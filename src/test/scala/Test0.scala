@@ -111,6 +111,8 @@ object Test0 {
 
       applyTactic(InlineTac("teleport"))
 
+      applyTactic(QInitTac(left=true))
+
       applyTactic(AssignTac(left=true))
       applyTactic(SimpTac)
 

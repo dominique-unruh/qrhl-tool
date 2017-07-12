@@ -4,10 +4,10 @@ import java.io.{BufferedReader, File, InputStreamReader}
 import java.lang.RuntimeException
 import java.nio.file.Paths
 
-import info.hupel.isabelle._
-import info.hupel.isabelle.api._
+import info.hupel.isabelle.{Codec, Platform, Program, System, ml}
+import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Var, Context => IContext, Typ => ITyp, Type => IType}
-import info.hupel.isabelle.setup._
+import info.hupel.isabelle.setup.{Resources, Setup}
 import monix.execution.Scheduler.Implicits.global
 
 import scala.collection.mutable
@@ -195,6 +195,5 @@ object Isabelle {
     def readTyp(str:String) : ITyp = runExpr(isabelle.readTypeExpr(context)(str))
     def prettyTyp(typ:ITyp): String = runExpr(isabelle.printTypExpr(typ)(context))
     def simplify(term: Term) : Term = runExpr(Isabelle.simplifyTerm(term)(context))
-
   }
 }

@@ -2,7 +2,10 @@ theory Test
   imports QRHL
 begin
 
- 
+  
+  
+ML QRHL.qinitWp
+
   term "sup a b"
   
     ML " @{const_name sup} "

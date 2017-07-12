@@ -290,7 +290,12 @@ syntax "_quantum_equality" :: "qvariable_list_args \<Rightarrow> qvariable_list_
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
 
+subsection \<open>Subspace division\<close>
 
+axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_")
+  
+(* term "space_div (\<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>) EPR \<lbrakk>A1, B1\<rbrakk>" *)
+  
 section \<open>Common quantum objects\<close>
 
 axiomatization EPR :: "(bit*bit) state"
@@ -316,7 +321,7 @@ proof (rule exI[of _ 1], rule allI, rule impI)
     by linarith
 qed
 
-
+ML_file \<open>qrhl.ML\<close>
   
 section \<open>Experiments\<close>
   
