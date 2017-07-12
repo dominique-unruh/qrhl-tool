@@ -56,12 +56,26 @@ object Parser extends RegexParsers {
          _ <- qInitSymbol;
     // TODO: add a cut
          _ = assert(vs.nonEmpty);
+    // TODO: check that all vars are distinct
          qvs = vs.map { context.environment.qVariables(_) };
          typ = Typ(context.isabelle.get, IType("QRHL.state",List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
          e <- expression(typ))
       yield QInit(qvs,e)
 
-  def statement(implicit context:ParserContext) : Parser[Statement] = assign | sample | call | qInit
+  def qApply(implicit context:ParserContext) : Parser[QApply] =
+      for (_ <- literal("on");
+           vs <- identifierList;
+           _ <- literal("apply");
+           _ = assert(vs.nonEmpty);
+           qvs = vs.map { context.environment.qVariables(_) };
+           // TODO: check that all vars are distinct
+           typ = Typ(context.isabelle.get, IType("QRHL.isometry",
+             List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*),
+                  Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
+           e <- expression(typ))
+        yield QApply(qvs,e)
+
+  def statement(implicit context:ParserContext) : Parser[Statement] = assign | sample | call | qInit | qApply
 
   def statementWithSep(implicit context:ParserContext) : Parser[Statement] = statement ~ statementSeparator ^^ { case s ~ _ => s }
 

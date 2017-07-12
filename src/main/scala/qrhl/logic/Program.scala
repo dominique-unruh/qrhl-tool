@@ -85,6 +85,7 @@ final case class QInit(location:List[QVariable], expression:Expression) extends 
 }
 final case class QApply(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
+  override def toString: String = s"on ${location.map(_.name).mkString(",")} apply $expression"
 }
 final case class Measurement(result:CVariable, location:List[QVariable], e:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this

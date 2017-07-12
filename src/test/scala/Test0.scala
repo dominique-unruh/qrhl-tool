@@ -95,12 +95,12 @@ object Test0 {
 
       declareProgram("teleport", "" +
         "A,B <q EPR;" +
-//        "apply CNOT on C,A;" +
-//        "apply H on C;" +
+        "on C,A apply CNOT;" +
+        "on C apply H;" +
 //        "a <- measure A in computational_basis;" +
 //        "c <- measure B in computational_basis;" +
-//        "if (a=1) then apply X on B;" +
-//        "if (c=1) then apply Z on B;" +
+//        "if (a=1) then on B apply X;" +
+//        "if (c=1) then on B apply Z;" +
         "")
 
       openGoal(QRHLSubgoal(

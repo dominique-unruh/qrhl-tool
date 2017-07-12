@@ -47,7 +47,6 @@ ML {* @{type_name "distr"} *}
   
 section \<open>Subspaces\<close>
   
-typedecl 'a subspace
 typedef 'a state = "{x::'a\<Rightarrow>complex. \<exists>b. \<forall>F. finite F \<longrightarrow> sum (\<lambda>i. (norm(x i))^2) F \<le> b }"
   by (rule exI[of _ "\<lambda>_.0"], auto)
 setup_lifting type_definition_state
@@ -115,6 +114,8 @@ instance apply intro_classes
 end
 
   (* TODO: states should be normalized! *)
+
+typedecl 'a subspace
   
 instantiation subspace :: (type)zero begin instance .. end (* The subspace {0} *)
 instantiation subspace :: (type)top begin instance .. end (* The full space *)
@@ -220,6 +221,9 @@ hide_fact tmp_Inf1 tmp_Inf2 tmp_Sup1 tmp_Sup2 tmp_Inf3
 lemma top_not_bot[simp]: "(top::'a subspace) \<noteq> bot" 
   using subspace_zero_not_top bot_subspace_def by metis
 
+typedecl ('a,'b) isometry
+type_synonym 'a isometry2 = "('a,'a) isometry"
+    
 section \<open>Quantum variables\<close>
 
 typedecl 'a qvariable (* a variable, refers to a location in a memory *)
@@ -321,6 +325,9 @@ proof (rule exI[of _ 1], rule allI, rule impI)
     by linarith
 qed
 
+axiomatization CNOT :: "(bit*bit) isometry2"
+axiomatization H :: "bit isometry2"
+  
 ML_file \<open>qrhl.ML\<close>
   
 section \<open>Experiments\<close>
