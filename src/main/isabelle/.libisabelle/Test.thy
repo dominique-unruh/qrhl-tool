@@ -4,7 +4,7 @@ begin
 
   
   
-lemma "(H \<rightarrow> \<lbrakk>C1\<rbrakk>)* \<cdot> (\<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> imageIso (H \<rightarrow> \<lbrakk>C1\<rbrakk>)) =  H \<rightarrow> \<lbrakk>C1\<rbrakk> \<cdot> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
+lemma "(H \<^sub>@ \<lbrakk>C1\<rbrakk>)* \<cdot> (\<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> imageIso (H \<^sub>@ \<lbrakk>C1\<rbrakk>)) =  H \<^sub>@ \<lbrakk>C1\<rbrakk> \<cdot> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
   by simp
   
   

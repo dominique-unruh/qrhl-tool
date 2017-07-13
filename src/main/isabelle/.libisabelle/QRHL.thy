@@ -253,7 +253,19 @@ axiomatization where
 and unitary_image[simp]: "unitary U \<Longrightarrow> imageIso U = top"
 for U :: "'a isometry2"
 
-      
+section \<open>Projectors\<close>
+
+typedecl 'a projector
+axiomatization proj :: "'a state \<Rightarrow> 'a projector"
+  
+section \<open>Measurements\<close>
+  
+typedecl ('a,'b) measurement
+axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> 'b projector"
+  
+axiomatization computational_basis :: "('a, 'a) measurement" where
+  mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
+  
 section \<open>Quantum variables\<close>
 
 typedecl 'a qvariable (* a variable, refers to a location in a memory *)

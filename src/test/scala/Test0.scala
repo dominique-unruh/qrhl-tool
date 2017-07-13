@@ -87,8 +87,8 @@ object Test0 {
     try {
       loadIsabelle("/opt/Isabelle2016-1")
 
-      declareVariable("a", "int")
-      declareVariable("c", "int")
+      declareVariable("a", "bit")
+      declareVariable("c", "bit")
       declareVariable("A", "bit", quantum=true)
       declareVariable("B", "bit", quantum=true)
       declareVariable("C", "bit", quantum=true)
@@ -97,7 +97,7 @@ object Test0 {
         "A,B <q EPR;" +
         "on C,A apply CNOT;" +
         "on C apply H;" +
-//        "a <- measure A in computational_basis;" +
+        "a <- measure A in computational_basis;" +
 //        "c <- measure B in computational_basis;" +
 //        "if (a=1) then on B apply X;" +
 //        "if (c=1) then on B apply Z;" +

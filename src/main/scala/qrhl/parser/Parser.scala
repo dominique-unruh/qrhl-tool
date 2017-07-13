@@ -75,7 +75,22 @@ object Parser extends RegexParsers {
            e <- expression(typ))
         yield QApply(qvs,e)
 
-  def statement(implicit context:ParserContext) : Parser[Statement] = assign | sample | call | qInit | qApply
+  val measureSymbol : Parser[String] = assignSymbol
+  def measure(implicit context:ParserContext) : Parser[Measurement] =
+    for (res <- identifier;
+         _ <- measureSymbol;
+         _ <- literal("measure");
+         vs <- identifierList;
+         resv = context.environment.cVariables(res);
+         qvs = vs.map { context.environment.qVariables(_) };
+         _ <- literal("in");
+         etyp = Typ(context.isabelle.get, IType("QRHL.measurement",
+           List(resv.isabelleTyp, Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))
+         ));
+         e <- expression(etyp))
+      yield Measurement(resv,qvs,e)
+
+  def statement(implicit context:ParserContext) : Parser[Statement] = measure | assign | sample | call | qInit | qApply
 
   def statementWithSep(implicit context:ParserContext) : Parser[Statement] = statement ~ statementSeparator ^^ { case s ~ _ => s }
 

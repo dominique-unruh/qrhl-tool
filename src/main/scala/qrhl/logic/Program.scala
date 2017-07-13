@@ -74,10 +74,12 @@ final case class Sample(variable:CVariable, expression:Expression) extends State
 final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     IfThenElse(condition,thenBranch.inline(name,program),elseBranch.inline(name,program))
+  override def toString: String = s"if ($condition) $thenBranch else $elseBranch"
 }
 final case class While(condition:Expression, body: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     While(condition,body.inline(name,program))
+  override def toString: String = s"while ($condition) $body"
 }
 final case class QInit(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -89,6 +91,7 @@ final case class QApply(location:List[QVariable], expression:Expression) extends
 }
 final case class Measurement(result:CVariable, location:List[QVariable], e:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
+  override def toString: String = s"${result.name} <- measure ${location.map(_.name).mkString(",")} in $e"
 }
 final case class Call(name:String) extends Statement {
   override def toString: String = "call "+name
