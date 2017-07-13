@@ -1,2 +1,9 @@
 *.class
 *.log
+*~
+/doc
+/project/target
+/project/project/target
+/.idea/workspace.xml
+/target
+\#*#
