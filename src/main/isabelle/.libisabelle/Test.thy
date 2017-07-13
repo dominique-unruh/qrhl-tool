@@ -4,6 +4,10 @@ begin
 
   
   
+lemma "(H \<rightarrow> \<lbrakk>C1\<rbrakk>)* \<cdot> (\<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> imageIso (H \<rightarrow> \<lbrakk>C1\<rbrakk>)) =  H \<rightarrow> \<lbrakk>C1\<rbrakk> \<cdot> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
+  by simp
+  
+  
 ML QRHL.qinitWp
 
   term "sup a b"

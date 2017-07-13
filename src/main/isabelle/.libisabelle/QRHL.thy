@@ -1,5 +1,5 @@
 theory QRHL
-imports Complex_Main
+imports Complex_Main "~~/src/Tools/Adhoc_Overloading"
 begin
 
 section \<open>Miscellaneous\<close>
@@ -221,9 +221,39 @@ hide_fact tmp_Inf1 tmp_Inf2 tmp_Sup1 tmp_Sup2 tmp_Inf3
 lemma top_not_bot[simp]: "(top::'a subspace) \<noteq> bot" 
   using subspace_zero_not_top bot_subspace_def by metis
 
+    subsection \<open>Isometries\<close>
+    
+      
 typedecl ('a,'b) isometry
 type_synonym 'a isometry2 = "('a,'a) isometry"
-    
+  
+axiomatization 
+  adjoint :: "('a,'b) isometry \<Rightarrow> ('b,'a) isometry" ("_*" 100)
+and timesIso :: "('b,'c) isometry \<Rightarrow> ('a,'b) isometry \<Rightarrow> ('a,'c) isometry" 
+and applyIso :: "('a,'b) isometry \<Rightarrow> 'a state \<Rightarrow> 'b state"
+and applyIsoSpace :: "('a,'b) isometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
+and imageIso :: "('a,'b) isometry \<Rightarrow> 'b subspace" 
+
+
+consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
+adhoc_overloading
+  cdot timesIso applyIso applyIsoSpace
+  
+  
+axiomatization identity :: "'a isometry2" where
+    apply_id[simp]: "identity \<cdot> \<psi> = \<psi>"
+and times_id[simp]: "identity \<cdot> U = U" 
+and apply_space_id[simp]: "identity \<cdot> S = S" 
+for \<psi> :: "'a state" and U :: "('b,'a) isometry" and S :: "'a subspace"
+
+definition "unitary U = (U \<cdot> (U*) = identity)"  
+
+axiomatization where 
+    unitary_adjoint[simp]: "unitary U \<Longrightarrow> U* = U" 
+and unitary_image[simp]: "unitary U \<Longrightarrow> imageIso U = top"
+for U :: "'a isometry2"
+
+      
 section \<open>Quantum variables\<close>
 
 typedecl 'a qvariable (* a variable, refers to a location in a memory *)
@@ -299,6 +329,25 @@ subsection \<open>Subspace division\<close>
 axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_")
   
 (* term "space_div (\<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>) EPR \<lbrakk>A1, B1\<rbrakk>" *)
+
+subsection \<open>Lifting\<close>
+  
+axiomatization
+    liftIso :: "'a isometry2 \<Rightarrow> 'a qvariables \<Rightarrow> mem2 isometry2"
+and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> assertion"
+
+consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<^sub>@_"  [91,91] 90 )
+adhoc_overloading
+  lift liftIso liftSpace
+  
+axiomatization where 
+    adjoint_lift[simp]: "adjoint (liftIso U Q) = liftIso (adjoint U) Q" 
+and imageIso_lift[simp]: "imageIso (liftIso U Q) = liftSpace (imageIso U) Q"
+and top_lift[simp]: "liftSpace top Q = top"
+and bot_lift[simp]: "liftSpace bot Q = bot"
+for U :: "'a isometry2"
+  
+
   
 section \<open>Common quantum objects\<close>
 
@@ -325,8 +374,10 @@ proof (rule exI[of _ 1], rule allI, rule impI)
     by linarith
 qed
 
-axiomatization CNOT :: "(bit*bit) isometry2"
-axiomatization H :: "bit isometry2"
+axiomatization CNOT :: "(bit*bit) isometry2" where
+  unitaryCNOT[simp]: "unitary CNOT"
+axiomatization H :: "bit isometry2" where
+  unitaryH[simp]: "unitary H"
   
 ML_file \<open>qrhl.ML\<close>
   

@@ -111,20 +111,19 @@ object Test0 {
 
       applyTactic(InlineTac("teleport"))
 
+      applyTactic(QApplyTac(left=true))
+      applyTactic(SimpTac)
+
+      applyTactic(QApplyTac(left=true))
+      applyTactic(SimpTac)
+
       applyTactic(QInitTac(left=true))
-
-      applyTactic(AssignTac(left=true))
-      applyTactic(SimpTac)
-
-      applyTactic(AssignTac(left=false))
-      applyTactic(SimpTac)
-
-      applyTactic(SampleTac(left=false))
       applyTactic(SimpTac)
 
       applyTactic(SkipTac)
       applyTactic(SimpTac)
-      applyTactic(TrueTac)
+//      applyTactic(TrueTac)
+
     } catch {
       case e : Throwable => e.printStackTrace()
     } finally {
