@@ -51,6 +51,28 @@ typedef 'a state = "{x::'a\<Rightarrow>complex. \<exists>b. \<forall>F. finite F
   by (rule exI[of _ "\<lambda>_.0"], auto)
 setup_lifting type_definition_state
 
+lift_definition ket :: "'a \<Rightarrow> 'a state" ("|_\<rangle>") is "\<lambda>x y. if x=y then 1 else 0"
+proof (rule exI[of _ 1], rule allI, rule impI)
+  fix a::'a and F::"'a set" assume "finite F"
+  have "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 0" if "a\<notin>F"
+    apply (subst sum.cong[where B=F and h="\<lambda>_. 0"]) using that by auto
+  moreover have "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 1" if "a\<in>F"
+  proof -
+    obtain F0 where "a\<notin>F0" and F_F0: "F=insert a F0"
+      by (meson \<open>a \<in> F\<close> mk_disjoint_insert) 
+    show "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 1"
+      unfolding F_F0
+      apply (subst sum.insert_remove)
+       using F_F0 `finite F` apply auto
+      apply (subst sum.cong[where B=F0 and h="\<lambda>_. 0"])
+        apply (simp add: \<open>a \<notin> F0\<close>)
+       using \<open>a \<notin> F0\<close> apply auto[1]
+      by simp
+  qed
+  ultimately show "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) \<le> 1"
+    by linarith
+qed
+
 instantiation state :: (type)real_vector begin
 lift_definition zero_state :: "'a state" is "\<lambda>_.0" by auto
 lift_definition uminus_state :: "'a state \<Rightarrow> 'a state" is uminus by auto
@@ -131,7 +153,9 @@ definition "(a < b) = (a \<le> b \<and> \<not> (b \<le> a))" for a :: "'a subspa
 instance .. end
 hide_fact less_eq_subspace_def
 hide_const tmp_subspace_less_eq
-
+  
+axiomatization ortho :: "'a subspace \<Rightarrow> 'a subspace" (* Orthogonal complement *)
+  
 axiomatization where
     subspace_zero_not_top[simp]: "(0::'a subspace) \<noteq> top"
 and tmp_reflex: "x \<le> x" (* Names with tmp_ will be hidden later *)
@@ -221,6 +245,12 @@ hide_fact tmp_Inf1 tmp_Inf2 tmp_Sup1 tmp_Sup2 tmp_Inf3
 lemma top_not_bot[simp]: "(top::'a subspace) \<noteq> bot" 
   using subspace_zero_not_top bot_subspace_def by metis
 
+axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a state set"
+    
+definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
+  
+  
+  
     subsection \<open>Isometries\<close>
     
       
@@ -257,11 +287,13 @@ section \<open>Projectors\<close>
 
 typedecl 'a projector
 axiomatization proj :: "'a state \<Rightarrow> 'a projector"
+  and imProj :: "'a projector \<Rightarrow> 'a subspace"
   
 section \<open>Measurements\<close>
   
 typedecl ('a,'b) measurement
 axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> 'b projector"
+  and mtotal :: "('a,'b) measurement \<Rightarrow> bool"
   
 axiomatization computational_basis :: "('a, 'a) measurement" where
   mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
@@ -346,6 +378,7 @@ subsection \<open>Lifting\<close>
   
 axiomatization
     liftIso :: "'a isometry2 \<Rightarrow> 'a qvariables \<Rightarrow> mem2 isometry2"
+and liftProj :: "'a projector \<Rightarrow> 'a qvariables \<Rightarrow> mem2 projector"
 and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> assertion"
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<^sub>@_"  [91,91] 90 )
@@ -364,27 +397,6 @@ for U :: "'a isometry2"
 section \<open>Common quantum objects\<close>
 
 axiomatization EPR :: "(bit*bit) state"
-lift_definition ket :: "'a \<Rightarrow> 'a state" ("|_\<rangle>") is "\<lambda>x y. if x=y then 1 else 0"
-proof (rule exI[of _ 1], rule allI, rule impI)
-  fix a::'a and F::"'a set" assume "finite F"
-  have "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 0" if "a\<notin>F"
-    apply (subst sum.cong[where B=F and h="\<lambda>_. 0"]) using that by auto
-  moreover have "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 1" if "a\<in>F"
-  proof -
-    obtain F0 where "a\<notin>F0" and F_F0: "F=insert a F0"
-      by (meson \<open>a \<in> F\<close> mk_disjoint_insert) 
-    show "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 1"
-      unfolding F_F0
-      apply (subst sum.insert_remove)
-       using F_F0 `finite F` apply auto
-      apply (subst sum.cong[where B=F0 and h="\<lambda>_. 0"])
-        apply (simp add: \<open>a \<notin> F0\<close>)
-       using \<open>a \<notin> F0\<close> apply auto[1]
-      by simp
-  qed
-  ultimately show "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) \<le> 1"
-    by linarith
-qed
 
 axiomatization CNOT :: "(bit*bit) isometry2" where
   unitaryCNOT[simp]: "unitary CNOT"
@@ -395,9 +407,13 @@ ML_file \<open>qrhl.ML\<close>
   
 section \<open>Experiments\<close>
   
-definition test where "test (x::int) = x"
-
-lemma testsimp[simp]: "test x = x"
-  using test_def by auto
-
+axiomatization where mtotal_computational_basis [simp]: "mtotal computational_basis"
+axiomatization where imProj_proj [simp]: "imProj (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a state"
+axiomatization where imProj_liftProj [simp]: "imProj (liftProj P Q) = liftSpace (imProj P) Q" for P :: "'a projector" and Q
+axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
+  for Q R :: "'a qvariables" and \<psi> :: "'a state"
+lemma "\<CC>\<ll>\<aa>[mtotal computational_basis] \<sqinter> (INF z. \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> imProj (liftProj (mproj computational_basis z) \<lbrakk>B1\<rbrakk>) + ortho (imProj (liftProj (mproj computational_basis z) \<lbrakk>B1\<rbrakk>))) = undefined"
+  apply simp
+    oops
+    
 end

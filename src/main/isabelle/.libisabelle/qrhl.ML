@@ -6,6 +6,9 @@ fun mk_qvariableT T = Type(@{type_name qvariable}, [T])
 fun mk_stateT T = Type(@{type_name state}, [T])
 fun mk_isometryT T T' = Type(@{type_name isometry}, [T,T'])
 fun mk_isometry2T T = mk_isometryT T T
+fun mk_measurementT T T' = Type(@{type_name measurement}, [T,T'])
+fun mk_projectorT T = Type(@{type_name projector}, [T])
+
 
 fun qvariables [] = (@{term "()"},@{typ unit})
   | qvariables [v] = 
@@ -41,9 +44,34 @@ fun qapplyWp post e Q =
     @{term "applyIsoSpace :: mem2 isometry2 \<Rightarrow> _ \<Rightarrow> _"} $ adj_e' $ post_im_e'
   end
 
+fun mk_INFIMUM A f = 
+  let val AT = fastype_of A
+      val fT = fastype_of f
+      (* val idxT = case AT of Type(@{type_name set}, [T]) => T *)
+      val (_,infT) = dest_funT fT 
+      val infsetT = HOLogic.mk_setT infT
+  in
+    Const(@{const_name Inf}, infsetT --> infT) $ (Const(@{const_name image}, fT --> AT --> infsetT) $ f $ A)
+  end
 
+fun measureWp B x e Q =
+  let val B_z = abstract_over(x,B)
+      val (_,resT) = dest_Free x
+      val (vs,vsT) = qvariables Q
+      val measT = mk_measurementT resT vsT
+      val e_z = Const(@{const_name mproj}, measT --> resT --> mk_projectorT vsT)
+                  $ e $ Bound(0)
+      val lift_e_z = Const(@{const_name liftProj}, mk_projectorT vsT --> mk_qvariablesT vsT --> @{typ "mem2 projector"})
+                    $ e_z $ vs
+      val im_e_z = @{const imProj(mem2)} $ lift_e_z
+      val Be = @{const plus(assertion)} $ (@{const inf(assertion)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)
+      val Inf_Be = mk_INFIMUM (Const(@{const_name top}, HOLogic.mk_setT resT)) (Abs("z",resT,Be))
+      val total = @{const classical_subspace} $ (Const(@{const_name mtotal}, measT --> HOLogic.boolT) $ e)
+  in
+  @{const inf(assertion)} $ total $ Inf_Be
+  end
 
-val _ = qapplyWp @{term "top :: assertion"} @{term "H"} [@{term "q::bit qvariable"}]
+val _ = measureWp @{term "Cla[x=(x::bool)] :: assertion"} @{term "x::bool"} @{term "a::(bool,bit) measurement"} [@{term "q::bit qvariable"}]
 |> Thm.cterm_of @{context}
 |> @{print}
 

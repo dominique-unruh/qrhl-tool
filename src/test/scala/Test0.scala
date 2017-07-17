@@ -98,7 +98,7 @@ object Test0 {
         "on C,A apply CNOT;" +
         "on C apply H;" +
         "a <- measure A in computational_basis;" +
-//        "c <- measure B in computational_basis;" +
+        "c <- measure B in computational_basis;" +
 //        "if (a=1) then on B apply X;" +
 //        "if (c=1) then on B apply Z;" +
         "")
@@ -110,6 +110,12 @@ object Test0 {
         "Qeq[B1=A2]"))
 
       applyTactic(InlineTac("teleport"))
+
+      applyTactic(MeasureTac(left=true))
+      applyTactic(SimpTac)
+
+      applyTactic(MeasureTac(left=true))
+      applyTactic(SimpTac)
 
       applyTactic(QApplyTac(left=true))
       applyTactic(SimpTac)
