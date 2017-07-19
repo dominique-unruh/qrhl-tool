@@ -400,8 +400,16 @@ axiomatization EPR :: "(bit*bit) state"
 
 axiomatization CNOT :: "(bit*bit) isometry2" where
   unitaryCNOT[simp]: "unitary CNOT"
-axiomatization H :: "bit isometry2" where
+axiomatization H :: "bit isometry2" 
+  and X :: "bit isometry2"
+  and Y :: "bit isometry2"
+  and Z :: "bit isometry2"
+  where
   unitaryH[simp]: "unitary H"
+and unitaryX[simp]: "unitary X"
+and unitaryY[simp]: "unitary Y"
+and unitaryZ[simp]: "unitary Z"
+
   
 ML_file \<open>qrhl.ML\<close>
   

@@ -69,6 +69,6 @@ case class WpTac(left:Boolean) extends WpStyleTac(left=left) {
       val wpExpr = ml(post.isabelleTerm)(implicitly) (e1.isabelleTerm)(implicitly) (vs2.map(_.isabelleTerm))
       val wp = post.isabelle.runExpr(wpExpr)
       Expression(post.isabelle,wp)
-    case _ => throw UserException(s"statement $statement unsupported by WpTac")
+    case _ => throw UserException(s"""statement "$statement" unsupported by WpTac""")
   }
 }

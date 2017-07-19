@@ -82,7 +82,7 @@ class State private (val environment: Environment,
       s"${goal.size} subgoals:\n" + goal.map(g => s"> $g\n").mkString
   }
 
-  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment)
+  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT)
 
   def loadIsabelle(path:String) : State = {
     assert(isabelle.isEmpty)

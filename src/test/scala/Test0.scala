@@ -85,7 +85,13 @@ object Test0 {
   def main(args: Array[String]): Unit = {
     import tactic._
     try {
+//      val test = "a(b);)"
+//      val res = Parser.parse(Parser.scanExpression,test)
+//      println(res)
+
       loadIsabelle("/opt/Isabelle2016-1")
+//      println("A,B <q EPR;" : Block)
+//      return
 
       declareVariable("a", "bit")
       declareVariable("c", "bit")
@@ -99,9 +105,11 @@ object Test0 {
         "on C apply H;" +
         "a <- measure A in computational_basis;" +
         "c <- measure B in computational_basis;" +
-//        "if (a=1) then on B apply X;" +
-//        "if (c=1) then on B apply Z;" +
+        "if (a=1) then on B apply X; else skip;" +
+        "if (c=1) then on B apply Z; else skip;" +
         "")
+
+      println("Declared teleport.")
 
       openGoal(QRHLSubgoal(
         "call teleport;",

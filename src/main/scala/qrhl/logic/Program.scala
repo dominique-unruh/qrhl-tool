@@ -28,13 +28,13 @@ sealed trait Statement {
 
 class Block(val statements:List[Statement]) extends Statement {
   override def toString: String = statements match {
-    case Nil => ";"
-    case List(s) => s.toString + ";"
-    case _ => "{ " + statements.map{ _.toString + ";" }.mkString(" ") + " }"
+    case Nil => "{}"
+    case List(s) => s.toString
+    case _ => "{ " + statements.map{ _.toString}.mkString(" ") + " }"
   }
   def toStringNoParens: String = statements match {
     case Nil => "skip;"
-    case _ => statements.map{ _.toString + ";" }.mkString(" ")
+    case _ => statements.map{ _.toString }.mkString(" ")
   }
   def length : Int = statements.size
 
@@ -64,36 +64,36 @@ object Block {
 
 
 final case class Assign(variable:CVariable, expression:Expression) extends Statement {
-  override def toString: String = variable.name + " <- " + expression.toString
+  override def toString: String = s"""${variable.name} <- $expression;"""
   override def inline(name: String, statement: Statement): Statement = this
 }
 final case class Sample(variable:CVariable, expression:Expression) extends Statement {
-  override def toString: String = variable.name + " <$ " + expression.toString
+  override def toString: String = s"""${variable.name} <$$ $expression;"""
   override def inline(name: String, statement: Statement): Statement = this
 }
 final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     IfThenElse(condition,thenBranch.inline(name,program),elseBranch.inline(name,program))
-  override def toString: String = s"if ($condition) $thenBranch else $elseBranch"
+  override def toString: String = s"if ($condition) $thenBranch else $elseBranch;"
 }
 final case class While(condition:Expression, body: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     While(condition,body.inline(name,program))
-  override def toString: String = s"while ($condition) $body"
+  override def toString: String = s"while ($condition) $body;"
 }
 final case class QInit(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
-  override def toString: String = s"${location.map(_.name).mkString(",")} <q $expression"
+  override def toString: String = s"${location.map(_.name).mkString(",")} <q $expression;"
 }
 final case class QApply(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
-  override def toString: String = s"on ${location.map(_.name).mkString(",")} apply $expression"
+  override def toString: String = s"on ${location.map(_.name).mkString(",")} apply $expression;"
 }
 final case class Measurement(result:CVariable, location:List[QVariable], e:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
-  override def toString: String = s"${result.name} <- measure ${location.map(_.name).mkString(",")} in $e"
+  override def toString: String = s"${result.name} <- measure ${location.map(_.name).mkString(",")} in $e;"
 }
 final case class Call(name:String) extends Statement {
-  override def toString: String = "call "+name
+  override def toString: String = s"call $name;"
   override def inline(name: String, program: Statement): Statement = this
 }

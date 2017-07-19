@@ -8,7 +8,8 @@ import qrhl.logic._
 import scala.util.parsing.combinator._
 
 case class ParserContext(environment: Environment,
-                          isabelle: Option[Isabelle.Context])
+                          isabelle: Option[Isabelle.Context],
+                        boolT: Typ)
 
 object Parser extends RegexParsers {
 
@@ -19,10 +20,32 @@ object Parser extends RegexParsers {
 //  val natural : Parser[BigInt] = """[0-9]+""".r ^^ { BigInt(_) }
 
   private val statementSeparator = literal(";")
+  // TODO expression should stop at ) as well
+
+  def repWithState[S](p : S => Parser[S], start : S) : Parser[S] =
+    p(start).?.flatMap { case Some(s) => repWithState(p,s); case None => success(start) }
+
+  val scanExpression : Parser[String] = repWithState[(Int,List[Char])]({
+    case (0, chars) =>
+      elem("expression", { c => c != ';' && c != ')' }) ^^ { c =>
+        val cs = c :: chars
+        val lvl = if (c == '(') 1 else 0
+        (lvl, cs)
+      }
+    case (level, chars) =>
+      elem("expression", { _ => true }) ^^ { c =>
+        assert(level > 0)
+        val cs = c :: chars
+        val lvl = if (c == '(') level + 1 else if (c == ')') level - 1 else level
+        (lvl, cs)
+      }
+  }, (0,Nil)) ^^ { case (_,chars) => chars.reverse.mkString.trim }
+
   def expression(typ:Typ)(implicit context:ParserContext) : Parser[Expression] =
-    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
+//    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
+    scanExpression ^^ { str:String => context.isabelle match {
       case None => throw UserException("""Need isabelle command first. Try "isabelle <path>." or "isabelle auto." or "isabelle none."""")
-      case Some(isabelle) => Expression(isabelle, str.mkString.trim, typ)
+      case Some(isabelle) => Expression(isabelle, str  /*str.mkString.trim*/, typ)
     } }
 
   private val assignSymbol = literal("<-")
@@ -31,7 +54,8 @@ object Parser extends RegexParsers {
          _ <- assignSymbol;
          // TODO: add a cut
          typ = context.environment.cVariables(v).typ;
-         e <- expression(typ))
+         e <- expression(typ);
+         _ <- statementSeparator)
      yield Assign(context.environment.cVariables(v), e)
 
   private val sampleSymbol = literal("<$")
@@ -40,11 +64,12 @@ object Parser extends RegexParsers {
          _ <- sampleSymbol;
          // TODO: add a cut
          typ = context.environment.cVariables(v).typ;
-         e <- expression(Typ.typeCon("QRHL.distr",typ)))
+         e <- expression(Typ.typeCon("QRHL.distr",typ));
+         _ <- statementSeparator)
       yield Sample(context.environment.cVariables(v), e)
 
   def call(implicit context:ParserContext) : Parser[Call] =
-    literal("call") ~! identifier ^^ { case _ ~ name =>
+    literal("call") ~! identifier <~ statementSeparator ^^ { case _ ~ name =>
       if (!context.environment.programs.contains(name))
       throw UserException(s"""Program $name not defined (in "call $name").""")
       Call(name)
@@ -59,7 +84,8 @@ object Parser extends RegexParsers {
     // TODO: check that all vars are distinct
          qvs = vs.map { context.environment.qVariables(_) };
          typ = Typ(context.isabelle.get, IType("QRHL.state",List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
-         e <- expression(typ))
+         e <- expression(typ);
+         _ <- statementSeparator)
       yield QInit(qvs,e)
 
   def qApply(implicit context:ParserContext) : Parser[QApply] =
@@ -72,7 +98,8 @@ object Parser extends RegexParsers {
            typ = Typ(context.isabelle.get, IType("QRHL.isometry",
              List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*),
                   Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
-           e <- expression(typ))
+           e <- expression(typ);
+           _ <- statementSeparator)
         yield QApply(qvs,e)
 
   val measureSymbol : Parser[String] = assignSymbol
@@ -87,17 +114,36 @@ object Parser extends RegexParsers {
          etyp = Typ(context.isabelle.get, IType("QRHL.measurement",
            List(resv.isabelleTyp, Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))
          ));
-         e <- expression(etyp))
+         e <- expression(etyp);
+         _ <- statementSeparator)
       yield Measurement(resv,qvs,e)
 
-  def statement(implicit context:ParserContext) : Parser[Statement] = measure | assign | sample | call | qInit | qApply
+  def ifThenElse(implicit context:ParserContext) : Parser[IfThenElse] =
+    for (_ <- literal("if");
+         _ <- literal("(");
+         e <- expression(context.boolT);
+         _ <- literal(")");
+         _ <- literal("then");
+         thenBranch <- statementOrParenBlock; // TODO: allow nested block
+         _ <- literal("else");
+         elseBranch <- statementOrParenBlock)  // TODO: allow nested block
+      yield IfThenElse(e,thenBranch,elseBranch)
 
-  def statementWithSep(implicit context:ParserContext) : Parser[Statement] = statement ~ statementSeparator ^^ { case s ~ _ => s }
+  def statement(implicit context:ParserContext) : Parser[Statement] = measure | assign | sample | call | qInit | qApply | ifThenElse
+
+//  def statementWithSep(implicit context:ParserContext) : Parser[Statement] = statement ~ statementSeparator ^^ { case s ~ _ => s }
 
   def skip : Parser[Block] = "skip" ~! statementSeparator ^^ { _ => Block.empty }
 
+  def statementOrParenBlock(implicit context:ParserContext) : Parser[Block] =
+    parenBlock | skip | (statement ^^ { s => Block(s) })
+
+  def parenBlock(implicit context:ParserContext) : Parser[Block] =
+    ("{" ~ "}" ^^ { _ => Block() }) |
+    ("{" ~> block <~ "}")
+
   def block(implicit context:ParserContext) : Parser[Block] =
     (statementSeparator ^^ { _ => Block.empty }) |
-      (rep1(statementWithSep) ^^ { s => Block(s:_*) }) |
-        skip
+      (rep1(statement) ^^ { s => Block(s:_*) }) |
+      skip
 }
