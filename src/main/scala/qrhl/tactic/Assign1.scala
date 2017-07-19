@@ -27,13 +27,18 @@ object Assign2 extends Tactic {
   override val toString: String = "assign2"
 }
 
-case class AssignTac(left:Boolean) extends WpStyleTac(left=left) {
-  override def getWP(state: State, left: Boolean, statement: Statement, post: Expression): Expression = statement match {
-    case Assign(v,e) =>
-      val env = state.environment
-      post.substitute(v.index(left=left),e.index(env, left=left))
-    case _ => throw UserException(s"Expected am assign statement as last expression on the ${if (left) "left" else "right"} side")
-  }
-
-  override val toString: String = if (left) "assign(left)" else "assign(right)"
-}
+//@deprecated
+//case class AssignTac(left:Boolean) extends WpStyleTac(left=left) {
+//  override def getWP(state: State, left: Boolean, statement: Statement, post: Expression): Expression = statement match {
+//    case Assign(v,e) =>
+//      val env = state.environment
+//      post.substitute(v.index(left=left),e.index(env, left=left))
+//    case _ => throw UserException(s"Expected am assign statement as last expression on the ${if (left) "left" else "right"} side")
+//  }
+//
+//  override val toString: String = if (left) "assign(left)" else "assign(right)"
+//}
+//
+//object AssignTac {
+//  def getWP(state: State, left: Boolean, statement: Statement, post: Expression): _root_.qrhl.logic.Expression = ???
+//}

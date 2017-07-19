@@ -63,13 +63,13 @@ object Test0 {
 
       applyTactic(InlineTac("test"))
 
-      applyTactic(AssignTac(left = true))
+      applyTactic(WpTac(left = true))
       applyTactic(SimpTac)
 
-      applyTactic(AssignTac(left = false))
+      applyTactic(WpTac(left = false))
       applyTactic(SimpTac)
 
-      applyTactic(SampleTac(left = false))
+      applyTactic(WpTac(left = false))
       applyTactic(SimpTac)
 
       applyTactic(SkipTac)
@@ -111,19 +111,19 @@ object Test0 {
 
       applyTactic(InlineTac("teleport"))
 
-      applyTactic(MeasureTac(left=true))
+      applyTactic(WpTac(left=true))
       applyTactic(SimpTac)
 
-      applyTactic(MeasureTac(left=true))
+      applyTactic(WpTac(left=true))
       applyTactic(SimpTac)
 
-      applyTactic(QApplyTac(left=true))
+      applyTactic(WpTac(left=true))
       applyTactic(SimpTac)
 
-      applyTactic(QApplyTac(left=true))
+      applyTactic(WpTac(left=true))
       applyTactic(SimpTac)
 
-      applyTactic(QInitTac(left=true))
+      applyTactic(WpTac(left=true))
       applyTactic(SimpTac)
 
       applyTactic(SkipTac)
