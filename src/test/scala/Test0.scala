@@ -134,6 +134,12 @@ object Test0 {
       applyTactic(WpTac(left=true))
       applyTactic(SimpTac)
 
+      applyTactic(WpTac(left=true))
+      applyTactic(SimpTac)
+
+      applyTactic(WpTac(left=true))
+      applyTactic(SimpTac)
+
       applyTactic(SkipTac)
       applyTactic(SimpTac)
 //      applyTactic(TrueTac)

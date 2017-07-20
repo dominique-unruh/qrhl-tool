@@ -10,7 +10,7 @@ sealed trait Subgoal {
 }
 
 final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expression) extends Subgoal {
-  override def toString: String = s"{ $pre }  ${left.toStringNoParens}  ~  ${right.toStringNoParens}  { $post }"
+  override def toString: String = s"{ $pre }\n  ${left.toStringNoParens}\n~\n  ${right.toStringNoParens}\n{ $post }"
 
   override def checkVariablesDeclared(environment: Environment): Unit = {
     for (x <- pre.variables)

@@ -251,20 +251,23 @@ definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
   
   
   
-    subsection \<open>Isometries\<close>
+subsection \<open>Isometries\<close>
     
       
 typedecl ('a,'b) isometry
 type_synonym 'a isometry2 = "('a,'a) isometry"
   
 axiomatization 
-  adjoint :: "('a,'b) isometry \<Rightarrow> ('b,'a) isometry" ("_*" 100)
+  adjoint :: "('a,'b) isometry \<Rightarrow> ('b,'a) isometry" ("_*" [99] 100) (* TODO: not an isometry! *)
 and timesIso :: "('b,'c) isometry \<Rightarrow> ('a,'b) isometry \<Rightarrow> ('a,'c) isometry" 
 and applyIso :: "('a,'b) isometry \<Rightarrow> 'a state \<Rightarrow> 'b state"
 and applyIsoSpace :: "('a,'b) isometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
 and imageIso :: "('a,'b) isometry \<Rightarrow> 'b subspace" 
-
-
+where
+ applyIso_0[simp]: "applyIsoSpace U 0 = 0"
+and applyIso_bot[simp]: "applyIsoSpace U bot = bot"
+and applyIso_top[simp]: "applyIsoSpace U top = imageIso U"
+  
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
   cdot timesIso applyIso applyIsoSpace
@@ -277,7 +280,7 @@ and apply_space_id[simp]: "identity \<cdot> S = S"
 for \<psi> :: "'a state" and U :: "('b,'a) isometry" and S :: "'a subspace"
 
 definition "unitary U = (U \<cdot> (U*) = identity)"  
-
+  
 axiomatization where 
     unitary_adjoint[simp]: "unitary U \<Longrightarrow> U* = U" 
 and unitary_image[simp]: "unitary U \<Longrightarrow> imageIso U = top"
@@ -370,7 +373,7 @@ translations
 
 subsection \<open>Subspace division\<close>
 
-axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_")
+axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_" [89,89,89] 90)
   
 (* term "space_div (\<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>) EPR \<lbrakk>A1, B1\<rbrakk>" *)
 
@@ -390,6 +393,7 @@ axiomatization where
 and imageIso_lift[simp]: "imageIso (liftIso U Q) = liftSpace (imageIso U) Q"
 and top_lift[simp]: "liftSpace top Q = top"
 and bot_lift[simp]: "liftSpace bot Q = bot"
+and unitary_lift[simp]: "unitary (liftIso U Q) = unitary U"
 for U :: "'a isometry2"
   
 

@@ -71,7 +71,36 @@ fun measureWp B x e Q =
   @{const inf(assertion)} $ total $ Inf_Be
   end
 
-val _ = measureWp @{term "Cla[x=(x::bool)] :: assertion"} @{term "x::bool"} @{term "a::(bool,bit) measurement"} [@{term "q::bit qvariable"}]
+
+fun ifWp e thenWp elseWp =
+  let val Cla_e = @{const classical_subspace} $ e
+      val Cla_not_e = @{const classical_subspace} $ (@{const Not} $ e)
+      val then' = @{const plus(assertion)} $ Cla_not_e $ thenWp
+      val else' = @{const plus(assertion)} $ Cla_e $ elseWp
+  in
+    @{const inf(assertion)} $ then' $ else'
+  end
+
+fun sampleWp v T e B =
+    let val distrT = Type(@{type_name distr},[T])
+        val _ = if fastype_of e = distrT then ()
+                else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e],[e]))
+        val _ = if fastype_of B = @{typ assertion} then ()
+                else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
+        val setT = Type(@{type_name set},[T])
+        val supp = Const(@{const_name supp}, distrT --> setT) $ e
+        val absB = Term.absfree (v,T) B
+        val B2 = @{const Inf(assertion)} $
+                      (Const(@{const_name image}, (T --> @{typ assertion}) --> setT -->  @{typ "assertion set"})
+                         $ absB $ supp)
+        val total = @{const classical_subspace} $
+             HOLogic.mk_eq (Const(@{const_name weight}, distrT --> @{typ real}) $ e, @{term "1::real"})
+    in
+      @{term "inf::assertion=>assertion=>assertion"} $ total $ B2
+    end
+      
+
+val _ = ifWp @{term "x=true"} @{term "thenWP::assertion"} @{term "elseWP::assertion"}
 |> Thm.cterm_of @{context}
 |> @{print}
 

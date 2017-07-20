@@ -6,7 +6,7 @@ import qrhl.logic.{Block, Expression}
 /**
   * Created by unruh on 7/8/17.
   */
-case class Seq(left:Int, right:Int, inner:Expression) extends Tactic {
+case class SeqTac(left:Int, right:Int, inner:Expression) extends Tactic {
   assert(left>=0)
   assert(right>=0)
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
