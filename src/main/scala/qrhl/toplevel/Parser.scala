@@ -4,7 +4,7 @@ import info.hupel.isabelle.pure.{Typ => ITyp, Type => IType}
 import qrhl.{QRHLSubgoal, Tactic, UserException, toplevel}
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
-import qrhl.tactic.Admit
+import qrhl.tactic._
 
 import scala.util.parsing.combinator._
 
@@ -180,7 +180,7 @@ object Parser extends RegexParsers {
 //    }
 
   def declareProgram(implicit context:ParserContext) : Parser[DeclareProgramCommand] =
-    literal("program") ~> OnceParser(identifier ~ literal(":=") ~ block) ^^ { case id~_~prog =>
+    literal("program") ~> OnceParser(identifier ~ literal(":=") ~ parenBlock) ^^ { case id~_~prog =>
       DeclareProgramCommand(id,prog)
     }
 
@@ -197,13 +197,38 @@ object Parser extends RegexParsers {
     _ <- literal("}")
   ) yield GoalCommand(QRHLSubgoal(left,right,pre,post)))
 
-  val tactic: Parser[Tactic] =
-    literal("admit") ^^ { _ => Admit }
+  val tactic_wp: Parser[WpTac] =
+    literal("wp") ~> OnceParser("left|right".r) ^^ {
+      case "left" => WpTac(left=true)
+      case "right" => WpTac(left=false)
+    }
+
+  val tactic_inline: Parser[InlineTac] =
+    literal("inline") ~> identifier ^^ InlineTac
+
+  def tactic_seq(implicit context:ParserContext): Parser[SeqTac] =
+    literal("seq") ~> OnceParser(for (
+      left <- natural;
+      right <- natural;
+      _ <- literal(":");
+      inner <- expression(context.assertionT))
+      yield SeqTac(left,right,inner))
+
+  def tactic(implicit context:ParserContext): Parser[Tactic] =
+    literal("admit") ^^ { _ => Admit } |
+      tactic_wp |
+      literal("simp") ^^ { _ => SimpTac } |
+      literal("skip") ^^ { _ => SkipTac } |
+      literal("true") ^^ { _ => TrueTac } |
+      tactic_inline |
+      tactic_seq
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 
-  val dummy : Parser[DummyCommand] = "dummy" ^^ { _ => DummyCommand() }
+  val qed : Parser[QedCommand] = "qed" ^^ { _ => QedCommand() }
+
+//  val quit: Parser[QuitCommand] = "quit" ^^ { _ => QuitCommand() }
 
   def command(implicit context:ParserContext): Parser[Command] =
-    isabelle | variable | declareProgram | qrhl | (tactic ^^ TacticCommand) | undo | dummy
+    (isabelle | variable | declareProgram | qrhl | (tactic ^^ TacticCommand) | undo | qed).named("command")
 }

@@ -1,6 +1,6 @@
 package qrhl.toplevel
 
-import qrhl.{State, Subgoal, Tactic}
+import qrhl.{State, Subgoal, Tactic, UserException}
 import qrhl.logic.{Block, Typ}
 
 trait Command {
@@ -57,6 +57,19 @@ case class UndoCommand(n:Int) extends Command {
   override def act(state: State): State = throw new RuntimeException() // should not be called
 }
 
-case class DummyCommand() extends Command {
-  override def act(state: State): State = state
+//case object QuitCommand extends Command {
+//  override def act(state: State): State = throw new RuntimeException() // should not be called
+//}
+
+//case class DummyCommand() extends Command {
+//  override def act(state: State): State = state
+//}
+
+case class QedCommand() extends Command {
+  override def act(state: State): State = {
+    if (state.goal.nonEmpty)
+      throw UserException("Pending subgoals.")
+    state
+  }
 }
+

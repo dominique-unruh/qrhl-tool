@@ -5,7 +5,7 @@
   
 (proof-easy-config 'qrhl "qRHL"
 ;		   proof-prog-name "java -jar /home/unruh/.IdeaIC2017.1/config/plugins/Scala/launcher/sbt-launch.jar run"
-		   proof-prog-name "java -jar qrhl.jar"
+		   proof-prog-name "./sbt-qrhl.sh"
 		   proof-terminal-string "."
 		   proof-shell-annotated-prompt-regexp "^\\(\\.\\.\\.\\|qrhl\\)> "
 		   proof-script-comment-start-regexp "^\\s-*#"
@@ -16,6 +16,15 @@
 		   proof-shell-start-goals-regexp "^[0-9]+ subgoals:\\|No current goal\\."
 		   proof-shell-proof-completed-regexp "^No current goal.$"
 		   )
+
+(defun qr () ; Just for testing
+  "Restarts the prover, restarts it, and then processes the buffer to current position"
+  (interactive)
+  (proof-shell-exit t)
+  (proof-goto-point))
+
+  
+    
 
 (provide 'qrhl)
 

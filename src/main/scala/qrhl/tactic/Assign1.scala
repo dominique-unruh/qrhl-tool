@@ -3,6 +3,7 @@ package qrhl.tactic
 import qrhl._
 import qrhl.logic.{Assign, Block, Expression, Statement}
 
+@deprecated
 object Assign1 extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case QRHLSubgoal(Block(Assign(v,e)),Block(),pre,post) =>
@@ -15,6 +16,7 @@ object Assign1 extends Tactic {
   override val toString: String = "assign1"
 }
 
+@deprecated
 object Assign2 extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case QRHLSubgoal(Block(),Block(Assign(v,e)),pre,post) =>
