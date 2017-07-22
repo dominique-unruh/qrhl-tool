@@ -3,14 +3,14 @@ package qrhl
 import info.hupel.isabelle.pure.Type
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
-import qrhl.parser.ParserContext
+import qrhl.toplevel.ParserContext
 
 sealed trait Subgoal {
   def checkVariablesDeclared(environment: Environment): Unit
 }
 
 final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expression) extends Subgoal {
-  override def toString: String = s"{ $pre }\n  ${left.toStringNoParens}\n~\n  ${right.toStringNoParens}\n{ $post }"
+  override def toString: String = s"Pre:   $pre\nLeft:  ${left.toStringNoParens}\nRight: ${right.toStringNoParens}\nPost:  $post"
 
   override def checkVariablesDeclared(environment: Environment): Unit = {
     for (x <- pre.variables)
@@ -82,7 +82,7 @@ class State private (val environment: Environment,
       s"${goal.size} subgoals:\n" + goal.map(g => s"> $g\n").mkString
   }
 
-  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT)
+  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT, assertionT = assertionT)
 
   def loadIsabelle(path:String) : State = {
     assert(isabelle.isEmpty)

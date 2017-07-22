@@ -10,6 +10,9 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 
 isabelleVersions := Seq("2016-1")
 isabelleSessions in Compile := Seq("QRHL")
+//isabelleSources := Seq(baseDirectory.value / "src/main/isabelle/.libisabelle")
+
+//unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/isabelle"
 
 libraryDependencies ++= Seq(
   "info.hupel" %% "libisabelle" % "0.8.0", // TODO 0.8.3
@@ -19,3 +22,4 @@ libraryDependencies ++= Seq(
 
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25" % "test"
+libraryDependencies += "org.jline" % "jline" % "3.3.0"

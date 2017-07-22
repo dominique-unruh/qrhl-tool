@@ -1,6 +1,6 @@
 import qrhl._
 import qrhl.logic._
-import qrhl.parser.{Parser, ParserContext}
+import qrhl.toplevel.{Parser, ParserContext}
 
 import scala.language.implicitConversions
 
@@ -23,10 +23,10 @@ object Test0 {
     println(state)
   }
 
-  def loadIsabelle(path:String) : Unit = {
-    println(s"Loading Isabelle at $path.")
-    state = state.loadIsabelle(path)
-  }
+//  def loadIsabelle(path:String) : Unit = {
+//    println(s"Loading Isabelle at $path.")
+//    state = state.loadIsabelle(path)
+//  }
 
   def declareVariable(name:String, typ:Typ, quantum:Boolean=false) : Unit = {
     println(s"Declaring ${if (quantum) "quantum" else "classical"} variable $name : $typ.")
@@ -43,10 +43,11 @@ object Test0 {
     state = state.declareProgram(name,program)
   }
 
+/*
   def testSimple(): Unit = {
     import tactic._
     try {
-      loadIsabelle("/opt/Isabelle2016-1")
+//      loadIsabelle("/opt/Isabelle2016-1")
 
       declareVariable("a", "int")
       declareVariable("b", "int")
@@ -81,6 +82,17 @@ object Test0 {
       System.exit(0)
     }
   }
+*/
+
+  def run(cmd:String) : Unit = {
+    Parser.parseAll(Parser.command,cmd) match {
+      case Parser.Success(cmd2,_) =>
+        state = cmd2.act (state)
+      case res @ Parser.NoSuccess(msg) =>
+        println(msg)
+        println(res)
+    }
+  }
 
   def main(args: Array[String]): Unit = {
     import tactic._
@@ -89,17 +101,25 @@ object Test0 {
 //      val res = Parser.parse(Parser.scanExpression,test)
 //      println(res)
 
-      loadIsabelle("/opt/Isabelle2016-1")
+      run("isabelle /opt/Isabelle2016-1")
+
+//      loadIsabelle("/opt/Isabelle2016-1")
 //      println("A,B <q EPR;" : Block)
 //      return
 
-      declareVariable("a", "bit")
-      declareVariable("c", "bit")
-      declareVariable("A", "bit", quantum=true)
+      run("classical var a : bit")
+      run("classical var c : bit")
+
+//      declareVariable("a", "bit")
+//      declareVariable("c", "bit")
+      run("quantum var A : bit")
+//      declareVariable("A", "bit", quantum=true)
       declareVariable("B", "bit", quantum=true)
       declareVariable("C", "bit", quantum=true)
 
-      declareProgram("teleport", "" +
+      // teleports from C to B
+//      declareProgram("teleport", "" +
+      run("program teleport :=" +
         "A,B <q EPR;" +
         "on C,A apply CNOT;" +
         "on C apply H;" +
@@ -109,40 +129,44 @@ object Test0 {
         "if (c=1) then on B apply Z; else skip;" +
         "")
 
-      println("Declared teleport.")
+//      println("Declared teleport.")
 
-      openGoal(QRHLSubgoal(
-        "call teleport;",
-        "skip;",
-        "Qeq[A1=A2]",
-        "Qeq[B1=A2]"))
+      run("qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}")
 
-      applyTactic(InlineTac("teleport"))
+//      openGoal(QRHLSubgoal(
+//        "call teleport;",
+//        "skip;",
+//        "Qeq[C1=A2]",
+//        "Qeq[B1=A2]"))
 
-      applyTactic(WpTac(left=true))
-      applyTactic(SimpTac)
+      run("admit")
 
-      applyTactic(WpTac(left=true))
-      applyTactic(SimpTac)
-
-      applyTactic(WpTac(left=true))
-      applyTactic(SimpTac)
-
-      applyTactic(WpTac(left=true))
-      applyTactic(SimpTac)
-
-      applyTactic(WpTac(left=true))
-      applyTactic(SimpTac)
-
-      applyTactic(WpTac(left=true))
-      applyTactic(SimpTac)
-
-      applyTactic(WpTac(left=true))
-      applyTactic(SimpTac)
-
-      applyTactic(SkipTac)
-      applyTactic(SimpTac)
-//      applyTactic(TrueTac)
+//      applyTactic(InlineTac("teleport"))
+//
+//      applyTactic(WpTac(left=true))
+//      applyTactic(SimpTac)
+//
+//      applyTactic(WpTac(left=true))
+//      applyTactic(SimpTac)
+//
+//      applyTactic(WpTac(left=true))
+//      applyTactic(SimpTac)
+//
+//      applyTactic(WpTac(left=true))
+//      applyTactic(SimpTac)
+//
+//      applyTactic(WpTac(left=true))
+//      applyTactic(SimpTac)
+//
+//      applyTactic(WpTac(left=true))
+//      applyTactic(SimpTac)
+//
+//      applyTactic(WpTac(left=true))
+//      applyTactic(SimpTac)
+//
+//      applyTactic(SkipTac)
+//      applyTactic(SimpTac)
+////      applyTactic(TrueTac)
 
     } catch {
       case e : Throwable => e.printStackTrace()

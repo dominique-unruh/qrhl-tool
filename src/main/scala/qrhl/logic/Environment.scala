@@ -13,12 +13,15 @@ final class Environment private
 //  def getCVariable(name: String): CVariable = cVariables(name)
 
   def declareVariable(name: String, typ: Typ, quantum:Boolean=false): Environment = {
-    val newIdxNames = List(Variable.index1(name),Variable.index2(name))
-    for (n <- newIdxNames) assert(!indexedNames.contains(n))
-    val idxNames = indexedNames ++ newIdxNames
-
     assert(!nonindexedNames.contains(name))
     val nonidxNames = nonindexedNames + name
+
+    val newIdxNames = List(Variable.index1(name),Variable.index2(name))
+    for (n <- newIdxNames)
+      if (indexedNames.contains(n))
+        throw UserException(s"Indexed form $n of variable $name already defined")
+//    assert(!indexedNames.contains(n))
+    val idxNames = indexedNames ++ newIdxNames
 
     assert(!cVariables.contains(name))
     assert(!qVariables.contains(name))

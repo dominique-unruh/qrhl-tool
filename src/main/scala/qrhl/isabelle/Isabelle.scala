@@ -30,7 +30,7 @@ class Isabelle(path:String) {
   private val resources = Resources.dumpIsabelleResources().right.get
 
   private val environment : info.hupel.isabelle.api.Environment = {
-    println("Downloading Isabelle if needed (may take a while)")
+    if (path=="auto") println("Downloading Isabelle if needed (may take a while)")
     Await.result(setup.makeEnvironment(resources), Duration.Inf)
   }
 
