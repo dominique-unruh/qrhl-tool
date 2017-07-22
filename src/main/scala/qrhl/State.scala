@@ -79,7 +79,7 @@ class State private (val environment: Environment,
   override def toString: String = goal match {
     case Nil => "No current goal."
     case _ =>
-      s"${goal.size} subgoals:\n" + goal.map(g => s"> $g\n").mkString
+      s"${goal.size} subgoals:\n" + goal.mkString("\n\n")
   }
 
   lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT, assertionT = assertionT)

@@ -1,6 +1,5 @@
 isabelle /opt/Isabelle2016-1.
 
-qrhl {top} skip; ~ skip; {top}.
 
 
 classical var a : bit.
@@ -9,6 +8,8 @@ classical var c : bit.
 quantum var A : bit.
 quantum var B : bit.
 quantum var C : bit.
+
+
 
 program teleport :=
   A,B <q EPR;

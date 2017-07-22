@@ -15,6 +15,7 @@ object Toplevel {
   private val terminal = TerminalBuilder.terminal()
   private val lineReader = LineReaderBuilder.builder().terminal(terminal).build()
 
+  /** Returns null on EOF */
   private def readCommand(): String = {
     val str = new StringBuilder()
     var first = true
@@ -22,18 +23,23 @@ object Toplevel {
       //      val line = StdIn.readLine("qrhl> ")
       val line =
         try {
-          lineReader.readLine(if (first) "qrhl> " else "...> ")
+//          lineReader.readLine(if (first) "\nqrhl> " else "\n...> ")
+          StdIn.readLine(if (first) "\nqrhl> " else "\n...> ")
         } catch {
           case _: org.jline.reader.EndOfFileException =>
-            sys.exit(0)
+            null;
           case _: org.jline.reader.UserInterruptException =>
             println("Aborted.")
             sys.exit(1)
         }
 
-      str.append(line).append('\n')
+      if (line==null) {
+        val str2 = str.toString()
+        if (str2.trim == "") return null
+        return str2
+      }
 
-//      println(s"line [$line] ${commandEnd.regex}")
+      str.append(line).append('\n')
 
       if (commandEnd.findFirstIn(line).isDefined)
         return commandEnd.replaceAllIn(str.toString, "")
@@ -58,7 +64,7 @@ object Toplevel {
     while (true) {
       try {
         val cmdStr = readCommand()
-        println("KKK")
+        if (cmdStr==null) { println("EOF"); sys.exit() }
 //        println(s"cmd: [$cmdStr]")
         val cmd = parseCommand(states.top, cmdStr)
         cmd match {
@@ -73,10 +79,9 @@ object Toplevel {
       } catch {
         case UserException(msg) =>
           println("[ERROR] "+msg)
-        case e : Exception =>
-          println("[ERROR] "+e)
         case e : AssertionError =>
-          println("[ERROR] "+e)
+          println("[ERROR]")
+          e.printStackTrace()
       }
     }
   }

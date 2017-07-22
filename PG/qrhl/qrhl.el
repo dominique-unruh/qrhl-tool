@@ -4,7 +4,8 @@
   (proof-generic-count-undos span))
   
 (proof-easy-config 'qrhl "qRHL"
-		   proof-prog-name "java -jar /home/unruh/.IdeaIC2017.1/config/plugins/Scala/launcher/sbt-launch.jar run"
+;		   proof-prog-name "java -jar /home/unruh/.IdeaIC2017.1/config/plugins/Scala/launcher/sbt-launch.jar run"
+		   proof-prog-name "java -jar qrhl.jar"
 		   proof-terminal-string "."
 		   proof-shell-annotated-prompt-regexp "^\\(\\.\\.\\.\\|qrhl\\)> "
 		   proof-script-comment-start-regexp "^\\s-*#"

@@ -23,3 +23,11 @@ libraryDependencies ++= Seq(
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25" % "test"
 libraryDependencies += "org.jline" % "jline" % "3.3.0"
+
+
+
+//import sbtassembly.AssemblyPlugin.defaultShellScript
+//assemblyOption in assembly := (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript))
+mainClass in assembly := Some("qrhl.toplevel.Toplevel")
+//assemblyJarName in assembly := "qrhl.jar"
+assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"

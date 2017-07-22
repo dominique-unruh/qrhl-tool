@@ -21,10 +21,9 @@ object Parser extends RegexParsers {
   //  val natural : Parser[BigInt] = """[0-9]+""".r ^^ { BigInt(_) }
   val natural: Parser[Int] = """[0-9]+""".r ^^ { _.toInt }
 
-  val noIsabelleError: String = """Need isabelle command first. Try "isabelle <path>." or "isabelle auto." or "isabelle none.""""
+  val noIsabelleError: String = """Need isabelle command first. Try "isabelle <path>." or "isabelle auto."""""
 
   private val statementSeparator = literal(";")
-  // TODO expression should stop at ) as well
 
   def repWithState[S](p : S => Parser[S], start : S) : Parser[S] =
     p(start).?.flatMap { case Some(s) => repWithState(p,s); case None => success(start) }
