@@ -309,7 +309,7 @@ typedecl 'a qvariables (* represents a tuple of variables, of joint type 'a *)
 
 axiomatization
     qvariable_names :: "'a qvariables \<Rightarrow> string list"
-and qvariable_cons :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> ('a \<times> 'b) qvariables"
+and qvariable_cons :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> ('a \<times> 'b) qvariables"
 and qvariable_singleton :: "'a qvariable \<Rightarrow> 'a qvariables"
 
 nonterminal qvariable_list_args
@@ -320,16 +320,19 @@ syntax
   "_qvariable_list_args" :: "'a \<Rightarrow> qvariable_list_args \<Rightarrow> qvariable_list_args"     ("_,/ _")
 
 translations
-  "_qvariables (_qvariable_list_args x y)" \<rightleftharpoons> "CONST qvariable_cons (_qvariables (_qvariable_list_arg x)) (_qvariables y)"
+  "_qvariables (_qvariable_list_args x y)" \<rightleftharpoons> "CONST qvariable_cons x (_qvariables y)"
   "_qvariables (_qvariable_list_arg x)" \<rightleftharpoons> "CONST qvariable_singleton x"
   
 
 axiomatization where
-  qvariable_names_cons: "qvariables_names (qvariable_cons X Y) = qvariable_names X @ qvariable_names Y"
-  and qvariable_singleton_name: "qvariable_names (qvariable_singleton x) = [qvariable_name x]"
+  qvariable_names_cons[simp]: "qvariables_names (qvariable_cons x Y) = variable_name x # qvariable_names Y"
+  and qvariable_singleton_name[simp]: "qvariable_names (qvariable_singleton x) = [variable_name x]"
   for X::"'a qvariables" and Y::"'b qvariables" and x::"'c qvariable"
 
 definition "qvariables_distinct X == distinct (qvariable_names X)"
+
+
+
   
 section \<open>Assertions\<close>
     
@@ -362,6 +365,17 @@ lemma classical_sort[simp]:
   shows "A \<sqinter> Cla[b] = Cla[b] \<sqinter> A"
   by (simp add: classical_subspace_def)
 
+axiomatization colocal_ass_qvars :: "assertion \<Rightarrow> 'a qvariables \<Rightarrow> bool"
+  and colocal_qvars_qvars :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> bool"
+  and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool"
+
+consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
+adhoc_overloading colocal colocal_ass_qvars colocal_qvars_qvars colocal_qvar_qvars
+  
+axiomatization where 
+  colocal_qvariable_names[simp]: "set (qvariable_names Q) \<inter> set (qvariable_names R) = {} \<Longrightarrow> colocal Q R" 
+  for Q :: "'a qvariables" and R :: "'b qvariables"
+
 
 subsection \<open>Quantum equality\<close>
 
@@ -371,10 +385,11 @@ syntax "_quantum_equality" :: "qvariable_list_args \<Rightarrow> qvariable_list_
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
 
+axiomatization where colocal_quantum_eq[simp]: "colocal Q1 R \<Longrightarrow> colocal Q2 R \<Longrightarrow> colocal (Q1 \<equiv>\<qq> Q2) R"
+ for Q1 Q2 :: "'c qvariables" and R :: "'a qvariables"
+
 subsection \<open>Subspace division\<close>
 
-axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_" [89,89,89] 90)
-  
 (* term "space_div (\<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>) EPR \<lbrakk>A1, B1\<rbrakk>" *)
 
 subsection \<open>Lifting\<close>
@@ -396,6 +411,9 @@ and bot_lift[simp]: "liftSpace bot Q = bot"
 and unitary_lift[simp]: "unitary (liftIso U Q) = unitary U"
 for U :: "'a isometry2"
   
+axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_" [89,89,89] 90)
+  where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
+
 
   
 section \<open>Common quantum objects\<close>
@@ -424,8 +442,5 @@ axiomatization where imProj_proj [simp]: "imProj (proj \<psi>) = span {\<psi>}" 
 axiomatization where imProj_liftProj [simp]: "imProj (liftProj P Q) = liftSpace (imProj P) Q" for P :: "'a projector" and Q
 axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
   for Q R :: "'a qvariables" and \<psi> :: "'a state"
-lemma "\<CC>\<ll>\<aa>[mtotal computational_basis] \<sqinter> (INF z. \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> imProj (liftProj (mproj computational_basis z) \<lbrakk>B1\<rbrakk>) + ortho (imProj (liftProj (mproj computational_basis z) \<lbrakk>B1\<rbrakk>))) = undefined"
-  apply simp
-    oops
     
 end

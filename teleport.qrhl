@@ -9,9 +9,10 @@ quantum var A : bit.
 quantum var B : bit.
 quantum var C : bit.
 
+qrhl {top} skip; ~ skip; {A1::int}.
 
 
-program teleport :=
+program teleport := {
   A,B <q EPR;
   on C,A apply CNOT;
   on C apply H;
@@ -19,16 +20,23 @@ program teleport :=
   c <- measure B in computational_basis;
   if (a=1) then on B apply X; else skip;
   if (c=1) then on B apply Z; else skip;
-.
+}.
+
+
+ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {1=⟦A1⟧}.
 
 qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
-inline teleport.
+ inline teleport.
 
-seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
-wp left.
-skip.
-admit.
+ seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
+  wp left.
+  skip.
+  simp. (* TODO varnames *)
+  true.
+
+
+
 
 
 

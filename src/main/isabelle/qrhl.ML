@@ -20,11 +20,13 @@ fun qvariables [] = (@{term "()"},@{typ unit})
         end
   | qvariables (v::vs) = 
         let val (vs',vsT) = qvariables vs
-            val (v',vT) = qvariables [v]
-            val prodT = HOLogic.mk_prodT (vT,vsT)
+            (* val (v',vT) = qvariables [v] *)
+            val vT = fastype_of v
+            val vT' = case vT of Type(@{type_name qvariable},[vT']) => vT' | _ => raise TYPE("expecting a qvariable",[vT],[v])
+            val prodT = HOLogic.mk_prodT (vT',vsT)
         in
-          (Const(@{const_name qvariable_cons}, mk_qvariablesT vT --> mk_qvariablesT vsT --> 
-              mk_qvariablesT prodT) $ v' $ vs',
+          (Const(@{const_name qvariable_cons}, vT --> mk_qvariablesT vsT --> 
+              mk_qvariablesT prodT) $ v $ vs',
             prodT)
         end
   
@@ -98,11 +100,20 @@ fun sampleWp v T e B =
     in
       @{term "inf::assertion=>assertion=>assertion"} $ total $ B2
     end
-      
+   
+fun addVariableNameAssumption name T ctx =
+  let val qT = mk_qvariableT T
+      val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name,qT)
+      val rhs = HOLogic.mk_string name
+      val assm = Logic.mk_equals (lhs,rhs)
+      val (_,ctx) = Proof_Context.add_assms Assumption.assume_export
+                    [((Binding.name name,[Simplifier.simp_add]), [(assm,[])])] ctx
+  in
+    ctx
+  end
 
 val _ = ifWp @{term "x=true"} @{term "thenWP::assertion"} @{term "elseWP::assertion"}
 |> Thm.cterm_of @{context}
 |> @{print}
-
 
 end

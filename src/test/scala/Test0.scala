@@ -104,6 +104,8 @@ object Test0 {
 //    }
 //  }
 
+
+
   def main(args: Array[String]): Unit = {
     import tactic._
     val toplevel = new Toplevel()
@@ -122,7 +124,7 @@ object Test0 {
           quantum var B : bit.
           quantum var C : bit.
 
-          program teleport :=
+          program teleport := {
             A,B <q EPR;
             on C,A apply CNOT;
             on C apply H;
@@ -130,9 +132,18 @@ object Test0 {
             c <- measure B in computational_basis;
             if (a=1) then on B apply X; else skip;
             if (c=1) then on B apply Z; else skip;
-          .
+          }.
 
           qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
+
+            inline teleport.
+
+            seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
+             wp left.
+             skip.
+             simp. (* TODO varnames *)
+             true.
+
           """)
 
 

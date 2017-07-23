@@ -1,6 +1,8 @@
 package qrhl
 
-import info.hupel.isabelle.pure.Type
+import info.hupel.isabelle.hol.HOLogic
+import info.hupel.isabelle.ml
+import info.hupel.isabelle.pure.{Type, Typ => ITyp, Context => IContext}
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.toplevel.ParserContext
@@ -90,6 +92,11 @@ class State private (val environment: Environment,
     copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"assertion"))
   }
 
+  private def addVariableNameAssumption(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
+    val mlExpr = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext]("QRHL.addVariableNameAssumption")
+    isabelle.map(mlExpr(name)(implicitly)(typ))
+  }
+
   def declareVariable(name: String, typ: Typ, quantum: Boolean = false): State = {
     val newEnv = environment.declareVariable(name, typ, quantum = quantum)
     if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
@@ -99,7 +106,9 @@ class State private (val environment: Environment,
     val newIsa = isa.declareVariable(name, typ2)
       .declareVariable(Variable.index1(name), typ2)
       .declareVariable(Variable.index2(name), typ2)
-    copy(environment = newEnv, isabelle = Some(newIsa))
+    val newIsa2 = addVariableNameAssumption(newIsa, Variable.index1(name), typ1)
+    val newIsa3 = addVariableNameAssumption(newIsa2, Variable.index2(name), typ1)
+    copy(environment = newEnv, isabelle = Some(newIsa3))
   }
 
   def declareAmbientVariable(name: String, typ: Typ): State = {

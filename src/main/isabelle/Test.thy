@@ -2,6 +2,26 @@ theory Test
   imports QRHL                 
 begin
 
+  context fixes C1 A2 A1 B1 :: "bit qvariable" begin
+  
+term \<open>
+Qeq[C1=A2] \<sqinter> (lift (span {EPR}) \<lbrakk>A1,B1\<rbrakk>)
+\<close>
+  
+term \<open> \<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<le> (\<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> liftSpace (span (insert EPR bot)) \<lbrakk>A1, B1\<rbrakk>) \<div> EPR@\<lbrakk>A1, B1\<rbrakk>
+\<close>
+  
+lemma
+  assumes "variable_name C1 = ''C1''"
+  assumes "variable_name A2 = ''A2''"
+  assumes "variable_name A1 = ''A1''"
+  assumes "variable_name B1 = ''B1''"
+  (* assumes "colocal (\<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>) \<lbrakk>A1, B1\<rbrakk>" *)
+shows \<open>
+\<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<le> (\<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> span {EPR}\<^sub>@\<lbrakk>A1, B1\<rbrakk>) \<div> EPR@\<lbrakk>A1, B1\<rbrakk>
+\<close>
+  apply (simp add: assms)
+    
 lemma plus_Cla[simp]: "Cla[a] + Cla[b] = Cla[a \<or> b]"
   unfolding classical_subspace_def unfolding sup_subspace_def[symmetric] by auto
 
@@ -16,13 +36,13 @@ lemma INF_div[simp]: "(INF z. A z) \<div> \<psi>@Q = (INF z. A z \<div> \<psi>@Q
 (* lemma [simp]: "(INF z. B z) + C = (INF z. B z + C)" for C :: "'a subspace" WRONG *)
 lemma [simp]: "unitary U \<Longrightarrow> U \<cdot> Cla[b] = Cla[b]" apply (cases b) by auto
 
-axiomatization colocal :: "assertion \<Rightarrow> 'a qvariables \<Rightarrow> bool"
     
-lemma div[simp]:
-  assumes "colocal A Q"
-  shows "(A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
-  sorry
     
+    
+    
+    
+    
+  
 lemma
   assumes "colocal (\<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>) \<lbrakk>A1, B1\<rbrakk>"
 shows \<open>

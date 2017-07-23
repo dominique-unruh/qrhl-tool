@@ -184,6 +184,11 @@ object Isabelle {
       new Context(isabelle,thyName,newICtxt)
     }
 
+    def map(expr:ml.Expr[IContext => IContext]): Context = {
+      val newICtxt = expr(context)
+      new Context(isabelle,thyName,newICtxt)
+    }
+
     def runExpr[A](expr:ml.Expr[A])(implicit codec:Codec[A]) : A = isabelle.runExpr(expr,thyName)
 
     def readTerm(str:String, typ:ITyp): Term = {
