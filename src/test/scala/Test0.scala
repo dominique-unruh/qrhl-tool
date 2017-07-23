@@ -141,7 +141,7 @@ object Test0 {
             seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
              wp left.
              skip.
-             simp. (* TODO varnames *)
+             simp.
              true.
 
           """)

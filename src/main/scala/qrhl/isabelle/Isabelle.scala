@@ -6,6 +6,7 @@ import java.nio.file.Paths
 
 import info.hupel.isabelle.{Codec, Platform, Program, System, ml}
 import info.hupel.isabelle.api.{Configuration, Version}
+import info.hupel.isabelle.ml.Expr
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Var, Context => IContext, Typ => ITyp, Type => IType}
 import info.hupel.isabelle.setup.{Resources, Setup}
 import monix.execution.Scheduler.Implicits.global
@@ -74,8 +75,11 @@ class Isabelle(path:String) {
   private def runProg[A](prog:Program[A],thyName:String) : A = Await.result(system.run(prog, thyName), Duration.Inf)
   private def runExpr[A](expr:ml.Expr[A],thyName:String)(implicit codec:Codec[A]) : A = runProg(expr.toProg,thyName)
 
+  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
+  private def getRef[A : ml.Opaque](expr:ml.Expr[A], thyName:String) : ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
 
-  def getContext(thyName : String) = new Isabelle.Context(this, thyName, Isabelle.configureContext(IContext.initGlobal(Theory.get(thyName))))
+  def getContext(thyName : String) =
+    new Isabelle.Context(this, thyName, getRef(Isabelle.configureContext(IContext.initGlobal(Theory.get(thyName))),thyName))
 
 }
 
@@ -177,28 +181,35 @@ object Isabelle {
 
 
 
-  class Context private[Isabelle](isabelle:Isabelle, thyName: String, context:ml.Expr[IContext]) {
+  class Context private[Isabelle](isabelle:Isabelle, thyName: String, context:ml.Ref[IContext]) {
+
+    override protected def finalize(): Unit = {
+      println(s"Deleting context ${context.id}")
+      isabelle.runExpr(context.delete, thyName)
+      super.finalize()
+    }
 
     def declareVariable(name: String, isabelleTyp: ITyp): Context = {
-      val newICtxt = isabelle.declareVariableExpr(name, isabelleTyp)(context)
-      new Context(isabelle,thyName,newICtxt)
+//      val newICtxt = isabelle.declareVariableExpr(name, isabelleTyp)(context)
+//      new Context(isabelle,thyName,newICtxt)
+      map(isabelle.declareVariableExpr(name, isabelleTyp))
     }
 
     def map(expr:ml.Expr[IContext => IContext]): Context = {
-      val newICtxt = expr(context)
+      val newICtxt = isabelle.getRef(expr(context.read), thyName)
       new Context(isabelle,thyName,newICtxt)
     }
 
     def runExpr[A](expr:ml.Expr[A])(implicit codec:Codec[A]) : A = isabelle.runExpr(expr,thyName)
 
     def readTerm(str:String, typ:ITyp): Term = {
-      val parsedTerm = runExpr(isabelle.parseTermExpr(context)(str))
+      val parsedTerm = runExpr(isabelle.parseTermExpr(context.read)(str))
       val constrainedTerm = parsedTerm.constrain(typ)
-      runExpr(isabelle.checkTermExpr(context)(constrainedTerm))
+      runExpr(isabelle.checkTermExpr(context.read)(constrainedTerm))
     }
-    def prettyExpression(term:Term): String = runExpr(term.print(context))
-    def readTyp(str:String) : ITyp = runExpr(isabelle.readTypeExpr(context)(str))
-    def prettyTyp(typ:ITyp): String = runExpr(isabelle.printTypExpr(typ)(context))
-    def simplify(term: Term) : Term = runExpr(Isabelle.simplifyTerm(term)(context))
+    def prettyExpression(term:Term): String = runExpr(term.print(context.read))
+    def readTyp(str:String) : ITyp = runExpr(isabelle.readTypeExpr(context.read)(str))
+    def prettyTyp(typ:ITyp): String = runExpr(isabelle.printTypExpr(typ)(context.read))
+    def simplify(term: Term) : Term = runExpr(Isabelle.simplifyTerm(term)(context.read))
   }
 }
