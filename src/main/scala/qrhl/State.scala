@@ -88,7 +88,12 @@ class State private (val environment: Environment,
 
   def loadIsabelle(path:String) : State = {
     assert(isabelle.isEmpty)
-    val isa = new Isabelle(path).getContext("QRHL_Protocol")
+    val isa = new Isabelle(path)
+    loadIsabelle(isa)
+  }
+
+  def loadIsabelle(isabelle: Isabelle) : State = {
+    val isa = isabelle.getContext("QRHL_Protocol")
     copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"assertion"))
   }
 

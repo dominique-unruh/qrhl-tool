@@ -5,6 +5,7 @@ import java.io.{BufferedReader, StringReader}
 import info.hupel.isabelle.Operation.ProverException
 import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder
+import org.jline.terminal.impl.DumbTerminal
 import qrhl.isabelle.Isabelle
 import qrhl.{State, UserException}
 
@@ -12,7 +13,9 @@ import scala.io.StdIn
 import scala.util.matching.Regex
 
 
-class Toplevel {
+class Toplevel(initialState : State = State.empty) {
+  def isabelle = state.isabelle.get.isabelle
+
   private val commandEnd: Regex = """\.\s*$""".r
 
   /** Reads one command from the input. The last line of the command must end with ".".
@@ -61,7 +64,7 @@ class Toplevel {
     }
   }
 
-  private var states : List[State] = List(State.empty)
+  private var states : List[State] = List(initialState)
 
   /** Executes a single command. */
   def execCmd(cmd:Command) : Unit = {
@@ -125,9 +128,9 @@ class Toplevel {
         case e: ProverException =>
           val msg = Isabelle.symbolsToUnicode(e.msg)
           println("[ERROR] (in Isabelle) "+msg)
-        case e : AssertionError =>
-          println("[ERROR]")
-          e.printStackTrace()
+        case e : Throwable =>
+          println("[ERROR] [INTERNAL ERROR!!!]")
+          e.printStackTrace(System.out)
       }
     }
   }
@@ -137,10 +140,23 @@ object Toplevel {
   /** Runs the interactive toplevel from the terminal (with interactive readline). */
   def runFromTerminal() : Toplevel = {
     val terminal = TerminalBuilder.terminal()
-    val lineReader = LineReaderBuilder.builder().terminal(terminal).build()
+    val readLine : String => String = {
+      if (terminal.isInstanceOf[DumbTerminal])
+        { p:String => StdIn.readLine(p) } // DumbTerminal echoes lines, so we don't use JLine in this case
+      else {
+        val lineReader = LineReaderBuilder.builder().terminal(terminal).build()
+        lineReader.readLine
+      }
+    }
     val toplevel = new Toplevel()
-    toplevel.runWithErrorHandler(lineReader.readLine)
+    toplevel.runWithErrorHandler(readLine)
     toplevel
+  }
+
+
+  def makeToplevel(isabelle:Isabelle) : Toplevel = {
+    val state = State.empty.loadIsabelle(isabelle)
+    new Toplevel(state)
   }
 
   def main(args: Array[String]): Unit = {

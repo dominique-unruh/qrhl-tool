@@ -3,9 +3,7 @@ package qrhl.tactic
 import qrhl.logic.{Block, Expression, Statement}
 import qrhl._
 
-/**
-  * Created by unruh on 7/9/17.
-  */
+
 abstract class WpStyleTac(val left:Boolean) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case QRHLSubgoal(leftProg,rightProg,pre,post) =>
@@ -20,6 +18,7 @@ abstract class WpStyleTac(val left:Boolean) extends Tactic {
         val wp = getWP(state, last, post)
         List(QRHLSubgoal(leftProg, Block(right1: _*), pre, wp))
       }
+    case _ => throw UserException(s"$this supported only for qRHL subgoals")
   }
 
   def getWP(state: State, statement:Statement, post:Expression) : Expression

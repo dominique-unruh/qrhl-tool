@@ -56,7 +56,8 @@ object Parser extends RegexParsers {
     for (v <- identifier;
          _ <- assignSymbol;
          // TODO: add a cut
-         typ = context.environment.cVariables(v).typ;
+         typ = context.environment.cVariables.
+           getOrElse(v, throw UserException(s"Undefined variable $v")).typ;
          e <- expression(typ);
          _ <- statementSeparator)
      yield Assign(context.environment.cVariables(v), e)
@@ -66,7 +67,8 @@ object Parser extends RegexParsers {
     for (v <- identifier;
          _ <- sampleSymbol;
          // TODO: add a cut
-         typ = context.environment.cVariables(v).typ;
+         typ = context.environment.cVariables.
+           getOrElse(v, throw UserException(s"Undefined variable $v")).typ;
          e <- expression(Typ.typeCon("QRHL.distr",typ));
          _ <- statementSeparator)
       yield Sample(context.environment.cVariables(v), e)

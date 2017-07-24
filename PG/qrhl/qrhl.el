@@ -4,9 +4,8 @@
   (proof-generic-count-undos span))
   
 (proof-easy-config 'qrhl "qRHL"
-;		   proof-prog-name "java -jar /home/unruh/.IdeaIC2017.1/config/plugins/Scala/launcher/sbt-launch.jar run"
 		   proof-prog-name "./sbt-qrhl.sh"
-		   proof-terminal-string "."
+		   proof-script-command-end-regexp "\\.\\s-*$"
 		   proof-shell-annotated-prompt-regexp "^\\(\\.\\.\\.\\|qrhl\\)> "
 		   proof-script-comment-start-regexp "^\\s-*#"
 		   proof-script-comment-end "\n"
@@ -16,6 +15,8 @@
 		   proof-shell-start-goals-regexp "^[0-9]+ subgoals:\\|No current goal\\."
 		   proof-shell-proof-completed-regexp "^No current goal.$"
 		   )
+
+(add-hook 'qrhl-mode-hook (lambda () (set-input-method "TeX")))
 
 (defun qr () ; Just for testing
   "Restarts the prover, restarts it, and then processes the buffer to current position"

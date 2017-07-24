@@ -1,6 +1,6 @@
 package qrhl.isabelle
 
-import java.io.{BufferedReader, File, InputStreamReader}
+import java.io.{BufferedReader, File, IOException, InputStreamReader}
 import java.lang.RuntimeException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
@@ -23,40 +23,45 @@ class Isabelle(path:String) {
   val version = Version.Stable("2016-1")
 
   private val setup = {
-    if (path=="auto")
+    if (path == "auto")
       Setup.default(version).right.get
     else
-//      Setup.detect(Platform.genericPlatform(new File(path).toPath), version).right.get
+    //      Setup.detect(Platform.genericPlatform(new File(path).toPath), version).right.get
       Setup(Paths.get(path), Platform.guess.get, version)
   }
 
-  private val resources = Resources.dumpIsabelleResources().right.get
+  private val resources = Resources.dumpIsabelleResources() match {
+    case Left(error) => throw new IOException(error.explain)
+    case Right(r) => r
+  }
 
-  private val environment : info.hupel.isabelle.api.Environment = {
-    if (path=="auto") println("Downloading Isabelle if needed (may take a while)")
+  private val environment: info.hupel.isabelle.api.Environment = {
+    if (path == "auto") println("Downloading Isabelle if needed (may take a while)")
     try {
       Await.result(setup.makeEnvironment(resources), Duration.Inf)
     } catch {
-      case e:InvocationTargetException if e.getTargetException.getMessage.startsWith("Bad Isabelle root directory ") =>
+      case e: InvocationTargetException if e.getTargetException.getMessage.startsWith("Bad Isabelle root directory ") =>
         throw UserException(e.getTargetException.getMessage)
     }
   }
 
-  private val config : Configuration = Configuration.simple("QRHL")
+  private val config: Configuration = Configuration.simple("QRHL")
 
   private def build() {
     println("Building Isabelle (may take a while)")
-    if (!System.build(environment,config))
+    if (!System.build(environment, config))
       throw qrhl.UserException("Building Isabelle failed")
   }
 
-  private val system = { build(); Await.result(System.create(environment,config), Duration.Inf) }
+  private val system = {
+    build(); Await.result(System.create(environment, config), Duration.Inf)
+  }
 
 
   private val readTypeExpr: ml.Expr[IContext => String => ITyp] =
     ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.read_typ ctxt))")
 
-  private def printTypExpr(t:ITyp): ml.Expr[IContext => String] =
+  private def printTypExpr(t: ITyp): ml.Expr[IContext => String] =
     ml.Expr.uncheckedLiteral[ITyp => IContext => String]("(fn T => fn ctxt => YXML.content_of (Syntax.string_of_typ ctxt T))")(t)
 
   private val parseTermExpr: ml.Expr[IContext => String => Term] =
@@ -65,7 +70,7 @@ class Isabelle(path:String) {
   private val checkTermExpr: ml.Expr[IContext => Term => Term] =
     ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.check_term ctxt))")
 
-  private def declareVariableExpr(name:String, typ: ITyp) : ml.Expr[IContext => IContext] = {
+  private def declareVariableExpr(name: String, typ: ITyp): ml.Expr[IContext => IContext] = {
     val lit = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext](
       """
       (fn name => fn T => fn ctx =>
@@ -79,14 +84,30 @@ class Isabelle(path:String) {
   }
 
 
-  private def runProg[A](prog:Program[A],thyName:String) : A = Await.result(system.run(prog, thyName), Duration.Inf)
-  private def runExpr[A](expr:ml.Expr[A],thyName:String)(implicit codec:Codec[A]) : A = runProg(expr.toProg,thyName)
+  private def runProg[A](prog: Program[A], thyName: String): A = Await.result(system.run(prog, thyName), Duration.Inf)
+
+  private def runExpr[A](expr: ml.Expr[A], thyName: String)(implicit codec: Codec[A]): A = runProg(expr.toProg, thyName)
 
   private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
-  private def getRef[A : ml.Opaque](expr:ml.Expr[A], thyName:String) : ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
 
-  def getContext(thyName : String) =
-    new Isabelle.Context(this, thyName, getRef(Isabelle.configureContext(IContext.initGlobal(Theory.get(thyName))),thyName))
+  private def getRef[A: ml.Opaque](expr: ml.Expr[A], thyName: String): ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
+
+  def getContext(thyName: String) =
+    new Isabelle.Context(this, thyName, getRef(Isabelle.configureContext(IContext.initGlobal(Theory.get(thyName))), thyName))
+
+  private var disposed = false
+
+  def dispose(): Unit = this.synchronized {
+    if (!disposed) {
+      Await.result(system.dispose, Duration.Inf)
+      disposed = true
+    }
+  }
+
+  override def finalize(): Unit = {
+    dispose()
+    super.finalize()
+  }
 
 }
 
@@ -188,7 +209,7 @@ object Isabelle {
 
 
 
-  class Context private[Isabelle](isabelle:Isabelle, thyName: String, context:ml.Ref[IContext]) {
+  class Context private[Isabelle](val isabelle:Isabelle, thyName: String, context:ml.Ref[IContext]) {
 
     override protected def finalize(): Unit = {
       println(s"Deleting context ${context.id}")

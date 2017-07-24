@@ -1,6 +1,6 @@
 import qrhl._
 import qrhl.logic._
-import qrhl.toplevel.{Parser, ParserContext, Toplevel}
+import qrhl.toplevel.{Parser, ParserContext, Toplevel, ToplevelTest}
 
 import scala.language.implicitConversions
 
@@ -108,78 +108,13 @@ object Test0 {
 
   def main(args: Array[String]): Unit = {
     import tactic._
-    val toplevel = new Toplevel()
+    val toplevel = Toplevel.makeToplevel(ToplevelTest.isabelle)
     def execCmd(cmd:String) = toplevel.execCmd(cmd)
     def run(script:String) = toplevel.run(script)
     try {
-//      val test = "a(b);)"
-//      val res = Parser.parse(Parser.scanExpression,test)
-//      println(res)
-
-      run("""
-          isabelle /opt/Isabelle2016-1.
-          classical var a : bit.
-          classical var c : bit.
-          quantum var A : bit.
-          quantum var B : bit.
-          quantum var C : bit.
-
-          program teleport := {
-            A,B <q EPR;
-            on C,A apply CNOT;
-            on C apply H;
-            a <- measure A in computational_basis;
-            c <- measure B in computational_basis;
-            if (a=1) then on B apply X; else skip;
-            if (c=1) then on B apply Z; else skip;
-          }.
-
-          qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
-
-            inline teleport.
-
-            seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
-             wp left.
-             skip.
-             simp.
-             true.
-
-          """)
-
-
-      execCmd("inline teleport")
-
-      execCmd("seq 1 0: top")
-
-      execCmd("wp left")
-      execCmd("simp")
-
-      execCmd("wp left")
-      execCmd("simp")
-
-      execCmd("wp left")
-      execCmd("simp")
-
-      execCmd("wp left")
-      execCmd("simp")
-
-      execCmd("wp left")
-      execCmd("simp")
-
-      execCmd("wp left")
-      execCmd("simp")
-
-      execCmd("wp left")
-      execCmd("simp")
-
-      execCmd("skip")
-      execCmd("simp")
-      execCmd("true")
-
-    } catch {
-      case e : Throwable => e.printStackTrace()
+      run("qrhl {top} skip; ~ skip; {top}.")
     } finally {
-      System.exit(0)
+      toplevel.isabelle.dispose()
     }
   }
 }
