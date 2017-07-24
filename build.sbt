@@ -7,6 +7,7 @@ scalaVersion := "2.12.2"
 enablePlugins(LibisabellePlugin)
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.3" % "test"
 
 isabelleVersions := Seq("2016-1")
 isabelleSessions in Compile := Seq("QRHL")

@@ -2,6 +2,7 @@ package qrhl.isabelle
 
 import java.io.{BufferedReader, File, InputStreamReader}
 import java.lang.RuntimeException
+import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
 import info.hupel.isabelle.{Codec, Platform, Program, System, ml}
@@ -10,6 +11,7 @@ import info.hupel.isabelle.ml.Expr
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Var, Context => IContext, Typ => ITyp, Type => IType}
 import info.hupel.isabelle.setup.{Resources, Setup}
 import monix.execution.Scheduler.Implicits.global
+import qrhl.UserException
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -32,7 +34,12 @@ class Isabelle(path:String) {
 
   private val environment : info.hupel.isabelle.api.Environment = {
     if (path=="auto") println("Downloading Isabelle if needed (may take a while)")
-    Await.result(setup.makeEnvironment(resources), Duration.Inf)
+    try {
+      Await.result(setup.makeEnvironment(resources), Duration.Inf)
+    } catch {
+      case e:InvocationTargetException if e.getTargetException.getMessage.startsWith("Bad Isabelle root directory ") =>
+        throw UserException(e.getTargetException.getMessage)
+    }
   }
 
   private val config : Configuration = Configuration.simple("QRHL")
