@@ -3,9 +3,7 @@ package qrhl.tactic
 import qrhl._
 import qrhl.logic.{Block, Expression}
 
-/**
-  * Created by unruh on 7/8/17.
-  */
+
 case class SeqTac(left:Int, right:Int, inner:Expression) extends Tactic {
   assert(left>=0)
   assert(right>=0)
@@ -23,6 +21,6 @@ case class SeqTac(left:Int, right:Int, inner:Expression) extends Tactic {
         QRHLSubgoal(left1,right1,pre,inner),
         QRHLSubgoal(left2,right2,inner,post)
       )
-    case _ => ???
+    case _ => throw UserException("Expected a qRHL subgoal")
   }
 }

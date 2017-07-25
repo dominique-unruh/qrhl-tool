@@ -267,11 +267,19 @@ where
  applyIso_0[simp]: "applyIsoSpace U 0 = 0"
 and applyIso_bot[simp]: "applyIsoSpace U bot = bot"
 and applyIso_top[simp]: "applyIsoSpace U top = imageIso U"
+
   
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
   cdot timesIso applyIso applyIsoSpace
   
+axiomatization 
+    idIso :: "'a isometry2"
+where
+    apply_idIso[simp]: "applyIso idIso \<psi> = \<psi>"
+and apply_idIso_space[simp]: "applyIsoSpace idIso S = S"
+and times_idIso[simp]: "U \<cdot> idIso = U"
+  for \<psi> :: "'a state" and S :: "'a subspace" and U :: "('a,'b) isometry"
   
 axiomatization identity :: "'a isometry2" where
     apply_id[simp]: "identity \<cdot> \<psi> = \<psi>"
@@ -310,6 +318,7 @@ typedecl 'a qvariables (* represents a tuple of variables, of joint type 'a *)
 axiomatization
     qvariable_names :: "'a qvariables \<Rightarrow> string list"
 and qvariable_cons :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> ('a \<times> 'b) qvariables"
+and qvariables_concat :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> ('a * 'b) qvariables"
 and qvariable_singleton :: "'a qvariable \<Rightarrow> 'a qvariables"
 
 nonterminal qvariable_list_args
@@ -379,7 +388,9 @@ axiomatization where
 
 subsection \<open>Quantum equality\<close>
 
-axiomatization quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> assertion" (infix "\<equiv>\<qq>" 100)
+axiomatization quantum_equality_full :: "('a,'c) isometry \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) isometry \<Rightarrow> 'b qvariables \<Rightarrow> assertion"
+abbreviation "quantum_equality" :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> assertion" (infix "\<equiv>\<qq>" 100)
+  where "quantum_equality X Y \<equiv> quantum_equality_full idIso X idIso Y"
 syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> assertion" (infix "==q" 100)
 syntax "_quantum_equality" :: "qvariable_list_args \<Rightarrow> qvariable_list_args \<Rightarrow> assertion" ("Qeq'[_=_']")
 translations

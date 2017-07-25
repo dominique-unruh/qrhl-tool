@@ -2,8 +2,34 @@ theory Test
   imports QRHL                 
 begin
 
-  context fixes C1 A2 A1 B1 :: "bit qvariable" begin
+axiomatization "tensorIso" :: "('a,'b) isometry \<Rightarrow> ('c,'d) isometry \<Rightarrow> ('a*'c,'b*'d) isometry"
+axiomatization where idIso_tensor_idIso[simp]: "tensorIso idIso idIso = idIso"
+axiomatization "assoc_op" :: "('a*'b*'c, ('a*'b)*'c) isometry"
+axiomatization "assoc_op'" :: "(('a*'b)*'c, 'a*'b*'c) isometry"
+axiomatization "comm_op" :: "('a*'b, 'b*'a) isometry"
   
+consts tensor :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infix "\<otimes>" 71)
+adhoc_overloading tensor tensorIso
+  
+axiomatization "addState" :: "'a state \<Rightarrow> ('b,'b*'a) isometry"
+axiomatization where (* TODO: some disjointness conditions *)
+  quantum_eq_add_state: "quantum_equality_full U Q V R \<sqinter> span {\<psi>}\<^sub>@T
+             = quantum_equality_full (tensorIso U idIso) (qvariables_concat Q T) (addState \<psi> \<cdot> V) R"
+    for U :: "('a,'c) isometry" and V :: "('b,'c) isometry" and \<psi> :: "'d state"
+    and Q :: "'a qvariables"    and R :: "'b qvariables"    and T :: "'d qvariables"
+
+axiomatization where qvariables_concat[simp]: "qvariables_concat \<lbrakk>q\<rbrakk> Q = qvariable_cons q Q" (* TODO: should be by definition of qvariables_cons *)
+    for q :: "'a qvariable" and Q :: "'b qvariables"
+    
+context fixes C1 A2 A1 B1 :: "bit qvariable" begin
+    
+  
+lemma "\<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> span {EPR}\<^sub>@\<lbrakk>A1, B1\<rbrakk> \<le> quantum_equality_full idIso \<lbrakk>C1,A1,B1\<rbrakk> (addState EPR) \<lbrakk>A2\<rbrakk>"
+  apply (subst quantum_eq_add_state)
+    by simp
+      
+term "quantum_equality_full idIso \<lbrakk>C1,A1,B1\<rbrakk> ((H \<otimes> idIso) \<cdot> assoc_op' \<cdot> (CNOT \<otimes> idIso) \<cdot> assoc_op \<cdot> addState EPR) \<lbrakk>A2\<rbrakk>"
+    
 term \<open>
 Qeq[C1=A2] \<sqinter> (lift (span {EPR}) \<lbrakk>A1,B1\<rbrakk>)
 \<close>

@@ -216,6 +216,12 @@ object Parser extends RegexParsers {
       inner <- expression(context.assertionT))
       yield SeqTac(left,right,inner))
 
+  def tactic_conseq(implicit context:ParserContext): Parser[ConseqTac] =
+    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(context.assertionT)) ^^ {
+      case "pre" ~ _ ~ e => ConseqTac(pre=Some(e))
+      case "post" ~ _ ~ e => ConseqTac(post=Some(e))
+    }
+
   def tactic(implicit context:ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
       tactic_wp |
@@ -223,7 +229,8 @@ object Parser extends RegexParsers {
       literal("skip") ^^ { _ => SkipTac } |
       literal("true") ^^ { _ => TrueTac } |
       tactic_inline |
-      tactic_seq
+      tactic_seq |
+      tactic_conseq
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 
