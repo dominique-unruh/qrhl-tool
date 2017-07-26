@@ -5,7 +5,7 @@ import qrhl.isabelle.Isabelle
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp, Type => IType}
 
 final class Typ private (private val isabelle:Isabelle.Context, typ:ITyp) {
-  override val toString: String = Isabelle.symbolsToUnicode(isabelle.prettyTyp(typ))
+  override val toString: String = isabelle.prettyTyp(typ)
   val isabelleTyp : ITyp = typ
 }
 /* object Typ {

@@ -97,8 +97,8 @@ class State private (val environment: Environment,
     copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"assertion"))
   }
 
-  private def addVariableNameAssumption(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
-    val mlExpr = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext]("QRHL.addVariableNameAssumption")
+  private def addQVariableNameAssumption(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
+    val mlExpr = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext]("QRHL.addQVariableNameAssumption")
     isabelle.map(mlExpr(name)(implicitly)(typ))
   }
 
@@ -108,12 +108,14 @@ class State private (val environment: Environment,
     val isa = isabelle.get
     val typ1 = typ.isabelleTyp
     val typ2 = if (quantum) Type("QRHL.qvariable",List(typ1)) else typ1
-    val newIsa = isa.declareVariable(name, typ2)
+    var newIsa = isa.declareVariable(name, typ2)
       .declareVariable(Variable.index1(name), typ2)
       .declareVariable(Variable.index2(name), typ2)
-    val newIsa2 = addVariableNameAssumption(newIsa, Variable.index1(name), typ1)
-    val newIsa3 = addVariableNameAssumption(newIsa2, Variable.index2(name), typ1)
-    copy(environment = newEnv, isabelle = Some(newIsa3))
+    if (quantum) {
+      newIsa = addQVariableNameAssumption(newIsa, Variable.index1(name), typ1)
+      newIsa = addQVariableNameAssumption(newIsa, Variable.index2(name), typ1)
+    }
+    copy(environment = newEnv, isabelle = Some(newIsa))
   }
 
   def declareAmbientVariable(name: String, typ: Typ): State = {

@@ -7,7 +7,7 @@
 		   proof-prog-name "./sbt-qrhl.sh"
 		   proof-script-command-end-regexp "\\.\\s-*$"
 		   proof-shell-annotated-prompt-regexp "^\\(\\.\\.\\.\\|qrhl\\)> "
-		   proof-script-comment-start-regexp "^\\s-*#"
+		   proof-script-comment-start-regexp "#"
 		   proof-script-comment-end "\n"
 		   proof-shell-error-regexp "\\[ERROR\\]\\|Exception"
 		   proof-undo-n-times-cmd "undo %s."

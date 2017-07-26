@@ -245,6 +245,11 @@ hide_fact tmp_Inf1 tmp_Inf2 tmp_Sup1 tmp_Sup2 tmp_Inf3
 lemma top_not_bot[simp]: "(top::'a subspace) \<noteq> bot" 
   using subspace_zero_not_top bot_subspace_def by metis
 
+lemma bot_plus[simp]: "bot + x = x" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
+lemma plus_bot[simp]: "x + bot = x" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
+lemma top_plus[simp]: "top + x = top" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
+lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
+    
 axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a state set"
     
 definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
@@ -320,6 +325,7 @@ axiomatization
 and qvariable_cons :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> ('a \<times> 'b) qvariables"
 and qvariables_concat :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> ('a * 'b) qvariables"
 and qvariable_singleton :: "'a qvariable \<Rightarrow> 'a qvariables"
+and qvariable_unit :: "unit qvariables"
 
 nonterminal qvariable_list_args
 syntax
@@ -374,6 +380,26 @@ lemma classical_sort[simp]:
   shows "A \<sqinter> Cla[b] = Cla[b] \<sqinter> A"
   by (simp add: classical_subspace_def)
 
+lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]" unfolding sup_subspace_def[symmetric] by auto
+lemma INF_Cla[simp]: "(INF z. Cla[x z]) = Cla[\<forall>z. x z]" 
+proof (rule Inf_eqI)
+  show "\<And>i. i \<in> range (\<lambda>z. \<CC>\<ll>\<aa>[x z]) \<Longrightarrow> \<CC>\<ll>\<aa>[\<forall>z. x z] \<le> i" by auto
+  fix y assume assm: "\<And>i. i \<in> range (\<lambda>z. \<CC>\<ll>\<aa>[x z]) \<Longrightarrow> y \<le> i"
+  show "y \<le> \<CC>\<ll>\<aa>[\<forall>z. x z]"
+  proof (cases "\<forall>z. x z")
+    case True thus ?thesis by auto
+  next case False
+    then obtain z where "\<not> x z" by auto
+    hence "Cla[x z] = bot" by simp
+    hence "bot \<in> range (\<lambda>z. \<CC>\<ll>\<aa>[x z])"
+      by (metis rangeI) 
+    hence "y \<le> bot" by (rule assm)
+    thus ?thesis
+      by (simp add: False)
+  qed
+qed
+
+    
 axiomatization colocal_ass_qvars :: "assertion \<Rightarrow> 'a qvariables \<Rightarrow> bool"
   and colocal_qvars_qvars :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> bool"
   and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool"
@@ -453,5 +479,7 @@ axiomatization where imProj_proj [simp]: "imProj (proj \<psi>) = span {\<psi>}" 
 axiomatization where imProj_liftProj [simp]: "imProj (liftProj P Q) = liftSpace (imProj P) Q" for P :: "'a projector" and Q
 axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
   for Q R :: "'a qvariables" and \<psi> :: "'a state"
-    
+
+declare[[show_types]]
+  
 end

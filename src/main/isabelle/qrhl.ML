@@ -8,9 +8,22 @@ fun mk_isometryT T T' = Type(@{type_name isometry}, [T,T'])
 fun mk_isometry2T T = mk_isometryT T T
 fun mk_measurementT T T' = Type(@{type_name measurement}, [T,T'])
 fun mk_projectorT T = Type(@{type_name projector}, [T])
+fun mk_conjs [] = @{const True}
+  | mk_conjs [t] = t
+  | mk_conjs (t::ts) = @{const conj} $ t $ mk_conjs ts
+
+fun mk_INFIMUM A f = 
+  let val AT = fastype_of A
+      val fT = fastype_of f
+      (* val idxT = case AT of Type(@{type_name set}, [T]) => T *)
+      val (_,infT) = dest_funT fT 
+      val infsetT = HOLogic.mk_setT infT
+  in
+    Const(@{const_name Inf}, infsetT --> infT) $ (Const(@{const_name image}, fT --> AT --> infsetT) $ f $ A)
+  end
 
 
-fun qvariables [] = (@{term "()"},@{typ unit})
+fun qvariables [] = (@{term "qvariable_unit"},@{typ unit})
   | qvariables [v] = 
         let val vT = fastype_of v
             val vT' = case vT of Type(@{type_name qvariable},[vT']) => vT' | _ => raise TYPE("expecting a qvariable",[vT],[v])
@@ -44,16 +57,6 @@ fun qapplyWp post e Q =
       val post_im_e' = @{const inf(assertion)} $ post $ im_e'
   in
     @{term "applyIsoSpace :: mem2 isometry2 \<Rightarrow> _ \<Rightarrow> _"} $ adj_e' $ post_im_e'
-  end
-
-fun mk_INFIMUM A f = 
-  let val AT = fastype_of A
-      val fT = fastype_of f
-      (* val idxT = case AT of Type(@{type_name set}, [T]) => T *)
-      val (_,infT) = dest_funT fT 
-      val infsetT = HOLogic.mk_setT infT
-  in
-    Const(@{const_name Inf}, infsetT --> infT) $ (Const(@{const_name image}, fT --> AT --> infsetT) $ f $ A)
   end
 
 fun measureWp B x e Q =
@@ -101,7 +104,7 @@ fun sampleWp v T e B =
       @{term "inf::assertion=>assertion=>assertion"} $ total $ B2
     end
    
-fun addVariableNameAssumption name T ctx =
+fun addQVariableNameAssumption name T ctx =
   let val qT = mk_qvariableT T
       val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name,qT)
       val rhs = HOLogic.mk_string name
@@ -112,7 +115,89 @@ fun addVariableNameAssumption name T ctx =
     ctx
   end
 
-val _ = ifWp @{term "x=true"} @{term "thenWP::assertion"} @{term "elseWP::assertion"}
+fun mk_quantum_equality Q1 Q2 T =
+  let val isoT = mk_isometry2T T
+      val qvT = mk_qvariablesT T
+  in
+  Const(@{const_name quantum_equality_full}, isoT --> qvT --> isoT --> qvT --> @{typ assertion}) $
+    Const(@{const_name idIso}, isoT) $ Q1 $ Const(@{const_name idIso}, isoT) $ Q2
+  end
+
+(* returns a term t' such that t'\<and>remove = t\<and>remove is true *)
+fun removeAnd (remove:term) (t:term) = 
+  if t=remove then @{const True} else
+  case t of
+    (c as Const(@{const_name conj},_)) $ a $ b => c $ removeAnd remove a $ removeAnd remove b
+  | (c as Const(@{const_name inf},_)) $ a $ b => c $ removeAnd remove a $ removeAnd remove b
+  | (c as Const(@{const_name classical_subspace},_)) $ a => c $ removeAnd remove a
+  | _ => t
+
+(* returns a term t' such that t'\<sqinter>remove = t\<sqinter>remove is true *)
+fun removeInf (remove:term) (t:term) = 
+  if t=remove then Const(@{const_name top}, fastype_of t) else
+  case t of
+    (c as Const(@{const_name inf},_)) $ a $ b => c $ removeInf remove a $ removeInf remove b
+(*  | Const(@{const_name classical_subspace},_) $ a =>
+      (case remove of
+        Const(@{const_name classical_subspace},_) $ r => @{const classical_subspace} $ removeAnd r a
+      | _ => t) *)
+  | _ => t
+
+fun tidyTrueTop' (Const(@{const_name inf},_) $ Const(@{const_name top},_) $ t) = tidyTrueTop' t
+  | tidyTrueTop' (Const(@{const_name inf},_) $ t $ Const(@{const_name top},_)) = tidyTrueTop' t
+  | tidyTrueTop' (Const(@{const_name conj},_) $ Const(@{const_name True},_) $ t) = tidyTrueTop' t
+  | tidyTrueTop' (Const(@{const_name conj},_) $ t $ Const(@{const_name True},_)) = tidyTrueTop' t
+  | tidyTrueTop' (Const(@{const_name classical_subspace},_) $ Const(@{const_name True},_)) = @{const top(assertion)}
+  | tidyTrueTop' (t$u) = tidyTrueTop' t $ tidyTrueTop' u
+  | tidyTrueTop' (Abs(v,T,body)) = Abs(v,T,tidyTrueTop' body)
+  | tidyTrueTop' t = t
+
+fun tidyTrueTop t =
+  let val t' = tidyTrueTop' t
+  in
+    if t=t' then t else tidyTrueTop t'
+  end
+
+(* open List *)
+
+fun callWp cvars1 cvars2 qvars1 qvars2 post =
+  let (* val cvarsEq = HOLogic.mk_eq (HOLogic.mk_tuple cvars1, HOLogic.mk_tuple cvars2)
+      val claCvarsEq = @{const classical_subspace} $ cvarsEq *)
+      val (qvars1',qvars1T) = qvariables qvars1
+      val (qvars2',qvars2T) = qvariables qvars2
+      val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()
+      val qvarsEq = if qvars1=[] then @{const top(assertion)} else mk_quantum_equality qvars1' qvars2' qvars1T
+      val post = post |> removeInf qvarsEq (* invariant: post \<sqinter> qvarsEq \<Longrightarrow> original post *)
+
+      val cvarEqs = ListPair.zip (cvars1,cvars2) |> map HOLogic.mk_eq
+      val claCvarsEq = @{const classical_subspace} $ mk_conjs cvarEqs
+      val post = fold (fn eq => fn post => removeAnd eq post) cvarEqs post
+             (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
+      
+      val freeCVars = Term.add_frees post [] |> inter (op=) (cvars1 @ cvars2 |> map Term.dest_Free) |> rev
+      fun inf_over (v,T) p = mk_INFIMUM (HOLogic.mk_UNIV T) (Term.absfree (v,T) p)
+      val usedEqs = filter (fn (v1,v2) => member op= freeCVars (dest_Free v1) andalso member op= freeCVars (dest_Free v2))
+                    (ListPair.zip (cvars1,cvars2)) |> map HOLogic.mk_eq |> mk_conjs |> @{print}
+      val post = @{const plus(assertion)} $ (@{const classical_subspace} $ HOLogic.mk_not usedEqs) $ post
+             (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
+      val post = fold inf_over freeCVars post
+             (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
+
+      (* TODO: add "cvarEqs ==> " in post *)
+
+      val wp = @{const inf(assertion)} $ (@{const inf(assertion)} $ post $ claCvarsEq) $ qvarsEq
+      val wp = tidyTrueTop wp
+  in
+    ((wp, Term.add_free_names post []), qvarsEq)
+    (* wp *)
+  end
+
+val _ = callWp [@{term "a1::int"},@{term "b1::int"},@{term "c1::int"}] [@{term "a2::int"},@{term "b2::int"},@{term "c2::int"}] 
+               [] [] @{term "Cla[(a1::int)=a2 \<and> (a1\<le>a2) \<and> ((b1::int)=0) \<and> ((b2::int)=0)]"}
+|> #1 |> #1
+(* |> callWp [@{term "a1::int"},@{term "b1::int"},@{term "c1::int"}] [@{term "a2::int"},@{term "b2::int"},@{term "c2::int"}] 
+               [] [] 
+|> #1 |> #1 *)
 |> Thm.cterm_of @{context}
 |> @{print}
 

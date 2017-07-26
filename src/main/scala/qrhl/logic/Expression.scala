@@ -34,7 +34,7 @@ import qrhl.isabelle.Isabelle
 final class Expression private (val isabelle:Isabelle.Context, term:Term) {
   def variables : Set[String] = Isabelle.freeVars(term)
 
-  override lazy val toString: String = Isabelle.symbolsToUnicode(isabelle.prettyExpression(term))
+  override lazy val toString: String = isabelle.prettyExpression(term)
   val isabelleTerm : Term = term
   def simplify(isabelle: Option[Isabelle.Context]): Expression = simplify(isabelle.get)
   def simplify(isabelle: Isabelle.Context): Expression = Expression(isabelle, isabelle.simplify(term))

@@ -235,9 +235,9 @@ object Isabelle {
       val constrainedTerm = parsedTerm.constrain(typ)
       runExpr(isabelle.checkTermExpr(context.read)(constrainedTerm))
     }
-    def prettyExpression(term:Term): String = runExpr(term.print(context.read))
+    def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(runExpr(term.print(context.read)))
     def readTyp(str:String) : ITyp = runExpr(isabelle.readTypeExpr(context.read)(str))
-    def prettyTyp(typ:ITyp): String = runExpr(isabelle.printTypExpr(typ)(context.read))
+    def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(runExpr(isabelle.printTypExpr(typ)(context.read)))
     def simplify(term: Term) : Term = runExpr(Isabelle.simplifyTerm(term)(context.read))
   }
 }

@@ -38,7 +38,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  conseq pre: quantum_equality_full idIso ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
   admit.
  
- seq 2 0: undefined.
+ seq 2 0: quantum_equality_full idIso ⟦C1,A1,B1⟧ ((H ⊗ idIso) ⋅ assoc_op' ⋅ (CNOT ⊗ idIso) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
   wp left.
   wp left.
   skip.

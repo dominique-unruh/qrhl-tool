@@ -2,6 +2,14 @@ theory Test
   imports QRHL                 
 begin
 
+lemma "(k1 = s2 \<and> c1 = c2 \<and> m1 = m2 \<and> cglobA1 = cglobA2 \<and> b1 = b2 \<longrightarrow> \<lbrakk>qglobA1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2\<rbrakk> \<le> \<CC>\<ll>\<aa>[G k1 = G s2 \<and> cglobA1 = cglobA2 \<and> b1 = b2])
+ = undefined"
+  apply simp
+    
+  lemma "(INF b2 b1 a2 a1. \<CC>\<ll>\<aa>[\<not> (a1 = a2 \<and> b1 = b2)] + \<CC>\<ll>\<aa>[a1 \<le> a2 \<and> b1 = 0 \<and> b2 = 0]) \<sqinter>
+ \<CC>\<ll>\<aa>[a1 = a2 \<and> b1 = b2 \<and> c1 = c2] = undefined"
+    apply simp
+  
 axiomatization "tensorIso" :: "('a,'b) isometry \<Rightarrow> ('c,'d) isometry \<Rightarrow> ('a*'c,'b*'d) isometry"
 axiomatization where idIso_tensor_idIso[simp]: "tensorIso idIso idIso = idIso"
 axiomatization "assoc_op" :: "('a*'b*'c, ('a*'b)*'c) isometry"

@@ -2,6 +2,8 @@ package qrhl.logic
 
 import qrhl.UserException
 
+import scala.collection.mutable
+
 // Environments
 final class Environment private
   (val cVariables : Map[String,CVariable],
@@ -41,10 +43,10 @@ final class Environment private
       nonindexedNames = nonindexedNames+name)
   }
 
-  def declareProgram(name: String, program: Block): _root_.qrhl.logic.Environment = {
+  def declareProgram(name: String, program: Block): Environment = {
     if (programs.contains(name))
       throw UserException(s"A program with name $name was already declared.")
-    copy(programs=programs.updated(name, ConcreteProgramDecl(name,program)))
+    copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,program)))
   }
 
 
@@ -64,7 +66,37 @@ object Environment {
     nonindexedNames=Set.empty)
 }
 
-sealed trait ProgramDecl { val name: String }
-final case class AbstractProgramDecl(name:String) extends ProgramDecl
-final case class ConcreteProgramDecl(name:String, program:Block) extends ProgramDecl
+sealed trait ProgramDecl {
+  val variablesRecursive : (List[CVariable],List[QVariable])
+//  val variables : (List[CVariable],List[QVariable])
+//  val subprograms : List[ProgramDecl]
+  val name: String }
+final case class AbstractProgramDecl(name:String) extends ProgramDecl {
+  override val variablesRecursive: (List[CVariable], List[QVariable]) = ???
+}
+final case class ConcreteProgramDecl(environment: Environment, name:String, program:Block) extends ProgramDecl {
+  override val variablesRecursive: (List[CVariable], List[QVariable]) = {
+    val qvars = new mutable.LinkedHashSet[QVariable]
+    val cvars = new mutable.LinkedHashSet[CVariable]
+    def scan(st:Statement) : Unit = st match {
+      case Block(sts@_*) => sts.foreach(scan)
+      case Call(n) =>
+        val (c,q) = environment.programs(n).variablesRecursive
+        cvars ++= c
+        qvars ++= q
+      case Assign(v,e) =>
+        cvars += v
+        cvars ++= e.variables.flatMap(environment.cVariables.get)
+      case Sample(v,e) =>
+        cvars += v
+        cvars ++= e.variables.flatMap(environment.cVariables.get)
+      case QApply(loc,e) =>
+        qvars ++= loc
+        cvars ++= e.variables.flatMap(environment.cVariables.get)
+    }
+    scan(program)
+//    println(s"variablesRecursive $name, $cvars, $qvars")
+    (cvars.toList, qvars.toList)
+  }
+}
 

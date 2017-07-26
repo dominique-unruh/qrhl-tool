@@ -32,3 +32,4 @@ libraryDependencies += "org.jline" % "jline" % "3.3.0"
 mainClass in assembly := Some("qrhl.toplevel.Toplevel")
 //assemblyJarName in assembly := "qrhl.jar"
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
+test in assembly := {}

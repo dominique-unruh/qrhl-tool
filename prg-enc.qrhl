@@ -1,0 +1,78 @@
+isabelle /opt/Isabelle2016-1.
+
+# TODO: use constants
+# TODO: use other types
+ambient var G : nat => int.
+ambient var enc : nat * int => int. # tra
+
+
+#assumption ∀k x. enc(k,x) = G(k) + x.
+
+
+classical var k : nat.
+classical var s : nat.
+
+
+# Variables for adversary communication
+classical var m : int.
+classical var c : int.
+classical var r : int.
+classical var b : bit.
+
+# TODO: remove once we have abstract A1,A2
+quantum var qglobA : string.
+classical var cglobA : string.
+
+# TODO: all-quantified
+# A: inputs: none; outputs m
+program A1 := { c <- c; m <- m; cglobA <- cglobA; on qglobA apply undefined; b <- b; }.
+# A: inputs: c; outputs: b
+program A2 := { call A1; }.
+# B: inputs: r; outputs: b
+program B := { call A1; c <- r+m; call A2; }.
+
+
+# TODO use this:  c <- enc(k,m);
+program rorcpa0 := {
+  k <$ uniform UNIV;
+  call A1;
+  c <- G(k) + m;
+  call A2;
+}.
+
+program rorcpa1 := {
+  k <$ uniform UNIV;
+  call A1;
+  r <$ uniform UNIV;
+  c <- enc(k,r);
+  call A2;
+}.
+
+program prg0 := {
+  s <$ uniform UNIV;
+  r <- G(s);
+  call B;
+}.
+
+program prg1 := {
+  r <$ uniform UNIV;
+  call B;
+}.
+
+qrhl {top} call rorcpa0; ~ call prg0; {Cla[b1=b2]}.
+ inline rorcpa0.
+ inline prg0.
+ inline B.
+ call.
+ wp left.
+ wp right.
+ call.
+ simp.
+ wp right.
+ simp.
+ conseq post: ℭ𝔩𝔞[k1 = s2 ∧ c1 = c2 ∧ m1 = m2 ∧ cglobA1 = cglobA2 ∧ b1 = b2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧.
+  simp.
+  admit.
+ # TODO: why does this not work?
+ rnd.
+
