@@ -1,23 +1,14 @@
-isabelle /opt/Isabelle2016-1.
+isabelle /opt/Isabelle2016-1, theory PrgEnc.
 
-# TODO: use constants
-# TODO: use other types
-ambient var G : bool => bit.
-ambient var enc : bool * bit => bit.
-
-
-#assumption ∀k x. enc(k,x) = G(k) + x.
-
-
-classical var k : bool.
-classical var s : bool.
+classical var k : key.
+classical var s : key.
 
 
 # Variables for adversary communication
-classical var m : bit.
-classical var c : bit.
-classical var r : bit.
-classical var b : bool.
+classical var m : msg.
+classical var c : msg.
+classical var r : msg.
+classical var b : key.
 
 # TODO: remove once we have abstract A1,A2
 quantum var qglobA : string.

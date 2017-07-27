@@ -170,8 +170,8 @@ object Toplevel {
   }
 
 
-  def makeToplevel(isabelle:Isabelle) : Toplevel = {
-    val state = State.empty.loadIsabelle(isabelle,State.defaultIsabelleTheory)
+  def makeToplevel(isabelle:Isabelle, theory:Option[String]=None) : Toplevel = {
+    val state = State.empty.loadIsabelle(isabelle,theory)
     new Toplevel(state)
   }
 

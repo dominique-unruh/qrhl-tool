@@ -10,7 +10,7 @@ trait Command {
 case class IsabelleCommand(path: String, thy:Option[String]=None) extends Command {
   override def act(state: State): State = {
     println(s"Loading Isabelle at $path.")
-    state.loadIsabelle(path,thy.getOrElse(State.defaultIsabelleTheory))
+    state.loadIsabelle(path,thy)
   }
 }
 

@@ -88,14 +88,20 @@ class Isabelle(path:String) {
 
   private def runProg[A](prog: Program[A], thyName: String): A = Await.result(system.run(prog, thyName), Duration.Inf)
 
-  private def runExpr[A](expr: ml.Expr[A], thyName: String)(implicit codec: Codec[A]): A = runProg(expr.toProg, thyName)
+  def runExpr[A](expr: ml.Expr[A], thyName: String)(implicit codec: Codec[A]): A = runProg(expr.toProg, thyName)
 
   private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
 
-  private def getRef[A: ml.Opaque](expr: ml.Expr[A], thyName: String): ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
+  def getRef[A: ml.Opaque](expr: ml.Expr[A], thyName: String): ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
 
   def getContext(thyName: String) =
-    new Isabelle.Context(this, thyName, getRef(Isabelle.configureContext(IContext.initGlobal(Theory.get(thyName))), thyName))
+    new Isabelle.Context(this, thyName, getRef(IContext.initGlobal(Theory.get(thyName)), thyName))
+
+  def getContextFile(thyName: String): Isabelle.Context = {
+    val use: ml.Expr[String => Theory] =
+      ml.Expr.uncheckedLiteral("(fn name => (Thy_Info.use_thy (name,Position.none); Thy_Info.get_theory name))")
+    new Isabelle.Context(this, thyName, getRef(IContext.initGlobal(use(thyName)), "Protocol_Main"))
+  }
 
   private var disposed = false
 
@@ -133,8 +139,8 @@ object Isabelle {
     fv.result
   }
 
-  private val configureContext: ml.Expr[IContext => IContext] =
-    ml.Expr.uncheckedLiteral("(fn ctx => ctx (*|> Config.put show_types true |> Config.put show_sorts true*) )")
+//  private val configureContext: ml.Expr[IContext => IContext] =
+//    ml.Expr.uncheckedLiteral("(fn ctx => ctx (*|> Config.put show_types true |> Config.put show_sorts true*) )")
   private def simplifyTerm(term: Term) : ml.Expr[IContext => Term] = {
     val lit = ml.Expr.uncheckedLiteral[Term => IContext => Term](
       """

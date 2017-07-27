@@ -126,18 +126,24 @@ object Test0 {
 //    assert(System.build(environment, config))
 //    val system = Await.result(System.create(environment, config), Duration.Inf)
     val isa = new Isabelle(isabellePath)
-    try {
-//      val t = term" b1=b2 --> undefined b1 = undefined b2"
-      val ctx = isa.getContext("Protocol_Main")
-      val expr = ml.Expr.uncheckedLiteral[String](
-        """
-          let val ct = @{cterm "x=y --> undefined x=undefined y"}
-              val thm = Simplifier.rewrite @{context} ct
-          in Thm.string_of_thm @{context} thm |> YXML.content_of end
-        """)
 
-      val t2 = ctx.runExpr(expr)
-      println(t2)
+    try {
+/*
+      val use0: ml.Expr[String => Unit] =
+        ml.Expr.uncheckedLiteral("(fn name => Thy_Info.use_thy (name,Position.none))")
+      val get0: ml.Expr[String => Unit] =
+        ml.Expr.uncheckedLiteral("Thy_Info.get_theory name")
+//      val use: ml.Expr[String => Theory] =
+//        ml.Expr.uncheckedLiteral("(fn name => Thy_Info.use_thy (name,Position.none); Thy_Info.get_theory name)")
+      val thyName = "PrgEnc"
+      println("use0")
+      isa.runExpr(use0(thyName),"QRHL_Protocol")
+      println("done")
+//      val ref = isa.getRef(Context.initGlobal(get0(thyName)), thyName)
+//      println(ref)
+*/
+      val ctx = isa.getContextFile("PrgEnc")
+      println(ctx)
     } finally {
       isa.dispose()
     }
