@@ -1,7 +1,17 @@
+import java.nio.file.Paths
+
+import info.hupel.isabelle.api.{Configuration, Version}
 import qrhl._
 import qrhl.logic._
 import qrhl.toplevel.{Parser, ParserContext, Toplevel, ToplevelTest}
+import info.hupel.isabelle.pure._
+import info.hupel.isabelle.setup.{Resources, Setup}
+import info.hupel.isabelle.{Platform, System, ml}
+import qrhl.isabelle.Isabelle
+import qrhl.toplevel.ToplevelTest.isabellePath
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.language.implicitConversions
 
 object Test0 {
@@ -107,14 +117,29 @@ object Test0 {
 
 
   def main(args: Array[String]): Unit = {
-    import tactic._
-    val toplevel = Toplevel.makeToplevel(ToplevelTest.isabelle)
-    def execCmd(cmd:String) = toplevel.execCmd(cmd)
-    def run(script:String) = toplevel.run(script)
+//    val version = Version.Stable("2016-1")
+//    val isabellePath = "/opt/Isabelle2016-1"
+//    val setup = Setup(Paths.get(isabellePath), Platform.guess.get, version)
+//    val resources = Resources.dumpIsabelleResources().right.get
+//    val environment = Await.result(setup.makeEnvironment(resources), Duration.Inf)
+//    val config: Configuration = Configuration.simple("QRHL")
+//    assert(System.build(environment, config))
+//    val system = Await.result(System.create(environment, config), Duration.Inf)
+    val isa = new Isabelle(isabellePath)
     try {
-      run("qrhl {top} skip; ~ skip; {top}.")
+//      val t = term" b1=b2 --> undefined b1 = undefined b2"
+      val ctx = isa.getContext("Protocol_Main")
+      val expr = ml.Expr.uncheckedLiteral[String](
+        """
+          let val ct = @{cterm "x=y --> undefined x=undefined y"}
+              val thm = Simplifier.rewrite @{context} ct
+          in Thm.string_of_thm @{context} thm |> YXML.content_of end
+        """)
+
+      val t2 = ctx.runExpr(expr)
+      println(t2)
     } finally {
-      toplevel.isabelle.dispose()
+      isa.dispose()
     }
   }
 }

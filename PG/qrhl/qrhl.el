@@ -16,7 +16,10 @@
 		   proof-shell-proof-completed-regexp "^No current goal.$"
 		   )
 
-(add-hook 'qrhl-mode-hook (lambda () (set-input-method "TeX")))
+(add-hook 'qrhl-mode-hook
+	  (lambda ()
+	    (set-input-method "TeX")
+	    (set-variable 'electric-indent-inhibit t)))
 
 (defun qr () ; Just for testing
   "Restarts the prover, restarts it, and then processes the buffer to current position"

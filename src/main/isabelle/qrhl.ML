@@ -104,6 +104,28 @@ fun sampleWp v T e B =
       @{term "inf::assertion=>assertion=>assertion"} $ total $ B2
     end
    
+fun rndWp v1 e1 v2 e2 T B =
+    let val distrT = Type(@{type_name distr},[T])
+        val _ = if fastype_of e1 = distrT then ()
+                else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e1],[e1]))
+        val _ = if fastype_of e2 = distrT then ()
+                else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e2],[e2]))
+        val _ = if fastype_of B = @{typ assertion} then ()
+                else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
+        val setT = Type(@{type_name set},[T])
+        val supp = Const(@{const_name supp}, distrT --> setT) $ e1
+        val absB = Term.abstract_over (Free(v1,T),B) |> (fn t => Term.abstract_over (Free(v2,T),t)) |> (fn t => Abs("z",T,t))
+        val B2 = @{const Inf(assertion)} $
+                      (Const(@{const_name image}, (T --> @{typ assertion}) --> setT -->  @{typ "assertion set"})
+                         $ absB $ supp)
+        val sameDistr = @{const classical_subspace} $ HOLogic.mk_eq (e1,e2)
+    in
+      @{const inf(assertion)} $ sameDistr $ B2
+    end
+   
+val _ = rndWp "x1" @{term "uniform {x1::int}"} "x2" @{term "uniform {x2::int}"} @{typ int} @{term "Cla[(x1::int)=x2+1]"}
+|> Thm.cterm_of @{context} |> @{print}
+
 fun addQVariableNameAssumption name T ctx =
   let val qT = mk_qvariableT T
       val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name,qT)
@@ -177,7 +199,7 @@ fun callWp cvars1 cvars2 qvars1 qvars2 post =
       val freeCVars = Term.add_frees post [] |> inter (op=) (cvars1 @ cvars2 |> map Term.dest_Free) |> rev
       fun inf_over (v,T) p = mk_INFIMUM (HOLogic.mk_UNIV T) (Term.absfree (v,T) p)
       val usedEqs = filter (fn (v1,v2) => member op= freeCVars (dest_Free v1) andalso member op= freeCVars (dest_Free v2))
-                    (ListPair.zip (cvars1,cvars2)) |> map HOLogic.mk_eq |> mk_conjs |> @{print}
+                    (ListPair.zip (cvars1,cvars2)) |> map HOLogic.mk_eq |> mk_conjs 
       val post = @{const plus(assertion)} $ (@{const classical_subspace} $ HOLogic.mk_not usedEqs) $ post
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
       val post = fold inf_over freeCVars post

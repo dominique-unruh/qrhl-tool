@@ -37,7 +37,10 @@ definition[simp]: "inverse_bit (x::bit) = x"
 definition[simp]: "divide_bit = (op* :: bit\<Rightarrow>_\<Rightarrow>_)"
 instance by intro_classes (transfer; auto)+
 end
-
+instantiation bit :: finite begin
+instance by (intro_classes, transfer, simp)
+end
+  
 (*instantiation "fun" :: (type,zero)zero begin
 definition[simp]: "zero_fun (x::'a) = (0::'b)"
 instance .. 
@@ -381,25 +384,29 @@ lemma classical_sort[simp]:
   by (simp add: classical_subspace_def)
 
 lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]" unfolding sup_subspace_def[symmetric] by auto
-lemma INF_Cla[simp]: "(INF z. Cla[x z]) = Cla[\<forall>z. x z]" 
+lemma BINF_Cla[simp]: "(INF z:Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
 proof (rule Inf_eqI)
-  show "\<And>i. i \<in> range (\<lambda>z. \<CC>\<ll>\<aa>[x z]) \<Longrightarrow> \<CC>\<ll>\<aa>[\<forall>z. x z] \<le> i" by auto
-  fix y assume assm: "\<And>i. i \<in> range (\<lambda>z. \<CC>\<ll>\<aa>[x z]) \<Longrightarrow> y \<le> i"
-  show "y \<le> \<CC>\<ll>\<aa>[\<forall>z. x z]"
-  proof (cases "\<forall>z. x z")
+  show "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> \<CC>\<ll>\<aa>[\<forall>z\<in>Z. x z] \<le> i" by auto
+  fix y assume assm: "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> y \<le> i"
+  show "y \<le> \<CC>\<ll>\<aa>[\<forall>z\<in>Z. x z]"
+  proof (cases "\<forall>z\<in>Z. x z")
     case True thus ?thesis by auto
   next case False
-    then obtain z where "\<not> x z" by auto
+    then obtain z where "\<not> x z" and "z\<in>Z" by auto
     hence "Cla[x z] = bot" by simp
-    hence "bot \<in> range (\<lambda>z. \<CC>\<ll>\<aa>[x z])"
-      by (metis rangeI) 
+    hence "bot \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z"
+      using \<open>z \<in> Z\<close> by force
     hence "y \<le> bot" by (rule assm)
     thus ?thesis
       by (simp add: False)
   qed
 qed
+(* lemma INF_Cla[simp]: "(INF z. Cla[x z]) = Cla[\<forall>z. x z]" 
+  by simp *)
 
-    
+lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
+  apply (cases "X={}") by auto
+  
 axiomatization colocal_ass_qvars :: "assertion \<Rightarrow> 'a qvariables \<Rightarrow> bool"
   and colocal_qvars_qvars :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> bool"
   and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool"
@@ -480,6 +487,6 @@ axiomatization where imProj_liftProj [simp]: "imProj (liftProj P Q) = liftSpace 
 axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
   for Q R :: "'a qvariables" and \<psi> :: "'a state"
 
-declare[[show_types]]
+(* declare[[show_types]] *)
   
 end

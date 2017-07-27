@@ -16,9 +16,9 @@ isabelleSessions in Compile := Seq("QRHL")
 //unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/isabelle"
 
 libraryDependencies ++= Seq(
-  "info.hupel" %% "libisabelle" % "0.8.0", // TODO 0.8.3
-  "info.hupel" %% "libisabelle-setup" % "0.8.0",
-  "info.hupel" %% "pide-package" % "0.8.0"
+  "info.hupel" %% "libisabelle" % "0.8.3",
+  "info.hupel" %% "libisabelle-setup" % "0.8.3",
+  "info.hupel" %% "pide-package" % "0.8.3"
 )
 
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple

@@ -2,22 +2,22 @@ isabelle /opt/Isabelle2016-1.
 
 # TODO: use constants
 # TODO: use other types
-ambient var G : nat => int.
-ambient var enc : nat * int => int. # tra
+ambient var G : bool => bit.
+ambient var enc : bool * bit => bit.
 
 
 #assumption ∀k x. enc(k,x) = G(k) + x.
 
 
-classical var k : nat.
-classical var s : nat.
+classical var k : bool.
+classical var s : bool.
 
 
 # Variables for adversary communication
-classical var m : int.
-classical var c : int.
-classical var r : int.
-classical var b : bit.
+classical var m : bit.
+classical var c : bit.
+classical var r : bit.
+classical var b : bool.
 
 # TODO: remove once we have abstract A1,A2
 quantum var qglobA : string.
@@ -40,11 +40,12 @@ program rorcpa0 := {
   call A2;
 }.
 
+# TODO use this:  c <- enc(k,r);
 program rorcpa1 := {
   k <$ uniform UNIV;
   call A1;
   r <$ uniform UNIV;
-  c <- enc(k,r);
+  c <- G(k) + r;
   call A2;
 }.
 
@@ -59,7 +60,9 @@ program prg1 := {
   call B;
 }.
 
-qrhl {top} call rorcpa0; ~ call prg0; {Cla[b1=b2]}.
+qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
+        call rorcpa0; ~ call prg0;
+     {Cla[b1=b2]}.
  inline rorcpa0.
  inline prg0.
  inline B.
@@ -70,9 +73,23 @@ qrhl {top} call rorcpa0; ~ call prg0; {Cla[b1=b2]}.
  simp.
  wp right.
  simp.
- conseq post: ℭ𝔩𝔞[k1 = s2 ∧ c1 = c2 ∧ m1 = m2 ∧ cglobA1 = cglobA2 ∧ b1 = b2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧.
-  simp.
-  admit.
- # TODO: why does this not work?
  rnd.
+ skip.
+ simp.
+ true.
+qed.
 
+qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
+        call rorcpa1; ~ call prg1;
+     {Cla[b1=b2]}.
+ inline rorcpa1.
+ inline prg1.
+ inline B.
+ call.
+ simp.
+ wp left.
+ wp right.
+ simp.
+# TODO: need to swap lines in right prog
+# TODO: need rnd with non-trivial mapping
+    

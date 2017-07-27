@@ -231,7 +231,8 @@ object Parser extends RegexParsers {
       tactic_inline |
       tactic_seq |
       tactic_conseq |
-      literal("call") ^^ { _ => CallTac }
+      literal("call") ^^ { _ => CallTac } |
+      literal("rnd") ^^ { _ => RndTac }
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

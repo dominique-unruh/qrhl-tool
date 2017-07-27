@@ -2,8 +2,27 @@ theory Test
   imports QRHL                 
 begin
 
-lemma "(k1 = s2 \<and> c1 = c2 \<and> m1 = m2 \<and> cglobA1 = cglobA2 \<and> b1 = b2 \<longrightarrow> \<lbrakk>qglobA1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2\<rbrakk> \<le> \<CC>\<ll>\<aa>[G k1 = G s2 \<and> cglobA1 = cglobA2 \<and> b1 = b2])
- = undefined"
+lemma "weight (uniform (UNIV::bit set)) = (1::real)"
+  apply simp
+
+ML {*  
+            let val ct = @{cterm "x=y --> undefined x=undefined y"}
+              val thm = Simplifier.rewrite @{context} ct
+          in Thm.string_of_thm @{context} thm |> YXML.content_of end
+*}
+  
+  ML {* Sign.string_of_term *}
+  
+ML {*
+val ct = @{cterm "b1 = b2 \<longrightarrow> undefined b1 = undefined undefined b2"}
+ (* |> Thm.cterm_of @{context} *)
+val t = ct |> Thm.term_of
+val T = Thm.typ_of_cterm ct
+val thm = Simplifier.rewrite @{context} ct
+*}
+  
+lemma "undefined (k1 = s2 \<and> c1 = c2 \<and> m1 = m2 \<and> cglobA1 = cglobA2 \<and> b1 = b2 \<longrightarrow> \<lbrakk>qglobA1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2\<rbrakk> \<le> \<CC>\<ll>\<aa>[G k1 = G s2 \<and> cglobA1 = cglobA2 \<and> b1 = b2])
+"
   apply simp
     
   lemma "(INF b2 b1 a2 a1. \<CC>\<ll>\<aa>[\<not> (a1 = a2 \<and> b1 = b2)] + \<CC>\<ll>\<aa>[a1 \<le> a2 \<and> b1 = 0 \<and> b2 = 0]) \<sqinter>

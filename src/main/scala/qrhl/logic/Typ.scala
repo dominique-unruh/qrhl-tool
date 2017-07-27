@@ -4,23 +4,18 @@ import info.hupel.isabelle.hol.HOLogic
 import qrhl.isabelle.Isabelle
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp, Type => IType}
 
-final class Typ private (private val isabelle:Isabelle.Context, typ:ITyp) {
-  override val toString: String = isabelle.prettyTyp(typ)
-  val isabelleTyp : ITyp = typ
-}
-/* object Typ {
-  def typeCon(name: String, args: Typ*): Typ =
-    IsabelleTyp.typeCon(name, args map { _.asInstanceOf[IsabelleTyp] } :_*)
+final class Typ private (private val isabelle:Isabelle.Context, val isabelleTyp:ITyp) {
+  override val toString: String = isabelle.prettyTyp(isabelleTyp)
+//  val isabelleTyp : ITyp = typ
 
-  def apply(isabelle: Isabelle.Context, str: String): Typ = isabelle match {
-    case Some(isa) => IsabelleTyp(isa, str)
-    case None => ???
+  override def equals(o: Any): Boolean = o match {
+    case t:Typ => isabelleTyp==t.isabelleTyp
+    case _ => false
   }
-  def bool(isabelle: Option[Isabelle.Context]): Typ = isabelle match {
-    case Some(isa) => IsabelleTyp(isa,HOLogic.boolT)
-    case None => ???
-  }
-} */
+
+  override def hashCode: Int = isabelleTyp.hashCode
+}
+
 object Typ {
   def typeCon(name: String, args: Typ*): Typ =
     Typ(args.head.isabelle,
