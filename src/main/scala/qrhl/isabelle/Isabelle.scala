@@ -25,9 +25,11 @@ class Isabelle(path:String) {
   private val setup = {
     if (path == "auto")
       Setup.default(version).right.get
-    else
-    //      Setup.detect(Platform.genericPlatform(new File(path).toPath), version).right.get
+    else {
+//      val platformPath = Paths.get("tmp-isabelle")
+//      val platform = Platform.genericPlatform(platformPath)
       Setup(Paths.get(path), Platform.guess.get, version)
+    }
   }
 
   private val resources = Resources.dumpIsabelleResources() match {
@@ -109,6 +111,7 @@ class Isabelle(path:String) {
     super.finalize()
   }
 
+  def runJEdit(files:Seq[String]=Nil): Unit = environment.exec("jedit",List("-l","QRHL") ++ files.toList)
 }
 
 object Isabelle {

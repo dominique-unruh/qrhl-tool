@@ -154,10 +154,16 @@ object Parser extends RegexParsers {
 
   val quotedString : Parser[String] = """"[^"]*"""".r ^^ { s => s.substring(1,s.length-1) }
 
-  val unquotedString : Parser[String] = "[^.]+".r
+  val unquotedStringNoComma : Parser[String] = "[^.,]+".r
 
 //  val commandEndSymbol : Parser[_] = literal(".")
-  val isabelle : Parser[IsabelleCommand] = literal("isabelle") ~> OnceParser(quotedString | unquotedString).named("isabelle path") ^^ IsabelleCommand
+  val isabelle : Parser[IsabelleCommand] =
+    literal("isabelle") ~> OnceParser(
+      (quotedString | unquotedStringNoComma) ~ (literal(",") ~> literal("theory") ~> identifier).?
+    ) ^^ {
+      case path ~ None => IsabelleCommand(path)
+      case path ~ Some(thy) => IsabelleCommand(path,Some(thy))
+    }
 
   def typ(implicit context:ParserContext) : Parser[Typ] =
   //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {

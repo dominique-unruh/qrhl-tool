@@ -8,6 +8,7 @@ enablePlugins(LibisabellePlugin)
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.3" % "test"
+libraryDependencies += "org.rogach" %% "scallop" % "3.0.3"
 
 isabelleVersions := Seq("2016-1")
 isabelleSessions in Compile := Seq("QRHL")
@@ -29,7 +30,8 @@ libraryDependencies += "org.jline" % "jline" % "3.3.0"
 
 //import sbtassembly.AssemblyPlugin.defaultShellScript
 //assemblyOption in assembly := (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript))
-mainClass in assembly := Some("qrhl.toplevel.Toplevel")
+mainClass in assembly := Some("qrhl.Main")
 //assemblyJarName in assembly := "qrhl.jar"
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
 test in assembly := {}
+

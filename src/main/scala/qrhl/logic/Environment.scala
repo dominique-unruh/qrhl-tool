@@ -93,6 +93,20 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, prog
       case QApply(loc,e) =>
         qvars ++= loc
         cvars ++= e.variables.flatMap(environment.cVariables.get)
+      case While(e,body) =>
+        cvars ++= e.variables.flatMap(environment.cVariables.get)
+        scan(body)
+      case IfThenElse(e,thenBranch,elseBranch) =>
+        cvars ++= e.variables.flatMap(environment.cVariables.get)
+        scan(thenBranch)
+        scan(elseBranch)
+      case Measurement(res,loc,e) =>
+        cvars += res
+        qvars ++= loc
+        cvars ++= e.variables.flatMap(environment.cVariables.get)
+      case QInit(loc,e) =>
+        qvars ++= loc
+        cvars ++= e.variables.flatMap(environment.cVariables.get)
     }
     scan(program)
 //    println(s"variablesRecursive $name, $cvars, $qvars")

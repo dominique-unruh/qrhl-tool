@@ -1,6 +1,7 @@
 package qrhl.toplevel
 
-import java.io.{BufferedReader, StringReader}
+import java.io.{BufferedReader, FileReader, Reader, StringReader}
+import java.nio.file.Path
 
 import info.hupel.isabelle.Operation.ProverException
 import org.jline.reader.LineReaderBuilder
@@ -14,6 +15,11 @@ import scala.util.matching.Regex
 
 
 class Toplevel(initialState : State = State.empty) {
+  def dispose(): Unit = {
+    state.isabelle.foreach(_.isabelle.dispose())
+    states = null
+  }
+
   def isabelle = state.isabelle.get.isabelle
 
   private val commandEnd: Regex = """\.\s*$""".r
@@ -91,7 +97,17 @@ class Toplevel(initialState : State = State.empty) {
 
   /** Runs a sequence of commands. Each command must be delimited by "." at the end of a line. */
   def run(script: String): Unit = {
-    val reader = new BufferedReader(new StringReader(script))
+    val reader = new StringReader(script)
+    run(reader)
+  }
+
+  def run(script: Path): Unit = {
+    val reader = new FileReader(script.toFile)
+    run(reader)
+  }
+
+  def run(script: Reader) : Unit = {
+    val reader = new BufferedReader(script)
     def readLine(prompt:String) = {
       val line = reader.readLine()
       println("> "+line)
@@ -155,11 +171,11 @@ object Toplevel {
 
 
   def makeToplevel(isabelle:Isabelle) : Toplevel = {
-    val state = State.empty.loadIsabelle(isabelle)
+    val state = State.empty.loadIsabelle(isabelle,State.defaultIsabelleTheory)
     new Toplevel(state)
   }
 
-  def main(args: Array[String]): Unit = {
+  def main(): Unit = {
     try
       runFromTerminal()
     catch {

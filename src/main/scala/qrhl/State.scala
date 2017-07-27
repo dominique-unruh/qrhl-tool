@@ -86,14 +86,14 @@ class State private (val environment: Environment,
 
   lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT, assertionT = assertionT)
 
-  def loadIsabelle(path:String) : State = {
+  def loadIsabelle(path:String, theory:String) : State = {
     assert(isabelle.isEmpty)
     val isa = new Isabelle(path)
-    loadIsabelle(isa)
+    loadIsabelle(isa,theory)
   }
 
-  def loadIsabelle(isabelle: Isabelle) : State = {
-    val isa = isabelle.getContext("QRHL_Protocol")
+  def loadIsabelle(isabelle: Isabelle, theory:String) : State = {
+    val isa = isabelle.getContext(theory)
     copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"assertion"))
   }
 
@@ -129,4 +129,5 @@ class State private (val environment: Environment,
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
     boolT=null, assertionT=null)
+  val defaultIsabelleTheory = "QRHL_Protocol"
 }
