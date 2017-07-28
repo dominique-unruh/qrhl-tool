@@ -74,16 +74,20 @@ class Toplevel(initialState : State = State.empty) {
 
   /** Executes a single command. */
   def execCmd(cmd:Command) : Unit = {
+    state.filesChanged match {
+      case Nil =>
+      case files => println(s"***** [WARNING] Some files changed (${files.mkString(", ")}). Best restart the prover. *****\n\n")
+    }
+
     cmd match {
       case UndoCommand(n) =>
         assert(n < states.length)
         states = states.drop(n)
-        println(states.head)
       case _ =>
         val newState = cmd.act(states.head)
-        println(newState)
         states = newState :: states
     }
+    println(states.head)
   }
 
   /** Returns the current state of the toplevel */

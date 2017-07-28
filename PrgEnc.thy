@@ -18,4 +18,4 @@ definition enc :: "key * msg \<Rightarrow> msg"
   where [simp]: "enc = (\<lambda>(k,x). G(k)+x)"
   
 end
-  
+

@@ -117,31 +117,9 @@ object Test0 {
 
 
   def main(args: Array[String]): Unit = {
-//    val version = Version.Stable("2016-1")
-//    val isabellePath = "/opt/Isabelle2016-1"
-//    val setup = Setup(Paths.get(isabellePath), Platform.guess.get, version)
-//    val resources = Resources.dumpIsabelleResources().right.get
-//    val environment = Await.result(setup.makeEnvironment(resources), Duration.Inf)
-//    val config: Configuration = Configuration.simple("QRHL")
-//    assert(System.build(environment, config))
-//    val system = Await.result(System.create(environment, config), Duration.Inf)
     val isa = new Isabelle(isabellePath)
 
     try {
-/*
-      val use0: ml.Expr[String => Unit] =
-        ml.Expr.uncheckedLiteral("(fn name => Thy_Info.use_thy (name,Position.none))")
-      val get0: ml.Expr[String => Unit] =
-        ml.Expr.uncheckedLiteral("Thy_Info.get_theory name")
-//      val use: ml.Expr[String => Theory] =
-//        ml.Expr.uncheckedLiteral("(fn name => Thy_Info.use_thy (name,Position.none); Thy_Info.get_theory name)")
-      val thyName = "PrgEnc"
-      println("use0")
-      isa.runExpr(use0(thyName),"QRHL_Protocol")
-      println("done")
-//      val ref = isa.getRef(Context.initGlobal(get0(thyName)), thyName)
-//      println(ref)
-*/
       val ctx = isa.getContextFile("PrgEnc")
       println(ctx)
     } finally {

@@ -10,33 +10,33 @@ classical var c : msg.
 classical var r : msg.
 classical var b : key.
 
-# TODO: remove once we have abstract A1,A2
-quantum var qglobA : string.
-classical var cglobA : string.
+quantum var qstateA : string.
+classical var stateA : string.
 
-# TODO: all-quantified
-# A: inputs: none; outputs m
-program A1 := { c <- c; m <- m; cglobA <- cglobA; on qglobA apply undefined; b <- b; }.
-# A: inputs: c; outputs: b
+# TODO: make A1,A2 abstract
+
+# inputs: none; outputs m
+program A1 := { c <- c; m <- m; stateA <- stateA; on qstateA apply undefined; b <- b; }.
+
+# inputs: c; outputs: b
 program A2 := { call A1; }.
-# B: inputs: r; outputs: b
+
+# inputs: r; outputs: b
 program B := { call A1; c <- r+m; call A2; }.
 
 
-# TODO use this:  c <- enc(k,m);
 program rorcpa0 := {
   k <$ uniform UNIV;
   call A1;
-  c <- G(k) + m;
+  c <- enc(k,m);
   call A2;
 }.
 
-# TODO use this:  c <- enc(k,r);
 program rorcpa1 := {
   k <$ uniform UNIV;
   call A1;
   r <$ uniform UNIV;
-  c <- G(k) + r;
+  c <- enc(k,r);
   call A2;
 }.
 
@@ -51,7 +51,7 @@ program prg1 := {
   call B;
 }.
 
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
+qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ stateA1=stateA2] ⊓ ⟦qstateA1⟧ ≡𝔮 ⟦qstateA2⟧}
         call rorcpa0; ~ call prg0;
      {Cla[b1=b2]}.
  inline rorcpa0.
@@ -70,7 +70,7 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡�
  true.
 qed.
 
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
+qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ stateA1=stateA2] ⊓ ⟦qstateA1⟧ ≡𝔮 ⟦qstateA2⟧}
         call rorcpa1; ~ call prg1;
      {Cla[b1=b2]}.
  inline rorcpa1.

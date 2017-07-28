@@ -1,8 +1,10 @@
 package qrhl
 
+import java.nio.file.{Files, Path, Paths}
+
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.ml
-import info.hupel.isabelle.pure.{Type, Typ => ITyp, Context => IContext}
+import info.hupel.isabelle.pure.{Type, Context => IContext, Typ => ITyp}
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.toplevel.ParserContext
@@ -44,11 +46,21 @@ trait Tactic {
 
 case class UserException(msg:String) extends RuntimeException(msg)
 
+/** A path together with a last-modification time. */
+class FileTimeStamp(val file:Path) {
+  private val time = Files.getLastModifiedTime(file)
+  /** Returns whether the file has changed since the FileTimeStamp was created. */
+  def changed : Boolean = time!=Files.getLastModifiedTime(file)
+
+  override def toString: String = s"$file@$time"
+}
+
 class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val isabelle: Option[Isabelle.Context],
                      val boolT: Typ,
-                     val assertionT: Typ) {
+                     val assertionT: Typ,
+                     val dependencies: List[FileTimeStamp]) {
   def declareProgram(name: String, program: Block): State = {
     for (x <- program.variablesDirect)
       if (!environment.nonindexedNames.contains(x))
@@ -66,10 +78,12 @@ class State private (val environment: Environment,
 
   private def copy(environment:Environment=environment,
                    goal:List[Subgoal]=goal,
-                  isabelle:Option[Isabelle.Context]=isabelle,
-                  boolT:Typ=boolT,
-                  assertionT:Typ=assertionT) : State =
-    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT)
+                   isabelle:Option[Isabelle.Context]=isabelle,
+                   boolT:Typ=boolT,
+                   assertionT:Typ=assertionT,
+                   dependencies:List[FileTimeStamp]=dependencies) : State =
+    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT,
+      dependencies=dependencies)
 
   def openGoal(goal:Subgoal) : State = this.goal match {
     case Nil =>
@@ -93,11 +107,18 @@ class State private (val environment: Environment,
   }
 
   def loadIsabelle(isabelle: Isabelle, theory:Option[String]) : State = {
-    val isa = theory match {
-      case None => isabelle.getContext(State.defaultIsabelleTheory)
-      case Some(thy) => isabelle.getContextFile(thy)
+    val (isa,files) = theory match {
+      case None =>
+        (isabelle.getContext(State.defaultIsabelleTheory), dependencies)
+      case Some(thy) =>
+        val filename = Paths.get(thy+".thy")
+        (isabelle.getContextFile(thy), new FileTimeStamp(filename) :: dependencies)
     }
-    copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"assertion"))
+    copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"assertion"), dependencies=files)
+  }
+
+  def filesChanged : List[Path] = {
+    dependencies.filter(_.changed).map(_.file)
   }
 
   private def addQVariableNameAssumption(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
@@ -131,6 +152,6 @@ class State private (val environment: Environment,
 
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
-    boolT=null, assertionT=null)
+    boolT=null, assertionT=null, dependencies=Nil)
   private[State] val defaultIsabelleTheory = "QRHL_Protocol"
 }
