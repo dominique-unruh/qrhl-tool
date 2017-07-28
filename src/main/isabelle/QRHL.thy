@@ -24,6 +24,14 @@ axiomatization weight :: "'a distr \<Rightarrow> real" where
 and weight_leq1[simp]: "weight \<mu> \<le> 1"
 and weight_uniform[simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> weight (uniform M) = 1"
 
+axiomatization "map_distr" :: "('a\<Rightarrow>'b) \<Rightarrow> 'a distr \<Rightarrow> 'b distr" where
+  weight_map_distr[simp]: "weight (map_distr f \<mu>) = weight \<mu>"
+  and supp_map_distr[simp]: "supp (map_distr f \<mu>) = f ` (supp \<mu>)"
+  
+axiomatization where  
+  compose_map_distr[simp]: "map_distr g (map_distr f \<mu>) = map_distr (\<lambda>x. g (f x)) \<mu>"
+  for f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c"
+
 typedef bit = "UNIV::bool set"..
 setup_lifting type_definition_bit
 instantiation bit :: field begin
@@ -476,6 +484,7 @@ and unitaryX[simp]: "unitary X"
 and unitaryY[simp]: "unitary Y"
 and unitaryZ[simp]: "unitary Z"
 
+(* lemma onetwo: "(1)=0" sorry *)
   
 ML_file \<open>qrhl.ML\<close>
   

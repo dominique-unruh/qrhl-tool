@@ -81,6 +81,11 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡�
  wp left.
  wp right.
  simp.
-# TODO: need to swap lines in right prog
-# TODO: need rnd with non-trivial mapping
-    
+ swap right.
+ rnd r,r <- map_distr (%r. (r,r+G k1+m2)) (uniform UNIV).
+      # TODO: missing: marginal-conditions
+ simp my_simp.
+ call.
+ wp left.
+ skip.
+ simp.

@@ -23,6 +23,24 @@ sealed trait Statement {
     vars.result
   }
 
+  /** Including nested programs (via Call) */
+  def variablesAll(env:Environment) : Set[String] = {
+    val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
+    def collect(s:Statement) : Unit = s match {
+      case Block(ss @ _*) => ss.foreach(collect)
+      case Assign(v,e) => vars += v.name; vars ++= e.variables
+      case Sample(v,e) => vars += v.name; vars ++= e.variables
+      case Call(name) => env.programs(name)
+      case While(e,body) => vars ++= e.variables; collect(body)
+      case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
+      case QInit(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
+      case Measurement(v,vs,e) => vars += v.name; vars ++= vs.map(_.name); vars ++= e.variables
+      case QApply(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
+    }
+    collect(this)
+    vars.result
+  }
+
   def inline(name: String, program: Statement): Statement
 }
 

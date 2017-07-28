@@ -211,6 +211,12 @@ object Parser extends RegexParsers {
       case "right" => WpTac(left=false)
     }
 
+  val tactic_swap: Parser[SwapTac] =
+    literal("swap") ~> OnceParser("left|right".r) ^^ {
+      case "left" => SwapTac(left=true)
+      case "right" => SwapTac(left=false)
+    }
+
   val tactic_inline: Parser[InlineTac] =
     literal("inline") ~> identifier ^^ InlineTac
 
@@ -228,17 +234,32 @@ object Parser extends RegexParsers {
       case "post" ~ _ ~ e => ConseqTac(post=Some(e))
     }
 
+  def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
+    literal("rnd") ~> (for (
+      x <- identifier;
+      xT = context.environment.cVariables(x).typ;
+      _ <- literal(",");
+      y <- identifier;
+      yT = context.environment.cVariables(y).typ;
+      _ <- sampleSymbol | assignSymbol;
+      e <- expression((xT*yT).distr)
+    ) yield e).? ^^ RndTac
+
+  val tactic_simp : Parser[SimpTac] =
+    literal("simp") ~> OnceParser(rep(identifier)) ^^ SimpTac
+
   def tactic(implicit context:ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
       tactic_wp |
-      literal("simp") ^^ { _ => SimpTac } |
+      tactic_swap |
+      tactic_simp |
       literal("skip") ^^ { _ => SkipTac } |
       literal("true") ^^ { _ => TrueTac } |
       tactic_inline |
       tactic_seq |
       tactic_conseq |
       literal("call") ^^ { _ => CallTac } |
-      literal("rnd") ^^ { _ => RndTac }
+      tactic_rnd
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

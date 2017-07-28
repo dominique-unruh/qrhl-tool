@@ -141,19 +141,9 @@ object Isabelle {
 
 //  private val configureContext: ml.Expr[IContext => IContext] =
 //    ml.Expr.uncheckedLiteral("(fn ctx => ctx (*|> Config.put show_types true |> Config.put show_sorts true*) )")
-  private def simplifyTerm(term: Term) : ml.Expr[IContext => Term] = {
-    val lit = ml.Expr.uncheckedLiteral[Term => IContext => Term](
-      """
-      (fn t => fn ctx =>
-       let val ct = Thm.cterm_of ctx t
-           val ct_eq = Simplifier.rewrite ctx ct |> Thm.prop_of
-           val (lhs,rhs) = Logic.dest_equals ct_eq
-           val _ = if lhs<>t then raise TERM("conversion returned wrong lhs\n",[t,lhs,rhs]) else ()
-       in
-         rhs
-       end)
-      """)
-    lit(term)
+  private def simplifyTerm(term: Term, facts:List[String]) : ml.Expr[IContext => Term] = {
+    val lit = ml.Expr.uncheckedLiteral[Term => List[String] => IContext => Term]("QRHL.simp")
+    lit(term)(implicitly)(facts)
   }
 
   def absfree(varName: String, varTyp: ITyp, term: Term) : ml.Expr[Term] = {
@@ -247,6 +237,6 @@ object Isabelle {
     def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(runExpr(term.print(context.read)))
     def readTyp(str:String) : ITyp = runExpr(isabelle.readTypeExpr(context.read)(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(runExpr(isabelle.printTypExpr(typ)(context.read)))
-    def simplify(term: Term) : Term = runExpr(Isabelle.simplifyTerm(term)(context.read))
+    def simplify(term: Term, facts:List[String]) : Term = runExpr(Isabelle.simplifyTerm(term,facts)(context.read))
   }
 }

@@ -103,7 +103,9 @@ fun sampleWp v T e B =
     in
       @{term "inf::assertion=>assertion=>assertion"} $ total $ B2
     end
-   
+
+
+
 fun rndWp v1 e1 v2 e2 T B =
     let val distrT = Type(@{type_name distr},[T])
         val _ = if fastype_of e1 = distrT then ()
@@ -123,8 +125,32 @@ fun rndWp v1 e1 v2 e2 T B =
       @{const inf(assertion)} $ sameDistr $ B2
     end
    
-val _ = rndWp "x1" @{term "uniform {x1::int}"} "x2" @{term "uniform {x2::int}"} @{typ int} @{term "Cla[(x1::int)=x2+1]"}
-|> Thm.cterm_of @{context} |> @{print}
+fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
+  let val distrT1 = Type(@{type_name distr},[T1])
+      val distrT2 = Type(@{type_name distr},[T2])
+      val T12 = HOLogic.mk_prodT (T1,T2)
+      val distrT12 = Type(@{type_name distr},[T12])
+      val setT12 = HOLogic.mk_setT T12
+      val _ = if fastype_of e1 = distrT1 then ()
+              else raise(TYPE("variable and expression, type mismatch",[T1,fastype_of e1],[e1]))
+      val _ = if fastype_of e2 = distrT2 then ()
+              else raise(TYPE("variable and expression, type mismatch",[T2,fastype_of e2],[e2]))
+      val _ = if fastype_of B = @{typ assertion} then ()
+              else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
+      val supp = Const(@{const_name supp}, distrT12 --> setT12) $ f
+      val absB = B |> absfree (v2,T2) |> absfree (v1,T1)
+      val marginals = @{term "Cla[undefined]"}
+      val B2 = @{const Inf(assertion)} $
+               (Const(@{const_name image}, (T12 --> @{typ assertion}) --> setT12 -->  @{typ "assertion set"}) $
+                 (Const(@{const_name case_prod}, (T1-->T2--> @{typ assertion}) --> (T12--> @{typ assertion})) $
+                  absB) $ supp)
+  in
+    @{const inf(assertion)} $ marginals $ B2
+  end
+
+(* val _ = rndWp2 "x1" @{typ int} @{term "uniform {x1::int}"} "x2" @{typ int} @{term "uniform {x2::int}"} \<^sup>
+@{term "uniform UNIV :: (int*int)distr"} @{term "Cla[(x1::int)=x2]"}
+|> Thm.cterm_of @{context} |> @{print} *)
 
 fun addQVariableNameAssumption name T ctx =
   let val qT = mk_qvariableT T
@@ -213,6 +239,18 @@ fun callWp cvars1 cvars2 qvars1 qvars2 post =
     ((wp, Term.add_free_names post []), qvarsEq)
     (* wp *)
   end
+
+fun simp t facts ctx =
+  let val ct = Thm.cterm_of ctx t
+      val ctx'  = fold (fn name => fn ctx => ctx addsimps (Proof_Context.get_thms ctx name)) facts ctx
+      val ct_eq = Simplifier.rewrite ctx' ct |> Thm.prop_of
+      val (lhs,rhs) = Logic.dest_equals ct_eq
+      val _ = if lhs<>t then raise TERM("conversion returned wrong lhs\n",[t,lhs,rhs]) else ()
+  in
+    rhs
+  end
+
+(* val _ = simp @{term "1::_::one"} ["onetwo"] @{context}  |> @{print} *)
 
 val _ = callWp [@{term "a1::int"},@{term "b1::int"},@{term "c1::int"}] [@{term "a2::int"},@{term "b2::int"},@{term "c2::int"}] 
                [] [] @{term "Cla[(a1::int)=a2 \<and> (a1\<le>a2) \<and> ((b1::int)=0) \<and> ((b2::int)=0)]"}

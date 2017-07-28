@@ -36,8 +36,8 @@ final class Expression private (val isabelle:Isabelle.Context, term:Term) {
 
   override lazy val toString: String = isabelle.prettyExpression(term)
   val isabelleTerm : Term = term
-  def simplify(isabelle: Option[Isabelle.Context]): Expression = simplify(isabelle.get)
-  def simplify(isabelle: Isabelle.Context): Expression = Expression(isabelle, isabelle.simplify(term))
+  def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): Expression = simplify(isabelle.get,facts)
+  def simplify(isabelle: Isabelle.Context, facts:List[String]): Expression = Expression(isabelle, isabelle.simplify(term,facts))
 
   def map(f : Term => Term) : Expression = new Expression(isabelle, f(term))
   def substitute(v:CVariable, repl:Expression) : Expression = map(Expression.substitute(v.name, repl.isabelleTerm, _))
