@@ -14,6 +14,7 @@ instantiation distr :: (type)zero begin
 definition "0 = Abs_distr (\<lambda>_. 0)"
 instance .. 
 end
+ 
   
 definition "supp \<mu> = {x. prob \<mu> x > 0}" 
 definition uniform :: "'a set \<Rightarrow> 'a distr" where
@@ -30,6 +31,8 @@ axiomatization "map_distr" :: "('a\<Rightarrow>'b) \<Rightarrow> 'a distr \<Righ
   
 axiomatization where  
   compose_map_distr[simp]: "map_distr g (map_distr f \<mu>) = map_distr (\<lambda>x. g (f x)) \<mu>"
+and  map_distr_id[simp]: "map_distr (\<lambda>x. x) \<mu> = \<mu>"
+and map_distr_uniform_eq[simp]: "(map_distr f (uniform A) = uniform B) = (bij_betw f A B \<or> (infinite A \<and> infinite B))"
   for f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c"
 
 typedef bit = "UNIV::bool set"..
@@ -484,8 +487,6 @@ and unitaryX[simp]: "unitary X"
 and unitaryY[simp]: "unitary Y"
 and unitaryZ[simp]: "unitary Z"
 
-(* lemma onetwo: "(1)=0" sorry *)
-  
 ML_file \<open>qrhl.ML\<close>
   
 section \<open>Experiments\<close>

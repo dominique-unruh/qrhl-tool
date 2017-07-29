@@ -10,7 +10,6 @@ classical var c : msg.
 classical var r : msg.
 classical var b : key.
 
-# TODO: remove once we have abstract A1,A2
 quantum var qglobA : string.
 classical var cglobA : string.
 
@@ -23,20 +22,18 @@ program A2 := { call A1; }.
 program B := { call A1; c <- r+m; call A2; }.
 
 
-# TODO use this:  c <- enc(k,m);
 program rorcpa0 := {
   k <$ uniform UNIV;
   call A1;
-  c <- G(k) + m;
+  c <- enc(k,m);
   call A2;
 }.
 
-# TODO use this:  c <- enc(k,r);
 program rorcpa1 := {
   k <$ uniform UNIV;
   call A1;
   r <$ uniform UNIV;
-  c <- G(k) + r;
+  c <- enc(k,r);
   call A2;
 }.
 
@@ -54,6 +51,7 @@ program prg1 := {
 qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
         call rorcpa0; ~ call prg0;
      {Cla[b1=b2]}.
+    
  inline rorcpa0.
  inline prg0.
  inline B.
@@ -73,6 +71,7 @@ qed.
 qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
         call rorcpa1; ~ call prg1;
      {Cla[b1=b2]}.
+    
  inline rorcpa1.
  inline prg1.
  inline B.
@@ -83,9 +82,13 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡�
  simp.
  swap right.
  rnd r,r <- map_distr (%r. (r,r+G k1+m2)) (uniform UNIV).
-      # TODO: missing: marginal-conditions
  simp my_simp.
  call.
  wp left.
  skip.
  simp.
+ simp aux_bij.
+ true.
+qed.
+    
+    

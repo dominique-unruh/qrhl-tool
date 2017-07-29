@@ -139,7 +139,11 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
               else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
       val supp = Const(@{const_name supp}, distrT12 --> setT12) $ f
       val absB = B |> absfree (v2,T2) |> absfree (v1,T1)
-      val marginals = @{term "Cla[undefined]"}
+      val marginal1 = HOLogic.mk_eq (Const(@{const_name map_distr}, (T12-->T1) --> distrT12 --> distrT1) $
+          Const(@{const_name fst}, T12-->T1) $ f, e1)
+      val marginal2 = HOLogic.mk_eq (Const(@{const_name map_distr}, (T12-->T2) --> distrT12 --> distrT2) $
+          Const(@{const_name snd}, T12-->T2) $ f, e2)
+      val marginals = @{const classical_subspace} $ (HOLogic.mk_conj (marginal1,marginal2))
       val B2 = @{const Inf(assertion)} $
                (Const(@{const_name image}, (T12 --> @{typ assertion}) --> setT12 -->  @{typ "assertion set"}) $
                  (Const(@{const_name case_prod}, (T1-->T2--> @{typ assertion}) --> (T12--> @{typ assertion})) $
@@ -148,9 +152,9 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
     @{const inf(assertion)} $ marginals $ B2
   end
 
-(* val _ = rndWp2 "x1" @{typ int} @{term "uniform {x1::int}"} "x2" @{typ int} @{term "uniform {x2::int}"} \<^sup>
-@{term "uniform UNIV :: (int*int)distr"} @{term "Cla[(x1::int)=x2]"}
-|> Thm.cterm_of @{context} |> @{print} *)
+val _ = rndWp2 "x1" @{typ int} @{term "uniform {x1::int}"} "x2" @{typ bool} @{term "uniform {x2::bool}"} 
+@{term "uniform UNIV :: (int*bool)distr"} @{term "Cla[(x1::int)=0 \<and> x2]"}
+|> Thm.cterm_of @{context} |> @{print}
 
 fun addQVariableNameAssumption name T ctx =
   let val qT = mk_qvariableT T
