@@ -6,7 +6,7 @@ declare[[quick_and_dirty]]
   
 typedecl key
 typedecl msg
-  
+
 instantiation key :: finite begin instance sorry end
 instantiation msg :: finite begin instance sorry end
 instantiation msg :: group_add begin instance sorry end
@@ -20,16 +20,16 @@ definition enc :: "key * msg \<Rightarrow> msg"
   
 lemma my_simp: "G k1 + x = x + G k1 + m2 + m2"
   by (metis add.assoc add.left_cancel xor_cancel)
+lemma mysimp2: "x+m11+m22+m22 = x+m11" for x::msg
+  by (metis add.assoc add.left_cancel xor_cancel)
 
 lemma aux_bij: "bij (\<lambda>xb::msg. xb + Gx + xa)"
   apply (rule bij_betw_byWitness[where f'="\<lambda>xb::msg. xb + Gx + xa"], auto)
   apply (metis add.assoc add.left_cancel xor_cancel)
   by (metis add.assoc add.left_cancel xor_cancel)
     
-  
-
     
-declare[[show_types,show_sorts]]
+(* declare[[show_types,show_sorts]] *)
   
     
 end
