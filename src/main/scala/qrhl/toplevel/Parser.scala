@@ -192,6 +192,16 @@ object Parser extends RegexParsers {
       DeclareProgramCommand(id,prog)
     }
 
+  def declareAdversary(implicit context:ParserContext) : Parser[DeclareAdversaryCommand] =
+    literal("adversary") ~> OnceParser(identifier ~ literal("vars") ~ identifierList) ^^ {
+      case name ~ _ ~ vars =>
+        for (v <- vars) if (!context.environment.cVariables.contains(v) && !context.environment.qVariables.contains(v))
+          throw UserException(s"Not a program variable: $v")
+        val cvars = vars.flatMap(context.environment.cVariables.get)
+        val qvars = vars.flatMap(context.environment.qVariables.get)
+        DeclareAdversaryCommand(name,cvars,qvars)
+    }
+
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
     _ <- literal("{");
@@ -268,5 +278,5 @@ object Parser extends RegexParsers {
 //  val quit: Parser[QuitCommand] = "quit" ^^ { _ => QuitCommand() }
 
   def command(implicit context:ParserContext): Parser[Command] =
-    (isabelle | variable | declareProgram | qrhl | (tactic ^^ TacticCommand) | undo | qed).named("command")
+    (isabelle | variable | declareProgram | declareAdversary | qrhl | (tactic ^^ TacticCommand) | undo | qed).named("command")
 }

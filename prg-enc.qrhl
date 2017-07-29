@@ -13,14 +13,13 @@ classical var b : key.
 quantum var qglobA : string.
 classical var cglobA : string.
 
-# TODO: all-quantified
 # A: inputs: none; outputs m
-program A1 := { c <- c; m <- m; cglobA <- cglobA; on qglobA apply undefined; b <- b; }.
+adversary A1 vars m,cglobA,qglobA.
 # A: inputs: c; outputs: b
-program A2 := { call A1; }.
+adversary A2 vars c,b,cglobA,qglobA.
+
 # B: inputs: r; outputs: b
 program B := { call A1; c <- r+m; call A2; }.
-
 
 program rorcpa0 := {
   k <$ uniform UNIV;
@@ -48,6 +47,7 @@ program prg1 := {
   call B;
 }.
 
+
 qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
         call rorcpa0; ~ call prg0;
      {Cla[b1=b2]}.
@@ -66,7 +66,9 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡�
  skip.
  simp.
  true.
+
 qed.
+
 
 qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
         call rorcpa1; ~ call prg1;
@@ -89,6 +91,7 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡�
  simp.
  simp aux_bij.
  true.
+
 qed.
     
     

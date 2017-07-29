@@ -1,7 +1,7 @@
 package qrhl.toplevel
 
 import qrhl.{State, Subgoal, Tactic, UserException}
-import qrhl.logic.{Block, Typ}
+import qrhl.logic.{Block, CVariable, QVariable, Typ}
 
 trait Command {
   def act(state: State): State
@@ -32,6 +32,13 @@ case class DeclareProgramCommand(name: String, program : Block) extends Command 
   override def act(state: State): State = {
     println(s"Declaring program $name. ")
     state.declareProgram(name,program)
+  }
+}
+
+case class DeclareAdversaryCommand(name: String, cvars: Seq[CVariable], qvars : Seq[QVariable]) extends Command {
+  override def act(state: State): State = {
+    println(s"Declaring adversary $name. ")
+    state.declareAdversary(name,cvars,qvars)
   }
 }
 

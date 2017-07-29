@@ -4,7 +4,14 @@ import qrhl.UserException
 
 import scala.collection.mutable
 
-// Environments
+/** Represents a logic environment in which programs and expressions are interpreted.
+  * @param cVariables
+  * @param qVariables All declared quantum variables
+  * @param ambientVariables All declared ambient variables (i.e., unspecified values, can be used in programs but not written)
+  * @param indexedNames TODO
+  * @param nonindexedNames TODO
+  * @param programs All declared programs (both concrete and abstract (adversary) ones
+  */
 final class Environment private
   (val cVariables : Map[String,CVariable],
    val qVariables : Map[String,QVariable],
@@ -49,6 +56,12 @@ final class Environment private
     copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,program)))
   }
 
+  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable]): Environment = {
+    if (programs.contains(name))
+      throw UserException(s"A program with name $name was already declared.")
+    copy(programs=programs.updated(name, AbstractProgramDecl(name,cvars.toList,qvars.toList)))
+  }
+
 
   private def copy(cVariables:Map[String,CVariable]=cVariables,
                    qVariables:Map[String,QVariable]=qVariables,
@@ -71,8 +84,8 @@ sealed trait ProgramDecl {
 //  val variables : (List[CVariable],List[QVariable])
 //  val subprograms : List[ProgramDecl]
   val name: String }
-final case class AbstractProgramDecl(name:String) extends ProgramDecl {
-  override val variablesRecursive: (List[CVariable], List[QVariable]) = ???
+final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable]) extends ProgramDecl {
+  override val variablesRecursive: (List[CVariable], List[QVariable]) = (cvars,qvars)
 }
 final case class ConcreteProgramDecl(environment: Environment, name:String, program:Block) extends ProgramDecl {
   override val variablesRecursive: (List[CVariable], List[QVariable]) = {
