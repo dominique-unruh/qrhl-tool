@@ -1,5 +1,7 @@
 isabelle /opt/Isabelle2016-1, theory PrgEnc.
 
+ambient var rho : program_state.
+
 classical var k : key.
 classical var s : key.
 
@@ -65,10 +67,10 @@ program middle := {
   call A2;
 }.
 
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m11=m12 ∧ m21=m22 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
-        call indcpa0; ~ call prg0B1;
-     {Cla[b1=b2]}.
-    
+goal indcpa0_prg0B1: Pr[b:indcpa0(rho)] = Pr[b:prg0B1(rho)].
+
+ byqrhl.
+ simp.
  inline indcpa0.
  inline prg0B1.
  inline B1.
@@ -86,10 +88,10 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m11=m12 ∧ m21=m22 ∧ cglobA1=cglobA2] ⊓ ⟦qg
 
 qed.
 
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m11=m12 ∧ m21=m22 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
-        call prg1B1; ~ call prg1B2;
-     {Cla[b1=b2]}.
+goal prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
 
+ byqrhl.
+ simp.
  inline prg1B1.
  inline prg1B2.
  inline B1.
@@ -109,11 +111,10 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m11=m12 ∧ m21=m22 ∧ cglobA1=cglobA2] ⊓ ⟦qg
 
 qed.
 
-    
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m11=m12 ∧ m21=m22 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
-        call indcpa1; ~ call prg0B2;
-     {Cla[b1=b2]}.
+goal indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
 
+ byqrhl.
+ simp.
  inline indcpa1.
  inline prg0B2.
  inline B2.
@@ -129,4 +130,14 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m11=m12 ∧ m21=m22 ∧ cglobA1=cglobA2] ⊓ ⟦qg
  simp.
  true.
     
+qed.
+
+
+goal abs( Pr[b:indcpa0(rho)] - Pr[b:indcpa1(rho)] ) <=
+     abs( Pr[b:prg0B1(rho)] - Pr[b:prg1B1(rho)] ) +
+     abs( Pr[b:prg0B2(rho)] - Pr[b:prg1B2(rho)] ).
+
+ simp indcpa0_prg0B1 indcpa1_prg0B2 prg1B1_prg1B21.
+ simp triangle.
+ true.
 qed.

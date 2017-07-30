@@ -8,6 +8,10 @@ import qrhl.logic._
 import qrhl.toplevel.ParserContext
 
 sealed trait Subgoal {
+  /** This goal as a boolean expression. If it cannot be expressed in Isabelle, a different,
+    * logically weaker expression is returned. */
+  def toExpression: Expression
+
   def checkVariablesDeclared(environment: Environment): Unit
 }
 
@@ -28,7 +32,11 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
       if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in left program")
   }
+
+  /** Returns the expression "True" */
+  override def toExpression: Expression = Expression(pre.isabelle, HOLogic.True)
 }
+
 final case class AmbientSubgoal(goal: Expression) extends Subgoal {
   override def toString: String = goal.toString
 
@@ -36,6 +44,9 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
     for (x <- goal.variables)
       if (!environment.variableExists(x))
         throw UserException(s"Undeclared variable $x")
+
+  /** This goal as a boolean expression. */
+  override def toExpression: Expression = goal
 }
 
 trait Tactic {
@@ -46,10 +57,20 @@ case class UserException(msg:String) extends RuntimeException(msg)
 
 class State private (val environment: Environment,
                      val goal: List[Subgoal],
+                     val currentLemma: Option[(String,Expression)],
                      val isabelle: Option[Isabelle.Context],
                      val boolT: Typ,
                      val assertionT: Typ,
                      val programT: Typ) {
+  def qed: State = {
+    assert(currentLemma.isDefined)
+    assert(goal.isEmpty)
+
+    val (name,prop) = currentLemma.get
+    val isa = if (name!="") isabelle.map(_.addAssumption(name,prop.isabelleTerm)) else isabelle
+    copy(isabelle=isa, currentLemma=None)
+  }
+
   def declareProgram(name: String, program: Block): State = {
     for (x <- program.variablesDirect)
       if (!environment.variableExistsForProg(x))
@@ -76,16 +97,18 @@ class State private (val environment: Environment,
 
   private def copy(environment:Environment=environment,
                    goal:List[Subgoal]=goal,
-                  isabelle:Option[Isabelle.Context]=isabelle,
-                  boolT:Typ=boolT,
-                  assertionT:Typ=assertionT,
-                   programT:Typ=programT) : State =
-    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT, programT=programT)
+                   isabelle:Option[Isabelle.Context]=isabelle,
+                   boolT:Typ=boolT,
+                   assertionT:Typ=assertionT,
+                   programT:Typ=programT,
+                   currentLemma:Option[(String,Expression)]=currentLemma) : State =
+    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT,
+      currentLemma=currentLemma, programT=programT)
 
-  def openGoal(goal:Subgoal) : State = this.goal match {
-    case Nil =>
+  def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
+    case None =>
       goal.checkVariablesDeclared(environment)
-      copy(goal=List(goal))
+      copy(goal=List(goal), currentLemma=Some((name,goal.toExpression)))
     case _ => throw UserException("There is still a pending proof.")
   }
 
@@ -142,6 +165,6 @@ class State private (val environment: Environment,
 
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
-    boolT=null, assertionT=null, programT=null)
+    boolT=null, assertionT=null, programT=null, currentLemma=None)
   private[State] val defaultIsabelleTheory = "QRHL_Protocol"
 }

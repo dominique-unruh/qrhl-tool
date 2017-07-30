@@ -265,6 +265,11 @@ object Isabelle {
       map(isabelle.declareVariableExpr(name, isabelleTyp))
     }
 
+    def addAssumption(name: String, assumption: Term): Context = {
+      val lit = ml.Expr.uncheckedLiteral[String => Term => IContext => IContext]("QRHL.addAssumption")
+      map(lit(name)(implicitly)(assumption))
+    }
+
     def map(expr:ml.Expr[IContext => IContext]): Context = {
       val newICtxt = isabelle.getRef(expr(context.read), thyName)
       new Context(isabelle,thyName,newICtxt)

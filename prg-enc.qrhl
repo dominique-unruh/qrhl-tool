@@ -51,7 +51,7 @@ program prg1 := {
 
 
 
-goal Pr[b:rorcpa0(rho)] <= Pr[b:prg0(rho)].
+goal rorcpa0_prg0: Pr[b:rorcpa0(rho)] = Pr[b:prg0(rho)].
 
  byqrhl.
  simp.
@@ -73,7 +73,7 @@ goal Pr[b:rorcpa0(rho)] <= Pr[b:prg0(rho)].
 qed.
 
 
-goal Pr[b:rorcpa1(rho)] <= Pr[b:prg1(rho)].
+goal rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
 
  byqrhl.
  simp.
@@ -97,6 +97,9 @@ goal Pr[b:rorcpa1(rho)] <= Pr[b:prg1(rho)].
 
 qed.
 
-    
-    
-    
+goal abs (Pr[b:rorcpa0(rho)] - Pr[b:rorcpa1(rho)]) = abs(Pr[b:prg0(rho)]-Pr[b:prg1(rho)]).
+
+ simp rorcpa0_prg0 rorcpa1_prg1.
+ true.
+
+qed.

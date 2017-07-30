@@ -203,8 +203,8 @@ object Parser extends RegexParsers {
     }
 
   def goal(implicit context:ParserContext) : Parser[GoalCommand] =
-    literal("goal") ~> OnceParser(expression(context.boolT)) ^^ {
-    e => GoalCommand(AmbientSubgoal(e)) }
+    literal("goal") ~> OnceParser((identifier <~ ":").? ~ expression(context.boolT)) ^^ {
+      case name ~ e => GoalCommand(name.getOrElse(""), AmbientSubgoal(e)) }
 
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
@@ -217,7 +217,7 @@ object Parser extends RegexParsers {
     _ <- literal("{");
     post <- expression(context.assertionT);
     _ <- literal("}")
-  ) yield GoalCommand(QRHLSubgoal(left,right,pre,post)))
+  ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post)))
 
   val tactic_wp: Parser[WpTac] =
     literal("wp") ~> OnceParser("left|right".r) ^^ {

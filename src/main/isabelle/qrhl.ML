@@ -281,6 +281,17 @@ fun byQRHLPre cvars qvars =
     @{const inf(assertion)} $ cEqs' $ qvarsEq
   end
 
+fun addAssumption name term ctx =
+  let val _ = if fastype_of term = HOLogic.boolT then ()
+              else raise (TYPE("expected a boolean expression",[fastype_of term],[term]))
+      val prop = HOLogic.mk_Trueprop term
+      val (_,ctx) = Proof_Context.add_assms Assumption.assume_export
+                               [((Binding.name name,[]), [(prop,[])])] ctx
+  in
+    ctx
+  end
+
+
 val _ = byQRHLPre [("a1","a2",@{typ bool}),("b1","b2",@{typ int})] [("q1","q2",@{typ bool}),("r1","r2",@{typ int})]
 |> Thm.cterm_of @{context}
 |> @{print}
