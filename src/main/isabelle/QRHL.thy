@@ -52,12 +52,17 @@ instantiation bit :: finite begin
 instance by (intro_classes, transfer, simp)
 end
   
+lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
+  apply transfer by auto
+
 (*instantiation "fun" :: (type,zero)zero begin
 definition[simp]: "zero_fun (x::'a) = (0::'b)"
 instance .. 
 end*)
-    
-ML {* @{type_name "distr"} *}
+
+typedecl program
+typedecl program_state
+
   
 section \<open>Subspaces\<close>
   
@@ -267,7 +272,6 @@ lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding sup_subsp
 axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a state set"
     
 definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
-  
   
   
 subsection \<open>Isometries\<close>
@@ -498,5 +502,13 @@ axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> 
   for Q R :: "'a qvariables" and \<psi> :: "'a state"
 
 (* declare[[show_types]] *)
+
+axiomatization probability :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" 
+syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:_'(_')]")
+parse_translation \<open>[("_probability", fn ctx => fn [Const(v,_),p,rho] =>
+  @{const probability} $ HOLogic.mk_string v $ p $ rho)]\<close>
+    
+print_translation \<open>[(@{const_syntax probability}, fn ctx => fn [str,p,rho] =>
+  Const(@{syntax_const "_probability"},dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
   
 end

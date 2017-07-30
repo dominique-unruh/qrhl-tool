@@ -7,8 +7,9 @@ import java.nio.file.Paths
 
 import info.hupel.isabelle.{Codec, Platform, Program, System, ml}
 import info.hupel.isabelle.api.{Configuration, Version}
+import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.ml.Expr
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Var, Context => IContext, Typ => ITyp, Type => IType}
+import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Type, Var, Context => IContext, Typ => ITyp}
 import info.hupel.isabelle.setup.{Resources, Setup}
 import monix.execution.Scheduler.Implicits.global
 import qrhl.UserException
@@ -121,10 +122,52 @@ class Isabelle(path:String) {
 }
 
 object Isabelle {
+  def mk_conj(t1: Term, t2: Term) : Term = HOLogic.conj $ t1 $ t2
+  def mk_conjs(terms: Term*): Term = terms match {
+    case t :: ts => ts.foldLeft(t)(mk_conj)
+    case Nil => HOLogic.True
+  }
+
+  val assertionT = Type("QRHL.subspace", List(Type("QRHL.mem2",Nil)))
+  val classical_subspace = Const("QRHL.classical_subspace", HOLogic.boolT -->: assertionT)
+  val assertion_inf = Const ("Lattices.inf_class.inf", assertionT -->: assertionT -->: assertionT)
+
+  def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
+
+  /** Analogous to Isabelle's HOLogic.dest_list. Throws [[MatchError]] if it's not a list */
+  def dest_list(term: Term): List[Term] = term match {
+    case (Const("List.list.Nil", _)) => Nil
+    case App(App(Const("List.list.Cons", _), t), u) => t :: dest_list(u)
+    case _ => throw new MatchError
+  }
+
+  /** Analogous to Isabelle's HOLogic.dest_numeral. Throws [[MatchError]] if it's not a numeral */
+  def dest_numeral(term:Term) : BigInt = term match {
+    case (Const("Num.num.One", _)) => 1
+    case App(Const("Num.num.Bit0", _), bs) => 2 * dest_numeral(bs)
+    case App(Const("Num.num.Bit1", _), bs) => 2 * dest_numeral(bs) + 1
+    case _ => throw new MatchError
+  }
+
+  /** Analogous to Isabelle's HOLogic.dest_char. Throws [[MatchError]] if it's not a char */
+  def dest_char(term:Term) : Char = {
+    val (typ, n) = term match {
+      case Const("Groups.zero_class.zero", ty) => (ty, 0)
+      case App(Const("String.Char", Type("fun", List(_, ty))), t) => (ty, dest_numeral(t).toInt)
+      case _ => throw new MatchError
+    }
+    if (typ == Type ("String.char", Nil)) n.toChar
+    else throw new MatchError
+  }
+
+  /** Analogous to Isabelle's HOLogic.dest_string. Throws [[MatchError]] if it's not a string */
+  def dest_string(term:Term) : String =
+    dest_list(term).map(dest_char).mkString
+
   def tupleT(typs: ITyp*): ITyp = typs match {
-    case Nil => IType("Product_Type.unit", Nil) // Unit
+    case Nil => Type("Product_Type.unit", Nil) // Unit
     case List(typ) => typ
-    case (typ :: rest) => IType("Product_Type.prod", List(typ,tupleT(rest :_*)))
+    case (typ :: rest) => Type("Product_Type.prod", List(typ,tupleT(rest :_*)))
   }
 
   def freeVars(term: Term): Set[String] = {
@@ -234,7 +277,7 @@ object Isabelle {
       val constrainedTerm = parsedTerm.constrain(typ)
       runExpr(isabelle.checkTermExpr(context.read)(constrainedTerm))
     }
-    def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(runExpr(term.print(context.read)))
+    def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(runExpr[String](term.print(context.read : ml.Expr[IContext]) : ml.Expr[String]))
     def readTyp(str:String) : ITyp = runExpr(isabelle.readTypeExpr(context.read)(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(runExpr(isabelle.printTypExpr(typ)(context.read)))
     def simplify(term: Term, facts:List[String]) : Term = runExpr(Isabelle.simplifyTerm(term,facts)(context.read))

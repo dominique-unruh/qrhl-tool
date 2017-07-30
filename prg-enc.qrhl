@@ -1,5 +1,7 @@
 isabelle /opt/Isabelle2016-1, theory PrgEnc.
 
+ambient var rho : program_state.
+
 classical var k : key.
 classical var s : key.
 
@@ -8,7 +10,7 @@ classical var s : key.
 classical var m : msg.
 classical var c : msg.
 classical var r : msg.
-classical var b : key.
+classical var b : bit.
 
 quantum var qglobA : string.
 classical var cglobA : string.
@@ -48,10 +50,11 @@ program prg1 := {
 }.
 
 
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
-        call rorcpa0; ~ call prg0;
-     {Cla[b1=b2]}.
-    
+
+goal Pr[b:rorcpa0(rho)] <= Pr[b:prg0(rho)].
+
+ byqrhl.
+ simp.
  inline rorcpa0.
  inline prg0.
  inline B.
@@ -70,10 +73,10 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡�
 qed.
 
 
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧}
-        call rorcpa1; ~ call prg1;
-     {Cla[b1=b2]}.
-    
+goal Pr[b:rorcpa1(rho)] <= Pr[b:prg1(rho)].
+
+ byqrhl.
+ simp.
  inline rorcpa1.
  inline prg1.
  inline B.
@@ -83,7 +86,7 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡�
  wp right.
  simp.
  swap right.
- rnd r,r <- map_distr (%r. (r,r+G k1+m2)) (uniform UNIV).
+ rnd r,r <- map_distr (λr. (r,r+G k1+m2)) (uniform UNIV).
  simp my_simp.
  call.
  wp left.
@@ -93,5 +96,7 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ cglobA1=cglobA2] ⊓ ⟦qglobA1⟧ ≡�
  true.
 
 qed.
+
+    
     
     

@@ -5,6 +5,8 @@ import info.hupel.isabelle.hol.HOLogic.boolT
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp, Type => IType}
 import qrhl.isabelle.Isabelle
 
+import scala.collection.mutable
+
 // Expressions
 /*sealed trait Expression {
   def simplify(isabelle: Option[Isabelle.Context]) : Expression
@@ -32,7 +34,23 @@ import qrhl.isabelle.Isabelle
 
 
 final class Expression private (val isabelle:Isabelle.Context, term:Term) {
-  def variables : Set[String] = Isabelle.freeVars(term)
+  /** Free variables, including those encoded as a string in "probability ... ... str" */
+  private def freeVars(term: Term): Set[String] = {
+    val fv = new mutable.SetBuilder[String,Set[String]](Set.empty)
+    def collect(t:Term) : Unit = t match {
+      case Free(v,_) => fv += v
+      case App(App(App(Const("QRHL.probability",_),t1),t2),t3) =>
+        fv += Isabelle.dest_string(t1)
+        collect(t2); collect(t3)
+      case Const(_,_) | Bound(_) | Var(_,_) =>
+      case App(t1,t2) => collect(t1); collect(t2)
+      case Abs(_,_,body) => collect(body)
+    }
+    collect(term)
+    fv.result
+  }
+
+  def variables : Set[String] = freeVars(term)
 
   override lazy val toString: String = isabelle.prettyExpression(term)
   val isabelleTerm : Term = term
@@ -75,6 +93,8 @@ object Expression {
   def apply(isabelle:Isabelle.Context, term:Term) : Expression = {
     new Expression(isabelle,term)
   }
+
+  def unapply(e: Expression): Option[Term] = Some(e.isabelleTerm)
 
   def substitute(v: String, repl: Term, term: Term): Term = {
       def subst(t:Term) : Term = t match {

@@ -16,16 +16,16 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
 
   override def checkVariablesDeclared(environment: Environment): Unit = {
     for (x <- pre.variables)
-      if (!environment.indexedNames.contains(x))
+      if (!environment.variableExistsForAssertion(x))
         throw UserException(s"Undeclared variable $x in precondition")
     for (x <- post.variables)
-      if (!environment.indexedNames.contains(x))
+      if (!environment.variableExistsForAssertion(x))
         throw UserException(s"Undeclared variable $x in postcondition")
     for (x <- left.variablesDirect)
-      if (!environment.nonindexedNames.contains(x))
+      if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in left program")
     for (x <- right.variablesDirect)
-      if (!environment.nonindexedNames.contains(x))
+      if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in left program")
   }
 }
@@ -34,7 +34,7 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
 
   override def checkVariablesDeclared(environment: Environment): Unit =
     for (x <- goal.variables)
-      if (!environment.indexedNames.contains(x))
+      if (!environment.variableExists(x))
         throw UserException(s"Undeclared variable $x")
 }
 
@@ -48,11 +48,16 @@ class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val isabelle: Option[Isabelle.Context],
                      val boolT: Typ,
-                     val assertionT: Typ) {
+                     val assertionT: Typ,
+                     val programT: Typ) {
   def declareProgram(name: String, program: Block): State = {
     for (x <- program.variablesDirect)
-      if (!environment.nonindexedNames.contains(x))
+      if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in program")
+
+    if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
+    val isa = isabelle.get.declareVariable(name, programT.isabelleTyp)
+
     copy(environment = environment.declareProgram(name, program))
   }
 
@@ -66,14 +71,16 @@ class State private (val environment: Environment,
       throw UserException("No pending proof")
     case (subgoal::subgoals) =>
       copy(goal=tactic.apply(this,subgoal)++subgoals)
+
   }
 
   private def copy(environment:Environment=environment,
                    goal:List[Subgoal]=goal,
                   isabelle:Option[Isabelle.Context]=isabelle,
                   boolT:Typ=boolT,
-                  assertionT:Typ=assertionT) : State =
-    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT)
+                  assertionT:Typ=assertionT,
+                   programT:Typ=programT) : State =
+    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT, programT=programT)
 
   def openGoal(goal:Subgoal) : State = this.goal match {
     case Nil =>
@@ -101,7 +108,7 @@ class State private (val environment: Environment,
       case None => isabelle.getContext(State.defaultIsabelleTheory)
       case Some(thy) => isabelle.getContextFile(thy)
     }
-    copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"assertion"))
+    copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"QRHL.assertion"), programT=Typ(isa,"QRHL.program"))
   }
 
   private def addQVariableNameAssumption(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
@@ -135,6 +142,6 @@ class State private (val environment: Environment,
 
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
-    boolT=null, assertionT=null)
+    boolT=null, assertionT=null, programT=null)
   private[State] val defaultIsabelleTheory = "QRHL_Protocol"
 }

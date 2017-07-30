@@ -1,7 +1,7 @@
 package qrhl.toplevel
 
 import info.hupel.isabelle.pure.{Typ => ITyp, Type => IType}
-import qrhl.{QRHLSubgoal, Tactic, UserException, toplevel}
+import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.tactic._
@@ -202,6 +202,10 @@ object Parser extends RegexParsers {
         DeclareAdversaryCommand(name,cvars,qvars)
     }
 
+  def goal(implicit context:ParserContext) : Parser[GoalCommand] =
+    literal("goal") ~> OnceParser(expression(context.boolT)) ^^ {
+    e => GoalCommand(AmbientSubgoal(e)) }
+
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
     _ <- literal("{");
@@ -269,7 +273,8 @@ object Parser extends RegexParsers {
       tactic_seq |
       tactic_conseq |
       literal("call") ^^ { _ => CallTac } |
-      tactic_rnd
+      tactic_rnd |
+      literal("byqrhl") ^^ { _ => ByQRHLTac }
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 
@@ -278,5 +283,5 @@ object Parser extends RegexParsers {
 //  val quit: Parser[QuitCommand] = "quit" ^^ { _ => QuitCommand() }
 
   def command(implicit context:ParserContext): Parser[Command] =
-    (isabelle | variable | declareProgram | declareAdversary | qrhl | (tactic ^^ TacticCommand) | undo | qed).named("command")
+    (isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) | undo | qed).named("command")
 }
