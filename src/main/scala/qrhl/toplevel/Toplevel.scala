@@ -20,7 +20,7 @@ class Toplevel(initialState : State = State.empty) {
     states = null
   }
 
-  def isabelle = state.isabelle.get.isabelle
+  def isabelle: Isabelle = state.isabelle.get.isabelle
 
   private val commandEnd: Regex = """\.\s*$""".r
 

@@ -95,12 +95,12 @@ class Isabelle(path:String) {
   def getRef[A: ml.Opaque](expr: ml.Expr[A], thyName: String): ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
 
   def getContext(thyName: String) =
-    new Isabelle.Context(this, thyName, getRef(IContext.initGlobal(Theory.get(thyName)), thyName))
+    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(Theory.get(thyName)), thyName))
 
   def getContextFile(thyName: String): Isabelle.Context = {
     val use: ml.Expr[String => Theory] =
       ml.Expr.uncheckedLiteral("(fn name => (Thy_Info.use_thy (name,Position.none); Thy_Info.get_theory name))")
-    new Isabelle.Context(this, thyName, getRef(IContext.initGlobal(use(thyName)), "Protocol_Main"))
+    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(use(thyName)), "Protocol_Main"))
   }
 
   private var disposed = false
