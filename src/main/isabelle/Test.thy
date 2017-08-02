@@ -2,6 +2,15 @@ theory Test
   imports QRHL                 
 begin
 
+  
+  
+  term "1"
+  term "a\<longleftrightarrow>b"
+ML \<open>
+@{term "inf"};;
+@{type_name bit}
+\<close>
+  
 lemma "weight (uniform (UNIV::bit set)) = (1::real)"
   apply simp
 

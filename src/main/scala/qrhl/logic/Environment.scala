@@ -4,66 +4,87 @@ import qrhl.UserException
 
 import scala.collection.mutable
 
-// Environments
+/** Represents a logic environment in which programs and expressions are interpreted.
+  * @param cVariables All declared classical variables
+  * @param qVariables All declared quantum variables
+  * @param ambientVariables All declared ambient variables (i.e., unspecified values, can be used in programs but not written)
+  * @param programs All declared programs (both concrete and abstract (adversary) ones)
+  */
 final class Environment private
   (val cVariables : Map[String,CVariable],
    val qVariables : Map[String,QVariable],
-   val ambientVariables : Map[String,Typ], // variables used in the ambient logic
-   val indexedNames : Set[String], // all variable names together, program variables indexed with 1/2
-   val nonindexedNames : Set[String], // all variable names together, without 1/2-index
+   val ambientVariables : Map[String,Typ],
+   val cqVariables12 : Set[String],
+//   val indexedNames : Set[String], // all variable names together, program variables indexed with 1/2
+//   val nonindexedNames : Set[String], // all variable names together, without 1/2-index
    val programs : Map[String,ProgramDecl]) {
 //  def getCVariable(name: String): CVariable = cVariables(name)
 
+  def variableExists(name:String) : Boolean = {
+    cVariables.contains(name) || qVariables.contains(name) || ambientVariables.contains(name) ||
+      cqVariables12.contains(name) || programs.contains(name)
+  }
+
+  /** Variable declared as program variable or ambient variable */
+  def variableExistsForProg(name:String) : Boolean = cVariables.contains(name) || qVariables.contains(name) || ambientVariables.contains(name)
+  /** Variable declared as indexed program variable or ambient variable */
+  def variableExistsForAssertion(name:String) : Boolean = cqVariables12.contains(name) || ambientVariables.contains(name)
+//  /** Variable declared as indexed program variable or ambient variable or program */
+//  def variableExistsForGoal(name:String) : Boolean = cqVariables12.contains(name) || ambientVariables.contains(name) || programs.contains(name)
+
   def declareVariable(name: String, typ: Typ, quantum:Boolean=false): Environment = {
-    assert(!nonindexedNames.contains(name))
-    val nonidxNames = nonindexedNames + name
+    assert(!variableExists(name))
+//    val nonidxNames = nonindexedNames + name
 
     val newIdxNames = List(Variable.index1(name),Variable.index2(name))
     for (n <- newIdxNames)
-      if (indexedNames.contains(n))
+      if (variableExists(n))
         throw UserException(s"Indexed form $n of variable $name already defined")
 //    assert(!indexedNames.contains(n))
-    val idxNames = indexedNames ++ newIdxNames
+//    val idxNames = indexedNames ++ newIdxNames
 
-    assert(!cVariables.contains(name))
-    assert(!qVariables.contains(name))
+//    assert(!cVariables.contains(name))
+//    assert(!qVariables.contains(name))
     if (quantum)
       copy(qVariables = qVariables.updated(name, QVariable(name,typ)),
-        indexedNames=idxNames, nonindexedNames = nonidxNames)
+        cqVariables12=cqVariables12++newIdxNames)
     else
       copy(cVariables = cVariables.updated(name, CVariable(name,typ)),
-        indexedNames=idxNames, nonindexedNames = nonidxNames)
+        cqVariables12=cqVariables12++newIdxNames)
   }
 
   def declareAmbientVariable(name: String, typ:Typ) : Environment = {
-    assert(!nonindexedNames.contains(name))
-    assert(!indexedNames.contains(name))
-    copy(ambientVariables=ambientVariables.updated(name, typ),
-      indexedNames = indexedNames+name,
-      nonindexedNames = nonindexedNames+name)
+    assert(!variableExists(name))
+    copy(ambientVariables=ambientVariables.updated(name, typ))
   }
 
   def declareProgram(name: String, program: Block): Environment = {
     if (programs.contains(name))
       throw UserException(s"A program with name $name was already declared.")
+    assert(!variableExists(name))
     copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,program)))
+  }
+
+  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable]): Environment = {
+    if (programs.contains(name))
+      throw UserException(s"A program with name $name was already declared.")
+    assert(!variableExists(name))
+    copy(programs=programs.updated(name, AbstractProgramDecl(name,cvars.toList,qvars.toList)))
   }
 
 
   private def copy(cVariables:Map[String,CVariable]=cVariables,
                    qVariables:Map[String,QVariable]=qVariables,
                    ambientVariables:Map[String,Typ]=ambientVariables,
-                   indexedNames : Set[String]=indexedNames,
-                   nonindexedNames : Set[String]=nonindexedNames,
-                   programs:Map[String,ProgramDecl]=programs) =
+                   programs:Map[String,ProgramDecl]=programs,
+                   cqVariables12:Set[String]=cqVariables12) =
     new Environment(cVariables=cVariables, qVariables=qVariables, programs=programs,
-      indexedNames=indexedNames, ambientVariables=ambientVariables, nonindexedNames=nonindexedNames)
+      ambientVariables=ambientVariables, cqVariables12=cqVariables12)
 }
 
 object Environment {
   val empty = new Environment(cVariables=Map.empty, qVariables=Map.empty,
-    ambientVariables=Map.empty, indexedNames=Set.empty, programs=Map.empty,
-    nonindexedNames=Set.empty)
+    ambientVariables=Map.empty, programs=Map.empty, cqVariables12=Set.empty)
 }
 
 sealed trait ProgramDecl {
@@ -71,8 +92,8 @@ sealed trait ProgramDecl {
 //  val variables : (List[CVariable],List[QVariable])
 //  val subprograms : List[ProgramDecl]
   val name: String }
-final case class AbstractProgramDecl(name:String) extends ProgramDecl {
-  override val variablesRecursive: (List[CVariable], List[QVariable]) = ???
+final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable]) extends ProgramDecl {
+  override val variablesRecursive: (List[CVariable], List[QVariable]) = (cvars,qvars)
 }
 final case class ConcreteProgramDecl(environment: Environment, name:String, program:Block) extends ProgramDecl {
   override val variablesRecursive: (List[CVariable], List[QVariable]) = {

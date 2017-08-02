@@ -103,7 +103,9 @@ fun sampleWp v T e B =
     in
       @{term "inf::assertion=>assertion=>assertion"} $ total $ B2
     end
-   
+
+
+
 fun rndWp v1 e1 v2 e2 T B =
     let val distrT = Type(@{type_name distr},[T])
         val _ = if fastype_of e1 = distrT then ()
@@ -123,8 +125,37 @@ fun rndWp v1 e1 v2 e2 T B =
       @{const inf(assertion)} $ sameDistr $ B2
     end
    
-val _ = rndWp "x1" @{term "uniform {x1::int}"} "x2" @{term "uniform {x2::int}"} @{typ int} @{term "Cla[(x1::int)=x2+1]"}
-|> Thm.cterm_of @{context} |> @{print}
+fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
+  let val distrT1 = Type(@{type_name distr},[T1])
+      val distrT2 = Type(@{type_name distr},[T2])
+      val T12 = HOLogic.mk_prodT (T1,T2)
+      val distrT12 = Type(@{type_name distr},[T12])
+      val setT12 = HOLogic.mk_setT T12
+      val _ = if fastype_of e1 = distrT1 then ()
+              else raise(TYPE("variable and expression, type mismatch",[T1,fastype_of e1],[e1]))
+      val _ = if fastype_of e2 = distrT2 then ()
+              else raise(TYPE("variable and expression, type mismatch",[T2,fastype_of e2],[e2]))
+      val _ = if fastype_of B = @{typ assertion} then ()
+              else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
+      val supp = Const(@{const_name supp}, distrT12 --> setT12) $ f
+      val absB = B |> absfree (v2,T2) |> absfree (v1,T1)
+      val marginal1 = HOLogic.mk_eq (Const(@{const_name map_distr}, (T12-->T1) --> distrT12 --> distrT1) $
+          Const(@{const_name fst}, T12-->T1) $ f, e1)
+      val marginal2 = HOLogic.mk_eq (Const(@{const_name map_distr}, (T12-->T2) --> distrT12 --> distrT2) $
+          Const(@{const_name snd}, T12-->T2) $ f, e2)
+      val marginals = @{const classical_subspace} $ (HOLogic.mk_conj (marginal1,marginal2))
+      val B2 = @{const Inf(assertion)} $
+               (Const(@{const_name image}, (T12 --> @{typ assertion}) --> setT12 -->  @{typ "assertion set"}) $
+                 (Const(@{const_name case_prod}, (T1-->T2--> @{typ assertion}) --> (T12--> @{typ assertion})) $
+                  absB) $ supp)
+  in
+    @{const inf(assertion)} $ marginals $ B2
+  end
+
+(* val _ = rndWp2 "x1" @{typ int} @{term "uniform {x1::int}"} "x2" @{typ bool} @{term "uniform {x2::bool}"} 
+@{term "uniform UNIV :: (int*bool)distr"} @{term "Cla[(x1::int)=0 \<and> x2]"}
+|> Thm.cterm_of @{context} |> @{print} *)
+
 
 fun addQVariableNameAssumption name T ctx =
   let val qT = mk_qvariableT T
@@ -214,12 +245,54 @@ fun callWp cvars1 cvars2 qvars1 qvars2 post =
     (* wp *)
   end
 
-val _ = callWp [@{term "a1::int"},@{term "b1::int"},@{term "c1::int"}] [@{term "a2::int"},@{term "b2::int"},@{term "c2::int"}] 
-               [] [] @{term "Cla[(a1::int)=a2 \<and> (a1\<le>a2) \<and> ((b1::int)=0) \<and> ((b2::int)=0)]"}
-|> #1 |> #1
-(* |> callWp [@{term "a1::int"},@{term "b1::int"},@{term "c1::int"}] [@{term "a2::int"},@{term "b2::int"},@{term "c2::int"}] 
-               [] [] 
-|> #1 |> #1 *)
+fun simp t facts ctx =
+  let val ct = Thm.cterm_of ctx t
+      val ctx'  = fold (fn name => fn ctx => ctx addsimps (Proof_Context.get_thms ctx name)) facts ctx
+      val ct_eq = Simplifier.rewrite ctx' ct |> Thm.prop_of
+      val (lhs,rhs) = Logic.dest_equals ct_eq
+      val _ = if lhs<>t then raise TERM("conversion returned wrong lhs\n",[t,lhs,rhs]) else ()
+  in
+    rhs
+  end
+
+fun dest_numeral_syntax (Const (@{const_syntax "Num.num.One"}, _)) = 1
+  | dest_numeral_syntax (Const (@{const_syntax "Num.num.Bit0"}, _) $ bs) = 2 * dest_numeral_syntax bs
+  | dest_numeral_syntax (Const (@{const_syntax "Num.num.Bit1"}, _) $ bs) = 2 * dest_numeral_syntax bs + 1
+  | dest_numeral_syntax t = raise TERM ("dest_num_syntax", [t]);
+fun dest_char_syntax t =
+  case t of
+      Const (@{const_syntax Groups.zero_class.zero}, _) => 0
+    | (Const (@{const_syntax String.Char}, _) $ t) => dest_numeral_syntax t
+    | _ => raise TERM ("dest_char_syntax", [t]);
+fun dest_list_syntax (Const (@{const_syntax Nil}, _)) = []
+  | dest_list_syntax (Const (@{const_syntax Cons}, _) $ t $ u) = t :: dest_list_syntax u
+  | dest_list_syntax t = raise TERM ("dest_list_syntax", [t])
+val dest_string_syntax = implode o map (chr o dest_char_syntax) o dest_list_syntax;
+
+
+fun byQRHLPre cvars qvars =
+  let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
+      val cEqs' = @{const classical_subspace} $ mk_conjs cEqs
+      val (qvars1',qvars1T) = qvariables (map (fn (v1,_ ,T) => Free(v1,mk_qvariableT T)) qvars)
+      val (qvars2',qvars2T) = qvariables (map (fn (_ ,v2,T) => Free(v2,mk_qvariableT T)) qvars)
+      val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
+      val qvarsEq = if qvars=[] then @{const top(assertion)} else mk_quantum_equality qvars1' qvars2' qvars1T
+  in
+    @{const inf(assertion)} $ cEqs' $ qvarsEq
+  end
+
+fun addAssumption name term ctx =
+  let val _ = if fastype_of term = HOLogic.boolT then ()
+              else raise (TYPE("expected a boolean expression",[fastype_of term],[term]))
+      val prop = HOLogic.mk_Trueprop term
+      val (_,ctx) = Proof_Context.add_assms Assumption.assume_export
+                               [((Binding.name name,[]), [(prop,[])])] ctx
+  in
+    ctx
+  end
+
+
+val _ = byQRHLPre [("a1","a2",@{typ bool}),("b1","b2",@{typ int})] [("q1","q2",@{typ bool}),("r1","r2",@{typ int})]
 |> Thm.cterm_of @{context}
 |> @{print}
 

@@ -5,6 +5,8 @@ import qrhl.isabelle.Isabelle
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp, Type => IType}
 
 final class Typ private (private val isabelle:Isabelle.Context, val isabelleTyp:ITyp) {
+  def distr: Typ = Typ(isabelle, IType("QRHL.distr",List(isabelleTyp)))
+
   override val toString: String = isabelle.prettyTyp(isabelleTyp)
 //  val isabelleTyp : ITyp = typ
 
@@ -12,6 +14,8 @@ final class Typ private (private val isabelle:Isabelle.Context, val isabelleTyp:
     case t:Typ => isabelleTyp==t.isabelleTyp
     case _ => false
   }
+
+  def *(o: Typ) = Typ(isabelle, IType("Product_Type.prod",List(isabelleTyp,o.isabelleTyp)))
 
   override def hashCode: Int = isabelleTyp.hashCode
 }

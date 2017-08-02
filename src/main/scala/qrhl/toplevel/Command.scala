@@ -1,7 +1,7 @@
 package qrhl.toplevel
 
 import qrhl.{State, Subgoal, Tactic, UserException}
-import qrhl.logic.{Block, Typ}
+import qrhl.logic.{Block, CVariable, QVariable, Typ}
 
 trait Command {
   def act(state: State): State
@@ -37,10 +37,22 @@ case class DeclareProgramCommand(name: String, program : Block) extends Command 
   }
 }
 
-case class GoalCommand(goal: Subgoal) extends Command {
+case class DeclareAdversaryCommand(name: String, cvars: Seq[CVariable], qvars : Seq[QVariable]) extends Command {
+  override def act(state: State): State = {
+    println(s"Declaring adversary $name. ")
+    state.declareAdversary(name,cvars,qvars)
+  }
+}
+
+/**
+  *
+  * @param name may be "", if the lemma should not be stored
+  * @param goal
+  */
+case class GoalCommand(name: String, goal: Subgoal) extends Command {
   override def act(state: State): State = {
     println("Starting proof.")
-    val state2 = state.openGoal(goal)
+    val state2 = state.openGoal(name, goal)
     state2
   }
 }
@@ -71,7 +83,13 @@ case class QedCommand() extends Command {
   override def act(state: State): State = {
     if (state.goal.nonEmpty)
       throw UserException("Pending subgoals.")
-    state
+    if (state.currentLemma.isEmpty)
+      throw UserException("Not in a proof.")
+    if (state.currentLemma.get._1 != "")
+      println(s"Finished and saved current lemma as ${state.currentLemma.get._1}:\n${state.currentLemma.get._2}")
+    else
+      println("Finished current lemma.")
+    state.qed
   }
 }
 

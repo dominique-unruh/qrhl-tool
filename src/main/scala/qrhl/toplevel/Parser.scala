@@ -1,7 +1,7 @@
 package qrhl.toplevel
 
 import info.hupel.isabelle.pure.{Typ => ITyp, Type => IType}
-import qrhl.{QRHLSubgoal, Tactic, UserException, toplevel}
+import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.tactic._
@@ -192,6 +192,20 @@ object Parser extends RegexParsers {
       DeclareProgramCommand(id,prog)
     }
 
+  def declareAdversary(implicit context:ParserContext) : Parser[DeclareAdversaryCommand] =
+    literal("adversary") ~> OnceParser(identifier ~ literal("vars") ~ identifierList) ^^ {
+      case name ~ _ ~ vars =>
+        for (v <- vars) if (!context.environment.cVariables.contains(v) && !context.environment.qVariables.contains(v))
+          throw UserException(s"Not a program variable: $v")
+        val cvars = vars.flatMap(context.environment.cVariables.get)
+        val qvars = vars.flatMap(context.environment.qVariables.get)
+        DeclareAdversaryCommand(name,cvars,qvars)
+    }
+
+  def goal(implicit context:ParserContext) : Parser[GoalCommand] =
+    literal("goal") ~> OnceParser((identifier <~ ":").? ~ expression(context.boolT)) ^^ {
+      case name ~ e => GoalCommand(name.getOrElse(""), AmbientSubgoal(e)) }
+
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
     _ <- literal("{");
@@ -203,12 +217,18 @@ object Parser extends RegexParsers {
     _ <- literal("{");
     post <- expression(context.assertionT);
     _ <- literal("}")
-  ) yield GoalCommand(QRHLSubgoal(left,right,pre,post)))
+  ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post)))
 
   val tactic_wp: Parser[WpTac] =
     literal("wp") ~> OnceParser("left|right".r) ^^ {
       case "left" => WpTac(left=true)
       case "right" => WpTac(left=false)
+    }
+
+  val tactic_swap: Parser[SwapTac] =
+    literal("swap") ~> OnceParser("left|right".r) ^^ {
+      case "left" => SwapTac(left=true)
+      case "right" => SwapTac(left=false)
     }
 
   val tactic_inline: Parser[InlineTac] =
@@ -228,17 +248,33 @@ object Parser extends RegexParsers {
       case "post" ~ _ ~ e => ConseqTac(post=Some(e))
     }
 
+  def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
+    literal("rnd") ~> (for (
+      x <- identifier;
+      xT = context.environment.cVariables(x).typ;
+      _ <- literal(",");
+      y <- identifier;
+      yT = context.environment.cVariables(y).typ;
+      _ <- sampleSymbol | assignSymbol;
+      e <- expression((xT*yT).distr)
+    ) yield e).? ^^ RndTac
+
+  val tactic_simp : Parser[SimpTac] =
+    literal("simp") ~> OnceParser(rep(identifier)) ^^ SimpTac
+
   def tactic(implicit context:ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
       tactic_wp |
-      literal("simp") ^^ { _ => SimpTac } |
+      tactic_swap |
+      tactic_simp |
       literal("skip") ^^ { _ => SkipTac } |
       literal("true") ^^ { _ => TrueTac } |
       tactic_inline |
       tactic_seq |
       tactic_conseq |
       literal("call") ^^ { _ => CallTac } |
-      literal("rnd") ^^ { _ => RndTac }
+      tactic_rnd |
+      literal("byqrhl") ^^ { _ => ByQRHLTac }
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 
@@ -247,5 +283,5 @@ object Parser extends RegexParsers {
 //  val quit: Parser[QuitCommand] = "quit" ^^ { _ => QuitCommand() }
 
   def command(implicit context:ParserContext): Parser[Command] =
-    (isabelle | variable | declareProgram | qrhl | (tactic ^^ TacticCommand) | undo | qed).named("command")
+    (isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) | undo | qed).named("command")
 }

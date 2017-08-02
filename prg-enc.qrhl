@@ -1,4 +1,6 @@
-isabelle auto, theory PrgEnc.
+isabelle /opt/Isabelle2016-1, theory PrgEnc.
+
+ambient var rho : program_state.
 
 classical var k : key.
 classical var s : key.
@@ -8,22 +10,18 @@ classical var s : key.
 classical var m : msg.
 classical var c : msg.
 classical var r : msg.
-classical var b : key.
+classical var b : bit.
 
-quantum var qstateA : string.
-classical var stateA : string.
+quantum var qglobA : string.
+classical var cglobA : string.
 
-# TODO: make A1,A2 abstract
+# A: inputs: none; outputs m
+adversary A1 vars m,cglobA,qglobA.
+# A: inputs: c; outputs: b
+adversary A2 vars c,b,cglobA,qglobA.
 
-# inputs: none; outputs m
-program A1 := { c <- c; m <- m; stateA <- stateA; on qstateA apply undefined; b <- b; }.
-
-# inputs: c; outputs: b
-program A2 := { call A1; }.
-
-# inputs: r; outputs: b
+# B: inputs: r; outputs: b
 program B := { call A1; c <- r+m; call A2; }.
-
 
 program rorcpa0 := {
   k <$ uniform UNIV;
@@ -51,9 +49,12 @@ program prg1 := {
   call B;
 }.
 
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ stateA1=stateA2] ⊓ ⟦qstateA1⟧ ≡𝔮 ⟦qstateA2⟧}
-        call rorcpa0; ~ call prg0;
-     {Cla[b1=b2]}.
+
+
+goal rorcpa0_prg0: Pr[b:rorcpa0(rho)] = Pr[b:prg0(rho)].
+
+ byqrhl.
+ simp.
  inline rorcpa0.
  inline prg0.
  inline B.
@@ -68,11 +69,14 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ stateA1=stateA2] ⊓ ⟦qstateA1⟧ ≡�
  skip.
  simp.
  true.
+
 qed.
 
-qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ stateA1=stateA2] ⊓ ⟦qstateA1⟧ ≡𝔮 ⟦qstateA2⟧}
-        call rorcpa1; ~ call prg1;
-     {Cla[b1=b2]}.
+
+goal rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
+
+ byqrhl.
+ simp.
  inline rorcpa1.
  inline prg1.
  inline B.
@@ -81,6 +85,21 @@ qrhl {Cla[b1=b2 ∧ c1=c2 ∧ m1=m2 ∧ stateA1=stateA2] ⊓ ⟦qstateA1⟧ ≡�
  wp left.
  wp right.
  simp.
-# TODO: need to swap lines in right prog
-# TODO: need rnd with non-trivial mapping
-    
+ swap right.
+ rnd r,r <- map_distr (λr. (r,r+G k1+m2)) (uniform UNIV).
+ simp my_simp.
+ call.
+ wp left.
+ skip.
+ simp.
+ simp aux_bij.
+ true.
+
+qed.
+
+goal abs (Pr[b:rorcpa0(rho)] - Pr[b:rorcpa1(rho)]) = abs(Pr[b:prg0(rho)]-Pr[b:prg1(rho)]).
+
+ simp rorcpa0_prg0 rorcpa1_prg1.
+ true.
+
+qed.

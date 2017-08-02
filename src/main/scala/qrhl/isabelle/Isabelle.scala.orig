@@ -9,7 +9,12 @@ import info.hupel.isabelle.{Codec, OfficialPlatform, Platform, Program, System, 
 import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.ml.Expr
+<<<<<<< HEAD
+import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Var, Context => IContext, Typ => ITyp, Type => IType}
+import info.hupel.isabelle.setup.Setup.{Absent, SetupImpossible, detect}
+=======
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Type, Var, Context => IContext, Typ => ITyp}
+>>>>>>> refs/remotes/origin/master
 import info.hupel.isabelle.setup.{Resources, Setup}
 import monix.execution.Scheduler.Implicits.global
 import qrhl.UserException
@@ -89,7 +94,6 @@ class Isabelle(path:String) {
   private val system = {
     build(); Await.result(System.create(environment, config), Duration.Inf)
   }
-
 
   private val readTypeExpr: ml.Expr[IContext => String => ITyp] =
     ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.read_typ ctxt))")

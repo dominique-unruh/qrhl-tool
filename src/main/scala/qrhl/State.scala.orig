@@ -4,7 +4,7 @@ import java.nio.file.{Files, Path, Paths}
 
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.ml
-import info.hupel.isabelle.pure.{Type, Typ => ITyp, Context => IContext}
+import info.hupel.isabelle.pure.{Type, Context => IContext, Typ => ITyp}
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.toplevel.ParserContext
@@ -72,7 +72,9 @@ class State private (val environment: Environment,
                      val isabelle: Option[Isabelle.Context],
                      val boolT: Typ,
                      val assertionT: Typ,
+<<<<<<< HEAD
                      val dependencies: List[FileTimeStamp]) {
+=======
                      val programT: Typ) {
   def qed: State = {
     assert(currentLemma.isDefined)
@@ -83,6 +85,7 @@ class State private (val environment: Environment,
     copy(isabelle=isa, currentLemma=None)
   }
 
+>>>>>>> refs/remotes/origin/master
   def declareProgram(name: String, program: Block): State = {
     for (x <- program.variablesDirect)
       if (!environment.variableExistsForProg(x))
@@ -104,6 +107,7 @@ class State private (val environment: Environment,
       throw UserException("No pending proof")
     case (subgoal::subgoals) =>
       copy(goal=tactic.apply(this,subgoal)++subgoals)
+
   }
 
   private def copy(environment:Environment=environment,
@@ -111,14 +115,22 @@ class State private (val environment: Environment,
                    isabelle:Option[Isabelle.Context]=isabelle,
                    boolT:Typ=boolT,
                    assertionT:Typ=assertionT,
-                   programT:Typ=programT,
+<<<<<<< HEAD
                    dependencies:List[FileTimeStamp]=dependencies) : State =
+    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT,
+      dependencies=dependencies)
+
+  def openGoal(goal:Subgoal) : State = this.goal match {
+    case Nil =>
+=======
+                   programT:Typ=programT,
                    currentLemma:Option[(String,Expression)]=currentLemma) : State =
     new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT,
-      currentLemma=currentLemma, programT=programT, dependencies=dependencies)
+      currentLemma=currentLemma, programT=programT)
 
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
+>>>>>>> refs/remotes/origin/master
       goal.checkVariablesDeclared(environment)
       copy(goal=List(goal), currentLemma=Some((name,goal.toExpression)))
     case _ => throw UserException("There is still a pending proof.")
@@ -146,11 +158,15 @@ class State private (val environment: Environment,
         val filename = Paths.get(thy+".thy")
         (isabelle.getContextFile(thy), new FileTimeStamp(filename) :: dependencies)
     }
-    copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"QRHL.assertion"), programT=Typ(isa,"QRHL.program"), dependencies=files)
+<<<<<<< HEAD
+    copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"assertion"), dependencies=files)
   }
 
   def filesChanged : List[Path] = {
     dependencies.filter(_.changed).map(_.file)
+=======
+    copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"QRHL.assertion"), programT=Typ(isa,"QRHL.program"))
+>>>>>>> refs/remotes/origin/master
   }
 
   private def addQVariableNameAssumption(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
@@ -184,6 +200,10 @@ class State private (val environment: Environment,
 
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
-    boolT=null, assertionT=null, dependencies=Nil, programT=null, currentLemma=None)
+<<<<<<< HEAD
+    boolT=null, assertionT=null, dependencies=Nil)
+=======
+    boolT=null, assertionT=null, programT=null, currentLemma=None)
+>>>>>>> refs/remotes/origin/master
   private[State] val defaultIsabelleTheory = "QRHL_Protocol"
 }

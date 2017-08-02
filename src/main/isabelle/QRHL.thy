@@ -14,6 +14,7 @@ instantiation distr :: (type)zero begin
 definition "0 = Abs_distr (\<lambda>_. 0)"
 instance .. 
 end
+ 
   
 definition "supp \<mu> = {x. prob \<mu> x > 0}" 
 definition uniform :: "'a set \<Rightarrow> 'a distr" where
@@ -23,6 +24,16 @@ axiomatization weight :: "'a distr \<Rightarrow> real" where
   weight_pos[simp]: "weight \<mu> \<ge> 0" 
 and weight_leq1[simp]: "weight \<mu> \<le> 1"
 and weight_uniform[simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> weight (uniform M) = 1"
+
+axiomatization "map_distr" :: "('a\<Rightarrow>'b) \<Rightarrow> 'a distr \<Rightarrow> 'b distr" where
+  weight_map_distr[simp]: "weight (map_distr f \<mu>) = weight \<mu>"
+  and supp_map_distr[simp]: "supp (map_distr f \<mu>) = f ` (supp \<mu>)"
+  
+axiomatization where  
+  compose_map_distr[simp]: "map_distr g (map_distr f \<mu>) = map_distr (\<lambda>x. g (f x)) \<mu>"
+and  map_distr_id[simp]: "map_distr (\<lambda>x. x) \<mu> = \<mu>"
+and map_distr_uniform_eq[simp]: "(map_distr f (uniform A) = uniform B) = (bij_betw f A B \<or> (infinite A \<and> infinite B))"
+  for f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c"
 
 typedef bit = "UNIV::bool set"..
 setup_lifting type_definition_bit
@@ -41,12 +52,17 @@ instantiation bit :: finite begin
 instance by (intro_classes, transfer, simp)
 end
   
+lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
+  apply transfer by auto
+
 (*instantiation "fun" :: (type,zero)zero begin
 definition[simp]: "zero_fun (x::'a) = (0::'b)"
 instance .. 
 end*)
-    
-ML {* @{type_name "distr"} *}
+
+typedecl program
+typedecl program_state
+
   
 section \<open>Subspaces\<close>
   
@@ -256,7 +272,6 @@ lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding sup_subsp
 axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a state set"
     
 definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
-  
   
   
 subsection \<open>Isometries\<close>
@@ -476,7 +491,6 @@ and unitaryX[simp]: "unitary X"
 and unitaryY[simp]: "unitary Y"
 and unitaryZ[simp]: "unitary Z"
 
-  
 ML_file \<open>qrhl.ML\<close>
   
 section \<open>Experiments\<close>
@@ -488,5 +502,13 @@ axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> 
   for Q R :: "'a qvariables" and \<psi> :: "'a state"
 
 (* declare[[show_types]] *)
+
+axiomatization probability :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" 
+syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:_'(_')]")
+parse_translation \<open>[("_probability", fn ctx => fn [Const(v,_),p,rho] =>
+  @{const probability} $ HOLogic.mk_string v $ p $ rho)]\<close>
+    
+print_translation \<open>[(@{const_syntax probability}, fn ctx => fn [str,p,rho] =>
+  Const(@{syntax_const "_probability"},dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
   
 end
