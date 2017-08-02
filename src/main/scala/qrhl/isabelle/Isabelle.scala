@@ -5,10 +5,11 @@ import java.lang.RuntimeException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
-import info.hupel.isabelle.{Codec, Platform, Program, System, ml}
+import info.hupel.isabelle.{Codec, OfficialPlatform, Platform, Program, System, ml}
 import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.ml.Expr
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Var, Context => IContext, Typ => ITyp, Type => IType}
+import info.hupel.isabelle.setup.Setup.{Absent, SetupImpossible, detect}
 import info.hupel.isabelle.setup.{Resources, Setup}
 import monix.execution.Scheduler.Implicits.global
 import qrhl.UserException
@@ -17,18 +18,48 @@ import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.util.{Left, Right}
 import scala.util.matching.Regex
 
 class Isabelle(path:String) {
   val version = Version.Stable("2016-1")
 
-  private val setup = {
-    if (path == "auto")
-      Setup.default(version).right.get
-    else {
+  private val auto = path=="auto"
+
+  /** The directory that contains the jar, or, if not loaded from a jar, the current directory. */
+  private val localStoragePath = {
+    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
+    assert(location.getScheme=="file")
+    val path = Paths.get(location)
+    if (path.getFileName.toString.endsWith(".jar")) path.getParent.toAbsolutePath
+    else Paths.get("").toAbsolutePath
+  }.resolve("isabelle-temp")
+
+  private val platform : Platform = Platform.guess match {
+    case None if auto => throw UserException(""""isabelle auto" used, but cannot detect platform. Use "isabelle <path>" with an existing Isabelle install at <path> instead""")
+    case None if !auto => Platform.genericPlatform(localStoragePath)
+    case Some(p) => p.withLocalStorage(localStoragePath)
+  }
+
+  private val setup : Setup = {
+    if (auto) {
+      //      Setup.default(version,updateIfDevel = false).right.get
+      assert(platform.isInstanceOf[OfficialPlatform])
+      detect(platform, version, updateIfDevel=false) match {
+        case Right(install) =>           install
+        case Left(Absent) =>
+          println(s"*** Downloading Isabelle into ${platform.localStorage}. May take a while...")
+          Setup.install(platform.asInstanceOf[OfficialPlatform], version) match {
+            case Right(install) => install
+            case Left(reason) => throw UserException("Could not install Isabelle: "+reason.explain)
+          }
+        case Left(reason) => throw UserException("Could not setup Isabelle: "+reason.explain)
+      }
+    } else {
 //      val platformPath = Paths.get("tmp-isabelle")
 //      val platform = Platform.genericPlatform(platformPath)
-      Setup(Paths.get(path), Platform.guess.get, version)
+//      Setup(Paths.get(path), Platform.guess.get, version)
+      Setup(Paths.get(path), platform, version)
     }
   }
 
@@ -38,9 +69,9 @@ class Isabelle(path:String) {
   }
 
   private val environment: info.hupel.isabelle.api.Environment = {
-    if (path == "auto") println("Downloading Isabelle if needed (may take a while)")
+//    if (path == "auto") println("Downloading Isabelle if needed (may take a while)")
     try {
-      Await.result(setup.makeEnvironment(resources), Duration.Inf)
+      Await.result(setup.makeEnvironment(resources, Nil), Duration.Inf)
     } catch {
       case e: InvocationTargetException if e.getTargetException.getMessage.startsWith("Bad Isabelle root directory ") =>
         throw UserException(e.getTargetException.getMessage)
@@ -50,7 +81,7 @@ class Isabelle(path:String) {
   private val config: Configuration = Configuration.simple("QRHL")
 
   private def build() {
-    println("Building Isabelle (may take a while)")
+    println("*** Building Isabelle (may take a while, especially the first time)...")
     if (!System.build(environment, config))
       throw qrhl.UserException("Building Isabelle failed")
   }
@@ -58,7 +89,6 @@ class Isabelle(path:String) {
   private val system = {
     build(); Await.result(System.create(environment, config), Duration.Inf)
   }
-
 
   private val readTypeExpr: ml.Expr[IContext => String => ITyp] =
     ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.read_typ ctxt))")

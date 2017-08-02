@@ -10,4 +10,8 @@ class IsabelleTest extends FlatSpec {
       new Isabelle("/tmp/xxx")
     }
   }
+
+  "Isabelle" should "initialize successfully with path=auto" in {
+    new Isabelle("auto")
+  }
 }

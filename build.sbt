@@ -16,11 +16,11 @@ isabelleSessions in Compile := Seq("QRHL")
 
 //unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/isabelle"
 
-libraryDependencies ++= Seq(
-  "info.hupel" %% "libisabelle" % "0.8.3",
-  "info.hupel" %% "libisabelle-setup" % "0.8.3",
-  "info.hupel" %% "pide-package" % "0.8.3"
-)
+libraryDependencies ++= { val version = "0.9.0"; Seq(
+  "info.hupel" %% "libisabelle" % version,
+  "info.hupel" %% "libisabelle-setup" % version,
+  "info.hupel" %% "pide-package" % version
+) }
 
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25" % "test"

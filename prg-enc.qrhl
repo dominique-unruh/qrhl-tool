@@ -1,4 +1,4 @@
-isabelle /opt/Isabelle2016-1, theory PrgEnc.
+isabelle auto, theory PrgEnc.
 
 classical var k : key.
 classical var s : key.
