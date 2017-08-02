@@ -10,6 +10,7 @@ import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.ml.Expr
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Type, Var, Context => IContext, Typ => ITyp}
+import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resources, Setup}
 import monix.execution.Scheduler.Implicits.global
 import qrhl.UserException
@@ -45,8 +46,8 @@ class Isabelle(path:String) {
     if (auto) {
       //      Setup.default(version,updateIfDevel = false).right.get
       assert(platform.isInstanceOf[OfficialPlatform])
-      detect(platform, version, updateIfDevel=false) match {
-        case Right(install) =>           install
+      Setup.detect(platform, version, updateIfDevel=false) match {
+        case Right(install) => install
         case Left(Absent) =>
           println(s"*** Downloading Isabelle into ${platform.localStorage}. May take a while...")
           Setup.install(platform.asInstanceOf[OfficialPlatform], version) match {

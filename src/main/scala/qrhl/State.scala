@@ -72,7 +72,7 @@ class State private (val environment: Environment,
                      val isabelle: Option[Isabelle.Context],
                      val boolT: Typ,
                      val assertionT: Typ,
-                     val dependencies: List[FileTimeStamp]) {
+                     val dependencies: List[FileTimeStamp],
                      val programT: Typ) {
   def qed: State = {
     assert(currentLemma.isDefined)
@@ -112,7 +112,7 @@ class State private (val environment: Environment,
                    boolT:Typ=boolT,
                    assertionT:Typ=assertionT,
                    programT:Typ=programT,
-                   dependencies:List[FileTimeStamp]=dependencies) : State =
+                   dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,Expression)]=currentLemma) : State =
     new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT,
       currentLemma=currentLemma, programT=programT, dependencies=dependencies)
@@ -135,6 +135,8 @@ class State private (val environment: Environment,
   def loadIsabelle(path:String, theory:Option[String]) : State = {
     assert(isabelle.isEmpty)
     val isa = new Isabelle(path)
+    // since this is likely to happen when an existing Isabelle is reloaded, give the GC a chance to remove that existing Isabelle
+    System.gc()
     loadIsabelle(isa,theory)
   }
 

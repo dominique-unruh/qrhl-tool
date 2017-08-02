@@ -1,4 +1,4 @@
-isabelle /opt/Isabelle2016-1, theory PrgEnc.
+isabelle auto, theory PrgEnc.
 
 ambient var rho : program_state.
 
@@ -133,9 +133,9 @@ goal indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
 qed.
 
 
-goal abs( Pr[b:indcpa0(rho)] - Pr[b:indcpa1(rho)] ) <=
-     abs( Pr[b:prg0B1(rho)] - Pr[b:prg1B1(rho)] ) +
-     abs( Pr[b:prg0B2(rho)] - Pr[b:prg1B2(rho)] ).
+goal final: abs( Pr[b:indcpa0(rho)] - Pr[b:indcpa1(rho)] ) <=
+            abs( Pr[b:prg0B1(rho)] - Pr[b:prg1B1(rho)] ) +
+            abs( Pr[b:prg0B2(rho)] - Pr[b:prg1B2(rho)] ).
 
  simp indcpa0_prg0B1 indcpa1_prg0B2 prg1B1_prg1B21.
  simp triangle.

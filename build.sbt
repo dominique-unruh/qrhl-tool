@@ -34,4 +34,3 @@ mainClass in assembly := Some("qrhl.Main")
 //assemblyJarName in assembly := "qrhl.jar"
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
 test in assembly := {}
-
