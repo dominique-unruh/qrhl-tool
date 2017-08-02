@@ -23,7 +23,7 @@ libraryDependencies ++= { val version = "0.9.0"; Seq(
 ) }
 
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
-libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25" % "test"
+libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
 libraryDependencies += "org.jline" % "jline" % "3.3.0"
 
 

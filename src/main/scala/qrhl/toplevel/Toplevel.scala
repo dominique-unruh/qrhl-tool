@@ -13,7 +13,7 @@ import qrhl.{State, UserException}
 import scala.io.StdIn
 import scala.util.matching.Regex
 
-
+/** Not thread safe */
 class Toplevel(initialState : State = State.empty) {
   def dispose(): Unit = {
     state.isabelle.foreach(_.isabelle.dispose())
@@ -82,7 +82,11 @@ class Toplevel(initialState : State = State.empty) {
     cmd match {
       case UndoCommand(n) =>
         assert(n < states.length)
+        val isabelleLoaded = state.isabelle.isDefined
         states = states.drop(n)
+        // If state after undo has no Isabelle, run GC to give the system the chance to finalize a possibly loaded Isabelle
+        if (state.isabelle.isEmpty && isabelleLoaded)
+          System.gc()
       case _ =>
         val newState = cmd.act(states.head)
         states = newState :: states

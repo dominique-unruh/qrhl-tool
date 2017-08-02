@@ -13,6 +13,7 @@ import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Typ
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resources, Setup}
 import monix.execution.Scheduler.Implicits.global
+import org.log4s
 import qrhl.UserException
 
 import scala.collection.mutable
@@ -82,7 +83,7 @@ class Isabelle(path:String) {
   private val config: Configuration = Configuration.simple("QRHL")
 
   private def build() {
-    println("*** Building Isabelle (may take a while, especially the first time)...")
+    println("*** Building Isabelle (may take a while, especially the first time, e.g., 15min)...")
     if (!System.build(environment, config))
       throw qrhl.UserException("Building Isabelle failed")
   }
@@ -139,7 +140,9 @@ class Isabelle(path:String) {
 
   def dispose(): Unit = this.synchronized {
     if (!disposed) {
+      Isabelle.logger.debug("Disposing Isabelle.")
       Await.result(system.dispose, Duration.Inf)
+      Isabelle.logger.debug("Disposing Isabelle (done).")
       disposed = true
     }
   }
@@ -153,6 +156,7 @@ class Isabelle(path:String) {
 }
 
 object Isabelle {
+  private val logger = log4s.getLogger
   def mk_conj(t1: Term, t2: Term) : Term = HOLogic.conj $ t1 $ t2
   def mk_conjs(terms: Term*): Term = terms match {
     case t :: ts => ts.foldLeft(t)(mk_conj)
@@ -285,7 +289,7 @@ object Isabelle {
   class Context private[Isabelle](val isabelle:Isabelle, thyName: String, context:ml.Ref[IContext]) {
 
     override protected def finalize(): Unit = {
-      println(s"Deleting context ${context.id}")
+      logger.debug(s"Deleting context ${context.id}")
       isabelle.runExpr(context.delete, thyName)
       super.finalize()
     }
