@@ -35,3 +35,6 @@ because it will download and install Isabelle.
 
 == Editing the Isabelle theory files
 
+The examples prg-enc-*.qrhl depend on the Isabelle theory PrgEnc.thy.
+To edit that theory, run Isabelle using the run-isabelle.{sh,bat} script.
+Then open and edit the file normally.
