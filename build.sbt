@@ -1,6 +1,8 @@
-name := "tool"
+import NativePackagerHelper._
 
-version := "1.0"
+name := "qrhl"
+
+version := "0.1"
 
 scalaVersion := "2.12.2"
 
@@ -34,3 +36,20 @@ mainClass in assembly := Some("qrhl.Main")
 //assemblyJarName in assembly := "qrhl.jar"
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
 test in assembly := {}
+
+enablePlugins(JavaAppPackaging)
+mappings in Universal ++= Seq(
+    "proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat",
+    "prg-enc-rorcpa.qrhl", "prg-enc-indcpa.qrhl", "PrgEnc.thy", "teleport.qrhl", "README.md"
+  ).map { f =>
+  baseDirectory.value / f -> f
+}
+//javaOptions in Universal += "-Dfile.encoding=UTF-8" // Doesn't seem to work
+mappings in Universal ++= directory("PG")
+
+
+//lazy val mkBinary = taskKey[Unit]("Packages the binary")
+//
+//mkBinary := {
+//  assembly.value
+//}

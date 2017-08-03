@@ -4,7 +4,7 @@
   (proof-generic-count-undos span))
   
 (proof-easy-config 'qrhl "qRHL"
-		   proof-prog-name "./sbt-qrhl.sh"
+		   proof-prog-name "bin/qrhl"
 		   proof-script-command-end-regexp "\\.[ \t]*$"
 		   proof-shell-annotated-prompt-regexp "^\\(\\.\\.\\.\\|qrhl\\)> "
 		   proof-script-comment-start-regexp "#"
@@ -21,6 +21,7 @@
 (add-hook 'qrhl-mode-hook
 	  (lambda ()
 	    (set-input-method "TeX")
+	    (set-language-environment "UTF-8")
 	    (set-variable 'electric-indent-inhibit t)))
 
 (defun qr () ; Just for testing

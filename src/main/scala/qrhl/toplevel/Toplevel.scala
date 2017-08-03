@@ -144,6 +144,8 @@ class Toplevel(initialState : State = State.empty) {
     while (true) {
       try {
         val cmdStr = readCommand(readLine)
+//        println("XXXXX "+cmdStr.mkString(":"))
+//        println("YYYYY "+System.getProperty("file.encoding"))
         if (cmdStr==null) { println("EOF"); return; }
         execCmd(cmdStr)
       } catch {
@@ -165,9 +167,10 @@ object Toplevel {
   def runFromTerminal() : Toplevel = {
     val terminal = TerminalBuilder.terminal()
     val readLine : String => String = {
-      if (terminal.isInstanceOf[DumbTerminal])
-        { p:String => StdIn.readLine(p) } // DumbTerminal echoes lines, so we don't use JLine in this case
-      else {
+      if (terminal.isInstanceOf[DumbTerminal]) {
+        println("Using dumb readline instead of JLine.");
+        { (p: String) => StdIn.readLine(p) } // JLine's DumbTerminal echoes lines, so we don't use JLine in this case
+      } else {
         val lineReader = LineReaderBuilder.builder().terminal(terminal).build()
         lineReader.readLine
       }
