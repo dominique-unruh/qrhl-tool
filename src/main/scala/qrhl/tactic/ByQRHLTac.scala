@@ -79,8 +79,8 @@ case object ByQRHLTac extends Tactic {
       val isa = state.isabelle.get
       val left = Block(Call(p1name))
       val right = Block(Call(p2name))
-      val pre = Expression(isa, isa.runExpr(mlExpr))
-      val post = Expression(isa, Isabelle.classical_subspace $ (connective $ v1bool $ v2bool))
+      val pre = Expression(isa, state.assertionT, isa.runExpr(mlExpr))
+      val post = Expression(isa, state.assertionT, Isabelle.classical_subspace $ (connective $ v1bool $ v2bool))
 
       List(QRHLSubgoal(left,right,pre,post))
     case _ =>

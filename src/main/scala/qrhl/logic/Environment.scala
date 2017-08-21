@@ -18,7 +18,22 @@ final class Environment private
 //   val indexedNames : Set[String], // all variable names together, program variables indexed with 1/2
 //   val nonindexedNames : Set[String], // all variable names together, without 1/2-index
    val programs : Map[String,ProgramDecl]) {
-//  def getCVariable(name: String): CVariable = cVariables(name)
+  /** Checks whether the ambient variable "variable" is used in the definition of some program
+    * @param variable
+    * @return Some(programName) if the variable is used in program programName, None otherwise
+    */
+  def variableUsedInPrograms(variable: String) : Option[String] = {
+    for ((n, p) <- programs) p match {
+      case _: AbstractProgramDecl =>
+      case cpd: ConcreteProgramDecl =>
+        if (cpd.ambientVars.contains(variable))
+          return Some(n)
+    }
+    None
+  }
+
+
+  //  def getCVariable(name: String): CVariable = cVariables(name)
 
   def variableExists(name:String) : Boolean = {
     cVariables.contains(name) || qVariables.contains(name) || ambientVariables.contains(name) ||
@@ -96,6 +111,33 @@ final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:L
   override val variablesRecursive: (List[CVariable], List[QVariable]) = (cvars,qvars)
 }
 final case class ConcreteProgramDecl(environment: Environment, name:String, program:Block) extends ProgramDecl {
+  lazy val ambientVars: List[String] = {
+    val vars = new mutable.LinkedHashSet[String]
+    def scan(st:Statement) : Unit = st match {
+      case Block(sts@_*) => sts.foreach(scan)
+      case Call(n) =>
+      case Assign(v,e) =>
+        vars ++= e.variables.filter(environment.ambientVariables.contains)
+      case Sample(v,e) =>
+        vars ++= e.variables.filter(environment.ambientVariables.contains)
+      case QApply(loc,e) =>
+        vars ++= e.variables.filter(environment.ambientVariables.contains)
+      case While(e,body) =>
+        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        scan(body)
+      case IfThenElse(e,thenBranch,elseBranch) =>
+        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        scan(thenBranch)
+        scan(elseBranch)
+      case Measurement(res,loc,e) =>
+        vars ++= e.variables.filter(environment.ambientVariables.contains)
+      case QInit(loc,e) =>
+        vars ++= e.variables.filter(environment.ambientVariables.contains)
+    }
+    scan(program)
+    vars.toList
+  }
+
   override val variablesRecursive: (List[CVariable], List[QVariable]) = {
     val qvars = new mutable.LinkedHashSet[QVariable]
     val cvars = new mutable.LinkedHashSet[CVariable]

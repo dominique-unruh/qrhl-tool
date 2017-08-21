@@ -340,26 +340,30 @@ typedecl 'a qvariables (* represents a tuple of variables, of joint type 'a *)
 
 axiomatization
     qvariable_names :: "'a qvariables \<Rightarrow> string list"
-and qvariable_cons :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> ('a \<times> 'b) qvariables"
-and qvariables_concat :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> ('a * 'b) qvariables"
+(* and qvariable_cons :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> ('a \<times> 'b) qvariables" *)
+and qvariable_concat :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> ('a * 'b) qvariables"
 and qvariable_singleton :: "'a qvariable \<Rightarrow> 'a qvariables"
 and qvariable_unit :: "unit qvariables"
 
 nonterminal qvariable_list_args
 syntax
+  "qvariable_unit"      :: "qvariable_list_args \<Rightarrow> 'a"        ("(1'[[']])")
+  "qvariable_unit"      :: "qvariable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>'\<rbrakk>)")
   "_qvariables"      :: "qvariable_list_args \<Rightarrow> 'a"        ("(1'[[_']])")
   "_qvariables"      :: "qvariable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
   "_qvariable_list_arg"  :: "'a \<Rightarrow> qvariable_list_args"                   ("_")
   "_qvariable_list_args" :: "'a \<Rightarrow> qvariable_list_args \<Rightarrow> qvariable_list_args"     ("_,/ _")
 
 translations
-  "_qvariables (_qvariable_list_args x y)" \<rightleftharpoons> "CONST qvariable_cons x (_qvariables y)"
+  "_qvariables (_qvariable_list_args x y)" \<rightleftharpoons> "CONST qvariable_concat (CONST qvariable_singleton x) (_qvariables y)"
   "_qvariables (_qvariable_list_arg x)" \<rightleftharpoons> "CONST qvariable_singleton x"
+  "_qvariables (_qvariable_list_args x y)" \<leftharpoondown> "CONST qvariable_concat (_qvariables (_qvariable_list_arg x)) (_qvariables y)"
   
 
 axiomatization where
-  qvariable_names_cons[simp]: "qvariables_names (qvariable_cons x Y) = variable_name x # qvariable_names Y"
+  qvariable_names_cons[simp]: "qvariable_names (qvariable_concat X Y) = qvariable_names X @ qvariable_names Y"
   and qvariable_singleton_name[simp]: "qvariable_names (qvariable_singleton x) = [variable_name x]"
+  and qvariable_unit_name[simp]: "qvariable_names qvariable_unit = []"
   for X::"'a qvariables" and Y::"'b qvariables" and x::"'c qvariable"
 
 definition "qvariables_distinct X == distinct (qvariable_names X)"

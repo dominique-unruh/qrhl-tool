@@ -2,7 +2,7 @@ import NativePackagerHelper._
 
 name := "qrhl"
 
-version := "0.1"
+version := "0.1alpha"
 
 scalaVersion := "2.12.2"
 

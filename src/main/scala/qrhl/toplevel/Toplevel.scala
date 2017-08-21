@@ -61,14 +61,6 @@ class Toplevel(initialState : State = State.empty) {
     "" // unreachable
   }
 
-  private def parseCommand(state:State, str:String): Command = {
-    implicit val parserContext = state.parserContext
-    Parser.parseAll(Parser.command,str) match {
-      case Parser.Success(cmd2,_) => cmd2
-      case res @ Parser.NoSuccess(msg, _) =>
-        throw UserException(msg)
-    }
-  }
 
   private var states : List[State] = List(initialState)
 
@@ -99,7 +91,7 @@ class Toplevel(initialState : State = State.empty) {
 
   /** Executes a single command. The command must be given without a final ".". */
   def execCmd(cmd:String) : Unit = {
-    val cmd2 = parseCommand(states.head, cmd)
+    val cmd2 = state.parseCommand(cmd)
     execCmd(cmd2)
   }
 

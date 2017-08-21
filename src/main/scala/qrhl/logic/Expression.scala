@@ -33,7 +33,7 @@ import scala.collection.mutable
 
 
 
-final class Expression private (val isabelle:Isabelle.Context, term:Term) {
+final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
   /** Free variables, including those encoded as a string in "probability ... ... str" */
   private def freeVars(term: Term): Set[String] = {
     val fv = new mutable.SetBuilder[String,Set[String]](Set.empty)
@@ -50,15 +50,18 @@ final class Expression private (val isabelle:Isabelle.Context, term:Term) {
     fv.result
   }
 
-  def variables : Set[String] = freeVars(term)
+  def variables : Set[String] = freeVars(isabelleTerm)
 
-  override lazy val toString: String = isabelle.prettyExpression(term)
-  val isabelleTerm : Term = term
+  override lazy val toString: String = isabelle.prettyExpression(isabelleTerm)
+//  val isabelleTerm : Term = isabelleTerm
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): Expression = simplify(isabelle.get,facts)
-  def simplify(isabelle: Isabelle.Context, facts:List[String]): Expression = Expression(isabelle, isabelle.simplify(term,facts))
+  def simplify(isabelle: Isabelle.Context, facts:List[String]): Expression = Expression(isabelle, typ, isabelle.simplify(isabelleTerm,facts))
 
-  def map(f : Term => Term) : Expression = new Expression(isabelle, f(term))
-  def substitute(v:CVariable, repl:Expression) : Expression = map(Expression.substitute(v.name, repl.isabelleTerm, _))
+  def map(f : Term => Term) : Expression = new Expression(isabelle, typ, f(isabelleTerm))
+  def substitute(v:CVariable, repl:Expression) : Expression = {
+    assert(repl.typ==v.typ)
+    map(Expression.substitute(v.name, repl.isabelleTerm, _))
+  }
 
   def index1(environment: Environment): Expression = index(environment, left=true)
   def index2(environment: Environment): Expression = index(environment, left=false)
@@ -71,7 +74,7 @@ final class Expression private (val isabelle:Isabelle.Context, term:Term) {
       case Const(_,_) | Bound(_) | Var(_,_) => t
       case Abs(name,typ,body) => Abs(name,typ,idx(body))
     }
-    new Expression(isabelle,idx(term))
+    new Expression(isabelle,typ,idx(isabelleTerm))
   }
 
 
@@ -79,19 +82,22 @@ final class Expression private (val isabelle:Isabelle.Context, term:Term) {
     case e2 : Expression =>
       val t = e2.isabelleTerm
       val assertionT = Typ(isabelle,"assertion").isabelleTyp  // Should be the type of t
-      val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(assertionT, ITyp.funT(assertionT, boolT))) $ term $ t
-      new Expression(isabelle,newT)
+      val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(assertionT, ITyp.funT(assertionT, boolT))) $ isabelleTerm $ t
+      val typ = Typ.bool(isabelle)
+      new Expression(isabelle,typ,newT)
   }
 }
 
 
 object Expression {
+  def trueExp(isabelle: Isabelle.Context): Expression = Expression(isabelle, Typ.bool(isabelle), HOLogic.True)
+
   def apply(isabelle:Isabelle.Context, str:String, typ:Typ) : Expression = {
     val term = isabelle.readTerm(Isabelle.unicodeToSymbols(str),typ.isabelleTyp)
-    Expression(isabelle,term)
+    Expression(isabelle, typ, term)
   }
-  def apply(isabelle:Isabelle.Context, term:Term) : Expression = {
-    new Expression(isabelle,term)
+  def apply(isabelle:Isabelle.Context, typ: Typ, term:Term) : Expression = {
+    new Expression(isabelle, typ, term)
   }
 
   def unapply(e: Expression): Option[Term] = Some(e.isabelleTerm)

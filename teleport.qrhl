@@ -1,6 +1,4 @@
-isabelle auto.
-
-
+isabelle auto, theory Teleport.
 
 classical var a : bit.
 classical var c : bit.
@@ -9,8 +7,8 @@ quantum var A : bit.
 quantum var B : bit.
 quantum var C : bit.
 
-# qrhl {top} skip; ~ skip; {A1::int}.
-
+ambient var a' : bit.
+ambient var c' : bit.
 
 program teleport := {
   A,B <q EPR;
@@ -22,8 +20,6 @@ program teleport := {
   if (c=1) then on B apply Z; else skip;
 }.
 
-
-# qrhl {Qeq[C1=A2]} call teleport; ~ skip; {1=⟦A1⟧}.
 
 qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
@@ -43,6 +39,18 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   wp left.
   skip.
   simp.
+  admit.
+# quantum_equality_full idIso ⟦C1, A1, B1⟧ (addState EPR) ⟦A2⟧ ≤ CNOT⇩@⟦C1, A1⟧ ⋅ (H⇩@⟦C1⟧ ⋅ quantum_equality_full idIso ⟦C1, A1, B1⟧ (H ⊗ idIso ⋅ assoc_op' ⋅ CNOT ⊗ idIso ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)
+
+  seq 2 0: if a=0 ∧ c=0 then top
+           else 0.
+     admit.
+     # TODO
+
+  case a' := a1.
+
+  # TODO: implement
+  # case <ambient var> := <indexed expression>
 
 
 
