@@ -38,8 +38,9 @@ fun qvariables [] = (@{term "qvariable_unit"},@{typ unit})
             val vT' = case vT of Type(@{type_name qvariable},[vT']) => vT' | _ => raise TYPE("expecting a qvariable",[vT],[v])
             val prodT = HOLogic.mk_prodT (vT',vsT)
         in
-          (Const(@{const_name qvariable_cons}, vT --> mk_qvariablesT vsT --> 
-              mk_qvariablesT prodT) $ v $ vs',
+          (Const(@{const_name qvariable_concat}, 
+              mk_qvariablesT vT' --> mk_qvariablesT vsT --> mk_qvariablesT prodT) $
+            (Const(@{const_name qvariable_singleton}, vT --> mk_qvariablesT vT') $ v) $ vs',
             prodT)
         end
   

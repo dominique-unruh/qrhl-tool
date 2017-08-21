@@ -1,1 +1,7 @@
-isabelle /opt/Isabelle2016-1, theory PrgEnc.
+isabelle /opt/Isabelle2016-1.
+
+classical var x : int.
+ambient var y : int.
+
+qrhl {top} skip; ~ skip; {top}.
+  case y := x.

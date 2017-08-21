@@ -5,7 +5,8 @@ import scala.collection.mutable
 
 // Programs
 sealed trait Statement {
-  /** Not including nested programs (via Call) */
+  /** All ambient and program variables.
+    * Not including nested programs (via Call) */
   def variablesDirect : Set[String] = {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {

@@ -259,6 +259,14 @@ object Parser extends RegexParsers {
       e <- expression((xT*yT).distr)
     ) yield e).? ^^ RndTac
 
+  def tactic_case(implicit context:ParserContext): Parser[CaseTac] =
+    literal("case") ~> OnceParser(for (
+      x <- identifier;
+      xT = context.environment.cVariables(x).typ;
+      _ <- literal(":=");
+      e <- expression(xT)
+    ) yield CaseTac(x,e))
+
   val tactic_simp : Parser[SimpTac] =
     literal("simp") ~> OnceParser(rep(identifier)) ^^ SimpTac
 
@@ -274,7 +282,8 @@ object Parser extends RegexParsers {
       tactic_conseq |
       literal("call") ^^ { _ => CallTac } |
       tactic_rnd |
-      literal("byqrhl") ^^ { _ => ByQRHLTac }
+      literal("byqrhl") ^^ { _ => ByQRHLTac } |
+      tactic_case
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

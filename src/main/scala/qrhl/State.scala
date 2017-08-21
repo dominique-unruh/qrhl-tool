@@ -4,10 +4,10 @@ import java.nio.file.{Files, Path, Paths}
 
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.ml
-import info.hupel.isabelle.pure.{Type, Typ => ITyp, Context => IContext}
+import info.hupel.isabelle.pure.{Type, Context => IContext, Typ => ITyp}
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
-import qrhl.toplevel.ParserContext
+import qrhl.toplevel.{Command, Parser, ParserContext}
 
 sealed trait Subgoal {
   /** This goal as a boolean expression. If it cannot be expressed in Isabelle, a different,
@@ -15,6 +15,8 @@ sealed trait Subgoal {
   def toExpression: Expression
 
   def checkVariablesDeclared(environment: Environment): Unit
+
+  def containsAmbientVar(x: String) : Boolean
 }
 
 final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expression) extends Subgoal {
@@ -36,7 +38,13 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
   }
 
   /** Returns the expression "True" */
-  override def toExpression: Expression = Expression(pre.isabelle, HOLogic.True)
+  override def toExpression: Expression = Expression.trueExp(pre.isabelle)
+
+  /** Not including ambient vars in nested programs (via Call) */
+  override def containsAmbientVar(x: String) = {
+    pre.variables.contains(x) || post.variables.contains(x) ||
+      left.variablesDirect.contains(x) || right.variablesDirect.contains(x)
+  }
 }
 
 final case class AmbientSubgoal(goal: Expression) extends Subgoal {
@@ -49,6 +57,8 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
 
   /** This goal as a boolean expression. */
   override def toExpression: Expression = goal
+
+  override def containsAmbientVar(x: String) = goal.variables.contains(x)
 }
 
 trait Tactic {
@@ -131,6 +141,24 @@ class State private (val environment: Environment,
   }
 
   lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT, assertionT = assertionT)
+
+  def parseCommand(str:String): Command = {
+    implicit val parserContext = this.parserContext
+    Parser.parseAll(Parser.command,str) match {
+      case Parser.Success(cmd2,_) => cmd2
+      case res @ Parser.NoSuccess(msg, _) =>
+        throw UserException(msg)
+    }
+  }
+
+  def parseExpression(typ:Typ, str:String): Expression = {
+    implicit val parserContext = this.parserContext
+    Parser.parseAll(Parser.expression(typ),str) match {
+      case Parser.Success(cmd2,_) => cmd2
+      case res @ Parser.NoSuccess(msg, _) =>
+        throw UserException(msg)
+    }
+  }
 
   def loadIsabelle(path:String, theory:Option[String]) : State = {
     assert(isabelle.isEmpty)
