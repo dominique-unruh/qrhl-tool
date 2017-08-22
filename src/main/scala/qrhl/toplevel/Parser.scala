@@ -262,7 +262,7 @@ object Parser extends RegexParsers {
   def tactic_case(implicit context:ParserContext): Parser[CaseTac] =
     literal("case") ~> OnceParser(for (
       x <- identifier;
-      xT = context.environment.cVariables(x).typ;
+      xT = context.environment.ambientVariables(x);
       _ <- literal(":=");
       e <- expression(xT)
     ) yield CaseTac(x,e))

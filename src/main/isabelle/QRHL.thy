@@ -505,8 +505,6 @@ axiomatization where imProj_liftProj [simp]: "imProj (liftProj P Q) = liftSpace 
 axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
   for Q R :: "'a qvariables" and \<psi> :: "'a state"
 
-(* declare[[show_types]] *)
-
 axiomatization probability :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" 
 syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:_'(_')]")
 parse_translation \<open>[("_probability", fn ctx => fn [Const(v,_),p,rho] =>

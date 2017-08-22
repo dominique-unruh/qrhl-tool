@@ -1,6 +1,10 @@
 package qrhl.tactic
 
+import info.hupel.isabelle.hol.HOLogic
+import info.hupel.isabelle.pure.{Const, Free, Term}
+import info.hupel.isabelle.{ml, pure}
 import qrhl._
+import qrhl.isabelle.Isabelle
 import qrhl.logic.{Expression, Variable}
 
 case class CaseTac(variable:String, expr:Expression) extends Tactic {
@@ -19,7 +23,18 @@ case class CaseTac(variable:String, expr:Expression) extends Tactic {
       if (varTyp != expr.typ)
         throw UserException(s"Variable $variable has type $varTyp, but expression has type ${expr.typ}")
 
-      ???
+      for (x <- expr.variables)
+        if (!state.environment.variableExistsForAssertion(x))
+          throw UserException(s"Undeclared (or non-indexed) variable $x in precondition")
+
+
+      val caseExpr : Term = Isabelle.classical_subspace $
+        (HOLogic.equ(varTyp.isabelleTyp) $ expr.isabelleTerm $ Free(variable,varTyp.isabelleTyp))
+      val pre2 = Isabelle.assertion_inf $ caseExpr $ pre.isabelleTerm
+      val pre3 = Expression(pre.isabelle, state.assertionT, pre2)
+
+
+      List(QRHLSubgoal(left,right,pre3,post))
     case _ : AmbientSubgoal => throw UserException("Expected a QRHL subgoal")
   }
 }

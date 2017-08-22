@@ -292,6 +292,12 @@ fun addAssumption name term ctx =
     ctx
   end
 
+fun checkType ctx term =
+  let val ct = Thm.cterm_of ctx term
+  in
+    Thm.typ_of_cterm ct
+  end
+
 
 val _ = byQRHLPre [("a1","a2",@{typ bool}),("b1","b2",@{typ int})] [("q1","q2",@{typ bool}),("r1","r2",@{typ int})]
 |> Thm.cterm_of @{context}

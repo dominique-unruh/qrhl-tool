@@ -34,6 +34,10 @@ import scala.collection.mutable
 
 
 final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
+  def checkType(): Unit = {
+    assert(isabelle.checkType(isabelleTerm) == typ.isabelleTyp)
+  }
+
   /** Free variables, including those encoded as a string in "probability ... ... str" */
   private def freeVars(term: Term): Set[String] = {
     val fv = new mutable.SetBuilder[String,Set[String]](Set.empty)

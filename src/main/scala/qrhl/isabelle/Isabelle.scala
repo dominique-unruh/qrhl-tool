@@ -287,6 +287,12 @@ object Isabelle {
 
 
   class Context private[Isabelle](val isabelle:Isabelle, thyName: String, context:ml.Ref[IContext]) {
+    def checkType(term:Term) : ITyp = {
+      val lit = ml.Expr.uncheckedLiteral[IContext => Term => ITyp]("QRHL.checkType")
+      val mlExpr = lit(context.read)(term)
+      runExpr(mlExpr)
+    }
+
 
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting context ${context.id}")
