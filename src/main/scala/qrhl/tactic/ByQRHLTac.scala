@@ -82,7 +82,7 @@ case object ByQRHLTac extends Tactic {
       val pre = Expression(isa, state.assertionT, isa.runExpr(mlExpr))
       val post = Expression(isa, state.assertionT, Isabelle.classical_subspace $ (connective $ v1bool $ v2bool))
 
-      List(QRHLSubgoal(left,right,pre,post))
+      List(QRHLSubgoal(left,right,pre,post,Nil))
     case _ =>
       throw UserException("""Expected subgoal of the form "Pr[b:p(rho)] = Pr[c:q(rho2)]" (or with <= or >=) where b,c are bool or bit program variables, and p,q are program names""")
   }

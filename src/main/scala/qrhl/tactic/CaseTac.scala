@@ -9,7 +9,7 @@ import qrhl.logic.{Expression, Variable}
 
 case class CaseTac(variable:String, expr:Expression) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
-    case QRHLSubgoal(left,right,pre,post) =>
+    case QRHLSubgoal(left,right,pre,post,assms) =>
 
       if (goal.containsAmbientVar(variable))
         throw UserException(s"Variable $variable already contained in goal")
@@ -34,7 +34,7 @@ case class CaseTac(variable:String, expr:Expression) extends Tactic {
       val pre3 = Expression(pre.isabelle, state.assertionT, pre2)
 
 
-      List(QRHLSubgoal(left,right,pre3,post))
+      List(QRHLSubgoal(left,right,pre3,post,assms))
     case _ : AmbientSubgoal => throw UserException("Expected a QRHL subgoal")
   }
 }

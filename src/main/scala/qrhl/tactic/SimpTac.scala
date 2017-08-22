@@ -1,5 +1,6 @@
 package qrhl.tactic
 
+import org.log4s
 import qrhl._
 import qrhl.toplevel.Parser
 
@@ -8,10 +9,16 @@ case class SimpTac(facts:List[String]) extends Tactic {
     state.isabelle match {
       case Some(isa) => goal match {
         case AmbientSubgoal(expr) => List(AmbientSubgoal(expr.simplify(isa,facts)))
-        case QRHLSubgoal(left, right, pre, post) => List(QRHLSubgoal(left, right, pre.simplify(isa,facts), post.simplify(isa,facts)))
+        case QRHLSubgoal(left, right, pre, post, assms) =>
+          if (assms.nonEmpty) SimpTac.logger.warn("Ignoring assumptions in simplification")
+          List(QRHLSubgoal(left, right, pre.simplify(isa,facts), post.simplify(isa,facts), assms))
       }
       case None => throw UserException(Parser.noIsabelleError)
     }
 
   override def toString: String = "simplify"
+}
+
+object SimpTac {
+  private val logger = log4s.getLogger
 }

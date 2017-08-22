@@ -6,9 +6,9 @@ import qrhl.logic.{Assign, Block, Expression, Statement}
 @deprecated
 object Assign1 extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
-    case QRHLSubgoal(Block(Assign(v,e)),Block(),pre,post) =>
+    case QRHLSubgoal(Block(Assign(v,e)),Block(),pre,post,assms) =>
       val env = state.environment
-      List(AmbientSubgoal(pre.leq(post.map(Expression.substitute(v.index1.name,e.index1(env).isabelleTerm,_)))))
+      List(AmbientSubgoal(pre.leq(post.map(Expression.substitute(v.index1.name,e.index1(env).isabelleTerm,_)))).addAssumptions(assms))
     case _ =>
       throw UserException("Expected a qRHL subgoal")
   }
@@ -19,9 +19,9 @@ object Assign1 extends Tactic {
 @deprecated
 object Assign2 extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
-    case QRHLSubgoal(Block(),Block(Assign(v,e)),pre,post) =>
+    case QRHLSubgoal(Block(),Block(Assign(v,e)),pre,post,assms) =>
       val env = state.environment
-      List(AmbientSubgoal(pre.leq(post.substitute(v.index2,e.index2(env)))))
+      List(AmbientSubgoal(pre.leq(post.substitute(v.index2,e.index2(env)))).addAssumptions(assms))
     case _ =>
       throw UserException("Expected a qRHL subgoal")
   }

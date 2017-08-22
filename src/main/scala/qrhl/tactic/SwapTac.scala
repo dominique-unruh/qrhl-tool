@@ -5,9 +5,9 @@ import qrhl.logic.{Block, Environment}
 
 case class SwapTac(left:Boolean) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
-    case QRHLSubgoal(l,r,pre,post) =>
+    case QRHLSubgoal(l,r,pre,post,assms) =>
       val env = state.environment
-      List(QRHLSubgoal(if (left) swap(env,l) else l, if (!left) swap(env,r) else r, pre, post))
+      List(QRHLSubgoal(if (left) swap(env,l) else l, if (!left) swap(env,r) else r, pre, post,assms))
     case _ =>
       throw UserException("Expected qRHL goal")
   }

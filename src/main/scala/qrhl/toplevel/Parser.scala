@@ -217,7 +217,7 @@ object Parser extends RegexParsers {
     _ <- literal("{");
     post <- expression(context.assertionT);
     _ <- literal("}")
-  ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post)))
+  ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post,Nil)))
 
   val tactic_wp: Parser[WpTac] =
     literal("wp") ~> OnceParser("left|right".r) ^^ {
@@ -268,7 +268,10 @@ object Parser extends RegexParsers {
     ) yield CaseTac(x,e))
 
   val tactic_simp : Parser[SimpTac] =
-    literal("simp") ~> OnceParser(rep(identifier)) ^^ SimpTac
+    literal("simp") ~> OnceParser(rep(identifier)) ^^ SimpTac.apply
+
+  def tactic_split(implicit context:ParserContext) : Parser[CaseSplitTac] =
+    literal("casesplit") ~> OnceParser(expression(context.boolT)) ^^ CaseSplitTac
 
   def tactic(implicit context:ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
@@ -283,6 +286,7 @@ object Parser extends RegexParsers {
       literal("call") ^^ { _ => CallTac } |
       tactic_rnd |
       literal("byqrhl") ^^ { _ => ByQRHLTac } |
+      tactic_split |
       tactic_case
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand

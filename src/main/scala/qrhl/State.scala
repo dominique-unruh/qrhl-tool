@@ -9,6 +9,8 @@ import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext}
 
+import scala.annotation.tailrec
+
 sealed trait Subgoal {
   /** This goal as a boolean expression. If it cannot be expressed in Isabelle, a different,
     * logically weaker expression is returned. */
@@ -17,10 +19,22 @@ sealed trait Subgoal {
   def checkVariablesDeclared(environment: Environment): Unit
 
   def containsAmbientVar(x: String) : Boolean
+
+  @tailrec
+  final def addAssumptions(assms: List[Expression]): Subgoal = assms match {
+    case Nil => this
+    case a::as => addAssumption(a).addAssumptions(as)
+  }
+
+  def addAssumption(assm: Expression): Subgoal
 }
 
-final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expression) extends Subgoal {
-  override def toString: String = s"Pre:   $pre\nLeft:  ${left.toStringNoParens}\nRight: ${right.toStringNoParens}\nPost:  $post"
+final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expression, assumptions:List[Expression]) extends Subgoal {
+  override def toString: String = {
+    val assms = if (assumptions.isEmpty) "" else
+      s"Assumptions:\n${assumptions.map(a => s"* $a\n").mkString}\n"
+    s"${assms}Pre:   $pre\nLeft:  ${left.toStringNoParens}\nRight: ${right.toStringNoParens}\nPost:  $post"
+  }
 
   override def checkVariablesDeclared(environment: Environment): Unit = {
     for (x <- pre.variables)
@@ -35,6 +49,9 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
     for (x <- right.variablesDirect)
       if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in left program")
+    for (a <- assumptions; x <- a.variables)
+      if (!environment.variableExists(x))
+        throw UserException(s"Undeclared variable $x in assumptions")
   }
 
   /** Returns the expression "True" */
@@ -43,7 +60,13 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
   /** Not including ambient vars in nested programs (via Call) */
   override def containsAmbientVar(x: String) = {
     pre.variables.contains(x) || post.variables.contains(x) ||
-      left.variablesDirect.contains(x) || right.variablesDirect.contains(x)
+      left.variablesDirect.contains(x) || right.variablesDirect.contains(x) ||
+      assumptions.exists(_.variables.contains(x))
+  }
+
+  override def addAssumption(assm: Expression) = {
+    assert(assm.typ.isabelleTyp==HOLogic.boolT)
+    QRHLSubgoal(left,right,pre,post,assm::assumptions)
   }
 }
 
@@ -59,7 +82,13 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
   override def toExpression: Expression = goal
 
   override def containsAmbientVar(x: String) = goal.variables.contains(x)
-}
+
+  override def addAssumption(assm: Expression) = {
+    assert(assm.typ.isabelleTyp == HOLogic.boolT)
+    AmbientSubgoal(assm.implies(goal))
+  }
+
+  }
 
 trait Tactic {
   def apply(state: State, goal : Subgoal) : List[Subgoal]

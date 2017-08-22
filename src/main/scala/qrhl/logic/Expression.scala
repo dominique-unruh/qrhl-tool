@@ -82,14 +82,27 @@ final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val
   }
 
 
-  def leq(e: Expression): Expression = e match {
-    case e2 : Expression =>
-      val t = e2.isabelleTerm
-      val assertionT = Typ(isabelle,"assertion").isabelleTyp  // Should be the type of t
+  def leq(e: Expression): Expression = {
+      val t = e.isabelleTerm
+      val assertionT = Isabelle.assertionT // Should be the type of t
       val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(assertionT, ITyp.funT(assertionT, boolT))) $ isabelleTerm $ t
       val typ = Typ.bool(isabelle)
       new Expression(isabelle,typ,newT)
   }
+
+  def implies(e: Expression): Expression = {
+    val t = e.isabelleTerm
+    val newT = HOLogic.imp $ isabelleTerm $ t
+    val typ = Typ.bool(isabelle)
+    new Expression(isabelle,typ,newT)
+  }
+
+  def not: Expression = {
+    assert(typ.isabelleTyp==HOLogic.boolT)
+    new Expression(isabelle,typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
+  }
+
+
 }
 
 

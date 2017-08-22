@@ -8,8 +8,8 @@ import qrhl._
   */
 object SkipTac extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
-    case QRHLSubgoal(Block(),Block(),pre,post) =>
-      List(AmbientSubgoal(pre.leq(post)))
+    case QRHLSubgoal(Block(),Block(),pre,post,assms) =>
+      List(AmbientSubgoal(pre.leq(post)).addAssumptions(assms))
   }
 
   override def toString: String = "skip"
