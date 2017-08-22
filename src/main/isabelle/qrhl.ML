@@ -23,6 +23,9 @@ fun mk_INFIMUM A f =
   end
 
 
+fun dest_All (Const("HOL.All",_) $ Abs(x,T,body)) = (T,body)
+  | dest_All t = raise TERM("dest_All",[t])
+
 fun qvariables [] = (@{term "qvariable_unit"},@{typ unit})
   | qvariables [v] = 
         let val vT = fastype_of v
@@ -298,8 +301,16 @@ fun checkType ctx term =
     Thm.typ_of_cterm ct
   end
 
+fun fixTac term var =
+  let val (typ,body) = dest_All term
+      val res = Term.subst_bound (Free(var,typ), body)
+  in
+  (res,typ)
+  end
 
-val _ = byQRHLPre [("a1","a2",@{typ bool}),("b1","b2",@{typ int})] [("q1","q2",@{typ bool}),("r1","r2",@{typ int})]
+
+val _ = fixTac @{term "!x::int. x=x"} "z"
+|> fst
 |> Thm.cterm_of @{context}
 |> @{print}
 

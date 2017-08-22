@@ -273,6 +273,9 @@ object Parser extends RegexParsers {
   def tactic_split(implicit context:ParserContext) : Parser[CaseSplitTac] =
     literal("casesplit") ~> OnceParser(expression(context.boolT)) ^^ CaseSplitTac
 
+  def tactic_fix : Parser[FixTac] =
+    literal("fix") ~> identifier ^^ FixTac
+
   def tactic(implicit context:ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
       tactic_wp |
@@ -287,7 +290,8 @@ object Parser extends RegexParsers {
       tactic_rnd |
       literal("byqrhl") ^^ { _ => ByQRHLTac } |
       tactic_split |
-      tactic_case
+      tactic_case |
+      tactic_fix
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

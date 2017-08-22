@@ -2,6 +2,7 @@ theory Test
   imports QRHL                 
 begin
 
+  ML {* @{term bot} *}
   
 term "\<not>b"  
   
