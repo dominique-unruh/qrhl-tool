@@ -42,21 +42,34 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   admit.
 # quantum_equality_full idIso ⟦C1, A1, B1⟧ (addState EPR) ⟦A2⟧ ≤ CNOT⇩@⟦C1, A1⟧ ⋅ (H⇩@⟦C1⟧ ⋅ quantum_equality_full idIso ⟦C1, A1, B1⟧ (H ⊗ idIso ⋅ assoc_op' ⋅ CNOT ⊗ idIso ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)
 
- seq 2 0: Cla[if a1=0 ∧ c1=0 then True else False].
+ seq 2 0: if a1=0 ∧ c1=0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧
+          else if a1=0 ∧ c1=1 then Z⇩@⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧
+          else if a1=1 ∧ c1=0 then X⇩@⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧
+          else X⇩@⟦B1⟧ ⋅ (Z⇩@⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
   admit.
      # TODO
 
+ wp left.
+ wp left.
  case a' := a1.
  case c' := c1.
- wp left.
- wp left.
  skip.
  casesplit a'=0.
-  casesplit c'=0.
-   simp.
-
-
-admit.
+ casesplit c'=0.
+  # case a'=0 c'=0
+  simp.
+  true.
+  # case a'=0 c'=1
+  simp.
+  true.
+ casesplit c'=0.
+  # case a'=1 c'=0
+  simp.
+  true.
+  # case a'=1 c'=1
+  simp.
+  true.
 
 qed.
+
 

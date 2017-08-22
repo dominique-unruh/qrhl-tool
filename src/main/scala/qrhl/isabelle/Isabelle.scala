@@ -166,6 +166,10 @@ object Isabelle {
   val assertionT = Type("QRHL.subspace", List(Type("QRHL.mem2",Nil)))
   val classical_subspace = Const("QRHL.classical_subspace", HOLogic.boolT -->: assertionT)
   val assertion_inf = Const ("Lattices.inf_class.inf", assertionT -->: assertionT -->: assertionT)
+  val assertion_bot = Const ("Orderings.bot_class.bot", assertionT)
+  val assertion_0 = Const ("Groups.zero_class.zero", assertionT)
+
+
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
 

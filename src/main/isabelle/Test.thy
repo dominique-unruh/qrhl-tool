@@ -3,7 +3,7 @@ theory Test
 begin
 
   
-  
+term "\<not>b"  
   
 lemma "undefined (k1 = s2 \<and> c1 = c2 \<and> m1 = m2 \<and> cglobA1 = cglobA2 \<and> b1 = b2 \<longrightarrow> \<lbrakk>qglobA1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2\<rbrakk> \<le> \<CC>\<ll>\<aa>[G k1 = G s2 \<and> cglobA1 = cglobA2 \<and> b1 = b2])
 "

@@ -3,6 +3,7 @@ package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
 import qrhl._
+import qrhl.isabelle.Isabelle
 import qrhl.logic.Expression
 
 object TrueTac extends Tactic {
@@ -10,8 +11,10 @@ object TrueTac extends Tactic {
     case AmbientSubgoal(exp : Expression) =>
       if (exp.isabelleTerm==HOLogic.True) Nil
       else throw UserException("""Tactic true expects a subgoal that is simply "true"""")
-    case _ : QRHLSubgoal =>
-      throw UserException("""Tactic true expects a subgoal that is simply "true" (not a qRHL judgement)""")
+    case g : QRHLSubgoal =>
+      if (g.assumptions.exists(_.isabelleTerm==HOLogic.False)) Nil
+      else if (g.pre.isabelleTerm==Isabelle.assertion_bot || g.pre.isabelleTerm==Isabelle.assertion_0) Nil
+      else throw UserException("""Expecting a QRHL subgoal with one assumption being "False" or the precondition being "bot" or "0"""")
   }
 
   override def toString: String = "true"

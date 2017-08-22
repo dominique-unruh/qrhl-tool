@@ -51,9 +51,15 @@ end
 instantiation bit :: finite begin
 instance by (intro_classes, transfer, simp)
 end
-  
+
+lemma bit_cases: "(x=0 \<Longrightarrow> P) \<Longrightarrow> (x=1 \<Longrightarrow> P) \<Longrightarrow> P" for x :: bit
+  by (metis (full_types) Rep_bit_inverse one_bit.abs_eq zero_bit.abs_eq)
+lemma bit_two[simp]: "(2::bit) = 0"
+  by (metis add_cancel_left_right bit_cases one_add_one) 
 lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
   apply transfer by auto
+lemma bit_neq[simp]: "(a \<noteq> b) = (a = b+1)" for a b :: bit
+  apply (cases a rule:bit_cases; cases b rule:bit_cases) by auto
 
 (*instantiation "fun" :: (type,zero)zero begin
 definition[simp]: "zero_fun (x::'a) = (0::'b)"
