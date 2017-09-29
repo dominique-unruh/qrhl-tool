@@ -1,5 +1,7 @@
 theory Test
   imports QRHL                 
+  abbrevs "\<And>!" = ""
+    "You are silly!" = "I'm not!"
 begin
 
   ML {* @{term bot} *}

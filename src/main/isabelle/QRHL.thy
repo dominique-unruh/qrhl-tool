@@ -1,7 +1,7 @@
 theory QRHL
-imports Complex_Main "~~/src/Tools/Adhoc_Overloading"
+  imports Complex_Main "~~/src/Tools/Adhoc_Overloading"
 begin
-
+  
 section \<open>Miscellaneous\<close>
   
 syntax "Lattices.sup_class.sup" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<squnion>" 65)

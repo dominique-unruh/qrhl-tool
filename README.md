@@ -2,11 +2,12 @@
 
 The binaries should run on Windows, Linux, and MacOS.
 But if you have the choice, Linux should be easiest, especially if Java and Emacs are already installed.
+You can download the binaries [here](https://www.ut.ee/~unruh/qrhl.zip).
 
 ## Prerequisites
 
-* Java must be installed (at least Java 8), and the java executable must be in the path.
-* Emacs must be installed, and the emacs executable must be in the path (or else, edit `proofgeneral.{bat,sh}`).
+* Java must be installed (at least Java 8), and the `java` executable must be in the path.
+* Emacs must be installed, and the `emacs` executable must be in the path (or else, edit `proofgeneral.{bat,sh}`).
 
 To check whether this is the case, go into a terminal (or Command Prompt in Windows),
 and enter `java` or `emacs`, respectively, and see whether the commands are found.
@@ -14,13 +15,13 @@ and enter `java` or `emacs`, respectively, and see whether the commands are foun
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.1`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.1alpha`.
 
 
 ## Executing the demos
 
 In the `qrhl-0.1` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
-The current directory must be the qrhl-0.1 directory!
+The current directory must be the `qrhl-0.1alpha` directory!
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files: `prg-enc-indcpa.qrhl`,
@@ -32,7 +33,8 @@ You will see the current goal and some messages withing the Emacs/ProofGeneral w
 See the [ProofGeneral manual](https://proofgeneral.github.io/doc/userman/) for more information.
 
 Note: The first step of the proof script (`isabelle auto...`) will take very long upon first activation,
-because it will download and build Isabelle.
+because it will download and build Isabelle. 
+You need to be online the first time you execute this step. 
 
 
 ## Editing the Isabelle theory files
