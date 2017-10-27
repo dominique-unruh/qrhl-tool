@@ -4,6 +4,6 @@
     <option name="deprecationWarnings" value="true" />
     <option name="uncheckedWarnings" value="true" />
     <option name="featureWarnings" value="true" />
-    <profile name="SBT 1" modules="tool,qrhl-tool" />
+    <profile name="SBT 1" modules="tool,qrhl-tool,qrhl-tool" />
   </component>
 </project>

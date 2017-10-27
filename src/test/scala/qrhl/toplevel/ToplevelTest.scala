@@ -14,7 +14,7 @@ class ToplevelTest extends FlatSpec {
 }
 
 object ToplevelTest {
-  val isabellePath = "/opt/Isabelle2016-1"
+  val isabellePath = "auto"
   lazy val isabelle = new Isabelle(isabellePath)
   def makeToplevel(): Toplevel = Toplevel.makeToplevel(ToplevelTest.isabelle)
 }

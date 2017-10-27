@@ -75,8 +75,8 @@ class Isabelle(path:String) {
     try {
       Await.result(setup.makeEnvironment(resources, Nil), Duration.Inf)
     } catch {
-      case e: InvocationTargetException if e.getTargetException.getMessage.startsWith("Bad Isabelle root directory ") =>
-        throw UserException(e.getTargetException.getMessage)
+      case e: RuntimeException if e.getMessage.startsWith("Generic environment does not support unofficial platform") =>
+        throw UserException("Bad Isabelle root directory (probably)")
     }
   }
 
