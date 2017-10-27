@@ -2,7 +2,9 @@
 
 The binaries should run on Windows, Linux, and MacOS.
 But if you have the choice, Linux should be easiest, especially if Java and Emacs are already installed.
-You can download the binaries [here](https://www.ut.ee/~unruh/qrhl.zip).
+You can download the binaries [here](https://www.ut.ee/~unruh/qrhl.zip). 
+
+On Windows, font problems have been observed (strange characters in the proof state).  
 
 ## Prerequisites
 
@@ -20,7 +22,7 @@ Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.1alpha`.
 
 ## Executing the demos
 
-In the `qrhl-0.1` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
+In the `qrhl-0.1alpha` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
 The current directory must be the `qrhl-0.1alpha` directory!
 
 This will open emacs running ProofGeneral configured for the qrhl
@@ -42,3 +44,12 @@ You need to be online the first time you execute this step.
 The examples `prg-enc-*.qrhl` depend on the Isabelle theory `PrgEnc.thy`.
 To edit that theory, run Isabelle using the `run-isabelle.{sh,bat}` script.
 Then open and edit the file normally.
+
+# Compiling / running from source
+
+Use `git clone git@github.com:dominique-unruh/qrhl-tool.git` to download the sources.
+Run `sbt packageBin` to generate the binary `qrhl.zip`.
+(Assuming you have SBT in your path.)
+Run `sbt test` to run the unit tests.
+Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (but make sure to compile first).
+You can also open the directory as a project in Intelli/J, but you need to run `sbt packageBin` before the first run, and after each change of the files in `src/main/isabelle`.
