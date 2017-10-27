@@ -22,9 +22,9 @@ class Toplevel(initialState : State = State.empty) {
 
   def isabelle: Isabelle = state.isabelle.get.isabelle
 
-  private val commandEnd: Regex = """\.\s*$""".r
 
   /** Reads one command from the input. The last line of the command must end with ".".
+    * Comment lines (starting with whitespace + #) are skipped.
     * @param readLine command for reading lines from the input, invoked with the prompt to show
     * @return the command (without the "."), null on EOF
     * */
@@ -45,17 +45,22 @@ class Toplevel(initialState : State = State.empty) {
             sys.exit(1)
         }
 
-      if (line==null) {
-        val str2 = str.toString()
-        if (str2.trim == "") return null
-        return str2
+      line match {
+        case Toplevel.commentRegex(_*) =>
+        case _ =>
+
+          if (line == null) {
+            val str2 = str.toString()
+            if (str2.trim == "") return null
+            return str2
+          }
+
+          str.append(line).append('\n')
+
+          if (Toplevel.commandEnd.findFirstIn(line).isDefined)
+            return Toplevel.commandEnd.replaceAllIn(str.toString, "")
+          first = false
       }
-
-      str.append(line).append('\n')
-
-      if (commandEnd.findFirstIn(line).isDefined)
-        return commandEnd.replaceAllIn(str.toString, "")
-      first = false
     }
 
     "" // unreachable
@@ -115,8 +120,9 @@ class Toplevel(initialState : State = State.empty) {
     }
     run(readLine _)
   }
-
+  
   /** Runs a sequence of commands. Each command must be delimited by "." at the end of a line.
+    * A line starting with # (and possibly whitespace before that) is ignored (comment).
     * @param readLine command for reading lines from the input, invoked with the prompt to show
     */
   def run(readLine : String => String): Unit = {
@@ -155,6 +161,9 @@ class Toplevel(initialState : State = State.empty) {
 }
 
 object Toplevel {
+  private val commandEnd: Regex = """\.\s*$""".r
+  private val commentRegex = """^\s*\#.*$""".r
+
   /** Runs the interactive toplevel from the terminal (with interactive readline). */
   def runFromTerminal() : Toplevel = {
     val terminal = TerminalBuilder.terminal()
@@ -171,7 +180,6 @@ object Toplevel {
     toplevel.runWithErrorHandler(readLine)
     toplevel
   }
-
 
   def makeToplevel(isabelle:Isabelle, theory:Option[String]=None) : Toplevel = {
     val state = State.empty.loadIsabelle(isabelle,theory)

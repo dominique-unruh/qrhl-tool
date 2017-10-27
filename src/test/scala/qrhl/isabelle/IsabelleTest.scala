@@ -2,6 +2,7 @@ package qrhl.isabelle
 
 import org.scalatest.FlatSpec
 import qrhl.UserException
+import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 
 class IsabelleTest extends FlatSpec {
@@ -13,5 +14,9 @@ class IsabelleTest extends FlatSpec {
 
   "Isabelle" should "initialize successfully with path=auto" in {
     new Isabelle("auto")
+  }
+
+  "Isabelle" should "load an empty theory" in {
+    ToplevelTest.isabelle.getContextFile("Empty")
   }
 }

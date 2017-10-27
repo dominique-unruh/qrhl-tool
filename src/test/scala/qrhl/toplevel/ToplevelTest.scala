@@ -1,5 +1,7 @@
 package qrhl.toplevel
 
+import java.nio.file.{Path, Paths}
+
 import org.scalatest.{FlatSpec, FunSuite}
 import qrhl.UserException
 import qrhl.isabelle.Isabelle
@@ -10,6 +12,16 @@ class ToplevelTest extends FlatSpec {
     assertThrows[UserException] {
       toplevel.execCmd("program prog := { x <- (); }")
     }
+  }
+
+  "prg-enc-indcpa.qrhl" should "execute successfully" in {
+    val toplevel = new Toplevel()
+    toplevel.run(Paths.get("prg-enc-indcpa.qrhl"))
+  }
+
+  "prg-enc-rorcpa.qrhl" should "execute successfully" in {
+    val toplevel = new Toplevel()
+    toplevel.run(Paths.get("prg-enc-rorcpa.qrhl"))
   }
 }
 

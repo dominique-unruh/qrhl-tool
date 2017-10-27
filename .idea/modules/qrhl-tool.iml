@@ -26,6 +26,7 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="SBT: com.chuusai:shapeless_2.12:2.3.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.scala-lang:scala-library:2.12.4:jar" level="project" />
     <orderEntry type="library" name="SBT: org.reactivestreams:reactive-streams:1.0.1:jar" level="project" />
     <orderEntry type="library" name="SBT: org.log4s:log4s_2.12:1.4.0:jar" level="project" />
     <orderEntry type="library" name="SBT: org.eclipse.jgit:org.eclipse.jgit:4.9.0.201710071750-r:jar" level="project" />
@@ -68,6 +69,5 @@
     <orderEntry type="library" name="SBT: org.typelevel:cats-free_2.12:1.0.0-MF:jar" level="project" />
     <orderEntry type="library" name="SBT: org.typelevel:cats-kernel_2.12:1.0.0-MF:jar" level="project" />
     <orderEntry type="library" name="SBT: org.typelevel:cats-macros_2.12:1.0.0-MF:jar" level="project" />
-    <orderEntry type="library" name="scala-sdk-2.12.4" level="project" />
   </component>
 </module>

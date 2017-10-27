@@ -24,8 +24,8 @@ In the `qrhl-0.1` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on
 The current directory must be the `qrhl-0.1alpha` directory!
 
 This will open emacs running ProofGeneral configured for the qrhl
-tool.  Open one of the example files: `prg-enc-indcpa.qrhl`,
-`prg-enc-rorcpa.qrhl`, or `teleport.qrhl`.
+tool.  Open one of the example files: `prg-enc-indcpa.qrhl` or
+`prg-enc-rorcpa.qrhl`.
 
 To step through the examples, use Ctrl-C Ctrl-N to go forward one proof step, Ctrl-C Ctrl-U to go back one.
 You will see the current goal and some messages withing the Emacs/ProofGeneral window.

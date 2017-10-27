@@ -132,7 +132,7 @@ class Isabelle(path:String) {
 
   def getContextFile(thyName: String): Isabelle.Context = {
     val use: ml.Expr[String => Theory] =
-      ml.Expr.uncheckedLiteral("(fn name => (Thy_Info.use_thy (name,Position.none); Thy_Info.get_theory name))")
+      ml.Expr.uncheckedLiteral("(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory (\"Draft.\"^name)))")
     new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(use(thyName)), "Protocol_Main"))
   }
 
