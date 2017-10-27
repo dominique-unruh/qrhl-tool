@@ -49,3 +49,5 @@ mappings in Universal ++= directory("PG")
 // Without this, updateSbtClassifiers fails (and this breaks Intelli/J support)
 resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
 
+// To avoid that several tests simultaneously try to download Isabelle
+parallelExecution in Test := false
