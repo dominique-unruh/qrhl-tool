@@ -23,7 +23,7 @@ fun mk_INFIMUM A f =
   end
 
 
-fun dest_All (Const("HOL.All",_) $ Abs(x,T,body)) = (T,body)
+fun dest_All (Const("HOL.All",_) $ Abs(_,T,body)) = (T,body)
   | dest_All t = raise TERM("dest_All",[t])
 
 fun qvariables [] = (@{term "qvariable_unit"},@{typ unit})

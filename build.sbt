@@ -12,13 +12,13 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.3" % "test" // TODO 3.0.4
 libraryDependencies += "org.rogach" %% "scallop" % "3.1.1"
 
-isabelleVersions := Seq(Version.Stable("2016-1")) // TODO 2017
+isabelleVersions := Seq(Version.Stable("2017"))
 isabelleSessions in Compile := Seq("QRHL")
 //isabelleSources := Seq(baseDirectory.value / "src/main/isabelle/.libisabelle")
 
 //unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/isabelle"
 
-libraryDependencies ++= { val version = "0.9.1"; Seq(
+libraryDependencies ++= { val version = "0.9.2"; Seq(
   "info.hupel" %% "libisabelle" % version,
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version

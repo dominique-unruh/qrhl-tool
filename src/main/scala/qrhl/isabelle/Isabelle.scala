@@ -24,7 +24,7 @@ import scala.util.{Left, Right}
 import scala.util.matching.Regex
 
 class Isabelle(path:String) {
-  val version = Version.Stable("2016-1")
+  val version = Version.Stable("2017")
 
   private val auto = path=="auto"
 

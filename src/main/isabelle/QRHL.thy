@@ -1,5 +1,5 @@
 theory QRHL
-  imports Complex_Main "~~/src/Tools/Adhoc_Overloading"
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" (* "~~/src/Tools/Adhoc_Overloading" *)
 begin
   
 section \<open>Miscellaneous\<close>
