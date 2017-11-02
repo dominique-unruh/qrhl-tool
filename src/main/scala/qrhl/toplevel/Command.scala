@@ -86,7 +86,7 @@ case class QedCommand() extends Command {
     if (state.currentLemma.isEmpty)
       throw UserException("Not in a proof.")
     if (state.currentLemma.get._1 != "")
-      println(s"Finished and saved current lemma as ${state.currentLemma.get._1}:\n${state.currentLemma.get._2}")
+      println(s"Finished and saved current lemma as '${state.currentLemma.get._1}':\n${state.currentLemma.get._2}")
     else
       println("Finished current lemma.")
     state.qed

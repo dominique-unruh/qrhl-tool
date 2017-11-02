@@ -47,9 +47,11 @@ Then open and edit the file normally.
 
 # Compiling / running from source
 
+Make sure that `sbt` (Scala Build Tool) is on the path.
 Use `git clone git@github.com:dominique-unruh/qrhl-tool.git` to download the sources.
+Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
+Run `bin/qrhl` to run the tool on the command line.
 Run `sbt packageBin` to generate the binary `qrhl.zip`.
-(Assuming you have SBT in your path.)
 Run `sbt test` to run the unit tests.
-Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (but make sure to compile first).
-You can also open the directory as a project in Intelli/J, but you need to run `sbt packageBin` before the first run, and after each change of the files in `src/main/isabelle`.
+You can also open the directory as a project in Intelli/J, but you need to run `sbt assembly` before the first run,
+and after each change of the files in `src/main/isabelle`.
