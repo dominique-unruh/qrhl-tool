@@ -23,6 +23,12 @@ class ToplevelTest extends FlatSpec {
     val toplevel = new Toplevel()
     toplevel.run(Paths.get("prg-enc-rorcpa.qrhl"))
   }
+
+  "equality.qrhl" should "execute successfully" in {
+    val toplevel = new Toplevel()
+    toplevel.run(Paths.get("equality.qrhl"))
+  }
+
 }
 
 object ToplevelTest {
