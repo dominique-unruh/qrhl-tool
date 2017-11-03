@@ -1,5 +1,4 @@
-isabelle auto, theory Scratch.
-#  TODO don't use Scratch 
+isabelle.
 
 quantum var q : bit.
 classical var b : bit.

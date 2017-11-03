@@ -1,4 +1,4 @@
-isabelle auto, theory PrgEnc.
+isabelle PrgEnc.
 
 ambient var rho : program_state.
 

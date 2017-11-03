@@ -21,7 +21,7 @@ object Parser extends RegexParsers {
   //  val natural : Parser[BigInt] = """[0-9]+""".r ^^ { BigInt(_) }
   val natural: Parser[Int] = """[0-9]+""".r ^^ { _.toInt }
 
-  val noIsabelleError: String = """Need isabelle command first. Try "isabelle <path>." or "isabelle auto."""""
+  val noIsabelleError: String = """Need isabelle command first. Try "isabelle." or "isabelle <theory name>."""""
 
   private val statementSeparator = literal(";")
 
@@ -158,12 +158,7 @@ object Parser extends RegexParsers {
 
 //  val commandEndSymbol : Parser[_] = literal(".")
   val isabelle : Parser[IsabelleCommand] =
-    literal("isabelle") ~> OnceParser(
-      (quotedString | unquotedStringNoComma) ~ (literal(",") ~> literal("theory") ~> identifier).?
-    ) ^^ {
-      case path ~ None => IsabelleCommand(path)
-      case path ~ Some(thy) => IsabelleCommand(path,Some(thy))
-    }
+    literal("isabelle") ~> identifier.? ^^ IsabelleCommand
 
   def typ(implicit context:ParserContext) : Parser[Typ] =
   //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {

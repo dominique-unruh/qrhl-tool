@@ -7,10 +7,10 @@ trait Command {
   def act(state: State): State
 }
 
-case class IsabelleCommand(path: String, thy:Option[String]=None) extends Command {
+case class IsabelleCommand(thy:Option[String]=None) extends Command {
   override def act(state: State): State = {
-    println(s"Loading Isabelle at $path.")
-    val newState = state.loadIsabelle(path,thy)
+    println(s"Loading Isabelle.")
+    val newState = state.loadIsabelle("auto",thy)
     println("Isabelle loaded.")
     newState
   }

@@ -61,10 +61,10 @@ lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
 lemma bit_neq[simp]: "(a \<noteq> b) = (a = b+1)" for a b :: bit
   apply (cases a rule:bit_cases; cases b rule:bit_cases) by auto
 
-(*instantiation "fun" :: (type,zero)zero begin
-definition[simp]: "zero_fun (x::'a) = (0::'b)"
-instance .. 
-end*)
+declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]]
+
+lemma bit_plus_1_eq[simp]: "(a+1=b) = (a=b+1)" for a b :: bit
+  by auto
 
 typedecl program
 typedecl program_state
@@ -160,7 +160,7 @@ instance apply intro_classes
   by (transfer; rule ext; simp)
 end
 
-  (* TODO: states should be normalized! *)
+  (* TODO: states should be normalized! Or qinit rule gets a new precondition. *)
 
 typedecl 'a subspace
   
@@ -178,7 +178,7 @@ definition "(a < b) = (a \<le> b \<and> \<not> (b \<le> a))" for a :: "'a subspa
 instance .. end
 hide_fact less_eq_subspace_def
 hide_const tmp_subspace_less_eq
-  
+
 axiomatization ortho :: "'a subspace \<Rightarrow> 'a subspace" (* Orthogonal complement *)
   
 axiomatization where
@@ -270,6 +270,9 @@ hide_fact tmp_Inf1 tmp_Inf2 tmp_Sup1 tmp_Sup2 tmp_Inf3
 lemma top_not_bot[simp]: "(top::'a subspace) \<noteq> bot" 
   using subspace_zero_not_top bot_subspace_def by metis
 
+lemma inf_assoc_subspace[simp]: "A \<sqinter> (B \<sqinter> C) = A \<sqinter> B \<sqinter> C" for A B C :: "_ subspace"
+  unfolding inf.assoc by simp
+
 lemma bot_plus[simp]: "bot + x = x" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
 lemma plus_bot[simp]: "x + bot = x" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
 lemma top_plus[simp]: "top + x = top" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
@@ -279,15 +282,17 @@ axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a state set"
     
 definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
   
-  
+axiomatization where leq_INF[simp]: "A \<le> (INF x. V x)" 
+  for V :: "'a \<Rightarrow> 'b subspace"
+
 subsection \<open>Isometries\<close>
     
       
-typedecl ('a,'b) isometry
+typedecl ('a,'b) isometry (* partial isometries *)
 type_synonym 'a isometry2 = "('a,'a) isometry"
   
 axiomatization 
-  adjoint :: "('a,'b) isometry \<Rightarrow> ('b,'a) isometry" ("_*" [99] 100) (* TODO: not an isometry! *)
+  adjoint :: "('a,'b) isometry \<Rightarrow> ('b,'a) isometry" ("_*" [99] 100)
 and timesIso :: "('b,'c) isometry \<Rightarrow> ('a,'b) isometry \<Rightarrow> ('a,'c) isometry" 
 and applyIso :: "('a,'b) isometry \<Rightarrow> 'a state \<Rightarrow> 'b state"
 and applyIsoSpace :: "('a,'b) isometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
@@ -296,7 +301,7 @@ where
  applyIso_0[simp]: "applyIsoSpace U 0 = 0"
 and applyIso_bot[simp]: "applyIsoSpace U bot = bot"
 and applyIso_top[simp]: "applyIsoSpace U top = imageIso U"
-
+axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) isometry"
   
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
@@ -307,21 +312,42 @@ axiomatization
 where
     apply_idIso[simp]: "applyIso idIso \<psi> = \<psi>"
 and apply_idIso_space[simp]: "applyIsoSpace idIso S = S"
-and times_idIso[simp]: "U \<cdot> idIso = U"
-  for \<psi> :: "'a state" and S :: "'a subspace" and U :: "('a,'b) isometry"
-  
-axiomatization identity :: "'a isometry2" where
+and times_idIso1[simp]: "U \<cdot> idIso = U"
+and times_idIso2[simp]: "idIso \<cdot> V = V"
+and image_id[simp]: "imageIso idIso = top"
+and idIso_adjoint[simp]: "idIso* = idIso"
+for \<psi> :: "'a state" and S :: "'a subspace" and U :: "('a,'b) isometry" and V :: "('b,'a) isometry"
+
+axiomatization where mult_INF[simp]: "U \<cdot> (INF x. V x) = (INF x. U \<cdot> V x)" 
+  for V :: "'a \<Rightarrow> 'b subspace" and U :: "('b,'c) isometry"
+
+lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqinter> (U \<cdot> C)" 
+  for U :: "('a,'b) isometry" and B C :: "'a subspace"
+  using mult_INF[where V="\<lambda>x. if x then B else C" and U=U] 
+  unfolding INF_UNIV_bool_expand
+  by simp
+
+
+(* axiomatization identity :: "'a isometry2" where
     apply_id[simp]: "identity \<cdot> \<psi> = \<psi>"
 and times_id[simp]: "identity \<cdot> U = U" 
 and apply_space_id[simp]: "identity \<cdot> S = S" 
-for \<psi> :: "'a state" and U :: "('b,'a) isometry" and S :: "'a subspace"
+for \<psi> :: "'a state" and U :: "('b,'a) isometry" and S :: "'a subspace" *)
 
-definition "unitary U = (U \<cdot> (U*) = identity)"  
-  
-axiomatization where 
-    unitary_adjoint[simp]: "unitary U \<Longrightarrow> U* = U" 
-and unitary_image[simp]: "unitary U \<Longrightarrow> imageIso U = top"
-for U :: "'a isometry2"
+fun powerIso :: "('a,'a) isometry \<Rightarrow> nat \<Rightarrow> ('a,'a) isometry" where 
+  "powerIso U 0 = idIso"
+| "powerIso U (Suc i) = U \<cdot> powerIso U i"
+
+definition "unitary U = (U \<cdot> (U*) = idIso \<and> U* \<cdot> U = idIso)"  
+
+lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)isometry"
+  unfolding unitary_def by auto
+
+axiomatization where unitary_image[simp]: "unitary U \<Longrightarrow> imageIso U = top"
+  for U :: "'a isometry2"
+
+lemma unitary_id[simp]: "unitary idIso"
+  unfolding unitary_def by simp
 
 section \<open>Projectors\<close>
 
@@ -443,7 +469,6 @@ axiomatization where
   colocal_qvariable_names[simp]: "set (qvariable_names Q) \<inter> set (qvariable_names R) = {} \<Longrightarrow> colocal Q R" 
   for Q :: "'a qvariables" and R :: "'b qvariables"
 
-
 subsection \<open>Quantum equality\<close>
 
 axiomatization quantum_equality_full :: "('a,'c) isometry \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) isometry \<Rightarrow> 'b qvariables \<Rightarrow> assertion"
@@ -456,6 +481,7 @@ translations
 
 axiomatization where colocal_quantum_eq[simp]: "colocal Q1 R \<Longrightarrow> colocal Q2 R \<Longrightarrow> colocal (Q1 \<equiv>\<qq> Q2) R"
  for Q1 Q2 :: "'c qvariables" and R :: "'a qvariables"
+
 
 subsection \<open>Subspace division\<close>
 
@@ -483,6 +509,22 @@ for U :: "'a isometry2"
 axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
 
+axiomatization where Qeq_mult1[simp]:
+  "unitary U \<Longrightarrow> U\<^sub>@Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
+ for U::"('a,'a) isometry" and U2 :: "('b,'c) isometry"  
+
+axiomatization where Qeq_mult2[simp]:
+  "unitary U \<Longrightarrow> U\<^sub>@Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
+ for U::"('a,'a) isometry" and U1 :: "('b,'c) isometry"  
+
+axiomatization where qeq_collect:
+ "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idIso Q2"
+for U :: "('a,'b) isometry" and V :: "('c,'b) isometry"
+
+lemma qeq_collect_guarded[simp]:
+  assumes "NO_MATCH idIso V"
+  shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idIso Q2"
+  using qeq_collect by auto
 
   
 section \<open>Common quantum objects\<close>
@@ -500,6 +542,27 @@ axiomatization H :: "bit isometry2"
 and unitaryX[simp]: "unitary X"
 and unitaryY[simp]: "unitary Y"
 and unitaryZ[simp]: "unitary Z"
+and CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = idIso"
+and H_H[simp]: "H \<cdot> H = idIso"
+and X_X[simp]: "X \<cdot> X = idIso"
+and Y_Y[simp]: "Y \<cdot> Y = idIso"
+and Z_Z[simp]: "Z \<cdot> Z = idIso"
+and adjoint_CNOT[simp]: "CNOT* = CNOT"
+and adjoint_H[simp]: "H* = H"
+and adjoint_X[simp]: "X* = X"
+and adjoint_Y[simp]: "Y* = Y"
+and adjoint_Z[simp]: "Z* = Z"
+
+section \<open>Misc\<close>
+
+lemma bij_add_const[simp]: "bij (\<lambda>x. x+(y::_::ab_group_add))" 
+  apply (rule bijI') apply simp
+  apply (rename_tac z) apply (rule_tac x="z-y" in exI)
+  by auto
+
+
+declare imp_conjL[simp]
+
 
 ML_file \<open>qrhl.ML\<close>
   
