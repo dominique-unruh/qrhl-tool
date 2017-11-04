@@ -198,7 +198,7 @@ object Parser extends RegexParsers {
     }
 
   def goal(implicit context:ParserContext) : Parser[GoalCommand] =
-    literal("goal") ~> OnceParser((identifier <~ ":").? ~ expression(context.boolT)) ^^ {
+    literal("lemma") ~> OnceParser((identifier <~ ":").? ~ expression(context.boolT)) ^^ {
       case name ~ e => GoalCommand(name.getOrElse(""), AmbientSubgoal(e)) }
 
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =

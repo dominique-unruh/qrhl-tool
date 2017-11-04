@@ -67,7 +67,7 @@ program middle := {
   call A2;
 }.
 
-goal indcpa0_prg0B1: Pr[b:indcpa0(rho)] = Pr[b:prg0B1(rho)].
+lemma indcpa0_prg0B1: Pr[b:indcpa0(rho)] = Pr[b:prg0B1(rho)].
 
  byqrhl.
  simp.
@@ -88,7 +88,7 @@ goal indcpa0_prg0B1: Pr[b:indcpa0(rho)] = Pr[b:prg0B1(rho)].
 
 qed.
 
-goal prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
+lemma prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
 
  byqrhl.
  simp.
@@ -111,7 +111,7 @@ goal prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
 
 qed.
 
-goal indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
+lemma indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
 
  byqrhl.
  simp.
@@ -133,7 +133,7 @@ goal indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
 qed.
 
 
-goal final: abs( Pr[b:indcpa0(rho)] - Pr[b:indcpa1(rho)] ) <=
+lemma final: abs( Pr[b:indcpa0(rho)] - Pr[b:indcpa1(rho)] ) <=
             abs( Pr[b:prg0B1(rho)] - Pr[b:prg1B1(rho)] ) +
             abs( Pr[b:prg0B2(rho)] - Pr[b:prg1B2(rho)] ).
 
