@@ -15,9 +15,9 @@ classical var b : bit.
 quantum var qglobA : string.
 classical var cglobA : string.
 
-# A: inputs: none; outputs m
+# A1: inputs: none; outputs m
 adversary A1 vars m,cglobA,qglobA.
-# A: inputs: c; outputs: b
+# A2: inputs: c; outputs: b
 adversary A2 vars c,b,cglobA,qglobA.
 
 # B: inputs: r; outputs: b
@@ -69,7 +69,6 @@ lemma rorcpa0_prg0: Pr[b:rorcpa0(rho)] = Pr[b:prg0(rho)].
  skip.
  simp.
  true.
-
 qed.
 
 
@@ -94,12 +93,10 @@ lemma rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
  simp.
  simp aux_bij.
  true.
-
 qed.
 
 lemma final: abs (Pr[b:rorcpa0(rho)] - Pr[b:rorcpa1(rho)]) = abs(Pr[b:prg0(rho)]-Pr[b:prg1(rho)]).
 
  simp rorcpa0_prg0 rorcpa1_prg1.
  true.
-
 qed.
