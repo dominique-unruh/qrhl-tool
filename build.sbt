@@ -38,7 +38,8 @@ test in assembly := {}
 enablePlugins(JavaAppPackaging)
 mappings in Universal ++= Seq(
     "proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat",
-    "prg-enc-rorcpa.qrhl", "prg-enc-indcpa.qrhl", "PrgEnc.thy", "README.md"
+    "prg-enc-rorcpa.qrhl", "prg-enc-indcpa.qrhl", "PrgEnc.thy", "README.md",
+    "equality.qrhl", "example.qrhl", "Example.thy"
   ).map { f =>
   baseDirectory.value / f -> f
 }

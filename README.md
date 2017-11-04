@@ -26,8 +26,8 @@ In the `qrhl-0.1alpha` directory, execute `proofgeneral.sh` (or `proofgeneral.ba
 The current directory must be the `qrhl-0.1alpha` directory!
 
 This will open emacs running ProofGeneral configured for the qrhl
-tool.  Open one of the example files: `prg-enc-indcpa.qrhl` or
-`prg-enc-rorcpa.qrhl`.
+tool.  Open one of the example files: `example.qrhl`, `prg-enc-indcpa.qrhl`,
+`prg-enc-rorcpa.qrhl` or `equality.qrhl`.
 
 To step through the examples, use Ctrl-C Ctrl-N to go forward one proof step, Ctrl-C Ctrl-U to go back one.
 You will see the current goal and some messages withing the Emacs/ProofGeneral window.
@@ -42,6 +42,7 @@ You need to be online the first time you execute this step.
 ## Editing the Isabelle theory files
 
 The examples `prg-enc-*.qrhl` depend on the Isabelle theory `PrgEnc.thy`.
+(And `example.qrhl` on `Example.thy`.)
 To edit that theory, run Isabelle using the `run-isabelle.{sh,bat}` script.
 Then open and edit the file normally.
 
