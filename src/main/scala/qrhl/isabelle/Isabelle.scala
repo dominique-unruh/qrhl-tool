@@ -282,7 +282,9 @@ object Isabelle {
       if (cp <= 128) sb.append(cp.toChar)
       else symbolsInv.get(cp) match {
         case Some(sym) => sb.append("\\<"); sb.append(sym); sb.append('>')
-        case None => sb.appendCodePoint(cp)
+        case None =>
+          if (cp>255) throw UserException(f"""Character "${new String(Character.toChars(cp))}%s" (Ux$cp%04X) not supported by Isabelle""")
+          sb.appendCodePoint(cp)
       }
     }
     sb.toString

@@ -30,8 +30,5 @@ lemma aux_bij: "bij (\<lambda>xb::msg. xb + Gx + xa)"
     
 lemma triangle: "\<bar>a - b\<bar> \<le> \<bar>a - c\<bar> + \<bar>b - c\<bar>" for a b c :: real by simp
     
-(* declare[[show_types,show_sorts]] *)
-  
-    
 end
 
