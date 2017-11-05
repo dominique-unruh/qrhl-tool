@@ -71,14 +71,17 @@ typedecl program_state
 
   
 section \<open>Subspaces\<close>
-  
-typedef 'a state = "{x::'a\<Rightarrow>complex. \<exists>b. \<forall>F. finite F \<longrightarrow> sum (\<lambda>i. (norm(x i))^2) F \<le> b }"
-  by (rule exI[of _ "\<lambda>_.0"], auto)
-setup_lifting type_definition_state
 
-lift_definition ket :: "'a \<Rightarrow> 'a state" ("|_\<rangle>") is "\<lambda>x y. if x=y then 1 else 0"
-proof (rule exI[of _ 1], rule allI, rule impI)
-  fix a::'a and F::"'a set" assume "finite F"
+(* Rename \<rightarrow> vector. State is normalized *)
+typedef 'a vector = "{x::'a\<Rightarrow>complex. \<exists>b. \<forall>F. finite F \<longrightarrow> sum (\<lambda>i. (norm(x i))^2) F \<le> b }"
+  by (rule exI[of _ "\<lambda>_.0"], auto)
+setup_lifting type_definition_vector
+
+definition "ell2_norm x = (SUP F:{F. finite F}. sum (\<lambda>i. (norm(x i))^2) F)"
+lift_definition vector_norm :: "'a vector \<Rightarrow> real" is ell2_norm .
+
+lemma ell2_1: assumes  "finite F" shows "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) \<le> 1"
+proof - 
   have "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 0" if "a\<notin>F"
     apply (subst sum.cong[where B=F and h="\<lambda>_. 0"]) using that by auto
   moreover have "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 1" if "a\<in>F"
@@ -88,7 +91,7 @@ proof (rule exI[of _ 1], rule allI, rule impI)
     show "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) = 1"
       unfolding F_F0
       apply (subst sum.insert_remove)
-       using F_F0 `finite F` apply auto
+       using F_F0 assms apply auto
       apply (subst sum.cong[where B=F0 and h="\<lambda>_. 0"])
         apply (simp add: \<open>a \<notin> F0\<close>)
        using \<open>a \<notin> F0\<close> apply auto[1]
@@ -98,10 +101,28 @@ proof (rule exI[of _ 1], rule allI, rule impI)
     by linarith
 qed
 
-instantiation state :: (type)real_vector begin
-lift_definition zero_state :: "'a state" is "\<lambda>_.0" by auto
-lift_definition uminus_state :: "'a state \<Rightarrow> 'a state" is uminus by auto
-lift_definition plus_state :: "'a state \<Rightarrow> 'a state \<Rightarrow> 'a state" is "\<lambda>f g x. f x + g x"
+lift_definition basis_vector :: "'a \<Rightarrow> 'a vector" is "\<lambda>x y. if x=y then 1 else 0"
+  apply (rule exI[of _ 1], rule allI, rule impI)
+  by (rule ell2_1)
+
+lemma cSUP_eq_maximum:
+  fixes z :: "_::conditionally_complete_lattice"
+  assumes "\<exists>x\<in>X. f x = z"
+  assumes "\<And>x. x \<in> X \<Longrightarrow> f x \<le> z"
+  shows "(SUP x:X. f x) = z"
+  by (metis (mono_tags, hide_lams) assms(1) assms(2) cSup_eq_maximum imageE image_eqI)
+
+lemma ell2_basis_vector[simp]: "vector_norm (basis_vector i) = 1"
+  apply transfer unfolding ell2_norm_def
+  apply (rule cSUP_eq_maximum)
+  apply (rule_tac x="{i}" in bexI)
+    apply auto
+  by (rule ell2_1)
+
+instantiation vector :: (type)real_vector begin
+lift_definition zero_vector :: "'a vector" is "\<lambda>_.0" by auto
+lift_definition uminus_vector :: "'a vector \<Rightarrow> 'a vector" is uminus by auto
+lift_definition plus_vector :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>f g x. f x + g x"
 proof -
   fix f g :: "'a \<Rightarrow> complex"  fix fun1 fun2 :: "'a \<Rightarrow> complex"
     
@@ -132,8 +153,8 @@ proof -
     qed
   then show "\<exists>b. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (f i + g i))\<^sup>2) \<le> b" by auto
 qed
-definition "a - b = a + (-b)" for a b :: "'a state"
-lift_definition scaleR_state :: "real \<Rightarrow> 'a state \<Rightarrow> 'a state" is "\<lambda>r f x. r *\<^sub>R f x"
+definition "a - b = a + (-b)" for a b :: "'a vector"
+lift_definition scaleR_vector :: "real \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>r f x. r *\<^sub>R f x"
 proof -
   fix f :: "'a \<Rightarrow> complex" and r :: real
   assume "\<exists>b. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (f i))\<^sup>2) \<le> b"
@@ -153,14 +174,30 @@ instance apply intro_classes
          apply (transfer; rule ext; simp)
         apply (transfer; rule ext; simp)
        apply (transfer; rule ext; simp)
-      apply (unfold minus_state_def; transfer; rule ext; simp)
+      apply (unfold minus_vector_def; transfer; rule ext; simp)
      apply (transfer; rule ext; simp add: scaleR_add_right)
     apply (transfer; rule ext; simp add: scaleR_add_left)
    apply (transfer; rule ext; simp)
   by (transfer; rule ext; simp)
 end
 
-  (* TODO: states should be normalized! Or qinit rule gets a new precondition. *)
+term ket
+
+(* TODO: ket should be a state *)
+typedef 'a state = "{x::'a vector. vector_norm x = 1}"
+  morphisms state_to_vector Abs_state
+  apply (rule exI[of _ "basis_vector undefined"])
+  by simp
+setup_lifting type_definition_state
+
+lift_definition ket :: "'a \<Rightarrow> 'a state" ("|_\<rangle>") is "basis_vector"
+  by (rule ell2_basis_vector)
+
+lemma vector_to_state_ket[simp]: "state_to_vector (ket i) = basis_vector i"
+  by (rule ket.rep_eq)
+
+declare[[coercion state_to_vector]]
+
 
 typedecl 'a subspace
   
@@ -170,7 +207,7 @@ instantiation subspace :: (type)inf begin instance .. end (* Intersection *)
 instantiation subspace :: (type)Inf begin instance .. end (* Intersection *)
 instantiation subspace :: (type)plus begin instance .. end (* Sum of spaces *)
 instantiation subspace :: (type)Sup begin instance .. end (* Sum of spaces *)
-  
+
 consts tmp_subspace_less_eq :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> bool"
 instantiation subspace :: (type)ord begin  
 definition "(a \<le> b) = tmp_subspace_less_eq a b" (* \<le> means inclusion *)
@@ -278,7 +315,7 @@ lemma plus_bot[simp]: "x + bot = x" for x :: "'a subspace" unfolding sup_subspac
 lemma top_plus[simp]: "top + x = top" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
 lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
     
-axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a state set"
+axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set"
     
 definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
   
@@ -301,7 +338,7 @@ type_synonym 'a isometry2 = "('a,'a) isometry"
 axiomatization 
   adjoint :: "('a,'b) isometry \<Rightarrow> ('b,'a) isometry" ("_*" [99] 100)
 and timesIso :: "('b,'c) isometry \<Rightarrow> ('a,'b) isometry \<Rightarrow> ('a,'c) isometry" 
-and applyIso :: "('a,'b) isometry \<Rightarrow> 'a state \<Rightarrow> 'b state"
+and applyIso :: "('a,'b) isometry \<Rightarrow> 'a vector \<Rightarrow> 'b vector"
 and applyIsoSpace :: "('a,'b) isometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
 and imageIso :: "('a,'b) isometry \<Rightarrow> 'b subspace"  (* TODO: same as applyIsoSpace U top *)
 where
@@ -327,7 +364,7 @@ and times_idIso1[simp]: "U \<cdot> idIso = U"
 and times_idIso2[simp]: "idIso \<cdot> V = V"
 and image_id[simp]: "imageIso idIso = top"
 and idIso_adjoint[simp]: "idIso* = idIso"
-for \<psi> :: "'a state" and S :: "'a subspace" and U :: "('a,'b) isometry" and V :: "('b,'a) isometry"
+for \<psi> :: "'a vector" and S :: "'a subspace" and U :: "('a,'b) isometry" and V :: "('b,'a) isometry"
 
 axiomatization where mult_INF[simp]: "U \<cdot> (INF x. V x) = (INF x. U \<cdot> V x)" 
   for V :: "'a \<Rightarrow> 'b subspace" and U :: "('b,'c) isometry"
@@ -357,7 +394,7 @@ section \<open>Projectors\<close>
 
 (* TODO: use isometries instead? *)
 typedecl 'a projector
-axiomatization proj :: "'a state \<Rightarrow> 'a projector"
+axiomatization proj :: "'a vector \<Rightarrow> 'a projector"
   and imProj :: "'a projector \<Rightarrow> 'a subspace"
   
 section \<open>Measurements\<close>
@@ -517,7 +554,7 @@ for U :: "'a isometry2"
 axiomatization where lift_idIso[simp]: "idIso\<^sub>@Q = idIso" for Q :: "'a qvariables"
 
 
-axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_" [89,89,89] 90)
+axiomatization space_div :: "assertion \<Rightarrow> 'a vector \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
 
 axiomatization where Qeq_mult1[simp]:
@@ -540,7 +577,7 @@ lemma qeq_collect_guarded[simp]:
   
 section \<open>Common quantum objects\<close>
 
-axiomatization EPR :: "(bit*bit) state"
+axiomatization EPR :: "(bit*bit) vector"
 
 axiomatization CNOT :: "(bit*bit) isometry2" where
   unitaryCNOT[simp]: "unitary CNOT"
@@ -584,10 +621,10 @@ section \<open>Experiments\<close>
 
 
 axiomatization where mtotal_computational_basis [simp]: "mtotal computational_basis"
-axiomatization where imProj_proj [simp]: "imProj (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a state"
+axiomatization where imProj_proj [simp]: "imProj (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a vector"
 axiomatization where imProj_liftProj [simp]: "imProj (liftProj P Q) = liftSpace (imProj P) Q" for P :: "'a projector" and Q
 axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
-  for Q R :: "'a qvariables" and \<psi> :: "'a state"
+  for Q R :: "'a qvariables" and \<psi> :: "'a vector"
 
 axiomatization probability :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" 
 syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:_'(_')]")

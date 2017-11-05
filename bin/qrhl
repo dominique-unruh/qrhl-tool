@@ -2,5 +2,5 @@
 
 set -e
 
-sbt assembly
+setsid sbt assembly
 java -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar qrhl.jar "$@"
