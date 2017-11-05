@@ -7,7 +7,7 @@ fun mk_stateT T = Type(@{type_name state}, [T])
 fun mk_isometryT T T' = Type(@{type_name isometry}, [T,T'])
 fun mk_isometry2T T = mk_isometryT T T
 fun mk_measurementT T T' = Type(@{type_name measurement}, [T,T'])
-fun mk_projectorT T = Type(@{type_name projector}, [T])
+(* fun mk_projectorT T = Type(@{type_name projector}, [T]) *)
 fun mk_conjs [] = @{const True}
   | mk_conjs [t] = t
   | mk_conjs (t::ts) = @{const conj} $ t $ mk_conjs ts
@@ -68,11 +68,11 @@ fun measureWp B x e Q =
       val (_,resT) = dest_Free x
       val (vs,vsT) = qvariables Q
       val measT = mk_measurementT resT vsT
-      val e_z = Const(@{const_name mproj}, measT --> resT --> mk_projectorT vsT)
+      val e_z = Const(@{const_name mproj}, measT --> resT --> mk_isometry2T vsT)
                   $ e $ Bound(0)
-      val lift_e_z = Const(@{const_name liftProj}, mk_projectorT vsT --> mk_qvariablesT vsT --> @{typ "mem2 projector"})
+      val lift_e_z = Const(@{const_name liftIso}, mk_isometry2T vsT --> mk_qvariablesT vsT --> @{typ "mem2 isometry2"})
                     $ e_z $ vs
-      val im_e_z = @{const imProj(mem2)} $ lift_e_z
+      val im_e_z = @{const applyIsoSpace(mem2,mem2)} $ lift_e_z $ @{const top(predicate)}
       val Be = @{const plus(predicate)} $ (@{const inf(predicate)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)
       val Inf_Be = mk_INFIMUM (Const(@{const_name top}, HOLogic.mk_setT resT)) (Abs("z",resT,Be))
       val total = @{const classical_subspace} $ (Const(@{const_name mtotal}, measT --> HOLogic.boolT) $ e)
@@ -240,13 +240,10 @@ fun callWp cvars1 cvars2 qvars1 qvars2 post =
       val post = fold inf_over freeCVars post
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
 
-      (* TODO: add "cvarEqs ==> " in post *)
-
       val wp = @{const inf(predicate)} $ (@{const inf(predicate)} $ post $ claCvarsEq) $ qvarsEq
       val wp = tidyTrueTop wp
   in
     ((wp, Term.add_free_names post []), qvarsEq)
-    (* wp *)
   end
 
 

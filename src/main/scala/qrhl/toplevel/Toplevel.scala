@@ -142,8 +142,6 @@ class Toplevel(initialState : State = State.empty) {
     while (true) {
       try {
         val cmdStr = readCommand(readLine)
-//        println("XXXXX "+cmdStr.mkString(":"))
-//        println("YYYYY "+System.getProperty("file.encoding"))
         if (cmdStr==null) { println("EOF"); return; }
         execCmd(cmdStr)
       } catch {

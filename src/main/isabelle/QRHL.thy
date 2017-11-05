@@ -66,9 +66,6 @@ declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]]
 lemma bit_plus_1_eq[simp]: "(a+1=b) = (a=b+1)" for a b :: bit
   by auto
 
-typedecl program
-typedecl program_state
-
   
 section \<open>Subspaces\<close>
 
@@ -339,11 +336,10 @@ axiomatization
 and timesIso :: "('b,'c) isometry \<Rightarrow> ('a,'b) isometry \<Rightarrow> ('a,'c) isometry" 
 and applyIso :: "('a,'b) isometry \<Rightarrow> 'a vector \<Rightarrow> 'b vector"
 and applyIsoSpace :: "('a,'b) isometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
-(* and imageIso :: "('a,'b) isometry \<Rightarrow> 'b subspace"  (* TODO: same as applyIsoSpace U top *) *)
 where
  applyIso_0[simp]: "applyIsoSpace U 0 = 0"
 and applyIso_bot[simp]: "applyIsoSpace U bot = bot"
-(* and applyIso_top[simp]: "applyIsoSpace U top = imageIso U" *)
+
 axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) isometry"
 
 abbreviation "imageIso U \<equiv> applyIsoSpace U top"
@@ -393,20 +389,22 @@ lemma unitary_id[simp]: "unitary idIso"
 
 section \<open>Projectors\<close>
 
-(* TODO: use isometries instead? *)
-typedecl 'a projector
-axiomatization proj :: "'a vector \<Rightarrow> 'a projector"
-  and imProj :: "'a projector \<Rightarrow> 'a subspace"
-  
+definition "isProjector P = (P=P* \<and> P=P\<cdot>P)"
+axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) isometry"
+  where isProjector_proj[simp]: "isProjector (proj x)"
+and imageIso_proj [simp]: "imageIso (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a vector"
+
 section \<open>Measurements\<close>
-  
+
 typedecl ('a,'b) measurement
-axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> 'b projector"
+axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> 'b isometry2"
   and mtotal :: "('a,'b) measurement \<Rightarrow> bool"
-  
+  where isProjector_mproj[simp]: "isProjector (mproj M i)"
+
 axiomatization computational_basis :: "('a, 'a) measurement" where
-  mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
-  
+  mproj_computational_basis[simp]: "mproj computational_basis x = proj (basis_vector x)"
+and mtotal_computational_basis [simp]: "mtotal computational_basis"
+
 section \<open>Quantum variables\<close>
 
 typedecl 'a qvariable (* a variable, refers to a location in a memory *)
@@ -443,9 +441,6 @@ axiomatization where
 
 definition "qvariables_distinct X == distinct (qvariable_names X)"
 
-
-
-(* TODO: rename \<rightarrow> predicates *)  
 section \<open>Quantum predicates\<close>
     
 typedecl mem2
@@ -529,15 +524,11 @@ axiomatization where colocal_quantum_eq[simp]: "colocal Q1 R \<Longrightarrow> c
  for Q1 Q2 :: "'c qvariables" and R :: "'a qvariables"
 
 
-subsection \<open>Subspace division\<close>
-
-(* term "space_div (\<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>) EPR \<lbrakk>A1, B1\<rbrakk>" *)
-
 subsection \<open>Lifting\<close>
   
 axiomatization
     liftIso :: "'a isometry2 \<Rightarrow> 'a qvariables \<Rightarrow> mem2 isometry2"
-and liftProj :: "'a projector \<Rightarrow> 'a qvariables \<Rightarrow> mem2 projector"
+(* and liftProj :: "'a projector \<Rightarrow> 'a qvariables \<Rightarrow> mem2 projector" *)
 and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<^sub>@_"  [91,91] 90 )
@@ -554,9 +545,6 @@ for U :: "'a isometry2"
 
 axiomatization where lift_idIso[simp]: "idIso\<^sub>@Q = idIso" for Q :: "'a qvariables"
 
-
-axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a qvariables \<Rightarrow> predicate" ("_ \<div> _@_" [89,89,89] 90)
-  where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
 
 axiomatization where Qeq_mult1[simp]:
   "unitary U \<Longrightarrow> U\<^sub>@Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
@@ -575,6 +563,13 @@ lemma qeq_collect_guarded[simp]:
   shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idIso Q2"
   using qeq_collect by auto
 
+axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
+  for Q R :: "'a qvariables" and \<psi> :: "'a vector"
+
+subsection \<open>Subspace division\<close>
+
+axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a qvariables \<Rightarrow> predicate" ("_ \<div> _@_" [89,89,89] 90)
+  where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
   
 section \<open>Common quantum objects\<close>
 
@@ -615,23 +610,18 @@ declare imp_conjL[simp]
 
 ML_file \<open>qrhl.ML\<close>
   
-section \<open>Experiments\<close>
 
-(* TODO: remove or sort *)
+section \<open>Programs\<close>
 
+typedecl program
+typedecl program_state
 
-
-axiomatization where mtotal_computational_basis [simp]: "mtotal computational_basis"
-axiomatization where imProj_proj [simp]: "imProj (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a vector"
-axiomatization where imProj_liftProj [simp]: "imProj (liftProj P Q) = liftSpace (imProj P) Q" for P :: "'a projector" and Q
-axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
-  for Q R :: "'a qvariables" and \<psi> :: "'a vector"
-
-axiomatization probability :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" 
+axiomatization probability :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:_'(_')]")
 parse_translation \<open>[("_probability", fn ctx => fn [Const(v,_),p,rho] =>
   @{const probability} $ HOLogic.mk_string v $ p $ rho)]\<close>
-    
+
+(* Must come after loading qrhl.ML *)
 print_translation \<open>[(@{const_syntax probability}, fn ctx => fn [str,p,rho] =>
   Const(@{syntax_const "_probability"},dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
   
