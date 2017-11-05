@@ -3,6 +3,7 @@ isabelle.
 quantum var q : bit.
 classical var b : bit.
 ambient var z : bit.
+ambient var x : bit.
 
 program prog1 := {
   b <$ uniform UNIV;
@@ -55,14 +56,12 @@ qrhl {Qeq[q1=q2]} call prog1; ~ call prog2; {Qeq[q1=q2]}.
   wp left.
   wp right.
 
-  rnd b,b <- map_distr (λb. (b,-b)) (uniform UNIV).
+  rnd b,b <- map_distr (λb. (b,b+1)) (uniform UNIV).
 
   wp right.
 
   skip.
   simp.
   true.
-
 qed.
-
 

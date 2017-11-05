@@ -1,5 +1,5 @@
 theory QRHL
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" (* "~~/src/Tools/Adhoc_Overloading" *)
+  imports Complex_Main "HOL-Library.Adhoc_Overloading"
 begin
   
 section \<open>Miscellaneous\<close>
@@ -282,8 +282,15 @@ axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a state set"
     
 definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
   
-axiomatization where leq_INF[simp]: "A \<le> (INF x. V x)" 
-  for V :: "'a \<Rightarrow> 'b subspace"
+lemma leq_INF[simp]:
+  fixes V :: "'a \<Rightarrow> 'b subspace"
+  shows "(A \<le> (INF x. V x)) = (\<forall>x. A \<le> V x)"
+  by (simp add: le_Inf_iff)
+
+lemma leq_plus_subspace[simp]: "a \<le> a + c" for a::"'a subspace"
+  by (simp add: add_increasing2)
+lemma leq_plus_subspace2[simp]: "a \<le> c + a" for a::"'a subspace"
+  by (simp add: add_increasing)
 
 subsection \<open>Isometries\<close>
     
@@ -296,7 +303,7 @@ axiomatization
 and timesIso :: "('b,'c) isometry \<Rightarrow> ('a,'b) isometry \<Rightarrow> ('a,'c) isometry" 
 and applyIso :: "('a,'b) isometry \<Rightarrow> 'a state \<Rightarrow> 'b state"
 and applyIsoSpace :: "('a,'b) isometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
-and imageIso :: "('a,'b) isometry \<Rightarrow> 'b subspace" 
+and imageIso :: "('a,'b) isometry \<Rightarrow> 'b subspace"  (* TODO: same as applyIsoSpace U top *)
 where
  applyIso_0[simp]: "applyIsoSpace U 0 = 0"
 and applyIso_bot[simp]: "applyIsoSpace U bot = bot"
@@ -306,7 +313,11 @@ axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) isometry"
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
   cdot timesIso applyIso applyIsoSpace
-  
+
+axiomatization where
+  cdot_plus_distrib[simp]: "U \<cdot> (A + B) = U \<cdot> A + U \<cdot> B"
+for A B :: "'a subspace" and U :: "('a,'b) isometry"
+
 axiomatization 
     idIso :: "'a isometry2"
 where
@@ -327,13 +338,6 @@ lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqin
   unfolding INF_UNIV_bool_expand
   by simp
 
-
-(* axiomatization identity :: "'a isometry2" where
-    apply_id[simp]: "identity \<cdot> \<psi> = \<psi>"
-and times_id[simp]: "identity \<cdot> U = U" 
-and apply_space_id[simp]: "identity \<cdot> S = S" 
-for \<psi> :: "'a state" and U :: "('b,'a) isometry" and S :: "'a subspace" *)
-
 fun powerIso :: "('a,'a) isometry \<Rightarrow> nat \<Rightarrow> ('a,'a) isometry" where 
   "powerIso U 0 = idIso"
 | "powerIso U (Suc i) = U \<cdot> powerIso U i"
@@ -351,6 +355,7 @@ lemma unitary_id[simp]: "unitary idIso"
 
 section \<open>Projectors\<close>
 
+(* TODO: use isometries instead? *)
 typedecl 'a projector
 axiomatization proj :: "'a state \<Rightarrow> 'a projector"
   and imProj :: "'a projector \<Rightarrow> 'a subspace"
@@ -402,7 +407,7 @@ definition "qvariables_distinct X == distinct (qvariable_names X)"
 
 
 
-  
+(* TODO: rename \<rightarrow> predicates *)  
 section \<open>Assertions\<close>
     
 typedecl mem2
@@ -434,6 +439,11 @@ lemma classical_sort[simp]:
   shows "A \<sqinter> Cla[b] = Cla[b] \<sqinter> A"
   by (simp add: classical_subspace_def)
 
+lemma applyIso_Cla[simp]:
+  assumes "unitary A"
+  shows "A \<cdot> Cla[b] = Cla[b]"
+  apply (cases b) using assms by auto
+
 lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]" unfolding sup_subspace_def[symmetric] by auto
 lemma BINF_Cla[simp]: "(INF z:Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
 proof (rule Inf_eqI)
@@ -452,8 +462,6 @@ proof (rule Inf_eqI)
       by (simp add: False)
   qed
 qed
-(* lemma INF_Cla[simp]: "(INF z. Cla[x z]) = Cla[\<forall>z. x z]" 
-  by simp *)
 
 lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
@@ -505,7 +513,10 @@ and top_lift[simp]: "liftSpace top Q = top"
 and bot_lift[simp]: "liftSpace bot Q = bot"
 and unitary_lift[simp]: "unitary (liftIso U Q) = unitary U"
 for U :: "'a isometry2"
-  
+
+axiomatization where lift_idIso[simp]: "idIso\<^sub>@Q = idIso" for Q :: "'a qvariables"
+
+
 axiomatization space_div :: "assertion \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
 
@@ -567,7 +578,11 @@ declare imp_conjL[simp]
 ML_file \<open>qrhl.ML\<close>
   
 section \<open>Experiments\<close>
-  
+
+(* TODO: remove or sort *)
+
+
+
 axiomatization where mtotal_computational_basis [simp]: "mtotal computational_basis"
 axiomatization where imProj_proj [simp]: "imProj (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a state"
 axiomatization where imProj_liftProj [simp]: "imProj (liftProj P Q) = liftSpace (imProj P) Q" for P :: "'a projector" and Q
