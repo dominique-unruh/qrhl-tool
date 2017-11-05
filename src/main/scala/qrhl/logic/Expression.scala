@@ -84,8 +84,8 @@ final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val
 
   def leq(e: Expression): Expression = {
       val t = e.isabelleTerm
-      val assertionT = Isabelle.assertionT // Should be the type of t
-      val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(assertionT, ITyp.funT(assertionT, boolT))) $ isabelleTerm $ t
+      val predicateT = Isabelle.predicateT // Should be the type of t
+      val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(predicateT, ITyp.funT(predicateT, boolT))) $ isabelleTerm $ t
       val typ = Typ.bool(isabelle)
       new Expression(isabelle,typ,newT)
   }

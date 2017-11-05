@@ -23,14 +23,14 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
         (y2.name)(implicitly)(f2.isabelleTerm)(implicitly)
         (x1.typ.isabelleTyp)(implicitly)(post.isabelleTerm))
         val wp = state.isabelle.get.runExpr(wpExpr)
-        Expression(state.isabelle.get, state.assertionT, wp)
+        Expression(state.isabelle.get, state.predicateT, wp)
       case Some(distr) =>
         val lit = ml.Expr.uncheckedLiteral[String => pure.Typ => pure.Term => String => pure.Typ => pure.Term => pure.Term => pure.Term => pure.Term]("QRHL.rndWp2")
         val wpExpr = (lit(x1.name)(implicitly) (x1.typ.isabelleTyp)(implicitly) (e1.isabelleTerm)(implicitly)
                          (y2.name)(implicitly) (y2.typ.isabelleTyp)(implicitly) (f2.isabelleTerm)(implicitly)
                          (distr.isabelleTerm)(implicitly) (post.isabelleTerm))
         val wp = state.isabelle.get.runExpr(wpExpr)
-        Expression(state.isabelle.get, state.assertionT, wp)
+        Expression(state.isabelle.get, state.predicateT, wp)
     }
     case _ =>
       throw UserException("Expected sampling statement as last statement on both sides")

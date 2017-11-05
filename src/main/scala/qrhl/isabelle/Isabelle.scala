@@ -163,11 +163,11 @@ object Isabelle {
     case Nil => HOLogic.True
   }
 
-  val assertionT = Type("QRHL.subspace", List(Type("QRHL.mem2",Nil)))
-  val classical_subspace = Const("QRHL.classical_subspace", HOLogic.boolT -->: assertionT)
-  val assertion_inf = Const ("Lattices.inf_class.inf", assertionT -->: assertionT -->: assertionT)
-  val assertion_bot = Const ("Orderings.bot_class.bot", assertionT)
-  val assertion_0 = Const ("Groups.zero_class.zero", assertionT)
+  val predicateT = Type("QRHL.subspace", List(Type("QRHL.mem2",Nil)))
+  val classical_subspace = Const("QRHL.classical_subspace", HOLogic.boolT -->: predicateT)
+  val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
+  val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
+  val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
 
 
 

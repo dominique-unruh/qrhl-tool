@@ -134,7 +134,7 @@ class Toplevel(initialState : State = State.empty) {
   }
 
   /** Runs a sequence of commands. Each command must be delimited by "." at the end of a line.
-    * Errors (such as UserException's and assertions) are caught and printed as error messages,
+    * Errors (such as UserException's and asserts) are caught and printed as error messages,
     * and the commands producing the errors are ignored.
     * @param readLine command for reading lines from the input, invoked with the prompt to show
     */

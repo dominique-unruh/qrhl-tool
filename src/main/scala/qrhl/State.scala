@@ -38,10 +38,10 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
 
   override def checkVariablesDeclared(environment: Environment): Unit = {
     for (x <- pre.variables)
-      if (!environment.variableExistsForAssertion(x))
+      if (!environment.variableExistsForPredicate(x))
         throw UserException(s"Undeclared variable $x in precondition")
     for (x <- post.variables)
-      if (!environment.variableExistsForAssertion(x))
+      if (!environment.variableExistsForPredicate(x))
         throw UserException(s"Undeclared variable $x in postcondition")
     for (x <- left.variablesDirect)
       if (!environment.variableExistsForProg(x))
@@ -110,7 +110,7 @@ class State private (val environment: Environment,
                      val currentLemma: Option[(String,Expression)],
                      val isabelle: Option[Isabelle.Context],
                      val boolT: Typ,
-                     val assertionT: Typ,
+                     val predicateT: Typ,
                      val dependencies: List[FileTimeStamp],
                      val programT: Typ) {
   def qed: State = {
@@ -149,11 +149,11 @@ class State private (val environment: Environment,
                    goal:List[Subgoal]=goal,
                    isabelle:Option[Isabelle.Context]=isabelle,
                    boolT:Typ=boolT,
-                   assertionT:Typ=assertionT,
+                   predicateT:Typ=predicateT,
                    programT:Typ=programT,
                    dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,Expression)]=currentLemma) : State =
-    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, assertionT=assertionT,
+    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, predicateT=predicateT,
       currentLemma=currentLemma, programT=programT, dependencies=dependencies)
 
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
@@ -169,7 +169,7 @@ class State private (val environment: Environment,
       s"${goal.size} subgoals:\n\n" + goal.mkString("\n\n")
   }
 
-  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT, assertionT = assertionT)
+  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT, predicateT = predicateT)
 
   def parseCommand(str:String): Command = {
     implicit val parserContext = this.parserContext
@@ -205,7 +205,7 @@ class State private (val environment: Environment,
         val filename = Paths.get(thy+".thy")
         (isabelle.getContextFile(thy), new FileTimeStamp(filename) :: dependencies)
     }
-    copy(isabelle = Some(isa), boolT = Typ.bool(isa), assertionT=Typ(isa,"QRHL.assertion"), programT=Typ(isa,"QRHL.program"), dependencies=files)
+    copy(isabelle = Some(isa), boolT = Typ.bool(isa), predicateT=Typ(isa,"QRHL.predicate"), programT=Typ(isa,"QRHL.program"), dependencies=files)
   }
 
   def filesChanged : List[Path] = {
@@ -243,6 +243,6 @@ class State private (val environment: Environment,
 
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
-    boolT=null, assertionT=null, dependencies=Nil, programT=null, currentLemma=None)
+    boolT=null, predicateT=null, dependencies=Nil, programT=null, currentLemma=None)
   private[State] val defaultIsabelleTheory = "QRHL_Protocol"
 }

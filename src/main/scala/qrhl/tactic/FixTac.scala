@@ -25,6 +25,6 @@ case class FixTac(variable:String) extends Tactic {
       if (varTyp!=varTyp3)
         throw UserException(s"Please use a variable of type $varTyp3 ($variable has type $varTyp)")
 
-      List(AmbientSubgoal(Expression(state.isabelle.get, state.assertionT, result)))
+      List(AmbientSubgoal(Expression(state.isabelle.get, state.predicateT, result)))
   }
 }

@@ -43,7 +43,7 @@ final class Environment private
   /** Variable declared as program variable or ambient variable */
   def variableExistsForProg(name:String) : Boolean = cVariables.contains(name) || qVariables.contains(name) || ambientVariables.contains(name)
   /** Variable declared as indexed program variable or ambient variable */
-  def variableExistsForAssertion(name:String) : Boolean = cqVariables12.contains(name) || ambientVariables.contains(name)
+  def variableExistsForPredicate(name:String) : Boolean = cqVariables12.contains(name) || ambientVariables.contains(name)
 //  /** Variable declared as indexed program variable or ambient variable or program */
 //  def variableExistsForGoal(name:String) : Boolean = cqVariables12.contains(name) || ambientVariables.contains(name) || programs.contains(name)
 

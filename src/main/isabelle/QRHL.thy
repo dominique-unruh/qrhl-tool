@@ -183,7 +183,6 @@ end
 
 term ket
 
-(* TODO: ket should be a state *)
 typedef 'a state = "{x::'a vector. vector_norm x = 1}"
   morphisms state_to_vector Abs_state
   apply (rule exI[of _ "basis_vector undefined"])
@@ -340,13 +339,15 @@ axiomatization
 and timesIso :: "('b,'c) isometry \<Rightarrow> ('a,'b) isometry \<Rightarrow> ('a,'c) isometry" 
 and applyIso :: "('a,'b) isometry \<Rightarrow> 'a vector \<Rightarrow> 'b vector"
 and applyIsoSpace :: "('a,'b) isometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
-and imageIso :: "('a,'b) isometry \<Rightarrow> 'b subspace"  (* TODO: same as applyIsoSpace U top *)
+(* and imageIso :: "('a,'b) isometry \<Rightarrow> 'b subspace"  (* TODO: same as applyIsoSpace U top *) *)
 where
  applyIso_0[simp]: "applyIsoSpace U 0 = 0"
 and applyIso_bot[simp]: "applyIsoSpace U bot = bot"
-and applyIso_top[simp]: "applyIsoSpace U top = imageIso U"
+(* and applyIso_top[simp]: "applyIsoSpace U top = imageIso U" *)
 axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) isometry"
-  
+
+abbreviation "imageIso U \<equiv> applyIsoSpace U top"
+
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
   cdot timesIso applyIso applyIsoSpace
@@ -445,16 +446,16 @@ definition "qvariables_distinct X == distinct (qvariable_names X)"
 
 
 (* TODO: rename \<rightarrow> predicates *)  
-section \<open>Assertions\<close>
+section \<open>Quantum predicates\<close>
     
 typedecl mem2
-type_synonym assertion = "mem2 subspace"
+type_synonym predicate = "mem2 subspace"
 
-subsection \<open>Classical assertions\<close>
+subsection \<open>Classical predicates\<close>
   
-definition classical_subspace :: "bool \<Rightarrow> assertion"  ("\<CC>\<ll>\<aa>[_]")
+definition classical_subspace :: "bool \<Rightarrow> predicate"  ("\<CC>\<ll>\<aa>[_]")
   where "\<CC>\<ll>\<aa>[b] = (if b then top else bot)"
-syntax classical_subspace :: "bool \<Rightarrow> assertion"  ("Cla[_]")
+syntax classical_subspace :: "bool \<Rightarrow> predicate"  ("Cla[_]")
     
 lemma classical_true[simp]: "Cla[True] = top" unfolding classical_subspace_def by simp
 lemma classical_false[simp]: "Cla[False] = bot" unfolding classical_subspace_def by simp
@@ -503,7 +504,7 @@ qed
 lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
   
-axiomatization colocal_ass_qvars :: "assertion \<Rightarrow> 'a qvariables \<Rightarrow> bool"
+axiomatization colocal_ass_qvars :: "predicate \<Rightarrow> 'a qvariables \<Rightarrow> bool"
   and colocal_qvars_qvars :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> bool"
   and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool"
 
@@ -516,11 +517,11 @@ axiomatization where
 
 subsection \<open>Quantum equality\<close>
 
-axiomatization quantum_equality_full :: "('a,'c) isometry \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) isometry \<Rightarrow> 'b qvariables \<Rightarrow> assertion"
-abbreviation "quantum_equality" :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> assertion" (infix "\<equiv>\<qq>" 100)
+axiomatization quantum_equality_full :: "('a,'c) isometry \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) isometry \<Rightarrow> 'b qvariables \<Rightarrow> predicate"
+abbreviation "quantum_equality" :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
   where "quantum_equality X Y \<equiv> quantum_equality_full idIso X idIso Y"
-syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> assertion" (infix "==q" 100)
-syntax "_quantum_equality" :: "qvariable_list_args \<Rightarrow> qvariable_list_args \<Rightarrow> assertion" ("Qeq'[_=_']")
+syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "==q" 100)
+syntax "_quantum_equality" :: "qvariable_list_args \<Rightarrow> qvariable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
 
@@ -537,7 +538,7 @@ subsection \<open>Lifting\<close>
 axiomatization
     liftIso :: "'a isometry2 \<Rightarrow> 'a qvariables \<Rightarrow> mem2 isometry2"
 and liftProj :: "'a projector \<Rightarrow> 'a qvariables \<Rightarrow> mem2 projector"
-and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> assertion"
+and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<^sub>@_"  [91,91] 90 )
 adhoc_overloading
@@ -554,7 +555,7 @@ for U :: "'a isometry2"
 axiomatization where lift_idIso[simp]: "idIso\<^sub>@Q = idIso" for Q :: "'a qvariables"
 
 
-axiomatization space_div :: "assertion \<Rightarrow> 'a vector \<Rightarrow> 'a qvariables \<Rightarrow> assertion" ("_ \<div> _@_" [89,89,89] 90)
+axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a qvariables \<Rightarrow> predicate" ("_ \<div> _@_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
 
 axiomatization where Qeq_mult1[simp]:

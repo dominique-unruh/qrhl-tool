@@ -49,16 +49,16 @@ fun qvariables [] = (@{term "qvariable_unit"},@{typ unit})
   
 fun qinitWp post e Q =
   let val (vs,vsT) = qvariables Q in
-    Const(@{const_name space_div}, @{typ assertion} --> mk_stateT vsT --> mk_qvariablesT vsT --> @{typ assertion}) $
+    Const(@{const_name space_div}, @{typ predicate} --> mk_stateT vsT --> mk_qvariablesT vsT --> @{typ predicate}) $
       post $ e $ vs
   end
 
 fun qapplyWp post e Q =
   let val (vs,vsT) = qvariables Q 
       val e' = Const(@{const_name liftIso}, mk_isometry2T vsT --> mk_qvariablesT vsT --> @{typ "mem2 isometry2"}) $ e $ vs
-      val im_e' = @{const imageIso(mem2,mem2)} $ e'
+      val im_e' = @{const applyIsoSpace(mem2,mem2)} $ e' $ @{const top(predicate)}
       val adj_e' = @{term "adjoint :: _ \<Rightarrow> mem2 isometry2"} $ e'
-      val post_im_e' = @{const inf(assertion)} $ post $ im_e'
+      val post_im_e' = @{const inf(predicate)} $ post $ im_e'
   in
     @{term "applyIsoSpace :: mem2 isometry2 \<Rightarrow> _ \<Rightarrow> _"} $ adj_e' $ post_im_e'
   end
@@ -73,39 +73,39 @@ fun measureWp B x e Q =
       val lift_e_z = Const(@{const_name liftProj}, mk_projectorT vsT --> mk_qvariablesT vsT --> @{typ "mem2 projector"})
                     $ e_z $ vs
       val im_e_z = @{const imProj(mem2)} $ lift_e_z
-      val Be = @{const plus(assertion)} $ (@{const inf(assertion)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)
+      val Be = @{const plus(predicate)} $ (@{const inf(predicate)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)
       val Inf_Be = mk_INFIMUM (Const(@{const_name top}, HOLogic.mk_setT resT)) (Abs("z",resT,Be))
       val total = @{const classical_subspace} $ (Const(@{const_name mtotal}, measT --> HOLogic.boolT) $ e)
   in
-  @{const inf(assertion)} $ total $ Inf_Be
+  @{const inf(predicate)} $ total $ Inf_Be
   end
 
 
 fun ifWp e thenWp elseWp =
   let val Cla_e = @{const classical_subspace} $ e
       val Cla_not_e = @{const classical_subspace} $ (@{const Not} $ e)
-      val then' = @{const plus(assertion)} $ Cla_not_e $ thenWp
-      val else' = @{const plus(assertion)} $ Cla_e $ elseWp
+      val then' = @{const plus(predicate)} $ Cla_not_e $ thenWp
+      val else' = @{const plus(predicate)} $ Cla_e $ elseWp
   in
-    @{const inf(assertion)} $ then' $ else'
+    @{const inf(predicate)} $ then' $ else'
   end
 
 fun sampleWp v T e B =
     let val distrT = Type(@{type_name distr},[T])
         val _ = if fastype_of e = distrT then ()
                 else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e],[e]))
-        val _ = if fastype_of B = @{typ assertion} then ()
-                else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
+        val _ = if fastype_of B = @{typ predicate} then ()
+                else raise(TYPE("predicate has wrong type",[fastype_of B],[B]))
         val setT = Type(@{type_name set},[T])
         val supp = Const(@{const_name supp}, distrT --> setT) $ e
         val absB = Term.absfree (v,T) B
-        val B2 = @{const Inf(assertion)} $
-                      (Const(@{const_name image}, (T --> @{typ assertion}) --> setT -->  @{typ "assertion set"})
+        val B2 = @{const Inf(predicate)} $
+                      (Const(@{const_name image}, (T --> @{typ predicate}) --> setT -->  @{typ "predicate set"})
                          $ absB $ supp)
         val total = @{const classical_subspace} $
              HOLogic.mk_eq (Const(@{const_name weight}, distrT --> @{typ real}) $ e, @{term "1::real"})
     in
-      @{term "inf::assertion=>assertion=>assertion"} $ total $ B2
+      @{term "inf::predicate=>predicate=>predicate"} $ total $ B2
     end
 
 
@@ -116,17 +116,17 @@ fun rndWp v1 e1 v2 e2 T B =
                 else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e1],[e1]))
         val _ = if fastype_of e2 = distrT then ()
                 else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e2],[e2]))
-        val _ = if fastype_of B = @{typ assertion} then ()
-                else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
+        val _ = if fastype_of B = @{typ predicate} then ()
+                else raise(TYPE("predicate has wrong type",[fastype_of B],[B]))
         val setT = Type(@{type_name set},[T])
         val supp = Const(@{const_name supp}, distrT --> setT) $ e1
         val absB = Term.abstract_over (Free(v1,T),B) |> (fn t => Term.abstract_over (Free(v2,T),t)) |> (fn t => Abs("z",T,t))
-        val B2 = @{const Inf(assertion)} $
-                      (Const(@{const_name image}, (T --> @{typ assertion}) --> setT -->  @{typ "assertion set"})
+        val B2 = @{const Inf(predicate)} $
+                      (Const(@{const_name image}, (T --> @{typ predicate}) --> setT -->  @{typ "predicate set"})
                          $ absB $ supp)
         val sameDistr = @{const classical_subspace} $ HOLogic.mk_eq (e1,e2)
     in
-      @{const inf(assertion)} $ sameDistr $ B2
+      @{const inf(predicate)} $ sameDistr $ B2
     end
    
 fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
@@ -139,8 +139,8 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
               else raise(TYPE("variable and expression, type mismatch",[T1,fastype_of e1],[e1]))
       val _ = if fastype_of e2 = distrT2 then ()
               else raise(TYPE("variable and expression, type mismatch",[T2,fastype_of e2],[e2]))
-      val _ = if fastype_of B = @{typ assertion} then ()
-              else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
+      val _ = if fastype_of B = @{typ predicate} then ()
+              else raise(TYPE("predicate has wrong type",[fastype_of B],[B]))
       val supp = Const(@{const_name supp}, distrT12 --> setT12) $ f
       val absB = B |> absfree (v2,T2) |> absfree (v1,T1)
       val marginal1 = HOLogic.mk_eq (Const(@{const_name map_distr}, (T12-->T1) --> distrT12 --> distrT1) $
@@ -148,12 +148,12 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
       val marginal2 = HOLogic.mk_eq (Const(@{const_name map_distr}, (T12-->T2) --> distrT12 --> distrT2) $
           Const(@{const_name snd}, T12-->T2) $ f, e2)
       val marginals = @{const classical_subspace} $ (HOLogic.mk_conj (marginal1,marginal2))
-      val B2 = @{const Inf(assertion)} $
-               (Const(@{const_name image}, (T12 --> @{typ assertion}) --> setT12 -->  @{typ "assertion set"}) $
-                 (Const(@{const_name case_prod}, (T1-->T2--> @{typ assertion}) --> (T12--> @{typ assertion})) $
+      val B2 = @{const Inf(predicate)} $
+               (Const(@{const_name image}, (T12 --> @{typ predicate}) --> setT12 -->  @{typ "predicate set"}) $
+                 (Const(@{const_name case_prod}, (T1-->T2--> @{typ predicate}) --> (T12--> @{typ predicate})) $
                   absB) $ supp)
   in
-    @{const inf(assertion)} $ marginals $ B2
+    @{const inf(predicate)} $ marginals $ B2
   end
 
 (* val _ = rndWp2 "x1" @{typ int} @{term "uniform {x1::int}"} "x2" @{typ bool} @{term "uniform {x2::bool}"} 
@@ -176,7 +176,7 @@ fun mk_quantum_equality Q1 Q2 T =
   let val isoT = mk_isometry2T T
       val qvT = mk_qvariablesT T
   in
-  Const(@{const_name quantum_equality_full}, isoT --> qvT --> isoT --> qvT --> @{typ assertion}) $
+  Const(@{const_name quantum_equality_full}, isoT --> qvT --> isoT --> qvT --> @{typ predicate}) $
     Const(@{const_name idIso}, isoT) $ Q1 $ Const(@{const_name idIso}, isoT) $ Q2
   end
 
@@ -204,7 +204,7 @@ fun tidyTrueTop' (Const(@{const_name inf},_) $ Const(@{const_name top},_) $ t) =
   | tidyTrueTop' (Const(@{const_name inf},_) $ t $ Const(@{const_name top},_)) = tidyTrueTop' t
   | tidyTrueTop' (Const(@{const_name conj},_) $ Const(@{const_name True},_) $ t) = tidyTrueTop' t
   | tidyTrueTop' (Const(@{const_name conj},_) $ t $ Const(@{const_name True},_)) = tidyTrueTop' t
-  | tidyTrueTop' (Const(@{const_name classical_subspace},_) $ Const(@{const_name True},_)) = @{const top(assertion)}
+  | tidyTrueTop' (Const(@{const_name classical_subspace},_) $ Const(@{const_name True},_)) = @{const top(predicate)}
   | tidyTrueTop' (t$u) = tidyTrueTop' t $ tidyTrueTop' u
   | tidyTrueTop' (Abs(v,T,body)) = Abs(v,T,tidyTrueTop' body)
   | tidyTrueTop' t = t
@@ -223,7 +223,7 @@ fun callWp cvars1 cvars2 qvars1 qvars2 post =
       val (qvars1',qvars1T) = qvariables qvars1
       val (qvars2',qvars2T) = qvariables qvars2
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()
-      val qvarsEq = if qvars1=[] then @{const top(assertion)} else mk_quantum_equality qvars1' qvars2' qvars1T
+      val qvarsEq = if qvars1=[] then @{const top(predicate)} else mk_quantum_equality qvars1' qvars2' qvars1T
       val post = post |> removeInf qvarsEq (* invariant: post \<sqinter> qvarsEq \<Longrightarrow> original post *)
 
       val cvarEqs = ListPair.zip (cvars1,cvars2) |> map HOLogic.mk_eq
@@ -235,14 +235,14 @@ fun callWp cvars1 cvars2 qvars1 qvars2 post =
       fun inf_over (v,T) p = mk_INFIMUM (HOLogic.mk_UNIV T) (Term.absfree (v,T) p)
       val usedEqs = filter (fn (v1,v2) => member op= freeCVars (dest_Free v1) andalso member op= freeCVars (dest_Free v2))
                     (ListPair.zip (cvars1,cvars2)) |> map HOLogic.mk_eq |> mk_conjs 
-      val post = @{const plus(assertion)} $ (@{const classical_subspace} $ HOLogic.mk_not usedEqs) $ post
+      val post = @{const plus(predicate)} $ (@{const classical_subspace} $ HOLogic.mk_not usedEqs) $ post
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
       val post = fold inf_over freeCVars post
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
 
       (* TODO: add "cvarEqs ==> " in post *)
 
-      val wp = @{const inf(assertion)} $ (@{const inf(assertion)} $ post $ claCvarsEq) $ qvarsEq
+      val wp = @{const inf(predicate)} $ (@{const inf(predicate)} $ post $ claCvarsEq) $ qvarsEq
       val wp = tidyTrueTop wp
   in
     ((wp, Term.add_free_names post []), qvarsEq)
@@ -320,9 +320,9 @@ fun byQRHLPre cvars qvars =
       val (qvars1',qvars1T) = qvariables (map (fn (v1,_ ,T) => Free(v1,mk_qvariableT T)) qvars)
       val (qvars2',qvars2T) = qvariables (map (fn (_ ,v2,T) => Free(v2,mk_qvariableT T)) qvars)
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
-      val qvarsEq = if qvars=[] then @{const top(assertion)} else mk_quantum_equality qvars1' qvars2' qvars1T
+      val qvarsEq = if qvars=[] then @{const top(predicate)} else mk_quantum_equality qvars1' qvars2' qvars1T
   in
-    @{const inf(assertion)} $ cEqs' $ qvarsEq
+    @{const inf(predicate)} $ cEqs' $ qvarsEq
   end
 
 fun addAssumption name term ctx =

@@ -19,7 +19,7 @@ object Test0 {
   var state: State = State.empty
   implicit def parserContext : ParserContext = state.parserContext
   implicit def pp(str:String) : Block = Parser.parseAll(Parser.block,str).get
-  implicit def pe(str:String) : Expression = Parser.parseAll(Parser.expression(state.assertionT),str).get
+  implicit def pe(str:String) : Expression = Parser.parseAll(Parser.expression(state.predicateT),str).get
   implicit def pt(str:String) : Typ = Typ(parserContext.isabelle.get, str)
 */
 

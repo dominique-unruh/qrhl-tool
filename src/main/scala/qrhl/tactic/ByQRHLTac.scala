@@ -24,7 +24,7 @@ case object ByQRHLTac extends Tactic {
 //    Isabelle.mk_conjs((for (c<-cvars)
 //      yield Isabelle.mk_eq(c.typ.isabelleTyp, c.index1.isabelleTerm, c.index2.isabelleTerm)) : _*)
 //
-//  def mkQEquality(qvars: List[QVariable]) : Term = Const("HOL.undefined", Isabelle.assertionT)
+//  def mkQEquality(qvars: List[QVariable]) : Term = Const("HOL.undefined", Isabelle.predicateT)
 
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case AmbientSubgoal(Expression(App(App(Const(rel,_),Probability(v1,p1,rho1)),Probability(v2,p2,rho2)))) =>
@@ -79,8 +79,8 @@ case object ByQRHLTac extends Tactic {
       val isa = state.isabelle.get
       val left = Block(Call(p1name))
       val right = Block(Call(p2name))
-      val pre = Expression(isa, state.assertionT, isa.runExpr(mlExpr))
-      val post = Expression(isa, state.assertionT, Isabelle.classical_subspace $ (connective $ v1bool $ v2bool))
+      val pre = Expression(isa, state.predicateT, isa.runExpr(mlExpr))
+      val post = Expression(isa, state.predicateT, Isabelle.classical_subspace $ (connective $ v1bool $ v2bool))
 
       List(QRHLSubgoal(left,right,pre,post,Nil))
     case _ =>

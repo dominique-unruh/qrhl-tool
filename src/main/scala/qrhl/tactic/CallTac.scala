@@ -35,7 +35,7 @@ case object CallTac extends WpBothStyleTac() {
             s"except within the term $quaStr")
         }
 
-      Expression(state.isabelle.get, state.assertionT, wp)
+      Expression(state.isabelle.get, state.predicateT, wp)
     case _ => throw UserException("Expected a call statement as last statement on both sides")
   }
 }

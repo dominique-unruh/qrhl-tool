@@ -32,18 +32,18 @@ import qrhl.logic._
 //      |    let val distrT = Type(@{type_name distr},[T])
 //      |        val _ = if fastype_of e = distrT then ()
 //      |                else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e],[e]))
-//      |        val _ = if fastype_of B = @{typ assertion} then ()
-//      |                else raise(TYPE("assertion has wrong type",[fastype_of B],[B]))
+//      |        val _ = if fastype_of B = @{typ predicate} then ()
+//      |                else raise(TYPE("predicate has wrong type",[fastype_of B],[B]))
 //      |        val setT = Type(@{type_name set},[T])
 //      |        val supp = Const(@{const_name supp}, distrT --> setT) $ e
 //      |        val absB = Term.absfree (v,T) B
-//      |        val B2 = @{const Inf(assertion)} $
-//      |                      (Const(@{const_name image}, (T --> @{typ assertion}) --> setT -->  @{typ "assertion set"})
+//      |        val B2 = @{const Inf(predicate)} $
+//      |                      (Const(@{const_name image}, (T --> @{typ predicate}) --> setT -->  @{typ "predicate set"})
 //      |                         $ absB $ supp)
 //      |        val total = @{const classical_subspace} $
 //      |             HOLogic.mk_eq (Const(@{const_name weight}, distrT --> @{typ real}) $ e, @{term "1::real"})
 //      |    in
-//      |      @{term "inf::assertion=>assertion=>assertion"} $ total $ B2
+//      |      @{term "inf::predicate=>predicate=>predicate"} $ total $ B2
 //      |    end)
 //    """.stripMargin)
 //

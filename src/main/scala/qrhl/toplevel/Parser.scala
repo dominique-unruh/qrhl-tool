@@ -9,8 +9,8 @@ import qrhl.tactic._
 import scala.util.parsing.combinator._
 
 case class ParserContext(environment: Environment,
-                          isabelle: Option[Isabelle.Context],
-                        boolT: Typ, assertionT: Typ)
+                         isabelle: Option[Isabelle.Context],
+                         boolT: Typ, predicateT: Typ)
 
 object Parser extends RegexParsers {
 
@@ -204,13 +204,13 @@ object Parser extends RegexParsers {
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
     _ <- literal("{");
-    pre <- expression(context.assertionT);
+    pre <- expression(context.predicateT);
     _ <- literal("}");
     left <- block;
     _ <- literal("~");
     right <- block;
     _ <- literal("{");
-    post <- expression(context.assertionT);
+    post <- expression(context.predicateT);
     _ <- literal("}")
   ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post,Nil)))
 
@@ -234,11 +234,11 @@ object Parser extends RegexParsers {
       left <- natural;
       right <- natural;
       _ <- literal(":");
-      inner <- expression(context.assertionT))
+      inner <- expression(context.predicateT))
       yield SeqTac(left,right,inner))
 
   def tactic_conseq(implicit context:ParserContext): Parser[ConseqTac] =
-    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(context.assertionT)) ^^ {
+    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(context.predicateT)) ^^ {
       case "pre" ~ _ ~ e => ConseqTac(pre=Some(e))
       case "post" ~ _ ~ e => ConseqTac(post=Some(e))
     }

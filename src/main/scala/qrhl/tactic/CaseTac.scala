@@ -24,14 +24,14 @@ case class CaseTac(variable:String, expr:Expression) extends Tactic {
         throw UserException(s"Variable $variable has type $varTyp, but expression has type ${expr.typ}")
 
       for (x <- expr.variables)
-        if (!state.environment.variableExistsForAssertion(x))
+        if (!state.environment.variableExistsForPredicate(x))
           throw UserException(s"Undeclared (or non-indexed) variable $x in precondition")
 
 
       val caseExpr : Term = Isabelle.classical_subspace $
         (HOLogic.equ(varTyp.isabelleTyp) $ expr.isabelleTerm $ Free(variable,varTyp.isabelleTyp))
-      val pre2 = Isabelle.assertion_inf $ caseExpr $ pre.isabelleTerm
-      val pre3 = Expression(pre.isabelle, state.assertionT, pre2)
+      val pre2 = Isabelle.predicate_inf $ caseExpr $ pre.isabelleTerm
+      val pre3 = Expression(pre.isabelle, state.predicateT, pre2)
 
 
       List(QRHLSubgoal(left,right,pre3,post,assms))

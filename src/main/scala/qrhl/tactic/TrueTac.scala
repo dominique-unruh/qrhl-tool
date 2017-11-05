@@ -13,7 +13,7 @@ object TrueTac extends Tactic {
       else throw UserException("""Tactic true expects a subgoal that is simply "true"""")
     case g : QRHLSubgoal =>
       if (g.assumptions.exists(_.isabelleTerm==HOLogic.False)) Nil
-      else if (g.pre.isabelleTerm==Isabelle.assertion_bot || g.pre.isabelleTerm==Isabelle.assertion_0) Nil
+      else if (g.pre.isabelleTerm==Isabelle.predicate_bot || g.pre.isabelleTerm==Isabelle.predicate_0) Nil
       else throw UserException("""Expecting a QRHL subgoal with one assumption being "False" or the precondition being "bot" or "0"""")
   }
 
