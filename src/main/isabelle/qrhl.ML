@@ -249,7 +249,7 @@ fun callWp cvars1 cvars2 qvars1 qvars2 post =
 
 fun simp_any t ctx =
   let val ct = Thm.cterm_of ctx t
-      val ct_eq = Simplifier.rewrite ctx ct |> Thm.prop_of
+      val ct_eq = Simplifier.asm_full_rewrite ctx ct |> Thm.prop_of
       val (lhs,rhs) = Logic.dest_equals ct_eq
       val _ = if lhs<>t then raise TERM("conversion returned wrong lhs\n",[t,lhs,rhs]) else ()
   in
