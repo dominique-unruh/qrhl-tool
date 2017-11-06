@@ -451,7 +451,7 @@ subsection \<open>Classical predicates\<close>
 definition classical_subspace :: "bool \<Rightarrow> predicate"  ("\<CC>\<ll>\<aa>[_]")
   where "\<CC>\<ll>\<aa>[b] = (if b then top else bot)"
 syntax classical_subspace :: "bool \<Rightarrow> predicate"  ("Cla[_]")
-    
+
 lemma classical_true[simp]: "Cla[True] = top" unfolding classical_subspace_def by simp
 lemma classical_false[simp]: "Cla[False] = bot" unfolding classical_subspace_def by simp
 lemma classical_mono[simp]: "(Cla[a] \<le> Cla[b]) = (a \<longrightarrow> b)" 
@@ -471,6 +471,10 @@ lemma classical_sort[simp]:
   assumes "NO_MATCH Cla[x] A" 
   shows "A \<sqinter> Cla[b] = Cla[b] \<sqinter> A"
   by (simp add: classical_subspace_def)
+
+
+lemma Cla_split[split]: "P (Cla[Q]) = ((Q \<longrightarrow> P top) \<and> (\<not> Q \<longrightarrow> P bot))"
+  by (cases Q, auto) 
 
 lemma applyIso_Cla[simp]:
   assumes "unitary A"
