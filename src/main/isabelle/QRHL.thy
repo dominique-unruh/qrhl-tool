@@ -69,7 +69,6 @@ lemma bit_plus_1_eq[simp]: "(a+1=b) = (a=b+1)" for a b :: bit
   
 section \<open>Subspaces\<close>
 
-(* Rename \<rightarrow> vector. State is normalized *)
 typedef 'a vector = "{x::'a\<Rightarrow>complex. \<exists>b. \<forall>F. finite F \<longrightarrow> sum (\<lambda>i. (norm(x i))^2) F \<le> b }"
   by (rule exI[of _ "\<lambda>_.0"], auto)
 setup_lifting type_definition_vector
@@ -313,8 +312,11 @@ lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding sup_subsp
     
 axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set"
     
-definition "span A = Inf {S. A \<subseteq> subspace_as_set S}"
-  
+definition "spanVector A = Inf {S. A \<subseteq> subspace_as_set S}"
+definition "spanState A = Inf {S. state_to_vector ` A \<subseteq> subspace_as_set S}"
+consts span :: "'a set \<Rightarrow> 'b subspace"
+adhoc_overloading span spanState spanVector
+
 lemma leq_INF[simp]:
   fixes V :: "'a \<Rightarrow> 'b subspace"
   shows "(A \<le> (INF x. V x)) = (\<forall>x. A \<le> V x)"
@@ -535,10 +537,12 @@ axiomatization
 (* and liftProj :: "'a projector \<Rightarrow> 'a qvariables \<Rightarrow> mem2 projector" *)
 and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
 
-consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<^sub>@_"  [91,91] 90 )
+
+consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<guillemotright>_"  [91,91] 90)
+syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_>>_"  [91,91] 90)
 adhoc_overloading
   lift liftIso liftSpace
-  
+
 axiomatization where 
     adjoint_lift[simp]: "adjoint (liftIso U Q) = liftIso (adjoint U) Q" 
 and imageIso_lift[simp]: "imageIso (liftIso U Q) = liftSpace (imageIso U) Q"
@@ -547,15 +551,15 @@ and bot_lift[simp]: "liftSpace bot Q = bot"
 and unitary_lift[simp]: "unitary (liftIso U Q) = unitary U"
 for U :: "'a isometry2"
 
-axiomatization where lift_idIso[simp]: "idIso\<^sub>@Q = idIso" for Q :: "'a qvariables"
+axiomatization where lift_idIso[simp]: "idIso\<guillemotright>Q = idIso" for Q :: "'a qvariables"
 
 
 axiomatization where Qeq_mult1[simp]:
-  "unitary U \<Longrightarrow> U\<^sub>@Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
+  "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
  for U::"('a,'a) isometry" and U2 :: "('b,'c) isometry"  
 
 axiomatization where Qeq_mult2[simp]:
-  "unitary U \<Longrightarrow> U\<^sub>@Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
+  "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
  for U::"('a,'a) isometry" and U1 :: "('b,'c) isometry"  
 
 axiomatization where qeq_collect:
@@ -572,8 +576,8 @@ axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> 
 
 subsection \<open>Subspace division\<close>
 
-axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a qvariables \<Rightarrow> predicate" ("_ \<div> _@_" [89,89,89] 90)
-  where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>@Q) = (A \<sqinter> span {\<psi>}\<^sub>@Q \<le> B)"
+axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> predicate" ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
+  where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
   
 section \<open>Common quantum objects\<close>
 

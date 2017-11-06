@@ -34,7 +34,9 @@ import scala.collection.mutable
 
 
 final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
-  def checkType(): Unit = {
+  def checkWelltyped(typ:Typ): Unit = checkWelltyped(typ.isabelleTyp)
+  def checkWelltyped(ityp:ITyp): Unit = {
+    assert(ityp==this.typ.isabelleTyp)
     assert(isabelle.checkType(isabelleTerm) == typ.isabelleTyp)
   }
 

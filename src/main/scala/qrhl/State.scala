@@ -12,6 +12,10 @@ import qrhl.toplevel.{Command, Parser, ParserContext}
 import scala.annotation.tailrec
 
 sealed trait Subgoal {
+  /** Checks whether all isabelle terms in this goal are well-typed.
+    * Should always succeed, unless there are bugs somewhere. */
+  def checkWelltyped(): Unit
+
   /** This goal as a boolean expression. If it cannot be expressed in Isabelle, a different,
     * logically weaker expression is returned. */
   def toExpression: Expression
@@ -68,6 +72,16 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
     assert(assm.typ.isabelleTyp==HOLogic.boolT)
     QRHLSubgoal(left,right,pre,post,assm::assumptions)
   }
+
+  /** Checks whether all isabelle terms in this goal are well-typed.
+    * Should always succeed, unless there are bugs somewhere. */
+  override def checkWelltyped(): Unit = {
+    for (a <- assumptions) a.checkWelltyped(HOLogic.boolT)
+    left.checkWelltyped()
+    right.checkWelltyped()
+    pre.checkWelltyped(Isabelle.predicateT)
+    post.checkWelltyped(Isabelle.predicateT)
+  }
 }
 
 final case class AmbientSubgoal(goal: Expression) extends Subgoal {
@@ -81,14 +95,17 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
   /** This goal as a boolean expression. */
   override def toExpression: Expression = goal
 
-  override def containsAmbientVar(x: String) = goal.variables.contains(x)
+  override def containsAmbientVar(x: String): Boolean = goal.variables.contains(x)
 
-  override def addAssumption(assm: Expression) = {
+  override def addAssumption(assm: Expression): AmbientSubgoal = {
     assert(assm.typ.isabelleTyp == HOLogic.boolT)
     AmbientSubgoal(assm.implies(goal))
   }
 
-  }
+  /** Checks whether all isabelle terms in this goal are well-typed.
+    * Should always succeed, unless there are bugs somewhere. */
+  override def checkWelltyped(): Unit = goal.checkWelltyped(HOLogic.boolT)
+}
 
 trait Tactic {
   def apply(state: State, goal : Subgoal) : List[Subgoal]

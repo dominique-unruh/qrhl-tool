@@ -86,7 +86,7 @@ object Parser extends RegexParsers {
          _ <- qInitSymbol;
     // TODO: add a cut
          _ = assert(vs.nonEmpty);
-    // TODO: check that all vars are distinct
+         _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
          qvs = vs.map { context.environment.qVariables(_) };
          typ = Typ(context.isabelle.get, IType("QRHL.state",List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
          e <- expression(typ);

@@ -168,7 +168,7 @@ object Isabelle {
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
-
+  def distrT(typ:ITyp): Type = Type("QRHL.distr", List(typ))
 
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
