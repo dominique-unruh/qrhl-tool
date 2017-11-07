@@ -69,12 +69,11 @@ lemma bit_plus_1_eq[simp]: "(a+1=b) = (a=b+1)" for a b :: bit
   
 section \<open>Subspaces\<close>
 
-typedef 'a vector = "{x::'a\<Rightarrow>complex. \<exists>b. \<forall>F. finite F \<longrightarrow> sum (\<lambda>i. (norm(x i))^2) F \<le> b }"
+typedef 'a vector = "{x::'a\<Rightarrow>complex. bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)}"
   by (rule exI[of _ "\<lambda>_.0"], auto)
 setup_lifting type_definition_vector
 
 definition "ell2_norm x = (SUP F:{F. finite F}. sum (\<lambda>i. (norm(x i))^2) F)"
-lift_definition vector_norm :: "'a vector \<Rightarrow> real" is ell2_norm .
 
 lemma ell2_1: assumes  "finite F" shows "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) \<le> 1"
 proof - 
@@ -97,7 +96,47 @@ proof -
     by linarith
 qed
 
+
+lemma cSUP_leD: "bdd_above (f`A) \<Longrightarrow> (SUP i:A. f i) \<le> y \<Longrightarrow> i \<in> A \<Longrightarrow> f i \<le> y" for y :: "'a::conditionally_complete_lattice"
+  by (meson cSUP_upper order_trans)
+
+lemma ell2_norm_0:
+  assumes "bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)"
+  shows "(ell2_norm x = 0) = (x = (\<lambda>_. 0))"
+proof
+  assume "x = (\<lambda>_. 0)"
+  then show "ell2_norm x = 0"
+    unfolding ell2_norm_def apply auto
+    by (metis cSUP_const empty_Collect_eq finite.emptyI)
+next
+  assume norm0: "ell2_norm x = 0"
+  show "x = (\<lambda>_. 0)"
+  proof
+    fix i
+    have "sum (\<lambda>i. (cmod (x i))\<^sup>2) {i} \<le> 0" 
+      apply (rule cSUP_leD[where A="Collect finite"])
+      using norm0 assms unfolding ell2_norm_def by auto
+    then show "x i = 0" by auto
+  qed
+qed
+
+axiomatization where ell2_norm_triangle:
+ "bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)
+  \<Longrightarrow>
+  bdd_above (sum (\<lambda>i. (cmod (y i))\<^sup>2) ` Collect finite)
+  \<Longrightarrow>
+  ell2_norm (\<lambda>i. x i + y i) \<le> ell2_norm x + ell2_norm y"
+for x y :: "'a\<Rightarrow>complex"
+  
+axiomatization where ell2_norm_mult:
+  "bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)
+  \<Longrightarrow>
+  ell2_norm (\<lambda>i. a *\<^sub>R x i) = \<bar>a\<bar> * ell2_norm x"
+for x :: "'a\<Rightarrow>complex"
+
+
 lift_definition basis_vector :: "'a \<Rightarrow> 'a vector" is "\<lambda>x y. if x=y then 1 else 0"
+  unfolding bdd_above_def apply simp
   apply (rule exI[of _ 1], rule allI, rule impI)
   by (rule ell2_1)
 
@@ -108,24 +147,20 @@ lemma cSUP_eq_maximum:
   shows "(SUP x:X. f x) = z"
   by (metis (mono_tags, hide_lams) assms(1) assms(2) cSup_eq_maximum imageE image_eqI)
 
-lemma ell2_basis_vector[simp]: "vector_norm (basis_vector i) = 1"
-  apply transfer unfolding ell2_norm_def
-  apply (rule cSUP_eq_maximum)
-  apply (rule_tac x="{i}" in bexI)
-    apply auto
-  by (rule ell2_1)
 
 instantiation vector :: (type)real_vector begin
 lift_definition zero_vector :: "'a vector" is "\<lambda>_.0" by auto
-lift_definition uminus_vector :: "'a vector \<Rightarrow> 'a vector" is uminus by auto
+lift_definition uminus_vector :: "'a vector \<Rightarrow> 'a vector" is uminus by simp
 lift_definition plus_vector :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>f g x. f x + g x"
 proof -
   fix f g :: "'a \<Rightarrow> complex"  fix fun1 fun2 :: "'a \<Rightarrow> complex"
-    
-  assume "\<exists>bf. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. ((cmod (f i))^2)) \<le> bf"
-  then obtain bf where bf: "\<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (f i)^2)) \<le> bf" ..
-  assume "\<exists>bg. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. ((cmod (g i))^2)) \<le> bg"
-  then obtain bg where bg: "\<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (g i)^2)) \<le> bg" ..
+
+  assume "bdd_above (sum (\<lambda>i. (cmod (f i))\<^sup>2) ` Collect finite)"
+  then obtain bf where bf: "\<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (f i)^2)) \<le> bf" 
+    apply atomize_elim unfolding bdd_above_def by auto
+  assume "bdd_above (sum (\<lambda>i. (cmod (g i))\<^sup>2) ` Collect finite)"
+  then obtain bg where bg: "\<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (g i)^2)) \<le> bg"
+    apply atomize_elim unfolding bdd_above_def by auto
 
   have cmod: "cmod (a+b)^2 \<le> 2 * ((cmod a)^2 + (cmod b)^2)" for a b
     by (smt cmod_def cmod_power2 norm_triangle_ineq power2_sum sqrt_le_D sum_squares_bound)
@@ -147,14 +182,18 @@ proof -
     ultimately show "(\<Sum>i\<in>F. (cmod (f i + g i))\<^sup>2) \<le> b" unfolding b_def 
       by auto
     qed
-  then show "\<exists>b. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (f i + g i))\<^sup>2) \<le> b" by auto
+    then have "\<exists>b. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (f i + g i))\<^sup>2) \<le> b" by auto
+    then show "bdd_above (sum (\<lambda>i. (cmod (f i + g i))\<^sup>2) ` Collect finite)" 
+      unfolding bdd_above_def by auto
 qed
 definition "a - b = a + (-b)" for a b :: "'a vector"
 lift_definition scaleR_vector :: "real \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>r f x. r *\<^sub>R f x"
 proof -
   fix f :: "'a \<Rightarrow> complex" and r :: real
-  assume "\<exists>b. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (f i))\<^sup>2) \<le> b"
-  then obtain b where b: "\<And>F. finite F \<Longrightarrow> (\<Sum>i\<in>F. (cmod (f i))\<^sup>2) \<le> b" by auto
+  assume "bdd_above (sum (\<lambda>i. (cmod (f i))\<^sup>2) ` Collect finite)"
+  (* assume "\<exists>b. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (f i))\<^sup>2) \<le> b" *)
+  then obtain b where b: "\<And>F. finite F \<Longrightarrow> (\<Sum>i\<in>F. (cmod (f i))\<^sup>2) \<le> b" 
+    apply atomize_elim unfolding bdd_above_def by auto
   have aux: "(r*x)^2 = r^2 * x^2" for r x :: real unfolding power2_eq_square by auto
   have "(\<Sum>i\<in>F. (cmod (r *\<^sub>R f i))\<^sup>2) \<le> \<bar>r\<bar>\<^sup>2 * b" if "finite F" for F
     apply (subst norm_scaleR)
@@ -162,8 +201,8 @@ proof -
     apply (subst sum_distrib_left[symmetric])
     apply (subst mult_left_mono)
     by (auto simp: b that)
-  then show "\<exists>b. \<forall>F. finite F \<longrightarrow> (\<Sum>i\<in>F. (cmod (r *\<^sub>R f i))\<^sup>2) \<le> b"
-    by auto
+  then show "bdd_above (sum (\<lambda>i. (cmod (r *\<^sub>R f i))\<^sup>2) ` Collect finite)"
+    unfolding bdd_above_def by auto
 qed
 instance apply intro_classes
           apply (transfer; rule ext; simp)
@@ -177,9 +216,27 @@ instance apply intro_classes
   by (transfer; rule ext; simp)
 end
 
-term ket
+instantiation vector :: (type)real_normed_vector begin
+lift_definition norm_vector :: "'a vector \<Rightarrow> real" is ell2_norm .
+definition "dist x y = norm (x - y)" for x y::"'a vector"
+definition "sgn x = x /\<^sub>R norm x" for x::"'a vector"
+definition "uniformity = (INF e:{0<..}. principal {(x::'a vector, y). norm (x - y) < e})"
+definition "open U = (\<forall>x\<in>U. \<forall>\<^sub>F (x', y) in INF e:{0<..}. principal {(x, y). norm (x - y) < e}. x' = x \<longrightarrow> y \<in> U)" for U :: "'a vector set"
+instance apply intro_classes
+  unfolding dist_vector_def sgn_vector_def uniformity_vector_def open_vector_def apply simp_all
+    apply transfer apply (fact ell2_norm_0)
+   apply transfer apply (fact ell2_norm_triangle)
+  apply transfer by (fact ell2_norm_mult)
+end
 
-typedef 'a state = "{x::'a vector. vector_norm x = 1}"
+lemma ell2_basis_vector[simp]: "norm (basis_vector i) = 1"
+  apply transfer unfolding ell2_norm_def
+  apply (rule cSUP_eq_maximum)
+  apply (rule_tac x="{i}" in bexI)
+    apply auto
+  by (rule ell2_1)
+
+typedef 'a state = "{x::'a vector. norm x = 1}"
   morphisms state_to_vector Abs_state
   apply (rule exI[of _ "basis_vector undefined"])
   by simp
@@ -327,64 +384,70 @@ lemma leq_plus_subspace[simp]: "a \<le> a + c" for a::"'a subspace"
 lemma leq_plus_subspace2[simp]: "a \<le> c + a" for a::"'a subspace"
   by (simp add: add_increasing)
 
-subsection \<open>Isometries\<close>
-    
-      
-typedecl ('a,'b) pisometry (* partial isometries *)
-(* type_synonym ('a,'a) pisometry = "('a,'a) pisometry" *)
+subsection \<open>Bounded operators\<close>
   
+typedef ('a,'b) bounded = "{A::'a vector\<Rightarrow>'b vector. bounded_linear A}"
+  using bounded_linear_zero by blast
+  
+
 axiomatization 
-  adjoint :: "('a,'b) pisometry \<Rightarrow> ('b,'a) pisometry" ("_*" [99] 100)
-and timesIso :: "('b,'c) pisometry \<Rightarrow> ('a,'b) pisometry \<Rightarrow> ('a,'c) pisometry" 
-and applyIso :: "('a,'b) pisometry \<Rightarrow> 'a vector \<Rightarrow> 'b vector"
-and applyIsoSpace :: "('a,'b) pisometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
+  adjoint :: "('a,'b) bounded \<Rightarrow> ('b,'a) bounded" ("_*" [99] 100)
+and timesOp :: "('b,'c) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'c) bounded" 
+and applyOp :: "('a,'b) bounded \<Rightarrow> 'a vector \<Rightarrow> 'b vector"
+and applyOpSpace :: "('a,'b) bounded \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
 where
- applyIso_0[simp]: "applyIsoSpace U 0 = 0"
-and applyIso_bot[simp]: "applyIsoSpace U bot = bot"
+ applyOp_0[simp]: "applyOpSpace U 0 = 0"
 
-axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) pisometry"
+lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
+  by (simp add: bot_subspace_def)
 
-abbreviation "imageIso U \<equiv> applyIsoSpace U top"
+axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) bounded"
+
+abbreviation "imageIso U \<equiv> applyOpSpace U top"
 
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
-  cdot timesIso applyIso applyIsoSpace
+  cdot timesOp applyOp applyOpSpace
 
 axiomatization where
   cdot_plus_distrib[simp]: "U \<cdot> (A + B) = U \<cdot> A + U \<cdot> B"
-for A B :: "'a subspace" and U :: "('a,'b) pisometry"
+for A B :: "'a subspace" and U :: "('a,'b) bounded"
 
 axiomatization 
-    idIso :: "('a,'a) pisometry"
+    idIso :: "('a,'a) bounded"
 where
-    apply_idIso[simp]: "applyIso idIso \<psi> = \<psi>"
-and apply_idIso_space[simp]: "applyIsoSpace idIso S = S"
+    apply_idIso[simp]: "applyOp idIso \<psi> = \<psi>"
+and apply_idIso_space[simp]: "applyOpSpace idIso S = S"
 and times_idIso1[simp]: "U \<cdot> idIso = U"
 and times_idIso2[simp]: "idIso \<cdot> V = V"
 and image_id[simp]: "imageIso idIso = top"
 and idIso_adjoint[simp]: "idIso* = idIso"
-for \<psi> :: "'a vector" and S :: "'a subspace" and U :: "('a,'b) pisometry" and V :: "('b,'a) pisometry"
+for \<psi> :: "'a vector" and S :: "'a subspace" and U :: "('a,'b) bounded" and V :: "('b,'a) bounded"
 
 axiomatization where mult_INF[simp]: "U \<cdot> (INF x. V x) = (INF x. U \<cdot> V x)" 
-  for V :: "'a \<Rightarrow> 'b subspace" and U :: "('b,'c) pisometry"
+  for V :: "'a \<Rightarrow> 'b subspace" and U :: "('b,'c) bounded"
 
 lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqinter> (U \<cdot> C)" 
-  for U :: "('a,'b) pisometry" and B C :: "'a subspace"
+  for U :: "('a,'b) bounded" and B C :: "'a subspace"
   using mult_INF[where V="\<lambda>x. if x then B else C" and U=U] 
   unfolding INF_UNIV_bool_expand
   by simp
 
-fun powerIso :: "('a,'a) pisometry \<Rightarrow> nat \<Rightarrow> ('a,'a) pisometry" where 
+fun powerIso :: "('a,'a) bounded \<Rightarrow> nat \<Rightarrow> ('a,'a) bounded" where 
   "powerIso U 0 = idIso"
 | "powerIso U (Suc i) = U \<cdot> powerIso U i"
 
 definition "unitary U = (U \<cdot> (U*) = idIso \<and> U* \<cdot> U = idIso)"  
+definition "isometry U = (U* \<cdot> U = idIso)"  
 
-lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)pisometry"
+lemma unitary_isometry[simp]: "unitary U \<Longrightarrow> isometry U"
+  unfolding unitary_def isometry_def by simp
+
+lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)bounded"
   unfolding unitary_def by auto
 
 axiomatization where unitary_image[simp]: "unitary U \<Longrightarrow> imageIso U = top"
-  for U :: "('a,'a) pisometry"
+  for U :: "('a,'a) bounded"
 
 lemma unitary_id[simp]: "unitary idIso"
   unfolding unitary_def by simp
@@ -392,14 +455,14 @@ lemma unitary_id[simp]: "unitary idIso"
 section \<open>Projectors\<close>
 
 definition "isProjector P = (P=P* \<and> P=P\<cdot>P)"
-axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) pisometry"
+axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) bounded"
   where isProjector_proj[simp]: "isProjector (proj x)"
 and imageIso_proj [simp]: "imageIso (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a vector"
 
 section \<open>Measurements\<close>
 
 typedecl ('a,'b) measurement
-axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> ('b,'b) pisometry"
+axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> ('b,'b) bounded"
   and mtotal :: "('a,'b) measurement \<Rightarrow> bool"
   where isProjector_mproj[simp]: "isProjector (mproj M i)"
 
@@ -478,7 +541,7 @@ lemma classical_sort[simp]:
 lemma Cla_split[split]: "P (Cla[Q]) = ((Q \<longrightarrow> P top) \<and> (\<not> Q \<longrightarrow> P bot))"
   by (cases Q, auto) 
 
-lemma applyIso_Cla[simp]:
+lemma applyOp_Cla[simp]:
   assumes "unitary A"
   shows "A \<cdot> Cla[b] = Cla[b]"
   apply (cases b) using assms by auto
@@ -518,7 +581,7 @@ axiomatization where
 
 subsection \<open>Quantum equality\<close>
 
-axiomatization quantum_equality_full :: "('a,'c) pisometry \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) pisometry \<Rightarrow> 'b qvariables \<Rightarrow> predicate"
+axiomatization quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b qvariables \<Rightarrow> predicate"
 abbreviation "quantum_equality" :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
   where "quantum_equality X Y \<equiv> quantum_equality_full idIso X idIso Y"
 syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "==q" 100)
@@ -533,7 +596,7 @@ axiomatization where colocal_quantum_eq[simp]: "colocal Q1 R \<Longrightarrow> c
 subsection \<open>Lifting\<close>
   
 axiomatization
-    liftIso :: "('a,'a) pisometry \<Rightarrow> 'a qvariables \<Rightarrow> (mem2,mem2) pisometry"
+    liftIso :: "('a,'a) bounded \<Rightarrow> 'a qvariables \<Rightarrow> (mem2,mem2) bounded"
 and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
 
 
@@ -548,22 +611,22 @@ and imageIso_lift[simp]: "imageIso (liftIso U Q) = liftSpace (imageIso U) Q"
 and top_lift[simp]: "liftSpace top Q = top"
 and bot_lift[simp]: "liftSpace bot Q = bot"
 and unitary_lift[simp]: "unitary (liftIso U Q) = unitary U"
-for U :: "('a,'a) pisometry"
+for U :: "('a,'a) bounded"
 
 axiomatization where lift_idIso[simp]: "idIso\<guillemotright>Q = idIso" for Q :: "'a qvariables"
 
 
 axiomatization where Qeq_mult1[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
- for U::"('a,'a) pisometry" and U2 :: "('b,'c) pisometry"  
+ for U::"('a,'a) bounded" and U2 :: "('b,'c) bounded"  
 
 axiomatization where Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
- for U::"('a,'a) pisometry" and U1 :: "('b,'c) pisometry"  
+ for U::"('a,'a) bounded" and U1 :: "('b,'c) bounded"  
 
 axiomatization where qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idIso Q2"
-for U :: "('a,'b) pisometry" and V :: "('c,'b) pisometry"
+for U :: "('a,'b) bounded" and V :: "('c,'b) bounded"
 
 lemma qeq_collect_guarded[simp]:
   assumes "NO_MATCH idIso V"
@@ -582,12 +645,12 @@ section \<open>Common quantum objects\<close>
 
 axiomatization EPR :: "(bit*bit) vector"
 
-axiomatization CNOT :: "(bit*bit, bit*bit) pisometry" where
+axiomatization CNOT :: "(bit*bit, bit*bit) bounded" where
   unitaryCNOT[simp]: "unitary CNOT"
-axiomatization H :: "(bit,bit) pisometry" 
-  and X :: "(bit,bit) pisometry"
-  and Y :: "(bit,bit) pisometry"
-  and Z :: "(bit,bit) pisometry"
+axiomatization H :: "(bit,bit) bounded" 
+  and X :: "(bit,bit) bounded"
+  and Y :: "(bit,bit) bounded"
+  and Z :: "(bit,bit) bounded"
   where
   unitaryH[simp]: "unitary H"
 and unitaryX[simp]: "unitary X"

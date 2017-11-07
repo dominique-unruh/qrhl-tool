@@ -4,8 +4,8 @@ struct
 fun mk_qvariablesT T = Type(@{type_name qvariables}, [T])
 fun mk_qvariableT T = Type(@{type_name qvariable}, [T])
 fun mk_stateT T = Type(@{type_name state}, [T])
-fun mk_isometryT T T' = Type(@{type_name pisometry}, [T,T'])
-fun mk_isometry2T T = mk_isometryT T T
+fun mk_boundedT T T' = Type(@{type_name bounded}, [T,T'])
+fun mk_bounded2T T = mk_boundedT T T
 fun mk_measurementT T T' = Type(@{type_name measurement}, [T,T'])
 (* fun mk_projectorT T = Type(@{type_name projector}, [T]) *)
 fun mk_conjs [] = @{const True}
@@ -26,7 +26,7 @@ fun mk_INFIMUM A f =
 fun dest_All (Const("HOL.All",_) $ Abs(_,T,body)) = (T,body)
   | dest_All t = raise TERM("dest_All",[t])
 
-fun qvariables [] = (@{term "qvariable_unit"},@{typ unit})
+fun qvariables [] = (@{const qvariable_unit},@{typ unit})
   | qvariables [v] = 
         let val vT = fastype_of v
             val vT' = case vT of Type(@{type_name qvariable},[vT']) => vT' | _ => raise TYPE("expecting a qvariable",[vT],[v])
@@ -56,12 +56,12 @@ fun qinitWp post e Q =
 fun qapplyWp post e Q =
   let val (vs,vsT) = qvariables Q 
       val unitary = @{const classical_subspace} $ 
-          (Const(@{const_name unitary}, mk_isometry2T vsT --> HOLogic.boolT) $ e)
-      val e' = Const(@{const_name liftIso}, mk_isometry2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) pisometry"}) $ e $ vs
-      val im_e' = @{const applyIsoSpace(mem2,mem2)} $ e' $ @{const top(predicate)}
-      val adj_e' = @{term "adjoint :: _ \<Rightarrow> (mem2,mem2) pisometry"} $ e'
+          (Const(@{const_name isometry}, mk_bounded2T vsT --> HOLogic.boolT) $ e)
+      val e' = Const(@{const_name liftIso}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"}) $ e $ vs
+      val im_e' = @{const applyOpSpace(mem2,mem2)} $ e' $ @{const top(predicate)}
+      val adj_e' = @{const adjoint(mem2,mem2)} $ e'
       val post_im_e' = @{const inf(predicate)} $ post $ im_e'
-      val apply_e' = @{term "applyIsoSpace :: (mem2,mem2) pisometry \<Rightarrow> _ \<Rightarrow> _"} $ adj_e' $ post_im_e'
+      val apply_e' = @{const applyOpSpace(mem2,mem2)} $ adj_e' $ post_im_e'
       val unitary_etc = @{const inf(predicate)} $ unitary $ apply_e'
   in
     unitary_etc
@@ -72,11 +72,11 @@ fun measureWp B x e Q =
       val (_,resT) = dest_Free x
       val (vs,vsT) = qvariables Q
       val measT = mk_measurementT resT vsT
-      val e_z = Const(@{const_name mproj}, measT --> resT --> mk_isometry2T vsT)
+      val e_z = Const(@{const_name mproj}, measT --> resT --> mk_bounded2T vsT)
                   $ e $ Bound(0)
-      val lift_e_z = Const(@{const_name liftIso}, mk_isometry2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) pisometry"})
+      val lift_e_z = Const(@{const_name liftIso}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"})
                     $ e_z $ vs
-      val im_e_z = @{const applyIsoSpace(mem2,mem2)} $ lift_e_z $ @{const top(predicate)}
+      val im_e_z = @{const applyOpSpace(mem2,mem2)} $ lift_e_z $ @{const top(predicate)}
       val Be = @{const plus(predicate)} $ (@{const inf(predicate)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)
       val Inf_Be = mk_INFIMUM (Const(@{const_name top}, HOLogic.mk_setT resT)) (Abs("z",resT,Be))
       val total = @{const classical_subspace} $ (Const(@{const_name mtotal}, measT --> HOLogic.boolT) $ e)
@@ -109,7 +109,7 @@ fun sampleWp v T e B =
         val total = @{const classical_subspace} $
              HOLogic.mk_eq (Const(@{const_name weight}, distrT --> @{typ real}) $ e, @{term "1::real"})
     in
-      @{term "inf::predicate=>predicate=>predicate"} $ total $ B2
+      @{const inf(predicate)} $ total $ B2
     end
 
 
@@ -177,7 +177,7 @@ fun addQVariableNameAssumption name T ctx =
   end
 
 fun mk_quantum_equality Q1 Q2 T =
-  let val isoT = mk_isometry2T T
+  let val isoT = mk_bounded2T T
       val qvT = mk_qvariablesT T
   in
   Const(@{const_name quantum_equality_full}, isoT --> qvT --> isoT --> qvT --> @{typ predicate}) $
@@ -350,9 +350,5 @@ fun fixTac term var =
   end
 
 
-val _ = fixTac @{term "!x::int. x=x"} "z"
-|> fst
-|> Thm.cterm_of @{context}
-|> @{print}
 
 end

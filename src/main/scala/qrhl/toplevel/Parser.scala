@@ -100,7 +100,7 @@ object Parser extends RegexParsers {
            _ = assert(vs.nonEmpty);
            _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
            qvs = vs.map { context.environment.qVariables(_) };
-           typ = Typ(context.isabelle.get, IType("QRHL.pisometry",
+           typ = Typ(context.isabelle.get, IType("QRHL.bounded",
              List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*),
                   Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
            e <- expression(typ);
