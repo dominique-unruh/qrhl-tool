@@ -98,9 +98,9 @@ object Parser extends RegexParsers {
            vs <- identifierList;
            _ <- literal("apply");
            _ = assert(vs.nonEmpty);
+           _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
            qvs = vs.map { context.environment.qVariables(_) };
-           // TODO: check that all vars are distinct
-           typ = Typ(context.isabelle.get, IType("QRHL.isometry",
+           typ = Typ(context.isabelle.get, IType("QRHL.pisometry",
              List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*),
                   Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
            e <- expression(typ);
@@ -115,7 +115,7 @@ object Parser extends RegexParsers {
          vs <- identifierList;
          resv = context.environment.cVariables(res);
          qvs = vs.map { context.environment.qVariables(_) };
-         _ <- literal("in");
+         _ <- literal("with");
          etyp = Typ(context.isabelle.get, IType("QRHL.measurement",
            List(resv.isabelleTyp, Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))
          ));

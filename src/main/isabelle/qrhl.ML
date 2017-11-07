@@ -4,7 +4,7 @@ struct
 fun mk_qvariablesT T = Type(@{type_name qvariables}, [T])
 fun mk_qvariableT T = Type(@{type_name qvariable}, [T])
 fun mk_stateT T = Type(@{type_name state}, [T])
-fun mk_isometryT T T' = Type(@{type_name isometry}, [T,T'])
+fun mk_isometryT T T' = Type(@{type_name pisometry}, [T,T'])
 fun mk_isometry2T T = mk_isometryT T T
 fun mk_measurementT T T' = Type(@{type_name measurement}, [T,T'])
 (* fun mk_projectorT T = Type(@{type_name projector}, [T]) *)
@@ -55,12 +55,16 @@ fun qinitWp post e Q =
 
 fun qapplyWp post e Q =
   let val (vs,vsT) = qvariables Q 
-      val e' = Const(@{const_name liftIso}, mk_isometry2T vsT --> mk_qvariablesT vsT --> @{typ "mem2 isometry2"}) $ e $ vs
+      val unitary = @{const classical_subspace} $ 
+          (Const(@{const_name unitary}, mk_isometry2T vsT --> HOLogic.boolT) $ e)
+      val e' = Const(@{const_name liftIso}, mk_isometry2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) pisometry"}) $ e $ vs
       val im_e' = @{const applyIsoSpace(mem2,mem2)} $ e' $ @{const top(predicate)}
-      val adj_e' = @{term "adjoint :: _ \<Rightarrow> mem2 isometry2"} $ e'
+      val adj_e' = @{term "adjoint :: _ \<Rightarrow> (mem2,mem2) pisometry"} $ e'
       val post_im_e' = @{const inf(predicate)} $ post $ im_e'
+      val apply_e' = @{term "applyIsoSpace :: (mem2,mem2) pisometry \<Rightarrow> _ \<Rightarrow> _"} $ adj_e' $ post_im_e'
+      val unitary_etc = @{const inf(predicate)} $ unitary $ apply_e'
   in
-    @{term "applyIsoSpace :: mem2 isometry2 \<Rightarrow> _ \<Rightarrow> _"} $ adj_e' $ post_im_e'
+    unitary_etc
   end
 
 fun measureWp B x e Q =
@@ -70,7 +74,7 @@ fun measureWp B x e Q =
       val measT = mk_measurementT resT vsT
       val e_z = Const(@{const_name mproj}, measT --> resT --> mk_isometry2T vsT)
                   $ e $ Bound(0)
-      val lift_e_z = Const(@{const_name liftIso}, mk_isometry2T vsT --> mk_qvariablesT vsT --> @{typ "mem2 isometry2"})
+      val lift_e_z = Const(@{const_name liftIso}, mk_isometry2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) pisometry"})
                     $ e_z $ vs
       val im_e_z = @{const applyIsoSpace(mem2,mem2)} $ lift_e_z $ @{const top(predicate)}
       val Be = @{const plus(predicate)} $ (@{const inf(predicate)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)

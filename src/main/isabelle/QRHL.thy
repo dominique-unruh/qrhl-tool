@@ -330,19 +330,19 @@ lemma leq_plus_subspace2[simp]: "a \<le> c + a" for a::"'a subspace"
 subsection \<open>Isometries\<close>
     
       
-typedecl ('a,'b) isometry (* partial isometries *)
-type_synonym 'a isometry2 = "('a,'a) isometry"
+typedecl ('a,'b) pisometry (* partial isometries *)
+(* type_synonym ('a,'a) pisometry = "('a,'a) pisometry" *)
   
 axiomatization 
-  adjoint :: "('a,'b) isometry \<Rightarrow> ('b,'a) isometry" ("_*" [99] 100)
-and timesIso :: "('b,'c) isometry \<Rightarrow> ('a,'b) isometry \<Rightarrow> ('a,'c) isometry" 
-and applyIso :: "('a,'b) isometry \<Rightarrow> 'a vector \<Rightarrow> 'b vector"
-and applyIsoSpace :: "('a,'b) isometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
+  adjoint :: "('a,'b) pisometry \<Rightarrow> ('b,'a) pisometry" ("_*" [99] 100)
+and timesIso :: "('b,'c) pisometry \<Rightarrow> ('a,'b) pisometry \<Rightarrow> ('a,'c) pisometry" 
+and applyIso :: "('a,'b) pisometry \<Rightarrow> 'a vector \<Rightarrow> 'b vector"
+and applyIsoSpace :: "('a,'b) pisometry \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
 where
  applyIso_0[simp]: "applyIsoSpace U 0 = 0"
 and applyIso_bot[simp]: "applyIsoSpace U bot = bot"
 
-axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) isometry"
+axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) pisometry"
 
 abbreviation "imageIso U \<equiv> applyIsoSpace U top"
 
@@ -352,10 +352,10 @@ adhoc_overloading
 
 axiomatization where
   cdot_plus_distrib[simp]: "U \<cdot> (A + B) = U \<cdot> A + U \<cdot> B"
-for A B :: "'a subspace" and U :: "('a,'b) isometry"
+for A B :: "'a subspace" and U :: "('a,'b) pisometry"
 
 axiomatization 
-    idIso :: "'a isometry2"
+    idIso :: "('a,'a) pisometry"
 where
     apply_idIso[simp]: "applyIso idIso \<psi> = \<psi>"
 and apply_idIso_space[simp]: "applyIsoSpace idIso S = S"
@@ -363,28 +363,28 @@ and times_idIso1[simp]: "U \<cdot> idIso = U"
 and times_idIso2[simp]: "idIso \<cdot> V = V"
 and image_id[simp]: "imageIso idIso = top"
 and idIso_adjoint[simp]: "idIso* = idIso"
-for \<psi> :: "'a vector" and S :: "'a subspace" and U :: "('a,'b) isometry" and V :: "('b,'a) isometry"
+for \<psi> :: "'a vector" and S :: "'a subspace" and U :: "('a,'b) pisometry" and V :: "('b,'a) pisometry"
 
 axiomatization where mult_INF[simp]: "U \<cdot> (INF x. V x) = (INF x. U \<cdot> V x)" 
-  for V :: "'a \<Rightarrow> 'b subspace" and U :: "('b,'c) isometry"
+  for V :: "'a \<Rightarrow> 'b subspace" and U :: "('b,'c) pisometry"
 
 lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqinter> (U \<cdot> C)" 
-  for U :: "('a,'b) isometry" and B C :: "'a subspace"
+  for U :: "('a,'b) pisometry" and B C :: "'a subspace"
   using mult_INF[where V="\<lambda>x. if x then B else C" and U=U] 
   unfolding INF_UNIV_bool_expand
   by simp
 
-fun powerIso :: "('a,'a) isometry \<Rightarrow> nat \<Rightarrow> ('a,'a) isometry" where 
+fun powerIso :: "('a,'a) pisometry \<Rightarrow> nat \<Rightarrow> ('a,'a) pisometry" where 
   "powerIso U 0 = idIso"
 | "powerIso U (Suc i) = U \<cdot> powerIso U i"
 
 definition "unitary U = (U \<cdot> (U*) = idIso \<and> U* \<cdot> U = idIso)"  
 
-lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)isometry"
+lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)pisometry"
   unfolding unitary_def by auto
 
 axiomatization where unitary_image[simp]: "unitary U \<Longrightarrow> imageIso U = top"
-  for U :: "'a isometry2"
+  for U :: "('a,'a) pisometry"
 
 lemma unitary_id[simp]: "unitary idIso"
   unfolding unitary_def by simp
@@ -392,14 +392,14 @@ lemma unitary_id[simp]: "unitary idIso"
 section \<open>Projectors\<close>
 
 definition "isProjector P = (P=P* \<and> P=P\<cdot>P)"
-axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) isometry"
+axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) pisometry"
   where isProjector_proj[simp]: "isProjector (proj x)"
 and imageIso_proj [simp]: "imageIso (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a vector"
 
 section \<open>Measurements\<close>
 
 typedecl ('a,'b) measurement
-axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> 'b isometry2"
+axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> ('b,'b) pisometry"
   and mtotal :: "('a,'b) measurement \<Rightarrow> bool"
   where isProjector_mproj[simp]: "isProjector (mproj M i)"
 
@@ -518,7 +518,7 @@ axiomatization where
 
 subsection \<open>Quantum equality\<close>
 
-axiomatization quantum_equality_full :: "('a,'c) isometry \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) isometry \<Rightarrow> 'b qvariables \<Rightarrow> predicate"
+axiomatization quantum_equality_full :: "('a,'c) pisometry \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) pisometry \<Rightarrow> 'b qvariables \<Rightarrow> predicate"
 abbreviation "quantum_equality" :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
   where "quantum_equality X Y \<equiv> quantum_equality_full idIso X idIso Y"
 syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "==q" 100)
@@ -533,8 +533,7 @@ axiomatization where colocal_quantum_eq[simp]: "colocal Q1 R \<Longrightarrow> c
 subsection \<open>Lifting\<close>
   
 axiomatization
-    liftIso :: "'a isometry2 \<Rightarrow> 'a qvariables \<Rightarrow> mem2 isometry2"
-(* and liftProj :: "'a projector \<Rightarrow> 'a qvariables \<Rightarrow> mem2 projector" *)
+    liftIso :: "('a,'a) pisometry \<Rightarrow> 'a qvariables \<Rightarrow> (mem2,mem2) pisometry"
 and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
 
 
@@ -549,22 +548,22 @@ and imageIso_lift[simp]: "imageIso (liftIso U Q) = liftSpace (imageIso U) Q"
 and top_lift[simp]: "liftSpace top Q = top"
 and bot_lift[simp]: "liftSpace bot Q = bot"
 and unitary_lift[simp]: "unitary (liftIso U Q) = unitary U"
-for U :: "'a isometry2"
+for U :: "('a,'a) pisometry"
 
 axiomatization where lift_idIso[simp]: "idIso\<guillemotright>Q = idIso" for Q :: "'a qvariables"
 
 
 axiomatization where Qeq_mult1[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
- for U::"('a,'a) isometry" and U2 :: "('b,'c) isometry"  
+ for U::"('a,'a) pisometry" and U2 :: "('b,'c) pisometry"  
 
 axiomatization where Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
- for U::"('a,'a) isometry" and U1 :: "('b,'c) isometry"  
+ for U::"('a,'a) pisometry" and U1 :: "('b,'c) pisometry"  
 
 axiomatization where qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idIso Q2"
-for U :: "('a,'b) isometry" and V :: "('c,'b) isometry"
+for U :: "('a,'b) pisometry" and V :: "('c,'b) pisometry"
 
 lemma qeq_collect_guarded[simp]:
   assumes "NO_MATCH idIso V"
@@ -583,12 +582,12 @@ section \<open>Common quantum objects\<close>
 
 axiomatization EPR :: "(bit*bit) vector"
 
-axiomatization CNOT :: "(bit*bit) isometry2" where
+axiomatization CNOT :: "(bit*bit, bit*bit) pisometry" where
   unitaryCNOT[simp]: "unitary CNOT"
-axiomatization H :: "bit isometry2" 
-  and X :: "bit isometry2"
-  and Y :: "bit isometry2"
-  and Z :: "bit isometry2"
+axiomatization H :: "(bit,bit) pisometry" 
+  and X :: "(bit,bit) pisometry"
+  and Y :: "(bit,bit) pisometry"
+  and Z :: "(bit,bit) pisometry"
   where
   unitaryH[simp]: "unitary H"
 and unitaryX[simp]: "unitary X"
