@@ -14,7 +14,7 @@ program prog1 := {
 program prog2 := {
   on q apply H;
   b <$ uniform UNIV;
-  on q apply (powerIso H b);
+  on q apply (powerOp H b);
 }.
 
 
@@ -23,13 +23,13 @@ qrhl {Qeq[q1=q2]} call prog1; ~ call prog2; {Qeq[q1=q2]}.
   inline prog1.
   inline prog2.
 
-  seq 0 1: quantum_equality_full idIso [[q1]] H [[q2]].
+  seq 0 1: quantum_equality_full idOp [[q1]] H [[q2]].
     wp right.
     skip.
     simp.
     true.
 
-  seq 1 1: quantum_equality_full idIso [[q1]] H [[q2]] ⊓ Cla[b1≠b2].
+  seq 1 1: quantum_equality_full idOp [[q1]] H [[q2]] ⊓ Cla[b1≠b2].
     rnd b,b <- map_distr (λb. (b,b+1)) (uniform UNIV). 
     skip.
     simp.
