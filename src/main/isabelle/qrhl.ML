@@ -57,7 +57,7 @@ fun qapplyWp post e Q =
   let val (vs,vsT) = qvariables Q 
       val unitary = @{const classical_subspace} $ 
           (Const(@{const_name isometry}, mk_bounded2T vsT --> HOLogic.boolT) $ e)
-      val e' = Const(@{const_name liftIso}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"}) $ e $ vs
+      val e' = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"}) $ e $ vs
       val im_e' = @{const applyOpSpace(mem2,mem2)} $ e' $ @{const top(predicate)}
       val adj_e' = @{const adjoint(mem2,mem2)} $ e'
       val post_im_e' = @{const inf(predicate)} $ post $ im_e'
@@ -74,7 +74,7 @@ fun measureWp B x e Q =
       val measT = mk_measurementT resT vsT
       val e_z = Const(@{const_name mproj}, measT --> resT --> mk_bounded2T vsT)
                   $ e $ Bound(0)
-      val lift_e_z = Const(@{const_name liftIso}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"})
+      val lift_e_z = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"})
                     $ e_z $ vs
       val im_e_z = @{const applyOpSpace(mem2,mem2)} $ lift_e_z $ @{const top(predicate)}
       val Be = @{const plus(predicate)} $ (@{const inf(predicate)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)
@@ -177,11 +177,11 @@ fun addQVariableNameAssumption name T ctx =
   end
 
 fun mk_quantum_equality Q1 Q2 T =
-  let val isoT = mk_bounded2T T
-      val qvT = mk_qvariablesT T
+  let val opT = mk_bounded2T T
+      val qvT = mk_qvariablesT T                                        
   in
-  Const(@{const_name quantum_equality_full}, isoT --> qvT --> isoT --> qvT --> @{typ predicate}) $
-    Const(@{const_name idIso}, isoT) $ Q1 $ Const(@{const_name idIso}, isoT) $ Q2
+  Const(@{const_name quantum_equality_full}, opT --> qvT --> opT --> qvT --> @{typ predicate}) $
+    Const(@{const_name idOp}, opT) $ Q1 $ Const(@{const_name idOp}, opT) $ Q2
   end
 
 (* returns a term t' such that t'\<and>remove = t\<and>remove is true *)

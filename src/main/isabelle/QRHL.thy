@@ -387,13 +387,17 @@ lemma leq_plus_subspace2[simp]: "a \<le> c + a" for a::"'a subspace"
 subsection \<open>Bounded operators\<close>
   
 typedef ('a,'b) bounded = "{A::'a vector\<Rightarrow>'b vector. bounded_linear A}"
+  morphisms applyOp Abs_bounded
   using bounded_linear_zero by blast
-  
+setup_lifting type_definition_bounded
 
-axiomatization 
+lift_definition idOp :: "('a,'a)bounded" is id
+  by (metis bounded_linear_ident comp_id fun.map_ident)
+ 
+axiomatization
   adjoint :: "('a,'b) bounded \<Rightarrow> ('b,'a) bounded" ("_*" [99] 100)
 and timesOp :: "('b,'c) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'c) bounded" 
-and applyOp :: "('a,'b) bounded \<Rightarrow> 'a vector \<Rightarrow> 'b vector"
+(* and applyOp :: "('a,'b) bounded \<Rightarrow> 'a vector \<Rightarrow> 'b vector" *)
 and applyOpSpace :: "('a,'b) bounded \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
 where
  applyOp_0[simp]: "applyOpSpace U 0 = 0"
@@ -403,7 +407,7 @@ lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
 
 axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) bounded"
 
-abbreviation "imageIso U \<equiv> applyOpSpace U top"
+abbreviation "imageOp U \<equiv> applyOpSpace U top"
 
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
@@ -413,15 +417,18 @@ axiomatization where
   cdot_plus_distrib[simp]: "U \<cdot> (A + B) = U \<cdot> A + U \<cdot> B"
 for A B :: "'a subspace" and U :: "('a,'b) bounded"
 
+lemma apply_idOp[simp]: "applyOp idOp \<psi> = \<psi>"
+  by (simp add: idOp.rep_eq)
+
 axiomatization 
-    idIso :: "('a,'a) bounded"
+    (* idOp :: "('a,'a) bounded" *)
 where
-    apply_idIso[simp]: "applyOp idIso \<psi> = \<psi>"
-and apply_idIso_space[simp]: "applyOpSpace idIso S = S"
-and times_idIso1[simp]: "U \<cdot> idIso = U"
-and times_idIso2[simp]: "idIso \<cdot> V = V"
-and image_id[simp]: "imageIso idIso = top"
-and idIso_adjoint[simp]: "idIso* = idIso"
+    (* apply_idOp[simp]: "applyOp idOp \<psi> = \<psi>" *)
+    apply_idOp_space[simp]: "applyOpSpace idOp S = S"
+and times_idOp1[simp]: "U \<cdot> idOp = U"
+and times_idOp2[simp]: "idOp \<cdot> V = V"
+and image_id[simp]: "imageOp idOp = top"
+and idOp_adjoint[simp]: "idOp* = idOp"
 for \<psi> :: "'a vector" and S :: "'a subspace" and U :: "('a,'b) bounded" and V :: "('b,'a) bounded"
 
 axiomatization where mult_INF[simp]: "U \<cdot> (INF x. V x) = (INF x. U \<cdot> V x)" 
@@ -433,12 +440,12 @@ lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqin
   unfolding INF_UNIV_bool_expand
   by simp
 
-fun powerIso :: "('a,'a) bounded \<Rightarrow> nat \<Rightarrow> ('a,'a) bounded" where 
-  "powerIso U 0 = idIso"
-| "powerIso U (Suc i) = U \<cdot> powerIso U i"
+fun powerOp :: "('a,'a) bounded \<Rightarrow> nat \<Rightarrow> ('a,'a) bounded" where 
+  "powerOp U 0 = idOp"
+| "powerOp U (Suc i) = U \<cdot> powerOp U i"
 
-definition "unitary U = (U \<cdot> (U*) = idIso \<and> U* \<cdot> U = idIso)"  
-definition "isometry U = (U* \<cdot> U = idIso)"  
+definition "unitary U = (U \<cdot> (U*) = idOp \<and> U* \<cdot> U = idOp)"  
+definition "isometry U = (U* \<cdot> U = idOp)"  
 
 lemma unitary_isometry[simp]: "unitary U \<Longrightarrow> isometry U"
   unfolding unitary_def isometry_def by simp
@@ -446,10 +453,10 @@ lemma unitary_isometry[simp]: "unitary U \<Longrightarrow> isometry U"
 lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)bounded"
   unfolding unitary_def by auto
 
-axiomatization where unitary_image[simp]: "unitary U \<Longrightarrow> imageIso U = top"
+axiomatization where unitary_image[simp]: "unitary U \<Longrightarrow> imageOp U = top"
   for U :: "('a,'a) bounded"
 
-lemma unitary_id[simp]: "unitary idIso"
+lemma unitary_id[simp]: "unitary idOp"
   unfolding unitary_def by simp
 
 section \<open>Projectors\<close>
@@ -457,7 +464,7 @@ section \<open>Projectors\<close>
 definition "isProjector P = (P=P* \<and> P=P\<cdot>P)"
 axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) bounded"
   where isProjector_proj[simp]: "isProjector (proj x)"
-and imageIso_proj [simp]: "imageIso (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a vector"
+and imageOp_proj [simp]: "imageOp (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a vector"
 
 section \<open>Measurements\<close>
 
@@ -583,7 +590,7 @@ subsection \<open>Quantum equality\<close>
 
 axiomatization quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b qvariables \<Rightarrow> predicate"
 abbreviation "quantum_equality" :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
-  where "quantum_equality X Y \<equiv> quantum_equality_full idIso X idIso Y"
+  where "quantum_equality X Y \<equiv> quantum_equality_full idOp X idOp Y"
 syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "==q" 100)
 syntax "_quantum_equality" :: "qvariable_list_args \<Rightarrow> qvariable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
 translations
@@ -596,24 +603,24 @@ axiomatization where colocal_quantum_eq[simp]: "colocal Q1 R \<Longrightarrow> c
 subsection \<open>Lifting\<close>
   
 axiomatization
-    liftIso :: "('a,'a) bounded \<Rightarrow> 'a qvariables \<Rightarrow> (mem2,mem2) bounded"
+    liftOp :: "('a,'a) bounded \<Rightarrow> 'a qvariables \<Rightarrow> (mem2,mem2) bounded"
 and liftSpace :: "'a subspace \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
 
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<guillemotright>_"  [91,91] 90)
 syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_>>_"  [91,91] 90)
 adhoc_overloading
-  lift liftIso liftSpace
+  lift liftOp liftSpace
 
 axiomatization where 
-    adjoint_lift[simp]: "adjoint (liftIso U Q) = liftIso (adjoint U) Q" 
-and imageIso_lift[simp]: "imageIso (liftIso U Q) = liftSpace (imageIso U) Q"
+    adjoint_lift[simp]: "adjoint (liftOp U Q) = liftOp (adjoint U) Q" 
+and imageOp_lift[simp]: "imageOp (liftOp U Q) = liftSpace (imageOp U) Q"
 and top_lift[simp]: "liftSpace top Q = top"
 and bot_lift[simp]: "liftSpace bot Q = bot"
-and unitary_lift[simp]: "unitary (liftIso U Q) = unitary U"
+and unitary_lift[simp]: "unitary (liftOp U Q) = unitary U"
 for U :: "('a,'a) bounded"
 
-axiomatization where lift_idIso[simp]: "idIso\<guillemotright>Q = idIso" for Q :: "'a qvariables"
+axiomatization where lift_idOp[simp]: "idOp\<guillemotright>Q = idOp" for Q :: "'a qvariables"
 
 
 axiomatization where Qeq_mult1[simp]:
@@ -625,12 +632,12 @@ axiomatization where Qeq_mult2[simp]:
  for U::"('a,'a) bounded" and U1 :: "('b,'c) bounded"  
 
 axiomatization where qeq_collect:
- "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idIso Q2"
+ "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idOp Q2"
 for U :: "('a,'b) bounded" and V :: "('c,'b) bounded"
 
 lemma qeq_collect_guarded[simp]:
-  assumes "NO_MATCH idIso V"
-  shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idIso Q2"
+  assumes "NO_MATCH idOp V"
+  shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idOp Q2"
   using qeq_collect by auto
 
 axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
@@ -656,11 +663,11 @@ axiomatization H :: "(bit,bit) bounded"
 and unitaryX[simp]: "unitary X"
 and unitaryY[simp]: "unitary Y"
 and unitaryZ[simp]: "unitary Z"
-and CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = idIso"
-and H_H[simp]: "H \<cdot> H = idIso"
-and X_X[simp]: "X \<cdot> X = idIso"
-and Y_Y[simp]: "Y \<cdot> Y = idIso"
-and Z_Z[simp]: "Z \<cdot> Z = idIso"
+and CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = idOp"
+and H_H[simp]: "H \<cdot> H = idOp"
+and X_X[simp]: "X \<cdot> X = idOp"
+and Y_Y[simp]: "Y \<cdot> Y = idOp"
+and Z_Z[simp]: "Z \<cdot> Z = idOp"
 and adjoint_CNOT[simp]: "CNOT* = CNOT"
 and adjoint_H[simp]: "H* = H"
 and adjoint_X[simp]: "X* = X"
