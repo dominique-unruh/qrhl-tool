@@ -14,6 +14,9 @@ case class CaseTac(variable:String, expr:Expression) extends Tactic {
       if (goal.containsAmbientVar(variable))
         throw UserException(s"Variable $variable already contained in goal")
 
+      if (expr.variables.contains(variable))
+        throw UserException(s"Variable $variable already contained in supplied expression $expr")
+
       state.environment.variableUsedInPrograms(variable) match {
         case None =>
         case Some(prog) => throw UserException(s"Variable $variable already used in program $prog")

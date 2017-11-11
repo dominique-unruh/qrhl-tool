@@ -1,12 +1,13 @@
 package qrhl.tactic
 
+import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.ml
 import info.hupel.isabelle.pure
 import qrhl.logic.{Call, Expression, Statement}
 import qrhl.{State, Tactic, UserException}
 
 case object CallTac extends WpBothStyleTac() {
-  override def getWP(state: State, left: Statement, right: Statement, post: Expression): Expression = (left,right) match {
+  override def getWP(state: State, left: Statement, right: Statement, post: Expression): (Expression, List[Expression]) = (left,right) match {
     case (Call(prog), Call(prog2)) =>
       if (prog!=prog2) throw UserException(s"Both program names need to be the same ($prog≠$prog2)")
       val decl = state.environment.programs.getOrElse(prog, throw new Exception("should not happen"))
@@ -21,21 +22,23 @@ case object CallTac extends WpBothStyleTac() {
 //          throw UserException(s"Postcondition must not contain variable $v (used by program $prog)")
 
       val lit = ml.Expr.uncheckedLiteral[List[pure.Term] => List[pure.Term] => List[pure.Term] => List[pure.Term]
-                          => pure.Term => ((pure.Term,List[String]),pure.Term)]("QRHL.callWp")
+                          => pure.Term => (pure.Term,pure.Term)]("QRHL.callWp")
       val mlExpr = (lit(cvarsIdx1.map(_.isabelleTerm))(implicitly) (cvarsIdx2.map(_.isabelleTerm))(implicitly)
                        (qvarsIdx1.map(_.isabelleTerm))(implicitly) (qvarsIdx2.map(_.isabelleTerm))(implicitly)
                        (post.isabelleTerm))
-      val ((wp,varsInPost),quaTerm) = post.isabelle.runExpr(mlExpr)
+      val (wp,colocality) = post.isabelle.runExpr(mlExpr)
 
-      for (v <- varsInPost)
-        if (forbidden.contains(v)) {
-//          val claStr = state.isabelle.get.prettyExpression(claTerm)
-          val quaStr = state.isabelle.get.prettyExpression(quaTerm)
-          throw UserException(s"Postcondition must not contain variable $v (used by program $prog), " +
-            s"except within the term $quaStr")
-        }
+//      for (v <- varsInPost)
+//        if (forbidden.contains(v)) {
+////          val claStr = state.isabelle.get.prettyExpression(claTerm)
+//          val quaStr = state.isabelle.get.prettyExpression(quaTerm)
+//          throw UserException(s"Postcondition must not contain variable $v (used by program $prog), " +
+//            s"except within the term $quaStr")
+//        }
 
-      Expression(state.isabelle.get, state.predicateT, wp)
+      val wp2 = Expression(state.isabelle.get, state.predicateT, wp)
+      val colocality2 = Expression(state.isabelle.get, state.boolT, colocality)
+      (wp2,List(colocality2))
     case _ => throw UserException("Expected a call statement as last statement on both sides")
   }
 }

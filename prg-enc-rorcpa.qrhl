@@ -59,9 +59,13 @@ lemma rorcpa0_prg0: Pr[b:rorcpa0(rho)] = Pr[b:prg0(rho)].
  inline prg0.
  inline B.
  call.
+  simp.
+  true.
  wp left.
  wp right.
  call.
+  simp.
+  true.
  simp.
  wp right.
  simp.
@@ -80,6 +84,8 @@ lemma rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
  inline prg1.
  inline B.
  call.
+  simp.
+  true.
  simp.
  wp left.
  wp right.
@@ -88,6 +94,8 @@ lemma rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
  rnd r,r <- map_distr (λr. (r,r+G k1+m2)) (uniform UNIV).
  simp my_simp.
  call.
+  simp.
+  true.
  wp left.
  skip.
  simp.
