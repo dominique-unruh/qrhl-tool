@@ -10,10 +10,8 @@ qrhl {Cla[c2 = 4]} call P1; ~ skip; {Cla[c1 = c2]}.
   wp left.
   skip.
   simp.
-  true.
 qed.
 
 lemma test: 1+1=2.
   simp.
-  true.
 qed.
