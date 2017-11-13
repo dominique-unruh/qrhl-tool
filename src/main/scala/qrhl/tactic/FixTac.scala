@@ -14,6 +14,11 @@ case class FixTac(variable:String) extends Tactic {
       if (goal.containsAmbientVar(variable))
         throw UserException(s"Variable $variable already contained in goal")
 
+      state.environment.variableUsedInPrograms(variable) match {
+        case None =>
+        case Some(prog) => throw UserException(s"Variable $variable already used in program $prog")
+      }
+      
       val varTyp = state.environment.ambientVariables.getOrElse(variable,
         throw UserException(s"$variable is not an ambient variable"))
 

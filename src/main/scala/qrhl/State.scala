@@ -5,6 +5,7 @@ import java.nio.file.{Files, Path, Paths}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.ml
 import info.hupel.isabelle.pure.{Type, Context => IContext, Typ => ITyp}
+import org.log4s
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext}
@@ -12,6 +13,8 @@ import qrhl.toplevel.{Command, Parser, ParserContext}
 import scala.annotation.tailrec
 
 sealed trait Subgoal {
+  def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
+
   /** Checks whether all isabelle terms in this goal are well-typed.
     * Should always succeed, unless there are bugs somewhere. */
   def checkWelltyped(): Unit
@@ -31,6 +34,10 @@ sealed trait Subgoal {
   }
 
   def addAssumption(assm: Expression): Subgoal
+}
+
+object QRHLSubgoal {
+  private val logger = log4s.getLogger
 }
 
 final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expression, assumptions:List[Expression]) extends Subgoal {
@@ -82,6 +89,13 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
     pre.checkWelltyped(Isabelle.predicateT)
     post.checkWelltyped(Isabelle.predicateT)
   }
+
+  override def simplify(isabelle: Isabelle.Context, facts: List[String]): QRHLSubgoal = {
+    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptionss for simplification")
+    val assms2: List[Expression] =
+      assumptions.map(_.simplify(isabelle,facts)).filter(_.isabelleTerm!=HOLogic.True)
+    QRHLSubgoal(left, right, pre.simplify(isabelle,facts), post.simplify(isabelle,facts), assms2)
+  }
 }
 
 final case class AmbientSubgoal(goal: Expression) extends Subgoal {
@@ -105,6 +119,9 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
   /** Checks whether all isabelle terms in this goal are well-typed.
     * Should always succeed, unless there are bugs somewhere. */
   override def checkWelltyped(): Unit = goal.checkWelltyped(HOLogic.boolT)
+
+  override def simplify(isabelle: Isabelle.Context, facts: List[String]): AmbientSubgoal =
+    AmbientSubgoal(goal.simplify(isabelle,facts))
 }
 
 trait Tactic {

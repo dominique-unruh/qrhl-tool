@@ -587,6 +587,15 @@ axiomatization where
   colocal_qvariable_names[simp]: "set (qvariable_names Q) \<inter> set (qvariable_names R) = {} \<Longrightarrow> colocal Q R" 
   for Q :: "'a qvariables" and R :: "'b qvariables"
 
+axiomatization where
+  colocal_top[simp]: "colocal top Q"
+  and colocal_bot[simp]: "colocal bot Q"
+  and colocal_inf[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A \<sqinter> B) Q"
+  and colocal_sup[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A \<squnion> B) Q"
+  and colocal_plus[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A + B) Q"
+  and colocal_Cla[simp]: "colocal (Cla[b]) Q"
+for Q :: "'a qvariables"
+
 subsection \<open>Quantum equality\<close>
 
 axiomatization quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b qvariables \<Rightarrow> predicate"

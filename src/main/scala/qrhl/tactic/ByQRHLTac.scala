@@ -30,11 +30,11 @@ case object ByQRHLTac extends Tactic {
     case AmbientSubgoal(Expression(App(App(Const(rel,_),Probability(v1,p1,rho1)),Probability(v2,p2,rho2)))) =>
       val p1name = p1 match {
         case Free(n,_) => n
-        case _ => throw UserException(s"Program in lhs must be the same of a program (not $p1)")
+        case _ => throw UserException(s"Program in lhs must be the name of a program (not $p1)")
       }
       val p2name = p2 match {
         case Free(n,_) => n
-        case _ => throw UserException(s"Program in rhs must be the same of a program (not $p2)")
+        case _ => throw UserException(s"Program in rhs must be the name of a program (not $p2)")
       }
       if (rho1!=rho2)
         throw UserException("The initial state in lhs and rhs must be identical (syntactically same term, not just equal)")

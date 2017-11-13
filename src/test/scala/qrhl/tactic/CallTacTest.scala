@@ -27,20 +27,22 @@ class CallTacTest extends FlatSpec {
 //    assert(ex.msg.startsWith("Postcondition must not contain variable"))
 //  }
 
-  "call tactic" should "complain about quantum program variables in post condition" in {
-    val tl = toplevel()
-    tl.execCmd("qrhl {top} call p; ~ call p; {lift undefined ⟦q1⟧}")
-
-    val ex = intercept[UserException] {
-      tl.state.applyTactic(CallTac)
-    }
-
-    assert(ex.msg.startsWith("Postcondition must not contain variable"))
-  }
+//  "call tactic" should "complain about quantum program variables in post condition" in {
+//    val tl = toplevel()
+//    tl.execCmd("qrhl {top} call p; ~ call p; {lift undefined ⟦q1⟧}")
+//
+//    val ex = intercept[UserException] {
+//      tl.state.applyTactic(CallTac)
+//    }
+//
+//    assert(ex.msg.startsWith("Postcondition must not contain variable"))
+//  }
 
   "call tactic" should "permit postcondition to contain the quantum variable equality" in {
     val tl = toplevel()
     tl.execCmd("qrhl {top} call p; ~ call p; {Qeq[q1=q2]}")
-    tl.state.applyTactic(CallTac)
+    val state2 = tl.state.applyTactic(CallTac)
+    state2.goal.foreach(_.checkWelltyped())
+    assert(state2.goal.length==2)
   }
 }

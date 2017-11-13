@@ -1,4 +1,4 @@
-isabelle auto, theory Teleport.
+isabelle Teleport.
 
 classical var a : bit.
 classical var c : bit.

@@ -4,7 +4,7 @@ import qrhl.logic.{Expression, Sample, Statement}
 import qrhl.{State, UserException}
 
 case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
-  override def getWP(state: State, left: Statement, right: Statement, post: Expression): Expression = (left,right) match {
+  override def getWP(state: State, left: Statement, right: Statement, post: Expression): (Expression,Nil.type) = (left,right) match {
     case (Sample(x,e), Sample(y,f)) =>
       val isabelle = post.isabelle
       val env = state.environment
@@ -23,14 +23,14 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
         (y2.name)(implicitly)(f2.isabelleTerm)(implicitly)
         (x1.typ.isabelleTyp)(implicitly)(post.isabelleTerm))
         val wp = state.isabelle.get.runExpr(wpExpr)
-        Expression(state.isabelle.get, state.predicateT, wp)
+        (Expression(state.isabelle.get, state.predicateT, wp), Nil)
       case Some(distr) =>
         val lit = ml.Expr.uncheckedLiteral[String => pure.Typ => pure.Term => String => pure.Typ => pure.Term => pure.Term => pure.Term => pure.Term]("QRHL.rndWp2")
         val wpExpr = (lit(x1.name)(implicitly) (x1.typ.isabelleTyp)(implicitly) (e1.isabelleTerm)(implicitly)
                          (y2.name)(implicitly) (y2.typ.isabelleTyp)(implicitly) (f2.isabelleTerm)(implicitly)
                          (distr.isabelleTerm)(implicitly) (post.isabelleTerm))
         val wp = state.isabelle.get.runExpr(wpExpr)
-        Expression(state.isabelle.get, state.predicateT, wp)
+        (Expression(state.isabelle.get, state.predicateT, wp), Nil)
     }
     case _ =>
       throw UserException("Expected sampling statement as last statement on both sides")

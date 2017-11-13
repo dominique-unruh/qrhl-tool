@@ -74,16 +74,17 @@ lemma indcpa0_prg0B1: Pr[b:indcpa0(rho)] = Pr[b:prg0B1(rho)].
  inline prg0B1.
  inline B1.
  call.
+  simp.
  wp left.
  wp right.
  simp.
  call.
+  simp.
  simp.
  wp right.
  rnd.
  skip.
  simp.
- true.
 qed.
 
 lemma prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
@@ -95,6 +96,7 @@ lemma prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
  inline B1.
  inline B2.
  call.
+  simp.
  wp left.
  wp right.
  swap left.
@@ -102,10 +104,10 @@ lemma prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
  rnd r,r <- map_distr (λr. (r,r+m11+m22)) (uniform UNIV).
  simp aux_bij mysimp2.
  call.
+  simp.
  simp.
  skip.
  simp.
- true.
 qed.
 
 lemma indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
@@ -116,16 +118,17 @@ lemma indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
  inline prg0B2.
  inline B2.
  call.
+  simp.
  wp left.
  wp right.
  simp.
  call.
+  simp.
  simp.
  wp right.
  rnd.
  skip.
  simp.
- true.
 qed.
 
 
@@ -134,6 +137,4 @@ lemma final: abs( Pr[b:indcpa0(rho)] - Pr[b:indcpa1(rho)] ) <=
             abs( Pr[b:prg0B2(rho)] - Pr[b:prg1B2(rho)] ).
 
  simp indcpa0_prg0B1 indcpa1_prg0B2 prg1B1_prg1B21.
- simp triangle.
- true.
 qed.

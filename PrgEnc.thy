@@ -28,7 +28,7 @@ lemma aux_bij: "bij (\<lambda>xb::msg. xb + Gx + xa)"
   apply (metis add.assoc add.left_cancel xor_cancel)
   by (metis add.assoc add.left_cancel xor_cancel)
     
-lemma triangle: "\<bar>a - b\<bar> \<le> \<bar>a - c\<bar> + \<bar>b - c\<bar>" for a b c :: real by simp
+(* lemma triangle: "\<bar>a - b\<bar> \<le> \<bar>a - c\<bar> + \<bar>b - c\<bar>" for a b c :: real by simp *)
     
 end
 
