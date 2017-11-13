@@ -91,7 +91,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
   }
 
   override def simplify(isabelle: Isabelle.Context, facts: List[String]): QRHLSubgoal = {
-    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptionss for simplification")
+//    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptions for simplification")
     val assms2: List[Expression] =
       assumptions.map(_.simplify(isabelle,facts)).filter(_.isabelleTerm!=HOLogic.True)
     QRHLSubgoal(left, right, pre.simplify(isabelle,facts), post.simplify(isabelle,facts), assms2)

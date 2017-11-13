@@ -248,7 +248,7 @@ fun callWp cvars1 cvars2 qvars1 qvars2 B =
       val wp = @{const inf(predicate)} $ (@{const inf(predicate)} $ B''' $ claCvarsEq) $ qvarsEq
       val wp = tidyTrueTop wp
 
-      val colocality = Const(@{const_name colocal_ass_qvars},
+      val colocality = Const(@{const_name colocal_pred_qvars},
             @{typ predicate} --> mk_qvariablesT qvars12T --> HOLogic.boolT)
           $ B' $ qvars12'
   in

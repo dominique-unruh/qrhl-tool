@@ -10,9 +10,9 @@ case class SeqTac(left:Int, right:Int, inner:Expression) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case QRHLSubgoal(leftProg,rightProg,pre,post,assms) =>
       if (leftProg.length < left)
-        throw UserException(s"Left program contains ${leftProg.length} statement, but we try to split after the ${left}th")
+        throw UserException(s"Left program contains ${leftProg.length} statements, but we try to split after the ${left}th")
       if (rightProg.length < right)
-        throw UserException(s"Right program contains ${rightProg.length} statement, but we try to split after the ${right}th")
+        throw UserException(s"Right program contains ${rightProg.length} statements, but we try to split after the ${right}th")
       val left1 = Block(leftProg.statements.take(left):_*)
       val left2 = Block(leftProg.statements.drop(left):_*)
       val right1 = Block(rightProg.statements.take(right):_*)
