@@ -14,7 +14,7 @@ program prog1 := {
 program prog2 := {
   on q apply H;
   b <$ uniform UNIV;
-  on q apply (powerOp H b);
+  on q apply (if b=1 then H else idOp);
 }.
 
 

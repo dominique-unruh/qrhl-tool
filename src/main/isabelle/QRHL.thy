@@ -236,6 +236,9 @@ lemma ell2_basis_vector[simp]: "norm (basis_vector i) = 1"
     apply auto
   by (rule ell2_1)
 
+
+
+
 typedef 'a state = "{x::'a vector. norm x = 1}"
   morphisms state_to_vector Abs_state
   apply (rule exI[of _ "basis_vector undefined"])
@@ -249,7 +252,6 @@ lemma vector_to_state_ket[simp]: "state_to_vector (ket i) = basis_vector i"
   by (rule ket.rep_eq)
 
 declare[[coercion state_to_vector]]
-
 
 typedecl 'a subspace
   
@@ -407,7 +409,7 @@ lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
 
 axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) bounded"
 
-abbreviation "imageOp U \<equiv> applyOpSpace U top"
+(* abbreviation "imageOp U \<equiv> applyOpSpace U top" *)
 
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
@@ -427,7 +429,7 @@ where
     apply_idOp_space[simp]: "applyOpSpace idOp S = S"
 and times_idOp1[simp]: "U \<cdot> idOp = U"
 and times_idOp2[simp]: "idOp \<cdot> V = V"
-and image_id[simp]: "imageOp idOp = top"
+(* and image_id[simp]: "imageOp idOp = top" *)
 and idOp_adjoint[simp]: "idOp* = idOp"
 for \<psi> :: "'a vector" and S :: "'a subspace" and U :: "('a,'b) bounded" and V :: "('b,'a) bounded"
 
@@ -440,9 +442,9 @@ lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqin
   unfolding INF_UNIV_bool_expand
   by simp
 
-fun powerOp :: "('a,'a) bounded \<Rightarrow> nat \<Rightarrow> ('a,'a) bounded" where 
+(* fun powerOp :: "('a,'a) bounded \<Rightarrow> nat \<Rightarrow> ('a,'a) bounded" where 
   "powerOp U 0 = idOp"
-| "powerOp U (Suc i) = U \<cdot> powerOp U i"
+| "powerOp U (Suc i) = U \<cdot> powerOp U i" *)
 
 definition "unitary U = (U \<cdot> (U*) = idOp \<and> U* \<cdot> U = idOp)"  
 definition "isometry U = (U* \<cdot> U = idOp)"  
@@ -453,7 +455,7 @@ lemma unitary_isometry[simp]: "unitary U \<Longrightarrow> isometry U"
 lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)bounded"
   unfolding unitary_def by auto
 
-axiomatization where unitary_image[simp]: "unitary U \<Longrightarrow> imageOp U = top"
+axiomatization where unitary_image[simp]: "unitary U \<Longrightarrow> applyOpSpace U top = top"
   for U :: "('a,'a) bounded"
 
 lemma unitary_id[simp]: "unitary idOp"
@@ -464,7 +466,7 @@ section \<open>Projectors\<close>
 definition "isProjector P = (P=P* \<and> P=P\<cdot>P)"
 axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) bounded"
   where isProjector_proj[simp]: "isProjector (proj x)"
-and imageOp_proj [simp]: "imageOp (proj \<psi>) = span {\<psi>}" for \<psi> :: "'a vector"
+and imageOp_proj [simp]: "applyOpSpace (proj \<psi>) top = span {\<psi>}" for \<psi> :: "'a vector"
 
 section \<open>Measurements\<close>
 
@@ -485,7 +487,6 @@ typedecl 'a qvariables (* represents a tuple of variables, of joint type 'a *)
 
 axiomatization
     qvariable_names :: "'a qvariables \<Rightarrow> string list"
-(* and qvariable_cons :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> ('a \<times> 'b) qvariables" *)
 and qvariable_concat :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> ('a * 'b) qvariables"
 and qvariable_singleton :: "'a qvariable \<Rightarrow> 'a qvariables"
 and qvariable_unit :: "unit qvariables"
@@ -575,12 +576,12 @@ qed
 lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
   
-axiomatization colocal_ass_qvars :: "predicate \<Rightarrow> 'a qvariables \<Rightarrow> bool"
+axiomatization colocal_pred_qvars :: "predicate \<Rightarrow> 'a qvariables \<Rightarrow> bool"
   and colocal_qvars_qvars :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> bool"
-  and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool"
+  and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool" (* TODO remove or docu *)
 
 consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
-adhoc_overloading colocal colocal_ass_qvars colocal_qvars_qvars colocal_qvar_qvars
+adhoc_overloading colocal colocal_pred_qvars colocal_qvars_qvars (* colocal_qvar_qvars *)
   
 axiomatization where 
   colocal_qvariable_names[simp]: "set (qvariable_names Q) \<inter> set (qvariable_names R) = {} \<Longrightarrow> colocal Q R" 
@@ -614,7 +615,8 @@ adhoc_overloading
 
 axiomatization where 
     adjoint_lift[simp]: "adjoint (liftOp U Q) = liftOp (adjoint U) Q" 
-and imageOp_lift[simp]: "imageOp (liftOp U Q) = liftSpace (imageOp U) Q"
+and imageOp_lift[simp]: "applyOpSpace (liftOp U Q) top = liftSpace (applyOpSpace U top) Q"
+and applyOpSpace_lift[simp]: "applyOpSpace (liftOp U Q) (liftSpace S Q) = liftSpace (applyOpSpace U S) Q"
 and top_lift[simp]: "liftSpace top Q = top"
 and bot_lift[simp]: "liftSpace bot Q = bot"
 and unitary_lift[simp]: "unitary (liftOp U Q) = unitary U"
@@ -645,12 +647,11 @@ axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> 
 
 subsection \<open>Subspace division\<close>
 
-axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> predicate" ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
+axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
+                    ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
   
 section \<open>Common quantum objects\<close>
-
-axiomatization EPR :: "(bit*bit) vector"
 
 axiomatization CNOT :: "(bit*bit, bit*bit) bounded" where
   unitaryCNOT[simp]: "unitary CNOT"
