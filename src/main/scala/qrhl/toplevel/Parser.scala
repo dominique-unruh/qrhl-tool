@@ -277,7 +277,7 @@ object Parser extends RegexParsers {
       tactic_swap |
       tactic_simp |
       literal("skip") ^^ { _ => SkipTac } |
-      literal("true") ^^ { _ => TrueTac } |
+//      literal("true") ^^ { _ => TrueTac } |
       tactic_inline |
       tactic_seq |
       tactic_conseq |
