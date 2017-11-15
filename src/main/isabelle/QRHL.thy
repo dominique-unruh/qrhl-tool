@@ -403,13 +403,14 @@ and timesOp :: "('b,'c) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,
 and applyOpSpace :: "('a,'b) bounded \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
 where
  applyOp_0[simp]: "applyOpSpace U 0 = 0"
+and times_applyOp: "applyOp (timesOp A B) \<psi> = applyOp A (applyOp B \<psi>)"
 
 lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
   by (simp add: bot_subspace_def)
 
-axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) bounded"
+axiomatization where equal_basis: "(\<And>x. applyOp A (basis_vector x) = applyOp B (basis_vector x)) \<Longrightarrow> A = B" for A::"('a,'b) bounded"
 
-(* abbreviation "imageOp U \<equiv> applyOpSpace U top" *)
+axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) bounded"
 
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
@@ -427,6 +428,7 @@ axiomatization
 where
     (* apply_idOp[simp]: "applyOp idOp \<psi> = \<psi>" *)
     apply_idOp_space[simp]: "applyOpSpace idOp S = S"
+and apply_0[simp]: "applyOp U 0 = 0"
 and times_idOp1[simp]: "U \<cdot> idOp = U"
 and times_idOp2[simp]: "idOp \<cdot> V = V"
 (* and image_id[simp]: "imageOp idOp = top" *)
@@ -442,6 +444,42 @@ lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqin
   unfolding INF_UNIV_bool_expand
   by simp
 
+definition "inj_option \<pi> = (\<forall>x y. \<pi> x = \<pi> y \<and> \<pi> x \<noteq> None \<longrightarrow> x = y)"
+definition "inv_option \<pi> = (\<lambda>y. if Some y \<in> range \<pi> then Some (inv \<pi> (Some y)) else None)"
+lemma inj_option_Some[simp]: "inj \<pi> \<Longrightarrow> inj_option (Some o \<pi>)"
+  unfolding inj_option_def inj_def by simp
+lemma inv_option_Some: "surj \<pi> \<Longrightarrow> inv_option (Some o \<pi>) = Some o (inv \<pi>)"
+  unfolding inv_option_def o_def inv_def apply (rule ext) by auto
+
+(* TODO: document classical_operator *)
+
+axiomatization classical_operator :: "('a\<Rightarrow>'b option) \<Rightarrow> ('a,'b) bounded" where
+ classical_operator_basis: "applyOp (classical_operator \<pi>) (basis_vector x) = 
+    (case \<pi> x of Some y \<Rightarrow> basis_vector y | None \<Rightarrow> 0)"
+axiomatization where classical_operator_adjoint: 
+  "inj_option \<pi> \<Longrightarrow> adjoint (classical_operator \<pi>) = classical_operator (inv_option \<pi>)"
+for \<pi> :: "'a \<Rightarrow> 'b option"
+
+
+lemma classical_operator_mult[simp]:
+  "classical_operator \<pi> \<cdot> classical_operator \<rho> = classical_operator (map_comp \<pi> \<rho>)"
+proof (rule equal_basis)
+  fix x
+  show "classical_operator \<pi> \<cdot> classical_operator \<rho> \<cdot> basis_vector x =
+        classical_operator (\<pi> \<circ>\<^sub>m \<rho>) \<cdot> basis_vector x"
+  proof (cases "\<rho> x")
+    case None
+    then show ?thesis unfolding classical_operator_basis times_applyOp by simp
+  next
+    case (Some y)
+    show ?thesis 
+      by (simp add: classical_operator_basis times_applyOp Some map_comp_def)
+  qed
+qed
+
+lemma classical_operator_Some[simp]: "classical_operator Some = idOp"
+  apply (rule equal_basis) unfolding classical_operator_basis by auto
+
 (* fun powerOp :: "('a,'a) bounded \<Rightarrow> nat \<Rightarrow> ('a,'a) bounded" where 
   "powerOp U 0 = idOp"
 | "powerOp U (Suc i) = U \<cdot> powerOp U i" *)
@@ -454,6 +492,52 @@ lemma unitary_isometry[simp]: "unitary U \<Longrightarrow> isometry U"
 
 lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)bounded"
   unfolding unitary_def by auto
+
+lemma isometry_classical_operator[simp]:
+  assumes "inj \<pi>"
+  shows "isometry (classical_operator (Some o \<pi>))"
+proof -
+  have comp: "inv_option (Some \<circ> \<pi>) \<circ>\<^sub>m (Some \<circ> \<pi>) = Some" 
+    apply (rule ext) unfolding inv_option_def o_def 
+    using assms unfolding inj_def inv_def by auto
+
+  show ?thesis
+    unfolding isometry_def
+    apply (subst classical_operator_adjoint)
+    using assms apply simp
+    apply simp
+    apply (subst comp)
+    apply (rule equal_basis)
+    by simp
+qed
+
+lemma unitary_classical_operator[simp]:
+  assumes "bij \<pi>"
+  shows "unitary (classical_operator (Some o \<pi>))"
+proof (unfold unitary_def, rule conjI)
+  have "isometry (classical_operator (Some o \<pi>))"
+    by (simp add: assms bij_is_inj)
+  then show "classical_operator (Some \<circ> \<pi>)* \<cdot> classical_operator (Some \<circ> \<pi>) = idOp"
+    unfolding isometry_def by simp
+next
+  have "inj \<pi>"
+    by (simp add: assms bij_is_inj)
+  have comp: "Some \<circ> \<pi> \<circ>\<^sub>m inv_option (Some \<circ> \<pi>) = Some"
+    apply (rule ext)
+    unfolding inv_option_def o_def map_comp_def
+    unfolding inv_def apply auto
+    apply (metis \<open>inj \<pi>\<close> inv_def inv_f_f)
+    by (metis assms bij_def image_iff range_eqI)
+
+  show "classical_operator (Some \<circ> \<pi>) \<cdot> classical_operator (Some \<circ> \<pi>)* = idOp"
+    apply (subst classical_operator_adjoint)
+     apply (simp add: \<open>inj \<pi>\<close>)
+    apply simp
+    apply (subst comp)
+    by simp
+qed
+
+
 
 axiomatization where unitary_image[simp]: "unitary U \<Longrightarrow> applyOpSpace U top = top"
   for U :: "('a,'a) bounded"
@@ -661,6 +745,8 @@ axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a q
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
   
 section \<open>Common quantum objects\<close>
+
+(* TODO: define CNOT, X via classical_operator *)
 
 axiomatization CNOT :: "(bit*bit, bit*bit) bounded" where
   unitaryCNOT[simp]: "unitary CNOT"

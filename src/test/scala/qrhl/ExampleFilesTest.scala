@@ -27,4 +27,9 @@ class ExampleFilesTest extends FlatSpec {
     toplevel.run(Paths.get("example.qrhl"))
   }
 
+  "rnd.qrhl" should "execute successfully" in {
+    val toplevel = new Toplevel()
+    toplevel.run(Paths.get("rnd.qrhl"))
+  }
+
 }
