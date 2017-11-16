@@ -25,7 +25,8 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
         val wp = state.isabelle.get.runExpr(wpExpr)
         (Expression(state.isabelle.get, state.predicateT, wp), Nil)
       case Some(distr) =>
-        val lit = ml.Expr.uncheckedLiteral[String => pure.Typ => pure.Term => String => pure.Typ => pure.Term => pure.Term => pure.Term => pure.Term]("QRHL.rndWp2")
+        val lit = ml.Expr.uncheckedLiteral[String => pure.Typ => pure.Term => String => pure.Typ => pure.Term =>
+                                                     pure.Term => pure.Term => pure.Term]("QRHL.rndWp2")
         val wpExpr = (lit(x1.name)(implicitly) (x1.typ.isabelleTyp)(implicitly) (e1.isabelleTerm)(implicitly)
                          (y2.name)(implicitly) (y2.typ.isabelleTyp)(implicitly) (f2.isabelleTerm)(implicitly)
                          (distr.isabelleTerm)(implicitly) (post.isabelleTerm))
