@@ -39,7 +39,7 @@ enablePlugins(JavaAppPackaging)
 mappings in Universal ++= Seq(
     "proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat",
     "prg-enc-rorcpa.qrhl", "prg-enc-indcpa.qrhl", "PrgEnc.thy", "README.md",
-    "equality.qrhl", "example.qrhl", "Example.thy"
+    "equality.qrhl", "example.qrhl", "Example.thy", "rnd.qrhl"
   ).map { f =>
   baseDirectory.value / f -> f
 }

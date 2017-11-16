@@ -57,7 +57,8 @@ fun qapplyWp post e Q =
   let val (vs,vsT) = qvariables Q 
       val unitary = @{const classical_subspace} $ 
           (Const(@{const_name isometry}, mk_bounded2T vsT --> HOLogic.boolT) $ e)
-      val e' = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"}) $ e $ vs
+      val e' = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"})
+                $ e $ vs
       val im_e' = @{const applyOpSpace(mem2,mem2)} $ e' $ @{const top(predicate)}
       val adj_e' = @{const adjoint(mem2,mem2)} $ e'
       val post_im_e' = @{const inf(predicate)} $ post $ im_e'
@@ -104,8 +105,8 @@ fun sampleWp v T e B =
         val supp = Const(@{const_name supp}, distrT --> setT) $ e
         val absB = Term.absfree (v,T) B
         val B2 = @{const Inf(predicate)} $
-                      (Const(@{const_name image}, (T --> @{typ predicate}) --> setT -->  @{typ "predicate set"})
-                         $ absB $ supp)
+                 (Const(@{const_name image}, (T --> @{typ predicate}) --> setT -->  @{typ "predicate set"})
+                  $ absB $ supp)
         val total = @{const classical_subspace} $
              HOLogic.mk_eq (Const(@{const_name weight}, distrT --> @{typ real}) $ e, @{term "1::real"})
     in
