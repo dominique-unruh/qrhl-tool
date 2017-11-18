@@ -589,166 +589,62 @@ lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqin
 
 definition "inj_option \<pi> = (\<forall>x y. \<pi> x = \<pi> y \<and> \<pi> x \<noteq> None \<longrightarrow> x = y)"
 definition "inv_option \<pi> = (\<lambda>y. if Some y \<in> range \<pi> then Some (inv \<pi> (Some y)) else None)"
-lemma inj_option_Some[simp]: "inj_option (Some o \<pi>) = inj \<pi>"
+lemma inj_option_Some_pi[simp]: "inj_option (Some o \<pi>) = inj \<pi>"
   unfolding inj_option_def inj_def by simp
+lemma inj_option_Some[simp]: "inj_option Some" 
+  apply (rewrite asm_rl[of "Some = Some o id"]) apply simp
+  unfolding inj_option_Some_pi by simp
 lemma inv_option_Some: "surj \<pi> \<Longrightarrow> inv_option (Some o \<pi>) = Some o (inv \<pi>)"
   unfolding inv_option_def o_def inv_def apply (rule ext) by auto
+lemma inj_option_map_comp[simp]: "inj_option f \<Longrightarrow> inj_option g \<Longrightarrow> inj_option (f \<circ>\<^sub>m g)"
+  unfolding inj_option_def apply auto
+  by (smt map_comp_Some_iff)
+
+lemma inj_option_inv_option[simp]: "inj_option (inv_option \<pi>)"
+proof (unfold inj_option_def, rule allI, rule allI, rule impI, erule conjE)
+  fix x y
+  assume same: "inv_option \<pi> x = inv_option \<pi> y"
+    and pix_not_None: "inv_option \<pi> x \<noteq> None"
+  have x_pi: "Some x \<in> range \<pi>" 
+    using pix_not_None unfolding inv_option_def apply auto
+    by (meson option.distinct(1))
+  have y_pi: "Some y \<in> range \<pi>" 
+    using pix_not_None unfolding same unfolding inv_option_def apply auto
+    by (meson option.distinct(1))
+  have "inv_option \<pi> x = Some (inv \<pi> (Some x))"
+    unfolding inv_option_def using x_pi by simp
+  moreover have "inv_option \<pi> y = Some (inv \<pi> (Some y))"
+    unfolding inv_option_def using y_pi by simp
+  ultimately have "inv \<pi> (Some x) = inv \<pi> (Some y)"
+    using same by simp
+  then show "x = y"
+    by (meson inv_into_injective option.inject x_pi y_pi)
+qed
+
 
 (* TODO: document classical_operator *)
 
-definition "cobounded_partial_fun f = (\<exists>n. \<forall>y. finite {x. f x = Some y} \<and> card {x. f x = Some y} \<le> n)"
-
-lemma assumes "cobounded_partial_fun \<pi>" and "cobounded_partial_fun \<rho>" shows "cobounded_partial_fun (\<pi> \<circ>\<^sub>m \<rho>)"
-proof -
-  from assms obtain n where finite_pi: "finite {x. \<pi> x = Some y}" and n:"card {x. \<pi> x = Some y} \<le> n" for y 
-    unfolding cobounded_partial_fun_def by auto
-  from assms obtain m where finite_rho: "finite {x. \<rho> x = Some y}" and m:"card {x. \<rho> x = Some y} \<le> m" for y 
-    unfolding cobounded_partial_fun_def by auto
-      { fix y
-        have nested: "{x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y} = (\<Union>z\<in>{z. \<pi> z = Some y}. {x. \<rho> x = Some z})"
-          (is "?comp = (\<Union>z\<in>?piset. ?rhoset z)")
-          apply auto unfolding map_comp_def
-          by (metis option.case_eq_if option.distinct(1) option.exhaust_sel) 
-        let ?rhoset' = "\<lambda>z. {(x,z) | x. \<rho> x = Some z}"
-        have m': "card (?rhoset' z) \<le> m" for z
-          using m 
-          apply (rewrite asm_rl[of "?rhoset' z = (\<lambda>x. (x,z)) ` ?rhoset z"], (auto)[1])
-          apply (subst card_image) unfolding inj_on_def by auto
-        have finite: "finite {x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y}"
-          unfolding nested apply (rule finite_UN_I)
-          using both_ok by auto
-        have "card ?comp = card (\<Union>z\<in>?piset. ?rhoset z)"
-          unfolding nested by simp
-        also have "... = card (fst ` (\<Union>z\<in>?piset. ?rhoset' z))"
-          unfolding image_UN 
-          apply (subst (2) image_Collect)
-          by auto
-        also have "... \<le> card (\<Union>z\<in>?piset. ?rhoset' z)"
-          apply (rule card_image_le) apply (rule finite_UN_I) using both_ok by auto
-        also have "... = (\<Sum>i\<in>?piset. card {(x, i) |x. \<rho> x = Some i})"
-          apply (rule card_UN_disjoint)
-          using finite_pi finite_rho by auto
-        also have "... \<le> (\<Sum>i\<in>?piset. m)"
-          apply (rule sum_mono) using m' by simp 
-        also have "\<dots> = card ?piset * m" 
-          by simp
-        also have "\<dots> \<le> n * m"
-          using n by auto
-        finally have card: "card ?comp \<le> n * m" by assumption
-        note finite card
-      }
-      then show ?thesis  by auto
-proof -
-
-|| A ket(i) ||_1,2 \<le> B
-|| A (sum x_i ket(i)) ||_2
-\<le>
-sum x_i || A ket i || 
-\<le> 
-B sum x_i
-
-
 axiomatization classical_operator :: "('a\<Rightarrow>'b option) \<Rightarrow> ('a,'b) bounded" where
- classical_operator_basis: "cobounded_partial_fun \<pi> \<Longrightarrow>
+ classical_operator_basis: "inj_option \<pi> \<Longrightarrow>
     applyOp (classical_operator \<pi>) (basis_vector x) = (case \<pi> x of Some y \<Rightarrow> basis_vector y | None \<Rightarrow> 0)"
-and
-   classical_operator_invalid: "\<not> (\<exists>n. \<forall>y. finite {x. \<pi> x = Some y} \<and> card {x. \<pi> x = Some y} \<le> n) \<Longrightarrow>
-    classical_operator \<pi> = 0"
-axiomatization where classical_operator_adjoint: 
+axiomatization where classical_operator_adjoint[simp]: 
   "inj_option \<pi> \<Longrightarrow> adjoint (classical_operator \<pi>) = classical_operator (inv_option \<pi>)"
 for \<pi> :: "'a \<Rightarrow> 'b option"
 
 
 lemma classical_operator_mult[simp]:
-  "classical_operator \<pi> \<cdot> classical_operator \<rho> = classical_operator (map_comp \<pi> \<rho>)"
-proof (rule equal_basis)
-  fix x
-  consider (both_ok) "\<exists>n. \<forall>y. finite {x. \<pi> x = Some y} \<and> card {x. \<pi> x = Some y} \<le> n" and 
-           "\<exists>n. \<forall>y. finite {x. \<rho> x = Some y} \<and> card {x. \<rho> x = Some y} \<le> n"
-           | (pi_unbounded) "\<not> (\<exists>n. \<forall>y. finite {x. \<pi> x = Some y} \<and> card {x. \<pi> x = Some y} \<le> n)"
-           | (rho_unbounded) "\<not> (\<exists>n. \<forall>y. finite {x. \<rho> x = Some y} \<and> card {x. \<rho> x = Some y} \<le> n)" 
-    apply atomize_elim by auto
-  then show "classical_operator \<pi> \<cdot> classical_operator \<rho> \<cdot> basis_vector x =
-        classical_operator (\<pi> \<circ>\<^sub>m \<rho>) \<cdot> basis_vector x"
-  proof (cases)
-    case both_ok
-    have comp_ok: "\<exists>n. \<forall>y. finite {x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y} \<and> card {x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y} \<le> n"
-    proof -
-      from both_ok obtain n where finite_pi: "finite {x. \<pi> x = Some y}" and n:"card {x. \<pi> x = Some y} \<le> n" for y by auto
-      from both_ok obtain m where finite_rho: "finite {x. \<rho> x = Some y}" and m:"card {x. \<rho> x = Some y} \<le> m" for y by auto
-      { fix y
-        have nested: "{x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y} = (\<Union>z\<in>{z. \<pi> z = Some y}. {x. \<rho> x = Some z})"
-          (is "?comp = (\<Union>z\<in>?piset. ?rhoset z)")
-          apply auto unfolding map_comp_def
-          by (metis option.case_eq_if option.distinct(1) option.exhaust_sel) 
-        let ?rhoset' = "\<lambda>z. {(x,z) | x. \<rho> x = Some z}"
-        have m': "card (?rhoset' z) \<le> m" for z
-          using m 
-          apply (rewrite asm_rl[of "?rhoset' z = (\<lambda>x. (x,z)) ` ?rhoset z"], (auto)[1])
-          apply (subst card_image) unfolding inj_on_def by auto
-        have finite: "finite {x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y}"
-          unfolding nested apply (rule finite_UN_I)
-          using both_ok by auto
-        have "card ?comp = card (\<Union>z\<in>?piset. ?rhoset z)"
-          unfolding nested by simp
-        also have "... = card (fst ` (\<Union>z\<in>?piset. ?rhoset' z))"
-          unfolding image_UN 
-          apply (subst (2) image_Collect)
-          by auto
-        also have "... \<le> card (\<Union>z\<in>?piset. ?rhoset' z)"
-          apply (rule card_image_le) apply (rule finite_UN_I) using both_ok by auto
-        also have "... = (\<Sum>i\<in>?piset. card {(x, i) |x. \<rho> x = Some i})"
-          apply (rule card_UN_disjoint)
-          using finite_pi finite_rho by auto
-        also have "... \<le> (\<Sum>i\<in>?piset. m)"
-          apply (rule sum_mono) using m' by simp 
-        also have "\<dots> = card ?piset * m" 
-          by simp
-        also have "\<dots> \<le> n * m"
-          using n by auto
-        finally have card: "card ?comp \<le> n * m" by assumption
-        note finite card
-      }
-      then show ?thesis  by auto
-    qed
-    show ?thesis
-    proof (cases "\<rho> x")
-      case None
-      then show ?thesis 
-        unfolding times_applyOp classical_operator_basis[OF both_ok(2)] classical_operator_basis[OF comp_ok] 
-        by simp
-    next
-      case (Some y)
-      show ?thesis 
-        unfolding classical_operator_basis[OF comp_ok] 
-        by (simp add: classical_operator_basis[OF both_ok(1)] 
-            classical_operator_basis[OF both_ok(2)] times_applyOp Some map_comp_def)
-    qed
-  next
-    case pi_unbounded
-    show ?thesis 
-      apply (subst classical_operator_invalid[of \<pi>]) using pi_unbounded apply simp
-      by doesnotwork
-  next
-    case rho_unbounded
-    then show ?thesis
-      apply (subst classical_operator_invalid[of \<rho>]) using rho_unbounded apply simp
-      sorry
-  qed
+  "inj_option \<pi> \<Longrightarrow> inj_option \<rho> \<Longrightarrow> classical_operator \<pi> \<cdot> classical_operator \<rho> = classical_operator (map_comp \<pi> \<rho>)"
+  apply (rule equal_basis)
+  unfolding times_applyOp
+  apply (subst classical_operator_basis, simp)+
+  apply (case_tac "\<rho> x")
+   apply auto
+  apply (subst classical_operator_basis, simp)
+  by auto
 
-  cases pi rho comp
-        0   0   0  \<rightarrow> ok
-        0   0   1  \<rightarrow> ok (imposs)
-        1   *   1  \<rightarrow> ok
-        *   1   1  \<rightarrow> ok
-        0   1   0  \<rightarrow> bad
-        1   0   0  \<rightarrow> bad
-        1   1   0  \<rightarrow> bad
-        
-qed
 
 lemma classical_operator_Some[simp]: "classical_operator Some = idOp"
-  apply (rule equal_basis) unfolding classical_operator_basis by auto
+  apply (rule equal_basis) apply (subst classical_operator_basis) apply simp by auto
 
 (* fun powerOp :: "('a,'a) bounded \<Rightarrow> nat \<Rightarrow> ('a,'a) bounded" where 
   "powerOp U 0 = idOp"
@@ -788,11 +684,9 @@ proof -
 
   show ?thesis
     unfolding isometry_def
-    apply (subst classical_operator_adjoint)
-    using assms apply simp
-    apply simp
+    apply (subst classical_operator_adjoint) using assms apply simp
+    apply (subst classical_operator_mult) using assms apply auto[2]
     apply (subst comp)
-    apply (rule equal_basis)
     by simp
 qed
 
@@ -815,11 +709,7 @@ next
     by (metis assms bij_def image_iff range_eqI)
 
   show "classical_operator (Some \<circ> \<pi>) \<cdot> classical_operator (Some \<circ> \<pi>)* = idOp"
-    apply (subst classical_operator_adjoint)
-     apply (simp add: \<open>inj \<pi>\<close>)
-    apply simp
-    apply (subst comp)
-    by simp
+    by (simp add: comp \<open>inj \<pi>\<close>)
 qed
 
 
