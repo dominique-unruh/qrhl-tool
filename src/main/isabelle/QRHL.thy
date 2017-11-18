@@ -1,5 +1,5 @@
 theory QRHL
-  imports Complex_Main "HOL-Library.Adhoc_Overloading"
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" "HOL-Library.Rewrite"
 begin
   
 section \<open>Miscellaneous\<close>
@@ -7,19 +7,46 @@ section \<open>Miscellaneous\<close>
 syntax "Lattices.sup_class.sup" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<squnion>" 65)
 syntax "Lattices.inf_class.inf" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<sqinter>" 70)
 
-typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. sum f M \<le> 1)}" 
+term "comm_monoid_set"
+
+typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}" 
   morphisms prob Abs_distr
   apply (rule exI[of _ "\<lambda>x. 0"]) by auto
+setup_lifting type_definition_distr
+
 instantiation distr :: (type)zero begin
-definition "0 = Abs_distr (\<lambda>_. 0)"
+lift_definition zero_distr :: "'a distr" is "(\<lambda>_. 0)" by simp
 instance .. 
 end
  
   
-definition "supp \<mu> = {x. prob \<mu> x > 0}" 
-definition uniform :: "'a set \<Rightarrow> 'a distr" where
-  "uniform M = Abs_distr (\<lambda>m. if m\<in>M then 1/card M else 0)"
-axiomatization where supp_uniform [simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> supp (uniform M) = M" for M :: "'a set"
+lift_definition supp :: "'a distr \<Rightarrow> 'a set" is "\<lambda>\<mu>. {x. \<mu> x > 0}" .
+lift_definition uniform :: "'a set \<Rightarrow> 'a distr" is "\<lambda>M. (\<lambda>m. if m\<in>M then 1/card M else 0)"
+proof (rule conjI; rule allI; (rule impI)?)
+  fix M and x :: 'a
+  show "0 \<le> (if x \<in> M then 1 / real (card M) else 0)" by auto
+  fix F
+  show "(\<Sum>m\<in>F. if m \<in> M then 1 / real (card M) else 0) \<le> 1" if "finite F"
+  proof (cases "finite M")
+    case True
+    show ?thesis
+      apply (subst sum.inter_restrict[symmetric, OF that])
+      apply simp
+      by (metis Int_lower2 True card_mono divide_le_eq_1 neq0_conv of_nat_0_less_iff of_nat_eq_0_iff of_nat_le_iff)
+  next
+    case False
+    show ?thesis
+      apply (subst card_infinite[OF False])
+      apply (rewrite asm_rl[of "1/real 0 = 0"]) apply auto[1]
+      by auto
+  qed
+qed
+
+
+lemma supp_uniform [simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> supp (uniform M) = M" for M :: "'a set"
+  apply transfer apply auto
+  using card_gt_0_iff by blast
+
 axiomatization weight :: "'a distr \<Rightarrow> real" where
   weight_pos[simp]: "weight \<mu> \<ge> 0" 
 and weight_leq1[simp]: "weight \<mu> \<le> 1"
@@ -52,7 +79,7 @@ instantiation bit :: finite begin
 instance by (intro_classes, transfer, simp)
 end
 
-lemma bit_cases: "(x=0 \<Longrightarrow> P) \<Longrightarrow> (x=1 \<Longrightarrow> P) \<Longrightarrow> P" for x :: bit
+lemma bit_cases[cases type:bit]: "(x=0 \<Longrightarrow> P) \<Longrightarrow> (x=1 \<Longrightarrow> P) \<Longrightarrow> P" for x :: bit
   by (metis (full_types) Rep_bit_inverse one_bit.abs_eq zero_bit.abs_eq)
 lemma bit_two[simp]: "(2::bit) = 0"
   by (metis add_cancel_left_right bit_cases one_add_one) 
@@ -66,6 +93,8 @@ declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]]
 lemma bit_plus_1_eq[simp]: "(a+1=b) = (a=b+1)" for a b :: bit
   by auto
 
+lemma bit_plus_2y[simp]: "(x + y) + y = x" for x :: bit
+  apply (cases y) by auto
   
 section \<open>Subspaces\<close>
 
@@ -236,7 +265,8 @@ lemma ell2_basis_vector[simp]: "norm (basis_vector i) = 1"
     apply auto
   by (rule ell2_1)
 
-
+axiomatization orthogonal :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> bool"
+  where orthogonal_comm: "orthogonal \<psi> \<phi> = orthogonal \<phi> \<psi>"
 
 
 typedef 'a state = "{x::'a vector. norm x = 1}"
@@ -251,123 +281,208 @@ lift_definition ket :: "'a \<Rightarrow> 'a state" ("|_\<rangle>") is "basis_vec
 lemma vector_to_state_ket[simp]: "state_to_vector (ket i) = basis_vector i"
   by (rule ket.rep_eq)
 
+axiomatization is_subspace :: "'a vector set \<Rightarrow> bool"
+  where is_subspace_0[simp]: "is_subspace {0}"
+    and is_subspace_UNIV[simp]: "is_subspace UNIV"
+    and is_subspace_orthog[simp]: "is_subspace A \<Longrightarrow> is_subspace {\<psi>. (\<forall>\<phi>\<in>A. orthogonal \<psi> \<phi>)}"
+    and is_subspace_inter[simp]: "is_subspace A \<Longrightarrow> is_subspace B \<Longrightarrow> is_subspace (A\<inter>B)"
+    and is_subspace_plus: "is_subspace A \<Longrightarrow> is_subspace B \<Longrightarrow> is_subspace {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}"
+    and is_subspace_contains_0: "is_subspace A \<Longrightarrow> 0 \<in> A"
+    and is_subspace_closed_plus: "is_subspace A \<Longrightarrow> x\<in>A \<Longrightarrow> y\<in>A \<Longrightarrow> (x+y) \<in> A"
+    and is_subspace_INF[simp]: "(\<And>x. x \<in> AA \<Longrightarrow> is_subspace x) \<Longrightarrow> is_subspace (\<Inter>AA)"
+    (* and is_subspace_spanex[simp]: "\<exists>A. is_subspace A \<and> M \<subseteq> A \<and> (\<forall>B. is_subspace B \<and> M \<subseteq> B \<longrightarrow> B \<subseteq> A)" *)
+
 declare[[coercion state_to_vector]]
 
-typedecl 'a subspace
-  
-instantiation subspace :: (type)zero begin instance .. end (* The subspace {0} *)
-instantiation subspace :: (type)top begin instance .. end (* The full space *)
-instantiation subspace :: (type)inf begin instance .. end (* Intersection *)
-instantiation subspace :: (type)Inf begin instance .. end (* Intersection *)
-instantiation subspace :: (type)plus begin instance .. end (* Sum of spaces *)
-instantiation subspace :: (type)Sup begin instance .. end (* Sum of spaces *)
+typedef 'a subspace = "{A::'a vector set. is_subspace A}"
+  morphisms subspace_to_set Abs_subspace
+  apply (rule exI[of _ "{0}"]) by simp
+setup_lifting type_definition_subspace
 
-consts tmp_subspace_less_eq :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> bool"
-instantiation subspace :: (type)ord begin  
-definition "(a \<le> b) = tmp_subspace_less_eq a b" (* \<le> means inclusion *)
-definition "(a < b) = (a \<le> b \<and> \<not> (b \<le> a))" for a :: "'a subspace"
+instantiation subspace :: (type)zero begin (* The subspace {0} *)
+lift_definition zero_subspace :: "'a subspace" is "{0::'a vector}" by simp
 instance .. end
-hide_fact less_eq_subspace_def
-hide_const tmp_subspace_less_eq
 
-axiomatization ortho :: "'a subspace \<Rightarrow> 'a subspace" (* Orthogonal complement *)
-  
-axiomatization where
-    subspace_zero_not_top[simp]: "(0::'a subspace) \<noteq> top"
-and tmp_reflex: "x \<le> x" (* Names with tmp_ will be hidden later *)
-and tmp_transitive: "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
-and tmp_antisym: "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
-and tmp_top: "x \<le> top"
-and tmp_pos: "x \<ge> 0" (* zero_le *)
-and tmp_inf1: "inf x y \<le> x"
-and tmp_inf2: "inf x y \<le> y"
-and tmp_inf: "x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> inf y z"
-and tmp_assoc: "x + y + z = x + (y + z)" 
-and tmp_comm: "x + y = y + x"
-and tmp_mono: "x \<le> y \<Longrightarrow> z + x \<le> z + y"
-and tmp_zero_neutral: "0 + x = x"
-and subspace_plus_sup: "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y + z \<le> x"
-and tmp_Inf1: "x \<in> A \<Longrightarrow> Inf A \<le> x"
-and tmp_Inf2: "(\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> Inf A"
-and tmp_Sup1: "x \<in> A \<Longrightarrow> Sup A \<ge> x"
-and tmp_Sup2: "(\<And>x. x \<in> A \<Longrightarrow> z \<ge> x) \<Longrightarrow> z \<ge> Sup A"
-and tmp_Inf3: "Inf {} = (top::'a subspace)" 
-and subspace_empty_Sup: "Sup {} = (0::'a subspace)"
-for x y z :: "'a subspace"
+instantiation subspace :: (type)top begin  (* The full space *)
+lift_definition top_subspace :: "'a subspace" is "UNIV::'a vector set" by simp
+instance .. end
+
+instantiation subspace :: (type)inf begin  (* Intersection *)
+lift_definition inf_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> 'a subspace" is "op\<inter>" by simp
+instance .. end
+
+instantiation subspace :: (type)sup begin  (* Sum of spaces *)
+lift_definition sup_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> 'a subspace" is "\<lambda>A B::'a vector set. {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}" 
+  by (rule is_subspace_plus)
+instance .. end
+instantiation subspace :: (type)plus begin  (* Sum of spaces *)
+lift_definition plus_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> 'a subspace" is "\<lambda>A B::'a vector set. {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}"
+  by (rule is_subspace_plus)
+instance .. end
+
+lemma subspace_sup_plus: "(sup :: 'a subspace \<Rightarrow> _ \<Rightarrow> _) = op+" 
+  unfolding sup_subspace_def plus_subspace_def by simp
+
+instantiation subspace :: (type)Inf begin  (* Intersection *)
+lift_definition Inf_subspace :: "'a subspace set \<Rightarrow> 'a subspace" is "Inf :: 'a vector set set \<Rightarrow> 'a vector set" by simp
+instance .. end
+
+instantiation subspace :: (type)ord begin  
+lift_definition less_eq_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> bool" is "op\<subseteq>". (* \<le> means inclusion *)
+lift_definition less_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> bool" is "op\<subset>". (* \<le> means inclusion *)
+instance .. end
+
+instantiation subspace :: (type)Sup begin (* Sum of spaces *)
+definition "Sup_subspace AA = (Inf {B::'a subspace. \<forall>A\<in>AA. B \<ge> A})"
+(* lift_definition Sup_subspace :: "'a subspace set \<Rightarrow> 'a subspace" is "\<lambda>AA. Inf (A" by simp *)
+(* lift_definition Sup_subspace :: "\<Sqinter>A\<in>{A."  *)
+instance .. end
+
+lemma subspace_zero_not_top[simp]: "(0::'a subspace) \<noteq> top"
+proof transfer 
+  have "basis_vector undefined \<noteq> (0::'a vector)"
+    apply transfer
+    by (meson one_neq_zero)
+  thus "{0::'a vector} \<noteq> UNIV" by auto
+qed
+
+(* axiomatization where
+ (* subspace_plus_sup: "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y + z \<le> x" *)
+    (* subspace_zero_not_top[simp]: "(0::'a subspace) \<noteq> top" *)
+(* and tmp_reflex: "x \<le> x" (* Names with tmp_ will be hidden later *) *)
+(* and tmp_transitive: "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" *)
+(* and tmp_antisym: "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y" *)
+(* and tmp_top: "x \<le> top" *)
+(* and tmp_pos: "x \<ge> 0" (* zero_le *) *)
+(* and tmp_inf1: "inf x y \<le> x" *)
+(* and tmp_inf2: "inf x y \<le> y" *)
+(* and tmp_inf: "x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> inf y z" *)
+(* and tmp_assoc: "x + y + z = x + (y + z)"  *)
+(* and tmp_comm: "x + y = y + x" *)
+(* and tmp_mono: "x \<le> y \<Longrightarrow> z + x \<le> z + y" *)
+(* and tmp_zero_neutral: "0 + x = x" *)
+(* and tmp_Inf1: "x \<in> A \<Longrightarrow> Inf A \<le> x" *)
+(* and tmp_Inf2: "(\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> Inf A" *)
+ and tmp_Sup1: "x \<in> A \<Longrightarrow> Sup A \<ge> x" 
+ and tmp_Sup2: "(\<And>x. x \<in> A \<Longrightarrow> z \<ge> x) \<Longrightarrow> z \<ge> Sup A" 
+ and subspace_empty_Sup: "Sup {} = 0"
+(* and tmp_Inf3: "Inf {} = (top::'a subspace)"  *)
+for x y z :: "'a subspace"  *)
 
 instantiation subspace :: (type)order begin
 instance apply intro_classes
-    by (fact less_subspace_def, fact tmp_reflex, fact tmp_transitive, fact tmp_antisym)
+  apply transfer apply (simp add: subset_not_subset_eq)
+  apply transfer apply simp
+  apply transfer apply simp
+  apply transfer by simp
 end
-hide_fact tmp_reflex tmp_transitive tmp_antisym
 
 instantiation subspace :: (type)order_top begin
-instance apply intro_classes by (fact tmp_top)
+instance apply intro_classes
+  apply transfer by simp
 end
-hide_fact tmp_top
 
 instantiation subspace :: (type)order_bot begin
-definition "(bot::'a subspace) = 0"
-instance apply intro_classes unfolding bot_subspace_def by (fact tmp_pos)
+lift_definition bot_subspace :: "'a subspace" is "{0::'a vector}" by (fact is_subspace_0)
+instance apply intro_classes
+  apply transfer by (simp add: is_subspace_contains_0)
 end
+lemma subspace_zero_bot: "(0::_ subspace) = bot" 
+  unfolding zero_subspace_def bot_subspace_def by simp
 
 instantiation subspace :: (type)ab_semigroup_add begin
-instance apply intro_classes by (fact tmp_assoc, fact tmp_comm)
+instance apply intro_classes
+   apply transfer apply auto using add.assoc apply blast apply (metis add.semigroup_axioms semigroup.assoc)
+  apply transfer apply auto using add.commute by blast+
 end
-hide_fact tmp_assoc tmp_comm
   
 instantiation subspace :: (type)ordered_ab_semigroup_add begin
-instance apply intro_classes by (fact tmp_mono)
+instance apply intro_classes
+  apply transfer by auto
 end
-hide_fact tmp_mono
  
 instantiation subspace :: (type)comm_monoid_add begin
-instance apply intro_classes by (fact tmp_zero_neutral)
+instance apply intro_classes
+  apply transfer by auto
 end
-hide_fact tmp_zero_neutral
      
   
 instantiation subspace :: (type)semilattice_sup begin
-definition "sup a b = a+b" for a::"'a subspace"
-instance apply intro_classes
-  using add_left_mono sup_subspace_def tmp_pos apply fastforce
-  using add_right_mono sup_subspace_def tmp_pos apply fastforce
-  by (simp add: subspace_plus_sup sup_subspace_def)
+instance proof intro_classes
+  fix x y z :: "'a subspace"
+  show "x \<le> x \<squnion> y"
+    apply transfer apply auto apply (rule exI, rule exI[of _ 0]) using is_subspace_contains_0 by auto
+  show "y \<le> x \<squnion> y"
+    apply transfer apply auto apply (rule exI[of _ 0]) using is_subspace_contains_0 by auto
+  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x"
+    apply transfer apply auto
+    apply (rule is_subspace_closed_plus)
+    by auto
+qed
 end
 
 instantiation subspace :: (type)canonically_ordered_monoid_add begin
 instance apply intro_classes
-  by (metis add.commute add.right_neutral add_left_mono antisym_conv subspace_plus_sup tmp_pos)
+  unfolding subspace_sup_plus[symmetric]
+  apply auto apply (rule_tac x=b in exI)
+  by (simp add: sup.absorb2) 
 end
-hide_fact tmp_pos
   
 instantiation subspace :: (type)semilattice_inf begin
-instance apply intro_classes by (fact tmp_inf1, fact tmp_inf2, fact tmp_inf)
+instance apply intro_classes
+    apply transfer apply simp
+   apply transfer apply simp
+  apply transfer by simp
 end
-hide_fact tmp_inf1 tmp_inf2 tmp_inf
 
 instantiation subspace :: (type)lattice begin
 instance ..
 end
 
+lemma  subspace_plus_sup: "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y + z \<le> x" for x y z :: "'a subspace"
+  unfolding subspace_sup_plus[symmetric] by auto
+
 instantiation subspace :: (type)complete_lattice begin
-instance apply intro_classes
-       apply (fact tmp_Inf1, fact tmp_Inf2, fact tmp_Sup1, fact tmp_Sup2, fact tmp_Inf3)
-    unfolding bot_subspace_def by (fact subspace_empty_Sup)
+instance proof intro_classes
+  fix x z :: "'a subspace" and A
+  show Inf_le: "x \<in> A \<Longrightarrow> Inf A \<le> x" for A and x::"'a subspace"
+    apply transfer by auto
+  show le_Inf: "(\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> Inf A" for A and z::"'a subspace"
+    apply transfer by auto
+  show "Inf {} = (top::'a subspace)"
+    apply transfer by auto
+  show "x \<le> Sup A" if "x \<in> A"
+    unfolding Sup_subspace_def 
+    apply (rule le_Inf)
+    using that by auto
+  show "(\<And>x. x \<in> A \<Longrightarrow> x \<le> z) \<Longrightarrow> Sup A \<le> z" 
+    unfolding Sup_subspace_def
+    apply (rule Inf_le)
+    by auto
+  have "Inf UNIV = (bot::'a subspace)"    
+    apply (rule antisym)
+     apply (rule Inf_le) apply simp
+    apply (rule le_Inf) by simp
+  thus "Sup {} = (bot::'a subspace)"
+    unfolding Sup_subspace_def by auto
+qed
 end
-hide_fact tmp_Inf1 tmp_Inf2 tmp_Sup1 tmp_Sup2 tmp_Inf3
-  
-  
-lemma top_not_bot[simp]: "(top::'a subspace) \<noteq> bot" 
-  using subspace_zero_not_top bot_subspace_def by metis
+
+lemma subspace_empty_Sup: "Sup {} = (0::'a subspace)"
+  unfolding subspace_zero_bot by auto
+
+lemma top_not_bot[simp]: "(top::'a subspace) \<noteq> bot"
+  by (metis subspace_zero_bot subspace_zero_not_top) 
 
 lemma inf_assoc_subspace[simp]: "A \<sqinter> (B \<sqinter> C) = A \<sqinter> B \<sqinter> C" for A B C :: "_ subspace"
   unfolding inf.assoc by simp
 
-lemma bot_plus[simp]: "bot + x = x" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
-lemma plus_bot[simp]: "x + bot = x" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
-lemma top_plus[simp]: "top + x = top" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
-lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding sup_subspace_def[symmetric] by simp
+lemma bot_plus[simp]: "bot + x = x" for x :: "'a subspace"
+  apply transfer
+  unfolding sup_subspace_def[symmetric] by simp
+lemma plus_bot[simp]: "x + bot = x" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
+lemma top_plus[simp]: "top + x = top" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
+lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
     
 axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set"
     
@@ -386,6 +501,25 @@ lemma leq_plus_subspace[simp]: "a \<le> a + c" for a::"'a subspace"
 lemma leq_plus_subspace2[simp]: "a \<le> c + a" for a::"'a subspace"
   by (simp add: add_increasing)
 
+
+axiomatization ortho :: "'a subspace \<Rightarrow> 'a subspace" (* Orthogonal complement *)
+  where ortho_leq[simp]: "ortho a \<le> ortho b \<longleftrightarrow> a \<ge> b"
+    and ortho_twice[simp]: "ortho (ortho x) = x"
+
+
+lemma ortho_top[simp]: "ortho top = bot"
+  apply (rule le_bot)
+  apply (subst ortho_twice[symmetric, of bot])
+  apply (subst ortho_leq)
+  by simp
+
+lemma ortho_bot[simp]: "ortho bot = top"
+  apply (rule top_le)
+  apply (subst ortho_twice[symmetric, of top])
+  apply (subst ortho_leq)
+  by simp
+
+
 subsection \<open>Bounded operators\<close>
   
 typedef ('a,'b) bounded = "{A::'a vector\<Rightarrow>'b vector. bounded_linear A}"
@@ -395,7 +529,12 @@ setup_lifting type_definition_bounded
 
 lift_definition idOp :: "('a,'a)bounded" is id
   by (metis bounded_linear_ident comp_id fun.map_ident)
- 
+
+instantiation bounded :: (type,type) zero begin
+lift_definition zero_bounded :: "('a,'b) bounded" is "\<lambda>_. 0" by simp
+instance ..
+end
+
 axiomatization
   adjoint :: "('a,'b) bounded \<Rightarrow> ('b,'a) bounded" ("_*" [99] 100)
 and timesOp :: "('b,'c) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'c) bounded" 
@@ -404,9 +543,13 @@ and applyOpSpace :: "('a,'b) bounded \<Rightarrow> 'a subspace \<Rightarrow> 'b 
 where
  applyOp_0[simp]: "applyOpSpace U 0 = 0"
 and times_applyOp: "applyOp (timesOp A B) \<psi> = applyOp A (applyOp B \<psi>)"
+axiomatization where
+  timesOp_assoc: "timesOp A (timesOp B C) = timesOp (timesOp A B) C" 
+and times_adjoint[simp]: "adjoint (timesOp A B) = timesOp (adjoint B) (adjoint A)"
+for A :: "('b,'a) bounded" and B :: "('c,'b) bounded" and C :: "('d,'c) bounded"
 
 lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
-  by (simp add: bot_subspace_def)
+  by (simp add: subspace_zero_bot[symmetric])
 
 axiomatization where equal_basis: "(\<And>x. applyOp A (basis_vector x) = applyOp B (basis_vector x)) \<Longrightarrow> A = B" for A::"('a,'b) bounded"
 
@@ -446,16 +589,71 @@ lemma mult_inf_distrib[simp]: "U \<cdot> (B \<sqinter> C) = (U \<cdot> B) \<sqin
 
 definition "inj_option \<pi> = (\<forall>x y. \<pi> x = \<pi> y \<and> \<pi> x \<noteq> None \<longrightarrow> x = y)"
 definition "inv_option \<pi> = (\<lambda>y. if Some y \<in> range \<pi> then Some (inv \<pi> (Some y)) else None)"
-lemma inj_option_Some[simp]: "inj \<pi> \<Longrightarrow> inj_option (Some o \<pi>)"
+lemma inj_option_Some[simp]: "inj_option (Some o \<pi>) = inj \<pi>"
   unfolding inj_option_def inj_def by simp
 lemma inv_option_Some: "surj \<pi> \<Longrightarrow> inv_option (Some o \<pi>) = Some o (inv \<pi>)"
   unfolding inv_option_def o_def inv_def apply (rule ext) by auto
 
 (* TODO: document classical_operator *)
 
+definition "cobounded_partial_fun f = (\<exists>n. \<forall>y. finite {x. f x = Some y} \<and> card {x. f x = Some y} \<le> n)"
+
+lemma assumes "cobounded_partial_fun \<pi>" and "cobounded_partial_fun \<rho>" shows "cobounded_partial_fun (\<pi> \<circ>\<^sub>m \<rho>)"
+proof -
+  from assms obtain n where finite_pi: "finite {x. \<pi> x = Some y}" and n:"card {x. \<pi> x = Some y} \<le> n" for y 
+    unfolding cobounded_partial_fun_def by auto
+  from assms obtain m where finite_rho: "finite {x. \<rho> x = Some y}" and m:"card {x. \<rho> x = Some y} \<le> m" for y 
+    unfolding cobounded_partial_fun_def by auto
+      { fix y
+        have nested: "{x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y} = (\<Union>z\<in>{z. \<pi> z = Some y}. {x. \<rho> x = Some z})"
+          (is "?comp = (\<Union>z\<in>?piset. ?rhoset z)")
+          apply auto unfolding map_comp_def
+          by (metis option.case_eq_if option.distinct(1) option.exhaust_sel) 
+        let ?rhoset' = "\<lambda>z. {(x,z) | x. \<rho> x = Some z}"
+        have m': "card (?rhoset' z) \<le> m" for z
+          using m 
+          apply (rewrite asm_rl[of "?rhoset' z = (\<lambda>x. (x,z)) ` ?rhoset z"], (auto)[1])
+          apply (subst card_image) unfolding inj_on_def by auto
+        have finite: "finite {x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y}"
+          unfolding nested apply (rule finite_UN_I)
+          using both_ok by auto
+        have "card ?comp = card (\<Union>z\<in>?piset. ?rhoset z)"
+          unfolding nested by simp
+        also have "... = card (fst ` (\<Union>z\<in>?piset. ?rhoset' z))"
+          unfolding image_UN 
+          apply (subst (2) image_Collect)
+          by auto
+        also have "... \<le> card (\<Union>z\<in>?piset. ?rhoset' z)"
+          apply (rule card_image_le) apply (rule finite_UN_I) using both_ok by auto
+        also have "... = (\<Sum>i\<in>?piset. card {(x, i) |x. \<rho> x = Some i})"
+          apply (rule card_UN_disjoint)
+          using finite_pi finite_rho by auto
+        also have "... \<le> (\<Sum>i\<in>?piset. m)"
+          apply (rule sum_mono) using m' by simp 
+        also have "\<dots> = card ?piset * m" 
+          by simp
+        also have "\<dots> \<le> n * m"
+          using n by auto
+        finally have card: "card ?comp \<le> n * m" by assumption
+        note finite card
+      }
+      then show ?thesis  by auto
+proof -
+
+|| A ket(i) ||_1,2 \<le> B
+|| A (sum x_i ket(i)) ||_2
+\<le>
+sum x_i || A ket i || 
+\<le> 
+B sum x_i
+
+
 axiomatization classical_operator :: "('a\<Rightarrow>'b option) \<Rightarrow> ('a,'b) bounded" where
- classical_operator_basis: "applyOp (classical_operator \<pi>) (basis_vector x) = 
-    (case \<pi> x of Some y \<Rightarrow> basis_vector y | None \<Rightarrow> 0)"
+ classical_operator_basis: "cobounded_partial_fun \<pi> \<Longrightarrow>
+    applyOp (classical_operator \<pi>) (basis_vector x) = (case \<pi> x of Some y \<Rightarrow> basis_vector y | None \<Rightarrow> 0)"
+and
+   classical_operator_invalid: "\<not> (\<exists>n. \<forall>y. finite {x. \<pi> x = Some y} \<and> card {x. \<pi> x = Some y} \<le> n) \<Longrightarrow>
+    classical_operator \<pi> = 0"
 axiomatization where classical_operator_adjoint: 
   "inj_option \<pi> \<Longrightarrow> adjoint (classical_operator \<pi>) = classical_operator (inv_option \<pi>)"
 for \<pi> :: "'a \<Rightarrow> 'b option"
@@ -465,16 +663,88 @@ lemma classical_operator_mult[simp]:
   "classical_operator \<pi> \<cdot> classical_operator \<rho> = classical_operator (map_comp \<pi> \<rho>)"
 proof (rule equal_basis)
   fix x
-  show "classical_operator \<pi> \<cdot> classical_operator \<rho> \<cdot> basis_vector x =
+  consider (both_ok) "\<exists>n. \<forall>y. finite {x. \<pi> x = Some y} \<and> card {x. \<pi> x = Some y} \<le> n" and 
+           "\<exists>n. \<forall>y. finite {x. \<rho> x = Some y} \<and> card {x. \<rho> x = Some y} \<le> n"
+           | (pi_unbounded) "\<not> (\<exists>n. \<forall>y. finite {x. \<pi> x = Some y} \<and> card {x. \<pi> x = Some y} \<le> n)"
+           | (rho_unbounded) "\<not> (\<exists>n. \<forall>y. finite {x. \<rho> x = Some y} \<and> card {x. \<rho> x = Some y} \<le> n)" 
+    apply atomize_elim by auto
+  then show "classical_operator \<pi> \<cdot> classical_operator \<rho> \<cdot> basis_vector x =
         classical_operator (\<pi> \<circ>\<^sub>m \<rho>) \<cdot> basis_vector x"
-  proof (cases "\<rho> x")
-    case None
-    then show ?thesis unfolding classical_operator_basis times_applyOp by simp
+  proof (cases)
+    case both_ok
+    have comp_ok: "\<exists>n. \<forall>y. finite {x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y} \<and> card {x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y} \<le> n"
+    proof -
+      from both_ok obtain n where finite_pi: "finite {x. \<pi> x = Some y}" and n:"card {x. \<pi> x = Some y} \<le> n" for y by auto
+      from both_ok obtain m where finite_rho: "finite {x. \<rho> x = Some y}" and m:"card {x. \<rho> x = Some y} \<le> m" for y by auto
+      { fix y
+        have nested: "{x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y} = (\<Union>z\<in>{z. \<pi> z = Some y}. {x. \<rho> x = Some z})"
+          (is "?comp = (\<Union>z\<in>?piset. ?rhoset z)")
+          apply auto unfolding map_comp_def
+          by (metis option.case_eq_if option.distinct(1) option.exhaust_sel) 
+        let ?rhoset' = "\<lambda>z. {(x,z) | x. \<rho> x = Some z}"
+        have m': "card (?rhoset' z) \<le> m" for z
+          using m 
+          apply (rewrite asm_rl[of "?rhoset' z = (\<lambda>x. (x,z)) ` ?rhoset z"], (auto)[1])
+          apply (subst card_image) unfolding inj_on_def by auto
+        have finite: "finite {x. (\<pi> \<circ>\<^sub>m \<rho>) x = Some y}"
+          unfolding nested apply (rule finite_UN_I)
+          using both_ok by auto
+        have "card ?comp = card (\<Union>z\<in>?piset. ?rhoset z)"
+          unfolding nested by simp
+        also have "... = card (fst ` (\<Union>z\<in>?piset. ?rhoset' z))"
+          unfolding image_UN 
+          apply (subst (2) image_Collect)
+          by auto
+        also have "... \<le> card (\<Union>z\<in>?piset. ?rhoset' z)"
+          apply (rule card_image_le) apply (rule finite_UN_I) using both_ok by auto
+        also have "... = (\<Sum>i\<in>?piset. card {(x, i) |x. \<rho> x = Some i})"
+          apply (rule card_UN_disjoint)
+          using finite_pi finite_rho by auto
+        also have "... \<le> (\<Sum>i\<in>?piset. m)"
+          apply (rule sum_mono) using m' by simp 
+        also have "\<dots> = card ?piset * m" 
+          by simp
+        also have "\<dots> \<le> n * m"
+          using n by auto
+        finally have card: "card ?comp \<le> n * m" by assumption
+        note finite card
+      }
+      then show ?thesis  by auto
+    qed
+    show ?thesis
+    proof (cases "\<rho> x")
+      case None
+      then show ?thesis 
+        unfolding times_applyOp classical_operator_basis[OF both_ok(2)] classical_operator_basis[OF comp_ok] 
+        by simp
+    next
+      case (Some y)
+      show ?thesis 
+        unfolding classical_operator_basis[OF comp_ok] 
+        by (simp add: classical_operator_basis[OF both_ok(1)] 
+            classical_operator_basis[OF both_ok(2)] times_applyOp Some map_comp_def)
+    qed
   next
-    case (Some y)
+    case pi_unbounded
     show ?thesis 
-      by (simp add: classical_operator_basis times_applyOp Some map_comp_def)
+      apply (subst classical_operator_invalid[of \<pi>]) using pi_unbounded apply simp
+      by doesnotwork
+  next
+    case rho_unbounded
+    then show ?thesis
+      apply (subst classical_operator_invalid[of \<rho>]) using rho_unbounded apply simp
+      sorry
   qed
+
+  cases pi rho comp
+        0   0   0  \<rightarrow> ok
+        0   0   1  \<rightarrow> ok (imposs)
+        1   *   1  \<rightarrow> ok
+        *   1   1  \<rightarrow> ok
+        0   1   0  \<rightarrow> bad
+        1   0   0  \<rightarrow> bad
+        1   1   0  \<rightarrow> bad
+        
 qed
 
 lemma classical_operator_Some[simp]: "classical_operator Some = idOp"
@@ -492,6 +762,21 @@ lemma unitary_isometry[simp]: "unitary U \<Longrightarrow> isometry U"
 
 lemma unitary_adjoint[simp]: "unitary (U*) = unitary U" for U::"('a,'b)bounded"
   unfolding unitary_def by auto
+
+lemma unitary_times[simp]: "unitary A \<Longrightarrow> unitary B \<Longrightarrow> unitary (A\<cdot>B)"
+  unfolding unitary_def apply simp
+  apply (subst timesOp_assoc)  
+  apply (subst timesOp_assoc[symmetric])  
+  apply simp
+  apply (subst timesOp_assoc)  
+  apply (subst timesOp_assoc[symmetric])  
+  by simp
+
+lemma isometry_times[simp]: "isometry A \<Longrightarrow> isometry B \<Longrightarrow> isometry (A\<cdot>B)"
+  unfolding isometry_def apply simp
+  apply (subst timesOp_assoc)  
+  apply (subst timesOp_assoc[symmetric])  
+  by simp
 
 lemma isometry_classical_operator[simp]:
   assumes "inj \<pi>"
@@ -629,9 +914,10 @@ lemma classical_sort[simp]:
   shows "A \<sqinter> Cla[b] = Cla[b] \<sqinter> A"
   by (simp add: classical_subspace_def)
 
-
 lemma Cla_split[split]: "P (Cla[Q]) = ((Q \<longrightarrow> P top) \<and> (\<not> Q \<longrightarrow> P bot))"
   by (cases Q, auto) 
+lemma classical_ortho[simp]: "ortho Cla[b] = Cla[\<not> b]"
+  by auto
 
 lemma applyOp_Cla[simp]:
   assumes "unitary A"
@@ -746,29 +1032,89 @@ axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a q
   
 section \<open>Common quantum objects\<close>
 
-(* TODO: define CNOT, X via classical_operator *)
+definition "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))"
+lemma unitaryCNOT[simp]: "unitary CNOT"
+  unfolding CNOT_def apply (rule unitary_classical_operator)
+  apply (rule o_bij[where g="\<lambda>(x,y). (x,y+x)"]; rule ext)
+  unfolding o_def id_def by auto
 
-axiomatization CNOT :: "(bit*bit, bit*bit) bounded" where
-  unitaryCNOT[simp]: "unitary CNOT"
-axiomatization H :: "(bit,bit) bounded" 
-  and X :: "(bit,bit) bounded"
-  and Y :: "(bit,bit) bounded"
-  and Z :: "(bit,bit) bounded"
-  where
+lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
+proof -
+  let ?f = "\<lambda>(x::bit,y). (x,y+x)"
+  have[simp]: "?f o ?f = id"
+    unfolding o_def id_def by auto
+  have[simp]: "bij ?f"
+    apply (rule o_bij[where g="?f"]; rule ext) by auto
+  have[simp]: "inj ?f"
+    apply (rule bij_is_inj) by simp
+  have[simp]: "surj ?f"
+    apply (rule bij_is_surj) by simp
+  have inv_f[simp]: "inv ?f = ?f"
+    apply (rule inv_unique_comp) by auto
+  have [simp]: "inv_option (Some \<circ> ?f) = Some \<circ> ?f"
+    apply (subst inv_option_Some) by simp_all
+  show ?thesis
+    unfolding CNOT_def
+    apply (subst classical_operator_adjoint)
+    by auto
+qed
+
+lemma CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = idOp"
+  using unitaryCNOT unfolding unitary_def adjoint_CNOT by simp
+
+definition "X = classical_operator (Some o (\<lambda>x::bit. x+1))"
+lemma unitaryX[simp]: "unitary X"
+  unfolding X_def apply (rule unitary_classical_operator)
+  apply (rule o_bij[where g="\<lambda>x. x+1"]; rule ext)
+  unfolding o_def id_def by auto
+
+lemma adjoint_X[simp]: "X* = X"
+proof -
+  let ?f = "\<lambda>x::bit. x+1"
+  have[simp]: "?f o ?f = id"
+    unfolding o_def id_def by auto
+  have[simp]: "bij ?f"
+    apply (rule o_bij[where g="?f"]; rule ext) by auto
+  have[simp]: "inj ?f"
+    apply (rule bij_is_inj) by simp
+  have[simp]: "surj ?f"
+    apply (rule bij_is_surj) by simp
+  have inv_f[simp]: "inv ?f = ?f"
+    apply (rule inv_unique_comp) by auto
+  have [simp]: "inv_option (Some \<circ> ?f) = Some \<circ> ?f"
+    apply (subst inv_option_Some) by simp_all
+  show ?thesis
+    unfolding X_def
+    apply (subst classical_operator_adjoint)
+    by auto
+qed
+
+
+lemma X_X[simp]: "X \<cdot> X = idOp"
+  using unitaryX unfolding unitary_def adjoint_CNOT by simp
+
+axiomatization H :: "(bit,bit) bounded" where
   unitaryH[simp]: "unitary H"
-and unitaryX[simp]: "unitary X"
-and unitaryY[simp]: "unitary Y"
-and unitaryZ[simp]: "unitary Z"
-and CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = idOp"
-and H_H[simp]: "H \<cdot> H = idOp"
-and X_X[simp]: "X \<cdot> X = idOp"
-and Y_Y[simp]: "Y \<cdot> Y = idOp"
-and Z_Z[simp]: "Z \<cdot> Z = idOp"
-and adjoint_CNOT[simp]: "CNOT* = CNOT"
 and adjoint_H[simp]: "H* = H"
-and adjoint_X[simp]: "X* = X"
-and adjoint_Y[simp]: "Y* = Y"
-and adjoint_Z[simp]: "Z* = Z"
+
+lemma H_H[simp]: "H \<cdot> H = idOp"
+  using unitaryH unfolding unitary_def by simp
+
+
+definition "Z = H \<cdot> X \<cdot> H"
+lemma unitaryZ[simp]: "unitary Z"
+  unfolding Z_def by simp
+
+lemma adjoint_Z[simp]: "Z* = Z"
+  unfolding Z_def apply simp apply (subst timesOp_assoc) by simp
+
+lemma Z_Z[simp]: "Z \<cdot> Z = idOp"
+  using unitaryZ unfolding unitary_def by simp
+
+axiomatization Y :: "(bit,bit) bounded"
+  where unitaryY[simp]: "unitary Y"
+    and Y_Y[simp]: "Y \<cdot> Y = idOp"
+    and adjoint_Y[simp]: "Y* = Y"
 
 section \<open>Misc\<close>
 
@@ -794,8 +1140,8 @@ syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_stat
 parse_translation \<open>[("_probability", fn ctx => fn [Const(v,_),p,rho] =>
   @{const probability} $ HOLogic.mk_string v $ p $ rho)]\<close>
 
-(* Must come after loading qrhl.ML *)
+(* Must come after loading qrhl.ML *)                                                                          
 print_translation \<open>[(@{const_syntax probability}, fn ctx => fn [str,p,rho] =>
   Const(@{syntax_const "_probability"},dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
-  
+
 end
