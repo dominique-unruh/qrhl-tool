@@ -7,8 +7,6 @@ section \<open>Miscellaneous\<close>
 syntax "Lattices.sup_class.sup" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<squnion>" 65)
 syntax "Lattices.inf_class.inf" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<sqinter>" 70)
 
-term "comm_monoid_set"
-
 typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}" 
   morphisms prob Abs_distr
   apply (rule exI[of _ "\<lambda>x. 0"]) by auto
@@ -59,7 +57,10 @@ axiomatization "map_distr" :: "('a\<Rightarrow>'b) \<Rightarrow> 'a distr \<Righ
 axiomatization where  
   compose_map_distr[simp]: "map_distr g (map_distr f \<mu>) = map_distr (\<lambda>x. g (f x)) \<mu>"
 and  map_distr_id[simp]: "map_distr (\<lambda>x. x) \<mu> = \<mu>"
-and map_distr_uniform_eq[simp]: "(map_distr f (uniform A) = uniform B) = (bij_betw f A B \<or> (infinite A \<and> infinite B))"
+  for f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c"
+functor map_distr: map_distr using map_distr_id compose_map_distr unfolding o_def id_def by auto
+
+axiomatization where map_distr_uniform[simp]: "bij_betw f A B \<Longrightarrow> map_distr f (uniform A) = uniform B"
   for f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c"
 
 typedef bit = "UNIV::bool set"..
