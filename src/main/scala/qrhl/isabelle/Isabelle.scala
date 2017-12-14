@@ -333,5 +333,6 @@ object Isabelle {
     def readTyp(str:String) : ITyp = runExpr(isabelle.readTypeExpr(context.read)(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(runExpr(isabelle.printTypExpr(typ)(context.read)))
     def simplify(term: Term, facts:List[String]) : Term = runExpr(Isabelle.simplifyTerm(term,facts)(context.read))
+    def contextExpr: Expr[IContext] = context.read
   }
 }

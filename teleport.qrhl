@@ -9,16 +9,19 @@ quantum var C : bit.
 
 ambient var a' : bit.
 ambient var c' : bit.
+ambient var z : bit.
+ambient var w : bit.
 
 program teleport := {
   A,B <q EPR;
   on C,A apply CNOT;
   on C apply H;
-  a <- measure A in computational_basis;
-  c <- measure B in computational_basis;
-  if (a=1) then on B apply X; else skip;
+  a <- measure A with computational_basis;
+  c <- measure B with computational_basis;
   if (c=1) then on B apply Z; else skip;
+  if (a=1) then on B apply X; else skip;
 }.
+
 
 
 qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
@@ -29,63 +32,119 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   wp left.
   skip.
   simp.
-  true.
 
- conseq pre: quantum_equality_full idIso ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
-  admit.
+ conseq pre: quantum_equality_full idOp ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
+  simp quantum_eq_add_state.
  
- seq 2 0: quantum_equality_full idIso ⟦C1,A1,B1⟧ ((H ⊗ idIso) ⋅ assoc_op' ⋅ (CNOT ⊗ idIso) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+ seq 2 0: quantum_equality_full idOp ⟦C1,A1,B1⟧
+          ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
   wp left.
   wp left.
   skip.
   simp.
-  admit.
-# quantum_equality_full idIso ⟦C1, A1, B1⟧ (addState EPR) ⟦A2⟧ ≤ CNOT⇩@⟦C1, A1⟧ ⋅ (H⇩@⟦C1⟧ ⋅ quantum_equality_full idIso ⟦C1, A1, B1⟧ (H ⊗ idIso ⋅ assoc_op' ⋅ CNOT ⊗ idIso ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)
-
- seq 1 0: if a1=0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧ else X⇩@⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧.
+  # The whole subgoal proven in Isabelle
+  rule teleport_goal1.
+  # TODO: document "rule" tactic
+   simp.
+	 
+ seq 1 0: if a1=0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧ else X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧.
   wp left.
   skip.
-  simp le_INF_iff.
+  simp.
   fix a'.
   casesplit a'=0.
    simp.
-
-quantum_equality_full idIso ⟦C1, A1, B1⟧ (H ⊗ idIso ⋅ assoc_op' ⋅ CNOT ⊗ idIso ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧
- ≤
-(INF x. (if x = 0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧ else X⇩@⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧) ⊓ span {|x⟩}⇩@⟦A1⟧ + ortho (span {|x⟩}⇩@⟦A1⟧))
-
- seq 2 0: if a1=0 ∧ c1=0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧
-          else if a1=0 ∧ c1=1 then Z⇩@⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧
-          else if a1=1 ∧ c1=0 then X⇩@⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧
-          else X⇩@⟦B1⟧ ⋅ (Z⇩@⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
-   wp left.
-   wp left.
-   skip.
+   clear 1.
+   rule teleport_goal2.
+    simp.	 
    simp.
-  admit.
-     # TODO
-
- wp left.
- wp left.
+   clear 1.
+   admit.
+	 
  case a' := a1.
- case c' := c1.
- skip.
  casesplit a'=0.
- casesplit c'=0.
-  # case a'=0 c'=0
+ conseq pre: Cla[a1=0] ⊓ ⟦B1⟧ ≡𝔮 ⟦A2⟧.
   simp.
-  true.
-  # case a'=0 c'=1
+ clear 1.
+# TODO: document "clear" tactic
+	 
+ seq 1 0: Cla[a1=0] ⊓ (if c1=0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧ else Z»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
+  wp left.
+  skip.
+  simp.	 
+  clear 1.
+  fix c'.
+  casesplit c'=0.
+   simp.
+   clear 1.
+   admit.
+   simp.
+   clear 1.
+   admit.
+
+ case c' := c1.
+ casesplit c'=0.       
+ conseq pre: Cla[a1=0 ∧ c1=0] ⊓ ⟦B1⟧ ≡𝔮 ⟦A2⟧.
   simp.
-  true.
- casesplit c'=0.
-  # case a'=1 c'=0
+ clear 1.
+	 
+ wp left.
+ wp left.
+ skip.
+ simp.
+ # a1=0, c1=0 branch finished.       
+
+ # Continuing a1=0, c1=1
+ conseq pre: Cla[a1=0 ∧ c1=1] ⊓ (Z»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
   simp.
-  true.
-  # case a'=1 c'=1
+ clear 1.
+	 
+ wp left.
+ wp left.
+ skip.
+ simp.
+ # a1=0, c1=1 branch finished.       
+       
+ # Continuing a1=1
+ conseq pre: Cla[a1=1] ⊓ (X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
   simp.
-  true.
+ clear 1.
+	 
+ seq 1 0: Cla[a1=1] ⊓ (if c1=0 then X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧ else Z»⟦B1⟧ ⋅ X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
+  wp left.
+  skip.
+  simp.	 
+  clear 1.
+  fix c'.
+  casesplit c'=0.
+   simp.
+   clear 1.
+   admit.
+   simp.
+   clear 1.
+   admit.
+
+ case c' := c1.
+ casesplit c'=0.       
+ conseq pre: Cla[a1=1 ∧ c1=0] ⊓ (X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
+  simp.
+ clear 1.
+	 
+ wp left.
+ wp left.
+ skip.
+ simp.
+ # a1=1, c1=0 branch finished.       
+
+ # Continuing a1=1, c1=1
+ conseq pre: Cla[a1=1 ∧ c1=1] ⊓ (Z»⟦B1⟧ ⋅ X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
+  simp.
+ clear 1.
+	 
+ wp left.
+ wp left.
+ skip.
+ simp timesOp_assoc.
+ # a1=1, c1=1 branch finished.       
 
 qed.
-
-

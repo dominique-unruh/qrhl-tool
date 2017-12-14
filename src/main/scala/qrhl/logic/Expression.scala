@@ -7,33 +7,13 @@ import qrhl.isabelle.Isabelle
 
 import scala.collection.mutable
 
-// Expressions
-/*sealed trait Expression {
-  def simplify(isabelle: Option[Isabelle.Context]) : Expression
-
-  def index1: Expression = index(true)
-  def index2: Expression = index(false)
-  def index(left:Boolean): Expression
-
-  def substitute(v: CVariable, value: Expression): Expression
-
-  def leq(e: Expression): Expression
-  @deprecated
-  def unmarkedString : String = toString
-}*/
-
-
-/*object Expression {
-  def apply(isabelle: Option[Isabelle.Context], str: String, typ: Typ): Expression = isabelle match {
-    case Some(isa) => IsabelleExpression(isa, str, typ)
-    case None => ???
-  }
-}*/
 
 
 
 
 final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
+  def stripAssumption(number: Int): Expression = Expression(isabelle,typ,Expression.stripAssumption(isabelleTerm,number))
+
   def checkWelltyped(typ:Typ): Unit = checkWelltyped(typ.isabelleTyp)
   def checkWelltyped(ityp:ITyp): Unit = {
     assert(ityp==this.typ.isabelleTyp)
@@ -130,5 +110,14 @@ object Expression {
         case Abs(name,typ,body) => Abs(name,typ,subst(body))
       }
       subst(term)
+  }
+
+  def stripAssumption(term:Term,number:Int) : Term = term match {
+    case App(App(Const("HOL.implies",_),assm0),rest) =>
+      assert(number>=0)
+      if (number==0) rest
+      else
+        HOLogic.imp $ assm0 $ stripAssumption(rest,number-1)
+    case _ => throw qrhl.UserException("Not enough assumptions")
   }
 }

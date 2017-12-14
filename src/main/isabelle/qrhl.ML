@@ -355,6 +355,18 @@ fun fixTac term var =
   (res,typ)
   end
 
-
+fun applyRule name goal ctx =
+  let val thms = Proof_Context.get_thms ctx name
+      val cgoal = Thm.cterm_of ctx (HOLogic.mk_Trueprop goal)
+      val goal' = Goal.init cgoal
+      val goal'' = case SINGLE (resolve_tac ctx thms 1) goal' of
+                    NONE => raise TERM("rule "^name, [goal])
+                   | SOME x => x
+      val subgoals = Thm.prems_of goal''
+      val subgoals' = map HOLogic.dest_Trueprop subgoals
+  in
+    (* subgoals' |> map (Thm.cterm_of ctx) |> @{make_string} |> error *)
+    subgoals'
+  end
 
 end

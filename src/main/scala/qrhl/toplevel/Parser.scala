@@ -265,6 +265,12 @@ object Parser extends RegexParsers {
   val tactic_simp : Parser[SimpTac] =
     literal("simp") ~> OnceParser(rep(identifier)) ^^ SimpTac.apply
 
+  val tactic_rule : Parser[RuleTac] =
+    literal("rule") ~> OnceParser(identifier) ^^ RuleTac.apply
+
+  val tactic_clear : Parser[ClearTac] =
+    literal("clear") ~> OnceParser(natural) ^^ ClearTac.apply
+
   def tactic_split(implicit context:ParserContext) : Parser[CaseSplitTac] =
     literal("casesplit") ~> OnceParser(expression(context.boolT)) ^^ CaseSplitTac
 
@@ -276,6 +282,8 @@ object Parser extends RegexParsers {
       tactic_wp |
       tactic_swap |
       tactic_simp |
+      tactic_rule |
+      tactic_clear |
       literal("skip") ^^ { _ => SkipTac } |
 //      literal("true") ^^ { _ => TrueTac } |
       tactic_inline |
