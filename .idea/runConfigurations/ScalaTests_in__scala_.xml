@@ -4,7 +4,7 @@
     <module name="qrhl-tool" />
     <setting name="path" value="" />
     <setting name="package" value="" />
-    <setting name="vmparams" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug" />
+    <setting name="vmparams" value="" />
     <setting name="params" value="" />
     <setting name="workingDirectory" value="file://$PROJECT_DIR$" />
     <setting name="searchForTest" value="Across module dependencies" />
