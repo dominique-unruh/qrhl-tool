@@ -36,16 +36,19 @@ fun index_of where
 definition "enum_idx (x::'a::enum) = index_of x (enum_class.enum :: 'a list)"
 definition "enum_len (TYPE('a::enum)) = length (enum_class.enum :: 'a list)"
 
+definition [code del]: "simplify_matrix x = (x::complex mat)"
+definition [code del]: "simplify_vector x = (x::complex vec)"
+
 axiomatization where bounded_of_mat_id[code]:
   "mat_of_bounded (idOp :: ('a::enum,'a) bounded) = one_mat (enum_len TYPE('a))"
 axiomatization where bounded_of_mat_timesOp[code]:
-  "mat_of_bounded (M \<cdot> N) = mat_of_bounded M * mat_of_bounded N" for M::"('b::enum,'c::enum) bounded" and N::"('a::enum,'b) bounded"
+  "mat_of_bounded (M \<cdot> N) = simplify_matrix (mat_of_bounded M * mat_of_bounded N)" for M::"('b::enum,'c::enum) bounded" and N::"('a::enum,'b) bounded"
 axiomatization where bounded_of_mat_plusOp[code]:
-  "mat_of_bounded (M + N) = mat_of_bounded M + mat_of_bounded N" for M::"('a::enum,'b::enum) bounded" and N::"('a::enum,'b) bounded"
+  "mat_of_bounded (M + N) = simplify_matrix (mat_of_bounded M + mat_of_bounded N)" for M::"('a::enum,'b::enum) bounded" and N::"('a::enum,'b) bounded"
 axiomatization where bounded_of_mat_uminusOp[code]:
   "mat_of_bounded (- M) = - mat_of_bounded M" for M::"('a::enum,'b::enum) bounded"
 axiomatization where vector_of_vec_applyOp[code]:
-  "vec_of_vector (M \<cdot> x) = (mult_mat_vec (mat_of_bounded M) (vec_of_vector x))"
+  "vec_of_vector (M \<cdot> x) = simplify_vector (mult_mat_vec (mat_of_bounded M) (vec_of_vector x))"
 
 
 axiomatization where mat_of_bounded_inj: "inj mat_of_bounded"
@@ -161,118 +164,231 @@ derive (eq) ceq complex
 derive (no) ccompare complex
 
 definition "two = (2::complex)"
-export_code "two" in SML file "T.ML"
-(* 
-datatype real' = RealR rat | Sqrt real'
-fun real_of_real' where 
-"real_of_real' (RealR r) = real_of_rat r"
-| "real_of_real' (Sqrt s) = sqrt (real_of_real' s)"
- *)
 
-term root
+datatype real' = Plus rat "real' list" | ErrorReal real
+
+
 (* definition[code del]: "Sqrt = sqrt" *)
-definition[code del]: "Plus (r::rat) (x::real list) = foldl (\<lambda> x y. x+sqrt(y)) (Ratreal r) x"
+fun Real' where
+  Real': "Real' (Plus (r::rat) (x::real' list)) = foldl (\<lambda> x y. x+sqrt(Real' y)) (Ratreal r) x"
 (* definition[code del]: "Uminus = (uminus :: real \<Rightarrow> _)" *)
-code_datatype Plus 
+(* definition [code del]: "ErrorReal x = (x::real)" *)
+(* declare to_real_Plus[code del] *)
+code_datatype Real' Ratreal 
+
+definition "real'_of_rat r = Plus r []"
+
+instantiation real' :: plus begin
+fun plus_real' where "(Plus r xs) + (Plus r' xs') = Plus (r+r') (xs @ xs')"
+instance ..
+end
+
+
+fun real'_sort_key  where
+  "real'_sort_key (Plus a []) = (if a=0 then 0 else 1)"
+| "real'_sort_key (Plus a (_#_)) = (2::nat)"
+| "real'_sort_key (ErrorReal x) = 3"
+
+fun simplify_real' and simplify_real'0 and simplify_real'1 where
+  "simplify_real' (Plus a xs) = simplify_real'0 (Plus a (sort_key real'_sort_key (map simplify_real' xs)))"
+| "simplify_real' (ErrorReal a) = ErrorReal a"
+
+| "simplify_real'0 (Plus a (Plus b [] # xs)) = 
+     (if b=0 then simplify_real'0 (Plus a xs)
+      else simplify_real'1 (Plus a (Plus b [] # xs)))"
+| "simplify_real'0 x = simplify_real'1 x"
+
+| "simplify_real'1 x = x"
+
+lemma size_list_sort_key: "size_list f (sort_key k l) = size_list f l" for f k l sorry
+
+(*
+lemma "size (simplify_real' x) \<le> size x \<and> size (simplify_real'0 x) \<le> size x \<and> size (simplify_real'1 x) \<le> size x"
+proof (induction "size x"  arbitrary:x rule:nat_less_induct)
+  case 1
+  then have size: "size (simplify_real' y) \<le> size y"
+    and size0: "size (simplify_real'0 y) \<le> size y"
+    and size1: "size (simplify_real'1 y) \<le> size y"
+    if "size y < size x" for y 
+    using that by auto
+
+  have "size (simplify_real'1 x) \<le> size x" by simp
+  moreover
+  consider (a0) a xs where "x=Plus a (Plus 0 [] # xs)"
+    | (ab) a b xs where "x=Plus a (Plus b [] # xs)" and "b\<noteq>0"
+    | (else) "simplify_real'0 x = x"
+    sorry
+  then have "size (simplify_real'0 x) \<le> size x"
+  proof (cases)
+    case a0
+    then show ?thesis apply simp
+      using size0
+      by (metis (no_types, lifting) add.commute add.right_neutral add_Suc le_SucI lessI less_SucI list.size(2) list.size_gen(1) real'.size(3))
+  next
+    case ab
+    then show ?thesis by auto
+  next
+    case else
+    then show ?thesis by auto
+  qed
+  moreover 
+  {fix a xs
+    have "size (Plus a (sort_key real'_sort_key (map simplify_real' xs))) \<le> 
+        size (Plus a (map simplify_real' xs))"
+      by (simp add: size_list_sort_key)
+    also
+    have "\<dots> \<le> Suc (size_list size xs)" apply simp
+    
+
+      by
+    size (simplify_real'0 (Plus a ((map simplify_real' xs))))" 
+    apply simp
+
+    find_theorems size_list insort_key
+    by
+"\<le> Suc (size_list size xs)"
+  have "size (simplify_real'0 (Plus a (sort_key real'_sort_key (map simplify_real' xs)))) \<le> Suc (size_list size xs)"
+  have "size (simplify_real' x) \<le> size x"
+    apply (cases x, hypsubst_thin, auto)
+    sorry
+  ultimately show ?case by simp
+qed
+  apply (induction x and y)
+  apply auto
+*)
 
 definition "exception f = f ()"
 declare[[code abort: exception]]
 
-lemma [code]: "sqrt x = Plus 0 [x]" unfolding Plus_def by simp
+fun rat_times_real' where
+  "rat_times_real' r (Plus r' xs) = Plus (r*r') (map (rat_times_real' (r*r)) xs)"
+
+instantiation real' :: times begin
+fun times_real' where 
+"(Plus r xs) * (Plus r' xs') = 
+  Plus (r*r') []
+  +
+  (rat_times_real' r (Plus 0 xs'))
+  +
+  (rat_times_real' r' (Plus 0 xs))
+  +
+  (Plus 0 (map (\<lambda>(x,y). x*y) (List.product xs xs')))"
+| "a*b = ErrorReal (Real' a * Real' b)"
+instance..
+end
+
+definition "simplify_real'_sized x = (let y = simplify_real' x in if size y \<le> size x then y else x)"
+lemma simplify_real'_sized_size: "size (simplify_real'_sized x) \<le> size x"
+  unfolding simplify_real'_sized_def
+  by (metis order_refl) 
+
+instantiation real' :: inverse begin
+function (sequential) inverse_real'0 and inverse_real' where
+  "inverse_real'0 (Plus a []) = Plus (inverse a) []"
+| "inverse_real'0 (Plus a [r]) = (if a=0 then Plus 0 [inverse r] else
+        exception (%_. ErrorReal (inverse (Real' (Plus a [r])))))"
+| "inverse_real' x = inverse_real'0 ( simplify_real'_sized x)"
+  by pat_completeness auto
+termination apply (relation "case_sum size size <*mlex*> case_sum (\<lambda>x. 0) (\<lambda>x. Suc 0) <*mlex*> {}")
+    apply auto
+  apply (simp add: wf_mlex)
+   apply (simp add: mlex_less)
+  by (simp add: simplify_real'_sized_size mlex_leq mlex_less)
+
+definition "divide_real' (a::real') b = a * inverse b"
+instance..
+end
+
+instantiation real' :: uminus begin
+fun uminus_real' where
+  "uminus_real' (Plus a xs) = Plus (-a) (map uminus_real' xs)"
+| "uminus_real' (ErrorReal a) = ErrorReal (-a)"
+instance..
+end
+
+typ rat
+
+instantiation real' :: minus begin
+definition "minus_real' a b = a + (uminus_real'_inst.uminus_real' b)"
+instance..
+end
+
+lemma [code]: "sqrt (Real' x) = Real' (Plus 0 [x])" by simp
 lemma [code]: 
-"Plus r xs * Plus r' xs' = Plus (r*r') 
-(map (op* (real_of_rat r)) xs' @ map (op* (real_of_rat r')) xs @ map (\<lambda>(x,y). x*y) (List.product xs xs'))"
+  "Real' a * Real' b = Real' (a*b)"
+  "Ratreal a' * Real' b = Real' (real'_of_rat a' * b)"
+  "Real' a * Ratreal b' = Real' (a * real'_of_rat b')"
   sorry
-lemma [code]:
-"Plus r xs + Plus r' xs' = Plus (r+r') (xs @ xs')"
+
+lemma [code]: 
+  "Real' a + Real' b = Real' (a+b)"
+  "Ratreal a' + Real' b = Real' (real'_of_rat a' + b)"
+  "Real' a + Ratreal b' = Real' (a + real'_of_rat b')"
   sorry
-(* lemma [code_abbrev]: "a + (-b) = a - (b::real) " by simp
-lemma [code_abbrev]: "a * (inverse b) = a / (b::real) " by (simp add: divide_inverse) *)
-lemma [code]:
-  "Plus r xs / Plus r' xs' = Plus r xs * (inverse (Plus r' xs'))"by (fact divide_inverse)
-lemma [code]:
-  "Plus r xs - Plus r' xs' = Plus r xs + (- (Plus r' xs'))" by simp 
-(* lemma [code_abbrev]: "0 = 0 / (b::real)" by simp  *)
-lemma [code]:
-  "inverse (Plus a []) = Plus (inverse a) []"
-  "inverse (Plus a [r]) = (if a=0 then Plus 0 [inverse r] else exception (%_. inverse (Plus a [r])))"
+
+lemma [code]: 
+  "Real' a / Real' b = Real' (a/b)"
+  "Ratreal a' / Real' b = Real' (real'_of_rat a' / b)"
+  "Real' a / Ratreal b' = Real' (a / real'_of_rat b')"
   sorry
-lemma[code]:
-  "- (Plus a xs) = Plus (-a) (map uminus xs)"
+
+lemma [code]: 
+  "Real' a - Real' b = Real' (a-b)"
+  "Ratreal a' - Real' b = Real' (real'_of_rat a' - b)"
+  "Real' a - Ratreal b' = Real' (a - real'_of_rat b')"
   sorry
-declare real_divide_code[code del]
-declare real_equal_code[code del]
-declare real_minus_code[code del]
-declare real_uminus_code[code del]
-declare real_plus_code[code del]
-declare real_times_code[code del]
-declare real_inverse_code[code del]
-declare real_floor_code[code del]
-declare real_less_code[code del]
-declare real_less_eq_code[code del]
 
-lemma [code]: "Ratreal x = Plus x []" sorry
+lemma [code]:
+  "sqrt (Ratreal a) = sqrt (Real' (Plus a []))"
+  "sqrt (Real' x) = Real' (Plus 0 [x])"
+  sorry
 
-lemma zero_real_code [code]: "0 = Plus 0 []"
-  unfolding Plus_def by simp
+definition "tmp = 1/sqrt 2"
+value [code] "1/tmp"
 
-lemma one_real_code [code]: "1 = Plus 1 []"
-  unfolding Plus_def by simp
 
-export_code "op/ :: real\<Rightarrow>_\<Rightarrow>_" in SML file "T.ML"
+export_code "op/ :: real\<Rightarrow>_\<Rightarrow>_" in Haskell 
 
 (* print_codesetup *)
 
-definition [code del]: "simplify_real x = (x::real)" 
-definition [code del]: "simplify_real' x = (x::real)"
+lemma Real'_simplify_real': "Real' (simplify_real' x) = Real' x"
+  sorry
 
-lemma [code]:
-  shows "simplify_real' (Plus a (Plus (Frct (0,1)) [] # xs)) = Plus a xs"
-    and "simplify_real (Plus a xs) = simplify_real' (Plus a (map simplify_real xs))"
-  unfolding simplify_real'_def simplify_real_def Plus_def 
-   apply (auto simp: zero_rat[symmetric])
-  done
+definition [code del]: "simplify_real x = (x::real)"
+lemma[code]: 
+"simplify_real (Ratreal x) = Ratreal x"
+"simplify_real (Real' y) = (case simplify_real' y of Plus a [] \<Rightarrow> Ratreal a | z \<Rightarrow> Real' z)"
+  sorry
 
-find_theorems "Rat.Fract 0 1"
+(* declare Real'[code_post] *)
 
-term Ratreal
-value "Sqrt 1 / Sqrt 2"
-value [nbe] "simplify_real ( sqrt(1)/sqrt 2 )"
-value "sqrt (1 / 2) - 0 + 0"
+lemma [code_post]:
+  "Real' (Plus a (x#xs)) = Real' (Plus a xs) + sqrt(Real' x)"
+  "Real' (Plus a []) = Ratreal a"
+  "0 + y = y"
+  sorry
+
+definition "simplify_complex (x::complex) = x"
+lemma [code]: "simplify_vector v = map_vec simplify_complex v" 
+  unfolding simplify_complex_def simplify_vector_def by auto 
+lemma [code]: "simplify_matrix v = map_mat simplify_complex v"  
+  unfolding simplify_complex_def simplify_matrix_def by auto 
+lemma [code]: "simplify_complex (Complex a b) = Complex (simplify_real a) (simplify_real b)"
+  unfolding simplify_complex_def simplify_real_def by simp
+
+  (* value "simplify_real (Real' (Plus 2 []))" *)
+  (* value "Real' (Plus 1 [Plus 2 []])" *)
+(* lemma "x=(Plus 0 [Plus 1 []]) * (Plus 0 [Plus (1 / 2) []])" *)
+(* value [nbe] "simplify_real (Real' ((Plus 0 [Plus 1 []]) * (Plus 0 [Plus (1 / 2) []])))" *)
+(* value [nbe] "simplify_real ( sqrt(1)/sqrt 2 )" *)
+(* value [nbe] "simplify_real ( sqrt(1)/sqrt 2 )" *)
+(* value "sqrt (1 / 2) - 0 + 0" *)
 
 value [nbe] "basis_vector (0::bit)"
-  value [nbe] " (H \<cdot> basis_vector (0::bit))"
+  value [code] "(H \<cdot> basis_vector (0::bit))"
 
-  value [xnbe] "proj (H \<cdot> basis_vector (0::bit))"
-
-(* declare real_divide_code[code del] *)
-(* lemma real_divide_code' [code]:
-  "Ratreal x / Ratreal y = Ratreal (x / y)"
-(* and "Ratreal a / sqrt b  = sqrt (a*a/b)" *)
-  sorry *)
-(* 
-definition "sqrt' x = (if x=1 then 1 else if x=0 then 0 else sqrt x)"
- *)
-(* lemma [code]: 
-  shows "Ratreal a / sqrt b = sqrt'(Ratreal a*Ratreal a/b)" 
-  and "sqrt b / Ratreal a = sqrt'(b/(Ratreal(a*a)))"
-  and "sqrt b / sqrt c = sqrt'(b/c)"
-  sorry
-
-lemma [code]: 
-  shows "Ratreal a * sqrt b = sqrt'(Ratreal a*Ratreal a*b)" 
-  and "sqrt b * Ratreal a = sqrt'(b*(Ratreal(a*a)))"
-  and "sqrt b * sqrt c = sqrt'(b*c)"
-  sorry
-
-  value [nbe] "1/sqrt 2 * sqrt 2"
-
-lemma [code]:
-  shows "sqrt a - Ratreal (Frct(0,0)) = sqrt a"
-  sorry
-typ rat
-  value "sqrt (1 / 2) - 0 + 0"
- *)
+  value "simplify_real (sqrt 0 + sqrt 0 + sqrt 0 + sqrt (1 / 2))"
+  value "simplify_real (sqrt (1 / 2) + sqrt 0 + sqrt 0 + sqrt 0)"
 
   value [nbe] "proj (H \<cdot> basis_vector (0::bit))"
 
