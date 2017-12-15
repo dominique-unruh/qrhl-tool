@@ -7,18 +7,19 @@ hide_const (open) Lattice.inf
 hide_const (open) Order.top
 hide_const (open) card_UNIV
 
+no_syntax   "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
 
 axiomatization bounded_of_mat :: "complex mat \<Rightarrow> ('a::enum,'b::enum) bounded"
   and mat_of_bounded :: "('a::enum,'b::enum) bounded \<Rightarrow> complex mat"
 axiomatization vector_of_vec :: "complex vec \<Rightarrow> ('a::enum) vector"
   and vec_of_vector :: "('a::enum) vector \<Rightarrow> complex vec"
 
-lemma [code abstype]:
+axiomatization where mat_of_bounded_inverse [code abstype]:
   "bounded_of_mat (mat_of_bounded B) = B"
-  sorry
-lemma [code abstype]:
+
+axiomatization where vec_of_vector_inverse [code abstype]:
   "vector_of_vec (vec_of_vector B) = B"
-  sorry
+
 
 fun index_of where
   "index_of x [] = (0::nat)"
@@ -39,9 +40,9 @@ axiomatization where bounded_of_mat_minusOp[code]:
 axiomatization where bounded_of_mat_uminusOp[code]:
   "mat_of_bounded (- M) = - mat_of_bounded M" for M::"('a::enum,'b::enum) bounded"
 axiomatization where vector_of_vec_applyOp[code]:
-  "vec_of_vector (M \<cdot> x) =  (mult_mat_vec (mat_of_bounded M) (vec_of_vector x))"
+  "vec_of_vector (M \<cdot> x) =  (mult_mat_vec (mat_of_bounded M) (vec_of_vector x))" for M :: "('a::enum,'b::enum) bounded"
 axiomatization where mat_of_bounded_scalarMult[code]:
-  "mat_of_bounded ((a::complex) \<cdot> M) = smult_mat a (mat_of_bounded M)"
+  "mat_of_bounded ((a::complex) \<cdot> M) = smult_mat a (mat_of_bounded M)" for M :: "('a::enum,'b::enum) bounded"
 
 axiomatization where mat_of_bounded_inj: "inj mat_of_bounded"
 instantiation bounded :: (enum,enum) equal begin
@@ -81,10 +82,13 @@ definition "matrix_tensor (A::'a::times mat) (B::'a mat) =
 
 axiomatization where bounded_of_mat_tensorOp[code]:
   "mat_of_bounded (tensorOp A B) = matrix_tensor (mat_of_bounded A) (mat_of_bounded B)"
+for A :: "('a::enum,'b::enum) bounded"
+and B :: "('c::enum,'d::enum) bounded"
 
 definition "adjoint_mat M = transpose_mat (map_mat cnj M)"
 axiomatization where bounded_of_mat_adjoint[code]:
   "mat_of_bounded (adjoint A) = adjoint_mat (mat_of_bounded A)"
+for A :: "('a::enum,'b::enum) bounded"
 
 axiomatization where bounded_of_mat_assoc_op[code]: 
   "mat_of_bounded (assoc_op :: ('a::enum*'b::enum*'c::enum,_) bounded) = one_mat (Enum.card_UNIV TYPE('a)*Enum.card_UNIV TYPE('b)*Enum.card_UNIV TYPE('c))"
@@ -106,6 +110,7 @@ axiomatization where mat_of_bounded_proj[code]:
     (let v = vec_of_vector \<psi>; d = dim_vec v in
     if \<psi>=0 then zero_mat d d else
           smult_mat (1/(cscalar_prod v v)) (mat_of_cols d [v] * mat_of_rows d [v]))"
+for \<psi> :: "'a::enum vector"
 
 axiomatization where vec_of_vector_basis_vector[code]:
   "vec_of_vector (basis_vector i) = unit_vec (enum_len TYPE('a)) (enum_idx i)" for i::"'a::enum"
@@ -141,7 +146,7 @@ derive (eq) ceq complex
 derive (no) ccompare complex
 
 
-
+(*
 section {* Experiments *}
 
 value "mat_of_bounded CNOT"
@@ -336,6 +341,6 @@ lemma
   apply (rule spec[of _ a], rule spec[of _ b], rule spec[of _ c])
   by eval
 
-
+*)
 
 end
