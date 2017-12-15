@@ -3,7 +3,12 @@ theory QRHL
 begin
 
 section \<open>Miscellaneous\<close>
-  
+
+definition "(sqrt2::complex) = sqrt 2"
+lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
+ by (simp add: of_real_def scaleR_2 sqrt2_def)
+lemma sqrt2_neq0[simp]: "sqrt2 \<noteq> 0" unfolding sqrt2_def by simp
+
 syntax "Lattices.sup_class.sup" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<squnion>" 65)
 syntax "Lattices.inf_class.inf" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<sqinter>" 70)
 
@@ -94,6 +99,8 @@ lemma bit_plus_1_eq[simp]: "(a+1=b) = (a=b+1)" for a b :: bit
 
 lemma bit_plus_2y[simp]: "(x + y) + y = x" for x :: bit
   apply (cases y) by auto
+
+lemma UNIV_bit: "(UNIV::bit set) = {0,1}" by auto
 
 instantiation bit :: enum begin
 definition "enum_bit = [0::bit,1]"
@@ -558,13 +565,30 @@ axiomatization
 and timesOp :: "('b,'c) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'c) bounded" 
 (* and applyOp :: "('a,'b) bounded \<Rightarrow> 'a vector \<Rightarrow> 'b vector" *)
 and applyOpSpace :: "('a,'b) bounded \<Rightarrow> 'a subspace \<Rightarrow> 'b subspace"
+and timesScalarOp :: "complex \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
+and timesScalarSpace :: "complex \<Rightarrow> 'a subspace \<Rightarrow> 'a subspace"
+and timesScalarVec :: "complex \<Rightarrow> 'a vector \<Rightarrow> 'a vector"
 where
  applyOp_0[simp]: "applyOpSpace U 0 = 0"
 and times_applyOp: "applyOp (timesOp A B) \<psi> = applyOp A (applyOp B \<psi>)"
+and timesScalarSpace_0[simp]: "timesScalarSpace 0 S = 0"
+and timesScalarSpace_not0[simp]: "a \<noteq> 0 \<Longrightarrow> timesScalarSpace a S = S"
+
 axiomatization where
   timesOp_assoc: "timesOp A (timesOp B C) = timesOp (timesOp A B) C" 
 and times_adjoint[simp]: "adjoint (timesOp A B) = timesOp (adjoint B) (adjoint A)"
 for A :: "('b,'a) bounded" and B :: "('c,'b) bounded" and C :: "('d,'c) bounded"
+
+axiomatization plusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
+axiomatization minusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
+axiomatization uminusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
+
+instantiation bounded :: (type,type) ab_group_add begin
+definition "op+ = plusOp" 
+definition "A - B = minusOp A B"
+definition "uminus = uminusOp"
+instance apply intro_classes sorry
+end
 
 lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
   by (simp add: subspace_zero_bot[symmetric])
@@ -575,7 +599,7 @@ axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) bounded"
 
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 adhoc_overloading
-  cdot timesOp applyOp applyOpSpace
+  cdot timesOp applyOp applyOpSpace timesScalarOp timesScalarSpace timesScalarVec
 
 axiomatization where
   cdot_plus_distrib[simp]: "U \<cdot> (A + B) = U \<cdot> A + U \<cdot> B"
@@ -583,6 +607,14 @@ for A B :: "'a subspace" and U :: "('a,'b) bounded"
 
 lemma apply_idOp[simp]: "applyOp idOp \<psi> = \<psi>"
   by (simp add: idOp.rep_eq)
+
+axiomatization where scalar_mult_1_op[simp]: "1 \<cdot> A = A" for A::"('a,'b)bounded"
+axiomatization where scalar_mult_0_op[simp]: "(0::complex) \<cdot> A = 0" for A::"('a,'b)bounded" 
+lemma scalar_op_op[simp]: "(a \<cdot> A) \<cdot> B = a \<cdot> (A \<cdot> B)" for a :: complex and A B :: "(_,_) bounded" sorry
+lemma op_scalar_op[simp]: "A \<cdot> (a \<cdot> B) = a \<cdot> (A \<cdot> B)" for a :: complex and A B :: "(_,_) bounded" sorry
+lemma scalar_scalar_op[simp]: "a \<cdot> (b \<cdot> A) = (a*b) \<cdot> A" for a b :: complex and A  :: "(_,_) bounded" sorry
+lemma scalar_op_vec[simp]: "(a \<cdot> A) \<cdot> \<psi> = a \<cdot> (A \<cdot> \<psi>)" for a :: complex and A :: "(_,_) bounded" and \<psi> :: "_ vector" sorry
+lemma add_scalar_mult: "a\<noteq>0 \<Longrightarrow> a \<cdot> A = a \<cdot> B \<Longrightarrow> A=B" for A :: "(_,_)bounded" and a::complex sorry
 
 axiomatization 
     (* idOp :: "('a,'a) bounded" *)
@@ -744,6 +776,9 @@ definition "isProjector P = (P=P* \<and> P=P\<cdot>P)"
 axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) bounded"
   where isProjector_proj[simp]: "isProjector (proj x)"
 and imageOp_proj [simp]: "applyOpSpace (proj \<psi>) top = span {\<psi>}" for \<psi> :: "'a vector"
+
+axiomatization where proj_scalar_mult[simp]: 
+  "a \<noteq> 0 \<Longrightarrow> proj (a \<cdot> \<psi>) = proj \<psi>" for a::complex and \<psi>::"'a vector"
 
 section \<open>Measurements\<close>
 
@@ -1008,6 +1043,9 @@ and adjoint_H[simp]: "H* = H"
 lemma H_H[simp]: "H \<cdot> H = idOp"
   using unitaryH unfolding unitary_def by simp
 
+definition "H' = sqrt2 \<cdot> H"
+lemma H_H': "H = (1/sqrt2) \<cdot> H'" unfolding H'_def sorry
+
 
 definition [code del]: "Z = H \<cdot> X \<cdot> H"
 lemma unitaryZ[simp]: "unitary Z"
@@ -1038,6 +1076,10 @@ axiomatization where
 
 axiomatization "assoc_op" :: "('a*'b*'c, ('a*'b)*'c) bounded"
   where unitary_assoc_op[simp]: "unitary assoc_op"
+
+axiomatization where tensor_scalar_mult1[simp]: "(a \<cdot> A) \<otimes> B = a \<cdot> (A \<otimes> B)" for a::complex and A::"('a,'b)bounded" and B::"('c,'d)bounded"
+axiomatization where tensor_scalar_mult2[simp]: "A \<otimes> (a \<cdot> B) = a \<cdot> (A \<otimes> B)" for a::complex and A::"('a,'b)bounded" and B::"('c,'d)bounded"
+
 
 section \<open>Misc\<close>
 
