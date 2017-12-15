@@ -4,23 +4,23 @@ begin
 
 declare[[quick_and_dirty]]
 
-axiomatization tensorIso :: "('a,'b) bounded \<Rightarrow> ('c,'d) bounded \<Rightarrow> ('a*'c,'b*'d) bounded"
-axiomatization where idIso_tensor_idIso[simp]: "tensorIso idOp idOp = idOp"
-axiomatization assoc_op :: "('a*'b*'c, ('a*'b)*'c) bounded"
-  where unitary_assoc_op[simp]: "unitary assoc_op"
+(* axiomatization tensorOp :: "('a,'b) bounded \<Rightarrow> ('c,'d) bounded \<Rightarrow> ('a*'c,'b*'d) bounded" *)
+axiomatization where idIso_tensor_idIso[simp]: "tensorOp idOp idOp = idOp"
+(* axiomatization assoc_op :: "('a*'b*'c, ('a*'b)*'c) bounded"
+  where unitary_assoc_op[simp]: "unitary assoc_op" *)
 (* axiomatization assoc_op' :: "(('a*'b)*'c, 'a*'b*'c) bounded" *)
-axiomatization comm_op :: "('a*'b, 'b*'a) bounded"
-  where unitary_comm_op[simp]: "unitary comm_op"
+(* axiomatization comm_op :: "('a*'b, 'b*'a) bounded"
+  where unitary_comm_op[simp]: "unitary comm_op" *)
   
-consts tensor :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infix "\<otimes>" 71)
-adhoc_overloading tensor tensorIso
+(* consts tensor :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infix "\<otimes>" 71)
+adhoc_overloading tensor tensorOp *)
 
 lemma tensor_times[simp]: "(U1 \<otimes> U2) \<cdot> (V1 \<otimes> V2) = (U1 \<cdot> V1) \<otimes> (U2 \<cdot> V2)" sorry
 
 axiomatization addState :: "'a state \<Rightarrow> ('b,'b*'a) bounded"
 axiomatization where (* TODO: some disjointness conditions *)
   quantum_eq_add_state: "quantum_equality_full U Q V R \<sqinter> span {\<psi>}\<guillemotright>T
-             = quantum_equality_full (tensorIso U idOp) (qvariable_concat Q T) (addState \<psi> \<cdot> V) R"
+             = quantum_equality_full (tensorOp U idOp) (qvariable_concat Q T) (addState \<psi> \<cdot> V) R"
     for U :: "('a,'c) bounded" and V :: "('b,'c) bounded" and \<psi> :: "'d state"
     and Q :: "'a qvariables"    and R :: "'b qvariables"    and T :: "'d qvariables"
 
@@ -178,10 +178,20 @@ lemma move_plus:
 lemma Proj_lift[simp]: "Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
   sorry
 
+
+
 lemma teleport_goal2:
   assumes "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"
   shows "quantum_equality_full (addState EPR* \<cdot> (assoc_op* \<cdot> (CNOT \<otimes> idOp \<cdot> (assoc_op \<cdot> H \<otimes> idOp)))) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk> 
          \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> span {basis_vector 0}\<guillemotright>\<lbrakk>A1\<rbrakk> + ortho (span {basis_vector 0}\<guillemotright>\<lbrakk>A1\<rbrakk>)"
-  sorry (* TODO *)
+proof -
+  have spanket: "span {basis_vector 0} = span {ket 0}" by auto
+  show ?thesis
+    unfolding spanket
+    apply (rule move_plus)
+    apply (subst quantum_eq_add_state)
+    apply simp
+  
+    sorry (* TODO *)
 
 end

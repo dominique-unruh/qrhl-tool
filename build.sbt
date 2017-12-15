@@ -23,6 +23,8 @@ libraryDependencies ++= { val version = "0.9.2"; Seq(
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version
 ) }
+libraryDependencies += "info.hupel.afp" % "afp-2017" % "1.1.20171130"
+
 
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
