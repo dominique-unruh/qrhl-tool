@@ -5,6 +5,17 @@ begin
 hide_const (open) Lattice.sup
 hide_const (open) Lattice.inf
 hide_const (open) Order.top
+hide_const (open) card_UNIV
+
+(* TODO move *)
+axiomatization plusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
+axiomatization uminusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
+instantiation bounded :: (type,type) ab_group_add begin
+definition "op+ = plusOp" 
+definition "A - B = plusOp A (uminusOp B)"
+definition "uminus = uminusOp"
+instance apply intro_classes sorry
+end
 
 axiomatization bounded_of_mat :: "complex mat \<Rightarrow> ('a::enum,'b::enum) bounded"
   and mat_of_bounded :: "('a::enum,'b::enum) bounded \<Rightarrow> complex mat"
@@ -13,82 +24,267 @@ axiomatization vector_of_vec :: "complex vec \<Rightarrow> ('a::enum) vector"
 
 lemma [code abstype]:
   "bounded_of_mat (mat_of_bounded B) = B"
-
-
-
-
-
-section \<open>Matrix computations, try 2\<close>
+  sorry
+lemma [code abstype]:
+  "vector_of_vec (vec_of_vector B) = B"
+  sorry
 
 fun index_of where
   "index_of x [] = (0::nat)"
 | "index_of x (y#ys) = (if x=y then 0 else (index_of x ys + 1))"
 
-(* Forces evaluation of matrix, to avoid that the functions inside are reevaluated all the time *)
-definition "fix_mat M = mat_of_rows_list (dim_col M) (mat_to_list M)"
-definition "fix_vec v = vec_of_list (list_of_vec v)"
-
-axiomatization bounded_of_mat :: "complex mat \<Rightarrow> ('a::enum,'b::enum) bounded"
-axiomatization vector_of_vec :: "complex vec \<Rightarrow> ('a::enum) vector"
 definition "enum_idx (x::'a::enum) = index_of x (enum_class.enum :: 'a list)"
-axiomatization where bounded_of_mat_id:
-  "(idOp :: ('a::enum,'a) bounded) = bounded_of_mat (one_mat (card_UNIV TYPE('a)))"
-axiomatization where bounded_of_mat_timesOp:
-  "bounded_of_mat M \<cdot> bounded_of_mat N = bounded_of_mat (fix_mat (M*N))"
-axiomatization where vector_of_vec_applyOp:
-  "bounded_of_mat M \<cdot> vector_of_vec x = vector_of_vec (fix_vec (mult_mat_vec M x))"
+definition "enum_len (TYPE('a::enum)) = length (enum_class.enum :: 'a list)"
 
-axiomatization where bounded_of_mat_eq:
-  "(bounded_of_mat M = bounded_of_mat N) = (mat_to_list M = mat_to_list N)"
-axiomatization where vector_of_vec_eq:
-  "(vector_of_vec x = vector_of_vec y) = (list_of_vec x = list_of_vec y)"
+axiomatization where bounded_of_mat_id[code]:
+  "mat_of_bounded (idOp :: ('a::enum,'a) bounded) = one_mat (enum_len TYPE('a))"
+axiomatization where bounded_of_mat_timesOp[code]:
+  "mat_of_bounded (M \<cdot> N) = mat_of_bounded M * mat_of_bounded N" for M::"('b::enum,'c::enum) bounded" and N::"('a::enum,'b) bounded"
+axiomatization where bounded_of_mat_plusOp[code]:
+  "mat_of_bounded (M + N) = mat_of_bounded M + mat_of_bounded N" for M::"('a::enum,'b::enum) bounded" and N::"('a::enum,'b) bounded"
+axiomatization where bounded_of_mat_uminusOp[code]:
+  "mat_of_bounded (- M) = - mat_of_bounded M" for M::"('a::enum,'b::enum) bounded"
+axiomatization where vector_of_vec_applyOp[code]:
+  "vec_of_vector (M \<cdot> x) = (mult_mat_vec (mat_of_bounded M) (vec_of_vector x))"
 
 
-axiomatization where vector_of_vec_basis_vector: 
-  "basis_vector i = vector_of_vec (unit_vec (card_UNIV TYPE('a)) (enum_idx i))" for i::"'a::enum"
+axiomatization where mat_of_bounded_inj: "inj mat_of_bounded"
+instantiation bounded :: (enum,enum) equal begin
+definition [code]: "equal_bounded M N \<longleftrightarrow> mat_of_bounded M = mat_of_bounded N" for M N :: "('a,'b) bounded"
+instance 
+  apply intro_classes
+  unfolding equal_bounded_def 
+  using mat_of_bounded_inj injD by fastforce 
+end
+
+axiomatization where vec_of_vector_inj: "inj vec_of_vector"
+instantiation vector :: (enum) equal begin
+definition [code]: "equal_vector M N \<longleftrightarrow> vec_of_vector M = vec_of_vector N" for M N :: "'a vector"
+instance 
+  apply intro_classes
+  unfolding equal_vector_def 
+  using vec_of_vector_inj injD by fastforce 
+end
 
 definition "matrix_X = mat_of_rows_list 2 [ [0::complex,1], [1,0] ]"
-axiomatization where bounded_of_mat_X: "X = bounded_of_mat matrix_X"
+axiomatization where bounded_of_mat_X[code]: "mat_of_bounded X = matrix_X"
 definition "matrix_H = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
-axiomatization where bounded_of_mat_H: "H = bounded_of_mat matrix_H"
+axiomatization where bounded_of_mat_H[code]: "mat_of_bounded H = matrix_H"
 definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]"
-axiomatization where bounded_of_mat_CNOT: "CNOT = bounded_of_mat matrix_CNOT"
+axiomatization where bounded_of_mat_CNOT[code]: "mat_of_bounded CNOT = matrix_CNOT"
 
 definition "matrix_tensor (A::'a::times mat) (B::'a mat) =
   mat (dim_row A*dim_row B) (dim_col A*dim_col B) 
   (\<lambda>(r,c). A $$ (r div dim_row A, c div dim_col A) *
            B $$ (r mod dim_row B, c mod dim_col B))"
 
-axiomatization where bounded_of_mat_tensorOp:
-  "((bounded_of_mat A) \<otimes> (bounded_of_mat B)) = bounded_of_mat (matrix_tensor A B)"
+axiomatization where bounded_of_mat_tensorOp[code]:
+  "mat_of_bounded (tensorOp A B) = matrix_tensor (mat_of_bounded A) (mat_of_bounded B)"
 
 definition "adjoint_mat M = transpose_mat (map_mat cnj M)"
-axiomatization where bounded_of_mat_adjoint:
-  "adjoint (bounded_of_mat A) = bounded_of_mat (adjoint_mat A)"
+axiomatization where bounded_of_mat_adjoint[code]:
+  "mat_of_bounded (adjoint A) = adjoint_mat (mat_of_bounded A)"
 
-axiomatization where bounded_of_mat_assoc_op: 
-  "(assoc_op :: ('a::enum*'b::enum*'c::enum,_) bounded) = bounded_of_mat (one_mat (card_UNIV TYPE('a)*card_UNIV TYPE('b)*card_UNIV TYPE('c)))"
+axiomatization where bounded_of_mat_assoc_op[code]: 
+  "mat_of_bounded (assoc_op :: ('a::enum*'b::enum*'c::enum,_) bounded) = one_mat (Enum.card_UNIV TYPE('a)*Enum.card_UNIV TYPE('b)*Enum.card_UNIV TYPE('c))"
 
 definition "comm_op_mat TYPE('a::enum) TYPE('b::enum) =
-  (let da = card_UNIV TYPE('a); db = card_UNIV TYPE('b) in
+  (let da = Enum.card_UNIV TYPE('a); db = Enum.card_UNIV TYPE('b) in
   mat (da*db) (da*db)
   (\<lambda>(r,c). (if (r div da = c mod da \<and>
                 r mod db = c div db) then 1 else 0)))"
 
-axiomatization where bounded_of_mat_comm_op:
-  "(comm_op :: ('a::enum*'b::enum,_) bounded) = bounded_of_mat (comm_op_mat TYPE('a) TYPE('b))"
+axiomatization where bounded_of_mat_comm_op[code]:
+  "mat_of_bounded (comm_op :: ('a::enum*'b::enum,_) bounded) = comm_op_mat TYPE('a) TYPE('b)"
 
-definition "mat_proj_basis_vector (x::'a::enum) = 
-  (let n = card_UNIV TYPE('a); i = enum_idx x in 
+axiomatization where vec_of_vector_zero[code]:
+  "vec_of_vector (0::'a::enum vector) = zero_vec (enum_len TYPE('a))"
+
+(* definition "mat_proj_basis_vector (x::'a::enum) = 
+  (let n = Enum.card_UNIV TYPE('a); i = enum_idx x in 
      mat n n (\<lambda>(r,c). (if r=i \<and> c=i then 1 else 0)))"
-axiomatization where bounded_of_mat_proj_basis_vector: 
-  "proj (basis_vector x) = bounded_of_mat (mat_proj_basis_vector x)" for x::"'a::enum"
+axiomatization where bounded_of_mat_proj_basis_vector[code]: 
+  "mat_of_bounded (proj (basis_vector x)) = mat_proj_basis_vector x" for x::"'a::enum" *)
 
-lemmas prepare_matrix_code = 
+(* (* TODO move *)
+axiomatization norm2 :: "'a vector \<Rightarrow> real"
+
+axiomatization where norm2[code]: "norm2 \<psi> = cscalar_prod (vec_of_vector \<psi>) (vec_of_vector \<psi>)" 
+ *)
+
+axiomatization where mat_of_bounded_proj[code]:
+  "mat_of_bounded (proj \<psi>) = 
+    (let v = vec_of_vector \<psi>; d = dim_vec v in
+    if \<psi>=0 then zero_mat d d else
+          smult_mat (1/(cscalar_prod v v)) (mat_of_cols d [v] * mat_of_rows d [v]))"
+
+axiomatization where vec_of_vector_basis_vector[code]:
+  "vec_of_vector (basis_vector i) = unit_vec (enum_len TYPE('a)) (enum_idx i)" for i::"'a::enum"
+
+(* lemmas prepare_matrix_code = 
 bounded_of_mat_id bounded_of_mat_timesOp vector_of_vec_applyOp vector_of_vec_basis_vector
 bounded_of_mat_X bounded_of_mat_H bounded_of_mat_CNOT bounded_of_mat_assoc_op
 bounded_of_mat_tensorOp bounded_of_mat_adjoint bounded_of_mat_assoc_op
 bounded_of_mat_proj_basis_vector bounded_of_mat_eq vector_of_vec_eq
+ *)
+
+term "f sums s \<longleftrightarrow> (\<lambda>n. \<Sum>i<n. f i) \<longlonglongrightarrow> s"
+
+instantiation bit :: linorder begin
+definition "less_bit (a::bit) (b::bit) = (a=0 \<and> b=1)"
+definition "less_eq_bit (a::bit) b = (a=b \<or> a<b)"
+instance apply intro_classes unfolding less_bit_def less_eq_bit_def by auto
+end
+
+
+derive (eq) ceq bit
+derive (linorder) compare_order bit
+derive (compare) ccompare bit
+derive (dlist) set_impl bit
+print_derives
+
+instantiation bit :: finite_UNIV begin
+definition "finite_UNIV_bit = Phantom(bit) True"
+instance apply intro_classes unfolding finite_UNIV_bit_def by simp
+end
+
+axiomatization where mat_of_bounded_zero[code]:
+  "mat_of_bounded (0::('a::enum,'b::enum) bounded) = zero_mat (enum_len TYPE('b)) (enum_len TYPE('a))"
+
+find_theorems set_fold_cfc
+
+axiomatization sqrt2 :: complex
+
+derive (eq) ceq real
+derive (no) ccompare real
+derive (eq) ceq complex
+derive (no) ccompare complex
+
+definition "two = (2::complex)"
+export_code "two" in SML file "T.ML"
+(* 
+datatype real' = RealR rat | Sqrt real'
+fun real_of_real' where 
+"real_of_real' (RealR r) = real_of_rat r"
+| "real_of_real' (Sqrt s) = sqrt (real_of_real' s)"
+ *)
+
+term root
+(* definition[code del]: "Sqrt = sqrt" *)
+definition[code del]: "Plus (r::rat) (x::real list) = foldl (\<lambda> x y. x+sqrt(y)) (Ratreal r) x"
+(* definition[code del]: "Uminus = (uminus :: real \<Rightarrow> _)" *)
+code_datatype Plus 
+
+definition "exception f = f ()"
+declare[[code abort: exception]]
+
+lemma [code]: "sqrt x = Plus 0 [x]" unfolding Plus_def by simp
+lemma [code]: 
+"Plus r xs * Plus r' xs' = Plus (r*r') 
+(map (op* (real_of_rat r)) xs' @ map (op* (real_of_rat r')) xs @ map (\<lambda>(x,y). x*y) (List.product xs xs'))"
+  sorry
+lemma [code]:
+"Plus r xs + Plus r' xs' = Plus (r+r') (xs @ xs')"
+  sorry
+(* lemma [code_abbrev]: "a + (-b) = a - (b::real) " by simp
+lemma [code_abbrev]: "a * (inverse b) = a / (b::real) " by (simp add: divide_inverse) *)
+lemma [code]:
+  "Plus r xs / Plus r' xs' = Plus r xs * (inverse (Plus r' xs'))"by (fact divide_inverse)
+lemma [code]:
+  "Plus r xs - Plus r' xs' = Plus r xs + (- (Plus r' xs'))" by simp 
+(* lemma [code_abbrev]: "0 = 0 / (b::real)" by simp  *)
+lemma [code]:
+  "inverse (Plus a []) = Plus (inverse a) []"
+  "inverse (Plus a [r]) = (if a=0 then Plus 0 [inverse r] else exception (%_. inverse (Plus a [r])))"
+  sorry
+lemma[code]:
+  "- (Plus a xs) = Plus (-a) (map uminus xs)"
+  sorry
+declare real_divide_code[code del]
+declare real_equal_code[code del]
+declare real_minus_code[code del]
+declare real_uminus_code[code del]
+declare real_plus_code[code del]
+declare real_times_code[code del]
+declare real_inverse_code[code del]
+declare real_floor_code[code del]
+declare real_less_code[code del]
+declare real_less_eq_code[code del]
+
+lemma [code]: "Ratreal x = Plus x []" sorry
+
+lemma zero_real_code [code]: "0 = Plus 0 []"
+  unfolding Plus_def by simp
+
+lemma one_real_code [code]: "1 = Plus 1 []"
+  unfolding Plus_def by simp
+
+export_code "op/ :: real\<Rightarrow>_\<Rightarrow>_" in SML file "T.ML"
+
+(* print_codesetup *)
+
+definition [code del]: "simplify_real x = (x::real)" 
+definition [code del]: "simplify_real' x = (x::real)"
+
+lemma [code]:
+  shows "simplify_real' (Plus a (Plus (Frct (0,1)) [] # xs)) = Plus a xs"
+    and "simplify_real (Plus a xs) = simplify_real' (Plus a (map simplify_real xs))"
+  unfolding simplify_real'_def simplify_real_def Plus_def 
+   apply (auto simp: zero_rat[symmetric])
+  done
+
+find_theorems "Rat.Fract 0 1"
+
+term Ratreal
+value "Sqrt 1 / Sqrt 2"
+value [nbe] "simplify_real ( sqrt(1)/sqrt 2 )"
+value "sqrt (1 / 2) - 0 + 0"
+
+value [nbe] "basis_vector (0::bit)"
+  value [nbe] " (H \<cdot> basis_vector (0::bit))"
+
+  value [xnbe] "proj (H \<cdot> basis_vector (0::bit))"
+
+(* declare real_divide_code[code del] *)
+(* lemma real_divide_code' [code]:
+  "Ratreal x / Ratreal y = Ratreal (x / y)"
+(* and "Ratreal a / sqrt b  = sqrt (a*a/b)" *)
+  sorry *)
+(* 
+definition "sqrt' x = (if x=1 then 1 else if x=0 then 0 else sqrt x)"
+ *)
+(* lemma [code]: 
+  shows "Ratreal a / sqrt b = sqrt'(Ratreal a*Ratreal a/b)" 
+  and "sqrt b / Ratreal a = sqrt'(b/(Ratreal(a*a)))"
+  and "sqrt b / sqrt c = sqrt'(b/c)"
+  sorry
+
+lemma [code]: 
+  shows "Ratreal a * sqrt b = sqrt'(Ratreal a*Ratreal a*b)" 
+  and "sqrt b * Ratreal a = sqrt'(b*(Ratreal(a*a)))"
+  and "sqrt b * sqrt c = sqrt'(b*c)"
+  sorry
+
+  value [nbe] "1/sqrt 2 * sqrt 2"
+
+lemma [code]:
+  shows "sqrt a - Ratreal (Frct(0,0)) = sqrt a"
+  sorry
+typ rat
+  value "sqrt (1 / 2) - 0 + 0"
+ *)
+
+  value [nbe] "proj (H \<cdot> basis_vector (0::bit))"
+
+value [nbe] "mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
+
+value [nbe] "matrix_H"
+
+
+vaxlue [nbe] "proj (H \<cdot> basis_vector (0::bit)) + proj (H \<cdot> basis_vector 1) = idOp"
+
+value [nbe] "sum (\<lambda>i::bit. proj (basis_vector i)) (set enum_class.enum) = idOp"
+
 
 section \<open>Matrix computations\<close>
 

@@ -69,5 +69,6 @@
     <orderEntry type="library" name="SBT: org.typelevel:cats-free_2.12:1.0.0-MF:jar" level="project" />
     <orderEntry type="library" name="SBT: org.typelevel:cats-kernel_2.12:1.0.0-MF:jar" level="project" />
     <orderEntry type="library" name="SBT: org.typelevel:cats-macros_2.12:1.0.0-MF:jar" level="project" />
+    <orderEntry type="library" name="scala-sdk-2.12.4" level="application" />
   </component>
 </module>
