@@ -1,5 +1,5 @@
 theory QRHL_Protocol
-imports Protocol_Main QRHL
+imports Protocol_Main QRHL QRHL_Code
 begin
 
 

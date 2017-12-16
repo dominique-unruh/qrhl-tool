@@ -7,7 +7,9 @@ hide_const (open) Lattice.inf
 hide_const (open) Order.top
 hide_const (open) card_UNIV
 
-no_syntax   "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
+no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
+no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
+
 
 axiomatization bounded_of_mat :: "complex mat \<Rightarrow> ('a::enum,'b::enum) bounded"
   and mat_of_bounded :: "('a::enum,'b::enum) bounded \<Rightarrow> complex mat"

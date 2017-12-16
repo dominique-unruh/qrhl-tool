@@ -4,7 +4,7 @@ begin
 
 section \<open>Miscellaneous\<close>
 
-definition "(sqrt2::complex) = sqrt 2"
+definition [code del]: "(sqrt2::complex) = sqrt 2"
 lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
  by (simp add: of_real_def scaleR_2 sqrt2_def)
 lemma sqrt2_neq0[simp]: "sqrt2 \<noteq> 0" unfolding sqrt2_def by simp
@@ -511,8 +511,8 @@ lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding subspace_
     
 axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set"
     
-definition "spanVector A = Inf {S. A \<subseteq> subspace_as_set S}"
-definition "spanState A = Inf {S. state_to_vector ` A \<subseteq> subspace_as_set S}"
+definition [code del]: "spanVector A = Inf {S. A \<subseteq> subspace_as_set S}"
+definition [code del]: "spanState A = Inf {S. state_to_vector ` A \<subseteq> subspace_as_set S}"
 consts span :: "'a set \<Rightarrow> 'b subspace"
 adhoc_overloading span spanState spanVector
 
@@ -902,13 +902,17 @@ lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
   
 axiomatization colocal_pred_qvars :: "predicate \<Rightarrow> 'a qvariables \<Rightarrow> bool"
   and colocal_qvars_qvars :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> bool"
-  and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool" (* TODO remove or docu *)
+  (* and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool" (* TODO remove or docu *) *)
+  and colocal_op_pred :: "(mem2,mem2) bounded \<Rightarrow> predicate \<Rightarrow> bool"
+  and colocal_op_qvars :: "(mem2,mem2) bounded \<Rightarrow> 'a qvariables \<Rightarrow> bool"
 
 consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
 adhoc_overloading colocal colocal_pred_qvars colocal_qvars_qvars (* colocal_qvar_qvars *)
-  
-axiomatization where 
-  colocal_qvariable_names[simp]: "set (qvariable_names Q) \<inter> set (qvariable_names R) = {} \<Longrightarrow> colocal Q R" 
+  colocal_op_pred colocal_op_qvars
+
+axiomatization where colocal_qvariable_names[simp]: 
+  "set (qvariable_names Q) \<inter> set (qvariable_names R) = {} 
+  \<Longrightarrow> distinct (qvariable_names Q) \<Longrightarrow> distinct (qvariable_names R) \<Longrightarrow> colocal Q R" 
   for Q :: "'a qvariables" and R :: "'b qvariables"
 
 axiomatization where
@@ -929,6 +933,11 @@ syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarr
 syntax "_quantum_equality" :: "qvariable_list_args \<Rightarrow> qvariable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
+
+axiomatization where colocal_quantum_equality_full[simp]:
+  "colocal Q1 Q3 \<Longrightarrow> colocal Q2 Q3 \<Longrightarrow> colocal Q1 Q2 \<Longrightarrow> colocal (quantum_equality_full U1 Q1 U2 Q2) Q3"
+for Q1::"'a qvariables" and Q2::"'b qvariables" and Q3::"'c qvariables"
+and U1 U2::"(_,'d)bounded" 
 
 axiomatization where colocal_quantum_eq[simp]: "colocal Q1 R \<Longrightarrow> colocal Q2 R \<Longrightarrow> colocal (Q1 \<equiv>\<qq> Q2) R"
  for Q1 Q2 :: "'c qvariables" and R :: "'a qvariables"
@@ -1076,8 +1085,10 @@ axiomatization Y :: "(bit,bit) bounded"
 section \<open>Tensor products\<close>
 
 axiomatization "tensorOp" :: "('a,'b) bounded \<Rightarrow> ('c,'d) bounded \<Rightarrow> ('a*'c,'b*'d) bounded"
+axiomatization "tensorSpace" :: "'a subspace \<Rightarrow> 'c subspace \<Rightarrow> ('a*'c) subspace"
+axiomatization "tensorVec" :: "'a vector \<Rightarrow> 'c vector \<Rightarrow> ('a*'c) vector"
 consts tensor :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infix "\<otimes>" 71)
-adhoc_overloading tensor tensorOp
+adhoc_overloading tensor tensorOp tensorSpace tensorVec
 
 axiomatization "comm_op" :: "('a*'b, 'b*'a) bounded"
   where unitary_comm_op[simp]: "unitary comm_op"
