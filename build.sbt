@@ -14,7 +14,7 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.1"
 
 isabelleVersions := Seq(Version.Stable("2017"))
 isabelleSessions in Compile := Seq("QRHL")
-//isabelleSources := Seq(baseDirectory.value / "src/main/isabelle/.libisabelle")
+//isabelleSources := Seq(baseDirectory.value / "src/main/isabelle")
 
 //unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/isabelle"
 
@@ -23,7 +23,20 @@ libraryDependencies ++= { val version = "0.9.2"; Seq(
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version
 ) }
-libraryDependencies += "info.hupel.afp" % "afp-2017" % "1.1.20171130"
+//libraryDependencies += "info.hupel.afp" % "afp-2017" % "1.1.20171130"
+
+val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2017-11-23.tar.gz"
+
+lazy val downloadAFP = taskKey[Unit]("Download the AFP and extract it to target/downloads/afp")
+downloadAFP := {
+  val path = "target/downloads/afp"
+  if(java.nio.file.Files.notExists(new File(path).toPath())) {
+    println("Path does not exist, downloading...")
+    IO.unzipURL(new URL(afpUrl), new File(path))
+  } else {
+    println("Path exists, no need to download.")
+  }
+}
 
 
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple

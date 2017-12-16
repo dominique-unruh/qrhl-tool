@@ -579,15 +579,26 @@ axiomatization where
 and times_adjoint[simp]: "adjoint (timesOp A B) = timesOp (adjoint B) (adjoint A)"
 for A :: "('b,'a) bounded" and B :: "('c,'b) bounded" and C :: "('d,'c) bounded"
 
-axiomatization plusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
-axiomatization minusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
-axiomatization uminusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
+axiomatization plusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'b) bounded" 
+  and uminusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded"
+  where
+  plusOp_assoc: "plusOp (plusOp a b) c = plusOp a (plusOp b c)"
+  and plusOp_comm: "plusOp a b = plusOp b a"
+  and plusOp_0: "plusOp 0 a = a"
+  and plusOp_cancel: "plusOp (uminusOp a) a = 0"
+for a b c :: "('a,'b) bounded"
 
 instantiation bounded :: (type,type) ab_group_add begin
 definition "op+ = plusOp" 
-definition "A - B = minusOp A B"
+definition "A - B = plusOp A (uminusOp B)"
 definition "uminus = uminusOp"
-instance apply intro_classes sorry
+instance apply intro_classes
+  unfolding plus_bounded_def minus_bounded_def uminus_bounded_def
+      apply (fact plusOp_assoc)
+     apply (fact plusOp_comm)
+    apply (fact plusOp_0)
+   apply (fact plusOp_cancel)
+  by auto
 end
 
 lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
@@ -610,11 +621,11 @@ lemma apply_idOp[simp]: "applyOp idOp \<psi> = \<psi>"
 
 axiomatization where scalar_mult_1_op[simp]: "1 \<cdot> A = A" for A::"('a,'b)bounded"
 axiomatization where scalar_mult_0_op[simp]: "(0::complex) \<cdot> A = 0" for A::"('a,'b)bounded" 
-lemma scalar_op_op[simp]: "(a \<cdot> A) \<cdot> B = a \<cdot> (A \<cdot> B)" for a :: complex and A B :: "(_,_) bounded" sorry
-lemma op_scalar_op[simp]: "A \<cdot> (a \<cdot> B) = a \<cdot> (A \<cdot> B)" for a :: complex and A B :: "(_,_) bounded" sorry
-lemma scalar_scalar_op[simp]: "a \<cdot> (b \<cdot> A) = (a*b) \<cdot> A" for a b :: complex and A  :: "(_,_) bounded" sorry
-lemma scalar_op_vec[simp]: "(a \<cdot> A) \<cdot> \<psi> = a \<cdot> (A \<cdot> \<psi>)" for a :: complex and A :: "(_,_) bounded" and \<psi> :: "_ vector" sorry
-lemma add_scalar_mult: "a\<noteq>0 \<Longrightarrow> a \<cdot> A = a \<cdot> B \<Longrightarrow> A=B" for A :: "(_,_)bounded" and a::complex sorry
+axiomatization where scalar_op_op[simp]: "(a \<cdot> A) \<cdot> B = a \<cdot> (A \<cdot> B)" for a :: complex and A B :: "(_,_) bounded" 
+axiomatization where op_scalar_op[simp]: "A \<cdot> (a \<cdot> B) = a \<cdot> (A \<cdot> B)" for a :: complex and A B :: "(_,_) bounded" 
+axiomatization where scalar_scalar_op[simp]: "a \<cdot> (b \<cdot> A) = (a*b) \<cdot> A" for a b :: complex and A  :: "(_,_) bounded" 
+axiomatization where scalar_op_vec[simp]: "(a \<cdot> A) \<cdot> \<psi> = a \<cdot> (A \<cdot> \<psi>)" for a :: complex and A :: "(_,_) bounded" and \<psi> :: "_ vector" 
+axiomatization where add_scalar_mult: "a\<noteq>0 \<Longrightarrow> a \<cdot> A = a \<cdot> B \<Longrightarrow> A=B" for A :: "(_,_)bounded" and a::complex 
 
 axiomatization 
     (* idOp :: "('a,'a) bounded" *)
@@ -1044,7 +1055,7 @@ lemma H_H[simp]: "H \<cdot> H = idOp"
   using unitaryH unfolding unitary_def by simp
 
 definition "H' = sqrt2 \<cdot> H"
-lemma H_H': "H = (1/sqrt2) \<cdot> H'" unfolding H'_def sorry
+lemma H_H': "H = (1/sqrt2) \<cdot> H'" unfolding H'_def by simp
 
 
 definition [code del]: "Z = H \<cdot> X \<cdot> H"
