@@ -83,7 +83,7 @@ class Isabelle(path:String) {
   private val config: Configuration = Configuration.simple("QRHL")
 
   private def build() {
-    println("*** Building Isabelle (may take a while, especially the first time, e.g., 15min)...")
+    println("*** Building Isabelle (may take a while, especially the first time, e.g., 10-25min)...")
     if (!System.build(environment, config))
       throw qrhl.UserException("Building Isabelle failed")
   }

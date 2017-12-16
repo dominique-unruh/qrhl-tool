@@ -1,4 +1,10 @@
+import java.nio.file.Files
+
 import NativePackagerHelper._
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import sbt.io.Using
+
+import scala.sys.process.Process
 
 name := "qrhl"
 
@@ -26,15 +32,28 @@ libraryDependencies ++= { val version = "0.9.2"; Seq(
 //libraryDependencies += "info.hupel.afp" % "afp-2017" % "1.1.20171130"
 
 val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2017-11-23.tar.gz"
+//val afpTarPath = "target/downloads/afp.tgz"
+val afpExtractPath = "target/downloads/afp"
 
-lazy val downloadAFP = taskKey[Unit]("Download the AFP and extract it to target/downloads/afp")
+lazy val downloadAFP = taskKey[Unit]("Download the AFP")
+managedResources in Compile := (managedResources in Compile).dependsOn(downloadAFP).value
+
 downloadAFP := {
-  val path = "target/downloads/afp"
-  if(java.nio.file.Files.notExists(new File(path).toPath())) {
-    println("Path does not exist, downloading...")
-    IO.unzipURL(new URL(afpUrl), new File(path))
-  } else {
-    println("Path exists, no need to download.")
+  import scala.sys.process._
+
+  val extractPath = baseDirectory.value / afpExtractPath
+
+  if (!extractPath.exists()) {
+    println("Downloading AFP.")
+    try {
+      extractPath.mkdirs()
+      print ( ( new URL(afpUrl) #> Process(List("tar", "xz", "--strip-components=1"), cwd = extractPath) ).!! )
+    } catch {
+      case e : Throwable =>
+        print("Removing "+extractPath)
+        IO.delete(extractPath)
+        throw e
+    }
   }
 }
 
