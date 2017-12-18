@@ -5,6 +5,8 @@ fun mk_qvariablesT T = Type(@{type_name qvariables}, [T])
 fun mk_qvariableT T = Type(@{type_name qvariable}, [T])
 fun mk_stateT T = Type(@{type_name state}, [T])
 fun mk_boundedT T T' = Type(@{type_name bounded}, [T,T'])
+fun dest_boundedT (Type(@{type_name bounded}, [T,T'])) = (T,T')
+  | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
 fun mk_bounded2T T = mk_boundedT T T
 fun mk_measurementT T T' = Type(@{type_name measurement}, [T,T'])
 (* fun mk_projectorT T = Type(@{type_name projector}, [T]) *)
@@ -360,7 +362,7 @@ fun applyRule name goal ctx =
       val cgoal = Thm.cterm_of ctx (HOLogic.mk_Trueprop goal)
       val goal' = Goal.init cgoal
       val goal'' = case SINGLE (resolve_tac ctx thms 1) goal' of
-                    NONE => raise TERM("rule "^name, [goal])
+                    NONE => raise TERM("rule "^name^" could not be applied", [goal])
                    | SOME x => x
       val subgoals = Thm.prems_of goal''
       val subgoals' = map HOLogic.dest_Trueprop subgoals
@@ -368,5 +370,164 @@ fun applyRule name goal ctx =
     (* subgoals' |> map (Thm.cterm_of ctx) |> @{make_string} |> error *)
     subgoals'
   end
+
+
+(* TODO remove??? *)
+datatype varterm = VTCons of varterm * varterm | VTSingle of string*typ | VTUnit
+
+fun parse_varterm (Const(@{const_name qvariable_concat},_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
+  | parse_varterm (Const(@{const_name qvariable_singleton},_) $ Free(n,Type(@{type_name qvariable},[T]))) = VTSingle (n,T)
+  | parse_varterm (Const(@{const_name qvariable_unit},_)) = VTUnit
+  | parse_varterm t = raise TERM("not a qvariables expression",[t])
+
+fun mk_varterm (VTUnit) = (@{const qvariable_unit}, @{typ unit})
+  | mk_varterm (VTCons(a,b)) = let
+      val (vta,Ta) = mk_varterm a
+      val (vtb,Tb) = mk_varterm b
+    in
+      (Const(@{const_name qvariable_concat}, 
+        mk_qvariablesT Ta --> mk_qvariablesT Tb --> mk_qvariablesT (HOLogic.mk_prodT(Ta,Tb))) $ vta $ vtb,
+       HOLogic.mk_prodT(Ta,Tb))
+    end
+  | mk_varterm (VTSingle(n,T)) = 
+      (Const(@{const_name qvariable_singleton}, mk_qvariableT T --> mk_qvariablesT T) $ 
+          Free(n,Type(@{type_name qvariable},[T])),T)
+
+fun type_of_varterm (VTUnit) = @{typ unit}
+  | type_of_varterm (VTCons(a,b)) = HOLogic.mk_prodT(type_of_varterm a, type_of_varterm b)
+  | type_of_varterm (VTSingle(_,T)) = T
+
+fun varterm_from_list [] = VTUnit
+  | varterm_from_list [nT] = VTSingle nT
+  | varterm_from_list (nT::xs) = VTCons (VTSingle nT, varterm_from_list xs)
+
+fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
+  | vars_in_varterm (VTSingle nT) = [nT]
+  | vars_in_varterm VTUnit = []
+
+fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
+
+fun missing_in_varterm vt1 vt2 = let
+  val v1 = vars_in_varterm vt1
+  val v2 = vars_in_varterm vt2
+  val miss = subtract nameq v1 v2
+in
+  varterm_from_list miss |> mk_varterm |> fst
+end
+
+fun qvariable_extension_hint_conv ctx ct = let
+val (lift,S,Q,R) = case Thm.term_of ct of
+    (Const(@{const_name join_qvariables_hint},_)) $ (Const(lift,_) $ S $ Q) $ R => (lift,S,Q,R)
+    | _ => raise CTERM("qvariable_extension_hint_conv: wrong shape",[ct])
+val conv_rule = case lift of @{const_name liftSpace} => @{thm join_qvariables_hint_subspace_conv_aux}
+                           | @{const_name liftOp} => @{thm join_qvariables_hint_bounded_conv_aux}
+                           | _ => raise CTERM("qvariable_extension_hint_conv: lift is "^lift, [ct])
+val vtQ = parse_varterm Q
+val vtR = parse_varterm R
+val miss = missing_in_varterm vtQ vtR |> Thm.cterm_of ctx
+val rule = infer_instantiate ctx 
+  [(("S",0),Thm.cterm_of ctx S),
+   (("R",0),Thm.cterm_of ctx R),
+   (("R'",0),miss),
+   (("Q",0),Thm.cterm_of ctx Q)]
+  conv_rule 
+in
+rule
+end
+
+fun sort_qvariables_step (VTSingle _) = NONE
+  | sort_qvariables_step (VTCons (v1 as VTSingle(n1,T1), v2 as VTSingle(n2,T2))) =
+      if n1<=n2 then NONE
+      else SOME(Const(@{const_name comm_op}, 
+            mk_boundedT (HOLogic.mk_prodT(T1,T2)) (HOLogic.mk_prodT(T2,T1))), 
+          VTCons (v2,v1))
+  | sort_qvariables_step (vt as (VTCons (v1 as VTSingle(n1,T1), VTCons (v2 as VTSingle(n2,T2), rest)))) =
+      if n1<=n2 then sort_qvariables_step_in vt
+      else let val restT = type_of_varterm rest in
+        SOME(Const(@{const_name comm_op_pfx},
+            mk_boundedT (HOLogic.mk_prodT (T1, HOLogic.mk_prodT (T2,restT))) (HOLogic.mk_prodT (T2, HOLogic.mk_prodT (T1,restT)))),
+          VTCons(v2, VTCons(v1,rest)))
+      end
+  | sort_qvariables_step (VTCons (VTCons(vt1,vt2), vt3)) =
+      let val T1 = type_of_varterm vt1
+          val T2 = type_of_varterm vt2
+          val T3 = type_of_varterm vt3
+      in
+        SOME(Const(@{const_name assoc_op_adj},
+            mk_boundedT (HOLogic.mk_prodT (HOLogic.mk_prodT(T1,T2), T3)) (HOLogic.mk_prodT (T1, HOLogic.mk_prodT(T2,T3)))),
+          VTCons(vt1, VTCons(vt2, vt3)))
+      end
+  | sort_qvariables_step (vt as VTCons (VTSingle _, _)) = sort_qvariables_step_in vt
+  | sort_qvariables_step VTUnit = NONE
+  | sort_qvariables_step (VTCons (vt, VTUnit)) =
+      let val T = type_of_varterm vt in
+        SOME(Const(@{const_name remove_qvar_unit_op},
+          mk_boundedT (HOLogic.mk_prodT(T,HOLogic.unitT)) T),
+          vt) end
+  | sort_qvariables_step (VTCons (VTUnit, vt)) =
+      let val T = type_of_varterm vt in
+        SOME(Const(@{const_name remove_qvar_unit_op2},
+          mk_boundedT (HOLogic.mk_prodT(HOLogic.unitT,T)) T),
+          vt) end
+
+(* sort_qvariables_step_in must be called on term "qvariable_concat [[q]] rest" *)
+and sort_qvariables_step_in (VTCons(v1 as VTSingle(_,T1), rest)) =
+  (case sort_qvariables_step rest of
+    NONE => NONE
+  | SOME(rest_op, rest_vt) =>
+    let val rest_opT = fastype_of rest_op
+        val (rest_op_inT,rest_op_outT) = dest_boundedT rest_opT
+    in
+      SOME(Const(@{const_name id_tensor}, 
+          rest_opT --> mk_boundedT (HOLogic.mk_prodT(T1,rest_op_inT)) (HOLogic.mk_prodT(T1,rest_op_outT))) $
+          rest_op,
+        VTCons(v1, rest_vt))
+    end)
+  | sort_qvariables_step_in vt = raise TERM("sort_qvariables_step_in", [mk_varterm vt |> fst])
+
+fun sort_qvariables vt =
+  case sort_qvariables_step vt of
+    NONE => NONE
+  | SOME(A,vt') =>
+      case sort_qvariables vt' of
+        NONE => SOME(A,vt')
+      | SOME(A',vt'') => (* A'\<cdot>A *)
+          let val AT = fastype_of A
+              val A'T = fastype_of A'
+              val (inT,_) = dest_boundedT AT
+              val (_,outT) = dest_boundedT A'T
+              val (vt't,vt'T) = mk_varterm vt'
+          in
+            SOME(Const(@{const_name qvar_trafo_mult}, mk_qvariablesT vt'T --> A'T --> AT --> mk_boundedT inT outT) $
+              vt't $ A' $ A,
+              vt'')
+          end
+        
+(* Expects: ct = sort_qvariables_hint (x>>Q) *)
+fun sort_qvariables_hint_conv ctx ct = let
+val (lift,S,Q) = case Thm.term_of ct of
+    (Const(@{const_name sort_qvariables_hint},_)) $ (Const(lift,_) $ S $ Q) => (lift,S,Q)
+    | _ => raise CTERM("sort_qvariables_hint_hint_conv: wrong shape",[ct])
+val conv_rule = case lift of @{const_name liftSpace} => @{thm sort_qvariables_hint_subspace_conv_aux}
+                           | @{const_name liftOp} => @{thm sort_qvariables_hint_bounded_conv_aux}
+                           | _ => raise CTERM("sort_qvariables_hint_hint_conv: lift is "^lift, [ct])
+val vtQ = parse_varterm Q
+in
+  case sort_qvariables vtQ of
+    NONE => Conv.rewr_conv @{thm sort_qvariables_hint_remove_aux} ct
+  | SOME(A,vt) =>
+        infer_instantiate ctx 
+          [(("S",0),Thm.cterm_of ctx S),
+           (("A",0),Thm.cterm_of ctx A),
+           (("R'",0),mk_varterm vt |> fst |> Thm.cterm_of ctx),
+           (("Q",0),Thm.cterm_of ctx Q)] conv_rule
+end
+
+fun qvariable_rewriting_simproc _ ctx ct =
+  SOME (qvariable_extension_hint_conv ctx ct)
+  handle CTERM _ => 
+    SOME (sort_qvariables_hint_conv ctx ct)
+    handle CTERM _ => NONE
+
 
 end

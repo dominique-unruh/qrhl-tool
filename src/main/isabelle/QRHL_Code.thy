@@ -17,10 +17,10 @@ axiomatization vector_of_vec :: "complex vec \<Rightarrow> ('a::enum) vector"
   and vec_of_vector :: "('a::enum) vector \<Rightarrow> complex vec"
 
 axiomatization where mat_of_bounded_inverse [code abstype]:
-  "bounded_of_mat (mat_of_bounded B) = B"
+  "bounded_of_mat (mat_of_bounded B) = B" for B::"('a::enum,'b::enum)bounded"
 
 axiomatization where vec_of_vector_inverse [code abstype]:
-  "vector_of_vec (vec_of_vector B) = B"
+  "vector_of_vec (vec_of_vector B) = B" for B::"('a::enum)vector"
 
 
 fun index_of where

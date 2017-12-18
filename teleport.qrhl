@@ -24,6 +24,9 @@ program teleport := {
 
 
 
+
+
+
 qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
  inline teleport.
@@ -34,8 +37,9 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   simp.
 
  conseq pre: quantum_equality_full idOp ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
-  simp quantum_eq_add_state.
- 
+  rule quantum_eq_add_state.
+   simp.
+
  seq 2 0: quantum_equality_full idOp ⟦C1,A1,B1⟧
           ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
   wp left.
@@ -46,9 +50,32 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   rule teleport_goal1.
   # TODO: document "rule" tactic
    simp.
+
+ seq 1 0: Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
+          quantum_equality_full idOp ⟦C1,A1,B1⟧
+          ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+  wp left.
+  simp.
+  skip.
+  simp.
+  fix a'.
+  rule move_plus_meas_rule.
+   simp.
+  simp.
+
+	 # TODO: can we simplify the invariant?
+
+	 qeq == A2: psi, CAB1: H CNOT (psi * EPR)
+	 proj*qeq == A2: psi, CAB1: Proj H CNOT (psi * EPR)
+	 
+
+	   assumes "Proj C ⋅ A ≤ B"
+	   shows "A ≤ (B⊓C) + ortho C"
+
 	 
  seq 1 0: if a1=0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧ else X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧.
   wp left.
+	 simp.
   skip.
   simp.
   fix a'.
@@ -148,3 +175,32 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  # a1=1, c1=1 branch finished.       
 
 qed.
+
+
+
+
+
+# Brute force
+qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
+  inline teleport.
+
+  seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
+   wp left.
+   skip.
+   simp.
+
+  wp left.
+  simp.
+  wp left.
+  simp.
+  wp left.
+  simp.
+  wp left.
+  simp.
+  wp left.
+  simp.
+  wp left.
+  simp.
+
+  skip.
+  simp.
