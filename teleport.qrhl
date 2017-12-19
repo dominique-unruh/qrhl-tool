@@ -1,3 +1,5 @@
+# WARNING: Unfinished experiment!
+
 isabelle Teleport.
 
 classical var a : bit.
