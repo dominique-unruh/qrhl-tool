@@ -22,7 +22,8 @@
 	  (lambda ()
 	    (set-input-method "TeX")
 	    (set-language-environment "UTF-8")
-	    (set-variable 'electric-indent-inhibit t)))
+	    (set-variable 'indent-tabs-mode nil)
+	    (set-variable 'electric-indent-mode nil)))
 
 (defun qr () ; Just for testing
   "Restarts the prover, restarts it, and then processes the buffer to current position"

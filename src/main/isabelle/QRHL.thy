@@ -1527,12 +1527,6 @@ lemma qvar_trafo_protecterd_comm_op[simp]:
  
 
 
-(*lemmas qvar_trafo_assoc_op_mult[simp] = qvar_trafo_mult[OF qvar_trafo_assoc_op]
-lemmas qvar_trafo_adj_assoc_op_mult[simp] = qvar_trafo_mult[OF qvar_trafo_adj[OF qvar_trafo_assoc_op]]
-lemmas qvar_trafo_comm_op_mult[simp] = qvar_trafo_mult[OF qvar_trafo_comm_op]
-lemmas qvar_trafo_comm_op_id_mult[simp] = qvar_trafo_mult[OF qvar_trafo_tensor[OF _ _ qvar_trafo_comm_op qvar_trafo_id]]
-lemmas qvar_trafo_id_comm_op_mult[simp] = qvar_trafo_mult[OF qvar_trafo_tensor[OF _ _ qvar_trafo_id qvar_trafo_comm_op]]*)
-
 schematic_goal
   assumes [simp]: "colocal_qvars_qvars \<lbrakk>r, q\<rbrakk> \<lbrakk>s, v\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>q, r\<rbrakk> \<lbrakk>s, v\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>r\<rbrakk> \<lbrakk>q\<rbrakk>
   \<and> colocal_qvars_qvars \<lbrakk>s\<rbrakk> \<lbrakk>v\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>q\<rbrakk> \<lbrakk>r, s, v\<rbrakk>"

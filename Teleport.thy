@@ -2,23 +2,9 @@ theory Teleport
   imports QRHL_Protocol
 begin
 
-find_theorems "_ = zero_vec _"
-
 definition "computational_basis_vec n = map (unit_vec n) [0..<n]"
 definition "orthogonal_complement_vec n vs = 
   filter (op\<noteq> (zero_vec n)) (drop (length vs) (gram_schmidt n (vs @ computational_basis_vec n)))"
-
-
-value [nbe] "orthogonal_complement_vec 3 [vec_of_list [1::real,1,0], vec_of_list [1,1,0] ]"    
-    
-    term finsum
-
-definition [code]: "testA = (mat_of_rows_list 2 [ [1,1],[1,1] ] :: complex mat)"
-(* How to find a basis for the kernel of testA: *)
-value "find_base_vectors (gauss_jordan_single testA)"
-
-
-term find_base_vectors
 
 declare[[quick_and_dirty]]
 
@@ -32,20 +18,20 @@ axiomatization EPR :: "(bit*bit) state"
 
 lemma applyOpSpace_colocal[simp]:
   fixes U :: "(mem2,mem2) bounded" and S :: predicate
-  assumes "colocal_op_pred U S"
+  assumes "colocal U S"
   shows "U \<cdot> S = S"
   sorry
 
 lemma colocal_op_pred_lift1[simp]:
-  fixes Q :: "'a qvariables"
+  fixes Q :: "'a qvariables" and U :: "('a,'a) bounded" and S :: predicate
   assumes "colocal S Q"
-  shows "colocal_op_pred (U\<guillemotright>Q) S"
+  shows "colocal (U\<guillemotright>Q) S"
   sorry
 
 lemma colocal_op_qvars_lift1[simp]:
-  fixes Q :: "'a qvariables"
+  fixes Q R :: "_ qvariables" and U :: "('a,'a) bounded"
   assumes "colocal Q R"
-  shows "colocal_op_qvars (U\<guillemotright>Q) R"
+  shows "colocal (U\<guillemotright>Q) R"
   sorry
 
 lemma colocal_pred_qvars_lift1[simp]:
@@ -77,7 +63,7 @@ lemma lift_extendL:
 
 lemma tensor_adjoint[simp]: "adjoint (U\<otimes>V) = (adjoint U) \<otimes> (adjoint V)" sorry
 
-lemma sort_lift[simp]:
+lemma sort_lift: (* TODO remove *)
   fixes U :: "(('c \<times> 'd) \<times> 'e, ('c \<times> 'd) \<times> 'e) bounded" and Q R S
   assumes "colocal Q R" and "colocal R S" and "colocal Q S"
   defines "V == assoc_op* \<cdot> U \<cdot> assoc_op"
@@ -108,20 +94,6 @@ axiomatization where
   timesOp_assoc_subspace[simp]: "applyOpSpace (timesOp A B) S = applyOpSpace A (applyOpSpace B S)"
 for S :: "'a subspace" and B :: "('a,'b) bounded" and A :: "('b,'c) bounded"
 
-
-lemma teleport_goal1:
-  assumes "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"
-  shows
-    "quantum_equality_full (addState EPR*) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>
-      \<le> CNOT\<guillemotright>\<lbrakk>C1, A1\<rbrakk> \<cdot> (H\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> quantum_equality_full (addState EPR* \<cdot> (assoc_op* \<cdot> (CNOT \<otimes> idOp \<cdot> (assoc_op \<cdot> H \<otimes> idOp)))) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>)"
-proof -
-  have H: "H \<otimes> idOp \<cdot> H \<otimes> idOp = idOp" by simp
-  have CNOT: "CNOT \<otimes> idOp \<cdot> CNOT \<otimes> idOp = idOp" by simp
-  show ?thesis
-    by (simp add: colocal_split1 colocal_split2 assms timesOp_assoc
-        lift_extendR[where U=H and R="\<lbrakk>A1,B1\<rbrakk>"] lift_extendR[where U=CNOT and R="\<lbrakk>B1\<rbrakk>"]
-        assoc_replace[OF H] assoc_replace[OF UadjU] assoc_replace[OF CNOT] assoc_replace[OF adjUU])
-qed
 
 
 
@@ -358,76 +330,14 @@ lemma INF_lift: "colocal Q \<lbrakk>\<rbrakk> \<Longrightarrow> (INF x. S x\<gui
 lemmas prepare_for_code = H_H' quantum_equality_full_subspace add_join_qvariables_hint INF_lift 
   EPR_EPR' span_vector_state Cla_inf_lift Cla_plus_lift
 
-lemma colocal_cheat: "NO_MATCH (a,a) (q,r) \<Longrightarrow> colocal \<lbrakk>q\<rbrakk> \<lbrakk>r\<rbrakk>" sorry
-lemma colocal_cheat2: "colocal \<lbrakk>q\<rbrakk> \<lbrakk>r\<rbrakk>" sorry
-(* lemma colocal_cases: "NO_MATCH (a,a) (q,r) \<Longrightarrow> colocal \<lbrakk>q\<rbrakk> \<lbrakk>r\<rbrakk>" sorry *)
-
-
-(* simproc_setup warn_colocal ("distinct_qvars Q") = {*
-  fn _ => fn ctx => fn ct => 
-  let 
-      val Q = Thm.term_of ct |> Term.dest_comb |> snd 
-      val vs = QRHL.parse_varterm Q |> QRHL.vars_in_varterm
-      val _ = if not (has_duplicates QRHL.nameq vs) 
-              then warning ("Please add to simplifier: "^ @{make_string} ct^" (remove simproc warn_colocal to remove warnings)")
-              else ()
-  in
-    NONE
-  end 
-  handle TERM _ => NONE
-*} *)
+(* lemma colocal_cheat: "NO_MATCH (a,a) (q,r) \<Longrightarrow> colocal \<lbrakk>q\<rbrakk> \<lbrakk>r\<rbrakk>" sorry
+lemma colocal_cheat2: "colocal \<lbrakk>q\<rbrakk> \<lbrakk>r\<rbrakk>" sorry *)
 
 lemmas qvar_trafo_adj_assoc_mult[simp] = qvar_trafo_mult[OF qvar_trafo_adj[OF qvar_trafo_assoc_op]] (* TODO: add to simplifier *)
 
-lemma distinct_qvarsL: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> distinct_qvars Q"
-  by (meson distinct_qvars_concat_unit1 distinct_qvars_split1) sorry
-
-(*
-lemma qvar_trafo_mult_assoc_comm_assoc[simp]:
-  fixes A :: "(_,_)bounded"
-  assumes A: "qvar_trafo A (qvariable_concat Q1 (qvariable_concat Q2 Q3)) R"
-  shows "qvar_trafo (A \<cdot> (assoc_op* \<cdot> comm_op \<otimes> idOp \<cdot> assoc_op)) (qvariable_concat Q2 (qvariable_concat Q1 Q3)) R"
-proof -
-  have [simp]: "colocal_qvars_qvars (qvariable_concat Q2 Q1) Q3" and [simp]: "colocal_qvars_qvars Q2 Q1"
-    and [simp]: "colocal_qvars_qvars (qvariable_concat Q1 Q2) Q3" and [simp]: "distinct_qvars Q3"
-    using assms unfolding qvar_trafo_def 
-    by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvarsL distinct_qvars_swap)
-  show ?thesis
-    apply (rule qvar_trafo_mult[OF _ A])
-    apply (rule qvar_trafo_assoc_op_mult)
-     apply simp
-     apply (rule qvar_trafo_mult)
-      apply (rule qvar_trafo_tensor)
-        apply simp
-       defer
-       apply (rule qvar_trafo_comm hatte keine _op)
-       apply simp
-       defer
-      apply (rule qvar_trafo_adj)
-      apply (rule qvar_trafo_assoc_op)
-      apply simp
-     apply simp
-    apply (rule qvar_trafo_id)
-    by simp
-qed
-*)
 
 lemma quantum_eq_add_state: (* TODO: recover axiom *)
   fixes C1 A1 B1 A2 :: "bit qvariable"
-(*  assumes colocal[simp]: "colocal_qvars_qvars \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>
-       \<and> colocal_qvars_qvars \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A1, B1\<rbrakk> \<lbrakk>C1, A2\<rbrakk>
-       \<and> colocal_qvars_qvars \<lbrakk>A2\<rbrakk> \<lbrakk>B1, C1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk> 
-  \<and> colocal_qvars_qvars \<lbrakk>A2\<rbrakk> \<lbrakk>C1, B1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A1\<rbrakk> \<lbrakk>A2, B1, C1\<rbrakk>
-  \<and> colocal_qvars_qvars \<lbrakk>A1\<rbrakk> \<lbrakk>A2, C1, B1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A1, A2\<rbrakk> \<lbrakk>C1, B1\<rbrakk> 
-\<and> colocal_qvars_qvars \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A2, A1\<rbrakk> \<lbrakk>C1, B1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A1, C1\<rbrakk> \<lbrakk>B1\<rbrakk>
-\<and> colocal_qvars_qvars \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>C1, A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A2\<rbrakk> \<lbrakk>A1, C1, B1\<rbrakk>
-\<and> colocal_qvars_qvars \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A2, C1\<rbrakk> \<lbrakk>A1, B1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A2\<rbrakk> \<lbrakk>C1, A1, B1\<rbrakk>
-\<and> colocal_qvars_qvars \<lbrakk>A1\<rbrakk> \<lbrakk>B1, C1, A2\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>B1\<rbrakk> \<lbrakk>C1, A2\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>B1\<rbrakk> \<lbrakk>A2, C1\<rbrakk>
-\<and> colocal_qvars_qvars \<lbrakk>B1, A2\<rbrakk> \<lbrakk>C1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A2, B1\<rbrakk> \<lbrakk>C1\<rbrakk>
-\<and> colocal_qvars_qvars \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>C1, A1, B1\<rbrakk> (qvariable_concat \<lbrakk>A2\<rbrakk> qvariable_unit)
-\<and> colocal_qvars_qvars \<lbrakk>A1\<rbrakk> \<lbrakk>B1, A2, C1\<rbrakk> \<and> colocal_qvars_qvars \<lbrakk>A1\<rbrakk> (qvariable_concat \<lbrakk>A2, B1, C1\<rbrakk> qvariable_unit)
-
-"*)
   assumes qvars[simp]: "distinct_qvars \<lbrakk>C1,A1,B1,A2\<rbrakk>"
   shows "\<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> span {EPR}\<guillemotright>\<lbrakk>A1, B1\<rbrakk> \<le> quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>"
 proof -
@@ -437,13 +347,6 @@ proof -
     and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
     using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
   note colocals = this colocal_split1 colocal_split2
- (*   have "S\<guillemotright>\<lbrakk>q\<rbrakk> \<cdot> R\<guillemotright>\<lbrakk>r\<rbrakk> = undef" for S R::"('a,'a)bounded"
-    using [[ML_exception_trace]]
-    apply (auto simp: prepare_for_code colocals)
-    apply (subst lift_tensorOp) apply simp
-    find_theorems tensorOp liftOp *)
-
-
   show ?thesis
     apply simp
     apply (auto simp: prepare_for_code colocals)
@@ -455,12 +358,8 @@ derive (eq) ceq subspace
 derive (no) ccompare subspace
 derive (monad) set_impl subspace
 
-(* declare Inf_subspace_def[code del] *)
-(* declare Inf_subspace_inst.Inf_subspace[code del] *)
 
 
-
-term "inf :: 'a subspace\<Rightarrow>_\<Rightarrow>_"
 (*
 lemma teleport_brute_force:
   assumes "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk> \<and> colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>"
@@ -484,40 +383,22 @@ qed
 lemma [code]: "mat_of_bounded (remove_qvar_unit_op::('a::enum*unit,_)bounded) = one_mat (enum_len TYPE('a))"
   sorry
 
-find_theorems one_mat idOp
 
-value "idOp \<otimes> (idOp \<otimes> (idOp \<otimes> (idOp \<otimes> remove_qvar_unit_op \<cdot> assoc_op*) \<cdot> assoc_op*) \<cdot> assoc_op*) \<cdot>
-    (assoc_op* \<cdot>
-     (idOp \<otimes> (assoc_op* \<cdot> comm_op \<otimes> idOp \<cdot> assoc_op \<cdot> idOp \<otimes> (assoc_op* \<cdot> comm_op \<otimes> idOp \<cdot> assoc_op) \<cdot> (assoc_op* \<cdot> comm_op \<otimes> idOp \<cdot> assoc_op)) \<cdot>
-      (assoc_op* \<cdot>
-       (comm_op \<otimes> idOp \<cdot>
-        (assoc_op \<cdot>
-         (idOp \<otimes> assoc_op* \<cdot>
-          (assoc_op* \<cdot>
-           (assoc_op* \<cdot>
-            eigenspace 4
-             (comm_op \<cdot>
-              (addState EPR'* \<cdot> (assoc_op* \<cdot> (CNOT \<otimes> idOp \<cdot> (assoc_op \<cdot> H' \<otimes> idOp)))) \<otimes>
-              (H'* \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op \<cdot> addState EPR')) \<otimes>
-            top))))))) \<otimes>
-     top)
-    \<le> (idOp \<otimes> (idOp \<otimes> assoc_op* \<cdot> assoc_op*) \<cdot>
-       (assoc_op* \<cdot>
-        (idOp \<otimes> (idOp \<otimes> (idOp \<otimes> (remove_qvar_unit_op \<cdot> comm_op) \<cdot> assoc_op*) \<cdot> assoc_op*) \<cdot>
-         (assoc_op* \<cdot>
-          (idOp \<otimes> (idOp \<otimes> (idOp \<otimes> remove_qvar_unit_op \<cdot> assoc_op*) \<cdot> assoc_op*) \<cdot>
-           (assoc_op* \<cdot>
-            (idOp \<otimes> assoc_op* \<cdot>
-             (assoc_op* \<cdot>
-              (assoc_op* \<cdot>
-               (comm_op \<otimes> idOp \<cdot>
-                (assoc_op \<cdot> (idOp \<otimes> comm_op \<cdot> (assoc_op* \<cdot> (comm_op \<otimes> idOp \<cdot> (assoc_op \<cdot> (assoc_op* \<cdot> eigenspace 1 comm_op \<otimes> top))))))) \<sqinter>
-               (idOp \<otimes> comm_op \<cdot> span {basis_vector 0} \<otimes> top)) \<otimes>
-              top)) \<otimes>
-            top) +
-           idOp \<otimes> assoc_op* \<cdot> (assoc_op* \<cdot> (ortho (span {basis_vector 0}) \<otimes> top) \<otimes> top)) \<otimes>
-          top)) \<otimes>
-        top) :: (bit*bit*bit*bit*bit)subspace)"
+lemma teleport_goal1:
+  assumes[simp]: "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"
+  shows
+    "quantum_equality_full (addState EPR*) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>
+      \<le> CNOT\<guillemotright>\<lbrakk>C1, A1\<rbrakk> \<cdot> (H\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> quantum_equality_full (addState EPR* \<cdot> (assoc_op* \<cdot> (CNOT \<otimes> idOp \<cdot> (assoc_op \<cdot> H \<otimes> idOp)))) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>)"
+proof -
+  have H: "H \<otimes> idOp \<cdot> H \<otimes> idOp = idOp" by simp
+  have CNOT: "CNOT \<otimes> idOp \<cdot> CNOT \<otimes> idOp = idOp" by simp
+  show ?thesis
+    using [[simproc del: warn_colocal]]
+    by (simp add: colocal_split1 colocal_split2 timesOp_assoc sort_lift
+        lift_extendR[where U=H and R="\<lbrakk>A1,B1\<rbrakk>"] lift_extendR[where U=CNOT and R="\<lbrakk>B1\<rbrakk>"]
+        assoc_replace[OF H] assoc_replace[OF UadjU] assoc_replace[OF CNOT] assoc_replace[OF adjUU])
+qed
+
 
 lemma teleport_goal2:
   assumes "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk> \<and> colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>"
@@ -532,7 +413,7 @@ proof -
   note colocals = this colocal_split1 colocal_split2
   show ?thesis
     apply (simp add: prepare_for_code colocals)
-    apply eval
+    (* apply eval *)
     (* apply normalization *)
 
     oops
@@ -556,13 +437,130 @@ proof -
     and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
-    using assms by (auto intro: colocal_sym)
+    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
   note colocals = this colocal_split1 colocal_split2
   show ?thesis
     unfolding a1
     (* using[[simp_trace_new]] *)
     apply (simp add: prepare_for_code colocals)
+    (* apply normalization *)
   find_theorems "(_::(_,_) bounded) \<cdot> quantum_equality_full  _ _ _ _"
+
+
+  oops
+
+lemma scalar_op_subspace [simp]: 
+  fixes \<alpha>::complex and A::"(_,_)bounded" and S::"_ subspace"
+  shows "(\<alpha>\<cdot>A)\<cdot>S = \<alpha>\<cdot>(A\<cdot>S)"
+  sorry
+
+lemma
+  fixes C1 A1 B1 A2 :: "bit qvariable"
+  assumes qvars[simp]: "distinct_qvars \<lbrakk>C1,A1,B1,A2\<rbrakk>"
+  shows "Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+      quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>) 
+        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>" (is "?lhs \<le> ?rhs")
+proof -
+   have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
+    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
+  note colocals = this colocal_split1 colocal_split2
+  have "quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>
+      = (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> ( addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>"
+  (is "_ = ?outside0")
+    apply (auto simp: prepare_for_code colocals)
+    by eval
+  have "?outside0 =
+ (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> (Qeq[C1=A2] \<sqinter> (lift (span {EPR}) \<lbrakk>A1,B1\<rbrakk>))" (is "_ = ?outside")
+    apply (auto simp: prepare_for_code colocals)
+    by eval
+
+  have "?lhs = Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> ?outside)" (is "_ = ?newrhs")
+    apply (auto simp: prepare_for_code colocals)
+    by eval
+
+  define C1A2 where "C1A2 = map vec_of_list [ [1::complex,0,0,0], [0,1,1,0], [0,0,0,1] ]"
+
+  have "Qeq[C1=A2] = SPAN C1A2\<guillemotright>\<lbrakk>C1, A2\<rbrakk>" 
+    unfolding C1A2_def
+    apply (auto simp: prepare_for_code colocals)
+    by eval
+
+  have "?lhs = Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+        (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> (SPAN C1A2\<guillemotright>\<lbrakk>C1,A2\<rbrakk> \<sqinter> (lift (span {EPR}) \<lbrakk>A1,B1\<rbrakk>)))"
+    apply (auto simp: C1A2_def prepare_for_code colocals)
+    by eval
+
+    define C1A2' where "C1A2' = map vec_of_list [ [0::complex,1,1,0] ]"
+
+    have "SPAN C1A2'\<guillemotright>\<lbrakk>C1,A2\<rbrakk> \<sqinter> (lift (span {EPR}) \<lbrakk>A1,B1\<rbrakk>)
+= SPAN (map vec_of_list [ [0,0,0,0, 1,0,0,1, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>  "
+    apply (auto simp: C1A2'_def prepare_for_code colocals)
+    by eval
+
+  have "
+        (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> ( SPAN (map vec_of_list [ [0,0,0,0, 1,0,0,1, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>)
+=
+        (H \<otimes> idOp)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> ( SPAN (map vec_of_list [ [0,0,0,0, 0,1,1,0, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>)
+"
+    apply (auto simp: C1A2'_def prepare_for_code colocals)
+    by eval
+
+(* 0101 + 0110 + 1000 + 1011 *)
+(* 0001. - 0101. + 0010? - 0110. + 1000. + 1100. + 1011. + 1111. *)
+
+  have "
+        (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> ( SPAN (map vec_of_list [ [0,0,0,0, 1,0,0,1, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>)
+=
+         ( SPAN [vec_of_list [0, 0, 1, - 1,   1, 1, 0, 0,   1, - 1, 0, 0,   0, 0, 1, 1] ]\<guillemotright>\<lbrakk>A1,A2,B1,C1\<rbrakk>)
+"
+    apply (auto simp: C1A2'_def prepare_for_code colocals)
+    by eval
+
+(* 0010. - 0011. + 0100. + 0101. + 1000. - 1001 + 1110. + 1111. *)
+  
+  have "Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+         ( SPAN [vec_of_list [0, 0, 1, - 1,   1, 1, 0, 0,   1, - 1, 0, 0,   0, 0, 1, 1] ]\<guillemotright>\<lbrakk>A1,A2,B1,C1\<rbrakk>) )
+=
+( 
+         ( SPAN [vec_of_list [0, 0, 0, - 1,   1, 1, 0, 0,   0, 0, 0, 0,  0,0,0,0] ]\<guillemotright>\<lbrakk>A1,A2,B1,C1\<rbrakk>) )
+"
+    apply (auto simp: C1A2'_def prepare_for_code colocals)
+    by eval
+
+  have "
+SPAN [vec_of_list [0, 0, 0, - 1,   1, 1, 0, 0,   0, 0, 0, 0,  0,0,0,0] ]\<guillemotright>\<lbrakk>A1,A2,B1,C1\<rbrakk>
+
+        (* (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> ( SPAN (map vec_of_list [ [0,0,0,0, 1,0,0,1, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>))  *)
+\<le> ?rhs"
+    apply (auto simp: C1A2'_def prepare_for_code colocals)
+    apply normalization
+
+(* -0011  0100  0101 *)
+
+(*     apply (subst op_scalar_op)
+    apply (subst timesScalarSpace_not0)
+using [[show_brackets]]
+    apply (rewrite at "_ (_ (1/sqrt2) _) _" DEADID.rel_mono_strong)
+     apply (rewrite at "_ _ \<hole> = _" DEADID.rel_mono_strong[where y=a]) defer
+  apply (rewrite at "_ (_ _ \<hole>) _ = _" DEADID.rel_mono_strong[where y=b]) defer
+
+    apply (subst scalar_op_op)
+    find_theorems "?x = ?y \<Longrightarrow> ?x = ?y"
+    find_theorems "(_::complex) \<cdot> (_::_subspace)"
+    find_theorems " ((_::complex) \<cdot> (_::(_,_)bounded)) \<cdot> (_::(_,_)bounded)"
+ *)
+    by eval
+
+
+(*   show ?thesis
+    apply (auto simp: prepare_for_code colocals)
+    apply normalization *)
+
+    oops
+
 
 end
 
