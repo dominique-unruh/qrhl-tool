@@ -1,6 +1,7 @@
 # Own additions (because Emacs's TeX input method produces these chars):
 \<lbrakk>               code: 0x00301A  group: punctuation  abbrev: [|
 \<rbrakk>               code: 0x00301B  group: punctuation  abbrev: |]
+\<cdot>                 code: 0x0000B7  group: operator
 
 
 # Default interpretation of some Isabelle symbols

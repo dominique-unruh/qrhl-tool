@@ -263,7 +263,10 @@ object Parser extends RegexParsers {
     ) yield CaseTac(x,e))
 
   val tactic_simp : Parser[SimpTac] =
-    literal("simp") ~> OnceParser(rep(identifier)) ^^ SimpTac.apply
+    literal("simp") ~> OnceParser(literal("!").? ~ rep(identifier)) ^^ {
+      case None ~ lemmas => SimpTac(lemmas)
+      case Some(_) ~ lemmas => SimpTac(lemmas, force = true)
+    }
 
   val tactic_rule : Parser[RuleTac] =
     literal("rule") ~> OnceParser(identifier) ^^ RuleTac.apply
