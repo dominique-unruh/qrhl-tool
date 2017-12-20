@@ -1006,7 +1006,7 @@ axiomatization where lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<gu
 axiomatization where lift_plus[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a subspace"  
 axiomatization where lift_timesOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a,'a) bounded"  
 axiomatization where lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> ortho (S\<guillemotright>Q) = (ortho S)\<guillemotright>Q" 
-axiomatization where lift_tensorOp[simp]: "colocal Q R \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>qvariable_concat Q R" for S T :: "(_,_) bounded" 
+axiomatization where lift_tensorOp: "colocal Q R \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>qvariable_concat Q R" for S T :: "(_,_) bounded" 
 axiomatization where lift_tensorSpace: "colocal Q R \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>qvariable_concat Q R" for S T :: "_ subspace" 
 axiomatization where lift_idOp[simp]: "idOp\<guillemotright>Q = idOp" for Q :: "'a qvariables"
 
@@ -1191,6 +1191,7 @@ axiomatization where assoc_op_lift: "(assoc_op \<cdot> A \<cdot> assoc_op*)\<gui
      = A\<guillemotright>(qvariable_concat Q (qvariable_concat R T))" for A::"('a*'b*'c,_)bounded" 
 axiomatization where comm_op_lift: "(comm_op \<cdot> A \<cdot> comm_op*)\<guillemotright>(qvariable_concat Q R)
      = A\<guillemotright>(qvariable_concat R Q)" for A::"('a*'b,_)bounded" 
+(* TODO wrong! ! ! ! ! *)
 axiomatization where lift_tensor: "(A \<otimes> A' \<cdot> C \<cdot> (A \<otimes> A')*)\<guillemotright>qvariable_concat R R' = C\<guillemotright>qvariable_concat Q Q'"
   for C::"('a*'b,_) bounded" and R::"'c qvariables" and R'::"'d qvariables" and A A'
 axiomatization where distinct_qvars_split1: "colocal (qvariable_concat Q R) S = (colocal Q R \<and> colocal Q S \<and> colocal R S)"

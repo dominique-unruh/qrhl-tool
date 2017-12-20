@@ -16,14 +16,16 @@ ambient var c' : bit.
 ambient var z : bit.
 ambient var w : bit.
 
+# Program to teleport a qubit from C to B
+# TODO: measurements on A,B???? Or A,C????
 program teleport := {
   A,B <q EPR;
   on C,A apply CNOT;
   on C apply H;
   a <- measure A with computational_basis;
-  c <- measure B with computational_basis;
-  if (c=1) then on B apply Z; else skip;
+  c <- measure C with computational_basis;
   if (a=1) then on B apply X; else skip;
+  if (c=1) then on B apply Z; else skip;
 }.
 
 
@@ -38,11 +40,12 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
   wp left.
   skip.
-  simp.
+# TODO: document simp!
+  simp!.
 
  conseq pre: quantum_equality_full idOp ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
   rule quantum_eq_add_state.
-   simp.
+   simp!.
 
  seq 2 0: quantum_equality_full idOp ⟦C1,A1,B1⟧
           ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
@@ -52,8 +55,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   simp.
   # The whole subgoal proven in Isabelle
   rule teleport_goal1.
-  # TODO: document "rule" tactic
-   simp.
+   simp!.
 
  seq 1 0: Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
              quantum_equality_full
@@ -65,19 +67,13 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   simp.
   fix a'.
   rule move_plus_meas_rule.
-   simp.
-  simp.
+   simp!.
+  simp!.
 
 case a':=a1.
 
-#conseq pre: Cla[a1=a'] ⊓ Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
-#                quantum_equality_full
-#                   idOp ⟦C1,A1,B1⟧
-#                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
-#  simp.
 
-
-seq 1 0: Cla[a1=a'] ⊓ (Proj (span {basis_vector c1})»⟦B1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
+seq 1 0: Cla[a1=a'] ⊓ (Proj (span {basis_vector c1})»⟦C1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
                 quantum_equality_full
                    idOp ⟦C1,A1,B1⟧
                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
@@ -88,167 +84,75 @@ seq 1 0: Cla[a1=a'] ⊓ (Proj (span {basis_vector c1})»⟦B1⟧ ⋅ (Proj (span
    clear 1.
   fix c'.
   rule move_plus_meas_rule.
-   simp.
-  simp.
+   simp!.
+  simp!.
 
 case c':=c1.
 
-conseq pre: Cla[a1=a' ∧ c1=c'] ⊓ (Proj (span {basis_vector c1})»⟦B1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
+conseq pre: Cla[a1=a' ∧ c1=c'] ⊓ (Proj (span {basis_vector c1})»⟦C1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
                 quantum_equality_full
                    idOp ⟦C1,A1,B1⟧
                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  simp.
+  simp!.
 
 casesplit a'=0.
 casesplit c'=0.
 
 # Case a1=0 c1=0
-conseq pre: Cla[a1=a' ∧ c1=c'] ⊓ (Proj (span {basis_vector 0})»⟦B1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+conseq pre: Cla[a1=0 ∧ c1=0] ⊓ (Proj (span {basis_vector 0})»⟦C1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
                 quantum_equality_full
                    idOp ⟦C1,A1,B1⟧
                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  simp.
+  simp!.
 clear 2.
 clear 1.
 
-# TODO: support · in symbol conversion table		
-seq 2 0: Cla[a1=a' ∧ c1=c'] ⊓ (Proj (span {basis_vector 0})»⟦B1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+seq 2 0: (Proj (span {basis_vector 0})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
                 quantum_equality_full
                    idOp ⟦C1,A1,B1⟧
                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
   wp left.
   wp left.
   skip.
-  simp.
+  simp!.
 
-  
+skip.
+rule teleport_goal2_a0c0.
+simp!.
+
+
+
+# Case a1=0 c1=1
+conseq pre: Cla[a1=0 ∧ c1=1] ⊓ (Proj (span {basis_vector 1})»⟦C1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+                quantum_equality_full
+                   idOp ⟦C1,A1,B1⟧
+                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+  simp!.
+clear 2.
+clear 1.
+
+seq 2 0: Z»〚B1〛 · (Proj (span {basis_vector 1})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+                quantum_equality_full
+                   idOp ⟦C1,A1,B1⟧
+                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+  wp left.
+  wp left.
+  skip.
+  simp ! assoc_left.
+
+skip.
+rule teleport_goal2_a0c1.
+simp!.
+
+casesplit c'=0.
+
+
 
 
 XXX
 
 
 		
-seq    wp left.
-  wp left.
-		
-conseq pre: 
-
-
-
-# TODO: support · in symbol conversion table		
-seq 2 0: (undefined::(_,_)bounded) ⋅ (Proj (span {basis_vector c1})»⟦B1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
-                quantum_equality_full
-                   idOp ⟦C1,A1,B1⟧
-                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  wp left.
-  wp left.
-	      
-
-	      # TODO continue
-		  
-		  
- seq 1 0: if a1=0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧ else X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧.
-  wp left.
-	 simp.
-  skip.
-  simp.
-  fix a'.
-  casesplit a'=0.
-   simp.
-   clear 1.
-   rule teleport_goal2.
-    simp.	 
-   simp.
-   clear 1.
-   admit.
-	 
- case a' := a1.
- casesplit a'=0.
- conseq pre: Cla[a1=0] ⊓ ⟦B1⟧ ≡𝔮 ⟦A2⟧.
-  simp.
- clear 1.
-# TODO: document "clear" tactic
-	 
- seq 1 0: Cla[a1=0] ⊓ (if c1=0 then ⟦B1⟧ ≡𝔮 ⟦A2⟧ else Z»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
-  wp left.
-  skip.
-  simp.	 
-  clear 1.
-  fix c'.
-  casesplit c'=0.
-   simp.
-   clear 1.
-   admit.
-   simp.
-   clear 1.
-   admit.
-
- case c' := c1.
- casesplit c'=0.       
- conseq pre: Cla[a1=0 ∧ c1=0] ⊓ ⟦B1⟧ ≡𝔮 ⟦A2⟧.
-  simp.
- clear 1.
-	 
- wp left.
- wp left.
- skip.
- simp.
- # a1=0, c1=0 branch finished.       
-
- # Continuing a1=0, c1=1
- conseq pre: Cla[a1=0 ∧ c1=1] ⊓ (Z»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
-  simp.
- clear 1.
-	 
- wp left.
- wp left.
- skip.
- simp.
- # a1=0, c1=1 branch finished.       
-       
- # Continuing a1=1
- conseq pre: Cla[a1=1] ⊓ (X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
-  simp.
- clear 1.
-	 
- seq 1 0: Cla[a1=1] ⊓ (if c1=0 then X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧ else Z»⟦B1⟧ ⋅ X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
-  wp left.
-  skip.
-  simp.	 
-  clear 1.
-  fix c'.
-  casesplit c'=0.
-   simp.
-   clear 1.
-   admit.
-   simp.
-   clear 1.
-   admit.
-
- case c' := c1.
- casesplit c'=0.       
- conseq pre: Cla[a1=1 ∧ c1=0] ⊓ (X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
-  simp.
- clear 1.
-	 
- wp left.
- wp left.
- skip.
- simp.
- # a1=1, c1=0 branch finished.       
-
- # Continuing a1=1, c1=1
- conseq pre: Cla[a1=1 ∧ c1=1] ⊓ (Z»⟦B1⟧ ⋅ X»⟦B1⟧ ⋅ ⟦B1⟧ ≡𝔮 ⟦A2⟧).
-  simp.
- clear 1.
-	 
- wp left.
- wp left.
- skip.
- simp timesOp_assoc.
- # a1=1, c1=1 branch finished.       
-
-qed.
 
 
 
