@@ -380,149 +380,12 @@ proof -
 qed
 
 
-lemma
-  assumes "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk> \<and> colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>"
-  assumes a1: "a1 = 0"
-  shows "Proj (span {basis_vector a1})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
-          quantum_equality_full idOp \<lbrakk>C1,A1,B1\<rbrakk>
-          ((H \<otimes> idOp) \<cdot> assoc_op* \<cdot> (CNOT \<otimes> idOp) \<cdot> assoc_op \<cdot> addState EPR) \<lbrakk>A2\<rbrakk> \<le>
-
-          quantum_equality_full idOp \<lbrakk>C1,A1,B1\<rbrakk>
-          (
-(idOp \<otimes> (Proj (span {basis_vector a1}) \<otimes> idOp)) \<cdot> 
-(H \<otimes> idOp) \<cdot> assoc_op* \<cdot> (CNOT \<otimes> idOp) \<cdot> assoc_op \<cdot> addState EPR) \<lbrakk>A2\<rbrakk>
-"
-proof -
-  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
-    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
-  note colocals = this colocal_split1 colocal_split2
-  show ?thesis
-    unfolding a1
-    (* using[[simp_trace_new]] *)
-    apply (simp add: prepare_for_code colocals)
-    (* apply normalization *)
-  find_theorems "(_::(_,_) bounded) \<cdot> quantum_equality_full  _ _ _ _"
-
-
-  oops
 
 lemma scalar_op_subspace [simp]: 
   fixes \<alpha>::complex and A::"(_,_)bounded" and S::"_ subspace"
   shows "(\<alpha>\<cdot>A)\<cdot>S = \<alpha>\<cdot>(A\<cdot>S)"
   sorry
 
-(*
-lemma
-  fixes C1 A1 B1 A2 :: "bit qvariable"
-  assumes qvars[simp]: "distinct_qvars \<lbrakk>C1,A1,B1,A2\<rbrakk>"
-  shows "Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
-      quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>) 
-        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>" (is "?lhs \<le> ?rhs")
-proof -
-   have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
-    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
-  note colocals = this colocal_split1 colocal_split2
-  have "quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>
-      = (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> ( addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>"
-  (is "_ = ?outside0")
-    apply (auto simp: prepare_for_code colocals assoc_right)
-    by eval
-  have "?outside0 =
- (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> (Qeq[C1=A2] \<sqinter> (lift (span {EPR}) \<lbrakk>A1,B1\<rbrakk>))" (is "_ = ?outside")
-    apply (auto simp: prepare_for_code colocals assoc_right)
-    by eval
-
-  have "?lhs = Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> ?outside)" (is "_ = ?newrhs")
-    apply (auto simp: prepare_for_code colocals assoc_right)
-    by eval
-
-  define C1A2 where "C1A2 = map vec_of_list [ [1::complex,0,0,0], [0,1,1,0], [0,0,0,1] ]"
-
-  have "Qeq[C1=A2] = SPAN C1A2\<guillemotright>\<lbrakk>C1, A2\<rbrakk>" 
-    unfolding C1A2_def
-    apply (auto simp: prepare_for_code colocals)
-    by eval
-
-  have "?lhs = Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
-        (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> (SPAN C1A2\<guillemotright>\<lbrakk>C1,A2\<rbrakk> \<sqinter> (lift (span {EPR}) \<lbrakk>A1,B1\<rbrakk>)))"
-    apply (auto simp: C1A2_def prepare_for_code colocals)
-    by eval
-
-    define C1A2' where "C1A2' = map vec_of_list [ [0::complex,1,1,0] ]"
-
-    have "SPAN C1A2'\<guillemotright>\<lbrakk>C1,A2\<rbrakk> \<sqinter> (lift (span {EPR}) \<lbrakk>A1,B1\<rbrakk>)
-= SPAN (map vec_of_list [ [0,0,0,0, 1,0,0,1, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>  "
-    apply (auto simp: C1A2'_def prepare_for_code colocals)
-    by eval
-
-  have "
-        (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> ( SPAN (map vec_of_list [ [0,0,0,0, 1,0,0,1, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>)
-=
-        (H \<otimes> idOp)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> ( SPAN (map vec_of_list [ [0,0,0,0, 0,1,1,0, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>)
-"
-    apply (auto simp: C1A2'_def prepare_for_code colocals)
-    by eval
-
-(* 0101 + 0110 + 1000 + 1011 *)
-(* 0001. - 0101. + 0010? - 0110. + 1000. + 1100. + 1011. + 1111. *)
-
-  have "
-        (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> ( SPAN (map vec_of_list [ [0,0,0,0, 1,0,0,1, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>)
-=
-         ( SPAN [vec_of_list [0, 0, 1, - 1,   1, 1, 0, 0,   1, - 1, 0, 0,   0, 0, 1, 1] ]\<guillemotright>\<lbrakk>A1,A2,B1,C1\<rbrakk>)
-"
-    apply (auto simp: C1A2'_def prepare_for_code colocals)
-    by eval
-
-(* 0010. - 0011. + 0100. + 0101. + 1000. - 1001 + 1110. + 1111. *)
-  
-  have "Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
-         ( SPAN [vec_of_list [0, 0, 1, - 1,   1, 1, 0, 0,   1, - 1, 0, 0,   0, 0, 1, 1] ]\<guillemotright>\<lbrakk>A1,A2,B1,C1\<rbrakk>) )
-=
-( 
-         ( SPAN [vec_of_list [0, 0, 0, - 1,   1, 1, 0, 0,   0, 0, 0, 0,  0,0,0,0] ]\<guillemotright>\<lbrakk>A1,A2,B1,C1\<rbrakk>) )
-"
-    apply (auto simp: C1A2'_def prepare_for_code colocals)
-    (* by eval *)
-    sorry
-
-  have "
-SPAN [vec_of_list [0, 0, 0, - 1,   1, 1, 0, 0,   0, 0, 0, 0,  0,0,0,0] ]\<guillemotright>\<lbrakk>A1,A2,B1,C1\<rbrakk>
-
-        (* (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op)\<guillemotright>\<lbrakk>C1,A1,B1\<rbrakk> \<cdot> ( SPAN (map vec_of_list [ [0,0,0,0, 1,0,0,1, 1,0,0,1, 0,0,0,0] ])\<guillemotright>\<lbrakk>A2,C1,A1,B1\<rbrakk>))  *)
-\<le> ?rhs"
-    apply (auto simp: C1A2'_def prepare_for_code colocals)
-    apply normalization
-
-(* -0011  0100  0101 *)
-
-(*     apply (subst op_scalar_op)
-    apply (subst timesScalarSpace_not0)
-using [[show_brackets]]
-    apply (rewrite at "_ (_ (1/sqrt2) _) _" DEADID.rel_mono_strong)
-     apply (rewrite at "_ _ \<hole> = _" DEADID.rel_mono_strong[where y=a]) defer
-  apply (rewrite at "_ (_ _ \<hole>) _ = _" DEADID.rel_mono_strong[where y=b]) defer
-
-    apply (subst scalar_op_op)
-    find_theorems "?x = ?y \<Longrightarrow> ?x = ?y"
-    find_theorems "(_::complex) \<cdot> (_::_subspace)"
-    find_theorems " ((_::complex) \<cdot> (_::(_,_)bounded)) \<cdot> (_::(_,_)bounded)"
- *)
-    (* by eval *)
-
-
-(*   show ?thesis
-    apply (auto simp: prepare_for_code colocals)
-    apply normalization *)
-
-    oops
-*)
 
 lemma teleport_goal2_a0c0:
   fixes C1 A1 B1 A2 :: "bit qvariable"
@@ -532,7 +395,7 @@ lemma teleport_goal2_a0c0:
                                      \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>)
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
 proof -
-   have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
@@ -551,7 +414,7 @@ lemma teleport_goal2_a0c1:
                                      \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>))
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
 proof -
-   have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
@@ -561,6 +424,46 @@ proof -
     apply (auto simp: prepare_for_code colocals assoc_right)
     by eval
 qed
+
+lemma teleport_goal2_a1c0:
+  fixes C1 A1 B1 A2 :: "bit qvariable"
+  assumes qvars[simp]: "distinct_qvars \<lbrakk>C1,A1,B1,A2\<rbrakk>"
+  shows "X\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> (Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+                 quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
+                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>))
+       \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
+proof -
+  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
+    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
+  note colocals = this colocal_split1 colocal_split2
+  show ?thesis
+    apply (auto simp: prepare_for_code colocals assoc_right)
+    by eval
+qed
+
+
+lemma teleport_goal2_a1c1:
+  fixes C1 A1 B1 A2 :: "bit qvariable"
+  assumes qvars[simp]: "distinct_qvars \<lbrakk>C1,A1,B1,A2\<rbrakk>"
+  shows "Z\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (X\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> (Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+                 quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (H \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
+                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>)))
+       \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
+proof -
+  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
+    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
+    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
+  note colocals = this colocal_split1 colocal_split2
+  show ?thesis
+    apply (auto simp: prepare_for_code colocals assoc_right)
+    by eval
+qed
+
 
 end
 

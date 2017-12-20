@@ -2,8 +2,6 @@
 
 isabelle Teleport.
 
-# TODO: support · in symbol conversion table
-
 classical var a : bit.
 classical var c : bit.
 
@@ -17,7 +15,6 @@ ambient var z : bit.
 ambient var w : bit.
 
 # Program to teleport a qubit from C to B
-# TODO: measurements on A,B???? Or A,C????
 program teleport := {
   A,B <q EPR;
   on C,A apply CNOT;
@@ -40,7 +37,6 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
   wp left.
   skip.
-# TODO: document simp!
   simp!.
 
  conseq pre: quantum_equality_full idOp ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
@@ -70,93 +66,134 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    simp!.
   simp!.
 
-case a':=a1.
+ case a':=a1.
 
 
-seq 1 0: Cla[a1=a'] ⊓ (Proj (span {basis_vector c1})»⟦C1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
-                quantum_equality_full
-                   idOp ⟦C1,A1,B1⟧
-                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  wp left.
-  simp.
-  skip.
-  simp.
-   clear 1.
-  fix c'.
-  rule move_plus_meas_rule.
+ seq 1 0: Cla[a1=a'] ⊓ (Proj (span {basis_vector c1})»⟦C1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   wp left.
+   simp.
+   skip.
+   simp.
+    clear 1.
+   fix c'.
+   rule move_plus_meas_rule.
+    simp!.
    simp!.
-  simp!.
 
-case c':=c1.
+ case c':=c1.
 
-conseq pre: Cla[a1=a' ∧ c1=c'] ⊓ (Proj (span {basis_vector c1})»⟦C1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
-                quantum_equality_full
-                   idOp ⟦C1,A1,B1⟧
-                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  simp!.
+ conseq pre: Cla[a1=a' ∧ c1=c'] ⊓ (Proj (span {basis_vector c1})»⟦C1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   simp!.
 
-casesplit a'=0.
-casesplit c'=0.
+ casesplit a'=0.
+ casesplit c'=0.
 
-# Case a1=0 c1=0
-conseq pre: Cla[a1=0 ∧ c1=0] ⊓ (Proj (span {basis_vector 0})»⟦C1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
-                quantum_equality_full
-                   idOp ⟦C1,A1,B1⟧
-                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  simp!.
-clear 2.
-clear 1.
+ # Case a1=0 c1=0
+ conseq pre: Cla[a1=0 ∧ c1=0] ⊓ (Proj (span {basis_vector 0})»⟦C1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   simp!.
+ clear 2.
+ clear 1.
 
-seq 2 0: (Proj (span {basis_vector 0})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
-                quantum_equality_full
-                   idOp ⟦C1,A1,B1⟧
-                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  wp left.
-  wp left.
-  skip.
-  simp!.
+ seq 2 0: (Proj (span {basis_vector 0})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   wp left.
+   wp left.
+   skip.
+   simp!.
 
-skip.
-rule teleport_goal2_a0c0.
-simp!.
-
-
-
-# Case a1=0 c1=1
-conseq pre: Cla[a1=0 ∧ c1=1] ⊓ (Proj (span {basis_vector 1})»⟦C1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
-                quantum_equality_full
-                   idOp ⟦C1,A1,B1⟧
-                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  simp!.
-clear 2.
-clear 1.
-
-seq 2 0: Z»〚B1〛 · (Proj (span {basis_vector 1})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
-                quantum_equality_full
-                   idOp ⟦C1,A1,B1⟧
-                   ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
-  wp left.
-  wp left.
-  skip.
-  simp ! assoc_left.
-
-skip.
-rule teleport_goal2_a0c1.
-simp!.
-
-casesplit c'=0.
+ skip.
+ rule teleport_goal2_a0c0.
+ simp!.
 
 
 
+ # Case a1=0 c1=1
+ conseq pre: Cla[a1=0 ∧ c1=1] ⊓ (Proj (span {basis_vector 1})»⟦C1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   simp!.
+ clear 2.
+ clear 1.
 
-XXX
+ seq 2 0: Z»〚B1〛 · (Proj (span {basis_vector 1})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   wp left.
+   wp left.
+   skip.
+   simp ! assoc_left.
+
+ skip.
+ rule teleport_goal2_a0c1.
+ simp!.
+
+ casesplit c'=0.
+
+ # Case a1=1 c1=0
+ conseq pre: Cla[a1=1 ∧ c1=0] ⊓ (Proj (span {basis_vector 0})»⟦C1⟧ ⋅ (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   simp!.
+ clear 2.
+ clear 1.
+
+ seq 2 0: X»〚B1〛 · (Proj (span {basis_vector 0})»⟦C1⟧ · (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   wp left.
+   wp left.
+   skip.
+   simp ! assoc_left.
+
+ skip.
+ rule teleport_goal2_a1c0.
+ simp!.
 
 
-		
+
+
+ # Case a1=1 c1=1
+ conseq pre: Cla[a1=1 ∧ c1=1] ⊓ (Proj (span {basis_vector 1})»⟦C1⟧ ⋅ (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+   simp!.
+ clear 2.
+ clear 1.
+
+ seq 2 0: Z»⟦B1⟧ ⋅ (X»⟦B1⟧ ⋅ (Proj (span {basis_vector 1})»⟦C1⟧ · (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
+                 quantum_equality_full
+                    idOp ⟦C1,A1,B1⟧
+                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧))).
+   wp left.
+   wp left.
+   skip.
+   simp ! assoc_left.
+
+ skip.
+ rule teleport_goal2_a1c1.
+ simp!.
+
+qed.		
 
 
 
-
+# TODO:
 
 # Brute force
 qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
