@@ -30,13 +30,13 @@ lemma colocal_op_pred_lift1[simp]:
 
 lemma colocal_op_qvars_lift1[simp]:
   fixes Q R :: "_ qvariables" and U :: "('a,'a) bounded"
-  assumes "colocal Q R"
+  assumes "distinct_qvars (qvariable_concat Q R)"
   shows "colocal (U\<guillemotright>Q) R"
   sorry
 
 lemma colocal_pred_qvars_lift1[simp]:
   fixes Q :: "'a qvariables"
-  assumes "colocal Q R"
+  assumes "distinct_qvars (qvariable_concat Q R)"
   shows "colocal_pred_qvars (S\<guillemotright>Q) R"
   sorry
 
@@ -52,12 +52,12 @@ lemma colocal_ortho[simp]: "colocal (ortho S) Q = colocal S Q" sorry
 
 
 lemma lift_extendR:
-  assumes "colocal Q R"
+  assumes "distinct_qvars (qvariable_concat Q R)"
   shows "U\<guillemotright>Q = (U\<otimes>idOp)\<guillemotright>(qvariable_concat Q R)"
   sorry
 
 lemma lift_extendL:
-  assumes "colocal Q R"
+  assumes "distinct_qvars (qvariable_concat Q R)"
   shows "U\<guillemotright>Q = (idOp\<otimes>U)\<guillemotright>(qvariable_concat R Q)"
   sorry
 
@@ -65,7 +65,7 @@ lemma tensor_adjoint[simp]: "adjoint (U\<otimes>V) = (adjoint U) \<otimes> (adjo
 
 lemma sort_lift: (* TODO remove *)
   fixes U :: "(('c \<times> 'd) \<times> 'e, ('c \<times> 'd) \<times> 'e) bounded" and Q R S
-  assumes "colocal Q R" and "colocal R S" and "colocal Q S"
+  assumes "distinct_qvars (qvariable_concat Q R)" and "distinct_qvars (qvariable_concat R S)" and "distinct_qvars (qvariable_concat Q S)"
   defines "V == assoc_op* \<cdot> U \<cdot> assoc_op"
   shows
     "U\<guillemotright>(qvariable_concat (qvariable_concat Q R) S) = V\<guillemotright>(qvariable_concat Q (qvariable_concat R S))"
@@ -76,8 +76,8 @@ lemma tensor_unitary[simp]:
   shows "unitary (U\<otimes>V)"
   sorry
 
-lemma colocal_split1: "colocal (qvariable_concat Q R) S = (colocal Q R \<and> colocal Q S \<and> colocal R S)" sorry
-lemma colocal_split2: "colocal S (qvariable_concat Q R) = (colocal Q R \<and> colocal S Q \<and> colocal S R)" for S :: "'a qvariables" sorry
+(* lemma distinct_qvars_split1: "distinct_qvars (qvariable_concat (qvariable_concat Q R) S) = (distinct_qvars (qvariable_concat Q R) \<and> distinct_qvars (qvariable_concat Q S) \<and> distinct_qvars (qvariable_concat R S))" sorry *)
+(* lemma distinct_qvars_split2: "colocal S (qvariable_concat Q R) = (colocal Q R \<and> colocal S Q \<and> colocal S R)" for S :: "'a qvariables" sorry *)
 
 lemma adjUU[simp]: "isometry U \<Longrightarrow> U* \<cdot> U = idOp" unfolding isometry_def by simp
 lemma UadjU[simp]: "unitary U \<Longrightarrow> U \<cdot> U* = idOp" unfolding unitary_def by simp
@@ -103,17 +103,12 @@ axiomatization eigenspace :: "complex \<Rightarrow> ('a,'a) bounded \<Rightarrow
 axiomatization kernel :: "('a,'b) bounded \<Rightarrow> 'a subspace"
 
 lemma quantum_equality_full_subspace:
-  "colocal Q R \<Longrightarrow> quantum_equality_full U Q V R = (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> qvariable_concat Q R"
+  "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> quantum_equality_full U Q V R = (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> qvariable_concat Q R"
   for Q :: "'a qvariables" and R :: "'b qvariables"
   and U V :: "(_,'c) bounded"
   using [[show_types,show_sorts,show_consts,show_brackets]]
   sorry
 
-  
-
-(* lemma colocal_sym: "colocal Q R \<Longrightarrow> colocal R Q" for Q :: "'a qvariables" and R :: "'b qvariables" sorry *)
-
-(* definition "reorder_qvars x (Q::'a qvariables) (R::'b qvariables) = x" *)
 
 lemma add_join_qvariables_hint: 
   fixes Q :: "'a qvariables" and R :: "'b qvariables" and A :: "('a,'a) bounded"
@@ -124,64 +119,6 @@ lemma add_join_qvariables_hint:
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R = join_qvariables_hint (T\<guillemotright>R) Q)"
   unfolding join_qvariables_hint_def by simp_all
 
-
-(* lemma reorder_qvars_subspace:
-  fixes Q :: "'a qvariables" and R :: "'b qvariables"
-  fixes A1 :: "'a1 qvariable" and A2 :: "'a2 qvariable" and B1 :: "'b1 qvariable" and C1 :: "'c1 qvariable" 
-  fixes S S' T S1 T1 S2 T2 S3 T3 S4 T4:: "_ subspace"
-  shows "colocal Q R \<Longrightarrow> reorder_qvars (S\<guillemotright>Q) Q R = (S\<otimes>top) \<guillemotright> qvariable_concat Q R" 
-  and "colocal Q R \<Longrightarrow> reorder_qvars (T\<guillemotright>R) Q R = (top\<otimes>T) \<guillemotright> qvariable_concat Q R"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S'\<guillemotright>qvariable_concat Q R) (qvariable_concat Q R) R = (S'\<guillemotright>qvariable_concat Q R)"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (T\<guillemotright>R) (qvariable_concat Q R) R = (top\<otimes>T) \<guillemotright> qvariable_concat Q R"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S'\<guillemotright>qvariable_concat Q R) (qvariable_concat Q R) Q = (S'\<guillemotright>qvariable_concat Q R)"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S\<guillemotright>Q) (qvariable_concat Q R) Q = (S\<otimes>top) \<guillemotright> qvariable_concat Q R"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S\<guillemotright>Q) Q (qvariable_concat Q R) = (S\<otimes>top) \<guillemotright> qvariable_concat Q R"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S'\<guillemotright>qvariable_concat Q R) Q (qvariable_concat Q R) = (S'\<guillemotright>qvariable_concat Q R)"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (S1\<guillemotright>qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>) (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>) (qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>A1\<rbrakk>)
-            = (comm_op \<cdot> S1) \<guillemotright> \<lbrakk>A2,C1,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (T1\<guillemotright>(qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>A1\<rbrakk>)) (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>) (qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>A1\<rbrakk>)
-            = (classical_operator (\<lambda>(c1,(b1,a2),a1). Some(a2,c1,a1,b1)) \<cdot> (top::'c1 subspace)\<otimes>T1) \<guillemotright> \<lbrakk>A2,C1,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (S2\<guillemotright>qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>) (qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>) (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)
-            = (classical_operator (%((c1,a2),(a1,b1)). Some(c1,a2,a1,b1)) \<cdot> S2) \<guillemotright> \<lbrakk>C1,A2,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (T2\<guillemotright>qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>) (qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>) (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)
-            = (classical_operator (%((c1,a1,b1),a2). Some(c1,a2,a1,b1)) \<cdot> T2) \<guillemotright> \<lbrakk>C1,A2,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (S3\<guillemotright>(qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>)) (qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>) (qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>C1, A1\<rbrakk>)
-    = (classical_operator (%((c1,a2),(a1,b1)). Some(c1,a2,a1,b1)) \<cdot> S3)\<guillemotright>\<lbrakk>C1,A2,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (T3\<guillemotright>(qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>C1, A1\<rbrakk>)) (qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>) (qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>C1, A1\<rbrakk>)
-    = (classical_operator (%((b1,a2),(c1,a1)). Some(c1,a2,a1,b1)) \<cdot> T3)\<guillemotright>\<lbrakk>C1,A2,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (S4\<guillemotright>\<lbrakk>A1\<rbrakk>) \<lbrakk>A1\<rbrakk> (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)
-    = ((top\<otimes>(S4\<otimes>top))\<otimes>top)\<guillemotright>(qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (T4\<guillemotright>(qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)) \<lbrakk>A1\<rbrakk> (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)
-    = T4\<guillemotright>(qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)"
-  sorry
-
-definition "wrap A B = A \<cdot> B \<cdot> A*" for A B :: "(_,_)bounded"
-
-lemma reorder_qvars_bounded:
-  fixes Q :: "'a qvariables" and R :: "'b qvariables"
-  fixes A1 :: "'a1 qvariable" and A2 :: "'a2 qvariable" and B1 :: "'b1 qvariable" and C1 :: "'c1 qvariable" 
-  fixes S S' T S1 T1 S2 T2 S3 T3 S4 T4 :: "(_,_) bounded"
-  shows "colocal Q R \<Longrightarrow> reorder_qvars (S\<guillemotright>Q) Q R = (S\<otimes>idOp) \<guillemotright> qvariable_concat Q R" 
-  and "colocal Q R \<Longrightarrow> reorder_qvars (T\<guillemotright>R) Q R = (idOp\<otimes>T) \<guillemotright> qvariable_concat Q R"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S'\<guillemotright>qvariable_concat Q R) (qvariable_concat Q R) R = (S'\<guillemotright>qvariable_concat Q R)"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (T\<guillemotright>R) (qvariable_concat Q R) R = (idOp\<otimes>T) \<guillemotright> qvariable_concat Q R"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S'\<guillemotright>qvariable_concat Q R) (qvariable_concat Q R) Q = (S'\<guillemotright>qvariable_concat Q R)"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S\<guillemotright>Q) (qvariable_concat Q R) Q = (S\<otimes>idOp) \<guillemotright> qvariable_concat Q R"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S\<guillemotright>Q) Q (qvariable_concat Q R) = (S\<otimes>idOp) \<guillemotright> qvariable_concat Q R"
-  and "colocal Q R \<Longrightarrow> reorder_qvars (S'\<guillemotright>qvariable_concat Q R) Q (qvariable_concat Q R) = (S'\<guillemotright>qvariable_concat Q R)"
-(*  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (S1\<guillemotright>qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>) (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>) (qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>A1\<rbrakk>)
-            = (comm_op \<cdot> S1) \<guillemotright> \<lbrakk>A2,C1,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (T1\<guillemotright>(qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>A1\<rbrakk>)) (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>) (qvariable_concat \<lbrakk>B1, A2\<rbrakk> \<lbrakk>A1\<rbrakk>)
-            = (classical_operator (\<lambda>(c1,(b1,a2),a1). Some(a2,c1,a1,b1)) \<cdot> (top::'c1 subspace)\<otimes>T1) \<guillemotright> \<lbrakk>A2,C1,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (S2\<guillemotright>qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>) (qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>) (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)
-            = (classical_operator (%((c1,a2),(a1,b1)). Some(c1,a2,a1,b1)) \<cdot> S2) \<guillemotright> \<lbrakk>C1,A2,A1,B1\<rbrakk>"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (T2\<guillemotright>qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>) (qvariable_concat \<lbrakk>C1, A2\<rbrakk> \<lbrakk>A1, B1\<rbrakk>) (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)
-            = (classical_operator (%((c1,a1,b1),a2). Some(c1,a2,a1,b1)) \<cdot> T2) \<guillemotright> \<lbrakk>C1,A2,A1,B1\<rbrakk>" *)
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (S4\<guillemotright>\<lbrakk>A1\<rbrakk>) \<lbrakk>A1\<rbrakk> (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)
-    = ((idOp\<otimes>(S4\<otimes>idOp))\<otimes>idOp)\<guillemotright>(qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)"
-  and "colocal \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk> \<Longrightarrow> reorder_qvars (T4\<guillemotright>(qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)) \<lbrakk>A1\<rbrakk> (qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)
-    = T4\<guillemotright>(qvariable_concat \<lbrakk>C1, A1, B1\<rbrakk> \<lbrakk>A2\<rbrakk>)"
-  sorry *)
 
 
 
@@ -291,8 +228,6 @@ lemma [code]: "Inf (Set_Monad l :: 'a subspace set) = fold inf l top"  sorry
 lemma [code]: "(A::'a subspace) \<sqinter> B = ortho (ortho A + ortho B)" unfolding subspace_sup_plus[symmetric] sorry
 
 
-(* definition "px = (\<lambda>(x::'a,y::'a). (x,y))" *)
-
 
 
 lemma span_vector_state: "spanState A = spanVector (state_to_vector ` A)"
@@ -301,17 +236,14 @@ lemma span_vector_state: "spanState A = spanVector (state_to_vector ` A)"
 lemma span_mult[simp]: "(a::complex)\<noteq>0 \<Longrightarrow> span { a\<cdot>\<psi> } = span {\<psi>::'a vector}" sorry
 
 term classical_subspace
-lemma Cla_inf_lift: "colocal Q \<lbrakk>\<rbrakk> \<Longrightarrow> Cla[b] \<sqinter> (S\<guillemotright>Q) = (if b then S else bot)\<guillemotright>Q"
+lemma Cla_inf_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<sqinter> (S\<guillemotright>Q) = (if b then S else bot)\<guillemotright>Q"
   by auto
-lemma Cla_plus_lift: "colocal Q \<lbrakk>\<rbrakk> \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q"
+lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q"
   by auto
-lemma INF_lift: "colocal Q \<lbrakk>\<rbrakk> \<Longrightarrow> (INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" sorry
+lemma INF_lift: "distinct_qvars Q \<Longrightarrow> (INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" sorry
 
 lemmas prepare_for_code = H_H' quantum_equality_full_subspace add_join_qvariables_hint INF_lift 
   EPR_EPR' span_vector_state Cla_inf_lift Cla_plus_lift
-
-(* lemma colocal_cheat: "NO_MATCH (a,a) (q,r) \<Longrightarrow> colocal \<lbrakk>q\<rbrakk> \<lbrakk>r\<rbrakk>" sorry
-lemma colocal_cheat2: "colocal \<lbrakk>q\<rbrakk> \<lbrakk>r\<rbrakk>" sorry *)
 
 lemmas qvar_trafo_adj_assoc_mult[simp] = qvar_trafo_mult[OF qvar_trafo_adj[OF qvar_trafo_assoc_op]] (* TODO: add to simplifier *)
 
@@ -321,12 +253,12 @@ lemma quantum_eq_add_state: (* TODO: recover axiom *)
   assumes qvars[simp]: "distinct_qvars \<lbrakk>C1,A1,B1,A2\<rbrakk>"
   shows "\<lbrakk>C1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk> \<sqinter> span {EPR}\<guillemotright>\<lbrakk>A1, B1\<rbrakk> \<le> quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>"
 proof -
-   have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
-    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
-  note colocals = this colocal_split1 colocal_split2
+   have                             "distinct_qvars \<lbrakk>A1,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>B1,A1\<rbrakk>"                             and "distinct_qvars \<lbrakk>B1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>B1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>C1,A1\<rbrakk>" and "distinct_qvars \<lbrakk>C1,B1\<rbrakk>"                             and "distinct_qvars \<lbrakk>C1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>A2,A1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,C1\<rbrakk>"
+    using assms using [[simproc del: warn_colocal]] by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvars_swap)
+  note colocals = this distinct_qvars_split1 distinct_qvars_split2
   show ?thesis
     apply simp
     apply (auto simp: prepare_for_code colocals)
@@ -350,7 +282,7 @@ proof -
     and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
     and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
     using assms by (auto intro: colocal_sym)
-  note colocals = this colocal_split1 colocal_split2
+  note colocals = this distinct_qvars_split1 distinct_qvars_split2
   show ?thesis
     apply (simp add: prepare_for_code colocals)
     using[[show_brackets]]
@@ -365,7 +297,8 @@ lemma [code]: "mat_of_bounded (remove_qvar_unit_op::('a::enum*unit,_)bounded) = 
 
 
 lemma teleport_goal1:
-  assumes[simp]: "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk> \<and> colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk> \<and> colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"
+  assumes[simp]: "distinct_qvars \<lbrakk>C1,A1\<rbrakk> \<and> distinct_qvars \<lbrakk>A1,B1\<rbrakk> \<and> distinct_qvars \<lbrakk>C1,B1\<rbrakk> \<and> distinct_qvars \<lbrakk>A1, C1\<rbrakk> \<and> distinct_qvars \<lbrakk>B1, C1\<rbrakk>
+                  \<and> distinct_qvars \<lbrakk>C1, A2\<rbrakk> \<and> distinct_qvars \<lbrakk>A1, A2\<rbrakk> \<and> distinct_qvars \<lbrakk>B1, A2\<rbrakk> \<and> distinct_qvars \<lbrakk>B1, A1\<rbrakk>"
   shows
     "quantum_equality_full (addState EPR*) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>
       \<le> CNOT\<guillemotright>\<lbrakk>C1, A1\<rbrakk> \<cdot> (H\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> quantum_equality_full (addState EPR* \<cdot> (assoc_op* \<cdot> (CNOT \<otimes> idOp \<cdot> (assoc_op \<cdot> H \<otimes> idOp)))) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>)"
@@ -373,8 +306,7 @@ proof -
   have H: "H \<otimes> idOp \<cdot> H \<otimes> idOp = idOp" by simp
   have CNOT: "CNOT \<otimes> idOp \<cdot> CNOT \<otimes> idOp = idOp" by simp
   show ?thesis
-    using [[simproc del: warn_colocal]]
-    by (simp add: colocal_split1 colocal_split2 timesOp_assoc sort_lift
+    by (simp add: distinct_qvars_split1 distinct_qvars_split2 timesOp_assoc sort_lift
         lift_extendR[where U=H and R="\<lbrakk>A1,B1\<rbrakk>"] lift_extendR[where U=CNOT and R="\<lbrakk>B1\<rbrakk>"]
         assoc_replace[OF H] assoc_replace[OF UadjU] assoc_replace[OF CNOT] assoc_replace[OF adjUU])
 qed
@@ -395,12 +327,12 @@ lemma teleport_goal2_a0c0:
                                      \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>)
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
 proof -
-  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
-    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
-  note colocals = this colocal_split1 colocal_split2
+  have                              "distinct_qvars \<lbrakk>A1,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>B1,A1\<rbrakk>"                             and "distinct_qvars \<lbrakk>B1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>B1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>C1,A1\<rbrakk>" and "distinct_qvars \<lbrakk>C1,B1\<rbrakk>"                             and "distinct_qvars \<lbrakk>C1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>A2,A1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,C1\<rbrakk>"
+    using assms using [[simproc del: warn_colocal]] by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvars_swap)
+  note colocals = this distinct_qvars_split1 distinct_qvars_split2
   show ?thesis
     apply (auto simp: prepare_for_code colocals assoc_right)
     by eval
@@ -414,12 +346,12 @@ lemma teleport_goal2_a0c1:
                                      \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>))
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
 proof -
-  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
-    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
-  note colocals = this colocal_split1 colocal_split2
+  have                               "distinct_qvars \<lbrakk>A1,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>B1,A1\<rbrakk>"                              and "distinct_qvars \<lbrakk>B1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>B1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>C1,A1\<rbrakk>" and "distinct_qvars \<lbrakk>C1,B1\<rbrakk>"                              and "distinct_qvars \<lbrakk>C1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>A2,A1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,C1\<rbrakk>"
+    using assms using [[simproc del: warn_colocal]] by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvars_swap)
+  note colocals = this distinct_qvars_split1 distinct_qvars_split2
   show ?thesis
     apply (auto simp: prepare_for_code colocals assoc_right)
     by eval
@@ -433,12 +365,12 @@ lemma teleport_goal2_a1c0:
                                      \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>))
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
 proof -
-  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
-    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
-  note colocals = this colocal_split1 colocal_split2
+  have                               "distinct_qvars \<lbrakk>A1,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>B1,A1\<rbrakk>"                              and "distinct_qvars \<lbrakk>B1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>B1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>C1,A1\<rbrakk>" and "distinct_qvars \<lbrakk>C1,B1\<rbrakk>"                              and "distinct_qvars \<lbrakk>C1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>A2,A1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,C1\<rbrakk>"
+    using assms using [[simproc del: warn_colocal]] by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvars_swap)
+  note colocals = this distinct_qvars_split1 distinct_qvars_split2
   show ?thesis
     apply (auto simp: prepare_for_code colocals assoc_right)
     by eval
@@ -453,12 +385,12 @@ lemma teleport_goal2_a1c1:
                                      \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>)))
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
 proof -
-  have                         "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>A1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A1\<rbrakk>"                        and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>C1\<rbrakk>" and "colocal \<lbrakk>B1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>B1\<rbrakk>"                        and "colocal \<lbrakk>C1\<rbrakk> \<lbrakk>A2\<rbrakk>" 
-    and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>A1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>B1\<rbrakk>" and "colocal \<lbrakk>A2\<rbrakk> \<lbrakk>C1\<rbrakk>"
-    using assms using [[simproc del: warn_colocal]] by (auto simp: colocal_split1 colocal_split2 intro: distinct_qvars_swap)
-  note colocals = this colocal_split1 colocal_split2
+  have                               "distinct_qvars \<lbrakk>A1,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>A1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>B1,A1\<rbrakk>"                              and "distinct_qvars \<lbrakk>B1,C1\<rbrakk>" and "distinct_qvars \<lbrakk>B1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>C1,A1\<rbrakk>" and "distinct_qvars \<lbrakk>C1,B1\<rbrakk>"                              and "distinct_qvars \<lbrakk>C1,A2\<rbrakk>" 
+    and "distinct_qvars \<lbrakk>A2,A1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,B1\<rbrakk>" and "distinct_qvars \<lbrakk>A2,C1\<rbrakk>"
+    using assms using [[simproc del: warn_colocal]] by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvars_swap)
+  note colocals = this distinct_qvars_split1 distinct_qvars_split2
   show ?thesis
     apply (auto simp: prepare_for_code colocals assoc_right)
     by eval
