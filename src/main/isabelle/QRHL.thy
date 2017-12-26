@@ -844,12 +844,6 @@ lemma [simp]: "a\<noteq>0 \<Longrightarrow> eigenspace b (a\<cdot>A) = eigenspac
 section \<open>Projectors\<close>
 
 definition "isProjector P = (P=P* \<and> P=P\<cdot>P)"
-axiomatization proj :: "'a vector \<Rightarrow> ('a,'a) bounded" (* TODO: make into abbreviation for Proj *)
-  where isProjector_proj[simp]: "isProjector (proj x)"
-and imageOp_proj [simp]: "applyOpSpace (proj \<psi>) top = span {\<psi>}" for \<psi> :: "'a vector"
-
-axiomatization where proj_scalar_mult[simp]: 
-  "a \<noteq> 0 \<Longrightarrow> proj (a \<cdot> \<psi>) = proj \<psi>" for a::complex and \<psi>::"'a vector"
 
 axiomatization Proj :: "'a subspace \<Rightarrow> ('a,'a) bounded" where
   isProjector_Proj[simp]: "isProjector (Proj S)"
@@ -860,6 +854,12 @@ lemma Proj_leq: "Proj S \<cdot> A \<le> S"
 
 
 axiomatization where Proj_times: "A \<cdot> Proj S \<cdot> A* = Proj (A\<cdot>S)" for A::"('a,'b)bounded"
+
+abbreviation proj :: "'a vector \<Rightarrow> ('a,'a) bounded" where "proj \<psi> \<equiv> Proj (span {\<psi>})"
+
+axiomatization where proj_scalar_mult[simp]: 
+  "a \<noteq> 0 \<Longrightarrow> proj (a \<cdot> \<psi>) = proj \<psi>" for a::complex and \<psi>::"'a vector"
+
 
 axiomatization where move_plus:
   "Proj (ortho C) \<cdot> A \<le> B \<Longrightarrow> A \<le> B + C"
@@ -1199,8 +1199,18 @@ axiomatization where Qeq_mult2[simp]:
  for U::"('a,'a) bounded" and U1 :: "('b,'c) bounded"  
 
 
-axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
+axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q
+   = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
   for Q R :: "'a qvariables" and \<psi> :: "'a vector"
+
+(* TODO: proof in paper *)
+axiomatization where
+  quantum_eq_add_state: 
+    "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow>
+    quantum_equality_full U Q V R \<sqinter> span {\<psi>}\<guillemotright>T
+             = quantum_equality_full (U \<otimes> idOp) (qvariable_concat Q T) (addState \<psi> \<cdot> V) R"
+    for U :: "('a,'c) bounded" and V :: "('b,'c) bounded" and \<psi> :: "'d state"
+    and Q :: "'a qvariables"    and R :: "'b qvariables"    and T :: "'d qvariables"
 
 section \<open>Common quantum objects\<close>
 
