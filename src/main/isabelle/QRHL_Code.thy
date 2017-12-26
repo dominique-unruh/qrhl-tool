@@ -7,6 +7,7 @@ hide_const (open) Lattice.sup
 hide_const (open) Lattice.inf
 hide_const (open) Order.top
 hide_const (open) card_UNIV
+hide_const (open) Coset.kernel
 no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
 no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
 
@@ -139,12 +140,82 @@ definition "computational_basis_vec n = map (unit_vec n) [0..<n]"
 definition "orthogonal_complement_vec n vs = 
   filter (op\<noteq> (zero_vec n)) (drop (length vs) (gram_schmidt n (vs @ computational_basis_vec n)))"
 
-lemma vector_to_bounded_scalar_times: "vector_to_bounded (a\<cdot>\<psi>) = a \<cdot> vector_to_bounded \<psi>" for a::complex
-  apply (rewrite at "a\<cdot>\<psi>" DEADID.rel_mono_strong[of _ "(a\<cdot>idOp)\<cdot>\<psi>"])
-   apply simp
-  apply (subst vector_to_bounded_applyOp)
-  by simp
+definition "vec_tensor (A::'a::times vec) (B::'a vec) =
+  vec (dim_vec A*dim_vec B) 
+  (\<lambda>r. A $ (r div dim_vec B) *
+       B $ (r mod dim_vec B))"
 
+
+axiomatization where tensorVec_code[code]: "vec_of_vector (\<psi> \<otimes> \<phi>) = vec_tensor (vec_of_vector \<psi>) (vec_of_vector \<phi>)"
+  for \<psi>::"'a::enum vector" and \<phi>::"'b::enum vector"
+
+definition [code del]: "SPAN x = spanVector (vector_of_vec ` set x)"
+code_datatype SPAN
+
+axiomatization where top_as_span[code]: "(top::'a subspace) = SPAN (computational_basis_vec (CARD('a::enum)))"
+axiomatization where bot_as_span[code]: "(bot::'a::enum subspace) = SPAN []" 
+axiomatization where plus_spans[code]: "SPAN A + SPAN B = SPAN (A @ B)" 
+
+axiomatization where ortho_SPAN[code]: "ortho (SPAN S :: 'a::enum subspace) = SPAN (orthogonal_complement_vec (CARD('a)) S)"
+axiomatization where span_Set_Monad[code]: "span (Set_Monad l) = SPAN (map vec_of_vector l)"
+  for l :: "'a::enum vector list"
+axiomatization where tensorSpace_SPAN[code]: "tensorSpace (SPAN A) (SPAN B) = SPAN [vec_tensor a b. a<-A, b<-B]"
+
+axiomatization where vec_of_vector_timesScalarVec[code]: "vec_of_vector (timesScalarVec a \<psi>) = smult_vec a (vec_of_vector \<psi>)"
+  for \<psi> :: "'a::enum vector"
+
+axiomatization where vec_of_vector_EPR'[code]: "vec_of_vector EPR' = vec_of_list [1,0,0,1]"
+
+lemma [code_post]: 
+  shows "Complex a 0 = complex_of_real a"
+  and "complex_of_real 0 = 0"
+  and "complex_of_real 1 = 1"
+  and "complex_of_real (a/b) = complex_of_real a / complex_of_real b"
+  and "complex_of_real (numeral n) = numeral n"
+  and "complex_of_real (-r) = - complex_of_real r"
+  using complex_eq_cancel_iff2 by auto
+
+instantiation subspace :: (enum) equal begin
+definition [code del]: "equal_subspace (A::'a subspace) B = (A=B)"
+instance apply intro_classes unfolding equal_subspace_def by simp
+end
+
+definition "is_subspace_of n vs ws =  
+  list_all (op= (zero_vec n)) (drop (length ws) (gram_schmidt n (ws @ vs)))"
+
+axiomatization where SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a subspace) \<longleftrightarrow> is_subspace_of (CARD('a::enum)) A B" 
+
+axiomatization where applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (map (mult_mat_vec (mat_of_bounded A)) S)"
+  for A::"('a::enum,'b::enum) bounded"
+
+axiomatization where kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_single (mat_of_bounded A)))" 
+  for A::"('a::enum,'b::enum) bounded"
+
+lemma [code_abbrev]: "kernel (A-a\<cdot>idOp) = eigenspace a A" 
+  unfolding eigenspace_def by simp
+
+axiomatization where mat_of_bounded_classical_operator[code]: 
+  "mat_of_bounded (classical_operator f) = mat (CARD('b)) (CARD('a))
+  (\<lambda>(r,c). if f (Enum.enum!c) = Some (Enum.enum!r) then 1 else 0)" 
+  for f::"'a::enum \<Rightarrow> 'b::enum option"
+
+lemma [code]: "HOL.equal (A::_ subspace) B = (A\<le>B \<and> B\<le>A)"
+  unfolding equal_subspace_def by auto
+
+
+axiomatization where mat_of_bounded_vector_to_bounded[code]: "mat_of_bounded (vector_to_bounded \<psi>) = mat_of_cols (CARD('a)) [vec_of_vector \<psi>]" 
+  for \<psi>::"'a::enum vector"
+
+axiomatization where mat_of_bounded_remove_qvar_unit_op[code]:
+  "mat_of_bounded (remove_qvar_unit_op::(_,'a::enum) bounded) = mat_of_bounded (idOp::(_,'a) bounded)" 
+
+lemma [code]: "(A::'a subspace) \<sqinter> B = ortho (ortho A + ortho B)"
+  unfolding subspace_sup_plus[symmetric]
+  by (smt inf.absorb2 inf.orderE inf_assoc_subspace inf_sup_ord(1) inf_sup_ord(2) leq_plus_subspace leq_plus_subspace2 ortho_leq ortho_twice subspace_plus_sup subspace_sup_plus)
+
+
+declare ord_subspace_inst.less_eq_subspace[code del]
+declare ord_subspace_inst.less_subspace[code del]
 
 derive (eq) ceq bit
 derive (linorder) compare_order bit
@@ -158,7 +229,12 @@ derive (no) ccompare complex
 derive (eq) ceq subspace
 derive (no) ccompare subspace
 derive (monad) set_impl subspace
+derive (eq) ceq vector
+derive (no) ccompare vector
+derive (monad) set_impl vector
 
 
+lemmas prepare_for_code = H_H' quantum_equality_full_subspace add_join_qvariables_hint INF_lift 
+  EPR_EPR' span_vector_state Cla_inf_lift Cla_plus_lift
 
 end

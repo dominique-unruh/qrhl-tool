@@ -8,6 +8,7 @@ definition [code del]: "(sqrt2::complex) = sqrt 2"
 lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
  by (simp add: of_real_def scaleR_2 sqrt2_def)
 lemma sqrt2_neq0[simp]: "sqrt2 \<noteq> 0" unfolding sqrt2_def by simp
+lemma [simp]: "cnj sqrt2 = sqrt2" unfolding sqrt2_def by simp
 
 syntax "Lattices.sup_class.sup" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<squnion>" 65)
 syntax "Lattices.inf_class.inf" :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "\<sqinter>" 70)
@@ -283,7 +284,9 @@ end
 
 axiomatization timesScalarVec :: "complex \<Rightarrow> 'a vector \<Rightarrow> 'a vector" where
   timesScalarVec_twice[simp]: "timesScalarVec a (timesScalarVec b \<psi>) = timesScalarVec (a*b) \<psi>"
-and uminus_vector: "(-\<psi>) = timesScalarVec (-1) \<psi>" for \<psi>::"'a vector"
+and uminus_vector: "(-\<psi>) = timesScalarVec (-1) \<psi>"
+and one_times_vec[simp]: "timesScalarVec (1::complex) \<psi> = \<psi>" 
+for \<psi> :: "'a vector"
 
 lemma ell2_basis_vector[simp]: "norm (basis_vector i) = 1"
   apply transfer unfolding ell2_norm_def
@@ -522,6 +525,12 @@ definition [code del]: "spanState A = Inf {S. state_to_vector ` A \<subseteq> su
 consts span :: "'a set \<Rightarrow> 'b subspace"
 adhoc_overloading span spanState spanVector
 
+lemma span_vector_state: "spanState A = spanVector (state_to_vector ` A)"
+  by (simp add: spanState_def spanVector_def) 
+
+axiomatization where span_mult[simp]: "(a::complex)\<noteq>0 \<Longrightarrow> span { timesScalarVec a \<psi> } = span {\<psi>}"
+  for \<psi>::"'a vector"
+
 lemma leq_INF[simp]:
   fixes V :: "'a \<Rightarrow> 'b subspace"
   shows "(A \<le> (INF x. V x)) = (\<forall>x. A \<le> V x)"
@@ -578,11 +587,20 @@ where
 and times_applyOp: "applyOp (timesOp A B) \<psi> = applyOp A (applyOp B \<psi>)"
 and timesScalarSpace_0[simp]: "timesScalarSpace 0 S = 0"
 and timesScalarSpace_not0[simp]: "a \<noteq> 0 \<Longrightarrow> timesScalarSpace a S = S"
+and one_times_op[simp]: "timesScalarOp (1::complex) B = B"
+
+axiomatization where scalar_times_adj[simp]: "(timesScalarOp a A)* = timesScalarOp (cnj a) (A*)" for A::"('a,'b)bounded"
 
 axiomatization where
   timesOp_assoc: "timesOp (timesOp A B) C = timesOp A (timesOp B C)" 
 and times_adjoint[simp]: "adjoint (timesOp A B) = timesOp (adjoint B) (adjoint A)"
 for A :: "('b,'a) bounded" and B :: "('c,'b) bounded" and C :: "('d,'c) bounded"
+
+axiomatization where
+  timesOp_assoc_subspace: "applyOpSpace (timesOp A B) S = applyOpSpace A (applyOpSpace B S)"
+for S :: "'a subspace" and B :: "('a,'b) bounded" and A :: "('b,'c) bounded"
+
+
 
 axiomatization plusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'b) bounded" 
   (* and uminusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded" *)
@@ -593,6 +611,8 @@ axiomatization plusOp :: "('a,'b) bounded \<Rightarrow> ('a,'b) bounded \<Righta
   and plusOp_cancel: "plusOp (uminusOp a) a = 0"
 for a b c :: "('a,'b) bounded"
 
+lemmas assoc_left = timesOp_assoc[symmetric] timesOp_assoc_subspace[symmetric] plusOp_assoc[symmetric]
+lemmas assoc_right = timesOp_assoc timesOp_assoc_subspace plusOp_assoc
 
 instantiation bounded :: (type,type) ab_group_add begin
 definition "op+ = plusOp" 
@@ -606,6 +626,10 @@ instance apply intro_classes
    apply (fact plusOp_cancel)
   by auto
 end
+
+axiomatization where scalar_times_op_add[simp]: "timesScalarOp a (A+B) = timesScalarOp a A + timesScalarOp a B" for a::complex and A B :: "('a,'b) bounded"
+lemma scalar_times_op_minus[simp]: "timesScalarOp a (A-B) = timesScalarOp a A - timesScalarOp a B" for a::complex and A B :: "('a,'b) bounded"
+  by (metis add_diff_cancel_right' diff_add_cancel scalar_times_op_add)
 
 lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
   by (simp add: subspace_zero_bot[symmetric])
@@ -792,6 +816,30 @@ lemma unitary_id[simp]: "unitary idOp"
 axiomatization vector_to_bounded :: "'a vector \<Rightarrow> (unit,'a) bounded"
   where vector_to_bounded_applyOp: "vector_to_bounded (A\<cdot>\<psi>) = A \<cdot> vector_to_bounded \<psi>" for A :: "(_,_)bounded"
 
+lemma vector_to_bounded_scalar_times: "vector_to_bounded (a\<cdot>\<psi>) = a \<cdot> vector_to_bounded \<psi>" for a::complex
+  apply (rewrite at "a\<cdot>\<psi>" DEADID.rel_mono_strong[of _ "(a\<cdot>idOp)\<cdot>\<psi>"])
+   apply simp
+  apply (subst vector_to_bounded_applyOp)
+  by simp
+
+
+axiomatization kernel :: "('a,'b) bounded \<Rightarrow> 'a subspace"
+definition eigenspace :: "complex \<Rightarrow> ('a,'a) bounded \<Rightarrow> 'a subspace" where
+  "eigenspace a A = kernel (A-a\<cdot>idOp)" 
+
+axiomatization where kernel_scalar_times[simp]: "a\<noteq>0 \<Longrightarrow> kernel (a\<cdot>A) = kernel A" 
+  for a :: complex and A :: "('a,'b) bounded"
+
+axiomatization where kernel_0[simp]: "kernel 0 = top"
+axiomatization where kernel_id[simp]: "kernel idOp = 0"
+
+lemma [simp]: "a\<noteq>0 \<Longrightarrow> eigenspace b (a\<cdot>A) = eigenspace (b/a) A"
+  unfolding eigenspace_def
+  apply (rewrite at "kernel \<hole>" DEADID.rel_mono_strong[where y="a \<cdot> (A - b / a \<cdot> idOp)"])
+   apply auto[1]
+  by (subst kernel_scalar_times, auto)
+
+
 
 section \<open>Projectors\<close>
 
@@ -810,10 +858,12 @@ and imageOp_Proj[simp]: "applyOpSpace (Proj S) top = S"
 lemma Proj_leq: "Proj S \<cdot> A \<le> S"
   by (metis imageOp_Proj inf.orderE inf.orderI mult_inf_distrib top_greatest)
 
+
 axiomatization where Proj_times: "A \<cdot> Proj S \<cdot> A* = Proj (A\<cdot>S)" for A::"('a,'b)bounded"
 
-
-
+axiomatization where move_plus:
+  "Proj (ortho C) \<cdot> A \<le> B \<Longrightarrow> A \<le> B + C"
+for A B C::"'a subspace"
 
 section \<open>Measurements\<close>
 
@@ -854,7 +904,11 @@ axiomatization where tensor_times[simp]: "(U1 \<otimes> U2) \<cdot> (V1 \<otimes
 axiomatization remove_qvar_unit_op :: "('a*unit,'a) bounded"
 
 (* TODO document *)
-definition addState :: "'a vector \<Rightarrow> ('b,'b*'a) bounded" where "addState \<psi> = idOp \<otimes> (vector_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
+definition addState :: "'a vector \<Rightarrow> ('b,'b*'a) bounded" where
+  "addState \<psi> = idOp \<otimes> (vector_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
+
+lemma addState_times_scalar[simp]: "addState (a \<cdot> \<psi>) = a \<cdot> addState \<psi>" for a::complex and psi::"'a vector"
+  unfolding addState_def by (simp add: vector_to_bounded_scalar_times)
 
 axiomatization where tensor_adjoint[simp]: "adjoint (U\<otimes>V) = (adjoint U) \<otimes> (adjoint V)"
   for U :: "('a,'b) bounded" and V :: "('c,'d) bounded"
@@ -929,6 +983,11 @@ qed
 
 lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
+
+lemma [simp]: "eigenspace b 0 = Cla[b=0]"
+  unfolding eigenspace_def apply auto
+  apply (rewrite at "kernel \<hole>" DEADID.rel_mono_strong[where y="(-b) \<cdot> idOp"])
+  by (auto simp: subspace_zero_bot uminus_bounded_def)
 
 section \<open>Quantum variables\<close>
 
@@ -1048,6 +1107,11 @@ axiomatization where lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> ortho
 axiomatization where lift_tensorOp: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>qvariable_concat Q R" for Q :: "'a qvariables" and R :: "'b qvariables" and S T :: "(_,_) bounded" 
 axiomatization where lift_tensorSpace: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>qvariable_concat Q R" for Q :: "'a qvariables" and R :: "'b qvariables" and S :: "_ subspace" 
 axiomatization where lift_idOp[simp]: "idOp\<guillemotright>Q = idOp" for Q :: "'a qvariables"
+axiomatization where INF_lift: "distinct_qvars Q \<Longrightarrow> (INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" for Q::"'a qvariables" and S::"'b \<Rightarrow> 'a subspace"
+lemma Cla_inf_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<sqinter> (S\<guillemotright>Q) = (if b then S else bot)\<guillemotright>Q" by auto
+lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
+axiomatization where Proj_lift[simp]: "distinct_qvars Q \<Longrightarrow> Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
+  for Q::"'a qvariables"
 
 axiomatization where colocal_op_pred_lift1[simp]:
  "colocal S Q \<Longrightarrow> colocal (U\<guillemotright>Q) S"
@@ -1071,6 +1135,15 @@ lemma lift_extendL:
   shows "U\<guillemotright>Q = (idOp\<otimes>U)\<guillemotright>(qvariable_concat R Q)"
   by (metis assms distinct_qvars_swap lift_idOp lift_tensorOp times_idOp2)
 
+lemma move_plus_meas_rule:
+  fixes Q::"'a qvariables"
+  assumes "distinct_qvars Q"
+  assumes "(Proj C)\<guillemotright>Q \<cdot> A \<le> B"
+  shows "A \<le> (B\<sqinter>C\<guillemotright>Q) + (ortho C)\<guillemotright>Q"
+  apply (rule move_plus) 
+  using Proj_leq[of "C\<guillemotright>Q"] assms by simp
+
+
 
 section \<open>Quantum predicates (ctd.)\<close>
 
@@ -1083,7 +1156,13 @@ axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a q
 
 subsection \<open>Quantum equality\<close>
 
-axiomatization quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b qvariables \<Rightarrow> predicate"
+axiomatization quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b qvariables \<Rightarrow> predicate" where
+  quantum_equality_full_subspace:
+  "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> quantum_equality_full U Q V R = 
+                 (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> qvariable_concat Q R"
+  for Q :: "'a qvariables" and R :: "'b qvariables"
+  and U V :: "(_,'c) bounded"
+
 abbreviation "quantum_equality" :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
   where "quantum_equality X Y \<equiv> quantum_equality_full idOp X idOp Y"
 syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarrow> predicate" (infix "==q" 100)
@@ -1213,6 +1292,9 @@ axiomatization Y :: "(bit,bit) bounded"
     and adjoint_Y[simp]: "Y* = Y"
 
 axiomatization EPR :: "(bit*bit) state" 
+definition[code del]: "EPR' = timesScalarVec sqrt2 (state_to_vector EPR)"
+lemma EPR_EPR': "state_to_vector EPR = timesScalarVec (1/sqrt2) EPR'"
+  unfolding EPR'_def by simp
 
 
 section \<open>Misc\<close>
@@ -1410,6 +1492,18 @@ lemma qvariable_extension_hint_bounded[simp]:
     - the whole expression should be rewritten to x'\<guillemotright>Q\<otimes>R' such that Q\<otimes>R' has the same variables as Q\<otimes>R (duplicates removed)
 *)
 definition "join_qvariables_hint x (R::'a qvariables) = x"
+
+
+lemma add_join_qvariables_hint: 
+  fixes Q :: "'a qvariables" and R :: "'b qvariables" and A :: "('a,'a) bounded"
+  shows "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>R = join_qvariables_hint (S\<guillemotright>Q) R \<sqinter> join_qvariables_hint (T\<guillemotright>R) Q"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>R = join_qvariables_hint (S\<guillemotright>Q) R + join_qvariables_hint (T\<guillemotright>R) Q"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> A\<guillemotright>Q \<cdot> T\<guillemotright>R = join_qvariables_hint (A\<guillemotright>Q) R \<cdot> join_qvariables_hint (T\<guillemotright>R) Q"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R \<le> join_qvariables_hint (T\<guillemotright>R) Q)"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R = join_qvariables_hint (T\<guillemotright>R) Q)"
+  unfolding join_qvariables_hint_def by simp_all
+
+
 
 (* Hint for the simplifier, meaning that:
     - x is of the form x'>>Q
