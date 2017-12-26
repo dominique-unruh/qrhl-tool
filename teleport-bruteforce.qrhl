@@ -1,0 +1,45 @@
+# WARNING: Unfinished experiment!
+
+isabelle Teleport.
+
+classical var a : bit.
+classical var c : bit.
+
+quantum var A : bit.
+quantum var B : bit.
+quantum var C : bit.
+
+ambient var a' : bit.
+ambient var c' : bit.
+ambient var z : bit.
+ambient var w : bit.
+
+# Program to teleport a qubit from C to B
+program teleport := {
+  A,B <q EPR;
+  on C,A apply CNOT;
+  on C apply H;
+  a <- measure A with computational_basis;
+  c <- measure C with computational_basis;
+  if (a=1) then on B apply X; else skip;
+  if (c=1) then on B apply Z; else skip;
+}.
+
+
+qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
+  inline teleport.
+
+  wp left.
+  wp left.
+  wp left.
+  wp left.
+  wp left.
+  wp left.
+  wp left.
+  skip.
+
+  rule teleport_bruteforce.
+   simp.
+
+qed.
+

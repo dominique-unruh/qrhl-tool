@@ -1,5 +1,3 @@
-# WARNING: Unfinished experiment!
-
 isabelle Teleport.
 
 classical var a : bit.
@@ -192,30 +190,3 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 qed.		
 
 
-
-# TODO:
-
-# Brute force
-qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
-  inline teleport.
-
-  seq 1 0: Qeq[C1=A2] ⊓ (lift (span {EPR}) ⟦A1,B1⟧).
-   wp left.
-   skip.
-   simp.
-
-  wp left.
-  simp.
-  wp left.
-  simp.
-  wp left.
-  simp.
-  wp left.
-  simp.
-  wp left.
-  simp.
-  wp left.
-  simp.
-
-  skip.
-  simp.

@@ -573,6 +573,7 @@ where
 and times_applyOp: "applyOp (timesOp A B) \<psi> = applyOp A (applyOp B \<psi>)"
 and timesScalarSpace_0[simp]: "timesScalarSpace 0 S = 0"
 and timesScalarSpace_not0[simp]: "a \<noteq> 0 \<Longrightarrow> timesScalarSpace a S = S"
+and timesScalarVec_twice[simp]: "timesScalarVec a (timesScalarVec b \<psi>) = timesScalarVec (a*b) \<psi>"
 
 axiomatization where
   timesOp_assoc: "timesOp A (timesOp B C) = timesOp (timesOp A B) C" 
