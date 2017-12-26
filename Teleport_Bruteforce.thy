@@ -1,23 +1,6 @@
 theory Teleport_Bruteforce
-  imports Teleport (* TODO: Only import QRHL_Protocol *)
+  imports QRHL_Protocol
 begin
-
-lemma [simp]: "isometry (1 / sqrt2 \<cdot> H')" sorry
-
-declare [[code drop: UNIV]]
-declare enum_class.UNIV_enum[code]
-
-(* 
-(* lemma [code]: "UNIV = set (Enum.enum)" by (fact enum_class.UNIV_enum) *)
-definition "test = (INF x::bit. (top::bit subspace))"
-export_code test in SML module_name Bla file "test.ML" 
-value test
-
- *)
-
-
-
-
 
 lemma teleport_bruteforce:
   assumes qvars[simp]: "distinct_qvars \<lbrakk>C1,A1,B1,A2\<rbrakk>"
@@ -30,7 +13,7 @@ proof -
     using assms using [[simproc del: warn_colocal]] by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvars_swap)
   note colocals = this distinct_qvars_split1 distinct_qvars_split2
   ML_prf {* val goal = Unsynchronized.ref @{term 7}; fun setgoal x = (goal := x) *}
-  show ?thesis
+  show ?thesis                                  
     apply (auto simp: prepare_for_code colocals assoc_right)
     by eval
 qed

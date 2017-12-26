@@ -81,9 +81,6 @@ lemma uminus_bounded_def: "(-A) = (-1) \<cdot> A" for A::"(_,_)bounded" sorry  *
 
 
 (* TODO: we have a more general version in QRHL_Code. Which? *)
-lemma [code]: "Inf (Set_Monad l :: 'a subspace set) = fold inf l top"
-  unfolding Set_Monad_def
-  by (simp add: Inf_set_fold)
 
 
 (* lemma test: "1=(1::nat)"

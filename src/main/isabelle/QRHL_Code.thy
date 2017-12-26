@@ -213,6 +213,12 @@ lemma [code]: "(A::'a subspace) \<sqinter> B = ortho (ortho A + ortho B)"
   unfolding subspace_sup_plus[symmetric]
   by (smt inf.absorb2 inf.orderE inf_assoc_subspace inf_sup_ord(1) inf_sup_ord(2) leq_plus_subspace leq_plus_subspace2 ortho_leq ortho_twice subspace_plus_sup subspace_sup_plus)
 
+lemma [code]: "Inf (Set_Monad l :: 'a subspace set) = fold inf l top"
+  unfolding Set_Monad_def
+  by (simp add: Inf_set_fold)
+
+declare [[code drop: UNIV]]
+declare enum_class.UNIV_enum[code]
 
 declare ord_subspace_inst.less_eq_subspace[code del]
 declare ord_subspace_inst.less_subspace[code del]

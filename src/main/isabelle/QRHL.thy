@@ -1274,6 +1274,8 @@ lemma H_H[simp]: "H \<cdot> H = idOp"
 
 definition "H' = sqrt2 \<cdot> H"
 lemma H_H': "H = (1/sqrt2) \<cdot> H'" unfolding H'_def by simp
+lemma [simp]: "isometry (1 / sqrt2 \<cdot> H')"
+  unfolding H'_def by simp
 
 
 definition [code del]: "Z = H \<cdot> X \<cdot> H"
