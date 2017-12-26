@@ -8,7 +8,7 @@ import scala.sys.process.Process
 
 name := "qrhl"
 
-version := "0.1alpha"
+version := "0.2alpha"
 
 scalaVersion := "2.12.4"
 

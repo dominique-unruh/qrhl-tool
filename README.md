@@ -17,13 +17,13 @@ and enter `java` or `emacs`, respectively, and see whether the commands are foun
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.1alpha`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.2alpha`.
 
 
 ## Executing the demos
 
-In the `qrhl-0.1alpha` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
-The current directory must be the `qrhl-0.1alpha` directory!
+In the `qrhl-0.2alpha` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
+The current directory must be the `qrhl-0.2alpha` directory!
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files: `example.qrhl`, `prg-enc-indcpa.qrhl`,
