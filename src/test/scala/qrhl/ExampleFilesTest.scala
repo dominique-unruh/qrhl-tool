@@ -37,4 +37,8 @@ class ExampleFilesTest extends FlatSpec {
     toplevel.run(Paths.get("teleport.qrhl"))
   }
 
+  "teleport-bruteforce.qrhl" should "execute successfully" in {
+    val toplevel = new Toplevel()
+    toplevel.run(Paths.get("teleport-bruteforce.qrhl"))
+  }
 }

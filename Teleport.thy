@@ -2,65 +2,8 @@ theory Teleport
   imports QRHL_Protocol
 begin
 
-definition "computational_basis_vec n = map (unit_vec n) [0..<n]"
-definition "orthogonal_complement_vec n vs = 
-  filter (op\<noteq> (zero_vec n)) (drop (length vs) (gram_schmidt n (vs @ computational_basis_vec n)))"
 
 declare[[quick_and_dirty]]
-
-axiomatization where tensor_times[simp]: "(U1 \<otimes> U2) \<cdot> (V1 \<otimes> V2) = (U1 \<cdot> V1) \<otimes> (U2 \<cdot> V2)"
-  for V1 :: "('a1,'b1) bounded" and U1 :: "('b1,'c1) bounded"
-   and V2 :: "('a2,'b2) bounded" and U2 :: "('b2,'c2) bounded"
-
-axiomatization vector_to_bounded :: "'a vector \<Rightarrow> (unit,'a) bounded"
-  where vector_to_bounded_applyOp: "vector_to_bounded (A\<cdot>\<psi>) = A \<cdot> vector_to_bounded \<psi>" for A :: "(_,_)bounded"
-
-lemma vector_to_bounded_scalar_times: "vector_to_bounded (a\<cdot>\<psi>) = a \<cdot> vector_to_bounded \<psi>" for a::complex
-  apply (rewrite at "a\<cdot>\<psi>" DEADID.rel_mono_strong[of _ "(a\<cdot>idOp)\<cdot>\<psi>"])
-   apply simp
-  apply (subst vector_to_bounded_applyOp)
-  by simp
-
-(* TODO document *)
-definition addState :: "'a vector \<Rightarrow> ('b,'b*'a) bounded" where "addState \<psi> = idOp \<otimes> (vector_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
-
-axiomatization EPR :: "(bit*bit) state" 
-
-axiomatization where applyOpSpace_colocal[simp]:
-  "colocal U S \<Longrightarrow> U\<noteq>0 \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) bounded" and S :: predicate
-
-axiomatization where colocal_op_pred_lift1[simp]:
- "colocal S Q \<Longrightarrow> colocal (U\<guillemotright>Q) S"
-for Q :: "'a qvariables" and U :: "('a,'a) bounded" and S :: predicate
-
-
-
-axiomatization where colocal_op_qvars_lift1[simp]:
-  "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> colocal (U\<guillemotright>Q) R"
-for Q R :: "_ qvariables" and U :: "('a,'a) bounded"
-  
-
-axiomatization where colocal_pred_qvars_lift1[simp]:
-  "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> colocal_pred_qvars (S\<guillemotright>Q) R"
-for Q :: "'a qvariables"
-
-axiomatization where colocal_pred_qvars_mult[simp]:
-  "colocal_op_qvars U Q \<Longrightarrow> colocal_pred_qvars S Q \<Longrightarrow> colocal_pred_qvars (U\<cdot>S) Q"
- 
-axiomatization where colocal_ortho[simp]: "colocal (ortho S) Q = colocal S Q"
-
-
-lemma lift_extendR:
-  assumes "distinct_qvars (qvariable_concat Q R)"
-  shows "U\<guillemotright>Q = (U\<otimes>idOp)\<guillemotright>(qvariable_concat Q R)"
-  by (metis assms qvariable_extension_hint_bounded qvariable_extension_hint_def)
-
-lemma lift_extendL:
-  assumes "distinct_qvars (qvariable_concat Q R)"
-  shows "U\<guillemotright>Q = (idOp\<otimes>U)\<guillemotright>(qvariable_concat R Q)"
-  by (metis assms distinct_qvars_swap lift_idOp lift_tensorOp times_idOp2)
-  
-axiomatization where tensor_adjoint[simp]: "adjoint (U\<otimes>V) = (adjoint U) \<otimes> (adjoint V)"
 
 
 lemma sort_lift: (* TODO remove *)
@@ -71,37 +14,21 @@ lemma sort_lift: (* TODO remove *)
     "U\<guillemotright>(qvariable_concat (qvariable_concat Q R) S) = V\<guillemotright>(qvariable_concat Q (qvariable_concat R S))"
   sorry
 
-axiomatization where idOp_tensor_idOp[simp]: "idOp\<otimes>idOp = idOp"
-
-lemma tensor_unitary[simp]: 
-  assumes "unitary U" and "unitary V"
-  shows "unitary (U\<otimes>V)"
-  using assms unfolding unitary_def by simp
-
-(* lemma distinct_qvars_split1: "distinct_qvars (qvariable_concat (qvariable_concat Q R) S) = (distinct_qvars (qvariable_concat Q R) \<and> distinct_qvars (qvariable_concat Q S) \<and> distinct_qvars (qvariable_concat R S))" sorry *)
-(* lemma distinct_qvars_split2: "colocal S (qvariable_concat Q R) = (colocal Q R \<and> colocal S Q \<and> colocal S R)" for S :: "'a qvariables"  *)
-
-lemma adjUU[simp]: "isometry U \<Longrightarrow> U* \<cdot> U = idOp" unfolding isometry_def by simp
-lemma UadjU[simp]: "unitary U \<Longrightarrow> U \<cdot> U* = idOp" unfolding unitary_def by simp
-
 
 lemma assoc_replace: 
   fixes A B C D :: "(_,_) bounded"
   assumes "A \<cdot> B = C"
   shows "D \<cdot> A \<cdot> B = D \<cdot> C"
-  by (simp add: timesOp_assoc[symmetric] assms) 
-
-(* lemma tensor_id_id[simp]: "idOp \<otimes> idOp = idOp"  *)
+  by (simp add: timesOp_assoc assms) 
 
 axiomatization where
   timesOp_assoc_subspace: "applyOpSpace (timesOp A B) S = applyOpSpace A (applyOpSpace B S)"
 for S :: "'a subspace" and B :: "('a,'b) bounded" and A :: "('b,'c) bounded"
 
-lemmas assoc_left = timesOp_assoc timesOp_assoc_subspace[symmetric]
-lemmas assoc_right = timesOp_assoc[symmetric] timesOp_assoc_subspace
+lemmas assoc_left = timesOp_assoc[symmetric] timesOp_assoc_subspace[symmetric]
+lemmas assoc_right = timesOp_assoc timesOp_assoc_subspace
 
 
-(* axiomatization eigenspace :: "complex \<Rightarrow> ('a,'a) bounded \<Rightarrow> 'a subspace" *)
 axiomatization kernel :: "('a,'b) bounded \<Rightarrow> 'a subspace"
 definition eigenspace :: "complex \<Rightarrow> ('a,'a) bounded \<Rightarrow> 'a subspace" where
   "eigenspace a A = kernel (A-a\<cdot>idOp)" 
@@ -175,8 +102,7 @@ derive (eq) ceq vector
 derive (no) ccompare vector
 derive (monad) set_impl vector (* No clue which is the best. *)                           
 
-(* TODO: don't use enum_len, but cardinality *)
-axiomatization where top_as_span[code]: "(top::'a subspace) = SPAN (computational_basis_vec (enum_len TYPE('a::enum)))"
+axiomatization where top_as_span[code]: "(top::'a subspace) = SPAN (computational_basis_vec (CARD('a::enum)))"
 axiomatization where bot_as_span[code]: "(bot::'a::enum subspace) = SPAN []" 
 axiomatization where plus_spans[code]: "SPAN A + SPAN B = SPAN (A @ B)" 
 
@@ -191,8 +117,8 @@ axiomatization where vec_of_vector_EPR'[code]: "vec_of_vector EPR' = vec_of_list
 
 axiomatization where vec_of_vector_timesScalarVec[code]: "vec_of_vector (timesScalarVec a \<psi>) = smult_vec a (vec_of_vector \<psi>)"
 (* lemma [code]: "mat_of_bounded (addState \<psi> :: ('a::enum,'a*'b::enum) bounded) 
-  = matrix_tensor (one_mat (enum_len TYPE('a))) (mat_of_cols (enum_len TYPE('b)) [vec_of_vector \<psi>])" *)
-axiomatization where ortho_SPAN[code]: "ortho (SPAN S :: 'a::enum subspace) = SPAN (orthogonal_complement_vec (enum_len TYPE('a)) S)"
+  = matrix_tensor (one_mat (CARD('a))) (mat_of_cols (CARD('b)) [vec_of_vector \<psi>])" *)
+axiomatization where ortho_SPAN[code]: "ortho (SPAN S :: 'a::enum subspace) = SPAN (orthogonal_complement_vec (CARD('a)) S)"
 axiomatization where span_Set_Monad[code]: "span (Set_Monad l) = SPAN (map vec_of_vector l)"
 axiomatization where tensorSpace_SPAN[code]: "tensorSpace (SPAN A) (SPAN B) = SPAN [vec_tensor a b. a<-A, b<-B]"
 
@@ -223,7 +149,7 @@ axiomatization where applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (m
 
 axiomatization where kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_single (mat_of_bounded A)))" 
 
-axiomatization where mat_of_bounded_classical_operator[code]: "(mat_of_bounded (classical_operator f :: ('a,'b)bounded)) = mat (enum_len TYPE('b::enum)) (enum_len TYPE('a::enum))
+axiomatization where mat_of_bounded_classical_operator[code]: "(mat_of_bounded (classical_operator f :: ('a,'b)bounded)) = mat (CARD('b::enum)) (CARD('a::enum))
   (\<lambda>(r,c). if f (Enum.enum!c) = Some (Enum.enum!r) then 1 else 0)" 
 
 lemma [code]: "HOL.equal (A::_ subspace) B = (A\<le>B \<and> B\<le>A)"
@@ -243,8 +169,10 @@ axiomatization where scalar_times_op_add[simp]: "a \<cdot> (A+B) = a\<cdot>A + a
 lemma [simp]: "a \<cdot> (A-B) = a\<cdot>A - a\<cdot>B" for a::complex and A B :: "('a,'b) bounded"
   by (metis add_diff_cancel_right' diff_add_cancel scalar_times_op_add)
 
-(* TODO: make def of uminus, same for vector *)
-lemma uminus_bounded_def: "(-A) = (-1) \<cdot> A" for A::"(_,_)bounded" sorry 
+(* 
+lemma uminus_bounded_def: "(-A) = (-1) \<cdot> A" for A::"(_,_)bounded" sorry  *)
+
+
 
 lemma [simp]: "a\<noteq>0 \<Longrightarrow> eigenspace b (a\<cdot>A) = eigenspace (b/a) A"
   unfolding eigenspace_def
@@ -331,9 +259,6 @@ proof -
 qed
 
 
-derive (eq) ceq subspace
-derive (no) ccompare subspace
-derive (monad) set_impl subspace
 
   
 
@@ -347,15 +272,13 @@ proof -
   have H: "H \<otimes> idOp \<cdot> H \<otimes> idOp = idOp" by simp
   have CNOT: "CNOT \<otimes> idOp \<cdot> CNOT \<otimes> idOp = idOp" by simp
   show ?thesis
-    by (simp add: distinct_qvars_split1 distinct_qvars_split2 timesOp_assoc sort_lift
+    by (simp add: distinct_qvars_split1 distinct_qvars_split2 timesOp_assoc[symmetric] sort_lift
         lift_extendR[where U=H and R="\<lbrakk>A1,B1\<rbrakk>"] lift_extendR[where U=CNOT and R="\<lbrakk>B1\<rbrakk>"]
         assoc_replace[OF H] assoc_replace[OF UadjU] assoc_replace[OF CNOT] assoc_replace[OF adjUU])
 qed
 
 
 
-axiomatization where scalar_op_subspace [simp]: 
-  "(\<alpha>\<cdot>A)\<cdot>S = \<alpha>\<cdot>(A\<cdot>S)" for \<alpha>::complex and A::"('a,'b)bounded" and S::"'a subspace"
   
   
 

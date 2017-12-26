@@ -1,6 +1,4 @@
-# WARNING: Unfinished experiment!
-
-isabelle Teleport.
+isabelle Teleport_Bruteforce.
 
 classical var a : bit.
 classical var c : bit.

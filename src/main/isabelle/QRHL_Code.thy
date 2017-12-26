@@ -2,11 +2,11 @@ theory QRHL_Code
   imports QRHL "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Code_Target_Numeral"
 begin
 
+(* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
 hide_const (open) Lattice.sup
 hide_const (open) Lattice.inf
 hide_const (open) Order.top
 hide_const (open) card_UNIV
-
 no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
 no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
 
@@ -28,10 +28,10 @@ fun index_of where
 | "index_of x (y#ys) = (if x=y then 0 else (index_of x ys + 1))"
 
 definition "enum_idx (x::'a::enum) = index_of x (enum_class.enum :: 'a list)"
-definition "enum_len (TYPE('a::enum)) = length (enum_class.enum :: 'a list)"
+(* definition "enum_len (TYPE('a::enum)) = length (enum_class.enum :: 'a list)" *)
 
 axiomatization where bounded_of_mat_id[code]:
-  "mat_of_bounded (idOp :: ('a::enum,'a) bounded) = one_mat (enum_len TYPE('a))"
+  "mat_of_bounded (idOp :: ('a::enum,'a) bounded) = one_mat (CARD('a))"
 axiomatization where bounded_of_mat_timesOp[code]:
   "mat_of_bounded (M \<cdot> N) =  (mat_of_bounded M * mat_of_bounded N)" for M::"('b::enum,'c::enum) bounded" and N::"('a::enum,'b) bounded"
 axiomatization where bounded_of_mat_plusOp[code]:
@@ -105,7 +105,7 @@ axiomatization where bounded_of_mat_comm_op[code]:
   "mat_of_bounded (comm_op :: ('a::enum*'b::enum,_) bounded) = comm_op_mat TYPE('a) TYPE('b)"
 
 axiomatization where vec_of_vector_zero[code]:
-  "vec_of_vector (0::'a::enum vector) = zero_vec (enum_len TYPE('a))"
+  "vec_of_vector (0::'a::enum vector) = zero_vec (CARD('a))"
 
 axiomatization where mat_of_bounded_proj[code]:
   "mat_of_bounded (proj \<psi>) = 
@@ -115,7 +115,7 @@ axiomatization where mat_of_bounded_proj[code]:
 for \<psi> :: "'a::enum vector"
 
 axiomatization where vec_of_vector_basis_vector[code]:
-  "vec_of_vector (basis_vector i) = unit_vec (enum_len TYPE('a)) (enum_idx i)" for i::"'a::enum"
+  "vec_of_vector (basis_vector i) = unit_vec (CARD('a)) (enum_idx i)" for i::"'a::enum"
 
 instantiation bit :: linorder begin
 definition "less_bit (a::bit) (b::bit) = (a=0 \<and> b=1)"
@@ -124,11 +124,6 @@ instance apply intro_classes unfolding less_bit_def less_eq_bit_def by auto
 end
 
 
-derive (eq) ceq bit
-derive (linorder) compare_order bit
-derive (compare) ccompare bit
-derive (dlist) set_impl bit
-print_derives
 
 instantiation bit :: card_UNIV begin
 definition "finite_UNIV_bit = Phantom(bit) True"
@@ -138,14 +133,31 @@ instance apply intro_classes unfolding finite_UNIV_bit_def card_UNIV_bit_def
 end
 
 axiomatization where mat_of_bounded_zero[code]:
-  "mat_of_bounded (0::('a::enum,'b::enum) bounded) = zero_mat (enum_len TYPE('b)) (enum_len TYPE('a))"
+  "mat_of_bounded (0::('a::enum,'b::enum) bounded) = zero_mat (CARD('b)) (CARD('a))"
+
+definition "computational_basis_vec n = map (unit_vec n) [0..<n]"
+definition "orthogonal_complement_vec n vs = 
+  filter (op\<noteq> (zero_vec n)) (drop (length vs) (gram_schmidt n (vs @ computational_basis_vec n)))"
+
+lemma vector_to_bounded_scalar_times: "vector_to_bounded (a\<cdot>\<psi>) = a \<cdot> vector_to_bounded \<psi>" for a::complex
+  apply (rewrite at "a\<cdot>\<psi>" DEADID.rel_mono_strong[of _ "(a\<cdot>idOp)\<cdot>\<psi>"])
+   apply simp
+  apply (subst vector_to_bounded_applyOp)
+  by simp
 
 
+derive (eq) ceq bit
+derive (linorder) compare_order bit
+derive (compare) ccompare bit
+derive (dlist) set_impl bit
 derive (eq) ceq real
 derive (linorder) compare real
 derive (compare) ccompare real
 derive (eq) ceq complex
 derive (no) ccompare complex
+derive (eq) ceq subspace
+derive (no) ccompare subspace
+derive (monad) set_impl subspace
 
 
 
