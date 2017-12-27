@@ -903,6 +903,7 @@ axiomatization where tensor_times[simp]: "(U1 \<otimes> U2) \<cdot> (V1 \<otimes
 
 axiomatization remove_qvar_unit_op :: "('a*unit,'a) bounded"
 
+
 (* TODO document *)
 definition addState :: "'a vector \<Rightarrow> ('b,'b*'a) bounded" where
   "addState \<psi> = idOp \<otimes> (vector_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
@@ -1113,6 +1114,11 @@ lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotr
 axiomatization where Proj_lift[simp]: "distinct_qvars Q \<Longrightarrow> Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
   for Q::"'a qvariables"
 
+axiomatization where remove_qvar_unit_op:
+  "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op*)\<guillemotright>Q = A\<guillemotright>(qvariable_concat Q \<lbrakk>\<rbrakk>)"
+for A::"(_,_)bounded" and Q::"'a qvariables"
+
+
 axiomatization where colocal_op_pred_lift1[simp]:
  "colocal S Q \<Longrightarrow> colocal (U\<guillemotright>Q) S"
 for Q :: "'a qvariables" and U :: "('a,'a) bounded" and S :: predicate
@@ -1144,6 +1150,315 @@ lemma move_plus_meas_rule:
   using Proj_leq[of "C\<guillemotright>Q"] assms by simp
 
 
+subsection "Rewriting quantum variable lifting"
+
+
+(* Means that operator A can be used to transform an expression \<dots>\<guillemotright>Q into \<dots>\<guillemotright>R *)
+definition "qvar_trafo A Q R = (distinct_qvars Q \<and> distinct_qvars R \<and> (\<forall>C::(_,_)bounded. C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R))" for A::"('a,'b) bounded"
+
+lemma qvar_trafo_id[simp]: "distinct_qvars Q \<Longrightarrow> qvar_trafo idOp Q Q" unfolding qvar_trafo_def by auto
+
+(* Auxiliary lemma, will be removed after generalizing to qvar_trafo_unitary *)
+lemma qvar_trafo_coiso: assumes "qvar_trafo A Q R" shows "A \<cdot> A* = idOp"
+proof -
+  have colocalQ: "distinct_qvars Q" and colocalR: "distinct_qvars R" using assms unfolding qvar_trafo_def by auto
+  have "idOp\<guillemotright>Q = (A \<cdot> idOp \<cdot> A*)\<guillemotright>R"
+    using assms unfolding qvar_trafo_def by auto 
+  hence "idOp\<guillemotright>R = (A \<cdot> A*)\<guillemotright>R" by auto
+  hence "idOp = A \<cdot> A*" apply (subst lift_eqOp[symmetric])
+    using colocalR by auto
+  then show ?thesis ..
+qed
+
+lemma qvar_trafo_adj[simp]: assumes "qvar_trafo A Q R" shows "qvar_trafo (A*) R Q"
+proof (unfold qvar_trafo_def, auto)
+  show colocalQ: "distinct_qvars Q" and colocalR: "distinct_qvars R" using assms unfolding qvar_trafo_def by auto
+  show "C\<guillemotright>R = (A* \<cdot> C \<cdot> A)\<guillemotright>Q" for C::"(_,_)bounded"
+  proof -
+    have "(A* \<cdot> C \<cdot> A)\<guillemotright>Q = (A \<cdot> (A* \<cdot> C \<cdot> A) \<cdot> A*)\<guillemotright>R"
+      using assms unfolding qvar_trafo_def by auto 
+    also have "\<dots> = ((A \<cdot> A*) \<cdot> C \<cdot> (A \<cdot> A*)*)\<guillemotright>R"
+      by (simp add: timesOp_assoc)
+    also have "\<dots> = C\<guillemotright>R" apply (subst qvar_trafo_coiso[OF assms])+ by auto 
+    finally show ?thesis ..
+  qed
+qed
+
+lemma qvar_trafo_unitary:
+  assumes "qvar_trafo A Q R"
+  shows "unitary A"
+proof -
+  have "qvar_trafo (A*) R Q"
+    using assms by (rule qvar_trafo_adj)
+  hence "(A*) \<cdot> (A*)* = idOp" by (rule qvar_trafo_coiso)
+  hence "A* \<cdot> A = idOp" by simp
+  also have "A \<cdot> A* = idOp"
+    using assms by (rule qvar_trafo_coiso)
+  ultimately show ?thesis unfolding unitary_def by simp
+qed
+
+hide_fact qvar_trafo_coiso (* Subsumed by qvar_trafo_unitary *)
+
+axiomatization where assoc_op_lift: "(assoc_op \<cdot> A \<cdot> assoc_op*)\<guillemotright>(qvariable_concat (qvariable_concat Q R) T)
+     = A\<guillemotright>(qvariable_concat Q (qvariable_concat R T))" for A::"('a*'b*'c,_)bounded" 
+axiomatization where comm_op_lift: "(comm_op \<cdot> A \<cdot> comm_op*)\<guillemotright>(qvariable_concat Q R)
+     = A\<guillemotright>(qvariable_concat R Q)" for A::"('a*'b,_)bounded" 
+axiomatization where lift_tensor_id: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> distinct_qvars (qvariable_concat Q R) \<Longrightarrow>
+   (\<And>D::(_,_) bounded. (A \<cdot> D \<cdot> A*)\<guillemotright>Q = D\<guillemotright>Q') \<Longrightarrow> (\<And>D::(_,_) bounded. (A' \<cdot> D \<cdot> A'*)\<guillemotright>R = D\<guillemotright>R') \<Longrightarrow> 
+  ((A\<otimes>A') \<cdot> C \<cdot> (A\<otimes>A')*)\<guillemotright>qvariable_concat Q R = C\<guillemotright>qvariable_concat Q' R'"
+  for A :: "('a,'b) bounded" and A' :: "('c,'d) bounded" and C::"(_,_) bounded" and Q R :: "_ qvariables"
+
+
+lemma qvar_trafo_assoc_op[simp]:
+  assumes "distinct_qvars (qvariable_concat Q (qvariable_concat R T))"
+  shows "qvar_trafo assoc_op (qvariable_concat Q (qvariable_concat R T))  (qvariable_concat (qvariable_concat Q R) T)"
+proof (unfold qvar_trafo_def, auto)
+  show "distinct_qvars (qvariable_concat Q (qvariable_concat R T))" and "distinct_qvars (qvariable_concat (qvariable_concat Q R) T)"
+    using assms by (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)
+  show "C\<guillemotright>qvariable_concat Q (qvariable_concat R T) = (assoc_op \<cdot> C \<cdot> assoc_op*)\<guillemotright>qvariable_concat (qvariable_concat Q R) T" for C::"(_,_)bounded"
+    by (rule assoc_op_lift[symmetric])
+qed
+
+
+lemma qvar_trafo_comm_op[simp]:
+  assumes "distinct_qvars (qvariable_concat Q R)"
+  shows "qvar_trafo comm_op (qvariable_concat Q R) (qvariable_concat R Q)"
+proof (unfold qvar_trafo_def, auto)
+  show "distinct_qvars (qvariable_concat Q R)" and "distinct_qvars (qvariable_concat R Q)"
+    using assms by (auto intro: distinct_qvars_swap)
+  show "C\<guillemotright>qvariable_concat Q R = (comm_op \<cdot> C \<cdot> comm_op*)\<guillemotright>qvariable_concat R Q" for C::"(_,_)bounded"
+    by (rule comm_op_lift[symmetric])
+qed
+
+lemma qvar_trafo_bounded:
+  fixes C::"(_,_) bounded"
+  assumes "qvar_trafo A Q R"
+  shows "C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R"
+  using assms unfolding qvar_trafo_def by auto
+
+lemma qvar_trafo_subspace:
+  fixes S::"'a subspace"
+  assumes "qvar_trafo A Q R"
+  shows "S\<guillemotright>Q = (A\<cdot>S)\<guillemotright>R"
+proof -
+  define C where "C = Proj S"
+  have "S\<guillemotright>Q = (Proj S \<cdot> top)\<guillemotright>Q" by simp
+  also have "\<dots> = (Proj S)\<guillemotright>Q \<cdot> top" by simp
+  also have "\<dots> = (A \<cdot> Proj S \<cdot> A*)\<guillemotright>R \<cdot> top"
+    apply (subst qvar_trafo_bounded) using assms by auto
+  also have "\<dots> = (Proj (A\<cdot>S))\<guillemotright>R \<cdot> top" apply (subst Proj_times) by simp
+  also have "\<dots> = (Proj (A\<cdot>S) \<cdot> top)\<guillemotright>R" by auto
+  also have "\<dots> = (A\<cdot>S)\<guillemotright>R" by auto
+  ultimately show ?thesis by simp
+qed
+
+lemma qvar_trafo_mult:
+  assumes "qvar_trafo A Q R"
+    and "qvar_trafo B R S"
+  shows "qvar_trafo (B\<cdot>A) Q S"
+proof (unfold qvar_trafo_def, auto)
+  show colocalQ: "distinct_qvars Q" and colocalS: "distinct_qvars S" using assms unfolding qvar_trafo_def by auto
+  show "C\<guillemotright>Q = (B \<cdot> A \<cdot> C \<cdot> (A* \<cdot> B*))\<guillemotright>S" for C::"(_,_) bounded"
+  proof -
+    have "C\<guillemotright>Q = (A \<cdot> C \<cdot> A*)\<guillemotright>R" apply (rule qvar_trafo_bounded) using assms by simp
+    also have "\<dots> = (B \<cdot> (A \<cdot> C \<cdot> A*) \<cdot> B*)\<guillemotright>S" apply (rule qvar_trafo_bounded) using assms by simp
+    also have "\<dots> = (B \<cdot> A \<cdot> C \<cdot> (A* \<cdot> B*))\<guillemotright>S" using timesOp_assoc by metis
+    finally show ?thesis .
+  qed
+qed
+
+lemma qvar_trafo_tensor:
+  assumes "distinct_qvars (qvariable_concat Q Q')"
+    and "distinct_qvars (qvariable_concat R R')"
+    and "qvar_trafo A Q R"
+    and "qvar_trafo A' Q' R'"
+  shows "qvar_trafo (A\<otimes>A') (qvariable_concat Q Q') (qvariable_concat R R')"
+proof (unfold qvar_trafo_def, (rule conjI[rotated])+, rule allI)
+  show "distinct_qvars (qvariable_concat Q Q')" and "distinct_qvars (qvariable_concat R R')"
+    using assms unfolding qvar_trafo_def by auto
+  show "C\<guillemotright>qvariable_concat Q Q' = ((A \<otimes> A') \<cdot> C \<cdot> (A \<otimes> A')*)\<guillemotright>qvariable_concat R R'" for C::"(_,_)bounded"
+    apply (rule lift_tensor_id[symmetric])
+    using assms unfolding qvar_trafo_def by auto
+qed
+
+
+
+(* A hint to the simplifier with the meaning:
+     - x is a term of the form x'>>Q (where x' is of type subspace or bounded)
+     - qvar_trafo A Q R holds (i.e., should be produced as a precondition when rewriting)
+     - the whole term should be rewritten into y'>>R for some y' 
+  Rewriting the term is done by the simplifier rules declared below.
+*)
+definition "qvariable_renaming_hint x (A::('a,'b) bounded) (R::'b qvariables) = x"
+lemma [cong]: "x=x' \<Longrightarrow> qvariable_renaming_hint x A R = qvariable_renaming_hint x' A R" by simp
+
+(* A copy of qvars_trafo that is protected from unintentional rewriting *)
+definition "qvar_trafo_protected = qvar_trafo"
+lemma [cong]: "qvar_trafo_protected A Q R = qvar_trafo_protected A Q R" ..
+
+lemma qvariable_renaming_hint_subspace[simp]:
+  fixes S::"_ subspace"
+  assumes "qvar_trafo_protected A Q R"
+  shows "qvariable_renaming_hint (S\<guillemotright>Q) A R = (A\<cdot>S)\<guillemotright>R"
+  using assms unfolding qvariable_renaming_hint_def qvar_trafo_protected_def by (rule qvar_trafo_subspace)
+
+lemma qvariable_renaming_hint_bounded[simp]:
+  fixes S::"(_,_) bounded"
+  assumes "qvar_trafo_protected A Q R"
+  shows "qvariable_renaming_hint (S\<guillemotright>Q) A R = (A\<cdot>S\<cdot>A*)\<guillemotright>R"
+  using assms unfolding qvariable_renaming_hint_def qvar_trafo_protected_def by (rule qvar_trafo_bounded)
+
+(* A hint to the simplifier with the meaning:
+     - x is a term of the form x'>>Q (where x' is of type subspace or bounded)
+     - colocal Q R holds (i.e., should be produced as a precondition when rewriting)
+     - the whole term should be rewritten into y'>>qvariable_concat Q R for some y'
+  Rewriting the term is done by the qvariable_rewriting simproc.
+ *)
+definition "qvariable_extension_hint x (R::_ qvariables) = x"
+
+
+lemma qvariable_extension_hint_subspace[simp]:
+  fixes S::"_ subspace"
+  assumes "distinct_qvars (qvariable_concat Q R)"
+  shows "qvariable_extension_hint (S\<guillemotright>Q) R = (S\<otimes>top)\<guillemotright>qvariable_concat Q R"
+  unfolding qvariable_extension_hint_def 
+  using assms by (rule lift_tensorSpace)
+
+lemma qvariable_extension_hint_bounded[simp]:
+  fixes S::"(_,_) bounded"
+  assumes "distinct_qvars (qvariable_concat Q R)"
+  shows "qvariable_extension_hint (S\<guillemotright>Q) R = (S\<otimes>idOp)\<guillemotright>qvariable_concat Q R"
+  unfolding qvariable_extension_hint_def 
+  using assms
+  by (metis lift_idOp lift_tensorOp times_idOp1)
+
+
+(* Hint for the simplifier, meaning that:
+    - x is of the form x'\<guillemotright>Q
+    - colocal Q [], colocal R [] holds
+    - the whole expression should be rewritten to x'\<guillemotright>Q\<otimes>R' such that Q\<otimes>R' has the same variables as Q\<otimes>R (duplicates removed)
+  Rewriting the term is done by the simplifier rules declared below.
+*)
+definition "join_qvariables_hint x (R::'a qvariables) = x"
+
+
+lemma add_join_qvariables_hint: 
+  fixes Q :: "'a qvariables" and R :: "'b qvariables" and A :: "('a,'a) bounded"
+  shows "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>R = join_qvariables_hint (S\<guillemotright>Q) R \<sqinter> join_qvariables_hint (T\<guillemotright>R) Q"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>R = join_qvariables_hint (S\<guillemotright>Q) R + join_qvariables_hint (T\<guillemotright>R) Q"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> A\<guillemotright>Q \<cdot> T\<guillemotright>R = join_qvariables_hint (A\<guillemotright>Q) R \<cdot> join_qvariables_hint (T\<guillemotright>R) Q"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R \<le> join_qvariables_hint (T\<guillemotright>R) Q)"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R = join_qvariables_hint (T\<guillemotright>R) Q)"
+  unfolding join_qvariables_hint_def by simp_all
+
+
+
+(* Hint for the simplifier, meaning that:
+    - x is of the form x'>>Q
+    - colocal Q [[]] holds
+    - the whole expression should be rewritten to y'>>Q' where Q' is a sorted qvariable list
+  Rewriting the term is done by the qvariable_rewriting simproc.
+ *)
+definition "sort_qvariables_hint x = x"
+
+lemma join_qvariables_hint_subspace_conv_aux:
+  "join_qvariables_hint (S\<guillemotright>Q) R \<equiv> sort_qvariables_hint (qvariable_extension_hint (S\<guillemotright>Q) R')" for S::"_ subspace"
+  unfolding join_qvariables_hint_def qvariable_extension_hint_def sort_qvariables_hint_def by simp
+
+lemma join_qvariables_hint_bounded_conv_aux:
+  "join_qvariables_hint (S\<guillemotright>Q) R \<equiv> sort_qvariables_hint (qvariable_extension_hint (S\<guillemotright>Q) R')" for S::"(_,_) bounded"
+  unfolding join_qvariables_hint_def qvariable_extension_hint_def sort_qvariables_hint_def by simp
+
+lemma sort_qvariables_hint_subspace_conv_aux:
+  "sort_qvariables_hint (S\<guillemotright>Q) \<equiv> qvariable_renaming_hint (S\<guillemotright>Q) A R'" for S::"_ subspace"
+  unfolding qvariable_renaming_hint_def sort_qvariables_hint_def by simp
+
+lemma sort_qvariables_hint_bounded_conv_aux:
+  "sort_qvariables_hint (S\<guillemotright>Q) \<equiv> qvariable_renaming_hint (S\<guillemotright>Q) A R'" for S::"(_,_) bounded"
+  unfolding qvariable_renaming_hint_def sort_qvariables_hint_def by simp
+
+lemma sort_qvariables_hint_remove_aux: "sort_qvariables_hint x \<equiv> x" 
+  unfolding sort_qvariables_hint_def by simp
+
+
+(* For convenience in ML code *)
+definition [simp]: "comm_op_pfx = assoc_op* \<cdot> (comm_op\<otimes>idOp) \<cdot> assoc_op"
+definition [simp]: "id_tensor A = idOp\<otimes>A"
+definition [simp]: "assoc_op_adj = assoc_op*"
+definition [simp]: "remove_qvar_unit_op2 = remove_qvar_unit_op \<cdot> comm_op"
+definition [simp]: "qvar_trafo_mult (Q::'b qvariables) (B::('b,'c)bounded) (A::('a,'b)bounded) = timesOp B A"
+
+
+lemma qvar_trafo_protected_mult[simp]: 
+  "qvar_trafo_protected A Q R \<Longrightarrow> qvar_trafo_protected B R S \<Longrightarrow> qvar_trafo_protected (qvar_trafo_mult R B A) Q S"
+  unfolding qvar_trafo_protected_def apply simp by (rule qvar_trafo_mult)
+
+lemma qvar_trafo_protected_adj_assoc_op[simp]:
+  "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow>
+    qvar_trafo_protected assoc_op_adj (qvariable_concat (qvariable_concat Q R) T)
+                                      (qvariable_concat Q (qvariable_concat R T))"
+  unfolding qvar_trafo_protected_def by simp 
+
+lemma qvar_trafo_protected_assoc_op[simp]:
+  "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow>
+    qvar_trafo_protected assoc_op (qvariable_concat Q (qvariable_concat R T))
+                                  (qvariable_concat (qvariable_concat Q R) T)"
+  unfolding qvar_trafo_protected_def by simp 
+
+lemma qvar_trafo_protected_comm_op_pfx[simp]:
+  assumes [simp]: "distinct_qvars (qvariable_concat Q (qvariable_concat R T))"
+  shows "qvar_trafo_protected comm_op_pfx
+         (qvariable_concat Q (qvariable_concat R T))
+         (qvariable_concat R (qvariable_concat Q T))"
+proof -
+  have [simp]: "distinct_qvars (qvariable_concat Q R)" 
+   and [simp]: "distinct_qvars (qvariable_concat (qvariable_concat R Q) T)"
+   and [simp]: "distinct_qvars (qvariable_concat (qvariable_concat Q R) T)"
+   and [simp]: "distinct_qvars (qvariable_concat R (qvariable_concat Q T)) "
+   and [simp]: "distinct_qvars T" 
+    using assms by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvars_swap distinct_qvarsL)
+  show ?thesis
+  unfolding qvar_trafo_protected_def comm_op_pfx_def
+  apply (rule qvar_trafo_mult[where R="qvariable_concat (qvariable_concat Q R) T"])
+   apply simp
+  apply (rule qvar_trafo_mult[where R="qvariable_concat (qvariable_concat R Q) T"])
+   apply (rule qvar_trafo_tensor)
+  by simp_all
+qed
+
+lemma qvar_trafo_protected_remove_qvar_unit_op[simp]:
+  assumes "distinct_qvars Q"
+  shows "qvar_trafo_protected (remove_qvar_unit_op) (qvariable_concat Q \<lbrakk>\<rbrakk>) Q"
+  unfolding qvar_trafo_protected_def qvar_trafo_def
+  by (auto simp: assms remove_qvar_unit_op)
+
+lemma qvar_trafo_protected_remove_qvar_unit_op2[simp]:
+  assumes [simp]: "distinct_qvars Q"
+  shows "qvar_trafo_protected (remove_qvar_unit_op2) (qvariable_concat \<lbrakk>\<rbrakk> Q) Q"
+  unfolding qvar_trafo_protected_def remove_qvar_unit_op2_def
+  apply (rule qvar_trafo_mult)
+   apply (rule qvar_trafo_comm_op)
+   apply simp
+  unfolding qvar_trafo_def
+  by (auto simp: remove_qvar_unit_op)
+
+
+lemma qvar_trafo_protecterd_id_tensor[simp]:
+  assumes [simp]: "distinct_qvars (qvariable_concat Q R)" and [simp]: "distinct_qvars (qvariable_concat Q R')"
+    and "qvar_trafo_protected A R R'"
+  shows "qvar_trafo_protected (id_tensor A) (qvariable_concat Q R) (qvariable_concat Q R')"
+  unfolding qvar_trafo_protected_def id_tensor_def
+  apply (rule qvar_trafo_tensor)
+     apply simp_all[2]
+   apply (rule qvar_trafo_id)
+  using assms(2) apply (rule distinct_qvarsL) 
+  using assms(3) unfolding qvar_trafo_protected_def by assumption
+
+lemma qvar_trafo_protecterd_comm_op[simp]:
+  assumes [simp]: "distinct_qvars (qvariable_concat Q R)"
+  shows "qvar_trafo_protected comm_op (qvariable_concat Q R) (qvariable_concat R Q)"
+  unfolding qvar_trafo_protected_def by simp                                                  
+ 
 
 section \<open>Quantum predicates (ctd.)\<close>
 
@@ -1320,342 +1635,18 @@ lemma bij_add_const[simp]: "bij (\<lambda>x. x+(y::_::ab_group_add))"
 declare imp_conjL[simp]
 
 
-
-section "Experiments"
-
-
-
-definition "qvar_trafo A Q R = (distinct_qvars Q \<and> distinct_qvars R \<and> (* (\<forall>S::'a subspace. S\<guillemotright>Q = (A\<cdot>S)\<guillemotright>R) \<and>  *)(\<forall>C::(_,_)bounded. C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R))" for A::"('a,'b) bounded"
-lemma qvar_trafo_id[simp]: "distinct_qvars Q \<Longrightarrow> qvar_trafo idOp Q Q" unfolding qvar_trafo_def by auto
-
-lemma qvar_trafo_coiso: assumes "qvar_trafo A Q R" shows "A \<cdot> A* = idOp"
-proof -
-  have colocalQ: "distinct_qvars Q" and colocalR: "distinct_qvars R" using assms unfolding qvar_trafo_def by auto
-  have "idOp\<guillemotright>Q = (A \<cdot> idOp \<cdot> A*)\<guillemotright>R"
-    using assms unfolding qvar_trafo_def by auto 
-  hence "idOp\<guillemotright>R = (A \<cdot> A*)\<guillemotright>R" by auto
-  hence "idOp = A \<cdot> A*" apply (subst lift_eqOp[symmetric])
-    using colocalR by auto
-  then show ?thesis ..
-qed
-
-lemma qvar_trafo_adj[simp]: assumes "qvar_trafo A Q R" shows "qvar_trafo (A*) R Q"
-proof (unfold qvar_trafo_def, auto)
-  show colocalQ: "distinct_qvars Q" and colocalR: "distinct_qvars R" using assms unfolding qvar_trafo_def by auto
-  (* have coiso: "A \<cdot> A* = idOp" *)
-  show "C\<guillemotright>R = (A* \<cdot> C \<cdot> A)\<guillemotright>Q" for C::"(_,_)bounded"
-  proof -
-    have "(A* \<cdot> C \<cdot> A)\<guillemotright>Q = (A \<cdot> (A* \<cdot> C \<cdot> A) \<cdot> A*)\<guillemotright>R"
-      using assms unfolding qvar_trafo_def by auto 
-    also have "\<dots> = ((A \<cdot> A*) \<cdot> C \<cdot> (A \<cdot> A*)*)\<guillemotright>R"
-      by (simp add: timesOp_assoc)
-    also have "\<dots> = C\<guillemotright>R" apply (subst qvar_trafo_coiso[OF assms])+ by auto 
-    finally show ?thesis ..
-  qed
-qed
-
-lemma qvar_trafo_unitary:
-  assumes "qvar_trafo A Q R"
-  shows "unitary A"
-proof -
-  have "qvar_trafo (A*) R Q"
-    using assms by (rule qvar_trafo_adj)
-  hence "(A*) \<cdot> (A*)* = idOp" by (rule qvar_trafo_coiso)
-  hence "A* \<cdot> A = idOp" by simp
-  also have "A \<cdot> A* = idOp"
-    using assms by (rule qvar_trafo_coiso)
-  ultimately show ?thesis unfolding unitary_def by simp
-qed
-
-hide_fact qvar_trafo_coiso (* Subsumed by qvar_trafo_unitary *)
-
-axiomatization where assoc_op_lift: "(assoc_op \<cdot> A \<cdot> assoc_op*)\<guillemotright>(qvariable_concat (qvariable_concat Q R) T)
-     = A\<guillemotright>(qvariable_concat Q (qvariable_concat R T))" for A::"('a*'b*'c,_)bounded" 
-axiomatization where comm_op_lift: "(comm_op \<cdot> A \<cdot> comm_op*)\<guillemotright>(qvariable_concat Q R)
-     = A\<guillemotright>(qvariable_concat R Q)" for A::"('a*'b,_)bounded" 
-axiomatization where lift_tensor_id: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> distinct_qvars (qvariable_concat Q R) \<Longrightarrow>
-   (\<And>D::(_,_) bounded. (A \<cdot> D \<cdot> A*)\<guillemotright>Q = D\<guillemotright>Q') \<Longrightarrow> (\<And>D::(_,_) bounded. (A' \<cdot> D \<cdot> A'*)\<guillemotright>R = D\<guillemotright>R') \<Longrightarrow> 
-  ((A\<otimes>A') \<cdot> C \<cdot> (A\<otimes>A')*)\<guillemotright>qvariable_concat Q R = C\<guillemotright>qvariable_concat Q' R'"
-  for A :: "('a,'b) bounded" and A' :: "('c,'d) bounded" and C::"(_,_) bounded" and Q R :: "_ qvariables"
-
-
-lemma qvar_trafo_assoc_op[simp]:
-  assumes "distinct_qvars (qvariable_concat Q (qvariable_concat R T))"
-  shows "qvar_trafo assoc_op (qvariable_concat Q (qvariable_concat R T))  (qvariable_concat (qvariable_concat Q R) T)"
-proof (unfold qvar_trafo_def, auto)
-  show "distinct_qvars (qvariable_concat Q (qvariable_concat R T))" and "distinct_qvars (qvariable_concat (qvariable_concat Q R) T)"
-    using assms by (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)
-  show "C\<guillemotright>qvariable_concat Q (qvariable_concat R T) = (assoc_op \<cdot> C \<cdot> assoc_op*)\<guillemotright>qvariable_concat (qvariable_concat Q R) T" for C::"(_,_)bounded"
-    by (rule assoc_op_lift[symmetric])
-qed
-
-
-lemma qvar_trafo_comm_op[simp]:
-  assumes "distinct_qvars (qvariable_concat Q R)"
-  shows "qvar_trafo comm_op (qvariable_concat Q R) (qvariable_concat R Q)"
-proof (unfold qvar_trafo_def, auto)
-  show "distinct_qvars (qvariable_concat Q R)" and "distinct_qvars (qvariable_concat R Q)"
-    using assms by (auto intro: distinct_qvars_swap)
-  show "C\<guillemotright>qvariable_concat Q R = (comm_op \<cdot> C \<cdot> comm_op*)\<guillemotright>qvariable_concat R Q" for C::"(_,_)bounded"
-    by (rule comm_op_lift[symmetric])
-qed
-
-lemma qvar_trafo_bounded:
-  fixes C::"(_,_) bounded"
-  assumes "qvar_trafo A Q R"
-  shows "C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R"
-  using assms unfolding qvar_trafo_def by auto
-
-lemma qvar_trafo_subspace:
-  fixes S::"'a subspace"
-  assumes "qvar_trafo A Q R"
-  shows "S\<guillemotright>Q = (A\<cdot>S)\<guillemotright>R"
-proof -
-  define C where "C = Proj S"
-  have "S\<guillemotright>Q = (Proj S \<cdot> top)\<guillemotright>Q" by simp
-  also have "\<dots> = (Proj S)\<guillemotright>Q \<cdot> top" by simp
-  also have "\<dots> = (A \<cdot> Proj S \<cdot> A*)\<guillemotright>R \<cdot> top"
-    apply (subst qvar_trafo_bounded) using assms by auto
-  also have "\<dots> = (Proj (A\<cdot>S))\<guillemotright>R \<cdot> top" apply (subst Proj_times) by simp
-  also have "\<dots> = (Proj (A\<cdot>S) \<cdot> top)\<guillemotright>R" by auto
-  also have "\<dots> = (A\<cdot>S)\<guillemotright>R" by auto
-  ultimately show ?thesis by simp
-qed
-
-lemma qvar_trafo_mult:
-  assumes "qvar_trafo A Q R"
-    and "qvar_trafo B R S"
-  shows "qvar_trafo (B\<cdot>A) Q S"
-proof (unfold qvar_trafo_def, auto)
-  show colocalQ: "distinct_qvars Q" and colocalS: "distinct_qvars S" using assms unfolding qvar_trafo_def by auto
-  show "C\<guillemotright>Q = (B \<cdot> A \<cdot> C \<cdot> (A* \<cdot> B*))\<guillemotright>S" for C::"(_,_) bounded"
-  proof -
-    have "C\<guillemotright>Q = (A \<cdot> C \<cdot> A*)\<guillemotright>R" apply (rule qvar_trafo_bounded) using assms by simp
-    also have "\<dots> = (B \<cdot> (A \<cdot> C \<cdot> A*) \<cdot> B*)\<guillemotright>S" apply (rule qvar_trafo_bounded) using assms by simp
-    also have "\<dots> = (B \<cdot> A \<cdot> C \<cdot> (A* \<cdot> B*))\<guillemotright>S" using timesOp_assoc by metis
-    finally show ?thesis .
-  qed
-qed
-
-lemma qvar_trafo_tensor:
-  assumes "distinct_qvars (qvariable_concat Q Q')"
-    and "distinct_qvars (qvariable_concat R R')"
-    and "qvar_trafo A Q R"
-    and "qvar_trafo A' Q' R'"
-  shows "qvar_trafo (A\<otimes>A') (qvariable_concat Q Q') (qvariable_concat R R')"
-proof (unfold qvar_trafo_def, (rule conjI[rotated])+, rule allI)
-  show "distinct_qvars (qvariable_concat Q Q')" and "distinct_qvars (qvariable_concat R R')"
-    using assms unfolding qvar_trafo_def by auto
-  show "C\<guillemotright>qvariable_concat Q Q' = ((A \<otimes> A') \<cdot> C \<cdot> (A \<otimes> A')*)\<guillemotright>qvariable_concat R R'" for C::"(_,_)bounded"
-    apply (rule lift_tensor_id[symmetric])
-    using assms unfolding qvar_trafo_def by auto
-qed
-
-
-
-(* A hint to the simplifier with the meaning:
-     - x is a term of the form x'>>Q (where x' is of type subspace or bounded)
-     - qvar_trafo A Q R holds (i.e., should be produced as a precondition when rewriting)
-     - the whole term should be rewritten into y'>>R for some y' *)
-definition "qvariable_renaming_hint x (A::('a,'b) bounded) (R::'b qvariables) = x"
-lemma [cong]: "x=x' \<Longrightarrow> qvariable_renaming_hint x A R = qvariable_renaming_hint x' A R" by simp
-
-definition "qvar_trafo_protected = qvar_trafo"
-lemma [cong]: "qvar_trafo_protected A Q R = qvar_trafo_protected A Q R" ..
-
-lemma qvariable_renaming_hint_subspace[simp]:
-  fixes S::"_ subspace"
-  assumes "qvar_trafo_protected A Q R"
-  shows "qvariable_renaming_hint (S\<guillemotright>Q) A R = (A\<cdot>S)\<guillemotright>R"
-  using assms unfolding qvariable_renaming_hint_def qvar_trafo_protected_def by (rule qvar_trafo_subspace)
-
-lemma qvariable_renaming_hint_bounded[simp]:
-  fixes S::"(_,_) bounded"
-  assumes "qvar_trafo_protected A Q R"
-  shows "qvariable_renaming_hint (S\<guillemotright>Q) A R = (A\<cdot>S\<cdot>A*)\<guillemotright>R"
-  using assms unfolding qvariable_renaming_hint_def qvar_trafo_protected_def by (rule qvar_trafo_bounded)
-
-(* A hint to the simplifier with the meaning:
-     - x is a term of the form x'>>Q (where x' is of type subspace or bounded)
-     - colocal Q R holds (i.e., should be produced as a precondition when rewriting)
-     - the whole term should be rewritten into y'>>qvariable_concat Q R for some y' *)
-definition "qvariable_extension_hint x (R::_ qvariables) = x"
-
-
-lemma qvariable_extension_hint_subspace[simp]:
-  fixes S::"_ subspace"
-  assumes "distinct_qvars (qvariable_concat Q R)"
-  shows "qvariable_extension_hint (S\<guillemotright>Q) R = (S\<otimes>top)\<guillemotright>qvariable_concat Q R"
-  unfolding qvariable_extension_hint_def 
-  using assms by (rule lift_tensorSpace)
-
-lemma qvariable_extension_hint_bounded[simp]:
-  fixes S::"(_,_) bounded"
-  assumes "distinct_qvars (qvariable_concat Q R)"
-  shows "qvariable_extension_hint (S\<guillemotright>Q) R = (S\<otimes>idOp)\<guillemotright>qvariable_concat Q R"
-  unfolding qvariable_extension_hint_def 
-  using assms
-  by (metis lift_idOp lift_tensorOp times_idOp1)
-
-
-(* Hint for the simplifier, meaning that:
-    - x is of the form x'\<guillemotright>Q
-    - colocal Q [], colocal R [] holds
-    - the whole expression should be rewritten to x'\<guillemotright>Q\<otimes>R' such that Q\<otimes>R' has the same variables as Q\<otimes>R (duplicates removed)
-*)
-definition "join_qvariables_hint x (R::'a qvariables) = x"
-
-
-lemma add_join_qvariables_hint: 
-  fixes Q :: "'a qvariables" and R :: "'b qvariables" and A :: "('a,'a) bounded"
-  shows "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>R = join_qvariables_hint (S\<guillemotright>Q) R \<sqinter> join_qvariables_hint (T\<guillemotright>R) Q"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>R = join_qvariables_hint (S\<guillemotright>Q) R + join_qvariables_hint (T\<guillemotright>R) Q"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> A\<guillemotright>Q \<cdot> T\<guillemotright>R = join_qvariables_hint (A\<guillemotright>Q) R \<cdot> join_qvariables_hint (T\<guillemotright>R) Q"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R \<le> join_qvariables_hint (T\<guillemotright>R) Q)"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R = join_qvariables_hint (T\<guillemotright>R) Q)"
-  unfolding join_qvariables_hint_def by simp_all
-
-
-
-(* Hint for the simplifier, meaning that:
-    - x is of the form x'>>Q
-    - colocal Q [[]] holds
-    - the whole expression should be rewritten to y'>>Q' where Q' is a sorted qvariable list *)
-definition "sort_qvariables_hint x = x"
-
-(* TODO: a simproc that rewrites "sort_qvariables_hint (x>>Q)" into "qvariable_renaming_hint (x>>Q) A Q'
-  for Q':=sorted Q, and A a suitable operator (built from \<otimes>, idOp, comm_op, assoc_op) *)
-
-
-lemma join_qvariables_hint_subspace_conv_aux:
-  "join_qvariables_hint (S\<guillemotright>Q) R \<equiv> sort_qvariables_hint (qvariable_extension_hint (S>>Q) R')" for S::"_ subspace"
-  unfolding join_qvariables_hint_def qvariable_extension_hint_def sort_qvariables_hint_def by simp
-
-lemma join_qvariables_hint_bounded_conv_aux:
-  "join_qvariables_hint (S\<guillemotright>Q) R \<equiv> sort_qvariables_hint (qvariable_extension_hint (S>>Q) R')" for S::"(_,_) bounded"
-  unfolding join_qvariables_hint_def qvariable_extension_hint_def sort_qvariables_hint_def by simp
-
-lemma sort_qvariables_hint_subspace_conv_aux:
-  "sort_qvariables_hint (S\<guillemotright>Q) \<equiv> qvariable_renaming_hint (S>>Q) A R'" for S::"_ subspace"
-  unfolding qvariable_renaming_hint_def sort_qvariables_hint_def by simp
-
-lemma sort_qvariables_hint_bounded_conv_aux:
-  "sort_qvariables_hint (S\<guillemotright>Q) \<equiv> qvariable_renaming_hint (S>>Q) A R'" for S::"(_,_) bounded"
-  unfolding qvariable_renaming_hint_def sort_qvariables_hint_def by simp
-
-lemma sort_qvariables_hint_remove_aux: "sort_qvariables_hint x \<equiv> x" 
-  unfolding sort_qvariables_hint_def by simp
-
-
-(* For convenience in ML code *)
-definition [simp]: "comm_op_pfx = assoc_op* \<cdot> (comm_op\<otimes>idOp) \<cdot> assoc_op"
-definition [simp]: "id_tensor A = idOp\<otimes>A"
-definition [simp]: "assoc_op_adj = assoc_op*"
-definition [simp]: "remove_qvar_unit_op2 = remove_qvar_unit_op \<cdot> comm_op"
-definition [simp]: "qvar_trafo_mult (Q::'b qvariables) (B::('b,'c)bounded) (A::('a,'b)bounded) = timesOp B A"
+section "ML Code"
 
 ML_file \<open>qrhl.ML\<close>
 
-section "Experiments ctd."
+section "Simprocs"
 
-simproc_setup warn_colocal ("distinct_qvars Q") = {*
-  fn _ => fn ctx => fn ct => 
-  let 
-      val Q = Thm.term_of ct |> Term.dest_comb |> snd
-      val vs = QRHL.parse_varterm Q |> QRHL.vars_in_varterm
-      val _ = if not (has_duplicates QRHL.nameq vs) 
-              then warning ("Please add to simplifier: "^ @{make_string} ct^
-                      " (or remove simproc warn_colocal to remove these warnings)")
-              else ()
-  in
-    NONE
-  end 
-  handle TERM _ => NONE
-*}
-
-
+(* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed qvariables but can't *)
+simproc_setup warn_colocal ("distinct_qvars Q") = QRHL.warn_colocal_simproc
 
 simproc_setup "qvariable_rewriting" ("join_qvariables_hint a b" | "sort_qvariables_hint a") = QRHL.qvariable_rewriting_simproc
 
-lemma qvar_trafo_protected_mult[simp]: 
-  "qvar_trafo_protected A Q R \<Longrightarrow> qvar_trafo_protected B R S \<Longrightarrow> qvar_trafo_protected (qvar_trafo_mult R B A) Q S"
-  unfolding qvar_trafo_protected_def apply simp by (rule qvar_trafo_mult)
-
-lemma qvar_trafo_protected_adj_assoc_op[simp]:
-  "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow>
-    qvar_trafo_protected assoc_op_adj (qvariable_concat (qvariable_concat Q R) T)
-                                      (qvariable_concat Q (qvariable_concat R T))"
-  unfolding qvar_trafo_protected_def by simp 
-
-lemma qvar_trafo_protected_assoc_op[simp]:
-  "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow>
-    qvar_trafo_protected assoc_op (qvariable_concat Q (qvariable_concat R T))
-                                  (qvariable_concat (qvariable_concat Q R) T)"
-  unfolding qvar_trafo_protected_def by simp 
-
-lemma qvar_trafo_protected_comm_op_pfx[simp]:
-  assumes [simp]: "distinct_qvars (qvariable_concat Q (qvariable_concat R T))"
-  shows "qvar_trafo_protected comm_op_pfx
-         (qvariable_concat Q (qvariable_concat R T))
-         (qvariable_concat R (qvariable_concat Q T))"
-proof -
-  have [simp]: "distinct_qvars (qvariable_concat Q R)" 
-   and [simp]: "distinct_qvars (qvariable_concat (qvariable_concat R Q) T)"
-   and [simp]: "distinct_qvars (qvariable_concat (qvariable_concat Q R) T)"
-   and [simp]: "distinct_qvars (qvariable_concat R (qvariable_concat Q T)) "
-   and [simp]: "distinct_qvars T" 
-    using assms by (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro: distinct_qvars_swap distinct_qvarsL)
-  show ?thesis
-  unfolding qvar_trafo_protected_def comm_op_pfx_def
-  apply (rule qvar_trafo_mult[where R="qvariable_concat (qvariable_concat Q R) T"])
-   apply simp
-  apply (rule qvar_trafo_mult[where R="qvariable_concat (qvariable_concat R Q) T"])
-   apply (rule qvar_trafo_tensor)
-  by simp_all
-qed
-
-axiomatization where remove_qvar_unit_op: 
-  "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op*)\<guillemotright>Q = A\<guillemotright>(qvariable_concat Q \<lbrakk>\<rbrakk>)"
-for A::"(_,_)bounded" and Q::"'a qvariables"
-
-lemma qvar_trafo_protected_remove_qvar_unit_op[simp]:
-  assumes "distinct_qvars Q"
-  shows "qvar_trafo_protected (remove_qvar_unit_op) (qvariable_concat Q \<lbrakk>\<rbrakk>) Q"
-  unfolding qvar_trafo_protected_def qvar_trafo_def
-  by (auto simp: assms remove_qvar_unit_op)
-
-lemma qvar_trafo_protected_remove_qvar_unit_op2[simp]:
-  assumes [simp]: "distinct_qvars Q"
-  shows "qvar_trafo_protected (remove_qvar_unit_op2) (qvariable_concat \<lbrakk>\<rbrakk> Q) Q"
-  unfolding qvar_trafo_protected_def remove_qvar_unit_op2_def
-  apply (rule qvar_trafo_mult)
-   apply (rule qvar_trafo_comm_op)
-   apply simp
-  unfolding qvar_trafo_def
-  by (auto simp: remove_qvar_unit_op)
-
-
-lemma qvar_trafo_protecterd_id_tensor[simp]:
-  assumes [simp]: "distinct_qvars (qvariable_concat Q R)" and [simp]: "distinct_qvars (qvariable_concat Q R')"
-    and "qvar_trafo_protected A R R'"
-  shows "qvar_trafo_protected (id_tensor A) (qvariable_concat Q R) (qvariable_concat Q R')"
-  unfolding qvar_trafo_protected_def id_tensor_def
-  apply (rule qvar_trafo_tensor)
-     apply simp_all[2]
-   apply (rule qvar_trafo_id)
-  using assms(2) apply (rule distinct_qvarsL) 
-  using assms(3) unfolding qvar_trafo_protected_def by assumption
-
-lemma qvar_trafo_protecterd_comm_op[simp]:
-  assumes [simp]: "distinct_qvars (qvariable_concat Q R)"
-  shows "qvar_trafo_protected comm_op (qvariable_concat Q R) (qvariable_concat R Q)"
-  unfolding qvar_trafo_protected_def by simp                                                  
- 
-
-
-
 section \<open>Programs\<close>
-
 
 typedecl program
 typedecl program_state

@@ -530,4 +530,18 @@ fun qvariable_rewriting_simproc _ ctx ct =
     handle CTERM _ => NONE
 
 
+fun warn_colocal_simproc _ _ ct = 
+  let 
+      val Q = Thm.term_of ct |> Term.dest_comb |> snd
+      val vs = parse_varterm Q |> vars_in_varterm
+      val _ = if not (has_duplicates nameq vs) 
+              then warning ("Please add to simplifier: "^ @{make_string} ct^
+                      " (or remove simproc warn_colocal to remove these warnings)")
+              else ()
+  in
+    NONE
+  end 
+  handle TERM _ => NONE
+
+
 end
