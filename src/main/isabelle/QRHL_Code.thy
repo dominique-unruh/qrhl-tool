@@ -147,11 +147,25 @@ definition [code del]: "SPAN x = spanVector (vector_of_vec ` set x)"
 code_datatype SPAN
 
 definition "mk_projector (S::'a::enum subspace) = mat_of_bounded (Proj S)" 
-axiomatization where mk_projector_SPAN[code]: "mk_projector (SPAN S :: 'a::enum subspace) = (case S of 
+fun mk_projector_orthog :: "nat \<Rightarrow> complex vec list \<Rightarrow> complex mat" where
+  "mk_projector_orthog d [] = zero_mat d d"
+| "mk_projector_orthog d [v] = (let norm2 = cscalar_prod v v in
+                                if norm2=0 then zero_mat d d else
+                                smult_mat (1/norm2) (mat_of_cols d [v] * mat_of_rows d [v]))"
+| "mk_projector_orthog d (v#vs) = (let norm2 = cscalar_prod v v in
+                                   if norm2=0 then mk_projector_orthog d vs else
+                                   smult_mat (1/norm2) (mat_of_cols d [v] * mat_of_rows d [v]) 
+                                        + mk_projector_orthog d vs)"
+
+axiomatization where mk_projector_SPAN[code]: 
+  "mk_projector (SPAN S :: 'a::enum subspace) = 
+    (let d = CARD('a) in mk_projector_orthog d (gram_schmidt d S))"
+
+(*axiomatization where mk_projector_SPAN[code]: "mk_projector (SPAN S :: 'a::enum subspace) = (case S of 
     [v] \<Rightarrow> (let d = dim_vec v in let norm2 = cscalar_prod v v in
                 if norm2=0 then zero_mat d d else
                             smult_mat (1/norm2) (mat_of_cols d [v] * mat_of_rows d [v]))
-  | _ \<Rightarrow> Code.abort (STR ''Computation of 'Proj S' only implemented for singleton S'') (\<lambda>_. mat_of_bounded (Proj (SPAN S :: 'a subspace))))"
+  | _ \<Rightarrow> Code.abort (STR ''Computation of 'Proj S' only implemented for singleton S'') (\<lambda>_. mat_of_bounded (Proj (SPAN S :: 'a subspace))))"*)
 
 lemma [code]: "mat_of_bounded (Proj S) = mk_projector S" for S :: "'a::enum subspace"
   unfolding mk_projector_def by simp
