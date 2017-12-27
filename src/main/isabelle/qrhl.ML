@@ -372,7 +372,6 @@ fun applyRule name goal ctx =
   end
 
 
-(* TODO remove??? *)
 datatype varterm = VTCons of varterm * varterm | VTSingle of string*typ | VTUnit
 
 fun parse_varterm (Const(@{const_name qvariable_concat},_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)

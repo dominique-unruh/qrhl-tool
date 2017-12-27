@@ -716,8 +716,6 @@ proof (unfold inj_option_def, rule allI, rule allI, rule impI, erule conjE)
 qed
 
 
-(* TODO: document classical_operator *)
-
 axiomatization classical_operator :: "('a\<Rightarrow>'b option) \<Rightarrow> ('a,'b) bounded" where
  classical_operator_basis: "inj_option \<pi> \<Longrightarrow>
     applyOp (classical_operator \<pi>) (basis_vector x) = (case \<pi> x of Some y \<Rightarrow> basis_vector y | None \<Rightarrow> 0)"
@@ -904,7 +902,6 @@ axiomatization where tensor_times[simp]: "(U1 \<otimes> U2) \<cdot> (V1 \<otimes
 axiomatization remove_qvar_unit_op :: "('a*unit,'a) bounded"
 
 
-(* TODO document *)
 definition addState :: "'a vector \<Rightarrow> ('b,'b*'a) bounded" where
   "addState \<psi> = idOp \<otimes> (vector_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
 
@@ -1023,17 +1020,11 @@ axiomatization where
   and qvariable_unit_name[simp]: "qvariable_names qvariable_unit = []"
   for X::"'a qvariables" and Y::"'b qvariables" and x::"'c qvariable"
 
-definition "qvariables_distinct X == distinct (qvariable_names X)" (* TODO remove *)
-
-
 subsection "Distinct quantum variables"
 
 
 axiomatization distinct_qvars :: "'a qvariables \<Rightarrow> bool"
-(* abbreviation "colocal_qvars_qvars Q R \<equiv> distinct_qvars (qvariable_concat Q R)" (* TODO remove *) *)
 axiomatization colocal_pred_qvars :: "predicate \<Rightarrow> 'a qvariables \<Rightarrow> bool"
-  (* and colocal_qvars_qvars :: "'a qvariables \<Rightarrow> 'b qvariables \<Rightarrow> bool" *)
-  (* and colocal_qvar_qvars :: "'a qvariable \<Rightarrow> 'b qvariables \<Rightarrow> bool" (* TODO remove or docu *) *)
   and colocal_op_pred :: "(mem2,mem2) bounded \<Rightarrow> predicate \<Rightarrow> bool"
   and colocal_op_qvars :: "(mem2,mem2) bounded \<Rightarrow> 'a qvariables \<Rightarrow> bool"
 
@@ -1518,7 +1509,6 @@ axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> 
    = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
   for Q R :: "'a qvariables" and \<psi> :: "'a vector"
 
-(* TODO: proof in paper *)
 axiomatization where
   quantum_eq_add_state: 
     "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow>
