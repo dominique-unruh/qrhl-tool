@@ -1549,13 +1549,13 @@ qed
 lemma CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = idOp"
   using unitaryCNOT unfolding unitary_def adjoint_CNOT by simp
 
-definition [code del]: "X = classical_operator (Some o (\<lambda>x::bit. x+1))"
-lemma unitaryX[simp]: "unitary X"
-  unfolding X_def apply (rule unitary_classical_operator)
+definition [code del]: "pauliX = classical_operator (Some o (\<lambda>x::bit. x+1))"
+lemma unitaryX[simp]: "unitary pauliX"
+  unfolding pauliX_def apply (rule unitary_classical_operator)
   apply (rule o_bij[where g="\<lambda>x. x+1"]; rule ext)
   unfolding o_def id_def by auto
 
-lemma adjoint_X[simp]: "X* = X"
+lemma adjoint_X[simp]: "pauliX* = pauliX"
 proof -
   let ?f = "\<lambda>x::bit. x+1"
   have[simp]: "?f o ?f = id"
@@ -1571,42 +1571,42 @@ proof -
   have [simp]: "inv_option (Some \<circ> ?f) = Some \<circ> ?f"
     apply (subst inv_option_Some) by simp_all
   show ?thesis
-    unfolding X_def
+    unfolding pauliX_def
     apply (subst classical_operator_adjoint)
     by auto
 qed
 
 
-lemma X_X[simp]: "X \<cdot> X = idOp"
+lemma X_X[simp]: "pauliX \<cdot> pauliX = idOp"
   using unitaryX unfolding unitary_def adjoint_CNOT by simp
 
-axiomatization H :: "(bit,bit) bounded" where
-  unitaryH[simp]: "unitary H"
-and adjoint_H[simp]: "H* = H"
+axiomatization hadamard :: "(bit,bit) bounded" where
+  unitaryH[simp]: "unitary hadamard"
+and adjoint_H[simp]: "hadamard* = hadamard"
 
-lemma H_H[simp]: "H \<cdot> H = idOp"
+lemma H_H[simp]: "hadamard \<cdot> hadamard = idOp"
   using unitaryH unfolding unitary_def by simp
 
-definition "H' = sqrt2 \<cdot> H"
-lemma H_H': "H = (1/sqrt2) \<cdot> H'" unfolding H'_def by simp
-lemma [simp]: "isometry (1 / sqrt2 \<cdot> H')"
-  unfolding H'_def by simp
+definition "hadamard' = sqrt2 \<cdot> hadamard"
+lemma H_H': "hadamard = (1/sqrt2) \<cdot> hadamard'" unfolding hadamard'_def by simp
+lemma [simp]: "isometry (1 / sqrt2 \<cdot> hadamard')"
+  unfolding hadamard'_def by simp
 
 
-definition [code del]: "Z = H \<cdot> X \<cdot> H"
-lemma unitaryZ[simp]: "unitary Z"
-  unfolding Z_def by simp
+definition [code del]: "pauliZ = hadamard \<cdot> pauliX \<cdot> hadamard"
+lemma unitaryZ[simp]: "unitary pauliZ"
+  unfolding pauliZ_def by simp
 
-lemma adjoint_Z[simp]: "Z* = Z"
-  unfolding Z_def apply simp apply (subst timesOp_assoc) by simp
+lemma adjoint_Z[simp]: "pauliZ* = pauliZ"
+  unfolding pauliZ_def apply simp apply (subst timesOp_assoc) by simp
 
-lemma Z_Z[simp]: "Z \<cdot> Z = idOp"
+lemma Z_Z[simp]: "pauliZ \<cdot> pauliZ = idOp"
   using unitaryZ unfolding unitary_def by simp
 
-axiomatization Y :: "(bit,bit) bounded"
-  where unitaryY[simp]: "unitary Y"
-    and Y_Y[simp]: "Y \<cdot> Y = idOp"
-    and adjoint_Y[simp]: "Y* = Y"
+axiomatization pauliY :: "(bit,bit) bounded"
+  where unitaryY[simp]: "unitary pauliY"
+    and Y_Y[simp]: "pauliY \<cdot> pauliY = idOp"
+    and adjoint_Y[simp]: "pauliY* = pauliY"
 
 axiomatization EPR :: "(bit*bit) state" 
 definition[code del]: "EPR' = timesScalarVec sqrt2 (state_to_vector EPR)"

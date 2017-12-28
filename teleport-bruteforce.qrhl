@@ -16,11 +16,11 @@ ambient var w : bit.
 program teleport := {
   A,B <q EPR;
   on C,A apply CNOT;
-  on C apply H;
+  on C apply hadamard;
   a <- measure A with computational_basis;
   c <- measure C with computational_basis;
-  if (a=1) then on B apply X; else skip;
-  if (c=1) then on B apply Z; else skip;
+  if (a=1) then on B apply pauliX; else skip;
+  if (c=1) then on B apply pauliZ; else skip;
 }.
 
 

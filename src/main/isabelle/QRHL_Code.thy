@@ -68,13 +68,13 @@ end
 
 
 definition "matrix_X = mat_of_rows_list 2 [ [0::complex,1], [1,0] ]"
-axiomatization where bounded_of_mat_X[code]: "mat_of_bounded X = matrix_X"
+axiomatization where bounded_of_mat_X[code]: "mat_of_bounded pauliX = matrix_X"
 definition "matrix_Z = mat_of_rows_list 2 [ [1::complex,0], [0,-1] ]"
-axiomatization where bounded_of_mat_Z[code]: "mat_of_bounded Z = matrix_Z"
+axiomatization where bounded_of_mat_Z[code]: "mat_of_bounded pauliZ = matrix_Z"
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
-axiomatization where bounded_of_mat_Y[code]: "mat_of_bounded Y = matrix_Y"
+axiomatization where bounded_of_mat_Y[code]: "mat_of_bounded pauliY = matrix_Y"
 definition "matrix_H' = mat_of_rows_list 2 [ [1::complex, 1], [1, -1] ]"
-axiomatization where bounded_of_mat_H'[code]: "mat_of_bounded H' = matrix_H'"
+axiomatization where bounded_of_mat_H'[code]: "mat_of_bounded hadamard' = matrix_H'"
 definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]"
 axiomatization where bounded_of_mat_CNOT[code]: "mat_of_bounded CNOT = matrix_CNOT"
 
