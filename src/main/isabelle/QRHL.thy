@@ -1632,7 +1632,11 @@ ML_file \<open>qrhl.ML\<close>
 section "Simprocs"
 
 (* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed qvariables but can't *)
-simproc_setup warn_colocal ("distinct_qvars Q") = QRHL.warn_colocal_simproc
+syntax "_declared_qvars" :: "qvariable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")
+syntax "_declared_qvars" :: "qvariable_list_args \<Rightarrow> bool" ("declared'_qvars [[_]]")
+parse_translation \<open>[("_declared_qvars", QRHL.declared_qvars_parse_tr)]\<close>
+
+simproc_setup warn_declared_qvars ("variable_name q") = QRHL.warn_declared_qvars_simproc
 
 simproc_setup "qvariable_rewriting" ("join_qvariables_hint a b" | "sort_qvariables_hint a") = QRHL.qvariable_rewriting_simproc
 

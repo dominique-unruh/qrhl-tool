@@ -529,7 +529,7 @@ fun qvariable_rewriting_simproc _ ctx ct =
     handle CTERM _ => NONE
 
 
-fun warn_colocal_simproc _ _ ct = 
+(* fun warn_colocal_simproc _ _ ct = 
   let 
       val Q = Thm.term_of ct |> Term.dest_comb |> snd
       val vs = parse_varterm Q |> vars_in_varterm
@@ -540,7 +540,44 @@ fun warn_colocal_simproc _ _ ct =
   in
     NONE
   end 
-  handle TERM _ => NONE
+  handle TERM _ => NONE *)
+
+
+local
+  fun mk_var_eq (v as Const ("_constrain", _) $ Free (n, _) $ Free _) =
+      @{const HOL.eq("char list")} $ (Const (@{const_name variable_name}, dummyT) $ v) $ HOLogic.mk_string n
+    | mk_var_eq t = raise (TERM("the argument to declared_qvars must contain only free variables",[t]))
+
+  fun declared_qvars_parse_tr' (Const (@{syntax_const "_qvariable_list_args"}, _) $ v $ vs)
+    = mk_var_eq v :: declared_qvars_parse_tr' vs
+    | declared_qvars_parse_tr' (Const (@{syntax_const "_qvariable_list_arg"}, _) $ v)
+    = [mk_var_eq v]
+| declared_qvars_parse_tr' t = raise (TERM("declared_qvars_parse_tr'",[t]))
+in
+  fun declared_qvars_parse_tr _ [vs] = mk_conjs (declared_qvars_parse_tr' vs)
+    | declared_qvars_parse_tr _ ts = raise (TERM("declared_qvars_parse_tr", ts))
+end
+
+structure WarnDeclaredQvarsData = Proof_Data
+(
+  type T = bool (* Within a nested call to the simproc *)
+  fun init _ = false
+)
+
+fun warn_declared_qvars_simproc _ ctx ct = 
+  if WarnDeclaredQvarsData.get ctx then NONE
+  else case Thm.term_of ct of
+      Const(@{const_name variable_name}, _) $ Free (n,_) =>
+        let val eq = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) (WarnDeclaredQvarsData.put true ctx) ct 
+            val rhs = eq |> Thm.prop_of |> Logic.dest_equals |> snd
+        in
+            case rhs of Const(@{const_name variable_name}, _) $ _ => 
+                            (warning ("Please add to simplifier: declared_qvars \<lbrakk>"^n
+                                        ^"\<rbrakk> (or remove simproc warn_declared_qvars to remove these warnings)");
+                            NONE)
+                      | _ => SOME eq
+        end
+    | _ => NONE
 
 
 end
