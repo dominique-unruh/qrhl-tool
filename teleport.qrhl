@@ -16,11 +16,11 @@ ambient var w : bit.
 program teleport := {
   A,B <q EPR;
   on C,A apply CNOT;
-  on C apply H;
+  on C apply hadamard;
   a <- measure A with computational_basis;
   c <- measure C with computational_basis;
-  if (a=1) then on B apply X; else skip;
-  if (c=1) then on B apply Z; else skip;
+  if (a=1) then on B apply pauliX; else skip;
+  if (c=1) then on B apply pauliZ; else skip;
 }.
 
 
@@ -41,7 +41,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   simp ! quantum_eq_add_state.
 
  seq 2 0: quantum_equality_full idOp ⟦C1,A1,B1⟧
-          ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+          ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
   wp left.
   wp left.
   skip.
@@ -53,7 +53,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  seq 1 0: Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
              quantum_equality_full
                 idOp ⟦C1,A1,B1⟧
-                ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+                ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
   wp left.
   simp.
   skip.
@@ -69,7 +69,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  seq 1 0: Cla[a1=a'] ⊓ (Proj (span {basis_vector c1})»⟦C1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    wp left.
    simp.
    skip.
@@ -85,7 +85,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  conseq pre: Cla[a1=a' ∧ c1=c'] ⊓ (Proj (span {basis_vector c1})»⟦C1⟧ ⋅ (Proj (span {basis_vector a1})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    simp!.
 
  casesplit a'=0.
@@ -95,7 +95,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  conseq pre: Cla[a1=0 ∧ c1=0] ⊓ (Proj (span {basis_vector 0})»⟦C1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    simp!.
  clear 2.
  clear 1.
@@ -103,7 +103,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  seq 2 0: (Proj (span {basis_vector 0})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    wp left.
    wp left.
    skip.
@@ -119,15 +119,15 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  conseq pre: Cla[a1=0 ∧ c1=1] ⊓ (Proj (span {basis_vector 1})»⟦C1⟧ ⋅ (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    simp!.
  clear 2.
  clear 1.
 
- seq 2 0: Z»〚B1〛 · (Proj (span {basis_vector 1})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
+ seq 2 0: pauliZ»〚B1〛 · (Proj (span {basis_vector 1})»⟦C1⟧ · (Proj (span {basis_vector 0})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    wp left.
    wp left.
    skip.
@@ -143,15 +143,15 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  conseq pre: Cla[a1=1 ∧ c1=0] ⊓ (Proj (span {basis_vector 0})»⟦C1⟧ ⋅ (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    simp!.
  clear 2.
  clear 1.
 
- seq 2 0: X»〚B1〛 · (Proj (span {basis_vector 0})»⟦C1⟧ · (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
+ seq 2 0: pauliX»〚B1〛 · (Proj (span {basis_vector 0})»⟦C1⟧ · (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    wp left.
    wp left.
    skip.
@@ -168,15 +168,15 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  conseq pre: Cla[a1=1 ∧ c1=1] ⊓ (Proj (span {basis_vector 1})»⟦C1⟧ ⋅ (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧)).
    simp!.
  clear 2.
  clear 1.
 
- seq 2 0: Z»⟦B1⟧ ⋅ (X»⟦B1⟧ ⋅ (Proj (span {basis_vector 1})»⟦C1⟧ · (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
+ seq 2 0: pauliZ»⟦B1⟧ ⋅ (pauliX»⟦B1⟧ ⋅ (Proj (span {basis_vector 1})»⟦C1⟧ · (Proj (span {basis_vector 1})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
-                    ((H ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧))).
+                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧))).
    wp left.
    wp left.
    skip.
