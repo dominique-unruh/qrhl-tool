@@ -7,14 +7,14 @@ ambient var x : bit.
 
 program prog1 := {
   b <$ uniform UNIV;
-  if (b=1) then on q apply H; else skip;
+  if (b=1) then on q apply hadamard; else skip;
 }.
 
 
 program prog2 := {
-  on q apply H;
+  on q apply hadamard;
   b <$ uniform UNIV;
-  on q apply (if b=1 then H else idOp);
+  on q apply (if b=1 then hadamard else idOp);
 }.
 
 
@@ -23,12 +23,12 @@ qrhl {Qeq[q1=q2]} call prog1; ~ call prog2; {Qeq[q1=q2]}.
   inline prog1.
   inline prog2.
 
-  seq 0 1: quantum_equality_full idOp [[q1]] H [[q2]].
+  seq 0 1: quantum_equality_full idOp [[q1]] hadamard [[q2]].
     wp right.
     skip.
     simp.
 
-  seq 1 1: quantum_equality_full idOp [[q1]] H [[q2]] ⊓ Cla[b1≠b2].
+  seq 1 1: quantum_equality_full idOp [[q1]] hadamard [[q2]] ⊓ Cla[b1≠b2].
     rnd b,b <- map_distr (λb. (b,b+1)) (uniform UNIV). 
     skip.
     simp.

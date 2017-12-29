@@ -1,7 +1,6 @@
 session QRHL = "QRHL-Prerequisites" +
-  sessions "HOL-Library"
   theories QRHL_Protocol
 
-session "QRHL-Prerequisites" = "HOL-Protocol" +
-  sessions "HOL-Library" "Jordan_Normal_Form"
-  theories "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Adhoc_Overloading" "HOL-Library.Rewrite" "HOL-Library.Code_Target_Numeral"
+session "QRHL-Prerequisites" = "HOL-Library" +
+  sessions "HOL-Protocol" "Jordan_Normal_Form"
+  theories "Jordan_Normal_Form.Matrix_Impl"
