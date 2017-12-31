@@ -20,7 +20,8 @@ lemma teleport_goal1:
   assumes[simp]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
   shows
     "quantum_equality_full (addState EPR*) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>
-      \<le> CNOT\<guillemotright>\<lbrakk>C1, A1\<rbrakk> \<cdot> (hadamard\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> quantum_equality_full (addState EPR* \<cdot> (assoc_op* \<cdot> (CNOT \<otimes> idOp \<cdot> (assoc_op \<cdot> hadamard \<otimes> idOp)))) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>)"
+      \<le> CNOT\<guillemotright>\<lbrakk>C1, A1\<rbrakk> \<cdot> (hadamard\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> 
+          quantum_equality_full (addState EPR* \<cdot> (assoc_op* \<cdot> (CNOT \<otimes> idOp \<cdot> (assoc_op \<cdot> hadamard \<otimes> idOp)))) \<lbrakk>C1, A1, B1\<rbrakk> idOp \<lbrakk>A2\<rbrakk>)"
 proof -
   have hadamard: "hadamard \<otimes> idOp \<cdot> hadamard \<otimes> idOp = idOp" by simp
   have CNOT: "CNOT \<otimes> idOp \<cdot> CNOT \<otimes> idOp = idOp" by simp
@@ -32,9 +33,9 @@ qed
 
 lemma teleport_goal2_a0c0:
   assumes[simp]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows "Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+  shows "Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
                  quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
-                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>)
+                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
   apply (auto simp: prepare_for_code assoc_right)
   by eval
@@ -42,9 +43,9 @@ lemma teleport_goal2_a0c0:
 
 lemma teleport_goal2_a0c1:
   assumes[simp]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows "pauliZ\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+  shows "pauliZ\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
                  quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
-                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>))
+                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
 proof -
   show ?thesis
@@ -54,18 +55,18 @@ qed
 
 lemma teleport_goal2_a1c0:
   assumes[simp]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows "pauliX\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> (Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+  shows "pauliX\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> Proj (span {basis_vector 0})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
                  quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
-                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>))
+                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
   apply (auto simp: prepare_for_code assoc_right)
   by eval
 
 lemma teleport_goal2_a1c1:
   assumes[simp]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows "pauliZ\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (pauliX\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> (Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> (Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
+  shows "pauliZ\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> pauliX\<guillemotright>\<lbrakk>B1\<rbrakk> \<cdot> Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>C1\<rbrakk> \<cdot> Proj (span {basis_vector 1})\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> 
                  quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
-                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>)))
+                                     \<cdot> addState (state_to_vector EPR)) \<lbrakk>A2\<rbrakk>
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
   apply (auto simp: prepare_for_code assoc_right)
   by eval
