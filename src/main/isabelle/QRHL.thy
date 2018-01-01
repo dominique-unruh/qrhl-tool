@@ -617,7 +617,7 @@ lemmas assoc_right = timesOp_assoc timesOp_assoc_subspace plusOp_assoc
 instantiation bounded :: (type,type) ab_group_add begin
 definition "op+ = plusOp" 
 definition "uminus = timesScalarOp (-1)"
-definition "A - B = plusOp A (uminus B)"
+definition "A - B = A + (uminus B)" for A::"('a,'b) bounded"
 instance apply intro_classes
   unfolding plus_bounded_def minus_bounded_def uminus_bounded_def
       apply (fact plusOp_assoc)
@@ -883,11 +883,25 @@ axiomatization "tensorVec" :: "'a vector \<Rightarrow> 'c vector \<Rightarrow> (
 consts tensor :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infix "\<otimes>" 71)
 adhoc_overloading tensor tensorOp tensorSpace tensorVec
 
+axiomatization where idOp_tensor_idOp[simp]: "idOp\<otimes>idOp = idOp"
+
 axiomatization "comm_op" :: "('a*'b, 'b*'a) bounded"
-  where unitary_comm_op[simp]: "unitary comm_op"
+
+axiomatization where adj_comm_op[simp]: "adjoint comm_op = comm_op"
 
 axiomatization where
-  comm_op_times_comm_op[simp]: "comm_op \<cdot> comm_op = idOp"
+  comm_op_swap[simp]: "comm_op \<cdot> (A\<otimes>B) \<cdot> comm_op = B\<otimes>A"
+  for A::"('a,'b) bounded" and B::"('c,'d) bounded"
+
+lemma comm_op_times_comm_op[simp]: "comm_op \<cdot> comm_op = idOp"
+proof -
+  find_theorems "idOp \<otimes> idOp"
+  have "comm_op \<cdot> (idOp \<otimes> idOp) \<cdot> comm_op = idOp \<otimes> idOp" by (simp del: idOp_tensor_idOp)
+  then show ?thesis by simp
+qed
+
+lemma unitary_comm_op[simp]: "unitary comm_op"
+  unfolding unitary_def by simp
 
 axiomatization "assoc_op" :: "('a*'b*'c, ('a*'b)*'c) bounded"
   where unitary_assoc_op[simp]: "unitary assoc_op"
@@ -911,7 +925,6 @@ lemma addState_times_scalar[simp]: "addState (a \<cdot> \<psi>) = a \<cdot> addS
 axiomatization where tensor_adjoint[simp]: "adjoint (U\<otimes>V) = (adjoint U) \<otimes> (adjoint V)"
   for U :: "('a,'b) bounded" and V :: "('c,'d) bounded"
 
-axiomatization where idOp_tensor_idOp[simp]: "idOp\<otimes>idOp = idOp"
 
 lemma tensor_unitary[simp]: 
   assumes "unitary U" and "unitary V"
@@ -1093,7 +1106,13 @@ axiomatization where lift_inf[simp]: "distinct_qvars Q \<Longrightarrow> S\<guil
 axiomatization where lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a subspace"
 axiomatization where lift_eqSp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a subspace" 
 axiomatization where lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a,'a) bounded" 
+axiomatization where lift_timesScalarOp[simp]: "distinct_qvars Q \<Longrightarrow> a \<cdot> (A\<guillemotright>Q) = (a \<cdot> A)\<guillemotright>Q" for a::complex and A::"('a,'a)bounded"
 axiomatization where lift_plus[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a subspace"  
+axiomatization where lift_plusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a,'a) bounded"  
+lemma lift_uminusOp[simp]: "distinct_qvars Q \<Longrightarrow> - (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a,'a) bounded"  
+  unfolding uminus_bounded_def by simp
+lemma lift_minusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q - T\<guillemotright>Q = (S - T)\<guillemotright>Q" for S T :: "('a,'a) bounded"  
+  unfolding minus_bounded_def by simp
 axiomatization where lift_timesOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a,'a) bounded"  
 axiomatization where lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> ortho (S\<guillemotright>Q) = (ortho S)\<guillemotright>Q" for Q :: "'a qvariables"
 axiomatization where lift_tensorOp: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>qvariable_concat Q R" for Q :: "'a qvariables" and R :: "'b qvariables" and S T :: "(_,_) bounded" 
@@ -1104,6 +1123,9 @@ lemma Cla_inf_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<sqinter> (S\<gu
 lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 axiomatization where Proj_lift[simp]: "distinct_qvars Q \<Longrightarrow> Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
   for Q::"'a qvariables"
+axiomatization where kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q::"'a qvariables"
+lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a qvariables"
+  unfolding eigenspace_def apply (subst lift_idOp[symmetric, of Q]) by (simp del: lift_idOp)
 
 axiomatization where remove_qvar_unit_op:
   "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op*)\<guillemotright>Q = A\<guillemotright>(qvariable_concat Q \<lbrakk>\<rbrakk>)"
@@ -1214,7 +1236,7 @@ qed
 lemma qvar_trafo_comm_op[simp]:
   assumes "distinct_qvars (qvariable_concat Q R)"
   shows "qvar_trafo comm_op (qvariable_concat Q R) (qvariable_concat R Q)"
-proof (unfold qvar_trafo_def, auto)
+proof (unfold qvar_trafo_def, auto simp del: adj_comm_op)
   show "distinct_qvars (qvariable_concat Q R)" and "distinct_qvars (qvariable_concat R Q)"
     using assms by (auto intro: distinct_qvars_swap)
   show "C\<guillemotright>qvariable_concat Q R = (comm_op \<cdot> C \<cdot> comm_op*)\<guillemotright>qvariable_concat R Q" for C::"(_,_)bounded"
@@ -1462,6 +1484,7 @@ axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a q
 
 subsection \<open>Quantum equality\<close>
 
+(* TODO should be a definition *)
 axiomatization quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b qvariables \<Rightarrow> predicate" where
   quantum_equality_full_subspace:
   "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> quantum_equality_full U Q V R = 
@@ -1475,6 +1498,25 @@ syntax quantum_equality :: "'a qvariables \<Rightarrow> 'a qvariables \<Rightarr
 syntax "_quantum_equality" :: "qvariable_list_args \<Rightarrow> qvariable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
+
+lemma quantum_equality_sym:
+  assumes "distinct_qvars (qvariable_concat Q R)"
+  shows "quantum_equality_full U Q V R = quantum_equality_full V R U Q"
+proof -
+  have dist: "distinct_qvars (qvariable_concat R Q)"
+    using assms by (rule distinct_qvars_swap)
+  have a: "comm_op \<cdot> ((V* \<cdot> U) \<otimes> (U* \<cdot> V)) \<cdot> comm_op* = (U* \<cdot> V) \<otimes> (V* \<cdot> U)" by simp
+  have op_eq: "((comm_op \<cdot> (V* \<cdot> U) \<otimes> (U* \<cdot> V))\<guillemotright>qvariable_concat Q R) =
+               ((comm_op \<cdot> (U* \<cdot> V) \<otimes> (V* \<cdot> U))\<guillemotright>qvariable_concat R Q)"
+    apply (subst comm_op_lift[symmetric])
+    using a by (simp add: assoc_right)
+  show ?thesis
+    apply (subst quantum_equality_full_subspace[OF assms])
+    apply (subst quantum_equality_full_subspace[OF dist])
+    apply (subst eigenspace_lift[symmetric, OF assms])
+    apply (subst eigenspace_lift[symmetric, OF dist])
+    using op_eq by simp
+qed
 
 axiomatization where colocal_quantum_equality_full[simp]:
   "distinct_qvars (qvariable_concat Q1 (qvariable_concat Q2 Q3)) \<Longrightarrow> colocal (quantum_equality_full U1 Q1 U2 Q2) Q3"
@@ -1504,11 +1546,12 @@ axiomatization where Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
  for U::"('a,'a) bounded" and U1 :: "('b,'c) bounded"  
 
-
-axiomatization where quantum_eq_unique [simp]: "quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q
-   = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
+(* TODO: generalize as in paper *)
+axiomatization where quantum_eq_unique [simp]: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow>
+  quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
   for Q R :: "'a qvariables" and \<psi> :: "'a vector"
 
+(* Proof in paper *)
 axiomatization where
   quantum_eq_add_state: 
     "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow>

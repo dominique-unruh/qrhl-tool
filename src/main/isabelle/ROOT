@@ -3,4 +3,4 @@ session QRHL = "QRHL-Prerequisites" +
 
 session "QRHL-Prerequisites" = "HOL-Library" +
   sessions "HOL-Protocol" "Jordan_Normal_Form"
-  theories "Jordan_Normal_Form.Matrix_Impl"
+  theories "Jordan_Normal_Form.Matrix_Impl" "HOL-Protocol.Protocol_Main"

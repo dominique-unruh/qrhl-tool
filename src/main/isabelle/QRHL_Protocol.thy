@@ -1,7 +1,5 @@
 theory QRHL_Protocol
-imports Protocol_Main QRHL QRHL_Code
+imports "HOL-Protocol.Protocol_Main" QRHL QRHL_Code
 begin
-
-
 
 end
