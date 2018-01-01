@@ -259,7 +259,7 @@ derive (no) ccompare vector
 derive (monad) set_impl vector
 
 
-lemmas prepare_for_code = H_H' quantum_equality_full_subspace add_join_qvariables_hint INF_lift 
+lemmas prepare_for_code = H_H' quantum_equality_full_def add_join_qvariables_hint INF_lift 
   EPR_EPR' span_vector_state Cla_inf_lift Cla_plus_lift
 
 end

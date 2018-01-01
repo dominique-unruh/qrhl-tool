@@ -1484,10 +1484,8 @@ axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a q
 
 subsection \<open>Quantum equality\<close>
 
-(* TODO should be a definition *)
-axiomatization quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b qvariables \<Rightarrow> predicate" where
-  quantum_equality_full_subspace:
-  "distinct_qvars (qvariable_concat Q R) \<Longrightarrow> quantum_equality_full U Q V R = 
+definition quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a qvariables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b qvariables \<Rightarrow> predicate" where
+  "quantum_equality_full U Q V R = 
                  (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> qvariable_concat Q R"
   for Q :: "'a qvariables" and R :: "'b qvariables"
   and U V :: "(_,'c) bounded"
@@ -1511,8 +1509,8 @@ proof -
     apply (subst comm_op_lift[symmetric])
     using a by (simp add: assoc_right)
   show ?thesis
-    apply (subst quantum_equality_full_subspace[OF assms])
-    apply (subst quantum_equality_full_subspace[OF dist])
+    apply (subst quantum_equality_full_def)
+    apply (subst quantum_equality_full_def)
     apply (subst eigenspace_lift[symmetric, OF assms])
     apply (subst eigenspace_lift[symmetric, OF dist])
     using op_eq by simp
@@ -1546,10 +1544,14 @@ axiomatization where Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
  for U::"('a,'a) bounded" and U1 :: "('b,'c) bounded"  
 
-(* TODO: generalize as in paper *)
-axiomatization where quantum_eq_unique [simp]: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow>
-  quantum_equality Q R \<sqinter> liftSpace (span{\<psi>}) Q = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{\<psi>}) R"
-  for Q R :: "'a qvariables" and \<psi> :: "'a vector"
+(* Proof in paper *)
+axiomatization where quantum_eq_unique[simp]: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow>
+  isometry U \<Longrightarrow> isometry (adjoint V) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
+  quantum_equality_full U Q V R \<sqinter> span{\<psi>}\<guillemotright>Q
+  = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{V* \<cdot> U \<cdot> \<psi>}) R"
+  for Q::"'a qvariables" and R::"'b qvariables"
+    and U::"('a,'c) bounded" and V::"('b,'c) bounded"
+    and \<psi>::"'a vector"
 
 (* Proof in paper *)
 axiomatization where
