@@ -131,7 +131,7 @@ final case class QInit(location:List[QVariable], expression:Expression) extends 
   override def toString: String = s"${location.map(_.name).mkString(",")} <q $expression;"
 
   override def checkWelltyped(): Unit = {
-    val expected = pure.Type("QRHL.state",List(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
+    val expected = pure.Type("QRHL.vector",List(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
     expression.checkWelltyped(expected)
   }
 }

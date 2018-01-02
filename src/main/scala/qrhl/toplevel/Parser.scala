@@ -88,7 +88,7 @@ object Parser extends RegexParsers {
          _ = assert(vs.nonEmpty);
          _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
          qvs = vs.map { context.environment.qVariables(_) };
-         typ = Typ(context.isabelle.get, IType("QRHL.state",List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
+         typ = Typ(context.isabelle.get, IType("QRHL.vector",List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
          e <- expression(typ);
          _ <- statementSeparator)
       yield QInit(qvs,e)

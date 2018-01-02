@@ -3,7 +3,7 @@ struct
 
 fun mk_qvariablesT T = Type(@{type_name qvariables}, [T])
 fun mk_qvariableT T = Type(@{type_name qvariable}, [T])
-fun mk_stateT T = Type(@{type_name state}, [T])
+fun mk_vectorT T = Type(@{type_name vector}, [T])
 fun mk_boundedT T T' = Type(@{type_name bounded}, [T,T'])
 fun dest_boundedT (Type(@{type_name bounded}, [T,T'])) = (T,T')
   | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
@@ -50,9 +50,13 @@ fun qvariables [] = (@{const qvariable_unit},@{typ unit})
         end
   
 fun qinitWp post e Q =
-  let val (vs,vsT) = qvariables Q in
-    Const(@{const_name space_div}, @{typ predicate} --> mk_stateT vsT --> mk_qvariablesT vsT --> @{typ predicate}) $
-      post $ e $ vs
+  let val (vs,vsT) = qvariables Q 
+      val qpre = Const(@{const_name space_div}, @{typ predicate} --> mk_vectorT vsT --> mk_qvariablesT vsT --> @{typ predicate}) $
+                    post $ e $ vs
+      val isunit = @{const classical_subspace} $ HOLogic.mk_eq 
+              (Const(@{const_name norm}, mk_vectorT vsT --> @{typ real}) $ e, @{term "1::real"})
+  in
+    @{const inf(predicate)} $ isunit $ qpre
   end
 
 fun qapplyWp post e Q =

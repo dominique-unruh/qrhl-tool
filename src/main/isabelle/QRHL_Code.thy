@@ -109,8 +109,8 @@ axiomatization where vec_of_vector_zero[code]:
   "vec_of_vector (0::'a::enum vector) = zero_vec (CARD('a))"
 
 
-axiomatization where vec_of_vector_basis_vector[code]:
-  "vec_of_vector (basis_vector i) = unit_vec (CARD('a)) (enum_idx i)" for i::"'a::enum"
+axiomatization where vec_of_vector_ket[code]:
+  "vec_of_vector (ket i) = unit_vec (CARD('a)) (enum_idx i)" for i::"'a::enum"
 
 instantiation bit :: linorder begin
 definition "less_bit (a::bit) (b::bit) = (a=0 \<and> b=1)"
@@ -143,7 +143,7 @@ definition "vec_tensor (A::'a::times vec) (B::'a vec) =
 axiomatization where tensorVec_code[code]: "vec_of_vector (\<psi> \<otimes> \<phi>) = vec_tensor (vec_of_vector \<psi>) (vec_of_vector \<phi>)"
   for \<psi>::"'a::enum vector" and \<phi>::"'b::enum vector"
 
-definition [code del]: "SPAN x = spanVector (vector_of_vec ` set x)"
+definition [code del]: "SPAN x = span (vector_of_vec ` set x)"
 code_datatype SPAN
 
 definition "mk_projector (S::'a::enum subspace) = mat_of_bounded (Proj S)" 
@@ -260,6 +260,6 @@ derive (monad) set_impl vector
 
 
 lemmas prepare_for_code = H_H' quantum_equality_full_def add_join_qvariables_hint INF_lift 
-  EPR_EPR' span_vector_state Cla_inf_lift Cla_plus_lift
+  EPR_EPR' Cla_inf_lift Cla_plus_lift
 
 end

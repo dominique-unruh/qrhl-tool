@@ -188,7 +188,7 @@ axiomatization where ell2_norm_mult:
 for x :: "'a\<Rightarrow>complex"
 
 
-lift_definition basis_vector :: "'a \<Rightarrow> 'a vector" is "\<lambda>x y. if x=y then 1 else 0"
+lift_definition ket :: "'a \<Rightarrow> 'a vector" is "\<lambda>x y. if x=y then 1 else 0"
   unfolding bdd_above_def apply simp
   apply (rule exI[of _ 1], rule allI, rule impI)
   by (rule ell2_1)
@@ -288,7 +288,7 @@ and uminus_vector: "(-\<psi>) = timesScalarVec (-1) \<psi>"
 and one_times_vec[simp]: "timesScalarVec (1::complex) \<psi> = \<psi>" 
 for \<psi> :: "'a vector"
 
-lemma ell2_basis_vector[simp]: "norm (basis_vector i) = 1"
+lemma ell2_ket[simp]: "norm (ket i) = 1"
   apply transfer unfolding ell2_norm_def
   apply (rule cSUP_eq_maximum)
   apply (rule_tac x="{i}" in bexI)
@@ -299,17 +299,17 @@ axiomatization orthogonal :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> bo
   where orthogonal_comm: "orthogonal \<psi> \<phi> = orthogonal \<phi> \<psi>"
 
 
-typedef 'a state = "{x::'a vector. norm x = 1}"
+(* typedef 'a state = "{x::'a vector. norm x = 1}"
   morphisms state_to_vector Abs_state
-  apply (rule exI[of _ "basis_vector undefined"])
+  apply (rule exI[of _ "ket undefined"])
   by simp
 setup_lifting type_definition_state
 
-lift_definition ket :: "'a \<Rightarrow> 'a state" ("|_\<rangle>") is "basis_vector"
-  by (rule ell2_basis_vector)
+lift_definition ket :: "'a \<Rightarrow> 'a state" ("|_\<rangle>") is "ket"
+  by (rule ell2_ket)
 
-lemma vector_to_state_ket[simp]: "state_to_vector (ket i) = basis_vector i"
-  by (rule ket.rep_eq)
+lemma vector_to_state_ket[simp]: "state_to_vector (ket i) = ket i"
+  by (rule ket.rep_eq) *)
 
 axiomatization is_subspace :: "'a vector set \<Rightarrow> bool"
   where is_subspace_0[simp]: "is_subspace {0}"
@@ -322,7 +322,7 @@ axiomatization is_subspace :: "'a vector set \<Rightarrow> bool"
     and is_subspace_INF[simp]: "(\<And>x. x \<in> AA \<Longrightarrow> is_subspace x) \<Longrightarrow> is_subspace (\<Inter>AA)"
     (* and is_subspace_spanex[simp]: "\<exists>A. is_subspace A \<and> M \<subseteq> A \<and> (\<forall>B. is_subspace B \<and> M \<subseteq> B \<longrightarrow> B \<subseteq> A)" *)
 
-declare[[coercion state_to_vector]]
+(* declare[[coercion state_to_vector]] *)
 
 typedef 'a subspace = "{A::'a vector set. is_subspace A}"
   morphisms subspace_to_set Abs_subspace
@@ -372,7 +372,7 @@ instance .. end
 
 lemma subspace_zero_not_top[simp]: "(0::'a subspace) \<noteq> top"
 proof transfer 
-  have "basis_vector undefined \<noteq> (0::'a vector)"
+  have "ket undefined \<noteq> (0::'a vector)"
     apply transfer
     by (meson one_neq_zero)
   thus "{0::'a vector} \<noteq> UNIV" by auto
@@ -519,14 +519,14 @@ lemma top_plus[simp]: "top + x = top" for x :: "'a subspace" unfolding subspace_
 lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
     
 axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set"
-    
-definition [code del]: "spanVector A = Inf {S. A \<subseteq> subspace_as_set S}"
-definition [code del]: "spanState A = Inf {S. state_to_vector ` A \<subseteq> subspace_as_set S}"
-consts span :: "'a set \<Rightarrow> 'b subspace"
-adhoc_overloading span spanState spanVector
 
-lemma span_vector_state: "spanState A = spanVector (state_to_vector ` A)"
-  by (simp add: spanState_def spanVector_def) 
+definition [code del]: "span A = Inf {S. A \<subseteq> subspace_as_set S}"
+(* definition [code del]: "spanState A = Inf {S. state_to_vector ` A \<subseteq> subspace_as_set S}" *)
+(* consts span :: "'a set \<Rightarrow> 'b subspace"
+adhoc_overloading span (* spanState *) spanVector *)
+
+(* lemma span_vector_state: "spanState A = spanVector (state_to_vector ` A)"
+  by (simp add: spanState_def spanVector_def)  *)
 
 axiomatization where span_mult[simp]: "(a::complex)\<noteq>0 \<Longrightarrow> span { timesScalarVec a \<psi> } = span {\<psi>}"
   for \<psi>::"'a vector"
@@ -634,7 +634,7 @@ lemma scalar_times_op_minus[simp]: "timesScalarOp a (A-B) = timesScalarOp a A - 
 lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
   by (simp add: subspace_zero_bot[symmetric])
 
-axiomatization where equal_basis: "(\<And>x. applyOp A (basis_vector x) = applyOp B (basis_vector x)) \<Longrightarrow> A = B" for A::"('a,'b) bounded"
+axiomatization where equal_basis: "(\<And>x. applyOp A (ket x) = applyOp B (ket x)) \<Longrightarrow> A = B" for A::"('a,'b) bounded"
 
 axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) bounded"
 
@@ -718,7 +718,7 @@ qed
 
 axiomatization classical_operator :: "('a\<Rightarrow>'b option) \<Rightarrow> ('a,'b) bounded" where
  classical_operator_basis: "inj_option \<pi> \<Longrightarrow>
-    applyOp (classical_operator \<pi>) (basis_vector x) = (case \<pi> x of Some y \<Rightarrow> basis_vector y | None \<Rightarrow> 0)"
+    applyOp (classical_operator \<pi>) (ket x) = (case \<pi> x of Some y \<Rightarrow> ket y | None \<Rightarrow> 0)"
 axiomatization where classical_operator_adjoint[simp]: 
   "inj_option \<pi> \<Longrightarrow> adjoint (classical_operator \<pi>) = classical_operator (inv_option \<pi>)"
 for \<pi> :: "'a \<Rightarrow> 'b option"
@@ -871,7 +871,7 @@ axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> ('b,
   where isProjector_mproj[simp]: "isProjector (mproj M i)"
 
 axiomatization computational_basis :: "('a, 'a) measurement" where
-  mproj_computational_basis[simp]: "mproj computational_basis x = proj (basis_vector x)"
+  mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
 and mtotal_computational_basis [simp]: "mtotal computational_basis"
 
 
@@ -1477,7 +1477,7 @@ section \<open>Quantum predicates (ctd.)\<close>
 
 subsection \<open>Subspace division\<close>
 
-axiomatization space_div :: "predicate \<Rightarrow> 'a state \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
+axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a qvariables \<Rightarrow> predicate"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
 
@@ -1546,7 +1546,7 @@ axiomatization where Qeq_mult2[simp]:
 
 (* Proof in paper *)
 axiomatization where quantum_eq_unique[simp]: "distinct_qvars (qvariable_concat Q R) \<Longrightarrow>
-  isometry U \<Longrightarrow> isometry (adjoint V) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
+  isometry U \<Longrightarrow> isometry (adjoint V) \<Longrightarrow> 
   quantum_equality_full U Q V R \<sqinter> span{\<psi>}\<guillemotright>Q
   = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{V* \<cdot> U \<cdot> \<psi>}) R"
   for Q::"'a qvariables" and R::"'b qvariables"
@@ -1556,10 +1556,10 @@ axiomatization where quantum_eq_unique[simp]: "distinct_qvars (qvariable_concat 
 (* Proof in paper *)
 axiomatization where
   quantum_eq_add_state: 
-    "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow>
+    "distinct_qvars (qvariable_concat Q (qvariable_concat R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
     quantum_equality_full U Q V R \<sqinter> span {\<psi>}\<guillemotright>T
              = quantum_equality_full (U \<otimes> idOp) (qvariable_concat Q T) (addState \<psi> \<cdot> V) R"
-    for U :: "('a,'c) bounded" and V :: "('b,'c) bounded" and \<psi> :: "'d state"
+    for U :: "('a,'c) bounded" and V :: "('b,'c) bounded" and \<psi> :: "'d vector"
     and Q :: "'a qvariables"    and R :: "'b qvariables"    and T :: "'d qvariables"
 
 section \<open>Common quantum objects\<close>
@@ -1653,9 +1653,15 @@ axiomatization pauliY :: "(bit,bit) bounded"
     and Y_Y[simp]: "pauliY \<cdot> pauliY = idOp"
     and adjoint_Y[simp]: "pauliY* = pauliY"
 
-axiomatization EPR :: "(bit*bit) state" 
-definition[code del]: "EPR' = timesScalarVec sqrt2 (state_to_vector EPR)"
-lemma EPR_EPR': "state_to_vector EPR = timesScalarVec (1/sqrt2) EPR'"
+axiomatization EPR :: "(bit*bit) vector" 
+  where EPR_normalized[simp]: "norm EPR = 1"
+
+definition[code del]: "EPR' = timesScalarVec sqrt2 EPR"
+
+lemma EPR_EPR': "EPR = timesScalarVec (1/sqrt2) EPR'"
+  unfolding EPR'_def by simp
+
+lemma norm_EPR'[simp]: "norm (1/sqrt2 \<cdot> EPR') = 1"
   unfolding EPR'_def by simp
 
 
