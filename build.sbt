@@ -74,7 +74,7 @@ mappings in Universal ++= Seq(
     "proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat",
     "prg-enc-rorcpa.qrhl", "prg-enc-indcpa.qrhl", "PrgEnc.thy", "README.md",
     "equality.qrhl", "example.qrhl", "Example.thy", "rnd.qrhl",
-    "teleport.qrhl", "Teleport.thy", "teleport-bruteforce.qrhl", "Teleport_Bruteforce.thy"
+    "teleport.qrhl", "Teleport.thy", "teleport-terse.qrhl", "Teleport_Terse.thy"
   ).map { f =>
   baseDirectory.value / f -> f
 }

@@ -1,4 +1,4 @@
-isabelle Teleport_Bruteforce.
+isabelle Teleport_Terse.
 
 classical var a : bit.
 classical var c : bit.

@@ -1,4 +1,4 @@
-theory Teleport_Bruteforce
+theory Teleport_Terse
   imports QRHL_Protocol
 begin
 
