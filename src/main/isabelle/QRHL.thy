@@ -51,6 +51,12 @@ lemma supp_uniform [simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longright
   apply transfer apply auto
   using card_gt_0_iff by blast
 
+lemma uniform_infinite: "infinite M \<Longrightarrow> uniform M = 0"
+  apply transfer by auto
+
+lemma uniform_empty: "uniform {} = 0"
+  apply transfer by simp
+
 axiomatization weight :: "'a distr \<Rightarrow> real" where
   weight_pos[simp]: "weight \<mu> \<ge> 0" 
 and weight_leq1[simp]: "weight \<mu> \<le> 1"

@@ -26,21 +26,29 @@ qrhl {Qeq[q1=q2]} call prog1; ~ call prog2; {Qeq[q1=q2]}.
   seq 0 1: quantum_equality_full idOp [[q1]] hadamard [[q2]].
     wp right.
     skip.
-    simp.
+    simp!.
 
   seq 1 1: quantum_equality_full idOp [[q1]] hadamard [[q2]] ⊓ Cla[b1≠b2].
     rnd b,b <- map_distr (λb. (b,b+1)) (uniform UNIV). 
     skip.
-    simp.
+    simp!.
 
   case z := b1.
-  wp left.
-  wp right.
-  simp.
-  skip.
-  casesplit z=0.  
+  casesplit z=0.
+
+    # Case b1=0
+    wp left.
+    wp right.
     simp.
+    skip.
+    simp!.
+
+    # Case b1=1
+    wp left.
+    wp right.
     simp.
+    skip.
+    simp!.
 
 qed.
 
@@ -57,6 +65,6 @@ qrhl {Qeq[q1=q2]} call prog1; ~ call prog2; {Qeq[q1=q2]}.
   wp right.
 
   skip.
-  simp.
+  simp!.
 qed.
 
