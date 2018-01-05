@@ -278,5 +278,5 @@ class State private (val environment: Environment,
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
     boolT=null, predicateT=null, dependencies=Nil, programT=null, currentLemma=None)
-  private[State] val defaultIsabelleTheory = "QRHL_Protocol"
+  private[State] val defaultIsabelleTheory = "QRHL"
 }

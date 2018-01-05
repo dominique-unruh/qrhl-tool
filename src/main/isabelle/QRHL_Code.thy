@@ -1,5 +1,5 @@
 theory QRHL_Code
-  imports QRHL "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Code_Target_Numeral"
+  imports QRHL_Core "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Code_Target_Numeral"
 begin
 
 (* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
