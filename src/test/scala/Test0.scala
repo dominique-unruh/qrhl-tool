@@ -120,7 +120,7 @@ object Test0 {
     val isa = new Isabelle(isabellePath)
 
     try {
-      val ctx = isa.getContextFile("PrgEnc")
+      val ctx = isa.getQRHLContextWithFiles("PrgEnc")
       println(ctx)
     } finally {
       isa.dispose()

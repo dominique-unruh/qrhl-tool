@@ -127,14 +127,19 @@ class Isabelle(path:String) {
 
   def getRef[A: ml.Opaque](expr: ml.Expr[A], thyName: String): ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
 
-  def getContext(thyName: String) =
-    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(Theory.get(thyName)), thyName))
+//  def getContext(thyName: String) =
+//    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(Theory.get(thyName)), thyName))
 
-  def getContextFile(thyName: String): Isabelle.Context = {
-    val use: ml.Expr[String => Theory] =
+  def getQRHLContextWithFiles(thys: String*) : Isabelle.Context = {
+    getContextWithThys(List("HOL-Protocol.Protocol_Main","QRHL.QRHL"), thys)
+  }
+
+  private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
     //      ml.Expr.uncheckedLiteral("(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory (\"Draft.\"^name)))")
-          ml.Expr.uncheckedLiteral("(fn name => Theory.begin_theory (\"Session\",Position.none) [\"HOL-Protocol.Protocol_Main\",\"Draft.\"^name])")
-    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(use(thyName)), "Protocol_Main"))
+    val use: ml.Expr[((List[String],List[String])) => Theory] =
+          ml.Expr.uncheckedLiteral("(fn (files,thys) => (map Thy_Info.use_thy files; Theory.begin_theory (\"QRHL_Session\", Position.none) (map Thy_Info.get_theory thys)))")
+    val allThys = thys.toList ++ files.map("Draft."+_)
+    new Isabelle.Context(this, "QRHL_Session", getRef[IContext](IContext.initGlobal(use((files.toList,allThys))), "Protocol_Main"))
   }
 
   private var disposed = false

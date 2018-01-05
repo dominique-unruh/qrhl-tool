@@ -234,10 +234,10 @@ class State private (val environment: Environment,
   def loadIsabelle(isabelle: Isabelle, theory:Option[String]) : State = {
     val (isa,files) = theory match {
       case None =>
-        (isabelle.getContext(State.defaultIsabelleTheory), dependencies)
+        (isabelle.getQRHLContextWithFiles(), dependencies)
       case Some(thy) =>
         val filename = Paths.get(thy+".thy")
-        (isabelle.getContextFile(thy), new FileTimeStamp(filename) :: dependencies)
+        (isabelle.getQRHLContextWithFiles(thy), new FileTimeStamp(filename) :: dependencies)
     }
     copy(isabelle = Some(isa), boolT = Typ.bool(isa), predicateT=Typ(isa,"QRHL.predicate"), programT=Typ(isa,"QRHL.program"), dependencies=files)
   }
@@ -278,5 +278,5 @@ class State private (val environment: Environment,
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
     boolT=null, predicateT=null, dependencies=Nil, programT=null, currentLemma=None)
-  private[State] val defaultIsabelleTheory = "QRHL"
+//  private[State] val defaultIsabelleTheory = "QRHL"
 }
