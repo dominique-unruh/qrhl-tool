@@ -1360,14 +1360,19 @@ lemma qvariable_extension_hint_bounded[simp]:
 *)
 definition "join_qvariables_hint x (R::'a qvariables) = x"
 
-
 lemma add_join_qvariables_hint: 
-  fixes Q :: "'a qvariables" and R :: "'b qvariables" and A :: "('a,'a) bounded"
+  fixes Q :: "'a qvariables" and R :: "'b qvariables" 
+    and S :: "'a subspace" and T :: "'b subspace"
+    and A :: "('a,'a) bounded" and B :: "('b,'b) bounded"
   shows "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>R = join_qvariables_hint (S\<guillemotright>Q) R \<sqinter> join_qvariables_hint (T\<guillemotright>R) Q"
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>R = join_qvariables_hint (S\<guillemotright>Q) R + join_qvariables_hint (T\<guillemotright>R) Q"
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> A\<guillemotright>Q \<cdot> T\<guillemotright>R = join_qvariables_hint (A\<guillemotright>Q) R \<cdot> join_qvariables_hint (T\<guillemotright>R) Q"
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R \<le> join_qvariables_hint (T\<guillemotright>R) Q)"
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>R) = (join_qvariables_hint (S\<guillemotright>Q) R = join_qvariables_hint (T\<guillemotright>R) Q)"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (A\<guillemotright>Q = B\<guillemotright>R) = (join_qvariables_hint (A\<guillemotright>Q) R = join_qvariables_hint (B\<guillemotright>R) Q)"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (A\<guillemotright>Q + B\<guillemotright>R) = (join_qvariables_hint (A\<guillemotright>Q) R + join_qvariables_hint (B\<guillemotright>R) Q)"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (A\<guillemotright>Q - B\<guillemotright>R) = (join_qvariables_hint (A\<guillemotright>Q) R - join_qvariables_hint (B\<guillemotright>R) Q)"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (A\<guillemotright>Q \<cdot> B\<guillemotright>R) = (join_qvariables_hint (A\<guillemotright>Q) R \<cdot> join_qvariables_hint (B\<guillemotright>R) Q)"
   unfolding join_qvariables_hint_def by simp_all
 
 
