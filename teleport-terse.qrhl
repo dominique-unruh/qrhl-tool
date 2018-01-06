@@ -7,11 +7,6 @@ quantum var A : bit.
 quantum var B : bit.
 quantum var C : bit.
 
-ambient var a' : bit.
-ambient var c' : bit.
-ambient var z : bit.
-ambient var w : bit.
-
 # Program to teleport a qubit from C to B
 program teleport := {
   A,B <q EPR;
@@ -36,8 +31,8 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   wp left.
   skip.
 
-  rule teleport_bruteforce.
-   simp.
+  rule teleport_terse.
+  simp!.
 
 qed.
 

@@ -9,8 +9,6 @@ quantum var C : bit.
 
 ambient var a' : bit.
 ambient var c' : bit.
-ambient var z : bit.
-ambient var w : bit.
 
 # Program to teleport a qubit from C to B
 program teleport := {
@@ -64,7 +62,6 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
  case a':=a1.
 
-
  seq 1 0: Cla[a1=a'] ⊓ (Proj (span {ket c1})»⟦C1⟧ ⋅ Proj (span {ket a1})»⟦A1⟧ ⋅ 
                  quantum_equality_full
                     idOp ⟦C1,A1,B1⟧
@@ -80,12 +77,6 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    simp ! assoc_right.
 
  case c':=c1.
-
- conseq pre: Cla[a1=a' ∧ c1=c'] ⊓ (Proj (span {ket c1})»⟦C1⟧ ⋅ Proj (span {ket a1})»⟦A1⟧ ⋅ 
-                 quantum_equality_full
-                    idOp ⟦C1,A1,B1⟧
-                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧).
-   simp!.
 
  casesplit a'=0.
  casesplit c'=0.

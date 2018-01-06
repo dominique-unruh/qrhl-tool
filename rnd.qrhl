@@ -7,5 +7,5 @@ qrhl {top} x <$ d; ~ x <$ map_distr (λz. z*z) d; { Cla[x1*x1 = x2] }.
   rnd x,x <- map_distr (λz. (z, z*z)) d.
   simp.
   skip.
-  simp.
+  simp!.
 qed.

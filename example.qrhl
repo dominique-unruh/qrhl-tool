@@ -9,9 +9,9 @@ qrhl {Cla[c2 = 4]} call P1; ~ skip; {Cla[c1 = c2]}.
   inline P1.
   wp left.
   skip.
-  simp.
+  simp!.
 qed.
 
 lemma test: 1+1=2.
-  simp.
+  simp!.
 qed.
