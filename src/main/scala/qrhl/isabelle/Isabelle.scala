@@ -3,7 +3,7 @@ package qrhl.isabelle
 import java.io.{BufferedReader, File, IOException, InputStreamReader}
 import java.lang.RuntimeException
 import java.lang.reflect.InvocationTargetException
-import java.nio.file.Paths
+import java.nio.file.{FileSystem, FileSystems, Files, Paths}
 
 import info.hupel.isabelle.{Codec, OfficialPlatform, Platform, Program, System, ml}
 import info.hupel.isabelle.api.{Configuration, Version}
@@ -17,10 +17,11 @@ import org.log4s
 import qrhl.UserException
 
 import scala.collection.mutable
+import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.util.{Left, Right}
+import scala.util.{Left, Random, Right}
 import scala.util.matching.Regex
 
 class Isabelle(path:String) {
@@ -134,12 +135,55 @@ class Isabelle(path:String) {
     getContextWithThys(List("HOL-Protocol.Protocol_Main","QRHL.QRHL"), thys)
   }
 
+//  private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
+//    //      ml.Expr.uncheckedLiteral("(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory (\"Draft.\"^name)))")
+//    val use: ml.Expr[((List[String],List[String])) => Theory] =
+//          ml.Expr.uncheckedLiteral("""(fn (files,thys) => let
+//                            val _ = map Thy_Info.use_thy files
+//                            val thy = Theory.begin_theory ("QRHL_Session", Position.none) (map Thy_Info.get_theory thys)
+//                            val thy = Theory.end_theory thy
+//                            val _ = Thy_Info.register_thy thy
+//                            in thy end)""")
+//    val allThys = thys.toList ++ files.map("Draft."+_)
+//    println(thys,files,allThys)
+//    new Isabelle.Context(this, "QRHL_Session", getRef[IContext](IContext.initGlobal(use((files.toList,allThys))), "Protocol_Main"))
+//  }
+
   private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
-    //      ml.Expr.uncheckedLiteral("(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory (\"Draft.\"^name)))")
-    val use: ml.Expr[((List[String],List[String])) => Theory] =
-          ml.Expr.uncheckedLiteral("(fn (files,thys) => (map Thy_Info.use_thy files; Theory.begin_theory (\"QRHL_Session\", Position.none) (map Thy_Info.get_theory thys)))")
-    val allThys = thys.toList ++ files.map("Draft."+_)
-    new Isabelle.Context(this, "QRHL_Session", getRef[IContext](IContext.initGlobal(use((files.toList,allThys))), "Protocol_Main"))
+    val thyName = "QRHL_Session_Tmp_" + Random.nextInt(1000000000)
+//    val thyFile = Files.createTempFile(FileSystems.getDefault.getPath("."), "QRHL_Session_Tmp_", ".thy")
+    val thyFile = Paths.get(".",thyName + ".thy")
+    thyFile.toFile.deleteOnExit()
+
+//    val thyName = thyFile.getFileName.toString.dropRight(4)
+    println("thyName",thyName)
+    val imports = (thys ++ files).map('"'+_+'"').mkString(" ")
+    println("imports",imports)
+
+    val thyCode = s"""
+      |theory $thyName
+      |  imports $imports
+      |begin
+      |end
+      """.stripMargin
+    println("thyCode",thyCode)
+
+    // Isabelle uses its own path splitting with /, so we can't use the OS's path separator here
+//    val thyDir = thyFile.iterator.asScala.map(_.toString).mkString("/")
+
+    Files.write(thyFile,thyCode.getBytes)
+
+    //    val use: ml.Expr[((String,String)) => Theory] =
+//      ml.Expr.uncheckedLiteral("""(fn (thy_dir,thy_name) => (Thy_Info.use_theories
+//        {document = false, symbols = HTML.no_symbols, last_timing = K Time.zeroTime,
+//        qualifier = Resources.default_qualifier, master_dir = Path.explode thy_dir}
+//        [(thy_name, Position.none)];
+//        Thy_Info.get_theory thy_name))""")
+
+    val use: ml.Expr[String => Theory] =
+      ml.Expr.uncheckedLiteral("""(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory ("Draft."^name)))""")
+
+    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(use(thyName)), "Protocol_Main"))
   }
 
   private var disposed = false

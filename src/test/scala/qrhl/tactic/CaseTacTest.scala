@@ -7,7 +7,7 @@ import qrhl.isabelle.Isabelle
 import qrhl.{QRHLSubgoal, UserException}
 import qrhl.toplevel.{TacticCommand, Toplevel, ToplevelTest}
 
-class CaseTacTest extends FlatSpec {
+class CaseTacTest extends FunSuite {
   def toplevel(): Toplevel = {
     val tl = ToplevelTest.makeToplevel()
     tl.run(
@@ -20,7 +20,7 @@ class CaseTacTest extends FlatSpec {
     tl
   }
 
-  "case tactic" should "work" in {
+  test("works") {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val st = tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(tl.state.boolT, "x1")))
@@ -32,7 +32,7 @@ class CaseTacTest extends FlatSpec {
   }
 
 
-  "case tactic" should "parse" in {
+  test("parse") {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val cmd = tl.state.parseCommand("case y := x1")
@@ -43,7 +43,7 @@ class CaseTacTest extends FlatSpec {
   }
 
 
-  "case tactic" should "fail if the variable has the wrong type" in {
+  test("fail if the variable has the wrong type") {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
@@ -53,7 +53,7 @@ class CaseTacTest extends FlatSpec {
     assert(ex.msg.startsWith("Variable z has type nat, but expression has type bool"))
   }
 
-  "case tactic" should "fail if the variable is reused" in {
+  test("fail if the variable is reused") {
     val tl = toplevel()
     tl.execCmd("qrhl {Cla[y=True]} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
@@ -63,7 +63,7 @@ class CaseTacTest extends FlatSpec {
     assert(ex.msg.startsWith("Variable y already contained in goal"))
   }
 
-  "case tactic" should "fail if the variable is already used in program declaration" in {
+  test("fail if the variable is already used in program declaration") {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
@@ -73,7 +73,7 @@ class CaseTacTest extends FlatSpec {
     assert(ex.msg.startsWith("Variable y2 already used in program P"))
   }
 
-  "case tactic" should "fail if the expression contains unindexed program variables" in {
+  test("fail if the expression contains unindexed program variables") {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[UserException] {

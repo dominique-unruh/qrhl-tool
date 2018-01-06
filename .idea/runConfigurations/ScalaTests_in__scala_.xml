@@ -27,6 +27,8 @@
     <buffered bufClass="qrhl.tactic.WpTacTest" />
     <buffered bufClass="qrhl.toplevel.ToplevelTest" />
     <buffered bufClass="qrhl.toplevel.ToplevelTest" />
-    <method />
+    <method>
+      <option name="Make" enabled="false" />
+    </method>
   </configuration>
 </component>
