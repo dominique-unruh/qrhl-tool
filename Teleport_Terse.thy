@@ -1,5 +1,5 @@
 theory Teleport_Terse
-  imports QRHL_Protocol
+  imports QRHL
 begin
 
 lemma teleport_bruteforce:

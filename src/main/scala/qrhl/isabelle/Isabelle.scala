@@ -151,14 +151,13 @@ class Isabelle(path:String) {
 
   private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
     val thyName = "QRHL_Session_Tmp_" + Random.nextInt(1000000000)
-//    val thyFile = Files.createTempFile(FileSystems.getDefault.getPath("."), "QRHL_Session_Tmp_", ".thy")
+//    println("thyName",thyName)
+
     val thyFile = Paths.get(".",thyName + ".thy")
     thyFile.toFile.deleteOnExit()
 
-//    val thyName = thyFile.getFileName.toString.dropRight(4)
-    println("thyName",thyName)
     val imports = (thys ++ files).map('"'+_+'"').mkString(" ")
-    println("imports",imports)
+//    println("imports",imports)
 
     val thyCode = s"""
       |theory $thyName
@@ -166,19 +165,9 @@ class Isabelle(path:String) {
       |begin
       |end
       """.stripMargin
-    println("thyCode",thyCode)
-
-    // Isabelle uses its own path splitting with /, so we can't use the OS's path separator here
-//    val thyDir = thyFile.iterator.asScala.map(_.toString).mkString("/")
+//    println("thyCode",thyCode)
 
     Files.write(thyFile,thyCode.getBytes)
-
-    //    val use: ml.Expr[((String,String)) => Theory] =
-//      ml.Expr.uncheckedLiteral("""(fn (thy_dir,thy_name) => (Thy_Info.use_theories
-//        {document = false, symbols = HTML.no_symbols, last_timing = K Time.zeroTime,
-//        qualifier = Resources.default_qualifier, master_dir = Path.explode thy_dir}
-//        [(thy_name, Position.none)];
-//        Thy_Info.get_theory thy_name))""")
 
     val use: ml.Expr[String => Theory] =
       ml.Expr.uncheckedLiteral("""(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory ("Draft."^name)))""")
@@ -213,12 +202,12 @@ object Isabelle {
     case Nil => HOLogic.True
   }
 
-  val predicateT = Type("QRHL.subspace", List(Type("QRHL.mem2",Nil)))
-  val classical_subspace = Const("QRHL.classical_subspace", HOLogic.boolT -->: predicateT)
+  val predicateT = Type("QRHL_Core.subspace", List(Type("QRHL_Core.mem2",Nil)))
+  val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
-  def distrT(typ:ITyp): Type = Type("QRHL.distr", List(typ))
+  def distrT(typ:ITyp): Type = Type("QRHL_Core.distr", List(typ))
 
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b

@@ -131,7 +131,7 @@ final case class QInit(location:List[QVariable], expression:Expression) extends 
   override def toString: String = s"${location.map(_.name).mkString(",")} <q $expression;"
 
   override def checkWelltyped(): Unit = {
-    val expected = pure.Type("QRHL.vector",List(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
+    val expected = pure.Type("QRHL_Core.vector",List(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
     expression.checkWelltyped(expected)
   }
 }
@@ -141,7 +141,7 @@ final case class QApply(location:List[QVariable], expression:Expression) extends
 
   override def checkWelltyped(): Unit = {
     val varType = Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)
-    val expected = pure.Type("QRHL.isometry",List(varType,varType))
+    val expected = pure.Type("QRHL_Core.bounded",List(varType,varType))
     expression.checkWelltyped(expected)
 
   }
@@ -151,7 +151,7 @@ final case class Measurement(result:CVariable, location:List[QVariable], e:Expre
   override def toString: String = s"${result.name} <- measure ${location.map(_.name).mkString(",")} in $e;"
 
   override def checkWelltyped(): Unit = {
-    val expected = pure.Type("QRHL.measurement",List(result.isabelleTyp, Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
+    val expected = pure.Type("QRHL_Core.measurement",List(result.isabelleTyp, Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
     e.checkWelltyped(expected)
   }
 }

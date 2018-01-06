@@ -24,7 +24,7 @@ case class QVariable(name:String, typ: Typ) extends Variable {
   override def index2: QVariable = QVariable(Variable.index2(name),typ)
   override def index(left:Boolean): QVariable = if (left) index1 else index2
 
-  override def isabelleTyp: pure.Typ = pure.Type("QRHL.qvariable",List(typ.isabelleTyp))
+  override def isabelleTyp: pure.Typ = pure.Type("QRHL_Core.qvariable",List(typ.isabelleTyp))
 }
 case class CVariable(name:String, typ: Typ) extends Variable {
   override def index1: CVariable = CVariable(Variable.index1(name),typ)

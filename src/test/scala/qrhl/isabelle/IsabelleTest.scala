@@ -6,7 +6,7 @@ import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 
 class IsabelleTest extends FunSuite {
-  ignore("wrong path") {
+  test("wrong path") {
     assertThrows[UserException] {
       new Isabelle("/tmp/xxx")
     }

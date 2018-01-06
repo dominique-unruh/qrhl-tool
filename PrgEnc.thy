@@ -1,5 +1,5 @@
 theory PrgEnc
-  imports QRHL_Protocol
+  imports QRHL
 begin
 
 (* Allows us to use "sorry" *)

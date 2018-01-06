@@ -69,7 +69,7 @@ object Parser extends RegexParsers {
          // TODO: add a cut
          typ = context.environment.cVariables.
            getOrElse(v, throw UserException(s"Undefined variable $v")).typ;
-         e <- expression(Typ.typeCon("QRHL.distr",typ));
+         e <- expression(Typ.typeCon("QRHL_Core.distr",typ));
          _ <- statementSeparator)
       yield Sample(context.environment.cVariables(v), e)
 
@@ -88,7 +88,7 @@ object Parser extends RegexParsers {
          _ = assert(vs.nonEmpty);
          _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
          qvs = vs.map { context.environment.qVariables(_) };
-         typ = Typ(context.isabelle.get, IType("QRHL.vector",List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
+         typ = Typ(context.isabelle.get, IType("QRHL_Core.vector",List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
          e <- expression(typ);
          _ <- statementSeparator)
       yield QInit(qvs,e)
@@ -100,7 +100,7 @@ object Parser extends RegexParsers {
            _ = assert(vs.nonEmpty);
            _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
            qvs = vs.map { context.environment.qVariables(_) };
-           typ = Typ(context.isabelle.get, IType("QRHL.bounded",
+           typ = Typ(context.isabelle.get, IType("QRHL_Core.bounded",
              List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*),
                   Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
            e <- expression(typ);
@@ -116,7 +116,7 @@ object Parser extends RegexParsers {
          resv = context.environment.cVariables(res);
          qvs = vs.map { context.environment.qVariables(_) };
          _ <- literal("with");
-         etyp = Typ(context.isabelle.get, IType("QRHL.measurement",
+         etyp = Typ(context.isabelle.get, IType("QRHL_Core.measurement",
            List(resv.isabelleTyp, Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))
          ));
          e <- expression(etyp);

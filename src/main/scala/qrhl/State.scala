@@ -239,7 +239,7 @@ class State private (val environment: Environment,
         val filename = Paths.get(thy+".thy")
         (isabelle.getQRHLContextWithFiles(thy), new FileTimeStamp(filename) :: dependencies)
     }
-    copy(isabelle = Some(isa), boolT = Typ.bool(isa), predicateT=Typ(isa,"QRHL.predicate"), programT=Typ(isa,"QRHL.program"), dependencies=files)
+    copy(isabelle = Some(isa), boolT = Typ.bool(isa), predicateT=Typ(isa,"QRHL_Core.predicate"), programT=Typ(isa,"QRHL_Core.program"), dependencies=files)
   }
 
   def filesChanged : List[Path] = {
@@ -256,7 +256,7 @@ class State private (val environment: Environment,
     if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = isabelle.get
     val typ1 = typ.isabelleTyp
-    val typ2 = if (quantum) Type("QRHL.qvariable",List(typ1)) else typ1
+    val typ2 = if (quantum) Type("QRHL_Core.qvariable",List(typ1)) else typ1
     var newIsa = isa.declareVariable(name, typ2)
       .declareVariable(Variable.index1(name), typ2)
       .declareVariable(Variable.index2(name), typ2)

@@ -11,14 +11,14 @@ import qrhl.logic._
 case object ByQRHLTac extends Tactic {
   object Probability {
     def unapply(term: pure.Term): Option[(pure.Term,pure.Term,pure.Term)] = term match {
-      case App(App(App(Const("QRHL.probability",_),v),p),rho) => Some(v,p,rho)
+      case App(App(App(Const("QRHL_Core.probability",_),v),p),rho) => Some(v,p,rho)
       case _ => None
     }
 
   }
 
   private val connectiveT = Type("HOL.bool",Nil) -->: Type("HOL.bool",Nil) -->: Type("HOL.bool",Nil)
-  private def bitToBool(b:Term) = Isabelle.mk_eq(Type("QRHL.bit",Nil), b, Const("Groups.one_class.one", Type("QRHL.bit",Nil)))
+  private def bitToBool(b:Term) = Isabelle.mk_eq(Type("QRHL_Core.bit",Nil), b, Const("Groups.one_class.one", Type("QRHL_Core.bit",Nil)))
 
 //  def mkCEquality(cvars: List[CVariable]) : Term =
 //    Isabelle.mk_conjs((for (c<-cvars)
@@ -51,13 +51,13 @@ case object ByQRHLTac extends Tactic {
 
       val v1bool = v1var.typ.isabelleTyp match {
         case Type("HOL.bool",Nil) => v1var.isabelleTerm
-        case Type("QRHL.bit",Nil) => bitToBool(v1var.isabelleTerm)
+        case Type("QRHL_Core.bit",Nil) => bitToBool(v1var.isabelleTerm)
         case _ => throw UserException(s"$v1name must have type bool or bit, not ${v1var.typ}")
       }
 
       val v2bool = v2var.typ.isabelleTyp match {
         case Type("HOL.bool",Nil) => v2var.isabelleTerm
-        case Type("QRHL.bit",Nil) => bitToBool(v2var.isabelleTerm)
+        case Type("QRHL_Core.bit",Nil) => bitToBool(v2var.isabelleTerm)
         case _ => throw UserException(s"$v2name must have type bool or bit, not ${v2var.typ}")
       }
 
