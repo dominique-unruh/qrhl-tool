@@ -1,5 +1,5 @@
 session QRHL = "QRHL-Prerequisites" +
-  theories QRHL_Protocol
+  theories QRHL "HOL-Protocol.Protocol_Main"
 
 session "QRHL-Prerequisites" = "HOL-Library" +
   sessions "HOL-Protocol" "Jordan_Normal_Form"
