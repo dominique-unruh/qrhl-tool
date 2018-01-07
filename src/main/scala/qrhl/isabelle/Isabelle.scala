@@ -136,7 +136,7 @@ class Isabelle(path:String, build:Boolean= !sys.env.contains("QRHL_SKIP_BUILD"))
 //    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(Theory.get(thyName)), thyName))
 
   def getQRHLContextWithFiles(thys: String*) : Isabelle.Context = {
-    getContextWithThys(List("QRHL.QRHL_Operations","QRHL.QRHL"), thys)
+    getContextWithThys(List("QRHL.QRHL_Operations","QRHL.QRHL"), thys.toList)
   }
 
 //  private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
@@ -153,7 +153,7 @@ class Isabelle(path:String, build:Boolean= !sys.env.contains("QRHL_SKIP_BUILD"))
 //    new Isabelle.Context(this, "QRHL_Session", getRef[IContext](IContext.initGlobal(use((files.toList,allThys))), "Protocol_Main"))
 //  }
 
-  private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
+/*  private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
     val thyName = "QRHL_Session_Tmp_" + Random.nextInt(1000000000)
 //    println("thyName",thyName)
 
@@ -182,8 +182,14 @@ class Isabelle(path:String, build:Boolean= !sys.env.contains("QRHL_SKIP_BUILD"))
 //    val ctxId = ctxRef.id
 
     new Isabelle.Context(this, ctxId)
-  }
+  }*/
 
+  private def getContextWithThys(thys: List[String], files: List[String]): Isabelle.Context = {
+    invoke(Operation.UseThys, files)
+    val imports = thys ::: files.map("Draft."+_)
+    val ctxId = invoke(Isabelle.createContextOp, imports)
+    new Isabelle.Context(this, ctxId)
+  }
 
   private var disposed = false
 
@@ -221,7 +227,7 @@ object Isabelle {
   def distrT(typ:ITyp): Type = Type("QRHL_Core.distr", List(typ))
 
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
-  val createContextOp: Operation[String, BigInt] = Operation.implicitly[String,BigInt]("create_context")
+  val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")
   val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_context")
   val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt,Term),String]("print_term")
   val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
