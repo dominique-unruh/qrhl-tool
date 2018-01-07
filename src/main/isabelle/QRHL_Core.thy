@@ -1538,19 +1538,22 @@ axiomatization where colocal_quantum_eq[simp]: "distinct_qvars (qvariable_concat
 axiomatization where applyOpSpace_colocal[simp]:
   "colocal U S \<Longrightarrow> U\<noteq>0 \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) bounded" and S :: predicate
 
-axiomatization where qeq_collect:
+lemma qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idOp Q2"
-for U :: "('a,'b) bounded" and V :: "('c,'b) bounded"
+ for U :: "('a,'b) bounded" and V :: "('c,'b) bounded"
+  unfolding quantum_equality_full_def by auto
 
 lemma qeq_collect_guarded[simp]:
   assumes "NO_MATCH idOp V"
   shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idOp Q2"
-  using qeq_collect by auto
+  by (fact qeq_collect)
 
+(* Proof in paper *)
 axiomatization where Qeq_mult1[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
  for U::"('a,'a) bounded" and U2 :: "('b,'c) bounded"  
 
+(* Proof in paper *)
 axiomatization where Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
  for U::"('a,'a) bounded" and U1 :: "('b,'c) bounded"  
