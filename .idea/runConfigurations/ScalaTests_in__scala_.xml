@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ScalaTests in 'scala'" type="ScalaTestRunConfiguration" factoryName="ScalaTest" nameIsGenerated="true">
+  <configuration default="false" name="ScalaTests in 'scala'" type="ScalaTestRunConfiguration" factoryName="ScalaTest" singleton="true" nameIsGenerated="true">
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
     <module name="qrhl-tool" />
     <setting name="path" value="" />
@@ -27,8 +27,6 @@
     <buffered bufClass="qrhl.tactic.WpTacTest" />
     <buffered bufClass="qrhl.toplevel.ToplevelTest" />
     <buffered bufClass="qrhl.toplevel.ToplevelTest" />
-    <method>
-      <option name="Make" enabled="false" />
-    </method>
+    <method />
   </configuration>
 </component>

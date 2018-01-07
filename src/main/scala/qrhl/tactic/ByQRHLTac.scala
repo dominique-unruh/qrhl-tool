@@ -2,8 +2,7 @@ package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Free, Term, Type}
-import info.hupel.isabelle.pure
-import info.hupel.isabelle.ml
+import info.hupel.isabelle.{Operation, ml, pure}
 import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -20,7 +19,9 @@ case object ByQRHLTac extends Tactic {
   private val connectiveT = Type("HOL.bool",Nil) -->: Type("HOL.bool",Nil) -->: Type("HOL.bool",Nil)
   private def bitToBool(b:Term) = Isabelle.mk_eq(Type("QRHL_Core.bit",Nil), b, Const("Groups.one_class.one", Type("QRHL_Core.bit",Nil)))
 
-//  def mkCEquality(cvars: List[CVariable]) : Term =
+  val byQRHLPreOp: Operation[(List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), Term] = Operation.implicitly[(List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), Term]("byQRHLPre") // TODO: move
+
+  //  def mkCEquality(cvars: List[CVariable]) : Term =
 //    Isabelle.mk_conjs((for (c<-cvars)
 //      yield Isabelle.mk_eq(c.typ.isabelleTyp, c.index1.isabelleTerm, c.index2.isabelleTerm)) : _*)
 //
@@ -72,14 +73,17 @@ case object ByQRHLTac extends Tactic {
       val cvars = (cvars1 ++ cvars2).distinct
       val qvars = (qvars1 ++ qvars2).distinct
 
-      val lit = ml.Expr.uncheckedLiteral[List[(String,String,pure.Typ)] => List[(String,String,pure.Typ)] => Term]("QRHL.byQRHLPre")
-      val mlExpr = (lit(cvars.map(v => (v.index1.name, v.index2.name, v.typ.isabelleTyp)))(implicitly)
-                       (qvars.map(v => (v.index1.name, v.index2.name, v.typ.isabelleTyp)))(implicitly))
-
+//      val lit = ml.Expr.uncheckedLiteral[List[(String,String,pure.Typ)] => List[(String,String,pure.Typ)] => Term]("QRHL.byQRHLPre")
+//      val mlExpr = (lit(cvars.map(v => (v.index1.name, v.index2.name, v.typ.isabelleTyp)))(implicitly)
+//                       (qvars.map(v => (v.index1.name, v.index2.name, v.typ.isabelleTyp)))(implicitly))
       val isa = state.isabelle.get
+      val preTerm = isa.isabelle.invoke(byQRHLPreOp,
+        (cvars.map(v => (v.index1.name, v.index2.name, v.typ.isabelleTyp)),
+         qvars.map(v => (v.index1.name, v.index2.name, v.typ.isabelleTyp))))
+
       val left = Block(Call(p1name))
       val right = Block(Call(p2name))
-      val pre = Expression(isa, state.predicateT, isa.runExpr(mlExpr))
+      val pre = Expression(isa, state.predicateT, preTerm)
       val post = Expression(isa, state.predicateT, Isabelle.classical_subspace $ (connective $ v1bool $ v2bool))
 
       List(QRHLSubgoal(left,right,pre,post,Nil))

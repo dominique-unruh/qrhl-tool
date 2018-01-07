@@ -10,14 +10,18 @@ import qrhl.toplevel.Toplevel.runFromTerminal
 object Main {
   class CLIConf(args: Seq[String]) extends ScallopConf(args) {
     val isabelle: ScallopOption[String] = opt[String]()
+    val rebuild : ScallopOption[Boolean] = toggle()
     val file: ScallopOption[String] = trailArg[String](required=false)
   }
 
   def main(args: Array[String]): Unit = {
     val conf = new CLIConf(args)
     conf.verify()
-    if (conf.isabelle.supplied) {
-      val isabelle = new Isabelle(conf.isabelle.toOption.get)
+    if (conf.rebuild.getOrElse(false)) {
+      val isabelle = new Isabelle("auto", build=true)
+      isabelle.dispose()
+    } else if (conf.isabelle.supplied) {
+      val isabelle = new Isabelle(conf.isabelle.toOption.get, build=true)
       isabelle.runJEdit(if (conf.file.supplied) List(conf.file.toOption.get) else Nil)
       isabelle.dispose()
     } else if (conf.file.isDefined) {

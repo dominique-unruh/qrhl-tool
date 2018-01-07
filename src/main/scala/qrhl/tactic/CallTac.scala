@@ -1,8 +1,8 @@
 package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.ml
-import info.hupel.isabelle.pure
+import info.hupel.isabelle.pure.Term
+import info.hupel.isabelle.{Operation, ml, pure}
 import qrhl.logic.{Call, Expression, Statement}
 import qrhl.{State, Tactic, UserException}
 
@@ -21,12 +21,17 @@ case object CallTac extends WpBothStyleTac() {
 //        if (forbidden.contains(v))
 //          throw UserException(s"Postcondition must not contain variable $v (used by program $prog)")
 
-      val lit = ml.Expr.uncheckedLiteral[List[pure.Term] => List[pure.Term] => List[pure.Term] => List[pure.Term]
-                          => pure.Term => (pure.Term,pure.Term)]("QRHL.callWp")
-      val mlExpr = (lit(cvarsIdx1.map(_.isabelleTerm))(implicitly) (cvarsIdx2.map(_.isabelleTerm))(implicitly)
-                       (qvarsIdx1.map(_.isabelleTerm))(implicitly) (qvarsIdx2.map(_.isabelleTerm))(implicitly)
-                       (post.isabelleTerm))
-      val (wp,colocality) = post.isabelle.runExpr(mlExpr)
+//      val lit = ml.Expr.uncheckedLiteral[List[pure.Term] => List[pure.Term] => List[pure.Term] => List[pure.Term]
+//                          => pure.Term => (pure.Term,pure.Term)]("QRHL.callWp")
+//      val mlExpr = (lit(cvarsIdx1.map(_.isabelleTerm))(implicitly) (cvarsIdx2.map(_.isabelleTerm))(implicitly)
+//                       (qvarsIdx1.map(_.isabelleTerm))(implicitly) (qvarsIdx2.map(_.isabelleTerm))(implicitly)
+//                       (post.isabelleTerm))
+//      val (wp,colocality) = post.isabelle.runExpr(mlExpr)
+      val (wp, colocality) = state.isabelle.get.isabelle.invoke(callWpOp,
+           ((cvarsIdx1.map(_.isabelleTerm), cvarsIdx2.map(_.isabelleTerm),
+            qvarsIdx1.map(_.isabelleTerm)), (qvarsIdx2.map(_.isabelleTerm),
+            post.isabelleTerm)))
+
 
 //      for (v <- varsInPost)
 //        if (forbidden.contains(v)) {
@@ -41,4 +46,7 @@ case object CallTac extends WpBothStyleTac() {
       (wp2,List(colocality2))
     case _ => throw UserException("Expected a call statement as last statement on both sides")
   }
+
+  val callWpOp: Operation[((List[Term], List[Term], List[Term]), (List[Term], Term)), (Term, Term)] =
+    Operation.implicitly[((List[pure.Term], List[pure.Term], List[pure.Term]), (List[pure.Term], pure.Term)), (pure.Term, pure.Term)]("callWp")
 }

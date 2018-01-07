@@ -2,8 +2,8 @@ package qrhl
 
 import java.nio.file.{Files, Path, Paths}
 
+import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.ml
 import info.hupel.isabelle.pure.{Type, Context => IContext, Typ => ITyp}
 import org.log4s
 import qrhl.isabelle.Isabelle
@@ -69,13 +69,13 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
   override def toExpression: Expression = Expression.trueExp(pre.isabelle)
 
   /** Not including ambient vars in nested programs (via Call) */
-  override def containsAmbientVar(x: String) = {
+  override def containsAmbientVar(x: String): Boolean = {
     pre.variables.contains(x) || post.variables.contains(x) ||
       left.variablesDirect.contains(x) || right.variablesDirect.contains(x) ||
       assumptions.exists(_.variables.contains(x))
   }
 
-  override def addAssumption(assm: Expression) = {
+  override def addAssumption(assm: Expression): QRHLSubgoal = {
     assert(assm.typ.isabelleTyp==HOLogic.boolT)
     QRHLSubgoal(left,right,pre,post,assm::assumptions)
   }
@@ -206,7 +206,7 @@ class State private (val environment: Environment,
   lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT, predicateT = predicateT)
 
   def parseCommand(str:String): Command = {
-    implicit val parserContext = this.parserContext
+    implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.command,str) match {
       case Parser.Success(cmd2,_) => cmd2
       case res @ Parser.NoSuccess(msg, _) =>
@@ -215,7 +215,7 @@ class State private (val environment: Environment,
   }
 
   def parseExpression(typ:Typ, str:String): Expression = {
-    implicit val parserContext = this.parserContext
+    implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.expression(typ),str) match {
       case Parser.Success(cmd2,_) => cmd2
       case res @ Parser.NoSuccess(msg, _) =>
@@ -247,8 +247,10 @@ class State private (val environment: Environment,
   }
 
   private def addQVariableNameAssumption(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
-    val mlExpr = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext]("QRHL.addQVariableNameAssumption")
-    isabelle.map(mlExpr(name)(implicitly)(typ))
+//    val mlExpr = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext]("QRHL.addQVariableNameAssumption")
+//    isabelle.map(mlExpr(name)(implicitly)(typ))
+
+    isabelle.map(id => isabelle.isabelle.invoke(State.addQVariableNameAssumptionOp, (name,typ,id)))
   }
 
   def declareVariable(name: String, typ: Typ, quantum: Boolean = false): State = {
@@ -279,4 +281,7 @@ object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
     boolT=null, predicateT=null, dependencies=Nil, programT=null, currentLemma=None)
 //  private[State] val defaultIsabelleTheory = "QRHL"
+
+  val addQVariableNameAssumptionOp: Operation[(String, ITyp, BigInt), BigInt] =
+    Operation.implicitly[(String,ITyp,BigInt), BigInt]("addQVariableNameAssumption")
 }

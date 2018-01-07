@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.Term
-import info.hupel.isabelle.{ml, pure}
+import info.hupel.isabelle.{Operation, ml, pure}
 import qrhl._
 import qrhl.logic.{Expression, Typ}
 
@@ -22,9 +22,10 @@ case class FixTac(variable:String) extends Tactic {
       val varTyp = state.environment.ambientVariables.getOrElse(variable,
         throw UserException(s"$variable is not an ambient variable"))
 
-      val lit = ml.Expr.uncheckedLiteral[Term => String => (Term,pure.Typ)]("QRHL.fixTac")
-      val mlExpr = lit(expr.isabelleTerm)(implicitly) (variable)
-      val (result,varTyp2) = state.isabelle.get.runExpr(mlExpr)
+//      val lit = ml.Expr.uncheckedLiteral[Term => String => (Term,pure.Typ)]("QRHL.fixTac")
+//      val mlExpr = lit(expr.isabelleTerm)(implicitly) (variable)
+//      val (result,varTyp2) = state.isabelle.get.runExpr(mlExpr)
+      val (result,varTyp2) = state.isabelle.get.isabelle.invoke(fixTacOp, (expr.isabelleTerm, variable))
       val varTyp3 = Typ(state.isabelle.get, varTyp2)
 
       if (varTyp!=varTyp3)
@@ -32,4 +33,6 @@ case class FixTac(variable:String) extends Tactic {
 
       List(AmbientSubgoal(Expression(state.isabelle.get, state.predicateT, result)))
   }
+
+  val fixTacOp: Operation[(Term, String), (Term, pure.Typ)] = Operation.implicitly[(Term,String), (Term,pure.Typ)]("fixTac")
 }

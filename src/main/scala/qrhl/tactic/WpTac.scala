@@ -1,9 +1,9 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.ml.Expr
-import info.hupel.isabelle.pure.{Term, Typ=>ITyp}
-import qrhl.{State, UserException}
+import info.hupel.isabelle.Operation
+import info.hupel.isabelle.pure.{Term, Typ => ITyp}
 import qrhl.logic._
+import qrhl.{State, UserException}
 
 case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
   override def toString: String = s"wp(${if (left) "left" else "right"})"
@@ -19,9 +19,13 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val e1 = e.index(env, left=left)
       val x1 = x.index(left=left)
 
-      val ml = Expr.uncheckedLiteral[String => ITyp => Term => Term => Term]("QRHL.sampleWp")
-      val wpExpr = ml(x1.name)(implicitly) (x1.typ.isabelleTyp)(implicitly) (e1.isabelleTerm)(implicitly) (post.isabelleTerm)
-      val wp = post.isabelle.runExpr(wpExpr)
+//      val ml = Expr.uncheckedLiteral[String => ITyp => Term => Term => Term]("QRHL.sampleWp")
+//      val wpExpr = ml(x1.name)(implicitly) (x1.typ.isabelleTyp)(implicitly) (e1.isabelleTerm)(implicitly) (post.isabelleTerm)
+//      val wp = post.isabelle.runExpr(wpExpr)
+
+      val wp = isabelle.isabelle.invoke(WpTac.sampleWpOp,
+        ((x1.name,x1.typ.isabelleTyp),(e1.isabelleTerm,post.isabelleTerm)))
+
       Expression(post.isabelle, state.predicateT, wp)
 
     case QApply(vs,e) =>
@@ -29,9 +33,13 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val e1 = e.index(env,left=left)
       val vs2 = vs.map(_.index(left=left))
 
-      val ml = Expr.uncheckedLiteral[Term => Term => List[Term] => Term]("QRHL.qapplyWp")
-      val wpExpr = ml(post.isabelleTerm)(implicitly) (e1.isabelleTerm)(implicitly) (vs2.map(_.isabelleTerm))
-      val wp = post.isabelle.runExpr(wpExpr)
+//      val ml = Expr.uncheckedLiteral[Term => Term => List[Term] => Term]("QRHL.qapplyWp")
+//      val wpExpr = ml(post.isabelleTerm)(implicitly) (e1.isabelleTerm)(implicitly) (vs2.map(_.isabelleTerm))
+//      val wp = post.isabelle.runExpr(wpExpr)
+
+      val wp = post.isabelle.isabelle.invoke(WpTac.qapplyWpOp,
+        (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.isabelleTerm)))
+
       Expression(post.isabelle, state.predicateT, wp)
 
     case Measurement(x,q,e) =>
@@ -40,12 +48,16 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val q1 = q.map(_.index(left=left))
       val x1 = x.index(left=left)
 
-      val ml = Expr.uncheckedLiteral[Term => Term => Term => List[Term] => Term]("QRHL.measureWp")
-      val wpExpr = (ml(post.isabelleTerm)(implicitly)
-                      (x1.isabelleTerm)(implicitly)
-                      (e1.isabelleTerm)(implicitly)
-                      (q1.map(_.isabelleTerm)))
-      val wp = post.isabelle.runExpr(wpExpr)
+//      val ml = Expr.uncheckedLiteral[Term => Term => Term => List[Term] => Term]("QRHL.measureWp")
+//      val wpExpr = (ml(post.isabelleTerm)(implicitly)
+//                      (x1.isabelleTerm)(implicitly)
+//                      (e1.isabelleTerm)(implicitly)
+//                      (q1.map(_.isabelleTerm)))
+//      val wp = post.isabelle.runExpr(wpExpr)
+
+      val wp = post.isabelle.isabelle.invoke(WpTac.measureWpOp,
+        ((post.isabelleTerm, x1.isabelleTerm), (e1.isabelleTerm, q1.map(_.isabelleTerm))))
+
       Expression(post.isabelle, state.predicateT, wp)
 
     case QInit(vs,e) =>
@@ -53,9 +65,13 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val e1 = e.index(env,left=left)
       val vs2 = vs.map(_.index(left=left))
 
-      val ml = Expr.uncheckedLiteral[Term => Term => List[Term] => Term]("QRHL.qinitWp")
-      val wpExpr = ml(post.isabelleTerm)(implicitly) (e1.isabelleTerm)(implicitly) (vs2.map(_.isabelleTerm))
-      val wp = state.isabelle.get.runExpr(wpExpr)
+//      val ml = Expr.uncheckedLiteral[Term => Term => List[Term] => Term]("QRHL.qinitWp")
+//      val wpExpr = ml(post.isabelleTerm)(implicitly) (e1.isabelleTerm)(implicitly) (vs2.map(_.isabelleTerm))
+//      val wp = state.isabelle.get.runExpr(wpExpr)
+
+      val wp = state.isabelle.get.isabelle.invoke(WpTac.qinitWpOp,
+        (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.isabelleTerm)))
+
       Expression(state.isabelle.get, state.predicateT, wp)
 
     case IfThenElse(e,thenBranch,elseBranch) =>
@@ -63,9 +79,13 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val elseWp = getWP(state, elseBranch.statements, post)
       val e1 = e.index(state.environment, left=left)
 
-      val ml = Expr.uncheckedLiteral[Term => Term => Term => Term]("QRHL.ifWp")
-      val wpExpr = ml(e1.isabelleTerm)(implicitly)  (thenWp.isabelleTerm)(implicitly)  (elseWp.isabelleTerm)
-      val wp = state.isabelle.get.runExpr(wpExpr)
+//      val ml = Expr.uncheckedLiteral[Term => Term => Term => Term]("QRHL.ifWp")
+//      val wpExpr = ml(e1.isabelleTerm)(implicitly)  (thenWp.isabelleTerm)(implicitly)  (elseWp.isabelleTerm)
+//      val wp = state.isabelle.get.runExpr(wpExpr)
+
+      val wp = state.isabelle.get.isabelle.invoke(WpTac.ifWpOp,
+        (e1.isabelleTerm, thenWp.isabelleTerm, elseWp.isabelleTerm))
+
       Expression(state.isabelle.get, state.predicateT, wp)
 
     case _ => throw UserException(s"""statement "$statement" unsupported by WpTac""")
@@ -74,4 +94,17 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
   def getWP(state: State, statements: Seq[Statement], post: Expression): Expression = {
     statements.foldRight(post) { (statement,wp) => getWP(state,statement,post) }
   }
+}
+
+object WpTac {
+  val sampleWpOp: Operation[((String, ITyp), (Term, Term)), Term] =
+    Operation.implicitly[((String,ITyp), (Term, Term)), Term]("sampleWp")
+  val qapplyWpOp: Operation[(Term, Term, List[Term]), Term] =
+    Operation.implicitly[(Term,Term,List[Term]), Term]("qapplyWp")
+  val measureWpOp: Operation[((Term, Term), (Term, List[Term])), Term] =
+    Operation.implicitly[((Term, Term), (Term,List[Term])), Term]("measureWp")
+  val qinitWpOp: Operation[(Term, Term, List[Term]), Term] =
+    Operation.implicitly[(Term,Term,List[Term]), Term]("qinitWp")
+  val ifWpOp: Operation[(Term, Term, Term), Term] =
+    Operation.implicitly[(Term,Term,Term), Term]("ifWp")
 }

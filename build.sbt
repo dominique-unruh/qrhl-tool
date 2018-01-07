@@ -12,6 +12,8 @@ version := "0.2alpha"
 
 scalaVersion := "2.12.4"
 
+scalacOptions += "-deprecation"
+
 enablePlugins(LibisabellePlugin)
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6"

@@ -1,30 +1,27 @@
 package qrhl.isabelle
 
-import java.io.{BufferedReader, File, IOException, InputStreamReader}
-import java.lang.RuntimeException
-import java.lang.reflect.InvocationTargetException
-import java.nio.file.{FileSystem, FileSystems, Files, Paths}
+import java.io.{BufferedReader, IOException, InputStreamReader}
+import java.nio.file.{Files, Paths}
 
-import info.hupel.isabelle.{Codec, OfficialPlatform, Platform, Program, System, ml}
 import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.ml.Expr
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Type, Var, Context => IContext, Typ => ITyp}
+import info.hupel.isabelle.ml.{Expr, Ref}
+import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Context => IContext, Typ => ITyp}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resources, Setup}
+import info.hupel.isabelle.{Codec, OfficialPlatform, Operation, Platform, Program, System, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
 
 import scala.collection.mutable
-import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.util.{Left, Random, Right}
 import scala.util.matching.Regex
+import scala.util.{Left, Random, Right}
 
-class Isabelle(path:String) {
+class Isabelle(path:String, build:Boolean= !sys.env.contains("QRHL_SKIP_BUILD")) {
   val version = Version.Stable("2017")
 
   private val auto = path=="auto"
@@ -83,56 +80,63 @@ class Isabelle(path:String) {
 
   private val config: Configuration = Configuration.simple("QRHL")
 
-  private def build() {
+  private def doBuild() {
     println("*** Building Isabelle (may take a while, especially the first time, e.g., 10-25min)...")
     if (!System.build(environment, config))
       throw qrhl.UserException("Building Isabelle failed")
   }
 
   private val system = {
-    build(); Await.result(System.create(environment, config), Duration.Inf)
+    if (build) doBuild()
+    else println("*** Warning: skipping build ***")
+    Await.result(System.create(environment, config), Duration.Inf)
   }
 
 
-  private val readTypeExpr: ml.Expr[IContext => String => ITyp] =
-    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.read_typ ctxt))")
+//  private val readTypeExpr: ml.Expr[IContext => String => ITyp] =
+//    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.read_typ ctxt))")
 
-  private def printTypExpr(t: ITyp): ml.Expr[IContext => String] =
-    ml.Expr.uncheckedLiteral[ITyp => IContext => String]("(fn T => fn ctxt => YXML.content_of (Syntax.string_of_typ ctxt T))")(t)
+//  private def printTypExpr(t: ITyp): ml.Expr[IContext => String] =
+//    ml.Expr.uncheckedLiteral[ITyp => IContext => String]("(fn T => fn ctxt => YXML.content_of (Syntax.string_of_typ ctxt T))")(t)
 
-  private val parseTermExpr: ml.Expr[IContext => String => Term] =
-    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.parse_term ctxt))")
+//  private val parseTermExpr: ml.Expr[IContext => String => Term] =
+//    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.parse_term ctxt))")
 
-  private val checkTermExpr: ml.Expr[IContext => Term => Term] =
-    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.check_term ctxt))")
+//  private val checkTermExpr: ml.Expr[IContext => Term => Term] =
+//    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.check_term ctxt))")
 
-  private def declareVariableExpr(name: String, typ: ITyp): ml.Expr[IContext => IContext] = {
-    val lit = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext](
-      """
-      (fn name => fn T => fn ctx =>
-         let val ([v],ctx') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctx
-             val _ = if v<>name then error("variable v already declared") else ()
-        in ctx' end)
-      """)
-    val eval1 = lit(name)
-    val eval2 = eval1(typ)
-    eval2
-  }
+//  private def declareVariableExpr(name: String, typ: ITyp): ml.Expr[IContext => IContext] = {
+//    val lit = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext](
+//      """
+//      (fn name => fn T => fn ctx =>
+//         let val ([v],ctx') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctx
+//             val _ = if v<>name then error("variable v already declared") else ()
+//        in ctx' end)
+//      """)
+//    val eval1 = lit(name)
+//    val eval2 = eval1(typ)
+//    eval2
+//  }
 
 
-  private def runProg[A](prog: Program[A], thyName: String): A = Await.result(system.run(prog, thyName), Duration.Inf)
+//  @deprecated("use operations","now")
+//  private def runProg[A](prog: Program[A], thyName: String): A = Await.result(system.run(prog, thyName), Duration.Inf)
 
-  def runExpr[A](expr: ml.Expr[A], thyName: String)(implicit codec: Codec[A]): A = runProg(expr.toProg, thyName)
+//  @deprecated("use operations","now")
+//  def runExpr[A](expr: ml.Expr[A], thyName: String)(implicit codec: Codec[A]): A = runProg(expr.toProg, thyName)
 
   private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
 
-  def getRef[A: ml.Opaque](expr: ml.Expr[A], thyName: String): ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
+//  @deprecated("use operations","now")
+//  def getRef[A: ml.Opaque](expr: ml.Expr[A], thyName: String): ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
+
+  def invoke[I,O](op: Operation[I,O], arg: I) : O = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
 
 //  def getContext(thyName: String) =
 //    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(Theory.get(thyName)), thyName))
 
   def getQRHLContextWithFiles(thys: String*) : Isabelle.Context = {
-    getContextWithThys(List("HOL-Protocol.Protocol_Main","QRHL.QRHL"), thys)
+    getContextWithThys(List("QRHL.QRHL_Operations","QRHL.QRHL"), thys)
   }
 
 //  private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
@@ -169,11 +173,17 @@ class Isabelle(path:String) {
 
     Files.write(thyFile,thyCode.getBytes)
 
-    val use: ml.Expr[String => Theory] =
-      ml.Expr.uncheckedLiteral("""(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory ("Draft."^name)))""")
+//    val use: ml.Expr[String => Theory] =
+//      ml.Expr.uncheckedLiteral("""(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory ("Draft."^name)))""")
+//
+//    val ctxRef = getRef[IContext](IContext.initGlobal(use(thyName)), "Protocol_Main")
+    val ctxId = invoke(Isabelle.createContextOp, thyName)
 
-    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(use(thyName)), "Protocol_Main"))
+//    val ctxId = ctxRef.id
+
+    new Isabelle.Context(this, ctxId)
   }
+
 
   private var disposed = false
 
@@ -192,6 +202,7 @@ class Isabelle(path:String) {
   }
 
   def runJEdit(files:Seq[String]=Nil): Unit = environment.exec("jedit",List("-l","QRHL") ++ files.toList)
+//  def rebuild(): Unit = build()
 }
 
 object Isabelle {
@@ -209,6 +220,16 @@ object Isabelle {
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
   def distrT(typ:ITyp): Type = Type("QRHL_Core.distr", List(typ))
 
+  val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
+  val createContextOp: Operation[String, BigInt] = Operation.implicitly[String,BigInt]("create_context")
+  val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_context")
+  val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt,Term),String]("print_term")
+  val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
+  val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String,Term,BigInt), BigInt]("add_assumption")
+  val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
+  val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
+  val simplifyTermOp: Operation[(Term, List[String], BigInt), Term] = Operation.implicitly[(Term,List[String],BigInt), Term]("simplify_term")
+  val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
 
@@ -216,7 +237,7 @@ object Isabelle {
   def dest_list(term: Term): List[Term] = term match {
     case (Const("List.list.Nil", _)) => Nil
     case App(App(Const("List.list.Cons", _), t), u) => t :: dest_list(u)
-    case _ => throw new MatchError
+    case _ => throw new MatchError(term)
   }
 
   /** Analogous to Isabelle's HOLogic.dest_numeral. Throws [[MatchError]] if it's not a numeral */
@@ -224,7 +245,7 @@ object Isabelle {
     case (Const("Num.num.One", _)) => 1
     case App(Const("Num.num.Bit0", _), bs) => 2 * dest_numeral(bs)
     case App(Const("Num.num.Bit1", _), bs) => 2 * dest_numeral(bs) + 1
-    case _ => throw new MatchError
+    case _ => throw new MatchError(term)
   }
 
   /** Analogous to Isabelle's HOLogic.dest_char. Throws [[MatchError]] if it's not a char */
@@ -232,10 +253,10 @@ object Isabelle {
     val (typ, n) = term match {
       case Const("Groups.zero_class.zero", ty) => (ty, 0)
       case App(Const("String.Char", Type("fun", List(_, ty))), t) => (ty, dest_numeral(t).toInt)
-      case _ => throw new MatchError
+      case _ => throw new MatchError(term)
     }
     if (typ == Type ("String.char", Nil)) n.toChar
-    else throw new MatchError
+    else throw new MatchError(term)
   }
 
   /** Analogous to Isabelle's HOLogic.dest_string. Throws [[MatchError]] if it's not a string */
@@ -331,47 +352,65 @@ object Isabelle {
 
 
 
-  class Context private[Isabelle](val isabelle:Isabelle, thyName: String, context:ml.Ref[IContext]) {
+  class Context private[Isabelle](val isabelle:Isabelle, val contextId: BigInt) {
     def checkType(term:Term) : ITyp = {
-      val lit = ml.Expr.uncheckedLiteral[IContext => Term => ITyp]("QRHL.checkType")
-      val mlExpr = lit(context.read)(term)
-      runExpr(mlExpr)
+//      val lit = ml.Expr.uncheckedLiteral[IContext => Term => ITyp]("QRHL.checkType")
+//      val mlExpr = lit(context.read)(term)
+//      runExpr(mlExpr)
+      isabelle.invoke(checkTypeOp, (contextId,term))
     }
 
 
     override protected def finalize(): Unit = {
-      logger.debug(s"Deleting context ${context.id}")
-      isabelle.runExpr(context.delete, thyName)
+      logger.debug(s"Deleting context $contextId")
+      isabelle.invoke(deleteContextOp,contextId)
+//      isabelle.runExpr(context.delete, thyName)
       super.finalize()
     }
 
     def declareVariable(name: String, isabelleTyp: ITyp): Context = {
 //      val newICtxt = isabelle.declareVariableExpr(name, isabelleTyp)(context)
 //      new Context(isabelle,thyName,newICtxt)
-      map(isabelle.declareVariableExpr(name, isabelleTyp))
+//      map(isabelle.declareVariableExpr(name, isabelleTyp))
+      val id = isabelle.invoke(declareVariableOp, (contextId, name, isabelleTyp))
+      new Context(isabelle,id)
     }
 
     def addAssumption(name: String, assumption: Term): Context = {
-      val lit = ml.Expr.uncheckedLiteral[String => Term => IContext => IContext]("QRHL.addAssumption")
-      map(lit(name)(implicitly)(assumption))
+//      val lit = ml.Expr.uncheckedLiteral[String => Term => IContext => IContext]("QRHL.addAssumption")
+//      map(lit(name)(implicitly)(assumption))
+      val id = isabelle.invoke(addAssumptionOp, (name,assumption,contextId))
+      new Context(isabelle,id)
     }
 
-    def map(expr:ml.Expr[IContext => IContext]): Context = {
-      val newICtxt = isabelle.getRef(expr(context.read), thyName)
-      new Context(isabelle,thyName,newICtxt)
-    }
+//    @deprecated("use operations", "now")
+//    def map(expr:ml.Expr[IContext => IContext]): Context = {
+//      val newICtxt = isabelle.getRef(expr(Ref[IContext](contextId).read), thyName)
+//      new Context(isabelle,thyName,newICtxt.id)
+//    }
 
-    def runExpr[A](expr:ml.Expr[A])(implicit codec:Codec[A]) : A = isabelle.runExpr(expr,thyName)
+    def map(f:BigInt => BigInt) : Context =
+      new Context(isabelle,f(contextId))
+
+//    @deprecated("use operations", "now")
+//    val context: Ref[IContext] = Ref[IContext](contextId)
+
+//    @deprecated("use operations", "now")
+//    def runExpr[A](expr:ml.Expr[A])(implicit codec:Codec[A]) : A = isabelle.runExpr(expr,thyName)
 
     def readTerm(str:String, typ:ITyp): Term = {
-      val parsedTerm = runExpr(isabelle.parseTermExpr(context.read)(str))
-      val constrainedTerm = parsedTerm.constrain(typ)
-      runExpr(isabelle.checkTermExpr(context.read)(constrainedTerm))
+      isabelle.invoke(readTermOp, (contextId,str,typ))
     }
-    def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(runExpr[String](term.print(context.read : ml.Expr[IContext]) : ml.Expr[String]))
-    def readTyp(str:String) : ITyp = runExpr(isabelle.readTypeExpr(context.read)(str))
-    def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(runExpr(isabelle.printTypExpr(typ)(context.read)))
-    def simplify(term: Term, facts:List[String]) : Term = runExpr(Isabelle.simplifyTerm(term,facts)(context.read))
-    def contextExpr: Expr[IContext] = context.read
+//    def readTerm(str:String, typ:ITyp): Term = {
+//      val parsedTerm = runExpr(isabelle.parseTermExpr(Ref[IContext](contextId).read)(str))
+//      val constrainedTerm = parsedTerm.constrain(typ)
+//      runExpr(isabelle.checkTermExpr(Ref[IContext](contextId).read)(constrainedTerm))
+//    }
+    def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTermOp,(contextId,term)))
+    def readTyp(str:String) : ITyp = isabelle.invoke(readTypOp, (contextId,str))
+    def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))
+    def simplify(term: Term, facts:List[String]) : Term = isabelle.invoke(simplifyTermOp, (term,facts,contextId))
+//    @deprecated("use operations","now")
+//    def contextExpr: Expr[IContext] = context.read
   }
 }
