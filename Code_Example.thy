@@ -20,4 +20,10 @@ lemma
   apply (auto simp: prepare_for_code)
   by eval
 
+lemma
+  assumes[simp]: "declared_qvars \<lbrakk>q1,q2\<rbrakk>"
+  shows "CNOT\<guillemotright>\<lbrakk>q1,q2\<rbrakk> \<cdot> hadamard\<guillemotright>\<lbrakk>q1\<rbrakk> \<cdot> span {ket (0,0)}\<guillemotright>\<lbrakk>q1,q2\<rbrakk> \<le> span {EPR}\<guillemotright>\<lbrakk>q1,q2\<rbrakk>"
+  apply (auto simp: prepare_for_code)
+  by eval
+
 end
