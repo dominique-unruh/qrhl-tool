@@ -95,17 +95,28 @@ proof -
       unfolding prxy'_def prxy_win 
       using prAA' prABpos by (simp add: add_mono landau_o.R_mult_right_mono)
 
-    have prA'B01: "\<forall>x a. prA' x a \<ge> 0 (* \<and> prA x a \<le> 1 *) \<and> prB x a \<ge> 0 (* \<and> prB x a \<le> 1 *)"
+    have prA'Bpos: "\<forall>x a. prA' x a \<ge> 0 \<and> prB x a \<ge> 0"
       unfolding prA'_def prA_def prB_def by (simp_all add: pmf_le_1)
     from prABsum have prA'Bsum: "\<forall>x. (\<Sum>a\<in>UNIV. prA' x a) = 1 \<and> (\<Sum>a\<in>UNIV. prB x a) \<le> 1"
       unfolding prA'_def sum_bool by auto
 
-    define pA00 pA01 pA10 pA11 pB00 pB01 pB10 pB11
-      where "pA00 = prA' False False" "pA01 = prA' False True"
-        "pA10 = prA' True False" "pA11 = prA' True True"
+    define pA00 pA01 pA10 pA11 pC00 pC01 pC10 pC11 pB00 pB01 pB10 pB11
+      where 
+        "pA00 = prA False False" "pA01 = prA False True"
+        "pA10 = prA True False" "pA11 = prA True True"
+        "pC00 = prA' False False" "pC01 = prA' False True" (* I wanted to call those pA'00 etc but that lead to a sos-bug *)
+        "pC10 = prA' True False" "pC11 = prA' True True"
         "pB00 = prB False False" "pB01 = prB False True"
         "pB10 = prB True False" "pB11 = prB True True"
     note pXxx_def = this    
+
+    (*
+    show ?thesis
+      unfolding pr1 sum_bool prxy_win apply simp
+      apply (insert prABpos prABsum) unfolding all_bool_eq sum_bool
+      unfolding pXxx_def[symmetric]
+      apply sos (* This fails, that's why we introduced the auxiliary prA' *)
+    *)
 
     have "pr1 \<sigma> \<le> (\<Sum>a\<in>UNIV. sum (prxy' a) UNIV) / 4"
       unfolding pr1 apply simp
@@ -113,9 +124,9 @@ proof -
       by (rule prxy')
     also have "\<dots> \<le> 3/4"
       unfolding sum_bool prxy'_def apply simp
-      apply (insert prA'B01 prA'Bsum) unfolding all_bool_eq sum_bool
+      apply (insert prA'Bpos prA'Bsum) unfolding all_bool_eq sum_bool
       unfolding pXxx_def[symmetric]
-      by (sos "(((A<0 * R<1) + (((A<=9 * R<1) * (R<4 * [1]^2)) + (((A<=8 * R<1) * ((R<11/6 * [5/11*pA01__ + 5/11*pA11__ + 1]^2) + (R<4/33 * [pA01__ + pA11__]^2))) + (((A<=4 * (A<=6 * (A<=8 * R<1))) * (R<1/2 * [1]^2)) + (((A<=2 * (A<=6 * (A<=8 * R<1))) * (R<5/6 * [1]^2)) + (((A<=2 * (A<=4 * (A<=9 * R<1))) * (R<4 * [1]^2)) + (((A<=2 * (A<=4 * (A<=5 * R<1))) * (R<8 * [1]^2)) + (((A<=1 * (A<=2 * (A<=6 * R<1))) * (R<8 * [1]^2)) + (((A<=0 * (A<=6 * (A<=9 * R<1))) * (R<4 * [1]^2)) + (((A<=0 * (A<=6 * (A<=7 * R<1))) * (R<8 * [1]^2)) + (((A<=0 * (A<=4 * (A<=8 * R<1))) * (R<37/6 * [1]^2)) + (((A<=0 * (A<=3 * (A<=4 * R<1))) * (R<8 * [1]^2)) + ((A<=0 * (A<=2 * (A<=8 * R<1))) * (R<1/2 * [1]^2)))))))))))))))")
+      by (sos "(((A<0 * R<1) + (((A<=9 * R<1) * (R<4 * [1]^2)) + (((A<=8 * R<1) * ((R<11/6 * [5/11*pC01__ + 5/11*pC11__ + 1]^2) + (R<4/33 * [pC01__ + pC11__]^2))) + (((A<=5 * (A<=7 * (A<=8 * R<1))) * (R<1/2 * [1]^2)) + (((A<=3 * (A<=7 * (A<=8 * R<1))) * (R<5/6 * [1]^2)) + (((A<=3 * (A<=5 * (A<=9 * R<1))) * (R<4 * [1]^2)) + (((A<=3 * (A<=4 * (A<=5 * R<1))) * (R<8 * [1]^2)) + (((A<=1 * (A<=7 * (A<=9 * R<1))) * (R<4 * [1]^2)) + (((A<=1 * (A<=6 * (A<=7 * R<1))) * (R<8 * [1]^2)) + (((A<=1 * (A<=5 * (A<=8 * R<1))) * (R<37/6 * [1]^2)) + (((A<=1 * (A<=3 * (A<=8 * R<1))) * (R<1/2 * [1]^2)) + (((A<=1 * (A<=2 * (A<=5 * R<1))) * (R<8 * [1]^2)) + ((A<=0 * (A<=3 * (A<=7 * R<1))) * (R<8 * [1]^2)))))))))))))))")
 
     finally show ?thesis .
   qed
