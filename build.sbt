@@ -77,10 +77,13 @@ mappings in Universal ++= Seq(
     "prg-enc-rorcpa.qrhl", "prg-enc-indcpa.qrhl", "PrgEnc.thy", "README.md",
     "equality.qrhl", "example.qrhl", "Example.thy", "rnd.qrhl",
     "teleport.qrhl", "Teleport.thy", "teleport-terse.qrhl", "Teleport_Terse.thy",
-    "Code_Example.thy"
-  ).map { f =>
-  baseDirectory.value / f -> f
-}
+    "Code_Example.thy", "chsh.ec", "Chsh.thy"
+  ).map { f => baseDirectory.value / f -> f };
+  
+mappings in Universal ++= Seq("manual.pdf"
+	 ).map { f => baseDirectory.value / ".." / f -> f };
+	 
+
 //javaOptions in Universal += "-Dfile.encoding=UTF-8" // Doesn't seem to work
 mappings in Universal ++= directory("PG")
 
