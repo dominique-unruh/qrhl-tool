@@ -80,7 +80,7 @@ mappings in Universal ++= Seq(
     "Code_Example.thy", "chsh.ec", "Chsh.thy"
   ).map { f => baseDirectory.value / f -> f };
   
-mappings in Universal ++= Seq("manual.pdf"
+mappings in Universal ++= Seq("manual.pdf", "qrhl.pdf"
 	 ).map { f => baseDirectory.value / ".." / f -> f };
 	 
 
