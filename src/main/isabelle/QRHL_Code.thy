@@ -183,6 +183,9 @@ axiomatization where tensorSpace_SPAN[code]: "tensorSpace (SPAN A) (SPAN B) = SP
 axiomatization where vec_of_vector_timesScalarVec[code]: "vec_of_vector (timesScalarVec a \<psi>) = smult_vec a (vec_of_vector \<psi>)"
   for \<psi> :: "'a::enum vector"
 
+axiomatization where vector_of_vec_plus[code]:
+  "vec_of_vector (x + y) =  (vec_of_vector x) + (vec_of_vector y)" for x y :: "'a::enum vector"
+
 axiomatization where vec_of_vector_EPR'[code]: "vec_of_vector EPR' = vec_of_list [1,0,0,1]"
 
 lemma [code_post]: 

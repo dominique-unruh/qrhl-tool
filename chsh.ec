@@ -210,7 +210,10 @@ lemma neq_or_imp (x a r:bool): x <> a => !((x = a) /\ r).
     smt.
 qed.
 
-(* TODO: What does the lemma actually say
+(* This lemma says that, for given initial states of A and B, 
+   and given inputs x and y, the (joint) probability of outputs a and b is the 
+   product of the probabilities of output a and of output b
+   (i.e., for fixed initial states and inputs, the outputs are independent.)
 
    This lemma is false in the quantum case.
 
@@ -255,7 +258,11 @@ qed.
 (* An auxiliary function to abbreviate the losing condition of CHSH *)
 op lose x y a b = !(win x y a b).
 
-(* TODO: document lemma *)
+(* This is a simple corollary of ab_prob that gives an explicit formula
+   (in term of the product of A's and B's individual output probabilities pa,pb)
+   for the probability that A and B output given values a and b and lose
+   (for fixed initial states and inputs).
+*)
 local lemma ab_prob2 x y a b pa pb (globs:glob A*glob B) &m:
     (glob A){m} = globs.`1 =>
     (glob B){m} = globs.`2 =>
@@ -277,13 +284,22 @@ conseq (_:_==> C.a = a /\ C.b = b /\ C.x = x /\ C.y = y).
   by apply (ab_prob x y a b pa pb globs &m) => //.
 qed.
 
-(* TODO: document *)
+(* A formula for the probability that A and B lose in terms of their inputs and
+   the probabilities pa,pb that A,B output 1.
+*)
 op failprob1 (pa pb:real) (x y:bool) : real = 
    let out0 = pa*pb + (1%r-pa)*(1%r-pb) in
       if x/\y then out0 else 1%r-out0.
 
 
-(* TODO: document *)
+(* This lemma shows that the probability that A and B lose (for fixed inputs and initial states)
+   is indeed failprob1.
+  
+   This lemma follows from ab_prob2 basically by summing over all possible values 
+   for the outputs a,b of A,B. (In EasyCrypt, at the core, this is done using 
+   the phoare split tactic.)
+
+*)
 local lemma ab_prob3 x y pa pb (globs:glob A*glob B) &m:
     (glob A){m} = globs.`1 =>
     (glob B){m} = globs.`2 =>
@@ -328,18 +344,30 @@ qed.
 op quarter = 1%r/4%r.
 op half = 1%r/2%r.
 
-(* TODO: document *)
+(* A polynomial expression for the probability that A and B fail,
+   in terms of the probabilities that A outputs 1 on input 0 (pa0), on input 1 (pa1),
+   that B outputs 1 on input 0 (pb0), on input 1 (pb1).
+*)
 op failpoly pa0 pa1 pb0 pb1 =
   quarter*(failprob1 pa1 pb1 true true)
 + quarter*(failprob1 pa1 pb0 true false)
 + quarter*(failprob1 pa0 pb1 false true)
 + quarter*(failprob1 pa0 pb0 false false).
 
-(* TODO: document *)
+(* The probability (times 4) that A and B lose and that the inputs are x,y 
+   (for uniformly random x,y).
+
+  pa0,pa1,pb0,pb1 are as in failpoly above.
+*)
 op failpoly_xy x y pa0 pa1 pb0 pb1 =
    failprob1 (if x then pa1 else pa0) (if y then pb1 else pb0) x y.
 
-(* TODO: document *)
+(* Shows that the probability that A and B lose and the input are x,y is indeed failprob1/4.
+
+   (That is, while earlier we were considering fixed inputs x,y, now we consider the game where 
+   C.xyab that includes the choosing of x,y, and the invocation of A,B, but not the 
+   initial invocation of S.)
+*)
 local lemma xyab_prob x y pa0 pa1 pb0 pb1 (globs:glob A*glob B) &m:
     (glob A){m} = globs.`1 =>
     (glob B){m} = globs.`2 =>
@@ -376,7 +404,7 @@ seq 1: (C.y = y) half (failpoly_xy x y pa0 pa1 pb0 pb1)
 qed.
 
 
-(* TODO: document *)
+(* Shows that the probability that A and B lose is indeed failpoly *)
 local lemma xyab_prob2 pa0 pa1 pb0 pb1 (globs:glob A*glob B) &m:
     (glob A){m} = globs.`1 =>
     (glob B){m} = globs.`2 =>
@@ -425,7 +453,7 @@ lemma real_ge_trans: forall (b a c:real),
 by [].
 
 
-(* TODO: document *)
+(* Shows that failpoly>=1/4 (assuming that pa0,pa1,pb0,pb1 are probabilities). *)
 lemma failpoly_bound pa0 pa1 pb0 pb1:
     pa0<=1%r => pa0>=0%r => pa1<=1%r => pa1>=0%r =>
     pb0<=1%r => pb0>=0%r => pb1<=1%r => pb1>=0%r =>
@@ -516,7 +544,9 @@ lemma failpoly_bound pa0 pa1 pb0 pb1:
     exact failpoly_explicit_geq.
 qed.
 
-(* TODO: document *)
+(* Simple corollary from xyab_prob2 and failpoly_bound: 
+   The probability that A and B lose is at least 1/4.
+*)
 local lemma xyab_prob3 pa0 pa1 pb0 pb1 (globs:glob A*glob B) &m:
     (glob A){m} = globs.`1 =>
     (glob B){m} = globs.`2 =>
@@ -536,7 +566,12 @@ proof.
   apply (xyab_prob2 pa0 pa1 pb0 pb1 globs &m) => //.
 qed.
 
-(* TODO: document *)
+(* The probability that A and B lose is at least 1/4.
+
+   The difference to xyab_prob3 is: In xyab_prob3, we considered a game where x,y are random, 
+   but the initial state of A,B is fixed. (I.e., we omitted the invocation of S.) 
+   In the present lemma, we consider the complete CHSH game.
+*)
 local lemma chsh1 &m: Pr[C.run() @ &m : res=false] >= (1%r/4%r).
     byphoare; trivial.
     clear &m.
@@ -565,7 +600,9 @@ call (_: (glob A) = globs.`1 /\ (glob B) = globs.`2 ==> true).
 qed.
 
 
-(* TODO: document *)
+(* An auxiliary module. It is used as a proof trick in lemma s_frame to be able to refer
+   to the variables of S,A,B jointly as glob Container.
+ *)
 local module Container = {
   module S = S
   module A = A
@@ -573,7 +610,16 @@ local module Container = {
   proc setup = S.setup
 }.
 
-(* TODO: document *)
+(* An auxiliary lemma, stating that if all variables of A,B,S are the
+   same on left/right side before execution of S.setup on both side,
+   then the are the same after execution. 
+
+   While EasyCrypt can solve such goals automatically if we only
+   consider the variables of S, the fact that the variables of S,A,B
+   are not disjoint makes EasyCrypt's tactic fail. This is remedied by
+   packaging all of S,A,B inside an intermediate module Container and then
+   using EasyCrypt's call tactic on that module.
+*)
 lemma s_frame: equiv [ S.setup ~ S.setup : ={glob S} /\ ={glob A} /\ ={glob B} ==> ={glob S} /\ ={glob A} /\ ={glob B} ].
   cut H: forall (Cnt<:Setup), equiv [ Cnt.setup ~ Cnt.setup : ={glob Cnt} ==> ={glob Cnt} ].
     by move => Cnt; proc*; call (_:true) => //.
@@ -582,7 +628,14 @@ lemma s_frame: equiv [ S.setup ~ S.setup : ={glob S} /\ ={glob A} /\ ={glob B} =
   exact (H Container).
 qed.
 
-(* TODO: document *)
+(* Shows that the probability that A and B win is at most 3/4.
+
+   The difference to lemma chsh1 is that now we use the module
+   CHSH(S,A,B) instead of C (which does essentially the same, but
+   breaks things down into different helper procedures), and that we
+   talk about the winning probability instead of the losing
+   probability.
+ *)
 lemma chsh2 &m: Pr[CHSH(S,A,B).run() @ &m : res=true] <= (3%r/4%r).
 proof.
     cut Heq: Pr[CHSH(S,A,B).run() @ &m : res=true] = Pr[C.run() @ &m : !(res=false)].
@@ -616,7 +669,12 @@ qed.
 
 end section.
 
-(* TODO: document *)
+(* The final result.
+
+   This is just a restatement of lemma chsh2, but not inside the
+   "section" above. That is, all assumptions introduced in the section
+   are now explicitly stated in the lemma.
+ *)
 lemma chsh (S<:Setup) (A<:Player) (B<:Player{A}) &m: 
     islossless S.setup =>
     islossless A.invoke =>
