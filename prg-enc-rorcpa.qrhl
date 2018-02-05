@@ -87,7 +87,7 @@ lemma rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
  wp right.
  simp.
  swap right.
- rnd r,r <- map_distr (λr. (r,r+G k1+m2)) (uniform UNIV).
+ rnd r,r <- map_distr (λr. (r,r + G k1 + m2)) (uniform UNIV).
  simp my_simp.
  call.
   simp!.
@@ -97,7 +97,7 @@ lemma rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
  simp ! aux_bij.
 qed.
 
-lemma final: abs (Pr[b:rorcpa0(rho)] - Pr[b:rorcpa1(rho)]) = abs(Pr[b:prg0(rho)]-Pr[b:prg1(rho)]).
+lemma final: abs (Pr[b:rorcpa0(rho)] - Pr[b:rorcpa1(rho)]) = abs (Pr[b:prg0(rho)] - Pr[b:prg1(rho)]).
 
  simp ! rorcpa0_prg0 rorcpa1_prg1.
 qed.
