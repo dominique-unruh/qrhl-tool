@@ -8,7 +8,7 @@ import scala.sys.process.Process
 
 name := "qrhl"
 
-version := "0.2alpha"
+version := "0.2"
 
 scalaVersion := "2.12.4"
 
@@ -80,8 +80,8 @@ mappings in Universal ++= Seq(
     "Code_Example.thy", "chsh.ec", "Chsh.thy"
   ).map { f => baseDirectory.value / f -> f };
   
-mappings in Universal ++= Seq("manual.pdf", "qrhl.pdf"
-	 ).map { f => baseDirectory.value / ".." / f -> f };
+mappings in Universal ++= Seq(
+	 baseDirectory.value / ".." / "manual.pdf" -> "manual.pdf")
 	 
 
 //javaOptions in Universal += "-Dfile.encoding=UTF-8" // Doesn't seem to work

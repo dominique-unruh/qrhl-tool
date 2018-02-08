@@ -1,4 +1,4 @@
-VERSION="0.2alpha"
+VERSION="0.2"
 SOURCES := $(shell find src) $(wildcard *.qrhl) $(wildcard *.thy)
 
 qrhl.zip : target/universal/qrhl-$(VERSION).zip
@@ -8,4 +8,4 @@ upload :
 	make -C .. upload-tool
 
 target/universal/qrhl-$(VERSION).zip : build.sbt $(SOURCES)
-	sbt packageBin
+	sbt universal:packageBin
