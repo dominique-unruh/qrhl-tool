@@ -2,14 +2,14 @@
 
 The binaries should run on Windows, Linux, and MacOS.
 But if you have the choice, Linux should be easiest, especially if Java and Emacs are already installed.
-You can download the binaries [here](https://www.ut.ee/~unruh/qrhl.zip). 
+You can download the binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases). 
 
 On Windows, font problems have been observed (strange characters in the proof state).  
 
 ## Prerequisites
 
 * Java must be installed (at least Java 8), and the `java` executable must be in the path.
-* Emacs must be installed, and the `emacs` executable must be in the path (or else, edit `proofgeneral.{bat,sh}`).
+* Emacs must be installed, and the `emacs` executable must be in the path (otherwise edit `proofgeneral.{bat,sh}`).
 
 To check whether this is the case, go into a terminal (or Command Prompt in Windows),
 and enter `java` or `emacs`, respectively, and see whether the commands are found.
@@ -17,13 +17,13 @@ and enter `java` or `emacs`, respectively, and see whether the commands are foun
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.2alpha`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.2`.
 
 
 ## Executing the demos
 
-In the `qrhl-0.2alpha` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
-The current directory must be the `qrhl-0.2alpha` directory!
+In the `qrhl-0.2` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
+The current directory must be the `qrhl-0.2` directory!
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files: `example.qrhl`, `prg-enc-indcpa.qrhl`,
@@ -34,7 +34,7 @@ You will see the current goal and some messages withing the Emacs/ProofGeneral w
 (Or you can use Ctrl-C Ctrl-Return to execute to the cursor position.)
 See the [ProofGeneral manual](https://proofgeneral.github.io/doc/userman/) for more information.
 
-Note: The first step of the proof script (`isabelle auto...`) will take very long upon first activation,
+Note: The first step of the proof script (`isabelle.`) will take very long upon first activation,
 because it will download and build Isabelle. 
 You need to be online the first time you execute this step. 
 
