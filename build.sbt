@@ -59,6 +59,32 @@ downloadAFP := {
   }
 }
 
+val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c3968054988b50da7f6c02c6b.tar.gz"
+val pgPatch = "src/proofgeneral/proof-site.el.patch"
+val pgExtractPath = "target/downloads/PG"
+lazy val downloadPG = taskKey[Unit]("Download ProofGeneral")
+managedResources in Compile := (managedResources in Compile).dependsOn(downloadPG).value
+
+downloadPG := {
+  import scala.sys.process._
+  val extractPath = baseDirectory.value / pgExtractPath
+
+  if (!extractPath.exists()) {
+    println("Downloading ProofGeneral.")
+    try {
+      extractPath.mkdirs()
+      print ( ( new URL(pgUrl) #> Process(List("tar", "xz", "--strip-components=1"), cwd = extractPath) ).!! )
+      print ( ( (baseDirectory.value / pgPatch) #> Process(List("patch", "generic/proof-site.el"), cwd = extractPath) ).!! )
+      print ( ( (baseDirectory.value / pgPatch) #> Process(List("cp", "-a", "src/proofgeneral", pgExtractPath + "/qrhl"), cwd = baseDirectory.value) ).!! )
+    } catch {
+      case e : Throwable =>
+        print("Removing "+extractPath)
+        IO.delete(extractPath)
+        throw e
+    }
+  }
+}
+
 
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
@@ -78,7 +104,7 @@ mappings in Universal ++= Seq(
     "equality.qrhl", "example.qrhl", "Example.thy", "rnd.qrhl",
     "teleport.qrhl", "Teleport.thy", "teleport-terse.qrhl", "Teleport_Terse.thy",
     "Code_Example.thy", "chsh.ec", "Chsh.thy"
-  ).map { f => baseDirectory.value / f -> f };
+  ).map { f => baseDirectory.value / f -> f }
   
 mappings in Universal ++= Seq(
 	 baseDirectory.value / ".." / "manual.pdf" -> "manual.pdf")

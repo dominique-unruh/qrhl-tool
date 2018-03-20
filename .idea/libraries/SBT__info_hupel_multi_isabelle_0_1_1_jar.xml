@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="SBT: info.hupel:multi-isabelle:0.1.1:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/info.hupel/multi-isabelle/jars/multi-isabelle-0.1.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/info.hupel/multi-isabelle/srcs/multi-isabelle-0.1.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
