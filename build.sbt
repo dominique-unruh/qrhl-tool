@@ -17,24 +17,19 @@ scalacOptions += "-deprecation"
 enablePlugins(LibisabellePlugin)
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.3" % "test" // Latest: 3.0.5
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.1.1" // Latest: 3.1.2
 
 isabelleVersions := Seq(Version.Stable("2017"))
 isabelleSessions in Compile := Seq("QRHL")
-//isabelleSources := Seq(baseDirectory.value / "src/main/isabelle")
-
-//unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/isabelle"
 
 libraryDependencies ++= { val version = "0.9.2"; Seq(
   "info.hupel" %% "libisabelle" % version,
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version
 ) }
-//libraryDependencies += "info.hupel.afp" % "afp-2017" % "1.1.20171130"
 
-val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2017-11-23.tar.gz"
-//val afpTarPath = "target/downloads/afp.tgz"
+val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2017-11-23.tar.gz" // Latest: 2018-01-12
 val afpExtractPath = "target/downloads/afp"
 
 lazy val downloadAFP = taskKey[Unit]("Download the AFP")
@@ -88,7 +83,7 @@ downloadPG := {
 
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
-libraryDependencies += "org.jline" % "jline" % "3.5.1"
+libraryDependencies += "org.jline" % "jline" % "3.5.1" // Latest: 3.6.2
 
 //import sbtassembly.AssemblyPlugin.defaultShellScript
 //assemblyOption in assembly := (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript))
