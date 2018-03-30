@@ -134,7 +134,15 @@ object Parser extends RegexParsers {
          elseBranch <- statementOrParenBlock)  // TODO: allow nested block
       yield IfThenElse(e,thenBranch,elseBranch)
 
-  def statement(implicit context:ParserContext) : Parser[Statement] = measure | assign | sample | call | qInit | qApply | ifThenElse
+  def whileLoop(implicit context:ParserContext) : Parser[While] =
+    for (_ <- literal("while");
+         _ <- literal("(");
+         e <- expression(context.boolT);
+         _ <- literal(")");
+         body <- statementOrParenBlock)
+      yield While(e,body)
+
+  def statement(implicit context:ParserContext) : Parser[Statement] = measure | assign | sample | call | qInit | qApply | ifThenElse | whileLoop
 
 //  def statementWithSep(implicit context:ParserContext) : Parser[Statement] = statement ~ statementSeparator ^^ { case s ~ _ => s }
 

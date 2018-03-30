@@ -119,7 +119,7 @@ final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch:
 final case class While(condition:Expression, body: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     While(condition,body.inline(name,program))
-  override def toString: String = s"while ($condition) $body;"
+  override def toString: String = s"while ($condition) $body"
 
   override def checkWelltyped(): Unit = {
     condition.checkWelltyped(HOLogic.boolT)
