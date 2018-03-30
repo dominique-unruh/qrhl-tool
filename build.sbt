@@ -10,7 +10,7 @@ name := "qrhl"
 
 version := "0.2"
 
-scalaVersion := "2.12.4"
+scalaVersion := "2.12.4" // Latest: 2.12.5
 
 scalacOptions += "-deprecation"
 
@@ -29,7 +29,7 @@ libraryDependencies ++= { val version = "0.9.2"; Seq(
   "info.hupel" %% "pide-package" % version
 ) }
 
-val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2017-11-23.tar.gz" // Latest: 2018-01-12
+val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
 val afpExtractPath = "target/downloads/afp"
 
 lazy val downloadAFP = taskKey[Unit]("Download the AFP")
