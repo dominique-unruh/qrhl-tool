@@ -27,7 +27,7 @@ The current directory must be the `qrhl-0.2` directory!
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files: `example.qrhl`, `prg-enc-indcpa.qrhl`,
-`prg-enc-rorcpa.qrhl` or `equality.qrhl`.
+`prg-enc-rorcpa.qrhl`, `equality.qrhl`, `teleport.qrhl`, or `teleport-terse.qrhl`.
 
 To step through the examples, use Ctrl-C Ctrl-N to go forward one proof step, Ctrl-C Ctrl-U to go back one.
 You will see the current goal and some messages withing the Emacs/ProofGeneral window.
