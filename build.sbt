@@ -18,7 +18,7 @@ enablePlugins(LibisabellePlugin)
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-libraryDependencies += "org.rogach" %% "scallop" % "3.1.1" // Latest: 3.1.2
+libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
 isabelleVersions := Seq(Version.Stable("2017"))
 isabelleSessions in Compile := Seq("QRHL")
