@@ -162,6 +162,8 @@ class State private (val environment: Environment,
         throw UserException(s"Undeclared variable $x in program")
 
     if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
+    if (this.environment.variableExists(name))
+      throw UserException(s"Name $name already used for a variable or program.")
     val isa = isabelle.get.declareVariable(name, programT.isabelleTyp)
 
     copy(environment = environment.declareProgram(name, program))

@@ -34,7 +34,10 @@ final class Environment private
 
 
   //  def getCVariable(name: String): CVariable = cVariables(name)
-
+  /** Tests whether variable of name ''name'' already exists.
+    * This includes classical, quantum, and ambient variables, as well as indexed variables
+    * and program names.
+    */
   def variableExists(name:String) : Boolean = {
     cVariables.contains(name) || qVariables.contains(name) || ambientVariables.contains(name) ||
       cqVariables12.contains(name) || programs.contains(name)
