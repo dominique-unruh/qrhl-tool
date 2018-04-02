@@ -6,12 +6,13 @@ import info.hupel.isabelle.{Operation, ml, pure}
 import qrhl.logic.{Call, Expression, Statement}
 import qrhl.{State, Tactic, UserException}
 
+@deprecated("Superseeded by EqualTac")
 case object CallTac extends WpBothStyleTac() {
   override def getWP(state: State, left: Statement, right: Statement, post: Expression): (Expression, List[Expression]) = (left,right) match {
     case (Call(prog), Call(prog2)) =>
       if (prog!=prog2) throw UserException(s"Both program names need to be the same ($prog≠$prog2)")
       val decl = state.environment.programs.getOrElse(prog, throw new Exception("should not happen"))
-      val (cvars,qvars) = decl.variablesRecursive
+      val (cvars,qvars,_,_) = decl.variablesRecursive
       val cvarsIdx1 = cvars.map(_.index1)
       val cvarsIdx2 = cvars.map(_.index2)
       val qvarsIdx1 = qvars.map(_.index1)

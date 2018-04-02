@@ -9,6 +9,41 @@ import scala.collection.mutable
 
 // Programs
 sealed trait Statement {
+  /** Returns all variables used in the statement.
+    * @param recurse Recurse into programs embedded via Call
+    * @return (cvars,qvars,avars,pnames) Classical, quantum, ambient variables, program declarations. */
+  def cqapVariables(environment: Environment, recurse: Boolean) : (List[CVariable],List[QVariable],List[String],List[ProgramDecl]) = {
+    val cvars = new mutable.LinkedHashSet[CVariable]()
+    val qvars = new mutable.LinkedHashSet[QVariable]()
+    val avars = new mutable.LinkedHashSet[String]()
+    val progs = new mutable.LinkedHashSet[ProgramDecl]()
+    cqapVariables(environment,cvars,qvars,avars,progs,recurse=recurse)
+    (cvars.toList,qvars.toList,avars.toList,progs.toList)
+  }
+
+  def cqapVariables(environment : Environment, cvars : mutable.Set[CVariable], qvars: mutable.Set[QVariable],
+                   avars : mutable.Set[String], progs : mutable.Set[ProgramDecl], recurse:Boolean): Unit = {
+    def collectExpr(e:Expression):Unit = e.caVariables(environment,cvars,avars)
+    def collect(s:Statement) : Unit = s match {
+      case Block(ss @ _*) => ss.foreach(collect)
+      case Assign(v,e) => cvars += v; collectExpr(e)
+      case Sample(v,e) => cvars += v; collectExpr(e)
+      case Call(name) =>
+        val p = environment.programs(name)
+        progs += p
+        if (recurse) {
+          val (cv,qv,av,ps) = p.variablesRecursive
+          cvars ++= cv; qvars ++= qv; avars ++= av; progs ++= ps
+        }
+      case While(e,body) => collectExpr(e); collect(body)
+      case IfThenElse(e,p1,p2) => collectExpr(e); collect(p1); collect(p2)
+      case QInit(vs,e) => qvars ++= vs; collectExpr(e)
+      case Measurement(v,vs,e) => cvars += v; collectExpr(e); qvars ++= vs
+      case QApply(vs,e) => qvars ++= vs; collectExpr(e)
+    }
+    collect(this)
+  }
+
   def checkWelltyped(): Unit
 
   /** All ambient and program variables.
@@ -30,14 +65,17 @@ sealed trait Statement {
     vars.result
   }
 
-  /** Including nested programs (via Call) */
+  /** Including nested programs (via Call). (Missing ambient variables from nested calls.) */
   def variablesAll(env:Environment) : Set[String] = {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
       case Assign(v,e) => vars += v.name; vars ++= e.variables
       case Sample(v,e) => vars += v.name; vars ++= e.variables
-      case Call(name) => env.programs(name)
+      case Call(name) =>
+        val (cvars,qvars,_,_) = env.programs(name).variablesRecursive
+        vars ++= cvars.map(_.name)
+        vars ++= qvars.map(_.name)
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
       case QInit(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables

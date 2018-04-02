@@ -300,7 +300,7 @@ object Parser extends RegexParsers {
       tactic_inline |
       tactic_seq |
       tactic_conseq |
-      literal("call") ^^ { _ => CallTac } |
+      literal("call") ^^ { _ => EqualTac } | // TODO: rename call -> equal
       tactic_rnd |
       literal("byqrhl") ^^ { _ => ByQRHLTac } |
       tactic_split |

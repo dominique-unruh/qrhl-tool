@@ -106,12 +106,19 @@ object Environment {
 }
 
 sealed trait ProgramDecl {
-  val variablesRecursive : (List[CVariable],List[QVariable])
+  /** All variables used by this program (classical, quantum, ambient, program names), recursively.
+    * For abstract programs, no ambient variables and program names are given */
+  val variablesRecursive : (List[CVariable],List[QVariable],List[String],List[ProgramDecl])
 //  val variables : (List[CVariable],List[QVariable])
 //  val subprograms : List[ProgramDecl]
-  val name: String }
+  val name: String
+
+//  val cqapVariablesRecursive
+
+}
 final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable]) extends ProgramDecl {
-  override val variablesRecursive: (List[CVariable], List[QVariable]) = (cvars,qvars)
+  override val variablesRecursive: (List[CVariable], List[QVariable], Nil.type, Nil.type) =
+    (cvars,qvars,Nil,Nil)
 }
 final case class ConcreteProgramDecl(environment: Environment, name:String, program:Block) extends ProgramDecl {
   lazy val ambientVars: List[String] = {
@@ -141,7 +148,10 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, prog
     vars.toList
   }
 
-  override val variablesRecursive: (List[CVariable], List[QVariable]) = {
+  override val variablesRecursive: (List[CVariable], List[QVariable], List[String], List[ProgramDecl]) =
+    program.cqapVariables(environment,recurse = true)
+
+  /*{
     val qvars = new mutable.LinkedHashSet[QVariable]
     val cvars = new mutable.LinkedHashSet[CVariable]
     def scan(st:Statement) : Unit = st match {
@@ -177,6 +187,6 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, prog
     scan(program)
 //    println(s"variablesRecursive $name, $cvars, $qvars")
     (cvars.toList, qvars.toList)
-  }
+  }*/
 }
 

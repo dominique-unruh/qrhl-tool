@@ -38,6 +38,16 @@ final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val
 
   def variables : Set[String] = freeVars(isabelleTerm)
 
+  /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */
+  def caVariables(environment: Environment, cvars : mutable.Set[CVariable], avars : mutable.Set[String]): Unit = {
+//    val cvars = mutable.LinkedHashSet[CVariable]()
+//    val avars = mutable.LinkedHashSet[String]()
+    for (v<-variables) environment.cVariables.get(v) match {
+      case Some(cv) => cvars += cv
+      case None => avars += v
+    }
+  }
+
   override lazy val toString: String = isabelle.prettyExpression(isabelleTerm)
 //  val isabelleTerm : Term = isabelleTerm
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): Expression = simplify(isabelle.get,facts)
@@ -83,7 +93,6 @@ final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val
     assert(typ.isabelleTyp==HOLogic.boolT)
     new Expression(isabelle,typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
   }
-
 
 }
 
