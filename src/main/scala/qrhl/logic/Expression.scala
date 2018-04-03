@@ -14,6 +14,12 @@ import scala.collection.mutable
 final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
   def stripAssumption(number: Int): Expression = Expression(isabelle,typ,Expression.stripAssumption(isabelleTerm,number))
 
+  override def equals(o: scala.Any): Boolean = o match {
+    case o : Expression => typ == o.typ && isabelleTerm == o.isabelleTerm
+    case _ => false
+  }
+
+
   def checkWelltyped(typ:Typ): Unit = checkWelltyped(typ.isabelleTyp)
   def checkWelltyped(ityp:ITyp): Unit = {
     assert(ityp==this.typ.isabelleTyp)

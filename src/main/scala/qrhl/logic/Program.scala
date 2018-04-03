@@ -90,6 +90,11 @@ sealed trait Statement {
 }
 
 class Block(val statements:List[Statement]) extends Statement {
+  override def equals(o: Any): Boolean = o match {
+    case Block(st @ _*) => statements==st
+    case _ => false
+  }
+
   override def toString: String = statements match {
     case Nil => "{}"
     case List(s) => s.toString
