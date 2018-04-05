@@ -67,12 +67,12 @@ lemma indcpa0_prg0B1: Pr[b:indcpa0(rho)] = Pr[b:prg0B1(rho)].
  inline indcpa0.
  inline prg0B1.
  inline B1.
- call.
+ equal.
   simp!.
  wp left.
  wp right.
  simp.
- call.
+ equal.
   simp!.
  simp.
  wp right.
@@ -89,7 +89,7 @@ lemma prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
  inline prg1B2.
  inline B1.
  inline B2.
- call.
+ equal.
   simp!.
  wp left.
  wp right.
@@ -97,7 +97,7 @@ lemma prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
  swap right.
  rnd r,r <- map_distr (λr. (r,r+m11+m22)) (uniform UNIV).
  simp aux_bij mysimp2.
- call.
+ equal.
   simp!.
  simp.
  skip.
@@ -111,12 +111,12 @@ lemma indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
  inline indcpa1.
  inline prg0B2.
  inline B2.
- call.
+ equal.
   simp!.
  wp left.
  wp right.
  simp.
- call.
+ equal.
   simp!.
  simp.
  wp right.
