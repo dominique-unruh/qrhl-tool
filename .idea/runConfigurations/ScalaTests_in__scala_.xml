@@ -20,6 +20,8 @@
     <buffered bufClass="qrhl.tactic.CallTacTest" />
     <buffered bufClass="qrhl.tactic.CaseTacTest" />
     <buffered bufClass="qrhl.tactic.CaseTacTest" />
+    <buffered bufClass="qrhl.tactic.EqualTacTest" />
+    <buffered bufClass="qrhl.tactic.EqualTacTest" />
     <buffered bufClass="qrhl.tactic.RuleTacTest" />
     <buffered bufClass="qrhl.tactic.RuleTacTest" />
     <buffered bufClass="qrhl.tactic.WpTacTest" />

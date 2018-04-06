@@ -1,5 +1,5 @@
 theory QRHL_Operations
-  imports "HOL-Protocol.Protocol_Main" QRHL_Core 
+  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding
 begin
 
 ML {*
@@ -104,10 +104,16 @@ operation_setup declare_variable = {*
             in make_ctxt_ref ctx' end }
 *}
 
-operation_setup addQVariableNameAssumption = {*
+operation_setup declare_quantum_variable = {*
   {from_lib = Codec.triple Codec.string Codec.typ Codec.int,
    to_lib = Codec.int,
-   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.addQVariableNameAssumption name typ (Refs.Ctxt.read ctx_id))}
+   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.declare_variable (Refs.Ctxt.read ctx_id) name typ QRHL.Quantum)}
+*}
+
+operation_setup declare_classical_variable = {*
+  {from_lib = Codec.triple Codec.string Codec.typ Codec.int,
+   to_lib = Codec.int,
+   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.declare_variable (Refs.Ctxt.read ctx_id) name typ QRHL.Classical)}
 *}
 
 operation_setup callWp = {*
@@ -171,5 +177,16 @@ operation_setup ifWp = {*
    action = fn (e, thenWp, elseWp) => QRHL.ifWp e thenWp elseWp}
 *}
 
+operation_setup expression_to_term = {*
+  {from_lib = Codec.term,
+   to_lib = Codec.term,
+   action = Encoding.expression_to_term}
+*}
+
+operation_setup add_index_to_expression = {*
+  {from_lib = Codec.tuple Codec.term Codec.bool,
+   to_lib = Codec.term,
+   action = fn (t,left) => Encoding.add_index_to_expression t left}
+*}
 
 end

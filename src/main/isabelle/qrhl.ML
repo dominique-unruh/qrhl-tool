@@ -172,6 +172,7 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
 |> Thm.cterm_of @{context} |> @{print} *)
 
 
+(* TODO: does not work on local theories *)
 fun addQVariableNameAssumption name T ctx =
   let val qT = mk_qvariableT T
       val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name,qT)
@@ -583,5 +584,25 @@ fun warn_declared_qvars_simproc _ ctx ct =
         end
     | _ => NONE
 
+
+datatype vartype = Classical | Quantum
+structure VarTypes = Proof_Data
+(
+  type T = vartype Symtab.table
+  fun init _ = Symtab.empty
+)
+
+fun declare_variable ctx v T typ =
+  let val ctx = addQVariableNameAssumption (if typ=Classical then v^"_var" else v) T ctx
+      val ctx = addQVariableNameAssumption (if typ=Classical then v^"1_var" else v^"1") T ctx
+      val ctx = addQVariableNameAssumption (if typ=Classical then v^"2_var" else v^"2") T ctx
+      val ctx = VarTypes.map (Symtab.insert op= (v,typ)) ctx
+      val ctx = VarTypes.map (Symtab.insert op= (v^"1",typ)) ctx
+      val ctx = VarTypes.map (Symtab.insert op= (v^"2",typ)) ctx
+  in
+    ctx
+  end
+
+fun lookup_variable ctx = Symtab.lookup (VarTypes.get ctx)
 
 end
