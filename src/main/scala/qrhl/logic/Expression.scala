@@ -22,7 +22,7 @@ final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val
 
   def checkWelltyped(typ:Typ): Unit = checkWelltyped(typ.isabelleTyp)
   def checkWelltyped(ityp:ITyp): Unit = {
-    assert(ityp==this.typ.isabelleTyp)
+    assert(ityp==this.typ.isabelleTyp,s"$ityp != ${this.typ.isabelleTyp}")
     assert(isabelle.checkType(isabelleTerm) == typ.isabelleTyp)
   }
 
