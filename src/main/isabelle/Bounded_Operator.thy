@@ -1,5 +1,6 @@
 theory Bounded_Operator
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" "HOL-Library.Rewrite" "HOL-Analysis.L2_Norm"
+  imports Complex_Main "HOL-Library.Rewrite" "HOL-Library.Adhoc_Overloading" "HOL-Analysis.L2_Norm"
+    "HOL-Analysis.Infinite_Set_Sum" "Complex_Vector_Spaces" "Complex_Inner_Product"
 begin
 
 section \<open>Subspaces\<close>
@@ -9,16 +10,14 @@ notation
   sup (infixl "\<squnion>" 65) 
 
 definition "has_ell2_norm x = bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)"
+
 lemma has_ell2_norm_setL2: "has_ell2_norm x = bdd_above (setL2 (norm o x) ` Collect finite)"
 proof -
-(*   have mono: "mono (\<lambda>A. sqrt (\<Sum>i\<in>A. (cmod (x i))\<^sup>2))"
-    unfolding mono_def apply (auto intro: sum_mono2)
-    apply (rule sum_mono2) *)
   have bdd_above_image_mono': "(\<And>x y. x\<le>y \<Longrightarrow> x:A \<Longrightarrow> y:A \<Longrightarrow> f x \<le> f y) \<Longrightarrow> (\<exists>M\<in>A. \<forall>x \<in> A. x \<le> M) \<Longrightarrow> bdd_above (f`A)" for f::"'a set\<Rightarrow>real" and A
     unfolding bdd_above_def by auto
 
   have "bdd_above X \<Longrightarrow> bdd_above (sqrt ` X)" for X
-    by (simp add: bdd_above_image_mono monoI)
+    by (meson bdd_aboveI2 bdd_above_def real_sqrt_le_iff)
   moreover have "bdd_above X" if bdd_sqrt: "bdd_above (sqrt ` X)" for X
   proof -
     obtain y where y:"y \<ge> sqrt x" if "x:X" for x 
@@ -32,8 +31,8 @@ proof -
     by rule
 
   show "has_ell2_norm x \<longleftrightarrow> bdd_above (setL2 (norm o x) ` Collect finite)"
-    unfolding has_ell2_norm_def unfolding setL2_def 
-    apply (rewrite asm_rl[of "(\<lambda>A. sqrt (\<Sum>i\<in>A. ((cmod \<circ> x) i)\<^sup>2)) ` Collect finite 
+    unfolding has_ell2_norm_def unfolding setL2_def
+    apply (rewrite asm_rl[of "(\<lambda>A. sqrt (sum (\<lambda>i. ((cmod \<circ> x) i)\<^sup>2) A)) ` Collect finite 
                             = sqrt ` (\<lambda>A. (\<Sum>i\<in>A. (cmod (x i))\<^sup>2)) ` Collect finite"])
       apply auto[1]
     apply (subst bdd_sqrt[symmetric])
@@ -233,19 +232,6 @@ proof -
     using triangle by fastforce
 qed
 
-(*axiomatization where ell2_norm_triangle:
- "bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)
-  \<Longrightarrow>
-  bdd_above (sum (\<lambda>i. (cmod (y i))\<^sup>2) ` Collect finite)
-  \<Longrightarrow>
-  ell2_norm (\<lambda>i. x i + y i) \<le> ell2_norm x + ell2_norm y"
-for x y :: "'a\<Rightarrow>complex"
-  
-axiomatization where ell2_norm_mult:
-  "bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)
-  \<Longrightarrow>
-  ell2_norm (\<lambda>i. a *\<^sub>R x i) = \<bar>a\<bar> * ell2_norm x"
-for x :: "'a\<Rightarrow>complex" *)
 
 
 lift_definition ket :: "'a \<Rightarrow> 'a vector" is "\<lambda>x y. if x=y then 1 else 0"
@@ -260,7 +246,8 @@ lemma cSUP_eq_maximum:
   shows "(SUP x:X. f x) = z"
   by (metis (mono_tags, hide_lams) assms(1) assms(2) cSup_eq_maximum imageE image_eqI)
 
-instantiation vector :: (type)real_vector begin
+
+instantiation vector :: (type)complex_vector begin
 lift_definition zero_vector :: "'a vector" is "\<lambda>_.0" by (auto simp: has_ell2_norm_def)
 lift_definition uminus_vector :: "'a vector \<Rightarrow> 'a vector" is uminus by (simp add: has_ell2_norm_def)
 lift_definition plus_vector :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>f g x. f x + g x"
@@ -268,8 +255,12 @@ lift_definition plus_vector :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> 
 definition "a - b = a + (-b)" for a b :: "'a vector"
 lift_definition scaleR_vector :: "real \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>r f x. complex_of_real r * f x"
   by (rule ell2_norm_smult)
+lift_definition scaleC_vector :: "complex \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>c f x. c * f x"
+  by (rule ell2_norm_smult)
 
 instance apply intro_classes
+           apply (transfer; rule ext; simp)
+           apply (transfer; rule ext; simp)
           apply (transfer; rule ext; simp)
          apply (transfer; rule ext; simp)
         apply (transfer; rule ext; simp)
@@ -277,11 +268,11 @@ instance apply intro_classes
       apply (unfold minus_vector_def; transfer; rule ext; simp)
      apply (transfer; rule ext; simp add: distrib_left)
     apply (transfer; rule ext; simp add: distrib_right)
-   apply (transfer; rule ext; simp add: scaleR_add_left)
+   apply (transfer; rule ext; simp)
   by (transfer; rule ext; simp)
 end
 
-instantiation vector :: (type)real_normed_vector begin
+instantiation vector :: (type)complex_normed_vector begin
 lift_definition norm_vector :: "'a vector \<Rightarrow> real" is ell2_norm .
 definition "dist x y = norm (x - y)" for x y::"'a vector"
 definition "sgn x = x /\<^sub>R norm x" for x::"'a vector"
@@ -289,16 +280,128 @@ definition "uniformity = (INF e:{0<..}. principal {(x::'a vector, y). norm (x - 
 definition "open U = (\<forall>x\<in>U. \<forall>\<^sub>F (x', y) in INF e:{0<..}. principal {(x, y). norm (x - y) < e}. x' = x \<longrightarrow> y \<in> U)" for U :: "'a vector set"
 instance apply intro_classes
   unfolding dist_vector_def sgn_vector_def uniformity_vector_def open_vector_def apply simp_all
-    apply transfer apply (fact ell2_norm_0)
-   apply transfer apply (fact ell2_norm_triangle)
-  apply transfer apply (subst ell2_norm_smult) by auto
+     apply transfer apply (fact ell2_norm_0)
+    apply transfer apply (fact ell2_norm_triangle)
+   apply transfer apply (subst ell2_norm_smult) apply (simp_all add: abs_complex_def)[2]
+  apply transfer by (simp add: ell2_norm_smult(2)) 
 end
 
-axiomatization timesScalarVec :: "complex \<Rightarrow> 'a vector \<Rightarrow> 'a vector" where
-  timesScalarVec_twice[simp]: "timesScalarVec a (timesScalarVec b \<psi>) = timesScalarVec (a*b) \<psi>"
-and uminus_vector: "(-\<psi>) = timesScalarVec (-1) \<psi>"
-and one_times_vec[simp]: "timesScalarVec (1::complex) \<psi> = \<psi>" 
-for \<psi> :: "'a vector"
+lemma infsetsum_cnj[simp]: "infsetsum (\<lambda>x. cnj (f x)) M = cnj (infsetsum f M)"
+  unfolding infsetsum_def by (rule integral_cnj)
+
+lemma infsetsum_mono_complex:
+  fixes f g :: "'a \<Rightarrow> complex"
+  assumes "f abs_summable_on A" and "g abs_summable_on A"
+  assumes "\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x"
+  shows   "infsetsum f A \<le> infsetsum g A"
+proof -
+  have "infsetsum f A = Complex (Re (infsetsum f A)) (Im (infsetsum f A))" by auto
+  also have "Re (infsetsum f A) = infsetsum (\<lambda>x. Re (f x)) A"
+    unfolding infsetsum_def apply (rule integral_Re[symmetric])
+    using assms by (simp add: abs_summable_on_def)
+  also have "Im (infsetsum f A) = infsetsum (\<lambda>x. Im (f x)) A "
+    unfolding infsetsum_def apply (rule integral_Im[symmetric])
+    using assms by (simp add: abs_summable_on_def)
+  finally have fsplit: "infsetsum f A = Complex (\<Sum>\<^sub>ax\<in>A. Re (f x)) (\<Sum>\<^sub>ax\<in>A. Im (f x))" by assumption
+
+  have "infsetsum g A = Complex (Re (infsetsum g A)) (Im (infsetsum g A))" by auto
+  also have "Re (infsetsum g A) = infsetsum (\<lambda>x. Re (g x)) A"
+    unfolding infsetsum_def apply (rule integral_Re[symmetric])
+    using assms by (simp add: abs_summable_on_def)
+  also have "Im (infsetsum g A) = infsetsum (\<lambda>x. Im (g x)) A "
+    unfolding infsetsum_def apply (rule integral_Im[symmetric])
+    using assms by (simp add: abs_summable_on_def)
+  finally have gsplit: "infsetsum g A = Complex (\<Sum>\<^sub>ax\<in>A. Re (g x)) (\<Sum>\<^sub>ax\<in>A. Im (g x))" by assumption
+
+  have Re_leq: "Re (f x) \<le> Re (g x)" if "x\<in>A" for x
+    using that assms unfolding less_eq_complex_def by simp
+  have Im_eq: "Im (f x) = Im (g x)" if "x\<in>A" for x
+    using that assms 
+    unfolding less_eq_complex_def by simp
+
+  have Refsum: "(\<lambda>x. Re (f x)) abs_summable_on A"
+    using assms(1) apply (rule abs_summable_on_comparison_test[where g=f])
+    using abs_Re_le_cmod by auto
+  have Regsum: "(\<lambda>x. Re (g x)) abs_summable_on A"
+    using assms(2) apply (rule abs_summable_on_comparison_test[where g=g])
+    using abs_Re_le_cmod by auto
+    
+  show "infsetsum f A \<le> infsetsum g A"
+    unfolding fsplit gsplit
+    apply (rule less_eq_complexI; simp)
+    using Refsum Regsum Re_leq apply (rule infsetsum_mono)
+    using Im_eq by auto
+qed
+
+(* TODO: move *)
+lemma cnj_x_x: "cnj x * x = (abs x)\<^sup>2"
+  apply (cases x)
+  by (auto simp: complex_cn complex_mult abs_complex_def complex_norm power2_eq_square complex_of_real_def)
+
+lemma cnj_x_x_geq0[simp]: "cnj x * x \<ge> 0"
+  apply (cases x)
+  by (auto simp: complex_cn complex_mult complex_of_real_def less_eq_complex_def)
+
+instantiation vector :: (type) complex_inner begin
+lift_definition cinner_vector :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> complex" is 
+  "\<lambda>x y. infsetsum (\<lambda>i. (cnj (x i) * y i)) UNIV" .
+instance
+proof standard
+  fix x y z :: "'a vector" fix c :: complex
+  show "cinner x y = cnj (cinner y x)"
+  proof transfer
+    fix x y :: "'a\<Rightarrow>complex" assume "has_ell2_norm x" and "has_ell2_norm y"
+    have "(\<Sum>\<^sub>ai. cnj (x i) * y i) = (\<Sum>\<^sub>ai. cnj (cnj (y i) * x i))"
+      by (metis complex_cnj_cnj complex_cnj_mult mult.commute)
+    also have "\<dots> = cnj (\<Sum>\<^sub>ai. cnj (y i) * x i)"
+      by (metis infsetsum_cnj) 
+    finally show "(\<Sum>\<^sub>ai. cnj (x i) * y i) = cnj (\<Sum>\<^sub>ai. cnj (y i) * x i)" .
+  qed
+
+  show "cinner (x + y) z = cinner x z + cinner y z" sorry
+  show "cinner (c *\<^sub>C x) y = cnj c * cinner x y" sorry
+
+  show "0 \<le> cinner x x"
+  proof transfer
+    fix x :: "'a \<Rightarrow> complex"
+    assume "has_ell2_norm x"
+    have sum: "(\<lambda>i. cnj (x i) * x i) abs_summable_on UNIV" sorry
+    have "0 = (\<Sum>\<^sub>ai::'a. 0)" by auto
+    also have "\<dots> \<le> (\<Sum>\<^sub>ai. cnj (x i) * x i)"
+      apply (rule infsetsum_mono_complex)
+      using sum by auto
+    finally show "0 \<le> (\<Sum>\<^sub>ai. cnj (x i) * x i)" by assumption
+  qed
+
+  show "(cinner x x = 0) = (x = 0)" sorry
+  show "norm x = sqrt (cmod (cinner x x))" sorry
+qed 
+end
+
+instance vector :: (type) chilbert_space sorry
+
+(* TODO remove and document *)
+abbreviation "timesScalarVec \<equiv> (scaleC :: complex \<Rightarrow> 'a vector \<Rightarrow> 'a vector)"
+
+(* lift_definition timesScalarVec :: "complex \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>c x i. c * x i"
+  by (fact ell2_norm_smult) *)
+(* scaleC_scaleC: lemma timesScalarVec_twice[simp]: "timesScalarVec a (timesScalarVec b \<psi>) = timesScalarVec (a*b) \<psi>"
+  by (transfer, auto) *)
+
+(* scaleC_minus1_left - lemma uminus_vector: "(-\<psi>) = timesScalarVec (-1) \<psi>"
+  apply transfer by auto *)
+
+(* scaleC_one - lemma one_times_vec[simp]: "timesScalarVec 1 \<psi> = \<psi>"
+  apply transfer by simp *)
+
+(* scaleC_zero_right -- lemma times_zero_vec[simp]: "timesScalarVec c 0 = 0"
+  apply transfer by simp *)
+
+(* scaleC_add_right -- lemma timesScalarVec_add_right: "timesScalarVec c (x+y) = timesScalarVec c x + timesScalarVec c y" 
+  apply transfer apply (rule ext) by algebra *)
+
+(* scaleC_add_left - lemma timesScalarVec_add_left: "timesScalarVec (c+d) x = timesScalarVec c x + timesScalarVec d x"
+  apply transfer apply (rule ext) by algebra *)
 
 lemma ell2_ket[simp]: "norm (ket i) = 1"
   apply transfer unfolding ell2_norm_def real_sqrt_eq_1_iff
@@ -307,18 +410,61 @@ lemma ell2_ket[simp]: "norm (ket i) = 1"
     apply auto
   by (rule ell2_1)
 
-axiomatization orthogonal :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> bool"
-  where orthogonal_comm: "orthogonal \<psi> \<phi> = orthogonal \<phi> \<psi>"
+definition "is_orthogonal x y = (cinner x y = 0)"
 
-axiomatization is_subspace :: "'a vector set \<Rightarrow> bool"
-  where is_subspace_0[simp]: "is_subspace {0}"
-    and is_subspace_UNIV[simp]: "is_subspace UNIV"
-    and is_subspace_orthog[simp]: "is_subspace A \<Longrightarrow> is_subspace {\<psi>. (\<forall>\<phi>\<in>A. orthogonal \<psi> \<phi>)}"
-    and is_subspace_inter[simp]: "is_subspace A \<Longrightarrow> is_subspace B \<Longrightarrow> is_subspace (A\<inter>B)"
-    and is_subspace_plus: "is_subspace A \<Longrightarrow> is_subspace B \<Longrightarrow> is_subspace {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}"
-    and is_subspace_contains_0: "is_subspace A \<Longrightarrow> 0 \<in> A"
-    and is_subspace_closed_plus: "is_subspace A \<Longrightarrow> x\<in>A \<Longrightarrow> y\<in>A \<Longrightarrow> (x+y) \<in> A"
-    and is_subspace_INF[simp]: "(\<And>x. x \<in> AA \<Longrightarrow> is_subspace x) \<Longrightarrow> is_subspace (\<Inter>AA)"
+lemma orthogonal_comm: "is_orthogonal \<psi> \<phi> = is_orthogonal \<phi> \<psi>"
+  unfolding is_orthogonal_def apply (subst cinner_commute) by blast
+
+locale is_subspace =
+  fixes A::"'a vector set"
+  assumes additive_closed: "x\<in>A \<Longrightarrow> y\<in>A \<Longrightarrow> x+y\<in>A"
+  assumes smult_closed: "x\<in>A \<Longrightarrow> c *\<^sub>C x \<in> A"
+  assumes closed: "closed A"
+  assumes zero: "0 : A"
+
+lemma is_subspace_0[simp]: "is_subspace {0}"
+  apply (rule is_subspace.intro) by auto
+
+lemma is_subspace_UNIV[simp]: "is_subspace UNIV"
+  apply (rule is_subspace.intro) by auto
+
+lemma is_subspace_inter[simp]: assumes "is_subspace A" and "is_subspace B" shows "is_subspace (A\<inter>B)"
+  apply (rule is_subspace.intro) 
+  using assms[unfolded is_subspace_def]
+  by auto
+
+lemma is_subspace_contains_0: "is_subspace A \<Longrightarrow> 0 \<in> A"
+  unfolding is_subspace_def by auto
+
+(* lemma is_subspace_plus: assumes "is_subspace A" and "is_subspace B" shows "is_subspace {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}"
+  apply (rule is_subspace.intro) 
+proof -
+  fix x y c assume x: "x \<in> {\<psi> + \<phi> |\<psi> \<phi>. \<psi> \<in> A \<and> \<phi> \<in> B}" and y: "y \<in> {\<psi> + \<phi> |\<psi> \<phi>. \<psi> \<in> A \<and> \<phi> \<in> B}"
+  from x y show "x + y \<in> {\<psi> + \<phi> |\<psi> \<phi>. \<psi> \<in> A \<and> \<phi> \<in> B}"
+    using assms[unfolded is_subspace_def]
+    by (smt add.assoc add.commute mem_Collect_eq)
+  from x obtain xA xB where sum: "x = xA + xB" and "xA : A" and "xB : B"
+    by auto
+  have cxA: "timesScalarVec c xA : A"
+    by (simp add: \<open>xA \<in> A\<close> assms(1) is_subspace.smult_closed)
+  have cxB: "timesScalarVec c xB : B"
+    by (simp add: \<open>xB \<in> B\<close> assms(2) is_subspace.smult_closed)
+  show "timesScalarVec c x \<in> {\<psi> + \<phi> |\<psi> \<phi>. \<psi> \<in> A \<and> \<phi> \<in> B}" 
+    unfolding sum timesScalarVec_add_right using cxA cxB by auto
+next
+  show "closed {\<psi> + \<phi> |\<psi> \<phi>. \<psi> \<in> A \<and> \<phi> \<in> B}" by auto
+  show "0 \<in> {\<psi> + \<phi> |\<psi> \<phi>. \<psi> \<in> A \<and> \<phi> \<in> B}" 
+    using assms[unfolded is_subspace_def] apply auto by force
+qed *)
+
+lemma is_subspace_INF[simp]: "(\<And>x. x \<in> AA \<Longrightarrow> is_subspace x) \<Longrightarrow> is_subspace (\<Inter>AA)"
+  apply (rule is_subspace.intro) unfolding is_subspace_def by auto
+
+
+
+axiomatization (* is_subspace :: "'a vector set \<Rightarrow> bool" *)
+  where is_subspace_orthog[simp]: "is_subspace A \<Longrightarrow> is_subspace {\<psi>. (\<forall>\<phi>\<in>A. is_orthogonal \<psi> \<phi>)}"
+    and is_subspace_plus: "is_subspace A \<Longrightarrow> is_subspace B \<Longrightarrow> is_subspace {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}" (* Proof above has only one missing step *)
 
 typedef 'a subspace = "{A::'a vector set. is_subspace A}"
   morphisms subspace_to_set Abs_subspace
@@ -372,28 +518,6 @@ proof transfer
   thus "{0::'a vector} \<noteq> UNIV" by auto
 qed
 
-(* axiomatization where
- (* subspace_plus_sup: "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y + z \<le> x" *)
-    (* subspace_zero_not_top[simp]: "(0::'a subspace) \<noteq> top" *)
-(* and tmp_reflex: "x \<le> x" (* Names with tmp_ will be hidden later *) *)
-(* and tmp_transitive: "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" *)
-(* and tmp_antisym: "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y" *)
-(* and tmp_top: "x \<le> top" *)
-(* and tmp_pos: "x \<ge> 0" (* zero_le *) *)
-(* and tmp_inf1: "inf x y \<le> x" *)
-(* and tmp_inf2: "inf x y \<le> y" *)
-(* and tmp_inf: "x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> inf y z" *)
-(* and tmp_assoc: "x + y + z = x + (y + z)"  *)
-(* and tmp_comm: "x + y = y + x" *)
-(* and tmp_mono: "x \<le> y \<Longrightarrow> z + x \<le> z + y" *)
-(* and tmp_zero_neutral: "0 + x = x" *)
-(* and tmp_Inf1: "x \<in> A \<Longrightarrow> Inf A \<le> x" *)
-(* and tmp_Inf2: "(\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> Inf A" *)
- and tmp_Sup1: "x \<in> A \<Longrightarrow> Sup A \<ge> x" 
- and tmp_Sup2: "(\<And>x. x \<in> A \<Longrightarrow> z \<ge> x) \<Longrightarrow> z \<ge> Sup A" 
- and subspace_empty_Sup: "Sup {} = 0"
-(* and tmp_Inf3: "Inf {} = (top::'a subspace)"  *)
-for x y z :: "'a subspace"  *)
 
 instantiation subspace :: (type)order begin
 instance apply intro_classes
@@ -442,7 +566,7 @@ instance proof intro_classes
     apply transfer apply auto apply (rule exI[of _ 0]) using is_subspace_contains_0 by auto
   show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x"
     apply transfer apply auto
-    apply (rule is_subspace_closed_plus)
+    apply (rule is_subspace.additive_closed)
     by auto
 qed
 end
@@ -512,8 +636,9 @@ lemma plus_bot[simp]: "x + bot = x" for x :: "'a subspace" unfolding subspace_su
 lemma top_plus[simp]: "top + x = top" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
 lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
     
-axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set"
+axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set" 
 
+hide_const (open) span
 definition [code del]: "span A = Inf {S. A \<subseteq> subspace_as_set S}"
 (* definition [code del]: "spanState A = Inf {S. state_to_vector ` A \<subseteq> subspace_as_set S}" *)
 (* consts span :: "'a set \<Rightarrow> 'b subspace"
@@ -535,11 +660,22 @@ lemma leq_plus_subspace[simp]: "a \<le> a + c" for a::"'a subspace"
 lemma leq_plus_subspace2[simp]: "a \<le> c + a" for a::"'a subspace"
   by (simp add: add_increasing)
 
+lift_definition ortho :: "'a subspace \<Rightarrow> 'a subspace" is (* Orthogonal complement *)
+  "\<lambda>S. {x::'a vector. \<forall>y\<in>S. is_orthogonal x y}" 
+  by (fact is_subspace_orthog)
 
-axiomatization ortho :: "'a subspace \<Rightarrow> 'a subspace" (* Orthogonal complement *)
-  where ortho_leq[simp]: "ortho a \<le> ortho b \<longleftrightarrow> a \<ge> b"
-    and ortho_twice[simp]: "ortho (ortho x) = x"
+axiomatization
+  where ortho_twice[simp]: "ortho (ortho x) = x"
 
+lemma ortho_leq[simp]: "ortho a \<le> ortho b \<longleftrightarrow> a \<ge> b"
+proof 
+  show d1: "b \<le> a \<Longrightarrow> ortho a \<le> ortho b" for a b :: "'a subspace"
+    apply transfer by auto
+  show "ortho a \<le> ortho b \<Longrightarrow> b \<le> a"
+    apply (subst ortho_twice[symmetric, of a])
+    apply (subst ortho_twice[symmetric, of b])
+    by (rule d1)
+qed
 
 lemma ortho_top[simp]: "ortho top = bot"
   apply (rule le_bot)
@@ -555,7 +691,7 @@ lemma ortho_bot[simp]: "ortho bot = top"
 
 
 subsection \<open>Bounded operators\<close>
-  
+
 typedef ('a,'b) bounded = "{A::'a vector\<Rightarrow>'b vector. bounded_linear A}"
   morphisms applyOp Abs_bounded
   using bounded_linear_zero by blast
@@ -568,6 +704,9 @@ instantiation bounded :: (type,type) zero begin
 lift_definition zero_bounded :: "('a,'b) bounded" is "\<lambda>_. 0" by simp
 instance ..
 end
+
+(* lift_definition timesOp :: "('b,'c) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'c) bounded" is "op o"
+  unfolding bounded_linear_def unfolding linear_def linear_axioms_def *)
 
 axiomatization
   adjoint :: "('a,'b) bounded \<Rightarrow> ('b,'a) bounded" ("_*" [99] 100)
@@ -630,7 +769,7 @@ lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
 
 axiomatization where equal_basis: "(\<And>x. applyOp A (ket x) = applyOp B (ket x)) \<Longrightarrow> A = B" for A::"('a,'b) bounded"
 
-axiomatization where adjoint_twice[simp]: "U** = U" for U :: "('a,'b) bounded"
+axiomatization where adjoint_twice[simp]: "(U*)* = U" for U :: "('a,'b) bounded"
 
 (* TODO: move specialized syntax into QRHL-specific file *)
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
