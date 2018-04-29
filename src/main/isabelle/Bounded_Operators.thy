@@ -1,5 +1,5 @@
-theory Bounded_Operator
-  imports "HOL-Library.Adhoc_Overloading" "HOL-Library.Rewrite" Complex_L2  
+theory Bounded_Operators
+  imports Complex_L2 "HOL-Library.Adhoc_Overloading"
 begin
 
 
@@ -312,17 +312,6 @@ axiomatization where proj_scalar_mult[simp]:
 axiomatization where move_plus:
   "Proj (ortho C) \<cdot> A \<le> B \<Longrightarrow> A \<le> B + C"
 for A B C::"'a subspace"
-
-section \<open>Measurements\<close>
-
-typedecl ('a,'b) measurement
-axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> ('b,'b) bounded"
-  and mtotal :: "('a,'b) measurement \<Rightarrow> bool"
-  where isProjector_mproj[simp]: "isProjector (mproj M i)"
-
-axiomatization computational_basis :: "('a, 'a) measurement" where
-  mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
-and mtotal_computational_basis [simp]: "mtotal computational_basis"
 
 
 section \<open>Tensor products\<close>

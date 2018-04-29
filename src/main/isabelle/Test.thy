@@ -1,5 +1,5 @@
 theory Test
-  imports "HOL-Library.Adhoc_Overloading" Main Test3
+  imports Main Test3 "HOL-Library.Adhoc_Overloading" Main
 begin
 
 lemma a: "x+(x::nat) = 2*x" by auto

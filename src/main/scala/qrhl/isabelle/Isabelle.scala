@@ -219,7 +219,7 @@ object Isabelle {
     case Nil => HOLogic.True
   }
 
-  val predicateT = Type("QRHL_Core.subspace", List(Type("QRHL_Core.mem2",Nil)))
+  val predicateT = Type("Complex_L2.subspace", List(Type("QRHL_Core.mem2",Nil)))
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)

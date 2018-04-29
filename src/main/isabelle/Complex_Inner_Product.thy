@@ -472,6 +472,4 @@ class chilbert_space = complex_inner + complete_space begin
 subclass hilbert_space by standard
 end
 
-term principal
-
 end

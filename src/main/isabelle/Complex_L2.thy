@@ -1,6 +1,5 @@
 theory Complex_L2
   imports "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum"
-    "HOL-Library.Adhoc_Overloading" (* Not used here, but needed to make Bounded_Operator word correctly *)
     Complex_Inner_Product Complex_Main
 begin
 

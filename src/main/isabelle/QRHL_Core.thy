@@ -1,5 +1,5 @@
 theory QRHL_Core
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operator
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators
 begin
 
 section \<open>Miscellaneous\<close>
@@ -122,6 +122,18 @@ lift_definition equal_bit :: "bit \<Rightarrow> bit \<Rightarrow> bool" is "HOL.
 instance apply intro_classes 
   apply transfer by (rule equal_eq)
 end
+
+
+section \<open>Measurements\<close>
+
+typedecl ('a,'b) measurement
+axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> ('b,'b) bounded"
+  and mtotal :: "('a,'b) measurement \<Rightarrow> bool"
+  where isProjector_mproj[simp]: "isProjector (mproj M i)"
+
+axiomatization computational_basis :: "('a, 'a) measurement" where
+  mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
+and mtotal_computational_basis [simp]: "mtotal computational_basis"
 
 
 section \<open>Quantum predicates\<close>

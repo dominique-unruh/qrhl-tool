@@ -6,3 +6,12 @@ session "QRHL-Prerequisites" = "HOL" +
   theories "Jordan_Normal_Form.Matrix_Impl" "HOL-Protocol.Protocol_Main" "HOL-Analysis.Inner_Product"
     "HOL-Analysis.Infinite_Set_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
     "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral"
+
+(* Total timing for different parent sessions of QRHL-Prerequisites:
+
+HOL: 42 min
+HOL-Library: ??? min
+HOL-Analysis: ??? min
+HOL-Algebra: ??? min
+
+*)

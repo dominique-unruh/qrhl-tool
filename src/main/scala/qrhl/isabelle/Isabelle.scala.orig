@@ -162,7 +162,7 @@ object Isabelle {
     case Nil => HOLogic.True
   }
 
-  val assertionT = Type("QRHL_Core.subspace", List(Type("QRHL.mem2",Nil)))
+  val assertionT = Type("Complex_L2.subspace", List(Type("QRHL.mem2",Nil)))
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: assertionT)
   val assertion_inf = Const ("Lattices.inf_class.inf", assertionT -->: assertionT -->: assertionT)
 
