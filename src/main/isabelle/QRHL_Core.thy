@@ -861,9 +861,9 @@ definition[code del]: "EPR' = timesScalarVec sqrt2 EPR"
 lemma EPR_EPR': "EPR = timesScalarVec (1/sqrt2) EPR'"
   unfolding EPR'_def by simp
 
-lemma norm_EPR'[simp]: "norm (1/sqrt2 \<cdot> EPR') = 1"
-  unfolding EPR'_def by simp
-
+lemma norm_EPR'[simp]: "cmod (1/sqrt2) * norm EPR' = 1"
+  unfolding EPR'_def using EPR_normalized apply auto
+  by (metis divide_cancel_right nonzero_mult_div_cancel_right norm_divide norm_eq_zero norm_one sqrt2_neq0)
 
 section \<open>Misc\<close>
 
