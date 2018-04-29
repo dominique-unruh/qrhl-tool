@@ -83,8 +83,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 
   private def doBuild() {
     println("*** Building Isabelle (may take a while, especially the first time, e.g., 10-25min)...")
-//    if (!System.build(environment, config)) TODO
-//      throw qrhl.UserException("Building Isabelle failed")
+    if (!System.build(environment, config))
+      throw qrhl.UserException("Building Isabelle failed")
   }
 
   private def checkBuilt() : Boolean = {
@@ -93,9 +93,14 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 //    println("LOC "+Paths.get(location))
 //    val comparedTo = Files.getLastModifiedTime(Paths.get(location))
 //    println(comparedTo)
-    val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path:Path,attr:BasicFileAttributes) =>
-      path.endsWith("QRHL") /*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/ })
-    files.findAny().isPresent
+    try {
+      val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, attr: BasicFileAttributes) =>
+        path.endsWith("QRHL") /*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
+      })
+      files.findAny().isPresent
+    } catch {
+      case _ : IOException => false
+    }
   }
 
   private val system = {
