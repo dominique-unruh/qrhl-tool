@@ -1,9 +1,10 @@
 theory Test
-  imports 
-    "HOL-Library.Rewrite" 
-    "HOL-Library.Adhoc_Overloading"
+  imports "HOL-Library.Adhoc_Overloading" Main Test3
 begin
 
-lemma "(0::nat) = (1::nat)"
-  apply (rewrite One_nat_def)
+lemma a: "x+(x::nat) = 2*x" by auto
+lemma b: "(1::nat)+(1::nat) = 2" 
+  apply (subst a)
+  by simp
 
+end

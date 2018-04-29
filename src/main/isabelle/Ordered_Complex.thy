@@ -1,12 +1,18 @@
 theory Ordered_Complex
-  imports Complex Ordered_Fields 
+  imports "HOL.Complex" Ordered_Fields "Jordan_Normal_Form.Conjugate" 
 begin
+
+declare less_eq_complex_def[simp del]
+declare less_complex_def[simp del]
 
 declare[[coercion_enabled=false]]
 
 subsection \<open>Ordering on complex numbers\<close>
 
-(* instantiation complex :: ord begin
+(*
+Add this if we remove Jordan_Normal_Form.Conjugate 
+
+instantiation complex :: ord begin
 definition [simp]: "x < y \<equiv> Im x = Im y \<and> Re x < Re y"
 definition [simp]: "x \<le> y \<equiv> Im x = Im y \<and> Re x \<le> Re y"
 instance ..
@@ -26,19 +32,17 @@ qed
 end *)
 
 instantiation complex :: nice_ordered_field begin
-definition [simp]: "x < y \<equiv> Im x = Im y \<and> Re x < Re y"
-definition [simp]: "x \<le> y \<equiv> Im x = Im y \<and> Re x \<le> Re y"
 (* definition "x \<le> y \<longleftrightarrow> Re x \<le> Re y \<and> Im x = Im y"
 definition "x < y \<longleftrightarrow> Re x < Re y \<and> Im x = Im y" for x y :: complex *)
 instance
 proof intro_classes
   note defs = less_eq_complex_def less_complex_def abs_complex_def
   fix x y z a b c :: complex
-   show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" unfolding defs by auto
+(*    show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" unfolding defs by auto
   show "x \<le> x" unfolding defs by auto
   show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" unfolding defs by auto
   show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y" unfolding defs by (simp add: complex.expand)
-  show "a \<le> b \<Longrightarrow> c + a \<le> c + b" unfolding defs by auto
+  show "a \<le> b \<Longrightarrow> c + a \<le> c + b" unfolding defs by auto *)
   show "a \<le> 0 \<Longrightarrow> \<bar>a\<bar> = - a" unfolding defs
     by (simp add: cmod_eq_Re complex_is_Real_iff)
   show "0 \<le> a \<Longrightarrow> \<bar>a\<bar> = a"

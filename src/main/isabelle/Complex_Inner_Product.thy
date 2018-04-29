@@ -1,7 +1,7 @@
 section \<open>Inner Product Spaces and the Gradient Derivative\<close>
 
 theory Complex_Inner_Product
-imports Complex_Main Complex_Vector_Spaces Inner_Product(* TODO needed? *)
+imports Complex_Main Complex_Vector_Spaces "HOL-Analysis.Inner_Product"
 begin
 
 subsection \<open>Complex inner product spaces\<close>
@@ -436,7 +436,6 @@ lemma cGDERIV_scaleC:
       :> (scaleC (cnj (f x)) dg + scaleC (cnj df) (cnj (g x)))"
   unfolding cgderiv_def has_field_derivative_def cinner_add_left cinner_scaleC_left
   apply (rule has_derivative_subst)
-  thm has_derivative_scaleR
   apply (erule (1) has_derivative_scaleC)
   by (simp add: ac_simps)
   
@@ -472,5 +471,7 @@ end
 class chilbert_space = complex_inner + complete_space begin
 subclass hilbert_space by standard
 end
+
+term principal
 
 end
