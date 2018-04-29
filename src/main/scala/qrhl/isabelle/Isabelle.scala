@@ -95,7 +95,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 //    println(comparedTo)
     try {
       val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, attr: BasicFileAttributes) =>
-        path.endsWith("QRHL") /*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
+        path.endsWith("QRHL") && !path.getParent.endsWith("log")
+//        path.endsWith("QRHL") && !path.endsWith("log")/*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
       })
       files.findAny().isPresent
     } catch {
