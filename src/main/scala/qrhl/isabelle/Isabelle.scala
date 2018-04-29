@@ -1,7 +1,8 @@
 package qrhl.isabelle
 
 import java.io.{BufferedReader, IOException, InputStreamReader}
-import java.nio.file.{Files, Paths}
+import java.nio.file.attribute.{BasicFileAttributes, FileTime}
+import java.nio.file.{Files, Path, Paths}
 
 import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.hol.HOLogic
@@ -21,7 +22,7 @@ import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Random, Right}
 
-class Isabelle(path:String, build:Boolean= !sys.env.contains("QRHL_SKIP_BUILD")) {
+class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
   val version = Version.Stable("2017")
 
   private val auto = path=="auto"
@@ -82,107 +83,37 @@ class Isabelle(path:String, build:Boolean= !sys.env.contains("QRHL_SKIP_BUILD"))
 
   private def doBuild() {
     println("*** Building Isabelle (may take a while, especially the first time, e.g., 10-25min)...")
-    if (!System.build(environment, config))
-      throw qrhl.UserException("Building Isabelle failed")
+//    if (!System.build(environment, config)) TODO
+//      throw qrhl.UserException("Building Isabelle failed")
+  }
+
+  private def checkBuilt() : Boolean = {
+//    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
+//    assert(location.getScheme=="file")
+//    println("LOC "+Paths.get(location))
+//    val comparedTo = Files.getLastModifiedTime(Paths.get(location))
+//    println(comparedTo)
+    val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path:Path,attr:BasicFileAttributes) =>
+      path.endsWith("QRHL") /*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/ })
+    files.findAny().isPresent
   }
 
   private val system = {
-    if (build) doBuild()
-    else println("*** Warning: skipping build ***")
+    if (build || !checkBuilt())
+      doBuild()
+
     Await.result(System.create(environment, config), Duration.Inf)
   }
 
 
-//  private val readTypeExpr: ml.Expr[IContext => String => ITyp] =
-//    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.read_typ ctxt))")
-
-//  private def printTypExpr(t: ITyp): ml.Expr[IContext => String] =
-//    ml.Expr.uncheckedLiteral[ITyp => IContext => String]("(fn T => fn ctxt => YXML.content_of (Syntax.string_of_typ ctxt T))")(t)
-
-//  private val parseTermExpr: ml.Expr[IContext => String => Term] =
-//    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.parse_term ctxt))")
-
-//  private val checkTermExpr: ml.Expr[IContext => Term => Term] =
-//    ml.Expr.uncheckedLiteral("(fn ctxt => (Syntax.check_term ctxt))")
-
-//  private def declareVariableExpr(name: String, typ: ITyp): ml.Expr[IContext => IContext] = {
-//    val lit = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext](
-//      """
-//      (fn name => fn T => fn ctx =>
-//         let val ([v],ctx') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctx
-//             val _ = if v<>name then error("variable v already declared") else ()
-//        in ctx' end)
-//      """)
-//    val eval1 = lit(name)
-//    val eval2 = eval1(typ)
-//    eval2
-//  }
-
-
-//  @deprecated("use operations","now")
-//  private def runProg[A](prog: Program[A], thyName: String): A = Await.result(system.run(prog, thyName), Duration.Inf)
-
-//  @deprecated("use operations","now")
-//  def runExpr[A](expr: ml.Expr[A], thyName: String)(implicit codec: Codec[A]): A = runProg(expr.toProg, thyName)
-
   private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
 
-//  @deprecated("use operations","now")
-//  def getRef[A: ml.Opaque](expr: ml.Expr[A], thyName: String): ml.Ref[A] = runProg(expr.rawPeek[Unit](unitConv), thyName)._1
-
   def invoke[I,O](op: Operation[I,O], arg: I) : O = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
-
-//  def getContext(thyName: String) =
-//    new Isabelle.Context(this, thyName, getRef[IContext](IContext.initGlobal(Theory.get(thyName)), thyName))
 
   def getQRHLContextWithFiles(thys: String*) : Isabelle.Context = {
     getContextWithThys(List("QRHL.QRHL_Operations","QRHL.QRHL"), thys.toList)
   }
 
-//  private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
-//    //      ml.Expr.uncheckedLiteral("(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory (\"Draft.\"^name)))")
-//    val use: ml.Expr[((List[String],List[String])) => Theory] =
-//          ml.Expr.uncheckedLiteral("""(fn (files,thys) => let
-//                            val _ = map Thy_Info.use_thy files
-//                            val thy = Theory.begin_theory ("QRHL_Session", Position.none) (map Thy_Info.get_theory thys)
-//                            val thy = Theory.end_theory thy
-//                            val _ = Thy_Info.register_thy thy
-//                            in thy end)""")
-//    val allThys = thys.toList ++ files.map("Draft."+_)
-//    println(thys,files,allThys)
-//    new Isabelle.Context(this, "QRHL_Session", getRef[IContext](IContext.initGlobal(use((files.toList,allThys))), "Protocol_Main"))
-//  }
-
-/*  private def getContextWithThys(thys: Seq[String], files: Seq[String]): Isabelle.Context = {
-    val thyName = "QRHL_Session_Tmp_" + Random.nextInt(1000000000)
-//    println("thyName",thyName)
-
-    val thyFile = Paths.get(".",thyName + ".thy")
-    thyFile.toFile.deleteOnExit()
-
-    val imports = (thys ++ files).map('"'+_+'"').mkString(" ")
-//    println("imports",imports)
-
-    val thyCode = s"""
-      |theory $thyName
-      |  imports $imports
-      |begin
-      |end
-      """.stripMargin
-//    println("thyCode",thyCode)
-
-    Files.write(thyFile,thyCode.getBytes)
-
-//    val use: ml.Expr[String => Theory] =
-//      ml.Expr.uncheckedLiteral("""(fn name => (Thy_Info.use_thy name; Thy_Info.get_theory ("Draft."^name)))""")
-//
-//    val ctxRef = getRef[IContext](IContext.initGlobal(use(thyName)), "Protocol_Main")
-    val ctxId = invoke(Isabelle.createContextOp, thyName)
-
-//    val ctxId = ctxRef.id
-
-    new Isabelle.Context(this, ctxId)
-  }*/
 
   private def getContextWithThys(thys: List[String], files: List[String]): Isabelle.Context = {
     invoke(Operation.UseThys, files)
@@ -208,7 +139,6 @@ class Isabelle(path:String, build:Boolean= !sys.env.contains("QRHL_SKIP_BUILD"))
   }
 
   def runJEdit(files:Seq[String]=Nil): Unit = environment.exec("jedit",List("-l","QRHL") ++ files.toList)
-//  def rebuild(): Unit = build()
 }
 
 object Isabelle {
