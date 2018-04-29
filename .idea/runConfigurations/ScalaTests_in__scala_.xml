@@ -16,6 +16,8 @@
     <buffered bufClass="qrhl.ExampleFilesTest" />
     <buffered bufClass="qrhl.isabelle.IsabelleTest" />
     <buffered bufClass="qrhl.isabelle.IsabelleTest" />
+    <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
+    <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
     <buffered bufClass="qrhl.tactic.CallTacTest" />
     <buffered bufClass="qrhl.tactic.CallTacTest" />
     <buffered bufClass="qrhl.tactic.CaseTacTest" />

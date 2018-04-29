@@ -248,15 +248,19 @@ class State private (val environment: Environment,
     dependencies.filter(_.changed).map(_.file)
   }
 
-  private def addQVariableNameAssumption(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
-//    val mlExpr = ml.Expr.uncheckedLiteral[String => ITyp => IContext => IContext]("QRHL.addQVariableNameAssumption")
-//    isabelle.map(mlExpr(name)(implicitly)(typ))
+  private def declare_quantum_variable(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
+    isabelle.map(id => isabelle.isabelle.invoke(State.declare_quantum_variable, (name,typ,id)))
+  }
 
-    isabelle.map(id => isabelle.isabelle.invoke(State.addQVariableNameAssumptionOp, (name,typ,id)))
+  private def declare_classical_variable(isabelle: Isabelle.Context, name: String, typ: ITyp) : Isabelle.Context = {
+    isabelle.map(id => isabelle.isabelle.invoke(State.declare_classical_variable, (name,typ,id)))
   }
 
   def declareVariable(name: String, typ: Typ, quantum: Boolean = false): State = {
     val newEnv = environment.declareVariable(name, typ, quantum = quantum)
+      .declareAmbientVariable(name+"_var", typ)
+      .declareAmbientVariable(Variable.index1(name)+"_var", typ)
+      .declareAmbientVariable(Variable.index2(name)+"_var", typ)
     if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = isabelle.get
     val typ1 = typ.isabelleTyp
@@ -265,8 +269,10 @@ class State private (val environment: Environment,
       .declareVariable(Variable.index1(name), typ2)
       .declareVariable(Variable.index2(name), typ2)
     if (quantum) {
-      newIsa = addQVariableNameAssumption(newIsa, Variable.index1(name), typ1)
-      newIsa = addQVariableNameAssumption(newIsa, Variable.index2(name), typ1)
+      newIsa = declare_quantum_variable(newIsa, name, typ1)
+    }
+    else {
+      newIsa = declare_classical_variable(newIsa, name, typ1)
     }
     copy(environment = newEnv, isabelle = Some(newIsa))
   }
@@ -284,6 +290,9 @@ object State {
     boolT=null, predicateT=null, dependencies=Nil, programT=null, currentLemma=None)
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
-  val addQVariableNameAssumptionOp: Operation[(String, ITyp, BigInt), BigInt] =
-    Operation.implicitly[(String,ITyp,BigInt), BigInt]("addQVariableNameAssumption")
+  val declare_quantum_variable: Operation[(String, ITyp, BigInt), BigInt] =
+    Operation.implicitly[(String,ITyp,BigInt), BigInt]("declare_quantum_variable")
+
+  val declare_classical_variable: Operation[(String, ITyp, BigInt), BigInt] =
+    Operation.implicitly[(String,ITyp,BigInt), BigInt]("declare_classical_variable")
 }

@@ -681,6 +681,17 @@ lemma qvar_trafo_protecterd_comm_op[simp]:
   shows "qvar_trafo_protected comm_op (qvariable_concat Q R) (qvariable_concat R Q)"
   unfolding qvar_trafo_protected_def by simp                                                  
  
+section \<open>Measurements\<close>
+
+typedecl ('a,'b) measurement
+axiomatization mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> ('b,'b) bounded"
+  and mtotal :: "('a,'b) measurement \<Rightarrow> bool"
+  where isProjector_mproj[simp]: "isProjector (mproj M i)"
+
+axiomatization computational_basis :: "('a, 'a) measurement" where
+  mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
+and mtotal_computational_basis [simp]: "mtotal computational_basis"
+
 
 section \<open>Quantum predicates (ctd.)\<close>
 
