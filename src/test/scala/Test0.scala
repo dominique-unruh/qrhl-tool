@@ -19,27 +19,31 @@ import scala.concurrent.duration.Duration
 import scala.language.implicitConversions
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Theory, Type, Var, Context => IContext, Typ => ITyp}
 
+import scala.util.Right
+
+
+import monix.execution.Scheduler.Implicits.global
+
 object Test0 {
   def main(args: Array[String]): Unit = {
     try {
-      println(1)
-      val isabelle = ToplevelTest.isabelle
-      println(3)
-//      throw new RuntimeException("KJKKJ")
-      val isa = isabelle.getQRHLContextWithFiles()
-      println(441)
-//      val expr = ml.Expr.uncheckedLiteral[String]("\"1\"")
-//      isabelle.runExpr(expr, "QRHL_Session")
-      isa.prettyTyp(HOLogic.boolT)
-      //    isa.runExpr(expr)
-      println(5)
-    } catch {
-      case e : Exception =>
-        println(s"EXN $e")
-        e.printStackTrace()
-//        sys.exit(1)
-    } finally {
-      sys.exit
+      val version = Version.Stable("2017")
+      val localStoragePath = Paths.get("/tmp/isabelle-temp")
+
+      val platform: Platform = Platform.guess match {
+        case Some(p) => p.withLocalStorage(localStoragePath)
+      }
+
+      val setup: Setup = Setup(Paths.get("/tmp/xxx"), platform, version)
+
+      val resources = Resources.dumpIsabelleResources() match {
+        case Right(r) => r
+      }
+
+      val environment = Await.result(setup.makeEnvironment(resources, Nil), Duration.Inf)
+    }
+    finally {
+      sys.exit(0)
     }
   }
 }

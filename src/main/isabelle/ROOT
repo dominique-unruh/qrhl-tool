@@ -7,11 +7,13 @@ session "QRHL-Prerequisites" = "HOL-Library" +
     "HOL-Analysis.Infinite_Set_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
     "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral"
 
-(* Total timing for different parent sessions of QRHL-Prerequisites:
+(*
+
+Total build timing for different parent sessions of QRHL-Prerequisites:
 
 HOL: 42 min
-HOL-Library: ??? min
-HOL-Analysis: ??? min
-HOL-Algebra: ??? min
+HOL-Library: 41 min
+HOL-Analysis: 57 min
+HOL-Algebra: 46 min
 
 *)
