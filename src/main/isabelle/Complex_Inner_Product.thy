@@ -165,7 +165,7 @@ proof (rule power2_le_imp_le)
   have ineq: "cinner x y * cnj (cinner x y) \<le> cinner x x * cinner y y"
     using Cauchy_Schwarz_ineq .
   have "(cmod (cinner x y))^2 = Re (cinner x y * cnj (cinner x y))"
-    by (metis Re_complex_of_real complex_norm_square)
+    by (metis (mono_tags) Re_complex_of_real complex_norm_square)
   also have "\<dots> \<le> Re (cinner x x * cinner y y)"
     using ineq by (rule Re_mono)
   also have "\<dots> = Re (complex_of_real ((norm x)^2) * complex_of_real ((norm y)^2))"

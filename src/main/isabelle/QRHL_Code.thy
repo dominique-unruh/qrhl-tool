@@ -136,8 +136,8 @@ definition "orthogonal_complement_vec n vs =
 
 definition "vec_tensor (A::'a::times vec) (B::'a vec) =
   vec (dim_vec A*dim_vec B) 
-  (\<lambda>r. A $ (r div dim_vec B) *
-       B $ (r mod dim_vec B))"
+  (\<lambda>r. vec_index A (r div dim_vec B) *
+       vec_index B (r mod dim_vec B))"
 
 
 axiomatization where tensorVec_code[code]: "vec_of_vector (\<psi> \<otimes> \<phi>) = vec_tensor (vec_of_vector \<psi>) (vec_of_vector \<phi>)"

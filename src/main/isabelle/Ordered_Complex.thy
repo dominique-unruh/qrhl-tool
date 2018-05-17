@@ -2,8 +2,8 @@ theory Ordered_Complex
   imports "HOL.Complex" Ordered_Fields "Jordan_Normal_Form.Conjugate" 
 begin
 
-declare less_eq_complex_def[simp del]
-declare less_complex_def[simp del]
+declare Conjugate.less_eq_complex_def[simp del]
+declare Conjugate.less_complex_def[simp del]
 
 declare[[coercion_enabled=false]]
 

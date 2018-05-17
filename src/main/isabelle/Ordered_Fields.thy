@@ -238,6 +238,11 @@ class nice_ordered_field = ordered_field + zero_less_one + idom_abs_sgn +
   and abs_nn: "abs x \<ge> 0"
 begin
 
+subclass (in linordered_field) nice_ordered_field
+  apply standard
+       apply auto
+  using local.inverse_le_imp_le apply blast
+  using local.dense_le by blast
 
 lemma comparable:
   assumes "a \<le> c \<or> a \<ge> c"
@@ -726,14 +731,6 @@ text \<open>Division and Signs\<close>
 
 text \<open>Division and the Number One\<close>
 
-text\<open>Simplify expressions equated with 1\<close>
-
-lemma zero_eq_1_divide_iff [simp]: "0 = 1 / a \<longleftrightarrow> a = 0"
-  by (cases "a = 0") (auto simp: field_simps)
-
-lemma one_divide_eq_0_iff [simp]: "1 / a = 0 \<longleftrightarrow> a = 0"
-  using zero_eq_1_divide_iff[of a] by simp
-
 text\<open>Simplify expressions such as \<open>0 < 1/x\<close> to \<open>0 < x\<close>\<close>
 
 lemma zero_le_divide_1_iff [simp]:
@@ -814,14 +811,6 @@ lemma divide_less_eq_1_neg [simp]:
   "a < 0 \<Longrightarrow> b/a < 1 \<longleftrightarrow> a < b"
   using local.dual_order.strict_iff_order by auto
 
-lemma eq_divide_eq_1 [simp]:
-  "(1 = b/a) = ((a \<noteq> 0 & a = b))"
-  by auto
-
-lemma divide_eq_eq_1 [simp]:
-  "(b/a = 1) = ((a \<noteq> 0 & a = b))"
-  by auto
-
 lemma abs_div_pos: "0 < y ==>
     \<bar>x\<bar> / y = \<bar>x / y\<bar>"
   by (simp add: local.abs_pos)
@@ -883,12 +872,6 @@ proof -
 qed
 
 end
-
-subclass (in linordered_field) nice_ordered_field
-  apply standard
-       apply auto
-  using local.inverse_le_imp_le apply blast
-  using local.dense_le by blast
 
 
 code_identifier

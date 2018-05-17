@@ -43,7 +43,7 @@ next
     proof -
       have "B' r \<le> (SUP F:{F. finite F \<and> F\<subseteq>part r}. sum normf F)"
         unfolding B'_def
-        by (metis (mono_tags, lifting) SUP_least SUP_upper mem_Collect_eq)
+        by (metis (mono_tags, lifting) SUP_least SUP_upper)
       also have "\<dots> \<le> B"
         using normf_B unfolding part_def
         by (metis (no_types, lifting) Int_subset_iff SUP_least mem_Collect_eq)
@@ -257,6 +257,7 @@ notation
   sup (infixl "\<squnion>" 65) 
 
 
+(* TODO: rename *)
 typedef 'a vector = "{x::'a\<Rightarrow>complex. has_ell2_norm x}"
   unfolding has_ell2_norm_def by (rule exI[of _ "\<lambda>_.0"], auto)
 setup_lifting type_definition_vector
@@ -683,6 +684,7 @@ lemma is_subspace_INF[simp]: "(\<And>x. x \<in> AA \<Longrightarrow> is_subspace
 axiomatization (* is_subspace :: "'a vector set \<Rightarrow> bool" *)
   where is_subspace_orthog[simp]: "is_subspace A \<Longrightarrow> is_subspace {\<psi>. (\<forall>\<phi>\<in>A. is_orthogonal \<psi> \<phi>)}"
     and is_subspace_plus: "is_subspace A \<Longrightarrow> is_subspace B \<Longrightarrow> is_subspace {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}" (* Proof above has only one missing step *)
+  for A B :: "'a vector set"
 
 typedef 'a subspace = "{A::'a vector set. is_subspace A}"
   morphisms subspace_to_set Abs_subspace
