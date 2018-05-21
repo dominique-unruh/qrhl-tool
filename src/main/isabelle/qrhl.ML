@@ -2,6 +2,7 @@ structure QRHL =
 struct
 
 fun mk_qvariablesT T = Type(@{type_name qvariables}, [T])
+fun mk_distrT T = Type(@{type_name distr}, [T])
 fun mk_qvariableT T = Type(@{type_name qvariable}, [T])
 fun mk_vectorT T = Type(@{type_name vector}, [T])
 fun mk_boundedT T T' = Type(@{type_name bounded}, [T,T'])

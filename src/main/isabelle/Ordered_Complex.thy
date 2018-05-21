@@ -5,7 +5,7 @@ begin
 declare Conjugate.less_eq_complex_def[simp del]
 declare Conjugate.less_complex_def[simp del]
 
-declare[[coercion_enabled=false]]
+(* declare[[coercion_enabled=false]] *)
 
 subsection \<open>Ordering on complex numbers\<close>
 

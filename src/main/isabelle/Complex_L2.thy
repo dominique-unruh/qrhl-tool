@@ -1,6 +1,6 @@
 theory Complex_L2
   imports "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum"
-    Complex_Inner_Product Complex_Main
+    Complex_Inner_Product Infinite_Set_Sum_Missing Complex_Main
 begin
 
 
@@ -11,189 +11,6 @@ declare[[quick_and_dirty]]
 section \<open>l2 norm - untyped\<close>
 
 definition "has_ell2_norm x = bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)"
-
-
-lemma abs_summable_finiteI:
-  assumes "\<And>F. finite F \<Longrightarrow> F\<subseteq>S \<Longrightarrow> sum (\<lambda>x. norm (f x)) F \<le> B"
-  shows "f abs_summable_on S"
-proof (cases "S={}")
-  case True
-  then show ?thesis by simp
-next
-  case False
-  define M normf where "M = count_space S" and "normf x = ennreal (norm (f x))" for x
-
-  have normf_B: "finite F \<Longrightarrow> F\<subseteq>S \<Longrightarrow> sum normf F \<le> ennreal B" for F
-        using assms[THEN ennreal_leI] 
-        apply (subst (asm) sum_ennreal[symmetric], simp)
-        unfolding normf_def[symmetric] by simp
-
-  have "integral\<^sup>S M g \<le> B" if "simple_function M g" and "g \<le> normf" for g 
-  proof -
-    define gS where "gS = g ` S"
-    have "finite gS"
-      using that unfolding gS_def M_def simple_function_count_space by simp
-    have "gS \<noteq> {}" unfolding gS_def using False by auto
-    define part where "part r = g -` {r} \<inter> S" for r
-    have r_finite: "r < \<infinity>" if "r : gS" for r 
-      using \<open>g \<le> normf\<close> that unfolding gS_def le_fun_def normf_def apply auto
-      using ennreal_less_top neq_top_trans top.not_eq_extremum by blast
-    define B' where "B' r = (SUP F:{F. finite F \<and> F\<subseteq>part r}. sum normf F)" for r
-    have B'fin: "B' r < \<infinity>" for r
-    proof -
-      have "B' r \<le> (SUP F:{F. finite F \<and> F\<subseteq>part r}. sum normf F)"
-        unfolding B'_def
-        by (metis (mono_tags, lifting) SUP_least SUP_upper)
-      also have "\<dots> \<le> B"
-        using normf_B unfolding part_def
-        by (metis (no_types, lifting) Int_subset_iff SUP_least mem_Collect_eq)
-      also have "\<dots> < \<infinity>"
-        by simp
-      finally show ?thesis by simp
-    qed
-    have sumB': "sum B' gS \<le> ennreal B + \<epsilon>" if "\<epsilon>>0" for \<epsilon>
-    proof -
-      define N \<epsilon>N where "N = card gS" and "\<epsilon>N = \<epsilon> / N"
-      have "N > 0" 
-        unfolding N_def using \<open>gS\<noteq>{}\<close> \<open>finite gS\<close>
-        by (simp add: card_gt_0_iff)
-      from \<epsilon>N_def that have "\<epsilon>N > 0"
-        by (simp add: ennreal_of_nat_eq_real_of_nat ennreal_zero_less_divide)
-      obtain F where F: "sum normf (F r) + \<epsilon>N \<ge> B' r" and Ffin: "finite (F r)" and Fpartr: "F r \<subseteq> part r" for r
-        apply atomize_elim apply (subst all_conj_distrib[symmetric])+ apply (rule choice) apply (rule allI)
-        apply (rename_tac r) apply (case_tac "B' r = 0") 
-      proof -
-        fix r assume "B' r = 0" 
-        then show "\<exists>F. B' r \<le> sum normf F + \<epsilon>N \<and> finite F \<and> F \<subseteq> part r" by auto
-      next
-        fix r :: ennreal
-        assume "B' r \<noteq> 0"
-        with \<open>\<epsilon>N > 0\<close> B'fin have "B' r - \<epsilon>N < B' r"
-          by (metis ennreal_between infinity_ennreal_def le_zero_eq not_le)
-        then obtain F where "B' r - \<epsilon>N \<le> sum normf F" and "finite F" and "F \<subseteq> part r"
-          apply atomize_elim apply (subst (asm) (2) B'_def)
-          by (metis (no_types, lifting) leD le_cases less_SUP_iff mem_Collect_eq)
-        then show "\<exists>F. B' r \<le> sum normf F + \<epsilon>N \<and> finite F \<and> F \<subseteq> part r"
-          by (metis add.commute ennreal_minus_le_iff)
-      qed
-      have "sum B' gS \<le> (\<Sum>r\<in>gS. sum normf (F r) + \<epsilon>N)"
-        using F by (simp add: sum_mono)
-      also have "\<dots> = (\<Sum>r\<in>gS. sum normf (F r)) + (\<Sum>r\<in>gS. \<epsilon>N)"
-        by (simp add: sum.distrib)
-      also have "\<dots> = (\<Sum>r\<in>gS. sum normf (F r)) + (card gS * \<epsilon>N)"
-        by auto
-      also have "\<dots> = (\<Sum>r\<in>gS. sum normf (F r)) + \<epsilon>"
-        unfolding \<epsilon>N_def N_def[symmetric] using \<open>N>0\<close> 
-        by (simp add: ennreal_times_divide mult.commute mult_divide_eq_ennreal)
-      also have "\<dots> = sum normf (UNION gS F) + \<epsilon>" 
-        apply (subst sum.UNION_disjoint[symmetric])
-        using \<open>finite gS\<close> apply assumption
-        using Ffin apply simp
-        using Fpartr[unfolded part_def] apply auto[1]
-        apply (metis subsetCE vimage_singleton_eq)
-        by simp
-      also have "\<dots> \<le> B + \<epsilon>"
-        apply (rule add_right_mono)
-        apply (rule normf_B)
-        using \<open>finite gS\<close> Ffin Fpartr unfolding part_def by auto
-      finally show ?thesis
-        by auto
-    qed
-    then have sumB': "sum B' gS \<le> B"
-      using ennreal_le_epsilon ennreal_less_zero_iff by blast
-(*     hence "B' r < \<infinity>" if "r \<in> gS" for r
-    proof -
-      have "sum B' gS = sum B' (gS - {r}) + B' r"
-        by (simp add: \<open>finite gS\<close> add.commute sum.remove that)
-      moreover have "0 \<le> sum B' (gS - {r})" by auto
-      ultimately have "B' r \<le> B" 
-        using sumB'
-        by (metis add.commute add.right_neutral add_mono_thms_linordered_semiring(1) dual_order.antisym le_cases)
-      then show ?thesis
-        using le_less_trans by fastforce
-    qed *)
-    obtain B'' where B'': "B' r = ennreal (B'' r)" if "r \<in> gS" for r
-      apply atomize_elim apply (rule_tac choice) 
-      using B'fin apply auto using less_top_ennreal by blast
-    have cases[case_names zero finite infinite]: "P" if "r=0 \<Longrightarrow> P" and "finite (part r) \<Longrightarrow> P"
-        and "infinite (part r) \<Longrightarrow> r\<noteq>0 \<Longrightarrow> P" for P r
-      using that by metis
-    have emeasure_B': "r * emeasure M (part r) \<le> B' r" if "r : gS" for r
-    proof (cases rule:cases[of r])
-      case zero
-      then show ?thesis by simp
-    next
-      case finite
-      have "r * of_nat (card (part r)) = r * (\<Sum>x\<in>part r. 1)" by simp
-      also have "\<dots> = (\<Sum>x\<in>part r. r)"
-        using mult.commute by auto
-      also have "\<dots> = (\<Sum>x\<in>part r. g x)"
-        unfolding part_def by auto
-      also have "\<dots> \<le> (SUP F:{F. finite F \<and> F\<subseteq>part r}. sum g F)"
-        using finite apply auto
-        by (simp add: Sup_upper)
-      also have "\<dots> \<le> B' r"
-        unfolding B'_def
-        apply (rule SUP_subset_mono, simp) 
-        apply (rule sum_mono) 
-        using \<open>g \<le> normf\<close>
-        by (simp add: le_fun_def) 
-      finally have "r * of_nat (card (part r)) \<le> B' r" by assumption
-      then show ?thesis
-        unfolding M_def
-        apply (subst emeasure_count_space_finite)
-        using part_def finite by auto
-    next
-      case infinite
-      from r_finite[OF \<open>r : gS\<close>] obtain r' where r': "r = ennreal r'"
-        using ennreal_cases by auto
-      with infinite have "r' > 0"
-        using ennreal_less_zero_iff not_gr_zero by blast
-      obtain N::nat where N:"N > B / r'" and "real N > 0" apply atomize_elim
-        using reals_Archimedean2
-        by (metis less_trans linorder_neqE_linordered_idom)
-      obtain F where "finite F" and "card F = N" and "F \<subseteq> part r"
-        apply atomize_elim using infinite
-        by (simp add: infinite_arbitrarily_large)
-      from \<open>F \<subseteq> part r\<close> have "F \<subseteq> S" unfolding part_def by simp
-      have "B < r * N"
-        using N unfolding r' ennreal_of_nat_eq_real_of_nat
-        apply (subst ennreal_mult[symmetric])
-        using ennreal_le_iff2 ennreal_neg infinite(2) r' apply blast
-         apply simp
-        apply (rule ennreal_lessI)
-        using \<open>r' > 0\<close> \<open>real N > 0\<close> apply simp
-        using \<open>r' > 0\<close> by (simp add: linordered_field_class.pos_divide_less_eq mult.commute)
-      also have "r * N = (\<Sum>x\<in>F. r)"
-        using \<open>card F = N\<close> by (simp add: mult.commute)
-      also have "(\<Sum>x\<in>F. r) = (\<Sum>x\<in>F. g x)"
-        apply (rule sum.cong)
-        using \<open>F \<subseteq> part r\<close> using part_def by auto
-      also have "(\<Sum>x\<in>F. g x) \<le> (\<Sum>x\<in>F. ennreal (norm (f x)))"
-        apply (rule sum_mono) using \<open>g \<le> normf\<close> unfolding normf_def le_fun_def by auto
-      also have "(\<Sum>x\<in>F. ennreal (norm (f x))) \<le> B" 
-         apply auto using assms[OF \<open>finite F\<close> \<open>F \<subseteq> S\<close>] by (rule ennreal_leI)
-      finally have "B < B" by auto
-      then show ?thesis by simp
-    qed
-
-    have "integral\<^sup>S M g = (\<Sum>r \<in> gS. r * emeasure M (part r))"
-      unfolding simple_integral_def gS_def M_def part_def by simp
-    also have "\<dots> \<le> (\<Sum>r \<in> gS. B' r)"
-      apply (rule sum_mono) using emeasure_B' by auto
-    also have "\<dots> \<le> B"
-      using sumB' by blast
-    finally show ?thesis by assumption
-  qed
-  hence "integral\<^sup>N M normf \<le> B"
-    unfolding nn_integral_def by (metis (no_types, lifting) SUP_least mem_Collect_eq)
-  hence "integral\<^sup>N M normf < \<infinity>"
-    using le_less_trans by fastforce
-  hence "integrable M f"
-    unfolding M_def normf_def by (rule integrableI_bounded[rotated], simp)
-  then show ?thesis
-    unfolding abs_summable_on_def M_def by simp
-qed
 
 lemma has_ell2_norm_infsetsum: "has_ell2_norm x \<longleftrightarrow> (\<lambda>i. (cmod (x i))\<^sup>2) abs_summable_on UNIV"
 proof
@@ -282,6 +99,12 @@ lemma ell2_norm_setL2:
   using monoI real_sqrt_le_mono apply blast
   using continuous_at_split isCont_real_sqrt apply blast
   using assms unfolding has_ell2_norm_def by auto
+
+lemma ell2_norm_infsetsum:
+  assumes "has_ell2_norm x"
+  shows "ell2_norm x = sqrt (infsetsum (\<lambda>i. (norm(x i))^2) UNIV)"
+  unfolding ell2_norm_def apply (subst infsetsum_nonneg)
+  using assms has_ell2_norm_infsetsum by auto
 
 lemma has_ell2_norm_finite[simp]: "has_ell2_norm (x::'a::finite\<Rightarrow>_)"
   unfolding has_ell2_norm_def by simp
@@ -505,52 +328,6 @@ instance apply intro_classes
   apply transfer by (simp add: ell2_norm_smult(2)) 
 end
 
-lemma infsetsum_cnj[simp]: "infsetsum (\<lambda>x. cnj (f x)) M = cnj (infsetsum f M)"
-  unfolding infsetsum_def by (rule integral_cnj)
-
-lemma infsetsum_mono_complex:
-  fixes f g :: "'a \<Rightarrow> complex"
-  assumes "f abs_summable_on A" and "g abs_summable_on A"
-  assumes "\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x"
-  shows   "infsetsum f A \<le> infsetsum g A"
-proof -
-  have "infsetsum f A = Complex (Re (infsetsum f A)) (Im (infsetsum f A))" by auto
-  also have "Re (infsetsum f A) = infsetsum (\<lambda>x. Re (f x)) A"
-    unfolding infsetsum_def apply (rule integral_Re[symmetric])
-    using assms by (simp add: abs_summable_on_def)
-  also have "Im (infsetsum f A) = infsetsum (\<lambda>x. Im (f x)) A "
-    unfolding infsetsum_def apply (rule integral_Im[symmetric])
-    using assms by (simp add: abs_summable_on_def)
-  finally have fsplit: "infsetsum f A = Complex (\<Sum>\<^sub>ax\<in>A. Re (f x)) (\<Sum>\<^sub>ax\<in>A. Im (f x))" by assumption
-
-  have "infsetsum g A = Complex (Re (infsetsum g A)) (Im (infsetsum g A))" by auto
-  also have "Re (infsetsum g A) = infsetsum (\<lambda>x. Re (g x)) A"
-    unfolding infsetsum_def apply (rule integral_Re[symmetric])
-    using assms by (simp add: abs_summable_on_def)
-  also have "Im (infsetsum g A) = infsetsum (\<lambda>x. Im (g x)) A "
-    unfolding infsetsum_def apply (rule integral_Im[symmetric])
-    using assms by (simp add: abs_summable_on_def)
-  finally have gsplit: "infsetsum g A = Complex (\<Sum>\<^sub>ax\<in>A. Re (g x)) (\<Sum>\<^sub>ax\<in>A. Im (g x))" by assumption
-
-  have Re_leq: "Re (f x) \<le> Re (g x)" if "x\<in>A" for x
-    using that assms unfolding less_eq_complex_def by simp
-  have Im_eq: "Im (f x) = Im (g x)" if "x\<in>A" for x
-    using that assms 
-    unfolding less_eq_complex_def by simp
-
-  have Refsum: "(\<lambda>x. Re (f x)) abs_summable_on A"
-    using assms(1) apply (rule abs_summable_on_comparison_test[where g=f])
-    using abs_Re_le_cmod by auto
-  have Regsum: "(\<lambda>x. Re (g x)) abs_summable_on A"
-    using assms(2) apply (rule abs_summable_on_comparison_test[where g=g])
-    using abs_Re_le_cmod by auto
-    
-  show "infsetsum f A \<le> infsetsum g A"
-    unfolding fsplit gsplit
-    apply (rule less_eq_complexI; simp)
-    using Refsum Regsum Re_leq apply (rule infsetsum_mono)
-    using Im_eq by auto
-qed
 
 (* TODO: move *)
 lemma cnj_x_x: "cnj x * x = (abs x)\<^sup>2"
@@ -560,6 +337,7 @@ lemma cnj_x_x: "cnj x * x = (abs x)\<^sup>2"
 lemma cnj_x_x_geq0[simp]: "cnj x * x \<ge> 0"
   apply (cases x)
   by (auto simp: complex_cn complex_mult complex_of_real_def less_eq_complex_def)
+
 
 instantiation vector :: (type) complex_inner begin
 lift_definition cinner_vector :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> complex" is 
@@ -577,14 +355,54 @@ proof standard
     finally show "(\<Sum>\<^sub>ai. cnj (x i) * y i) = cnj (\<Sum>\<^sub>ai. cnj (y i) * x i)" .
   qed
 
-  show "cinner (x + y) z = cinner x z + cinner y z" sorry
-  show "cinner (c *\<^sub>C x) y = cnj c * cinner x y" sorry
+  show "cinner (x + y) z = cinner x z + cinner y z"
+  proof transfer
+    fix x y z :: "'a \<Rightarrow> complex"
+    assume "has_ell2_norm x"
+    then have cnj_x: "(\<lambda>i. cnj (x i) * cnj (x i)) abs_summable_on UNIV"
+      by (simp del: complex_cnj_mult add: norm_mult[symmetric] complex_cnj_mult[symmetric] has_ell2_norm_infsetsum power2_eq_square)
+    assume "has_ell2_norm y"
+    then have cnj_y: "(\<lambda>i. cnj (y i) * cnj (y i)) abs_summable_on UNIV"
+      by (simp del: complex_cnj_mult add: norm_mult[symmetric] complex_cnj_mult[symmetric] has_ell2_norm_infsetsum power2_eq_square)
+    assume "has_ell2_norm z"
+    then have z: "(\<lambda>i. z i * z i) abs_summable_on UNIV" 
+      by (simp add: norm_mult[symmetric] has_ell2_norm_infsetsum power2_eq_square)
+    have cnj_x_z:"(\<lambda>i. cnj (x i) * z i) abs_summable_on UNIV"
+      using cnj_x z by (rule abs_summable_product) 
+    have cnj_y_z:"(\<lambda>i. cnj (y i) * z i) abs_summable_on UNIV"
+      using cnj_y z by (rule abs_summable_product) 
+      
+    show "(\<Sum>\<^sub>ai. cnj (x i + y i) * z i) = (\<Sum>\<^sub>ai. cnj (x i) * z i) + (\<Sum>\<^sub>ai. cnj (y i) * z i)"
+      apply (subst infsetsum_add[symmetric])
+        apply (fact cnj_x_z)
+       apply (fact cnj_y_z)
+      by (simp add: distrib_left mult.commute)
+  qed
+
+  show "cinner (c *\<^sub>C x) y = cnj c * cinner x y"
+  proof transfer
+    fix x y :: "'a \<Rightarrow> complex" and c :: complex
+    assume "has_ell2_norm x"
+    then have cnj_x: "(\<lambda>i. cnj (x i) * cnj (x i)) abs_summable_on UNIV"
+      by (simp del: complex_cnj_mult add: norm_mult[symmetric] complex_cnj_mult[symmetric] has_ell2_norm_infsetsum power2_eq_square)
+    assume "has_ell2_norm y"
+    then have y: "(\<lambda>i. y i * y i) abs_summable_on UNIV" 
+      by (simp add: norm_mult[symmetric] has_ell2_norm_infsetsum power2_eq_square)
+    have cnj_x_y:"(\<lambda>i. cnj (x i) * y i) abs_summable_on UNIV"
+      using cnj_x y by (rule abs_summable_product) 
+    then show "(\<Sum>\<^sub>ai. cnj (c * x i) * y i) = cnj c * (\<Sum>\<^sub>ai. cnj (x i) * y i)"
+      apply (subst infsetsum_cmult_right[symmetric])
+      by (auto simp: mult.commute mult.left_commute)
+  qed
 
   show "0 \<le> cinner x x"
   proof transfer
     fix x :: "'a \<Rightarrow> complex"
     assume "has_ell2_norm x"
-    have sum: "(\<lambda>i. cnj (x i) * x i) abs_summable_on UNIV" sorry
+    then have sum: "(\<lambda>i. cnj (x i) * x i) abs_summable_on UNIV"
+      unfolding has_ell2_norm_infsetsum power2_eq_square
+      apply (subst abs_summable_on_norm_iff[symmetric])
+      by (simp del: abs_summable_on_norm_iff add: norm_mult has_ell2_norm_infsetsum power2_eq_square)
     have "0 = (\<Sum>\<^sub>ai::'a. 0)" by auto
     also have "\<dots> \<le> (\<Sum>\<^sub>ai. cnj (x i) * x i)"
       apply (rule infsetsum_mono_complex)
@@ -592,12 +410,54 @@ proof standard
     finally show "0 \<le> (\<Sum>\<^sub>ai. cnj (x i) * x i)" by assumption
   qed
 
-  show "(cinner x x = 0) = (x = 0)" sorry
-  show "norm x = sqrt (cmod (cinner x x))" sorry
-qed 
+  show "(cinner x x = 0) = (x = 0)"
+  proof (transfer, auto)
+    fix x :: "'a \<Rightarrow> complex"
+    assume "has_ell2_norm x"
+    then have cmod_x2: "(\<lambda>i. cnj (x i) * x i) abs_summable_on UNIV"
+      unfolding has_ell2_norm_infsetsum power2_eq_square 
+      apply (subst abs_summable_on_norm_iff[symmetric])
+      by (simp del: abs_summable_on_norm_iff add: norm_mult)
+    assume eq0: "(\<Sum>\<^sub>ai. cnj (x i) * x i) = 0"
+    show "x = (\<lambda>_. 0)"
+    proof (rule ccontr)
+      assume "x \<noteq> (\<lambda>_. 0)"
+      then obtain i where "x i \<noteq> 0" by auto
+      then have "0 < cnj (x i) * x i"
+        using le_less by fastforce
+      also have "\<dots> = (\<Sum>\<^sub>ai\<in>{i}. cnj (x i) * x i)" by auto
+      also have "\<dots> \<le> (\<Sum>\<^sub>ai. cnj (x i) * x i)"
+        apply (rule infsetsum_subset_complex)
+          apply (fact cmod_x2)
+        by auto
+      also from eq0 have "\<dots> = 0" by assumption
+      finally show False by simp
+    qed
+  qed
+
+  show "norm x = sqrt (cmod (cinner x x))"
+  proof transfer 
+    fix x :: "'a \<Rightarrow> complex" 
+    assume x: "has_ell2_norm x"
+    then have sum: "(\<lambda>i. cnj (x i) * x i) abs_summable_on UNIV"
+      unfolding has_ell2_norm_infsetsum power2_eq_square
+      apply (subst abs_summable_on_norm_iff[symmetric])
+      by (simp del: abs_summable_on_norm_iff add: norm_mult has_ell2_norm_infsetsum power2_eq_square)
+
+    from x have "ell2_norm x = sqrt (\<Sum>\<^sub>ai. (cmod (x i))\<^sup>2)"
+      apply (subst ell2_norm_infsetsum) by auto
+    also have "\<dots> = sqrt (\<Sum>\<^sub>ai. cmod (cnj (x i) * x i))"
+      unfolding norm_complex_def power2_eq_square by auto
+    also have "\<dots> = sqrt (cmod (\<Sum>\<^sub>ai. cnj (x i) * x i))"
+      apply (subst infsetsum_cmod) using sum by auto
+    finally show "ell2_norm x = sqrt (cmod (\<Sum>\<^sub>ai. cnj (x i) * x i))" by assumption
+  qed
+qed
 end
 
-instance vector :: (type) chilbert_space sorry
+instantiation vector :: (type) chilbert_space begin
+instance sorry
+end
 
 (* TODO remove and document *)
 abbreviation "timesScalarVec \<equiv> (scaleC :: complex \<Rightarrow> 'a vector \<Rightarrow> 'a vector)"

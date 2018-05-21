@@ -40,7 +40,7 @@ interpretation complex_vector: vector_space "scaleC :: complex \<Rightarrow> 'a 
   by (rule scaleC_one)
 
 subclass (in complex_vector) real_vector
-  by (standard, simp_all add: scaleR_scaleC scaleC_add_right scaleC_add_left scaleC_scaleC scaleC_one)
+  by (standard, simp_all add: scaleR_scaleC scaleC_add_right scaleC_add_left)
 
 text \<open>Recover original theorem names\<close>
 
