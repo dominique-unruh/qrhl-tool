@@ -103,6 +103,51 @@ fun add_index_to_expression t left =
     Const(@{const_name expression},T) $ vs $ e
   end
     
+fun term_to_expression ctx t =
+  let val lookup_var = QRHL.lookup_variable ctx
+      val frees = Term.add_frees t [] |> filter (fn (v,_) => lookup_var v = SOME QRHL.Classical) |> rev
+      val (vars,varsT) = 
+        frees |> map (fn (v,T) => (v^"_var",T)) |> QRHL.varterm_from_list |> QRHL.mk_varterm
+      val pattern = HOLogic.mk_tuple (map Free frees) |> @{print}
+      val e = HOLogic.tupled_lambda pattern t |> @{print}
+      val T = fastype_of t
+  in
+    Const(@{const_name expression}, QRHL.mk_qvariablesT varsT --> (varsT --> T) --> mk_expressionT T)
+      $ vars $ e
+  end
+
+fun lambda_name_untyped (x, v) t =
+  Abs (if x = "" then Term.term_name v else x, dummyT, abstract_over (v, t));
+
+fun lambda_untyped v t = lambda_name_untyped ("", v) t;
+
+fun mk_case_prod_untyped t =
+      @{const Product_Type.prod.case_prod(dummy,dummy,dummy)} $ t
+
+fun tupled_lambda_untyped (x as Free _) b = lambda_untyped x b
+  | tupled_lambda_untyped (x as Var _) b = lambda_untyped x b
+  | tupled_lambda_untyped (Const ("Product_Type.Pair", _) $ u $ v) b =
+      mk_case_prod_untyped (tupled_lambda_untyped u (tupled_lambda_untyped v b))
+  | tupled_lambda_untyped (Const ("Product_Type.Unity", _)) b =
+      Abs ("x", HOLogic.unitT, b)
+  | tupled_lambda_untyped t _ = raise TERM ("tupled_lambda_untyped: bad tuple", [t]);
+
+fun mk_prod_untyped (t1, t2) = @{const Pair(dummy,dummy)} $ t1 $ t2
+
+fun mk_tuple_untyped [] = HOLogic.unit
+  | mk_tuple_untyped ts = foldr1 mk_prod_untyped ts;
+
+fun term_to_expression_untyped ctx t =
+  let val lookup_var = QRHL.lookup_variable ctx
+      val frees = Term.add_frees t [] |> filter (fn (v,_) => lookup_var v = SOME QRHL.Classical) |> rev
+      val (vars,varsT) = 
+        frees |> map (fn (v,T) => (v^"_var",T)) |> QRHL.varterm_from_list |> QRHL.mk_varterm
+      val pattern = mk_tuple_untyped (map Free frees)
+      val e = tupled_lambda_untyped pattern t
+  in
+    Const(@{const_name expression}, QRHL.mk_qvariablesT varsT --> (varsT --> dummyT) --> @{typ "dummy expression"})
+      $ vars $ e
+  end
 
 
 end

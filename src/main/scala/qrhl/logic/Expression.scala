@@ -1,5 +1,6 @@
 package qrhl.logic
 
+import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.hol.HOLogic.boolT
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp, Type => IType}
@@ -12,6 +13,9 @@ import scala.collection.mutable
 
 
 final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
+  lazy val encodeAsExpression : Term =
+    isabelle.isabelle.invoke(Expression.termToExpressionOp, (isabelle.contextId, isabelleTerm))
+
   def stripAssumption(number: Int): Expression = Expression(isabelle,typ,Expression.stripAssumption(isabelleTerm,number))
 
   override def equals(o: scala.Any): Boolean = o match {
@@ -104,6 +108,9 @@ final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val
 
 
 object Expression {
+  val termToExpressionOp: Operation[(BigInt, Term), Term] =
+    Operation.implicitly[(BigInt, Term), Term]("term_to_expression")
+
   def trueExp(isabelle: Isabelle.Context): Expression = Expression(isabelle, Typ.bool(isabelle), HOLogic.True)
 
   def apply(isabelle:Isabelle.Context, str:String, typ:Typ) : Expression = {

@@ -2,6 +2,7 @@ package qrhl.logic
 
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure
+import info.hupel.isabelle.pure.{Free, Term}
 import qrhl.isabelle.Isabelle
 
 import scala.collection.mutable
@@ -9,6 +10,9 @@ import scala.collection.mutable
 
 // Programs
 sealed trait Statement {
+  def programTerm : Term
+
+
   /** Returns all variables used in the statement.
     * @param recurse Recurse into programs embedded via Call
     * @return (cvars,qvars,avars,pnames) Classical, quantum, ambient variables, program declarations. */
@@ -90,6 +94,9 @@ sealed trait Statement {
 }
 
 class Block(val statements:List[Statement]) extends Statement {
+  lazy val programListTerm: Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTerm))
+  override lazy val programTerm : Term = Isabelle.block $ programListTerm
+
   override def equals(o: Any): Boolean = o match {
     case Block(st @ _*) => statements==st
     case _ => false
@@ -140,6 +147,9 @@ final case class Assign(variable:CVariable, expression:Expression) extends State
 
   override def checkWelltyped(): Unit =
     expression.checkWelltyped(variable.typ)
+
+  override lazy val programTerm: Term =
+    Isabelle.assign(variable.typ.isabelleTyp) $ variable.isabelleTerm_var $ expression.encodeAsExpression
 }
 final case class Sample(variable:CVariable, expression:Expression) extends Statement {
   override def toString: String = s"""${variable.name} <$$ $expression;"""
@@ -147,6 +157,9 @@ final case class Sample(variable:CVariable, expression:Expression) extends State
 
   override def checkWelltyped(): Unit =
     expression.checkWelltyped(Isabelle.distrT(variable.isabelleTyp))
+
+  override lazy val programTerm: Term =
+    Isabelle.sample(variable.typ.isabelleTyp) $ variable.isabelleTerm_var $ expression.encodeAsExpression
 }
 final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
@@ -158,6 +171,8 @@ final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch:
     thenBranch.checkWelltyped()
     elseBranch.checkWelltyped()
   }
+  override lazy val programTerm: Term =
+    Isabelle.ifthenelse $ condition.encodeAsExpression $ thenBranch.programListTerm $ elseBranch.programListTerm
 }
 final case class While(condition:Expression, body: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
@@ -168,6 +183,8 @@ final case class While(condition:Expression, body: Block) extends Statement {
     condition.checkWelltyped(HOLogic.boolT)
     body.checkWelltyped()
   }
+  override lazy val programTerm: Term =
+    Isabelle.whileProg $ condition.encodeAsExpression $ body.programListTerm
 }
 final case class QInit(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -177,6 +194,8 @@ final case class QInit(location:List[QVariable], expression:Expression) extends 
     val expected = pure.Type("Complex_L2.vector",List(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
     expression.checkWelltyped(expected)
   }
+  override lazy val programTerm: Term =
+    Isabelle.qinit(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression
 }
 final case class QApply(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -186,8 +205,9 @@ final case class QApply(location:List[QVariable], expression:Expression) extends
     val varType = Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)
     val expected = pure.Type("Bounded_Operators.bounded",List(varType,varType))
     expression.checkWelltyped(expected)
-
   }
+  override lazy val programTerm: Term =
+    Isabelle.qapply(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression
 }
 final case class Measurement(result:CVariable, location:List[QVariable], e:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -197,10 +217,14 @@ final case class Measurement(result:CVariable, location:List[QVariable], e:Expre
     val expected = pure.Type("QRHL_Core.measurement",List(result.isabelleTyp, Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
     e.checkWelltyped(expected)
   }
+  override lazy val programTerm: Term =
+    Isabelle.measurement(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*), result.typ.isabelleTyp) $
+      result.isabelleTerm_var $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression
 }
 final case class Call(name:String) extends Statement {
   override def toString: String = s"call $name;"
   override def inline(name: String, program: Statement): Statement = this
 
   override def checkWelltyped(): Unit = {}
+  override lazy val programTerm: Term = Free(name,Isabelle.programT)
 }

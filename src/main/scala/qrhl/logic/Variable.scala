@@ -11,6 +11,7 @@ sealed trait Variable {
   def index(left:Boolean): Variable = if (left) index1 else index2
   def isabelleTyp : pure.Typ
   def isabelleTerm: Term = Free(name,isabelleTyp)
+  def isabelleTerm_var: Term = Free(name+"_var",isabelleTyp)
 }
 object Variable {
   def index1(name:String) : String = name+"1"
@@ -31,4 +32,6 @@ case class CVariable(name:String, typ: Typ) extends Variable {
   override def index2: CVariable = CVariable(Variable.index2(name),typ)
   override def index(left:Boolean): CVariable = if (left) index1 else index2
   override def isabelleTyp: pure.Typ = typ.isabelleTyp
+
+
 }

@@ -6,7 +6,7 @@ import info.hupel.isabelle.{Operation, ml, pure}
 import qrhl.logic.{Call, Expression, Statement}
 import qrhl.{State, Tactic, UserException}
 
-@deprecated("Superseeded by EqualTac")
+@deprecated("Superseeded by EqualTac","now")
 case object CallTac extends WpBothStyleTac() {
   override def getWP(state: State, left: Statement, right: Statement, post: Expression): (Expression, List[Expression]) = (left,right) match {
     case (Call(prog), Call(prog2)) =>

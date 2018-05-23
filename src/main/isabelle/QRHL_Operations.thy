@@ -1,5 +1,5 @@
 theory QRHL_Operations
-  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding
+  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics
 begin
 
 ML {*
@@ -143,8 +143,8 @@ operation_setup rndWp2 = {*
 
 operation_setup applyRule = {*
   {from_lib = Codec.triple Codec.string Codec.term Codec.int,
-   to_lib = Codec.list Codec.term,
-   action = fn (name,goal,ctx_id) => QRHL.applyRule name goal (Refs.Ctxt.read ctx_id)}
+   to_lib = Codec.option (Codec.list Codec.term),
+   action = fn (name,goal,ctx_id) => SOME (QRHL.applyRule name goal (Refs.Ctxt.read ctx_id))}
 *}
 
 operation_setup sampleWp = {*
@@ -187,6 +187,18 @@ operation_setup add_index_to_expression = {*
   {from_lib = Codec.tuple Codec.term Codec.bool,
    to_lib = Codec.term,
    action = fn (t,left) => Encoding.add_index_to_expression t left}
+*}
+
+operation_setup term_to_expression = {*
+  {from_lib = Codec.tuple Codec.int Codec.term,
+   to_lib = Codec.term,
+   action = fn (ctxId, t) => Encoding.term_to_expression (Refs.Ctxt.read ctxId) t}
+*}
+
+operation_setup seq_tac = {*
+  {from_lib = Codec.triple (Codec.tuple Codec.int Codec.int) Codec.term Codec.int,
+   to_lib = Codec.option (Codec.list Codec.term),
+   action = fn ((i,j),goal,ctx_id) => Tactics.seq_tac_on_term i j (Refs.Ctxt.read ctx_id) goal}
 *}
 
 end

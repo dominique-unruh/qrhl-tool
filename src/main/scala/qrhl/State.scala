@@ -4,7 +4,7 @@ import java.nio.file.{Files, Path, Paths}
 
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{Type, Context => IContext, Typ => ITyp}
+import info.hupel.isabelle.pure.{Term, Type, Context => IContext, Typ => ITyp}
 import org.log4s
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -65,8 +65,15 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
         throw UserException(s"Undeclared variable $x in assumptions")
   }
 
-  /** Returns the expression "True" */
-  override def toExpression: Expression = Expression.trueExp(pre.isabelle)
+  override lazy val toExpression: Expression = {
+    val leftTerm = left.programListTerm
+    val rightTerm = right.programListTerm
+    val preTerm = pre.encodeAsExpression
+    val postTerm = post.encodeAsExpression
+    val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
+    val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
+    Expression(pre.isabelle, Typ.bool(pre.isabelle), term)
+  }
 
   /** Not including ambient vars in nested programs (via Call) */
   override def containsAmbientVar(x: String): Boolean = {

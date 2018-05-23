@@ -1,26 +1,27 @@
 package qrhl.isabelle
 
 import java.io.{BufferedReader, IOException, InputStreamReader}
-import java.nio.file.attribute.{BasicFileAttributes, FileTime}
+import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 
 import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.ml.{Expr, Ref}
+import info.hupel.isabelle.ml.Expr
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Context => IContext, Typ => ITyp}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resources, Setup}
-import info.hupel.isabelle.{Codec, OfficialPlatform, Operation, Platform, Program, System, ml}
+import info.hupel.isabelle.{OfficialPlatform, Operation, Platform, System, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
+import qrhl.logic.QVariable
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
-import scala.util.{Left, Random, Right}
+import scala.util.{Left, Right}
 
 class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
   val version = Version.Stable("2017")
@@ -154,13 +155,60 @@ object Isabelle {
     case t :: ts => ts.foldLeft(t)(mk_conj)
     case Nil => HOLogic.True
   }
+  def mk_list(typ:ITyp, terms: List[Term]): Term = {
+    val lT = listT(typ)
+    val cons = Const("List.list.Cons", typ -->: lT -->: lT)
+    val nil = Const("List.list.Nil",lT)
+    terms.foldRight[Term](nil)( cons $ _ $ _ )
+  }
+
+
 
   val predicateT = Type("Complex_L2.subspace", List(Type("QRHL_Core.mem2",Nil)))
+  val programT = Type("Encoding.program")
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
   def distrT(typ:ITyp): Type = Type("QRHL_Core.distr", List(typ))
+  def boundedT(typ:ITyp): Type = boundedT(typ,typ)
+  def boundedT(inT:ITyp, outT:ITyp) = Type("Bounded_Operators.bounded", List(inT,outT))
+  def measurementT(resultT:ITyp, qT: ITyp) = Type("QRHL_Core.measurement", List(resultT, qT))
+  def listT(typ:ITyp) : Type = Type("List.list", List(typ))
+  val block = Const("Encoding.block", listT(programT) -->: programT)
+  def vectorT(typ:ITyp) = Type("Complex_L2.vector", List(typ))
+  def qvariableT(typ:ITyp) = Type("QRHL_Core.qvariable", List(typ))
+  def qvariablesT(typ:ITyp) : Type = Type("QRHL_Core.qvariables", List(typ))
+  def qvariablesT(typs:List[ITyp]) : Type = qvariablesT(tupleT(typs:_*))
+  val cvariableT: ITyp => Type = qvariableT
+  def expressionT(typ:ITyp) = Type("Encoding.expression", List(typ))
+  def assign(typ:ITyp) : Const = Const("Encoding.assign", qvariableT(typ) -->: expressionT(typ) -->: programT)
+  def sample(typ:ITyp) : Const = Const("Encoding.assign", qvariableT(typ) -->: expressionT(distrT(typ)) -->: programT)
+  val ifthenelse = Const("Encoding.ifthenelse", expressionT(HOLogic.boolT) -->: listT(programT) -->: listT(programT) -->: programT)
+  val whileProg = Const("Encoding.while", expressionT(HOLogic.boolT) -->: listT(programT) -->: programT)
+  val metaImp = Const("Pure.imp", Type("prop") -->: Type("prop") -->: Type("prop"))
+  val boolT: ITyp = HOLogic.boolT
+  val qrhl = Const("Encoding.qrhl", expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
+  def qinit(typ:ITyp) = Const("Encoding.qinit", qvariablesT(typ) -->: expressionT(vectorT(typ)) -->: programT)
+  def qapply(typ:ITyp) = Const("Encoding.qapply", qvariablesT(typ) -->: expressionT(boundedT(typ)) -->: programT)
+  def measurement(resultT:ITyp, qT:ITyp) = Const("Encoding.measurement", cvariableT(resultT) -->: qvariablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
+  val unitT = Type("Product_Type.unit")
+  def prodT(t1:ITyp, t2:ITyp) = Type("Product_Type.prod", List(t1,t2))
+  private def qvarTuple_var0(qvs:List[QVariable]) : (Term,ITyp) = qvs match {
+    case Nil => (qvariable_unit, unitT)
+    case List(qv) => (qvariable_singleton(qv.typ.isabelleTyp) $ qv.isabelleTerm_var,
+                      qv.typ.isabelleTyp)
+    case qv::rest => {
+      val (qvTuple, qvTyp) = qvarTuple_var0(List(qv))
+      val (restTuple, restTyp) = qvarTuple_var0(rest)
+      (qvariable_concat(qvTyp, restTyp) $ qvTuple $ restTuple,
+       prodT(qvTyp, restTyp))
+    }
+  }
+  def qvarTuple_var(qvs:List[QVariable]) : Term = qvarTuple_var0(qvs)._1
+  val qvariable_unit = Const("QRHL_Core.qvariable_unit", qvariablesT(unitT))
+  def qvariable_singleton(typ:ITyp) = Const("QRHL_Core.qvariable_singleton", qvariableT(typ) -->: qvariablesT(typ))
+  def qvariable_concat(t1:ITyp, t2:ITyp) = Const("QRHL_Core.qvariable_concat", qvariablesT(t1) -->: qvariablesT(t2) -->: qvariablesT(prodT(t1,t2)))
 
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
   val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")
@@ -206,9 +254,9 @@ object Isabelle {
     dest_list(term).map(dest_char).mkString
 
   def tupleT(typs: ITyp*): ITyp = typs match {
-    case Nil => Type("Product_Type.unit", Nil) // Unit
+    case Nil => unitT
     case List(typ) => typ
-    case (typ :: rest) => Type("Product_Type.prod", List(typ,tupleT(rest :_*)))
+    case (typ :: rest) => prodT(typ,tupleT(rest :_*))
   }
 
   def freeVars(term: Term): Set[String] = {
