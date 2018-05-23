@@ -4,13 +4,15 @@ import java.nio.file.{Files, Path, Paths}
 
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{Term, Type, Context => IContext, Typ => ITyp}
+import info.hupel.isabelle.pure.{App, Const, Term, Type, Context => IContext, Typ => ITyp}
 import org.log4s
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext}
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
+import scala.util.control.Breaks
 
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
@@ -34,6 +36,35 @@ sealed trait Subgoal {
   }
 
   def addAssumption(assm: Expression): Subgoal
+}
+
+object Subgoal {
+  def apply(e : Expression) : Subgoal = {
+    val assms = new ListBuffer[Expression]()
+    var t = e.isabelleTerm
+    Breaks.breakable {
+      while (true) {
+        t match {
+          case App(App(Const("HOL.imp", _), a), b) =>
+            assms.append(Expression(e.isabelle, e.typ, a))
+            t = b
+          case _ => Breaks.break()
+        }
+      }
+    }
+
+    t match {
+      case App(App(App(App(Const(Isabelle.qrhl.name,_),pre),left),right),post) =>
+        val isabelle = e.isabelle
+        val pre2 = Expression.decodeFromExpression(isabelle,pre)
+        val post2 = Expression.decodeFromExpression(isabelle,post)
+        val left2 = Statement.decodeFromListTerm(e.isabelle, left)
+        val right2 = Statement.decodeFromListTerm(e.isabelle, right)
+        QRHLSubgoal(left2,right2,pre2,post2,assms.toList)
+      case _ =>
+        AmbientSubgoal(e)
+    }
+  }
 }
 
 object QRHLSubgoal {
@@ -226,6 +257,15 @@ class State private (val environment: Environment,
   def parseExpression(typ:Typ, str:String): Expression = {
     implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.expression(typ),str) match {
+      case Parser.Success(cmd2,_) => cmd2
+      case res @ Parser.NoSuccess(msg, _) =>
+        throw UserException(msg)
+    }
+  }
+
+  def parseBlock(str:String) = {
+    implicit val parserContext: ParserContext = this.parserContext
+    Parser.parseAll(Parser.block,str) match {
       case Parser.Success(cmd2,_) => cmd2
       case res @ Parser.NoSuccess(msg, _) =>
         throw UserException(msg)

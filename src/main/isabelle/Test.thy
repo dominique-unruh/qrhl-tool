@@ -62,14 +62,14 @@ val t = @{term "qrhl (expression qvariable_unit (\<lambda>x. \<CC>\<ll>\<aa>[Tru
 *}
 
 ML {*
-Tactics.seq_tac_on_term 1 1 @{context} t
+Tactics.seq_tac_on_term 1 1 @{context} t 
 *}
 
 thm seq[OF take1 take1]
 
 lemma "QRHL {Cla[true]} p1 p2 {Cla[a1<a2] \<sqinter> Cla[b1<b2]}"
   unfolding p1_def p2_def
-  apply (tactic \<open>Tactics.seq_tac 1 1 @{context} 1\<close>)
+  apply (tactic \<open>Tactics.seq_tac 1 1 @{term "Expr[top :: predicate]"} @{context} 1\<close>)
   (* apply (rule seq[OF take1 take2]) *)
   oops
 

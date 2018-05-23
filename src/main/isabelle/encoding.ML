@@ -49,6 +49,9 @@ fun expression_to_term t =
     e'
   end
 
+fun expression_to_term_typ t =
+  let val t2 = expression_to_term t in (t2, fastype_of t2) end
+
 (*
 fun encode_cvar (CVariable(n,T)) = Free(n,QRHL.mk_qvariableT T)
 fun encode_qvar (QVariable(n,T)) = Free(n,QRHL.mk_qvariableT T)

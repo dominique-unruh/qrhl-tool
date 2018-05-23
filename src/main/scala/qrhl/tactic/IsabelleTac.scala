@@ -16,7 +16,7 @@ abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[Li
       case Some(isa) =>
         val ctx = state.isabelle.get
         val goals = ctx.isabelle.invoke(operation, (arg, goal.toExpression.isabelleTerm, ctx.contextId)).get
-        for (t <- goals) yield AmbientSubgoal(Expression(isa,state.boolT,t))
+        for (t <- goals) yield Subgoal(Expression(isa,state.boolT,t))
       case None => throw UserException(Parser.noIsabelleError)
     }
   //    }

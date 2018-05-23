@@ -1,10 +1,13 @@
 package qrhl.tactic
 
+import info.hupel.isabelle.pure.Term
+import info.hupel.isabelle.{Operation, pure}
 import qrhl._
 import qrhl.logic.{Block, Expression}
 
 
-case class SeqTac(left:Int, right:Int, inner:Expression) extends Tactic {
+@deprecated("Use SeqTac","now")
+case class SeqTacOLD(left:Int, right:Int, inner:Expression) extends Tactic {
   assert(left>=0)
   assert(right>=0)
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
@@ -23,4 +26,14 @@ case class SeqTac(left:Int, right:Int, inner:Expression) extends Tactic {
       )
     case _ => throw UserException("Expected a qRHL subgoal")
   }
+}
+
+case class SeqTac(left:Int, right:Int, inner:Expression)
+  extends IsabelleTac(SeqTac.seqTacOp,(BigInt(left),BigInt(right),inner.encodeAsExpression)) {
+  override def toString: String = s"seq $left $right"
+}
+
+object SeqTac {
+  val seqTacOp: Operation[((BigInt, BigInt, Term), Term, BigInt), Option[List[Term]]] =
+    Operation.implicitly[((BigInt,BigInt,Term),Term,BigInt), Option[List[Term]]]("seq_tac")
 }

@@ -18,8 +18,9 @@ fun take_n_thm ctx n =
     thm
   end
 
-fun seq_tac i j ctx = 
-  let val rule = @{thm seq} OF [take_n_thm ctx i, take_n_thm ctx j] 
+fun seq_tac i j B ctx = 
+  let val rule = @{thm seq} OF [take_n_thm ctx i, take_n_thm ctx j]
+      val rule = infer_instantiate ctx [(("B",0), Thm.cterm_of ctx B)] rule
   in
   resolve_tac ctx [rule] end
 
@@ -31,6 +32,6 @@ case Seq.pull (tac goal) of
   | SOME (goal',_) => SOME (Thm.prems_of goal' |> map HOLogic.dest_Trueprop)
 end
 
-fun seq_tac_on_term i j ctx = tac_on_term (seq_tac i j ctx 1) ctx
+fun seq_tac_on_term i j B ctx = tac_on_term (seq_tac i j B ctx 1) ctx
 
 end

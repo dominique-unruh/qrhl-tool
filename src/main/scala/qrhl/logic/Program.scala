@@ -2,7 +2,7 @@ package qrhl.logic
 
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure
-import info.hupel.isabelle.pure.{Free, Term}
+import info.hupel.isabelle.pure.{App, Const, Free, Term}
 import qrhl.isabelle.Isabelle
 
 import scala.collection.mutable
@@ -91,6 +91,34 @@ sealed trait Statement {
   }
 
   def inline(name: String, program: Statement): Statement
+}
+
+object Statement {
+  def decodeFromListTerm(context: Isabelle.Context, t:Term) : Block = {
+    val statements = Isabelle.dest_list(t).map(decodeFromTerm(context,_))
+    Block(statements:_*)
+  }
+
+  def decodeFromTerm(context: Isabelle.Context, t:Term) : Statement = t match {
+    case App(Const(Isabelle.block.name,_), statements) => decodeFromListTerm(context, statements)
+    case App(App(Const(Isabelle.assignName,_),x),e) =>
+      Assign(CVariable.fromTerm_var(context, x),Expression.decodeFromExpression(context, e))
+    case App(App(Const(Isabelle.sampleName,_),x),e) =>
+      Sample(CVariable.fromTerm_var(context, x),Expression.decodeFromExpression(context, e))
+    case Free(name,_) => Call(name)
+    case App(App(Const(Isabelle.whileName,_),e),body) =>
+      While(Expression.decodeFromExpression(context,e), decodeFromListTerm(context, body))
+    case App(App(App(Const(Isabelle.ifthenelseName,_),e),thenBody),elseBody) =>
+      IfThenElse(Expression.decodeFromExpression(context,e),
+        decodeFromListTerm(context, thenBody), decodeFromListTerm(context, elseBody))
+    case App(App(Const(Isabelle.qinitName, _), vs), e) =>
+      QInit(QVariable.fromQVarList(context, vs), Expression.decodeFromExpression(context,e))
+    case App(App(Const(Isabelle.qapplyName, _), vs), e) =>
+      QApply(QVariable.fromQVarList(context, vs), Expression.decodeFromExpression(context,e))
+    case App(App(App(Const(Isabelle.measurementName, _), x), vs), e) =>
+      Measurement(CVariable.fromTerm_var(context, x), QVariable.fromQVarList(context, vs),
+        Expression.decodeFromExpression(context,e))
+  }
 }
 
 class Block(val statements:List[Statement]) extends Statement {

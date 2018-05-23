@@ -108,6 +108,15 @@ final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val
 
 
 object Expression {
+  def decodeFromExpression(isabelle:Isabelle.Context, t: Term): Expression = {
+    val (term,typ) = isabelle.isabelle.invoke(decodeFromExpressionOp, t)
+//    println("XXX", typ)
+    Expression(isabelle, Typ(isabelle, typ), term)
+  }
+
+  val decodeFromExpressionOp: Operation[Term, (Term, ITyp)] =
+    Operation.implicitly[Term,(Term,ITyp)]("expression_to_term")
+
   val termToExpressionOp: Operation[(BigInt, Term), Term] =
     Operation.implicitly[(BigInt, Term), Term]("term_to_expression")
 
@@ -117,6 +126,7 @@ object Expression {
     val term = isabelle.readTerm(Isabelle.unicodeToSymbols(str),typ.isabelleTyp)
     Expression(isabelle, typ, term)
   }
+
   def apply(isabelle:Isabelle.Context, typ: Typ, term:Term) : Expression = {
     new Expression(isabelle, typ, term)
   }

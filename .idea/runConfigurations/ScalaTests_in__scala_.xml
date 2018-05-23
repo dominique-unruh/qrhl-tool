@@ -14,6 +14,8 @@
     <setting name="package" value="" />
     <buffered bufClass="qrhl.ExampleFilesTest" />
     <buffered bufClass="qrhl.ExampleFilesTest" />
+    <buffered bufClass="qrhl.QRHLSubgoalTest" />
+    <buffered bufClass="qrhl.QRHLSubgoalTest" />
     <buffered bufClass="qrhl.isabelle.IsabelleTest" />
     <buffered bufClass="qrhl.isabelle.IsabelleTest" />
     <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />

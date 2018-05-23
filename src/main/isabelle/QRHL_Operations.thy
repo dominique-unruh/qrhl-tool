@@ -195,10 +195,16 @@ operation_setup term_to_expression = {*
    action = fn (ctxId, t) => Encoding.term_to_expression (Refs.Ctxt.read ctxId) t}
 *}
 
+operation_setup expression_to_term = {*
+  {from_lib = Codec.term,
+   to_lib = Codec.tuple Codec.term Codec.typ,
+   action = Encoding.expression_to_term_typ}
+*}
+
 operation_setup seq_tac = {*
-  {from_lib = Codec.triple (Codec.tuple Codec.int Codec.int) Codec.term Codec.int,
+  {from_lib = Codec.triple (Codec.triple Codec.int Codec.int Codec.term) Codec.term Codec.int,
    to_lib = Codec.option (Codec.list Codec.term),
-   action = fn ((i,j),goal,ctx_id) => Tactics.seq_tac_on_term i j (Refs.Ctxt.read ctx_id) goal}
+   action = fn ((i,j,B),goal,ctx_id) => Tactics.seq_tac_on_term i j B (Refs.Ctxt.read ctx_id) goal}
 *}
 
 end
