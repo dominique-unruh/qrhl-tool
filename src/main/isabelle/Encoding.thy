@@ -19,7 +19,7 @@ axiomatization
   sample :: "'a cvariable \<Rightarrow> 'a distr expression \<Rightarrow> program" and
   ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program" and
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program" and
-  qinit :: "'a qvariables \<Rightarrow> 'a expression \<Rightarrow> program" and
+  qinit :: "'a qvariables \<Rightarrow> 'a vector expression \<Rightarrow> program" and
   qapply :: "'a qvariables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program" and
   measurement :: "'a cvariable \<Rightarrow> 'b qvariables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
 
@@ -28,10 +28,19 @@ axiomatization fv_expression :: "'a expression \<Rightarrow> string set" where
     for v :: "'a qvariables"
 
 axiomatization fv_program :: "program \<Rightarrow> string set" where
-  fv_program_sequence: "fv_program (sequence p1 p2) = fv_program p1 \<union> fv_program p2"
-and fv_program_assign: "fv_program (assign x e) = {variable_name x} \<union> fv_expresson e"
-and fv_program_skip: "fv_program skip = {}"
-for p1 p2 :: program and e :: "'a expression"
+  fv_program_sequence: "fv_program (block b) = (\<Union>s\<in>set b. fv_program s)"
+and fv_program_assign: "fv_program (assign x e) = {variable_name x} \<union> fv_expression e"
+and fv_program_sample: "fv_program (sample x e2) = {variable_name x} \<union> fv_expression e2"
+and fv_program_ifthenelse: "fv_program (ifthenelse c p1 p2) =
+  fv_expression c \<union> (\<Union>s\<in>set p1. fv_program s) \<union> (\<Union>s\<in>set p2. fv_program s)"
+and fv_program_while: "fv_program (while c b) = fv_expression c \<union> (\<Union>s\<in>set b. fv_program s)"
+and fv_program_qinit: "fv_program (qinit Q e3) = set (qvariable_names Q) \<union> fv_expression e3"
+and fv_program_qapply: "fv_program (qapply Q e4) = set (qvariable_names Q) \<union> fv_expression e4"
+and fv_program_measurement: "fv_program (measurement x R e5) = {variable_name x} \<union> set (qvariable_names R) \<union> fv_expression e5"
+
+for b p1 p2 :: "program list" and x :: "'a qvariable" and e :: "'a expression"
+and e2 :: "'a distr expression" and e3 :: "'a vector expression" and e4 :: "('a,'a) bounded expression"
+and e5 :: "('a,'b) measurement expression" and Q :: "'a qvariables" and R :: "'b qvariables"
 
 axiomatization qrhl :: "predicate expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> predicate expression \<Rightarrow> bool"
 
