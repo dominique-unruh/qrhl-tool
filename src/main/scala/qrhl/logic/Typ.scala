@@ -4,10 +4,10 @@ import info.hupel.isabelle.hol.HOLogic
 import qrhl.isabelle.Isabelle
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp, Type => IType}
 
-final class Typ private (private val isabelle:Isabelle.Context, val isabelleTyp:ITyp) {
+final class Typ private (@deprecated private val isabelle:Isabelle.Context, val isabelleTyp:ITyp) {
   def distr: Typ = Typ(isabelle, IType("QRHL_Core.distr",List(isabelleTyp)))
 
-  override val toString: String = isabelle.prettyTyp(isabelleTyp)
+  override val toString: String = Isabelle.theContext.prettyTyp(isabelleTyp)
 //  val isabelleTyp : ITyp = typ
 
   override def equals(o: Any): Boolean = o match {

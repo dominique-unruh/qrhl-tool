@@ -12,7 +12,7 @@ import scala.collection.mutable
 
 
 
-final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
+final class Expression private (@deprecated("","now") val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
   lazy val encodeAsExpression : Term =
     isabelle.isabelle.invoke(Expression.termToExpressionOp, (isabelle.contextId, isabelleTerm))
 
@@ -58,7 +58,7 @@ final class Expression private (val isabelle:Isabelle.Context, val typ: Typ, val
     }
   }
 
-  override lazy val toString: String = isabelle.prettyExpression(isabelleTerm)
+  override lazy val toString: String = Isabelle.theContext.prettyExpression(isabelleTerm)
 //  val isabelleTerm : Term = isabelleTerm
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): Expression = simplify(isabelle.get,facts)
   def simplify(isabelle: Isabelle.Context, facts:List[String]): Expression = Expression(isabelle, typ, isabelle.simplify(isabelleTerm,facts))

@@ -26,8 +26,12 @@
     <buffered bufClass="qrhl.tactic.CaseTacTest" />
     <buffered bufClass="qrhl.tactic.EqualTacTest" />
     <buffered bufClass="qrhl.tactic.EqualTacTest" />
+    <buffered bufClass="qrhl.tactic.ExpressionTest" />
+    <buffered bufClass="qrhl.tactic.ExpressionTest" />
     <buffered bufClass="qrhl.tactic.RuleTacTest" />
     <buffered bufClass="qrhl.tactic.RuleTacTest" />
+    <buffered bufClass="qrhl.tactic.SeqTacTest" />
+    <buffered bufClass="qrhl.tactic.SeqTacTest" />
     <buffered bufClass="qrhl.tactic.WpTacTest" />
     <buffered bufClass="qrhl.tactic.WpTacTest" />
     <buffered bufClass="qrhl.toplevel.ParserTest" />

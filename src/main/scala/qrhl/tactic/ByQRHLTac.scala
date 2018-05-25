@@ -11,6 +11,7 @@ case object ByQRHLTac extends Tactic {
   class Probability(left : Boolean, state : State) {
     def unapply(term: pure.Term): Option[(pure.Term,pure.Term,pure.Term)] = term match {
       case App(App(App(Const("QRHL_Core.probability",_),v),p),rho) =>
+
         val vname = Isabelle.dest_string(v)
         val vvar = state.environment.cVariables.getOrElse(vname, throw UserException(s"$v is not the name of a classical variable")).index(left)
         val vbool = vvar.typ.isabelleTyp match {
@@ -21,12 +22,11 @@ case object ByQRHLTac extends Tactic {
         Some(vbool,p,rho)
 
       case App(App(App(Const("Encoding.probability2",_),v),p),rho) =>
-        val expressionToTermOp = Operation.implicitly[Term, Term]("expression_to_term")
+        val expressionToTermOp = Operation.implicitly[Term, (Term,pure.Typ)]("expression_to_term")
         val addIndexToExpressionOp = Operation.implicitly[(Term,Boolean), Term]("add_index_to_expression")
 
         val v2 = state.isabelle.get.isabelle.invoke(addIndexToExpressionOp, (v,left))
-        print("v2",v2)
-        val v3 = state.isabelle.get.isabelle.invoke(expressionToTermOp, v2)
+        val v3 = state.isabelle.get.isabelle.invoke(expressionToTermOp, v2)._1
         Some(v3,p,rho)
       case _ => None
     }
@@ -47,6 +47,7 @@ case object ByQRHLTac extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
     val ProbLeft = new Probability(true, state)
     val ProbRight = new Probability(false, state)
+
     goal match {
       case AmbientSubgoal(Expression(App(App(Const(rel,_),ProbLeft(v1,p1,rho1)),ProbRight(v2,p2,rho2)))) =>
         val p1name = p1 match {
@@ -61,7 +62,7 @@ case object ByQRHLTac extends Tactic {
           throw UserException("The initial state in lhs and rhs must be identical (syntactically same term, not just equal)")
         val rho = rho1
 
-//        val v1name = Isabelle.dest_string(v1)
+        //        val v1name = Isabelle.dest_string(v1)
 //        val v2name = Isabelle.dest_string(v2)
 
         val env = state.environment
@@ -70,7 +71,7 @@ case object ByQRHLTac extends Tactic {
         val p1prog = env.programs.getOrElse(p1name, throw UserException(s"$p1name is not the name of a program"))
         val p2prog = env.programs.getOrElse(p2name, throw UserException(s"$p2name is not the name of a program"))
 
-//        val v1bool = v1var.typ.isabelleTyp match {
+        //        val v1bool = v1var.typ.isabelleTyp match {
 //          case Type("HOL.bool",Nil) => v1var.isabelleTerm
 //          case Type("QRHL_Core.bit",Nil) => bitToBool(v1var.isabelleTerm)
 //          case _ => throw UserException(s"$v1name must have type bool or bit, not ${v1var.typ}")

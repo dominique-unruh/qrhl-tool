@@ -11,8 +11,9 @@ sealed trait Variable {
   def index2: Variable
   def index(left:Boolean): Variable = if (left) index1 else index2
   def isabelleTyp : pure.Typ
+  def typ : Typ
   def isabelleTerm: Term = Free(name,isabelleTyp)
-  def isabelleTerm_var: Term = Free(name+"_var",Isabelle.qvariableT(isabelleTyp))
+  def isabelleTerm_var: Term = Free(name+"_var",Isabelle.qvariableT(typ.isabelleTyp))
 }
 object Variable {
   def index1(name:String) : String = name+"1"

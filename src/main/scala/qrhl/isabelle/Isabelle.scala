@@ -353,9 +353,12 @@ object Isabelle {
     sb.toString
   }
 
-
+  private var _theContext : Context = _
+  def theContext: Context = _theContext
 
   class Context private[Isabelle](val isabelle:Isabelle, val contextId: BigInt) {
+    _theContext = this
+
     def checkType(term:Term) : ITyp = {
 //      val lit = ml.Expr.uncheckedLiteral[IContext => Term => ITyp]("QRHL.checkType")
 //      val mlExpr = lit(context.read)(term)
