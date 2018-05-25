@@ -2,7 +2,7 @@ structure Tactics =
 struct
 
 fun take_n_thm ctx n = 
-  let val T = TFree(("a"),@{sort type})
+  let val T = TFree(("'a"),@{sort type})
       val Tlist = HOLogic.listT T
       val l = Free(("l"),Tlist)
       val ss = List.tabulate (n, fn i => Free(("s"^string_of_int (i+1)),T))
@@ -19,8 +19,11 @@ fun take_n_thm ctx n =
   end
 
 fun seq_tac i j B ctx = 
-  let val rule = @{thm seq} OF [take_n_thm ctx i, take_n_thm ctx j]
-      val rule = infer_instantiate ctx [(("B",0), Thm.cterm_of ctx B)] rule
+  let 
+val _ = @{print} (@{thm seq} OF [take_n_thm ctx i])
+val rule = @{thm seq} OF [take_n_thm ctx i, take_n_thm ctx j]
+val _ = @{print} rule
+      val rule = infer_instantiate ctx [(("B",0), Thm.cterm_of ctx B)] rule |> @{print}
   in
   resolve_tac ctx [rule] end
 

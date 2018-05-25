@@ -1,6 +1,22 @@
 theory Test
-  imports QRHL
+  imports Main
 begin
+
+lemma x: fixes c :: int assumes "c = d" shows "True" ..
+
+context fixes a :: int begin
+
+ML {*
+val ctx = @{context}
+val T = TFree(("a"),@{sort type}) (* Note the incorrect "a" instead of "'a" *)
+val l = Free(("l"),T)
+val prop = HOLogic.mk_Trueprop (HOLogic.mk_eq (l,l)) (* prop = "l=l" *)
+fun tac {context=ctx, ...} = ALLGOALS (simp_tac ctx)
+val thm = Goal.prove ctx ["l"] [] prop tac (* proving prop *)
+val _ = @{thm x} OF [thm] (* Fails with "no unifiers". But succeeds if "fixes a" above is "fixes b" *)
+*}
+
+
 
 
 ML {*
@@ -61,22 +77,6 @@ val t = @{term "qrhl (expression qvariable_unit (\<lambda>x. \<CC>\<ll>\<aa>[Tru
      (expression \<lbrakk>a1_var, a2_var, b1_var, b2_var\<rbrakk> (\<lambda>(a1, a2, b1, b2). \<CC>\<ll>\<aa>[a1 < a2] \<sqinter> \<CC>\<ll>\<aa>[b1 < b2]))"}
 *}
 
-ML {*
-Tactics.seq_tac_on_term 1 1 @{context} t 
-*}
-
-thm seq[OF take1 take1]
-
-lemma "QRHL {Cla[true]} p1 p2 {Cla[a1<a2] \<sqinter> Cla[b1<b2]}"
-  unfolding p1_def p2_def
-  apply (tactic \<open>Tactics.seq_tac 1 1 @{term "Expr[top :: predicate]"} @{context} 1\<close>)
-  (* apply (rule seq[OF take1 take2]) *)
-  oops
-
-ML {* @{term "qrhl"} *}
-ML {* @{type_name "list"} *}
-
-end
 
 
 

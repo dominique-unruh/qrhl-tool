@@ -15,7 +15,9 @@ abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[Li
     state.isabelle match {
       case Some(isa) =>
         val ctx = state.isabelle.get
-        val goals = ctx.isabelle.invoke(operation, (arg, goal.toExpression.isabelleTerm, ctx.contextId)).get
+        val goals = ctx.isabelle.invoke(operation, (arg, goal.toExpression.isabelleTerm, ctx.contextId)).getOrElse {
+          throw UserException("tactic failed")
+        }
         for (t <- goals) yield Subgoal(Expression(isa,state.boolT,t))
       case None => throw UserException(Parser.noIsabelleError)
     }
