@@ -107,11 +107,11 @@ fun add_index_to_expression t left =
   end
     
 fun term_to_expression ctx t =
-  let val lookup_var = QRHL.lookup_variable ctx
-      val frees = Term.add_frees t [] |> filter (fn (v,_) => lookup_var v = SOME QRHL.Classical) |> rev
+  let val is_classical = QRHL.is_classical_variable ctx
+      val frees = Term.add_frees t [] |> filter (fn (v,_) => is_classical v) |> rev
       val (vars,varsT) = 
         frees |> map (fn (v,T) => (v^"_var",T)) |> QRHL.varterm_from_list |> QRHL.mk_varterm
-      val pattern = HOLogic.mk_tuple (map Free frees) |> @{print}
+      val pattern = HOLogic.mk_tuple (map Free frees)
       val e = HOLogic.tupled_lambda pattern t |> @{print}
       val T = fastype_of t
   in
@@ -152,5 +152,13 @@ fun term_to_expression_untyped ctx t =
       $ vars $ e
   end
 
+fun read_expression ctx str =
+  let val t = Syntax.read_term ctx str
+  in term_to_expression ctx t end
+
+fun read_predicate ctx str =
+  let val preterm = Syntax.parse_term ctx str
+      val t = Syntax.check_term ctx (Type.constraint @{typ "predicate"} preterm)
+  in term_to_expression ctx t end
 
 end

@@ -173,18 +173,6 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
 |> Thm.cterm_of @{context} |> @{print} *)
 
 
-(* TODO: does not work on local theories *)
-fun addQVariableNameAssumption name T ctx =
-  let val qT = mk_qvariableT T
-      val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name,qT)
-      val rhs = HOLogic.mk_string name
-      val assm = Logic.mk_equals (lhs,rhs)
-      val (_,ctx) = Proof_Context.add_assms Assumption.assume_export
-                    [((Binding.name name,[Simplifier.simp_add]), [(assm,[])])] ctx
-  in
-    ctx
-  end
-
 fun mk_quantum_equality Q1 Q2 T =
   let val opT = mk_bounded2T T
       val qvT = mk_qvariablesT T                                        
@@ -593,17 +581,43 @@ structure VarTypes = Proof_Data
   fun init _ = Symtab.empty
 )
 
-fun declare_variable ctx v T typ =
-  let val ctx = addQVariableNameAssumption (if typ=Classical then v^"_var" else v) T ctx
-      val ctx = addQVariableNameAssumption (if typ=Classical then v^"1_var" else v^"1") T ctx
-      val ctx = addQVariableNameAssumption (if typ=Classical then v^"2_var" else v^"2") T ctx
-      val ctx = VarTypes.map (Symtab.insert op= (v,typ)) ctx
-      val ctx = VarTypes.map (Symtab.insert op= (v^"1",typ)) ctx
-      val ctx = VarTypes.map (Symtab.insert op= (v^"2",typ)) ctx
+
+(* TODO: does not work on local theories *)
+fun addQVariableNameAssumption cq bind T ctxt =
+  let val qT = mk_qvariableT T
+      val name = Binding.name_of bind
+      val name' = if cq=Classical then name^"_var" else name
+      val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name',qT)
+      val rhs = HOLogic.mk_string name
+      val assm = Logic.mk_equals (lhs,rhs)
+      val ctxt1 = Variable.declare_term assm ctxt
+      val (_,ctxt2) = Proof_Context.add_assms Assumption.assume_export
+                  [((Binding.suffix_name "_varname" bind,[Simplifier.simp_add]), [(assm,[])])] ctxt1
+  in
+    ctxt2
+  end
+
+fun declare_variable ctx bind T cq =
+  let val qT = mk_qvariableT T
+      val v = Binding.name_of bind (* TODO: use binding when fixing variables *)
+      val vars = if cq=Classical then [(bind,T),(Binding.suffix_name "1" bind,T),(Binding.suffix_name "2" bind,T),
+                                       (Binding.suffix_name "_var" bind,qT),(Binding.suffix_name "1_var" bind,qT),(Binding.suffix_name "2_var" bind,qT)]
+                                  else [(bind,qT),(Binding.suffix_name "1" bind,qT),(Binding.suffix_name "2" bind,qT)]
+      val (_,ctx) = Variable.add_fixes_binding (map fst vars) ctx
+      val ctx = fold (fn (v,T) => Variable.declare_term (Free(Binding.name_of v,T))) vars ctx
+      val ctx = addQVariableNameAssumption cq bind T ctx
+      val ctx = addQVariableNameAssumption cq (Binding.suffix_name "1" bind) T ctx
+      val ctx = addQVariableNameAssumption cq (Binding.suffix_name "2" bind) T ctx
+      val ctx = VarTypes.map (Symtab.insert op= (v,cq)) ctx
+      val ctx = VarTypes.map (Symtab.insert op= (v^"1",cq)) ctx
+      val ctx = VarTypes.map (Symtab.insert op= (v^"2",cq)) ctx
   in
     ctx
   end
 
 fun lookup_variable ctx = Symtab.lookup (VarTypes.get ctx)
+fun is_classical_variable ctx name = case Symtab.lookup (VarTypes.get ctx) name of
+  SOME Classical => true
+  | _ => false
 
 end

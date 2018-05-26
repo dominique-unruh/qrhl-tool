@@ -46,10 +46,10 @@ axiomatization qrhl :: "predicate expression \<Rightarrow> program list \<Righta
 
 axiomatization probability2 :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 
-
 ML_file "encoding.ML"
 
 
+(*
 ML {*
 val ctx = QRHL.declare_variable @{context} "x" @{typ int} QRHL.Classical
 val e = Encoding.term_to_expression ctx (HOLogic.mk_eq (Free("x",dummyT),Free("y",dummyT)))
@@ -60,9 +60,16 @@ ML {*
 val e' = Encoding.add_index_to_expression e false
 val t = Encoding.expression_to_term e' |> Thm.cterm_of ctx
 *}
+*)
 
 syntax "_expression" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
 parse_translation \<open>[("_expression", fn ctx => fn [e] => Encoding.term_to_expression_untyped ctx e)]\<close>
+
+(* syntax "_predicate" :: "'a \<Rightarrow> predicate expression" ("Pred[_]")
+parse_translation \<open>[("_predicate", fn ctx => fn [e] => 
+  Encoding.term_to_predicate_expression_untyped ctx e)]\<close> *)
+
+term "Pred[ Cla[True] ]"
 
 syntax "_probability2" :: "'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> real" ("Pr2[_:_'(_')]")
 translations "_probability2 a b c" \<rightleftharpoons> "CONST probability2 (_expression a) b c"

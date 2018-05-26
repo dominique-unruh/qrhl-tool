@@ -11,4 +11,9 @@ lemma seq:
 
 ML_file "tactics.ML"
 
+method_setup seq = {*
+  Scan.lift Parse.nat -- Scan.lift Parse.nat -- Scan.lift Parse.term >> (fn ((i,j),B) => fn ctx =>
+    SIMPLE_METHOD (Tactics.seq_tac i j (Encoding.read_predicate ctx B) ctx 1))
+*}
+
 end
