@@ -13,8 +13,8 @@ import scala.collection.mutable
 
 
 final class Expression private (@deprecated("","now") val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
-  lazy val encodeAsExpression : Term =
-    isabelle.isabelle.invoke(Expression.termToExpressionOp, (isabelle.contextId, isabelleTerm))
+  def encodeAsExpression(context: Isabelle.Context) : Term =
+    context.isabelle.invoke(Expression.termToExpressionOp, (context.contextId, isabelleTerm))
 
   def stripAssumption(number: Int): Expression = Expression(isabelle,typ,Expression.stripAssumption(isabelleTerm,number))
 
@@ -24,10 +24,10 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
   }
 
 
-  def checkWelltyped(typ:Typ): Unit = checkWelltyped(typ.isabelleTyp)
-  def checkWelltyped(ityp:ITyp): Unit = {
+  def checkWelltyped(context:Isabelle.Context, typ:Typ): Unit = checkWelltyped(context, typ.isabelleTyp)
+  def checkWelltyped(context:Isabelle.Context, ityp:ITyp): Unit = {
     assert(ityp==this.typ.isabelleTyp,s"$ityp != ${this.typ.isabelleTyp}")
-    assert(isabelle.checkType(isabelleTerm) == typ.isabelleTyp)
+    assert(context.checkType(isabelleTerm) == typ.isabelleTyp)
   }
 
   /** Free variables, including those encoded as a string in "probability ... ... str" */
@@ -108,10 +108,9 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
 
 
 object Expression {
-  def decodeFromExpression(isabelle:Isabelle.Context, t: Term): Expression = {
-    val (term,typ) = isabelle.isabelle.invoke(decodeFromExpressionOp, t)
-//    println("XXX", typ)
-    Expression(isabelle, Typ(isabelle, typ), term)
+  def decodeFromExpression(context:Isabelle.Context, t: Term): Expression = {
+    val (term,typ) = context.isabelle.invoke(decodeFromExpressionOp, t)
+    Expression(context, Typ(context, typ), term)
   }
 
   val decodeFromExpressionOp: Operation[Term, (Term, ITyp)] =

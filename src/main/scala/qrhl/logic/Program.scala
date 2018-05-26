@@ -10,7 +10,7 @@ import scala.collection.mutable
 
 // Programs
 sealed trait Statement {
-  def programTerm : Term
+  def programTerm(context: Isabelle.Context) : Term
 
 
   /** Returns all variables used in the statement.
@@ -48,7 +48,7 @@ sealed trait Statement {
     collect(this)
   }
 
-  def checkWelltyped(): Unit
+  def checkWelltyped(context: Isabelle.Context): Unit
 
   /** All ambient and program variables.
     * Not including nested programs (via Call) */
@@ -58,7 +58,7 @@ sealed trait Statement {
       case Block(ss @ _*) => ss.foreach(collect)
       case Assign(v,e) => vars += v.name; vars ++= e.variables
       case Sample(v,e) => vars += v.name; vars ++= e.variables
-      case Call(name) =>
+      case Call(_) =>
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
       case QInit(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
@@ -122,8 +122,8 @@ object Statement {
 }
 
 class Block(val statements:List[Statement]) extends Statement {
-  lazy val programListTerm: Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTerm))
-  override lazy val programTerm : Term = Isabelle.block $ programListTerm
+  def programListTerm(context: Isabelle.Context): Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTerm(context)))
+  override def programTerm(context: Isabelle.Context) : Term = Isabelle.block $ programListTerm(context)
 
   override def equals(o: Any): Boolean = o match {
     case Block(st @ _*) => statements==st
@@ -158,8 +158,8 @@ class Block(val statements:List[Statement]) extends Statement {
     Block(newStatements : _*)
   }
 
-  override def checkWelltyped(): Unit =
-    for (s <- statements) s.checkWelltyped()
+  override def checkWelltyped(context: Isabelle.Context): Unit =
+    for (s <- statements) s.checkWelltyped(context)
 }
 
 object Block {
@@ -173,86 +173,86 @@ final case class Assign(variable:CVariable, expression:Expression) extends State
   override def toString: String = s"""${variable.name} <- $expression;"""
   override def inline(name: String, statement: Statement): Statement = this
 
-  override def checkWelltyped(): Unit =
-    expression.checkWelltyped(variable.typ)
+  override def checkWelltyped(context: Isabelle.Context): Unit =
+    expression.checkWelltyped(context, variable.typ)
 
-  override lazy val programTerm: Term =
-    Isabelle.assign(variable.typ.isabelleTyp) $ variable.isabelleTerm_var $ expression.encodeAsExpression
+  override def programTerm(context: Isabelle.Context): Term =
+    Isabelle.assign(variable.typ.isabelleTyp) $ variable.variableTerm $ expression.encodeAsExpression(context)
 }
 final case class Sample(variable:CVariable, expression:Expression) extends Statement {
   override def toString: String = s"""${variable.name} <$$ $expression;"""
   override def inline(name: String, statement: Statement): Statement = this
 
-  override def checkWelltyped(): Unit =
-    expression.checkWelltyped(Isabelle.distrT(variable.isabelleTyp))
+  override def checkWelltyped(context: Isabelle.Context): Unit =
+    expression.checkWelltyped(context, Isabelle.distrT(variable.valueTyp))
 
-  override lazy val programTerm: Term =
-    Isabelle.sample(variable.typ.isabelleTyp) $ variable.isabelleTerm_var $ expression.encodeAsExpression
+  override def programTerm(context: Isabelle.Context): Term =
+    Isabelle.sample(variable.typ.isabelleTyp) $ variable.variableTerm $ expression.encodeAsExpression(context)
 }
 final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     IfThenElse(condition,thenBranch.inline(name,program),elseBranch.inline(name,program))
   override def toString: String = s"if ($condition) $thenBranch else $elseBranch;"
 
-  override def checkWelltyped(): Unit = {
-    condition.checkWelltyped(HOLogic.boolT)
-    thenBranch.checkWelltyped()
-    elseBranch.checkWelltyped()
+  override def checkWelltyped(context: Isabelle.Context): Unit = {
+    condition.checkWelltyped(context, HOLogic.boolT)
+    thenBranch.checkWelltyped(context)
+    elseBranch.checkWelltyped(context)
   }
-  override lazy val programTerm: Term =
-    Isabelle.ifthenelse $ condition.encodeAsExpression $ thenBranch.programListTerm $ elseBranch.programListTerm
+  override def programTerm(context: Isabelle.Context): Term =
+    Isabelle.ifthenelse $ condition.encodeAsExpression(context) $ thenBranch.programListTerm(context) $ elseBranch.programListTerm(context)
 }
 final case class While(condition:Expression, body: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     While(condition,body.inline(name,program))
   override def toString: String = s"while ($condition) $body"
 
-  override def checkWelltyped(): Unit = {
-    condition.checkWelltyped(HOLogic.boolT)
-    body.checkWelltyped()
+  override def checkWelltyped(context: Isabelle.Context): Unit = {
+    condition.checkWelltyped(context, HOLogic.boolT)
+    body.checkWelltyped(context)
   }
-  override lazy val programTerm: Term =
-    Isabelle.whileProg $ condition.encodeAsExpression $ body.programListTerm
+  override def programTerm(context: Isabelle.Context): Term =
+    Isabelle.whileProg $ condition.encodeAsExpression(context) $ body.programListTerm(context)
 }
 final case class QInit(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
   override def toString: String = s"${location.map(_.name).mkString(",")} <q $expression;"
 
-  override def checkWelltyped(): Unit = {
+  override def checkWelltyped(context: Isabelle.Context): Unit = {
     val expected = pure.Type("Complex_L2.vector",List(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
-    expression.checkWelltyped(expected)
+    expression.checkWelltyped(context, expected)
   }
-  override lazy val programTerm: Term =
-    Isabelle.qinit(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression
+  override def programTerm(context: Isabelle.Context): Term =
+    Isabelle.qinit(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context)
 }
 final case class QApply(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
   override def toString: String = s"on ${location.map(_.name).mkString(",")} apply $expression;"
 
-  override def checkWelltyped(): Unit = {
+  override def checkWelltyped(context: Isabelle.Context): Unit = {
     val varType = Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)
     val expected = pure.Type("Bounded_Operators.bounded",List(varType,varType))
-    expression.checkWelltyped(expected)
+    expression.checkWelltyped(context, expected)
   }
-  override lazy val programTerm: Term =
-    Isabelle.qapply(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression
+  override def programTerm(context: Isabelle.Context): Term =
+    Isabelle.qapply(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context)
 }
 final case class Measurement(result:CVariable, location:List[QVariable], e:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
   override def toString: String = s"${result.name} <- measure ${location.map(_.name).mkString(",")} in $e;"
 
-  override def checkWelltyped(): Unit = {
-    val expected = pure.Type("QRHL_Core.measurement",List(result.isabelleTyp, Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
-    e.checkWelltyped(expected)
+  override def checkWelltyped(context: Isabelle.Context): Unit = {
+    val expected = pure.Type("QRHL_Core.measurement",List(result.variableTyp, Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
+    e.checkWelltyped(context, expected)
   }
-  override lazy val programTerm: Term =
+  override def programTerm(context: Isabelle.Context): Term =
     Isabelle.measurement(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*), result.typ.isabelleTyp) $
-      result.isabelleTerm_var $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression
+      result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context)
 }
 final case class Call(name:String) extends Statement {
   override def toString: String = s"call $name;"
   override def inline(name: String, program: Statement): Statement = this
 
-  override def checkWelltyped(): Unit = {}
-  override lazy val programTerm: Term = Free(name,Isabelle.programT)
+  override def checkWelltyped(context: Isabelle.Context): Unit = {}
+  override def programTerm(context: Isabelle.Context): Term = Free(name,Isabelle.programT)
 }

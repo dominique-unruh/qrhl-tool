@@ -38,7 +38,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 //      val wp = post.isabelle.runExpr(wpExpr)
 
       val wp = post.isabelle.isabelle.invoke(WpTac.qapplyWpOp,
-        (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.isabelleTerm)))
+        (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.variableTerm)))
 
       Expression(post.isabelle, state.predicateT, wp)
 
@@ -56,7 +56,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 //      val wp = post.isabelle.runExpr(wpExpr)
 
       val wp = post.isabelle.isabelle.invoke(WpTac.measureWpOp,
-        ((post.isabelleTerm, x1.isabelleTerm), (e1.isabelleTerm, q1.map(_.isabelleTerm))))
+        ((post.isabelleTerm, x1.valueTerm), (e1.isabelleTerm, q1.map(_.variableTerm))))
 
       Expression(post.isabelle, state.predicateT, wp)
 
@@ -70,7 +70,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 //      val wp = state.isabelle.get.runExpr(wpExpr)
 
       val wp = state.isabelle.get.isabelle.invoke(WpTac.qinitWpOp,
-        (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.isabelleTerm)))
+        (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.variableTerm)))
 
       Expression(state.isabelle.get, state.predicateT, wp)
 

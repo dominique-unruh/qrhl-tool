@@ -15,8 +15,8 @@ case object ByQRHLTac extends Tactic {
         val vname = Isabelle.dest_string(v)
         val vvar = state.environment.cVariables.getOrElse(vname, throw UserException(s"$v is not the name of a classical variable")).index(left)
         val vbool = vvar.typ.isabelleTyp match {
-          case Type("HOL.bool",Nil) => vvar.isabelleTerm
-          case Type("QRHL_Core.bit",Nil) => bitToBool(vvar.isabelleTerm)
+          case Type("HOL.bool",Nil) => vvar.valueTerm
+          case Type("QRHL_Core.bit",Nil) => bitToBool(vvar.valueTerm)
           case _ => throw UserException(s"$vname must have type bool or bit, not ${vvar.typ}")
         }
         Some(vbool,p,rho)

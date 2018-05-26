@@ -207,8 +207,8 @@ object Isabelle {
   def prodT(t1:ITyp, t2:ITyp) = Type("Product_Type.prod", List(t1,t2))
   private def qvarTuple_var0(qvs:List[QVariable]) : (Term,ITyp) = qvs match {
     case Nil => (qvariable_unit, unitT)
-    case List(qv) => (qvariable_singleton(qv.typ.isabelleTyp) $ qv.isabelleTerm_var,
-                      qv.typ.isabelleTyp)
+    case List(qv) => (qvariable_singleton(qv.valueTyp) $ qv.variableTerm,
+                      qv.valueTyp)
     case qv::rest => {
       val (qvTuple, qvTyp) = qvarTuple_var0(List(qv))
       val (restTuple, restTyp) = qvarTuple_var0(rest)

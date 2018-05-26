@@ -10,7 +10,7 @@ class ExpressionTest extends FunSuite {
     tl.execCmd("classical var x : int")
     val state = tl.state
     val e = state.parseExpression(state.predicateT,"Cla[ x=(1::int) ]")
-    val t = e.encodeAsExpression
+    val t = e.encodeAsExpression(tl.state.isabelle.get)
     println(e)
     println(t)
     assert(state.isabelle.get.checkType(t) == Isabelle.expressionT(Isabelle.predicateT))

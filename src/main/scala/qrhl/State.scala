@@ -4,7 +4,7 @@ import java.nio.file.{Files, Path, Paths}
 
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{App, Const, Term, Type, Context => IContext, Typ => ITyp}
+import info.hupel.isabelle.pure.{App, Const, Term, Typ => ITyp}
 import org.log4s
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -19,11 +19,11 @@ sealed trait Subgoal {
 
   /** Checks whether all isabelle terms in this goal are well-typed.
     * Should always succeed, unless there are bugs somewhere. */
-  def checkWelltyped(): Unit
+  def checkWelltyped(context: Isabelle.Context): Unit
 
   /** This goal as a boolean expression. If it cannot be expressed in Isabelle, a different,
     * logically weaker expression is returned. */
-  def toExpression: Expression
+  def toExpression(context:Isabelle.Context): Expression
 
   def checkVariablesDeclared(environment: Environment): Unit
 
@@ -39,7 +39,7 @@ sealed trait Subgoal {
 }
 
 object Subgoal {
-  def apply(e : Expression) : Subgoal = {
+  def apply(context: Isabelle.Context, e : Expression) : Subgoal = {
     val assms = new ListBuffer[Expression]()
     var t = e.isabelleTerm
     Breaks.breakable {
@@ -55,11 +55,10 @@ object Subgoal {
 
     t match {
       case App(App(App(App(Const(Isabelle.qrhl.name,_),pre),left),right),post) =>
-        val isabelle = e.isabelle
-        val pre2 = Expression.decodeFromExpression(isabelle,pre)
-        val post2 = Expression.decodeFromExpression(isabelle,post)
-        val left2 = Statement.decodeFromListTerm(e.isabelle, left)
-        val right2 = Statement.decodeFromListTerm(e.isabelle, right)
+        val pre2 = Expression.decodeFromExpression(context,pre)
+        val post2 = Expression.decodeFromExpression(context,post)
+        val left2 = Statement.decodeFromListTerm(context, left)
+        val right2 = Statement.decodeFromListTerm(context, right)
         QRHLSubgoal(left2,right2,pre2,post2,assms.toList)
       case _ =>
         AmbientSubgoal(e)
@@ -96,11 +95,11 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
         throw UserException(s"Undeclared variable $x in assumptions")
   }
 
-  override lazy val toExpression: Expression = {
-    val leftTerm = left.programListTerm
-    val rightTerm = right.programListTerm
-    val preTerm = pre.encodeAsExpression
-    val postTerm = post.encodeAsExpression
+  override def toExpression(context: Isabelle.Context): Expression = {
+    val leftTerm = left.programListTerm(context)
+    val rightTerm = right.programListTerm(context)
+    val preTerm = pre.encodeAsExpression(context)
+    val postTerm = post.encodeAsExpression(context)
     val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
     val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
     Expression(pre.isabelle, Typ.bool(pre.isabelle), term)
@@ -120,12 +119,12 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
 
   /** Checks whether all isabelle terms in this goal are well-typed.
     * Should always succeed, unless there are bugs somewhere. */
-  override def checkWelltyped(): Unit = {
-    for (a <- assumptions) a.checkWelltyped(HOLogic.boolT)
-    left.checkWelltyped()
-    right.checkWelltyped()
-    pre.checkWelltyped(Isabelle.predicateT)
-    post.checkWelltyped(Isabelle.predicateT)
+  override def checkWelltyped(context:Isabelle.Context): Unit = {
+    for (a <- assumptions) a.checkWelltyped(context, HOLogic.boolT)
+    left.checkWelltyped(context)
+    right.checkWelltyped(context)
+    pre.checkWelltyped(context, Isabelle.predicateT)
+    post.checkWelltyped(context, Isabelle.predicateT)
   }
 
   override def simplify(isabelle: Isabelle.Context, facts: List[String]): QRHLSubgoal = {
@@ -145,7 +144,7 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
         throw UserException(s"Undeclared variable $x")
 
   /** This goal as a boolean expression. */
-  override def toExpression: Expression = goal
+  override def toExpression(context: Isabelle.Context): Expression = goal
 
   override def containsAmbientVar(x: String): Boolean = goal.variables.contains(x)
 
@@ -156,7 +155,7 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
 
   /** Checks whether all isabelle terms in this goal are well-typed.
     * Should always succeed, unless there are bugs somewhere. */
-  override def checkWelltyped(): Unit = goal.checkWelltyped(HOLogic.boolT)
+  override def checkWelltyped(context: Isabelle.Context): Unit = goal.checkWelltyped(context,HOLogic.boolT)
 
   override def simplify(isabelle: Isabelle.Context, facts: List[String]): AmbientSubgoal =
     AmbientSubgoal(goal.simplify(isabelle,facts))
@@ -233,7 +232,7 @@ class State private (val environment: Environment,
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
       goal.checkVariablesDeclared(environment)
-      copy(goal=List(goal), currentLemma=Some((name,goal.toExpression)))
+      copy(goal=List(goal), currentLemma=Some((name,goal.toExpression(isabelle.get))))
     case _ => throw UserException("There is still a pending proof.")
   }
 
@@ -263,7 +262,7 @@ class State private (val environment: Environment,
     }
   }
 
-  def parseBlock(str:String) = {
+  def parseBlock(str:String): Block = {
     implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.block,str) match {
       case Parser.Success(cmd2,_) => cmd2
@@ -311,16 +310,13 @@ class State private (val environment: Environment,
     if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = isabelle.get
     val typ1 = typ.isabelleTyp
-    val typ2 = if (quantum) Type("QRHL_Core.qvariable",List(typ1)) else typ1
-    var newIsa = isa.declareVariable(name, typ2)
-      .declareVariable(Variable.index1(name), typ2)
-      .declareVariable(Variable.index2(name), typ2)
-    if (quantum) {
-      newIsa = declare_quantum_variable(newIsa, name, typ1)
-    }
-    else {
-      newIsa = declare_classical_variable(newIsa, name, typ1)
-    }
+//    val typ2 = if (quantum) Type("QRHL_Core.qvariable",List(typ1)) else typ1
+    val newIsa =
+      if (quantum)
+        declare_quantum_variable(isa, name, typ1)
+      else
+        declare_classical_variable(isa, name, typ1)
+
     copy(environment = newEnv, isabelle = Some(newIsa))
   }
 

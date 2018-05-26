@@ -18,7 +18,7 @@ class EqualTacTest extends FunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} call p; ~ call p; {Qeq[q1=q2]}")
     val state2 = tl.state.applyTactic(EqualTac)
-    state2.goal.foreach(_.checkWelltyped())
+    state2.goal.foreach(_.checkWelltyped(tl.state.isabelle.get))
     assert(state2.goal.length==2)
   }
 
@@ -27,7 +27,7 @@ class EqualTacTest extends FunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} while (x ≠ 0) x <- x - 1; ~ while (x ≠ 0) x <- x - 1; {top}")
     val state2 = tl.state.applyTactic(EqualTac)
-    state2.goal.foreach(_.checkWelltyped())
+    state2.goal.foreach(_.checkWelltyped(tl.state.isabelle.get))
     assert(state2.goal.length==2)
   }
 }

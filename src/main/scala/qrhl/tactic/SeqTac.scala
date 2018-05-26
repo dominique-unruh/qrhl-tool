@@ -29,7 +29,7 @@ case class SeqTacOLD(left:Int, right:Int, inner:Expression) extends Tactic {
 }
 
 case class SeqTac(left:Int, right:Int, inner:Expression)
-  extends IsabelleTac(SeqTac.seqTacOp,(BigInt(left),BigInt(right),inner.encodeAsExpression)) {
+  extends IsabelleTac(SeqTac.seqTacOp,{ ctx => (BigInt(left),BigInt(right),inner.encodeAsExpression(ctx)) }) {
   override def toString: String = s"seq $left $right"
 }
 

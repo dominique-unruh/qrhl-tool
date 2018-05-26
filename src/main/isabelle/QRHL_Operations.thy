@@ -95,6 +95,7 @@ operation_setup byQRHLPre = {*
    action = fn (cvars,qvars) => QRHL.byQRHLPre cvars qvars}
 *}
 
+(* Ambient variables *)
 operation_setup declare_variable = {*
   {from_lib = Codec.triple Codec.int Codec.string Codec.typ,
    to_lib = Codec.int,
@@ -107,13 +108,13 @@ operation_setup declare_variable = {*
 operation_setup declare_quantum_variable = {*
   {from_lib = Codec.triple Codec.string Codec.typ Codec.int,
    to_lib = Codec.int,
-   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.declare_variable (Refs.Ctxt.read ctx_id) name typ QRHL.Quantum)}
+   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ QRHL.Quantum)}
 *}
 
 operation_setup declare_classical_variable = {*
   {from_lib = Codec.triple Codec.string Codec.typ Codec.int,
    to_lib = Codec.int,
-   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.declare_variable (Refs.Ctxt.read ctx_id) name typ QRHL.Classical)}
+   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ QRHL.Classical)}
 *}
 
 operation_setup callWp = {*
@@ -175,12 +176,6 @@ operation_setup ifWp = {*
   {from_lib = Codec.triple Codec.term Codec.term Codec.term,
    to_lib = Codec.term,
    action = fn (e, thenWp, elseWp) => QRHL.ifWp e thenWp elseWp}
-*}
-
-operation_setup expression_to_term = {*
-  {from_lib = Codec.term,
-   to_lib = Codec.term,
-   action = Encoding.expression_to_term}
 *}
 
 operation_setup add_index_to_expression = {*

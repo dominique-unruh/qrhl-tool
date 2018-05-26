@@ -116,9 +116,7 @@ object Parser extends RegexParsers {
          resv = context.environment.cVariables(res);
          qvs = vs.map { context.environment.qVariables(_) };
          _ <- literal("with");
-         etyp = Typ(context.isabelle.get, IType("QRHL_Core.measurement",
-           List(resv.isabelleTyp, Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))
-         ));
+         etyp = Typ(context.isabelle.get, Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*)));
          e <- expression(etyp);
          _ <- statementSeparator)
       yield Measurement(resv,qvs,e)

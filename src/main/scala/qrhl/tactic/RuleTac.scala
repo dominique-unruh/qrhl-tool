@@ -10,7 +10,7 @@ import qrhl.toplevel.Parser
 
 import scala.collection.immutable.Nil
 
-case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, rule) {
+case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => rule }) {
 //  override def apply(state: State, goal: Subgoal): List[Subgoal] =
 //    goal match {
 //      case _: QRHLSubgoal => throw UserException("Expected an ambient logic subgoal")

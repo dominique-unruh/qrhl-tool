@@ -29,8 +29,8 @@ case object CallTac extends WpBothStyleTac() {
 //                       (post.isabelleTerm))
 //      val (wp,colocality) = post.isabelle.runExpr(mlExpr)
       val (wp, colocality) = state.isabelle.get.isabelle.invoke(callWpOp,
-           ((cvarsIdx1.map(_.isabelleTerm), cvarsIdx2.map(_.isabelleTerm),
-            qvarsIdx1.map(_.isabelleTerm)), (qvarsIdx2.map(_.isabelleTerm),
+           ((cvarsIdx1.map(_.valueTerm), cvarsIdx2.map(_.valueTerm),
+            qvarsIdx1.map(_.variableTerm)), (qvarsIdx2.map(_.variableTerm),
             post.isabelleTerm)))
 
 

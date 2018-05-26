@@ -3,11 +3,12 @@ package qrhl.tactic
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.pure.Term
 import qrhl._
+import qrhl.isabelle.Isabelle
 import qrhl.logic.Expression
 import qrhl.toplevel.Parser
 
 
-abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[List[Term]]], arg : A) extends Tactic {
+abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[List[Term]]], arg : Isabelle.Context => A) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] =
   //    goal match {
   //      case _: QRHLSubgoal => throw UserException("Expected an ambient logic subgoal")
@@ -15,10 +16,10 @@ abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[Li
     state.isabelle match {
       case Some(isa) =>
         val ctx = state.isabelle.get
-        val goals = ctx.isabelle.invoke(operation, (arg, goal.toExpression.isabelleTerm, ctx.contextId)).getOrElse {
+        val goals = ctx.isabelle.invoke(operation, (arg(isa), goal.toExpression(isa).isabelleTerm, ctx.contextId)).getOrElse {
           throw UserException("tactic failed")
         }
-        for (t <- goals) yield Subgoal(Expression(isa,state.boolT,t))
+        for (t <- goals) yield Subgoal(isa, Expression(isa,state.boolT,t))
       case None => throw UserException(Parser.noIsabelleError)
     }
   //    }

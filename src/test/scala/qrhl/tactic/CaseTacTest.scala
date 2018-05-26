@@ -2,10 +2,10 @@ package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.Free
-import org.scalatest.{FlatSpec, FunSuite}
+import org.scalatest.FunSuite
 import qrhl.isabelle.Isabelle
-import qrhl.{QRHLSubgoal, UserException}
 import qrhl.toplevel.{TacticCommand, Toplevel, ToplevelTest}
+import qrhl.{QRHLSubgoal, UserException}
 
 class CaseTacTest extends FunSuite {
   def toplevel(): Toplevel = {
@@ -28,7 +28,7 @@ class CaseTacTest extends FunSuite {
     assert(st.goal.length==1)
     val pre = st.goal.head.asInstanceOf[QRHLSubgoal].pre
     assert(pre.toString == "ℭ𝔩𝔞[x1 = y] ⊓ top")
-    pre.checkWelltyped(Isabelle.predicateT)
+    pre.checkWelltyped(tl.state.isabelle.get, Isabelle.predicateT)
   }
 
 
