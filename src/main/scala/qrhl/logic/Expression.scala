@@ -12,7 +12,7 @@ import scala.collection.mutable
 
 
 
-final class Expression private (@deprecated("","now") val isabelle:Isabelle.Context, val typ: Typ, val isabelleTerm:Term) {
+final class Expression private (val typ: Typ, val isabelleTerm:Term) {
   def encodeAsExpression(context: Isabelle.Context) : Term =
     context.isabelle.invoke(Expression.termToExpressionOp, (context.contextId, isabelleTerm))
 
@@ -63,7 +63,7 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): Expression = simplify(isabelle.get,facts)
   def simplify(isabelle: Isabelle.Context, facts:List[String]): Expression = Expression(isabelle, typ, isabelle.simplify(isabelleTerm,facts))
 
-  def map(f : Term => Term) : Expression = new Expression(null, typ, f(isabelleTerm))
+  def map(f : Term => Term) : Expression = new Expression(typ, f(isabelleTerm))
   def substitute(v:CVariable, repl:Expression) : Expression = {
     assert(repl.typ==v.typ)
     map(Expression.substitute(v.name, repl.isabelleTerm, _))
@@ -80,7 +80,7 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
       case Const(_,_) | Bound(_) | Var(_,_) => t
       case Abs(name,typ2,body) => Abs(name,typ2,idx(body))
     }
-    new Expression(null,typ,idx(isabelleTerm))
+    new Expression(typ,idx(isabelleTerm))
   }
 
 
@@ -89,19 +89,19 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
       val predicateT = Isabelle.predicateT // Should be the type of t
       val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(predicateT, ITyp.funT(predicateT, boolT))) $ isabelleTerm $ t
       val typ = Typ.bool(null)
-      new Expression(null,typ,newT)
+      new Expression(typ,newT)
   }
 
   def implies(e: Expression): Expression = {
     val t = e.isabelleTerm
     val newT = HOLogic.imp $ isabelleTerm $ t
     val typ = Typ.bool(null)
-    new Expression(null,typ,newT)
+    new Expression(typ,newT)
   }
 
   def not: Expression = {
     assert(typ.isabelleTyp==HOLogic.boolT)
-    new Expression(null,typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
+    new Expression(typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
   }
 
 }
@@ -127,7 +127,7 @@ object Expression {
   }
 
   def apply(isabelle:Isabelle.Context, typ: Typ, term:Term) : Expression = {
-    new Expression(isabelle, typ, term)
+    new Expression(typ, term)
   }
 
   def unapply(e: Expression): Option[Term] = Some(e.isabelleTerm)

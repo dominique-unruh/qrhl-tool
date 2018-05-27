@@ -118,6 +118,7 @@ object Statement {
     case App(App(App(Const(Isabelle.measurementName, _), x), vs), e) =>
       Measurement(CVariable.fromTerm_var(context, x), QVariable.fromQVarList(context, vs),
         Expression.decodeFromExpression(context,e))
+    case _ => throw new RuntimeException(s"term $t cannot be decoded as a statement")
   }
 }
 

@@ -1,7 +1,6 @@
 package qrhl.tactic
 
 import org.scalatest.FlatSpec
-import qrhl.UserException
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class CallTacTest extends FlatSpec {
