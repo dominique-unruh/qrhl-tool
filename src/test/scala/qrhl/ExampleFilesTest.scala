@@ -2,42 +2,42 @@ package qrhl
 
 import java.nio.file.Paths
 
-import org.scalatest.FlatSpec
+import org.scalatest.{FlatSpec, FunSuite}
 import qrhl.toplevel.Toplevel
 
-class ExampleFilesTest extends FlatSpec {
+class ExampleFilesTest extends FunSuite {
 
-  "prg-enc-indcpa.qrhl" should "execute successfully" in {
+  test("prg-enc-indcpa.qrhl") {
     val toplevel = new Toplevel()
     toplevel.run(Paths.get("prg-enc-indcpa.qrhl"))
   }
 
-  "prg-enc-rorcpa.qrhl" should "execute successfully" in {
+  test("prg-enc-rorcpa.qrhl") {
     val toplevel = new Toplevel()
     toplevel.run(Paths.get("prg-enc-rorcpa.qrhl"))
   }
 
-  "equality.qrhl" should "execute successfully" in {
+  test("equality.qrhl") {
     val toplevel = new Toplevel()
     toplevel.run(Paths.get("equality.qrhl"))
   }
 
-  "example.qrhl" should "execute successfully" in {
+  test("example.qrhl") {
     val toplevel = new Toplevel()
     toplevel.run(Paths.get("example.qrhl"))
   }
 
-  "rnd.qrhl" should "execute successfully" in {
+  test("rnd.qrhl") {
     val toplevel = new Toplevel()
     toplevel.run(Paths.get("rnd.qrhl"))
   }
 
-  "teleport.qrhl" should "execute successfully" in {
+  test("teleport.qrhl") {
     val toplevel = new Toplevel()
     toplevel.run(Paths.get("teleport.qrhl"))
   }
 
-  "teleport-terse.qrhl" should "execute successfully" in {
+  test("teleport-terse.qrhl") {
     val toplevel = new Toplevel()
     toplevel.run(Paths.get("teleport-terse.qrhl"))
   }
