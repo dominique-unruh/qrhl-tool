@@ -2,6 +2,7 @@ package qrhl.tactic
 
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.pure.{Term, Typ => ITyp}
+import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.{State, UserException}
 
@@ -24,9 +25,9 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 //      val wp = post.isabelle.runExpr(wpExpr)
 
       val wp = isabelle.isabelle.invoke(WpTac.sampleWpOp,
-        ((x1.name,x1.typ.isabelleTyp),(e1.isabelleTerm,post.isabelleTerm)))
+        ((x1.name,x1.valueTyp),(e1.isabelleTerm,post.isabelleTerm)))
 
-      Expression(null, state.predicateT, wp)
+      Expression(Isabelle.predicateT, wp)
 
     case QApply(vs,e) =>
       val env = state.environment
@@ -40,7 +41,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val wp = state.isabelle.get.isabelle.invoke(WpTac.qapplyWpOp,
         (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.variableTerm)))
 
-      Expression(null, state.predicateT, wp)
+      Expression(Isabelle.predicateT, wp)
 
     case Measurement(x,q,e) =>
       val env = state.environment
@@ -58,7 +59,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val wp = state.isabelle.get.isabelle.invoke(WpTac.measureWpOp,
         ((post.isabelleTerm, x1.valueTerm), (e1.isabelleTerm, q1.map(_.variableTerm))))
 
-      Expression(null, state.predicateT, wp)
+      Expression(Isabelle.predicateT, wp)
 
     case QInit(vs,e) =>
       val env = state.environment
@@ -72,7 +73,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val wp = state.isabelle.get.isabelle.invoke(WpTac.qinitWpOp,
         (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.variableTerm)))
 
-      Expression(state.isabelle.get, state.predicateT, wp)
+      Expression(Isabelle.predicateT, wp)
 
     case IfThenElse(e,thenBranch,elseBranch) =>
       val thenWp = getWP(state, thenBranch.statements, post)
@@ -86,7 +87,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val wp = state.isabelle.get.isabelle.invoke(WpTac.ifWpOp,
         (e1.isabelleTerm, thenWp.isabelleTerm, elseWp.isabelleTerm))
 
-      Expression(state.isabelle.get, state.predicateT, wp)
+      Expression(Isabelle.predicateT, wp)
 
     case _ => throw UserException(s"""statement "$statement" unsupported by WpTac""")
   }

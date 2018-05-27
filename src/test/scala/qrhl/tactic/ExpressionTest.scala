@@ -9,7 +9,7 @@ class ExpressionTest extends FunSuite {
     val tl = ToplevelTest.makeToplevel()
     tl.execCmd("classical var x : int")
     val state = tl.state
-    val e = state.parseExpression(state.predicateT,"Cla[ x=(1::int) ]")
+    val e = state.parseExpression(Isabelle.predicateT,"Cla[ x=(1::int) ]")
     val t = e.encodeAsExpression(tl.state.isabelle.get)
     println(e)
     println(t)

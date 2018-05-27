@@ -175,10 +175,10 @@ final case class Assign(variable:CVariable, expression:Expression) extends State
   override def inline(name: String, statement: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
-    expression.checkWelltyped(context, variable.typ)
+    expression.checkWelltyped(context, variable.valueTyp)
 
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.assign(variable.typ.isabelleTyp) $ variable.variableTerm $ expression.encodeAsExpression(context)
+    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context)
 }
 final case class Sample(variable:CVariable, expression:Expression) extends Statement {
   override def toString: String = s"""${variable.name} <$$ $expression;"""
@@ -188,7 +188,7 @@ final case class Sample(variable:CVariable, expression:Expression) extends State
     expression.checkWelltyped(context, Isabelle.distrT(variable.valueTyp))
 
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.sample(variable.typ.isabelleTyp) $ variable.variableTerm $ expression.encodeAsExpression(context)
+    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context)
 }
 final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
@@ -220,34 +220,34 @@ final case class QInit(location:List[QVariable], expression:Expression) extends 
   override def toString: String = s"${location.map(_.name).mkString(",")} <q $expression;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
-    val expected = pure.Type("Complex_L2.vector",List(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
+    val expected = Isabelle.vectorT(Isabelle.tupleT(location.map(_.valueTyp):_*))
     expression.checkWelltyped(context, expected)
   }
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.qinit(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context)
+    Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context)
 }
 final case class QApply(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
   override def toString: String = s"on ${location.map(_.name).mkString(",")} apply $expression;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
-    val varType = Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)
+    val varType = Isabelle.tupleT(location.map(_.valueTyp):_*)
     val expected = pure.Type("Bounded_Operators.bounded",List(varType,varType))
     expression.checkWelltyped(context, expected)
   }
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.qapply(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context)
+    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context)
 }
 final case class Measurement(result:CVariable, location:List[QVariable], e:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
   override def toString: String = s"${result.name} <- measure ${location.map(_.name).mkString(",")} in $e;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
-    val expected = pure.Type("QRHL_Core.measurement",List(result.variableTyp, Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*)))
+    val expected = pure.Type("QRHL_Core.measurement",List(result.variableTyp, Isabelle.tupleT(location.map(_.valueTyp):_*)))
     e.checkWelltyped(context, expected)
   }
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.measurement(Isabelle.tupleT(location.map(_.typ.isabelleTyp):_*), result.typ.isabelleTyp) $
+    Isabelle.measurement(Isabelle.tupleT(location.map(_.valueTyp):_*), result.valueTyp) $
       result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context)
 }
 final case class Call(name:String) extends Statement {

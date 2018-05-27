@@ -1,8 +1,7 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Free, Term, Type}
-import info.hupel.isabelle.{Operation, ml, pure}
+import info.hupel.isabelle.{Operation, pure}
 import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -14,10 +13,10 @@ case object ByQRHLTac extends Tactic {
 
         val vname = Isabelle.dest_string(v)
         val vvar = state.environment.cVariables.getOrElse(vname, throw UserException(s"$v is not the name of a classical variable")).index(left)
-        val vbool = vvar.typ.isabelleTyp match {
+        val vbool = vvar.valueTyp match {
           case Type("HOL.bool",Nil) => vvar.valueTerm
           case Type("QRHL_Core.bit",Nil) => bitToBool(vvar.valueTerm)
-          case _ => throw UserException(s"$vname must have type bool or bit, not ${vvar.typ}")
+          case _ => throw UserException(s"$vname must have type bool or bit, not ${vvar.valueTyp}")
         }
         Some(vbool,p,rho)
 
@@ -60,7 +59,7 @@ case object ByQRHLTac extends Tactic {
         }
         if (rho1!=rho2)
           throw UserException("The initial state in lhs and rhs must be identical (syntactically same term, not just equal)")
-        val rho = rho1
+//        val rho = rho1
 
         //        val v1name = Isabelle.dest_string(v1)
 //        val v2name = Isabelle.dest_string(v2)
@@ -96,13 +95,13 @@ case object ByQRHLTac extends Tactic {
 
         val isa = state.isabelle.get
         val preTerm = isa.isabelle.invoke(byQRHLPreOp,
-          (cvars.map(v => (v.index1.name, v.index2.name, v.typ.isabelleTyp)),
-            qvars.map(v => (v.index1.name, v.index2.name, v.typ.isabelleTyp))))
+          (cvars.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
+            qvars.map(v => (v.index1.name, v.index2.name, v.valueTyp))))
 
         val left = Block(Call(p1name))
         val right = Block(Call(p2name))
-        val pre = Expression(isa, state.predicateT, preTerm)
-        val post = Expression(isa, state.predicateT, Isabelle.classical_subspace $ (connective $ v1 $ v2))
+        val pre = Expression(Isabelle.predicateT, preTerm)
+        val post = Expression(Isabelle.predicateT, Isabelle.classical_subspace $ (connective $ v1 $ v2))
 
         List(QRHLSubgoal(left,right,pre,post,Nil))
       case _ =>

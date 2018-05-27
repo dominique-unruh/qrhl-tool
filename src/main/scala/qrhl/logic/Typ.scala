@@ -4,6 +4,7 @@ import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{Typ => ITyp, Type => IType}
 import qrhl.isabelle.Isabelle
 
+@deprecated("","")
 final class Typ private (val isabelleTyp:ITyp) {
   def distr: Typ = Typ(IType("QRHL_Core.distr",List(isabelleTyp)))
 

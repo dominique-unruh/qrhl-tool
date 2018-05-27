@@ -1,11 +1,10 @@
 package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{Const, Free, Term}
-import info.hupel.isabelle.{ml, pure}
+import info.hupel.isabelle.pure.{Free, Term}
 import qrhl._
 import qrhl.isabelle.Isabelle
-import qrhl.logic.{Expression, Variable}
+import qrhl.logic.Expression
 
 case class CaseTac(variable:String, expr:Expression) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
@@ -32,9 +31,9 @@ case class CaseTac(variable:String, expr:Expression) extends Tactic {
 
 
       val caseExpr : Term = Isabelle.classical_subspace $
-        (HOLogic.equ(varTyp.isabelleTyp) $ expr.isabelleTerm $ Free(variable,varTyp.isabelleTyp))
+        (HOLogic.equ(varTyp) $ expr.isabelleTerm $ Free(variable,varTyp))
       val pre2 = Isabelle.predicate_inf $ caseExpr $ pre.isabelleTerm
-      val pre3 = Expression(null, state.predicateT, pre2)
+      val pre3 = Expression(Isabelle.predicateT, pre2)
 
 
       List(QRHLSubgoal(left,right,pre3,post,assms))

@@ -12,7 +12,7 @@ sealed trait Variable {
   def index(left:Boolean): Variable = if (left) index1 else index2
   def variableTyp: pure.Typ = Isabelle.qvariableT(valueTyp)
   def valueTyp : pure.Typ
-  @deprecated("use valueType / variableTyp","") def typ : Typ
+//  @deprecated("use valueType / variableTyp","") def typ : Typ
   def variableTerm: Term
 }
 
@@ -23,13 +23,13 @@ object Variable {
     if (left) index1(name) else index2(name)
 }
 
-final case class QVariable(name:String, typ: Typ) extends Variable {
+final case class QVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
 
-  override def index1: QVariable = QVariable(Variable.index1(name),typ)
-  override def index2: QVariable = QVariable(Variable.index2(name),typ)
+  override def index1: QVariable = QVariable(Variable.index1(name),valueTyp)
+  override def index2: QVariable = QVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): QVariable = if (left) index1 else index2
 
-  override def valueTyp: pure.Typ = typ.isabelleTyp
+//  override def valueTyp: pure.Typ = typ.isabelleTyp
   override def variableTerm: Term = Free(name,variableTyp)
 }
 
@@ -37,7 +37,7 @@ object QVariable {
   def fromTerm_var(context: Isabelle.Context, x: Term): QVariable = x match {
     case Free(name,typ) =>
 //      assert(name.endsWith("_var"))
-      QVariable(name, Typ(Isabelle.dest_qvariableT(typ)))
+      QVariable(name, Isabelle.dest_qvariableT(typ))
     case _ => throw new java.lang.RuntimeException(f"Cannot transform $x into QVariable")
   }
 
@@ -53,11 +53,11 @@ object QVariable {
   }
 }
 
-final case class CVariable(name:String, typ: Typ) extends Variable {
-  override def index1: CVariable = CVariable(Variable.index1(name),typ)
-  override def index2: CVariable = CVariable(Variable.index2(name),typ)
+final case class CVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
+  override def index1: CVariable = CVariable(Variable.index1(name),valueTyp)
+  override def index2: CVariable = CVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): CVariable = if (left) index1 else index2
-  override def valueTyp: pure.Typ = typ.isabelleTyp
+//  override def valueTyp: pure.Typ = typ.isabelleTyp
   override def variableTerm: Term = Free(name+"_var",variableTyp)
   def valueTerm: Term = Free(name,valueTyp)
 }
@@ -66,7 +66,7 @@ object CVariable {
   def fromTerm_var(context: Isabelle.Context, x: Term): CVariable = x match {
     case Free(name,typ) =>
       assert(name.endsWith("_var"))
-      CVariable(name.stripSuffix("_var"), Typ(Isabelle.dest_qvariableT(typ)))
+      CVariable(name.stripSuffix("_var"), Isabelle.dest_qvariableT(typ))
     case _ => throw new RuntimeException("Illformed variable term")
   }
 }

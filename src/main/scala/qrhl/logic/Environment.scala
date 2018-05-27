@@ -1,6 +1,7 @@
 package qrhl.logic
 
 import qrhl.UserException
+import info.hupel.isabelle.pure
 
 import scala.collection.mutable
 
@@ -13,13 +14,12 @@ import scala.collection.mutable
 final class Environment private
   (val cVariables : Map[String,CVariable],
    val qVariables : Map[String,QVariable],
-   val ambientVariables : Map[String,Typ],
+   val ambientVariables : Map[String,pure.Typ],
    val cqVariables12 : Set[String],
 //   val indexedNames : Set[String], // all variable names together, program variables indexed with 1/2
 //   val nonindexedNames : Set[String], // all variable names together, without 1/2-index
    val programs : Map[String,ProgramDecl]) {
   /** Checks whether the ambient variable "variable" is used in the definition of some program
-    * @param variable
     * @return Some(programName) if the variable is used in program programName, None otherwise
     */
   def variableUsedInPrograms(variable: String) : Option[String] = {
@@ -50,7 +50,7 @@ final class Environment private
 //  /** Variable declared as indexed program variable or ambient variable or program */
 //  def variableExistsForGoal(name:String) : Boolean = cqVariables12.contains(name) || ambientVariables.contains(name) || programs.contains(name)
 
-  def declareVariable(name: String, typ: Typ, quantum:Boolean=false): Environment = {
+  def declareVariable(name: String, typ: pure.Typ, quantum:Boolean=false): Environment = {
     assert(!variableExists(name))
 //    val nonidxNames = nonindexedNames + name
 
@@ -71,7 +71,7 @@ final class Environment private
         cqVariables12=cqVariables12++newIdxNames)
   }
 
-  def declareAmbientVariable(name: String, typ:Typ) : Environment = {
+  def declareAmbientVariable(name: String, typ:pure.Typ) : Environment = {
     assert(!variableExists(name))
     copy(ambientVariables=ambientVariables.updated(name, typ))
   }
@@ -93,7 +93,7 @@ final class Environment private
 
   private def copy(cVariables:Map[String,CVariable]=cVariables,
                    qVariables:Map[String,QVariable]=qVariables,
-                   ambientVariables:Map[String,Typ]=ambientVariables,
+                   ambientVariables:Map[String,pure.Typ]=ambientVariables,
                    programs:Map[String,ProgramDecl]=programs,
                    cqVariables12:Set[String]=cqVariables12) =
     new Environment(cVariables=cVariables, qVariables=qVariables, programs=programs,
@@ -125,12 +125,12 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, prog
     val vars = new mutable.LinkedHashSet[String]
     def scan(st:Statement) : Unit = st match {
       case Block(sts@_*) => sts.foreach(scan)
-      case Call(n) =>
-      case Assign(v,e) =>
+      case Call(_) =>
+      case Assign(_,e) =>
         vars ++= e.variables.filter(environment.ambientVariables.contains)
-      case Sample(v,e) =>
+      case Sample(_,e) =>
         vars ++= e.variables.filter(environment.ambientVariables.contains)
-      case QApply(loc,e) =>
+      case QApply(_,e) =>
         vars ++= e.variables.filter(environment.ambientVariables.contains)
       case While(e,body) =>
         vars ++= e.variables.filter(environment.ambientVariables.contains)
@@ -139,9 +139,9 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, prog
         vars ++= e.variables.filter(environment.ambientVariables.contains)
         scan(thenBranch)
         scan(elseBranch)
-      case Measurement(res,loc,e) =>
+      case Measurement(_, _,e) =>
         vars ++= e.variables.filter(environment.ambientVariables.contains)
-      case QInit(loc,e) =>
+      case QInit(_,e) =>
         vars ++= e.variables.filter(environment.ambientVariables.contains)
     }
     scan(program)

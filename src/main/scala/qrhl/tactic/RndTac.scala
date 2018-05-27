@@ -1,6 +1,7 @@
 package qrhl.tactic
 import info.hupel.isabelle.pure.{Term, Typ}
 import info.hupel.isabelle.{Operation, pure}
+import qrhl.isabelle.Isabelle
 import qrhl.logic.{Expression, Sample, Statement}
 import qrhl.{State, UserException}
 
@@ -16,8 +17,8 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
 
       map match {
       case None =>
-        if (x.typ != y.typ)
-          throw UserException(s"The assigned variables $x and $y must have the same type (they have types ${x.typ} and ${y.typ})")
+        if (x.valueTyp != y.valueTyp)
+          throw UserException(s"The assigned variables $x and $y must have the same type (they have types ${x.valueTyp} and ${y.valueTyp})")
 
 //        val lit = ml.Expr.uncheckedLiteral[String => pure.Term => String => pure.Term => pure.Typ => pure.Term => pure.Term]("QRHL.rndWp")
 //        val wpExpr = (lit(x1.name)(implicitly)(e1.isabelleTerm)(implicitly)
@@ -25,8 +26,8 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
 //        (x1.typ.isabelleTyp)(implicitly)(post.isabelleTerm))
 //        val wp = state.isabelle.get.runExpr(wpExpr)
         val wp = state.isabelle.get.isabelle.invoke(rndWpOp,
-            ((x1.name,e1.isabelleTerm, y2.name), (f2.isabelleTerm, x1.typ.isabelleTyp, post.isabelleTerm)))
-        (Expression(state.isabelle.get, state.predicateT, wp), Nil)
+            ((x1.name,e1.isabelleTerm, y2.name), (f2.isabelleTerm, x1.valueTyp, post.isabelleTerm)))
+        (Expression(Isabelle.predicateT, wp), Nil)
       case Some(distr) =>
 //        val lit = ml.Expr.uncheckedLiteral[String => pure.Typ => pure.Term => String => pure.Typ => pure.Term =>
 //                                                     pure.Term => pure.Term => pure.Term]("QRHL.rndWp2")
@@ -36,11 +37,11 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
 //        val wp = state.isabelle.get.runExpr(wpExpr)
 
         val wp = state.isabelle.get.isabelle.invoke(rndWp2Op,
-           ((x1.name,x1.typ.isabelleTyp,e1.isabelleTerm),
-            (y2.name,y2.typ.isabelleTyp,f2.isabelleTerm),
+           ((x1.name,x1.valueTyp,e1.isabelleTerm),
+            (y2.name,y2.valueTyp,f2.isabelleTerm),
             (distr.isabelleTerm,post.isabelleTerm)))
 
-        (Expression(state.isabelle.get, state.predicateT, wp), Nil)
+        (Expression(Isabelle.predicateT, wp), Nil)
     }
     case _ =>
       throw UserException("Expected sampling statement as last statement on both sides")

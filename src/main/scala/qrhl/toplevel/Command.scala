@@ -1,7 +1,9 @@
 package qrhl.toplevel
 
+import info.hupel.isabelle.pure
+import qrhl.logic.{Block, CVariable, QVariable}
 import qrhl.{State, Subgoal, Tactic, UserException}
-import qrhl.logic.{Block, CVariable, QVariable, Typ}
+
 
 trait Command {
   def act(state: State): State
@@ -16,7 +18,7 @@ case class IsabelleCommand(thy:Option[String]=None) extends Command {
   }
 }
 
-case class DeclareVariableCommand(name: String, typ: Typ, ambient:Boolean=false, quantum:Boolean=false) extends Command {
+case class DeclareVariableCommand(name: String, typ: pure.Typ, ambient:Boolean=false, quantum:Boolean=false) extends Command {
   assert(!(ambient && quantum))
 
   override def act(state: State): State = {
@@ -45,9 +47,8 @@ case class DeclareAdversaryCommand(name: String, cvars: Seq[CVariable], qvars : 
 }
 
 /**
-  *
   * @param name may be "", if the lemma should not be stored
-  * @param goal
+  * @param goal the subgoal to be opened
   */
 case class GoalCommand(name: String, goal: Subgoal) extends Command {
   override def act(state: State): State = {

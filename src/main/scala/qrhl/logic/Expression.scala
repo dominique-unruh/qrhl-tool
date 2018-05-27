@@ -4,6 +4,7 @@ import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.hol.HOLogic.boolT
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp}
+import info.hupel.isabelle.pure
 import qrhl.isabelle.Isabelle
 
 import scala.collection.mutable
@@ -12,11 +13,11 @@ import scala.collection.mutable
 
 
 
-final class Expression private (val typ: Typ, val isabelleTerm:Term) {
+final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
   def encodeAsExpression(context: Isabelle.Context) : Term =
     context.isabelle.invoke(Expression.termToExpressionOp, (context.contextId, isabelleTerm))
 
-  def stripAssumption(number: Int): Expression = Expression(null,typ,Expression.stripAssumption(isabelleTerm,number))
+  def stripAssumption(number: Int): Expression = Expression(typ,Expression.stripAssumption(isabelleTerm,number))
 
   override def equals(o: scala.Any): Boolean = o match {
     case o : Expression => typ == o.typ && isabelleTerm == o.isabelleTerm
@@ -24,10 +25,13 @@ final class Expression private (val typ: Typ, val isabelleTerm:Term) {
   }
 
 
+  //noinspection ScalaDeprecation
+  @deprecated("","")
   def checkWelltyped(context:Isabelle.Context, typ:Typ): Unit = checkWelltyped(context, typ.isabelleTyp)
+
   def checkWelltyped(context:Isabelle.Context, ityp:ITyp): Unit = {
-    assert(ityp==this.typ.isabelleTyp,s"$ityp != ${this.typ.isabelleTyp}")
-    assert(context.checkType(isabelleTerm) == typ.isabelleTyp)
+    assert(ityp==this.typ,s"$ityp != ${this.typ}")
+    assert(context.checkType(isabelleTerm) == typ)
   }
 
   /** Free variables, including those encoded as a string in "probability ... ... str" */
@@ -61,11 +65,11 @@ final class Expression private (val typ: Typ, val isabelleTerm:Term) {
   override lazy val toString: String = Isabelle.theContext.prettyExpression(isabelleTerm)
 //  val isabelleTerm : Term = isabelleTerm
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): Expression = simplify(isabelle.get,facts)
-  def simplify(isabelle: Isabelle.Context, facts:List[String]): Expression = Expression(isabelle, typ, isabelle.simplify(isabelleTerm,facts))
+  def simplify(context: Isabelle.Context, facts:List[String]): Expression = Expression(typ, context.simplify(isabelleTerm,facts))
 
   def map(f : Term => Term) : Expression = new Expression(typ, f(isabelleTerm))
   def substitute(v:CVariable, repl:Expression) : Expression = {
-    assert(repl.typ==v.typ)
+    assert(repl.typ==v.valueTyp)
     map(Expression.substitute(v.name, repl.isabelleTerm, _))
   }
 
@@ -88,19 +92,18 @@ final class Expression private (val typ: Typ, val isabelleTerm:Term) {
       val t = e.isabelleTerm
       val predicateT = Isabelle.predicateT // Should be the type of t
       val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(predicateT, ITyp.funT(predicateT, boolT))) $ isabelleTerm $ t
-      val typ = Typ.bool(null)
-      new Expression(typ,newT)
+      new Expression(Isabelle.boolT,newT)
   }
 
   def implies(e: Expression): Expression = {
     val t = e.isabelleTerm
     val newT = HOLogic.imp $ isabelleTerm $ t
-    val typ = Typ.bool(null)
-    new Expression(typ,newT)
+//    val typ = Typ.bool(null)
+    new Expression(Isabelle.boolT,newT)
   }
 
   def not: Expression = {
-    assert(typ.isabelleTyp==HOLogic.boolT)
+    assert(typ==HOLogic.boolT)
     new Expression(typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
   }
 
@@ -110,7 +113,7 @@ final class Expression private (val typ: Typ, val isabelleTerm:Term) {
 object Expression {
   def decodeFromExpression(context:Isabelle.Context, t: Term): Expression = {
     val (term,typ) = context.isabelle.invoke(decodeFromExpressionOp, t)
-    Expression(context, Typ(typ), term)
+    Expression(typ, term)
   }
 
   val decodeFromExpressionOp: Operation[Term, (Term, ITyp)] =
@@ -119,15 +122,25 @@ object Expression {
   val termToExpressionOp: Operation[(BigInt, Term), Term] =
     Operation.implicitly[(BigInt, Term), Term]("term_to_expression")
 
-  def trueExp(isabelle: Isabelle.Context): Expression = Expression(isabelle, Typ.bool(isabelle), HOLogic.True)
+  def trueExp(isabelle: Isabelle.Context): Expression = Expression(Isabelle.boolT, HOLogic.True)
 
-  def apply(isabelle:Isabelle.Context, str:String, typ:Typ) : Expression = {
-    val term = isabelle.readTerm(Isabelle.unicodeToSymbols(str),typ.isabelleTyp)
-    Expression(isabelle, typ, term)
+  //noinspection ScalaDeprecation
+  @deprecated("","")
+  def apply(context: Isabelle.Context, str:String, typ:Typ) : Expression =
+    apply(context, str, typ.isabelleTyp)
+
+  def apply(context: Isabelle.Context, str:String, typ:pure.Typ) : Expression = {
+    val term = context.readTerm(Isabelle.unicodeToSymbols(str),typ)
+    Expression(typ, term)
   }
 
-  def apply(isabelle:Isabelle.Context, typ: Typ, term:Term) : Expression = {
+  def apply(typ: pure.Typ, term:Term) : Expression =
     new Expression(typ, term)
+
+  //noinspection ScalaDeprecation
+  @deprecated("","")
+  def apply(isabelle:Isabelle.Context, typ: Typ, term:Term) : Expression = {
+    new Expression(typ.isabelleTyp, term)
   }
 
   def unapply(e: Expression): Option[Term] = Some(e.isabelleTerm)

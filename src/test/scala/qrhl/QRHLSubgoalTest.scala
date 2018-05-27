@@ -7,15 +7,15 @@ import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class QRHLSubgoalTest extends FunSuite {
   val tl: Toplevel = ToplevelTest.makeToplevel()
-  def pb(str:String): Expression = tl.state.parseExpression(tl.state.boolT,str)
-  def pp(str:String): Expression = tl.state.parseExpression(tl.state.predicateT,str)
+  def pb(str:String): Expression = tl.state.parseExpression(Isabelle.boolT,str)
+  def pp(str:String): Expression = tl.state.parseExpression(Isabelle.predicateT,str)
 
   def testToExpressionWelltyped(context: Isabelle.Context, left:Block, right:Block, pre:Expression, post:Expression): Unit = {
     val qrhl = QRHLSubgoal(left,right,pre,post,Nil)
     qrhl.checkWelltyped(context)
     val e = qrhl.toExpression(context)
     print(e)
-    e.checkWelltyped(context, tl.state.boolT)
+    e.checkWelltyped(context, Isabelle.boolT)
   }
 
   test("toExpression welltyped") {

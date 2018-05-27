@@ -1,6 +1,6 @@
 package qrhl.toplevel
 
-import info.hupel.isabelle.pure.{Type => IType}
+import info.hupel.isabelle.pure
 import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -9,8 +9,7 @@ import qrhl.tactic._
 import scala.util.parsing.combinator._
 
 case class ParserContext(environment: Environment,
-                         isabelle: Option[Isabelle.Context],
-                         boolT: Typ, predicateT: Typ)
+                         isabelle: Option[Isabelle.Context])
 
 object Parser extends RegexParsers {
 
@@ -44,7 +43,7 @@ object Parser extends RegexParsers {
       }
   }, (0,Nil)) ^^ { case (_,chars) => chars.reverse.mkString.trim }
 
-  def expression(typ:Typ)(implicit context:ParserContext) : Parser[Expression] =
+  def expression(typ:pure.Typ)(implicit context:ParserContext) : Parser[Expression] =
 //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
     scanInnerSyntax ^^ { str:String => context.isabelle match {
       case None => throw UserException(noIsabelleError)
@@ -57,7 +56,7 @@ object Parser extends RegexParsers {
          _ <- assignSymbol;
          // TODO: add a cut
          typ = context.environment.cVariables.
-           getOrElse(v, throw UserException(s"Undefined variable $v")).typ;
+           getOrElse(v, throw UserException(s"Undefined variable $v")).valueTyp;
          e <- expression(typ);
          _ <- statementSeparator)
      yield Assign(context.environment.cVariables(v), e)
@@ -69,7 +68,7 @@ object Parser extends RegexParsers {
          // TODO: add a cut
          typ = context.environment.cVariables.
            getOrElse(v, throw UserException(s"Undefined variable $v")).valueTyp;
-         e <- expression(Typ(Isabelle.distrT(typ)));
+         e <- expression(Isabelle.distrT(typ));
          _ <- statementSeparator)
       yield Sample(context.environment.cVariables(v), e)
 
@@ -88,7 +87,7 @@ object Parser extends RegexParsers {
          _ = assert(vs.nonEmpty);
          _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
          qvs = vs.map { context.environment.qVariables(_) };
-         typ = Typ(Isabelle.vectorT(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*)));
+         typ = Isabelle.vectorT(Isabelle.tupleT(qvs.map(_.valueTyp):_*));
          e <- expression(typ);
          _ <- statementSeparator)
       yield QInit(qvs,e)
@@ -100,9 +99,7 @@ object Parser extends RegexParsers {
            _ = assert(vs.nonEmpty);
            _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
            qvs = vs.map { context.environment.qVariables(_) };
-           typ = Typ(IType("Bounded_Operators.bounded",
-             List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*),
-                  Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
+           typ = Isabelle.boundedT(Isabelle.tupleT(qvs.map(_.valueTyp):_*));
            e <- expression(typ);
            _ <- statementSeparator)
         yield QApply(qvs,e)
@@ -116,7 +113,7 @@ object Parser extends RegexParsers {
          resv = context.environment.cVariables(res);
          qvs = vs.map { context.environment.qVariables(_) };
          _ <- literal("with");
-         etyp = Typ(Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*)));
+         etyp = Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*));
          e <- expression(etyp);
          _ <- statementSeparator)
       yield Measurement(resv,qvs,e)
@@ -124,7 +121,7 @@ object Parser extends RegexParsers {
   def ifThenElse(implicit context:ParserContext) : Parser[IfThenElse] =
     for (_ <- literal("if");
          _ <- literal("(");
-         e <- expression(context.boolT);
+         e <- expression(Isabelle.boolT);
          _ <- literal(")");
          _ <- literal("then");
          thenBranch <- statementOrParenBlock; // TODO: allow nested block
@@ -135,7 +132,7 @@ object Parser extends RegexParsers {
   def whileLoop(implicit context:ParserContext) : Parser[While] =
     for (_ <- literal("while");
          _ <- literal("(");
-         e <- expression(context.boolT);
+         e <- expression(Isabelle.boolT);
          _ <- literal(")");
          body <- statementOrParenBlock)
       yield While(e,body)
@@ -166,11 +163,11 @@ object Parser extends RegexParsers {
   val isabelle : Parser[IsabelleCommand] =
     literal("isabelle") ~> identifier.? ^^ IsabelleCommand
 
-  def typ(implicit context:ParserContext) : Parser[Typ] =
+  def typ(implicit context:ParserContext) : Parser[pure.Typ] =
   //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
     scanInnerSyntax ^^ { str:String => context.isabelle match {
       case None => throw UserException(noIsabelleError)
-      case Some(isa) => Typ(isa, str)
+      case Some(isa) => isa.readTypUnicode(str)
     } }
 
   def variableKind : Parser[String] = "classical|quantum|ambient".r
@@ -205,19 +202,19 @@ object Parser extends RegexParsers {
     }
 
   def goal(implicit context:ParserContext) : Parser[GoalCommand] =
-    literal("lemma") ~> OnceParser((identifier <~ ":").? ~ expression(context.boolT)) ^^ {
+    literal("lemma") ~> OnceParser((identifier <~ ":").? ~ expression(Isabelle.boolT)) ^^ {
       case name ~ e => GoalCommand(name.getOrElse(""), AmbientSubgoal(e)) }
 
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
     _ <- literal("{");
-    pre <- expression(context.predicateT);
+    pre <- expression(Isabelle.predicateT);
     _ <- literal("}");
     left <- block;
     _ <- literal("~");
     right <- block;
     _ <- literal("{");
-    post <- expression(context.predicateT);
+    post <- expression(Isabelle.predicateT);
     _ <- literal("}")
   ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post,Nil)))
 
@@ -241,11 +238,11 @@ object Parser extends RegexParsers {
       left <- natural;
       right <- natural;
       _ <- literal(":");
-      inner <- expression(context.predicateT))
+      inner <- expression(Isabelle.predicateT))
       yield SeqTac(left,right,inner))
 
   def tactic_conseq(implicit context:ParserContext): Parser[ConseqTac] =
-    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(context.predicateT)) ^^ {
+    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(Isabelle.predicateT)) ^^ {
       case "pre" ~ _ ~ e => ConseqTac(pre=Some(e))
       case "post" ~ _ ~ e => ConseqTac(post=Some(e))
     }
@@ -253,12 +250,12 @@ object Parser extends RegexParsers {
   def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
     literal("rnd") ~> (for (
       x <- identifier;
-      xT = context.environment.cVariables(x).typ;
+      xT = context.environment.cVariables(x).valueTyp;
       _ <- literal(",");
       y <- identifier;
-      yT = context.environment.cVariables(y).typ;
+      yT = context.environment.cVariables(y).valueTyp;
       _ <- sampleSymbol | assignSymbol;
-      e <- expression((xT*yT).distr)
+      e <- expression(Isabelle.distrT(Isabelle.prodT(xT,yT)))
     ) yield e).? ^^ RndTac
 
   def tactic_case(implicit context:ParserContext): Parser[CaseTac] =
@@ -282,7 +279,7 @@ object Parser extends RegexParsers {
     literal("clear") ~> OnceParser(natural) ^^ ClearTac.apply
 
   def tactic_split(implicit context:ParserContext) : Parser[CaseSplitTac] =
-    literal("casesplit") ~> OnceParser(expression(context.boolT)) ^^ CaseSplitTac
+    literal("casesplit") ~> OnceParser(expression(Isabelle.boolT)) ^^ CaseSplitTac
 
   def tactic_fix : Parser[FixTac] =
     literal("fix") ~> identifier ^^ FixTac

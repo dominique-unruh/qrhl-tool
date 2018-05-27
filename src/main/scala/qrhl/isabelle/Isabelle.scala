@@ -414,6 +414,7 @@ object Isabelle {
 //    }
     def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTermOp,(contextId,term)))
     def readTyp(str:String) : ITyp = isabelle.invoke(readTypOp, (contextId,str))
+    def readTypUnicode(str:String) : ITyp = readTyp(unicodeToSymbols(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))
     def simplify(term: Term, facts:List[String]) : Term = isabelle.invoke(simplifyTermOp, (term,facts,contextId))
 //    @deprecated("use operations","now")

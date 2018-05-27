@@ -5,6 +5,7 @@ import java.nio.file.{Files, Path, Paths}
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Term, Typ => ITyp}
+import info.hupel.isabelle.pure
 import org.log4s
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -46,7 +47,7 @@ object Subgoal {
       while (true) {
         t match {
           case App(App(Const("HOL.imp", _), a), b) =>
-            assms.append(Expression(null, e.typ, a))
+            assms.append(Expression(e.typ, a))
             t = b
           case _ => Breaks.break()
         }
@@ -102,7 +103,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
     val postTerm = post.encodeAsExpression(context)
     val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
     val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
-    Expression(null, Typ.bool(null), term)
+    Expression(Isabelle.boolT, term)
   }
 
   /** Not including ambient vars in nested programs (via Call) */
@@ -113,7 +114,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
   }
 
   override def addAssumption(assm: Expression): QRHLSubgoal = {
-    assert(assm.typ.isabelleTyp==HOLogic.boolT)
+    assert(assm.typ==HOLogic.boolT)
     QRHLSubgoal(left,right,pre,post,assm::assumptions)
   }
 
@@ -149,7 +150,7 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
   override def containsAmbientVar(x: String): Boolean = goal.variables.contains(x)
 
   override def addAssumption(assm: Expression): AmbientSubgoal = {
-    assert(assm.typ.isabelleTyp == HOLogic.boolT)
+    assert(assm.typ == HOLogic.boolT)
     AmbientSubgoal(assm.implies(goal))
   }
 
@@ -180,10 +181,10 @@ class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val currentLemma: Option[(String,Expression)],
                      val isabelle: Option[Isabelle.Context],
-                     val boolT: Typ,
-                     val predicateT: Typ,
+                     @deprecated("","") val boolT: Typ,
+                     @deprecated("","") val predicateT: Typ,
                      val dependencies: List[FileTimeStamp],
-                     val programT: Typ) {
+                     @deprecated("","") val programT: Typ) {
   def qed: State = {
     assert(currentLemma.isDefined)
     assert(goal.isEmpty)
@@ -242,7 +243,7 @@ class State private (val environment: Environment,
       s"${goal.size} subgoals:\n\n" + goal.mkString("\n\n")
   }
 
-  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment, boolT = boolT, predicateT = predicateT)
+  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment)
 
   def parseCommand(str:String): Command = {
     implicit val parserContext: ParserContext = this.parserContext
@@ -253,7 +254,7 @@ class State private (val environment: Environment,
     }
   }
 
-  def parseExpression(typ:Typ, str:String): Expression = {
+  def parseExpression(typ:pure.Typ, str:String): Expression = {
     implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.expression(typ),str) match {
       case Parser.Success(cmd2,_) => cmd2
@@ -302,28 +303,28 @@ class State private (val environment: Environment,
     isabelle.map(id => isabelle.isabelle.invoke(State.declare_classical_variable, (name,typ,id)))
   }
 
-  def declareVariable(name: String, typ: Typ, quantum: Boolean = false): State = {
+  def declareVariable(name: String, typ: pure.Typ, quantum: Boolean = false): State = {
     val newEnv = environment.declareVariable(name, typ, quantum = quantum)
       .declareAmbientVariable(name+"_var", typ)
       .declareAmbientVariable(Variable.index1(name)+"_var", typ)
       .declareAmbientVariable(Variable.index2(name)+"_var", typ)
     if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = isabelle.get
-    val typ1 = typ.isabelleTyp
+//    val typ1 = typ.isabelleTyp
 //    val typ2 = if (quantum) Type("QRHL_Core.qvariable",List(typ1)) else typ1
     val newIsa =
       if (quantum)
-        declare_quantum_variable(isa, name, typ1)
+        declare_quantum_variable(isa, name, typ)
       else
-        declare_classical_variable(isa, name, typ1)
+        declare_classical_variable(isa, name, typ)
 
     copy(environment = newEnv, isabelle = Some(newIsa))
   }
 
-  def declareAmbientVariable(name: String, typ: Typ): State = {
+  def declareAmbientVariable(name: String, typ: pure.Typ): State = {
     val newEnv = environment.declareAmbientVariable(name, typ)
     if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
-    val isa = isabelle.get.declareVariable(name, typ.isabelleTyp)
+    val isa = isabelle.get.declareVariable(name, typ)
     copy(environment = newEnv, isabelle = Some(isa))
   }
 }
