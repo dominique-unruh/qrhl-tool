@@ -1,11 +1,11 @@
 package qrhl.logic
 
 import info.hupel.isabelle.hol.HOLogic
+import info.hupel.isabelle.pure.{Typ => ITyp, Type => IType}
 import qrhl.isabelle.Isabelle
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp, Type => IType}
 
-final class Typ private (@deprecated private val isabelle:Isabelle.Context, val isabelleTyp:ITyp) {
-  def distr: Typ = Typ(isabelle, IType("QRHL_Core.distr",List(isabelleTyp)))
+final class Typ private (val isabelleTyp:ITyp) {
+  def distr: Typ = Typ(IType("QRHL_Core.distr",List(isabelleTyp)))
 
   override val toString: String = Isabelle.theContext.prettyTyp(isabelleTyp)
 //  val isabelleTyp : ITyp = typ
@@ -15,24 +15,23 @@ final class Typ private (@deprecated private val isabelle:Isabelle.Context, val 
     case _ => false
   }
 
-  def *(o: Typ) = Typ(isabelle, IType("Product_Type.prod",List(isabelleTyp,o.isabelleTyp)))
+  def *(o: Typ) = Typ(Isabelle.prodT(isabelleTyp,o.isabelleTyp))
 
   override def hashCode: Int = isabelleTyp.hashCode
 }
 
 object Typ {
   def typeCon(name: String, args: Typ*): Typ =
-    Typ(args.head.isabelle,
-      IType(name, args.map { _.isabelleTyp }.toList))
-  def bool(isabelle: Isabelle.Context): Typ = Typ(isabelle,HOLogic.boolT)
+    Typ(IType(name, args.map { _.isabelleTyp }.toList))
+  def bool(isabelle: Isabelle.Context): Typ = Typ(HOLogic.boolT)
 
   def apply(isabelle:Isabelle.Context, str:String) : Typ = {
     val typ = isabelle.readTyp(Isabelle.unicodeToSymbols(str))
-    Typ(isabelle,typ)
+    Typ(typ)
   }
-  def apply(isabelle:Isabelle.Context, typ:ITyp) : Typ = {
+  def apply(typ:ITyp) : Typ = {
 //    val pretty = Isabelle.symbolsToUnicode(isabelle.prettyTyp(typ))
-    new Typ(isabelle, typ)
+    new Typ(typ)
   }
 }
 

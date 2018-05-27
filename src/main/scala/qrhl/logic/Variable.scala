@@ -37,7 +37,8 @@ object QVariable {
   def fromTerm_var(context: Isabelle.Context, x: Term): QVariable = x match {
     case Free(name,typ) =>
 //      assert(name.endsWith("_var"))
-      QVariable(name, Typ(context, Isabelle.dest_qvariableT(typ)))
+      QVariable(name, Typ(Isabelle.dest_qvariableT(typ)))
+    case _ => throw new java.lang.RuntimeException(f"Cannot transform $x into QVariable")
   }
 
   def fromQVarList(context: Isabelle.Context, qvs: Term): List[QVariable] = qvs match {
@@ -48,6 +49,7 @@ object QVariable {
       assert(v2.length==1)
       val vs2 = fromQVarList(context, vs)
       v2.head :: vs2
+    case _ => throw new RuntimeException("Illformed variable list")
   }
 }
 
@@ -64,6 +66,7 @@ object CVariable {
   def fromTerm_var(context: Isabelle.Context, x: Term): CVariable = x match {
     case Free(name,typ) =>
       assert(name.endsWith("_var"))
-      CVariable(name.stripSuffix("_var"), Typ(context, Isabelle.dest_qvariableT(typ)))
+      CVariable(name.stripSuffix("_var"), Typ(Isabelle.dest_qvariableT(typ)))
+    case _ => throw new RuntimeException("Illformed variable term")
   }
 }

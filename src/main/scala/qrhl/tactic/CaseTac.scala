@@ -34,7 +34,7 @@ case class CaseTac(variable:String, expr:Expression) extends Tactic {
       val caseExpr : Term = Isabelle.classical_subspace $
         (HOLogic.equ(varTyp.isabelleTyp) $ expr.isabelleTerm $ Free(variable,varTyp.isabelleTyp))
       val pre2 = Isabelle.predicate_inf $ caseExpr $ pre.isabelleTerm
-      val pre3 = Expression(pre.isabelle, state.predicateT, pre2)
+      val pre3 = Expression(null, state.predicateT, pre2)
 
 
       List(QRHLSubgoal(left,right,pre3,post,assms))

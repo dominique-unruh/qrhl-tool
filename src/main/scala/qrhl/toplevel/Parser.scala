@@ -1,6 +1,6 @@
 package qrhl.toplevel
 
-import info.hupel.isabelle.pure.{Typ => ITyp, Type => IType}
+import info.hupel.isabelle.pure.{Type => IType}
 import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -68,8 +68,8 @@ object Parser extends RegexParsers {
          _ <- sampleSymbol;
          // TODO: add a cut
          typ = context.environment.cVariables.
-           getOrElse(v, throw UserException(s"Undefined variable $v")).typ;
-         e <- expression(Typ.typeCon("QRHL_Core.distr",typ));
+           getOrElse(v, throw UserException(s"Undefined variable $v")).valueTyp;
+         e <- expression(Typ(Isabelle.distrT(typ)));
          _ <- statementSeparator)
       yield Sample(context.environment.cVariables(v), e)
 
@@ -88,7 +88,7 @@ object Parser extends RegexParsers {
          _ = assert(vs.nonEmpty);
          _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
          qvs = vs.map { context.environment.qVariables(_) };
-         typ = Typ(context.isabelle.get, IType("Complex_L2.vector",List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
+         typ = Typ(Isabelle.vectorT(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*)));
          e <- expression(typ);
          _ <- statementSeparator)
       yield QInit(qvs,e)
@@ -100,7 +100,7 @@ object Parser extends RegexParsers {
            _ = assert(vs.nonEmpty);
            _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
            qvs = vs.map { context.environment.qVariables(_) };
-           typ = Typ(context.isabelle.get, IType("Bounded_Operators.bounded",
+           typ = Typ(IType("Bounded_Operators.bounded",
              List(Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*),
                   Isabelle.tupleT(qvs.map(_.typ.isabelleTyp):_*))));
            e <- expression(typ);
@@ -116,7 +116,7 @@ object Parser extends RegexParsers {
          resv = context.environment.cVariables(res);
          qvs = vs.map { context.environment.qVariables(_) };
          _ <- literal("with");
-         etyp = Typ(context.isabelle.get, Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*)));
+         etyp = Typ(Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*)));
          e <- expression(etyp);
          _ <- statementSeparator)
       yield Measurement(resv,qvs,e)
@@ -174,6 +174,7 @@ object Parser extends RegexParsers {
     } }
 
   def variableKind : Parser[String] = "classical|quantum|ambient".r
+  //noinspection RedundantDefaultArgument
   def variable(implicit context:ParserContext) : Parser[DeclareVariableCommand] =
     variableKind ~ OnceParser(literal("var") ~ identifier ~ literal(":") ~ typ) ^^ {
       case kind~(_~id~_~typ) => kind match {

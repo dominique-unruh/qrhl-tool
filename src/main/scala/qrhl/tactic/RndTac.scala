@@ -7,7 +7,7 @@ import qrhl.{State, UserException}
 case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
   override def getWP(state: State, left: Statement, right: Statement, post: Expression): (Expression,Nil.type) = (left,right) match {
     case (Sample(x,e), Sample(y,f)) =>
-      val isabelle = post.isabelle
+//      val isabelle = post.isabelle
       val env = state.environment
       val e1 = e.index1(env)
       val x1 = x.index1

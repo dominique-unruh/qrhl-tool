@@ -1,14 +1,13 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.Term
-import info.hupel.isabelle.{Operation, ml, pure}
+import info.hupel.isabelle.{Operation, pure}
 import qrhl._
 import qrhl.logic.{Expression, Typ}
 
 case class FixTac(variable:String) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
-    case QRHLSubgoal(left,right,pre,post,assms) =>
+    case QRHLSubgoal(_, _, _, _, _) =>
       throw UserException("Expecting an ambient logic goal")
     case AmbientSubgoal(expr) =>
       if (goal.containsAmbientVar(variable))
@@ -26,7 +25,7 @@ case class FixTac(variable:String) extends Tactic {
 //      val mlExpr = lit(expr.isabelleTerm)(implicitly) (variable)
 //      val (result,varTyp2) = state.isabelle.get.runExpr(mlExpr)
       val (result,varTyp2) = state.isabelle.get.isabelle.invoke(fixTacOp, (expr.isabelleTerm, variable))
-      val varTyp3 = Typ(state.isabelle.get, varTyp2)
+      val varTyp3 = Typ(varTyp2)
 
       if (varTyp!=varTyp3)
         throw UserException(s"Please use a variable of type $varTyp3 ($variable has type $varTyp)")

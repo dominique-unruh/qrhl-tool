@@ -46,7 +46,7 @@ object Subgoal {
       while (true) {
         t match {
           case App(App(Const("HOL.imp", _), a), b) =>
-            assms.append(Expression(e.isabelle, e.typ, a))
+            assms.append(Expression(null, e.typ, a))
             t = b
           case _ => Breaks.break()
         }
@@ -102,7 +102,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
     val postTerm = post.encodeAsExpression(context)
     val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
     val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
-    Expression(pre.isabelle, Typ.bool(pre.isabelle), term)
+    Expression(null, Typ.bool(null), term)
   }
 
   /** Not including ambient vars in nested programs (via Call) */

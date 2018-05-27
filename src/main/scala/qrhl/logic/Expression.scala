@@ -3,7 +3,7 @@ package qrhl.logic
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.hol.HOLogic.boolT
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp, Type => IType}
+import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp}
 import qrhl.isabelle.Isabelle
 
 import scala.collection.mutable
@@ -16,7 +16,7 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
   def encodeAsExpression(context: Isabelle.Context) : Term =
     context.isabelle.invoke(Expression.termToExpressionOp, (context.contextId, isabelleTerm))
 
-  def stripAssumption(number: Int): Expression = Expression(isabelle,typ,Expression.stripAssumption(isabelleTerm,number))
+  def stripAssumption(number: Int): Expression = Expression(null,typ,Expression.stripAssumption(isabelleTerm,number))
 
   override def equals(o: scala.Any): Boolean = o match {
     case o : Expression => typ == o.typ && isabelleTerm == o.isabelleTerm
@@ -63,7 +63,7 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): Expression = simplify(isabelle.get,facts)
   def simplify(isabelle: Isabelle.Context, facts:List[String]): Expression = Expression(isabelle, typ, isabelle.simplify(isabelleTerm,facts))
 
-  def map(f : Term => Term) : Expression = new Expression(isabelle, typ, f(isabelleTerm))
+  def map(f : Term => Term) : Expression = new Expression(null, typ, f(isabelleTerm))
   def substitute(v:CVariable, repl:Expression) : Expression = {
     assert(repl.typ==v.typ)
     map(Expression.substitute(v.name, repl.isabelleTerm, _))
@@ -74,13 +74,13 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
   def index(environment: Environment, left: Boolean): Expression = {
     def idx(t:Term) : Term = t match {
       case App(t1,t2) => App(idx(t1),idx(t2))
-      case Free(name,typ) =>
+      case Free(name,typ2) =>
         if (environment.ambientVariables.contains(name)) t
-        else Free(Variable.index(left=left,name), typ)
+        else Free(Variable.index(left=left,name), typ2)
       case Const(_,_) | Bound(_) | Var(_,_) => t
-      case Abs(name,typ,body) => Abs(name,typ,idx(body))
+      case Abs(name,typ2,body) => Abs(name,typ2,idx(body))
     }
-    new Expression(isabelle,typ,idx(isabelleTerm))
+    new Expression(null,typ,idx(isabelleTerm))
   }
 
 
@@ -88,20 +88,20 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
       val t = e.isabelleTerm
       val predicateT = Isabelle.predicateT // Should be the type of t
       val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(predicateT, ITyp.funT(predicateT, boolT))) $ isabelleTerm $ t
-      val typ = Typ.bool(isabelle)
-      new Expression(isabelle,typ,newT)
+      val typ = Typ.bool(null)
+      new Expression(null,typ,newT)
   }
 
   def implies(e: Expression): Expression = {
     val t = e.isabelleTerm
     val newT = HOLogic.imp $ isabelleTerm $ t
-    val typ = Typ.bool(isabelle)
-    new Expression(isabelle,typ,newT)
+    val typ = Typ.bool(null)
+    new Expression(null,typ,newT)
   }
 
   def not: Expression = {
     assert(typ.isabelleTyp==HOLogic.boolT)
-    new Expression(isabelle,typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
+    new Expression(null,typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
   }
 
 }
@@ -110,7 +110,7 @@ final class Expression private (@deprecated("","now") val isabelle:Isabelle.Cont
 object Expression {
   def decodeFromExpression(context:Isabelle.Context, t: Term): Expression = {
     val (term,typ) = context.isabelle.invoke(decodeFromExpressionOp, t)
-    Expression(context, Typ(context, typ), term)
+    Expression(context, Typ(typ), term)
   }
 
   val decodeFromExpressionOp: Operation[Term, (Term, ITyp)] =
@@ -135,7 +135,7 @@ object Expression {
   def substitute(v: String, repl: Term, term: Term): Term = {
       def subst(t:Term) : Term = t match {
         case App(t1,t2) => App(subst(t1),subst(t2))
-        case Free(name,typ) =>
+        case Free(name, _) =>
           if (v==name) repl else t
         case Const(_,_) | Bound(_) | Var(_,_) => t
         case Abs(name,typ,body) => Abs(name,typ,subst(body))

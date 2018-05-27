@@ -14,7 +14,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       post.substitute(v.index(left=left),e.index(env, left=left))
 
     case Sample(x, e) =>
-      val isabelle = post.isabelle
+      val isabelle = state.isabelle.get
       val env = state.environment
       val e1 = e.index(env, left=left)
       val x1 = x.index(left=left)
@@ -26,7 +26,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       val wp = isabelle.isabelle.invoke(WpTac.sampleWpOp,
         ((x1.name,x1.typ.isabelleTyp),(e1.isabelleTerm,post.isabelleTerm)))
 
-      Expression(post.isabelle, state.predicateT, wp)
+      Expression(null, state.predicateT, wp)
 
     case QApply(vs,e) =>
       val env = state.environment
@@ -37,10 +37,10 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 //      val wpExpr = ml(post.isabelleTerm)(implicitly) (e1.isabelleTerm)(implicitly) (vs2.map(_.isabelleTerm))
 //      val wp = post.isabelle.runExpr(wpExpr)
 
-      val wp = post.isabelle.isabelle.invoke(WpTac.qapplyWpOp,
+      val wp = state.isabelle.get.isabelle.invoke(WpTac.qapplyWpOp,
         (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.variableTerm)))
 
-      Expression(post.isabelle, state.predicateT, wp)
+      Expression(null, state.predicateT, wp)
 
     case Measurement(x,q,e) =>
       val env = state.environment
@@ -55,10 +55,10 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 //                      (q1.map(_.isabelleTerm)))
 //      val wp = post.isabelle.runExpr(wpExpr)
 
-      val wp = post.isabelle.isabelle.invoke(WpTac.measureWpOp,
+      val wp = state.isabelle.get.isabelle.invoke(WpTac.measureWpOp,
         ((post.isabelleTerm, x1.valueTerm), (e1.isabelleTerm, q1.map(_.variableTerm))))
 
-      Expression(post.isabelle, state.predicateT, wp)
+      Expression(null, state.predicateT, wp)
 
     case QInit(vs,e) =>
       val env = state.environment
@@ -92,7 +92,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
   }
 
   def getWP(state: State, statements: Seq[Statement], post: Expression): Expression = {
-    statements.foldRight(post) { (statement,wp) => getWP(state,statement,post) }
+    statements.foldRight(post) { (statement,wp) => getWP(state,statement,wp) }
   }
 }
 
