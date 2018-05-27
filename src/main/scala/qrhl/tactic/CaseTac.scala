@@ -23,7 +23,7 @@ case class CaseTac(variable:String, expr:Expression) extends Tactic {
 
       val varTyp = state.environment.ambientVariables(variable)
       if (varTyp != expr.typ)
-        throw UserException(s"Variable $variable has type $varTyp, but expression has type ${expr.typ}")
+        throw UserException(s"Variable $variable has type ${state.isabelle.get.prettyTyp(varTyp)}, but expression has type ${state.isabelle.get.prettyTyp(expr.typ)}")
 
       for (x <- expr.variables)
         if (!state.environment.variableExistsForPredicate(x))

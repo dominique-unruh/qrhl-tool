@@ -19,7 +19,7 @@ abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[Li
         val goals = ctx.isabelle.invoke(operation, (arg(isa), goal.toExpression(isa).isabelleTerm, ctx.contextId)).getOrElse {
           throw UserException("tactic failed")
         }
-        for (t <- goals) yield Subgoal(isa, Expression(isa,state.boolT,t))
+        for (t <- goals) yield Subgoal(isa, Expression(Isabelle.boolT,t))
       case None => throw UserException(Parser.noIsabelleError)
     }
   //    }

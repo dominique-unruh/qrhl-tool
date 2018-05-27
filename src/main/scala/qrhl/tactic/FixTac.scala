@@ -3,6 +3,7 @@ package qrhl.tactic
 import info.hupel.isabelle.pure.Term
 import info.hupel.isabelle.{Operation, pure}
 import qrhl._
+import qrhl.isabelle.Isabelle
 import qrhl.logic.{Expression, Typ}
 
 case class FixTac(variable:String) extends Tactic {
@@ -25,12 +26,12 @@ case class FixTac(variable:String) extends Tactic {
 //      val mlExpr = lit(expr.isabelleTerm)(implicitly) (variable)
 //      val (result,varTyp2) = state.isabelle.get.runExpr(mlExpr)
       val (result,varTyp2) = state.isabelle.get.isabelle.invoke(fixTacOp, (expr.isabelleTerm, variable))
-      val varTyp3 = Typ(varTyp2)
+      val varTyp3 = varTyp2
 
       if (varTyp!=varTyp3)
-        throw UserException(s"Please use a variable of type $varTyp3 ($variable has type $varTyp)")
+        throw UserException(s"Please use a variable of type ${state.isabelle.get.prettyTyp(varTyp3)} ($variable has type ${state.isabelle.get.prettyTyp(varTyp)}")
 
-      List(AmbientSubgoal(Expression(state.isabelle.get, state.predicateT, result)))
+      List(AmbientSubgoal(Expression(Isabelle.predicateT, result)))
   }
 
   val fixTacOp: Operation[(Term, String), (Term, pure.Typ)] = Operation.implicitly[(Term,String), (Term,pure.Typ)]("fixTac")

@@ -3,6 +3,7 @@ package qrhl.tactic
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.Term
 import info.hupel.isabelle.{Operation, ml, pure}
+import qrhl.isabelle.Isabelle
 import qrhl.logic.{Call, Expression, Statement}
 import qrhl.{State, Tactic, UserException}
 
@@ -42,8 +43,8 @@ case object CallTac extends WpBothStyleTac() {
 //            s"except within the term $quaStr")
 //        }
 
-      val wp2 = Expression(state.isabelle.get, state.predicateT, wp)
-      val colocality2 = Expression(state.isabelle.get, state.boolT, colocality)
+      val wp2 = Expression(Isabelle.predicateT, wp)
+      val colocality2 = Expression(Isabelle.boolT, colocality)
       (wp2,List(colocality2))
     case _ => throw UserException("Expected a call statement as last statement on both sides")
   }

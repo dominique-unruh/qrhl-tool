@@ -181,10 +181,7 @@ class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val currentLemma: Option[(String,Expression)],
                      val isabelle: Option[Isabelle.Context],
-                     @deprecated("","") val boolT: Typ,
-                     @deprecated("","") val predicateT: Typ,
-                     val dependencies: List[FileTimeStamp],
-                     @deprecated("","") val programT: Typ) {
+                     val dependencies: List[FileTimeStamp]) {
   def qed: State = {
     assert(currentLemma.isDefined)
     assert(goal.isEmpty)
@@ -202,7 +199,7 @@ class State private (val environment: Environment,
     if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
     if (this.environment.variableExists(name))
       throw UserException(s"Name $name already used for a variable or program.")
-    val isa = isabelle.get.declareVariable(name, programT.isabelleTyp)
+    val isa = isabelle.get.declareVariable(name, Isabelle.programT)
 
     copy(environment = environment.declareProgram(name, program))
   }
@@ -222,13 +219,10 @@ class State private (val environment: Environment,
   private def copy(environment:Environment=environment,
                    goal:List[Subgoal]=goal,
                    isabelle:Option[Isabelle.Context]=isabelle,
-                   boolT:Typ=boolT,
-                   predicateT:Typ=predicateT,
-                   programT:Typ=programT,
                    dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,Expression)]=currentLemma) : State =
-    new State(environment=environment, goal=goal, isabelle=isabelle, boolT=boolT, predicateT=predicateT,
-      currentLemma=currentLemma, programT=programT, dependencies=dependencies)
+    new State(environment=environment, goal=goal, isabelle=isabelle,
+      currentLemma=currentLemma, dependencies=dependencies)
 
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
@@ -288,7 +282,7 @@ class State private (val environment: Environment,
         val filename = Paths.get(thy+".thy")
         (isabelle.getQRHLContextWithFiles(thy), new FileTimeStamp(filename) :: dependencies)
     }
-    copy(isabelle = Some(isa), boolT = Typ.bool(isa), predicateT=Typ(isa,"QRHL_Core.predicate"), programT=Typ(isa,"QRHL_Core.program"), dependencies=files)
+    copy(isabelle = Some(isa), dependencies=files)
   }
 
   def filesChanged : List[Path] = {
@@ -331,7 +325,7 @@ class State private (val environment: Environment,
 
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
-    boolT=null, predicateT=null, dependencies=Nil, programT=null, currentLemma=None)
+    dependencies=Nil, currentLemma=None)
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
   val declare_quantum_variable: Operation[(String, ITyp, BigInt), BigInt] =

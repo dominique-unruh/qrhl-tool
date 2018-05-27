@@ -2,6 +2,7 @@ package qrhl.tactic
 
 import info.hupel.isabelle.pure.Term
 import info.hupel.isabelle.{Operation, pure}
+import qrhl.isabelle.Isabelle
 import qrhl.logic.{Expression, Statement}
 import qrhl.{State, UserException}
 
@@ -20,8 +21,8 @@ case object EqualTac extends WpBothStyleTac() {
         qvarsIdx1.map(_.variableTerm)), (qvarsIdx2.map(_.variableTerm),
         post.isabelleTerm)))
 
-    val wp2 = Expression(state.isabelle.get, state.predicateT, wp)
-    val colocality2 = Expression(state.isabelle.get, state.boolT, colocality)
+    val wp2 = Expression(Isabelle.predicateT, wp)
+    val colocality2 = Expression(Isabelle.boolT, colocality)
     (wp2,List(colocality2))
   }
 
