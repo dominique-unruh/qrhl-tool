@@ -19,9 +19,9 @@ case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => 
 //          case Some(isa) =>
 ////            val ml = Expr.uncheckedLiteral[String => pure.Term => pure.Context => List[pure.Term]]("QRHL.applyRule")
 ////            val goalsExpr = ml(rule)(implicitly)   (expr.isabelleTerm)(implicitly)   (isa.contextExpr)
-////            val goals = state.isabelle.get.runExpr(goalsExpr)
+////            val goals = state.isabelle.runExpr(goalsExpr)
 //
-//            val ctx = state.isabelle.get
+//            val ctx = state.isabelle
 //            val goals = ctx.isabelle.invoke(RuleTac.applyRuleOp, (rule, expr.isabelleTerm, ctx.contextId))
 //            for (t <- goals) yield AmbientSubgoal(Expression(isa,state.boolT,t))
 //          case None => throw UserException(Parser.noIsabelleError)

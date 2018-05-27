@@ -15,7 +15,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
       post.substitute(v.index(left=left),e.index(env, left=left))
 
     case Sample(x, e) =>
-      val isabelle = state.isabelle.get
+      val isabelle = state.isabelle
       val env = state.environment
       val e1 = e.index(env, left=left)
       val x1 = x.index(left=left)
@@ -38,7 +38,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 //      val wpExpr = ml(post.isabelleTerm)(implicitly) (e1.isabelleTerm)(implicitly) (vs2.map(_.isabelleTerm))
 //      val wp = post.isabelle.runExpr(wpExpr)
 
-      val wp = state.isabelle.get.isabelle.invoke(WpTac.qapplyWpOp,
+      val wp = state.isabelle.isabelle.invoke(WpTac.qapplyWpOp,
         (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.variableTerm)))
 
       Expression(Isabelle.predicateT, wp)
@@ -56,7 +56,7 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 //                      (q1.map(_.isabelleTerm)))
 //      val wp = post.isabelle.runExpr(wpExpr)
 
-      val wp = state.isabelle.get.isabelle.invoke(WpTac.measureWpOp,
+      val wp = state.isabelle.isabelle.invoke(WpTac.measureWpOp,
         ((post.isabelleTerm, x1.valueTerm), (e1.isabelleTerm, q1.map(_.variableTerm))))
 
       Expression(Isabelle.predicateT, wp)
@@ -68,9 +68,9 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 
 //      val ml = Expr.uncheckedLiteral[Term => Term => List[Term] => Term]("QRHL.qinitWp")
 //      val wpExpr = ml(post.isabelleTerm)(implicitly) (e1.isabelleTerm)(implicitly) (vs2.map(_.isabelleTerm))
-//      val wp = state.isabelle.get.runExpr(wpExpr)
+//      val wp = state.isabelle.runExpr(wpExpr)
 
-      val wp = state.isabelle.get.isabelle.invoke(WpTac.qinitWpOp,
+      val wp = state.isabelle.isabelle.invoke(WpTac.qinitWpOp,
         (post.isabelleTerm, e1.isabelleTerm, vs2.map(_.variableTerm)))
 
       Expression(Isabelle.predicateT, wp)
@@ -82,9 +82,9 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 
 //      val ml = Expr.uncheckedLiteral[Term => Term => Term => Term]("QRHL.ifWp")
 //      val wpExpr = ml(e1.isabelleTerm)(implicitly)  (thenWp.isabelleTerm)(implicitly)  (elseWp.isabelleTerm)
-//      val wp = state.isabelle.get.runExpr(wpExpr)
+//      val wp = state.isabelle.runExpr(wpExpr)
 
-      val wp = state.isabelle.get.isabelle.invoke(WpTac.ifWpOp,
+      val wp = state.isabelle.isabelle.invoke(WpTac.ifWpOp,
         (e1.isabelleTerm, thenWp.isabelleTerm, elseWp.isabelleTerm))
 
       Expression(Isabelle.predicateT, wp)

@@ -24,8 +24,8 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
 //        val wpExpr = (lit(x1.name)(implicitly)(e1.isabelleTerm)(implicitly)
 //        (y2.name)(implicitly)(f2.isabelleTerm)(implicitly)
 //        (x1.typ.isabelleTyp)(implicitly)(post.isabelleTerm))
-//        val wp = state.isabelle.get.runExpr(wpExpr)
-        val wp = state.isabelle.get.isabelle.invoke(rndWpOp,
+//        val wp = state.isabelle.runExpr(wpExpr)
+        val wp = state.isabelle.isabelle.invoke(rndWpOp,
             ((x1.name,e1.isabelleTerm, y2.name), (f2.isabelleTerm, x1.valueTyp, post.isabelleTerm)))
         (Expression(Isabelle.predicateT, wp), Nil)
       case Some(distr) =>
@@ -34,9 +34,9 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
 //        val wpExpr = (lit(x1.name)(implicitly) (x1.typ.isabelleTyp)(implicitly) (e1.isabelleTerm)(implicitly)
 //                         (y2.name)(implicitly) (y2.typ.isabelleTyp)(implicitly) (f2.isabelleTerm)(implicitly)
 //                         (distr.isabelleTerm)(implicitly) (post.isabelleTerm))
-//        val wp = state.isabelle.get.runExpr(wpExpr)
+//        val wp = state.isabelle.runExpr(wpExpr)
 
-        val wp = state.isabelle.get.isabelle.invoke(rndWp2Op,
+        val wp = state.isabelle.isabelle.invoke(rndWp2Op,
            ((x1.name,x1.valueTyp,e1.isabelleTerm),
             (y2.name,y2.valueTyp,f2.isabelleTerm),
             (distr.isabelleTerm,post.isabelleTerm)))

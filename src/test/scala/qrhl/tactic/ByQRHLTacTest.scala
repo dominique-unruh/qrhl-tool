@@ -12,7 +12,7 @@ class ByQRHLTacTest extends FunSuite {
     tl.execCmd("lemma xxx: Pr[x:p(rho)] <= Pr[x:p(rho)]")
     tl.execCmd("byqrhl")
     assert(tl.state.goal.length == 1)
-    tl.state.goal.head.checkWelltyped(tl.state.isabelle.get)
+    tl.state.goal.head.checkWelltyped(tl.state.isabelle)
   }
 
   test("works with Pr2") {
@@ -28,6 +28,6 @@ class ByQRHLTacTest extends FunSuite {
     println(3)
     print(tl.state.goal.head)
     println(4)
-    tl.state.goal.head.checkWelltyped(tl.state.isabelle.get)
+    tl.state.goal.head.checkWelltyped(tl.state.isabelle)
   }
 }

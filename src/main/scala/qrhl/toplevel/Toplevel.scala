@@ -16,11 +16,11 @@ import scala.util.matching.Regex
 /** Not thread safe */
 class Toplevel(initialState : State = State.empty) {
   def dispose(): Unit = {
-    state.isabelle.foreach(_.isabelle.dispose())
+    if (state.hasIsabelle) state.isabelle.isabelle.dispose()
     states = null
   }
 
-  def isabelle: Isabelle = state.isabelle.get.isabelle
+  def isabelle: Isabelle = state.isabelle.isabelle
 
 
   /** Reads one command from the input. The last line of the command must end with ".".
@@ -79,10 +79,10 @@ class Toplevel(initialState : State = State.empty) {
     cmd match {
       case UndoCommand(n) =>
         assert(n < states.length)
-        val isabelleLoaded = state.isabelle.isDefined
+        val isabelleLoaded = state.hasIsabelle
         states = states.drop(n)
         // If state after undo has no Isabelle, run GC to give the system the chance to finalize a possibly loaded Isabelle
-        if (state.isabelle.isEmpty && isabelleLoaded)
+        if (!state.hasIsabelle && isabelleLoaded)
           System.gc()
       case _ =>
         val newState = cmd.act(states.head)

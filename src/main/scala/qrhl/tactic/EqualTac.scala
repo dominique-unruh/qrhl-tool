@@ -16,7 +16,7 @@ case object EqualTac extends WpBothStyleTac() {
     val qvarsIdx2 = qvars.map(_.index2)
     val forbidden = cvarsIdx1.map(_.name).toSet ++ cvarsIdx2.map(_.name) ++ qvarsIdx1.map(_.name) ++ qvarsIdx2.map(_.name)
 
-    val (wp, colocality) = state.isabelle.get.isabelle.invoke(callWpOp,
+    val (wp, colocality) = state.isabelle.isabelle.invoke(callWpOp,
       ((cvarsIdx1.map(_.valueTerm), cvarsIdx2.map(_.valueTerm),
         qvarsIdx1.map(_.variableTerm)), (qvarsIdx2.map(_.variableTerm),
         post.isabelleTerm)))

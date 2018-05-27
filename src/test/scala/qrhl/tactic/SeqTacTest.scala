@@ -17,8 +17,8 @@ class SeqTacTest extends FunSuite {
     val goals = tac(state,qrhl)
     assert(goals.length == 2)
     val List(goal1,goal2) = goals
-    goal1.checkWelltyped(tl.state.isabelle.get)
-    goal2.checkWelltyped(tl.state.isabelle.get)
+    goal1.checkWelltyped(tl.state.isabelle)
+    goal2.checkWelltyped(tl.state.isabelle)
     assert(goal1.isInstanceOf[QRHLSubgoal])
     assert(goal2.isInstanceOf[QRHLSubgoal])
   }

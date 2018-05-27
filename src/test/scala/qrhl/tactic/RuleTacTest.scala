@@ -20,7 +20,7 @@ class RuleTacTest extends FlatSpec {
     tl.execCmd("lemma test: a+b <= c+d")
     val state2 = tl.state.applyTactic(RuleTac("add_le_mono"))
     print("New goals: ",state2.goal)
-    state2.goal.foreach(_.checkWelltyped(tl.state.isabelle.get))
+    state2.goal.foreach(_.checkWelltyped(tl.state.isabelle))
     assert(state2.goal.length==2)
     // TODO: check the goals themselves?
   }

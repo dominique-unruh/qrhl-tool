@@ -180,14 +180,20 @@ class FileTimeStamp(val file:Path) {
 class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val currentLemma: Option[(String,Expression)],
-                     val isabelle: Option[Isabelle.Context],
+                     private val _isabelle: Option[Isabelle.Context],
                      val dependencies: List[FileTimeStamp]) {
+  def isabelle: Isabelle.Context = _isabelle match {
+    case Some(isa) => isa
+    case None => throw UserException(Parser.noIsabelleError)
+  }
+  def hasIsabelle: Boolean = _isabelle.isDefined
+
   def qed: State = {
     assert(currentLemma.isDefined)
     assert(goal.isEmpty)
 
     val (name,prop) = currentLemma.get
-    val isa = if (name!="") isabelle.map(_.addAssumption(name,prop.isabelleTerm)) else isabelle
+    val isa = if (name!="") _isabelle.map(_.addAssumption(name,prop.isabelleTerm)) else _isabelle
     copy(isabelle=isa, currentLemma=None)
   }
 
@@ -196,10 +202,10 @@ class State private (val environment: Environment,
       if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in program")
 
-    if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
+    if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
     if (this.environment.variableExists(name))
       throw UserException(s"Name $name already used for a variable or program.")
-    val isa = isabelle.get.declareVariable(name, Isabelle.programT)
+    val isa = _isabelle.get.declareVariable(name, Isabelle.programT)
 
     copy(environment = environment.declareProgram(name, program))
   }
@@ -218,16 +224,16 @@ class State private (val environment: Environment,
 
   private def copy(environment:Environment=environment,
                    goal:List[Subgoal]=goal,
-                   isabelle:Option[Isabelle.Context]=isabelle,
+                   isabelle:Option[Isabelle.Context]=_isabelle,
                    dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,Expression)]=currentLemma) : State =
-    new State(environment=environment, goal=goal, isabelle=isabelle,
+    new State(environment=environment, goal=goal, _isabelle=isabelle,
       currentLemma=currentLemma, dependencies=dependencies)
 
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
       goal.checkVariablesDeclared(environment)
-      copy(goal=List(goal), currentLemma=Some((name,goal.toExpression(isabelle.get))))
+      copy(goal=List(goal), currentLemma=Some((name,goal.toExpression(_isabelle.get))))
     case _ => throw UserException("There is still a pending proof.")
   }
 
@@ -237,7 +243,7 @@ class State private (val environment: Environment,
       s"${goal.size} subgoals:\n\n" + goal.mkString("\n\n")
   }
 
-  lazy val parserContext = ParserContext(isabelle=isabelle, environment=environment)
+  lazy val parserContext = ParserContext(isabelle=_isabelle, environment=environment)
 
   def parseCommand(str:String): Command = {
     implicit val parserContext: ParserContext = this.parserContext
@@ -267,7 +273,7 @@ class State private (val environment: Environment,
   }
 
   def loadIsabelle(path:String, theory:Option[String]) : State = {
-    assert(isabelle.isEmpty)
+    assert(_isabelle.isEmpty)
     val isa = new Isabelle(path)
     // since this is likely to happen when an existing Isabelle is reloaded, give the GC a chance to remove that existing Isabelle
     System.gc()
@@ -302,8 +308,8 @@ class State private (val environment: Environment,
       .declareAmbientVariable(name+"_var", typ)
       .declareAmbientVariable(Variable.index1(name)+"_var", typ)
       .declareAmbientVariable(Variable.index2(name)+"_var", typ)
-    if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
-    val isa = isabelle.get
+    if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
+    val isa = _isabelle.get
 //    val typ1 = typ.isabelleTyp
 //    val typ2 = if (quantum) Type("QRHL_Core.qvariable",List(typ1)) else typ1
     val newIsa =
@@ -317,14 +323,14 @@ class State private (val environment: Environment,
 
   def declareAmbientVariable(name: String, typ: pure.Typ): State = {
     val newEnv = environment.declareAmbientVariable(name, typ)
-    if (isabelle.isEmpty) throw UserException("Missing isabelle command.")
-    val isa = isabelle.get.declareVariable(name, typ)
+    if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
+    val isa = _isabelle.get.declareVariable(name, typ)
     copy(environment = newEnv, isabelle = Some(isa))
   }
 }
 
 object State {
-  val empty = new State(environment=Environment.empty,goal=Nil,isabelle=None,
+  val empty = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
     dependencies=Nil, currentLemma=None)
 //  private[State] val defaultIsabelleTheory = "QRHL"
 

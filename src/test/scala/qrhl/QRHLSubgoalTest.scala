@@ -23,7 +23,7 @@ class QRHLSubgoalTest extends FunSuite {
     val right = Block()
     val pre = pp("top")
     val post = pp("top")
-    testToExpressionWelltyped(tl.state.isabelle.get, left,right,pre,post)
+    testToExpressionWelltyped(tl.state.isabelle, left,right,pre,post)
   }
 
   test("toExpression welltyped 2") {
@@ -31,6 +31,6 @@ class QRHLSubgoalTest extends FunSuite {
     val right = Block(IfThenElse(pb("1=2"), Block(), Block()))
     val pre = pp("Cla[true]")
     val post = pp("Cla[false]")
-    testToExpressionWelltyped(tl.state.isabelle.get, left,right,pre,post)
+    testToExpressionWelltyped(tl.state.isabelle, left,right,pre,post)
   }
 }

@@ -14,7 +14,7 @@ import info.hupel.isabelle.{OfficialPlatform, Operation, Platform, System, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
-import qrhl.logic.{QVariable, Typ}
+import qrhl.logic.QVariable
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -209,12 +209,11 @@ object Isabelle {
     case Nil => (qvariable_unit, unitT)
     case List(qv) => (qvariable_singleton(qv.valueTyp) $ qv.variableTerm,
                       qv.valueTyp)
-    case qv::rest => {
+    case qv::rest =>
       val (qvTuple, qvTyp) = qvarTuple_var0(List(qv))
       val (restTuple, restTyp) = qvarTuple_var0(rest)
       (qvariable_concat(qvTyp, restTyp) $ qvTuple $ restTuple,
        prodT(qvTyp, restTyp))
-    }
   }
   def qvarTuple_var(qvs:List[QVariable]) : Term = qvarTuple_var0(qvs)._1
   val qvariable_unit = Const("QRHL_Core.qvariable_unit", qvariablesT(unitT))

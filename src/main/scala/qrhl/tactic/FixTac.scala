@@ -4,7 +4,7 @@ import info.hupel.isabelle.pure.Term
 import info.hupel.isabelle.{Operation, pure}
 import qrhl._
 import qrhl.isabelle.Isabelle
-import qrhl.logic.{Expression, Typ}
+import qrhl.logic.Expression
 
 case class FixTac(variable:String) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
@@ -24,12 +24,12 @@ case class FixTac(variable:String) extends Tactic {
 
 //      val lit = ml.Expr.uncheckedLiteral[Term => String => (Term,pure.Typ)]("QRHL.fixTac")
 //      val mlExpr = lit(expr.isabelleTerm)(implicitly) (variable)
-//      val (result,varTyp2) = state.isabelle.get.runExpr(mlExpr)
-      val (result,varTyp2) = state.isabelle.get.isabelle.invoke(fixTacOp, (expr.isabelleTerm, variable))
+//      val (result,varTyp2) = state.isabelle.runExpr(mlExpr)
+      val (result,varTyp2) = state.isabelle.isabelle.invoke(fixTacOp, (expr.isabelleTerm, variable))
       val varTyp3 = varTyp2
 
       if (varTyp!=varTyp3)
-        throw UserException(s"Please use a variable of type ${state.isabelle.get.prettyTyp(varTyp3)} ($variable has type ${state.isabelle.get.prettyTyp(varTyp)}")
+        throw UserException(s"Please use a variable of type ${state.isabelle.prettyTyp(varTyp3)} ($variable has type ${state.isabelle.prettyTyp(varTyp)}")
 
       List(AmbientSubgoal(Expression(Isabelle.predicateT, result)))
   }

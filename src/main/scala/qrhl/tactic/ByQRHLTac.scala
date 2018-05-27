@@ -24,8 +24,8 @@ case object ByQRHLTac extends Tactic {
         val expressionToTermOp = Operation.implicitly[Term, (Term,pure.Typ)]("expression_to_term")
         val addIndexToExpressionOp = Operation.implicitly[(Term,Boolean), Term]("add_index_to_expression")
 
-        val v2 = state.isabelle.get.isabelle.invoke(addIndexToExpressionOp, (v,left))
-        val v3 = state.isabelle.get.isabelle.invoke(expressionToTermOp, v2)._1
+        val v2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (v,left))
+        val v3 = state.isabelle.isabelle.invoke(expressionToTermOp, v2)._1
         Some(v3,p,rho)
       case _ => None
     }
@@ -93,7 +93,7 @@ case object ByQRHLTac extends Tactic {
         val cvars = (cvars1 ++ cvars2).distinct
         val qvars = (qvars1 ++ qvars2).distinct
 
-        val isa = state.isabelle.get
+        val isa = state.isabelle
         val preTerm = isa.isabelle.invoke(byQRHLPreOp,
           (cvars.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
             qvars.map(v => (v.index1.name, v.index2.name, v.valueTyp))))

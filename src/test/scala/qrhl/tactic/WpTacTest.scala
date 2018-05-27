@@ -15,7 +15,7 @@ class WpTacTest extends FlatSpec {
       """.stripMargin)
     val goals = toplevel.state.goal
     assert(goals.length==1)
-    goals.head.checkWelltyped(toplevel.state.isabelle.get)
+    goals.head.checkWelltyped(toplevel.state.isabelle)
   }
 
   "WpTac" should "returns a well-typed subgoal (assign)" in {
@@ -29,7 +29,7 @@ class WpTacTest extends FlatSpec {
       """.stripMargin)
     val goals = toplevel.state.goal
     assert(goals.length==1)
-    goals.head.checkWelltyped(toplevel.state.isabelle.get)
+    goals.head.checkWelltyped(toplevel.state.isabelle)
   }
 
   "WpTac" should "returns a well-typed subgoal (sample)" in {
@@ -43,6 +43,6 @@ class WpTacTest extends FlatSpec {
       """.stripMargin)
     val goals = toplevel.state.goal
     assert(goals.length==1)
-    goals.head.checkWelltyped(toplevel.state.isabelle.get)
+    goals.head.checkWelltyped(toplevel.state.isabelle)
   }
 }

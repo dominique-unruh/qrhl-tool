@@ -25,10 +25,6 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
   }
 
 
-  //noinspection ScalaDeprecation
-  @deprecated("","")
-  def checkWelltyped(context:Isabelle.Context, typ:Typ): Unit = checkWelltyped(context, typ.isabelleTyp)
-
   def checkWelltyped(context:Isabelle.Context, ityp:ITyp): Unit = {
     assert(ityp==this.typ,s"$ityp != ${this.typ}")
     assert(context.checkType(isabelleTerm) == typ)
@@ -124,11 +120,6 @@ object Expression {
 
   def trueExp(isabelle: Isabelle.Context): Expression = Expression(Isabelle.boolT, HOLogic.True)
 
-  //noinspection ScalaDeprecation
-  @deprecated("","")
-  def apply(context: Isabelle.Context, str:String, typ:Typ) : Expression =
-    apply(context, str, typ.isabelleTyp)
-
   def apply(context: Isabelle.Context, str:String, typ:pure.Typ) : Expression = {
     val term = context.readTerm(Isabelle.unicodeToSymbols(str),typ)
     Expression(typ, term)
@@ -136,12 +127,6 @@ object Expression {
 
   def apply(typ: pure.Typ, term:Term) : Expression =
     new Expression(typ, term)
-
-  //noinspection ScalaDeprecation
-  @deprecated("","")
-  def apply(isabelle:Isabelle.Context, typ: Typ, term:Term) : Expression = {
-    new Expression(typ.isabelleTyp, term)
-  }
 
   def unapply(e: Expression): Option[Term] = Some(e.isabelleTerm)
 
