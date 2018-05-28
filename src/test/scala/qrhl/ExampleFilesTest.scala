@@ -4,7 +4,9 @@ import java.nio.file.Paths
 
 import org.scalatest.{FlatSpec, FunSuite}
 import qrhl.toplevel.Toplevel
+import org.scalatest.tags.Slow
 
+@Slow
 class ExampleFilesTest extends FunSuite {
 
   test("prg-enc-indcpa.qrhl") {

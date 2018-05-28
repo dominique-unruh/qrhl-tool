@@ -1,20 +1,11 @@
 package qrhl.isabelle
 
-import java.io.IOException
-import java.nio.file.Paths
-
-import info.hupel.isabelle.{OfficialPlatform, Platform, System}
-import info.hupel.isabelle.api.{Configuration, Version}
-import info.hupel.isabelle.setup.Setup.Absent
-import info.hupel.isabelle.setup.{Resources, Setup}
-import org.scalatest.{FlatSpec, FunSpec, FunSuite}
+import org.scalatest.FunSuite
+import org.scalatest.tags.Slow
 import qrhl.UserException
-import qrhl.toplevel.{Toplevel, ToplevelTest}
+import qrhl.toplevel.ToplevelTest
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import scala.util.{Left, Right}
-
+@Slow
 class IsabelleTest extends FunSuite {
   test("wrong path") {
     assertThrows[UserException] {
