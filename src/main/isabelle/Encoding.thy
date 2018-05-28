@@ -10,11 +10,29 @@ axiomatization
 
 type_synonym 'a cvariable = "'a qvariable"
 
+
+axiomatization index_var :: "bool \<Rightarrow> 'a qvariable \<Rightarrow> 'a qvariable" where
+  index_var1[simp]: "variable_name (index_var True x) = variable_name x @ ''1''" and
+  index_var2[simp]: "variable_name (index_var False x) = variable_name x @ ''2''"
+
+axiomatization index_vars :: "bool \<Rightarrow> 'a qvariables \<Rightarrow> 'a qvariables"
+axiomatization where
+  index_vars_singleton: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>" and
+  index_vars_concat: "index_vars left (qvariable_concat Q R) = qvariable_concat (index_vars left Q) (index_vars left R)" and
+  index_vars_unit: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
+for x :: "'a qvariable" and Q :: "'b qvariables" and R :: "'c qvariables"
+
+axiomatization index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression" where
+  index_expression_def: "index_expression left (expression Q e) = expression (index_vars left Q) e"
+for Q :: "'b qvariables" and e :: "'b \<Rightarrow> 'a"
+
+typedecl substitution
+axiomatization substitute1 :: "'a qvariable \<Rightarrow> 'a expression \<Rightarrow> substitution"
+axiomatization subst_expression :: "substitution \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
+
 typedecl program
 axiomatization
-  (* skip :: "program" and *)
   block :: "program list \<Rightarrow> program" and
-  (* sequence :: "program \<Rightarrow> program \<Rightarrow> program" and *)
   assign :: "'a cvariable \<Rightarrow> 'a expression \<Rightarrow> program" and
   sample :: "'a cvariable \<Rightarrow> 'a distr expression \<Rightarrow> program" and
   ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program" and
@@ -22,6 +40,7 @@ axiomatization
   qinit :: "'a qvariables \<Rightarrow> 'a vector expression \<Rightarrow> program" and
   qapply :: "'a qvariables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program" and
   measurement :: "'a cvariable \<Rightarrow> 'b qvariables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
+
 
 axiomatization fv_expression :: "'a expression \<Rightarrow> string set" where
   fv_expression_def: "fv_expression (expression v e) = set (qvariable_names v)" 

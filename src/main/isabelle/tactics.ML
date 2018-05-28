@@ -67,4 +67,23 @@ end
 
 fun seq_tac_on_term i j B ctx = tac_on_term (seq_tac i j B ctx 1) ctx
 
+fun get_wp1 (prog:term) (post:term) ctxt =
+  let val goal = @{const qrhl} $ Var(("pre",0),@{typ "predicate expression"}) $ 
+                      prog $ @{term "[]::program list"} $ post |> HOLogic.mk_Trueprop
+      fun tac {context,prems=_} = resolve_tac context @{thms wp1_assign} 1
+      val thm = Goal.prove ctxt [] [] goal tac
+      val prop = Thm.prop_of thm
+      val pre = case HOLogic.dest_Trueprop prop of
+        Const(@{const_name qrhl},_) $ pre $ _ $ _ $ _ => pre
+        | _ => error "internal error"
+  in
+    (pre,thm)
+  end
+
+val _ =
+ (get_wp1 @{term "[assign x e]"} @{term "post :: predicate expression"} @{context})
+|> fst |> Thm.cterm_of @{context}
+
+|> @{print}
+
 end

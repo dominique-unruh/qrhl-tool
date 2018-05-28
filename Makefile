@@ -5,7 +5,7 @@ qrhl.zip : target/universal/qrhl-$(VERSION).zip
 	cp $< $@
 
 upload :
-	make -C .. upload-tool
+	make -C .. upload
 
 target/universal/qrhl-$(VERSION).zip : build.sbt $(SOURCES)
 	sbt universal:packageBin
