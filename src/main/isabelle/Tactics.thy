@@ -15,11 +15,28 @@ lemma wp1_assign:
   shows "qrhl A [assign x e] [] B"
   sorry
 
+lemma wp1_sample:
+  fixes A B x e
+  defines "A \<equiv> undefined" (* TODO *)
+  shows "qrhl A [sample x e] [] B"
+  sorry
+
 ML_file "tactics.ML"
 
 method_setup seq = {*
   Scan.lift Parse.nat -- Scan.lift Parse.nat -- Scan.lift Parse.term >> (fn ((i,j),B) => fn ctx =>
     SIMPLE_METHOD (Tactics.seq_tac i j (Encoding.read_predicate ctx B) ctx 1))
 *}
+
+(* ML {* val t = Unsynchronized.ref @{thm refl} *} *)
+
+lemma True and "qrhl D [s1,assign x e] [t1,t2,t3] B"
+   apply -
+  using [[method_error]]
+  apply (tactic \<open>Tactics.wp1_tac @{context} 2\<close>)
+(*   apply (tactic \<open>Tactics.seq_tac ~2 ~1 (Var(("xxx",0),@{typ "predicate expression"})) @{context} 2\<close>)
+  apply (tactic \<open>Tactics.seq_tac 0 0 (Var(("xxx",0),@{typ "predicate expression"})) @{context} 2\<close>)
+  apply (tactic \<open>resolve_tac @{context} [Tactics.get_wp1 @{term "assign x e"} @{term B} @{context} |> #2] 3\<close>) *)
+  oops
 
 end

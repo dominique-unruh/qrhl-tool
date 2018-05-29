@@ -25,53 +25,79 @@ fun error_tac msg ctx = if Config.get ctx method_error
   then K (raise ERROR(msg ())) else K Seq.empty
 fun error_method msg = CONTEXT_METHOD (K (error_ctac msg))
 
-(* is_list l i returns true if l is an explicit list of length >= i.
+(* is_list l i returns true if l is an explicit partial list of length >= i.
 Formally, if l is of the form "x1#x2#x3#...#xi#y" *)
 fun is_list l n = if n<=0 then true
   else case l of Const(@{const_name Cons},_) $ _ $ l => is_list l (n-1)
                | _ => false
-      
 
-fun seq_tac_checks i j goal = 
-  let val prop = Logic.strip_imp_concl goal in
-  case prop of
-    Const(@{const_name Trueprop},_) $ (Const(@{const_name qrhl},_) $ _ $ p1 $ p2 $ _) => 
-      if not (is_list p1 i) then SOME (fn _ => "Left program must consist of "^string_of_int i^" statements")
-      else if not (is_list p2 j) then SOME (fn _ => "Right program must consist of "^string_of_int j^" statements")
-      else NONE
-    | _ => SOME (K "Subgoal is not a qRHL judgement")
-  end
+(* is_list l i returns true if l is an explicit list of length >= i.
+Formally, if l is of the form "[x1,x2,x3,...,xi,...]" *)
+fun is_complete_list (Const(@{const_name Nil},_)) n = n <= 0
+  | is_complete_list (Const(@{const_name Cons},_) $ _ $ tl) n = is_complete_list tl (n-1)
+  | is_complete_list _ _ = false
 
-fun seq_tac_checks_hard i j =
+exception TAC_CHECK of unit -> string
+
+
+(* fun seq_tac_checks_hard i j =
   if i < 0 then raise ERROR ("seq_tac: First argument must be nonnegative")
   else if j < 0 then raise ERROR ("seq_tac: Second argument must be nonnegative")
-  else ()
+  else () *)
 
-fun seq_tac i j B ctx = 
-  (seq_tac_checks_hard i j;
-  SUBGOAL (fn (goal,n) => case seq_tac_checks i j goal of
-    SOME msg => error_tac (fn _ => "seq_tac: "^msg()) ctx
-  | NONE => let val rule = @{thm seq} OF [take_n_thm ctx i, take_n_thm ctx j]
-            val rule = infer_instantiate ctx [(("B",0), Thm.cterm_of ctx B)] rule
-            in
-              resolve_tac ctx [rule] n
-            end))
+val dummy_term = @{const Pure.prop} $ (@{const Pure.term(prop)} $ @{const Pure.dummy_pattern(prop)})
+
+fun SUBGOAL_with_check ctxt check tac i st = 
+  if Thm.prop_of st = dummy_term then no_tac st else
+  if Thm.nprems_of st < i then error_tac (fn _ => "No subgoal number "^string_of_int i^" (only "^string_of_int (Thm.nprems_of st)^" subgoals)") ctxt st else
+  SUBGOAL (fn (goal,n) =>
+  case (check goal; NONE) handle TAC_CHECK msg => SOME msg of
+    NONE => tac (goal,n)
+  | SOME msg => error_tac msg ctxt) i st
+)
+
+fun seq_tac_checks i j goal : unit = 
+  let val prop = Logic.strip_imp_concl goal in
+  case prop of
+    Const(@{const_name Trueprop},_) $ (Const(@{const_name qrhl},_) $ _ $ p1 $ p2 $ _) => (
+    (* Check i *)
+    if i >= 0 andalso not (is_list p1 i) then raise TAC_CHECK (fn _ => "Left program must consist of \<ge>"^string_of_int i^" statements") else ();
+    if i < 0 andalso not (is_complete_list p1 (~i-1)) then raise TAC_CHECK (fn _ => "Left program must consist of \<ge>"^string_of_int (~i-1)^" statements") else ();
+
+    (* Check j *)
+    if j >= 0 andalso not (is_list p2 j) then raise TAC_CHECK (fn _ => "Right program must consist of \<ge>"^string_of_int j^" statements") else ();
+    if j < 0 andalso not (is_complete_list p2 (~j-1)) then raise TAC_CHECK (fn _ => "Right program must consist of \<ge>"^string_of_int (~j-1)^" statements") else ();
+  ())
+  | _ => raise TAC_CHECK (K "Subgoal is not a qRHL judgement")
+  end
+
+fun seq_tac i j B ctxt = SUBGOAL_with_check ctxt (seq_tac_checks i j) (fn (goal,n) => 
+    let val (p1,p2) = case Logic.strip_imp_concl goal |> HOLogic.dest_Trueprop of 
+            Const(@{const_name qrhl},_) $ _ $ p1 $ p2 $ _ => (p1,p2)
+            | _ => raise Match
+        val i = if i>=0 then i else length (HOLogic.dest_list p1) + i + 1
+        val j = if j>=0 then j else length (HOLogic.dest_list p2) + j + 1
+        val rule = @{thm seq} OF [take_n_thm ctxt i, take_n_thm ctxt j]
+        val rule = infer_instantiate ctxt [(("B",0), Thm.cterm_of ctxt B)] rule
+    in
+      resolve_tac ctxt [rule] n
+    end)
+
 
 fun tac_on_term tac ctx t =
-let val goal = Goal.init (Thm.cterm_of ctx (HOLogic.mk_Trueprop t))
-in
-case Seq.pull (tac goal) of
-    NONE => NONE
-  | SOME (goal',_) => SOME (Thm.prems_of goal' |> map HOLogic.dest_Trueprop)
-end
+  let val goal = Goal.init (Thm.cterm_of ctx (HOLogic.mk_Trueprop t))
+  in
+  case Seq.pull (tac goal) of
+      NONE => NONE
+    | SOME (goal',_) => SOME (Thm.prems_of goal' |> map HOLogic.dest_Trueprop)
+  end
 
 fun seq_tac_on_term i j B ctx = tac_on_term (seq_tac i j B ctx 1) ctx
 
-fun get_wp1 (prog:term) (post:term) ctxt =
+fun get_wp1_tac tac (prog:term) (post:term) ctxt =
   let val goal = @{const qrhl} $ Var(("pre",0),@{typ "predicate expression"}) $ 
-                      prog $ @{term "[]::program list"} $ post |> HOLogic.mk_Trueprop
-      fun tac {context,prems=_} = resolve_tac context @{thms wp1_assign} 1
-      val thm = Goal.prove ctxt [] [] goal tac
+                      HOLogic.mk_list @{typ program} [prog] $ @{term "[]::program list"} $ post |> HOLogic.mk_Trueprop                    
+      val thm = Goal.prove ctxt [] [] goal (fn {context,...} => tac context)
       val prop = Thm.prop_of thm
       val pre = case HOLogic.dest_Trueprop prop of
         Const(@{const_name qrhl},_) $ pre $ _ $ _ $ _ => pre
@@ -80,10 +106,40 @@ fun get_wp1 (prog:term) (post:term) ctxt =
     (pre,thm)
   end
 
-val _ =
- (get_wp1 @{term "[assign x e]"} @{term "post :: predicate expression"} @{context})
-|> fst |> Thm.cterm_of @{context}
+fun get_wp1_rule rule = get_wp1_tac (fn ctxt => resolve_tac ctxt rule 1)
 
+val get_wp1_assign = get_wp1_rule @{thms wp1_assign}
+val get_wp1_sample = get_wp1_rule @{thms wp1_sample}
+
+fun get_wp1 prog post ctxt =
+  case prog of
+    Const(@{const_name assign},_) $ _ $ _ => get_wp1_assign prog post ctxt
+  | Const(@{const_name sample},_) $ _ $ _ => get_wp1_sample prog post ctxt
+  | _ => raise TERM ("get_wp1: Expected explicit single statement",[prog])
+
+(* fun wp1_tac ctxt = seq_tac -2 -1
+SUBGOAL (fn (goal,i) => let
+  val 
+) *)
+
+fun dest_qrhl_goal t = case Logic.strip_imp_concl t |> HOLogic.dest_Trueprop of 
+  Const(@{const_name qrhl},_) $ A $ p1 $ p2 $ B => (A,p1,p2,B)
+| _ => raise Match
+
+fun wp1_tac ctxt i = seq_tac ~2 ~1 (Var(("precondition",0),@{typ "predicate expression"})) ctxt i THEN
+  SUBGOAL (fn (goal,n) =>
+    let val (_,p1,_,B) = dest_qrhl_goal goal
+        val stmt = HOLogic.dest_list p1 |> the_single
+        val (_,thm) = get_wp1 stmt B ctxt
+    in
+      resolve_tac ctxt [thm] n
+    end
+  ) (i+1)
+  
+
+val _ =
+ get_wp1 @{term "assign x e"} @{term "post :: predicate expression"} @{context}
+|> fst |> Thm.cterm_of @{context}
 |> @{print}
 
 end
