@@ -4,11 +4,32 @@ begin
 
 (* TODO: should rename "qvariables" to "variables" *)
 
+type_synonym 'a cvariable = "'a qvariable"
+
 typedecl 'a expression
 axiomatization
   expression :: "'a qvariables \<Rightarrow> ('a\<Rightarrow>'b) \<Rightarrow> 'b expression"
 
-type_synonym 'a cvariable = "'a qvariable"
+abbreviation "const_expression z \<equiv> expression \<lbrakk>\<rbrakk> (\<lambda>_. z)"
+
+axiomatization map_expression :: "(('z \<Rightarrow> 'e) \<Rightarrow> 'f) \<Rightarrow> ('z \<Rightarrow> 'e expression) \<Rightarrow> 'f expression" where 
+  map_expression_def[simp]: "map_expression f (\<lambda>z. expression Q (e z)) = expression Q (\<lambda>a. f (\<lambda>z. e z a))"
+for Q :: "'a qvariables" and e :: "'z \<Rightarrow> 'a \<Rightarrow> 'e" and f :: "('z \<Rightarrow> 'e) \<Rightarrow> 'f"
+
+axiomatization pair_expression where
+  pair_expression_def[simp]: "pair_expression (expression Q1 e1) (expression Q2 e2)
+    = expression (qvariable_concat Q1 Q2) (\<lambda>(z1,z2). (e1 z1, e2 z2))"
+
+definition map_expression2' :: "('e1 \<Rightarrow> ('z \<Rightarrow> 'e2) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('z \<Rightarrow> 'e2 expression) \<Rightarrow> 'f expression" where
+  "map_expression2' f e1 e2 = map_expression (\<lambda>x12. let x1 = fst (x12 undefined) in
+                                                    let x2 = \<lambda>z. snd (x12 z) in
+                                                    f x1 x2) (\<lambda>z. pair_expression e1 (e2 z))"
+
+lemma map_expression2'[simp]:
+  "map_expression2' f (expression Q1 e1) (\<lambda>z. expression Q2 (e2 z))
+     = expression (qvariable_concat Q1 Q2) (\<lambda>(x1,x2). f (e1 x1) (\<lambda>z. e2 z x2))"
+  unfolding map_expression2'_def pair_expression_def map_expression_def
+  apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
 
 
 axiomatization index_var :: "bool \<Rightarrow> 'a qvariable \<Rightarrow> 'a qvariable" where
@@ -17,13 +38,13 @@ axiomatization index_var :: "bool \<Rightarrow> 'a qvariable \<Rightarrow> 'a qv
 
 axiomatization index_vars :: "bool \<Rightarrow> 'a qvariables \<Rightarrow> 'a qvariables"
 axiomatization where
-  index_vars_singleton: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>" and
-  index_vars_concat: "index_vars left (qvariable_concat Q R) = qvariable_concat (index_vars left Q) (index_vars left R)" and
-  index_vars_unit: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
+  index_vars_singleton[simp]: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>" and
+  index_vars_concat[simp]: "index_vars left (qvariable_concat Q R) = qvariable_concat (index_vars left Q) (index_vars left R)" and
+  index_vars_unit[simp]: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
 for x :: "'a qvariable" and Q :: "'b qvariables" and R :: "'c qvariables"
 
 axiomatization index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression" where
-  index_expression_def: "index_expression left (expression Q e) = expression (index_vars left Q) e"
+  index_expression_def[simp]: "index_expression left (expression Q e) = expression (index_vars left Q) e"
 for Q :: "'b qvariables" and e :: "'b \<Rightarrow> 'a"
 
 typedecl substitution

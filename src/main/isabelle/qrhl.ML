@@ -620,4 +620,44 @@ fun is_classical_variable ctx name = case Symtab.lookup (VarTypes.get ctx) name 
   SOME Classical => true
   | _ => false
 
+fun declare_variable_lthy name vartype = 
+  Local_Theory.declaration {pervasive=true, syntax=false} (fn _ => 
+    Context.mapping I (
+      VarTypes.map (Symtab.insert op= (name,vartype)) #>
+      VarTypes.map (Symtab.insert op= (name^"1",vartype)) #>
+      VarTypes.map (Symtab.insert op= (name^"2",vartype))))
+
+local
+fun varname_assumption bind T = HOLogic.mk_eq 
+  (Const(@{const_name variable_name}, mk_qvariableT T --> @{typ string}) $ 
+       Free(Binding.name_of bind ^ "_var", mk_qvariableT T),
+   HOLogic.mk_string (Binding.name_of bind)) |> HOLogic.mk_Trueprop
+in
+fun variables vars gthy = 
+let fun elems0 idx = [
+      Element.Fixes (map (fn (_,bind,T) => (Binding.suffix_name idx bind, SOME T, Mixfix.NoSyn)) vars),
+      Element.Fixes (map (fn (_,bind,T) => (Binding.suffix_name (idx^"_var") bind, SOME (mk_qvariableT T), Mixfix.NoSyn)) vars),
+      Element.Assumes (map (fn (_,bind,T) => ((Binding.suffix_name (idx^"_varname") bind, @{attributes [simp]}),
+                             [(varname_assumption (Binding.suffix_name idx bind) T, [])])) vars)]
+    val elems = map elems0 ["", "1", "2"] |> List.concat
+    (* val (_,lthy) = Bundle.context [] elems gthy *)
+    val (_,lthy) = Expression.add_locale (Binding.name ("variables_"^string_of_int(serial()))) Binding.empty ([],[]) elems gthy
+    val lthy2 = fold (fn (cq,bind,_) => fn lthy' => declare_variable_lthy (Binding.name_of bind) cq lthy') vars lthy
+in lthy2 end
+end
+
+fun variables_cmd vars thy = 
+  let (* val ctxt = Context.proof_of gthy *)
+      val vars' = map (fn (a,b,c) => (a,b,Syntax.read_typ_global thy c)) vars
+  in
+    variables vars' thy
+  end
+
+val parse_classical_quantum = (Parse.reserved "classical" >> K Classical) || (Parse.reserved "quantum" >> K Quantum)
+val _ =
+  Outer_Syntax.command @{command_keyword variables} "declare quantum/classical variables"
+    ((Parse.and_list (parse_classical_quantum -- Args.binding --| Parse.$$$ "::" -- Parse.typ >> (fn ((a,b),c) => (a,b,c))) >> 
+      (fn vars => Toplevel.begin_local_theory true (variables_cmd vars)))
+        --| Parse.begin)
+
 end

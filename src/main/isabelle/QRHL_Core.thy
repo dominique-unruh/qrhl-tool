@@ -1,5 +1,6 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators
+  keywords "variables" :: thy_decl_block
 begin
 
 section \<open>Miscellaneous\<close>

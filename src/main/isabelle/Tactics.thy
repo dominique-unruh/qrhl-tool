@@ -9,6 +9,10 @@ lemma seq:
   shows "qrhl A c d C"
   sorry
 
+lemma wp1_skip:
+  shows "qrhl B [] [] B"
+  sorry
+
 lemma wp1_assign:
   fixes A B x e
   defines "A \<equiv> subst_expression (substitute1 (index_var True x) (index_expression True e)) B"
@@ -17,8 +21,15 @@ lemma wp1_assign:
 
 lemma wp1_sample:
   fixes A B x e
-  defines "A \<equiv> undefined" (* TODO *)
+  defines "e' \<equiv> index_expression True e"
+  defines "B' z \<equiv> subst_expression (substitute1 (index_var True x) (const_expression z)) B"
+  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
   shows "qrhl A [sample x e] [] B"
+  sorry
+
+lemma wp1_block:
+  assumes "qrhl A p [] B"
+  shows "qrhl A [block p] [] B"
   sorry
 
 ML_file "tactics.ML"
@@ -30,13 +41,9 @@ method_setup seq = {*
 
 (* ML {* val t = Unsynchronized.ref @{thm refl} *} *)
 
-lemma True and "qrhl D [s1,assign x e] [t1,t2,t3] B"
-   apply -
-  using [[method_error]]
-  apply (tactic \<open>Tactics.wp1_tac @{context} 2\<close>)
+
 (*   apply (tactic \<open>Tactics.seq_tac ~2 ~1 (Var(("xxx",0),@{typ "predicate expression"})) @{context} 2\<close>)
   apply (tactic \<open>Tactics.seq_tac 0 0 (Var(("xxx",0),@{typ "predicate expression"})) @{context} 2\<close>)
   apply (tactic \<open>resolve_tac @{context} [Tactics.get_wp1 @{term "assign x e"} @{term B} @{context} |> #2] 3\<close>) *)
-  oops
 
 end

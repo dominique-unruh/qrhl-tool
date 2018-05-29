@@ -1,62 +1,19 @@
 theory Test
-  imports QRHL
-  keywords "variables" :: thy_decl_block
-  and "variables2" :: thy_decl_block
+  imports Tactics
 begin
 
 
 ML {*
-local 
-fun declare_variable ctx v T typ =
-  let val ctx = QRHL.VarTypes.map (Symtab.insert op= (v,typ)) ctx
-      val ctx = QRHL.VarTypes.map (Symtab.insert op= (v^"1",typ)) ctx
-      val ctx = QRHL.VarTypes.map (Symtab.insert op= (v^"2",typ)) ctx
-  in
-    ctx
-  end
-
-in
-
-fun decl_var_hack name typ vartype = 
-  Local_Theory.declaration {pervasive=true, syntax=false} (fn morph => Context.mapping (fn thy => thy)
-   (fn ctx => (declare_variable ctx name (Morphism.typ morph typ) vartype)))
-
-end
 *}
 
 ML {*
-fun varname_assumption bind T = HOLogic.mk_eq 
-  (Const(@{const_name variable_name}, QRHL.mk_qvariableT T --> @{typ string}) $ 
-       Free(Binding.name_of bind ^ "_var", QRHL.mk_qvariableT T),
-   HOLogic.mk_string (Binding.name_of bind)) |> HOLogic.mk_Trueprop
-fun variables vars gthy = 
-let fun elems0 idx = [
-      Element.Fixes (map (fn (_,bind,T) => (Binding.suffix_name idx bind, SOME T, Mixfix.NoSyn)) vars),
-      Element.Fixes (map (fn (_,bind,T) => (Binding.suffix_name (idx^"_var") bind, SOME (QRHL.mk_qvariableT T), Mixfix.NoSyn)) vars),
-      Element.Assumes (map (fn (_,bind,T) => ((Binding.suffix_name (idx^"_varname") bind, @{attributes [simp]}),
-                             [(varname_assumption (Binding.suffix_name idx bind) T, [])])) vars)]
-    val elems = map elems0 ["", "1", "2"] |> List.concat
-    val (_,lthy) = Bundle.context [] elems gthy
-    val lthy2 = fold (fn (cq,bind,T) => fn lthy' => decl_var_hack (Binding.name_of bind) T cq lthy') vars lthy
-in lthy2 end
 *}
 
 ML {*
-fun variables_cmd vars gthy = 
-  let val ctxt = Context.proof_of gthy
-      val vars' = map (fn (a,b,c) => (a,b,Syntax.read_typ ctxt c)) vars
-  in
-    variables vars' gthy
-  end
 *}
 
+
 ML {*
-val parse_classical_quantum = (Parse.reserved "classical" >> K QRHL.Classical) || (Parse.reserved "quantum" >> K QRHL.Quantum)
-val _ =
-  Outer_Syntax.command @{command_keyword variables} "declare quantum/classical variables"
-    ((Parse.and_list (parse_classical_quantum -- Args.binding --| Parse.$$$ "::" -- Parse.typ >> (fn ((a,b),c) => (a,b,c))) >> 
-      (fn vars => Toplevel.open_target (variables_cmd vars)))
-        --| Parse.begin)
 *}
 
 (*ML {*
@@ -69,7 +26,7 @@ val _ =
   )))
 *}*)
 
-ML {*
+(* ML {*
 fun variables2 vars gthy =
 let val lthy = Bundle.context [] [] gthy |> #2
     val lthy2 = fold (fn (cq,bind,T) => fn lthy' => QRHL.declare_variable lthy' bind T cq) vars lthy
@@ -93,8 +50,8 @@ val _ =
       (fn vars => Toplevel.open_target (variables2_cmd vars)))
         --| Parse.begin)
 *}
-
-
+ *)
+(* 
 variables2 classical a :: int and quantum q :: nat begin
 term a_var
 term a
@@ -105,28 +62,76 @@ lemma l: "variable_name a_var = ''a''" by simp
 
 end
 
+lemma l: "variable_name a_var = ''a''" by simp
+ *)
+
+lemma tmp3[simp]: 
+  fixes e :: "('a*'b)*'c \<Rightarrow> 'e"
+  defines "f == (\<lambda>(a,b,c). e ((a,b),c))"
+  shows "expression (qvariable_concat (qvariable_concat S Q) R) e
+    = expression (qvariable_concat S (qvariable_concat Q R)) f"
+  sorry
+
+lemma tmp4[simp]: 
+  fixes e :: "'a*unit \<Rightarrow> 'e"
+  (* defines "f == (\<lambda>(a,b,c). e ((a,b),c))" *)
+  shows "expression (qvariable_concat Q \<lbrakk>\<rbrakk>) e = expression Q (\<lambda>a. e (a,()))"
+  sorry
+
+(* context begin
+
+lemma xxx[simp]: "1=2" sorry
+
+declare[[method_error]]
+
+local_setup {*
+decl_var_hack "x" @{typ int} QRHL.Classical
+*}
+
+lemma "1=1" by auto
+definition "q=1" 
+
 ML {*
-  Thm.cterm_of @{context} t1;
-  Thm.cterm_of @{context} t2
+QRHL.VarTypes.get @{context} |> Symtab.dest
 *}
 
-lemma l: "variable_name a_var \<equiv> ''a''" sorry
+end
 
-lemma "a_var=u" apply simp oops
-ML {* 
-@{thms a_varname}
+ML {*
+QRHL.VarTypes.get @{context} |> Symtab.dest
 *}
-thm a_var
-ML Variable.declare_constraints
+
+lemma "1=2" by simp
+ML {* Config.get @{context} Tactics.method_error *}
+
+ML {* Config.get @{context} Tactics.method_error *}
+
+ML Config.declare
+ *)
 
 variables
-  quantum a :: int and
+  classical x :: int and
+  classical a :: int and
   classical b :: int and 
-  classical c :: int begin
+  classical c :: int
+begin
 
-ML 1
 
+lemma tmp[simp]: "subst_expression (substitute1 v (const_expression z)) (expression \<lbrakk>v\<rbrakk> f)
+= const_expression (f z)" sorry
+
+lemma tmp2[simp]: "index_var True x_var = x1_var" sorry
+
+
+lemma "qrhl D [s1,sample x_var Expr[uniform {0..x}] ] [t1,t2,t3] Expr[ Cla[x1\<ge>0] ]"
+  using [[method_error]]
+  apply (tactic \<open>Tactics.wp1_tac @{context} 1\<close>)
+  apply simp
+  oops
+
+term a_var
 definition "p1 = [ assign a_var Expr[1], assign b_var Expr[2] ]"
+term a_var
 definition "p2 = [ assign a_var Expr[3], assign b_var Expr[4] ]"
 
 ML {* Tactics.take_n_thm @{context} 2 *}
@@ -139,9 +144,17 @@ lemma lem: "QRHL {Cla[True]} p1 p2 {Cla[True]}"
   apply (seq 1 1 "Cla[a1=b1]")
   sorry
 
+ML {*
+QRHL.VarTypes.get @{context} |> Symtab.dest
+*}
+
+lemma xx[simp]: "1=2" sorry
+
 end
 
-variables classical a :: int and classical b :: int begin
-thm lem
+ML {*
+QRHL.VarTypes.get @{context} |> Symtab.dest
+*}
+
 
 end

@@ -18,11 +18,17 @@ fun take_n_thm ctxt n : thm =
     thm2
   end
 
+structure MethodErrorStack = Proof_Data (
+  type T = (unit -> string) list
+  fun init _ = []
+)
+fun method_error_push msg = MethodErrorStack.map (fn st => msg::st)
 val method_error = Attrib.setup_config_bool @{binding method_error} (K false)
+fun msg_to_string ctxt msg = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt))
 fun error_ctac msg (ctx,_) = if Config.get ctx method_error
-  then Seq.single (Seq.Error msg) else Seq.empty
+  then Seq.single (Seq.Error (fn _ => msg_to_string ctx msg)) else Seq.empty
 fun error_tac msg ctx = if Config.get ctx method_error
-  then K (raise ERROR(msg ())) else K Seq.empty
+  then K (raise ERROR(msg_to_string ctx msg)) else K Seq.empty
 fun error_method msg = CONTEXT_METHOD (K (error_ctac msg))
 
 (* is_list l i returns true if l is an explicit partial list of length >= i.
@@ -54,7 +60,7 @@ fun SUBGOAL_with_check ctxt check tac i st =
   case (check goal; NONE) handle TAC_CHECK msg => SOME msg of
     NONE => tac (goal,n)
   | SOME msg => error_tac msg ctxt) i st
-)
+
 
 fun seq_tac_checks i j goal : unit = 
   let val prop = Logic.strip_imp_concl goal in
@@ -94,6 +100,29 @@ fun tac_on_term tac ctx t =
 
 fun seq_tac_on_term i j B ctx = tac_on_term (seq_tac i j B ctx 1) ctx
 
+(* fun get_wp1_rule rule = get_wp1_tac (fn ctxt => resolve_tac ctxt rule 1)
+
+val get_wp1_assign = get_wp1_rule @{thms wp1_assign}
+val get_wp1_sample = get_wp1_rule @{thms wp1_sample} *)
+
+
+fun dest_qrhl_goal t = case Logic.strip_imp_concl t |> HOLogic.dest_Trueprop of 
+  Const(@{const_name qrhl},_) $ A $ p1 $ p2 $ B => (A,p1,p2,B)
+| _ => raise Match
+
+fun wp1_tac ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
+  val (_,p1,_,_) = dest_qrhl_goal goal
+  val stmts = HOLogic.dest_list p1
+  in case stmts of
+    [Const(@{const_name assign},_) $ _ $ _] => resolve_tac ctxt @{thms wp1_assign} n
+  | [Const(@{const_name sample},_) $ _ $ _] => resolve_tac ctxt @{thms wp1_sample} n
+  | [Const(@{const_name block},_) $ _] => resolve_tac ctxt @{thms wp1_block} n THEN wp1_tac ctxt n
+  | [] => resolve_tac ctxt @{thms wp1_skip} n
+  | _::_::_ => error_tac (K "lists of statements not yet supported") ctxt
+  | [_] => error_tac (fn _ => "Statement must be one of assign/sample/block, not '"^Syntax.string_of_term ctxt (the_single stmts)^"'") ctxt
+  end
+)
+
 fun get_wp1_tac tac (prog:term) (post:term) ctxt =
   let val goal = @{const qrhl} $ Var(("pre",0),@{typ "predicate expression"}) $ 
                       HOLogic.mk_list @{typ program} [prog] $ @{term "[]::program list"} $ post |> HOLogic.mk_Trueprop                    
@@ -106,25 +135,20 @@ fun get_wp1_tac tac (prog:term) (post:term) ctxt =
     (pre,thm)
   end
 
-fun get_wp1_rule rule = get_wp1_tac (fn ctxt => resolve_tac ctxt rule 1)
+val get_wp1 = get_wp1_tac (fn ctxt => wp1_tac ctxt 1)
 
-val get_wp1_assign = get_wp1_rule @{thms wp1_assign}
-val get_wp1_sample = get_wp1_rule @{thms wp1_sample}
-
+(*
 fun get_wp1 prog post ctxt =
   case prog of
     Const(@{const_name assign},_) $ _ $ _ => get_wp1_assign prog post ctxt
   | Const(@{const_name sample},_) $ _ $ _ => get_wp1_sample prog post ctxt
   | _ => raise TERM ("get_wp1: Expected explicit single statement",[prog])
+*)
 
 (* fun wp1_tac ctxt = seq_tac -2 -1
 SUBGOAL (fn (goal,i) => let
   val 
 ) *)
-
-fun dest_qrhl_goal t = case Logic.strip_imp_concl t |> HOLogic.dest_Trueprop of 
-  Const(@{const_name qrhl},_) $ A $ p1 $ p2 $ B => (A,p1,p2,B)
-| _ => raise Match
 
 fun wp1_tac ctxt i = seq_tac ~2 ~1 (Var(("precondition",0),@{typ "predicate expression"})) ctxt i THEN
   SUBGOAL (fn (goal,n) =>
@@ -136,9 +160,9 @@ fun wp1_tac ctxt i = seq_tac ~2 ~1 (Var(("precondition",0),@{typ "predicate expr
     end
   ) (i+1)
   
-
+val error_context = @{context} |> Config.put method_error true |> method_error_push (K "While testing") |> method_error_push (K "And more")
 val _ =
- get_wp1 @{term "assign x e"} @{term "post :: predicate expression"} @{context}
+ get_wp1 @{term "assign x e :: program"} @{term "post :: predicate expression"} error_context
 |> fst |> Thm.cterm_of @{context}
 |> @{print}
 
