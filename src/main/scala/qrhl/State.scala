@@ -305,9 +305,9 @@ class State private (val environment: Environment,
 
   def declareVariable(name: String, typ: pure.Typ, quantum: Boolean = false): State = {
     val newEnv = environment.declareVariable(name, typ, quantum = quantum)
-      .declareAmbientVariable(name+"_var", typ)
-      .declareAmbientVariable(Variable.index1(name)+"_var", typ)
-      .declareAmbientVariable(Variable.index2(name)+"_var", typ)
+      .declareAmbientVariable("var_"+name, typ)
+      .declareAmbientVariable("var_"+Variable.index1(name), typ)
+      .declareAmbientVariable("var_"+Variable.index2(name), typ)
     if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = _isabelle.get
 //    val typ1 = typ.isabelleTyp

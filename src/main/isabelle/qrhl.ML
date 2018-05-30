@@ -582,14 +582,16 @@ structure VarTypes = Proof_Data
 )
 
 
-(* TODO: does not work on local theories *)
-fun addQVariableNameAssumption cq bind T ctxt =
+fun varname_assumption cq bind T = 
   let val qT = mk_qvariableT T
       val name = Binding.name_of bind
-      val name' = if cq=Classical then name^"_var" else name
+      val name' = if cq=Classical then "var_"^name else name
       val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name',qT)
       val rhs = HOLogic.mk_string name
-      val assm = Logic.mk_equals (lhs,rhs)
+  in HOLogic.mk_eq (lhs,rhs) |> HOLogic.mk_Trueprop end
+
+fun addQVariableNameAssumption cq bind T ctxt =
+  let val assm = varname_assumption cq bind T
       val ctxt1 = Variable.declare_term assm ctxt
       val (_,ctxt2) = Proof_Context.add_assms Assumption.assume_export
                   [((Binding.suffix_name "_varname" bind,[Simplifier.simp_add]), [(assm,[])])] ctxt1
@@ -599,9 +601,9 @@ fun addQVariableNameAssumption cq bind T ctxt =
 
 fun declare_variable ctx bind T cq =
   let val qT = mk_qvariableT T
-      val v = Binding.name_of bind (* TODO: use binding when fixing variables *)
+      val v = Binding.name_of bind
       val vars = if cq=Classical then [(bind,T),(Binding.suffix_name "1" bind,T),(Binding.suffix_name "2" bind,T),
-                                       (Binding.suffix_name "_var" bind,qT),(Binding.suffix_name "1_var" bind,qT),(Binding.suffix_name "2_var" bind,qT)]
+                                       (bind |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "1" |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "2" |> Binding.prefix_name "var_",qT)]
                                   else [(bind,qT),(Binding.suffix_name "1" bind,qT),(Binding.suffix_name "2" bind,qT)]
       val (_,ctx) = Variable.add_fixes_binding (map fst vars) ctx
       val ctx = fold (fn (v,T) => Variable.declare_term (Free(Binding.name_of v,T))) vars ctx
@@ -627,24 +629,17 @@ fun declare_variable_lthy name vartype =
       VarTypes.map (Symtab.insert op= (name^"1",vartype)) #>
       VarTypes.map (Symtab.insert op= (name^"2",vartype))))
 
-local
-fun varname_assumption bind T = HOLogic.mk_eq 
-  (Const(@{const_name variable_name}, mk_qvariableT T --> @{typ string}) $ 
-       Free(Binding.name_of bind ^ "_var", mk_qvariableT T),
-   HOLogic.mk_string (Binding.name_of bind)) |> HOLogic.mk_Trueprop
-in
 fun variables vars gthy = 
 let fun elems0 idx = [
-      Element.Fixes (map (fn (_,bind,T) => (Binding.suffix_name idx bind, SOME T, Mixfix.NoSyn)) vars),
-      Element.Fixes (map (fn (_,bind,T) => (Binding.suffix_name (idx^"_var") bind, SOME (mk_qvariableT T), Mixfix.NoSyn)) vars),
-      Element.Assumes (map (fn (_,bind,T) => ((Binding.suffix_name (idx^"_varname") bind, @{attributes [simp]}),
-                             [(varname_assumption (Binding.suffix_name idx bind) T, [])])) vars)]
+      Element.Fixes (map (fn (_,bind,T) => (bind |> Binding.suffix_name idx, SOME T, Mixfix.NoSyn)) vars),
+      Element.Fixes (map (fn (_,bind,T) => (bind |> Binding.prefix_name "var_" |> Binding.suffix_name idx, SOME (mk_qvariableT T), Mixfix.NoSyn)) vars),
+      Element.Assumes (map (fn (cq,bind,T) => ((Binding.suffix_name (idx^"_varname") bind, @{attributes [simp]}),
+                             [(varname_assumption cq (Binding.suffix_name idx bind) T, [])])) vars)]
     val elems = map elems0 ["", "1", "2"] |> List.concat
     (* val (_,lthy) = Bundle.context [] elems gthy *)
     val (_,lthy) = Expression.add_locale (Binding.name ("variables_"^string_of_int(serial()))) Binding.empty ([],[]) elems gthy
     val lthy2 = fold (fn (cq,bind,_) => fn lthy' => declare_variable_lthy (Binding.name_of bind) cq lthy') vars lthy
 in lthy2 end
-end
 
 fun variables_cmd vars thy = 
   let (* val ctxt = Context.proof_of gthy *)

@@ -33,8 +33,19 @@ lemma map_expression2'[simp]:
 
 
 axiomatization index_var :: "bool \<Rightarrow> 'a qvariable \<Rightarrow> 'a qvariable" where
-  index_var1[simp]: "variable_name (index_var True x) = variable_name x @ ''1''" and
-  index_var2[simp]: "variable_name (index_var False x) = variable_name x @ ''2''"
+  index_var1: "y = index_var True x \<longleftrightarrow> variable_name y = variable_name x @ ''1''" and
+  index_var2: "y = index_var False x \<longleftrightarrow> variable_name y = variable_name x @ ''2''"
+
+lemma index_var1I: "variable_name y = variable_name x @ ''1'' \<Longrightarrow> index_var True x = y"
+  using index_var1 by metis
+lemma index_var2I: "variable_name y = variable_name x @ ''2'' \<Longrightarrow> index_var False x = y"
+  using index_var2 by metis
+
+lemma index_var1_simp[simp]: "variable_name (index_var True x) = variable_name x @ ''1''" 
+  using index_var1 by metis
+
+lemma index_var2_simp[simp]: "variable_name (index_var False x) = variable_name x @ ''2''"
+  using index_var2 by metis
 
 axiomatization index_vars :: "bool \<Rightarrow> 'a qvariables \<Rightarrow> 'a qvariables"
 axiomatization where

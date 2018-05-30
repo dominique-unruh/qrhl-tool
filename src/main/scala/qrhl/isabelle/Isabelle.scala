@@ -149,6 +149,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 }
 
 object Isabelle {
+  def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
+  def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
 
   private val logger = log4s.getLogger
   def mk_conj(t1: Term, t2: Term) : Term = HOLogic.conj $ t1 $ t2

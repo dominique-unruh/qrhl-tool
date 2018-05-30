@@ -36,7 +36,6 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
 object QVariable {
   def fromTerm_var(context: Isabelle.Context, x: Term): QVariable = x match {
     case Free(name,typ) =>
-//      assert(name.endsWith("_var"))
       QVariable(name, Isabelle.dest_qvariableT(typ))
     case _ => throw new java.lang.RuntimeException(f"Cannot transform $x into QVariable")
   }
@@ -58,15 +57,15 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
   override def index2: CVariable = CVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): CVariable = if (left) index1 else index2
 //  override def valueTyp: pure.Typ = typ.isabelleTyp
-  override def variableTerm: Term = Free(name+"_var",variableTyp)
+  override def variableTerm: Term = Free("var_"+name,variableTyp)
   def valueTerm: Term = Free(name,valueTyp)
 }
 
 object CVariable {
   def fromTerm_var(context: Isabelle.Context, x: Term): CVariable = x match {
     case Free(name,typ) =>
-      assert(name.endsWith("_var"))
-      CVariable(name.stripSuffix("_var"), Isabelle.dest_qvariableT(typ))
+      assert(name.startsWith("var_"))
+      CVariable(name.stripPrefix("var_"), Isabelle.dest_qvariableT(typ))
     case _ => throw new RuntimeException("Illformed variable term")
   }
 }
