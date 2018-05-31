@@ -41,7 +41,7 @@ fun term_to_expression ctx t =
       val e = HOLogic.tupled_lambda pattern t |> @{print}
       val T = fastype_of t
   in
-    Const(@{const_name expression}, QRHL.mk_qvariablesT varsT --> (varsT --> T) --> mk_expressionT T)
+    Const(@{const_name expression}, QRHL.mk_variablesT varsT --> (varsT --> T) --> mk_expressionT T)
       $ vars $ e
   end
 
@@ -74,7 +74,7 @@ fun term_to_expression_untyped ctx t =
       val pattern = mk_tuple_untyped (map Free frees)
       val e = tupled_lambda_untyped pattern t
   in
-    Const(@{const_name expression}, QRHL.mk_qvariablesT varsT --> (varsT --> dummyT) --> @{typ "dummy expression"})
+    Const(@{const_name expression}, QRHL.mk_variablesT varsT --> (varsT --> dummyT) --> @{typ "dummy expression"})
       $ vars $ e
   end
 

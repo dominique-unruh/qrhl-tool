@@ -1,9 +1,13 @@
 structure QRHL =
 struct
 
-fun mk_qvariablesT T = Type(@{type_name qvariables}, [T])
+fun mk_variablesT T = Type(@{type_name variables}, [T])
 fun mk_distrT T = Type(@{type_name distr}, [T])
-fun mk_qvariableT T = Type(@{type_name qvariable}, [T])
+fun mk_variableT T = Type(@{type_name variable}, [T])
+fun dest_variableT (Type(@{type_name variable}, [T])) = T
+  | dest_variableT T = raise TYPE("dest_variableT", [T], [])
+fun dest_variablesT (Type(@{type_name variables}, [T])) = T
+  | dest_variablesT T = raise TYPE("dest_variablesT", [T], [])
 fun mk_vectorT T = Type(@{type_name vector}, [T])
 fun mk_boundedT T T' = Type(@{type_name bounded}, [T,T'])
 fun dest_boundedT (Type(@{type_name bounded}, [T,T'])) = (T,T')
@@ -14,6 +18,8 @@ fun mk_measurementT T T' = Type(@{type_name measurement}, [T,T'])
 fun mk_conjs [] = @{const True}
   | mk_conjs [t] = t
   | mk_conjs (t::ts) = @{const conj} $ t $ mk_conjs ts
+fun mk_variable_name v = 
+  Const(@{const_name variable_name}, fastype_of v --> @{typ string}) $ v
 
 fun mk_INFIMUM A f = 
   let val AT = fastype_of A
@@ -29,30 +35,30 @@ fun mk_INFIMUM A f =
 fun dest_All (Const("HOL.All",_) $ Abs(_,T,body)) = (T,body)
   | dest_All t = raise TERM("dest_All",[t])
 
-fun qvariables [] = (@{const qvariable_unit},@{typ unit})
-  | qvariables [v] = 
+fun variables [] = (@{const variable_unit},@{typ unit})
+  | variables [v] = 
         let val vT = fastype_of v
-            val vT' = case vT of Type(@{type_name qvariable},[vT']) => vT' | _ => raise TYPE("expecting a qvariable",[vT],[v])
+            val vT' = case vT of Type(@{type_name variable},[vT']) => vT' | _ => raise TYPE("expecting a variable",[vT],[v])
         in
-          (Const(@{const_name qvariable_singleton}, vT --> Type(@{type_name qvariables}, [vT'])) $ v,
+          (Const(@{const_name variable_singleton}, vT --> Type(@{type_name variables}, [vT'])) $ v,
            vT')
         end
-  | qvariables (v::vs) = 
-        let val (vs',vsT) = qvariables vs
-            (* val (v',vT) = qvariables [v] *)
+  | variables (v::vs) = 
+        let val (vs',vsT) = variables vs
+            (* val (v',vT) = variables [v] *)
             val vT = fastype_of v
-            val vT' = case vT of Type(@{type_name qvariable},[vT']) => vT' | _ => raise TYPE("expecting a qvariable",[vT],[v])
+            val vT' = case vT of Type(@{type_name variable},[vT']) => vT' | _ => raise TYPE("expecting a variable",[vT],[v])
             val prodT = HOLogic.mk_prodT (vT',vsT)
         in
-          (Const(@{const_name qvariable_concat}, 
-              mk_qvariablesT vT' --> mk_qvariablesT vsT --> mk_qvariablesT prodT) $
-            (Const(@{const_name qvariable_singleton}, vT --> mk_qvariablesT vT') $ v) $ vs',
+          (Const(@{const_name variable_concat}, 
+              mk_variablesT vT' --> mk_variablesT vsT --> mk_variablesT prodT) $
+            (Const(@{const_name variable_singleton}, vT --> mk_variablesT vT') $ v) $ vs',
             prodT)
         end
   
 fun qinitWp post e Q =
-  let val (vs,vsT) = qvariables Q 
-      val qpre = Const(@{const_name space_div}, @{typ predicate} --> mk_vectorT vsT --> mk_qvariablesT vsT --> @{typ predicate}) $
+  let val (vs,vsT) = variables Q 
+      val qpre = Const(@{const_name space_div}, @{typ predicate} --> mk_vectorT vsT --> mk_variablesT vsT --> @{typ predicate}) $
                     post $ e $ vs
       val isunit = @{const classical_subspace} $ HOLogic.mk_eq 
               (Const(@{const_name norm}, mk_vectorT vsT --> @{typ real}) $ e, @{term "1::real"})
@@ -61,10 +67,10 @@ fun qinitWp post e Q =
   end
 
 fun qapplyWp post e Q =
-  let val (vs,vsT) = qvariables Q 
+  let val (vs,vsT) = variables Q 
       val unitary = @{const classical_subspace} $ 
           (Const(@{const_name isometry}, mk_bounded2T vsT --> HOLogic.boolT) $ e)
-      val e' = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"})
+      val e' = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_variablesT vsT --> @{typ "(mem2,mem2) bounded"})
                 $ e $ vs
       val im_e' = @{const applyOpSpace(mem2,mem2)} $ e' $ @{const top(predicate)}
       val adj_e' = @{const adjoint(mem2,mem2)} $ e'
@@ -78,11 +84,11 @@ fun qapplyWp post e Q =
 fun measureWp B x e Q =
   let val B_z = abstract_over(x,B)
       val (_,resT) = dest_Free x
-      val (vs,vsT) = qvariables Q
+      val (vs,vsT) = variables Q
       val measT = mk_measurementT resT vsT
       val e_z = Const(@{const_name mproj}, measT --> resT --> mk_bounded2T vsT)
                   $ e $ Bound(0)
-      val lift_e_z = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_qvariablesT vsT --> @{typ "(mem2,mem2) bounded"})
+      val lift_e_z = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_variablesT vsT --> @{typ "(mem2,mem2) bounded"})
                     $ e_z $ vs
       val im_e_z = @{const applyOpSpace(mem2,mem2)} $ lift_e_z $ @{const top(predicate)}
       val Be = @{const plus(predicate)} $ (@{const inf(predicate)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)
@@ -175,7 +181,7 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
 
 fun mk_quantum_equality Q1 Q2 T =
   let val opT = mk_bounded2T T
-      val qvT = mk_qvariablesT T                                        
+      val qvT = mk_variablesT T                                        
   in
   Const(@{const_name quantum_equality_full}, opT --> qvT --> opT --> qvT --> @{typ predicate}) $
     Const(@{const_name idOp}, opT) $ Q1 $ Const(@{const_name idOp}, opT) $ Q2
@@ -221,9 +227,9 @@ fun tidyTrueTop t =
 fun callWp cvars1 cvars2 qvars1 qvars2 B =
   let (* val cvarsEq = HOLogic.mk_eq (HOLogic.mk_tuple cvars1, HOLogic.mk_tuple cvars2)
       val claCvarsEq = @{const classical_subspace} $ cvarsEq *)
-      val (qvars1',qvars1T) = qvariables qvars1
-      val (qvars2',qvars2T) = qvariables qvars2
-      val (qvars12',qvars12T) = qvariables (qvars1 @ qvars2)
+      val (qvars1',qvars1T) = variables qvars1
+      val (qvars2',qvars2T) = variables qvars2
+      val (qvars12',qvars12T) = variables (qvars1 @ qvars2)
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()
       val qvarsEq = if qvars1=[] then @{const top(predicate)} else mk_quantum_equality qvars1' qvars2' qvars1T
       val B0 = B |> removeInf qvarsEq (* invariant: post \<sqinter> qvarsEq \<Longrightarrow> original post *)
@@ -246,7 +252,7 @@ fun callWp cvars1 cvars2 qvars1 qvars2 B =
       val wp = tidyTrueTop wp
 
       val colocality = Const(@{const_name colocal_pred_qvars},
-            @{typ predicate} --> mk_qvariablesT qvars12T --> HOLogic.boolT)
+            @{typ predicate} --> mk_variablesT qvars12T --> HOLogic.boolT)
           $ B' $ qvars12'
   in
     (wp, colocality)
@@ -320,8 +326,8 @@ val dest_string_syntax = implode o map (chr o dest_char_syntax) o dest_list_synt
 fun byQRHLPre cvars qvars =
   let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
       val cEqs' = @{const classical_subspace} $ mk_conjs cEqs
-      val (qvars1',qvars1T) = qvariables (map (fn (v1,_ ,T) => Free(v1,mk_qvariableT T)) qvars)
-      val (qvars2',qvars2T) = qvariables (map (fn (_ ,v2,T) => Free(v2,mk_qvariableT T)) qvars)
+      val (qvars1',qvars1T) = variables (map (fn (v1,_ ,T) => Free(v1,mk_variableT T)) qvars)
+      val (qvars2',qvars2T) = variables (map (fn (_ ,v2,T) => Free(v2,mk_variableT T)) qvars)
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
       val qvarsEq = if qvars=[] then @{const top(predicate)} else mk_quantum_equality qvars1' qvars2' qvars1T
   in
@@ -368,23 +374,23 @@ fun applyRule name goal ctx =
 
 datatype varterm = VTCons of varterm * varterm | VTSingle of string*typ | VTUnit
 
-fun parse_varterm (Const(@{const_name qvariable_concat},_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
-  | parse_varterm (Const(@{const_name qvariable_singleton},_) $ Free(n,Type(@{type_name qvariable},[T]))) = VTSingle (n,T)
-  | parse_varterm (Const(@{const_name qvariable_unit},_)) = VTUnit
-  | parse_varterm t = raise TERM("not a qvariables expression",[t])
+fun parse_varterm (Const(@{const_name variable_concat},_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
+  | parse_varterm (Const(@{const_name variable_singleton},_) $ Free(n,Type(@{type_name variable},[T]))) = VTSingle (n,T)
+  | parse_varterm (Const(@{const_name variable_unit},_)) = VTUnit
+  | parse_varterm t = raise TERM("not a variables expression",[t])
 
-fun mk_varterm (VTUnit) = (@{const qvariable_unit}, @{typ unit})
+fun mk_varterm (VTUnit) = (@{const variable_unit}, @{typ unit})
   | mk_varterm (VTCons(a,b)) = let
       val (vta,Ta) = mk_varterm a
       val (vtb,Tb) = mk_varterm b
     in
-      (Const(@{const_name qvariable_concat}, 
-        mk_qvariablesT Ta --> mk_qvariablesT Tb --> mk_qvariablesT (HOLogic.mk_prodT(Ta,Tb))) $ vta $ vtb,
+      (Const(@{const_name variable_concat}, 
+        mk_variablesT Ta --> mk_variablesT Tb --> mk_variablesT (HOLogic.mk_prodT(Ta,Tb))) $ vta $ vtb,
        HOLogic.mk_prodT(Ta,Tb))
     end
   | mk_varterm (VTSingle(n,T)) = 
-      (Const(@{const_name qvariable_singleton}, mk_qvariableT T --> mk_qvariablesT T) $ 
-          Free(n,Type(@{type_name qvariable},[T])),T)
+      (Const(@{const_name variable_singleton}, mk_variableT T --> mk_variablesT T) $ 
+          Free(n,Type(@{type_name variable},[T])),T)
 
 fun type_of_varterm (VTUnit) = @{typ unit}
   | type_of_varterm (VTCons(a,b)) = HOLogic.mk_prodT(type_of_varterm a, type_of_varterm b)
@@ -408,13 +414,13 @@ in
   varterm_from_list miss |> mk_varterm |> fst
 end
 
-fun qvariable_extension_hint_conv ctx ct = let
+fun variable_extension_hint_conv ctx ct = let
 val (lift,S,Q,R) = case Thm.term_of ct of
-    (Const(@{const_name join_qvariables_hint},_)) $ (Const(lift,_) $ S $ Q) $ R => (lift,S,Q,R)
-    | _ => raise CTERM("qvariable_extension_hint_conv: wrong shape",[ct])
-val conv_rule = case lift of @{const_name liftSpace} => @{thm join_qvariables_hint_subspace_conv_aux}
-                           | @{const_name liftOp} => @{thm join_qvariables_hint_bounded_conv_aux}
-                           | _ => raise CTERM("qvariable_extension_hint_conv: lift is "^lift, [ct])
+    (Const(@{const_name join_variables_hint},_)) $ (Const(lift,_) $ S $ Q) $ R => (lift,S,Q,R)
+    | _ => raise CTERM("variable_extension_hint_conv: wrong shape",[ct])
+val conv_rule = case lift of @{const_name liftSpace} => @{thm join_variables_hint_subspace_conv_aux}
+                           | @{const_name liftOp} => @{thm join_variables_hint_bounded_conv_aux}
+                           | _ => raise CTERM("variable_extension_hint_conv: lift is "^lift, [ct])
 val vtQ = parse_varterm Q
 val vtR = parse_varterm R
 val miss = missing_in_varterm vtQ vtR |> Thm.cterm_of ctx
@@ -428,20 +434,20 @@ in
 rule
 end
 
-fun sort_qvariables_step (VTSingle _) = NONE
-  | sort_qvariables_step (VTCons (v1 as VTSingle(n1,T1), v2 as VTSingle(n2,T2))) =
+fun sort_variables_step (VTSingle _) = NONE
+  | sort_variables_step (VTCons (v1 as VTSingle(n1,T1), v2 as VTSingle(n2,T2))) =
       if n1<=n2 then NONE
       else SOME(Const(@{const_name comm_op}, 
             mk_boundedT (HOLogic.mk_prodT(T1,T2)) (HOLogic.mk_prodT(T2,T1))), 
           VTCons (v2,v1))
-  | sort_qvariables_step (vt as (VTCons (v1 as VTSingle(n1,T1), VTCons (v2 as VTSingle(n2,T2), rest)))) =
-      if n1<=n2 then sort_qvariables_step_in vt
+  | sort_variables_step (vt as (VTCons (v1 as VTSingle(n1,T1), VTCons (v2 as VTSingle(n2,T2), rest)))) =
+      if n1<=n2 then sort_variables_step_in vt
       else let val restT = type_of_varterm rest in
         SOME(Const(@{const_name comm_op_pfx},
             mk_boundedT (HOLogic.mk_prodT (T1, HOLogic.mk_prodT (T2,restT))) (HOLogic.mk_prodT (T2, HOLogic.mk_prodT (T1,restT)))),
           VTCons(v2, VTCons(v1,rest)))
       end
-  | sort_qvariables_step (VTCons (VTCons(vt1,vt2), vt3)) =
+  | sort_variables_step (VTCons (VTCons(vt1,vt2), vt3)) =
       let val T1 = type_of_varterm vt1
           val T2 = type_of_varterm vt2
           val T3 = type_of_varterm vt3
@@ -450,22 +456,22 @@ fun sort_qvariables_step (VTSingle _) = NONE
             mk_boundedT (HOLogic.mk_prodT (HOLogic.mk_prodT(T1,T2), T3)) (HOLogic.mk_prodT (T1, HOLogic.mk_prodT(T2,T3)))),
           VTCons(vt1, VTCons(vt2, vt3)))
       end
-  | sort_qvariables_step (vt as VTCons (VTSingle _, _)) = sort_qvariables_step_in vt
-  | sort_qvariables_step VTUnit = NONE
-  | sort_qvariables_step (VTCons (vt, VTUnit)) =
+  | sort_variables_step (vt as VTCons (VTSingle _, _)) = sort_variables_step_in vt
+  | sort_variables_step VTUnit = NONE
+  | sort_variables_step (VTCons (vt, VTUnit)) =
       let val T = type_of_varterm vt in
         SOME(Const(@{const_name remove_qvar_unit_op},
           mk_boundedT (HOLogic.mk_prodT(T,HOLogic.unitT)) T),
           vt) end
-  | sort_qvariables_step (VTCons (VTUnit, vt)) =
+  | sort_variables_step (VTCons (VTUnit, vt)) =
       let val T = type_of_varterm vt in
         SOME(Const(@{const_name remove_qvar_unit_op2},
           mk_boundedT (HOLogic.mk_prodT(HOLogic.unitT,T)) T),
           vt) end
 
-(* sort_qvariables_step_in must be called on term "qvariable_concat [[q]] rest" *)
-and sort_qvariables_step_in (VTCons(v1 as VTSingle(_,T1), rest)) =
-  (case sort_qvariables_step rest of
+(* sort_variables_step_in must be called on term "variable_concat [[q]] rest" *)
+and sort_variables_step_in (VTCons(v1 as VTSingle(_,T1), rest)) =
+  (case sort_variables_step rest of
     NONE => NONE
   | SOME(rest_op, rest_vt) =>
     let val rest_opT = fastype_of rest_op
@@ -476,13 +482,13 @@ and sort_qvariables_step_in (VTCons(v1 as VTSingle(_,T1), rest)) =
           rest_op,
         VTCons(v1, rest_vt))
     end)
-  | sort_qvariables_step_in vt = raise TERM("sort_qvariables_step_in", [mk_varterm vt |> fst])
+  | sort_variables_step_in vt = raise TERM("sort_variables_step_in", [mk_varterm vt |> fst])
 
-fun sort_qvariables vt =
-  case sort_qvariables_step vt of
+fun sort_variables vt =
+  case sort_variables_step vt of
     NONE => NONE
   | SOME(A,vt') =>
-      case sort_qvariables vt' of
+      case sort_variables vt' of
         NONE => SOME(A,vt')
       | SOME(A',vt'') => (* A'\<cdot>A *)
           let val AT = fastype_of A
@@ -491,23 +497,23 @@ fun sort_qvariables vt =
               val (_,outT) = dest_boundedT A'T
               val (vt't,vt'T) = mk_varterm vt'
           in
-            SOME(Const(@{const_name qvar_trafo_mult}, mk_qvariablesT vt'T --> A'T --> AT --> mk_boundedT inT outT) $
+            SOME(Const(@{const_name qvar_trafo_mult}, mk_variablesT vt'T --> A'T --> AT --> mk_boundedT inT outT) $
               vt't $ A' $ A,
               vt'')
           end
         
-(* Expects: ct = sort_qvariables_hint (x>>Q) *)
-fun sort_qvariables_hint_conv ctx ct = let
+(* Expects: ct = sort_variables_hint (x>>Q) *)
+fun sort_variables_hint_conv ctx ct = let
 val (lift,S,Q) = case Thm.term_of ct of
-    (Const(@{const_name sort_qvariables_hint},_)) $ (Const(lift,_) $ S $ Q) => (lift,S,Q)
-    | _ => raise CTERM("sort_qvariables_hint_hint_conv: wrong shape",[ct])
-val conv_rule = case lift of @{const_name liftSpace} => @{thm sort_qvariables_hint_subspace_conv_aux}
-                           | @{const_name liftOp} => @{thm sort_qvariables_hint_bounded_conv_aux}
-                           | _ => raise CTERM("sort_qvariables_hint_hint_conv: lift is "^lift, [ct])
+    (Const(@{const_name sort_variables_hint},_)) $ (Const(lift,_) $ S $ Q) => (lift,S,Q)
+    | _ => raise CTERM("sort_variables_hint_hint_conv: wrong shape",[ct])
+val conv_rule = case lift of @{const_name liftSpace} => @{thm sort_variables_hint_subspace_conv_aux}
+                           | @{const_name liftOp} => @{thm sort_variables_hint_bounded_conv_aux}
+                           | _ => raise CTERM("sort_variables_hint_hint_conv: lift is "^lift, [ct])
 val vtQ = parse_varterm Q
 in
-  case sort_qvariables vtQ of
-    NONE => Conv.rewr_conv @{thm sort_qvariables_hint_remove_aux} ct
+  case sort_variables vtQ of
+    NONE => Conv.rewr_conv @{thm sort_variables_hint_remove_aux} ct
   | SOME(A,vt) =>
         infer_instantiate ctx 
           [(("S",0),Thm.cterm_of ctx S),
@@ -516,10 +522,10 @@ in
            (("Q",0),Thm.cterm_of ctx Q)] conv_rule
 end
 
-fun qvariable_rewriting_simproc _ ctx ct =
-  SOME (qvariable_extension_hint_conv ctx ct)
+fun variable_rewriting_simproc _ ctx ct =
+  SOME (variable_extension_hint_conv ctx ct)
   handle CTERM _ => 
-    SOME (sort_qvariables_hint_conv ctx ct)
+    SOME (sort_variables_hint_conv ctx ct)
     handle CTERM _ => NONE
 
 
@@ -542,9 +548,9 @@ local
       @{const HOL.eq("char list")} $ (Const (@{const_name variable_name}, dummyT) $ v) $ HOLogic.mk_string n
     | mk_var_eq t = raise (TERM("the argument to declared_qvars must contain only free variables",[t]))
 
-  fun declared_qvars_parse_tr' (Const (@{syntax_const "_qvariable_list_args"}, _) $ v $ vs)
+  fun declared_qvars_parse_tr' (Const (@{syntax_const "_variable_list_args"}, _) $ v $ vs)
     = mk_var_eq v :: declared_qvars_parse_tr' vs
-    | declared_qvars_parse_tr' (Const (@{syntax_const "_qvariable_list_arg"}, _) $ v)
+    | declared_qvars_parse_tr' (Const (@{syntax_const "_variable_list_arg"}, _) $ v)
     = [mk_var_eq v]
 | declared_qvars_parse_tr' t = raise (TERM("declared_qvars_parse_tr'",[t]))
 in
@@ -583,7 +589,7 @@ structure VarTypes = Proof_Data
 
 
 fun varname_assumption cq bind T = 
-  let val qT = mk_qvariableT T
+  let val qT = mk_variableT T
       val name = Binding.name_of bind
       val name' = if cq=Classical then "var_"^name else name
       val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name',qT)
@@ -600,7 +606,7 @@ fun addQVariableNameAssumption cq bind T ctxt =
   end
 
 fun declare_variable ctx bind T cq =
-  let val qT = mk_qvariableT T
+  let val qT = mk_variableT T
       val v = Binding.name_of bind
       val vars = if cq=Classical then [(bind,T),(Binding.suffix_name "1" bind,T),(Binding.suffix_name "2" bind,T),
                                        (bind |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "1" |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "2" |> Binding.prefix_name "var_",qT)]
@@ -632,7 +638,7 @@ fun declare_variable_lthy name vartype =
 fun variables vars gthy = 
 let fun elems0 idx = [
       Element.Fixes (map (fn (_,bind,T) => (bind |> Binding.suffix_name idx, SOME T, Mixfix.NoSyn)) vars),
-      Element.Fixes (map (fn (_,bind,T) => (bind |> Binding.prefix_name "var_" |> Binding.suffix_name idx, SOME (mk_qvariableT T), Mixfix.NoSyn)) vars),
+      Element.Fixes (map (fn (_,bind,T) => (bind |> Binding.prefix_name "var_" |> Binding.suffix_name idx, SOME (mk_variableT T), Mixfix.NoSyn)) vars),
       Element.Assumes (map (fn (cq,bind,T) => ((Binding.suffix_name (idx^"_varname") bind, @{attributes [simp]}),
                              [(varname_assumption cq (Binding.suffix_name idx bind) T, [])])) vars)]
     val elems = map elems0 ["", "1", "2"] |> List.concat

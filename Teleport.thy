@@ -4,10 +4,10 @@ begin
 
 lemma assoc_op_lift_aux:
   fixes U :: "(('c \<times> 'd) \<times> 'e, ('c \<times> 'd) \<times> 'e) bounded" and Q R S
-  assumes "distinct_qvars (qvariable_concat Q R)" and "distinct_qvars (qvariable_concat R S)" and "distinct_qvars (qvariable_concat Q S)"
+  assumes "distinct_qvars (variable_concat Q R)" and "distinct_qvars (variable_concat R S)" and "distinct_qvars (variable_concat Q S)"
   defines "V == assoc_op* \<cdot> U \<cdot> assoc_op"
   shows
-    "U\<guillemotright>(qvariable_concat (qvariable_concat Q R) S) = V\<guillemotright>(qvariable_concat Q (qvariable_concat R S))"
+    "U\<guillemotright>(variable_concat (variable_concat Q R) S) = V\<guillemotright>(variable_concat Q (variable_concat R S))"
   using assms by (metis (no_types, lifting) V_def adjoint_twice distinct_qvars_split2 distinct_qvars_swap qvar_trafo_adj qvar_trafo_assoc_op qvar_trafo_bounded)
 
 lemma assoc_replace: 

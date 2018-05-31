@@ -6,8 +6,7 @@ import java.nio.file.{Files, Path, Paths}
 
 import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.ml.Expr
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Context => IContext, Typ => ITyp}
+import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Typ => ITyp}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resources, Setup}
 import info.hupel.isabelle.{OfficialPlatform, Operation, Platform, System, ml}
@@ -95,7 +94,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 //    val comparedTo = Files.getLastModifiedTime(Paths.get(location))
 //    println(comparedTo)
     try {
-      val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, attr: BasicFileAttributes) =>
+      val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
         path.endsWith("QRHL") && !path.getParent.endsWith("log")
 //        path.endsWith("QRHL") && !path.endsWith("log")/*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
       })
@@ -113,7 +112,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
   }
 
 
-  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
+//  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
 
   def invoke[I,O](op: Operation[I,O], arg: I) : O = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
 
@@ -180,18 +179,18 @@ object Isabelle {
   def listT(typ:ITyp) : Type = Type("List.list", List(typ))
   val block = Const("Encoding.block", listT(programT) -->: programT)
   def vectorT(typ:ITyp) = Type("Complex_L2.vector", List(typ))
-  def qvariableT(typ:ITyp) = Type("QRHL_Core.qvariable", List(typ))
-  def dest_qvariableT(typ: ITyp): ITyp = typ match {
-    case Type("QRHL_Core.qvariable", List(typ2)) => typ2
+  def variableT(typ:ITyp) = Type("QRHL_Core.variable", List(typ))
+  def dest_variableT(typ: ITyp): ITyp = typ match {
+    case Type("QRHL_Core.variable", List(typ2)) => typ2
   }
-  def qvariablesT(typ:ITyp) : Type = Type("QRHL_Core.qvariables", List(typ))
-  def qvariablesT(typs:List[ITyp]) : Type = qvariablesT(tupleT(typs:_*))
-  val cvariableT: ITyp => Type = qvariableT
+  def variablesT(typ:ITyp) : Type = Type("QRHL_Core.variables", List(typ))
+  def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
+  //val cvariableT: ITyp => Type = variableT
   def expressionT(typ:ITyp) = Type("Encoding.expression", List(typ))
   val assignName = "Encoding.assign"
-  def assign(typ:ITyp) : Const = Const(assignName, qvariableT(typ) -->: expressionT(typ) -->: programT)
+  def assign(typ:ITyp) : Const = Const(assignName, variableT(typ) -->: expressionT(typ) -->: programT)
   val sampleName = "Encoding.sample"
-  def sample(typ:ITyp) : Const = Const(sampleName, qvariableT(typ) -->: expressionT(distrT(typ)) -->: programT)
+  def sample(typ:ITyp) : Const = Const(sampleName, variableT(typ) -->: expressionT(distrT(typ)) -->: programT)
   val ifthenelseName = "Encoding.ifthenelse"
   val ifthenelse = Const(ifthenelseName, expressionT(HOLogic.boolT) -->: listT(programT) -->: listT(programT) -->: programT)
   val whileName = "Encoding.while"
@@ -200,29 +199,29 @@ object Isabelle {
   val boolT: ITyp = HOLogic.boolT
   val qrhl = Const("Encoding.qrhl", expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
   val qinitName = "Encoding.qinit"
-  def qinit(typ:ITyp) = Const(qinitName, qvariablesT(typ) -->: expressionT(vectorT(typ)) -->: programT)
+  def qinit(typ:ITyp) = Const(qinitName, variablesT(typ) -->: expressionT(vectorT(typ)) -->: programT)
   val qapplyName = "Encoding.qapply"
-  def qapply(typ:ITyp) = Const(qapplyName, qvariablesT(typ) -->: expressionT(boundedT(typ)) -->: programT)
+  def qapply(typ:ITyp) = Const(qapplyName, variablesT(typ) -->: expressionT(boundedT(typ)) -->: programT)
   val measurementName = "Encoding.measurement"
-  def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, cvariableT(resultT) -->: qvariablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
+  def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variableT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
   val unitT = Type("Product_Type.unit")
   def prodT(t1:ITyp, t2:ITyp) = Type("Product_Type.prod", List(t1,t2))
   private def qvarTuple_var0(qvs:List[QVariable]) : (Term,ITyp) = qvs match {
-    case Nil => (qvariable_unit, unitT)
-    case List(qv) => (qvariable_singleton(qv.valueTyp) $ qv.variableTerm,
+    case Nil => (variable_unit, unitT)
+    case List(qv) => (variable_singleton(qv.valueTyp) $ qv.variableTerm,
                       qv.valueTyp)
     case qv::rest =>
       val (qvTuple, qvTyp) = qvarTuple_var0(List(qv))
       val (restTuple, restTyp) = qvarTuple_var0(rest)
-      (qvariable_concat(qvTyp, restTyp) $ qvTuple $ restTuple,
+      (variable_concat(qvTyp, restTyp) $ qvTuple $ restTuple,
        prodT(qvTyp, restTyp))
   }
   def qvarTuple_var(qvs:List[QVariable]) : Term = qvarTuple_var0(qvs)._1
-  val qvariable_unit = Const("QRHL_Core.qvariable_unit", qvariablesT(unitT))
-  val qvariable_singletonName = "QRHL_Core.qvariable_singleton"
-  def qvariable_singleton(typ:ITyp) = Const(qvariable_singletonName, qvariableT(typ) -->: qvariablesT(typ))
-  val qvariable_concatName = "QRHL_Core.qvariable_concat"
-  def qvariable_concat(t1:ITyp, t2:ITyp) = Const(qvariable_concatName, qvariablesT(t1) -->: qvariablesT(t2) -->: qvariablesT(prodT(t1,t2)))
+  val variable_unit = Const("QRHL_Core.variable_unit", variablesT(unitT))
+  val variable_singletonName = "QRHL_Core.variable_singleton"
+  def variable_singleton(typ:ITyp) = Const(variable_singletonName, variableT(typ) -->: variablesT(typ))
+  val variable_concatName = "QRHL_Core.variable_concat"
+  def variable_concat(t1:ITyp, t2:ITyp) = Const(variable_concatName, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1,t2)))
 
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
   val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")
@@ -287,10 +286,10 @@ object Isabelle {
 
 //  private val configureContext: ml.Expr[IContext => IContext] =
 //    ml.Expr.uncheckedLiteral("(fn ctx => ctx (*|> Config.put show_types true |> Config.put show_sorts true*) )")
-  private def simplifyTerm(term: Term, facts:List[String]) : ml.Expr[IContext => Term] = {
-    val lit = ml.Expr.uncheckedLiteral[Term => List[String] => IContext => Term]("QRHL.simp")
-    lit(term)(implicitly)(facts)
-  }
+//  private def simplifyTerm(term: Term, facts:List[String]) : ml.Expr[IContext => Term] = {
+//    val lit = ml.Expr.uncheckedLiteral[Term => List[String] => IContext => Term]("QRHL.simp")
+//    lit(term)(implicitly)(facts)
+//  }
 
   def absfree(varName: String, varTyp: ITyp, term: Term) : ml.Expr[Term] = {
     val lit = ml.Expr.uncheckedLiteral[String => ITyp => Term => Term](

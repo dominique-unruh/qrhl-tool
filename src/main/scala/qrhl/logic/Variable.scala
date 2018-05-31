@@ -10,7 +10,7 @@ sealed trait Variable {
   def index1: Variable
   def index2: Variable
   def index(left:Boolean): Variable = if (left) index1 else index2
-  def variableTyp: pure.Typ = Isabelle.qvariableT(valueTyp)
+  def variableTyp: pure.Typ = Isabelle.variableT(valueTyp)
   def valueTyp : pure.Typ
 //  @deprecated("use valueType / variableTyp","") def typ : Typ
   def variableTerm: Term
@@ -36,14 +36,14 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
 object QVariable {
   def fromTerm_var(context: Isabelle.Context, x: Term): QVariable = x match {
     case Free(name,typ) =>
-      QVariable(name, Isabelle.dest_qvariableT(typ))
+      QVariable(name, Isabelle.dest_variableT(typ))
     case _ => throw new java.lang.RuntimeException(f"Cannot transform $x into QVariable")
   }
 
   def fromQVarList(context: Isabelle.Context, qvs: Term): List[QVariable] = qvs match {
-    case Const(Isabelle.qvariable_unit.name, _) => Nil
-    case App(Const(Isabelle.qvariable_singletonName,_), v) => List(fromTerm_var(context, v))
-    case App(App(Const(Isabelle.qvariable_concatName,_), v), vs) =>
+    case Const(Isabelle.variable_unit.name, _) => Nil
+    case App(Const(Isabelle.variable_singletonName,_), v) => List(fromTerm_var(context, v))
+    case App(App(Const(Isabelle.variable_concatName,_), v), vs) =>
       val v2 = fromQVarList(context, v)
       assert(v2.length==1)
       val vs2 = fromQVarList(context, vs)
@@ -65,7 +65,7 @@ object CVariable {
   def fromTerm_var(context: Isabelle.Context, x: Term): CVariable = x match {
     case Free(name,typ) =>
       assert(name.startsWith("var_"))
-      CVariable(name.stripPrefix("var_"), Isabelle.dest_qvariableT(typ))
+      CVariable(name.stripPrefix("var_"), Isabelle.dest_variableT(typ))
     case _ => throw new RuntimeException("Illformed variable term")
   }
 }

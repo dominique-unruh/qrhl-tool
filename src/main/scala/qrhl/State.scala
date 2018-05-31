@@ -311,7 +311,7 @@ class State private (val environment: Environment,
     if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = _isabelle.get
 //    val typ1 = typ.isabelleTyp
-//    val typ2 = if (quantum) Type("QRHL_Core.qvariable",List(typ1)) else typ1
+//    val typ2 = if (quantum) Type("QRHL_Core.variable",List(typ1)) else typ1
     val newIsa =
       if (quantum)
         declare_quantum_variable(isa, name, typ)
