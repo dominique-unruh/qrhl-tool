@@ -110,22 +110,24 @@ fun dest_qrhl_goal t = case Logic.strip_imp_concl t |> HOLogic.dest_Trueprop of
   Const(@{const_name qrhl},_) $ A $ p1 $ p2 $ B => (A,p1,p2,B)
 | _ => raise Match
 
-fun wp1_tac ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
-  val (_,p1,_,_) = dest_qrhl_goal goal
-  val stmts = HOLogic.dest_list p1
+fun wp1_tac left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
+  val (_,p1,p2,_) = dest_qrhl_goal goal
+  val stmts = HOLogic.dest_list (if left then p1 else p2)
   in case stmts of
-    [Const(@{const_name assign},_) $ _ $ _] => resolve_tac ctxt @{thms wp1_assign} n
-  | [Const(@{const_name sample},_) $ _ $ _] => resolve_tac ctxt @{thms wp1_sample} n
-  | [Const(@{const_name block},_) $ _] => resolve_tac ctxt @{thms wp1_block} n THEN wp1_tac ctxt n
-  | [] => resolve_tac ctxt @{thms wp1_skip} n
+    [Const(@{const_name assign},_) $ _ $ _] => resolve_tac ctxt (if left then @{thms wp1_assign} else @{thms wp2_assign}) n
+  | [Const(@{const_name sample},_) $ _ $ _] => resolve_tac ctxt (if left then @{thms wp1_sample} else @{thms wp2_sample}) n
+  | [Const(@{const_name block},_) $ _] => resolve_tac ctxt (if left then @{thms wp1_block} else @{thms wp2_block}) n THEN wp1_tac left ctxt n
+  | [] => resolve_tac ctxt @{thms wp_skip} n
   | _::_::_ => error_tac (K "lists of statements not yet supported") ctxt
-  | [_] => error_tac (fn _ => "Statement must be one of assign/sample/block, not '"^Syntax.string_of_term ctxt (the_single stmts)^"'") ctxt
+  | [s] => error_tac (fn _ => "Statement must be one of assign/sample/block, not '"^Syntax.string_of_term ctxt s^"'") ctxt
   end
 )
 
-fun get_wp1_tac tac (prog:term) (post:term) ctxt =
-  let val goal = @{const qrhl} $ Var(("pre",0),@{typ "predicate expression"}) $ 
-                      HOLogic.mk_list @{typ program} [prog] $ @{term "[]::program list"} $ post |> HOLogic.mk_Trueprop                    
+fun get_wp1_tac tac left (prog:term) (post:term) ctxt =
+  let val progl = HOLogic.mk_list @{typ program} [prog]
+      val skip = @{term "[]::program list"}
+      val goal = @{const qrhl} $ Var(("pre",0),@{typ "predicate expression"}) $ 
+                      (if left then progl else skip) $ (if left then skip else progl) $ post |> HOLogic.mk_Trueprop                    
       val thm = Goal.prove ctxt [] [] goal (fn {context,...} => tac context)
       val prop = Thm.prop_of thm
       val pre = case HOLogic.dest_Trueprop prop of
@@ -135,7 +137,7 @@ fun get_wp1_tac tac (prog:term) (post:term) ctxt =
     (pre,thm)
   end
 
-val get_wp1 = get_wp1_tac (fn ctxt => wp1_tac ctxt 1)
+fun get_wp1 left = get_wp1_tac (fn ctxt => wp1_tac left ctxt 1) left
 
 (*
 fun get_wp1 prog post ctxt =
@@ -150,11 +152,13 @@ SUBGOAL (fn (goal,i) => let
   val 
 ) *)
 
-fun wp1_tac ctxt i = seq_tac ~2 ~1 (Var(("precondition",0),@{typ "predicate expression"})) ctxt i THEN
+fun wp1_tac ctxt left i = 
+  seq_tac (if left then ~2 else ~1) (if left then ~1 else ~2)
+           (Var(("precondition",0),@{typ "predicate expression"})) ctxt i THEN
   SUBGOAL (fn (goal,n) =>
-    let val (_,p1,_,B) = dest_qrhl_goal goal
-        val stmt = HOLogic.dest_list p1 |> the_single
-        val (_,thm) = get_wp1 stmt B ctxt
+    let val (_,p1,p2,B) = dest_qrhl_goal goal
+        val stmt = HOLogic.dest_list (if left then p1 else p2) |> the_single
+        val (_,thm) = get_wp1 left stmt B ctxt
     in
       resolve_tac ctxt [thm] n
     end
@@ -162,7 +166,7 @@ fun wp1_tac ctxt i = seq_tac ~2 ~1 (Var(("precondition",0),@{typ "predicate expr
   
 val error_context = @{context} |> Config.put method_error true |> method_error_push (K "While testing") |> method_error_push (K "And more")
 val _ =
- get_wp1 @{term "assign x e :: program"} @{term "post :: predicate expression"} error_context
+ get_wp1 true @{term "assign x e :: program"} @{term "post :: predicate expression"} error_context
 |> fst |> Thm.cterm_of @{context}
 |> @{print}
 

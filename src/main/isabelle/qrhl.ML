@@ -404,6 +404,16 @@ fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
   | vars_in_varterm (VTSingle nT) = [nT]
   | vars_in_varterm VTUnit = []
 
+fun parse_varlist t =
+  let val vt = parse_varterm t
+      fun tol (VTSingle nT) = [nT]
+        | tol VTUnit = []
+        | tol (VTCons (VTSingle nT, rest)) = nT :: tol rest
+        | tol (VTCons _) = raise TERM("not a variable list",[t])
+  in
+    tol vt
+  end
+
 fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
 
 fun missing_in_varterm vt1 vt2 = let

@@ -9,7 +9,7 @@ lemma seq:
   shows "qrhl A c d C"
   sorry
 
-lemma wp1_skip:
+lemma wp_skip:
   shows "qrhl B [] [] B"
   sorry
 
@@ -17,6 +17,12 @@ lemma wp1_assign:
   fixes A B x e
   defines "A \<equiv> subst_expression (substitute1 (index_var True x) (index_expression True e)) B"
   shows "qrhl A [assign x e] [] B"
+  sorry
+
+lemma wp2_assign:
+  fixes A B x e
+  defines "A \<equiv> subst_expression (substitute1 (index_var False x) (index_expression False e)) B"
+  shows "qrhl A [] [assign x e] B"
   sorry
 
 lemma wp1_sample:
@@ -27,9 +33,22 @@ lemma wp1_sample:
   shows "qrhl A [sample x e] [] B"
   sorry
 
+lemma wp2_sample:
+  fixes A B x e
+  defines "e' \<equiv> index_expression False e"
+  defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
+  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
+  shows "qrhl A [] [sample x e] B"
+  sorry
+
 lemma wp1_block:
   assumes "qrhl A p [] B"
   shows "qrhl A [block p] [] B"
+  sorry
+
+lemma wp2_block:
+  assumes "qrhl A [] p B"
+  shows "qrhl A [] [block p] B"
   sorry
 
 ML_file "tactics.ML"

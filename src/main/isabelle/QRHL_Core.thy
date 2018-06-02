@@ -5,6 +5,8 @@ begin
 
 section \<open>Miscellaneous\<close>
 
+ML_file "misc.ML"
+
 definition [code del]: "(sqrt2::complex) = sqrt 2"
 lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
  by (simp add: of_real_def scaleR_2 sqrt2_def)
