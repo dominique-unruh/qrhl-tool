@@ -51,6 +51,18 @@ lemma wp2_block:
   shows "qrhl A [] [block p] B"
   sorry
 
+lemma wp1_cons:
+  assumes "qrhl A [p] [] B'"
+    and "qrhl B' ps [] B"
+  shows "qrhl A (p#ps) [] B"
+  sorry
+
+lemma wp2_cons:
+  assumes "qrhl A [] [p] B'"
+    and "qrhl B' [] ps B"
+  shows "qrhl A [] (p#ps) B"
+  sorry
+
 ML_file "tactics.ML"
 
 method_setup seq = {*
@@ -64,5 +76,14 @@ method_setup seq = {*
 (*   apply (tactic \<open>Tactics.seq_tac ~2 ~1 (Var(("xxx",0),@{typ "predicate expression"})) @{context} 2\<close>)
   apply (tactic \<open>Tactics.seq_tac 0 0 (Var(("xxx",0),@{typ "predicate expression"})) @{context} 2\<close>)
   apply (tactic \<open>resolve_tac @{context} [Tactics.get_wp1 @{term "assign x e"} @{term B} @{context} |> #2] 3\<close>) *)
+
+variables classical x :: nat begin
+
+schematic_goal "qrhl ?pre [block [assign var_x Expr[x+2], assign var_x Expr[0], assign var_x Expr[x+1] ] ] [] Expr[ Cla[x1=1] ]"
+  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply simp
+  oops
+
+end
 
 end

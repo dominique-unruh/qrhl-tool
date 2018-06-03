@@ -2,13 +2,26 @@ theory Encoding
   imports QRHL_Core
 begin
 
-(* TODO: should rename "variables" to "variables" *)
-
 type_synonym 'a cvariable = "'a variable"
 
 typedecl 'a expression
 axiomatization
   expression :: "'a variables \<Rightarrow> ('a\<Rightarrow>'b) \<Rightarrow> 'b expression"
+
+text \<open>
+Some notation, used mainly in the documentation of the ML code:
+\<^item> A term of type @{typ "'a variables"} is an @{emph \<open>explicit variable list\<close>} if it is of the form
+  @{term "\<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk>"} where the @{term "x\<^sub>i"} are free variables.
+
+\<^item> A term of type @{typ "'a variables"} is an @{emph \<open>explicit variable term\<close>} if it is built from
+  @{const variable_concat}, @{const variable_unit}, @{const variable_singleton} and free variables.
+
+\<^item> An expression is @{emph \<open>well-formed explicit\<close>} iff it is of the form @{term "expression \<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk> (\<lambda>(z\<^sub>1,z\<^sub>2,dots,z\<^sub>n). e (z\<^sub>1,z\<^sub>2,dots,z\<^sub>n))"}
+  where the @{term "x\<^sub>i"} are free variables.
+
+\<^item>   An expression is @{emph \<open>explicit\<close>} iff it is of the form @{term "expression Q e"} where @{term Q} is an explicit variable term.
+\<close>
+
 
 abbreviation "const_expression z \<equiv> expression \<lbrakk>\<rbrakk> (\<lambda>_. z)"
 
@@ -97,8 +110,65 @@ axiomatization qrhl :: "predicate expression \<Rightarrow> program list \<Righta
 
 axiomatization probability2 :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 
+lemma expression_clean_assoc_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
+  assumes "expression (variable_concat Q (variable_concat R S)) (\<lambda>(q,(r,s)). e ((q,r),s)) \<equiv> e'"
+  shows "expression (variable_concat (variable_concat Q R) S) e \<equiv> e'"
+  sorry
+
+lemma expression_clean_singleton_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
+  shows "expression \<lbrakk>x\<rbrakk> e \<equiv> expression \<lbrakk>x\<rbrakk> e"
+  sorry
+
+lemma expression_clean_cons_unit_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
+  assumes "expression Q (\<lambda>q. e (q,())) \<equiv> expression Q' e'"
+  shows "expression (variable_concat Q variable_unit) e \<equiv> expression Q' e'"
+  sorry
+
+lemma expression_clean_unit_cons_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
+  assumes "expression Q (\<lambda>q. e ((),q)) \<equiv> expression Q' e'"
+  shows "expression (variable_concat variable_unit Q) e \<equiv> expression Q' e'"
+  sorry
+
+lemma expression_clean_var_cons_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
+  assumes "expression Q (\<lambda>x. x) \<equiv> expression Q' e'"
+  shows "expression (variable_concat \<lbrakk>x\<rbrakk> Q) (\<lambda>x. x) \<equiv> expression (variable_concat \<lbrakk>x\<rbrakk> Q') (\<lambda>(x,q). (x, e' q))"
+  sorry
+
+lemma expression_clean_unit_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
+  shows "expression \<lbrakk>\<rbrakk> e \<equiv> expression \<lbrakk>\<rbrakk> (\<lambda>_. e ())"
+  by simp
+
+lemma expression_id_comp_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
+  assumes "expression Q (\<lambda>x. x) \<equiv> expression Q' g"
+  shows "expression Q e \<equiv> expression Q' (\<lambda>x. e (g x))"
+  sorry
+
+lemma index_var_conv1_aux: -- \<open>Helper for ML function index_var_conv\<close>
+  assumes "variable_name v \<equiv> vname"
+  assumes "variable_name v1 \<equiv> v1name"
+  assumes "vname @ ''1'' \<equiv> v1name"
+  shows "index_var True v \<equiv> v1"
+  using assms index_var1I by smt
+
+lemma index_var_conv2_aux: -- \<open>Helper for ML function index_var_conv\<close>
+  assumes "variable_name v \<equiv> vname"
+  assumes "variable_name v2 \<equiv> v2name"
+  assumes "vname @ ''2'' \<equiv> v2name"
+  shows "index_var False v \<equiv> v2"
+  using assms index_var2I by smt
+
 ML_file "encoding.ML"
 
+hide_fact expression_clean_assoc_aux
+          expression_clean_singleton_aux
+          expression_clean_cons_unit_aux
+          expression_clean_unit_cons_aux
+          expression_clean_var_cons_aux
+          expression_id_comp_aux
+          index_var_conv1_aux
+          index_var_conv2_aux
+
+simproc_setup index_var ("index_var lr v") = Encoding.index_var_simproc
 
 (*
 ML {*

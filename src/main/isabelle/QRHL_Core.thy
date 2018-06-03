@@ -1,11 +1,16 @@
 theory QRHL_Core
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators Universe
   keywords "variables" :: thy_decl_block
 begin
 
 section \<open>Miscellaneous\<close>
 
+lemma pat_lambda_conv_aux: -- \<open>Helper for ML function pat_lambda_conv\<close>
+  shows "term \<equiv> (\<lambda>_. term ())"
+  by simp
+
 ML_file "misc.ML"
+
 
 definition [code del]: "(sqrt2::complex) = sqrt 2"
 lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
@@ -126,11 +131,53 @@ instance apply intro_classes
   apply transfer by (rule equal_eq)
 end
 
+section \<open>Program variables\<close>
+
+typedef variable_raw = "{v :: string * universe set. snd v \<noteq> {}}" by auto
+
+setup {* Sign.add_const_constraint (@{const_name embedding},SOME @{typ "'a=>universe"}) *}
+
+(* a variable, refers to a location in a memory *)
+typedef (overloaded) 'a variable = "{v::variable_raw. range (embedding::'a=>universe) = snd (Rep_variable_raw v)}" sorry
+
+setup {* Sign.add_const_constraint (@{const_name embedding},SOME @{typ "'a::value=>universe"}) *}
+
+definition variable_name :: "'a variable \<Rightarrow> string" where "variable_name v = fst (Rep_variable_raw (Rep_variable v))"
+
+typedecl 'a "variables" (* represents a tuple of variables, of joint type 'a *)
+
+axiomatization
+    variable_names :: "'a variables \<Rightarrow> string list"
+and variable_concat :: "'a variables \<Rightarrow> 'b variables \<Rightarrow> ('a * 'b) variables"
+and variable_singleton :: "'a variable \<Rightarrow> 'a variables"
+and variable_unit :: "unit variables"
+
+nonterminal variable_list_args
+syntax
+  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[[']])")
+  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>'\<rbrakk>)")
+  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[[_']])")
+  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
+  "_variable_list_arg"  :: "'a \<Rightarrow> variable_list_args"                   ("_")
+  "_variable_list_args" :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"     ("_,/ _")
+
+translations
+  "_variables (_variable_list_args x y)" \<rightleftharpoons> "CONST variable_concat (CONST variable_singleton x) (_variables y)"
+  "_variables (_variable_list_arg x)" \<rightleftharpoons> "CONST variable_singleton x"
+  "_variables (_variable_list_args x y)" \<leftharpoondown> "CONST variable_concat (_variables (_variable_list_arg x)) (_variables y)"
+  
+
+axiomatization where
+  variable_names_cons[simp]: "variable_names (variable_concat X Y) = variable_names X @ variable_names Y"
+  and variable_singleton_name[simp]: "variable_names (variable_singleton x) = [variable_name x]"
+  and variable_unit_name[simp]: "variable_names variable_unit = []"
+  for X::"'a variables" and Y::"'b variables" and x::"'c variable"
 
 
 section \<open>Quantum predicates\<close>
     
-typedecl mem2
+typedef mem2 = "{f. \<forall>v::variable_raw. f v \<in> snd (Rep_variable_raw v)}"
+  apply auto apply (rule choice) using Rep_variable_raw by auto
 type_synonym predicate = "mem2 subspace"
 
 subsection \<open>Classical predicates\<close>
@@ -196,38 +243,6 @@ lemma [simp]: "eigenspace b 0 = Cla[b=0]"
   apply (rewrite at "kernel \<hole>" DEADID.rel_mono_strong[where y="(-b) \<cdot> idOp"])
   by (auto simp: subspace_zero_bot uminus_bounded_def)
 
-section \<open>Program variables\<close>
-
-typedecl 'a variable (* a variable, refers to a location in a memory *)
-axiomatization variable_name :: "'a variable \<Rightarrow> string"
-typedecl 'a "variables" (* represents a tuple of variables, of joint type 'a *)
-
-axiomatization
-    variable_names :: "'a variables \<Rightarrow> string list"
-and variable_concat :: "'a variables \<Rightarrow> 'b variables \<Rightarrow> ('a * 'b) variables"
-and variable_singleton :: "'a variable \<Rightarrow> 'a variables"
-and variable_unit :: "unit variables"
-
-nonterminal variable_list_args
-syntax
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[[']])")
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>'\<rbrakk>)")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[[_']])")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
-  "_variable_list_arg"  :: "'a \<Rightarrow> variable_list_args"                   ("_")
-  "_variable_list_args" :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"     ("_,/ _")
-
-translations
-  "_variables (_variable_list_args x y)" \<rightleftharpoons> "CONST variable_concat (CONST variable_singleton x) (_variables y)"
-  "_variables (_variable_list_arg x)" \<rightleftharpoons> "CONST variable_singleton x"
-  "_variables (_variable_list_args x y)" \<leftharpoondown> "CONST variable_concat (_variables (_variable_list_arg x)) (_variables y)"
-  
-
-axiomatization where
-  variable_names_cons[simp]: "variable_names (variable_concat X Y) = variable_names X @ variable_names Y"
-  and variable_singleton_name[simp]: "variable_names (variable_singleton x) = [variable_name x]"
-  and variable_unit_name[simp]: "variable_names variable_unit = []"
-  for X::"'a variables" and Y::"'b variables" and x::"'c variable"
 
 subsection "Distinct quantum variables"
 
@@ -919,6 +934,5 @@ parse_translation \<open>[("_probability", fn ctx => fn [Const(v,_),p,rho] =>
 (* Must come after loading qrhl.ML *)                                                                          
 print_translation \<open>[(@{const_syntax probability}, fn ctx => fn [str,p,rho] =>
   Const(@{syntax_const "_probability"},dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
-
 
 end

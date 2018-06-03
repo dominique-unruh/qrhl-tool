@@ -87,4 +87,75 @@ fun read_predicate ctx str =
       val t = Syntax.check_term ctx (Type.constraint @{typ "predicate"} preterm)
   in term_to_expression ctx t end
 
+(* Translates "expression Q e" (where Q is an explicit variable list) into "expression Q (%(x\<^sub>1,...). e (x\<^sub>1,...)"
+   with one x\<^sub>i for each variable in Q. The result is a well-formed explicit expression *)
+fun clean_expression_abs_pat_conv ctxt ct = let
+  val Q = case Thm.term_of ct of
+    Const(@{const_name expression},_) $ Q $ _ => Q
+    | _ => raise CTERM("clean_expression_abs_pat_conv",[ct])
+  val varlist = QRHL.parse_varlist Q
+  in
+    (Conv.arg_conv (Misc.pat_lambda_conv ctxt varlist)) ct
+  end
+
+(* Helper for clean_expression_conv_varlist *)
+fun clean_expression_conv_varlist_tac1 ctxt =
+  resolve_tac ctxt @{thms expression_clean_assoc_aux expression_clean_singleton_aux 
+                          expression_clean_cons_unit_aux expression_clean_unit_cons_aux
+                          expression_clean_var_cons_aux expression_clean_unit_aux} 1
+  ORELSE
+  CHANGED (resolve_tac ctxt @{thms expression_id_comp_aux} 1)
+
+(* Helper for clean_expression_conv_varlist *)
+fun clean_expression_conv_varlist_tac ctxt = REPEAT_DETERM (clean_expression_conv_varlist_tac1 ctxt)
+
+(* Converts an explicit expression into an expression "expression Q e" where Q is an explicit variable list. *)
+val clean_expression_conv_varlist : Proof.context -> conv = Misc.conv_from_tac (fn _=>fn _=>()) clean_expression_conv_varlist_tac
+
+(* Converts a well-formed explicit expression into a well-formed explicit expression, 
+   simplifying subterms "case (x,y) of (x,y) => ...". (clean_expression_conv_varlist introduces such subterms.) *)
+fun clean_expression_conv_case_prod ctxt : conv = Raw_Simplifier.rewrite ctxt false
+  @{thms case_prod_conv[THEN eq_reflection]}
+
+(* Converts an explicit expression into a well-formed explicit expression *)
+fun clean_expression_conv ctxt = 
+  clean_expression_conv_varlist ctxt then_conv 
+  clean_expression_abs_pat_conv ctxt then_conv
+  clean_expression_conv_case_prod ctxt
+
+
+(* Converts "index_var True/False x" (where x is a free variable) into "x1" or "x2",
+   assuming x is declared via the variables-command or equivalent.
+   (More specifically, it requires that simp rules "variable_name x/x1/x2 = ''...''" with 
+   the correct names are declared.) *)
+fun index_var_conv ctxt ct =
+  let val (lrname,x,T) = case Thm.term_of ct of
+        Const(@{const_name index_var},_) $ Const(lrname,_) $ Free(x,T) => (lrname,x,T)
+      | _ => raise CTERM("index_var_conv: wrong shape",[ct])
+      val lr = case lrname of 
+          @{const_name True} => true
+        | @{const_name False} => false
+        | _ => raise CTERM("index_var_conv: wrong shape (expected True/False as first arg)",[ct])
+
+      val suffix = (if lr then "1" else "2")
+      val x1 = x ^ suffix
+
+      val varname_x = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt (Thm.cterm_of ctxt 
+        (Const(@{const_name variable_name}, T --> @{typ string}) $ Free(x,T)))
+
+      val varname_x1 = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt (Thm.cterm_of ctxt 
+        (Const(@{const_name variable_name}, T --> @{typ string}) $ Free(x1,T)))
+
+      val helper_thm = if lr then @{thm index_var_conv1_aux} else  @{thm index_var_conv2_aux}
+  
+      val name_x = varname_x |> Thm.concl_of |> Logic.dest_equals |> snd
+      val name_eq = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt
+        (@{term "op@ :: string=>_=>_"} $ name_x $ HOLogic.mk_string suffix |> Thm.cterm_of ctxt)
+  in
+    helper_thm OF [varname_x, varname_x1, name_eq]
+  end
+
+(* Simproc that simplifies using index_var_conv, see there.  *)
+fun index_var_simproc _ ctxt ct = SOME (index_var_conv ctxt ct) handle CTERM _ => NONE
+
 end
