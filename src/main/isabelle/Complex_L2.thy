@@ -746,6 +746,7 @@ lift_definition ortho :: "'a subspace \<Rightarrow> 'a subspace" is (* Orthogona
 
 axiomatization
   where ortho_twice[simp]: "ortho (ortho x) = x"
+  for x :: "'a subspace"
 
 lemma ortho_leq[simp]: "ortho a \<le> ortho b \<longleftrightarrow> a \<ge> b"
 proof 

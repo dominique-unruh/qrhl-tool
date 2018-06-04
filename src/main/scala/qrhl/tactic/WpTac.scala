@@ -4,9 +4,20 @@ import info.hupel.isabelle.Operation
 import info.hupel.isabelle.pure.{Term, Typ => ITyp}
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
-import qrhl.{State, UserException}
+import qrhl.{QRHLSubgoal, State, Subgoal, UserException}
 
-case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
+/* TODO: use this one */
+case class WpTac(left:Boolean)
+  extends IsabelleTac(WpTac.wpTacOp, { context => left }) {
+  override def toString: String = s"wp(${if (left) "left" else "right"})"
+
+  override def check(state: State, goal: Subgoal, newGoals: List[Subgoal]): Unit = {
+    assert(newGoals.length==1)
+    assert(newGoals.head.isInstanceOf[QRHLSubgoal])
+  }
+}
+
+case class WpTacOld(override val left:Boolean) extends WpStyleTac(left) {
   override def toString: String = s"wp(${if (left) "left" else "right"})"
 
   override def getWP(state: State, statement: Statement, post: Expression): Expression = statement match {
@@ -98,6 +109,9 @@ case class WpTac(override val left:Boolean) extends WpStyleTac(left) {
 }
 
 object WpTac {
+  val wpTacOp: Operation[(Boolean, Term, BigInt), Option[List[Term]]] =
+    Operation.implicitly[(Boolean,Term,BigInt), Option[List[Term]]]("wp_tac")
+
   val sampleWpOp: Operation[((String, ITyp), (Term, Term)), Term] =
     Operation.implicitly[((String,ITyp), (Term, Term)), Term]("sampleWp")
   val qapplyWpOp: Operation[(Term, Term, List[Term]), Term] =

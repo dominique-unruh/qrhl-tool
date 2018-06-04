@@ -1,10 +1,53 @@
 theory Test
-  imports Tactics QRHL_Code
+  imports Encoding Tactics
 begin
+
+(* ML {* fun double ctx [e] = @{const plus(dummy)} $ e $ e *}
+
+syntax "_double1" :: "'a \<Rightarrow> 'a" ("double1 _" [81] 80)
+parse_translation {* [("_double1", double)] *}
+
+(* Ctrl-click on double1 DOT NOT jump to definition *)
+term "double1 2"
+
+
+consts "double2_donotuse" :: "'a \<Rightarrow> 'a" ("double2 _" [81] 80)
+parse_translation {* [(@{const_syntax double2_donotuse}, double)] *}
+
+(* Ctrl-click on double1 DOES jump to definition
+   but we define an extra constant that clutters the name space
+   and is forbidden (meaningless) *)
+term "double2 2"
+(* Example: leads to valid looking pretty printing but is nonsense *)
+term "double2_donotuse 2"
+
+
+abbreviation (input) double3 ("double3 _" [81] 80) where
+  "double3 x == x+x"
+
+(* Ctrl-click on double1 DOES jump to definition, 
+   but abbreviation mechanism too limited for more complex cases *)
+term "double3 2"
+
+
+syntax "_double4" :: "'a \<Rightarrow> 'a" ("TEMPORARY")
+parse_translation {* [("_double4", double)] *}
+abbreviation (input) double4_donotuse ("double4 _" [81] 80) where
+  "double4_donotuse x == TEMPORARY x"
+no_syntax "_double4" :: "'a \<Rightarrow> 'a" ("TEMPORARY")
+
+(* Ctrl-click on double1 DOES jump to definition, 
+   no "forbidden" constant defined,
+   but it's complicated and feels like a hack. *)
+term "double4 2"
+ *)
+
 
 instantiation expression :: (ord) ord begin
 instance sorry
 end
+
+
 
 
 ML{*
@@ -183,7 +226,7 @@ ML {*
 fun is_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
   ((QRHL.parse_varterm Q; true) handle TERM _ => false)
   | is_explicit_expression _ = false
-fun is_varlist_explicit_expression (Const(@{const_name expression},_) $ Q $ e) =
+fun is_varlist_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
   ((QRHL.parse_varlist Q; true) handle TERM _ => false)
   |  is_varlist_explicit_expression _ = false
 *}
@@ -215,23 +258,31 @@ lemma expression_leq2:
   shows "expression \<lbrakk>v,w\<rbrakk> (\<lambda>(x,y). e x y) \<le> expression \<lbrakk>v,w\<rbrakk> (\<lambda>(x,y). e' x y)"
   sorry
 
+(* TODO move near top_not_bot *)
+lemma bot_not_top[simp]: "(bot::'a subspace) \<noteq> top"
+  by (metis top_not_bot)
+
 lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" sorry
+lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot" sorry
+lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
+lemma Cla_leq[simp]: "Cla[e] \<le> Cla[f] \<longleftrightarrow> (e \<longrightarrow> f)" by simp
+
 
 schematic_goal
   assumes [simp]: "x\<ge>0"
-  shows "qrhl Expr[ Cla[x1=0 \<and> x2=0] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ] ] [] Expr[ Cla[x1\<ge>x2] ]"
+  shows "qrhl Expr[ Cla[x1=0 \<and> x2=1] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ] ] [assign var_x Expr[x-1] ] Expr[ Cla[x1\<ge>x2] ]"
   using [[method_error,show_types]]
-  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>) 
+  apply (tactic \<open>Tactics.wp_tac @{context} false 1\<close>)
   apply simp
   apply (rule skip)
   apply (rule expression_leq2)
-  by auto  
-
+  by simp
+    
 schematic_goal "qrhl ?pre [assign var_x Expr[x+2], assign var_x Expr[0], assign var_x Expr[x+1] ] [] Expr[ Cla[x1=1] ]"
   apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>, simp?)+
   apply (rule qrhl_top)
   oops
-
 
 end
 

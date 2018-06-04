@@ -31,6 +31,11 @@ case class SeqTacOLD(left:Int, right:Int, inner:Expression) extends Tactic {
 case class SeqTac(left:Int, right:Int, inner:Expression)
   extends IsabelleTac(SeqTac.seqTacOp,{ ctx => (BigInt(left),BigInt(right),inner.encodeAsExpression(ctx)) }) {
   override def toString: String = s"seq $left $right"
+
+  override def check(state: State, goal: Subgoal, newGoals: List[Subgoal]): Unit = {
+    if (newGoals.length!=2) throw UserException(s"Internal error: seq tactic returned ${newGoals.length} subgoals")
+    if (newGoals.exists(!_.isInstanceOf[QRHLSubgoal])) throw UserException(s"Internal error: seq tactic returned subgoals that are not QRHL judgments")
+  }
 }
 
 object SeqTac {

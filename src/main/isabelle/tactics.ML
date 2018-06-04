@@ -191,5 +191,6 @@ fun wp_tac ctxt left i =
     end
   ) (i+1)
   
+fun wp_tac_on_term left ctx = tac_on_term (wp_tac ctx left 1) ctx
 
 end

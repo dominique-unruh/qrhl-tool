@@ -202,4 +202,10 @@ operation_setup seq_tac = {*
    action = fn ((i,j,B),goal,ctx_id) => Tactics.seq_tac_on_term i j B (Refs.Ctxt.read ctx_id) goal}
 *}
 
+operation_setup wp_tac = {*
+  {from_lib = Codec.triple Codec.bool Codec.term Codec.int,
+   to_lib = Codec.option (Codec.list Codec.term),
+   action = fn (left,goal,ctx_id) => Tactics.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal}
+*}
+
 end

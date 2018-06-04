@@ -35,6 +35,9 @@ for Q :: "'a variables" and e :: "'z \<Rightarrow> 'a \<Rightarrow> 'e" and f ::
 axiomatization pair_expression where
   pair_expression_def[simp]: "pair_expression (expression Q1 e1) (expression Q2 e2)
     = expression (variable_concat Q1 Q2) (\<lambda>(z1,z2). (e1 z1, e2 z2))"
+for Q1 :: "'q1 variables" and Q2 :: "'q2 variables" 
+and e1 :: "'q1 \<Rightarrow> 'e1" and e2 :: "'q2 \<Rightarrow> 'e2"
+
 
 definition map_expression :: "('e \<Rightarrow> 'f) \<Rightarrow> ('e expression) \<Rightarrow> 'f expression" where
   "map_expression f e = map_expression' (\<lambda>e. f (e ())) (\<lambda>_. e)"
