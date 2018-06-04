@@ -127,6 +127,18 @@ fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
   | [Const(@{const_name block},_) $ _] => 
       resolve_tac ctxt (lr @{thms wp1_block} @{thms wp2_block}) n THEN wp_tac0 left ctxt n
       ORELSE error "block"
+  | [Const(@{const_name qapply},_) $ _ $ _] => 
+      resolve_tac ctxt (lr @{thms wp1_qapply} @{thms wp2_qapply}) n
+      ORELSE error "quantum application"
+  | [Const(@{const_name qinit},_) $ _ $ _] => 
+      resolve_tac ctxt (lr @{thms wp1_qinit} @{thms wp2_qinit}) n
+      ORELSE error "quantum initialization"
+  | [Const(@{const_name ifthenelse},_) $ _ $ _ $ _] => 
+      resolve_tac ctxt (lr @{thms wp1_if} @{thms wp2_if}) n
+      ORELSE error "if-statement"
+  | [Const(@{const_name measure},_) $ _ $ _ $ _] => 
+      resolve_tac ctxt (lr @{thms wp1_measure} @{thms wp2_measure}) n
+      ORELSE error "measurement-statement"
   | [] => 
       resolve_tac ctxt @{thms wp_skip} n
       ORELSE error "empty program"
@@ -135,7 +147,7 @@ fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
        THEN wp_tac0 left ctxt (n+1) (* Must happen first to instantiate B' *)
        THEN wp_tac0 left ctxt n)
       ORELSE error "list of statements"
-  | [s] => error_tac (fn _ => "Statement must be one of assign/sample/block, not '"^Syntax.string_of_term ctxt s^"'") ctxt
+  | [s] => error_tac (fn _ => "Statement must be one of assign/sample/block/qinit/qapply/measure/if, not '"^Syntax.string_of_term ctxt s^"'") ctxt
   end)
 
 fun get_wp_via_tac tac left (prog:term) (post:term) ctxt =

@@ -1,5 +1,5 @@
 theory Test
-  imports Tactics
+  imports Tactics QRHL_Code
 begin
 
 instantiation expression :: (ord) ord begin
@@ -154,9 +154,12 @@ variables
   classical x :: int and
   classical a :: int and
   classical b :: int and 
-  classical c :: int
+  classical c :: int and
+  quantum q :: int
 begin
 
+thm q1_varname
+thm x1_varname
 
 lemma qrhl_top: "qrhl A p1 p2 (expression Q (\<lambda>z. top))" sorry
 
@@ -176,26 +179,53 @@ lemma
   apply simp
   by (rule qrhl_top)
 
+ML {*
+fun is_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
+  ((QRHL.parse_varterm Q; true) handle TERM _ => false)
+  | is_explicit_expression _ = false
+fun is_varlist_explicit_expression (Const(@{const_name expression},_) $ Q $ e) =
+  ((QRHL.parse_varlist Q; true) handle TERM _ => false)
+  |  is_varlist_explicit_expression _ = false
+*}
+
+ML {*
+fun clean_expression_simproc _ ctxt ct = 
+  let val t = Thm.term_of ct in
+  if is_explicit_expression t andalso not (is_varlist_explicit_expression t) then
+      SOME (Encoding.clean_expression_conv ctxt ct) handle CTERM _ => NONE
+    else
+      NONE
+  end
+*}
+
+simproc_setup clean_expression ("expression Q e") = clean_expression_simproc
 
 lemma skip:
   assumes "A \<le> B"
   shows "qrhl A [] [] B"
   sorry
 
-lemma expression_leq:
+lemma expression_leq1:
   assumes "\<And>x. e x \<le> e' x"
-  shows "expression Q e \<le> expression Q e'"
+  shows "expression \<lbrakk>v\<rbrakk> e \<le> expression \<lbrakk>v\<rbrakk> e'"
   sorry
+
+lemma expression_leq2:
+  assumes "\<And>x y. e x y \<le> e' x y"
+  shows "expression \<lbrakk>v,w\<rbrakk> (\<lambda>(x,y). e x y) \<le> expression \<lbrakk>v,w\<rbrakk> (\<lambda>(x,y). e' x y)"
+  sorry
+
+lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" sorry
 
 schematic_goal
   assumes [simp]: "x\<ge>0"
-  shows "qrhl Expr[ Cla[x1=0 \<and> x2=0] ] [sample var_x Expr[ uniform {0..max x 0}] ] [] Expr[ Cla[x1\<ge>x2] ]"
+  shows "qrhl Expr[ Cla[x1=0 \<and> x2=0] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ] ] [] Expr[ Cla[x1\<ge>x2] ]"
   using [[method_error,show_types]]
   apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>)
-  apply (rule skip)
   apply simp
-  apply (rule expression_leq)
-  by auto
+  apply (rule skip)
+  apply (rule expression_leq2)
+  by auto  
 
 schematic_goal "qrhl ?pre [assign var_x Expr[x+2], assign var_x Expr[0], assign var_x Expr[x+1] ] [] Expr[ Cla[x1=1] ]"
   apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>, simp?)+

@@ -647,8 +647,10 @@ fun declare_variable_lthy name vartype =
 
 fun variables vars gthy = 
 let fun elems0 idx = [
-      Element.Fixes (map (fn (_,bind,T) => (bind |> Binding.suffix_name idx, SOME T, Mixfix.NoSyn)) vars),
-      Element.Fixes (map (fn (_,bind,T) => (bind |> Binding.prefix_name "var_" |> Binding.suffix_name idx, SOME (mk_variableT T), Mixfix.NoSyn)) vars),
+      Element.Fixes (map_filter (fn (cq,bind,T) => 
+           case cq of Classical => SOME (bind |> Binding.suffix_name idx, SOME T, Mixfix.NoSyn) | Quantum => NONE) vars),
+      Element.Fixes (map (fn (cq,bind,T) => (bind |> (case cq of Classical => Binding.prefix_name "var_" | Quantum => I)
+                                                  |> Binding.suffix_name idx, SOME (mk_variableT T), Mixfix.NoSyn)) vars),
       Element.Assumes (map (fn (cq,bind,T) => ((Binding.suffix_name (idx^"_varname") bind, @{attributes [simp]}),
                              [(varname_assumption cq (Binding.suffix_name idx bind) T, [])])) vars)]
     val elems = map elems0 ["", "1", "2"] |> List.concat

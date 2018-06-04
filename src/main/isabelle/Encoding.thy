@@ -19,31 +19,60 @@ Some notation, used mainly in the documentation of the ML code:
 \<^item> An expression is @{emph \<open>well-formed explicit\<close>} iff it is of the form @{term "expression \<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk> (\<lambda>(z\<^sub>1,z\<^sub>2,dots,z\<^sub>n). e (z\<^sub>1,z\<^sub>2,dots,z\<^sub>n))"}
   where the @{term "x\<^sub>i"} are free variables.
 
-\<^item>   An expression is @{emph \<open>explicit\<close>} iff it is of the form @{term "expression Q e"} where @{term Q} is an explicit variable term.
+\<^item> An expression is @{emph \<open>varlist explicit\<close>} iff it is of the form @{term "expression \<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk> e"}
+  where the @{term "x\<^sub>i"} are free variables.
+
+\<^item> An expression is @{emph \<open>explicit\<close>} iff it is of the form @{term "expression Q e"} where @{term Q} is an explicit variable term.
 \<close>
 
 
 abbreviation "const_expression z \<equiv> expression \<lbrakk>\<rbrakk> (\<lambda>_. z)"
 
-axiomatization map_expression :: "(('z \<Rightarrow> 'e) \<Rightarrow> 'f) \<Rightarrow> ('z \<Rightarrow> 'e expression) \<Rightarrow> 'f expression" where 
-  map_expression_def[simp]: "map_expression f (\<lambda>z. expression Q (e z)) = expression Q (\<lambda>a. f (\<lambda>z. e z a))"
+axiomatization map_expression' :: "(('z \<Rightarrow> 'e) \<Rightarrow> 'f) \<Rightarrow> ('z \<Rightarrow> 'e expression) \<Rightarrow> 'f expression" where 
+  map_expression'_def[simp]: "map_expression' f (\<lambda>z. expression Q (e z)) = expression Q (\<lambda>a. f (\<lambda>z. e z a))"
 for Q :: "'a variables" and e :: "'z \<Rightarrow> 'a \<Rightarrow> 'e" and f :: "('z \<Rightarrow> 'e) \<Rightarrow> 'f"
 
 axiomatization pair_expression where
   pair_expression_def[simp]: "pair_expression (expression Q1 e1) (expression Q2 e2)
     = expression (variable_concat Q1 Q2) (\<lambda>(z1,z2). (e1 z1, e2 z2))"
 
+definition map_expression :: "('e \<Rightarrow> 'f) \<Rightarrow> ('e expression) \<Rightarrow> 'f expression" where
+  "map_expression f e = map_expression' (\<lambda>e. f (e ())) (\<lambda>_. e)"
+
+lemma map_expression[simp]:
+  "map_expression f (expression Q e) = expression Q (\<lambda>x. f (e x))"
+  unfolding map_expression_def map_expression'_def
+  apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
+
 definition map_expression2' :: "('e1 \<Rightarrow> ('z \<Rightarrow> 'e2) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('z \<Rightarrow> 'e2 expression) \<Rightarrow> 'f expression" where
-  "map_expression2' f e1 e2 = map_expression (\<lambda>x12. let x1 = fst (x12 undefined) in
+  "map_expression2' f e1 e2 = map_expression' (\<lambda>x12. let x1 = fst (x12 undefined) in
                                                     let x2 = \<lambda>z. snd (x12 z) in
                                                     f x1 x2) (\<lambda>z. pair_expression e1 (e2 z))"
 
 lemma map_expression2'[simp]:
   "map_expression2' f (expression Q1 e1) (\<lambda>z. expression Q2 (e2 z))
      = expression (variable_concat Q1 Q2) (\<lambda>(x1,x2). f (e1 x1) (\<lambda>z. e2 z x2))"
-  unfolding map_expression2'_def pair_expression_def map_expression_def
+  unfolding map_expression2'_def pair_expression_def map_expression'_def
   apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
 
+definition map_expression2 :: "('e1 \<Rightarrow> 'e2 \<Rightarrow> 'f) \<Rightarrow> 'e1 expression \<Rightarrow> 'e2 expression \<Rightarrow> 'f expression" where
+  "map_expression2 f e1 e2 = map_expression (\<lambda>(x1,x2). f x1 x2) (pair_expression e1 e2)"
+
+lemma map_expression2[simp]:
+  "map_expression2 f (expression Q1 e1) (expression Q2 e2)
+     = expression (variable_concat Q1 Q2) (\<lambda>(x1,x2). f (e1 x1) (e2 x2))"
+  unfolding map_expression2_def pair_expression_def apply simp
+  apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
+
+definition map_expression3 :: "('e1 \<Rightarrow> 'e2 \<Rightarrow> 'e3 \<Rightarrow> 'f) \<Rightarrow> 'e1 expression \<Rightarrow> 'e2 expression \<Rightarrow> 'e3 expression \<Rightarrow> 'f expression" where
+  "map_expression3 f e1 e2 e3 = map_expression (\<lambda>(x1,x2,x3). f x1 x2 x3)
+    (pair_expression e1 (pair_expression e2 e3))"
+
+lemma map_expression3[simp]:
+  "map_expression3 f (expression Q1 e1) (expression Q2 e2) (expression Q3 e3)
+     = expression (variable_concat Q1 (variable_concat Q2 Q3)) (\<lambda>(x1,x2,x3). f (e1 x1) (e2 x2) (e3 x3))"
+  unfolding map_expression3_def pair_expression_def apply simp
+  apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
 
 axiomatization index_var :: "bool \<Rightarrow> 'a variable \<Rightarrow> 'a variable" where
   index_var1: "y = index_var True x \<longleftrightarrow> variable_name y = variable_name x @ ''1''" and
@@ -84,6 +113,7 @@ axiomatization
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program" and
   qinit :: "'a variables \<Rightarrow> 'a vector expression \<Rightarrow> program" and
   qapply :: "'a variables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program" and
+  (* TODO rename to measure *)
   measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
 
 
