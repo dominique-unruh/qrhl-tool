@@ -43,13 +43,15 @@ lemma wp2_sample:
 
 lemma wp1_qapply:
   fixes A B Q e
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q \<cdot> top)))) (index_expression True e) B"
+  defines "Q\<^sub>1 \<equiv> index_vars True Q"
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) (index_expression True e) B"
   shows "qrhl A [qapply Q e] [] B"
   sorry
 
 lemma wp2_qapply:
   fixes A B Q e
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[isometry e\<^sub>2] \<sqinter> (adjoint (e\<^sub>2\<guillemotright>Q) \<cdot> (B \<sqinter> (e\<^sub>2\<guillemotright>Q \<cdot> top)))) (index_expression False e) B"
+  defines "Q\<^sub>2 \<equiv> index_vars False Q"
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[isometry e\<^sub>2] \<sqinter> (adjoint (e\<^sub>2\<guillemotright>Q\<^sub>2) \<cdot> (B \<sqinter> (e\<^sub>2\<guillemotright>Q\<^sub>2 \<cdot> top)))) (index_expression False e) B"
   shows "qrhl A [] [qapply Q e] B"
   sorry
 
@@ -57,7 +59,7 @@ lemma wp1_measure:
   fixes A B x Q e
   defines "e\<^sub>1 \<equiv> index_expression True e"
   defines "B' z \<equiv> subst_expression (substitute1 (index_var True x) (const_expression z)) B"
-  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q) \<cdot> top"
+  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars True Q)) \<cdot> top"
   defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>1 B'. Cla[mtotal e\<^sub>1] \<sqinter> 
            (INF z. ((B' z \<sqinter> ebar e\<^sub>1 z) + ortho (ebar e\<^sub>1 z)))) e\<^sub>1 B'"
   shows "qrhl A [measurement x Q e] [] B"
@@ -67,24 +69,24 @@ lemma wp2_measure:
   fixes A B x Q e
   defines "e\<^sub>2 \<equiv> index_expression False e"
   defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
-  defines "\<And>e\<^sub>2 z. ebar e\<^sub>2 z \<equiv> ((mproj e\<^sub>2 z)\<guillemotright>Q) \<cdot> top"
+  defines "\<And>e\<^sub>2 z. ebar e\<^sub>2 z \<equiv> ((mproj e\<^sub>2 z)\<guillemotright>(index_vars False Q)) \<cdot> top"
   defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>2 B'. Cla[mtotal e\<^sub>2] \<sqinter> 
            (INF z. ((B' z \<sqinter> ebar e\<^sub>2 z) + ortho (ebar e\<^sub>2 z)))) e\<^sub>2 B'"
-  shows "qrhl A [measurement x Q e] [] B"
+  shows "qrhl A [] [measurement x Q e] B"
   sorry
 
 lemma wp1_qinit:
   fixes B e Q
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> Q))
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> (index_vars True Q)))
            (index_expression True e) B"
   shows "qrhl A [qinit Q e] [] B"
   sorry
 
 lemma wp2_qinit:
   fixes B e Q
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[norm e\<^sub>2 = 2] \<sqinter> (B \<div> e\<^sub>2 \<guillemotright> Q))
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[norm e\<^sub>2 = 2] \<sqinter> (B \<div> e\<^sub>2 \<guillemotright> (index_vars False Q)))
            (index_expression False e) B"
-  shows "qrhl A [qinit Q e] [] B"
+  shows "qrhl A [] [qinit Q e] B"
   sorry
 
 lemma wp1_if:
@@ -102,7 +104,7 @@ lemma wp2_if:
   assumes "qrhl wp_false p2 [] B"
   defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>2 wp_true wp_false. (Cla[e\<^sub>2] + wp_true) \<sqinter> (Cla[\<not>e\<^sub>2] + wp_false))
            (index_expression False e) wp_true wp_false"
-  shows "qrhl A [ifthenelse e p1 p2] [] B"
+  shows "qrhl A [] [ifthenelse e p1 p2] B"
   sorry
 
 lemma wp1_block:

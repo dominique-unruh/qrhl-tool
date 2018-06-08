@@ -12,8 +12,8 @@ case class WpTac(left:Boolean)
   override def toString: String = s"wp(${if (left) "left" else "right"})"
 
   override def check(state: State, goal: Subgoal, newGoals: List[Subgoal]): Unit = {
-    assert(newGoals.length==1)
-    assert(newGoals.head.isInstanceOf[QRHLSubgoal])
+    assert(newGoals.length==1, newGoals.length)
+    assert(newGoals.head.isInstanceOf[QRHLSubgoal], newGoals.head)
   }
 }
 

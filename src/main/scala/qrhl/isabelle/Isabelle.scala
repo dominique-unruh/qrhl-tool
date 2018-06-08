@@ -197,6 +197,7 @@ object Isabelle {
   val whileProg = Const(whileName, expressionT(HOLogic.boolT) -->: listT(programT) -->: programT)
   val metaImp = Const("Pure.imp", Type("prop") -->: Type("prop") -->: Type("prop"))
   val boolT: ITyp = HOLogic.boolT
+  val implies = Const("HOL.implies", boolT -->: boolT -->: boolT)
   val qrhl = Const("Encoding.qrhl", expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
   val qinitName = "Encoding.qinit"
   def qinit(typ:ITyp) = Const(qinitName, variablesT(typ) -->: expressionT(vectorT(typ)) -->: programT)

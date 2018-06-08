@@ -408,6 +408,7 @@ fun parse_varlist t =
   let val vt = parse_varterm t
       fun tol (VTSingle nT) = [nT]
         | tol VTUnit = []
+        | tol (VTCons (VTSingle _, VTUnit)) = raise TERM("not a variable list",[t])
         | tol (VTCons (VTSingle nT, rest)) = nT :: tol rest
         | tol (VTCons _) = raise TERM("not a variable list",[t])
   in

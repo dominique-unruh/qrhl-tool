@@ -98,7 +98,12 @@ fun tac_on_term tac ctx t =
     | SOME (goal',_) => SOME (Thm.prems_of goal' |> map HOLogic.dest_Trueprop)
   end
 
-fun seq_tac_on_term i j B ctx = tac_on_term (seq_tac i j B ctx 1) ctx
+fun tac_on_term_concl tac ctxt (Const(@{const_name implies},_) $ a $ b) = 
+      Option.map (map (fn t => HOLogic.mk_imp (a, t)))
+      (tac_on_term_concl tac ctxt b)
+  | tac_on_term_concl tac ctxt b = tac_on_term tac ctxt b
+
+fun seq_tac_on_term i j B ctx = tac_on_term_concl (seq_tac i j B ctx 1) ctx
 
 (* fun get_wp1_rule rule = get_wp1_tac (fn ctxt => resolve_tac ctxt rule 1)
 
@@ -135,6 +140,8 @@ fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
       ORELSE error "quantum initialization"
   | [Const(@{const_name ifthenelse},_) $ _ $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_if} @{thms wp2_if}) n
+      THEN wp_tac0 left ctxt n
+      THEN wp_tac0 left ctxt n
       ORELSE error "if-statement"
   | [Const(@{const_name measure},_) $ _ $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_measure} @{thms wp2_measure}) n
@@ -164,7 +171,50 @@ fun get_wp_via_tac tac left (prog:term) (post:term) ctxt =
     (pre,thm)
   end
 
-fun get_wp left = get_wp_via_tac (fn ctxt => wp_tac0 left ctxt 1) left
+fun get_wp_not_cleaned left = get_wp_via_tac (fn ctxt => wp_tac0 left ctxt 1) left
+
+(* Cleans up the result of get_wp. That is, removes all index_{var,vars,expressions} and map_expression 
+   and variants from the precondition of a qrhl judgement (i.e., "Trueprop (qrhl A p1 p2 B)"),
+   and makes the expression explicit well-formed.
+
+   Assuming all involved variables, variable lists, and expressions are all explicit. *)
+fun wp_cleanup_conv ctxt =
+ (Encoding.index_conv ctxt
+  then_conv
+  Conv.bottom_conv (fn ctxt => Conv.try_conv (Encoding.subst_expression_conv ctxt)) ctxt
+  then_conv
+  Encoding.map_expression_conv ctxt
+  then_conv
+  Conv.try_conv (Encoding.clean_expression_conv ctxt)
+  )
+    |> Conv.arg_conv (* Trueprop *)
+    |> Conv.fun_conv |> Conv.fun_conv |> Conv.fun_conv |> Conv.arg_conv (* precondition of qrhl *)
+
+(* Computes a "weakest" (or as weak as we can) precondition
+   for post w.r.t prograpm prog. Returns (pre,qrhl)
+   where pre is the precondition, and qrhl is a 
+   judgement "qrhl pre prog [] post" (if left=True)
+   and  "qrhl pre [] prog post" (if left=False).
+
+   If post is well-formed explicit, and so is prog (TODO: define
+   well-formed explicit prog's), then pre is well-formed explicit.
+ *)
+fun get_wp left prog post ctxt = let
+  val (_,thm) = get_wp_not_cleaned left prog post ctxt
+(* val _ = @{print} thm *)
+  val thm2 = Conv.fconv_rule (wp_cleanup_conv ctxt) thm
+(* val _ = @{print} thm2 *)
+  val (wp,_,_,_) = thm2 |> Thm.prop_of |> dest_qrhl_goal
+in
+  (wp,thm2)         
+end  
+
+(* fun get_wp_clean left prog post ctxt = 
+  let val (_,thm) = get_wp left prog post ctxt
+      val thm2 = 
+  in
+    thm
+  end *)
 
 (*
 fun get_wp1 prog post ctxt =
@@ -191,6 +241,8 @@ fun wp_tac ctxt left i =
     end
   ) (i+1)
   
-fun wp_tac_on_term left ctx = tac_on_term (wp_tac ctx left 1) ctx
+fun wp_tac_on_term left ctx = 
+  tac_on_term_concl (wp_tac ctx left 1) ctx
+
 
 end

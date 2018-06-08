@@ -703,6 +703,8 @@ lemma subspace_empty_Sup: "Sup {} = (0::'a subspace)"
 
 lemma top_not_bot[simp]: "(top::'a subspace) \<noteq> bot"
   by (metis subspace_zero_bot subspace_zero_not_top) 
+lemma bot_not_top[simp]: "(bot::'a subspace) \<noteq> top"
+  by (metis top_not_bot)
 
 lemma inf_assoc_subspace[simp]: "A \<sqinter> B \<sqinter> C = A \<sqinter> (B \<sqinter> C)" for A B C :: "_ subspace"
   unfolding inf.assoc by simp

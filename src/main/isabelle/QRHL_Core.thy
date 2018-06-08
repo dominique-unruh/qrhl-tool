@@ -708,6 +708,9 @@ axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a 
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
 
+lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" sorry
+lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot" sorry
+lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
 
 subsection \<open>Quantum equality\<close>
 

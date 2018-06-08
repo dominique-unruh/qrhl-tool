@@ -3,6 +3,10 @@ struct
 
 val current_simpset = simpset_of @{context}
 
+fun prove_handle ctxt vars goal tac =
+  Goal.prove ctxt vars [] goal (fn {context,...} => tac context)
+  handle ERROR _ => raise TERM("Failed to prove goal",[goal])
+
 fun SOLVE1 tac st = 
   (tac THEN COND (has_fewer_prems (Thm.nprems_of st)) all_tac no_tac) st
 
@@ -12,7 +16,7 @@ fun conv_from_tac check tac ctxt ct =
       val maxidx = Thm.maxidx_of_cterm ct
       val T = Thm.typ_of_cterm ct
       val goal = Logic.mk_equals (Thm.term_of ct, Var(("result",maxidx+1), T))
-      val thm = Goal.prove ctxt [] [] goal (fn {context,...} => tac context THEN print_tac context "conv_from_tac subgoals:")
+      val thm = prove_handle ctxt [] goal tac
   in
     thm
   end
@@ -32,9 +36,16 @@ fun pat_lambda_conv ctxt varlist ct = let
   val goal = Logic.mk_equals (t', rhs)
   val thm = 
     if varlist=[] then @{thm pat_lambda_conv_aux} else
-    Goal.prove ctxt ["term"] [] goal (fn {context,...} => simp_tac (put_simpset current_simpset context) 1)
+    prove_handle ctxt ["term"] goal (fn context => simp_tac (put_simpset current_simpset context) 1)
   in
     infer_instantiate ctxt [(("term",0),ct)] thm
+  end
+
+fun change_conv conv ct =
+  let val thm = conv ct
+      val _ = if Thm.term_of (Thm.lhs_of thm) = Thm.term_of (Thm.rhs_of thm) then raise (CTERM("not changed",[ct])) else ()
+  in
+    thm
   end
 
 end

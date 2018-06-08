@@ -7,8 +7,9 @@ fun string_of_term_gl t = Syntax.string_of_term_global (Context.the_global_conte
 
 fun assert_aconv x y =
   if x aconv y then () else
-  error ("Expected "^ string_of_term_gl y^" (up to aconv), got "^ string_of_term_gl x)
+  error ("Expected: "^ string_of_term_gl y^"\nGot:      "^ string_of_term_gl x)
 
+fun assert_aconv_cterm x y = assert_aconv (Thm.term_of x) (Thm.term_of y)
 
 fun assert_aconv_thm x y =
   if Thm.prop_of x aconv y then () else

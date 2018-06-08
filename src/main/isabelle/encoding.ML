@@ -5,9 +5,10 @@ fun mk_expressionT T = Type(@{type_name expression}, [T])
 
 (* val expression_to_term_simpset = clear_simpset @{context} addsimps @{thms case_prod_conv} *)
 
+(* TODO: should make sure it's sound (i.e., reject expressions that cannot be converted, check whether vars are declared *)
 fun expression_to_term t =
   let val (vs,e) = case t of Const(@{const_name expression},_) $ vs $ e => (vs,e) | _ => raise (TERM("expression_to_term",[t]))
-      val vars = QRHL.parse_varterm vs |> QRHL.vars_in_varterm 
+      val vars = QRHL.parse_varlist vs 
           |> map (fn (x,T) => Free (String.extract (x,4,NONE),T)) (* unsafe, not checking whether the var name is wellformed *)
           (* |> @{print} *)
       val e' = e $ HOLogic.mk_tuple vars
@@ -109,8 +110,11 @@ fun clean_expression_conv_varlist_tac1 ctxt =
 (* Helper for clean_expression_conv_varlist *)
 fun clean_expression_conv_varlist_tac ctxt = REPEAT_DETERM (clean_expression_conv_varlist_tac1 ctxt)
 
+(* Helper for clean_expression_conv_varlist *)
+val clean_expression_conv_varlist1 : Proof.context -> conv = Misc.conv_from_tac (fn _=>fn _=>()) clean_expression_conv_varlist_tac
+
 (* Converts an explicit expression into an expression "expression Q e" where Q is an explicit variable list. *)
-val clean_expression_conv_varlist : Proof.context -> conv = Misc.conv_from_tac (fn _=>fn _=>()) clean_expression_conv_varlist_tac
+fun clean_expression_conv_varlist ctxt : conv = Conv.repeat_conv (Misc.change_conv (clean_expression_conv_varlist1 ctxt))
 
 (* Converts a well-formed explicit expression into a well-formed explicit expression, 
    simplifying subterms "case (x,y) of (x,y) => ...". (clean_expression_conv_varlist introduces such subterms.) *)
@@ -157,5 +161,63 @@ fun index_var_conv ctxt ct =
 
 (* Simproc that simplifies using index_var_conv, see there.  *)
 fun index_var_simproc _ ctxt ct = SOME (index_var_conv ctxt ct) handle CTERM _ => NONE
+
+(* Rewrites all index_{var,vars,expression} subterms (e.g., index_var True x \<rightarrow> x1, etc.).
+   If the involved variables, variable lists, and expressions are all explicit, this will
+   remove all occurrences of index_{...}.
+*)
+fun index_conv ctxt =
+  Raw_Simplifier.rewrite ctxt false @{thms 
+        index_expression_def[THEN eq_reflection]
+        index_vars_concat[THEN eq_reflection]
+        index_vars_singleton[THEN eq_reflection]
+        index_vars_unit[THEN eq_reflection]}
+then_conv
+  Conv.top_sweep_conv index_var_conv ctxt
+
+(* Rewrites subterms of the form "map_expression ..." (or variants map_expression', 2', 2, 3)
+   If the involved variables, variable lists, and expressions are all explicit, this will
+   remove all occurrences of map_expression and variants.
+ *)
+fun map_expression_conv ctxt = 
+  Raw_Simplifier.rewrite ctxt false @{thms 
+    map_expression[THEN eq_reflection]
+    map_expression'_def[THEN eq_reflection]
+    map_expression2'[THEN eq_reflection]
+    map_expression2[THEN eq_reflection]
+    map_expression3[THEN eq_reflection]}
+
+fun subst_expression_conv_tac1 ctxt =
+  resolve_tac ctxt @{thms subst_expression_concat_id_aux subst_expression_singleton_same_aux subst_expression_unit_aux} 1
+  ORELSE
+  CHANGED (resolve_tac ctxt @{thms subst_expression_id_comp_aux} 1)
+  ORELSE 
+  (resolve_tac ctxt @{thms subst_expression_singleton_notsame_aux} 1
+        THEN Misc.SOLVE1 (simp_tac ctxt 1))
+
+fun subst_expression_conv_tac ctxt = REPEAT_DETERM (subst_expression_conv_tac1 ctxt)
+
+fun subst_expression_conv_noclean_check (_:Proof.context) t = let
+  val (sub,e) = case t of 
+    Const(@{const_name subst_expression},_) $ sub $ e => (sub,e)
+    | _ => raise TERM("not a subst_expression term",[t])
+  val (x,_) = case sub of
+    Const(@{const_name substitute1},_) $ x $ f => (x,f)
+    | _ => raise TERM("not an explicit substitution (substitute1 x f)",[t,sub])
+  val (Q,_) = case e of
+    Const(@{const_name expression},_) $ Q $ e' => (Q,e')
+    | _ => raise TERM("not an explicit expression (substitute1 Q e)",[t,e])
+  val _ = QRHL.parse_varlist Q
+  val _ = case x of
+    Free _ => ()
+    | _ => raise TERM("not an explicit variable name",[t,x])
+in
+  ()
+end
+
+val subst_expression_conv_noclean = Misc.conv_from_tac subst_expression_conv_noclean_check subst_expression_conv_tac
+
+fun subst_expression_conv ctxt = subst_expression_conv_noclean ctxt then_conv clean_expression_conv ctxt
+
 
 end

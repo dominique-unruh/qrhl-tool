@@ -2,6 +2,28 @@ theory Test
   imports Encoding Tactics
 begin
 
+
+ML {*
+fun is_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
+  ((QRHL.parse_varterm Q; true) handle TERM _ => false)
+  | is_explicit_expression _ = false
+fun is_varlist_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
+  ((QRHL.parse_varlist Q; true) handle TERM _ => false)
+  |  is_varlist_explicit_expression _ = false
+*}
+
+ML {*
+fun clean_expression_simproc _ ctxt ct = 
+  let val t = Thm.term_of ct in
+  if is_explicit_expression t andalso not (is_varlist_explicit_expression t) then
+      SOME (Encoding.clean_expression_conv ctxt ct) handle CTERM _ => NONE
+    else
+      NONE
+  end
+*}
+
+simproc_setup clean_expression ("expression Q e") = clean_expression_simproc
+
 (* ML {* fun double ctx [e] = @{const plus(dummy)} $ e $ e *}
 
 syntax "_double1" :: "'a \<Rightarrow> 'a" ("double1 _" [81] 80)
@@ -86,22 +108,6 @@ lemma tmp4[simp]:
   shows "expression (variable_concat Q \<lbrakk>\<rbrakk>) e = expression Q (\<lambda>a. e (a,()))"
   sorry
  *)
-lemma subst_expression_unit_aux:
-  "subst_expression (substitute1 x f) (expression \<lbrakk>\<rbrakk> e') \<equiv> (expression \<lbrakk>\<rbrakk> e')" sorry
-
-lemma subst_expression_singleton_same_aux:
-  "subst_expression (substitute1 x (expression R f')) (expression \<lbrakk>x\<rbrakk> e') \<equiv> (expression R (\<lambda>r. e' (f' r)))" sorry
-
-lemma subst_expression_singleton_notsame_aux:
-  assumes "variable_name x \<noteq> variable_name y"
-  shows "subst_expression (substitute1 x f) (expression \<lbrakk>y\<rbrakk> e') \<equiv> expression \<lbrakk>y\<rbrakk> e'" sorry
-
-lemma subst_expression_concat_id_aux:
-  assumes "subst_expression (substitute1 x f) (expression Q1 (\<lambda>x. x)) \<equiv> expression Q1' e1"
-  assumes "subst_expression (substitute1 x f) (expression Q2 (\<lambda>x. x)) \<equiv> expression Q2' e2"
-  shows "subst_expression (substitute1 x f) (expression (variable_concat Q1 Q2) (\<lambda>x. x)) \<equiv>
-    expression (variable_concat Q1' Q2') (\<lambda>(x1,x2). (e1 x1, e2 x2))"
-  sorry
 
 (* lemma subst_expression_concat_id:
   assumes "subst_expression (substitute1 x f) (expression Q1 (\<lambda>x. x)) = expression Q1' e1"
@@ -109,11 +115,6 @@ lemma subst_expression_concat_id_aux:
   shows "subst_expression (substitute1 x f) (expression (variable_concat Q1 Q2) (\<lambda>x. x)) =
     expression (variable_concat Q1' Q2') (\<lambda>(x1,x2). (e1 x1, e2 x2))"
   sorry *)
-
-lemma subst_expression_id_comp_aux:
-  assumes "subst_expression (substitute1 x f) (expression Q (\<lambda>x. x)) \<equiv> expression Q' g"
-  shows "subst_expression (substitute1 x f) (expression Q e) \<equiv> expression Q' (\<lambda>x. e (g x))"
-  sorry
 
 
 
@@ -128,42 +129,12 @@ lemma subst_expression_id_comp_aux:
   shows "subst_expression (substitute1 x f) (expression (variable_concat \<lbrakk>x\<rbrakk> Q) (\<lambda>x. x)) \<equiv> xxxxx"*)
 
 ML {*
-fun subst_expression_conv_tac1 ctxt =
-  resolve_tac ctxt @{thms subst_expression_concat_id_aux subst_expression_singleton_same_aux subst_expression_unit_aux} 1
-  ORELSE
-  CHANGED (resolve_tac ctxt @{thms subst_expression_id_comp_aux} 1)
-  ORELSE 
-  (resolve_tac ctxt @{thms subst_expression_singleton_notsame_aux} 1
-        THEN Misc.SOLVE1 (simp_tac ctxt 1))
-
-fun subst_expression_conv_tac ctxt = REPEAT_DETERM (subst_expression_conv_tac1 ctxt)
 *}
 
 (* variables classical v :: int and classical w :: nat begin *)
 
 ML {*
 
-fun subst_expression_conv_noclean_check (_:Proof.context) t = let
-  val (sub,e) = case t of 
-    Const(@{const_name subst_expression},_) $ sub $ e => (sub,e)
-    | _ => raise TERM("not a subst_expression term",[t])
-  val (x,_) = case sub of
-    Const(@{const_name substitute1},_) $ x $ f => (x,f)
-    | _ => raise TERM("not an explicit substitution (substitute1 x f)",[t,sub])
-  val (Q,_) = case e of
-    Const(@{const_name expression},_) $ Q $ e' => (Q,e')
-    | _ => raise TERM("not an explicit expression (substitute1 Q e)",[t,e])
-  val _ = QRHL.parse_varlist Q
-  val _ = case x of
-    Free _ => ()
-    | _ => raise TERM("not an explicit variable name",[t,x])
-in
-  ()
-end
-
-val subst_expression_conv_noclean = Misc.conv_from_tac subst_expression_conv_noclean_check subst_expression_conv_tac
-
-fun subst_expression_conv ctxt = subst_expression_conv_noclean ctxt then_conv Encoding.clean_expression_conv ctxt
 
 (* ;;
 subst_expression_conv @{context} @{cterm "subst_expression (substitute1 var_v (const_expression z)) (expression \<lbrakk>var_v,var_w\<rbrakk> e)"} *)
@@ -187,7 +158,7 @@ schematic_goal blu: "expression (variable_concat \<lbrakk>var_w,var_w\<rbrakk> (
 
 
 ML {*
-  fun subst_expression_simproc _ ctxt ct = SOME (subst_expression_conv ctxt ct) handle CTERM _ => NONE
+  fun subst_expression_simproc _ ctxt ct = SOME (Encoding.subst_expression_conv ctxt ct) handle CTERM _ => NONE
 *}
 
 simproc_setup subst_expression ("subst_expression (substitute1 x (expression R f')) (expression Q e')") = subst_expression_simproc
@@ -201,15 +172,60 @@ variables
   quantum q :: int
 begin
 
+lemma "qrhl Expr[top] [qinit \<lbrakk>q\<rbrakk> Expr[ket 0] ] [qinit \<lbrakk>q\<rbrakk> Expr[ket 0] ] Expr[top]"
+  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>)
+  using[[method_error]]
+  apply (tactic \<open>Tactics.wp_tac @{context} false 1\<close>)
+  apply simp
+  oops
+
+lemma expression_clean_unit_cons_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
+  assumes "expression Q (\<lambda>q. e ((),q)) \<equiv> expression Q' e'"
+  shows "expression (variable_concat variable_unit Q) e \<equiv> expression Q' e'"
+  sorry
+
+schematic_goal "expression (variable_concat variable_unit (variable_concat variable_unit variable_unit)) (\<lambda>(x1, x2). bot) \<equiv> ?xxx"
+  apply (rule expression_clean_unit_cons_aux)+
+  oops
+
+thm map_expression2
+ML {*
+  Tactics.get_wp true @{term "qinit \<lbrakk>q\<rbrakk> (const_expression (ket 0))"} 
+@{term "(expression (variable_concat variable_unit variable_unit) (\<lambda>(x1, x2). \<CC>\<ll>\<aa>[norm (ket 0) = 1] \<sqinter> top \<div> ket 0\<guillemotright>\<lbrakk>q\<rbrakk>))"} @{context}
+|> snd
+*}
+
+ML \<open>
+Tactics.wp_cleanup_conv @{context} @{cprop \<open>qrhl (expression (variable_concat variable_unit (variable_concat variable_unit variable_unit))
+                 (\<lambda>(x1, x2). \<CC>\<ll>\<aa>[norm (ket 0) = 1] \<sqinter> (case x2 of (x1, x2) \<Rightarrow> \<CC>\<ll>\<aa>[norm (ket ...) = 1] \<sqinter> top \<div> ket 0\<guillemotright>\<lbrakk>q\<rbrakk>) \<div> ket 0\<guillemotright>\<lbrakk>q\<rbrakk>))
+           [qinit \<lbrakk>q\<rbrakk> (const_expression (ket 0)) ] []
+           (expression (variable_concat variable_unit variable_unit) (\<lambda>(x1, x2). \<CC>\<ll>\<aa>[norm (ket 0) = 1] \<sqinter> top \<div> ket 0\<guillemotright>\<lbrakk>q\<rbrakk>))\<close>}
+\<close>
+
+ML \<open>
+Encoding.clean_expression_conv_varlist @{context} @{cterm "expression (variable_concat variable_unit (variable_concat variable_unit variable_unit))
+                 (\<lambda>(x1, x2). True)"}
+\<close>
+
+schematic_goal "expression (variable_concat variable_unit (variable_concat variable_unit variable_unit))
+                 (\<lambda>(x1, x2). True) == ?xx"
+(* apply (rule expression_clean_unit_cons_aux) *)
+
+apply (tactic  \<open>Encoding.clean_expression_conv_varlist_tac1 @{context}\<close>)
+apply (tactic  \<open>Encoding.clean_expression_conv_varlist_tac1 @{context}\<close>)
+apply (tactic  \<open>Encoding.clean_expression_conv_varlist_tac1 @{context}\<close>)
+  oops
+
 thm q1_varname
 thm x1_varname
 
 lemma qrhl_top: "qrhl A p1 p2 (expression Q (\<lambda>z. top))" sorry
+lemma qrhl_top': "f \<ge> top \<Longrightarrow> qrhl A p1 p2 (expression Q f)" sorry
 
 
 
 ML {*
-subst_expression_conv @{context} @{cterm "subst_expression (substitute1 var_x2 (const_expression 0))
+Encoding.subst_expression_conv @{context} @{cterm "subst_expression (substitute1 var_x2 (const_expression 0))
  (expression \<lbrakk>var_x1, var_x2\<rbrakk> (\<lambda>(x1, x2). \<CC>\<ll>\<aa>[Ball {0..max x1 0} (op \<le> x2) ] ))"}
 *}
 
@@ -221,27 +237,6 @@ lemma
   apply (tactic \<open>Tactics.wp_tac @{context} false 1\<close>)
   apply simp
   by (rule qrhl_top)
-
-ML {*
-fun is_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
-  ((QRHL.parse_varterm Q; true) handle TERM _ => false)
-  | is_explicit_expression _ = false
-fun is_varlist_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
-  ((QRHL.parse_varlist Q; true) handle TERM _ => false)
-  |  is_varlist_explicit_expression _ = false
-*}
-
-ML {*
-fun clean_expression_simproc _ ctxt ct = 
-  let val t = Thm.term_of ct in
-  if is_explicit_expression t andalso not (is_varlist_explicit_expression t) then
-      SOME (Encoding.clean_expression_conv ctxt ct) handle CTERM _ => NONE
-    else
-      NONE
-  end
-*}
-
-simproc_setup clean_expression ("expression Q e") = clean_expression_simproc
 
 lemma skip:
   assumes "A \<le> B"
@@ -258,15 +253,6 @@ lemma expression_leq2:
   shows "expression \<lbrakk>v,w\<rbrakk> (\<lambda>(x,y). e x y) \<le> expression \<lbrakk>v,w\<rbrakk> (\<lambda>(x,y). e' x y)"
   sorry
 
-(* TODO move near top_not_bot *)
-lemma bot_not_top[simp]: "(bot::'a subspace) \<noteq> top"
-  by (metis top_not_bot)
-
-lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" sorry
-lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot" sorry
-lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
-lemma Cla_leq[simp]: "Cla[e] \<le> Cla[f] \<longleftrightarrow> (e \<longrightarrow> f)" by simp
-
 
 schematic_goal
   assumes [simp]: "x\<ge>0"
@@ -278,11 +264,32 @@ schematic_goal
   apply (rule skip)
   apply (rule expression_leq2)
   by simp
-    
+
+ML {*
+  val (_,thm) = Tactics.get_wp true  @{term "sample var_x Expr[uniform{x}]"} @{term "Expr[ Cla[x1=1 \<and> True] ]"} @{context}
+  val (pre,_,_,_) = Tactics.dest_qrhl_goal (Thm.prop_of thm)
+  val cpre = Thm.cterm_of @{context} pre
+*}                                                                                             
+
+ML \<open>
+@{const_name implies}
+\<close>
+
+
+ML {*
+  Tactics.wp_cleanup_conv @{context} (Thm.cprop_of thm)
+  |> Thm.rhs_of
+*}
+
+
 schematic_goal "qrhl ?pre [assign var_x Expr[x+2], assign var_x Expr[0], assign var_x Expr[x+1] ] [] Expr[ Cla[x1=1] ]"
-  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>, simp?)+
-  apply (rule qrhl_top)
-  oops
+  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>)+
+  (* apply (tactic \<open>CONVERSION (wp_cleanup_conv @{context}) 1\<close>) *)
+  apply (rule qrhl_top')
+  by (auto simp: le_fun_def) 
+
+
+
 
 end
 

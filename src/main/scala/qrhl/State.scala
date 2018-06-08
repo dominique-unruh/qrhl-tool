@@ -46,7 +46,7 @@ object Subgoal {
     Breaks.breakable {
       while (true) {
         t match {
-          case App(App(Const("HOL.imp", _), a), b) =>
+          case App(App(Const(Isabelle.implies.name, _), a), b) =>
             assms.append(Expression(e.typ, a))
             t = b
           case _ => Breaks.break()
