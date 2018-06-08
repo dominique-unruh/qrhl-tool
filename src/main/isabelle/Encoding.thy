@@ -244,24 +244,25 @@ val t = Encoding.expression_to_term e' |> Thm.cterm_of ctx
 *}
 *)
 
-syntax "_expression" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
-parse_translation \<open>[("_expression", fn ctx => fn [e] => Encoding.term_to_expression_untyped ctx e)]\<close>
+consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
+parse_translation \<open>[(@{const_syntax expression_syntax}, fn ctx => fn [e] => Encoding.term_to_expression_untyped ctx e)]\<close>
+hide_const expression_syntax
 
-(* syntax "_predicate" :: "'a \<Rightarrow> predicate expression" ("Pred[_]")
-parse_translation \<open>[("_predicate", fn ctx => fn [e] => 
-  Encoding.term_to_predicate_expression_untyped ctx e)]\<close> *)
+term "Expr[x]"
 
-term "Pred[ Cla[True] ]"
+consts "probability2_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr2[_:_'(_')]")
+translations "CONST probability2_syntax a b c" \<rightleftharpoons> "CONST probability2 (Expr[a]) b c"
+hide_const probability2_syntax
 
-syntax "_probability2" :: "'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> real" ("Pr2[_:_'(_')]")
-translations "_probability2 a b c" \<rightleftharpoons> "CONST probability2 (_expression a) b c"
+term "Pr2[x:y(z)]"
 
-syntax "_qrhl" :: "'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> bool" ("QRHL {_} _ _ {_}")
-translations "_qrhl a b c d" \<rightleftharpoons> "CONST qrhl (_expression a) b c (_expression d)"
+consts "qrhl_syntax" :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> bool expression \<Rightarrow> bool" ("QRHL {_} _ _ {_}")
+translations "CONST qrhl_syntax a b c d" \<rightleftharpoons> "CONST qrhl (Expr[a]) b c (Expr[d])"
+hide_const qrhl_syntax
 
-syntax "_rhl" :: "'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> bool" ("RHL {_} _ _ {_}")
-translations "_rhl a b c d" \<rightleftharpoons> "_qrhl (classical_subspace a) b c (classical_subspace d)"
-
+consts "rhl_syntax" :: "bool \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> bool \<Rightarrow> bool" ("RHL {_} _ _ {_}")
+translations "CONST rhl_syntax a b c d" \<rightleftharpoons> "QRHL {classical_subspace a} b c {classical_subspace d}"
+hide_const rhl_syntax
 
 term \<open> QRHL {Cla[x=1]} skip skip {Cla[x=1]} \<close>
 term \<open> RHL {x=1} skip skip {x=1} \<close>

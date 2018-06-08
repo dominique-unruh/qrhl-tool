@@ -80,7 +80,16 @@ Encoding.clean_expression_abs_pat_conv @{context} @{cterm "expression \<lbrakk>v
 
 
 ML {*
-Encoding.clean_expression_conv @{context} @{cterm "expression (variable_concat \<lbrakk>var_w,var_w\<rbrakk>
+@{cterm "expression (variable_concat \<lbrakk>var_w,var_w\<rbrakk>
+ (variable_concat variable_unit (variable_concat \<lbrakk>var_w\<rbrakk> variable_unit))) e"}
+|> Encoding.clean_expression_conv_varlist1 @{context} |> Thm.rhs_of
+|> Encoding.clean_expression_conv_varlist1 @{context} |> Thm.rhs_of
+|> Encoding.clean_expression_conv_varlist1 @{context} |> Thm.rhs_of
+*}
+
+ML {*
+TODO
+Encoding.clean_expression_conv_varlist @{context} @{cterm "expression (variable_concat \<lbrakk>var_w,var_w\<rbrakk>
  (variable_concat variable_unit (variable_concat \<lbrakk>var_w\<rbrakk> variable_unit))) e"}
 *}
 
