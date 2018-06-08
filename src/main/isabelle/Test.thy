@@ -88,7 +88,6 @@ ML {*
 *}
 
 ML {*
-TODO
 Encoding.clean_expression_conv_varlist @{context} @{cterm "expression (variable_concat \<lbrakk>var_w,var_w\<rbrakk>
  (variable_concat variable_unit (variable_concat \<lbrakk>var_w\<rbrakk> variable_unit))) e"}
 *}

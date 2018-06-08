@@ -2,6 +2,7 @@ theory Test_Tactics
   imports UnitTest "../../main/isabelle/Tactics"
 begin
 
+(* TEST CASE: get_wp of "if true then skip else skip" *)
 ML \<open>
 local
 val post = @{term "Expr[top::predicate]"}
@@ -10,7 +11,7 @@ val expected_wp = @{term "const_expression ((\<CC>\<ll>\<aa>[True] + top) \<sqin
 val (wp,thm) = Tactics.get_wp true @{term "ifthenelse Expr[True] [] []"} post @{context}
 
 val _ = assert_aconv expected_wp wp
-val (A,_,_,B) = Tactics.dest_qrhl_goal (Thm.prop_of thm)
+val (A,_,_,B) = Encoding.dest_qrhl_goal (Thm.prop_of thm)
 val _ = assert_aconv expected_wp A
 val _ = assert_aconv post B
 in end

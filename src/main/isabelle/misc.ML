@@ -48,4 +48,16 @@ fun change_conv conv ct =
     thm
   end
 
+fun conditional_conv test conv1 conv2 ct = if test ct then conv1 ct else conv2 ct
+
+fun repeat_until_conv' test conv ct = 
+  (conv 
+  then_conv
+  conditional_conv (test (SOME ct)) Conv.all_conv (repeat_until_conv' test conv)) ct
+
+
+fun repeat_until_conv test conv ct =
+  if test NONE ct then Conv.all_conv ct else repeat_until_conv' test conv ct
+  
+
 end

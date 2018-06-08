@@ -3,6 +3,11 @@ struct
 
 fun mk_expressionT T = Type(@{type_name expression}, [T])
 
+
+fun dest_qrhl (Const(@{const_name qrhl},_) $ A $ p1 $ p2 $ B) = (A,p1,p2,B)
+  | dest_qrhl _ = raise Match
+fun dest_qrhl_goal t = Logic.strip_imp_concl t |> HOLogic.dest_Trueprop |> dest_qrhl
+
 (* val expression_to_term_simpset = clear_simpset @{context} addsimps @{thms case_prod_conv} *)
 
 (* TODO: should make sure it's sound (i.e., reject expressions that cannot be converted, check whether vars are declared *)
@@ -114,7 +119,14 @@ fun clean_expression_conv_varlist_tac ctxt = REPEAT_DETERM (clean_expression_con
 val clean_expression_conv_varlist1 : Proof.context -> conv = Misc.conv_from_tac (fn _=>fn _=>()) clean_expression_conv_varlist_tac
 
 (* Converts an explicit expression into an expression "expression Q e" where Q is an explicit variable list. *)
-fun clean_expression_conv_varlist ctxt : conv = Conv.repeat_conv (Misc.change_conv (clean_expression_conv_varlist1 ctxt))
+fun clean_expression_conv_varlist ctxt : conv = Misc.repeat_until_conv 
+  (fn prev => fn current => 
+      case Thm.term_of current of Const(@{const_name expression},_) $ Q $ _ => 
+        (QRHL.is_varlist Q orelse 
+            case Option.map Thm.term_of prev of SOME (Const(@{const_name expression},_) $ Q' $ _) => Q aconv Q'
+                                              | NONE => false)
+       | _ => raise CTERM("clean_expression_conv_varlist: expected expression",[current]))
+  (clean_expression_conv_varlist1 ctxt)
 
 (* Converts a well-formed explicit expression into a well-formed explicit expression, 
    simplifying subterms "case (x,y) of (x,y) => ...". (clean_expression_conv_varlist introduces such subterms.) *)

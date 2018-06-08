@@ -408,12 +408,19 @@ fun parse_varlist t =
   let val vt = parse_varterm t
       fun tol (VTSingle nT) = [nT]
         | tol VTUnit = []
-        | tol (VTCons (VTSingle _, VTUnit)) = raise TERM("not a variable list",[t])
+        | tol (VTCons (VTSingle _, VTUnit)) = raise TERM("not an explicit variable list",[t])
         | tol (VTCons (VTSingle nT, rest)) = nT :: tol rest
-        | tol (VTCons _) = raise TERM("not a variable list",[t])
+        | tol (VTCons _) = raise TERM("not an explicit variable list",[t])
   in
     tol vt
   end
+
+(* Checks if term is a (not necessarily explict) variable list *)
+fun is_varlist (Const(@{const_name variable_unit},_)) = true
+  | is_varlist (Const(@{const_name variable_singleton},_) $ _) = true
+  | is_varlist (Const(@{const_name variable_concat},_) $ _ $ Const(@{const_name variable_unit},_)) = false
+  | is_varlist (Const(@{const_name variable_concat},_) $ _ $ rest) = is_varlist rest
+  | is_varlist _ = false
 
 fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
 

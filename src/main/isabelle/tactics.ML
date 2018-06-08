@@ -111,10 +111,6 @@ val get_wp1_assign = get_wp1_rule @{thms wp1_assign}
 val get_wp1_sample = get_wp1_rule @{thms wp1_sample} *)
 
 
-fun dest_qrhl_goal t = case Logic.strip_imp_concl t |> HOLogic.dest_Trueprop of 
-  Const(@{const_name qrhl},_) $ A $ p1 $ p2 $ B => (A,p1,p2,B)
-| _ => raise Match
-
 fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
   val (pre,p1,p2,post) = dest_qrhl_goal goal
   val stmts = HOLogic.dest_list (if left then p1 else p2)
