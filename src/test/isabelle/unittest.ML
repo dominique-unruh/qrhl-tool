@@ -15,11 +15,11 @@ fun assert_aconv_thm y x =
   if Thm.prop_of x aconv y then () else
   error ("Expected "^ string_of_term_gl y^" (up to aconv), got "^ @{make_string} x)
 
-fun assert_aconv_conv conv y x =
-  let val thm = conv x
+fun assert_aconv_conv conv input expected =
+  let val thm = conv input
       val (lhs,rhs) = Logic.dest_equals (Thm.prop_of thm)
-      val _ = if lhs aconv (Thm.term_of x) then () else error ("Conversion returned wrong lhs")
+      val _ = if lhs aconv (Thm.term_of input) then () else error ("Conversion returned wrong lhs")
   in
-    if rhs aconv y then () else
-    error ("Expected (up to aconv): "^ string_of_term_gl y^"\nGot: "^ string_of_term_gl rhs)
+    if rhs aconv expected then () else
+    error ("Expected (up to aconv): "^ string_of_term_gl expected^"\nGot: "^ string_of_term_gl rhs)
   end

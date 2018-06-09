@@ -11,21 +11,22 @@ fun dest_qrhl_goal t = Logic.strip_imp_concl t |> HOLogic.dest_Trueprop |> dest_
 (* val expression_to_term_simpset = clear_simpset @{context} addsimps @{thms case_prod_conv} *)
 
 (* TODO: should make sure it's sound (i.e., reject expressions that cannot be converted, check whether vars are declared *)
-fun expression_to_term t =
+fun expression_to_term ctxt t =
   let val (vs,e) = case t of Const(@{const_name expression},_) $ vs $ e => (vs,e) | _ => raise (TERM("expression_to_term",[t]))
       val vars = QRHL.parse_varlist vs 
           |> map (fn (x,T) => Free (String.extract (x,4,NONE),T)) (* unsafe, not checking whether the var name is wellformed *)
           (* |> @{print} *)
       val e' = e $ HOLogic.mk_tuple vars
-      val e'' = Raw_Simplifier.rewrite_term @{theory} @{thms case_prod_conv[THEN eq_reflection]} [] e'
+(* val _ = e' |> Thm.cterm_of ctxt |> @{print} *)
+      val e'' = Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) @{thms case_prod_conv[THEN eq_reflection]} [] e'
   in
     e''
   end
 
 (* val _ = expression_to_term @{term "expression \<lbrakk>var_x,var_y\<rbrakk> (\<lambda>(x,y). x+y)"} |> (fn t => (t,Thm.cterm_of @{context} t)) |> @{print} *)
 
-fun expression_to_term_typ t =
-  let val t2 = expression_to_term t in (t2, fastype_of t2) end
+fun expression_to_term_typ ctxt t =
+  let val t2 = expression_to_term ctxt t in (t2, fastype_of t2) end
 
 fun add_index_to_expression t left =
   let val suffix = if left then "1" else "2"
@@ -229,7 +230,7 @@ end
 
 val subst_expression_conv_noclean = Misc.conv_from_tac subst_expression_conv_noclean_check subst_expression_conv_tac
 
-fun subst_expression_conv ctxt = subst_expression_conv_noclean ctxt then_conv clean_expression_conv ctxt
+fun subst_expression_conv ctxt = subst_expression_conv_noclean ctxt then_conv Conv.try_conv (clean_expression_conv ctxt)
 
 
 end

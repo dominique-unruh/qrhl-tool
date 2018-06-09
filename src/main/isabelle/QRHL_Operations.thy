@@ -191,9 +191,9 @@ operation_setup term_to_expression = {*
 *}
 
 operation_setup expression_to_term = {*
-  {from_lib = Codec.term,
+  {from_lib = Codec.tuple Codec.int Codec.term,
    to_lib = Codec.tuple Codec.term Codec.typ,
-   action = Encoding.expression_to_term_typ}
+   action = fn (ctxId, t) => Encoding.expression_to_term_typ (Refs.Ctxt.read ctxId) t}
 *}
 
 operation_setup seq_tac = {*

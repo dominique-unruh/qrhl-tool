@@ -21,11 +21,11 @@ case object ByQRHLTac extends Tactic {
         Some(vbool,p,rho)
 
       case App(App(App(Const("Encoding.probability2",_),v),p),rho) =>
-        val expressionToTermOp = Operation.implicitly[Term, (Term,pure.Typ)]("expression_to_term")
+//        val expressionToTermOp = Operation.implicitly[Term, (Term,pure.Typ)]("expression_to_term")
         val addIndexToExpressionOp = Operation.implicitly[(Term,Boolean), Term]("add_index_to_expression")
 
         val v2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (v,left))
-        val v3 = state.isabelle.isabelle.invoke(expressionToTermOp, v2)._1
+        val v3 = Expression.decodeFromExpression(state.isabelle, v2).isabelleTerm
         Some(v3,p,rho)
       case _ => None
     }

@@ -3,4 +3,5 @@
 set -e
 
 setsid sbt assembly
+export QRHL_FORCE_BUILD=1
 java -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar qrhl.jar "$@"

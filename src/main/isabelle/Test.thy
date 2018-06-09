@@ -3,6 +3,28 @@ theory Test
 begin
 
 
+  by
+qrhl ?pre [measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)] [] 
+(expression \<lbrakk>var_a1\<rbrakk> (\<lambda>a1. proj (ket a1)\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op \<cdot> addState EPR) \<lbrakk>A2\<rbrakk>))
+
+
+typedecl msg
+instance msg :: "value" sorry
+variables classical c :: msg and classical b :: bit and classical cglobA :: int and quantum qglobA :: int
+and classical r :: int and classical m :: msg begin
+term var_m
+ML \<open>
+val post = @{term "Expr[ (\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> \<CC>\<ll>\<aa>[c1 = c2 \<and> b1 = b2 \<and> cglobA1 = cglobA2] \<sqinter> \<lbrakk>qglobA1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2\<rbrakk> ]"}
+(* val prog = @{term "assign var_c Expr[r+m]"};; *)
+\<close>
+ML \<open>
+(* Tactics.get_wp true prog post @{context} |> snd *)
+Encoding.expression_to_term @{context} post |> Thm.cterm_of @{context};;
+(* post |> Thm.cterm_of @{context};; *)
+\<close>
+end
+
+
 ML {*
 fun is_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
   ((QRHL.parse_varterm Q; true) handle TERM _ => false)
@@ -237,6 +259,7 @@ Encoding.subst_expression_conv @{context} @{cterm "subst_expression (substitute1
  (expression \<lbrakk>var_x1, var_x2\<rbrakk> (\<lambda>(x1, x2). \<CC>\<ll>\<aa>[Ball {0..max x1 0} (op \<le> x2) ] ))"}
 *}
 
+
 lemma
   assumes [simp]: "x\<ge>0"
   shows "qrhl D [s1,sample var_x Expr[ uniform {0..max x 0}] ] [t1,t2,assign var_x Expr[0] ] Expr[ Cla[x1\<ge>x2] ]"
@@ -275,7 +298,7 @@ schematic_goal
 
 ML {*
   val (_,thm) = Tactics.get_wp true  @{term "sample var_x Expr[uniform{x}]"} @{term "Expr[ Cla[x1=1 \<and> True] ]"} @{context}
-  val (pre,_,_,_) = Tactics.dest_qrhl_goal (Thm.prop_of thm)
+  val (pre,_,_,_) = Encoding.dest_qrhl_goal (Thm.prop_of thm)
   val cpre = Thm.cterm_of @{context} pre
 *}                                                                                             
 

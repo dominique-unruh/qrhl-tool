@@ -93,7 +93,7 @@ lemma wp1_if:
   fixes e p1 p2 B
   assumes "qrhl wp_true p1 [] B"
   assumes "qrhl wp_false p2 [] B"
-  defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[e\<^sub>1] + wp_true) \<sqinter> (Cla[\<not>e\<^sub>1] + wp_false))
+  defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
            (index_expression True e) wp_true wp_false"
   shows "qrhl A [ifthenelse e p1 p2] [] B"
   sorry
@@ -102,7 +102,7 @@ lemma wp2_if:
   fixes e p1 p2 B
   assumes "qrhl wp_true p1 [] B"
   assumes "qrhl wp_false p2 [] B"
-  defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>2 wp_true wp_false. (Cla[e\<^sub>2] + wp_true) \<sqinter> (Cla[\<not>e\<^sub>2] + wp_false))
+  defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>2 wp_true wp_false. (Cla[\<not>e\<^sub>2] + wp_true) \<sqinter> (Cla[e\<^sub>2] + wp_false))
            (index_expression False e) wp_true wp_false"
   shows "qrhl A [] [ifthenelse e p1 p2] B"
   sorry

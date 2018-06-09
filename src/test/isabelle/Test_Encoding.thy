@@ -13,5 +13,26 @@ in end
 \<close>
 end
 
+variables classical x :: int begin
+ML \<open>
+local
+val ct = @{cterm "expression (variable_concat variable_unit \<lbrakk>var_x2\<rbrakk>) (\<lambda>(x1,x2). x2)"}
+val _ = assert_aconv_conv (Encoding.clean_expression_conv @{context})
+        ct @{term "expression \<lbrakk>var_x2\<rbrakk> (\<lambda>x1. x1)"} : unit
+in end
+\<close>
+end
+
+
+variables classical x :: int begin
+ML \<open>
+local
+val ct = @{cterm "subst_expression (substitute1 var_x1 (const_expression z))
+                   (expression \<lbrakk>var_x1, var_x2\<rbrakk> (\<lambda>(x1::int, x2::int). (x1,x2)))"}
+val _ = assert_aconv_conv (Encoding.subst_expression_conv @{context}) ct 
+        @{term "expression \<lbrakk>var_x2\<rbrakk> (%x. (z::int,x))"}
+in end
+\<close>
+end
 
 end

@@ -419,7 +419,7 @@ fun parse_varlist t =
 fun is_varlist (Const(@{const_name variable_unit},_)) = true
   | is_varlist (Const(@{const_name variable_singleton},_) $ _) = true
   | is_varlist (Const(@{const_name variable_concat},_) $ _ $ Const(@{const_name variable_unit},_)) = false
-  | is_varlist (Const(@{const_name variable_concat},_) $ _ $ rest) = is_varlist rest
+  | is_varlist (Const(@{const_name variable_concat},_) $ Const(@{const_name variable_singleton},_) $ rest) = is_varlist rest
   | is_varlist _ = false
 
 fun nameq ((x:string,_:typ), (y,_:typ)) = x=y

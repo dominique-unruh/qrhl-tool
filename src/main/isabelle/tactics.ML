@@ -112,7 +112,7 @@ val get_wp1_sample = get_wp1_rule @{thms wp1_sample} *)
 
 
 fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
-  val (pre,p1,p2,post) = dest_qrhl_goal goal
+  val (pre,p1,p2,post) = Encoding.dest_qrhl_goal goal
   val stmts = HOLogic.dest_list (if left then p1 else p2)
   fun error kind = error_tac (fn _ => "Cound not instantiate "^Syntax.string_of_term ctxt pre^
         " (should be schematic variable) with precondition of \""^Syntax.string_of_term ctxt post^
@@ -139,7 +139,7 @@ fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
       THEN wp_tac0 left ctxt n
       THEN wp_tac0 left ctxt n
       ORELSE error "if-statement"
-  | [Const(@{const_name measure},_) $ _ $ _ $ _] => 
+  | [Const(@{const_name measurement},_) $ _ $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_measure} @{thms wp2_measure}) n
       ORELSE error "measurement-statement"
   | [] => 
@@ -200,7 +200,7 @@ fun get_wp left prog post ctxt = let
 (* val _ = @{print} thm *)
   val thm2 = Conv.fconv_rule (wp_cleanup_conv ctxt) thm
 (* val _ = @{print} thm2 *)
-  val (wp,_,_,_) = thm2 |> Thm.prop_of |> dest_qrhl_goal
+  val (wp,_,_,_) = thm2 |> Thm.prop_of |> Encoding.dest_qrhl_goal
 in
   (wp,thm2)         
 end  
@@ -229,7 +229,7 @@ fun wp_tac ctxt left i =
   seq_tac (if left then ~2 else ~1) (if left then ~1 else ~2)
            (Var(("precondition",0),@{typ "predicate expression"})) ctxt i THEN
   SUBGOAL (fn (goal,n) =>
-    let val (_,p1,p2,B) = dest_qrhl_goal goal
+    let val (_,p1,p2,B) = Encoding.dest_qrhl_goal goal
         val stmt = HOLogic.dest_list (if left then p1 else p2) |> the_single
         val (_,thm) = get_wp left stmt B ctxt
     in
