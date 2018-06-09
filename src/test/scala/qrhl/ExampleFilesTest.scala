@@ -11,7 +11,7 @@ class ExampleFilesTest extends FunSuite {
 
   def testFile(file:String): Unit = {
     val toplevel = new Toplevel()
-    toplevel.run(Paths.get(file))
+    toplevel.run(Paths.get("examples",file))
     toplevel.dispose()
     System.gc()
   }

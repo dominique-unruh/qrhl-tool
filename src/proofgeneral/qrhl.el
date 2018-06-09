@@ -1,10 +1,11 @@
-;(require ’proof-easy-config)
 
 (defun qrhl-find-and-forget (span)
   (proof-generic-count-undos span))
   
+(defvar qrhl-home (file-name-directory (directory-file-name (file-name-directory (directory-file-name (file-name-directory load-file-name))))))
+  
 (proof-easy-config 'qrhl "qRHL"
-		   proof-prog-name "bin/qrhl"
+		   proof-prog-name (concat qrhl-home "bin/qrhl")
 		   proof-script-command-end-regexp "\\.[ \t]*$"
 		   proof-shell-annotated-prompt-regexp "^\\(\\.\\.\\.\\|qrhl\\)> "
 		   proof-script-comment-start-regexp "#"
@@ -31,9 +32,4 @@
   (proof-shell-exit t)
   (proof-goto-point))
 
-  
-    
-
 (provide 'qrhl)
-
-

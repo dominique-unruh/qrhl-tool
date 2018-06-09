@@ -116,7 +116,6 @@ axiomatization
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program" and
   qinit :: "'a variables \<Rightarrow> 'a vector expression \<Rightarrow> program" and
   qapply :: "'a variables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program" and
-  (* TODO rename to measure *)
   measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
 
 

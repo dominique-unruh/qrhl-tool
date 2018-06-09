@@ -2,6 +2,10 @@ theory Test
   imports Encoding Tactics
 begin
 
+ML \<open>
+Thy_Info.get_theory "Draft.Bla"
+\<close>
+
 
   by
 qrhl ?pre [measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)] [] 

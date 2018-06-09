@@ -181,7 +181,8 @@ class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val currentLemma: Option[(String,Expression)],
                      private val _isabelle: Option[Isabelle.Context],
-                     val dependencies: List[FileTimeStamp]) {
+                     val dependencies: List[FileTimeStamp],
+                     val currentDirectory: Path) {
   def isabelle: Isabelle.Context = _isabelle match {
     case Some(isa) => isa
     case None => throw UserException(Parser.noIsabelleError)
@@ -226,9 +227,18 @@ class State private (val environment: Environment,
                    goal:List[Subgoal]=goal,
                    isabelle:Option[Isabelle.Context]=_isabelle,
                    dependencies:List[FileTimeStamp]=dependencies,
-                   currentLemma:Option[(String,Expression)]=currentLemma) : State =
+                   currentLemma:Option[(String,Expression)]=currentLemma,
+                   currentDirectory:Path=currentDirectory) : State =
     new State(environment=environment, goal=goal, _isabelle=isabelle,
-      currentLemma=currentLemma, dependencies=dependencies)
+      currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory)
+
+  def changeDirectory(dir:Path): State = {
+    assert(dir!=null)
+    if (dir==currentDirectory) return this
+    if (!Files.isDirectory(dir)) throw UserException(s"Non-existent directory: $dir")
+    if (hasIsabelle) throw UserException("Cannot change directory after loading Isabelle")
+    copy(currentDirectory=dir)
+  }
 
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
@@ -285,8 +295,10 @@ class State private (val environment: Environment,
       case None =>
         (isabelle.getQRHLContextWithFiles(), dependencies)
       case Some(thy) =>
-        val filename = Paths.get(thy+".thy")
-        (isabelle.getQRHLContextWithFiles(thy), new FileTimeStamp(filename) :: dependencies)
+        val filename = currentDirectory.resolve(thy+".thy")
+//        println("State.loadIsabelle",thy,currentDirectory,filename)
+//        val thyname = currentDirectory.resolve(thy)
+        (isabelle.getQRHLContextWithFiles(filename), new FileTimeStamp(filename) :: dependencies)
     }
     copy(isabelle = Some(isa), dependencies=files)
   }
@@ -331,7 +343,7 @@ class State private (val environment: Environment,
 
 object State {
   val empty = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
-    dependencies=Nil, currentLemma=None)
+    dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""))
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
   val declare_quantum_variable: Operation[(String, ITyp, BigInt), BigInt] =

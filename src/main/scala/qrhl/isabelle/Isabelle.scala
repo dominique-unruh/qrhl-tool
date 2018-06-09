@@ -116,14 +116,33 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 
   def invoke[I,O](op: Operation[I,O], arg: I) : O = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
 
-  def getQRHLContextWithFiles(thys: String*) : Isabelle.Context = {
+  /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
+    *
+    * @param thys Path pointing to theory files (including the suffix .thy)
+    * @return the context
+    */
+  def getQRHLContextWithFiles(thys: Path*) : Isabelle.Context = {
     getContextWithThys(List("QRHL.QRHL_Operations","QRHL.QRHL"), thys.toList)
   }
 
-
-  private def getContextWithThys(thys: List[String], files: List[String]): Isabelle.Context = {
-    invoke(Operation.UseThys, files)
-    val imports = thys ::: files.map("Draft."+_)
+  /** Creates a new context that imports the given theories.
+    *
+    * @param thys Names of theories that have to be contained in the current session
+    * @param files Path pointing to theory files (including the suffix .thy)
+    * @return the context
+    */
+  private def getContextWithThys(thys: List[String], files: List[Path]): Isabelle.Context = {
+    import scala.collection.JavaConverters._
+    for (f <- files) assert(Files.isRegularFile(f))
+    val filesThyPath = files.map { f =>
+      val relative = Paths.get("").relativize(f)
+      val names = relative.iterator().asScala.toList
+      names.mkString("/").stripSuffix(".thy")
+    }
+    val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount-1).toString.stripSuffix(".thy") }
+//    println("Isabelle getContextWithThys", files, filesThyPath)
+    invoke(Operation.UseThys, filesThyPath)
+    val imports = thys ::: filesThyName
     val ctxId = invoke(Isabelle.createContextOp, imports)
     new Isabelle.Context(this, ctxId)
   }

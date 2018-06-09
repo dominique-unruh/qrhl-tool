@@ -22,7 +22,6 @@ class Toplevel(initialState : State = State.empty) {
 
   def isabelle: Isabelle = state.isabelle.isabelle
 
-
   /** Reads one command from the input. The last line of the command must end with ".".
     * Comment lines (starting with whitespace + #) are skipped.
     * @param readLine command for reading lines from the input, invoked with the prompt to show
@@ -108,6 +107,8 @@ class Toplevel(initialState : State = State.empty) {
 
   def run(script: Path): Unit = {
     val reader = new FileReader(script.toFile)
+    print("Toplevel.run",script,script.getParent)
+    execCmd(ChangeDirectoryCommand(script.getParent))
     run(reader)
   }
 

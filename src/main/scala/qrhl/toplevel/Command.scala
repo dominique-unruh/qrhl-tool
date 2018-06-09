@@ -1,5 +1,7 @@
 package qrhl.toplevel
 
+import java.nio.file.Path
+
 import info.hupel.isabelle.pure
 import qrhl.logic.{Block, CVariable, QVariable}
 import qrhl.{State, Subgoal, Tactic, UserException}
@@ -7,6 +9,11 @@ import qrhl.{State, Subgoal, Tactic, UserException}
 
 trait Command {
   def act(state: State): State
+}
+
+case class ChangeDirectoryCommand(dir:Path) extends Command {
+  assert(dir!=null)
+  override def act(state: State): State = state.changeDirectory(dir)
 }
 
 case class IsabelleCommand(thy:Option[String]=None) extends Command {

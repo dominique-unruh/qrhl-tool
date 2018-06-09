@@ -1,5 +1,7 @@
 package qrhl.isabelle
 
+import java.nio.file.Paths
+
 import org.scalatest.FunSuite
 import org.scalatest.tags.Slow
 import qrhl.UserException
@@ -18,7 +20,7 @@ class IsabelleTest extends FunSuite {
   }
 
   test("load an empty theory") {
-    ToplevelTest.isabelle.getQRHLContextWithFiles("Empty")
+    ToplevelTest.isabelle.getQRHLContextWithFiles(Paths.get("Empty"))
   }
 
 }
