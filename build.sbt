@@ -95,10 +95,10 @@ test in assembly := {}
 enablePlugins(JavaAppPackaging)
 mappings in Universal ++= Seq(
     "proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat",
-    "prg-enc-rorcpa.qrhl", "prg-enc-indcpa.qrhl", "PrgEnc.thy", "README.md",
-    "equality.qrhl", "example.qrhl", "Example.thy", "rnd.qrhl",
-    "teleport.qrhl", "Teleport.thy", "teleport-terse.qrhl", "Teleport_Terse.thy",
-    "Code_Example.thy", "chsh.ec", "Chsh.thy"
+    "examples/prg-enc-rorcpa.qrhl", "examples/prg-enc-indcpa.qrhl", "examples/PrgEnc.thy", "README.md",
+    "examples/equality.qrhl", "examples/example.qrhl", "examples/Example.thy", "examples/rnd.qrhl",
+    "examples/teleport.qrhl", "examples/Teleport.thy", "examples/teleport-terse.qrhl", "examples/Teleport_Terse.thy",
+    "examples/Code_Example.thy", "examples/chsh.ec", "examples/Chsh.thy"
   ).map { f => baseDirectory.value / f -> f }
   
 mappings in Universal ++= Seq(

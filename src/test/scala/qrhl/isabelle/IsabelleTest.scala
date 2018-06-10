@@ -20,7 +20,7 @@ class IsabelleTest extends FunSuite {
   }
 
   test("load an empty theory") {
-    ToplevelTest.isabelle.getQRHLContextWithFiles(Paths.get("Empty"))
+    ToplevelTest.isabelle.getQRHLContextWithFiles(Paths.get("Empty.thy"))
   }
 
 }

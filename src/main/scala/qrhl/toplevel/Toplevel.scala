@@ -107,7 +107,7 @@ class Toplevel(initialState : State = State.empty) {
 
   def run(script: Path): Unit = {
     val reader = new FileReader(script.toFile)
-    print("Toplevel.run",script,script.getParent)
+//    print("Toplevel.run",script,script.getParent)
     execCmd(ChangeDirectoryCommand(script.getParent))
     run(reader)
   }
