@@ -1,5 +1,5 @@
 theory All_Tests
-  imports Test_Misc Test_Tactics Test_Encoding
+  imports Test_Misc Test_Tactics Test_Encoding Test_QRHL_Core
 begin
 
 ML \<open> 

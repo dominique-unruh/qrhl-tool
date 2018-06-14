@@ -113,11 +113,11 @@ val get_wp1_sample = get_wp1_rule @{thms wp1_sample} *)
 
 fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
   val (pre,p1,p2,post) = Encoding.dest_qrhl_goal goal
-  val stmts = HOLogic.dest_list (if left then p1 else p2)
+  fun lr l r = if left then l else r
+  val stmts = HOLogic.dest_list (lr p1 p2)
   fun error kind = error_tac (fn _ => "Cound not instantiate "^Syntax.string_of_term ctxt pre^
         " (should be schematic variable) with precondition of \""^Syntax.string_of_term ctxt post^
         "\" for "^kind^" "^Syntax.string_of_term ctxt (if left then p1 else p2)) ctxt
-  fun lr l r = if left then l else r
   in case stmts of
     [Const(@{const_name assign},_) $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_assign} @{thms wp2_assign}) n

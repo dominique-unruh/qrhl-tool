@@ -84,7 +84,7 @@ lemma wp1_qinit:
 
 lemma wp2_qinit:
   fixes B e Q
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[norm e\<^sub>2 = 2] \<sqinter> (B \<div> e\<^sub>2 \<guillemotright> (index_vars False Q)))
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[norm e\<^sub>2 = 1] \<sqinter> (B \<div> e\<^sub>2 \<guillemotright> (index_vars False Q)))
            (index_expression False e) B"
   shows "qrhl A [] [qinit Q e] B"
   sorry
@@ -100,8 +100,8 @@ lemma wp1_if:
 
 lemma wp2_if:
   fixes e p1 p2 B
-  assumes "qrhl wp_true p1 [] B"
-  assumes "qrhl wp_false p2 [] B"
+  assumes "qrhl wp_true [] p1 B"
+  assumes "qrhl wp_false [] p2 B"
   defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>2 wp_true wp_false. (Cla[\<not>e\<^sub>2] + wp_true) \<sqinter> (Cla[e\<^sub>2] + wp_false))
            (index_expression False e) wp_true wp_false"
   shows "qrhl A [] [ifthenelse e p1 p2] B"

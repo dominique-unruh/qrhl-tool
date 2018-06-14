@@ -506,6 +506,19 @@ proof (unfold qvar_trafo_def, (rule conjI[rotated])+, rule allI)
 qed
 
 
+(* A hint to the simplifier with the meaning:
+    - A is a term of the form x>>Q
+    - R is an explicit distinct varterm containing all variables in Q
+    - Q is an explicit distinct varterm
+    - The whole term should be rewritten into x'>>R for some x'
+  Rewriting the term is done by the simproc variable_rewriting_simproc declared below.
+*)
+definition "reorder_variables_hint A R = A"
+lemma [cong]: "A=A' \<Longrightarrow> reorder_variables_hint A R = reorder_variables_hint A' R" by simp
+
+lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x" -- \<open>Auxiliary lemma used by reorder_variables_hint_conv\<close>
+  unfolding reorder_variables_hint_def by simp
+
 
 (* A hint to the simplifier with the meaning:
      - x is a term of the form x'>>Q (where x' is of type subspace or bounded)
@@ -531,6 +544,58 @@ lemma variable_renaming_hint_bounded[simp]:
   assumes "qvar_trafo_protected A Q R"
   shows "variable_renaming_hint (S\<guillemotright>Q) A R = (A\<cdot>S\<cdot>A*)\<guillemotright>R"
   using assms unfolding variable_renaming_hint_def qvar_trafo_protected_def by (rule qvar_trafo_bounded)
+
+
+lemma extend_space_lift_aux: -- \<open>Auxiliary lemma for extend_lift_conv\<close>
+  fixes Q :: "'q variables" and R :: "'r variables"
+    and S :: "'q subspace"
+  assumes "distinct_qvars (variable_concat Q R)"
+  shows "S\<guillemotright>Q \<equiv> (S\<otimes>top)\<guillemotright>(variable_concat Q R)"
+  apply (rule eq_reflection)
+  using assms by (rule lift_tensorSpace)
+
+
+lemma extend_bounded_lift_aux: -- \<open>Auxiliary lemma for extend_lift_conv\<close>
+  fixes Q :: "'q variables" and R :: "'r variables"
+    and S :: "('q,'q) bounded"
+  assumes "distinct_qvars (variable_concat Q R)"
+  shows "S\<guillemotright>Q \<equiv> (S\<otimes>idOp)\<guillemotright>(variable_concat Q R)"
+  apply (rule eq_reflection)
+  using assms lift_extendR by blast
+
+lemma trafo_lift_space_aux: -- \<open>Auxiliary lemma for sort_lift_conv\<close>
+  fixes S::"_ subspace"
+  assumes "qvar_trafo_protected A Q R"
+  shows "S\<guillemotright>Q \<equiv> (A\<cdot>S)\<guillemotright>R"
+  apply (rule eq_reflection)
+  using assms unfolding qvar_trafo_protected_def by (rule qvar_trafo_subspace)
+
+lemma trafo_lift_bounded_aux: -- \<open>Auxiliary lemma for sort_lift_conv\<close>
+  fixes S::"(_,_) bounded"
+  assumes "qvar_trafo_protected A Q R"
+  shows "S\<guillemotright>Q \<equiv> (A\<cdot>S\<cdot>A*)\<guillemotright>R"
+  apply (rule eq_reflection)
+  using assms unfolding qvar_trafo_protected_def by (rule qvar_trafo_bounded)
+
+lemma trafo_lift_space_bw_aux: -- \<open>Auxiliary lemma for reorder_lift_conv\<close>
+  fixes S::"_ subspace"
+  assumes "qvar_trafo_protected A Q R"
+  shows "S\<guillemotright>R \<equiv> (A*\<cdot>S)\<guillemotright>Q"
+  apply (rule eq_reflection)
+  using qvar_trafo_adj[OF assms[unfolded qvar_trafo_protected_def]]
+  using qvar_trafo_subspace by blast
+
+lemma trafo_lift_bounded_bw_aux: -- \<open>Auxiliary lemma for reorder_lift_conv\<close>
+  fixes S::"(_,_) bounded"
+  assumes "qvar_trafo_protected A Q R"
+  shows "S\<guillemotright>R \<equiv> (A*\<cdot>S\<cdot>A)\<guillemotright>Q"
+  apply (rule eq_reflection)
+  using qvar_trafo_bounded[OF qvar_trafo_adj[OF assms[unfolded qvar_trafo_protected_def]]]
+  by simp
+  
+
+
+
 
 (* A hint to the simplifier with the meaning:
      - x is a term of the form x'>>Q (where x' is of type subspace or bounded)
@@ -922,7 +987,8 @@ parse_translation \<open>[("_declared_qvars", QRHL.declared_qvars_parse_tr)]\<cl
 
 simproc_setup warn_declared_qvars ("variable_name q") = QRHL.warn_declared_qvars_simproc
 
-simproc_setup "variable_rewriting" ("join_variables_hint a b" | "sort_variables_hint a") = QRHL.variable_rewriting_simproc
+simproc_setup "variable_rewriting" ("join_variables_hint a b" | "sort_variables_hint a" | "reorder_variables_hint a b") = 
+  QRHL.variable_rewriting_simproc
 
 section \<open>Programs\<close>
 

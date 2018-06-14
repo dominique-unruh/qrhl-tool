@@ -3,11 +3,11 @@ fun assert_equal mk_string y x =
   if x=y then () else
   error ("Expected "^mk_string y^", got "^mk_string x)
 
-fun string_of_term_gl t = Syntax.string_of_term_global (Context.the_global_context ()) t ^ " -- " ^ @{make_string} t
+fun string_of_term_gl t = Syntax.string_of_term_global (Context.the_global_context ()) t
 
-fun assert_aconv x y =
-  if x aconv y then () else
-  error ("Expected: "^ string_of_term_gl x^"\nGot:      "^ string_of_term_gl y)
+fun assert_aconv expected y =
+  if expected aconv y then () else
+  error ("Expected: "^ string_of_term_gl expected^"\nGot:      "^ string_of_term_gl y)
 
 fun assert_aconv_cterm x y = assert_aconv (Thm.term_of x) (Thm.term_of y)
 

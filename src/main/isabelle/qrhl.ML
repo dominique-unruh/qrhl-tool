@@ -35,6 +35,7 @@ fun mk_INFIMUM A f =
 fun dest_All (Const("HOL.All",_) $ Abs(_,T,body)) = (T,body)
   | dest_All t = raise TERM("dest_All",[t])
 
+(* TODO: superseeded by mk_varterm ? *)
 fun variables [] = (@{const variable_unit},@{typ unit})
   | variables [v] = 
         let val vT = fastype_of v
@@ -55,7 +56,38 @@ fun variables [] = (@{const variable_unit},@{typ unit})
             (Const(@{const_name variable_singleton}, vT --> mk_variablesT vT') $ v) $ vs',
             prodT)
         end
-  
+
+(* Transforms "\<lbrakk>\<dots>\<rbrakk> \<Longrightarrow> A==B" into "A==B" if all the premises can be solved by simp_tac *) 
+fun simp_conv_premises ctxt thm =
+  let val res = thm |> ALLGOALS (fn i => TRY (Simplifier.simp_tac ctxt i)) |> Seq.hd
+      val _ = if Thm.nprems_of res > 0 then raise TERM("unresolved premises",Thm.prems_of res) else ()
+  in res end
+
+(* Given a term of the form "A\<guillemotright>Q", returns (lift,A,Q) where "lift x y" evaluates 
+   to x/y if \<guillemotright> is a lifting of subspace/bounded, respectively.  *)
+fun dest_lift (t as (Const(lift,_) $ S $ Q)) = let
+  val lift_kind = case lift of @{const_name liftSpace} => (fn x => fn _ => x)
+                             | @{const_name liftOp} => (fn _ => fn y => y)
+                             | _ => raise TERM("dest_lift: lift is "^lift, [t])
+  in
+    (lift_kind,S,Q)
+  end
+  | dest_lift t = raise TERM("dest_lift",[t])
+
+(* Converts "A >> Q" into "A' >> (Q\<otimes>R)" for some A' *)
+fun extend_lift_conv ctxt vtR ct = let
+  val (lift_kind,S,Q) = dest_lift (Thm.term_of ct)
+  val extend_thm = infer_instantiate ctxt [(("Q",0),Thm.cterm_of ctxt Q),
+                                           (("R",0),Thm.cterm_of ctxt vtR),
+                                           (("S",0),Thm.cterm_of ctxt S)]
+                        (lift_kind @{thm extend_space_lift_aux} @{thm extend_bounded_lift_aux})
+  val extend_thm' = extend_thm |> simp_conv_premises ctxt
+in
+  extend_thm'
+end
+
+
+(* TODO remove *)
 fun qinitWp post e Q =
   let val (vs,vsT) = variables Q 
       val qpre = Const(@{const_name space_div}, @{typ predicate} --> mk_vectorT vsT --> mk_variablesT vsT --> @{typ predicate}) $
@@ -66,6 +98,7 @@ fun qinitWp post e Q =
     @{const inf(predicate)} $ isunit $ qpre
   end
 
+(* TODO remove *)
 fun qapplyWp post e Q =
   let val (vs,vsT) = variables Q 
       val unitary = @{const classical_subspace} $ 
@@ -81,6 +114,7 @@ fun qapplyWp post e Q =
     unitary_etc
   end
 
+(* TODO remove *)
 fun measureWp B x e Q =
   let val B_z = abstract_over(x,B)
       val (_,resT) = dest_Free x
@@ -99,6 +133,7 @@ fun measureWp B x e Q =
   end
 
 
+(* TODO remove *)
 fun ifWp e thenWp elseWp =
   let val Cla_e = @{const classical_subspace} $ e
       val Cla_not_e = @{const classical_subspace} $ (@{const Not} $ e)
@@ -108,6 +143,7 @@ fun ifWp e thenWp elseWp =
     @{const inf(predicate)} $ then' $ else'
   end
 
+(* TODO remove *)
 fun sampleWp v T e B =
     let val distrT = Type(@{type_name distr},[T])
         val _ = if fastype_of e = distrT then ()
@@ -128,6 +164,7 @@ fun sampleWp v T e B =
 
 
 
+(* TODO remove *)
 fun rndWp v1 e1 v2 e2 T B =
     let val distrT = Type(@{type_name distr},[T])
         val _ = if fastype_of e1 = distrT then ()
@@ -147,6 +184,7 @@ fun rndWp v1 e1 v2 e2 T B =
       @{const inf(predicate)} $ sameDistr $ B2
     end
    
+(* TODO remove *)
 fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
   let val distrT1 = Type(@{type_name distr},[T1])
       val distrT2 = Type(@{type_name distr},[T2])
@@ -429,9 +467,11 @@ fun missing_in_varterm vt1 vt2 = let
   val v2 = vars_in_varterm vt2
   val miss = subtract nameq v1 v2
 in
-  varterm_from_list miss |> mk_varterm |> fst
+  varterm_from_list miss
 end
 
+
+(* TODO: rewrite using extend_lift_conv *)
 fun variable_extension_hint_conv ctx ct = let
 val (lift,S,Q,R) = case Thm.term_of ct of
     (Const(@{const_name join_variables_hint},_)) $ (Const(lift,_) $ S $ Q) $ R => (lift,S,Q,R)
@@ -441,7 +481,7 @@ val conv_rule = case lift of @{const_name liftSpace} => @{thm join_variables_hin
                            | _ => raise CTERM("variable_extension_hint_conv: lift is "^lift, [ct])
 val vtQ = parse_varterm Q
 val vtR = parse_varterm R
-val miss = missing_in_varterm vtQ vtR |> Thm.cterm_of ctx
+val miss = missing_in_varterm vtQ vtR |> mk_varterm |> fst |> Thm.cterm_of ctx
 val rule = infer_instantiate ctx 
   [(("S",0),Thm.cterm_of ctx S),
    (("R",0),Thm.cterm_of ctx R),
@@ -474,13 +514,13 @@ fun sort_variables_step (VTSingle _) = NONE
             mk_boundedT (HOLogic.mk_prodT (HOLogic.mk_prodT(T1,T2), T3)) (HOLogic.mk_prodT (T1, HOLogic.mk_prodT(T2,T3)))),
           VTCons(vt1, VTCons(vt2, vt3)))
       end
-  | sort_variables_step (vt as VTCons (VTSingle _, _)) = sort_variables_step_in vt
-  | sort_variables_step VTUnit = NONE
   | sort_variables_step (VTCons (vt, VTUnit)) =
       let val T = type_of_varterm vt in
         SOME(Const(@{const_name remove_qvar_unit_op},
           mk_boundedT (HOLogic.mk_prodT(T,HOLogic.unitT)) T),
           vt) end
+  | sort_variables_step (vt as VTCons (VTSingle _, _)) = sort_variables_step_in vt
+  | sort_variables_step VTUnit = NONE
   | sort_variables_step (VTCons (VTUnit, vt)) =
       let val T = type_of_varterm vt in
         SOME(Const(@{const_name remove_qvar_unit_op2},
@@ -520,7 +560,26 @@ fun sort_variables vt =
               vt'')
           end
         
+(* Converts "A >> Q" into "A' >> Q'" where Q' is a sorted explicit variable list *)
+fun sort_lift_conv ctxt ct = let
+val (lift_kind,S,Q) = dest_lift (Thm.term_of ct)
+val vtQ = parse_varterm Q
+val thm = case sort_variables vtQ of
+  NONE => Thm.reflexive ct
+  | SOME (sorter, vt) => 
+        infer_instantiate ctxt 
+          [(("S",0),Thm.cterm_of ctxt S),
+           (("A",0),Thm.cterm_of ctxt sorter),
+           (("R",0),mk_varterm vt |> fst |> Thm.cterm_of ctxt),
+           (("Q",0),Thm.cterm_of ctxt Q)] 
+          (lift_kind @{thm trafo_lift_space_aux} @{thm trafo_lift_bounded_aux})
+                         |> simp_conv_premises ctxt
+in
+thm
+end
+
 (* Expects: ct = sort_variables_hint (x>>Q) *)
+(* TODO: rewrite using sort_lift_conv *)
 fun sort_variables_hint_conv ctx ct = let
 val (lift,S,Q) = case Thm.term_of ct of
     (Const(@{const_name sort_variables_hint},_)) $ (Const(lift,_) $ S $ Q) => (lift,S,Q)
@@ -540,11 +599,52 @@ in
            (("Q",0),Thm.cterm_of ctx Q)] conv_rule
 end
 
+(* Expects: ct = x>>Q, and vtR represents a varterm R
+   where Q,R are explicit variable terms each with distinct variables,
+   and R contains all variables of Q
+ *)
+fun reorder_lift_conv ctxt vtR ct = let
+  val (lift_kind,_,Q) = dest_lift (Thm.term_of ct)
+  val vtQ = parse_varterm Q
+  val miss = missing_in_varterm vtQ vtR
+  val () = if not (subset op= (vars_in_varterm vtQ, vars_in_varterm vtR)) then raise (CTERM("too many variables",[ct])) else ()
+  val extend_thm = if miss=VTUnit then Thm.reflexive ct else extend_lift_conv ctxt (mk_varterm miss |> fst) ct
+  val extended = Thm.rhs_of extend_thm
+  val sorted_thm = sort_lift_conv ctxt extended
+  val sorted = Thm.rhs_of sorted_thm
+  val S'' = case Thm.term_of sorted of (Const _ $ S'' $ _) => S'' | _ => raise (CTERM ("reorder_variables_hint_conv' 2", [ct,extended]))
+  val antisorted_thm = case sort_variables vtR of
+    NONE => Thm.reflexive extended
+    | SOME (sorter, vt) => 
+          infer_instantiate ctxt 
+            [(("S",0),Thm.cterm_of ctxt S''),
+             (("A",0),Thm.cterm_of ctxt sorter),
+             (("R",0),mk_varterm vt |> fst |> Thm.cterm_of ctxt),
+             (("Q",0),mk_varterm vtR |> fst |> Thm.cterm_of ctxt) ] 
+            (lift_kind @{thm trafo_lift_space_bw_aux} @{thm trafo_lift_bounded_bw_aux})
+                           |> simp_conv_premises ctxt
+in
+  Thm.transitive (Thm.transitive extend_thm sorted_thm) antisorted_thm
+end
+
+fun reorder_variables_hint_conv ctxt ct =
+  let val R = case Thm.term_of ct of
+        (Const(@{const_name reorder_variables_hint},_) $ _ $ R) => R
+      | _ => raise CTERM("reoder_variables_hint_conv: wrong shape",[ct])
+      val vtR = parse_varterm R
+  in
+    (Conv.rewr_conv @{thm reorder_variables_hint_remove_aux}
+    then_conv
+    reorder_lift_conv ctxt vtR) ct
+  end
+
 fun variable_rewriting_simproc _ ctx ct =
   SOME (variable_extension_hint_conv ctx ct)
   handle CTERM _ => 
-    SOME (sort_variables_hint_conv ctx ct)
-    handle CTERM _ => NONE
+  SOME (reorder_variables_hint_conv ctx ct)
+  handle CTERM _ => 
+  SOME (sort_variables_hint_conv ctx ct)
+  handle CTERM _ => NONE
 
 
 (* fun warn_colocal_simproc _ _ ct = 

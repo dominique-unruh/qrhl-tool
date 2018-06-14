@@ -717,8 +717,9 @@ lemma bot_plus[simp]: "bot + x = x" for x :: "'a subspace"
 lemma plus_bot[simp]: "x + bot = x" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
 lemma top_plus[simp]: "top + x = top" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
 lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding subspace_sup_plus[symmetric] by simp
-    
-axiomatization subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set" 
+
+(* TODO remove *)
+abbreviation subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set" where "subspace_as_set == subspace_to_set"
 
 hide_const (open) span
 definition [code del]: "span A = Inf {S. A \<subseteq> subspace_as_set S}"
