@@ -462,6 +462,7 @@ fun is_varlist (Const(@{const_name variable_unit},_)) = true
 
 fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
 
+(* Returns a varterm containing all variables from vt2 that are not in vt1 *)
 fun missing_in_varterm vt1 vt2 = let
   val v1 = vars_in_varterm vt1
   val v2 = vars_in_varterm vt2
@@ -614,7 +615,7 @@ fun reorder_lift_conv ctxt vtR ct = let
   val sorted = Thm.rhs_of sorted_thm
   val S'' = case Thm.term_of sorted of (Const _ $ S'' $ _) => S'' | _ => raise (CTERM ("reorder_variables_hint_conv' 2", [ct,extended]))
   val antisorted_thm = case sort_variables vtR of
-    NONE => Thm.reflexive extended
+    NONE => Thm.reflexive sorted
     | SOME (sorter, vt) => 
           infer_instantiate ctxt 
             [(("S",0),Thm.cterm_of ctxt S''),
@@ -638,12 +639,30 @@ fun reorder_variables_hint_conv ctxt ct =
     reorder_lift_conv ctxt vtR) ct
   end
 
+fun extend_lift_as_var_concat_hint_conv ctxt ct =
+  let val (A,R) = case Thm.term_of ct of
+        (Const(@{const_name extend_lift_as_var_concat_hint},_) $ A $ R) => (A,R)
+      | _ => raise CTERM("reoder_variables_hint_conv: wrong shape",[ct])
+      val (_,_,Q) = dest_lift A
+      val vtR = parse_varterm R
+      val vtQ = parse_varterm Q
+      val vtQ' = missing_in_varterm vtR vtQ
+      val target = VTCons (vtQ',vtR)
+  in
+    (Conv.rewr_conv @{thm extend_lift_as_var_concat_hint_remove_aux}
+    then_conv
+    reorder_lift_conv ctxt target) ct
+  end
+
+
 fun variable_rewriting_simproc _ ctx ct =
   SOME (variable_extension_hint_conv ctx ct)
   handle CTERM _ => 
   SOME (reorder_variables_hint_conv ctx ct)
   handle CTERM _ => 
   SOME (sort_variables_hint_conv ctx ct)
+  handle CTERM _ => 
+  SOME (extend_lift_as_var_concat_hint_conv ctx ct)
   handle CTERM _ => NONE
 
 

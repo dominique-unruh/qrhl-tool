@@ -1,99 +1,60 @@
 theory Test
-  imports Encoding Tactics
+  imports (* Real_Sqrt2 *) Encoding Tactics QRHL_Code 
 begin
 
-lemma assumes [simp]: "declared_qvars\<lbrakk>a,b,c,d\<rbrakk>"
-  fixes x :: "_ subspace"
-  shows "reorder_variables_hint (x\<guillemotright>\<lbrakk>a,c,b\<rbrakk>) \<lbrakk>c,d,b,a\<rbrakk> = undefined"
-  apply simp
-  oops
 
-ML {*
-QRHL.sort_variables (QRHL.parse_varterm @{term "variable_concat \<lbrakk>\<rbrakk> \<lbrakk>a,b,c\<rbrakk>"})
-|> the |> fst
-*}
+(* definition "matrix_H = mat_of_rows_list 2 [ [sqrt 2::complex, sqrt 2], [sqrt 2, -sqrt 2] ]"
+axiomatization where bounded_of_mat_H[code]: "mat_of_bounded hadamard = matrix_H"
 
-(* lemma qvar_trafo_adjoint: 
-  assumes "qvar_trafo A Q R"
-  shows "qvar_trafo (adjoint A) R Q"
-proof (unfold qvar_trafo_def, auto)
-  show "distinct_qvars R" and "distinct_qvars Q" using assms unfolding qvar_trafo_def by auto
-  fix C :: "('b,'b)bounded"
-  have "unitary A" using assms
-    using qvar_trafo_unitary by blast
-  then have "C = (A \<cdot> (A* \<cdot> C \<cdot> A) \<cdot> A* )"
-    by (metis (full_types) adjoint_twice assoc_left(1) times_adjoint times_idOp1 unitary_def)
-  also have "\<dots>\<guillemotright>R = (A* \<cdot> C \<cdot> A)\<guillemotright>Q"
-    using assms unfolding qvar_trafo_def by simp
-  finally show "C\<guillemotright>R = (A* \<cdot> C \<cdot> A)\<guillemotright>Q" by assumption
-qed *)
+value "hadamard" *)
 
-
-(* lemma reorder_variables_hint_subspace_conv_aux:
-  "reorder_variables_hint (S\<guillemotright>Q) R \<equiv> variable_renaming_hint (S\<guillemotright>Q) A R" for S::"_ subspace"
-  unfolding variable_renaming_hint_def reorder_variables_hint_def by simp
-
-lemma reorder_variables_hint_bounded_conv_aux:
-  "reorder_variables_hint (S\<guillemotright>Q) R \<equiv> variable_renaming_hint (S\<guillemotright>Q) A R" for S::"(_,_) bounded"
-  unfolding variable_renaming_hint_def reorder_variables_hint_def by simp
-
-lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x" 
-  unfolding reorder_variables_hint_def by simp
- *)
-
-(* ML"open QRHL" *)
-
-(* ML \<open>
-fun variable_extension_hint_conv' ctx vtQ R vtR ct = let
-val (lift,S,Q) = case Thm.term_of ct of
-    Const(lift,_) $ S $ Q => (lift,S,Q)
-    | _ => raise CTERM("variable_extension_hint_conv: wrong shape",[ct])
-val conv_rule = case lift of @{const_name liftSpace} => @{thm join_variables_hint_subspace_conv_aux}
-                           | @{const_name liftOp} => @{thm join_variables_hint_bounded_conv_aux}
-                           | _ => raise CTERM("variable_extension_hint_conv: lift is "^lift, [ct])
-(* val vtQ = parse_varterm Q *)
-(* val vtR = parse_varterm R *)
-val miss = missing_in_varterm vtQ vtR |> mk_varterm |> fst |> Thm.cterm_of ctx
-val rule = infer_instantiate ctx 
-  [(("S",0),Thm.cterm_of ctx S),
-   (("R",0),Thm.cterm_of ctx R),
-   (("R'",0),miss),
-   (("Q",0),Thm.cterm_of ctx Q)]
-  conv_rule 
-in
-rule
-end
-\<close> *)
-
-
-(* ML \<open>
-datatype lift_kind = LiftSpace | LiftOp
-\<close> *)
-
-variables quantum a :: int and quantum b :: int and quantum c :: int and quantum d :: int begin
-
-
-
-
+(* variables quantum q :: bit and quantum r :: bit and quantum s :: bit and quantum t :: bit begin
 ML \<open>
-
-(* reorder_variables_hint_conv' @{context} 
-(* ( @{term "\<lbrakk>a,c,b,d\<rbrakk>"}) *)
-(parse_varterm @{term "variable_concat  \<lbrakk>\<rbrakk> \<lbrakk>a,c,b,d\<rbrakk>"}) (* TODO: should work with [[]] at the end, too *) 
-@{cterm "(S::(_,_)bounded) \<guillemotright> (variable_concat \<lbrakk>a,b\<rbrakk> \<lbrakk>d\<rbrakk>)"}
+  
 ;;
+
+QRHL.extend_lift_as_var_concat_hint_conv @{context} @{cterm "extend_lift_as_var_concat_hint ((A::_ subspace)\<guillemotright>\<lbrakk>q,t,s\<rbrakk>) \<lbrakk>r,s\<rbrakk>"};;
+(* QRHL.reorder_lift_conv @{context} (QRHL.parse_varterm @{term "\<lbrakk>q,r,s\<rbrakk>"}) @{cterm "((A::_ subspace)\<guillemotright>\<lbrakk>q,s\<rbrakk>)"};; *)
+\<close>                                
+end *)
+
+(* lemma div:
+  fixes S :: "_ subspace"
+  shows "NO_MATCH ((variable_concat a b),b) (Q,R) \<Longrightarrow> (space_div (S\<guillemotright>Q) \<psi> R) = 
+  (space_div (extend_lift_as_var_concat_hint (S\<guillemotright>Q) R)) \<psi> R"
+  unfolding extend_lift_as_var_concat_hint_def by simp *)
+
+(* axiomatization space_div_unlifted :: "('a*'b) subspace \<Rightarrow> 'b vector \<Rightarrow> 'a subspace"
+        (* space_div_unlifted S \<psi> := {\<phi>. \<phi>\<otimes>\<psi> \<in> S} *)
+  where div2: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
  *)
 
-;;
+(* simproc_setup tmp ("extend_lift_as_var_concat_hint A R") = \<open>fn _ => fn ctxt => fn ct => 
+SOME (extend_lift_as_var_concat_hint_conv ctxt ct) handle CTERM _ => NONE\<close> *)
 
-QRHL.reorder_variables_hint_conv @{context} 
-(* ( @{term "\<lbrakk>a,c,b,d\<rbrakk>"}) *)
-(* (parse_varterm @{term "variable_concat  \<lbrakk>\<rbrakk> \<lbrakk>a,c,b,d\<rbrakk>"}) (* TODO: should work with [[]] at the end, too *)  *)
-@{cterm "reorder_variables_hint ((S::(_,_)bounded) \<guillemotright> (variable_concat \<lbrakk>a,b\<rbrakk> \<lbrakk>d\<rbrakk>)) (variable_concat  \<lbrakk>\<rbrakk> \<lbrakk>a,c,b,d\<rbrakk>)"}
-\<close>
+(* space_div_unlifted S \<psi> := {\<phi>. \<phi>\<otimes>\<psi> \<in> S} 
+   = {\<phi>. (I\<otimes>\<psi>)*\<phi> \<in> S}
+   = {\<phi>. (1-proj S)*(I\<otimes>\<psi>)*\<phi> = 0} *)
+(* lemma [code]: "space_div_unlifted S \<psi> = kernel ((idOp-Proj S) \<cdot> addState \<psi>)"
+  sorry *)
+
+
+
+
+
+
+
+variables quantum q :: bit and quantum r :: bit begin
+term "hadamard\<guillemotright>\<lbrakk>q\<rbrakk>"
+lemma "space_div (span{ket 0}\<guillemotright>\<lbrakk>q\<rbrakk>) (ket 1) \<lbrakk>r\<rbrakk> = span{ket 0}\<guillemotright>\<lbrakk>q\<rbrakk>"
+  apply (auto simp: prepare_for_code)
+  by eval
+
+lemma "space_div (span{ket (0,0), ket(1,1)}\<guillemotright>\<lbrakk>q,r\<rbrakk>) (ket 0) \<lbrakk>r\<rbrakk> = span{ket 0}\<guillemotright>\<lbrakk>q\<rbrakk>"
+  apply (auto simp: prepare_for_code)
+  by eval
+
 end
-
-
 
 ML {*
 fun is_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =

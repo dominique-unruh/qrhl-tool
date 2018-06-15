@@ -519,6 +519,16 @@ lemma [cong]: "A=A' \<Longrightarrow> reorder_variables_hint A R = reorder_varia
 lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x" -- \<open>Auxiliary lemma used by reorder_variables_hint_conv\<close>
   unfolding reorder_variables_hint_def by simp
 
+(* Tells the simplifier the following:
+    - A is of the form x\<guillemotright>Q
+    - Q,R are both explicit distinct variable terms
+    - the term should be rewritten into x'\<guillemotright>(variable_concat Q' R) for some Q', x'
+*)
+definition "extend_lift_as_var_concat_hint A R = A"
+lemma [cong]: "A=A' \<Longrightarrow> extend_lift_as_var_concat_hint A R = extend_lift_as_var_concat_hint A' R" by simp
+lemma extend_lift_as_var_concat_hint_remove_aux: "extend_lift_as_var_concat_hint A R \<equiv> A"
+  by (simp add: extend_lift_as_var_concat_hint_def)
+
 
 (* A hint to the simplifier with the meaning:
      - x is a term of the form x'>>Q (where x' is of type subspace or bounded)
@@ -603,6 +613,7 @@ lemma trafo_lift_bounded_bw_aux: -- \<open>Auxiliary lemma for reorder_lift_conv
      - the whole term should be rewritten into y'>>variable_concat Q R for some y'
   Rewriting the term is done by the variable_rewriting simproc.
  *)
+(* TODO: we might not need this if we reimplement the various conversions *)
 definition "variable_extension_hint x (R::_ variables) = x"
 
 
@@ -773,9 +784,20 @@ axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a 
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
 
+definition space_div_unlifted :: "('a*'b) subspace \<Rightarrow> 'b vector \<Rightarrow> 'a subspace" where
+  "space_div_unlifted S \<psi> = Abs_subspace {\<phi>. \<phi>\<otimes>\<psi> \<in> subspace_as_set S}"
+
+lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
+  sorry
+
 lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" sorry
 lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot" sorry
 lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
+
+lemma space_div_add_extend_lift_as_var_concat_hint:
+  fixes S :: "_ subspace"
+  shows "NO_MATCH ((variable_concat a b),b) (Q,R) \<Longrightarrow> (space_div (S\<guillemotright>Q) \<psi> R) = (space_div (extend_lift_as_var_concat_hint (S\<guillemotright>Q) R)) \<psi> R"
+  unfolding extend_lift_as_var_concat_hint_def by simp
 
 subsection \<open>Quantum equality\<close>
 
@@ -987,7 +1009,9 @@ parse_translation \<open>[("_declared_qvars", QRHL.declared_qvars_parse_tr)]\<cl
 
 simproc_setup warn_declared_qvars ("variable_name q") = QRHL.warn_declared_qvars_simproc
 
-simproc_setup "variable_rewriting" ("join_variables_hint a b" | "sort_variables_hint a" | "reorder_variables_hint a b") = 
+simproc_setup "variable_rewriting" 
+  ("join_variables_hint a b" | "sort_variables_hint a" | 
+   "reorder_variables_hint a b" | "extend_lift_as_var_concat_hint A R") = 
   QRHL.variable_rewriting_simproc
 
 section \<open>Programs\<close>
