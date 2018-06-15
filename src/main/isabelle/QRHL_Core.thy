@@ -11,8 +11,8 @@ lemma pat_lambda_conv_aux: -- \<open>Helper for ML function pat_lambda_conv\<clo
 
 ML_file "misc.ML"
 
-
-definition [code del]: "(sqrt2::complex) = sqrt 2"
+(* TODO remove *)
+definition [code]: "(sqrt2::complex) = sqrt 2"
 lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
  by (simp add: of_real_def scaleR_2 sqrt2_def)
 lemma sqrt2_neq0[simp]: "sqrt2 \<noteq> 0" unfolding sqrt2_def by simp
@@ -952,10 +952,10 @@ and adjoint_H[simp]: "hadamard* = hadamard"
 lemma H_H[simp]: "hadamard \<cdot> hadamard = idOp"
   using unitaryH unfolding unitary_def by simp
 
-definition "hadamard' = sqrt2 \<cdot> hadamard"
+(* definition "hadamard' = sqrt2 \<cdot> hadamard"
 lemma H_H': "hadamard = (1/sqrt2) \<cdot> hadamard'" unfolding hadamard'_def by simp
 lemma [simp]: "isometry (1 / sqrt2 \<cdot> hadamard')"
-  unfolding hadamard'_def by simp
+  unfolding hadamard'_def by simp *)
 
 
 definition [code del]: "pauliZ = hadamard \<cdot> pauliX \<cdot> hadamard"
@@ -976,14 +976,14 @@ axiomatization pauliY :: "(bit,bit) bounded"
 axiomatization EPR :: "(bit*bit) vector" 
   where EPR_normalized[simp]: "norm EPR = 1"
 
-definition[code del]: "EPR' = timesScalarVec sqrt2 EPR"
+(* definition[code del]: "EPR' = timesScalarVec sqrt2 EPR"
 
 lemma EPR_EPR': "EPR = timesScalarVec (1/sqrt2) EPR'"
   unfolding EPR'_def by simp
 
 lemma norm_EPR'[simp]: "cmod (1/sqrt2) * norm EPR' = 1"
   unfolding EPR'_def using EPR_normalized apply auto
-  by (metis divide_cancel_right nonzero_mult_div_cancel_right norm_divide norm_eq_zero norm_one sqrt2_neq0)
+  by (metis divide_cancel_right nonzero_mult_div_cancel_right norm_divide norm_eq_zero norm_one sqrt2_neq0) *)
 
 section \<open>Misc\<close>
 

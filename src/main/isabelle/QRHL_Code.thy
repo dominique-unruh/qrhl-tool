@@ -73,8 +73,10 @@ definition "matrix_Z = mat_of_rows_list 2 [ [1::complex,0], [0,-1] ]"
 axiomatization where bounded_of_mat_Z[code]: "mat_of_bounded pauliZ = matrix_Z"
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
 axiomatization where bounded_of_mat_Y[code]: "mat_of_bounded pauliY = matrix_Y"
-definition "matrix_H' = mat_of_rows_list 2 [ [1::complex, 1], [1, -1] ]"
-axiomatization where bounded_of_mat_H'[code]: "mat_of_bounded hadamard' = matrix_H'"
+(* definition "matrix_H' = mat_of_rows_list 2 [ [1::complex, 1], [1, -1] ]"
+axiomatization where bounded_of_mat_H'[code]: "mat_of_bounded hadamard' = matrix_H'" *)
+definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
+axiomatization where bounded_of_mat_hadamard[code]: "mat_of_bounded hadamard = matrix_hadamard"
 definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]"
 axiomatization where bounded_of_mat_CNOT[code]: "mat_of_bounded CNOT = matrix_CNOT"
 
@@ -186,7 +188,7 @@ axiomatization where vec_of_vector_timesScalarVec[code]: "vec_of_vector (timesSc
 axiomatization where vector_of_vec_plus[code]:
   "vec_of_vector (x + y) =  (vec_of_vector x) + (vec_of_vector y)" for x y :: "'a::enum vector"
 
-axiomatization where vec_of_vector_EPR'[code]: "vec_of_vector EPR' = vec_of_list [1,0,0,1]"
+axiomatization where vec_of_vector_EPR[code]: "vec_of_vector EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
 
 lemma [code_post]: 
   shows "Complex a 0 = complex_of_real a"
@@ -262,7 +264,7 @@ derive (no) ccompare vector
 derive (monad) set_impl vector
 
 
-lemmas prepare_for_code = H_H' quantum_equality_full_def add_join_variables_hint space_div_space_div_unlifted
-  space_div_add_extend_lift_as_var_concat_hint INF_lift EPR_EPR' Cla_inf_lift Cla_plus_lift
+lemmas prepare_for_code = quantum_equality_full_def add_join_variables_hint space_div_space_div_unlifted
+  space_div_add_extend_lift_as_var_concat_hint INF_lift Cla_inf_lift Cla_plus_lift
 
 end

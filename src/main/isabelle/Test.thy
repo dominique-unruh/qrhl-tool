@@ -1,42 +1,15 @@
 theory Test
-  imports (* Real_Sqrt2 *) Encoding Tactics QRHL_Code 
+  imports Real_Sqrt2 Encoding Tactics QRHL_Code 
 begin
 
+lemma  "CNOT \<cdot> ((hadamard \<cdot> ket 0) \<otimes> ket 0) = EPR"
+  apply (auto simp: prepare_for_code)
+  apply eval
 
 (* definition "matrix_H = mat_of_rows_list 2 [ [sqrt 2::complex, sqrt 2], [sqrt 2, -sqrt 2] ]"
 axiomatization where bounded_of_mat_H[code]: "mat_of_bounded hadamard = matrix_H"
 
 value "hadamard" *)
-
-(* variables quantum q :: bit and quantum r :: bit and quantum s :: bit and quantum t :: bit begin
-ML \<open>
-  
-;;
-
-QRHL.extend_lift_as_var_concat_hint_conv @{context} @{cterm "extend_lift_as_var_concat_hint ((A::_ subspace)\<guillemotright>\<lbrakk>q,t,s\<rbrakk>) \<lbrakk>r,s\<rbrakk>"};;
-(* QRHL.reorder_lift_conv @{context} (QRHL.parse_varterm @{term "\<lbrakk>q,r,s\<rbrakk>"}) @{cterm "((A::_ subspace)\<guillemotright>\<lbrakk>q,s\<rbrakk>)"};; *)
-\<close>                                
-end *)
-
-(* lemma div:
-  fixes S :: "_ subspace"
-  shows "NO_MATCH ((variable_concat a b),b) (Q,R) \<Longrightarrow> (space_div (S\<guillemotright>Q) \<psi> R) = 
-  (space_div (extend_lift_as_var_concat_hint (S\<guillemotright>Q) R)) \<psi> R"
-  unfolding extend_lift_as_var_concat_hint_def by simp *)
-
-(* axiomatization space_div_unlifted :: "('a*'b) subspace \<Rightarrow> 'b vector \<Rightarrow> 'a subspace"
-        (* space_div_unlifted S \<psi> := {\<phi>. \<phi>\<otimes>\<psi> \<in> S} *)
-  where div2: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
- *)
-
-(* simproc_setup tmp ("extend_lift_as_var_concat_hint A R") = \<open>fn _ => fn ctxt => fn ct => 
-SOME (extend_lift_as_var_concat_hint_conv ctxt ct) handle CTERM _ => NONE\<close> *)
-
-(* space_div_unlifted S \<psi> := {\<phi>. \<phi>\<otimes>\<psi> \<in> S} 
-   = {\<phi>. (I\<otimes>\<psi>)*\<phi> \<in> S}
-   = {\<phi>. (1-proj S)*(I\<otimes>\<psi>)*\<phi> = 0} *)
-(* lemma [code]: "space_div_unlifted S \<psi> = kernel ((idOp-Proj S) \<cdot> addState \<psi>)"
-  sorry *)
 
 
 

@@ -1,5 +1,5 @@
 theory QRHL
-  imports QRHL_Core QRHL_Code Encoding Tactics
+  imports Real_Sqrt2 QRHL_Core QRHL_Code Encoding Tactics
 begin
 
 end
