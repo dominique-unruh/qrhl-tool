@@ -125,6 +125,7 @@ fun clean_expression_conv_varlist ctxt : conv = Misc.repeat_until_conv
       case Thm.term_of current of Const(@{const_name expression},_) $ Q $ _ => 
         (QRHL.is_varlist Q orelse 
             case Option.map Thm.term_of prev of SOME (Const(@{const_name expression},_) $ Q' $ _) => Q aconv Q'
+                                              | SOME t => raise (TERM("clean_expression_conv_varlist: malformed prev",[t]))
                                               | NONE => false)
        | _ => raise CTERM("clean_expression_conv_varlist: expected expression",[current]))
   (clean_expression_conv_varlist1 ctxt)
@@ -232,5 +233,19 @@ val subst_expression_conv_noclean = Misc.conv_from_tac subst_expression_conv_noc
 
 fun subst_expression_conv ctxt = subst_expression_conv_noclean ctxt then_conv Conv.try_conv (clean_expression_conv ctxt)
 
+fun is_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
+  ((QRHL.parse_varterm Q; true) handle TERM _ => false)
+  | is_explicit_expression _ = false
+fun is_varlist_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
+  ((QRHL.parse_varlist Q; true) handle TERM _ => false)
+  |  is_varlist_explicit_expression _ = false
+
+fun clean_expression_simproc _ ctxt ct = 
+  let val t = Thm.term_of ct in
+  if is_explicit_expression t andalso not (is_varlist_explicit_expression t) then
+      SOME (clean_expression_conv ctxt ct) handle CTERM _ => NONE
+    else
+      NONE
+  end
 
 end

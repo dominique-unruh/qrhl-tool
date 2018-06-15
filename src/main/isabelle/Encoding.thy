@@ -7,6 +7,7 @@ type_synonym 'a cvariable = "'a variable"
 typedecl 'a expression
 axiomatization
   expression :: "'a variables \<Rightarrow> ('a\<Rightarrow>'b) \<Rightarrow> 'b expression"
+and expression_eval :: "'b expression \<Rightarrow> mem2 \<Rightarrow> 'b"
 
 text \<open>
 Some notation, used mainly in the documentation of the ML code:
@@ -230,18 +231,8 @@ hide_fact expression_clean_assoc_aux
 
 simproc_setup index_var ("index_var lr v") = Encoding.index_var_simproc
 
-(*
-ML {*
-val ctx = QRHL.declare_variable @{context} "x" @{typ int} QRHL.Classical
-val e = Encoding.term_to_expression ctx (HOLogic.mk_eq (Free("x",dummyT),Free("y",dummyT)))
-   |> Syntax.check_term ctx 
-*}
+simproc_setup clean_expression ("expression Q e") = Encoding.clean_expression_simproc
 
-ML {*
-val e' = Encoding.add_index_to_expression e false
-val t = Encoding.expression_to_term e' |> Thm.cterm_of ctx
-*}
-*)
 
 consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
 parse_translation \<open>[(@{const_syntax expression_syntax}, fn ctx => fn [e] => Encoding.term_to_expression_untyped ctx e)]\<close>
