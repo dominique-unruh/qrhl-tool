@@ -154,9 +154,9 @@ and variable_unit :: "unit variables"
 
 nonterminal variable_list_args
 syntax
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[[']])")
+  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|'|])")
   "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>'\<rbrakk>)")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[[_']])")
+  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|_'|])")
   "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
   "_variable_list_arg"  :: "'a \<Rightarrow> variable_list_args"                   ("_")
   "_variable_list_args" :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"     ("_,/ _")
@@ -660,7 +660,7 @@ lemma add_join_variables_hint:
 
 (* Hint for the simplifier, meaning that:
     - x is of the form x'>>Q
-    - colocal Q [[]] holds
+    - colocal Q \<lbrakk>\<rbrakk> holds
     - the whole expression should be rewritten to y'>>Q' where Q' is a sorted variable list
   Rewriting the term is done by the variable_rewriting simproc.
  *)
@@ -1004,7 +1004,7 @@ section "Simprocs"
 
 (* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed variables but can't *)
 syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")
-syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars [[_]]")
+syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars [|_|]")
 parse_translation \<open>[("_declared_qvars", QRHL.declared_qvars_parse_tr)]\<close>
 
 simproc_setup warn_declared_qvars ("variable_name q") = QRHL.warn_declared_qvars_simproc
@@ -1020,7 +1020,7 @@ typedecl program
 typedecl program_state
 
 axiomatization probability :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
-syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:_'(_')]")
+syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:(_'(_'))]")
 parse_translation \<open>[("_probability", fn ctx => fn [Const(v,_),p,rho] =>
   @{const probability} $ HOLogic.mk_string v $ p $ rho)]\<close>
 

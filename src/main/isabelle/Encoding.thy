@@ -240,11 +240,9 @@ hide_const expression_syntax
 
 term "Expr[x]"
 
-consts "probability2_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr2[_:_'(_')]")
+consts "probability2_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr2[_:(_'(_'))]")
 translations "CONST probability2_syntax a b c" \<rightleftharpoons> "CONST probability2 (Expr[a]) b c"
 hide_const probability2_syntax
-
-term "Pr2[x:y(z)]"
 
 consts "qrhl_syntax" :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> bool expression \<Rightarrow> bool" ("QRHL {_} _ _ {_}")
 translations "CONST qrhl_syntax a b c d" \<rightleftharpoons> "CONST qrhl (Expr[a]) b c (Expr[d])"
