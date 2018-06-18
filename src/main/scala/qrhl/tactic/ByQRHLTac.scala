@@ -9,7 +9,7 @@ import qrhl.logic._
 case object ByQRHLTac extends Tactic {
   class Probability(left : Boolean, state : State) {
     def unapply(term: pure.Term): Option[(pure.Term,pure.Term,pure.Term)] = term match {
-      case App(App(App(Const("QRHL_Core.probability",_),v),p),rho) =>
+      case App(App(App(Const(Isabelle.probability_old.name,_),v),p),rho) =>
 
         val vname = Isabelle.dest_string(v)
         val vvar = state.environment.cVariables.getOrElse(vname, throw UserException(s"$v is not the name of a classical variable")).index(left)
@@ -20,7 +20,7 @@ case object ByQRHLTac extends Tactic {
         }
         Some(vbool,p,rho)
 
-      case App(App(App(Const("Encoding.probability2",_),v),p),rho) =>
+      case App(App(App(Const(Isabelle.probability.name,_),v),p),rho) =>
 //        val expressionToTermOp = Operation.implicitly[Term, (Term,pure.Typ)]("expression_to_term")
         val addIndexToExpressionOp = Operation.implicitly[(Term,Boolean), Term]("add_index_to_expression")
 

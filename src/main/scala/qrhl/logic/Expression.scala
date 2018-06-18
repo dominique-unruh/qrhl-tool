@@ -35,7 +35,8 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
     val fv = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(t:Term) : Unit = t match {
       case Free(v,_) => fv += v
-      case App(App(App(Const("QRHL_Core.probability",_),t1),t2),t3) =>
+        // TODO: what about Encoding.probability?
+      case App(App(App(Const(Isabelle.probability_old.name,_),t1),t2),t3) =>
         fv += Isabelle.dest_string(t1)
         collect(t2); collect(t3)
       case Const(_,_) | Bound(_) | Var(_,_) =>

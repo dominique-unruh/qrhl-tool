@@ -1014,18 +1014,5 @@ simproc_setup "variable_rewriting"
    "reorder_variables_hint a b" | "extend_lift_as_var_concat_hint A R") = 
   QRHL.variable_rewriting_simproc
 
-section \<open>Programs\<close>
-
-typedecl program
-typedecl program_state
-
-axiomatization probability :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
-syntax "_probability" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:(_'(_'))]")
-parse_translation \<open>[("_probability", fn ctx => fn [Const(v,_),p,rho] =>
-  @{const probability} $ HOLogic.mk_string v $ p $ rho)]\<close>
-
-(* Must come after loading qrhl.ML *)                                                                          
-print_translation \<open>[(@{const_syntax probability}, fn ctx => fn [str,p,rho] =>
-  Const(@{syntax_const "_probability"},dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
 
 end

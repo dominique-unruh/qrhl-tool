@@ -141,7 +141,18 @@ and e5 :: "('a,'b) measurement expression" and Q :: "'a variables" and R :: "'b 
 
 axiomatization qrhl :: "predicate expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> predicate expression \<Rightarrow> bool"
 
-axiomatization probability2 :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
+typedecl program_state
+
+axiomatization probability_old :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
+syntax "_probability_old" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("PrOld[_:(_'(_'))]")
+parse_translation \<open>[("_probability_old", fn ctx => fn [Const(v,_),p,rho] =>
+  @{const probability_old} $ HOLogic.mk_string v $ p $ rho)]\<close>
+
+(* Must come after loading qrhl.ML *)                                                                          
+print_translation \<open>[(@{const_syntax probability_old}, fn ctx => fn [str,p,rho] =>
+  Const(@{syntax_const "_probability_old"},dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
+
+axiomatization probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 
 lemma expression_clean_assoc_aux: -- \<open>Helper for ML function clean_expression_conv_varlist\<close>
   assumes "expression (variable_concat Q (variable_concat R S)) (\<lambda>(q,(r,s)). e ((q,r),s)) \<equiv> e'"
@@ -240,9 +251,9 @@ hide_const expression_syntax
 
 term "Expr[x]"
 
-consts "probability2_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr2[_:(_'(_'))]")
-translations "CONST probability2_syntax a b c" \<rightleftharpoons> "CONST probability2 (Expr[a]) b c"
-hide_const probability2_syntax
+consts "probability_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:(_'(_'))]")
+translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c"
+hide_const probability_syntax
 
 consts "qrhl_syntax" :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> bool expression \<Rightarrow> bool" ("QRHL {_} _ _ {_}")
 translations "CONST qrhl_syntax a b c d" \<rightleftharpoons> "CONST qrhl (Expr[a]) b c (Expr[d])"
@@ -255,18 +266,18 @@ hide_const rhl_syntax
 term \<open> QRHL {Cla[x=1]} skip skip {Cla[x=1]} \<close>
 term \<open> RHL {x=1} skip skip {x=1} \<close>
 
-term \<open>Pr[x:p(rho)] <= Pr[x:p(rho)]\<close>
+term \<open>PrOld[x:p(rho)] <= PrOld[x:p(rho)]\<close>
 
 term \<open>
   Expr[x+1]
 \<close>
 
 term \<open>
-  Pr2[x=1:p(rho)]
+  Pr[x=1:p(rho)]
 \<close>
 
 term \<open>
-  Pr2[x=1:p(rho)] <= Pr2[x=1:p(rho)]
+  Pr[x=1:p(rho)] <= Pr[x=1:p(rho)]
 \<close>
 
 

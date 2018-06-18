@@ -242,6 +242,11 @@ object Isabelle {
   def variable_singleton(typ:ITyp) = Const(variable_singletonName, variableT(typ) -->: variablesT(typ))
   val variable_concatName = "QRHL_Core.variable_concat"
   def variable_concat(t1:ITyp, t2:ITyp) = Const(variable_concatName, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1,t2)))
+  val realT = Type("Real.real")
+  val stringT: Type = listT(Type("String.char"))
+  val program_stateT = Type("Encoding.program_state")
+  val probability = Const("Encoding.probability", expressionT(boolT) -->: programT -->: program_stateT -->: realT)
+  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
 
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
   val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")

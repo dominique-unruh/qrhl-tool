@@ -173,12 +173,47 @@ axiomatization powG :: "G \<Rightarrow> int \<Rightarrow> G" (infixr "\<^sup>^" 
 (* axiomatization where group_G: group_G *)
 (* abbreviation "g == generator G" *)
 
-
+lemma (in cyclic_group) m_comm:
+  assumes "x : carrier G" and "y : carrier G"
+  shows "x \<otimes> y = y \<otimes> x"
+proof -
+  from generator assms obtain n m :: nat where x:"x=\<^bold>g (^) n" and y:"y=\<^bold>g (^) m" 
+    apply atomize_elim by auto
+  show ?thesis
+    unfolding x y by (simp add: add.commute nat_pow_mult)
+qed
 
 interpretation G_group: cyclic_group G
   rewrites "x (^)\<^bsub>G\<^esub> n = x \<^sup>^ (n::int)" and "x \<otimes>\<^bsub>G\<^esub> y = x*y" and "\<one>\<^bsub>G\<^esub> = 1" and "generator G = g" 
-    and "m_inv G = inverse"
+    and "m_inv G = inverse" and "carrier G = UNIV"
   sorry
+
+
+thm G_group.m_comm
+
+(* From CryptHOL *)
+record 'a cyclic_group = "'a monoid" + 
+  generator :: 'a ("\<^bold>g\<index>")
+locale cyclic_group = group G
+  for G :: "('a, 'b) cyclic_group_scheme" (structure)
+  +
+  assumes generator_closed [intro, simp]: "generator G \<in> carrier G"
+  and generator: "carrier G \<subseteq> range (\<lambda>n :: nat. generator G (^)\<^bsub>G\<^esub> n)"
+
+(*sublocale cyclic_group \<subseteq> comm_group
+proof standard
+  fix x y assume "x : carrier G" and "y : carrier G"
+  with generator obtain n m :: nat where x:"x=\<^bold>g (^) n" and y:"y=\<^bold>g (^) m" 
+    apply atomize_elim by auto
+  show "x \<otimes> y = y \<otimes> x"
+    unfolding x y by (simp add: add.commute nat_pow_mult)
+qed*)
+
+
+(* interpretation bool_cyclic: cyclic_group "\<lparr> carrier = UNIV, monoid.mult = op\<noteq>, one = False, generator = True \<rparr>"
+  apply standard apply (auto simp: Units_def nat_pow_def image_def) 
+  by (rule_tac x="if x then 1 else 0" in exI, simp)
+ *)
 
 definition "keygen = uniform {(g \<^sup>^ x, x) | x::int. x\<in>{0..order G-1}}"
 (* thm cyclic_group.keygen_def *)
@@ -202,9 +237,90 @@ lemma weight_keygen: "weight keygen = 1"
 lemma supp_keygen: "supp keygen = {(g \<^sup>^ x, x) |x::int. x \<in> {0..order G - 1}}"
   unfolding keygen_def apply (rule supp_uniform) by auto
 
-lemma correct: "(g \<^sup>^ b) \<^sup>^ r * m * (g \<^sup>^ r) \<^sup>^ - b = m" by auto
+lemma (in monoid) nat_pow_Suc_left: 
+  assumes "x \<in> carrier G"
+  shows "x (^) Suc n = x \<otimes> (x (^) n)"
+  apply (induction n)
+  using assms apply simp
+  subgoal premises prems for n
+    apply (subst nat_pow_Suc)
+    apply (subst prems)
+    apply (subst nat_pow_Suc)
+    apply (subst m_assoc)
+    using assms by auto
+  done
+
+lemma (in group) inv_nat_pow:
+  assumes "x \<in> carrier G"
+  shows "inv x (^) (n::nat) = inv (x (^) n)"
+  apply (induction n) 
+   apply simp
+  apply (subst nat_pow_Suc)
+  apply (subst nat_pow_Suc_left)
+  using assms by (auto simp: inv_mult_group)
+
+lemma (in group) inv_int_pow:
+  assumes "x \<in> carrier G"
+  shows "inv x (^) (n::int) = inv (x (^) n)"
+  apply (cases n; hypsubst_thin)
+   apply (subst int_pow_int)+
+  using assms apply (rule inv_nat_pow)
+  using assms apply (subst int_pow_neg, simp)+
+  apply (subst int_pow_int)+
+  by (subst inv_nat_pow, simp_all)
 
 
+lemma (in group) int_pow_pow:
+  assumes "x \<in> carrier G" shows "(x (^) n) (^) m = x (^) (n * m::int)"
+proof (cases n; cases m)
+  show ?thesis if "n=int n'" and "m=int m'" for n' m'
+    unfolding that int_pow_int
+    apply (subst nat_pow_pow)
+     apply (fact assms)
+    unfolding int_pow_int[symmetric]
+    by simp
+
+  show ?thesis if "n=-int n'" and "m=int m'" for n' m'
+    unfolding that 
+    apply (subst mult_minus_left)
+    apply (subst int_pow_neg, simp add: assms)+
+    unfolding that int_pow_int of_nat_mult[symmetric]
+    apply (subst inv_nat_pow, simp add: assms)
+    apply (subst nat_pow_pow)
+    using assms by simp_all
+
+  show ?thesis if "n=int n'" and "m=-int m'" for n' m'
+    unfolding that 
+    apply (subst mult_minus_right)
+    apply (subst int_pow_neg, simp add: assms)+
+    unfolding that int_pow_int of_nat_mult[symmetric]
+    apply (subst nat_pow_pow)
+    using assms by simp_all
+
+  show ?thesis if "n=-int n'" and "m=-int m'" for n' m'
+    unfolding that 
+    apply (subst mult_minus_left)
+    apply (subst mult_minus_right)
+    apply (subst int_pow_neg, simp add: assms)+
+    unfolding that int_pow_int of_nat_mult[symmetric]
+    apply (subst inv_nat_pow, simp add: assms)
+    apply (subst nat_pow_pow)
+    using assms by simp_all
+qed
+
+lemma (in cyclic_group) "(\<^bold>g (^) r) (^) -x = (\<^bold>g (^) (-r*x))" for r x :: int
+  apply (subst int_pow_pow)
+   apply (simp add: nat_pow_pow)
+  by auto
+
+(* lemma correct: "(g (^) x) (^) r \oti* m * (g \<^sup>^ r) \<^sup>^ -x = m"  *)
+
+lemma correct: "(g \<^sup>^ x) \<^sup>^ r * m * (g \<^sup>^ r) \<^sup>^ -x = m" 
+  apply (subst G_group.int_pow_pow) apply simp
+  apply (subst G_group.int_pow_pow) apply simp
+  apply (subst G_group.m_comm) 
+    apply (auto simp: G_group.inv_int_pow )
+  by (metis G_group.int_pow_neg G_group.inv_solve_left UNIV_I mult.commute)
 
 variables classical c :: "G*G" and classical m :: G and classical pksk :: "G*int"
 and classical pk :: G and classical sk :: int begin
@@ -234,6 +350,8 @@ lemma elgamal_correct [simp]:
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
+
+term "Pr[x:y(z)]"
 
 lemma elgamal_correct2 [simp]:
   fixes z
