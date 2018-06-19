@@ -60,7 +60,7 @@ program prg1B2 := {
   call B2;
 }.
 
-lemma indcpa0_prg0B1: Pr[b:indcpa0(rho)] = Pr[b:prg0B1(rho)].
+lemma indcpa0_prg0B1: Pr[b=1:indcpa0(rho)] = Pr[b=1:prg0B1(rho)].
 
  byqrhl.
  simp.
@@ -81,7 +81,7 @@ lemma indcpa0_prg0B1: Pr[b:indcpa0(rho)] = Pr[b:prg0B1(rho)].
  simp!.
 qed.
 
-lemma prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
+lemma prg1B1_prg1B21: Pr[b=1:prg1B1(rho)] = Pr[b=1:prg1B2(rho)].
 
  byqrhl.
  simp.
@@ -104,7 +104,7 @@ lemma prg1B1_prg1B21: Pr[b:prg1B1(rho)] = Pr[b:prg1B2(rho)].
  simp!.
 qed.
 
-lemma indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
+lemma indcpa1_prg0B2: Pr[b=1:indcpa1(rho)] = Pr[b=1:prg0B2(rho)].
 
  byqrhl.
  simp.
@@ -126,9 +126,9 @@ lemma indcpa1_prg0B2: Pr[b:indcpa1(rho)] = Pr[b:prg0B2(rho)].
 qed.
 
 
-lemma final: abs( Pr[b:indcpa0(rho)] - Pr[b:indcpa1(rho)] ) <=
-             abs( Pr[b:prg0B1(rho)] - Pr[b:prg1B1(rho)] ) +
-             abs( Pr[b:prg0B2(rho)] - Pr[b:prg1B2(rho)] ).
+lemma final: abs( Pr[b=1:indcpa0(rho)] - Pr[b=1:indcpa1(rho)] ) <=
+             abs( Pr[b=1:prg0B1(rho)] - Pr[b=1:prg1B1(rho)] ) +
+             abs( Pr[b=1:prg0B2(rho)] - Pr[b=1:prg1B2(rho)] ).
 
  simp ! indcpa0_prg0B1 indcpa1_prg0B2 prg1B1_prg1B21.
 qed.

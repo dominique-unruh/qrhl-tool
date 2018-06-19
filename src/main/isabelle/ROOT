@@ -1,4 +1,5 @@
 session QRHL = "QRHL-Prerequisites" +
+  options [quick_and_dirty=true]
   theories QRHL "HOL-Protocol.Protocol_Main" "QRHL_Operations"
 
 session "QRHL-Prerequisites" = "HOL-Library" +

@@ -3,11 +3,6 @@ theory Complex_L2
     Complex_Inner_Product Infinite_Set_Sum_Missing Complex_Main
 begin
 
-
-
-(* Allows us to use "sorry" *)
-declare[[quick_and_dirty]]
-
 section \<open>l2 norm - untyped\<close>
 
 definition "has_ell2_norm x = bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)"

@@ -51,7 +51,7 @@ program prg1 := {
 
 
 
-lemma rorcpa0_prg0: Pr[b:rorcpa0(rho)] = Pr[b:prg0(rho)].
+lemma rorcpa0_prg0: Pr[b=1:rorcpa0(rho)] = Pr[b=1:prg0(rho)].
 
  byqrhl.
  simp.
@@ -73,7 +73,7 @@ lemma rorcpa0_prg0: Pr[b:rorcpa0(rho)] = Pr[b:prg0(rho)].
 qed.
 
 
-lemma rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
+lemma rorcpa1_prg1: Pr[b=1:rorcpa1(rho)] = Pr[b=1:prg1(rho)].
 
  byqrhl.
  simp.
@@ -97,7 +97,7 @@ lemma rorcpa1_prg1: Pr[b:rorcpa1(rho)] = Pr[b:prg1(rho)].
  simp ! aux_bij.
 qed.
 
-lemma final: abs (Pr[b:rorcpa0(rho)] - Pr[b:rorcpa1(rho)]) = abs (Pr[b:prg0(rho)] - Pr[b:prg1(rho)]).
+lemma final: abs (Pr[b=1:rorcpa0(rho)] - Pr[b=1:rorcpa1(rho)]) = abs (Pr[b=1:prg0(rho)] - Pr[b=1:prg1(rho)]).
 
  simp ! rorcpa0_prg0 rorcpa1_prg1.
 qed.
