@@ -241,6 +241,13 @@ lemma [code]: "Inf (Set_Monad l :: 'a subspace set) = fold inf l top"
   unfolding Set_Monad_def
   by (simp add: Inf_set_fold)
 
+lemma quantum_equality_full_def_let:
+  "quantum_equality_full U Q V R = (let U=U; V=V in
+                 (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> variable_concat Q R)"
+  unfolding quantum_equality_full_def by auto
+
+lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))" sorry
+
 declare [[code drop: UNIV]]
 declare enum_class.UNIV_enum[code]
 
@@ -264,7 +271,9 @@ derive (no) ccompare vector
 derive (monad) set_impl vector
 
 
-lemmas prepare_for_code = quantum_equality_full_def add_join_variables_hint space_div_space_div_unlifted
+
+lemmas prepare_for_code = quantum_equality_full_def_let add_join_variables_hint space_div_space_div_unlifted
   space_div_add_extend_lift_as_var_concat_hint INF_lift Cla_inf_lift Cla_plus_lift
+  top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift
 
 end
