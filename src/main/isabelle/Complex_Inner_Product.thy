@@ -191,7 +191,7 @@ proof
   proof (rule power2_le_imp_le)
     have "cinner x y + cinner y x = complex_of_real (2 * Re (cinner x y))"
       apply (subst (2) cinner_commute)
-      by (cases "cinner x y", simp add: complex_add complex_cn complex_of_real_def)
+      by (cases "cinner x y", simp add: complex_add complex_cnj complex_of_real_def)
     also have "\<dots> \<le> complex_of_real (2 * cmod (cinner x y))"
       apply (subst complex_of_real_mono_iff)
       using complex_Re_le_cmod by auto
@@ -332,7 +332,7 @@ proof
     unfolding cinner_complex_def by simp
   show "norm x = sqrt (cmod (cinner x x))"
     apply (cases x, hypsubst_thin)
-    unfolding cinner_complex_def complex_cn complex_mult complex_norm
+    unfolding cinner_complex_def complex_cnj complex_mult complex_norm
     by (simp add: power2_eq_square) 
 qed
 

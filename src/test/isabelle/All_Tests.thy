@@ -13,7 +13,7 @@ val files =
 val theories = @{theory} |> Context.parents_of |> map Context.theory_name
 
 val _ = files |> map (fn f =>
-  if member op= theories f then () else error ("Add "^f^" to the imports"))
+  if member (=) theories f then () else error ("Add "^f^" to the imports"))
 
 \<close>
 

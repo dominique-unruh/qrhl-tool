@@ -168,7 +168,7 @@ fun index_var_conv ctxt ct =
   
       val name_x = varname_x |> Thm.concl_of |> Logic.dest_equals |> snd
       val name_eq = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt
-        (@{term "op@ :: string=>_=>_"} $ name_x $ HOLogic.mk_string suffix |> Thm.cterm_of ctxt)
+        (@{term "(@) :: string=>_=>_"} $ name_x $ HOLogic.mk_string suffix |> Thm.cterm_of ctxt)
   in
     helper_thm OF [varname_x, varname_x1, name_eq]
   end

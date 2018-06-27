@@ -18,7 +18,7 @@ lift_definition zero_bounded :: "('a,'b) bounded" is "\<lambda>_. 0" by simp
 instance ..
 end
 
-(* lift_definition timesOp :: "('b,'c) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'c) bounded" is "op o"
+(* lift_definition timesOp :: "('b,'c) bounded \<Rightarrow> ('a,'b) bounded \<Rightarrow> ('a,'c) bounded" is "(o)"
   unfolding bounded_linear_def unfolding linear_def linear_axioms_def *)
 
 axiomatization
@@ -61,7 +61,7 @@ lemmas assoc_left = timesOp_assoc[symmetric] timesOp_assoc_subspace[symmetric] p
 lemmas assoc_right = timesOp_assoc timesOp_assoc_subspace plusOp_assoc
 
 instantiation bounded :: (type,type) ab_group_add begin
-definition "op+ = plusOp" 
+definition "(+) = plusOp" 
 definition "uminus = timesScalarOp (-1)"
 definition "A - B = A + (uminus B)" for A::"('a,'b) bounded"
 instance apply intro_classes

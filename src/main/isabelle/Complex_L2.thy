@@ -34,7 +34,7 @@ next
     apply (rule_tac abs_summable_finiteI[where B=B]) by fastforce 
 qed
 
-lemma has_ell2_norm_setL2: "has_ell2_norm x = bdd_above (setL2 (norm o x) ` Collect finite)"
+lemma has_ell2_norm_L2_set: "has_ell2_norm x = bdd_above (L2_set (norm o x) ` Collect finite)"
 proof -
   have bdd_above_image_mono': "(\<And>x y. x\<le>y \<Longrightarrow> x:A \<Longrightarrow> y:A \<Longrightarrow> f x \<le> f y) \<Longrightarrow> (\<exists>M\<in>A. \<forall>x \<in> A. x \<le> M) \<Longrightarrow> bdd_above (f`A)" for f::"'a set\<Rightarrow>real" and A
     unfolding bdd_above_def by auto
@@ -53,8 +53,8 @@ proof -
   ultimately have bdd_sqrt: "bdd_above X \<longleftrightarrow> bdd_above (sqrt ` X)" for X
     by rule
 
-  show "has_ell2_norm x \<longleftrightarrow> bdd_above (setL2 (norm o x) ` Collect finite)"
-    unfolding has_ell2_norm_def unfolding setL2_def
+  show "has_ell2_norm x \<longleftrightarrow> bdd_above (L2_set (norm o x) ` Collect finite)"
+    unfolding has_ell2_norm_def unfolding L2_set_def
     apply (rewrite asm_rl[of "(\<lambda>A. sqrt (sum (\<lambda>i. ((cmod \<circ> x) i)\<^sup>2) A)) ` Collect finite 
                             = sqrt ` (\<lambda>A. (\<Sum>i\<in>A. (cmod (x i))\<^sup>2)) ` Collect finite"])
       apply auto[1]
@@ -87,10 +87,10 @@ lemma SUP_max:
 
 definition "ell2_norm x = sqrt (SUP F:{F. finite F}. sum (\<lambda>i. (norm(x i))^2) F)"
 
-lemma ell2_norm_setL2: 
+lemma ell2_norm_L2_set: 
   assumes "has_ell2_norm x"
-  shows "ell2_norm x = (SUP F:{F. finite F}. setL2 (norm o x) F)"
-  unfolding ell2_norm_def setL2_def o_def apply (subst continuous_at_Sup_mono)
+  shows "ell2_norm x = (SUP F:{F. finite F}. L2_set (norm o x) F)"
+  unfolding ell2_norm_def L2_set_def o_def apply (subst continuous_at_Sup_mono)
   using monoI real_sqrt_le_mono apply blast
   using continuous_at_split isCont_real_sqrt apply blast
   using assms unfolding has_ell2_norm_def by auto
@@ -113,18 +113,18 @@ proof -
     using mono by auto
 qed
 
-lemma setL2_mono2:
+lemma L2_set_mono2:
   assumes "finite L"
   assumes "K \<le> L"
-  shows "setL2 f K \<le> setL2 f L"
-  unfolding setL2_def apply (rule real_sqrt_le_mono)
+  shows "L2_set f K \<le> L2_set f L"
+  unfolding L2_set_def apply (rule real_sqrt_le_mono)
   apply (rule sum_mono2)
   using assms by auto
 
-lemma ell2_norm_finite_def': "ell2_norm (x::'a::finite\<Rightarrow>complex) = setL2 (norm o x) UNIV"
-  apply (subst ell2_norm_setL2) apply simp
+lemma ell2_norm_finite_def': "ell2_norm (x::'a::finite\<Rightarrow>complex) = L2_set (norm o x) UNIV"
+  apply (subst ell2_norm_L2_set) apply simp
   apply (subst SUP_max[where m=UNIV])
-  by (auto simp: mono_def intro!: setL2_mono2)
+  by (auto simp: mono_def intro!: L2_set_mono2)
 
 lemma ell2_1: assumes  "finite F" shows "(\<Sum>i\<in>F. (cmod (if a = i then 1 else 0))\<^sup>2) \<le> 1"
 proof - 
@@ -175,36 +175,36 @@ lemma ell2_norm_smult:
   assumes "has_ell2_norm x"
   shows "has_ell2_norm (\<lambda>i. c * x i)" and "ell2_norm (\<lambda>i. c * x i) = cmod c * ell2_norm x"
 proof -
-  have setL2_mul: "setL2 (cmod \<circ> (\<lambda>i. c * x i)) F = cmod c * setL2 (cmod \<circ> x) F" for F
+  have L2_set_mul: "L2_set (cmod \<circ> (\<lambda>i. c * x i)) F = cmod c * L2_set (cmod \<circ> x) F" for F
   proof -
-    have "setL2 (cmod \<circ> (\<lambda>i. c * x i)) F = setL2 (\<lambda>i. (cmod c * (cmod o x) i)) F"
+    have "L2_set (cmod \<circ> (\<lambda>i. c * x i)) F = L2_set (\<lambda>i. (cmod c * (cmod o x) i)) F"
       by (metis comp_def norm_mult)
-    also have "\<dots> = cmod c * setL2 (cmod o x) F"
-      by (metis norm_ge_zero setL2_right_distrib)
+    also have "\<dots> = cmod c * L2_set (cmod o x) F"
+      by (metis norm_ge_zero L2_set_right_distrib)
     finally show ?thesis .
   qed
 
-  from assms obtain M where M: "M \<ge> setL2 (cmod o x) F" if "finite F" for F
-    unfolding has_ell2_norm_setL2 bdd_above_def by auto
-  then have "cmod c * M \<ge> setL2 (cmod o (\<lambda>i. c * x i)) F" if "finite F" for F
-    unfolding setL2_mul
+  from assms obtain M where M: "M \<ge> L2_set (cmod o x) F" if "finite F" for F
+    unfolding has_ell2_norm_L2_set bdd_above_def by auto
+  then have "cmod c * M \<ge> L2_set (cmod o (\<lambda>i. c * x i)) F" if "finite F" for F
+    unfolding L2_set_mul
     by (simp add: ordered_comm_semiring_class.comm_mult_left_mono that) 
   then show has: "has_ell2_norm (\<lambda>i. c * x i)"
-    unfolding has_ell2_norm_setL2 bdd_above_def using setL2_mul[symmetric] by auto
+    unfolding has_ell2_norm_L2_set bdd_above_def using L2_set_mul[symmetric] by auto
 
-  have "ell2_norm (\<lambda>i. c * x i) = SUPREMUM (Collect finite) (setL2 (cmod \<circ> (\<lambda>i. c * x i)))"
-    apply (rule ell2_norm_setL2) by (rule has)
-  also have "\<dots> = SUPREMUM (Collect finite) (\<lambda>F. cmod c * setL2 (cmod \<circ> x) F)"
-    apply (rule SUP_cong) apply auto by (rule setL2_mul)
+  have "ell2_norm (\<lambda>i. c * x i) = SUPREMUM (Collect finite) (L2_set (cmod \<circ> (\<lambda>i. c * x i)))"
+    apply (rule ell2_norm_L2_set) by (rule has)
+  also have "\<dots> = SUPREMUM (Collect finite) (\<lambda>F. cmod c * L2_set (cmod \<circ> x) F)"
+    apply (rule SUP_cong) apply auto by (rule L2_set_mul)
   also have "\<dots> = cmod c * ell2_norm x" 
-    apply (subst ell2_norm_setL2) apply (fact assms)
+    apply (subst ell2_norm_L2_set) apply (fact assms)
     apply (subst continuous_at_Sup_mono[where f="\<lambda>x. cmod c * x"])
     apply (simp add: mono_def ordered_comm_semiring_class.comm_mult_left_mono)
        apply (rule continuous_mult)
     using continuous_const apply blast
        apply simp
       apply blast
-     apply (meson assms has_ell2_norm_setL2)
+     apply (meson assms has_ell2_norm_L2_set)
     by auto
   finally show "ell2_norm (\<lambda>i. c * x i) = cmod c * ell2_norm x" .
 qed
@@ -214,27 +214,27 @@ lemma ell2_norm_triangle:
   assumes "has_ell2_norm x" and "has_ell2_norm y"
   shows "has_ell2_norm (\<lambda>i. x i + y i)" and "ell2_norm (\<lambda>i. x i + y i) \<le> ell2_norm x + ell2_norm y"
 proof -
-  have triangle: "setL2 (cmod \<circ> (\<lambda>i. x i + y i)) F \<le> setL2 (cmod \<circ> x) F + setL2 (cmod \<circ> y) F" (is "?lhs\<le>?rhs") 
+  have triangle: "L2_set (cmod \<circ> (\<lambda>i. x i + y i)) F \<le> L2_set (cmod \<circ> x) F + L2_set (cmod \<circ> y) F" (is "?lhs\<le>?rhs") 
     if "finite F" for F
   proof -
-    have "?lhs \<le> setL2 (\<lambda>i. (cmod o x) i + (cmod o y) i) F"
-      apply (rule setL2_mono)
+    have "?lhs \<le> L2_set (\<lambda>i. (cmod o x) i + (cmod o y) i) F"
+      apply (rule L2_set_mono)
       by (auto simp: norm_triangle_ineq)
     also have "\<dots> \<le> ?rhs"
-      by (rule setL2_triangle_ineq)
+      by (rule L2_set_triangle_ineq)
     finally show ?thesis .
   qed
 
-  obtain Mx My where Mx: "Mx \<ge> setL2 (cmod o x) F" and My: "My \<ge> setL2 (cmod o y) F" if "finite F" for F
-    using assms unfolding has_ell2_norm_setL2 bdd_above_def by auto
-  then have MxMy: "Mx + My \<ge> setL2 (cmod \<circ> x) F + setL2 (cmod \<circ> y) F" if "finite F" for F
+  obtain Mx My where Mx: "Mx \<ge> L2_set (cmod o x) F" and My: "My \<ge> L2_set (cmod o y) F" if "finite F" for F
+    using assms unfolding has_ell2_norm_L2_set bdd_above_def by auto
+  then have MxMy: "Mx + My \<ge> L2_set (cmod \<circ> x) F + L2_set (cmod \<circ> y) F" if "finite F" for F
     using that by fastforce
-  then have bdd_plus: "bdd_above ((\<lambda>xa. setL2 (cmod \<circ> x) xa + setL2 (cmod \<circ> y) xa) ` Collect finite)"
+  then have bdd_plus: "bdd_above ((\<lambda>xa. L2_set (cmod \<circ> x) xa + L2_set (cmod \<circ> y) xa) ` Collect finite)"
     unfolding bdd_above_def by auto
-  from MxMy have MxMy': "Mx + My \<ge> setL2 (cmod \<circ> (\<lambda>i. x i + y i)) F" if "finite F" for F 
+  from MxMy have MxMy': "Mx + My \<ge> L2_set (cmod \<circ> (\<lambda>i. x i + y i)) F" if "finite F" for F 
     using triangle that by fastforce
   then show has: "has_ell2_norm (\<lambda>i. x i + y i)"
-    unfolding has_ell2_norm_setL2 bdd_above_def by auto
+    unfolding has_ell2_norm_L2_set bdd_above_def by auto
 
   have SUP_plus: "(SUP x:A. f x + g x) \<le> (SUP x:A. f x) + (SUP x:A. g x)" 
     if notempty: "A\<noteq>{}" and bddf: "bdd_above (f`A)"and bddg: "bdd_above (g`A)"
@@ -256,13 +256,13 @@ proof -
   qed
   
   show "ell2_norm (\<lambda>i. x i + y i) \<le> ell2_norm x + ell2_norm y"
-    apply (subst ell2_norm_setL2, fact has)
-    apply (subst ell2_norm_setL2, fact assms)+
+    apply (subst ell2_norm_L2_set, fact has)
+    apply (subst ell2_norm_L2_set, fact assms)+
     apply (rule order.trans[rotated])
      apply (rule SUP_plus)
        apply auto[1]
-      apply (meson assms(1) has_ell2_norm_setL2)
-     apply (meson assms(2) has_ell2_norm_setL2)
+      apply (meson assms(1) has_ell2_norm_L2_set)
+     apply (meson assms(2) has_ell2_norm_L2_set)
     apply (rule cSUP_subset_mono)
        apply auto
     using MxMy unfolding bdd_above_def apply auto[1]
@@ -327,11 +327,11 @@ end
 (* TODO: move *)
 lemma cnj_x_x: "cnj x * x = (abs x)\<^sup>2"
   apply (cases x)
-  by (auto simp: complex_cn complex_mult abs_complex_def complex_norm power2_eq_square complex_of_real_def)
+  by (auto simp: complex_cnj complex_mult abs_complex_def complex_norm power2_eq_square complex_of_real_def)
 
 lemma cnj_x_x_geq0[simp]: "cnj x * x \<ge> 0"
   apply (cases x)
-  by (auto simp: complex_cn complex_mult complex_of_real_def less_eq_complex_def)
+  by (auto simp: complex_cnj complex_mult complex_of_real_def less_eq_complex_def)
 
 
 instantiation vector :: (type) complex_inner begin
@@ -555,7 +555,7 @@ lift_definition top_subspace :: "'a subspace" is "UNIV::'a vector set" by simp
 instance .. end
 
 instantiation subspace :: (type)inf begin  (* Intersection *)
-lift_definition inf_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> 'a subspace" is "op\<inter>" by simp
+lift_definition inf_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> 'a subspace" is "(\<inter>)" by simp
 instance .. end
 
 instantiation subspace :: (type)sup begin  (* Sum of spaces *)
@@ -567,7 +567,7 @@ lift_definition plus_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Righta
   by (rule is_subspace_plus)
 instance .. end
 
-lemma subspace_sup_plus: "(sup :: 'a subspace \<Rightarrow> _ \<Rightarrow> _) = op+" 
+lemma subspace_sup_plus: "(sup :: 'a subspace \<Rightarrow> _ \<Rightarrow> _) = (+)" 
   unfolding sup_subspace_def plus_subspace_def by simp
 
 instantiation subspace :: (type)Inf begin  (* Intersection *)
@@ -575,8 +575,8 @@ lift_definition Inf_subspace :: "'a subspace set \<Rightarrow> 'a subspace" is "
 instance .. end
 
 instantiation subspace :: (type)ord begin  
-lift_definition less_eq_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> bool" is "op\<subseteq>". (* \<le> means inclusion *)
-lift_definition less_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> bool" is "op\<subset>". (* \<le> means inclusion *)
+lift_definition less_eq_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> bool" is "(\<subseteq>)". (* \<le> means inclusion *)
+lift_definition less_subspace :: "'a subspace \<Rightarrow> 'a subspace \<Rightarrow> bool" is "(\<subset>)". (* \<le> means inclusion *)
 instance .. end
 
 instantiation subspace :: (type)Sup begin (* Sum of spaces *)

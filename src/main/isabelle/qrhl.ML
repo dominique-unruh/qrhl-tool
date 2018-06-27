@@ -350,13 +350,19 @@ fun dest_numeral_syntax (Const (@{const_syntax "Num.num.One"}, _)) = 1
   | dest_numeral_syntax (Const (@{const_syntax "Num.num.Bit0"}, _) $ bs) = 2 * dest_numeral_syntax bs
   | dest_numeral_syntax (Const (@{const_syntax "Num.num.Bit1"}, _) $ bs) = 2 * dest_numeral_syntax bs + 1
   | dest_numeral_syntax t = raise TERM ("dest_num_syntax", [t]);
-fun dest_char_syntax t =
-  case t of
-      Const (@{const_syntax Groups.zero_class.zero}, _) => 0
-    | (Const (@{const_syntax String.Char}, _) $ t) => dest_numeral_syntax t
-    | _ => raise TERM ("dest_char_syntax", [t]);
-fun dest_list_syntax (Const (@{const_syntax Nil}, _)) = []
-  | dest_list_syntax (Const (@{const_syntax Cons}, _) $ t $ u) = t :: dest_list_syntax u
+
+fun dest_bit_syntax (Const (@{const_syntax False},_)) = 0
+  | dest_bit_syntax (Const (@{const_syntax True},_)) = 1
+  | dest_bit_syntax _ = raise TERM ("dest_bit_syntax", []);
+
+val dest_bits_syntax = Integer.eval_radix 2 o map dest_bit_syntax;
+
+fun dest_char_syntax (Const (\<^const_syntax>\<open>String.char.Char\<close>, _) $ b0 $ b1 $ b2 $ b3 $ b4 $ b5 $ b6 $ b7) =
+      dest_bits_syntax [b0, b1, b2, b3, b4, b5, b6, b7]
+  | dest_char_syntax t = raise TERM ("dest_char_syntax", [t]);
+
+fun dest_list_syntax (Const (\<^const_syntax>\<open>Nil\<close>, _)) = []
+  | dest_list_syntax (Const (\<^const_syntax>\<open>Cons\<close>, _) $ t $ u) = t :: dest_list_syntax u
   | dest_list_syntax t = raise TERM ("dest_list_syntax", [t])
 val dest_string_syntax = implode o map (chr o dest_char_syntax) o dest_list_syntax;
 

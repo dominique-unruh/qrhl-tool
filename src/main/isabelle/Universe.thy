@@ -63,7 +63,7 @@ proof -
   define D0 where "D0 = Pow (universe_powertower n)"
   define i0 where "i0 x = Rep_universe ` x" for x
   have "inj_on i0 D0"
-    by (metis Rep_universe_inverse \<open>i0 \<equiv> op ` Rep_universe\<close> inj_on_image inj_on_inverseI)
+    by (metis Rep_universe_inverse \<open>i0 \<equiv> (`) Rep_universe\<close> inj_on_image inj_on_inverseI)
   define D1 where "D1 = i0 ` D0"
   have D1: "D1 = Pow {(x,n) | x. Elem x ((Power ^^ n) HOLZF.Inf)}" 
     unfolding D1_def i0_def D0_def universe_powertower_def
@@ -74,8 +74,8 @@ proof -
   have "inj_on i1 D1"
     apply (rule inj_onI) unfolding i1_def D1 
     apply auto
-    apply (smt \<open>i1 \<equiv> op ` fst\<close> contra_subsetD fst_conv imageI image_iff mem_Collect_eq old.prod.exhaust prod.inject)
-    by (smt \<open>i1 \<equiv> op ` fst\<close> contra_subsetD fst_conv imageI image_iff mem_Collect_eq old.prod.exhaust prod.inject)
+    apply (smt \<open>i1 \<equiv> (`) fst\<close> contra_subsetD fst_conv imageI image_iff mem_Collect_eq old.prod.exhaust prod.inject)
+    by (smt \<open>i1 \<equiv> (`) fst\<close> contra_subsetD fst_conv imageI image_iff mem_Collect_eq old.prod.exhaust prod.inject)
 
   define D2 where "D2 = i1 ` D1" 
   have "D2 = Pow (explode ((Power ^^ n) HOLZF.Inf))"

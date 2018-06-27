@@ -8,6 +8,8 @@ hide_const (open) Lattice.inf
 hide_const (open) Order.top
 hide_const (open) card_UNIV
 hide_const (open) Coset.kernel
+hide_const (open) span
+
 no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
 no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
 
@@ -134,7 +136,7 @@ axiomatization where mat_of_bounded_zero[code]:
 
 definition "computational_basis_vec n = map (unit_vec n) [0..<n]"
 definition "orthogonal_complement_vec n vs = 
-  filter (op\<noteq> (zero_vec n)) (drop (length vs) (gram_schmidt n (vs @ computational_basis_vec n)))"
+  filter ((\<noteq>) (zero_vec n)) (drop (length vs) (gram_schmidt n (vs @ computational_basis_vec n)))"
 
 definition "vec_tensor (A::'a::times vec) (B::'a vec) =
   vec (dim_vec A*dim_vec B) 
@@ -205,7 +207,7 @@ instance apply intro_classes unfolding equal_subspace_def by simp
 end
 
 definition "is_subspace_of n vs ws =  
-  list_all (op= (zero_vec n)) (drop (length ws) (gram_schmidt n (ws @ vs)))"
+  list_all ((=) (zero_vec n)) (drop (length ws) (gram_schmidt n (ws @ vs)))"
 
 axiomatization where SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a subspace) \<longleftrightarrow> is_subspace_of (CARD('a::enum)) A B" 
 

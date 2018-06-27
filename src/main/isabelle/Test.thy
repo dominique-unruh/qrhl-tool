@@ -1,6 +1,6 @@
 theory Test
   imports Encoding Tactics QRHL_Code "~~/src/HOL/Eisbach/Eisbach_Tools" CryptHOL.Cyclic_Group
-  "HOL-Imperative_HOL.Imperative_HOL"
+  (* "HOL-Imperative_HOL.Imperative_HOL" *)
 begin
 
 ML \<open>
@@ -81,19 +81,6 @@ val _ = show_oracles @{thm theo}
 
 
 
-definition "bl1 = do {
-  x <- ref (1::int);
-  y <- !x;
-  return y
-}"
-
-definition "bl2 = execute bl1 Heap.empty"
-
-export_code bl2 in SML module_name Bla
-
-ML \<open>
-ML_Syntax.print_term @{term 1} |> writeln
-\<close>
 
 
 (* 
@@ -270,7 +257,7 @@ end
 typedecl G
 instance G::"{power,ab_semigroup_mult,inverse}" sorry
 axiomatization G::"G cyclic_group" and g::G
-(* term "op^^" *)
+(* term "(^^)" *)
 axiomatization powG :: "G \<Rightarrow> int \<Rightarrow> G" (infixr "\<^sup>^" 80)
 (* locale group_G = cyclic_group G  *)
 (* axiomatization where group_G: group_G *)
@@ -280,14 +267,14 @@ lemma (in cyclic_group) m_comm:
   assumes "x : carrier G" and "y : carrier G"
   shows "x \<otimes> y = y \<otimes> x"
 proof -
-  from generator assms obtain n m :: nat where x:"x=\<^bold>g (^) n" and y:"y=\<^bold>g (^) m" 
+  from generator assms obtain n m :: nat where x:"x=\<^bold>g [^] n" and y:"y=\<^bold>g [^] m" 
     apply atomize_elim by auto
   show ?thesis
     unfolding x y by (simp add: add.commute nat_pow_mult)
 qed
 
 interpretation G_group: cyclic_group G
-  rewrites "x (^)\<^bsub>G\<^esub> n = x \<^sup>^ (n::int)" and "x \<otimes>\<^bsub>G\<^esub> y = x*y" and "\<one>\<^bsub>G\<^esub> = 1" and "generator G = g" 
+  rewrites "x [^]\<^bsub>G\<^esub> n = x \<^sup>^ (n::int)" and "x \<otimes>\<^bsub>G\<^esub> y = x*y" and "\<one>\<^bsub>G\<^esub> = 1" and "generator G = g" 
     and "m_inv G = inverse" and "carrier G = UNIV"
   sorry
 
@@ -301,19 +288,19 @@ locale cyclic_group = group G
   for G :: "('a, 'b) cyclic_group_scheme" (structure)
   +
   assumes generator_closed [intro, simp]: "generator G \<in> carrier G"
-  and generator: "carrier G \<subseteq> range (\<lambda>n :: nat. generator G (^)\<^bsub>G\<^esub> n)"
+  and generator: "carrier G \<subseteq> range (\<lambda>n :: nat. generator G [^]\<^bsub>G\<^esub> n)"
 
 (*sublocale cyclic_group \<subseteq> comm_group
 proof standard
   fix x y assume "x : carrier G" and "y : carrier G"
-  with generator obtain n m :: nat where x:"x=\<^bold>g (^) n" and y:"y=\<^bold>g (^) m" 
+  with generator obtain n m :: nat where x:"x=\<^bold>g [^] n" and y:"y=\<^bold>g [^] m" 
     apply atomize_elim by auto
   show "x \<otimes> y = y \<otimes> x"
     unfolding x y by (simp add: add.commute nat_pow_mult)
 qed*)
 
 
-(* interpretation bool_cyclic: cyclic_group "\<lparr> carrier = UNIV, monoid.mult = op\<noteq>, one = False, generator = True \<rparr>"
+(* interpretation bool_cyclic: cyclic_group "\<lparr> carrier = UNIV, monoid.mult = (\<noteq>), one = False, generator = True \<rparr>"
   apply standard apply (auto simp: Units_def nat_pow_def image_def) 
   by (rule_tac x="if x then 1 else 0" in exI, simp)
  *)
@@ -342,7 +329,7 @@ lemma supp_keygen: "supp keygen = {(g \<^sup>^ x, x) |x::int. x \<in> {0..order 
 
 lemma (in monoid) nat_pow_Suc_left: 
   assumes "x \<in> carrier G"
-  shows "x (^) Suc n = x \<otimes> (x (^) n)"
+  shows "x [^] Suc n = x \<otimes> (x [^] n)"
   apply (induction n)
   using assms apply simp
   subgoal premises prems for n
@@ -355,7 +342,7 @@ lemma (in monoid) nat_pow_Suc_left:
 
 lemma (in group) inv_nat_pow:
   assumes "x \<in> carrier G"
-  shows "inv x (^) (n::nat) = inv (x (^) n)"
+  shows "inv x [^] (n::nat) = inv (x [^] n)"
   apply (induction n) 
    apply simp
   apply (subst nat_pow_Suc)
@@ -364,7 +351,7 @@ lemma (in group) inv_nat_pow:
 
 lemma (in group) inv_int_pow:
   assumes "x \<in> carrier G"
-  shows "inv x (^) (n::int) = inv (x (^) n)"
+  shows "inv x [^] (n::int) = inv (x [^] n)"
   apply (cases n; hypsubst_thin)
    apply (subst int_pow_int)+
   using assms apply (rule inv_nat_pow)
@@ -374,7 +361,7 @@ lemma (in group) inv_int_pow:
 
 
 lemma (in group) int_pow_pow:
-  assumes "x \<in> carrier G" shows "(x (^) n) (^) m = x (^) (n * m::int)"
+  assumes "x \<in> carrier G" shows "(x [^] n) [^] m = x [^] (n * m::int)"
 proof (cases n; cases m)
   show ?thesis if "n=int n'" and "m=int m'" for n' m'
     unfolding that int_pow_int
@@ -411,12 +398,12 @@ proof (cases n; cases m)
     using assms by simp_all
 qed
 
-lemma (in cyclic_group) "(\<^bold>g (^) r) (^) -x = (\<^bold>g (^) (-r*x))" for r x :: int
+lemma (in cyclic_group) "(\<^bold>g [^] r) [^] -x = (\<^bold>g [^] (-r*x))" for r x :: int
   apply (subst int_pow_pow)
    apply (simp add: nat_pow_pow)
   by auto
 
-(* lemma correct: "(g (^) x) (^) r \oti* m * (g \<^sup>^ r) \<^sup>^ -x = m"  *)
+(* lemma correct: "(g [^] x) [^] r \oti* m * (g \<^sup>^ r) \<^sup>^ -x = m"  *)
 
 lemma correct: "(g \<^sup>^ x) \<^sup>^ r * m * (g \<^sup>^ r) \<^sup>^ -x = m" 
   apply (subst G_group.int_pow_pow) apply simp

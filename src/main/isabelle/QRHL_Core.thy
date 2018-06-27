@@ -5,7 +5,7 @@ begin
 
 section \<open>Miscellaneous\<close>
 
-lemma pat_lambda_conv_aux: -- \<open>Helper for ML function pat_lambda_conv\<close>
+lemma pat_lambda_conv_aux: \<comment> \<open>Helper for ML function pat_lambda_conv\<close>
   shows "term \<equiv> (\<lambda>_. term ())"
   by simp
 
@@ -83,14 +83,14 @@ axiomatization where map_distr_uniform[simp]: "bij_betw f A B \<Longrightarrow> 
 typedef bit = "UNIV::bool set"..
 setup_lifting type_definition_bit
 instantiation bit :: field begin
-lift_definition times_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "op&".
-lift_definition plus_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "op\<noteq>".
+lift_definition times_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "(&)".
+lift_definition plus_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "(\<noteq>)".
 lift_definition zero_bit :: bit is "False".
 lift_definition one_bit :: bit is "True".
 definition[simp]: "uminus_bit (x::bit) = x"
-definition[simp]: "minus_bit = (op+ :: bit\<Rightarrow>_\<Rightarrow>_)"
+definition[simp]: "minus_bit = ((+) :: bit\<Rightarrow>_\<Rightarrow>_)"
 definition[simp]: "inverse_bit (x::bit) = x"
-definition[simp]: "divide_bit = (op* :: bit\<Rightarrow>_\<Rightarrow>_)"
+definition[simp]: "divide_bit = (( * ) :: bit\<Rightarrow>_\<Rightarrow>_)"
 instance by intro_classes (transfer; auto)+
 end
 
@@ -524,7 +524,7 @@ qed
 definition "reorder_variables_hint A R = A"
 lemma [cong]: "A=A' \<Longrightarrow> reorder_variables_hint A R = reorder_variables_hint A' R" by simp
 
-lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x" -- \<open>Auxiliary lemma used by reorder_variables_hint_conv\<close>
+lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x" \<comment> \<open>Auxiliary lemma used by reorder_variables_hint_conv\<close>
   unfolding reorder_variables_hint_def by simp
 
 (* Tells the simplifier the following:
@@ -564,7 +564,7 @@ lemma variable_renaming_hint_bounded[simp]:
   using assms unfolding variable_renaming_hint_def qvar_trafo_protected_def by (rule qvar_trafo_bounded)
 
 
-lemma extend_space_lift_aux: -- \<open>Auxiliary lemma for extend_lift_conv\<close>
+lemma extend_space_lift_aux: \<comment> \<open>Auxiliary lemma for extend_lift_conv\<close>
   fixes Q :: "'q variables" and R :: "'r variables"
     and S :: "'q subspace"
   assumes "distinct_qvars (variable_concat Q R)"
@@ -573,7 +573,7 @@ lemma extend_space_lift_aux: -- \<open>Auxiliary lemma for extend_lift_conv\<clo
   using assms by (rule lift_tensorSpace)
 
 
-lemma extend_bounded_lift_aux: -- \<open>Auxiliary lemma for extend_lift_conv\<close>
+lemma extend_bounded_lift_aux: \<comment> \<open>Auxiliary lemma for extend_lift_conv\<close>
   fixes Q :: "'q variables" and R :: "'r variables"
     and S :: "('q,'q) bounded"
   assumes "distinct_qvars (variable_concat Q R)"
@@ -581,21 +581,21 @@ lemma extend_bounded_lift_aux: -- \<open>Auxiliary lemma for extend_lift_conv\<c
   apply (rule eq_reflection)
   using assms lift_extendR by blast
 
-lemma trafo_lift_space_aux: -- \<open>Auxiliary lemma for sort_lift_conv\<close>
+lemma trafo_lift_space_aux: \<comment> \<open>Auxiliary lemma for sort_lift_conv\<close>
   fixes S::"_ subspace"
   assumes "qvar_trafo_protected A Q R"
   shows "S\<guillemotright>Q \<equiv> (A\<cdot>S)\<guillemotright>R"
   apply (rule eq_reflection)
   using assms unfolding qvar_trafo_protected_def by (rule qvar_trafo_subspace)
 
-lemma trafo_lift_bounded_aux: -- \<open>Auxiliary lemma for sort_lift_conv\<close>
+lemma trafo_lift_bounded_aux: \<comment> \<open>Auxiliary lemma for sort_lift_conv\<close>
   fixes S::"(_,_) bounded"
   assumes "qvar_trafo_protected A Q R"
   shows "S\<guillemotright>Q \<equiv> (A\<cdot>S\<cdot>A*)\<guillemotright>R"
   apply (rule eq_reflection)
   using assms unfolding qvar_trafo_protected_def by (rule qvar_trafo_bounded)
 
-lemma trafo_lift_space_bw_aux: -- \<open>Auxiliary lemma for reorder_lift_conv\<close>
+lemma trafo_lift_space_bw_aux: \<comment> \<open>Auxiliary lemma for reorder_lift_conv\<close>
   fixes S::"_ subspace"
   assumes "qvar_trafo_protected A Q R"
   shows "S\<guillemotright>R \<equiv> (A*\<cdot>S)\<guillemotright>Q"
@@ -603,7 +603,7 @@ lemma trafo_lift_space_bw_aux: -- \<open>Auxiliary lemma for reorder_lift_conv\<
   using qvar_trafo_adj[OF assms[unfolded qvar_trafo_protected_def]]
   using qvar_trafo_subspace by blast
 
-lemma trafo_lift_bounded_bw_aux: -- \<open>Auxiliary lemma for reorder_lift_conv\<close>
+lemma trafo_lift_bounded_bw_aux: \<comment> \<open>Auxiliary lemma for reorder_lift_conv\<close>
   fixes S::"(_,_) bounded"
   assumes "qvar_trafo_protected A Q R"
   shows "S\<guillemotright>R \<equiv> (A*\<cdot>S\<cdot>A)\<guillemotright>Q"
