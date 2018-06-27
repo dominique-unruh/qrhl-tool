@@ -20,7 +20,7 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
-isabelleVersions := Seq(Version.Stable("2017"))
+isabelleVersions := Seq(Version.Stable("2018-RC0")) // TODO
 isabelleSessions in Compile := Seq("QRHL")
 
 libraryDependencies ++= { val version = "0.9.3"; Seq(
@@ -29,7 +29,8 @@ libraryDependencies ++= { val version = "0.9.3"; Seq(
   "info.hupel" %% "pide-package" % version
 ) }
 
-val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
+//val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
+val afpUrl = "https://bitbucket.org/isa-afp/afp-devel/get/7f9c8aca53e8.tar.gz" // TODO 2018
 val afpExtractPath = "target/downloads/afp"
 
 lazy val downloadAFP = taskKey[Unit]("Download the AFP")

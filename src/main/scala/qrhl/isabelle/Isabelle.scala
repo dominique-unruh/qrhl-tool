@@ -23,7 +23,7 @@ import scala.util.matching.Regex
 import scala.util.{Left, Right}
 
 class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
-  val version = Version.Stable("2017")
+  val version = Version.Stable("2018-RC0") // TODO 2018
 
   private val auto = path=="auto"
 
