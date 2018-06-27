@@ -1,6 +1,109 @@
 theory Test
   imports Encoding Tactics QRHL_Code "~~/src/HOL/Eisbach/Eisbach_Tools" CryptHOL.Cyclic_Group
+  "HOL-Imperative_HOL.Imperative_HOL"
 begin
+
+ML \<open>
+type sorry_location = { position : Position.T, comment : string }
+val sorry_table = Synchronized.var "sorry" (Inttab.empty : sorry_location Inttab.table)
+\<close>
+
+definition sorry_marker :: "int \<Rightarrow> prop \<Rightarrow> prop" where "sorry_marker n P == P"
+
+ML \<open>
+Proofterm.proofs := 1
+\<close>
+
+
+oracle sorry_marker_oracle = \<open>fn (ctxt, (loc:sorry_location), t) => let
+  val ser = serial ()
+  val _ = Synchronized.change sorry_table (Inttab.update (ser, loc))
+  val t' = @{const sorry_marker} $ HOLogic.mk_number @{typ int} ser $ t
+  val ct = Thm.cterm_of ctxt t'
+  in
+    ct
+  end
+\<close>
+
+ML \<open>
+fun marked_sorry ctxt loc t = 
+  sorry_marker_oracle (ctxt,loc,t) |> Conv.fconv_rule (Conv.rewr_conv @{thm sorry_marker_def});;
+(* val thm1 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
+val thm2 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
+val thm = Thm.transitive thm1 thm2 *)
+\<close>
+
+ML \<open>
+fun marked_sorry_tac ctxt loc = SUBGOAL (fn (goal,i) => let
+  val thm = marked_sorry ctxt loc goal
+  in
+    solve_tac ctxt [thm] i
+  end
+) 
+\<close>
+
+
+ML \<open>
+fun show_oracles thm = let
+  val known_oracles = thm |> Thm.theory_of_thm |> Proof_Context.init_global
+                          |> Thm.extern_oracles false |> map (fn (m as (_,props),name) => 
+                              (Properties.get props "name" |> the,
+                               Markup.markup m name))
+                          |> Symtab.make
+  val oracles = thm |> Thm.proof_body_of |> Proofterm.all_oracles_of
+  fun show ("Test.sorry_marker_oracle",t) = let
+        val ser = case t of @{const sorry_marker} $ n $ _ => HOLogic.dest_number n |> snd
+                          | t => raise (TERM ("show_oracles", [t]))
+        val loc = Inttab.lookup (Synchronized.value sorry_table) ser |> the
+        val pos = #position loc
+        val comment = #comment loc
+      in "\n  cheat method: " ^ comment ^ Position.here pos  end
+    | show (name,_) = "\n  " ^ (Symtab.lookup known_oracles name |> the)
+  in
+    "Oracles used in theorem:" :: (map show oracles) |> Output.writelns
+  end
+\<close>
+
+
+method_setup cheat = \<open>Scan.lift (Parse.position Parse.text) >> (fn (txt,pos) => fn _ => CONTEXT_METHOD (fn _ => fn (ctxt, st) =>
+    Method.CONTEXT ctxt (marked_sorry_tac ctxt {position=pos, comment=txt} 1 st)))\<close>
+
+declare[[smt_oracle=true]]
+
+lemma theo: "1=1"
+  apply (rule trans[of _ 1])
+   apply (cheat 1)
+  by smt
+
+ML \<open>
+val _ = show_oracles @{thm theo}
+\<close>
+
+
+
+definition "bl1 = do {
+  x <- ref (1::int);
+  y <- !x;
+  return y
+}"
+
+definition "bl2 = execute bl1 Heap.empty"
+
+export_code bl2 in SML module_name Bla
+
+ML \<open>
+ML_Syntax.print_term @{term 1} |> writeln
+\<close>
+
+
+(* 
+ML \<open>
+val (func,fut) = Active.dialog_text ()
+val _ = func "hello" |> writeln
+val _ = func "hullo" |> writeln
+val _ = Future.join fut
+\<close>
+ *)
 
 hide_const (open) Order.top
 
