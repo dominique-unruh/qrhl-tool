@@ -136,17 +136,11 @@ method_setup seq = {*
     SIMPLE_METHOD (Tactics.seq_tac i j (Encoding.read_predicate ctx B) ctx 1))
 *}
 
-(* ML {* val t = Unsynchronized.ref @{thm refl} *} *)
-
-
-(*   apply (tactic \<open>Tactics.seq_tac ~2 ~1 (Var(("xxx",0),@{typ "predicate expression"})) @{context} 2\<close>)
-  apply (tactic \<open>Tactics.seq_tac 0 0 (Var(("xxx",0),@{typ "predicate expression"})) @{context} 2\<close>)
-  apply (tactic \<open>resolve_tac @{context} [Tactics.get_wp1 @{term "assign x e"} @{term B} @{context} |> #2] 3\<close>) *)
 
 variables classical x :: nat begin
 
 schematic_goal "qrhl ?pre [block [assign var_x Expr[x+2], assign var_x Expr[0], assign var_x Expr[x+1] ] ] [] Expr[ Cla[x1=1] ]"
-  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply (tactic \<open>Tactics.wp_tac \<^context> true 1\<close>)
   apply simp
   oops
 

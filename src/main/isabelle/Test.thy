@@ -1,7 +1,12 @@
 theory Test
-  imports Encoding Tactics QRHL_Code "~~/src/HOL/Eisbach/Eisbach_Tools" CryptHOL.Cyclic_Group
+  imports Encoding Tactics QRHL_Code "HOL-Eisbach.Eisbach_Tools" CryptHOL.Cyclic_Group
   (* "HOL-Imperative_HOL.Imperative_HOL" *)
 begin
+
+consts bla :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "''*" 80)
+
+term "1 *' 2"
+term "('*   )"
 
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }
@@ -18,7 +23,7 @@ Proofterm.proofs := 1
 oracle sorry_marker_oracle = \<open>fn (ctxt, (loc:sorry_location), t) => let
   val ser = serial ()
   val _ = Synchronized.change sorry_table (Inttab.update (ser, loc))
-  val t' = @{const sorry_marker} $ HOLogic.mk_number @{typ int} ser $ t
+  val t' = \<^const>\<open>sorry_marker\<close> $ HOLogic.mk_number \<^typ>\<open>int\<close> ser $ t
   val ct = Thm.cterm_of ctxt t'
   in
     ct
@@ -32,6 +37,7 @@ fun marked_sorry ctxt loc t =
 val thm2 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
 val thm = Thm.transitive thm1 thm2 *)
 \<close>
+
 
 ML \<open>
 fun marked_sorry_tac ctxt loc = SUBGOAL (fn (goal,i) => let
@@ -52,7 +58,7 @@ fun show_oracles thm = let
                           |> Symtab.make
   val oracles = thm |> Thm.proof_body_of |> Proofterm.all_oracles_of
   fun show ("Test.sorry_marker_oracle",t) = let
-        val ser = case t of @{const sorry_marker} $ n $ _ => HOLogic.dest_number n |> snd
+        val ser = case t of \<^const>\<open>sorry_marker\<close> $ n $ _ => HOLogic.dest_number n |> snd
                           | t => raise (TERM ("show_oracles", [t]))
         val loc = Inttab.lookup (Synchronized.value sorry_table) ser |> the
         val pos = #position loc
@@ -229,8 +235,8 @@ lemma
   assumes [simp]: "x\<ge>0"
   shows "qrhl D [s1,sample var_x Expr[uniform {0..max x 0}]] [t1,t2,assign var_x Expr[0]] Expr[Cla[x1\<ge>x2]]"
   using [[method_error,show_types]]
-  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>)
-  apply (tactic \<open>Tactics.wp_tac @{context} false 1\<close>)
+  apply (tactic \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic \<open>Tactics.wp_tac \<^context> false 1\<close>)
   apply simp
   by (rule qrhl_top)
 lemma test:
@@ -245,8 +251,8 @@ lemma
   assumes [simp]: "x\<ge>0"
   shows "qrhl Expr[ Cla[x1=0 \<and> x2=1] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ]] [assign var_x Expr[x-1]] Expr[Cla[x1\<ge>x2]]"
   using [[method_error]]
-  apply (tactic \<open>Tactics.wp_tac @{context} true 1\<close>) 
-  apply (tactic \<open>Tactics.wp_tac @{context} false 1\<close>)
+  apply (tactic \<open>Tactics.wp_tac \<^context> true 1\<close>) 
+  apply (tactic \<open>Tactics.wp_tac \<^context> false 1\<close>)
   apply simp
   apply (rule skip)
   apply intro_expression_leq
@@ -428,15 +434,15 @@ lemma elgamal_correct [simp]:
           ElGamal
          [] Expr[Cla[m1=z]]"
   unfolding ElGamal_def
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
   apply (simp add: dec_def)
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
   (* unfolding enc_def *)
   (* unfolding  *)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
@@ -449,15 +455,15 @@ lemma elgamal_correct2 [simp]:
           ElGamal
          [] Expr[Cla[m1=m2]]"
   unfolding ElGamal_def
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
   apply (simp add: dec_def)
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
   (* unfolding enc_def *)
   (* unfolding  *)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
-  apply (tactic  \<open>Tactics.wp_tac @{context} true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)

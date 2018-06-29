@@ -1,34 +1,32 @@
 structure QRHL =
 struct
 
-fun mk_variablesT T = Type(@{type_name variables}, [T])
-fun mk_distrT T = Type(@{type_name distr}, [T])
-fun mk_variableT T = Type(@{type_name variable}, [T])
-fun dest_variableT (Type(@{type_name variable}, [T])) = T
+fun mk_variablesT T = Type(\<^type_name>\<open>variables\<close>, [T])
+fun mk_distrT T = Type(\<^type_name>\<open>distr\<close>, [T])
+fun mk_variableT T = Type(\<^type_name>\<open>variable\<close>, [T])
+fun dest_variableT (Type(\<^type_name>\<open>variable\<close>, [T])) = T
   | dest_variableT T = raise TYPE("dest_variableT", [T], [])
-fun dest_variablesT (Type(@{type_name variables}, [T])) = T
+fun dest_variablesT (Type(\<^type_name>\<open>variables\<close>, [T])) = T
   | dest_variablesT T = raise TYPE("dest_variablesT", [T], [])
-fun mk_vectorT T = Type(@{type_name vector}, [T])
-fun mk_boundedT T T' = Type(@{type_name bounded}, [T,T'])
-fun dest_boundedT (Type(@{type_name bounded}, [T,T'])) = (T,T')
+fun mk_vectorT T = Type(\<^type_name>\<open>vector\<close>, [T])
+fun mk_boundedT T T' = Type(\<^type_name>\<open>bounded\<close>, [T,T'])
+fun dest_boundedT (Type(\<^type_name>\<open>bounded\<close>, [T,T'])) = (T,T')
   | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
 fun mk_bounded2T T = mk_boundedT T T
-fun mk_measurementT T T' = Type(@{type_name measurement}, [T,T'])
-(* fun mk_projectorT T = Type(@{type_name projector}, [T]) *)
-fun mk_conjs [] = @{const True}
+fun mk_measurementT T T' = Type(\<^type_name>\<open>measurement\<close>, [T,T'])
+fun mk_conjs [] = \<^const>\<open>True\<close>
   | mk_conjs [t] = t
-  | mk_conjs (t::ts) = @{const conj} $ t $ mk_conjs ts
+  | mk_conjs (t::ts) = \<^const>\<open>conj\<close> $ t $ mk_conjs ts
 fun mk_variable_name v = 
-  Const(@{const_name variable_name}, fastype_of v --> @{typ string}) $ v
+  Const(\<^const_name>\<open>variable_name\<close>, fastype_of v --> \<^typ>\<open>string\<close>) $ v
 
 fun mk_INFIMUM A f = 
   let val AT = fastype_of A
       val fT = fastype_of f
-      (* val idxT = case AT of Type(@{type_name set}, [T]) => T *)
       val (_,infT) = dest_funT fT 
       val infsetT = HOLogic.mk_setT infT
   in
-    Const(@{const_name Inf}, infsetT --> infT) $ (Const(@{const_name image}, fT --> AT --> infsetT) $ f $ A)
+    Const(\<^const_name>\<open>Inf\<close>, infsetT --> infT) $ (Const(\<^const_name>\<open>image\<close>, fT --> AT --> infsetT) $ f $ A)
   end
 
 
@@ -36,24 +34,24 @@ fun dest_All (Const("HOL.All",_) $ Abs(_,T,body)) = (T,body)
   | dest_All t = raise TERM("dest_All",[t])
 
 (* TODO: superseeded by mk_varterm ? *)
-fun variables [] = (@{const variable_unit},@{typ unit})
+fun variables [] = (\<^const>\<open>variable_unit\<close>,\<^typ>\<open>unit\<close>)
   | variables [v] = 
         let val vT = fastype_of v
-            val vT' = case vT of Type(@{type_name variable},[vT']) => vT' | _ => raise TYPE("expecting a variable",[vT],[v])
+            val vT' = case vT of Type(\<^type_name>\<open>variable\<close>,[vT']) => vT' | _ => raise TYPE("expecting a variable",[vT],[v])
         in
-          (Const(@{const_name variable_singleton}, vT --> Type(@{type_name variables}, [vT'])) $ v,
+          (Const(\<^const_name>\<open>variable_singleton\<close>, vT --> Type(\<^type_name>\<open>variables\<close>, [vT'])) $ v,
            vT')
         end
   | variables (v::vs) = 
         let val (vs',vsT) = variables vs
             (* val (v',vT) = variables [v] *)
             val vT = fastype_of v
-            val vT' = case vT of Type(@{type_name variable},[vT']) => vT' | _ => raise TYPE("expecting a variable",[vT],[v])
+            val vT' = case vT of Type(\<^type_name>\<open>variable\<close>,[vT']) => vT' | _ => raise TYPE("expecting a variable",[vT],[v])
             val prodT = HOLogic.mk_prodT (vT',vsT)
         in
-          (Const(@{const_name variable_concat}, 
+          (Const(\<^const_name>\<open>variable_concat\<close>, 
               mk_variablesT vT' --> mk_variablesT vsT --> mk_variablesT prodT) $
-            (Const(@{const_name variable_singleton}, vT --> mk_variablesT vT') $ v) $ vs',
+            (Const(\<^const_name>\<open>variable_singleton\<close>, vT --> mk_variablesT vT') $ v) $ vs',
             prodT)
         end
 
@@ -66,8 +64,8 @@ fun simp_conv_premises ctxt thm =
 (* Given a term of the form "A\<guillemotright>Q", returns (lift,A,Q) where "lift x y" evaluates 
    to x/y if \<guillemotright> is a lifting of subspace/bounded, respectively.  *)
 fun dest_lift (t as (Const(lift,_) $ S $ Q)) = let
-  val lift_kind = case lift of @{const_name liftSpace} => (fn x => fn _ => x)
-                             | @{const_name liftOp} => (fn _ => fn y => y)
+  val lift_kind = case lift of \<^const_name>\<open>liftSpace\<close> => (fn x => fn _ => x)
+                             | \<^const_name>\<open>liftOp\<close> => (fn _ => fn y => y)
                              | _ => raise TERM("dest_lift: lift is "^lift, [t])
   in
     (lift_kind,S,Q)
@@ -90,10 +88,10 @@ end
 (* TODO remove *)
 fun qinitWp post e Q =
   let val (vs,vsT) = variables Q 
-      val qpre = Const(@{const_name space_div}, @{typ predicate} --> mk_vectorT vsT --> mk_variablesT vsT --> @{typ predicate}) $
+      val qpre = Const(\<^const_name>\<open>space_div\<close>, \<^typ>\<open>predicate\<close> --> mk_vectorT vsT --> mk_variablesT vsT --> \<^typ>\<open>predicate\<close>) $
                     post $ e $ vs
-      val isunit = @{const classical_subspace} $ HOLogic.mk_eq 
-              (Const(@{const_name norm}, mk_vectorT vsT --> @{typ real}) $ e, @{term "1::real"})
+      val isunit = \<^const>\<open>classical_subspace\<close> $ HOLogic.mk_eq 
+              (Const(\<^const_name>\<open>norm\<close>, mk_vectorT vsT --> \<^typ>\<open>real\<close>) $ e, \<^term>\<open>1::real\<close>)
   in
     @{const inf(predicate)} $ isunit $ qpre
   end
@@ -101,9 +99,9 @@ fun qinitWp post e Q =
 (* TODO remove *)
 fun qapplyWp post e Q =
   let val (vs,vsT) = variables Q 
-      val unitary = @{const classical_subspace} $ 
-          (Const(@{const_name isometry}, mk_bounded2T vsT --> HOLogic.boolT) $ e)
-      val e' = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_variablesT vsT --> @{typ "(mem2,mem2) bounded"})
+      val unitary = \<^const>\<open>classical_subspace\<close> $ 
+          (Const(\<^const_name>\<open>isometry\<close>, mk_bounded2T vsT --> HOLogic.boolT) $ e)
+      val e' = Const(\<^const_name>\<open>liftOp\<close>, mk_bounded2T vsT --> mk_variablesT vsT --> \<^typ>\<open>(mem2,mem2) bounded\<close>)
                 $ e $ vs
       val im_e' = @{const applyOpSpace(mem2,mem2)} $ e' $ @{const top(predicate)}
       val adj_e' = @{const adjoint(mem2,mem2)} $ e'
@@ -120,14 +118,14 @@ fun measureWp B x e Q =
       val (_,resT) = dest_Free x
       val (vs,vsT) = variables Q
       val measT = mk_measurementT resT vsT
-      val e_z = Const(@{const_name mproj}, measT --> resT --> mk_bounded2T vsT)
+      val e_z = Const(\<^const_name>\<open>mproj\<close>, measT --> resT --> mk_bounded2T vsT)
                   $ e $ Bound(0)
-      val lift_e_z = Const(@{const_name liftOp}, mk_bounded2T vsT --> mk_variablesT vsT --> @{typ "(mem2,mem2) bounded"})
+      val lift_e_z = Const(\<^const_name>\<open>liftOp\<close>, mk_bounded2T vsT --> mk_variablesT vsT --> \<^typ>\<open>(mem2,mem2) bounded\<close>)
                     $ e_z $ vs
       val im_e_z = @{const applyOpSpace(mem2,mem2)} $ lift_e_z $ @{const top(predicate)}
       val Be = @{const plus(predicate)} $ (@{const inf(predicate)} $ B_z $ im_e_z) $ (@{const ortho(mem2)} $ im_e_z)
-      val Inf_Be = mk_INFIMUM (Const(@{const_name top}, HOLogic.mk_setT resT)) (Abs("z",resT,Be))
-      val total = @{const classical_subspace} $ (Const(@{const_name mtotal}, measT --> HOLogic.boolT) $ e)
+      val Inf_Be = mk_INFIMUM (Const(\<^const_name>\<open>top\<close>, HOLogic.mk_setT resT)) (Abs("z",resT,Be))
+      val total = @{const classical_subspace} $ (Const(\<^const_name>\<open>mtotal\<close>, measT --> HOLogic.boolT) $ e)
   in
   @{const inf(predicate)} $ total $ Inf_Be
   end
@@ -135,8 +133,8 @@ fun measureWp B x e Q =
 
 (* TODO remove *)
 fun ifWp e thenWp elseWp =
-  let val Cla_e = @{const classical_subspace} $ e
-      val Cla_not_e = @{const classical_subspace} $ (@{const Not} $ e)
+  let val Cla_e = \<^const>\<open>classical_subspace\<close> $ e
+      val Cla_not_e = \<^const>\<open>classical_subspace\<close> $ (\<^const>\<open>Not\<close> $ e)
       val then' = @{const plus(predicate)} $ Cla_not_e $ thenWp
       val else' = @{const plus(predicate)} $ Cla_e $ elseWp
   in
@@ -145,19 +143,19 @@ fun ifWp e thenWp elseWp =
 
 (* TODO remove *)
 fun sampleWp v T e B =
-    let val distrT = Type(@{type_name distr},[T])
+    let val distrT = Type(\<^type_name>\<open>distr\<close>,[T])
         val _ = if fastype_of e = distrT then ()
                 else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e],[e]))
-        val _ = if fastype_of B = @{typ predicate} then ()
+        val _ = if fastype_of B = \<^typ>\<open>predicate\<close> then ()
                 else raise(TYPE("predicate has wrong type",[fastype_of B],[B]))
-        val setT = Type(@{type_name set},[T])
-        val supp = Const(@{const_name supp}, distrT --> setT) $ e
+        val setT = Type(\<^type_name>\<open>set\<close>,[T])
+        val supp = Const(\<^const_name>\<open>supp\<close>, distrT --> setT) $ e
         val absB = Term.absfree (v,T) B
         val B2 = @{const Inf(predicate)} $
-                 (Const(@{const_name image}, (T --> @{typ predicate}) --> setT -->  @{typ "predicate set"})
+                 (Const(\<^const_name>\<open>image\<close>, (T --> \<^typ>\<open>predicate\<close>) --> setT -->  \<^typ>\<open>predicate set\<close>)
                   $ absB $ supp)
-        val total = @{const classical_subspace} $
-             HOLogic.mk_eq (Const(@{const_name weight}, distrT --> @{typ real}) $ e, @{term "1::real"})
+        val total = \<^const>\<open>classical_subspace\<close> $
+             HOLogic.mk_eq (Const(\<^const_name>\<open>weight\<close>, distrT --> \<^typ>\<open>real\<close>) $ e, \<^term>\<open>1::real\<close>)
     in
       @{const inf(predicate)} $ total $ B2
     end
@@ -166,47 +164,47 @@ fun sampleWp v T e B =
 
 (* TODO remove *)
 fun rndWp v1 e1 v2 e2 T B =
-    let val distrT = Type(@{type_name distr},[T])
+    let val distrT = Type(\<^type_name>\<open>distr\<close>,[T])
         val _ = if fastype_of e1 = distrT then ()
                 else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e1],[e1]))
         val _ = if fastype_of e2 = distrT then ()
                 else raise(TYPE("variable and expression, type mismatch",[T,fastype_of e2],[e2]))
-        val _ = if fastype_of B = @{typ predicate} then ()
+        val _ = if fastype_of B = \<^typ>\<open>predicate\<close> then ()
                 else raise(TYPE("predicate has wrong type",[fastype_of B],[B]))
-        val setT = Type(@{type_name set},[T])
-        val supp = Const(@{const_name supp}, distrT --> setT) $ e1
+        val setT = Type(\<^type_name>\<open>set\<close>,[T])
+        val supp = Const(\<^const_name>\<open>supp\<close>, distrT --> setT) $ e1
         val absB = Term.abstract_over (Free(v1,T),B) |> (fn t => Term.abstract_over (Free(v2,T),t)) |> (fn t => Abs("z",T,t))
         val B2 = @{const Inf(predicate)} $
-                      (Const(@{const_name image}, (T --> @{typ predicate}) --> setT -->  @{typ "predicate set"})
+                      (Const(\<^const_name>\<open>image\<close>, (T --> \<^typ>\<open>predicate\<close>) --> setT -->  \<^typ>\<open>predicate set\<close>)
                          $ absB $ supp)
-        val sameDistr = @{const classical_subspace} $ HOLogic.mk_eq (e1,e2)
+        val sameDistr = \<^const>\<open>classical_subspace\<close> $ HOLogic.mk_eq (e1,e2)
     in
       @{const inf(predicate)} $ sameDistr $ B2
     end
    
 (* TODO remove *)
 fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
-  let val distrT1 = Type(@{type_name distr},[T1])
-      val distrT2 = Type(@{type_name distr},[T2])
+  let val distrT1 = Type(\<^type_name>\<open>distr\<close>,[T1])
+      val distrT2 = Type(\<^type_name>\<open>distr\<close>,[T2])
       val T12 = HOLogic.mk_prodT (T1,T2)
-      val distrT12 = Type(@{type_name distr},[T12])
+      val distrT12 = Type(\<^type_name>\<open>distr\<close>,[T12])
       val setT12 = HOLogic.mk_setT T12
       val _ = if fastype_of e1 = distrT1 then ()
               else raise(TYPE("variable and expression, type mismatch",[T1,fastype_of e1],[e1]))
       val _ = if fastype_of e2 = distrT2 then ()
               else raise(TYPE("variable and expression, type mismatch",[T2,fastype_of e2],[e2]))
-      val _ = if fastype_of B = @{typ predicate} then ()
+      val _ = if fastype_of B = \<^typ>\<open>predicate\<close> then ()
               else raise(TYPE("predicate has wrong type",[fastype_of B],[B]))
-      val supp = Const(@{const_name supp}, distrT12 --> setT12) $ f
+      val supp = Const(\<^const_name>\<open>supp\<close>, distrT12 --> setT12) $ f
       val absB = B |> absfree (v2,T2) |> absfree (v1,T1)
-      val marginal1 = HOLogic.mk_eq (Const(@{const_name map_distr}, (T12-->T1) --> distrT12 --> distrT1) $
-          Const(@{const_name fst}, T12-->T1) $ f, e1)
-      val marginal2 = HOLogic.mk_eq (Const(@{const_name map_distr}, (T12-->T2) --> distrT12 --> distrT2) $
-          Const(@{const_name snd}, T12-->T2) $ f, e2)
-      val marginals = @{const classical_subspace} $ (HOLogic.mk_conj (marginal1,marginal2))
+      val marginal1 = HOLogic.mk_eq (Const(\<^const_name>\<open>map_distr\<close>, (T12-->T1) --> distrT12 --> distrT1) $
+          Const(\<^const_name>\<open>fst\<close>, T12-->T1) $ f, e1)
+      val marginal2 = HOLogic.mk_eq (Const(\<^const_name>\<open>map_distr\<close>, (T12-->T2) --> distrT12 --> distrT2) $
+          Const(\<^const_name>\<open>snd\<close>, T12-->T2) $ f, e2)
+      val marginals = \<^const>\<open>classical_subspace\<close> $ (HOLogic.mk_conj (marginal1,marginal2))
       val B2 = @{const Inf(predicate)} $
-               (Const(@{const_name image}, (T12 --> @{typ predicate}) --> setT12 -->  @{typ "predicate set"}) $
-                 (Const(@{const_name case_prod}, (T1-->T2--> @{typ predicate}) --> (T12--> @{typ predicate})) $
+               (Const(\<^const_name>\<open>image\<close>, (T12 --> \<^typ>\<open>predicate\<close>) --> setT12 -->  \<^typ>\<open>predicate set\<close>) $
+                 (Const(\<^const_name>\<open>case_prod\<close>, (T1-->T2--> \<^typ>\<open>predicate\<close>) --> (T12-->\<^typ>\<open>predicate\<close>)) $
                   absB) $ supp)
   in
     @{const inf(predicate)} $ marginals $ B2
@@ -221,35 +219,31 @@ fun mk_quantum_equality Q1 Q2 T =
   let val opT = mk_bounded2T T
       val qvT = mk_variablesT T                                        
   in
-  Const(@{const_name quantum_equality_full}, opT --> qvT --> opT --> qvT --> @{typ predicate}) $
-    Const(@{const_name idOp}, opT) $ Q1 $ Const(@{const_name idOp}, opT) $ Q2
+  Const(\<^const_name>\<open>quantum_equality_full\<close>, opT --> qvT --> opT --> qvT --> \<^typ>\<open>predicate\<close>) $
+    Const(\<^const_name>\<open>idOp\<close>, opT) $ Q1 $ Const(\<^const_name>\<open>idOp\<close>, opT) $ Q2
   end
 
 (* returns a term t' such that t'\<and>remove = t\<and>remove is true *)
 fun removeAnd (remove:term) (t:term) = 
-  if t=remove then @{const True} else
+  if t=remove then \<^const>\<open>True\<close> else
   case t of
-    (c as Const(@{const_name conj},_)) $ a $ b => c $ removeAnd remove a $ removeAnd remove b
-  | (c as Const(@{const_name inf},_)) $ a $ b => c $ removeAnd remove a $ removeAnd remove b
-  | (c as Const(@{const_name classical_subspace},_)) $ a => c $ removeAnd remove a
+    (c as Const(\<^const_name>\<open>conj\<close>,_)) $ a $ b => c $ removeAnd remove a $ removeAnd remove b
+  | (c as Const(\<^const_name>\<open>inf\<close>,_)) $ a $ b => c $ removeAnd remove a $ removeAnd remove b
+  | (c as Const(\<^const_name>\<open>classical_subspace\<close>,_)) $ a => c $ removeAnd remove a
   | _ => t
 
 (* returns a term t' such that t'\<sqinter>remove = t\<sqinter>remove is true *)
 fun removeInf (remove:term) (t:term) = 
-  if t=remove then Const(@{const_name top}, fastype_of t) else
+  if t=remove then Const(\<^const_name>\<open>top\<close>, fastype_of t) else
   case t of
-    (c as Const(@{const_name inf},_)) $ a $ b => c $ removeInf remove a $ removeInf remove b
-(*  | Const(@{const_name classical_subspace},_) $ a =>
-      (case remove of
-        Const(@{const_name classical_subspace},_) $ r => @{const classical_subspace} $ removeAnd r a
-      | _ => t) *)
+    (c as Const(\<^const_name>\<open>inf\<close>,_)) $ a $ b => c $ removeInf remove a $ removeInf remove b
   | _ => t
 
-fun tidyTrueTop' (Const(@{const_name inf},_) $ Const(@{const_name top},_) $ t) = tidyTrueTop' t
-  | tidyTrueTop' (Const(@{const_name inf},_) $ t $ Const(@{const_name top},_)) = tidyTrueTop' t
-  | tidyTrueTop' (Const(@{const_name conj},_) $ Const(@{const_name True},_) $ t) = tidyTrueTop' t
-  | tidyTrueTop' (Const(@{const_name conj},_) $ t $ Const(@{const_name True},_)) = tidyTrueTop' t
-  | tidyTrueTop' (Const(@{const_name classical_subspace},_) $ Const(@{const_name True},_)) = @{const top(predicate)}
+fun tidyTrueTop' (Const(\<^const_name>\<open>inf\<close>,_) $ Const(\<^const_name>\<open>top\<close>,_) $ t) = tidyTrueTop' t
+  | tidyTrueTop' (Const(\<^const_name>\<open>inf\<close>,_) $ t $ Const(\<^const_name>\<open>top\<close>,_)) = tidyTrueTop' t
+  | tidyTrueTop' (Const(\<^const_name>\<open>conj\<close>,_) $ Const(\<^const_name>\<open>True\<close>,_) $ t) = tidyTrueTop' t
+  | tidyTrueTop' (Const(\<^const_name>\<open>conj\<close>,_) $ t $ Const(\<^const_name>\<open>True\<close>,_)) = tidyTrueTop' t
+  | tidyTrueTop' (Const(\<^const_name>\<open>classical_subspace\<close>,_) $ Const(\<^const_name>\<open>True\<close>,_)) = @{const top(predicate)}
   | tidyTrueTop' (t$u) = tidyTrueTop' t $ tidyTrueTop' u
   | tidyTrueTop' (Abs(v,T,body)) = Abs(v,T,tidyTrueTop' body)
   | tidyTrueTop' t = t
@@ -273,7 +267,7 @@ fun callWp cvars1 cvars2 qvars1 qvars2 B =
       val B0 = B |> removeInf qvarsEq (* invariant: post \<sqinter> qvarsEq \<Longrightarrow> original post *)
 
       val cvarEqs = ListPair.zip (cvars1,cvars2) |> map HOLogic.mk_eq
-      val claCvarsEq = @{const classical_subspace} $ mk_conjs cvarEqs
+      val claCvarsEq = \<^const>\<open>classical_subspace\<close> $ mk_conjs cvarEqs
       val B' = fold (fn eq => fn post => removeAnd eq post) cvarEqs B0
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
       
@@ -281,7 +275,7 @@ fun callWp cvars1 cvars2 qvars1 qvars2 B =
       fun inf_over (v,T) p = mk_INFIMUM (HOLogic.mk_UNIV T) (Term.absfree (v,T) p)
       val usedEqs = filter (fn (v1,v2) => member op= freeCVars (dest_Free v1) andalso member op= freeCVars (dest_Free v2))
                     (ListPair.zip (cvars1,cvars2)) |> map HOLogic.mk_eq |> mk_conjs 
-      val B'' = @{const plus(predicate)} $ (@{const classical_subspace} $ HOLogic.mk_not usedEqs) $ B'
+      val B'' = @{const plus(predicate)} $ (\<^const>\<open>classical_subspace\<close> $ HOLogic.mk_not usedEqs) $ B'
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
       val B''' = fold inf_over freeCVars B''
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
@@ -289,8 +283,8 @@ fun callWp cvars1 cvars2 qvars1 qvars2 B =
       val wp = @{const inf(predicate)} $ (@{const inf(predicate)} $ B''' $ claCvarsEq) $ qvarsEq
       val wp = tidyTrueTop wp
 
-      val colocality = Const(@{const_name colocal_pred_qvars},
-            @{typ predicate} --> mk_variablesT qvars12T --> HOLogic.boolT)
+      val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>,
+            \<^typ>\<open>predicate\<close> --> mk_variablesT qvars12T --> HOLogic.boolT)
           $ B' $ qvars12'
   in
     (wp, colocality)
@@ -315,7 +309,7 @@ fun simp_prop t ctx =
       NONE => raise TERM("asm_full_simp_tac failed",[t])
     | SOME thm => case Thm.prems_of thm of
                     [t'] => t'
-                  | [] => @{prop True}
+                  | [] => \<^prop>\<open>True\<close>
                   | _ => raise THM("asm_full_simp_tac produced multiple subgoals",0,[thm])
   end       
 
@@ -324,15 +318,15 @@ fun simp_bool t ctx =
       val res = simp_prop prop ctx
   in
     case res of
-      (Const (@{const_name Trueprop}, _) $ P) => P
+      (Const (\<^const_name>\<open>Trueprop\<close>, _) $ P) => P
     | _ => raise TERM("simp_prop did not return a term starting with Trueprop",[t,res])
   end
 
 fun simp t facts ctx =
   let val ctx'  = fold (fn name => fn ctx => ctx addsimps (Proof_Context.get_thms ctx name)) facts ctx
   in case fastype_of t of
-        Type(@{type_name prop},_) => simp_prop t ctx'
-      | Type(@{type_name bool},_) => simp_bool t ctx'
+        Type(\<^type_name>\<open>prop\<close>,_) => simp_prop t ctx'
+      | Type(\<^type_name>\<open>bool\<close>,_) => simp_bool t ctx'
       | _ => simp_any t ctx'
   end
 
@@ -346,13 +340,13 @@ fun simp t facts ctx =
     rhs
   end *)
 
-fun dest_numeral_syntax (Const (@{const_syntax "Num.num.One"}, _)) = 1
-  | dest_numeral_syntax (Const (@{const_syntax "Num.num.Bit0"}, _) $ bs) = 2 * dest_numeral_syntax bs
-  | dest_numeral_syntax (Const (@{const_syntax "Num.num.Bit1"}, _) $ bs) = 2 * dest_numeral_syntax bs + 1
+fun dest_numeral_syntax (Const (\<^const_syntax>\<open>Num.num.One\<close>, _)) = 1
+  | dest_numeral_syntax (Const (\<^const_syntax>\<open>Num.num.Bit0\<close>, _) $ bs) = 2 * dest_numeral_syntax bs
+  | dest_numeral_syntax (Const (\<^const_syntax>\<open>Num.num.Bit1\<close>, _) $ bs) = 2 * dest_numeral_syntax bs + 1
   | dest_numeral_syntax t = raise TERM ("dest_num_syntax", [t]);
 
-fun dest_bit_syntax (Const (@{const_syntax False},_)) = 0
-  | dest_bit_syntax (Const (@{const_syntax True},_)) = 1
+fun dest_bit_syntax (Const (\<^const_syntax>\<open>False\<close>,_)) = 0
+  | dest_bit_syntax (Const (\<^const_syntax>\<open>True\<close>,_)) = 1
   | dest_bit_syntax _ = raise TERM ("dest_bit_syntax", []);
 
 val dest_bits_syntax = Integer.eval_radix 2 o map dest_bit_syntax;
@@ -369,7 +363,7 @@ val dest_string_syntax = implode o map (chr o dest_char_syntax) o dest_list_synt
 
 fun byQRHLPre cvars qvars =
   let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
-      val cEqs' = @{const classical_subspace} $ mk_conjs cEqs
+      val cEqs' = \<^const>\<open>classical_subspace\<close> $ mk_conjs cEqs
       val (qvars1',qvars1T) = variables (map (fn (v1,_ ,T) => Free(v1,mk_variableT T)) qvars)
       val (qvars2',qvars2T) = variables (map (fn (_ ,v2,T) => Free(v2,mk_variableT T)) qvars)
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
@@ -418,25 +412,25 @@ fun applyRule name goal ctx =
 
 datatype varterm = VTCons of varterm * varterm | VTSingle of string*typ | VTUnit
 
-fun parse_varterm (Const(@{const_name variable_concat},_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
-  | parse_varterm (Const(@{const_name variable_singleton},_) $ Free(n,Type(@{type_name variable},[T]))) = VTSingle (n,T)
-  | parse_varterm (Const(@{const_name variable_unit},_)) = VTUnit
+fun parse_varterm (Const(\<^const_name>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
+  | parse_varterm (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ Free(n,Type(\<^type_name>\<open>variable\<close>,[T]))) = VTSingle (n,T)
+  | parse_varterm (Const(\<^const_name>\<open>variable_unit\<close>,_)) = VTUnit
   | parse_varterm t = raise TERM("not a variables expression",[t])
 
-fun mk_varterm (VTUnit) = (@{const variable_unit}, @{typ unit})
+fun mk_varterm (VTUnit) = (\<^const>\<open>variable_unit\<close>, \<^typ>\<open>unit\<close>)
   | mk_varterm (VTCons(a,b)) = let
       val (vta,Ta) = mk_varterm a
       val (vtb,Tb) = mk_varterm b
     in
-      (Const(@{const_name variable_concat}, 
+      (Const(\<^const_name>\<open>variable_concat\<close>, 
         mk_variablesT Ta --> mk_variablesT Tb --> mk_variablesT (HOLogic.mk_prodT(Ta,Tb))) $ vta $ vtb,
        HOLogic.mk_prodT(Ta,Tb))
     end
   | mk_varterm (VTSingle(n,T)) = 
-      (Const(@{const_name variable_singleton}, mk_variableT T --> mk_variablesT T) $ 
-          Free(n,Type(@{type_name variable},[T])),T)
+      (Const(\<^const_name>\<open>variable_singleton\<close>, mk_variableT T --> mk_variablesT T) $ 
+          Free(n,Type(\<^type_name>\<open>variable\<close>,[T])),T)
 
-fun type_of_varterm (VTUnit) = @{typ unit}
+fun type_of_varterm (VTUnit) = \<^typ>\<open>unit\<close>
   | type_of_varterm (VTCons(a,b)) = HOLogic.mk_prodT(type_of_varterm a, type_of_varterm b)
   | type_of_varterm (VTSingle(_,T)) = T
 
@@ -460,10 +454,10 @@ fun parse_varlist t =
   end
 
 (* Checks if term is a (not necessarily explict) variable list *)
-fun is_varlist (Const(@{const_name variable_unit},_)) = true
-  | is_varlist (Const(@{const_name variable_singleton},_) $ _) = true
-  | is_varlist (Const(@{const_name variable_concat},_) $ _ $ Const(@{const_name variable_unit},_)) = false
-  | is_varlist (Const(@{const_name variable_concat},_) $ Const(@{const_name variable_singleton},_) $ rest) = is_varlist rest
+fun is_varlist (Const(\<^const_name>\<open>variable_unit\<close>,_)) = true
+  | is_varlist (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ _) = true
+  | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ _ $ Const(\<^const_name>\<open>variable_unit\<close>,_)) = false
+  | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ Const(\<^const_name>\<open>variable_singleton\<close>,_) $ rest) = is_varlist rest
   | is_varlist _ = false
 
 fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
@@ -481,10 +475,10 @@ end
 (* TODO: rewrite using extend_lift_conv *)
 fun variable_extension_hint_conv ctx ct = let
 val (lift,S,Q,R) = case Thm.term_of ct of
-    (Const(@{const_name join_variables_hint},_)) $ (Const(lift,_) $ S $ Q) $ R => (lift,S,Q,R)
+    (Const(\<^const_name>\<open>join_variables_hint\<close>,_)) $ (Const(lift,_) $ S $ Q) $ R => (lift,S,Q,R)
     | _ => raise CTERM("variable_extension_hint_conv: wrong shape",[ct])
-val conv_rule = case lift of @{const_name liftSpace} => @{thm join_variables_hint_subspace_conv_aux}
-                           | @{const_name liftOp} => @{thm join_variables_hint_bounded_conv_aux}
+val conv_rule = case lift of \<^const_name>\<open>liftSpace\<close> => @{thm join_variables_hint_subspace_conv_aux}
+                           | \<^const_name>\<open>liftOp\<close> => @{thm join_variables_hint_bounded_conv_aux}
                            | _ => raise CTERM("variable_extension_hint_conv: lift is "^lift, [ct])
 val vtQ = parse_varterm Q
 val vtR = parse_varterm R
@@ -502,13 +496,13 @@ end
 fun sort_variables_step (VTSingle _) = NONE
   | sort_variables_step (VTCons (v1 as VTSingle(n1,T1), v2 as VTSingle(n2,T2))) =
       if n1<=n2 then NONE
-      else SOME(Const(@{const_name comm_op}, 
+      else SOME(Const(\<^const_name>\<open>comm_op\<close>, 
             mk_boundedT (HOLogic.mk_prodT(T1,T2)) (HOLogic.mk_prodT(T2,T1))), 
           VTCons (v2,v1))
   | sort_variables_step (vt as (VTCons (v1 as VTSingle(n1,T1), VTCons (v2 as VTSingle(n2,T2), rest)))) =
       if n1<=n2 then sort_variables_step_in vt
       else let val restT = type_of_varterm rest in
-        SOME(Const(@{const_name comm_op_pfx},
+        SOME(Const(\<^const_name>\<open>comm_op_pfx\<close>,
             mk_boundedT (HOLogic.mk_prodT (T1, HOLogic.mk_prodT (T2,restT))) (HOLogic.mk_prodT (T2, HOLogic.mk_prodT (T1,restT)))),
           VTCons(v2, VTCons(v1,rest)))
       end
@@ -517,20 +511,20 @@ fun sort_variables_step (VTSingle _) = NONE
           val T2 = type_of_varterm vt2
           val T3 = type_of_varterm vt3
       in
-        SOME(Const(@{const_name assoc_op_adj},
+        SOME(Const(\<^const_name>\<open>assoc_op_adj\<close>,
             mk_boundedT (HOLogic.mk_prodT (HOLogic.mk_prodT(T1,T2), T3)) (HOLogic.mk_prodT (T1, HOLogic.mk_prodT(T2,T3)))),
           VTCons(vt1, VTCons(vt2, vt3)))
       end
   | sort_variables_step (VTCons (vt, VTUnit)) =
       let val T = type_of_varterm vt in
-        SOME(Const(@{const_name remove_qvar_unit_op},
+        SOME(Const(\<^const_name>\<open>remove_qvar_unit_op\<close>,
           mk_boundedT (HOLogic.mk_prodT(T,HOLogic.unitT)) T),
           vt) end
   | sort_variables_step (vt as VTCons (VTSingle _, _)) = sort_variables_step_in vt
   | sort_variables_step VTUnit = NONE
   | sort_variables_step (VTCons (VTUnit, vt)) =
       let val T = type_of_varterm vt in
-        SOME(Const(@{const_name remove_qvar_unit_op2},
+        SOME(Const(\<^const_name>\<open>remove_qvar_unit_op2\<close>,
           mk_boundedT (HOLogic.mk_prodT(HOLogic.unitT,T)) T),
           vt) end
 
@@ -542,7 +536,7 @@ and sort_variables_step_in (VTCons(v1 as VTSingle(_,T1), rest)) =
     let val rest_opT = fastype_of rest_op
         val (rest_op_inT,rest_op_outT) = dest_boundedT rest_opT
     in
-      SOME(Const(@{const_name id_tensor}, 
+      SOME(Const(\<^const_name>\<open>id_tensor\<close>, 
           rest_opT --> mk_boundedT (HOLogic.mk_prodT(T1,rest_op_inT)) (HOLogic.mk_prodT(T1,rest_op_outT))) $
           rest_op,
         VTCons(v1, rest_vt))
@@ -562,7 +556,7 @@ fun sort_variables vt =
               val (_,outT) = dest_boundedT A'T
               val (vt't,vt'T) = mk_varterm vt'
           in
-            SOME(Const(@{const_name qvar_trafo_mult}, mk_variablesT vt'T --> A'T --> AT --> mk_boundedT inT outT) $
+            SOME(Const(\<^const_name>\<open>qvar_trafo_mult\<close>, mk_variablesT vt'T --> A'T --> AT --> mk_boundedT inT outT) $
               vt't $ A' $ A,
               vt'')
           end
@@ -589,10 +583,10 @@ end
 (* TODO: rewrite using sort_lift_conv *)
 fun sort_variables_hint_conv ctx ct = let
 val (lift,S,Q) = case Thm.term_of ct of
-    (Const(@{const_name sort_variables_hint},_)) $ (Const(lift,_) $ S $ Q) => (lift,S,Q)
+    (Const(\<^const_name>\<open>sort_variables_hint\<close>,_)) $ (Const(lift,_) $ S $ Q) => (lift,S,Q)
     | _ => raise CTERM("sort_variables_hint_hint_conv: wrong shape",[ct])
-val conv_rule = case lift of @{const_name liftSpace} => @{thm sort_variables_hint_subspace_conv_aux}
-                           | @{const_name liftOp} => @{thm sort_variables_hint_bounded_conv_aux}
+val conv_rule = case lift of \<^const_name>\<open>liftSpace\<close> => @{thm sort_variables_hint_subspace_conv_aux}
+                           | \<^const_name>\<open>liftOp\<close> => @{thm sort_variables_hint_bounded_conv_aux}
                            | _ => raise CTERM("sort_variables_hint_hint_conv: lift is "^lift, [ct])
 val vtQ = parse_varterm Q
 in
@@ -636,7 +630,7 @@ end
 
 fun reorder_variables_hint_conv ctxt ct =
   let val R = case Thm.term_of ct of
-        (Const(@{const_name reorder_variables_hint},_) $ _ $ R) => R
+        (Const(\<^const_name>\<open>reorder_variables_hint\<close>,_) $ _ $ R) => R
       | _ => raise CTERM("reoder_variables_hint_conv: wrong shape",[ct])
       val vtR = parse_varterm R
   in
@@ -647,7 +641,7 @@ fun reorder_variables_hint_conv ctxt ct =
 
 fun extend_lift_as_var_concat_hint_conv ctxt ct =
   let val (A,R) = case Thm.term_of ct of
-        (Const(@{const_name extend_lift_as_var_concat_hint},_) $ A $ R) => (A,R)
+        (Const(\<^const_name>\<open>extend_lift_as_var_concat_hint\<close>,_) $ A $ R) => (A,R)
       | _ => raise CTERM("reoder_variables_hint_conv: wrong shape",[ct])
       val (_,_,Q) = dest_lift A
       val vtR = parse_varterm R
@@ -688,12 +682,12 @@ fun variable_rewriting_simproc _ ctx ct =
 
 local
   fun mk_var_eq (v as Const ("_constrain", _) $ Free (n, _) $ Free _) =
-      @{const HOL.eq("char list")} $ (Const (@{const_name variable_name}, dummyT) $ v) $ HOLogic.mk_string n
+      @{const HOL.eq("char list")} $ (Const (\<^const_name>\<open>variable_name\<close>, dummyT) $ v) $ HOLogic.mk_string n
     | mk_var_eq t = raise (TERM("the argument to declared_qvars must contain only free variables",[t]))
 
-  fun declared_qvars_parse_tr' (Const (@{syntax_const "_variable_list_args"}, _) $ v $ vs)
+  fun declared_qvars_parse_tr' (Const (\<^syntax_const>\<open>_variable_list_args\<close>, _) $ v $ vs)
     = mk_var_eq v :: declared_qvars_parse_tr' vs
-    | declared_qvars_parse_tr' (Const (@{syntax_const "_variable_list_arg"}, _) $ v)
+    | declared_qvars_parse_tr' (Const (\<^syntax_const>\<open>_variable_list_arg\<close>, _) $ v)
     = [mk_var_eq v]
 | declared_qvars_parse_tr' t = raise (TERM("declared_qvars_parse_tr'",[t]))
 in
@@ -710,11 +704,11 @@ structure WarnDeclaredQvarsData = Proof_Data
 fun warn_declared_qvars_simproc _ ctx ct = 
   if WarnDeclaredQvarsData.get ctx then NONE
   else case Thm.term_of ct of
-      Const(@{const_name variable_name}, _) $ Free (n,_) =>
+      Const(\<^const_name>\<open>variable_name\<close>, _) $ Free (n,_) =>
         let val eq = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) (WarnDeclaredQvarsData.put true ctx) ct 
             val rhs = eq |> Thm.prop_of |> Logic.dest_equals |> snd
         in
-            case rhs of Const(@{const_name variable_name}, _) $ _ => 
+            case rhs of Const(\<^const_name>\<open>variable_name\<close>, _) $ _ => 
                             (warning ("Please add to simplifier: declared_qvars \<lbrakk>"^n
                                         ^"\<rbrakk> (or remove simproc warn_declared_qvars to remove these warnings)");
                             NONE)
@@ -735,7 +729,7 @@ fun varname_assumption cq bind T =
   let val qT = mk_variableT T
       val name = Binding.name_of bind
       val name' = if cq=Classical then "var_"^name else name
-      val lhs = Const(@{const_name variable_name}, qT --> HOLogic.stringT) $ Free(name',qT)
+      val lhs = Const(\<^const_name>\<open>variable_name\<close>, qT --> HOLogic.stringT) $ Free(name',qT)
       val rhs = HOLogic.mk_string name
   in HOLogic.mk_eq (lhs,rhs) |> HOLogic.mk_Trueprop end
 
@@ -801,7 +795,7 @@ fun variables_cmd vars thy =
 
 val parse_classical_quantum = (Parse.reserved "classical" >> K Classical) || (Parse.reserved "quantum" >> K Quantum)
 val _ =
-  Outer_Syntax.command @{command_keyword variables} "declare quantum/classical variables"
+  Outer_Syntax.command \<^command_keyword>\<open>variables\<close> "declare quantum/classical variables"
     ((Parse.and_list (parse_classical_quantum -- Args.binding --| Parse.$$$ "::" -- Parse.typ >> (fn ((a,b),c) => (a,b,c))) >> 
       (fn vars => Toplevel.begin_local_theory true (variables_cmd vars)))
         --| Parse.begin)

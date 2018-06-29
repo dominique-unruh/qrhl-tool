@@ -4,12 +4,12 @@ struct
 fun take_n_thm ctxt n : thm = 
   let val (names,ctxt1) = Variable.variant_fixes ("'a"::"l"::List.tabulate (n, fn i => "s"^string_of_int (i+1))) ctxt
       val (Tname,lname,ssnames) = case names of Tname::lname::ssnames => (Tname,lname,ssnames) | _  => error "internal"
-      val T = TFree(Tname,@{sort type})
+      val T = TFree(Tname,\<^sort>\<open>type\<close>)
       val Tlist = HOLogic.listT T
       val l = Free(lname,Tlist)
       val ss = map (fn n => Free(n,T)) ssnames
       val lhs = fold_rev (fn s => fn l => HOLogic.cons_const T $ s $ l) ss l
-      val rhs = Const(@{const_name append}, Tlist --> Tlist --> Tlist) $ HOLogic.mk_list T ss $ l
+      val rhs = Const(\<^const_name>\<open>append\<close>, Tlist --> Tlist --> Tlist) $ HOLogic.mk_list T ss $ l
       val prop = HOLogic.mk_Trueprop (HOLogic.mk_eq (lhs,rhs))
       fun tac {context=ctxt', ...} = ALLGOALS (simp_tac ctxt')
       val thm = Goal.prove ctxt1 [] [] prop tac
@@ -23,7 +23,7 @@ structure MethodErrorStack = Proof_Data (
   fun init _ = []
 )
 fun method_error_push msg = MethodErrorStack.map (fn st => msg::st)
-val method_error = Attrib.setup_config_bool @{binding method_error} (K false)
+val method_error = Attrib.setup_config_bool \<^binding>\<open>method_error\<close> (K false)
 fun msg_to_string ctxt msg = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt))
 fun error_ctac msg (ctx,_) = if Config.get ctx method_error
   then Seq.single (Seq.Error (fn _ => msg_to_string ctx msg)) else Seq.empty
@@ -34,13 +34,13 @@ fun error_method msg = CONTEXT_METHOD (K (error_ctac msg))
 (* is_list l i returns true if l is an explicit partial list of length >= i.
 Formally, if l is of the form "x1#x2#x3#...#xi#y" *)
 fun is_list l n = if n<=0 then true
-  else case l of Const(@{const_name Cons},_) $ _ $ l => is_list l (n-1)
+  else case l of Const(\<^const_name>\<open>Cons\<close>,_) $ _ $ l => is_list l (n-1)
                | _ => false
 
 (* is_list l i returns true if l is an explicit list of length >= i.
 Formally, if l is of the form "[x1,x2,x3,...,xi,...]" *)
-fun is_complete_list (Const(@{const_name Nil},_)) n = n <= 0
-  | is_complete_list (Const(@{const_name Cons},_) $ _ $ tl) n = is_complete_list tl (n-1)
+fun is_complete_list (Const(\<^const_name>\<open>Nil\<close>,_)) n = n <= 0
+  | is_complete_list (Const(\<^const_name>\<open>Cons\<close>,_) $ _ $ tl) n = is_complete_list tl (n-1)
   | is_complete_list _ _ = false
 
 exception TAC_CHECK of unit -> string
@@ -51,7 +51,7 @@ exception TAC_CHECK of unit -> string
   else if j < 0 then raise ERROR ("seq_tac: Second argument must be nonnegative")
   else () *)
 
-val dummy_term = @{const Pure.prop} $ (@{const Pure.term(prop)} $ @{const Pure.dummy_pattern(prop)})
+val dummy_term = \<^const>\<open>Pure.prop\<close> $ (@{const Pure.term(prop)} $ @{const Pure.dummy_pattern(prop)})
 
 fun SUBGOAL_with_check ctxt check tac i st = 
   if Thm.prop_of st = dummy_term then no_tac st else
@@ -65,7 +65,7 @@ fun SUBGOAL_with_check ctxt check tac i st =
 fun seq_tac_checks i j goal : unit = 
   let val prop = Logic.strip_imp_concl goal in
   case prop of
-    Const(@{const_name Trueprop},_) $ (Const(@{const_name qrhl},_) $ _ $ p1 $ p2 $ _) => (
+    Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qrhl\<close>,_) $ _ $ p1 $ p2 $ _) => (
     (* Check i *)
     if i >= 0 andalso not (is_list p1 i) then raise TAC_CHECK (fn _ => "Left program must consist of \<ge>"^string_of_int i^" statements") else ();
     if i < 0 andalso not (is_complete_list p1 (~i-1)) then raise TAC_CHECK (fn _ => "Left program must consist of \<ge>"^string_of_int (~i-1)^" statements") else ();
@@ -79,7 +79,7 @@ fun seq_tac_checks i j goal : unit =
 
 fun seq_tac i j B ctxt = SUBGOAL_with_check ctxt (seq_tac_checks i j) (fn (goal,n) => 
     let val (p1,p2) = case Logic.strip_imp_concl goal |> HOLogic.dest_Trueprop of 
-            Const(@{const_name qrhl},_) $ _ $ p1 $ p2 $ _ => (p1,p2)
+            Const(\<^const_name>\<open>qrhl\<close>,_) $ _ $ p1 $ p2 $ _ => (p1,p2)
             | _ => raise Match
         val i = if i>=0 then i else length (HOLogic.dest_list p1) + i + 1
         val j = if j>=0 then j else length (HOLogic.dest_list p2) + j + 1
@@ -98,7 +98,7 @@ fun tac_on_term tac ctx t =
     | SOME (goal',_) => SOME (Thm.prems_of goal' |> map HOLogic.dest_Trueprop)
   end
 
-fun tac_on_term_concl tac ctxt (Const(@{const_name implies},_) $ a $ b) = 
+fun tac_on_term_concl tac ctxt (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) = 
       Option.map (map (fn t => HOLogic.mk_imp (a, t)))
       (tac_on_term_concl tac ctxt b)
   | tac_on_term_concl tac ctxt b = tac_on_term tac ctxt b
@@ -119,27 +119,27 @@ fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
         " (should be schematic variable) with precondition of \""^Syntax.string_of_term ctxt post^
         "\" for "^kind^" "^Syntax.string_of_term ctxt (if left then p1 else p2)) ctxt
   in case stmts of
-    [Const(@{const_name assign},_) $ _ $ _] => 
+    [Const(\<^const_name>\<open>assign\<close>,_) $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_assign} @{thms wp2_assign}) n
       ORELSE error "assign-statement"
-  | [Const(@{const_name sample},_) $ _ $ _] =>
+  | [Const(\<^const_name>\<open>sample\<close>,_) $ _ $ _] =>
       resolve_tac ctxt (lr @{thms wp1_sample} @{thms wp2_sample}) n
       ORELSE error "sample-statement"
-  | [Const(@{const_name block},_) $ _] => 
+  | [Const(\<^const_name>\<open>block\<close>,_) $ _] => 
       resolve_tac ctxt (lr @{thms wp1_block} @{thms wp2_block}) n THEN wp_tac0 left ctxt n
       ORELSE error "block"
-  | [Const(@{const_name qapply},_) $ _ $ _] => 
+  | [Const(\<^const_name>\<open>qapply\<close>,_) $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_qapply} @{thms wp2_qapply}) n
       ORELSE error "quantum application"
-  | [Const(@{const_name qinit},_) $ _ $ _] => 
+  | [Const(\<^const_name>\<open>qinit\<close>,_) $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_qinit} @{thms wp2_qinit}) n
       ORELSE error "quantum initialization"
-  | [Const(@{const_name ifthenelse},_) $ _ $ _ $ _] => 
+  | [Const(\<^const_name>\<open>ifthenelse\<close>,_) $ _ $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_if} @{thms wp2_if}) n
       THEN wp_tac0 left ctxt n
       THEN wp_tac0 left ctxt n
       ORELSE error "if-statement"
-  | [Const(@{const_name measurement},_) $ _ $ _ $ _] => 
+  | [Const(\<^const_name>\<open>measurement\<close>,_) $ _ $ _ $ _] => 
       resolve_tac ctxt (lr @{thms wp1_measure} @{thms wp2_measure}) n
       ORELSE error "measurement-statement"
   | [] => 
@@ -154,14 +154,14 @@ fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
   end)
 
 fun get_wp_via_tac tac left (prog:term) (post:term) ctxt =
-  let val progl = HOLogic.mk_list @{typ program} [prog]
-      val skip = @{term "[]::program list"}
-      val goal = @{const qrhl} $ Var(("pre",0),@{typ "predicate expression"}) $ 
+  let val progl = HOLogic.mk_list \<^typ>\<open>program\<close> [prog]
+      val skip = \<^term>\<open>[]::program list\<close>
+      val goal = \<^const>\<open>qrhl\<close> $ Var(("pre",0),\<^typ>\<open>predicate expression\<close>) $ 
                       (if left then progl else skip) $ (if left then skip else progl) $ post |> HOLogic.mk_Trueprop                    
       val thm = Goal.prove ctxt [] [] goal (fn {context,...} => tac context)
       val prop = Thm.prop_of thm
       val pre = case HOLogic.dest_Trueprop prop of
-        Const(@{const_name qrhl},_) $ pre $ _ $ _ $ _ => pre
+        Const(\<^const_name>\<open>qrhl\<close>,_) $ pre $ _ $ _ $ _ => pre
         | _ => error "internal error"
   in
     (pre,thm)
@@ -227,7 +227,7 @@ SUBGOAL (fn (goal,i) => let
 
 fun wp_tac ctxt left i = 
   seq_tac (if left then ~2 else ~1) (if left then ~1 else ~2)
-           (Var(("precondition",0),@{typ "predicate expression"})) ctxt i THEN
+           (Var(("precondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i THEN
   SUBGOAL (fn (goal,n) =>
     let val (_,p1,p2,B) = Encoding.dest_qrhl_goal goal
         val stmt = HOLogic.dest_list (if left then p1 else p2) |> the_single

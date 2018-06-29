@@ -135,7 +135,7 @@ section \<open>Program variables\<close>
 
 typedef variable_raw = "{v :: string * universe set. snd v \<noteq> {}}" by auto
 
-setup {* Sign.add_const_constraint (@{const_name embedding},SOME @{typ "'a=>universe"}) *}
+setup {* Sign.add_const_constraint (\<^const_name>\<open>embedding\<close>,SOME \<^typ>\<open>'a=>universe\<close>) *}
 
 (* a variable, refers to a location in a memory *)
 typedef (overloaded) 'a variable = "{v::variable_raw. range (embedding::'a=>universe) = snd (Rep_variable_raw v)}" sorry

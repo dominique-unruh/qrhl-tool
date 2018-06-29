@@ -11,19 +11,19 @@ and expression_eval :: "'b expression \<Rightarrow> mem2 \<Rightarrow> 'b"
 
 text \<open>
 Some notation, used mainly in the documentation of the ML code:
-\<^item> A term of type @{typ "'a variables"} is an @{emph \<open>explicit variable list\<close>} if it is of the form
-  @{term "\<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk>"} where the @{term "x\<^sub>i"} are free variables.
+\<^item> A term of type \<^typ>\<open>'a variables\<close> is an \<^emph>\<open>explicit variable list\<close> if it is of the form
+  \<^term>\<open>\<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk>\<close> where the \<^term>\<open>x\<^sub>i\<close> are free variables.
 
-\<^item> A term of type @{typ "'a variables"} is an @{emph \<open>explicit variable term\<close>} if it is built from
-  @{const variable_concat}, @{const variable_unit}, @{const variable_singleton} and free variables.
+\<^item> A term of type \<^typ>\<open>'a variables\<close> is an \<^emph>\<open>explicit variable term\<close> if it is built from
+  \<^const>\<open>variable_concat\<close>, \<^const>\<open>variable_unit\<close>, \<^const>\<open>variable_singleton\<close> and free variables.
 
-\<^item> An expression is @{emph \<open>well-formed explicit\<close>} iff it is of the form @{term "expression \<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk> (\<lambda>(z\<^sub>1,z\<^sub>2,dots,z\<^sub>n). e (z\<^sub>1,z\<^sub>2,dots,z\<^sub>n))"}
-  where the @{term "x\<^sub>i"} are free variables.
+\<^item> An expression is \<^emph>\<open>well-formed explicit\<close> iff it is of the form \<^term>\<open>expression \<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk> (\<lambda>(z\<^sub>1,z\<^sub>2,dots,z\<^sub>n). e (z\<^sub>1,z\<^sub>2,dots,z\<^sub>n))\<close>
+  where the \<^term>\<open>x\<^sub>i\<close> are free variables.
 
-\<^item> An expression is @{emph \<open>varlist explicit\<close>} iff it is of the form @{term "expression \<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk> e"}
-  where the @{term "x\<^sub>i"} are free variables.
+\<^item> An expression is \<^emph>\<open>varlist explicit\<close> iff it is of the form \<^term>\<open>expression \<lbrakk>x\<^sub>1,x\<^sub>2,dots,x\<^sub>n\<rbrakk> e\<close>
+  where the \<^term>\<open>x\<^sub>i\<close> are free variables.
 
-\<^item> An expression is @{emph \<open>explicit\<close>} iff it is of the form @{term "expression Q e"} where @{term Q} is an explicit variable term.
+\<^item> An expression is \<^emph>\<open>explicit\<close> iff it is of the form \<^term>\<open>expression Q e\<close> where \<^term>\<open>Q\<close> is an explicit variable term.
 \<close>
 
 
@@ -46,7 +46,7 @@ definition map_expression :: "('e \<Rightarrow> 'f) \<Rightarrow> ('e expression
 lemma map_expression[simp]:
   "map_expression f (expression Q e) = expression Q (\<lambda>x. f (e x))"
   unfolding map_expression_def map_expression'_def
-  apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
+  apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
 definition map_expression2' :: "('e1 \<Rightarrow> ('z \<Rightarrow> 'e2) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('z \<Rightarrow> 'e2 expression) \<Rightarrow> 'f expression" where
   "map_expression2' f e1 e2 = map_expression' (\<lambda>x12. let x1 = fst (x12 undefined) in
@@ -57,7 +57,7 @@ lemma map_expression2'[simp]:
   "map_expression2' f (expression Q1 e1) (\<lambda>z. expression Q2 (e2 z))
      = expression (variable_concat Q1 Q2) (\<lambda>(x1,x2). f (e1 x1) (\<lambda>z. e2 z x2))"
   unfolding map_expression2'_def pair_expression_def map_expression'_def
-  apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
+  apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
 definition map_expression2 :: "('e1 \<Rightarrow> 'e2 \<Rightarrow> 'f) \<Rightarrow> 'e1 expression \<Rightarrow> 'e2 expression \<Rightarrow> 'f expression" where
   "map_expression2 f e1 e2 = map_expression (\<lambda>(x1,x2). f x1 x2) (pair_expression e1 e2)"
@@ -66,7 +66,7 @@ lemma map_expression2[simp]:
   "map_expression2 f (expression Q1 e1) (expression Q2 e2)
      = expression (variable_concat Q1 Q2) (\<lambda>(x1,x2). f (e1 x1) (e2 x2))"
   unfolding map_expression2_def pair_expression_def apply simp
-  apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
+  apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
 definition map_expression3 :: "('e1 \<Rightarrow> 'e2 \<Rightarrow> 'e3 \<Rightarrow> 'f) \<Rightarrow> 'e1 expression \<Rightarrow> 'e2 expression \<Rightarrow> 'e3 expression \<Rightarrow> 'f expression" where
   "map_expression3 f e1 e2 e3 = map_expression (\<lambda>(x1,x2,x3). f x1 x2 x3)
@@ -76,7 +76,7 @@ lemma map_expression3[simp]:
   "map_expression3 f (expression Q1 e1) (expression Q2 e2) (expression Q3 e3)
      = expression (variable_concat Q1 (variable_concat Q2 Q3)) (\<lambda>(x1,x2,x3). f (e1 x1) (e2 x2) (e3 x3))"
   unfolding map_expression3_def pair_expression_def apply simp
-  apply (tactic \<open>cong_tac @{context} 1\<close>) by auto
+  apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
 axiomatization index_var :: "bool \<Rightarrow> 'a variable \<Rightarrow> 'a variable" where
   index_var1: "y = index_var True x \<longleftrightarrow> variable_name y = variable_name x @ ''1''" and
@@ -146,11 +146,11 @@ typedecl program_state
 axiomatization probability_old :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 syntax "_probability_old" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("PrOld[_:(_'(_'))]")
 parse_translation \<open>[("_probability_old", fn ctx => fn [Const(v,_),p,rho] =>
-  @{const probability_old} $ HOLogic.mk_string v $ p $ rho)]\<close>
+  \<^const>\<open>probability_old\<close> $ HOLogic.mk_string v $ p $ rho)]\<close>
 
 (* Must come after loading qrhl.ML *)                                                                          
-print_translation \<open>[(@{const_syntax probability_old}, fn ctx => fn [str,p,rho] =>
-  Const(@{syntax_const "_probability_old"},dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
+print_translation \<open>[(\<^const_syntax>\<open>probability_old\<close>, fn ctx => fn [str,p,rho] =>
+  Const(\<^syntax_const>\<open>_probability_old\<close>,dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
 
 axiomatization probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 
@@ -246,7 +246,7 @@ simproc_setup clean_expression ("expression Q e") = Encoding.clean_expression_si
 
 
 consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
-parse_translation \<open>[(@{const_syntax expression_syntax}, fn ctx => fn [e] => Encoding.term_to_expression_untyped ctx e)]\<close>
+parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Encoding.term_to_expression_untyped ctx e)]\<close>
 hide_const expression_syntax
 
 term "Expr[x]"

@@ -1,7 +1,7 @@
 structure Misc =
 struct
 
-val current_simpset = simpset_of @{context}
+val current_simpset = simpset_of \<^context>
 
 fun prove_handle ctxt vars goal tac =
   Goal.prove ctxt vars [] goal (fn {context,...} => tac context)
