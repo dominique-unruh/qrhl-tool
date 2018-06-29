@@ -3,12 +3,12 @@ struct
 
 val ml_term_parser = Args.context -- Scan.lift (
 Parse.term
--- Scan.optional (@{keyword "for"} |-- Scan.repeat1 (Args.name --| Parse.$$$ "=" -- Parse.ML_source)) []
+-- Scan.optional (\<^keyword>\<open>for\<close> |-- Scan.repeat1 (Args.name --| Parse.$$$ "=" -- Parse.ML_source)) []
 --| Scan.ahead Parse.eof)
 
 val ml_typ_parser = Args.context -- Scan.lift (
 Parse.typ
--- Scan.optional (@{keyword "for"} |-- Scan.repeat1 (Args.name --| Parse.$$$ "=" -- Parse.ML_source)) []
+-- Scan.optional (\<^keyword>\<open>for\<close> |-- Scan.repeat1 (Args.name --| Parse.$$$ "=" -- Parse.ML_source)) []
 --| Scan.ahead Parse.eof)
 
 
@@ -42,16 +42,16 @@ fun print_term conf (Const arg) = "Term.Const " ^ print_pair print_string (print
 
 fun ml_term (ctxt,(str,mlmap)) =
   let val ctxt = Proof_Context.set_mode Proof_Context.mode_schematic ctxt
-      val trm = Syntax.read_term ctxt str |> @{print}
-      val trm_ML = print_term {mlmap=mlmap} trm |> @{print}
+      val trm = Syntax.read_term ctxt str
+      val trm_ML = print_term {mlmap=mlmap} trm
   in
     trm_ML
   end
 
 fun ml_typ (ctxt,(str,mlmap)) =
   let val ctxt = Proof_Context.set_mode Proof_Context.mode_schematic ctxt
-      val trm = Syntax.read_typ ctxt str |> @{print}
-      val trm_ML = print_typ {mlmap=mlmap} trm |> @{print}
+      val trm = Syntax.read_typ ctxt str
+      val trm_ML = print_typ {mlmap=mlmap} trm
   in
     trm_ML
   end

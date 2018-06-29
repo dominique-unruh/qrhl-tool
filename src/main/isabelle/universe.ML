@@ -3,7 +3,7 @@ struct
 
 fun instantiate_value tycon thy =
 let val arity = Sign.arity_number thy tycon
-    val sorts = replicate arity @{sort "value"}
+    val sorts = replicate arity \<^sort>\<open>value\<close>
     val vs = Name.invent_names Name.context "'a" sorts
     val tycon_info = 
       case Typedef.get_info_global thy tycon of
@@ -16,9 +16,9 @@ let val arity = Sign.arity_number thy tycon
     val Rep = Const(#Rep_name (fst tycon_info), abs_type --> rep_type)
     (* val inst_type = Type(tycon,map TFree vs) *)
     val OFCLASS_value_typedef = @{thm OFCLASS_value_typedef} (* Global_Theory.get_thm thy "Universe.OFCLASS_value_typedef" *)
-    val lthy = Class.instantiation ([tycon],vs,@{sort "value"}) thy
+    val lthy = Class.instantiation ([tycon],vs,\<^sort>\<open>value\<close>) thy
 
-    val bind = Binding.suffix_name ("_"^(List.last (Long_Name.explode tycon))) @{binding embedding'}
+    val bind = Binding.suffix_name ("_"^(List.last (Long_Name.explode tycon))) \<^binding>\<open>embedding'\<close>
     val rhs = @{ml_term "(fst embedding' \<circ> (Rep::'abs_type::value\<Rightarrow>'rep_type::value), snd (embedding'::'rep_type universe_embedding))"
                 for Rep=Rep 'abs_type=abs_type 'rep_type=rep_type}
     val ((_,(_,emb_thm)),lthy) = Local_Theory.define ((bind,NoSyn), ((Thm.def_binding bind,[]), rhs)) lthy

@@ -214,8 +214,8 @@ qed
 
 (* Hack to allow to state lemma value_classI. Is there a cleaner way? *)
 ML {*  
-  val consts_to_unconstrain = [@{const_name embedding'}]
-  val consts_orig_constraints = map (Sign.the_const_constraint @{theory}) consts_to_unconstrain
+  val consts_to_unconstrain = [\<^const_name>\<open>embedding'\<close>]
+  val consts_orig_constraints = map (Sign.the_const_constraint \<^theory>) consts_to_unconstrain
 *}
 setup {*
   fold (fn c => fn thy => Sign.add_const_constraint (c,NONE) thy) consts_to_unconstrain
@@ -623,8 +623,8 @@ instance apply (rule value_classI[OF embedding'_list_def, of "\<lambda>l. (lengt
 end
 
 local_setup {* 
-  Local_Theory.define ((@{binding embedding'_UNCONSTRAINED},NoSyn),((@{binding embedding'_UNCONSTRAINED_def},[]),
-      Const(@{const_name embedding'},@{typ "'a universe_embedding"}))) #> snd
+  Local_Theory.define ((\<^binding>\<open>embedding'_UNCONSTRAINED\<close>,NoSyn),((\<^binding>\<open>embedding'_UNCONSTRAINED_def\<close>,[]),
+      Const(\<^const_name>\<open>embedding'\<close>,\<^typ>\<open>'a universe_embedding\<close>))) #> snd
 *}
 
 lemma OFCLASS_value_typedef[unfolded embedding'_UNCONSTRAINED_def]:

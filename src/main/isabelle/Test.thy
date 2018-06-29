@@ -1,7 +1,9 @@
 theory Test
-  imports Encoding Tactics QRHL_Code "~~/src/HOL/Eisbach/Eisbach_Tools" CryptHOL.Cyclic_Group
+  imports Encoding Tactics QRHL_Code "HOL-Eisbach.Eisbach_Tools" CryptHOL.Cyclic_Group
   (* "HOL-Imperative_HOL.Imperative_HOL" *)
 begin
+
+term "(* abc *) 1"
 
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }
@@ -32,6 +34,7 @@ fun marked_sorry ctxt loc t =
 val thm2 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
 val thm = Thm.transitive thm1 thm2 *)
 \<close>
+
 
 ML \<open>
 fun marked_sorry_tac ctxt loc = SUBGOAL (fn (goal,i) => let

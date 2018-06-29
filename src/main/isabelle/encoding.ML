@@ -1,10 +1,10 @@
 structure Encoding = 
 struct
 
-fun mk_expressionT T = Type(@{type_name expression}, [T])
+fun mk_expressionT T = Type(\<^type_name>\<open>expression\<close>, [T])
 
 
-fun dest_qrhl (Const(@{const_name qrhl},_) $ A $ p1 $ p2 $ B) = (A,p1,p2,B)
+fun dest_qrhl (Const(\<^const_name>\<open>qrhl\<close>,_) $ A $ p1 $ p2 $ B) = (A,p1,p2,B)
   | dest_qrhl _ = raise Match
 fun dest_qrhl_goal t = Logic.strip_imp_concl t |> HOLogic.dest_Trueprop |> dest_qrhl
 
@@ -12,18 +12,14 @@ fun dest_qrhl_goal t = Logic.strip_imp_concl t |> HOLogic.dest_Trueprop |> dest_
 
 (* TODO: should make sure it's sound (i.e., reject expressions that cannot be converted, check whether vars are declared *)
 fun expression_to_term ctxt t =
-  let val (vs,e) = case t of Const(@{const_name expression},_) $ vs $ e => (vs,e) | _ => raise (TERM("expression_to_term",[t]))
+  let val (vs,e) = case t of Const(\<^const_name>\<open>expression\<close>,_) $ vs $ e => (vs,e) | _ => raise (TERM("expression_to_term",[t]))
       val vars = QRHL.parse_varlist vs 
           |> map (fn (x,T) => Free (String.extract (x,4,NONE),T)) (* unsafe, not checking whether the var name is wellformed *)
-          (* |> @{print} *)
       val e' = e $ HOLogic.mk_tuple vars
-(* val _ = e' |> Thm.cterm_of ctxt |> @{print} *)
       val e'' = Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) @{thms case_prod_conv[THEN eq_reflection]} [] e'
   in
     e''
   end
-
-(* val _ = expression_to_term @{term "expression \<lbrakk>var_x,var_y\<rbrakk> (\<lambda>(x,y). x+y)"} |> (fn t => (t,Thm.cterm_of @{context} t)) |> @{print} *)
 
 fun expression_to_term_typ ctxt t =
   let val t2 = expression_to_term ctxt t in (t2, fastype_of t2) end
@@ -32,11 +28,11 @@ fun add_index_to_expression t left =
   let val suffix = if left then "1" else "2"
       fun rename (Free(x,T)) =  Free(x^suffix,T)
         | rename t = t
-      val (vs,e,T) = case t of Const(@{const_name expression},T) $ vs $ e => (vs,e,T) | _ => 
+      val (vs,e,T) = case t of Const(\<^const_name>\<open>expression\<close>,T) $ vs $ e => (vs,e,T) | _ => 
             raise (TERM("add_index_to_expression",[t]))
       val vs = Term.map_aterms rename vs
   in
-    Const(@{const_name expression},T) $ vs $ e
+    Const(\<^const_name>\<open>expression\<close>,T) $ vs $ e
   end
     
 fun term_to_expression ctx t =
@@ -45,10 +41,10 @@ fun term_to_expression ctx t =
       val (vars,varsT) = 
         frees |> map (fn (v,T) => ("var_"^v,T)) |> QRHL.varterm_from_list |> QRHL.mk_varterm
       val pattern = HOLogic.mk_tuple (map Free frees)
-      val e = HOLogic.tupled_lambda pattern t |> @{print}
+      val e = HOLogic.tupled_lambda pattern t
       val T = fastype_of t
   in
-    Const(@{const_name expression}, QRHL.mk_variablesT varsT --> (varsT --> T) --> mk_expressionT T)
+    Const(\<^const_name>\<open>expression\<close>, QRHL.mk_variablesT varsT --> (varsT --> T) --> mk_expressionT T)
       $ vars $ e
   end
 
@@ -81,7 +77,7 @@ fun term_to_expression_untyped ctx t =
       val pattern = mk_tuple_untyped (map Free frees)
       val e = tupled_lambda_untyped pattern t
   in
-    Const(@{const_name expression}, QRHL.mk_variablesT varsT --> (varsT --> dummyT) --> @{typ "dummy expression"})
+    Const(\<^const_name>\<open>expression\<close>, QRHL.mk_variablesT varsT --> (varsT --> dummyT) --> \<^typ>\<open>dummy expression\<close>)
       $ vars $ e
   end
 
@@ -91,14 +87,14 @@ fun read_expression ctx str =
 
 fun read_predicate ctx str =
   let val preterm = Syntax.parse_term ctx str
-      val t = Syntax.check_term ctx (Type.constraint @{typ "predicate"} preterm)
+      val t = Syntax.check_term ctx (Type.constraint \<^typ>\<open>predicate\<close> preterm)
   in term_to_expression ctx t end
 
 (* Translates "expression Q e" (where Q is an explicit variable list) into "expression Q (%(x\<^sub>1,...). e (x\<^sub>1,...)"
    with one x\<^sub>i for each variable in Q. The result is a well-formed explicit expression *)
 fun clean_expression_abs_pat_conv ctxt ct = let
   val Q = case Thm.term_of ct of
-    Const(@{const_name expression},_) $ Q $ _ => Q
+    Const(\<^const_name>\<open>expression\<close>,_) $ Q $ _ => Q
     | _ => raise CTERM("clean_expression_abs_pat_conv",[ct])
   val varlist = QRHL.parse_varlist Q
   in
@@ -122,9 +118,9 @@ val clean_expression_conv_varlist1 : Proof.context -> conv = Misc.conv_from_tac 
 (* Converts an explicit expression into an expression "expression Q e" where Q is an explicit variable list. *)
 fun clean_expression_conv_varlist ctxt : conv = Misc.repeat_until_conv 
   (fn prev => fn current => 
-      case Thm.term_of current of Const(@{const_name expression},_) $ Q $ _ => 
+      case Thm.term_of current of Const(\<^const_name>\<open>expression\<close>,_) $ Q $ _ => 
         (QRHL.is_varlist Q orelse 
-            case Option.map Thm.term_of prev of SOME (Const(@{const_name expression},_) $ Q' $ _) => Q aconv Q'
+            case Option.map Thm.term_of prev of SOME (Const(\<^const_name>\<open>expression\<close>,_) $ Q' $ _) => Q aconv Q'
                                               | SOME t => raise (TERM("clean_expression_conv_varlist: malformed prev",[t]))
                                               | NONE => false)
        | _ => raise CTERM("clean_expression_conv_varlist: expected expression",[current]))
@@ -148,27 +144,27 @@ fun clean_expression_conv ctxt =
    the correct names are declared.) *)
 fun index_var_conv ctxt ct =
   let val (lrname,x,T) = case Thm.term_of ct of
-        Const(@{const_name index_var},_) $ Const(lrname,_) $ Free(x,T) => (lrname,x,T)
+        Const(\<^const_name>\<open>index_var\<close>,_) $ Const(lrname,_) $ Free(x,T) => (lrname,x,T)
       | _ => raise CTERM("index_var_conv: wrong shape",[ct])
       val lr = case lrname of 
-          @{const_name True} => true
-        | @{const_name False} => false
+          \<^const_name>\<open>True\<close> => true
+        | \<^const_name>\<open>False\<close> => false
         | _ => raise CTERM("index_var_conv: wrong shape (expected True/False as first arg)",[ct])
 
       val suffix = (if lr then "1" else "2")
       val x1 = x ^ suffix
 
       val varname_x = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt (Thm.cterm_of ctxt 
-        (Const(@{const_name variable_name}, T --> @{typ string}) $ Free(x,T)))
+        (Const(\<^const_name>\<open>variable_name\<close>, T --> \<^typ>\<open>string\<close>) $ Free(x,T)))
 
       val varname_x1 = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt (Thm.cterm_of ctxt 
-        (Const(@{const_name variable_name}, T --> @{typ string}) $ Free(x1,T)))
+        (Const(\<^const_name>\<open>variable_name\<close>, T --> \<^typ>\<open>string\<close>) $ Free(x1,T)))
 
       val helper_thm = if lr then @{thm index_var_conv1_aux} else  @{thm index_var_conv2_aux}
   
       val name_x = varname_x |> Thm.concl_of |> Logic.dest_equals |> snd
       val name_eq = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt
-        (@{term "(@) :: string=>_=>_"} $ name_x $ HOLogic.mk_string suffix |> Thm.cterm_of ctxt)
+        (\<^term>\<open>(@) :: string\<Rightarrow>_\<Rightarrow>_\<close> $ name_x $ HOLogic.mk_string suffix |> Thm.cterm_of ctxt)
   in
     helper_thm OF [varname_x, varname_x1, name_eq]
   end
@@ -213,13 +209,13 @@ fun subst_expression_conv_tac ctxt = REPEAT_DETERM (subst_expression_conv_tac1 c
 
 fun subst_expression_conv_noclean_check (_:Proof.context) t = let
   val (sub,e) = case t of 
-    Const(@{const_name subst_expression},_) $ sub $ e => (sub,e)
+    Const(\<^const_name>\<open>subst_expression\<close>,_) $ sub $ e => (sub,e)
     | _ => raise TERM("not a subst_expression term",[t])
   val (x,_) = case sub of
-    Const(@{const_name substitute1},_) $ x $ f => (x,f)
+    Const(\<^const_name>\<open>substitute1\<close>,_) $ x $ f => (x,f)
     | _ => raise TERM("not an explicit substitution (substitute1 x f)",[t,sub])
   val (Q,_) = case e of
-    Const(@{const_name expression},_) $ Q $ e' => (Q,e')
+    Const(\<^const_name>\<open>expression\<close>,_) $ Q $ e' => (Q,e')
     | _ => raise TERM("not an explicit expression (substitute1 Q e)",[t,e])
   val _ = QRHL.parse_varlist Q
   val _ = case x of
@@ -233,10 +229,10 @@ val subst_expression_conv_noclean = Misc.conv_from_tac subst_expression_conv_noc
 
 fun subst_expression_conv ctxt = subst_expression_conv_noclean ctxt then_conv Conv.try_conv (clean_expression_conv ctxt)
 
-fun is_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
+fun is_explicit_expression (Const(\<^const_name>\<open>expression\<close>,_) $ Q $ _) =
   ((QRHL.parse_varterm Q; true) handle TERM _ => false)
   | is_explicit_expression _ = false
-fun is_varlist_explicit_expression (Const(@{const_name expression},_) $ Q $ _) =
+fun is_varlist_explicit_expression (Const(\<^const_name>\<open>expression\<close>,_) $ Q $ _) =
   ((QRHL.parse_varlist Q; true) handle TERM _ => false)
   |  is_varlist_explicit_expression _ = false
 
