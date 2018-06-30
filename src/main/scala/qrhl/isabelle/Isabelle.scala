@@ -122,7 +122,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     * @return the context
     */
   def getQRHLContextWithFiles(thys: Path*) : Isabelle.Context = {
-    getContextWithThys(List("QRHL.QRHL_Operations","QRHL.QRHL"), thys.toList)
+    getContextWithThys(List("QRHL.QRHL","QRHL.QRHL_Operations"), thys.toList)
   }
 
   /** Creates a new context that imports the given theories.
@@ -142,7 +142,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount-1).toString.stripSuffix(".thy") }
 //    println("Isabelle getContextWithThys", files, filesThyPath)
     invoke(Operation.UseThys, filesThyPath)
-    val imports = thys ::: filesThyName
+    val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
     val ctxId = invoke(Isabelle.createContextOp, imports)
     new Isabelle.Context(this, ctxId)
   }
