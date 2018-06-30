@@ -1,5 +1,5 @@
 theory Example
-  imports QRHL
+  imports QRHL.QRHL
 begin
 
 definition "square x = x*x"

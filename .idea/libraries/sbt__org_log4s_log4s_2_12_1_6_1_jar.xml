@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sbt: org.log4s:log4s_2.12:1.6.1:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.log4s/log4s_2.12/jars/log4s_2.12-1.6.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.log4s/log4s_2.12/srcs/log4s_2.12-1.6.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

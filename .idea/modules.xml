@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/qrhl-tool.iml" filepath="$PROJECT_DIR$/.idea/modules/qrhl-tool.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/qrhl-tool-build.iml" filepath="$PROJECT_DIR$/.idea/modules/qrhl-tool-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root-2018.iml" filepath="$PROJECT_DIR$/.idea/modules/root-2018.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root-2018-build.iml" filepath="$PROJECT_DIR$/.idea/modules/root-2018-build.iml" />
     </modules>
   </component>
 </project>

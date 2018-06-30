@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sbt: io.monix:monix-execution_2.12:3.0.0-RC1:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/io.monix/monix-execution_2.12/jars/monix-execution_2.12-3.0.0-RC1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/io.monix/monix-execution_2.12/srcs/monix-execution_2.12-3.0.0-RC1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

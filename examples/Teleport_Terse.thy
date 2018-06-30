@@ -1,5 +1,5 @@
 theory Teleport_Terse
-  imports QRHL
+  imports QRHL.QRHL
 begin
 
 lemma teleport_terse:

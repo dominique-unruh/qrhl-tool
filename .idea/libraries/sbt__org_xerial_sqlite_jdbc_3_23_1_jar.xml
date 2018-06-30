@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sbt: org.xerial:sqlite-jdbc:3.23.1:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.xerial/sqlite-jdbc/jars/sqlite-jdbc-3.23.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.xerial/sqlite-jdbc/srcs/sqlite-jdbc-3.23.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

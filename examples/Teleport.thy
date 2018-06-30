@@ -1,5 +1,5 @@
 theory Teleport
-  imports QRHL
+  imports QRHL.QRHL
 begin
 
 lemma assoc_op_lift_aux:

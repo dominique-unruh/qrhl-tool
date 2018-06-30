@@ -128,10 +128,11 @@ for q :: "'a variable" and Q :: "'b variables" and R :: "'c variables"
 instantiation expression :: (ord) ord begin
 definition "less_eq_expression e f \<longleftrightarrow> expression_eval e \<le> expression_eval f"
 definition "less_expression e f \<longleftrightarrow> expression_eval e \<le> expression_eval f \<and> \<not> (expression_eval f \<le> expression_eval e)"
-instance by intro_classes
+instance by intro_classes                   
 end
 
-axiomatization where expression_eval: "expression_eval (expression Q e) m = e (eval_variables Q m)"
+axiomatization where expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
+  for X :: "'x variables" and e :: "'x \<Rightarrow> 'e" and m :: mem2
 
 instantiation expression :: (preorder) preorder begin
 instance apply intro_classes
@@ -282,7 +283,7 @@ interpretation G_group: cyclic_group G
 
 thm G_group.m_comm
 
-(* From CryptHOL *)
+(*(* From CryptHOL *)
 record 'a cyclic_group = "'a monoid" + 
   generator :: 'a ("\<^bold>g\<index>")
 locale cyclic_group = group G
@@ -290,6 +291,7 @@ locale cyclic_group = group G
   +
   assumes generator_closed [intro, simp]: "generator G \<in> carrier G"
   and generator: "carrier G \<subseteq> range (\<lambda>n :: nat. generator G [^]\<^bsub>G\<^esub> n)"
+*)
 
 (*sublocale cyclic_group \<subseteq> comm_group
 proof standard

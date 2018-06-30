@@ -1,5 +1,5 @@
 theory Code_Example
-  imports QRHL
+  imports QRHL.QRHL
 begin
 
 lemma 
