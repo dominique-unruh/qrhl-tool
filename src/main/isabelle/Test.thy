@@ -3,11 +3,6 @@ theory Test
   (* "HOL-Imperative_HOL.Imperative_HOL" *)
 begin
 
-consts bla :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "''*" 80)
-
-term "1 *' 2"
-term "('*   )"
-
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }
 val sorry_table = Synchronized.var "sorry" (Inttab.empty : sorry_location Inttab.table)
