@@ -1,5 +1,5 @@
 theory Chsh
-  imports CryptHOL
+  imports CryptHOL.CryptHOL
 begin
 
 locale chsh =

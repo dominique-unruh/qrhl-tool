@@ -5,7 +5,7 @@
     <option name="uncheckedWarnings" value="true" />
     <option name="featureWarnings" value="true" />
     <profile name="SBT 1" modules="tool" />
-    <profile name="sbt 1" modules="qrhl-tool,root-2018">
+    <profile name="sbt 1" modules="qrhl-tool">
       <option name="deprecationWarnings" value="true" />
     </profile>
   </component>

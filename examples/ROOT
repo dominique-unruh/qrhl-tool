@@ -11,5 +11,5 @@ session QRHL in "../src/main/isabelle" = "QRHL-Prerequisites" +
 
 session "QRHL-Examples" = "QRHL" +
   sessions "CryptHOL"
-  theories PrgEnc (* Chsh TODO *) Code_Example Example Teleport_Terse Teleport
+  theories PrgEnc Chsh Code_Example Example Teleport_Terse Teleport
 
