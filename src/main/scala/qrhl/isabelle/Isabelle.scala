@@ -8,7 +8,7 @@ import info.hupel.isabelle.api.{Configuration, Version}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Typ => ITyp}
 import info.hupel.isabelle.setup.Setup.Absent
-import info.hupel.isabelle.setup.{Resources, Setup}
+import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
 import info.hupel.isabelle.{OfficialPlatform, Operation, Platform, System, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
@@ -22,19 +22,37 @@ import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
 
+object DistributionDirectory {
+  /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
+    * and when running from installation, the installation directory.
+    * Returned as an absolute path.
+    */
+  lazy val distributionDirectory: Path = {
+    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
+    assert(location.getScheme=="file")
+    val path = Paths.get(location)
+    val dir =
+      if (path.getFileName.toString.endsWith(".jar")) {
+        val jarDir = path.getParent.toAbsolutePath
+        if (jarDir.endsWith("lib"))
+          jarDir.getParent
+        else
+          jarDir
+      }
+      else Paths.get("").toAbsolutePath
+
+    assert(Files.exists(dir.resolve("isabelle-thys")))
+    dir
+  }
+}
+
 class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
   val version = Version.Stable("2018-RC0") // TODO 2018
 
   private val auto = path=="auto"
 
   /** The directory that contains the jar, or, if not loaded from a jar, the current directory. */
-  private val localStoragePath = {
-    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
-    assert(location.getScheme=="file")
-    val path = Paths.get(location)
-    if (path.getFileName.toString.endsWith(".jar")) path.getParent.toAbsolutePath
-    else Paths.get("").toAbsolutePath
-  }.resolve("isabelle-temp")
+  private val localStoragePath = DistributionDirectory.distributionDirectory.resolve("isabelle-temp")
 
   private val platform : Platform = Platform.guess match {
     case None if auto => throw UserException(""""isabelle auto" used, but cannot detect platform. Use "isabelle <path>" with an existing Isabelle install at <path> instead""")
@@ -69,17 +87,28 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     case Right(r) => r
   }
 
+  val components = List(
+    resources.component,
+    DistributionDirectory.distributionDirectory.resolve("isabelle-afp"),
+    DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
+    DistributionDirectory.distributionDirectory.resolve("isabelle-thys")
+  )
+
   private val environment: info.hupel.isabelle.api.Environment = {
 //    if (path == "auto") println("Downloading Isabelle if needed (may take a while)")
     try {
-      Await.result(setup.makeEnvironment(resources, Nil), Duration.Inf)
+      val env = setup.makeEnvironment(resolver=Resolver.Default,
+        user=platform.userStorage(version),
+        components=components,
+        options=Nil)
+      Await.result(env, Duration.Inf)
     } catch {
       case e: RuntimeException if e.getMessage.startsWith("Generic environment does not support unofficial platform") =>
         throw UserException("Bad Isabelle root directory (probably)")
     }
   }
 
-  private val config: Configuration = Configuration.simple("QRHL")
+  private val config: Configuration = Configuration.simple("QRHL-Protocol")
 
   private def doBuild() {
     println("*** Building Isabelle (may take a while, especially the first time, e.g., 10-25min)...")
@@ -95,7 +124,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 //    println(comparedTo)
     try {
       val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
-        path.endsWith("QRHL") && !path.getParent.endsWith("log")
+        path.endsWith("QRHL-Protocol") && !path.getParent.endsWith("log")
 //        path.endsWith("QRHL") && !path.endsWith("log")/*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
       })
       files.findAny().isPresent
@@ -122,7 +151,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     * @return the context
     */
   def getQRHLContextWithFiles(thys: Path*) : Isabelle.Context = {
-    getContextWithThys(List("QRHL.QRHL","QRHL.QRHL_Operations"), thys.toList)
+    getContextWithThys(List("QRHL.QRHL","QRHL-Protocol.QRHL_Operations"), thys.toList)
+    // TODO: Do we need to include QRHL-Protocol.QRHL_Operations?
   }
 
   /** Creates a new context that imports the given theories.

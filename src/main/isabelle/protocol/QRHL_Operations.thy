@@ -1,5 +1,5 @@
 theory QRHL_Operations
-  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics
+  imports "HOL-Protocol.Protocol_Main" QRHL.QRHL_Core QRHL.Encoding QRHL.Tactics
 begin
 
 ML {*

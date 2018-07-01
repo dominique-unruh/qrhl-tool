@@ -1,15 +1,3 @@
-session "QRHL-Prerequisites" = "HOL-Library" +
-  sessions "HOL-Library" "Jordan_Normal_Form" "HOL-Analysis" "HOL-ZF" "HOL-ex"
-  theories "Jordan_Normal_Form.Matrix_Impl" "HOL-Analysis.Inner_Product"
-    "HOL-Analysis.Infinite_Set_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
-    "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral" "HOL-ZF.HOLZF"
-    "HOL-ex.Sqrt"				   
-
-session QRHL in "../src/main/isabelle" = "QRHL-Prerequisites" +
-  options [quick_and_dirty=true]
-  theories QRHL
-
 session "QRHL-Examples" = "QRHL" +
   sessions "CryptHOL"
   theories PrgEnc Chsh Code_Example Example Teleport_Terse Teleport
-

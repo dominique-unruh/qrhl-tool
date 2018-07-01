@@ -1,0 +1,3 @@
+session "QRHL-Protocol" = QRHL +
+  sessions "HOL-Protocol"
+  theories "HOL-Protocol.Protocol_Main" "QRHL_Operations"

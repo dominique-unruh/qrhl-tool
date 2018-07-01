@@ -1,21 +1,10 @@
 session QRHL = "QRHL-Prerequisites" +
   options [quick_and_dirty=true]
-  theories QRHL "HOL-Protocol.Protocol_Main" "QRHL_Operations"
+  theories QRHL
 
 session "QRHL-Prerequisites" = "HOL-Library" +
-  sessions "HOL-Library" "HOL-Protocol" "Jordan_Normal_Form" "HOL-Analysis" "HOL-ZF" "HOL-ex"
-  theories "Jordan_Normal_Form.Matrix_Impl" "HOL-Protocol.Protocol_Main" "HOL-Analysis.Inner_Product"
+  sessions "HOL-Library" "Jordan_Normal_Form" "HOL-Analysis" "HOL-ZF" "HOL-ex"
+  theories "Jordan_Normal_Form.Matrix_Impl" "HOL-Analysis.Inner_Product"
     "HOL-Analysis.Infinite_Set_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
     "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral" "HOL-ZF.HOLZF"
     "HOL-ex.Sqrt"
-
-(*
-
-Total build timing for different parent sessions of QRHL-Prerequisites:
-
-HOL: 42 min
-HOL-Library: 41 min
-HOL-Analysis: 57 min
-HOL-Algebra: 46 min
-
-*)

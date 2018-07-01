@@ -8,7 +8,7 @@ import scala.sys.process.Process
 
 name := "qrhl"
 
-version := "0.3alpha"
+version := "0.4alpha"
 
 scalaVersion := "2.12.5"
 
@@ -22,7 +22,8 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
 isabelleVersions := Seq(Version.Stable("2018-RC0")) // TODO 2018
 isabelleSessions in Compile := Seq("QRHL")
-isabelleSourceFilter := (- ".*") && (- "*~")
+//isabelleSourceFilter := (- ".*") && (- "*~")
+isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
 
 libraryDependencies ++= { val version = "1.0.0-RC1"; Seq( // TODO 2018
   "info.hupel" %% "libisabelle" % version,
