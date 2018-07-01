@@ -1,4 +1,4 @@
-VERSION="0.3alpha"
+VERSION="0.4alpha"
 SOURCES := $(shell find src) $(wildcard *.qrhl) $(wildcard *.thy)
 
 qrhl.zip : target/universal/qrhl-$(VERSION).zip
@@ -13,6 +13,7 @@ target/universal/qrhl-$(VERSION).zip : build.sbt $(SOURCES)
 local-isabelle :
 	/opt/Isabelle2018-RC0/bin/isabelle jedit -s -l Lots-Of-Stuff ~/svn/queasycrypt/trunk/qrhl-tool/src/main/isabelle/Test.thy &
 
-tmp : qrhl.zip
+test-distrib : qrhl.zip
 	unzip -d tmp qrhl.zip
-	cd tmp && echo isabelle. | bin/qrhl
+	cd tmp/qrhl-$(VERSION)/examples && \
+		for i in *.qrhl; do ../bin/qrhl "$$i"; done

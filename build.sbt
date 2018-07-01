@@ -4,6 +4,7 @@ import NativePackagerHelper._
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import sbt.io.Using
 
+import scala.collection.mutable.ListBuffer
 import scala.sys.process.Process
 
 name := "qrhl"
@@ -96,21 +97,29 @@ assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
 test in assembly := {}
 
 enablePlugins(JavaAppPackaging)
-mappings in Universal ++= Seq(
-    "proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat",
-    "examples/prg-enc-rorcpa.qrhl", "examples/prg-enc-indcpa.qrhl", "examples/PrgEnc.thy", "README.md",
-    "examples/equality.qrhl", "examples/example.qrhl", "examples/Example.thy", "examples/rnd.qrhl",
-    "examples/teleport.qrhl", "examples/Teleport.thy", "examples/teleport-terse.qrhl", "examples/Teleport_Terse.thy",
-    "examples/Code_Example.thy", "examples/chsh.ec", "examples/Chsh.thy"
-  ).map { f => baseDirectory.value / f -> f }
-  
-mappings in Universal ++= Seq(
-	 baseDirectory.value / ".." / "manual.pdf" -> "manual.pdf")
-	 
 
-//javaOptions in Universal += "-Dfile.encoding=UTF-8" // Doesn't seem to work
+mappings in Universal ++=
+  List("proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat", "README.md").
+    map { f => baseDirectory.value / f -> f }
+
+mappings in Universal ++= {
+  val base = baseDirectory.value
+  val dirs = base / "isabelle-thys" +++ base / "examples"
+  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl")
+  files pair relativeTo(base)
+}
+
+mappings in Universal ++= {
+  val base = baseDirectory.value
+  val files = base / "isabelle-afp" ** (- ("*~" || "link-afp.sh"))
+  files pair relativeTo(base)
+}
+
+mappings in Universal += (baseDirectory.value / ".." / "manual.pdf" -> "manual.pdf")
+
 mappings in Universal ++= directory("PG")
 
+//javaOptions in Universal += "-Dfile.encoding=UTF-8" // Doesn't seem to work
 
 // Without this, updateSbtClassifiers fails (and this breaks Intelli/J support)
 resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")

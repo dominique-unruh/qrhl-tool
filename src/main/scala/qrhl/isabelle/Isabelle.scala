@@ -87,7 +87,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     case Right(r) => r
   }
 
-  val components = List(
+  private val components = List(
     resources.component,
     DistributionDirectory.distributionDirectory.resolve("isabelle-afp"),
     DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
