@@ -276,16 +276,33 @@ object Isabelle {
     case _ => throw new MatchError(term)
   }
 
+  /** Analogous to Isabelle's HOLogic.dest_bit. Throws [[MatchError]] if it's not a char */
+  def dest_bit(term:Term) : Int = term match {
+    case HOLogic.True => 1
+    case HOLogic.False => 0
+    case _ => throw new MatchError(term)
+  }
+
+  def dest_bits(bits:Term*) : Int = {
+    val bits2 = bits.map(dest_bit)
+//    println(bits)
+    var value = 1
+    var result = 0
+    for (b <- bits2) {
+      result += b*value
+//      println(b,result)
+      value *= 2
+    }
+//    println(result.toChar)
+    result
+  }
+
   /** Analogous to Isabelle's HOLogic.dest_char. Throws [[MatchError]] if it's not a char */
-  def dest_char(term:Term) : Char = {
-    val (typ, n) = term match {
-      case Const("Groups.zero_class.zero", ty) => (ty, 0)
-      case App(Const("String.Char", Type("fun", List(_, ty))), t) => (ty, dest_numeral(t).toInt)
+  def dest_char(term:Term) : Char = term match {
+      case App(App(App(App(App(App(App(App(Const("String.char.Char", _), b0), b1), b2), b3), b4), b5), b6), b7) =>
+        dest_bits(b0, b1, b2, b3, b4, b5, b6, b7).toChar
       case _ => throw new MatchError(term)
     }
-    if (typ == Type ("String.char", Nil)) n.toChar
-    else throw new MatchError(term)
-  }
 
   /** Analogous to Isabelle's HOLogic.dest_string. Throws [[MatchError]] if it's not a string */
   def dest_string(term:Term) : String =
