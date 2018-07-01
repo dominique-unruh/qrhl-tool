@@ -111,7 +111,8 @@ mappings in Universal ++= {
 
 mappings in Universal ++= {
   val base = baseDirectory.value
-  val files = base / "isabelle-afp" ** (- ("*~" || "link-afp.sh"))
+  val files = base / "isabelle-afp" * (- ("*~" || "link-afp.sh")) ** (- "*~")
+//  println("FILES",files)
   files pair relativeTo(base)
 }
 

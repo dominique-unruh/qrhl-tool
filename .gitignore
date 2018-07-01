@@ -1,4 +1,3 @@
-*.class
 *.log
 *~
 /doc
@@ -10,8 +9,5 @@
 /qrhl.jar
 /qrhl.zip
 /isabelle-temp
-/test.qrhl
-/Test.thy
-/Testing.thy
-/Tmp.thy
 .*.marks
+/tmp
