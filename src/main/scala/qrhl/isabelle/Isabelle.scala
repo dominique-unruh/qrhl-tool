@@ -165,7 +165,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     import scala.collection.JavaConverters._
     for (f <- files) assert(Files.isRegularFile(f))
     val filesThyPath = files.map { f =>
-      val relative = Paths.get("").relativize(f)
+//      println("XXX",f,Paths.get(""))
+      val relative = Paths.get("").toAbsolutePath.relativize(f.toAbsolutePath)
       val names = relative.iterator().asScala.toList
       names.mkString("/").stripSuffix(".thy")
     }
