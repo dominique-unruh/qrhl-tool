@@ -22,6 +22,7 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
 isabelleVersions := Seq(Version.Stable("2018-RC0")) // TODO 2018
 isabelleSessions in Compile := Seq("QRHL")
+isabelleSourceFilter := (- ".*") && (- "*~")
 
 libraryDependencies ++= { val version = "1.0.0-RC1"; Seq( // TODO 2018
   "info.hupel" %% "libisabelle" % version,
