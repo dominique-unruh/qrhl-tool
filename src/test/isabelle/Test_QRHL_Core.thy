@@ -1,5 +1,5 @@
 theory Test_QRHL_Core
-  imports  UnitTest "../../main/isabelle/QRHL_Core"
+  imports  UnitTest "QRHL.QRHL_Core"
 begin
 
 (* TEST CASE: sort_lift_conv (A\<guillemotright>(variable_concat  \<lbrakk>a\<rbrakk> \<lbrakk>\<rbrakk>)) *)

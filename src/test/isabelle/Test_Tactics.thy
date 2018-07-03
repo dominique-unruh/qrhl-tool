@@ -1,5 +1,5 @@
 theory Test_Tactics
-  imports UnitTest "../../main/isabelle/Tactics"
+  imports UnitTest "QRHL.Tactics"
 begin
 
 ML \<open>

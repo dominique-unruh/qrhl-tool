@@ -1,5 +1,5 @@
 theory Test_Misc
-  imports UnitTest "../../main/isabelle/QRHL_Core"
+  imports UnitTest "QRHL.QRHL_Core"
 begin
 
 ML \<open>

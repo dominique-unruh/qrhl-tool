@@ -61,7 +61,7 @@ lemma sum_bool: "(\<Sum>x\<in>UNIV. P x) = P False + P True"
   
 
 
-lemma "spmf chsh_game True \<le> 3/4"
+lemma chsh: "spmf chsh_game True \<le> 3/4"
 proof -
   define pr1 where "pr1 \<sigma> = spmf (do { x <- coin_spmf; y <- coin_spmf; (a::bool) <- A (fst \<sigma>) x; b <- B (snd \<sigma>) y; return_spmf (x\<and>y \<longleftrightarrow> a\<noteq>b) }) True" for \<sigma>
 
@@ -156,4 +156,4 @@ qed
 
 end
 
-
+end

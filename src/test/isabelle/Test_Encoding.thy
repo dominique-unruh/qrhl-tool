@@ -1,5 +1,5 @@
 theory Test_Encoding
-  imports UnitTest "../../main/isabelle/Encoding"
+  imports UnitTest "QRHL.Encoding"
 begin
 
 variables classical b :: int begin
