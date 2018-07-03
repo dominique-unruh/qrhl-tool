@@ -31,6 +31,9 @@ libraryDependencies ++= { val version = "1.0.0-RC2"; Seq( // TODO 2018
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version
 ) }
+libraryDependencies += "info.hupel" % "classy" % "0.2.1" // TODO 2018 REMOVE
+libraryDependencies += "info.hupel" % "multi-isabelle" % "0.1.1" // TODO 2018 REMOVE
+
 
 //val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
 val afpUrl = "https://bitbucket.org/isa-afp/afp-devel/get/2af750da996c.tar.gz" // TODO 2018
