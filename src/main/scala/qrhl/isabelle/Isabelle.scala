@@ -42,12 +42,15 @@ object DistributionDirectory {
       else Paths.get("").toAbsolutePath
 
     assert(Files.exists(dir.resolve("isabelle-thys")))
+    logger.debug(s"Distribution directory = $dir")
     dir
   }
+
+  private val logger = log4s.getLogger
 }
 
 class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
-  val version = Version.Stable("2018-RC0") // TODO 2018
+  val version = Version.Stable("2018-RC1") // TODO 2018
 
   private val auto = path=="auto"
 
