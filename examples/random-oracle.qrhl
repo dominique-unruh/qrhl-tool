@@ -36,7 +36,7 @@ classical var cglobA : string.
 adversary A vars cglobA, qglobA, x, y.
 
 # A game where the adversary can perform a single query to the random oracle
-program p1 := {
+program prog1 := {
   call hInit;
   call A;
   call hQuery;
@@ -46,19 +46,21 @@ program p1 := {
 # A game where the adversary can perform a single query to the random oracle,
 # but the random oracle is initialized using hInit' now.
 # (As would be the case in a history free reduction.)
-program p2 := {
+program prog2 := {
   call hInit';
   call A;
   call hQuery;
   call A;
 }.
 
-# p1 and p2 are indistinguishable:
+# prog1 and prog2 are indistinguishable:
 
-qrhl {Cla[cglobA1=cglobA2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2]} call p1; ~ call p2; {Cla[cglobA1=cglobA2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2]}.
+qrhl {Cla[cglobA1=cglobA2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2]}
+        call prog1; ~ call prog2; 
+     {Cla[cglobA1=cglobA2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2]}.
 
-inline p1.
-inline p2.
+inline prog1.
+inline prog2.
 equal.
  simp!.
 inline hQuery.

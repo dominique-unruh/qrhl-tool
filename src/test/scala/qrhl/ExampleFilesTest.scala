@@ -47,4 +47,8 @@ class ExampleFilesTest extends FunSuite {
   test("random-oracle.qrhl") {
     testFile("random-oracle.qrhl")
   }
+
+  test("epr.qrhl") {
+    testFile("epr.qrhl")
+  }
 }
