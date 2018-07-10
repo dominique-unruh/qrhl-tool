@@ -1,5 +1,5 @@
 theory QRHL_Core
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators Universe
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators Universe Misc_Missing
   keywords "variables" :: thy_decl_block
 begin
 
@@ -992,6 +992,55 @@ lemma EPR_EPR': "EPR = timesScalarVec (1/sqrt2) EPR'"
 lemma norm_EPR'[simp]: "cmod (1/sqrt2) * norm EPR' = 1"
   unfolding EPR'_def using EPR_normalized apply auto
   by (metis divide_cancel_right nonzero_mult_div_cancel_right norm_divide norm_eq_zero norm_one sqrt2_neq0) *)
+
+definition "Uoracle f = classical_operator (Some o (\<lambda>(x,y::_::group_add). (x, y + (f x))))"
+
+
+lemma unitary_Uoracle[simp]: "unitary (Uoracle f)"
+  unfolding Uoracle_def
+  apply (rule unitary_classical_operator, rule bijI)
+   apply (simp add: inj_on_def)
+  apply (auto simp: image_def)
+  by (metis diff_add_cancel)
+
+lemma Uoracle_adjoint: "(Uoracle f)* = classical_operator (Some o (\<lambda>(x,y::_::group_add). (x, y - (f x))))" 
+      (is "_ = classical_operator (Some o ?pi)")
+proof -
+  define \<pi> where "\<pi> = ?pi"
+  have [simp]: "surj \<pi>"
+    apply (auto simp: \<pi>_def image_def)
+    by (metis add_diff_cancel)
+
+  define \<pi>2 where "\<pi>2 = (\<lambda>(x,y). (x, y + (f x)))"
+  have "\<pi>2 o \<pi> = id"
+    unfolding \<pi>_def \<pi>2_def by auto
+  with \<open>surj \<pi>\<close> have [simp]: "surj \<pi>2"
+    by (metis fun.set_map surj_id)
+  have "\<pi> o \<pi>2 = id"
+    unfolding \<pi>_def \<pi>2_def by auto
+  then have [simp]: "inj \<pi>2"
+    using \<open>\<pi>2 \<circ> \<pi> = id\<close> inj_iff inv_unique_comp by blast
+
+  have "Hilbert_Choice.inv \<pi>2 = \<pi>"
+    using inv_unique_comp
+    using \<open>\<pi> \<circ> \<pi>2 = id\<close> \<open>\<pi>2 \<circ> \<pi> = id\<close> by blast
+
+  then have "inv_option (Some o \<pi>2) = Some o \<pi>"
+    by (subst inv_option_Some, simp_all)
+
+  then have "(classical_operator (Some \<circ> \<pi>2))* = classical_operator (Some o \<pi>)"
+    apply (subst classical_operator_adjoint)
+    by simp_all
+
+  then show ?thesis
+    unfolding \<pi>_def \<pi>2_def Uoracle_def by auto
+qed
+
+lemma Uoracle_selfadjoint[simp]: "(Uoracle f)* = Uoracle f" for f :: "_ \<Rightarrow> _::xor_group"
+  unfolding Uoracle_adjoint unfolding Uoracle_def by simp
+
+lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = idOp" for f :: "_ \<Rightarrow> _::xor_group"
+  apply (subst Uoracle_selfadjoint[symmetric]) apply (rule adjUU) by simp
 
 section \<open>Misc\<close>
 
