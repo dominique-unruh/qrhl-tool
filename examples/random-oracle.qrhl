@@ -1,0 +1,66 @@
+isabelle RandomOracle.
+
+classical var h : x => y.
+
+quantum var x : x.
+quantum var y : y.
+
+program hInit := {
+  h <$ uniform UNIV;
+}.
+
+program hQuery := {
+  on x,y apply Uoracle h;
+}.
+
+classical var r : x => r.
+
+program hInit' := {
+  r <$ uniform UNIV;
+  h <- π o r;
+}.
+
+quantum var qglobA : string.
+classical var cglobA : string.
+adversary A vars cglobA, qglobA, x, y.
+
+program p1 := {
+  call hInit;
+  call A;
+  call hQuery;
+  call A;
+}.
+
+program p2 := {
+  call hInit';
+  call A;
+  call hQuery;
+  call A;
+}.
+
+qrhl {Cla[cglobA1=cglobA2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2]} call p1; ~ call p2; {Cla[cglobA1=cglobA2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2]}.
+
+inline p1.
+inline p2.
+equal.
+ simp!.
+inline hQuery.
+wp left.
+ simp.
+wp right.
+ simp.
+conseq post: Cla[cglobA1=cglobA2 ∧ h1=h2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2].
+ simp ! Uora_twice.
+equal.
+ simp!.
+inline hInit.
+inline hInit'.
+wp right.
+ simp.
+# Postcondition is: ℭ𝔩𝔞[h1 = π ∘ r2] + some equalities
+rnd h,r <- map_distr (λr. (π o r, r)) (uniform UNIV).
+ simp bij_pi.
+skip.
+simp!.
+
+qed.

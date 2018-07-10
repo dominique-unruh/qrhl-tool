@@ -43,4 +43,8 @@ class ExampleFilesTest extends FunSuite {
   test("teleport-terse.qrhl") {
     testFile("teleport-terse.qrhl")
   }
+
+  test("random-oracle.qrhl") {
+    testFile("random-oracle.qrhl")
+  }
 }

@@ -98,7 +98,8 @@ mappings in Universal ++= Seq(
     "examples/prg-enc-rorcpa.qrhl", "examples/prg-enc-indcpa.qrhl", "examples/PrgEnc.thy", "README.md",
     "examples/equality.qrhl", "examples/example.qrhl", "examples/Example.thy", "examples/rnd.qrhl",
     "examples/teleport.qrhl", "examples/Teleport.thy", "examples/teleport-terse.qrhl", "examples/Teleport_Terse.thy",
-    "examples/Code_Example.thy", "examples/chsh.ec", "examples/Chsh.thy"
+    "examples/Code_Example.thy", "examples/chsh.ec", "examples/Chsh.thy", "examples/random_oracle.qrhl",
+    "examples/RandomOracle.thy"
   ).map { f => baseDirectory.value / f -> f }
   
 mappings in Universal ++= Seq(
