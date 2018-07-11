@@ -37,7 +37,7 @@ lemma teleport_goal2_a0c0:
                  quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
                                      \<cdot> addState EPR) \<lbrakk>A2\<rbrakk>
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
-  apply (auto simp: prepare_for_code)
+  apply (simp add: prepare_for_code)
   by eval
 
 
@@ -49,7 +49,7 @@ lemma teleport_goal2_a0c1:
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
 proof -
   show ?thesis
-    apply (auto simp: prepare_for_code)
+    apply (simp add: prepare_for_code)
     by eval
 qed
 
@@ -59,7 +59,7 @@ lemma teleport_goal2_a1c0:
                  quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
                                      \<cdot> addState EPR) \<lbrakk>A2\<rbrakk>
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
-  apply (auto simp: prepare_for_code)
+  apply (simp add: prepare_for_code)
   by eval
 
 lemma teleport_goal2_a1c1:
@@ -68,7 +68,7 @@ lemma teleport_goal2_a1c1:
                  quantum_equality_full idOp \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes> idOp \<cdot> assoc_op* \<cdot> CNOT \<otimes> idOp \<cdot> assoc_op 
                                      \<cdot> addState EPR) \<lbrakk>A2\<rbrakk>
        \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>"
-  apply (auto simp: prepare_for_code)
+  apply (simp add: prepare_for_code)
   by eval
 
 end
