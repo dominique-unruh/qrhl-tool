@@ -31,6 +31,7 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
 
 //  override def valueTyp: pure.Typ = typ.isabelleTyp
   override def variableTerm: Term = Free(name,variableTyp)
+  override def toString: String = s"$name : ${Isabelle.pretty(valueTyp)} (quantum)"
 }
 
 object QVariable {
@@ -59,6 +60,8 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
 //  override def valueTyp: pure.Typ = typ.isabelleTyp
   override def variableTerm: Term = Free("var_"+name,variableTyp)
   def valueTerm: Term = Free(name,valueTyp)
+
+  override def toString: String = s"$name : ${Isabelle.pretty(valueTyp)} (classical)"
 }
 
 object CVariable {
