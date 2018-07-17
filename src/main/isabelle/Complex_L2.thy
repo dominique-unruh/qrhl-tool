@@ -450,8 +450,58 @@ proof standard
 qed
 end
 
+lemma norm_vector_component: "norm (Rep_vector x i) \<le> norm x" sorry
+lemma Cauchy_vector_component: 
+  fixes X
+  defines "x i == Rep_vector (X i)"
+  shows "Cauchy X \<Longrightarrow> Cauchy (\<lambda>i. x i j)"
+proof -
+  assume "Cauchy X"
+  have "dist (x i j) (x i' j) \<le> dist (X i) (X i')" for i i'
+  proof -
+    have "dist (X i) (X i') = norm (X i - X i')"
+      unfolding dist_norm by simp
+    also have "norm (X i - X i') \<ge> norm (Rep_vector (X i - X i') j)"
+      by (rule norm_vector_component)
+    also have "Rep_vector (X i - X i') j = x i j - x i' j"
+      unfolding x_def
+      by (metis add_implies_diff diff_add_cancel plus_vector.rep_eq) 
+    also have "norm (x i j - x i' j) = dist (x i j) (x i' j)"
+      unfolding dist_norm by simp
+    finally show ?thesis by assumption
+  qed
+  then show ?thesis
+    unfolding Cauchy_def
+    using \<open>Cauchy X\<close> unfolding Cauchy_def
+    by (meson le_less_trans) 
+qed
+
 instantiation vector :: (type) chilbert_space begin
 instance sorry
+(* proof intro_classes
+  fix X :: "nat \<Rightarrow> 'a vector"
+  assume "Cauchy X"
+  define x where "x i = Rep_vector (X i)" for i
+
+  from \<open>Cauchy X\<close> have "Cauchy (\<lambda>i. x i j)" for j
+    unfolding x_def
+    by (rule Cauchy_vector_component)
+  hence "convergent (\<lambda>i. x i j)" for j
+    by (simp add: Cauchy_convergent_iff)
+  then obtain Lx where "(\<lambda>i. x i j) \<longlonglongrightarrow> Lx j" for j
+    unfolding convergent_def by metis
+  define L where "L = Abs_vector Lx"
+  have "X \<longlonglongrightarrow> L"
+  proof (rule LIMSEQ_I)
+    fix r::real assume "0<r"
+    
+  show "convergent X"
+  proof (rule convergentI, rule LIMSEQ_I)
+    fix r::real assume "0<r"
+    
+    show "\<exists>no. \<forall>n\<ge>no. norm (X n - L) < r" sorry
+  qed
+qed *)
 end
 
 (* TODO remove and document *)
