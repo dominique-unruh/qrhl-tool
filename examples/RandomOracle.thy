@@ -1,5 +1,5 @@
 theory RandomOracle
-  imports QRHL
+  imports QRHL.QRHL
 begin
 
 section \<open>Specification\<close>

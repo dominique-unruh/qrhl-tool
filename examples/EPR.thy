@@ -1,5 +1,5 @@
 theory EPR
-  imports QRHL
+  imports QRHL.QRHL
 begin
 
 lemma final_goal:

@@ -2,9 +2,9 @@ theory Misc_Missing
   imports Main
 begin
 
-lemma inj_comp[simp]: "inj (op\<circ> f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c)) = inj f"
+lemma inj_comp[simp]: "inj ((\<circ>) f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c)) = inj f"
 proof (rule; rule injI)
-  assume inj: "inj (op\<circ> f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c))"
+  assume inj: "inj ((\<circ>) f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c))"
   fix x y
   assume "f x = f y"
   then have "f o (\<lambda>_::'a. x) = f o (\<lambda>_. y)" by auto
@@ -21,9 +21,9 @@ next
   then show "x = y" by auto
 qed
 
-lemma surj_comp[simp]: "surj (op\<circ> f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c)) = surj f"
+lemma surj_comp[simp]: "surj ((\<circ>) f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c)) = surj f"
 proof (rule)
-  assume surj: "surj (op\<circ> f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c))"
+  assume surj: "surj ((\<circ>) f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c))"
   {fix y :: 'c
   from surj obtain g :: "'a\<Rightarrow>'b" where "f o g = (\<lambda>_. y)"
     unfolding surj_def by metis
@@ -37,11 +37,11 @@ next
   {fix g :: "'a\<Rightarrow>'c"
     from 1 have "f \<circ> (Hilbert_Choice.inv f o g) = g" unfolding o_assoc by auto
     then have "\<exists>h. f o h = g" by auto}
-  then show "surj (op\<circ> f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c))"
+  then show "surj ((\<circ>) f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c))"
     unfolding surj_def by metis
 qed
 
-lemma bij_comp[simp]: "bij (op\<circ> f) = bij f" 
+lemma bij_comp[simp]: "bij ((\<circ>) f) = bij f" 
   unfolding bij_def by simp
 
 class xor_group = ab_group_add +
