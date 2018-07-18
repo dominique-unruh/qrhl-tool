@@ -125,16 +125,44 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 //    println("LOC "+Paths.get(location))
 //    val comparedTo = Files.getLastModifiedTime(Paths.get(location))
 //    println(comparedTo)
-    try {
-      val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
+
+    import scala.collection.JavaConverters._
+
+    val isabelleThys = Files.find(DistributionDirectory.distributionDirectory.resolve("isabelle-thys"),
+                          10, (path: Path, _: BasicFileAttributes) => true).iterator.asScala.toList
+    assert(isabelleThys.nonEmpty)
+    val newest = isabelleThys.map { Files.getLastModifiedTime(_) }.max
+
+    val heaps = try {
+      Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
         path.endsWith("QRHL-Protocol") && !path.getParent.endsWith("log")
-//        path.endsWith("QRHL") && !path.endsWith("log")/*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
-      })
-      files.findAny().isPresent
+      }).iterator.asScala.toList
     } catch {
-      case _ : IOException => false
+      case _: IOException => return false
     }
+
+    if (heaps.isEmpty)
+      return false
+    val newestHeap = heaps.map { Files.getLastModifiedTime(_) }.max
+
+//    println("Newest:      ",newest)
+//    println("Newest heap: ",newestHeap)
+
+    if (newestHeap.compareTo(newest) > 0)
+      return true
+
+    false
   }
+
+//    try {
+//      val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
+//        path.endsWith("QRHL-Protocol") && !path.getParent.endsWith("log")
+////        path.endsWith("QRHL") && !path.endsWith("log")/*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
+//      })
+//      files.findAny().isPresent
+//    } catch {
+//      case _ : IOException => false
+//    }
 
   private val system = {
     if (build || !checkBuilt())
