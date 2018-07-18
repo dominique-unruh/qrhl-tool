@@ -18,7 +18,7 @@ case class RndTac(map:Option[Expression]=None) extends WpBothStyleTac {
       map match {
       case None =>
         if (x.valueTyp != y.valueTyp)
-          throw UserException(s"The assigned variables $x and $y must have the same type (they have types ${x.valueTyp} and ${y.valueTyp})")
+          throw UserException(s"The assigned variables ${x.name} and ${y.name} must have the same type (they have types ${Isabelle.pretty(x.valueTyp)} and ${Isabelle.pretty(y.valueTyp)})")
 
 //        val lit = ml.Expr.uncheckedLiteral[String => pure.Term => String => pure.Term => pure.Typ => pure.Term => pure.Term]("QRHL.rndWp")
 //        val wpExpr = (lit(x1.name)(implicitly)(e1.isabelleTerm)(implicitly)

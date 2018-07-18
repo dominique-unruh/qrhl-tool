@@ -1,0 +1,33 @@
+isabelle EPR.
+
+quantum var q : bit.
+quantum var r : bit.
+classical var x : bit.
+
+program left := {
+  q,r <q EPR;
+  on q apply hadamard;
+}.
+
+program right := {
+  q,r <q EPR;
+  on r apply hadamard;
+}.
+
+qrhl {Cla[True]} call left; ~ call right; {Qeq[q1,r1=q2,r2]}.
+
+inline left.
+inline right.
+wp left.
+ simp.
+wp right.
+ simp.
+wp left.
+ simp.
+wp right.
+ simp.
+skip.
+simp final_goal.
+
+qed.
+

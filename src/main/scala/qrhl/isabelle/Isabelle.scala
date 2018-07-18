@@ -166,7 +166,9 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     */
   private def getContextWithThys(thys: List[String], files: List[Path]): Isabelle.Context = {
     import scala.collection.JavaConverters._
-    for (f <- files) assert(Files.isRegularFile(f))
+    for (f <- files)
+      if (!Files.isRegularFile(f))
+        throw UserException(s"Isabelle theory file not found: $f")
     val filesThyPath = files.map { f =>
 //      println("XXX",f,Paths.get(""))
       val relative = Paths.get("").toAbsolutePath.relativize(f.toAbsolutePath)
