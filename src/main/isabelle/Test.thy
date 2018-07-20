@@ -158,33 +158,6 @@ lemma skip:
   shows "qrhl A [] [] B"
   sorry
 
-(* 
-lemma tmp: "(\<And>x. C x) \<Longrightarrow> (C x)" 
-  by metis
- *)
-
-term "[[y]]"
-term "[(y)]"
-
-
-(* lemma expression_leq:
-  assumes "\<And>x. e x \<le> e' x"
-  shows "expression X e \<le> expression X e'"
-  using assms unfolding less_eq_expression_def expression_eval le_fun_def
-  by auto *)
-
-(* 
-lemma expression_leq1:
-  assumes "\<And>x. e x \<le> e' x"
-  shows "expression \<lbrakk>v\<rbrakk> e \<le> expression \<lbrakk>v\<rbrakk> e'"
-  using assms by (rule expression_leq) 
-
-lemma expression_leq2:
-  assumes "\<And>x y. e x y \<le> e' x y"
-  shows "expression \<lbrakk>v,w\<rbrakk> (\<lambda>(x,y). e x y) \<le> expression \<lbrakk>v,w\<rbrakk> (\<lambda>(x,y). e' x y)"
-  apply (rule expression_leq) using assms by auto
- *)
-
 ML \<open>
 fun rename_tac_variant names = SUBGOAL (fn (goal,i) =>
   let val used = Term.add_free_names goal []
@@ -283,33 +256,6 @@ interpretation G_group: cyclic_group G
   sorry
 
 
-thm G_group.m_comm
-
-(*(* From CryptHOL *)
-record 'a cyclic_group = "'a monoid" + 
-  generator :: 'a ("\<^bold>g\<index>")
-locale cyclic_group = group G
-  for G :: "('a, 'b) cyclic_group_scheme" (structure)
-  +
-  assumes generator_closed [intro, simp]: "generator G \<in> carrier G"
-  and generator: "carrier G \<subseteq> range (\<lambda>n :: nat. generator G [^]\<^bsub>G\<^esub> n)"
-*)
-
-(*sublocale cyclic_group \<subseteq> comm_group
-proof standard
-  fix x y assume "x : carrier G" and "y : carrier G"
-  with generator obtain n m :: nat where x:"x=\<^bold>g [^] n" and y:"y=\<^bold>g [^] m" 
-    apply atomize_elim by auto
-  show "x \<otimes> y = y \<otimes> x"
-    unfolding x y by (simp add: add.commute nat_pow_mult)
-qed*)
-
-
-(* interpretation bool_cyclic: cyclic_group "\<lparr> carrier = UNIV, monoid.mult = (\<noteq>), one = False, generator = True \<rparr>"
-  apply standard apply (auto simp: Units_def nat_pow_def image_def) 
-  by (rule_tac x="if x then 1 else 0" in exI, simp)
- *)
-
 definition "keygen = uniform {(g \<^sup>^ x, x) | x::int. x\<in>{0..order G-1}}"
 (* thm cyclic_group.keygen_def *)
 definition "enc h x = uniform {(g\<^sup>^r, h\<^sup>^r * x) | r::int. r\<in>{0..order G-1}}"
@@ -364,8 +310,9 @@ lemma (in group) inv_int_pow:
   apply (subst int_pow_int)+
   by (subst inv_nat_pow, simp_all)
 
+thm group.int_pow_pow
 
-lemma (in group) int_pow_pow:
+(* lemma (in group) int_pow_pow:
   assumes "x \<in> carrier G" shows "(x [^] n) [^] m = x [^] (n * m::int)"
 proof (cases n; cases m)
   show ?thesis if "n=int n'" and "m=int m'" for n' m'
@@ -402,6 +349,7 @@ proof (cases n; cases m)
     apply (subst nat_pow_pow)
     using assms by simp_all
 qed
+ *)
 
 lemma (in cyclic_group) "(\<^bold>g [^] r) [^] -x = (\<^bold>g [^] (-r*x))" for r x :: int
   apply (subst int_pow_pow)

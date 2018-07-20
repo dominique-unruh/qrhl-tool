@@ -55,22 +55,20 @@ object Parser extends RegexParsers {
     for (v <- identifier;
          _ <- assignSymbol;
          // TODO: add a cut
-         typ = context.environment.cVariables.
-           getOrElse(v, throw UserException(s"Undefined variable $v")).valueTyp;
+         typ = context.environment.getCVariable(v).valueTyp;
          e <- expression(typ);
          _ <- statementSeparator)
-     yield Assign(context.environment.cVariables(v), e)
+     yield Assign(context.environment.getCVariable(v), e)
 
   private val sampleSymbol = literal("<$")
   def sample(implicit context:ParserContext) : Parser[Sample] =
     for (v <- identifier;
          _ <- sampleSymbol;
          // TODO: add a cut
-         typ = context.environment.cVariables.
-           getOrElse(v, throw UserException(s"Undefined variable $v")).valueTyp;
+         typ = context.environment.getCVariable(v).valueTyp;
          e <- expression(Isabelle.distrT(typ));
          _ <- statementSeparator)
-      yield Sample(context.environment.cVariables(v), e)
+      yield Sample(context.environment.getCVariable(v), e)
 
   def call(implicit context:ParserContext) : Parser[Call] =
     literal("call") ~! identifier <~ statementSeparator ^^ { case _ ~ name =>
@@ -86,7 +84,7 @@ object Parser extends RegexParsers {
     // TODO: add a cut
          _ = assert(vs.nonEmpty);
          _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-         qvs = vs.map { context.environment.qVariables(_) };
+         qvs = vs.map { context.environment.getQVariable };
          typ = Isabelle.vectorT(Isabelle.tupleT(qvs.map(_.valueTyp):_*));
          e <- expression(typ);
          _ <- statementSeparator)
@@ -98,7 +96,7 @@ object Parser extends RegexParsers {
            _ <- literal("apply");
            _ = assert(vs.nonEmpty);
            _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-           qvs = vs.map { context.environment.qVariables(_) };
+           qvs = vs.map { context.environment.getQVariable };
            typ = Isabelle.boundedT(Isabelle.tupleT(qvs.map(_.valueTyp):_*));
            e <- expression(typ);
            _ <- statementSeparator)
@@ -110,8 +108,8 @@ object Parser extends RegexParsers {
          _ <- measureSymbol;
          _ <- literal("measure");
          vs <- identifierList;
-         resv = context.environment.cVariables(res);
-         qvs = vs.map { context.environment.qVariables(_) };
+         resv = context.environment.getCVariable(res);
+         qvs = vs.map { context.environment.getQVariable };
          _ <- literal("with");
          etyp = Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*));
          e <- expression(etyp);
@@ -250,10 +248,10 @@ object Parser extends RegexParsers {
   def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
     literal("rnd") ~> (for (
       x <- identifier;
-      xT = context.environment.cVariables(x).valueTyp;
+      xT = context.environment.getCVariable(x).valueTyp;
       _ <- literal(",");
       y <- identifier;
-      yT = context.environment.cVariables(y).valueTyp;
+      yT = context.environment.getCVariable(y).valueTyp;
       _ <- sampleSymbol | assignSymbol;
       e <- expression(Isabelle.distrT(Isabelle.prodT(xT,yT)))
     ) yield e).? ^^ RndTac
@@ -261,7 +259,7 @@ object Parser extends RegexParsers {
   def tactic_case(implicit context:ParserContext): Parser[CaseTac] =
     literal("case") ~> OnceParser(for (
       x <- identifier;
-      xT = context.environment.ambientVariables(x);
+      xT = context.environment.getAmbientVariable(x);
       _ <- literal(":=");
       e <- expression(xT)
     ) yield CaseTac(x,e))

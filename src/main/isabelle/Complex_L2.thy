@@ -289,7 +289,10 @@ lift_definition zero_vector :: "'a vector" is "\<lambda>_.0" by (auto simp: has_
 lift_definition uminus_vector :: "'a vector \<Rightarrow> 'a vector" is uminus by (simp add: has_ell2_norm_def)
 lift_definition plus_vector :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>f g x. f x + g x"
   by (rule ell2_norm_triangle) 
-definition "a - b = a + (-b)" for a b :: "'a vector"
+lift_definition minus_vector :: "'a vector \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>f g x. f x - g x"
+  apply (subst ab_group_add_class.ab_diff_conv_add_uminus)
+  apply (rule ell2_norm_triangle) 
+  apply auto by (simp add: has_ell2_norm_def)
 lift_definition scaleR_vector :: "real \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>r f x. complex_of_real r * f x"
   by (rule ell2_norm_smult)
 lift_definition scaleC_vector :: "complex \<Rightarrow> 'a vector \<Rightarrow> 'a vector" is "\<lambda>c f x. c * f x"
@@ -302,7 +305,7 @@ instance apply intro_classes
          apply (transfer; rule ext; simp)
         apply (transfer; rule ext; simp)
        apply (transfer; rule ext; simp)
-      apply (unfold minus_vector_def; transfer; rule ext; simp)
+      apply (transfer; subst ab_group_add_class.ab_diff_conv_add_uminus; simp)
      apply (transfer; rule ext; simp add: distrib_left)
     apply (transfer; rule ext; simp add: distrib_right)
    apply (transfer; rule ext; simp)
@@ -450,7 +453,19 @@ proof standard
 qed
 end
 
-lemma norm_vector_component: "norm (Rep_vector x i) \<le> norm x" sorry
+lemma norm_vector_component: "norm (Rep_vector x i) \<le> norm x"
+proof transfer
+  fix x :: "'a \<Rightarrow> complex" and i
+  assume has: "has_ell2_norm x"
+  have "cmod (x i) = L2_set (cmod \<circ> x) {i}" by auto
+  also have "\<dots> \<le> ell2_norm x"
+    apply (subst ell2_norm_L2_set, fact has)
+    apply (rule cSUP_upper)
+     apply simp
+    using has unfolding has_ell2_norm_L2_set by simp
+  finally show "cmod (x i) \<le> ell2_norm x" by assumption
+qed
+
 lemma Cauchy_vector_component: 
   fixes X
   defines "x i == Rep_vector (X i)"
@@ -482,6 +497,8 @@ instance sorry
   fix X :: "nat \<Rightarrow> 'a vector"
   assume "Cauchy X"
   define x where "x i = Rep_vector (X i)" for i
+  then have [transfer_rule]: "rel_fun (=) (pcr_vector (=)) x X"
+    unfolding vector.pcr_cr_eq cr_vector_def rel_fun_def by simp
 
   from \<open>Cauchy X\<close> have "Cauchy (\<lambda>i. x i j)" for j
     unfolding x_def
@@ -490,17 +507,23 @@ instance sorry
     by (simp add: Cauchy_convergent_iff)
   then obtain Lx where "(\<lambda>i. x i j) \<longlonglongrightarrow> Lx j" for j
     unfolding convergent_def by metis
+
   define L where "L = Abs_vector Lx"
-  have "X \<longlonglongrightarrow> L"
+  have "has_ell2_norm Lx" sorry
+  then have [transfer_rule]: "pcr_vector (=) Lx L"
+    unfolding vector.pcr_cr_eq cr_vector_def
+    unfolding L_def apply (subst Abs_vector_inverse) by auto
+
+  have XL: "X \<longlonglongrightarrow> L"
   proof (rule LIMSEQ_I)
     fix r::real assume "0<r"
-    
-  show "convergent X"
-  proof (rule convergentI, rule LIMSEQ_I)
-    fix r::real assume "0<r"
-    
-    show "\<exists>no. \<forall>n\<ge>no. norm (X n - L) < r" sorry
+    show "\<exists>no. \<forall>n\<ge>no. norm (X n - L) < r"
+      apply transfer
+      sorry
   qed
+
+  show "convergent X"
+    using XL by (rule convergentI)
 qed *)
 end
 

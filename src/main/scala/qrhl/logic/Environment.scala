@@ -2,6 +2,7 @@ package qrhl.logic
 
 import qrhl.UserException
 import info.hupel.isabelle.pure
+import info.hupel.isabelle.pure.Typ
 
 import scala.collection.mutable
 
@@ -19,7 +20,15 @@ final class Environment private
 //   val indexedNames : Set[String], // all variable names together, program variables indexed with 1/2
 //   val nonindexedNames : Set[String], // all variable names together, without 1/2-index
    val programs : Map[String,ProgramDecl]) {
+  def getCVariable(res: String): CVariable =
+    cVariables.getOrElse(res, throw UserException(s"Classical variable $res not declared"))
+  def getQVariable(res: String): QVariable =
+    qVariables.getOrElse(res, throw UserException(s"Quantum variable $res not declared"))
+  def getAmbientVariable(res: String): Typ =
+    ambientVariables.getOrElse(res, throw UserException(s"Ambient variable $res not declared"))
+
   /** Checks whether the ambient variable "variable" is used in the definition of some program
+    *
     * @return Some(programName) if the variable is used in program programName, None otherwise
     */
   def variableUsedInPrograms(variable: String) : Option[String] = {

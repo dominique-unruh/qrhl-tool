@@ -89,7 +89,11 @@ fun seq_tac i j B ctxt = SUBGOAL_with_check ctxt (seq_tac_checks i j) (fn (goal,
       resolve_tac ctxt [rule] n
     end)
 
+(* Applies tac to tactic tac to the goal t.
+   Returns NONE if tac fails, and the list of new subgoals otherwise.
 
+   t has to be a term of type bool.
+   The subgoals are returned without Trueprop *)
 fun tac_on_term tac ctx t =
   let val goal = Goal.init (Thm.cterm_of ctx (HOLogic.mk_Trueprop t))
   in
@@ -98,6 +102,8 @@ fun tac_on_term tac ctx t =
     | SOME (goal',_) => SOME (Thm.prems_of goal' |> map HOLogic.dest_Trueprop)
   end
 
+(* Like tac_on_term, but works on terms of the form A1\<Longrightarrow>A2\<Longrightarrow>\<dots>\<Longrightarrow>B and
+   operates on B only. (Carries over the premises to all subgoals.) *)
 fun tac_on_term_concl tac ctxt (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) = 
       Option.map (map (fn t => HOLogic.mk_imp (a, t)))
       (tac_on_term_concl tac ctxt b)
@@ -110,7 +116,16 @@ fun seq_tac_on_term i j B ctx = tac_on_term_concl (seq_tac i j B ctx 1) ctx
 val get_wp1_assign = get_wp1_rule @{thms wp1_assign}
 val get_wp1_sample = get_wp1_rule @{thms wp1_sample} *)
 
+(* "wp_tac0 true ctxt i" is a tactic that operates on the i-th goal which is assumed to be of 
+   the form "qrhl ?A p1 skip B" where ?A is a schematic variable.
+   wp_tac0 solves the subgoal (if p1 is built only from supported statements) and instantiates ?A
+   to be the weakest precondition.
 
+   "wp_tac0 false" operates analogously, except that it expects a goal of the form "qrhl ?A skip p2 B"
+
+   The resulting weakest precondition is not cleaned up (e.g., contains terms such as 
+   subst_expression etc.)
+*)
 fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
   val (pre,p1,p2,post) = Encoding.dest_qrhl_goal goal
   fun lr l r = if left then l else r
