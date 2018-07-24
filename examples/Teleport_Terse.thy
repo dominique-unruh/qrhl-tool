@@ -9,4 +9,3 @@ lemma teleport_terse:
   by eval
 
 end
-                                                                                                            

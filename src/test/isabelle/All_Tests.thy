@@ -8,8 +8,8 @@ theory All_Tests
     "QRHL-Examples.Chsh" "QRHL-Examples.PrgEnc" "QRHL-Examples.Code_Example"
     "QRHL-Examples.EPR" "QRHL-Examples.RandomOracle"
 begin
-                  
-ML \<open> 
+
+ML \<open>
 
 val has_missing = Unsynchronized.ref false
 
@@ -32,6 +32,7 @@ val _ = examples |> map (fn f =>
   if member op= theories f then () else (warning ("Add \"QRHL-Examples."^f^"\" to the imports"); has_missing := true))
 
 val _ = if !has_missing then error "Please fix imports" else ()
+
 \<close>
 
 end
