@@ -140,7 +140,7 @@ setup {* Sign.add_const_constraint (\<^const_name>\<open>embedding\<close>,SOME 
 (* a variable, refers to a location in a memory *)
 typedef (overloaded) 'a variable = "{v::variable_raw. range (embedding::'a=>universe) = snd (Rep_variable_raw v)}" sorry
 
-setup {* Sign.add_const_constraint (@{const_name embedding},SOME @{typ "'a::value=>universe"}) *}
+setup {* Sign.add_const_constraint (@{const_name embedding},SOME @{typ "'a::universe=>universe"}) *}
 
 definition variable_name :: "'a variable \<Rightarrow> string" where "variable_name v = fst (Rep_variable_raw (Rep_variable v))"
 
