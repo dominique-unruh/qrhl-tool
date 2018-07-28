@@ -17,6 +17,7 @@ fun assert_aconv_thm y x =
 
 fun assert_aconv_conv conv input expected =
   let val thm = conv input
+      val _ = Thm.proof_body_of thm (* Makes sure that all proofs are executed and succeed *)
       val (lhs,rhs) = Logic.dest_equals (Thm.prop_of thm)
       val _ = if lhs aconv (Thm.term_of input) then () else error ("Conversion returned wrong lhs")
   in

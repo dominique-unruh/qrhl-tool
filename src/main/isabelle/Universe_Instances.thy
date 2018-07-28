@@ -2,7 +2,9 @@ theory Universe_Instances
   imports Complex_Main Universe CryptHOL.Misc_CryptHOL
 begin
 
-derive universe real 
+no_notation HLD_nxt (infixr "\<cdot>" 65)
+
+derive universe real
 
 derive universe nlist
 
