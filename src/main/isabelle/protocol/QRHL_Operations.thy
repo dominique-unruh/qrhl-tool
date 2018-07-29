@@ -130,11 +130,11 @@ operation_setup fixTac = {*
    action = fn (expr,var) => QRHL.fixTac expr var}
 *}
 
-(* operation_setup rndWp = {*
+operation_setup rndWp = {*
   {from_lib = Codec.tuple (Codec.triple Codec.string Codec.term Codec.string) (Codec.triple Codec.term Codec.typ Codec.term),
    to_lib = Codec.term,
    action = fn ((v1, e1, v2), (e2, T, B)) => QRHL.rndWp v1 e1 v2 e2 T B}
-*} *)
+*}
 
 operation_setup rndWp2 = {*
   {from_lib = Codec.triple (Codec.triple Codec.string Codec.typ Codec.term) (Codec.triple Codec.string Codec.typ Codec.term) (Codec.tuple Codec.term Codec.term),

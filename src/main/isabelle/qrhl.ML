@@ -76,7 +76,7 @@ in
   extend_thm'
 end
 
-
+(*
 (* TODO remove *)
 fun qinitWp post e Q =
   let val (vs,vsT) = variables Q 
@@ -87,7 +87,9 @@ fun qinitWp post e Q =
   in
     @{const inf(predicate)} $ isunit $ qpre
   end
-
+ *)
+        
+        (*
 (* TODO remove *)
 fun qapplyWp post e Q =
   let val (vs,vsT) = variables Q 
@@ -103,7 +105,9 @@ fun qapplyWp post e Q =
   in
     unitary_etc
   end
+         *)
 
+        (*
 (* TODO remove *)
 fun measureWp B x e Q =
   let val B_z = abstract_over(x,B)
@@ -121,8 +125,9 @@ fun measureWp B x e Q =
   in
   @{const inf(predicate)} $ total $ Inf_Be
   end
+         *)
 
-
+(*
 (* TODO remove *)
 fun ifWp e thenWp elseWp =
   let val Cla_e = \<^const>\<open>classical_subspace\<close> $ e
@@ -132,7 +137,9 @@ fun ifWp e thenWp elseWp =
   in
     @{const inf(predicate)} $ then' $ else'
   end
-
+ *)
+        
+(*
 (* TODO remove *)
 fun sampleWp v T e B =
     let val distrT = Type(\<^type_name>\<open>distr\<close>,[T])
@@ -151,10 +158,9 @@ fun sampleWp v T e B =
     in
       @{const inf(predicate)} $ total $ B2
     end
+ *)
 
 
-
-(* TODO remove *)
 fun rndWp v1 e1 v2 e2 T B =
     let val distrT = Type(\<^type_name>\<open>distr\<close>,[T])
         val _ = if fastype_of e1 = distrT then ()
