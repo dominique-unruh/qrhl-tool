@@ -1,9 +1,12 @@
 theory Test
   imports QRHL.Encoding QRHL.Tactics QRHL.QRHL_Code "HOL-Eisbach.Eisbach_Tools" CryptHOL.Cyclic_Group
-  (* "HOL-Imperative_HOL.Imperative_HOL" *)
+  (* "HOL-Imperative_HOL.Imperative_HOL" *) QRHL.QRHL
 begin
 
-
+term true
+term True
+term top
+(* term "Cla[top]" *)
 
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }

@@ -42,8 +42,8 @@ class QRHLSubgoalTest extends FunSuite {
   test("toExpression welltyped roundtrip 2") {
     val left = Block(While(pb("1=2"), Block()))
     val right = Block(IfThenElse(pb("1=2"), Block(), Block()))
-    val pre = pp("Cla[true]")
-    val post = pp("Cla[false]")
+    val pre = pp("Cla[True]")
+    val post = pp("Cla[False]")
     testToExpressionWelltypedRoundtrip(tl.state.isabelle, left,right,pre,post)
   }
 

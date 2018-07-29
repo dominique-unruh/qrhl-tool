@@ -47,7 +47,12 @@ object Parser extends RegexParsers {
 //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
     scanInnerSyntax ^^ { str:String => context.isabelle match {
       case None => throw UserException(noIsabelleError)
-      case Some(isa) => Expression(isa, str  /*str.mkString.trim*/, typ)
+      case Some(isa) =>
+        val e = Expression(isa, str  /*str.mkString.trim*/, typ)
+        for (v <- e.variables)
+          if (!context.environment.variableExists(v))
+            throw UserException(s"Variable $v was not declared (in expression $str")
+        e
     } }
 
   private val assignSymbol = literal("<-")

@@ -36,7 +36,7 @@ fun add_index_to_expression t left =
   end
     
 fun term_to_expression ctx t =
-  let val is_classical = QRHL.is_classical_variable ctx
+  let val is_classical = Prog_Variables.is_classical_variable ctx
       val frees = Term.add_frees t [] |> filter (fn (v,_) => is_classical v) |> rev
       val (vars,varsT) = 
         frees |> map (fn (v,T) => ("var_"^v,T)) |> QRHL.varterm_from_list |> QRHL.mk_varterm
@@ -70,8 +70,8 @@ fun mk_tuple_untyped [] = HOLogic.unit
   | mk_tuple_untyped ts = foldr1 mk_prod_untyped ts;
 
 fun term_to_expression_untyped ctx t =
-  let val lookup_var = QRHL.lookup_variable ctx
-      val frees = Term.add_frees t [] |> filter (fn (v,_) => lookup_var v = SOME QRHL.Classical) |> rev
+  let val lookup_var = Prog_Variables.lookup_variable ctx
+      val frees = Term.add_frees t [] |> filter (fn (v,_) => lookup_var v = SOME Prog_Variables.Classical) |> rev
       val (vars,varsT) = 
         frees |> map (fn (v,T) => ("var_"^v,T)) |> QRHL.varterm_from_list |> QRHL.mk_varterm
       val pattern = mk_tuple_untyped (map Free frees)
