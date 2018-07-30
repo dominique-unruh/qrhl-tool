@@ -89,7 +89,7 @@ fun seq_tac i j B ctxt = SUBGOAL_with_check ctxt (seq_tac_checks i j) (fn (goal,
       resolve_tac ctxt [rule] n
     end)
 
-(* Applies tac to tactic tac to the goal t.
+(* Applies tactic tac to the goal t.
    Returns NONE if tac fails, and the list of new subgoals otherwise.
 
    t has to be a term of type bool.
@@ -102,7 +102,7 @@ fun tac_on_term tac ctx t =
     | SOME (goal',_) => SOME (Thm.prems_of goal' |> map HOLogic.dest_Trueprop)
   end
 
-(* Like tac_on_term, but works on terms of the form A1\<Longrightarrow>A2\<Longrightarrow>\<dots>\<Longrightarrow>B and
+(* Like tac_on_term, but works on terms of the form A1-->A2-->\<dots>-->B and
    operates on B only. (Carries over the premises to all subgoals.) *)
 fun tac_on_term_concl tac ctxt (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) = 
       Option.map (map (fn t => HOLogic.mk_imp (a, t)))

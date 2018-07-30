@@ -50,7 +50,7 @@ object DistributionDirectory {
 }
 
 class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
-  val version = Version.Stable("2018-RC2") // TODO 2018
+  val version = Version.Stable("2018-RC3") // TODO 2018
 
   private val auto = path=="auto"
 
