@@ -1,6 +1,6 @@
 theory Complex_L2
   imports "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum"
-    Complex_Inner_Product Infinite_Set_Sum_Missing Complex_Main
+    Complex_Inner_Product Infinite_Set_Sum_Missing Complex_Main Universe_Instances
 begin
 
 hide_const (open) span
@@ -75,6 +75,7 @@ notation
 typedef 'a vector = "{x::'a\<Rightarrow>complex. has_ell2_norm x}"
   unfolding has_ell2_norm_def by (rule exI[of _ "\<lambda>_.0"], auto)
 setup_lifting type_definition_vector
+derive universe vector
 
 lemma SUP_max:
   fixes f::"'a::order\<Rightarrow>'b::conditionally_complete_lattice"
@@ -620,6 +621,7 @@ typedef 'a subspace = "{A::'a vector set. is_subspace A}"
   morphisms subspace_to_set Abs_subspace
   apply (rule exI[of _ "{0}"]) by simp
 setup_lifting type_definition_subspace
+derive universe subspace
 
 instantiation subspace :: (type)zero begin (* The subspace {0} *)
 lift_definition zero_subspace :: "'a subspace" is "{0::'a vector}" by simp

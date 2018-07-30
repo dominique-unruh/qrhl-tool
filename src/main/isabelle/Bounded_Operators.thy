@@ -9,6 +9,7 @@ typedef ('a,'b) bounded = "{A::'a vector\<Rightarrow>'b vector. bounded_clinear 
   morphisms applyOp Abs_bounded
   using bounded_clinear_zero by blast
 setup_lifting type_definition_bounded
+derive universe bounded
 
 lift_definition idOp :: "('a,'a)bounded" is id
   by (metis bounded_clinear_ident comp_id fun.map_ident)

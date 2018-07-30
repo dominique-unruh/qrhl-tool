@@ -143,6 +143,7 @@ axiomatization qrhl :: "predicate expression \<Rightarrow> program list \<Righta
 
 typedecl program_state
 
+(* TODO remove *)
 axiomatization probability_old :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 syntax "_probability_old" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("PrOld[_:(_'(_'))]")
 parse_translation \<open>[("_probability_old", fn ctx => fn [Const(v,_),p,rho] =>

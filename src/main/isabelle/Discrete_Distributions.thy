@@ -1,13 +1,15 @@
 chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
-  imports Complex_Main "HOL-Library.Rewrite"
+  imports Complex_Main "HOL-Library.Rewrite" Universe_Instances
 begin
 
 typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}" 
   morphisms prob Abs_distr
   apply (rule exI[of _ "\<lambda>x. 0"]) by auto
 setup_lifting type_definition_distr
+
+derive universe distr
 
 instantiation distr :: (type)zero begin
 lift_definition zero_distr :: "'a distr" is "(\<lambda>_. 0)" by simp
