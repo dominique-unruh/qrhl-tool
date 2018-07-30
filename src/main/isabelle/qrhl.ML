@@ -677,6 +677,29 @@ fun variable_rewriting_simproc _ ctx ct =
   end 
   handle TERM _ => NONE *)
 
+fun program_type args sort a mx lthy = 
+  let val (T,lthy) = Typedecl.typedecl {final = true} (a, args, mx) lthy
+      val (typname,_) = dest_Type T
+      val lthy = if sort=dummyS then lthy else
+                     Local_Theory.background_theory (Axclass.arity_axiomatization (typname, map snd args, sort)) lthy
+      val lthy = Local_Theory.background_theory (Axclass.arity_axiomatization 
+                      (typname, map (fn (_,sort) => @{class universe}::sort) args, @{sort universe})) lthy
+      val _ = if sort <> dummyS then
+                tracing ("Axiomatizing type of sort "^Syntax.string_of_sort lthy sort^".\n"^
+                         "Also axiomatizing as sort "^Syntax.string_of_sort lthy @{sort universe}^" assuming the type args are additionally of that sort.\n"^
+                         "This is unsound if no such type satisfying those sort constraints exists! Check!")
+              else ()
+  in lthy end
+fun program_type_cmd args sort a mx lthy = let
+  val default_sort = Type.defaultS (Proof_Context.tsig_of lthy)
+  fun read_constraint lthy c = case Typedecl.read_constraint lthy c of [""] => default_sort | s => s
+  val args' = map (apsnd (read_constraint lthy)) args
+  val sort' = case sort of NONE => dummyS | SOME s => Syntax.read_sort lthy s
+  in program_type args' sort' a mx lthy end
 
+val _ =
+  Outer_Syntax.local_theory \<^command_keyword>\<open>declare_variable_type\<close> "type declaration for qRHL programs"
+    (Parse.type_args_constrained -- Parse.binding -- Parse.opt_mixfix -- Scan.option (Parse.$$$ "::" |-- Parse.!!! Parse.sort)
+      >> (fn (((args, a), mx), sort) => program_type_cmd args sort a mx))
 
 end

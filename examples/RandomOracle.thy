@@ -6,15 +6,9 @@ section \<open>Specification\<close>
 
 text \<open>We declare three types x,y,r. All three types are finite, and on y, + is the XOR operation.\<close>
 
-typedecl x
-typedecl y
-typedecl r
-
-instance x :: finite sorry
-instance y :: finite sorry
-instance r :: finite sorry
-
-instance y :: xor_group sorry
+declare_variable_type x :: finite
+declare_variable_type y :: "{finite,xor_group}"
+declare_variable_type r :: finite
 
 text \<open>\<pi> is an arbitrary bijection from r to y\<close>
 

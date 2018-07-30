@@ -5,6 +5,21 @@ begin
 
 
 
+declare [[show_sorts]]
+declare_variable_type ('a::finite,'c) bla :: "{finite,group_add}"
+declare_variable_type xxx :: group_add
+(* typedef ('a::finite,'b) blu = "UNIV::int set" by simp *)
+
+
+
+term "x::(_,_)bla == x::_::type"
+
+(* instantiation int :: "{finite,group_add}" begin *)
+
+typ "(int,int) bla"
+typ "(bool,int) bla"
+
+
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }
 val sorry_table = Synchronized.var "sorry" (Inttab.empty : sorry_location Inttab.table)
@@ -231,9 +246,10 @@ lemma
 
 end
 
-typedecl G
-instance G::"{power,ab_semigroup_mult,inverse}" sorry
+declare_variable_type G :: "{power,ab_semigroup_mult,inverse}"
+
 axiomatization G::"G cyclic_group" and g::G
+
 (* term "(^^)" *)
 axiomatization powG :: "G \<Rightarrow> int \<Rightarrow> G" (infixr "\<^sup>^" 80)
 (* locale group_G = cyclic_group G  *)

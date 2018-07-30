@@ -62,6 +62,12 @@ fun is_classical_variable ctx name = case Symtab.lookup (VarTypes.get ctx) name 
   SOME Classical => true
   | _ => false
 
+fun check_variable_type ctxt T =
+  if Sign.of_sort (Proof_Context.theory_of ctxt) (T, \<^sort>\<open>universe\<close>) then () else
+    error ("Type of variable ("^Syntax.string_of_typ ctxt T^") must be of sort "^Syntax.string_of_sort ctxt @{sort universe}^".\n"^
+           "In the Isabelle theory, use 'derive universe T' for every type T defined using typedef/datatype,\n"^
+           "and use declare_variable_type instead of typedecl")
+
 fun declare_variable_lthy name vartype = 
   Local_Theory.declaration {pervasive=true, syntax=false} (fn _ => 
     Context.mapping I (
@@ -77,8 +83,39 @@ fun varname_assumption cq bind T =
       val rhs = HOLogic.mk_string name
   in HOLogic.mk_eq (lhs,rhs) |> HOLogic.mk_Trueprop end
 
+fun addQVariableNameAssumption cq bind T ctxt =
+  let val assm = varname_assumption cq bind T
+      val ctxt1 = Variable.declare_term assm ctxt
+      val (_,ctxt2) = Proof_Context.add_assms Assumption.assume_export
+                  [((Binding.suffix_name "_varname" bind,[Simplifier.simp_add]), [(assm,[])])] ctxt1
+  in
+    ctxt2
+  end
+
+
+fun declare_variable ctxt bind T cq =
+  let val _ = check_variable_type ctxt T
+      val qT = mk_variableT T
+      val v = Binding.name_of bind
+      val vars = if cq=Classical then [(bind,T),(Binding.suffix_name "1" bind,T),(Binding.suffix_name "2" bind,T),
+                                       (bind |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "1" |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "2" |> Binding.prefix_name "var_",qT)]
+                                  else [(bind,qT),(Binding.suffix_name "1" bind,qT),(Binding.suffix_name "2" bind,qT)]
+      val (_,ctxt) = Variable.add_fixes_binding (map fst vars) ctxt
+      val ctxt = fold (fn (v,T) => Variable.declare_term (Free(Binding.name_of v,T))) vars ctxt
+      val ctxt = addQVariableNameAssumption cq bind T ctxt
+      val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "1" bind) T ctxt
+      val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "2" bind) T ctxt
+      val ctxt = VarTypes.map (Symtab.insert op= (v,cq)) ctxt
+      val ctxt = VarTypes.map (Symtab.insert op= (v^"1",cq)) ctxt
+      val ctxt = VarTypes.map (Symtab.insert op= (v^"2",cq)) ctxt
+  in
+    ctxt
+  end
+
+
 fun variables vars gthy = 
-let fun elems0 idx = [
+let val _ = app (fn (_,_,T) => check_variable_type (Proof_Context.init_global gthy) T)
+    fun elems0 idx = [
       Element.Fixes (map_filter (fn (cq,bind,T) => 
            case cq of Classical => SOME (bind |> Binding.suffix_name idx, SOME T, Mixfix.NoSyn) | Quantum => NONE) vars),
       Element.Fixes (map (fn (cq,bind,T) => (bind |> (case cq of Classical => Binding.prefix_name "var_" | Quantum => I)
@@ -90,34 +127,6 @@ let fun elems0 idx = [
     val (_,lthy) = Expression.add_locale (Binding.name ("variables_"^string_of_int(serial()))) Binding.empty ([],[]) elems gthy
     val lthy2 = fold (fn (cq,bind,_) => fn lthy' => declare_variable_lthy (Binding.name_of bind) cq lthy') vars lthy
 in lthy2 end
-
-fun addQVariableNameAssumption cq bind T ctxt =
-  let val assm = varname_assumption cq bind T
-      val ctxt1 = Variable.declare_term assm ctxt
-      val (_,ctxt2) = Proof_Context.add_assms Assumption.assume_export
-                  [((Binding.suffix_name "_varname" bind,[Simplifier.simp_add]), [(assm,[])])] ctxt1
-  in
-    ctxt2
-  end
-
-
-fun declare_variable ctx bind T cq =
-  let val qT = mk_variableT T
-      val v = Binding.name_of bind
-      val vars = if cq=Classical then [(bind,T),(Binding.suffix_name "1" bind,T),(Binding.suffix_name "2" bind,T),
-                                       (bind |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "1" |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "2" |> Binding.prefix_name "var_",qT)]
-                                  else [(bind,qT),(Binding.suffix_name "1" bind,qT),(Binding.suffix_name "2" bind,qT)]
-      val (_,ctx) = Variable.add_fixes_binding (map fst vars) ctx
-      val ctx = fold (fn (v,T) => Variable.declare_term (Free(Binding.name_of v,T))) vars ctx
-      val ctx = addQVariableNameAssumption cq bind T ctx
-      val ctx = addQVariableNameAssumption cq (Binding.suffix_name "1" bind) T ctx
-      val ctx = addQVariableNameAssumption cq (Binding.suffix_name "2" bind) T ctx
-      val ctx = VarTypes.map (Symtab.insert op= (v,cq)) ctx
-      val ctx = VarTypes.map (Symtab.insert op= (v^"1",cq)) ctx
-      val ctx = VarTypes.map (Symtab.insert op= (v^"2",cq)) ctx
-  in
-    ctx
-  end
 
 fun variables_cmd vars thy = 
   let (* val ctxt = Context.proof_of gthy *)

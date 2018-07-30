@@ -96,7 +96,7 @@ lemma prg1B1_prg1B21: Pr[b=1:prg1B1(rho)] = Pr[b=1:prg1B2(rho)].
  swap left.
  swap right.
  rnd r,r <- map_distr (λr. (r,r+m11+m22)) (uniform UNIV).
- simp aux_bij mysimp2.
+ simp aux_bij.
  equal.
   simp!.
  simp.

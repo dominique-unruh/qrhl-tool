@@ -1,7 +1,7 @@
 chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
-  imports Complex_Main "HOL-Library.Rewrite" Universe_Instances
+  imports Complex_Main "HOL-Library.Rewrite" Universe_Instances_Complex_Main
 begin
 
 typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}" 

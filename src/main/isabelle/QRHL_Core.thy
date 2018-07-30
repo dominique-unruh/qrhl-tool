@@ -1,6 +1,7 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators Discrete_Distributions 
     Universe Misc_Missing Prog_Variables
+  keywords "declare_variable_type" :: thy_decl
 begin
 
 hide_const (open) span

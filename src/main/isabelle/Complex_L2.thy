@@ -1,6 +1,6 @@
 theory Complex_L2
   imports "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum"
-    Complex_Inner_Product Infinite_Set_Sum_Missing Complex_Main Universe_Instances
+    Complex_Inner_Product Infinite_Set_Sum_Missing Complex_Main Universe_Instances_Complex_Main
 begin
 
 hide_const (open) span

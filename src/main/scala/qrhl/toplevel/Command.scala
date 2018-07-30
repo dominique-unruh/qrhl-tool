@@ -3,6 +3,7 @@ package qrhl.toplevel
 import java.nio.file.Path
 
 import info.hupel.isabelle.pure
+import qrhl.isabelle.Isabelle
 import qrhl.logic.{Block, CVariable, QVariable}
 import qrhl.{State, Subgoal, Tactic, UserException}
 
@@ -33,7 +34,7 @@ case class DeclareVariableCommand(name: String, typ: pure.Typ, ambient:Boolean=f
       println(s"Declaring ambient variable $name : $typ.")
       state.declareAmbientVariable(name,typ)
     } else {
-      println(s"Declaring ${if (quantum) "quantum" else "classical"} variable $name : $typ.")
+      println(s"Declaring ${if (quantum) "quantum" else "classical"} variable $name : ${Isabelle.pretty(typ)}.")
       state.declareVariable(name, typ, quantum = quantum)
     }
   }

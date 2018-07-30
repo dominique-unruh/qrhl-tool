@@ -667,6 +667,41 @@ Sign.arity_sorts \<^theory> \<^type_name>\<open>t\<close> \<^sort>\<open>univers
 (* setup {* Typedef.interpretation (Local_Theory.background_theory o Universe.try_instantiate_universe) *} *)
 
 derive universe int
+derive universe unit
 derive universe list
+derive universe char
+derive universe tuple_isomorphism
+derive universe integer
+derive universe property_pre_property_bdT
+derive universe sumbool
+derive universe Enum.finite_1 Enum.finite_2 Enum.finite_3 Enum.finite_4 Enum.finite_5
+derive universe "Code_Evaluation.term"
+derive universe String.literal
+derive universe typerep
+derive universe num
+derive universe natural
+derive universe Quickcheck_Exhaustive.three_valued
+derive universe lazy_sequence
+derive universe property_pre_property
+derive universe Quickcheck_Narrowing.cfun
+derive universe Quickcheck_Exhaustive.unknown
+derive universe option
+derive universe Predicate.pred
+derive universe Nitpick.word
+derive universe Predicate.seq
+derive universe filter
+derive universe Quickcheck_Narrowing.ffun
+derive universe Nitpick.pair_box
+derive universe Nitpick.fun_box
+
+ML \<open> (* Lists all types that are not declared as sort universe *)
+\<^context>
+|> Proof_Context.tsig_of
+|> Type.rep_tsig
+|> #log_types
+|> app (fn tn => (Proof_Context.arity_sorts \<^context> tn @{sort universe}; ()) 
+    handle ERROR _ => tracing ("NO: "^Syntax.string_of_typ \<^context> (Type(tn,[]))^"    "^tn))
+\<close>
+
 
 end
