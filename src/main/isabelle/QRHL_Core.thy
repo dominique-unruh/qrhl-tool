@@ -135,14 +135,14 @@ section \<open>Program variables\<close>
 
 typedef variable_raw = "{v :: string * universe set. snd v \<noteq> {}}" by auto
 
-setup {* Sign.add_const_constraint (\<^const_name>\<open>embedding\<close>,SOME \<^typ>\<open>'a=>universe\<close>) *}
-
 (* a variable, refers to a location in a memory *)
-typedef (overloaded) 'a variable = "{v::variable_raw. range (embedding::'a=>universe) = snd (Rep_variable_raw v)}" sorry
+typedef (overloaded) ('a::"value") variable = "{v::variable_raw. range (embedding::'a=>universe) = snd (Rep_variable_raw v)}"
+  apply (rule exI[where x="Abs_variable_raw (undefined, range embedding)"])
+  apply simp
+  apply (subst Abs_variable_raw_inverse)
+  by auto
 
-setup {* Sign.add_const_constraint (@{const_name embedding},SOME @{typ "'a::value=>universe"}) *}
-
-definition variable_name :: "'a variable \<Rightarrow> string" where "variable_name v = fst (Rep_variable_raw (Rep_variable v))"
+definition variable_name :: "'a::value variable \<Rightarrow> string" where "variable_name v = fst (Rep_variable_raw (Rep_variable v))"
 
 typedecl 'a "variables" (* represents a tuple of variables, of joint type 'a *)
 
@@ -171,7 +171,7 @@ axiomatization where
   variable_names_cons[simp]: "variable_names (variable_concat X Y) = variable_names X @ variable_names Y"
   and variable_singleton_name[simp]: "variable_names (variable_singleton x) = [variable_name x]"
   and variable_unit_name[simp]: "variable_names variable_unit = []"
-  for X::"'a variables" and Y::"'b variables" and x::"'c variable"
+  for X::"'a::value variables" and Y::"'b::value variables" and x::"'c::value variable"
 
 
 section \<open>Quantum predicates\<close>

@@ -31,8 +31,11 @@ thy
 end
 
 fun try_instantiate_value tycon thy =
-  instantiate_value tycon thy
-  handle ERROR _ => (tracing ("Did not instantiate "^tycon^" :: value"); thy)
-       | THM _ => (tracing ("Did not instantiate "^tycon^" :: value"); thy);
+  let fun err () = (tracing ("Did not instantiate "^Syntax.string_of_typ_global thy (Type(tycon,[]))^" :: "
+                              ^Syntax.string_of_sort_global thy @{sort value}); thy) in
+    instantiate_value tycon thy
+    handle ERROR _ => (err (); thy)
+         | THM _ => (err (); thy)
+  end
 
 end

@@ -2,9 +2,6 @@ theory PrgEnc
   imports QRHL.QRHL
 begin
 
-(* Allows us to use "sorry" *)
-declare[[quick_and_dirty]]
-
 typedecl key
 typedecl msg
 

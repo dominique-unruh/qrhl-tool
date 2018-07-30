@@ -1,9 +1,19 @@
 theory Test
-  imports QRHL.Encoding QRHL.Tactics QRHL.QRHL_Code "HOL-Eisbach.Eisbach_Tools" CryptHOL.Cyclic_Group
-  (* "HOL-Imperative_HOL.Imperative_HOL" *)
+  imports  "HOL-Eisbach.Eisbach_Tools" CryptHOL.CryptHOL
+    QRHL.CryptHOL_Missing QRHL.QRHL
+    QRHL.Universe QRHL.QRHL_Core 
 begin
 
+term nlists
 
+term Uoracle
+
+declare[[coercion_enabled=false]]
+term "x::_::value == x::int"
+
+term "x::_::group_add == x::(bit,_) nlist"
+
+(* int, bit *)
 
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }

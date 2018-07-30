@@ -1,8 +1,15 @@
 theory Universe
-imports Main "HOL.BNF_Cardinal_Order_Relation" (* Misc Tools *) "HOL-Library.Nat_Bijection" "HOL-Library.Rewrite" "HOL-ZF.HOLZF" ML_Term_Antiquot
+  imports Main "HOL.BNF_Cardinal_Order_Relation" (* Misc Tools *) "HOL-Library.Nat_Bijection" "HOL-Library.Rewrite" "HOL-ZF.HOLZF" ML_Term_Antiquot
+
+  (* HOTFIX: *) Complex_Main "HOL-Library.Extended_Nonnegative_Real" "HOL-Library.Numeral_Type" "HOL-Analysis.Sigma_Algebra"
+  "HOL-Analysis.Topology_Euclidean_Space" "HOL-Library.Multiset"
+
 begin
 
 hide_const (open) HOLZF.Inf
+
+(* HOTFIX: *)
+hide_const (open) span
 
 (* For proving instances of types declared with 
   "datatype" (not "datatype_new"), see, e.g., "char"
