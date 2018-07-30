@@ -78,7 +78,7 @@ lemma map_expression3[simp]:
   unfolding map_expression3_def pair_expression_def apply simp
   apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
-axiomatization index_var :: "bool \<Rightarrow> 'a::value variable \<Rightarrow> 'a::value variable" where
+axiomatization index_var :: "bool \<Rightarrow> 'a::universe variable \<Rightarrow> 'a::universe variable" where
   index_var1: "y = index_var True x \<longleftrightarrow> variable_name y = variable_name x @ ''1''" and
   index_var2: "y = index_var False x \<longleftrightarrow> variable_name y = variable_name x @ ''2''"
 
@@ -98,7 +98,7 @@ axiomatization where
   index_vars_singleton[simp]: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>" and
   index_vars_concat[simp]: "index_vars left (variable_concat Q R) = variable_concat (index_vars left Q) (index_vars left R)" and
   index_vars_unit[simp]: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
-for x :: "'a::value variable" and Q :: "'b::value variables" and R :: "'c::value variables"
+for x :: "'a::universe variable" and Q :: "'b::universe variables" and R :: "'c::universe variables"
 
 axiomatization index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression" where
   index_expression_def[simp]: "index_expression left (expression Q e) = expression (index_vars left Q) e"
@@ -135,7 +135,7 @@ and fv_program_qinit: "fv_program (qinit Q e3) = set (variable_names Q) \<union>
 and fv_program_qapply: "fv_program (qapply Q e4) = set (variable_names Q) \<union> fv_expression e4"
 and fv_program_measurement: "fv_program (measurement x R e5) = {variable_name x} \<union> set (variable_names R) \<union> fv_expression e5"
 
-for b p1 p2 :: "program list" and x :: "'a::value variable" and e :: "'a expression"
+for b p1 p2 :: "program list" and x :: "'a::universe variable" and e :: "'a expression"
 and e2 :: "'a distr expression" and e3 :: "'a vector expression" and e4 :: "('a,'a) bounded expression"
 and e5 :: "('a,'b) measurement expression" and Q :: "'a variables" and R :: "'b variables"
 

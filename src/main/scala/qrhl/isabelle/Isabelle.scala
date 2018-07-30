@@ -249,24 +249,25 @@ object Isabelle {
 
 
 
+  val bitT = Type("Misc_Missing.bit", Nil)
   val predicateT = Type("Complex_L2.subspace", List(Type("QRHL_Core.mem2",Nil)))
   val programT = Type("Encoding.program")
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
-  def distrT(typ:ITyp): Type = Type("QRHL_Core.distr", List(typ))
+  def distrT(typ:ITyp): Type = Type("Discrete_Distributions.distr", List(typ))
   def boundedT(typ:ITyp): Type = boundedT(typ,typ)
   def boundedT(inT:ITyp, outT:ITyp) = Type("Bounded_Operators.bounded", List(inT,outT))
   def measurementT(resultT:ITyp, qT: ITyp) = Type("QRHL_Core.measurement", List(resultT, qT))
   def listT(typ:ITyp) : Type = Type("List.list", List(typ))
   val block = Const("Encoding.block", listT(programT) -->: programT)
   def vectorT(typ:ITyp) = Type("Complex_L2.vector", List(typ))
-  def variableT(typ:ITyp) = Type("QRHL_Core.variable", List(typ))
+  def variableT(typ:ITyp) = Type("Prog_Variables.variable", List(typ))
   def dest_variableT(typ: ITyp): ITyp = typ match {
-    case Type("QRHL_Core.variable", List(typ2)) => typ2
+    case Type("Prog_Variables.variable", List(typ2)) => typ2
   }
-  def variablesT(typ:ITyp) : Type = Type("QRHL_Core.variables", List(typ))
+  def variablesT(typ:ITyp) : Type = Type("Prog_Variables.variables", List(typ))
   def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
   //val cvariableT: ITyp => Type = variableT
   def expressionT(typ:ITyp) = Type("Encoding.expression", List(typ))
@@ -301,10 +302,10 @@ object Isabelle {
        prodT(qvTyp, restTyp))
   }
   def qvarTuple_var(qvs:List[QVariable]) : Term = qvarTuple_var0(qvs)._1
-  val variable_unit = Const("QRHL_Core.variable_unit", variablesT(unitT))
-  val variable_singletonName = "QRHL_Core.variable_singleton"
+  val variable_unit = Const("Prog_Variables.variable_unit", variablesT(unitT))
+  val variable_singletonName = "Prog_Variables.variable_singleton"
   def variable_singleton(typ:ITyp) = Const(variable_singletonName, variableT(typ) -->: variablesT(typ))
-  val variable_concatName = "QRHL_Core.variable_concat"
+  val variable_concatName = "Prog_Variables.variable_concat"
   def variable_concat(t1:ITyp, t2:ITyp) = Const(variable_concatName, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1,t2)))
   val realT = Type("Real.real")
   val stringT: Type = listT(Type("String.char"))

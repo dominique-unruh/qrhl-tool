@@ -1,5 +1,6 @@
 package qrhl.tactic
 
+import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Free, Term, Type}
 import info.hupel.isabelle.{Operation, pure}
 import qrhl._
@@ -14,8 +15,8 @@ case object ByQRHLTac extends Tactic {
         val vname = Isabelle.dest_string(v)
         val vvar = state.environment.cVariables.getOrElse(vname, throw UserException(s"$v is not the name of a classical variable")).index(left)
         val vbool = vvar.valueTyp match {
-          case Type("HOL.bool",Nil) => vvar.valueTerm
-          case Type("QRHL_Core.bit",Nil) => bitToBool(vvar.valueTerm)
+          case HOLogic.boolT => vvar.valueTerm
+          case Isabelle.bitT => bitToBool(vvar.valueTerm)
           case _ => throw UserException(s"$vname must have type bool or bit, not ${vvar.valueTyp}")
         }
         Some(vbool,p,rho)
@@ -31,8 +32,9 @@ case object ByQRHLTac extends Tactic {
     }
   }
 
-  private val connectiveT = Type("HOL.bool",Nil) -->: Type("HOL.bool",Nil) -->: Type("HOL.bool",Nil)
-  private def bitToBool(b:Term) = Isabelle.mk_eq(Type("QRHL_Core.bit",Nil), b, Const("Groups.one_class.one", Type("QRHL_Core.bit",Nil)))
+  private val connectiveT = HOLogic.boolT -->: HOLogic.boolT -->: HOLogic.boolT
+  private def bitToBool(b:Term) =
+    Isabelle.mk_eq(Isabelle.bitT, b, Const("Groups.one_class.one", Isabelle.bitT))
 
   val byQRHLPreOp: Operation[(List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), Term]
     = Operation.implicitly[(List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), Term]("byQRHLPre") // TODO: move

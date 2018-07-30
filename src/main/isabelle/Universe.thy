@@ -1,15 +1,9 @@
 theory Universe
   imports Main "HOL.BNF_Cardinal_Order_Relation" (* Misc Tools *) "HOL-Library.Nat_Bijection" "HOL-Library.Rewrite" "HOL-ZF.HOLZF" ML_Term_Antiquot
-
-  (* HOTFIX: *) Complex_Main "HOL-Library.Extended_Nonnegative_Real" "HOL-Library.Numeral_Type" "HOL-Analysis.Sigma_Algebra"
-  "HOL-Analysis.Topology_Euclidean_Space" "HOL-Library.Multiset"
-
+    Deriving.Derive_Manager
 begin
 
 hide_const (open) HOLZF.Inf
-
-(* HOTFIX: *)
-hide_const (open) span
 
 (* For proving instances of types declared with 
   "datatype" (not "datatype_new"), see, e.g., "char"
@@ -164,7 +158,7 @@ end
 
 (* definition "small_cardinal (_::'a itself) = (\<exists>t n (i::'a\<Rightarrow>universe). powertower t \<and> inj i \<and> range i \<subseteq> t n)" *)
 
-class "value" = default +
+class "universe" = default +
   fixes embedding' :: "('a \<Rightarrow> universe) \<times> nat"
   assumes embedding'_range: "range (fst embedding') \<subseteq> universe_powertower (snd embedding')"
   assumes inj_embedding': "inj (fst embedding')"
@@ -174,7 +168,7 @@ definition embedding'_default :: "('a\<Rightarrow>universe) \<times> nat" where
   "embedding'_default == (SOME fn. inj (fst fn) \<and> range (fst fn) \<subseteq> universe_powertower (snd fn))"
 
 definition "embedding = fst embedding'" 
-(* definition embedding :: "'a::value \<Rightarrow> universe" where
+(* definition embedding :: "'a::universe \<Rightarrow> universe" where
   "embedding == (SOME f::'a\<Rightarrow>universe. inj f)" *)
 
 lemma embedding_inv [simp]: "(embedding x = embedding y) = (x = y)"
@@ -185,7 +179,7 @@ lemma embedding_inv' [simp]: "inv embedding (embedding x) = x"
   
 type_synonym 'a universe_embedding = "('a\<Rightarrow>universe)\<times>nat"
 
-instantiation "nat" :: "value" begin
+instantiation "nat" :: "universe" begin
 definition "(embedding'::nat universe_embedding) = embedding'_default"
 instance proof (intro_classes, goal_cases)
 case 1
@@ -200,8 +194,8 @@ case 2 show ?case using theses by simp
 qed
 end
 
-lemma value_classI':
-  assumes "inj (f::'a\<Rightarrow>'b::value)"
+lemma universe_classI':
+  assumes "inj (f::'a\<Rightarrow>'b::universe)"
   shows "range (fst (embedding'_default::'a universe_embedding)) \<subseteq> universe_powertower (snd (embedding'_default::'a universe_embedding))" and "inj (fst (embedding'_default::'a universe_embedding))"
 proof -
 (*   obtain n where range: "range (embedding::'b\<Rightarrow>universe) \<subseteq> universe_powertower n"
@@ -219,7 +213,7 @@ proof -
      by auto
 qed
 
-(* Hack to allow to state lemma value_classI. Is there a cleaner way? *)
+(* Hack to allow to state lemma universe_classI. Is there a cleaner way? *)
 ML {*  
   val consts_to_unconstrain = [\<^const_name>\<open>embedding'\<close>]
   val consts_orig_constraints = map (Sign.the_const_constraint \<^theory>) consts_to_unconstrain
@@ -228,11 +222,11 @@ setup {*
   fold (fn c => fn thy => Sign.add_const_constraint (c,NONE) thy) consts_to_unconstrain
 *}
 
-lemma value_classI:
+lemma universe_classI:
   assumes emb: "(embedding'::'a universe_embedding) = embedding'_default"
-  assumes inj: "inj (f::'a\<Rightarrow>'b::value)"
-  shows "OFCLASS('a, value_class)"
-apply intro_classes using value_classI'[OF inj] unfolding emb by auto
+  assumes inj: "inj (f::'a\<Rightarrow>'b::universe)"
+  shows "OFCLASS('a, universe_class)"
+apply intro_classes using universe_classI'[OF inj] unfolding emb by auto
 
 (* Recover stored type constraints *)
 setup {*
@@ -263,7 +257,7 @@ proof -
   thus ?thesis1 and "PROP ?thesis2" by auto
 qed
 
-instantiation set :: ("value") "value" begin
+instantiation set :: ("universe") "universe" begin
 definition "(embedding' :: 'a set universe_embedding) = 
   (\<lambda>M. val_set_embedding (snd (embedding'::'a universe_embedding)) (fst (embedding'::'a universe_embedding) ` M), 
         Suc (snd (embedding'::'a universe_embedding)))"
@@ -283,7 +277,7 @@ instance proof
 qed
 end
 
-(*instantiation set :: (value) value begin
+(*instantiation set :: (universe) universe begin
 definition "(embedding :: 'a set \<Rightarrow> universe) = embedding_default"
 instance proof
   obtain n where range: "range (embedding::'a\<Rightarrow>universe) \<subseteq> universe_powertower n"
@@ -324,9 +318,9 @@ instance proof
 qed
 end*)
 
-instantiation bool :: "value" begin
+instantiation bool :: "universe" begin
 definition "(embedding' :: bool universe_embedding) = embedding'_default"
-instance apply (rule value_classI[OF embedding'_bool_def, of "\<lambda>b. if b then 0 else Suc 0"])
+instance apply (rule universe_classI[OF embedding'_bool_def, of "\<lambda>b. if b then 0 else Suc 0"])
   apply (rule injI)
   by (case_tac x, case_tac y, auto)
 end
@@ -457,7 +451,7 @@ proof -
     by (auto intro: inj1 inj2)
 qed
 
-instantiation sum :: ("value","value") "value" begin
+instantiation sum :: ("universe","universe") "universe" begin
 definition "(embedding' :: ('a+'b) universe_embedding) = 
   (\<lambda>x. val_sum_embedding (snd (embedding'::'a universe_embedding)) (snd (embedding'::'b universe_embedding))
     (map_sum (fst embedding') (fst embedding') x), 
@@ -479,7 +473,7 @@ case 2
 qed
 end
 
-(*instantiation sum :: (value,value) value begin
+(*instantiation sum :: (universe,universe) universe begin
 instance proof (intro_classes, cases "\<exists>i::'a\<Rightarrow>'b. inj i")
 case True
   then obtain i::"'a\<Rightarrow>'b" where "inj i" by auto
@@ -491,7 +485,7 @@ case True
   hence "\<exists>f::'a+'b\<Rightarrow>'b set set. inj f"
     by (rule exI[of _ i2])
   thus "\<exists>t n (i::'a+'b\<Rightarrow>universe). powertower t \<and> inj i \<and> range i \<subseteq> t n"
-    by (rule value_classI')
+    by (rule universe_classI')
 next 
 case False
   with ordered_cardinals obtain i::"'b\<Rightarrow>'a" where "inj i" by auto
@@ -503,7 +497,7 @@ case False
   hence "\<exists>f::'a+'b\<Rightarrow>'a set set. inj f"
     by (rule exI[of _ i2])
   thus "\<exists>t n (i::'a+'b\<Rightarrow>universe). powertower t \<and> inj i \<and> range i \<subseteq> t n"
-    by (rule value_classI')
+    by (rule universe_classI')
 qed
 end*)
 
@@ -599,7 +593,7 @@ proof -
     unfolding x n m by simp
 qed
 
-instantiation prod :: ("value","value") "value" begin
+instantiation prod :: ("universe","universe") "universe" begin
 definition "(embedding' :: ('a\<times>'b) universe_embedding) = 
   (\<lambda>x. val_prod_embedding (map_prod (fst embedding') (fst embedding') x), 
   prod_encode (snd (embedding'::'a universe_embedding), snd (embedding'::'b universe_embedding)) + 3)"
@@ -617,28 +611,28 @@ instance proof
 qed
 end
 
-instantiation "fun" :: ("value","value")"value" begin
+instantiation "fun" :: ("universe","universe")"universe" begin
 definition "(embedding' :: ('a\<Rightarrow>'b) universe_embedding) = embedding'_default"
-instance apply (rule value_classI[OF embedding'_fun_def, of "\<lambda>f. {(x,f x)| x. True}"])
+instance apply (rule universe_classI[OF embedding'_fun_def, of "\<lambda>f. {(x,f x)| x. True}"])
   by (rule injI, auto)
 end
 
-instantiation list :: ("value") "value" begin
+(* instantiation list :: ("universe") "universe" begin
 definition "(embedding' :: 'a list universe_embedding) = embedding'_default"
-instance apply (rule value_classI[OF embedding'_list_def, of "\<lambda>l. (length l, nth l)"])
+instance apply (rule universe_classI[OF embedding'_list_def, of "\<lambda>l. (length l, nth l)"])
   by (rule injI, metis nth_equalityI old.prod.inject)
-end
+end *)
 
 local_setup {* 
   Local_Theory.define ((\<^binding>\<open>embedding'_UNCONSTRAINED\<close>,NoSyn),((\<^binding>\<open>embedding'_UNCONSTRAINED_def\<close>,[]),
       Const(\<^const_name>\<open>embedding'\<close>,\<^typ>\<open>'a universe_embedding\<close>))) #> snd
 *}
 
-lemma OFCLASS_value_typedef[unfolded embedding'_UNCONSTRAINED_def]:
-  fixes Rep::"'a\<Rightarrow>'b::value"
+lemma OFCLASS_universe_typedef[unfolded embedding'_UNCONSTRAINED_def]:
+  fixes Rep::"'a\<Rightarrow>'b::universe"
   assumes emb: "(embedding'_UNCONSTRAINED :: 'a universe_embedding) \<equiv> (fst embedding' o Rep, snd (embedding'::'b universe_embedding))"
   assumes inj: "\<And>x y. (Rep x = Rep y) = (x = y)" 
-  shows "OFCLASS('a,value_class)"
+  shows "OFCLASS('a,universe_class)"
 proof (intro_classes, fold embedding'_UNCONSTRAINED_def)
   let ?e = "embedding'_UNCONSTRAINED :: 'a universe_embedding"
   show "range (fst ?e) \<subseteq> universe_powertower (snd ?e)"
@@ -649,11 +643,30 @@ proof (intro_classes, fold embedding'_UNCONSTRAINED_def)
 qed
 
 
-subsection {* Automatically instantiate new types (defined via typedef) *}
+subsection {* Automatically instantiate new types using @{command derive} *}
+
+(* datatype 'a::finite xxx = XXX 'a 
+typedef 'a::finite y = "UNIV :: 'a set" by simp
+datatype z = Z "(int+int) xxx"
+typedef zz = "UNIV :: int set" by simp
+typedef ('a,'b) t = "UNIV :: 'a set" by simp *)
 
 ML_file "universe.ML"
 
+setup \<open>Derive_Manager.register_derive "universe" "Instantiates the given type with sort universe" Universe.generate_universe_cmd\<close>
 
-setup {* Typedef.interpretation (Local_Theory.background_theory o Universe.try_instantiate_value) *}
+(* declare[[show_sorts]]
+(* term "Rep_y" *)
+derive universe t
+ML \<open>
+Sign.arity_sorts \<^theory> \<^type_name>\<open>t\<close> \<^sort>\<open>universe\<close>
+|> map (Syntax.string_of_sort \<^context>) |> map writeln
+\<close>
+ *)
+
+(* setup {* Typedef.interpretation (Local_Theory.background_theory o Universe.try_instantiate_universe) *} *)
+
+derive universe int
+derive universe list
 
 end

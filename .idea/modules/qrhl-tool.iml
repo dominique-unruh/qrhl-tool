@@ -73,9 +73,9 @@
     <orderEntry type="library" name="sbt: org.tukaani:xz:1.8:jar" level="project" />
     <orderEntry type="library" name="sbt: org.xerial:sqlite-jdbc:3.23.1:jar" level="project" />
     <orderEntry type="library" name="sbt: info.hupel:classy:0.2.1:jar" level="project" />
-    <orderEntry type="library" name="sbt: info.hupel:libisabelle-setup_2.12:1.0.0-RC2:jar" level="project" />
-    <orderEntry type="library" name="sbt: info.hupel:libisabelle_2.12:1.0.0-RC2:jar" level="project" />
-    <orderEntry type="library" name="sbt: info.hupel:pide-interface_2.12:1.0.0-RC2:jar" level="project" />
-    <orderEntry type="library" name="sbt: info.hupel:pide-package_2.12:1.0.0-RC2:jar" level="project" />
+    <orderEntry type="library" name="sbt: info.hupel:libisabelle-setup_2.12:1.0.0-RC3:jar" level="project" />
+    <orderEntry type="library" name="sbt: info.hupel:libisabelle_2.12:1.0.0-RC3:jar" level="project" />
+    <orderEntry type="library" name="sbt: info.hupel:pide-interface_2.12:1.0.0-RC3:jar" level="project" />
+    <orderEntry type="library" name="sbt: info.hupel:pide-package_2.12:1.0.0-RC3:jar" level="project" />
   </component>
 </module>

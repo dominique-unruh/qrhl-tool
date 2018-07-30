@@ -1,177 +1,20 @@
 theory QRHL_Core
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators Universe Misc_Missing
-  keywords "variables" :: thy_decl_block
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators Discrete_Distributions 
+    Universe Misc_Missing Prog_Variables
 begin
+
+hide_const (open) span
 
 section \<open>Miscellaneous\<close>
 
-lemma pat_lambda_conv_aux: \<comment> \<open>Helper for ML function pat_lambda_conv\<close>
-  shows "term \<equiv> (\<lambda>_. term ())"
-  by simp
 
-ML_file "misc.ML"
-
-(* TODO remove *)
-definition [code]: "(sqrt2::complex) = sqrt 2"
+(* definition [code]: "(sqrt2::complex) = sqrt 2"
 lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
  by (simp add: of_real_def scaleR_2 sqrt2_def)
 lemma sqrt2_neq0[simp]: "sqrt2 \<noteq> 0" unfolding sqrt2_def by simp
-lemma [simp]: "cnj sqrt2 = sqrt2" unfolding sqrt2_def by simp
-
-typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}" 
-  morphisms prob Abs_distr
-  apply (rule exI[of _ "\<lambda>x. 0"]) by auto
-setup_lifting type_definition_distr
-
-instantiation distr :: (type)zero begin
-lift_definition zero_distr :: "'a distr" is "(\<lambda>_. 0)" by simp
-instance .. 
-end
- 
-  
-lift_definition supp :: "'a distr \<Rightarrow> 'a set" is "\<lambda>\<mu>. {x. \<mu> x > 0}" .
-lift_definition uniform :: "'a set \<Rightarrow> 'a distr" is "\<lambda>M. (\<lambda>m. if m\<in>M then 1/card M else 0)"
-proof (rule conjI; rule allI; (rule impI)?)
-  fix M and x :: 'a
-  show "0 \<le> (if x \<in> M then 1 / real (card M) else 0)" by auto
-  fix F
-  show "(\<Sum>m\<in>F. if m \<in> M then 1 / real (card M) else 0) \<le> 1" if "finite F"
-  proof (cases "finite M")
-    case True
-    show ?thesis
-      apply (subst sum.inter_restrict[symmetric, OF that])
-      apply simp
-      by (metis Int_lower2 True card_mono divide_le_eq_1 neq0_conv of_nat_0_less_iff of_nat_eq_0_iff of_nat_le_iff)
-  next
-    case False
-    show ?thesis
-      apply (subst card_infinite[OF False])
-      apply (rewrite asm_rl[of "1/real 0 = 0"]) apply auto[1]
-      by auto
-  qed
-qed
+lemma [simp]: "cnj sqrt2 = sqrt2" unfolding sqrt2_def by simp *)
 
 
-lemma supp_uniform [simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> supp (uniform M) = M" for M :: "'a set"
-  apply transfer apply auto
-  using card_gt_0_iff by blast
-
-lemma uniform_infinite: "infinite M \<Longrightarrow> uniform M = 0"
-  apply transfer by auto
-
-lemma uniform_empty: "uniform {} = 0"
-  apply transfer by simp
-
-axiomatization weight :: "'a distr \<Rightarrow> real" where
-  weight_pos[simp]: "weight \<mu> \<ge> 0" 
-and weight_leq1[simp]: "weight \<mu> \<le> 1"
-and weight_uniform[simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> weight (uniform M) = 1"
-
-axiomatization "map_distr" :: "('a\<Rightarrow>'b) \<Rightarrow> 'a distr \<Rightarrow> 'b distr" where
-  weight_map_distr[simp]: "weight (map_distr f \<mu>) = weight \<mu>"
-  and supp_map_distr[simp]: "supp (map_distr f \<mu>) = f ` (supp \<mu>)"
-  
-axiomatization where  
-  compose_map_distr[simp]: "map_distr g (map_distr f \<mu>) = map_distr (\<lambda>x. g (f x)) \<mu>"
-and  map_distr_id[simp]: "map_distr (\<lambda>x. x) \<mu> = \<mu>"
-  for f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c"
-functor map_distr: map_distr using map_distr_id compose_map_distr unfolding o_def id_def by auto
-
-axiomatization where map_distr_uniform[simp]: "bij_betw f A B \<Longrightarrow> map_distr f (uniform A) = uniform B"
-  for f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c"
-
-typedef bit = "UNIV::bool set"..
-setup_lifting type_definition_bit
-instantiation bit :: field begin
-lift_definition times_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "(&)".
-lift_definition plus_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "(\<noteq>)".
-lift_definition zero_bit :: bit is "False".
-lift_definition one_bit :: bit is "True".
-definition[simp]: "uminus_bit (x::bit) = x"
-definition[simp]: "minus_bit = ((+) :: bit\<Rightarrow>_\<Rightarrow>_)"
-definition[simp]: "inverse_bit (x::bit) = x"
-definition[simp]: "divide_bit = (( * ) :: bit\<Rightarrow>_\<Rightarrow>_)"
-instance by intro_classes (transfer; auto)+
-end
-
-
-lemma bit_cases[cases type:bit]: "(x=0 \<Longrightarrow> P) \<Longrightarrow> (x=1 \<Longrightarrow> P) \<Longrightarrow> P" for x :: bit
-  by (metis (full_types) Rep_bit_inverse one_bit.abs_eq zero_bit.abs_eq)
-lemma bit_two[simp]: "(2::bit) = 0"
-  by (metis add_cancel_left_right bit_cases one_add_one) 
-lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
-  apply transfer by auto
-lemma bit_neq[simp]: "(a \<noteq> b) = (a = b+1)" for a b :: bit
-  apply (cases a rule:bit_cases; cases b rule:bit_cases) by auto
-
-declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]]
-
-lemma bit_plus_1_eq[simp]: "(a+1=b) = (a=b+1)" for a b :: bit
-  by auto
-
-lemma bit_plus_2y[simp]: "(x + y) + y = x" for x :: bit
-  apply (cases y) by auto
-
-lemma UNIV_bit: "(UNIV::bit set) = {0,1}" by auto
-
-instantiation bit :: enum begin
-definition "enum_bit = [0::bit,1]"
-definition "enum_all_bit P \<longleftrightarrow> P (0::bit) \<and> P 1"
-definition "enum_ex_bit P \<longleftrightarrow> P (0::bit) \<or> P 1"
-instance apply intro_classes
-  unfolding enum_bit_def enum_all_bit_def enum_ex_bit_def 
-     apply auto
-  using bit_cases apply metis
-  using bit_cases by metis
-end
-
-instantiation bit :: equal begin
-lift_definition equal_bit :: "bit \<Rightarrow> bit \<Rightarrow> bool" is "HOL.equal :: bool \<Rightarrow> bool \<Rightarrow> bool" .
-instance apply intro_classes 
-  apply transfer by (rule equal_eq)
-end
-
-section \<open>Program variables\<close>
-
-typedef variable_raw = "{v :: string * universe set. snd v \<noteq> {}}" by auto
-
-(* a variable, refers to a location in a memory *)
-typedef (overloaded) ('a::"value") variable = "{v::variable_raw. range (embedding::'a=>universe) = snd (Rep_variable_raw v)}"
-  apply (rule exI[where x="Abs_variable_raw (undefined, range embedding)"])
-  apply simp
-  apply (subst Abs_variable_raw_inverse)
-  by auto
-
-definition variable_name :: "'a::value variable \<Rightarrow> string" where "variable_name v = fst (Rep_variable_raw (Rep_variable v))"
-
-typedecl 'a "variables" (* represents a tuple of variables, of joint type 'a *)
-
-axiomatization
-    variable_names :: "'a variables \<Rightarrow> string list"
-and variable_concat :: "'a variables \<Rightarrow> 'b variables \<Rightarrow> ('a * 'b) variables"
-and variable_singleton :: "'a variable \<Rightarrow> 'a variables"
-and variable_unit :: "unit variables"
-
-nonterminal variable_list_args
-syntax
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|'|])")
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>'\<rbrakk>)")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|_'|])")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
-  "_variable_list_arg"  :: "'a \<Rightarrow> variable_list_args"                   ("_")
-  "_variable_list_args" :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"     ("_,/ _")
-
-translations
-  "_variables (_variable_list_args x y)" \<rightleftharpoons> "CONST variable_concat (CONST variable_singleton x) (_variables y)"
-  "_variables (_variable_list_arg x)" \<rightleftharpoons> "CONST variable_singleton x"
-  "_variables (_variable_list_args x y)" \<leftharpoondown> "CONST variable_concat (_variables (_variable_list_arg x)) (_variables y)"
-  
-
-axiomatization where
-  variable_names_cons[simp]: "variable_names (variable_concat X Y) = variable_names X @ variable_names Y"
-  and variable_singleton_name[simp]: "variable_names (variable_singleton x) = [variable_name x]"
-  and variable_unit_name[simp]: "variable_names variable_unit = []"
-  for X::"'a::value variables" and Y::"'b::value variables" and x::"'c::value variable"
 
 
 section \<open>Quantum predicates\<close>
@@ -1058,13 +901,6 @@ section "ML Code"
 ML_file \<open>qrhl.ML\<close>
 
 section "Simprocs"
-
-(* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed variables but can't *)
-syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")
-syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars [|_|]")
-parse_translation \<open>[("_declared_qvars", QRHL.declared_qvars_parse_tr)]\<close>
-
-simproc_setup warn_declared_qvars ("variable_name q") = QRHL.warn_declared_qvars_simproc
 
 simproc_setup "variable_rewriting" 
   ("join_variables_hint a b" | "sort_variables_hint a" | 

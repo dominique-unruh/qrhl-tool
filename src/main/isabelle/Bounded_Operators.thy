@@ -5,13 +5,13 @@ begin
 
 subsection \<open>Bounded operators\<close>
 
-typedef ('a,'b) bounded = "{A::'a vector\<Rightarrow>'b vector. bounded_linear A}"
+typedef ('a,'b) bounded = "{A::'a vector\<Rightarrow>'b vector. bounded_clinear A}"
   morphisms applyOp Abs_bounded
-  using bounded_linear_zero by blast
+  using bounded_clinear_zero by blast
 setup_lifting type_definition_bounded
 
 lift_definition idOp :: "('a,'a)bounded" is id
-  by (metis bounded_linear_ident comp_id fun.map_ident)
+  by (metis bounded_clinear_ident comp_id fun.map_ident)
 
 instantiation bounded :: (type,type) zero begin
 lift_definition zero_bounded :: "('a,'b) bounded" is "\<lambda>_. 0" by simp

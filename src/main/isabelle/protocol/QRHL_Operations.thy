@@ -108,13 +108,13 @@ operation_setup declare_variable = {*
 operation_setup declare_quantum_variable = {*
   {from_lib = Codec.triple Codec.string Codec.typ Codec.int,
    to_lib = Codec.int,
-   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ QRHL.Quantum)}
+   action = fn (name,typ,ctx_id) => make_ctxt_ref (Prog_Variables.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ Prog_Variables.Quantum)}
 *}
 
 operation_setup declare_classical_variable = {*
   {from_lib = Codec.triple Codec.string Codec.typ Codec.int,
    to_lib = Codec.int,
-   action = fn (name,typ,ctx_id) => make_ctxt_ref (QRHL.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ QRHL.Classical)}
+   action = fn (name,typ,ctx_id) => make_ctxt_ref (Prog_Variables.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ Prog_Variables.Classical)}
 *}
 
 operation_setup callWp = {*
@@ -148,35 +148,35 @@ operation_setup applyRule = {*
    action = fn (name,goal,ctx_id) => SOME (QRHL.applyRule name goal (Refs.Ctxt.read ctx_id))}
 *}
 
-operation_setup sampleWp = {*
+(* operation_setup sampleWp = {*
   {from_lib = Codec.tuple (Codec.tuple Codec.string Codec.typ) (Codec.tuple Codec.term Codec.term),
    to_lib = Codec.term,
    action = fn ((v, T), (e, B)) => QRHL.sampleWp v T e B}
-*}
+*} *)
 
-operation_setup qapplyWp = {*
+(* operation_setup qapplyWp = {*
   {from_lib = Codec.triple Codec.term Codec.term (Codec.list Codec.term),
    to_lib = Codec.term,
    action = fn (post, e, q) => QRHL.qapplyWp post e q}
-*}
+*} *)
 
-operation_setup measureWp = {*
+(* operation_setup measureWp = {*
   {from_lib = Codec.tuple (Codec.tuple Codec.term Codec.term) (Codec.tuple Codec.term (Codec.list Codec.term)),
    to_lib = Codec.term,
    action = fn ((B, x), (e, Q)) => QRHL.measureWp B x e Q}
-*}
+*} *)
 
-operation_setup qinitWp = {*
+(* operation_setup qinitWp = {*
   {from_lib = Codec.triple Codec.term Codec.term (Codec.list Codec.term),
    to_lib = Codec.term,
    action = fn (post, e, Q) => QRHL.qinitWp post e Q}
-*}
+*} *)
 
-operation_setup ifWp = {*
+(* operation_setup ifWp = {*
   {from_lib = Codec.triple Codec.term Codec.term Codec.term,
    to_lib = Codec.term,
    action = fn (e, thenWp, elseWp) => QRHL.ifWp e thenWp elseWp}
-*}
+*} *)
 
 operation_setup add_index_to_expression = {*
   {from_lib = Codec.tuple Codec.term Codec.bool,

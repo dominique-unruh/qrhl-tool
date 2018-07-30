@@ -3,6 +3,8 @@ theory Complex_L2
     Complex_Inner_Product Infinite_Set_Sum_Missing Complex_Main
 begin
 
+hide_const (open) span
+
 section \<open>l2 norm - untyped\<close>
 
 definition "has_ell2_norm x = bdd_above (sum (\<lambda>i. (cmod (x i))\<^sup>2) ` Collect finite)"
@@ -567,7 +569,7 @@ locale is_subspace =
   assumes additive_closed: "x\<in>A \<Longrightarrow> y\<in>A \<Longrightarrow> x+y\<in>A"
   assumes smult_closed: "x\<in>A \<Longrightarrow> c *\<^sub>C x \<in> A"
   assumes closed: "closed A"
-  assumes zero: "0 : A"
+  assumes zero: "0 \<in> A"
 
 lemma is_subspace_0[simp]: "is_subspace {0}"
   apply (rule is_subspace.intro) by auto
@@ -789,7 +791,6 @@ lemma plus_top[simp]: "x + top = top" for x :: "'a subspace" unfolding subspace_
 (* TODO remove *)
 abbreviation subspace_as_set :: "'a subspace \<Rightarrow> 'a vector set" where "subspace_as_set == subspace_to_set"
 
-hide_const (open) span
 definition [code del]: "span A = Inf {S. A \<subseteq> subspace_as_set S}"
 (* definition [code del]: "spanState A = Inf {S. state_to_vector ` A \<subseteq> subspace_as_set S}" *)
 (* consts span :: "'a set \<Rightarrow> 'b subspace"

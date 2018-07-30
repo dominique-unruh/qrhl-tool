@@ -149,7 +149,7 @@ class Toplevel(initialState : State = State.empty) {
         case UserException(msg) =>
           println("[ERROR] "+msg)
         case e: ProverException =>
-          val msg = Isabelle.symbolsToUnicode(e.msg)
+          val msg = Isabelle.symbolsToUnicode(e.fullMessage)
           println("[ERROR] (in Isabelle) "+msg)
         case e : Throwable =>
           println("[ERROR] [INTERNAL ERROR!!!]")

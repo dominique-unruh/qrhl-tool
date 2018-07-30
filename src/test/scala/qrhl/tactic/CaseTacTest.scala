@@ -27,7 +27,7 @@ class CaseTacTest extends FunSuite {
 //    print(st.goal)
     assert(st.goal.length==1)
     val pre = st.goal.head.asInstanceOf[QRHLSubgoal].pre
-    assert(pre.toString == "ℭ𝔩𝔞[x1 = y] ⊓ top")
+    assert(pre.toString == "ℭ𝔩𝔞[x1 = y] ⊓ ⊤")
     pre.checkWelltyped(tl.state.isabelle, Isabelle.predicateT)
   }
 
