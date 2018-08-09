@@ -21,7 +21,7 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
-isabelleVersions := Seq(Version.Stable("2018-RC3")) // TODO 2018
+isabelleVersions := Seq(Version.Stable("2018-RC4")) // TODO 2018
 isabelleSessions in Compile := Seq("QRHL")
 //isabelleSourceFilter := (- ".*") && (- "*~")
 isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
@@ -36,7 +36,7 @@ libraryDependencies += "info.hupel" % "multi-isabelle" % "0.1.1" // TODO 2018 RE
 
 
 //val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
-val afpUrl = "https://bitbucket.org/isa-afp/afp-2018/get/234a91c26d02.tar.gz" // TODO 2018
+val afpUrl = "https://bitbucket.org/isa-afp/afp-2018/get/cd52173.tar.gz" // TODO 2018
 val afpExtractPath = "target/downloads/afp"
 
 lazy val downloadAFP = taskKey[Unit]("Download the AFP")
