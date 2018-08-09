@@ -119,13 +119,13 @@ mappings in Universal ++= {
   files pair relativeTo(base)
 }
 
-mappings in Universal += (baseDirectory.value / ".." / "manual.pdf" -> "manual.pdf")
+mappings in Universal += (baseDirectory.value / ".." / "queasycrypt" / "trunk" / "manual.pdf" -> "manual.pdf")
 
 mappings in Universal ++= directory("PG")
 
 //javaOptions in Universal += "-Dfile.encoding=UTF-8" // Doesn't seem to work
 
-// Without this, updateSbtClassifiers fails (and this breaks Intelli/J support)
+// Without this, updateSbtClassifiers fails (and that breaks Intelli/J support)
 resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
 
 // To avoid that several tests simultaneously try to download Isabelle
