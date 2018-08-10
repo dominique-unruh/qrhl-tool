@@ -1,9 +1,23 @@
 theory Test
-  imports QRHL.QRHL QRHL.Encoding QRHL.Tactics QRHL.QRHL_Code "HOL-Eisbach.Eisbach_Tools" CryptHOL.Cyclic_Group
-  (* "HOL-Imperative_HOL.Imperative_HOL" *) QRHL.QRHL
+  imports CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools"
 begin
 
+datatype x = N
+(* TODO broken! *)
 
+
+datatype 'a mytree = Node "'a mytree * 'a mytree" | Leaf 'a
+derive universe mytree
+
+declare_variable_type 'a t1
+declare_variable_type ('a,'b) t2
+declare_variable_type ('a::finite , 'b) t3
+
+declare_variable_type key :: finite
+declare_variable_type msg :: "{ finite , xor_group }"
+declare_variable_type ( 'a :: finite ) list :: finite
+
+declare_variable_type wrong :: "{ finite , no_top }"
 
 declare [[show_sorts]]
 declare_variable_type ('a::finite,'c) bla :: "{finite,group_add}"
