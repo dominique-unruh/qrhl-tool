@@ -211,8 +211,8 @@ class State private (val environment: Environment,
     copy(environment = environment.declareProgram(name, program))
   }
 
-  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable]): State = {
-    copy(environment = environment.declareAdversary(name, cvars, qvars))
+  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], calls: Seq[String]): State = {
+    copy(environment = environment.declareAdversary(name, cvars, qvars, calls))
   }
 
 
