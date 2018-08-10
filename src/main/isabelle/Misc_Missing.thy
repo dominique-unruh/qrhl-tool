@@ -89,13 +89,16 @@ lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
 lemma bit_neq[simp]: "(a \<noteq> b) = (a = b+1)" for a b :: bit
   apply (cases a rule:bit_cases; cases b rule:bit_cases) by auto
 
-declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]]
+(* declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]] *)
 
 lemma bit_plus_1_eq[simp]: "(a+1=b) = (a=b+1)" for a b :: bit
   by auto
 
 lemma bit_plus_2y[simp]: "(x + y) + y = x" for x :: bit
   apply (cases y) by auto
+
+definition (in zero_neq_one) of_bit :: "bit \<Rightarrow> 'a"
+  where "of_bit b = (if b=0 then 0 else 1)"
 
 lemma UNIV_bit: "(UNIV::bit set) = {0,1}" by auto
 
@@ -115,6 +118,9 @@ lift_definition equal_bit :: "bit \<Rightarrow> bit \<Rightarrow> bool" is "HOL.
 instance apply intro_classes 
   apply transfer by (rule equal_eq)
 end
+
+instance bit :: xor_group
+  apply intro_classes by auto
 
 section \<open>Code\<close>
 

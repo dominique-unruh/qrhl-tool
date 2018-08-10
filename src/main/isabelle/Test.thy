@@ -1,10 +1,54 @@
 theory Test
-  imports CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools"
+  imports (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools" *)
+QRHL.QRHL_Core
 begin
 
-datatype x = N
-(* TODO broken! *)
+typedecl x 
 
+(* declare_variable_type x :: plus *)
+
+ML \<open>
+Sign.witness_sorts \<^theory> [] [@{sort "{finite,topological_space}"}]
+\<close>
+
+class bla
+typedecl 'a b1
+instance b1 :: (finite) bla sorry
+
+ML \<open>
+Sign.witness_sorts \<^theory> [] [@{sort "{bla}"}]
+\<close>
+
+instantiation bit :: topological_space begin
+definition [simp]: "open_bit U = True" for U :: "bit set"
+instance by standard auto
+end
+
+declare_variable_type msg :: "{ finite , mult_zero }"
+declare_variable_type msg2 :: "{finite, field, mult_zero, xor_group, enum, topological_space}"
+
+
+
+(* class len0_proper = len0 + finite + assumes CARD_LENGTH: "CARD('a) = LENGTH('a)"
+
+instance bit0 :: (len0_proper) len0_proper
+  apply intro_classes by (auto simp: CARD_LENGTH[symmetric])
+instance bit1 :: (len0_proper) len0_proper
+  apply intro_classes by (auto simp: CARD_LENGTH[symmetric])
+instance num1 :: len0_proper
+  apply intro_classes by auto
+instance num0 :: len0_proper
+  apply intro_classes apply auto *)
+
+type_synonym 'l bitstring = "(bit,'l) nlist"
+
+quotient_type 'a quo = "'a list" / "\<lambda>x y. (set x = set y)" 
+  by (auto intro: reflpI equivpI sympI transpI)
+
+derive universe quo
+
+term "x::(_)bitstring == x::_::universe"
+term "x::_ bit0 == x::_::universe"
 
 datatype 'a mytree = Node "'a mytree * 'a mytree" | Leaf 'a
 derive universe mytree
@@ -239,6 +283,7 @@ lemma
   apply (tactic \<open>Tactics.wp_tac \<^context> false 1\<close>)
   apply simp
   by (rule qrhl_top)
+
 lemma test:
   (* assumes "\<And>x y. e x \<le> e' x y" *)
   (* fixes z::"_::preorder" *)
@@ -254,8 +299,7 @@ lemma
   apply (tactic \<open>Tactics.wp_tac \<^context> true 1\<close>) 
   apply (tactic \<open>Tactics.wp_tac \<^context> false 1\<close>)
   apply simp
-  apply (rule skip)
-  apply intro_expression_leq
+  apply skip
   by simp
 
 end
@@ -269,6 +313,38 @@ axiomatization powG :: "G \<Rightarrow> int \<Rightarrow> G" (infixr "\<^sup>^" 
 (* locale group_G = cyclic_group G  *)
 (* axiomatization where group_G: group_G *)
 (* abbreviation "g == generator G" *)
+
+thm cyclic_group.carrier_conv_generator
+
+(* Add to CryptHOL? *)
+lemma (in cyclic_group) "finite (carrier G)"
+proof -
+  from generator obtain n::nat where "\<^bold>g [^] n = inv \<^bold>g" 
+    apply atomize_elim by (metis generatorE generator_closed inv_closed)
+  then have g1: "\<^bold>g [^] (Suc n) = \<one>"
+    by auto
+  then have mod: "\<^bold>g [^] m = \<^bold>g [^] (m mod Suc n)" for m
+  proof -
+    obtain k where "m mod Suc n + Suc n * k = m" apply atomize_elim
+      by (metis mod_less_eq_dividend mod_mod_trivial nat_mod_eq_lemma)
+    then have "\<^bold>g [^] m = \<^bold>g [^] (m mod Suc n + Suc n * k)" by simp
+    also have "\<dots> = \<^bold>g [^] (m mod Suc n)" 
+      apply (subst nat_pow_mult[symmetric], rule)
+      apply (subst nat_pow_pow[symmetric], rule)
+      unfolding g1 by simp
+    finally show ?thesis .
+  qed
+  have "range ((([^])::_\<Rightarrow>nat\<Rightarrow>_) \<^bold>g) \<subseteq> (([^]) \<^bold>g) ` {..<Suc n}"
+  proof -
+    have "\<^bold>g [^] x \<in> ([^]) \<^bold>g ` {..<Suc n}" for x::nat
+      apply (subst mod) by auto
+    then show ?thesis by auto
+  qed
+  then have "finite (range ((([^])::_\<Rightarrow>nat\<Rightarrow>_) \<^bold>g))"
+    using finite_surj by auto
+  with generator show "finite (carrier G)"
+    using finite_subset by blast
+qed
 
 lemma (in cyclic_group) m_comm:
   assumes "x : carrier G" and "y : carrier G"
@@ -287,7 +363,6 @@ interpretation G_group: cyclic_group G
 
 
 definition "keygen = uniform {(g \<^sup>^ x, x) | x::int. x\<in>{0..order G-1}}"
-(* thm cyclic_group.keygen_def *)
 definition "enc h x = uniform {(g\<^sup>^r, h\<^sup>^r * x) | r::int. r\<in>{0..order G-1}}"
 definition "dec x c = (let (c1,c2) = c in c2 * c1 \<^sup>^ (-x))"
 
@@ -340,46 +415,6 @@ lemma (in group) inv_int_pow:
   apply (subst int_pow_int)+
   by (subst inv_nat_pow, simp_all)
 
-thm group.int_pow_pow
-
-(* lemma (in group) int_pow_pow:
-  assumes "x \<in> carrier G" shows "(x [^] n) [^] m = x [^] (n * m::int)"
-proof (cases n; cases m)
-  show ?thesis if "n=int n'" and "m=int m'" for n' m'
-    unfolding that int_pow_int
-    apply (subst nat_pow_pow)
-     apply (fact assms)
-    unfolding int_pow_int[symmetric]
-    by simp
-
-  show ?thesis if "n=-int n'" and "m=int m'" for n' m'
-    unfolding that 
-    apply (subst mult_minus_left)
-    apply (subst int_pow_neg, simp add: assms)+
-    unfolding that int_pow_int of_nat_mult[symmetric]
-    apply (subst inv_nat_pow, simp add: assms)
-    apply (subst nat_pow_pow)
-    using assms by simp_all
-
-  show ?thesis if "n=int n'" and "m=-int m'" for n' m'
-    unfolding that 
-    apply (subst mult_minus_right)
-    apply (subst int_pow_neg, simp add: assms)+
-    unfolding that int_pow_int of_nat_mult[symmetric]
-    apply (subst nat_pow_pow)
-    using assms by simp_all
-
-  show ?thesis if "n=-int n'" and "m=-int m'" for n' m'
-    unfolding that 
-    apply (subst mult_minus_left)
-    apply (subst mult_minus_right)
-    apply (subst int_pow_neg, simp add: assms)+
-    unfolding that int_pow_int of_nat_mult[symmetric]
-    apply (subst inv_nat_pow, simp add: assms)
-    apply (subst nat_pow_pow)
-    using assms by simp_all
-qed
- *)
 
 lemma (in cyclic_group) "(\<^bold>g [^] r) [^] -x = (\<^bold>g [^] (-r*x))" for r x :: int
   apply (subst int_pow_pow)
