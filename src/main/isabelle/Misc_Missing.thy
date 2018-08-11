@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main Universe
+  imports Main Universe "HOL-Library.Bit"
 begin
 
 section \<open>Misc\<close>
@@ -63,9 +63,9 @@ end
 section \<open>Type bit\<close>
 
 
-typedef bit = "UNIV::bool set"..
+(* typedef bit = "UNIV::bool set".. *)
 setup_lifting type_definition_bit
-instantiation bit :: field begin
+(* instantiation bit :: field begin
 lift_definition times_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "(&)".
 lift_definition plus_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "(\<noteq>)".
 lift_definition zero_bit :: bit is "False".
@@ -75,19 +75,19 @@ definition[simp]: "minus_bit = ((+) :: bit\<Rightarrow>_\<Rightarrow>_)"
 definition[simp]: "inverse_bit (x::bit) = x"
 definition[simp]: "divide_bit = (( * ) :: bit\<Rightarrow>_\<Rightarrow>_)"
 instance by intro_classes (transfer; auto)+
-end
+end *)
 
 derive universe bit
 
 
-lemma bit_cases[cases type:bit]: "(x=0 \<Longrightarrow> P) \<Longrightarrow> (x=1 \<Longrightarrow> P) \<Longrightarrow> P" for x :: bit
-  by (metis (full_types) Rep_bit_inverse one_bit.abs_eq zero_bit.abs_eq)
-lemma bit_two[simp]: "(2::bit) = 0"
-  by (metis add_cancel_left_right bit_cases one_add_one) 
+(* lemma bit_cases[cases type:bit]: "(x=0 \<Longrightarrow> P) \<Longrightarrow> (x=1 \<Longrightarrow> P) \<Longrightarrow> P" for x :: bit (* bit.exhaust *)
+  by (metis (full_types) Rep_bit_inverse one_bit.abs_eq zero_bit.abs_eq) *)
+(* lemma bit_two[simp]: "(2::bit) = 0" (* bit_numeral_even *)
+  by (metis add_cancel_left_right bit.exhaust one_add_one)  *)
 lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
   apply transfer by auto
 lemma bit_neq[simp]: "(a \<noteq> b) = (a = b+1)" for a b :: bit
-  apply (cases a rule:bit_cases; cases b rule:bit_cases) by auto
+  apply (cases a rule:bit.exhaust; cases b rule:bit.exhaust) by auto
 
 (* declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]] *)
 
@@ -109,15 +109,15 @@ definition "enum_ex_bit P \<longleftrightarrow> P (0::bit) \<or> P 1"
 instance apply intro_classes
   unfolding enum_bit_def enum_all_bit_def enum_ex_bit_def 
      apply auto
-  using bit_cases apply metis
-  using bit_cases by metis
+  using bit.exhaust apply metis
+  using bit.exhaust by metis
 end
 
-instantiation bit :: equal begin
+(* instantiation bit :: equal begin
 lift_definition equal_bit :: "bit \<Rightarrow> bit \<Rightarrow> bool" is "HOL.equal :: bool \<Rightarrow> bool \<Rightarrow> bool" .
 instance apply intro_classes 
   apply transfer by (rule equal_eq)
-end
+end *)
 
 instance bit :: xor_group
   apply intro_classes by auto
