@@ -693,10 +693,10 @@ fun declare_variable_type args sort a mx lthy =
   in lthy end
 
 fun declare_variable_type_cmd args sort a mx lthy = let
-  (* val default_sort = Type.defaultS (Proof_Context.tsig_of lthy) *)
-  fun read_constraint lthy c = case Typedecl.read_constraint lthy c of [""] => [] | s => s
+  val default_sort = Type.defaultS (Proof_Context.tsig_of lthy)
+  fun read_constraint lthy c = case Typedecl.read_constraint lthy c of [""] => default_sort | s => s
   val args' = map (apsnd (read_constraint lthy)) args
-  val sort' = case sort of NONE => [] | SOME s => Syntax.read_sort lthy s
+  val sort' = case sort of NONE => default_sort | SOME s => Syntax.read_sort lthy s
   in declare_variable_type args' sort' a mx lthy end
 
 val _ =

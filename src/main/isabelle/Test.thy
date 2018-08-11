@@ -4,35 +4,6 @@ theory Test
     QRHL.QRHL_Core  
 begin
 
-
-datatype 'a mytree = Node "'a mytree * 'a mytree" | Leaf 'a
-derive universe mytree
-
-declare_variable_type 'a t1 
-declare_variable_type ('a,'b) t2
-declare_variable_type ('a::finite , 'b) t3
-
-declare_variable_type key :: finite
-declare_variable_type msg :: "{ finite , xor_group }"
-declare_variable_type ( 'a :: finite ) list :: finite
-
-declare_variable_type wrong :: "{ finite , no_top }"
-
-declare [[show_sorts]]
-declare_variable_type ('a::finite,'c) bla :: "{finite,group_add}"
-declare_variable_type xxx :: group_add
-(* typedef ('a::finite,'b) blu = "UNIV::int set" by simp *)
-
-
-
-term "x::(_,_)bla == x::_::type"
-
-(* instantiation int :: "{finite,group_add}" begin *)
-
-typ "(int,int) bla"
-typ "(bool,int) bla"
-
-
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }
 val sorry_table = Synchronized.var "sorry" (Inttab.empty : sorry_location Inttab.table)
