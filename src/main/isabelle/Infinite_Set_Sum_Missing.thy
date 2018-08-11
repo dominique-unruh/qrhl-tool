@@ -2,12 +2,15 @@ theory Infinite_Set_Sum_Missing
   imports "HOL-Analysis.Infinite_Set_Sum" Ordered_Complex
 begin
 
-lemma abs_summable_finiteI:
+lemma abs_summable_finiteI0:
   assumes "\<And>F. finite F \<Longrightarrow> F\<subseteq>S \<Longrightarrow> sum (\<lambda>x. norm (f x)) F \<le> B"
-  shows "f abs_summable_on S"
+    and "B \<ge> 0"
+  shows "f abs_summable_on S" and "infsetsum (\<lambda>x. norm (f x)) S \<le> B"
+  unfolding atomize_conj
 proof (cases "S={}")
   case True
-  then show ?thesis by simp
+  then show "f abs_summable_on S \<and> infsetsum (\<lambda>x. norm (f x)) S \<le> B" 
+    using assms by auto
 next
   case False
   define M normf where "M = count_space S" and "normf x = ennreal (norm (f x))" for x
@@ -161,7 +164,7 @@ next
       also have "(\<Sum>x\<in>F. g x) \<le> (\<Sum>x\<in>F. ennreal (norm (f x)))"
         apply (rule sum_mono) using \<open>g \<le> normf\<close> unfolding normf_def le_fun_def by auto
       also have "(\<Sum>x\<in>F. ennreal (norm (f x))) \<le> B" 
-         apply auto using assms[OF \<open>finite F\<close> \<open>F \<subseteq> S\<close>] by (rule ennreal_leI)
+         apply auto using assms(1)[OF \<open>finite F\<close> \<open>F \<subseteq> S\<close>] by (rule ennreal_leI)
       finally have "B < B" by auto
       then show ?thesis by simp
     qed
@@ -174,15 +177,39 @@ next
       using sumB' by blast
     finally show ?thesis by assumption
   qed
-  hence "integral\<^sup>N M normf \<le> B"
+  hence int_leq_B: "integral\<^sup>N M normf \<le> B"
     unfolding nn_integral_def by (metis (no_types, lifting) SUP_least mem_Collect_eq)
   hence "integral\<^sup>N M normf < \<infinity>"
     using le_less_trans by fastforce
   hence "integrable M f"
     unfolding M_def normf_def by (rule integrableI_bounded[rotated], simp)
-  then show ?thesis
+  then have f_sum_S: "f abs_summable_on S"
     unfolding abs_summable_on_def M_def by simp
+  have "infsetsum (\<lambda>x. norm (f x)) S \<le> B"
+    apply (subst ennreal_le_iff[symmetric], simp add: assms)
+    apply (subst nn_integral_conv_infsetsum[symmetric])
+    using f_sum_S int_leq_B 
+    unfolding normf_def M_def by auto
+  with f_sum_S
+  show "f abs_summable_on S \<and> infsetsum (\<lambda>x. norm (f x)) S \<le> B" by simp
 qed
+
+lemma abs_summable_finiteI:
+  assumes "\<And>F. finite F \<Longrightarrow> F\<subseteq>S \<Longrightarrow> sum (\<lambda>x. norm (f x)) F \<le> B"
+  shows "f abs_summable_on S"
+proof -
+  from assms have "sum (\<lambda>x. norm (f x)) {} \<le> B" by blast
+  then have "0 \<le> B" by simp
+  then show ?thesis 
+    using assms by (rule abs_summable_finiteI0[rotated])
+qed
+
+lemma infsetsum_finite_sets:
+  assumes "\<And>F. finite F \<Longrightarrow> F\<subseteq>S \<Longrightarrow> sum (\<lambda>x. norm (f x)) F \<le> B"
+    and "B \<ge> 0" and "\<And>x. f x \<ge> 0"
+  shows "infsetsum f S \<le> B"
+  using abs_summable_finiteI0(2)[where f=f and S=S, OF assms(1-2), simplified]
+  using assms(3) by auto
 
 lemma abs_summable_finiteI_converse:
   assumes f_sum_S: "f abs_summable_on S"
@@ -202,6 +229,52 @@ proof -
     by (rule norm_ge_zero)
   finally show ?thesis by assumption
 qed
+
+lemma abs_summable_countable:
+  fixes \<mu> :: "'a \<Rightarrow> 'b::{banach,second_countable_topology}"
+  assumes "\<mu> abs_summable_on T"
+  shows "countable {x\<in>T. 0 \<noteq> \<mu> x}"
+proof -
+  define B where "B = infsetsum (\<lambda>x. norm (\<mu> x)) T"
+  have \<mu>sum: "sum (\<lambda>x. norm (\<mu> x)) F \<le> B" if "finite F" and "F \<subseteq> T" for F
+    unfolding B_def apply (rule abs_summable_finiteI_converse)
+    using assms that by auto
+  define S where "S i = {x\<in>T. 1/real (Suc i) < norm (\<mu> x)}" for i::nat
+  have "\<exists>i. x \<in> S i" if "0 < norm (\<mu> x)" and "x \<in> T" for x
+    using that unfolding S_def apply (auto simp del: real_norm_def)
+    by (metis inverse_eq_divide not0_implies_Suc of_nat_Suc real_arch_inverse that(1))
+  then have union: "{x\<in>T. 0 < norm (\<mu> x)} = (\<Union>i. S i)"
+    unfolding S_def by auto
+  have finiteS: "finite (S i)" for i
+  proof (rule ccontr)
+    assume "infinite (S i)"
+    then obtain F where F_Si: "F \<subseteq> S i" and cardF: "card F > (Suc i)*B" and finiteF: "finite F"
+      by (metis One_nat_def ex_less_of_nat_mult infinite_arbitrarily_large lessI mult.commute mult.left_neutral of_nat_0_less_iff of_nat_1)
+    from F_Si have F_T: "F \<subseteq> T" 
+      unfolding S_def by blast
+    from finiteF \<mu>sum F_T have sumF: "sum (\<lambda>x. norm (\<mu> x)) F \<le> B" by simp
+    have "sum (\<lambda>x. norm (\<mu> x)) F \<ge> sum (\<lambda>_. 1/real (Suc i)) F" (is "_ \<ge> \<dots>")
+      apply (rule sum_mono)
+      using F_Si S_def by auto
+    moreover have "\<dots> = real (card F) / (Suc i)"
+      by (subst sum_constant_scale, auto)
+    moreover have "\<dots> > B"
+      using cardF
+      by (simp add: linordered_field_class.mult_imp_less_div_pos ordered_field_class.sign_simps)
+    ultimately have "sum (\<lambda>x. norm (\<mu> x)) F > B"
+      by linarith 
+    with sumF show False by simp
+  qed
+  have "countable (\<Union>i. S i)"
+    apply (rule countable_UN, simp)
+    apply (rule countable_finite)
+    using finiteS by simp
+  then have "countable {x\<in>T. 0 < norm (\<mu> x)}"
+    unfolding union by simp
+  then show ?thesis
+    by simp
+qed
+
 
 lemma infsetsum_cnj[simp]: "infsetsum (\<lambda>x. cnj (f x)) M = cnj (infsetsum f M)"
   unfolding infsetsum_def by (rule integral_cnj)
@@ -348,7 +421,7 @@ next
   qed
 qed
 
-lemma infsetsum_nonneg:
+lemma infsetsum_nonneg_is_SUPREMUM:
   fixes f :: "'a \<Rightarrow> real"
   assumes summable: "f abs_summable_on A"
   assumes fnn: "\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0"
@@ -485,6 +558,96 @@ proof -
     using assms(1) infsetsum_Re by blast
   also have "\<dots> = cmod (infsetsum f M)" using nn cmod_eq_Re less_eq_complex_def by auto
   finally show ?thesis by assumption
+qed
+
+theorem infsetsum_Sigma:
+  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
+  assumes summable: "f abs_summable_on (Sigma A B)"
+  shows   "infsetsum f (Sigma A B) = infsetsum (\<lambda>x. infsetsum (\<lambda>y. f (x, y)) (B x)) A"
+proof -
+  from summable have countable_Sigma: "countable {x \<in> Sigma A B. 0 \<noteq> f x}"
+    by (rule abs_summable_countable)
+(*   define A' where "A' = {a\<in>A. \<exists>b\<in>B a. 0 \<noteq> f (a,b)}"
+  have "countable A"
+    using countable_Sigma apply auto *)
+  define A' where "A' = fst ` {x \<in> Sigma A B. 0 \<noteq> f x}"
+  have countA': "countable A'"
+    using countable_Sigma unfolding A'_def by auto
+
+  define B' where "B' a = snd ` ({x \<in> Sigma A B. 0 \<noteq> f x} \<inter> {(a,b) | b. True})" for a
+  have countB': "countable (B' a)" for a
+    using countable_Sigma unfolding B'_def by auto
+
+  have Sigma_eq: "x \<in> Sigma A B \<longleftrightarrow> x \<in> Sigma A' B'" if "f x \<noteq> 0" for x
+    unfolding A'_def B'_def Sigma_def apply auto
+    using that by force
+
+  have Sigma'_smaller: "Sigma A' B' \<subseteq> Sigma A B"
+    unfolding A'_def B'_def by auto
+  with summable have summable': "f abs_summable_on Sigma A' B'"
+    using abs_summable_on_subset by blast
+
+  have A'_smaller: "A' \<subseteq> A"
+    unfolding A'_def by auto
+  have B'_smaller: "B' a \<subseteq> B a" for a
+    unfolding B'_def by auto
+
+  have "infsetsum f (Sigma A B) = infsetsum f (Sigma A' B')"
+    apply (rule infsetsum_cong_neutral) using Sigma_eq by auto
+  also from countA' countB' summable' have "\<dots> = (\<Sum>\<^sub>aa\<in>A'. \<Sum>\<^sub>ab\<in>B' a. f (a, b))"
+    by (rule infsetsum_Sigma)
+  also have "\<dots> = (\<Sum>\<^sub>aa\<in>A. \<Sum>\<^sub>ab\<in>B' a. f (a, b))" (is "_ = (\<Sum>\<^sub>aa\<in>A. ?inner a)" is "_ = ?rhs")
+    apply (rule infsetsum_cong_neutral)
+    using A'_smaller apply auto
+    unfolding A'_def B'_def Sigma_def apply auto
+    by (smt Int_Collect fst_conv image_iff infsetsum_all_0)
+  also have "?inner a = (\<Sum>\<^sub>ab\<in>B a. f (a, b))" if "a\<in>A" for a
+    apply (rule infsetsum_cong_neutral)
+    using that unfolding A'_def B'_def Sigma_def apply auto
+    by (smt Int_Collect image_iff mem_Collect_eq snd_conv)
+  then have "?rhs = (\<Sum>\<^sub>aa\<in>A. \<Sum>\<^sub>ab\<in>B a. f (a, b))"
+    by (rule infsetsum_cong, auto)
+  finally show ?thesis 
+    by simp
+qed
+
+lemma infsetsum_Sigma':
+  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
+  assumes summable: "(\<lambda>(x,y). f x y) abs_summable_on (Sigma A B)"
+  shows   "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) (B x)) A = infsetsum (\<lambda>(x,y). f x y) (Sigma A B)"
+  using assms by (subst infsetsum_Sigma) auto
+
+lemma infsetsum_Times:
+  fixes A :: "'a set" and B :: "'b set"
+  assumes summable: "f abs_summable_on (A \<times> B)"
+  shows   "infsetsum f (A \<times> B) = infsetsum (\<lambda>x. infsetsum (\<lambda>y. f (x, y)) B) A"
+  using assms by (subst infsetsum_Sigma) auto
+
+lemma infsetsum_Times':
+  fixes A :: "'a set" and B :: "'b set"
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c :: {banach, second_countable_topology}"
+  assumes summable: "(\<lambda>(x,y). f x y) abs_summable_on (A \<times> B)"
+  shows   "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) B) A = infsetsum (\<lambda>(x,y). f x y) (A \<times> B)"
+  using assms by (subst infsetsum_Times) auto
+
+lemma infsetsum_swap:
+  fixes A :: "'a set" and B :: "'b set"
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c :: {banach, second_countable_topology}"
+  assumes summable: "(\<lambda>(x,y). f x y) abs_summable_on A \<times> B"
+  shows   "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) B) A = infsetsum (\<lambda>y. infsetsum (\<lambda>x. f x y) A) B"
+proof -
+  from summable have summable': "(\<lambda>(x,y). f y x) abs_summable_on B \<times> A"
+    by (subst abs_summable_on_Times_swap) auto
+  have bij: "bij_betw (\<lambda>(x, y). (y, x)) (B \<times> A) (A \<times> B)"
+    by (auto simp: bij_betw_def inj_on_def)
+  have "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) B) A = infsetsum (\<lambda>(x,y). f x y) (A \<times> B)"
+    using summable by (subst infsetsum_Times) auto
+  also have "\<dots> = infsetsum (\<lambda>(x,y). f y x) (B \<times> A)"
+    by (subst infsetsum_reindex_bij_betw[OF bij, of "\<lambda>(x,y). f x y", symmetric])
+       (simp_all add: case_prod_unfold)
+  also have "\<dots> = infsetsum (\<lambda>y. infsetsum (\<lambda>x. f x y) A) B"
+    using summable' by (subst infsetsum_Times) auto
+  finally show ?thesis .
 qed
 
 

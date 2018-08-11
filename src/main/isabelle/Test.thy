@@ -1,11 +1,7 @@
 theory Test
-  imports (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools" *)
-QRHL.QRHL_Core
+  imports CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools"
+    (* QRHL.QRHL_Core *)
 begin
-
-typedecl x 
-
-(* declare_variable_type x :: plus *)
 
 ML \<open>
 Sign.witness_sorts \<^theory> [] [@{sort "{finite,topological_space}"}]
@@ -19,9 +15,9 @@ ML \<open>
 Sign.witness_sorts \<^theory> [] [@{sort "{bla}"}]
 \<close>
 
-instantiation bit :: topological_space begin
+instantiation bit :: "{finite,topological_space}" begin
 definition [simp]: "open_bit U = True" for U :: "bit set"
-instance by standard auto
+instance apply standard by auto
 end
 
 declare_variable_type msg :: "{ finite , mult_zero }"

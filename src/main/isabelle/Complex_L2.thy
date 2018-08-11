@@ -101,7 +101,7 @@ lemma ell2_norm_L2_set:
 lemma ell2_norm_infsetsum:
   assumes "has_ell2_norm x"
   shows "ell2_norm x = sqrt (infsetsum (\<lambda>i. (norm(x i))^2) UNIV)"
-  unfolding ell2_norm_def apply (subst infsetsum_nonneg)
+  unfolding ell2_norm_def apply (subst infsetsum_nonneg_is_SUPREMUM)
   using assms has_ell2_norm_infsetsum by auto
 
 lemma has_ell2_norm_finite[simp]: "has_ell2_norm (x::'a::finite\<Rightarrow>_)"
