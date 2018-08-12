@@ -2,76 +2,169 @@ theory Test
   imports 
 (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools" *)
     QRHL.QRHL_Core  
-  keywords
+    Multi_Transfer
+(*   keywords
     "relift_definition" :: thy_goal
+ *)
 begin
 
 typedef stuff = "UNIV :: nat set" by simp
 
 locale stuff1 begin
 setup_lifting type_definition_stuff
-lift_definition all :: "stuff set" is UNIV .
-ML \<open>
-Transfer.get_transfer_raw \<^context>
-              |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_Const (fn (name,_) => name=\<^const_name>\<open>stuff1.all\<close>))
+(* ML \<open>
+
+      val transfer_thms = Transfer.get_transfer_raw \<^context>
+      |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_type (Term.exists_subtype (fn Type(n,_) => n=\<^type_name>\<open>stuff\<close> | _ => false)))
+val _ = transfer_thms |> map Thm.theory_of_thm |> map (Context.pretty_abbrev_thy) |> @{print}
 \<close>
+ *)
 end
+
+ML \<open>
+
+\<close>
+
 
 locale stuff2 begin
 lemma type_definition_stuff': "type_definition (\<lambda>x. Rep_stuff x + 1) (\<lambda>x. Abs_stuff (x - 1)) {0<..}"
   apply (rule type_definition.intro)
   using Rep_stuff_inverse Abs_stuff_inverse by auto
 setup_lifting type_definition_stuff'
-print_theorems
+ML \<open>Multi_Transfer.local_transfer_rules \<^context>\<close>
+end
+
+lift_definition test :: "int vector" is "undefined" sorry
+
+lift_definition (in stuff1) all :: "stuff set" is UNIV .
+lemma (in stuff1) all: "all = UNIV"
+  unfolding all_def apply auto by (metis Rep_stuff_inverse rangeI)
+
+lift_definition (in stuff2) all :: "stuff set" is "{0<..}" by simp
+lemma (in stuff2) all: "all = stuff1.all"
+  unfolding stuff1.all_def all_def apply auto
+  using greaterThan_0 image_iff
+  by fastforce
+
+lemmas (in stuff2) [transfer_rule] = all.transfer[unfolded all]
+
+context stuff2 begin
+lift_definition test2 :: "int vector" is "undefined" sorry
+ML \<open>Multi_Transfer.local_transfer_rules \<^context>\<close>
 end
 
 
 ML \<open>
-fun relift_definition' (from:string) thm lthy =
-  let val transfer = Transfer.get_transfer_raw lthy
-              |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_Const (fn (name,_) => name=from))
-      val _ = if null transfer then error ("No transfer theorems containing "^from^" found") else ()
-      val conv = Conv.top_sweep_conv (K (Conv.rewr_conv thm)) lthy
-      val transfer_new = map (Conv.fconv_rule conv) transfer
-      fun add_transfers morph = fold (Transfer.transfer_raw_add o Morphism.thm morph) transfer_new
-      (* val _ = @{print} transfer_new *)
-  in
-    Local_Theory.declaration {pervasive=false, syntax=false} add_transfers lthy
-  end
-fun relift_definition (from:term) (to:term) lthy =
-  let val from_name = dest_Const from |> fst
-      fun after_qed thmss = relift_definition' from_name (thmss |> hd |> hd)
-      val prop = Logic.mk_equals (from, to)
-      val lthy = Proof.theorem NONE after_qed [[(prop,[])]] lthy
+\<close>
+
+ML \<open>Multi_Transfer.Saved_Transfer_Rules.get (Context.Theory \<^theory>)\<close>
+
+
+ML \<open>
+(* fun save_transfer_rules locale tyco name lthy =
+  let
+      val lthy_locale = Named_Target.init' {conclude=I, setup=I} locale (Proof_Context.theory_of lthy)
+      val transfer_thms = Transfer.get_transfer_raw lthy_locale
+          |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_type (Term.exists_subtype (fn Type(n,_) => n=tyco | _ => false)))
+      val (transfer_thms_exported,thy) = Local_Theory.exit_result_global (fn m => map (Morphism.thm m)) (transfer_thms,lthy_locale)
+      val lthy = Context.raw_transfer thy lthy
+      val update = Saved_Transfer_Rules.map (Symtab.update (name,transfer_thms_exported))
+      val lthy = Local_Theory.declaration {pervasive=true, syntax=false} (K update) lthy
+                     (* TODO merge *)
   in
     lthy
   end
-fun relift_definition_cmd from to lthy =
-  let val from' = Proof_Context.read_const {proper = true, strict = true} lthy from
-      val to' = Proof_Context.read_const {proper = true, strict = true} lthy to
-  in
-    relift_definition from' to' lthy
-  end
-val _ =
-  Outer_Syntax.local_theory_to_proof \<^command_keyword>\<open>relift_definition\<close>
-    "Transfering a 'lift_definition' to another constant"
-    (Parse.const -- Parse.const
-    >> (fn (from,to) => relift_definition_cmd from to))
+ *)
 \<close>
 
-lift_definition (in stuff2) all :: "stuff set" is "{0<..}" by simp
+save_transfer_rules stuff1
+save_transfer_rules stuff2
 
-bundle stuff2 begin
-lemma all_eq: "stuff2.all = stuff1.all"
-  unfolding stuff1.all_def stuff2.all_def apply auto
-  using greaterThan_0 image_iff
-  by fastforce
+ML \<open>Multi_Transfer.Saved_Transfer_Rules.get (Context.Theory \<^theory>)\<close>
 
-lemmas [transfer_rule] = stuff2.all.transfer[unfolded all_eq]
+lemma "card (UNIV :: stuff set) = 0"
+  using [[transfer_import stuff1]]
+  apply transfer
+  by simp
+
+lemma "x : stuff1.all"
+  using [[transfer_import stuff1]]
+  using [[transfer_import stuff2]]
+  apply transfer
+  by simp
+  
+
+
+(* ML \<open>
+fun import_transfer_rules locale tyco context =
+  let val thy = Context.theory_of context
+      val _ = thy |> Context.pretty_abbrev_thy |> @{print}
+      (* val lthy = Context.proof_of context *)
+      val lthy_locale = Named_Target.init' {conclude=I, setup=I} locale thy
+(* val _ = @{print} 1 *)
+      val transfer_thms = Transfer.get_transfer_raw lthy_locale
+      |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_type (Term.exists_subtype (fn Type(n,_) => n=tyco | _ => false)))
+val _ = transfer_thms |> hd |> Thm.theory_of_thm |> (Context.pretty_abbrev_thy) |> @{print}
+      (* val transfer_thms_exported = Proof_Context.export lthy_locale (Context.proof_of context) transfer_thms *)
+      val (transfer_thms_exported,thy') = Local_Theory.exit_result_global (fn m => map (Morphism.thm m)) (transfer_thms,lthy_locale)
+      val context' = Context.mapping (K thy') (Context.raw_transfer thy') context
+      (* val transfer_thms_exported' = Proof_Context.export lthy' lthy transfer_thms_exported *)
+(* val _ = @{print} 2 *)
+      (* val transfer_thms_exported = map (Thm.transfer'' context) transfer_thms_exported *)
+(* val _ = @{print} 3 *)
+      val add_transfers = fold (Transfer.transfer_raw_add) transfer_thms_exported
+(* val _ = @{print} 4 *)
+in 
+  add_transfers context'
+end
+
+val _ = Attrib.setup @{binding import_transfer}
+  (Scan.lift (Parse.position Parse.name) -- Scan.lift Parse.type_const
+    >> (fn (locale,tyco) => Thm.declaration_attribute 
+    (fn _ => fn context => 
+      let val locale' = Locale.check (Context.theory_of context) locale
+          val tyco' = Proof_Context.read_type_name {proper=true,strict=true} (Context.proof_of context) tyco 
+                      |> dest_Type |> fst 
+      in
+      import_transfer_rules locale' tyco' context end)))
+  "Imports transfer rules from locale" 
+  |> Theory.setup
+;;
+(* import_transfer_rules \<^locale>\<open>stuff1\<close> \<^type_name>\<open>stuff\<close> \<^context> *)
+\<close>
+ *)
+(* declare [[import_transfer stuff1 stuff]] *)
+
+(* lemma "x : stuff1.all"
+  using [[import_transfer stuff1 stuff]]
+  apply transfer
+  by simp
+ *)
+
+(* bundle stuff1 begin
+lemmas [transfer_rule] = stuff1.all.transfer
+lemmas [transfer_rule] = stuff1.stuff.bi_unique stuff1.stuff.pcr_cr_eq stuff1.stuff.rep_transfer
+  stuff1.stuff.domain stuff1.stuff.left_unique
+  stuff1.stuff.right_unique stuff1.stuff.right_total
+lemmas [transfer_domain_rule] = stuff1.stuff.domain
+end
+ *)
+
+(* lemma "x : stuff1.all"
+  including stuff1
+  apply transfer
+  apply transfer_step
+ *)
+
+(* bundle stuff2 begin
+lemmas [transfer_rule] = stuff2.all.transfer[unfolded stuff2.all]
+
 lemmas [transfer_rule] = stuff2.stuff.bi_unique stuff2.stuff.pcr_cr_eq stuff2.stuff.rep_transfer (* stuff2.cr_stuff_def stuff2.pcr_stuff_def *)
  stuff2.stuff.domain stuff2.stuff.domain_eq  stuff2.stuff.domain_par stuff2.stuff.domain_par_left_total stuff2.stuff.left_unique
  stuff2.stuff.right_unique stuff2.stuff.right_total
+
 lemmas [transfer_domain_rule] = stuff2.stuff.domain_eq
+ *)
 
 (* relift_definition stuff2.all stuff1.all
   apply (rule eq_reflection)
@@ -80,13 +173,14 @@ lemmas [transfer_domain_rule] = stuff2.stuff.domain_eq
   by fastforce
  *)
 
-ML \<open>
+(* ML \<open>
 Transfer.get_transfer_raw \<^context>
               |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_Const (fn (name,_) => name=\<^const_name>\<open>stuff1.all\<close>))
 \<close>
 end
+ *)
 
-(* declare [[lifting_restore stuff2.Quotient_stuff]] *)
+(* (* declare [[lifting_restore stuff2.Quotient_stuff]] *)
 lemma "x : stuff1.all"
   including stuff2 
   apply transfer_start
@@ -95,16 +189,16 @@ lemma "x : stuff1.all"
    apply transfer_step
   apply transfer_end
   by simp
+ *)
+(* end *)
 
-end
-
-print_bundles! 
+(* print_bundles!  *)
 
 
 (* end *)
 (* end *)
 
-(* context bla begin
+(* (* context bla begin
 lifting_forget bla2.stuff.lifting *)
 lemma "x : stuff1.all"
   (* using [[lifting_restore Quotient_stuff]] *)
@@ -129,6 +223,7 @@ lemma (in bla2) "x : all2"
   by simp
 
 print_theorems
+ *)
 
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }
