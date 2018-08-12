@@ -2,7 +2,133 @@ theory Test
   imports 
 (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools" *)
     QRHL.QRHL_Core  
+  keywords
+    "relift_definition" :: thy_goal
 begin
+
+typedef stuff = "UNIV :: nat set" by simp
+
+locale stuff1 begin
+setup_lifting type_definition_stuff
+lift_definition all :: "stuff set" is UNIV .
+ML \<open>
+Transfer.get_transfer_raw \<^context>
+              |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_Const (fn (name,_) => name=\<^const_name>\<open>stuff1.all\<close>))
+\<close>
+end
+
+locale stuff2 begin
+lemma type_definition_stuff': "type_definition (\<lambda>x. Rep_stuff x + 1) (\<lambda>x. Abs_stuff (x - 1)) {0<..}"
+  apply (rule type_definition.intro)
+  using Rep_stuff_inverse Abs_stuff_inverse by auto
+setup_lifting type_definition_stuff'
+print_theorems
+end
+
+
+ML \<open>
+fun relift_definition' (from:string) thm lthy =
+  let val transfer = Transfer.get_transfer_raw lthy
+              |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_Const (fn (name,_) => name=from))
+      val _ = if null transfer then error ("No transfer theorems containing "^from^" found") else ()
+      val conv = Conv.top_sweep_conv (K (Conv.rewr_conv thm)) lthy
+      val transfer_new = map (Conv.fconv_rule conv) transfer
+      fun add_transfers morph = fold (Transfer.transfer_raw_add o Morphism.thm morph) transfer_new
+      (* val _ = @{print} transfer_new *)
+  in
+    Local_Theory.declaration {pervasive=false, syntax=false} add_transfers lthy
+  end
+fun relift_definition (from:term) (to:term) lthy =
+  let val from_name = dest_Const from |> fst
+      fun after_qed thmss = relift_definition' from_name (thmss |> hd |> hd)
+      val prop = Logic.mk_equals (from, to)
+      val lthy = Proof.theorem NONE after_qed [[(prop,[])]] lthy
+  in
+    lthy
+  end
+fun relift_definition_cmd from to lthy =
+  let val from' = Proof_Context.read_const {proper = true, strict = true} lthy from
+      val to' = Proof_Context.read_const {proper = true, strict = true} lthy to
+  in
+    relift_definition from' to' lthy
+  end
+val _ =
+  Outer_Syntax.local_theory_to_proof \<^command_keyword>\<open>relift_definition\<close>
+    "Transfering a 'lift_definition' to another constant"
+    (Parse.const -- Parse.const
+    >> (fn (from,to) => relift_definition_cmd from to))
+\<close>
+
+lift_definition (in stuff2) all :: "stuff set" is "{0<..}" by simp
+
+bundle stuff2 begin
+lemma all_eq: "stuff2.all = stuff1.all"
+  unfolding stuff1.all_def stuff2.all_def apply auto
+  using greaterThan_0 image_iff
+  by fastforce
+
+lemmas [transfer_rule] = stuff2.all.transfer[unfolded all_eq]
+lemmas [transfer_rule] = stuff2.stuff.bi_unique stuff2.stuff.pcr_cr_eq stuff2.stuff.rep_transfer (* stuff2.cr_stuff_def stuff2.pcr_stuff_def *)
+ stuff2.stuff.domain stuff2.stuff.domain_eq  stuff2.stuff.domain_par stuff2.stuff.domain_par_left_total stuff2.stuff.left_unique
+ stuff2.stuff.right_unique stuff2.stuff.right_total
+lemmas [transfer_domain_rule] = stuff2.stuff.domain_eq
+
+(* relift_definition stuff2.all stuff1.all
+  apply (rule eq_reflection)
+  unfolding stuff1.all_def stuff2.all_def apply auto
+  using greaterThan_0 image_iff
+  by fastforce
+ *)
+
+ML \<open>
+Transfer.get_transfer_raw \<^context>
+              |> filter (fn thm => thm |> Thm.prop_of |> Term.exists_Const (fn (name,_) => name=\<^const_name>\<open>stuff1.all\<close>))
+\<close>
+end
+
+(* declare [[lifting_restore stuff2.Quotient_stuff]] *)
+lemma "x : stuff1.all"
+  including stuff2 
+  apply transfer_start
+     apply transfer_step
+    apply transfer_step
+   apply transfer_step
+  apply transfer_end
+  by simp
+
+end
+
+print_bundles! 
+
+
+(* end *)
+(* end *)
+
+(* context bla begin
+lifting_forget bla2.stuff.lifting *)
+lemma "x : stuff1.all"
+  (* using [[lifting_restore Quotient_stuff]] *)
+  including lift2
+  apply transfer_start
+  apply transfer_step
+  apply transfer_step
+  apply transfer_step
+  apply transfer_end
+
+(* 
+ 1. Transfer.Rel (rel_fun ?Ra7 (rel_fun (rel_set pcr_stuff) (=))) ?aa7 (\<in>) *)
+
+lemma (in bla) "bla.all = bla2.all2"
+  unfolding bla.all_def bla2.all2_def apply auto
+  using greaterThan_0 image_iff by fastforce
+
+print_theorems
+  (* parametric refl *) .
+lemma (in bla2) "x : all2"
+  apply transfer
+  by simp
+
+print_theorems
 
 ML \<open>
 type sorry_location = { position : Position.T, comment : string }
