@@ -63,8 +63,12 @@ end
 section \<open>Type bit\<close>
 
 
-(* typedef bit = "UNIV::bool set".. *)
 setup_lifting type_definition_bit
+
+(* Needed after setup_lifting since otherwise code generation breaks, see the following "value" command *)
+code_datatype "0::bit" "1::bit"
+value [nbe] "0\<noteq>(1::bit)"
+
 (* instantiation bit :: field begin
 lift_definition times_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "(&)".
 lift_definition plus_bit :: "bit \<Rightarrow> bit \<Rightarrow> bit" is "(\<noteq>)".

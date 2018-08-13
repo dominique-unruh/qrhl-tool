@@ -36,7 +36,7 @@ for Q :: "'a variables" and e :: "'z \<Rightarrow> 'a \<Rightarrow> 'e" and f ::
 axiomatization pair_expression where
   pair_expression_def[simp]: "pair_expression (expression Q1 e1) (expression Q2 e2)
     = expression (variable_concat Q1 Q2) (\<lambda>(z1,z2). (e1 z1, e2 z2))"
-for Q1 :: "'q1 variables" and Q2 :: "'q2 variables" 
+for Q1 :: "'q1::universe variables" and Q2 :: "'q2::universe variables" 
 and e1 :: "'q1 \<Rightarrow> 'e1" and e2 :: "'q2 \<Rightarrow> 'e2"
 
 
@@ -120,9 +120,10 @@ axiomatization
   measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
 
 
-axiomatization fv_expression :: "'a expression \<Rightarrow> string set" where
+axiomatization fv_expression :: "'a expression \<Rightarrow> string set" 
+axiomatization where
   fv_expression_def: "fv_expression (expression v e) = set (variable_names v)"
-    for v :: "'a variables"
+    for v :: "'a::universe variables" and e :: "'a \<Rightarrow> 'b expression"
 
 axiomatization fv_program :: "program \<Rightarrow> string set" where
   fv_program_sequence: "fv_program (block b) = (\<Union>s\<in>set b. fv_program s)"
@@ -137,7 +138,7 @@ and fv_program_measurement: "fv_program (measurement x R e5) = {variable_name x}
 
 for b p1 p2 :: "program list" and x :: "'a::universe variable" and e :: "'a expression"
 and e2 :: "'a distr expression" and e3 :: "'a vector expression" and e4 :: "('a,'a) bounded expression"
-and e5 :: "('a,'b) measurement expression" and Q :: "'a variables" and R :: "'b variables"
+and e5 :: "('a,'b::universe) measurement expression" and Q :: "'a variables" and R :: "'b variables"
 
 axiomatization qrhl :: "predicate expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> predicate expression \<Rightarrow> bool"
 

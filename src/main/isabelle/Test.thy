@@ -2,11 +2,12 @@ theory Test
   imports 
 (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools" *)
     QRHL.QRHL_Core  
-    Multi_Transfer
 (*   keywords
     "relift_definition" :: thy_goal
  *)
 begin
+
+value "0 = (1::bit)"
 
 typedef stuff = "UNIV :: nat set" by simp
 
@@ -337,14 +338,29 @@ lemma "space_div (span{ket (0,0), ket(1,1)}\<guillemotright>\<lbrakk>q,r\<rbrakk
   by eval
  *)
 
+(* TODO move *)
+setup_lifting type_definition_variable_raw
+setup_lifting type_definition_variable
+setup_lifting type_definition_mem2
 
-axiomatization eval_variable :: "'a variable \<Rightarrow> mem2 \<Rightarrow> 'a"
+(* thm type_definition_mem2
+lemma type_definition_universe_class: 
+  fixes embed
+  defines "embed \<equiv> embedding::'a::universe\<Rightarrow>_"
+  shows "type_definition embed (inv embed) (range embed)"
+  apply (rule type_definition.intro)
+  by (auto simp: embed_def)
+setup_lifting type_definition_universe_class *)
+
+lift_definition eval_variable :: "'a::universe variable \<Rightarrow> mem2 \<Rightarrow> 'a"
+  is "\<lambda>v m. inv embedding (m v)" .
+print_theorems
+
 axiomatization eval_variables :: "'a variables \<Rightarrow> mem2 \<Rightarrow> 'a"
-axiomatization where
-  eval_variables_unit: "eval_variables \<lbrakk>\<rbrakk> m = ()"
-and eval_variables_singleton: "eval_variables \<lbrakk>q\<rbrakk> m = eval_variable q m"
-and eval_variables_concat: "eval_variables (variable_concat Q R) m = (eval_variables Q m, eval_variables R m)"
-for q :: "'a variable" and Q :: "'b variables" and R :: "'c variables" 
+
+lemma eval_variables_unit: "eval_variables \<lbrakk>\<rbrakk> m = ()" sorry
+lemma eval_variables_singleton: "eval_variables \<lbrakk>q\<rbrakk> m = eval_variable q m" sorry
+lemma eval_variables_concat: "eval_variables (variable_concat Q R) m = (eval_variables Q m, eval_variables R m)" sorry
 
 
 instantiation expression :: (ord) ord begin

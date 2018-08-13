@@ -3,7 +3,7 @@ theory Teleport
 begin
 
 lemma assoc_op_lift_aux:
-  fixes U :: "(('c \<times> 'd) \<times> 'e, ('c \<times> 'd) \<times> 'e) bounded" and Q R S
+  fixes U :: "(_,_) bounded" and Q R S
   assumes "distinct_qvars (variable_concat Q R)" and "distinct_qvars (variable_concat R S)" and "distinct_qvars (variable_concat Q S)"
   defines "V == assoc_op* \<cdot> U \<cdot> assoc_op"
   shows

@@ -90,57 +90,105 @@ lemma [simp]: "eigenspace b 0 = Cla[b=0]"
 
 subsection "Distinct quantum variables"
 
+axiomatization predicate_local_raw :: "predicate \<Rightarrow> variable_raw set \<Rightarrow> bool"
+lemma predicate_local_raw_top: "predicate_local_raw top {}" sorry
+lemma predicate_local_raw_bot: "predicate_local_raw bot {}" sorry
+lemma predicate_local_raw_inter: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw B Q \<Longrightarrow> predicate_local_raw (A\<sqinter>B) Q" sorry
+lemma predicate_local_raw_plus: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw B Q \<Longrightarrow> predicate_local_raw (A+B) Q" sorry
+lemma predicate_local_raw_ortho: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw (ortho A) Q" sorry
+lemma predicate_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> predicate_local_raw A Q \<Longrightarrow> predicate_local_raw A Q'" sorry
+axiomatization operator_local_raw :: "(mem2,mem2)bounded \<Rightarrow> variable_raw set \<Rightarrow> bool"
+lemma predicate_local_raw_apply_op: "operator_local_raw U Q \<Longrightarrow> predicate_local_raw A Q \<Longrightarrow> predicate_local_raw (U\<cdot>A) Q" sorry
+lemma operator_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> operator_local_raw A Q \<Longrightarrow> operator_local_raw A Q'" sorry
 
-axiomatization distinct_qvars :: "'a variables \<Rightarrow> bool"
-axiomatization colocal_pred_qvars :: "predicate \<Rightarrow> 'a variables \<Rightarrow> bool"
-  and colocal_op_pred :: "(mem2,mem2) bounded \<Rightarrow> predicate \<Rightarrow> bool"
-  and colocal_op_qvars :: "(mem2,mem2) bounded \<Rightarrow> 'a variables \<Rightarrow> bool"
+lift_definition colocal_pred_qvars :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
+  is "\<lambda>A (vs,_). \<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> predicate_local_raw A vs'" .
+
+lift_definition colocal_op_qvars :: "(mem2,mem2) bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
+  is "\<lambda>A (vs,_). \<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> operator_local_raw A vs'" .
+
+lift_definition colocal_op_pred :: "(mem2,mem2) bounded \<Rightarrow> predicate \<Rightarrow> bool"
+  is "\<lambda>A B. \<exists>vs1 vs2. vs1 \<inter> vs2 = {} \<and> operator_local_raw A vs1 \<and> predicate_local_raw B vs2" .
 
 consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
 adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (* colocal_qvars_qvars *)
 
-axiomatization where colocal_variable_names[simp]:
-  "distinct (variable_names Q) \<Longrightarrow> distinct_qvars Q" 
-  for Q :: "'a variables"
+lifting_forget subspace.lifting (* TODO: don't *)
+lemma colocal_top[simp]: "distinct_qvars Q \<Longrightarrow> colocal_pred_qvars top Q"
+  apply transfer by (auto intro: predicate_local_raw_top exI[of _ "{}"])
+lemma colocal_bot[simp]: "distinct_qvars Q \<Longrightarrow> colocal bot Q"
+  apply transfer by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
 
-axiomatization where
-  colocal_top[simp]: "colocal top Q"
-  and colocal_bot[simp]: "colocal bot Q"
-  and colocal_inf[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A \<sqinter> B) Q"
-  and colocal_sup[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A \<squnion> B) Q"
-  and colocal_plus[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A + B) Q"
-  and colocal_Cla[simp]: "colocal (Cla[b]) Q"
-for Q :: "'a variables"
+lemma colocal_inf[simp]: assumes "colocal A Q" and "colocal B Q" shows "colocal (A \<sqinter> B) Q"
+proof -
+  obtain vsQ Qe where Q: "Rep_variables Q = (vsQ,Qe)" apply atomize_elim by simp
+  from assms
+  obtain vsA vsB where "set (flatten_tree vsQ) \<inter> vsA = {}" and "predicate_local_raw A vsA"
+    and "set (flatten_tree vsQ) \<inter> vsB = {}" and "predicate_local_raw B vsB"
+    apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
+  then show ?thesis
+    unfolding colocal_pred_qvars.rep_eq Q apply simp
+    apply (rule exI[of _ "vsA \<union> vsB"])
+    by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_inter )
+qed
 
+lemma colocal_plus[simp]: 
+  fixes A :: "_ subspace"
+  assumes "colocal A Q" and "colocal B Q" shows "colocal (A + B) Q" 
+proof -
+  obtain vsQ Qe where Q: "Rep_variables Q = (vsQ,Qe)" apply atomize_elim by simp
+  from assms
+  obtain vsA vsB where "set (flatten_tree vsQ) \<inter> vsA = {}" and "predicate_local_raw A vsA"
+    and "set (flatten_tree vsQ) \<inter> vsB = {}" and "predicate_local_raw B vsB"
+    apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
+  then show ?thesis
+    unfolding colocal_pred_qvars.rep_eq Q apply simp
+    apply (rule exI[of _ "vsA \<union> vsB"])
+    by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_plus)
+qed
 
-axiomatization where colocal_pred_qvars_mult[simp]:
-  "colocal_op_qvars U Q \<Longrightarrow> colocal_pred_qvars S Q \<Longrightarrow> colocal_pred_qvars (U\<cdot>S) Q"
-for Q :: "'a variables"
+lemma colocal_sup[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A \<squnion> B) Q"
+  unfolding subspace_sup_plus by simp
+lemma colocal_Cla[simp]: "distinct_qvars Q \<Longrightarrow> colocal (Cla[b]) Q"
+  by (cases b; simp)
 
-axiomatization where colocal_ortho[simp]: "colocal (ortho S) Q = colocal S Q"
-  for Q :: "'a variables"
+lemma colocal_pred_qvars_mult[simp]:
+  assumes "colocal_op_qvars U Q" and "colocal_pred_qvars S Q" shows "colocal_pred_qvars (U\<cdot>S) Q"
+proof -
+  obtain vsQ Qe where Q: "Rep_variables Q = (vsQ,Qe)" apply atomize_elim by simp
+  from assms
+  obtain vsU vsS where "set (flatten_tree vsQ) \<inter> vsU = {}" and "operator_local_raw U vsU"
+    and "set (flatten_tree vsQ) \<inter> vsS = {}" and "predicate_local_raw S vsS"
+    apply atomize_elim unfolding colocal_pred_qvars.rep_eq colocal_op_qvars.rep_eq unfolding Q by auto
+  then show ?thesis
+    unfolding colocal_pred_qvars.rep_eq Q apply simp
+    apply (rule exI[of _ "vsU \<union> vsS"])
+    by (auto intro: predicate_local_raw_mono operator_local_raw_mono intro!: predicate_local_raw_apply_op)
+qed
 
-axiomatization where distinct_qvars_split1: 
-  "distinct_qvars (variable_concat (variable_concat Q R) S) = (distinct_qvars (variable_concat Q R) \<and> distinct_qvars (variable_concat Q S) \<and> distinct_qvars (variable_concat R S))"
-  for Q::"'a variables" and R::"'b variables" and S::"'c variables"
-axiomatization where distinct_qvars_split2: "distinct_qvars (variable_concat S (variable_concat Q R)) = (distinct_qvars (variable_concat Q R) \<and> distinct_qvars (variable_concat Q S) \<and> distinct_qvars (variable_concat R S))"
-  for Q::"'a variables" and R::"'b variables" and S::"'c variables"
-axiomatization where distinct_qvars_swap: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars (variable_concat R Q)" for Q::"'a variables" and R::"'b variables"
-axiomatization where distinct_qvars_concat_unit1[simp]: "distinct_qvars (variable_concat Q \<lbrakk>\<rbrakk>) = distinct_qvars Q" for Q::"'a variables" 
-axiomatization where distinct_qvars_concat_unit2[simp]: "distinct_qvars (variable_concat \<lbrakk>\<rbrakk> Q) = distinct_qvars Q" for Q::"'a variables" 
-axiomatization where distinct_qvars_unit[simp]: "distinct_qvars \<lbrakk>\<rbrakk>" for Q::"'a variables" 
-axiomatization where distinct_qvars_single[simp]: "distinct_qvars \<lbrakk>q\<rbrakk>" for q::"'a variable"
-
-lemma distinct_qvarsL: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars Q"
-  by (meson distinct_qvars_concat_unit1 distinct_qvars_split1)
-lemma distinct_qvarsR: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars R"
-  by (meson distinct_qvars_concat_unit1 distinct_qvars_split1)
+lemma colocal_ortho[simp]: "colocal (ortho S) Q = colocal S Q"
+proof -
+  have "colocal (ortho S) Q" if "colocal S Q" for S
+  proof -
+    obtain vsQ Qe where Q: "Rep_variables Q = (vsQ,Qe)" apply atomize_elim by simp
+    from that
+    obtain vsS where "set (flatten_tree vsQ) \<inter> vsS = {}" and "predicate_local_raw S vsS"
+      apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
+    then show ?thesis
+      unfolding colocal_pred_qvars.rep_eq Q apply simp
+      apply (rule exI[of _ vsS])
+      by (auto intro: intro!: predicate_local_raw_ortho)
+  qed
+  from this this[where S="ortho S"]
+  show ?thesis 
+    by auto
+qed
 
 subsection \<open>Lifting\<close>
-  
+
 axiomatization
-    liftOp :: "('a,'a) bounded \<Rightarrow> 'a variables \<Rightarrow> (mem2,mem2) bounded"
-and liftSpace :: "'a subspace \<Rightarrow> 'a variables \<Rightarrow> predicate"
+    liftOp :: "('a,'a) bounded \<Rightarrow> 'a::universe variables \<Rightarrow> (mem2,mem2) bounded"
+and liftSpace :: "'a subspace \<Rightarrow> 'a::universe variables \<Rightarrow> predicate"
 
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<guillemotright>_"  [91,91] 90)
@@ -155,31 +203,31 @@ and applyOpSpace_lift[simp]: "applyOpSpace (liftOp U Q) (liftSpace S Q) = liftSp
 and top_lift[simp]: "liftSpace top Q = top"
 and bot_lift[simp]: "liftSpace bot Q = bot"
 and unitary_lift[simp]: "unitary (liftOp U Q) = unitary U"
-for U :: "('a,'a) bounded"
+for U :: "('a::universe,'a) bounded"
 
-axiomatization where lift_inf[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>Q = (S \<sqinter> T)\<guillemotright>Q" for S::"'a subspace"
-axiomatization where lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a subspace"
-axiomatization where lift_eqSp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a subspace" 
-axiomatization where lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a,'a) bounded" 
-axiomatization where lift_timesScalarOp[simp]: "distinct_qvars Q \<Longrightarrow> a \<cdot> (A\<guillemotright>Q) = (a \<cdot> A)\<guillemotright>Q" for a::complex and A::"('a,'a)bounded"
-axiomatization where lift_plus[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a subspace"  
-axiomatization where lift_plusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a,'a) bounded"  
-lemma lift_uminusOp[simp]: "distinct_qvars Q \<Longrightarrow> - (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a,'a) bounded"  
+axiomatization where lift_inf[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>Q = (S \<sqinter> T)\<guillemotright>Q" for S::"'a::universe subspace"
+axiomatization where lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a::universe subspace"
+axiomatization where lift_eqSp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a::universe subspace" 
+axiomatization where lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a::universe,'a) bounded" 
+axiomatization where lift_timesScalarOp[simp]: "distinct_qvars Q \<Longrightarrow> a \<cdot> (A\<guillemotright>Q) = (a \<cdot> A)\<guillemotright>Q" for a::complex and A::"('a::universe,'a)bounded"
+axiomatization where lift_plus[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a::universe subspace"  
+axiomatization where lift_plusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a::universe,'a) bounded"  
+lemma lift_uminusOp[simp]: "distinct_qvars Q \<Longrightarrow> - (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a::universe,'a) bounded"  
   unfolding uminus_bounded_def by simp
-lemma lift_minusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q - T\<guillemotright>Q = (S - T)\<guillemotright>Q" for S T :: "('a,'a) bounded"  
+lemma lift_minusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q - T\<guillemotright>Q = (S - T)\<guillemotright>Q" for S T :: "('a::universe,'a) bounded"  
   unfolding minus_bounded_def by simp
-axiomatization where lift_timesOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a,'a) bounded"  
-axiomatization where lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> ortho (S\<guillemotright>Q) = (ortho S)\<guillemotright>Q" for Q :: "'a variables"
-axiomatization where lift_tensorOp: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>variable_concat Q R" for Q :: "'a variables" and R :: "'b variables" and S T :: "(_,_) bounded" 
-axiomatization where lift_tensorSpace: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>variable_concat Q R" for Q :: "'a variables" and R :: "'b variables" and S :: "_ subspace" 
-axiomatization where lift_idOp[simp]: "idOp\<guillemotright>Q = idOp" for Q :: "'a variables"
-axiomatization where INF_lift: "distinct_qvars Q \<Longrightarrow> (INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" for Q::"'a variables" and S::"'b \<Rightarrow> 'a subspace"
+axiomatization where lift_timesOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a::universe,'a) bounded"  
+axiomatization where lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> ortho (S\<guillemotright>Q) = (ortho S)\<guillemotright>Q" for Q :: "'a::universe variables"
+axiomatization where lift_tensorOp: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>variable_concat Q R" for Q :: "'a::universe variables" and R :: "'b::universe variables" and S T :: "(_,_) bounded" 
+axiomatization where lift_tensorSpace: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>variable_concat Q R" for Q :: "'a::universe variables" and R :: "'b::universe variables" and S :: "_ subspace" 
+axiomatization where lift_idOp[simp]: "idOp\<guillemotright>Q = idOp" for Q :: "'a::universe variables"
+axiomatization where INF_lift: "distinct_qvars Q \<Longrightarrow> (INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" for Q::"'a::universe variables" and S::"'b \<Rightarrow> 'a subspace"
 lemma Cla_inf_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<sqinter> (S\<guillemotright>Q) = (if b then S else bot)\<guillemotright>Q" by auto
 lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 axiomatization where Proj_lift[simp]: "distinct_qvars Q \<Longrightarrow> Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
-  for Q::"'a variables"
-axiomatization where kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q::"'a variables"
-lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a variables"
+  for Q::"'a::universe variables"
+axiomatization where kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q::"'a::universe variables"
+lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a::universe variables"
   unfolding eigenspace_def apply (subst lift_idOp[symmetric, of Q]) by (simp del: lift_idOp)
 
 lemma top_leq_lift: "distinct_qvars Q \<Longrightarrow> top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S" sorry
@@ -192,20 +240,20 @@ lemma bot_eq_lift: "distinct_qvars Q \<Longrightarrow> bot = S\<guillemotright>Q
 
 axiomatization where remove_qvar_unit_op:
   "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op*)\<guillemotright>Q = A\<guillemotright>(variable_concat Q \<lbrakk>\<rbrakk>)"
-for A::"(_,_)bounded" and Q::"'a variables"
+for A::"(_,_)bounded" and Q::"'a::universe variables"
 
 
 axiomatization where colocal_op_pred_lift1[simp]:
  "colocal S Q \<Longrightarrow> colocal (U\<guillemotright>Q) S"
-for Q :: "'a variables" and U :: "('a,'a) bounded" and S :: predicate
+for Q :: "'a::universe variables" and U :: "('a,'a) bounded" and S :: predicate
 
 axiomatization where colocal_op_qvars_lift1[simp]:
   "distinct_qvars (variable_concat Q R) \<Longrightarrow> colocal (U\<guillemotright>Q) R"
-for Q :: "'a variables" and R :: "'b variables" and U :: "('a,'a) bounded"  
+for Q :: "'a::universe variables" and R :: "'b::universe variables" and U :: "('a,'a) bounded"  
 
 axiomatization where colocal_pred_qvars_lift1[simp]:
   "distinct_qvars (variable_concat Q R) \<Longrightarrow> colocal_pred_qvars (S\<guillemotright>Q) R"
-for Q :: "'a variables" and R :: "'b variables"
+for Q :: "'a::universe variables" and R :: "'b::universe variables"
 
 lemma lift_extendR:
   assumes "distinct_qvars (variable_concat Q R)"
@@ -218,7 +266,7 @@ lemma lift_extendL:
   by (metis assms distinct_qvars_swap lift_idOp lift_tensorOp times_idOp2)
 
 lemma move_plus_meas_rule:
-  fixes Q::"'a variables"
+  fixes Q::"'a::universe variables"
   assumes "distinct_qvars Q"
   assumes "(Proj C)\<guillemotright>Q \<cdot> A \<le> B"
   shows "A \<le> (B\<sqinter>C\<guillemotright>Q) + (ortho C)\<guillemotright>Q"
@@ -230,7 +278,7 @@ subsection "Rewriting quantum variable lifting"
 
 
 (* Means that operator A can be used to transform an expression \<dots>\<guillemotright>Q into \<dots>\<guillemotright>R *)
-definition "qvar_trafo A Q R = (distinct_qvars Q \<and> distinct_qvars R \<and> (\<forall>C::(_,_)bounded. C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R))" for A::"('a,'b) bounded"
+definition "qvar_trafo A Q R = (distinct_qvars Q \<and> distinct_qvars R \<and> (\<forall>C::(_,_)bounded. C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R))" for A::"('a::universe,'b::universe) bounded"
 
 lemma qvar_trafo_id[simp]: "distinct_qvars Q \<Longrightarrow> qvar_trafo idOp Q Q" unfolding qvar_trafo_def by auto
 
@@ -276,13 +324,13 @@ qed
 hide_fact qvar_trafo_coiso (* Subsumed by qvar_trafo_unitary *)
 
 axiomatization where assoc_op_lift: "(assoc_op \<cdot> A \<cdot> assoc_op*)\<guillemotright>(variable_concat (variable_concat Q R) T)
-     = A\<guillemotright>(variable_concat Q (variable_concat R T))" for A::"('a*'b*'c,_)bounded" 
+     = A\<guillemotright>(variable_concat Q (variable_concat R T))" for A::"('a::universe*'b::universe*'c::universe,_)bounded" 
 axiomatization where comm_op_lift: "(comm_op \<cdot> A \<cdot> comm_op*)\<guillemotright>(variable_concat Q R)
-     = A\<guillemotright>(variable_concat R Q)" for A::"('a*'b,_)bounded" 
+     = A\<guillemotright>(variable_concat R Q)" for A::"('a::universe*'b::universe,_)bounded" 
 axiomatization where lift_tensor_id: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars (variable_concat Q R) \<Longrightarrow>
    (\<And>D::(_,_) bounded. (A \<cdot> D \<cdot> A*)\<guillemotright>Q = D\<guillemotright>Q') \<Longrightarrow> (\<And>D::(_,_) bounded. (A' \<cdot> D \<cdot> A'*)\<guillemotright>R = D\<guillemotright>R') \<Longrightarrow> 
   ((A\<otimes>A') \<cdot> C \<cdot> (A\<otimes>A')*)\<guillemotright>variable_concat Q R = C\<guillemotright>variable_concat Q' R'"
-  for A :: "('a,'b) bounded" and A' :: "('c,'d) bounded" and C::"(_,_) bounded" and Q R :: "_ variables"
+  for A :: "('a::universe,'b::universe) bounded" and A' :: "('c::universe,'d::universe) bounded" and C::"(_,_) bounded" and Q R :: "_ variables"
 
 
 lemma qvar_trafo_assoc_op[simp]:
@@ -313,7 +361,7 @@ lemma qvar_trafo_bounded:
   using assms unfolding qvar_trafo_def by auto
 
 lemma qvar_trafo_subspace:
-  fixes S::"'a subspace"
+  fixes S::"'a::universe subspace"
   assumes "qvar_trafo A Q R"
   shows "S\<guillemotright>Q = (A\<cdot>S)\<guillemotright>R"
 proof -
@@ -388,7 +436,7 @@ lemma extend_lift_as_var_concat_hint_remove_aux: "extend_lift_as_var_concat_hint
      - the whole term should be rewritten into y'>>R for some y' 
   Rewriting the term is done by the simplifier rules declared below.
 *)
-definition "variable_renaming_hint x (A::('a,'b) bounded) (R::'b variables) = x"
+definition "variable_renaming_hint x (A::('a,'b) bounded) (R::'b::universe variables) = x"
 lemma [cong]: "x=x' \<Longrightarrow> variable_renaming_hint x A R = variable_renaming_hint x' A R" by simp
 
 (* A copy of qvars_trafo that is protected from unintentional rewriting *)
@@ -409,7 +457,7 @@ lemma variable_renaming_hint_bounded[simp]:
 
 
 lemma extend_space_lift_aux: \<comment> \<open>Auxiliary lemma for extend_lift_conv\<close>
-  fixes Q :: "'q variables" and R :: "'r variables"
+  fixes Q :: "'q::universe variables" and R :: "'r::universe variables"
     and S :: "'q subspace"
   assumes "distinct_qvars (variable_concat Q R)"
   shows "S\<guillemotright>Q \<equiv> (S\<otimes>top)\<guillemotright>(variable_concat Q R)"
@@ -418,7 +466,7 @@ lemma extend_space_lift_aux: \<comment> \<open>Auxiliary lemma for extend_lift_c
 
 
 lemma extend_bounded_lift_aux: \<comment> \<open>Auxiliary lemma for extend_lift_conv\<close>
-  fixes Q :: "'q variables" and R :: "'r variables"
+  fixes Q :: "'q::universe variables" and R :: "'r::universe variables"
     and S :: "('q,'q) bounded"
   assumes "distinct_qvars (variable_concat Q R)"
   shows "S\<guillemotright>Q \<equiv> (S\<otimes>idOp)\<guillemotright>(variable_concat Q R)"
@@ -491,10 +539,10 @@ lemma variable_extension_hint_bounded[simp]:
     - the whole expression should be rewritten to x'\<guillemotright>Q\<otimes>R' such that Q\<otimes>R' has the same variables as Q\<otimes>R (duplicates removed)
   Rewriting the term is done by the simplifier rules declared below.
 *)
-definition "join_variables_hint x (R::'a variables) = x"
+definition "join_variables_hint x (R::'a::universe variables) = x"
 
 lemma add_join_variables_hint: 
-  fixes Q :: "'a variables" and R :: "'b variables" 
+  fixes Q :: "'a::universe variables" and R :: "'b::universe variables" 
     and S :: "'a subspace" and T :: "'b subspace"
     and A :: "('a,'a) bounded" and B :: "('b,'b) bounded"
   shows "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>R = join_variables_hint (S\<guillemotright>Q) R \<sqinter> join_variables_hint (T\<guillemotright>R) Q"
@@ -543,7 +591,7 @@ definition [simp]: "comm_op_pfx = assoc_op* \<cdot> (comm_op\<otimes>idOp) \<cdo
 definition [simp]: "id_tensor A = idOp\<otimes>A"
 definition [simp]: "assoc_op_adj = assoc_op*"
 definition [simp]: "remove_qvar_unit_op2 = remove_qvar_unit_op \<cdot> comm_op"
-definition [simp]: "qvar_trafo_mult (Q::'b variables) (B::('b,'c)bounded) (A::('a,'b)bounded) = timesOp B A"
+definition [simp]: "qvar_trafo_mult (Q::'b::universe variables) (B::('b,'c)bounded) (A::('a,'b)bounded) = timesOp B A"
 
 
 lemma qvar_trafo_protected_mult[simp]: 
@@ -632,7 +680,7 @@ section \<open>Quantum predicates (ctd.)\<close>
 
 subsection \<open>Subspace division\<close>
 
-axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a variables \<Rightarrow> predicate"
+axiomatization space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a::universe variables \<Rightarrow> predicate"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
   where leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
 
@@ -653,15 +701,15 @@ lemma space_div_add_extend_lift_as_var_concat_hint:
 
 subsection \<open>Quantum equality\<close>
 
-definition quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a variables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b variables \<Rightarrow> predicate" where
+definition quantum_equality_full :: "('a,'c) bounded \<Rightarrow> 'a::universe variables \<Rightarrow> ('b,'c) bounded \<Rightarrow> 'b::universe variables \<Rightarrow> predicate" where
   [code del]: "quantum_equality_full U Q V R = 
                  (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> variable_concat Q R"
-  for Q :: "'a variables" and R :: "'b variables"
+  for Q :: "'a::universe variables" and R :: "'b::universe variables"
   and U V :: "(_,'c) bounded"
 
-abbreviation "quantum_equality" :: "'a variables \<Rightarrow> 'a variables \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
+abbreviation "quantum_equality" :: "'a::universe variables \<Rightarrow> 'a::universe variables \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
   where "quantum_equality X Y \<equiv> quantum_equality_full idOp X idOp Y"
-syntax quantum_equality :: "'a variables \<Rightarrow> 'a variables \<Rightarrow> predicate" (infix "==q" 100)
+syntax quantum_equality :: "'a::universe variables \<Rightarrow> 'a::universe variables \<Rightarrow> predicate" (infix "==q" 100)
 syntax "_quantum_equality" :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_variables a) (_variables b)"
@@ -687,21 +735,22 @@ qed
 
 axiomatization where colocal_quantum_equality_full[simp]:
   "distinct_qvars (variable_concat Q1 (variable_concat Q2 Q3)) \<Longrightarrow> colocal (quantum_equality_full U1 Q1 U2 Q2) Q3"
-for Q1::"'a variables" and Q2::"'b variables" and Q3::"'c variables"
+for Q1::"'a::universe variables" and Q2::"'b::universe variables" and Q3::"'c::universe variables"
 and U1 U2::"(_,'d)bounded" 
 
 axiomatization where colocal_quantum_eq[simp]: "distinct_qvars (variable_concat (variable_concat Q1 Q2) R) \<Longrightarrow> colocal (Q1 \<equiv>\<qq> Q2) R"
- for Q1 Q2 :: "'c variables" and R :: "'a variables"
+ for Q1 Q2 :: "'c::universe variables" and R :: "'a::universe variables"
 
 axiomatization where applyOpSpace_colocal[simp]:
   "colocal U S \<Longrightarrow> U\<noteq>0 \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) bounded" and S :: predicate
 
 lemma qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idOp Q2"
- for U :: "('a,'b) bounded" and V :: "('c,'b) bounded"
+ for U :: "('a::universe,'b::universe) bounded" and V :: "('c::universe,'b) bounded"
   unfolding quantum_equality_full_def by auto
 
 lemma qeq_collect_guarded[simp]:
+  fixes U :: "('a::universe,'b::universe) bounded" and V :: "('c::universe,'b) bounded"
   assumes "NO_MATCH idOp V"
   shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idOp Q2"
   by (fact qeq_collect)
@@ -709,19 +758,19 @@ lemma qeq_collect_guarded[simp]:
 (* Proof in paper *)
 axiomatization where Qeq_mult1[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
- for U::"('a,'a) bounded" and U2 :: "('b,'c) bounded"  
+ for U::"('a::universe,'a) bounded" and U2 :: "('b::universe,'c::universe) bounded"  
 
 (* Proof in paper *)
 axiomatization where Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
- for U::"('a,'a) bounded" and U1 :: "('b,'c) bounded"  
+ for U::"('a::universe,'a::universe) bounded" and U1 :: "('b::universe,'c::universe) bounded"  
 
 (* Proof in paper *)
 axiomatization where quantum_eq_unique[simp]: "distinct_qvars (variable_concat Q R) \<Longrightarrow>
   isometry U \<Longrightarrow> isometry (adjoint V) \<Longrightarrow> 
   quantum_equality_full U Q V R \<sqinter> span{\<psi>}\<guillemotright>Q
   = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{V* \<cdot> U \<cdot> \<psi>}) R"
-  for Q::"'a variables" and R::"'b variables"
+  for Q::"'a::universe variables" and R::"'b::universe variables"
     and U::"('a,'c) bounded" and V::"('b,'c) bounded"
     and \<psi>::"'a vector"
 
@@ -731,8 +780,8 @@ axiomatization where
     "distinct_qvars (variable_concat Q (variable_concat R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
     quantum_equality_full U Q V R \<sqinter> span {\<psi>}\<guillemotright>T
              = quantum_equality_full (U \<otimes> idOp) (variable_concat Q T) (addState \<psi> \<cdot> V) R"
-    for U :: "('a,'c) bounded" and V :: "('b,'c) bounded" and \<psi> :: "'d vector"
-    and Q :: "'a variables"    and R :: "'b variables"    and T :: "'d variables"
+    for U :: "('a::universe,'c) bounded" and V :: "('b::universe,'c) bounded" and \<psi> :: "'d::universe vector"
+    and Q :: "'a::universe variables"    and R :: "'b::universe variables"    and T :: "'d variables"
 
 section \<open>Common quantum objects\<close>
 
