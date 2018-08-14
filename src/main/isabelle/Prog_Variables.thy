@@ -160,17 +160,6 @@ lemma variable_singleton_name[simp]: "variable_names (variable_singleton x) = [v
 lemma variable_unit_name[simp]: "variable_names variable_unit = []"
   by (transfer, auto)
 
-ML_file "prog_variables.ML"
-
-section {* Simprocs *}
-
-(* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed variables but can't *)
-syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")
-syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars [|_|]")
-parse_translation \<open>[("_declared_qvars", Prog_Variables.declared_qvars_parse_tr)]\<close>
-
-simproc_setup warn_declared_qvars ("variable_name q") = Prog_Variables.warn_declared_qvars_simproc
-
 section \<open>Distinct variables\<close>
 
 lift_definition distinct_qvars :: "'a::universe variables \<Rightarrow> bool" 
@@ -200,6 +189,64 @@ lemma distinct_qvarsL: "distinct_qvars (variable_concat Q R) \<Longrightarrow> d
   apply transfer by auto
 lemma distinct_qvarsR: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars R"
   apply transfer by auto
+
+typedef mem2 = "{f. \<forall>v::variable_raw. f v \<in> snd (Rep_variable_raw v)}"
+  apply auto apply (rule choice) using Rep_variable_raw by auto
+
+section \<open>Indexed variables\<close>
+
+
+axiomatization index_var :: "bool \<Rightarrow> 'a::universe variable \<Rightarrow> 'a::universe variable" where
+  index_var1: "y = index_var True x \<longleftrightarrow> variable_name y = variable_name x @ ''1''" and
+  index_var2: "y = index_var False x \<longleftrightarrow> variable_name y = variable_name x @ ''2''"
+
+lemma index_var1I: "variable_name y = variable_name x @ ''1'' \<Longrightarrow> index_var True x = y"
+  using index_var1 by metis
+lemma index_var2I: "variable_name y = variable_name x @ ''2'' \<Longrightarrow> index_var False x = y"
+  using index_var2 by metis
+
+lemma index_var1_simp[simp]: "variable_name (index_var True x) = variable_name x @ ''1''" 
+  using index_var1 by metis
+
+lemma index_var2_simp[simp]: "variable_name (index_var False x) = variable_name x @ ''2''"
+  using index_var2 by metis
+
+axiomatization index_vars :: "bool \<Rightarrow> 'a variables \<Rightarrow> 'a variables"
+axiomatization where
+  index_vars_singleton[simp]: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>" and
+  index_vars_concat[simp]: "index_vars left (variable_concat Q R) = variable_concat (index_vars left Q) (index_vars left R)" and
+  index_vars_unit[simp]: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
+for x :: "'a::universe variable" and Q :: "'b::universe variables" and R :: "'c::universe variables"
+
+section \<open>ML code\<close>
+
+
+lemma index_var_conv1_aux: \<comment> \<open>Helper for ML function index_var_conv\<close>
+  assumes "variable_name v \<equiv> vname"
+  assumes "variable_name v1 \<equiv> v1name"
+  assumes "vname @ ''1'' \<equiv> v1name"
+  shows "index_var True v \<equiv> v1"
+  using assms index_var1I by smt
+
+lemma index_var_conv2_aux: \<comment> \<open>Helper for ML function index_var_conv\<close>
+  assumes "variable_name v \<equiv> vname"
+  assumes "variable_name v2 \<equiv> v2name"
+  assumes "vname @ ''2'' \<equiv> v2name"
+  shows "index_var False v \<equiv> v2"
+  using assms index_var2I by smt
+
+ML_file "prog_variables.ML"
+
+section {* Simprocs *}
+
+(* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed variables but can't *)
+syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")
+syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars [|_|]")
+parse_translation \<open>[("_declared_qvars", Prog_Variables.declared_qvars_parse_tr)]\<close>
+
+simproc_setup warn_declared_qvars ("variable_name q") = Prog_Variables.warn_declared_qvars_simproc
+
+section \<open>Cleanup\<close>
 
 hide_type (open) vtree
 

@@ -20,8 +20,6 @@ lemma [simp]: "cnj sqrt2 = sqrt2" unfolding sqrt2_def by simp *)
 
 section \<open>Quantum predicates\<close>
     
-typedef mem2 = "{f. \<forall>v::variable_raw. f v \<in> snd (Rep_variable_raw v)}"
-  apply auto apply (rule choice) using Rep_variable_raw by auto
 type_synonym predicate = "mem2 subspace"
 
 subsection \<open>Classical predicates\<close>
@@ -934,7 +932,7 @@ lemma Uoracle_selfadjoint[simp]: "(Uoracle f)* = Uoracle f" for f :: "_ \<Righta
 
 lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = idOp" for f :: "_ \<Rightarrow> _::xor_group"
   apply (subst Uoracle_selfadjoint[symmetric]) apply (rule adjUU) by simp
-
+                                                                    
 section \<open>Misc\<close>
 
 lemma bij_add_const[simp]: "bij (\<lambda>x. x+(y::_::ab_group_add))" 

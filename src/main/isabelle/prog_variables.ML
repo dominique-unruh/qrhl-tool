@@ -143,4 +143,103 @@ val _ =
       (fn vars => Toplevel.begin_local_theory true (variables_cmd vars)))
         --| Parse.begin)
 
+
+datatype varterm = VTCons of varterm * varterm | VTSingle of string*typ | VTUnit
+
+fun parse_varterm (Const(\<^const_name>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
+  | parse_varterm (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ Free(n,Type(\<^type_name>\<open>variable\<close>,[T]))) = VTSingle (n,T)
+  | parse_varterm (Const(\<^const_name>\<open>variable_unit\<close>,_)) = VTUnit
+  | parse_varterm t = raise TERM("not a variables expression",[t])
+
+fun mk_varterm (VTUnit) = (\<^const>\<open>variable_unit\<close>, \<^typ>\<open>unit\<close>)
+  | mk_varterm (VTCons(a,b)) = let
+      val (vta,Ta) = mk_varterm a
+      val (vtb,Tb) = mk_varterm b
+    in
+      (Const(\<^const_name>\<open>variable_concat\<close>, 
+        mk_variablesT Ta --> mk_variablesT Tb --> mk_variablesT (HOLogic.mk_prodT(Ta,Tb))) $ vta $ vtb,
+       HOLogic.mk_prodT(Ta,Tb))
+    end
+  | mk_varterm (VTSingle(n,T)) = 
+      (Const(\<^const_name>\<open>variable_singleton\<close>, mk_variableT T --> mk_variablesT T) $ 
+          Free(n,Type(\<^type_name>\<open>variable\<close>,[T])),T)
+
+fun type_of_varterm (VTUnit) = \<^typ>\<open>unit\<close>
+  | type_of_varterm (VTCons(a,b)) = HOLogic.mk_prodT(type_of_varterm a, type_of_varterm b)
+  | type_of_varterm (VTSingle(_,T)) = T
+
+fun varterm_from_list [] = VTUnit
+  | varterm_from_list [nT] = VTSingle nT
+  | varterm_from_list (nT::xs) = VTCons (VTSingle nT, varterm_from_list xs)
+
+fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
+  | vars_in_varterm (VTSingle nT) = [nT]
+  | vars_in_varterm VTUnit = []
+
+fun parse_varlist t =
+  let val vt = parse_varterm t
+      fun tol (VTSingle nT) = [nT]
+        | tol VTUnit = []
+        | tol (VTCons (VTSingle _, VTUnit)) = raise TERM("not an explicit variable list",[t])
+        | tol (VTCons (VTSingle nT, rest)) = nT :: tol rest
+        | tol (VTCons _) = raise TERM("not an explicit variable list",[t])
+  in
+    tol vt
+  end
+
+(* Checks if term is a (not necessarily explict) variable list *)
+fun is_varlist (Const(\<^const_name>\<open>variable_unit\<close>,_)) = true
+  | is_varlist (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ _) = true
+  | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ _ $ Const(\<^const_name>\<open>variable_unit\<close>,_)) = false
+  | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ Const(\<^const_name>\<open>variable_singleton\<close>,_) $ rest) = is_varlist rest
+  | is_varlist _ = false
+
+fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
+
+(* Returns a varterm containing all variables from vt2 that are not in vt1 *)
+fun missing_in_varterm vt1 vt2 = let
+  val v1 = vars_in_varterm vt1
+  val v2 = vars_in_varterm vt2
+  val miss = subtract nameq v1 v2
+in
+  varterm_from_list miss
+end
+
+
+(* Converts "index_var True/False x" (where x is a free variable) into "x1" or "x2",
+   assuming x is declared via the variables-command or equivalent.
+   (More specifically, it requires that simp rules "variable_name x/x1/x2 = ''...''" with 
+   the correct names are declared.) *)
+fun index_var_conv ctxt ct =
+  let val (lrname,x,T) = case Thm.term_of ct of
+        Const(\<^const_name>\<open>index_var\<close>,_) $ Const(lrname,_) $ Free(x,T) => (lrname,x,T)
+      | _ => raise CTERM("index_var_conv: wrong shape",[ct])
+      val lr = case lrname of 
+          \<^const_name>\<open>True\<close> => true
+        | \<^const_name>\<open>False\<close> => false
+        | _ => raise CTERM("index_var_conv: wrong shape (expected True/False as first arg)",[ct])
+
+      val suffix = (if lr then "1" else "2")
+      val x1 = x ^ suffix
+
+      val varname_x = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt (Thm.cterm_of ctxt 
+        (Const(\<^const_name>\<open>variable_name\<close>, T --> \<^typ>\<open>string\<close>) $ Free(x,T)))
+
+      val varname_x1 = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt (Thm.cterm_of ctxt 
+        (Const(\<^const_name>\<open>variable_name\<close>, T --> \<^typ>\<open>string\<close>) $ Free(x1,T)))
+
+      val helper_thm = if lr then @{thm index_var_conv1_aux} else  @{thm index_var_conv2_aux}
+  
+      val name_x = varname_x |> Thm.concl_of |> Logic.dest_equals |> snd
+      val name_eq = Raw_Simplifier.rewrite_cterm (false,false,false) (fn _ => fn _ => NONE) ctxt
+        (\<^term>\<open>(@) :: string\<Rightarrow>_\<Rightarrow>_\<close> $ name_x $ HOLogic.mk_string suffix |> Thm.cterm_of ctxt)
+  in
+    helper_thm OF [varname_x, varname_x1, name_eq]
+  end
+
+(* Simproc that simplifies using index_var_conv, see there.  *)
+fun index_var_simproc _ ctxt ct = SOME (index_var_conv ctxt ct) handle CTERM _ => NONE
+
+
+
 end

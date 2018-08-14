@@ -12,6 +12,14 @@ fun dest_boundedT (Type(\<^type_name>\<open>bounded\<close>, [T,T'])) = (T,T')
 fun mk_bounded2T T = mk_boundedT T T
 fun mk_measurementT T T' = Type(\<^type_name>\<open>measurement\<close>, [T,T'])
 
+val parse_varterm = Prog_Variables.parse_varterm
+val missing_in_varterm = Prog_Variables.missing_in_varterm
+val vars_in_varterm = Prog_Variables.vars_in_varterm
+val mk_varterm = Prog_Variables.mk_varterm
+val type_of_varterm = Prog_Variables.type_of_varterm
+datatype varterm = datatype Prog_Variables.varterm
+
+
 fun mk_INFIMUM A f = 
   let val AT = fastype_of A
       val fT = fastype_of f
@@ -407,67 +415,6 @@ fun applyRule name goal ctx =
     subgoals'
   end
 
-
-datatype varterm = VTCons of varterm * varterm | VTSingle of string*typ | VTUnit
-
-fun parse_varterm (Const(\<^const_name>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
-  | parse_varterm (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ Free(n,Type(\<^type_name>\<open>variable\<close>,[T]))) = VTSingle (n,T)
-  | parse_varterm (Const(\<^const_name>\<open>variable_unit\<close>,_)) = VTUnit
-  | parse_varterm t = raise TERM("not a variables expression",[t])
-
-fun mk_varterm (VTUnit) = (\<^const>\<open>variable_unit\<close>, \<^typ>\<open>unit\<close>)
-  | mk_varterm (VTCons(a,b)) = let
-      val (vta,Ta) = mk_varterm a
-      val (vtb,Tb) = mk_varterm b
-    in
-      (Const(\<^const_name>\<open>variable_concat\<close>, 
-        mk_variablesT Ta --> mk_variablesT Tb --> mk_variablesT (HOLogic.mk_prodT(Ta,Tb))) $ vta $ vtb,
-       HOLogic.mk_prodT(Ta,Tb))
-    end
-  | mk_varterm (VTSingle(n,T)) = 
-      (Const(\<^const_name>\<open>variable_singleton\<close>, mk_variableT T --> mk_variablesT T) $ 
-          Free(n,Type(\<^type_name>\<open>variable\<close>,[T])),T)
-
-fun type_of_varterm (VTUnit) = \<^typ>\<open>unit\<close>
-  | type_of_varterm (VTCons(a,b)) = HOLogic.mk_prodT(type_of_varterm a, type_of_varterm b)
-  | type_of_varterm (VTSingle(_,T)) = T
-
-fun varterm_from_list [] = VTUnit
-  | varterm_from_list [nT] = VTSingle nT
-  | varterm_from_list (nT::xs) = VTCons (VTSingle nT, varterm_from_list xs)
-
-fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
-  | vars_in_varterm (VTSingle nT) = [nT]
-  | vars_in_varterm VTUnit = []
-
-fun parse_varlist t =
-  let val vt = parse_varterm t
-      fun tol (VTSingle nT) = [nT]
-        | tol VTUnit = []
-        | tol (VTCons (VTSingle _, VTUnit)) = raise TERM("not an explicit variable list",[t])
-        | tol (VTCons (VTSingle nT, rest)) = nT :: tol rest
-        | tol (VTCons _) = raise TERM("not an explicit variable list",[t])
-  in
-    tol vt
-  end
-
-(* Checks if term is a (not necessarily explict) variable list *)
-fun is_varlist (Const(\<^const_name>\<open>variable_unit\<close>,_)) = true
-  | is_varlist (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ _) = true
-  | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ _ $ Const(\<^const_name>\<open>variable_unit\<close>,_)) = false
-  | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ Const(\<^const_name>\<open>variable_singleton\<close>,_) $ rest) = is_varlist rest
-  | is_varlist _ = false
-
-fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
-
-(* Returns a varterm containing all variables from vt2 that are not in vt1 *)
-fun missing_in_varterm vt1 vt2 = let
-  val v1 = vars_in_varterm vt1
-  val v2 = vars_in_varterm vt2
-  val miss = subtract nameq v1 v2
-in
-  varterm_from_list miss
-end
 
 
 (* TODO: rewrite using extend_lift_conv *)

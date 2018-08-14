@@ -190,13 +190,13 @@ fun get_wp_not_cleaned left = get_wp_via_tac (fn ctxt => wp_tac0 left ctxt 1) le
 
    Assuming all involved variables, variable lists, and expressions are all explicit. *)
 fun wp_cleanup_conv ctxt =
- (Encoding.index_conv ctxt
+ (Expressions.index_conv ctxt
   then_conv
   Conv.bottom_conv (fn ctxt => Conv.try_conv (Encoding.subst_expression_conv ctxt)) ctxt
   then_conv
   Encoding.map_expression_conv ctxt
   then_conv
-  Conv.try_conv (Encoding.clean_expression_conv ctxt)
+  Conv.try_conv (Expressions.clean_expression_conv ctxt)
   )
     |> Conv.arg_conv (* Trueprop *)
     |> Conv.fun_conv |> Conv.fun_conv |> Conv.fun_conv |> Conv.arg_conv (* precondition of qrhl *)
