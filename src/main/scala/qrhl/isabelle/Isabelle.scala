@@ -249,7 +249,7 @@ object Isabelle {
 
 
 
-  val bitT = Type("Misc_Missing.bit", Nil)
+  val bitT = Type("Bit.bit", Nil)
   val predicateT = Type("Complex_L2.subspace", List(Type("QRHL_Core.mem2",Nil)))
   val programT = Type("Encoding.program")
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
