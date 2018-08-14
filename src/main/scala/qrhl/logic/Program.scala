@@ -36,11 +36,11 @@ sealed trait Statement {
       case Call(name, args @ _*) =>
         val p = environment.programs(name)
         progs += p
-        args.foreach(collect)
         if (recurse) {
           val (cv,qv,av,ps) = p.variablesRecursive
           cvars ++= cv; qvars ++= qv; avars ++= av; progs ++= ps
         }
+        args.foreach(collect)
       case While(e,body) => collectExpr(e); collect(body)
       case IfThenElse(e,p1,p2) => collectExpr(e); collect(p1); collect(p2)
       case QInit(vs,e) => qvars ++= vs; collectExpr(e)
@@ -60,7 +60,7 @@ sealed trait Statement {
       case Block(ss @ _*) => ss.foreach(collect)
       case Assign(v,e) => vars += v.name; vars ++= e.variables
       case Sample(v,e) => vars += v.name; vars ++= e.variables
-      case Call(_) =>
+      case Call(_, _*) =>
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
       case QInit(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
@@ -109,8 +109,9 @@ object Statement {
     case App(App(Const(Isabelle.sampleName,_),x),e) =>
       Sample(CVariable.fromTerm_var(context, x),Expression.decodeFromExpression(context, e))
     case Free(name,_) => Call(name)
-    case App(App(Const(Isabelle.instantiateOraclesName,_), Free(name,_)), args) =>
-      throw UserException("Not yet implemented. Tell Dominique.")
+    case App(App(Const(Isabelle.instantiateOracles.name,_), Free(name,_)), args) =>
+      val args2 = Isabelle.dest_list(args).map(decodeFromTerm(context,_).asInstanceOf[Call])
+      Call(name,args2 : _*)
     case App(App(Const(Isabelle.whileName,_),e),body) =>
       While(Expression.decodeFromExpression(context,e), decodeFromListTerm(context, body))
     case App(App(App(Const(Isabelle.ifthenelseName,_),e),thenBody),elseBody) =>
@@ -260,13 +261,16 @@ final case class Measurement(result:CVariable, location:List[QVariable], e:Expre
 final case class Call(name:String, args:Call*) extends Statement {
   override def toString: String = "call "+toStringShort+";"
   def toStringShort: String =
-    if (args.isEmpty) name else s"call $name(${args.map(_.toStringShort).mkString(",")})"
+    if (args.isEmpty) name else s"$name(${args.map(_.toStringShort).mkString(",")})"
   override def inline(name: String, program: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {}
   override def programTerm(context: Isabelle.Context): Term = {
-    if (args.nonEmpty)
-      throw UserException("Not yet implemented. Tell Dominique.")
-    Free(name, Isabelle.programT)
+    if (args.nonEmpty) {
+      val argTerms = args.map(_.programTerm(context)).toList
+      val argList = Isabelle.mk_list(Isabelle.programT, argTerms)
+      Isabelle.instantiateOracles $ Free(name, Isabelle.oracle_programT) $ argList
+    } else
+      Free(name, Isabelle.programT)
   }
 }

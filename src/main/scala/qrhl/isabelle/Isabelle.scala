@@ -252,6 +252,7 @@ object Isabelle {
   val bitT = Type("Bit.bit", Nil)
   val predicateT = Type("Complex_L2.subspace", List(Type("QRHL_Core.mem2",Nil)))
   val programT = Type("Encoding.program")
+  val oracle_programT = Type("Encoding.oracle_program")
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
@@ -271,7 +272,7 @@ object Isabelle {
   def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
   //val cvariableT: ITyp => Type = variableT
   def expressionT(typ:ITyp) = Type("Encoding.expression", List(typ))
-  val instantiateOraclesName: String = "Encoding.instantiateOracles"
+  val instantiateOracles = Const("Encoding.instantiateOracles", oracle_programT -->: listT(programT) -->: programT)
   val assignName = "Encoding.assign"
   def assign(typ:ITyp) : Const = Const(assignName, variableT(typ) -->: expressionT(typ) -->: programT)
   val sampleName = "Encoding.sample"
