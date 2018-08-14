@@ -271,6 +271,7 @@ object Isabelle {
   def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
   //val cvariableT: ITyp => Type = variableT
   def expressionT(typ:ITyp) = Type("Encoding.expression", List(typ))
+  val instantiateOraclesName: String = "Encoding.instantiateOracles"
   val assignName = "Encoding.assign"
   def assign(typ:ITyp) : Const = Const(assignName, variableT(typ) -->: expressionT(typ) -->: programT)
   val sampleName = "Encoding.sample"

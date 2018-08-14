@@ -109,6 +109,7 @@ axiomatization substitute1 :: "'a variable \<Rightarrow> 'a expression \<Rightar
 axiomatization subst_expression :: "substitution \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
 
 typedecl program
+typedecl oracle_program
 axiomatization
   block :: "program list \<Rightarrow> program" and
   assign :: "'a cvariable \<Rightarrow> 'a expression \<Rightarrow> program" and
@@ -117,8 +118,8 @@ axiomatization
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program" and
   qinit :: "'a variables \<Rightarrow> 'a vector expression \<Rightarrow> program" and
   qapply :: "'a variables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program" and
-  measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
-
+  measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program" and
+  instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
 
 axiomatization fv_expression :: "'a expression \<Rightarrow> string set" 
 axiomatization where

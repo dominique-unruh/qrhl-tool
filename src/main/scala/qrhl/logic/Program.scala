@@ -3,6 +3,7 @@ package qrhl.logic
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure
 import info.hupel.isabelle.pure.{App, Const, Free, Term}
+import qrhl.UserException
 import qrhl.isabelle.Isabelle
 
 import scala.collection.mutable
@@ -32,9 +33,10 @@ sealed trait Statement {
       case Block(ss @ _*) => ss.foreach(collect)
       case Assign(v,e) => cvars += v; collectExpr(e)
       case Sample(v,e) => cvars += v; collectExpr(e)
-      case Call(name) =>
+      case Call(name, args @ _*) =>
         val p = environment.programs(name)
         progs += p
+        args.foreach(collect)
         if (recurse) {
           val (cv,qv,av,ps) = p.variablesRecursive
           cvars ++= cv; qvars ++= qv; avars ++= av; progs ++= ps
@@ -76,10 +78,11 @@ sealed trait Statement {
       case Block(ss @ _*) => ss.foreach(collect)
       case Assign(v,e) => vars += v.name; vars ++= e.variables
       case Sample(v,e) => vars += v.name; vars ++= e.variables
-      case Call(name) =>
+      case Call(name, args @ _*) =>
         val (cvars,qvars,_,_) = env.programs(name).variablesRecursive
         vars ++= cvars.map(_.name)
         vars ++= qvars.map(_.name)
+        args.foreach(collect)
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
       case QInit(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
@@ -106,6 +109,8 @@ object Statement {
     case App(App(Const(Isabelle.sampleName,_),x),e) =>
       Sample(CVariable.fromTerm_var(context, x),Expression.decodeFromExpression(context, e))
     case Free(name,_) => Call(name)
+    case App(App(Const(Isabelle.instantiateOraclesName,_), Free(name,_)), args) =>
+      throw UserException("Not yet implemented. Tell Dominique.")
     case App(App(Const(Isabelle.whileName,_),e),body) =>
       While(Expression.decodeFromExpression(context,e), decodeFromListTerm(context, body))
     case App(App(App(Const(Isabelle.ifthenelseName,_),e),thenBody),elseBody) =>
@@ -153,7 +158,9 @@ class Block(val statements:List[Statement]) extends Statement {
     }
     val newStatements = for (s <- statements;
                              s2 <- s match {
-                               case Call(name2) if name==name2 => programStatements
+                               case Call(name2, args @ _*) if name==name2 =>
+                                 assert(args.isEmpty, s"Cannot inline $s, oracles not supported.")
+                                 programStatements
                                case _ => List(s.inline(name,program))
                              }) yield s2
     Block(newStatements : _*)
@@ -250,10 +257,16 @@ final case class Measurement(result:CVariable, location:List[QVariable], e:Expre
     Isabelle.measurement(Isabelle.tupleT(location.map(_.valueTyp):_*), result.valueTyp) $
       result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context)
 }
-final case class Call(name:String) extends Statement {
-  override def toString: String = s"call $name;"
+final case class Call(name:String, args:Call*) extends Statement {
+  override def toString: String = "call "+toStringShort+";"
+  def toStringShort: String =
+    if (args.isEmpty) name else s"call $name(${args.map(_.toStringShort).mkString(",")})"
   override def inline(name: String, program: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {}
-  override def programTerm(context: Isabelle.Context): Term = Free(name,Isabelle.programT)
+  override def programTerm(context: Isabelle.Context): Term = {
+    if (args.nonEmpty)
+      throw UserException("Not yet implemented. Tell Dominique.")
+    Free(name, Isabelle.programT)
+  }
 }
