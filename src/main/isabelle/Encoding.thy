@@ -8,6 +8,7 @@ type_synonym 'a cvariable = "'a variable"
 
 
 typedecl program
+typedecl oracle_program
 axiomatization
   block :: "program list \<Rightarrow> program" and
   assign :: "'a cvariable \<Rightarrow> 'a expression \<Rightarrow> program" and
@@ -16,8 +17,8 @@ axiomatization
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program" and
   qinit :: "'a variables \<Rightarrow> 'a vector expression \<Rightarrow> program" and
   qapply :: "'a variables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program" and
-  measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
-
+  measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program" and
+  instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
 
 axiomatization fv_program :: "program \<Rightarrow> string set" where
   fv_program_sequence: "fv_program (block b) = (\<Union>s\<in>set b. fv_program s)"

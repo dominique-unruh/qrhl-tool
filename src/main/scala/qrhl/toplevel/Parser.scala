@@ -75,12 +75,21 @@ object Parser extends RegexParsers {
          _ <- statementSeparator)
       yield Sample(context.environment.getCVariable(v), e)
 
+  def programExp(implicit context:ParserContext) : Parser[Call] = identifier ~
+    (literal("(") ~ rep1sep(programExp,identifierListSep) ~ ")").? ^^ {
+    case name ~ args =>
+      val args2 = args match { case None => Nil; case Some(_ ~ a ~ _) => a }
+      context.environment.programs.get(name) match {
+        case None => throw UserException(s"""Program $name not defined (in call-statement).""")
+        case Some(decl) =>
+          if (decl.numOracles!=args2.length)
+            throw UserException(s"""Program $name expects ${decl.numOracles} oracles (in call-statement)""")
+      }
+      Call(name,args2 : _*)
+  }
+
   def call(implicit context:ParserContext) : Parser[Call] =
-    literal("call") ~! identifier <~ statementSeparator ^^ { case _ ~ name =>
-      if (!context.environment.programs.contains(name))
-      throw UserException(s"""Program $name not defined (in "call $name").""")
-      Call(name)
-    }
+    literal("call") ~! programExp ~ statementSeparator ^^ { case _ ~ call ~ _ => call }
 
   private val qInitSymbol = literal("<q")
   def qInit(implicit context:ParserContext) : Parser[QInit] =
@@ -194,9 +203,9 @@ object Parser extends RegexParsers {
       DeclareProgramCommand(id,prog)
     }
 
-  private def declareAdversaryCalls: Parser[List[String]] = (literal("calls") ~ identifierList).? ^^ {
-    case None => Nil
-    case Some(_ ~ progs) => progs
+  private def declareAdversaryCalls: Parser[Int] = (literal("calls") ~ rep1sep(literal("?"),identifierListSep)).? ^^ {
+    case None => 0
+    case Some(_ ~ progs) => progs.length
   }
 
   def declareAdversary(implicit context:ParserContext) : Parser[DeclareAdversaryCommand] =
@@ -305,7 +314,7 @@ object Parser extends RegexParsers {
       tactic_seq |
       tactic_conseq |
       literal("call") ^^ { _ => ErrorTac("Call tactic was renamed. Use \"equal\" instead.") } |
-      literal("equal") ^^ { _ => EqualTac } | // TODO: rename call -> equal
+      literal("equal") ^^ { _ => EqualTac } |
       tactic_rnd |
       literal("byqrhl") ^^ { _ => ByQRHLTac } |
       tactic_split |

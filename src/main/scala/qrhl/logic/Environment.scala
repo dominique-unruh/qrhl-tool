@@ -1,11 +1,10 @@
 package qrhl.logic
 
-import qrhl.UserException
 import info.hupel.isabelle.pure
 import info.hupel.isabelle.pure.Typ
+import qrhl.UserException
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 /** Represents a logic environment in which programs and expressions are interpreted.
   * @param cVariables All declared classical variables
@@ -93,15 +92,14 @@ final class Environment private
     copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,program)))
   }
 
-  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], calls: Seq[String]): Environment = {
+  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], numOracles: Int): Environment = {
     if (programs.contains(name))
       throw UserException(s"A program with name $name was already declared.")
-    for (p <- calls)
-      if (!programs.contains(p))
-        throw UserException(s"Please declare program $p first.")
+//    for (p <- calls)
+//      if (!programs.contains(p))
+//        throw UserException(s"Please declare program $p first.")
     assert(!variableExists(name))
-    copy(programs=programs.updated(name, AbstractProgramDecl(name, cvars.toList, qvars.toList,
-                                                             calls.toList.map(programs))))
+    copy(programs=programs.updated(name, AbstractProgramDecl(name, cvars.toList, qvars.toList, numOracles)))
   }
 
 
@@ -125,12 +123,15 @@ sealed trait ProgramDecl {
 //  val variables : (List[CVariable],List[QVariable])
 //  val subprograms : List[ProgramDecl]
   val name: String
+  val numOracles : Int
 
 //  val cqapVariablesRecursive
 
 }
-final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], calls:List[ProgramDecl]) extends ProgramDecl {
-  override val variablesRecursive: (List[CVariable], List[QVariable], List[String], List[ProgramDecl]) = {
+final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], numOracles:Int) extends ProgramDecl {
+  override val variablesRecursive: (List[CVariable], List[QVariable], List[String], List[ProgramDecl]) =
+    (cvars, qvars, Nil, Nil)
+/*  {
     val cvarsAll = new mutable.LinkedHashSet[CVariable]()
     cvarsAll ++= cvars
     val qvarsAll = new mutable.LinkedHashSet[QVariable]()
@@ -146,10 +147,11 @@ final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:L
       callsAll ++= pr
     }
     (cvarsAll.toList, qvarsAll.toList, ambAll.toList, callsAll.toList)
-  }
+  }*/
 }
 
 final case class ConcreteProgramDecl(environment: Environment, name:String, program:Block) extends ProgramDecl {
+  override val numOracles: Int = 0
   lazy val ambientVars: List[String] = {
     val vars = new mutable.LinkedHashSet[String]
     def scan(st:Statement) : Unit = st match {
