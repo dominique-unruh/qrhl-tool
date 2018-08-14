@@ -679,6 +679,7 @@ fun variable_rewriting_simproc _ ctx ct =
 
 fun declare_variable_type args sort a mx lthy = 
   let val sort' = Sign.minimize_sort (Proof_Context.theory_of lthy) (@{class universe}::sort)
+      val is_base_sort = Sign.subsort (Proof_Context.theory_of lthy) (Object_Logic.get_base_sort lthy |> the_default [], sort)
       (* val _ = Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort'] |> @{print} *)
       val _ = if null (Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort']) then
                 warning ("Assuming the existence of a type of sort "^Syntax.string_of_sort lthy sort'^".\n"^
@@ -686,7 +687,7 @@ fun declare_variable_type args sort a mx lthy =
               else ()
       val (T,lthy) = Typedecl.typedecl {final = true} (a, args, mx) lthy
       val (typname,_) = dest_Type T
-      val lthy = if sort=dummyS then lthy else
+      val lthy = if is_base_sort then lthy else
                      Local_Theory.background_theory (Axclass.arity_axiomatization (typname, map snd args, sort)) lthy
       val lthy = Local_Theory.background_theory (Axclass.arity_axiomatization 
                       (typname, map (fn (_,sort) => @{class universe}::sort) args, @{sort universe})) lthy
