@@ -50,7 +50,7 @@ object DistributionDirectory {
 }
 
 class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
-  val version = Version.Stable("2018-RC4") // TODO 2018
+  val version = Version.Stable("2018")
   private val auto = path=="auto"
 
   /** The directory that contains the jar, or, if not loaded from a jar, the current directory. */
