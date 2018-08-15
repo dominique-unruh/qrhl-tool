@@ -181,19 +181,19 @@ operation_setup applyRule = {*
 operation_setup add_index_to_expression = {*
   {from_lib = Codec.tuple Codec.term Codec.bool,
    to_lib = Codec.term,
-   action = fn (t,left) => Encoding.add_index_to_expression t left}
+   action = fn (t,left) => Expressions.add_index_to_expression t left}
 *}
 
 operation_setup term_to_expression = {*
   {from_lib = Codec.tuple Codec.int Codec.term,
    to_lib = Codec.term,
-   action = fn (ctxId, t) => Encoding.term_to_expression (Refs.Ctxt.read ctxId) t}
+   action = fn (ctxId, t) => Expressions.term_to_expression (Refs.Ctxt.read ctxId) t}
 *}
 
 operation_setup expression_to_term = {*
   {from_lib = Codec.tuple Codec.int Codec.term,
    to_lib = Codec.tuple Codec.term Codec.typ,
-   action = fn (ctxId, t) => Encoding.expression_to_term_typ (Refs.Ctxt.read ctxId) t}
+   action = fn (ctxId, t) => Expressions.expression_to_term_typ (Refs.Ctxt.read ctxId) t}
 *}
 
 operation_setup seq_tac = {*

@@ -51,7 +51,6 @@ object DistributionDirectory {
 
 class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
   val version = Version.Stable("2018-RC4") // TODO 2018
-
   private val auto = path=="auto"
 
   /** The directory that contains the jar, or, if not loaded from a jar, the current directory. */
@@ -132,6 +131,15 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
                           10, (path: Path, _: BasicFileAttributes) => true).iterator.asScala.toList
     assert(isabelleThys.nonEmpty)
     val newest = isabelleThys.map { Files.getLastModifiedTime(_) }.max
+
+    /* TODO: Correct heap dir should be
+      environment.isabelleSetting("ISABELLE_HEAPS") + "/" +
+      environment.isabelleSetting("ML_SYSTEM") + "/" +
+      environment.isabelleSetting("ML_PLATFORM")
+      We could just delete this heap file if checkBuilt returns false.
+      This makes sure that build is not done each time.
+      But: check how this works with Windows paths
+     */
 
     val heaps = try {
       Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
@@ -248,9 +256,8 @@ object Isabelle {
   }
 
 
-
   val bitT = Type("Bit.bit", Nil)
-  val predicateT = Type("Complex_L2.subspace", List(Type("QRHL_Core.mem2",Nil)))
+  val predicateT = Type("Complex_L2.subspace", List(Type("Prog_Variables.mem2",Nil)))
   val programT = Type("Encoding.program")
   val oracle_programT = Type("Encoding.oracle_program")
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
@@ -271,7 +278,7 @@ object Isabelle {
   def variablesT(typ:ITyp) : Type = Type("Prog_Variables.variables", List(typ))
   def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
   //val cvariableT: ITyp => Type = variableT
-  def expressionT(typ:ITyp) = Type("Encoding.expression", List(typ))
+  def expressionT(typ:ITyp) = Type("Expressions.expression", List(typ))
   val instantiateOracles = Const("Encoding.instantiateOracles", oracle_programT -->: listT(programT) -->: programT)
   val assignName = "Encoding.assign"
   def assign(typ:ITyp) : Const = Const(assignName, variableT(typ) -->: expressionT(typ) -->: programT)

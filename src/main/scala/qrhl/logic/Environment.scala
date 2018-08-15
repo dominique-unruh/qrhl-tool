@@ -60,13 +60,14 @@ final class Environment private
 //  def variableExistsForGoal(name:String) : Boolean = cqVariables12.contains(name) || ambientVariables.contains(name) || programs.contains(name)
 
   def declareVariable(name: String, typ: pure.Typ, quantum:Boolean=false): Environment = {
-    assert(!variableExists(name))
+    if (variableExists(name))
+      throw UserException(s"Variable name $name already in use (as variable or program name)")
 //    val nonidxNames = nonindexedNames + name
 
     val newIdxNames = List(Variable.index1(name),Variable.index2(name))
     for (n <- newIdxNames)
       if (variableExists(n))
-        throw UserException(s"Indexed form $n of variable $name already defined")
+        throw UserException(s"Indexed form $n of variable $name already in use (as variable or program name)")
 //    assert(!indexedNames.contains(n))
 //    val idxNames = indexedNames ++ newIdxNames
 
