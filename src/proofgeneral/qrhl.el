@@ -6,6 +6,10 @@
   
 (proof-easy-config 'qrhl "qRHL"
 		   proof-prog-name (concat qrhl-home "bin/qrhl")
+		   ; We need to give some option here, otherwise proof-prog-name is interpreted
+		   ; as a shell command which leads to problems if the path contains spaces
+		   ; (see the documentation for proof-prog-name)
+           qrhl-prog-args '("--emacs")
 		   proof-script-command-end-regexp "\\.[ \t]*$"
 		   proof-shell-annotated-prompt-regexp "^\\(\\.\\.\\.\\|qrhl\\)> "
 		   proof-script-comment-start-regexp "#"

@@ -11,6 +11,7 @@ object Main {
   class CLIConf(args: Seq[String]) extends ScallopConf(args) {
     val isabelle: ScallopOption[String] = opt[String]()
     val rebuild : ScallopOption[Boolean] = toggle()
+    val emacs : ScallopOption[Boolean] = toggle() // Ignored but ProofGeneral needs to give some option to support spaces in paths
     val file: ScallopOption[String] = trailArg[String](required=false)
   }
 
