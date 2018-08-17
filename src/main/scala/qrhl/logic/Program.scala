@@ -149,7 +149,13 @@ class Block(val statements:List[Statement]) extends Statement {
   def length : Int = statements.size
 
   def inline(environment: Environment, name: String): Block = {
-    inline(name: String, environment.programs(name).asInstanceOf[ConcreteProgramDecl].program)
+    environment.programs(name) match {
+      case decl : ConcreteProgramDecl =>
+        inline(name: String, decl.program)
+      case _ : AbstractProgramDecl =>
+        throw UserException(s"Cannot inline '$name'. It is an abstract program (declared with 'adversary').")
+    }
+//    inline(name: String, environment.programs(name).asInstanceOf[ConcreteProgramDecl].program)
   }
 
   override def inline(name:String, program:Statement): Block = {
