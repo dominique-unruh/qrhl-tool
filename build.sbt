@@ -21,7 +21,6 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
-isabelleVersions := Seq(Version.Stable("2018"))
 //isabelleSessions in Compile := Seq("QRHL")
 //isabelleSourceFilter := (- ".*") && (- "*~")
 isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
