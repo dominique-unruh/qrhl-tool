@@ -283,7 +283,8 @@ class State private (val environment: Environment,
   }
 
   def loadIsabelle(path:String, theory:Option[String]) : State = {
-    assert(_isabelle.isEmpty)
+    if (!_isabelle.isEmpty)
+      throw UserException("Only one isabelle-command allowed")
     val isa = new Isabelle(path)
     // since this is likely to happen when an existing Isabelle is reloaded, give the GC a chance to remove that existing Isabelle
     System.gc()
