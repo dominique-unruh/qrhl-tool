@@ -7,11 +7,13 @@ import info.hupel.isabelle.Operation.ProverException
 import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder
 import org.jline.terminal.impl.DumbTerminal
+import org.log4s
 import qrhl.isabelle.Isabelle
 import qrhl.{State, UserException}
 
 import scala.io.StdIn
 import scala.util.matching.Regex
+import Toplevel.logger
 
 /** Not thread safe */
 class Toplevel(initialState : State = State.empty) {
@@ -149,8 +151,8 @@ class Toplevel(initialState : State = State.empty) {
         case UserException(msg) =>
           println("[ERROR] "+msg)
         case e: ProverException =>
-          val msg = Isabelle.symbolsToUnicode(e.fullMessage)
-          println("[ERROR] (in Isabelle) "+msg)
+          println("[ERROR] (in Isabelle) "+Isabelle.symbolsToUnicode(e.msg))
+          logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
         case e : Throwable =>
           println("[ERROR] [INTERNAL ERROR!!!]")
           e.printStackTrace(System.out)
@@ -162,6 +164,8 @@ class Toplevel(initialState : State = State.empty) {
 object Toplevel {
   private val commandEnd: Regex = """\.\s*$""".r
   private val commentRegex = """^\s*\#.*$""".r
+
+  private val logger = log4s.getLogger
 
   /** Runs the interactive toplevel from the terminal (with interactive readline). */
   def runFromTerminal() : Toplevel = {
