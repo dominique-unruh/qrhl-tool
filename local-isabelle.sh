@@ -2,4 +2,10 @@
 
 DIR="$(dirname "$(readlink -f "$BASH_SOURCE")")"
 
-/opt/Isabelle2018-RC4/bin/isabelle jedit -s -l QRHL-Examples-Prerequisites -d "$DIR" "$@" &
+if [ "$#" = 0 ]; then
+    FILES=("$DIR/isabelle-thys/Test.thy")
+else
+    FILES=()
+fi
+
+/opt/Isabelle2018/bin/isabelle jedit -s -l QRHL-Examples-Prerequisites -d "$DIR" "$@" "$FILES" &
