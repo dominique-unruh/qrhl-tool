@@ -387,9 +387,6 @@ lemma wp2_cons_func:
 
 
 
-(* lemmas wp_func = wp_skip_func wp1_assign_func wp2_assign_func (* wp1_sample_func TODO *) wp2_sample_func
-  wp1_qapply_func wp2_qapply_func wp1_measure_func wp2_measure_func wp1_if_func wp2_if_func
-  wp1_block_func wp2_block_func wp1_cons_func wp2_cons_func *)
 
 
 
@@ -433,7 +430,7 @@ fun specf_to_specfx ({name,inputs,outputs,pattern} : specf) = {name=name,fallbac
 ML \<open>
 val spec_wp = 
 {name="wp", thms= 
-["wp_skip_func","wp1_assign_func","wp2_assign_func", (* "wp1_sample_func", *) "wp2_sample_func",
+["wp_skip_func","wp1_assign_func","wp2_assign_func", "wp1_sample_func", "wp2_sample_func",
   "wp1_qapply_func", "wp2_qapply_func", "wp1_measure_func", "wp2_measure_func", "wp1_if_func", "wp2_if_func",
   "wp1_block_func", "wp2_block_func", "wp1_cons_func", "wp2_cons_func"],
 inputs=["c","d","B"], outputs=["A"], fallback="fn (c,d,B) => raise TERM(\"wp\",[c,d,B])", pattern=Thm.concl_of @{thm wp_skip_func}} : specfx
@@ -503,72 +500,18 @@ term "(%x. x) x"
 term "(%x. f x)"
 
 ML \<open>
-fun rewrite_thm_as thm ct = let
-val eq = Thm.transitive (Thm.beta_conversion true (Thm.cprop_of thm)) (Thm.beta_conversion true ct |> Thm.symmetric)
-val thm' = Thm.equal_elim eq thm
-in thm' end
 \<close>
 
 ML \<open>
-local
-val ctxt = \<^context>
-val assm = @{prop "\<And>z. subst_expression (substitute1 x1 (const_expression z)) B = B' z"} |> free_to_var
-val termvars = Symtab.make(map(fn n=>(n,n))["B","t_b","t_a","x1","z"])
-val conf = (empty_conf (hd spec))
+;;
 
-val _ = assm |> Thm.cterm_of ctxt
-val ((z,T),assm') = Logic.dest_all assm
-(* val _ = (z,T) |> @{print} *)
-val _ = assm' |> Thm.cterm_of ctxt
-val vars = Term.add_vars assm [] |> map (fst o fst)
-val outputs = vars |> filter (not o Symtab.defined termvars)
-val outputs_z = Name.variant_list vars (outputs |> map (fn n => n ^ "_" ^ z))
-val subst = outputs ~~ outputs_z |> Symtab.make
-fun s (t as Var((n,0),T') $ Free z') =
-    (case (Symtab.lookup subst n, z'=(z,T)) of
-      (SOME nz, true) => Var((nz,0),T' |> dest_funT |> snd)
-    | _ => t)
-  | s (t1 $ t2) = s t1 $ s t2
-  | s (Abs(n,T,t)) = Abs(n,T,s t)
-  | s t = t
-val assm'' = s assm'
-val _ = assm'' |> Thm.cterm_of ctxt
-
-val ((code,cert'),(termvars,ctxt)) = code_for_assumption ctxt termvars conf spec assm''
-val code = "local" :: map indent' code
-(* val _ = @{print} termvars *)
-(* val _ = @{print} termvars *)
-(* val _ = @{print} cert' *)
-
-val comment = print_comment "TODO: comment"
-fun abscode1 (v,vz) (ctxt,termvars,checks) = let 
-  val (v',(ctxt,termvars,checks)) = print_var_pattern v (ctxt,termvars,checks)
-  val T' = print_typ termvars T
-  val vz' = print_var termvars vz
-  in ("val "^v'^" = absfree ("^ML_Syntax.print_string z^","^T'^") "^vz', (* SHouldn't z be quoted in some way? TODO *)
-      (ctxt,termvars,checks)) end
-val (abscode,(ctxt,termvars,checks)) = fold_map abscode1 (Symtab.dest subst) (ctxt,termvars,[])
-val _ = if null checks then () else error "checks not empty"
-val (certvar,ctxt) = ML_Context.variant "cert" ctxt
-val certcode = "fun "^certvar^" () = generalize_thm_to ctxt " ^ ML_Syntax.atomic cert' ^ " " ^ ML_Syntax.atomic (print_term termvars assm)
-  ^ " TODO: (" ^ "\"z\",t_a)"
-val code = code @ ["in", comment] @ abscode @ [certcode,"end"]
-
-val termvars = fold Symtab.delete outputs_z termvars
-
-val _ = code |> String.concatWith "\n" |> tracing
-
-(* Generate: cert *)
-
-in end
+code_for_assumption \<^context>
+(Symtab.make(map(fn n=>(n,n))["B","t_b","t_a","x1"]))
+(empty_conf (hd spec)) spec
+(@{prop "\<And>z. subst_expression (substitute1 x1 (const_expression z)) B = B' z"} |> free_to_var)
+|> (fn ((code,cert),_) => (code |> String.concatWith "\n" |> tracing; tracing cert))
 \<close>
 
-ML \<open>
-fun generalize_thm_to ctxt thm prop (v,T) = let
-  val thm' = thm |> Thm.generalize ([],["v"]) 0 |> Thm.forall_intr (Thm.cterm_of ctxt (Free(v,T)))
-  val thm'' = rewrite_thm_as thm' (Thm.cterm_of ctxt prop)
-  in thm'' end
-\<close>
 
 
 
@@ -580,21 +523,24 @@ val t_a = @{typ "nat"}
 val t_b = @{typ "nat"}
 val x1 = @{term "var_x1"}
 val B = @{term "Expr[Suc x1]"}
+(* val za = @{term "zzzzzz::nat"} (* TODO should be in autogen code *) *)
 open Test
 in
 
+
 local
-  (* Assumption: subst_expression (substitute1 ?x1.0 (expression variable_unit (\<lambda>_. z))) ?B = ?B'_z
+  val za = Free("za_" ^ serial_string(), t_a)
+  (* Assumption: subst_expression (substitute1 ?x1.0 (expression variable_unit (\<lambda>_. ?za))) ?B = ?B'_z
      Handled using function subst_expression_func *)
   val (((b_z)), cert)
-           = subst_expression_func ctxt (Term.$ (Term.$ (Term.Const ("Expressions.substitute1", Term.Type ("fun", [Term.Type ("Prog_Variables.variable", [t_a]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_a]), Term.Type ("Expressions.substitution", [])])])), x1), Term.$ (Term.$ (Term.Const ("Expressions.expression", Term.Type ("fun", [Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]), Term.Type ("fun", [Term.Type ("fun", [Term.Type ("Product_Type.unit", []), t_a]), Term.Type ("Expressions.expression", [t_a])])])), Term.Const ("Prog_Variables.variable_unit", Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]))), Term.Abs ("uu_", Term.Type ("Product_Type.unit", []), Term.Free ("z", t_a))))) (B)
+           = subst_expression_func ctxt (Term.$ (Term.$ (Term.Const ("Expressions.substitute1", Term.Type ("fun", [Term.Type ("Prog_Variables.variable", [t_a]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_a]), Term.Type ("Expressions.substitution", [])])])), x1), Term.$ (Term.$ (Term.Const ("Expressions.expression", Term.Type ("fun", [Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]), Term.Type ("fun", [Term.Type ("fun", [Term.Type ("Product_Type.unit", []), t_a]), Term.Type ("Expressions.expression", [t_a])])])), Term.Const ("Prog_Variables.variable_unit", Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]))), Term.Abs ("uu_", Term.Type ("Product_Type.unit", []), za)))) (B)
 in
-(* TODO: comment *)
-val b = absfree ("z",t_a) b_z
-fun certa () = generalize_thm_to ctxt (cert ()) (Term.$ (Term.Const ("Pure.all", Term.Type ("fun", [Term.Type ("fun", [t_a, Term.Type ("prop", [])]), Term.Type ("prop", [])])), Term.Abs ("z", t_a, Term.$ (Term.Const ("HOL.Trueprop", Term.Type ("fun", [Term.Type ("HOL.bool", []), Term.Type ("prop", [])])), Term.$ (Term.$ (Term.Const ("HOL.eq", Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("HOL.bool", [])])])), Term.$ (Term.$ (Term.Const ("Expressions.subst_expression", Term.Type ("fun", [Term.Type ("Expressions.substitution", []), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("Expressions.expression", [t_b])])])), Term.$ (Term.$ (Term.Const ("Expressions.substitute1", Term.Type ("fun", [Term.Type ("Prog_Variables.variable", [t_a]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_a]), Term.Type ("Expressions.substitution", [])])])), x1), Term.$ (Term.$ (Term.Const ("Expressions.expression", Term.Type ("fun", [Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]), Term.Type ("fun", [Term.Type ("fun", [Term.Type ("Product_Type.unit", []), t_a]), Term.Type ("Expressions.expression", [t_a])])])), Term.Const ("Prog_Variables.variable_unit", Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]))), Term.Abs ("uu_", Term.Type ("Product_Type.unit", []), Term.Bound 1)))), B)), Term.$ (b, Term.Bound 0))))))
-  ("z",t_a)
+(* Assumption: \<And>z. subst_expression (substitute1 ?x1.0 (expression variable_unit (\<lambda>_. z))) ?B = ?B' z
+   Handled by stripping all-quantifier *)
+val b = absfree (dest_Free za) b_z
+fun certa () = generalize_thm_to ctxt (cert ()) (dest_Free za)
+               (Term.$ (Term.Const ("Pure.all", Term.Type ("fun", [Term.Type ("fun", [t_a, Term.Type ("prop", [])]), Term.Type ("prop", [])])), Term.Abs ("z", t_a, Term.$ (Term.Const ("HOL.Trueprop", Term.Type ("fun", [Term.Type ("HOL.bool", []), Term.Type ("prop", [])])), Term.$ (Term.$ (Term.Const ("HOL.eq", Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("HOL.bool", [])])])), Term.$ (Term.$ (Term.Const ("Expressions.subst_expression", Term.Type ("fun", [Term.Type ("Expressions.substitution", []), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("Expressions.expression", [t_b])])])), Term.$ (Term.$ (Term.Const ("Expressions.substitute1", Term.Type ("fun", [Term.Type ("Prog_Variables.variable", [t_a]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_a]), Term.Type ("Expressions.substitution", [])])])), x1), Term.$ (Term.$ (Term.Const ("Expressions.expression", Term.Type ("fun", [Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]), Term.Type ("fun", [Term.Type ("fun", [Term.Type ("Product_Type.unit", []), t_a]), Term.Type ("Expressions.expression", [t_a])])])), Term.Const ("Prog_Variables.variable_unit", Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]))), Term.Abs ("uu_", Term.Type ("Product_Type.unit", []), Term.Bound 1)))), B)), Term.$ (b, Term.Bound 0))))))
 end 
-
 
 end
 ;;
@@ -644,7 +590,7 @@ Test.index_vars \<^context> @{term True} @{term "\<lbrakk>var_x,var_y\<rbrakk>"}
 \<close>
 
 ML \<open>
-Test.wp \<^context> @{term "[assign var_x Expr[undefined]]"} @{term "[] :: program list"} @{term "Expr[top::predicate]"}
+Test.wp \<^context> @{term "[sample var_x Expr[undefined]]"} @{term "[] :: program list"} @{term "Expr[top::predicate]"}
 |> check_func
 \<close>
 
@@ -660,7 +606,7 @@ end
 
 variables classical x :: int begin
 ML \<open>
-wp \<^context> @{term "[assign var_x Expr[x*x], assign var_x Expr[x*x]]"} @{term "[] :: program list"} @{term "Expr[Cla[x1=x2]]"}
+Test.wp \<^context> @{term "[assign var_x Expr[x*x], assign var_x Expr[x*x]]"} @{term "[] :: program list"} @{term "Expr[Cla[x1=x2]]"}
 |> check_func
 \<close>
 end

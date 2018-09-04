@@ -229,13 +229,77 @@ fun code_for_assumption ctxt termvars (conf:conf) (spec:spec) t = let
             end
             handle Pattern.MATCH => NONE) spec
   (* val _ = if null (! (#checks conf)) then () else error "code_for_assumption: checks not empty (2)" *)
-  val code = case code of SOME c => c | NONE => eqterm_to_ml ctxt termvars conf t
+  val code = case code of SOME c => c | NONE =>
+    (case t of Const(@{const_name Pure.eq},_) $ _ $ _ => eqterm_to_ml ctxt termvars conf t
+             | Const(@{const_name Pure.all},_) $ Abs(_,_,_) => code_for_assumption_allquant ctxt termvars (conf:conf) (spec:spec) t
+             | _ => raise TERM("Don't know how to handle this assumption when creating function '" ^ #name (#current conf) ^ "'", [t]))
   (* val code = apsnd indent code *)
   (* val _ = #current_assm conf := @{term "dummyterm"} *)
   (* val _ = if null (! (#checks conf)) then () else error "code_for_assumption: checks not empty (3)" *)
   in
     code
   end
+
+and code_for_assumption_allquant ctxt termvars (conf:conf) (spec:spec) assm = let
+  (* val ctxt = \<^context> *)
+  (* val assm = @{prop "\<And>z. subst_expression (substitute1 x1 (const_expression z)) B = B' z"} |> free_to_var *)
+  
+  (* val termvars = Symtab.make(map(fn n=>(n,n))["B","t_b","t_a","x1"]) *)
+  (* val conf = (empty_conf (hd spec)) *)
+  (* val outputs = ["B'"] *)
+  (* val inputs = ["B","x1"] *)
+  
+  (* val _ = assm |> Thm.cterm_of ctxt *)
+  val vars = Term.add_vars assm [] |> map (fst o fst)
+  val (Const(@{const_name Pure.all}, _) $ Abs(z,T,body)) = assm
+  val [z'] = Name.variant_list vars [z]  (* Fresh name for schematic var z *)
+  (* val ((z,T),assm') = Logic.dest_all assm *)
+  val assm' = Term.subst_bound (Var((z',0),T), body)
+  (* val _ = (z,T) |> @{print} *)
+  (* val _ = assm' |> Thm.cterm_of ctxt *)
+  val outputs = vars |> filter (not o Symtab.defined termvars)
+  val outputs_z = Name.variant_list (z'::vars) (outputs |> map (fn n => n ^ "_" ^ z))
+  val (_,(ctxt,termvars,[])) = print_var_pattern z' (ctxt,termvars,[])
+  val subst = outputs ~~ outputs_z |> Symtab.make
+  fun s (t as Var((n,0),T') $ Var v) =
+      (case (Symtab.lookup subst n, v=((z',0),T)) of
+        (SOME nz, true) => Var((nz,0),T' |> dest_funT |> snd)
+      | _ => t)
+    | s (t1 $ t2) = s t1 $ s t2
+    | s (Abs(n,T,t)) = Abs(n,T,s t)
+    | s t = t
+  val assm'' = s assm'
+  (* val _ = assm'' |> Thm.cterm_of ctxt *)
+  
+  val ((code,cert'),(termvars,ctxt)) = code_for_assumption ctxt termvars conf spec assm''
+  (* val z_def_code = "  val " ^ print_var termvars z' ^ " = Term.variant_frees (HOLogic.mk_tuple ["
+      ^String.concatWith "," (map (print_var termvars) inputs)^"]) [("
+      ^ML_Syntax.print_string z^","^print_typ termvars T^")] |> the_single |> Free" *)
+  val z_def_code = "  val " ^ print_var termvars z' ^ " = Free(" ^ ML_Syntax.print_string (z'^"_") ^" ^ serial_string(), " ^ print_typ termvars T ^")"
+  val code = "local" :: z_def_code :: map indent' code
+  (* val _ = @{print} termvars *)
+  (* val _ = @{print} termvars *)
+  (* val _ = @{print} cert' *)
+  
+  val comment = "Assumption: " ^ Syntax.string_of_term ctxt assm ^ "\n   Handled by stripping all-quantifier" |> print_comment
+  
+  fun abscode1 (v,vz) (ctxt,termvars,checks) = let 
+    val (v',(ctxt,termvars,checks)) = print_var_pattern v (ctxt,termvars,checks)
+    (* val T' = print_typ termvars T *)
+    val vz' = print_var termvars vz
+    in ("val "^v'^" = absfree (dest_Free "^print_var termvars z'^") "^vz', 
+        (ctxt,termvars,checks)) end
+  val (abscode,(ctxt,termvars,checks)) = fold_map abscode1 (Symtab.dest subst) (ctxt,termvars,[])
+  val _ = if null checks then () else error "checks not empty"
+  val (certvar,ctxt) = ML_Context.variant "cert" ctxt
+  val certcode = "fun "^certvar^" () = Cert_Codegen.generalize_thm_to ctxt " ^ ML_Syntax.atomic cert' ^ " (dest_Free " ^ print_var termvars z' ^")\n               "
+   ^ ML_Syntax.atomic (print_term termvars assm)
+  val code = code @ ["in", comment] @ abscode @ [certcode,"end"]
+  
+  val termvars = fold Symtab.delete (z'::outputs_z) termvars
+  (* val _ = code |> String.concatWith "\n" |> tracing *)
+in ((code,certvar^" ()"),(termvars,ctxt)) end
+
 
 (* Returns a function. 
    Computes the variables in "outputs" using thm.
@@ -263,6 +327,7 @@ fun thm_to_fun ctxt (conf:conf) spec thmname funname inputs outputs = let
   (* val _ = #globals conf := prep :: ! (#globals conf) *)
   val insts = Term.add_vars (Thm.prop_of thm) [] |> rev |> map (fn ((n,_),_) => print_var termvars n)
               |> String.concatWith ", " |> enclose "[" "]" |> (fn c => "(map (SOME o Thm.cterm_of ctxt) "^c^")")
+  (* TODO: is there a faster variant of "OF" that can be used if no unification/matching is needed? *)
   val mkcert = "fun "^mkcert_name^" () = (infer_instantiate' ctxt "^insts^" @{thm " ^ ML_Syntax.print_string thmname ^ "}) OF [" ^ 
               String.concatWith ", " certs ^ "]"
   val steps = vals @ [mkcert]
@@ -296,7 +361,7 @@ fun thms_to_fun ctxt (spec:spec) (func:specfx) =
             |> map indent'
       val inputs' = " " ^ String.concatWith " " inputs
       val tracing_cmd = "  val _ = " ^ ML_Syntax.print_string ("Invoking: " ^ #name func ^ " ") ^ " ^ " ^ 
-            String.concatWith " ^\" \"^ " (inputs |> map (fn s => "(Syntax.string_of_term ctxt "^s^")")) ^
+            String.concatWith " ^\" \"^ " (inputs |> map (fn s => "(\"\<open>\" ^ Syntax.string_of_term ctxt "^s^" ^ \"\<close>\")")) ^
             " |> tracing"
       val fundefs = if #tracing conf then fundefs @ [tracing_cmd] else fundefs
       val body = fold (fn snippet => fn sofar => if sofar="" then snippet ^ inputs' else sofar ^ " handle Bind => " ^ snippet ^ inputs') (map snd thm_names) ""
@@ -322,5 +387,15 @@ fun thms_to_funs ctxt (spec:spec) structname filename =
   in
     ()
   end
+
+fun rewrite_thm_as thm ct = let
+  val eq = Thm.transitive (Thm.beta_conversion true (Thm.cprop_of thm)) (Thm.beta_conversion true ct |> Thm.symmetric)
+  val thm' = Thm.equal_elim eq thm
+  in thm' end
+
+fun generalize_thm_to ctxt thm (v,T) prop = let
+  val thm' = thm |> (* Thm.generalize ([],["v"]) 0 |>  *) Thm.forall_intr (Thm.cterm_of ctxt (Free(v,T)))
+  val thm'' = rewrite_thm_as thm' (Thm.cterm_of ctxt prop)
+  in thm'' end
 
 end
