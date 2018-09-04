@@ -11,7 +11,7 @@ typedecl program
 typedecl oracle_program
 axiomatization
   block :: "program list \<Rightarrow> program" and
-  assign :: "'a cvariable \<Rightarrow> 'a expression \<Rightarrow> program" and
+  assign :: "'a::universe cvariable \<Rightarrow> 'a expression \<Rightarrow> program" and
   sample :: "'a cvariable \<Rightarrow> 'a distr expression \<Rightarrow> program" and
   ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program" and
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program" and
@@ -78,7 +78,7 @@ lemma subst_expression_id_comp_aux: \<comment> \<open>Helper for ML function sub
 ML_file "encoding.ML"
 
 (* TODO move *)
-hide_fact expression_clean_assoc_aux
+hide_fact (open) expression_clean_assoc_aux
           expression_clean_singleton_aux
           expression_clean_cons_unit_aux
           expression_clean_unit_cons_aux

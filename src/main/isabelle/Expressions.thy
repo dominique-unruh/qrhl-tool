@@ -86,12 +86,12 @@ lemma map_expression3[simp]:
 
 axiomatization index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression" where
   index_expression_def[simp]: "index_expression left (expression Q e) = expression (index_vars left Q) e"
-for Q :: "'b variables" and e :: "'b \<Rightarrow> 'a"
+for Q :: "'b::universe variables" and e :: "'b \<Rightarrow> 'a"
 
 section \<open>Substitutions\<close>
 
 typedecl substitution
-axiomatization substitute1 :: "'a variable \<Rightarrow> 'a expression \<Rightarrow> substitution"
+axiomatization substitute1 :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> substitution"
 axiomatization subst_expression :: "substitution \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
 
 section \<open>ML code\<close>

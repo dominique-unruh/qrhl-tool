@@ -94,8 +94,9 @@ fun seq_tac i j B ctxt = SUBGOAL_with_check ctxt (seq_tac_checks i j) (fn (goal,
 
    t has to be a term of type bool.
    The subgoals are returned without Trueprop *)
-fun tac_on_term tac ctx t =
-  let val goal = Goal.init (Thm.cterm_of ctx (HOLogic.mk_Trueprop t))
+fun tac_on_term tac ctxt t =
+  let val ctxt = Config.put method_error true ctxt
+      val goal = Goal.init (Thm.cterm_of ctxt (HOLogic.mk_Trueprop t))
   in
   case Seq.pull (tac goal) of
       NONE => NONE

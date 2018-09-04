@@ -211,7 +211,7 @@ lemma index_var1_simp[simp]: "variable_name (index_var True x) = variable_name x
 lemma index_var2_simp[simp]: "variable_name (index_var False x) = variable_name x @ ''2''"
   using index_var2 by metis
 
-axiomatization index_vars :: "bool \<Rightarrow> 'a variables \<Rightarrow> 'a variables"
+axiomatization index_vars :: "bool \<Rightarrow> 'a::universe variables \<Rightarrow> 'a variables"
 axiomatization where
   index_vars_singleton[simp]: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>" and
   index_vars_concat[simp]: "index_vars left (variable_concat Q R) = variable_concat (index_vars left Q) (index_vars left R)" and

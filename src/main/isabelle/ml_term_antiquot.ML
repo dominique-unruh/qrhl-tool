@@ -43,7 +43,7 @@ fun print_term conf (Const arg) = "Term.Const " ^ print_pair print_string (print
 fun ml_term (ctxt,(str,mlmap)) =
   let val ctxt = Proof_Context.set_mode Proof_Context.mode_schematic ctxt
       val trm = Syntax.read_term ctxt str
-      val trm_ML = print_term {mlmap=mlmap} trm
+      val trm_ML = ML_Syntax.atomic (print_term {mlmap=mlmap} trm)
   in
     trm_ML
   end
@@ -51,7 +51,7 @@ fun ml_term (ctxt,(str,mlmap)) =
 fun ml_typ (ctxt,(str,mlmap)) =
   let val ctxt = Proof_Context.set_mode Proof_Context.mode_schematic ctxt
       val trm = Syntax.read_typ ctxt str
-      val trm_ML = print_typ {mlmap=mlmap} trm
+      val trm_ML = ML_Syntax.atomic (print_typ {mlmap=mlmap} trm)
   in
     trm_ML
   end
