@@ -11,12 +11,6 @@ begin
 
 text nothing
 
-no_notation "Order.bottom" ("\<bottom>\<index>")
-no_notation "Order.top" ("\<top>\<index>")
-no_notation "Lattice.meet" (infixl "\<sqinter>\<index>" 70)
-no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
-hide_const (open) Order.bottom Order.top
-
 term Order.bottom
 term \<bottom>
 term "a \<sqinter> b"
@@ -26,6 +20,8 @@ definition "assert_equals a b = (a=b)"
 lemma assert_equals_refl: "assert_equals a a" unfolding assert_equals_def by simp
 definition [simp]: "assert_string_neq (a::string) b = (a \<noteq> b)"
 lemma NO_MATCH_I: "NO_MATCH x y" by simp
+
+ML Thm.implies_elim
 
 ML_file "cert_codegen.ML"
 

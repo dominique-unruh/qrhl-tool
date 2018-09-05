@@ -9,6 +9,11 @@ hide_const (open) Order.top
 hide_const (open) card_UNIV
 hide_const (open) Coset.kernel
 hide_const (open) span
+no_notation "Order.bottom" ("\<bottom>\<index>")
+no_notation "Order.top" ("\<top>\<index>")
+no_notation "Lattice.meet" (infixl "\<sqinter>\<index>" 70)
+no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
+hide_const (open) Order.bottom Order.top
 
 no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
 no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
