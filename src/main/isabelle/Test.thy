@@ -247,6 +247,34 @@ lemma wp2_assign_func:
   shows "qrhl A c d B"
   using assms wp2_assign by metis
 
+lemma map_expression2'_func: (* TODO remove *)
+  assumes "e1 == expression Q1 E1"
+  assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
+    (* TODO remove undefined, do the concat *)
+  assumes "undefined \<equiv> e'"
+   shows "map_expression2' f e1 e2 = e'"
+  sorry 
+
+(* lemma map_expression2'_func:
+  assumes "e1 == expression Q1 E1"
+  assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
+    (* TODO remove undefined, do the concat *)
+  assumes "expression (variable_concat Q1 (Q2 undefined)) (\<lambda>(x1,x2). f (E1 x1) (\<lambda>z. E2 z x2)) \<equiv> e'"
+   shows "map_expression2' f e1 e2 = e'"
+  unfolding assms(1,2) assms(3)[symmetric] sorry (* TODO *)
+ *)
+
+ML \<open>
+val map_expression2'_func_spec : specfx = {
+  name="map_expression2'",
+  pattern=\<^prop>\<open>map_expression2' f e1 e2 = e'\<close> |> free_to_var,
+  inputs=["f","e1","e2"], outputs=["e'"],
+  thms=["map_expression2'_func"],
+  fallback="fn (f,e1,e2) => raise TERM(\"map_expression2'\",[f,e1,e2])"
+}
+\<close>
+
+
 lemma wp1_sample_func:
   fixes A B c d x e
   assumes "d == []" and "c == [sample x e]" 
@@ -254,8 +282,8 @@ lemma wp1_sample_func:
   assumes "index_expression True e = e1"
 (* TODO: all-quants probably don't work! *)
   assumes "\<And>z. subst_expression (substitute1 x1 (const_expression z)) B = B' z"
-(* TODO: implement map_expression2 *)
-  assumes "map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e1 B' == A"
+(* TODO: implement map_expression2' *)
+  assumes "map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e1 B' = A"
   shows "qrhl A c d B"
   unfolding assms(1-2) assms(3-6)[symmetric] by (rule wp1_sample)
 
@@ -438,9 +466,28 @@ val spec = [
   specf_to_specfx NO_MATCH_func_spec,
   index_expression_func_spec,
   index_vars_func_spec,
-  subst_expression_func_spec
+  subst_expression_func_spec,
+  map_expression2'_func_spec
 ]
 \<close>
+
+ML \<open>                           
+val _ = thms_to_fun \<^context> spec map_expression2'_func_spec
+|> (fn c => "fun " ^ c)
+|> (fn c => (tracing c; c))
+|> (fn c => ML_Context.eval ML_Compiler.flags Position.none (ML_Lex.read_pos Position.none c))
+\<close>
+
+
+ML \<open>
+local
+val t = @{term "map_expression2' f (const_expression ()) (%_. const_expression ())"}
+in
+val (Const _ $ f $ e1 $ e2) = t
+val _ =
+map_expression2' \<^context> f e1 e2
+end
+\<close>                                                      
 
 
 
@@ -463,9 +510,6 @@ thm_to_fun \<^context> (empty_conf (hd spec)) spec "wp1_sample_func" "f" ["c","d
 ML \<open>
 ;;
 val _ = thms_to_fun \<^context> spec spec_wp |> tracing
-\<close>
-
-ML \<open>
 \<close>
 
 
@@ -589,7 +633,6 @@ ML \<open>
 Test.wp \<^context> @{term "[sample var_x Expr[undefined]]"} @{term "[] :: program list"} @{term "Expr[top::predicate]"}
 |> check_func
 \<close>
-
 
 ML \<open>
 (* TODO should simplif the nested prod-case's *)
