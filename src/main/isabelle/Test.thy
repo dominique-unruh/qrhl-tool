@@ -16,6 +16,13 @@ term \<bottom>
 term "a \<sqinter> b"
 term Lattice.meet
 
+ML \<open>
+fun check_func (t,cert) = let
+  val thm = cert ()
+  (* val _ = if Thm.term_of (Thm.rhs_of thm) <> t then raise TERM("check_func",[Thm.prop_of thm, t]) else () *)
+  in (Thm.global_cterm_of (Thm.theory_of_thm thm) t, thm) end
+\<close>
+
 definition "assert_equals a b = (a=b)"
 lemma assert_equals_refl: "assert_equals a a" unfolding assert_equals_def by simp
 definition [simp]: "assert_string_neq (a::string) b = (a \<noteq> b)"
@@ -49,16 +56,48 @@ val get_variable_name_spec : specf = {name="get_variable_name", inputs=["v"], ou
 (* get_variable_name \<^context> @{term var_xxx} *)
 \<close>
 
+(* TODO remove *)
+lemma func: (* TODO remove *)
+  assumes "e1 == expression Q1 E1"
+  assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
+  assumes "expression (variable_concat Q1 (Q2 undefined)) (\<lambda>(x1,x2). f (E1 x1) (\<lambda>z. E2 z x2)) \<equiv> e'"
+  (* assumes "undefined \<equiv> e'" *)
+  shows "map_expression2' f e1 e2 = e'"
+  sorry 
+
+
+
+ML \<open>
+val func_spec : specfx = {
+  name="func", pattern=\<^prop>\<open>map_expression2' f e1 e2 = e'\<close> |> free_to_var,
+  inputs=["f","e1","e2"], outputs=["e'"],
+  thms=["func"], fallback="fn (f,e1,e2) => raise TERM(\"func\",[f,e1,e2])"} \<close>
+
+ML \<open>
+val code = thms_to_funs \<^context> [func_spec] "Test" "test0.ML"
+\<close>
+ML\<open>fun prt t = (@{print} (Thm.cterm_of \<^context> t); ())
+\<close>
+
+ML_file "test0.ML"
+
+
+ML \<open>
+local
+val t = @{term "map_expression2' f (const_expression ()) (%_. const_expression ())"}
+val (Const _ $ f $ e1 $ e2) = t
+in
+val res = Test.func \<^context> f e1 e2 |> check_func
+end
+\<close>                                                      
+
+(* END remove *)
+
+
 ML \<open>
 @{ml_term "string_concat_func a b c"}
 \<close>
 
-ML \<open>
-fun check_func (t,cert) = let
-  val thm = cert ()
-  (* val _ = if Thm.term_of (Thm.rhs_of thm) <> t then raise TERM("check_func",[Thm.prop_of thm, t]) else () *)
-  in (Thm.global_cterm_of (Thm.theory_of_thm thm) t, thm) end
-\<close>
 
 
 (* definition string_concat_func[simp]: "string_concat_func a b c = (a@b = c)" *)
@@ -247,22 +286,21 @@ lemma wp2_assign_func:
   shows "qrhl A c d B"
   using assms wp2_assign by metis
 
-lemma map_expression2'_func: (* TODO remove *)
+(* lemma map_expression2'_func: (* TODO remove *)
   assumes "e1 == expression Q1 E1"
   assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
     (* TODO remove undefined, do the concat *)
   assumes "undefined \<equiv> e'"
    shows "map_expression2' f e1 e2 = e'"
-  sorry 
+  sorry  *)
 
-(* lemma map_expression2'_func:
+lemma map_expression2'_func:
   assumes "e1 == expression Q1 E1"
   assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
     (* TODO remove undefined, do the concat *)
   assumes "expression (variable_concat Q1 (Q2 undefined)) (\<lambda>(x1,x2). f (E1 x1) (\<lambda>z. E2 z x2)) \<equiv> e'"
    shows "map_expression2' f e1 e2 = e'"
   unfolding assms(1,2) assms(3)[symmetric] sorry (* TODO *)
- *)
 
 ML \<open>
 val map_expression2'_func_spec : specfx = {

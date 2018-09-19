@@ -248,9 +248,13 @@ and code_for_assumption_allquant ctxt termvars (conf:conf) (spec:spec) assm = le
   (* val _ = (z,T) |> @{print} *)
   (* val _ = assm' |> Thm.cterm_of ctxt *)
   val outputs = vars |> filter (not o Symtab.defined termvars)
-  val outputs_z = Name.variant_list (z'::vars) (outputs |> map (fn n => n ^ "_" ^ z))
+  val inputs = vars |> filter (Symtab.defined termvars)
+  val inoutputs = inputs @ outputs
+  val inoutputs_z = Name.variant_list (z'::vars) (inoutputs |> map (fn n => n ^ "_" ^ z))
   val (_,(ctxt,termvars,[])) = print_var_pattern z' (ctxt,termvars,[])
-  val subst = outputs ~~ outputs_z |> Symtab.make
+  val subst = inoutputs ~~ inoutputs_z |> Symtab.make
+val _ = @{print} subst
+
   fun s (t as Var((n,0),T') $ Var v) =
       (case (Symtab.lookup subst n, v=((z',0),T)) of
         (SOME nz, true) => Var((nz,0),T' |> dest_funT |> snd)
@@ -259,29 +263,37 @@ and code_for_assumption_allquant ctxt termvars (conf:conf) (spec:spec) assm = le
     | s (Abs(n,T,t)) = Abs(n,T,s t)
     | s t = t
   val assm'' = s assm'
-  
+
+  val z'' = print_var termvars z'
+  val z_def_code = "val " ^ z'' ^ " = Free(" ^ ML_Syntax.print_string (z'^"_") ^" ^ serial_string(), " ^ print_typ termvars T ^")"
+
+  val (code_inputs_z,(termvars,ctxt)) = fold_map (fn v => fn (termvars,ctxt) => let
+      val vz = Symtab.lookup subst v |> the
+      val v' = print_var termvars v
+      val (vz',(ctxt,termvars,[])) = print_var_pattern vz (ctxt,termvars,[])
+      val codeline = "val " ^ vz' ^ " = betapply (" ^ v' ^","^ z'' ^")"
+    in (codeline,(termvars,ctxt)) end)
+    inputs (termvars,ctxt)
+
   val ((code,cert'),(termvars,ctxt)) = code_for_assumption ctxt termvars conf spec assm''
-  (* val z_def_code = "  val " ^ print_var termvars z' ^ " = Term.variant_frees (HOLogic.mk_tuple ["
-      ^String.concatWith "," (map (print_var termvars) inputs)^"]) [("
-      ^ML_Syntax.print_string z^","^print_typ termvars T^")] |> the_single |> Free" *)
-  val z_def_code = "val " ^ print_var termvars z' ^ " = Free(" ^ ML_Syntax.print_string (z'^"_") ^" ^ serial_string(), " ^ print_typ termvars T ^")"
-  val code = z_def_code :: code
+  val code = z_def_code :: code_inputs_z @ code
   
   val comment = "Assumption: " ^ Syntax.string_of_term ctxt assm ^ "\n   Handled by stripping all-quantifier" |> print_comment
   
-  fun abscode1 (v,vz) (ctxt,termvars,checks) = let 
+  fun abscode1 v (ctxt,termvars,checks) = let 
+    val vz = Symtab.lookup subst v |> the
     val (v',(ctxt,termvars,checks)) = print_var_pattern v (ctxt,termvars,checks)
     val vz' = print_var termvars vz
-    in ("val "^v'^" = Cert_Codegen.absfree' "^ML_Syntax.print_string z^" (dest_Free "^print_var termvars z'^") "^vz', 
+    in ("val "^v'^" = Cert_Codegen.absfree' "^ML_Syntax.print_string z^" (dest_Free "^z''^") "^vz', 
         (ctxt,termvars,checks)) end
-  val (abscode,(ctxt,termvars,checks)) = fold_map abscode1 (Symtab.dest subst) (ctxt,termvars,[])
-  val _ = if null checks then () else error "checks not empty"
+  val (abscode,(ctxt,termvars,checks)) = fold_map abscode1 outputs (ctxt,termvars,[])
+  val _ = if null checks then () else error "code_for_assumption_allquant: checks not empty"
   val (certvar,ctxt) = ML_Context.variant "cert" ctxt
-  val certcode = "fun "^certvar^" () = Cert_Codegen.generalize_thm_to ctxt " ^ ML_Syntax.atomic cert' ^ " (dest_Free " ^ print_var termvars z' ^")\n               "
+  val certcode = "fun "^certvar^" () = Cert_Codegen.generalize_thm_to ctxt " ^ ML_Syntax.atomic cert' ^ " (dest_Free " ^ z'' ^")\n               "
    ^ ML_Syntax.atomic (print_term termvars assm)
   val code = code @ comment :: abscode @ [certcode]
   
-  val termvars = fold Symtab.delete (z'::outputs_z) termvars
+  val termvars = fold Symtab.delete (z'::inoutputs_z) termvars
 in ((code,certvar^" ()"),(termvars,ctxt)) end
 
 (* transforms thm="A1=>A2=>...=>An=>B" into B given prems=[A1,...,An]
