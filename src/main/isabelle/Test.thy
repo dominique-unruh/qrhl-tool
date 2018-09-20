@@ -9,12 +9,10 @@ QRHL.QRHL
  *)
 begin
 
-text nothing
+ML \<open>Options.default_put_bool "skip_proofs" false\<close>
+declare[[show_abbrevs=false,eta_contract=false]]
 
-term Order.bottom
-term \<bottom>
-term "a \<sqinter> b"
-term Lattice.meet
+text nothing
 
 ML \<open>
 fun check_func (t,cert) = let
@@ -28,16 +26,10 @@ lemma assert_equals_refl: "assert_equals a a" unfolding assert_equals_def by sim
 definition [simp]: "assert_string_neq (a::string) b = (a \<noteq> b)"
 lemma NO_MATCH_I: "NO_MATCH x y" by simp
 
-ML Thm.implies_elim
+definition "constant_function f y = (\<forall>x. f x = y)"
 
 ML_file "cert_codegen.ML"
 
-(* variables classical xxx :: int begin *)
-
-(* lemma [simp]: "variable_name var_xxx = ''x''" sorry
-lemma [simp]: "variable_name var_xxx = ''x''" *)
-
-(* lemma "variable_name var_xxx = undefined" apply simp oops *)
 
 ML \<open>open Cert_Codegen\<close>
 
@@ -56,7 +48,7 @@ val get_variable_name_spec : specf = {name="get_variable_name", inputs=["v"], ou
 (* get_variable_name \<^context> @{term var_xxx} *)
 \<close>
 
-(* TODO remove *)
+(* (* TODO remove *)
 lemma func: (* TODO remove *)
   assumes "e1 == expression Q1 E1"
   assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
@@ -92,7 +84,7 @@ end
 \<close>                                                      
 
 (* END remove *)
-
+ *)
 
 ML \<open>
 @{ml_term "string_concat_func a b c"}
@@ -159,6 +151,12 @@ fun index_var_func ctxt left (v as Free(n,T)) = let
 ;;
 val index_var_func_spec = {name="index_var_func", inputs=["left","v"], outputs=["v1"], pattern=\<^prop>\<open>index_var left v = v1\<close> |> free_to_var} : specf
 \<close>
+
+ML \<open>
+fun constant_function ctxt f = error "nyi: constant_function"
+val constant_function_spec = {name="constant_function", inputs=["f"], outputs=["y"], pattern=\<^prop>\<open>constant_function f y\<close> |> free_to_var} : specf
+\<close>
+
 
 variables classical x :: int begin
 ML \<open>
@@ -286,21 +284,15 @@ lemma wp2_assign_func:
   shows "qrhl A c d B"
   using assms wp2_assign by metis
 
-(* lemma map_expression2'_func: (* TODO remove *)
-  assumes "e1 == expression Q1 E1"
-  assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
-    (* TODO remove undefined, do the concat *)
-  assumes "undefined \<equiv> e'"
-   shows "map_expression2' f e1 e2 = e'"
-  sorry  *)
-
 lemma map_expression2'_func:
   assumes "e1 == expression Q1 E1"
-  assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
-    (* TODO remove undefined, do the concat *)
-  assumes "expression (variable_concat Q1 (Q2 undefined)) (\<lambda>(x1,x2). f (E1 x1) (\<lambda>z. E2 z x2)) \<equiv> e'"
+  assumes "\<And>z. e2 z == expression (Q2z z) (E2 z)"
+  assumes "constant_function Q2z Q2"
+  assumes "expression (variable_concat Q1 Q2) (\<lambda>(x1,x2). f (E1 x1) (\<lambda>z. E2 z x2)) \<equiv> e'"
    shows "map_expression2' f e1 e2 = e'"
-  unfolding assms(1,2) assms(3)[symmetric] sorry (* TODO *)
+  unfolding assms(1,2) assms(4)[symmetric]
+  using assms(3) unfolding constant_function_def
+  by simp
 
 ML \<open>
 val map_expression2'_func_spec : specfx = {
@@ -498,6 +490,7 @@ val spec_wp =
 inputs=["c","d","B"], outputs=["A"], fallback="fn (c,d,B) => raise TERM(\"wp\",[c,d,B])", pattern=Thm.concl_of @{thm wp_skip_func}} : specfx
 val spec = [
   spec_wp,
+  specf_to_specfx constant_function_spec,
   specf_to_specfx index_var_func_spec,
   specf_to_specfx get_variable_name_spec,
   specf_to_specfx assert_string_neq_func_spec,
@@ -568,27 +561,6 @@ ML_file "test.ML"
 
 (* declare[[show_brackets]] *)
 (* print_attributes *)
-
-declare[[show_abbrevs=false,eta_contract=false]]
-ML \<open>
-\<^term>\<open>(%x::bool. x)\<close> $ \<^term>\<open>True\<close> |> Thm.cterm_of \<^context> 
-\<close>
-
-term "(%x. x) x"
-term "(%x. f x)"
-
-ML \<open>
-\<close>
-
-ML \<open>
-;;
-
-code_for_assumption \<^context>
-(Symtab.make(map(fn n=>(n,n))["B","t_b","t_a","x1"]))
-(empty_conf (hd spec)) spec
-(@{prop "\<And>z. subst_expression (substitute1 x1 (const_expression z)) B = B' z"} |> free_to_var)
-|> (fn ((code,cert),_) => (code |> String.concatWith "\n" |> tracing; tracing cert))
-\<close>
 
 
 
@@ -666,6 +638,18 @@ variables classical x :: bool and classical y :: bool begin
 ML \<open>
 Test.index_vars \<^context> @{term True} @{term "\<lbrakk>var_x,var_y\<rbrakk>"} |> check_func
 \<close>
+
+(* ML \<open>
+fun check_func1 pattern [input] (t,cert) = let
+  val thm = cert ()
+  val thy = Thm.theory_of_thm thm
+  val pattern = free_to_var pattern
+  val (_,tenv) = Pattern.first_order_match thy (pattern,Thm.prop_of thm) (Vartab.empty,Vartab.empty)
+  val _ = if input aconv (Vartab.lookup tenv ("input",0) |> the |> snd) then () else error "mismatch"
+  in (Thm.global_cterm_of thy t) end
+  | check_func1  _ _ _ = error "meh"
+\<close> *)
+
 
 ML \<open>
 Test.wp \<^context> @{term "[sample var_x Expr[undefined]]"} @{term "[] :: program list"} @{term "Expr[top::predicate]"}
