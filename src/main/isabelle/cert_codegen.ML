@@ -6,6 +6,20 @@ type specfx = {name: string, pattern: term, inputs: string list, outputs: string
               thms: string list, fallback: string}
 type spec = specfx list
 
+fun specf_to_specfx ({name,inputs,outputs,pattern} : specf) = {name=name,fallback="",inputs=inputs,outputs=outputs,pattern=pattern,thms=[]} : specfx
+fun specfx_to_specf ({name,inputs,outputs,pattern,...} : specfx) = {name=name,inputs=inputs,outputs=outputs,pattern=pattern} : specf
+fun specfx_to_specf' structname ({name,inputs,outputs,pattern,...} : specfx) = {name=structname^"."^name,inputs=inputs,outputs=outputs,pattern=pattern} : specf
+
+structure Data = Theory_Data(
+  type T = specf list
+  val empty = []
+  val merge = Library.merge op=
+  val extend = I
+)
+
+fun add_specs specs = Data.map (fn s => specs @ s)
+fun add_spec spec = add_specs [spec]
+
 fun print_tuple [] = "()"
   | print_tuple [x] = x
   | print_tuple xs = ML_Syntax.atomic (String.concatWith ", " xs)
@@ -30,15 +44,30 @@ fun string_concat_func _ a b = let
   (c,cert)
   end
 
-val string_concat_func_spec : specf = {name="string_concat_func", inputs=["a","b"], outputs=["c"],
+val string_concat_func_spec : specf = {name="Cert_Codegen.string_concat_func", inputs=["a","b"], outputs=["c"],
                                        pattern=\<^prop>\<open>a @ b = (c::string)\<close> |> free_to_var}
 
 fun assert_equals_func ctxt a b = 
   if a <> b then raise TERM("assert_equals_func",[a,b])
   else ((),fn () => infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt a)] @{thm assert_equals_refl})
 
-val assert_equals_func_spec : specf = {name="assert_equals_func", inputs=["a","b"], outputs=[],
+val assert_equals_func_spec : specf = {name="Cert_Codegen.assert_equals_func", inputs=["a","b"], outputs=[],
                                       pattern=\<^prop>\<open>assert_equals a b\<close> |> free_to_var}
+
+fun constant_function ctxt (Abs(_,T,body)) = let
+  val _ = if loose_bvar (body,0) then raise Bind else ()
+  fun cert () = let
+    val cT = Thm.ctyp_of ctxt T
+    val cbody = Thm.cterm_of ctxt body
+    val bodycT = Thm.ctyp_of_cterm cbody
+    val bodyT = Thm.typ_of bodycT
+    in instantiate_normalize ([((("'a",0),\<^sort>\<open>type\<close>),cT),
+                               ((("'b",0),\<^sort>\<open>type\<close>),bodycT)],[
+                               ((("y",0),bodyT),cbody)]) @{thm constant_function_absI} end
+    (* infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt body)] @{thm constant_function_absI} *)
+  in (body,cert) end
+  | constant_function _ _ = raise Bind
+val constant_function_spec = {name="Cert_Codegen.constant_function", inputs=["f"], outputs=["y"], pattern=\<^prop>\<open>constant_function f y\<close> |> free_to_var} : specf
 
 
 fun assert_string_neq_func _ a b = let
@@ -51,7 +80,7 @@ fun assert_string_neq_func _ a b = let
     ((),cert)
   end
 
-val assert_string_neq_func_spec : specf = {name="assert_string_neq_func", inputs=["a","b"], outputs=[],
+val assert_string_neq_func_spec : specf = {name="Cert_Codegen.assert_string_neq_func", inputs=["a","b"], outputs=[],
                                       pattern=\<^prop>\<open>assert_string_neq a b\<close> |> free_to_var}
 
   (* TODO: does not support schematic variables in pattern yet *)
@@ -62,26 +91,20 @@ fun NO_MATCH_func ctxt pattern t = let
     infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt pattern), SOME (Thm.cterm_of ctxt t)] @{thm NO_MATCH_I})
   end
 
-val NO_MATCH_func_spec : specf = {name="NO_MATCH_func", pattern=Thm.prop_of @{thm NO_MATCH_I},
+val NO_MATCH_func_spec : specf = {name="Cert_Codegen.NO_MATCH_func", pattern=Thm.prop_of @{thm NO_MATCH_I},
   inputs=["x","y"], outputs=[]}
 
 type conf = {
   tracing: bool,
-  (* term_vars: string Symtab.table Unsynchronized.ref, (* Names used for variables occurring in terms *) *)
-  (* ctxt: Proof.context Unsynchronized.ref,  (* will be returned in the end *) *)
-  (* checks: string list Unsynchronized.ref, (* additional checks that have to be performed after the pattern match *)  *)
   current: specfx, (* spec of currently created function *)
   current_assm: term (* currently processed assumption *)
-  (* globals: string list Unsynchronized.ref, *)
-  (* thms: thm Inttab.table Unsynchronized.ref *)
 }
 fun empty_conf current = 
-    {tracing = true, (* term_vars = Unsynchronized.ref Symtab.empty, *) 
-     (* checks = Unsynchronized.ref [], *) (* thms = Unsynchronized.ref Inttab.empty, *)
-      (* globals=Unsynchronized.ref [], *) current=current, current_assm = @{prop "dummyterm"}} : conf
-(* fun update_conf_pattern ({term_vars,ctxt,checks,current,current_assm...}:conf) pattern = 
-  {current=current, current_assm=current_assm, term_vars=term_vars, ctxt=ctxt, checks=checks, pattern=pattern} : conf *)
-fun update_conf_current_assm ({tracing,current,...}:conf) current_assm = {tracing=tracing, current=current, current_assm=current_assm}
+    {tracing = true,
+     current=current,
+     current_assm = @{prop "dummyterm"}} : conf
+fun update_conf_current_assm ({tracing,current,...}:conf) current_assm = 
+  {tracing=tracing, current=current, current_assm=current_assm} : conf
 
 fun print_comment str = let
   fun quote (#"*" :: #")" :: l) res = quote l (#")" :: #" " :: #"*" :: res)
@@ -200,7 +223,7 @@ end *)
 val indent = String.translate (fn c => if c = #"\n" then "\n  " else str c)
 fun indent' str = "  " ^ indent str
 
-fun code_for_assumption ctxt termvars (conf:conf) (spec:spec) t = let
+fun code_for_assumption ctxt termvars (conf:conf) (spec:specf list) t = let
   val conf = update_conf_current_assm conf t
   (* val _ = if null (! (#checks conf)) then () else error "code_for_assumption: checks not empty (1)" *)
   val code = Library.get_first (fn {name,pattern,inputs,outputs,...} => 
@@ -230,7 +253,7 @@ fun code_for_assumption ctxt termvars (conf:conf) (spec:spec) t = let
   (* val _ = if null (! (#checks conf)) then () else error "code_for_assumption: checks not empty (2)" *)
   val code = case code of SOME c => c | NONE =>
     (case t of Const(@{const_name Pure.eq},_) $ _ $ _ => eqterm_to_ml ctxt termvars conf t
-             | Const(@{const_name Pure.all},_) $ Abs(_,_,_) => code_for_assumption_allquant ctxt termvars (conf:conf) (spec:spec) t
+             | Const(@{const_name Pure.all},_) $ Abs(_,_,_) => code_for_assumption_allquant ctxt termvars (conf:conf) (spec:specf list) t
              | _ => raise TERM("Don't know how to handle this assumption when creating function '" ^ #name (#current conf) ^ "'", [t]))
   (* val code = apsnd indent code *)
   (* val _ = #current_assm conf := @{term "dummyterm"} *)
@@ -239,7 +262,7 @@ fun code_for_assumption ctxt termvars (conf:conf) (spec:spec) t = let
     code
   end
 
-and code_for_assumption_allquant ctxt termvars (conf:conf) (spec:spec) assm = let
+and code_for_assumption_allquant ctxt termvars (conf:conf) (spec:specf list) assm = let
   val vars = Term.add_vars assm [] |> map (fst o fst)
   val (Const(@{const_name Pure.all}, _) $ Abs(z,T,body)) = assm
   val [z'] = Name.variant_list vars [z]  (* Fresh name for schematic var z *)
@@ -320,7 +343,7 @@ end
    Computes the variables in "outputs" using thm.
    Raises Bind if the pattern from thm is not matched, or if the preconditions cannot be fulfilled.
  *)
-fun thm_to_fun ctxt (conf:conf) spec thmname funname inputs outputs = let
+fun thm_to_fun ctxt (conf:conf) (spec:specf list) thmname funname inputs outputs = let
   val (inputs',(ctxt,termvars,checks)) = fold_map print_var_pattern inputs (ctxt,Symtab.empty,[])
   val _ = if null checks then () else error "thm_to_fun (1b): checks not empty"
   val thm = Proof_Context.get_thm ctxt thmname
@@ -348,9 +371,18 @@ fun thm_to_fun ctxt (conf:conf) spec thmname funname inputs outputs = let
     print_tuple [print_tuple outputs', mkcert_name] ^ " end\n"
   in
     code
-  end
+  end                                               
 
-fun thms_to_fun ctxt (spec:spec) (func:specfx) =
+fun term_tuple_to_string n = let
+  val vars = Library.map_range (fn i => "x"^string_of_int i) n
+  in "(fn (" ^ String.concatWith "," vars ^ ") => String.concatWith \" \" [" ^ 
+      String.concatWith "," (map (fn v => "Syntax.string_of_term ctxt "^v) vars) ^ "])" end
+
+;;
+val _ = term_tuple_to_string 4 |> writeln
+;;
+
+fun thms_to_fun ctxt (spec:specf list) (func:specfx) =
   let 
       val (thm_names,ctxt) = fold_map (fn n => fn ctxt => let val (n',ctxt) = ML_Context.variant n ctxt in ((n,n'),ctxt) end) (#thms func) ctxt
       val concls = #thms func |> map (Thm.concl_of o Proof_Context.get_thm ctxt)
@@ -364,32 +396,43 @@ fun thms_to_fun ctxt (spec:spec) (func:specfx) =
       val fundefs = map (fn (thm,funname) => thm_to_fun ctxt conf spec thm funname (#inputs func) (#outputs func)) thm_names
             |> map indent'
       val inputs' = " " ^ String.concatWith " " inputs
-      val tracing_cmd = "  val _ = " ^ ML_Syntax.print_string ("Invoking: " ^ #name func ^ " ") ^ " ^ " ^ 
+      val tracing_cmd = "  val _ = " ^ ML_Syntax.print_string ("Invoking:  " ^ #name func ^ " ") ^ " ^ " ^ 
             String.concatWith " ^\" \"^ " (inputs |> map (fn s => "(\"\<open>\" ^ Syntax.string_of_term ctxt "^s^" ^ \"\<close>\")")) ^
             " |> tracing"
       val fundefs = if #tracing conf then fundefs @ [tracing_cmd] else fundefs
       val body = fold (fn snippet => fn sofar => if sofar="" then snippet ^ inputs' else sofar ^ " handle Bind => " ^ snippet ^ inputs') (map snd thm_names) ""
-      val body = body ^ " handle Bind => " ^ ML_Syntax.atomic (#fallback func) ^ " " ^ print_tuple inputs
-      val code = #name func ^ " ctxt" ^ inputs' ^ " = let\n" ^ String.concatWith "\n" fundefs ^ "\nin\n" ^  body ^ "\nend\n\n"
+      val (result_var,ctxt) = ML_Context.variant "result" ctxt
+      val body = "  val " ^ result_var ^ " = " ^ body ^ " handle Bind => " ^ ML_Syntax.atomic (#fallback func) ^ " " ^ print_tuple inputs
+      val fundefs = fundefs @ [body]
+      val tracing_cmd2 = "  val _ = " ^ ML_Syntax.print_string ("Returning: " ^ #name func ^ " -> ") ^ " ^ " 
+             ^ term_tuple_to_string (length (#outputs func)) ^ " (fst " ^ result_var ^ ") |> tracing"
+      val fundefs = if #tracing conf then fundefs @ [tracing_cmd2] else fundefs
+      val code = #name func ^ " ctxt" ^ inputs' ^ " = let\n" ^ String.concatWith "\n" fundefs ^ "\nin\n" ^  result_var ^ "\nend\n\n"
   in
     code
   end
 
-fun thms_to_funs ctxt (spec:spec) structname filename =
+fun thms_to_funs (spec:spec) structname filename thy =
   (* TODO: assert that all vars in spec have index 0 *)
-  let val spec' = filter_out (fn {fallback,thms,...} => fallback="" andalso null thms) spec
-      val ctxt = fold (fn func => fn ctxt => ML_Context.variant (#name func) ctxt |> snd) spec ctxt
-      val codes = map (thms_to_fun ctxt spec) spec'
+  let 
+      val ctxt = Proof_Context.init_global thy (* This context will be discarded in the end *)
+      val allspec = map specfx_to_specf spec @ Data.get thy
+      (* val spec' = filter_out (fn {fallback,thms,...} => fallback="" andalso null thms) spec *)
+      val ctxt = fold (fn func => fn ctxt => ML_Context.variant (#name func) ctxt |> snd) allspec ctxt
+      val codes = map (thms_to_fun ctxt allspec) spec
       (* val prep = String.concatWith "\n" preps *)
       (* val prep = String.concatWith "\n" (flat preps) *)
       val code = "structure " ^ structname ^ " =\nstruct\n\nfun " ^ String.concatWith "\nand " codes ^ "\nend\n"
-      val path = Path.append (Resources.master_directory (Proof_Context.theory_of ctxt)) (Path.make [filename])
+      val path = Path.append (Resources.master_directory (Proof_Context.theory_of ctxt)) (Path.make ["autogenerated",filename])
       val _ = File.write path code
-      val _ = ML_Context.eval_file ML_Compiler.flags path
+      val pos = Path.position path
+      val src = ML_Lex.read_pos pos (File.read path)
+      val thy = Context.theory_map (ML_Context.exec (fn () => ML_Context.eval ML_Compiler.flags pos src)) thy
+      val thy = add_specs (map (specfx_to_specf' structname) spec) thy
 (* val _ = writeln prep *)
 (* val _ = writeln code *)
   in
-    ()
+    thy
   end
 
 fun rewrite_thm_as thm ct = let

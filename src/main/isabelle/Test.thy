@@ -1,6 +1,7 @@
 theory Test
   imports 
  (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools"  *)
+(* Cert_Codegen *)
 QRHL.QRHL
      (* QRHL.QRHL_Core  Multi_Transfer  *)
 (* QRHL.Prog_Variables *)
@@ -9,11 +10,6 @@ QRHL.QRHL
  *)
 begin
 
-ML \<open>Options.default_put_bool "skip_proofs" false\<close>
-declare[[show_abbrevs=false,eta_contract=false]]
-
-text nothing
-
 ML \<open>
 fun check_func (t,cert) = let
   val thm = cert ()
@@ -21,29 +17,36 @@ fun check_func (t,cert) = let
   in (Thm.global_cterm_of (Thm.theory_of_thm thm) t, thm) end
 \<close>
 
-definition "assert_equals a b = (a=b)"
-lemma assert_equals_refl: "assert_equals a a" unfolding assert_equals_def by simp
-definition [simp]: "assert_string_neq (a::string) b = (a \<noteq> b)"
-lemma NO_MATCH_I: "NO_MATCH x y" by simp
+ML \<open>
+fun test_wp ctxt c d B = let
+  val (A,cert) = Autogen_WP.wp ctxt c d B
+  val thm = cert ()
+  val prop = Thm.prop_of thm |> HOLogic.dest_Trueprop
+  val Const(\<^const_name>\<open>qrhl\<close>,_) $ A' $ c' $ d' $ B' = prop
+  fun err s t t' = raise CTERM("test_wp: "^s,[Thm.cterm_of ctxt t,Thm.cterm_of ctxt t'])
+  val _ = if c' = c then () else err "c" c c'
+  val _ = if d' = d then () else err "d" d d'
+  val _ = if B' = B then () else err "B" B B'
+  val _ = if Envir.beta_norm A' = Envir.beta_norm A then () else err "A" A A'
+in Thm.global_cterm_of (Thm.theory_of_thm thm) A end
+\<close>
 
-definition "constant_function f y = (\<forall>x. f x = y)"
 
-ML_file "cert_codegen.ML"
+variables classical x :: int and classical y :: int begin
+ML \<open>
+  test_wp \<^context> @{term "[sample var_x Expr[uniform {y<..<x}]]"} @{term "[] :: program list"} @{term "Expr[Cla[x1=x2]]"}
+\<close>
+end
+
+declare[[show_abbrevs=false,eta_contract=false]]
+
+text nothing
+
 
 
 ML \<open>open Cert_Codegen\<close>
 
 ML \<open>
-fun get_variable_name ctxt v = let
-  val ct = Const(\<^const_name>\<open>variable_name\<close>, fastype_of v --> HOLogic.stringT) $ v |> Thm.cterm_of ctxt
-  val thm = Raw_Simplifier.rewrite_cterm (false,false,false) (K (K NONE)) ctxt ct
-  val rhs = Thm.rhs_of thm |> Thm.term_of
-  val _ = HOLogic.dest_string rhs         
-  in
-    (rhs, fn () => thm RS @{thm meta_eq_to_obj_eq})
-  end
-val get_variable_name_spec : specf = {name="get_variable_name", inputs=["v"], outputs=["n"],
-                                      pattern=\<^prop>\<open>variable_name v = n\<close> |> free_to_var}
 ;;
 (* get_variable_name \<^context> @{term var_xxx} *)
 \<close>
@@ -119,42 +122,15 @@ assert_equals_func \<^context> @{term 123} @{term 123} |> snd |> (fn c => c())
 \<close>
 
 
-lemma index_var1_aux:
-  assumes "variable_name v = vname"
-  assumes "variable_name v1 = v1name"
-  assumes "vname @ ''1'' = v1name'"
-  assumes "assert_equals v1name v1name'"
-  shows "index_var True v = v1"
-  using assms unfolding assert_equals_def using index_var1I by smt
-
-lemma index_var2_aux:
-  assumes "variable_name v = vname"
-  assumes "variable_name v2 = v2name"
-  assumes "vname @ ''2'' = v2name'"
-  assumes "assert_equals v2name v2name'"
-  shows "index_var False v = v2"
-  using assms unfolding assert_equals_def using index_var2I by smt
 
 
 ML \<open>
-fun index_var_func ctxt left (v as Free(n,T)) = let
-  val left' = if left = \<^const>\<open>True\<close> then true else if left = \<^const>\<open>False\<close> then false else raise TERM("index_var_func",[left])
-  fun lr x y = if left' then x else y
-  val v1 = Free(n^lr "1" "2",T)
-  val (vname,vname_cert) = get_variable_name ctxt v
-  val (v1name,v1name_cert) = get_variable_name ctxt v1
-  val (v1name',v1name'_cert) = string_concat_func ctxt vname (lr \<^term>\<open>''1''\<close> \<^term>\<open>''2''\<close>)
-  val ((),eq_cert) = assert_equals_func ctxt v1name v1name'
-  fun cert () = (lr @{thm index_var1_aux} @{thm index_var2_aux}) OF [vname_cert(), v1name_cert(), v1name'_cert(), eq_cert()]
-  in (v1,cert) end
-  | index_var_func _ _ v = raise TERM("index_var_func",[v])
-;;
-val index_var_func_spec = {name="index_var_func", inputs=["left","v"], outputs=["v1"], pattern=\<^prop>\<open>index_var left v = v1\<close> |> free_to_var} : specf
 \<close>
 
+declare[[show_types]]
+
 ML \<open>
-fun constant_function ctxt f = error "nyi: constant_function"
-val constant_function_spec = {name="constant_function", inputs=["f"], outputs=["y"], pattern=\<^prop>\<open>constant_function f y\<close> |> free_to_var} : specf
+constant_function \<^context> @{term "%z::nat. 1+(2::int)"} |> check_func
 \<close>
 
 
@@ -163,283 +139,6 @@ ML \<open>
 index_var_func \<^context> @{term False} @{term "var_x"} |> check_func
 \<close>
 end
-
-lemma index_expression_func:
-  assumes "e \<equiv> expression Q E"
-  assumes "index_vars left Q = Q1"
-  assumes "expression Q1 E \<equiv> e'"
-  shows "index_expression left e = e'"
-  using assms index_expression_def by metis
-
-ML \<open>
-val index_expression_func_spec : specfx = {name="index_expression_func", inputs=["left","e"], outputs=["e'"],
-    pattern=Thm.concl_of @{thm index_expression_func}, thms=["index_expression_func"], 
-    fallback="fn (left,e) => raise TERM(\"index_expression_func\",[left,e])"}
-\<close>
-
-
-lemma index_vars_unit_func:
-  assumes "X \<equiv> variable_unit"
-  assumes "variable_unit \<equiv> X'"
-  shows "index_vars left X = X'"
-  using assms index_vars_unit by metis
-
-lemma index_vars_singleton_func:
-  assumes "X \<equiv> variable_singleton x"
-  assumes "index_var left x = x1"
-  assumes "variable_singleton x1 \<equiv> X'"
-  shows "index_vars left X = X'"
-  using assms index_vars_singleton by metis
-
-lemma index_vars_concat_func:
-  assumes "X \<equiv> variable_concat Y Z"
-  assumes "index_vars left Y = Y1"
-  assumes "index_vars left Z = Z1"
-  assumes "variable_concat Y1 Z1 \<equiv> X'"
-  shows "index_vars left X = X'"
-  using assms index_vars_concat by metis
-
-ML \<open>
-val index_vars_func_spec : specfx = {name="index_vars", inputs=["left","X"], outputs=["X'"],
-  thms= ["index_vars_unit_func","index_vars_singleton_func","index_vars_concat_func"],
-  pattern=Thm.concl_of @{thm index_vars_singleton_func}, fallback="fn (left,X) => raise TERM(\"index_vars_concat_func\",[left,X])"}
-\<close>
-
-lemma subst_expression_func_unit:
-  assumes "s == substitute1 x f"
-  assumes "e == expression variable_unit E"
-  assumes "expression variable_unit E == e'"
-  shows "subst_expression s e = e'"
-  using assms Encoding.subst_expression_unit_aux by metis
-
-lemma subst_expression_func_singleton_same:
-  assumes "s == substitute1 x (expression R F)"
-  assumes "e == expression \<lbrakk>x\<rbrakk> E"
-  assumes "expression R (\<lambda>r. E (F r)) == e'"
-  shows "subst_expression s e = e'"
-  using assms Encoding.subst_expression_singleton_same_aux by metis
-
-lemma subst_expression_func_singleton_notsame:
-  assumes "s == substitute1 x f"
-  assumes "e == expression \<lbrakk>y\<rbrakk> E"
-  assumes "variable_name x = xn"
-  assumes "variable_name y = yn"
-  assumes neq: "assert_string_neq xn yn"
-  assumes "e == e'"
-  shows "subst_expression s e = e'"
-  using neq unfolding assms(1,2) assms(3,4,6)[symmetric] assert_string_neq_def
-  using Encoding.subst_expression_singleton_notsame_aux by metis
-
-lemma subst_expression_func_concat_id:
-  assumes "s == substitute1 x f"
-  assumes "e == expression (variable_concat Q1 Q2) (\<lambda>x. x)"
-  assumes "subst_expression (substitute1 x f) (expression Q1 (\<lambda>x. x)) = expression Q1' e1"
-  assumes "subst_expression (substitute1 x f) (expression Q2 (\<lambda>x. x)) = expression Q2' e2"
-  assumes "expression (variable_concat Q1' Q2') (\<lambda>(x1,x2). (e1 x1, e2 x2)) == e'"
-  shows "subst_expression s e = e'"
-  using assms Encoding.subst_expression_concat_id_aux by metis
-
-lemma subst_expression_func_id_comp:
-  assumes "s == substitute1 x f"
-  assumes "e == expression Q E"
-  assumes "NO_MATCH (\<lambda>x::unit. x) E"
-  assumes "subst_expression (substitute1 x f) (expression Q (\<lambda>x. x)) = expression Q' g"
-  assumes "expression Q' (\<lambda>x. E (g x)) == e'"
-  shows "subst_expression s e = e'"
-  using assms(4) unfolding assms(1-2) assms(5)[symmetric]
-  using Encoding.subst_expression_id_comp_aux by metis
-
-ML \<open>
-val subst_expression_func_spec : specfx = {
-  name="subst_expression_func",
-  inputs=["s","e"], outputs=["e'"], pattern= @{thm subst_expression_func_id_comp} |> Thm.concl_of,
-  thms= ["subst_expression_func_unit","subst_expression_func_concat_id",
-               "subst_expression_func_singleton_same","subst_expression_func_singleton_notsame",
-               "subst_expression_func_concat_id", "subst_expression_func_id_comp"],
-  fallback="fn (s,e) => raise TERM(\"subst_expression_func\",[s,e])"}
-\<close>
-
-
-
-lemma wp_skip_func:
-  assumes "c == []" and "d == []" and "B == A"
-  shows "qrhl A c d B"
-  unfolding assms by (rule wp_skip)
-
-lemma wp1_assign_func:
-  fixes x e c d A B
-  assumes "c == [assign x e]" and "d == []"
-  assumes "index_var True x = x1"
-  assumes "index_expression True e = e1"
-  assumes "subst_expression (substitute1 x1 e1) B = A"
-  shows "qrhl A c d B"
-  using assms wp1_assign by metis
-
-lemma wp2_assign_func:
-  fixes x e c d A B
-  assumes "d == [assign x e]" and "c == []"
-  assumes "index_var False x = x1"
-  assumes "index_expression False e = e1"
-  assumes "subst_expression (substitute1 x1 e1) B = A"
-  shows "qrhl A c d B"
-  using assms wp2_assign by metis
-
-lemma map_expression2'_func:
-  assumes "e1 == expression Q1 E1"
-  assumes "\<And>z. e2 z == expression (Q2z z) (E2 z)"
-  assumes "constant_function Q2z Q2"
-  assumes "expression (variable_concat Q1 Q2) (\<lambda>(x1,x2). f (E1 x1) (\<lambda>z. E2 z x2)) \<equiv> e'"
-   shows "map_expression2' f e1 e2 = e'"
-  unfolding assms(1,2) assms(4)[symmetric]
-  using assms(3) unfolding constant_function_def
-  by simp
-
-ML \<open>
-val map_expression2'_func_spec : specfx = {
-  name="map_expression2'",
-  pattern=\<^prop>\<open>map_expression2' f e1 e2 = e'\<close> |> free_to_var,
-  inputs=["f","e1","e2"], outputs=["e'"],
-  thms=["map_expression2'_func"],
-  fallback="fn (f,e1,e2) => raise TERM(\"map_expression2'\",[f,e1,e2])"
-}
-\<close>
-
-
-lemma wp1_sample_func:
-  fixes A B c d x e
-  assumes "d == []" and "c == [sample x e]" 
-  assumes "index_var True x = x1"
-  assumes "index_expression True e = e1"
-(* TODO: all-quants probably don't work! *)
-  assumes "\<And>z. subst_expression (substitute1 x1 (const_expression z)) B = B' z"
-(* TODO: implement map_expression2' *)
-  assumes "map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e1 B' = A"
-  shows "qrhl A c d B"
-  unfolding assms(1-2) assms(3-6)[symmetric] by (rule wp1_sample)
-
-lemma wp2_sample_func:
-(*TODO*)
-  fixes A B c d x e
-  assumes "c == []" and "d == [sample x e]" 
-  defines "e' \<equiv> index_expression False e"
-  defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
-  assumes "map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B' == A"
-  shows "qrhl A c d B"
-  unfolding assms(1-4) assms(5)[symmetric] by (rule wp2_sample)
-
-lemma wp1_qapply_func:
-(*TODO*)
-  fixes A B Q e
-  assumes "d == []" and "c == [qapply Q e]"
-  defines "Q\<^sub>1 \<equiv> index_vars True Q"
-  assumes "map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) (index_expression True e) B \<equiv> A"
-  shows "qrhl A c d B"
-  unfolding assms(1-3) assms(4)[symmetric] by (rule wp1_qapply)
-
-lemma wp2_qapply_func:
-(*TODO*)
-  fixes A B Q e
-  assumes "c == []" and "d == [qapply Q e]"
-  defines "Q\<^sub>1 \<equiv> index_vars False Q"
-  assumes "map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) (index_expression False e) B \<equiv> A"
-  shows "qrhl A c d B"
-  unfolding assms(1-3) assms(4)[symmetric] by (rule wp2_qapply)
-
-lemma wp1_measure_func:
-(*TODO*)
-  fixes A B x Q e
-  assumes "d == []" and "c == [measurement x Q e]"
-  defines "e\<^sub>1 \<equiv> index_expression True e"
-  defines "B' z \<equiv> subst_expression (substitute1 (index_var True x) (const_expression z)) B"
-  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars True Q)) \<cdot> top"
-  assumes "map_expression2' (\<lambda>e\<^sub>1 B'. Cla[mtotal e\<^sub>1] \<sqinter> 
-           (INF z. ((B' z \<sqinter> ebar e\<^sub>1 z) + ortho (ebar e\<^sub>1 z)))) e\<^sub>1 B' == A"
-  shows "qrhl A c d B"
-  unfolding assms(1-5) assms(6)[symmetric] by (rule wp1_measure)
-
-lemma wp2_measure_func:
-(*TODO*)
-  fixes A B x Q e
-  assumes "c == []" and "d == [measurement x Q e]"
-  defines "e\<^sub>1 \<equiv> index_expression False e"
-  defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
-  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars False Q)) \<cdot> top"
-  assumes "map_expression2' (\<lambda>e\<^sub>1 B'. Cla[mtotal e\<^sub>1] \<sqinter> 
-           (INF z. ((B' z \<sqinter> ebar e\<^sub>1 z) + ortho (ebar e\<^sub>1 z)))) e\<^sub>1 B' == A"
-  shows "qrhl A c d B"
-  unfolding assms(1-5) assms(6)[symmetric] by (rule wp2_measure)
-
-lemma wp1_qinit_func:
-(*TODO*)
-  fixes A B e Q
-  assumes "d==[]" and "c == [qinit Q e]"
-  assumes "map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> (index_vars True Q)))
-           (index_expression True e) B == A"
-  shows "qrhl A c d B"
-  unfolding assms(1-2) assms(3)[symmetric] by (rule wp1_qinit)
-
-lemma wp2_qinit_func:
-(*TODO*)
-  fixes A B e Q
-  assumes "c == []" and "d == [qinit Q e]"
-  assumes "map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> (index_vars False Q)))
-           (index_expression False e) B == A"
-  shows "qrhl A c d B"
-  unfolding assms(1-2) assms(3)[symmetric] by (rule wp2_qinit)
-
-lemma wp1_if_func:
-(*TODO*)
-  fixes e p1 p2 B
-  assumes "d == []" and "c == [ifthenelse e p1 p2]"
-  assumes "qrhl wp_true p1 [] B"
-  assumes "qrhl wp_false p2 [] B"
-  assumes "map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
-           (index_expression True e) wp_true wp_false == A"
-  shows "qrhl A c d B"
-  unfolding assms(1-2) assms(5)[symmetric] using assms(3,4) by (rule wp1_if)
-
-lemma wp2_if_func:
-(*TODO*)
-  fixes e p1 p2 B
-  assumes "c == []" and "d == [ifthenelse e p1 p2]"
-  assumes "qrhl wp_true [] p1 B"
-  assumes "qrhl wp_false [] p2 B"
-  assumes "map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
-           (index_expression False e) wp_true wp_false == A"
-  shows "qrhl A c d B"
-  unfolding assms(1-2) assms(5)[symmetric] using assms(3,4) by (rule wp2_if)
-
-lemma wp1_block_func:
-(*TODO*)
-  assumes "d == []" and "c == [block p]"
-  assumes "qrhl A p [] B"
-  shows "qrhl A c d B"
-  unfolding assms(1,2) using assms(3) by (rule wp1_block)
-
-lemma wp2_block_func:
-(*TODO*)
-  assumes "c == []" and "d == [block p]"
-  assumes "qrhl A [] p B"
-  shows "qrhl A c d B"
-  unfolding assms(1,2) using assms(3) by (rule wp2_block)
-
-lemma wp1_cons_func:
-  assumes "d == []" and "c == p#ps"
-  assumes "NO_MATCH ([]::unit list) ps"
-  assumes "qrhl B' ps [] B" and "qrhl A [p] [] B'"
-  shows "qrhl A c d B"
-  unfolding assms(1,2) using assms(4,5) by (rule wp1_cons[rotated])
-
-lemma wp2_cons_func:
-  assumes "c == []" and "d == p#ps"
-  assumes "NO_MATCH ([]::unit list) ps"
-  assumes "qrhl B' [] ps B"
-    and "qrhl A [] [p] B'"
-  shows "qrhl A c d B"
-  unfolding assms(1,2) using assms(4,5) by (rule wp2_cons[rotated])
-
-
-
 
 
 
@@ -476,38 +175,28 @@ fun thm_antiq (conf:conf) thm =
 \<close> *)
 
 
-ML \<open>
-fun specf_to_specfx ({name,inputs,outputs,pattern} : specf) = {name=name,fallback="",inputs=inputs,outputs=outputs,pattern=pattern,thms=[]} : specfx
-\<close>
+ML ML_File.ML
+ML Toplevel.generic_theory
+
+(* ML_file "test_index_vars.ML" *)
+(* ML "open Index_Vars" *)
+
+(* ML_file "test_index_expression.ML" *)
+(* ML "open Index_Expression" *)
+
+(* ML_file "test_map_expression.ML" *)
+(* ML "open Map_Expression" *)
+
+(* ML_file "test_subst_expression.ML" *)
+(* ML "open Subst_Expression" *)
 
 
-ML \<open>
-val spec_wp = 
-{name="wp", thms= 
-["wp_skip_func","wp1_assign_func","wp2_assign_func", "wp1_sample_func", "wp2_sample_func",
-  "wp1_qapply_func", "wp2_qapply_func", "wp1_measure_func", "wp2_measure_func", "wp1_if_func", "wp2_if_func",
-  "wp1_block_func", "wp2_block_func", "wp1_cons_func", "wp2_cons_func"],
-inputs=["c","d","B"], outputs=["A"], fallback="fn (c,d,B) => raise TERM(\"wp\",[c,d,B])", pattern=Thm.concl_of @{thm wp_skip_func}} : specfx
-val spec = [
-  spec_wp,
-  specf_to_specfx constant_function_spec,
-  specf_to_specfx index_var_func_spec,
-  specf_to_specfx get_variable_name_spec,
-  specf_to_specfx assert_string_neq_func_spec,
-  specf_to_specfx NO_MATCH_func_spec,
-  index_expression_func_spec,
-  index_vars_func_spec,
-  subst_expression_func_spec,
-  map_expression2'_func_spec
-]
-\<close>
-
-ML \<open>                           
+(* ML \<open>                           
 val _ = thms_to_fun \<^context> spec map_expression2'_func_spec
 |> (fn c => "fun " ^ c)
 |> (fn c => (tracing c; c))
 |> (fn c => ML_Context.eval ML_Compiler.flags Position.none (ML_Lex.read_pos Position.none c))
-\<close>
+\<close> 
 
 
 ML \<open>
@@ -519,114 +208,30 @@ val _ =
 map_expression2' \<^context> f e1 e2
 end
 \<close>                                                      
-
-
-
-ML \<open>
-;;
-print_comment "This (* is *) cool (******)"
-\<close>
+*)
 
 
 
 
 
-
-ML \<open>
+(* ML \<open>
 (* TODO make work *)
 thm_to_fun \<^context> (empty_conf (hd spec)) spec "wp1_sample_func" "f" ["c","d","B"] ["A"] |> writeln
 \<close>
-
+ 
 
 ML \<open>
 ;;
 val _ = thms_to_fun \<^context> spec spec_wp |> tracing
 \<close>
+*)
 
-
-
-ML \<open>
-(* val path = Path.append (Resources.master_directory \<^theory>) (Path.make ["test.ML"]) *)
-val code = thms_to_funs \<^context> spec "Test" "test.ML"
-(* val code = "val x = 1;;" *)
-(* val written = File.write path code *)
-(* val _ = ML_Context.eval_file ML_Compiler.flags path *)
-(* val pos = Path.position path *)
-(* val lex = ML_Lex.read_pos pos code *)
-(* val res = ML_Context.eval_in (SOME ctxt) ML_Compiler.flags pos lex *)
-(* val res = ML_Context.eval_file ML_Compiler.flags path *)
-\<close>
-
-ML_file "test.ML"
-
-(* declare[[show_brackets]] *)
-(* print_attributes *)
+(* ML_file "test_wp.ML" *)
+(* ML "open WP" *)
 
 
 
 
-variables classical x :: nat begin
-ML \<open>
-local
-val ctxt = \<^context>
-val t_a = @{typ "nat"}
-val t_b = @{typ "nat"}
-val x1 = @{term "var_x1"}
-val B = @{term "Expr[Suc x1]"}
-(* val za = @{term "zzzzzz::nat"} (* TODO should be in autogen code *) *)
-open Test
-in
-
-
-local
-  val za = Free("za_" ^ serial_string(), t_a)
-  (* Assumption: subst_expression (substitute1 ?x1.0 (expression variable_unit (\<lambda>_. ?za))) ?B = ?B'_z
-     Handled using function subst_expression_func *)
-  val (((b_z)), cert)
-           = subst_expression_func ctxt (Term.$ (Term.$ (Term.Const ("Expressions.substitute1", Term.Type ("fun", [Term.Type ("Prog_Variables.variable", [t_a]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_a]), Term.Type ("Expressions.substitution", [])])])), x1), Term.$ (Term.$ (Term.Const ("Expressions.expression", Term.Type ("fun", [Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]), Term.Type ("fun", [Term.Type ("fun", [Term.Type ("Product_Type.unit", []), t_a]), Term.Type ("Expressions.expression", [t_a])])])), Term.Const ("Prog_Variables.variable_unit", Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]))), Term.Abs ("uu_", Term.Type ("Product_Type.unit", []), za)))) (B)
-in
-(* Assumption: \<And>z. subst_expression (substitute1 ?x1.0 (expression variable_unit (\<lambda>_. z))) ?B = ?B' z
-   Handled by stripping all-quantifier *)
-val b = absfree (dest_Free za) b_z
-fun certa () = generalize_thm_to ctxt (cert ()) (dest_Free za)
-               (Term.$ (Term.Const ("Pure.all", Term.Type ("fun", [Term.Type ("fun", [t_a, Term.Type ("prop", [])]), Term.Type ("prop", [])])), Term.Abs ("z", t_a, Term.$ (Term.Const ("HOL.Trueprop", Term.Type ("fun", [Term.Type ("HOL.bool", []), Term.Type ("prop", [])])), Term.$ (Term.$ (Term.Const ("HOL.eq", Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("HOL.bool", [])])])), Term.$ (Term.$ (Term.Const ("Expressions.subst_expression", Term.Type ("fun", [Term.Type ("Expressions.substitution", []), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("Expressions.expression", [t_b])])])), Term.$ (Term.$ (Term.Const ("Expressions.substitute1", Term.Type ("fun", [Term.Type ("Prog_Variables.variable", [t_a]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_a]), Term.Type ("Expressions.substitution", [])])])), x1), Term.$ (Term.$ (Term.Const ("Expressions.expression", Term.Type ("fun", [Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]), Term.Type ("fun", [Term.Type ("fun", [Term.Type ("Product_Type.unit", []), t_a]), Term.Type ("Expressions.expression", [t_a])])])), Term.Const ("Prog_Variables.variable_unit", Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]))), Term.Abs ("uu_", Term.Type ("Product_Type.unit", []), Term.Bound 1)))), B)), Term.$ (b, Term.Bound 0))))))
-end 
-
-end
-;;
-b |> Thm.cterm_of \<^context>
-;;
-certa ()
-;;
-certa () 
-|> Thm.prop_of
-(* |> Term.dest_comb |> snd *)
-(* |> (fn (Abs(_,_,body)) => body) *)
-|> Logic.dest_all |> snd
-|> HOLogic.dest_Trueprop
-|> Term.dest_comb |> snd
- (* |>Thm.cterm_of \<^context> *)
-\<close>
-
-ML \<open>
-val ctxt = \<^context>
-val t_b = @{typ "nat"}
-val x1 = @{term "var_x1"}
-val z = @{term "z::nat"}
-val B = @{term "Expr[Suc x1]"}
-
-(* Assumption: subst_expression (substitute1 ?x1.0 (const_expression ?z)) ?B = ?B'z
-   Handled using function subst_expression_func *)
-
-val (((b_z)), cert)
-         = Test.subst_expression_func ctxt (Term.$ (Term.$ (Term.Const ("Expressions.substitute1", Term.Type ("fun", [Term.Type ("Prog_Variables.variable", [t_b]), Term.Type ("fun", [Term.Type ("Expressions.expression", [t_b]), Term.Type ("Expressions.substitution", [])])])), x1), Term.$ (Term.$ (Term.Const ("Expressions.expression", Term.Type ("fun", [Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]), Term.Type ("fun", [Term.Type ("fun", [Term.Type ("Product_Type.unit", []), t_b]), Term.Type ("Expressions.expression", [t_b])])])), Term.Const ("Prog_Variables.variable_unit", Term.Type ("Prog_Variables.variables", [Term.Type ("Product_Type.unit", [])]))), Term.Abs ("uu_", Term.Type ("Product_Type.unit", []), z)))) (B) 
-val B' = absfree ("z",@{typ int}) b_z
-val thm = cert()
-val prop = @{cprop "\<And>z. subst_expression (substitute1 var_x1 (const_expression z)) (expression \<lbrakk>var_x1\<rbrakk> (%x. Suc x)) = (\<lambda>z. const_expression (Suc z)) z"}
-val thm' = thm |> Thm.generalize ([],["z"]) 0 |> Thm.forall_intr (Thm.cterm_of \<^context> (Var(("z",0),@{typ nat})))
-val thm'' = rewrite_thm_as thm' prop
-\<close>
-end
 
 (* ML \<open>
 val _ = Theory.setup (ML_Antiquotation.declaration \<^binding>\<open>lemma_to_fun\<close>
@@ -636,7 +241,7 @@ val _ = Theory.setup (ML_Antiquotation.declaration \<^binding>\<open>lemma_to_fu
 variables classical x :: bool and classical y :: bool begin
 (* declare [[show_types,show_consts]] *)
 ML \<open>
-Test.index_vars \<^context> @{term True} @{term "\<lbrakk>var_x,var_y\<rbrakk>"} |> check_func
+Autogen_Index_Vars.index_vars \<^context> @{term True} @{term "\<lbrakk>var_x,var_y\<rbrakk>"} |> check_func
 \<close>
 
 (* ML \<open>
@@ -651,14 +256,10 @@ fun check_func1 pattern [input] (t,cert) = let
 \<close> *)
 
 
-ML \<open>
-Test.wp \<^context> @{term "[sample var_x Expr[undefined]]"} @{term "[] :: program list"} @{term "Expr[top::predicate]"}
-|> check_func
-\<close>
 
 ML \<open>
 (* TODO should simplif the nested prod-case's *)
-Test.subst_expression_func \<^context> @{term "substitute1 (var_x1::bool variable) (const_expression True)"}
+Autogen_Subst_Expression.subst_expression_func \<^context> @{term "substitute1 (var_x1::bool variable) (const_expression True)"}
 @{term "Expr[Cla[x1=x2]]"}
 |> check_func
 \<close>
@@ -667,7 +268,7 @@ end
 
 variables classical x :: int begin
 ML \<open>
-Test.wp \<^context> @{term "[assign var_x Expr[x*x], assign var_x Expr[x*x]]"} @{term "[] :: program list"} @{term "Expr[Cla[x1=x2]]"}
+Autogen_WP.wp \<^context> @{term "[assign var_x Expr[x*x], assign var_x Expr[x*x]]"} @{term "[] :: program list"} @{term "Expr[Cla[x1=x2]]"}
 |> check_func
 \<close>
 end

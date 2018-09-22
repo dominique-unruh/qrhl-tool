@@ -1,5 +1,5 @@
 theory QRHL
-  imports Real_Sqrt2 QRHL_Core QRHL_Code Encoding Tactics Universe_Instances_CryptHOL
+  imports Real_Sqrt2 QRHL_Core QRHL_Code Encoding Tactics Universe_Instances_CryptHOL Weakest_Precondition
 begin
 
 end
