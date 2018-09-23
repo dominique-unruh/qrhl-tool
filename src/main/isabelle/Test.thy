@@ -17,6 +17,16 @@ fun check_func (t,cert) = let
   in (Thm.global_cterm_of (Thm.theory_of_thm thm) t, thm) end
 \<close>
 
+
+(* eta_proc bug *)
+lemma "(\<lambda>(i, b, s). t (i, b, s)) == x"
+  apply simp (* Becomes t = x *)
+  oops
+schematic_goal x: " (\<lambda>(i, b, s). ?t (i, b, s)) = xxx"
+  (* apply simp *)
+  oops
+
+
 ML \<open>
 fun test_wp ctxt c d B = let
   val (A,cert) = Autogen_WP.wp ctxt c d B
@@ -32,9 +42,20 @@ in Thm.global_cterm_of (Thm.theory_of_thm thm) A end
 \<close>
 
 
-variables classical x :: int and classical y :: int begin
+variables classical x :: int and classical y :: int and quantum q :: int begin
 ML \<open>
   test_wp \<^context> @{term "[sample var_x Expr[uniform {y<..<x}]]"} @{term "[] :: program list"} @{term "Expr[Cla[x1=x2]]"}
+\<close>
+ML \<open>
+  test_wp \<^context> @{term "[qapply \<lbrakk>q\<rbrakk> Expr[undefined]]"} @{term "[] :: program list"} @{term "Expr[top \<guillemotright> \<lbrakk>q\<rbrakk>]"}
+\<close>
+ML \<open>
+Autogen_Cleanup_Expression_Concat.cleanup_expression_concat \<^context> \<^term>\<open>variable_unit\<close> \<^term>\<open>variable_unit\<close> \<^term>\<open>\<lambda>(x1::unit, x2::unit). ()\<close>
+|> check_func
+\<close>
+ML \<open>
+cleanup_expression_function \<^context> \<^term>\<open>variable_unit\<close> \<^term>\<open>undefined :: unit\<Rightarrow>unit\<close>
+|> check_func
 \<close>
 end
 

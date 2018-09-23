@@ -34,6 +34,36 @@ fun free_to_var (Free(v,T)) = Var((v,0),free_to_varT T)
   | free_to_var (Const(n,T)) = Const (n,free_to_varT T)
   | free_to_var (t as Bound _) = t
 
+(* Returns a term %(v1,..,vn). t (v1,...,vn) and a certificate t == %(v1,..,vn). t (v1,...,vn) *)
+fun mk_tupled_lambda ctxt vs t = let
+  val vnames = vs |> map fst |> Name.variant_list []
+  val vs' = (vnames ~~ map snd vs) |> map Free
+  val tuple = HOLogic.mk_tuple vs'
+  val tT = fastype_of t
+  val lambda = HOLogic.tupled_lambda tuple (Var(("t",0),tT) $ tuple)
+  val lambda' = Term.subst_Vars [(("t",0),t)] lambda
+  fun cert () = case vs of
+      [] => infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt t)] @{thm unit_abs_eta_conv[symmetric, THEN eq_reflection]} |> \<^print>
+    | [_] => Thm.eta_conversion (Thm.cterm_of ctxt lambda') |> Thm.symmetric
+    | _ => let
+      (* val thm = infer_instantiate ctxt [(("x",0),lambda |> Thm.cterm_of ctxt)] @{thm reflexive} *)
+      val lambda'' = Term.subst_Vars [(("t",0),Free("t",tT))] lambda
+      val _ = \<^print> lambda'' 
+      val thm = case eta_proc ctxt lambda'' of SOME thm => thm | NONE => raise TYPE("mk_tupled_lambda",map snd vs,[t,lambda''])
+      val thm = Thm.generalize ([],["t"]) 2 thm
+      val thm = Thm.symmetric thm
+      val thm = Thm.instantiate ([],[((("t",2),tT), Thm.cterm_of ctxt t)]) thm
+      val _ = thm |> Thm.prop_of |> \<^print>
+      in thm end
+  in
+    (lambda',cert)
+  end
+
+(* ;;
+val _ = mk_tupled_lambda \<^context> [("x",\<^typ>\<open>unit\<close>)] @{term "xxx::unit\<Rightarrow>int"} 
+|> (fn x => snd x ()) |> Thm.prop_of |> \<^print>
+;; *)
+
 fun string_concat_func _ a b = let
   val a' = HOLogic.dest_string a
   val b' = HOLogic.dest_string b
@@ -276,7 +306,7 @@ and code_for_assumption_allquant ctxt termvars (conf:conf) (spec:specf list) ass
   val inoutputs_z = Name.variant_list (z'::vars) (inoutputs |> map (fn n => n ^ "_" ^ z))
   val (_,(ctxt,termvars,[])) = print_var_pattern z' (ctxt,termvars,[])
   val subst = inoutputs ~~ inoutputs_z |> Symtab.make
-val _ = @{print} subst
+(* val _ = @{print} subst *)
 
   fun s (t as Var((n,0),T') $ Var v) =
       (case (Symtab.lookup subst n, v=((z',0),T)) of
