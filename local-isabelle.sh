@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Runs a locally installed Isabelle
+
 DIR="$(dirname "$(readlink -f "$BASH_SOURCE")")"
 
 if [ "$#" = 0 ]; then

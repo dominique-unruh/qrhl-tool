@@ -10,12 +10,35 @@ QRHL.QRHL
  *)
 begin
 
+
+ML \<open>
+Cert_Codegen.Data.get \<^theory> |> map #name
+\<close>
+
+
 ML \<open>
 fun check_func (t,cert) = let
   val thm = cert ()
   (* val _ = if Thm.term_of (Thm.rhs_of thm) <> t then raise TERM("check_func",[Thm.prop_of thm, t]) else () *)
   in (Thm.global_cterm_of (Thm.theory_of_thm thm) t, thm) end
 \<close>
+
+
+ML \<open>
+Cert_Codegen.list_last \<^context> \<^term>\<open>[1,2,3]\<close>
+|> (fn ((x,x'),y) => (Thm.cterm_of \<^context> x, Thm.cterm_of \<^context> x', y ()))
+\<close>
+
+
+
+variables classical x :: int begin
+ML \<open>
+Autogen_WP.wp1_tac \<^context> \<^term>\<open>False\<close>
+\<^term>\<open>qrhl Expr[Cla[False]] [assign var_x Expr[1], assign var_x Expr[2]]
+[assign var_x Expr[1], assign var_x Expr[2]] Expr[Cla[True]]\<close>
+|> snd |> (fn x => x())
+\<close>
+end
 
 
 (* eta_proc bug *)

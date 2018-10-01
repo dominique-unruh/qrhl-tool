@@ -83,7 +83,7 @@ fun seq_tac i j B ctxt = SUBGOAL_with_check ctxt (seq_tac_checks i j) (fn (goal,
             | _ => raise Match
         val i = if i>=0 then i else length (HOLogic.dest_list p1) + i + 1
         val j = if j>=0 then j else length (HOLogic.dest_list p2) + j + 1
-        val rule = @{thm seq} OF [take_n_thm ctxt i, take_n_thm ctxt j]
+        val rule = @{thm seqREMOVE} OF [take_n_thm ctxt i, take_n_thm ctxt j]
         val rule = infer_instantiate ctxt [(("B",0), Thm.cterm_of ctxt B)] rule
     in
       resolve_tac ctxt [rule] n
@@ -109,6 +109,12 @@ fun tac_on_term_concl tac ctxt (Const(\<^const_name>\<open>implies\<close>,_) $ 
       Option.map (map (fn t => HOLogic.mk_imp (a, t)))
       (tac_on_term_concl tac ctxt b)
   | tac_on_term_concl tac ctxt b = tac_on_term tac ctxt b
+
+
+fun apply_to_concl f (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) = 
+      (* Option.map (map (fn t => HOLogic.mk_imp (a, t))) *)
+      HOLogic.mk_imp (a, apply_to_concl f b)
+  | apply_to_concl f b = f b
 
 fun seq_tac_on_term i j B ctx = tac_on_term_concl (seq_tac i j B ctx 1) ctx
 
@@ -241,6 +247,7 @@ SUBGOAL (fn (goal,i) => let
   val 
 ) *)
 
+(* TODO rewrite using cert-functions *)
 fun wp_tac ctxt left i = 
   seq_tac (if left then ~2 else ~1) (if left then ~1 else ~2)
            (Var(("precondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i THEN
@@ -252,9 +259,16 @@ fun wp_tac ctxt left i =
       resolve_tac ctxt [thm] n
     end
   ) (i+1)
-  
-fun wp_tac_on_term left ctx = 
-  tac_on_term_concl (wp_tac ctx left 1) ctx
 
+
+(* fun wp_tac_on_term left ctx = 
+  tac_on_term_concl (wp_tac ctx left 1) ctx *)
+
+  
+fun wp_tac_on_term left ctx t =
+  let fun f t = let val (t',cert) = Autogen_WP.wp1_tac ctx (if left then \<^const>\<open>True\<close> else \<^const>\<open>False\<close>) t val _ = cert () in 
+    t
+  end
+  in SOME [apply_to_concl f t] end
 
 end

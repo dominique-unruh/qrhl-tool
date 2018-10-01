@@ -1,6 +1,143 @@
 theory Weakest_Precondition
-  imports Cert_Codegen Encoding Tactics
+  imports Cert_Codegen Encoding
 begin
+
+lemma seq:
+  assumes "qrhl A c1 d1 B"
+  and "qrhl B c2 d2 C"
+  shows "qrhl A (c1@c2) (d1@d2) C"
+  sorry
+
+
+
+lemma seqREMOVE:
+  assumes "c = c1@c2" and "d = d1@d2"
+  assumes "qrhl A c1 d1 B"
+    and "qrhl B c2 d2 C"
+  shows "qrhl A c d C"
+  using assms using seq by auto
+  
+
+lemma wp_skip:
+  shows "qrhl B [] [] B"
+  sorry
+
+lemma wp1_assign:
+  fixes A B x e
+  defines "A \<equiv> subst_expression (substitute1 (index_var True x) (index_expression True e)) B"
+  shows "qrhl A [assign x e] [] B"
+  sorry
+
+lemma wp2_assign:
+  fixes A B x e
+  defines "A \<equiv> subst_expression (substitute1 (index_var False x) (index_expression False e)) B"
+  shows "qrhl A [] [assign x e] B"
+  sorry
+
+lemma wp1_sample:
+  fixes A B x e
+  defines "e' \<equiv> index_expression True e"
+  defines "B' z \<equiv> subst_expression (substitute1 (index_var True x) (const_expression z)) B"
+  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
+  shows "qrhl A [sample x e] [] B"
+  sorry
+
+lemma wp2_sample:
+  fixes A B x e
+  defines "e' \<equiv> index_expression False e"
+  defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
+  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
+  shows "qrhl A [] [sample x e] B"
+  sorry
+
+lemma wp1_qapply:
+  fixes A B Q e
+  defines "Q\<^sub>1 \<equiv> index_vars True Q"
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) (index_expression True e) B"
+  shows "qrhl A [qapply Q e] [] B"
+  sorry
+
+lemma wp2_qapply:
+  fixes A B Q e
+  defines "Q\<^sub>2 \<equiv> index_vars False Q"
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[isometry e\<^sub>2] \<sqinter> (adjoint (e\<^sub>2\<guillemotright>Q\<^sub>2) \<cdot> (B \<sqinter> (e\<^sub>2\<guillemotright>Q\<^sub>2 \<cdot> top)))) (index_expression False e) B"
+  shows "qrhl A [] [qapply Q e] B"
+  sorry
+
+lemma wp1_measure:
+  fixes A B x Q e
+  defines "e\<^sub>1 \<equiv> index_expression True e"
+  defines "B' z \<equiv> subst_expression (substitute1 (index_var True x) (const_expression z)) B"
+  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars True Q)) \<cdot> top"
+  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>1 B'. Cla[mtotal e\<^sub>1] \<sqinter> 
+           (INF z. ((B' z \<sqinter> ebar e\<^sub>1 z) + ortho (ebar e\<^sub>1 z)))) e\<^sub>1 B'"
+  shows "qrhl A [measurement x Q e] [] B"
+  sorry
+
+lemma wp2_measure:
+  fixes A B x Q e
+  defines "e\<^sub>2 \<equiv> index_expression False e"
+  defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
+  defines "\<And>e\<^sub>2 z. ebar e\<^sub>2 z \<equiv> ((mproj e\<^sub>2 z)\<guillemotright>(index_vars False Q)) \<cdot> top"
+  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>2 B'. Cla[mtotal e\<^sub>2] \<sqinter> 
+           (INF z. ((B' z \<sqinter> ebar e\<^sub>2 z) + ortho (ebar e\<^sub>2 z)))) e\<^sub>2 B'"
+  shows "qrhl A [] [measurement x Q e] B"
+  sorry
+
+lemma wp1_qinit:
+  fixes B e Q
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> (index_vars True Q)))
+           (index_expression True e) B"
+  shows "qrhl A [qinit Q e] [] B"
+  sorry
+
+lemma wp2_qinit:
+  fixes B e Q
+  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[norm e\<^sub>2 = 1] \<sqinter> (B \<div> e\<^sub>2 \<guillemotright> (index_vars False Q)))
+           (index_expression False e) B"
+  shows "qrhl A [] [qinit Q e] B"
+  sorry
+
+lemma wp1_if:
+  fixes e p1 p2 B
+  assumes "qrhl wp_true p1 [] B"
+  assumes "qrhl wp_false p2 [] B"
+  defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
+           (index_expression True e) wp_true wp_false"
+  shows "qrhl A [ifthenelse e p1 p2] [] B"
+  sorry
+
+lemma wp2_if:
+  fixes e p1 p2 B
+  assumes "qrhl wp_true [] p1 B"
+  assumes "qrhl wp_false [] p2 B"
+  defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>2 wp_true wp_false. (Cla[\<not>e\<^sub>2] + wp_true) \<sqinter> (Cla[e\<^sub>2] + wp_false))
+           (index_expression False e) wp_true wp_false"
+  shows "qrhl A [] [ifthenelse e p1 p2] B"
+  sorry
+
+lemma wp1_block:
+  assumes "qrhl A p [] B"
+  shows "qrhl A [block p] [] B"
+  sorry
+
+lemma wp2_block:
+  assumes "qrhl A [] p B"
+  shows "qrhl A [] [block p] B"
+  sorry
+
+lemma wp1_cons:
+  assumes "qrhl A [p] [] B'"
+    and "qrhl B' ps [] B"
+  shows "qrhl A (p#ps) [] B"
+  sorry
+
+lemma wp2_cons:
+  assumes "qrhl A [] [p] B'"
+    and "qrhl B' [] ps B"
+  shows "qrhl A [] (p#ps) B"
+  sorry
+
 
 
 (* TODO move non wp-stuff *)
@@ -444,17 +581,46 @@ lemma wp2_cons_func:
 
 
 
-ML \<open>
-val spec_wp = 
+definition "wp1_tac left qrhl_in qrhl_out =
+  (qrhl_out \<longrightarrow> qrhl_in)" 
+
+lemma wp1_tac_func_left:
+  assumes "left == True"
+  assumes "qrhl_in == qrhl A c d B"
+  assumes "list_last c c' s"
+  assumes "qrhl B' [s] [] B"
+  assumes "qrhl A c' d B' == qrhl_out"
+  shows "wp1_tac left qrhl_in qrhl_out"
+  unfolding wp1_tac_def assms(1,2) assms(5)[symmetric] assms(3)[unfolded list_last_def, symmetric]
+  using assms(4) apply auto
+  apply (rule seqREMOVE) by auto  
+
+
+lemma wp1_tac_func_right:
+  assumes "left == False"
+  assumes "qrhl_in == qrhl A c d B"
+  assumes "list_last d d' s"
+  assumes "qrhl B' [] [s] B"
+  assumes "qrhl A c d' B' == qrhl_out"
+  shows "wp1_tac left qrhl_in qrhl_out"
+  unfolding wp1_tac_def assms(1,2) assms(5)[symmetric] assms(3)[unfolded list_last_def, symmetric]
+  using assms(4) apply auto
+  apply (rule seqREMOVE) by auto
+
+setup \<open>Cert_Codegen.thms_to_funs [
+
 {name="wp", thms= 
 ["wp_skip_func","wp1_assign_func","wp2_assign_func", "wp1_sample_func", "wp2_sample_func",
   "wp1_qapply_func", "wp2_qapply_func", "wp1_measure_func", "wp2_measure_func", "wp1_if_func", "wp2_if_func",
   "wp1_block_func", "wp2_block_func", "wp1_cons_func", "wp2_cons_func"],
-inputs=["c","d","B"], outputs=["A"], fallback="fn (c,d,B) => raise TERM(\"wp\",[c,d,B])", pattern=Thm.concl_of @{thm wp_skip_func}} : Cert_Codegen.specfx
-\<close>
+inputs=["c","d","B"], outputs=["A"], fallback="fn (c,d,B) => raise TERM(\"wp\",[c,d,B])", 
+pattern=Thm.concl_of @{thm wp_skip_func}},
 
-setup \<open>Cert_Codegen.thms_to_funs [spec_wp] "Autogen_WP" "wp.ML"\<close>
+{name="wp1_tac", inputs=["left","qrhl_in"], outputs=["qrhl_out"],
+  pattern= @{thm wp1_tac_func_left} |> Thm.concl_of, thms=["wp1_tac_func_left","wp1_tac_func_right"],
+  fallback="fn (left,qrhl_in) => raise TERM(\"wp1_tac\",[left,qrhl_in])"}
 
+] "Autogen_WP" "wp.ML"\<close>
 
 
 end

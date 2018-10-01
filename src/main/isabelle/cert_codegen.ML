@@ -64,6 +64,26 @@ val _ = mk_tupled_lambda \<^context> [("x",\<^typ>\<open>unit\<close>)] @{term "
 |> (fn x => snd x ()) |> Thm.prop_of |> \<^print>
 ;; *)
 
+fun list_last ctxt t = let
+  val list = HOLogic.dest_list t
+  val lT = fastype_of t
+  val T = lT |> dest_Type |> snd |> the_single
+  val (l1,t2) = split_last list
+  val t1 = HOLogic.mk_list T l1
+  fun cert () = let
+    val lhs = Const(\<^const_name>\<open>append\<close>, lT-->lT-->lT) $ t1 $ HOLogic.mk_list T [t2] |> Thm.cterm_of ctxt
+    fun conv ct = (((Conv.rewr_conv @{thm List.append.append_Cons[THEN eq_reflection]}) then_conv Conv.arg_conv conv)
+                  else_conv (Conv.rewr_conv @{thm List.append.left_neutral[THEN eq_reflection]})) ct
+    val thm = conv lhs 
+    val thm = @{thm list_lastI} OF [thm]
+  in thm end
+in
+  ((t1,t2),cert)
+end
+
+val list_last_spec = {name="Cert_Codegen.list_last", inputs=["list"], outputs=["xs","x"],
+  pattern=\<^prop>\<open>list_last list xs x\<close> |> free_to_var} : specf
+
 fun string_concat_func _ a b = let
   val a' = HOLogic.dest_string a
   val b' = HOLogic.dest_string b
