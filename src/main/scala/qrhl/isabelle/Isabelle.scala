@@ -84,15 +84,16 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     }
   }
 
-  private val resources = Resources.dumpIsabelleResources() match {
+  private val resources = Resources.dumpIsabelleResources() match { // TODO remove
     case Left(error) => throw new IOException(error.explain)
     case Right(r) => r
   }
+  Files.delete(resources.component.resolve("ROOTS"))
 
   private val components = List(
-    resources.component,
+    resources.component, // TODO remove
     DistributionDirectory.distributionDirectory.resolve("isabelle-afp"),
-    DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
+//    DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
     DistributionDirectory.distributionDirectory.resolve("isabelle-thys")
   )
 
@@ -110,7 +111,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     }
   }
 
-  private val config: Configuration = Configuration.simple("QRHL-Protocol")
+  private val config: Configuration = Configuration.simple("QRHL")
 
   private def doBuild() {
     println("*** Building Isabelle (may take a while, especially the first time, e.g., 10-25min)...")
@@ -143,7 +144,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 
     val heaps = try {
       Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
-        path.endsWith("QRHL-Protocol") && !path.getParent.endsWith("log")
+        path.endsWith("QRHL") && !path.getParent.endsWith("log")
       }).iterator.asScala.toList
     } catch {
       case _: IOException => return false
@@ -190,8 +191,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     * @return the context
     */
   def getQRHLContextWithFiles(thys: Path*) : Isabelle.Context = {
-    getContextWithThys(List("QRHL.QRHL","QRHL-Protocol.QRHL_Operations"), thys.toList)
-    // TODO: Do we need to include QRHL-Protocol.QRHL_Operations?
+    getContextWithThys(List("QRHL.QRHL","QRHL.QRHL_Operations"), thys.toList)
+    // TODO: Do we need to include QRHL.QRHL_Operations?
   }
 
   /** Creates a new context that imports the given theories.

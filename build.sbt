@@ -2,6 +2,7 @@ import java.nio.file.Files
 
 import NativePackagerHelper._
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import sbt.Keys.update
 import sbt.io.Using
 
 import scala.collection.mutable.ListBuffer
@@ -25,13 +26,32 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 //isabelleSourceFilter := (- ".*") && (- "*~")
 isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
 
-libraryDependencies ++= { val version = "1.0.0-RC3"; Seq( // TODO 2018
+libraryDependencies ++= { val version = "1.0.0"; Seq(
   "info.hupel" %% "libisabelle" % version,
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version
 ) }
-//libraryDependencies += "info.hupel" % "classy" % "0.2.1" // TODO 2018 REMOVE
-//libraryDependencies += "info.hupel" % "multi-isabelle" % "0.1.1" // TODO 2018 REMOVE
+
+def extractJar(update : UpdateReport, name : String, target : File) = {
+  val jar = update
+    .select(configurationFilter("compile"))
+    .filter(_.name.startsWith(name))
+    .filter(_.name.endsWith(".jar"))
+    .head
+  IO.unzip(jar,target)
+  ()
+}
+
+lazy val extractLibisabelleProtocol = taskKey[Unit]("Extract libisabelle Protocol session")
+val libisabelleExtractPath = "target/downloads/libisabelle"
+val classyExtractPath = "target/downloads/classy"
+managedResources in Compile := (managedResources in Compile).dependsOn(extractLibisabelleProtocol).value
+
+extractLibisabelleProtocol := {
+  val up = (update in Compile).value
+  extractJar(up, "libisabelle_", baseDirectory.value / libisabelleExtractPath)
+  extractJar(up, "classy-", baseDirectory.value / classyExtractPath)
+}
 
 
 //val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
