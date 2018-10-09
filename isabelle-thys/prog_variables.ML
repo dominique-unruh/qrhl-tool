@@ -51,14 +51,17 @@ fun warn_declared_qvars_simproc _ ctx ct =
 
 
 datatype vartype = Classical | Quantum
-structure VarTypes = Proof_Data
+type varinfo = {vartype : vartype, name_thm : thm}
+structure VarInfo = Proof_Data
 (
-  type T = vartype Symtab.table
+  type T = varinfo Symtab.table
   fun init _ = Symtab.empty
 )
 
-fun lookup_variable ctx = Symtab.lookup (VarTypes.get ctx)
-fun is_classical_variable ctx name = case Symtab.lookup (VarTypes.get ctx) name of
+fun lookup_variable ctxt = Symtab.lookup (VarInfo.get ctxt)
+fun lookup_variable_type ctxt name = lookup_variable ctxt name |> Option.map #vartype
+
+fun is_classical_variable ctxt name = case lookup_variable_type ctxt name of
   SOME Classical => true
   | _ => false
 
@@ -68,16 +71,28 @@ fun check_variable_type ctxt T =
            "In the Isabelle theory, use 'derive universe T' for every type T defined using typedef/datatype,\n"^
            "and use declare_variable_type instead of typedecl")
 
-fun declare_variable_lthy name vartype = 
-  Local_Theory.declaration {pervasive=true, syntax=false} (fn _ => 
-    Context.mapping I (
-      VarTypes.map (Symtab.insert op= (name,vartype)) #>
-      VarTypes.map (Symtab.insert op= (name^"1",vartype)) #>
-      VarTypes.map (Symtab.insert op= (name^"2",vartype))))
+local
+fun add_varinfo morph name vartype ctxt' ctxt = let
+  val thm = Proof_Context.get_thm ctxt' (name ^ "_varname")
+  val varinfo = {vartype=vartype, name_thm=Morphism.thm morph thm} : varinfo
+  val ctxt = VarInfo.map (Symtab.insert (K true) (name,varinfo)) ctxt
+  in ctxt end
+
+fun declare_variable_morph m name vartype ctxt' =
+      add_varinfo m name vartype ctxt' #>
+      add_varinfo m (name^"1") vartype ctxt' #>
+      add_varinfo m (name^"2") vartype ctxt'
+in
+fun declare_variable_lthy name vartype ctxt = 
+  Local_Theory.declaration {pervasive=true, syntax=false} (fn m => 
+    Context.mapping I (declare_variable_morph m name vartype ctxt)) ctxt
+
+fun declare_variable_ctxt name vartype ctxt = declare_variable_morph Morphism.identity name vartype ctxt ctxt
+end
 
 fun varname_assumption cq bind T = 
   let val qT = mk_variableT T
-      val name = Binding.name_of bind
+      val name = Binding.name_of bind           
       val name' = if cq=Classical then "var_"^name else name
       val lhs = Const(\<^const_name>\<open>variable_name\<close>, qT --> HOLogic.stringT) $ Free(name',qT)
       val rhs = HOLogic.mk_string name
@@ -86,7 +101,7 @@ fun varname_assumption cq bind T =
 fun addQVariableNameAssumption cq bind T ctxt =
   let val assm = varname_assumption cq bind T
       val ctxt1 = Variable.declare_term assm ctxt
-      val (_,ctxt2) = Proof_Context.add_assms Assumption.assume_export
+      val ([(_,[thm])],ctxt2) = Proof_Context.add_assms Assumption.assume_export
                   [((Binding.suffix_name "_varname" bind,[Simplifier.simp_add]), [(assm,[])])] ctxt1
   in
     ctxt2
@@ -105,9 +120,9 @@ fun declare_variable ctxt bind T cq =
       val ctxt = addQVariableNameAssumption cq bind T ctxt
       val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "1" bind) T ctxt
       val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "2" bind) T ctxt
-      val ctxt = VarTypes.map (Symtab.insert op= (v,cq)) ctxt
-      val ctxt = VarTypes.map (Symtab.insert op= (v^"1",cq)) ctxt
-      val ctxt = VarTypes.map (Symtab.insert op= (v^"2",cq)) ctxt
+      val ctxt = (* VarTypes.map (Symtab.insert op= (v,cq)) ctxt *)  declare_variable_ctxt v cq ctxt
+      (* val ctxt = (* VarTypes.map (Symtab.insert op= (v^"1",cq)) ctxt *) declare_variable_ctxt (v^"1") cq ctxt *)
+      (* val ctxt = (* VarTypes.map (Symtab.insert op= (v^"2",cq)) ctxt *) declare_variable_ctxt (v^"2") cq ctxt *)
   in
     ctxt
   end

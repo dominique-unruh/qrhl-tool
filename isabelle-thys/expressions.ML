@@ -78,7 +78,7 @@ fun term_to_expression ctx t =
   end
 
 fun term_to_expression_untyped ctx t =
-  let val lookup_var = Prog_Variables.lookup_variable ctx
+  let val lookup_var = Prog_Variables.lookup_variable_type ctx
       val frees = Term.add_frees t [] |> filter (fn (v,_) => lookup_var v = SOME Prog_Variables.Classical) |> rev
       val (vars,varsT) = 
         frees |> map (fn (v,T) => ("var_"^v,T)) |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm

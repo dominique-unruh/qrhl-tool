@@ -138,11 +138,8 @@ lemma wp2_cons:
   shows "qrhl A [] (p#ps) B"
   sorry
 
-
-
-(* TODO move non wp-stuff *)
-ML \<open>
-fun get_variable_name ctxt v = let
+(* ML \<open>
+fun get_variable_name_orig ctxt v = let
   val ct = Const(\<^const_name>\<open>variable_name\<close>, fastype_of v --> HOLogic.stringT) $ v |> Thm.cterm_of ctxt
   val thm = Raw_Simplifier.rewrite_cterm (false,false,false) (K (K NONE)) ctxt ct
   val rhs = Thm.rhs_of thm |> Thm.term_of
@@ -150,6 +147,30 @@ fun get_variable_name ctxt v = let
   in
     (rhs, fn () => thm RS @{thm meta_eq_to_obj_eq})
   end
+\<close> *)
+
+ML \<open>
+fun get_variable_name ctxt (v as Free(n,T)) = let
+  val vn = unprefix "var_" n handle Fail _ => n
+  val varinfo = case Prog_Variables.lookup_variable ctxt vn of SOME vi => vi |
+                  NONE => raise TERM("get_variable_name: unknown variable",[v])
+  val thm = #name_thm varinfo
+(*   val vn = unprefix "var_" n handle Fail _ => n
+  val str = HOLogic.mk_string vn
+  val _ = get_variable_name_count := (!get_variable_name_count) + 1
+in (str, (fn _ => error "get_variable_name cert")) end
+ *)
+  val prop = Thm.prop_of thm
+  val (n',T',str) = case prop of Const _ $ (Const _ $ (Const _ $ Free(n',T')) $ str) => (n',T',str)
+  val _ = if n <> n' then raise TERM("get_variable_name: wrong name: "^n',[v]) else ()
+  val _ = if T <> T' then raise TYPE("get_variable_name: wrong type",[T,T'],[v]) else ()
+in (str, fn _ => thm) end
+  | get_variable_name _ v = raise TERM("get_variable_name: not a variable",[v])
+\<close>
+
+
+(* TODO move non wp-stuff *)
+ML \<open>
 val get_variable_name_spec : Cert_Codegen.specf = {name="get_variable_name", inputs=["v"], outputs=["n"],
                                       pattern=\<^prop>\<open>variable_name v = n\<close> |> Cert_Codegen.free_to_var}
 \<close>

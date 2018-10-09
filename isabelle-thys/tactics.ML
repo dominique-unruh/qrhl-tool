@@ -261,14 +261,17 @@ fun wp_tac ctxt left i =
   ) (i+1)
 
 
-(* fun wp_tac_on_term left ctx = 
-  tac_on_term_concl (wp_tac ctx left 1) ctx *)
-
+  (*
+fun wp_tac_on_term left ctx = 
+  tac_on_term_concl (wp_tac ctx left 1) ctx
+   *)
   
+  (* TODO: warning: checks are disabled in cert_codegen *)
 fun wp_tac_on_term left ctx t =
-  let fun f t = let val (t',cert) = Autogen_WP.wp1_tac ctx (if left then \<^const>\<open>True\<close> else \<^const>\<open>False\<close>) t val _ = cert () in 
-    t
+      let fun f t = let val (t',cert) = Autogen_WP.wp1_tac ctx (if left then \<^const>\<open>True\<close> else \<^const>\<open>False\<close>) t val _ = cert () in 
+    t'
   end
-  in SOME [apply_to_concl f t] end
+in SOME [apply_to_concl f t] end
+
 
 end
