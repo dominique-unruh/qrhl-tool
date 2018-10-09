@@ -16,7 +16,7 @@ scalaVersion := "2.12.6"
 
 scalacOptions += "-deprecation"
 
-enablePlugins(LibisabellePlugin)
+//enablePlugins(LibisabellePlugin)
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
@@ -24,7 +24,7 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
 //isabelleSessions in Compile := Seq("QRHL")
 //isabelleSourceFilter := (- ".*") && (- "*~")
-isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
+//isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
 
 libraryDependencies ++= { val version = "1.0.0"; Seq(
   "info.hupel" %% "libisabelle" % version,
@@ -40,6 +40,11 @@ def extractJar(update : UpdateReport, name : String, target : File) = {
     .head
   IO.unzip(jar,target)
   ()
+}
+
+assemblyMergeStrategy in assembly := {
+  case PathList(ps @ _*) if ps.last == ".files" => MergeStrategy.discard
+  case x => (assemblyMergeStrategy in assembly).value(x)
 }
 
 lazy val extractLibisabelleProtocol = taskKey[Unit]("Extract libisabelle Protocol session")
