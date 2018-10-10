@@ -8,6 +8,7 @@ upload :
 	make -C ../queasycrypt/trunk upload
 
 target/universal/qrhl-$(VERSION).zip : build.sbt $(SOURCES)
+	make -C ../queasycrypt/trunk manual.pdf
 	sbt universal:packageBin
 
 # TODO remove

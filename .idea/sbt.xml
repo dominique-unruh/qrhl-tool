@@ -12,10 +12,9 @@
           </set>
         </option>
         <option name="resolveSbtClassifiers" value="true" />
-        <option name="sbtVersion" value="1.0.3" />
+        <option name="sbtVersion" value="1.2.4" />
         <option name="useAutoImport" value="true" />
       </SbtProjectSettings>
     </option>
-    <option name="vmParameters" value="" />
   </component>
 </project>

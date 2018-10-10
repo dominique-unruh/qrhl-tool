@@ -84,14 +84,14 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     }
   }
 
-  private val resources = Resources.dumpIsabelleResources() match { // TODO remove
-    case Left(error) => throw new IOException(error.explain)
-    case Right(r) => r
-  }
-  Files.delete(resources.component.resolve("ROOTS"))
+//  private val resources = Resources.dumpIsabelleResources() match { // TODO remove
+//    case Left(error) => throw new IOException(error.explain)
+//    case Right(r) => r
+//  }
+//  Files.delete(resources.component.resolve("ROOTS"))
 
   private val components = List(
-    resources.component, // TODO remove
+//    resources.component, // TODO remove
     DistributionDirectory.distributionDirectory.resolve("isabelle-afp"),
 //    DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
     DistributionDirectory.distributionDirectory.resolve("isabelle-thys")
