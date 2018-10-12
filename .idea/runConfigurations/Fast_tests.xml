@@ -1,0 +1,43 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Fast tests" type="ScalaTestRunConfiguration" factoryName="ScalaTest" singleton="true">
+    <module name="qrhl" />
+    <setting name="path" value="" />
+    <setting name="vmparams" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />
+    <setting name="params" value="-l org.scalatest.tags.Slow" />
+    <setting name="workingDirectory" value="file://$PROJECT_DIR$" />
+    <setting name="searchForTest" value="Across module dependencies" />
+    <setting name="showProgressMessages" value="true" />
+    <setting name="useSbt" value="false" />
+    <setting name="useUiWithSbt" value="false" />
+    <envs />
+    <setting name="testKind" value="All in package" />
+    <setting name="package" value="" />
+    <buffered bufClass="qrhl.ExampleFilesTest" />
+    <buffered bufClass="qrhl.ExampleFilesTest" />
+    <buffered bufClass="qrhl.QRHLSubgoalTest" />
+    <buffered bufClass="qrhl.QRHLSubgoalTest" />
+    <buffered bufClass="qrhl.isabelle.IsabelleTest" />
+    <buffered bufClass="qrhl.isabelle.IsabelleTest" />
+    <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
+    <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
+    <buffered bufClass="qrhl.tactic.CaseTacTest" />
+    <buffered bufClass="qrhl.tactic.CaseTacTest" />
+    <buffered bufClass="qrhl.tactic.EqualTacTest" />
+    <buffered bufClass="qrhl.tactic.EqualTacTest" />
+    <buffered bufClass="qrhl.tactic.ExpressionTest" />
+    <buffered bufClass="qrhl.tactic.ExpressionTest" />
+    <buffered bufClass="qrhl.tactic.RndTacTest" />
+    <buffered bufClass="qrhl.tactic.RndTacTest" />
+    <buffered bufClass="qrhl.tactic.RuleTacTest" />
+    <buffered bufClass="qrhl.tactic.RuleTacTest" />
+    <buffered bufClass="qrhl.tactic.SeqTacTest" />
+    <buffered bufClass="qrhl.tactic.SeqTacTest" />
+    <buffered bufClass="qrhl.tactic.WpTacTest" />
+    <buffered bufClass="qrhl.tactic.WpTacTest" />
+    <buffered bufClass="qrhl.toplevel.ParserTest" />
+    <buffered bufClass="qrhl.toplevel.ParserTest" />
+    <buffered bufClass="qrhl.toplevel.ToplevelTest" />
+    <buffered bufClass="qrhl.toplevel.ToplevelTest" />
+    <method v="2" />
+  </configuration>
+</component>
