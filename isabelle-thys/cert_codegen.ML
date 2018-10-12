@@ -149,8 +149,12 @@ type conf = {
   current: specfx, (* spec of currently created function *)
   current_assm: term (* currently processed assumption *)
 }
+
+(* Hack. Seems to be false if the heap image is being compiled (even via jEdit) but true if the theory is loaded directly in jEdit *)
+val interactive = OS.Process.getEnv "ISABELLE_ML_DEBUGGER" = NONE
+
 fun empty_conf current = 
-    {tracing = true,
+    {tracing = interactive,
      current=current,
      current_assm = @{prop "dummyterm"}} : conf
 fun update_conf_current_assm ({tracing,current,...}:conf) current_assm = 

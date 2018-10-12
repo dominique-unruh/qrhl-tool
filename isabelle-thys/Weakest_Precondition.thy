@@ -542,15 +542,6 @@ lemma wp2_qinit_func:
   shows "qrhl A c d B"
   unfolding assms(1-2) assms(3-5)[symmetric] by (rule wp2_qinit)
 
-lemma wp2_qinit_func:
-(*TODO*)
-  fixes A B e Q
-  assumes "c == []" and "d == [qinit Q e]"
-  assumes "map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> (index_vars False Q)))
-           (index_expression False e) B == A"
-  shows "qrhl A c d B"
-  unfolding assms(1-2) assms(3)[symmetric] by (rule wp2_qinit)
-
 lemma wp1_if_func:
 (*TODO*)
   fixes e p1 p2 B

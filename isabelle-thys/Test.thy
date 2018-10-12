@@ -10,6 +10,15 @@ QRHL.QRHL
  *)
 begin
 
+ML \<open>
+OS.Process.system "set >/tmp/blabla.txt"
+\<close>
+
+ML \<open>
+OS.Process.getEnv "ISABELLE_ML_DEBUGGER"
+\<close>
+
+
 
 ML \<open>
 Cert_Codegen.Data.get \<^theory> |> map #name
