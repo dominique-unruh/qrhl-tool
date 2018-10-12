@@ -74,9 +74,10 @@ in Thm.global_cterm_of (Thm.theory_of_thm thm) A end
 \<close>
 
 
-variables classical x :: int and classical y :: int and classical u :: unit and quantum q :: int begin
+variables classical x :: int and classical y :: int and classical u :: unit and quantum q :: int and classical b :: bool begin
 ML \<open>
-  test_wp \<^context>  \<^term>\<open>[]::program list\<close> @{term "[qinit \<lbrakk>q\<rbrakk> Expr[undefined x]]"}  @{term "Expr[Cla[x2=x1]]"}
+  test_wp \<^context> \<^term>\<open>[ifthenelse Expr[b] [assign var_b Expr[\<not>b], assign var_b Expr[\<not>b]] [] ]\<close> \<^term>\<open>[]::program list\<close>   @{term "Expr[Cla[b1]]"}
+     |> Simplifier.rewrite \<^context> |> Thm.rhs_of
 \<close>
 ML \<open>
   test_wp \<^context> \<^term>\<open>[]::program list\<close> @{term "[measurement var_x \<lbrakk>q\<rbrakk> Expr[computational_basis]]"} @{term "Expr[Cla[x2=x1]]"}

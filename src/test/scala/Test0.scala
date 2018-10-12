@@ -103,7 +103,7 @@ object Test0 {
     }
 
     import sys.process._
-    "nohup play ~/Dropbox/Schwarzenegger-You-are-stupid.mp3" !
+//    "nohup play ~/Dropbox/Schwarzenegger-You-are-stupid.mp3" !
 
     sys.exit(0)
   }
