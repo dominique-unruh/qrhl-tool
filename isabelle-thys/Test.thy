@@ -67,9 +67,8 @@ in Thm.global_cterm_of (Thm.theory_of_thm thm) A end
 
 variables classical x :: int and classical y :: int and classical u :: unit and quantum q :: int begin
 ML \<open>
-Autogen_Cleanup_Expression_Concat.cleanup_expression_concat \<^context> \<^term>\<open>\<lbrakk>var_x1\<rbrakk>\<close> \<^term>\<open>\<lbrakk>\<rbrakk>\<close> \<^term>\<open>undefined :: int * unit => int\<close>
+  test_wp \<^context>  \<^term>\<open>[]::program list\<close> @{term "[qinit \<lbrakk>q\<rbrakk> Expr[undefined x]]"}  @{term "Expr[Cla[x2=x1]]"}
 \<close>
-
 ML \<open>
   test_wp \<^context> \<^term>\<open>[]::program list\<close> @{term "[measurement var_x \<lbrakk>q\<rbrakk> Expr[computational_basis]]"} @{term "Expr[Cla[x2=x1]]"}
 \<close>

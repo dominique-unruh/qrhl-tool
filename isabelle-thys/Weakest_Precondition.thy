@@ -525,13 +525,22 @@ lemma wp2_measure_func:
 
 
 lemma wp1_qinit_func:
-(*TODO*)
-  fixes A B e Q
+  fixes A B e Q c d
   assumes "d==[]" and "c == [qinit Q e]"
-  assumes "map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> (index_vars True Q)))
-           (index_expression True e) B == A"
+  assumes "index_expression True e = e\<^sub>1"
+  assumes "index_vars True Q = Q\<^sub>1"
+  assumes "map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> Q\<^sub>1)) e\<^sub>1 B = A"
   shows "qrhl A c d B"
-  unfolding assms(1-2) assms(3)[symmetric] by (rule wp1_qinit)
+  unfolding assms(1-2) assms(3-5)[symmetric] by (rule wp1_qinit)
+
+lemma wp2_qinit_func:
+  fixes A B e Q c d
+  assumes "c==[]" and "d == [qinit Q e]"
+  assumes "index_expression False e = e\<^sub>1"
+  assumes "index_vars False Q = Q\<^sub>1"
+  assumes "map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> Q\<^sub>1)) e\<^sub>1 B = A"
+  shows "qrhl A c d B"
+  unfolding assms(1-2) assms(3-5)[symmetric] by (rule wp2_qinit)
 
 lemma wp2_qinit_func:
 (*TODO*)
@@ -626,8 +635,8 @@ setup \<open>Cert_Codegen.thms_to_funs [
 
 {name="wp", thms= 
 ["wp_skip_func","wp1_assign_func","wp2_assign_func", "wp1_sample_func", "wp2_sample_func",
-  "wp1_qapply_func", "wp2_qapply_func", "wp1_measure_func", "wp2_measure_func", "wp1_if_func", "wp2_if_func",
-  "wp1_block_func", "wp2_block_func", "wp1_cons_func", "wp2_cons_func"],
+  "wp1_qapply_func", "wp2_qapply_func", "wp1_measure_func", "wp2_measure_func", 
+  "wp1_qinit_func", "wp2_qinit_func"],
 inputs=["c","d","B"], outputs=["A"], fallback="fn (c,d,B) => raise TERM(\"wp\",[c,d,B])", 
 pattern=Thm.concl_of @{thm wp_skip_func}},
 

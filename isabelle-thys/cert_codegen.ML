@@ -150,7 +150,7 @@ type conf = {
   current_assm: term (* currently processed assumption *)
 }
 fun empty_conf current = 
-    {tracing = false,
+    {tracing = true,
      current=current,
      current_assm = @{prop "dummyterm"}} : conf
 fun update_conf_current_assm ({tracing,current,...}:conf) current_assm = 
