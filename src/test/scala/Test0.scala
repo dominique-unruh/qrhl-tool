@@ -2,12 +2,131 @@
 
 import java.util.Date
 
-import qrhl.toplevel.Toplevel
+import info.hupel.isabelle.api.XML.Tree
+import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
+import info.hupel.isabelle.pure.{Indexname, Typ}
+import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 import scala.language.implicitConversions
+import scala.math.BigInt
+
+sealed abstract class HashTerm {
+  val hash: BigInt
+  protected def updateHash(hash: BigInt) : HashTerm
+  def $(that: HashTerm): HashTerm = App(this, that)
+}
+
+final class Const private (val name: String, val typ: Typ, val hash: BigInt) extends HashTerm {
+  override protected def updateHash(hash: BigInt) = ???
+}
+object Const {
+  def unapply(arg: Const): Some[(String, Typ)] = Some(arg.name,arg.typ)
+  def apply(name: String, typ: Typ) = new Const(name,typ,HashTerm.noHash)
+}
+final class Free private (val name: String, val typ: Typ, val hash: BigInt) extends HashTerm {
+  override protected def updateHash(hash: BigInt): HashTerm = ???
+}
+object Free {
+  def unapply(arg: Free): Some[(String, Typ)] = Some(arg.name,arg.typ)
+  def apply(name: String, typ: Typ) = new Free(name,typ,HashTerm.noHash)
+}
+final class Var private (val name: Indexname, val typ: Typ, val hash: BigInt) extends HashTerm {
+  override protected def updateHash(hash: BigInt): HashTerm = ???
+}
+object Var {
+  def unapply(arg: Var): Some[(Indexname, Typ)] = Some(arg.name,arg.typ)
+  def apply(name: Indexname, typ: Typ) = new Var(name,typ,HashTerm.noHash)
+}
+final class Bound private (val index: BigInt, val hash: BigInt) extends HashTerm {
+  override protected def updateHash(hash: BigInt): HashTerm = ???
+}
+object Bound {
+  def unapply(arg: Bound): Some[BigInt] = Some(arg.index)
+  def apply(index: BigInt) = new Bound(index,HashTerm.noHash)
+}
+final class Abs private (val name: String, val typ: Typ, val body: HashTerm, val hash: BigInt) extends HashTerm {
+  override protected def updateHash(hash: BigInt): HashTerm = ???
+}
+object Abs {
+  def unapply(arg: Abs): Some[(String, Typ, HashTerm)] = Some((arg.name,arg.typ,arg.body))
+  def apply(name: String, typ: Typ, body: HashTerm) = new Abs(name,typ,body,HashTerm.noHash)
+}
+final class App private (val fun: HashTerm, val arg: HashTerm, val hash: BigInt) extends HashTerm {
+  override protected def updateHash(hash: BigInt): HashTerm = ???
+}
+object App {
+  def apply(fun: HashTerm, arg: HashTerm) = new App(fun, arg, HashTerm.noHash)
+  def unapply(arg: App): Some[(HashTerm, HashTerm)] = Some((arg.fun,arg.arg))
+}
+
+object HashTermWithHash {
+  def unapply(term: HashTerm): Option[BigInt] =
+    if (term.hash==HashTerm.noHash)
+      None
+    else Some(term.hash)
+}
+
+object HashTerm {
+  val noHash = 0
+
+  implicit val codec: Codec[HashTerm] = Codec.tuple[BigInt,HashTerm](Codec.integer,codec0).transform({case (hash,term) => term.updateHash(hash)}, {term => (term.hash,term)}, "term")
+
+  lazy val codec0: Codec[HashTerm] = new Codec.Variant[HashTerm]("hterm'") {
+    val mlType = "term"
+
+    val termConst = Codec[(String, Typ)]
+    val termFree = Codec[(String, Typ)]
+    val termVar = Codec[(Indexname, Typ)]
+    val termBound = Codec[BigInt]
+    lazy val termAbs = Codec[(String, Typ, HashTerm)](Codec.triple(Codec.string,Typ.typCodec,codec0))
+    lazy val termApp = Codec[(HashTerm, HashTerm)](Codec.tuple(codec0,codec0))
+
+    def enc(term: HashTerm) = term match {
+//      case HashTermWithHash(hash) => (6, Codec[BigInt].encode(hash))
+      case Const(name, typ) => (0, termConst.encode((name, typ)))
+      case Free(name, typ) => (1, termFree.encode((name, typ)))
+      case Var(iname, typ) => (2, termVar.encode((iname, typ)))
+      case Bound(idx) => (3, termBound.encode(idx))
+      case Abs(name, typ, body) => (4, termAbs.encode((name, typ, body)))
+      case App(f, x) => (5, termApp.encode((f, x)))
+    }
+
+    def dec(idx: Int) = idx match {
+      case 0 => Some(tree => termConst.decode(tree).right.map { case (name, typ) => Const(name, typ) })
+      case 1 => Some(tree => termFree.decode(tree).right.map { case (name, typ) => Free(name, typ) })
+      case 2 => Some(tree => termVar.decode(tree).right.map { case (iname, typ) => Var(iname, typ) })
+      case 3 => Some(tree => termBound.decode(tree).right.map { idx => Bound(idx) })
+      case 4 => Some(tree => termAbs.decode(tree).right.map { case (name, typ, body) => Abs(name, typ, body) })
+      case 5 => Some(tree => termApp.decode(tree).right.map { case (f, x) => App(f, x) })
+//      case 6 => Some(tree => ())
+      case _ => None
+    }
+  }
+}
 
 object Test0 {
   def main(args: Array[String]): Unit = {
+
+    import HashTerm.codec
+
+    val idCodec = new Codec[Tree] {
+      override val mlType: String = "blabla"
+      override def encode(t: Tree): Tree = t
+      override def decode(tree: Tree): XMLResult[Tree] = Right(tree)
+    }
+
+    val isabelle = ToplevelTest.isabelle
+    //    val context = ToplevelTest.isabelle.getQRHLContextWithFiles()
+    val op = Operation.implicitly("term_test")(Codec.unit,idCodec)
+    val res1 = isabelle.invoke(op,())
+    print(res1.pretty(2))
+
+    val res2 = isabelle.invoke(op,())
+    print(res2)
+
+  }
+
+  def main0(args: Array[String]): Unit = {
     try {
       val tl = new Toplevel()
       tl.run(

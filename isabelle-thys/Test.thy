@@ -3,6 +3,7 @@ theory Test
  (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools"  *)
 (* Cert_Codegen *)
 QRHL.QRHL
+Hashed_Terms
      (* QRHL.QRHL_Core  Multi_Transfer  *)
 (* QRHL.Prog_Variables *)
 (*   keywords
@@ -11,17 +12,25 @@ QRHL.QRHL
 begin
 
 ML \<open>
-OS.Process.system "set >/tmp/blabla.txt"
+  ;;
+Hashed_Terms.hash_typ \<^typ>\<open>(int*'a) list\<close> 0
 \<close>
 
 ML \<open>
-OS.Process.getEnv "ISABELLE_ML_DEBUGGER"
+;;
+Hashed_Terms.hash_term \<^term>\<open>%x. x+2\<close>
+\<close>
+
+ML \<open>
+;;
+Hashed_Terms.hash_and_store_term \<^term>\<open>%x. 2+x+2*2\<close> |> \<^print>
+;;
+Hashed_Terms.hash_and_store_term \<^term>\<open>%x. 2*3\<close> |> \<^print>
 \<close>
 
 
-
 ML \<open>
-Cert_Codegen.Data.get \<^theory> |> map #name
+1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000
 \<close>
 
 

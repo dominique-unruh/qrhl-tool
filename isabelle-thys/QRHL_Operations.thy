@@ -1,5 +1,5 @@
 theory QRHL_Operations
-  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics
+  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics Hashed_Terms
 begin
 
 ML {*
@@ -206,6 +206,13 @@ operation_setup wp_tac = {*
   {from_lib = Codec.triple Codec.bool Codec.term Codec.int,
    to_lib = Codec.option (Codec.list Codec.term),
    action = fn (left,goal,ctx_id) => Tactics.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal}
+*}
+
+(* TODO remove *)
+operation_setup term_test = {*
+  {from_lib = Codec.unit,
+   to_lib = Hashed_Terms.term_codec,
+   action = fn () => \<^term>\<open>True\<close>}
 *}
 
 end
