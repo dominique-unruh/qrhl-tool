@@ -1,6 +1,7 @@
 package qrhl.toplevel
 
 import info.hupel.isabelle.pure
+import jdk.jshell.spi.ExecutionControl
 import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -264,6 +265,16 @@ object Parser extends RegexParsers {
       case "post" ~ _ ~ e => ConseqTac(post=Some(e))
     }
 
+  def tactic_equal(implicit context:ParserContext) : Parser[EqualTac] =
+    literal("equal") ~> (literal("exclude") ~> identifierList).? ^^ {
+      case None => EqualTac(Nil)
+      case Some(ps) =>
+        for (p <- ps if !context.environment.programs.contains(p))
+          throw UserException(s"Undeclared program $p")
+        EqualTac(ps)
+    }
+
+
   def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
     literal("rnd") ~> (for (
       x <- identifier;
@@ -314,7 +325,7 @@ object Parser extends RegexParsers {
       tactic_seq |
       tactic_conseq |
       literal("call") ^^ { _ => ErrorTac("Call tactic was renamed. Use \"equal\" instead.") } |
-      literal("equal") ^^ { _ => EqualTac } |
+      tactic_equal |
       tactic_rnd |
       literal("byqrhl") ^^ { _ => ByQRHLTac } |
       tactic_split |

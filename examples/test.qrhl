@@ -1,0 +1,43 @@
+isabelle Example.
+
+classical var c : nat.
+classical var d : nat.
+quantum var q : bit.
+
+adversary A vars c calls ?.
+
+program P1 := { d <- 0; }.
+program P2 := { d <- 1; on q apply hadamard; }.
+
+qrhl {Cla[c1 = c2]} call A(P1); ~ call A(P2); {Cla[c1 = c2]}.
+ equal.
+  simp!.
+
+ inline P1.
+ inline P2.
+ wp right.
+ wp left.
+ wp right.
+ skip.
+ simp!.
+
+ skip.
+ simp!.
+
+qed.
+
+
+
+qrhl {Cla[c1 = c2 ∧ d1 * d2 = 0]} call A(P1); ~ call A(P1); {Cla[d1 * d2 = 0]}.
+ equal exclude P1.
+  simp!.
+
+ inline P1.
+ wp left.
+ wp right.
+ skip.
+ simp!.
+
+ skip.
+ simp.
+qed.

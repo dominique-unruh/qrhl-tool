@@ -11,6 +11,8 @@ import scala.collection.mutable
 
 // Programs
 sealed trait Statement {
+  def toBlock: Block = Block(this)
+
   def programTerm(context: Isabelle.Context) : Term
 
 
@@ -131,6 +133,8 @@ object Statement {
 class Block(val statements:List[Statement]) extends Statement {
   def programListTerm(context: Isabelle.Context): Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTerm(context)))
   override def programTerm(context: Isabelle.Context) : Term = Isabelle.block $ programListTerm(context)
+
+  override def toBlock: Block = this
 
   override def equals(o: Any): Boolean = o match {
     case Block(st @ _*) => statements==st

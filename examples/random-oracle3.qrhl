@@ -1,0 +1,85 @@
+isabelle RandomOracle.
+
+# A variable that contains the random oracle
+classical var h : x => y.
+
+# Query registers for querying the random oracle (x=input, y=output)
+quantum var x : x.
+quantum var y : y.
+
+# Initializes the random oracle
+program hInit := {
+  h <$ uniform UNIV;
+}.
+
+# A classical variable for hInit' below
+classical var r : x => r.
+
+program hInit' := {
+  r <$ uniform UNIV;
+}.
+
+# hQuery models a query to the random oracle (superposition query)
+program hQuery := {
+  on x,y apply Uoracle h;
+}.
+
+
+# hQuery models a query to the random oracle (superposition query)
+program hQuery' := {
+  on x,y apply Uoracle (π o r);
+}.
+
+# Defining an adversary with access to x,y.
+# (I.e., the adversary may access the query registers of the random oracle.)
+quantum var qglobA : string.
+classical var cglobA : string.
+adversary A vars cglobA, qglobA, x, y calls ?.
+
+# A game where the adversary can perform a single query to the random oracle
+program prog1 := {
+  call hInit;
+  call A(hQuery);
+}.
+
+# A game where the adversary can perform a single query to the random oracle,
+# but the random oracle is initialized using hInit' now.
+# (As would be the case in a history free reduction.)
+program prog2 := {
+  call hInit';
+  call A(hQuery');
+}.
+
+# prog1 and prog2 are indistinguishable:
+
+qrhl {Cla[cglobA1=cglobA2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2]}
+        call prog1; ~ call prog2; 
+     {Cla[cglobA1=cglobA2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2]}.
+
+inline prog1.
+inline prog2.
+
+conseq post: Cla[cglobA1=cglobA2 ∧ h1=π ∘ r2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2].
+  simp!.
+
+equal.
+ simp!.
+
+inline hQuery.
+inline hQuery'.
+wp left.
+ simp.
+wp right.
+ simp.
+skip.
+ simp ! Uora_twice.
+
+inline hInit.
+inline hInit'.
+# Postcondition is: ℭ𝔩𝔞[h1 = π ∘ r2] + some equalities
+rnd h,r <- map_distr (λr. (π o r, r)) (uniform UNIV).
+ simp bij_pi.
+skip.
+simp!.
+
+qed.

@@ -1,5 +1,6 @@
 package qrhl
 
+import java.io.File
 import java.nio.file.Paths
 
 import org.scalatest.{FlatSpec, FunSuite}
@@ -16,39 +17,46 @@ class ExampleFilesTest extends FunSuite {
     System.gc()
   }
 
-  test("prg-enc-indcpa.qrhl") {
-    testFile("prg-enc-indcpa.qrhl")
+  for (file <- new File("examples").listFiles();
+       name = file.getName
+       if name.endsWith(".qrhl")) {
+    println(s"Creating test $name")
+    test(name) { testFile(name) }
   }
 
-  test("prg-enc-rorcpa.qrhl") {
-    testFile("prg-enc-rorcpa.qrhl")
-  }
-
-  test("equality.qrhl") {
-    testFile("equality.qrhl")
-  }
-
-  test("example.qrhl") {
-    testFile("example.qrhl")
-  }
-
-  test("rnd.qrhl") {
-    testFile("rnd.qrhl")
-  }
-
-  test("teleport.qrhl") {
-    testFile("teleport.qrhl")
-  }
-
-  test("teleport-terse.qrhl") {
-    testFile("teleport-terse.qrhl")
-  }
-
-  test("random-oracle.qrhl") {
-    testFile("random-oracle.qrhl")
-  }
-
-  test("epr.qrhl") {
-    testFile("epr.qrhl")
-  }
+//  test("prg-enc-indcpa.qrhl") {
+//    testFile("prg-enc-indcpa.qrhl")
+//  }
+//
+//  test("prg-enc-rorcpa.qrhl") {
+//    testFile("prg-enc-rorcpa.qrhl")
+//  }
+//
+//  test("equality.qrhl") {
+//    testFile("equality.qrhl")
+//  }
+//
+//  test("example.qrhl") {
+//    testFile("example.qrhl")
+//  }
+//
+//  test("rnd.qrhl") {
+//    testFile("rnd.qrhl")
+//  }
+//
+//  test("teleport.qrhl") {
+//    testFile("teleport.qrhl")
+//  }
+//
+//  test("teleport-terse.qrhl") {
+//    testFile("teleport-terse.qrhl")
+//  }
+//
+//  test("random-oracle.qrhl") {
+//    testFile("random-oracle.qrhl")
+//  }
+//
+//  test("epr.qrhl") {
+//    testFile("epr.qrhl")
+//  }
 }
