@@ -1,4 +1,4 @@
-VERSION="0.3alpha"
+VERSION="0.3"
 SOURCES := $(shell find src) $(wildcard examples/*.qrhl) $(wildcard examples/*.thy) $(wildcard isabelle-thys/*.thy) $(wildcard isabelle-thys/*.ML)
 
 qrhl.zip : target/universal/qrhl-$(VERSION).zip
@@ -15,3 +15,8 @@ xxx : qrhl.zip
 	mkdir -p tmp
 	cd tmp && unzip -o ../qrhl.zip
 	rm -fv tmp/qrhl-0.3alpha/lib/isabelle-temp/user/Isabelle2017/.isabelle/Isabelle2017/heaps/polyml-5.6_x86-linux/QRHL
+
+test-distrib : qrhl.zip
+	unzip -d tmp qrhl.zip
+	cd tmp/qrhl-$(VERSION)/examples && \
+		for i in *.qrhl; do ../bin/qrhl "$$i"; done

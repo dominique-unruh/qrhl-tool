@@ -8,9 +8,9 @@ import scala.sys.process.Process
 
 name := "qrhl"
 
-version := "0.3alpha"
+version := "0.3"
 
-scalaVersion := "2.12.5"
+scalaVersion := "2.12.6"
 
 scalacOptions += "-deprecation"
 
