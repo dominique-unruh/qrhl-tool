@@ -2,7 +2,7 @@ theory Test
   imports 
  (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools"  *)
 (* Cert_Codegen *)
-QRHL.QRHL
+QRHL.QRHL QRHL.QRHL_Operations
 Hashed_Terms
      (* QRHL.QRHL_Core  Multi_Transfer  *)
 (* QRHL.Prog_Variables *)
@@ -10,28 +10,6 @@ Hashed_Terms
     "relift_definition" :: thy_goal
  *)
 begin
-
-ML \<open>
-  ;;
-Hashed_Terms.hash_typ \<^typ>\<open>(int*'a) list\<close> 0
-\<close>
-
-ML \<open>
-;;
-Hashed_Terms.hash_term \<^term>\<open>%x. x+2\<close>
-\<close>
-
-ML \<open>
-;;
-Hashed_Terms.hash_and_store_term \<^term>\<open>%x. 2+x+2*2\<close> |> \<^print>
-;;
-Hashed_Terms.hash_and_store_term \<^term>\<open>%x. 2*3\<close> |> \<^print>
-\<close>
-
-
-ML \<open>
-1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000*1000
-\<close>
 
 
 ML \<open>
@@ -537,8 +515,9 @@ definition "less_expression e f \<longleftrightarrow> expression_eval e \<le> ex
 instance by intro_classes                   
 end
 
-axiomatization where expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
+(* axiomatization where expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
   for X :: "'x variables" and e :: "'x \<Rightarrow> 'e" and m :: mem2
+ *)
 
 instantiation expression :: (preorder) preorder begin
 instance apply intro_classes

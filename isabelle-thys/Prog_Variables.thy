@@ -60,8 +60,13 @@ proof -
 qed
 setup_lifting type_definition_variables
 
-lift_definition variable_names :: "'a::universe variables \<Rightarrow> string list" 
-  is "\<lambda>(v,e). map variable_raw_name (flatten_tree v)" .
+lift_definition raw_variables :: "'a::universe variables \<Rightarrow> variable_raw list" 
+  is "\<lambda>(v::variable_raw vtree,e). flatten_tree v" .
+
+definition "variable_names vs = map variable_raw_name (raw_variables vs)"
+
+(* lift_definition variable_names :: "'a::universe variables \<Rightarrow> string list" 
+  is "\<lambda>(v,e). map variable_raw_name (flatten_tree v)" . *)
 
 lift_definition variable_concat :: "'a::universe variables \<Rightarrow> 'b::universe variables \<Rightarrow> ('a * 'b) variables"
   is "\<lambda>(v1,e1) (v2,e2). (VTree_Concat v1 v2,
@@ -134,10 +139,6 @@ proof -
     by auto
 qed
 
-lift_definition variable_unit :: "unit variables"
-  is "(VTree_Unit, \<lambda>_. embedding ())"
-  by (auto intro: bij_betwI')
-
 nonterminal variable_list_args
 syntax
   "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|'|])")
@@ -153,45 +154,102 @@ translations
   "_variables (_variable_list_args x y)" \<leftharpoondown> "CONST variable_concat (_variables (_variable_list_arg x)) (_variables y)"
   
 
+lift_definition variable_unit :: "unit variables"
+  is "(VTree_Unit, \<lambda>_. embedding ())"
+  by (auto intro: bij_betwI')
+
+lemma raw_variables_concat[simp]: "raw_variables (variable_concat Q1 Q2) = raw_variables Q1 @ raw_variables Q2"
+  apply transfer by auto
+
+lemma raw_variables_unit[simp]: "raw_variables variable_unit = []"
+  apply transfer by simp
+
+lemma raw_variables_singleton[simp]: "raw_variables \<lbrakk>x\<rbrakk> = [Rep_variable x]"
+  apply transfer by simp
+
 lemma variable_names_cons[simp]: "variable_names (variable_concat X Y) = variable_names X @ variable_names Y"
-  by (transfer, auto)
+  unfolding variable_names_def by simp
+
 lemma variable_singleton_name[simp]: "variable_names (variable_singleton x) = [variable_name x]"
-  by (transfer, auto)
+  unfolding variable_names_def variable_name_def by simp
+
 lemma variable_unit_name[simp]: "variable_names variable_unit = []"
-  by (transfer, auto)
+  unfolding variable_names_def by simp
 
 section \<open>Distinct variables\<close>
 
-lift_definition distinct_qvars :: "'a::universe variables \<Rightarrow> bool" 
-  is "\<lambda>(v,_). distinct (flatten_tree v)" .
+definition "distinct_qvars Q = distinct (raw_variables Q)"
 
 lemma distinct_variable_names[simp]:
   "distinct (variable_names Q) \<Longrightarrow> distinct_qvars Q" 
-  apply transfer using distinct_map by auto
-
+  unfolding variable_names_def distinct_qvars_def
+  by (subst (asm) distinct_map, simp)
+  
 lemma distinct_qvars_split1: 
   "distinct_qvars (variable_concat (variable_concat Q R) S) = (distinct_qvars (variable_concat Q R) \<and> distinct_qvars (variable_concat Q S) \<and> distinct_qvars (variable_concat R S))"
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 lemma distinct_qvars_split2: "distinct_qvars (variable_concat S (variable_concat Q R)) = (distinct_qvars (variable_concat Q R) \<and> distinct_qvars (variable_concat Q S) \<and> distinct_qvars (variable_concat R S))"
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 lemma distinct_qvars_swap: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars (variable_concat R Q)" 
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 lemma distinct_qvars_concat_unit1[simp]: "distinct_qvars (variable_concat Q \<lbrakk>\<rbrakk>) = distinct_qvars Q" for Q::"'a::universe variables" 
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 lemma distinct_qvars_concat_unit2[simp]: "distinct_qvars (variable_concat \<lbrakk>\<rbrakk> Q) = distinct_qvars Q" for Q::"'a::universe variables" 
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 lemma distinct_qvars_unit[simp]: "distinct_qvars \<lbrakk>\<rbrakk>" 
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 lemma distinct_qvars_single[simp]: "distinct_qvars \<lbrakk>q\<rbrakk>" for q::"'a::universe variable"
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 
 lemma distinct_qvarsL: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars Q"
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 lemma distinct_qvarsR: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars R"
-  apply transfer by auto
+  unfolding distinct_qvars_def apply transfer by auto
 
 typedef mem2 = "{f. \<forall>v::variable_raw. f v \<in> snd (Rep_variable_raw v)}"
   apply auto apply (rule choice) using Rep_variable_raw by auto
+
+fun eval_vtree :: "variable_raw Prog_Variables.vtree \<Rightarrow> mem2 \<Rightarrow> universe Prog_Variables.vtree" where
+  "eval_vtree VTree_Unit m = VTree_Unit"
+| "eval_vtree (VTree_Singleton v) m = VTree_Singleton (Rep_mem2 m v)"
+| "eval_vtree (VTree_Concat t1 t2) m = VTree_Concat (eval_vtree t1 m) (eval_vtree t2 m)"
+
+lemma eval_vtree_footprint: 
+  assumes "\<And>v. v\<in>set (flatten_tree vs) \<Longrightarrow> Rep_mem2 m1 v = Rep_mem2 m2 v" 
+  shows "eval_vtree vs m1 = eval_vtree vs m2" 
+proof (insert assms, induction vs)
+    case (VTree_Singleton x)
+    then show ?case by auto
+  next
+    case (VTree_Concat vs1 vs2)
+    have "v \<in> set (flatten_tree vs1) \<Longrightarrow> Rep_mem2 m1 v = Rep_mem2 m2 v" for v
+      using VTree_Concat.prems by auto
+    with VTree_Concat.IH have "eval_vtree vs1 m1 = eval_vtree vs1 m2" by simp
+    moreover have "v \<in> set (flatten_tree vs2) \<Longrightarrow> Rep_mem2 m1 v = Rep_mem2 m2 v" for v
+      using VTree_Concat.prems by auto
+    with VTree_Concat.IH have "eval_vtree vs2 m1 = eval_vtree vs2 m2" by simp
+    ultimately show ?case by simp
+  next
+    case VTree_Unit
+    then show ?case by auto
+  qed
+
+lift_definition eval_variables :: "'a::universe variables \<Rightarrow> mem2 \<Rightarrow> 'a" is
+ "\<lambda>(vtree,e) m. inv embedding (e (eval_vtree vtree m))" .
+
+lemma eval_variables_footprint: 
+  assumes "\<And>v. v\<in>set (raw_variables vs) \<Longrightarrow> Rep_mem2 m1 v = Rep_mem2 m2 v" 
+  shows "eval_variables vs m1 = eval_variables vs m2" 
+  using assms apply transfer apply auto apply (subst eval_vtree_footprint) by auto
+
+lemma eval_variables_concat[simp]: "eval_variables (variable_concat Q1 Q2) m = (eval_variables Q1 m, eval_variables Q2 m)"
+  apply transfer by auto
+
+lemma eval_variables_unit[simp]: "eval_variables \<lbrakk>\<rbrakk> m = ()"
+  apply transfer by auto
+
+(* lemma eval_variables_singleton[simp]: "eval_variables \<lbrakk>x\<rbrakk> m = ()"
+  apply transfer by auto *)
 
 section \<open>Indexed variables\<close>
 

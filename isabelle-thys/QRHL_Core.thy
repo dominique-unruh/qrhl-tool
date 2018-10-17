@@ -113,9 +113,9 @@ adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (*
 
 lifting_forget subspace.lifting (* TODO: don't *)
 lemma colocal_top[simp]: "distinct_qvars Q \<Longrightarrow> colocal_pred_qvars top Q"
-  apply transfer by (auto intro: predicate_local_raw_top exI[of _ "{}"])
+  unfolding distinct_qvars_def apply transfer by (auto intro: predicate_local_raw_top exI[of _ "{}"])
 lemma colocal_bot[simp]: "distinct_qvars Q \<Longrightarrow> colocal bot Q"
-  apply transfer by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
+  unfolding distinct_qvars_def apply transfer by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
 
 lemma colocal_inf[simp]: assumes "colocal A Q" and "colocal B Q" shows "colocal (A \<sqinter> B) Q"
 proof -
