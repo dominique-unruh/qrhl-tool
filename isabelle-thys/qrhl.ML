@@ -299,11 +299,12 @@ fun callWp cvars1 cvars2 qvars1 qvars2 B =
 
 fun simp_any t ctx =
   let val ct = Thm.cterm_of ctx t
-      val ct_eq = Simplifier.asm_full_rewrite ctx ct |> Thm.prop_of
+      val ct_eq_thm = Simplifier.asm_full_rewrite ctx ct
+      val ct_eq = ct_eq_thm |> Thm.prop_of
       val (lhs,rhs) = Logic.dest_equals ct_eq
       val _ = if lhs<>t then raise TERM("conversion returned wrong lhs\n",[t,lhs,rhs]) else ()
   in
-    rhs
+    (rhs,ct_eq_thm)
   end
 
 fun simp_prop t ctx = 
@@ -314,17 +315,17 @@ fun simp_prop t ctx =
     case result of
       NONE => raise TERM("asm_full_simp_tac failed",[t])
     | SOME thm => case Thm.prems_of thm of
-                    [t'] => t'
-                  | [] => \<^prop>\<open>True\<close>
+                    [t'] => (t',thm)
+                  | [] => (\<^prop>\<open>True\<close>,thm)
                   | _ => raise THM("asm_full_simp_tac produced multiple subgoals",0,[thm])
   end       
 
 fun simp_bool t ctx =
   let val prop = HOLogic.mk_Trueprop t
-      val res = simp_prop prop ctx
+      val (res,thm) = simp_prop prop ctx
   in
     case res of
-      (Const (\<^const_name>\<open>Trueprop\<close>, _) $ P) => P
+      (Const (\<^const_name>\<open>Trueprop\<close>, _) $ P) => (P,thm)
     | _ => raise TERM("simp_prop did not return a term starting with Trueprop",[t,res])
   end
 
@@ -412,7 +413,7 @@ fun applyRule name goal ctx =
       val subgoals' = map HOLogic.dest_Trueprop subgoals
   in
     (* subgoals' |> map (Thm.cterm_of ctx) |> @{make_string} |> error *)
-    subgoals'
+    (subgoals',goal'')
   end
 
 

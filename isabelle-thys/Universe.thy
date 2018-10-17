@@ -46,10 +46,10 @@ typedef universe = "{(x,n) | x n. Elem x ((Power ^^ n) HOLZF.Inf)}"
   by (simp add: Infinity)
 (*
 Alternatively, universe can be axiomatized as follows, which is weaker than the ZF axioms 
-(the axiomatization below is implied by existence of a smaller cardinal, namely beth_\<omega>)
+(the consts below is implied by existence of a smaller cardinal, namely beth_\<omega>)
 
 typedecl universe
-axiomatization universe_powertower :: "nat \<Rightarrow> universe set" where
+consts universe_powertower :: "nat \<Rightarrow> universe set" where
     universe_powertower: "\<exists>i. inj_on i (Pow (universe_powertower n)) \<and> i ` (Pow (universe_powertower n)) \<subseteq> universe_powertower (Suc n)"
 and universe_powertower_disjoint: "x \<in> universe_powertower n \<Longrightarrow> x \<in> universe_powertower m \<Longrightarrow> n=m"
 and universe_powertower_nat: "\<exists>n (i::nat\<Rightarrow>universe). inj i \<and> range i \<subseteq> universe_powertower n" 

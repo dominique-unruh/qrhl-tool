@@ -1,14 +1,24 @@
 theory QRHL_Operations
-  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics Hashed_Terms
+  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics Hashed_Terms Extended_Sorry
 begin
 
 ML {*
-  fun make_ctxt_ref ctx = let
-    val id = serial ()
-    val _ = Refs.Ctxt.write id ctx
-  in
-    id
-  end
+fun make_ctxt_ref ctx = let
+  val id = serial ()
+  val _ = Refs.Ctxt.write id ctx
+in
+  id
+end
+
+fun make_thm_ref thm = let
+  val id = serial ()
+  val _ = Refs.Thm.write id thm
+in
+  id
+end
+
+fun tac_dummy_thm NONE = NONE
+  | tac_dummy_thm (SOME ts) = SOME (ts,0)
 *}
 
 (*
@@ -46,6 +56,12 @@ operation_setup delete_context = {*
    action = Refs.Ctxt.delete}
 *}
 
+operation_setup delete_thm = {*
+  {from_lib = Codec.int,
+   to_lib = Codec.unit,
+   action = Refs.Thm.delete}
+*}
+
 operation_setup print_term = {*
   {from_lib = Codec.tuple Codec.int Codec.term,
    to_lib = Codec.string,
@@ -68,12 +84,6 @@ operation_setup read_typ = {*
   {from_lib = Codec.tuple Codec.int Codec.string,
    to_lib = Codec.typ,
    action = fn (ctx_id, str) => Syntax.read_typ (Refs.Ctxt.read ctx_id) str}
-*}
-
-operation_setup simplify_term = {*
-  {from_lib = Codec.triple Codec.term (Codec.list Codec.string) Codec.int,
-   to_lib = Codec.term,
-   action = fn (t,thms,ctx_id) => QRHL.simp t thms (Refs.Ctxt.read ctx_id)}
 *}
 
 operation_setup read_term = {*
@@ -144,39 +154,21 @@ operation_setup rndWp2 = {*
 
 operation_setup applyRule = {*
   {from_lib = Codec.triple Codec.string Codec.term Codec.int,
-   to_lib = Codec.option (Codec.list Codec.term),
-   action = fn (name,goal,ctx_id) => SOME (QRHL.applyRule name goal (Refs.Ctxt.read ctx_id))}
+   to_lib = Codec.option (Codec.tuple (Codec.list Codec.term) Codec.int),
+   action = fn (name,goal,ctx_id) => let
+     val ctxt = Refs.Ctxt.read ctx_id
+     val (ts,thm) = QRHL.applyRule name goal ctxt
+     in SOME (ts,make_thm_ref thm) end}
 *}
 
-(* operation_setup sampleWp = {*
-  {from_lib = Codec.tuple (Codec.tuple Codec.string Codec.typ) (Codec.tuple Codec.term Codec.term),
-   to_lib = Codec.term,
-   action = fn ((v, T), (e, B)) => QRHL.sampleWp v T e B}
-*} *)
-
-(* operation_setup qapplyWp = {*
-  {from_lib = Codec.triple Codec.term Codec.term (Codec.list Codec.term),
-   to_lib = Codec.term,
-   action = fn (post, e, q) => QRHL.qapplyWp post e q}
-*} *)
-
-(* operation_setup measureWp = {*
-  {from_lib = Codec.tuple (Codec.tuple Codec.term Codec.term) (Codec.tuple Codec.term (Codec.list Codec.term)),
-   to_lib = Codec.term,
-   action = fn ((B, x), (e, Q)) => QRHL.measureWp B x e Q}
-*} *)
-
-(* operation_setup qinitWp = {*
-  {from_lib = Codec.triple Codec.term Codec.term (Codec.list Codec.term),
-   to_lib = Codec.term,
-   action = fn (post, e, Q) => QRHL.qinitWp post e Q}
-*} *)
-
-(* operation_setup ifWp = {*
-  {from_lib = Codec.triple Codec.term Codec.term Codec.term,
-   to_lib = Codec.term,
-   action = fn (e, thenWp, elseWp) => QRHL.ifWp e thenWp elseWp}
-*} *)
+operation_setup simplify_term = {*
+  {from_lib = Codec.triple Codec.term (Codec.list Codec.string) Codec.int,
+   to_lib = Codec.tuple Codec.term Codec.int,
+   action = fn (t,thms,ctx_id) => let
+     val ctxt = Refs.Ctxt.read ctx_id
+     val (t,thm) = QRHL.simp t thms ctxt
+     in (t,make_thm_ref thm) end}
+*}
 
 operation_setup add_index_to_expression = {*
   {from_lib = Codec.tuple Codec.term Codec.bool,
@@ -198,14 +190,14 @@ operation_setup expression_to_term = {*
 
 operation_setup seq_tac = {*
   {from_lib = Codec.triple (Codec.triple Codec.int Codec.int Codec.term) Codec.term Codec.int,
-   to_lib = Codec.option (Codec.list Codec.term),
-   action = fn ((i,j,B),goal,ctx_id) => Tactics.seq_tac_on_term i j B (Refs.Ctxt.read ctx_id) goal}
+   to_lib = Codec.option (Codec.tuple (Codec.list Codec.term) Codec.int),
+   action = fn ((i,j,B),goal,ctx_id) => Tactics.seq_tac_on_term i j B (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm}
 *}
 
 operation_setup wp_tac = {*
   {from_lib = Codec.triple Codec.bool Codec.term Codec.int,
-   to_lib = Codec.option (Codec.list Codec.term),
-   action = fn (left,goal,ctx_id) => Tactics.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal}
+   to_lib = Codec.option (Codec.tuple (Codec.list Codec.term) Codec.int),
+   action = fn (left,goal,ctx_id) => Tactics.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm}
 *}
 
 (* TODO remove *)
@@ -213,6 +205,12 @@ operation_setup term_test = {*
   {from_lib = Codec.unit,
    to_lib = Hashed_Terms.term_codec,
    action = fn () => \<^term>\<open>True\<close>}
+*}
+
+operation_setup show_oracles_lines = {*
+  {from_lib = Codec.int,
+   to_lib = Codec.list Codec.string,
+   action = map YXML.content_of o Extended_Sorry.show_oracles_lines o Refs.Thm.read}
 *}
 
 end

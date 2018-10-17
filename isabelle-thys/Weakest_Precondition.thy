@@ -400,7 +400,7 @@ proof -
     unfolding assms(4)[symmetric] cleanup_expression_concat_def map_expression_def pair_expression_def by simp
   have "e' = map_expression (\<lambda>(x1,x2). x2 x1) (pair_expression (expression Q1 E1) ?e23)"
     unfolding assms(5)[symmetric]
-    unfolding cleanup_expression_concat_def map_expression_def pair_expression_def apply simp
+    unfolding cleanup_expression_concat_def map_expression_def pair_expression apply simp
     apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
   also have "\<dots> = (expression (variable_concat Q1 (variable_concat Q2 Q3)) (\<lambda>(x1,(x2,x3)). (f (E1 x1) (E2 x2) (E3 x3))))"
     unfolding e23 apply simp

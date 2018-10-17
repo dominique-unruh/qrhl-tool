@@ -19,17 +19,18 @@ no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (in
 no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
 
 
-axiomatization bounded_of_mat :: "complex mat \<Rightarrow> ('a::enum,'b::enum) bounded"
-  and mat_of_bounded :: "('a::enum,'b::enum) bounded \<Rightarrow> complex mat"
-axiomatization vector_of_vec :: "complex vec \<Rightarrow> ('a::enum) vector"
-  and vec_of_vector :: "('a::enum) vector \<Rightarrow> complex vec"
+consts bounded_of_mat :: "complex mat \<Rightarrow> ('a::enum,'b::enum) bounded"
+       mat_of_bounded :: "('a::enum,'b::enum) bounded \<Rightarrow> complex mat"
+consts vector_of_vec :: "complex vec \<Rightarrow> ('a::enum) vector"
+       vec_of_vector :: "('a::enum) vector \<Rightarrow> complex vec"
 
-axiomatization where mat_of_bounded_inverse [code abstype]:
+lemma mat_of_bounded_inverse [code abstype]:
   "bounded_of_mat (mat_of_bounded B) = B" for B::"('a::enum,'b::enum)bounded"
+  by (cheat 15)
 
-axiomatization where vec_of_vector_inverse [code abstype]:
+lemma vec_of_vector_inverse [code abstype]:
   "vector_of_vec (vec_of_vector B) = B" for B::"('a::enum)vector"
-
+  by (cheat 15)
 
 fun index_of where
   "index_of x [] = (0::nat)"
@@ -38,23 +39,32 @@ fun index_of where
 definition "enum_idx (x::'a::enum) = index_of x (enum_class.enum :: 'a list)"
 (* definition "enum_len (TYPE('a::enum)) = length (enum_class.enum :: 'a list)" *)
 
-axiomatization where bounded_of_mat_id[code]:
+lemma bounded_of_mat_id[code]:
   "mat_of_bounded (idOp :: ('a::enum,'a) bounded) = one_mat (CARD('a))"
-axiomatization where bounded_of_mat_timesOp[code]:
+  by (cheat 15)
+lemma bounded_of_mat_timesOp[code]:
   "mat_of_bounded (M \<cdot> N) =  (mat_of_bounded M * mat_of_bounded N)" for M::"('b::enum,'c::enum) bounded" and N::"('a::enum,'b) bounded"
-axiomatization where bounded_of_mat_plusOp[code]:
+  by (cheat 15)
+lemma bounded_of_mat_plusOp[code]:
   "mat_of_bounded (M + N) =  (mat_of_bounded M + mat_of_bounded N)" for M::"('a::enum,'b::enum) bounded" and N::"('a::enum,'b) bounded"
-axiomatization where bounded_of_mat_minusOp[code]:
+  by (cheat 15)
+lemma bounded_of_mat_minusOp[code]:
   "mat_of_bounded (M - N) =  (mat_of_bounded M - mat_of_bounded N)" 
   for M::"('a::enum,'b::enum) bounded" and N::"('a::enum,'b) bounded"
-axiomatization where bounded_of_mat_uminusOp[code]:
+  by (cheat 15)
+lemma bounded_of_mat_uminusOp[code]:
   "mat_of_bounded (- M) = - mat_of_bounded M" for M::"('a::enum,'b::enum) bounded"
-axiomatization where vector_of_vec_applyOp[code]:
+  by (cheat 15)
+lemma vector_of_vec_applyOp[code]:
   "vec_of_vector (M \<cdot> x) =  (mult_mat_vec (mat_of_bounded M) (vec_of_vector x))" for M :: "('a::enum,'b::enum) bounded"
-axiomatization where mat_of_bounded_scalarMult[code]:
+  by (cheat 15)
+lemma mat_of_bounded_scalarMult[code]:
   "mat_of_bounded ((a::complex) \<cdot> M) = smult_mat a (mat_of_bounded M)" for M :: "('a::enum,'b::enum) bounded"
+  by (cheat 16)
 
-axiomatization where mat_of_bounded_inj: "inj mat_of_bounded"
+lemma mat_of_bounded_inj: "inj mat_of_bounded"
+  by (cheat 16)
+
 instantiation bounded :: (enum,enum) equal begin
 definition [code]: "equal_bounded M N \<longleftrightarrow> mat_of_bounded M = mat_of_bounded N" for M N :: "('a,'b) bounded"
 instance 
@@ -63,7 +73,9 @@ instance
   using mat_of_bounded_inj injD by fastforce 
 end
 
-axiomatization where vec_of_vector_inj: "inj vec_of_vector"
+lemma vec_of_vector_inj: "inj vec_of_vector"
+  by (cheat 16)
+
 instantiation vector :: (enum) equal begin
 definition [code]: "equal_vector M N \<longleftrightarrow> vec_of_vector M = vec_of_vector N" for M N :: "'a vector"
 instance 
@@ -75,35 +87,43 @@ end
 
 
 definition "matrix_X = mat_of_rows_list 2 [ [0::complex,1], [1,0] ]"
-axiomatization where bounded_of_mat_X[code]: "mat_of_bounded pauliX = matrix_X"
+lemma bounded_of_mat_X[code]: "mat_of_bounded pauliX = matrix_X"
+  by (cheat 16)
 definition "matrix_Z = mat_of_rows_list 2 [ [1::complex,0], [0,-1] ]"
-axiomatization where bounded_of_mat_Z[code]: "mat_of_bounded pauliZ = matrix_Z"
+lemma bounded_of_mat_Z[code]: "mat_of_bounded pauliZ = matrix_Z"
+  by (cheat 16)
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
-axiomatization where bounded_of_mat_Y[code]: "mat_of_bounded pauliY = matrix_Y"
+lemma bounded_of_mat_Y[code]: "mat_of_bounded pauliY = matrix_Y"
+  by (cheat 16)
 (* definition "matrix_H' = mat_of_rows_list 2 [ [1::complex, 1], [1, -1] ]"
-axiomatization where bounded_of_mat_H'[code]: "mat_of_bounded hadamard' = matrix_H'" *)
+lemma bounded_of_mat_H'[code]: "mat_of_bounded hadamard' = matrix_H'" *)
 definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
-axiomatization where bounded_of_mat_hadamard[code]: "mat_of_bounded hadamard = matrix_hadamard"
+lemma bounded_of_mat_hadamard[code]: "mat_of_bounded hadamard = matrix_hadamard"
+  by (cheat 16)
 definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]"
-axiomatization where bounded_of_mat_CNOT[code]: "mat_of_bounded CNOT = matrix_CNOT"
+lemma bounded_of_mat_CNOT[code]: "mat_of_bounded CNOT = matrix_CNOT"
+  by (cheat 17)
 
 definition "matrix_tensor (A::'a::times mat) (B::'a mat) =
   mat (dim_row A*dim_row B) (dim_col A*dim_col B) 
   (\<lambda>(r,c). A $$ (r div dim_row B, c div dim_col B) *
            B $$ (r mod dim_row B, c mod dim_col B))"
 
-axiomatization where bounded_of_mat_tensorOp[code]:
+lemma bounded_of_mat_tensorOp[code]:
   "mat_of_bounded (tensorOp A B) = matrix_tensor (mat_of_bounded A) (mat_of_bounded B)"
 for A :: "('a::enum,'b::enum) bounded"
 and B :: "('c::enum,'d::enum) bounded"
+  by (cheat 17)
 
 definition "adjoint_mat M = transpose_mat (map_mat cnj M)"
-axiomatization where bounded_of_mat_adjoint[code]:
+lemma bounded_of_mat_adjoint[code]:
   "mat_of_bounded (adjoint A) = adjoint_mat (mat_of_bounded A)"
 for A :: "('a::enum,'b::enum) bounded"
+  by (cheat 17)
 
-axiomatization where bounded_of_mat_assoc_op[code]: 
+lemma bounded_of_mat_assoc_op[code]: 
   "mat_of_bounded (assoc_op :: ('a::enum*'b::enum*'c::enum,_) bounded) = one_mat (Enum.card_UNIV TYPE('a)*Enum.card_UNIV TYPE('b)*Enum.card_UNIV TYPE('c))"
+  by (cheat 17)
 
 definition "comm_op_mat TYPE('a::enum) TYPE('b::enum) =
   (let da = Enum.card_UNIV TYPE('a); db = Enum.card_UNIV TYPE('b) in
@@ -111,15 +131,18 @@ definition "comm_op_mat TYPE('a::enum) TYPE('b::enum) =
   (\<lambda>(r,c). (if (r div da = c mod db \<and>
                 r mod da = c div db) then 1 else 0)))"
 
-axiomatization where bounded_of_mat_comm_op[code]:
+lemma bounded_of_mat_comm_op[code]:
   "mat_of_bounded (comm_op :: ('a::enum*'b::enum,_) bounded) = comm_op_mat TYPE('a) TYPE('b)"
+  by (cheat 17)
 
-axiomatization where vec_of_vector_zero[code]:
+lemma vec_of_vector_zero[code]:
   "vec_of_vector (0::'a::enum vector) = zero_vec (CARD('a))"
+  by (cheat 17)
 
 
-axiomatization where vec_of_vector_ket[code]:
+lemma vec_of_vector_ket[code]:
   "vec_of_vector (ket i) = unit_vec (CARD('a)) (enum_idx i)" for i::"'a::enum"
+  by (cheat 17)
 
 instantiation bit :: linorder begin
 definition "less_bit (a::bit) (b::bit) = (a=0 \<and> b=1)"
@@ -136,8 +159,9 @@ instance apply intro_classes unfolding finite_UNIV_bit_def card_UNIV_bit_def
   apply auto unfolding UNIV_bit by simp 
 end
 
-axiomatization where mat_of_bounded_zero[code]:
+lemma mat_of_bounded_zero[code]:
   "mat_of_bounded (0::('a::enum,'b::enum) bounded) = zero_mat (CARD('b)) (CARD('a))"
+  by (cheat 17)
 
 definition "computational_basis_vec n = map (unit_vec n) [0..<n]"
 definition "orthogonal_complement_vec n vs = 
@@ -149,8 +173,9 @@ definition "vec_tensor (A::'a::times vec) (B::'a vec) =
        vec_index B (r mod dim_vec B))"
 
 
-axiomatization where tensorVec_code[code]: "vec_of_vector (\<psi> \<otimes> \<phi>) = vec_tensor (vec_of_vector \<psi>) (vec_of_vector \<phi>)"
+lemma tensorVec_code[code]: "vec_of_vector (\<psi> \<otimes> \<phi>) = vec_tensor (vec_of_vector \<psi>) (vec_of_vector \<phi>)"
   for \<psi>::"'a::enum vector" and \<phi>::"'b::enum vector"
+  by (cheat 17)
 
 definition [code del]: "SPAN x = span (vector_of_vec ` set x)"
 code_datatype SPAN
@@ -166,11 +191,12 @@ fun mk_projector_orthog :: "nat \<Rightarrow> complex vec list \<Rightarrow> com
                                    smult_mat (1/norm2) (mat_of_cols d [v] * mat_of_rows d [v]) 
                                         + mk_projector_orthog d vs)"
 
-axiomatization where mk_projector_SPAN[code]: 
+lemma mk_projector_SPAN[code]: 
   "mk_projector (SPAN S :: 'a::enum subspace) = 
     (let d = CARD('a) in mk_projector_orthog d (gram_schmidt d S))"
+  by (cheat 17)
 
-(*axiomatization where mk_projector_SPAN[code]: "mk_projector (SPAN S :: 'a::enum subspace) = (case S of 
+(*lemma mk_projector_SPAN[code]: "mk_projector (SPAN S :: 'a::enum subspace) = (case S of 
     [v] \<Rightarrow> (let d = dim_vec v in let norm2 = cscalar_prod v v in
                 if norm2=0 then zero_mat d d else
                             smult_mat (1/norm2) (mat_of_cols d [v] * mat_of_rows d [v]))
@@ -180,22 +206,31 @@ lemma [code]: "mat_of_bounded (Proj S) = mk_projector S" for S :: "'a::enum subs
   unfolding mk_projector_def by simp
 
 
-axiomatization where top_as_span[code]: "(top::'a subspace) = SPAN (computational_basis_vec (CARD('a::enum)))"
-axiomatization where bot_as_span[code]: "(bot::'a::enum subspace) = SPAN []" 
-axiomatization where plus_spans[code]: "SPAN A + SPAN B = SPAN (A @ B)" 
+lemma top_as_span[code]: "(top::'a subspace) = SPAN (computational_basis_vec (CARD('a::enum)))"
+  by (cheat 17)
+lemma bot_as_span[code]: "(bot::'a::enum subspace) = SPAN []" 
+  by (cheat 17)
+lemma plus_spans[code]: "SPAN A + SPAN B = SPAN (A @ B)" 
+  by (cheat 17)
 
-axiomatization where ortho_SPAN[code]: "ortho (SPAN S :: 'a::enum subspace) = SPAN (orthogonal_complement_vec (CARD('a)) S)"
-axiomatization where span_Set_Monad[code]: "span (Set_Monad l) = SPAN (map vec_of_vector l)"
+lemma ortho_SPAN[code]: "ortho (SPAN S :: 'a::enum subspace) = SPAN (orthogonal_complement_vec (CARD('a)) S)"
+  by (cheat 17)
+lemma span_Set_Monad[code]: "span (Set_Monad l) = SPAN (map vec_of_vector l)"
   for l :: "'a::enum vector list"
-axiomatization where tensorSpace_SPAN[code]: "tensorSpace (SPAN A) (SPAN B) = SPAN [vec_tensor a b. a<-A, b<-B]"
+  by (cheat 17)
+lemma tensorSpace_SPAN[code]: "tensorSpace (SPAN A) (SPAN B) = SPAN [vec_tensor a b. a<-A, b<-B]"
+  by (cheat 17)
 
-axiomatization where vec_of_vector_timesScalarVec[code]: "vec_of_vector (timesScalarVec a \<psi>) = smult_vec a (vec_of_vector \<psi>)"
+lemma vec_of_vector_timesScalarVec[code]: "vec_of_vector (timesScalarVec a \<psi>) = smult_vec a (vec_of_vector \<psi>)"
   for \<psi> :: "'a::enum vector"
+  by (cheat 17)
 
-axiomatization where vector_of_vec_plus[code]:
+lemma vector_of_vec_plus[code]:
   "vec_of_vector (x + y) =  (vec_of_vector x) + (vec_of_vector y)" for x y :: "'a::enum vector"
+  by (cheat 17)
 
-axiomatization where vec_of_vector_EPR[code]: "vec_of_vector EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
+lemma vec_of_vector_EPR[code]: "vec_of_vector EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
+  by (cheat 17)
 
 lemma [code_post]: 
   shows "Complex a 0 = complex_of_real a"
@@ -214,31 +249,37 @@ end
 definition "is_subspace_of n vs ws =  
   list_all ((=) (zero_vec n)) (drop (length ws) (gram_schmidt n (ws @ vs)))"
 
-axiomatization where SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a subspace) \<longleftrightarrow> is_subspace_of (CARD('a::enum)) A B" 
+lemma SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a subspace) \<longleftrightarrow> is_subspace_of (CARD('a::enum)) A B" 
+  by (cheat 17)
 
-axiomatization where applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (map (mult_mat_vec (mat_of_bounded A)) S)"
+lemma applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (map (mult_mat_vec (mat_of_bounded A)) S)"
   for A::"('a::enum,'b::enum) bounded"
+  by (cheat 17)
 
-axiomatization where kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_single (mat_of_bounded A)))" 
+lemma kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_single (mat_of_bounded A)))" 
   for A::"('a::enum,'b::enum) bounded"
+  by (cheat 17)
 
 lemma [code_abbrev]: "kernel (A-a\<cdot>idOp) = eigenspace a A" 
   unfolding eigenspace_def by simp
 
-axiomatization where mat_of_bounded_classical_operator[code]: 
+lemma mat_of_bounded_classical_operator[code]: 
   "mat_of_bounded (classical_operator f) = mat (CARD('b)) (CARD('a))
   (\<lambda>(r,c). if f (Enum.enum!c) = Some (Enum.enum!r) then 1 else 0)" 
   for f::"'a::enum \<Rightarrow> 'b::enum option"
+  by (cheat 17)
 
 lemma [code]: "HOL.equal (A::_ subspace) B = (A\<le>B \<and> B\<le>A)"
   unfolding equal_subspace_def by auto
 
 
-axiomatization where mat_of_bounded_vector_to_bounded[code]: "mat_of_bounded (vector_to_bounded \<psi>) = mat_of_cols (CARD('a)) [vec_of_vector \<psi>]" 
+lemma mat_of_bounded_vector_to_bounded[code]: "mat_of_bounded (vector_to_bounded \<psi>) = mat_of_cols (CARD('a)) [vec_of_vector \<psi>]" 
   for \<psi>::"'a::enum vector"
+  by (cheat 17)
 
-axiomatization where mat_of_bounded_remove_qvar_unit_op[code]:
+lemma mat_of_bounded_remove_qvar_unit_op[code]:
   "mat_of_bounded (remove_qvar_unit_op::(_,'a::enum) bounded) = mat_of_bounded (idOp::(_,'a) bounded)" 
+  by (cheat 17)
 
 lemma [code]: "(A::'a subspace) \<sqinter> B = ortho (ortho A + ortho B)"
   unfolding subspace_sup_plus[symmetric]

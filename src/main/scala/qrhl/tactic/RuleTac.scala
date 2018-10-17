@@ -33,6 +33,6 @@ case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => 
 
 object RuleTac {
   private val logger = log4s.getLogger
-  val applyRuleOp: Operation[(String, Term, BigInt), Option[List[Term]]] =
-    Operation.implicitly[(String,pure.Term,BigInt), Option[List[pure.Term]]]("applyRule")
+  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[Term],BigInt)]] =
+    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[pure.Term],BigInt)]]("applyRule")
 }

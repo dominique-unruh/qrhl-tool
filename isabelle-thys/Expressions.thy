@@ -1,5 +1,5 @@
 theory Expressions
-  imports Prog_Variables Misc_Missing
+  imports Prog_Variables Misc_Missing Extended_Sorry
 begin
 
 typedef 'a expression = "{(vs,f::_\<Rightarrow>'a). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)}"
@@ -61,10 +61,6 @@ qed
 lemma map_expression'[simp]: "map_expression' f (\<lambda>z. expression Q (e z)) = expression Q (\<lambda>a. f (\<lambda>z. e z a))"
   apply transfer by auto
 
-(* axiomatization map_expression' :: "(('z \<Rightarrow> 'e) \<Rightarrow> 'f) \<Rightarrow> ('z \<Rightarrow> 'e expression) \<Rightarrow> 'f expression" where 
-  map_expression'_def[simp]: "map_expression' f (\<lambda>z. expression Q (e z)) = expression Q (\<lambda>a. f (\<lambda>z. e z a))"
-for Q :: "'a::universe variables" and e :: "'z \<Rightarrow> 'a \<Rightarrow> 'e" and f :: "('z \<Rightarrow> 'e) \<Rightarrow> 'f" *)
-
 lift_definition pair_expression :: "'a expression \<Rightarrow> 'b expression \<Rightarrow> ('a \<times> 'b) expression" is
   "\<lambda>(vs1,e1) (vs2,e2). (vs1 \<union> vs2, \<lambda>m. (e1 m, e2 m))"
   by auto
@@ -75,13 +71,6 @@ lemma pair_expression[simp]: "pair_expression (expression Q1 e1) (expression Q2 
   apply (subst Rep_expression_inject[symmetric])
   unfolding pair_expression.rep_eq expression.rep_eq
   by auto 
-
-(* axiomatization pair_expression where
-  pair_expression_def[simp]: "pair_expression (expression Q1 e1) (expression Q2 e2)
-    = expression (variable_concat Q1 Q2) (\<lambda>(z1,z2). (e1 z1, e2 z2))"
-for Q1 :: "'q1::universe variables" and Q2 :: "'q2::universe variables" 
-and e1 :: "'q1 \<Rightarrow> 'e1" and e2 :: "'q2 \<Rightarrow> 'e2" *)
-
 
 definition map_expression :: "('e \<Rightarrow> 'f) \<Rightarrow> ('e expression) \<Rightarrow> 'f expression" where
   "map_expression f e = map_expression' (\<lambda>e. f (e ())) (\<lambda>_. e)"
@@ -122,15 +111,16 @@ lemma map_expression3[simp]:
   apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
 
-axiomatization index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression" where
-  index_expression_def[simp]: "index_expression left (expression Q e) = expression (index_vars left Q) e"
+consts index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression"
+lemma index_expression_def[simp]: "index_expression left (expression Q e) = expression (index_vars left Q) e"
 for Q :: "'b::universe variables" and e :: "'b \<Rightarrow> 'a"
+  by (cheat TODO8)
 
 section \<open>Substitutions\<close>
 
 typedecl substitution
-axiomatization substitute1 :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> substitution"
-axiomatization subst_expression :: "substitution \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
+consts substitute1 :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> substitution"
+consts subst_expression :: "substitution \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
 
 section \<open>ML code\<close>
 

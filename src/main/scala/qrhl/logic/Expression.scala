@@ -61,8 +61,12 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
 
   override lazy val toString: String = Isabelle.theContext.prettyExpression(isabelleTerm)
 //  val isabelleTerm : Term = isabelleTerm
-  def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): Expression = simplify(isabelle.get,facts)
-  def simplify(context: Isabelle.Context, facts:List[String]): Expression = Expression(typ, context.simplify(isabelleTerm,facts))
+  def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): (Expression,Isabelle.Thm) = simplify(isabelle.get,facts)
+
+  def simplify(context: Isabelle.Context, facts:List[String]): (Expression,Isabelle.Thm) =
+    context.simplify(isabelleTerm,facts) match {
+      case (t,thm) => (Expression(typ, t), thm)
+    }
 
   def map(f : Term => Term) : Expression = new Expression(typ, f(isabelleTerm))
   def substitute(v:CVariable, repl:Expression) : Expression = {

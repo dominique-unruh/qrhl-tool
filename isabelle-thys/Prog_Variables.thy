@@ -1,5 +1,5 @@
 theory Prog_Variables
-  imports Universe
+  imports Universe Extended_Sorry
   keywords "variables" :: thy_decl_block
 begin
 
@@ -254,9 +254,11 @@ lemma eval_variables_unit[simp]: "eval_variables \<lbrakk>\<rbrakk> m = ()"
 section \<open>Indexed variables\<close>
 
 
-axiomatization index_var :: "bool \<Rightarrow> 'a::universe variable \<Rightarrow> 'a::universe variable" where
-  index_var1: "y = index_var True x \<longleftrightarrow> variable_name y = variable_name x @ ''1''" and
-  index_var2: "y = index_var False x \<longleftrightarrow> variable_name y = variable_name x @ ''2''"
+consts index_var :: "bool \<Rightarrow> 'a::universe variable \<Rightarrow> 'a::universe variable"
+lemma index_var1: "y = index_var True x \<longleftrightarrow> variable_name y = variable_name x @ ''1''"
+  by (cheat TODO9)
+lemma index_var2: "y = index_var False x \<longleftrightarrow> variable_name y = variable_name x @ ''2''"
+  by (cheat TODO9)
 
 lemma index_var1I: "variable_name y = variable_name x @ ''1'' \<Longrightarrow> index_var True x = y"
   using index_var1 by metis
@@ -269,12 +271,14 @@ lemma index_var1_simp[simp]: "variable_name (index_var True x) = variable_name x
 lemma index_var2_simp[simp]: "variable_name (index_var False x) = variable_name x @ ''2''"
   using index_var2 by metis
 
-axiomatization index_vars :: "bool \<Rightarrow> 'a::universe variables \<Rightarrow> 'a variables"
-axiomatization where
-  index_vars_singleton[simp]: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>" and
-  index_vars_concat[simp]: "index_vars left (variable_concat Q R) = variable_concat (index_vars left Q) (index_vars left R)" and
-  index_vars_unit[simp]: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
-for x :: "'a::universe variable" and Q :: "'b::universe variables" and R :: "'c::universe variables"
+consts index_vars :: "bool \<Rightarrow> 'a::universe variables \<Rightarrow> 'a variables"
+lemma index_vars_singleton[simp]: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>"
+  by (cheat TODO9)
+lemma index_vars_concat[simp]: "index_vars left (variable_concat Q R) = variable_concat (index_vars left Q) (index_vars left R)"
+  by (cheat TODO9)
+lemma index_vars_unit[simp]: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
+  for x :: "'a::universe variable" and Q :: "'b::universe variables" and R :: "'c::universe variables"
+  by (cheat TODO9)
 
 section \<open>ML code\<close>
 

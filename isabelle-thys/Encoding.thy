@@ -9,38 +9,46 @@ type_synonym 'a cvariable = "'a variable"
 
 typedecl program
 typedecl oracle_program
-axiomatization
-  block :: "program list \<Rightarrow> program" and
-  assign :: "'a::universe cvariable \<Rightarrow> 'a expression \<Rightarrow> program" and
-  sample :: "'a cvariable \<Rightarrow> 'a distr expression \<Rightarrow> program" and
-  ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program" and
-  while :: "bool expression \<Rightarrow> program list \<Rightarrow> program" and
-  qinit :: "'a variables \<Rightarrow> 'a vector expression \<Rightarrow> program" and
-  qapply :: "'a variables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program" and
-  measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program" and
+consts
+  block :: "program list \<Rightarrow> program"
+  assign :: "'a::universe cvariable \<Rightarrow> 'a expression \<Rightarrow> program"
+  sample :: "'a cvariable \<Rightarrow> 'a distr expression \<Rightarrow> program"
+  ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program"
+  while :: "bool expression \<Rightarrow> program list \<Rightarrow> program"
+  qinit :: "'a variables \<Rightarrow> 'a vector expression \<Rightarrow> program"
+  qapply :: "'a variables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program"
+  measurement :: "'a cvariable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
   instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
 
-axiomatization fv_program :: "program \<Rightarrow> string set" where
-  fv_program_sequence: "fv_program (block b) = (\<Union>s\<in>set b. fv_program s)"
-and fv_program_assign: "fv_program (assign x e) = {variable_name x} \<union> fv_expression e"
-and fv_program_sample: "fv_program (sample x e2) = {variable_name x} \<union> fv_expression e2"
-and fv_program_ifthenelse: "fv_program (ifthenelse c p1 p2) =
+consts fv_program :: "program \<Rightarrow> string set"
+lemma fv_program_sequence: "fv_program (block b) = (\<Union>s\<in>set b. fv_program s)"
+  by (cheat TODO7)
+lemma fv_program_assign: "fv_program (assign x e) = {variable_name x} \<union> fv_expression e"
+  by (cheat TODO7)
+lemma fv_program_sample: "fv_program (sample x e2) = {variable_name x} \<union> fv_expression e2"
+  by (cheat TODO7)
+lemma fv_program_ifthenelse: "fv_program (ifthenelse c p1 p2) =
   fv_expression c \<union> (\<Union>s\<in>set p1. fv_program s) \<union> (\<Union>s\<in>set p2. fv_program s)"
-and fv_program_while: "fv_program (while c b) = fv_expression c \<union> (\<Union>s\<in>set b. fv_program s)"
-and fv_program_qinit: "fv_program (qinit Q e3) = set (variable_names Q) \<union> fv_expression e3"
-and fv_program_qapply: "fv_program (qapply Q e4) = set (variable_names Q) \<union> fv_expression e4"
-and fv_program_measurement: "fv_program (measurement x R e5) = {variable_name x} \<union> set (variable_names R) \<union> fv_expression e5"
+  by (cheat TODO7)
+lemma fv_program_while: "fv_program (while c b) = fv_expression c \<union> (\<Union>s\<in>set b. fv_program s)"
+  by (cheat TODO7)
+lemma fv_program_qinit: "fv_program (qinit Q e3) = set (variable_names Q) \<union> fv_expression e3"
+  by (cheat TODO7)
+lemma fv_program_qapply: "fv_program (qapply Q e4) = set (variable_names Q) \<union> fv_expression e4"
+  by (cheat TODO7)
+lemma fv_program_measurement: "fv_program (measurement x R e5) = {variable_name x} \<union> set (variable_names R) \<union> fv_expression e5"
+  by (cheat TODO7)
 
-for b p1 p2 :: "program list" and x :: "'a::universe variable" and e :: "'a expression"
+(* for b p1 p2 :: "program list" and x :: "'a::universe variable" and e :: "'a expression"
 and e2 :: "'a distr expression" and e3 :: "'a vector expression" and e4 :: "('a,'a) bounded expression"
-and e5 :: "('a,'b::universe) measurement expression" and Q :: "'a variables" and R :: "'b variables"
+and e5 :: "('a,'b::universe) measurement expression" and Q :: "'a variables" and R :: "'b variables" *)
 
-axiomatization qrhl :: "predicate expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> predicate expression \<Rightarrow> bool"
+consts qrhl :: "predicate expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> predicate expression \<Rightarrow> bool"
 
 typedecl program_state
 
 (* TODO remove *)
-axiomatization probability_old :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
+consts probability_old :: "string \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 syntax "_probability_old" :: "ident \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("PrOld[_:(_'(_'))]")
 parse_translation \<open>[("_probability_old", fn ctx => fn [Const(v,_),p,rho] =>
   \<^const>\<open>probability_old\<close> $ HOLogic.mk_string v $ p $ rho)]\<close>
@@ -49,7 +57,7 @@ parse_translation \<open>[("_probability_old", fn ctx => fn [Const(v,_),p,rho] =
 print_translation \<open>[(\<^const_syntax>\<open>probability_old\<close>, fn ctx => fn [str,p,rho] =>
   Const(\<^syntax_const>\<open>_probability_old\<close>,dummyT) $ Const(QRHL.dest_string_syntax str,dummyT) $ p $ rho)]\<close>
 
-axiomatization probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
+consts probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 
 
 lemma subst_expression_unit_aux: \<comment> \<open>Helper for ML function subst_expression_conv\<close>

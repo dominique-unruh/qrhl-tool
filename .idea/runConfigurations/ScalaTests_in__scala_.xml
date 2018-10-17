@@ -38,8 +38,8 @@
     <buffered bufClass="qrhl.toplevel.ParserTest" />
     <buffered bufClass="qrhl.toplevel.ToplevelTest" />
     <buffered bufClass="qrhl.toplevel.ToplevelTest" />
-    <method>
-      <option name="Make" enabled="false" />
+    <method v="2">
+      <option name="Make" enabled="true" />
     </method>
   </configuration>
 </component>

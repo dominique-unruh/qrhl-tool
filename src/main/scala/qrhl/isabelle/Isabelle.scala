@@ -326,12 +326,13 @@ object Isabelle {
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
   val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")
   val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_context")
+  val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_thm")
   val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt,Term),String]("print_term")
   val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
   val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String,Term,BigInt), BigInt]("add_assumption")
   val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
-  val simplifyTermOp: Operation[(Term, List[String], BigInt), Term] = Operation.implicitly[(Term,List[String],BigInt), Term]("simplify_term")
+  val simplifyTermOp: Operation[(Term, List[String], BigInt), (Term,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (Term,BigInt)]("simplify_term")
   val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
@@ -473,68 +474,56 @@ object Isabelle {
   private var _theContext : Context = _
   def theContext: Context = _theContext
 
+  object Thm {
+    val show_oracles_lines_op : Operation[BigInt, List[String]] = Operation.implicitly[BigInt,List[String]]("show_oracles_lines")
+  }
+
+  class Thm(val isabelle:Isabelle, val thmId: BigInt) {
+    def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId)
+    def show_oracles(): Unit = for (line <- show_oracles_lines()) println(line)
+
+    override protected def finalize(): Unit = {
+      logger.debug(s"Deleting theorem $thmId")
+      isabelle.invoke(deleteThmOp,thmId)
+      super.finalize()
+    }
+  }
+
   class Context private[Isabelle](val isabelle:Isabelle, val contextId: BigInt) {
     _theContext = this
 
     def checkType(term:Term) : ITyp = {
-//      val lit = ml.Expr.uncheckedLiteral[IContext => Term => ITyp]("QRHL.checkType")
-//      val mlExpr = lit(context.read)(term)
-//      runExpr(mlExpr)
       isabelle.invoke(checkTypeOp, (contextId,term))
     }
-
 
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting context $contextId")
       isabelle.invoke(deleteContextOp,contextId)
-//      isabelle.runExpr(context.delete, thyName)
       super.finalize()
     }
 
     def declareVariable(name: String, isabelleTyp: ITyp): Context = {
-//      val newICtxt = isabelle.declareVariableExpr(name, isabelleTyp)(context)
-//      new Context(isabelle,thyName,newICtxt)
-//      map(isabelle.declareVariableExpr(name, isabelleTyp))
       val id = isabelle.invoke(declareVariableOp, (contextId, name, isabelleTyp))
       new Context(isabelle,id)
     }
 
     def addAssumption(name: String, assumption: Term): Context = {
-//      val lit = ml.Expr.uncheckedLiteral[String => Term => IContext => IContext]("QRHL.addAssumption")
-//      map(lit(name)(implicitly)(assumption))
       val id = isabelle.invoke(addAssumptionOp, (name,assumption,contextId))
       new Context(isabelle,id)
     }
 
-//    @deprecated("use operations", "now")
-//    def map(expr:ml.Expr[IContext => IContext]): Context = {
-//      val newICtxt = isabelle.getRef(expr(Ref[IContext](contextId).read), thyName)
-//      new Context(isabelle,thyName,newICtxt.id)
-//    }
-
     def map(f:BigInt => BigInt) : Context =
       new Context(isabelle,f(contextId))
-
-//    @deprecated("use operations", "now")
-//    val context: Ref[IContext] = Ref[IContext](contextId)
-
-//    @deprecated("use operations", "now")
-//    def runExpr[A](expr:ml.Expr[A])(implicit codec:Codec[A]) : A = isabelle.runExpr(expr,thyName)
 
     def readTerm(str:String, typ:ITyp): Term = {
       isabelle.invoke(readTermOp, (contextId,str,typ))
     }
-//    def readTerm(str:String, typ:ITyp): Term = {
-//      val parsedTerm = runExpr(isabelle.parseTermExpr(Ref[IContext](contextId).read)(str))
-//      val constrainedTerm = parsedTerm.constrain(typ)
-//      runExpr(isabelle.checkTermExpr(Ref[IContext](contextId).read)(constrainedTerm))
-//    }
+
     def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTermOp,(contextId,term)))
     def readTyp(str:String) : ITyp = isabelle.invoke(readTypOp, (contextId,str))
     def readTypUnicode(str:String) : ITyp = readTyp(unicodeToSymbols(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))
-    def simplify(term: Term, facts:List[String]) : Term = isabelle.invoke(simplifyTermOp, (term,facts,contextId))
-//    @deprecated("use operations","now")
-//    def contextExpr: Expr[IContext] = context.read
+    def simplify(term: Term, facts:List[String]) : (Term,Thm) =
+      isabelle.invoke(simplifyTermOp, (term,facts,contextId)) match {case (t,thmId) => (t,new Thm(isabelle,thmId))}
   }
 }
