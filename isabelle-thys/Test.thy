@@ -2,8 +2,8 @@ theory Test
   imports 
  (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools"  *)
 (* Cert_Codegen *)
-QRHL.QRHL
-Hashed_Terms
+QRHL.QRHL QRHL.QRHL_Operations
+Hashed_Terms Extended_Sorry
      (* QRHL.QRHL_Core  Multi_Transfer  *)
 (* QRHL.Prog_Variables *)
 (*   keywords
@@ -510,71 +510,28 @@ lemma "stuff1.all = stuff2.all"
  *)
 
 
-ML \<open>
-type sorry_location = { position : Position.T, comment : string }
-val sorry_table = Synchronized.var "sorry" (Inttab.empty : sorry_location Inttab.table)
-\<close>
 
-definition sorry_marker :: "int \<Rightarrow> prop \<Rightarrow> prop" where "sorry_marker n P == P"
+
 
 ML \<open>
-Proofterm.proofs := 1
-\<close>
-
-
-oracle sorry_marker_oracle = \<open>fn (ctxt, (loc:sorry_location), t) => let
-  val ser = serial ()
-  val _ = Synchronized.change sorry_table (Inttab.update (ser, loc))
-  val t' = \<^const>\<open>sorry_marker\<close> $ HOLogic.mk_number \<^typ>\<open>int\<close> ser $ t
-  val ct = Thm.cterm_of ctxt t'
-  in
-    ct
-  end
-\<close>
-
-ML \<open>
-fun marked_sorry ctxt loc t = 
+(* fun marked_sorry ctxt loc t = 
   sorry_marker_oracle (ctxt,loc,t) |> Conv.fconv_rule (Conv.rewr_conv @{thm sorry_marker_def});;
-(* val thm1 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
+ *)(* val thm1 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
 val thm2 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
 val thm = Thm.transitive thm1 thm2 *)
 \<close>
 
 
 ML \<open>
-fun marked_sorry_tac ctxt loc = SUBGOAL (fn (goal,i) => let
+(* fun marked_sorry_tac ctxt loc = SUBGOAL (fn (goal,i) => let
   val thm = marked_sorry ctxt loc goal
   in
     solve_tac ctxt [thm] i
   end
 ) 
-\<close>
+ *)\<close>
 
 
-ML \<open>
-fun show_oracles thm = let
-  val known_oracles = thm |> Thm.theory_of_thm |> Proof_Context.init_global
-                          |> Thm.extern_oracles false |> map (fn (m as (_,props),name) => 
-                              (Properties.get props "name" |> the,
-                               Markup.markup m name))
-                          |> Symtab.make
-  val oracles = thm |> Thm.proof_body_of |> Proofterm.all_oracles_of
-  fun show ("Test.sorry_marker_oracle",t) = let
-        val ser = case t of \<^const>\<open>sorry_marker\<close> $ n $ _ => HOLogic.dest_number n |> snd
-                          | t => raise (TERM ("show_oracles", [t]))
-        val loc = Inttab.lookup (Synchronized.value sorry_table) ser |> the
-        val pos = #position loc
-        val comment = #comment loc
-      in "\n  cheat method: " ^ comment ^ Position.here pos  end
-    | show (name,_) = "\n  " ^ (Symtab.lookup known_oracles name |> the)
-  in
-    "Oracles used in theorem:" :: (map show oracles) |> Output.writelns
-  end
-\<close>
-
-
-method_setup cheat = \<open>Scan.lift (Parse.position Parse.text) >> (fn (txt,pos) => fn _ => CONTEXT_METHOD (fn _ => fn (ctxt, st) =>
-    Method.CONTEXT ctxt (marked_sorry_tac ctxt {position=pos, comment=txt} 1 st)))\<close>
 
 declare[[smt_oracle=true]]
 
@@ -584,7 +541,7 @@ lemma theo: "1=1"
   by smt
 
 ML \<open>
-val _ = show_oracles @{thm theo}
+Extended_Sorry.show_oracles_lines @{thm theo}
 \<close>
 
 
@@ -641,7 +598,7 @@ lift_definition eval_variable :: "'a::universe variable \<Rightarrow> mem2 \<Rig
   is "\<lambda>v m. Hilbert_Choice.inv embedding (m v)" .
 print_theorems
 
-axiomatization eval_variables :: "'a variables \<Rightarrow> mem2 \<Rightarrow> 'a"
+consts eval_variables :: "'a variables \<Rightarrow> mem2 \<Rightarrow> 'a"
 
 lemma eval_variables_unit: "eval_variables \<lbrakk>\<rbrakk> m = ()" sorry
 lemma eval_variables_singleton: "eval_variables \<lbrakk>q\<rbrakk> m = eval_variable q m" sorry
@@ -654,8 +611,9 @@ definition "less_expression e f \<longleftrightarrow> expression_eval e \<le> ex
 instance by intro_classes                   
 end
 
-axiomatization where expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
+(* lemma expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
   for X :: "'x variables" and e :: "'x \<Rightarrow> 'e" and m :: mem2
+ *)
 
 instantiation expression :: (preorder) preorder begin
 instance apply intro_classes
@@ -754,12 +712,12 @@ end
 
 declare_variable_type G :: "{power,ab_semigroup_mult,inverse}"
 
-axiomatization G::"G cyclic_group" and g::G
+consts G::"G cyclic_group" and g::G
 
 (* term "(^^)" *)
-axiomatization powG :: "G \<Rightarrow> int \<Rightarrow> G" (infixr "\<^sup>^" 80)
+consts powG :: "G \<Rightarrow> int \<Rightarrow> G" (infixr "\<^sup>^" 80)
 (* locale group_G = cyclic_group G  *)
-(* axiomatization where group_G: group_G *)
+(* lemma group_G: group_G *)
 (* abbreviation "g == generator G" *)
 
 thm cyclic_group.carrier_conv_generator

@@ -20,7 +20,7 @@ val tests =
       then SOME (substring (f, 0, String.size f - 4)) else NONE)
 
 val examples = \<^theory> |> Resources.master_directory |> (fn p => Path.append p (Path.explode "../../../examples")) |> File.read_dir
-  |> map_filter (fn f => if String.isSuffix ".thy" f
+  |> map_filter (fn f => if String.isSuffix ".thy" f andalso f <> "TestEx.thy"
       then SOME (substring (f, 0, String.size f - 4)) else NONE)
 
 val theories = \<^theory> |> Context.parents_of |> map Context.theory_name

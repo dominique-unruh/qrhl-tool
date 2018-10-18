@@ -8,6 +8,7 @@ import info.hupel.isabelle.pure.{App, Const, Term, Typ => ITyp}
 import info.hupel.isabelle.pure
 import org.log4s
 import qrhl.isabelle.Isabelle
+import qrhl.isabelle.Isabelle.Thm
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext}
 
@@ -40,6 +41,13 @@ sealed trait Subgoal {
 }
 
 object Subgoal {
+  def printOracles(thms : Thm*): Unit = {
+    println()
+    for (thm <- thms)
+      thm.show_oracles()
+    println()
+  }
+
   def apply(context: Isabelle.Context, e : Expression) : Subgoal = {
     val assms = new ListBuffer[Expression]()
     var t = e.isabelleTerm
@@ -130,9 +138,12 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
 
   override def simplify(isabelle: Isabelle.Context, facts: List[String]): QRHLSubgoal = {
 //    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptions for simplification")
-    val assms2: List[Expression] =
-      assumptions.map(_.simplify(isabelle,facts)).filter(_.isabelleTerm!=HOLogic.True)
-    QRHLSubgoal(left, right, pre.simplify(isabelle,facts), post.simplify(isabelle,facts), assms2)
+    val (assms2,thms) = assumptions.map(_.simplify(isabelle,facts)).unzip
+    val assms3: List[Expression] = assms2.filter(_.isabelleTerm!=HOLogic.True)
+    val (pre2,thm2) = pre.simplify(isabelle,facts)
+    val (post2,thm3) = post.simplify(isabelle,facts)
+    Subgoal.printOracles(thm2::thm3::thms : _*)
+    QRHLSubgoal(left, right, pre2, post2, assms2)
   }
 }
 
@@ -158,8 +169,11 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
     * Should always succeed, unless there are bugs somewhere. */
   override def checkWelltyped(context: Isabelle.Context): Unit = goal.checkWelltyped(context,HOLogic.boolT)
 
-  override def simplify(isabelle: Isabelle.Context, facts: List[String]): AmbientSubgoal =
-    AmbientSubgoal(goal.simplify(isabelle,facts))
+  override def simplify(isabelle: Isabelle.Context, facts: List[String]): AmbientSubgoal = {
+    val (term, thm) = goal.simplify(isabelle, facts)
+    Subgoal.printOracles(thm)
+    AmbientSubgoal(term)
+  }
 }
 
 trait Tactic {

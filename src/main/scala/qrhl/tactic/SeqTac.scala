@@ -39,6 +39,6 @@ case class SeqTac(left:Int, right:Int, inner:Expression)
 }
 
 object SeqTac {
-  val seqTacOp: Operation[((BigInt, BigInt, Term), Term, BigInt), Option[List[Term]]] =
-    Operation.implicitly[((BigInt,BigInt,Term),Term,BigInt), Option[List[Term]]]("seq_tac")
+  val seqTacOp: Operation[((BigInt, BigInt, Term), Term, BigInt), Option[(List[Term],BigInt)]] =
+    Operation.implicitly[((BigInt,BigInt,Term),Term,BigInt), Option[(List[Term],BigInt)]]("seq_tac")
 }

@@ -1,6 +1,7 @@
 theory Complex_L2
   imports "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum"
     Complex_Inner_Product Infinite_Set_Sum_Missing Complex_Main Universe_Instances_Complex_Main
+    Extended_Sorry
 begin
 
 hide_const (open) span
@@ -612,10 +613,12 @@ lemma is_subspace_INF[simp]: "(\<And>x. x \<in> AA \<Longrightarrow> is_subspace
 
 
 
-axiomatization (* is_subspace :: "'a vector set \<Rightarrow> bool" *)
-  where is_subspace_orthog[simp]: "is_subspace A \<Longrightarrow> is_subspace {\<psi>. (\<forall>\<phi>\<in>A. is_orthogonal \<psi> \<phi>)}"
-    and is_subspace_plus: "is_subspace A \<Longrightarrow> is_subspace B \<Longrightarrow> is_subspace {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}" (* Proof above has only one missing step *)
+lemma is_subspace_orthog[simp]: "is_subspace A \<Longrightarrow> is_subspace {\<psi>. (\<forall>\<phi>\<in>A. is_orthogonal \<psi> \<phi>)}"
+  by (cheat TODO6)
+
+lemma is_subspace_plus: "is_subspace A \<Longrightarrow> is_subspace B \<Longrightarrow> is_subspace {\<psi>+\<phi>| \<psi> \<phi>. \<psi>\<in>A \<and> \<phi>\<in>B}" (* Proof above has only one missing step *)
   for A B :: "'a vector set"
+  by (cheat TODO6)
 
 typedef 'a subspace = "{A::'a vector set. is_subspace A}"
   morphisms subspace_to_set Abs_subspace
@@ -801,8 +804,9 @@ adhoc_overloading span (* spanState *) spanVector *)
 (* lemma span_vector_state: "spanState A = spanVector (state_to_vector ` A)"
   by (simp add: spanState_def spanVector_def)  *)
 
-axiomatization where span_mult[simp]: "(a::complex)\<noteq>0 \<Longrightarrow> span { timesScalarVec a \<psi> } = span {\<psi>}"
+lemma span_mult[simp]: "(a::complex)\<noteq>0 \<Longrightarrow> span { timesScalarVec a \<psi> } = span {\<psi>}"
   for \<psi>::"'a vector"
+  by (cheat TODO6)
 
 lemma leq_INF[simp]:
   fixes V :: "'a \<Rightarrow> 'b subspace"
@@ -818,9 +822,9 @@ lift_definition ortho :: "'a subspace \<Rightarrow> 'a subspace" is (* Orthogona
   "\<lambda>S. {x::'a vector. \<forall>y\<in>S. is_orthogonal x y}" 
   by (fact is_subspace_orthog)
 
-axiomatization
-  where ortho_twice[simp]: "ortho (ortho x) = x"
+lemma ortho_twice[simp]: "ortho (ortho x) = x"
   for x :: "'a subspace"
+  by (cheat TODO6)
 
 lemma ortho_leq[simp]: "ortho a \<le> ortho b \<longleftrightarrow> a \<ge> b"
 proof 

@@ -6,8 +6,8 @@ import org.log4s
 
 
 object JointMeasureTacTmp {
-  val op: Operation[(Unit, Term, BigInt), Option[List[Term]]] =
-    Operation.implicitly[(Unit, pure.Term, BigInt), Option[List[pure.Term]]]("joint_measure_simple_tac")
+  val op: Operation[(Unit, Term, BigInt), Option[(List[Term],BigInt)]] =
+    Operation.implicitly[(Unit, pure.Term, BigInt), Option[(List[pure.Term],BigInt)]]("joint_measure_simple_tac")
 }
 
 case object JointMeasureTac extends IsabelleTac(JointMeasureTacTmp.op, { _ => () }) {

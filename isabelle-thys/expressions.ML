@@ -153,7 +153,7 @@ fun clean_expression_conv ctxt =
 val map_expression_conv = 
   Conv.rewrs_conv @{thms 
     map_expression[THEN eq_reflection]
-    map_expression'_def[THEN eq_reflection]
+    map_expression'[THEN eq_reflection]
     map_expression2'[THEN eq_reflection]
     map_expression2[THEN eq_reflection]
     map_expression3[THEN eq_reflection]

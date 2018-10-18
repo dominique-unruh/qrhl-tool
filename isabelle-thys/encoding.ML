@@ -23,7 +23,7 @@ fun read_predicate ctx str =
 fun map_expression_subterm_conv ctxt = 
   Raw_Simplifier.rewrite ctxt false @{thms 
     map_expression[THEN eq_reflection]
-    map_expression'_def[THEN eq_reflection]
+    map_expression'[THEN eq_reflection]
     map_expression2'[THEN eq_reflection]
     map_expression2[THEN eq_reflection]
     map_expression3[THEN eq_reflection]

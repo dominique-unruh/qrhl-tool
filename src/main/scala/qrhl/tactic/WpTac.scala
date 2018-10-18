@@ -109,8 +109,8 @@ case class WpTacOld(override val left:Boolean) extends WpStyleTac(left) {
 }
 
 object WpTac {
-  val wpTacOp: Operation[(Boolean, Term, BigInt), Option[List[Term]]] =
-    Operation.implicitly[(Boolean,Term,BigInt), Option[List[Term]]]("wp_tac")
+  val wpTacOp: Operation[(Boolean, Term, BigInt), Option[(List[Term],BigInt)]] =
+    Operation.implicitly[(Boolean,Term,BigInt), Option[(List[Term],BigInt)]]("wp_tac")
 
   val sampleWpOp: Operation[((String, ITyp), (Term, Term)), Term] =
     Operation.implicitly[((String,ITyp), (Term, Term)), Term]("sampleWp")
