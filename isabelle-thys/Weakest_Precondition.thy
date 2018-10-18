@@ -69,8 +69,8 @@ lemma wp1_measure:
   defines "e\<^sub>1 \<equiv> index_expression True e"
   defines "B' z \<equiv> subst_expression (substitute1 (index_var True x) (const_expression z)) B"
   defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars True Q)) \<cdot> top"
-  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>1 B'. Cla[mtotal e\<^sub>1] \<sqinter> 
-           (INF z. ((B' z \<sqinter> ebar e\<^sub>1 z) + ortho (ebar e\<^sub>1 z)))) e\<^sub>1 B'"
+  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
+           (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
   shows "qrhl A [measurement x Q e] [] B"
   sorry
 
@@ -79,8 +79,8 @@ lemma wp2_measure:
   defines "e\<^sub>2 \<equiv> index_expression False e"
   defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
   defines "\<And>e\<^sub>2 z. ebar e\<^sub>2 z \<equiv> ((mproj e\<^sub>2 z)\<guillemotright>(index_vars False Q)) \<cdot> top"
-  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>2 B'. Cla[mtotal e\<^sub>2] \<sqinter> 
-           (INF z. ((B' z \<sqinter> ebar e\<^sub>2 z) + ortho (ebar e\<^sub>2 z)))) e\<^sub>2 B'"
+  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>2 B'. let M = e\<^sub>2 in Cla[mtotal M] \<sqinter> 
+           (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>2 B'"
   shows "qrhl A [] [measurement x Q e] B"
   sorry
 
@@ -288,7 +288,7 @@ ML \<open>
 fun cleanup_expression_function ctxt Q f = let
   val vs = Prog_Variables.parse_varlist Q
   val (f',cert') = Cert_Codegen.mk_tupled_lambda ctxt vs f
-  fun cert () = (infer_instantiate ctxt [(("Q",0),Q |> Thm.cterm_of ctxt)] @{thm cleanup_expression_functionI}) OF [cert' () |> \<^print>]
+  fun cert () = (infer_instantiate ctxt [(("Q",0),Q |> Thm.cterm_of ctxt)] @{thm cleanup_expression_functionI}) OF [cert' ()]
   in
     (f',cert)
   end;;
@@ -541,7 +541,7 @@ lemma wp1_measure_func:
   assumes "map_expression2' (\<lambda>e\<^sub>1 B'. let meas=e\<^sub>1 in Cla[mtotal meas] \<sqinter> 
            (INF z. ((B' z \<sqinter> (((mproj meas z)\<guillemotright>Q\<^sub>1) \<cdot> top)) + ortho (((mproj meas z)\<guillemotright>Q\<^sub>1) \<cdot> top)))) e\<^sub>1 B' = A"
   shows "qrhl A c d B"
-  unfolding assms(1,2) assms(3,4,5,6,7)[symmetric] Let_def by (rule wp1_measure)
+  unfolding assms(1,2) assms(3,4,5,6,7)[symmetric] Let_def by (rule wp1_measure[unfolded Let_def])
 
 lemma wp2_measure_func:
   fixes A B x Q e
@@ -553,7 +553,7 @@ lemma wp2_measure_func:
   assumes "map_expression2' (\<lambda>e\<^sub>1 B'. let meas=e\<^sub>1 in Cla[mtotal meas] \<sqinter> 
            (INF z. ((B' z \<sqinter> (((mproj meas z)\<guillemotright>Q\<^sub>1) \<cdot> top)) + ortho (((mproj meas z)\<guillemotright>Q\<^sub>1) \<cdot> top)))) e\<^sub>1 B' = A"
   shows "qrhl A c d B"
-  unfolding assms(1,2) assms(3,4,5,6,7)[symmetric] Let_def by (rule wp2_measure)
+  unfolding assms(1,2) assms(3,4,5,6,7)[symmetric] Let_def by (rule wp2_measure[unfolded Let_def])
 
 
 lemma wp1_qinit_func:

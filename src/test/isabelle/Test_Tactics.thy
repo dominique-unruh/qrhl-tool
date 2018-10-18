@@ -21,6 +21,7 @@ test_get_wp \<^context> true
             \<^term>\<open>const_expression ((\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> (\<CC>\<ll>\<aa>[True] + top))\<close> (* expected *)
 \<close>
 
+declare[[show_types,show_sorts,show_consts,eta_contract=false]]
 
 (* TEST CASE: get_wp of "measure a A computational_basis" *)
 variables classical a :: bit and quantum A :: bit begin
@@ -28,9 +29,8 @@ ML \<open>
 test_get_wp \<^context> true 
             \<^term>\<open>measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
             \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
-            \<^term>\<open>const_expression (\<CC>\<ll>\<aa>[mtotal (computational_basis::(bit,_)measurement) ] \<sqinter>
-                  (INF z. top \<sqinter> (mproj computational_basis z\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> top) +
-                      ortho (mproj computational_basis z\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> top)))\<close> (* expected *)
+            \<^term>\<open>const_expression (\<CC>\<ll>\<aa>[mtotal (computational_basis :: (bit,_) measurement)] \<sqinter> 
+              (INF z. let e = mproj computational_basis z\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> top in top \<sqinter> e + ortho e))\<close> (* expected *)
 \<close>
 end
 

@@ -7,7 +7,9 @@ fun string_of_term_gl t = Syntax.string_of_term_global (Context.the_global_conte
 
 fun assert_aconv expected y =
   if expected aconv y then () else
-  error ("Expected: "^ string_of_term_gl expected^"\nGot:      "^ string_of_term_gl y)
+  if Envir.beta_norm expected aconv Envir.beta_norm y then
+    error ("Expected: "^ string_of_term_gl expected^"\nGot:      the same up to beta equivalence")
+  else error ("Expected: "^ string_of_term_gl expected^"\nGot:      "^ string_of_term_gl y)
 
 fun assert_aconv_cterm x y = assert_aconv (Thm.term_of x) (Thm.term_of y)
 

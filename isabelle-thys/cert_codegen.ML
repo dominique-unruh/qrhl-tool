@@ -154,7 +154,7 @@ type conf = {
 val interactive = OS.Process.getEnv "ISABELLE_ML_DEBUGGER" = NONE
 
 fun empty_conf current = 
-    {tracing = interactive,
+    {tracing = false (* TODO interactive *),
      current=current,
      current_assm = @{prop "dummyterm"}} : conf
 fun update_conf_current_assm ({tracing,current,...}:conf) current_assm = 
