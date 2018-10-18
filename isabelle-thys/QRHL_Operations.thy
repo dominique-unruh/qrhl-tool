@@ -1,5 +1,5 @@
 theory QRHL_Operations
-  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics Hashed_Terms
+  imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics Hashed_Terms Joint_Measure
 begin
 
 ML {*
@@ -206,6 +206,15 @@ operation_setup wp_tac = {*
   {from_lib = Codec.triple Codec.bool Codec.term Codec.int,
    to_lib = Codec.option (Codec.list Codec.term),
    action = fn (left,goal,ctx_id) => Tactics.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal}
+*}
+
+operation_setup joint_measure_simple_tac = {*
+  {from_lib = Codec.triple Codec.unit Codec.term Codec.int,
+   to_lib = Codec.option (Codec.list Codec.term),
+   action = fn ((),goal,ctx_id) => 
+     let val ctxt = Refs.Ctxt.read ctx_id
+         val subgoals = Tactics.tac_on_term_concl (Joint_Measure.joint_measure_simple_seq_tac ctxt 1) ctxt goal
+     in subgoals end}
 *}
 
 (* TODO remove *)

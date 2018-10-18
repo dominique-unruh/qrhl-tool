@@ -1,43 +1,18 @@
-isabelle Example.
+isabelle TestEx.
 
-classical var c : nat.
-classical var d : nat.
+classical var c : bit.
 quantum var q : bit.
 
-adversary A vars c calls ?.
+program M := {
+  c <- measure q with computational_basis;
+}.
 
-program P1 := { d <- 0; }.
-program P2 := { d <- 1; on q apply hadamard; }.
+adversary A vars c.
 
-qrhl {Cla[c1 = c2]} call A(P1); ~ call A(P2); {Cla[c1 = c2]}.
- equal.
-  simp!.
-
- inline P1.
- inline P2.
- wp right.
- wp left.
- wp right.
+qrhl {Cla[c1 = c2] ⊓ Qeq[q1=q2]} call M; ~ call M; {Cla[c1 = c2] ⊓ Qeq[q1=q2]}.
+ inline M.
+ debug:goal.
+ measure.
  skip.
- simp!.
-
- skip.
- simp!.
-
-qed.
-
-
-
-qrhl {Cla[c1 = c2 ∧ d1 * d2 = 0]} call A(P1); ~ call A(P1); {Cla[d1 * d2 = 0]}.
- equal exclude P1.
-  simp!.
-
- inline P1.
- wp left.
- wp right.
- skip.
- simp!.
-
- skip.
- simp.
+ simp ! aux.
 qed.

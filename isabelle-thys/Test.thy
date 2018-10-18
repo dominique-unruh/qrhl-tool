@@ -11,10 +11,122 @@ Hashed_Terms
  *)
 begin
 
+variables classical c :: bit and quantum q :: bit begin
 ML \<open>
-  ;;
-Hashed_Terms.hash_typ \<^typ>\<open>(int*'a) list\<close> 0
+local
+fun p t = (@{print} (Thm.cterm_of \<^context> t); t)
+val goal = @{term "qrhl (expression \<lbrakk>var_c1, var_c2\<rbrakk> (\<lambda>(c1, c2). \<CC>\<ll>\<aa>[c1 = c2] \<sqinter> \<lbrakk>q1\<rbrakk> \<equiv>\<qq> \<lbrakk>q2\<rbrakk>)) [measurement var_c \<lbrakk>q\<rbrakk> (const_expression computational_basis)] [measurement var_c \<lbrakk>q\<rbrakk> (const_expression computational_basis)] (expression \<lbrakk>var_c1, var_c2\<rbrakk> (\<lambda>(c1, c2). \<CC>\<ll>\<aa>[c1 = c2] \<sqinter> \<lbrakk>q1\<rbrakk> \<equiv>\<qq> \<lbrakk>q2\<rbrakk>))"}
+val ctxt = \<^context>
+val res = Tactics.tac_on_term_concl (Joint_Measure.joint_measure_simple_seq_tac ctxt 1) ctxt goal |> the |> the_single
+val B = res |> dest_comb |> snd |> p
+val res2 = Expressions.expression_to_term \<^context> B |> p
+in
+end
 \<close>
+lemma "qrhl (expression \<lbrakk>var_c1, var_c2\<rbrakk> (\<lambda>(c1, c2). \<CC>\<ll>\<aa>[c1 = c2] \<sqinter> \<lbrakk>q1\<rbrakk> \<equiv>\<qq> \<lbrakk>q2\<rbrakk>)) [measurement var_c \<lbrakk>q\<rbrakk> (const_expression computational_basis)] [measurement var_c \<lbrakk>q\<rbrakk> (const_expression computational_basis)] (expression \<lbrakk>var_c1, var_c2\<rbrakk> (\<lambda>(c1, c2). \<CC>\<ll>\<aa>[c1 = c2] \<sqinter> \<lbrakk>q1\<rbrakk> \<equiv>\<qq> \<lbrakk>q2\<rbrakk>))"
+  apply (tactic \<open>Joint_Measure.joint_measure_simple_seq_tac \<^context> 1\<close>)
+  oops
+end
+
+
+thm wp1_measure
+
+term map_expression3
+
+lemma index_expression_tac:
+  assumes "Q1 = index_vars left Q"
+  shows "(expression Q1 E) = index_expression left (expression Q E)"
+  using assms index_expression_def by metis
+
+lemma index_vars_unit_tac:
+  shows "variable_unit = index_vars left variable_unit"
+  using index_vars_unit by metis
+
+lemma index_vars_singleton_tac:
+  assumes "x1 = index_var left x"
+  shows "variable_singleton x1 = index_vars left (variable_singleton x)"
+  using assms index_vars_singleton by metis
+
+lemma index_vars_concat_tac:
+  assumes "Y1 = index_vars left Y"
+  assumes "Z1 = index_vars left Z"
+  shows "variable_concat Y1 Z1 = index_vars left (variable_concat Y Z)"
+  using assms index_vars_concat by metis
+
+lemma map_expression3'_tac:
+  shows "expression (variable_concat Q1 (variable_concat Q2 Q3)) (\<lambda>(x1,x2,x3). f (e1 x1) (e2 x2) (\<lambda>z. e3 z x3))
+   = map_expression3' f (expression Q1 e1) (expression Q2 e2) (\<lambda>z. expression Q3 (e3 z))"
+  using map_expression3' by metis
+
+ML \<open>
+fun print_conv ct = (\<^print> ct; Conv.all_conv ct)
+\<close>
+
+ML \<open>
+(* Subgoals of the form ?x = index_var True/False x *)
+fun index_var_tac ctxt = 
+  CONVERSION (Conv.arg_conv (Conv.arg_conv (Prog_Variables.index_var_conv ctxt)))
+  THEN'
+  SUBGOAL (fn (t,i) =>
+    case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>HOL.eq\<close>,_) $ _ $ Free _) => resolve_tac ctxt @{thms refl} i
+            | _ => raise TERM("index_var_tac",[t]))
+\<close>
+
+ML \<open>
+\<close>
+
+
+ML \<open>
+(* Subgoals of the form ?x = index_vars True/False vs
+   where vs is an explicit varterm *)
+fun index_vars_tac ctxt = SUBGOAL (fn (t,i) =>
+  case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ 
+        (Const(\<^const_name>\<open>HOL.eq\<close>,_) $ _ $ (Const(\<^const_name>\<open>index_vars\<close>,_) $ _ $ vars)) =>
+    (case vars of Const(\<^const_name>\<open>variable_unit\<close>, _) => 
+                    resolve_tac ctxt @{thms index_vars_unit_tac} i
+                | Const(\<^const_name>\<open>variable_singleton\<close>, _) $ _ => 
+                    resolve_tac ctxt @{thms index_vars_singleton_tac} i
+                    THEN index_var_tac ctxt i
+                | Const(\<^const_name>\<open>variable_concat\<close>, _) $ _ $ _ => 
+                    resolve_tac ctxt @{thms index_vars_concat_tac} i
+                    THEN index_vars_tac ctxt i THEN index_vars_tac ctxt i
+                | _ => raise TERM("index_vars_tac: not a varterm",[t,vars]))
+  | _ => raise TERM("index_vars_tac",[t]))
+\<close>
+
+ML \<open>
+(* Subgoals of the form ?x = index_expression True/False e
+   where e is an explicit expression *)
+fun index_expression_tac ctxt = 
+  resolve_tac ctxt @{thms index_expression_tac}
+  THEN' index_vars_tac ctxt
+\<close>
+
+ML \<open>
+fun print_tac_n ctxt msg = SUBGOAL (fn (t,i) =>
+ (tracing (msg ^ Position.here \<^here> ^ "\n" ^ Syntax.string_of_term ctxt t); all_tac))
+\<close>
+
+
+
+ML \<open>
+\<close>
+
+ML \<open>
+\<close>
+
+ML \<open>
+\<close>
+
+
+variables classical x :: "int*int" and classical y :: "int*int" and quantum q :: "int*int" and quantum r :: "int" and quantum s :: int begin
+schematic_goal 
+  shows "qrhl ?A [measurement var_x \<lbrakk>q\<rbrakk> Expr[computational_basis]]  [measurement var_y \<lbrakk>r,s\<rbrakk> Expr[computational_basis]] Expr[Cla[x1=y2]] \<and> undefined ?A"
+  apply rule
+  apply (tactic \<open>joint_measure_simple_tac \<^context> 1\<close>)
+
+
+  sorry (* TODO *)
 
 ML \<open>
 ;;
@@ -46,6 +158,11 @@ ML \<open>
 Cert_Codegen.list_last \<^context> \<^term>\<open>[1,2,3]\<close>
 |> (fn ((x,x'),y) => (Thm.cterm_of \<^context> x, Thm.cterm_of \<^context> x', y ()))
 \<close>
+
+(* ML \<open>
+val t = \<^term>\<open>\<CC>\<ll>\<aa>[uniform UNIV = uniform UNIV] \<sqinter> (\<Sqinter>z\<in>supp (uniform UNIV). (\<Sqinter>m12 m11. \<CC>\<ll>\<aa>[m11 \<noteq> m12] + (\<CC>\<ll>\<aa>[\<not> True] + \<top>) \<sqinter> \<CC>\<ll>\<aa>[enc (z, m11) = G z + m12 \<and> b1 = b2]) \<sqinter> \<CC>\<ll>\<aa>[m11 = m12 \<and> m21 = m22 \<and> cglobA1 = cglobA2] \<sqinter> \<lbrakk>qglobA1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2\<rbrakk>)\<close>
+val _ = Autogen_WP.wp \<^context> 
+\<close> *)
 
 
 

@@ -1,6 +1,5 @@
 package qrhl.tactic
 
-import jdk.vm.ci.meta.Assumptions.Assumption
 import qrhl._
 import qrhl.logic.{Block, Expression, Statement}
 

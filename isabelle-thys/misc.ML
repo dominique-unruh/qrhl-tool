@@ -55,9 +55,12 @@ fun repeat_until_conv' test conv ct =
   then_conv
   conditional_conv (test (SOME ct)) Conv.all_conv (repeat_until_conv' test conv)) ct
 
-
 fun repeat_until_conv test conv ct =
   if test NONE ct then Conv.all_conv ct else repeat_until_conv' test conv ct
   
+(* Solves a goal of the form "?x = a"
+   by applying conv to a and then instantiating ?x with the result *)
+fun schematic_conv_tac conv ctxt =
+  CONVERSION (Conv.arg_conv (Conv.arg_conv (conv ctxt))) THEN' solve_tac ctxt @{thms refl}
 
 end

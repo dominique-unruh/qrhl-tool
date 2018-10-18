@@ -140,7 +140,9 @@ mappings in Universal ++=
 mappings in Universal ++= {
   val base = baseDirectory.value
   val dirs = base / "isabelle-thys" +++ base / "examples"
-  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl")
+  val files = dirs ** (("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl") -- ("Test.thy" || "Scratch.thy" || "TestEx.thy" || "test.qrhl"))
+//  val excluded = Set("Test.thy", "TestEx.thy", "test.qrhl")
+//  val files2 = files.filter(f => excluded.contains(f.base))
   files pair relativeTo(base)
 }
 

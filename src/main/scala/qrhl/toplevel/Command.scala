@@ -102,3 +102,12 @@ case class QedCommand() extends Command {
   }
 }
 
+
+class DebugCommand private (action: State => State) extends Command {
+  override def act(state: State): State = action(state)
+}
+object DebugCommand {
+  def state(action: State => Unit): DebugCommand = new DebugCommand({ state => action(state); state})
+  def goals(action: (Isabelle.Context, List[Subgoal]) => Unit): DebugCommand =
+    new DebugCommand({state:State => action(state.isabelle, state.goal); state})
+}

@@ -1,7 +1,6 @@
 package qrhl.toplevel
 
 import info.hupel.isabelle.pure
-import jdk.jshell.spi.ExecutionControl
 import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
@@ -274,7 +273,6 @@ object Parser extends RegexParsers {
         EqualTac(ps)
     }
 
-
   def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
     literal("rnd") ~> (for (
       x <- identifier;
@@ -330,7 +328,8 @@ object Parser extends RegexParsers {
       literal("byqrhl") ^^ { _ => ByQRHLTac } |
       tactic_split |
       tactic_case |
-      tactic_fix
+      tactic_fix |
+      literal("measure") ^^ { _ => JointMeasureTac }
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 
@@ -338,6 +337,9 @@ object Parser extends RegexParsers {
 
 //  val quit: Parser[QuitCommand] = "quit" ^^ { _ => QuitCommand() }
 
+  val debug : Parser[DebugCommand] = "debug:" ~>
+    ("goal" ^^ { _ => DebugCommand.goals((context,goals) => for (g <- goals) println(g.toExpression(context))) })
+
   def command(implicit context:ParserContext): Parser[Command] =
-    (isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) | undo | qed).named("command")
+    (debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) | undo | qed).named("command")
 }

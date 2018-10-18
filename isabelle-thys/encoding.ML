@@ -19,14 +19,17 @@ fun read_predicate ctx str =
    If the involved variables, variable lists, and expressions are all explicit, this will
    remove all occurrences of map_expression and variants.
  *)
-fun map_expression_conv ctxt = 
+(* TODO remove? *)
+fun map_expression_subterm_conv ctxt = 
   Raw_Simplifier.rewrite ctxt false @{thms 
     map_expression[THEN eq_reflection]
     map_expression'_def[THEN eq_reflection]
     map_expression2'[THEN eq_reflection]
     map_expression2[THEN eq_reflection]
-    map_expression3[THEN eq_reflection]}
+    map_expression3[THEN eq_reflection]
+    map_expression3'[THEN eq_reflection]}
 
+(* TODO: remove (use subst_expression') *)
 fun subst_expression_conv_tac1 ctxt =
   resolve_tac ctxt @{thms subst_expression_concat_id_aux subst_expression_singleton_same_aux subst_expression_unit_aux} 1
   ORELSE

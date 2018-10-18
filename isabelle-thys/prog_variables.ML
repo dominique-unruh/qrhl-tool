@@ -225,6 +225,7 @@ end
    assuming x is declared via the variables-command or equivalent.
    (More specifically, it requires that simp rules "variable_name x/x1/x2 = ''...''" with 
    the correct names are declared.) *)
+(* TODO: use context data for the variable name theorem (instead of simplifier) *)
 fun index_var_conv ctxt ct =
   let val (lrname,x,T) = case Thm.term_of ct of
         Const(\<^const_name>\<open>index_var\<close>,_) $ Const(lrname,_) $ Free(x,T) => (lrname,x,T)
@@ -255,6 +256,10 @@ fun index_var_conv ctxt ct =
 (* Simproc that simplifies using index_var_conv, see there.  *)
 fun index_var_simproc _ ctxt ct = SOME (index_var_conv ctxt ct) handle CTERM _ => NONE
 
+(* Subgoals of the form "variable_name x ~= variable_name y"
+   where x,y are explicit variables *)
+(* TODO: something more specific than just simplifier? *)
+fun different_variable_names_tac ctxt = SOLVED' (simp_tac ctxt)
 
 
 end

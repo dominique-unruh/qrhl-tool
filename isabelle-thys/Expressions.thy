@@ -83,6 +83,14 @@ lemma map_expression3[simp]:
   unfolding map_expression3_def pair_expression_def apply simp
   apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
+consts map_expression3' ::
+ "('e1 \<Rightarrow> 'e2 \<Rightarrow> ('z \<Rightarrow> 'e3) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('e2 expression) \<Rightarrow> ('z \<Rightarrow> 'e3 expression) \<Rightarrow> 'f expression"
+
+lemma map_expression3'[simp]:
+  "map_expression3' f (expression Q1 e1) (expression Q2 e2) (\<lambda>z. expression Q3 (e3 z))
+     = expression (variable_concat Q1 (variable_concat Q2 Q3)) (\<lambda>(x1,x2,x3). f (e1 x1) (e2 x2) (\<lambda>z. e3 z x3))"
+  sorry
+
 
 axiomatization index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression" where
   index_expression_def[simp]: "index_expression left (expression Q e) = expression (index_vars left Q) e"
@@ -92,7 +100,42 @@ section \<open>Substitutions\<close>
 
 typedecl substitution
 axiomatization substitute1 :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> substitution"
+(* TODO remove *)
 axiomatization subst_expression :: "substitution \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
+
+consts subst_expression' :: "substitution list \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
+
+ 
+lemma subst_expression'_unit_tac:
+  shows "expression variable_unit E = subst_expression' s (expression variable_unit E)"
+  sorry
+
+lemma subst_expression'_singleton_same_tac:
+  shows "expression R (\<lambda>r. E (F r)) = subst_expression' (substitute1 x (expression R F) # s) (expression \<lbrakk>x\<rbrakk> E)"
+  sorry
+
+lemma subst_expression'_singleton_empty_tac:
+  shows "expression \<lbrakk>x\<rbrakk> E = subst_expression' [] (expression \<lbrakk>x\<rbrakk> E)"
+  sorry
+
+lemma subst_expression'_singleton_notsame_tac:
+  assumes "variable_name x \<noteq> variable_name y"
+  assumes "e = subst_expression' s (expression \<lbrakk>y\<rbrakk> E)"
+  shows "e = subst_expression' (substitute1 x f # s) (expression \<lbrakk>y\<rbrakk> E)"
+  sorry
+
+lemma subst_expression'_concat_id_tac:
+  assumes "expression Q1' e1 = subst_expression' s (expression Q1 (\<lambda>x. x))"
+  assumes "expression Q2' e2 = subst_expression' s (expression Q2 (\<lambda>x. x))"
+  shows "expression (variable_concat Q1' Q2') (\<lambda>(x1,x2). (e1 x1, e2 x2)) = subst_expression' s (expression (variable_concat Q1 Q2) (\<lambda>x. x))"
+  sorry
+
+lemma subst_expression'_id_comp_tac:
+  assumes "expression Q' g = subst_expression' s (expression Q (\<lambda>x. x))"
+  shows "expression Q' (\<lambda>x. E (g x)) = subst_expression' s (expression Q E)"
+  sorry
+
+
 
 section \<open>ML code\<close>
 

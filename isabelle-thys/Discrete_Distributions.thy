@@ -181,18 +181,18 @@ lemma map_distr_id[simp]: "map_distr (\<lambda>x. x) \<mu> = \<mu>"
   by (transfer, auto)
 
 lemma map_distr_uniform[simp]: 
-  fixes f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c" 
-  assumes "bij_betw f A B"
+  fixes f::"'a\<Rightarrow>'b" 
+  assumes bij: "bij_betw f A B"
   shows "map_distr f (uniform A) = uniform B"
-proof (cases "finite A", insert assms, transfer fixing: A B, rule_tac ext)
-  fix f x
-  assume "finite A" and bij: "bij_betw f A B"
-  then have "finite B"
+proof (cases "finite A", transfer fixing: f A B, rule ext)
+  fix x
+  case True
+  with bij have "finite B"
     using bij_betw_finite by blast
-  (* from bij obtain y where y: "f -` {x} = {y}" by auto *)
   from bij have cardAB[simp]: "card A = card B"
     using bij_betw_same_card by blast
-  show "(\<Sum>\<^sub>am\<in>f -` {x}. if m \<in> A then 1 / real (card A) else 0) = (if x \<in> B then 1 / real (card B) else 0)" (is "?lhs = ?rhs")
+  show "(\<Sum>\<^sub>am\<in>f -` {x}. if m \<in> A then 1 / real (card A) else 0) = (if x \<in> B then 1 / real (card B) else 0)" 
+     (is "?lhs = ?rhs")
   proof (cases "x \<in> B")
     case True
     define R where "R = (f -` {x}) \<inter> -A"
