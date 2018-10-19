@@ -67,7 +67,7 @@ fun hash_and_store_term t = Multithreading.synchronized "hash_and_store_term" ha
 fun lookup_term h = case Inttab.lookup (!hashed_terms) h of SOME t => t | NONE => error ("lookup_term: "^string_of_int h)
 
 fun hterm_to_term (h,HOmitted) = lookup_term h
-
+  | hterm_to_term ht = error ("hterm_to_term: "^\<^make_string> ht)
 
 local
 open Codec

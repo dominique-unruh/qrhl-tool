@@ -1,5 +1,5 @@
 theory Expressions
-  imports Prog_Variables Misc_Missing Extended_Sorry
+  imports Prog_Variables Misc_Missing Extended_Sorry Multi_Transfer
 begin
 
 typedef 'a expression = "{(vs,f::_\<Rightarrow>'a). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)}"
@@ -10,7 +10,9 @@ lift_definition expression :: "'a::universe variables \<Rightarrow> ('a\<Rightar
   "\<lambda>(vs::'a variables) (f::'a\<Rightarrow>'b). (set (raw_variables vs), (f o eval_variables vs) :: mem2\<Rightarrow>'b)"
   using eval_variables_footprint by fastforce
 
+lifting_forget mem2.lifting
 lift_definition expression_eval :: "'b expression \<Rightarrow> mem2 \<Rightarrow> 'b" is "\<lambda>(vs,f) m. f m" .
+setup_lifting type_definition_mem2
 
 lemma expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
   unfolding expression_eval.rep_eq expression.rep_eq by auto
@@ -110,19 +112,32 @@ lemma map_expression3[simp]:
   unfolding map_expression3_def pair_expression apply simp
   apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
-consts map_expression3' ::
- "('e1 \<Rightarrow> 'e2 \<Rightarrow> ('z \<Rightarrow> 'e3) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('e2 expression) \<Rightarrow> ('z \<Rightarrow> 'e3 expression) \<Rightarrow> 'f expression"
+definition map_expression3' ::
+ "('e1 \<Rightarrow> 'e2 \<Rightarrow> ('z \<Rightarrow> 'e3) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('e2 expression) \<Rightarrow> ('z \<Rightarrow> 'e3 expression) \<Rightarrow> 'f expression" where
+  "map_expression3' f e1 e2 e3 = map_expression'
+           (\<lambda>x123. let x1 = fst (x123 undefined) in
+              let x2 = fst (snd (x123 undefined)) in
+              let x3 = \<lambda>z. snd (snd (x123 z)) in
+              f x1 x2 x3)
+         (\<lambda>z. (pair_expression e1 (pair_expression e2 (e3 z))))"
 
 lemma map_expression3'[simp]:
   "map_expression3' f (expression Q1 e1) (expression Q2 e2) (\<lambda>z. expression Q3 (e3 z))
      = expression (variable_concat Q1 (variable_concat Q2 Q3)) (\<lambda>(x1,x2,x3). f (e1 x1) (e2 x2) (\<lambda>z. e3 z x3))"
-  sorry
+  unfolding map_expression3'_def pair_expression map_expression'
+  apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
+lemma range_cases[case_names 1]: "x : range f \<Longrightarrow> (\<And>y. P (f y)) \<Longrightarrow> P x"
+  unfolding image_def by auto 
 
-consts index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression"
-lemma index_expression_def[simp]: "index_expression left (expression Q e) = expression (index_vars left Q) e"
-for Q :: "'b::universe variables" and e :: "'b \<Rightarrow> 'a"
-  by (cheat TODO8)
+lift_definition index_expression :: "bool \<Rightarrow> 'a expression \<Rightarrow> 'a expression" is
+  "\<lambda>left (vs,e). (index_var_raw left ` vs, \<lambda>m. e (unindex_mem2 left m))"
+  by auto
+
+lemma index_expression[simp]: "index_expression left (expression Q e) = expression (index_vars left Q) e"
+  for Q :: "'b::universe variables" and e :: "'b \<Rightarrow> 'a"
+  using [[transfer_del_const index_vars]]
+  apply transfer by auto
 
 section \<open>Substitutions\<close>
 

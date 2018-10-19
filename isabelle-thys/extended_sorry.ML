@@ -1,7 +1,8 @@
 structure Extended_Sorry =
 struct
 
-val _ = if !Proofterm.proofs < 1 then error "Need Proofterm.proofs >= 1 for Extended_Sorry.thy" else () 
+val _ = if !Proofterm.proofs < 1 then 
+  (Proofterm.proofs := 1; tracing "Need Proofterm.proofs >= 1 for Extended_Sorry.thy") else () 
 
 type sorry_location = { position : Position.T, comment : string }
 type sorry_entry = { position : Position.T, comment : string, context : Proof.context }

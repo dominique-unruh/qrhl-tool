@@ -245,7 +245,7 @@ lemma index_expression_func:
   assumes "index_vars left Q = Q1"
   assumes "expression Q1 E \<equiv> e'"
   shows "index_expression left e = e'"
-  using assms index_expression_def by metis
+  using assms index_expression by metis
 
 ML \<open>
 val index_expression_func_spec : Cert_Codegen.specfx = {name="index_expression_func", inputs=["left","e"], outputs=["e'"],

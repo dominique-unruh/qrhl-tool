@@ -1,5 +1,5 @@
 theory Prog_Variables
-  imports Universe Extended_Sorry
+  imports Universe Extended_Sorry Multi_Transfer
   keywords "variables" :: thy_decl_block
 begin
 
@@ -206,8 +206,9 @@ lemma distinct_qvarsL: "distinct_qvars (variable_concat Q R) \<Longrightarrow> d
 lemma distinct_qvarsR: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars R"
   unfolding distinct_qvars_def apply transfer by auto
 
-typedef mem2 = "{f. \<forall>v::variable_raw. f v \<in> snd (Rep_variable_raw v)}"
-  apply auto apply (rule choice) using Rep_variable_raw by auto
+typedef mem2 = "{f. \<forall>v::variable_raw. f v \<in> variable_raw_domain v}"
+  apply auto apply (rule choice) apply transfer by auto
+setup_lifting type_definition_mem2
 
 fun eval_vtree :: "variable_raw Prog_Variables.vtree \<Rightarrow> mem2 \<Rightarrow> universe Prog_Variables.vtree" where
   "eval_vtree VTree_Unit m = VTree_Unit"
@@ -253,15 +254,40 @@ lemma eval_variables_unit[simp]: "eval_variables \<lbrakk>\<rbrakk> m = ()"
 
 section \<open>Indexed variables\<close>
 
+lift_definition index_var_raw  :: "bool \<Rightarrow> variable_raw \<Rightarrow> variable_raw" is
+  "\<lambda>left (n,dom). (n @ (if left then ''1'' else ''2''), dom)"
+  by auto
 
-consts index_var :: "bool \<Rightarrow> 'a::universe variable \<Rightarrow> 'a::universe variable"
+lemma index_var_raw_inject: "index_var_raw left x = index_var_raw left y \<Longrightarrow> x = y"
+  apply transfer by auto
+
+lemma variable_raw_domain_index_var_raw[simp]: "variable_raw_domain (index_var_raw left v) = variable_raw_domain v"
+  apply transfer by auto
+
+lemma variable_raw_name_index_var_left[simp]: "variable_raw_name (index_var_raw True v) = variable_raw_name v @ ''1''"
+  apply transfer by auto
+lemma variable_raw_name_index_var_right[simp]: "variable_raw_name (index_var_raw False v) = variable_raw_name v @ ''2''"
+  apply transfer by auto
+
+lemma variable_eqI: "variable_name x = variable_name y \<Longrightarrow> x = y"
+  apply transfer apply transfer by auto
+
+lift_definition index_var :: "bool \<Rightarrow> 'a::universe variable \<Rightarrow> 'a::universe variable" is index_var_raw
+  by simp
+
 lemma index_var1: "y = index_var True x \<longleftrightarrow> variable_name y = variable_name x @ ''1''"
-  by (cheat TODO9)
+  apply (rule iffI)
+   apply (transfer, simp)
+  by (rule variable_eqI, transfer, simp)
+
 lemma index_var2: "y = index_var False x \<longleftrightarrow> variable_name y = variable_name x @ ''2''"
-  by (cheat TODO9)
+  apply (rule iffI)
+   apply (transfer, simp)
+  by (rule variable_eqI, transfer, simp)
 
 lemma index_var1I: "variable_name y = variable_name x @ ''1'' \<Longrightarrow> index_var True x = y"
   using index_var1 by metis
+
 lemma index_var2I: "variable_name y = variable_name x @ ''2'' \<Longrightarrow> index_var False x = y"
   using index_var2 by metis
 
@@ -271,14 +297,58 @@ lemma index_var1_simp[simp]: "variable_name (index_var True x) = variable_name x
 lemma index_var2_simp[simp]: "variable_name (index_var False x) = variable_name x @ ''2''"
   using index_var2 by metis
 
-consts index_vars :: "bool \<Rightarrow> 'a::universe variables \<Rightarrow> 'a variables"
+lift_definition unindex_mem2 :: "bool \<Rightarrow> mem2 \<Rightarrow> mem2" is
+  "\<lambda>left (f::_\<Rightarrow>universe) v. f (index_var_raw left v)"
+  apply transfer by (auto; blast)
+
+lemma Rep_mem2_unindex_mem2[simp]: "Rep_mem2 (unindex_mem2 left m) v = Rep_mem2 m (index_var_raw left v)"
+  unfolding unindex_mem2.rep_eq by auto
+
+lemma eval_vtree_unindex_mem2[simp]: "eval_vtree vt (unindex_mem2 left m)
+        = eval_vtree (map_vtree (index_var_raw left) vt) m"
+  by (induction vt, auto)
+
+lift_definition index_mem2 :: "bool \<Rightarrow> mem2 \<Rightarrow> mem2" is
+  "\<lambda>left (f::_\<Rightarrow>universe) v. 
+    if v \<in> range (index_var_raw left) then f (inv (index_var_raw left) v) else f v"
+  by (auto, metis f_inv_into_f rangeI variable_raw_domain_index_var_raw)
+
+lemma Rep_mem2_index_mem2[simp]: "Rep_mem2 (index_mem2 left m) (index_var_raw left v) = Rep_mem2 m v"
+  apply transfer apply auto
+  by (metis f_inv_into_f index_var_raw_inject rangeI)
+
+lemma Rep_mem2_index_mem2_bad: "v \<notin> range (index_var_raw left) \<Longrightarrow> Rep_mem2 (index_mem2 left m) v = Rep_mem2 m v"
+  unfolding index_mem2.rep_eq by auto
+
+definition "index_vartree left = map_vtree (index_var_raw left)"
+
+lemma tree_domain_index_vartree[simp]: "tree_domain (index_vartree left vt) = tree_domain vt"
+  unfolding index_vartree_def by (induction vt, auto)
+
+lift_definition index_vars :: "bool \<Rightarrow> 'a::universe variables \<Rightarrow> 'a variables" is
+  "\<lambda>left (vt,e). (index_vartree left vt,e)" by auto
+
+lemma eval_variables_unindex_mem2[simp]: 
+  "eval_variables Q (unindex_mem2 left m) = eval_variables (index_vars left Q) m"
+  apply transfer apply auto
+  by (simp add: index_vartree_def)
+
+(* TODO move *)
+lemma flatten_tree_map_vtree: "flatten_tree (map_vtree f t) = map f (flatten_tree t)"
+  by (induction t, auto)
+
+lemma raw_variables_index_vars[simp]: "raw_variables (index_vars left vs) = map (index_var_raw left) (raw_variables vs)"
+  unfolding raw_variables.rep_eq index_vars.rep_eq case_prod_beta index_vartree_def 
+  by (simp add: flatten_tree_map_vtree)
+
 lemma index_vars_singleton[simp]: "index_vars left \<lbrakk>x\<rbrakk> = \<lbrakk>index_var left x\<rbrakk>"
-  by (cheat TODO9)
+  apply transfer unfolding index_vartree_def by auto
+
 lemma index_vars_concat[simp]: "index_vars left (variable_concat Q R) = variable_concat (index_vars left Q) (index_vars left R)"
-  by (cheat TODO9)
+  apply transfer unfolding index_vartree_def by auto
 lemma index_vars_unit[simp]: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
   for x :: "'a::universe variable" and Q :: "'b::universe variables" and R :: "'c::universe variables"
-  by (cheat TODO9)
+  apply transfer unfolding index_vartree_def by auto
 
 section \<open>ML code\<close>
 

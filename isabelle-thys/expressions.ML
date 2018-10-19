@@ -8,7 +8,7 @@ fun mk_expressionT T = Type(\<^type_name>\<open>expression\<close>, [T])
 *)
 fun index_conv ctxt =
   Raw_Simplifier.rewrite ctxt false @{thms 
-        index_expression_def[THEN eq_reflection]
+        index_expression[THEN eq_reflection]
         index_vars_concat[THEN eq_reflection]
         index_vars_singleton[THEN eq_reflection]
         index_vars_unit[THEN eq_reflection]}

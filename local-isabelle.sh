@@ -2,12 +2,15 @@
 
 # Runs a locally installed Isabelle
 
+set -x
+
+ISABELLE_DIR=/opt/Isabelle2018
 DIR="$(dirname "$(readlink -f "$BASH_SOURCE")")"
 
 if [ "$#" = 0 ]; then
-    FILES=("$DIR/isabelle-thys/Test.thy")
+    FILES=("$DIR/isabelle-thys/Test.thy" "$ISABELLE_DIR/src/Pure/ROOT.ML")
 else
     FILES=()
 fi
 
-/opt/Isabelle2018/bin/isabelle jedit -s -l QRHL-Examples-Prerequisites -d "$DIR" "$@" "$FILES" &
+"$ISABELLE_DIR"/bin/isabelle jedit -s -l QRHL-Examples-Prerequisites -d "$DIR" "$@" "${FILES[@]}" &
