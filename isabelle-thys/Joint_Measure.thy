@@ -11,7 +11,7 @@ lemma joint_measure_simple:
   defines "y\<^sub>2 \<equiv> index_var False y"
   defines "Q\<^sub>1 \<equiv> index_vars True Q"
   defines "R\<^sub>2 \<equiv> index_vars False R"
-  defines "B' z \<equiv> subst_expression' [substitute1 x\<^sub>1 (const_expression z),
+  defines "B' z \<equiv> subst_expression [substitute1 x\<^sub>1 (const_expression z),
                                      substitute1 y\<^sub>2 (const_expression z)] B"
   defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q\<^sub>1) \<cdot> top"
   defines "\<And>f\<^sub>2 z. fbar f\<^sub>2 z \<equiv> ((mproj f\<^sub>2 z)\<guillemotright>R\<^sub>2) \<cdot> top"
@@ -30,7 +30,7 @@ lemma joint_measure_simple_tac:
   assumes "y\<^sub>2 = index_var False y"
   assumes "Q\<^sub>1 = index_vars True Q"
   assumes "R\<^sub>2 = index_vars False R"
-  assumes "\<And>z. B' z = subst_expression' [substitute1 x\<^sub>1 (const_expression z),
+  assumes "\<And>z. B' z = subst_expression [substitute1 x\<^sub>1 (const_expression z),
                                          substitute1 y\<^sub>2 (const_expression z)] B"
   defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q\<^sub>1) \<cdot> top"
   defines "\<And>f\<^sub>2 z. fbar f\<^sub>2 z \<equiv> ((mproj f\<^sub>2 z)\<guillemotright>R\<^sub>2) \<cdot> top"
@@ -50,7 +50,7 @@ fun joint_measure_simple_tac ctxt =
   THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
   THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
   THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
-  THEN' Expressions.subst_expression'_tac ctxt
+  THEN' Expressions.subst_expression_tac ctxt
   THEN' Misc.schematic_conv_tac (K Expressions.map_expression_conv) ctxt
 
 fun joint_measure_simple_seq_tac ctxt i =

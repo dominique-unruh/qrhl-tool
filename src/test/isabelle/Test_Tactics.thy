@@ -29,8 +29,9 @@ ML \<open>
 test_get_wp \<^context> true 
             \<^term>\<open>measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
             \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
-            \<^term>\<open>const_expression (\<CC>\<ll>\<aa>[mtotal (computational_basis :: (bit,_) measurement)] \<sqinter> 
-              (INF z. let e = mproj computational_basis z\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> top in top \<sqinter> e + ortho e))\<close> (* expected *)
+            \<^term>\<open>const_expression
+                 (let M::(bit, bit) measurement = computational_basis
+                  in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (INF z::bit. let P::mem2 subspace = mproj M z\<guillemotright>\<lbrakk>A1::bit variable\<rbrakk> \<cdot> top in top \<sqinter> P + ortho P))\<close> (* expected *)
 \<close>
 end
 

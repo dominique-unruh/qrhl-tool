@@ -29,9 +29,9 @@ end
 variables classical x :: int begin
 ML \<open>
 local
-val ct = \<^cterm>\<open>subst_expression (substitute1 var_x1 (const_expression z))
+val ct = \<^cterm>\<open>subst_expression_old (substitute1 var_x1 (const_expression z))
                    (expression \<lbrakk>var_x1, var_x2\<rbrakk> (\<lambda>(x1::int, x2::int). (x1,x2)))\<close>
-val () = assert_aconv_conv (Encoding.subst_expression_conv \<^context>) ct 
+val () = assert_aconv_conv (Encoding.subst_expression_old_conv \<^context>) ct 
             \<^term>\<open>expression \<lbrakk>var_x2\<rbrakk> (%x. (z::int,x))\<close>
 in end
 \<close>

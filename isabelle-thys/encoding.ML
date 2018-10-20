@@ -30,19 +30,21 @@ fun map_expression_subterm_conv ctxt =
     map_expression3'[THEN eq_reflection]}
 
 (* TODO: remove (use subst_expression') *)
-fun subst_expression_conv_tac1 ctxt =
-  resolve_tac ctxt @{thms subst_expression_concat_id_aux subst_expression_singleton_same_aux subst_expression_unit_aux} 1
+fun subst_expression_old_conv_tac1 ctxt =
+  resolve_tac ctxt @{thms subst_expression_old_concat_id_aux subst_expression_old_singleton_same_aux subst_expression_old_unit_aux} 1
   ORELSE
-  CHANGED (resolve_tac ctxt @{thms subst_expression_id_comp_aux} 1)
+  CHANGED (resolve_tac ctxt @{thms subst_expression_old_id_comp_aux} 1)
   ORELSE 
-  (resolve_tac ctxt @{thms subst_expression_singleton_notsame_aux} 1
+  (resolve_tac ctxt @{thms subst_expression_old_singleton_notsame_aux} 1
         THEN Misc.SOLVE1 (simp_tac ctxt 1))
 
-fun subst_expression_conv_tac ctxt = REPEAT_DETERM (subst_expression_conv_tac1 ctxt)
+(* TODO remove *)
+fun subst_expression_old_conv_tac ctxt = REPEAT_DETERM (subst_expression_old_conv_tac1 ctxt)
 
+(* TODO remove *)
 fun subst_expression_conv_noclean_check (_:Proof.context) t = let
   val (sub,e) = case t of 
-    Const(\<^const_name>\<open>subst_expression\<close>,_) $ sub $ e => (sub,e)
+    Const(\<^const_name>\<open>subst_expression_old\<close>,_) $ sub $ e => (sub,e)
     | _ => raise TERM("not a subst_expression term",[t])
   val (x,_) = case sub of
     Const(\<^const_name>\<open>substitute1\<close>,_) $ x $ f => (x,f)
@@ -58,9 +60,10 @@ in
   ()
 end
 
-val subst_expression_conv_noclean = Misc.conv_from_tac subst_expression_conv_noclean_check subst_expression_conv_tac
+(* TODO remove *)
+val subst_expression_old_conv_noclean = Misc.conv_from_tac subst_expression_conv_noclean_check subst_expression_old_conv_tac
 
-fun subst_expression_conv ctxt = subst_expression_conv_noclean ctxt then_conv Conv.try_conv (Expressions.clean_expression_conv ctxt)
+fun subst_expression_old_conv ctxt = subst_expression_old_conv_noclean ctxt then_conv Conv.try_conv (Expressions.clean_expression_conv ctxt)
 
 fun is_explicit_expression (Const(\<^const_name>\<open>expression\<close>,_) $ Q $ _) =
   ((QRHL.parse_varterm Q; true) handle TERM _ => false)

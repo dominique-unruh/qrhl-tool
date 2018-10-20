@@ -60,26 +60,26 @@ print_translation \<open>[(\<^const_syntax>\<open>probability_old\<close>, fn ct
 consts probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
 
 
-lemma subst_expression_unit_aux: \<comment> \<open>Helper for ML function subst_expression_conv\<close>
-  "subst_expression (substitute1 x f) (expression \<lbrakk>\<rbrakk> e') \<equiv> (expression \<lbrakk>\<rbrakk> e')" sorry
+lemma subst_expression_old_unit_aux: \<comment> \<open>Helper for ML function subst_expression_conv\<close>
+  "subst_expression_old (substitute1 x f) (expression \<lbrakk>\<rbrakk> e') \<equiv> (expression \<lbrakk>\<rbrakk> e')" sorry
 
-lemma subst_expression_singleton_same_aux: \<comment> \<open>Helper for ML function subst_expression_conv\<close>
-  "subst_expression (substitute1 x (expression R f')) (expression \<lbrakk>x\<rbrakk> e') \<equiv> (expression R (\<lambda>r. e' (f' r)))" sorry
+lemma subst_expression_old_singleton_same_aux: \<comment> \<open>Helper for ML function subst_expression_old_conv\<close>
+  "subst_expression_old (substitute1 x (expression R f')) (expression \<lbrakk>x\<rbrakk> e') \<equiv> (expression R (\<lambda>r. e' (f' r)))" sorry
 
-lemma subst_expression_singleton_notsame_aux: \<comment> \<open>Helper for ML function subst_expression_conv\<close>
+lemma subst_expression_old_singleton_notsame_aux: \<comment> \<open>Helper for ML function subst_expression_old_conv\<close>
   assumes "variable_name x \<noteq> variable_name y"
-  shows "subst_expression (substitute1 x f) (expression \<lbrakk>y\<rbrakk> e') \<equiv> expression \<lbrakk>y\<rbrakk> e'" sorry
+  shows "subst_expression_old (substitute1 x f) (expression \<lbrakk>y\<rbrakk> e') \<equiv> expression \<lbrakk>y\<rbrakk> e'" sorry
 
-lemma subst_expression_concat_id_aux: \<comment> \<open>Helper for ML function subst_expression_conv\<close>
-  assumes "subst_expression (substitute1 x f) (expression Q1 (\<lambda>x. x)) \<equiv> expression Q1' e1"
-  assumes "subst_expression (substitute1 x f) (expression Q2 (\<lambda>x. x)) \<equiv> expression Q2' e2"
-  shows "subst_expression (substitute1 x f) (expression (variable_concat Q1 Q2) (\<lambda>x. x)) \<equiv>
+lemma subst_expression_old_concat_id_aux: \<comment> \<open>Helper for ML function subst_expression_old_conv\<close>
+  assumes "subst_expression_old (substitute1 x f) (expression Q1 (\<lambda>x. x)) \<equiv> expression Q1' e1"
+  assumes "subst_expression_old (substitute1 x f) (expression Q2 (\<lambda>x. x)) \<equiv> expression Q2' e2"
+  shows "subst_expression_old (substitute1 x f) (expression (variable_concat Q1 Q2) (\<lambda>x. x)) \<equiv>
     expression (variable_concat Q1' Q2') (\<lambda>(x1,x2). (e1 x1, e2 x2))"
   sorry
 
-lemma subst_expression_id_comp_aux: \<comment> \<open>Helper for ML function subst_expression_conv\<close>
-  assumes "subst_expression (substitute1 x f) (expression Q (\<lambda>x. x)) \<equiv> expression Q' g"
-  shows "subst_expression (substitute1 x f) (expression Q e) \<equiv> expression Q' (\<lambda>x. e (g x))"
+lemma subst_expression_old_id_comp_aux: \<comment> \<open>Helper for ML function subst_expression_old_conv\<close>
+  assumes "subst_expression_old (substitute1 x f) (expression Q (\<lambda>x. x)) \<equiv> expression Q' g"
+  shows "subst_expression_old (substitute1 x f) (expression Q e) \<equiv> expression Q' (\<lambda>x. e (g x))"
   sorry
 
 
@@ -94,11 +94,11 @@ hide_fact (open) expression_clean_assoc_aux
           expression_id_comp_aux
           index_var_conv1_aux
           index_var_conv2_aux
-          subst_expression_unit_aux
-          subst_expression_singleton_same_aux
-          subst_expression_singleton_notsame_aux
-          subst_expression_concat_id_aux
-          subst_expression_id_comp_aux
+          subst_expression_old_unit_aux
+          subst_expression_old_singleton_same_aux
+          subst_expression_old_singleton_notsame_aux
+          subst_expression_old_concat_id_aux
+          subst_expression_old_id_comp_aux
 
 (* TODO move *)
 simproc_setup index_var ("index_var lr v") = Prog_Variables.index_var_simproc

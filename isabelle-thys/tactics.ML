@@ -142,10 +142,10 @@ fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
         "\" for "^kind^" "^Syntax.string_of_term ctxt (if left then p1 else p2)) ctxt
   in case stmts of
     [Const(\<^const_name>\<open>assign\<close>,_) $ _ $ _] => 
-      resolve_tac ctxt (lr @{thms wp1_assign} @{thms wp2_assign}) n
+      resolve_tac ctxt (lr @{thms wp1_assign_old} @{thms wp2_assign_old}) n
       ORELSE error "assign-statement"
   | [Const(\<^const_name>\<open>sample\<close>,_) $ _ $ _] =>
-      resolve_tac ctxt (lr @{thms wp1_sample} @{thms wp2_sample}) n
+      resolve_tac ctxt (lr @{thms wp1_sample_old} @{thms wp2_sample_old}) n
       ORELSE error "sample-statement"
   | [Const(\<^const_name>\<open>block\<close>,_) $ _] => 
       resolve_tac ctxt (lr @{thms wp1_block} @{thms wp2_block}) n THEN wp_tac0 left ctxt n
@@ -162,7 +162,7 @@ fun wp_tac0 left ctxt = SUBGOAL_with_check ctxt (fn _ => ()) (fn (goal,n) => let
       THEN wp_tac0 left ctxt n
       ORELSE error "if-statement"
   | [Const(\<^const_name>\<open>measurement\<close>,_) $ _ $ _ $ _] => 
-      resolve_tac ctxt (lr @{thms wp1_measure} @{thms wp2_measure}) n
+      resolve_tac ctxt (lr @{thms wp1_measure_old} @{thms wp2_measure_old}) n
       ORELSE error "measurement-statement"
   | [] => 
       resolve_tac ctxt @{thms wp_skip} n
@@ -199,7 +199,7 @@ fun get_wp_not_cleaned left = get_wp_via_tac (fn ctxt => wp_tac0 left ctxt 1) le
 fun wp_cleanup_conv ctxt =
  (Expressions.index_conv ctxt (* TODO this should be done directly as in joint_measure_simple_tac *)
   then_conv
-  Conv.bottom_conv (fn ctxt => Conv.try_conv (Encoding.subst_expression_conv ctxt)) ctxt  (* TODO this should be done directly as in joint_measure_simple_tac *)
+  Conv.bottom_conv (fn ctxt => Conv.try_conv (Encoding.subst_expression_old_conv ctxt)) ctxt  (* TODO this should be done directly as in joint_measure_simple_tac *)
   then_conv
   Encoding.map_expression_subterm_conv ctxt (* TODO this should be done directly as in joint_measure_simple_tac *)
   then_conv

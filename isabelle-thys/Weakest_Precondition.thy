@@ -24,20 +24,43 @@ lemma wp_skip:
 
 lemma wp1_assign:
   fixes A B x e
-  defines "A \<equiv> subst_expression (substitute1 (index_var True x) (index_expression True e)) B"
+  defines "A \<equiv> subst_expression [substitute1 (index_var True x) (index_expression True e)] B"
+  shows "qrhl A [assign x e] [] B"
+  sorry
+
+(* TODO remove *)
+lemma wp1_assign_old:
+  fixes A B x e
+  defines "A \<equiv> subst_expression_old (substitute1 (index_var True x) (index_expression True e)) B"
   shows "qrhl A [assign x e] [] B"
   sorry
 
 lemma wp2_assign:
   fixes A B x e
-  defines "A \<equiv> subst_expression (substitute1 (index_var False x) (index_expression False e)) B"
+  defines "A \<equiv> subst_expression [substitute1 (index_var False x) (index_expression False e)] B"
+  shows "qrhl A [] [assign x e] B"
+  sorry
+
+(* TODO remove *)
+lemma wp2_assign_old:
+  fixes A B x e
+  defines "A \<equiv> subst_expression_old (substitute1 (index_var False x) (index_expression False e)) B"
   shows "qrhl A [] [assign x e] B"
   sorry
 
 lemma wp1_sample:
   fixes A B x e
   defines "e' \<equiv> index_expression True e"
-  defines "B' z \<equiv> subst_expression (substitute1 (index_var True x) (const_expression z)) B"
+  defines "B' z \<equiv> subst_expression [substitute1 (index_var True x) (const_expression z)] B"
+  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
+  shows "qrhl A [sample x e] [] B"
+  sorry
+
+(* TODO remove *)
+lemma wp1_sample_old:
+  fixes A B x e
+  defines "e' \<equiv> index_expression True e"
+  defines "B' z \<equiv> subst_expression_old (substitute1 (index_var True x) (const_expression z)) B"
   defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
   shows "qrhl A [sample x e] [] B"
   sorry
@@ -45,7 +68,16 @@ lemma wp1_sample:
 lemma wp2_sample:
   fixes A B x e
   defines "e' \<equiv> index_expression False e"
-  defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
+  defines "B' z \<equiv> subst_expression [substitute1 (index_var False x) (const_expression z)] B"
+  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
+  shows "qrhl A [] [sample x e] B"
+  sorry
+
+
+lemma wp2_sample_old:
+  fixes A B x e
+  defines "e' \<equiv> index_expression False e"
+  defines "B' z \<equiv> subst_expression_old (substitute1 (index_var False x) (const_expression z)) B"
   defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
   shows "qrhl A [] [sample x e] B"
   sorry
@@ -67,7 +99,7 @@ lemma wp2_qapply:
 lemma wp1_measure:
   fixes A B x Q e
   defines "e\<^sub>1 \<equiv> index_expression True e"
-  defines "B' z \<equiv> subst_expression (substitute1 (index_var True x) (const_expression z)) B"
+  defines "B' z \<equiv> subst_expression [substitute1 (index_var True x) (const_expression z)] B"
   defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars True Q)) \<cdot> top"
   defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
            (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
@@ -77,7 +109,27 @@ lemma wp1_measure:
 lemma wp2_measure:
   fixes A B x Q e
   defines "e\<^sub>2 \<equiv> index_expression False e"
-  defines "B' z \<equiv> subst_expression (substitute1 (index_var False x) (const_expression z)) B"
+  defines "B' z \<equiv> subst_expression [substitute1 (index_var False x) (const_expression z)] B"
+  defines "\<And>e\<^sub>2 z. ebar e\<^sub>2 z \<equiv> ((mproj e\<^sub>2 z)\<guillemotright>(index_vars False Q)) \<cdot> top"
+  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>2 B'. let M = e\<^sub>2 in Cla[mtotal M] \<sqinter> 
+           (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>2 B'"
+  shows "qrhl A [] [measurement x Q e] B"
+  sorry
+
+lemma wp1_measure_old:
+  fixes A B x Q e
+  defines "e\<^sub>1 \<equiv> index_expression True e"
+  defines "B' z \<equiv> subst_expression_old (substitute1 (index_var True x) (const_expression z)) B"
+  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars True Q)) \<cdot> top"
+  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
+           (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
+  shows "qrhl A [measurement x Q e] [] B"
+  sorry
+
+lemma wp2_measure_old:
+  fixes A B x Q e
+  defines "e\<^sub>2 \<equiv> index_expression False e"
+  defines "B' z \<equiv> subst_expression_old (substitute1 (index_var False x) (const_expression z)) B"
   defines "\<And>e\<^sub>2 z. ebar e\<^sub>2 z \<equiv> ((mproj e\<^sub>2 z)\<guillemotright>(index_vars False Q)) \<cdot> top"
   defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>2 B'. let M = e\<^sub>2 in Cla[mtotal M] \<sqinter> 
            (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>2 B'"
@@ -267,18 +319,18 @@ lemma wp1_assign_func:
   assumes "c == [assign x e]" and "d == []"
   assumes "index_var True x = x1"
   assumes "index_expression True e = e1"
-  assumes "subst_expression (substitute1 x1 e1) B = A"
+  assumes "subst_expression_old (substitute1 x1 e1) B = A"
   shows "qrhl A c d B"
-  using assms wp1_assign by metis
+  using assms wp1_assign_old by metis
 
 lemma wp2_assign_func:
   fixes x e c d A B
   assumes "d == [assign x e]" and "c == []"
   assumes "index_var False x = x1"
   assumes "index_expression False e = e1"
-  assumes "subst_expression (substitute1 x1 e1) B = A"
+  assumes "subst_expression_old (substitute1 x1 e1) B = A"
   shows "qrhl A c d B"
-  using assms wp2_assign by metis
+  using assms wp2_assign_old by metis
 
 definition "cleanup_expression_function Q f = f"
 lemma cleanup_expression_functionI: "f == f' \<Longrightarrow> cleanup_expression_function Q f = f'"
@@ -441,15 +493,15 @@ lemma subst_expression_func_unit:
   assumes "s == substitute1 x f"
   assumes "e == expression variable_unit E"
   assumes "expression variable_unit E == e'"
-  shows "subst_expression s e = e'"
-  using assms Encoding.subst_expression_unit_aux by metis
+  shows "subst_expression_old s e = e'"
+  using assms Encoding.subst_expression_old_unit_aux by metis
 
 lemma subst_expression_func_singleton_same:
   assumes "s == substitute1 x (expression R F)"
   assumes "e == expression \<lbrakk>x\<rbrakk> E"
   assumes "expression R (\<lambda>r. E (F r)) == e'"
-  shows "subst_expression s e = e'"
-  using assms Encoding.subst_expression_singleton_same_aux by metis
+  shows "subst_expression_old s e = e'"
+  using assms Encoding.subst_expression_old_singleton_same_aux by metis
 
 lemma subst_expression_func_singleton_notsame:
   assumes "s == substitute1 x f"
@@ -458,28 +510,28 @@ lemma subst_expression_func_singleton_notsame:
   assumes "variable_name y = yn"
   assumes neq: "assert_string_neq xn yn"
   assumes "e == e'"
-  shows "subst_expression s e = e'"
+  shows "subst_expression_old s e = e'"
   using neq unfolding assms(1,2) assms(3,4,6)[symmetric] assert_string_neq_def
-  using Encoding.subst_expression_singleton_notsame_aux by metis
+  using Encoding.subst_expression_old_singleton_notsame_aux by metis
 
 lemma subst_expression_func_concat_id:
   assumes "s == substitute1 x f"
   assumes "e == expression (variable_concat Q1 Q2) (\<lambda>x. x)"
-  assumes "subst_expression (substitute1 x f) (expression Q1 (\<lambda>x. x)) = expression Q1' e1"
-  assumes "subst_expression (substitute1 x f) (expression Q2 (\<lambda>x. x)) = expression Q2' e2"
+  assumes "subst_expression_old (substitute1 x f) (expression Q1 (\<lambda>x. x)) = expression Q1' e1"
+  assumes "subst_expression_old (substitute1 x f) (expression Q2 (\<lambda>x. x)) = expression Q2' e2"
   assumes "cleanup_expression_concat Q1' Q2' (\<lambda>(x1,x2). (e1 x1, e2 x2)) = e'"
-  shows "subst_expression s e = e'"
-  using assms Encoding.subst_expression_concat_id_aux unfolding cleanup_expression_concat_def by metis
+  shows "subst_expression_old s e = e'"
+  using assms Encoding.subst_expression_old_concat_id_aux unfolding cleanup_expression_concat_def by metis
 
 lemma subst_expression_func_id_comp:
   assumes "s == substitute1 x f"
   assumes "e == expression Q E"
   assumes "NO_MATCH (\<lambda>x::unit. x) E"
-  assumes "subst_expression (substitute1 x f) (expression Q (\<lambda>x. x)) = expression Q' g"
+  assumes "subst_expression_old (substitute1 x f) (expression Q (\<lambda>x. x)) = expression Q' g"
   assumes "expression Q' (\<lambda>x. E (g x)) == e'"
-  shows "subst_expression s e = e'"
+  shows "subst_expression_old s e = e'"
   using assms(4) unfolding assms(1-2) assms(5)[symmetric]
-  using Encoding.subst_expression_id_comp_aux by metis
+  using Encoding.subst_expression_old_id_comp_aux by metis
 
 ML \<open>
 val subst_expression_func_spec : Cert_Codegen.specfx = {
@@ -498,20 +550,20 @@ lemma wp1_sample_func:
   assumes "d == []" and "c == [sample x e]" 
   assumes "index_var True x = x1"
   assumes "index_expression True e = e1"
-  assumes "\<And>z. subst_expression (substitute1 x1 (const_expression z)) B = B' z"
+  assumes "\<And>z. subst_expression_old (substitute1 x1 (const_expression z)) B = B' z"
   assumes "map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e1 B' = A"
   shows "qrhl A c d B"
-  unfolding assms(1-2) assms(3-6)[symmetric] by (rule wp1_sample)
+  unfolding assms(1-2) assms(3-6)[symmetric] by (rule wp1_sample_old)
 
 lemma wp2_sample_func:
   fixes A B c d x e
   assumes "c == []" and "d == [sample x e]" 
   assumes "index_var False x = x1"
   assumes "index_expression False e = e1"
-  assumes "\<And>z. subst_expression (substitute1 x1 (const_expression z)) B = B' z"
+  assumes "\<And>z. subst_expression_old (substitute1 x1 (const_expression z)) B = B' z"
   assumes "map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e1 B' = A"
   shows "qrhl A c d B"
-  unfolding assms(1-2) assms(3-6)[symmetric] by (rule wp2_sample)
+  unfolding assms(1-2) assms(3-6)[symmetric] by (rule wp2_sample_old)
 
 lemma wp1_qapply_func:
   fixes A B Q e
@@ -537,11 +589,11 @@ lemma wp1_measure_func:
   assumes "index_expression True e = e\<^sub>1"
   assumes "index_vars True Q = Q\<^sub>1"
   assumes "index_var True x = x\<^sub>1"
-  assumes "\<And>z. subst_expression (substitute1 x\<^sub>1 (const_expression z)) B = B' z"
+  assumes "\<And>z. subst_expression_old (substitute1 x\<^sub>1 (const_expression z)) B = B' z"
   assumes "map_expression2' (\<lambda>e\<^sub>1 B'. let meas=e\<^sub>1 in Cla[mtotal meas] \<sqinter> 
            (INF z. ((B' z \<sqinter> (((mproj meas z)\<guillemotright>Q\<^sub>1) \<cdot> top)) + ortho (((mproj meas z)\<guillemotright>Q\<^sub>1) \<cdot> top)))) e\<^sub>1 B' = A"
   shows "qrhl A c d B"
-  unfolding assms(1,2) assms(3,4,5,6,7)[symmetric] Let_def by (rule wp1_measure[unfolded Let_def])
+  unfolding assms(1,2) assms(3,4,5,6,7)[symmetric] Let_def by (rule wp1_measure_old[unfolded Let_def])
 
 lemma wp2_measure_func:
   fixes A B x Q e
@@ -549,11 +601,11 @@ lemma wp2_measure_func:
   assumes "index_expression False e = e\<^sub>1"
   assumes "index_vars False Q = Q\<^sub>1"
   assumes "index_var False x = x\<^sub>1"
-  assumes "\<And>z. subst_expression (substitute1 x\<^sub>1 (const_expression z)) B = B' z"
+  assumes "\<And>z. subst_expression_old (substitute1 x\<^sub>1 (const_expression z)) B = B' z"
   assumes "map_expression2' (\<lambda>e\<^sub>1 B'. let meas=e\<^sub>1 in Cla[mtotal meas] \<sqinter> 
            (INF z. ((B' z \<sqinter> (((mproj meas z)\<guillemotright>Q\<^sub>1) \<cdot> top)) + ortho (((mproj meas z)\<guillemotright>Q\<^sub>1) \<cdot> top)))) e\<^sub>1 B' = A"
   shows "qrhl A c d B"
-  unfolding assms(1,2) assms(3,4,5,6,7)[symmetric] Let_def by (rule wp2_measure[unfolded Let_def])
+  unfolding assms(1,2) assms(3,4,5,6,7)[symmetric] Let_def by (rule wp2_measure_old[unfolded Let_def])
 
 
 lemma wp1_qinit_func:

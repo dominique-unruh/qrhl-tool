@@ -159,36 +159,36 @@ val map_expression_conv =
     map_expression3[THEN eq_reflection]
     map_expression3'[THEN eq_reflection]}
 
-(* Subgoals of the form ?x (or: expression ?Q ?e) = subst_expression' s e
+(* Subgoals of the form ?x (or: expression ?Q ?e) = subst_expression s e
    where s is an explicit substitution and e is an explicit expression *)
-fun subst_expression'_tac ctxt = 
-  (* print_tac_n ctxt "subst_expression'_tac" THEN' *)
+fun subst_expression_tac ctxt = 
+  (* print_tac_n ctxt "subst_expression_tac" THEN' *)
   SUBGOAL (fn (t,i) =>
   case Logic.strip_assums_concl t |> HOLogic.dest_Trueprop of 
-        (Const(\<^const_name>\<open>HOL.eq\<close>,_) $ _ $ (Const(\<^const_name>\<open>subst_expression'\<close>,_) $ s $ 
+        (Const(\<^const_name>\<open>HOL.eq\<close>,_) $ _ $ (Const(\<^const_name>\<open>subst_expression\<close>,_) $ s $ 
           (Const(\<^const_name>\<open>expression\<close>,_) $ vars $ e))) =>
     (case vars of Const(\<^const_name>\<open>variable_unit\<close>, _) => 
-                    resolve_tac ctxt @{thms subst_expression'_unit_tac} i
+                    resolve_tac ctxt @{thms subst_expression_unit_tac} i
                 | Const(\<^const_name>\<open>variable_singleton\<close>,_) $ x =>
                     (case s of
                       Const(\<^const_name>\<open>Nil\<close>,_) => 
-                        resolve_tac ctxt @{thms subst_expression'_singleton_empty_tac} i
+                        resolve_tac ctxt @{thms subst_expression_singleton_empty_tac} i
                     | Const(\<^const_name>\<open>Cons\<close>,_) $ (Const(\<^const_name>\<open>substitute1\<close>,_) $ y $ _) $ _ =>
                         if x = y then
-                           resolve_tac ctxt @{thms subst_expression'_singleton_same_tac} i
+                           resolve_tac ctxt @{thms subst_expression_singleton_same_tac} i
                         else
-                           resolve_tac ctxt @{thms subst_expression'_singleton_notsame_tac} i
+                           resolve_tac ctxt @{thms subst_expression_singleton_notsame_tac} i
                            THEN Prog_Variables.different_variable_names_tac ctxt i
-                           THEN subst_expression'_tac ctxt i
-                    | _ => raise TERM("subst_expression'_tac: not an explicit substitution",[t,s]))
+                           THEN subst_expression_tac ctxt i
+                    | _ => raise TERM("subst_expression_tac: not an explicit substitution",[t,s]))
                 | Const(\<^const_name>\<open>variable_concat\<close>, _) $ _ $ _ => 
                     (case e of 
                        Abs(_,_,Bound 0) => 
-                         resolve_tac ctxt @{thms subst_expression'_concat_id_tac} i
-                         THEN subst_expression'_tac ctxt i THEN subst_expression'_tac ctxt i
-                     | _ => resolve_tac ctxt @{thms subst_expression'_id_comp_tac} i
-                            THEN subst_expression'_tac ctxt i)
+                         resolve_tac ctxt @{thms subst_expression_concat_id_tac} i
+                         THEN subst_expression_tac ctxt i THEN subst_expression_tac ctxt i
+                     | _ => resolve_tac ctxt @{thms subst_expression_id_comp_tac} i
+                            THEN subst_expression_tac ctxt i)
                 | _ => raise TERM("index_vars_tac: not a varterm",[t,vars]))
-  | _ => raise TERM("subst_expression'_tac: bad shape",[t]))
+  | _ => raise TERM("subst_expression_tac: bad shape",[t]))
 
 end
