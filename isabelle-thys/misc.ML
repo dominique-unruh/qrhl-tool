@@ -58,9 +58,27 @@ fun repeat_until_conv' test conv ct =
 fun repeat_until_conv test conv ct =
   if test NONE ct then Conv.all_conv ct else repeat_until_conv' test conv ct
   
+
+structure MethodErrorStack = Proof_Data (
+  type T = (unit -> string) list
+  fun init _ = []
+)
+exception LAZY_ERROR of unit -> string
+fun method_error_push msg = MethodErrorStack.map (fn st => msg::st)
+(* val method_error = Attrib.setup_config_bool \<^binding>\<open>method_error\<close> (K false) *)
+fun msg_to_string ctxt msg () = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt))
+fun error_ctac msg (ctx,_) = Seq.single (Seq.Error (msg_to_string ctx msg))
+fun error_tac msg ctx _ = raise LAZY_ERROR (msg_to_string ctx msg)
+fun error_tac' msg ctxt i st = error_tac (fn _ => msg (nth (Thm.prems_of st) (i-1))) ctxt i st
+fun error_method msg = CONTEXT_METHOD (K (error_ctac msg))
+fun fail_on_LAZY_ERROR f x = f x handle LAZY_ERROR msg => raise ERROR (msg())
+
 (* Solves a goal of the form "?x = a"
    by applying conv to a and then instantiating ?x with the result *)
-fun schematic_conv_tac conv ctxt =
-  CONVERSION (Conv.arg_conv (Conv.arg_conv (conv ctxt))) THEN' solve_tac ctxt @{thms refl}
+fun schematic_conv_tac str conv ctxt i =
+  (CONVERSION (Conv.arg_conv (Conv.arg_conv (conv ctxt))) i
+   ORELSE error_tac' (fn t => "Could not evaluate expression on lhs, not a " ^ str ^ ": " ^ 
+        Syntax.string_of_term ctxt t) ctxt i)
+  THEN solve_tac ctxt @{thms refl} i
 
 end

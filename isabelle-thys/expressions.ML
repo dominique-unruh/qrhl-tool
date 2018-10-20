@@ -15,6 +15,8 @@ fun index_conv ctxt =
 then_conv
   Conv.top_sweep_conv Prog_Variables.index_var_conv ctxt
 
+val index_tac = Misc.schematic_conv_tac "valid indexing expression" index_conv
+
 (* TODO move *)
 fun map_varterm_tuple _ (Prog_Variables.VTUnit) = \<^term>\<open>()\<close>
   | map_varterm_tuple f (Prog_Variables.VTSingle nT) = f nT
@@ -158,6 +160,8 @@ val map_expression_conv =
     map_expression2[THEN eq_reflection]
     map_expression3[THEN eq_reflection]
     map_expression3'[THEN eq_reflection]}
+
+val map_expression_tac = Misc.schematic_conv_tac "map_expression term" (K map_expression_conv)
 
 (* Subgoals of the form ?x (or: expression ?Q ?e) = subst_expression s e
    where s is an explicit substitution and e is an explicit expression *)

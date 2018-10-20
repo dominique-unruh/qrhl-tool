@@ -14,18 +14,11 @@ begin
 
 variables classical a :: bit and quantum A :: bit begin
 ML \<open>
-Tactics.get_wp true 
+Weakest_Precondition.get_wp true 
             \<^term>\<open>measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
             \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
  \<^context>
 \<close>
-
-  by
-
-            \<^term>\<open>const_expression (\<CC>\<ll>\<aa>[mtotal (computational_basis :: (bit,_) measurement)] \<sqinter> 
-              (INF z. let e = mproj computational_basis z\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> top in top \<sqinter> e + ortho e))\<close> (* expected *)
-\<close>
-
 end
 
 

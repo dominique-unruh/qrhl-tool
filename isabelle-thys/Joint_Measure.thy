@@ -1,5 +1,5 @@
 theory Joint_Measure
-  imports Expressions Encoding Expressions Tactics
+  imports Expressions Encoding Tactics
 begin
 
 
@@ -44,14 +44,14 @@ ML \<open>
 structure Joint_Measure = struct
 fun joint_measure_simple_tac ctxt =
   resolve_tac ctxt @{thms joint_measure_simple_tac}
-  THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
-  THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
-  THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
-  THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
-  THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
-  THEN' Misc.schematic_conv_tac Expressions.index_conv ctxt
+  THEN' Expressions.index_tac ctxt
+  THEN' Expressions.index_tac ctxt
+  THEN' Expressions.index_tac ctxt
+  THEN' Expressions.index_tac ctxt
+  THEN' Expressions.index_tac ctxt
+  THEN' Expressions.index_tac ctxt
   THEN' Expressions.subst_expression_tac ctxt
-  THEN' Misc.schematic_conv_tac (K Expressions.map_expression_conv) ctxt
+  THEN' Expressions.map_expression_tac ctxt
 
 fun joint_measure_simple_seq_tac ctxt i =
   Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i

@@ -1,195 +1,146 @@
 theory Weakest_Precondition
-  imports Encoding
+  imports Encoding Tactics
 begin
 
-lemma seq:
-  assumes "qrhl A c1 d1 B"
-  and "qrhl B c2 d2 C"
-  shows "qrhl A (c1@c2) (d1@d2) C"
-  sorry
-
-
-
-lemma seqREMOVE:
-  assumes "c = c1@c2" and "d = d1@d2"
-  assumes "qrhl A c1 d1 B"
-    and "qrhl B c2 d2 C"
-  shows "qrhl A c d C"
-  using assms using seq by auto
-  
-
-lemma wp_skip:
+lemma skip_rule:
   shows "qrhl B [] [] B"
   sorry
 
-lemma wp1_assign:
+lemma wp1_assign_tac:
   fixes A B x e
-  defines "A \<equiv> subst_expression [substitute1 (index_var True x) (index_expression True e)] B"
+  assumes "x1 = index_var True x"
+  assumes "e1 = index_expression True e"
+  assumes "A = subst_expression [substitute1 x1 e1] B"
   shows "qrhl A [assign x e] [] B"
   sorry
 
-(* TODO remove *)
-lemma wp1_assign_old:
+lemma wp2_assign_tac:
   fixes A B x e
-  defines "A \<equiv> subst_expression_old (substitute1 (index_var True x) (index_expression True e)) B"
-  shows "qrhl A [assign x e] [] B"
-  sorry
-
-lemma wp2_assign:
-  fixes A B x e
-  defines "A \<equiv> subst_expression [substitute1 (index_var False x) (index_expression False e)] B"
+  assumes "x1 = index_var False x"
+  assumes "e1 = index_expression False e"
+  assumes "A = subst_expression [substitute1 x1 e1] B"
   shows "qrhl A [] [assign x e] B"
   sorry
 
-(* TODO remove *)
-lemma wp2_assign_old:
+lemma wp1_sample_tac:
   fixes A B x e
-  defines "A \<equiv> subst_expression_old (substitute1 (index_var False x) (index_expression False e)) B"
-  shows "qrhl A [] [assign x e] B"
-  sorry
-
-lemma wp1_sample:
-  fixes A B x e
-  defines "e' \<equiv> index_expression True e"
-  defines "B' z \<equiv> subst_expression [substitute1 (index_var True x) (const_expression z)] B"
-  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
+  assumes "x1 = index_var True x"
+  assumes "e1 = index_expression True e"
+  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  defines "A \<equiv> map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
   shows "qrhl A [sample x e] [] B"
   sorry
 
-(* TODO remove *)
-lemma wp1_sample_old:
+lemma wp2_sample_tac:
   fixes A B x e
-  defines "e' \<equiv> index_expression True e"
-  defines "B' z \<equiv> subst_expression_old (substitute1 (index_var True x) (const_expression z)) B"
-  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
-  shows "qrhl A [sample x e] [] B"
-  sorry
-
-lemma wp2_sample:
-  fixes A B x e
-  defines "e' \<equiv> index_expression False e"
-  defines "B' z \<equiv> subst_expression [substitute1 (index_var False x) (const_expression z)] B"
-  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
+  assumes "x1 = index_var False x"
+  assumes "e1 = index_expression False e"
+  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  defines "A \<equiv> map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
   shows "qrhl A [] [sample x e] B"
   sorry
 
-
-lemma wp2_sample_old:
-  fixes A B x e
-  defines "e' \<equiv> index_expression False e"
-  defines "B' z \<equiv> subst_expression_old (substitute1 (index_var False x) (const_expression z)) B"
-  defines "A \<equiv> map_expression2' (\<lambda>e' B'. Cla[weight e' = 1] \<sqinter> (INF z:supp e'. B' z)) e' B'"
-  shows "qrhl A [] [sample x e] B"
-  sorry
-
-lemma wp1_qapply:
+lemma wp1_qapply_tac:
   fixes A B Q e
-  defines "Q\<^sub>1 \<equiv> index_vars True Q"
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) (index_expression True e) B"
+  assumes "Q\<^sub>1 = index_vars True Q"
+  assumes "e1 = index_expression True e"
+  assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) e1 B"
   shows "qrhl A [qapply Q e] [] B"
   sorry
 
-lemma wp2_qapply:
+lemma wp2_qapply_tac:
   fixes A B Q e
-  defines "Q\<^sub>2 \<equiv> index_vars False Q"
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[isometry e\<^sub>2] \<sqinter> (adjoint (e\<^sub>2\<guillemotright>Q\<^sub>2) \<cdot> (B \<sqinter> (e\<^sub>2\<guillemotright>Q\<^sub>2 \<cdot> top)))) (index_expression False e) B"
+  assumes "Q\<^sub>1 = index_vars False Q"
+  assumes "e1 = index_expression False e"
+  assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) e1 B"
   shows "qrhl A [] [qapply Q e] B"
   sorry
 
-lemma wp1_measure:
-  fixes A B x Q e
-  defines "e\<^sub>1 \<equiv> index_expression True e"
-  defines "B' z \<equiv> subst_expression [substitute1 (index_var True x) (const_expression z)] B"
-  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars True Q)) \<cdot> top"
-  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
-           (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
-  shows "qrhl A [measurement x Q e] [] B"
-  sorry
-
-lemma wp2_measure:
-  fixes A B x Q e
-  defines "e\<^sub>2 \<equiv> index_expression False e"
-  defines "B' z \<equiv> subst_expression [substitute1 (index_var False x) (const_expression z)] B"
-  defines "\<And>e\<^sub>2 z. ebar e\<^sub>2 z \<equiv> ((mproj e\<^sub>2 z)\<guillemotright>(index_vars False Q)) \<cdot> top"
-  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>2 B'. let M = e\<^sub>2 in Cla[mtotal M] \<sqinter> 
-           (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>2 B'"
-  shows "qrhl A [] [measurement x Q e] B"
-  sorry
-
-lemma wp1_measure_old:
-  fixes A B x Q e
-  defines "e\<^sub>1 \<equiv> index_expression True e"
-  defines "B' z \<equiv> subst_expression_old (substitute1 (index_var True x) (const_expression z)) B"
-  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>(index_vars True Q)) \<cdot> top"
-  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
-           (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
-  shows "qrhl A [measurement x Q e] [] B"
-  sorry
-
-lemma wp2_measure_old:
-  fixes A B x Q e
-  defines "e\<^sub>2 \<equiv> index_expression False e"
-  defines "B' z \<equiv> subst_expression_old (substitute1 (index_var False x) (const_expression z)) B"
-  defines "\<And>e\<^sub>2 z. ebar e\<^sub>2 z \<equiv> ((mproj e\<^sub>2 z)\<guillemotright>(index_vars False Q)) \<cdot> top"
-  defines "A \<equiv> map_expression2' (\<lambda>e\<^sub>2 B'. let M = e\<^sub>2 in Cla[mtotal M] \<sqinter> 
-           (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>2 B'"
-  shows "qrhl A [] [measurement x Q e] B"
-  sorry
-
-lemma wp1_qinit:
+lemma wp1_qinit_tac:
   fixes B e Q
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> (index_vars True Q)))
-           (index_expression True e) B"
+  assumes "Q1 = index_vars True Q"
+  assumes "e1 = index_expression True e"
+  assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> Q1)) e1 B"
   shows "qrhl A [qinit Q e] [] B"
   sorry
 
-lemma wp2_qinit:
+lemma wp2_qinit_tac:
   fixes B e Q
-  defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>2 B. Cla[norm e\<^sub>2 = 1] \<sqinter> (B \<div> e\<^sub>2 \<guillemotright> (index_vars False Q)))
-           (index_expression False e) B"
+  assumes "Q1 = index_vars False Q"
+  assumes "e1 = index_expression False e"
+  assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> Q1)) e1 B"
   shows "qrhl A [] [qinit Q e] B"
   sorry
 
-lemma wp1_if:
+lemma wp1_if_tac:
   fixes e p1 p2 B
+  assumes "e1 = index_expression True e"
   assumes "qrhl wp_true p1 [] B"
   assumes "qrhl wp_false p2 [] B"
-  defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
-           (index_expression True e) wp_true wp_false"
+  assumes "A = map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
+               e1 wp_true wp_false"
   shows "qrhl A [ifthenelse e p1 p2] [] B"
   sorry
 
-lemma wp2_if:
+
+lemma wp2_if_tac:
   fixes e p1 p2 B
+  assumes "e1 = index_expression False e"
   assumes "qrhl wp_true [] p1 B"
   assumes "qrhl wp_false [] p2 B"
-  defines "A \<equiv> map_expression3 (\<lambda>e\<^sub>2 wp_true wp_false. (Cla[\<not>e\<^sub>2] + wp_true) \<sqinter> (Cla[e\<^sub>2] + wp_false))
-           (index_expression False e) wp_true wp_false"
+  assumes "A = map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
+               e1 wp_true wp_false"
   shows "qrhl A [] [ifthenelse e p1 p2] B"
   sorry
 
-lemma wp1_block:
+lemma wp1_block_tac:
   assumes "qrhl A p [] B"
   shows "qrhl A [block p] [] B"
   sorry
 
-lemma wp2_block:
+lemma wp2_block_tac:
   assumes "qrhl A [] p B"
   shows "qrhl A [] [block p] B"
   sorry
 
-lemma wp1_cons:
+lemma wp1_measure_tac:
+  fixes A B x Q e
+  assumes "x1 = index_var True x"
+  assumes "Q1 = index_vars True Q"
+  assumes "e\<^sub>1 = index_expression True e"
+  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q1) \<cdot> top"
+  assumes "A = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
+                         (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
+  shows "qrhl A [measurement x Q e] [] B"
+  sorry
+
+
+lemma wp2_measure_tac:
+  fixes A B x Q e
+  assumes "x1 = index_var False x"
+  assumes "Q1 = index_vars False Q"
+  assumes "e\<^sub>1 = index_expression False e"
+  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q1) \<cdot> top"
+  assumes "A = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
+                         (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
+  shows "qrhl A [] [measurement x Q e] B"
+  sorry
+
+lemma wp1_cons_tac:
   assumes "qrhl A [p] [] B'"
     and "qrhl B' ps [] B"
   shows "qrhl A (p#ps) [] B"
   sorry
 
-lemma wp2_cons:
+lemma wp2_cons_tac:
   assumes "qrhl A [] [p] B'"
     and "qrhl B' [] ps B"
   shows "qrhl A [] (p#ps) B"
   sorry
 
+(* TODO move or remove *)
 ML \<open>
 fun get_variable_name ctxt (v as Free(n,T)) = let
   val vn = unprefix "var_" n handle Fail _ => n
@@ -209,6 +160,7 @@ in (str, fn _ => thm) end
   | get_variable_name _ v = raise TERM("get_variable_name: not a variable",[v])
 \<close>
 
+ML_file "weakest_precondition.ML"
 
 
 

@@ -1,10 +1,11 @@
 theory Test_Tactics
-  imports UnitTest "QRHL.Tactics"
+  imports UnitTest "QRHL.Tactics" 
+    (* TODO: own test theory: *) "QRHL.Weakest_Precondition"
 begin
 
 ML \<open>
 fun test_get_wp ctxt left prog post expected =
-let val (wp,thm) = Tactics.get_wp left prog post ctxt
+let val (wp,thm) = Weakest_Precondition.get_wp left prog post ctxt
     val _ = assert_aconv expected wp
     val (A,_,_,B) = Encoding.dest_qrhl_goal (Thm.prop_of thm)
     val _ = assert_aconv expected A
@@ -43,6 +44,16 @@ test_get_wp \<^context> false
             \<^term>\<open>Expr[top::predicate]\<close> (* post *)
             \<^term>\<open>const_expression ((\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> (\<CC>\<ll>\<aa>[True] + top))\<close> (* expected *)
 \<close>
+end
+
+variables quantum x :: bit and quantum y :: bit and classical h :: "bit \<Rightarrow> bit" begin
+ML \<open>
+test_get_wp \<^context> true
+            \<^term>\<open>qapply \<lbrakk>x\<rbrakk> Expr[hadamard]\<close>
+            \<^term>\<open>Expr[top::predicate]\<close>
+            \<^term>\<open>Expr[\<CC>\<ll>\<aa>[isometry hadamard] \<sqinter> ((hadamard\<guillemotright>\<lbrakk>x1::bit variable\<rbrakk>)* \<cdot> (top \<sqinter> (hadamard\<guillemotright>\<lbrakk>x1\<rbrakk> \<cdot> top)))]\<close>
+\<close>
+
 end
 
 end

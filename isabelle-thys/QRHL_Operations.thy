@@ -1,5 +1,6 @@
 theory QRHL_Operations
   imports "HOL-Protocol.Protocol_Main" QRHL_Core Encoding Tactics Hashed_Terms Joint_Measure Extended_Sorry
+    Weakest_Precondition
 begin
 
 ML {*
@@ -197,7 +198,7 @@ operation_setup seq_tac = {*
 operation_setup wp_tac = {*
   {from_lib = Codec.triple Codec.bool Codec.term Codec.int,
    to_lib = Codec.option (Codec.tuple (Codec.list Codec.term) Codec.int),
-   action = fn (left,goal,ctx_id) => Tactics.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm}
+   action = fn (left,goal,ctx_id) => Weakest_Precondition.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm}
 *}
 
 operation_setup joint_measure_simple_tac = {*
