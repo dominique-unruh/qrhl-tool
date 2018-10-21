@@ -81,12 +81,6 @@ fun wp_tac left ctxt = SUBGOAL (fn (goal,n) => let
   | [s] => Misc.error_tac (fn _ => "Statement must be one of assign/sample/block/qinit/qapply/measure/if, not '"^Syntax.string_of_term ctxt s^"'") ctxt
   end)
 
-(* fun wp_cleanup_conv ctxt =
- Conv.try_conv (Expressions.clean_expression_conv ctxt)
-    |> Conv.arg_conv (* Trueprop *)
-    |> Conv.fun_conv |> Conv.fun_conv |> Conv.fun_conv |> Conv.arg_conv (* precondition of qrhl *)
- *)
-
 fun get_wp left (prog:term) (post:term) ctxt =
   let val progl = HOLogic.mk_list \<^typ>\<open>program\<close> [prog]
       val skip = \<^term>\<open>[]::program list\<close>
@@ -101,65 +95,6 @@ fun get_wp left (prog:term) (post:term) ctxt =
   in
     (pre,thm)
   end
-
-(* fun get_wp_not_cleaned left = get_wp_via_tac (fn ctxt => wp_tac left ctxt 1) left *)
-
-(*
-(* Cleans up the result of get_wp. That is, removes all index_{var,vars,expressions} and map_expression 
-   and variants from the precondition of a qrhl judgement (i.e., "Trueprop (qrhl A p1 p2 B)"),
-   and makes the expression explicit well-formed.
-
-   Assuming all involved variables, variable lists, and expressions are all explicit. *)
-fun wp_cleanup_conv ctxt =
- (
-  (*Expressions.index_conv ctxt (* TODO this should be done directly as in joint_measure_simple_tac *)
-  then_conv
-  Conv.bottom_conv (fn ctxt => Conv.try_conv (Encoding.subst_expression_old_conv ctxt)) ctxt  (* TODO this should be done directly as in joint_measure_simple_tac *)
-  then_conv
-  Encoding.map_expression_subterm_conv ctxt (* TODO this should be done directly as in joint_measure_simple_tac *)
-  then_conv*)
-  (* TODO: try if needed *)
-  (* Conv.try_conv (Expressions.clean_expression_conv ctxt) *) Conv.all_conv
-  )
-    |> Conv.arg_conv (* Trueprop *)
-    |> Conv.fun_conv |> Conv.fun_conv |> Conv.fun_conv |> Conv.arg_conv (* precondition of qrhl *)
-*)
-
-(* Computes a "weakest" (or as weak as we can) precondition
-   for post w.r.t prograpm prog. Returns (pre,qrhl)
-   where pre is the precondition, and qrhl is a 
-   judgement "qrhl pre prog [] post" (if left=True)
-   and  "qrhl pre [] prog post" (if left=False).
-*)
-(* fun get_wp left prog post ctxt = let
-  val (_,thm) = Misc.fail_on_LAZY_ERROR (get_wp_via_tac (fn ctxt => wp_tac left ctxt 1) left left prog post) ctxt
-(* val _ = @{print} thm *)
-  (* val thm2 = Conv.fconv_rule (wp_cleanup_conv ctxt) thm *)
-(* val _ = @{print} thm2 *)
-  val (wp,_,_,_) = thm |> Thm.prop_of |> Encoding.dest_qrhl_goal
-in
-  (wp,thm)
-end  
- *)
-(* fun get_wp_clean left prog post ctxt = 
-  let val (_,thm) = get_wp left prog post ctxt
-      val thm2 = 
-  in
-    thm
-  end *)
-
-(*
-fun get_wp1 prog post ctxt =
-  case prog of
-    Const(@{const_name assign},_) $ _ $ _ => get_wp1_assign prog post ctxt
-  | Const(@{const_name sample},_) $ _ $ _ => get_wp1_sample prog post ctxt
-  | _ => raise TERM ("get_wp1: Expected explicit single statement",[prog])
-*)
-
-(* fun wp1_tac ctxt = seq_tac -2 -1
-SUBGOAL (fn (goal,i) => let
-  val 
-) *)
 
 fun wp_seq_tac left ctxt i = 
   Tactics.seq_tac (if left then ~2 else ~1) (if left then ~1 else ~2)

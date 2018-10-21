@@ -132,8 +132,9 @@ lemma pat_lambda_conv_aux: \<comment> \<open>Helper for ML function pat_lambda_c
   shows "term \<equiv> (\<lambda>_. term ())"
   by simp
 
-ML_file "misc.ML"
+lemma eq_reflection_swap: "a = b \<Longrightarrow> b\<equiv>a" by auto
 
+ML_file "misc.ML"
 
 
 end

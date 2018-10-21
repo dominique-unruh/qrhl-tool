@@ -81,4 +81,30 @@ fun schematic_conv_tac str conv ctxt i =
         Syntax.string_of_term ctxt t) ctxt i)
   THEN solve_tac ctxt @{thms refl} i
 
+fun mk_equals_cterm ct1 ct2 = let
+  val T = Thm.typ_of_cterm ct1
+  val thy = Thm.theory_of_cterm ct1
+  val equals = Thm.global_cterm_of thy (Const(\<^const_name>\<open>Pure.eq\<close>,T --> T --> \<^typ>\<open>prop\<close>))
+  in
+    Thm.apply (Thm.apply equals ct1) ct2
+  end
+
+
+(* Given a tactic which solves a subgoal of the form "?x = a" by
+  instantiating ?x:=a', produces a conversion that converts a to a' *)
+fun schematic_tac_conv ctxt tac ct = let
+  val var = Thm.var (("x",Thm.maxidx_of_cterm ct + 1),Thm.ctyp_of_cterm ct)
+  val goal = mk_equals_cterm ct var
+  val st = Goal.init goal
+  val st = case Tactical.SINGLE (resolve_tac ctxt @{thms eq_reflection_swap} 1) st of
+             SOME st => st
+           | NONE => raise TERM ("schematic_tac_conv: eq_reflection", Thm.prems_of st)
+  val st = case Tactical.SINGLE tac st of
+             SOME st => st
+           | NONE => raise TERM ("schematic_tac_conv: tactic failed", Thm.prems_of st)
+  val _ = if not (Thm.no_prems st) then raise TERM ("schematic_tac_conv: tactic left subgoals", Thm.prems_of st) else ()
+  val thm = Goal.finish ctxt st
+  (* val goal = Logic *)
+  in thm end
+
 end

@@ -142,9 +142,7 @@ lemma index_expression[simp]: "index_expression left (expression Q e) = expressi
 section \<open>Substitutions\<close>
 
 typedecl substitution
-axiomatization substitute1 :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> substitution"
-(* TODO remove *)
-consts subst_expression_old :: "substitution \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
+consts substitute1 :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> substitution"
 
 consts subst_expression :: "substitution list \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
 
