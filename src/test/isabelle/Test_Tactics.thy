@@ -6,9 +6,11 @@ begin
 ML \<open>
 fun test_get_wp ctxt left prog post expected =
 let val (wp,thm) = Weakest_Precondition.get_wp left prog post ctxt
-    val _ = assert_aconv expected wp
+    val wp' = wp |> Thm.cterm_of ctxt |> Conv.try_conv (Expressions.clean_expression_conv ctxt)
+                 |> Thm.rhs_of |> Thm.term_of |> Envir.beta_norm
+    val _ = assert_aconv expected wp'
     val (A,_,_,B) = Encoding.dest_qrhl_goal (Thm.prop_of thm)
-    val _ = assert_aconv expected A
+    val _ = assert_aconv wp A
     val _ = assert_aconv post B
 in () end
 \<close>
@@ -53,7 +55,17 @@ test_get_wp \<^context> true
             \<^term>\<open>Expr[top::predicate]\<close>
             \<^term>\<open>Expr[\<CC>\<ll>\<aa>[isometry hadamard] \<sqinter> ((hadamard\<guillemotright>\<lbrakk>x1::bit variable\<rbrakk>)* \<cdot> (top \<sqinter> (hadamard\<guillemotright>\<lbrakk>x1\<rbrakk> \<cdot> top)))]\<close>
 \<close>
+end
 
+
+variables classical x :: bit begin
+declare [[show_types,show_consts]]
+ML \<open>
+test_get_wp \<^context> false
+            \<^term>\<open>sample var_x Expr[undefined]\<close>
+            \<^term>\<open>Expr[top::predicate]\<close>
+            \<^term>\<open>Expr[\<CC>\<ll>\<aa>[weight (undefined::bit distr) = (1::real)] \<sqinter> (INF z::bit:supp undefined. (top::predicate))]\<close>
+\<close>   
 end
 
 end
