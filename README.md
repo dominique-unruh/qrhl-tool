@@ -17,32 +17,34 @@ and enter `java` or `emacs`, respectively, and see whether the commands are foun
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.2`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.3`.
 
+To update, simply extract the new version over the old one. (You can
+delete the old one first, but then Isabelle will be
+redownloaded/recompiled.)
 
 ## Executing the demos
 
-In the `qrhl-0.2` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
-The current directory must be the `qrhl-0.2` directory!
+In the `qrhl-0.3` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
 
 This will open emacs running ProofGeneral configured for the qrhl
-tool.  Open one of the example files: `example.qrhl`, `prg-enc-indcpa.qrhl`,
-`prg-enc-rorcpa.qrhl`, `equality.qrhl`, `teleport.qrhl`, or `teleport-terse.qrhl`.
+tool.  Open one of the example files in `examples/`,
+e.g. `example.qrhl`.
 
 To step through the examples, use Ctrl-C Ctrl-N to go forward one proof step, Ctrl-C Ctrl-U to go back one.
 You will see the current goal and some messages withing the Emacs/ProofGeneral window.
 (Or you can use Ctrl-C Ctrl-Return to execute to the cursor position.)
 See the [ProofGeneral manual](https://proofgeneral.github.io/doc/userman/) for more information.
 
-Note: The first step of the proof script (`isabelle.`) will take very long upon first activation,
+Note: The first step of the proof script (`isabelle.`) will take **very long** upon first activation,
 because it will download and build Isabelle. 
 You need to be online the first time you execute this step. 
 
 
 ## Editing the Isabelle theory files
 
-The examples `prg-enc-*.qrhl` depend on the Isabelle theory `PrgEnc.thy`.
-(And `example.qrhl` on `Example.thy`.)
+Some examples depend on an accompanying Isabelle theory. (E.g., 
+ `prg-enc-rorcpa.qrhl` depends on the Isabelle theory `PrgEnc.thy`.)
 To edit that theory, run Isabelle using the `run-isabelle.{sh,bat}` script.
 Then open and edit the file normally.
 
