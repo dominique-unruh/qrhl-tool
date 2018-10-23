@@ -1,8 +1,7 @@
-theory Test_Encoding
-  imports UnitTest "QRHL.Encoding"
+theory Test_Expressions
+  imports UnitTest "QRHL.Expressions"
 begin
 
-(* TODO move *)
 variables classical b :: int begin
 ML \<open>
 local
@@ -14,7 +13,6 @@ in end
 \<close>
 end
 
-(* TODO move *)
 variables classical x :: int begin
 ML \<open>
 local
@@ -25,7 +23,6 @@ in end
 \<close>
 end
 
-(* TODO: move to Test_Expressions *)
 variables classical x :: int begin
 ML \<open>
 local

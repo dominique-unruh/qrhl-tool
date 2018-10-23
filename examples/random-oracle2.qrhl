@@ -1,5 +1,10 @@
 isabelle RandomOracle.
 
+###########################################
+# WARNING:                                #
+# This example uses undocumented features #
+###########################################
+
 # A variable that contains the random oracle
 classical var h : x => y.
 
@@ -69,6 +74,6 @@ wp right.
 rnd h,r <- map_distr (λr. (π o r, r)) (uniform UNIV).
  simp bij_pi.
 skip.
-simp!.
+simp! o_def.
 
 qed.

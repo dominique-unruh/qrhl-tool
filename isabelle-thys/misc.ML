@@ -63,15 +63,18 @@ structure MethodErrorStack = Proof_Data (
   type T = (unit -> string) list
   fun init _ = []
 )
-exception LAZY_ERROR of unit -> string
+datatype lazy_error = Lazy_Error of unit -> string
+exception LAZY_ERROR of lazy_error
+fun lazy_error msg = LAZY_ERROR (Lazy_Error msg)
+val _ = ML_system_pp (fn depth => fn _ => fn Lazy_Error msg => Pretty.to_polyml (Pretty.str (msg ())))
 fun method_error_push msg = MethodErrorStack.map (fn st => msg::st)
 (* val method_error = Attrib.setup_config_bool \<^binding>\<open>method_error\<close> (K false) *)
 fun msg_to_string ctxt msg () = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt))
 fun error_ctac msg (ctx,_) = Seq.single (Seq.Error (msg_to_string ctx msg))
-fun error_tac msg ctx _ = raise LAZY_ERROR (msg_to_string ctx msg)
+fun error_tac msg ctx _ = raise lazy_error (msg_to_string ctx msg)
 fun error_tac' msg ctxt i st = error_tac (fn _ => msg (nth (Thm.prems_of st) (i-1))) ctxt i st
 fun error_method msg = CONTEXT_METHOD (K (error_ctac msg))
-fun fail_on_LAZY_ERROR f x = f x handle LAZY_ERROR msg => raise ERROR (msg())
+fun fail_on_LAZY_ERROR f x = f x handle LAZY_ERROR (Lazy_Error msg) => raise ERROR (msg())
 
 (* Solves a goal of the form "?x = a"
    by applying conv to a and then instantiating ?x with the result *)

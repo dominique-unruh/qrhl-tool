@@ -1,7 +1,7 @@
 theory All_Unit_Tests
   imports 
     (* Tests *)
-    Test_Misc Test_Tactics Test_Encoding Test_QRHL_Core
+    Test_Misc Test_Tactics Test_Expressions Test_QRHL_Core
 begin
 
 ML \<open>

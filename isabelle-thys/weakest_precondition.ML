@@ -100,7 +100,7 @@ fun wp_seq_tac left ctxt i =
   Tactics.seq_tac (if left then ~2 else ~1) (if left then ~1 else ~2)
            (Var(("precondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i
   THEN
-  wp_tac left ctxt i
+  wp_tac left ctxt (i+1)
 (*   SUBGOAL (fn (goal,n) =>
     let val (_,p1,p2,B) = Encoding.dest_qrhl_goal goal
         val stmt = HOLogic.dest_list (if left then p1 else p2) |> the_single

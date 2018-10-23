@@ -80,6 +80,6 @@ wp right.
 rnd h,r <- map_distr (λr. (π o r, r)) (uniform UNIV).
  simp bij_pi.
 skip.
-simp!.
+simp! o_def.
 
 qed.
