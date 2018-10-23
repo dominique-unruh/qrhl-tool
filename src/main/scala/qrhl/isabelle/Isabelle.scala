@@ -243,6 +243,12 @@ object Isabelle {
   def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
   def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
 
+
+  object Thm {
+    private val logger = log4s.getLogger
+    val show_oracles_lines_op : Operation[BigInt, List[String]] = Operation.implicitly[BigInt,List[String]]("show_oracles_lines")
+  }
+
   private val logger = log4s.getLogger
   def mk_conj(t1: Term, t2: Term) : Term = HOLogic.conj $ t1 $ t2
   def mk_conjs(terms: Term*): Term = terms match {
@@ -474,13 +480,12 @@ object Isabelle {
   private var _theContext : Context = _
   def theContext: Context = _theContext
 
-  object Thm {
-    val show_oracles_lines_op : Operation[BigInt, List[String]] = Operation.implicitly[BigInt,List[String]]("show_oracles_lines")
-  }
-
   class Thm(val isabelle:Isabelle, val thmId: BigInt) {
-    def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId)
-    def show_oracles(): Unit = for (line <- show_oracles_lines()) println(line)
+    def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbolsToUnicode)
+    def show_oracles(): Unit = {
+      val text = show_oracles_lines().mkString("\n")
+      Thm.logger.debug(text)
+    }
 
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting theorem $thmId")

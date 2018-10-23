@@ -41,11 +41,11 @@ sealed trait Subgoal {
 }
 
 object Subgoal {
+  private val logger = log4s.getLogger
+
   def printOracles(thms : Thm*): Unit = {
-    println()
     for (thm <- thms)
       thm.show_oracles()
-    println()
   }
 
   def apply(context: Isabelle.Context, e : Expression) : Subgoal = {
