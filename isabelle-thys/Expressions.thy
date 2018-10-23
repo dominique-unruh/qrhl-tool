@@ -141,10 +141,88 @@ lemma index_expression[simp]: "index_expression left (expression Q e) = expressi
 
 section \<open>Substitutions\<close>
 
-typedecl substitution
-consts substitute1 :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> substitution"
+(* TODO move *)
+lemma variable_raw_domain_Rep_variable[simp]: "variable_raw_domain (Rep_variable (v::'a::universe variable)) = range (embedding::'a\<Rightarrow>_)"
+  apply transfer by simp
 
-consts subst_expression :: "substitution list \<Rightarrow> 'b expression \<Rightarrow> 'b expression"
+(* TODO: rename to substitution1 *)
+typedef substitution1 = "{(v::variable_raw, vs, e::mem2\<Rightarrow>universe). 
+  finite vs \<and>
+  (\<forall>m. e m \<in> variable_raw_domain v) \<and>
+  (\<forall>m1 m2. (\<forall>w\<in>vs. Rep_mem2 m1 w = Rep_mem2 m2 w) \<longrightarrow> e m1 = e m2)}"
+  by (rule exI[of _ "(Rep_variable (undefined::unit variable), {}, \<lambda>_. embedding ())"], auto)
+setup_lifting type_definition_substitution1
+
+lift_definition substitute1 :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> substitution1" is
+  "\<lambda>(v::variable_raw) (vs,e). (v, vs, \<lambda>m. embedding (e m))" 
+  by auto 
+
+lift_definition subst_mem2 :: "substitution1 list \<Rightarrow> mem2 \<Rightarrow> mem2" is
+  "\<lambda>(\<sigma>::(variable_raw*_*(mem2\<Rightarrow>universe)) list) (m::mem2) (v::variable_raw). 
+    case find (\<lambda>(w,_,_). w=v) \<sigma> of None \<Rightarrow> Rep_mem2 m v | Some (_,_,e) \<Rightarrow> e m"
+proof (rename_tac \<sigma> m v)
+  fix \<sigma> m v
+  assume assm: "list_all (\<lambda>x. x \<in> {(v, vs, e). finite vs \<and> (\<forall>m. e m \<in> variable_raw_domain v) \<and> (\<forall>m1 m2. (\<forall>w\<in>vs. Rep_mem2 m1 w = Rep_mem2 m2 w) \<longrightarrow> e m1 = e m2)}) \<sigma>"
+  show "(case find (\<lambda>(w, _, _). w = v) \<sigma> of None \<Rightarrow> Rep_mem2 m v | Some (xa, xaa, e) \<Rightarrow> e m) \<in> variable_raw_domain v" 
+    find_theorems find
+  proof (cases "find (\<lambda>(w, _, _). w = v) \<sigma> = None")
+    case True
+    then show ?thesis using Rep_mem2 by auto
+  next
+    case False
+    then obtain w vs e where find: "find (\<lambda>(w, _, _). w=v) \<sigma> = Some (w,vs,e)" by auto
+    then have "(v,vs,e) \<in> set \<sigma>"
+      apply (subst (asm) find_Some_iff)
+      using nth_mem by force
+    with assm have "e m \<in> variable_raw_domain v"
+      by (metis (mono_tags, lifting) Ball_set_list_all case_prod_conv mem_Collect_eq)
+    with find show ?thesis by auto
+  qed
+qed
+
+(* 
+definition subst_expression :: "substitution list \<Rightarrow> 'b expression \<Rightarrow> 'b expression" where
+  "subst_expression \<sigma> e =  *)
+
+lift_definition substitution1_footprint :: "substitution1 \<Rightarrow> variable_raw set" is "\<lambda>(_,vs::variable_raw set,_). vs" .
+lift_definition substitution1_variable :: "substitution1 \<Rightarrow> variable_raw" is "\<lambda>(v::variable_raw,_,_). v" .
+
+lemma finite_substitution1_footprint[simp]: "finite (substitution1_footprint \<sigma>)"
+  apply transfer by auto
+
+lemma subst_mem2_footprint:
+  fixes \<sigma> vs
+  defines "vs' == (\<Union>x\<in>set \<sigma>. substitution1_footprint x) \<union> (vs - substitution1_variable ` set \<sigma>)"
+  assumes meq: "\<And>v. v\<in>vs' \<Longrightarrow> Rep_mem2 m1 v = Rep_mem2 m2 v"
+  assumes "v \<in> vs"
+  shows "Rep_mem2 (subst_mem2 \<sigma> m1) v = Rep_mem2 (subst_mem2 \<sigma> m2) v"
+proof (cases "find (\<lambda>(w,_,_). w = v) (map Rep_substitution1 \<sigma>)")
+  case None
+  then have unmod: "Rep_mem2 (subst_mem2 \<sigma> m) v = Rep_mem2 m v" for m
+    unfolding subst_mem2.rep_eq by simp
+  from None vs'_def have "v \<in> vs'" sorry
+  with unmod and meq show ?thesis by metis
+next
+  case (Some a)
+  then show ?thesis sorry
+qed
+
+lift_definition subst_expression :: "substitution1 list \<Rightarrow> 'b expression \<Rightarrow> 'b expression" is
+  "\<lambda>(\<sigma>::substitution1 list) (vs,e).
+       ((\<Union>x\<in>set \<sigma>. substitution1_footprint x) \<union> (vs - substitution1_variable ` set \<sigma>),
+        e o subst_mem2 \<sigma>)"
+proof auto
+  fix \<sigma> and vs :: "variable_raw set" and e :: "mem2\<Rightarrow>'b" and m1 m2
+  assume "finite vs"
+  assume "\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> e m1 = e m2"
+  then have e_footprint: "e m1 = e m2" if "\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v" for m1 m2 using that by simp
+  assume meq: "\<forall>v\<in>(\<Union>x\<in>set \<sigma>. substitution1_footprint x) \<union> (vs - substitution1_variable ` set \<sigma>).
+          Rep_mem2 m1 v = Rep_mem2 m2 v"
+  then have "Rep_mem2 (subst_mem2 \<sigma> m1) v = Rep_mem2 (subst_mem2 \<sigma> m2) v" if "v \<in> vs" for v
+    using subst_mem2_footprint using that by metis
+  then show "e (subst_mem2 \<sigma> m1) = e (subst_mem2 \<sigma> m2)" 
+    by (rule_tac e_footprint, simp)
+qed
 
  
 lemma subst_expression_unit_tac:
