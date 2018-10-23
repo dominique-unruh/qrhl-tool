@@ -186,9 +186,13 @@ definition subst_expression :: "substitution list \<Rightarrow> 'b expression \<
 
 lift_definition substitution1_footprint :: "substitution1 \<Rightarrow> variable_raw set" is "\<lambda>(_,vs::variable_raw set,_). vs" .
 lift_definition substitution1_variable :: "substitution1 \<Rightarrow> variable_raw" is "\<lambda>(v::variable_raw,_,_). v" .
+lift_definition substitution1_function :: "substitution1 \<Rightarrow> mem2 \<Rightarrow> universe" is "\<lambda>(_,_,f::mem2\<Rightarrow>universe). f" .
 
 lemma finite_substitution1_footprint[simp]: "finite (substitution1_footprint \<sigma>)"
   apply transfer by auto
+
+lemma find_map: "find p (map f l) = map_option f (find (\<lambda>x. p (f x)) l)"
+  by (induction l, auto)
 
 lemma subst_mem2_footprint:
   fixes \<sigma> vs
@@ -200,15 +204,33 @@ proof (cases "find (\<lambda>(w,_,_). w = v) (map Rep_substitution1 \<sigma>)")
   case None
   then have unmod: "Rep_mem2 (subst_mem2 \<sigma> m) v = Rep_mem2 m v" for m
     unfolding subst_mem2.rep_eq by simp
-  from None vs'_def have "v \<in> vs'" sorry
+  from None have "v \<notin> substitution1_variable ` set \<sigma>"
+    apply transfer by (auto simp: find_None_iff)
+  with \<open>v \<in> vs\<close> have "v \<in> vs'"
+    unfolding vs'_def by simp 
   with unmod and meq show ?thesis by metis
 next
-  case (Some a)
-  then show ?thesis sorry
+  case (Some s)
+  obtain sv svs sf where "s=(sv,svs,sf)"
+    by (atomize_elim, meson prod_cases3) 
+  with Some have find: "find (\<lambda>(w,_,_). w = v) (map Rep_substitution1 \<sigma>) = Some (sv,svs,sf)" by simp
+  then obtain s where "s \<in> set \<sigma>" and Rep_s: "Rep_substitution1 s = (sv,svs,sf)" 
+    apply atomize_elim apply (subst (asm) find_map)
+    apply auto by (metis find_Some_iff nth_mem)
+  from find have Rep_sf: "Rep_mem2 (subst_mem2 \<sigma> m) v = sf m" for m
+    unfolding subst_mem2.rep_eq by simp
+  from Rep_s have sf_eq: "(\<forall>w\<in>svs. Rep_mem2 m1 w = Rep_mem2 m2 w) \<Longrightarrow> sf m1 = sf m2"
+    using Rep_substitution1[of s] by auto
+  have "svs \<subseteq> vs'" unfolding vs'_def
+    by (metis (mono_tags, lifting) UN_I UnCI \<open>s : set \<sigma>\<close> Rep_s case_prod_conv subsetI substitution1_footprint.rep_eq)
+  with sf_eq meq have "sf m1 = sf m2" by auto
+  with sf_eq show ?thesis
+    by (simp add: Rep_sf)
 qed
 
 lift_definition subst_expression :: "substitution1 list \<Rightarrow> 'b expression \<Rightarrow> 'b expression" is
   "\<lambda>(\<sigma>::substitution1 list) (vs,e).
+       (* TODO: restrict the first part to those x which have a variable in vs to make subst_expression_unit_tac true *)
        ((\<Union>x\<in>set \<sigma>. substitution1_footprint x) \<union> (vs - substitution1_variable ` set \<sigma>),
         e o subst_mem2 \<sigma>)"
 proof auto
@@ -224,7 +246,6 @@ proof auto
     by (rule_tac e_footprint, simp)
 qed
 
- 
 lemma subst_expression_unit_tac:
   shows "expression variable_unit E = subst_expression s (expression variable_unit E)"
   sorry
