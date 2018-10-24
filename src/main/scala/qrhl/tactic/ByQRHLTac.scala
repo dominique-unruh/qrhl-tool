@@ -10,19 +10,7 @@ import qrhl.logic._
 case object ByQRHLTac extends Tactic {
   class Probability(left : Boolean, state : State) {
     def unapply(term: pure.Term): Option[(pure.Term,pure.Term,pure.Term)] = term match {
-      case App(App(App(Const(Isabelle.probability_old.name,_),v),p),rho) =>
-
-        val vname = Isabelle.dest_string(v)
-        val vvar = state.environment.cVariables.getOrElse(vname, throw UserException(s"$v is not the name of a classical variable")).index(left)
-        val vbool = vvar.valueTyp match {
-          case HOLogic.boolT => vvar.valueTerm
-          case Isabelle.bitT => bitToBool(vvar.valueTerm)
-          case _ => throw UserException(s"$vname must have type bool or bit, not ${vvar.valueTyp}")
-        }
-        Some(vbool,p,rho)
-
       case App(App(App(Const(Isabelle.probability.name,_),v),p),rho) =>
-//        val expressionToTermOp = Operation.implicitly[Term, (Term,pure.Typ)]("expression_to_term")
         val addIndexToExpressionOp = Operation.implicitly[(Term,Boolean), Term]("add_index_to_expression")
 
         val v2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (v,left))
@@ -38,12 +26,6 @@ case object ByQRHLTac extends Tactic {
 
   val byQRHLPreOp: Operation[(List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), Term]
     = Operation.implicitly[(List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), Term]("byQRHLPre") // TODO: move
-
-  //  def mkCEquality(cvars: List[CVariable]) : Term =
-//    Isabelle.mk_conjs((for (c<-cvars)
-//      yield Isabelle.mk_eq(c.typ.isabelleTyp, c.index1.isabelleTerm, c.index2.isabelleTerm)) : _*)
-//
-//  def mkQEquality(qvars: List[QVariable]) : Term = Const("HOL.undefined", Isabelle.predicateT)
 
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
     val ProbLeft = new Probability(true, state)

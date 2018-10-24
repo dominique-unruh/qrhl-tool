@@ -30,15 +30,14 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
     assert(context.checkType(isabelleTerm) == typ)
   }
 
-  /** Free variables, including those encoded as a string in "probability ... ... str" */
+  /** Free variables */
   private def freeVars(term: Term): Set[String] = {
     val fv = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(t:Term) : Unit = t match {
       case Free(v,_) => fv += v
-        // TODO: what about Encoding.probability?
-      case App(App(App(Const(Isabelle.probability_old.name,_),t1),t2),t3) =>
-        fv += Isabelle.dest_string(t1)
-        collect(t2); collect(t3)
+//      case App(App(App(Const(Isabelle.probability_old.name,_),t1),t2),t3) =>
+//        fv += Isabelle.dest_string(t1)
+//        collect(t2); collect(t3)
       case Const(_,_) | Bound(_) | Var(_,_) =>
       case App(t1,t2) => collect(t1); collect(t2)
       case Abs(_,_,body) => collect(body)

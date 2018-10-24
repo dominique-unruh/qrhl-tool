@@ -265,8 +265,8 @@ object Isabelle {
 
   val bitT = Type("Bit.bit", Nil)
   val predicateT = Type("Complex_L2.subspace", List(Type("Prog_Variables.mem2",Nil)))
-  val programT = Type("Encoding.program")
-  val oracle_programT = Type("Encoding.oracle_program")
+  val programT = Type("Programs.program")
+  val oracle_programT = Type("Programs.oracle_program")
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
@@ -276,7 +276,7 @@ object Isabelle {
   def boundedT(inT:ITyp, outT:ITyp) = Type("Bounded_Operators.bounded", List(inT,outT))
   def measurementT(resultT:ITyp, qT: ITyp) = Type("QRHL_Core.measurement", List(resultT, qT))
   def listT(typ:ITyp) : Type = Type("List.list", List(typ))
-  val block = Const("Encoding.block", listT(programT) -->: programT)
+  val block = Const("Programs.block", listT(programT) -->: programT)
   def vectorT(typ:ITyp) = Type("Complex_L2.vector", List(typ))
   def variableT(typ:ITyp) = Type("Prog_Variables.variable", List(typ))
   def dest_variableT(typ: ITyp): ITyp = typ match {
@@ -286,24 +286,24 @@ object Isabelle {
   def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
   //val cvariableT: ITyp => Type = variableT
   def expressionT(typ:ITyp) = Type("Expressions.expression", List(typ))
-  val instantiateOracles = Const("Encoding.instantiateOracles", oracle_programT -->: listT(programT) -->: programT)
-  val assignName = "Encoding.assign"
+  val instantiateOracles = Const("Programs.instantiateOracles", oracle_programT -->: listT(programT) -->: programT)
+  val assignName = "Programs.assign"
   def assign(typ:ITyp) : Const = Const(assignName, variableT(typ) -->: expressionT(typ) -->: programT)
-  val sampleName = "Encoding.sample"
+  val sampleName = "Programs.sample"
   def sample(typ:ITyp) : Const = Const(sampleName, variableT(typ) -->: expressionT(distrT(typ)) -->: programT)
-  val ifthenelseName = "Encoding.ifthenelse"
+  val ifthenelseName = "Programs.ifthenelse"
   val ifthenelse = Const(ifthenelseName, expressionT(HOLogic.boolT) -->: listT(programT) -->: listT(programT) -->: programT)
-  val whileName = "Encoding.while"
+  val whileName = "Programs.while"
   val whileProg = Const(whileName, expressionT(HOLogic.boolT) -->: listT(programT) -->: programT)
   val metaImp = Const("Pure.imp", Type("prop") -->: Type("prop") -->: Type("prop"))
   val boolT: ITyp = HOLogic.boolT
   val implies = Const("HOL.implies", boolT -->: boolT -->: boolT)
-  val qrhl = Const("Encoding.qrhl", expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
-  val qinitName = "Encoding.qinit"
+  val qrhl = Const("Relational_Hoare.qrhl", expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
+  val qinitName = "Programs.qinit"
   def qinit(typ:ITyp) = Const(qinitName, variablesT(typ) -->: expressionT(vectorT(typ)) -->: programT)
-  val qapplyName = "Encoding.qapply"
+  val qapplyName = "Programs.qapply"
   def qapply(typ:ITyp) = Const(qapplyName, variablesT(typ) -->: expressionT(boundedT(typ)) -->: programT)
-  val measurementName = "Encoding.measurement"
+  val measurementName = "Programs.measurement"
   def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variableT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
   val unitT = Type("Product_Type.unit")
   def prodT(t1:ITyp, t2:ITyp) = Type("Product_Type.prod", List(t1,t2))
@@ -325,9 +325,9 @@ object Isabelle {
   def variable_concat(t1:ITyp, t2:ITyp) = Const(variable_concatName, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1,t2)))
   val realT = Type("Real.real")
   val stringT: Type = listT(Type("String.char"))
-  val program_stateT = Type("Encoding.program_state")
-  val probability = Const("Encoding.probability", expressionT(boolT) -->: programT -->: program_stateT -->: realT)
-  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
+  val program_stateT = Type("Programs.program_state")
+  val probability = Const("Programs.probability", expressionT(boolT) -->: programT -->: program_stateT -->: realT)
+//  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
 
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
   val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")
