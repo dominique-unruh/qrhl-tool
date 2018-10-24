@@ -378,6 +378,8 @@ parse_translation \<open>[("_declared_qvars", Prog_Variables.declared_qvars_pars
 
 simproc_setup warn_declared_qvars ("variable_name q") = Prog_Variables.warn_declared_qvars_simproc
 
+simproc_setup index_var ("index_var lr v") = Prog_Variables.index_var_simproc
+
 section \<open>Cleanup\<close>
 
 hide_type (open) vtree

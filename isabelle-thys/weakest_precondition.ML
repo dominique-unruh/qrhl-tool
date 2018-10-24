@@ -10,7 +10,7 @@ struct
    "wp_tac false" operates analogously, except that it expects a goal of the form "qrhl ?A skip p2 B"
 *)
 fun wp_tac left ctxt = SUBGOAL (fn (goal,n) => let
-  val (pre,p1,p2,post) = Encoding.dest_qrhl_goal goal
+  val (pre,p1,p2,post) = Relational_Hoare.dest_qrhl_goal goal
   fun lr l r = if left then l else r
   val stmts = HOLogic.dest_list (lr p1 p2)
   fun error kind = Misc.error_tac (fn _ => "Cound not instantiate "^Syntax.string_of_term ctxt pre^

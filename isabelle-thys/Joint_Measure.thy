@@ -1,5 +1,5 @@
 theory Joint_Measure
-  imports Expressions Encoding Tactics
+  imports Expressions Tactics
 begin
 
 

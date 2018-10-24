@@ -1,5 +1,5 @@
 theory Weakest_Precondition
-  imports Encoding Tactics
+  imports Tactics
 begin
 
 lemma skip_rule:

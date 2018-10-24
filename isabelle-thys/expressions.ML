@@ -195,4 +195,20 @@ fun subst_expression_tac ctxt =
                 | _ => raise TERM("index_vars_tac: not a varterm",[t,vars]))
   | _ => raise TERM("subst_expression_tac: bad shape",[t]))
 
+
+fun is_explicit_expression (Const(\<^const_name>\<open>expression\<close>,_) $ Q $ _) =
+  ((Prog_Variables.parse_varterm Q; true) handle TERM _ => false)
+  | is_explicit_expression _ = false
+fun is_varlist_explicit_expression (Const(\<^const_name>\<open>expression\<close>,_) $ Q $ _) =
+  ((Prog_Variables.parse_varlist Q; true) handle TERM _ => false)
+  |  is_varlist_explicit_expression _ = false
+
+fun clean_expression_simproc _ ctxt ct = 
+  let val t = Thm.term_of ct in
+  if is_explicit_expression t andalso not (is_varlist_explicit_expression t) then
+      SOME (clean_expression_conv ctxt ct) handle CTERM _ => NONE
+    else
+      NONE
+  end
+
 end

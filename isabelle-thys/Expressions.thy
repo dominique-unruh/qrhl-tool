@@ -342,4 +342,10 @@ lemma expression_id_comp_aux: \<comment> \<open>Helper for ML function clean_exp
 
 ML_file "expressions.ML"
 
+simproc_setup clean_expression ("expression Q e") = Expressions.clean_expression_simproc
+
+consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
+parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Expressions.term_to_expression_untyped ctx e)]\<close>
+hide_const expression_syntax
+
 end

@@ -1,6 +1,8 @@
+(* TODO: distribute in separate theories *)
 theory Tactics
-  imports Encoding
+  imports Expressions Relational_Hoare
 begin
+
 
 
 lemma seq:
@@ -15,13 +17,13 @@ lemma seqREMOVE:
     and "qrhl B c2 d2 C"
   shows "qrhl A c d C"
   using assms using seq by auto
-  
+
 
 ML_file "tactics.ML"
 
 method_setup seq = {*
   Scan.lift Parse.nat -- Scan.lift Parse.nat -- Scan.lift Parse.term >> (fn ((i,j),B) => fn ctx =>
-    SIMPLE_METHOD (Tactics.seq_tac i j (Encoding.read_predicate ctx B) ctx 1))
+    SIMPLE_METHOD (Tactics.seq_tac i j (Relational_Hoare.read_predicate ctx B) ctx 1))
 *}
 
 end

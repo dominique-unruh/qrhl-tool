@@ -1,9 +1,9 @@
 theory Test
   imports 
- (* CryptHOL.Cyclic_Group QRHL.QRHL "HOL-Eisbach.Eisbach_Tools"  *)
+ CryptHOL.Cyclic_Group "HOL-Eisbach.Eisbach_Tools" 
 (* Cert_Codegen *)
-QRHL.QRHL QRHL.QRHL_Operations
-Hashed_Terms Extended_Sorry
+(* Hashed_Terms Extended_Sorry *)
+QRHL.QRHL
      (* QRHL.QRHL_Core  Multi_Transfer  *)
 (* QRHL.Prog_Variables *)
 (*   keywords
@@ -11,6 +11,7 @@ Hashed_Terms Extended_Sorry
  *)
 begin
 
+hide_const (open) Order.top
 
 variables classical a :: bit and quantum A :: bit begin
 ML \<open>
@@ -30,52 +31,8 @@ fun check_func (t,cert) = let
 \<close>
 
 
-variables classical c :: bit and quantum q :: bit begin
-ML \<open>
-val goal = @{term "qrhl (expression \<lbrakk>var_c1, var_c2\<rbrakk> (\<lambda>(c1, c2). \<CC>\<ll>\<aa>[c1 = c2] \<sqinter> \<lbrakk>q1\<rbrakk> \<equiv>\<qq> \<lbrakk>q2\<rbrakk>)) 
-  [measurement var_c \<lbrakk>q\<rbrakk> (const_expression computational_basis)] [measurement var_c \<lbrakk>q\<rbrakk> (const_expression computational_basis)] (expression \<lbrakk>var_c1, var_c2\<rbrakk> (\<lambda>(c1, c2). \<CC>\<ll>\<aa>[c1 = c2] \<sqinter> \<lbrakk>q1\<rbrakk> \<equiv>\<qq> \<lbrakk>q2\<rbrakk>))"}
-(* val Const(\<^const_name>\<open>qrhl\<close>,_) $ A' $ c' $ d' $ B' = goal *)
-
-fun test1 () = Tactics.wp_tac_on_term_cert_codegen true \<^context> goal
-   (* with cert: 8.8ms 9.2ms 6.6ms *)
-   (* without cert: 0.02 *)
-fun test2 () = Tactics.wp_tac_on_term true \<^context> goal (* 10.3ms 21ms *)
-
-fun time f = let
-  val iterations = 300000
-  fun run 0 = ()
-    | run i = (f (); run (i-1))
-  val start = Time.now ()
-  val _ = run iterations
-  val stop = Time.now ()
-  val duration = Time.toReal (stop-start) / Real.fromInt iterations * 1000.0
-  in duration end
-
-val _ = time test1 |> \<^print>
-\<close>
-end
 
 
-ML \<open>
-Cert_Codegen.list_last \<^context> \<^term>\<open>[1,2,3]\<close>
-|> (fn ((x,x'),y) => (Thm.cterm_of \<^context> x, Thm.cterm_of \<^context> x', y ()))
-\<close>
-
-(* ML \<open>
-val t = \<^term>\<open>\<CC>\<ll>\<aa>[uniform UNIV = uniform UNIV] \<sqinter> (\<Sqinter>z\<in>supp (uniform UNIV). (\<Sqinter>m12 m11. \<CC>\<ll>\<aa>[m11 \<noteq> m12] + (\<CC>\<ll>\<aa>[\<not> True] + \<top>) \<sqinter> \<CC>\<ll>\<aa>[enc (z, m11) = G z + m12 \<and> b1 = b2]) \<sqinter> \<CC>\<ll>\<aa>[m11 = m12 \<and> m21 = m22 \<and> cglobA1 = cglobA2] \<sqinter> \<lbrakk>qglobA1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2\<rbrakk>)\<close>
-val _ = Autogen_WP.wp \<^context> 
-\<close> *)
-
-
-
-variables classical x :: int begin
-ML \<open>
-Autogen_WP.wp1_tac \<^context> \<^term>\<open>False\<close>
-\<^term>\<open>qrhl Expr[Cla[False]] [assign var_x Expr[1], assign var_x Expr[2]]
-[assign var_x Expr[1], assign var_x Expr[2]] Expr[Cla[True]]\<close>
-|> snd |> (fn x => x())
-\<close>
-end
 
 
 (* eta_proc bug *)
@@ -87,414 +44,15 @@ schematic_goal x: " (\<lambda>(i, b, s). ?t (i, b, s)) = xxx"
   oops
 
 
-ML \<open>
-fun test_wp ctxt c d B = let
-  val (A,cert) = Autogen_WP.wp ctxt c d B
-  val thm = cert ()
-  val prop = Thm.prop_of thm |> HOLogic.dest_Trueprop
-  val Const(\<^const_name>\<open>qrhl\<close>,_) $ A' $ c' $ d' $ B' = prop
-  fun err s t t' = raise CTERM("test_wp: "^s,[Thm.cterm_of ctxt t,Thm.cterm_of ctxt t'])
-  val _ = if c' = c then () else err "c" c c'
-  val _ = if d' = d then () else err "d" d d'
-  val _ = if B' = B then () else err "B" B B'
-  val _ = if Envir.beta_norm A' = Envir.beta_norm A then () else err "A" A A'
-in Thm.global_cterm_of (Thm.theory_of_thm thm) A end
-\<close>
-
-
-variables classical x :: int and classical y :: int and classical u :: unit and quantum q :: int and classical b :: bool begin
-ML \<open>
-  test_wp \<^context> \<^term>\<open>[ifthenelse Expr[b] [assign var_b Expr[\<not>b], assign var_b Expr[\<not>b]] [] ]\<close> \<^term>\<open>[]::program list\<close>   @{term "Expr[Cla[b1]]"}
-     |> Simplifier.rewrite \<^context> |> Thm.rhs_of
-\<close>
-ML \<open>
-  test_wp \<^context> \<^term>\<open>[]::program list\<close> @{term "[measurement var_x \<lbrakk>q\<rbrakk> Expr[computational_basis]]"} @{term "Expr[Cla[x2=x1]]"}
-\<close>
-ML \<open>
-  test_wp \<^context> @{term "[measurement var_x \<lbrakk>q\<rbrakk> Expr[computational_basis]]"} @{term "[] :: program list"} @{term "Expr[Cla[x2=x1]]"}
-\<close>
-ML \<open>
-  test_wp \<^context> @{term "[sample var_x Expr[uniform {y<..<x}]]"} @{term "[] :: program list"} @{term "Expr[Cla[x1=x2]]"}
-\<close>
-ML \<open>
-  test_wp \<^context> @{term "[qapply \<lbrakk>q\<rbrakk> Expr[undefined]]"} @{term "[] :: program list"} @{term "Expr[top \<guillemotright> \<lbrakk>q\<rbrakk>]"}
-\<close>
-ML \<open>
-Autogen_Cleanup_Expression_Concat.cleanup_expression_concat \<^context> \<^term>\<open>variable_unit\<close> \<^term>\<open>variable_unit\<close> \<^term>\<open>\<lambda>(x1::unit, x2::unit). ()\<close>
-|> check_func
-\<close>
-ML \<open>
-cleanup_expression_function \<^context> \<^term>\<open>variable_unit\<close> \<^term>\<open>undefined :: unit\<Rightarrow>unit\<close>
-|> check_func
-\<close>
-end
 
 declare[[show_abbrevs=false,eta_contract=false]]
 
 text nothing
 
 
-
-ML \<open>open Cert_Codegen\<close>
-
-ML \<open>
-;;
-(* get_variable_name \<^context> @{term var_xxx} *)
-\<close>
-
-(* (* TODO remove *)
-lemma func: (* TODO remove *)
-  assumes "e1 == expression Q1 E1"
-  assumes "\<And>z. e2 z == expression (Q2 z) (E2 z)"
-  assumes "expression (variable_concat Q1 (Q2 undefined)) (\<lambda>(x1,x2). f (E1 x1) (\<lambda>z. E2 z x2)) \<equiv> e'"
-  (* assumes "undefined \<equiv> e'" *)
-  shows "map_expression2' f e1 e2 = e'"
-  sorry 
-
-
-
-ML \<open>
-val func_spec : specfx = {
-  name="func", pattern=\<^prop>\<open>map_expression2' f e1 e2 = e'\<close> |> free_to_var,
-  inputs=["f","e1","e2"], outputs=["e'"],
-  thms=["func"], fallback="fn (f,e1,e2) => raise TERM(\"func\",[f,e1,e2])"} \<close>
-
-ML \<open>
-val code = thms_to_funs \<^context> [func_spec] "Test" "test0.ML"
-\<close>
-ML\<open>fun prt t = (@{print} (Thm.cterm_of \<^context> t); ())
-\<close>
-
-ML_file "test0.ML"
-
-
-ML \<open>
-local
-val t = @{term "map_expression2' f (const_expression ()) (%_. const_expression ())"}
-val (Const _ $ f $ e1 $ e2) = t
-in
-val res = Test.func \<^context> f e1 e2 |> check_func
-end
-\<close>                                                      
-
-(* END remove *)
- *)
-
-ML \<open>
-@{ml_term "string_concat_func a b c"}
-\<close>
-
-
-
-(* definition string_concat_func[simp]: "string_concat_func a b c = (a@b = c)" *)
-ML \<open> 
-;;
-string_concat_func \<^context> \<^term>\<open>''hello''\<close> \<^term>\<open>''there''\<close> |> check_func 
-;;
-fun get_variable_name_spec ctxt v = let
-  val ct = Thm.cterm_of ctxt v
-  val thm = Raw_Simplifier.rewrite_cterm (false,false,false) (K (K NONE)) ctxt ct
-  val rhs = Thm.rhs_of thm |> Thm.term_of
-  val _ = HOLogic.dest_string rhs
-  in
-    (rhs, fn () => thm)
-  end
-;;
-val get_variable_name_spec : specf = {name="get_variable_name", inputs=["v"], outputs=["n"],
-                                      pattern=\<^prop>\<open>variable_name v = n\<close> |> free_to_var}
-;;
-(* get_variable_name \<^context> @{term var_xxx} |> check_func *)
-\<close>
-
-
-ML \<open>
-;;
-assert_equals_func \<^context> @{term 123} @{term 123} |> snd |> (fn c => c())
-\<close>
-
-
-
-
-ML \<open>
-\<close>
-
-declare[[show_types]]
-
-ML \<open>
-constant_function \<^context> @{term "%z::nat. 1+(2::int)"} |> check_func
-\<close>
-
-
-variables classical x :: int begin
-ML \<open>
-index_var_func \<^context> @{term False} @{term "var_x"} |> check_func
-\<close>
-end
-
-
-
-
-
-(* ML \<open>
-val thm_by_id = Synchronized.var "thm_by_id" Inttab.empty : thm Inttab.table Synchronized.var
-fun store_thm thm = let val id = serial () 
-                        val _ = Synchronized.change thm_by_id (Inttab.update_new (id,thm))
-                    in id end
-fun get_thm_by_id id = Inttab.lookup (Synchronized.value thm_by_id) id |> the
-\<close>
- *)
-
-(* ML \<open>
-structure Data = Theory_Data (
-  type T = thm Inttab.table
-  (* fun init _ = Inttab.empty *)
-  val empty = Inttab.empty
-  fun merge _ = Inttab.empty
-  val extend = I
-)
-fun get_thm ctxt id = Inttab.lookup (Data.get ctxt) id |> the
-fun thm_antiq (conf:conf) thm =
-  let val id = serial ()
-      val ctxt = Data.map (Inttab.update_new (id,thm)) (!(#ctxt conf))
-      val (var,ctxt) = ML_Context.variant "thm" ctxt
-      val prepare = "val " ^ var ^ " = get_thm \<^context> " ^ ML_Syntax.print_int id
-      val retrieve = (* ML_Context.struct_name ctxt ^ "." ^ *) var
-      val _ = #ctxt conf := ctxt
-  in
-    (prepare,retrieve)
-  end
-\<close> *)
-
-
-ML ML_File.ML
-ML Toplevel.generic_theory
-
-(* ML_file "test_index_vars.ML" *)
-(* ML "open Index_Vars" *)
-
-(* ML_file "test_index_expression.ML" *)
-(* ML "open Index_Expression" *)
-
-(* ML_file "test_map_expression.ML" *)
-(* ML "open Map_Expression" *)
-
-(* ML_file "test_subst_expression.ML" *)
-(* ML "open Subst_Expression" *)
-
-
-(* ML \<open>                           
-val _ = thms_to_fun \<^context> spec map_expression2'_func_spec
-|> (fn c => "fun " ^ c)
-|> (fn c => (tracing c; c))
-|> (fn c => ML_Context.eval ML_Compiler.flags Position.none (ML_Lex.read_pos Position.none c))
-\<close> 
-
-
-ML \<open>
-local
-val t = @{term "map_expression2' f (const_expression ()) (%_. const_expression ())"}
-in
-val (Const _ $ f $ e1 $ e2) = t
-val _ =
-map_expression2' \<^context> f e1 e2
-end
-\<close>                                                      
-*)
-
-
-
-
-
-(* ML \<open>
-(* TODO make work *)
-thm_to_fun \<^context> (empty_conf (hd spec)) spec "wp1_sample_func" "f" ["c","d","B"] ["A"] |> writeln
-\<close>
- 
-
-ML \<open>
-;;
-val _ = thms_to_fun \<^context> spec spec_wp |> tracing
-\<close>
-*)
-
-(* ML_file "test_wp.ML" *)
-(* ML "open WP" *)
-
-
-
-
-
-(* ML \<open>
-val _ = Theory.setup (ML_Antiquotation.declaration \<^binding>\<open>lemma_to_fun\<close>
-(Scan.succeed()) (fn _ => fn _ => fn ctxt => (lemma_to_fun ctxt spec |> apfst K)))
-\<close> *)
-
-variables classical x :: bool and classical y :: bool begin
-(* declare [[show_types,show_consts]] *)
-ML \<open>
-Autogen_Index_Vars.index_vars \<^context> @{term True} @{term "\<lbrakk>var_x,var_y\<rbrakk>"} |> check_func
-\<close>
-
-(* ML \<open>
-fun check_func1 pattern [input] (t,cert) = let
-  val thm = cert ()
-  val thy = Thm.theory_of_thm thm
-  val pattern = free_to_var pattern
-  val (_,tenv) = Pattern.first_order_match thy (pattern,Thm.prop_of thm) (Vartab.empty,Vartab.empty)
-  val _ = if input aconv (Vartab.lookup tenv ("input",0) |> the |> snd) then () else error "mismatch"
-  in (Thm.global_cterm_of thy t) end
-  | check_func1  _ _ _ = error "meh"
-\<close> *)
-
-
-
-ML \<open>
-(* TODO should simplif the nested prod-case's *)
-Autogen_Subst_Expression.subst_expression_func \<^context> @{term "substitute1 (var_x1::bool variable) (const_expression True)"}
-@{term "Expr[Cla[x1=x2]]"}
-|> check_func
-\<close>
-end
-
-
-variables classical x :: int begin
-ML \<open>
-Autogen_WP.wp \<^context> @{term "[assign var_x Expr[x*x], assign var_x Expr[x*x]]"} @{term "[] :: program list"} @{term "Expr[Cla[x1=x2]]"}
-|> check_func
-\<close>
-end
-
-
-
-(* value "0 = (1::bit)"
-
-typedef stuff = "UNIV :: nat set" by simp
-
-locale stuff1
-setup_lifting (in stuff1) type_definition_stuff
-
-locale stuff2 begin
-lemma type_definition_stuff': "type_definition (\<lambda>x. Rep_stuff x + 1) (\<lambda>x. Abs_stuff (x - 1)) {0<..}"
-  apply (rule type_definition.intro)
-  using Rep_stuff_inverse Abs_stuff_inverse by auto
-setup_lifting type_definition_stuff'
-end
-
-lift_definition (in stuff1) all :: "stuff set" is UNIV .
-
-lift_definition (in stuff2) all :: "stuff set" is "{0<..}" by simp
-lemma (in stuff2) all: "all = stuff1.all"
-  unfolding stuff1.all_def all_def apply auto
-  using greaterThan_0 image_iff
-  by fastforce
-lemma (in stuff2) all_UNIV: "all = UNIV"
-  unfolding all_def apply auto
-  by (metis (no_types, lifting) Abs_stuff_cases diff_Suc_Suc diff_zero greaterThan_0 image_iff)
-
-
-lemmas (in stuff2) [transfer_rule] = all.transfer[unfolded all]
-lemmas (in stuff2) [transfer_rule] = all.transfer[unfolded all_UNIV]
-
-save_transfer_rules stuff1
-save_transfer_rules stuff2
-
-lemma "card (UNIV :: stuff set) = 0"
-  using [[transfer_import stuff1]]
-  apply transfer
-  by auto
-
-lemma "stuff1.all = stuff2.all"
-  using [[transfer_import stuff1]]
-  using [[transfer_import stuff2]]
-  apply transfer
-  by simp
-  
- *)
-
-
-
-
-
-ML \<open>
-(* fun marked_sorry ctxt loc t = 
-  sorry_marker_oracle (ctxt,loc,t) |> Conv.fconv_rule (Conv.rewr_conv @{thm sorry_marker_def});;
- *)(* val thm1 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
-val thm2 = marked_sorry @{context} {position= @{here}} @{prop "1==1"}
-val thm = Thm.transitive thm1 thm2 *)
-\<close>
-
-
-ML \<open>
-(* fun marked_sorry_tac ctxt loc = SUBGOAL (fn (goal,i) => let
-  val thm = marked_sorry ctxt loc goal
-  in
-    solve_tac ctxt [thm] i
-  end
-) 
- *)\<close>
-
-
-
-declare[[smt_oracle=true]]
-
-lemma theo: "1=1"
-  (* apply (rule trans[of _ 1]) *)
-   (* apply (cheat 1) *)
-  by smt
-
-ML \<open>
-Extended_Sorry.show_oracles_lines @{thm theo}
-\<close>
-
-
-
-
-
-(* 
-ML \<open>
-val (func,fut) = Active.dialog_text ()
-val _ = func "hello" |> writeln
-val _ = func "hullo" |> writeln
-val _ = Future.join fut
-\<close>
- *)
-
 hide_const (open) Order.top Polynomial.order
 hide_const (open) List_Fusion.generator.generator
 
-
-(* 
-lemma "hadamard\<guillemotright>\<lbrakk>q1\<rbrakk> \<cdot> Qeq[q1=q2] = hadamard\<guillemotright>\<lbrakk>q2\<rbrakk> \<cdot> Qeq[q1=q2]"
-  apply (auto simp: prepare_for_code)
-  apply eval
-  done
-
- *)  
-  
-  
-  
-(* lemma "space_div (span{ket 0}\<guillemotright>\<lbrakk>q\<rbrakk>) (ket 1) \<lbrakk>r\<rbrakk> = span{ket 0}\<guillemotright>\<lbrakk>q\<rbrakk>"
-  apply (auto simp: prepare_for_code)
-  by eval
-
-lemma "space_div (span{ket (0,0), ket(1,1)}\<guillemotright>\<lbrakk>q,r\<rbrakk>) (ket 0) \<lbrakk>r\<rbrakk> = span{ket 0}\<guillemotright>\<lbrakk>q\<rbrakk>"
-  apply (auto simp: prepare_for_code)
-  by eval
- *)
-
-(* TODO move *)
-setup_lifting type_definition_variable_raw
-setup_lifting type_definition_variable
-setup_lifting type_definition_mem2
-
-(* thm type_definition_mem2
-lemma type_definition_universe_class: 
-  fixes embed
-  defines "embed \<equiv> embedding::'a::universe\<Rightarrow>_"
-  shows "type_definition embed (inv embed) (range embed)"
-  apply (rule type_definition.intro)
-  by (auto simp: embed_def)
-setup_lifting type_definition_universe_class *)
 
 lift_definition eval_variable :: "'a::universe variable \<Rightarrow> mem2 \<Rightarrow> 'a"
   is "\<lambda>v m. Hilbert_Choice.inv embedding (m v)" .
@@ -586,9 +144,9 @@ begin
 lemma
   assumes [simp]: "x\<ge>0"
   shows "qrhl D [s1,sample var_x Expr[uniform {0..max x 0}]] [t1,t2,assign var_x Expr[0]] Expr[Cla[x1\<ge>x2]]"
-  using [[method_error,show_types]]
-  apply (tactic \<open>Tactics.wp_tac \<^context> true 1\<close>)
-  apply (tactic \<open>Tactics.wp_tac \<^context> false 1\<close>)
+  using [[show_types]]
+  apply (tactic \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
   apply simp
   by (rule qrhl_top)
 
@@ -603,9 +161,8 @@ lemma test:
 lemma
   assumes [simp]: "x\<ge>0"
   shows "qrhl Expr[ Cla[x1=0 \<and> x2=1] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ]] [assign var_x Expr[x-1]] Expr[Cla[x1\<ge>x2]]"
-  using [[method_error]]
-  apply (tactic \<open>Tactics.wp_tac \<^context> true 1\<close>) 
-  apply (tactic \<open>Tactics.wp_tac \<^context> false 1\<close>)
+  apply (tactic \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>) 
+  apply (tactic \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
   apply simp
   apply skip
   by simp
@@ -614,10 +171,10 @@ end
 
 declare_variable_type G :: "{power,ab_semigroup_mult,inverse}"
 
-consts G::"G cyclic_group" and g::G
+axiomatization G::"G cyclic_group" and g::G
 
 (* term "(^^)" *)
-consts powG :: "G \<Rightarrow> int \<Rightarrow> G" (infixr "\<^sup>^" 80)
+axiomatization powG :: "G \<Rightarrow> int \<Rightarrow> G" (infixr "\<^sup>^" 80)
 (* locale group_G = cyclic_group G  *)
 (* lemma group_G: group_G *)
 (* abbreviation "g == generator G" *)
@@ -754,20 +311,18 @@ lemma elgamal_correct [simp]:
           ElGamal
          [] Expr[Cla[m1=z]]"
   unfolding ElGamal_def
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
-  apply (simp add: dec_def)
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (simp add: case_prod_beta dec_def)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
   (* unfolding enc_def *)
   (* unfolding  *)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
-
-term "Pr[x:y(z)]"
 
 lemma elgamal_correct2 [simp]:
   fixes z
@@ -775,15 +330,15 @@ lemma elgamal_correct2 [simp]:
           ElGamal
          [] Expr[Cla[m1=m2]]"
   unfolding ElGamal_def
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
   apply (simp add: dec_def)
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
   (* unfolding enc_def *)
   (* unfolding  *)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
-  apply (tactic  \<open>Tactics.wp_tac \<^context> true 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)

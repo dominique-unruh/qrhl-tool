@@ -9,7 +9,7 @@ let val (wp,thm) = Weakest_Precondition.get_wp left prog post ctxt
     val wp' = wp |> Thm.cterm_of ctxt |> Conv.try_conv (Expressions.clean_expression_conv ctxt)
                  |> Thm.rhs_of |> Thm.term_of |> Envir.beta_norm
     val _ = assert_aconv expected wp'
-    val (A,_,_,B) = Encoding.dest_qrhl_goal (Thm.prop_of thm)
+    val (A,_,_,B) = Relational_Hoare.dest_qrhl_goal (Thm.prop_of thm)
     val _ = assert_aconv wp A
     val _ = assert_aconv post B
 in () end
