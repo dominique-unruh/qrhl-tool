@@ -17,6 +17,10 @@ setup_lifting type_definition_mem2
 lemma expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
   unfolding expression_eval.rep_eq expression.rep_eq by auto
 
+lift_definition expression_vars :: "'a expression \<Rightarrow> variable_raw set" is "\<lambda>(vs::variable_raw set,f). vs" .
+lemma expression_vars[simp]: "expression_vars (expression X e) = set (raw_variables X)"
+  by (simp add: expression.rep_eq expression_vars.rep_eq)
+
 text \<open>
 Some notation, used mainly in the documentation of the ML code:
 \<^item> A term of type \<^typ>\<open>'a variables\<close> is an \<^emph>\<open>explicit variable list\<close> if it is of the form
@@ -145,7 +149,6 @@ section \<open>Substitutions\<close>
 lemma variable_raw_domain_Rep_variable[simp]: "variable_raw_domain (Rep_variable (v::'a::universe variable)) = range (embedding::'a\<Rightarrow>_)"
   apply transfer by simp
 
-(* TODO: rename to substitution1 *)
 typedef substitution1 = "{(v::variable_raw, vs, e::mem2\<Rightarrow>universe). 
   finite vs \<and>
   (\<forall>m. e m \<in> variable_raw_domain v) \<and>
@@ -162,6 +165,11 @@ lift_definition substitution1_variable :: "substitution1 \<Rightarrow> variable_
 lift_definition substitution1_function :: "substitution1 \<Rightarrow> mem2 \<Rightarrow> universe" is "\<lambda>(_,_,f::mem2\<Rightarrow>universe). f" .
 
 lemma substitution1_function_domain: "substitution1_function s m \<in> variable_raw_domain (substitution1_variable s)"
+  apply transfer by auto
+
+lemma substitute1_variable[simp]: "substitution1_variable (substitute1 x e) = Rep_variable x"
+  apply transfer by auto
+lemma substitute1_function: "substitution1_function (substitute1 x e) m = embedding (expression_eval e m)"
   apply transfer by auto
 
 lift_definition subst_mem2 :: "substitution1 list \<Rightarrow> mem2 \<Rightarrow> mem2" is
@@ -202,8 +210,9 @@ lemma find_map: "find p (map f l) = map_option f (find (\<lambda>x. p (f x)) l)"
   by (induction l, auto)
 
 definition "subst_expression_footprint (\<sigma>::substitution1 list) (vs::variable_raw set) =
-  (Union {substitution1_footprint s | s v. Some s = find (\<lambda>s. substitution1_variable s = v) \<sigma> \<and> substitution1_variable s \<in> vs})
-      \<union> (vs - substitution1_variable ` set \<sigma>)"
+  (Union {substitution1_footprint s | s v. 
+      Some s = find (\<lambda>s. substitution1_variable s = v) \<sigma> \<and> substitution1_variable s \<in> vs})
+    \<union> (vs - substitution1_variable ` set \<sigma>)"
 
 lemma finite_subst_expression_footprint: "finite vs \<Longrightarrow> finite (subst_expression_footprint \<sigma> vs)"
 proof -
@@ -218,6 +227,10 @@ proof -
   ultimately show ?thesis
     by (meson finite_subset)
 qed
+
+lemma subst_expression_footprint_union:
+  "subst_expression_footprint \<sigma> (X \<union> Y) = subst_expression_footprint \<sigma> X \<union> subst_expression_footprint \<sigma> Y"
+  unfolding subst_expression_footprint_def by blast
 
 lemma subst_mem2_footprint:
   fixes \<sigma> vs
@@ -267,6 +280,11 @@ proof (auto simp: finite_subst_expression_footprint)
     by (rule_tac e_footprint, simp)
 qed
 
+lemma subst_expression_footprint: "expression_vars (subst_expression \<sigma> e) = subst_expression_footprint \<sigma> (expression_vars e)"
+  apply transfer by auto
+lemma subst_expression_eval: "expression_eval (subst_expression \<sigma> e) = expression_eval e o subst_mem2 \<sigma>"
+  apply (rule ext) unfolding o_def expression_eval.rep_eq subst_expression.rep_eq case_prod_beta by simp
+
 lemma subst_expression_unit_tac:
   shows "expression variable_unit E = subst_expression s (expression variable_unit E)"
   apply (subst Rep_expression_inject[symmetric])
@@ -274,12 +292,34 @@ lemma subst_expression_unit_tac:
   by auto
 
 lemma subst_expression_singleton_same_tac:
+  fixes x :: "'x::universe variable"
   shows "expression R (\<lambda>r. E (F r)) = subst_expression (substitute1 x (expression R F) # s) (expression \<lbrakk>x\<rbrakk> E)"
 proof (subst Rep_expression_inject[symmetric], simp add: expression.rep_eq subst_expression.rep_eq, rule conjI)
-  show "set (raw_variables R) = subst_expression_footprint (substitute1 x (expression R F) # s) {Rep_variable x}"
-    sorry
+  define x' where "x' = Rep_variable x"
+  have aux: "((\<exists>v. (x' = v \<longrightarrow> sa = substitute1 x (expression R F)) \<and>
+          (x' \<noteq> v \<longrightarrow> Some sa = find (\<lambda>s. substitution1_variable s = v) s)) \<and>
+           substitution1_variable sa = x')
+      =
+         (sa = substitute1 x (expression R F) \<and> substitution1_variable sa = x')" for sa
+    apply auto by (metis (mono_tags) find_Some_iff)
+  have "subst_expression_footprint (substitute1 x (expression R F) # s) {x'} = substitution1_footprint (substitute1 x (expression R F))"
+    unfolding subst_expression_footprint_def by (simp add: x'_def[symmetric] aux)
+  also have "\<dots> = set (raw_variables R)"
+    by (simp add: substitution1_footprint.rep_eq substitute1.rep_eq case_prod_beta expression.rep_eq)
+  finally
+  show "set (raw_variables R) = subst_expression_footprint (substitute1 x (expression R F) # s) {x'}" by simp
+next
+  have eval_x: "(embedding::'x\<Rightarrow>_) (eval_variables \<lbrakk>x\<rbrakk> m) = (Rep_mem2 m (Rep_variable x))" for m
+    apply (simp add: variable_singleton.rep_eq eval_variables.rep_eq)
+    apply (rule f_inv_into_f)
+    by (metis (no_types, lifting) Rep_mem2 mem_Collect_eq variable_raw_domain_Rep_variable)
+  have "F (eval_variables R m) = eval_variables \<lbrakk>x\<rbrakk> (subst_mem2 (substitute1 x (expression R F) # s) m)" for m
+    apply (subst embedding_inv[symmetric])
+    apply (simp add: eval_x subst_mem2.rep_eq substitute1_function)
+    apply transfer by auto
+  then
   show "(\<lambda>r. E (F r)) \<circ> eval_variables R = E \<circ> eval_variables \<lbrakk>x\<rbrakk> \<circ> subst_mem2 (substitute1 x (expression R F) # s)"
-    sorry
+    by auto
 qed
 
 lemma subst_expression_singleton_empty_tac:
@@ -289,24 +329,89 @@ lemma subst_expression_singleton_empty_tac:
   by simp
 
 lemma subst_expression_singleton_notsame_tac:
-  assumes "variable_name x \<noteq> variable_name y"
-  assumes "e = subst_expression s (expression \<lbrakk>y\<rbrakk> E)"
-  shows "e = subst_expression (substitute1 x f # s) (expression \<lbrakk>y\<rbrakk> E)"
-  sorry
+  fixes x :: "'x::universe variable" and y :: "'y::universe variable"
+  assumes neq: "variable_name x \<noteq> variable_name y"
+  assumes e_def: "e = subst_expression \<sigma> (expression \<lbrakk>y\<rbrakk> E)"
+  shows "e = subst_expression (substitute1 x f # \<sigma>) (expression \<lbrakk>y\<rbrakk> E)"
+proof (unfold e_def, subst Rep_expression_inject[symmetric], simp add: expression.rep_eq subst_expression.rep_eq, rule conjI)
+  define x' y' where "x' = Rep_variable x" and "y' = Rep_variable y"
+  from neq have [simp]: "x' \<noteq> y'"
+    by (metis variable_name.rep_eq x'_def y'_def)
+  then have aux1: "Some s = find (\<lambda>s. substitution1_variable s = v) (substitute1 x f # \<sigma>) \<and> substitution1_variable s \<in> {y'}
+          \<longleftrightarrow> Some s = find (\<lambda>s. substitution1_variable s = v) \<sigma> \<and> substitution1_variable s \<in> {y'}"
+    for v s
+    by (metis (mono_tags) find.simps(2) find_Some_iff singletonD substitute1_variable x'_def)
+  from \<open>x' \<noteq> y'\<close> 
+  have aux2: "{y'} - substitution1_variable ` set (substitute1 x f # \<sigma>)
+            = {y'} - substitution1_variable ` set (\<sigma>)"
+    using x'_def by auto
+  show "subst_expression_footprint \<sigma> {y'} = subst_expression_footprint (substitute1 x f # \<sigma>) {y'}"
+    unfolding subst_expression_footprint_def aux1 aux2 by simp
+
+  have eval_y: "(embedding::'y\<Rightarrow>_) (eval_variables \<lbrakk>y\<rbrakk> m) = (Rep_mem2 m (Rep_variable y))" for m
+    apply (simp add: variable_singleton.rep_eq eval_variables.rep_eq)
+    apply (rule f_inv_into_f)
+    by (metis (no_types, lifting) Rep_mem2 mem_Collect_eq variable_raw_domain_Rep_variable)
+  have "eval_variables \<lbrakk>y\<rbrakk> (subst_mem2 \<sigma> m) = eval_variables \<lbrakk>y\<rbrakk> (subst_mem2 (substitute1 x f # \<sigma>) m)" for m
+    apply (subst embedding_inv[symmetric])
+    by (simp add: eval_y subst_mem2.rep_eq substitute1_function del: embedding_inv flip: x'_def y'_def)
+  then show "E \<circ> eval_variables \<lbrakk>y\<rbrakk> \<circ> subst_mem2 \<sigma> = E \<circ> eval_variables \<lbrakk>y\<rbrakk> \<circ> subst_mem2 (substitute1 x f # \<sigma>)"
+    by auto
+qed
 
 lemma subst_expression_concat_id_tac:
   assumes "expression Q1' e1 = subst_expression s (expression Q1 (\<lambda>x. x))"
   assumes "expression Q2' e2 = subst_expression s (expression Q2 (\<lambda>x. x))"
   shows "expression (variable_concat Q1' Q2') (\<lambda>(x1,x2). (e1 x1, e2 x2)) = subst_expression s (expression (variable_concat Q1 Q2) (\<lambda>x. x))"
-  sorry
+proof (subst Rep_expression_inject[symmetric], simp add: expression.rep_eq subst_expression.rep_eq, rule conjI)
+  show "set (raw_variables Q1') \<union> set (raw_variables Q2') =
+        subst_expression_footprint s (set (raw_variables Q1) \<union> set (raw_variables Q2))"
+    apply (subst subst_expression_footprint_union)
+    using assms by (metis expression_vars subst_expression_footprint)
+next
+  have 1: "e1 (eval_variables Q1' m) = eval_variables Q1 (subst_mem2 s m)" for m
+    using assms(1)[THEN arg_cong[where f=expression_eval]]
+    unfolding subst_expression_eval o_def expression_eval
+    by metis
+  have 2: "e2 (eval_variables Q2' m) = eval_variables Q2 (subst_mem2 s m)" for m
+    using assms(2)[THEN arg_cong[where f=expression_eval]]
+    unfolding subst_expression_eval o_def expression_eval
+    by metis
+  from 1 2
+  show "(\<lambda>(x1, x2). (e1 x1, e2 x2)) \<circ> eval_variables (variable_concat Q1' Q2') =
+    (\<lambda>x. x) \<circ> eval_variables (variable_concat Q1 Q2) \<circ> subst_mem2 s"
+    by auto
+qed
 
 lemma subst_expression_id_comp_tac:
   assumes "expression Q' g = subst_expression s (expression Q (\<lambda>x. x))"
   shows "expression Q' (\<lambda>x. E (g x)) = subst_expression s (expression Q E)"
-  using assms apply (subst Rep_expression_inject[symmetric]) apply (subst (asm) Rep_expression_inject[symmetric])
-  unfolding expression.rep_eq subst_expression.rep_eq 
-  apply auto
-  sorry
+proof (subst Rep_expression_inject[symmetric], simp add: expression.rep_eq subst_expression.rep_eq, rule conjI)
+  have "set (raw_variables Q') = expression_vars (expression Q' g)"
+    by simp
+  also have "\<dots> = expression_vars (subst_expression s (expression Q (\<lambda>x. x)))"
+    using assms by simp
+  also have "\<dots> = subst_expression_footprint s (expression_vars (expression Q (\<lambda>x. x)))"
+    unfolding subst_expression_footprint by rule
+  also have "\<dots> = subst_expression_footprint s (set (raw_variables Q))"
+    by simp
+  finally
+  show "set (raw_variables Q') = subst_expression_footprint s (set (raw_variables Q))"
+    by assumption
+
+
+  from assms have "expression_eval (expression Q' g) m = expression_eval (subst_expression s (expression Q (\<lambda>x. x))) m" for m
+    by simp
+  then have "g (eval_variables Q' m) = expression_eval (subst_expression s (expression Q (\<lambda>x. x))) m" for m
+    by (simp add: expression_eval)
+  also have "\<dots> m = eval_variables Q (subst_mem2 s m)" for m
+    unfolding expression_eval.rep_eq subst_expression.rep_eq case_prod_beta expression.rep_eq
+    by simp
+  finally have "g (eval_variables Q' m) = eval_variables Q (subst_mem2 s m)" for m
+    by assumption
+  then show "(\<lambda>x. E (g x)) \<circ> eval_variables Q' = E \<circ> eval_variables Q \<circ> subst_mem2 s"
+    by auto
+qed
 
 
 
