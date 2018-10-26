@@ -1,0 +1,216 @@
+\newif\ifdraft
+\newif\ifanonymous
+
+%\drafttrue
+%\anonymoustrue
+
+\iffullversion\else
+\anonymoustrue
+\fi
+
+\iffullversion
+\documentclass{article}
+\else
+\documentclass[acmsmall,review\ifanonymous,anonymous\fi,natbib=false]{acmart}
+\settopmatter{printacmref=false,printfolios=true,printccs=false}
+%\documentclass[submission]{eptcs}
+\fi
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,paralist,stmaryrd,mathpartir,mathtools,tabularx,xcolor,centernot,tabto}
+\usepackage{tocloft}
+
+\usepackage[backend=bibtex,maxbibnames=100
+\iffullversion\else , giveninits=true, doi=false, isbn=false \fi]{biblatex}
+
+\iffullversion
+\usepackage{makeidx}\makeindex
+\usepackage[font=footnotesize,labelfont=bf]{caption}
+\fi
+\usepackage{graphicx}
+\usepackage[section]{placeins}
+\usepackage{idxlayout}
+\usepackage{yfonts}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{declmath}
+\usepackage{version}
+\usepackage{xr}
+\iffullversion \usepackage[framemethod=tikz]{mdframed} \fi
+% don't load geometry if preview is to be loaeded
+% (the ifx-statement detects \PassOptionsToPackage{preview}{...})
+\expandafter\ifx\csname opt@preview.sty\endcsname\relax
+\iffullversion \usepackage[a4paper,margin=1in]{geometry} \fi
+\fi
+\usepackage[users=QT]{uchanges}
+\usepackage{circuits}
+\ChangesSetUserColor[Dominique]{Q}{red}
+\iffullversion \usepackage[pdfborderstyle={/S/U/W 0.3}]{hyperref} \fi
+\usepackage[delaytext,envcountsame,multiautoref]{latexhacks}
+
+\usetikzlibrary{decorations.pathreplacing}
+
+\iffullversion
+\newcommand\fullshort[2]{#1}
+\includeversion{fullversion}
+\excludeversion{shortversion}
+\else
+\newcommand\fullshort[2]{#2}
+\excludeversion{fullversion}
+\includeversion{shortversion}
+\fi
+
+\newcommand\fullonly[1]{\fullshort{#1}{}}
+\newcommand\shortonly[1]{\fullshort{}{#1}}
+
+\newcommand\fullonlypar{\fullonly\par}
+
+\newcommand\mytilde{\raise.17ex\hbox{$\scriptstyle\sim$}}
+
+
+\shortonly{
+  % \acmConference{Submission to POPL}{July}{2018}
+  \acmJournal{PACMPL}
+  \acmNumber{POPL}
+  \acmVolume{1}
+  \acmArticle{1}
+  \acmYear{2018}
+  \acmMonth{1}
+  \acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
+  \startPage{1}
+  \setcopyright{none}
+  \long\def\footnotetextcopyrightpermission#1{}
+  %\bibliographystyle{ACM-Reference-Format}
+}
+
+
+%\hyphenation{proof-script}
+
+\input{macros}
+%\input{pastebin}
+
+\sloppy
+
+\fullshort{
+  \newcommand\delaytextsv[1]{}
+}{
+  \newcommand\delaytextsv[2]{%
+    \delaytext{#1}{#2}}
+}
+ 
+
+\DeclareUnicodeCharacter{212D}{\textswab C}
+\DeclareUnicodeCharacter{1D529}{\textswab l}
+\DeclareUnicodeCharacter{1D51E}{\textswab a}
+\DeclareUnicodeCharacter{2260}{\ensuremath{\neq}}
+\DeclareUnicodeCharacter{27E6}{\ensuremath{\llbracket}}
+\DeclareUnicodeCharacter{27E7}{\ensuremath{\rrbracket}}
+\DeclareUnicodeCharacter{2297}{\ensuremath{\otimes}}
+\DeclareUnicodeCharacter{22C5}{\ensuremath{\cdot}}
+\DeclareUnicodeCharacter{2264}{\ensuremath{\leq}}
+\DeclareUnicodeCharacter{2293}{\ensuremath{\sqcap}}
+
+\hyphenation{Isa-belle}
+\hyphenation{Isa-belle/HOL}
+
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  literate={~} \mytilde {1},
+  breaklines=true,
+  escapeinside=\^^A\^^B,
+}
+
+\makeatletter
+\fullonly{
+\DeclareCaptionFormat{myformat}{#1#2#3\leavevmode\leaders\hrule height .1pt\hfill\kern\z@}
+\captionsetup[figure]{format=myformat}
+}
+
+%\fullshort{
+\renewcommand\sectionautorefname{Section}
+\renewcommand\subsectionautorefname{Section}
+\renewcommand\subsubsectionautorefname{Section}
+\newcommand\lemmaautorefname{Lemma}
+\newcommand\conjectureautorefname{Conjecture}
+\newcommand\definitionautorefname{Definition}
+\newcommand\corollaryautorefname{Corollary}
+\newcommand\claimautorefname{Claim}
+% }{
+% \renewcommand\sectionautorefname{Sec.}
+% \renewcommand\subsectionautorefname{Sec.}
+% \renewcommand\subsubsectionautorefname{Sec.}
+% \renewcommand\theoremautorefname{Thm.}
+% \newcommand\lemmaautorefname{Lemma}
+% \newcommand\conjectureautorefname{Conjecture}
+% \newcommand\definitionautorefname{Def.}
+% \newcommand\corollaryautorefname{Coro.}
+% \newcommand\claimautorefname{Claim}
+% }
+
+\fullonly{
+\mdfdefinestyle{theoremstyle}{%
+  linecolor=black,
+  backgroundcolor=black!10!white,
+  frametitlebelowskip=0pt,
+  innerleftmargin=5pt,
+  innerrightmargin=5pt,
+}
+
+\mdtheorem[style=theoremstyle]{definition}{Definition}
+\mdtheorem[style=theoremstyle]{lemma}{Lemma}
+\mdtheorem[style=theoremstyle]{corollary}{Corollary}
+}
+
+\newtheorem{theorem}{Theorem}
+\shortonly{ \newtheorem{lemma}{Lemma} }
+\newtheorem{conjecture}{Conjecture}
+\shortonly{ \newtheorem{definition}{Definition} }
+
+\newcounter{claimstep}
+\newtheorem{claim}{Claim}[claimstep]
+\renewcommand\theclaim{\arabic{claim}}
+
+
+\newcommand\toolidx[1]{\index{#1@\textttOLD{#1} (tool command)}}
+
+
+\AtBeginDocument{
+  \ifx\PreviewMacro\undefined\else
+  \PreviewEnvironment*{figure}
+  \PreviewMacro*\footnote
+  \PreviewMacro[!]\boardpic
+  \PreviewMacro*\lstinputlisting
+  \PreviewMacro[{[]{}{}{}}]\RULE
+  \fi}
+
+\bibliography{qrhl}
+
+
+\newcommand\PROOFREAD[1]{\TODOQ{proofread\ifx!#1!\else #1\fi}}
+%\renewcommand\PROOFREAD[1]{}
+
+\ifanonymous
+\newcommand\anonymouserror{{\Huge\bfseries ANONYMOUSXXX}\error}
+\newcommand\nonanonymous[1]{}
+\else
+\newcommand\anonymouserror{}
+\newcommand\nonanonymous[1]{#1}
+\fi
+
+\newcommand\giturl[1]{\anonymouserror
+  \url{https://raw.githubusercontent.com/dominique-unruh/qrhl-tool/master/#1}}
+
+\fullshort{
+  \newenvironment{citemize}{\begin{itemize}}{\end{itemize}}
+}{
+  \newenvironment{citemize}{\begin{compactitem}}{\end{compactitem}}
+}
+
+\allowdisplaybreaks
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "manual"
+%%% End:

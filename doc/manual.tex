@@ -1,0 +1,54 @@
+\newif\iffullversion
+\fullversiontrue
+
+\input{preamble}
+
+\let\standalonemanual1
+
+\externaldocument[main:]{qrhl}
+
+\newcommand\qrhlautoref[1]{\autoref{main:#1} in~\cite{qrhl-paper-from-manual}}
+\newcommand\qrhlautorefx[1]{\autoref{main:#1}}
+
+\renewcommand\refrule[1]{\hbox{\textsc{#1}} rule}
+\renewcommand\ruleref[1]{rule \hbox{\textsc{#1}}}
+\renewcommand\rulerefx[1]{\hbox{\textsc{#1}}}
+\renewcommand\Ruleref[1]{Rule \hbox{\textsc{#1}}}
+
+
+\begin{document}
+
+\title{qRHL tool -- Manual}
+\author{Dominique Unruh\\\small University of Tartu}
+\date{}
+
+\maketitle
+
+\ifdraft
+\begin{center}
+  \LARGE\bfseries
+  % Do not change this wording, it is used by Makefile and build.sbt
+  THIS IS A DRAFT
+\end{center}
+\fi
+
+\let\subsubsection\subsection
+\let\subsection\section
+
+\input{tool}
+
+\printbibliography
+
+\renewcommand\symbolindexentry[4]{\noindent\hbox{\hbox to 2in{$#2$\hfill}\parbox[t]{3.5in}{#3}\hbox to 1cm{\hfill #4}}\\[2pt]}
+
+\fullonly \printsymbolindex
+
+\fullonly \printindex  
+
+
+\end{document}
+
+% Local Variables:
+% TeX-PDF-mode: t
+% TeX-master: t
+% End:

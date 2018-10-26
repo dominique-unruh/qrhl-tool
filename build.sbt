@@ -144,7 +144,7 @@ mappings in Universal ++= {
   files pair relativeTo(base)
 }
 
-mappings in Universal += (baseDirectory.value / ".." / "queasycrypt" / "trunk" / "manual.pdf" -> "manual.pdf")
+mappings in Universal += (baseDirectory.value / "doc" / "manual.pdf" -> "manual.pdf")
 
 mappings in Universal ++= directory("PG")
 

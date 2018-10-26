@@ -1,0 +1,326 @@
+%%% -*- buffer-read-only: t -*-
+%%% MAC=cfcfc1bf091d1dfc9aec55be5a4db4fc712b2021
+%%% LEN=9353
+%%% CONTENT_SHA1=e15504187e3ad09fe0ce4fb28d599e516cd5142b
+%%% 
+%%% 
+%%% 
+%%% *** WARNING ***
+%%% This is not the master copy of this file.
+%%% You can edit this copy, nothing bad will happen.
+%%% But it will prevent Dominique Unruh from automatically
+%%% transferring changes from the master copy to this copy.
+%%% Be prepared to answer to Dominique!
+%%% 
+%%% (If you are Dominique Unruh, disregard the above warning.)
+%%% 
+%%% 
+%%% 
+%%% 
+%%% Source: /home/unruh/svn/home/eclipse/latex-tools/circuits.sty
+%%% SVN: 67625+modified
+%%% 
+%%% 
+%%% 
+\RequirePackage{tikz,etoolbox}
+
+
+% General concept of this library:
+%
+% When drawing a circuit, there is always a "current x position".  New
+% objects (such as gates) will be drawn at that position (the current
+% x position does not affect normal tikz primitives).
+% 
+% Also, there is a set of wires. Each wire has a y-coordinate (that
+% does not usually change), and an x-coordinate that expresses how far
+% the wire has been drawn so far.
+%
+% Wires can be updated, this will draw them until the "current x
+% position". Depending on the command for updating, this may involve
+% drawing or not (\drawWire, \skipWire).
+%
+% Wires can also be used as virtual markes for y-positions, in this
+% case one should not use \drawWire. (E.g., a wire could be used to
+% align things vertically in the figure.)
+%
+% Another concept is the "right border". It is the farthest x position
+% that has so far been drawn. (Using primitives that from this
+% library). It can be used to set the next "current x position" using
+% \stepForward. (TODO: update \stepForward to do this, update
+% primitives to update the right border)
+%
+% TODO: Say how to initialize the circuit (especially \currentXPos).
+%
+% TODO: Explain how the positions are stored
+
+
+\usetikzlibrary{positioning,fit,calc}
+
+\newcommand\@circuitsError{\PackageError{circuits}}
+\newcommand\@circuitsError@notinit{\@circuitsError{Circuit not initialized}{You need to invoke \string\initializeCircuit\space before using any commands from circuits.sty}}
+%\DeclareRobustCommand\@circuitsError@undefWire[1]{\edef\@tempa{???}\typeout{Undefined wire \expandafter\strip@prefix\meaning\@tempa - You referenced a wire that doesn't exist. Define the wire first, e.g., using \string\newWire{\expandafter\strip@prefix\meaning\@tempa}}\error}
+%\def\@circuitsError@undefWire#1{\errorUndefinedWire}
+
+\newcounter{coordCounter}
+\newdimen\wireBundleMax
+\newdimen\wireBundleMin
+\newdimen\wireBundleHeight
+\newdimen\wireBundleCenter
+
+\def\currentXPos{\@circuitsError@notinit}
+\def\circuitRightBorder{\@circuitsError@notinit}
+
+\def\getWireCoord#1{%
+  \ifcsdef{wire #1}{%
+    \@nameuse{wire #1}%
+  }{%
+    \expandafter\@circuitsError@undefWire\expandafter{#1}% TODO: proper error message
+  }%
+}
+
+\def\newCoordName#1{%
+  \stepcounter{coordCounter}
+  \xdef\coordName{#1-\arabic{coordCounter}}%
+}
+
+\def\stepForward#1{%
+  \newCoordName{stepForward}%
+  \coordinate[right=#1 of \circuitRightBorder] (\coordName);
+  \global\let\currentXPos\coordName
+  \registerRightBorderCandidate{\currentXPos}%
+}
+
+% \registerRightBorderCandidate[anchor (default: east)]{node/coordinate}
+\newcommand\registerRightBorderCandidate[1]{%
+  \pgfpointanchor{#1}{east}%
+  \@tempdima=\pgf@x
+  \pgfpointanchor{\circuitRightBorder}{east}%
+    \typeout{XXXX #1 {\circuitRightBorder} {\the\pgf@x} {\the\@tempdima}}%
+  \ifdimgreater{\@tempdima}{\pgf@x}{%
+    \xdef\circuitRightBorder{#1}}{}%
+}
+
+\newcommand\initializeCircuit[1][]{%
+  \ifstrempty{#1}{%
+    \newCoordName{init}%
+    \coordinate (\coordName);
+    \global\let\currentXPos\coordName
+  }{%
+    \xdef\currentXPos{#1}%
+  }
+  \global\let\circuitRightBorder\currentXPos
+  \global\undef\lastDefinedWire
+}
+
+\newcommand\markCoordinate[2][]{%
+  \node[inner sep=0pt, fill=pink] at (#2) {%
+    \fboxrule=-1pt
+    \fboxsep=0pt
+    \cooltooltip{Coordinate: #2 #1}{Coordinate: #2 #1}{Coordinate: #2 #1}{Coordinate: #2 #1}
+    {\phantom{\rule{1mm}{1mm}}}};
+}
+
+% \labelWire{wire name}{wire label}
+\newcommand\labelWire[2][]{%
+  \ifstrempty{#1}{}{\csgdef{wire-label #2}{#1}}%
+  \node[anchor=south, inner sep=1pt] at (\getWireCoord{#2} -| \currentXPos) {\csuse{wire-label #2}};
+}
+
+
+\def\newWireAt#1#2{%
+  \newCoordName{newWire#1}%
+  \coordinate (\coordName) at (#2);
+  \csxdef{wire #1}{\coordName}%
+}
+
+\def\newWireRelative#1#2#3{%
+  \newCoordName{wire-#1}%
+  \coordinate[yshift=#3] (\coordName) at (\getWireCoord{#2} -| \currentXPos);
+  \csxdef{wire #1}{\coordName}%
+}
+
+\def\drawWire#1{%
+  \drawWireTo{#1}{\currentXPos}%
+}
+
+\tikzset{quantumWire/.style={}}
+
+\def\drawWireTo#1#2{%
+  \newCoordName{wire-#1}%
+  \coordinate (\coordName) at (\getWireCoord{#1} -| #2);
+  \draw[quantumWire] (\getWireCoord{#1}) to (\coordName);
+  \csxdef{wire #1}{\coordName}%
+}
+
+
+
+\def\skipWire#1{%
+  \skipWireTo{#1}{\currentXPos}%
+}
+
+\def\skipWireTo#1#2{%
+  \newCoordName{wire-#1}%
+  \typeout{SKIP WIRE #1 \meaning\coordName}%
+  \coordinate (\coordName) at (\getWireCoord{#1} -| #2);
+  \csxdef{wire #1}{\coordName}%
+}
+
+\def\skipWires#1{%
+  \foreach \wire in {#1} { \skipWire{\wire} }%
+}
+
+
+\def\drawWires#1{%
+  \foreach \wire in {#1} { \drawWire{\wire} }%
+}
+
+
+\def\labelWires#1{%
+  \foreach \wire in {#1} { \labelWire{\wire} }%
+}
+
+
+% Given a comma separated list of wire names, this will compute
+% the maximum and minimum y-coordinates of the wires
+% The results will be assigned (globally) to the dimens
+% \wireBundleMax,
+% \wireBundleMin, \wireBundleHeight (for max-min),
+% \wireBundleCenter (for (max+min)/2)
+%
+% #1 = list of wires (e.g., A,B,C)
+% #2 = extra space to be left on top (TeX dimension!)
+% #3 = extra space to be left on bottom (TeX dimension!)
+\def\getWireBundleMinMax#1#2#3{
+  \wireBundleMax=-16000pt
+  \wireBundleMin=16000pt
+  \foreach \wire in {#1} {
+    \pgfpointanchor{\getWireCoord{\wire}}{center}%
+    \ifdimgreater{\pgf@y}{\wireBundleMax}{\global\wireBundleMax=\pgf@y}{}%
+    \ifdimless{\pgf@y}{\wireBundleMin}{\global\wireBundleMin=\pgf@y}{}%
+  }
+  \global\advance\wireBundleMax by #2\relax
+  \@tempdima=#3
+  \global\advance\wireBundleMin by -\@tempdima
+  \global\wireBundleHeight=\wireBundleMax \global\advance\wireBundleHeight-\wireBundleMin
+  \global\wireBundleCenter=\wireBundleMin \global\advance\wireBundleCenter by .5\wireBundleHeight
+  \typeout{MINMAX: \the\wireBundleMin, \the\wireBundleMax, \the\wireBundleHeight}
+}
+
+\tikzset{
+  /tikz/encloseWireBundle/topPadding/.initial=5pt,
+  /tikz/encloseWireBundle/bottomPadding/.initial=5pt,
+% 
+  % \node[encloseWireBundle={A,B,C,D}] will make the current node to start
+  % at the current x-position, extend as far as necessary to contain its content
+  % and to be tall enough so that A,B,C,D all connect to it
+  %
+  % Example: A two qubit unitary $U$ can be rendered as
+  % \node[draw, encloseWireBundle={X,C,R,Q}] (U) {$U$};
+  %
+  % Note: this will not update the current x position
+  /tikz/encloseWireBundle/.code=%
+    \getWireBundleMinMax{#1}{\pgfkeysvalueof{/tikz/encloseWireBundle/topPadding}}{\pgfkeysvalueof{/tikz/encloseWireBundle/bottomPadding}}% {\pgfkeysvalueof{/tikz/encloseWireBundle/topPadding}}{\pgfkeysvalueof{/tikz/encloseWireBundle/bottomPadding}}%
+    \pgfkeysalso{/tikz/minimum height=\wireBundleHeight,/tikz/anchor=west}%
+    \pgfpointanchor{\currentXPos}{center}%
+    \edef\tikz@node@at{\noexpand\pgfpoint{\pgf@x}{\wireBundleCenter}}%
+}
+
+
+\tikzset{%
+  /tikz/gateAsy/.code 2 args={
+    \getWireBundleMinMax{#1,#2}{\pgfkeysvalueof{/tikz/encloseWireBundle/topPadding}}{\pgfkeysvalueof{/tikz/encloseWireBundle/bottomPadding}}
+    \pgfkeysalso{/tikz/draw}
+    \pgfkeysalso{/tikz/minimum height=\wireBundleHeight,/tikz/anchor=west}%
+    \pgfkeysalso{/tikz/append after command=\pgfextra{\afterGate}}
+    \pgfpointanchor{\currentXPos}{center}%
+    \edef\tikz@node@at{\noexpand\pgfpoint{\pgf@x}{\wireBundleCenter}}%
+%
+    \xdef\@previous@inputWires{#1}%
+    \xdef\@previous@outputWires{#2}%
+%
+    \appto\tikz@atend@node{\xdef\@previous@nodeName{\tikz@fig@name}}%
+  }
+}
+
+\tikzset{%
+  /tikz/gate/.style={/tikz/gateAsy={#1}{#1}}}
+
+% Used to perform delayed operations for the key /tikz/gate
+\def\afterGate{%
+  \typeout{LAST \meaning\tikzlastnode}%
+  \ifdefempty{\@previous@nodeName}{\error{No node name defined}}{}%
+  % 
+  \foreach \wire in \@previous@inputWires {%
+    \drawWireTo\wire{\@previous@nodeName.west}%
+  }%
+  % 
+  \foreach \wire in \@previous@outputWires {%
+    \skipWireTo\wire{\@previous@nodeName.east}%
+  }%
+  \registerRightBorderCandidate{\@previous@nodeName}%
+}
+
+% TODO document
+\tikzset{/tikz/outcomeOf/.style={%
+    /tikz/anchor=base,
+    /tikz/at=(#1 |- \getWireCoord{outcomes}),
+    /tikz/append after command={(#1) edge[->,double] (\tikzlastnode)}
+  }}
+
+
+\def\defaultWireGap{-5mm}
+
+% TODO document
+\newcommand\newWire[1]{%
+  \ifundef\lastDefinedWire{%
+    \newWireAt{#1}\currentXPos%
+  }{%
+    \newWireRelative{#1}\lastDefinedWire{\defaultWireGap}
+  }%
+  \xdef\lastDefinedWire{#1}%
+}
+
+% TODO document
+\newcommand\newWires[1]{%
+  \foreach \wire in {#1} {\newWire\wire}}
+
+
+\tikzset{cnot/.style={%
+    gate={#1},
+    circle,
+    path picture={%
+        \draw (path picture bounding box.south) -- (path picture bounding box.north)
+              (path picture bounding box.west) -- (path picture bounding box.east);}
+}}
+
+\tikzset{controlDot/.style={circle,fill,inner sep=0pt,minimum size=1.5mm}}
+
+\tikzset{control/.style={%
+    append after command={\pgfextra{\drawGateControls\@previous@nodeName{#1}}}%
+}}
+
+% \drawGateControls{gate}{wires}
+\def\drawGateControls#1#2{%
+  \foreach \wire in {#2} {%
+    \draw (\getWireCoord{\wire} -| #1) to (#1);%
+  }%
+  \foreach \wire in {#2} {%
+    \node[controlDot] (controlOn\wire) at (\getWireCoord{\wire} -| #1) {};%
+    \registerRightBorderCandidate{controlOn\wire}%
+    \drawWireTo\wire{controlOn\wire.west}%
+    \skipWireTo\wire{controlOn\wire.east}%
+  }%
+}
+
+
+\tikzset{wireInput/.style={%
+    /tikz/anchor=east,
+    /tikz/left=0pt of {\getWireCoord{#1}}
+}}
+
+
+
+
+% Local Variables:
+% TeX-PDF-mode: t
+% End:
