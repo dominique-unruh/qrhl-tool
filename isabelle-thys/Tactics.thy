@@ -9,7 +9,7 @@ lemma seq:
   assumes "qrhl A c1 d1 B"
   and "qrhl B c2 d2 C"
   shows "qrhl A (c1@c2) (d1@d2) C"
-  sorry
+  by (cheat seq)
 
 lemma seqREMOVE:
   assumes "c = c1@c2" and "d = d1@d2"

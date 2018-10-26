@@ -54,18 +54,6 @@ hide_const (open) Order.top Polynomial.order
 hide_const (open) List_Fusion.generator.generator
 
 
-(* lift_definition eval_variable :: "'a::universe variable \<Rightarrow> mem2 \<Rightarrow> 'a"
-  is "\<lambda>v m. Hilbert_Choice.inv embedding (m v)" .
-print_theorems
- *)
-
-(* term eval_variables *)
-(* consts eval_variables :: "'a variables \<Rightarrow> mem2 \<Rightarrow> 'a" *)
-
-(* lemma eval_variables_unit: "eval_variables \<lbrakk>\<rbrakk> m = ()" sorry *)
-(* lemma eval_variables_singleton: "eval_variables \<lbrakk>q\<rbrakk> m = eval_variable q m" sorry *)
-(* lemma eval_variables_concat: "eval_variables (variable_concat Q R) m = (eval_variables Q m, eval_variables R m)" sorry *)
-
 
 instantiation expression :: (ord) ord begin
 definition "less_eq_expression e f \<longleftrightarrow> expression_eval e \<le> expression_eval f"
@@ -91,13 +79,15 @@ end
 
 
 
-lemma qrhl_top: "qrhl A p1 p2 (expression Q (\<lambda>z. top))" sorry
-lemma qrhl_top': "f \<ge> top \<Longrightarrow> qrhl A p1 p2 (expression Q f)" sorry
+lemma qrhl_top: "qrhl A p1 p2 (expression Q (\<lambda>z. top))" by (cheat qrhl_top)
+lemma qrhl_top': "f \<ge> top \<Longrightarrow> qrhl A p1 p2 (expression Q f)" 
+  using qrhl_top
+  by (metis (full_types) le_funI top.extremum top_le)
 
 lemma skip:
   assumes "A \<le> B"
   shows "qrhl A [] [] B"
-  sorry
+  by (cheat skip)
 
 ML \<open>
 fun rename_tac_variant names = SUBGOAL (fn (goal,i) =>
@@ -228,7 +218,7 @@ qed
 interpretation G_group: cyclic_group G
   rewrites "x [^]\<^bsub>G\<^esub> n = x \<^sup>^ (n::int)" and "x \<otimes>\<^bsub>G\<^esub> y = x*y" and "\<one>\<^bsub>G\<^esub> = 1" and "generator G = g" 
     and "m_inv G = inverse" and "carrier G = UNIV"
-  sorry
+  by (cheat G_group)
 
 
 definition "keygen = uniform {(g \<^sup>^ x, x) | x::int. x\<in>{0..order G-1}}"

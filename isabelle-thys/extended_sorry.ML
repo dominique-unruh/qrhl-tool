@@ -24,11 +24,25 @@ val (_,sorry_marker_oracle) =
 fun marked_sorry ctxt loc t = 
   sorry_marker_oracle (ctxt,loc,t) |> Conv.fconv_rule (Conv.rewr_conv @{thm sorry_marker_def})
 
-fun marked_sorry_tac ctxt loc = SUBGOAL (fn (goal,i) => let
+(* Applies to first subgoal *)
+fun marked_sorry_tac1 ctxt loc = PRIMITIVE (fn st => let
+  val goal = Thm.cprem_of st 1 |> Thm.term_of
   val thm = marked_sorry ctxt loc goal
   in
-    solve_tac ctxt [thm] i
+    Thm.elim_implies thm st
+  end)
+
+fun marked_sorry_tac ctxt loc st = 
+  (COND Thm.no_prems all_tac (marked_sorry_tac1 ctxt loc THEN marked_sorry_tac ctxt loc)) st
+
+(* 
+fun marked_sorry_tac ctxt loc = SUBGOAL (fn (goal,i) => let
+  val thm = marked_sorry ctxt loc goal
+  val _ = \<^print> (thm,Thm.cterm_of ctxt goal)
+  in
+    Thm.elim_implies solve_tac ctxt [thm] i : tactic
   end) 
+ *)
 
 fun show_oracles_lines thm = let
   val known_oracles = thm |> Thm.theory_of_thm |> Proof_Context.init_global

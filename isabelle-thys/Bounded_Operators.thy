@@ -80,9 +80,7 @@ lemma applyOp_bot[simp]: "applyOpSpace U bot = bot"
   by (simp add: subspace_zero_bot[symmetric])
 
 lemma equal_basis: "(\<And>x. applyOp A (ket x) = applyOp B (ket x)) \<Longrightarrow> A = B" for A::"('a,'b) bounded"
-  (* apply (tactic  \<open>Extended_Sorry.marked_sorry_tac \<^context> {position= @{here}, comment="xxx"} 1\<close>) *)
-  (* apply (cheat equal_basis) *)
-  sorry
+  by (cheat equal_basis)
 
 lemma adjoint_twice[simp]: "(U*)* = U" for U :: "('a,'b) bounded" by (cheat adjoint_twice)
 
@@ -122,7 +120,7 @@ and times_idOp1[simp]: "U \<cdot> idOp = U"
 and times_idOp2[simp]: "idOp \<cdot> V = V"
 and idOp_adjoint[simp]: "idOp* = idOp"
 for \<psi> :: "'a vector" and S :: "'a subspace" and U :: "('a,'b) bounded" and V :: "('b,'a) bounded"
-  sorry
+  by (cheat apply_idOp_space)
 
 lemma mult_INF[simp]: "U \<cdot> (INF x. V x) = (INF x. U \<cdot> V x)" 
   for V :: "'a \<Rightarrow> 'b subspace" and U :: "('b,'c) bounded"

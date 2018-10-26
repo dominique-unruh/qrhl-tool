@@ -89,15 +89,23 @@ lemma [simp]: "eigenspace b 0 = Cla[b=0]"
 subsection "Distinct quantum variables"
 
 consts predicate_local_raw :: "predicate \<Rightarrow> variable_raw set \<Rightarrow> bool"
-lemma predicate_local_raw_top: "predicate_local_raw top {}" sorry
-lemma predicate_local_raw_bot: "predicate_local_raw bot {}" sorry
-lemma predicate_local_raw_inter: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw B Q \<Longrightarrow> predicate_local_raw (A\<sqinter>B) Q" sorry
-lemma predicate_local_raw_plus: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw B Q \<Longrightarrow> predicate_local_raw (A+B) Q" sorry
-lemma predicate_local_raw_ortho: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw (ortho A) Q" sorry
-lemma predicate_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> predicate_local_raw A Q \<Longrightarrow> predicate_local_raw A Q'" sorry
+lemma predicate_local_raw_top: "predicate_local_raw top {}" 
+  by (cheat predicate_local_raw_top)
+lemma predicate_local_raw_bot: "predicate_local_raw bot {}" 
+  by (cheat predicate_local_raw_bot)
+lemma predicate_local_raw_inter: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw B Q \<Longrightarrow> predicate_local_raw (A\<sqinter>B) Q" 
+  by (cheat predicate_local_raw_inter)
+lemma predicate_local_raw_plus: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw B Q \<Longrightarrow> predicate_local_raw (A+B) Q" 
+  by (cheat predicate_local_raw_plus)
+lemma predicate_local_raw_ortho: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw (ortho A) Q" 
+  by (cheat predicate_local_raw_ortho)
+lemma predicate_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> predicate_local_raw A Q \<Longrightarrow> predicate_local_raw A Q'"
+  by (cheat predicate_local_raw_mono)
 consts operator_local_raw :: "(mem2,mem2)bounded \<Rightarrow> variable_raw set \<Rightarrow> bool"
-lemma predicate_local_raw_apply_op: "operator_local_raw U Q \<Longrightarrow> predicate_local_raw A Q \<Longrightarrow> predicate_local_raw (U\<cdot>A) Q" sorry
-lemma operator_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> operator_local_raw A Q \<Longrightarrow> operator_local_raw A Q'" sorry
+lemma predicate_local_raw_apply_op: "operator_local_raw U Q \<Longrightarrow> predicate_local_raw A Q \<Longrightarrow> predicate_local_raw (U\<cdot>A) Q" 
+  by (cheat predicate_local_raw_apply_op)
+lemma operator_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> operator_local_raw A Q \<Longrightarrow> operator_local_raw A Q'" 
+  by (cheat operator_local_raw_mono)
 
 lift_definition colocal_pred_qvars :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
   is "\<lambda>A (vs,_). \<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> predicate_local_raw A vs'" .
@@ -249,12 +257,18 @@ lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemo
 lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a::universe variables"
   unfolding eigenspace_def apply (subst lift_idOp[symmetric, of Q]) by (simp del: lift_idOp)
 
-lemma top_leq_lift: "distinct_qvars Q \<Longrightarrow> top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S" sorry
-lemma top_geq_lift: "distinct_qvars Q \<Longrightarrow> top \<ge> S\<guillemotright>Q \<longleftrightarrow> top \<ge> S" sorry
-lemma bot_leq_lift: "distinct_qvars Q \<Longrightarrow> bot \<le> S\<guillemotright>Q \<longleftrightarrow> bot \<le> S" sorry
-lemma bot_geq_lift: "distinct_qvars Q \<Longrightarrow> bot \<ge> S\<guillemotright>Q \<longleftrightarrow> bot \<ge> S" sorry
-lemma top_eq_lift: "distinct_qvars Q \<Longrightarrow> top = S\<guillemotright>Q \<longleftrightarrow> top = S" sorry
-lemma bot_eq_lift: "distinct_qvars Q \<Longrightarrow> bot = S\<guillemotright>Q \<longleftrightarrow> bot = S" sorry
+lemma top_leq_lift: "distinct_qvars Q \<Longrightarrow> top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S" 
+  by (cheat top_leq_lift)
+lemma top_geq_lift: "distinct_qvars Q \<Longrightarrow> top \<ge> S\<guillemotright>Q \<longleftrightarrow> top \<ge> S" 
+  by (cheat top_geq_lift)
+lemma bot_leq_lift: "distinct_qvars Q \<Longrightarrow> bot \<le> S\<guillemotright>Q \<longleftrightarrow> bot \<le> S" 
+  by (cheat bot_leq_lift)
+lemma bot_geq_lift: "distinct_qvars Q \<Longrightarrow> bot \<ge> S\<guillemotright>Q \<longleftrightarrow> bot \<ge> S" 
+  by (cheat bot_geq_lift)
+lemma top_eq_lift: "distinct_qvars Q \<Longrightarrow> top = S\<guillemotright>Q \<longleftrightarrow> top = S" 
+  by (cheat top_eq_lift)
+lemma bot_eq_lift: "distinct_qvars Q \<Longrightarrow> bot = S\<guillemotright>Q \<longleftrightarrow> bot = S" 
+  by (cheat bot_eq_lift)
 
 
 lemma remove_qvar_unit_op:
@@ -356,7 +370,7 @@ lemma lift_tensor_id: "distinct_qvars (variable_concat Q R) \<Longrightarrow> di
    (\<And>D::(_,_) bounded. (A \<cdot> D \<cdot> A*)\<guillemotright>Q = D\<guillemotright>Q') \<Longrightarrow> (\<And>D::(_,_) bounded. (A' \<cdot> D \<cdot> A'*)\<guillemotright>R = D\<guillemotright>R') \<Longrightarrow> 
   ((A\<otimes>A') \<cdot> C \<cdot> (A\<otimes>A')*)\<guillemotright>variable_concat Q R = C\<guillemotright>variable_concat Q' R'"
   for A :: "('a::universe,'b::universe) bounded" and A' :: "('c::universe,'d::universe) bounded" and C::"(_,_) bounded" and Q R :: "_ variables"
-  sorry
+  by (cheat lift_tensor_id)
 
 
 lemma qvar_trafo_assoc_op[simp]:
@@ -718,10 +732,12 @@ definition space_div_unlifted :: "('a*'b) subspace \<Rightarrow> 'b vector \<Rig
   [code del]: "space_div_unlifted S \<psi> = Abs_subspace {\<phi>. \<phi>\<otimes>\<psi> \<in> subspace_as_set S}"
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
-  sorry
+  by (cheat space_div_space_div_unlifted)
 
-lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" sorry
-lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot" sorry
+lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" 
+  by (cheat top_div)
+lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot" 
+  by (cheat bot_div)
 lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
 
 lemma space_div_add_extend_lift_as_var_concat_hint:

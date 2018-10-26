@@ -294,7 +294,8 @@ lemma quantum_equality_full_def_let:
                  (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> variable_concat Q R)"
   unfolding quantum_equality_full_def by auto
 
-lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))" sorry
+lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))" 
+  by (cheat space_div_unlifted_code)
 
 declare [[code drop: UNIV]]
 declare enum_class.UNIV_enum[code]

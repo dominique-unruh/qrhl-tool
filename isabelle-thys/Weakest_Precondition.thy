@@ -4,7 +4,7 @@ begin
 
 lemma skip_rule:
   shows "qrhl B [] [] B"
-  sorry
+  by (cheat skip_rule)
 
 lemma wp1_assign_tac:
   fixes A B x e
@@ -12,7 +12,7 @@ lemma wp1_assign_tac:
   assumes "e1 = index_expression True e"
   assumes "A = subst_expression [substitute1 x1 e1] B"
   shows "qrhl A [assign x e] [] B"
-  sorry
+  by (cheat wp1_assign_tac)
 
 lemma wp2_assign_tac:
   fixes A B x e
@@ -20,7 +20,7 @@ lemma wp2_assign_tac:
   assumes "e1 = index_expression False e"
   assumes "A = subst_expression [substitute1 x1 e1] B"
   shows "qrhl A [] [assign x e] B"
-  sorry
+  by (cheat wp2_assign_tac)
 
 lemma wp1_sample_tac:
   fixes A B x e
@@ -29,7 +29,7 @@ lemma wp1_sample_tac:
   assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
   assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
   shows "qrhl A [sample x e] [] B"
-  sorry
+  by (cheat wp1_sample_tac)
 
 lemma wp2_sample_tac:
   fixes A B x e
@@ -38,7 +38,7 @@ lemma wp2_sample_tac:
   assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
   assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
   shows "qrhl A [] [sample x e] B"
-  sorry
+  by (cheat wp2_sample_tac)
 
 lemma wp1_qapply_tac:
   fixes A B Q e
@@ -46,7 +46,7 @@ lemma wp1_qapply_tac:
   assumes "e1 = index_expression True e"
   assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) e1 B"
   shows "qrhl A [qapply Q e] [] B"
-  sorry
+  by (cheat wp1_qapply_tac)
 
 lemma wp2_qapply_tac:
   fixes A B Q e
@@ -54,7 +54,7 @@ lemma wp2_qapply_tac:
   assumes "e1 = index_expression False e"
   assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) e1 B"
   shows "qrhl A [] [qapply Q e] B"
-  sorry
+  by (cheat wp2_qapply_tac)
 
 lemma wp1_qinit_tac:
   fixes B e Q
@@ -62,7 +62,7 @@ lemma wp1_qinit_tac:
   assumes "e1 = index_expression True e"
   assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> Q1)) e1 B"
   shows "qrhl A [qinit Q e] [] B"
-  sorry
+  by (cheat wp1_qinit_tac)
 
 lemma wp2_qinit_tac:
   fixes B e Q
@@ -70,7 +70,7 @@ lemma wp2_qinit_tac:
   assumes "e1 = index_expression False e"
   assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> Q1)) e1 B"
   shows "qrhl A [] [qinit Q e] B"
-  sorry
+  by (cheat wp2_qinit_tac)
 
 lemma wp1_if_tac:
   fixes e p1 p2 B
@@ -80,7 +80,7 @@ lemma wp1_if_tac:
   assumes "A = map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
                e1 wp_true wp_false"
   shows "qrhl A [ifthenelse e p1 p2] [] B"
-  sorry
+  by (cheat wp1_if_tac)
 
 
 lemma wp2_if_tac:
@@ -91,17 +91,17 @@ lemma wp2_if_tac:
   assumes "A = map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (Cla[\<not>e\<^sub>1] + wp_true) \<sqinter> (Cla[e\<^sub>1] + wp_false))
                e1 wp_true wp_false"
   shows "qrhl A [] [ifthenelse e p1 p2] B"
-  sorry
+  by (cheat wp2_if_tac)
 
 lemma wp1_block_tac:
   assumes "qrhl A p [] B"
   shows "qrhl A [block p] [] B"
-  sorry
+  by (cheat wp1_block_tac)
 
 lemma wp2_block_tac:
   assumes "qrhl A [] p B"
   shows "qrhl A [] [block p] B"
-  sorry
+  by (cheat wp2_block_tac)
 
 lemma wp1_measure_tac:
   fixes A B x Q e
@@ -113,8 +113,7 @@ lemma wp1_measure_tac:
   assumes "A = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
                          (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
   shows "qrhl A [measurement x Q e] [] B"
-  sorry
-
+  by (cheat wp1_measure_tac)
 
 lemma wp2_measure_tac:
   fixes A B x Q e
@@ -126,19 +125,19 @@ lemma wp2_measure_tac:
   assumes "A = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
                          (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
   shows "qrhl A [] [measurement x Q e] B"
-  sorry
+  by (cheat wp2_measure_tac)
 
 lemma wp1_cons_tac:
   assumes "qrhl A [p] [] B'"
     and "qrhl B' ps [] B"
   shows "qrhl A (p#ps) [] B"
-  sorry
+  using assms seqREMOVE by fastforce
 
 lemma wp2_cons_tac:
   assumes "qrhl A [] [p] B'"
     and "qrhl B' [] ps B"
   shows "qrhl A [] (p#ps) B"
-  sorry
+  using assms seqREMOVE by fastforce
 
 (* TODO move or remove *)
 ML \<open>

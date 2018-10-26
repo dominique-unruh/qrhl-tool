@@ -496,7 +496,7 @@ proof -
 qed
 
 instantiation vector :: (type) chilbert_space begin
-instance sorry
+instance by (cheat vector_chilbert_space)
 (* proof intro_classes
   fix X :: "nat \<Rightarrow> 'a vector"
   assume "Cauchy X"
@@ -513,7 +513,7 @@ instance sorry
     unfolding convergent_def by metis
 
   define L where "L = Abs_vector Lx"
-  have "has_ell2_norm Lx" sorry
+  have "has_ell2_norm Lx" by cheat
   then have [transfer_rule]: "pcr_vector (=) Lx L"
     unfolding vector.pcr_cr_eq cr_vector_def
     unfolding L_def apply (subst Abs_vector_inverse) by auto
@@ -523,7 +523,7 @@ instance sorry
     fix r::real assume "0<r"
     show "\<exists>no. \<forall>n\<ge>no. norm (X n - L) < r"
       apply transfer
-      sorry
+      by cheat
   qed
 
   show "convergent X"
