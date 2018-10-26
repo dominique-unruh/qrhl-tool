@@ -54,15 +54,17 @@ hide_const (open) Order.top Polynomial.order
 hide_const (open) List_Fusion.generator.generator
 
 
-lift_definition eval_variable :: "'a::universe variable \<Rightarrow> mem2 \<Rightarrow> 'a"
+(* lift_definition eval_variable :: "'a::universe variable \<Rightarrow> mem2 \<Rightarrow> 'a"
   is "\<lambda>v m. Hilbert_Choice.inv embedding (m v)" .
 print_theorems
+ *)
 
-consts eval_variables :: "'a variables \<Rightarrow> mem2 \<Rightarrow> 'a"
+(* term eval_variables *)
+(* consts eval_variables :: "'a variables \<Rightarrow> mem2 \<Rightarrow> 'a" *)
 
-lemma eval_variables_unit: "eval_variables \<lbrakk>\<rbrakk> m = ()" sorry
-lemma eval_variables_singleton: "eval_variables \<lbrakk>q\<rbrakk> m = eval_variable q m" sorry
-lemma eval_variables_concat: "eval_variables (variable_concat Q R) m = (eval_variables Q m, eval_variables R m)" sorry
+(* lemma eval_variables_unit: "eval_variables \<lbrakk>\<rbrakk> m = ()" sorry *)
+(* lemma eval_variables_singleton: "eval_variables \<lbrakk>q\<rbrakk> m = eval_variable q m" sorry *)
+(* lemma eval_variables_concat: "eval_variables (variable_concat Q R) m = (eval_variables Q m, eval_variables R m)" sorry *)
 
 
 instantiation expression :: (ord) ord begin
@@ -112,6 +114,8 @@ method_setup rename_tac_eisbach = \<open>
                | _ => (warning ("Could not convert "^Syntax.string_of_term ctxt name^" into a variable name. Not renaming."); Method.succeed)
     )\<close>
 
+(* abbreviation "eval_variable v m \<equiv> eval_variables \<lbrakk>v\<rbrakk> m" *)
+
 (* Converts a goal of the form "expression Q e \<le> expression R f :: 'a expression" 
    with Q,R explicit variable terms into "\<And>x1...xn. C x1...xn \<le> D x1...xn :: 'a" for some C,D. *)
 method intro_expression_leq = 
@@ -121,10 +125,10 @@ method intro_expression_leq =
       \<open>rule allI, rename_tac mem, 
        match conclusion in "C mem" for mem \<Rightarrow> 
          \<open>unfold expression_eval[where m=mem],
-          (unfold eval_variables_concat[where m=mem] eval_variables_unit[where m=mem] eval_variables_singleton[where m=mem])?,
+          (unfold eval_variables_concat[where m=mem] eval_variables_unit[where m=mem])?,
           (unfold case_prod_conv)?,
-          ((match conclusion in "PROP (D (eval_variable v mem))" for D v \<Rightarrow> 
-              \<open>rule meta_spec[where x="eval_variable v mem" and P=D], rename_tac_eisbach v\<close>)+)?
+          ((match conclusion in "PROP (D (eval_variables \<lbrakk>v\<rbrakk> mem))" for D v \<Rightarrow> 
+              \<open>rule meta_spec[where x="eval_variables \<lbrakk>v\<rbrakk> mem" and P=D], rename_tac_eisbach v\<close>)+)?
          \<close>
       \<close>
   )[1]

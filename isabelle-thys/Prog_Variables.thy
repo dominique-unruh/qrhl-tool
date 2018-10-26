@@ -246,11 +246,11 @@ lemma eval_variables_footprint:
 lemma eval_variables_concat[simp]: "eval_variables (variable_concat Q1 Q2) m = (eval_variables Q1 m, eval_variables Q2 m)"
   apply transfer by auto
 
-lemma eval_variables_unit[simp]: "eval_variables \<lbrakk>\<rbrakk> m = ()"
-  apply transfer by auto
+lemma eval_variables_unit: "eval_variables \<lbrakk>\<rbrakk> m = ()" (* Simp not needed, already simp'ed by unit_eq *)
+  by simp
 
-(* lemma eval_variables_singleton[simp]: "eval_variables \<lbrakk>x\<rbrakk> m = ()"
-  apply transfer by auto *)
+lemma eval_variables_singleton: "eval_variables \<lbrakk>x::'a::universe variable\<rbrakk> m = inv (embedding::'a\<Rightarrow>_) (Rep_mem2 m (Rep_variable x))"
+  unfolding eval_variables.rep_eq variable_singleton.rep_eq by simp
 
 section \<open>Indexed variables\<close>
 
