@@ -19,6 +19,7 @@
 		   proof-shell-proof-completed-regexp "^No current goal.$"
 		   proof-shell-eager-annotation-start "\\*\\*\\* "
 		   proof-shell-eager-annotation-start-length 4
+		   proof-no-fully-processed-buffer t
 		   )
 
 (add-hook 'qrhl-mode-hook
