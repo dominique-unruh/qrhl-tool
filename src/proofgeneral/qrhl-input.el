@@ -93,6 +93,7 @@
       `(quail-define-rules ,@(nreverse newrules)))))
 
 (qrhl-input--define-rules
+
  ("!`" ?¡)
  ("\\pounds" ?£) ;; ("{\\pounds}" ?£)
  ("\\S" ?§) ;; ("{\\S}" ?§)
@@ -676,8 +677,8 @@
  ("\\rdq" ?\”)
  ("\\defs" ?≙)				; per fuzz/zed
  ;; ("\\sqrt[3]" ?∛)
- ("\\llbracket" ?\〚) 			; stmaryrd
- ("\\rrbracket" ?\〛)
+ ("\\llbracket" ?\⟦) 			; stmaryrd
+ ("\\rrbracket" ?\⟧)
  ;; ("\\lbag" ?\〚) 			; fuzz
  ;; ("\\rbag" ?\〛)
  ("\\ldata" ?\《) 			; fuzz/zed
@@ -717,5 +718,21 @@
  ("\\textcircledP" ?℗)
  ("\\textreferencemark" ?※)
  )
+
+
+;; Dominique's rules for qrhl-tool:
+(quail-define-rules
+ ((append . t))
+ ("\\ox" ?⊗)
+ ("\\ket" ["|⟩"])
+ ("\\ket0" ["|0⟩"])
+ ("\\ket1" ["|1⟩"])
+ ("[|" ["⟦"])
+ ("|]" ["⟧"])
+ (">>" ?»)
+ ("\\Cla" ["ℭ𝔩𝔞"])
+ ("\\qeq" ["≡𝔮"])
+ )
+
 
 ;;; qrhl-input.el ends here
