@@ -12,7 +12,11 @@ target/universal/qrhl-$(VERSION).zip : build.sbt $(SOURCES)
 	sbt universal:packageBin
 
 test-distrib0 : qrhl.zip
-	rm -rf tmp/qrhl-$(VERSION)/{bin,examples,manual.pdf,PG,proofgeneral.bat,proofgeneral.sh,README.md,run-isabelle.bat,run-isabelle.sh}
+	-rm -f tmp/qrhl-$(VERSION)/*
+	-rm -f tmp/qrhl-$(VERSION)/lib/*
+	rm -rf tmp/qrhl-$(VERSION)/examples
+	rm -rf tmp/qrhl-$(VERSION)/bin
+	rm -rf tmp/qrhl-$(VERSION)/PG
 	unzip -d tmp qrhl.zip
 
 test-distrib : test-distrib0
