@@ -2,9 +2,15 @@
 
 set -e
 
-SELF="$(readlink -f "$0")"
-DIR="$(dirname "$SELF")"
+DIR="$(dirname "$BASH_SOURCE[0]")"
 DIR="$(dirname "$DIR")"
+
+if ! [ -e "$DIR/isabelle-thys" ]; then
+    echo >/dev/stderr "Cannot determine the installation directory that contains the qrhl tool."
+    echo >/dev/stderr "Please edit the line 'DIR=...' in proofgeneral.sh, it should set DIR to the installation directory."
+    exit 1
+fi
+
 ( cd  "$DIR" && setsid sbt assembly )
 #export QRHL_FORCE_BUILD=1
 java -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar "$DIR/qrhl.jar" "$@"
