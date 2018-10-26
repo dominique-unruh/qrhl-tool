@@ -134,7 +134,7 @@
 
 @misc{certicrypt-web,
 	howpublished={\url{http://certicrypt.gforge.inria.fr/}},
-	note={Accessed 2017-11-05},
+	note={Accessed 2018-10-24},
 	title={CertiCrypt: Computer-Aided Cryptographic Proofs in Coq},
 }
 
@@ -185,7 +185,7 @@
 @misc{proofgeneral,
 	author={{The PG dev team}},
 	howpublished={\url{https://proofgeneral.github.io/}},
-	note={Accessed 2017-01-02},
+	note={Accessed 2018-10-24},
 	title={Proof General (A generic Emacs interface for proof assistants)},
 }
 
@@ -232,8 +232,8 @@
 
 @misc{cryptoverif-web,
 	howpublished={\url{http://prosecco.gforge.inria.fr/personal/bblanche/cryptoverif/}},
-	note={\fullonly{Accessed 2016-12-29}},
 	title={CryptoVerif: Cryptographic protocol verifier in the computational model},
+	note={Accessed 2018-10-24},
 }
 
 @inproceedings{cryptoverif,
@@ -270,21 +270,21 @@
 @Misc{qrhl-binary,
   key = 	 {qrhl-binary},
   author = 	 {Dominique Unruh\anonymouserror},
-  title = 	 {qrhl-tool binary distribution},
-  url = {https://github.com/dominique-unruh/qrhl-tool/releases/tag/v0.2},
+  title = 	 {qrhl-tool binary distribution, version 0.3},
+  url = {https://github.com/dominique-unruh/qrhl-tool/releases/tag/v0.3},
   year = 	 2018}
-
-@Misc{qrhl-paper,
-  author = 	 {Dominique Unruh\anonymouserror},
-  title = 	 {Quantum Relational Hoare Logic},
-  url = {https://www.ut.ee/~unruh/qrhl.pdf},
-  year = 	 2018}
-
 
 @Misc{qrhl-paper-from-manual,
   author = 	 {Dominique Unruh\anonymouserror},
   title = 	 {Quantum Relational Hoare Logic},
-  howpublished = {IACR ePrint},
+  howpublished = {\href{https://arxiv.org/abs/1802.03188}{arXiv:1802.03188} [quant-ph]},
+  year = 	 2018}
+
+
+@Misc{fullversion,
+  author = 	 {Dominique Unruh\anonymouserror},
+  title = 	 {Quantum Relational Hoare Logic},
+  howpublished = {\href{https://arxiv.org/abs/1802.03188}{arXiv:1802.03188} [quant-ph]},
   year = 	 2018}
 
 
@@ -350,13 +350,14 @@ month={June},}
  keywords = {Hoare logic, denotational semantics, dependency, information flow, optimizing compilation, partial equivalence relations, program analysis, security, types},
 }
 
+
 @manual{sage,
   Key          = {Sage},
-  Author       = {W.\thinspace{}A. Stein and others},
+  Author       = {W. A. Stein and others},
   Organization = {The Sage Development Team},
   Title        = {{S}age {M}athematics {S}oftware ({V}ersion 5.12)},
-  note         = {{\tt http://www.sagemath.org}},
-  Year         = {2014},
+  note         = {\url{http://www.sagemath.org}},
+  Year         = 2014,
 }
 
 @article{bennett93teleport,
@@ -775,7 +776,7 @@ doi="10.1007/978-3-319-10082-1_6",
 @inproceedings{qro-nizk,
 	author={Unruh, Dominique},
 	booktitle={Eurocrypt 2015},
-	note={Full version IACR ePrint \href{http://eprint.iacr.org/2014/587}{2014/587}},
+	note={Full version is \href{http://eprint.iacr.org/2014/587}{IACR ePrint 2014/587}},
 	pages={755-784},
 	publisher={Springer},
 	title={Non-interactive zero-knowledge proofs in the quantum random oracle model},
@@ -860,3 +861,26 @@ isbn="978-3-642-10622-4"
 	title={Quantum Attacks on Classical Proof Systems (The Hardness of Quantum Rewinding)},
 	year=2014,
 }
+
+@book{katz2014introduction,
+	author={Katz, J. and Lindell, Y.},
+	isbn={9781466570269},
+	lccn=2014039042,
+	publisher={Taylor \& Francis},
+	series={Chapman \& Hall/CRC Cryptography and Network Security Series},
+	title={Introduction to Modern Cryptography, Second Edition},
+	year=2014,
+}
+
+@Misc{chsh-ec,
+  author = 	 {Dominique Unruh},
+  title = 	 {chsh.ec},
+  howpublished = {\url{https://raw.githubusercontent.com/dominique-unruh/qrhl-tool/v0.3/examples/chsh.ec}},
+  year = 	 2018}
+
+@Misc{Chsh.thy,
+  author = 	 {Dominique Unruh},
+  title = 	 {Chsh.thy},
+  howpublished = {\url{https://raw.githubusercontent.com/dominique-unruh/qrhl-tool/v0.3/examples/Chsh.thy}},
+  year = 	 2018}
+

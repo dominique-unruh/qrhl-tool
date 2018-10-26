@@ -1,5 +1,7 @@
 \makeatletter
 
+\newcommand\pagelabel[1]{\phantomsection\label{#1}}
+
 \DeclareRobustCommand\sagelink[1]{%
   \let\SAGECELLLINK\undefined
   \InputIfFileExists{#1.sagelink}{}{}%
@@ -177,7 +179,7 @@
 \newcommand\pB{\resize@next@paren\Bigl\Bigr}
 
 \newlistof{rule}{rule}{{List of rules}}
-\renewcommand\cftruletitlefont{\xxx} % Was: \section*
+\renewcommand\cftruletitlefont{\section*}
 \newcommand\rulestrut{}
 \newcommand\rulespace{}
 \newcommand\RULE[4][]{%
@@ -719,9 +721,12 @@
   placeholder=R_1 \circrel R_2,
   description={Composition of relations}}
 
+\declare{macro=\setN, code=\mathbb N,
+  description={Natural numbers}}
+
 %%% Local Variables: 
 %%% mode: latex
-%%% TeX-master: "qrhl"
+%%% TeX-master: "o2h-main"
 %%% TeX-PDF-mode: t 
 %%% End: 
 
