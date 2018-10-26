@@ -164,6 +164,31 @@ is used anywhere in the proof script must be declared. If a variable
 available in predicates to refer to that variable in the left/right
 program.
 
+Types used with \texttt{classical var} and
+\texttt{quantum var} must satisfy an important condition. Namely, they
+must be in the type class\footnote{A type class represents a property
+  of a type, for example, the type class \texttt{finite} applies only
+  to types with finite domain.} \texttt{universe}%
+\index{universe@\texttt{universe} (Isabelle typeclass)}.\footnote{%
+  \label{footnote:universe}The
+  type class \texttt{universe} guarantees that the type
+  is small enough (its cardinality is at most $\beth_i$ for some $i\in\setN$).
+  Without this restriction, it would
+  be possible, e.g., to have a program variable of type
+  $P\ \mathtt{set}$,
+  where $P$
+  is the type of all programs. That would mean that programs can
+  contain arbitrary elements of $P\ \mathtt{set}$.
+  Hence the powerset of $P$
+  can be embedded in $P$
+  which is impossible. Restricting program variables to small types
+  makes it possible to define $P$ (and related types).
+  This is not a restriction in practice since all types built from
+  basic types using powersets, functions, and inductive datatypes
+  are small in this sense.}
+  For most predeclared types, this will already be the case,
+  but if not, follow the instructions in \autoref{sec:deftypes}.
+
 An ambient variable simply stands for a fixed but arbitrary value.
 That is, ambient variables are implicitly all-quantified.  In other
 words, ambient variables are free variables of the ambient
@@ -638,7 +663,7 @@ tutorial \cite{isabelle-tutorial}.
 
 For experiments, it can be useful to directly invoke Isabelle/HOL
 (using the \texttt{./run-isabelle.sh} script) and edit a theory that
-imports \texttt{QRHL}.
+imports \texttt{QRHL.QRHL}.
 
 Expressions used in assign-statements will probably only rarely use
 any of the custom types and constants from \texttt{QRHL.thy} (except the type
@@ -676,6 +701,8 @@ tables below.
 types. Some of those types are defined in Isabelle/HOL using
 \texttt{typedef}, others are only axiomatized, see
 \texttt{QRHL.thy} and the theories imported therein.
+
+When defining your own types in an accompanying theory, please consult \autoref{sec:deftypes}.
 
 \begin{longtable}{|p{.19\hsize}|>{\parskip=\medskipamount}p{.75\hsize}|}
   \hline
@@ -1127,7 +1154,38 @@ for getting the special characters (marked ``How to input:'' in the table below)
   If we identify all those types, then $\mathtt{assoc\_op}$
   is the identity operator.
   \\
-  \hline \subhead{States} \hline \constdef{$\basis{}x$\par
+  \hline
+  \constdef{$\mathtt{Uoracle}\ f$}
+  {(\alpha\times\beta,\alpha\times\beta)\ \mathtt{bounded}}
+  {$f::\alpha\Rightarrow\beta$}
+  \toolconst{Uoracle}
+  &
+  Classical function $f$ represented as a unitary.
+  More precisely, 
+  $\mathtt{Uoracle}\ f : \basis{}{(x,y)}\mapsto \basis{}{(x,y+f(x))}$.
+
+  (This is a useful construct when modeling, e.g., function that can be queried in superposition
+  by a quantum algorithm.)
+
+  The type $\beta$
+  must have sort $\texttt{group\_add}$. This guarantees that
+  $y+f(x)$ is well-defined and has suitable properties (in particular, this
+  makes $\mathtt{Uoracle}\ f$ unitary).
+
+  Examples of types that have this sort are \texttt{bit},
+  \texttt{int}, $(\dots,\dots)\ \mathtt{nlist}$.
+  (The latter is defined in CryptHOL \cite{crypthol}, but you
+  additionally need to import the theory
+  \texttt{QRHL.CryptHOL\_Missing}.)
+
+  When axiomatizing a type \texttt{T}, you can use \texttt{instance T
+    :: group\_add sorry} to declare that \texttt{T} has this property. (Without specifying
+  \texttt{T} any further.)
+  \\
+  \hline
+  \subhead{States}
+  %
+  \hline \constdef{$\basis{}x$\par
     $\mathtt{ket}\ x$}
   {\alpha\ \mathtt{vector}} {$x :: \alpha$}
   \toolconst{ket} & The basis state $\basis{}{x}$ of $\elltwo\alpha$.
@@ -1205,8 +1263,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \toolconst{liftOp}
   &
   The operator $\lift A Q:=\Uvarnames{Q}A\adj{\Uvarnames Q}\otimes\idv{\qu{V_1}\qu{V_2}\setminus Q}$.
-  % (See \qrhlautorefx{def:lift}.)
-  \TODOQ{put back when lift is in arxiv}
+  (See \qrhlautorefx{def:lift}.)
   
   Intuitively, $\text\guillemotright$ takes an operator $A$
   on $\elltwo\alpha$,
@@ -1236,8 +1293,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \toolconst{liftOp}
   &
   The subspace $\lift SQ:=\Uvarnames{Q}S\otimes\elltwov{V_1V_2\setminus Q}$.
-  % (See \qrhlautorefx{def:lift}.)
-  \TODOQ{Put back when present in arxiv}
+  (See \qrhlautorefx{def:lift}.)
 
   Intuitively, $\text\guillemotright$
   takes a subspace $S$
@@ -2365,7 +2421,7 @@ judgments. (Typically, one will prove lemmas about predicates.)  It is
 beyond the scope of this paper to introduce proofs in Isabelle/HOL,
 see the tutorial \cite{isabelle-tutorial} and the
 reference manual \cite{isar-ref} for more information. The theory
-\texttt{QRHL} provides numerous definitions (most of them listed in
+\texttt{QRHL} (imported using \texttt{imports QRHL.QRHL} in Isabelle) provides numerous definitions (most of them listed in
 \autoref{sec:tool.pred}) and axioms/lemmas. Many of the lemmas are
 declared as simplification rules, but some of them are for direct use
 only. We do not provide a comprehensive list here. To find useful
@@ -2416,8 +2472,96 @@ in the accompanying theory to
 add type information to the output of our tool (this affects all
 Isabelle/HOL formulas printed as part of the subgoals).
 
+\subsubsection{Declaring types}
+\label{sec:deftypes}
 
-\paragraph{Code generation.} If all quantum variables involved in a
+In an accompanying Isabelle file, it is possible to define types as
+usual using Isabelle commands such as \texttt{typedef},
+\texttt{datatype}, and \texttt{typedecl}. However, there is one important
+caveat: To use a type as the type of a program variable, that type
+needs to instantiate the type class \texttt{universe} (representing
+types of sufficiently small cardinality).\footnote{For reasons described in
+  \autoref{footnote:universe}.} For most builtin types, this is
+already the case. However, there are two cases where one needs to be
+aware of this restriction.
+
+First, when defining one's own types (using \texttt{typedef} or
+\texttt{datatype}). In that case, Isabelle will not know that the
+resulting type is small. Fortunately, in most cases
+(assuming the types from which the new type is built are small) this
+can be done automatically with a single command:
+\begin{lstlisting}
+  derive universe typename
+\end{lstlisting}
+For example:
+\begin{lstlisting}
+  datatype 'a mytree = Node "'a mytree * 'a mytree" | Leaf 'a .
+  derive universe mytree
+\end{lstlisting}
+The \texttt{derive universe} command is also useful for types imported
+from other Isabelle theories if they were not yet shown to instantiate
+\texttt{universe}.
+
+
+The second use case is the declaration of types using
+\texttt{typedecl}. Such declarations are useful to specify in a
+development that \texttt{T} is just an arbitrary type, and that the
+whole proof holds for any type~\texttt{T}. (E.g., one might declare a
+type \texttt{key} of keys without further specifying its nature.)
+However, in this case, Isabelle will not know that \texttt{T} is
+small (and thus instantiates \texttt{universe}) since
+nothing was specified about \texttt{T}. One solution would be to add
+instantiation proofs with \texttt{sorry}. However, we have included a
+custom command for declaring types that covers this situation:
+\texttt{declare\_variable\_type}. In its basic form, it declares a new
+type that is of class \texttt{universe}:
+\begin{lstlisting}
+  declare_variable_type key
+\end{lstlisting}
+The new type can also have type parameters:
+\begin{lstlisting}
+  declare_variable_type 'a t1
+  declare_variable_type ('a,'b) t2
+  declare_variable_type ('a::finite,'b) t3
+\end{lstlisting}
+where the last case constrains 'a to have the type class
+\texttt{finite}.  Finally, the command also has a convenient method
+for declaring that a given type has further type classes (besides \texttt{universe}) such as in:
+\begin{lstlisting}
+  declare_variable_type key :: finite
+  declare_variable_type msg :: "{finite,xor_group}"
+  declare_variable_type ('a::finite) list :: finite
+\end{lstlisting}
+(\texttt{universe} is always implicitly added.\footnote{More precisely,
+  \texttt{declare\_variable\_type\ ('a$_1$::s$_1$,\dots,'a$_n$::s$_n$) t :: s}
+  declares two facts: If \texttt{'a$_1$,\dots,'a$_n$} have sorts (type classes)
+  \texttt{s$_1$,\dots,s$_n$}, then the type \texttt{('a$_1$,\dots,'a$_n$) t}
+  has sort \texttt{s}. (Where \texttt{s$_i$} and \texttt{s} are empty when omitted from the command.)
+  And
+  if \texttt{'a$_1$,\dots,'a$_n$} have sorts
+  \texttt{s$_1'$,\dots,s$_n'$}, then the type \texttt{('a$_1$,\dots,'a$_n$) t}
+  has sort \texttt{s$'$}, where \texttt{s$_i'$} and \texttt{s$'$} are
+  \texttt{s$_i$} and \texttt{s} with the type class \texttt{universe} added.})
+
+The command will check whether the existence of a type of the given
+sorts can be consistently assumed.  If this is not the case, a warning
+is issued.\footnote{If the warning is not justified, it is possible to
+  remove it by manually defining a new type (e.g., via
+  \texttt{typedef} or \texttt{datatype}) and showing that that type
+  has the required sort (it is a \emph{sort witness}). After that,
+  \texttt{declare\_variable\_type} will not issue a warning any more
+  since the existence of a type of the right sort is ensured.}  For
+example,
+\begin{lstlisting}
+  declare_variable_type wrong :: "{finite,no_top}"
+\end{lstlisting}
+produces a warning since it would declare a type that is both finite
+and has no upper bound, and thus lead to a contradiction.
+
+
+
+\subsubsection{Code generation}
+If all quantum variables involved in a
 claim about predicates have finite types, the claim will often
 essentially be a claim about concrete operators and subspaces of fixed
 dimension. This means that by explicit computation of those operators and
@@ -2564,7 +2708,7 @@ itself chooses~$m$. More formally:
   means uniformly random choice, and the notation
   $\Pr[e:G]$
   denotes the probability that $e$
-  holds after running the instructions in $G$,
+  holds after executing the instructions in $G$,
   and $\eta$
   is a security parameter (on which $A_1,A_2,G,K,M$
   implicitly depend).
@@ -2644,30 +2788,15 @@ it needs to be done in an accompanying Isabelle theory
   and also directly available at \giturl{PrgEnc.thy}}.}
 
 In this theory, we first declare the types \texttt{key} and
-\texttt{msg} as abstract (i.e., unspecified) types:
+\texttt{msg} as abstract (i.e., unspecified) types. We want both types
+to be finite, i.e., of type class \texttt{finite} (otherwise uniform
+sampling of keys/messages is not well-defined), and we want that on
+type \texttt{msg}, $+$
+represents the XOR operation (type class \texttt{xor\_group}\footnote{This type class
+  declares \texttt{msg} as an abelian additive group with the extra law $a+a=0$.}).
 \begin{lstlisting}
-  typedecl key
-  typedecl msg
-\end{lstlisting}
-Furthermore, we need to declare those types as finite (otherwise
-uniform sampling of keys/messages is not well-defined). We use
-Isabelle's type class mechanism for this:
-\begin{lstlisting}
-  instantiation key :: finite [...]
-  instantiation msg :: finite [...]
-\end{lstlisting}
-Since we cannot prove that those types are finite (they are declared
-abstractly, after all), the proof obligations from those
-\texttt{instantiation} commands are discharged with \texttt{sorry}
-(which tells Isabelle to simply believe the claim).
-
-We also need to declare that there is an operation $+$
-(the XOR operation) on \texttt{msg} that is a group operation, and
-that satisfies the rule $a+a=0$.
-This is done by declaring \texttt{msg} as an additive group via the type class mechanism and adding an axiom that specifies the cancellation property:
-\begin{lstlisting}
-  instantiation msg :: group_add [...]
-  axiomatization where xor_cancel[simp]: "a+a=0" for a::msg
+  declare_variable_type key :: finite
+  declare_variable_type msg :: "{finite,xor_group}"
 \end{lstlisting}
 
 Now we can declare the PRG $G$
@@ -2813,7 +2942,7 @@ interesting case: We have the subgoal
     $\sqcap$ $\llbracket$qglobA1$\rrbracket$ $\equiv\mathfrak q$ $\llbracket$qglobA2$\rrbracket$
   }\}
 \end{multline*}
-At the first glance, it would seem that the right thing to do is to
+At first glance, it would seem that the right thing to do is to
 sample \texttt{r1} and \texttt{r2} identically by applying
 \texttt{rnd.} However, if $\mathtt{r1}=\mathtt{r2}$,
 then the part \texttt{G k1 + r1 = r2 + m2} of the postcondition will
@@ -3413,7 +3542,7 @@ entities.) With this assumption added to the simplifier
 (using \texttt{[simp]}), simplification rules that reason about quantum
 variables will work correctly. The lemma is proven by stating two
 intermediate simple facts and then running the simplifier with a
-collection of facts from \texttt{QRHL.thy}. We omit the details.  Once
+collection of facts from the theory \texttt{QRHL}. We omit the details.  Once
 we have shown \texttt{telepost\_goal1} in Isabelle, we can use it in
 our tool. Namely, to prove the subgoal, we use the tactic \texttt{rule
   telepost\_goal1} in our tool. This leaves us with one new subgoal (corresponding to
@@ -3577,5 +3706,5 @@ with the tactics \texttt{\frenchspacing rule teleport\_terse. simp!.}
 
 %%% Local Variables:
 %%% mode: latex
-%%% TeX-master: "qrhl"
+%%% TeX-master: "manual"
 %%% End:

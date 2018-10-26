@@ -1,17 +1,17 @@
 \newif\ifdraft
 \newif\ifanonymous
 
-%\drafttrue
+\drafttrue
 %\anonymoustrue
 
-\iffullversion\else
-\anonymoustrue
-\fi
+%\iffullversion\else
+%\anonymoustrue
+%\fi
 
 \iffullversion
 \documentclass{article}
 \else
-\documentclass[acmsmall,review\ifanonymous,anonymous\fi,natbib=false]{acmart}
+\documentclass[acmsmall\ifanonymous,anonymous\fi,natbib=false,screen=false]{acmart}
 \settopmatter{printacmref=false,printfolios=true,printccs=false}
 %\documentclass[submission]{eptcs}
 \fi
@@ -42,9 +42,10 @@
 \expandafter\ifx\csname opt@preview.sty\endcsname\relax
 \iffullversion \usepackage[a4paper,margin=1in]{geometry} \fi
 \fi
-\usepackage[users=QT]{uchanges}
+\usepackage[users=QR]{uchanges}
 \usepackage{circuits}
 \ChangesSetUserColor[Dominique]{Q}{red}
+\ChangesSetUserColor[Reviewer]{R}{invalid}
 \iffullversion \usepackage[pdfborderstyle={/S/U/W 0.3}]{hyperref} \fi
 \usepackage[delaytext,envcountsame,multiautoref]{latexhacks}
 
@@ -68,7 +69,13 @@
 \newcommand\mytilde{\raise.17ex\hbox{$\scriptstyle\sim$}}
 
 
+\makeatletter
+
 \shortonly{
+  % TODO remove
+  \ifdraft
+    \global\let\@ACM@screentrue\relax
+  \fi
   % \acmConference{Submission to POPL}{July}{2018}
   \acmJournal{PACMPL}
   \acmNumber{POPL}
@@ -82,6 +89,7 @@
   \long\def\footnotetextcopyrightpermission#1{}
   %\bibliographystyle{ACM-Reference-Format}
 }
+
 
 
 %\hyphenation{proof-script}
@@ -212,5 +220,5 @@
 
 %%% Local Variables:
 %%% mode: latex
-%%% TeX-master: "manual"
+%%% TeX-master: "qrhl"
 %%% End:
