@@ -19,7 +19,7 @@
 		   proof-shell-error-regexp "\\[ERROR\\]\\|Exception"
 		   proof-undo-n-times-cmd "undo %s."
 		   proof-find-and-forget-fn 'qrhl-find-and-forget
-		   proof-shell-start-goals-regexp "^[0-9]+ subgoals:\\|No current goal\\."
+		   proof-shell-start-goals-regexp "^[0-9]+ subgoals:\\|Goal:\\|No current goal\\."
 		   proof-shell-proof-completed-regexp "^No current goal.$"
 		   proof-shell-eager-annotation-start "\\*\\*\\* "
 		   proof-shell-eager-annotation-start-length 4
