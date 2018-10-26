@@ -2,7 +2,6 @@ isabelle Example.
 
 classical var c : nat.
 quantum var q : bit.
-a_b
 
 program P1 := { c <- square 2; }.
 
