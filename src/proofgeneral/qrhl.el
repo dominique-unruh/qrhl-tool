@@ -1,4 +1,6 @@
 
+(load-library "qrhl-input")
+
 (defun qrhl-find-and-forget (span)
   (proof-generic-count-undos span))
   
@@ -25,7 +27,7 @@
 
 (add-hook 'qrhl-mode-hook
 	  (lambda ()
-	    (set-input-method "TeX")
+	    (set-input-method "qrhl")
 	    (set-language-environment "UTF-8")
 	    (set-variable 'indent-tabs-mode nil)
 	    (set-variable 'electric-indent-mode nil)))
