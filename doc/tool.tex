@@ -1099,7 +1099,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   is intended, use \texttt{tensorOp}, or provide additional type
   information for~$A$ or~$B$.
 
-  \texinput{\\otimes}
+  \texinput{\\otimes, \\ox}
   \\
   \hline
   \constdef{$\mathtt{comm\_op}$}
@@ -1132,7 +1132,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   {\alpha\ \mathtt{vector}} {$x :: \alpha$}
   \toolconst{ket} & The basis state $\basis{}{x}$ of $\elltwo\alpha$.
 
-  \texinput{\\rangle}
+  \texinput{\\ket}
   \\
   \hline
   \constdef{$\mathtt{EPR}$}
@@ -1165,7 +1165,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   is intended, use \texttt{tensorVec}, or provide additional type
   information for~$\psi$ or~$\phi$.
 
-  \texinput{\\otimes}
+  \texinput{\\otimes, \\ox}
   \\
   \hline
   \subhead{Quantum variables}
@@ -1190,7 +1190,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   Typed quantum variables allow Isabelle/HOL to check those type
   conditions.
 
-  \texinput{\\llbracket, \\rrbracket}
+  \texinput{\\llbracket, \\rrbracket, [|, |]}
   \\
   \hline
   \constdef{$A\text\guillemotright Q$\par
@@ -1221,7 +1221,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   is intended, use \texttt{liftOp}, or provide additional type
   information for the lhs $A$.
 
-  \texinput{\\frqq}
+  \texinput{\\frqq, >{}>}
   \\
   \hline
   \constdef{$S\text\guillemotright Q$\par
@@ -1437,8 +1437,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   This allows to encode predicates about classical variables within
   quantum predicates.
 
-  \texinput{\textnormal{There is no input method support for entering $\mathfrak{Cla}$.
-      Use the $\mathtt{Cla}[\dots]$ syntax instead.}}
+  \texinput{\\Cla}
   \\
   \hline
   \constdef{{\small $\mathtt{quantum\_equality\_full}\, A_1\, Q_1\, A_2\, Q_2$}}
@@ -1489,10 +1488,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   such that
   $\alpha_1\times\dots\times\alpha_n=\alpha_1'\times\dots\times\alpha_m'$.
   
-  \texinput{\textnormal{There is no input method support for
-      $\mathfrak q$.
-      Use, e.g., the \texttt{==q} syntax instead of
-      $\mathord\equiv\mathfrak q$.}}
+  \texinput{\\qeq}
   \\
   %
   \hline
@@ -1520,7 +1516,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   this combination as a single constant instead of breaking it down
   into several (more difficult to type) building blocks.
 
-  \texinput{\\div, \\frqq}
+  \texinput{\\div, \\frqq, >{}>}
   \\
   %
   \hline
@@ -1554,7 +1550,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   is intended, use \texttt{tensorSpace}, or provide additional type
   information for~$S$ or~$ T$.
 
-  \texinput{\\otimes}
+  \texinput{\\otimes, \\ox}
   \\
   \hline
   \subhead{Measurements}
@@ -3577,5 +3573,5 @@ with the tactics \texttt{\frenchspacing rule teleport\_terse. simp!.}
 
 %%% Local Variables:
 %%% mode: latex
-%%% TeX-master: "qrhl"
+%%% TeX-master: "manual"
 %%% End:

@@ -36,3 +36,4 @@
 *.syi
 /doc/manual-blx.bib
 /doc/manual.pdf
+*.synctex.gz
