@@ -180,23 +180,15 @@ proof -
     (* Some appreviations. pXij is prX i j (where we identify 0=False, 1=True).
        We will need those below to simplify the terms to make them comprehensible
        for the sos-tactic *)
-    define pA00 pA01 pA10 pA11 pC00 pC01 pC10 pC11 pB00 pB01 pB10 pB11
+    define pA00 pA01 pA10 pA11 pA'00 pA'01 pA'10 pA'11 pB00 pB01 pB10 pB11
       where 
         "pA00 = prA False False" "pA01 = prA False True"
         "pA10 = prA True False" "pA11 = prA True True"
-        "pC00 = prA' False False" "pC01 = prA' False True" (* I wanted to call those pA'00 etc but that lead to a sos-bug *)
-        "pC10 = prA' True False" "pC11 = prA' True True"
+        "pA'00 = prA' False False" "pA'01 = prA' False True"
+        "pA'10 = prA' True False" "pA'11 = prA' True True"
         "pB00 = prB False False" "pB01 = prB False True"
         "pB10 = prB True False" "pB11 = prB True True"
     note pXxx_def = this    
-
-    (*
-    show ?thesis
-      unfolding pr1 sum_bool prxy_win apply simp
-      apply (insert prABpos prABsum) unfolding all_bool_eq sum_bool
-      unfolding pXxx_def[symmetric]
-      apply sos (* This fails, that's why we introduced the auxiliary prA' *)
-    *)
 
     (* Probability of winning is the sum over all prxy' a b for all a b, divided by 4 *)
     have "pr1 \<sigma> \<le> (\<Sum>a\<in>UNIV. sum (prxy' a) UNIV) / 4"
@@ -208,7 +200,7 @@ proof -
       unfolding sum_bool prxy'_def apply simp
       apply (insert prA'Bpos prA'Bsum) unfolding all_bool_eq sum_bool
       unfolding pXxx_def[symmetric]
-      by (sos "(((A<0 * R<1) + (((A<=9 * R<1) * (R<4 * [1]^2)) + (((A<=8 * R<1) * ((R<11/6 * [5/11*pC01__ + 5/11*pC11__ + 1]^2) + (R<4/33 * [pC01__ + pC11__]^2))) + (((A<=5 * (A<=7 * (A<=8 * R<1))) * (R<1/2 * [1]^2)) + (((A<=3 * (A<=7 * (A<=8 * R<1))) * (R<5/6 * [1]^2)) + (((A<=3 * (A<=5 * (A<=9 * R<1))) * (R<4 * [1]^2)) + (((A<=3 * (A<=4 * (A<=5 * R<1))) * (R<8 * [1]^2)) + (((A<=1 * (A<=7 * (A<=9 * R<1))) * (R<4 * [1]^2)) + (((A<=1 * (A<=6 * (A<=7 * R<1))) * (R<8 * [1]^2)) + (((A<=1 * (A<=5 * (A<=8 * R<1))) * (R<37/6 * [1]^2)) + (((A<=1 * (A<=3 * (A<=8 * R<1))) * (R<1/2 * [1]^2)) + (((A<=1 * (A<=2 * (A<=5 * R<1))) * (R<8 * [1]^2)) + ((A<=0 * (A<=3 * (A<=7 * R<1))) * (R<8 * [1]^2)))))))))))))))")
+      by (sos "(((A<0 * R<1) + (((A<=9 * R<1) * (R<4 * [1]^2)) + (((A<=8 * R<1) * ((R<11/6 * [5/11*pA'01__ + 5/11*pA'11__ + 1]^2) + (R<4/33 * [pA'01__ + pA'11__]^2))) + (((A<=4 * (A<=6 * (A<=8 * R<1))) * (R<1/2 * [1]^2)) + (((A<=2 * (A<=6 * (A<=8 * R<1))) * (R<5/6 * [1]^2)) + (((A<=2 * (A<=4 * (A<=9 * R<1))) * (R<4 * [1]^2)) + (((A<=2 * (A<=4 * (A<=5 * R<1))) * (R<8 * [1]^2)) + (((A<=1 * (A<=2 * (A<=6 * R<1))) * (R<8 * [1]^2)) + (((A<=0 * (A<=6 * (A<=9 * R<1))) * (R<4 * [1]^2)) + (((A<=0 * (A<=6 * (A<=7 * R<1))) * (R<8 * [1]^2)) + (((A<=0 * (A<=4 * (A<=8 * R<1))) * (R<37/6 * [1]^2)) + (((A<=0 * (A<=3 * (A<=4 * R<1))) * (R<8 * [1]^2)) + ((A<=0 * (A<=2 * (A<=8 * R<1))) * (R<1/2 * [1]^2)))))))))))))))")
 
     (* So, altogether we have shown our subgoal (the fact pr1_34) *)
     finally show "pr1 \<sigma> \<le> 3/4" .
