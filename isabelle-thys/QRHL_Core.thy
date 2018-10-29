@@ -17,7 +17,7 @@ lemma [simp]: "cnj sqrt2 = sqrt2" unfolding sqrt2_def by simp *)
 
 
 
-
+(* TODO move into theory Predicates.thy *)
 section \<open>Quantum predicates\<close>
     
 type_synonym predicate = "mem2 subspace"
@@ -111,10 +111,11 @@ lift_definition colocal_op_pred :: "(mem2,mem2) bounded \<Rightarrow> predicate 
 consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
 adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (* colocal_qvars_qvars *)
 
-lifting_forget subspace.lifting (* TODO: don't *)
 lemma colocal_top[simp]: "distinct_qvars Q \<Longrightarrow> colocal_pred_qvars top Q"
+  using [[transfer_del_const cr_subspace]]
   unfolding distinct_qvars_def apply transfer by (auto intro: predicate_local_raw_top exI[of _ "{}"])
 lemma colocal_bot[simp]: "distinct_qvars Q \<Longrightarrow> colocal bot Q"
+  using [[transfer_del_const cr_subspace]]
   unfolding distinct_qvars_def apply transfer by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
 
 lemma colocal_inf[simp]: assumes "colocal A Q" and "colocal B Q" shows "colocal (A \<sqinter> B) Q"
