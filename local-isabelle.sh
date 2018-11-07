@@ -2,7 +2,7 @@
 
 # Runs a locally installed Isabelle
 
-set -x
+set -e
 
 ISABELLE_DIR=/opt/Isabelle2018
 DIR="$(dirname "$(readlink -f "$BASH_SOURCE")")"
