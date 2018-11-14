@@ -131,10 +131,10 @@ mappings in Universal ++=
 mappings in Universal ++= {
   val base = baseDirectory.value
   val dirs = base / "isabelle-thys" +++ base / "examples"
-  val files = dirs ** (("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl") -- ("Test.thy" || "Scratch.thy" || "TestEx.thy" || "test.qrhl"))
-//  val excluded = Set("Test.thy", "TestEx.thy", "test.qrhl")
-//  val files2 = files.filter(f => excluded.contains(f.base))
-  files pair relativeTo(base)
+  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl")
+  val excluded = List("isabelle-thys/Test.thy", "examples/TestEx.thy", "examples/test.qrhl", "isabelle-thys/Scratch.thy")
+  val files2 = files.filter { f => ! excluded.exists(e => f.getPath.endsWith(e)) }
+  files2 pair relativeTo(base)
 }
 
 mappings in Universal ++= {
