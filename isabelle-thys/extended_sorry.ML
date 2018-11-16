@@ -1,6 +1,27 @@
 structure Extended_Sorry =
 struct
 
+(* Fixed reimplementation of Proofterm.all_oracles_of (REMOVE when the original is fixed) *)
+fun join_thms (thms: Proofterm.pthm list) =
+  Future.joins (map (Proofterm.thm_node_body o #2) thms);
+val oracle_ord = prod_ord fast_string_ord Term_Ord.fast_term_ord;
+val unions_oracles = Ord_List.unions oracle_ord;
+
+val all_oracles_of =
+  let
+    fun collect_inner thms =
+        tap join_thms thms |> fold (fn (i, thm_node) => fn (x, seen) =>
+          if Inttab.defined seen i then (x, seen)
+          else
+            let
+              val body = Future.join (Proofterm.thm_node_body thm_node);
+              val (x', seen') = collect body (x, Inttab.update (i, ()) seen);
+            in (x', seen') end)
+    and collect (PBody {oracles, thms, ...}) seen = case collect_inner thms seen of (x,seen) => 
+            (if null oracles then x else oracles :: x, seen)
+  in fn body => unions_oracles (#1 (collect body ([], Inttab.empty))) end;
+(* END reimplementation *)
+
 val _ = if !Proofterm.proofs < 1 then 
   (Proofterm.proofs := 1; tracing "Need Proofterm.proofs >= 1 for Extended_Sorry.thy") else () 
 
@@ -50,7 +71,7 @@ fun show_oracles_lines thm = let
                               (Properties.get props "name" |> the,
                                Markup.markup m name))
                           |> Symtab.make
-  val oracles = thm |> Thm.proof_body_of |> Proofterm.all_oracles_of
+  val oracles = thm |> Thm.proof_body_of |> all_oracles_of
   fun show ("Extended_Sorry.sorry_marker_oracle",t) = let
         val (ser,t) = case t of \<^const>\<open>sorry_marker\<close> $ n $ t => (HOLogic.dest_number n |> snd, t)
                           | t => raise (TERM ("show_oracles", [t]))
