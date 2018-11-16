@@ -1,15 +1,35 @@
 theory Test
   imports 
- CryptHOL.Cyclic_Group "HOL-Eisbach.Eisbach_Tools" 
+ (* CryptHOL.Cyclic_Group "HOL-Eisbach.Eisbach_Tools"  *)
 (* Cert_Codegen *)
 (* Hashed_Terms Extended_Sorry *)
-QRHL.QRHL
-     (* QRHL.QRHL_Core  Multi_Transfer  *)
-(* QRHL.Prog_Variables *)
+(* QRHL.QRHL *)
+Main
 (*   keywords
     "relift_definition" :: thy_goal
  *)
 begin
+
+declare[[ML_debugger]]
+
+ML \<open>
+Options.default ()
+\<close>
+
+
+lemma xxx: False
+  by (tactic \<open>all_tac\<close>)
+
+ML \<open>
+Thy_Info.register_thy \<^theory>
+\<close>
+
+
+ML \<open>
+ @{thm xxx}
+|> Thm.proof_body_of
+\<close>
+
 
 hide_const (open) Order.top
 

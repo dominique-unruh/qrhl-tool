@@ -1,18 +1,5 @@
 isabelle TestEx.
 
-classical var c : bit.
-quantum var q : bit.
+lemma x.
+rule test2.
 
-program M := {
-  c <- measure q with computational_basis;
-}.
-
-adversary A vars c.
-
-qrhl {Cla[c1 = c2] ⊓ Qeq[q1=q2]} call M; ~ call M; {Cla[c1 = c2] ⊓ Qeq[q1=q2]}.
- inline M.
- debug:goal.
- measure.
- skip.
- simp ! aux.
-qed.

@@ -223,4 +223,15 @@ operation_setup show_oracles_lines = {*
    action = map YXML.content_of o Extended_Sorry.show_oracles_lines o Refs.Thm.read}
 *}
 
+operation_setup (sequential, bracket) use_thys2 = \<open>
+  {from_lib = Codec.list Codec.string,
+   to_lib = Codec.unit,
+   action = List.app Thy_Info.use_thy}
+\<close>
+
+ML \<open>
+Codec.exn_result
+\<close>
+
+
 end

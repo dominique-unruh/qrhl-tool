@@ -214,7 +214,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     }
     val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount-1).toString.stripSuffix(".thy") }
 //    println("Isabelle getContextWithThys", files, filesThyPath)
-    invoke(Operation.UseThys, filesThyPath)
+    invoke(Isabelle.useThys2Op /*Operation.UseThys*/, filesThyPath)
     val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
     val ctxId = invoke(Isabelle.createContextOp, imports)
     new Isabelle.Context(this, ctxId)
@@ -330,6 +330,7 @@ object Isabelle {
 //  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
 
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
+  val useThys2Op: Operation[List[String], Unit] = Operation.implicitly[List[String], Unit]("use_thys2")
   val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")
   val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_context")
   val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_thm")
@@ -345,14 +346,14 @@ object Isabelle {
 
   /** Analogous to Isabelle's HOLogic.dest_list. Throws [[MatchError]] if it's not a list */
   def dest_list(term: Term): List[Term] = term match {
-    case (Const("List.list.Nil", _)) => Nil
+    case Const("List.list.Nil", _) => Nil
     case App(App(Const("List.list.Cons", _), t), u) => t :: dest_list(u)
     case _ => throw new MatchError(term)
   }
 
   /** Analogous to Isabelle's HOLogic.dest_numeral. Throws [[MatchError]] if it's not a numeral */
   def dest_numeral(term:Term) : BigInt = term match {
-    case (Const("Num.num.One", _)) => 1
+    case Const("Num.num.One", _) => 1
     case App(Const("Num.num.Bit0", _), bs) => 2 * dest_numeral(bs)
     case App(Const("Num.num.Bit1", _), bs) => 2 * dest_numeral(bs) + 1
     case _ => throw new MatchError(term)
@@ -393,7 +394,7 @@ object Isabelle {
   def tupleT(typs: ITyp*): ITyp = typs match {
     case Nil => unitT
     case List(typ) => typ
-    case (typ :: rest) => prodT(typ,tupleT(rest :_*))
+    case typ :: rest => prodT(typ,tupleT(rest :_*))
   }
 
   def freeVars(term: Term): Set[String] = {
