@@ -1,35 +1,16 @@
 theory Test
   imports 
- (* CryptHOL.Cyclic_Group "HOL-Eisbach.Eisbach_Tools"  *)
+  CryptHOL.Cyclic_Group "HOL-Eisbach.Eisbach_Tools"  
 (* Cert_Codegen *)
 (* Hashed_Terms Extended_Sorry *)
-(* QRHL.QRHL *)
+QRHL.QRHL
 Main
 (*   keywords
     "relift_definition" :: thy_goal
  *)
 begin
 
-declare[[ML_debugger]]
-
-ML \<open>
-Options.default ()
-\<close>
-
-
-lemma xxx: False
-  by (tactic \<open>all_tac\<close>)
-
-ML \<open>
-Thy_Info.register_thy \<^theory>
-\<close>
-
-
-ML \<open>
- @{thm xxx}
-|> Thm.proof_body_of
-\<close>
-
+axiomatization xxx :: "int \<Rightarrow> bool" (* REMOVE *)
 
 hide_const (open) Order.top
 
@@ -235,11 +216,12 @@ proof -
     unfolding x y by (simp add: add.commute nat_pow_mult)
 qed
 
+(* axiomatization where cyclic_group_G: "cyclic_group G" *)
+
 interpretation G_group: cyclic_group G
   rewrites "x [^]\<^bsub>G\<^esub> n = x \<^sup>^ (n::int)" and "x \<otimes>\<^bsub>G\<^esub> y = x*y" and "\<one>\<^bsub>G\<^esub> = 1" and "generator G = g" 
     and "m_inv G = inverse" and "carrier G = UNIV"
   by (cheat G_group)
-
 
 definition "keygen = uniform {(g \<^sup>^ x, x) | x::int. x\<in>{0..order G-1}}"
 definition "enc h x = uniform {(g\<^sup>^r, h\<^sup>^r * x) | r::int. r\<in>{0..order G-1}}"
@@ -338,6 +320,40 @@ lemma elgamal_correct [simp]:
   apply skip
   by (auto simp: correct)
 
+
+lemma lem1:
+  assumes "xxx 1"
+  shows "xxx 2"
+  by (cheat 1)
+
+lemma lem2:
+  assumes "xxx 2"
+  shows "xxx 3"
+  by (cheat 2)
+
+lemma lem3:
+  assumes "xxx 1"
+  shows "xxx 3"
+  ML_val \<open>@{Isar.goal} |> #goal |> Extended_Sorry.show_oracles\<close>
+  apply (rule lem2)  
+  ML_val \<open>@{Isar.goal} |> #goal |> Extended_Sorry.show_oracles\<close>
+  apply (rule lem1)
+  ML_val \<open>@{Isar.goal} |> #goal |> Extended_Sorry.show_oracles\<close>
+  by (fact assms)
+
+ML \<open>
+(
+@{thm lem1} RS @{thm lem2}
+)
+|>
+Thm.proof_body_of (* |> Proofterm.all_oracles_of  *) 
+\<close>
+
+lemma skipREMOVE:
+  assumes "A \<le> B"
+  shows "qrhl A [] [] B"
+  by (cheat 1)
+
 lemma elgamal_correct2 [simp]:
   fixes z
   shows "qrhl Expr[Cla[m1=m2]] 
@@ -347,8 +363,6 @@ lemma elgamal_correct2 [simp]:
   apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
   apply (simp add: dec_def)
   apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
-  (* unfolding enc_def *)
-  (* unfolding  *)
   apply (simp add: weight_enc supp_enc)
   apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
   apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
@@ -356,5 +370,11 @@ lemma elgamal_correct2 [simp]:
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
+  
+
+ML \<open>
+Extended_Sorry.show_oracles @{thm elgamal_correct2}
+\<close>
+
 
 end
