@@ -74,7 +74,8 @@ class Toplevel(initialState : State = State.empty) {
   def execCmd(cmd:Command) : Unit = {
     state.filesChanged match {
       case Nil =>
-      case files => println(s"***** [WARNING] Some files changed (${files.mkString(", ")}). Best restart the prover. *****\n\n")
+      case files =>
+        println(s"***** [WARNING] Some files changed (${files.mkString(", ")}).\n***** Please retract the current proof script. (C-c C-r or Proof-General->Retract Buffer)\n\n")
     }
 
     cmd match {
