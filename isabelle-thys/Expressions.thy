@@ -47,13 +47,14 @@ section \<open>Constructing expressions\<close>
 abbreviation "const_expression z \<equiv> expression \<lbrakk>\<rbrakk> (\<lambda>_. z)"
 
 lift_definition map_expression' :: "(('z \<Rightarrow> 'e) \<Rightarrow> 'f) \<Rightarrow> ('z \<Rightarrow> 'e expression) \<Rightarrow> 'f expression" is
-  "\<lambda>F ez. if (\<forall>z. fst (ez z) = fst (ez undefined)) then (fst (ez undefined), (\<lambda>m. F (\<lambda>z. snd (ez z) m)))
-          else Rep_expression undefined" 
+  "\<lambda>F ez. if (\<forall>z. fst (ez z) = fst (ez undefined)) 
+          then (fst (ez undefined), (\<lambda>m. F (\<lambda>z. snd (ez z) m)))
+          else Rep_expression (const_expression undefined)" 
   apply (rename_tac F ez)
 proof -
   fix F :: "('z \<Rightarrow> 'e) \<Rightarrow> 'f" and ez :: "'z \<Rightarrow> variable_raw set \<times> (mem2 \<Rightarrow> 'e)"
   assume assm: "(\<And>x. ez x \<in> {(vs, f). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)})"
-  show "(if \<forall>z. fst (ez z) = fst (ez undefined) then (fst (ez undefined), \<lambda>m. F (\<lambda>z. snd (ez z) m)) else Rep_expression undefined)
+  show "(if \<forall>z. fst (ez z) = fst (ez undefined) then (fst (ez undefined), \<lambda>m. F (\<lambda>z. snd (ez z) m)) else Rep_expression (const_expression undefined))
        \<in> {(vs, f). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)}"
   proof (cases "\<forall>z. fst (ez z) = fst (ez undefined)")
     case True
@@ -143,6 +144,15 @@ lemma index_expression[simp]: "index_expression left (expression Q e) = expressi
   using [[transfer_del_const index_vars]]
   apply transfer by auto
 
+lift_definition index_flip_expression :: "'a expression \<Rightarrow> 'a expression" is
+  "\<lambda>(vs,e). (index_flip_var_raw ` vs, \<lambda>m. e (index_flip_mem2 m))"
+  by auto
+
+lemma index_flip_expression[simp]: "index_flip_expression (expression Q e) = expression (index_flip_vars Q) e"
+  for Q :: "'b::universe variables" and e :: "'b \<Rightarrow> 'a"
+  using [[transfer_del_const index_flip_vars]]
+  apply transfer by auto
+
 section \<open>Substitutions\<close>
 
 (* TODO move *)
@@ -170,6 +180,14 @@ lemma substitution1_function_domain: "substitution1_function s m \<in> variable_
 lemma substitute1_variable[simp]: "substitution1_variable (substitute1 x e) = Rep_variable x"
   apply transfer by auto
 lemma substitute1_function: "substitution1_function (substitute1 x e) m = embedding (expression_eval e m)"
+  apply transfer by auto
+
+lift_definition index_flip_substitute1 :: "substitution1 \<Rightarrow> substitution1" 
+  is "\<lambda>(v,vs,f). (index_flip_var_raw v, index_flip_var_raw ` vs, f o index_flip_mem2)"
+  by auto
+
+lemma index_flip_substitute1: "index_flip_substitute1 (substitute1 x e) = 
+  substitute1 (index_flip_var x) (index_flip_expression e)"
   apply transfer by auto
 
 lift_definition subst_mem2 :: "substitution1 list \<Rightarrow> mem2 \<Rightarrow> mem2" is
@@ -477,6 +495,20 @@ lemma expression_id_comp_aux: \<comment> \<open>Helper for ML function clean_exp
   using assms[THEN meta_eq_to_obj_eq] apply transfer
   by (auto simp add: o_def)
   
+section "Orderings on expressions"
+
+instantiation expression :: (ord) ord begin
+definition "less_eq_expression e f \<longleftrightarrow> expression_eval e \<le> expression_eval f"
+definition "less_expression e f \<longleftrightarrow> expression_eval e \<le> expression_eval f \<and> \<not> (expression_eval f \<le> expression_eval e)"
+instance by intro_classes                   
+end
+
+instantiation expression :: (preorder) preorder begin
+instance apply intro_classes
+  unfolding less_expression_def less_eq_expression_def 
+  using order_trans by auto
+end
+
 
 ML_file "expressions.ML"
 

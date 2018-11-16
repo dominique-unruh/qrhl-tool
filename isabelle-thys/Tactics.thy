@@ -5,7 +5,7 @@ begin
 
 
 
-lemma seq:
+lemma seq_rule:
   assumes "qrhl A c1 d1 B"
   and "qrhl B c2 d2 C"
   shows "qrhl A (c1@c2) (d1@d2) C"
@@ -16,7 +16,7 @@ lemma seqREMOVE:
   assumes "qrhl A c1 d1 B"
     and "qrhl B c2 d2 C"
   shows "qrhl A c d C"
-  using assms using seq by auto
+  using assms using seq_rule by auto
 
 
 ML_file "tactics.ML"

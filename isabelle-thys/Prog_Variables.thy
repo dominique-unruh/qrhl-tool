@@ -269,6 +269,27 @@ lemma variable_raw_name_index_var_left[simp]: "variable_raw_name (index_var_raw 
 lemma variable_raw_name_index_var_right[simp]: "variable_raw_name (index_var_raw False v) = variable_raw_name v @ ''2''"
   apply transfer by auto
 
+definition "index_flip_name n = (if n=[] then [] else (if last n = CHR ''1'' then butlast n @ ''2'' else if last n = CHR ''2'' then butlast n @ ''1'' else n))"
+lift_definition index_flip_var_raw  :: "variable_raw \<Rightarrow> variable_raw" is
+  "\<lambda>(n,dom). (index_flip_name n, dom)"
+  by auto
+
+lemma index_flip_name_twice: "index_flip_name (index_flip_name x) = x"
+  apply (cases x rule: rev_cases) unfolding index_flip_name_def by auto
+
+lemma index_flip_name_inject: "index_flip_name x = index_flip_name y \<Longrightarrow> x = y"
+  using index_flip_name_twice by metis
+
+lemma index_flip_var_raw_inject: "index_flip_var_raw x = index_flip_var_raw y \<Longrightarrow> x = y"
+  apply transfer by (auto simp: index_flip_name_inject)
+
+lemma variable_raw_domain_index_flip_var_raw[simp]: "variable_raw_domain (index_flip_var_raw v) = variable_raw_domain v"
+  apply transfer by auto
+
+lemma variable_raw_name_index_flip_var[simp]: "variable_raw_name (index_flip_var_raw v) =  index_flip_name (variable_raw_name v)"
+  apply transfer by auto
+
+(* TODO move to different section *)
 lemma variable_eqI: "variable_name x = variable_name y \<Longrightarrow> x = y"
   apply transfer apply transfer by auto
 
@@ -297,6 +318,21 @@ lemma index_var1_simp[simp]: "variable_name (index_var True x) = variable_name x
 lemma index_var2_simp[simp]: "variable_name (index_var False x) = variable_name x @ ''2''"
   using index_var2 by metis
 
+lift_definition index_flip_var :: "'a::universe variable \<Rightarrow> 'a::universe variable" is index_flip_var_raw
+  by simp
+
+lemma index_flip_var: "y = index_flip_var x \<longleftrightarrow> variable_name y = index_flip_name (variable_name x)"
+  apply (rule iffI)
+   apply (transfer, simp)
+  by (rule variable_eqI, transfer, simp)
+
+lemma index_flip_varI: "variable_name y = index_flip_name (variable_name x) \<Longrightarrow> index_flip_var x = y"
+  using index_flip_var by metis
+
+lemma index_flip_var_simp[simp]: "variable_name (index_flip_var x) = index_flip_name (variable_name x)" 
+  using index_flip_var by metis
+
+
 lift_definition unindex_mem2 :: "bool \<Rightarrow> mem2 \<Rightarrow> mem2" is
   "\<lambda>left (f::_\<Rightarrow>universe) v. f (index_var_raw left v)"
   apply transfer by (auto; blast)
@@ -320,10 +356,22 @@ lemma Rep_mem2_index_mem2[simp]: "Rep_mem2 (index_mem2 left m) (index_var_raw le
 lemma Rep_mem2_index_mem2_bad: "v \<notin> range (index_var_raw left) \<Longrightarrow> Rep_mem2 (index_mem2 left m) v = Rep_mem2 m v"
   unfolding index_mem2.rep_eq by auto
 
+lift_definition index_flip_mem2 :: "mem2 \<Rightarrow> mem2" is
+  "\<lambda>(f::_\<Rightarrow>universe) v. f (index_flip_var_raw v)"
+  using variable_raw_domain_index_flip_var_raw by blast
+
+lemma Rep_mem2_index_flip_mem2[simp]: "Rep_mem2 (index_flip_mem2 m) v = Rep_mem2 m (index_flip_var_raw v)"
+  unfolding index_flip_mem2.rep_eq by simp
+
 definition "index_vartree left = map_vtree (index_var_raw left)"
 
 lemma tree_domain_index_vartree[simp]: "tree_domain (index_vartree left vt) = tree_domain vt"
   unfolding index_vartree_def by (induction vt, auto)
+
+definition "index_flip_vartree = map_vtree (index_flip_var_raw)"
+
+lemma tree_domain_index_flip_vartree[simp]: "tree_domain (index_flip_vartree vt) = tree_domain vt"
+  unfolding index_flip_vartree_def by (induction vt, auto)
 
 lift_definition index_vars :: "bool \<Rightarrow> 'a::universe variables \<Rightarrow> 'a variables" is
   "\<lambda>left (vt,e). (index_vartree left vt,e)" by auto
@@ -349,6 +397,38 @@ lemma index_vars_concat[simp]: "index_vars left (variable_concat Q R) = variable
 lemma index_vars_unit[simp]: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
   for x :: "'a::universe variable" and Q :: "'b::universe variables" and R :: "'c::universe variables"
   apply transfer unfolding index_vartree_def by auto
+
+
+lift_definition index_flip_vars :: "'a::universe variables \<Rightarrow> 'a variables" is
+  "\<lambda>(vt,e). (index_flip_vartree vt,e)" by auto
+
+lemma eval_variables_index_flip_mem2[simp]: 
+  "eval_variables Q (index_flip_mem2 m) = eval_variables (index_flip_vars Q) m"
+proof (transfer, auto, rename_tac vt f Q)
+  fix vt f Q
+  assume bij: "bij_betw f (tree_domain vt) (range embedding)"
+  have "(eval_vtree vt (index_flip_mem2 Q)) = (eval_vtree (index_flip_vartree vt) Q)"
+    apply (induction vt)
+    by (auto simp: index_flip_vartree_def)
+  then show "inv embedding (f (eval_vtree vt (index_flip_mem2 Q))) = inv embedding (f (eval_vtree (index_flip_vartree vt) Q))"
+    by simp
+qed
+
+
+lemma raw_variables_index_flip_vars[simp]: "raw_variables (index_flip_vars vs) = map (index_flip_var_raw) (raw_variables vs)"
+  unfolding raw_variables.rep_eq index_vars.rep_eq case_prod_beta index_flip_vartree_def
+  by (simp add: flatten_tree_map_vtree index_flip_vars.rep_eq index_flip_vartree_def split_beta)
+
+lemma index_flip_vars_singleton[simp]: "index_flip_vars \<lbrakk>x\<rbrakk> = \<lbrakk>index_flip_var x\<rbrakk>"
+  apply transfer unfolding index_flip_vartree_def by auto
+
+lemma index_flip_vars_concat[simp]: "index_flip_vars (variable_concat Q R) = variable_concat (index_flip_vars Q) (index_flip_vars R)"
+  apply transfer unfolding index_flip_vartree_def by auto
+
+lemma index_flip_vars_unit[simp]: "index_flip_vars \<lbrakk>\<rbrakk> = \<lbrakk>\<rbrakk>"
+  for x :: "'a::universe variable" and Q :: "'b::universe variables" and R :: "'c::universe variables"
+  apply transfer unfolding index_flip_vartree_def by auto
+
 
 section \<open>ML code\<close>
 

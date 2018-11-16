@@ -40,7 +40,7 @@ fun check_func (t,cert) = let
 lemma "(\<lambda>(i, b, s). t (i, b, s)) == x"
   apply simp (* Becomes t = x *)
   oops
-schematic_goal x: " (\<lambda>(i, b, s). ?t (i, b, s)) = xxx"
+schematic_goal x: " (\<lambda>(i, b, s). ?t (i, b, s)) = xxxx"
   (* apply simp *)
   oops
 
@@ -56,21 +56,6 @@ hide_const (open) List_Fusion.generator.generator
 
 
 
-instantiation expression :: (ord) ord begin
-definition "less_eq_expression e f \<longleftrightarrow> expression_eval e \<le> expression_eval f"
-definition "less_expression e f \<longleftrightarrow> expression_eval e \<le> expression_eval f \<and> \<not> (expression_eval f \<le> expression_eval e)"
-instance by intro_classes                   
-end
-
-(* lemma expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
-  for X :: "'x variables" and e :: "'x \<Rightarrow> 'e" and m :: mem2
- *)
-
-instantiation expression :: (preorder) preorder begin
-instance apply intro_classes
-  unfolding less_expression_def less_eq_expression_def 
-  using order_trans by auto
-end
 
 (* ML {*
   fun subst_expression_simproc _ ctxt ct = SOME (Encoding.subst_expression_conv ctxt ct) handle CTERM _ => NONE
@@ -88,7 +73,7 @@ lemma qrhl_top': "f \<ge> top \<Longrightarrow> qrhl A p1 p2 (expression Q f)"
 lemma skip:
   assumes "A \<le> B"
   shows "qrhl A [] [] B"
-  by (cheat skip)
+  using skip_rule conseq_rule assms by blast
 
 ML \<open>
 fun rename_tac_variant names = SUBGOAL (fn (goal,i) =>
