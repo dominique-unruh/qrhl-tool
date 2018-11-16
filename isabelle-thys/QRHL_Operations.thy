@@ -22,20 +22,6 @@ fun tac_dummy_thm NONE = NONE
   | tac_dummy_thm (SOME ts) = SOME (ts,0)
 *}
 
-(*
-operation_setup create_context = {*
-  {from_lib = Codec.string,
-   to_lib = Codec.int,
-   action = fn (name:string) =>
-            let val _ = Thy_Info.use_thy name
-              val thy = Thy_Info.get_theory ("Draft."^name)
-              val ctx = Proof_Context.init_global thy
-            in
-              make_ctxt_ref ctx
-            end}
-*}
-*)
-
 operation_setup create_context = {*
   {from_lib = Codec.list Codec.string,
    to_lib = Codec.int,
@@ -228,10 +214,5 @@ operation_setup (sequential, bracket) use_thys2 = \<open>
    to_lib = Codec.unit,
    action = List.app Thy_Info.use_thy}
 \<close>
-
-ML \<open>
-Codec.exn_result
-\<close>
-
 
 end
