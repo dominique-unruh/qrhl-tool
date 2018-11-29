@@ -10,6 +10,6 @@ if ! [ -e "$DIR/PG" ]; then
     exit 1
 fi
 
-chmod +x "$DIR/bin/qrhl"
+chmod +x "$DIR/bin/qrhl" || true
 export JAVA_OPTS="-Dfile.encoding=UTF-8"
 emacs --no-site-file -q --eval '(set-language-environment "UTF-8")' -l "$DIR/PG/generic/proof-site.el" "$@"
