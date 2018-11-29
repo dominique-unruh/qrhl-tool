@@ -1,0 +1,19 @@
+name: qrhl-tool
+version: '0.4alpha'
+summary: Verification tool for qRHL based proofs
+description: Verification tool for qRHL based proofs
+confinement: devmode
+grade: devel
+apps:
+  test:
+    command: bash
+  proofgeneral:
+    command: qrhl-$SNAPCRAFT_PROJECT_VERSION/proofgeneral.sh
+    plugs: [desktop]
+parts:
+  qrhl-tool:
+    plugin: dump
+    source: target/snapcraft/$SNAPCRAFT_PROJECT_VERSION
+  packages:
+    plugin: nil
+    stage-packages: [default-jdk,emacs]
