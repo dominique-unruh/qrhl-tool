@@ -5,6 +5,13 @@ begin
 
 ML_file "qrhl_operations.ML"
 
+ML \<open>
+(* Codec.add_exception_printer (fn pr => fn exn => case Par_Exn.dest exn of 
+  NONE => NONE | 
+  SOME exns => exns |> map pr |> String.concatWith "\n" |> SOME);; *)
+Codec.add_exception_printer (fn _ => fn exn => Runtime.exn_message exn |> YXML.parse_body |> XML.content_of |> SOME)
+\<close>
+
 ML \<open>open QRHL_Operations\<close>
 
 (* ML \<open>
