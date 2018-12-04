@@ -276,13 +276,13 @@ object Parser extends RegexParsers {
   def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
     literal("rnd") ~> (for (
       x <- identifier;
-      xT = context.environment.getCVariable(x).valueTyp;
+      xVar = context.environment.getCVariable(x);
       _ <- literal(",");
       y <- identifier;
-      yT = context.environment.getCVariable(y).valueTyp;
+      yVar = context.environment.getCVariable(y);
       _ <- sampleSymbol | assignSymbol;
-      e <- expression(Isabelle.distrT(Isabelle.prodT(xT,yT)))
-    ) yield e).? ^^ RndTac
+      e <- expression(Isabelle.distrT(Isabelle.prodT(xVar.valueTyp,yVar.valueTyp)))
+    ) yield (xVar,yVar,e)).? ^^ RndTac
 
   def tactic_case(implicit context:ParserContext): Parser[CaseTac] =
     literal("case") ~> OnceParser(for (
