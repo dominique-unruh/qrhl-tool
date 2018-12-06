@@ -24,6 +24,8 @@
 		   proof-shell-eager-annotation-start "\\*\\*\\* "
 		   proof-shell-eager-annotation-start-length 4
 		   proof-no-fully-processed-buffer t
+		   proof-shell-filename-escapes '(("\\\\" . "\\\\") ("\"" . "\\\""))
+		   proof-shell-cd-cmd "changeDirectory \"%s\"."
 		   )
 
 (add-hook 'qrhl-mode-hook

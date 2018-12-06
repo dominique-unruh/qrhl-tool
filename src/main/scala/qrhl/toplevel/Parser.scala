@@ -5,13 +5,14 @@ import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic._
 import qrhl.tactic._
+import java.nio.file.{Path,Paths}
 
 import scala.util.parsing.combinator._
 
 case class ParserContext(environment: Environment,
                          isabelle: Option[Isabelle.Context])
 
-object Parser extends RegexParsers {
+object Parser extends JavaTokenParsers {
 
   val identifier : Parser[String] = """[a-zA-Z][a-zA-Z0-9_']*""".r
   val identifierListSep : Parser[String] = ","
@@ -167,7 +168,15 @@ object Parser extends RegexParsers {
       (rep1(statement) ^^ { s => Block(s:_*) }) |
       skip
 
-  val quotedString : Parser[String] = """"[^"]*"""".r ^^ { s => s.substring(1,s.length-1) }
+  // TODO does not match strings like "xxx\"xxx" or "xxx\\xxx" properly
+  val quotedString : Parser[String] = stringLiteral ^^ { s:String =>
+    val result = new StringBuilder()
+    val iterator = s.substring(1,s.length-1).iterator
+    for (c <- iterator)
+      if (c=='\\') result.append(iterator.next())
+      else result.append(c)
+    result.toString()
+  }
 
   val unquotedStringNoComma : Parser[String] = "[^.,]+".r
 
@@ -340,6 +349,8 @@ object Parser extends RegexParsers {
   val debug : Parser[DebugCommand] = "debug:" ~>
     ("goal" ^^ { _ => DebugCommand.goals((context,goals) => for (g <- goals) println(g.toExpression(context))) })
 
+  val changeDirectory : Parser[ChangeDirectoryCommand] = literal("changeDirectory") ~> quotedString ^^ ChangeDirectoryCommand.apply
+
   def command(implicit context:ParserContext): Parser[Command] =
-    (debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) | undo | qed).named("command")
+    (debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) | undo | qed | changeDirectory).named("command")
 }
