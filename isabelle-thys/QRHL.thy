@@ -3,4 +3,6 @@ theory QRHL
     Joint_Measure
 begin
 
+declare [[quick_and_dirty]]
+
 end

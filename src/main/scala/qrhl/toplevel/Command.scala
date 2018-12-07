@@ -16,6 +16,9 @@ case class ChangeDirectoryCommand(dir:Path) extends Command {
   assert(dir!=null)
   override def act(state: State): State = state.changeDirectory(dir)
 }
+object ChangeDirectoryCommand {
+  def apply(dir:String) : ChangeDirectoryCommand = apply(Path.of(dir))
+}
 
 case class IsabelleCommand(thy:Option[String]=None) extends Command {
   override def act(state: State): State = {
