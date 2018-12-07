@@ -1,6 +1,6 @@
 package qrhl.toplevel
 
-import java.nio.file.Path
+import java.nio.file.{Path, Paths}
 
 import info.hupel.isabelle.pure
 import qrhl.isabelle.Isabelle
@@ -17,7 +17,7 @@ case class ChangeDirectoryCommand(dir:Path) extends Command {
   override def act(state: State): State = state.changeDirectory(dir)
 }
 object ChangeDirectoryCommand {
-  def apply(dir:String) : ChangeDirectoryCommand = apply(Path.of(dir))
+  def apply(dir:String) : ChangeDirectoryCommand = apply(Paths.get(dir))
 }
 
 case class IsabelleCommand(thy:Option[String]=None) extends Command {
