@@ -6,6 +6,14 @@ typedef 'a expression = "{(vs,f::_\<Rightarrow>'a). finite vs \<and> (\<forall>m
   apply (rule exI[of _ "({},(\<lambda>x. undefined))"]) by auto
 setup_lifting type_definition_expression
 
+lift_definition rel_expression :: "(variable_raw \<Rightarrow> variable_raw \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> 'a expression \<Rightarrow> 'b expression \<Rightarrow> bool"
+  is "\<lambda>(rel_v::variable_raw \<Rightarrow> variable_raw \<Rightarrow> bool) (rel_result::'a \<Rightarrow> 'b \<Rightarrow> bool). 
+      (rel_prod (rel_set rel_v) (rel_fun (rel_mem2 rel_v) rel_result)
+        :: variable_raw set * (mem2 => 'a) => variable_raw set * (_ => 'b) => bool)".
+
+lemma rel_expression_eq: "rel_expression (=) (=) = (=)"
+  unfolding rel_expression.rep_eq rel_set_eq rel_mem2_eq rel_fun_eq prod.rel_eq Rep_expression_inject by rule
+
 lift_definition expression :: "'a::universe variables \<Rightarrow> ('a\<Rightarrow>'b) \<Rightarrow> 'b expression" is
   "\<lambda>(vs::'a variables) (f::'a\<Rightarrow>'b). (set (raw_variables vs), (f o eval_variables vs) :: mem2\<Rightarrow>'b)"
   using eval_variables_footprint by fastforce
@@ -20,6 +28,9 @@ lemma expression_eval: "expression_eval (expression X e) m = e (eval_variables X
 lift_definition expression_vars :: "'a expression \<Rightarrow> variable_raw set" is "\<lambda>(vs::variable_raw set,f). vs" .
 lemma expression_vars[simp]: "expression_vars (expression X e) = set (raw_variables X)"
   by (simp add: expression.rep_eq expression_vars.rep_eq)
+
+lemma expression_eqI: "expression_vars e = expression_vars e' \<Longrightarrow> expression_eval e = expression_eval e' \<Longrightarrow> e = e'"
+  apply transfer by auto
 
 text \<open>
 Some notation, used mainly in the documentation of the ML code:
@@ -153,6 +164,12 @@ lemma index_flip_expression[simp]: "index_flip_expression (expression Q e) = exp
   using [[transfer_del_const index_flip_vars]]
   apply transfer by auto
 
+lemma index_flip_expression_vars[simp]: "expression_vars (index_flip_expression e) = index_flip_var_raw ` expression_vars e"
+  by (simp add: expression_vars.rep_eq index_flip_expression.rep_eq split_beta)
+
+lemma index_flip_expression_twice[simp]: "index_flip_expression (index_flip_expression e) = e"
+  apply transfer by (auto simp: image_iff)
+
 section \<open>Substitutions\<close>
 
 (* TODO move *)
@@ -189,6 +206,38 @@ lift_definition index_flip_substitute1 :: "substitution1 \<Rightarrow> substitut
 lemma index_flip_substitute1: "index_flip_substitute1 (substitute1 x e) = 
   substitute1 (index_flip_var x) (index_flip_expression e)"
   apply transfer by auto
+
+(* definition rel_substitute1 :: "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> ('a expression\<Rightarrow>'a expression\<Rightarrow>bool) \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)" where
+  "rel_substitute1 rel_v rel_e s1 s2 = 
+    (rel_v (substitution1_variable s1) (substitution1_variable s2)
+   \<and> rel_e (inv embedding o substitution1_function s1) (substitution1_function s2))"
+ *)
+
+
+lift_definition rel_substitute1 :: "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> ('a::universe expression\<Rightarrow>'a expression\<Rightarrow>bool) \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)" is
+  "\<lambda>(rel_v::variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) (rel_exp :: (variable_raw set * (mem2 \<Rightarrow> 'a)) \<Rightarrow> (variable_raw set * (mem2 \<Rightarrow> 'a)) \<Rightarrow> bool). 
+    rel_prod rel_v (%(vs1,f1) (vs2,f2). rel_exp (vs1, inv embedding o f1 :: mem2 \<Rightarrow> 'a) (vs2, inv embedding o f2 :: mem2 \<Rightarrow> 'a))"
+proof (rename_tac rel_v rel_exp1 rel_exp2 prod1 prod2)
+  fix rel_v and rel_exp1 rel_exp2 :: "variable_raw set \<times> (mem2 \<Rightarrow> 'a)
+   \<Rightarrow> variable_raw set \<times> (mem2 \<Rightarrow> 'a) \<Rightarrow> bool" and prod1 prod2 :: "variable_raw \<times> variable_raw set \<times> (mem2 \<Rightarrow> universe)"
+  obtain v1 vs1 f1 where prod1: "prod1 = (v1,vs1,f1)" apply atomize_elim by (meson prod_cases3)
+  obtain v2 vs2 f2 where prod2: "prod2 = (v2,vs2,f2)" apply atomize_elim by (meson prod_cases3)
+  assume eq: "vsf1 \<in> {(vs, f). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)} \<Longrightarrow>
+              vsf2 \<in> {(vs, f). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)} \<Longrightarrow>
+              rel_exp1 vsf1 vsf2 = rel_exp2 vsf1 vsf2" for vsf1 vsf2
+  assume p1: "prod1 \<in> {(v, vs, e).
+           finite vs \<and> (\<forall>m. e m \<in> variable_raw_domain v) \<and> (\<forall>m1 m2. (\<forall>w\<in>vs. Rep_mem2 m1 w = Rep_mem2 m2 w) \<longrightarrow> e m1 = e m2)} "
+  assume p2: "prod2 \<in> {(v, vs, e).
+           finite vs \<and> (\<forall>m. e m \<in> variable_raw_domain v) \<and> (\<forall>m1 m2. (\<forall>w\<in>vs. Rep_mem2 m1 w = Rep_mem2 m2 w) \<longrightarrow> e m1 = e m2)}"
+  have "rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2) \<longleftrightarrow>
+        rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)"
+    apply (rule eq)
+    using p1 p2 unfolding prod1 prod2 apply auto by presburger+
+  then
+  show "rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2 =
+        rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2"
+    by (simp add: case_prod_beta prod1 prod2)
+qed
 
 lift_definition subst_mem2 :: "substitution1 list \<Rightarrow> mem2 \<Rightarrow> mem2" is
   "\<lambda>(\<sigma>::substitution1 list) (m::mem2) (v::variable_raw). 

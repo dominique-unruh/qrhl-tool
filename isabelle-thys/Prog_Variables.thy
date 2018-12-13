@@ -210,6 +210,14 @@ typedef mem2 = "{f. \<forall>v::variable_raw. f v \<in> variable_raw_domain v}"
   apply auto apply (rule choice) apply transfer by auto
 setup_lifting type_definition_mem2
 
+lift_definition rel_mem2 :: "(variable_raw \<Rightarrow> variable_raw \<Rightarrow> bool) \<Rightarrow> mem2 \<Rightarrow> mem2 \<Rightarrow> bool"
+  is "\<lambda>rel_v::variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool. rel_fun rel_v (=)".
+
+lemma rel_mem2_eq: "rel_mem2 (=) = (=)"
+  apply (rule ext)+ unfolding rel_mem2.rep_eq rel_fun_def using Rep_mem2_inject by auto
+lemma rel_mem2_mono: "A \<ge> B \<Longrightarrow> rel_mem2 A \<le> rel_mem2 B"
+  unfolding rel_mem2.rep_eq rel_fun_def by auto
+
 fun eval_vtree :: "variable_raw Prog_Variables.vtree \<Rightarrow> mem2 \<Rightarrow> universe Prog_Variables.vtree" where
   "eval_vtree VTree_Unit m = VTree_Unit"
 | "eval_vtree (VTree_Singleton v) m = VTree_Singleton (Rep_mem2 m v)"
@@ -274,11 +282,14 @@ lift_definition index_flip_var_raw  :: "variable_raw \<Rightarrow> variable_raw"
   "\<lambda>(n,dom). (index_flip_name n, dom)"
   by auto
 
-lemma index_flip_name_twice: "index_flip_name (index_flip_name x) = x"
+lemma index_flip_name_twice[simp]: "index_flip_name (index_flip_name x) = x"
   apply (cases x rule: rev_cases) unfolding index_flip_name_def by auto
 
 lemma index_flip_name_inject: "index_flip_name x = index_flip_name y \<Longrightarrow> x = y"
   using index_flip_name_twice by metis
+
+lemma index_flip_var_twice[simp]: "index_flip_var_raw (index_flip_var_raw x) = x"
+  apply transfer by auto
 
 lemma index_flip_var_raw_inject: "index_flip_var_raw x = index_flip_var_raw y \<Longrightarrow> x = y"
   apply transfer by (auto simp: index_flip_name_inject)

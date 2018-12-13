@@ -10,6 +10,8 @@ Main
  *)
 begin
 
+ML YXML.string_of
+
 axiomatization xxx :: "int \<Rightarrow> bool" (* REMOVE *)
 
 hide_const (open) Order.top
@@ -356,9 +358,25 @@ lemma elgamal_correct2 [simp]:
   apply skip
   by (auto simp: correct)
   
+lemma elgamal_correct3 [simp]:
+  fixes z
+  shows "qrhl Expr[Cla[m1=m2]] 
+         [] ElGamal Expr[Cla[m1=m2]]"
+  unfolding ElGamal_def
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (simp add: dec_def case_prod_beta)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (simp add: weight_enc supp_enc case_prod_beta)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (simp add: weight_keygen supp_keygen)
+  apply skip
+  by (auto simp: correct)
+  
 
 ML \<open>
-Extended_Sorry.show_oracles @{thm elgamal_correct2}
+Extended_Sorry.show_oracles @{thm elgamal_correct3}
 \<close>
 
 
