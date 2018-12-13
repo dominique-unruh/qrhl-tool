@@ -16,6 +16,9 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
 
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
+
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
 
@@ -107,8 +110,8 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
   override def toExpression(context: Isabelle.Context): Expression = {
     val leftTerm = left.programListTerm(context)
     val rightTerm = right.programListTerm(context)
-    val preTerm = pre.encodeAsExpression(context)
-    val postTerm = post.encodeAsExpression(context)
+    val preTerm = pre.encodeAsExpression(context).isabelleTerm
+    val postTerm = post.encodeAsExpression(context).isabelleTerm
     val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
     val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
     Expression(Isabelle.boolT, term)

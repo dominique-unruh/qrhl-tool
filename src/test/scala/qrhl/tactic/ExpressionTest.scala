@@ -6,13 +6,14 @@ import qrhl.logic.Expression
 import qrhl.toplevel.ToplevelTest
 
 class ExpressionTest extends FunSuite {
-  test("read printy roundtrip") {
+  test("read print roundtrip") {
     val tl = ToplevelTest.makeToplevel()
     tl.execCmd("classical var x : int")
-//    val state = tl.state
-    val e = Expression(tl.state.isabelle, "Cla[ x=(1::int) ]", Isabelle.predicateT)
+    val str = "Cla[ x=(1::int) ]"
+    //    val state = tl.state
+    val e = Expression(tl.state.isabelle, str, Isabelle.predicateT)
     println(e)
-    assert(false)
+    assert(e.toString=="ℭ\uD835\uDD29\uD835\uDD1E[x = 1]")
   }
 
   test("encodeAsExpression") {
@@ -23,7 +24,7 @@ class ExpressionTest extends FunSuite {
     val t = e.encodeAsExpression(tl.state.isabelle)
     println(e)
     println(t)
-    assert(state.isabelle.checkType(t) == Isabelle.expressionT(Isabelle.predicateT))
+    assert(t.typ == Isabelle.expressionT(Isabelle.predicateT))
   }
 
   test("encodeAsExpression roundtrip") {
@@ -33,8 +34,8 @@ class ExpressionTest extends FunSuite {
     val e = state.parseExpression(Isabelle.predicateT,"Cla[ x=(1::int) ]")
     println(e)
     val t = e.encodeAsExpression(tl.state.isabelle)
-    println(Isabelle.pretty(t))
-    val e2 = Expression.decodeFromExpression(tl.state.isabelle, t)
+    println(t)
+    val e2 = Expression.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)
 
     assert(e.isabelleTerm==e2.isabelleTerm)
@@ -50,8 +51,8 @@ class ExpressionTest extends FunSuite {
     val e = state.parseExpression(Isabelle.predicateT,"Cla[ x1=x2 ]")
     println(e)
     val t = e.encodeAsExpression(tl.state.isabelle)
-    println(Isabelle.pretty(t))
-    val e2 = Expression.decodeFromExpression(tl.state.isabelle, t)
+    println(t)
+    val e2 = Expression.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)
 
     assert(e.isabelleTerm==e2.isabelleTerm)
@@ -68,13 +69,12 @@ class ExpressionTest extends FunSuite {
     val e = state.parseExpression(Isabelle.predicateT,"Cla[ x1=x2 ∧ c1=c2 ]")
     println(e)
     val t = e.encodeAsExpression(tl.state.isabelle)
-    println(Isabelle.pretty(t))
-    val e2 = Expression.decodeFromExpression(tl.state.isabelle, t)
+    println(t)
+    val e2 = Expression.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)
 
     assert(e.isabelleTerm==e2.isabelleTerm)
     assert(e.typ==e2.typ)
     assert(e==e2)
-
   }
 }

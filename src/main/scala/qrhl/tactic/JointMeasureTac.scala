@@ -3,11 +3,14 @@ package qrhl.tactic
 import info.hupel.isabelle.{Operation, pure}
 import info.hupel.isabelle.pure.Term
 import org.log4s
+import qrhl.logic.Expression
 
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
 
 object JointMeasureTacTmp {
-  val op: Operation[(Unit, Term, BigInt), Option[(List[Term],BigInt)]] =
-    Operation.implicitly[(Unit, pure.Term, BigInt), Option[(List[pure.Term],BigInt)]]("joint_measure_simple_tac")
+  val op: Operation[(Unit, Term, BigInt), Option[(List[Expression],BigInt)]] =
+    Operation.implicitly[(Unit, pure.Term, BigInt), Option[(List[Expression],BigInt)]]("joint_measure_simple_tac")
 }
 
 case object JointMeasureTac extends IsabelleTac(JointMeasureTacTmp.op, { _ => () }) {

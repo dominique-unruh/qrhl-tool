@@ -7,8 +7,10 @@ import qrhl.isabelle.Isabelle
 import qrhl.logic.Expression
 import qrhl.toplevel.Parser
 
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
 
-abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[(List[Term],BigInt)]], arg : Isabelle.Context => A) extends Tactic {
+abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[(List[Expression],BigInt)]], arg : Isabelle.Context => A) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
     val ctx = state.isabelle
 //    println("IsabelleTac",Isabelle.pretty(goal.toExpression(ctx).isabelleTerm))
@@ -16,7 +18,7 @@ abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[(L
       throw UserException("tactic failed") }
     val thm = if (thmId==0) null else new Isabelle.Thm(ctx.isabelle, thmId)
 
-    val newGoals = for (t <- goals) yield Subgoal(ctx, Expression(Isabelle.boolT, t))
+    val newGoals = for (t <- goals) yield Subgoal(ctx, t)
 
     check(state, goal, newGoals)
 

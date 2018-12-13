@@ -1,6 +1,5 @@
 package qrhl.logic
 
-import info.hupel.isabelle
 import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
@@ -12,11 +11,13 @@ import scalaz.Applicative
 import scala.collection.mutable
 
 
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
 
 
-
+// TODO: move into Isabelle
 final class Expression private (val typ: pure.Typ, val isabelleTerm:Term, val pretty:Option[String]=None) {
-  def encodeAsExpression(context: Isabelle.Context) : Term =
+  def encodeAsExpression(context: Isabelle.Context) : Expression =
     context.isabelle.invoke(Expression.termToExpressionOp, (context.contextId, isabelleTerm))
 
   def stripAssumption(number: Int): Expression = Expression(typ,Expression.stripAssumption(isabelleTerm,number))
@@ -68,9 +69,9 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term, val pr
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): (Expression,Isabelle.Thm) = simplify(isabelle.get,facts)
 
   def simplify(context: Isabelle.Context, facts:List[String]): (Expression,Isabelle.Thm) =
-    context.simplify(isabelleTerm,facts) match {
+    context.simplify(isabelleTerm,facts)/* match {
       case (t,thm) => (Expression(typ, t), thm)
-    }
+    }*/
 
   def map(f : Term => Term) : Expression = new Expression(typ, f(isabelleTerm))
   def substitute(v:CVariable, repl:Expression) : Expression = {
@@ -127,7 +128,7 @@ object Expression {
     }
   }
 
-  object typ_tight_codec extends Codec[ITyp] {
+  implicit object typ_tight_codec extends Codec[ITyp] {
     override val mlType: String = "term"
 
     override def encode(t: ITyp): XML.Tree = ???
@@ -154,7 +155,7 @@ object Expression {
     }
   }
 
-  object term_tight_codec extends Codec[Term] {
+  implicit object term_tight_codec extends Codec[Term] {
     override val mlType: String = "term"
 
     override def encode(t: Term): XML.Tree = ???
@@ -193,27 +194,28 @@ object Expression {
 
   implicit object codec extends Codec[Expression] {
     override val mlType: String = "term"
-    override def encode(e: Expression): XML.Tree =
+    /*override def encode(e: Expression): XML.Tree =
       XML.elem(("expression",Nil),
-        List(XML.text(""), term_tight_codec.encode(e.isabelleTerm), XML.elem(("omitted",Nil),Nil)))
+        List(XML.text(""), term_tight_codec.encode(e.isabelleTerm), XML.elem(("omitted",Nil),Nil)))*/
+    override def encode(e: Expression): XML.Tree = throw new RuntimeException("Do not call this!")
     override def decode(tree: XML.Tree): XMLResult[Expression] = tree match {
       case XML.Elem(("expression",Nil), List(XML.Text(str), termXML, typXML)) =>
         for (typ <- typ_tight_codec.decode(typXML);
              term <- term_tight_codec.decode(termXML))
-        yield new Expression(typ,term,Some(str))
+        yield new Expression(typ,term,Some(Isabelle.symbolsToUnicode(str)))
     }
   }
 
   def decodeFromExpression(context:Isabelle.Context, t: Term): Expression = {
-    val (term,typ) = context.isabelle.invoke(decodeFromExpressionOp, (context.contextId, t))
-    Expression(typ, term)
+    context.isabelle.invoke(decodeFromExpressionOp, (context.contextId, t))
+//    Expression(typ, term)
   }
 
-  val decodeFromExpressionOp: Operation[(BigInt,Term), (Term, ITyp)] =
-    Operation.implicitly[(BigInt,Term), (Term,ITyp)]("expression_to_term")
+  val decodeFromExpressionOp: Operation[(BigInt,Term), Expression] =
+    Operation.implicitly[(BigInt,Term), Expression]("expression_to_term")
 
-  val termToExpressionOp: Operation[(BigInt, Term), Term] =
-    Operation.implicitly[(BigInt, Term), Term]("term_to_expression")
+  val termToExpressionOp: Operation[(BigInt, Term), Expression] =
+    Operation.implicitly[(BigInt, Term), Expression]("term_to_expression")
 
   def trueExp(isabelle: Isabelle.Context): Expression = Expression(Isabelle.boolT, HOLogic.True)
 

@@ -196,7 +196,7 @@ final case class Assign(variable:CVariable, expression:Expression) extends State
     expression.checkWelltyped(context, variable.valueTyp)
 
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context)
+    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
 }
 final case class Sample(variable:CVariable, expression:Expression) extends Statement {
   override def toString: String = s"""${variable.name} <$$ $expression;"""
@@ -206,7 +206,7 @@ final case class Sample(variable:CVariable, expression:Expression) extends State
     expression.checkWelltyped(context, Isabelle.distrT(variable.valueTyp))
 
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context)
+    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
 }
 final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
@@ -219,7 +219,7 @@ final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch:
     elseBranch.checkWelltyped(context)
   }
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.ifthenelse $ condition.encodeAsExpression(context) $ thenBranch.programListTerm(context) $ elseBranch.programListTerm(context)
+    Isabelle.ifthenelse $ condition.encodeAsExpression(context).isabelleTerm $ thenBranch.programListTerm(context) $ elseBranch.programListTerm(context)
 }
 final case class While(condition:Expression, body: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
@@ -231,7 +231,7 @@ final case class While(condition:Expression, body: Block) extends Statement {
     body.checkWelltyped(context)
   }
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.whileProg $ condition.encodeAsExpression(context) $ body.programListTerm(context)
+    Isabelle.whileProg $ condition.encodeAsExpression(context).isabelleTerm $ body.programListTerm(context)
 }
 final case class QInit(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -242,7 +242,7 @@ final case class QInit(location:List[QVariable], expression:Expression) extends 
     expression.checkWelltyped(context, expected)
   }
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context)
+    Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
 }
 final case class QApply(location:List[QVariable], expression:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -254,7 +254,7 @@ final case class QApply(location:List[QVariable], expression:Expression) extends
     expression.checkWelltyped(context, expected)
   }
   override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context)
+    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
 }
 final case class Measurement(result:CVariable, location:List[QVariable], e:Expression) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -266,7 +266,7 @@ final case class Measurement(result:CVariable, location:List[QVariable], e:Expre
   }
   override def programTerm(context: Isabelle.Context): Term =
     Isabelle.measurement(Isabelle.tupleT(location.map(_.valueTyp):_*), result.valueTyp) $
-      result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context)
+      result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context).isabelleTerm
 }
 final case class Call(name:String, args:Call*) extends Statement {
   override def toString: String = "call "+toStringShort+";"

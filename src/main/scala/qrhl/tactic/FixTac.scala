@@ -6,6 +6,9 @@ import qrhl._
 import qrhl.isabelle.Isabelle
 import qrhl.logic.Expression
 
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
+
 case class FixTac(variable:String) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case QRHLSubgoal(_, _, _, _, _) =>
@@ -25,14 +28,15 @@ case class FixTac(variable:String) extends Tactic {
 //      val lit = ml.Expr.uncheckedLiteral[Term => String => (Term,pure.Typ)]("QRHL.fixTac")
 //      val mlExpr = lit(expr.isabelleTerm)(implicitly) (variable)
 //      val (result,varTyp2) = state.isabelle.runExpr(mlExpr)
-      val (result,varTyp2) = state.isabelle.isabelle.invoke(fixTacOp, (expr.isabelleTerm, variable))
+      val (result,varTyp2) = state.isabelle.isabelle.invoke(fixTacOp, (state.isabelle.contextId, expr.isabelleTerm, variable))
       val varTyp3 = varTyp2
 
       if (varTyp!=varTyp3)
         throw UserException(s"Please use a variable of type ${state.isabelle.prettyTyp(varTyp3)} ($variable has type ${state.isabelle.prettyTyp(varTyp)}")
 
-      List(AmbientSubgoal(Expression(Isabelle.predicateT, result)))
+      List(AmbientSubgoal(result))
   }
 
-  val fixTacOp: Operation[(Term, String), (Term, pure.Typ)] = Operation.implicitly[(Term,String), (Term,pure.Typ)]("fixTac")
+  val fixTacOp: Operation[(BigInt, Term, String), (Expression, pure.Typ)] =
+    Operation.implicitly[(BigInt, Term,String), (Expression, pure.Typ)]("fixTac")
 }

@@ -12,6 +12,9 @@ object EqualTac {
   def apply(): EqualTac = EqualTac(Nil)
 }
 
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
+
 case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
   override def getWP(state: State, left: Statement, right: Statement, post: Expression): (Expression, List[Subgoal]) = {
     val cvars = new mutable.LinkedHashSet[CVariable]()
@@ -62,23 +65,23 @@ case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
     val (wp, colocality) = state.isabelle.isabelle.invoke(callWpOp,
       ((cvarsIdx1.map(_.valueTerm), cvarsIdx2.map(_.valueTerm),
         qvarsIdx1.map(_.variableTerm)), (qvarsIdx2.map(_.variableTerm),
-        post.isabelleTerm)))
-    val wp2 = Expression(Isabelle.predicateT, wp)
-    val colocality2 = Expression(Isabelle.boolT, colocality)
+        post.isabelleTerm, state.isabelle.contextId)))
+//    val wp2 = Expression(Isabelle.predicateT, wp)
+//    val colocality2 = Expression(Isabelle.boolT, colocality)
 
     if (mismatches.nonEmpty) {
       println("*** WARNING: equal tactic with mismatches is not proven or carefully thought through yet! ***")
     }
 
     val mismatchGoals = mismatches.toList.map {
-      case (l,r) => QRHLSubgoal(l.toBlock,r.toBlock,wp2,wp2,Nil)
+      case (l,r) => QRHLSubgoal(l.toBlock,r.toBlock,wp,wp,Nil)
     }
 
-    (wp2,AmbientSubgoal(colocality2)::mismatchGoals)
+    (wp,AmbientSubgoal(colocality)::mismatchGoals)
   }
 
-  val callWpOp: Operation[((List[Term], List[Term], List[Term]), (List[Term], Term)), (Term, Term)] =
-    Operation.implicitly[((List[pure.Term], List[pure.Term], List[pure.Term]), (List[pure.Term], pure.Term)), (pure.Term, pure.Term)]("callWp")
+  val callWpOp: Operation[((List[Term], List[Term], List[Term]), (List[Term], Term, BigInt)), (Expression, Expression)] =
+    Operation.implicitly[((List[pure.Term], List[pure.Term], List[pure.Term]), (List[pure.Term], Term, BigInt)), (Expression, Expression)]("callWp")
 }
 
 case object EqualTacOld extends WpBothStyleTac() {
@@ -94,13 +97,13 @@ case object EqualTacOld extends WpBothStyleTac() {
     val (wp, colocality) = state.isabelle.isabelle.invoke(callWpOp,
       ((cvarsIdx1.map(_.valueTerm), cvarsIdx2.map(_.valueTerm),
         qvarsIdx1.map(_.variableTerm)), (qvarsIdx2.map(_.variableTerm),
-        post.isabelleTerm)))
+        post.isabelleTerm, state.isabelle.contextId)))
 
-    val wp2 = Expression(Isabelle.predicateT, wp)
-    val colocality2 = Expression(Isabelle.boolT, colocality)
-    (wp2,List(AmbientSubgoal(colocality2)))
+//    val wp2 = Expression(Isabelle.predicateT, wp)
+//    val colocality2 = Expression(Isabelle.boolT, colocality)
+    (wp,List(AmbientSubgoal(colocality)))
   }
 
-  val callWpOp: Operation[((List[Term], List[Term], List[Term]), (List[Term], Term)), (Term, Term)] =
-    Operation.implicitly[((List[pure.Term], List[pure.Term], List[pure.Term]), (List[pure.Term], pure.Term)), (pure.Term, pure.Term)]("callWp")
+  val callWpOp: Operation[((List[Term], List[Term], List[Term]), (List[Term], Term, BigInt)), (Expression, Expression)] =
+    Operation.implicitly[((List[pure.Term], List[pure.Term], List[pure.Term]), (List[pure.Term], pure.Term, BigInt)), (Expression, Expression)]("callWp")
 }

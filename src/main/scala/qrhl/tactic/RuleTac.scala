@@ -10,6 +10,9 @@ import qrhl.toplevel.Parser
 
 import scala.collection.immutable.Nil
 
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
+
 case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => rule }) {
 //  override def apply(state: State, goal: Subgoal): List[Subgoal] =
 //    goal match {
@@ -33,6 +36,6 @@ case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => 
 
 object RuleTac {
   private val logger = log4s.getLogger
-  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[Term],BigInt)]] =
-    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[pure.Term],BigInt)]]("applyRule")
+  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[Expression],BigInt)]] =
+    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[Expression],BigInt)]]("applyRule")
 }

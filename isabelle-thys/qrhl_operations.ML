@@ -77,10 +77,14 @@ val term_tight_codec = Codec.basic { encode=term_tight_encode, decode=term_tight
 
 (** A codec for terms that additionally attaches a human readable representation *)
 
-fun expression_encode t = 
-  XML.Elem (("expression",[]),[XML.Text "TODO: string representation", term_tight_encode t, typ_tight_encode (fastype_of t)])
-fun expression_decode (XML.Elem (("expression",[]),[XML.Text _, xml, _])) = term_tight_decode xml
-  | expression_decode xml = Codec.Failure ("invalid encoding for a term (expression codec)",[xml])
+fun expression_encode (ctxt,t) = let
+  (* val ctxt = Context.the_local_context () *)
+  val str = YXML.content_of (Syntax.string_of_term ctxt t)
+  val xml = XML.Elem (("expression",[]),[XML.Text str, term_tight_encode t, typ_tight_encode (fastype_of t)])
+  in xml end
+(* fun expression_decode (XML.Elem (("expression",[]),[XML.Text _, xml, _])) = term_tight_decode xml
+  | expression_decode xml = Codec.Failure ("invalid encoding for a term (expression codec)",[xml]) *)
+fun expression_decode _ = error "expression_decode: not implemented"
 
 val expression_codec = Codec.basic { encode=expression_encode, decode=expression_decode }
 

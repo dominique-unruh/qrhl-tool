@@ -5,6 +5,8 @@ import info.hupel.isabelle.{Operation, pure}
 import qrhl._
 import qrhl.logic.{Block, Expression}
 
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
 
 @deprecated("Use SeqTac","now")
 case class SeqTacOLD(left:Int, right:Int, inner:Expression) extends Tactic {
@@ -29,7 +31,7 @@ case class SeqTacOLD(left:Int, right:Int, inner:Expression) extends Tactic {
 }
 
 case class SeqTac(left:Int, right:Int, inner:Expression)
-  extends IsabelleTac(SeqTac.seqTacOp,{ ctx => (BigInt(left),BigInt(right),inner.encodeAsExpression(ctx)) }) {
+  extends IsabelleTac(SeqTac.seqTacOp, { ctx => (BigInt(left),BigInt(right),inner.encodeAsExpression(ctx).isabelleTerm) }) {
   override def toString: String = s"seq $left $right"
 
   override def check(state: State, goal: Subgoal, newGoals: List[Subgoal]): Unit = {
@@ -39,6 +41,6 @@ case class SeqTac(left:Int, right:Int, inner:Expression)
 }
 
 object SeqTac {
-  val seqTacOp: Operation[((BigInt, BigInt, Term), Term, BigInt), Option[(List[Term],BigInt)]] =
-    Operation.implicitly[((BigInt,BigInt,Term),Term,BigInt), Option[(List[Term],BigInt)]]("seq_tac")
+  val seqTacOp: Operation[((BigInt, BigInt, Term), Term, BigInt), Option[(List[Expression],BigInt)]] =
+    Operation.implicitly[((BigInt,BigInt,Term),Term,BigInt), Option[(List[Expression],BigInt)]]("seq_tac")
 }

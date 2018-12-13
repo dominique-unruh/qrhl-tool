@@ -13,7 +13,7 @@ import info.hupel.isabelle.{OfficialPlatform, Operation, Platform, System, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
-import qrhl.logic.QVariable
+import qrhl.logic.{Expression, QVariable}
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -21,6 +21,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
+
+import Expression.typ_tight_codec
+import Expression.term_tight_codec
 
 object DistributionDirectory {
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
@@ -340,7 +343,7 @@ object Isabelle {
   val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
   @deprecated
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
-  val simplifyTermOp: Operation[(Term, List[String], BigInt), (Term,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (Term,BigInt)]("simplify_term")
+  val simplifyTermOp: Operation[(Term, List[String], BigInt), (Expression,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (Expression,BigInt)]("simplify_term")
   val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
@@ -533,7 +536,7 @@ object Isabelle {
     def readTyp(str:String) : ITyp = isabelle.invoke(readTypOp, (contextId,str))
     def readTypUnicode(str:String) : ITyp = readTyp(unicodeToSymbols(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))
-    def simplify(term: Term, facts:List[String]) : (Term,Thm) =
+    def simplify(term: Term, facts:List[String]) : (Expression,Thm) =
       isabelle.invoke(simplifyTermOp, (term,facts,contextId)) match {case (t,thmId) => (t,new Thm(isabelle,thmId))}
   }
 }
