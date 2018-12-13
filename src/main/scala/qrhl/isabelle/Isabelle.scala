@@ -338,6 +338,7 @@ object Isabelle {
   val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
   val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String,Term,BigInt), BigInt]("add_assumption")
   val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
+  @deprecated
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
   val simplifyTermOp: Operation[(Term, List[String], BigInt), (Term,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (Term,BigInt)]("simplify_term")
   val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
@@ -521,11 +522,14 @@ object Isabelle {
     def map(f:BigInt => BigInt) : Context =
       new Context(isabelle,f(contextId))
 
+    @deprecated("Use Expression.read","now")
     def readTerm(str:String, typ:ITyp): Term = {
       isabelle.invoke(readTermOp, (contextId,str,typ))
     }
 
+    @deprecated("Use Expression.toString","now")
     def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTermOp,(contextId,term)))
+
     def readTyp(str:String) : ITyp = isabelle.invoke(readTypOp, (contextId,str))
     def readTypUnicode(str:String) : ITyp = readTyp(unicodeToSymbols(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))

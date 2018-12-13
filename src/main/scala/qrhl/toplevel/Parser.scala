@@ -254,6 +254,7 @@ object Parser extends JavaTokenParsers {
     literal("swap") ~> OnceParser("left|right".r ~ natural.?) ^^ {
       case "left" ~ n => SwapTac(left=true, n.getOrElse(1))
       case "right" ~ n => SwapTac(left=false, n.getOrElse(1))
+      case _ ~ _ => throw new InternalError("Should not occur")
     }
 
   val tactic_inline: Parser[InlineTac] =

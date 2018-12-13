@@ -1,11 +1,13 @@
 package qrhl.logic
 
-import info.hupel.isabelle.Operation
+import info.hupel.isabelle
+import info.hupel.isabelle.api.XML
+import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.hol.HOLogic.boolT
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Var, Typ => ITyp}
-import info.hupel.isabelle.pure
+import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, TFree, TVar, Term, Type, Var, Typ => ITyp}
 import qrhl.isabelle.Isabelle
+import scalaz.Applicative
 
 import scala.collection.mutable
 
@@ -13,7 +15,7 @@ import scala.collection.mutable
 
 
 
-final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
+final class Expression private (val typ: pure.Typ, val isabelleTerm:Term, val pretty:Option[String]=None) {
   def encodeAsExpression(context: Isabelle.Context) : Term =
     context.isabelle.invoke(Expression.termToExpressionOp, (context.contextId, isabelleTerm))
 
@@ -23,7 +25,6 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
     case o : Expression => typ == o.typ && isabelleTerm == o.isabelleTerm
     case _ => false
   }
-
 
   def checkWelltyped(context:Isabelle.Context, ityp:ITyp): Unit = {
     assert(ityp==this.typ,s"$ityp != ${this.typ}")
@@ -58,7 +59,11 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
     }
   }
 
-  override lazy val toString: String = Isabelle.theContext.prettyExpression(isabelleTerm)
+  override lazy val toString: String = pretty match {
+    case Some(s) => s
+    case _ => Isabelle.theContext.prettyExpression(isabelleTerm)
+  }
+
 //  val isabelleTerm : Term = isabelleTerm
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): (Expression,Isabelle.Thm) = simplify(isabelle.get,facts)
 
@@ -111,6 +116,94 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term) {
 
 
 object Expression {
+  implicit object applicativeXMLResult extends Applicative[XMLResult] {
+    override def point[A](a: => A): XMLResult[A] = Right(a)
+    override def ap[A, B](fa: => XMLResult[A])(f: => XMLResult[A => B]): XMLResult[B] = fa match {
+      case Left(error) => Left(error)
+      case Right(a) => f match {
+        case Left(error) => Left(error)
+        case Right(ab) => Right(ab(a))
+      }
+    }
+  }
+
+  object typ_tight_codec extends Codec[ITyp] {
+    override val mlType: String = "term"
+
+    override def encode(t: ITyp): XML.Tree = ???
+
+    import scalaz._, std.list._, std.option._, syntax.traverse._
+
+    def decode_class(tree: XML.Tree): XMLResult[String] = tree match {
+      case XML.Elem((c,Nil),Nil) => Right(c)
+    }
+
+    override def decode(tree: XML.Tree): XMLResult[ITyp] = tree match {
+      case XML.Elem(("t",Nil), XML.Text(name) :: xmls) =>
+        for (ts <- xmls.map(decode).sequence) yield Type(name,ts)
+      case XML.Elem (("f",Nil), XML.Text(name) :: xmls) =>
+        for (sort <- xmls.map(decode_class).sequence) yield TFree(name,sort)
+      case xml @ XML.Elem(("v",List((name,idx))), xmls) =>
+//        try {
+        val i = Integer.parseInt(idx)
+        for (sort <- xmls.map(decode_class).sequence) yield TVar((name,i),sort)
+//        } catch {
+//          case e : NumberFormatException =>
+//            Right(())
+//        }
+    }
+  }
+
+  object term_tight_codec extends Codec[Term] {
+    override val mlType: String = "term"
+
+    override def encode(t: Term): XML.Tree = ???
+
+    override def decode(tree: XML.Tree): XMLResult[Term] = tree match {
+      case XML.Elem(("c",Nil),List(XML.Text(name),typXml)) =>
+        for (typ <- typ_tight_codec.decode(typXml)) yield Const(name,typ)
+
+      case XML.Elem(("a",Nil),List(xml1, xml2)) =>
+        for (t1 <- decode(xml1);
+             t2 <- decode(xml2))
+          yield t1 $ t2
+
+      case XML.Elem(("f",Nil), List(XML.Text(name), xml)) =>
+        for (typ <- typ_tight_codec.decode(xml))
+          yield Free(name,typ)
+
+      case XML.Elem(("v",List((name,idx))), List(xml1)) =>
+        val i = Integer.parseInt(idx)
+        for (typ <- typ_tight_codec.decode(xml1))
+          yield Var((name,i),typ)
+
+      case XML.Elem(("A",Nil), List(XML.Text(name), xmlTyp, xmlBody)) =>
+        for (typ <- typ_tight_codec.decode(xmlTyp);
+             body <- decode(xmlBody))
+          yield Abs(name,typ,body)
+
+      case XML.Elem (("b",Nil), List(XML.Text(idx))) =>
+        val i = Integer.parseInt(idx)
+        Right(Bound(i))
+
+      case xml =>
+        Left(("invalid encoding for a term",List(xml)))
+    }
+  }
+
+  implicit object codec extends Codec[Expression] {
+    override val mlType: String = "term"
+    override def encode(e: Expression): XML.Tree =
+      XML.elem(("expression",Nil),
+        List(XML.text(""), term_tight_codec.encode(e.isabelleTerm), XML.elem(("omitted",Nil),Nil)))
+    override def decode(tree: XML.Tree): XMLResult[Expression] = tree match {
+      case XML.Elem(("expression",Nil), List(XML.Text(str), termXML, typXML)) =>
+        for (typ <- typ_tight_codec.decode(typXML);
+             term <- term_tight_codec.decode(termXML))
+        yield new Expression(typ,term,Some(str))
+    }
+  }
+
   def decodeFromExpression(context:Isabelle.Context, t: Term): Expression = {
     val (term,typ) = context.isabelle.invoke(decodeFromExpressionOp, (context.contextId, t))
     Expression(typ, term)
@@ -124,9 +217,11 @@ object Expression {
 
   def trueExp(isabelle: Isabelle.Context): Expression = Expression(Isabelle.boolT, HOLogic.True)
 
+  private val readExpressionOp : Operation[(BigInt, String, ITyp), Expression] = Operation.implicitly[(BigInt, String, ITyp), Expression]("read_expression")
   def apply(context: Isabelle.Context, str:String, typ:pure.Typ) : Expression = {
-    val term = context.readTerm(Isabelle.unicodeToSymbols(str),typ)
-    Expression(typ, term)
+    context.isabelle.invoke(readExpressionOp,(context.contextId,Isabelle.unicodeToSymbols(str),typ))
+//    val term = context.readTerm(Isabelle.unicodeToSymbols(str),typ)
+//    Expression(typ, term)
   }
 
   def apply(typ: pure.Typ, term:Term) : Expression =

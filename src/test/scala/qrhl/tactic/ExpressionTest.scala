@@ -6,6 +6,15 @@ import qrhl.logic.Expression
 import qrhl.toplevel.ToplevelTest
 
 class ExpressionTest extends FunSuite {
+  test("read printy roundtrip") {
+    val tl = ToplevelTest.makeToplevel()
+    tl.execCmd("classical var x : int")
+//    val state = tl.state
+    val e = Expression(tl.state.isabelle, "Cla[ x=(1::int) ]", Isabelle.predicateT)
+    println(e)
+    assert(false)
+  }
+
   test("encodeAsExpression") {
     val tl = ToplevelTest.makeToplevel()
     tl.execCmd("classical var x : int")
