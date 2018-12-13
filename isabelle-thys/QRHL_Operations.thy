@@ -3,24 +3,9 @@ theory QRHL_Operations
     Weakest_Precondition
 begin
 
-ML {*
-fun make_ctxt_ref ctx = let
-  val id = serial ()
-  val _ = Refs.Ctxt.write id ctx
-in
-  id
-end
+ML_file "qrhl_operations.ML"
 
-fun make_thm_ref thm = let
-  val id = serial ()
-  val _ = Refs.Thm.write id thm
-in
-  id
-end
-
-fun tac_dummy_thm NONE = NONE
-  | tac_dummy_thm (SOME ts) = SOME (ts,0)
-*}
+ML \<open>open QRHL_Operations\<close>
 
 operation_setup create_context = {*
   {from_lib = Codec.list Codec.string,
@@ -76,14 +61,13 @@ operation_setup read_typ = {*
 operation_setup read_term = {*
   {from_lib = Codec.triple Codec.int Codec.string Codec.typ,
    to_lib = Codec.term,
-   action = fn (ctx_id, str, T) =>
-     let val ctx = Refs.Ctxt.read ctx_id
-         val parsed = Syntax.parse_term ctx str
-         val constrained = Const("_type_constraint_", T --> T) $ parsed
-         val term = Syntax.check_term ctx constrained
-     in
-       term
-     end}
+   action = fn (ctx_id, str, T) => parse_term (Refs.Ctxt.read ctx_id) str T}
+*}
+
+operation_setup read_expression = {*
+  {from_lib = Codec.triple Codec.int Codec.string Codec.typ,
+   to_lib = expression_codec,
+   action = fn (ctx_id, str, T) => parse_term (Refs.Ctxt.read ctx_id) str T}
 *}
 
 operation_setup byQRHLPre = {*
