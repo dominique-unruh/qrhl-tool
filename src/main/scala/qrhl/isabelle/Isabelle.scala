@@ -1,6 +1,7 @@
 package qrhl.isabelle
 
 import java.io.{BufferedReader, IOException, InputStreamReader}
+import java.lang
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 
@@ -186,7 +187,12 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 
 //  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
 
-  def invoke[I,O](op: Operation[I,O], arg: I) : O = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
+  def invoke[I,O](op: Operation[I,O], arg: I) : O = {
+    val start = lang.System.nanoTime
+    val result = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
+    Isabelle.logger.debug(s"Operation ${op.name} ${(lang.System.nanoTime-start)/1000000}ms")
+    result
+  }
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
     *
