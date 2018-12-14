@@ -112,7 +112,7 @@ case class WpTac(left:Boolean)
 
 object WpTac {
   val wpTacOp: Operation[(Boolean, Term, BigInt), Option[(List[Expression],BigInt)]] =
-    Operation.implicitly[(Boolean,Term,BigInt), Option[(List[Expression],BigInt)]]("wp_tac")
+    Operation.implicitly[(Boolean, Term, BigInt), Option[(List[Expression],BigInt)]]("wp_tac")
 
 /*  val sampleWpOp: Operation[((String, ITyp), (Term, Term)), Expression] =
     Operation.implicitly[((String,ITyp), (Term, Term)), Term]("sampleWp")

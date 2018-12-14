@@ -14,10 +14,10 @@ case object ByQRHLTac extends Tactic {
   class Probability(left : Boolean, state : State) {
     def unapply(term: pure.Term): Option[(pure.Term,pure.Term,pure.Term)] = term match {
       case App(App(App(Const(Isabelle.probability.name,_),v),p),rho) =>
-        val addIndexToExpressionOp = Operation.implicitly[(Term,Boolean), Term]("add_index_to_expression")
+        val addIndexToExpressionOp = Operation.implicitly[(BigInt,Term,Boolean), Expression]("add_index_to_expression")
 
-        val v2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (v,left))
-        val v3 = Expression.decodeFromExpression(state.isabelle, v2).isabelleTerm
+        val v2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (state.isabelle.contextId,v,left))
+        val v3 = Expression.decodeFromExpression(state.isabelle, v2.isabelleTerm).isabelleTerm
         Some(v3,p,rho)
       case _ => None
     }

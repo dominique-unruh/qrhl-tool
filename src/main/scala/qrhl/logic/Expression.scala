@@ -9,10 +9,10 @@ import qrhl.isabelle.Isabelle
 import scalaz.Applicative
 
 import scala.collection.mutable
-
-
 import Expression.typ_tight_codec
 import Expression.term_tight_codec
+import org.log4s
+import org.log4s.Logger
 
 
 // TODO: move into Isabelle
@@ -117,6 +117,8 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term, val pr
 
 
 object Expression {
+  private val logger: Logger = log4s.getLogger
+
   implicit object applicativeXMLResult extends Applicative[XMLResult] {
     override def point[A](a: => A): XMLResult[A] = Right(a)
     override def ap[A, B](fa: => XMLResult[A])(f: => XMLResult[A => B]): XMLResult[B] = fa match {
@@ -131,13 +133,18 @@ object Expression {
   implicit object typ_tight_codec extends Codec[ITyp] {
     override val mlType: String = "term"
 
-    override def encode(t: ITyp): XML.Tree = ???
-
-    import scalaz._, std.list._, std.option._, syntax.traverse._
-
     def decode_class(tree: XML.Tree): XMLResult[String] = tree match {
       case XML.Elem((c,Nil),Nil) => Right(c)
     }
+    def encode_class(c : String): XML.Tree = XML.Elem((c,Nil),Nil)
+
+    override def encode(t: ITyp): XML.Tree = t match {
+      case Type(name, typs) => XML.Elem(("t", Nil), XML.Text(name) :: typs.map(encode))
+      case TFree(name, sort) => XML.Elem(("f", Nil), XML.Text(name) :: sort.map(encode_class))
+      case TVar((name, idx), sort) => XML.Elem(("v", List((name, idx.toString))), sort.map(encode_class))
+    }
+
+    import scalaz._, std.list._, std.option._, syntax.traverse._
 
     override def decode(tree: XML.Tree): XMLResult[ITyp] = tree match {
       case XML.Elem(("t",Nil), XML.Text(name) :: xmls) =>
@@ -152,13 +159,24 @@ object Expression {
 //          case e : NumberFormatException =>
 //            Right(())
 //        }
+      case xml =>
+        logger.debug(xml.toString)
+        Left(("invalid encoding for a type",List(xml)))
     }
   }
 
   implicit object term_tight_codec extends Codec[Term] {
     override val mlType: String = "term"
 
-    override def encode(t: Term): XML.Tree = ???
+    override def encode(t: Term): XML.Tree = t match {
+      case Const(name, typ) => XML.Elem(("c", Nil), List(XML.Text(name), typ_tight_codec.encode(typ)))
+      case App(t1, t2) => XML.Elem(("a", Nil), List(encode(t1), encode(t2)))
+      case Free(name, typ) => XML.Elem(("f", Nil), List(XML.Text(name), typ_tight_codec.encode(typ)))
+      case Var((name, idx), typ) => XML.Elem(("v", List((name, idx.toString))), List(typ_tight_codec.encode(typ)))
+      case Abs(name, typ, body) => XML.Elem(("A", Nil), List(XML.Text(name), typ_tight_codec.encode(typ), encode(body)))
+      case Bound(i) => XML.Elem(("b", Nil), List(XML.Text(i.toString)))
+    }
+
 
     override def decode(tree: XML.Tree): XMLResult[Term] = tree match {
       case XML.Elem(("c",Nil),List(XML.Text(name),typXml)) =>
@@ -183,11 +201,17 @@ object Expression {
              body <- decode(xmlBody))
           yield Abs(name,typ,body)
 
+      case XML.Elem(("A",Nil), List(xmlTyp, xmlBody)) =>
+        for (typ <- typ_tight_codec.decode(xmlTyp);
+             body <- decode(xmlBody))
+          yield Abs("",typ,body)
+
       case XML.Elem (("b",Nil), List(XML.Text(idx))) =>
         val i = Integer.parseInt(idx)
         Right(Bound(i))
 
       case xml =>
+        logger.debug(xml.toString)
         Left(("invalid encoding for a term",List(xml)))
     }
   }

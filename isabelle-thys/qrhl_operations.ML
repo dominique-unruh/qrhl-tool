@@ -68,6 +68,9 @@ fun term_tight_decode (XML.Elem(("c",[]),[XML.Text name,typ])) =
   | term_tight_decode (XML.Elem (("A",[]), [XML.Text name, xml_T, xml_body])) =
        Codec.bind_result (fn T => Codec.bind_result (fn body => Codec.Success (Abs(name,T,body)))
        (term_tight_decode xml_body)) (typ_tight_decode xml_T)
+  | term_tight_decode (XML.Elem (("A",[]), [xml_T, xml_body])) =
+       Codec.bind_result (fn T => Codec.bind_result (fn body => Codec.Success (Abs("",T,body)))
+       (term_tight_decode xml_body)) (typ_tight_decode xml_T)
   | term_tight_decode (xml as XML.Elem (("b",[]), [XML.Text (i)])) =
        (Codec.Success (Bound (parse_int i))
        handle Fail str => Codec.Failure ("invalid encoding for a schematic variable: "^str, [xml]))
