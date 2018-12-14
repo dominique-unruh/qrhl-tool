@@ -25,5 +25,8 @@ test-distrib : test-distrib0
 	set -e && cd tmp/qrhl-$(VERSION)/examples && \
 		for i in *.qrhl; do ../bin/qrhl "$$i"; done
 
-owncloud : qrhl.zip
+test :
+	sbt test
+
+owncloud : test qrhl.zip
 	cp -v qrhl.zip /home/unruh/ownCloud/qrhl/
