@@ -14,7 +14,7 @@ import info.hupel.isabelle.{OfficialPlatform, Operation, Platform, System, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
-import qrhl.logic.{Expression, QVariable}
+import qrhl.logic.QVariable
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -23,8 +23,8 @@ import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
 
-import Expression.typ_tight_codec
-import Expression.term_tight_codec
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
 
 object DistributionDirectory {
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
@@ -242,6 +242,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 
   override def finalize(): Unit = {
     dispose()
+    //noinspection ScalaDeprecation
     super.finalize()
   }
 
@@ -249,6 +250,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 }
 
 object Isabelle {
+  @deprecated("use Expression.toString","now")
   def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
   def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
 
@@ -347,9 +349,9 @@ object Isabelle {
   val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
   val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String,Term,BigInt), BigInt]("add_assumption")
   val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
-  @deprecated
+  @deprecated("use readExpression","now")
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
-  val simplifyTermOp: Operation[(Term, List[String], BigInt), (Expression,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (Expression,BigInt)]("simplify_term")
+  val simplifyTermOp: Operation[(Term, List[String], BigInt), (RichTerm,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (RichTerm,BigInt)]("simplify_term")
   val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
@@ -501,6 +503,7 @@ object Isabelle {
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting theorem $thmId")
       isabelle.invoke(deleteThmOp,thmId)
+      //noinspection ScalaDeprecation
       super.finalize()
     }
   }
@@ -515,6 +518,7 @@ object Isabelle {
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting context $contextId")
       isabelle.invoke(deleteContextOp,contextId)
+      //noinspection ScalaDeprecation
       super.finalize()
     }
 
@@ -542,7 +546,7 @@ object Isabelle {
     def readTyp(str:String) : ITyp = isabelle.invoke(readTypOp, (contextId,str))
     def readTypUnicode(str:String) : ITyp = readTyp(unicodeToSymbols(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))
-    def simplify(term: Term, facts:List[String]) : (Expression,Thm) =
+    def simplify(term: Term, facts:List[String]) : (RichTerm,Thm) =
       isabelle.invoke(simplifyTermOp, (term,facts,contextId)) match {case (t,thmId) => (t,new Thm(isabelle,thmId))}
   }
 }

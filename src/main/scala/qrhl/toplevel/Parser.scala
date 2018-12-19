@@ -2,10 +2,10 @@ package qrhl.toplevel
 
 import info.hupel.isabelle.pure
 import qrhl._
-import qrhl.isabelle.Isabelle
+import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
 import qrhl.tactic._
-import java.nio.file.{Path,Paths}
+import java.nio.file.{Path, Paths}
 
 import scala.util.parsing.combinator._
 
@@ -44,12 +44,12 @@ object Parser extends JavaTokenParsers {
       }
   }, (0,Nil)) ^^ { case (_,chars) => chars.reverse.mkString.trim }
 
-  def expression(typ:pure.Typ)(implicit context:ParserContext) : Parser[Expression] =
+  def expression(typ:pure.Typ)(implicit context:ParserContext) : Parser[RichTerm] =
 //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
     scanInnerSyntax ^^ { str:String => context.isabelle match {
       case None => throw UserException(noIsabelleError)
       case Some(isa) =>
-        val e = Expression(isa, str  /*str.mkString.trim*/, typ)
+        val e = RichTerm(isa, str  /*str.mkString.trim*/, typ)
         for (v <- e.variables)
           if (!context.environment.variableExists(v))
             throw UserException(s"Variable $v was not declared (in expression $str")

@@ -4,7 +4,7 @@ import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure
 import info.hupel.isabelle.pure.{App, Const, Free, Term}
 import qrhl.UserException
-import qrhl.isabelle.Isabelle
+import qrhl.isabelle.{Isabelle, RichTerm}
 
 import scala.collection.mutable
 
@@ -13,6 +13,7 @@ import scala.collection.mutable
 sealed trait Statement {
   def toBlock: Block = Block(this)
 
+  @deprecated("too slow","now")
   def programTerm(context: Isabelle.Context) : Term
 
 
@@ -30,7 +31,7 @@ sealed trait Statement {
 
   def cqapVariables(environment : Environment, cvars : mutable.Set[CVariable], qvars: mutable.Set[QVariable],
                    avars : mutable.Set[String], progs : mutable.Set[ProgramDecl], recurse:Boolean): Unit = {
-    def collectExpr(e:Expression):Unit = e.caVariables(environment,cvars,avars)
+    def collectExpr(e:RichTerm):Unit = e.caVariables(environment,cvars,avars)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
       case Assign(v,e) => cvars += v; collectExpr(e)
@@ -99,33 +100,35 @@ sealed trait Statement {
 }
 
 object Statement {
+  @deprecated("Too slow","now")
   def decodeFromListTerm(context: Isabelle.Context, t:Term) : Block = {
     val statements = Isabelle.dest_list(t).map(decodeFromTerm(context,_))
     Block(statements:_*)
   }
 
+  @deprecated("Too slow","now")
   def decodeFromTerm(context: Isabelle.Context, t:Term) : Statement = t match {
     case App(Const(Isabelle.block.name,_), statements) => decodeFromListTerm(context, statements)
     case App(App(Const(Isabelle.assignName,_),x),e) =>
-      Assign(CVariable.fromTerm_var(context, x),Expression.decodeFromExpression(context, e))
+      Assign(CVariable.fromTerm_var(context, x),RichTerm.decodeFromExpression(context, e))
     case App(App(Const(Isabelle.sampleName,_),x),e) =>
-      Sample(CVariable.fromTerm_var(context, x),Expression.decodeFromExpression(context, e))
+      Sample(CVariable.fromTerm_var(context, x),RichTerm.decodeFromExpression(context, e))
     case Free(name,_) => Call(name)
     case App(App(Const(Isabelle.instantiateOracles.name,_), Free(name,_)), args) =>
       val args2 = Isabelle.dest_list(args).map(decodeFromTerm(context,_).asInstanceOf[Call])
       Call(name,args2 : _*)
     case App(App(Const(Isabelle.whileName,_),e),body) =>
-      While(Expression.decodeFromExpression(context,e), decodeFromListTerm(context, body))
+      While(RichTerm.decodeFromExpression(context,e), decodeFromListTerm(context, body))
     case App(App(App(Const(Isabelle.ifthenelseName,_),e),thenBody),elseBody) =>
-      IfThenElse(Expression.decodeFromExpression(context,e),
+      IfThenElse(RichTerm.decodeFromExpression(context,e),
         decodeFromListTerm(context, thenBody), decodeFromListTerm(context, elseBody))
     case App(App(Const(Isabelle.qinitName, _), vs), e) =>
-      QInit(QVariable.fromQVarList(context, vs), Expression.decodeFromExpression(context,e))
+      QInit(QVariable.fromQVarList(context, vs), RichTerm.decodeFromExpression(context,e))
     case App(App(Const(Isabelle.qapplyName, _), vs), e) =>
-      QApply(QVariable.fromQVarList(context, vs), Expression.decodeFromExpression(context,e))
+      QApply(QVariable.fromQVarList(context, vs), RichTerm.decodeFromExpression(context,e))
     case App(App(App(Const(Isabelle.measurementName, _), x), vs), e) =>
       Measurement(CVariable.fromTerm_var(context, x), QVariable.fromQVarList(context, vs),
-        Expression.decodeFromExpression(context,e))
+        RichTerm.decodeFromExpression(context,e))
     case _ => throw new RuntimeException(s"term $t cannot be decoded as a statement")
   }
 }
@@ -188,7 +191,7 @@ object Block {
 }
 
 
-final case class Assign(variable:CVariable, expression:Expression) extends Statement {
+final case class Assign(variable:CVariable, expression:RichTerm) extends Statement {
   override def toString: String = s"""${variable.name} <- $expression;"""
   override def inline(name: String, statement: Statement): Statement = this
 
@@ -198,7 +201,7 @@ final case class Assign(variable:CVariable, expression:Expression) extends State
   override def programTerm(context: Isabelle.Context): Term =
     Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
 }
-final case class Sample(variable:CVariable, expression:Expression) extends Statement {
+final case class Sample(variable:CVariable, expression:RichTerm) extends Statement {
   override def toString: String = s"""${variable.name} <$$ $expression;"""
   override def inline(name: String, statement: Statement): Statement = this
 
@@ -208,7 +211,7 @@ final case class Sample(variable:CVariable, expression:Expression) extends State
   override def programTerm(context: Isabelle.Context): Term =
     Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
 }
-final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch: Block) extends Statement {
+final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     IfThenElse(condition,thenBranch.inline(name,program),elseBranch.inline(name,program))
   override def toString: String = s"if ($condition) $thenBranch else $elseBranch;"
@@ -221,7 +224,8 @@ final case class IfThenElse(condition:Expression, thenBranch: Block, elseBranch:
   override def programTerm(context: Isabelle.Context): Term =
     Isabelle.ifthenelse $ condition.encodeAsExpression(context).isabelleTerm $ thenBranch.programListTerm(context) $ elseBranch.programListTerm(context)
 }
-final case class While(condition:Expression, body: Block) extends Statement {
+
+final case class While(condition:RichTerm, body: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
     While(condition,body.inline(name,program))
   override def toString: String = s"while ($condition) $body"
@@ -233,7 +237,8 @@ final case class While(condition:Expression, body: Block) extends Statement {
   override def programTerm(context: Isabelle.Context): Term =
     Isabelle.whileProg $ condition.encodeAsExpression(context).isabelleTerm $ body.programListTerm(context)
 }
-final case class QInit(location:List[QVariable], expression:Expression) extends Statement {
+
+final case class QInit(location:List[QVariable], expression:RichTerm) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
   override def toString: String = s"${location.map(_.name).mkString(",")} <q $expression;"
 
@@ -244,7 +249,7 @@ final case class QInit(location:List[QVariable], expression:Expression) extends 
   override def programTerm(context: Isabelle.Context): Term =
     Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
 }
-final case class QApply(location:List[QVariable], expression:Expression) extends Statement {
+final case class QApply(location:List[QVariable], expression:RichTerm) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
   override def toString: String = s"on ${location.map(_.name).mkString(",")} apply $expression;"
 
@@ -256,7 +261,7 @@ final case class QApply(location:List[QVariable], expression:Expression) extends
   override def programTerm(context: Isabelle.Context): Term =
     Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
 }
-final case class Measurement(result:CVariable, location:List[QVariable], e:Expression) extends Statement {
+final case class Measurement(result:CVariable, location:List[QVariable], e:RichTerm) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
   override def toString: String = s"${result.name} <- measure ${location.map(_.name).mkString(",")} in $e;"
 

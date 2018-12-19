@@ -3,14 +3,10 @@ package qrhl.tactic
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.pure.Term
 import qrhl._
-import qrhl.isabelle.Isabelle
-import qrhl.logic.Expression
+import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.toplevel.Parser
 
-import Expression.typ_tight_codec
-import Expression.term_tight_codec
-
-abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[(List[Expression],BigInt)]], arg : Isabelle.Context => A) extends Tactic {
+abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[(List[RichTerm],BigInt)]], arg : Isabelle.Context => A) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
     val ctx = state.isabelle
 //    println("IsabelleTac",Isabelle.pretty(goal.toExpression(ctx).isabelleTerm))

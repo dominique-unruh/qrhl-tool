@@ -2,12 +2,12 @@ package qrhl.tactic
 
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.pure.{Term, Typ => ITyp}
-import qrhl.isabelle.Isabelle
+import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
 import qrhl.{QRHLSubgoal, State, Subgoal, UserException}
 
-import Expression.typ_tight_codec
-import Expression.term_tight_codec
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
 
 case class WpTac(left:Boolean)
   extends IsabelleTac(WpTac.wpTacOp, { context => left }) {
@@ -111,8 +111,8 @@ case class WpTac(left:Boolean)
 }*/
 
 object WpTac {
-  val wpTacOp: Operation[(Boolean, Term, BigInt), Option[(List[Expression],BigInt)]] =
-    Operation.implicitly[(Boolean, Term, BigInt), Option[(List[Expression],BigInt)]]("wp_tac")
+  val wpTacOp: Operation[(Boolean, Term, BigInt), Option[(List[RichTerm],BigInt)]] =
+    Operation.implicitly[(Boolean, Term, BigInt), Option[(List[RichTerm],BigInt)]]("wp_tac")
 
 /*  val sampleWpOp: Operation[((String, ITyp), (Term, Term)), Expression] =
     Operation.implicitly[((String,ITyp), (Term, Term)), Term]("sampleWp")

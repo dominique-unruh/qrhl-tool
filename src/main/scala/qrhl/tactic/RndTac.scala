@@ -1,15 +1,15 @@
 package qrhl.tactic
 import info.hupel.isabelle.pure.{Term, Typ}
 import info.hupel.isabelle.{Operation, pure}
-import qrhl.isabelle.Isabelle
-import qrhl.logic.{CVariable, Expression, Sample, Statement}
+import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.logic.{CVariable, Sample, Statement}
 import qrhl.{State, UserException}
 
-import Expression.typ_tight_codec
-import Expression.term_tight_codec
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
 
-case class RndTac(map:Option[(CVariable,CVariable,Expression)]=None) extends WpBothStyleTac {
-  override def getWP(state: State, left: Statement, right: Statement, post: Expression): (Expression,Nil.type) = (left,right) match {
+case class RndTac(map:Option[(CVariable,CVariable,RichTerm)]=None) extends WpBothStyleTac {
+  override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm,Nil.type) = (left,right) match {
     case (Sample(x,e), Sample(y,f)) =>
 //      val isabelle = post.isabelle
       val env = state.environment
@@ -42,8 +42,8 @@ case class RndTac(map:Option[(CVariable,CVariable,Expression)]=None) extends WpB
       throw UserException("Expected sampling statement as last statement on both sides")
   }
 
-  val rndWpOp: Operation[(BigInt, (String, Term, String), (Term, Typ, Term)), Expression] =
-    Operation.implicitly[(BigInt, (String, pure.Term, String), (pure.Term, pure.Typ, pure.Term)), Expression]("rndWp")
-  val rndWp2Op: Operation[((String, Typ, Term), (String, Typ, Term), (Term, Term, BigInt)), Expression] =
-    Operation.implicitly[((String, pure.Typ, pure.Term), (String, pure.Typ, pure.Term), (pure.Term, pure.Term, BigInt)), Expression]("rndWp2")
+  val rndWpOp: Operation[(BigInt, (String, Term, String), (Term, Typ, Term)), RichTerm] =
+    Operation.implicitly[(BigInt, (String, pure.Term, String), (pure.Term, pure.Typ, pure.Term)), RichTerm]("rndWp")
+  val rndWp2Op: Operation[((String, Typ, Term), (String, Typ, Term), (Term, Term, BigInt)), RichTerm] =
+    Operation.implicitly[((String, pure.Typ, pure.Term), (String, pure.Typ, pure.Term), (pure.Term, pure.Term, BigInt)), RichTerm]("rndWp2")
 }

@@ -3,11 +3,10 @@ package qrhl.tactic
 import info.hupel.isabelle.pure.Term
 import info.hupel.isabelle.{Operation, pure}
 import qrhl._
-import qrhl.isabelle.Isabelle
-import qrhl.logic.Expression
+import qrhl.isabelle.{Isabelle, RichTerm}
 
-import Expression.typ_tight_codec
-import Expression.term_tight_codec
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
 
 case class FixTac(variable:String) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
@@ -37,6 +36,6 @@ case class FixTac(variable:String) extends Tactic {
       List(AmbientSubgoal(result))
   }
 
-  val fixTacOp: Operation[(BigInt, Term, String), (Expression, pure.Typ)] =
-    Operation.implicitly[(BigInt, Term,String), (Expression, pure.Typ)]("fixTac")
+  val fixTacOp: Operation[(BigInt, Term, String), (RichTerm, pure.Typ)] =
+    Operation.implicitly[(BigInt, Term,String), (RichTerm, pure.Typ)]("fixTac")
 }

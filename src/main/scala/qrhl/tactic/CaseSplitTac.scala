@@ -1,10 +1,10 @@
 package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
-import qrhl.logic.Expression
 import qrhl._
+import qrhl.isabelle.RichTerm
 
-case class CaseSplitTac(expr:Expression) extends Tactic {
+case class CaseSplitTac(expr:RichTerm) extends Tactic {
   assert(expr.typ==HOLogic.boolT)
 
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {

@@ -3,7 +3,7 @@ package qrhl.tactic
 import org.scalatest.FunSuite
 import qrhl.QRHLSubgoal
 import qrhl.isabelle.Isabelle
-import qrhl.logic.{Expression, Statement}
+import qrhl.logic.Statement
 import qrhl.toplevel.ToplevelTest
 
 class SeqTacTest extends FunSuite {

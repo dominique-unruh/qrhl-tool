@@ -1,29 +1,28 @@
-package qrhl.logic
+package qrhl.isabelle
 
 import info.hupel.isabelle.api.XML
-import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.hol.HOLogic.boolT
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, TFree, TVar, Term, Type, Var, Typ => ITyp}
-import qrhl.isabelle.Isabelle
+import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
+import org.log4s
+import org.log4s.Logger
+import qrhl.logic.{CVariable, Environment, Variable}
 import scalaz.Applicative
 
 import scala.collection.mutable
-import Expression.typ_tight_codec
-import Expression.term_tight_codec
-import org.log4s
-import org.log4s.Logger
 
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
 
-// TODO: move into Isabelle
-final class Expression private (val typ: pure.Typ, val isabelleTerm:Term, val pretty:Option[String]=None) {
-  def encodeAsExpression(context: Isabelle.Context) : Expression =
-    context.isabelle.invoke(Expression.termToExpressionOp, (context.contextId, isabelleTerm))
+final class RichTerm private(val typ: pure.Typ, val isabelleTerm:Term, val pretty:Option[String]=None) {
+  def encodeAsExpression(context: Isabelle.Context) : RichTerm =
+    context.isabelle.invoke(RichTerm.termToExpressionOp, (context.contextId, isabelleTerm))
 
-  def stripAssumption(number: Int): Expression = Expression(typ,Expression.stripAssumption(isabelleTerm,number))
+  def stripAssumption(number: Int): RichTerm = RichTerm(typ,RichTerm.stripAssumption(isabelleTerm,number))
 
   override def equals(o: scala.Any): Boolean = o match {
-    case o : Expression => typ == o.typ && isabelleTerm == o.isabelleTerm
+    case o : RichTerm => typ == o.typ && isabelleTerm == o.isabelleTerm
     case _ => false
   }
 
@@ -66,22 +65,22 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term, val pr
   }
 
 //  val isabelleTerm : Term = isabelleTerm
-  def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): (Expression,Isabelle.Thm) = simplify(isabelle.get,facts)
+  def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): (RichTerm,Isabelle.Thm) = simplify(isabelle.get,facts)
 
-  def simplify(context: Isabelle.Context, facts:List[String]): (Expression,Isabelle.Thm) =
+  def simplify(context: Isabelle.Context, facts:List[String]): (RichTerm,Isabelle.Thm) =
     context.simplify(isabelleTerm,facts)/* match {
       case (t,thm) => (Expression(typ, t), thm)
     }*/
 
-  def map(f : Term => Term) : Expression = new Expression(typ, f(isabelleTerm))
-  def substitute(v:CVariable, repl:Expression) : Expression = {
+  def map(f : Term => Term) : RichTerm = new RichTerm(typ, f(isabelleTerm))
+  def substitute(v:CVariable, repl:RichTerm) : RichTerm = {
     assert(repl.typ==v.valueTyp)
-    map(Expression.substitute(v.name, repl.isabelleTerm, _))
+    map(RichTerm.substitute(v.name, repl.isabelleTerm, _))
   }
 
-  def index1(environment: Environment): Expression = index(environment, left=true)
-  def index2(environment: Environment): Expression = index(environment, left=false)
-  def index(environment: Environment, left: Boolean): Expression = {
+  def index1(environment: Environment): RichTerm = index(environment, left=true)
+  def index2(environment: Environment): RichTerm = index(environment, left=false)
+  def index(environment: Environment, left: Boolean): RichTerm = {
     def idx(t:Term) : Term = t match {
       case App(t1,t2) => App(idx(t1),idx(t2))
       case Free(name,typ2) =>
@@ -90,33 +89,33 @@ final class Expression private (val typ: pure.Typ, val isabelleTerm:Term, val pr
       case Const(_,_) | Bound(_) | Var(_,_) => t
       case Abs(name,typ2,body) => Abs(name,typ2,idx(body))
     }
-    new Expression(typ,idx(isabelleTerm))
+    new RichTerm(typ,idx(isabelleTerm))
   }
 
 
-  def leq(e: Expression): Expression = {
+  def leq(e: RichTerm): RichTerm = {
       val t = e.isabelleTerm
       val predicateT = Isabelle.predicateT // Should be the type of t
       val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(predicateT, ITyp.funT(predicateT, boolT))) $ isabelleTerm $ t
-      new Expression(Isabelle.boolT,newT)
+      new RichTerm(Isabelle.boolT,newT)
   }
 
-  def implies(e: Expression): Expression = {
+  def implies(e: RichTerm): RichTerm = {
     val t = e.isabelleTerm
     val newT = HOLogic.imp $ isabelleTerm $ t
 //    val typ = Typ.bool(null)
-    new Expression(Isabelle.boolT,newT)
+    new RichTerm(Isabelle.boolT,newT)
   }
 
-  def not: Expression = {
+  def not: RichTerm = {
     assert(typ==HOLogic.boolT)
-    new Expression(typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
+    new RichTerm(typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
   }
 
 }
 
 
-object Expression {
+object RichTerm {
   private val logger: Logger = log4s.getLogger
 
   implicit object applicativeXMLResult extends Applicative[XMLResult] {
@@ -135,6 +134,7 @@ object Expression {
 
     def decode_class(tree: XML.Tree): XMLResult[String] = tree match {
       case XML.Elem((c,Nil),Nil) => Right(c)
+      case xml => Left(("invalid encoding of class",List(xml)))
     }
     def encode_class(c : String): XML.Tree = XML.Elem((c,Nil),Nil)
 
@@ -144,7 +144,9 @@ object Expression {
       case TVar((name, idx), sort) => XML.Elem(("v", List((name, idx.toString))), sort.map(encode_class))
     }
 
-    import scalaz._, std.list._, std.option._, syntax.traverse._
+    import scalaz._
+    import std.list._
+    import syntax.traverse._
 
     override def decode(tree: XML.Tree): XMLResult[ITyp] = tree match {
       case XML.Elem(("t",Nil), XML.Text(name) :: xmls) =>
@@ -216,44 +218,44 @@ object Expression {
     }
   }
 
-  implicit object codec extends Codec[Expression] {
+  implicit object codec extends Codec[RichTerm] {
     override val mlType: String = "term"
     /*override def encode(e: Expression): XML.Tree =
       XML.elem(("expression",Nil),
         List(XML.text(""), term_tight_codec.encode(e.isabelleTerm), XML.elem(("omitted",Nil),Nil)))*/
-    override def encode(e: Expression): XML.Tree = throw new RuntimeException("Do not call this!")
-    override def decode(tree: XML.Tree): XMLResult[Expression] = tree match {
+    override def encode(e: RichTerm): XML.Tree = throw new RuntimeException("Do not call this!")
+    override def decode(tree: XML.Tree): XMLResult[RichTerm] = tree match {
       case XML.Elem(("expression",Nil), List(XML.Text(str), termXML, typXML)) =>
         for (typ <- typ_tight_codec.decode(typXML);
              term <- term_tight_codec.decode(termXML))
-        yield new Expression(typ,term,Some(Isabelle.symbolsToUnicode(str)))
+        yield new RichTerm(typ,term,Some(Isabelle.symbolsToUnicode(str)))
     }
   }
 
-  def decodeFromExpression(context:Isabelle.Context, t: Term): Expression = {
+  def decodeFromExpression(context:Isabelle.Context, t: Term): RichTerm = {
     context.isabelle.invoke(decodeFromExpressionOp, (context.contextId, t))
 //    Expression(typ, term)
   }
 
-  val decodeFromExpressionOp: Operation[(BigInt,Term), Expression] =
-    Operation.implicitly[(BigInt,Term), Expression]("expression_to_term")
+  val decodeFromExpressionOp: Operation[(BigInt,Term), RichTerm] =
+    Operation.implicitly[(BigInt,Term), RichTerm]("expression_to_term")
 
-  val termToExpressionOp: Operation[(BigInt, Term), Expression] =
-    Operation.implicitly[(BigInt, Term), Expression]("term_to_expression")
+  val termToExpressionOp: Operation[(BigInt, Term), RichTerm] =
+    Operation.implicitly[(BigInt, Term), RichTerm]("term_to_expression")
 
-  def trueExp(isabelle: Isabelle.Context): Expression = Expression(Isabelle.boolT, HOLogic.True)
+  def trueExp(isabelle: Isabelle.Context): RichTerm = RichTerm(Isabelle.boolT, HOLogic.True)
 
-  private val readExpressionOp : Operation[(BigInt, String, ITyp), Expression] = Operation.implicitly[(BigInt, String, ITyp), Expression]("read_expression")
-  def apply(context: Isabelle.Context, str:String, typ:pure.Typ) : Expression = {
+  private val readExpressionOp : Operation[(BigInt, String, ITyp), RichTerm] = Operation.implicitly[(BigInt, String, ITyp), RichTerm]("read_expression")
+  def apply(context: Isabelle.Context, str:String, typ:pure.Typ) : RichTerm = {
     context.isabelle.invoke(readExpressionOp,(context.contextId,Isabelle.unicodeToSymbols(str),typ))
 //    val term = context.readTerm(Isabelle.unicodeToSymbols(str),typ)
 //    Expression(typ, term)
   }
 
-  def apply(typ: pure.Typ, term:Term) : Expression =
-    new Expression(typ, term)
+  def apply(typ: pure.Typ, term:Term) : RichTerm =
+    new RichTerm(typ, term)
 
-  def unapply(e: Expression): Option[Term] = Some(e.isabelleTerm)
+  def unapply(e: RichTerm): Option[Term] = Some(e.isabelleTerm)
 
   def substitute(v: String, repl: Term, term: Term): Term = {
       def subst(t:Term) : Term = t match {

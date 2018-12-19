@@ -1,24 +1,10 @@
 isabelle.
 
-classical var x : nat.
-classical var y : nat.
-classical var z : nat.
+# A variable that contains the random oracle
+classical var h : unit => unit.
 
-program P1 := {
-z <- 1;
-y <- 1;
-z <- 1;
-}.
+qrhl {top}
+        skip; ~ h <- undefined; 
+     {Cla[h1=h2]}.
 
-program P2 := {
-x <- 1;
-y <- 1;
-z <- 1;
-}.
-
-qrhl {top} call P1; ~ call P2; {top}.
-inline P1.
-inline P2.
-swap right 2.
-
-
+wp right.

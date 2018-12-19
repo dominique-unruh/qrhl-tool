@@ -5,13 +5,13 @@ import info.hupel.isabelle.pure.Term
 import info.hupel.isabelle.{Operation, pure}
 import org.log4s
 import qrhl._
-import qrhl.logic.Expression
+import qrhl.isabelle.RichTerm
 import qrhl.toplevel.Parser
 
 import scala.collection.immutable.Nil
 
-import Expression.typ_tight_codec
-import Expression.term_tight_codec
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
 
 case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => rule }) {
 //  override def apply(state: State, goal: Subgoal): List[Subgoal] =
@@ -36,6 +36,6 @@ case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => 
 
 object RuleTac {
   private val logger = log4s.getLogger
-  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[Expression],BigInt)]] =
-    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[Expression],BigInt)]]("applyRule")
+  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[RichTerm],BigInt)]] =
+    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[RichTerm],BigInt)]]("applyRule")
 }
