@@ -244,4 +244,20 @@ operation_setup (sequential, bracket) use_thys2 = \<open>
    action = List.app Thy_Info.use_thy}
 \<close>
 
+operation_setup statement_to_term = \<open>
+  {from_lib = Codec.tuple Codec.int statement_codec2,
+   to_lib = expression_codec,
+   action = fn (ctxt_id, statement) =>
+     let val ctxt = Refs.Ctxt.read ctxt_id
+     in (ctxt, Programs.statement_to_term ctxt statement) end}
+\<close>
+
+operation_setup statements_to_term = \<open>
+  {from_lib = Codec.tuple Codec.int (Codec.list statement_codec2),
+   to_lib = expression_codec,
+   action = fn (ctxt_id, statements) =>
+     let val ctxt = Refs.Ctxt.read ctxt_id
+     in (ctxt, map (Programs.statement_to_term ctxt) statements |> HOLogic.mk_list \<^typ>\<open>program\<close>) end}
+\<close>
+
 end

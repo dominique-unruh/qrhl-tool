@@ -10,7 +10,7 @@ abstract class IsabelleTac[A](operation : Operation[(A, Term, BigInt), Option[(L
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
     val ctx = state.isabelle
 //    println("IsabelleTac",Isabelle.pretty(goal.toExpression(ctx).isabelleTerm))
-    val (goals,thmId) = ctx.isabelle.invoke(operation, (arg(ctx), goal.toExpression(ctx).isabelleTerm, ctx.contextId)).getOrElse {
+    val (goals,thmId) = ctx.isabelle.invoke(operation, (arg(ctx), goal.toTerm(ctx).isabelleTerm, ctx.contextId)).getOrElse {
       throw UserException("tactic failed") }
     val thm = if (thmId==0) null else new Isabelle.Thm(ctx.isabelle, thmId)
 

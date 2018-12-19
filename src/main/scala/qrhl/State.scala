@@ -26,9 +26,8 @@ sealed trait Subgoal {
     * Should always succeed, unless there are bugs somewhere. */
   def checkWelltyped(context: Isabelle.Context): Unit
 
-  /** This goal as a boolean expression. If it cannot be expressed in Isabelle, a different,
-    * logically weaker expression is returned. */
-  def toExpression(context:Isabelle.Context): RichTerm
+  /** This goal as a boolean term. (A valid Isabelle representation of this goal.) */
+  def toTerm(context:Isabelle.Context): RichTerm
 
   def checkVariablesDeclared(environment: Environment): Unit
 
@@ -107,9 +106,10 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
         throw UserException(s"Undeclared variable $x in assumptions")
   }
 
-  override def toExpression(context: Isabelle.Context): RichTerm = {
-    val leftTerm = left.programListTerm(context)
-    val rightTerm = right.programListTerm(context)
+  // TODO: do this in one go in Isabelle
+  override def toTerm(context: Isabelle.Context): RichTerm = {
+    val leftTerm = left.programListTerm(context).isabelleTerm
+    val rightTerm = right.programListTerm(context).isabelleTerm
     val preTerm = pre.encodeAsExpression(context).isabelleTerm
     val postTerm = post.encodeAsExpression(context).isabelleTerm
     val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
@@ -159,7 +159,7 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
         throw UserException(s"Undeclared variable $x")
 
   /** This goal as a boolean expression. */
-  override def toExpression(context: Isabelle.Context): RichTerm = goal
+  override def toTerm(context: Isabelle.Context): RichTerm = goal
 
   override def containsAmbientVar(x: String): Boolean = goal.variables.contains(x)
 
@@ -260,7 +260,7 @@ class State private (val environment: Environment,
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
       goal.checkVariablesDeclared(environment)
-      copy(goal=List(goal), currentLemma=Some((name,goal.toExpression(_isabelle.get))))
+      copy(goal=List(goal), currentLemma=Some((name,goal.toTerm(_isabelle.get))))
     case _ => throw UserException("There is still a pending proof.")
   }
 

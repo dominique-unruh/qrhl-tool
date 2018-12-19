@@ -149,7 +149,8 @@ and
     Codec.traverse_results statement_decode stmts
   | block_decode xml = Codec.Failure ("invalid encoding for a block",[xml])
 
-
+val statement_codec1 = Codec.basic {encode=statement_encode, decode=fn _ => error "Do not call 'decode statement_codec1'"}
+val statement_codec2 = Codec.basic {encode=fn _ => error "Do not call 'decode statement_codec1'", decode=statement_decode}
 
 
 end

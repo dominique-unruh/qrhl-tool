@@ -20,7 +20,7 @@ class QRHLSubgoalTest extends FunSuite {
     val context = tl.state.isabelle
     val qrhl = QRHLSubgoal(left,right,pre,post,Nil)
     qrhl.checkWelltyped(context)
-    val e = qrhl.toExpression(context)
+    val e = qrhl.toTerm(context)
     print(e)
     e.checkWelltyped(context, Isabelle.boolT)
 

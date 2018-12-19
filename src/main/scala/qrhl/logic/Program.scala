@@ -1,20 +1,30 @@
 package qrhl.logic
 
+import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure
+import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.pure.{App, Const, Free, Term}
 import qrhl.UserException
 import qrhl.isabelle.{Isabelle, RichTerm}
 
 import scala.collection.mutable
 
+// Implicits
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
+import Statement.codec
+
 
 // Programs
 sealed trait Statement {
   def toBlock: Block = Block(this)
 
-  @deprecated("too slow","now")
-  def programTerm(context: Isabelle.Context) : Term
+  @deprecated("too slow, use programTerm instead","now")
+  def programTermOLD(context: Isabelle.Context) : Term
+
+  def programTerm(context: Isabelle.Context): RichTerm = {
+    context.isabelle.invoke(Statement.statement_to_term_op, (context.contextId, this))
+  }
 
 
   /** Returns all variables used in the statement.
@@ -131,11 +141,53 @@ object Statement {
         RichTerm.decodeFromExpression(context,e))
     case _ => throw new RuntimeException(s"term $t cannot be decoded as a statement")
   }
+
+  implicit object codec extends Codec[Statement] {
+    override val mlType: String = "Programs.statement"
+
+    def encode_call(c : Call): XML.Tree = c match {
+      case Call(name,args@_*) => XML.Elem(("call",List(("name",name))), args.map(encode_call).toList)
+    }
+
+    private def enc_term(t: RichTerm) = RichTerm.term_tight_codec.encode(t.isabelleTerm)
+
+    override def encode(t: Statement): XML.Tree = t match {
+      case Block(stmts@_*) => XML.Elem(("block", Nil), stmts.map(encode).toList)
+      case Assign(v, rhs) => XML.Elem(("assign", List(("lhs", v.name))), List(enc_term(rhs)))
+      case Sample(v, rhs) => XML.Elem(("sample", List(("lhs", v.name))), List(enc_term(rhs)))
+      case call: Call => encode_call(call)
+      case Measurement(v, loc, exp) => XML.Elem(("measurement", List(("lhs", v.name))),
+        enc_term(exp) :: loc.map { l => Codec.string.encode(l.name) })
+      case QInit(loc, exp) => XML.Elem(("qinit", Nil),
+        enc_term(exp) :: loc.map { l => Codec.string.encode(l.name) })
+      case QApply(loc, exp) => XML.Elem(("qapply", Nil),
+        enc_term(exp) :: loc.map { l => Codec.string.encode(l.name) })
+      case IfThenElse(e, p1, p2) => XML.Elem(("ifte", Nil),
+        List(enc_term(e), encode(p1), encode(p2)))
+      case While(e, p1) => XML.Elem(("while", Nil),
+        List(enc_term(e), encode(p1)))
+    }
+
+    override def decode(tree: XML.Tree): XMLResult[Statement] = ???
+  }
+
+  // TODO: implement on Isabelle side or remove
+  val statement_to_term_op: Operation[(BigInt, Statement), RichTerm] =
+    Operation.implicitly[(BigInt, Statement), RichTerm]("statement_to_term")
+
+  val statements_to_term_op: Operation[(BigInt, List[Statement]), RichTerm] =
+    Operation.implicitly[(BigInt, List[Statement]), RichTerm]("statements_to_term")
 }
 
 class Block(val statements:List[Statement]) extends Statement {
-  def programListTerm(context: Isabelle.Context): Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTerm(context)))
-  override def programTerm(context: Isabelle.Context) : Term = Isabelle.block $ programListTerm(context)
+  @deprecated("too slow", "now")
+  def programListTermOld(context: Isabelle.Context): Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTermOLD(context)))
+
+  def programListTerm(context: Isabelle.Context): RichTerm =
+    context.isabelle.invoke(Statement.statements_to_term_op, (context.contextId, this.statements))
+
+
+  override def programTermOLD(context: Isabelle.Context) : Term = Isabelle.block $ programListTermOld(context)
 
   override def toBlock: Block = this
 
@@ -198,7 +250,7 @@ final case class Assign(variable:CVariable, expression:RichTerm) extends Stateme
   override def checkWelltyped(context: Isabelle.Context): Unit =
     expression.checkWelltyped(context, variable.valueTyp)
 
-  override def programTerm(context: Isabelle.Context): Term =
+  override def programTermOLD(context: Isabelle.Context): Term =
     Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
 }
 final case class Sample(variable:CVariable, expression:RichTerm) extends Statement {
@@ -208,7 +260,7 @@ final case class Sample(variable:CVariable, expression:RichTerm) extends Stateme
   override def checkWelltyped(context: Isabelle.Context): Unit =
     expression.checkWelltyped(context, Isabelle.distrT(variable.valueTyp))
 
-  override def programTerm(context: Isabelle.Context): Term =
+  override def programTermOLD(context: Isabelle.Context): Term =
     Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
 }
 final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
@@ -221,8 +273,8 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
     thenBranch.checkWelltyped(context)
     elseBranch.checkWelltyped(context)
   }
-  override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.ifthenelse $ condition.encodeAsExpression(context).isabelleTerm $ thenBranch.programListTerm(context) $ elseBranch.programListTerm(context)
+  override def programTermOLD(context: Isabelle.Context): Term =
+    Isabelle.ifthenelse $ condition.encodeAsExpression(context).isabelleTerm $ thenBranch.programListTermOld(context) $ elseBranch.programListTermOld(context)
 }
 
 final case class While(condition:RichTerm, body: Block) extends Statement {
@@ -234,8 +286,8 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
     condition.checkWelltyped(context, HOLogic.boolT)
     body.checkWelltyped(context)
   }
-  override def programTerm(context: Isabelle.Context): Term =
-    Isabelle.whileProg $ condition.encodeAsExpression(context).isabelleTerm $ body.programListTerm(context)
+  override def programTermOLD(context: Isabelle.Context): Term =
+    Isabelle.whileProg $ condition.encodeAsExpression(context).isabelleTerm $ body.programListTermOld(context)
 }
 
 final case class QInit(location:List[QVariable], expression:RichTerm) extends Statement {
@@ -246,7 +298,7 @@ final case class QInit(location:List[QVariable], expression:RichTerm) extends St
     val expected = Isabelle.vectorT(Isabelle.tupleT(location.map(_.valueTyp):_*))
     expression.checkWelltyped(context, expected)
   }
-  override def programTerm(context: Isabelle.Context): Term =
+  override def programTermOLD(context: Isabelle.Context): Term =
     Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
 }
 final case class QApply(location:List[QVariable], expression:RichTerm) extends Statement {
@@ -258,7 +310,7 @@ final case class QApply(location:List[QVariable], expression:RichTerm) extends S
     val expected = pure.Type("Bounded_Operators.bounded",List(varType,varType))
     expression.checkWelltyped(context, expected)
   }
-  override def programTerm(context: Isabelle.Context): Term =
+  override def programTermOLD(context: Isabelle.Context): Term =
     Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
 }
 final case class Measurement(result:CVariable, location:List[QVariable], e:RichTerm) extends Statement {
@@ -269,7 +321,7 @@ final case class Measurement(result:CVariable, location:List[QVariable], e:RichT
     val expected = pure.Type("QRHL_Core.measurement",List(result.variableTyp, Isabelle.tupleT(location.map(_.valueTyp):_*)))
     e.checkWelltyped(context, expected)
   }
-  override def programTerm(context: Isabelle.Context): Term =
+  override def programTermOLD(context: Isabelle.Context): Term =
     Isabelle.measurement(Isabelle.tupleT(location.map(_.valueTyp):_*), result.valueTyp) $
       result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context).isabelleTerm
 }
@@ -280,9 +332,9 @@ final case class Call(name:String, args:Call*) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {}
-  override def programTerm(context: Isabelle.Context): Term = {
+  override def programTermOLD(context: Isabelle.Context): Term = {
     if (args.nonEmpty) {
-      val argTerms = args.map(_.programTerm(context)).toList
+      val argTerms = args.map(_.programTermOLD(context)).toList
       val argList = Isabelle.mk_list(Isabelle.programT, argTerms)
       Isabelle.instantiateOracles $ Free(name, Isabelle.oracle_programT) $ argList
     } else
