@@ -44,4 +44,6 @@ consts "probability_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program
 translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c"
 hide_const probability_syntax
 
+ML_file "programs.ML"
+
 end

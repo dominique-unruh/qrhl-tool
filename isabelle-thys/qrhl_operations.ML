@@ -92,8 +92,66 @@ fun expression_decode _ = error "expression_decode: not implemented"
 val expression_codec = Codec.basic { encode=expression_encode, decode=expression_decode }
 
 
+(* Statement codec *)
+
+local open Programs open Codec in
+fun call_encode (CALL (name,args)) = XML.Elem(("call",[("name",name)]), map call_encode args)
+
+fun call_decode (XML.Elem(("call",[("name",name)]), args)) =
+  map_result (fn a => CALL (name,a)) (traverse_results call_decode args)
+  | call_decode xml = Codec.Failure ("invalid encoding for a call specification",[xml])
+
+
+fun statement_encode (ctxt, Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode (ctxt,s)) stmts)
+  | statement_encode (ctxt, Assign (var, rhs)) = XML.Elem(("assign",[("lhs",var)]), [expression_encode (ctxt,rhs)])
+  | statement_encode (ctxt, Sample (var, rhs)) = XML.Elem(("sample",[("lhs",var)]), [expression_encode (ctxt,rhs)])
+  | statement_encode (_, Call c) = call_encode c
+  | statement_encode (ctxt, Measurement (var,loc,exp)) = XML.Elem(("measurement",[("lhs",var)]), 
+        expression_encode (ctxt,exp) :: map (Codec.encode Codec.string) loc)
+  | statement_encode (ctxt, QInit (loc,exp)) = XML.Elem(("qinit",[]), 
+        expression_encode (ctxt,exp) :: map (Codec.encode Codec.string) loc)
+  | statement_encode (ctxt, QApply (loc,exp)) = XML.Elem(("qapply",[]), 
+        expression_encode (ctxt,exp) :: map (Codec.encode Codec.string) loc)
+  | statement_encode (ctxt, IfThenElse (e,p1,p2)) = XML.Elem(("ifte",[]),
+        [expression_encode (ctxt,e), statement_encode (ctxt, Block p1), statement_encode (ctxt, Block p2)])
+  | statement_encode (ctxt, While (e,p1)) = XML.Elem(("while",[]),
+        [expression_encode (ctxt,e), statement_encode (ctxt, Block p1)])
+
+fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
+      block_decode xml |> map_result Block
+  | statement_decode (XML.Elem(("assign",[("lhs",var)]), [e])) = 
+      Codec.map_result (fn e => Assign (var, e)) (term_tight_decode e)
+  | statement_decode (XML.Elem(("sample",[("lhs",var)]), [e])) = 
+      Codec.map_result (fn e => Sample (var, e)) (term_tight_decode e)
+  | statement_decode (xml as XML.Elem(("call",_),_)) = Codec.map_result Call (call_decode xml)
+  | statement_decode (XML.Elem(("measurement",[("lhs",var)]), exp :: loc)) =
+      bind_result (fn exp => map_result (fn loc => Measurement (var,loc,exp))
+          (traverse_results (Codec.decode Codec.string) loc))
+         (term_tight_decode exp)
+  | statement_decode (XML.Elem(("qinit",[]), exp :: loc)) =
+      bind_result (fn exp => map_result (fn loc => QInit (loc,exp))
+          (traverse_results (Codec.decode Codec.string) loc))
+         (term_tight_decode exp)
+  | statement_decode (XML.Elem(("qapply",[]), exp :: loc)) =
+      bind_result (fn exp => map_result (fn loc => QApply (loc,exp))
+          (traverse_results (Codec.decode Codec.string) loc))
+         (term_tight_decode exp)
+  | statement_decode (XML.Elem(("ifte",[]), [e, p1, p2])) =
+      bind_result (fn e => bind_result (fn p1 => map_result (fn p2 => IfThenElse (e,p1,p2))
+         (block_decode p2)) (block_decode p1)) (term_tight_decode e)
+  | statement_decode (XML.Elem(("while",[]), [e, p1])) =
+      bind_result (fn e => map_result (fn p1 => While (e,p1))
+         (block_decode p1)) (term_tight_decode e)
+  | statement_decode xml = Codec.Failure ("invalid encoding for a statement",[xml])
+
+and
+  block_decode (XML.Elem(("block",[]), stmts)) : statement list result = 
+    Codec.traverse_results statement_decode stmts
+  | block_decode xml = Codec.Failure ("invalid encoding for a block",[xml])
 
 
 
+
+end
 
 end
