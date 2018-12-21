@@ -7,7 +7,7 @@ import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class EqualTacTest extends FunSuite {
   def toplevel(): Toplevel = {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.run(
       """classical var x : bit.
         |quantum var q : bit.

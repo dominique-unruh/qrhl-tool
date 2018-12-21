@@ -7,7 +7,7 @@ import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class RndTacTest extends FunSuite {
   def toplevel(): Toplevel = {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.run(
       """classical var x : bool.
       """.stripMargin)

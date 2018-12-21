@@ -1,12 +1,7 @@
-theory TestEx
-  imports QRHL.QRHL
+theory TestEx 
+  imports QRHL.QRHL TestEx2
 begin
 
-definition "x == True"
-
-lemma test2: x
-unfolding x_def
-      by auto (* FAILS *)
-
+definition "x == 10"
 
 end

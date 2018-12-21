@@ -300,16 +300,10 @@ class State private (val environment: Environment,
     }
   }
 
-  def loadIsabelle(path:String, theory:Option[String]) : State = {
-    if (!_isabelle.isEmpty)
+  def loadIsabelle(theory:Option[String]) : State = {
+    if (_isabelle.isDefined)
       throw UserException("Only one isabelle-command allowed")
-    val isa = new Isabelle(path)
-    // since this is likely to happen when an existing Isabelle is reloaded, give the GC a chance to remove that existing Isabelle
-    System.gc()
-    loadIsabelle(isa,theory)
-  }
-
-  def loadIsabelle(isabelle: Isabelle, theory:Option[String]) : State = {
+    val isabelle = Isabelle.globalIsabelle
     val (isa,files) = theory match {
       case None =>
         (isabelle.getQRHLContextWithFiles(), dependencies)

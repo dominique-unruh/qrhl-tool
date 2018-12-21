@@ -8,7 +8,7 @@ import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class QRHLSubgoalTest extends FunSuite {
   lazy val tl: Toplevel = {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var y : int")
     tl

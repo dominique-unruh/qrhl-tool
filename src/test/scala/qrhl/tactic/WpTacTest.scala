@@ -1,11 +1,11 @@
 package qrhl.tactic
 
 import org.scalatest.FlatSpec
-import qrhl.toplevel.{TacticCommand, ToplevelTest}
+import qrhl.toplevel.{TacticCommand, Toplevel, ToplevelTest}
 
 class WpTacTest extends FlatSpec {
   "WpTac" should "returns a well-typed subgoal (qinit)" in {
-    val toplevel = ToplevelTest.makeToplevel()
+    val toplevel = Toplevel.makeToplevel()
     toplevel.run(
       """
         |quantum var q : bit.
@@ -19,7 +19,7 @@ class WpTacTest extends FlatSpec {
   }
 
   "WpTac" should "returns a well-typed subgoal (assign)" in {
-    val toplevel = ToplevelTest.makeToplevel()
+    val toplevel = Toplevel.makeToplevel()
     toplevel.run(
       """
         |classical var q : bit.
@@ -33,7 +33,7 @@ class WpTacTest extends FlatSpec {
   }
 
   "WpTac" should "returns a well-typed subgoal (sample)" in {
-    val toplevel = ToplevelTest.makeToplevel()
+    val toplevel = Toplevel.makeToplevel()
     toplevel.run(
       """
         |classical var q : bit.

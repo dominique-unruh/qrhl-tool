@@ -4,11 +4,11 @@ import org.scalatest.FunSuite
 import qrhl.QRHLSubgoal
 import qrhl.isabelle.Isabelle
 import qrhl.logic.{Expression, Statement}
-import qrhl.toplevel.ToplevelTest
+import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class SeqTacTest extends FunSuite {
   def testSeqRule(pre:String,post:String,left:String,right:String,middle:String) : Unit = {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : int")
     val state = tl.state
     val left2 = state.parseBlock(left)

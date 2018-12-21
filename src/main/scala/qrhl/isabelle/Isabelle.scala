@@ -22,7 +22,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
-
 import Expression.typ_tight_codec
 import Expression.term_tight_codec
 
@@ -232,6 +231,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
   private var disposed = false
 
   def dispose(): Unit = this.synchronized {
+    if (Isabelle.isGlobalIsabelle(this))
+      throw new lang.RuntimeException("Trying to dispose Isabelle.globalIsabelle")
     if (!disposed) {
       Isabelle.logger.debug("Disposing Isabelle.")
       Await.result(system.dispose, Duration.Inf)
@@ -249,6 +250,15 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 }
 
 object Isabelle {
+  private var globalIsabellePeek : Isabelle = _
+  lazy val globalIsabelle: Isabelle = {
+    val isabelle = new Isabelle("auto")
+    globalIsabellePeek = isabelle
+    isabelle
+  }
+  def isGlobalIsabelle(isabelle : Isabelle): Boolean =
+    (globalIsabellePeek != null) && (globalIsabelle == isabelle)
+
   def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
   def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
 
