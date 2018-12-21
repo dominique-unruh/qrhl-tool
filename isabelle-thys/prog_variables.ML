@@ -187,6 +187,10 @@ fun varterm_from_list [] = VTUnit
   | varterm_from_list [nT] = VTSingle nT
   | varterm_from_list (nT::xs) = VTCons (VTSingle nT, varterm_from_list xs)
 
+fun varterm_from_list_untyped [] = VTUnit
+  | varterm_from_list_untyped [n] = VTSingle (n,dummyT)
+  | varterm_from_list_untyped (n::xs) = VTCons (VTSingle (n,dummyT), varterm_from_list_untyped xs)
+
 fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
   | vars_in_varterm (VTSingle nT) = [nT]
   | vars_in_varterm VTUnit = []

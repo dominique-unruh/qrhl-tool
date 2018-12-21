@@ -4,13 +4,16 @@ struct
 val mk_variablesT = Prog_Variables.mk_variablesT
 val mk_variableT = Prog_Variables.mk_variableT
 val mk_conjs = Prog_Variables.mk_conjs
-fun mk_distrT T = Type(\<^type_name>\<open>distr\<close>, [T])
 fun mk_vectorT T = Type(\<^type_name>\<open>vector\<close>, [T])
+fun dest_vectorT (Type(\<^type_name>\<open>vector\<close>, [T])) = T
+  | dest_vectorT T = raise TYPE("dest_vectorT",[T],[])
 fun mk_boundedT T T' = Type(\<^type_name>\<open>bounded\<close>, [T,T'])
 fun dest_boundedT (Type(\<^type_name>\<open>bounded\<close>, [T,T'])) = (T,T')
   | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
 fun mk_bounded2T T = mk_boundedT T T
 fun mk_measurementT T T' = Type(\<^type_name>\<open>measurement\<close>, [T,T'])
+fun dest_measurementT (Type(\<^type_name>\<open>measurement\<close>, [T,T'])) = (T,T')
+  | dest_measurementT T = raise TYPE("dest_measurementT",[T],[])
 
 val parse_varterm = Prog_Variables.parse_varterm
 val missing_in_varterm = Prog_Variables.missing_in_varterm

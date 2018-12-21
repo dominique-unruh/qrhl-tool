@@ -257,7 +257,7 @@ operation_setup statements_to_term = \<open>
    to_lib = expression_codec,
    action = fn (ctxt_id, statements) =>
      let val ctxt = Refs.Ctxt.read ctxt_id
-     in (ctxt, map (Programs.statement_to_term ctxt) statements |> HOLogic.mk_list \<^typ>\<open>program\<close>) end}
+     in (ctxt, Programs.statements_to_term ctxt statements) end}
 \<close>
 
 end

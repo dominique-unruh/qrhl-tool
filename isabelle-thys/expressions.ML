@@ -73,9 +73,11 @@ fun mk_prod_untyped (t1, t2) = @{const Pair(dummy,dummy)} $ t1 $ t2
 fun mk_tuple_untyped [] = HOLogic.unit
   | mk_tuple_untyped ts = foldr1 mk_prod_untyped ts;
 
-fun term_to_expression ctx t =
-  let val is_classical = Prog_Variables.is_classical_variable ctx
+fun term_to_expression ctxt t =
+  let val is_classical = Prog_Variables.is_classical_variable ctxt
       val frees = Term.add_frees t [] |> filter (fn (v,_) => is_classical v) |> rev
+(*       val _ = app (fn (v,T) => if Prog_Variables.lookup_variable_type ctxt v = T then () 
+            else raise TYPE("term_to_expression: "^v^" has wrong type",[T,Prog_Variables.lookup_variable_type ctxt v],[])) *)
       val (vars,varsT) = 
         frees |> map (fn (v,T) => ("var_"^v,T)) |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
       val pattern = HOLogic.mk_tuple (map Free frees)

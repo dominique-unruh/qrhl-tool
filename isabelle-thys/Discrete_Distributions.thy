@@ -262,4 +262,6 @@ qed
 
 functor map_distr: map_distr using map_distr_id compose_map_distr unfolding o_def id_def by auto
 
+ML_file "discrete_distributions.ML"
+
 end
