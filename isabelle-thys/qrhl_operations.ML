@@ -15,6 +15,13 @@ in
   id
 end
 
+fun context_decode (XML.Elem(("context",[("id",id)]),[])) = Refs.Ctxt.read (parse_int id) |> Codec.Success
+  | context_decode xml = Codec.Failure ("invalid encoding for a context",[xml])
+
+fun context_encode ctxt = let val id = make_ctxt_ref ctxt in XML.Elem(("context",[("id",string_of_int id)]),[]) end
+
+val context_codec = Codec.basic {encode=context_encode, decode=context_decode}
+
 fun tac_dummy_thm NONE = NONE
   | tac_dummy_thm (SOME ts) = SOME (ts,0)
 
@@ -80,16 +87,17 @@ val term_tight_codec = Codec.basic { encode=term_tight_encode, decode=term_tight
 
 (** A codec for terms that additionally attaches a human readable representation *)
 
-fun expression_encode (ctxt,t) = let
+fun expression_encode ctxt t = let
   (* val ctxt = Context.the_local_context () *)
   val str = YXML.content_of (Syntax.string_of_term ctxt t)
   val xml = XML.Elem (("expression",[]),[XML.Text str, term_tight_encode t, typ_tight_encode (fastype_of t)])
   in xml end
 (* fun expression_decode (XML.Elem (("expression",[]),[XML.Text _, xml, _])) = term_tight_decode xml
   | expression_decode xml = Codec.Failure ("invalid encoding for a term (expression codec)",[xml]) *)
-fun expression_decode _ = error "expression_decode: not implemented"
+fun expression_decode (XML.Elem (("expression",[]),[t])) = term_tight_decode t
 
-val expression_codec = Codec.basic { encode=expression_encode, decode=expression_decode }
+val expression_codec = Codec.basic { encode=fn _ => error "expression_codec: encode not allowed", decode=expression_decode }
+fun expression_codec' ctxt = Codec.basic { encode=expression_encode ctxt, decode=expression_decode }
 
 
 (* Statement codec *)
@@ -102,20 +110,20 @@ fun call_decode (XML.Elem(("call",[("name",name)]), args)) =
   | call_decode xml = Codec.Failure ("invalid encoding for a call specification",[xml])
 
 
-fun statement_encode (ctxt, Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode (ctxt,s)) stmts)
-  | statement_encode (ctxt, Assign (var, rhs)) = XML.Elem(("assign",[("lhs",var)]), [expression_encode (ctxt,rhs)])
-  | statement_encode (ctxt, Sample (var, rhs)) = XML.Elem(("sample",[("lhs",var)]), [expression_encode (ctxt,rhs)])
-  | statement_encode (_, Call c) = call_encode c
-  | statement_encode (ctxt, Measurement (var,loc,exp)) = XML.Elem(("measurement",[("lhs",var)]), 
-        expression_encode (ctxt,exp) :: map (Codec.encode Codec.string) loc)
-  | statement_encode (ctxt, QInit (loc,exp)) = XML.Elem(("qinit",[]), 
-        expression_encode (ctxt,exp) :: map (Codec.encode Codec.string) loc)
-  | statement_encode (ctxt, QApply (loc,exp)) = XML.Elem(("qapply",[]), 
-        expression_encode (ctxt,exp) :: map (Codec.encode Codec.string) loc)
-  | statement_encode (ctxt, IfThenElse (e,p1,p2)) = XML.Elem(("ifte",[]),
-        [expression_encode (ctxt,e), statement_encode (ctxt, Block p1), statement_encode (ctxt, Block p2)])
-  | statement_encode (ctxt, While (e,p1)) = XML.Elem(("while",[]),
-        [expression_encode (ctxt,e), statement_encode (ctxt, Block p1)])
+fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode ctxt (s)) stmts)
+  | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[("lhs",var)]), [expression_encode ctxt rhs])
+  | statement_encode ctxt (Sample (var, rhs)) = XML.Elem(("sample",[("lhs",var)]), [expression_encode ctxt rhs])
+  | statement_encode _ (Call c) = call_encode c
+  | statement_encode ctxt (Measurement (var,loc,exp)) = XML.Elem(("measurement",[("lhs",var)]), 
+        expression_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+  | statement_encode ctxt (QInit (loc,exp)) = XML.Elem(("qinit",[]), 
+        expression_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+  | statement_encode ctxt (QApply (loc,exp)) = XML.Elem(("qapply",[]), 
+        expression_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+  | statement_encode ctxt (IfThenElse (e,p1,p2)) = XML.Elem(("ifte",[]),
+        [expression_encode ctxt (e), statement_encode ctxt ( Block p1), statement_encode ctxt ( Block p2)])
+  | statement_encode ctxt (While (e,p1)) = XML.Elem(("while",[]),
+        [expression_encode ctxt (e), statement_encode ctxt ( Block p1)])
 
 fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
       block_decode xml |> map_result Block
@@ -149,14 +157,18 @@ and
     Codec.traverse_results statement_decode stmts
   | block_decode xml = Codec.Failure ("invalid encoding for a block",[xml])
 
-val statement_codec1 = Codec.basic {encode=statement_encode, decode=fn _ => error "Do not call 'decode statement_codec1'"}
-val statement_codec2 = Codec.basic {encode=fn _ => error "Do not call 'decode statement_codec1'", decode=statement_decode}
+val statement_codec = Codec.basic {encode=fn _ => error "statement_codec: encode not allowed", decode=statement_decode}
+fun statement_codec' ctxt = Codec.basic {encode=statement_encode ctxt, decode=statement_decode}
 
 datatype subgoal = Subgoal_QRHL of Relational_Hoare.qrhl_judgment * term list | Subgoal_Ambient of term
 
+fun subgoal_to_term ctxt (Subgoal_QRHL (qrhl, assms)) = 
+    fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms (Relational_Hoare.qrhl_judgment_to_term ctxt qrhl)
+  | subgoal_to_term _ (Subgoal_Ambient t) = t
+
 fun qrhl_encode (ctxt, Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) = XML.Elem(("qrhl",[]),
-  [expression_encode (ctxt,pre), statement_encode (ctxt,Programs.Block p1), statement_encode (ctxt,Programs.Block p2),
-   expression_encode (ctxt,post)])
+  [expression_encode ctxt (pre), statement_encode ctxt (Programs.Block p1), statement_encode ctxt (Programs.Block p2),
+   expression_encode ctxt (post)])
 
 fun qrhl_decode (XML.Elem(("qrhl",[]), [pre,p1,p2,post])) =
   bind_result (fn pre => 
@@ -168,17 +180,17 @@ fun qrhl_decode (XML.Elem(("qrhl",[]), [pre,p1,p2,post])) =
 
 
 fun subgoal_encode ctxt (Subgoal_QRHL (qrhl,assms)) = XML.Elem(("qrhlgoal",[]), 
-  qrhl_encode (ctxt, qrhl) :: map (fn assm => expression_encode (ctxt, assm)) assms) 
-  | subgoal_encode ctxt (Subgoal_Ambient t) = XML.Elem(("ambient",[]), [expression_encode (ctxt, t)])
+  qrhl_encode (ctxt, qrhl) :: map (fn assm => expression_encode ctxt ( assm)) assms) 
+  | subgoal_encode ctxt (Subgoal_Ambient t) = XML.Elem(("ambient",[]), [expression_encode ctxt ( t)])
 
 fun subgoal_decode (XML.Elem(("qrhlgoal",[]), qrhl::assms)) =
   bind_result (fn qrhl => (map_result (fn assms => Subgoal_QRHL (qrhl,assms)) 
       (traverse_results expression_decode assms))) (qrhl_decode qrhl)
-  | subgoal_decode (XML.Elem(("ambient",[]), [t])) = expression_decode t
+  | subgoal_decode (XML.Elem(("ambient",[]), [t])) = expression_decode t |> map_result Subgoal_Ambient
   | subgoal_decode xml = Codec.Failure ("invalid encoding for a subgoal",[xml])
 
-fun subgoal_codec ctxt = Codec.basic {encode=subgoal_encode ctxt, decode=subgoal_decode}
-val subgoal_codec' = Codec.basic {encode=fn _ => error "subgoal_codec': encode not allowed", decode=subgoal_decode}
+val subgoal_codec = Codec.basic {encode=fn _ => error "subgoal_codec: encode not allowed", decode=subgoal_decode}
+fun subgoal_codec' ctxt = Codec.basic {encode=subgoal_encode ctxt, decode=subgoal_decode}
 
 end
 

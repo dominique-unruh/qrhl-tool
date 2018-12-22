@@ -5,12 +5,12 @@ import java.lang
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 
-import info.hupel.isabelle.api.{Configuration, Version}
+import info.hupel.isabelle.api.{Configuration, Version, XML}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Typ => ITyp}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
-import info.hupel.isabelle.{OfficialPlatform, Operation, Platform, System, ml}
+import info.hupel.isabelle.{Codec, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
@@ -22,9 +22,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
+import scalaz.Applicative
 
 object DistributionDirectory {
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
@@ -253,6 +253,18 @@ object Isabelle {
   @deprecated("use Expression.toString","now")
   def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
   def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
+
+  implicit object applicativeXMLResult extends Applicative[XMLResult] {
+    override def point[A](a: => A): XMLResult[A] = Right(a)
+    override def ap[A, B](fa: => XMLResult[A])(f: => XMLResult[A => B]): XMLResult[B] = fa match {
+      case Left(error) => Left(error)
+      case Right(a) => f match {
+        case Left(error) => Left(error)
+        case Right(ab) => Right(ab(a))
+      }
+    }
+  }
+
 
 
   object Thm {
@@ -548,5 +560,16 @@ object Isabelle {
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))
     def simplify(term: Term, facts:List[String]) : (RichTerm,Thm) =
       isabelle.invoke(simplifyTermOp, (term,facts,contextId)) match {case (t,thmId) => (t,new Thm(isabelle,thmId))}
+  }
+
+  object Context {
+    implicit object codec extends Codec[Context] {
+      override val mlType: String = "Proof.context"
+      override def encode(ctxt: Context): XML.Tree = XML.elem(("context", List(("id", ctxt.contextId.toString))),Nil)
+      def decode(isabelle : Isabelle, xml: XML.Tree): XMLResult[Context] = xml match {
+        case XML.Elem(("context", List(("id", id))), Nil) => Right(new Context(isabelle, BigInt(id)))
+      }
+      override def decode(tree: XML.Tree): XMLResult[Context] = throw new RuntimeException("Use Context.codec.decode(Isabelle,XML.Tree) instead")
+    }
   }
 }

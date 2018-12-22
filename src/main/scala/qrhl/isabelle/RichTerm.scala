@@ -8,12 +8,12 @@ import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import org.log4s
 import org.log4s.Logger
 import qrhl.logic.{CVariable, Environment, Variable}
-import scalaz.Applicative
 
 import scala.collection.mutable
 
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
+import Isabelle.applicativeXMLResult
 
 final class RichTerm private(val typ: pure.Typ, val isabelleTerm:Term, val pretty:Option[String]=None) {
   def encodeAsExpression(context: Isabelle.Context) : RichTerm =
@@ -118,17 +118,6 @@ final class RichTerm private(val typ: pure.Typ, val isabelleTerm:Term, val prett
 object RichTerm {
   private val logger: Logger = log4s.getLogger
 
-  implicit object applicativeXMLResult extends Applicative[XMLResult] {
-    override def point[A](a: => A): XMLResult[A] = Right(a)
-    override def ap[A, B](fa: => XMLResult[A])(f: => XMLResult[A => B]): XMLResult[B] = fa match {
-      case Left(error) => Left(error)
-      case Right(a) => f match {
-        case Left(error) => Left(error)
-        case Right(ab) => Right(ab(a))
-      }
-    }
-  }
-
   implicit object typ_tight_codec extends Codec[ITyp] {
     override val mlType: String = "term"
 
@@ -223,7 +212,8 @@ object RichTerm {
     /*override def encode(e: Expression): XML.Tree =
       XML.elem(("expression",Nil),
         List(XML.text(""), term_tight_codec.encode(e.isabelleTerm), XML.elem(("omitted",Nil),Nil)))*/
-    override def encode(e: RichTerm): XML.Tree = throw new RuntimeException("Do not call this!")
+    override def encode(e: RichTerm): XML.Tree = XML.Elem(("expression",Nil), List(term_tight_codec.encode(e.isabelleTerm)))
+    
     override def decode(tree: XML.Tree): XMLResult[RichTerm] = tree match {
       case XML.Elem(("expression",Nil), List(XML.Text(str), termXML, typXML)) =>
         for (typ <- typ_tight_codec.decode(typXML);

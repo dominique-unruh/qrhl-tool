@@ -2,10 +2,9 @@ package qrhl
 
 import java.nio.file.{Files, Path, Paths}
 
-import info.hupel.isabelle.Operation
+import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Term, Typ => ITyp}
-import info.hupel.isabelle.pure
 import org.log4s
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.isabelle.Isabelle.Thm
@@ -15,9 +14,13 @@ import qrhl.toplevel.{Command, Parser, ParserContext}
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
+import info.hupel.isabelle.api.XML
 
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
+import Isabelle.applicativeXMLResult
+import Isabelle.Context.codec
+import Subgoal.codec
 
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
@@ -44,6 +47,37 @@ sealed trait Subgoal {
 
 object Subgoal {
   private val logger = log4s.getLogger
+
+  implicit object codec extends Codec[Subgoal] {
+    override val mlType: String = "QRHL_Operations.subgoal"
+
+    import scalaz._
+    import std.list._
+    import syntax.traverse._
+
+    override def encode(t: Subgoal): XML.Tree = t match {
+      case QRHLSubgoal(left, right, pre, post, assms) =>
+        val leftXml = Statement.codec.encode(left)
+        val rightXml = Statement.codec.encode(right)
+        val preXml = RichTerm.codec.encode(pre)
+        val postXml = RichTerm.codec.encode(post)
+        val assmsXml = assms.map(RichTerm.codec.encode)
+        XML.Elem(("qrhlgoal",Nil), XML.Elem(("qrhl",Nil), List(preXml, leftXml, rightXml, postXml)) :: assmsXml)
+    }
+
+    override def decode(xml: XML.Tree): XMLResult[Subgoal] = xml match {
+      case XML.Elem(("qrhlgoal",Nil), XML.Elem(("qrhl",Nil),List(preXml,leftXml,rightXml,postXml))::assmsXml) =>
+        for (pre <- RichTerm.codec.decode(preXml);
+             left <- Statement.codec.decode(leftXml);
+             right <- Statement.codec.decode(rightXml);
+             post <- RichTerm.codec.decode(postXml);
+             assms <- assmsXml.traverse(RichTerm.codec.decode))
+          yield QRHLSubgoal(left.asInstanceOf[Block], right.asInstanceOf[Block], pre, post, assms)
+      case XML.Elem(("ambient",Nil), List(termXml)) =>
+        for (t <- RichTerm.codec.decode(termXml)) yield AmbientSubgoal(t)
+      case badXml => Left("invalid encoding for a subgoal",List(badXml))
+    }
+  }
 
   def printOracles(thms : Thm*): Unit = {
     for (thm <- thms)
@@ -106,15 +140,17 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
         throw UserException(s"Undeclared variable $x in assumptions")
   }
 
-  // TODO: do this in one go in Isabelle
   override def toTerm(context: Isabelle.Context): RichTerm = {
-    val leftTerm = left.programListTerm(context).isabelleTerm
-    val rightTerm = right.programListTerm(context).isabelleTerm
-    val preTerm = pre.encodeAsExpression(context).isabelleTerm
-    val postTerm = post.encodeAsExpression(context).isabelleTerm
-    val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
-    val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
-    RichTerm(Isabelle.boolT, term)
+//    val leftTerm = left.programListTerm(context).isabelleTerm
+//    val rightTerm = right.programListTerm(context).isabelleTerm
+//    val preTerm = pre.encodeAsExpression(context).isabelleTerm
+//    val postTerm = post.encodeAsExpression(context).isabelleTerm
+//    val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
+//    val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
+//    RichTerm(Isabelle.boolT, term)
+    // TODO: make global
+    val subgoal_to_term_op = Operation.implicitly[(Isabelle.Context,Subgoal),RichTerm]("subgoal_to_term")
+    context.isabelle.invoke(subgoal_to_term_op, (context, this))
   }
 
   /** Not including ambient vars in nested programs (via Call) */
