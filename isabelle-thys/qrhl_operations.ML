@@ -152,6 +152,33 @@ and
 val statement_codec1 = Codec.basic {encode=statement_encode, decode=fn _ => error "Do not call 'decode statement_codec1'"}
 val statement_codec2 = Codec.basic {encode=fn _ => error "Do not call 'decode statement_codec1'", decode=statement_decode}
 
+datatype subgoal = Subgoal_QRHL of Relational_Hoare.qrhl_judgment * term list | Subgoal_Ambient of term
+
+fun qrhl_encode (ctxt, Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) = XML.Elem(("qrhl",[]),
+  [expression_encode (ctxt,pre), statement_encode (ctxt,Programs.Block p1), statement_encode (ctxt,Programs.Block p2),
+   expression_encode (ctxt,post)])
+
+fun qrhl_decode (XML.Elem(("qrhl",[]), [pre,p1,p2,post])) =
+  bind_result (fn pre => 
+  bind_result (fn p1 => 
+  bind_result (fn p2 => 
+  map_result (fn post => Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) (expression_decode post))
+  (block_decode p2)) (block_decode p1)) (expression_decode pre)
+  | qrhl_decode xml = Codec.Failure ("invalid encoding for a qrhl statement",[xml])
+
+
+fun subgoal_encode ctxt (Subgoal_QRHL (qrhl,assms)) = XML.Elem(("qrhlgoal",[]), 
+  qrhl_encode (ctxt, qrhl) :: map (fn assm => expression_encode (ctxt, assm)) assms) 
+  | subgoal_encode ctxt (Subgoal_Ambient t) = XML.Elem(("ambient",[]), [expression_encode (ctxt, t)])
+
+fun subgoal_decode (XML.Elem(("qrhlgoal",[]), qrhl::assms)) =
+  bind_result (fn qrhl => (map_result (fn assms => Subgoal_QRHL (qrhl,assms)) 
+      (traverse_results expression_decode assms))) (qrhl_decode qrhl)
+  | subgoal_decode (XML.Elem(("ambient",[]), [t])) = expression_decode t
+  | subgoal_decode xml = Codec.Failure ("invalid encoding for a subgoal",[xml])
+
+fun subgoal_codec ctxt = Codec.basic {encode=subgoal_encode ctxt, decode=subgoal_decode}
+val subgoal_codec' = Codec.basic {encode=fn _ => error "subgoal_codec': encode not allowed", decode=subgoal_decode}
 
 end
 

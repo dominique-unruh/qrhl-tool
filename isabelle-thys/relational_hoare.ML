@@ -10,4 +10,12 @@ fun read_predicate ctx str =
       val t = Syntax.check_term ctx (Type.constraint \<^typ>\<open>predicate\<close> preterm)
   in Expressions.term_to_expression ctx t end
 
+datatype qrhl_judgment = QRHL_Judgment of term * Programs.statement list * Programs.statement list * term
+
+fun qrhl_judgment_to_term ctxt (QRHL_Judgment (pre, p1, p2, post)) =
+  \<^const>\<open>qrhl\<close>
+    $ Expressions.term_to_expression ctxt pre
+    $ Programs.statements_to_term ctxt p1 $ Programs.statements_to_term ctxt p2
+    $ Expressions.term_to_expression ctxt post
+
 end
