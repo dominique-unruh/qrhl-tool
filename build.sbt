@@ -26,7 +26,7 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 //isabelleSourceFilter := (- ".*") && (- "*~")
 //isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
 
-libraryDependencies ++= { val version = "1.0.1"; Seq(
+libraryDependencies ++= { val version = "1.1.0-RC1"; Seq(
   "info.hupel" %% "libisabelle" % version,
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version

@@ -3,7 +3,6 @@ package qrhl.toplevel
 import java.io.{BufferedReader, FileReader, Reader, StringReader}
 import java.nio.file.Path
 
-import info.hupel.isabelle.Operation.ProverException
 import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder
 import org.jline.terminal.impl.DumbTerminal
@@ -14,6 +13,7 @@ import qrhl.{State, UserException}
 import scala.io.StdIn
 import scala.util.matching.Regex
 import Toplevel.logger
+import info.hupel.isabelle.{Operation, ProverResult}
 
 /** Not thread safe */
 class Toplevel(initialState : State = State.empty) {
@@ -151,7 +151,7 @@ class Toplevel(initialState : State = State.empty) {
       } catch {
         case UserException(msg) =>
           println("[ERROR] "+msg)
-        case e: ProverException =>
+        case e: ProverResult.Failure =>
           println("[ERROR] (in Isabelle) "+Isabelle.symbolsToUnicode(e.msg))
           logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
         case e : Throwable =>
