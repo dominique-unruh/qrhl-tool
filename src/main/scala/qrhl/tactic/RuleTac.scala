@@ -13,7 +13,7 @@ import scala.collection.immutable.Nil
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 
-case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => rule }) {
+case class RuleTac(rule:String) extends IsabelleTac[String]("apply_rule", { _ => rule }) {
 //  override def apply(state: State, goal: Subgoal): List[Subgoal] =
 //    goal match {
 //      case _: QRHLSubgoal => throw UserException("Expected an ambient logic subgoal")
@@ -36,6 +36,6 @@ case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => 
 
 object RuleTac {
   private val logger = log4s.getLogger
-  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[RichTerm],BigInt)]] =
-    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[RichTerm],BigInt)]]("applyRule")
+//  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[RichTerm],BigInt)]] =
+//    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[RichTerm],BigInt)]]("applyRule")
 }

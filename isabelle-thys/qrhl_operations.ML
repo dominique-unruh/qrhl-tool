@@ -15,6 +15,22 @@ in
   id
 end
 
+structure Terms = struct
+val table = Synchronized.var ("term_table") (Inttab.empty, Termtab.empty)
+fun term_to_id ctxt t = Synchronized.change_result table (fn (tab1,tab2) =>
+  case Termtab.lookup tab2 t of SOME id => (id,(tab1,tab2))
+  | NONE => let
+      val id = serial ()
+      val tab2' = Termtab.update_new (t,id) tab2
+      val tab1' = Inttab.update_new (id, (t, Lazy.lazy (fn _ => YXML.content_of (Syntax.string_of_term ctxt t)))) tab1
+    in (id,(tab1',tab2')) end)
+fun lookup_id id = case Inttab.lookup (Synchronized.value table |> fst) id of NONE => error "QRHL_Operations.Terms.lookup_id"
+  | SOME x => x
+fun id_to_term id = fst (lookup_id id)
+fun id_to_string id = snd (lookup_id id) |> Lazy.force
+end
+
+
 fun context_decode (XML.Elem(("context",[("id",id)]),[])) = Refs.Ctxt.read (parse_int id) |> Codec.Success
   | context_decode xml = Codec.Failure ("invalid encoding for a context",[xml])
 
@@ -22,8 +38,15 @@ fun context_encode ctxt = let val id = make_ctxt_ref ctxt in XML.Elem(("context"
 
 val context_codec = Codec.basic {encode=context_encode, decode=context_decode}
 
+fun thm_decode (XML.Elem(("thm",[("id",id)]),[])) = Refs.Thm.read (parse_int id) |> Codec.Success
+  | thm_decode xml = Codec.Failure ("invalid encoding for a thm",[xml])
+
+fun thm_encode ctxt = let val id = make_thm_ref ctxt in XML.Elem(("thm",[("id",string_of_int id)]),[]) end
+
+val thm_codec = Codec.basic {encode=thm_encode, decode=thm_decode}
+
 fun tac_dummy_thm NONE = NONE
-  | tac_dummy_thm (SOME ts) = SOME (ts,0)
+  | tac_dummy_thm (SOME ts) = SOME (ts,@{thm TrueI})
 
 fun parse_term ctx str T = let
   val parsed = Syntax.parse_term ctx str
@@ -87,14 +110,19 @@ val term_tight_codec = Codec.basic { encode=term_tight_encode, decode=term_tight
 
 (** A codec for terms that additionally attaches a human readable representation *)
 
+(* TODO rename expression -> richterm *)
+
 fun expression_encode ctxt t = let
   (* val ctxt = Context.the_local_context () *)
-  val str = YXML.content_of (Syntax.string_of_term ctxt t)
-  val xml = XML.Elem (("expression",[]),[XML.Text str, term_tight_encode t, typ_tight_encode (fastype_of t)])
+  (* val str = YXML.content_of (Syntax.string_of_term ctxt t) *)
+  val id = Terms.term_to_id ctxt t |> string_of_int
+  (* val xml = XML.Elem (("expression",[]),[XML.Text str, term_tight_encode t, typ_tight_encode (fastype_of t)]) *)
+  val xml = XML.Elem(("expression",[("id",id)]), [])
   in xml end
 (* fun expression_decode (XML.Elem (("expression",[]),[XML.Text _, xml, _])) = term_tight_decode xml
   | expression_decode xml = Codec.Failure ("invalid encoding for a term (expression codec)",[xml]) *)
 fun expression_decode (XML.Elem (("expression",[]),[t])) = term_tight_decode t
+  | expression_decode (XML.Elem(("expression",[("id",id)]), [])) = Terms.id_to_term (parse_int id) |> Codec.Success
 
 val expression_codec = Codec.basic { encode=fn _ => error "expression_codec: encode not allowed", decode=expression_decode }
 fun expression_codec' ctxt = Codec.basic { encode=expression_encode ctxt, decode=expression_decode }
@@ -192,6 +220,21 @@ fun subgoal_decode (XML.Elem(("qrhlgoal",[]), qrhl::assms)) =
 val subgoal_codec = Codec.basic {encode=fn _ => error "subgoal_codec: encode not allowed", decode=subgoal_decode}
 fun subgoal_codec' ctxt = Codec.basic {encode=subgoal_encode ctxt, decode=subgoal_decode}
 
+fun apply_tactic_on_term_concl tac (arg,subgoal,ctxt) = let
+  val goal = subgoal_to_term ctxt subgoal
+  val subgoals = Tactics.tac_on_term_concl (tac ctxt arg) ctxt goal |> tac_dummy_thm
+  in subgoals |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) thm_codec)) end
+
+fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
+  val goal = subgoal_to_term ctxt subgoal
+  val cgoal = Thm.cterm_of ctxt (HOLogic.mk_Trueprop goal)
+  val goal' = Goal.init cgoal
+  val goal'' = case SINGLE (tac ctxt arg) goal' of
+                NONE => raise TERM(name arg^" could not be applied", [goal])
+               | SOME x => x
+  val subgoals = Thm.prems_of goal''
+  val subgoals' = map HOLogic.dest_Trueprop subgoals
+  in SOME (subgoals',goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) thm_codec)) end
 end
 
 end

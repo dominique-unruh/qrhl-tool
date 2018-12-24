@@ -405,7 +405,7 @@ fun fixTac term var =
   (res,typ)
   end
 
-fun applyRule name goal ctx =
+(* fun applyRule name goal ctx =
   let val thms = Proof_Context.get_thms ctx name
       val cgoal = Thm.cterm_of ctx (HOLogic.mk_Trueprop goal)
       val goal' = Goal.init cgoal
@@ -417,7 +417,7 @@ fun applyRule name goal ctx =
   in
     (* subgoals' |> map (Thm.cterm_of ctx) |> @{make_string} |> error *)
     (subgoals',goal'')
-  end
+  end *)
 
 
 

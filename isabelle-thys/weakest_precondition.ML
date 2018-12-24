@@ -111,8 +111,8 @@ fun wp_seq_tac left ctxt i =
   ) (i+1)
  *)
 
-fun wp_tac_on_term left ctxt = 
-  Tactics.tac_on_term_concl (wp_seq_tac left ctxt 1) ctxt
+(* fun wp_tac_on_term left ctxt = 
+  Tactics.tac_on_term_concl (wp_seq_tac left ctxt 1) ctxt *)
 
 
 end

@@ -63,6 +63,8 @@ object Subgoal {
         val postXml = RichTerm.codec.encode(post)
         val assmsXml = assms.map(RichTerm.codec.encode)
         XML.Elem(("qrhlgoal",Nil), XML.Elem(("qrhl",Nil), List(preXml, leftXml, rightXml, postXml)) :: assmsXml)
+      case AmbientSubgoal(goal) =>
+        XML.Elem(("ambient",Nil), List(RichTerm.codec.encode(goal)))
     }
 
     override def decode(xml: XML.Tree): XMLResult[Subgoal] = xml match {

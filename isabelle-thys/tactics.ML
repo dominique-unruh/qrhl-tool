@@ -103,7 +103,7 @@ fun apply_to_concl f (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) =
       HOLogic.mk_imp (a, apply_to_concl f b)
   | apply_to_concl f b = f b
 
-fun seq_tac_on_term i j B ctx = tac_on_term_concl (seq_tac i j B ctx 1) ctx
+(* fun seq_tac_on_term i j B ctx = tac_on_term_concl (seq_tac i j B ctx 1) ctx *)
 
 (* fun get_wp1_rule rule = get_wp1_tac (fn ctxt => resolve_tac ctxt rule 1)
 

@@ -24,6 +24,7 @@ import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
+import qrhl.isabelle.Isabelle.Thm
 import scalaz.Applicative
 
 object DistributionDirectory {
@@ -269,7 +270,18 @@ object Isabelle {
 
   object Thm {
     private val logger = log4s.getLogger
-    val show_oracles_lines_op : Operation[BigInt, List[String]] = Operation.implicitly[BigInt,List[String]]("show_oracles_lines")
+    val show_oracles_lines_op: Operation[BigInt, List[String]] = Operation.implicitly[BigInt, List[String]]("show_oracles_lines")
+
+    implicit def codec(implicit isabelle: Isabelle): Codec[Isabelle.Thm] =
+      new Codec[Isabelle.Thm] {
+        override val mlType: String = "thm"
+
+        override def encode(thm: Thm): XML.Tree = XML.elem(("thm", List(("id", thm.thmId.toString))), Nil)
+
+        override def decode(xml: XML.Tree): XMLResult[Thm] = xml match {
+          case XML.Elem(("thm", List(("id", id))), Nil) => Right(new Thm(isabelle, BigInt(id)))
+        }
+    }
   }
 
   private val logger = log4s.getLogger
@@ -569,6 +581,7 @@ object Isabelle {
       def decode(isabelle : Isabelle, xml: XML.Tree): XMLResult[Context] = xml match {
         case XML.Elem(("context", List(("id", id))), Nil) => Right(new Context(isabelle, BigInt(id)))
       }
+      // TODO: use an implicit isabelle argument
       override def decode(tree: XML.Tree): XMLResult[Context] = throw new RuntimeException("Use Context.codec.decode(Isabelle,XML.Tree) instead")
     }
   }

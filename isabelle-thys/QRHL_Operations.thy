@@ -150,15 +150,20 @@ operation_setup rndWp2 = {*
          QRHL.rndWp2 v1 T1 e1 v2 T2 e2 f B |> expression_encode ctxt end}
 *}
 
-operation_setup applyRule = {*
-  {from_lib = Codec.triple Codec.string term_tight_codec Codec.int,
+operation_setup apply_rule = {*
+  {from_lib = Codec.triple Codec.string subgoal_codec context_codec,
    to_lib = Codec.id,
-   action = fn (name,goal,ctx_id) => let
+   action = apply_tactic_on_term 
+      (fn ctxt => fn name => resolve_tac ctxt (Proof_Context.get_thms ctxt name) 1) 
+      (fn rule => "rule "^rule)
+
+(*  fn (name,goal,ctx_id) => let
      val ctxt = Refs.Ctxt.read ctx_id
      val (ts,thm) = QRHL.applyRule name goal ctxt
      in SOME (ts,make_thm_ref thm) 
           |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) Codec.int))
-      end}
+      end *)
+}
 *}
 
 operation_setup simplify_term = {*
@@ -197,6 +202,10 @@ operation_setup expression_to_term = {*
 *}
 
 operation_setup seq_tac = {*
+  {from_lib = Codec.triple (Codec.triple Codec.int Codec.int expression_codec) subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term_concl (fn ctxt => fn (i,j,B) => Tactics.seq_tac i j B ctxt 1)}
+(* 
   {from_lib = Codec.triple (Codec.triple Codec.int Codec.int term_tight_codec) term_tight_codec Codec.int,
    to_lib = Codec.id,
    action = fn ((i,j,B),goal,ctx_id) => let
@@ -204,25 +213,25 @@ operation_setup seq_tac = {*
      val result = Tactics.seq_tac_on_term i j B ctxt goal |> tac_dummy_thm
     in result 
         |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) Codec.int))
-    end}
+    end} *)
 *}
 
 operation_setup wp_tac = {*
-  {from_lib = Codec.triple Codec.bool term_tight_codec Codec.int,
+  {from_lib = Codec.triple Codec.bool subgoal_codec context_codec,
    to_lib = Codec.id,
-   action = fn (left,goal,ctx_id) => let
+   action = apply_tactic_on_term_concl (fn ctxt => fn left => Weakest_Precondition.wp_seq_tac left ctxt 1)}
+(* fn (left,goal,ctx_id) => let
      val ctxt = Refs.Ctxt.read ctx_id
      val result = Weakest_Precondition.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm
-    in result |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) Codec.int)) end}
+    in result |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) Codec.int)) end} *)
 *}
 
+
+
 operation_setup joint_measure_simple_tac = {*
-  {from_lib = Codec.triple Codec.unit term_tight_codec Codec.int,
+  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
-   action = fn ((),goal,ctx_id) => 
-     let val ctxt = Refs.Ctxt.read ctx_id
-         val subgoals = Tactics.tac_on_term_concl (Joint_Measure.joint_measure_simple_seq_tac ctxt 1) ctxt goal |> tac_dummy_thm
-     in subgoals |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) Codec.int)) end}
+   action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Measure.joint_measure_simple_seq_tac ctxt 1)}
 *}
 
 (* (* TODO remove *)
@@ -266,5 +275,15 @@ operation_setup subgoal_to_term = \<open>
    to_lib = Codec.id,
    action = fn (ctxt, subgoal) => subgoal_to_term ctxt subgoal
       |> Codec.encode (expression_codec' ctxt)}\<close>
+
+operation_setup retrieve_term = \<open>
+  {from_lib = Codec.int,
+   to_lib = Codec.tuple typ_tight_codec term_tight_codec,
+   action = fn id => let val t = Terms.id_to_term id in (fastype_of t, t) end}\<close>
+
+operation_setup retrieve_term_string = \<open>
+  {from_lib = Codec.int,
+   to_lib = Codec.string,
+   action = Terms.id_to_string}\<close>
 
 end

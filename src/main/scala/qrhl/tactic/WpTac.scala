@@ -10,7 +10,7 @@ import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 
 case class WpTac(left:Boolean)
-  extends IsabelleTac(WpTac.wpTacOp, { context => left }) {
+  extends IsabelleTac[Boolean]("wp_tac", { _ => left }) {
   override def toString: String = s"wp(${if (left) "left" else "right"})"
 
   override def check(state: State, goal: Subgoal, newGoals: List[Subgoal]): Unit = {
@@ -111,8 +111,8 @@ case class WpTac(left:Boolean)
 }*/
 
 object WpTac {
-  val wpTacOp: Operation[(Boolean, Term, BigInt), Option[(List[RichTerm],BigInt)]] =
-    Operation.implicitly[(Boolean, Term, BigInt), Option[(List[RichTerm],BigInt)]]("wp_tac")
+//  val wpTacOp: Operation[(Boolean, Term, BigInt), Option[(List[RichTerm],BigInt)]] =
+//    Operation.implicitly[(Boolean, Term, BigInt), Option[(List[RichTerm],BigInt)]]("wp_tac")
 
 /*  val sampleWpOp: Operation[((String, ITyp), (Term, Term)), Expression] =
     Operation.implicitly[((String,ITyp), (Term, Term)), Term]("sampleWp")

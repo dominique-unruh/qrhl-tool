@@ -4,18 +4,39 @@ import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.hol.HOLogic.boolT
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, TFree, TVar, Term, Type, Var, Typ => ITyp}
-import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
+import info.hupel.isabelle.{Codec, DecodingException, Operation, XMLResult, pure}
 import org.log4s
 import org.log4s.Logger
 import qrhl.logic.{CVariable, Environment, Variable}
 
 import scala.collection.mutable
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import Isabelle.applicativeXMLResult
 
-final class RichTerm private(val typ: pure.Typ, val isabelleTerm:Term, val pretty:Option[String]=None) {
+final class RichTerm private(id: Option[BigInt]=None, _typ: Option[pure.Typ]=None, _isabelleTerm:Option[Term]=None, _pretty:Option[String]=None) {
+  class debug_codec[A](codec : Codec[A]) extends Codec[A] { // TODO remove
+    override val mlType: String = codec.mlType
+
+    override def encode(t: A): XML.Tree = codec.encode(t)
+
+    override def decode(tree: XML.Tree): XMLResult[A] = {
+      RichTerm.logger.debug(tree.toString)
+      codec.decode(tree)
+    }
+  }
+
+  lazy val (typ,isabelleTerm) : (pure.Typ,Term) = (_typ,_isabelleTerm) match {
+    case (Some(ty),Some(te)) => (ty,te)
+    case _ =>
+      val retrieve_term_op = Operation.implicitly[BigInt,(pure.Typ,Term)]("retrieve_term")(implicitly, Codec.tuple(typ_tight_codec,term_tight_codec)) // TODO move
+//      try {
+        Isabelle.theContext.isabelle.invoke(retrieve_term_op, id.get)
+//      } catch {
+//        case e @ DecodingException(msg,body) => print(body); throw e
+//      }
+  }
+
   def encodeAsExpression(context: Isabelle.Context) : RichTerm =
     context.isabelle.invoke(RichTerm.termToExpressionOp, (context.contextId, isabelleTerm))
 
@@ -59,9 +80,14 @@ final class RichTerm private(val typ: pure.Typ, val isabelleTerm:Term, val prett
     }
   }
 
-  override lazy val toString: String = pretty match {
+  override lazy val toString: String = _pretty match {
     case Some(s) => s
-    case _ => Isabelle.theContext.prettyExpression(isabelleTerm)
+    case _ => id match {
+      case Some(id2) =>
+        val retrieve_term_string_op = Operation.implicitly[BigInt,String]("retrieve_term_string") // TODO move
+        Isabelle.symbolsToUnicode(Isabelle.theContext.isabelle.invoke(retrieve_term_string_op, id.get))
+      case None => Isabelle.theContext.prettyExpression (isabelleTerm)
+    }
   }
 
 //  val isabelleTerm : Term = isabelleTerm
@@ -72,7 +98,8 @@ final class RichTerm private(val typ: pure.Typ, val isabelleTerm:Term, val prett
       case (t,thm) => (Expression(typ, t), thm)
     }*/
 
-  def map(f : Term => Term) : RichTerm = new RichTerm(typ, f(isabelleTerm))
+  def map(f : Term => Term) : RichTerm = RichTerm(typ, f(isabelleTerm))
+
   def substitute(v:CVariable, repl:RichTerm) : RichTerm = {
     assert(repl.typ==v.valueTyp)
     map(RichTerm.substitute(v.name, repl.isabelleTerm, _))
@@ -89,7 +116,7 @@ final class RichTerm private(val typ: pure.Typ, val isabelleTerm:Term, val prett
       case Const(_,_) | Bound(_) | Var(_,_) => t
       case Abs(name,typ2,body) => Abs(name,typ2,idx(body))
     }
-    new RichTerm(typ,idx(isabelleTerm))
+    new RichTerm(_typ = Some(typ), _isabelleTerm = Some(idx(isabelleTerm)))
   }
 
 
@@ -97,19 +124,19 @@ final class RichTerm private(val typ: pure.Typ, val isabelleTerm:Term, val prett
       val t = e.isabelleTerm
       val predicateT = Isabelle.predicateT // Should be the type of t
       val newT =  Const ("Orderings.ord_class.less_eq", ITyp.funT(predicateT, ITyp.funT(predicateT, boolT))) $ isabelleTerm $ t
-      new RichTerm(Isabelle.boolT,newT)
+      RichTerm(Isabelle.boolT,newT)
   }
 
   def implies(e: RichTerm): RichTerm = {
     val t = e.isabelleTerm
     val newT = HOLogic.imp $ isabelleTerm $ t
 //    val typ = Typ.bool(null)
-    new RichTerm(Isabelle.boolT,newT)
+    RichTerm(Isabelle.boolT,newT)
   }
 
   def not: RichTerm = {
     assert(typ==HOLogic.boolT)
-    new RichTerm(typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
+    RichTerm(typ,Const("HOL.Not",HOLogic.boolT -->: HOLogic.boolT) $ isabelleTerm)
   }
 
 }
@@ -215,10 +242,12 @@ object RichTerm {
     override def encode(e: RichTerm): XML.Tree = XML.Elem(("expression",Nil), List(term_tight_codec.encode(e.isabelleTerm)))
     
     override def decode(tree: XML.Tree): XMLResult[RichTerm] = tree match {
-      case XML.Elem(("expression",Nil), List(XML.Text(str), termXML, typXML)) =>
-        for (typ <- typ_tight_codec.decode(typXML);
-             term <- term_tight_codec.decode(termXML))
-        yield new RichTerm(typ,term,Some(Isabelle.symbolsToUnicode(str)))
+      case XML.Elem(("expression",List(("id",id))),Nil) =>
+        Right(new RichTerm(id=Some(BigInt(id))))
+//      case XML.Elem(("expression",Nil), List(XML.Text(str), termXML, typXML)) =>
+//        for (typ <- typ_tight_codec.decode(typXML);
+//             term <- term_tight_codec.decode(termXML))
+//        yield new RichTerm(typ,term,Some(Isabelle.symbolsToUnicode(str)))
     }
   }
 
@@ -243,7 +272,7 @@ object RichTerm {
   }
 
   def apply(typ: pure.Typ, term:Term) : RichTerm =
-    new RichTerm(typ, term)
+    new RichTerm(_typ=Some(typ), _isabelleTerm = Some(term))
 
   def unapply(e: RichTerm): Option[Term] = Some(e.isabelleTerm)
 
