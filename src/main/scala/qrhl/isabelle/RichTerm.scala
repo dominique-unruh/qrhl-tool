@@ -243,11 +243,11 @@ object RichTerm {
       case None => XML.Elem(("richterm",Nil), List(term_tight_codec.encode(e.isabelleTerm)))
       case Some(id2) => XML.Elem(("richterm",List(("id",id2.toString))),Nil)
     }
-    
+
     override def decode(tree: XML.Tree): XMLResult[RichTerm] = tree match {
       case XML.Elem(("richterm",List(("id",id))),List(typXml)) =>
         for (typ <- typ_tight_codec.decode(typXml))
-          yield new RichTerm(id=Some(BigInt(id)), typ = typ)
+          yield RichTerm(id=BigInt(id), typ = typ)
 //      case XML.Elem(("richterm",Nil), List(XML.Text(str), termXML, typXML)) =>
 //        for (typ <- typ_tight_codec.decode(typXML);
 //             term <- term_tight_codec.decode(termXML))
@@ -277,6 +277,10 @@ object RichTerm {
 
   def apply(typ: pure.Typ, term:Term) : RichTerm =
     new RichTerm(typ=typ, _isabelleTerm = Some(term))
+
+  private val cache = new mutable.WeakHashMap[BigInt,RichTerm]()
+  def apply(id : BigInt, typ : ITyp) : RichTerm =
+    cache.getOrElseUpdate(id, new RichTerm(id = Some(id), typ = typ))
 
   def unapply(e: RichTerm): Option[Term] = Some(e.isabelleTerm)
 
