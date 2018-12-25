@@ -29,7 +29,7 @@ fun expression_to_term ctxt t =
 (*      val vars = Prog_Variables.parse_varlist vs 
           |> map (fn (x,T) => Free (String.extract (x,4,NONE),T)) *) (* unsafe, not checking whether the var name is wellformed *)
       val vT = Prog_Variables.parse_varterm vs
-      val arg = map_varterm_tuple (fn (x,T) => Free (String.extract (x,4,NONE),T)) vT
+      val arg = map_varterm_tuple (fn (x,T) => Free (Prog_Variables.strip_var_prefix x,T)) vT
       val e' = e $ arg
       val e'' = Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) @{thms case_prod_conv[THEN eq_reflection]} [] e'
   in

@@ -13,6 +13,11 @@ fun dest_variableT (Type(\<^type_name>\<open>variable\<close>, [T])) = T
 fun dest_variablesT (Type(\<^type_name>\<open>variables\<close>, [T])) = T
   | dest_variablesT T = raise TYPE("dest_variablesT", [T], [])
 
+fun strip_var_prefix x = if String.isPrefix "var_" x 
+  then String.extract (x,4,NONE) 
+  else error ("strip_var_prefix: Expected string starting with var_, not "^x)
+
+
 local
   fun mk_var_eq (v as Const ("_constrain", _) $ Free (n, _) $ Free _) =
       @{const HOL.eq("char list")} $ (Const (\<^const_name>\<open>variable_name\<close>, dummyT) $ v) $ HOLogic.mk_string n

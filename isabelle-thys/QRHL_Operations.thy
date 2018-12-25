@@ -278,8 +278,8 @@ operation_setup subgoal_to_term = \<open>
 
 operation_setup retrieve_term = \<open>
   {from_lib = Codec.int,
-   to_lib = Codec.tuple typ_tight_codec term_tight_codec,
-   action = fn id => let val t = Terms.id_to_term id in (fastype_of t, t) end}\<close>
+   to_lib = term_tight_codec,
+   action = fn id => Terms.id_to_term id}\<close>
 
 operation_setup retrieve_term_string = \<open>
   {from_lib = Codec.int,

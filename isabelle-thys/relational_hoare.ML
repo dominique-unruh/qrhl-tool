@@ -18,4 +18,10 @@ fun qrhl_judgment_to_term ctxt (QRHL_Judgment (pre, p1, p2, post)) =
     $ Programs.statements_to_term ctxt p1 $ Programs.statements_to_term ctxt p2
     $ Expressions.term_to_expression ctxt post
 
+fun term_to_qrhl_judgment ctxt (Const(\<^const_name>\<open>qrhl\<close>,_) $ pre $ p1 $ p2 $ post) =
+  QRHL_Judgment (Expressions.expression_to_term ctxt pre,
+                 Programs.term_to_statements ctxt p1,
+                 Programs.term_to_statements ctxt p2,
+                 Expressions.expression_to_term ctxt post)
+
 end

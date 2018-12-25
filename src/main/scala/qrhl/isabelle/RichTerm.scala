@@ -14,7 +14,7 @@ import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import Isabelle.applicativeXMLResult
 
-final class RichTerm private(id: Option[BigInt]=None, _typ: Option[pure.Typ]=None, _isabelleTerm:Option[Term]=None, _pretty:Option[String]=None) {
+final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _isabelleTerm:Option[Term]=None, _pretty:Option[String]=None) {
   class debug_codec[A](codec : Codec[A]) extends Codec[A] { // TODO remove
     override val mlType: String = codec.mlType
 
@@ -26,12 +26,12 @@ final class RichTerm private(id: Option[BigInt]=None, _typ: Option[pure.Typ]=Non
     }
   }
 
-  lazy val (typ,isabelleTerm) : (pure.Typ,Term) = (_typ,_isabelleTerm) match {
-    case (Some(ty),Some(te)) => (ty,te)
-    case _ =>
-      val retrieve_term_op = Operation.implicitly[BigInt,(pure.Typ,Term)]("retrieve_term")(implicitly, Codec.tuple(typ_tight_codec,term_tight_codec)) // TODO move
+  lazy val isabelleTerm : Term = _isabelleTerm match {
+    case Some(te) => te
+    case None =>
+      val retrieve_term_op = Operation.implicitly[BigInt, Term]("retrieve_term")(implicitly, term_tight_codec) // TODO move
 //      try {
-        Isabelle.theContext.isabelle.invoke(retrieve_term_op, id.get)
+      Isabelle.theContext.isabelle.invoke(retrieve_term_op, id.get)
 //      } catch {
 //        case e @ DecodingException(msg,body) => print(body); throw e
 //      }
@@ -116,7 +116,7 @@ final class RichTerm private(id: Option[BigInt]=None, _typ: Option[pure.Typ]=Non
       case Const(_,_) | Bound(_) | Var(_,_) => t
       case Abs(name,typ2,body) => Abs(name,typ2,idx(body))
     }
-    new RichTerm(_typ = Some(typ), _isabelleTerm = Some(idx(isabelleTerm)))
+    new RichTerm(typ = typ, _isabelleTerm = Some(idx(isabelleTerm)))
   }
 
 
@@ -239,11 +239,15 @@ object RichTerm {
     /*override def encode(e: Expression): XML.Tree =
       XML.elem(("expression",Nil),
         List(XML.text(""), term_tight_codec.encode(e.isabelleTerm), XML.elem(("omitted",Nil),Nil)))*/
-    override def encode(e: RichTerm): XML.Tree = XML.Elem(("expression",Nil), List(term_tight_codec.encode(e.isabelleTerm)))
+    override def encode(e: RichTerm): XML.Tree = e.id match {
+      case None => XML.Elem(("expression",Nil), List(term_tight_codec.encode(e.isabelleTerm)))
+      case Some(id2) => XML.Elem(("expression",List(("id",id2.toString))),Nil)
+    }
     
     override def decode(tree: XML.Tree): XMLResult[RichTerm] = tree match {
-      case XML.Elem(("expression",List(("id",id))),Nil) =>
-        Right(new RichTerm(id=Some(BigInt(id))))
+      case XML.Elem(("expression",List(("id",id))),List(typXml)) =>
+        for (typ <- typ_tight_codec.decode(typXml))
+          yield new RichTerm(id=Some(BigInt(id)), typ = typ)
 //      case XML.Elem(("expression",Nil), List(XML.Text(str), termXML, typXML)) =>
 //        for (typ <- typ_tight_codec.decode(typXML);
 //             term <- term_tight_codec.decode(termXML))
@@ -272,7 +276,7 @@ object RichTerm {
   }
 
   def apply(typ: pure.Typ, term:Term) : RichTerm =
-    new RichTerm(_typ=Some(typ), _isabelleTerm = Some(term))
+    new RichTerm(typ=typ, _isabelleTerm = Some(term))
 
   def unapply(e: RichTerm): Option[Term] = Some(e.isabelleTerm)
 

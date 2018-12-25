@@ -117,7 +117,7 @@ fun expression_encode ctxt t = let
   (* val str = YXML.content_of (Syntax.string_of_term ctxt t) *)
   val id = Terms.term_to_id ctxt t |> string_of_int
   (* val xml = XML.Elem (("expression",[]),[XML.Text str, term_tight_encode t, typ_tight_encode (fastype_of t)]) *)
-  val xml = XML.Elem(("expression",[("id",id)]), [])
+  val xml = XML.Elem(("expression",[("id",id)]), [typ_tight_encode (fastype_of t)])
   in xml end
 (* fun expression_decode (XML.Elem (("expression",[]),[XML.Text _, xml, _])) = term_tight_decode xml
   | expression_decode xml = Codec.Failure ("invalid encoding for a term (expression codec)",[xml]) *)
@@ -156,28 +156,28 @@ fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => st
 fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
       block_decode xml |> map_result Block
   | statement_decode (XML.Elem(("assign",[("lhs",var)]), [e])) = 
-      Codec.map_result (fn e => Assign (var, e)) (term_tight_decode e)
+      Codec.map_result (fn e => Assign (var, e)) (expression_decode e)
   | statement_decode (XML.Elem(("sample",[("lhs",var)]), [e])) = 
-      Codec.map_result (fn e => Sample (var, e)) (term_tight_decode e)
+      Codec.map_result (fn e => Sample (var, e)) (expression_decode e)
   | statement_decode (xml as XML.Elem(("call",_),_)) = Codec.map_result Call (call_decode xml)
   | statement_decode (XML.Elem(("measurement",[("lhs",var)]), exp :: loc)) =
       bind_result (fn exp => map_result (fn loc => Measurement (var,loc,exp))
           (traverse_results (Codec.decode Codec.string) loc))
-         (term_tight_decode exp)
+         (expression_decode exp)
   | statement_decode (XML.Elem(("qinit",[]), exp :: loc)) =
       bind_result (fn exp => map_result (fn loc => QInit (loc,exp))
           (traverse_results (Codec.decode Codec.string) loc))
-         (term_tight_decode exp)
+         (expression_decode exp)
   | statement_decode (XML.Elem(("qapply",[]), exp :: loc)) =
       bind_result (fn exp => map_result (fn loc => QApply (loc,exp))
           (traverse_results (Codec.decode Codec.string) loc))
-         (term_tight_decode exp)
+         (expression_decode exp)
   | statement_decode (XML.Elem(("ifte",[]), [e, p1, p2])) =
       bind_result (fn e => bind_result (fn p1 => map_result (fn p2 => IfThenElse (e,p1,p2))
-         (block_decode p2)) (block_decode p1)) (term_tight_decode e)
+         (block_decode p2)) (block_decode p1)) (expression_decode e)
   | statement_decode (XML.Elem(("while",[]), [e, p1])) =
       bind_result (fn e => map_result (fn p1 => While (e,p1))
-         (block_decode p1)) (term_tight_decode e)
+         (block_decode p1)) (expression_decode e)
   | statement_decode xml = Codec.Failure ("invalid encoding for a statement",[xml])
 
 and
@@ -193,6 +193,16 @@ datatype subgoal = Subgoal_QRHL of Relational_Hoare.qrhl_judgment * term list | 
 fun subgoal_to_term ctxt (Subgoal_QRHL (qrhl, assms)) = 
     fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms (Relational_Hoare.qrhl_judgment_to_term ctxt qrhl)
   | subgoal_to_term _ (Subgoal_Ambient t) = t
+
+fun term_to_subgoal ctxt t = let
+  fun split_assms assms (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) = split_assms (a::assms) b
+    | split_assms assms t = (assms,t)
+  val (assms,t') = split_assms [] t
+  in
+    case t' of (Const(\<^const_name>\<open>qrhl\<close>,_) $ _ $ _ $ _ $ _) => 
+      Subgoal_QRHL (Relational_Hoare.term_to_qrhl_judgment ctxt t', assms)
+   | _ => Subgoal_Ambient t
+  end
 
 fun qrhl_encode (ctxt, Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) = XML.Elem(("qrhl",[]),
   [expression_encode ctxt (pre), statement_encode ctxt (Programs.Block p1), statement_encode ctxt (Programs.Block p2),
@@ -221,9 +231,18 @@ val subgoal_codec = Codec.basic {encode=fn _ => error "subgoal_codec: encode not
 fun subgoal_codec' ctxt = Codec.basic {encode=subgoal_encode ctxt, decode=subgoal_decode}
 
 fun apply_tactic_on_term_concl tac (arg,subgoal,ctxt) = let
+  (* val _ = warning "STEP 1" *)
   val goal = subgoal_to_term ctxt subgoal
-  val subgoals = Tactics.tac_on_term_concl (tac ctxt arg) ctxt goal |> tac_dummy_thm
-  in subgoals |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) thm_codec)) end
+  (* val _ = warning "STEP 2" *)
+  val subgoals = Tactics.tac_on_term_concl (tac ctxt arg) ctxt goal
+  (* val _ = warning "STEP 3" *)
+  val subgoals = subgoals |> Option.map (map (term_to_subgoal ctxt))
+  (* val _ = warning "STEP 4" *)
+  val subgoals = subgoals |> tac_dummy_thm
+  (* val _ = warning "STEP 5" *)
+  val encoded = subgoals |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec))
+  (* val _ = warning "STEP 6" *)
+  in encoded end
 
 fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
   val goal = subgoal_to_term ctxt subgoal
@@ -234,7 +253,7 @@ fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
                | SOME x => x
   val subgoals = Thm.prems_of goal''
   val subgoals' = map HOLogic.dest_Trueprop subgoals
-  in SOME (subgoals',goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) thm_codec)) end
+  in SOME (subgoals' |> map (term_to_subgoal ctxt),goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec)) end
 end
 
 end

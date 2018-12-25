@@ -4,13 +4,14 @@ import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.lang
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
+import java.util.{Timer, TimerTask}
 
 import info.hupel.isabelle.api.{Configuration, Version, XML}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Typ => ITyp}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
-import info.hupel.isabelle.{Codec, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
+import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
@@ -185,7 +186,6 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     Await.result(System.create(environment, config), Duration.Inf)
   }
 
-
 //  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
 
   def invoke[I,O](op: Operation[I,O], arg: I) : O = {
@@ -194,6 +194,11 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     Isabelle.logger.debug(s"Operation ${op.name} ${(lang.System.nanoTime-start)/1000000}ms")
     result
   }
+
+//  // TODO remove
+//  new Timer().schedule(new TimerTask {
+//    override def run(): Unit = { invoke(Operation.Hello,"world") }
+//  },100,100)
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
     *
@@ -306,16 +311,37 @@ object Isabelle {
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
-  def distrT(typ:ITyp): Type = Type("Discrete_Distributions.distr", List(typ))
+  val distrT_name = "Discrete_Distributions.distr"
+  def distrT(typ:ITyp): Type = Type(distrT_name, List(typ))
+  def dest_distrT(typ: ITyp): ITyp = typ match {
+    case Type(`distrT_name`, List(typ2)) => typ2
+    case _ => throw new RuntimeException("expected type 'distr', not "+typ)
+  }
+  val boundedT_name = "Bounded_Operators.bounded"
   def boundedT(typ:ITyp): Type = boundedT(typ,typ)
-  def boundedT(inT:ITyp, outT:ITyp) = Type("Bounded_Operators.bounded", List(inT,outT))
-  def measurementT(resultT:ITyp, qT: ITyp) = Type("QRHL_Core.measurement", List(resultT, qT))
+  def boundedT(inT:ITyp, outT:ITyp) = Type(boundedT_name, List(inT,outT))
+  def dest_boundedT(typ:ITyp): (ITyp, ITyp) = typ match {
+    case Type(`boundedT_name`, List(t1,t2)) => (t1,t2)
+    case _ => throw new RuntimeException("expected type 'bounded', not "+typ)
+  }
+  val measurementT_name = "QRHL_Core.measurement"
+  def measurementT(resultT:ITyp, qT: ITyp) = Type(measurementT_name, List(resultT, qT))
+  def dest_measurementT(typ: ITyp): (ITyp,ITyp) = typ match {
+    case Type(`measurementT_name`, List(typ1,typ2)) => (typ1,typ2)
+    case _ => throw new RuntimeException("expected type 'measurement', not "+typ)
+  }
   def listT(typ:ITyp) : Type = Type("List.list", List(typ))
   val block = Const("Programs.block", listT(programT) -->: programT)
-  def vectorT(typ:ITyp) = Type("Complex_L2.vector", List(typ))
+  val vectorT_name = "Complex_L2.vector"
+  def vectorT(typ:ITyp) = Type(vectorT_name, List(typ))
+  def dest_vectorT(typ:ITyp) : ITyp = typ match {
+    case Type(`vectorT_name`, List(t1)) => t1
+    case _ => throw new RuntimeException("expected type 'vector', not "+typ)
+  }
   def variableT(typ:ITyp) = Type("Prog_Variables.variable", List(typ))
   def dest_variableT(typ: ITyp): ITyp = typ match {
     case Type("Prog_Variables.variable", List(typ2)) => typ2
+    case _ => throw new RuntimeException("expected type 'variable', not "+typ)
   }
   def variablesT(typ:ITyp) : Type = Type("Prog_Variables.variables", List(typ))
   def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
@@ -341,7 +367,12 @@ object Isabelle {
   val measurementName = "Programs.measurement"
   def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variableT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
   val unitT = Type("Product_Type.unit")
-  def prodT(t1:ITyp, t2:ITyp) = Type("Product_Type.prod", List(t1,t2))
+  val prodT_name = "Product_Type.prod"
+  def prodT(t1:ITyp, t2:ITyp) = Type(prodT_name, List(t1,t2))
+  def dest_prodT(typ: ITyp): (ITyp, ITyp) = typ match {
+    case Type(`prodT_name`, List(t1,t2)) => (t1,t2)
+    case _ => throw new RuntimeException("expected type 'prod', not "+typ)
+  }
   private def qvarTuple_var0(qvs:List[QVariable]) : (Term,ITyp) = qvs match {
     case Nil => (variable_unit, unitT)
     case List(qv) => (variable_singleton(qv.valueTyp) $ qv.variableTerm,

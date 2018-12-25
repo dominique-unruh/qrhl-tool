@@ -274,7 +274,7 @@ class State private (val environment: Environment,
   def applyTactic(tactic:Tactic) : State = goal match {
     case Nil =>
       throw UserException("No pending proof")
-    case (subgoal::subgoals) =>
+    case subgoal::subgoals =>
       copy(goal=tactic.apply(this,subgoal)++subgoals)
   }
 

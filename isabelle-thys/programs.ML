@@ -20,6 +20,11 @@ fun call_to_term (CALL (name,[])) = Free(name,\<^typ>\<open>program\<close>)
   | call_to_term (CALL (name,args)) = 
       \<^const>\<open>instantiateOracles\<close> $ Free(name,\<^typ>\<open>oracle_program\<close>) $ HOLogic.mk_list \<^typ>\<open>program\<close> (map call_to_term args)
 
+fun term_to_call (Free(name,_)) = CALL (name,[])
+  | term_to_call (Const(\<^const_name>\<open>instantiateOracles\<close>,_) $ Free(name,_) $ args) = let
+      val args' = args |> HOLogic.dest_list |> map term_to_call
+      in CALL (name,args') end
+  | term_to_call t = raise TERM ("term_to_call",[t])
 
 local open Expressions open Prog_Variables in
 (* TODO move *)
@@ -65,6 +70,35 @@ fun statement_to_term ctxt (Assign(lhs,rhs)) = let
          loc' $ term_to_expression ctxt e end
 
 and statements_to_term ctxt statements = map (statement_to_term ctxt) statements |> HOLogic.mk_list \<^typ>\<open>program\<close>
+
+fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statements) = Block (term_to_statements ctxt statements)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>assign\<close>,_) $ Free(x,_) $ e) = 
+      Assign (strip_var_prefix x, expression_to_term ctxt e)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>sample\<close>,_) $ Free(x,_) $ e) = 
+      Sample (strip_var_prefix x, expression_to_term ctxt e)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>while\<close>,_) $ e $ body) =
+      While (expression_to_term ctxt e, term_to_statements ctxt body)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>ifthenelse\<close>,_) $ e $ p1 $ p2) =
+      IfThenElse (expression_to_term ctxt e, term_to_statements ctxt p1, term_to_statements ctxt p2)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>qinit\<close>,_) $ vs $ e) =
+      QInit (parse_varlist vs |> map fst, expression_to_term ctxt e)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>qapply\<close>,_) $ vs $ e) =
+      QApply (parse_varlist vs |> map fst, expression_to_term ctxt e)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>measurement\<close>,_) $ Free(x,_) $ vs $ e) =
+      Measurement (strip_var_prefix x, parse_varlist vs |> map fst, expression_to_term ctxt e)
+  | term_to_statement _ (t as Free _) = Call (term_to_call t)
+  | term_to_statement _ (t as Const(\<^const_name>\<open>instantiateOracles\<close>,_) $ _ $ _) = Call (term_to_call t)
+  | term_to_statement _ t = raise TERM("term_to_statement",[t])
+
+(*
+    case Free(name,_) => Call(name)
+    case App(App(Const(Isabelle.instantiateOracles.name,_), Free(name,_)), args) =>
+      val args2 = Isabelle.dest_list(args).map(decodeFromTerm(context,_).asInstanceOf[Call])
+      Call(name,args2 : _* )
+*)
+
+and term_to_statements ctxt t = HOLogic.dest_list t |> map (term_to_statement ctxt)
+
 end
 
 end

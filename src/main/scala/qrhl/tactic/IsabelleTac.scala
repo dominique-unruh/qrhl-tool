@@ -16,19 +16,19 @@ abstract class IsabelleTac[A](operationName : String, arg : Isabelle.Context => 
     implicit val _ : Codec[A] = codec
     import Isabelle.Thm.codec
 
-    val operation : Operation[(A, Subgoal, Isabelle.Context), Option[(List[RichTerm],Isabelle.Thm)]] = {
-      Operation.implicitly[(A, Subgoal, Isabelle.Context), Option[(List[RichTerm],Isabelle.Thm)]](operationName)
+    val operation : Operation[(A, Subgoal, Isabelle.Context), Option[(List[Subgoal],Isabelle.Thm)]] = {
+      Operation.implicitly[(A, Subgoal, Isabelle.Context), Option[(List[Subgoal],Isabelle.Thm)]](operationName)
     }
 
-    val (goals,thm) = ctx.isabelle.invoke(operation, (arg(ctx), goal, ctx)).getOrElse {
+    val (newGoals,thm) = ctx.isabelle.invoke(operation, (arg(ctx), goal, ctx)).getOrElse {
       throw UserException("tactic failed") }
 //    val thm = if (thmId==0) null else new Isabelle.Thm(ctx.isabelle, thmId)
 
-    val newGoals = for (t <- goals) yield Subgoal(ctx, t)
+//    val newGoals = for (t <- goals) yield Subgoal(ctx, t)
 
     check(state, goal, newGoals)
 
-    if (thm!=null) Subgoal.printOracles(thm)
+    Subgoal.printOracles(thm)
 
     newGoals
   }
