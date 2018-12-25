@@ -237,18 +237,18 @@ object RichTerm {
   implicit object codec extends Codec[RichTerm] {
     override val mlType: String = "term"
     /*override def encode(e: Expression): XML.Tree =
-      XML.elem(("expression",Nil),
+      XML.elem(("richterm",Nil),
         List(XML.text(""), term_tight_codec.encode(e.isabelleTerm), XML.elem(("omitted",Nil),Nil)))*/
     override def encode(e: RichTerm): XML.Tree = e.id match {
-      case None => XML.Elem(("expression",Nil), List(term_tight_codec.encode(e.isabelleTerm)))
-      case Some(id2) => XML.Elem(("expression",List(("id",id2.toString))),Nil)
+      case None => XML.Elem(("richterm",Nil), List(term_tight_codec.encode(e.isabelleTerm)))
+      case Some(id2) => XML.Elem(("richterm",List(("id",id2.toString))),Nil)
     }
     
     override def decode(tree: XML.Tree): XMLResult[RichTerm] = tree match {
-      case XML.Elem(("expression",List(("id",id))),List(typXml)) =>
+      case XML.Elem(("richterm",List(("id",id))),List(typXml)) =>
         for (typ <- typ_tight_codec.decode(typXml))
           yield new RichTerm(id=Some(BigInt(id)), typ = typ)
-//      case XML.Elem(("expression",Nil), List(XML.Text(str), termXML, typXML)) =>
+//      case XML.Elem(("richterm",Nil), List(XML.Text(str), termXML, typXML)) =>
 //        for (typ <- typ_tight_codec.decode(typXML);
 //             term <- term_tight_codec.decode(termXML))
 //        yield new RichTerm(typ,term,Some(Isabelle.symbolsToUnicode(str)))

@@ -7,16 +7,6 @@ ML_file "qrhl_operations.ML"
 
 ML \<open>open QRHL_Operations\<close>
 
-(* ML \<open>
-fun xxx (XML.Elem(("expression",_),[XML.Text x,_,_])) = x
-\<close>
-
-axiomatization bla :: 'a
-
-ML \<open>
-expression_encode \<^term>\<open>bla a+b\<close> |> xxx
-\<close> *)
-
 operation_setup create_context = {*
   {from_lib = Codec.list Codec.string,
    to_lib = Codec.int,
@@ -81,7 +71,7 @@ operation_setup read_expression = {*
    to_lib = Codec.id,
    action = fn (ctx_id, str, T) => 
       let val ctxt = Refs.Ctxt.read ctx_id in
-        parse_term ctxt str T |> expression_encode ctxt end}
+        parse_term ctxt str T |> richterm_encode ctxt end}
 *}
 
 operation_setup byQRHLPre = {*
@@ -89,7 +79,7 @@ operation_setup byQRHLPre = {*
    to_lib = Codec.id,
    action = fn (ctxt_id,cvars,qvars) => 
       let val ctxt = Refs.Ctxt.read ctxt_id in
-          QRHL.byQRHLPre cvars qvars |> expression_encode ctxt end}
+          QRHL.byQRHLPre cvars qvars |> richterm_encode ctxt end}
 *}
 
 (* Ambient variables *)
@@ -121,7 +111,7 @@ operation_setup callWp = {*
    action = fn ((cvars1, cvars2, qvars1), (qvars2, B, ctxt_id)) => 
     let val ctxt = Refs.Ctxt.read ctxt_id in
         QRHL.callWp cvars1 cvars2 qvars1 qvars2 B
-        |> Codec.encode (Codec.tuple (expression_codec' ctxt) (expression_codec' ctxt)) end}
+        |> Codec.encode (Codec.tuple (richterm_codec' ctxt) (richterm_codec' ctxt)) end}
 *}
 
 operation_setup fixTac = {*
@@ -129,7 +119,7 @@ operation_setup fixTac = {*
    to_lib = Codec.id,
    action = fn (ctxt_id,expr,var) => 
       let val ctxt = Refs.Ctxt.read ctxt_id in
-          QRHL.fixTac expr var |> Codec.encode (Codec.tuple (expression_codec' ctxt) typ_tight_codec) end}
+          QRHL.fixTac expr var |> Codec.encode (Codec.tuple (richterm_codec' ctxt) typ_tight_codec) end}
 *}
 
 operation_setup rndWp = {*
@@ -137,7 +127,7 @@ operation_setup rndWp = {*
    to_lib = Codec.id,
    action = fn (ctxt_id, (v1, e1, v2), (e2, T, B)) => 
      let val ctxt = Refs.Ctxt.read ctxt_id in
-         QRHL.rndWp v1 e1 v2 e2 T B |> expression_encode ctxt end}
+         QRHL.rndWp v1 e1 v2 e2 T B |> richterm_encode ctxt end}
 *}
 
 operation_setup rndWp2 = {*
@@ -147,7 +137,7 @@ operation_setup rndWp2 = {*
    to_lib = Codec.id,
    action = fn ((v1, T1, e1), (v2, T2, e2), (f, B, ctxt_id)) => 
      let val ctxt = Refs.Ctxt.read ctxt_id in
-         QRHL.rndWp2 v1 T1 e1 v2 T2 e2 f B |> expression_encode ctxt end}
+         QRHL.rndWp2 v1 T1 e1 v2 T2 e2 f B |> richterm_encode ctxt end}
 *}
 
 operation_setup apply_rule = {*
@@ -161,7 +151,7 @@ operation_setup apply_rule = {*
      val ctxt = Refs.Ctxt.read ctx_id
      val (ts,thm) = QRHL.applyRule name goal ctxt
      in SOME (ts,make_thm_ref thm) 
-          |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) Codec.int))
+          |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int))
       end *)
 }
 *}
@@ -173,7 +163,7 @@ operation_setup simplify_term = {*
      val ctxt = Refs.Ctxt.read ctx_id
      val (t,thm) = QRHL.simp t thms ctxt
      in (t,make_thm_ref thm)
-        |> Codec.encode (Codec.tuple (expression_codec' ctxt) Codec.int)
+        |> Codec.encode (Codec.tuple (richterm_codec' ctxt) Codec.int)
        end}
 *}
 
@@ -182,7 +172,7 @@ operation_setup add_index_to_expression = {*
    to_lib = Codec.id,
    action = fn (ctxt_id,t,left) => let
      val ctxt = Refs.Ctxt.read ctxt_id in
-     Expressions.add_index_to_expression t left |> expression_encode ctxt end}
+     Expressions.add_index_to_expression t left |> richterm_encode ctxt end}
 *}
 
 operation_setup term_to_expression = {*
@@ -190,7 +180,7 @@ operation_setup term_to_expression = {*
    to_lib = Codec.id,
    action = fn (ctxId, t) => let
      val ctxt = Refs.Ctxt.read ctxId in
-        Expressions.term_to_expression ctxt t |> expression_encode ctxt end}
+        Expressions.term_to_expression ctxt t |> richterm_encode ctxt end}
 *}
 
 operation_setup expression_to_term = {*
@@ -198,11 +188,11 @@ operation_setup expression_to_term = {*
    to_lib = Codec.id,
    action = fn (ctxId, t) => let
      val ctxt = Refs.Ctxt.read ctxId in
-     Expressions.expression_to_term (Refs.Ctxt.read ctxId) t |> expression_encode ctxt end}
+     Expressions.expression_to_term (Refs.Ctxt.read ctxId) t |> richterm_encode ctxt end}
 *}
 
 operation_setup seq_tac = {*
-  {from_lib = Codec.triple (Codec.triple Codec.int Codec.int expression_codec) subgoal_codec context_codec,
+  {from_lib = Codec.triple (Codec.triple Codec.int Codec.int richterm_codec) subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn (i,j,B) => Tactics.seq_tac i j B ctxt 1)}
 (* 
@@ -212,7 +202,7 @@ operation_setup seq_tac = {*
      val ctxt = Refs.Ctxt.read ctx_id
      val result = Tactics.seq_tac_on_term i j B ctxt goal |> tac_dummy_thm
     in result 
-        |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) Codec.int))
+        |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int))
     end} *)
 *}
 
@@ -223,7 +213,7 @@ operation_setup wp_tac = {*
 (* fn (left,goal,ctx_id) => let
      val ctxt = Refs.Ctxt.read ctx_id
      val result = Weakest_Precondition.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm
-    in result |> Codec.encode (Codec.option (Codec.tuple (Codec.list (expression_codec' ctxt)) Codec.int)) end} *)
+    in result |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int)) end} *)
 *}
 
 
@@ -259,7 +249,7 @@ operation_setup statement_to_term = \<open>
    action = fn (ctxt_id, statement) =>
      let val ctxt = Refs.Ctxt.read ctxt_id
      in Programs.statement_to_term ctxt statement
-         |> expression_encode ctxt  end}
+         |> richterm_encode ctxt  end}
 \<close>
 
 operation_setup statements_to_term = \<open>
@@ -267,14 +257,14 @@ operation_setup statements_to_term = \<open>
    to_lib = Codec.id,
    action = fn (ctxt_id, statements) =>
      let val ctxt = Refs.Ctxt.read ctxt_id
-     in Programs.statements_to_term ctxt statements |> expression_encode ctxt end}
+     in Programs.statements_to_term ctxt statements |> richterm_encode ctxt end}
 \<close>
 
 operation_setup subgoal_to_term = \<open>
   {from_lib = Codec.tuple context_codec subgoal_codec,
    to_lib = Codec.id,
    action = fn (ctxt, subgoal) => subgoal_to_term ctxt subgoal
-      |> Codec.encode (expression_codec' ctxt)}\<close>
+      |> Codec.encode (richterm_codec' ctxt)}\<close>
 
 operation_setup retrieve_term = \<open>
   {from_lib = Codec.int,

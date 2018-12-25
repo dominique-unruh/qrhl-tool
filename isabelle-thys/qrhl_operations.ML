@@ -110,22 +110,20 @@ val term_tight_codec = Codec.basic { encode=term_tight_encode, decode=term_tight
 
 (** A codec for terms that additionally attaches a human readable representation *)
 
-(* TODO rename expression -> richterm *)
-
-fun expression_encode ctxt t = let
+fun richterm_encode ctxt t = let
   (* val ctxt = Context.the_local_context () *)
   (* val str = YXML.content_of (Syntax.string_of_term ctxt t) *)
   val id = Terms.term_to_id ctxt t |> string_of_int
-  (* val xml = XML.Elem (("expression",[]),[XML.Text str, term_tight_encode t, typ_tight_encode (fastype_of t)]) *)
-  val xml = XML.Elem(("expression",[("id",id)]), [typ_tight_encode (fastype_of t)])
+  (* val xml = XML.Elem (("richterm",[]),[XML.Text str, term_tight_encode t, typ_tight_encode (fastype_of t)]) *)
+  val xml = XML.Elem(("richterm",[("id",id)]), [typ_tight_encode (fastype_of t)])
   in xml end
-(* fun expression_decode (XML.Elem (("expression",[]),[XML.Text _, xml, _])) = term_tight_decode xml
-  | expression_decode xml = Codec.Failure ("invalid encoding for a term (expression codec)",[xml]) *)
-fun expression_decode (XML.Elem (("expression",[]),[t])) = term_tight_decode t
-  | expression_decode (XML.Elem(("expression",[("id",id)]), [])) = Terms.id_to_term (parse_int id) |> Codec.Success
+(* fun richterm_decode (XML.Elem (("richterm",[]),[XML.Text _, xml, _])) = term_tight_decode xml
+  | richterm_decode xml = Codec.Failure ("invalid encoding for a term (richterm codec)",[xml]) *)
+fun richterm_decode (XML.Elem (("richterm",[]),[t])) = term_tight_decode t
+  | richterm_decode (XML.Elem(("richterm",[("id",id)]), [])) = Terms.id_to_term (parse_int id) |> Codec.Success
 
-val expression_codec = Codec.basic { encode=fn _ => error "expression_codec: encode not allowed", decode=expression_decode }
-fun expression_codec' ctxt = Codec.basic { encode=expression_encode ctxt, decode=expression_decode }
+val richterm_codec = Codec.basic { encode=fn _ => error "richterm_codec: encode not allowed", decode=richterm_decode }
+fun richterm_codec' ctxt = Codec.basic { encode=richterm_encode ctxt, decode=richterm_decode }
 
 
 (* Statement codec *)
@@ -139,45 +137,45 @@ fun call_decode (XML.Elem(("call",[("name",name)]), args)) =
 
 
 fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode ctxt (s)) stmts)
-  | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[("lhs",var)]), [expression_encode ctxt rhs])
-  | statement_encode ctxt (Sample (var, rhs)) = XML.Elem(("sample",[("lhs",var)]), [expression_encode ctxt rhs])
+  | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[("lhs",var)]), [richterm_encode ctxt rhs])
+  | statement_encode ctxt (Sample (var, rhs)) = XML.Elem(("sample",[("lhs",var)]), [richterm_encode ctxt rhs])
   | statement_encode _ (Call c) = call_encode c
   | statement_encode ctxt (Measurement (var,loc,exp)) = XML.Elem(("measurement",[("lhs",var)]), 
-        expression_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+        richterm_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
   | statement_encode ctxt (QInit (loc,exp)) = XML.Elem(("qinit",[]), 
-        expression_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+        richterm_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
   | statement_encode ctxt (QApply (loc,exp)) = XML.Elem(("qapply",[]), 
-        expression_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+        richterm_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
   | statement_encode ctxt (IfThenElse (e,p1,p2)) = XML.Elem(("ifte",[]),
-        [expression_encode ctxt (e), statement_encode ctxt ( Block p1), statement_encode ctxt ( Block p2)])
+        [richterm_encode ctxt (e), statement_encode ctxt ( Block p1), statement_encode ctxt ( Block p2)])
   | statement_encode ctxt (While (e,p1)) = XML.Elem(("while",[]),
-        [expression_encode ctxt (e), statement_encode ctxt ( Block p1)])
+        [richterm_encode ctxt (e), statement_encode ctxt ( Block p1)])
 
 fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
       block_decode xml |> map_result Block
   | statement_decode (XML.Elem(("assign",[("lhs",var)]), [e])) = 
-      Codec.map_result (fn e => Assign (var, e)) (expression_decode e)
+      Codec.map_result (fn e => Assign (var, e)) (richterm_decode e)
   | statement_decode (XML.Elem(("sample",[("lhs",var)]), [e])) = 
-      Codec.map_result (fn e => Sample (var, e)) (expression_decode e)
+      Codec.map_result (fn e => Sample (var, e)) (richterm_decode e)
   | statement_decode (xml as XML.Elem(("call",_),_)) = Codec.map_result Call (call_decode xml)
   | statement_decode (XML.Elem(("measurement",[("lhs",var)]), exp :: loc)) =
       bind_result (fn exp => map_result (fn loc => Measurement (var,loc,exp))
           (traverse_results (Codec.decode Codec.string) loc))
-         (expression_decode exp)
+         (richterm_decode exp)
   | statement_decode (XML.Elem(("qinit",[]), exp :: loc)) =
       bind_result (fn exp => map_result (fn loc => QInit (loc,exp))
           (traverse_results (Codec.decode Codec.string) loc))
-         (expression_decode exp)
+         (richterm_decode exp)
   | statement_decode (XML.Elem(("qapply",[]), exp :: loc)) =
       bind_result (fn exp => map_result (fn loc => QApply (loc,exp))
           (traverse_results (Codec.decode Codec.string) loc))
-         (expression_decode exp)
+         (richterm_decode exp)
   | statement_decode (XML.Elem(("ifte",[]), [e, p1, p2])) =
       bind_result (fn e => bind_result (fn p1 => map_result (fn p2 => IfThenElse (e,p1,p2))
-         (block_decode p2)) (block_decode p1)) (expression_decode e)
+         (block_decode p2)) (block_decode p1)) (richterm_decode e)
   | statement_decode (XML.Elem(("while",[]), [e, p1])) =
       bind_result (fn e => map_result (fn p1 => While (e,p1))
-         (block_decode p1)) (expression_decode e)
+         (block_decode p1)) (richterm_decode e)
   | statement_decode xml = Codec.Failure ("invalid encoding for a statement",[xml])
 
 and
@@ -205,26 +203,26 @@ fun term_to_subgoal ctxt t = let
   end
 
 fun qrhl_encode (ctxt, Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) = XML.Elem(("qrhl",[]),
-  [expression_encode ctxt (pre), statement_encode ctxt (Programs.Block p1), statement_encode ctxt (Programs.Block p2),
-   expression_encode ctxt (post)])
+  [richterm_encode ctxt (pre), statement_encode ctxt (Programs.Block p1), statement_encode ctxt (Programs.Block p2),
+   richterm_encode ctxt (post)])
 
 fun qrhl_decode (XML.Elem(("qrhl",[]), [pre,p1,p2,post])) =
   bind_result (fn pre => 
   bind_result (fn p1 => 
   bind_result (fn p2 => 
-  map_result (fn post => Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) (expression_decode post))
-  (block_decode p2)) (block_decode p1)) (expression_decode pre)
+  map_result (fn post => Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) (richterm_decode post))
+  (block_decode p2)) (block_decode p1)) (richterm_decode pre)
   | qrhl_decode xml = Codec.Failure ("invalid encoding for a qrhl statement",[xml])
 
 
 fun subgoal_encode ctxt (Subgoal_QRHL (qrhl,assms)) = XML.Elem(("qrhlgoal",[]), 
-  qrhl_encode (ctxt, qrhl) :: map (fn assm => expression_encode ctxt ( assm)) assms) 
-  | subgoal_encode ctxt (Subgoal_Ambient t) = XML.Elem(("ambient",[]), [expression_encode ctxt ( t)])
+  qrhl_encode (ctxt, qrhl) :: map (fn assm => richterm_encode ctxt ( assm)) assms) 
+  | subgoal_encode ctxt (Subgoal_Ambient t) = XML.Elem(("ambient",[]), [richterm_encode ctxt ( t)])
 
 fun subgoal_decode (XML.Elem(("qrhlgoal",[]), qrhl::assms)) =
   bind_result (fn qrhl => (map_result (fn assms => Subgoal_QRHL (qrhl,assms)) 
-      (traverse_results expression_decode assms))) (qrhl_decode qrhl)
-  | subgoal_decode (XML.Elem(("ambient",[]), [t])) = expression_decode t |> map_result Subgoal_Ambient
+      (traverse_results richterm_decode assms))) (qrhl_decode qrhl)
+  | subgoal_decode (XML.Elem(("ambient",[]), [t])) = richterm_decode t |> map_result Subgoal_Ambient
   | subgoal_decode xml = Codec.Failure ("invalid encoding for a subgoal",[xml])
 
 val subgoal_codec = Codec.basic {encode=fn _ => error "subgoal_codec: encode not allowed", decode=subgoal_decode}
