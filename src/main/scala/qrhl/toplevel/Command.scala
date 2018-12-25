@@ -23,7 +23,7 @@ object ChangeDirectoryCommand {
 case class IsabelleCommand(thy:Option[String]=None) extends Command {
   override def act(state: State): State = {
     println(s"Loading Isabelle.")
-    val newState = state.loadIsabelle("auto",thy)
+    val newState = state.loadIsabelle(thy)
     println("Isabelle loaded.")
     newState
   }

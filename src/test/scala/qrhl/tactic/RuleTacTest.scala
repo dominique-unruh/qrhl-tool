@@ -5,7 +5,7 @@ import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class RuleTacTest extends FlatSpec {
   def toplevel(): Toplevel = {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.run(
       """ambient var a : nat.
         |ambient var b : nat.

@@ -1,11 +1,11 @@
 package qrhl.tactic
 
 import org.scalatest.{FlatSpec, FunSpec, FunSuite}
-import qrhl.toplevel.{TacticCommand, ToplevelTest}
+import qrhl.toplevel.{TacticCommand, Toplevel, ToplevelTest}
 
 class WpTacTest extends FunSuite {
   test("WpTac well-typed (qinit)") {
-    val toplevel = ToplevelTest.makeToplevel()
+    val toplevel = Toplevel.makeToplevel()
     toplevel.run(
       """
         |quantum var q : bit.
@@ -19,7 +19,7 @@ class WpTacTest extends FunSuite {
   }
 
   test("WpTac well-typed (assign)") {
-    val toplevel = ToplevelTest.makeToplevel()
+    val toplevel = Toplevel.makeToplevel()
     toplevel.run(
       """
         |classical var q : bit.
@@ -33,7 +33,7 @@ class WpTacTest extends FunSuite {
   }
 
   test("WpTac well-typed (sample)") {
-    val toplevel = ToplevelTest.makeToplevel()
+    val toplevel = Toplevel.makeToplevel()
     toplevel.run(
       """
         |classical var q : bit.

@@ -9,7 +9,7 @@ import qrhl.{QRHLSubgoal, UserException}
 
 class CaseTacTest extends FunSuite {
   def toplevel(): Toplevel = {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.run(
       """classical var x : bool.
         |ambient var y : bool.

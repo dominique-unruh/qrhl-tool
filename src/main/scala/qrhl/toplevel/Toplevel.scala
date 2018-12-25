@@ -17,10 +17,10 @@ import Toplevel.logger
 
 /** Not thread safe */
 class Toplevel(initialState : State = State.empty) {
-  def dispose(): Unit = {
-    if (state.hasIsabelle) state.isabelle.isabelle.dispose()
-    states = null
-  }
+//  def dispose(): Unit = {
+//    if (state.hasIsabelle) state.isabelle.isabelle.dispose()
+//    states = null
+//  }
 
   def isabelle: Isabelle = state.isabelle.isabelle
 
@@ -185,8 +185,8 @@ object Toplevel {
     toplevel
   }
 
-  def makeToplevel(isabelle:Isabelle, theory:Option[String]=None) : Toplevel = {
-    val state = State.empty.loadIsabelle(isabelle,theory)
+  def makeToplevel(theory:Option[String]=None) : Toplevel = {
+    val state = State.empty.loadIsabelle(theory)
     new Toplevel(state)
   }
 

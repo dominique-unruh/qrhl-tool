@@ -1,11 +1,11 @@
 package qrhl.tactic
 
 import org.scalatest.{FlatSpec, FunSpec, FunSuite}
-import qrhl.toplevel.{GoalCommand, ToplevelTest}
+import qrhl.toplevel.{GoalCommand, Toplevel, ToplevelTest}
 
 class ByQRHLTacTest extends FunSuite {
   test("works with Pr") {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : bit")
     tl.execCmd("ambient var rho : program_state")
     tl.execCmd("program p := { skip; }")

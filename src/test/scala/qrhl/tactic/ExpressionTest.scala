@@ -2,11 +2,11 @@ package qrhl.tactic
 
 import org.scalatest.FunSuite
 import qrhl.isabelle.{Isabelle, RichTerm}
-import qrhl.toplevel.ToplevelTest
+import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class ExpressionTest extends FunSuite {
   test("read print roundtrip") {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : int")
     val str = "Cla[ x=(1::int) ]"
     //    val state = tl.state
@@ -16,7 +16,7 @@ class ExpressionTest extends FunSuite {
   }
 
   test("encodeAsExpression") {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : int")
     val state = tl.state
     val e = state.parseExpression(Isabelle.predicateT,"Cla[ x=(1::int) ]")
@@ -27,7 +27,7 @@ class ExpressionTest extends FunSuite {
   }
 
   test("encodeAsExpression roundtrip") {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : int")
     val state = tl.state
     val e = state.parseExpression(Isabelle.predicateT,"Cla[ x=(1::int) ]")
@@ -44,7 +44,7 @@ class ExpressionTest extends FunSuite {
   }
 
   test("encodeAsExpression roundtrip 2") {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : int")
     val state = tl.state
     val e = state.parseExpression(Isabelle.predicateT,"Cla[ x1=x2 ]")
@@ -61,7 +61,7 @@ class ExpressionTest extends FunSuite {
   }
 
   test("encodeAsExpression roundtrip 3") {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var c : int")
     val state = tl.state

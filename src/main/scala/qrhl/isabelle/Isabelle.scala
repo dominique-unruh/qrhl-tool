@@ -238,6 +238,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
   private var disposed = false
 
   def dispose(): Unit = this.synchronized {
+    if (Isabelle.isGlobalIsabelle(this))
+      throw new lang.RuntimeException("Trying to dispose Isabelle.globalIsabelle")
     if (!disposed) {
       Isabelle.logger.debug("Disposing Isabelle.")
       Await.result(system.dispose, Duration.Inf)
@@ -256,6 +258,15 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 }
 
 object Isabelle {
+  private var globalIsabellePeek : Isabelle = _
+  lazy val globalIsabelle: Isabelle = {
+    val isabelle = new Isabelle("auto")
+    globalIsabellePeek = isabelle
+    isabelle
+  }
+  def isGlobalIsabelle(isabelle : Isabelle): Boolean =
+    (globalIsabellePeek != null) && (globalIsabelle == isabelle)
+
   @deprecated("use Expression.toString","now")
   def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
   def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
@@ -551,6 +562,7 @@ object Isabelle {
   class Thm(val isabelle:Isabelle, val thmId: BigInt) {
     def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbolsToUnicode)
     def show_oracles(): Unit = {
+      // TODO inline text into debug()
       val text = show_oracles_lines().mkString("\n")
       Thm.logger.debug(text)
     }
