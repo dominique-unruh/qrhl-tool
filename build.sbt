@@ -111,6 +111,12 @@ downloadPG := {
 }
 
 
+lazy val makeGITREVISION = taskKey[Unit]("Create GITREVISION")
+makeGITREVISION := {
+  Process(List("bash","-c","( git describe --tags --long --always --dirty --broken && git describe --always --all ) > target/GITREVISION")).!!
+}
+managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
+
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
 libraryDependencies += "org.jline" % "jline" % "3.6.2"
@@ -145,6 +151,7 @@ mappings in Universal ++= {
 }
 
 mappings in Universal += (baseDirectory.value / "doc" / "manual.pdf" -> "manual.pdf")
+mappings in Universal += (baseDirectory.value / "target" / "GITREVISION" -> "GITREVISION")
 
 mappings in Universal ++= directory("PG")
 
