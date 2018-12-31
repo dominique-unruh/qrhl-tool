@@ -186,24 +186,149 @@ lemma bi_unique_rel_expression[transfer_rule]:
   shows "bi_unique (rel_expression R S)"
   using assms by (meson bi_total_alt_def bi_unique_alt_def left_unique_rel_expression right_unique_rel_expression)
 
+lemma rel_substitute1_flip[simp]: "(rel_substitute1 R S)^--1 = rel_substitute1 R^--1 S^--1"
+  apply (rule ext)+ unfolding conversep_iff apply transfer by auto
+
+lemma left_unique_rel_substitute1[transfer_rule]: 
+  assumes "left_unique R"
+  assumes "left_unique S"
+  shows "left_unique (rel_substitute1 R S)"
+proof -
+  have "s1 = s2" if "rel_substitute1 R S s1 t" and "rel_substitute1 R S s2 t" for s1 s2 t
+  proof -
+    obtain xs1 vss1 es1 where s1: "Rep_substitution1 s1 = (xs1,vss1,es1)" by (meson prod_cases3)
+    then have "finite vss1" and foot1: "(\<forall>w\<in>vss1. Rep_mem2 m1 w = Rep_mem2 m2 w) \<longrightarrow> es1 m1 = es1 m2" for m1 m2
+      using Rep_substitution1[of s1] by auto
+    obtain xs2 vss2 es2 where s2: "Rep_substitution1 s2 = (xs2,vss2,es2)" by (meson prod_cases3)
+    then have "finite vss2" and foot2: "(\<forall>w\<in>vss2. Rep_mem2 m1 w = Rep_mem2 m2 w) \<longrightarrow> es2 m1 = es2 m2" for m1 m2
+      using Rep_substitution1[of s2] by auto
+    obtain xt vst et where t: "Rep_substitution1 t = (xt,vst,et)" by (meson prod_cases3)
+
+    from that have "rel_prod R
+     (\<lambda>(vss1, es1) (vst, et).
+         range es1 \<subseteq> range EMBEDDING('a) \<and>
+         range et \<subseteq> range EMBEDDING('b) \<and>
+         S (Abs_expression (vss1, inv EMBEDDING('a) \<circ> es1)) (Abs_expression (vst, inv EMBEDDING('b) \<circ> et)))
+     (xs1, vss1, es1) (xt, vst, et)"
+      unfolding rel_substitute1.rep_eq s1 t by simp
+    then have R1: "R xs1 xt" and range_es1: "range es1 \<subseteq> range EMBEDDING('a)" and "range et \<subseteq> range EMBEDDING('b)" 
+      and S1: "S (Abs_expression (vss1, inv EMBEDDING('a) \<circ> es1)) (Abs_expression (vst, inv EMBEDDING('b) \<circ> et))"
+      by auto
+
+    from that have "rel_prod R
+     (\<lambda>(vss2, es2) (vst, et).
+         range es2 \<subseteq> range EMBEDDING('a) \<and>
+         range et \<subseteq> range EMBEDDING('b) \<and>
+         S (Abs_expression (vss2, inv EMBEDDING('a) \<circ> es2)) (Abs_expression (vst, inv EMBEDDING('b) \<circ> et)))
+     (xs2, vss2, es2) (xt, vst, et)"
+      unfolding rel_substitute1.rep_eq s2 t by simp
+    then have R2: "R xs2 xt" and range_es2: "range es2 \<subseteq> range EMBEDDING('a)" and "range et \<subseteq> range EMBEDDING('b)" 
+      and S2: "S (Abs_expression (vss2, inv EMBEDDING('a) \<circ> es2)) (Abs_expression (vst, inv EMBEDDING('b) \<circ> et))"
+      by auto
+
+    from R1 R2 have "xs1 = xs2"
+      using \<open>left_unique R\<close>
+      by (meson left_uniqueD)
+
+    from S1 S2 have AbsS: "Abs_expression (vss1, inv EMBEDDING('a) \<circ> es1) = Abs_expression (vss2, inv EMBEDDING('a) \<circ> es2)"
+      using \<open>left_unique S\<close>
+      by (meson left_uniqueD)
+    have "(vss1, inv EMBEDDING('a) \<circ> es1) = (vss2, inv EMBEDDING('a) \<circ> es2)"
+      apply (rule Abs_expression_inject[THEN iffD1, OF _ _ AbsS])
+      using foot1 foot2 \<open>finite vss1\<close> \<open>finite vss2\<close> by force+
+    then have "vss1 = vss2" and inv: "inv EMBEDDING('a) o es1 = inv EMBEDDING('a) o es2" by auto
+    with range_es1 range_es2 have "es1 = es2"
+      by (smt fun.inj_map_strong inv_into_injective subsetCE) 
+
+    from \<open>xs1 = xs2\<close> and \<open>vss1 = vss2\<close> and \<open>es1 = es2\<close>
+    show "s1 = s2"
+      using Rep_substitution1_inject s1 s2 by fastforce
+    qed
+  then show ?thesis
+    unfolding left_unique_def by simp
+qed
+
+lemma right_unique_rel_substitute1[transfer_rule]:
+  assumes "right_unique R" and "right_unique S"
+  shows "right_unique (rel_substitute1 R S)"
+  apply (subst conversep_conversep[of R, symmetric])
+  apply (subst conversep_conversep[of S, symmetric])
+  apply (subst rel_substitute1_flip[symmetric])
+  apply (simp del: rel_substitute1_flip)
+  apply (rule left_unique_rel_substitute1)
+  using assms by auto
+
+lemma bi_unique_rel_substitute1[transfer_rule]:
+  assumes "bi_unique R" and "bi_unique S"
+  shows "bi_unique (rel_substitute1 R S)"
+  using assms by (meson bi_total_alt_def bi_unique_alt_def left_unique_rel_substitute1 right_unique_rel_substitute1)
+
 lemma rel_expression_subst_expression [transfer_rule]: 
   includes lifting_syntax
-  assumes "bi_unique R" and "bi_total R" and "type_preserving_var_rel R" (* TODO cleanup *)
+  assumes [transfer_rule]: "bi_unique R" and [transfer_rule]: "bi_total R" and [transfer_rule]: "type_preserving_var_rel R" (* TODO cleanup *)
   defines "subR == rel_substitute1 R (rel_expression R (=))"
   shows "(list_all2 subR ===> rel_expression R (=) ===> rel_expression R (=)) 
          subst_expression subst_expression"
 proof -
   have "rel_expression R (=) (subst_expression s1 e1) (subst_expression s2 e2)" 
-    if "list_all2 subR s1 s2" and "rel_expression R (=) e1 e2" for s1 s2 and e1 e2 :: "'b expression"
+    if [transfer_rule]: "list_all2 subR s1 s2" and "rel_expression R (=) e1 e2" for s1 s2 and e1 e2 :: "'b expression"
   proof -
     obtain vs1 E1 where e1: "Rep_expression e1 = (vs1,E1)" apply atomize_elim by auto
     obtain vs2 E2 where e2: "Rep_expression e2 = (vs2,E2)" apply atomize_elim by auto
-    have foot: "rel_set R (subst_expression_footprint s1 vs1) (subst_expression_footprint s2 vs2)"
-      apply (rule rel_setI)
-      unfolding subst_expression_footprint_def 
-      apply auto
+    have [unfolded subR_def, transfer_rule]: "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 R ===> (=)))) Rep_substitution1 Rep_substitution1"
+      unfolding subR_def apply (rule rel_substitute1_Rep_substitution1) by simp
+    have [transfer_rule]: "(subR ===> R) substitution1_variable substitution1_variable"
+      unfolding subR_def by (rule rel_substitute1_substitution1_variable)
+    (* have [transfer_rule]: "bi_total subR"   *)
+      unfolding subR_def 
       sorry
+    have [transfer_rule]: "bi_unique subR" 
+      unfolding subR_def
+      using \<open>bi_unique R\<close> apply (rule bi_unique_rel_substitute1)
+      apply (rule bi_unique_rel_expression)
+      using assms bi_unique_eq by auto
+    have [transfer_rule]: "(subR ===> rel_set R) substitution1_footprint substitution1_footprint"
+      unfolding subR_def by (rule rel_substitute1_substitution1_footprint)
+    have [transfer_rule]: "rel_set R vs1 vs2" sorry
+    have foot: "rel_set R (subst_expression_footprint s1 vs1) (subst_expression_footprint s2 vs2)"
+      unfolding subst_expression_footprint_def 
+      apply transfer_prover_start
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+      apply transfer_step
+    (* have [tranfer_rule]: "(list_all2 (subR ===> _) ===> rel_mem2 R) subst_mem2 subst_mem2" *)
     have subst: "(rel_mem2 R ===> (=)) (E1 \<circ> subst_mem2 s1) (E2 \<circ> subst_mem2 s2)" 
+      apply transfer_prover_start
       sorry
     show ?thesis
       unfolding rel_expression.rep_eq subst_expression.rep_eq e1 e2 using foot subst by auto
@@ -214,6 +339,7 @@ proof -
     apply (rule_tac rel_funI)+ by assumption
 qed
 
+
 (* TODO move *)
 lemma index_flip_subst_expression: "index_flip_expression (subst_expression \<sigma> e) 
   = subst_expression (map index_flip_substitute1 \<sigma>) (index_flip_expression e)"
@@ -222,11 +348,6 @@ proof -
   have varR_def': "varR x y \<longleftrightarrow> x = index_flip_var_raw y" for x y
     unfolding varR_def by auto
   define subR where "subR = (rel_substitute1 varR (rel_expression varR ((=)::'b::universe\<Rightarrow>'b\<Rightarrow>bool)))" 
-    (* for T :: "'b::universe itself" *)
-  (* define expR where "expR x y \<longleftrightarrow> index_flip_expression x = y" for x y :: "'a expression" *)
-  (* let ?expR = "rel_expression varR (=)" *)
-  (* define sub1R where "sub1R x y \<longleftrightarrow> index_flip_substitute1 x = y" for x y *)
-  (* let ?subR = "rel_substitute1 varR (=)" *)
   have rel_set_varR: "rel_set varR x y \<longleftrightarrow> index_flip_var_raw ` x = y" for x y
     unfolding rel_set_def varR_def by auto
 
@@ -303,7 +424,9 @@ proof -
      unfolding subR_def
     apply (rule_tac rel_funI)+ by assumption *)
 
-  note rel_expression_subst_expression[where R=varR, folded subR_def, transfer_rule]
+  have [transfer_rule]: "(list_all2 subR ===> rel_expression varR (=) ===> rel_expression varR (=))
+   subst_expression subst_expression"
+    unfolding subR_def by transfer_prover
 
   have "(rel_expression (=) (=))
         (index_flip_expression (subst_expression \<sigma> e))

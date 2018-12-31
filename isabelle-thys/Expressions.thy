@@ -29,6 +29,9 @@ lift_definition expression_vars :: "'a expression \<Rightarrow> variable_raw set
 lemma expression_vars[simp]: "expression_vars (expression X e) = set (raw_variables X)"
   by (simp add: expression.rep_eq expression_vars.rep_eq)
 
+lemma Rep_expression_components: "Rep_expression e = (expression_vars e, expression_eval e)"
+  apply transfer by auto
+
 lemma expression_eqI: "expression_vars e = expression_vars e' \<Longrightarrow> expression_eval e = expression_eval e' \<Longrightarrow> e = e'"
   apply transfer by auto
 
@@ -191,6 +194,9 @@ lift_definition substitution1_footprint :: "substitution1 \<Rightarrow> variable
 lift_definition substitution1_variable :: "substitution1 \<Rightarrow> variable_raw" is "\<lambda>(v::variable_raw,_,_). v" .
 lift_definition substitution1_function :: "substitution1 \<Rightarrow> mem2 \<Rightarrow> universe" is "\<lambda>(_,_,f::mem2\<Rightarrow>universe). f" .
 
+lemma Rep_substitution1_components: "Rep_substitution1 s = (substitution1_variable s, substitution1_footprint s, substitution1_function s)"
+  apply transfer by auto
+
 lemma substitution1_function_domain: "substitution1_function s m \<in> variable_raw_domain (substitution1_variable s)"
   apply transfer by auto
 
@@ -214,12 +220,15 @@ lemma index_flip_substitute1: "index_flip_substitute1 (substitute1 x e) =
  *)
 
 
-lift_definition rel_substitute1 :: "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> ('a::universe expression\<Rightarrow>'a expression\<Rightarrow>bool) \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)" is
-  "\<lambda>(rel_v::variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) (rel_exp :: (variable_raw set * (mem2 \<Rightarrow> 'a)) \<Rightarrow> (variable_raw set * (mem2 \<Rightarrow> 'a)) \<Rightarrow> bool). 
-    rel_prod rel_v (%(vs1,f1) (vs2,f2). rel_exp (vs1, inv embedding o f1 :: mem2 \<Rightarrow> 'a) (vs2, inv embedding o f2 :: mem2 \<Rightarrow> 'a))"
+lift_definition rel_substitute1 :: "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> ('a::universe expression\<Rightarrow>'b::universe expression\<Rightarrow>bool) \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)" is
+  "\<lambda>(rel_v::variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) 
+    (rel_exp :: (variable_raw set * (mem2 \<Rightarrow> 'a)) \<Rightarrow> (variable_raw set * (mem2 \<Rightarrow> 'b)) \<Rightarrow> bool). 
+    rel_prod rel_v (%(vs1,f1) (vs2,f2). range f1 \<subseteq> range (embedding::'a\<Rightarrow>_) \<and> range f2 \<subseteq> range (embedding::'b\<Rightarrow>_) \<and>
+                                        rel_exp (vs1, inv embedding o f1 :: mem2 \<Rightarrow> 'a) 
+                                                (vs2, inv embedding o f2 :: mem2 \<Rightarrow> 'b))"
 proof (rename_tac rel_v rel_exp1 rel_exp2 prod1 prod2)
   fix rel_v and rel_exp1 rel_exp2 :: "variable_raw set \<times> (mem2 \<Rightarrow> 'a)
-   \<Rightarrow> variable_raw set \<times> (mem2 \<Rightarrow> 'a) \<Rightarrow> bool" and prod1 prod2 :: "variable_raw \<times> variable_raw set \<times> (mem2 \<Rightarrow> universe)"
+   \<Rightarrow> variable_raw set \<times> (mem2 \<Rightarrow> 'b) \<Rightarrow> bool" and prod1 prod2 :: "variable_raw \<times> variable_raw set \<times> (mem2 \<Rightarrow> universe)"
   obtain v1 vs1 f1 where prod1: "prod1 = (v1,vs1,f1)" apply atomize_elim by (meson prod_cases3)
   obtain v2 vs2 f2 where prod2: "prod2 = (v2,vs2,f2)" apply atomize_elim by (meson prod_cases3)
   assume eq: "vsf1 \<in> {(vs, f). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)} \<Longrightarrow>
@@ -234,10 +243,22 @@ proof (rename_tac rel_v rel_exp1 rel_exp2 prod1 prod2)
     apply (rule eq)
     using p1 p2 unfolding prod1 prod2 apply auto by presburger+
   then
-  show "rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2 =
-        rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2"
+  show "rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). range f1 \<subseteq> range (embedding::'a\<Rightarrow>_) \<and> range f2 \<subseteq> range (embedding::'b\<Rightarrow>_) \<and> rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2 =
+        rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). range f1 \<subseteq> range (embedding::'a\<Rightarrow>_) \<and> range f2 \<subseteq> range (embedding::'b\<Rightarrow>_) \<and> rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2"
     by (simp add: case_prod_beta prod1 prod2)
 qed
+
+lemma rel_substitute1_expression_eq: "rel_substitute1 R (rel_expression S T) s1 s2 = 
+        (R (substitution1_variable s1) (substitution1_variable s2) \<and>
+        rel_set S (substitution1_footprint s1) (substitution1_footprint s2) \<and>
+        range (substitution1_function s1) \<subseteq> range EMBEDDING('a) \<and> 
+        range (substitution1_function s2) \<subseteq> range EMBEDDING('b) \<and> 
+        rel_fun (rel_mem2 S) T (inv EMBEDDING('a) \<circ> substitution1_function s1)
+                               (inv EMBEDDING('b) \<circ> substitution1_function s2))"
+  apply transfer by force
+
+
+
 
 lift_definition subst_mem2 :: "substitution1 list \<Rightarrow> mem2 \<Rightarrow> mem2" is
   "\<lambda>(\<sigma>::substitution1 list) (m::mem2) (v::variable_raw). 
@@ -258,6 +279,66 @@ proof (rename_tac \<sigma> m v)
       using substitution1_function_domain by metis
     with find show ?thesis by auto
   qed
+qed
+
+
+(* lemma
+  includes lifting_syntax
+  fixes R
+  defines "subR == rel_substitute1 R (rel_expression R (=))"
+  shows "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 R ===> (=)))) Rep_substitution1 Rep_substitution1"
+  apply (rule rel_funI)
+  apply (simp add: subR_def rel_substitute1_expression_eq[abs_def] rel_fun_def Rep_substitution1_components rel_prod_conv)
+  by (meson inv_into_injective rangeI set_rev_mp)
+ *)
+
+(* lemma rel_substitute1_Rep_substitution1:
+  includes lifting_syntax
+  fixes R S
+  defines "subR == rel_substitute1 R (rel_expression R S)"
+  defines "S' == BNF_Greatest_Fixpoint.image2p embedding embedding S"
+  shows "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 R ===> S'))) Rep_substitution1 Rep_substitution1"
+  apply (rule rel_funI)
+  apply (simp add: S'_def subR_def rel_substitute1_expression_eq[abs_def] rel_fun_def Rep_substitution1_components rel_prod_conv BNF_Greatest_Fixpoint.image2p_def)
+  apply auto
+  by (meson contra_subsetD f_inv_into_f rangeI) *)
+
+lemma rel_substitute1_Rep_substitution1:
+  includes lifting_syntax
+  fixes R S S'
+  defines "subR == rel_substitute1 R (rel_expression R S)"
+  assumes "\<And>x y. S x y \<longleftrightarrow> S' (embedding x) (embedding y)"
+  shows "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 R ===> S'))) Rep_substitution1 Rep_substitution1"
+  apply (rule rel_funI)
+  apply (simp add: subR_def rel_substitute1_expression_eq[abs_def] rel_fun_def Rep_substitution1_components rel_prod_conv BNF_Greatest_Fixpoint.image2p_def)
+  using assms by (auto simp: f_inv_into_f image_subset_iff) 
+
+lemma rel_substitute1_substitution1_variable: 
+  includes lifting_syntax
+  fixes R S
+  defines "subR == rel_substitute1 R (rel_expression R S)"
+  shows "(subR ===> R) substitution1_variable substitution1_variable"
+proof -
+  define S' where S': "S' == BNF_Greatest_Fixpoint.image2p embedding embedding S"
+  have [unfolded subR_def, transfer_rule]: "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 R ===> S'))) Rep_substitution1 Rep_substitution1"
+    unfolding subR_def apply (rule rel_substitute1_Rep_substitution1) by (simp add: S' image2p_def)
+  show ?thesis
+    unfolding subR_def substitution1_variable_def map_fun_def
+    by transfer_prover
+qed
+
+
+lemma rel_substitute1_substitution1_footprint:
+  includes lifting_syntax
+  fixes R
+  defines "subR == rel_substitute1 R (rel_expression R (=))"
+  shows "(subR ===> rel_set R) substitution1_footprint substitution1_footprint"
+proof -
+  have [unfolded subR_def, transfer_rule]: "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 R ===> (=)))) Rep_substitution1 Rep_substitution1"
+    unfolding subR_def apply (rule rel_substitute1_Rep_substitution1) by simp
+  show ?thesis
+    unfolding subR_def substitution1_footprint_def map_fun_def
+    by transfer_prover
 qed
 
 lemma subst_mem2_empty[simp]: "subst_mem2 [] = id"

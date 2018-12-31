@@ -171,6 +171,10 @@ definition "embedding = fst embedding'"
 (* definition embedding :: "'a::universe \<Rightarrow> universe" where
   "embedding == (SOME f::'a\<Rightarrow>universe. inj f)" *)
 
+syntax "_type_embedding" :: "type => ('a::universe\<Rightarrow>universe)" ("(1EMBEDDING/(1'(_')))")
+
+translations "EMBEDDING('t)" => "CONST embedding :: 't::universe\<Rightarrow>universe"
+
 lemma embedding_inv [simp]: "(embedding x = embedding y) = (x = y)"
   using inj_embedding' unfolding embedding_def inj_on_def by auto
 
