@@ -2427,41 +2427,43 @@ This rule is an immediate consequence of rules \rulerefx{Skip} and \rulerefx{Con
 
 \tactic{swap}
 
-\TODOQ{Document variants ``swap left $n$'' and ``swap right $n$''}
-
 This tactic swaps the last two statements on the left or the right side of a qRHL subgoal,
-assuming those statements are independent (have no joint variables).
-Specifically, when invoked as \texttt{swap left}, it applies the rule
+assuming those statements are independent (have no joint variables),
+or more generally performs a cyclic rotation of the last $n+1$ statements.
+
+Specifically, when invoked as ``\texttt{swap left $n$}'' for $n\geq1$, it applies the rule
 \[
   \inferrule
-  {\rhl A{s_1;\dots;s_{n-2};s_n;s_{n-1}}{\bc}{B}}
-  {\rhl A{s_1;\dots;s_{n-2};s_{n-1};s_n}{\bc}{B}}
+  {\rhl A{s_1;\dots;s_{m};s'';s'_{1};\dots;s'_{n}}{\bc}{B}}
+  {\rhl A{s_1;\dots;s_{m};s'_{1};\dots;s'_{n};s''}{\bc}{B}}
   \qquad
   \text{if}
   \qquad
-  \fv(s_{n-1})\cap \fv(s_n)=\varnothing.
+  \fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing.
 \]
-This rule holds since $s_{n-1}$
-is $\fv(s_{n-1})$-local
-and $s_n$
-is $\fv(s_n)$-local,
-and thus $\denotc{s_{n-1};s_{n}}=\denotc{s_{n};s_{n-1}}$
-since $ \fv(s_{n-1})\cap \fv(s_n)=\varnothing$.
+This rule holds since $s'_{1};\dots;s'_{n}$
+is $\fv(s'_{1};\dots;s'_{n})$-local
+and $s''$
+is $\fv(s'')$-local,
+and thus $\denotc{s'_{1};\dots;s'_{n};s''}=\denotc{s'';s'_{1};\dots;s'_{n}}$
+since $\fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing$.
 
 If-statements count as single statements, even if their bodies contain
 multiple statements.
 
-When invoked as \texttt{swap right}, the analogous rule 
+When invoked as ``\texttt{swap right $n$}'', the analogous rule 
 \[
   \inferrule
-  {\rhl A{\bc}{s_1;\dots;s_{n-2};s_n;s_{n-1}}{B}}
-  {\rhl A{\bc}{s_1;\dots;s_{n-2};s_{n-1};s_n}{\bc}{B}}
+  {\bc}{\rhl A{s_1;\dots;s_{m};s'';s'_{1};\dots;s'_{n}}{B}}
+  {\bc}{\rhl A{s_1;\dots;s_{m};s'_{1};\dots;s'_{n};s''}{B}}
   \qquad
   \text{if}
   \qquad
-  \fv(s_{n-1})\cap \fv(s_n)=\varnothing
+  \fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing.
 \]
 is applied.
+
+When invoked as ``\texttt{swap left}'' or ``\texttt{swap right}'', then $n=1$ is assumed.
 
 \tactic{wp} 
 
