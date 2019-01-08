@@ -1,34 +1,17 @@
-\newif\iffullversion
-\fullversiontrue
 \newif\ifdraft
-\newif\ifanonymous
 
-%\drafttrue
-%\anonymoustrue
+\drafttrue
 
-%\iffullversion\else
-%\anonymoustrue
-%\fi
-
-\iffullversion
 \documentclass{article}
-\else
-\documentclass[acmsmall\ifanonymous,anonymous\fi,natbib=false,screen=false]{acmart}
-\settopmatter{printacmref=false,printfolios=true,printccs=false}
-%\documentclass[submission]{eptcs}
-\fi
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,amssymb,paralist,stmaryrd,mathpartir,mathtools,tabularx,xcolor,centernot,tabto}
 \usepackage{tocloft}
 
-\usepackage[backend=bibtex,maxbibnames=100
-\iffullversion\else , giveninits=true, doi=false, isbn=false \fi]{biblatex}
+\usepackage[backend=bibtex,maxbibnames=100]{biblatex}
 
-\iffullversion
 \usepackage{makeidx}\makeindex
 \usepackage[font=footnotesize,labelfont=bf]{caption}
-\fi
 \usepackage{graphicx}
 \usepackage[section]{placeins}
 \usepackage{idxlayout}
@@ -38,59 +21,25 @@
 \usepackage{declmath}
 \usepackage{version}
 \usepackage{xr}
-\iffullversion \usepackage[framemethod=tikz]{mdframed} \fi
+\usepackage[framemethod=tikz]{mdframed}
 % don't load geometry if preview is to be loaeded
 % (the ifx-statement detects \PassOptionsToPackage{preview}{...})
 \expandafter\ifx\csname opt@preview.sty\endcsname\relax
-\iffullversion \usepackage[a4paper,margin=1in]{geometry} \fi
+\usepackage[a4paper,margin=1in]{geometry}
 \fi
 \usepackage[users=QR]{uchanges}
 \usepackage{circuits}
 \ChangesSetUserColor[Dominique]{Q}{red}
 \ChangesSetUserColor[Reviewer]{R}{invalid}
-\iffullversion \usepackage[pdfborderstyle={/S/U/W 0.3}]{hyperref} \fi
+\usepackage[pdfborderstyle={/S/U/W 0.3}]{hyperref}
 \usepackage[delaytext,envcountsame,multiautoref]{latexhacks}
 
 \usetikzlibrary{decorations.pathreplacing}
-
-\iffullversion
-\newcommand\fullshort[2]{#1}
-\includeversion{fullversion}
-\excludeversion{shortversion}
-\else
-\newcommand\fullshort[2]{#2}
-\excludeversion{fullversion}
-\includeversion{shortversion}
-\fi
-
-\newcommand\fullonly[1]{\fullshort{#1}{}}
-\newcommand\shortonly[1]{\fullshort{}{#1}}
-
-\newcommand\fullonlypar{\fullonly\par}
 
 \newcommand\mytilde{\raise.17ex\hbox{$\scriptstyle\sim$}}
 
 
 \makeatletter
-
-\shortonly{
-  % TODO remove
-  \ifdraft
-    \global\let\@ACM@screentrue\relax
-  \fi
-  % \acmConference{Submission to POPL}{July}{2018}
-  \acmJournal{PACMPL}
-  \acmNumber{POPL}
-  \acmVolume{1}
-  \acmArticle{1}
-  \acmYear{2018}
-  \acmMonth{1}
-  \acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
-  \startPage{1}
-  \setcopyright{none}
-  \long\def\footnotetextcopyrightpermission#1{}
-  %\bibliographystyle{ACM-Reference-Format}
-}
 
 
 
@@ -101,13 +50,6 @@
 
 \sloppy
 
-\fullshort{
-  \newcommand\delaytextsv[1]{}
-}{
-  \newcommand\delaytextsv[2]{%
-    \delaytext{#1}{#2}}
-}
- 
 
 \DeclareUnicodeCharacter{212D}{\textswab C}
 \DeclareUnicodeCharacter{1D529}{\textswab l}
@@ -132,10 +74,10 @@
 }
 
 \makeatletter
-\fullonly{
+
 \DeclareCaptionFormat{myformat}{#1#2#3\leavevmode\leaders\hrule height .1pt\hfill\kern\z@}
 \captionsetup[figure]{format=myformat}
-}
+
 
 %\fullshort{
 \renewcommand\sectionautorefname{Section}
@@ -158,7 +100,7 @@
 % \newcommand\claimautorefname{Claim}
 % }
 
-\fullonly{
+
 \mdfdefinestyle{theoremstyle}{%
   linecolor=black,
   backgroundcolor=black!10!white,
@@ -170,12 +112,10 @@
 \mdtheorem[style=theoremstyle]{definition}{Definition}
 \mdtheorem[style=theoremstyle]{lemma}{Lemma}
 \mdtheorem[style=theoremstyle]{corollary}{Corollary}
-}
+
 
 \newtheorem{theorem}{Theorem}
-\shortonly{ \newtheorem{lemma}{Lemma} }
 \newtheorem{conjecture}{Conjecture}
-\shortonly{ \newtheorem{definition}{Definition} }
 
 \newcounter{claimstep}
 \newtheorem{claim}{Claim}[claimstep]
@@ -200,33 +140,12 @@
 \newcommand\PROOFREAD[1]{\TODOQ{proofread\ifx!#1!\else #1\fi}}
 %\renewcommand\PROOFREAD[1]{}
 
-\ifanonymous
-\newcommand\anonymouserror{{\Huge\bfseries ANONYMOUSXXX}\error}
-\newcommand\nonanonymous[1]{}
-\else
-\newcommand\anonymouserror{}
-\newcommand\nonanonymous[1]{#1}
-\fi
+\newcommand\giturl[1]{\url{https://raw.githubusercontent.com/dominique-unruh/qrhl-tool/master/#1}}
 
-\newcommand\giturl[1]{\anonymouserror
-  \url{https://raw.githubusercontent.com/dominique-unruh/qrhl-tool/master/#1}}
-
-\fullshort{
-  \newenvironment{citemize}{\begin{itemize}}{\end{itemize}}
-}{
-  \newenvironment{citemize}{\begin{compactitem}}{\end{compactitem}}
-}
+\newenvironment{citemize}{\begin{itemize}}{\end{itemize}}
 
 \allowdisplaybreaks
 
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "manual"
-%%% End:
-
-
-\let\standalonemanual1
 
 \externaldocument[main:]{qrhl}
 
@@ -259,29 +178,17 @@
 \let\subsection\section
 
 
-\ifx\standalonemanual1\else
-  \section{The proof assistant}
-\fi
-\label{sec:tool}
 
-\ifx\standalonemanual1 This is \else This section constitutes \fi a user manual for our proof assistant for
+This is a user manual for our proof assistant for
 performing qRHL-based security proofs.  The tool is a prototype to
 demonstrate the logic and to experiment with security proofs. At this
 point, it is not yet meant for larger developments.
 
-\ifx\standalonemanual1%
 This manual assumes knowledge of the underlying qRHL formalism, see
 \cite{qrhl-paper-from-manual}.
-%
-\fi
+\TODOQ{Cite POPL version too}
 
-\ifanonymous
-\showafter{2018}{07}{20}{\POPLspecific}
-A link to the binaries and the sources is included in the nonanonymous supplement.
-\else
-The source code is published on GitHub \cite{github-source}\ifx\standalonemanual1\else, 
-a binary distribution is available in \cite{qrhl-binary}\fi.
-\fi
+The source code is published on GitHub \cite{github-source}.
 
 For installation instructions see the included \texttt{README.md}.
 
@@ -330,11 +237,7 @@ tactics in the tool, and many of the simplification rules in
 \texttt{QRHL.thy} are axiomatized (and backed by the proofs in this
 paper).\footnote{The theory \texttt{QRHL.thy} is integrated in executable in the binary distribution
   but can be inspected 
-  \ifanonymous
-  in the source code.
-  \else
-  at \url{https://github.com/dominique-unruh/qrhl-tool/blob/master/src/main/isabelle/QRHL.thy}.
-  \fi}
+  at \url{https://github.com/dominique-unruh/qrhl-tool/blob/master/src/main/isabelle/QRHL.thy}.}
 We simply use Isabelle/HOL as a backend because it comes with
 rich existing theories and tools. Embedding it in our tool avoids
 duplication of effort.
@@ -398,7 +301,7 @@ See \autoref{sec:isabelle} for more information on accompanying theories.
 \paragraph{Declaring variables.} There are three different kinds of
 variables: classical, quantum, and ambient variables. Classical and
 quantum variables represent classical and quantum program variables as
-defined \ifx\standalonemanual1 in \cite{qrhl-paper-from-manual}\else in this paper\fi. These can be declared using the following commands
+defined in \cite{qrhl-paper-from-manual}. These can be declared using the following commands
 \begin{center}
   \toolidx{classical var}%
   \index{var@\texttt{var} (tool syntax)!classical@\texttt{classical}}%
@@ -729,7 +632,7 @@ A program is represented as a list of statements.\footnote{This
     is an arbitrary unit vector if $\psi$
     is not a unit vector. With this interpretation, programs as
     implemented in our tool match the typing-rules and semantics
-    \ifx\standalonemanual1 in \cite{qrhl-paper-from-manual}\else in this paper\fi.
+    in \cite{qrhl-paper-from-manual}.
     %
     See \autoref{footnote:wp.qinit} for how this affects the rules implemented by the tactics.
   }
@@ -809,7 +712,7 @@ A program is represented as a list of statements.\footnote{This
     is an arbitrary isometry (e.g., the identity) if $U$
     is not an isometry. With this interpretation, programs as
     implemented in our tool match the typing-rules and semantics
-    \ifx\standalonemanual1 in \cite{qrhl-paper-from-manual}\else in this paper\fi.
+    in \cite{qrhl-paper-from-manual}.
     %
     %
     See \autoref{footnote:wp.qapply} for how this affects the rules implemented by the tactics.
@@ -1379,8 +1282,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
 
   (Not the labeled one between $\bounded V$
   and $\boundedv W$
-  described in the preliminaries\ifx\standalonemanual1 of
-  \cite{qrhl-paper-from-manual}\fi. That is,
+  described in the preliminaries of
+  \cite{qrhl-paper-from-manual}. That is,
   $A\otimes B\neq B\otimes A$.)
 
   The notations $A\tensor B$ and $\mathtt{tensor}\ A\ B$ are overloaded.
@@ -1476,8 +1379,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
 
   (Not the labeled one between $\elltwov V$
   and $\elltwov W$
-  described in the preliminaries\ifx\standalonemanual1 of
-  \cite{qrhl-paper-from-manual}\fi. That is,
+  described in the preliminaries of
+  \cite{qrhl-paper-from-manual}. That is,
   $\psi\otimes\phi\neq\phi\otimes\psi$.)
 
   The notations $\psi\tensor\phi$ and $\mathtt{tensor}\ \psi\ \phi$ are overloaded.
@@ -1861,8 +1764,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
 
   (Not the labeled one between $\elltwov V$
   and $\elltwov W$
-  described in the preliminaries\ifx\standalonemanual1 of
-  \cite{qrhl-paper-from-manual}\fi. That is,
+  described in the preliminaries of
+  \cite{qrhl-paper-from-manual}. That is,
   $S\otimes T\neq T\otimes S$.)
 
   The notations $S\tensor T$ and $\mathtt{tensor}\ S\  T$ are overloaded.
@@ -1998,6 +1901,8 @@ The rule is a special case of \ruleref{QrhlElimEq}.
 
 
 \tactic{equal}
+
+\TODOQ{equal with differences}
 
 Converts a subgoal of the form
 $\rhl{A}{\bc;s}{\bc';s}{B}$
@@ -2425,7 +2330,7 @@ example, we can show the judgment
 $\rhl{\mathtt{top}}{\xx\texttt{ <\$ }d;}{\xx\texttt{ <\$
   }\mathtt{map\_distr}\ (\lambda z.\ z*z)\ d;}{
   \mathfrak{Cla}[\xx_1*\xx_1 = \xx_2] }$ (see the contributed file
-\texttt{rnd.qrhl}\nonanonymous{\footnote{\giturl{rnd.qrhl}, and bundled with the tool.}}) which does not seem easily possible in EasyCrypt.
+\texttt{rnd.qrhl}\footnote{\giturl{rnd.qrhl}, and bundled with the tool.}) which does not seem easily possible in EasyCrypt.
 
 \tactic{rule}
 
@@ -2697,7 +2602,7 @@ well-known or obvious facts):
   \hline
   \bfseries Isabelle lemma
   &
-    \bfseries Lemma in \ifx\standalonemanual1 \cite{qrhl-paper-from-manual} \else this paper \fi
+    \bfseries Lemma in \cite{qrhl-paper-from-manual}
   \\
   \hline
   \hline
@@ -2917,7 +2822,7 @@ To give a complete example, \eqref{eq:code2} can be shown as follows:
 \end{lstlisting}
 This example, the proof of \eqref{eq:code1}, and a few other examples
 can be found in \texttt{Code\_Example.thy}.\footnote{Bundled with the
-  tool\nonanonymous{, and also directly available at \giturl{Code\_Example.thy}}.}  (A
+  tool, and also directly available at \giturl{Code\_Example.thy}.}  (A
 remark: the subgoal produced after \texttt{apply (simp ...)} in this
 example is not the same as in \eqref{eq:code2-rewrite} but a somewhat
 more complex one. This is because the simplification procedures do
@@ -3046,8 +2951,8 @@ encryption scheme itself. Since this involves the definition of types
 (for keys and messages) and logical constants ($\mathrm{enc}$
 and~$G$),
 it needs to be done in an accompanying Isabelle theory
-\texttt{PrgEnc.thy}.\footnote{The full theory file is bunded with the tool\nonanonymous{,
-  and also directly available at \giturl{PrgEnc.thy}}.}
+\texttt{PrgEnc.thy}.\footnote{The full theory file is bunded with the tool,
+  and also directly available at \giturl{PrgEnc.thy}.}
 
 In this theory, we first declare the types \texttt{key} and
 \texttt{msg} as abstract (i.e., unspecified) types. We want both types
@@ -3079,8 +2984,8 @@ that will be used in the proof (\texttt{my\_simp}, \texttt{mysimp2}, \texttt{aux
 \paragraph{Specification in our tool.} We now proceed to the
 specifications that are done in our tool directly. We show only
 excerpts, the full file is
-\texttt{prg-enc-rorcpa.qrhl}.\footnote{Bundled with the tool\nonanonymous{, and also
-  directly available at \giturl{prg-enc-rorcpa.qrhl}}.}  We first specify the games
+\texttt{prg-enc-rorcpa.qrhl}.\footnote{Bundled with the tool, and also
+  directly available at \giturl{prg-enc-rorcpa.qrhl}.}  We first specify the games
 from \autoref{def:roradv} and \autoref{def:prg.adv}. Consider the lhs
 game from \autoref{def:roradv}. At first, it seems like we have a
 problem here. The description of the game requires $A_1,A_2$
@@ -3293,7 +3198,7 @@ is unchanged. That is, we use the same accompanying theory
 \texttt{PrgEnc.thy} as in \autoref{sec:ex.ror}.
 
 In our tool,\footnote{File \texttt{prg-enc-indcpa.qrhl}, bundled with
-  the tool\nonanonymous{, and also directly available here: \giturl{prg-enc-indcpa.qrhl}}.} we have
+  the tool, and also directly available here: \giturl{prg-enc-indcpa.qrhl}.} we have
 to describe the two IND-OT-CPA games from \autoref{def:indadv}
 (\texttt{indcpa0} and \texttt{indcpa1} in \autoref{fig:indprogs}), as well as the
 two PRG games from \autoref{def:prg.adv}. For the latter, there is a
@@ -3417,8 +3322,8 @@ This can be proven immediately using the tactic \texttt{\frenchspacing
 \subsubsection{Quantum equality}
 \label{sec:qeq.example}
 
-In the file \texttt{equality.qrhl}\footnote{Bundled with the tool\nonanonymous{, and
-  also available directly at \giturl{equality.qrhl}}.} we give a simple
+In the file \texttt{equality.qrhl}\footnote{Bundled with the tool, and
+  also available directly at \giturl{equality.qrhl}.} we give a simple
 example involving reasoning about quantum equality. We show
 \begin{equation}\label{eq:equality}
 \rhl{\qq_1\quanteq\qq_2}{\mathtt{prog1}}{\mathtt{prog2}}{\qq_1\quanteq\qq_2}
@@ -3701,7 +3606,7 @@ simply maintained equality between two quantum states without ever
 performing any explicit operations on it), and as a further example on
 how to use the quantum equality.
 
-\paragraph{The ``instructive'' proof.} This proof is formalized in \texttt{teleport.qrhl}.\footnote{Bundled with the tool\nonanonymous{, and also directly available at \giturl{teleport.qrhl}}.}
+\paragraph{The ``instructive'' proof.} This proof is formalized in \texttt{teleport.qrhl}.\footnote{Bundled with the tool, and also directly available at \giturl{teleport.qrhl}.}
 The initial subgoal is \eqref{eq:teleport.claim}. We use the tactic
 \texttt{inline teleport} to inline the definition of
 \texttt{teleport}. First, we reason about the first instruction in
@@ -3787,8 +3692,8 @@ with an ambient subgoal relating quantum predicates. Unfortunately,
 the \texttt{simp} tactic is not able to solve this subgoal. Therefore
 we outsourced this subgoal to Isabelle/HOL. Namely, we copy-and-pasted
 the subgoal into the accompanying theory
-\texttt{Teleport.thy},\footnote{Bundled with the tool\nonanonymous{, and also
-  directly available at \giturl{Teleport.thy}}.}
+\texttt{Teleport.thy},\footnote{Bundled with the tool, and also
+  directly available at \giturl{Teleport.thy}.}
 That is, we proved a lemma of the form
 \begin{lstlisting}
   lemma teleport_goal1:
@@ -3949,8 +3854,8 @@ The other three cases for $a',c'$ are solved analogously.
 The proof described above shows the predicates that hold after each
 step of the teleportation program. However, a much shorter (and less
 explicit) proof is possible, too. This proof is given in
-\texttt{teleport-terse.qrhl}.\footnote{Bundled with the tool\nonanonymous{, and also
-  directly available at \giturl{teleport-terse.qrhl}}.}  The definition of the
+\texttt{teleport-terse.qrhl}.\footnote{Bundled with the tool, and also
+  directly available at \giturl{teleport-terse.qrhl}.}  The definition of the
 program \texttt{teleport} is the same as before (see
 \autoref{fig:teleport}). To prove the goal \eqref{eq:teleport.claim},
 we unfolding the definition of \texttt{teleport} using \texttt{inline
@@ -3960,25 +3865,20 @@ and the apply \texttt{skip}. We now get a lengthy inequality between
 predicates as the remaining goal. While this inequality is hardly
 readable (it is an 814 character string), we can just copy-and-paste
 it into the accompanying theory
-\texttt{Teleport\_Terse.thy}\footnote{Bundled with the tool\nonanonymous{, and also
-  directly available at \giturl{Teleport\_Terse.thy}}.} as a lemma
+\texttt{Teleport\_Terse.thy}\footnote{Bundled with the tool, and also
+  directly available at \giturl{Teleport\_Terse.thy}.} as a lemma
 \texttt{teleport\_terse} and prove it using Isabelle's code generation
 (see \autoref{sec:isabelle}). With that lemma, the goal is proven
 with the tactics \texttt{\frenchspacing rule teleport\_terse. simp!.}
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "manual"
-%%% End:
 
 
 \printbibliography
 
 \renewcommand\symbolindexentry[4]{\noindent\hbox{\hbox to 2in{$#2$\hfill}\parbox[t]{3.5in}{#3}\hbox to 1cm{\hfill #4}}\\[2pt]}
 
-\fullonly \printsymbolindex
+\printsymbolindex
 
-\fullonly \printindex  
+\printindex  
 
 
 \end{document}

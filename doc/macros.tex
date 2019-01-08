@@ -12,7 +12,6 @@
   {\edef\@tempa{\noexpand\href{\SAGECELLLINK}}%
     \@tempa}}
 
-\fullonly{
   \mdfdefinestyle{proofstyle}{%
     backgroundcolor=black!4!white,
     innertopmargin=3pt,
@@ -70,13 +69,9 @@
         \qed\global\let\qed\qedmacro
       \end{trivlist}
     \end{mdframed}}%
-}
 
-\shortonly{
-\newenvironment{claimproof}{%
-  \def\qed{\hfill\qedboxclaim}%
-  \begin{proof}[Proof of claim]}{\end{proof}}
-}
+
+
 
 % \showafter{year}{month}{day}{text} evaluates to {text} starting from year/month/day
 \newcommand\showafter[4]{%
@@ -114,13 +109,10 @@
 \newcommand\qedboxclaim{\ensuremath\diamond}
 \newcommand\qedbox{\m@th$\Box$}
 \newcommand\qedmacro{\hfill\qedbox}
-\fullonly{ \global\let\qed\qedmacro }
+\global\let\qed\qedmacro
 \newcommand\skipqed{\global\let\qed\empty}
-\fullshort{
-  \newcommand\mathQED{\tag*{\qedbox}\skipqed}
-}{
-  \newcommand\mathQED{}
-}
+\newcommand\mathQED{\tag*{\qedbox}\skipqed}
+
 \newcommand\txtrel[1]{\stackrel{\hskip-1in\text{\tiny#1}\hskip-1in}}
 \newcommand\eqrefrel[1]{\txtrel{\eqref{#1}}}
 \newcommand\starrel{\txtrel{$(*)$}}
@@ -726,7 +718,7 @@
 
 %%% Local Variables: 
 %%% mode: latex
-%%% TeX-master: "o2h-main"
+%%% TeX-master: "manual"
 %%% TeX-PDF-mode: t 
 %%% End: 
 
