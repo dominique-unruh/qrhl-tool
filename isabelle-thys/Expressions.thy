@@ -248,6 +248,34 @@ proof (rename_tac rel_v rel_exp1 rel_exp2 prod1 prod2)
     by (simp add: case_prod_beta prod1 prod2)
 qed
 
+(* TODO remove *)
+lift_definition rel_substitute1' :: "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> ('a::universe expression\<Rightarrow>'b::universe expression\<Rightarrow>bool) \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)" is
+  "\<lambda>(rel_v::variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) 
+    (rel_exp :: (variable_raw set * (mem2 \<Rightarrow> 'a)) \<Rightarrow> (variable_raw set * (mem2 \<Rightarrow> 'b)) \<Rightarrow> bool). 
+    rel_prod rel_v (%(vs1,f1) (vs2,f2). rel_exp (vs1, inv embedding o f1 :: mem2 \<Rightarrow> 'a) 
+                                                (vs2, inv embedding o f2 :: mem2 \<Rightarrow> 'b))"
+proof (rename_tac rel_v rel_exp1 rel_exp2 prod1 prod2)
+  fix rel_v and rel_exp1 rel_exp2 :: "variable_raw set \<times> (mem2 \<Rightarrow> 'a)
+   \<Rightarrow> variable_raw set \<times> (mem2 \<Rightarrow> 'b) \<Rightarrow> bool" and prod1 prod2 :: "variable_raw \<times> variable_raw set \<times> (mem2 \<Rightarrow> universe)"
+  obtain v1 vs1 f1 where prod1: "prod1 = (v1,vs1,f1)" apply atomize_elim by (meson prod_cases3)
+  obtain v2 vs2 f2 where prod2: "prod2 = (v2,vs2,f2)" apply atomize_elim by (meson prod_cases3)
+  assume eq: "vsf1 \<in> {(vs, f). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)} \<Longrightarrow>
+              vsf2 \<in> {(vs, f). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)} \<Longrightarrow>
+              rel_exp1 vsf1 vsf2 = rel_exp2 vsf1 vsf2" for vsf1 vsf2
+  assume p1: "prod1 \<in> {(v, vs, e).
+           finite vs \<and> (\<forall>m. e m \<in> variable_raw_domain v) \<and> (\<forall>m1 m2. (\<forall>w\<in>vs. Rep_mem2 m1 w = Rep_mem2 m2 w) \<longrightarrow> e m1 = e m2)} "
+  assume p2: "prod2 \<in> {(v, vs, e).
+           finite vs \<and> (\<forall>m. e m \<in> variable_raw_domain v) \<and> (\<forall>m1 m2. (\<forall>w\<in>vs. Rep_mem2 m1 w = Rep_mem2 m2 w) \<longrightarrow> e m1 = e m2)}"
+  have "rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2) \<longleftrightarrow>
+        rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)"
+    apply (rule eq)
+    using p1 p2 unfolding prod1 prod2 apply auto by presburger+
+  then
+  show "rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2 =
+        rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2"
+    by (simp add: case_prod_beta prod1 prod2)
+qed
+
 lemma rel_substitute1_expression_eq: "rel_substitute1 R (rel_expression S T) s1 s2 = 
         (R (substitution1_variable s1) (substitution1_variable s2) \<and>
         rel_set S (substitution1_footprint s1) (substitution1_footprint s2) \<and>

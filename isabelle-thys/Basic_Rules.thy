@@ -263,6 +263,86 @@ lemma bi_unique_rel_substitute1[transfer_rule]:
   shows "bi_unique (rel_substitute1 R S)"
   using assms by (meson bi_total_alt_def bi_unique_alt_def left_unique_rel_substitute1 right_unique_rel_substitute1)
 
+lemma rel_set_subst_expression_footprint:
+  includes lifting_syntax
+  assumes "bi_unique R" and "bi_total R" and "type_preserving_var_rel R"
+  defines "subR == rel_substitute1 R (rel_expression R (=))"
+  assumes "list_all2 subR s1 s2"
+  assumes "rel_set R vs1 vs2" 
+  shows "rel_set R (subst_expression_footprint s1 vs1) (subst_expression_footprint s2 vs2)"
+proof (rule rel_setI)
+
+  have goal: "\<exists>y\<in>subst_expression_footprint s2 vs2. R x y" if "x \<in> subst_expression_footprint s1 vs1" 
+    and [transfer_rule]: "list_all2 subR s1 s2"
+    and [transfer_rule]: "rel_set R vs1 vs2"
+    and [transfer_rule]: "bi_unique R"
+    and [transfer_rule]: "bi_total R"
+    and [transfer_rule]: "type_preserving_var_rel R"
+    and subR_def: "subR = rel_substitute1 R (rel_expression R (=))"
+  for x s1 s2 vs1 vs2 R subR
+  proof -
+    have [transfer_rule]: "(subR ===> R) substitution1_variable substitution1_variable"
+      unfolding subR_def by (rule rel_substitute1_substitution1_variable)
+    have [transfer_rule]: "(subR ===> rel_set R) substitution1_footprint substitution1_footprint"
+      unfolding subR_def by (rule rel_substitute1_substitution1_footprint)
+    have [transfer_rule]: "bi_unique subR" 
+      unfolding subR_def
+      using \<open>bi_unique R\<close> apply (rule bi_unique_rel_substitute1)
+      apply (rule bi_unique_rel_expression)
+      using that bi_unique_eq by auto
+    show ?thesis
+    proof (cases "x \<in> vs1 - substitution1_variable ` set s1")
+      case False
+      with that obtain sx vx where x_sx: "x \<in> substitution1_footprint sx" 
+        and Some1: "Some sx = find (\<lambda>s. substitution1_variable s = vx) s1" 
+        and sx_vs1: "substitution1_variable sx \<in> vs1"
+        unfolding subst_expression_footprint_def by auto
+      from Some1 obtain i where s1i: "s1!i = sx" and lens1: "i < length s1"
+        by (metis find_Some_iff) 
+      define sy where "sy = s2!i"
+      then have [transfer_rule]: "subR sx sy" (* and "i < length s2" *)
+        using s1i lens1 \<open>list_all2 subR s1 s2\<close> list_all2_conv_all_nth by blast
+      from Some1 have vx_def: "vx = substitution1_variable sx"
+        by (metis (mono_tags) find_Some_iff)
+      define vy where "vy = substitution1_variable sy"
+      have [transfer_rule]: "R vx vy" unfolding vy_def vx_def
+        by (meson \<open>(subR ===> R) substitution1_variable substitution1_variable\<close> \<open>subR sx sy\<close> rel_funD)
+      from sx_vs1 have "vx : vs1"
+        by (simp add: vx_def)
+      have Some2: "Some sy = find (\<lambda>s. substitution1_variable s = vy) s2"
+        apply (transfer fixing: sy vy s1) 
+        by (fact Some1)
+      have sy_vs2: "substitution1_variable sy \<in> vs2"
+        apply (transfer fixing: sy vs2)
+        by (fact sx_vs1)
+      have "rel_set R (substitution1_footprint sx) (substitution1_footprint sy)"
+        by (meson \<open>(subR ===> rel_set R) substitution1_footprint substitution1_footprint\<close> \<open>subR sx sy\<close> rel_funD)
+      with x_sx obtain y where Rxy: "R x y" and y_sy: "y \<in> substitution1_footprint sy"
+        by (meson rel_set_def)
+      from Some2 sy_vs2 y_sy have "y\<in>subst_expression_footprint s2 vs2"
+        unfolding subst_expression_footprint_def by auto
+      with Rxy show ?thesis by auto
+    next
+      case True
+      have "rel_set R (vs1 - substitution1_variable ` set s1) (vs2 - substitution1_variable ` set s2)"
+        by transfer_prover
+      with True obtain y where "y \<in> vs2 - substitution1_variable ` set s2" and Rxy: "R x y"
+        by (meson rel_set_def)
+      then have "y\<in>subst_expression_footprint s2 vs2"
+        unfolding subst_expression_footprint_def by auto
+      with Rxy show ?thesis by auto 
+    qed
+  qed
+  show "\<exists>y\<in>subst_expression_footprint s2 vs2. R x y" if "x \<in> subst_expression_footprint s1 vs1" for x
+    apply (rule goal) using assms that by simp_all
+  show "\<exists>x\<in>subst_expression_footprint s1 vs1. R x y" if "y \<in> subst_expression_footprint s2 vs2" for y
+    apply (subst conversep_iff[of R, symmetric])
+    apply (rule goal[where R="conversep R" and subR="conversep subR"]) 
+          apply (simp_all add: list.rel_flip)
+    using that assms by (simp_all add: subR_def)
+qed
+
+
 lemma rel_expression_subst_expression [transfer_rule]: 
   includes lifting_syntax
   assumes [transfer_rule]: "bi_unique R" and [transfer_rule]: "bi_total R" and [transfer_rule]: "type_preserving_var_rel R" (* TODO cleanup *)
@@ -271,17 +351,21 @@ lemma rel_expression_subst_expression [transfer_rule]:
          subst_expression subst_expression"
 proof -
   have "rel_expression R (=) (subst_expression s1 e1) (subst_expression s2 e2)" 
-    if [transfer_rule]: "list_all2 subR s1 s2" and "rel_expression R (=) e1 e2" for s1 s2 and e1 e2 :: "'b expression"
+    if subR_s1_s2[transfer_rule]: "list_all2 subR s1 s2" and R_e1_e2: "rel_expression R (=) e1 e2" for s1 s2 and e1 e2 :: "'b expression"
   proof -
+    (* define subR' where "subR' == rel_substitute1' R (rel_expression R (=))" *)
+(*     from that(1) have "list_all2 subR' s1 s2" 
+      apply (rule list_all2_mono)
+      unfolding subR_def subR'_def 
+      apply transfer apply auto
+      by (smt UNIV_I comp_apply image_subset_iff inv_into_injective rel_fun_def) *)
     obtain vs1 E1 where e1: "Rep_expression e1 = (vs1,E1)" apply atomize_elim by auto
     obtain vs2 E2 where e2: "Rep_expression e2 = (vs2,E2)" apply atomize_elim by auto
     have [unfolded subR_def, transfer_rule]: "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 R ===> (=)))) Rep_substitution1 Rep_substitution1"
       unfolding subR_def apply (rule rel_substitute1_Rep_substitution1) by simp
     have [transfer_rule]: "(subR ===> R) substitution1_variable substitution1_variable"
       unfolding subR_def by (rule rel_substitute1_substitution1_variable)
-    (* have [transfer_rule]: "bi_total subR"   *)
-      unfolding subR_def 
-      sorry
+    (* have [transfer_rule]: "bi_total subR'" sorry *)
     have [transfer_rule]: "bi_unique subR" 
       unfolding subR_def
       using \<open>bi_unique R\<close> apply (rule bi_unique_rel_substitute1)
@@ -289,45 +373,14 @@ proof -
       using assms bi_unique_eq by auto
     have [transfer_rule]: "(subR ===> rel_set R) substitution1_footprint substitution1_footprint"
       unfolding subR_def by (rule rel_substitute1_substitution1_footprint)
-    have [transfer_rule]: "rel_set R vs1 vs2" sorry
+    have "rel_set R (expression_vars e1) (expression_vars e2)"
+      using R_e1_e2 apply transfer by auto
+    then have R_vs1_vs2[transfer_rule]: "rel_set R vs1 vs2"
+      by (metis Rep_expression_components e1 e2 fst_conv)
     have foot: "rel_set R (subst_expression_footprint s1 vs1) (subst_expression_footprint s2 vs2)"
-      unfolding subst_expression_footprint_def 
-      apply transfer_prover_start
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-      apply transfer_step
-    (* have [tranfer_rule]: "(list_all2 (subR ===> _) ===> rel_mem2 R) subst_mem2 subst_mem2" *)
-    have subst: "(rel_mem2 R ===> (=)) (E1 \<circ> subst_mem2 s1) (E2 \<circ> subst_mem2 s2)" 
+      apply (rule rel_set_subst_expression_footprint)
+      using assms R_vs1_vs2 subR_s1_s2 unfolding subR_def by auto
+    have subst: "(rel_mem2 R ===> (=)) (E1 \<circ> subst_mem2 s1) (E2 \<circ> subst_mem2 s2)"
       apply transfer_prover_start
       sorry
     show ?thesis
