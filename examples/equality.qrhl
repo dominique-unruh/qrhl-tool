@@ -7,7 +7,10 @@ ambient var x : bit.
 
 program prog1 := {
   b <$ uniform UNIV;
-  if (b=1) then on q apply hadamard; else skip;
+  if (b=1) then
+    on q apply hadamard;
+  else
+    skip;
 }.
 
 
