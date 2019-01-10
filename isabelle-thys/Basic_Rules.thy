@@ -29,6 +29,11 @@ lemma substitution1_variable_index_flip: "substitution1_variable (index_flip_sub
   index_flip_var_raw (substitution1_variable s)"
   apply transfer by auto
 
+lemma substitution1_function_index_flip: "substitution1_function (index_flip_substitute1 s) = 
+  substitution1_function s \<circ> index_flip_mem2"
+  apply (cases "Rep_substitution1 s")
+  by (simp add: substitution1_function.rep_eq index_flip_substitute1.rep_eq)
+
 lemma index_flip_var_raw_substitution1_footprint: "index_flip_var_raw ` substitution1_footprint s =
   substitution1_footprint (index_flip_substitute1 s)"
   sorry
@@ -266,7 +271,7 @@ lemma bi_unique_rel_substitute1[transfer_rule]:
 lemma rel_set_subst_expression_footprint:
   includes lifting_syntax
   assumes "bi_unique R" and "bi_total R" and "type_preserving_var_rel R"
-  defines "subR == rel_substitute1 R (rel_expression R (=))"
+  defines "subR == rel_substitute1 R (rel_expression R (=))" (* TODO must be (=) ? *)
   assumes "list_all2 subR s1 s2"
   assumes "rel_set R vs1 vs2" 
   shows "rel_set R (subst_expression_footprint s1 vs1) (subst_expression_footprint s2 vs2)"
@@ -342,6 +347,60 @@ proof (rule rel_setI)
     using that assms by (simp_all add: subR_def)
 qed
 
+lemma rel_substitution1_function:
+  includes lifting_syntax
+  fixes R
+  defines "subR == rel_substitute1 R (rel_expression R (=))"
+  shows "(subR ===> rel_mem2 R ===> (=)) substitution1_function substitution1_function"
+proof (rule rel_funI, rule rel_funI, rename_tac s1 s2 m1 m2)
+  fix s1 s2 m1 m2
+  assume s12: "subR s1 s2"
+  assume m12: "rel_mem2 R m1 m2"
+  show "substitution1_function s1 m1 = substitution1_function s2 m2"
+    using s12 m12 unfolding subR_def 
+    apply transfer unfolding rel_fun_def rel_set_def apply auto
+    by (meson inv_into_injective range_subsetD)
+qed
+
+lemma rel_subst_mem2:
+  includes lifting_syntax
+  fixes R
+  assumes [transfer_rule]: "bi_unique R"
+  defines "subR == rel_substitute1 R (rel_expression R (=))"
+  shows "(list_all2 subR ===> rel_mem2 R ===> rel_mem2 R) subst_mem2 subst_mem2"
+proof (rule rel_funI, rule rel_funI)
+  fix s1 s2 m1 m2
+  assume s12[unfolded subR_def, transfer_rule]: "list_all2 subR s1 s2"
+  assume m12[transfer_rule]: "rel_mem2 R m1 m2"
+  show "rel_mem2 R (subst_mem2 s1 m1) (subst_mem2 s2 m2)"
+    unfolding rel_mem2.rep_eq subst_mem2.rep_eq 
+  proof (rule rel_funI, rename_tac v1 v2) 
+    fix v1 v2
+    assume v12[transfer_rule]: "R v1 v2"
+    note rel_substitute1_substitution1_variable[transfer_rule]
+    define find1 find2 where "find1 = find (\<lambda>s. substitution1_variable s = v1) s1" and "find2 = find (\<lambda>s. substitution1_variable s = v2) s2"
+    have find12: "(rel_option subR) find1 find2" 
+      unfolding find1_def find2_def subR_def
+      by transfer_prover
+    show "(case find1 of None \<Rightarrow> Rep_mem2 m1 v1 | Some s \<Rightarrow> substitution1_function s m1) =
+          (case find2 of None \<Rightarrow> Rep_mem2 m2 v2 | Some s \<Rightarrow> substitution1_function s m2)"
+    proof (cases "find1")
+      case None
+      with find12 have None2: "find2 = None" by auto
+      show ?thesis
+        unfolding None None2 apply simp
+        by (metis (full_types) v12 m12 rel_fun_def rel_mem2.rep_eq)
+    next
+      case (Some s1')
+      with find12 obtain s2' where Some2: "find2 = Some s2'" and [transfer_rule]: "subR s1' s2'"
+        by (meson option_rel_Some1)
+      have [transfer_rule]: "(subR ===> rel_mem2 R ===> (=)) substitution1_function substitution1_function"
+         unfolding subR_def by (rule rel_substitution1_function)
+      show ?thesis
+        unfolding Some Some2 apply simp by transfer_prover
+    qed
+  qed
+qed
 
 lemma rel_expression_subst_expression [transfer_rule]: 
   includes lifting_syntax
@@ -351,21 +410,15 @@ lemma rel_expression_subst_expression [transfer_rule]:
          subst_expression subst_expression"
 proof -
   have "rel_expression R (=) (subst_expression s1 e1) (subst_expression s2 e2)" 
-    if subR_s1_s2[transfer_rule]: "list_all2 subR s1 s2" and R_e1_e2: "rel_expression R (=) e1 e2" for s1 s2 and e1 e2 :: "'b expression"
+    if subR_s1_s2[transfer_rule]: "list_all2 subR s1 s2" and R_e1_e2: "rel_expression R (=) e1 e2" 
+    for s1 s2 and e1 e2 :: "'b expression"
   proof -
-    (* define subR' where "subR' == rel_substitute1' R (rel_expression R (=))" *)
-(*     from that(1) have "list_all2 subR' s1 s2" 
-      apply (rule list_all2_mono)
-      unfolding subR_def subR'_def 
-      apply transfer apply auto
-      by (smt UNIV_I comp_apply image_subset_iff inv_into_injective rel_fun_def) *)
-    obtain vs1 E1 where e1: "Rep_expression e1 = (vs1,E1)" apply atomize_elim by auto
-    obtain vs2 E2 where e2: "Rep_expression e2 = (vs2,E2)" apply atomize_elim by auto
+    define vs1 E1 vs2 E2 where "vs1 = expression_vars e1" and "E1 = expression_eval e1"
+      and "vs2 = expression_vars e2" and "E2 = expression_eval e2"
     have [unfolded subR_def, transfer_rule]: "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 R ===> (=)))) Rep_substitution1 Rep_substitution1"
       unfolding subR_def apply (rule rel_substitute1_Rep_substitution1) by simp
     have [transfer_rule]: "(subR ===> R) substitution1_variable substitution1_variable"
       unfolding subR_def by (rule rel_substitute1_substitution1_variable)
-    (* have [transfer_rule]: "bi_total subR'" sorry *)
     have [transfer_rule]: "bi_unique subR" 
       unfolding subR_def
       using \<open>bi_unique R\<close> apply (rule bi_unique_rel_substitute1)
@@ -373,18 +426,23 @@ proof -
       using assms bi_unique_eq by auto
     have [transfer_rule]: "(subR ===> rel_set R) substitution1_footprint substitution1_footprint"
       unfolding subR_def by (rule rel_substitute1_substitution1_footprint)
-    have "rel_set R (expression_vars e1) (expression_vars e2)"
-      using R_e1_e2 apply transfer by auto
-    then have R_vs1_vs2[transfer_rule]: "rel_set R vs1 vs2"
-      by (metis Rep_expression_components e1 e2 fst_conv)
+    have R_vs1_vs2[transfer_rule]: "rel_set R vs1 vs2"
+      unfolding vs1_def vs2_def using R_e1_e2 apply transfer by auto
     have foot: "rel_set R (subst_expression_footprint s1 vs1) (subst_expression_footprint s2 vs2)"
       apply (rule rel_set_subst_expression_footprint)
       using assms R_vs1_vs2 subR_s1_s2 unfolding subR_def by auto
-    have subst: "(rel_mem2 R ===> (=)) (E1 \<circ> subst_mem2 s1) (E2 \<circ> subst_mem2 s2)"
-      apply transfer_prover_start
-      sorry
+    have E1E2: "(rel_mem2 R ===> (=)) E1 E2" 
+      unfolding E1_def E2_def apply (rule rel_funI)
+      using R_e1_e2 apply transfer 
+      unfolding rel_mem2.rep_eq rel_fun_def by auto
+    have subst_mem2_s1_s2: "(rel_mem2 R ===> rel_mem2 R) (subst_mem2 s1) (subst_mem2 s2)"
+      using rel_subst_mem2 subR_s1_s2 \<open>bi_unique R\<close>
+      by (metis rel_fun_def subR_def)
+    from E1E2 subst_mem2_s1_s2 have subst: "(rel_mem2 R ===> (=)) (E1 \<circ> subst_mem2 s1) (E2 \<circ> subst_mem2 s2)"
+      by (smt comp_def rel_funD rel_funI)
     show ?thesis
-      unfolding rel_expression.rep_eq subst_expression.rep_eq e1 e2 using foot subst by auto
+      unfolding rel_expression.rep_eq subst_expression.rep_eq using foot subst
+      by (simp add: Rep_expression_components E1_def E2_def vs1_def vs2_def)
   qed
 
   then show ?thesis
@@ -392,92 +450,92 @@ proof -
     apply (rule_tac rel_funI)+ by assumption
 qed
 
+definition "rel_flip_index x y \<longleftrightarrow> index_flip_var_raw x = y"
+lemma rel_flip_index_def': "rel_flip_index x y \<longleftrightarrow> x = index_flip_var_raw y"
+    unfolding rel_flip_index_def by auto
 
-(* TODO move *)
-lemma index_flip_subst_expression: "index_flip_expression (subst_expression \<sigma> e) 
-  = subst_expression (map index_flip_substitute1 \<sigma>) (index_flip_expression e)"
+lemma bi_unique_rel_flip_index: "bi_unique rel_flip_index" 
+  apply (rule bi_uniqueI)
+   apply (rule left_uniqueI, unfold rel_flip_index_def', auto)[1]
+  by (rule right_uniqueI, unfold rel_flip_index_def, auto)[1]
+
+lemma bi_total_rel_flip_index: "bi_total rel_flip_index"
+  apply (rule bi_totalI)
+   apply (rule left_totalI, unfold rel_flip_index_def, auto)[1]
+  by (rule right_totalI, unfold rel_flip_index_def', auto)[1]
+
+lemma type_preserving_rel_flip_index: "type_preserving_var_rel rel_flip_index"
+    unfolding type_preserving_var_rel_def rel_flip_index_def by auto 
+
+lemma rel_flip_index_conversep[simp]: "rel_flip_index\<inverse>\<inverse> = rel_flip_index"
+  apply (rule ext)+ unfolding conversep_iff using rel_flip_index_def rel_flip_index_def' by auto
+
+lemma index_flip_subst_expression: 
+  fixes \<sigma> :: "substitution1 list" and e :: "'a::universe expression"
+  shows "index_flip_expression (subst_expression \<sigma> e) 
+        = subst_expression (map index_flip_substitute1 \<sigma>) (index_flip_expression e)"
 proof -
-  define varR where "varR x y \<longleftrightarrow> index_flip_var_raw x = y" for x y
-  have varR_def': "varR x y \<longleftrightarrow> x = index_flip_var_raw y" for x y
-    unfolding varR_def by auto
-  define subR where "subR = (rel_substitute1 varR (rel_expression varR ((=)::'b::universe\<Rightarrow>'b\<Rightarrow>bool)))" 
-  have rel_set_varR: "rel_set varR x y \<longleftrightarrow> index_flip_var_raw ` x = y" for x y
-    unfolding rel_set_def varR_def by auto
+  define subR where "subR = (rel_substitute1x rel_flip_index rel_flip_index)" 
+  
+  have rel_set_rel_flip_index: "rel_set rel_flip_index x y \<longleftrightarrow> index_flip_var_raw ` x = y" for x y
+    unfolding rel_set_def rel_flip_index_def by auto
 
   include lifting_syntax
-  have [transfer_rule]: "bi_unique varR" 
-    apply (rule bi_uniqueI)
-     apply (rule left_uniqueI, unfold varR_def', auto)[1]
-    by (rule right_uniqueI, unfold varR_def, auto)[1]
+  note bi_unique_rel_flip_index[transfer_rule]
+  note bi_total_rel_flip_index[transfer_rule]
+  note type_preserving_rel_flip_index[transfer_rule]
 
-  have [transfer_rule]: "bi_total varR"
-    apply (rule bi_totalI)
-     apply (rule left_totalI, unfold varR_def, auto)[1]
-    by (rule right_totalI, unfold varR_def', auto)[1]
-
-  have [transfer_rule]: "type_preserving_var_rel varR"
-    unfolding type_preserving_var_rel_def varR_def by auto 
-
-  have rel_fun_flip[simp]: "(rel_fun x y)^--1 = (rel_fun x^--1 y^--1)" for x :: "'c\<Rightarrow>'d\<Rightarrow>bool" and y :: "'e\<Rightarrow>'f\<Rightarrow>bool" 
+  have rel_fun_flip[simp]: "(x ===> y)^--1 = (x^--1 ===> y^--1)" for x :: "'c\<Rightarrow>'d\<Rightarrow>bool" and y :: "'e\<Rightarrow>'f\<Rightarrow>bool" 
     unfolding rel_fun_def by auto
-(*   have rel_mem2_flip[simp]: "(rel_mem2 x)^--1 = (rel_mem2 x^--1)" for x
-    apply (rule ext)+ unfolding conversep_iff apply transfer
-    by (auto simp: rel_fun_def) *)
-  have [simp]: "varR\<inverse>\<inverse> = varR"
-    apply (rule ext)+ unfolding conversep_iff using varR_def varR_def' by auto
 
-  have "rel_expression varR (=) e (index_flip_expression e)" for e :: "'c expression"
+  have "rel_expression rel_flip_index (=) e (index_flip_expression e)" for e :: "'c expression"
   proof (unfold rel_expression.rep_eq index_flip_expression.rep_eq, cases "Rep_expression e", auto)
     fix vs f assume "Rep_expression e = (vs,f)"
-    show "rel_set varR vs (index_flip_var_raw ` vs)"
-      by (rule rel_setI, unfold varR_def, auto)
-    show "(rel_mem2 varR ===> (=)) f (\<lambda>m. f (index_flip_mem2 m))"
-      apply (rule conversepD[of "(rel_mem2 varR ===> (=))"])
+    show "rel_set rel_flip_index vs (index_flip_var_raw ` vs)"
+      by (rule rel_setI, unfold rel_flip_index_def, auto)
+    show "(rel_mem2 rel_flip_index ===> (=)) f (\<lambda>m. f (index_flip_mem2 m))"
+      apply (rule conversepD[of "(rel_mem2 rel_flip_index ===> (=))"])
       unfolding rel_fun_flip apply simp
-      unfolding rel_fun_def rel_mem2.rep_eq varR_def' apply transfer by auto
+      unfolding rel_fun_def rel_mem2.rep_eq rel_flip_index_def'
+      unfolding rel_flip_index_def' apply transfer by auto
   qed
-  then have [transfer_rule]: "((=) ===> rel_expression varR (=)) (%x. x) index_flip_expression"
+  then have [transfer_rule]: "((=) ===> rel_expression rel_flip_index (=)) (%x. x) index_flip_expression"
     unfolding rel_fun_def by auto
 
-  have varR_index_flip_var_raw: "varR v (index_flip_var_raw v)" for v
-    by (simp add: varR_def)
-  have rel_set_varR_index_flip_var_raw: "rel_set varR vs (index_flip_var_raw ` vs)" for vs
-    by (subst rel_set_varR, rule)
-  have "F x = (F \<circ> index_flip_mem2) y" if "rel_mem2 varR x y" for F::"mem2\<Rightarrow>'c" and x y
-    using that apply transfer apply (auto simp: varR_def[abs_def])
+  have rel_flip_index_index_flip_var_raw: "rel_flip_index v (index_flip_var_raw v)" for v
+    by (simp add: rel_flip_index_def)
+  have rel_set_rel_flip_index_index_flip_var_raw: "rel_set rel_flip_index vs (index_flip_var_raw ` vs)" for vs
+    by (subst rel_set_rel_flip_index, rule)
+  have Fx: "F x = (F \<circ> index_flip_mem2) y" if "rel_mem2 rel_flip_index x y" for F::"mem2\<Rightarrow>'c" and x y
+    using that apply transfer apply (auto simp: rel_flip_index_def[abs_def])
     by (metis (full_types) rel_fun_def)
-  then have inv_embedding_index_flip_mem2: "(rel_mem2 varR ===> (=)) (inv embedding \<circ> f) (inv embedding \<circ> (f \<circ> index_flip_mem2))" for f
+  then have inv_embedding_index_flip_mem2: "(rel_mem2 rel_flip_index ===> (=)) (inv embedding \<circ> f) (inv embedding \<circ> (f \<circ> index_flip_mem2))" for f
     apply (rule_tac rel_funI) by simp
 
-  have 1: "rel_prod varR
-          (\<lambda>(vs1, f1) (vs2, f2). rel_prod (rel_set varR) (rel_mem2 varR ===> (=)) (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2))
-          (v, vs, f) (index_flip_var_raw v, index_flip_var_raw ` vs, f \<circ> index_flip_mem2)" for v vs f
-    by (auto intro: varR_index_flip_var_raw rel_set_varR_index_flip_var_raw inv_embedding_index_flip_mem2)
+  have 1: "rel_prod rel_flip_index (\<lambda>(vs1, f1) (vs2, f2). 
+              rel_prod (rel_set rel_flip_index) (rel_mem2 rel_flip_index ===> (=)) 
+                       (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2))
+              (v, vs, f) (index_flip_var_raw v, index_flip_var_raw ` vs, f \<circ> index_flip_mem2)" for v vs f
+    by (auto intro: rel_flip_index_index_flip_var_raw rel_set_rel_flip_index_index_flip_var_raw inv_embedding_index_flip_mem2)
 
-  have "rel_substitute1 varR (rel_expression varR (=)) s (index_flip_substitute1 s)" for s
-    apply transfer apply (case_tac s) using 1 by simp
-  then have index_flip_substitute1_transfer [transfer_rule]: 
+(*   define niceS where "niceS s \<longleftrightarrow> variable_raw_domain (substitution1_variable s) = range (embedding::'a\<Rightarrow>_)" for s
+  define niceR where "niceR s1 s2 \<longleftrightarrow> s1=s2 \<and> niceS s1" for s1 s2 *)
+
+  have "rel_substitute1x rel_flip_index rel_flip_index s (index_flip_substitute1 s)" (* if "niceS s" *) for s
+    unfolding rel_substitute1x_def  
+    using Fx by (auto simp: rel_flip_index_def substitution1_variable_index_flip substitution1_function_index_flip rel_fun_def)
+
+  then have index_flip_substitute1_transfer [transfer_rule]:
     "((=) ===> subR) (%x. x) index_flip_substitute1"
     unfolding subR_def rel_fun_def by auto
-(*   have [transfer_rule]: "bi_unique (rel_expression varR (=))"
+(*   have [transfer_rule]: "bi_unique (rel_expression rel_flip_index (=))"
     sorry *)
-  have "index_flip_expression e = f" if that[transfer_rule]: "rel_expression varR (=) e f" for e f :: "'c expression"
+  have "index_flip_expression e = f" if that[transfer_rule]: "rel_expression rel_flip_index (=) e f" for e f :: "'c expression"
     apply transfer by rule
-  then have [transfer_rule]: "(rel_expression varR (=) ===> rel_expression (=) (=)) index_flip_expression id"
+  then have [transfer_rule]: "(rel_expression rel_flip_index (=) ===> rel_expression (=) (=)) index_flip_expression id"
     apply (rule_tac rel_funI) by (simp add: rel_expression_eq)
 
-(*   have "rel_expression varR (=) (subst_expression s1 e1) (subst_expression s2 e2)" 
-    if "list_all2 subR s1 s2" and "rel_expression varR (=) e1 e2" for s1 s2 e1 e2
-    apply transfer
-    sorry *)
-
-(*  then have [transfer_rule]:
-    "(list_all2 subR ===> rel_expression varR (=) ===> rel_expression varR (=)) 
-    subst_expression subst_expression"
-     unfolding subR_def
-    apply (rule_tac rel_funI)+ by assumption *)
-
-  have [transfer_rule]: "(list_all2 subR ===> rel_expression varR (=) ===> rel_expression varR (=))
+  have [transfer_rule]: "(list_all2 subR ===> rel_expression rel_flip_index (=) ===> rel_expression rel_flip_index (=))
    subst_expression subst_expression"
     unfolding subR_def by transfer_prover
 
@@ -485,7 +543,104 @@ proof -
         (index_flip_expression (subst_expression \<sigma> e))
         (id (subst_expression (map index_flip_substitute1 \<sigma>) (index_flip_expression e)))"
     apply transfer_prover_start
-           apply transfer_step+
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+    by simp
+  then
+  show "index_flip_expression (subst_expression \<sigma> e) = subst_expression (map index_flip_substitute1 \<sigma>) (index_flip_expression e)"
+    unfolding rel_expression_eq id_def by assumption
+qed
+
+
+(* TODO move *)
+lemma index_flip_subst_expression: 
+  fixes \<sigma> :: "substitution1 list" and e :: "'a::universe expression"
+  shows "index_flip_expression (subst_expression \<sigma> e) 
+        = subst_expression (map index_flip_substitute1 \<sigma>) (index_flip_expression e)"
+proof -
+  define subR where "subR = (rel_substitute1 rel_flip_index (rel_expression rel_flip_index ((=)::'a\<Rightarrow>'a\<Rightarrow>bool)))" 
+  
+  have rel_set_rel_flip_index: "rel_set rel_flip_index x y \<longleftrightarrow> index_flip_var_raw ` x = y" for x y
+    unfolding rel_set_def rel_flip_index_def by auto
+
+  include lifting_syntax
+  note bi_unique_rel_flip_index[transfer_rule]
+  note bi_total_rel_flip_index[transfer_rule]
+  note type_preserving_rel_flip_index[transfer_rule]
+
+  have rel_fun_flip[simp]: "(x ===> y)^--1 = (x^--1 ===> y^--1)" for x :: "'c\<Rightarrow>'d\<Rightarrow>bool" and y :: "'e\<Rightarrow>'f\<Rightarrow>bool" 
+    unfolding rel_fun_def by auto
+
+
+  have "rel_expression rel_flip_index (=) e (index_flip_expression e)" for e :: "'c expression"
+  proof (unfold rel_expression.rep_eq index_flip_expression.rep_eq, cases "Rep_expression e", auto)
+    fix vs f assume "Rep_expression e = (vs,f)"
+    show "rel_set rel_flip_index vs (index_flip_var_raw ` vs)"
+      by (rule rel_setI, unfold rel_flip_index_def, auto)
+    show "(rel_mem2 rel_flip_index ===> (=)) f (\<lambda>m. f (index_flip_mem2 m))"
+      apply (rule conversepD[of "(rel_mem2 rel_flip_index ===> (=))"])
+      unfolding rel_fun_flip apply simp
+      unfolding rel_fun_def rel_mem2.rep_eq rel_flip_index_def'
+      unfolding rel_flip_index_def' apply transfer by auto
+  qed
+  then have [transfer_rule]: "((=) ===> rel_expression rel_flip_index (=)) (%x. x) index_flip_expression"
+    unfolding rel_fun_def by auto
+
+  have rel_flip_index_index_flip_var_raw: "rel_flip_index v (index_flip_var_raw v)" for v
+    by (simp add: rel_flip_index_def)
+  have rel_set_rel_flip_index_index_flip_var_raw: "rel_set rel_flip_index vs (index_flip_var_raw ` vs)" for vs
+    by (subst rel_set_rel_flip_index, rule)
+  have "F x = (F \<circ> index_flip_mem2) y" if "rel_mem2 rel_flip_index x y" for F::"mem2\<Rightarrow>'c" and x y
+    using that apply transfer apply (auto simp: rel_flip_index_def[abs_def])
+    by (metis (full_types) rel_fun_def)
+  then have inv_embedding_index_flip_mem2: "(rel_mem2 rel_flip_index ===> (=)) (inv embedding \<circ> f) (inv embedding \<circ> (f \<circ> index_flip_mem2))" for f
+    apply (rule_tac rel_funI) by simp
+
+  have 1: "rel_prod rel_flip_index (\<lambda>(vs1, f1) (vs2, f2). 
+              rel_prod (rel_set rel_flip_index) (rel_mem2 rel_flip_index ===> (=)) 
+                       (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2))
+              (v, vs, f) (index_flip_var_raw v, index_flip_var_raw ` vs, f \<circ> index_flip_mem2)" for v vs f
+    by (auto intro: rel_flip_index_index_flip_var_raw rel_set_rel_flip_index_index_flip_var_raw inv_embedding_index_flip_mem2)
+
+  define niceS where "niceS s \<longleftrightarrow> variable_raw_domain (substitution1_variable s) = range (embedding::'a\<Rightarrow>_)" for s
+  define niceR where "niceR s1 s2 \<longleftrightarrow> s1=s2 \<and> niceS s1" for s1 s2
+
+  have "rel_substitute1 rel_flip_index (rel_expression rel_flip_index ((=)::'a\<Rightarrow>_\<Rightarrow>_)) s (index_flip_substitute1 s)" if "niceS s" for s
+    using [[show_types, show_consts]]
+    using that[unfolded niceS_def]
+    apply transfer apply (case_tac s) using 1 by auto
+  then have index_flip_substitute1_transfer [transfer_rule]: 
+    "(niceR ===> subR) (%x. x) index_flip_substitute1"
+    unfolding niceR_def subR_def rel_fun_def by auto
+(*   have [transfer_rule]: "bi_unique (rel_expression rel_flip_index (=))"
+    sorry *)
+  have "index_flip_expression e = f" if that[transfer_rule]: "rel_expression rel_flip_index (=) e f" for e f :: "'c expression"
+    apply transfer by rule
+  then have [transfer_rule]: "(rel_expression rel_flip_index (=) ===> rel_expression (=) (=)) index_flip_expression id"
+    apply (rule_tac rel_funI) by (simp add: rel_expression_eq)
+
+  have [transfer_rule]: "(list_all2 subR ===> rel_expression rel_flip_index (=) ===> rel_expression rel_flip_index (=))
+   subst_expression subst_expression"
+    unfolding subR_def by transfer_prover
+
+  have "(rel_expression (=) (=))
+        (index_flip_expression (subst_expression \<sigma> e))
+        (id (subst_expression (map index_flip_substitute1 \<sigma>) (index_flip_expression e)))"
+    apply transfer_prover_start
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+           apply transfer_step
+    find_theorems map name:transfer
     by simp
   then
   show "index_flip_expression (subst_expression \<sigma> e) = subst_expression (map index_flip_substitute1 \<sigma>) (index_flip_expression e)"
@@ -699,7 +854,7 @@ lemma sample2_rule:
   using [[simproc del: index_var]]
   apply (rule sym_rule)
   apply (simp add: assms index_flip_subst_expression index_flip_substitute1 
-      index_flip_var_index_var index_flip_expression_index_expression
+      index_flip_expression_index_expression
       index_flip_map_expression2' o_def)
   by (rule sample1_rule)
 

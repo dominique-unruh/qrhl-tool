@@ -219,8 +219,14 @@ lemma index_flip_substitute1: "index_flip_substitute1 (substitute1 x e) =
    \<and> rel_e (inv embedding o substitution1_function s1) (substitution1_function s2))"
  *)
 
+definition rel_substitute1x :: "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> (variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)"
+  where "rel_substitute1x R S s1 s2 \<longleftrightarrow> R (substitution1_variable s1) (substitution1_variable s2) \<and>
+    (rel_fun (rel_mem2 S) (=)) (substitution1_function s1) (substitution1_function s2)"
 
-lift_definition rel_substitute1 :: "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> ('a::universe expression\<Rightarrow>'b::universe expression\<Rightarrow>bool) \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)" is
+
+lift_definition rel_substitute1 :: 
+  "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> ('a::universe expression\<Rightarrow>'b::universe expression\<Rightarrow>bool) 
+          \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)" is
   "\<lambda>(rel_v::variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) 
     (rel_exp :: (variable_raw set * (mem2 \<Rightarrow> 'a)) \<Rightarrow> (variable_raw set * (mem2 \<Rightarrow> 'b)) \<Rightarrow> bool). 
     rel_prod rel_v (%(vs1,f1) (vs2,f2). range f1 \<subseteq> range (embedding::'a\<Rightarrow>_) \<and> range f2 \<subseteq> range (embedding::'b\<Rightarrow>_) \<and>
