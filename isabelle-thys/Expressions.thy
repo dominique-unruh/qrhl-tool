@@ -18,9 +18,9 @@ lift_definition expression :: "'a::universe variables \<Rightarrow> ('a\<Rightar
   "\<lambda>(vs::'a variables) (f::'a\<Rightarrow>'b). (set (raw_variables vs), (f o eval_variables vs) :: mem2\<Rightarrow>'b)"
   using eval_variables_footprint by fastforce
 
-lifting_forget mem2.lifting
-lift_definition expression_eval :: "'b expression \<Rightarrow> mem2 \<Rightarrow> 'b" is "\<lambda>(vs,f) m. f m" .
-setup_lifting type_definition_mem2
+(* lifting_forget mem2.lifting *)
+lift_definition expression_eval :: "'b expression \<Rightarrow> mem2 \<Rightarrow> 'b" is "\<lambda>(vs::variable_raw set,f::mem2\<Rightarrow>'b) m. f m" .
+(* setup_lifting type_definition_mem2 *)
 
 lemma expression_eval: "expression_eval (expression X e) m = e (eval_variables X m)"
   unfolding expression_eval.rep_eq expression.rep_eq by auto
@@ -221,6 +221,7 @@ lemma index_flip_substitute1: "index_flip_substitute1 (substitute1 x e) =
 
 definition rel_substitute1x :: "(variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> (variable_raw\<Rightarrow>variable_raw\<Rightarrow>bool) \<Rightarrow> (substitution1\<Rightarrow>substitution1\<Rightarrow>bool)"
   where "rel_substitute1x R S s1 s2 \<longleftrightarrow> R (substitution1_variable s1) (substitution1_variable s2) \<and>
+    (rel_set R (substitution1_footprint s1) (substitution1_footprint s2)) \<and>
     (rel_fun (rel_mem2 S) (=)) (substitution1_function s1) (substitution1_function s2)"
 
 
@@ -289,6 +290,7 @@ lemma rel_substitute1_expression_eq: "rel_substitute1 R (rel_expression S T) s1 
         range (substitution1_function s2) \<subseteq> range EMBEDDING('b) \<and> 
         rel_fun (rel_mem2 S) T (inv EMBEDDING('a) \<circ> substitution1_function s1)
                                (inv EMBEDDING('b) \<circ> substitution1_function s2))"
+  using [[transfer_del_const pcr_mem2]]
   apply transfer by force
 
 
@@ -347,6 +349,14 @@ lemma rel_substitute1_Rep_substitution1:
   apply (simp add: subR_def rel_substitute1_expression_eq[abs_def] rel_fun_def Rep_substitution1_components rel_prod_conv BNF_Greatest_Fixpoint.image2p_def)
   using assms by (auto simp: f_inv_into_f image_subset_iff) 
 
+lemma rel_substitute1x_Rep_substitution1:
+  includes lifting_syntax
+  fixes R S S'
+  defines "subR == rel_substitute1x R S"
+  shows "(subR ===> rel_prod R (rel_prod (rel_set R) (rel_mem2 S ===> (=)))) Rep_substitution1 Rep_substitution1"
+  apply (rule rel_funI)
+  by (simp add: subR_def rel_substitute1x_def Rep_substitution1_components)
+
 lemma rel_substitute1_substitution1_variable: 
   includes lifting_syntax
   fixes R S
@@ -361,6 +371,19 @@ proof -
     by transfer_prover
 qed
 
+lemma rel_substitute1x_substitution1_variable: 
+  includes lifting_syntax
+  fixes R S
+  defines "subR == rel_substitute1x R S"
+  shows "(subR ===> R) substitution1_variable substitution1_variable"
+  unfolding subR_def rel_substitute1x_def rel_fun_def by auto
+
+lemma rel_substitute1x_substitution1_footprint:
+  includes lifting_syntax
+  fixes R S
+  defines "subR == rel_substitute1x R S"
+  shows "(subR ===> rel_set R) substitution1_footprint substitution1_footprint"
+  unfolding subR_def rel_substitute1x_def rel_fun_def by auto
 
 lemma rel_substitute1_substitution1_footprint:
   includes lifting_syntax
