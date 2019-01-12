@@ -176,6 +176,11 @@ lemma variable_singleton_name[simp]: "variable_names (variable_singleton x) = [v
 lemma variable_unit_name[simp]: "variable_names variable_unit = []"
   unfolding variable_names_def by simp
 
+definition "type_preserving_var_rel R \<longleftrightarrow> (\<forall>v w. R v w \<longrightarrow> variable_raw_domain v = variable_raw_domain w)"
+
+lemma type_preserving_var_rel_flip[simp]: "type_preserving_var_rel R\<inverse>\<inverse> \<longleftrightarrow> type_preserving_var_rel R"
+  unfolding type_preserving_var_rel_def by auto
+
 section \<open>Distinct variables\<close>
 
 definition "distinct_qvars Q = distinct (raw_variables Q)"
@@ -217,6 +222,86 @@ lemma rel_mem2_eq: "rel_mem2 (=) = (=)"
   apply (rule ext)+ unfolding rel_mem2.rep_eq rel_fun_def using Rep_mem2_inject by auto
 lemma rel_mem2_mono: "A \<ge> B \<Longrightarrow> rel_mem2 A \<le> rel_mem2 B"
   unfolding rel_mem2.rep_eq rel_fun_def by auto
+
+lemma left_unique_rel_mem2[transfer_rule]: assumes "left_total R" shows "left_unique (rel_mem2 R)"
+proof -
+  have left_unique_fun: "left_unique (rel_fun R ((=)))"
+    apply (rule left_unique_fun)
+    using assms left_unique_eq by auto
+  have "m=m'" if "rel_mem2 R m m2" and "rel_mem2 R m' m2" for m m' m2
+  proof -
+    from that have "rel_fun R (=) (Rep_mem2 m) (Rep_mem2 m2)" by (simp add: rel_mem2.rep_eq)
+    moreover from that have "rel_fun R (=) (Rep_mem2 m') (Rep_mem2 m2)" by (simp add: rel_mem2.rep_eq)
+    ultimately have "Rep_mem2 m = Rep_mem2 m'"
+      by (rule left_unique_fun[unfolded left_unique_def, rule_format])
+    then show "m = m'"
+      using Rep_mem2_inject by auto 
+  qed
+  then show ?thesis
+    by (simp add: left_uniqueI)
+qed
+
+lemma rel_mem2_flip[simp]: "(rel_mem2 x)^--1 = (rel_mem2 x^--1)"
+    apply (rule ext)+ unfolding conversep_iff apply transfer
+    by (auto simp: rel_fun_def)
+
+lemma right_unique_rel_mem2[transfer_rule]: assumes "right_total R" shows "right_unique (rel_mem2 R)"
+  apply (subst conversep_conversep[of R, symmetric])
+  apply (subst rel_mem2_flip[symmetric])
+  apply (simp del: rel_mem2_flip)
+  apply (rule left_unique_rel_mem2)
+  using assms by simp
+
+lemma bi_unique_rel_mem2[transfer_rule]: assumes "bi_total R" shows "bi_unique (rel_mem2 R)"
+  using assms bi_total_alt_def bi_unique_alt_def left_unique_rel_mem2 right_unique_rel_mem2 by blast
+
+lemma left_total_rel_mem2[transfer_rule]: 
+  assumes "left_unique R" and "right_total R" and "type_preserving_var_rel R"
+  shows "left_total (rel_mem2 R)"
+proof -
+  have "\<exists>m2. rel_mem2 R m1 m2" for m1
+  proof (transfer fixing: R, auto)
+    fix m1 
+    assume m1v: "\<forall>v. m1 v \<in> variable_raw_domain v"
+    have left_total_fun: "left_total (rel_fun R (=))"
+      apply (rule left_total_fun)
+      using \<open>left_unique R\<close> by (auto simp: left_total_eq)
+    then obtain m2 where m2: "rel_fun R (=) m1 m2" 
+      using left_totalE by auto
+    have m2v: "m2 v \<in> variable_raw_domain v" for v
+    proof -
+      obtain w where "R w v"
+        apply atomize_elim using \<open>right_total R\<close> unfolding right_total_def by simp
+      with m2 have m1m2: "m1 w = m2 v"
+        by (rule rel_funD)
+      from \<open>R w v\<close> \<open>type_preserving_var_rel R\<close> have "variable_raw_domain v = variable_raw_domain w"
+        unfolding type_preserving_var_rel_def by simp
+      with m1v[rule_format, of w] m1m2 
+      show ?thesis by auto
+    qed
+    from m2 m2v 
+    show "\<exists>x. (\<forall>v. x v \<in> variable_raw_domain v) \<and> rel_fun R (=) m1 x"
+      by auto
+  qed
+  then show ?thesis
+    by (rule left_totalI)
+qed
+
+lemma right_total_rel_mem2[transfer_rule]: 
+  assumes "right_unique R" and "left_total R" and "type_preserving_var_rel R"
+  shows "right_total (rel_mem2 R)"
+  apply (subst conversep_conversep[of R, symmetric])
+  apply (subst rel_mem2_flip[symmetric])
+  apply (simp del: rel_mem2_flip)
+  apply (rule left_total_rel_mem2)
+  using assms by auto
+
+lemma bi_total_rel_mem2[transfer_rule]: 
+  assumes "bi_unique R" and "bi_total R" and "type_preserving_var_rel R"
+  shows "bi_total (rel_mem2 R)"
+  by (meson assms bi_total_alt_def bi_unique_alt_def left_total_rel_mem2 right_total_rel_mem2)
+
+
 
 fun eval_vtree :: "variable_raw Prog_Variables.vtree \<Rightarrow> mem2 \<Rightarrow> universe Prog_Variables.vtree" where
   "eval_vtree VTree_Unit m = VTree_Unit"
@@ -282,6 +367,7 @@ lift_definition index_flip_var_raw  :: "variable_raw \<Rightarrow> variable_raw"
   "\<lambda>(n,dom). (index_flip_name n, dom)"
   by auto
 
+
 lemma index_flip_name_twice[simp]: "index_flip_name (index_flip_name x) = x"
   apply (cases x rule: rev_cases) unfolding index_flip_name_def by auto
 
@@ -294,11 +380,37 @@ lemma index_flip_var_twice[simp]: "index_flip_var_raw (index_flip_var_raw x) = x
 lemma index_flip_var_raw_inject: "index_flip_var_raw x = index_flip_var_raw y \<Longrightarrow> x = y"
   apply transfer by (auto simp: index_flip_name_inject)
 
+lemma index_flip_var_index_var_raw[simp]: "index_flip_var_raw (index_var_raw left x) = index_var_raw (\<not> left) x"
+  apply transfer
+  by (auto simp: index_flip_name_def)
+
 lemma variable_raw_domain_index_flip_var_raw[simp]: "variable_raw_domain (index_flip_var_raw v) = variable_raw_domain v"
   apply transfer by auto
 
 lemma variable_raw_name_index_flip_var[simp]: "variable_raw_name (index_flip_var_raw v) =  index_flip_name (variable_raw_name v)"
   apply transfer by auto
+
+
+definition "rel_flip_index x y \<longleftrightarrow> index_flip_var_raw x = y"
+lemma rel_flip_index_def': "rel_flip_index x y \<longleftrightarrow> x = index_flip_var_raw y"
+    unfolding rel_flip_index_def by auto
+
+lemma bi_unique_rel_flip_index: "bi_unique rel_flip_index" 
+  apply (rule bi_uniqueI)
+   apply (rule left_uniqueI, unfold rel_flip_index_def', auto)[1]
+  by (rule right_uniqueI, unfold rel_flip_index_def, auto)[1]
+
+lemma bi_total_rel_flip_index: "bi_total rel_flip_index"
+  apply (rule bi_totalI)
+   apply (rule left_totalI, unfold rel_flip_index_def, auto)[1]
+  by (rule right_totalI, unfold rel_flip_index_def', auto)[1]
+
+lemma type_preserving_rel_flip_index: "type_preserving_var_rel rel_flip_index"
+    unfolding type_preserving_var_rel_def rel_flip_index_def by auto 
+
+lemma rel_flip_index_conversep[simp]: "rel_flip_index\<inverse>\<inverse> = rel_flip_index"
+  apply (rule ext)+ unfolding conversep_iff using rel_flip_index_def rel_flip_index_def' by auto
+
 
 (* TODO move to different section *)
 lemma variable_eqI: "variable_name x = variable_name y \<Longrightarrow> x = y"
@@ -336,6 +448,9 @@ lemma index_flip_var: "y = index_flip_var x \<longleftrightarrow> variable_name 
   apply (rule iffI)
    apply (transfer, simp)
   by (rule variable_eqI, transfer, simp)
+
+lemma index_flip_var_index_var[simp]: "index_flip_var (index_var left x) = index_var (\<not>left) x"
+  apply transfer by simp
 
 lemma index_flip_varI: "variable_name y = index_flip_name (variable_name x) \<Longrightarrow> index_flip_var x = y"
   using index_flip_var by metis
