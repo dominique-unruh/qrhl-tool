@@ -72,10 +72,6 @@ case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
         qvarsIdx1.map(_.variableTerm)), (qvarsIdx2.map(_.variableTerm),
         post.isabelleTerm, state.isabelle.contextId)))
 
-    if (mismatches.nonEmpty) {
-      println("*** WARNING: equal tactic with mismatches is not proven or carefully thought through yet! ***")
-    }
-
     val mismatchGoals = mismatches.toList.map {
       case (l,r) => QRHLSubgoal(l.toBlock,r.toBlock,wp,wp,Nil)
     }
