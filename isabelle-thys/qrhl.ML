@@ -260,12 +260,8 @@ fun tidyTrueTop t =
     if t=t' then t else tidyTrueTop t'
   end
 
-(* open List *)
-
 fun callWp cvars1 cvars2 qvars1 qvars2 B =
-  let (* val cvarsEq = HOLogic.mk_eq (HOLogic.mk_tuple cvars1, HOLogic.mk_tuple cvars2)
-      val claCvarsEq = @{const classical_subspace} $ cvarsEq *)
-      val (qvars1',qvars1T) = variables qvars1
+  let val (qvars1',qvars1T) = variables qvars1
       val (qvars2',qvars2T) = variables qvars2
       val (qvars12',qvars12T) = variables (qvars1 @ qvars2)
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()

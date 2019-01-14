@@ -1,10 +1,5 @@
 isabelle RandomOracle.
 
-###########################################
-# WARNING:                                #
-# This example uses undocumented features #
-###########################################
-
 # A variable that contains the random oracle
 classical var h : x => y.
 

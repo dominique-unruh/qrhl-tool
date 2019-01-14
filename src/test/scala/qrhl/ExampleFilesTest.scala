@@ -19,7 +19,8 @@ class ExampleFilesTest extends FunSuite {
 
   for (file <- new File("examples").listFiles();
        name = file.getName
-       if name.endsWith(".qrhl")) {
+       if name.endsWith(".qrhl")
+       if name != "test.qrhl") {
     println(s"Creating test $name")
     test(name) { testFile(name) }
   }

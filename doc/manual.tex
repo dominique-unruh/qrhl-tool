@@ -149,8 +149,8 @@
 
 \externaldocument[main:]{qrhl}
 
-\newcommand\qrhlautoref[1]{\autoref{main:#1} in~\cite{qrhl-paper-from-manual}}
-\newcommand\qrhlautorefx[1]{\autoref{main:#1}}
+\newcommand\qrhlautoref[1]{\autoref*{main:#1} in~\cite{qrhl-paper-from-manual}}
+\newcommand\qrhlautorefx[1]{\autoref*{main:#1}}
 
 \renewcommand\refrule[1]{\hbox{\textsc{#1}} rule}
 \renewcommand\ruleref[1]{rule \hbox{\textsc{#1}}}
@@ -398,6 +398,26 @@ some program containing (at most) the program variables
 variables is assumed. Thus, if we prove a statement referring to
 \texttt{name}, this statement holds for any program \texttt{name}. We
 use these declarations to model adversaries.
+
+\TODOQ{proofread}
+In some cases, an adversary may invoke other programs (e.g., an encryption oracle).
+In that case, we declare an adversary with ``holes'' using:
+\begin{center}
+  \toolidx{adversary}
+  \begin{lstlisting}
+    adversary name vars v1,v2,v3,...,vn calls ?,?,...,?.
+  \end{lstlisting}
+\end{center}
+This means the program \texttt{name} contains variables \texttt{v1,v2,v3,...,vn},
+as well as $n$ ``holes'' (one for each question mark).\footnote{Formally,
+  it declares \texttt{name} to refer to a context in the sense of
+  \qrhlautoref{footnote:context} with $n$ holes.}
+We write \texttt{name(p1,...,pn)} to refer to \texttt{name} with \texttt{p1},\dots,\texttt{pn}
+inserted instead of the holes.
+(For example, \texttt{name(enc,dec)} would run the adversary \texttt{name} and allow it to invoke the
+programs \texttt{enc} and \texttt{dec}.)
+Note that the variables \texttt{v1,v2,v3,...,vn} do not have to include variables contained
+in the programs \texttt{p1,\dots,pn}.
 
 Since the language in this paper does not model procedure calls,
 adversaries are simply program fragments that get executed as part of
@@ -782,12 +802,18 @@ A program is represented as a list of statements.\footnote{This
   \toolprog{call}
   & The program $\mathit{prog}$ itself.
 
+  \TODOQ{proofread}
   $\mathit{prog}$
   must be the name of a program (declared with \texttt{program} or
   \texttt{adversary}).
+  If the \texttt{adversary}-command declared a program ``with $n$ holes''
+  (using \texttt{adversary ... calls ?,...,?}),
+  then \textit{prog} is an expression of the form \texttt{name(arg1,\dots,argn)}
+  where each \texttt{arg1,\dots,argn} is again the name of a program or such an expression.
 
   Logically, \texttt{call $\mathit{prog}$;}
-  is simply an abbreviation for the code of $\mathit{prog}$.
+  is simply an abbreviation for the code of $\mathit{prog}$
+  (possibly after substituting \texttt{arg1,\dots,argn} for its holes).
   And if $\mathit{prog}$
   was defined using \texttt{program}, it would be equivalent to simply
   write the code from the definition of the program instead of
@@ -811,7 +837,10 @@ A program is represented as a list of statements.\footnote{This
 
   \textbf{Example:} ``\texttt{call A;}'' invokes the adversary \texttt{A}
   (assuming \texttt{A} was declared using \texttt{adversary A vars
-    ...}).
+    ...}).  ``\texttt{call A(enc,dec);}'' invokes the adversary \texttt{A}
+  that can call programs \texttt{enc} and \texttt{dec}
+  (assuming \texttt{A} was declared using \texttt{adversary A vars
+    ... calls ?,?}).
   \\
   \hline
 \end{longtable}
@@ -1432,8 +1461,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \toolconst{liftOp}
   &
   The operator $\lift A Q:=\Uvarnames{Q}A\adj{\Uvarnames Q}\otimes\idv{\qu{V_1}\qu{V_2}\setminus Q}$.
-  % (See \qrhlautorefx{def:lift}.)
-  \TODOQ{put back when arxiv has been updated}
+  (See \qrhlautoref{def:lift}.)
   
   Intuitively, $\text\guillemotright$ takes an operator $A$
   on $\elltwo\alpha$,
@@ -1463,8 +1491,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \toolconst{liftOp}
   &
   The subspace $\lift SQ:=\Uvarnames{Q}S\otimes\elltwov{V_1V_2\setminus Q}$.
-  % (See \qrhlautorefx{def:lift}.)
-  \TODOQ{put back when arxiv has been updated}
+  (See \qrhlautoref{def:lift}.)
 
   Intuitively, $\text\guillemotright$
   takes a subspace $S$
@@ -1906,27 +1933,42 @@ The rule is a special case of \ruleref{QrhlElimEq}.
 
 \tactic{equal}
 
-\TODOQ{equal with differences}
-
 Converts a subgoal of the form
-$\rhl{A}{\bc;s}{\bc';s}{B}$
-where $s$ is a single statement
+$\rhl{A}{\bc;s}{\bc';s'}{B}$
+where $s,s'$ are single statements with $s=s'$ (up to few differences)
 into a subgoal $\rhl{A}{\bc}{\bc'}{C}$
 with suitably updated postcondition $C$.
 (Note: an if- or while-statement counts as a single statement.)
+In addition, a subgoal about free variables,
+as well as subgoals corresponding to the differences between $s,s'$ (if any) are produced.
+
+\textbf{In detail:}
+By comparing $s,s'$, a context $S$ with multiple holes is obtained
+such that $s=S[s_1,\dots,s_n]$ and $s'=S[s'_1,\dots,s'_n]$.\footnote{%
+  The definition of multi-hole contexts is given in \qrhlautoref{footnote:context}.
+  
+  Note that in statements of the form \texttt{call A(p1,\dots,pn)},
+  \texttt{A} is a context itself with \texttt{p1,\dots,pn} in its holes.
+  So the holes of $S$ can also be arguments of adversaries in \texttt{call}-statements.
+  (E.g., when $s=\mathtt{call A(enc1)}$ and $s'=\mathtt{call A(enc2)}$,
+  then $s_1=\mathtt{enc1}$ and $s_1'=\mathtt{enc2}$.)
+}
+(In particular, if $s=s'$, then simply $S=s=s'$.)
 
 The postcondition $C$ is derived as follows:
 
 Let $\xx^{(1)},\dots,\xx^{(n)}$
-be the free classical variables of $s$,
+be the free classical variables of $S$,
 and $\qq^{(1)},\dots,\qq^{(m)}$
-be the free quantum variables of $s$.
-(Including those of any programs included recursively within $s$
-via \texttt{call} statements.)
+be the free quantum variables of $S$
+(free quantum variables means quantum variables on the lhs of
+initialization, measurements, and apply-statements).
+This includes the variables of any programs included recursively within $S$
+via \texttt{call} statements, but not programs that are replaced by holes.
 
 First, we rewrite the postcondition $B$
 is several steps. This is in order to get a new postcondition $C$ that does
-not share any free variables with $s$ (if possible) while strengthening the postcondition as little as
+not share any free variables with $S$ (if possible) while strengthening the postcondition as little as
 possible.
 
 $B'$
@@ -1962,7 +2004,7 @@ Let
 where $X_1X_2$
 are all classical variables $\xx^{(i)}_j$
 (for $j=1,2$)
-such that $\xx^{(i)}_j$
+such that $\xx^{(i)}$
 is a free variable of $s$, and $\xx^{(i)}_j$ is free in $B''$.
 
 Let
@@ -1973,9 +2015,7 @@ Let
 \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket.
 \]
 Note that $C$ is a subset of $B$, and 
-note that $\cl{\fv(B''')}\cap\fv(s)=\varnothing$.
-
-
+note that $\cl{\fv(B''')}\cap\fv(S)=\varnothing$.
 
 
 With this definitions, the rule implemented by the tactic is:
@@ -1984,36 +2024,29 @@ With this definitions, the rule implemented by the tactic is:
 \mathtt{colocal}\ B'\ \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)},
 \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket
 \\
+\rhl{C}{s_i}{s_i'}{C}\text{ for }i=1,\dots,n
+\\
     \rhl{A}{\bc}{\bc'}C
   }
   {
-    \rhl{A}{\bc;s}{\bc';s}{B}
+    \rhl{A}{\bc;s}{\bc';s'}{B}
   }
 \]
 
 
-This rule is shown as follows: From \ruleref{Equal}, we have
-$
-\rhl{\mathit{Eqs}}{s}{s}{\mathit{Eqs}}
-$
-where $\mathit{Eqs}:=\mathfrak{Cla}[\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
-\xx^{(n)}_1=\xx^{(n)}_2]\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)}
-\rrbracket \mathrel{\mathord\equiv\mathfrak q} \llbracket
-\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$.
-With \ruleref{Frame}, we get 
-$
-\rhl{B'''\sqcap\mathit{Eqs}}{s}{s}{B'''\sqcap\mathit{Eqs}}
-$.
-(We have that $s$ does not share variables with $B'''$ as required by
-\ruleref{Frame} since
-$\cl{\fv(B''')}\cap\fv(P)=\varnothing$ and since
-$\mathtt{colocal}\ B'\ \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)},
-\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$ implies $\mathtt{colocal}\ B'''\ \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)},
-\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$.)
-With \ruleref{Seq}, and using $C=B'''\sqcap\mathit{Eqs}$, we get 
-$   \rhl{A}{\bc;\mathtt{call}\ P}{\bc';\mathtt{call}\ P}{B'''\sqcap\mathit{Eqs}}$.
-And with \ruleref{Conseq}, we get
-$   \rhl{A}{\bc;\mathtt{call}\ P}{\bc';\mathtt{call}\ P}{B}$.
+This rule is shown as follows:
+From $\mathtt{colocal}\ B'\ \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)},
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$, we have
+$\qu{\fv(B''')}\cap(\idx1 \qu{\fv(C)}\cup\idx2\qu{\fv(C)})=\varnothing$.
+
+From \ruleref{Adversary} and $\rhl{C}{s_i}{s_i'}{C}$, we have $\rhl{C}{s}{s}{C}$
+(Here \ruleref{Adversary} is instantiated with $C:=S$, $X:=\cl{\fv(S)}$, $Y:=\qu{\fv(C)}$,
+$W:=\varnothing$, $\Tilde X:=\cl{\fv(B''')}$ with indices removed,
+$Z:=\qu{\fv(B''')}$, $R:=B'''$, $\bc_i:=s_i$, $\bc'_i:=s'_i$.)
+
+Then with \ruleref{Seq} and $\rhl{A}{\bc}{\bc'}C$, we get 
+$\rhl{A}{\bc;s}{\bc's'}C$. And with \ruleref{Conseq} and $C\subseteq B$,
+we get $\rhl{A}{\bc;s}{\bc's'}B$.
 
 
 The first subgoal intuitively means that the quantum variables from
@@ -2023,34 +2056,41 @@ $\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
 \qq_n^{(1)},\dots,\qq_n^{(m)} \rrbracket$). This subgoal can usually
 be discharged with ``\texttt{simp.}''.
 
-
 \medskip
 
 We explain shortly the motivation behind the construction of the new
 postcondition $C$.
-We need that $C$
-does not contain any of the program variables of $s$ (except within $\mathit{Eqs}$).
+We need that $C$ is of the form
+\[
+  C:=B'''\sqcap\mathit{Eqs}
+  \quad\text{with}\quad
+  \mathit{Eqs} := \mathfrak{Cla}[\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
+\xx^{(n)}_1=\xx^{(n)}_2]\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)}
+\rrbracket \mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket
+\]
+for some $B$ to be able to apply \ruleref{Adversary}, where $B'''$
+does not contain any of the program variables of $S$.
 (Otherwise we cannot apply the \refrule{Frame}.) And furthermore, we
 need that $C$
-is a subset of $B$.  And finally, $C$
-must be of the form $B'''\sqcap \mathtt{Eqs}$ for some $B'''$.
+is a subset of $B$.  
 
 Our definition of $C$
 is an attempt of finding a reasonably large $B'''$
 (and thus $C$) that satisfies those constraints.
 
 For this, we start with $B$,
-and remove as many terms containing program variables of $s$
+and remove as many terms containing program variables of $S$
 from $B$
 as we can. Namely, since $C=B'''\sqcap \mathit{Eqs}$,
 we can remove all equations
 from $B$ that occur in $\mathit{Eqs}$ anyway
 without weakening the predicate. This leads to $B'$.
-If there remain any quantum variables of $s$
+If there remain any quantum variables of $S$
 in $B'$,
 there seems to be nothing we can do. However, if there are classical
 variables $X_1X_2$
-of $s$
+of $S$
 remaining, we can get rid of them by replacing $B'$
 by $\mathtt{INF}\ X_1X_2.\ B'$.
 (If $B'$
@@ -2083,7 +2123,7 @@ For classical $B'=\CL{e}$, this is equivalent to
     \xx_1\geq\xx_2 }$ which is true.)  We only add those equalities in
   $B''$ that actually may be relevant for $B'$, to keep the term small.
   
-  
+
 
 \tactic{case}
 
@@ -2458,8 +2498,8 @@ multiple statements.
 When invoked as ``\texttt{swap right $n$}'', the analogous rule 
 \[
   \inferrule
-  {\bc}{\rhl A{s_1;\dots;s_{m};s'';s'_{1};\dots;s'_{n}}{B}}
-  {\bc}{\rhl A{s_1;\dots;s_{m};s'_{1};\dots;s'_{n};s''}{B}}
+  {\rhl A{\bc}{s_1;\dots;s_{m};s'';s'_{1};\dots;s'_{n}}{B}}
+  {\rhl A{\bc}{s_1;\dots;s_{m};s'_{1};\dots;s'_{n};s''}{B}}
   \qquad
   \text{if}
   \qquad
