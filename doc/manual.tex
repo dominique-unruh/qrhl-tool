@@ -167,8 +167,6 @@
 
 \TODOQ{Document measure tactic}
  
-\TODOQ{Document equal tactic with differences}
-
 \maketitle
 
 \ifdraft
@@ -182,7 +180,7 @@
 \let\subsubsection\subsection
 \let\subsection\section
 
-
+\tableofcontents
 
 This is a user manual for our proof assistant for
 performing qRHL-based security proofs.  The tool is a prototype to
@@ -399,7 +397,6 @@ variables is assumed. Thus, if we prove a statement referring to
 \texttt{name}, this statement holds for any program \texttt{name}. We
 use these declarations to model adversaries.
 
-\TODOQ{proofread}
 In some cases, an adversary may invoke other programs (e.g., an encryption oracle).
 In that case, we declare an adversary with ``holes'' using:
 \begin{center}
@@ -410,8 +407,8 @@ In that case, we declare an adversary with ``holes'' using:
 \end{center}
 This means the program \texttt{name} contains variables \texttt{v1,v2,v3,...,vn},
 as well as $n$ ``holes'' (one for each question mark).\footnote{Formally,
-  it declares \texttt{name} to refer to a context in the sense of
-  \qrhlautoref{footnote:context} with $n$ holes.}
+  it declares \texttt{name} to refer to a multi-hole context with $n$ holes in the sense of
+  \qrhlautoref{footnote:context}.}
 We write \texttt{name(p1,...,pn)} to refer to \texttt{name} with \texttt{p1},\dots,\texttt{pn}
 inserted instead of the holes.
 (For example, \texttt{name(enc,dec)} would run the adversary \texttt{name} and allow it to invoke the
@@ -802,14 +799,14 @@ A program is represented as a list of statements.\footnote{This
   \toolprog{call}
   & The program $\mathit{prog}$ itself.
 
-  \TODOQ{proofread}
   $\mathit{prog}$
   must be the name of a program (declared with \texttt{program} or
   \texttt{adversary}).
   If the \texttt{adversary}-command declared a program ``with $n$ holes''
   (using \texttt{adversary ... calls ?,...,?}),
   then \textit{prog} is an expression of the form \texttt{name(arg1,\dots,argn)}
-  where each \texttt{arg1,\dots,argn} is again the name of a program or such an expression.
+  where each \texttt{arg1,\dots,argn} is again the name of a program (or an expression
+  of the form \texttt{name(arg1,\dots,argn)}).
 
   Logically, \texttt{call $\mathit{prog}$;}
   is simply an abbreviation for the code of $\mathit{prog}$
@@ -1931,6 +1928,85 @@ The rule is a special case of \ruleref{QrhlElimEq}.
 
 
 
+
+
+\tactic{case}
+
+When invoked as ``$\mathtt{case}\ z := e\mathtt{.}$'',
+it replaces the subgoal $\rhl A\bc\bd B$
+by $\rhl{\mathfrak{Cla}[z=e]\sqcap A}\bc\bd B$.
+The variable $z$
+must be a declared as an ambient variable that is not contained in
+$\bc,\bd,e$
+or in the code of any program declared with the \texttt{program} command.
+
+\[
+\inferrule
+{\rhl{\mathfrak{Cla}[z=e]\sqcap A}\bc\bd B}
+{\rhl A\bc\bd B}
+\]
+
+The tactic is justified by \ruleref{Case}. Note that \ruleref{Case}
+would add an additional all-quantifier $\forall z$
+to the subgoal. However, since all ambient variables are implicitly
+all-quantified, the all-quantifier can be omitted.
+
+
+\tactic{casesplit} 
+
+When invoked as ``$\mathtt{casesplit}\ e\mathtt{.}$''
+with a Boolean expression $e$,
+the current subgoal $G$
+is replaced by two subgoals $e\rightarrow G$
+and $\lnot e\rightarrow G$.
+This works for qRHL subgoals and ambient logic subgoals.
+
+\[
+  \inferrule
+  {e\rightarrow G
+    \\
+    \lnot e\rightarrow G}
+  {G}
+\]
+
+\tactic{clear}
+
+When invoked as ``\texttt{clear} $n$''
+for some integer $n\geq 1$,
+it removes the $n$-th
+assumption from the current subgoal. For qRHL subgoals, assumptions
+are explicitly listed and numbered in the tool. For ambient subgoals of the form
+$A_1\to \dots \to A_m\to B$,
+$A_n$ is considered to be the $n$-th assumption.
+
+\[
+  \inferrule
+  {A_1\to \dots A_{n-1}\to A_{n+1}\to\dots \to A_m\to B}
+  {A_1\to \dots \to A_m\to B}
+\]
+
+
+
+\tactic{conseq}
+
+When invoked as ``\texttt{conseq pre: $C$.}'',
+it rewrites the precondition of the current qRHL subgoal to become~$C$.
+When invoked as ``\texttt{conseq post: $C$.}'',
+it rewrites the postcondition of the current qRHL subgoal to become~$C$.
+$C$ must be an Isabelle/HOL expression of type \texttt{predicate}.
+
+That is, one of the following two rules is applied (left for
+\texttt{pre}, right for \texttt{post}):
+\[
+  \inferrule{A\leq C\\\rhl{C}\bc\bd B}{\rhl A\bc\bd B}
+  \qquad
+  \inferrule{C\leq B\\\rhl{A}\bc\bd C}{\rhl A\bc\bd B}
+\]
+%
+Both rules are special cases of \ruleref{Conseq}.
+
+
+
 \tactic{equal}
 
 Converts a subgoal of the form
@@ -2123,85 +2199,6 @@ For classical $B'=\CL{e}$, this is equivalent to
     \xx_1\geq\xx_2 }$ which is true.)  We only add those equalities in
   $B''$ that actually may be relevant for $B'$, to keep the term small.
   
-
-
-\tactic{case}
-
-When invoked as ``$\mathtt{case}\ z := e\mathtt{.}$'',
-it replaces the subgoal $\rhl A\bc\bd B$
-by $\rhl{\mathfrak{Cla}[z=e]\sqcap A}\bc\bd B$.
-The variable $z$
-must be a declared as an ambient variable that is not contained in
-$\bc,\bd,e$
-or in the code of any program declared with the \texttt{program} command.
-
-\[
-\inferrule
-{\rhl{\mathfrak{Cla}[z=e]\sqcap A}\bc\bd B}
-{\rhl A\bc\bd B}
-\]
-
-The tactic is justified by \ruleref{Case}. Note that \ruleref{Case}
-would add an additional all-quantifier $\forall z$
-to the subgoal. However, since all ambient variables are implicitly
-all-quantified, the all-quantifier can be omitted.
-
-
-\tactic{clear}
-
-When invoked as ``\texttt{clear} $n$''
-for some integer $n\geq 1$,
-it removes the $n$-th
-assumption from the current subgoal. For qRHL subgoals, assumptions
-are explicitly listed and numbered in the tool. For ambient subgoals of the form
-$A_1\to \dots \to A_m\to B$,
-$A_n$ is considered to be the $n$-th assumption.
-
-\[
-  \inferrule
-  {A_1\to \dots A_{n-1}\to A_{n+1}\to\dots \to A_m\to B}
-  {A_1\to \dots \to A_m\to B}
-\]
-
-
-\tactic{casesplit} 
-
-When invoked as ``$\mathtt{casesplit}\ e\mathtt{.}$''
-with a Boolean expression $e$,
-the current subgoal $G$
-is replaced by two subgoals $e\rightarrow G$
-and $\lnot e\rightarrow G$.
-This works for qRHL subgoals and ambient logic subgoals.
-
-\[
-  \inferrule
-  {e\rightarrow G
-    \\
-    \lnot e\rightarrow G}
-  {G}
-\]
-
-
-\tactic{conseq}
-
-When invoked as ``\texttt{conseq pre: $C$.}'',
-it rewrites the precondition of the current qRHL subgoal to become~$C$.
-When invoked as ``\texttt{conseq post: $C$.}'',
-it rewrites the postcondition of the current qRHL subgoal to become~$C$.
-$C$ must be an Isabelle/HOL expression of type \texttt{predicate}.
-
-That is, one of the following two rules is applied (left for
-\texttt{pre}, right for \texttt{post}):
-\[
-  \inferrule{A\leq C\\\rhl{C}\bc\bd B}{\rhl A\bc\bd B}
-  \qquad
-  \inferrule{C\leq B\\\rhl{A}\bc\bd C}{\rhl A\bc\bd B}
-\]
-%
-Both rules are special cases of \ruleref{Conseq}.
-
-
-
 
 
 
