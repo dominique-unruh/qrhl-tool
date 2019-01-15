@@ -1,6 +1,6 @@
 \newif\ifdraft
 
-\drafttrue
+%\drafttrue
 
 \documentclass{article}
 \usepackage[utf8]{inputenc}
@@ -165,8 +165,6 @@
 \date{}
 
 
-\TODOQ{Document measure tactic}
- 
 \maketitle
 
 \ifdraft
@@ -560,8 +558,8 @@ goals opened. If the current proof started with a \texttt{lemma}
 command, the proven fact is stored under the name specified in the
 \texttt{lemma} command.
 
-\TODOQ{remove this newpage if the table in programs doesn't break badly then}
-\newpage
+%\TODOQ{remove this newpage if the table in programs doesn't break badly then}
+%\newpage
 
 \subsection{Programs}
 \label{sec:tool.programs}
@@ -1135,34 +1133,28 @@ for getting the special characters (marked ``How to input:'' in the table below)
   If $M$ is infinite or empty, then $\mathtt{uniform}\ M:=0$.
   \\
   %
-  \hline \hline
-  \constdef{$\mathtt{Pr}[v:P(\rho)]$}{\mathtt{real}}{$v::\mathtt{bool},\mathtt{bit}$
+  \hline
+  \constdef{$\mathtt{Pr}[e:P(\rho)]$}{\mathtt{real}}{$e::\mathtt{bool}$
     \par and $P::\mathtt{program}$ \par and $\rho::\mathtt{program\_state}$}
   \symbolindexmark\TOOLpr
   &
   %
-  The probability $\prafter {v}{P}{\rho}$
-  that $v=1$
-  or $v=\true$ after execution of the program $P$ with initial state $\rho$.
+  The probability $\prafter {e}{P}{\rho}$
+  that $e=\true$ after execution of the program $P$ with initial state $\rho$.
 
-  Here $v$
-  must be the name of a classical variable declared with
-  \texttt{\frenchspacing classical var $v$ : bit;}
-  (or \texttt{bool}).  (An expression that merely evaluates
-  to $v$
-  is not allowed. For example:
-  $\mathtt{Pr}[\mathtt{fst}\ (v,v):P(\rho)]$
-  is not a synonym for $\mathtt{Pr}[v:P(\rho)]$.
-  This is because a special syntax translation operates on probability
-  expressions.)
+  Here $e$
+  must be an expression of type \texttt{bool}
+  (and $e$ may contain ambient and program variables without indices).
 
+  
   $P$
   can be the name of a program declared using \texttt{program P :=
     ...;} or \texttt{adversary P var ...;}. (But in the case of $P$,
   expressions that evaluate to a program are also admissible.)
 
+  
   The constant \texttt{probability} is internally used for representing 
-  $\mathtt{Pr}[v:P(\rho)]$. It should not be used directly.
+  $\mathtt{Pr}[e:P(\rho)]$. It should not be used directly.
   %
   \\
   \hline
@@ -1872,35 +1864,42 @@ text accompanying the rule.
 
 \newcommand\tactic[1]{\subsubsection*{Tactic #1}\index{#1@\textttOLD{#1} (tactic)}}
 
-\tactic{admit} Solves the current subgoal without checking. This
+\tactic{admit}
+
+Solves the current subgoal without checking. This
 tactic is \emph{not sound}, it can be used to prove any theorem.  It
 is intended for experimentation and proof development (to get a
 subgoal out of the way temporarily and focus on other subgoals first).
 
-\tactic{byqrhl} Transforms a goal of the form
-$\mathtt{Pr}[\xx:P(\rho)] =\mathtt{Pr}[\xx':P'(\rho)]$
+\tactic{byqrhl}
+
+
+When invoked as ``\texttt{byqrhl.}'', transforms a goal of the form
+$\mathtt{Pr}[e:P(\rho)] =\mathtt{Pr}[e':P'(\rho)]$
 into a qRHL subgoal. (Also works for $\leq$ or $\geq$ instead of $=$.)
 
-Here $\xx,\xx'$
-must be classical variables of type \texttt{bit} or \texttt{bool}, and
-$P,P'$
-must be the names of programs that have been declared using the
+Here $e,e'$
+must be expressions of type \texttt{bool} (that may contain classical and ambient variables),
+and $P,P'$ must be the names of programs that have been declared using the
 \texttt{program} or the \texttt{adversary} command.
 
+
 The tactic implements the following rule:
-\[
+\begin{multline*}
 \inferrule{
-  \rhl{\mathfrak{Cla}[\yy^{(1)}_1=\yy^{(1)}_2\land\dots\land\yy^{(n)}_1=\yy^{(n)}_2]\sqcap
+  \pb\rhl{\CL{\yy^{(1)}_1=\yy^{(1)}_2\land\dots\land\yy^{(n)}_1=\yy^{(n)}_2}\sqcap
     \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
     \mathrel{\mathord\equiv\mathfrak q}
     \llbracket \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket}
   {\mathtt{call}\ P}{\mathtt{call}\ P'}
-  {\mathfrak{Cla}[\xx_1\leftrightarrow\xx'_2]}
+  {\CL{e_1\leftrightarrow e'_2}}
 }
 {
-  \mathtt{Pr}[\xx:P(\rho)] =\mathtt{Pr}[\xx':P'(\rho)]
+  \mathtt{Pr}[e:P(\rho)] =\mathtt{Pr}[e':P'(\rho)]
 }
-\]
+\\
+\text{with}\quad e_1 := \idx1e,\ e'_2 := \idx2e'.
+\end{multline*}
 Here $\yy^{(1)},\dots,\yy^{(n)}$
 are the free classical variables of $P,P'$.
 And $\qq^{(1)},\dots,\qq^{(m)}$
@@ -1908,9 +1907,6 @@ are the free quantum variables of $P,P'$.
 (Including those of any programs included recursively within $P,P'$
 via \texttt{call}.)
 
-If $\xx,\xx'$
-are of type \texttt{bit}, the precondition contains
-$(\xx_1=1)\leftrightarrow(\xx'_2=1)$ instead of $\xx_1\leftrightarrow \xx_2$.
 If the conclusion contains $\leq$
 or $\geq$
 instead of $=$,
@@ -2238,6 +2234,59 @@ The current goal must be a qRHL subgoal.
 Logically, this does not change the subgoal since \texttt{call $P$;}
 is just an abbreviation for the code of $P$.
 
+\tactic{measure}
+
+When invoked as  ``\texttt{measure.}'',
+converts a subgoal of the form
+$\rhl{A}{\,\bc; \xx\ \mathtt{<-\ measure}\ Q\ \mathtt{in}\ e \,}
+{\,\bc';\xx'\ \mathtt{<-\ measure}\ Q'\ \mathtt{in}\ e' \,}{B}$
+(i.e., ending in a measurement-statement on both sides) into a subgoal
+$\rhl{A}{\bc}{\bc'}{C}$ with suitably updated postcondition $C$.
+
+Here $e,e'$ must have the same type.
+
+The tactic implements the following rule:
+\[
+  \inferrule{
+      \rhl{A}{\bc}{\bc'}{B'}
+  }{
+    \rhl{A}{\,\bc; \xx\ \texttt{<-\ measure}\ Q\ \mathtt{in}\ e \,}
+           {\,\bc';\xx'\ \texttt{<-\ measure}\ Q'\ \mathtt{in}\ e' \,}{B}
+  }
+\]
+where
+\begin{multline*}
+  B' 
+  :=
+  \CL{e_1=e'_2} \sqcap
+  \paren{Q_1\quanteq Q_2'} \sqcap {}
+  \\
+  \mathtt{INF}\ z.\
+  \mathtt{let}\ \bar e = (\lift{(\mathtt{mproj}\ e_1\ z)}{Q_1}) \cdot \mathtt{top};\ 
+                \bar e' = (\lift{(\mathtt{mproj}\ e'_2\ z)}{Q'_2}) \cdot \mathtt{top}\ \mathtt{in}
+  \\
+  {\pb\paren{B\{z/\xx_1,z/\xx'_2\} ⊓ \bar e ⊓ \bar f} + \mathtt{ortho}\ \bar e + \mathtt{ortho}\ \bar e'}
+\end{multline*}
+with
+\begin{equation*}
+  e_1 := \idx1e,
+  \quad
+  e'_2 := \idx2e',
+  \quad
+  Q_1 := \idx1Q,
+  \quad
+  Q'_2 := \idx2Q'.
+\end{equation*}
+
+This rule is a consequence of \ruleref{JointMeasureSimple} and \ruleref{Seq}: 
+From \ruleref{JointMeasureSimple}, we obtain 
+$\rhl{B'}{\,\xx\ \texttt{<-\ measure}\ Q\ \mathtt{in}\ e \,}
+{\,\xx'\ \texttt{<-\ measure}\ Q'\ \mathtt{in}\ e' \,}{B}$
+(The only differences between $B'$ and the precondition from
+\ruleref{JointMeasureSimple} is the use of Isabelle-syntax here
+and the fact that $\im e$ replaced by the equivalent $e\cdot\mathtt{top}$.)
+Then with $\rhl{A}{\bc}{\bc'}{B'}$
+and \ruleref{Seq}, we get the conclusion of the rule.
 
 \tactic{rnd}
 
