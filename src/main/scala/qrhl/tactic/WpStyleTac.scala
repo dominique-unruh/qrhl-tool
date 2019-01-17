@@ -1,7 +1,8 @@
 package qrhl.tactic
 
-import qrhl.logic.{Block, Expression, Statement}
+import qrhl.logic.{Block, Statement}
 import qrhl._
+import qrhl.isabelle.RichTerm
 
 
 abstract class WpStyleTac(val left:Boolean) extends Tactic {
@@ -21,5 +22,5 @@ abstract class WpStyleTac(val left:Boolean) extends Tactic {
     case _ => throw UserException(s"$this supported only for qRHL subgoals")
   }
 
-  def getWP(state: State, statement:Statement, post:Expression) : Expression
+  def getWP(state: State, statement:Statement, post:RichTerm) : RichTerm
 }

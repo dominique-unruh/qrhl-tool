@@ -1,6 +1,6 @@
 package qrhl.toplevel
 
-import info.hupel.isabelle.Operation.ProverException
+import info.hupel.isabelle.ProverResult
 import info.hupel.isabelle.hol.HOLogic
 import org.scalatest.FunSuite
 import qrhl.UserException
@@ -8,7 +8,7 @@ import qrhl.logic.Call
 
 class ParserTest extends FunSuite {
   implicit lazy val parserContext: ParserContext = {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     // If this fails for parsing reasons, just directly compose commands instead
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var y : int")
@@ -30,7 +30,7 @@ class ParserTest extends FunSuite {
   }
 
   test("fail to parse while loop") {
-    assertThrows[ProverException] {
+    assertThrows[ProverResult.Failure] {
       val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; };")
     }
   }

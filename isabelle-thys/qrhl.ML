@@ -4,13 +4,16 @@ struct
 val mk_variablesT = Prog_Variables.mk_variablesT
 val mk_variableT = Prog_Variables.mk_variableT
 val mk_conjs = Prog_Variables.mk_conjs
-fun mk_distrT T = Type(\<^type_name>\<open>distr\<close>, [T])
 fun mk_vectorT T = Type(\<^type_name>\<open>vector\<close>, [T])
+fun dest_vectorT (Type(\<^type_name>\<open>vector\<close>, [T])) = T
+  | dest_vectorT T = raise TYPE("dest_vectorT",[T],[])
 fun mk_boundedT T T' = Type(\<^type_name>\<open>bounded\<close>, [T,T'])
 fun dest_boundedT (Type(\<^type_name>\<open>bounded\<close>, [T,T'])) = (T,T')
   | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
 fun mk_bounded2T T = mk_boundedT T T
 fun mk_measurementT T T' = Type(\<^type_name>\<open>measurement\<close>, [T,T'])
+fun dest_measurementT (Type(\<^type_name>\<open>measurement\<close>, [T,T'])) = (T,T')
+  | dest_measurementT T = raise TYPE("dest_measurementT",[T],[])
 
 val parse_varterm = Prog_Variables.parse_varterm
 val missing_in_varterm = Prog_Variables.missing_in_varterm
@@ -260,12 +263,8 @@ fun tidyTrueTop t =
     if t=t' then t else tidyTrueTop t'
   end
 
-(* open List *)
-
 fun callWp cvars1 cvars2 qvars1 qvars2 B =
-  let (* val cvarsEq = HOLogic.mk_eq (HOLogic.mk_tuple cvars1, HOLogic.mk_tuple cvars2)
-      val claCvarsEq = @{const classical_subspace} $ cvarsEq *)
-      val (qvars1',qvars1T) = variables qvars1
+  let val (qvars1',qvars1T) = variables qvars1
       val (qvars2',qvars2T) = variables qvars2
       val (qvars12',qvars12T) = variables (qvars1 @ qvars2)
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()
@@ -402,7 +401,7 @@ fun fixTac term var =
   (res,typ)
   end
 
-fun applyRule name goal ctx =
+(* fun applyRule name goal ctx =
   let val thms = Proof_Context.get_thms ctx name
       val cgoal = Thm.cterm_of ctx (HOLogic.mk_Trueprop goal)
       val goal' = Goal.init cgoal
@@ -414,7 +413,7 @@ fun applyRule name goal ctx =
   in
     (* subgoals' |> map (Thm.cterm_of ctx) |> @{make_string} |> error *)
     (subgoals',goal'')
-  end
+  end *)
 
 
 

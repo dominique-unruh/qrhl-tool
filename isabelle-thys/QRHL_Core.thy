@@ -218,11 +218,11 @@ lemma unitary_lift[simp]: "unitary (liftOp U Q) = unitary U"
   by (cheat TODO10)
 (* for U :: "('a::universe,'a) bounded" *)
 
-lemma lift_inf[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>Q = (S \<sqinter> T)\<guillemotright>Q" for S::"'a::universe subspace"
+lemma lift_inf[simp]: "S\<guillemotright>Q \<sqinter> T\<guillemotright>Q = (S \<sqinter> T)\<guillemotright>Q" for S::"'a::universe subspace"
   by (cheat TODO11)
-lemma lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a::universe subspace"
+lemma lift_leq[simp]: "(S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a::universe subspace"
   by (cheat TODO11)
-lemma lift_eqSp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a::universe subspace" 
+lemma lift_eqSp[simp]: "(S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a::universe subspace" 
   by (cheat TODO11)
 lemma lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a::universe,'a) bounded" 
   by (cheat TODO11)
@@ -258,18 +258,22 @@ lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemo
 lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a::universe variables"
   unfolding eigenspace_def apply (subst lift_idOp[symmetric, of Q]) by (simp del: lift_idOp)
 
-lemma top_leq_lift: "distinct_qvars Q \<Longrightarrow> top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S" 
-  by (cheat top_leq_lift)
-lemma top_geq_lift: "distinct_qvars Q \<Longrightarrow> top \<ge> S\<guillemotright>Q \<longleftrightarrow> top \<ge> S" 
-  by (cheat top_geq_lift)
-lemma bot_leq_lift: "distinct_qvars Q \<Longrightarrow> bot \<le> S\<guillemotright>Q \<longleftrightarrow> bot \<le> S" 
-  by (cheat bot_leq_lift)
-lemma bot_geq_lift: "distinct_qvars Q \<Longrightarrow> bot \<ge> S\<guillemotright>Q \<longleftrightarrow> bot \<ge> S" 
-  by (cheat bot_geq_lift)
-lemma top_eq_lift: "distinct_qvars Q \<Longrightarrow> top = S\<guillemotright>Q \<longleftrightarrow> top = S" 
-  by (cheat top_eq_lift)
-lemma bot_eq_lift: "distinct_qvars Q \<Longrightarrow> bot = S\<guillemotright>Q \<longleftrightarrow> bot = S" 
-  by (cheat bot_eq_lift)
+lemma top_leq_lift: "top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S" 
+  apply (subst top_lift[symmetric]) apply (subst lift_leq) by simp
+lemma top_geq_lift: "top \<ge> S\<guillemotright>Q \<longleftrightarrow> top \<ge> S" 
+  apply (subst top_lift[symmetric]) apply (subst lift_leq) by simp
+lemma bot_leq_lift: "bot \<le> S\<guillemotright>Q \<longleftrightarrow> bot \<le> S" 
+  apply (subst bot_lift[symmetric]) apply (subst lift_leq) by simp
+lemma bot_geq_lift: "bot \<ge> S\<guillemotright>Q \<longleftrightarrow> bot \<ge> S" 
+  apply (subst bot_lift[symmetric]) apply (subst lift_leq) by simp
+lemma top_eq_lift: "top = S\<guillemotright>Q \<longleftrightarrow> top = S" 
+  apply (subst top_lift[symmetric]) apply (subst lift_eqSp) by simp
+lemma bot_eq_lift: "bot = S\<guillemotright>Q \<longleftrightarrow> bot = S" 
+  apply (subst bot_lift[symmetric]) apply (subst lift_eqSp) by simp
+lemma top_eq_lift2: "S\<guillemotright>Q = top \<longleftrightarrow> S = top" 
+  apply (subst top_lift[symmetric]) apply (subst lift_eqSp) by simp
+lemma bot_eq_lift2: "S\<guillemotright>Q = bot \<longleftrightarrow> S = bot" 
+  apply (subst bot_lift[symmetric]) apply (subst lift_eqSp) by simp
 
 
 lemma remove_qvar_unit_op:

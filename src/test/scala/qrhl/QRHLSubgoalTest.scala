@@ -1,26 +1,26 @@
 package qrhl
 
 import org.scalatest.FunSuite
-import qrhl.isabelle.Isabelle
-import qrhl.logic.{Block, Expression, IfThenElse, While}
+import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.logic.{Block, IfThenElse, While}
 import qrhl.tactic.SeqTac
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class QRHLSubgoalTest extends FunSuite {
   lazy val tl: Toplevel = {
-    val tl = ToplevelTest.makeToplevel()
+    val tl = Toplevel.makeToplevel()
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var y : int")
     tl
   }
-  def pb(str:String): Expression = tl.state.parseExpression(Isabelle.boolT,str)
-  def pp(str:String): Expression = tl.state.parseExpression(Isabelle.predicateT,str)
+  def pb(str:String): RichTerm = tl.state.parseExpression(Isabelle.boolT,str)
+  def pp(str:String): RichTerm = tl.state.parseExpression(Isabelle.predicateT,str)
 
-  def testToExpressionWelltypedRoundtrip(context: Isabelle.Context, left:Block, right:Block, pre:Expression, post:Expression): Unit = {
+  def testToExpressionWelltypedRoundtrip(context: Isabelle.Context, left:Block, right:Block, pre:RichTerm, post:RichTerm): Unit = {
     val context = tl.state.isabelle
     val qrhl = QRHLSubgoal(left,right,pre,post,Nil)
     qrhl.checkWelltyped(context)
-    val e = qrhl.toExpression(context)
+    val e = qrhl.toTerm(context)
     print(e)
     e.checkWelltyped(context, Isabelle.boolT)
 

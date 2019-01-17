@@ -5,12 +5,15 @@ import info.hupel.isabelle.pure.Term
 import info.hupel.isabelle.{Operation, pure}
 import org.log4s
 import qrhl._
-import qrhl.logic.Expression
+import qrhl.isabelle.RichTerm
 import qrhl.toplevel.Parser
 
 import scala.collection.immutable.Nil
 
-case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => rule }) {
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
+
+case class RuleTac(rule:String) extends IsabelleTac[String]("apply_rule", { _ => rule }) {
 //  override def apply(state: State, goal: Subgoal): List[Subgoal] =
 //    goal match {
 //      case _: QRHLSubgoal => throw UserException("Expected an ambient logic subgoal")
@@ -33,6 +36,6 @@ case class RuleTac(rule:String) extends IsabelleTac(RuleTac.applyRuleOp, { _ => 
 
 object RuleTac {
   private val logger = log4s.getLogger
-  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[Term],BigInt)]] =
-    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[pure.Term],BigInt)]]("applyRule")
+//  val applyRuleOp: Operation[(String, Term, BigInt), Option[(List[RichTerm],BigInt)]] =
+//    Operation.implicitly[(String,pure.Term,BigInt), Option[(List[RichTerm],BigInt)]]("applyRule")
 }

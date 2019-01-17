@@ -5,6 +5,7 @@ import java.util.Date
 import info.hupel.isabelle.api.XML.Tree
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.pure.{Indexname, Typ}
+import qrhl.State
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 import scala.language.implicitConversions
@@ -106,23 +107,6 @@ object HashTerm {
 
 object Test0 {
   def main(args: Array[String]): Unit = {
-
-    import HashTerm.codec
-
-    val idCodec = new Codec[Tree] {
-      override val mlType: String = "blabla"
-      override def encode(t: Tree): Tree = t
-      override def decode(tree: Tree): XMLResult[Tree] = Right(tree)
-    }
-
-    val isabelle = ToplevelTest.isabelle
-    //    val context = ToplevelTest.isabelle.getQRHLContextWithFiles()
-    val op = Operation.implicitly("term_test")(Codec.unit,idCodec)
-    val res1 = isabelle.invoke(op,())
-    print(res1.pretty(2))
-
-    val res2 = isabelle.invoke(op,())
-    print(res2)
 
   }
 

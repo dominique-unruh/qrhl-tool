@@ -18,11 +18,12 @@ class IsabelleTest extends FunSuite {
   }
 
   test("initialize with path=auto") {
-    new Isabelle("auto")
+    Isabelle.globalIsabelle
+//    Isabelle.globalIsabelle.new Isabelle("auto")
   }
 
   test("load an empty theory") {
-    ToplevelTest.isabelle.getQRHLContextWithFiles(Paths.get("Empty.thy"))
+    Isabelle.globalIsabelle.getQRHLContextWithFiles(Paths.get("Empty.thy"))
   }
 
   test("dest_char") {

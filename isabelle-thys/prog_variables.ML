@@ -13,6 +13,11 @@ fun dest_variableT (Type(\<^type_name>\<open>variable\<close>, [T])) = T
 fun dest_variablesT (Type(\<^type_name>\<open>variables\<close>, [T])) = T
   | dest_variablesT T = raise TYPE("dest_variablesT", [T], [])
 
+fun strip_var_prefix x = if String.isPrefix "var_" x 
+  then String.extract (x,4,NONE) 
+  else error ("strip_var_prefix: Expected string starting with var_, not "^x)
+
+
 local
   fun mk_var_eq (v as Const ("_constrain", _) $ Free (n, _) $ Free _) =
       @{const HOL.eq("char list")} $ (Const (\<^const_name>\<open>variable_name\<close>, dummyT) $ v) $ HOLogic.mk_string n
@@ -186,6 +191,10 @@ fun type_of_varterm (VTUnit) = \<^typ>\<open>unit\<close>
 fun varterm_from_list [] = VTUnit
   | varterm_from_list [nT] = VTSingle nT
   | varterm_from_list (nT::xs) = VTCons (VTSingle nT, varterm_from_list xs)
+
+fun varterm_from_list_untyped [] = VTUnit
+  | varterm_from_list_untyped [n] = VTSingle (n,dummyT)
+  | varterm_from_list_untyped (n::xs) = VTCons (VTSingle (n,dummyT), varterm_from_list_untyped xs)
 
 fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
   | vars_in_varterm (VTSingle nT) = [nT]

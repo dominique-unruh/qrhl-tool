@@ -4,17 +4,20 @@ import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Free, Term, Type}
 import info.hupel.isabelle.{Operation, pure}
 import qrhl._
-import qrhl.isabelle.Isabelle
+import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
+
+import qrhl.isabelle.RichTerm.term_tight_codec
+import qrhl.isabelle.RichTerm.typ_tight_codec
 
 case object ByQRHLTac extends Tactic {
   class Probability(left : Boolean, state : State) {
     def unapply(term: pure.Term): Option[(pure.Term,pure.Term,pure.Term)] = term match {
       case App(App(App(Const(Isabelle.probability.name,_),v),p),rho) =>
-        val addIndexToExpressionOp = Operation.implicitly[(Term,Boolean), Term]("add_index_to_expression")
+        val addIndexToExpressionOp = Operation.implicitly[(BigInt,Term,Boolean), RichTerm]("add_index_to_expression")
 
-        val v2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (v,left))
-        val v3 = Expression.decodeFromExpression(state.isabelle, v2).isabelleTerm
+        val v2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (state.isabelle.contextId,v,left))
+        val v3 = RichTerm.decodeFromExpression(state.isabelle, v2.isabelleTerm).isabelleTerm
         Some(v3,p,rho)
       case _ => None
     }
@@ -24,15 +27,15 @@ case object ByQRHLTac extends Tactic {
   private def bitToBool(b:Term) =
     Isabelle.mk_eq(Isabelle.bitT, b, Const("Groups.one_class.one", Isabelle.bitT))
 
-  val byQRHLPreOp: Operation[(List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), Term]
-    = Operation.implicitly[(List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), Term]("byQRHLPre") // TODO: move
+  val byQRHLPreOp: Operation[(BigInt, List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), RichTerm]
+    = Operation.implicitly[(BigInt, List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), RichTerm]("byQRHLPre") // TODO: move
 
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
     val ProbLeft = new Probability(true, state)
     val ProbRight = new Probability(false, state)
 
     goal match {
-      case AmbientSubgoal(Expression(App(App(Const(rel,_),ProbLeft(v1,p1,rho1)),ProbRight(v2,p2,rho2)))) =>
+      case AmbientSubgoal(RichTerm(App(App(Const(rel,_),ProbLeft(v1,p1,rho1)),ProbRight(v2,p2,rho2)))) =>
         val p1name = p1 match {
           case Free(n,_) => n
           case _ => throw UserException(s"Program in lhs must be the name of a program (not $p1)")
@@ -78,14 +81,15 @@ case object ByQRHLTac extends Tactic {
         val qvars = (qvars1 ++ qvars2).distinct
 
         val isa = state.isabelle
-        val preTerm = isa.isabelle.invoke(byQRHLPreOp,
-          (cvars.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
+        val pre = isa.isabelle.invoke(byQRHLPreOp,
+          (isa.contextId,
+            cvars.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
             qvars.map(v => (v.index1.name, v.index2.name, v.valueTyp))))
 
         val left = Block(Call(p1name))
         val right = Block(Call(p2name))
-        val pre = Expression(Isabelle.predicateT, preTerm)
-        val post = Expression(Isabelle.predicateT, Isabelle.classical_subspace $ (connective $ v1 $ v2))
+//        val pre = Expression(Isabelle.predicateT, preTerm)
+        val post = RichTerm(Isabelle.predicateT, Isabelle.classical_subspace $ (connective $ v1 $ v2))
 
         List(QRHLSubgoal(left,right,pre,post,Nil))
       case _ =>

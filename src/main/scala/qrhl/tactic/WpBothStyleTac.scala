@@ -1,7 +1,8 @@
 package qrhl.tactic
 
 import qrhl._
-import qrhl.logic.{Block, Expression, Statement}
+import qrhl.isabelle.RichTerm
+import qrhl.logic.{Block, Statement}
 
 
 abstract class WpBothStyleTac() extends Tactic {
@@ -19,5 +20,5 @@ abstract class WpBothStyleTac() extends Tactic {
   /** Returns a (preferably weakest) precondition for post given programs left/right.
     * @return (wp,assms), where wp is the precondition, and assms are potential additional subgoals that need to be proven
     */
-  def getWP(state: State, left:Statement, right:Statement, post:Expression) : (Expression,Seq[Subgoal])
+  def getWP(state: State, left:Statement, right:Statement, post:RichTerm) : (RichTerm,Seq[Subgoal])
 }

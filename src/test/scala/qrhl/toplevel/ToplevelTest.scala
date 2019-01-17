@@ -8,14 +8,14 @@ import qrhl.isabelle.Isabelle
 
 class ToplevelTest extends FunSuite {
   test("assign statement should throw UserException on undefined variable") {
-    val toplevel = ToplevelTest.makeToplevel()
+    val toplevel = Toplevel.makeToplevel()
     assertThrows[UserException] {
       toplevel.execCmd("program prog := { x <- (); }")
     }
   }
 
   test("name collision between program and variable should have proper error message") {
-    val toplevel = ToplevelTest.makeToplevel()
+    val toplevel = Toplevel.makeToplevel()
     toplevel.execCmd("classical var x : int")
     val exn = intercept[UserException] {
       toplevel.execCmd("program x := { skip; }") }
@@ -24,7 +24,7 @@ class ToplevelTest extends FunSuite {
 }
 
 object ToplevelTest {
-  val isabellePath = "auto"
-  lazy val isabelle = new Isabelle(isabellePath)
-  def makeToplevel(): Toplevel = Toplevel.makeToplevel(ToplevelTest.isabelle)
+//  val isabellePath = "auto"
+//  lazy val isabelle = new Isabelle(isabellePath)
+//  def makeToplevel(): Toplevel = Toplevel.makeToplevel()
 }

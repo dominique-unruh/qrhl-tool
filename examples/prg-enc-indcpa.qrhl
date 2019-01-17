@@ -1,3 +1,5 @@
+# Formalization of one of the examples in "Quantum Relational Hoare Logic" (https://arxiv.org/abs/1802.03188)
+
 isabelle PrgEnc.
 
 ambient var rho : program_state.

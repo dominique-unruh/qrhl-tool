@@ -1,8 +1,8 @@
 package qrhl.tactic
 
-import jdk.jshell.spi.ExecutionControl
 import qrhl._
 import qrhl.logic.{Block, Environment}
+
 
 case class SwapTac(left:Boolean, number:Int=1) extends Tactic {
   if (number < 1)

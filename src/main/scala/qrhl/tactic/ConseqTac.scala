@@ -1,9 +1,9 @@
 package qrhl.tactic
 
 import qrhl._
-import qrhl.logic.Expression
+import qrhl.isabelle.RichTerm
 
-case class ConseqTac(pre: Option[Expression]=None, post:Option[Expression]=None) extends Tactic {
+case class ConseqTac(pre: Option[RichTerm]=None, post:Option[RichTerm]=None) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case QRHLSubgoal(left,right,pre2,post2,assms) =>
       var goals = List(QRHLSubgoal(left,right,pre.getOrElse(pre2),post.getOrElse(post2),assms)) : List[Subgoal]

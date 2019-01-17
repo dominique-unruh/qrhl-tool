@@ -3,11 +3,14 @@ package qrhl.tactic
 import info.hupel.isabelle.pure.Term
 import info.hupel.isabelle.{Operation, pure}
 import qrhl._
-import qrhl.logic.{Block, Expression}
+import qrhl.isabelle.RichTerm
+import qrhl.logic.Block
 
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
 
 @deprecated("Use SeqTac","now")
-case class SeqTacOLD(left:Int, right:Int, inner:Expression) extends Tactic {
+case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
   assert(left>=0)
   assert(right>=0)
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
@@ -28,8 +31,8 @@ case class SeqTacOLD(left:Int, right:Int, inner:Expression) extends Tactic {
   }
 }
 
-case class SeqTac(left:Int, right:Int, inner:Expression)
-  extends IsabelleTac(SeqTac.seqTacOp,{ ctx => (BigInt(left),BigInt(right),inner.encodeAsExpression(ctx)) }) {
+case class SeqTac(left:Int, right:Int, inner:RichTerm)
+  extends IsabelleTac[(BigInt, BigInt, RichTerm)]("seq_tac", { ctx => (BigInt(left),BigInt(right),inner.encodeAsExpression(ctx) /* TODO: encodeAsExpression should be done on Isabelle side */) }) {
   override def toString: String = s"seq $left $right"
 
   override def check(state: State, goal: Subgoal, newGoals: List[Subgoal]): Unit = {
@@ -39,6 +42,6 @@ case class SeqTac(left:Int, right:Int, inner:Expression)
 }
 
 object SeqTac {
-  val seqTacOp: Operation[((BigInt, BigInt, Term), Term, BigInt), Option[(List[Term],BigInt)]] =
-    Operation.implicitly[((BigInt,BigInt,Term),Term,BigInt), Option[(List[Term],BigInt)]]("seq_tac")
+//  val seqTacOp: Operation[((BigInt, BigInt, Term), Term, BigInt), Option[(List[RichTerm],BigInt)]] =
+//    Operation.implicitly[((BigInt,BigInt,Term),Term,BigInt), Option[(List[RichTerm],BigInt)]]("seq_tac")
 }

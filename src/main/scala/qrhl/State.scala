@@ -2,12 +2,11 @@ package qrhl
 
 import java.nio.file.{Files, Path, Paths}
 
-import info.hupel.isabelle.Operation
+import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Term, Typ => ITyp}
-import info.hupel.isabelle.pure
 import org.log4s
-import qrhl.isabelle.Isabelle
+import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.isabelle.Isabelle.Thm
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext}
@@ -15,6 +14,13 @@ import qrhl.toplevel.{Command, Parser, ParserContext}
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
+import info.hupel.isabelle.api.XML
+
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
+import Isabelle.applicativeXMLResult
+import Isabelle.Context.codec
+import Subgoal.codec
 
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
@@ -23,39 +29,71 @@ sealed trait Subgoal {
     * Should always succeed, unless there are bugs somewhere. */
   def checkWelltyped(context: Isabelle.Context): Unit
 
-  /** This goal as a boolean expression. If it cannot be expressed in Isabelle, a different,
-    * logically weaker expression is returned. */
-  def toExpression(context:Isabelle.Context): Expression
+  /** This goal as a boolean term. (A valid Isabelle representation of this goal.) */
+  def toTerm(context:Isabelle.Context): RichTerm
 
   def checkVariablesDeclared(environment: Environment): Unit
 
   def containsAmbientVar(x: String) : Boolean
 
   @tailrec
-  final def addAssumptions(assms: List[Expression]): Subgoal = assms match {
+  final def addAssumptions(assms: List[RichTerm]): Subgoal = assms match {
     case Nil => this
     case a::as => addAssumption(a).addAssumptions(as)
   }
 
-  def addAssumption(assm: Expression): Subgoal
+  def addAssumption(assm: RichTerm): Subgoal
 }
 
 object Subgoal {
   private val logger = log4s.getLogger
+
+  implicit object codec extends Codec[Subgoal] {
+    override val mlType: String = "QRHL_Operations.subgoal"
+
+    import scalaz._
+    import std.list._
+    import syntax.traverse._
+
+    override def encode(t: Subgoal): XML.Tree = t match {
+      case QRHLSubgoal(left, right, pre, post, assms) =>
+        val leftXml = Statement.codec.encode(left)
+        val rightXml = Statement.codec.encode(right)
+        val preXml = RichTerm.codec.encode(pre)
+        val postXml = RichTerm.codec.encode(post)
+        val assmsXml = assms.map(RichTerm.codec.encode)
+        XML.Elem(("qrhlgoal",Nil), XML.Elem(("qrhl",Nil), List(preXml, leftXml, rightXml, postXml)) :: assmsXml)
+      case AmbientSubgoal(goal) =>
+        XML.Elem(("ambient",Nil), List(RichTerm.codec.encode(goal)))
+    }
+
+    override def decode(xml: XML.Tree): XMLResult[Subgoal] = xml match {
+      case XML.Elem(("qrhlgoal",Nil), XML.Elem(("qrhl",Nil),List(preXml,leftXml,rightXml,postXml))::assmsXml) =>
+        for (pre <- RichTerm.codec.decode(preXml);
+             left <- Statement.codec.decode(leftXml);
+             right <- Statement.codec.decode(rightXml);
+             post <- RichTerm.codec.decode(postXml);
+             assms <- assmsXml.traverse(RichTerm.codec.decode))
+          yield QRHLSubgoal(left.asInstanceOf[Block], right.asInstanceOf[Block], pre, post, assms)
+      case XML.Elem(("ambient",Nil), List(termXml)) =>
+        for (t <- RichTerm.codec.decode(termXml)) yield AmbientSubgoal(t)
+      case badXml => Left("invalid encoding for a subgoal",List(badXml))
+    }
+  }
 
   def printOracles(thms : Thm*): Unit = {
     for (thm <- thms)
       thm.show_oracles()
   }
 
-  def apply(context: Isabelle.Context, e : Expression) : Subgoal = {
-    val assms = new ListBuffer[Expression]()
+  def apply(context: Isabelle.Context, e : RichTerm) : Subgoal = {
+    val assms = new ListBuffer[RichTerm]()
     var t = e.isabelleTerm
     Breaks.breakable {
       while (true) {
         t match {
           case App(App(Const(Isabelle.implies.name, _), a), b) =>
-            assms.append(Expression(e.typ, a))
+            assms.append(RichTerm(e.typ, a))
             t = b
           case _ => Breaks.break()
         }
@@ -64,8 +102,8 @@ object Subgoal {
 
     t match {
       case App(App(App(App(Const(Isabelle.qrhl.name,_),pre),left),right),post) =>
-        val pre2 = Expression.decodeFromExpression(context,pre)
-        val post2 = Expression.decodeFromExpression(context,post)
+        val pre2 = RichTerm.decodeFromExpression(context,pre)
+        val post2 = RichTerm.decodeFromExpression(context,post)
         val left2 = Statement.decodeFromListTerm(context, left)
         val right2 = Statement.decodeFromListTerm(context, right)
         QRHLSubgoal(left2,right2,pre2,post2,assms.toList)
@@ -79,7 +117,7 @@ object QRHLSubgoal {
   private val logger = log4s.getLogger
 }
 
-final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expression, assumptions:List[Expression]) extends Subgoal {
+final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]) extends Subgoal {
   override def toString: String = {
     val assms = if (assumptions.isEmpty) "" else
       s"Assumptions:\n${assumptions.map(a => s"* $a\n").mkString}\n"
@@ -104,14 +142,17 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
         throw UserException(s"Undeclared variable $x in assumptions")
   }
 
-  override def toExpression(context: Isabelle.Context): Expression = {
-    val leftTerm = left.programListTerm(context)
-    val rightTerm = right.programListTerm(context)
-    val preTerm = pre.encodeAsExpression(context)
-    val postTerm = post.encodeAsExpression(context)
-    val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
-    val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
-    Expression(Isabelle.boolT, term)
+  override def toTerm(context: Isabelle.Context): RichTerm = {
+//    val leftTerm = left.programListTerm(context).isabelleTerm
+//    val rightTerm = right.programListTerm(context).isabelleTerm
+//    val preTerm = pre.encodeAsExpression(context).isabelleTerm
+//    val postTerm = post.encodeAsExpression(context).isabelleTerm
+//    val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
+//    val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
+//    RichTerm(Isabelle.boolT, term)
+    // TODO: make global
+    val subgoal_to_term_op = Operation.implicitly[(Isabelle.Context,Subgoal),RichTerm]("subgoal_to_term")
+    context.isabelle.invoke(subgoal_to_term_op, (context, this))
   }
 
   /** Not including ambient vars in nested programs (via Call) */
@@ -121,7 +162,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
       assumptions.exists(_.variables.contains(x))
   }
 
-  override def addAssumption(assm: Expression): QRHLSubgoal = {
+  override def addAssumption(assm: RichTerm): QRHLSubgoal = {
     assert(assm.typ==HOLogic.boolT)
     QRHLSubgoal(left,right,pre,post,assm::assumptions)
   }
@@ -139,7 +180,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
   override def simplify(isabelle: Isabelle.Context, facts: List[String]): QRHLSubgoal = {
 //    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptions for simplification")
     val (assms2,thms) = assumptions.map(_.simplify(isabelle,facts)).unzip
-    val assms3: List[Expression] = assms2.filter(_.isabelleTerm!=HOLogic.True)
+    val assms3: List[RichTerm] = assms2.filter(_.isabelleTerm!=HOLogic.True)
     val (pre2,thm2) = pre.simplify(isabelle,facts)
     val (post2,thm3) = post.simplify(isabelle,facts)
     Subgoal.printOracles(thm2::thm3::thms : _*)
@@ -147,7 +188,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:Expression, post:Expre
   }
 }
 
-final case class AmbientSubgoal(goal: Expression) extends Subgoal {
+final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
   override def toString: String = goal.toString
 
   override def checkVariablesDeclared(environment: Environment): Unit =
@@ -156,11 +197,11 @@ final case class AmbientSubgoal(goal: Expression) extends Subgoal {
         throw UserException(s"Undeclared variable $x")
 
   /** This goal as a boolean expression. */
-  override def toExpression(context: Isabelle.Context): Expression = goal
+  override def toTerm(context: Isabelle.Context): RichTerm = goal
 
   override def containsAmbientVar(x: String): Boolean = goal.variables.contains(x)
 
-  override def addAssumption(assm: Expression): AmbientSubgoal = {
+  override def addAssumption(assm: RichTerm): AmbientSubgoal = {
     assert(assm.typ == HOLogic.boolT)
     AmbientSubgoal(assm.implies(goal))
   }
@@ -193,7 +234,7 @@ class FileTimeStamp(val file:Path) {
 
 class State private (val environment: Environment,
                      val goal: List[Subgoal],
-                     val currentLemma: Option[(String,Expression)],
+                     val currentLemma: Option[(String,RichTerm)],
                      private val _isabelle: Option[Isabelle.Context],
                      val dependencies: List[FileTimeStamp],
                      val currentDirectory: Path) {
@@ -233,7 +274,7 @@ class State private (val environment: Environment,
   def applyTactic(tactic:Tactic) : State = goal match {
     case Nil =>
       throw UserException("No pending proof")
-    case (subgoal::subgoals) =>
+    case subgoal::subgoals =>
       copy(goal=tactic.apply(this,subgoal)++subgoals)
   }
 
@@ -241,7 +282,7 @@ class State private (val environment: Environment,
                    goal:List[Subgoal]=goal,
                    isabelle:Option[Isabelle.Context]=_isabelle,
                    dependencies:List[FileTimeStamp]=dependencies,
-                   currentLemma:Option[(String,Expression)]=currentLemma,
+                   currentLemma:Option[(String,RichTerm)]=currentLemma,
                    currentDirectory:Path=currentDirectory) : State =
     new State(environment=environment, goal=goal, _isabelle=isabelle,
       currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory)
@@ -257,7 +298,7 @@ class State private (val environment: Environment,
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
       goal.checkVariablesDeclared(environment)
-      copy(goal=List(goal), currentLemma=Some((name,goal.toExpression(_isabelle.get))))
+      copy(goal=List(goal), currentLemma=Some((name,goal.toTerm(_isabelle.get))))
     case _ => throw UserException("There is still a pending proof.")
   }
 
@@ -279,7 +320,7 @@ class State private (val environment: Environment,
     }
   }
 
-  def parseExpression(typ:pure.Typ, str:String): Expression = {
+  def parseExpression(typ:pure.Typ, str:String): RichTerm = {
     implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.expression(typ),str) match {
       case Parser.Success(cmd2,_) => cmd2
@@ -297,16 +338,10 @@ class State private (val environment: Environment,
     }
   }
 
-  def loadIsabelle(path:String, theory:Option[String]) : State = {
-    if (!_isabelle.isEmpty)
+  def loadIsabelle(theory:Option[String]) : State = {
+    if (_isabelle.isDefined)
       throw UserException("Only one isabelle-command allowed")
-    val isa = new Isabelle(path)
-    // since this is likely to happen when an existing Isabelle is reloaded, give the GC a chance to remove that existing Isabelle
-    System.gc()
-    loadIsabelle(isa,theory)
-  }
-
-  def loadIsabelle(isabelle: Isabelle, theory:Option[String]) : State = {
+    val isabelle = Isabelle.globalIsabelle
     val (isa,files) = theory match {
       case None =>
         (isabelle.getQRHLContextWithFiles(), dependencies)

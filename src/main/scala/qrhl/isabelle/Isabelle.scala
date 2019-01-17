@@ -1,15 +1,17 @@
 package qrhl.isabelle
 
 import java.io.{BufferedReader, IOException, InputStreamReader}
+import java.lang
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
+import java.util.{Timer, TimerTask}
 
-import info.hupel.isabelle.api.{Configuration, Version}
+import info.hupel.isabelle.api.{Configuration, Version, XML}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Typ => ITyp}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
-import info.hupel.isabelle.{OfficialPlatform, Operation, Platform, System, ml}
+import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
@@ -21,6 +23,10 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
+import RichTerm.typ_tight_codec
+import RichTerm.term_tight_codec
+import qrhl.isabelle.Isabelle.Thm
+import scalaz.Applicative
 
 object DistributionDirectory {
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
@@ -180,10 +186,19 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     Await.result(System.create(environment, config), Duration.Inf)
   }
 
-
 //  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
 
-  def invoke[I,O](op: Operation[I,O], arg: I) : O = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
+  def invoke[I,O](op: Operation[I,O], arg: I) : O = {
+    val start = lang.System.nanoTime
+    val result = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
+    Isabelle.logger.debug(s"Operation ${op.name} ${(lang.System.nanoTime-start)/1000000}ms")
+    result
+  }
+
+//  // TODO remove
+//  new Timer().schedule(new TimerTask {
+//    override def run(): Unit = { invoke(Operation.Hello,"world") }
+//  },100,100)
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
     *
@@ -223,6 +238,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
   private var disposed = false
 
   def dispose(): Unit = this.synchronized {
+    if (Isabelle.isGlobalIsabelle(this))
+      throw new lang.RuntimeException("Trying to dispose Isabelle.globalIsabelle")
     if (!disposed) {
       Isabelle.logger.debug("Disposing Isabelle.")
       Await.result(system.dispose, Duration.Inf)
@@ -233,6 +250,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 
   override def finalize(): Unit = {
     dispose()
+    //noinspection ScalaDeprecation
     super.finalize()
   }
 
@@ -240,13 +258,46 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 }
 
 object Isabelle {
+  private var globalIsabellePeek : Isabelle = _
+  lazy val globalIsabelle: Isabelle = {
+    val isabelle = new Isabelle("auto")
+    globalIsabellePeek = isabelle
+    isabelle
+  }
+  def isGlobalIsabelle(isabelle : Isabelle): Boolean =
+    (globalIsabellePeek != null) && (globalIsabelle == isabelle)
+
+  @deprecated("use Expression.toString","now")
   def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
   def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
+
+  implicit object applicativeXMLResult extends Applicative[XMLResult] {
+    override def point[A](a: => A): XMLResult[A] = Right(a)
+    override def ap[A, B](fa: => XMLResult[A])(f: => XMLResult[A => B]): XMLResult[B] = fa match {
+      case Left(error) => Left(error)
+      case Right(a) => f match {
+        case Left(error) => Left(error)
+        case Right(ab) => Right(ab(a))
+      }
+    }
+  }
+
 
 
   object Thm {
     private val logger = log4s.getLogger
-    val show_oracles_lines_op : Operation[BigInt, List[String]] = Operation.implicitly[BigInt,List[String]]("show_oracles_lines")
+    val show_oracles_lines_op: Operation[BigInt, List[String]] = Operation.implicitly[BigInt, List[String]]("show_oracles_lines")
+
+    implicit def codec(implicit isabelle: Isabelle): Codec[Isabelle.Thm] =
+      new Codec[Isabelle.Thm] {
+        override val mlType: String = "thm"
+
+        override def encode(thm: Thm): XML.Tree = XML.elem(("thm", List(("id", thm.thmId.toString))), Nil)
+
+        override def decode(xml: XML.Tree): XMLResult[Thm] = xml match {
+          case XML.Elem(("thm", List(("id", id))), Nil) => Right(new Thm(isabelle, BigInt(id)))
+        }
+    }
   }
 
   private val logger = log4s.getLogger
@@ -271,16 +322,37 @@ object Isabelle {
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
-  def distrT(typ:ITyp): Type = Type("Discrete_Distributions.distr", List(typ))
+  val distrT_name = "Discrete_Distributions.distr"
+  def distrT(typ:ITyp): Type = Type(distrT_name, List(typ))
+  def dest_distrT(typ: ITyp): ITyp = typ match {
+    case Type(`distrT_name`, List(typ2)) => typ2
+    case _ => throw new RuntimeException("expected type 'distr', not "+typ)
+  }
+  val boundedT_name = "Bounded_Operators.bounded"
   def boundedT(typ:ITyp): Type = boundedT(typ,typ)
-  def boundedT(inT:ITyp, outT:ITyp) = Type("Bounded_Operators.bounded", List(inT,outT))
-  def measurementT(resultT:ITyp, qT: ITyp) = Type("QRHL_Core.measurement", List(resultT, qT))
+  def boundedT(inT:ITyp, outT:ITyp) = Type(boundedT_name, List(inT,outT))
+  def dest_boundedT(typ:ITyp): (ITyp, ITyp) = typ match {
+    case Type(`boundedT_name`, List(t1,t2)) => (t1,t2)
+    case _ => throw new RuntimeException("expected type 'bounded', not "+typ)
+  }
+  val measurementT_name = "QRHL_Core.measurement"
+  def measurementT(resultT:ITyp, qT: ITyp) = Type(measurementT_name, List(resultT, qT))
+  def dest_measurementT(typ: ITyp): (ITyp,ITyp) = typ match {
+    case Type(`measurementT_name`, List(typ1,typ2)) => (typ1,typ2)
+    case _ => throw new RuntimeException("expected type 'measurement', not "+typ)
+  }
   def listT(typ:ITyp) : Type = Type("List.list", List(typ))
   val block = Const("Programs.block", listT(programT) -->: programT)
-  def vectorT(typ:ITyp) = Type("Complex_L2.vector", List(typ))
+  val vectorT_name = "Complex_L2.vector"
+  def vectorT(typ:ITyp) = Type(vectorT_name, List(typ))
+  def dest_vectorT(typ:ITyp) : ITyp = typ match {
+    case Type(`vectorT_name`, List(t1)) => t1
+    case _ => throw new RuntimeException("expected type 'vector', not "+typ)
+  }
   def variableT(typ:ITyp) = Type("Prog_Variables.variable", List(typ))
   def dest_variableT(typ: ITyp): ITyp = typ match {
     case Type("Prog_Variables.variable", List(typ2)) => typ2
+    case _ => throw new RuntimeException("expected type 'variable', not "+typ)
   }
   def variablesT(typ:ITyp) : Type = Type("Prog_Variables.variables", List(typ))
   def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
@@ -306,7 +378,12 @@ object Isabelle {
   val measurementName = "Programs.measurement"
   def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variableT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
   val unitT = Type("Product_Type.unit")
-  def prodT(t1:ITyp, t2:ITyp) = Type("Product_Type.prod", List(t1,t2))
+  val prodT_name = "Product_Type.prod"
+  def prodT(t1:ITyp, t2:ITyp) = Type(prodT_name, List(t1,t2))
+  def dest_prodT(typ: ITyp): (ITyp, ITyp) = typ match {
+    case Type(`prodT_name`, List(t1,t2)) => (t1,t2)
+    case _ => throw new RuntimeException("expected type 'prod', not "+typ)
+  }
   private def qvarTuple_var0(qvs:List[QVariable]) : (Term,ITyp) = qvs match {
     case Nil => (variable_unit, unitT)
     case List(qv) => (variable_singleton(qv.valueTyp) $ qv.variableTerm,
@@ -338,9 +415,9 @@ object Isabelle {
   val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
   val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String,Term,BigInt), BigInt]("add_assumption")
   val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
-  @deprecated
+  @deprecated("use readExpression","now")
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
-  val simplifyTermOp: Operation[(Term, List[String], BigInt), (Term,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (Term,BigInt)]("simplify_term")
+  val simplifyTermOp: Operation[(Term, List[String], BigInt), (RichTerm,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (RichTerm,BigInt)]("simplify_term")
   val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
@@ -485,13 +562,13 @@ object Isabelle {
   class Thm(val isabelle:Isabelle, val thmId: BigInt) {
     def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbolsToUnicode)
     def show_oracles(): Unit = {
-      val text = show_oracles_lines().mkString("\n")
-      Thm.logger.debug(text)
+      Thm.logger.debug(show_oracles_lines().mkString("\n"))
     }
 
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting theorem $thmId")
       isabelle.invoke(deleteThmOp,thmId)
+      //noinspection ScalaDeprecation
       super.finalize()
     }
   }
@@ -506,6 +583,7 @@ object Isabelle {
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting context $contextId")
       isabelle.invoke(deleteContextOp,contextId)
+      //noinspection ScalaDeprecation
       super.finalize()
     }
 
@@ -533,7 +611,19 @@ object Isabelle {
     def readTyp(str:String) : ITyp = isabelle.invoke(readTypOp, (contextId,str))
     def readTypUnicode(str:String) : ITyp = readTyp(unicodeToSymbols(str))
     def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))
-    def simplify(term: Term, facts:List[String]) : (Term,Thm) =
+    def simplify(term: Term, facts:List[String]) : (RichTerm,Thm) =
       isabelle.invoke(simplifyTermOp, (term,facts,contextId)) match {case (t,thmId) => (t,new Thm(isabelle,thmId))}
+  }
+
+  object Context {
+    implicit object codec extends Codec[Context] {
+      override val mlType: String = "Proof.context"
+      override def encode(ctxt: Context): XML.Tree = XML.elem(("context", List(("id", ctxt.contextId.toString))),Nil)
+      def decode(isabelle : Isabelle, xml: XML.Tree): XMLResult[Context] = xml match {
+        case XML.Elem(("context", List(("id", id))), Nil) => Right(new Context(isabelle, BigInt(id)))
+      }
+      // TODO: use an implicit isabelle argument
+      override def decode(tree: XML.Tree): XMLResult[Context] = throw new RuntimeException("Use Context.codec.decode(Isabelle,XML.Tree) instead")
+    }
   }
 }
