@@ -229,7 +229,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     }
     val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount-1).toString.stripSuffix(".thy") }
 //    println("Isabelle getContextWithThys", files, filesThyPath)
-    invoke(Isabelle.useThys2Op /*Operation.UseThys*/, filesThyPath)
+    invoke(Operation.UseThys, filesThyPath)
     val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
     val ctxId = invoke(Isabelle.createContextOp, imports)
     new Isabelle.Context(this, ctxId)
@@ -407,7 +407,7 @@ object Isabelle {
 //  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
 
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
-  val useThys2Op: Operation[List[String], Unit] = Operation.implicitly[List[String], Unit]("use_thys2")
+//  val useThys2Op: Operation[List[String], Unit] = Operation.implicitly[List[String], Unit]("use_thys2")
   val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")
   val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_context")
   val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_thm")
