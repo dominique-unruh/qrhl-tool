@@ -17,7 +17,7 @@ and enter `java` or `emacs`, respectively, and see whether the commands are foun
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.3`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.4`.
 
 To update, simply extract the new version over the old one. (You can
 delete the old one first, but then Isabelle will be
@@ -25,7 +25,7 @@ redownloaded/recompiled.)
 
 ## Executing the demos
 
-In the `qrhl-0.3` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
+In the `qrhl-0.4` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
@@ -52,7 +52,7 @@ Then open and edit the file normally.
 
 * Make sure that `sbt` (Scala Build Tool) is on the path.
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
-* Use `git checkout v0.3` (replace `v0.3` by the version you wish to compile, or by `master` for the current development snapshot). 
+* Use `git checkout v0.4` (replace `v0.4` by the version you wish to compile, or by `master` for the current development snapshot). 
 * Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
 * Run `sbt packageBin` to generate the binary `qrhl.zip`.

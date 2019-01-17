@@ -562,9 +562,7 @@ object Isabelle {
   class Thm(val isabelle:Isabelle, val thmId: BigInt) {
     def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbolsToUnicode)
     def show_oracles(): Unit = {
-      // TODO inline text into debug()
-      val text = show_oracles_lines().mkString("\n")
-      Thm.logger.debug(text)
+      Thm.logger.debug(show_oracles_lines().mkString("\n"))
     }
 
     override protected def finalize(): Unit = {

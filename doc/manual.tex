@@ -1,14 +1,156 @@
-\newif\iffullversion
-\fullversiontrue
+\newif\ifdraft
 
-\input{preamble}
+%\drafttrue
 
-\let\standalonemanual1
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,paralist,stmaryrd,mathpartir,mathtools,tabularx,xcolor,centernot,tabto}
+\usepackage{tocloft}
+
+\usepackage[backend=bibtex,maxbibnames=100]{biblatex}
+
+\usepackage{makeidx}\makeindex
+\usepackage[font=footnotesize,labelfont=bf]{caption}
+\usepackage{graphicx}
+\usepackage[section]{placeins}
+\usepackage{idxlayout}
+\usepackage{yfonts}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{declmath}
+\usepackage{version}
+\usepackage{xr}
+\usepackage[framemethod=tikz]{mdframed}
+% don't load geometry if preview is to be loaeded
+% (the ifx-statement detects \PassOptionsToPackage{preview}{...})
+\expandafter\ifx\csname opt@preview.sty\endcsname\relax
+\usepackage[a4paper,margin=1in]{geometry}
+\fi
+\usepackage[users=QR]{uchanges}
+\usepackage{circuits}
+\ChangesSetUserColor[Dominique]{Q}{red}
+\ChangesSetUserColor[Reviewer]{R}{invalid}
+\usepackage[pdfborderstyle={/S/U/W 0.3}]{hyperref}
+\usepackage[delaytext,envcountsame,multiautoref]{latexhacks}
+
+\usetikzlibrary{decorations.pathreplacing}
+
+\newcommand\mytilde{\raise.17ex\hbox{$\scriptstyle\sim$}}
+
+
+\makeatletter
+
+
+
+%\hyphenation{proof-script}
+
+\input{macros}
+%\input{pastebin}
+
+\sloppy
+
+
+\DeclareUnicodeCharacter{212D}{\textswab C}
+\DeclareUnicodeCharacter{1D529}{\textswab l}
+\DeclareUnicodeCharacter{1D51E}{\textswab a}
+\DeclareUnicodeCharacter{2260}{\ensuremath{\neq}}
+\DeclareUnicodeCharacter{27E6}{\ensuremath{\llbracket}}
+\DeclareUnicodeCharacter{27E7}{\ensuremath{\rrbracket}}
+\DeclareUnicodeCharacter{2297}{\ensuremath{\otimes}}
+\DeclareUnicodeCharacter{22C5}{\ensuremath{\cdot}}
+\DeclareUnicodeCharacter{2264}{\ensuremath{\leq}}
+\DeclareUnicodeCharacter{2293}{\ensuremath{\sqcap}}
+
+\hyphenation{Isa-belle}
+\hyphenation{Isa-belle/HOL}
+
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  literate={~} \mytilde {1},
+  breaklines=true,
+  escapeinside=\^^A\^^B,
+}
+
+\makeatletter
+
+\DeclareCaptionFormat{myformat}{#1#2#3\leavevmode\leaders\hrule height .1pt\hfill\kern\z@}
+\captionsetup[figure]{format=myformat}
+
+
+%\fullshort{
+\renewcommand\sectionautorefname{Section}
+\renewcommand\subsectionautorefname{Section}
+\renewcommand\subsubsectionautorefname{Section}
+\newcommand\lemmaautorefname{Lemma}
+\newcommand\conjectureautorefname{Conjecture}
+\newcommand\definitionautorefname{Definition}
+\newcommand\corollaryautorefname{Corollary}
+\newcommand\claimautorefname{Claim}
+% }{
+% \renewcommand\sectionautorefname{Sec.}
+% \renewcommand\subsectionautorefname{Sec.}
+% \renewcommand\subsubsectionautorefname{Sec.}
+% \renewcommand\theoremautorefname{Thm.}
+% \newcommand\lemmaautorefname{Lemma}
+% \newcommand\conjectureautorefname{Conjecture}
+% \newcommand\definitionautorefname{Def.}
+% \newcommand\corollaryautorefname{Coro.}
+% \newcommand\claimautorefname{Claim}
+% }
+
+
+\mdfdefinestyle{theoremstyle}{%
+  linecolor=black,
+  backgroundcolor=black!10!white,
+  frametitlebelowskip=0pt,
+  innerleftmargin=5pt,
+  innerrightmargin=5pt,
+}
+
+\mdtheorem[style=theoremstyle]{definition}{Definition}
+\mdtheorem[style=theoremstyle]{lemma}{Lemma}
+\mdtheorem[style=theoremstyle]{corollary}{Corollary}
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{conjecture}{Conjecture}
+
+\newcounter{claimstep}
+\newtheorem{claim}{Claim}[claimstep]
+\renewcommand\theclaim{\arabic{claim}}
+
+
+\newcommand\toolidx[1]{\index{#1@\textttOLD{#1} (tool command)}}
+
+
+\AtBeginDocument{
+  \ifx\PreviewMacro\undefined\else
+  \PreviewEnvironment*{figure}
+  \PreviewMacro*\footnote
+  \PreviewMacro[!]\boardpic
+  \PreviewMacro*\lstinputlisting
+  \PreviewMacro[{[]{}{}{}}]\RULE
+  \fi}
+
+\bibliography{qrhl}
+
+
+\newcommand\PROOFREAD[1]{\TODOQ{proofread\ifx!#1!\else #1\fi}}
+%\renewcommand\PROOFREAD[1]{}
+
+\newcommand\giturl[1]{\url{https://raw.githubusercontent.com/dominique-unruh/qrhl-tool/master/#1}}
+
+\newenvironment{citemize}{\begin{itemize}}{\end{itemize}}
+
+\allowdisplaybreaks
+
 
 \externaldocument[main:]{qrhl}
 
-\newcommand\qrhlautoref[1]{\autoref{main:#1} in~\cite{qrhl-paper-from-manual}}
-\newcommand\qrhlautorefx[1]{\autoref{main:#1}}
+\newcommand\qrhlautoref[1]{\autoref*{main:#1} in~\cite{qrhl-paper-from-manual}}
+\newcommand\qrhlautorefx[1]{\autoref*{main:#1}}
 
 \renewcommand\refrule[1]{\hbox{\textsc{#1}} rule}
 \renewcommand\ruleref[1]{rule \hbox{\textsc{#1}}}
@@ -21,6 +163,7 @@
 \title{qRHL tool -- Manual}
 \author{Dominique Unruh\\\small University of Tartu}
 \date{}
+
 
 \maketitle
 
@@ -35,15 +178,3799 @@
 \let\subsubsection\subsection
 \let\subsection\section
 
-\input{tool}
+\tableofcontents
+
+This is a user manual for our proof assistant for
+performing qRHL-based security proofs.  The tool is a prototype to
+demonstrate the logic and to experiment with security proofs. At this
+point, it is not yet meant for larger developments.
+
+This manual assumes knowledge of the underlying qRHL formalism, see
+\cite{qrhl-paper-from-manual}.
+
+The source code is published on GitHub \cite{github-source}.
+
+For installation instructions see the included \texttt{README.md}.
+
+
+\subsection{Architecture}
+
+The tool consists of three main components: a ProofGeneral
+\cite{proofgeneral} frontend, the core tool written in Scala, and a
+Isabelle/HOL \cite{isabelle} backend with custom theories. The
+ProofGeneral frontend merely eases the interactive development of
+proofs, once a proof script is finished, it can also be checked by the
+core tool directly. The core tool implements a theorem prover for qRHL
+(with tactics-based backward reasoning). Only tactics for manipulating
+qRHL judgements are built-in into the core tool. Many tactics produce
+subgoals that are not qRHL judgments.
+(We call those \emph{``ambient'' subgoals}%
+\index{ambient subgoal} because they are expressed in the ambient logic.)
+Those ambient subgoals are outsourced to
+the Isabelle/HOL backend for simplification or solving. This way, the
+overall tool supports arbitrarily complex pre- and post-conditions in
+qRHL statements, and arbitrarily complex expressions within programs
+(only limited by what can be expressed in Isabelle/HOL). The
+Isabelle/HOL backend is automatically downloaded, compiled, and
+executed by the core tool (via libisabelle \cite{libisabelle}).\footnote{This
+  uses about 2GB of additional disk space.
+  The downloaded Isabelle is stored in a subdirectory of the tools installation,
+  so deleting the tools directory will also recover that space.}
+  
+
+More precisely, when parsing a program, all expressions (e.g.,
+\texttt{1+2} in an assignment \texttt{a <- 1+2}) are sent as literal
+strings to Isabelle/HOL for parsing. And in a qRHL judgement such as
+\texttt{\{ℭ𝔩𝔞[x1=x2]\} x <- x+1; \mytilde{} skip; \{ℭ𝔩𝔞[x1≠x2]\}}, the
+predicates \texttt{ℭ𝔩𝔞[x1=x2]} and \texttt{ℭ𝔩𝔞[x1≠x2]} are also parsed
+by Isabelle/HOL. In order to support the different constructions used
+in predicates (see \qrhlautoref{sec:predicates}, e.g., $\CL{\dots}$
+or $\quanteq$),
+we include an Isabelle/HOL theory \texttt{QRHL.thy} in the tool that
+contains the definitions and simplification rules needed for reasoning
+about quantum predicates.
+
+We stress that although we use Isabelle/HOL as a backend, this does
+not mean that our tool is an LCF-style theorem prover (i.e., one that
+breaks down all proofs to elementary mathematical proof steps).  All
+tactics in the tool, and many of the simplification rules in
+\texttt{QRHL.thy} are axiomatized (and backed by the proofs in this
+paper).\footnote{The theory \texttt{QRHL.thy} is integrated in executable in the binary distribution
+  but can be inspected 
+  at \url{https://github.com/dominique-unruh/qrhl-tool/blob/master/src/main/isabelle/QRHL.thy}.}
+We simply use Isabelle/HOL as a backend because it comes with
+rich existing theories and tools. Embedding it in our tool avoids
+duplication of effort.
+
+A proof script for our tool consists of a UTF-8 encoded qRHL file
+\texttt{example.qrhl}, optionally accompanied by an Isabelle/HOL
+theory \texttt{Example.thy}. See \autoref{fig:example}. The
+accompanying Isabelle/HOL theory can define additional constants
+(e.g., \texttt{square}) and simplification rules (e.g.,
+\texttt{square\_simp}), etc.  All files (including user-created ones)
+are expected to be found in top-level directory of the tool's installation directory.
+
+\begin{figure}[t]\centering
+  \lstset{aboveskip=0pt,belowskip=0pt,frame=single}
+  \centering
+  \begin{tabular}{p{.45\hsize}p{.45\hsize}}
+    \textbf{example.qrhl}
+    &
+      \textbf{Example.thy}
+    \\[-5pt]
+    \lstinputlisting{example.qrhl.lst}
+    &
+      \lstinputlisting{Example.thy.lst}
+  \end{tabular}
+  \vspace*{-5mm}
+  \caption{Example qRHL proof script. The files are bundled with the tool.}
+  \label{fig:example}
+\end{figure}
+
+To execute the example, execute \texttt{./proofgeneral.sh
+  example.qrhl} and then use, e.g., \texttt{Ctrl-C Ctrl-N} to evaluate
+the file step by step. (If emacs is not available, you can also run
+\texttt{bin/qrhl example.qrhl} noninteractively.) To edit
+\texttt{Example.thy}, execute \texttt{./run-isabelle.sh Example.thy}.
+
+\subsection{Proof scripts}
+\label{sec:tool.proofscripts}
+
+qRHL proof scripts contain a mixture of declarations (e.g., defining a
+variable or a program), claims (e.g., qRHL judgements), and proofs.
+Syntactically, the script is a sequence of commands.
+
+A command is a single or multiline string, terminated with a
+``\texttt{.}''. (The ``\texttt{.}'' must be the last non-whitespace character in the
+line. That is, no further commands or comments can be in the same
+line.) Inside a command, line breaks are treated like spaces.
+
+Between commands, there can be comments that start with ``\texttt{\#}'' (on
+their own lines). These are ignored. (Comments may not occur within a
+command, not even inside a multiline command.)
+
+\paragraph{Isabelle initialization.} The first command in a proof
+script must be ``\texttt{isabelle.}''\toolidx{isabelle} This
+initializes (and possibly downloads, if needed) Isabelle/HOL. If a
+custom Isabelle/HOL theory ``\texttt{Example.thy}'' is to be used, use
+the command ``\texttt{isabelle Example.}'' instead. Custom
+Isabelle/HOL theories should import the theory \texttt{QRHL} to get
+access to qRHL-related definitions, lemmas, and simplification rules.
+See \autoref{sec:isabelle} for more information on accompanying theories.
+
+\paragraph{Declaring variables.} There are three different kinds of
+variables: classical, quantum, and ambient variables. Classical and
+quantum variables represent classical and quantum program variables as
+defined in \cite{qrhl-paper-from-manual}. These can be declared using the following commands
+\begin{center}
+  \toolidx{classical var}%
+  \index{var@\texttt{var} (tool syntax)!classical@\texttt{classical}}%
+  \toolidx{quantum var}%
+  \index{var@\texttt{var} (tool syntax)!quantum@\texttt{quantum}}%
+  \begin{lstlisting}
+    classical var x : type.
+    quantum var q : type.
+  \end{lstlisting}
+\end{center}
+respectively. Here \texttt{x},\texttt{q} are the variable names, and \texttt{type}
+is the type of the variable.
+That is, $\typev{\mathtt{x}}=\mathrm{UNIV}_{\mathtt{type}}$ where
+$\mathrm{UNIV}_{\mathtt{type}}$ is the universe of all values of type \texttt{type}.
+\texttt{type} can be an arbitrary type
+that is understood by Isabelle/HOL.
+(If custom types are needed, they
+can be defined in an accompanying theory. Simple examples of
+predefined types are \texttt{bit}, \texttt{bool}, \texttt{nat}
+(natural numbers), \texttt{int} (integers).) Any program variable that
+is used anywhere in the proof script must be declared. If a variable
+\texttt{x} was defined, then the names \texttt{x1} and \texttt{x2} are
+available in predicates to refer to that variable in the left/right
+program.
+
+Types used with \texttt{classical var} and
+\texttt{quantum var} must satisfy an important condition. Namely, they
+must be in the type class\footnote{A type class represents a property
+  of a type, for example, the type class \texttt{finite} applies only
+  to types with finite domain.} \texttt{universe}%
+\index{universe@\texttt{universe} (Isabelle typeclass)}.\footnote{%
+  \label{footnote:universe}The
+  type class \texttt{universe} guarantees that the type
+  is small enough (its cardinality is at most $\beth_i$ for some $i\in\setN$).
+  Without this restriction, it would
+  be possible, e.g., to have a program variable of type
+  $P\ \mathtt{set}$,
+  where $P$
+  is the type of all programs. That would mean that programs can
+  contain arbitrary elements of $P\ \mathtt{set}$.
+  Hence the powerset of $P$
+  can be embedded in $P$
+  which is impossible. Restricting program variables to small types
+  makes it possible to define $P$ (and related types).
+  This is not a restriction in practice since all types built from
+  basic types using powersets, functions, and inductive datatypes
+  are small in this sense.}
+  For most predeclared types, this will already be the case,
+  but if not, follow the instructions in \autoref{sec:deftypes}.
+
+An ambient variable simply stands for a fixed but arbitrary value.
+That is, ambient variables are implicitly all-quantified.  In other
+words, ambient variables are free variables of the ambient
+logic. Ambient variables are declared using
+\begin{center}
+  \toolidx{ambient var}%
+  \index{var@\texttt{var} (tool syntax)!ambient@\texttt{ambient}}%
+  \begin{lstlisting}
+    ambient var x : type.
+  \end{lstlisting}
+\end{center}
+where \texttt{type} is again an arbitrary Isabelle/HOL type.
+
+
+\paragraph{Program declarations.} There are two kinds of declarations
+for programs. The first is
+\begin{center}
+  \toolidx{program}
+  \begin{lstlisting}
+    program name := { code }.
+  \end{lstlisting}
+\end{center}
+which defines \texttt{name} to refer to the program described by
+\texttt{code}. Logically, this simply introduces an abbreviation for
+referring to a concrete code fragment. This code fragment can then be
+embedded in other code fragments (see the \texttt{call} statement in
+the syntax of programs, \autoref{sec:tool.programs}). For the syntax of \texttt{code},
+see \autoref{sec:tool.programs}.
+
+The second kind of declaration declares an unspecified program:
+\begin{center}
+  \toolidx{adversary}
+  \begin{lstlisting}
+    adversary name vars v1,v2,v3,...,vn.
+  \end{lstlisting}
+\end{center}
+That is, after this declaration, \texttt{name} is assumed to refer to
+some program containing (at most) the program variables
+\texttt{v1},\dots,\texttt{vn}. Nothing beyond that restriction on its
+variables is assumed. Thus, if we prove a statement referring to
+\texttt{name}, this statement holds for any program \texttt{name}. We
+use these declarations to model adversaries.
+
+In some cases, an adversary may invoke other programs (e.g., an encryption oracle).
+In that case, we declare an adversary with ``holes'' using:
+\begin{center}
+  \toolidx{adversary}
+  \begin{lstlisting}
+    adversary name vars v1,v2,v3,...,vn calls ?,?,...,?.
+  \end{lstlisting}
+\end{center}
+This means the program \texttt{name} contains variables \texttt{v1,v2,v3,...,vn},
+as well as $n$ ``holes'' (one for each question mark).\footnote{Formally,
+  it declares \texttt{name} to refer to a multi-hole context with $n$ holes in the sense of
+  \qrhlautoref{footnote:context}.}
+We write \texttt{name(p1,...,pn)} to refer to \texttt{name} with \texttt{p1},\dots,\texttt{pn}
+inserted instead of the holes.
+(For example, \texttt{name(enc,dec)} would run the adversary \texttt{name} and allow it to invoke the
+programs \texttt{enc} and \texttt{dec}.)
+Note that the variables \texttt{v1,v2,v3,...,vn} do not have to include variables contained
+in the programs \texttt{p1,\dots,pn}.
+
+Since the language in this paper does not model procedure calls,
+adversaries are simply program fragments that get executed as part of
+a larger program. In particular, there is no syntactic provision for
+inputs and outputs of an adversary. Instead, all communication with
+the adversary has to take place through global variables. We recommend
+the following approach to the definition of adversaries: One declares
+two variables for the internal state of the adversary (one classical,
+one quantum), declares some variables for input/output of the
+adversary (as needed in the specific context where the adversary is
+used), and then declares an adversary that uses all those variables
+(with an informal comment detailing which variables are intended as input and
+output). For example, in \texttt{prg-enc-rorcpa.qrhl} (see \autoref{sec:ex.ror}), we have an
+adversary \texttt{A2} that takes an message \texttt{c} and returns
+a bit \texttt{b}. The declaration is:
+\begin{center}
+  \begin{lstlisting}
+    quantum var qglobA : string.
+    classical var cglobA : string.
+    classical var c : msg.
+    classical var b : bit.
+    # A2: inputs: c; outputs: b
+    adversary A2 vars c,b,cglobA,qglobA.
+  \end{lstlisting}
+\end{center}
+(Here the adversary state is in \texttt{cglobA} and \texttt{qglobA},
+those variables are also shared with other program fragments
+representing different invocations of the same adversary. We use the
+type \texttt{string} for the state to ensure that the type is big enough to allow to represent any computation.)
+
+Note that this approach also allows us to model adversaries that
+cannot communicate by simply giving them no shared global variables.
+
+Furthermore, in a reduction-based security proof, we need to construct
+a new adversary \texttt{B} from an existing adversary \texttt{A}. This
+can be done by using the \texttt{program} to define a new adversary
+\texttt{B} that invokes the existing (unspecified) adversary program
+\texttt{A}. For example, 
+\texttt{prg-enc-rorcpa.qrhl} defines:
+\begin{center}
+  \begin{lstlisting}
+    # B: inputs: r; outputs: b
+    program B := { call A1; c <- r+m; call A2; }.
+  \end{lstlisting}
+\end{center}
+
+
+\paragraph{Goals.} To start a proof, one first needs to state a
+goal. There are two kinds of goals: qRHL judgements, and ambient logic
+statements. A qRHL judgement goal is opened using the
+\texttt{qrhl}-command:
+\begin{center}
+  \toolidx{qrhl}
+  \begin{lstlisting}
+    qrhl {pre} code1 ~ code2 {post}.
+  \end{lstlisting}
+\end{center}
+Here \texttt{pre} and \texttt{post} are quantum predicates (parsed by
+Isabelle/HOL, see \autoref{sec:tool.pred}), and \texttt{code1},
+\texttt{code2} are programs (see \autoref{sec:tool.programs} for the
+syntax). The meaning of this command is that we start a proof of the
+qRHL judgment
+$\rhl{\mathtt{pre}}{\mathtt{code1}}{\mathtt{code2}}{\mathtt{post}}$.
+
+The second kind of goal is an ambient logic goal, opened using the
+\texttt{lemma}-command:
+\begin{center}
+  \toolidx{lemma}
+  \begin{lstlisting}
+    lemma name: formula.
+  \end{lstlisting}
+\end{center}
+Here \texttt{name} is the name under which the proven fact will be
+stored. And \texttt{formula} is an arbitrary formula that Isabelle/HOL
+understands. For example,
+\begin{center}
+  \toolidx{qed}
+  \begin{lstlisting}
+    lemma test: 1+1=2.
+  \end{lstlisting}
+\end{center}
+starts the proof of a lemma called \texttt{test} of the fact that
+$1+1=2$.
+Once a lemma is proven, the new fact can be referred to like any other
+fact known to Isabelle/HOL, for example when using the tactic
+\texttt{simp}.
+
+Note that \texttt{formula} cannot contain qRHL judgments. (These have
+no encoding in Isabelle/HOL.) It is, however, possible to refer to
+named programs (declared using the \texttt{program}-command or the
+\texttt{adversary}-command) in Isabelle/HOL expressions of the
+following form:
+\begin{center}
+  \begin{lstlisting}
+    Pr[b:prog(rho)]
+  \end{lstlisting}
+\end{center}
+Here \texttt{b} must be an expression of type \texttt{bool},
+and \texttt{prog} must be the name of a
+declared program, and \texttt{rho} must be an expression of type
+\texttt{program\_state} (typically \texttt{rho} is simply an
+uninterpreted ambient variable).  Then \texttt{Pr[b:prog(rho)]} 
+denotes the probability that $\mathtt{b}=\true$
+after executing \texttt{prog} with initial state $\rho$
+(as in \qrhlautoref{def:prafter}).  For example,
+\begin{center}
+  \begin{lstlisting}
+    lemma secure: Pr[b=1:game1(rho)] = Pr[b=1:game2(rho)].
+  \end{lstlisting}
+\end{center}
+would start a goal stating that the programs \texttt{game1} and
+\texttt{game2} have the same probability of outputting $1$
+in variable \texttt{b}, for any initial state. Such goals can be
+transformed into qRHL goals using the tactic \texttt{byqrhl}, but they
+can also be reasoned about in Isabelle/HOL (via the \texttt{simp}
+tactic) which treats those probabilities as uninterpreted values $\in[0,1]$.
+
+
+\paragraph{Proofs.} Once a goal has been opened using either
+\texttt{qrhl} or \texttt{lemma}, the tool is in proof mode. In this
+mode, the state consists of a list of subgoals. (In ProofGeneral, the
+current list of subgoals are listed in the \texttt{*goals*} window.)
+Each subgoal is either a qRHL judgment (like the ones created by the
+\texttt{qrhl} command) or an ambient logic formula (like the ones
+created by \texttt{lemma}). (A qRHL subgoal can additionally contain a
+list of assumptions $A_1,\dots,A_n$
+that are ambient logic formulas. In this case, the interpretation is
+that the qRHL judgments holds whenever those assumptions are satisfied.)
+
+A proof consists of a sequence of tactic invocations. Each tactic
+transforms the first subgoal into zero or more subgoals.  (With the
+guarantee that the new goals together imply the original subgoal.)
+The available tactics are described in \autoref{sec:tactics} below.
+
+When the list of subgoals is empty, the proof must be finished by
+\begin{center}
+  \begin{lstlisting}
+    qed.
+  \end{lstlisting}
+\end{center}
+This finishes the proof, and further declarations can be made, or new
+goals opened. If the current proof started with a \texttt{lemma}
+command, the proven fact is stored under the name specified in the
+\texttt{lemma} command.
+
+%\TODOQ{remove this newpage if the table in programs doesn't break badly then}
+%\newpage
+
+\subsection{Programs}
+\label{sec:tool.programs}
+
+A program is represented as a list of statements.\footnote{This
+  deviates slightly from the syntax of programs described in
+  \qrhlautoref{sec:syn.prog}. There, larger programs are composed from
+  smaller ones by using the binary sequential composition operation
+  ``$\seq{}{}$''.
+  However, since the sequential composition is associative (up to
+  denotational equivalence), we can instead represent a nested
+  application of sequential compositions as a simple list of
+  statements.} Each statement is one of the following:
+
+\newcommand\toolprog[1]{\index{#1@\textttOLD{#1} (tool program syntax)}}
+
+%\edef\oldparindent{\the\parindent}
+\begin{longtable}{|p{.275\hsize}|>{\parskip=\medskipamount}p{.66\hsize}|}
+  \hline
+  \textbf{Syntax} & \textbf{Meaning} \\
+  \hline
+  \hline
+  \texttt{skip;}\toolprog{skip} & The empty program $\Skip$. \\
+  \hline
+  \texttt{$x$ <- $\mathit{expr}$;}%
+  \symbolindexmark\TOOLassign
+  & The assignment $\assign x{\emph{expr}}$.
+
+  $x$
+  must be declared as a classical variable of some Isabelle/HOL type~$T$,
+  and $\emph{expr}$
+  must be an Isabelle/HOL term of the same type $T$.
+  $\emph{expr}$
+  may contain classical and ambient variables as free variables.
+
+  \textbf{Example:} ``\texttt{x <- x+1;}'' increases \texttt{x}.
+  \\
+  \hline
+  \texttt{$x$ <\$ $\mathit{expr}$;}%
+  \symbolindexmark\TOOLsample
+  &
+  The sampling $\sample x{\emph{expr}}$.
+
+  $x$
+  must be declared as a classical variable of some Isabelle/HOL type~$T$,
+  and $\emph{expr}$
+  must be an Isabelle/HOL term of the type $T\ \mathtt{distr}$, the type of distributions over $T$.
+  (See the tables below for constants for constructing distributions.)
+  $\emph{expr}$
+  may contain classical and ambient variables as free variables.
+
+  \textbf{Example:} ``\texttt{x <\$ uniform UNIV;}'' samples \texttt{x} uniformly
+  from the type of $\mathtt{x}$ (assuming the type of \texttt{x} is finite).
+  \\
+  \hline
+  \texttt{$q_1$,\dots,$q_n$ <q $\mathit{expr}$;}%
+  \symbolindexmark\TOOLqinit
+  & The quantum initialization $\Qinit{q_1,\dots,q_n}{\emph{expr}}$.
+
+  $q_1,\dots,q_n$
+  must be declared as quantum variables with some Isabelle/HOL types
+  $T_1,\dots, T_n$.
+  All $q_i$
+  must be distinct variables. $\emph{expr}$
+  must be an Isabelle/HOL expression of type
+  $(T_1\times\dots\times T_n)\ \mathtt{vector}$,
+  the type of vectors with basis $T_1\times\dots\times T_n$.
+  (See the tables below for constants for constructing states.)
+  $\emph{expr}$
+  may contain classical and ambient variables as free variables.
+
+  
+  Note that our definition of well-typed programs
+  (\qrhlautoref{sec:syn.prog}) requires $\mathit{expr}$
+  to be a unit vector, while in our tool, we allow $\emph{expr}$
+  to be a non-normalized vector. This is simply to avoid having to define
+  too many different types in Isabelle/HOL (which would lead to the
+  need of applying type conversions very often). The tactics in the
+  tool take this into account and create an explicit precondition that
+  $\mathit{expr}$
+  has unit length (specifically, the tactic \texttt{wp} which implements
+  \ruleref{QInit1}).\footnote{\label{footnote:mkUnit}Formally, changing the type of programs
+    is justified as follows: A program
+    \texttt{$q_1$,\dots,$q_n$ <q $\mathit{expr}$;}
+    is interpreted as $\Qinit{q_1,\dots,q_n}{\mathit{mkUnit}(e)}$
+    where $\mathit{mkUnit}(\psi)=\psi$\index{mkUnit}
+    for unit vectors $\psi$,
+    and $\mathit{mkUnit}(\psi)$
+    is an arbitrary unit vector if $\psi$
+    is not a unit vector. With this interpretation, programs as
+    implemented in our tool match the typing-rules and semantics
+    in \cite{qrhl-paper-from-manual}.
+    %
+    See \autoref{footnote:wp.qinit} for how this affects the rules implemented by the tactics.
+  }
+
+  
+  \textbf{Example:} ``\texttt{x,y <q EPR;}'' initializes \texttt{x},\texttt{y} to
+  contain an EPR pair. (Assuming that \texttt{x} and \texttt{y} are
+  quantum variables of type \texttt{bit}.)
+  \\
+  \hline \texttt{$x$
+    <- measure $q_1$,\dots,$q_n$
+    with $\mathit{measurement}$;}%
+  \toolprog{measure ... with}
+  & The measurement
+  \[
+    \Qmeasure{x}{q_1,\dots,q_n}{\mathit{measurement}}
+  \]
+
+  $x$
+  must be declared as a classical variable of some Isabelle/HOL type
+  $T_x$.
+  $q_1,\dots,q_n$
+  must be declared as quantum variables of some Isabelle/HOL types
+  $T_1,\dots, T_n$.
+  All $q_i$
+  must be distinct variables.  $\mathit{measurement}$
+  must be an Isabelle/HOL expression of type
+  $(T_x,T_1\times\dots\times T_n)\ \mathtt{measurement}$,
+  the type of measurements with outcomes of type $T_x$.
+  (See the tables below for constants for constructing measurements.)
+  $\emph{expr}$
+  may contain classical and ambient variables as free variables.
+  
+  \textbf{Example:} ``\texttt{x <- measure q with computational\_basis;}'' measures
+  the quantum variable \texttt{q} in the computational basis and
+  assigns the outcome to the classical variable \texttt{x}. Both
+  variables must have the same type.
+  \\
+  \hline
+  \texttt{on $q_1$,\dots,$q_n$ apply $\mathit{expr}$;}%
+  \toolprog{on ... apply}%
+  \index{apply@\texttt{apply} (tool program syntax)!on@\texttt{on ...}}
+  &
+  The unitary quantum operation\quad $\Qapply{\mathit{expr}}{q_1,\dots,q_n}$.
+
+  $q_1,\dots,q_n$
+  must be declared as quantum variables of some Isabelle/HOL types
+  $T_1,\dots, T_n$.
+  All $q_i$
+  must be distinct variables.   
+
+  $\mathit{expr}$
+  must be an Isabelle/HOL expression of type
+  $(T_1\times\dots\times T_n,T_1\times\dots\times T_n)\ \mathtt{bounded}$,
+  the type of bounded operators.
+  (See the tables below for constants for constructing bounded operators.)
+  $\emph{expr}$
+  may contain classical and ambient variables as free variables.
+
+
+  Note that our definition of well-typed programs
+  (\qrhlautoref{sec:syn.prog}) requires $\mathit{expr}$
+  to be an isometry, while in our tool, we allow $\emph{expr}$
+  to be any bounded operator. This is simply to avoid having to define
+  too many different types in Isabelle/HOL (which would lead to the
+  need of applying type conversions very often). The tactics in the
+  tool take this into account and create an explicit precondition that
+  $\mathit{expr}$
+  is an isometry (specifically, the tactic \texttt{wp} which implements
+  \ruleref{QApply1}).\footnote{\label{footnote:mkIso}Formally, changing the type of programs
+    is justified as follows: A program \texttt{on $q_1,\dots,q_n$
+      apply $e$;}
+    is interpreted as $\Qapply{\mathit{mkIso}(e)}{q_1,\dots,q_n}$
+    where $\mathit{mkIso}(U)=U$\index{mkIso}
+    for isometries $U$,
+    and $\mathit{mkIso}(U)$
+    is an arbitrary isometry (e.g., the identity) if $U$
+    is not an isometry. With this interpretation, programs as
+    implemented in our tool match the typing-rules and semantics
+    in \cite{qrhl-paper-from-manual}.
+    %
+    %
+    See \autoref{footnote:wp.qapply} for how this affects the rules implemented by the tactics.
+  }
+
+  \textbf{Example:} ``\texttt{on x,y apply CNOT;}'' applies a CNOT to the quantum
+  variables \texttt{x},\texttt{y}. (They are assumed to be of type
+  \texttt{bit}.)
+  \\
+  \hline
+  \texttt{if ($c$) then $P_1$ else $P_2$}
+  \toolprog{if ... then ... else}
+  &
+  The conditional\quad $\langif{c}{P_1}{P_2}$.
+
+  $c$
+  must be an Isabelle/HOL expression of type \texttt{bool}.  $c$
+  may contain classical and ambient variables as free variables.
+
+
+  The programs $P_1$
+  and $P_2$
+  are either single statements, or blocks of the form \texttt{\{ $s_1$
+    $s_2$
+    \dots{} $s_n$
+    \}} where each $s_i$
+  is a statement. (Note that each $s_i$ will end with a semicolon.)
+
+  \textbf{Example:} ``\texttt{if (x=0) then x <- x+1; else skip;}'' is
+  equivalent to \texttt{x <- 1;} (assuming \texttt{x} is of type
+  \texttt{bit}).
+  
+  \textbf{Example:} ``\texttt{if (x=0) then \{ x <- 1; y <- 1; \} else
+    \{ x <- 0; y <- 0; \}}'' sets \texttt{x} and \texttt{y} to $1$
+  if \texttt{x=0}, and to \texttt{0} otherwise.
+  \\
+  \hline
+  \texttt{while ($c$) then $P$}
+  \toolprog{if ... then ... else}
+  &
+  The conditional\quad $\while{c}{P}$.
+
+  $c$
+  must be an Isabelle/HOL expression of type \texttt{bool}.  $c$
+  may contain classical and ambient variables as free variables.
+
+
+  The programs $P$ is either a single statement, or a block of the form \texttt{\{ $s_1$
+    $s_2$
+    \dots{} $s_n$
+    \}} where each $s_i$
+  is a statement. (Note that each $s_i$ will end with a semicolon.)
+
+  \textbf{Example:} ``\texttt{while (x≤0) x <- x+1;}'' increases
+    \texttt{x} until it is positive (assuming \texttt{x} is of type
+    \texttt{int}).
+  
+    \textbf{Example:} ``\texttt{while (x≤0) \{ x <- x+1; y <- y+1; \}}''
+    increases both \texttt{x} and \texttt{y} until \texttt{x} is positive.
+  \\
+  \hline
+  \texttt{call $\mathit{prog}$;}
+  \toolprog{call}
+  & The program $\mathit{prog}$ itself.
+
+  $\mathit{prog}$
+  must be the name of a program (declared with \texttt{program} or
+  \texttt{adversary}).
+  If the \texttt{adversary}-command declared a program ``with $n$ holes''
+  (using \texttt{adversary ... calls ?,...,?}),
+  then \textit{prog} is an expression of the form \texttt{name(arg1,\dots,argn)}
+  where each \texttt{arg1,\dots,argn} is again the name of a program (or an expression
+  of the form \texttt{name(arg1,\dots,argn)}).
+
+  Logically, \texttt{call $\mathit{prog}$;}
+  is simply an abbreviation for the code of $\mathit{prog}$
+  (possibly after substituting \texttt{arg1,\dots,argn} for its holes).
+  And if $\mathit{prog}$
+  was defined using \texttt{program}, it would be equivalent to simply
+  write the code from the definition of the program instead of
+  \texttt{call $\mathit{prog}$;}.
+  (Although some tactics may treat the two cases differently.)
+  However, if $\mathit{prog}$
+  was defined using \texttt{adversary}, the \texttt{call
+    $\mathit{prog}$;}
+  syntax is necessary since the code of $\mathit{prog}$ is not known.
+
+  We do not have a corresponding construct in the syntax from
+  \qrhlautoref{sec:syn.prog} because we can simply write $\mathit{prog}$
+  instead of \texttt{call \textit{prog};}. (For example, \texttt{x <-
+    1; call A; x <- 0;} translates to $\assign x1;A;\assign x0$.)
+
+  Note that \texttt{call} is not a procedure call. In particular, we
+  cannot pass arguments, have local variables, or get a return
+  value. However, arguments and return values can be emulated
+  by using global variables (see the discussion of program
+  declarations in \autoref{sec:tool.proofscripts}).
+
+  \textbf{Example:} ``\texttt{call A;}'' invokes the adversary \texttt{A}
+  (assuming \texttt{A} was declared using \texttt{adversary A vars
+    ...}).  ``\texttt{call A(enc,dec);}'' invokes the adversary \texttt{A}
+  that can call programs \texttt{enc} and \texttt{dec}
+  (assuming \texttt{A} was declared using \texttt{adversary A vars
+    ... calls ?,?}).
+  \\
+  \hline
+\end{longtable}
+
+
+
+\subsection{Expressions and predicates}
+\label{sec:tool.pred}
+
+\newcommand\tooltype[1]{\index{#1@\textttOLD{#1} (Isabelle/HOL type)}}
+
+\paragraph{Expressions.}
+Expressions within programs, and predicates in qRHL judgments are
+interpreted by Isabelle/HOL (the Isabelle/HOL 2017 version), in the
+context of a builtin theory QRHL. We assume some familiarity with
+Isabelle/HOL. Readers unfamiliar with Isabelle/HOL may study the
+tutorial \cite{isabelle-tutorial}.
+
+For experiments, it can be useful to directly invoke Isabelle/HOL
+(using the \texttt{./run-isabelle.sh} script) and edit a theory that
+imports \texttt{QRHL.QRHL}.
+
+Expressions used in assign-statements will probably only rarely use
+any of the custom types and constants from \texttt{QRHL.thy} (except the type
+\texttt{bit}). However, in sampling-statements we need to construct
+expressions of type $\alpha$
+\texttt{distr} (distributions), and the various quantum operations
+need expressions of types $(\alpha,\alpha)$
+\texttt{bounded}, $\alpha$
+\texttt{vector}, and $(\alpha,\beta)$
+\texttt{measurement}. Various predefined constants for constructing
+expressions of those types are described in the table below.
+
+
+\paragraph{Predicates.} Predicates (the post- and preconditions in
+qRHL judgments) are also interpreted by Isabelle/HOL. They have to be
+expressions of the type \texttt{mem2 subspace} (abbreviated \texttt{predicate}),
+with free classical
+program variables (indexed with \texttt{1} or \texttt{2}, i.e., if the
+program variable is \texttt{x}, then the expression may contain
+\texttt{x1} and \texttt{x2}). Here \texttt{mem2} is the type of pairs
+of memories, and thus \texttt{mem2 subspace} is the type with universe
+$\elltwov{V_1V_2}$
+if $V_1,V_2$ represent the indexed program variables.
+
+Predicates can additionally contain quantum variables as arguments to
+specific constructions, e.g., \texttt{pauliX\guillemotright$\llbracket\qq\rrbracket$}
+would refer to an Pauli-$X$ operator on quantum variable $\qq$.
+
+Predicates can be constructed using the constants described in the
+tables below.
+
+
+
+\paragraph{Types.} The theory \texttt{QRHL} defines the following
+types. Some of those types are defined in Isabelle/HOL using
+\texttt{typedef}, others are only axiomatized, see
+\texttt{QRHL.thy} and the theories imported therein.
+
+When defining your own types in an accompanying theory, please consult \autoref{sec:deftypes}.
+
+\begin{longtable}{|p{.19\hsize}|>{\parskip=\medskipamount}p{.75\hsize}|}
+  \hline
+  \textbf{Type} & \textbf{Meaning} \\
+  \hline \hline \texttt{bit}\tooltype{bit} & The type of bits.
+
+  This type is isomorphic to \texttt{bool}, but using the type
+  \texttt{bit} can lead to more familiar notation in some cases
+  because the constants $0$
+  and $1$
+  can be used. On bits, the operations $+$,
+  $*$,
+  $-$,
+  $/$
+  are defined modulo $2$
+  (that is, \texttt{bit} is the finite field of size $2$).
+  In particular, the negation of $x$
+  is written $x+1$ (not $-x$ which is equal to $x$).
+
+  An implicit coercion is declared so that \texttt{bit} can be used
+  where \textbf{nat} or \texttt{int} are expected.  
+  \\
+  \hline
+  $\alpha$ \texttt{distr}\tooltype{distr} & The set of distributions over $\alpha$.
+
+  Recall from the preliminaries that in our context, distributions are
+  functions $\mu:\alpha\to\setRpos$
+  with $\sum_x\mu(x)\leq1$.
+
+  Expressions of this type occur on the right hand side of sample
+  statements (e.g., \texttt{e} in \texttt{x <\$ e;}).
+  \\
+  \hline
+  $\alpha$ \texttt{vector}\tooltype{vector} & Vectors in $\elltwo \alpha$.
+  
+  The type is endowed with the type class
+  \texttt{normed\_real\_vector}, so operations such as $+$
+  or \texttt{norm} work as expected.
+
+  Expressions of this type occur on the rhs of quantum initialization
+  statements (e.g., \texttt{e} in \texttt{q <q e;}).
+  
+  % \\
+  % \hline $\alpha$
+  % \texttt{state}\tooltype{state} & Normalized vectors in $\elltwo\alpha$.
+  %
+  % Expressions of this type occur on the right hand side of quantum initialization
+  % statements (e.g., \texttt{e} in \texttt{q <q e;}).
+  \\
+  \hline
+  $\alpha$ \texttt{subspace}\tooltype{subspace} &
+  Closed subspaces of $\elltwo\alpha$.
+
+  This type is used mostly for constructing quantum predicates.
+  
+  It is endowed with the type class \texttt{complete\_lattice}, thus
+  it has operations such as \symbolindexmark\SQCAP$\sqcap$
+  (\texttt{inf}) for the intersection of two spaces, \symbolindexmark\SQCUP$\sqcup$
+  (\texttt{sup}) or $+$
+  for the sum of two spaces, \symbolindexmark\TOOLINF\texttt{INF x:Z. f x} for the
+  intersection of all spaces $f(x)$
+  for $x\in Z$, and $\leq$ for inclusion of subspaces.
+  And \symbolindexmark\TOOLtop\texttt{top} is the whole space $\elltwo\alpha$,
+  and \texttt{0} and \symbolindexmark\TOOLbot\texttt{bot} both refer to the zero-space~$0$.
+  \\
+  %
+  \hline \texttt{mem2}\tooltype{mem2} & The quantum part of pairs of memories.  That
+  is, if $V_1,V_2$
+  denote the set of all variables with indices $1$
+  and $2$,
+  respectively, \texttt{mem2} represents $\types{\qu{V_1}\qu{V_2}}$.
+
+  This type is mainly used for defining the type \texttt{predicate}.
+  \\
+  \hline \texttt{predicate}\tooltype{predicate} & An abbreviation for \texttt{mem2
+    subspace}, that is, subspaces of
+  $ \elltwo{\types{\qu{V_1}\qu{V_2}}}= \elltwov{\qu{V_1}\qu{V_2}}$.
+
+  This is the type of quantum predicates.
+
+  Expressions of this type occur in the pre- and postcondition of qRHL
+  judgments, as well as in many subgoals generated by tactics.
+  \\
+  \hline $(\alpha,\beta)$ \texttt{bounded}\tooltype{bounded} &
+  Bounded operators $\bounded{\alpha,\beta}$.
+
+  Expressions of this type occur in quantum operation statements,
+  e.g., \texttt{U} in ``\texttt{on q apply U}''. In that case, \texttt{U}
+  should always describe an isometry. (See the description of quantum
+  operation statements in \autoref{sec:tool.programs}.)
+
+  Expressions of this type also occur in predicates, e.g., as an
+  argument to \texttt{quantum\_equality\_full} or due to application
+  of the \texttt{wp} tactic (implementing \ruleref{QApply1}).
+  \\
+  \hline
+  $(\alpha,\beta)$ \texttt{measurement}\tooltype{measurement} & Measurements $\Meas\alpha\beta$.
+
+  Expressions of this type occur in measurements statements,
+  e.g., \texttt{M} in ``\texttt{x <- measure q with M}''.
+  \\
+  \hline
+  $\alpha$ \texttt{variable}\tooltype{variable} &
+  Represents a program variable $\qq$ with $\typev\qq=\alpha$.
+
+  One can think of a variable of type \texttt{$\alpha$
+    variable} as a variable name, associated with type~$\alpha$.
+  There are no constants for creating values of type
+  \texttt{$\alpha$
+    variable}. Instead, by declaring a quantum variable using
+  \texttt{quantum var q : T;} in the tool, \texttt{q1} and \texttt{q2}
+  will automatically be declared to have type \texttt{T
+    variable}.\footnote{\texttt{classical var x : T;} also declares
+    values of type \texttt{T variable} in Isabelle, but those are not
+    needed on the user level, they are used internally.}
+  Quantum variables are needed to specify registers when constructing
+  predicates. (See, e.g., the description of the \texttt{lift} constant
+  below.)
+  \\
+  \hline
+  $\alpha$ \texttt{variables}\tooltype{variables} & Tuples of program variables.
+
+  When $\mathtt{q}_1,\dots,\mathtt{q}_n$
+  are variables of types \texttt{$\alpha_1$
+    variable},\dots,\texttt{$\alpha_n$
+    variable}, then their tuple (constructed with the syntax
+  $\llbracket\texttt{q}_1,\dots,\texttt{q}_n\rrbracket$) has type
+  $(\alpha_1\times\dots\times\alpha_n)\ \mathtt{variables}$.
+
+  Having such a type is necessary for specifying certain constants
+  that operate on list of quantum variables (e.g., \texttt{lift}) in a type-safe way.
+  \\
+  \hline
+  \texttt{program}\tooltype{program}  &
+  A program.
+
+  When a program \texttt{P} is declared with \texttt{program P :=
+    ...;} or \texttt{adversary P ...;}, then \texttt{P} will have type
+  \texttt{program} in Isabelle/HOL expressions. \texttt{P} can then be
+  used as an argument to the \texttt{Pr[...]} constant (see the table below). There are
+  no other uses of this type in our development.
+  \\
+  \hline \texttt{program\_state}\tooltype{program\_state} &
+  A program state. That is, an
+  element of $\traceposcq{V_1V_2}$
+  of trace $1$,
+  where $V_1,V_2$
+  denote the set of all variables with indices $1$
+  and $2$, respectively.
+
+  This type is not interpreted in any way, there is are no constants
+  for constructing program states. The only use is as an argument to
+  the \texttt{Pr[...]} constant (see the table below), to refer to
+  an unspecified but fixed quantum state (typically declared by \texttt{\frenchspacing ambient
+    var rho :
+    program\_state;}). \\
+  \hline
+\end{longtable}
+
+\paragraph{Constants.} The theory \texttt{QRHL} defines the following
+constants for use in expressions and predicates. In many cases, there
+are several possible syntaxes for entering the same constant. We list
+all of them, the first being the one Isabelle/HOL will use for
+printing the constant. In many cases, the syntax contains special
+characters. These can be entered with the TeX input method of Emacs
+(which is automatically active in our ProofGeneral customization). In
+those cases we additionally mention the character sequences to be entered in ProofGeneral
+for getting the special characters (marked ``How to input:'' in the table below).
+
+\newcommand\constdef[3]{#1\par
+  \hskip1em\begin{minipage}{\hsize-1em}\raggedright $::#2$\end{minipage}%
+  \ifx!#3!\hskip-1em\noindent\else\par\medskip\small(for #3)\fi}
+
+\newcommand\subhead[1]{\multicolumn{2}{r@{}}{\footnotesize\bfseries #1}\\}
+
+\DeclareRobustCommand\texinput[1]{\textbf{How to input:} \texttt{\def\\{\textbackslash}#1}}
+
+\newcommand\toolconst[1]{\index{#1@\textttOLD{#1} (Isabelle/HOL constant)}}
+
+\begin{longtable}{|>{\raggedright}p{.33\hsize}|>{\parskip=\medskipamount}p{.61\hsize}|}
+  \hline
+  \textbf{Name / syntax / type}
+  & \textbf{Meaning} \\
+  \hline
+  \subhead{Distributions}
+  \hline
+  \constdef{$\mathtt{supp}\ \mu$}{\alpha\ \mathtt{set}}{$\mathtt{\mu :: \alpha\ distr}$}
+  \toolconst{supp}
+  &
+  %
+  The support $\suppd\mu$ of the distribution $\mu$.
+  %
+  \\
+  \hline
+  \constdef{$\mathtt{weight}\ \mu$}{real}{$\mathtt{\mu :: \alpha\ \mathtt{distr}}$}
+  \toolconst{weight}
+  &
+  %
+  The weight of the distribution, that is $\sum_x\mu(x)$.
+  In particular, $\mu$ is total iff $\mathtt{weight}\ \mu = 1$.
+  %
+  \\
+  \hline
+  \constdef{$\mathtt{map\_distr}\ f\ \mu$}{\beta\ \mathtt{distr}}{
+    $f :: \alpha \Rightarrow \beta$
+    and
+    $\mathtt{\mu :: \alpha\ distr}$}
+  \toolconst{map\_distr} &
+  %
+  The distribution of $f(x)$ when $x$ is $\mu$-distributed. That is,
+  $\nu(x)
+  =
+  \sum_{y\in f^{-1}(\{x\})}\mu(y)
+  $
+  for $\nu:=\mathtt{map\_distr}\ f\ \mu$.
+
+  In particular, the first and second marginal of a distribution $\mu$
+  on pairs are given by $\mathtt{map\_distr}\ \mathtt{fst}\ \mu$
+  and $\mathtt{map\_distr}\ \mathtt{snd}\ \mu$, respectively.
+  \\
+  \hline
+  \constdef{$\mathtt{prob}\ \mu\ x$}{\mathtt{real}}
+  {$\mathtt{\mu :: \alpha\ distr}$ and $x::\alpha$}
+  \toolconst{prob} &
+  %
+  The probability $\mu(x)$ of $x$ according to distribution $\mu$.
+  \\
+  \hline
+  \constdef{$\mathtt{uniform}\ M$}{\alpha\ \mathtt{distr}}
+  {$M::\alpha\ \mathtt{set}$}
+  \toolconst{uniform}
+  &
+  The uniform distribution on the set $M$ if $M$ is finite and non-empty.
+
+  If $M$ is infinite or empty, then $\mathtt{uniform}\ M:=0$.
+  \\
+  %
+  \hline
+  \constdef{$\mathtt{Pr}[e:P(\rho)]$}{\mathtt{real}}{$e::\mathtt{bool}$
+    \par and $P::\mathtt{program}$ \par and $\rho::\mathtt{program\_state}$}
+  \symbolindexmark\TOOLpr
+  &
+  %
+  The probability $\prafter {e}{P}{\rho}$
+  that $e=\true$ after execution of the program $P$ with initial state $\rho$.
+
+  Here $e$
+  must be an expression of type \texttt{bool}
+  (and $e$ may contain ambient and program variables without indices).
+
+  
+  $P$
+  can be the name of a program declared using \texttt{program P :=
+    ...;} or \texttt{adversary P var ...;}. (But in the case of $P$,
+  expressions that evaluate to a program are also admissible.)
+
+  
+  The constant \texttt{probability} is internally used for representing 
+  $\mathtt{Pr}[e:P(\rho)]$. It should not be used directly.
+  %
+  \\
+  \hline
+  \subhead{Operators}
+  \hline
+  \constdef{$A^*$\par$\mathtt{adjoint}\ A$}{(\beta,\alpha)\ \mathtt{bounded}}
+  {$A::(\alpha,\beta)\ \mathtt{bounded}$}
+  \toolconst{adjoint}
+  &
+  %
+  The adjoint $A^*$ of $A$.
+  \\
+  \hline
+  \constdef{$A\cdot B$\par$\mathtt{timesOp}\ A\ B$}
+  {(\alpha,\gamma)\ \mathtt{bounded}}
+  {$A::(\beta,\gamma)\ \mathtt{bounded}$
+    \par and
+    $B::(\alpha,\beta)\ \mathtt{bounded}$}
+  \toolconst{timesOp}
+  \symbolindexmark\TOOLcdot
+  &
+  The product $AB$ of operators $A$ and $B$.
+
+  The syntax $A\cdot B$
+  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  of $\cdot$
+  is intended, use \texttt{timesOp}, or provide additional type
+  information for $A$ and $B$.
+
+  \texinput{\\cdot}
+  \\
+  \hline \constdef{$A\cdot \psi$\par$\mathtt{applyOp}\
+    A\ \psi$} {\beta\ \mathtt{vector}}
+  {$A::(\alpha,\beta)\ \mathtt{bounded}$
+    \par and
+    $\psi::\alpha\ \mathtt{vector}$}
+  \toolconst{applyOp}
+  \symbolindexmark\TOOLcdot
+  &
+  The result $A\psi$ of applying the operator $A$ to the vector $\psi$.
+
+  The syntax $A\cdot \psi$
+  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  of $\cdot$
+  is intended, use \texttt{applyOp}, or provide additional type
+  information for the $A$ and $\psi$.
+
+  \texinput{\\cdot}
+  \\
+  \hline
+  \constdef{$A\cdot S$\par$\mathtt{applyOpSpace}\ A\ S$}
+  {\beta\ \mathtt{subspace}}
+  {$A::(\alpha,\beta)\ \mathtt{bounded}$
+    \par and
+    $S::\alpha\ \mathtt{subspace}$}
+  \toolconst{applyOpSpace}
+  \symbolindexmark\TOOLcdot
+  &
+  The result $AS=\{A\psi:\psi\in S\}$ of applying the operator $A$ to the subspace $\psi$.
+
+  The syntax $A\cdot S$
+  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  of $\cdot$
+  is intended, use \texttt{applyOpSpace}, or provide additional type
+  information for the $A$ and $S$.
+
+  \texinput{\\cdot}
+  \\
+  \hline
+  \constdef{$\mathtt{idOp}$}
+  {(\alpha,\alpha)\ \mathtt{bounded}}
+  {}
+  \toolconst{idOp}
+  &
+  The identity operator $\id$ on $\elltwo\alpha$.
+  \\
+  \hline
+  %
+  \constdef{$\mathtt{addState}\ \psi$}
+  {(\beta,\beta\times\alpha)\ \mathtt{bounded}}
+  {$\psi::\alpha\ \mathtt{vector}$}
+  \toolconst{addState}
+  &
+  %
+  The operator mapping $\phi$
+  to $\phi\otimes\psi$.
+  (Where $\otimes$
+  denotes a positional tensor product, not the labeled tensor product
+  defined in \qrhlautoref{sec:prelim}.)
+  \\
+  \hline
+  %
+  \constdef{$\mathtt{unitary}\ A$}
+  {\mathtt{bool}}
+  {$A :: (\alpha,\beta)\ \mathtt{bounded}$}
+  \toolconst{unitary}
+  & True iff $A$ is unitary.
+  \\
+  \hline
+  \constdef{$\mathtt{isometry}\ A$}
+  {\mathtt{bool}}
+  {$A :: (\alpha,\beta)\ \mathtt{bounded}$}
+  \toolconst{isometry}
+  & True iff $A$ is an isometry.
+  \\
+  \hline
+  \constdef{$\mathtt{isProjector}\ A$}
+  {\mathtt{bool}}
+  {$A :: (\alpha,\alpha)\ \mathtt{bounded}$}
+  \toolconst{isProjector}
+  & True iff $A$ is a projector.
+  \\
+  \hline
+  \constdef{$\mathtt{Proj}\ S$}
+  {(\alpha,\alpha)\ \mathtt{bounded}}
+  {$S :: \alpha\ \mathtt{subspace}$}
+  \toolconst{Proj}
+  &
+  The projector onto subspace $S$.
+  \\
+  \hline
+  \constdef{\texttt{hadamard,pauliX,pauliY,pauliZ}}
+  {(\mathtt{bit},\mathtt{bit})\ \mathtt{bounded}}
+  {}
+%  \symbolindexmark\TOOLH\symbolindexmark\TOOLX\symbolindexmark\TOOLY\symbolindexmark\TOOLZ
+  \toolconst{hadamard}\toolconst{pauliX}\toolconst{pauliY}\toolconst{pauliZ}
+  & Hadamard, or Pauli $X$, $Y$, $Z$ operators, respectively.
+  \\
+  \hline
+  \constdef{\texttt{CNOT}}
+  {(\mathtt{bit}\times\mathtt{bit},\mathtt{bit}\times\mathtt{bit})\ \mathtt{bounded}}
+  {}
+  \toolconst{CNOT}
+  & Controlled-not on two qubits (first qubit is the control)
+  \\
+  \hline
+  \constdef{$A\tensor B$\par
+    $\mathtt{tensor}\ A\ B$\par
+    $\mathtt{tensorOp}\ A\ B$}
+  {(\alpha,\beta)\ \mathtt{bounded}}
+  {$A::\alpha\ \mathtt{bounded}$ \par and $B::\beta\ \mathtt{bounded}$}
+  \toolconst{tensor}
+  \toolconst{tensorOp}
+  \symbolindexmark\TOOLotimes
+  &
+  The (positional) tensor product $A\otimes B$ of operators.
+
+  (Not the labeled one between $\bounded V$
+  and $\boundedv W$
+  described in the preliminaries of
+  \cite{qrhl-paper-from-manual}. That is,
+  $A\otimes B\neq B\otimes A$.)
+
+  The notations $A\tensor B$ and $\mathtt{tensor}\ A\ B$ are overloaded.
+  If Isabelle/HOL has trouble recognizing which meaning
+  is intended, use \texttt{tensorOp}, or provide additional type
+  information for~$A$ or~$B$.
+
+  \texinput{\\otimes, \\ox}
+  \\
+  \hline
+  \constdef{$\mathtt{comm\_op}$}
+  {(\alpha\times\beta, \beta\times\alpha)\ \mathtt{bounded}}
+  {}
+  \toolconst{comm\_op}
+  &
+  The canonical isomorphism between $\elltwo{X\times Y}$ and $\elltwo{Y\times X}$.
+
+  That is, the operator mapping $\basis{}{x,y}$ to $\basis{}{y,x}$.
+  \\
+  \hline
+  \constdef{$\mathtt{assoc\_op}$}
+  {(\alpha\mathord\times(\beta\mathord\times\gamma),\! (\alpha\mathord\times\beta)\mathord\times\gamma)\mathtt{bounded}}
+  {}
+  \toolconst{assoc\_op}
+  &
+  The canonical isomorphism between $\elltwo{X\times (Y\times Z)}$ and $\elltwo{(X\times Y)\times Z}$.
+
+  That is, the operator mapping $\basis{}{x,(y,z)}$ to $\basis{}{(x,y),z}$.
+
+  Note that in Isabelle/HOL, $\alpha\times(\beta\times\gamma)$
+  is the same type as $\alpha\times\beta\times\gamma$
+  but not the same as $(\alpha\times\beta)\times\gamma$.
+  If we identify all those types, then $\mathtt{assoc\_op}$
+  is the identity operator.
+  \\
+  \hline
+  \constdef{$\mathtt{Uoracle}\ f$}
+  {(\alpha\times\beta,\alpha\times\beta)\ \mathtt{bounded}}
+  {$f::\alpha\Rightarrow\beta$}
+  \toolconst{Uoracle}
+  &
+  Classical function $f$ represented as a unitary.
+  More precisely, 
+  $\mathtt{Uoracle}\ f : \basis{}{(x,y)}\mapsto \basis{}{(x,y+f(x))}$.
+
+  (This is a useful construct when modeling, e.g., function that can be queried in superposition
+  by a quantum algorithm.)
+
+  The type $\beta$
+  must have sort $\texttt{group\_add}$. This guarantees that
+  $y+f(x)$ is well-defined and has suitable properties (in particular, this
+  makes $\mathtt{Uoracle}\ f$ unitary).
+
+  Examples of types that have this sort are \texttt{bit},
+  \texttt{int}, $(\dots,\dots)\ \mathtt{nlist}$.
+  (The latter is defined in CryptHOL \cite{crypthol}, but you
+  additionally need to import the theory
+  \texttt{QRHL.CryptHOL\_Missing}.)
+
+  When axiomatizing a type \texttt{T}, you can use \texttt{instance T
+    :: group\_add sorry} to declare that \texttt{T} has this property. (Without specifying
+  \texttt{T} any further.)
+  \\
+  \hline
+  \subhead{States}
+  %
+  \hline \constdef{$\basis{}x$\par
+    $\mathtt{ket}\ x$}
+  {\alpha\ \mathtt{vector}} {$x :: \alpha$}
+  \toolconst{ket} & The basis state $\basis{}{x}$ of $\elltwo\alpha$.
+
+  \texinput{\\ket}
+  \\
+  \hline
+  \constdef{$\mathtt{EPR}$}
+  {(\mathtt{bit}\times\mathtt{bit})\ \mathtt{vector}}
+  {}
+  \toolconst{EPR}
+  &
+  The state $\frac1{\sqrt2}\basis{}{00}+\frac1{\sqrt2}\basis{}{11}$.
+  \\
+  \hline
+  \constdef{$\psi\tensor\phi$\par
+    $\mathtt{tensor}\ \psi\ \phi$\par
+    $\mathtt{tensorVec}\ \psi\ \phi$}
+  {(\alpha,\beta)\ \mathtt{vector}}
+  {$\psi::\alpha\ \mathtt{vector}$ and $\phi::\beta\ \mathtt{vector}$}
+  \toolconst{tensor}
+  \toolconst{tensorVec}
+  \symbolindexmark\TOOLotimes
+  &
+  The (positional) tensor product $\psi\otimes\phi$ of vectors.
+
+  (Not the labeled one between $\elltwov V$
+  and $\elltwov W$
+  described in the preliminaries of
+  \cite{qrhl-paper-from-manual}. That is,
+  $\psi\otimes\phi\neq\phi\otimes\psi$.)
+
+  The notations $\psi\tensor\phi$ and $\mathtt{tensor}\ \psi\ \phi$ are overloaded.
+  If Isabelle/HOL has trouble recognizing which meaning
+  is intended, use \texttt{tensorVec}, or provide additional type
+  information for~$\psi$ or~$\phi$.
+
+  \texinput{\\otimes, \\ox}
+  \\
+  \hline
+  \subhead{Quantum variables}
+  \hline
+  \constdef{$\llbracket \qq_1,\dots,\qq_n\rrbracket$\par
+    $[|\qq_1,\dots,\qq_n|]$}
+  {(\alpha_1\times\dots\times\alpha_n)\penalty0\ \mathtt{variables}}
+  {$\qq_i::\alpha_i\ \mathtt{variable}$}
+  \symbolindexmark\TOOLqvars
+  &
+  A typed tuple of quantum variables.
+
+  Constants that can be applied to several quantum variables expect a
+  typed tuple of quantum variables because their result type depends
+  on the types of all involved quantum variables.
+
+  For example the Isabelle/HOL expression
+  $\llbracket\qq_1,\qq_2\rrbracket\quanteq\llbracket\qq_1'\rrbracket$
+  expresses the quantum equality $\qq_1\qq_2\quanteq\qq_1'$
+  and it is well-typed iff
+  $\typev{\qq_1}\times\typev{\qq_2}=\typev{\qq_1'}$.
+  Typed quantum variables allow Isabelle/HOL to check those type
+  conditions.
+
+  \texinput{\\llbracket, \\rrbracket, [|, |]}
+  \\
+  \hline
+  \constdef{$A\text\guillemotright Q$\par
+    $A>>Q$\par
+    $\mathtt{lift}\ A\ Q$\par
+    $\mathtt{liftOp}\ A\ Q$}
+  {(\mathtt{mem2},\mathtt{mem2})\ \mathtt{bounded}}
+  {$A::(\alpha,\alpha)\ \mathtt{bounded}$
+    \par and
+    $Q::\alpha\ \mathtt{variables}$}
+  \symbolindexmark\TOOLfrqq
+  \toolconst{liftOp}
+  &
+  The operator $\lift A Q:=\Uvarnames{Q}A\adj{\Uvarnames Q}\otimes\idv{\qu{V_1}\qu{V_2}\setminus Q}$.
+  (See \qrhlautoref{def:lift}.)
+  
+  Intuitively, $\text\guillemotright$ takes an operator $A$
+  on $\elltwo\alpha$,
+  and returns the operator $A\text\guillemotright Q$
+  on $\elltwov{V_1V_2}$
+  that corresponds to applying $A$
+  on the quantum variables $Q\subseteq V_1V_2$.
+
+  The syntax $A\text\guillemotright Q$ and \texttt{lift}
+  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  of $\text\guillemotright$ or \texttt{lift}
+  is intended, use \texttt{liftOp}, or provide additional type
+  information for the lhs $A$.
+
+  \texinput{\\frqq, >{}>}
+  \\
+  \hline
+  \constdef{$S\text\guillemotright Q$\par
+    $S>>Q$\par
+    $\mathtt{lift}\ S\ Q$\par
+    $\mathtt{liftSpace}\ S\ Q$}
+  {\mathtt{predicate}}
+  {$A::\alpha\ \mathtt{subspace}$
+    \par and
+  $Q::\alpha\ \mathtt{variables}$}
+  \symbolindexmark\TOOLfrqq
+  \toolconst{liftOp}
+  &
+  The subspace $\lift SQ:=\Uvarnames{Q}S\otimes\elltwov{V_1V_2\setminus Q}$.
+  (See \qrhlautoref{def:lift}.)
+
+  Intuitively, $\text\guillemotright$
+  takes a subspace $S$
+  of $\elltwo\alpha$,
+  and returns the subspace $S\text\guillemotright Q$
+  of $\elltwov{V_1V_2}$
+  that corresponds
+  to the state of variables $Q$ being in subspace $S$.
+
+  The syntax $S\text\guillemotright Q$ and \texttt{lift}
+  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  of $\text\guillemotright$ or \texttt{lift}
+  is intended, use \texttt{liftSpace}, or provide additional type
+  information for the lhs~$S$.
+  
+  \texinput{\\frqq}
+  \\
+  %
+  \hline
+  \constdef{$\mathtt{distinct\_qvars}\ Q$}
+  {\mathtt{bool}}
+  {$Q::\alpha\ \mathtt{variables}$}
+  \toolconst{distinct\_qvars}
+  &
+  True if the variables in the quantum variable tuple $Q$ are all distinct.
+
+
+  To automatically simplify statements of this form in an accompanying
+  Isabelle theory, it is recommended to add a fact of the form
+  $\mathtt{declared\_qvars}\ \llbracket\dots\rrbracket$
+  to the Isabelle simplifier, see the explanations for
+  $\mathtt{declared\_qvars}$.
+  \\
+  %
+  \hline
+  \constdef{$\mathtt{colocal}\ P\ Q$\par
+    $\mathtt{colocal\_pred\_qvars}\ P\ Q$}
+  {\mathtt{bool}}
+  {$P::\mathtt{predicate}$
+    \par and
+    $Q::\alpha\ \mathtt{variables}$}
+  \toolconst{colocal}
+  \toolconst{colocal\_pred\_qvars}
+  &
+  True iff the predicate $P$ is $X$-local for some set of variables with $X\cap Q=\varnothing$,
+  and no variable occurs twice in $Q$.
+
+  The syntax $\mathtt{colocal}\ P\ Q$
+  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  of \texttt{colocal}
+  is intended, use \texttt{colocal\_pred\_qvars}, or provide additional type
+  information for $P$ and $Q$.
+
+  To automatically simplify statements of this form in an accompanying
+  Isabelle theory, it is recommended to add a fact of the form
+  $\mathtt{declared\_qvars}\ \llbracket\dots\rrbracket$
+  to the Isabelle simplifier, see the explanations for
+  $\mathtt{declared\_qvars}$.
+  \\
+  %
+  \hline
+  \constdef{$\mathtt{colocal}\ A\ Q$\par
+    $\mathtt{colocal\_op\_qvars}\ A\ Q$}
+  {\mathtt{bool}}
+  {$A::(\mathtt{mem2},\mathtt{mem2})\ \mathtt{bounded}$
+    \par and
+    $Q::\alpha\ \mathtt{variables}$}
+  \toolconst{colocal}
+  \toolconst{colocal\_op\_qvars}
+  &
+  True iff the operator $A$ is $X$-local for some set of variables with $X\cap Q=\varnothing$,
+  and no variable occurs twice in $Q$.
+
+  The syntax $\mathtt{colocal}\ A\ Q$
+  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  of \texttt{colocal}
+  is intended, use \texttt{colocal\_op\_qvars}, or provide additional type
+  information for $A$ and $Q$.
+
+  To automatically simplify statements of this form in an accompanying
+  Isabelle theory, it is recommended to add a fact of the form
+  $\mathtt{declared\_qvars}\ \llbracket\dots\rrbracket$
+  to the Isabelle simplifier, see the explanations for
+  $\mathtt{declared\_qvars}$.
+  \\
+  % 
+  \hline
+  \constdef{$\mathtt{colocal}\ A\ P$\par
+    $\mathtt{colocal\_op\_pred}\ A\ P$}
+  {\mathtt{bool}}
+  {$A::(\mathtt{mem2},\mathtt{mem2})\ \mathtt{bounded}$
+    \par and
+    $P::\mathtt{predicate}$}
+  \toolconst{colocal}
+  \toolconst{colocal\_op\_pred}
+  &
+  True if the operator $A$
+  is $X$-local
+  and the predicate $P$
+  is $Y$-local
+  for some sets $X,Y$ of quantum variables with $X\cap Y=\varnothing$.
+
+  The syntax $\mathtt{colocal}\ A\ P$
+  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  of \texttt{colocal}
+  is intended, use \texttt{colocal\_op\_pred}, or provide additional type
+  information for $A$ and $P$.
+
+  To automatically simplify statements of this form in an accompanying
+  Isabelle theory, it is recommended to add a fact of the form
+  $\mathtt{declared\_qvars}\ \llbracket\dots\rrbracket$
+  to the Isabelle simplifier, see the explanations for
+  $\mathtt{declared\_qvars}$.
+  \\
+  %
+  \hline
+  \constdef{$\mathtt{declared\_qvars}\ \llbracket\qq_1,\dots,\qq_n\rrbracket$\par
+    $\mathtt{declared\_qvars}\ [|\qq_1,\dots,\qq_n|]$}
+  {\mathtt{bool}}
+  {$\qq_i::\alpha_i\ \mathtt{variable}$}
+  \toolconst{declared\_qvars}
+  &
+  Informally, indicates that all $\qq_i$ are quantum variables declared in the tool.
+
+  All $\qq_i$
+  must be free Isabelle variables referring directly to quantum
+  variables (i.e., not bound variables, nor is it permitted to, e.g., define
+  $x$ as an alias for $\qq$ and then use $x$ here).
+  
+  Formally, this is an abbreviation for
+  $\mathtt{variable\_name}\ \qq_1=s_1\land\dots\land
+  \mathtt{variable\_name}\ \qq_n=s_n$, where $s_i$
+  is a string literal containing the name of the variable $\qq_i$.
+  The simplifier can use these statements to automatically prove
+  $\mathtt{distinct\_qvars}\ \llbracket\qq_1,\dots,\qq_n\rrbracket$
+  and various statements of the form $\mathtt{colocal} \dots$.
+
+  When reasoning in Isabelle directly (in an accompanying theory), it
+  is advisable to add the assumption
+  $\mathtt{declared\_qvars}\ \llbracket\qq_1,\dots,\qq_n\rrbracket$
+  (where $\qq_i$
+  are quantum variables declared using \texttt{quantum var ...} in our tool)
+  as an assumption to lemmas that are proven in Isabelle, and to add this
+  assumption to the Isabelle simplifier. See
+  \texttt{Teleport\_Terse.thy} and \texttt{Teleport.thy} for
+  examples.
+
+  When invoking the simplifier from the tool via the \texttt{simp}
+  tactic, it is not necessary to add those assumptions because the
+  \texttt{simp} tactic already adds it automatically.
+  In particular, ambient subgoals of the form
+  $\mathtt{declared\_qvars}\ \llbracket\dots\rrbracket$
+  are solved automatically by the \texttt{simp} tactic.
+  \\
+  %
+  \hline
+  \subhead{Subspaces \& predicates}
+  % \hline
+  % \constdef{$\mathtt{span}\ M$\par
+  %   $\mathtt{spanState}\ M$}
+  % {\alpha\ \mathtt{subspace}}
+  % {$M::\alpha\ \mathtt{state}\ \mathtt{set}$}
+  % \toolconst{span}
+  % \toolconst{spanState}
+  % &
+  % The span $\SPAN M$ of the states in $M$.
+%
+  % Equivalent to $\mathtt{span}\ (\mathtt{image}\ \mathtt{state\_to\_vector}\ M)$.
+%
+  % The syntax $\mathtt{span}\ M$
+  % is overloaded. If Isabelle/HOL has trouble recognizing which meaning
+  % of \texttt{span}
+  % is intended, use \texttt{spanState}, or provide additional type
+  % information for the argument $M$.
+  % \\
+  % 
+  \hline
+  \constdef{$\mathtt{span}\ M$}
+  {\alpha\ \mathtt{subspace}}
+  {$M::\alpha\ \mathtt{vector}\ \mathtt{set}$}
+  \toolconst{span}
+  \toolconst{spanVector}
+  &
+  The span ``$\SPAN M$'' of the states in $M$.
+  \\
+  %
+  \hline
+  \constdef{$\mathfrak{Cla}[b]$\par
+    $\mathtt{Cla}[b]$\par
+    $\mathtt{classical\_subspace}\ b$}
+  {\mathtt{predicate}}
+  {$b::\mathtt{bool}$}
+  \toolconst{classical\_subspace}
+  &
+  The predicate $\CL b\subseteq\elltwov{V_1V_2}$.
+
+  This allows to encode predicates about classical variables within
+  quantum predicates.
+
+  \texinput{\\Cla}
+  \\
+  \hline
+  \constdef{{\small $\mathtt{quantum\_equality\_full}\, A_1\, Q_1\, A_2\, Q_2$}}
+  {\mathtt{predicate}}
+  {$A_1::(\alpha,\gamma)\ \mathtt{bounded}$
+    \par and
+    $Q_1::\alpha\ \mathtt{variables}$
+    \par and
+    $A_2::(\beta,\gamma)\ \mathtt{bounded}$
+    \par and
+    $Q_2::\beta\ \mathtt{variables}$}
+  \toolconst{classical\_equality\_full}
+  &
+  The quantum equality predicate $A_1Q_1\quanteq A_2Q_2$. (\qrhlautoref{def:quanteq})
+    \\
+  \hline
+  \constdef{$Q_1\mathrel{\mathord\equiv\mathfrak q} Q_2$ \par 
+    $Q_1\ \texttt{==q}\ Q_2$ \par 
+    $\mathtt{quantum\_equality}\ Q_1\ Q_2$ \par
+    $\mathtt{Qeq}[\qq_1,\dots,\qq_n = \qq_1',\dots,\qq_m']$
+  }
+  {\mathtt{predicate}}
+  {$Q_1 :: \alpha\ \mathtt{variables}$
+    \par and
+    $Q_2 :: \alpha\ \mathtt{variables}$}
+  \toolconst{classical\_equality}
+  \toolconst{Qeq[\,]}
+  \symbolindexmark\TOOLqeq
+  \symbolindexmark\TOOLQeq
+  &
+  Quantum equality $Q_1\quanteq Q_2$. (\qrhlautoref{def:quanteq.simple})
+
+  This is an abbreviation for
+  \[
+    \mathtt{quantum\_equality\_full}\ \mathtt{idOp}\ Q_1\
+    \mathtt{idOp}\ Q_2.
+  \]
+  (That is, Isabelle/HOL internally expands this
+  abbreviation whenever it encounters it.)
+
+  The syntax $\mathtt{Qeq}[\qq_1,\dots,\qq_n = \qq_1',\dots,\qq_m']$
+  is a convenience input syntax for inputting
+  $\llbracket \qq_1,\dots,\qq_n\rrbracket
+  \mathrel{\mathord\equiv\mathfrak q} \llbracket
+  \qq_1',\dots,\qq_m'\rrbracket$.  The variables
+  $\qq_i,\qq'_i$
+  must have types $\alpha_i,\alpha_i'$
+  such that
+  $\alpha_1\times\dots\times\alpha_n=\alpha_1'\times\dots\times\alpha_m'$.
+  
+  \texinput{\\qeq}
+  \\
+  %
+  \hline
+  \constdef{$P \div \psi\text\guillemotright Q$\par
+    $\mathtt{space\_div}\ P\ \psi\ Q$}
+  {\mathtt{predicate}}
+  {$P::\mathtt{predicate}$
+    \par and
+    $\psi::\alpha\ \mathtt{vector}$
+    \par and
+    $Q::\alpha\ \mathtt{variables}$
+  }
+  \toolconst{space\_div}
+  \symbolindexmark\TOOLspacediv
+  &
+  %
+  The quantum predicate
+  $(\spaceat{P}{\Uvarnames Q\psi})\otimes\elltwov Q$.
+
+  Note that the only place where $\spaceat{}{}$
+  appear in our qRHL rules is in \ruleref{QInit1}, where it appears in an
+  expression of the form
+  $(\spaceat{P}{\Uvarnames Q\psi})\otimes\elltwov Q$.
+  Because of this it is more convenient in the tool to directly define
+  this combination as a single constant instead of breaking it down
+  into several (more difficult to type) building blocks.
+
+  \texinput{\\div, \\frqq, >{}>}
+  \\
+  %
+  \hline
+  \constdef{$\mathtt{ortho}\ S$}
+  {\alpha\ \mathtt{subspace}}
+  {$S::\alpha\ \mathtt{subspace}$}
+  \toolconst{ortho}
+  &
+  Orthogonal complement $\orth S$ of $S$.
+  \\
+  \hline
+  \constdef{$S\tensor T$\par
+    $\mathtt{tensor}\ S\  T$\par
+    $\mathtt{tensorSpace}\ S\  T$}
+  {(\alpha,\beta)\ \mathtt{subspace}}
+  {$S::\alpha\ \mathtt{subspace}$ and $ T::\beta\ \mathtt{subspace}$}
+  \toolconst{tensor}
+  \toolconst{tensorSpace}
+  \symbolindexmark\TOOLotimes
+  &
+  The (positional) tensor product $S\otimes T$ of subspaces.
+
+  (Not the labeled one between $\elltwov V$
+  and $\elltwov W$
+  described in the preliminaries of
+  \cite{qrhl-paper-from-manual}. That is,
+  $S\otimes T\neq T\otimes S$.)
+
+  The notations $S\tensor T$ and $\mathtt{tensor}\ S\  T$ are overloaded.
+  If Isabelle/HOL has trouble recognizing which meaning
+  is intended, use \texttt{tensorSpace}, or provide additional type
+  information for~$S$ or~$ T$.
+
+  \texinput{\\otimes, \\ox}
+  \\
+  \hline
+  \subhead{Measurements}
+  \hline
+  \constdef{$\mathtt{computational\_basis}$}
+  {(\alpha,\alpha)\ \mathtt{measurement}}
+  {}
+  \toolconst{computational\_basis}
+  &
+  A projective measurement on $\elltwo\alpha$ in the computational basis.
+  \\
+  %
+  \hline
+  \constdef{$\mathtt{mtotal}\ M$}
+  {\mathtt{bool}}
+  {$M::(\alpha,\beta)\ \mathtt{measurement}$}
+  \toolconst{mtotal}
+  &
+  True iff the measurement $M$ is total.
+  \\
+  %
+  \hline
+  \constdef{$\mathtt{mproj}\ M\ x$}
+  {(\beta,\beta)\ \mathtt{bounded}}
+  {$M::(\alpha,\beta)\ \mathtt{measurement}$
+   \par and
+    $x::\alpha$}
+  \toolconst{mproj}
+  &
+  The projector $M(x)$ corresponding to outcome $x$ of the projective measurement $M$.
+  \\
+  \hline
+\end{longtable}
+
+
+
+\subsection{Tactics}
+\label{sec:tactics}
+
+
+In this section, we document all tactics supported by our 
+tool. The tactics are not in one-to-one correspondence with the rules
+from \autoref{sec:tactics} (for example, many tactics implement a
+combination of some rule with the \rulerefx{Seq} or \rulerefx{Conseq}
+rule). Yet, most rules can be recovered as special cases of the
+tactics. (E.g., the \ruleref{Sample1} can be implemented as the tactic
+sequence \texttt{wp left. skip. simp.}) Some rules are not
+implemented in their full generality (e.g., \rulerefx{Frame} is
+implemented by \texttt{equal} which does not take into account readonly
+variables). Rules that are not yet implemented in the tool are:
+\rulerefx{Sym}, \rulerefx{QrhlElim} (but we have
+\rulerefx{QrhlElimEq}), \rulerefx{JointSample}, \rulerefx{JointIf},
+\rulerefx{While1}, \rulerefx{JointWhile}, \rulerefx{JointMeasure},
+\rulerefx{JointMeasureSimple}.
+
+In the description of the rules, we use Isabelle/HOL syntax for
+expressions (in particular, for pre- and postconditions) because that
+is the syntax used in our tool. The reader should keep this in mind
+when comparing the rules described in this section with those from
+\qrhlautoref{sec:qrhl}. See \autoref{sec:isabelle} for a description
+of the constants used in Isabelle/HOL syntax.
+
+Whenever we state a rule describing the operation of a tactic, the
+preconditions of the rule are the subgoals created by the tactic. Any
+other preconditions the rule may have (i.e., conditions that the tactic
+checks immediately instead of creating a subgoal) are mentioned in the
+text accompanying the rule.
+
+\newcommand\tactic[1]{\subsubsection*{Tactic #1}\index{#1@\textttOLD{#1} (tactic)}}
+
+\tactic{admit}
+
+Solves the current subgoal without checking. This
+tactic is \emph{not sound}, it can be used to prove any theorem.  It
+is intended for experimentation and proof development (to get a
+subgoal out of the way temporarily and focus on other subgoals first).
+
+\tactic{byqrhl}
+
+
+When invoked as ``\texttt{byqrhl.}'', transforms a goal of the form
+$\mathtt{Pr}[e:P(\rho)] =\mathtt{Pr}[e':P'(\rho)]$
+into a qRHL subgoal. (Also works for $\leq$ or $\geq$ instead of $=$.)
+
+Here $e,e'$
+must be expressions of type \texttt{bool} (that may contain classical and ambient variables),
+and $P,P'$ must be the names of programs that have been declared using the
+\texttt{program} or the \texttt{adversary} command.
+
+
+The tactic implements the following rule:
+\begin{multline*}
+\inferrule{
+  \pb\rhl{\CL{\yy^{(1)}_1=\yy^{(1)}_2\land\dots\land\yy^{(n)}_1=\yy^{(n)}_2}\sqcap
+    \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
+    \mathrel{\mathord\equiv\mathfrak q}
+    \llbracket \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket}
+  {\mathtt{call}\ P}{\mathtt{call}\ P'}
+  {\CL{e_1\leftrightarrow e'_2}}
+}
+{
+  \mathtt{Pr}[e:P(\rho)] =\mathtt{Pr}[e':P'(\rho)]
+}
+\\
+\text{with}\quad e_1 := \idx1e,\ e'_2 := \idx2e'.
+\end{multline*}
+Here $\yy^{(1)},\dots,\yy^{(n)}$
+are the free classical variables of $P,P'$.
+And $\qq^{(1)},\dots,\qq^{(m)}$
+are the free quantum variables of $P,P'$.
+(Including those of any programs included recursively within $P,P'$
+via \texttt{call}.)
+
+If the conclusion contains $\leq$
+or $\geq$
+instead of $=$,
+then $\leftrightarrow$
+is replaced by $\rightarrow$
+or $\leftarrow$,
+respectively.  If $m=0$,
+then
+$\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
+\mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_n^{(1)},\dots,\qq_n^{(m)} \rrbracket$ is replaced by \texttt{top}.
+
+The rule is a special case of \ruleref{QrhlElimEq}.
+
+
+
+
+
+
+\tactic{case}
+
+When invoked as ``$\mathtt{case}\ z := e\mathtt{.}$'',
+it replaces the subgoal $\rhl A\bc\bd B$
+by $\rhl{\mathfrak{Cla}[z=e]\sqcap A}\bc\bd B$.
+The variable $z$
+must be a declared as an ambient variable that is not contained in
+$\bc,\bd,e$
+or in the code of any program declared with the \texttt{program} command.
+
+\[
+\inferrule
+{\rhl{\mathfrak{Cla}[z=e]\sqcap A}\bc\bd B}
+{\rhl A\bc\bd B}
+\]
+
+The tactic is justified by \ruleref{Case}. Note that \ruleref{Case}
+would add an additional all-quantifier $\forall z$
+to the subgoal. However, since all ambient variables are implicitly
+all-quantified, the all-quantifier can be omitted.
+
+
+\tactic{casesplit} 
+
+When invoked as ``$\mathtt{casesplit}\ e\mathtt{.}$''
+with a Boolean expression $e$,
+the current subgoal $G$
+is replaced by two subgoals $e\rightarrow G$
+and $\lnot e\rightarrow G$.
+This works for qRHL subgoals and ambient logic subgoals.
+
+\[
+  \inferrule
+  {e\rightarrow G
+    \\
+    \lnot e\rightarrow G}
+  {G}
+\]
+
+\tactic{clear}
+
+When invoked as ``\texttt{clear} $n$''
+for some integer $n\geq 1$,
+it removes the $n$-th
+assumption from the current subgoal. For qRHL subgoals, assumptions
+are explicitly listed and numbered in the tool. For ambient subgoals of the form
+$A_1\to \dots \to A_m\to B$,
+$A_n$ is considered to be the $n$-th assumption.
+
+\[
+  \inferrule
+  {A_1\to \dots A_{n-1}\to A_{n+1}\to\dots \to A_m\to B}
+  {A_1\to \dots \to A_m\to B}
+\]
+
+
+
+\tactic{conseq}
+
+When invoked as ``\texttt{conseq pre: $C$.}'',
+it rewrites the precondition of the current qRHL subgoal to become~$C$.
+When invoked as ``\texttt{conseq post: $C$.}'',
+it rewrites the postcondition of the current qRHL subgoal to become~$C$.
+$C$ must be an Isabelle/HOL expression of type \texttt{predicate}.
+
+That is, one of the following two rules is applied (left for
+\texttt{pre}, right for \texttt{post}):
+\[
+  \inferrule{A\leq C\\\rhl{C}\bc\bd B}{\rhl A\bc\bd B}
+  \qquad
+  \inferrule{C\leq B\\\rhl{A}\bc\bd C}{\rhl A\bc\bd B}
+\]
+%
+Both rules are special cases of \ruleref{Conseq}.
+
+
+
+\tactic{equal}
+
+Converts a subgoal of the form
+$\rhl{A}{\bc;s}{\bc';s'}{B}$
+where $s,s'$ are single statements with $s=s'$ (up to few differences)
+into a subgoal $\rhl{A}{\bc}{\bc'}{C}$
+with suitably updated postcondition $C$.
+(Note: an if- or while-statement counts as a single statement.)
+In addition, a subgoal about free variables,
+as well as subgoals corresponding to the differences between $s,s'$ (if any) are produced.
+
+\textbf{In detail:}
+By comparing $s,s'$, a context $S$ with multiple holes is obtained
+such that $s=S[s_1,\dots,s_n]$ and $s'=S[s'_1,\dots,s'_n]$.\footnote{%
+  The definition of multi-hole contexts is given in \qrhlautoref{footnote:context}.
+  
+  Note that in statements of the form \texttt{call A(p1,\dots,pn)},
+  \texttt{A} is a context itself with \texttt{p1,\dots,pn} in its holes.
+  So the holes of $S$ can also be arguments of adversaries in \texttt{call}-statements.
+  (E.g., when $s=\mathtt{call A(enc1)}$ and $s'=\mathtt{call A(enc2)}$,
+  then $s_1=\mathtt{enc1}$ and $s_1'=\mathtt{enc2}$.)
+}
+(In particular, if $s=s'$, then simply $S=s=s'$.)
+
+The postcondition $C$ is derived as follows:
+
+Let $\xx^{(1)},\dots,\xx^{(n)}$
+be the free classical variables of $S$,
+and $\qq^{(1)},\dots,\qq^{(m)}$
+be the free quantum variables of $S$
+(free quantum variables means quantum variables on the lhs of
+initialization, measurements, and apply-statements).
+This includes the variables of any programs included recursively within $S$
+via \texttt{call} statements, but not programs that are replaced by holes.
+
+First, we rewrite the postcondition $B$
+is several steps. This is in order to get a new postcondition $C$ that does
+not share any free variables with $S$ (if possible) while strengthening the postcondition as little as
+possible.
+
+$B'$
+is $B$
+with occurrences of $\xx^{(i)}_1=\xx^{(i)}_2$
+for all $i$,
+and occurrences of
+$\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
+\mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$ removed. (In such a way that
+$B'\sqcap\mathfrak{Cla}[\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
+\xx^{(n)}_1=\xx^{(n)}_2]\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)}
+\rrbracket \mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$ is a subset of $B$.)
+
+Let $i_1,\dots,i_k$
+be all indices such that both $\xx^{(i)}_1$
+and $\xx^{(i)}_2$ are free variables in $B'$.
+Let
+\[
+ B'':=\mathfrak{Cla}\pb\parenthesis[]{\lnot (\xx_1^{(i_1)}=\xx_2^{(i_1)}\land\dots\land\xx_1^{(i_k)}=\xx_2^{(i_k)})} + B'.
+\]
+Note that also
+$B''\sqcap\mathfrak{Cla}\pb\parenthesis[]{\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
+\xx^{(n)}_1=\xx^{(n)}_2}\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
+\mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$ is a subset of $B$.
+
+Let 
+\[
+  B''':=\mathtt{INF}\ X_1X_2.\ B''
+\]
+where $X_1X_2$
+are all classical variables $\xx^{(i)}_j$
+(for $j=1,2$)
+such that $\xx^{(i)}$
+is a free variable of $s$, and $\xx^{(i)}_j$ is free in $B''$.
+
+Let
+\[
+  C:=B'''\sqcap\mathfrak{Cla}[\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
+\xx^{(n)}_1=\xx^{(n)}_2]\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)}
+\rrbracket \mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket.
+\]
+Note that $C$ is a subset of $B$, and 
+note that $\cl{\fv(B''')}\cap\fv(S)=\varnothing$.
+
+
+With this definitions, the rule implemented by the tactic is:
+\[
+  \inferrule{
+\mathtt{colocal}\ B'\ \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)},
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket
+\\
+\rhl{C}{s_i}{s_i'}{C}\text{ for }i=1,\dots,n
+\\
+    \rhl{A}{\bc}{\bc'}C
+  }
+  {
+    \rhl{A}{\bc;s}{\bc';s'}{B}
+  }
+\]
+
+
+This rule is shown as follows:
+From $\mathtt{colocal}\ B'\ \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)},
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$, we have
+$\qu{\fv(B''')}\cap(\idx1 \qu{\fv(C)}\cup\idx2\qu{\fv(C)})=\varnothing$.
+
+From \ruleref{Adversary} and $\rhl{C}{s_i}{s_i'}{C}$, we have $\rhl{C}{s}{s}{C}$
+(Here \ruleref{Adversary} is instantiated with $C:=S$, $X:=\cl{\fv(S)}$, $Y:=\qu{\fv(C)}$,
+$W:=\varnothing$, $\Tilde X:=\cl{\fv(B''')}$ with indices removed,
+$Z:=\qu{\fv(B''')}$, $R:=B'''$, $\bc_i:=s_i$, $\bc'_i:=s'_i$.)
+
+Then with \ruleref{Seq} and $\rhl{A}{\bc}{\bc'}C$, we get 
+$\rhl{A}{\bc;s}{\bc's'}C$. And with \ruleref{Conseq} and $C\subseteq B$,
+we get $\rhl{A}{\bc;s}{\bc's'}B$.
+
+
+The first subgoal intuitively means that the quantum variables from
+the program do not occur in the postcondition (except within
+$\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
+\mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_n^{(1)},\dots,\qq_n^{(m)} \rrbracket$). This subgoal can usually
+be discharged with ``\texttt{simp.}''.
+
+\medskip
+
+We explain shortly the motivation behind the construction of the new
+postcondition $C$.
+We need that $C$ is of the form
+\[
+  C:=B'''\sqcap\mathit{Eqs}
+  \quad\text{with}\quad
+  \mathit{Eqs} := \mathfrak{Cla}[\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
+\xx^{(n)}_1=\xx^{(n)}_2]\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)}
+\rrbracket \mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket
+\]
+for some $B$ to be able to apply \ruleref{Adversary}, where $B'''$
+does not contain any of the program variables of $S$.
+(Otherwise we cannot apply the \refrule{Frame}.) And furthermore, we
+need that $C$
+is a subset of $B$.  
+
+Our definition of $C$
+is an attempt of finding a reasonably large $B'''$
+(and thus $C$) that satisfies those constraints.
+
+For this, we start with $B$,
+and remove as many terms containing program variables of $S$
+from $B$
+as we can. Namely, since $C=B'''\sqcap \mathit{Eqs}$,
+we can remove all equations
+from $B$ that occur in $\mathit{Eqs}$ anyway
+without weakening the predicate. This leads to $B'$.
+If there remain any quantum variables of $S$
+in $B'$,
+there seems to be nothing we can do. However, if there are classical
+variables $X_1X_2$
+of $S$
+remaining, we can get rid of them by replacing $B'$
+by $\mathtt{INF}\ X_1X_2.\ B'$.
+(If $B'$
+is classical, this is equivalent to all-quantifying over $X_1X_2$.)
+This is the idea behind the definition of $B'''$.
+However, this would mean that inside $\mathtt{INF}\ X_1X_2.\ B'$,
+the information is lost that $\xx_1^{(i)}=\xx_2^{(i)}$.
+(E.g., if $B=\CL{\xx_1\geq \xx_2}$,
+then $\mathtt{INF}\ \xx_1\xx_2.\ B'$
+is equivalent to $\CL{\forall\xx_1\xx_2.\ \xx_1\geq\xx_2}$
+which is false.) To recover this information, we instead define $B'''$ as 
+\[\mathtt{INF}\ \xx_1\xx_2.\
+  \mathfrak{Cla}\pb\parenthesis[]{\lnot (\xx_1^{(i_1)}=\xx_2^{(i_1)}\land\dots\land\xx_1^{(i_k)}=\xx_2^{(i_k)})} + B'.
+\]
+For classical $B'=\CL{e}$, this is equivalent to 
+\[\pB\CL{
+    \forall X_1X_2.\
+    (\xx_1^{(i_1)}=\xx_2^{(i_1)}\land\dots\land\xx_1^{(i_k)}=\xx_2^{(i_k)})
+    \longrightarrow
+    B'
+    }.
+  \]
+  Then $B'''$
+  can be satisfiable even if $B$
+  relies on the equality of the classical variables.  (For example, if
+  $B=\CL{\xx_1\geq \xx_2}$,
+  we have
+  $B'''= \pb\paren{\mathtt{INF}\ \xx_1\xx_2.\ \CL{\lnot \xx_1= \xx2} + \CL{\xx_1\geq
+    \xx_2}} = \CL{ \forall\xx_1\xx_2.\ \xx_1=\xx_2 \longrightarrow
+    \xx_1\geq\xx_2 }$ which is true.)  We only add those equalities in
+  $B''$ that actually may be relevant for $B'$, to keep the term small.
+  
+
+
+
+\tactic{fix}
+
+When invoked as ``\texttt{fix $z$.}'',
+replaces a goal of the form $\forall x.\, e$
+by $e\{z/x\}$,
+i.e., $e$
+with occurrences of $x$
+replaced by $z$.
+The variable $z$
+must be a declared as an ambient variable, and it must not occur free in
+$e$
+or in the code of any program declared with the \texttt{program}
+command.
+
+\[
+  \inferrule
+  {e\{z/x\}}
+  {\forall x.\, e}
+\]
+%
+This rule is justified by the fact that free ambient variables are
+implicitly all-quantified.
+
+
+\tactic{inline}
+
+When invoked as ``\texttt{inline $P$.}''
+it replaces all occurrences of \texttt{call $P$;}
+in the current subgoal by the code of $P$.
+Here $P$
+must be a program defined by \texttt{program $P$ := \{...\}.}
+The current goal must be a qRHL subgoal.
+
+Logically, this does not change the subgoal since \texttt{call $P$;}
+is just an abbreviation for the code of $P$.
+
+\tactic{measure}
+
+When invoked as  ``\texttt{measure.}'',
+converts a subgoal of the form
+$\rhl{A}{\,\bc; \xx\ \mathtt{<-\ measure}\ Q\ \mathtt{in}\ e \,}
+{\,\bc';\xx'\ \mathtt{<-\ measure}\ Q'\ \mathtt{in}\ e' \,}{B}$
+(i.e., ending in a measurement-statement on both sides) into a subgoal
+$\rhl{A}{\bc}{\bc'}{C}$ with suitably updated postcondition $C$.
+
+Here $e,e'$ must have the same type.
+
+The tactic implements the following rule:
+\[
+  \inferrule{
+      \rhl{A}{\bc}{\bc'}{B'}
+  }{
+    \rhl{A}{\,\bc; \xx\ \texttt{<-\ measure}\ Q\ \mathtt{in}\ e \,}
+           {\,\bc';\xx'\ \texttt{<-\ measure}\ Q'\ \mathtt{in}\ e' \,}{B}
+  }
+\]
+where
+\begin{multline*}
+  B' 
+  :=
+  \CL{e_1=e'_2} \sqcap
+  \paren{Q_1\quanteq Q_2'} \sqcap {}
+  \\
+  \mathtt{INF}\ z.\
+  \mathtt{let}\ \bar e = (\lift{(\mathtt{mproj}\ e_1\ z)}{Q_1}) \cdot \mathtt{top};\ 
+                \bar e' = (\lift{(\mathtt{mproj}\ e'_2\ z)}{Q'_2}) \cdot \mathtt{top}\ \mathtt{in}
+  \\
+  {\pb\paren{B\{z/\xx_1,z/\xx'_2\} ⊓ \bar e ⊓ \bar f} + \mathtt{ortho}\ \bar e + \mathtt{ortho}\ \bar e'}
+\end{multline*}
+with
+\begin{equation*}
+  e_1 := \idx1e,
+  \quad
+  e'_2 := \idx2e',
+  \quad
+  Q_1 := \idx1Q,
+  \quad
+  Q'_2 := \idx2Q'.
+\end{equation*}
+
+This rule is a consequence of \ruleref{JointMeasureSimple} and \ruleref{Seq}: 
+From \ruleref{JointMeasureSimple}, we obtain 
+$\rhl{B'}{\,\xx\ \texttt{<-\ measure}\ Q\ \mathtt{in}\ e \,}
+{\,\xx'\ \texttt{<-\ measure}\ Q'\ \mathtt{in}\ e' \,}{B}$
+(The only differences between $B'$ and the precondition from
+\ruleref{JointMeasureSimple} is the use of Isabelle-syntax here
+and the fact that $\im e$ replaced by the equivalent $e\cdot\mathtt{top}$.)
+Then with $\rhl{A}{\bc}{\bc'}{B'}$
+and \ruleref{Seq}, we get the conclusion of the rule.
+
+\tactic{rnd}
+
+Converts a subgoal of the form
+$\rhl{A}{\,\bc;\xx\ \texttt{<\$}\ e\,}{\,\bc';\xx'\ \texttt{<\$}\
+  e'\,}{B}$ (i.e., ending in a sampling on both sides) into a subgoal
+$\rhl{A}{\bc}{\bc'}{C}$ with suitably updated postcondition $C$.
+
+\medskip
+
+Specifically, if invoked as ``\texttt{rnd.}'', the new postcondition
+will be
+$C:= \mathfrak{Cla}[e_1=e_2'] \sqcap (\mathtt{INF}\ z\in\mathtt{supp}\ e_1.\
+B')$ where $e_1:=\idx1 e$
+(all free classical variables in $e$
+indexed with $1$),
+and $e_2':=\idx2e$ (all free classical variables in $e'$ indexed with $2$),
+and $B':=B\{z/\xx_1,z/\xx'_2\}$ (i.e., all occurrences of $\xx_1$ and $\xx_2$ replaced by a fresh variable $z$).
+
+Informally, $C$
+requires that $e$
+and $e'$
+are the same distribution, and $B$
+holds for any $\xx_1=\xx'_2$ in the support of $e$.
+That is, the syntax ``\texttt{rnd.}'' is to be used in the common case
+when both programs end with the same sampling, and we want the two
+samplings to be ``in sync'', i.e., to return the same value.
+
+The variables $\xx$ and $\xx'$ must have the same type in this case.
+
+That is, ``\texttt{rnd}.'' implements the following rule:
+\[
+  \inferrule
+  {\pb\rhl{A}\bc{\bc'}{
+      \mathfrak{Cla}[e_1=e_2'] \sqcap \pb\paren{\mathtt{INF}\ z\in\mathtt{supp}\ e_1.\ B\{z/\xx_1,z/\xx'_2\}}
+    }
+  }
+  {\rhl{A}{\,\bc;\xx\ \texttt{<\$}\ e\,}{\,\bc';\xx'\ \texttt{<\$}\ e'\,}{B}}
+  \qquad\text{where}\
+  e_1:=\idx1 e,
+  \
+  e_2':=\idx2e'
+\]
+This rule is a consequence of \ruleref{JointSample}
+and \ruleref{Seq}: From \ruleref{JointSample} (with
+$f:=\mathtt{map\_distr}\ (\lambda z.\, (z,z))\ e_1$
+and some simplifying), we get
+\[
+  \rhl
+{
+      \mathfrak{Cla}[e_1=e_2'] \sqcap \pb\paren{\mathtt{INF}\ z\in\mathtt{supp}\ e_1.\ B\{z/\xx_1,z/\xx'_2\}}
+    } {\xx\
+      \texttt{<\$}\ e}{\xx'\ \texttt{<\$}\ e'} {B}.
+    \]
+With \ruleref{Seq}, the conclusion of the rule follows.
+
+\medskip
+
+The second way of invoking the tactic is ``\texttt{rnd $\xx,\xx'$
+  <- $f$.}''
+Here $\xx,\xx'$
+must be the same variables as in the sampling statements in the
+subgoal.
+
+In this case, the new subgoal will be
+$\rhl{A}{\bc}{\bc'}{C}$ with
+\[
+  C:=
+\mathfrak{Cla}[\mathtt{map\_distr}\ \mathtt{fst}\ f = e_1 \land
+\mathtt{map\_distr}\ \mathtt{snd}\ f = e_2']
+\sqcap
+\pb\paren{\mathtt{INF}\ (\xx_1,\xx_2')\in \mathtt{supp}\ f.\ B}
+\]
+where $e_1:=\idx1 e$
+(all variables in $e$
+indexed with~$1$),
+and $e_2':=\idx2e'$ (all variables in $e'$ indexed with~$2$).
+
+Informally, $C$
+says $f$
+has marginals $e$
+and $e'$,
+and the postcondition $B$
+holds for any possible $\xx_1,\xx_2'$
+in the support of $f$.
+This variant is used if the variables $\xx,\xx'$
+in the two programs are sampled according to potentially different
+distributions, and we want to establish a specific relationship
+between those variables after sampling (the relationship is encoded in
+the choice of $f$).
+
+That is, the tactic ``\texttt{rnd $\xx,\xx'$ <- $f$.}'' implements the following rule:
+\begin{gather*}
+  \inferrule
+  {\pb\rhl{A}\bc{\bc'}{
+\mathfrak{Cla}[\mathtt{map\_distr}\ \mathtt{fst}\ f = e_1 \land
+\mathtt{map\_distr}\ \mathtt{snd}\ f = e_2']
+\sqcap
+\pb\paren{\mathtt{INF}\ (\xx_1,\xx_2')\in \mathtt{supp}\ f.\ B}
+    }
+  }
+  {\rhl{A}{\,\bc;\xx\ \texttt{<\$}\ e\,}{\,\bc';\xx'\ \texttt{<\$}\ e'\,}{B}}
+  \\
+  \hskip4in
+  \text{where}\
+  e_1:=\idx1 e,\
+  e_2':=\idx2e'
+\end{gather*}
+The rule is an immediate consequence of \ruleref{JointSample} and \ruleref{Seq}.
+
+
+\medskip
+
+Readers familiar with EasyCrypt may notice that their
+\texttt{rnd}-tactic takes very different arguments. Namely, in
+EasyCrypt, one can invoke the tactic as \texttt{rnd $F$
+  $G$}
+where $F$
+and $G$
+are isomorphisms between the distributions $e_1,e'_2$.
+The EasyCrypt behavior can be recovered in our tool by invoking
+\texttt{rnd $\xx,\xx'$
+  <- $\mathtt{map\_distr}\ (\lambda z.\, (z, F\, z))\ e_1$}.
+(Instead of the condition that $F$
+is an isomorphism between the distributions, our tactic will have the
+equation $\mathtt{map\_distr}\ \mathtt{snd}\ \mathtt{map\_distr}\ (\lambda z.\, (z, F\, z))\ e_1 = e_2'$
+in the resulting precondition, which follows from the fact that $F$
+is an isomorphism.)  Our tactic is more general though, since we can
+also handle the case where the distributions are not isomorphic.  For
+example, we can show the judgment
+$\rhl{\mathtt{top}}{\xx\texttt{ <\$ }d;}{\xx\texttt{ <\$
+  }\mathtt{map\_distr}\ (\lambda z.\ z*z)\ d;}{
+  \mathfrak{Cla}[\xx_1*\xx_1 = \xx_2] }$ (see the contributed file
+\texttt{rnd.qrhl}\footnote{\giturl{rnd.qrhl}, and bundled with the tool.}) which does not seem easily possible in EasyCrypt.
+
+\tactic{rule}
+
+When invoked as ``\texttt{\frenchspacing rule $l$}''
+on an ambient subgoal, it applies the rule $l$
+to the current subgoal. That is, $l$
+is assumed to be the name of an Isabelle lemma of the form
+$A_1\Longrightarrow\dots\Longrightarrow A_n\Longrightarrow B$,
+where $B$
+matches the current goal (i.e., $B\sigma$
+is the current goal for some substitution $\sigma$). The current goal is then replaced by goals
+$A_1\sigma$, \dots, $A_n\sigma$.
+
+This tactic is particularly useful for delegating subproofs to
+Isabelle/HOL. For example, if the current subgoal is an inequality of
+predicates that the \texttt{simp}-tactic cannot solve, then the
+subgoal can be copied to the accompanying Isabelle/HOL theory and
+proven there as a lemma $l$
+(possibly with some preconditions of the form
+$\mathtt{distinct\_qvars}\ \llbracket \qq_1,\dots,\qq_n\rrbracket$
+that will then become new subgoals in the tool and can be resolved
+using the \texttt{simp}-tactic).
+
+\tactic{seq}
+
+When invoked as ``\texttt{\frenchspacing seq $i$ $j$: $C$}'', the tactic applies the rule
+\[
+  \inferrule
+  {
+    \rhl{A}{s_1;\dots;s_{i}}{s'_1;\dots;s_{j}}{C}
+    \\
+    \rhl{C}{s_{i+1};\dots;s_n}{s'_{j+1};\dots;s_m}{B}
+  }
+  {\rhl{A}{s_1;\dots;s_n}{s'_1;\dots;s'_m}{B}}
+\]
+That is, it splits off the first $i$
+statements on the left and the first $j$
+statements on the right of the current qRHL subgoal, and uses the
+argument $C$ as the invariant to use in the middle.
+
+If-statements count as single statements, even if their bodies contain
+multiple statements.
+
+The rule is an immediate consequence of \ruleref{Seq}.
+
+\tactic{simp}
+
+When invoked as ``\texttt{simp $l_1$
+  \dots{} $l_n$.}'',
+it runs the Isabelle/HOL simplifier on the current goal, resulting in
+one or zero subgoals.
+
+More precisely, if the current goal is an ambient logic statement, the
+simplifier is applied directly. If the current goal is a qRHL
+judgment, the simplifier is applied to the precondition, the
+postcondition, and all assumptions (i.e., to all $P_i$
+if the current goal is $P_1\implies\dots\implies P_n\implies \rhl{A}\bc\bd B$).
+
+If the result is a trivial statement, the subgoal is removed. (Trivial
+statements are: \texttt{True}, qRHL judgments where one assumption is
+\texttt{False}, and qRHL judgments where the precondition is
+\texttt{bot}.)
+
+The arguments $l_1,\dots,l_n$
+refer to names of Isabelle/HOL theorems. These are passed to the
+simplifier as additional simplification rules. They can either refer
+to theorems shown in Isabelle/HOL (e.g., in the theories included in
+Isabelle/HOL, in \texttt{QRHL.thy}, or in the accompanying theory
+loaded using the \texttt{isabelle TheoryName.} command), or to lemmas
+proven within the current proof script (when the goal was stated using
+\texttt{\frenchspacing lemma $l_i$:
+  ...}).  These arguments are optional, the most common form of
+invoking the tactic is simply \texttt{simp.}
+
+
+When invoked as ``\texttt{simp ! $l_1$
+  \dots{} $l_n$.}'',
+the tactic behaves the same but fails unless the subgoal is solved and
+removed.
+
+
+\tactic{skip}
+
+Converts a qRHL subgoal $\rhl A\Skip\Skip B$
+into an ambient logic subgoal.
+\[
+\inferrule{
+  A \leq B
+}{
+  \rhl A \Skip \Skip B
+}
+\]
+This rule is an immediate consequence of rules \rulerefx{Skip} and \rulerefx{Conseq}.
+
+\tactic{swap}
+
+This tactic swaps the last two statements on the left or the right side of a qRHL subgoal,
+assuming those statements are independent (have no joint variables),
+or more generally performs a cyclic rotation of the last $n+1$ statements.
+
+Specifically, when invoked as ``\texttt{swap left $n$}'' for $n\geq1$, it applies the rule
+\[
+  \inferrule
+  {\rhl A{s_1;\dots;s_{m};s'';s'_{1};\dots;s'_{n}}{\bc}{B}}
+  {\rhl A{s_1;\dots;s_{m};s'_{1};\dots;s'_{n};s''}{\bc}{B}}
+  \qquad
+  \text{if}
+  \qquad
+  \fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing.
+\]
+This rule holds since $s'_{1};\dots;s'_{n}$
+is $\fv(s'_{1};\dots;s'_{n})$-local
+and $s''$
+is $\fv(s'')$-local,
+and thus $\denotc{s'_{1};\dots;s'_{n};s''}=\denotc{s'';s'_{1};\dots;s'_{n}}$
+since $\fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing$.
+
+If-statements count as single statements, even if their bodies contain
+multiple statements.
+
+When invoked as ``\texttt{swap right $n$}'', the analogous rule 
+\[
+  \inferrule
+  {\rhl A{\bc}{s_1;\dots;s_{m};s'';s'_{1};\dots;s'_{n}}{B}}
+  {\rhl A{\bc}{s_1;\dots;s_{m};s'_{1};\dots;s'_{n};s''}{B}}
+  \qquad
+  \text{if}
+  \qquad
+  \fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing.
+\]
+is applied.
+
+When invoked as ``\texttt{swap left}'' or ``\texttt{swap right}'', then $n=1$ is assumed.
+
+\tactic{wp} 
+
+Removes the last statement from the left or right program of a qRHL
+subgoal and adapts the postcondition accordingly.
+
+\newcommand\WP{\operatorname{wp}}%
+
+More precisely, when invoked as ``\texttt{wp left.}'' or ``\texttt{wp right.}'', it applies the rule
+\begin{equation}
+  \inferrule
+  {\rhl{A}{s_1;\dots;s_{n-1}}\bc{\WP_1(B,s_n)}}
+  {\rhl{A}{s_1;\dots;s_{n-1};s_n}\bc{B}}
+  \qquad\text{or}\qquad
+  \inferrule
+  {\rhl{A}\bc{s_1;\dots;s_{n-1}}{\WP_2(B,s_n)}}
+  {\rhl{A}\bc{s_1;\dots;s_{n-1};s_n}{B}}
+  \label{eq:wp}
+\end{equation}
+respectively. (If-statements count as single statements, even if their bodies contain
+multiple statements.) Here the $\WP_1$ is the following recursively defined partial function:
+%
+%
+\begin{align*}
+  \WP_1(B,\ \texttt{$\xx$ <- $e$}) & := B\{e_1/\xx_1\} \\
+  \WP_1(B,\ \texttt{$\xx$ <\$ $e$}) & := \mathfrak{Cla}[\mathtt{weight}\ e_1 = 1]
+                                    \sqcap (\mathtt{INF}\ \xx_1\in\mathtt{supp}\ e_1.\ B) \\
+  \WP_1(B,\  \texttt{on $\qq^{(1)},\dots,\qq^{(n)}$ apply $e$})
+                                 & :=
+                                   \mathfrak{Cla}[\mathtt{isometry}\ e_1] \sqcap \pb\paren{\bar e\,^* \cdot (B\sqcap \bar e\cdot\mathtt{top})}\\
+                                 &\qquad\qquad\text{where }\bar e := e_1\text\guillemotright \llbracket\qq^{(1)}_1,\dots,\qq^{(n)}_1\rrbracket \\
+  \WP_1(B,\  \texttt{$\xx$ <- measure  $\qq^{(1)},\dots,\qq^{(n)}$ with $e$})
+                                 & := \mathfrak{Cla}[\mathtt{mtotal}\ e_1] \sqcap \pb\paren{\mathtt{INF}\ z.\ \pb\paren{(B\{z/\xx_1\}\sqcap \bar e)+\mathtt{ortho}\ \bar e}} \\
+                                 &\qquad\qquad\text{where }\bar e := \pb\paren{(\mathtt{mproj}\ e_1\ z)\text\guillemotright \llbracket\qq^{(1)}_1,\dots,\qq^{(n)}_1\rrbracket}\cdot \mathtt{top} \\
+  \WP_1(B,\  \texttt{$\qq^{(1)},\dots,\qq^{(n)}$ <q $e$})
+                                 & := \mathfrak{Cla}[\mathtt{norm}\ e_1=1] \sqcap B\div e_1 \text\guillemotright \llbracket\qq^{(1)}_1,\dots,\qq^{(n)}_1\rrbracket \\
+  \WP_1(B,\  \texttt{if ($e$) then $\bc$ else $\bd$})
+                                 & := \pb\paren{\mathfrak{Cla}[\lnot e_1] + \WP_1(B,\bc)} \sqcap \pb\paren{\mathfrak{Cla}[e_1] + \WP_1(B,\bd)} \\
+  \WP_1(B,\  s_1;\dots;s_n) & := \WP_1(\WP_1(\dots \WP_1(\WP_1(B, s_n), s_{n-1}) \dots, s_2), s_1)
+\end{align*}
+Here we write $e_1$
+for $\idx1e$
+everywhere.  Note that the function $\WP_1$
+is undefined if the argument contains a \texttt{call}-statement. In
+those cases, the tactic will fail.
+
+The function $\WP_2$
+is defined analogously, except that all variables and expressions get
+index $2$ instead of index $1$.
+
+\medskip
+
+The functions $\WP_1$
+and $\WP_2$
+satisfy $\rhl{\WP_1(B,\bc)}\bc\Skip B$
+and $\rhl{\WP_2(B,\bc)}\Skip\bc B$,
+respectively. This can be seen by induction over the structure of
+$\bc$,
+and using the rules \rulerefx{Assign1}, \rulerefx{Sample1},
+\rulerefx{QApply1},\footnote{\label{footnote:wp.qapply}%
+  Note that \ruleref{QApply1} does not
+  contain the term $\mathfrak{Cla}[\mathtt{isometry}\ e_1]$
+  that $\WP_1(B,\texttt{on $\qq^{(1)},\dots,\qq^{(n)}$
+    apply $e$})$
+  contains.  The reason why $\WP_1(\dots)$
+  includes this additional term is that \texttt{on
+    $\qq^{(1)},\dots,\qq^{(n)}$
+    apply $e$}
+  actually translates to $\Qapply{\mathit{mkIso}(e)}{q_1,\dots,q_n}$
+  (see \autoref{footnote:mkIso}). Applying \ruleref{QApply1} to this
+  program
+  gives the precondition
+  \[
+    \hat e\,^* \cdot (B\sqcap \hat e\cdot\mathtt{top})
+    \quad\text{where}\quad
+    \hat e := \mathit{mkIso}(\idx1e)\text\guillemotright \llbracket\qq^{(1)}_1,\dots,\qq^{(n)}_1\rrbracket
+  \]
+  which is a superset of
+  \[
+    \mathfrak{Cla}[\mathtt{isometry}\ e_1] \sqcap \bar e\,^* \cdot (B\sqcap \bar e\cdot\mathtt{top})
+    \quad\text{where}\quad
+    \bar e := e_1\text\guillemotright \llbracket\qq^{(1)}_1,\dots,\qq^{(n)}_1\rrbracket
+    \text{ and }e_1:=\idx1 e.
+    \]
+  } \rulerefx{Measure1}, \rulerefx{QInit1},\footnote{\label{footnote:wp.qinit}%
+    Note that \ruleref{QInit1} does not contain the term $\mathfrak{Cla}[\mathtt{norm}\ e_1=1]$
+    that $\WP_1(B,\  \texttt{$\qq^{(1)},\dots,\qq^{(n)}$ <q $e$})$ contains.
+    The reason why $\WP_1(\dots)$ includes this additional term is that
+    \texttt{$\qq^{(1)},\dots,\qq^{(n)}$ <q $e$} actually translates to $\Qinit{\qq_1,\dots,\qq_n}{\mathit{mkUnit(e)}}$
+    (see \autoref{footnote:mkUnit}). Applying \ruleref{QInit1} to this program gives the precondition
+    \[
+      B\div \hat e \text\guillemotright \llbracket\qq^{(1)}_1,\dots,\qq^{(n)}_1\rrbracket
+      \quad\text{where}\quad
+      \hat e := \mathit{mkUnit}(\idx1e)
+    \]
+    which is a superset of
+    \[
+      \mathfrak{Cla}[\mathtt{norm}\ e_1=1] \sqcap B\div e_1 \text\guillemotright \llbracket\qq^{(1)}_1,\dots,\qq^{(n)}_1\rrbracket
+      \quad\text{where}\quad
+      e_1 := \idx1e.
+    \]
+    }
+  \rulerefx{If1},
+\rulerefx{Conseq}, and \rulerefx{Seq}. From this, the rules 
+in \eqref{eq:wp} follow with \ruleref{Seq}.
+
+Note that we call this tactic \texttt{wp} like ``weakest
+precondition''. However, we stress that we have not actually proven that
+the precondition returned by $\WP_1$
+or $\WP_2$ is indeed the \emph{weakest} precondition.
+(We have merely tried to make them as weak as possible.)
+
+
+\subsection{Accompanying Isabelle theories}
+\label{sec:isabelle}
+
+A proof script for our tool can load an accompanying Isabelle/HOL
+theory (using the \texttt{isabelle} command). In this theory,
+arbitrary Isabelle/HOL developments are possible.  In particular, one
+can define new types and constants for use in programs (e.g., the
+encryption scheme in \autoref{sec:ex.ror}), and one can prove
+arbitrary helper lemmas as long as they do not involve qRHL
+judgments. (Typically, one will prove lemmas about predicates.)  It is
+beyond the scope of this paper to introduce proofs in Isabelle/HOL,
+see the tutorial \cite{isabelle-tutorial} and the
+reference manual \cite{isar-ref} for more information. The theory
+\texttt{QRHL} (imported using \texttt{imports QRHL.QRHL} in Isabelle) provides numerous definitions (most of them listed in
+\autoref{sec:tool.pred}) and axioms/lemmas. Many of the lemmas are
+declared as simplification rules, but some of them are for direct use
+only. We do not provide a comprehensive list here. To find useful
+facts, use the \texttt{find\_theorems} command in Isabelle
+\cite{isar-ref}. Or try the \texttt{sledgehammer} command
+\cite{isar-ref} for proving simple lemmas.  The following
+axioms/lemmas correspond to facts proven in this paper (all other axioms/lemmas are
+well-known or obvious facts):
+\begin{center}
+\begin{tabular}{|ll|}
+  \hline
+  \bfseries Isabelle lemma
+  &
+    \bfseries Lemma in \cite{qrhl-paper-from-manual}
+  \\
+  \hline
+  \hline
+  \texttt{leq\_space\_div}\,\textsuperscript{simp} & \qrhlautorefx{lemma:spacediv.leq} \\
+  \hline
+  \texttt{classical\_inf}\,\textsuperscript{simp} & \qrhlautorefx{lemma:cl.simps} \\
+  \texttt{classical\_sup}\,\textsuperscript{simp} &\\
+  \texttt{Cla\_plus}\,\textsuperscript{simp} &\\
+  \texttt{BINF\_Cla}\,\textsuperscript{simp} &\\
+  \texttt{classical\_ortho}\,\textsuperscript{simp} &\\
+  \hline
+  \texttt{qeq\_collect} & \qrhlautorefx{lemma:qeq.move} \\
+  \texttt{qeq\_collect\_guarded}\,\textsuperscript{simp} & \\
+  \hline
+  \texttt{Qeq\_mult1} & \qrhlautorefx{lemma:qeq.inside} \\
+  \texttt{Qeq\_mult2} & \\
+  \hline
+  \texttt{quantum\_eq\_unique}\,\textsuperscript{simp} & \qrhlautorefx{lemma:qeq.span} \\
+  \hline
+  \texttt{quantum\_eq\_add\_state} & \qrhlautorefx{lemma:quanteqaddstate} \\
+  \hline
+  \hline
+  \multicolumn{2}{|c|}{\textsuperscript{simp} means: the lemma is added to the simplifier} \\
+  \hline
+\end{tabular}
+\end{center}
+
+The accompanying theory can also be used to set Isabelle configuration
+options that then affect our tool's behavior. For example, use
+\begin{lstlisting}
+  declare[[show_types,show_sorts]]
+\end{lstlisting}
+in the accompanying theory to
+add type information to the output of our tool (this affects all
+Isabelle/HOL formulas printed as part of the subgoals).
+
+\subsubsection{Declaring types}
+\label{sec:deftypes}
+
+In an accompanying Isabelle file, it is possible to define types as
+usual using Isabelle commands such as \texttt{typedef},
+\texttt{datatype}, and \texttt{typedecl}. However, there is one important
+caveat: To use a type as the type of a program variable, that type
+needs to instantiate the type class \texttt{universe} (representing
+types of sufficiently small cardinality).\footnote{For reasons described in
+  \autoref{footnote:universe}.} For most builtin types, this is
+already the case. However, there are two cases where one needs to be
+aware of this restriction.
+
+First, when defining one's own types (using \texttt{typedef} or
+\texttt{datatype}). In that case, Isabelle will not know that the
+resulting type is small. Fortunately, in most cases
+(assuming the types from which the new type is built are small) this
+can be done automatically with a single command:
+\begin{lstlisting}
+  derive universe typename
+\end{lstlisting}
+For example:
+\begin{lstlisting}
+  datatype 'a mytree = Node "'a mytree * 'a mytree" | Leaf 'a .
+  derive universe mytree
+\end{lstlisting}
+The \texttt{derive universe} command is also useful for types imported
+from other Isabelle theories if they were not yet shown to instantiate
+\texttt{universe}.
+
+
+The second use case is the declaration of types using
+\texttt{typedecl}. Such declarations are useful to specify in a
+development that \texttt{T} is just an arbitrary type, and that the
+whole proof holds for any type~\texttt{T}. (E.g., one might declare a
+type \texttt{key} of keys without further specifying its nature.)
+However, in this case, Isabelle will not know that \texttt{T} is
+small (and thus instantiates \texttt{universe}) since
+nothing was specified about \texttt{T}. One solution would be to add
+instantiation proofs with \texttt{sorry}. However, we have included a
+custom command for declaring types that covers this situation:
+\texttt{declare\_variable\_type}. In its basic form, it declares a new
+type that is of class \texttt{universe}:
+\begin{lstlisting}
+  declare_variable_type key
+\end{lstlisting}
+The new type can also have type parameters:
+\begin{lstlisting}
+  declare_variable_type 'a t1
+  declare_variable_type ('a,'b) t2
+  declare_variable_type ('a::finite,'b) t3
+\end{lstlisting}
+where the last case constrains 'a to have the type class
+\texttt{finite}.  Finally, the command also has a convenient method
+for declaring that a given type has further type classes (besides \texttt{universe}) such as in:
+\begin{lstlisting}
+  declare_variable_type key :: finite
+  declare_variable_type msg :: "{finite,xor_group}"
+  declare_variable_type ('a::finite) list :: finite
+\end{lstlisting}
+(\texttt{universe} is always implicitly added.\footnote{More precisely,
+  \texttt{declare\_variable\_type\ ('a$_1$::s$_1$,\dots,'a$_n$::s$_n$) t :: s}
+  declares two facts: If \texttt{'a$_1$,\dots,'a$_n$} have sorts (type classes)
+  \texttt{s$_1$,\dots,s$_n$}, then the type \texttt{('a$_1$,\dots,'a$_n$) t}
+  has sort \texttt{s}. (Where \texttt{s$_i$} and \texttt{s} are empty when omitted from the command.)
+  And
+  if \texttt{'a$_1$,\dots,'a$_n$} have sorts
+  \texttt{s$_1'$,\dots,s$_n'$}, then the type \texttt{('a$_1$,\dots,'a$_n$) t}
+  has sort \texttt{s$'$}, where \texttt{s$_i'$} and \texttt{s$'$} are
+  \texttt{s$_i$} and \texttt{s} with the type class \texttt{universe} added.})
+
+The command will check whether the existence of a type of the given
+sorts can be consistently assumed.  If this is not the case, a warning
+is issued.\footnote{If the warning is not justified, it is possible to
+  remove it by manually defining a new type (e.g., via
+  \texttt{typedef} or \texttt{datatype}) and showing that that type
+  has the required sort (it is a \emph{sort witness}). After that,
+  \texttt{declare\_variable\_type} will not issue a warning any more
+  since the existence of a type of the right sort is ensured.}  For
+example,
+\begin{lstlisting}
+  declare_variable_type wrong :: "{finite,no_top}"
+\end{lstlisting}
+produces a warning since it would declare a type that is both finite
+and has no upper bound, and thus lead to a contradiction.
+
+
+
+\subsubsection{Code generation}
+If all quantum variables involved in a
+claim about predicates have finite types, the claim will often
+essentially be a claim about concrete operators and subspaces of fixed
+dimension. This means that by explicit computation of those operators and
+subspaces, the claim can be decided. To support this, we use the
+Isabelle code generation mechanism 
+\cite{isabelle-codegen}. This mechanism allows us to provide explicit
+algorithms for the various operations that occur in formulas. (For
+example, we might provide a matrix addition algorithm for $A+B$
+where $A,B::(\alpha,\beta)\ \mathtt{bounded}$.)
+In our case, we give algorithms for most operations on bounded
+operators and subspaces. (We rely heavily on \cite{Jordan_Normal_Form-AFP} which
+implements various algorithms on matrices in Isabelle/HOL.) This
+allows us to directly evaluate most expressions involving bounded
+operators and subspaces, as long as the involved types are
+finite.\footnote{Strictly speaking, besides being finite, the types need to implement the
+  type class \texttt{Enum.enum} which means an explicit list of all
+  elements of the type must be provided.}
+
+Unfortunately, most expressions involving predicates that occur as
+subgoals in our tool cannot be directly evaluated using this
+mechanism. This is due to the \texttt{lift} (\guillemotright) operation. For example, we
+might have the claim
+\begin{equation}
+  \label{eq:code1}
+  \mathtt{span}\ \{\mathtt{EPR}\} \text\guillemotright \llbracket \qq_1,\qq_2\rrbracket
+  \leq
+  \mathtt{span}\ \{\basis{}{00},\basis{}{11}\} \text\guillemotright \llbracket{\qq_1,\qq_2}\rrbracket
+\end{equation}
+Here the lhs and rhs are infinite dimensional subspaces (because
+$\text\guillemotright \llbracket \qq_1,\qq_2\rrbracket$
+maps a subspace of $\elltwov{\qq_1\qq_2}$
+to a subspace of $\elltwov{\qu{V_1}\qu{V_2}}$).
+Therefore, the lhs and rhs cannot be explicitly computed (at least not
+using a straighforward representation). Thus, we first need to convert
+the above expression into the following equivalent finite dimensional
+one:
+$ \mathtt{span}\ \{\mathtt{EPR}\} \leq \mathtt{span}\
+\{\basis{}{00},\basis{}{11}\}.  $
+
+In this specific case, this is a special case of the simple rule
+$A\leq B\implies A\text\guillemotright Q\leq B\text\guillemotright
+Q$. In general, however, removing the \texttt{lift} operations can be
+nontrivial. The \texttt{lift}s can be interspersed with different
+operations, and they may use different sets of quantum variables,
+or differently ordered ones. For example, consider
+\begin{equation}
+  \label{eq:code2}
+  \mathtt{span}\ \{\mathtt{EPR}\} \text\guillemotright \llbracket \qq_1,\qq_2\rrbracket
+  \leq
+  \mathtt{span}\ \{\basis{}{00},\basis{}{11}\} \text\guillemotright \llbracket{\qq_2,\qq_1}\rrbracket
+\end{equation}
+(Note the different order $\qq_2,\qq_1$
+on the rhs.) To make this into a finite dimensional expression, we
+first have to rewrite
+$\mathtt{span}\ \{\basis{}{00},\basis{}{11}\} \text\guillemotright
+\llbracket{\qq_2,\qq_1}\rrbracket$ into
+$\pb\paren{\mathtt{comm\_op} \cdot \mathtt{span}\ \{\basis{}{00},\basis{}{11}\}}
+\text\guillemotright \llbracket{\qq_1,\qq_2}\rrbracket$ (where $\mathtt{comm\_op}$
+is an operator mapping $\basis{}{x,y}$ to $\basis{}{y,x}$), and only then
+can we apply the rule
+$A\leq B\implies A\text\guillemotright Q\leq B\text\guillemotright Q$ and get
+\begin{equation}
+  \label{eq:code2-rewrite}
+  \mathtt{span}\ \{\mathtt{EPR}\}
+  \leq
+  \mathtt{comm\_op} \cdot \mathtt{span}\ \{\basis{}{00},\basis{}{11}\}.
+\end{equation}
+
+We have automated this process (using a number of simplification rules
+and custom ML simplification procedures). To perform this conversion,
+we use the following method:
+\begin{lstlisting}
+  apply (simp add: prepare_for_code)
+\end{lstlisting}
+
+Another problem is that the Isabelle/HOL code generation implements
+real numbers as fractions. Thus, the code generation fails (aborts) when the
+expression involves, e.g., square roots. Unfortunately, operators and
+states such as \texttt{hadamard} and \texttt{EPR} involve $\sqrt2$.
+We reimplemented the real number code generation in Isabelle/HOL to support real numbers
+of the form $a+b\sqrt 2$ for rational $a,b$, thus these operators and states can
+be used. However, there is no support so far for other irrational numbers (e.g., $\sqrt 3$).
+
+To give a complete example, \eqref{eq:code2} can be shown as follows:
+\begin{lstlisting}
+  lemma
+    assumes[simp]: "declared_qvars \ensuremath{\llbracket}q1,q2\ensuremath{\rrbracket}"
+    shows "span {EPR} \ensuremath{\text\guillemotright} \ensuremath{\llbracket}q1,q2\ensuremath{\rrbracket} \ensuremath{\leq} span {ket (0,0), ket (1,1)} \ensuremath{\text\guillemotright} \ensuremath{\llbracket}q2,q1\ensuremath{\rrbracket}"
+  apply (simp add: prepare_for_code)
+  by eval (* Invokes proof by code evaluation *)
+\end{lstlisting}
+This example, the proof of \eqref{eq:code1}, and a few other examples
+can be found in \texttt{Code\_Example.thy}.\footnote{Bundled with the
+  tool, and also directly available at \giturl{Code\_Example.thy}.}  (A
+remark: the subgoal produced after \texttt{apply (simp ...)} in this
+example is not the same as in \eqref{eq:code2-rewrite} but a somewhat
+more complex one. This is because the simplification procedures do
+not necessarily find the simplest way of removing the \texttt{lift}s.)
+
+\subsection{Examples}
+
+\newcommand\filelist[2]{\noindent\framebox{\textbf{#1 -- \texttt{#2}}}\par\lstinputlisting{#2.lst}}
+
+\newcommand\qrhlfile[1]{\filelist{qRHL proof script}{#1.qrhl}}
+\newcommand\isafile[1]{\filelist{Isabelle/HOL theory}{#1.thy}}
+
+\subsubsection{ROR-OT-CPA encryption from PRGs}
+\label{sec:ex.ror}
+
+Our first example proof is the ROR-OT-CPA security of a simple
+one-time encryption scheme.
+
+
+\paragraph{The setting.} The encryption scheme is defined by
+\begin{align*}
+  &\mathrm{enc}:K\times M\to M,\qquad
+  \mathrm{enc}(k,m) := G(k)\oplus m \\
+  &\mathrm{dec}:K\times M\to M,\qquad
+  \mathrm{dec}(k,c) := G(k)\oplus c
+\end{align*}
+where $G:K\to M$
+is a pseudorandom generator, $k$
+is the key, and $m$
+is the message (plaintext). 
+
+The \index{ROR-OT-CPA}ROR-OT-CPA security notion says,
+informally: The adversary cannot distinguish between an encryption
+of~$m$
+and an encryption of a random message, even if the adversary
+itself chooses~$m$. More formally:
+\begin{definition}[ROR-OT-CPA advantage]\label{def:roradv}
+  For a stateful adversary $A_1,A_2$, let \symbolindexmark\AdvROR
+  \begin{align*}
+    \AdvROR^{A_1A_2}(\eta) :=
+    \Bigl\lvert
+    &\Pr\bigl[b=1:
+        k\sampleset K,\, m\leftarrow A_1(),\, c:=\mathrm{enc}(k,m),\, b\leftarrow A_2(c)\bigr]
+    \\    -
+     &\Pr\bigl[b=1:
+       k\sampleset K,\, m\leftarrow A_1(),\, r\sampleset M,\, c:=\mathrm{enc}(k,r),\, b\leftarrow A_2(c)\bigr]
+       \Bigr\rvert      
+  \end{align*}
+  where \symbolindexmark\sampleset$\sampleset$
+  means uniformly random choice, and the notation
+  $\Pr[e:G]$
+  denotes the probability that $e$
+  holds after executing the instructions in $G$,
+  and $\eta$
+  is a security parameter (on which $A_1,A_2,G,K,M$
+  implicitly depend).
+
+  We call $\AdvROR^{A_1A_2}$ the \emph{ROR-OT-CPA advantage}%
+  \index{advantage!ROR-OT-CPA}%
+  \index{ROR-OT-CPA!advantage}
+  of $A_1,A_2$.
+\end{definition}
+With this definition, we can then, for example, define ROR-OT-CPA
+security of $\mathrm{enc}$
+as ``for any quantum-polynomial-time $A_1,A_2$,
+$\AdvROR^{A_1A_2}$
+is negligible.'' This is what is called asymptotic security. We will
+instead follow the concrete security approach where we explicitly
+derive bounds for $\AdvROR^{A_1A_2}$.
+
+Analogously, we define pseudorandomness of $G:K\to M$ by defining the \emph{PRG advantage}%
+\index{PRG advantage}%
+\index{advantage!PRG} of $G$:
+\begin{definition}[PRG advantage]\label{def:prg.adv}
+  For an adversary $A$, let \symbolindexmark\AdvPRG
+  \begin{equation*}
+    \AdvPRG^{A}(\eta) :=
+    \Bigl\lvert
+    \Pr\bigl[b=1:
+        s\sampleset K,\, r := G(s),\, b\leftarrow A(r)\bigr]
+        -
+    \Pr\bigl[b=1:
+       r\sampleset M,\, b\leftarrow A(r)\bigr]
+       \Bigr\rvert      .
+  \end{equation*}
+\end{definition}
+Again, we can define pseudorandomness of $G$
+by requiring that $\AdvPRG^A$
+is negligible for all quantum-polynomial-time $A$,
+or reason about concrete advantages.
+
+What we want to show is the following well-known fact: ``If $G$
+is pseudorandom, then $\mathrm{enc}$
+is ROR-OT-CPA.'' In the concrete security setting, we can state this
+more precisely:
+\begin{lemma}[Concrete ROR-OT-CPA security of $\mathbf{enc}$]\label{lemma:rorcpa}
+  For any $A_1,A_2$, there exists a $B$ such that:
+  \begin{compactenum}[(i)]
+  \item\label{item:time} $\Time(B) \leq \Time(A_1) + \Time(A_2) + O(\log \eta)$. 
+  \item\label{item:adv} $\AdvROR^{A_1,A_2}(\eta) \leq \AdvPRG^B(\eta)$.
+  \end{compactenum}
+  Here \symbolindexmark\Time$\Time(A)$
+  refers to the worst-case runtime of $A$,
+  and we assume that elementary operations (e.g.,~$\oplus$)
+  on $K$ and $M$ take time $O(\log\eta)$.
+\end{lemma}
+It is immediate that this also implies asymptotic ROR-OT-CPA security.
+
+In our tool, we will almost show \autoref{lemma:rorcpa}. Specifically,
+we will show property \eqref{item:adv}, but we will not show
+\eqref{item:time} (because our tool does not have the concept of the
+runtime of an algorithm). Instead, we explicitly specify $B$
+and leave it to the user to check that $B$
+indeed satisfies \eqref{item:time}. This is the state of the art and
+is done in the same way, in, e.g., EasyCrypt and CryptHOL. Explicit reasoning about
+runtime is left as future work.
+
+In addition, we will leave the security parameter $\eta$
+implicit. This means that our proof is for fixed $\eta$,
+but since it holds for any $\eta$,
+the case of variable $\eta$ is implied.
+
+
+\paragraph{Specification in Isabelle.} The first step is to encode the
+encryption scheme itself. Since this involves the definition of types
+(for keys and messages) and logical constants ($\mathrm{enc}$
+and~$G$),
+it needs to be done in an accompanying Isabelle theory
+\texttt{PrgEnc.thy}.\footnote{The full theory file is bunded with the tool,
+  and also directly available at \giturl{PrgEnc.thy}.}
+
+In this theory, we first declare the types \texttt{key} and
+\texttt{msg} as abstract (i.e., unspecified) types. We want both types
+to be finite, i.e., of type class \texttt{finite} (otherwise uniform
+sampling of keys/messages is not well-defined), and we want that on
+type \texttt{msg}, $+$
+represents the XOR operation (type class \texttt{xor\_group}\footnote{This type class
+  declares \texttt{msg} as an abelian additive group with the extra law $a+a=0$.}).
+\begin{lstlisting}
+  declare_variable_type key :: finite
+  declare_variable_type msg :: "{finite,xor_group}"
+\end{lstlisting}
+
+Now we can declare the PRG $G$
+and the encryption function $\mathrm{enc}$.
+Since $G$
+is just an unspecified function, all we need to do is to declare an
+uninterpreted constant with the right type. And $\mathrm{enc}$
+can be explicitly defined:
+\begin{lstlisting}
+  axiomatization G :: "key \ensuremath{\Rightarrow} msg"
+  definition enc :: "key * msg \ensuremath{\Rightarrow} msg"
+    where [simp]: "enc = (\ensuremath{\lambda}(k,x). G(k)+x)"
+\end{lstlisting}
+
+In addition, we declare an prove some simple simplification rules for XOR
+that will be used in the proof (\texttt{my\_simp}, \texttt{mysimp2}, \texttt{aux\_bij}).
+
+\paragraph{Specification in our tool.} We now proceed to the
+specifications that are done in our tool directly. We show only
+excerpts, the full file is
+\texttt{prg-enc-rorcpa.qrhl}.\footnote{Bundled with the tool, and also
+  directly available at \giturl{prg-enc-rorcpa.qrhl}.}  We first specify the games
+from \autoref{def:roradv} and \autoref{def:prg.adv}. Consider the lhs
+game from \autoref{def:roradv}. At first, it seems like we have a
+problem here. The description of the game requires $A_1,A_2$
+to be algorithms that take arguments and return values, i.e.,
+procedures. But our language for programs does not support
+procedures. Fortunately, there is a simple workaround. We set aside a
+few global variables (\texttt{m,c,r,b}) explicitly for storing inputs
+and outputs of the adversary. So, for example, $b\leftarrow A_2(c)$
+can be performed by declaring $b,c$
+as variables accessible to $A_2$,
+and then simply calling $A_2$
+without arguments in our program. The former is achieved by the
+following commands:
+\begin{lstlisting}
+  adversary A1 vars m,cglobA,qglobA.
+  adversary A2 vars c,b,cglobA,qglobA.
+\end{lstlisting}
+(Here \texttt{cglobA} and \texttt{qglobA} are quantum variables that
+model the internal classical and quantum state of $A_1,A_2$.)
+And for calling the adversary $A_2$,
+we have the syntax \texttt{call A2;}. The resulting program code is
+given in \autoref{fig:rorprogs}. Note that \texttt{UNIV} is the set of
+all values (of a given type), so \texttt{uniform UNIV} samples
+uniformly from all keys or messages, respectively.
+
+\begin{figure}[t]\centering
+  \lstset{aboveskip=0pt,belowskip=0pt,frame=single}
+  \centering
+  \begin{tabular}{p{.45\hsize}p{.45\hsize}}
+    \textbf{Games from \autoref{def:roradv}}
+    &
+    \textbf{Games from \autoref{def:prg.adv}}
+    \\[-5pt]
+    \begin{lstlisting}
+program rorcpa0 := {
+  k <$ uniform UNIV;
+  call A1;
+  c <- enc(k,m);
+  call A2;
+}.
+
+program rorcpa1 := {
+  k <$ uniform UNIV;
+  call A1;
+  r <$ uniform UNIV;
+  c <- enc(k,r);
+  call A2;
+}.
+\end{lstlisting}
+    &
+      \begin{lstlisting}
+program prg0 := {
+  s <$ uniform UNIV;
+  r <- G(s);
+  call B;
+}.
+
+program prg1 := {
+  r <$ uniform UNIV;
+  call B;
+}.
+\end{lstlisting}
+      %$
+  \end{tabular}
+  \vspace*{-5mm}
+  \caption{Specification of games in \textttOLD{prg-enc-rorcpa.qrhl}.}
+  \label{fig:rorprogs}
+\end{figure}
+
+While $A_1$
+and $A_2$
+are declared as unspecified adversaries, we need to specify $B$
+explicitly. (Recall that we wanted to give an explict $B$
+so that the user can verify
+\autoref{lemma:rorcpa}\,\eqref{item:time}.) In our case, the adversary
+$B$ is quite simple:
+\begin{lstlisting}
+  program B := { call A1; c <- r+m; call A2; }.
+\end{lstlisting}
+It is easy to see that (assuming a suitable formalization of runtime)
+the overhead of $B$ is only $O(\log\eta)$.
+
+\paragraph{The proof.} The proof proceeds by first proving two facts as lemmas:
+\begin{lstlisting}
+  lemma rorcpa0_prg0: Pr[b=1:rorcpa0(rho)] = Pr[b=1:prg0(rho)].
+  lemma rorcpa1_prg1: Pr[b=1:rorcpa1(rho)] = Pr[b=1:prg1(rho)].
+\end{lstlisting}
+Here \texttt{rho} is an ambient variable of type
+\texttt{program\_state}, so the lemmas hold for any initial state
+\texttt{rho}. Recall that \texttt{Pr[b=1:G(rho)]} refers to the
+probability that $\mathtt{b}=1$ after \texttt{G}.
+
+The proofs of both lemmas have similar form. In both cases, we first
+transform the claim into a qRHL judgment using the tactic
+\texttt{byqrhl} We inline the definitions of \texttt{rorcpa0},
+\texttt{prg0}, and \texttt{B} using the \texttt{inline}
+tactic. Trailing assignments are removed with \texttt{wp left} or
+\texttt{wp right} when they occur. Ambient subgoals
+are proven using the \texttt{simp} tactic, possibly giving some of the auxiliary lemmas from
+\texttt{PrgEnc.thy} as hints.
+And for subgoals of the form
+$\rhl\dots{\dots;\mathtt{call}\ A}{\dots;\mathtt{call}\ A}\dots$,
+we use the \texttt{equal} tactic to remove the last statement. We use the
+\texttt{swap} tactic to swap two statements where needed to make matching
+\texttt{call}-statements occur together.  Similarly, for subgoals
+$\rhl\dots{\dots;\texttt{k <\$ uniform UNIV}}{\dots;\texttt{s <\$
+    uniform UNIV}}\dots$, we use the \texttt{rnd} tactic. In the proof
+of lemma \texttt{rorcpa0\_prg0}, we will need $k$
+and $s$
+to be sampled identically, so the basic form \texttt{rnd.} of the
+tactic is sufficient. In \texttt{rorcpa1\_prg1} we encounter a more
+interesting case: We have the subgoal
+\begin{multline*}
+  \{\dots\}{\texttt{\dots; r <\$ uniform UNIV;}}
+  \pmb\sim
+  {\texttt{\dots; r <\$ uniform UNIV;}}
+  \{\texttt{
+    ℭ𝔩𝔞[G k1 + r1 = r2 + m2}
+  \\
+  \texttt{$\land$ b1 = b2 $\land$ cglobA1 = cglobA2]
+    $\sqcap$ $\llbracket$qglobA1$\rrbracket$ $\equiv\mathfrak q$ $\llbracket$qglobA2$\rrbracket$
+  }\}
+\end{multline*}
+At first glance, it would seem that the right thing to do is to
+sample \texttt{r1} and \texttt{r2} identically by applying
+\texttt{rnd.} However, if $\mathtt{r1}=\mathtt{r2}$,
+then the part \texttt{G k1 + r1 = r2 + m2} of the postcondition will
+not be satisfied. Instead, we want to pick \texttt{r1} and \texttt{r2}
+such that their XOR is \texttt{r + G k1 + m2}. This can be achieved by the
+extended form of the \texttt{rnd} tactic that provides a witness for
+the joint distribution of \texttt{r1} and \texttt{r2}:
+\begin{lstlisting}
+  rnd r,r <- map_distr (\ensuremath{\lambda}r. (r,r + G k1 + m2)) (uniform UNIV).
+\end{lstlisting}
+This means \texttt{r} is picked uniformly, and \texttt{r1} is
+\texttt{r}, and \texttt{r2} is \texttt{r + G k1 + m2} which makes the
+postcondition true.
+
+After having shown lemmas \texttt{rorcpa0\_prg0} and
+\texttt{rorcpa1\_prg1}, we can show \autoref{lemma:rorcpa} in the
+following form:
+\begin{lstlisting}
+  lemma final: abs (Pr[b=1:rorcpa0(rho)] - Pr[b=1:rorcpa1(rho)])
+             = abs (Pr[b=1:prg0(rho)] - Pr[b=1:prg1(rho)]).
+\end{lstlisting}
+This fact follows immediately (using the Isabelle simplifier) from the
+lemmas \texttt{rorcpa0\_prg0} and \texttt{rorcpa1\_prg1}, so we can
+show it using \texttt{\frenchspacing simp ! rorcpa0\_prg0 rorcpa1\_prg1.}
+ 
+%\isafile{PrgEnc}
+%\qrhlfile{prg-enc-rorcpa}
+
+
+
+\subsubsection{IND-OT-CPA encryption from PRGs}
+\label{sec:ex.ind}
+
+The second example is the IND-OT-CPA security of the encryption scheme
+$\mathrm{enc}$
+from \autoref{sec:ex.ror}.  We give this second example to show that
+security proofs that contain more than one reduction step do not pose
+a problem. (The ROR-OT-CPA proof from \autoref{sec:ex.ror} was a
+single reduction step to the PRG security of $G$.)
+We only describe the differences to the proof from
+\autoref{sec:ex.ror}.
+
+\paragraph{The setting.}
+The \index{IND-OT-CPA}IND-OT-CPA security notion says,
+informally: The adversary cannot distinguish between an encryption
+of~$m_1$ or $m_2$, even if the adversary
+chooses~$m_1$ and~$m_2$ itself. More formally:
+\begin{definition}[IND-OT-CPA advantage]\label{def:indadv}
+  For a stateful adversary $A_1,A_2$, let \symbolindexmark\AdvIND
+  \begin{align*}
+    \AdvIND^{A_1A_2}(\eta) :=
+    \Bigl\lvert
+    &\Pr\bigl[b=1:
+        k\sampleset K,\, (m_1,m_2)\leftarrow A_1(),\, c:=\mathrm{enc}(k,m_1),\, b\leftarrow A_2(c)\bigr]
+    \\    -
+     &\Pr\bigl[b=1:
+       k\sampleset K,\, (m_1,m_2)\leftarrow A_1(),\, c:=\mathrm{enc}(k,m_2),\, b\leftarrow A_2(c)\bigr]
+       \Bigr\rvert      
+  \end{align*}
+  We call $\AdvIND^{A_1A_2}$ the \emph{IND-OT-CPA advantage}%
+  \index{advantage!IND-OT-CPA}%
+  \index{IND-OT-CPA!advantage}
+  of $A_1,A_2$.
+\end{definition}
+
+What we want to show is the following well-known fact: ``If $G$
+is pseudorandom, then $\mathrm{enc}$
+is IND-OT-CPA.'' In the concrete security setting, we can state this
+more precisely:
+\begin{lemma}[Concrete IND-OT-CPA security of $\mathbf{enc}$]\label{lemma:indcpa}
+  For any $A_1,A_2$, there exist $B_1,B_2$ such that:
+  \begin{compactenum}[(i)]
+  \item\label{item:time.ind} $\Time(B_i) \leq \Time(A_1) + \Time(A_2) + O(\log \eta)$ for $i=1,2$.
+  \item\label{item:adv.ind} $\AdvIND^{A_1,A_2}(\eta) \leq \AdvPRG^{B_1}(\eta) +  \AdvPRG^{B_2}(\eta)$.
+  \end{compactenum}
+\end{lemma}
+
+As before, we will not show \eqref{item:time.ind} in the tool but
+instead define $B_1$
+and $B_2$ explicitly, leaving the runtime analysis to the user.
+
+\paragraph{Specification.} The specification of the encryption scheme
+$\mathrm{enc}$
+and the PRG $G$
+is unchanged. That is, we use the same accompanying theory
+\texttt{PrgEnc.thy} as in \autoref{sec:ex.ror}.
+
+In our tool,\footnote{File \texttt{prg-enc-indcpa.qrhl}, bundled with
+  the tool, and also directly available here: \giturl{prg-enc-indcpa.qrhl}.} we have
+to describe the two IND-OT-CPA games from \autoref{def:indadv}
+(\texttt{indcpa0} and \texttt{indcpa1} in \autoref{fig:indprogs}), as well as the
+two PRG games from \autoref{def:prg.adv}. For the latter, there is a
+minor issue: Since we have two reductions to the security of $G$,
+we need to invoke the security of $G$
+twice, once for the adversary $B_1$,
+and once for the adversary $B_2$.
+Since our tool does not have a module system that would allow us to
+generically instantiate the same game with different adversaries
+(e.g., EasyCrypt's module system allows us to specify the games with a
+module parameter that is then instantiated with an adversary module),
+we need to write down the games from \autoref{def:prg.adv} twice, once
+for adversary $B_1$
+(\texttt{prg0B1} and \texttt{prg1B1} in \autoref{fig:indprogs}) and once for
+adversary $B_2$ (\texttt{prg0B1} and \texttt{prg1B1}).
+
+\begin{figure}[t]\centering
+  \lstset{aboveskip=0pt,belowskip=0pt,frame=single}
+  \centering
+  \begin{tabular}{p{.5\hsize}p{.4\hsize}}
+    \textbf{Games from \autoref{def:indadv}}
+    &
+    \textbf{Games from \autoref{def:prg.adv}}
+    \\[-5pt]
+    \begin{lstlisting}
+adversary A1 vars m1,m2,cglobA,qglobA.
+adversary A2 vars c,b,cglobA,qglobA.
+
+program indcpa0 := {
+  k <$ uniform UNIV;
+  call A1;
+  c <- enc(k,m1);
+  call A2;
+}.
+
+program indcpa1 := {
+  k <$ uniform UNIV;
+  call A1;
+  c <- enc(k,m2);
+  call A2;
+}.
+\end{lstlisting}
+    &
+      \begin{lstlisting}
+program prg0B1 := {
+  s <$ uniform UNIV;
+  r <- G(s);
+  call B1; }.
+
+program prg1B1 := {
+  r <$ uniform UNIV;
+  call B1; }.
+
+program prg0B2 := {
+  s <$ uniform UNIV;
+  r <- G(s);
+  call B2; }.
+
+program prg1B2 := {
+  r <$ uniform UNIV;
+  call B2; }.
+\end{lstlisting}
+      %$
+  \end{tabular}
+  \vspace*{-5mm}
+  \caption{Specification of games in \textttOLD{prg-enc-indcpa.qrhl}.}
+  \label{fig:indprogs}
+\end{figure}
+
+And, of course, we need to explicitly specify the adversaries $B_1$ and $B_2$:
+\begin{lstlisting}
+  program B1 := { call A1; c <- r+m1; call A2; }.
+  program B2 := { call A1; c <- r+m2; call A2; }.
+\end{lstlisting}
+It is easy to see that they satisfy the runtime conditions in
+\autoref{lemma:indcpa}\,\eqref{item:time.ind}.
+
+
+\paragraph{The proof.}
+We use the following sequence of games:
+\begin{equation*}
+  \framebox{\texttt{indcpa0}}
+  \overset=\longleftrightarrow
+  \framebox{\texttt{prg0B1}}
+  \xleftrightarrow{\AdvPRG^{B_1}}
+  \framebox{\texttt{prg1B1}}
+  \overset=\longleftrightarrow
+  \framebox{\texttt{prg1B2}}
+  \xleftrightarrow{\AdvPRG^{B_2}}
+  \framebox{\texttt{prg0B2}}
+  \overset=\longleftrightarrow
+  \framebox{\texttt{indcpa1}}
+\end{equation*}
+Here $\overset=\longleftrightarrow$
+means that we show that the probability of $b=1$
+is the same in the two games. And $\xleftrightarrow{\AdvPRG^{B_i}}$
+means that the difference of $\Pr[b=1]$
+is $\AdvPRG^{B_i}$
+(we do not need to prove those arrows, since that difference between those games is  $\AdvPRG^{B_i}$ by definition).
+
+The three $\overset=\longleftrightarrow$ are shown in the following lemmas:
+\begin{lstlisting}
+  lemma indcpa0_prg0B1: Pr[b=1:indcpa0(rho)] = Pr[b=1:prg0B1(rho)].
+  lemma prg1B1_prg1B21: Pr[b=1:prg1B1(rho)]  = Pr[b=1:prg1B2(rho)].
+  lemma indcpa1_prg0B2: Pr[b=1:indcpa1(rho)] = Pr[b=1:prg0B2(rho)].
+\end{lstlisting}
+The proofs of these lemmas are similar to the ones in \autoref{sec:ex.ror}.
+
+From these three lemmas we immediately get the final result (which
+encodes \autoref{lemma:indcpa}\,\eqref{item:adv.ind}):
+\begin{lstlisting}
+  lemma final: abs( Pr[b=1:indcpa0(rho)] - Pr[b=1:indcpa1(rho)] ) <=
+               abs( Pr[b=1:prg0B1(rho)]  - Pr[b=1:prg1B1(rho)] ) +
+               abs( Pr[b=1:prg0B2(rho)]  - Pr[b=1:prg1B2(rho)] ).
+\end{lstlisting}
+This can be proven immediately using the tactic \texttt{\frenchspacing
+  simp !  indcpa0\_prg0B1 indcpa1\_prg0B2 prg1B1\_prg1B21.}
+
+%\qrhlfile{prg-enc-indcpa}
+
+\subsubsection{Quantum equality}
+\label{sec:qeq.example}
+
+In the file \texttt{equality.qrhl}\footnote{Bundled with the tool, and
+  also available directly at \giturl{equality.qrhl}.} we give a simple
+example involving reasoning about quantum equality. We show
+\begin{equation}\label{eq:equality}
+\rhl{\qq_1\quanteq\qq_2}{\mathtt{prog1}}{\mathtt{prog2}}{\qq_1\quanteq\qq_2}
+\end{equation}
+for the following programs:
+
+{\centering
+    \lstset{aboveskip=0pt,belowskip=0pt}
+\begin{tabular}{p{.46\hsize}@{\hskip40pt}p{.43\hsize}}
+  \begin{lstlisting}
+program prog1 := {
+  b <$ uniform UNIV;
+  if (b=1) then on q apply hadamard;
+           else skip;
+}.
+  \end{lstlisting}%
+  &
+  \begin{lstlisting}
+program prog2 := {
+  on q apply hadamard;
+  b <$ uniform UNIV;
+  on q apply (if b=1
+     then hadamard else idOp); }.
+  \end{lstlisting}%
+\end{tabular}
+}
+
+The first program \texttt{prog1} picks a random bit $b$
+and applies the Hadamard operation $H$
+to $\qq$
+iff $b=1$.
+The second program \texttt{prog2} additionally first applies $H$,
+then picks $b$,
+and then applies $H$
+iff $b=1$.
+Since $H^2=\id$,
+in both programs $H$
+is applied to $\qq$
+with probability $\frac12$,
+so we expect them to have the same effect on $\qq$.
+This is what \eqref{eq:equality} expresses.
+
+There are two important differences between \texttt{prog1} and
+\texttt{prog2}. First, \texttt{prog2} performs an additional
+application of $H$
+which means that the $b=1$
+case of \texttt{prog2} corresponds to the $b=0$
+case in \texttt{prog1} and vice versa. And secondly, we have written
+the conditional application of $H$
+differently.  In \texttt{prog1}, if $b=1$,
+$H$
+is applied, otherwise nothing is done.  In contrast, in
+\texttt{prog2}, there is always an application on $\qq$,
+but the operator that is applied is computed using the expression
+\texttt{if b=1 then hadamard else idOp} which evaluates to $H$
+or to the identity. In other words, in \texttt{prog1}, we use a
+language-level conditional and perform an actual branching. While in
+\texttt{prog2}, no branching occurs, and the conditional is encoded in
+the computation of the unitary that is applied. Of course, this should
+not make a difference, but we formulated the two programs differently
+to demonstrate that our logic can handle both approaches gracefully.
+
+We will formalize two proofs. The first is a bit longer, and
+explicitly states the invariants and case distinctions that are
+made. This makes the proof more instructive. The second proof makes is
+as terse as possible, simply applying tactics to remove statements
+from the end of the programs, and relying on the simplifier to remove
+the final, lengthy, verification condition.
+
+\paragraph{The ``instructive'' proof.} We start with the qRHL subgoal
+\[
+\rhl{\qq_1\quanteq \qq_2} {\mathtt{call\ prog1;}} {\mathtt{call\ prog2;}} {\qq_1\quanteq \qq_2}
+\]
+and use the tactic \texttt{inline} to inline the code of both
+programs. Then we use \texttt{seq 0 1: $I_1$}
+with
+$I_1:=\texttt{quantum\_equality\_full idOp
+  $\llbracket$q1$\rrbracket$
+  hadamard $\llbracket$q2$\rrbracket$}$
+to split off the first statement of the right program. That is, we
+claim that after executing the first statement of the right program
+(an application of Hadamard $H$
+on $\qq$),
+the precondition $\qq_1\quanteq\qq_2$
+is transformed into $\id\,\qq_1\quanteq H\qq_2$.
+Intuitively, this is what we expect, because if originally
+$\qq_1\quanteq \qq_2$,
+and the new $\qq_2$
+is the result of applying $H$
+to $\qq_2$,
+then the new $\qq_2$
+should equal $\qq_1$
+if we apply another $H$
+to it. The resulting subgoal can be solved easily using \texttt{\frenchspacing wp
+  right. skip. simp.}
+
+We are left with the new goal
+\begin{multline*}
+  \{I_1\}\
+  {\texttt{b <\$ uniform UNIV;
+      if (b=1) then on q apply hadamard; else skip;}} \\
+  \pmb\sim
+  {\texttt{b <\$ uniform UNIV;
+      on q apply (if b=1 then hadamard else idOp);}}
+  \
+  \{\qq_1\quanteq\qq_2\}
+\end{multline*}
+We then claim that the sampling of $b$
+on both sides leads to $b_1\neq b_2$.
+That is, we use the tactic \texttt{seq 1 1: $I_2$}
+with
+$I_2:=\texttt{quantum\_equality\_full idOp
+  $\llbracket$q1$\rrbracket$
+  hadamard $\llbracket$q2$\rrbracket$
+  $\sqcap$ Cla[b1≠b2].}$ to split off the two samplings into a separate qRHL
+judgement. That judgement can be solved using the \texttt{rnd}
+tactic. Since we want $b_1\neq b_2$
+to hold, we cannot use the simple form of \texttt{rnd}, but instead we
+use \texttt{\frenchspacing rnd b,b <- map\_distr ($\lambda$b.
+  (b,b+1)) (uniform UNIV)} to tell the tool to sample $b_1$
+and $b_2$
+so that they will always be inequal. (Note: $b+1$
+is the negation of the bit $b$
+since $+$
+is XOR on bits.)  We use \texttt{\frenchspacing skip. simp!} to discharge the remainder of
+this subgoal.
+
+Now, we are left with the subgoal
+\begin{multline}
+  \{I_2\}\
+  {\texttt{if (b=1) then on q apply hadamard; else skip;}} \\
+  \pmb\sim
+  {\texttt{on q apply (if b=1 then hadamard else idOp);}}
+  \
+  \{\qq_1\quanteq\qq_2\}
+  \label{eq:I2.rhl}
+\end{multline}
+Note that $I_2$
+contains the program variables $b_1,b_2$
+upon which further branching depends. To be able to make a case
+distinction over their values, we need to be able to refer to their
+values in the ambient logic. To this end, we apply the tactic
+\texttt{case z := b1}. This adds $\CL{\texttt{b1 = z}}$
+to the precondition where $z$
+is an ambient variable. (That means that we can treat $z$
+as a fixed value and make a case distinction over its value.)  The
+case distinction itself is done via \texttt{casesplit z=0.} This will
+create two new subgoals, one with the additional assumption (in the
+ambient logic, not in the precondition) that $z=0$,
+and one that $z\neq 0$.
+The rest of the subgoal is still as in \eqref{eq:I2.rhl}.
+
+To finish the first subgoal, we apply \texttt{\frenchspacing wp left. wp right.}
+which removes the remaining statements and changes the postcondition
+accordingly. Then \texttt{\frenchspacing skip. simp.} solves the subgoal. The
+$z\neq0$ subgoal is solved analogously.
+
+\paragraph{The ``terse'' proof.} As it turns out, the previous proof
+is much more verbose than needed. Instead of explicitly using
+\texttt{seq}, \texttt{case}, and \texttt{casesplit} to decompose the
+proof into understandable subgoals, we can use the ``straightforward''
+approach and simply remove statement by statement from the end of the
+programs, and leave it to the simplifier to prove the resulting
+statement. That is, we use \texttt{wp left. wp right} to remove
+the conditional applications of $H$,
+then we use \texttt{\frenchspacing rnd b,b <- map\_distr ($\lambda$b. (b,b+1)) (uniform
+  UNIV)} to remove the two samplings (in a way that ensures
+$b_1\neq b_2$). We
+use \texttt{wp right} to remove the remaining application of $H$
+in the first line of the right program, and then apply \texttt{skip.}
+We get a lengthy and hardly readable verification condition, but
+fortunately, it can be discharged by an application of \texttt{simp.}
+
+Why did we need the more complex approach in the first proof? In this
+simple example, we did not. However, in more complex cases, breaking
+the proof down in individual cases, and simplifying intermediate
+pre- and postconditions may make it easier for the simplifier (if the overall goal
+is too complex to be solved in one go), and it may help the user to debug
+the proof. (For example, to figure out the right witness to be used in
+the \texttt{rnd b,b <- ...} tactic, it helps to have a readable pre- and
+postcondition. And case distinctions help us to distinguish in which
+case a problem arises and to narrow down what it is.
+
+
+%\qrhlfile{equality}
+
+
+
+\subsubsection{Quantum teleportation}
+
+The final example is the analysis of quantum teleportation
+\cite{bennett93teleport}. Quantum teleportation is a quantum protocol that allows
+us to move a qubit from a quantum register $C$
+to a quantum register $B$
+with only classical communication between the system containing $C$
+and the system containing $B$
+(assuming a shared initial state).  The program \texttt{teleport} that
+describes the teleportation process is shown in \autoref{fig:teleport}.
+%
+\begin{figure}[t]\centering
+  \lstset{aboveskip=0pt,belowskip=0pt}
+  \centering
+  \begin{tabular}{p{.57\hsize}p{.4\hsize}}
+  \begin{lstlisting}
+program teleport := {
+  A,B <q EPR;
+  on C,A apply CNOT;
+  on C apply hadamard;
+  a <- measure A with computational_basis;
+  c <- measure C with computational_basis;
+  if (a=1) then on B apply pauliX;
+           else skip;
+  if (c=1) then on B apply pauliZ;
+           else skip;  }.
+\end{lstlisting}
+    &
+      \tikzset{>=stealth}
+      \def\defaultWireGap{-7mm}
+      \raisebox{-\height}{\begin{tikzpicture}
+        \initializeCircuit;
+        \newWires{C,A,B};
+        \node[wireInput=C] (Cin) {$\psi$};
+        \draw[decorate,decoration={mirror,brace,amplitude=3pt,raise=3pt}]
+             ($(\getWireCoord{A})+(0,.7mm)$) -- node[left,xshift=-2mm] {\small\texttt{EPR}}
+             ($(\getWireCoord{B})+(0,-.7mm)$);
+        \stepForward{2mm};
+        \labelWire[\tiny$C$]{C};
+        \labelWire[\tiny$A$]{A};
+        \labelWire[\tiny$B$]{B};
+        \stepForward{2mm};
+        {tikzset{minimum size=1mm} \node[cnot=A,control=C] (cnot) {};}
+        \stepForward{4mm};
+        \node[gate=C] (H) {$H$};`
+        \node[gate=A] (mA) {\rlap{\small\ /}$\frown$};
+        \stepForward{3mm};
+        {\tikzset{quantumWire/.style={double,->}};
+          \drawWire{A}; \node[right=0mm of \getWireCoord{A}] {$a$};}
+        \stepForward{1mm};
+        \node[gate=C] (mC) {\rlap{\small\ /}$\frown$};
+        \node[gate=B] (X) {$X$};
+        \node[below=0mm of X] {\tiny if $a{=}1$};
+        \stepForward{3mm};
+        {\tikzset{quantumWire/.style={double,->}};
+          \drawWire{C}; \node[right=0mm of \getWireCoord{C}] {$c$};}
+        \stepForward{1mm};
+        \node[gate=B] (Z) {$Z$};
+        \node[below=0mm of Z] {\tiny if $c{=}1$};
+        \stepForward{2mm};
+        \drawWire{B};
+        \node[right=0mm of \getWireCoord{B}] {$\psi$};
+      \end{tikzpicture}}
+%      \raisebox{-\height}{\includegraphics[width=\hsize]{teleport.png}}
+  \end{tabular}
+  \vspace*{-3mm}
+  \caption{Quantum teleportation as a program and as a circuit.}
+  \label{fig:teleport}
+\end{figure}
+% 
+We will
+show the following fact:
+\begin{equation}\label{eq:teleport.claim}
+  \rhl{C_1\quanteq A_2}{\mathtt{teleport}}{\Skip}{B_1\quanteq A_2}
+\end{equation}
+That is, we show that if $C_1$
+contains a qubit that is equal to $A_2$,
+then after teleporting $C_1$
+to $B_1$, $B_1$ will be equal to $A_2$ as expected.
+
+
+As with the example from \autoref{sec:qeq.example}, we formalize two
+proofs of \eqref{eq:teleport.claim}, an ``instructive'' one with
+explictly stated intermediate invariants and case distinctions, and a
+``terse'' one that simply applies \texttt{wp} as often as needed and
+relies on Isabelle to decide the final verification condition.
+
+This example serves both as an illustration that we can analyze
+protocols that make use of non-trivial quantum effects (as opposed to
+the examples in \autoref{sec:ex.ror} and \autoref{sec:ex.ind} which
+simply maintained equality between two quantum states without ever
+performing any explicit operations on it), and as a further example on
+how to use the quantum equality.
+
+\paragraph{The ``instructive'' proof.} This proof is formalized in \texttt{teleport.qrhl}.\footnote{Bundled with the tool, and also directly available at \giturl{teleport.qrhl}.}
+The initial subgoal is \eqref{eq:teleport.claim}. We use the tactic
+\texttt{inline teleport} to inline the definition of
+\texttt{teleport}. First, we reason about the first instruction in
+\texttt{teleport}, the initialization of $A,B$
+with an EPR state (\texttt{A,B <q EPR}). We claim that after that
+step, the invariant
+$I_1:={(C_1\quanteq A_2) \sqcap (\mathtt{span}
+\{\mathtt{EPR}\}\text\guillemotright\llbracket A_1,B_1\rrbracket)}$
+holds. Intuitively, this is what we expect, since after initializing
+$A,B$
+with \texttt{EPR} on the left side, their state with will be in
+$\SPAN\ \{\mathtt{EPR}\}$.
+We formalize this with the tactic \texttt{seq 1 0: $I_1$},
+and the resulting subgoal can be proven directly using
+\texttt{\frenchspacing wp left. skip. simp.}
+
+Then we rewrite the precondition $I_1$
+into
+\[
+  I_2:=(\mathtt{quantum\_equality\_full}\ \mathtt{idOp}\ ⟦C_1,A_1,B_1⟧\
+  (\texttt{addState EPR})\ ⟦A_2⟧)
+\] using tactic \texttt{\frenchspacing conseq pre: $I_2$.}
+We get a new subgoal $I_1\leq I_2$
+which can be proven using \texttt{simp quantum\_eq\_add\_state.}
+(\texttt{quantum\_eq\_add\_state} is the Isabelle formulation of
+\qrhlautoref{lemma:quanteqaddstate}). Intuitively, $I_2$
+states that after the initialization, $C_1A_1B_1$
+are in the same state as $A_2$
+would be if we were to add the state $\mathtt{EPR}$ to it.
+
+
+We now have the subgoal
+\[
+\rhl{I_2}{\bc_1}\Skip{B_1\quanteq A_2}
+\]
+where $\bc_1$ is \texttt{teleport} without the first line.
+
+We now show that the next two lines (applying CNOT and Hadamard)
+lead to the following invariant:
+\begin{multline*}
+  I_3 := \Bigl(\texttt{quantum\_equality\_full idOp }⟦C_1,A_1,B_1⟧
+    \\
+  \pb\paren{(\mathtt{hadamard} ⊗ \mathtt{idOp}) ⋅ \mathtt{assoc\_op}^* ⋅
+    (\mathtt{CNOT} ⊗ \mathtt{idOp}) ⋅ \mathtt{assoc\_op} ⋅ \mathtt{addState}\ \mathtt{EPR}}\ ⟦A_2⟧
+  \Bigr)
+\end{multline*}
+In other words, we claim that after those two lines, the quantum
+registers $C_1A_1B_1$
+will contain the state that $A_2$
+would contain if we added the state \texttt{EPR} to it, and then
+applied CNOT on the first two and Hadamard on the first register.
+What are the unexpected additional operations \texttt{assoc\_op} and
+$\texttt{assoc\_op}^*$?
+These are needed due to the fact that in Isabelle/HOL,
+$(\alpha\times\beta)\times\gamma$
+and $\alpha\times(\beta\times\gamma)$
+are not the same type, although in handwritten mathematics, one
+usually identifies those types. For example
+$\mathtt{addState}\ \mathtt{EPR}$
+is an operator from $\elltwo{\mathtt{bit}}$
+to $\elltwo{\mathtt{bit}\times(\mathtt{bit}\times\mathtt{bit})}$.
+And $\mathtt{CNOT}\otimes\mathtt{idOp}$
+is an operator on
+$\elltwo{(\mathtt{bit}\times\mathtt{bit})\times\mathtt{bit}}$.
+So we cannot multiply those operators (a type error would be raised by
+Isabelle and by our tool). Instead, we need to apply
+$\mathtt{assoc\_op}$
+in between, which is the canonical isomorphism between
+$\elltwo{\mathtt{bit}\times(\mathtt{bit}\times\mathtt{bit})}$
+to $\elltwo{(\mathtt{bit}\times\mathtt{bit})\times\mathtt{bit}}$.
+(If we identify $(\alpha\times\beta)\times\gamma$
+and $\alpha\times(\beta\times\gamma)$,
+then \texttt{assoc\_op} is the identity.) Similarly,
+$\texttt{assoc\_op}^*$
+is the canonical isomorphism in the opposite direction.
+
+In the tool, claiming that the new invariant after the CNOT and the
+Hadamard is $I_3$
+is done via the tactic \texttt{seq 2 0: $I_3$.}
+To prove the new subgoal resulting from \texttt{seq}, we apply
+\texttt{\frenchspacing wp left. wp left. skip. simp.} This leaves us
+with an ambient subgoal relating quantum predicates. Unfortunately,
+the \texttt{simp} tactic is not able to solve this subgoal. Therefore
+we outsourced this subgoal to Isabelle/HOL. Namely, we copy-and-pasted
+the subgoal into the accompanying theory
+\texttt{Teleport.thy},\footnote{Bundled with the tool, and also
+  directly available at \giturl{Teleport.thy}.}
+That is, we proved a lemma of the form
+\begin{lstlisting}
+  lemma teleport_goal1:
+  assumes[simp]: "declared_qvars \ensuremath{\llbracket}A1,B1,C1,A2\ensuremath{\rrbracket}"
+  shows "..."
+\end{lstlisting}
+where \texttt{...} is the copy-and-pasted subgoal. Note the assumption
+\texttt{"declared\_qvars $\llbracket$A1,B1,C1,A2$\rrbracket$"}.
+This one basically tells Isabelle that \texttt{A1,B1,C2,A2} can be
+treated as distinct quantum variables. (Because logically, free
+variables in an Isabelle lemma do not have to refer to different
+entities.) With this assumption added to the simplifier
+(using \texttt{[simp]}), simplification rules that reason about quantum
+variables will work correctly. The lemma is proven by stating two
+intermediate simple facts and then running the simplifier with a
+collection of facts from the theory \texttt{QRHL}. We omit the details.  Once
+we have shown \texttt{telepost\_goal1} in Isabelle, we can use it in
+our tool. Namely, to prove the subgoal, we use the tactic \texttt{rule
+  telepost\_goal1} in our tool. This leaves us with one new subgoal (corresponding to
+the \texttt{"declared\_qvars $\llbracket$A1,B1,C1,A2$\rrbracket$"}
+assumption of the lemma) which can be discharged by \texttt{simp}.
+
+The goal is now:
+\[
+  \rhl{I_3}{\bc_3}\Skip{B_1\quanteq A_2}
+\]
+where $\bc_3$
+refers to \texttt{teleport} without the first three lines.
+
+Next we analyze the effect of the first measurement.  If the outcome
+of the measurement is $a_1$,
+then this means that the state of $A_1$
+is projected onto $\basis{A_1}{a_1}$.
+So, after the measurement, the predicate $I_4:={}$\texttt{Proj
+  (span \{ket $a_1$\})»⟦$A_1$⟧
+  $\cdot$
+  $I_3$}
+should be satisfied. We express this using the tactic
+\texttt{\frenchspacing seq 1 0: $I_4$.}
+To prove the resulting subgoal, we apply the tactics \texttt{\frenchspacing
+  wp left. simp. skip. simp} as usual. This leaves us with an ambient
+subgoal of roughly the following form:
+\[
+  \forall x.\ I_3 \leq
+\texttt{Proj
+  (span \{ket $x$\})»⟦$A_1$⟧}
+\cdot I_3
+\sqcap 
+\texttt{span \{ket $x$\}»⟦$A_1$⟧}
++
+\mathtt{ortho}\ (\texttt{span \{ket $x$\}»⟦$A_1$⟧})
+\]
+We remove the all-quantifier using tactic \texttt{fix a'}.
+Then the fact can be shown using tactic \texttt{rule move\_plus\_meas\_rule},\footnote{The lemma \texttt{move\_plus\_meas\_rule} says
+  $(\texttt{Proj}\ C)\textrm\guillemotright Q ⋅ A ≤ B \implies
+ A ≤ (B⊓C\textrm\guillemotright Q) + (\mathtt{ortho}\ C)\textrm\guillemotright Q$
+and is useful for simplifying inequalities between predicates arising from \texttt{wp} applied to a measurement.}
+followed by simplification.
+
+We are now left with the goal
+\[
+  \rhl{I_4}{\bc_4}\Skip{B_1\quanteq A_2}
+\]
+where $\bc_4$ is \texttt{teleport} without the first four lines.
+
+
+In order to be able to refer to the value of $a_1$ in the ambient logic, we apply the tactic \texttt{case a'}, this changes the subgoal into 
+\[
+  \rhl{\CL{a_1=a'}\sqcap I_4}{\bc_4}\Skip{B_1\quanteq A_2}
+\]
+
+We now analyze the effect of the second measurement.  If the outcome
+of the measurement is $c_1$,
+then this means that the state of $C_1$
+is projected onto $\basis{C_1}{c_1}$.
+So, after the measurement, the predicate
+$I_5:=\CL{a_1=a'}\sqcap {}$\texttt{Proj
+  (span \{ket $c_1$\})»⟦$C_1$⟧
+  $\cdot$
+  $I_4$} holds.
+This step is similar to the previous one (\texttt{\frenchspacing seq
+  1 0: $I_5$}
+etc.), we omit the details. We again use tactic \texttt{case c'} to
+be able to refer to $c_1$ in the ambient logic.
+We have the following goal:
+\[
+  \rhl{\CL{c_1=c'}\sqcap I_5}{\bc_5}\Skip{B_1\quanteq A_2}
+\]
+where $\bc_5$ is \texttt{teleport} without the first five lines.
+
+Now we will do a case distinction over the four different
+possibilities for $a',c'$.
+We get the first case using the tactics \texttt{\frenchspacing
+  casesplit a'=0.  casesplit c'=0.} The current subgoal now has the
+assumptions $a'=0$ and $c'=0$. Using these assumptions, we can rewrite the precondition into
+\[
+  I_6 := \CL{a_1=0 \land c_1=0} \sqcap
+  \underbrace{\texttt{Proj (span \{ket $0$\})»⟦$C_1$⟧}
+  \cdot
+  \texttt{Proj (span \{ket $0$\})»⟦$A_1$⟧}
+  \cdot I_3}_{{}=:I_7}
+\]
+using \texttt{conseq pre: $I_6$.}
+Besides minor reordering of terms, we basically just substituted
+$a':=0$
+and $c':=0$
+(which is justified by the assumptions), so the resulting subgoal can
+be solved directly by \texttt{simp!.} The goal is then:
+\[
+  \rhl{I_6}{\bc_5}\Skip{B_1\quanteq A_2}
+\]
+
+Now we analyze the remaining two lines of \texttt{teleport}, namely
+the conditionally applied unitaries \texttt{pauliX} and
+\texttt{pauliZ}. In the case $a_1=0,c_1=0$,
+they will not be applied, so after the last two lines, the predicate
+$I_7$
+is still satisfied. (In the other three cases, additionally
+\texttt{pauliZ»⟦$B_1$⟧}
+and/or \texttt{pauliX»⟦$B_1$⟧}
+would be multiplied to $I_7$.)
+We show this using \texttt{\frenchspacing seq 2 0: $I_7$.
+  wp left. wp left. skip. simp!.}
+
+We finally have the subgoal
+\[
+  \rhl{I_7}\Skip\Skip{B_1\quanteq A_2}
+\]
+This is transformed into $I_7\leq (B_1\quanteq A_2)$
+by tactic \texttt{skip}.  What does this inequality say? It says that
+if we have a state on $C_1A_1B_1$
+that is equal to $A_2$
+after adding \texttt{EPR} and applying CNOT and Hadamard, and then we
+apply projections onto $\basis{A_1}0$
+and $\basis{C_1}0$ to the state,
+then that state satisfies $B_1\quanteq A_2$.
+Showing this inequality is the core of the actual proof that teleportation
+works. We show this inequality by explicit computation of the involved operators
+and subspaces. We use the code generation mechanism of Isabelle for
+this explicit computation.  That is, we copy-and-paste
+the subgoal into the accompanying theory \texttt{Teleport.thy} as a lemma.
+\begin{lstlisting}
+  lemma teleport_goal2_a0c0:
+    assumes[simp]: "declared_qvars \ensuremath{\llbracket}A1,B1,C1,A2\ensuremath{\rrbracket}"
+    shows "$I_7\leq (B_1\quanteq A_2)$"
+      apply (simp add: prepare_for_code) by eval
+\end{lstlisting}
+(See \autoref{sec:isabelle} for an explanation of
+\texttt{prepare\_for\_code} and \texttt{eval}.)  With this lemma in
+the accompanying theory, we can solve the goal in our tool using
+\texttt{\frenchspacing rule teleport\_goal2\_a0c0.  simp!.}
+
+The other three cases for $a',c'$ are solved analogously.
+
+
+
+\paragraph{The ``terse'' proof.}
+The proof described above shows the predicates that hold after each
+step of the teleportation program. However, a much shorter (and less
+explicit) proof is possible, too. This proof is given in
+\texttt{teleport-terse.qrhl}.\footnote{Bundled with the tool, and also
+  directly available at \giturl{teleport-terse.qrhl}.}  The definition of the
+program \texttt{teleport} is the same as before (see
+\autoref{fig:teleport}). To prove the goal \eqref{eq:teleport.claim},
+we unfolding the definition of \texttt{teleport} using \texttt{inline
+  teleport}, then apply the tactic \texttt{wp left} seven times to get
+a goal of the form $\rhl{\dots}\Skip\Skip\dots$,
+and the apply \texttt{skip}. We now get a lengthy inequality between
+predicates as the remaining goal. While this inequality is hardly
+readable (it is an 814 character string), we can just copy-and-paste
+it into the accompanying theory
+\texttt{Teleport\_Terse.thy}\footnote{Bundled with the tool, and also
+  directly available at \giturl{Teleport\_Terse.thy}.} as a lemma
+\texttt{teleport\_terse} and prove it using Isabelle's code generation
+(see \autoref{sec:isabelle}). With that lemma, the goal is proven
+with the tactics \texttt{\frenchspacing rule teleport\_terse. simp!.}
+
 
 \printbibliography
 
 \renewcommand\symbolindexentry[4]{\noindent\hbox{\hbox to 2in{$#2$\hfill}\parbox[t]{3.5in}{#3}\hbox to 1cm{\hfill #4}}\\[2pt]}
 
-\fullonly \printsymbolindex
+\printsymbolindex
 
-\fullonly \printindex  
+\printindex  
 
 
 \end{document}

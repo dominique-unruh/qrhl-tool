@@ -1,7 +1,5 @@
-theory TestEx 
-  imports QRHL.QRHL TestEx2
+theory TestEx
+  imports QRHL.QRHL
 begin
-
-definition "x == 10"
 
 end

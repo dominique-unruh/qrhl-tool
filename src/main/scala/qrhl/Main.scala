@@ -28,6 +28,7 @@ object Main {
     } else if (conf.file.isDefined) {
       val tl = new Toplevel()
       tl.run(Paths.get(conf.file.toOption.get))
+      sys.exit()
 //      tl.dispose()
     } else
       Toplevel.main()

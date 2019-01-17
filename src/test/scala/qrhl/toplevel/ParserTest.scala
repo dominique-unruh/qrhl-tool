@@ -1,6 +1,6 @@
 package qrhl.toplevel
 
-import info.hupel.isabelle.Operation.ProverException
+import info.hupel.isabelle.ProverResult
 import info.hupel.isabelle.hol.HOLogic
 import org.scalatest.FunSuite
 import qrhl.UserException
@@ -30,7 +30,7 @@ class ParserTest extends FunSuite {
   }
 
   test("fail to parse while loop") {
-    assertThrows[ProverException] {
+    assertThrows[ProverResult.Failure] {
       val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; };")
     }
   }

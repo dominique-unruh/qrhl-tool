@@ -24,8 +24,11 @@ case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
     val mismatches = new mutable.LinkedHashSet[(Statement,Statement)]()
     val env = state.environment
 
+    // Adds the classical variables in e to cvars
     def collectExpr(e: RichTerm): Unit = e.caVariables(env,cvars,dummy)
 
+    // For l=C[l1,...,ln], r=C[r1,...,rn] for programs li, ri, adds all (li,ri) to mismatches
+    // Also adds all classical/quantum variables in l,r to cvars/qvars
     def collect(l: Statement, r: Statement) : Unit = (l,r) match {
       case (Assign(xl,el), Assign(xr,er)) if xl==xr && el==er =>
         cvars += xl; collectExpr(el)
@@ -55,28 +58,27 @@ case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
     }
 
     collect(left,right)
+    // For left=C[l1,...,ln], right=C[r1,...,rn] for programs li, ri, mismatches contains all (li,ri) (in order but without duplicates)
+    // And cvars/qvars contains all classical/quantum variables in left,right.
 
     val cvarsIdx1 = cvars.toList.map(_.index1)
     val cvarsIdx2 = cvars.toList.map(_.index2)
     val qvarsIdx1 = qvars.toList.map(_.index1)
     val qvarsIdx2 = qvars.toList.map(_.index2)
-//    val forbidden = cvarsIdx1.map(_.name).toSet ++ cvarsIdx2.map(_.name) ++ qvarsIdx1.map(_.name) ++ qvarsIdx2.map(_.name)
 
+    // Computes wp and colocality, see QRHL.callWp in Isabelle/ML sources
     val (wp, colocality) = state.isabelle.isabelle.invoke(callWpOp,
       ((cvarsIdx1.map(_.valueTerm), cvarsIdx2.map(_.valueTerm),
         qvarsIdx1.map(_.variableTerm)), (qvarsIdx2.map(_.variableTerm),
         post.isabelleTerm, state.isabelle.contextId)))
-//    val wp2 = Expression(Isabelle.predicateT, wp)
-//    val colocality2 = Expression(Isabelle.boolT, colocality)
-
-    if (mismatches.nonEmpty) {
-      println("*** WARNING: equal tactic with mismatches is not proven or carefully thought through yet! ***")
-    }
 
     val mismatchGoals = mismatches.toList.map {
       case (l,r) => QRHLSubgoal(l.toBlock,r.toBlock,wp,wp,Nil)
     }
 
+    // For each element (l,e) of mismatches, mismatchGoals contains a goal of the form {wp}l~r{wp}
+
+    // Returns wp as the "weakest precondition", and colocality and mismatchGoals as additional goals.
     (wp,AmbientSubgoal(colocality)::mismatchGoals)
   }
 

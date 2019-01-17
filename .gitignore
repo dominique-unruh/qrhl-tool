@@ -13,7 +13,6 @@
 /tmp
 /doc/*.lst
 /doc/makesymind.py
-./
 /doc/declmath.css
 /doc/declmath.js
 /doc/declmath.sty
@@ -68,3 +67,9 @@
 .idea/modules.xml
 .idea/*.iml
 .idea/modules
+
+_region_.tex
+_region_.prv
+prv_manual.fmt
+
+manual.toc
