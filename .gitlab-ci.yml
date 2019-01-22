@@ -9,7 +9,7 @@ build:
     untracked: true
 
 test:
-  depencendies:
+  dependencies:
     - build
   script: sbt test
   artifacts:
@@ -17,7 +17,7 @@ test:
       junit: target/test-reports/TEST-*.xml
 
 test-distrib:
-  depencendies:
+  dependencies:
     - build
   script: make test-distrib
 
