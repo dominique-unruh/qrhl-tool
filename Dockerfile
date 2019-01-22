@@ -1,0 +1,1 @@
+FROM aergus/latex

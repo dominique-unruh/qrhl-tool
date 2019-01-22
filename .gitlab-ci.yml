@@ -3,13 +3,19 @@ cache:
     - isabelle-temp/
     - tmp/*/isabelle-tmp
     - cache/
-    
 
 stages:
   - build
   - test
   - test2
   - package
+
+make-image:
+  when: manual
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    - docker build -t registry.gitlab.com/unruh/qrhl-tool/build-image .
+    - docker push registry.gitlab.com/unruh/qrhl-tool/build-image
 
 build:
   stage: build
