@@ -1,0 +1,30 @@
+cache:
+  paths:
+    - isabelle-temp
+    - tmp/*/isabelle-tmp
+
+build:
+  script: make qrhl.zip
+  artifacts:
+    untracked: true
+
+test:
+  depencendies:
+    - build
+  script: sbt test
+  artifacts:
+    reports:
+      junit: target/test-reports/TEST-*.xml
+
+test-distrib:
+  depencendies:
+    - build
+  script: make test-distrib
+
+package:
+  dependencies:
+    - build
+  scripts: echo Nothing to do.
+  artifacts:
+    paths:
+      - qrhl.zip
