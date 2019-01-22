@@ -2,6 +2,9 @@
 
 import sys, re
 
+sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf8', buffering=1)
+# sys.stdout.reconfigure(encoding='utf-8') # Works only with Python 3.7+
+
 substitutes = {
     'lambda': '\\lambda',
     'Rightarrow': '\\Rightarrow',
@@ -41,7 +44,7 @@ def replace(text):
 
 infile = sys.argv[1]
 
-with open(infile,'rt') as f:
+with open(infile, 'rt', encoding='utf-8') as f:
     for line in f.readlines():
         line = line.rstrip()
         line = replace(line)
