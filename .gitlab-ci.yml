@@ -10,24 +10,16 @@ stages:
   - test2
   - package
 
-make-image:
-  when: manual
-  stage: build
-  script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
-    - mkdir empty-dir
-    - docker build -t registry.gitlab.com/unruh/qrhl-tool/build-image empty-dir
-    - docker push registry.gitlab.com/unruh/qrhl-tool/build-image
-
 build:
+  image: registry.gitlab.com/unruh/qrhl-tool/build-image
   stage: build
-  before_script:
-    - echo "deb https://dl.bintray.com/sbt/debian /" >> /etc/apt/sources.list.d/sbt.list
-    - apt-get -o dir::cache::archives="cache/apt" update -y
-    - apt-get -o dir::cache::archives="cache/apt" install apt-transport-https -y
-    - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-    - apt-get -o dir::cache::archives="cache/apt" update -y
-    - apt-get -o dir::cache::archives="cache/apt" install -y sbt texlive-latex-base
+#  before_script:
+#    - echo "deb https://dl.bintray.com/sbt/debian /" >> /etc/apt/sources.list.d/sbt.list
+#    - apt-get -o dir::cache::archives="cache/apt" update -y
+#    - apt-get -o dir::cache::archives="cache/apt" install apt-transport-https -y
+#    - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
+#    - apt-get -o dir::cache::archives="cache/apt" update -y
+#    - apt-get -o dir::cache::archives="cache/apt" install -y sbt texlive-latex-base
   script: make qrhl.zip
 #  image: aergus/latex
   artifacts:
