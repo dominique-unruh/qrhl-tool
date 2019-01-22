@@ -5,8 +5,8 @@ std : manual.pdf
 
 declmath.sty :
 	if ! [ -d declmath ]; then \
-		git clone 'git@github.com:dominique-unruh/declmath.git'; fi
-	for f in declmath.sty declmath.sty.ltxml declmath.js declmath.css makesymind.py; do \
+		git clone --depth=1 'https://github.com/dominique-unruh/declmath.git'; fi
+	for f in declmath.sty makesymind.py; do \
 		ln -sf declmath/"$$f" .; done
 %.qrhl.lst : ../examples/%.qrhl format-for-listings.py
 	python3 format-for-listings.py $< >$@
