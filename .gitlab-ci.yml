@@ -12,6 +12,7 @@ stages:
 build:
   stage: build
   script: make qrhl.zip
+  image: aergus/latex
   artifacts:
     untracked: true
     expire_in: 30 days
