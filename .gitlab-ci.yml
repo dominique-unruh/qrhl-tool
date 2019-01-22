@@ -12,9 +12,11 @@ stages:
 
 make-image:
   when: manual
+  stage: build
   script:
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
-    - docker build -t registry.gitlab.com/unruh/qrhl-tool/build-image .
+    - mkdir empty-dir
+    - docker build -t registry.gitlab.com/unruh/qrhl-tool/build-image empty-dir
     - docker push registry.gitlab.com/unruh/qrhl-tool/build-image
 
 build:
