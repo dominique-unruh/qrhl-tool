@@ -6,8 +6,9 @@ cache:
 stages:
   - build
   - test
+  - test2
   - package
-    
+
 build:
   stage: build
   script: make qrhl.zip
@@ -17,23 +18,24 @@ build:
 
 test:
   stage: test
-  dependencies:
-    - build
+#  dependencies:
+#    - build
   script: sbt test
   artifacts:
     reports:
       junit: target/test-reports/TEST-*.xml
 
 test-distrib:
-  stage: test
-  dependencies:
-    - build
+  stage: test2
+#  dependencies:
+#    - build
+#    - test
   script: make test-distrib
 
 package:
   stage: package
-  dependencies:
-    - build
+#  dependencies:
+#    - build
   script: echo Nothing to do.
   artifacts:
     paths:
