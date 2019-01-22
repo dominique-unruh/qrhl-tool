@@ -10,8 +10,12 @@ stages:
   - test2
   - package
 
+
+variables:
+  SBT_OPTS: "-Dsbt.global.base=cache/sbt/sbtboot -Dsbt.boot.directory=cache/sbt/boot -Dsbt.ivy.home=cache/sbt/ivy"
+
 build:
-  image: registry.gitlab.com/unruh/qrhl-tool/build-image
+#  image: registry.gitlab.com/unruh/qrhl-tool/build-image
   stage: build
 #  before_script:
 #    - echo "deb https://dl.bintray.com/sbt/debian /" >> /etc/apt/sources.list.d/sbt.list
