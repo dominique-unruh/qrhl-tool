@@ -3,12 +3,19 @@ cache:
     - isabelle-temp
     - tmp/*/isabelle-tmp
 
+stages:
+  - build
+  - test
+  - package
+    
 build:
+  stage: build
   script: make qrhl.zip
   artifacts:
     untracked: true
 
 test:
+  stage: test
   dependencies:
     - build
   script: sbt test
@@ -17,11 +24,13 @@ test:
       junit: target/test-reports/TEST-*.xml
 
 test-distrib:
+  stage: test
   dependencies:
     - build
   script: make test-distrib
 
 package:
+  stage: package
   dependencies:
     - build
   script: echo Nothing to do.
