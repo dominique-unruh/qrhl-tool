@@ -12,8 +12,10 @@ stages:
 
 build:
   stage: build
+  before_script:
+    - apt-get -o dir::cache::archives="apt-cache" install -y texlive-latex-base
   script: make qrhl.zip
-  image: aergus/latex
+#  image: aergus/latex
   artifacts:
     untracked: true
     expire_in: 30 days
