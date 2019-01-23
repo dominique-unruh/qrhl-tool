@@ -24,14 +24,9 @@ build:
 #    - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
 #    - apt-get -o dir::cache::archives="cache/apt" update -y
 #    - apt-get -o dir::cache::archives="cache/apt" install -y sbt texlive-latex-base
-  script: make qrhl.zip
-#    - ls -lha
-#    - pwd
-#    - git status
-#    - git describe --tags --long --always --dirty --broken
-#    - git describe --always --all
-#    - bash -c "( git describe --tags --long --always --dirty --broken && git describe --always --all ) > target/GITREVISION"
-#    - make qrhl.zip
+  script:
+    - make qrhl.zip
+    - ./build.sh
 #  image: aergus/latex
   artifacts:
     paths:
