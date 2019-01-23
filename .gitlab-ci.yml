@@ -34,11 +34,15 @@ build:
 #    - make qrhl.zip
 #  image: aergus/latex
   artifacts:
-    untracked: true
+    paths:
+      - target
+      - project
+      - qrhl.zip
     expire_in: 30 days
     when: always
 
 test:
+  image: registry.gitlab.com/unruh/qrhl-tool/build-image
   stage: test
 #  dependencies:
 #    - build
