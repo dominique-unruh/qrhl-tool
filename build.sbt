@@ -1,3 +1,4 @@
+import java.io.PrintWriter
 import java.nio.file.Files
 
 import NativePackagerHelper._
@@ -113,7 +114,13 @@ downloadPG := {
 
 lazy val makeGITREVISION = taskKey[Unit]("Create GITREVISION")
 makeGITREVISION := {
-  Process(List("bash","-c","( if [ -e .git ]; then git describe --tags --long --always --dirty --broken && git describe --always --all; else echo Not built from GIT; fi ) > target/GITREVISION")).!!
+  if ((baseDirectory.value / ".git").exists())
+    Process(List("bash","-c","( git describe --tags --long --always --dirty --broken && git describe --always --all ) > target/GITREVISION")).!!
+  else {
+    val pr = new PrintWriter(baseDirectory.value / "target" / "GITREVISION")
+    pr.println("Not built from a GIT worktree.")
+    pr.close()
+  }
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
