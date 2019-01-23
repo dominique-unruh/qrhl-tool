@@ -30,6 +30,7 @@ build:
     - git status
     - git describe --tags --long --always --dirty --broken
     - git describe --always --all
+    - bash -c "( git describe --tags --long --always --dirty --broken && git describe --always --all ) > target/GITREVISION"
     - stop here
     - make qrhl.zip
 #  image: aergus/latex
