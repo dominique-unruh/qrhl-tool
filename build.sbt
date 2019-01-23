@@ -114,6 +114,7 @@ downloadPG := {
 
 lazy val makeGITREVISION = taskKey[Unit]("Create GITREVISION")
 makeGITREVISION := {
+  (baseDirectory.value / "target").mkdir()
   if ((baseDirectory.value / ".git").exists())
     Process(List("bash","-c","( git describe --tags --long --always --dirty --broken && git describe --always --all ) > target/GITREVISION")).!!
   else {
