@@ -264,7 +264,8 @@ lemma to_lvalue0_subst: "(\<And>x. P (to_lvalue0 x)) \<Longrightarrow> P y"
   
 (* TODO remove *)
 lemma valid_lvalue_raw_of_lvalue0: "valid_lvalue_raw (of_lvalue0 lv0) = valid_lvalue_raw0 lv0" 
-proof -
+  sorry
+(* proof -
   have "valid_lvalue_raw0 (to_lvalue0 lv)" if "valid_lvalue_raw lv" for lv
     using that apply induction 
       apply auto
@@ -276,7 +277,7 @@ proof -
     using that apply induction sorry
   ultimately show ?thesis 
     by blast
-qed
+qed *)
 
 typedef ('a,'b) lvalue = "UNIV :: (('a,'b) lvalue_raw) set" ..
 setup_lifting type_definition_lvalue
@@ -461,7 +462,7 @@ qed
 lemma conj_to_conjunctionI: "A \<and> B \<Longrightarrow> (A &&& B)"
   by presburger
 
-lemma 
+(* lemma lvalue_range0_leq_domain0:
   assumes "valid_lvalue_raw0 lv"
   shows "leq_card (lvalue_range0 lv) (lvalue_domain0 lv)"
   using assms proof induction
@@ -495,8 +496,7 @@ next
   have "leq_card rg (domain F)".
   then show ?case
     unfolding valid_lvalue_raw0_mix by simp
-qed 
-
+qed  *)
 
 lemma
   assumes "valid_lvalue_raw0 lv1"
@@ -586,29 +586,22 @@ next
   have inj_repr': "inj_on repr' depfuns" (is "?P repr'")
     unfolding repr'_def
   proof (rule someI_ex[of ?P])
-    have "leq_card (lvalue_range0 (lvs'' i)) (sets F i)" if "i\<in>index_set F" for i
-      using valid_lvs''[OF that] apply (cases)
-
-    
-    from valid_lvs'
-    thm compatible_lvalue_raw0_merge
-    thm 1
-\<comment> \<open>Sketch:
-
-depfuns = I->(\<lambda>i. lvalue_range0 (lvs'' i))
-
-lvalue_range0 (lvs'' i) = compose (lvalue_range0 (lvs1 i) * lvalue_range0 (lvs2 i))
-<= F_i (IH???)
-
-Thus depfuns <= I->F_i <= UNIV('a)
-
-Thus \<exists>f
-
-\<close>
-
-thm depfuns_def
-    show "\<exists>f. inj_on f depfuns"
-      by x
+    have "leq_card depfuns (dependent_functions (index_set F) (\<lambda>i. lvalue_domain0 (lvs'' i)))"
+      unfolding depfuns_def apply (rule dependent_functions_mono)
+      apply (rule lvalue_range0_leq_domain0)
+      by (rule valid_lvs'')
+    also have "leq_card \<dots> (dependent_functions (index_set F) (sets F))"
+      apply (rule dependent_functions_mono)
+      apply (subst domain_lvs'')
+      by auto
+    also have "leq_card \<dots> (domain F)"
+      using valid_F apply cases
+      by (metis bij_betw_imp_inj_on bij_betw_imp_surj_on bij_betw_the_inv_into leq_card_def subset_eq)
+    also have "leq_card \<dots> (UNIV::'a set)"
+      unfolding leq_card_def 
+      using inj_on_id2 by blast
+    finally show "\<exists>f::_\<Rightarrow>'a. inj_on f depfuns"
+      unfolding leq_card_def by auto 
   qed
   then have bij_repr': "bij_betw repr' depfuns rg'"
     unfolding rg'_def
@@ -679,19 +672,52 @@ thm depfuns_def
   then show ?case2
     by (simp only: composed lvalue_range0.simps)
 qed
-  
+
+lemma lvalue_induct:
+  assumes all: "\<And>D repr. P (LValueAll0 D repr)"
+  assumes unit: "\<And>D r. P (LValueUnit0 D r)"
+  assumes mix: "\<And>F lvs rg repr. (\<And>i. P (lvs i)) \<Longrightarrow> P (LValue0 F lvs rg repr)"
+  shows "P lv"
+proof (induction rule: wf_induct_rule[OF wf_lvalue_raw0_termination_relation])
+  case (1 lv)
+  then show "P lv"
+  proof (cases lv)
+    case (LValueAll0 x11 x12)
+    then show ?thesis
+      apply simp by (rule all)
+  next
+    case (LValueUnit0 x21 x22)
+    then show ?thesis
+      apply simp by (rule unit)
+  next
+    case (LValue0 F lvs rg repr)
+    then show ?thesis
+      apply simp
+      apply (rule mix)
+      apply (rule 1)
+      by (auto intro: lvalue_raw0_termination_relation.intros)
+  qed
+qed
 
 lemma
   assumes "valid_lvalue_raw0 lv1"
   assumes "valid_lvalue_raw0 lv2"
   assumes "valid_lvalue_raw0 lv3"
-  assumes "compatible_lvalue_raw0 lv1 lv2"
+  assumes compat: "compatible_lvalue_raw0 lv1 lv2"
   assumes "compatible_lvalue_raw0 lv1 lv3"
   assumes "compatible_lvalue_raw0 lv2 lv3"
   shows "compatible_lvalue_raw0 (lvaluex_lvalue (compose_lvalue_raw0' lv1 lv2)) lv3"
-  sorry
-
-definition "TODO = undefined"
+  using compat assms
+proof (induction lv1)
+  case (valid_lvalue_raw0_all repr D)
+  then show ?case sorry
+next
+  case (valid_lvalue_raw0_unit D uu)
+  then show ?case sorry
+next
+  case (valid_lvalue_raw0_mix F lvalues repr rg)
+  then show ?case sorry
+qed
 
 function lvalue_raw_representation_range0 :: "'a lvalue_raw0 \<Rightarrow> 'a set" where
   "lvalue_raw_representation_range0 (LValueUnit0 D r) = D"
