@@ -1,6 +1,7 @@
 package qrhl.toplevel
 
 import java.io.{BufferedReader, FileReader, Reader, StringReader}
+import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 import org.jline.reader.LineReaderBuilder
@@ -109,7 +110,7 @@ class Toplevel(initialState : State = State.empty) {
   }
 
   def run(script: Path): Unit = {
-    val reader = new FileReader(script.toFile)
+    val reader = new FileReader(script.toFile, StandardCharsets.UTF_8)
 //    println("Toplevel.run",script,script.toAbsolutePath.normalize.getParent)
     execCmd(ChangeDirectoryCommand(script.toAbsolutePath.normalize.getParent))
     run(reader)
@@ -174,7 +175,7 @@ object Toplevel {
     val readLine : String => String = {
       if (terminal.isInstanceOf[DumbTerminal]) {
         println("Using dumb readline instead of JLine.");
-        { (p: String) => StdIn.readLine(p) } // JLine's DumbTerminal echoes lines, so we don't use JLine in this case
+        { p: String => StdIn.readLine(p) } // JLine's DumbTerminal echoes lines, so we don't use JLine in this case
       } else {
         val lineReader = LineReaderBuilder.builder().terminal(terminal).build()
         lineReader.readLine
