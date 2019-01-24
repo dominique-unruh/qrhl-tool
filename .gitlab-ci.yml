@@ -26,7 +26,7 @@ build:
 #    - apt-get -o dir::cache::archives="cache/apt" install -y sbt texlive-latex-base
   script:
     - make qrhl.zip
-    - ./build.sh
+    - echo isabelle. | QRHL_FORCE_BUILD=1 bin/qrhl
 #  image: aergus/latex
   artifacts:
     paths:
