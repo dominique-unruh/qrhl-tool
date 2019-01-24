@@ -58,7 +58,8 @@ test-distrib:
 #    - build
 #    - test
   script:
-    - set -e && cd tmp/qrhl-$(VERSION)/examples && for i in *.qrhl; do ../bin/qrhl "$i"; done
+    - unzip -d tmp qrhl.zip
+    - set -ex && cd tmp/*/examples && for i in *.qrhl; do ../bin/qrhl "$i"; done
 #    - touch qrhl.zip # Avoids that make file rebuilds qrhl.zip (already done in build job)
 #    - make test-distrib
   cache:
