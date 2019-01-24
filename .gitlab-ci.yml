@@ -45,6 +45,8 @@ test:
   artifacts:
     reports:
       junit: target/test-reports/TEST-*.xml
+  cache:
+    policy: pull
 
 test-distrib:
   stage: test2
