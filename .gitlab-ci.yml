@@ -24,6 +24,7 @@ build:
 #    - apt-get -o dir::cache::archives="cache/apt" install -y sbt texlive-latex-base
   script:
     - ls -lh isabelle-afp
+    - echo -e 'show mappings\nexit' | sbt
     - if [ $[RANDOM % 100] = 0 ]; then echo Flushing cache.; rm -rf isabelle-temp tmp cache; fi # Flush cache approx. every 100. build
     - make qrhl.zip
     - ls -lh isabelle-afp
