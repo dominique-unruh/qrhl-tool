@@ -26,6 +26,7 @@ build:
 #    - apt-get -o dir::cache::archives="cache/apt" update -y
 #    - apt-get -o dir::cache::archives="cache/apt" install -y sbt texlive-latex-base
   script:
+    - if [ $[RANDOM % 100] = 0 ]; then rm -rf isabelle-temp tmp cache; fi # Flush cache approx. every 100. build
     - make qrhl.zip
     - echo isabelle. | QRHL_FORCE_BUILD=1 bin/qrhl
 #  image: aergus/latex
