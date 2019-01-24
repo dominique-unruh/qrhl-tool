@@ -1,7 +1,6 @@
 cache:
   paths:
     - isabelle-temp/
-    - tmp/*/isabelle-tmp
     - cache/
 
 stages:
@@ -63,8 +62,10 @@ test-distrib:
 
 package:
   stage: package
-#  dependencies:
-#    - build
+  cache:
+    key: test-distrib
+    paths:
+    - isabelle-temp/
   script: echo Nothing to do.
   artifacts:
     paths:
