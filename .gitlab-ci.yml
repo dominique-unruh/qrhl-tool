@@ -6,7 +6,6 @@ cache:
 stages:
   - build
   - test
-  - test2
   - package
 
 
@@ -54,20 +53,21 @@ test:
     policy: pull
 
 test-distrib:
-  stage: test2
+  stage: test
 #  dependencies:
 #    - build
 #    - test
   script:
-    - touch qrhl.zip # Avoids that make file rebuilds qrhl.zip (already done in build job)
-    - make test-distrib
-
-package:
-  stage: package
+    - set -e && cd tmp/qrhl-$(VERSION)/examples && for i in *.qrhl; do ../bin/qrhl "$i"; done
+#    - touch qrhl.zip # Avoids that make file rebuilds qrhl.zip (already done in build job)
+#    - make test-distrib
   cache:
     key: test-distrib
     paths:
     - isabelle-temp/
+
+package:
+  stage: package
   script: echo Nothing to do.
   artifacts:
     paths:
