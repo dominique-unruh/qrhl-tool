@@ -1,6 +1,6 @@
 package qrhl.toplevel
 
-import java.io.{BufferedReader, FileReader, Reader, StringReader}
+import java.io._
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
@@ -110,7 +110,7 @@ class Toplevel(initialState : State = State.empty) {
   }
 
   def run(script: Path): Unit = {
-    val reader = new FileReader(script.toFile, StandardCharsets.UTF_8)
+    val reader = new InputStreamReader(new FileInputStream(script.toFile), StandardCharsets.UTF_8)
 //    println("Toplevel.run",script,script.toAbsolutePath.normalize.getParent)
     execCmd(ChangeDirectoryCommand(script.toAbsolutePath.normalize.getParent))
     run(reader)
