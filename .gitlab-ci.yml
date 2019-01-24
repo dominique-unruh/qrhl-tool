@@ -72,6 +72,8 @@ test-distrib:
     key: test-distrib
     paths:
     - isabelle-temp/
+  artifacts:
+    untracked: true
 
 package:
   stage: package
