@@ -46,6 +46,10 @@ test:
     reports:
       junit: target/test-reports/TEST-*.xml
   cache:
+    paths:
+      - isabelle-temp/
+      - tmp/*/isabelle-tmp
+      - cache/
     policy: pull
 
 test-distrib:
