@@ -58,7 +58,9 @@ test-distrib:
 #  dependencies:
 #    - build
 #    - test
-  script: make test-distrib
+  script:
+    - touch qrhl.zip # Avoids that make file rebuilds qrhl.zip (already done in build job)
+    - make test-distrib
 
 package:
   stage: package
