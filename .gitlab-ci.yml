@@ -28,7 +28,7 @@ build:
     - if [ $[RANDOM % 100] = 0 ]; then echo Flushing cache.; rm -rf isabelle-temp tmp cache; fi # Flush cache approx. every 100. build
     - make qrhl.zip
 #    - ls -lh isabelle-afp
-    - unzip -v qrhl.zip
+#    - unzip -v qrhl.zip
     - echo isabelle. | QRHL_FORCE_BUILD=1 bin/qrhl
 #  image: aergus/latex
   artifacts:
