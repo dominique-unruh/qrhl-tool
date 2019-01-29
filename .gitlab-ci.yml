@@ -37,7 +37,6 @@ test:
   cache:
     paths:
       - isabelle-temp/
-      - tmp/*/isabelle-tmp
       - cache/
     policy: pull
 
@@ -51,7 +50,7 @@ test-distrib:
   cache:
     key: test-distrib
     paths:
-    - isabelle-temp/
+      - tmp/*/isabelle-tmp
   artifacts:
     untracked: true
     when: on_failure
