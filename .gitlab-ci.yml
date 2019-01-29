@@ -8,29 +8,16 @@ stages:
   - test
   - package
 
-
 variables:
   SBT_OPTS: "-Dsbt.global.base=cache/sbt/sbtboot -Dsbt.boot.directory=cache/sbt/boot -Dsbt.ivy.home=cache/sbt/ivy"
 
 build:
   image: registry.gitlab.com/unruh/qrhl-tool/build-image
   stage: build
-#  before_script:
-#    - echo "deb https://dl.bintray.com/sbt/debian /" >> /etc/apt/sources.list.d/sbt.list
-#    - apt-get -o dir::cache::archives="cache/apt" update -y
-#    - apt-get -o dir::cache::archives="cache/apt" install apt-transport-https -y
-#    - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-#    - apt-get -o dir::cache::archives="cache/apt" update -y
-#    - apt-get -o dir::cache::archives="cache/apt" install -y sbt texlive-latex-base
   script:
-#    - ls -lh isabelle-afp
-#    - echo -e 'show mappings\nexit' | sbt
     - if [ $[RANDOM % 100] = 0 ]; then echo Flushing cache.; rm -rf isabelle-temp tmp cache; fi # Flush cache approx. every 100. build
     - make qrhl.zip
-#    - ls -lh isabelle-afp
-#    - unzip -v qrhl.zip
     - echo isabelle. | QRHL_FORCE_BUILD=1 bin/qrhl
-#  image: aergus/latex
   artifacts:
     paths:
       - target
@@ -43,8 +30,6 @@ build:
 test:
   image: registry.gitlab.com/unruh/qrhl-tool/build-image
   stage: test
-#  dependencies:
-#    - build
   script: sbt test
   artifacts:
     reports:
@@ -59,15 +44,10 @@ test:
 test-distrib:
   image: registry.gitlab.com/unruh/qrhl-tool/build-image
   stage: test
-#  dependencies:
-#    - build
-#    - test
   script:
     - java -version
     - unzip -d tmp qrhl.zip
     - set -ex && cd tmp/*/examples && for i in *.qrhl; do ../bin/qrhl "$i"; done
-#    - touch qrhl.zip # Avoids that make file rebuilds qrhl.zip (already done in build job)
-#    - make test-distrib
   cache:
     key: test-distrib
     paths:
