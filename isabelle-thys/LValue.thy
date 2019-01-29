@@ -1,6 +1,10 @@
 theory LValue
   imports Main "HOL-Library.Rewrite" (* "HOL-Cardinals.Cardinals" *)
+    (* "Jordan_Normal_Form.Matrix_Impl" *) Complex_Main
+    (* "HOL-Library.Indicator_Function" *)
 begin
+
+(* no_syntax "\<^const>Group.m_inv" :: "('a, 'b) monoid_scheme => 'a => 'a" ("inv\<index> _" [81] 80) *)
 
 typedef 'a index = "UNIV::'a set" ..
 (* typedef 'a target = "UNIV::'a set" .. *)
@@ -12,6 +16,19 @@ inductive_set dependent_functions' :: "'b \<Rightarrow> 'a set \<Rightarrow> ('a
    \<Longrightarrow> f \<in> dependent_functions' undef domain range"
 
 abbreviation "dependent_functions == dependent_functions' undefined" 
+
+lemma dependent_functions_nonempty:
+  assumes "\<And>i. i\<in>I \<Longrightarrow> A i \<noteq> {}"
+  shows "dependent_functions' u I A \<noteq> {}"
+proof -
+  from assms obtain f where f: "f i \<in> A i" if "i\<in>I" for i
+    apply atomize_elim apply (rule choice) by auto
+  have "(\<lambda>i. if i:I then f i else u) : dependent_functions' u I A"
+    apply (rule dependent_functions'.intros)
+    using f by auto
+  thus ?thesis
+    by auto
+qed
 
 definition "leq_card A B = (\<exists>f. inj_on f A \<and> f`A \<subseteq> B)" (* Equivalent to (card_of A \<le>o card_of B). TODO use that? *)
 
@@ -364,6 +381,10 @@ fun map_lvaluex where
 
 definition "lvalue_raw0_to_lvaluex lv = LValueX lv id"
 
+lemma lvaluex_range_map[simp]: "lvaluex_range (map_lvaluex g lv) = g ` lvaluex_range lv"
+  by (cases lv, hypsubst_thin, auto)
+lemma lvaluex_domain_map[simp]: "lvaluex_domain (map_lvaluex g lv) = lvaluex_domain lv"
+  by (cases lv, hypsubst_thin, auto)
 
 inductive_set lvalue_raw0_termination_relation where
   "((lvs1 i), (LValue0 F1 lvs1 rg1 repr1)) \<in> lvalue_raw0_termination_relation"
@@ -469,18 +490,35 @@ lemma lvaluex_domain_compose_lvalue_raw0':
   assumes valid1: "valid_lvalue_raw0 lv1"
   assumes valid2: "valid_lvalue_raw0 lv2"
   assumes compat: "compatible_lvalue_raw0 lv1 lv2"
-  shows "lvaluex_domain (compose_lvalue_raw0' lv1 lv2) = lvalue_domain0 lv1"
-using compat proof cases
-  case (compatible_lvalue_raw0_unitleft D uu)
-  then show ?thesis by simp
-next
-  case (compatible_lvalue_raw0_unitright D uv)
-  then show ?thesis
-    apply (cases lv1) by simp_all
-next
-  case (compatible_lvalue_raw0_merge F lvs1 rg1 repr1 lvs2 rg2 repr2)
-  show ?thesis
-    unfolding compatible_lvalue_raw0_merge by (simp add: Let_def)
+  shows "lvaluex_domain (compose_lvalue_raw0' lv1 lv2) = lvalue_domain0 lv1" (is ?thesis1)
+    and "lvaluex_domain (compose_lvalue_raw0' lv1 lv2) = lvalue_domain0 lv2" (is ?thesis2)
+proof -
+  show ?thesis1
+    using compat proof cases
+    case (compatible_lvalue_raw0_unitleft D uu)
+    then show ?thesis by simp
+  next
+    case (compatible_lvalue_raw0_unitright D uv)
+    then show ?thesis
+      apply (cases lv1) by simp_all
+  next
+    case (compatible_lvalue_raw0_merge F lvs1 rg1 repr1 lvs2 rg2 repr2)
+    show ?thesis
+      unfolding compatible_lvalue_raw0_merge by (simp add: Let_def)
+  qed
+  show ?thesis2
+    using compat proof cases
+    case (compatible_lvalue_raw0_unitleft D uu)
+    then show ?thesis by simp
+  next
+    case (compatible_lvalue_raw0_unitright D uv)
+    then show ?thesis
+      apply (cases lv1) by simp_all
+  next
+    case (compatible_lvalue_raw0_merge F lvs1 rg1 repr1 lvs2 rg2 repr2)
+    show ?thesis
+      unfolding compatible_lvalue_raw0_merge by (simp add: Let_def)
+  qed
 qed
 
 lemma conj_to_conjunctionI: "A \<and> B \<Longrightarrow> (A &&& B)"
@@ -697,6 +735,22 @@ next
     by (simp only: composed lvalue_range0.simps)
 qed
 
+lemma valid_map_lvaluex:
+  assumes "valid_lvaluex lv"
+  assumes "inj_on g (lvaluex_range lv)"
+  shows "valid_lvaluex (map_lvaluex g lv)"
+  using assms apply cases by (auto simp: comp_inj_on_iff intro!: valid_lvaluex.intros)
+
+lemma valid_compose_lvaluex:
+  assumes valid_lv1: "valid_lvaluex lv1"
+  assumes valid_lv2: "valid_lvaluex lv2"
+  assumes compat: "compatible_lvaluex lv1 lv2"
+  shows "valid_lvaluex (compose_lvaluex lv1 lv2)" 
+  apply (cases lv1, cases lv2, simp)
+  apply (rule valid_map_lvaluex)
+   apply (metis compat compatible_lvaluex.simps lvaluex.sel(1) valid_compose_lvalue_raw0' valid_lv1 valid_lv2 valid_lvaluex.simps)
+  by (metis compat compatible_lvaluex.simps lvaluex.inject map_prod_inj_on range_compose_lvalue_raw0' valid_lv1 valid_lv2 valid_lvaluex.simps)
+
 lemma lvalue_induct:
   assumes all: "\<And>D repr. P (LValueAll0 D repr)"
   assumes unit: "\<And>D r. P (LValueUnit0 D r)"
@@ -721,6 +775,50 @@ proof (induction rule: wf_induct_rule[OF wf_lvalue_raw0_termination_relation])
       apply (rule 1)
       by (auto intro: lvalue_raw0_termination_relation.intros)
   qed
+qed
+
+lemma range_compose_lvaluex:
+  assumes valid_x: "valid_lvaluex x"
+  assumes valid_y: "valid_lvaluex y"
+  assumes compat: "compatible_lvaluex x y"
+  shows "lvaluex_range (compose_lvaluex x y) = lvaluex_range x \<times> lvaluex_range y"
+proof -
+  obtain xlv xf where x: "x = LValueX xlv xf"
+    using lvaluex.exhaust_sel by blast
+  obtain ylv yf where y: "y = LValueX ylv yf"
+    using lvaluex.exhaust_sel by blast
+  from valid_x have valid_xlv: "valid_lvalue_raw0 xlv" 
+    unfolding x apply cases by simp
+  from valid_y have valid_ylv: "valid_lvalue_raw0 ylv" 
+    unfolding y apply cases by simp
+  from compat have compat0: "compatible_lvalue_raw0 xlv ylv" 
+    unfolding x y apply cases by simp
+
+  show ?thesis
+    by (simp add: x y map_prod_surj_on range_compose_lvalue_raw0'[OF valid_xlv valid_ylv compat0])
+qed
+
+lemma domain_compose_lvaluex:
+  assumes valid_x: "valid_lvaluex x"
+  assumes valid_y: "valid_lvaluex y"
+  assumes compat: "compatible_lvaluex x y"
+  shows "lvaluex_domain (compose_lvaluex x y) = lvaluex_domain x" (is ?thesis1)
+    and "lvaluex_domain (compose_lvaluex x y) = lvaluex_domain y" (is ?thesis2)
+proof -
+  obtain xlv xf where x: "x = LValueX xlv xf"
+    using lvaluex.exhaust_sel by blast
+  obtain ylv yf where y: "y = LValueX ylv yf"
+    using lvaluex.exhaust_sel by blast
+  from valid_x have valid_xlv: "valid_lvalue_raw0 xlv" 
+    unfolding x apply cases by simp
+  from valid_y have valid_ylv: "valid_lvalue_raw0 ylv" 
+    unfolding y apply cases by simp
+  from compat have compat0: "compatible_lvalue_raw0 xlv ylv" 
+    unfolding x y apply cases by simp
+  show ?thesis1
+    by (simp add: x y map_prod_surj_on lvaluex_domain_compose_lvalue_raw0'(1)[OF valid_xlv valid_ylv compat0])
+  show ?thesis2
+    by (simp add: x y map_prod_surj_on lvaluex_domain_compose_lvalue_raw0'(2)[OF valid_xlv valid_ylv compat0])
 qed
 
 lemma compatible_compose_lvalue_raw0':
@@ -810,7 +908,6 @@ next
       using that valid1s valid2s valid3s compat12s compat13s compat23s
       apply (rule compatible_lvalue_raw0_merge.IH)
       by (fact that)+
-    find_theorems compose_lvalue_raw0' lvs1
     have "compatible_lvalue_raw0 lvs0 lv3"
       using valid0 valid3 compat''3
       unfolding lv3_mix lvs0_def 
@@ -854,7 +951,14 @@ termination
 
 (* TODO: definition that interprets an ('a,'b) lvalue as a bijection domain \<rightarrow> range * something *)
 
-definition "lvalue_update0 f lv x = inv (lvalue_raw_representation0 lv) (apfst f (lvalue_raw_representation0 lv x))"
+definition lvaluex_representation :: "('a,'b) lvaluex \<Rightarrow> 'a \<Rightarrow> 'b\<times>'a" where
+  "lvaluex_representation lv x = apfst (lvaluex_fun lv) (lvalue_raw_representation0 (lvaluex_lvalue lv) x)"
+
+definition lvaluex_representation_range :: "('a,'b) lvaluex \<Rightarrow> 'a set" where
+  "lvaluex_representation_range lv = lvalue_raw_representation_range0 (lvaluex_lvalue lv)"
+
+definition "lvalue_update0 f lv x = inv (lvalue_raw_representation0 lv)
+                                        (apfst f (lvalue_raw_representation0 lv x))"
 fun lvaluex_update where
   "lvaluex_update f (LValueX lv g) = lvalue_update0 (inv g o f o g) lv"
 
@@ -863,8 +967,22 @@ fun lvaluex_update where
 lemma nonempty_range:
   assumes "valid_lvalue_raw0 lv"
   shows "lvalue_range0 lv \<noteq> {}"
-  using assms apply induction apply auto
-  sorry
+using assms proof induction
+  case (valid_lvalue_raw0_all D repr)
+  then show ?case by auto
+next
+  case (valid_lvalue_raw0_unit D uu)
+  then show ?case by auto
+next
+  case (valid_lvalue_raw0_mix F lvs repr rg)
+  from valid_lvalue_raw0_mix.IH
+  have "dependent_functions (index_set F) (\<lambda>i. lvalue_range0 (lvs i)) \<noteq> {}"
+    by (rule dependent_functions_nonempty)
+  with valid_lvalue_raw0_mix.hyps have "rg \<noteq> {}"
+    using bij_betw_empty2 by blast
+  then show ?case
+    by simp
+qed
 
 lemma bij_lvalue_raw_representation0:
   assumes "valid_lvalue_raw0 lv"
@@ -989,14 +1107,391 @@ next
     unfolding representation by auto
 qed
 
+lemma bij_lvaluex_representation:
+  assumes "valid_lvaluex lv"
+  shows "bij_betw (lvaluex_representation lv) (lvaluex_domain lv) 
+                  (lvaluex_range lv \<times> lvaluex_representation_range lv)"
+proof -
+  obtain f lv0 where lv: "lv = LValueX lv0 f"
+    using lvaluex.exhaust_sel by blast
+  from assms
+  have valid0: "valid_lvalue_raw0 lv0"
+    using lv valid_lvaluex.cases by auto
+  from assms
+  have inj_f: "inj_on f (lvalue_range0 lv0)"
+    using lv valid_lvaluex.cases by auto
+  note bij_lvalue_raw_representation0[OF valid0]
+  moreover
+  have "bij_betw (apfst f) (lvalue_range0 lv0 \<times> lvalue_raw_representation_range0 lv0)
+                           (f ` lvalue_range0 lv0 \<times> lvalue_raw_representation_range0 lv0)"
+    apply (rule bij_betwI')
+    using inj_f inj_on_contraD apply fastforce
+    by auto 
+  ultimately
+  show ?thesis
+    apply (simp add: lv lvaluex_representation_def[abs_def] lvaluex_representation_range_def)
+    by (rule bij_betw_trans[unfolded o_def], auto)
+qed
 
-lemma
+(* lemma
   fixes lv1 :: "('a,'b) lvaluex" and lv2 :: "('a,'c) lvaluex"
   assumes "valid_lvaluex lv1"
   assumes "valid_lvaluex lv2"
   assumes "compatible_lvaluex lv1 lv2"
-  shows "lvaluex_update f1 lv1 (lvaluex_update f2 lv2 x) = lvaluex_update (map_prod f1 f2) (compose_lvaluex lv1 lv2) x"
-  sorry
+  shows "lvaluex_update f1 lv1 (lvaluex_update f2 lv2 x)
+       = lvaluex_update (map_prod f1 f2) (compose_lvaluex lv1 lv2) x"
+  orry *)
 (* TODO same the other way around *)
+
+definition "left_composition_map f x = (case x of (x,r) \<Rightarrow> case f r of (y,s) \<Rightarrow> ((x,y),s))"
+definition "left_composition_map_back f' xy = (case xy of ((x,y),s) \<Rightarrow> (x, f' (y,s)))"
+
+definition "right_composition_map f y = (case y of (y,r) \<Rightarrow> case f r of (x,s) \<Rightarrow> ((x,y),s))"
+definition "right_composition_map_back f' xy = (case xy of ((x,y),s) \<Rightarrow> (y, f' (x,s)))"
+
+inductive left_composition_f :: "('a,'b) lvaluex \<Rightarrow> ('a,'c) lvaluex \<Rightarrow> _" where
+" valid_lvaluex x \<Longrightarrow> valid_lvaluex y \<Longrightarrow> compatible_lvaluex x y
+  \<Longrightarrow> bij_betw f (lvaluex_representation_range x) (lvaluex_range y \<times> lvaluex_representation_range (compose_lvaluex x y))
+  \<Longrightarrow> (\<And>z. left_composition_map f (lvaluex_representation x z) = (lvaluex_representation (compose_lvaluex x y) z))
+  \<Longrightarrow> (f' = inv_into (lvaluex_representation_range x) f)
+  \<Longrightarrow> left_composition_f x y f f'"
+
+
+inductive right_composition_f :: "('a,'b) lvaluex \<Rightarrow> ('a,'c) lvaluex \<Rightarrow> _" where
+" valid_lvaluex x \<Longrightarrow> valid_lvaluex y \<Longrightarrow> compatible_lvaluex x y
+  \<Longrightarrow> bij_betw f (lvaluex_representation_range y) (lvaluex_range x \<times> lvaluex_representation_range (compose_lvaluex x y))
+  \<Longrightarrow> (\<And>z. right_composition_map f (lvaluex_representation y z) = (lvaluex_representation (compose_lvaluex x y) z))
+  \<Longrightarrow> (f' = inv_into (lvaluex_representation_range y) f)
+  \<Longrightarrow> right_composition_f x y f f'"
+
+
+lemma left_composition_f_inv_inj: 
+  fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
+  assumes left_composition_f: "left_composition_f x y f f'"
+  defines "xy == compose_lvaluex x y"
+  defines "Rx == lvaluex_representation x"
+  defines "Rxy == lvaluex_representation xy"
+  assumes z1_dom: "z1 \<in> lvaluex_domain x"
+  assumes z2_dom: "z2 \<in> lvaluex_domain x"
+  assumes Rxy_z1: "Rxy z1 = ((x1, y1), r1)"
+  assumes Rxy_z2: "Rxy z2 = ((x2, y2), r2)"
+  shows "f' (y1, r1) = f' (y2, r2) \<longleftrightarrow> (y1,r1) = (y2,r2)"
+proof -
+  have valid_x: "valid_lvaluex x"
+    and valid_y: "valid_lvaluex y"
+    and compat: "compatible_lvaluex x y"
+    using left_composition_f
+    using left_composition_f.cases by blast+
+  have valid_xy: "valid_lvaluex xy"
+    unfolding xy_def using valid_x valid_y compat by (rule valid_compose_lvaluex)
+  have x_dom: "lvaluex_domain xy = lvaluex_domain x"
+    unfolding xy_def apply (rule domain_compose_lvaluex)
+    using valid_x valid_y compat by simp_all
+  with z1_dom have z1_dom': "z1 \<in> lvaluex_domain xy"
+    unfolding xy_def by simp
+  from x_dom z2_dom have z2_dom': "z2 \<in> lvaluex_domain xy"
+    unfolding xy_def by simp
+  have inj: "inj_on f' (lvaluex_range y \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    using left_composition_f apply cases
+    by (simp add: bij_betw_imp_surj_on inj_on_inv_into)
+  have Rxy_z1_rg: "Rxy z1 \<in> (lvaluex_range x \<times> lvaluex_range y) \<times> lvaluex_representation_range xy"
+    using bij_lvaluex_representation[OF valid_xy] 
+    unfolding Rxy_def xy_def[symmetric] range_compose_lvaluex[OF valid_x valid_y compat, symmetric]
+    using z1_dom' bij_betwE by blast 
+  have Rxy_z2_rg: "Rxy z2 \<in> (lvaluex_range x \<times> lvaluex_range y) \<times> lvaluex_representation_range xy"
+    using bij_lvaluex_representation[OF valid_xy] 
+    unfolding Rxy_def xy_def[symmetric] range_compose_lvaluex[OF valid_x valid_y compat, symmetric]
+    using z2_dom' bij_betwE by blast 
+  from Rxy_z1_rg
+  have 1: "(y1,r1) \<in> (lvaluex_range y \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    unfolding Rxy_z1 unfolding xy_def by auto
+  from Rxy_z2_rg
+  have 2: "(y2,r2) \<in> (lvaluex_range y \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    unfolding Rxy_z2 unfolding xy_def by auto
+  from inj 1 2
+  show ?thesis
+    by (simp add: inj_on_eq_iff)
+qed
+
+lemma right_composition_f_inv_inj: 
+  fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
+  assumes right_composition_f: "right_composition_f x y f f'"
+  defines "xy == compose_lvaluex x y"
+  defines "Ry == lvaluex_representation y"
+  defines "Rxy == lvaluex_representation xy"
+  assumes z1_dom: "z1 \<in> lvaluex_domain y"
+  assumes z2_dom: "z2 \<in> lvaluex_domain y"
+  assumes Rxy_z1: "Rxy z1 = ((x1, y1), r1)"
+  assumes Rxy_z2: "Rxy z2 = ((x2, y2), r2)"
+  shows "f' (x1, r1) = f' (x2, r2) \<longleftrightarrow> (x1,r1) = (x2,r2)"
+proof -
+  have valid_x: "valid_lvaluex x"
+    and valid_y: "valid_lvaluex y"
+    and compat: "compatible_lvaluex x y"
+    using right_composition_f
+    using right_composition_f.cases by blast+
+  have valid_xy: "valid_lvaluex xy"
+    unfolding xy_def using valid_x valid_y compat by (rule valid_compose_lvaluex)
+  have y_dom: "lvaluex_domain xy = lvaluex_domain y"
+    unfolding xy_def apply (rule domain_compose_lvaluex)
+    using valid_x valid_y compat by simp_all
+  with z1_dom have z1_dom': "z1 \<in> lvaluex_domain xy"
+    unfolding xy_def by simp
+  from y_dom z2_dom have z2_dom': "z2 \<in> lvaluex_domain xy"
+    unfolding xy_def by simp
+  have inj: "inj_on f' (lvaluex_range x \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    using right_composition_f apply cases
+    by (simp add: bij_betw_imp_surj_on inj_on_inv_into)
+  have Rxy_z1_rg: "Rxy z1 \<in> (lvaluex_range x \<times> lvaluex_range y) \<times> lvaluex_representation_range xy"
+    using bij_lvaluex_representation[OF valid_xy] 
+    unfolding Rxy_def xy_def[symmetric] range_compose_lvaluex[OF valid_x valid_y compat, symmetric]
+    using z1_dom' bij_betwE by blast 
+  have Rxy_z2_rg: "Rxy z2 \<in> (lvaluex_range x \<times> lvaluex_range y) \<times> lvaluex_representation_range xy"
+    using bij_lvaluex_representation[OF valid_xy] 
+    unfolding Rxy_def xy_def[symmetric] range_compose_lvaluex[OF valid_x valid_y compat, symmetric]
+    using z2_dom' bij_betwE by blast 
+  from Rxy_z1_rg
+  have 1: "(x1,r1) \<in> (lvaluex_range x \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    unfolding Rxy_z1 unfolding xy_def by auto
+  from Rxy_z2_rg
+  have 2: "(x2,r2) \<in> (lvaluex_range x \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    unfolding Rxy_z2 unfolding xy_def by auto
+  from inj 1 2
+  show ?thesis
+    by (simp add: inj_on_eq_iff)
+qed
+
+lemma left_composition_map_back: 
+  assumes left_composition_f: "left_composition_f x y f f'"
+  defines "xy == compose_lvaluex x y"
+  defines "Rx == lvaluex_representation x"
+  defines "Rxy == lvaluex_representation xy"
+  assumes z: "z \<in> lvaluex_domain x"
+  shows "Rx z = left_composition_map_back f' (Rxy z)"
+proof -
+  from left_composition_f
+  have Rxy: "left_composition_map f (Rx z) = Rxy z" for z
+    unfolding xy_def Rxy_def Rx_def
+    apply cases by simp
+  from left_composition_f
+  have f': "f' = inv_into (lvaluex_representation_range x) f"
+    apply cases by simp
+  from left_composition_f
+  have valid_x: "valid_lvaluex x"
+    apply cases by simp
+
+  have [simp]: "r = f' (f r)" if "Rx z = (a, r)" and "z \<in> lvaluex_domain x" for z a r
+  proof -
+    note bij_lvaluex_representation[OF valid_x]
+    then have "Rx z \<in> (lvaluex_range x \<times> lvaluex_representation_range x)"
+      unfolding that Rx_def using that bij_betwE by fastforce
+    then have "r \<in> lvaluex_representation_range x"
+      unfolding that by simp
+    then show ?thesis
+      unfolding f'
+      by (metis bij_betw_def inv_into_f_f left_composition_f left_composition_f.cases)
+  qed
+  show ?thesis
+    unfolding Rxy[symmetric]
+    apply (cases "Rx z") using z
+    unfolding left_composition_map_def left_composition_map_back_def 
+    by (auto simp: case_prod_beta)
+qed
+
+lemma right_composition_map_back: 
+  assumes right_composition_f: "right_composition_f x y f f'"
+  defines "xy == compose_lvaluex x y"
+  defines "Ry == lvaluex_representation y"
+  defines "Rxy == lvaluex_representation xy"
+  assumes z: "z \<in> lvaluex_domain y"
+  shows "Ry z = right_composition_map_back f' (Rxy z)"
+proof -
+  from right_composition_f
+  have Rxy: "right_composition_map f (Ry z) = Rxy z" for z
+    unfolding xy_def Rxy_def Ry_def
+    apply cases by simp
+  from right_composition_f
+  have f': "f' = inv_into (lvaluex_representation_range y) f"
+    apply cases by simp
+  from right_composition_f
+  have valid_y: "valid_lvaluex y"
+    apply cases by simp
+
+  have [simp]: "r = f' (f r)" if "Ry z = (a, r)" and "z \<in> lvaluex_domain y" for z a r
+  proof -
+    note bij_lvaluex_representation[OF valid_y]
+    then have "Ry z \<in> (lvaluex_range y \<times> lvaluex_representation_range y)"
+      unfolding that Ry_def using that bij_betwE by fastforce
+    then have "r \<in> lvaluex_representation_range y"
+      unfolding that by simp
+    then show ?thesis
+      unfolding f'
+      by (metis bij_betw_def inv_into_f_f right_composition_f right_composition_f.cases)
+  qed
+  show ?thesis
+    unfolding Rxy[symmetric]
+    apply (cases "Ry z") using z
+    unfolding right_composition_map_def right_composition_map_back_def 
+    by (auto simp: case_prod_beta)
+qed
+
+lemma composed_lvalue_relationship_left:
+  fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
+  assumes "valid_lvaluex x"
+  assumes "valid_lvaluex y"
+  assumes "compatible_lvaluex x y"
+  defines "xy == compose_lvaluex x y"
+  obtains f f' where "left_composition_f x y f f'"
+  sorry
+
+lemma composed_lvalue_relationship_right:
+  fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
+  assumes "valid_lvaluex x"
+  assumes "valid_lvaluex y"
+  assumes "compatible_lvaluex x y"
+  defines "xy == compose_lvaluex x y"
+  obtains f f' where "right_composition_f x y f f'"
+  sorry
+
+typedef 'a::finite matrix = "UNIV::('a\<Rightarrow>'a\<Rightarrow>complex) set" by simp
+setup_lifting type_definition_matrix
+
+(* definition "matrix_tensor (A::'a::times mat) (B::'a mat) =
+  mat (dim_row A*dim_row B) (dim_col A*dim_col B) 
+  (\<lambda>(r,c). A $$ (r div dim_row B, c div dim_col B) *
+           B $$ (r mod dim_row B, c mod dim_col B))" *)
+
+(* lemma dim_row_matrix_tensor: "dim_row (matrix_tensor M N) = dim_row M * dim_row N" sorr
+lemma dim_col_matrix_tensor: "dim_col (matrix_tensor M N) = dim_col M * dim_col N" sorr *)
+
+lift_definition tensor :: "'a::finite matrix \<Rightarrow> 'b::finite matrix \<Rightarrow> ('a*'b) matrix" is
+  "%A B. \<lambda>(r1,r2) (c1,c2). A r1 c1 * B r2 c2" .
+
+(*
+consts value1 :: 'a
+definition "value2 = (SOME x. x\<noteq>value1)"
+
+definition "fst_subset = (SOME M::('a*'b)set. \<exists>f. bij_betw f (UNIV::'a set) M)"
+definition "snd_subset = (SOME M::('a*'b)set. \<exists>f. bij_betw f (UNIV::'b set) M)"
+definition "fst_iso = (SOME f::'a\<Rightarrow>'a*'b. bij_betw f (UNIV::'a set) fst_subset)"
+definition "snd_iso = (SOME f::'b\<Rightarrow>'a*'b. bij_betw f (UNIV::'b set) snd_subset)"
+
+term fst_iso
+
+ (* TODO only workd is both 'a,'b have \<ge>2 elements *)
+definition pair_factorization :: "('a*'b) lvalue_factorization" where
+  "pair_factorization = \<lparr> domain=UNIV, index_set={value1,value2}, 
+                          sets=(%i. if i=value1 then fst_subset else if i=value2 then snd_subset else undefined), 
+                          isomorphism=(%x i. if i=value1 then fst_iso (fst x) else if i=value2 then snd_iso (snd x) else undefined) \<rparr>"
+
+lemma assumes "card (UNIV::'a set) \<ge> 2" and "card (UNIV::'b set) \<ge> 2" 
+  shows "valid_lvalue_factorization (pair_factorization::('a*'b) lvalue_factorization)"
+  unfolding pair_factorization_def apply (rule valid_lvalue_factorization.intros)
+     apply auto
+  sorry
+
+definition fst_lvalue :: "('a*'b, 'a) lvaluex" where
+  "fst_lvalue = LValueX (LValue0 pair_factorization 
+      (\<lambda>i. if i=value1 then LValueAll0 fst_subset id else LValueUnit0 snd_subset undefined)
+      fst_subset (\<lambda>x. fst_iso (fst (x value1)))) (inv fst_iso)" *)
+
+instantiation matrix :: (finite) ring_1 begin
+lift_definition times_matrix :: "'a matrix \<Rightarrow> 'a matrix \<Rightarrow> 'a matrix" is "%A B i k. (\<Sum>j\<in>UNIV. A i j * B j k)".
+lift_definition one_matrix :: "'a matrix" is "\<lambda>i j. if i=j then 1 else 0".
+instance sorry
+end
+
+axiomatization
+  fst_lvalue :: "('a*'b, 'a) lvaluex" and
+  snd_lvalue :: "('a*'b, 'b) lvaluex" where
+  valid_fst_lvalue: "valid_lvaluex fst_lvalue" and
+  valid_snd_lvalue: "valid_lvaluex snd_lvalue" and
+  compatible_fst_snd: "compatible_lvaluex fst_lvalue snd_lvalue" and
+  compatible_snd_fst: "compatible_lvaluex snd_lvalue fst_lvalue"
+
+abbreviation "delta x y == (if x=y then 1 else 0)"
+
+lift_definition matrix_on :: "'b::finite matrix \<Rightarrow> ('a::finite,'b) lvaluex \<Rightarrow> 'a matrix" is
+  "\<lambda>B lv (r::'a) (c::'a). B (fst (lvaluex_representation lv r)) (fst (lvaluex_representation lv c))
+  * delta (snd (lvaluex_representation lv r)) (snd (lvaluex_representation lv c))".
+
+lemma matrix_on_lift_left:
+  assumes "valid_lvaluex x" and "valid_lvaluex y" and "compatible_lvaluex x y"
+  assumes domain[simp]: "lvaluex_domain x = UNIV"
+  defines "xy == compose_lvaluex x y"
+  shows "matrix_on A x = matrix_on (tensor A 1) xy"
+proof (transfer fixing: x y xy, rule ext, rule ext)
+  fix A :: "'b \<Rightarrow> 'b \<Rightarrow> complex" and r c
+  define Rx where "Rx = lvaluex_representation x"
+  define Rxy where "Rxy = lvaluex_representation xy"
+  from composed_lvalue_relationship_left[OF assms(1-3)]
+  obtain f f' where f: "left_composition_f x y f f'"
+    by auto
+  have valid_xy: "valid_lvaluex xy"
+    unfolding xy_def using assms(1-3) by (rule valid_compose_lvaluex)
+  note left_composition_f_inv_inj[OF f, folded xy_def Rxy_def, simp]
+  have map: "Rx z = left_composition_map_back f' (Rxy z)" if "z \<in> lvaluex_domain x" for z
+    unfolding Rx_def Rxy_def xy_def
+    using f that by (rule left_composition_map_back)
+  show "A (fst (Rx r)) (fst (Rx c)) * delta (snd (Rx r)) (snd (Rx c)) =
+       (case fst (Rxy r) of (r1, r2) \<Rightarrow> \<lambda>(c1, c2). A r1 c1 * delta r2 c2)
+        (fst (Rxy c)) * delta (snd (Rxy r)) (snd (Rxy c))"
+    apply (subst map, simp)+
+    apply (cases "Rxy r", cases "Rxy c") 
+    unfolding left_composition_map_back_def
+    by auto
+qed
+
+lemma matrix_on_lift_right:
+  assumes "valid_lvaluex x" and "valid_lvaluex y" and "compatible_lvaluex x y"
+  assumes domain[simp]: "lvaluex_domain y = UNIV"
+  defines "xy == compose_lvaluex x y"
+  shows "matrix_on A y = matrix_on (tensor 1 A) xy"
+proof (transfer fixing: x y xy, rule ext, rule ext)
+  fix A :: "'c \<Rightarrow> 'c \<Rightarrow> complex" and r c
+  define Ry where "Ry = lvaluex_representation y"
+  define Rxy where "Rxy = lvaluex_representation xy"
+  from composed_lvalue_relationship_right[OF assms(1-3)]
+  obtain f f' where f: "right_composition_f x y f f'"
+    by auto
+  have valid_xy: "valid_lvaluex xy"
+    unfolding xy_def using assms(1-3) by (rule valid_compose_lvaluex)
+  note right_composition_f_inv_inj[OF f, folded xy_def Rxy_def, simp]
+  have map: "Ry z = right_composition_map_back f' (Rxy z)" if "z \<in> lvaluex_domain y" for z
+    unfolding Ry_def Rxy_def xy_def
+    using f that by (rule right_composition_map_back)
+  show "A (fst (Ry r)) (fst (Ry c)) * delta (snd (Ry r)) (snd (Ry c)) =
+       (case fst (Rxy r) of (r1, r2) \<Rightarrow> \<lambda>(c1, c2). delta r1 c1 * A r2 c2)
+        (fst (Rxy c)) * delta (snd (Rxy r)) (snd (Rxy c))"
+    apply (subst map, simp)+
+    apply (cases "Rxy r", cases "Rxy c") 
+    unfolding right_composition_map_back_def
+    by auto
+qed
+
+lemma tensor_distrib: "(tensor A B) * (tensor C D) = tensor (A * C) (B * D)"
+  sorry
+
+lemma matrix_on_times: 
+  assumes "valid_lvaluex x"
+  shows "matrix_on A x * matrix_on B x = matrix_on (A*B) x"
+  apply (transfer fixing: x, rule ext, rule ext)
+  sorry
+
+lemma
+  assumes "valid_lvaluex x" and "valid_lvaluex y" and "compatible_lvaluex x y"
+  assumes "lvaluex_domain x = UNIV"
+  defines "xy == compose_lvaluex x y"
+  shows "matrix_on A x * matrix_on B y = matrix_on (tensor A B) xy"
+  apply (subst matrix_on_lift_left[where A=A and y=y])
+  using assms(1-4) apply simp_all[4]
+  apply (subst matrix_on_lift_right[where A=B and x=x])
+  using assms(1-3) apply simp_all[3]
+  using assms(3,4)
+  using assms(1-2) domain_compose_lvaluex apply fastforce
+  apply (subst matrix_on_times)
+   apply (simp add: assms(1) assms(2) assms(3) valid_compose_lvaluex)
+  unfolding xy_def[symmetric]
+  by (simp add: tensor_distrib)
 
 end
