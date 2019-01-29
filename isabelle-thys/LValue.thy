@@ -1,6 +1,10 @@
 theory LValue
   imports Main "HOL-Library.Rewrite" (* "HOL-Cardinals.Cardinals" *)
+    (* "Jordan_Normal_Form.Matrix_Impl" *) Complex_Main
+    (* "HOL-Library.Indicator_Function" *)
 begin
+
+(* no_syntax "\<^const>Group.m_inv" :: "('a, 'b) monoid_scheme => 'a => 'a" ("inv\<index> _" [81] 80) *)
 
 typedef 'a index = "UNIV::'a set" ..
 (* typedef 'a target = "UNIV::'a set" .. *)
@@ -12,6 +16,19 @@ inductive_set dependent_functions' :: "'b \<Rightarrow> 'a set \<Rightarrow> ('a
    \<Longrightarrow> f \<in> dependent_functions' undef domain range"
 
 abbreviation "dependent_functions == dependent_functions' undefined" 
+
+lemma dependent_functions_nonempty:
+  assumes "\<And>i. i\<in>I \<Longrightarrow> A i \<noteq> {}"
+  shows "dependent_functions' u I A \<noteq> {}"
+proof -
+  from assms obtain f where f: "f i \<in> A i" if "i\<in>I" for i
+    apply atomize_elim apply (rule choice) by auto
+  have "(\<lambda>i. if i:I then f i else u) : dependent_functions' u I A"
+    apply (rule dependent_functions'.intros)
+    using f by auto
+  thus ?thesis
+    by auto
+qed
 
 definition "leq_card A B = (\<exists>f. inj_on f A \<and> f`A \<subseteq> B)" (* Equivalent to (card_of A \<le>o card_of B). TODO use that? *)
 
@@ -854,7 +871,14 @@ termination
 
 (* TODO: definition that interprets an ('a,'b) lvalue as a bijection domain \<rightarrow> range * something *)
 
-definition "lvalue_update0 f lv x = inv (lvalue_raw_representation0 lv) (apfst f (lvalue_raw_representation0 lv x))"
+definition lvaluex_representation :: "('a,'b) lvaluex \<Rightarrow> 'a \<Rightarrow> 'b\<times>'a" where
+  "lvaluex_representation lv x = apfst (lvaluex_fun lv) (lvalue_raw_representation0 (lvaluex_lvalue lv) x)"
+
+definition lvaluex_representation_range :: "('a,'b) lvaluex \<Rightarrow> 'a set" where
+  "lvaluex_representation_range lv = lvalue_raw_representation_range0 (lvaluex_lvalue lv)"
+
+definition "lvalue_update0 f lv x = inv (lvalue_raw_representation0 lv)
+                                        (apfst f (lvalue_raw_representation0 lv x))"
 fun lvaluex_update where
   "lvaluex_update f (LValueX lv g) = lvalue_update0 (inv g o f o g) lv"
 
@@ -863,8 +887,22 @@ fun lvaluex_update where
 lemma nonempty_range:
   assumes "valid_lvalue_raw0 lv"
   shows "lvalue_range0 lv \<noteq> {}"
-  using assms apply induction apply auto
-  sorry
+using assms proof induction
+  case (valid_lvalue_raw0_all D repr)
+  then show ?case by auto
+next
+  case (valid_lvalue_raw0_unit D uu)
+  then show ?case by auto
+next
+  case (valid_lvalue_raw0_mix F lvs repr rg)
+  from valid_lvalue_raw0_mix.IH
+  have "dependent_functions (index_set F) (\<lambda>i. lvalue_range0 (lvs i)) \<noteq> {}"
+    by (rule dependent_functions_nonempty)
+  with valid_lvalue_raw0_mix.hyps have "rg \<noteq> {}"
+    using bij_betw_empty2 by blast
+  then show ?case
+    by simp
+qed
 
 lemma bij_lvalue_raw_representation0:
   assumes "valid_lvalue_raw0 lv"
@@ -990,13 +1028,183 @@ next
 qed
 
 
-lemma
+(* lemma
   fixes lv1 :: "('a,'b) lvaluex" and lv2 :: "('a,'c) lvaluex"
   assumes "valid_lvaluex lv1"
   assumes "valid_lvaluex lv2"
   assumes "compatible_lvaluex lv1 lv2"
-  shows "lvaluex_update f1 lv1 (lvaluex_update f2 lv2 x) = lvaluex_update (map_prod f1 f2) (compose_lvaluex lv1 lv2) x"
-  sorry
+  shows "lvaluex_update f1 lv1 (lvaluex_update f2 lv2 x)
+       = lvaluex_update (map_prod f1 f2) (compose_lvaluex lv1 lv2) x"
+  sorry *)
 (* TODO same the other way around *)
+
+definition "left_composition_map f x = (case x of (x,r) \<Rightarrow> case f r of (y,s) \<Rightarrow> ((x,y),s))"
+definition "left_composition_map_back f' xy = (case xy of ((x,y),s) \<Rightarrow> (x, f' (y,s)))"
+
+inductive left_composition_f :: "('a,'b) lvaluex \<Rightarrow> ('a,'c) lvaluex \<Rightarrow> _" where
+"bij_betw f (lvaluex_representation_range x) (lvaluex_range y \<times> lvaluex_representation_range (compose_lvaluex x y))
+  \<Longrightarrow> (\<And>z. left_composition_map f (lvaluex_representation x z) = (lvaluex_representation (compose_lvaluex x y) z))
+  \<Longrightarrow> (f' = inv_into (lvaluex_representation_range x) f)
+  \<Longrightarrow> left_composition_f x y f f'"
+
+
+lemma left_composition_f_inv_inj: 
+  fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
+  assumes left_composition_f: "left_composition_f x y f f'"
+  defines "xy == compose_lvaluex x y"
+  defines "Rx == lvaluex_representation x"
+  defines "Rxy == lvaluex_representation xy"
+  assumes "Rxy z1 = ((x1, y1), r1)"
+  assumes "Rxy z2 = ((x2, y2), r2)"
+  shows "f' (y1, r1) = f' (y2, r2) \<longleftrightarrow> (y1,r1) = (y2,r2)"
+proof -
+  have inj: "inj_on f' (lvaluex_range y \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    using left_composition_f apply cases
+    by (simp add: bij_betw_imp_surj_on inj_on_inv_into)
+  have 1: "(y1,r1) \<in> (lvaluex_range y \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    sorry
+  have 2: "(y2,r2) \<in> (lvaluex_range y \<times> lvaluex_representation_range (compose_lvaluex x y))"
+    sorry
+  from inj 1 2
+  show ?thesis
+    by (simp add: inj_on_eq_iff)
+qed
+
+lemma left_composition_map_back: 
+  assumes left_composition_f: "left_composition_f x y f f'"
+  defines "xy == compose_lvaluex x y"
+  defines "Rx == lvaluex_representation x"
+  defines "Rxy == lvaluex_representation xy"
+  shows "Rx z = left_composition_map_back f' (Rxy z)"
+proof -
+  from left_composition_f
+  have Rxy: "left_composition_map f (Rx z) = Rxy z" for z
+    unfolding xy_def Rxy_def Rx_def
+    apply cases by simp
+  from left_composition_f
+  have f': "f' = inv_into (lvaluex_representation_range x) f"
+    apply cases by simp
+
+  have [simp]: "r = f' (f r)" if "Rx z = (a, r)" for z a r
+  proof -
+    find_theorems lvaluex_representation_range
+    have "r \<in> lvaluex_representation_range x"
+      using that unfolding Rx_def sorry
+    then show ?thesis
+      unfolding f'
+      by (metis bij_betw_def inv_into_f_f left_composition_f left_composition_f.cases)
+  qed
+  show ?thesis
+    unfolding Rxy[symmetric]
+    apply (cases "Rx z")
+    unfolding left_composition_map_def left_composition_map_back_def 
+    by (auto simp: case_prod_beta)
+qed
+
+lemma composed_lvalue_relationship:
+  fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
+  assumes "valid_lvaluex x"
+  assumes "valid_lvaluex y"
+  assumes "compatible_lvaluex x y"
+  defines "xy == compose_lvaluex x y"
+(*   defines "Rx == lvaluex_representation x"
+  defines "Rxy == lvaluex_representation xy" *)
+  obtains f f' where "left_composition_f x y f f'"
+(*   where "bij_betw f (lvaluex_representation_range x) (lvaluex_range y \<times> lvaluex_representation_range xy)"
+    and "(case Rx z of (x,r) \<Rightarrow> case f r of (y,s) \<Rightarrow> ((x,y),s)) = Rxy z" *)
+  sorry
+
+typedef 'a::finite matrix = "UNIV::('a\<Rightarrow>'a\<Rightarrow>complex) set" by simp
+setup_lifting type_definition_matrix
+
+(* definition "matrix_tensor (A::'a::times mat) (B::'a mat) =
+  mat (dim_row A*dim_row B) (dim_col A*dim_col B) 
+  (\<lambda>(r,c). A $$ (r div dim_row B, c div dim_col B) *
+           B $$ (r mod dim_row B, c mod dim_col B))" *)
+
+(* lemma dim_row_matrix_tensor: "dim_row (matrix_tensor M N) = dim_row M * dim_row N" sorry
+lemma dim_col_matrix_tensor: "dim_col (matrix_tensor M N) = dim_col M * dim_col N" sorry *)
+
+lift_definition tensor :: "'a::finite matrix \<Rightarrow> 'b::finite matrix \<Rightarrow> ('a*'b) matrix" is
+  "%A B. \<lambda>(r1,r2) (c1,c2). A r1 c1 * B r2 c2" .
+
+(*
+consts value1 :: 'a
+definition "value2 = (SOME x. x\<noteq>value1)"
+
+definition "fst_subset = (SOME M::('a*'b)set. \<exists>f. bij_betw f (UNIV::'a set) M)"
+definition "snd_subset = (SOME M::('a*'b)set. \<exists>f. bij_betw f (UNIV::'b set) M)"
+definition "fst_iso = (SOME f::'a\<Rightarrow>'a*'b. bij_betw f (UNIV::'a set) fst_subset)"
+definition "snd_iso = (SOME f::'b\<Rightarrow>'a*'b. bij_betw f (UNIV::'b set) snd_subset)"
+
+term fst_iso
+
+ (* TODO only workd is both 'a,'b have \<ge>2 elements *)
+definition pair_factorization :: "('a*'b) lvalue_factorization" where
+  "pair_factorization = \<lparr> domain=UNIV, index_set={value1,value2}, 
+                          sets=(%i. if i=value1 then fst_subset else if i=value2 then snd_subset else undefined), 
+                          isomorphism=(%x i. if i=value1 then fst_iso (fst x) else if i=value2 then snd_iso (snd x) else undefined) \<rparr>"
+
+lemma assumes "card (UNIV::'a set) \<ge> 2" and "card (UNIV::'b set) \<ge> 2" 
+  shows "valid_lvalue_factorization (pair_factorization::('a*'b) lvalue_factorization)"
+  unfolding pair_factorization_def apply (rule valid_lvalue_factorization.intros)
+     apply auto
+  sorry
+
+definition fst_lvalue :: "('a*'b, 'a) lvaluex" where
+  "fst_lvalue = LValueX (LValue0 pair_factorization 
+      (\<lambda>i. if i=value1 then LValueAll0 fst_subset id else LValueUnit0 snd_subset undefined)
+      fst_subset (\<lambda>x. fst_iso (fst (x value1)))) (inv fst_iso)" *)
+
+instantiation matrix :: (finite) ring_1 begin
+lift_definition times_matrix :: "'a matrix \<Rightarrow> 'a matrix \<Rightarrow> 'a matrix" is "%A B i k. (\<Sum>j\<in>UNIV. A i j * B j k)".
+lift_definition one_matrix :: "'a matrix" is "\<lambda>i j. if i=j then 1 else 0".
+instance sorry
+end
+
+axiomatization
+  fst_lvalue :: "('a*'b, 'a) lvaluex" and
+  snd_lvalue :: "('a*'b, 'b) lvaluex" where
+  valid_fst_lvalue: "valid_lvaluex fst_lvalue" and
+  valid_snd_lvalue: "valid_lvaluex snd_lvalue" and
+  compatible_fst_snd: "compatible_lvaluex fst_lvalue snd_lvalue" and
+  compatible_snd_fst: "compatible_lvaluex snd_lvalue fst_lvalue"
+
+abbreviation "delta x y == (if x=y then 1 else 0)"
+
+lift_definition matrix_on :: "'b::finite matrix \<Rightarrow> ('a::finite,'b) lvaluex \<Rightarrow> 'a matrix" is
+  "\<lambda>B lv (r::'a) (c::'a). B (fst (lvaluex_representation lv r)) (fst (lvaluex_representation lv c))
+  * delta (snd (lvaluex_representation lv r)) (snd (lvaluex_representation lv c))".
+
+lemma matrix_on_lift_left:
+  assumes "valid_lvaluex x" and "valid_lvaluex y" and "compatible_lvaluex x y"
+  defines "xy == compose_lvaluex x y"
+  shows "matrix_on A x = matrix_on (tensor A 1) xy"
+proof (transfer fixing: x y xy, rule ext, rule ext)
+  fix A :: "'b \<Rightarrow> 'b \<Rightarrow> complex" and r c
+  define Rx where "Rx = lvaluex_representation x"
+  define Rxy where "Rxy = lvaluex_representation xy"
+  from composed_lvalue_relationship[OF assms(1-3)]
+  obtain f f' where f: "left_composition_f x y f f'"
+    by auto
+  note left_composition_f_inv_inj[OF f, folded xy_def Rxy_def, simp]
+  have map: "Rx z = left_composition_map_back f' (Rxy z)" for z
+    sorry
+  show "A (fst (Rx r)) (fst (Rx c)) * delta (snd (Rx r)) (snd (Rx c)) =
+       (case fst (Rxy r) of (r1, r2) \<Rightarrow> \<lambda>(c1, c2). A r1 c1 * delta r2 c2)
+        (fst (Rxy c)) * delta (snd (Rxy r)) (snd (Rxy c))"
+    apply (subst map)+
+    apply (cases "Rxy r", cases "Rxy c") 
+    unfolding left_composition_map_back_def
+    by auto
+qed
+
+
+lemma
+  assumes "valid_lvaluex x" and "valid_lvaluex y" and "compatible_lvaluex x y"
+  defines "xy == compose_lvaluex x y"
+  shows "matrix_on A x * matrix_on B y = matrix_on (tensor A B) xy"
+proof (transfer fixing: lv1 lv2, rule ext, rule ext)
+  sorry
 
 end
