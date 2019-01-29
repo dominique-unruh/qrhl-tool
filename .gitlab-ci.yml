@@ -1,0 +1,71 @@
+stages:
+  - build
+  - test
+  - package
+
+variables:
+  SBT_OPTS: "-Dsbt.global.base=cache/sbt/sbtboot -Dsbt.boot.directory=cache/sbt/boot -Dsbt.ivy.home=cache/sbt/ivy"
+
+build:
+  image: registry.gitlab.com/unruh/qrhl-tool/build-image
+  stage: build
+  script:
+    - if [ $[RANDOM % 100] = 0 ]; then echo Flushing cache.; rm -rf isabelle-temp tmp cache; fi # Flush cache approx. every 100. build
+    - make qrhl.zip
+    - echo isabelle. | QRHL_FORCE_BUILD=1 bin/qrhl
+  artifacts:
+    paths:
+      - target
+      - project
+      - qrhl.zip
+      - doc
+    expire_in: 30 days
+    when: always
+  cache:
+    key: main
+    paths:
+      - isabelle-temp/
+      - cache/
+
+test:
+  image: registry.gitlab.com/unruh/qrhl-tool/build-image
+  stage: test
+  script: sbt test
+  artifacts:
+    reports:
+      junit: target/test-reports/TEST-*.xml
+  cache:
+    key: main
+    paths:
+      - isabelle-temp/
+      - cache/
+    policy: pull
+
+test-distrib:
+  image: registry.gitlab.com/unruh/qrhl-tool/build-image
+  stage: test
+  script:
+    - java -version
+    - unzip -d tmp qrhl.zip
+    - set -ex && cd tmp/*/examples && for i in *.qrhl; do ../bin/qrhl "$i"; done
+  cache:
+    key: test-distrib
+    paths:
+      - tmp/*/isabelle-temp
+  artifacts:
+    untracked: true
+    when: on_failure
+    expire_in: 1d
+
+package:
+  stage: package
+  script: echo Nothing to do.
+  artifacts:
+    paths:
+      - qrhl.zip
+  cache:
+    key: main
+    paths:
+      - isabelle-temp/
+      - cache/
+    policy: pull
