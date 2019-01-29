@@ -57,7 +57,7 @@ test:
     policy: pull
 
 test-distrib:
-  image: java:latest
+  image: registry.gitlab.com/unruh/qrhl-tool/build-image
   stage: test
 #  dependencies:
 #    - build
