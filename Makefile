@@ -9,7 +9,7 @@ doc/manual.pdf :
 	make -C doc manual.pdf
 
 target/universal/qrhl-$(VERSION).zip : build.sbt $(SOURCES)
-	sbt managedResources # Makes sure that the next sbt command sees all files in isabelle-afp
+	sbt managedResources # Make sure that the next sbt command sees all files in isabelle-afp
 	sbt universal:packageBin
 
 test-distrib0 : qrhl.zip
