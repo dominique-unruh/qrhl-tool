@@ -51,7 +51,7 @@ test-distrib:
   cache:
     key: test-distrib
     paths:
-      - tmp/*/isabelle-tmp
+      - tmp/*/isabelle-temp
   artifacts:
     untracked: true
     when: on_failure
