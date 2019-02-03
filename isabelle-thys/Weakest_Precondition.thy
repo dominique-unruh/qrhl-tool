@@ -135,6 +135,12 @@ lemma wp2_cons_tac:
   shows "qrhl A [] (p#ps) B"
   using assms seqREMOVE by fastforce
 
+lemma wp_split_left_right_tac:
+  assumes "qrhl B c [] C"
+    and "qrhl A [] d B"
+  shows "qrhl A c d C"
+  by (rule seqREMOVE[OF _ _ assms(2) assms(1)], simp_all)
+
 (* TODO move or remove *)
 ML \<open>
 fun get_variable_name ctxt (v as Free(n,T)) = let

@@ -1,4 +1,20 @@
-isabelle TestEx.
+isabelle.
 
-lemma x=y.
-simp x_def y_def.
+classical var x : int.
+
+program P := {
+  x <- x + 1;
+  x <- x + 2;
+  x <- x + 3;
+  x <- x + 4;
+}.
+
+qrhl { Cla[x1=x2] } call P; ~ call P; { Cla[x1=x2] }.
+inline P.
+wp left.
+wp right 2.
+wp 3 2.
+skip.
+simp!.
+qed.
+

@@ -245,9 +245,14 @@ object Parser extends JavaTokenParsers {
   ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post,Nil)))
 
   val tactic_wp: Parser[WpTac] =
-    literal("wp") ~> OnceParser("left|right".r) ^^ {
-      case "left" => WpTac(left=true)
-      case "right" => WpTac(left=false)
+    literal("wp") ~> {
+      (literal("left") ~> natural.? ^^ { n => WpTac(left = n.getOrElse(1), right = 0) }) |
+        (literal("right") ~> natural.? ^^ { n => WpTac(right = n.getOrElse(1), left = 0) }) |
+        (natural ~ natural ^^ { case l ~ r => WpTac(left = l, right = r) })
+    }
+  OnceParser("left|right".r) ^^ {
+      case "left" => WpTac(left=1,right=0)
+      case "right" => WpTac(left=0,right=1)
     }
 
   val tactic_swap: Parser[SwapTac] =

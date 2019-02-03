@@ -214,9 +214,9 @@ operation_setup seq_tac = {*
 *}
 
 operation_setup wp_tac = {*
-  {from_lib = Codec.triple Codec.bool subgoal_codec context_codec,
+  {from_lib = Codec.triple (Codec.tuple Codec.int Codec.int) subgoal_codec context_codec,
    to_lib = Codec.id,
-   action = apply_tactic_on_term_concl (fn ctxt => fn left => Weakest_Precondition.wp_seq_tac left ctxt 1)}
+   action = apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Weakest_Precondition.wp_seq_tac left right ctxt 1)}
 (* fn (left,goal,ctx_id) => let
      val ctxt = Refs.Ctxt.read ctx_id
      val result = Weakest_Precondition.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm

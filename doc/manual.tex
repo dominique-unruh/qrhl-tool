@@ -2557,7 +2557,7 @@ When invoked as ``\texttt{swap left}'' or ``\texttt{swap right}'', then $n=1$ is
 
 \tactic{wp} 
 
-Removes the last statement from the left or right program of a qRHL
+Removes the last statement(s) from the left or right program of a qRHL
 subgoal and adapts the postcondition accordingly.
 
 \newcommand\WP{\operatorname{wp}}%
@@ -2666,6 +2666,14 @@ the precondition returned by $\WP_1$
 or $\WP_2$ is indeed the \emph{weakest} precondition.
 (We have merely tried to make them as weak as possible.)
 
+\medskip
+
+\texttt{wp left} and \texttt{wp right} apply only to the very last statement.
+The following variants can be used to handle several statements in one go:
+\texttt{wp left $n$} with $n\geq0$ is equivalent to $n$
+invocations of \texttt{wp left}.
+Analogously \texttt{wp right $n$}.
+And \texttt{wp $n$ $m$} is equivalent to \texttt{wp left $n$. wp right $n$.}
 
 \subsection{Accompanying Isabelle theories}
 \label{sec:isabelle}

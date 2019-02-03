@@ -127,8 +127,7 @@ lemma
   assumes [simp]: "x\<ge>0"
   shows "qrhl D [s1,sample var_x Expr[uniform {0..max x 0}]] [t1,t2,assign var_x Expr[0]] Expr[Cla[x1\<ge>x2]]"
   using [[show_types]]
-  apply (tactic \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
-  apply (tactic \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (tactic \<open>Weakest_Precondition.wp_seq_tac 1 1 \<^context> 1\<close>)
   apply simp
   by (rule qrhl_top)
 
@@ -143,8 +142,7 @@ lemma test:
 lemma
   assumes [simp]: "x\<ge>0"
   shows "qrhl Expr[ Cla[x1=0 \<and> x2=1] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ]] [assign var_x Expr[x-1]] Expr[Cla[x1\<ge>x2]]"
-  apply (tactic \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>) 
-  apply (tactic \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (tactic \<open>Weakest_Precondition.wp_seq_tac 1 1 \<^context> 1\<close>) 
   apply simp
   apply skip
   by simp
@@ -294,15 +292,13 @@ lemma elgamal_correct [simp]:
           ElGamal
          [] Expr[Cla[m1=z]]"
   unfolding ElGamal_def
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: case_prod_beta dec_def)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   (* unfolding enc_def *)
   (* unfolding  *)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 3 0 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
@@ -347,13 +343,11 @@ lemma elgamal_correct2 [simp]:
           ElGamal
          [] Expr[Cla[m1=m2]]"
   unfolding ElGamal_def
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: dec_def)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac true \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 3 0 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
@@ -363,13 +357,11 @@ lemma elgamal_correct3 [simp]:
   shows "qrhl Expr[Cla[m1=m2]] 
          [] ElGamal Expr[Cla[m1=m2]]"
   unfolding ElGamal_def
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 1 \<^context> 1\<close>)
   apply (simp add: dec_def case_prod_beta)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 1 \<^context> 1\<close>)
   apply (simp add: weight_enc supp_enc case_prod_beta)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac false \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 3 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
