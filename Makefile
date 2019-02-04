@@ -29,7 +29,7 @@ test-distrib : test-distrib0
 test :
 	sbt test
 
-owncloud : test qrhl.zip
+owncloud : qrhl.zip
 	cp -v qrhl.zip /home/unruh/ownCloud/qrhl/
 
 push_docker:
