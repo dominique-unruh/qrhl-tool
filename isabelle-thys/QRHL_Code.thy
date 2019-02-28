@@ -1,5 +1,5 @@
 theory QRHL_Code
-  imports QRHL_Core "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Code_Target_Numeral"
+  imports Deriving.Compare_Real QRHL_Core "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Code_Target_Numeral"
 begin
 
 (* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
@@ -308,7 +308,7 @@ derive (linorder) compare_order bit
 derive (compare) ccompare bit
 derive (dlist) set_impl bit
 derive (eq) ceq real
-derive (linorder) compare real
+(* derive (linorder) compare real *)
 derive (compare) ccompare real
 derive (eq) ceq complex
 derive (no) ccompare complex
