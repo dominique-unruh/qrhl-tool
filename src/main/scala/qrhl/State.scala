@@ -9,18 +9,18 @@ import org.log4s
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.isabelle.Isabelle.Thm
 import qrhl.logic._
-import qrhl.toplevel.{Command, Parser, ParserContext}
+import qrhl.toplevel.{Command, Parser, ParserContext, Toplevel}
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
 import info.hupel.isabelle.api.XML
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import Isabelle.applicativeXMLResult
 import Isabelle.Context.codec
 import Subgoal.codec
+import qrhl.State.logger
 
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
@@ -236,22 +236,22 @@ class CheatMode private (
                     private val cheatAtAll : Boolean, // whether any cheating should happen at all
                     private val cheatInProof : Boolean, // cheating till the end of the current proof
                     private val cheatInFile : Boolean, // cheating till the end of current file
-                    private val includeLevel : Int // level of includes (0 = top level fail, no cheating)
+                    private val inInclude : Boolean // in included file
                     ) {
-  assert(includeLevel >= 0)
-  def endInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=false, includeLevel=includeLevel-1)
-  def endProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=false, cheatInFile=cheatInFile, includeLevel=includeLevel)
-  def cheating: Boolean = cheatAtAll && (cheatInFile || cheatInProof || includeLevel>0)
-  def startCheatInProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=true, cheatInFile=cheatInFile, includeLevel=includeLevel)
-  def startCheatInFile = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=true, includeLevel=includeLevel)
-  def startInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=cheatInFile, includeLevel=includeLevel+1)
+//  assert(includeLevel >= 0)
+//  def endInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=false, includeLevel=includeLevel-1)
+  def endProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=false, cheatInFile=cheatInFile, inInclude=inInclude)
+  def cheating: Boolean = cheatAtAll && (cheatInFile || cheatInProof || inInclude)
+  def startCheatInProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=true, cheatInFile=cheatInFile, inInclude=inInclude)
+  def startCheatInFile = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=true, inInclude=inInclude)
+  def startInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=cheatInFile, inInclude=true)
   def stopCheatInFile(inProof:Boolean) = new CheatMode(cheatAtAll=cheatAtAll,
     cheatInProof=cheatInProof || (inProof && cheatInFile),
-    cheatInFile=false, includeLevel=includeLevel)
+    cheatInFile=false, inInclude=inInclude)
 }
 
 object CheatMode {
-  def make(cheatAtAll:Boolean): CheatMode = new CheatMode(cheatAtAll=cheatAtAll,false,false,0)
+  def make(cheatAtAll:Boolean): CheatMode = new CheatMode(cheatAtAll=cheatAtAll,false,false,false)
 }
 
 class State private (val environment: Environment,
@@ -260,7 +260,26 @@ class State private (val environment: Environment,
                      private val _isabelle: Option[Isabelle.Context],
                      val dependencies: List[FileTimeStamp],
                      val currentDirectory: Path,
-                     val cheatMode : CheatMode) {
+                     val cheatMode : CheatMode,
+                     val includedFiles : Set[Path]) {
+  def include(file: Path): State = {
+    val fullpath = currentDirectory.resolve(file).toRealPath()
+    logger.debug(s"Including $fullpath")
+    if (includedFiles.contains(fullpath)) {
+      println(s"Already included $file. Skipping.")
+      this
+    } else {
+      val state1 = copy(includedFiles = includedFiles + fullpath, cheatMode=cheatMode.startInclude)
+      val toplevel = Toplevel.makeToplevelFromState(state1)
+      toplevel.run(fullpath)
+      val state2 = toplevel.state
+      val state3 = toplevel.state.copy(
+        dependencies=new FileTimeStamp(fullpath)::state2.dependencies,
+        cheatMode = cheatMode) // restore original cheatMode
+      state3
+    }
+  }
+
   def cheatInFile: State = copy(cheatMode=cheatMode.startCheatInFile)
   def cheatInProof: State = copy(cheatMode=cheatMode.startCheatInProof)
   def stopCheating: State = copy(cheatMode=cheatMode.stopCheatInFile(currentLemma.isDefined))
@@ -315,9 +334,11 @@ class State private (val environment: Environment,
                    dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,RichTerm)]=currentLemma,
                    currentDirectory:Path=currentDirectory,
-                   cheatMode:CheatMode=cheatMode) : State =
+                   cheatMode:CheatMode=cheatMode,
+                   includedFiles:Set[Path]=includedFiles) : State =
     new State(environment=environment, goal=goal, _isabelle=isabelle, cheatMode=cheatMode,
-      currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory)
+      currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory,
+      includedFiles=includedFiles)
 
   def changeDirectory(dir:Path): State = {
     assert(dir!=null)
@@ -427,8 +448,9 @@ class State private (val environment: Environment,
 }
 
 object State {
-  def empty(cheatingAtAll:Boolean) = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
-    dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""), cheatMode=CheatMode.make(cheatingAtAll))
+  def empty(cheating:Boolean) = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
+    dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""),
+    cheatMode=CheatMode.make(cheating), includedFiles=Set.empty)
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
   val declare_quantum_variable: Operation[(String, ITyp, BigInt), BigInt] =
@@ -436,4 +458,6 @@ object State {
 
   val declare_classical_variable: Operation[(String, ITyp, BigInt), BigInt] =
     Operation.implicitly[(String,ITyp,BigInt), BigInt]("declare_classical_variable")
+
+  private val logger = log4s.getLogger
 }

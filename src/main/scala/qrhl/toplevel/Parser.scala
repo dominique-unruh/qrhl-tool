@@ -363,6 +363,10 @@ object Parser extends JavaTokenParsers {
       ("cheat:stop" ^^ {_ => CheatCommand(stop=true)}) |
       ("cheat" ^^ {_ => CheatCommand()})
 
+  val include : Parser[IncludeCommand] =
+    "include" ~> quotedString ^^ IncludeCommand.apply
+
   def command(implicit context:ParserContext): Parser[Command] =
-    (debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) | undo | qed | changeDirectory | cheat).named("command")
+    (debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
+      include | undo | qed | changeDirectory | cheat).named("command")
 }

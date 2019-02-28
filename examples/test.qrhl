@@ -1,13 +1,6 @@
-isabelle.
+#isabelle.
 
-classical var x : int.
-
-program P := {
-  x <- x + 1;
-  x <- x + 2;
-  x <- x + 3;
-  x <- x + 4;
-}.
+include "test2.qrhl".
 
 qrhl { Cla[x1=x2] } call P; ~ call P; { Cla[x1=x2] }.
 inline P.

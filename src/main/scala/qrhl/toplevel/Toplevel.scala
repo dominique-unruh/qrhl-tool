@@ -88,11 +88,11 @@ class Toplevel private(initialState : State) {
         if (!state.hasIsabelle && isabelleLoaded)
           System.gc()
       case _ =>
-        val newState = cmd.act(states.head)
+        val newState = cmd.act(state)
         states = newState :: states
     }
 
-    println(states.head)
+    println(state)
   }
 
   /** Returns the current state of the toplevel */
@@ -188,12 +188,15 @@ object Toplevel {
   }
 
   def makeToplevelWithTheory(theory:Option[String]=None) : Toplevel = {
-    val state = State.empty(cheatingAtAll = false).loadIsabelle(theory)
+    val state = State.empty(cheating = false).loadIsabelle(theory)
     new Toplevel(state)
   }
 
+  def makeToplevelFromState(state:State) : Toplevel =
+    new Toplevel(state)
+
   def makeToplevel(cheating:Boolean) : Toplevel = {
-    val state = State.empty(cheatingAtAll = cheating)
+    val state = State.empty(cheating = cheating)
     new Toplevel(state)
   }
 
