@@ -232,12 +232,39 @@ class FileTimeStamp(val file:Path) {
   override def toString: String = s"$file@$time"
 }
 
+class CheatMode private (
+                    private val cheatAtAll : Boolean, // whether any cheating should happen at all
+                    private val cheatInProof : Boolean, // cheating till the end of the current proof
+                    private val cheatInFile : Boolean, // cheating till the end of current file
+                    private val includeLevel : Int // level of includes (0 = top level fail, no cheating)
+                    ) {
+  assert(includeLevel >= 0)
+  def endInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=false, includeLevel=includeLevel-1)
+  def endProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=false, cheatInFile=cheatInFile, includeLevel=includeLevel)
+  def cheating: Boolean = cheatAtAll && (cheatInFile || cheatInProof || includeLevel>0)
+  def startCheatInProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=true, cheatInFile=cheatInFile, includeLevel=includeLevel)
+  def startCheatInFile = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=true, includeLevel=includeLevel)
+  def startInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=cheatInFile, includeLevel=includeLevel+1)
+  def stopCheatInFile(inProof:Boolean) = new CheatMode(cheatAtAll=cheatAtAll,
+    cheatInProof=cheatInProof || (inProof && cheatInFile),
+    cheatInFile=false, includeLevel=includeLevel)
+}
+
+object CheatMode {
+  def make(cheatAtAll:Boolean): CheatMode = new CheatMode(cheatAtAll=cheatAtAll,false,false,0)
+}
+
 class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val currentLemma: Option[(String,RichTerm)],
                      private val _isabelle: Option[Isabelle.Context],
                      val dependencies: List[FileTimeStamp],
-                     val currentDirectory: Path) {
+                     val currentDirectory: Path,
+                     val cheatMode : CheatMode) {
+  def cheatInFile: State = copy(cheatMode=cheatMode.startCheatInFile)
+  def cheatInProof: State = copy(cheatMode=cheatMode.startCheatInProof)
+  def stopCheating: State = copy(cheatMode=cheatMode.stopCheatInFile(currentLemma.isDefined))
+
   def isabelle: Isabelle.Context = _isabelle match {
     case Some(isa) => isa
     case None => throw UserException(Parser.noIsabelleError)
@@ -250,7 +277,7 @@ class State private (val environment: Environment,
 
     val (name,prop) = currentLemma.get
     val isa = if (name!="") _isabelle.map(_.addAssumption(name,prop.isabelleTerm)) else _isabelle
-    copy(isabelle=isa, currentLemma=None)
+    copy(isabelle=isa, currentLemma=None, cheatMode=cheatMode.endProof)
   }
 
   def declareProgram(name: String, program: Block): State = {
@@ -271,20 +298,25 @@ class State private (val environment: Environment,
   }
 
 
-  def applyTactic(tactic:Tactic) : State = goal match {
-    case Nil =>
-      throw UserException("No pending proof")
-    case subgoal::subgoals =>
-      copy(goal=tactic.apply(this,subgoal)++subgoals)
-  }
+  def applyTactic(tactic:Tactic) : State =
+    if (cheatMode.cheating)
+      copy(goal=Nil)
+    else
+      goal match {
+        case Nil =>
+          throw UserException("No pending proof")
+        case subgoal::subgoals =>
+          copy(goal=tactic.apply(this,subgoal)++subgoals)
+      }
 
   private def copy(environment:Environment=environment,
                    goal:List[Subgoal]=goal,
                    isabelle:Option[Isabelle.Context]=_isabelle,
                    dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,RichTerm)]=currentLemma,
-                   currentDirectory:Path=currentDirectory) : State =
-    new State(environment=environment, goal=goal, _isabelle=isabelle,
+                   currentDirectory:Path=currentDirectory,
+                   cheatMode:CheatMode=cheatMode) : State =
+    new State(environment=environment, goal=goal, _isabelle=isabelle, cheatMode=cheatMode,
       currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory)
 
   def changeDirectory(dir:Path): State = {
@@ -302,7 +334,9 @@ class State private (val environment: Environment,
     case _ => throw UserException("There is still a pending proof.")
   }
 
-  override def toString: String = goal match {
+  override def toString: String = if (cheatMode.cheating)
+    "In cheat mode."
+  else goal match {
     case Nil => "No current goal."
     case List(goal1) => s"Goal:\n\n" + goal1
     case List(goal1,rest @ _*) =>
@@ -393,8 +427,8 @@ class State private (val environment: Environment,
 }
 
 object State {
-  val empty = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
-    dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""))
+  def empty(cheatingAtAll:Boolean) = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
+    dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""), cheatMode=CheatMode.make(cheatingAtAll))
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
   val declare_quantum_variable: Operation[(String, ITyp, BigInt), BigInt] =

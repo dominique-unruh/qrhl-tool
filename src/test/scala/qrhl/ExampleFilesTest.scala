@@ -11,7 +11,7 @@ import org.scalatest.tags.Slow
 class ExampleFilesTest extends FunSuite {
 
   def testFile(file:String): Unit = {
-    val toplevel = new Toplevel()
+    val toplevel = Toplevel.makeToplevel(cheating = false)
     toplevel.run(Paths.get("examples",file))
 //    toplevel.dispose()
     System.gc()

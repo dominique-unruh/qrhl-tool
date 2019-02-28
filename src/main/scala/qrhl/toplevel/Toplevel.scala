@@ -17,7 +17,7 @@ import Toplevel.logger
 import info.hupel.isabelle.{Operation, ProverResult}
 
 /** Not thread safe */
-class Toplevel(initialState : State = State.empty) {
+class Toplevel private(initialState : State) {
 //  def dispose(): Unit = {
 //    if (state.hasIsabelle) state.isabelle.isabelle.dispose()
 //    states = null
@@ -91,6 +91,7 @@ class Toplevel(initialState : State = State.empty) {
         val newState = cmd.act(states.head)
         states = newState :: states
     }
+
     println(states.head)
   }
 
@@ -170,7 +171,7 @@ object Toplevel {
   private val logger = log4s.getLogger
 
   /** Runs the interactive toplevel from the terminal (with interactive readline). */
-  def runFromTerminal() : Toplevel = {
+  def runFromTerminal(cheating:Boolean) : Toplevel = {
     val terminal = TerminalBuilder.terminal()
     val readLine : String => String = {
       if (terminal.isInstanceOf[DumbTerminal]) {
@@ -181,19 +182,24 @@ object Toplevel {
         lineReader.readLine
       }
     }
-    val toplevel = new Toplevel()
+    val toplevel = Toplevel.makeToplevel(cheating=cheating)
     toplevel.runWithErrorHandler(readLine)
     toplevel
   }
 
-  def makeToplevel(theory:Option[String]=None) : Toplevel = {
-    val state = State.empty.loadIsabelle(theory)
+  def makeToplevelWithTheory(theory:Option[String]=None) : Toplevel = {
+    val state = State.empty(cheatingAtAll = false).loadIsabelle(theory)
     new Toplevel(state)
   }
 
-  def main(): Unit = {
+  def makeToplevel(cheating:Boolean) : Toplevel = {
+    val state = State.empty(cheatingAtAll = cheating)
+    new Toplevel(state)
+  }
+
+  def main(cheating:Boolean): Unit = {
     try
-      runFromTerminal()
+      runFromTerminal(cheating)
     catch {
       case e:Throwable => // we need to catch and print, otherwise the sys.exit below gobbles up the exception
         e.printStackTrace()

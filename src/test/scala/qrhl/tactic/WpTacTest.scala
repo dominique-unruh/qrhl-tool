@@ -5,7 +5,7 @@ import qrhl.toplevel.{TacticCommand, Toplevel, ToplevelTest}
 
 class WpTacTest extends FunSuite {
   test("WpTac well-typed (qinit)") {
-    val toplevel = Toplevel.makeToplevel()
+    val toplevel = Toplevel.makeToplevelWithTheory()
     toplevel.run(
       """
         |quantum var q : bit.
@@ -19,7 +19,7 @@ class WpTacTest extends FunSuite {
   }
 
   test("WpTac well-typed (qinit, two in one)") {
-    val toplevel = Toplevel.makeToplevel()
+    val toplevel = Toplevel.makeToplevelWithTheory()
     toplevel.run(
       """
         |quantum var q : bit.
@@ -32,7 +32,7 @@ class WpTacTest extends FunSuite {
   }
 
   test("WpTac well-typed (assign)") {
-    val toplevel = Toplevel.makeToplevel()
+    val toplevel = Toplevel.makeToplevelWithTheory()
     toplevel.run(
       """
         |classical var q : bit.
@@ -46,7 +46,7 @@ class WpTacTest extends FunSuite {
   }
 
   test("WpTac well-typed (sample)") {
-    val toplevel = Toplevel.makeToplevel()
+    val toplevel = Toplevel.makeToplevelWithTheory()
     toplevel.run(
       """
         |classical var q : bit.

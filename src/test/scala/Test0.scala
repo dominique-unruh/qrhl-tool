@@ -112,7 +112,7 @@ object Test0 {
 
   def main0(args: Array[String]): Unit = {
     try {
-      val tl = new Toplevel()
+      val tl = Toplevel.makeToplevel(cheating=false)
       tl.run(
         """
           |isabelle PrgEnc.
