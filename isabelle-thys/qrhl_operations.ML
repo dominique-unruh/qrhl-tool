@@ -254,4 +254,20 @@ fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
   in SOME (subgoals' |> map (term_to_subgoal ctxt),goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec)) end
 end
 
+fun local_thy_file thy = let val name = Context.theory_long_name thy in
+  if String.isPrefix "Draft." name then
+  let val short = Context.theory_name thy
+      val dir = Thy_Info.master_directory name
+  in SOME (Path.append dir (Path.basic (short^".thy")) |> Path.implode) end
+  else NONE 
+end
+  
+fun create_context thy_names = let
+     val thys = map Thy_Info.get_theory thy_names
+     val thy = Theory.begin_theory ("QRHL_Session", Position.none) thys
+     val files = thy |> Theory.ancestors_of 
+                     |> map_filter local_thy_file 
+     val ctxt = Proof_Context.init_global thy
+in (make_ctxt_ref ctxt,files) end
+
 end

@@ -15,12 +15,12 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
 import info.hupel.isabelle.api.XML
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import Isabelle.applicativeXMLResult
 import Isabelle.Context.codec
 import Subgoal.codec
+import qrhl.State.logger
 
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
@@ -342,16 +342,18 @@ class State private (val environment: Environment,
     if (_isabelle.isDefined)
       throw UserException("Only one isabelle-command allowed")
     val isabelle = Isabelle.globalIsabelle
-    val (isa,files) = theory match {
-      case None =>
-        (isabelle.getQRHLContextWithFiles(), dependencies)
+    val (ctxt,deps) = theory match {
+      case None => isabelle.getQRHLContextWithFiles()
       case Some(thy) =>
         val filename = currentDirectory.resolve(thy+".thy")
-//        println("State.loadIsabelle",thy,currentDirectory,filename)
-//        val thyname = currentDirectory.resolve(thy)
-        (isabelle.getQRHLContextWithFiles(filename), new FileTimeStamp(filename) :: dependencies)
+        isabelle.getQRHLContextWithFiles(filename)
     }
-    copy(isabelle = Some(isa), dependencies=files)
+
+    logger.debug(s"Dependencies of theory $theory: $deps")
+
+    val stamps = deps.map(new FileTimeStamp(_))
+
+    copy(isabelle = Some(ctxt), dependencies=stamps ::: dependencies)
   }
 
   def filesChanged : List[Path] = {
@@ -393,6 +395,8 @@ class State private (val environment: Environment,
 }
 
 object State {
+  private val logger = log4s.getLogger
+
   val empty = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
     dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""))
 //  private[State] val defaultIsabelleTheory = "QRHL"
