@@ -20,7 +20,15 @@ abbreviation "dependent_functions == dependent_functions' undefined"
 
 definition "restrict f S x = (if x\<in>S then f x else undefined)"
 
-lemma restrict_image: "restrict f X ` X = f ` X"
+lemma restrict_simp[simp]:
+  "x : D \<Longrightarrow> restrict f D x = f x"
+  unfolding restrict_def by simp
+
+lemma restrict_simp_outside[simp]:
+  "x \<notin> D \<Longrightarrow> restrict f D x = undefined"
+  unfolding restrict_def by simp
+
+lemma restrict_image[simp]: "restrict f X ` X = f ` X"
   apply (rule image_cong, simp)
   unfolding restrict_def by simp
 
@@ -389,6 +397,7 @@ inductive valid_lvalue_factorization :: "'a lvalue_factorization \<Rightarrow> b
   "\<lbrakk> domain \<noteq> {};
      \<And>i. i\<notin>I \<Longrightarrow> sets i = undefined;
      \<And>x. x\<notin>domain \<Longrightarrow> isom x = undefined;
+     leq_card I domain;
      bij_betw isom domain (dependent_functions I sets)
    \<rbrakk> \<Longrightarrow> valid_lvalue_factorization \<lparr> lvf_domain=domain, lvf_index_set=I, lvf_sets=sets, lvf_isomorphism=isom \<rparr>"
 
@@ -833,6 +842,11 @@ definition lvalue_basic_squash :: "('a,'b) lvalue_basic \<Rightarrow> ('a,'a) lv
          f' = inv_into (lvalue_basic_range lv) f
      in (lv',f'))"
 
+lemma lvalue_basic_squash_valid:
+  assumes "valid_lvalue_basic lvb"
+  shows "valid_lvalue_basic (fst (lvalue_basic_squash lvb))"
+  sorry
+
 lemma lvalue_basic_squash_bij:
   assumes "valid_lvalue_basic lvb"
   shows "bij_betw (snd (lvalue_basic_squash lvb))
@@ -886,6 +900,11 @@ proof -
     unfolding squash lvb'_def by simp
 qed
 
+lemma lvalue_basic_squash_domain[simp]:
+  "lvalue_basic_domain (fst (lvalue_basic_squash lvb)) = lvalue_basic_domain lvb"
+  apply (cases lvb) unfolding lvalue_basic_squash_def
+  by (simp add: Let_def lvalue_basic_domain_def)
+
 datatype ('a,'b) lvalue = 
   LValueBasic "('a,'b) lvalue_basic"
   (* LValueChained lv lvb = lv o lvb *)
@@ -908,9 +927,6 @@ inductive valid_lvalue where
   "valid_lvalue_basic lvb \<Longrightarrow> valid_lvalue (LValueBasic lvb)"
 | "\<lbrakk> valid_lvalue lv; valid_lvalue_basic lvb; lvalue_domain lv = lvalue_basic_range lvb \<rbrakk>
        \<Longrightarrow> valid_lvalue (LValueChained lv lvb)"
-
-definition lvalue_compose :: "('a,'b) lvalue \<Rightarrow> ('a,'c) lvalue \<Rightarrow> ('a,'b*'c) lvalue" where
-  "lvalue_compose = undefined" (* TODO *)
 
 fun lvalue_squash where
   "lvalue_squash (LValueBasic lvb) = (let (lvb',f) = lvalue_basic_squash lvb in (LValueBasic lvb', f))"
@@ -954,24 +970,314 @@ next
     by (fact valid)
 qed
 
-definition lvalue_basic_domain_map :: "('a\<Rightarrow>'b) \<Rightarrow> ('b,'c) lvalue_basic \<Rightarrow> ('a,'c) lvalue_basic" where
-"lvalue_basic_domain_map = undefined" (* TODO *)
+fun factorization_domain_map :: "('a\<Rightarrow>'b) \<Rightarrow> 'b lvalue_factorization \<Rightarrow> 'a lvalue_factorization" where
+  "factorization_domain_map f \<lparr> lvf_domain=domain, lvf_index_set=I, lvf_sets=sets, lvf_isomorphism=isom \<rparr>
+    = (* \<lparr> lvf_domain=domain', lvf_index_set=I', lvf_sets=sets', lvf_isomorphism=isom' \<rparr> *) undefined"
+
+(* lvalue_basic_domain_map f lv = lv o f *)
+fun lvalue_basic_domain_map :: "('a\<Rightarrow>'b) \<Rightarrow> ('a set) \<Rightarrow> ('b,'c) lvalue_basic \<Rightarrow> ('a,'c) lvalue_basic" where
+"lvalue_basic_domain_map f D \<lparr> lv_factorization=factorization, lv_factors=factors, lv_representation=repr \<rparr>
+  = (* \<lparr> lv_factorization=factorization_domain_map f D factorization, lv_factors=factors, lv_representation=repr \<rparr> *)undefined" (* TODO *)
+
+lemma lvalue_basic_domain_map_domain[simp]:
+  shows "lvalue_basic_domain (lvalue_basic_domain_map f D lvb) = D"
+  sorry
 
 fun lvalue_chain_basic :: "('b,'c) lvalue_basic \<Rightarrow> ('a,'b) lvalue \<Rightarrow> ('a,'c) lvalue" where
   "lvalue_chain_basic lvb1 (LValueBasic lvb2) = (let (lvb2',f) = lvalue_basic_squash lvb2 in
-    LValueChained (LValueBasic (lvalue_basic_domain_map f lvb1)) lvb2')"
+    LValueChained (LValueBasic (lvalue_basic_domain_map f (lvalue_basic_range lvb2') lvb1)) lvb2')"
 | "lvalue_chain_basic lvb1 (LValueChained lv2 lvb2) = LValueChained (lvalue_chain_basic lvb1 lv2) lvb2"
 
 fun lvalue_chain where
   "lvalue_chain (LValueBasic lvb1) lv2 = lvalue_chain_basic lvb1 lv2"
 | "lvalue_chain (LValueChained lv1 lvb1) lv2 = lvalue_chain lv1 (lvalue_chain_basic lvb1 lv2)"
 
+lemma lvalue_chain_basic_domain[simp]: "lvalue_domain (lvalue_chain_basic lvb lv) = lvalue_domain lv"
+  by (induction lv; simp add: case_prod_beta)
+
+lemma lvalue_chain_domain[simp]: "lvalue_domain (lvalue_chain lv1 lv2) = lvalue_domain lv2"
+  by (induction lv1 arbitrary: lv2; simp)
+
+fun lvalue_fun :: "('a, 'b) lvalue \<Rightarrow> 'a \<Rightarrow> 'b" where
+  "lvalue_fun (LValueBasic lvb) x = lvalue_basic_fun lvb x"
+| "lvalue_fun (LValueChained lv lvb) x = lvalue_fun lv (lvalue_basic_fun lvb x)"
+
+fun lvalue_cofun :: "('a, 'b) lvalue \<Rightarrow> 'a \<Rightarrow> 'a"
+  and "lvalue_corange" :: "('a, 'b) lvalue \<Rightarrow> 'a set"
+where
+  "lvalue_cofun (LValueBasic lvb) x = lvalue_basic_cofun lvb x"
+| "lvalue_cofun (LValueChained lv lvb) x = 
+    (let y = lvalue_basic_fun lvb x;
+         yco = lvalue_basic_cofun lvb x;
+         zco = lvalue_cofun lv y;
+         f = SOME f. inj_on f (lvalue_basic_corange lvb \<times> lvalue_corange lv)
+     in f (yco,zco))"
+| "lvalue_corange (LValueBasic lvb) = lvalue_basic_corange lvb"
+| "lvalue_corange (LValueChained lv lvb) = 
+    (let f = SOME f. inj_on f (lvalue_basic_corange lvb \<times> lvalue_corange lv)
+    in f ` (lvalue_basic_corange lvb \<times> lvalue_corange lv))"
+
+section \<open>Composition of lvalues\<close>
+
 inductive lvalue_compatible :: "('a,'b) lvalue \<Rightarrow> ('a,'c) lvalue \<Rightarrow> bool" where
-  lvalue_compatible_same: "lvalue_compatible lv1 lv2 \<Longrightarrow> lvalue_compatible (LValueChained lv1 lvb) (LValueChained lv2 lvb)" 
-| lvalue_compatible_cc: "lvalue_basic_compatible lvb1 lvb2 \<Longrightarrow> lvalue_compatible (LValueChained lv1 lvb1) (LValueChained lv2 lvb2)"
-| lvalue_compatible_bb: "lvalue_basic_compatible lvb1 lvb2 \<Longrightarrow> lvalue_compatible (LValueBasic lvb1) (LValueBasic lvb2)"
-| lvalue_compatible_cb: "lvalue_basic_compatible lvb1 lvb2 \<Longrightarrow> lvalue_compatible (LValueChained lv1 lvb1) (LValueBasic lvb2)"
-| lvalue_compatible_bc: "lvalue_basic_compatible lvb1 lvb2 \<Longrightarrow> lvalue_compatible (LValueBasic lvb1) (LValueChained lv2 lvb2)"
+  lvalue_compatible_same: "\<lbrakk> lvalue_compatible lv1 lv2; valid_lvalue (LValueChained lv1 lvb);
+ valid_lvalue (LValueChained lv2 lvb) \<rbrakk> \<Longrightarrow> lvalue_compatible (LValueChained lv1 lvb) (LValueChained lv2 lvb)" 
+| lvalue_compatible_cc: "\<lbrakk> lvalue_basic_compatible lvb1 lvb2; valid_lvalue (LValueChained lv1 lvb1); valid_lvalue (LValueChained lv2 lvb2) \<rbrakk>
+ \<Longrightarrow> lvalue_compatible (LValueChained lv1 lvb1) (LValueChained lv2 lvb2)"
+| lvalue_compatible_bb: "\<lbrakk> lvalue_basic_compatible lvb1 lvb2; valid_lvalue (LValueBasic lvb1); valid_lvalue (LValueBasic lvb2) \<rbrakk> \<Longrightarrow> lvalue_compatible (LValueBasic lvb1) (LValueBasic lvb2)"
+| lvalue_compatible_cb: "\<lbrakk> lvalue_basic_compatible lvb1 lvb2; valid_lvalue (LValueChained lv1 lvb1); valid_lvalue (LValueBasic lvb2) \<rbrakk> \<Longrightarrow> lvalue_compatible (LValueChained lv1 lvb1) (LValueBasic lvb2)"
+| lvalue_compatible_bc: "\<lbrakk> lvalue_basic_compatible lvb1 lvb2; valid_lvalue (LValueBasic lvb1); valid_lvalue (LValueChained lv2 lvb2)\<rbrakk> \<Longrightarrow> lvalue_compatible (LValueBasic lvb1) (LValueChained lv2 lvb2)"
+
+lemma lvalue_compatible_valid:
+  assumes "lvalue_compatible lv1 lv2"
+  shows "valid_lvalue lv1" and "valid_lvalue lv2"
+  using assms apply cases apply auto 
+  using assms apply cases by auto
+
+term lvalue_chain_basic
+
+definition lvalue_product :: "('a,'b) lvalue \<Rightarrow> ('c,'d) lvalue \<Rightarrow> ('a*'c,'b*'d) lvalue" where
+  "lvalue_product = undefined" (* TODO *)
+
+definition "make_lvalue_factorization D I sets isom =
+    \<lparr> lvf_domain=D, lvf_index_set=I,
+    lvf_sets=restrict sets I,
+    lvf_isomorphism=restrict (\<lambda>a. restrict (isom a) I) D \<rparr>"
+
+lemma valid_make_lvalue_factorization:
+  assumes nonempty: "D \<noteq> {}"
+  assumes surj: "\<And>y. y \<in> dependent_functions I sets \<Longrightarrow> \<exists>x\<in>D. \<forall>i\<in>I. y i = isom x i" 
+  assumes sets: "\<And>x i. x \<in> D \<Longrightarrow> i:I \<Longrightarrow> isom x i \<in> sets i"
+  assumes inj: "\<And>x y. x \<in> D \<Longrightarrow> y \<in> D \<Longrightarrow> (\<And>i. i\<in>I \<Longrightarrow> isom x i = isom y i) \<Longrightarrow> x = y"
+  assumes card: "leq_card I D"
+  shows "valid_lvalue_factorization (make_lvalue_factorization D I sets isom)"
+  unfolding make_lvalue_factorization_def
+proof (rule valid_lvalue_factorization.intros)
+  have dep: "dependent_functions I (restrict sets I) = dependent_functions I sets"
+    apply auto
+     apply (erule dependent_functions'.cases; rule dependent_functions'.intros; simp)
+    by (erule dependent_functions'.cases; rule dependent_functions'.intros; simp)
+  have surj': "\<exists>x\<in>D. y = restrict (isom x) I" if "y \<in> dependent_functions I sets" for y
+    apply (rule bex_reg[OF _ surj[OF that]])
+    using that apply (rule dependent_functions'.cases)
+    apply auto apply (rule ext, rename_tac i) apply (case_tac "i:I")
+    by auto
+  have sets': "x \<in> D \<Longrightarrow> restrict (isom x) I \<in> dependent_functions I sets" for x
+    apply (rule dependent_functions'.intros)
+     apply auto
+    by (rule sets)
+  have inj': "x \<in> D \<Longrightarrow> y \<in> D \<Longrightarrow> restrict (isom x) I = restrict (isom y) I \<Longrightarrow> x = y" for x y
+    apply (rule inj, auto simp: restrict_def[abs_def])
+    by meson
+  show "bij_betw (restrict (\<lambda>a. restrict (isom a) I) D) D (dependent_functions I (restrict sets I))"
+    apply (rule bij_betwI')
+    by (auto simp: inj' sets' surj' dep)
+qed (auto simp: assms)
+
+definition "factorization_id D = make_lvalue_factorization D {undefined}
+                                   (\<lambda>i. Abs_factor ` D) (\<lambda>a i. Abs_factor a)"
+
+lemma factorization_id_index_set[simp]: "lvf_index_set (factorization_id D) = {undefined}"
+  unfolding factorization_id_def make_lvalue_factorization_def by simp
+
+lemma factorization_id_sets[simp]: "lvf_sets (factorization_id D) = restrict (\<lambda>i. Abs_factor ` D) {undefined}"
+  unfolding factorization_id_def make_lvalue_factorization_def by simp
+
+
+definition "make_lvalue_basic factorization factors repr
+  = \<lparr> lv_factorization=factorization, lv_factors=factors,
+      lv_representation=restrict repr (dependent_functions factors (lvf_sets factorization)) \<rparr>"
+
+lemma valid_make_lvalue_basic:
+  assumes factorization: "valid_lvalue_factorization factorization"
+  assumes factors: "factors \<subseteq> lvf_index_set factorization"
+  assumes repr: "inj_on repr (dependent_functions factors (lvf_sets factorization))"
+  shows "valid_lvalue_basic (make_lvalue_basic factorization factors repr)"
+proof -
+  show ?thesis
+  unfolding make_lvalue_basic_def
+  using factorization factors apply (rule valid_lvalue_basic.intros)
+  unfolding inj_on_restrict using repr apply assumption
+  unfolding restrict_def by simp
+qed
+
+definition lvalue_basic_id :: "'a set \<Rightarrow> ('a,'a) lvalue_basic" where
+  "lvalue_basic_id D = make_lvalue_basic (factorization_id D) {undefined} (\<lambda>f. Rep_factor (f undefined))"
+
+lemma valid_factorization_id: 
+  assumes "D\<noteq>{}"
+  shows "valid_lvalue_factorization (factorization_id D)"
+  unfolding factorization_id_def
+proof (rule valid_make_lvalue_factorization)
+  show "y \<in> dependent_functions {undefined} (\<lambda>i. Abs_factor ` D) \<Longrightarrow> 
+          \<exists>x\<in>D. \<forall>i\<in>{undefined}. y i = Abs_factor x" for y :: "'a LValue.index \<Rightarrow> 'a factor"
+    apply (rule bexI[of _ "Rep_factor (y undefined)"])
+     apply (auto simp: Rep_factor_inverse)
+    apply (erule dependent_functions'.cases)
+    apply auto
+    by (metis Abs_factor_inverse UNIV_I image_iff)
+  show "x \<in> D \<Longrightarrow> y \<in> D \<Longrightarrow> (\<And>i. i \<in> {undefined} \<Longrightarrow> Abs_factor x = Abs_factor y) \<Longrightarrow> x = y" for x y
+    apply (subst (asm) Abs_factor_inject) by auto
+  show "leq_card {undefined} D"
+    unfolding leq_card_def
+    apply (rule exI[of _ "\<lambda>_. SOME d. d\<in>D"])
+    using assms by (simp add: some_in_eq)
+qed (auto simp: assms)
+
+lemma valid_lvalue_basic_id: 
+  assumes "D\<noteq>{}"
+  shows "valid_lvalue_basic (lvalue_basic_id D)"
+proof -
+  have inj: "inj_on (\<lambda>f. Rep_factor (f undefined)) (dependent_functions {undefined} (lvf_sets (factorization_id D)))"
+    apply (rule inj_onI)
+    apply (subst (asm) Rep_factor_inject)
+    apply (simp, rule ext, rename_tac i, case_tac "i=undefined")
+    unfolding dependent_functions'.simps by auto 
+
+  show ?thesis
+    unfolding lvalue_basic_id_def
+    apply (rule valid_make_lvalue_basic)
+    using assms apply (rule valid_factorization_id)
+     apply simp
+    using inj by simp
+qed
+
+definition "lvalue_id D = LValueBasic (lvalue_basic_id D)"
+
+lemma valid_lvalue_id: 
+  assumes "D \<noteq> {}"
+  shows "valid_lvalue (lvalue_id D)"
+  unfolding lvalue_id_def
+  apply (rule valid_lvalue.intros)
+  using assms by (rule valid_lvalue_basic_id)
+
+function lvalue_compose :: "('a,'b) lvalue \<Rightarrow> ('a,'c) lvalue \<Rightarrow> ('a,'b*'c) lvalue" where
+  lvalue_compose_same: "lvalue_compatible lv1 lv2 \<Longrightarrow> 
+      lvalue_compose (LValueChained lv1 lvb) (LValueChained lv2 lvb) = 
+      LValueChained (lvalue_compose lv1 lv2) lvb"
+| lvalue_compose_cc: "\<not> lvalue_compatible lv1 lv2 \<or> lvb1\<noteq>lvb2 \<Longrightarrow>
+      lvalue_compose (LValueChained lv1 lvb1) (LValueChained lv2 lvb2) =
+      lvalue_chain (lvalue_product lv1 lv2) (LValueBasic (lvalue_basic_compose lvb1 lvb2))"
+| lvalue_compose_bb: "lvalue_compose (LValueBasic lvb1) (LValueBasic lvb2) = LValueBasic (lvalue_basic_compose lvb1 lvb2)"
+| lvalue_compose_cb: "lvalue_compose (LValueChained lv1 lvb1) (LValueBasic lvb2) =
+      lvalue_chain (lvalue_product lv1 (lvalue_id (lvalue_basic_range lvb2)))
+                   (LValueBasic (lvalue_basic_compose lvb1 lvb2))"
+| lvalue_compose_bc: "lvalue_compose (LValueBasic lvb1) (LValueChained lv2 lvb2) =
+      lvalue_chain (lvalue_product (lvalue_id (lvalue_basic_range lvb1)) lv2)
+                   (LValueBasic (lvalue_basic_compose lvb1 lvb2))"
+                 apply auto 
+  by (atomize_elim, case_tac a; case_tac b, auto)
+termination by lexicographic_order
+
+lemma lvalue_compose_domain:
+  assumes "lvalue_compatible lv1 lv2"
+  shows "lvalue_domain (lvalue_compose lv1 lv2) = lvalue_domain lv1"
+proof (insert assms, induction lv1 lv2 rule: lvalue_compose.induct)
+  case (1 lv1 lv2 lvb)
+  then show ?case
+    by (subst lvalue_compose.simps, auto)
+next
+  case (2 lv1 lv2 lvb1 lvb2)
+  then have c: "lvalue_basic_compatible lvb1 lvb2"
+    using lvalue_compatible.cases by auto
+  show ?case 
+    apply (subst lvalue_compose.simps, fact 2)
+    apply simp
+    using c by (rule lvalue_basic_domain_compose)
+next
+  case (3 lvb1 lvb2)
+  then have c: "lvalue_basic_compatible lvb1 lvb2"
+    using lvalue_compatible.cases by auto
+  show ?case
+    apply (subst lvalue_compose.simps, simp)
+    using c by (rule lvalue_basic_domain_compose)
+next
+  case (4 lv1 lvb1 lvb2)
+  then have c: "lvalue_basic_compatible lvb1 lvb2"
+    using lvalue_compatible.cases by auto
+  show ?case
+    apply (subst lvalue_compose.simps, simp)
+    using c by (rule lvalue_basic_domain_compose)
+next
+  case (5 lvb1 lv2 lvb2)
+  then have c: "lvalue_basic_compatible lvb1 lvb2"
+    using lvalue_compatible.cases by auto
+  show ?case
+    apply (subst lvalue_compose.simps, simp)
+    using c by (rule lvalue_basic_domain_compose)
+qed
+
+lemma lvalue_basic_domain_map_valid: 
+  assumes "valid_lvalue_basic lvb"
+  assumes "bij_betw f D (lvalue_basic_domain lvb)"
+  shows "valid_lvalue_basic (lvalue_basic_domain_map f D lvb)"
+  sorry
+
+lemma lvalue_chain_basic_valid: 
+  assumes valid_lvb: "valid_lvalue_basic lvb"
+  assumes "valid_lvalue lv"
+  assumes "lvalue_basic_domain lvb = lvalue_range lv"
+  shows "valid_lvalue (lvalue_chain_basic lvb lv)"
+proof (insert assms, induction lv arbitrary: lvb)
+  case (LValueBasic lvb2)
+  then have valid_lvb2: "valid_lvalue_basic lvb2"
+    using valid_lvalue.simps by auto
+  show ?case 
+    apply (simp add: case_prod_beta)
+    apply (rule valid_lvalue.intros)+
+       apply (rule lvalue_basic_domain_map_valid)
+    using LValueBasic apply simp
+    using LValueBasic.prems(2) LValueBasic.prems(3) lvalue_basic_squash_bij valid_lvalue.cases apply auto[1]
+    using valid_lvb2 apply (rule lvalue_basic_squash_valid)  
+    by simp
+  next
+  case (LValueChained lv x2)
+  then show ?case sorry
+qed
+
+
+lemma lvalue_chain_valid: 
+  shows "valid_lvalue (lvalue_chain lv1 lv2)"
+  apply (induction lv1) apply simp  
+  find_theorems valid_lvalue lvalue_chain_basic
+lemma lvalue_compose_valid: 
+  shows "lvalue_compatible lv1 lv2 \<Longrightarrow> valid_lvalue (lvalue_compose lv1 lv2)"
+proof (induction lv1 lv2 rule: lvalue_compose.induct)
+  case (1 lv1 lv2 lvb)
+  from "1.prems" have valid_lv1lvb: "valid_lvalue (LValueChained lv1 lvb)"
+    by (rule lvalue_compatible_valid)
+  then have valid_lvb: "valid_lvalue_basic lvb"
+    by cases
+  from valid_lv1lvb have dom1: "lvalue_domain lv1 = lvalue_basic_range lvb"
+    by cases
+  then have domain: "lvalue_domain (lvalue_compose lv1 lv2) = lvalue_basic_range lvb"
+    by (subst lvalue_compose_domain[OF "1.hyps"])
+  show ?case
+    apply (subst lvalue_compose_same[OF "1.hyps"])
+    using "1.IH"[OF "1.hyps"] valid_lvb domain by (rule valid_lvalue.intros)
+next
+  case (2 lv1 lv2 lvb1 lvb2)
+  show ?case
+    apply (subst lvalue_compose_cc[OF "2.hyps"])
+    by x
+next
+  case (3 lvb1 lvb2)
+  show ?case
+    apply (subst lvalue_compose_bb)
+    apply (rule valid_lvalue.intros)
+    apply (rule lvalue_basic_compose_valid)
+    using 3 by cases
+next
+  case (4 lv1 lvb1 lvb2)
+  show ?case
+    apply (subst lvalue_compose_cb)
+    by x 
+next
+  case (5 lvb1 lv2 lvb2)
+  show ?case 
+    apply (subst lvalue_compose_bc)
+    by x
+qed
 
 lemma lvalue_compatible_sym:
   assumes "lvalue_compatible lv1 lv2"
@@ -1002,24 +1308,43 @@ case (lvalue_compatible_bc lvb1 lvb2 lv2)
     by (rule lvalue_basic_compatible_sym)
 qed
 
-fun lvalue_fun :: "('a, 'b) lvalue \<Rightarrow> 'a \<Rightarrow> 'b" where
-  "lvalue_fun (LValueBasic lvb) x = lvalue_basic_fun lvb x"
-| "lvalue_fun (LValueChained lv lvb) x = lvalue_fun lv (lvalue_basic_fun lvb x)"
+definition "left_composition_map f x = (case x of (x,r) \<Rightarrow> case f r of (y,s) \<Rightarrow> ((x,y),s))"
+definition "left_composition_map_back f' xy = (case xy of ((x,y),s) \<Rightarrow> (x, f' (y,s)))"
 
-fun lvalue_cofun :: "('a, 'b) lvalue \<Rightarrow> 'a \<Rightarrow> 'a"
-  and "lvalue_corange" :: "('a, 'b) lvalue \<Rightarrow> 'a set"
-where
-  "lvalue_cofun (LValueBasic lvb) x = lvalue_basic_cofun lvb x"
-| "lvalue_cofun (LValueChained lv lvb) x = 
-    (let y = lvalue_basic_fun lvb x;
-         yco = lvalue_basic_cofun lvb x;
-         zco = lvalue_cofun lv y;
-         f = SOME f. inj_on f (lvalue_basic_corange lvb \<times> lvalue_corange lv)
-     in f (yco,zco))"
-| "lvalue_corange (LValueBasic lvb) = lvalue_basic_corange lvb"
-| "lvalue_corange (LValueChained lv lvb) = 
-    (let f = SOME f. inj_on f (lvalue_basic_corange lvb \<times> lvalue_corange lv)
-    in f ` (lvalue_basic_corange lvb \<times> lvalue_corange lv))"
+inductive left_composition_f :: "('a,'b) lvalue \<Rightarrow> ('a,'c) lvalue \<Rightarrow> _" where
+  "bij_betw f (lvalue_corange x) (lvalue_range y \<times> lvalue_corange (lvalue_compose x y))
+    \<Longrightarrow> (\<And>z. left_composition_map f (lvalue_fun x z, lvalue_cofun x z) 
+                = (lvalue_fun (lvalue_compose x y) z, lvalue_cofun (lvalue_compose x y) z))
+    \<Longrightarrow> (f' = inv_into (lvalue_corange x) f)
+    \<Longrightarrow> left_composition_f x y f f'"
+
+lemma left_composition_map_back:
+  assumes left_composition_f: "left_composition_f x y f f'"
+  defines "xy == lvalue_compose x y"
+  defines "Rx == (\<lambda>i. (lvalue_fun x i, lvalue_cofun x i))"
+  defines "Rxy == (\<lambda>i. (lvalue_fun xy i, lvalue_cofun xy i))"
+  assumes z: "z \<in> lvalue_domain x"
+  shows "Rx z = left_composition_map_back f' (Rxy z)"
+  sorry
+
+lemma left_composition_f_inv_inj: 
+  fixes x :: "('a,'b) lvalue" and y :: "('a,'c) lvalue"
+  assumes left_composition_f: "left_composition_f x y f f'"
+  defines "xy == lvalue_compose x y"
+  defines "Rx == (\<lambda>i. (lvalue_fun x i, lvalue_cofun x i))"
+  defines "Rxy == (\<lambda>i. (lvalue_fun xy i, lvalue_cofun xy i))"
+  assumes z1_dom: "z1 \<in> lvalue_domain x"
+  assumes z2_dom: "z2 \<in> lvalue_domain x"
+  assumes Rxy_z1: "Rxy z1 = ((x1, y1), r1)"
+  assumes Rxy_z2: "Rxy z2 = ((x2, y2), r2)"
+  shows "f' (y1, r1) = f' (y2, r2) \<longleftrightarrow> (y1,r1) = (y2,r2)"
+  sorry
+
+lemma composed_lvalue_relationship_left:
+  fixes x :: "('a,'b) lvalue" and y :: "('a,'c) lvalue"
+  assumes compat: "lvalue_compatible x y"
+  shows "\<exists>f f'. left_composition_f x y f f'"
+  sorry
 
 section Matrices
 
@@ -1044,7 +1369,32 @@ instance apply intro_classes.
 end
 
 instantiation matrix :: (finite) ring_1 begin
-instance apply intro_classes sorry
+instance proof intro_classes
+  fix a b c :: "'a matrix"
+  show "(a * b) * c = a * (b * c)"
+    apply transfer
+    apply (subst sum_distrib_right)
+    apply (subst sum_distrib_left)
+    apply (subst sum.swap)
+    apply (subst mult.assoc)
+    by simp
+  show "1 * a = a"
+    apply (transfer, rule ext, rule ext, rename_tac i k)
+    apply (subst sum.mono_neutral_right)
+    by auto
+  show "a * 1 = a"
+    apply (transfer, rule ext, rule ext, rename_tac i k)
+    apply (subst sum.mono_neutral_right)
+    by auto
+  show "(a + b) * c = a * c + b * c"
+    apply transfer
+    unfolding ring_distribs sum.distrib by simp
+  show "a * (b + c) = a * b + a * c"
+    apply transfer
+    unfolding ring_distribs sum.distrib by simp
+  show "(0::'a matrix) \<noteq> 1"
+    apply transfer by (meson zero_neq_one) 
+qed
 end
 
 axiomatization
@@ -1064,7 +1414,7 @@ lift_definition matrix_on :: "'b::finite matrix \<Rightarrow> ('a,'b) lvalue \<R
   * delta (lvalue_cofun lv r) (lvalue_cofun lv c)" .
 
 lemma matrix_on_lift_left:
-  assumes compat: "compatible_lvaluex x y"
+  assumes compat: "lvalue_compatible x y"
   assumes domain[simp]: "lvalue_domain x = UNIV"
   defines "xy == lvalue_compose x y"
   shows "matrix_on A x = matrix_on (tensor A 1) xy"
@@ -1076,18 +1426,32 @@ proof (transfer fixing: x y xy, rule ext, rule ext)
   obtain f f' where f: "left_composition_f x y f f'"
     by auto
   have valid_xy: "valid_lvalue xy"
-    unfolding xy_def using compat by (rule valid_lvalue_compose)
-  note left_composition_f_inv_inj[OF f, folded xy_def Rxy_def, simp]
-  have map: "Rx z = left_composition_map_back f' (Rxy z)" if "z \<in> lvaluex_domain x" for z
+    unfolding xy_def using compat by (rule lvalue_compose_valid)
+  note f'_inj = left_composition_f_inv_inj[OF f, folded xy_def Rxy_def, simp]
+  have map1: "lvalue_fun x z = fst (left_composition_map_back f' (Rxy z))" if "z \<in> lvalue_domain x" for z
     unfolding Rx_def Rxy_def xy_def
-    using f that by (rule left_composition_map_back)
-  show "A (lvalue_fun x r) (lvalue_fun x c) * delta (lvalue_cofun x r) (lvalue_cofun x c) =
+    apply (subst left_composition_map_back[OF f that, symmetric])
+    by simp
+  have map2: "lvalue_cofun x z = snd (left_composition_map_back f' (Rxy z))" if "z \<in> lvalue_domain x" for z
+    unfolding Rx_def Rxy_def xy_def
+    apply (subst left_composition_map_back[OF f that, symmetric])
+    by simp
+  define xr xc xyr xyc xyr' xyc' where "xr = lvalue_fun x r" and "xc = lvalue_fun x c"
+                      and  "xyr = lvalue_fun xy r" and "xyc = lvalue_fun xy c"
+                      and  "xyr' = lvalue_cofun xy r" and "xyc' = lvalue_cofun xy c"
+  note defs = this
+  show "A xr xc * delta (lvalue_cofun x r) (lvalue_cofun x c) =
        (case lvalue_fun xy r of (r1, r2) \<Rightarrow> \<lambda>(c1, c2). A r1 c1 * delta r2 c2) (lvalue_fun xy c) *
        delta (lvalue_cofun xy r) (lvalue_cofun xy c)"
-    apply (subst map, simp)+
-    apply (cases "Rxy r", cases "Rxy c") 
+    unfolding defs
+    apply (subst map1 map2, simp)+
+    unfolding Rxy_def
+    unfolding defs[symmetric]
     unfolding left_composition_map_back_def
-    by auto
+    apply (auto simp: case_prod_beta)
+      apply (metis (no_types, lifting) Pair_inject f'_inj domain iso_tuple_UNIV_I prod.collapse xyc'_def xyc_def xyr'_def xyr_def)
+    apply (metis (no_types, hide_lams) UNIV_I domain f'_inj prod.exhaust_sel prod.inject xyc'_def xyc_def xyr'_def xyr_def)
+    by (metis UNIV_I domain f'_inj prod.exhaust_sel snd_conv xyc'_def xyc_def xyr'_def xyr_def)
 qed
 
 lemma matrix_on_lift_right:
@@ -1139,7 +1503,7 @@ proof (transfer, rule ext, rule ext)
 qed
 
 lemma matrix_on_times: 
-  fixes x :: "('a::finite, 'b::finite) lvaluex"
+  fixes x :: "('a::finite, 'b::finite) lvalue"
   assumes valid_x: "valid_lvaluex x"
   assumes domain[simp]: "lvaluex_domain x = UNIV"
   assumes range[simp]: "lvaluex_range x = UNIV"
@@ -1239,18 +1603,8 @@ definition "lvalue_update0 f lv x = inv (lvalue_raw_representation0 lv)
 fun lvaluex_update where
   "lvaluex_update f (LValueX lv g) = lvalue_update0 (inv g o f o g) lv"
 
-definition "left_composition_map f x = (case x of (x,r) \<Rightarrow> case f r of (y,s) \<Rightarrow> ((x,y),s))"
-definition "left_composition_map_back f' xy = (case xy of ((x,y),s) \<Rightarrow> (x, f' (y,s)))"
-
 definition "right_composition_map f y = (case y of (y,r) \<Rightarrow> case f r of (x,s) \<Rightarrow> ((x,y),s))"
 definition "right_composition_map_back f' xy = (case xy of ((x,y),s) \<Rightarrow> (y, f' (x,s)))"
-
-inductive left_composition_f :: "('a,'b) lvalue \<Rightarrow> ('a,'c) lvalue \<Rightarrow> _" where
-"bij_betw f (lvalue_corange x) (lvalue_range y \<times> lvalue_corange (lvalue_compose x y))
-  \<Longrightarrow> (\<And>z. left_composition_map f (lvalue_fun x z, lvalue_cofun x z) 
-              = (lvalue_fun (lvalue_compose x y) z, lvalue_cofun (lvalue_compose x y) z))
-  \<Longrightarrow> (f' = inv_into (lvalue_corange x) f)
-  \<Longrightarrow> left_composition_f x y f f'"
 
 
 inductive right_composition_f :: "('a,'b) lvaluex \<Rightarrow> ('a,'c) lvaluex \<Rightarrow> _" where
@@ -1261,17 +1615,6 @@ inductive right_composition_f :: "('a,'b) lvaluex \<Rightarrow> ('a,'c) lvaluex 
   \<Longrightarrow> right_composition_f x y f f'"
 
 
-lemma left_composition_f_inv_inj: 
-  fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
-  assumes left_composition_f: "left_composition_f x y f f'"
-  defines "xy == compose_lvaluex x y"
-  defines "Rx == lvaluex_representation x"
-  defines "Rxy == lvaluex_representation xy"
-  assumes z1_dom: "z1 \<in> lvaluex_domain x"
-  assumes z2_dom: "z2 \<in> lvaluex_domain x"
-  assumes Rxy_z1: "Rxy z1 = ((x1, y1), r1)"
-  assumes Rxy_z2: "Rxy z2 = ((x2, y2), r2)"
-  shows "f' (y1, r1) = f' (y2, r2) \<longleftrightarrow> (y1,r1) = (y2,r2)"
 
 lemma right_composition_f_inv_inj:
   fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
@@ -1285,13 +1628,6 @@ lemma right_composition_f_inv_inj:
   assumes Rxy_z2: "Rxy z2 = ((x2, y2), r2)"
   shows "f' (x1, r1) = f' (x2, r2) \<longleftrightarrow> (x1,r1) = (x2,r2)"
 
-lemma left_composition_map_back:
-  assumes left_composition_f: "left_composition_f x y f f'"
-  defines "xy == compose_lvaluex x y"
-  defines "Rx == lvaluex_representation x"
-  defines "Rxy == lvaluex_representation xy"
-  assumes z: "z \<in> lvaluex_domain x"
-  shows "Rx z = left_composition_map_back f' (Rxy z)"
 
   
 lemma right_composition_map_back:
@@ -1321,10 +1657,6 @@ lemma composed_lvalue_relationship_left0:
   \<and> (\<forall>z. left_composition_map f (lvalue_raw_representation0 x z) 
               = (lvaluex_representation (compose_lvalue_raw0' x y) z))"
 
-lemma composed_lvalue_relationship_left:
-  fixes x :: "('a,'b) lvalue" and y :: "('a,'c) lvalue"
-  assumes compat: "compatible_lvaluex x y"
-  obtains f f' where "left_composition_f x y f f'"
 
 lemma composed_lvalue_relationship_right:
   fixes x :: "('a,'b) lvaluex" and y :: "('a,'c) lvaluex"
