@@ -14,7 +14,7 @@ derive universe distr
 lemma distr_abs_summable_on:
   fixes f :: "'a \<Rightarrow> real"
   assumes "\<forall>x. f x \<ge> 0" and "\<forall> M. finite M \<longrightarrow> sum f M \<le> 1"
-  shows "f abs_summable_on UNIV"
+  shows "f abs_summable_on E"
   apply (rule abs_summable_finiteI)
   using assms by auto
 
@@ -80,17 +80,72 @@ lemma uniform_infinite: "infinite M \<Longrightarrow> uniform M = 0"
 lemma uniform_empty: "uniform {} = 0"
   apply transfer by simp
 
-lift_definition weight :: "'a distr \<Rightarrow> real" is "\<lambda>\<mu>. infsetsum \<mu> UNIV" .
+lift_definition Prob :: "'a distr \<Rightarrow> 'a set \<Rightarrow> real" is infsetsum .
 
-lemma weight_pos[simp]: "weight \<mu> \<ge> 0"
+abbreviation "weight \<mu> == Prob \<mu> UNIV"
+
+lemma Prob_is_0:
+  "Prob \<mu> E = 0 \<longleftrightarrow> disjnt (supp \<mu>) E"
+proof (transfer fixing: E, rule)
+  fix \<mu> :: "'a\<Rightarrow>real"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  then have "0 \<le> \<mu> x" for x
+      using distr by simp
+  from distr have "\<mu> abs_summable_on E"
+    by (simp add: distr_abs_summable_on)
+  assume sum0: "infsetsum \<mu> E = 0"
+  have "\<mu> x = 0" if "x : E" for x
+  proof -
+    have "\<mu> x = infsetsum \<mu> {x}"
+      by simp
+    also have "\<dots> \<le> infsetsum \<mu> E"
+      apply (rule infsetsum_mono_neutral_left)
+      using \<open>\<mu> abs_summable_on E\<close> that distr by auto
+    also have "\<dots> = 0"
+      by (fact sum0)
+    finally show "\<mu> x = 0"
+      using \<open>0 \<le> \<mu> x\<close> by simp
+  qed
+  then show "disjnt {x. 0 < \<mu> x} E"
+    using \<open>0 \<le> \<mu> _\<close> unfolding disjnt_def by auto
+next
+  fix \<mu> :: "'a\<Rightarrow>real"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  assume "disjnt {x. 0 < \<mu> x} E"
+  then have "\<mu> x = 0" if "x:E" for x
+    unfolding disjnt_def distr
+    using distr less_eq_real_def that by auto 
+  then show "infsetsum \<mu> E = 0"
+    by (rule infsetsum_all_0)
+qed
+
+lemma Prob_pos: "Prob \<mu> E \<ge> 0"
   apply transfer
   by (rule infsetsum_nonneg) auto
 
-lemma weight_leq1[simp]: "weight \<mu> \<le> 1"
-  apply transfer apply (subst infsetsum_nonneg_is_SUPREMUM)
-  using distr_abs_summable_on apply blast
-   apply simp
-  by (rule cSUP_least, auto)
+lemma Prob_mono:
+  assumes "E \<subseteq> F"
+  shows "Prob \<mu> E \<le> Prob \<mu> F"
+proof (transfer fixing: E F)
+  fix \<mu> :: "'a \<Rightarrow> real"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  then have "\<mu> abs_summable_on E" and "\<mu> abs_summable_on F"
+    by (simp_all add: distr_abs_summable_on)
+  then show "infsetsum \<mu> E \<le> infsetsum \<mu> F"
+    apply (rule infsetsum_mono_neutral_left)
+    using assms distr by auto
+qed
+
+lemma Prob_leq1: "Prob \<mu> E \<le> 1"
+proof -
+  have "Prob \<mu> UNIV \<le> 1"
+    apply transfer apply (subst infsetsum_nonneg_is_SUPREMUM)
+    using distr_abs_summable_on apply blast
+     apply simp
+    by (rule cSUP_least, auto)
+  then show ?thesis
+    using Prob_mono[of E UNIV \<mu>] by auto
+qed
 
 lemma weight_uniform[simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> weight (uniform M) = 1"
 proof transfer
