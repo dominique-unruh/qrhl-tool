@@ -317,6 +317,73 @@ qed
 
 functor map_distr: map_distr using map_distr_id compose_map_distr unfolding o_def id_def by auto
 
+
+lift_definition expectation :: "'a distr \<Rightarrow> ('a\<Rightarrow>'b) \<Rightarrow> 'b::{banach, second_countable_topology}" is
+  "\<lambda>\<mu> f. infsetsum (\<lambda>x. \<mu> x *\<^sub>R f x) UNIV" .
+
+lift_definition expectation_exists :: "'a distr \<Rightarrow> ('a\<Rightarrow>'b::{banach, second_countable_topology}) \<Rightarrow> bool" is
+  "\<lambda>\<mu> f. (\<lambda>x. \<mu> x *\<^sub>R f x) abs_summable_on UNIV" .
+
+lemma expectation_exists_bounded:
+  fixes a b :: real
+  assumes "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x \<ge> a"
+  assumes "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x \<le> b"
+  shows "expectation_exists \<mu> f"
+proof (insert assms, transfer fixing: a b f)
+  fix \<mu> :: "'a \<Rightarrow> real"
+  define \<mu>f where "\<mu>f x = \<mu> x *\<^sub>R f x" for x
+  obtain B where "B \<ge> -a" and "B \<ge> b" and "B \<ge> 0"
+    by (meson linear order_trans)
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  then have \<mu>pos: "\<mu> x \<ge> 0" for x by auto
+  from distr have sum: "sum \<mu> F \<le> 1" if "finite F" for F
+    using that by auto
+  assume "(\<And>x. x \<in> {x. 0 < \<mu> x} \<Longrightarrow> a \<le> f x)"
+  then have fx1: "f x \<ge> -B" if "0 < \<mu> x" for x
+    using that \<open>- a \<le> B\<close> by force
+  assume "(\<And>x. x \<in> {x. 0 < \<mu> x} \<Longrightarrow> f x \<le> b)"
+  then have fx2: "f x \<le> B" if "0 < \<mu> x" for x
+    using that \<open>b \<le> B\<close> order.trans by auto
+  have B: "norm (\<mu>f x) \<le> B * \<mu> x" for x
+    apply (cases "\<mu> x > 0", auto simp: \<mu>f_def intro!: abs_leI)
+    using fx1[of x] fx2[of x] \<mu>pos[of x] apply auto
+    using nice_ordered_field_class.pos_minus_divide_le_eq by fastforce
+  have "(\<Sum>x\<in>F. norm (\<mu>f x)) \<le> B" if "finite F" for F
+  proof -
+    have "(\<Sum>x\<in>F. norm (\<mu>f x)) \<le> (\<Sum>x\<in>F. B * \<mu> x)"
+      using B
+      by (simp add: sum_mono)
+    also have "\<dots> \<le> B * (\<Sum>x\<in>F. \<mu> x)"
+      by (simp add: sum_distrib_left)
+    also have "\<dots> \<le> B * 1"
+      apply (rule mult_left_mono)
+      using that sum \<open>B\<ge>0\<close> by simp_all
+    finally show ?thesis by simp
+  qed
+  then show "\<mu>f abs_summable_on UNIV"
+    by (rule abs_summable_finiteI)
+qed
+
+lemma expectation_mono:
+  fixes f :: "'a\<Rightarrow>real"
+  assumes "expectation_exists \<mu> f"
+  assumes "expectation_exists \<mu> g"
+  assumes leq: "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x \<le> g x"
+  shows "expectation \<mu> f \<le> expectation \<mu> g"
+proof (insert assms, transfer)
+  fix \<mu> :: "'a\<Rightarrow>real" and f g :: "'a\<Rightarrow>real"
+  assume "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  then have pos: "\<mu> x \<ge> 0" for x by simp
+  assume leq: "(\<And>x. x \<in> {x. 0 < \<mu> x} \<Longrightarrow> f x \<le> g x)"
+  have leq': "\<mu> x *\<^sub>R f x \<le> \<mu> x *\<^sub>R g x" for x
+    apply (cases "\<mu> x = 0") using pos[of x] leq[of x] by auto
+  assume sumf: "(\<lambda>x. \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
+    and sumg: "(\<lambda>x. \<mu> x *\<^sub>R g x) abs_summable_on UNIV"
+  from sumf sumg leq' show "infsetsum (\<lambda>x. \<mu> x *\<^sub>R f x) UNIV \<le> infsetsum (\<lambda>x. \<mu> x *\<^sub>R g x) UNIV"
+    by (rule infsetsum_mono)
+qed
+
+
 ML_file "discrete_distributions.ML"
 
 end
