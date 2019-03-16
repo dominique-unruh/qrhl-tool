@@ -1,18 +1,3 @@
-#isabelle.
+isabelle.
 
-include "test2.qrhl".
-
-qrhl { Cla[x1=x2] } call P; ~ call P; { Cla[x1=x2] }.
-inline P.
-wp left.
-cheat:proof.
-wp right 2.
-wp 3 2.
-skip.
-cheat:stop.
-simp!.
-simp!.
-qed.
-
-
-classical var xxx : int.
+xxx.
