@@ -258,6 +258,7 @@ class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val currentLemma: Option[(String,RichTerm)],
                      private val _isabelle: Option[Isabelle.Context],
+                     private val _isabelleTheory: Option[Path],
                      val dependencies: List[FileTimeStamp],
                      val currentDirectory: Path,
                      val cheatMode : CheatMode,
@@ -275,7 +276,8 @@ class State private (val environment: Environment,
       val state2 = toplevel.state
       val state3 = toplevel.state.copy(
         dependencies=new FileTimeStamp(fullpath)::state2.dependencies,
-        cheatMode = cheatMode) // restore original cheatMode
+        cheatMode = cheatMode, // restore original cheatMode
+        currentDirectory = currentDirectory) // restore original currentDirectory
       state3
     }
   }
@@ -335,16 +337,17 @@ class State private (val environment: Environment,
                    currentLemma:Option[(String,RichTerm)]=currentLemma,
                    currentDirectory:Path=currentDirectory,
                    cheatMode:CheatMode=cheatMode,
+                   isabelleTheory:Option[Path]=_isabelleTheory,
                    includedFiles:Set[Path]=includedFiles) : State =
     new State(environment=environment, goal=goal, _isabelle=isabelle, cheatMode=cheatMode,
       currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory,
-      includedFiles=includedFiles)
+      includedFiles=includedFiles, _isabelleTheory=isabelleTheory)
 
   def changeDirectory(dir:Path): State = {
     assert(dir!=null)
     if (dir==currentDirectory) return this
     if (!Files.isDirectory(dir)) throw UserException(s"Non-existent directory: $dir")
-    if (hasIsabelle) throw UserException("Cannot change directory after loading Isabelle")
+//    if (hasIsabelle) throw UserException("Cannot change directory after loading Isabelle")
     copy(currentDirectory=dir)
   }
 
@@ -394,19 +397,25 @@ class State private (val environment: Environment,
   }
 
   def loadIsabelle(theory:Option[String]) : State = {
+    val theoryPath = theory map { thy => currentDirectory.resolve(thy+".thy") }
+
     if (_isabelle.isDefined)
-      throw UserException("Only one isabelle-command allowed")
+      if (theoryPath != _isabelleTheory)
+        throw UserException(s"Isabelle loaded twice with different theories: $theoryPath vs. ${_isabelleTheory}")
+      else
+        return this
+    
     val isabelle = Isabelle.globalIsabelle
-    val (isa,files) = theory match {
+    val (isa,files) = theoryPath match {
       case None =>
         (isabelle.getQRHLContextWithFiles(), dependencies)
-      case Some(thy) =>
-        val filename = currentDirectory.resolve(thy+".thy")
+      case Some(filename) =>
+//        val filename = currentDirectory.resolve(thy+".thy")
 //        println("State.loadIsabelle",thy,currentDirectory,filename)
 //        val thyname = currentDirectory.resolve(thy)
         (isabelle.getQRHLContextWithFiles(filename), new FileTimeStamp(filename) :: dependencies)
     }
-    copy(isabelle = Some(isa), dependencies=files)
+    copy(isabelle = Some(isa), dependencies=files, isabelleTheory=theoryPath)
   }
 
   def filesChanged : List[Path] = {
@@ -448,7 +457,8 @@ class State private (val environment: Environment,
 }
 
 object State {
-  def empty(cheating:Boolean) = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
+  def empty(cheating:Boolean) = new State(environment=Environment.empty, goal=Nil,
+    _isabelle=None, _isabelleTheory=None,
     dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""),
     cheatMode=CheatMode.make(cheating), includedFiles=Set.empty)
 //  private[State] val defaultIsabelleTheory = "QRHL"
