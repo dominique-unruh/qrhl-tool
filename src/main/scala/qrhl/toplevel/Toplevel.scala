@@ -187,7 +187,7 @@ object Toplevel {
     toplevel
   }
 
-  def makeToplevelWithTheory(theory:Option[String]=None) : Toplevel = {
+  def makeToplevelWithTheory(theory:Seq[String]=Nil) : Toplevel = {
     val state = State.empty(cheating = false).loadIsabelle(theory)
     new Toplevel(state)
   }

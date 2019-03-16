@@ -17,6 +17,7 @@ object Parser extends JavaTokenParsers {
   val identifier : Parser[String] = """[a-zA-Z][a-zA-Z0-9_']*""".r
   val identifierListSep : Parser[String] = ","
   val identifierList : Parser[List[String]] = rep1sep(identifier,identifierListSep)
+  val identifierList0 : Parser[List[String]] = repsep(identifier,identifierListSep)
 
   //  val natural : Parser[BigInt] = """[0-9]+""".r ^^ { BigInt(_) }
   val natural: Parser[Int] = """[0-9]+""".r ^^ { _.toInt }
@@ -182,7 +183,7 @@ object Parser extends JavaTokenParsers {
 
 //  val commandEndSymbol : Parser[_] = literal(".")
   val isabelle : Parser[IsabelleCommand] =
-    literal("isabelle") ~> identifier.? ^^ IsabelleCommand
+    literal("isabelle") ~> identifierList0 ^^ IsabelleCommand
 
   def typ(implicit context:ParserContext) : Parser[pure.Typ] =
   //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {

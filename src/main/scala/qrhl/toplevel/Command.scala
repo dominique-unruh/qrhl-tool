@@ -20,7 +20,7 @@ object ChangeDirectoryCommand {
   def apply(dir:String) : ChangeDirectoryCommand = apply(Paths.get(dir))
 }
 
-case class IsabelleCommand(thy:Option[String]=None) extends Command {
+case class IsabelleCommand(thy:Seq[String]) extends Command {
   override def act(state: State): State = {
     println(s"Loading Isabelle.")
     val newState = state.loadIsabelle(thy)
