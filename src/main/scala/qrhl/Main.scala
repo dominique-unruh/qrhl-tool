@@ -29,7 +29,13 @@ object Main {
       isabelle.dispose()
     } else if (conf.file.isDefined) {
       val tl = Toplevel.makeToplevel(cheating=conf.cheating.getOrElse(false))
-      tl.run(Paths.get(conf.file.toOption.get))
+      try
+        tl.run(Paths.get(conf.file.toOption.get))
+      catch {
+        case e : Throwable =>
+          e.printStackTrace()
+          sys.exit(1)
+      }
       sys.exit()
 //      tl.dispose()
     } else
