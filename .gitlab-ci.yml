@@ -5,6 +5,7 @@ stages:
 
 variables:
   SBT_OPTS: "-Dsbt.global.base=cache/sbt/sbtboot -Dsbt.boot.directory=cache/sbt/boot -Dsbt.ivy.home=cache/sbt/ivy"
+  GIT_SUBMODULE_STRATEGY: normal
 
 build:
   image: registry.gitlab.com/unruh/qrhl-tool/build-image

@@ -2,7 +2,7 @@ chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum" 
-    Universe_Instances_Complex_Main Infinite_Set_Sum_Missing
+    Universe_Instances_Complex_Main Bounded_Operators.Infinite_Set_Sum_Missing
 begin
 
 typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}" 

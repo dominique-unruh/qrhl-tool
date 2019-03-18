@@ -1,5 +1,5 @@
 theory Expressions
-  imports Prog_Variables Misc_Missing Extended_Sorry Multi_Transfer
+  imports Prog_Variables Misc_Missing Bounded_Operators.Extended_Sorry Multi_Transfer
 begin
 
 typedef 'a expression = "{(vs,f::_\<Rightarrow>'a). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)}"
