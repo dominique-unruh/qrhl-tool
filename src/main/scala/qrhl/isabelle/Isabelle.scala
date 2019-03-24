@@ -59,7 +59,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
   val version = Version.Stable("2018")
   private val auto = path=="auto"
 
-  /** The directory that contains the jar, or, if not loaded from a jar, the current directory. */
+  /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
   private val localStoragePath = DistributionDirectory.distributionDirectory.resolve("isabelle-temp")
 
   private val platform : Platform = Platform.guess match {
@@ -205,7 +205,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     * @param thys Path pointing to theory files (including the suffix .thy)
     * @return the context
     */
-  def getQRHLContextWithFiles(thys: Path*) : Isabelle.Context = {
+  def getQRHLContextWithFiles(thys: Path*) : (Isabelle.Context, List[Path]) = {
     getContextWithThys(List("QRHL.QRHL","QRHL.QRHL_Operations"), thys.toList)
     // TODO: Do we need to include QRHL.QRHL_Operations?
   }
@@ -216,7 +216,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     * @param files Path pointing to theory files (including the suffix .thy)
     * @return the context
     */
-  private def getContextWithThys(thys: List[String], files: List[Path]): Isabelle.Context = {
+  private def getContextWithThys(thys: List[String], files: List[Path]): (Isabelle.Context, List[Path]) = {
     import scala.collection.JavaConverters._
     for (f <- files)
       if (!Files.isRegularFile(f))
@@ -231,8 +231,15 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 //    println("Isabelle getContextWithThys", files, filesThyPath)
     invoke(Operation.UseThys, filesThyPath)
     val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
-    val ctxId = invoke(Isabelle.createContextOp, imports)
-    new Isabelle.Context(this, ctxId)
+    val (ctxId, dependencies) = invoke(Isabelle.createContextOp, imports)
+    val ctxt = new Isabelle.Context(this, ctxId)
+    val paths = dependencies.map(Path.of(_))
+
+    for (p <- paths)
+      if (!Files.exists(p))
+        println(s"*** Theory has non-existing dependency $p. This is a bug. Please report.")
+
+    (ctxt, paths.filter(Files.exists(_)))
   }
 
   private var disposed = false
@@ -408,7 +415,8 @@ object Isabelle {
 
   val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
 //  val useThys2Op: Operation[List[String], Unit] = Operation.implicitly[List[String], Unit]("use_thys2")
-  val createContextOp: Operation[List[String], BigInt] = Operation.implicitly[List[String],BigInt]("create_context")
+  val createContextOp: Operation[List[String], (BigInt,List[String])] =
+    Operation.implicitly[List[String],(BigInt,List[String])]("create_context")
   val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_context")
   val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_thm")
   val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt,Term),String]("print_term")

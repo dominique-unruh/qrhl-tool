@@ -406,9 +406,10 @@ class State private (val environment: Environment,
         return this
     
     val isabelle = Isabelle.globalIsabelle
-    val isa = isabelle.getQRHLContextWithFiles(theoryPath : _*)
-    val files = theoryPath map { new FileTimeStamp(_) }
-    copy(isabelle = Some(isa), dependencies=files:::dependencies, isabelleTheory=theoryPath)
+    val (ctxt,deps) = isabelle.getQRHLContextWithFiles(theoryPath : _*)
+    logger.debug(s"Dependencies of theory $theory: $deps")
+    val stamps = deps.map(new FileTimeStamp(_))
+    copy(isabelle = Some(ctxt), dependencies=stamps:::dependencies, isabelleTheory=theoryPath)
   }
 
   def filesChanged : List[Path] = {
