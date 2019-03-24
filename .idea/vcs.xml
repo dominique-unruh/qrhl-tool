@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/doc/declmath" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/isabelle-thys/Bounded_Operators" vcs="Git" />
   </component>
 </project>
