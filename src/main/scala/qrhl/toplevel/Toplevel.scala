@@ -118,11 +118,17 @@ class Toplevel private(initialState : State) {
   }
 
   def run(script: Path): Unit = {
-//    val reader = new InputStreamReader(new FileInputStream(script.toFile), StandardCharsets.UTF_8)
-//    println("Toplevel.run",script,script.toAbsolutePath.normalize.getParent)
+    //    val reader = new InputStreamReader(new FileInputStream(script.toFile), StandardCharsets.UTF_8)
+    //    println("Toplevel.run",script,script.toAbsolutePath.normalize.getParent)
     val readLine = new Toplevel.ReadLine.File(script)
     execCmd(ChangeDirectoryCommand(script.toAbsolutePath.normalize.getParent), readLine.position)
     run(readLine)
+  }
+
+  def runWithErrorHandler(script: Path, abortOnError:Boolean): Boolean = {
+    val readLine = new Toplevel.ReadLine.File(script)
+    execCmd(ChangeDirectoryCommand(script.toAbsolutePath.normalize.getParent), readLine.position)
+    runWithErrorHandler(readLine, abortOnError=abortOnError)
   }
 
   /** Runs a sequence of commands. Each command must be delimited by "." at the end of a line.
@@ -142,22 +148,24 @@ class Toplevel private(initialState : State) {
     * and the commands producing the errors are ignored.
     * @param readLine command for reading lines from the input, invoked with the prompt to show
     */
-  def runWithErrorHandler(readLine : ReadLine): Unit = {
+  def runWithErrorHandler(readLine : ReadLine, abortOnError:Boolean=false): Boolean = {
     while (true) {
       try {
         val cmdStr = readCommand(readLine)
-        if (cmdStr==null) { println("EOF"); return; }
+        if (cmdStr==null) { println("EOF"); return true; }
         execCmd(cmdStr, readLine.position)
       } catch {
         case e:UserException =>
-//          readLine.printPosition()
           println(s"[ERROR] ${e.positionMessage}")
+          if (abortOnError) return false
         case e : Throwable =>
-//          readLine.printPosition()
           println("[ERROR] [INTERNAL ERROR!!!]")
           e.printStackTrace(System.out)
+          if (abortOnError) return false
       }
     }
+    assert(false) // unreachable
+    false
   }
 }
 

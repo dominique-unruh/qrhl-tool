@@ -288,7 +288,7 @@ class State private (val environment: Environment,
       } catch {
         case e:NoSuchFileException => throw UserException(s"File not found: $file (relative to $currentDirectory)")
       }
-    
+
     logger.debug(s"Including $fullpath")
     if (includedFiles.contains(fullpath)) {
       println(s"Already included $file. Skipping.")
