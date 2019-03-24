@@ -2,7 +2,7 @@ package qrhl
 
 import java.nio.file.{Files, Path, Paths}
 
-import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
+import info.hupel.isabelle.{Codec, Operation, ProverResult, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Term, Typ => ITyp}
 import org.log4s
@@ -221,7 +221,25 @@ trait Tactic {
   def apply(state: State, goal : Subgoal) : List[Subgoal]
 }
 
-case class UserException(msg:String) extends RuntimeException(msg)
+class UserException private (private val msg:String, private var _position:String=null) extends RuntimeException(msg) {
+  def setPosition(position:String): Unit = {
+    if (_position==null)
+      _position = position
+  }
+  def position : String = _position
+  def positionMessage : String = s"$position: $msg"
+}
+object UserException {
+  private val logger = log4s.getLogger
+
+  def apply(msg: String) = new UserException(msg)
+  def apply(e: ProverResult.Failure, position: String): UserException = {
+    logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
+    val e2 = UserException("(in Isabelle) "+Isabelle.symbolsToUnicode(e.msg))
+    e2.setPosition(position)
+    e2
+  }
+}
 
 /** A path together with a last-modification time. */
 class FileTimeStamp(val file:Path) {

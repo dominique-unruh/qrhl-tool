@@ -50,7 +50,7 @@ class CaseTacTest extends FunSuite {
       tl.state.applyTactic(CaseTac("z", tl.state.parseExpression(Isabelle.boolT, "x1")))
     }
 
-    assert(ex.msg.startsWith("Variable z has type nat, but expression has type bool"))
+    assert(ex.getMessage.startsWith("Variable z has type nat, but expression has type bool"))
   }
 
   test("fail if the variable is reused") {
@@ -60,7 +60,7 @@ class CaseTacTest extends FunSuite {
       tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(Isabelle.boolT, "x1")))
     }
 
-    assert(ex.msg.startsWith("Variable y already contained in goal"))
+    assert(ex.getMessage.startsWith("Variable y already contained in goal"))
   }
 
   test("fail if the variable is already used in program declaration") {
@@ -70,7 +70,7 @@ class CaseTacTest extends FunSuite {
       tl.state.applyTactic(CaseTac("y2", tl.state.parseExpression(Isabelle.boolT, "x1")))
     }
 
-    assert(ex.msg.startsWith("Variable y2 already used in program P"))
+    assert(ex.getMessage.startsWith("Variable y2 already used in program P"))
   }
 
   test("fail if the expression contains unindexed program variables") {
@@ -80,7 +80,7 @@ class CaseTacTest extends FunSuite {
       tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(Isabelle.boolT, "x")))
     }
 
-    assert(ex.msg.startsWith("Undeclared (or non-indexed) variable x in precondition"))
+    assert(ex.getMessage.startsWith("Undeclared (or non-indexed) variable x in precondition"))
   }
 
 }

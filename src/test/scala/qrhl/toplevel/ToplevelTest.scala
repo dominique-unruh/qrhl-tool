@@ -5,6 +5,7 @@ import java.nio.file.{Path, Paths}
 import org.scalatest.{FlatSpec, FunSuite}
 import qrhl.UserException
 import qrhl.isabelle.Isabelle
+import qrhl.toplevel.Toplevel.ReadLine
 
 class ToplevelTest extends FunSuite {
   test("assign statement should throw UserException on undefined variable") {
@@ -19,12 +20,17 @@ class ToplevelTest extends FunSuite {
     toplevel.execCmd("classical var x : int")
     val exn = intercept[UserException] {
       toplevel.execCmd("program x := { skip; }") }
-    assert(exn.msg.startsWith("Name x already used for a variable or program"))
+    assert(exn.getMessage.startsWith("Name x already used for a variable or program"))
   }
 }
 
 object ToplevelTest {
-//  val isabellePath = "auto"
-//  lazy val isabelle = new Isabelle(isabellePath)
-//  def makeToplevel(): Toplevel = Toplevel.makeToplevel()
+
+  //  val isabellePath = "auto"
+  //  lazy val isabelle = new Isabelle(isabellePath)
+  //  def makeToplevel(): Toplevel = Toplevel.makeToplevel()
+//  object dummyReadLine extends ReadLine {
+//    override def readline(prompt: String): String = ???
+//    override def position: String = "<test case>"
+//  }
 }
