@@ -1,6 +1,6 @@
 package qrhl
 
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, NoSuchFileException, Path, Paths}
 
 import info.hupel.isabelle.{Codec, Operation, ProverResult, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
@@ -282,7 +282,13 @@ class State private (val environment: Environment,
                      val cheatMode : CheatMode,
                      val includedFiles : Set[Path]) {
   def include(file: Path): State = {
-    val fullpath = currentDirectory.resolve(file).toRealPath()
+    val fullpath =
+      try {
+        currentDirectory.resolve(file).toRealPath()
+      } catch {
+        case e:NoSuchFileException => throw UserException(s"File not found: $file (relative to $currentDirectory)")
+      }
+    
     logger.debug(s"Including $fullpath")
     if (includedFiles.contains(fullpath)) {
       println(s"Already included $file. Skipping.")
