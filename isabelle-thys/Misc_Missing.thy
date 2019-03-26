@@ -136,5 +136,9 @@ lemma eq_reflection_swap: "a = b \<Longrightarrow> b\<equiv>a" by auto
 
 ML_file "misc.ML"
 
+(* TODO remove *)
+schematic_goal "?x = [1,2] @ [3,4] @ []" and "?x = abc"
+  apply (tactic \<open>Misc.append_list_tac \<^context> 1\<close>)
+  oops
 
 end

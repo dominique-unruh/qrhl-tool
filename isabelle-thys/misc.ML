@@ -79,7 +79,7 @@ fun fail_on_LAZY_ERROR f x = f x handle LAZY_ERROR (Lazy_Error msg) => raise ERR
 (* Solves a goal of the form "?x = a"
    by applying conv to a and then instantiating ?x with the result *)
 fun schematic_conv_tac str conv ctxt i =
-  (CONVERSION (Conv.arg_conv (Conv.arg_conv (conv ctxt))) i
+  (CONVERSION (Conv.params_conv ~1 (K (Conv.arg_conv (Conv.arg_conv (conv ctxt)))) ctxt) i
    ORELSE error_tac' (fn t => "Could not evaluate expression on lhs, not a " ^ str ^ ": " ^ 
         Syntax.string_of_term ctxt t) ctxt i)
   THEN solve_tac ctxt @{thms refl} i
@@ -109,5 +109,11 @@ fun schematic_tac_conv ctxt tac ct = let
   val thm = Goal.finish ctxt st
   (* val goal = Logic *)
   in thm end
+
+
+fun append_list_tac ctxt =
+  CONVERSION (Raw_Simplifier.rewrite ctxt false
+   @{thms append_Nil[THEN eq_reflection] append_Cons[THEN eq_reflection]})
+  THEN' resolve_tac ctxt @{thms refl}
 
 end

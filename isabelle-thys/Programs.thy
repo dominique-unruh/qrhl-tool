@@ -9,7 +9,7 @@ typedecl oracle_program
 consts
   block :: "program list \<Rightarrow> program"
   assign :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> program"
-  sample :: "'a variable \<Rightarrow> 'a distr expression \<Rightarrow> program"
+  sample :: "'a variables \<Rightarrow> 'a distr expression \<Rightarrow> program"
   ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program"
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program"
   qinit :: "'a variables \<Rightarrow> 'a vector expression \<Rightarrow> program"
@@ -22,7 +22,7 @@ lemma fv_program_sequence: "fv_program (block b) = (\<Union>s\<in>set b. fv_prog
   by (cheat TODO7)
 lemma fv_program_assign: "fv_program (assign x e) = {variable_name x} \<union> fv_expression e"
   by (cheat TODO7)
-lemma fv_program_sample: "fv_program (sample x e2) = {variable_name x} \<union> fv_expression e2"
+lemma fv_program_sample: "fv_program (sample xs e2) = set (variable_names xs) \<union> fv_expression e2"
   by (cheat TODO7)
 lemma fv_program_ifthenelse: "fv_program (ifthenelse c p1 p2) =
   fv_expression c \<union> (\<Union>s\<in>set p1. fv_program s) \<union> (\<Union>s\<in>set p2. fv_program s)"

@@ -62,13 +62,13 @@ variables classical x :: bit begin
 declare [[show_types,show_consts]]
 ML \<open>
 test_get_wp \<^context> false
-            \<^term>\<open>sample var_x Expr[undefined]\<close>
+            \<^term>\<open>sample \<lbrakk>var_x\<rbrakk> Expr[undefined]\<close>
             \<^term>\<open>Expr[top::predicate]\<close>
             \<^term>\<open>Expr[\<CC>\<ll>\<aa>[weight (undefined::bit distr) = (1::real)] \<sqinter> (INF z::bit:supp undefined. (top::predicate))]\<close>
-\<close>   
+\<close>
 end
 
-variables classical b :: int begin
+(* variables classical b :: int begin
 ML \<open>
 local
 val t = \<^term>\<open>qrhl Expr[top] [assign var_b Expr[1]] [assign var_b Expr[2]] Expr[top]\<close>
@@ -76,6 +76,6 @@ val t' = Weakest_Precondition.wp_tac_on_term true \<^context> t |> the |> the_si
 val _ = assert_aconv \<^term>\<open>qrhl Expr[top] [] [assign var_b Expr[2]] Expr[top]\<close> t'
 in end
 \<close>
-end
+end *)
 
 end

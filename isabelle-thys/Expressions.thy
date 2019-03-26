@@ -596,6 +596,13 @@ proof (rule rel_funI, rule rel_funI, rename_tac s1 s2 m1 m2)
     by (metis UNIV_I image_subset_iff inv_into_injective)
 qed
 
+(* TODO define *)
+axiomatization substitute_vars :: "'a variables \<Rightarrow> 'a expression \<Rightarrow> substitution1 list"
+axiomatization where substitute_vars_unit: "substitute_vars variable_unit e = []"
+axiomatization where substitute_vars_concat: "substitute_vars (variable_concat v1 v2) e
+   = (substitute_vars v1 (map_expression fst e)) @ (substitute_vars v2 (map_expression snd e))" for e :: "('a::universe*'b::universe) expression"
+axiomatization where substitute_vars_singleton: "substitute_vars (variable_singleton v) e = [substitute1 v e]" for e :: "('a::universe) expression"
+
 
 lift_definition subst_mem2 :: "substitution1 list \<Rightarrow> mem2 \<Rightarrow> mem2" is
   "\<lambda>(\<sigma>::substitution1 list) (m::mem2) (v::variable_raw). 
@@ -1372,7 +1379,30 @@ lemma expression_id_comp_aux: \<comment> \<open>Helper for ML function clean_exp
   apply (rule eq_reflection)
   using assms[THEN meta_eq_to_obj_eq] apply transfer
   by (auto simp add: o_def)
-  
+
+lemma subst_expression_convert_substitute_vars_tac: \<comment> \<open>Helper for ML function subst_expression_tac\<close>
+  assumes "\<sigma> = substitute_vars xs e"
+  assumes "g = subst_expression \<sigma> f"
+  shows "g = subst_expression (substitute_vars xs e) f"
+  using assms by simp
+
+lemma substitute_vars_unit_tac: \<comment> \<open>Helper for ML function substitute_vars_tac\<close>
+  shows "[] = substitute_vars \<lbrakk>\<rbrakk> e"
+  by (simp add: substitute_vars_unit)
+
+lemma substitute_vars_singleton_tac: \<comment> \<open>Helper for ML function substitute_vars_tac\<close>
+  shows "[substitute1 x e] = substitute_vars \<lbrakk>x\<rbrakk> e"
+  by (simp add: substitute_vars_singleton)
+
+lemma substitute_vars_concat_tac: \<comment> \<open>Helper for ML function substitute_vars_tac\<close>
+  assumes "e1 = map_expression fst e"
+  assumes "e2 = map_expression snd e"
+  assumes "lQ = substitute_vars Q e1"
+  assumes "lR = substitute_vars R e2"
+  assumes "lQR = lQ @ lR"
+  shows "lQR = substitute_vars (variable_concat Q R) e"
+  apply (subst substitute_vars_concat) unfolding assms by simp
+
 section "Orderings on expressions"
 
 instantiation expression :: (ord) ord begin
@@ -1395,5 +1425,11 @@ simproc_setup clean_expression ("expression Q e") = Expressions.clean_expression
 consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
 parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Expressions.term_to_expression_untyped ctx e)]\<close>
 hide_const expression_syntax
+
+(* TODO remove *)
+schematic_goal "?x = substitute_vars \<lbrakk>var_z,var_x\<rbrakk> Expr[x]" and "?x = xxx"
+apply (tactic \<open>Expressions.substitute_vars_tac \<^context> 1\<close>)
+print_theorems
+  oops
 
 end

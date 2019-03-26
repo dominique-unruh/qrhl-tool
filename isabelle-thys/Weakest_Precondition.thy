@@ -20,18 +20,18 @@ lemma wp2_assign_tac:
 
 lemma wp1_sample_tac:
   fixes A B x e
-  assumes "x1 = index_var True x"
+  assumes "x1 = index_vars True x"
   assumes "e1 = index_expression True e"
-  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
   shows "qrhl A [sample x e] [] B"
   unfolding assms by (fact sample1_rule)
 
 lemma wp2_sample_tac:
   fixes A B x e
-  assumes "x1 = index_var False x"
+  assumes "x1 = index_vars False x"
   assumes "e1 = index_expression False e"
-  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
   shows "qrhl A [] [sample x e] B"
   unfolding assms by (fact sample2_rule)

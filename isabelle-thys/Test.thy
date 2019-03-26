@@ -5,48 +5,11 @@ theory Test
 (* Hashed_Terms Extended_Sorry *)
 QRHL.QRHL
 Main
-TestEx2
+(* TestEx2 *)
 (*   keywords
     "relift_definition" :: thy_goal
  *)
 begin
-
-ML \<open>
-\<^theory>\<open>TestEx2\<close>
-|> Context.theory_long_name
-|> Thy_Info.master_directory
-\<close>
-
-
-ML \<open>
-\<^theory> |> Theory.ancestors_of 
-|> map Context.theory_long_name
-|> filter (not o Resources.loaded_theory)
-|> List.mapPartial Resources.known_theory
-\<close>
-
-ML \<open>Thy_Info.use_thy\<close>
-
-ML \<open>
-Resources.loaded_theory "QRHL.Tactics"
-\<close>
-
-ML \<open>
-Resources.imports_of \<^theory>\<open>Tactics\<close>
-\<close>
-
-ML_file "test.ML"
-
-ML Resources.provide 
-
-
-ML \<open>
-\<^theory>\<open>Main\<close>
-\<close>
-
-
-
-ML YXML.string_of
 
 axiomatization xxx :: "int \<Rightarrow> bool" (* REMOVE *)
 
@@ -161,7 +124,7 @@ begin
 
 lemma
   assumes [simp]: "x\<ge>0"
-  shows "qrhl D [s1,sample var_x Expr[uniform {0..max x 0}]] [t1,t2,assign var_x Expr[0]] Expr[Cla[x1\<ge>x2]]"
+  shows "qrhl D [s1,sample \<lbrakk>var_x\<rbrakk> Expr[uniform {0..max x 0}]] [t1,t2,assign var_x Expr[0]] Expr[Cla[x1\<ge>x2]]"
   using [[show_types]]
   apply (tactic \<open>Weakest_Precondition.wp_seq_tac 1 1 \<^context> 1\<close>)
   apply simp
@@ -315,10 +278,10 @@ lemma correct: "(g \<^sup>^ x) \<^sup>^ r * m * (g \<^sup>^ r) \<^sup>^ -x = m"
 variables classical c :: "G*G" and classical m :: G and classical pksk :: "G*int"
 and classical pk :: G and classical sk :: int begin
 
-definition "ElGamal = [sample var_pksk Expr[keygen],
-           assign var_pk Expr[fst pksk],
-           assign var_sk Expr[snd pksk],
-           sample var_c Expr[enc pk m],
+definition "ElGamal = [sample \<lbrakk>var_pk,var_sk\<rbrakk> Expr[keygen],
+           (* assign var_pk Expr[fst pksk], *)
+           (* assign var_sk Expr[snd pksk], *)
+           sample \<lbrakk>var_c\<rbrakk> Expr[enc pk m],
            assign var_m Expr[dec sk c]
           ]"
 
@@ -334,7 +297,7 @@ lemma elgamal_correct [simp]:
   (* unfolding enc_def *)
   (* unfolding  *)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 3 0 \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
@@ -383,7 +346,7 @@ lemma elgamal_correct2 [simp]:
   apply (simp add: dec_def)
   apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 3 0 \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
@@ -397,7 +360,7 @@ lemma elgamal_correct3 [simp]:
   apply (simp add: dec_def case_prod_beta)
   apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 1 \<^context> 1\<close>)
   apply (simp add: weight_enc supp_enc case_prod_beta)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 3 \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 1 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)

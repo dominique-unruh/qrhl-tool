@@ -165,9 +165,31 @@ val map_expression_conv =
 
 val map_expression_tac = Misc.schematic_conv_tac "map_expression term" (K map_expression_conv)
 
+(* Subgoals of the form ?x = substitute_vars Q e
+   where Q is an explicit varterm and e an explicit expression.
+   x will be assigned a list of substitute1's *)
+fun substitute_vars_tac ctxt = SUBGOAL (fn (t,i) => 
+  case Logic.strip_assums_concl t |> HOLogic.dest_Trueprop of 
+    (Const(\<^const_name>\<open>HOL.eq\<close>,_) $ _ $ (Const(\<^const_name>\<open>substitute_vars\<close>,_) $ Q $ 
+      (Const(\<^const_name>\<open>expression\<close>,_) $ vars $ e))) =>
+    (case Q of
+      Const(\<^const_name>\<open>variable_unit\<close>,_) =>
+        resolve_tac ctxt @{thms substitute_vars_unit_tac} i
+      | Const(\<^const_name>\<open>variable_singleton\<close>,_) $ _ =>
+        resolve_tac ctxt @{thms substitute_vars_singleton_tac} i
+      | Const(\<^const_name>\<open>variable_concat\<close>,_) $ _ $ _ =>
+        resolve_tac ctxt @{thms substitute_vars_concat_tac} i
+        THEN map_expression_tac ctxt i
+        THEN map_expression_tac ctxt i
+        THEN substitute_vars_tac ctxt i
+        THEN substitute_vars_tac ctxt i
+        THEN Misc.append_list_tac ctxt i
+      | _ => raise TERM("substitute_vars_tac: nyi",[t]))
+  | _ => raise TERM("substitute_vars_tac: bad shape",[t]))
+
 (* Subgoals of the form ?x (or: expression ?Q ?e) = subst_expression s e
-   where s is an explicit substitution and e is an explicit expression *)
-fun subst_expression_tac ctxt = 
+   where s is an explicit substitution1 list and e is an explicit expression *)
+fun subst_expression_list_tac ctxt = 
   (* print_tac_n ctxt "subst_expression_tac" THEN' *)
   SUBGOAL (fn (t,i) =>
   case Logic.strip_assums_concl t |> HOLogic.dest_Trueprop of 
@@ -185,17 +207,32 @@ fun subst_expression_tac ctxt =
                         else
                            resolve_tac ctxt @{thms subst_expression_singleton_notsame_tac} i
                            THEN Prog_Variables.different_variable_names_tac ctxt i
-                           THEN subst_expression_tac ctxt i
-                    | _ => raise TERM("subst_expression_tac: not an explicit substitution",[t,s]))
+                           THEN subst_expression_list_tac ctxt i
+                    | _ => raise TERM("subst_expression_list_tac: not an explicit substitution",[t,s]))
                 | Const(\<^const_name>\<open>variable_concat\<close>, _) $ _ $ _ => 
                     (case e of 
                        Abs(_,_,Bound 0) => 
                          resolve_tac ctxt @{thms subst_expression_concat_id_tac} i
-                         THEN subst_expression_tac ctxt i THEN subst_expression_tac ctxt i
+                         THEN subst_expression_list_tac ctxt i THEN subst_expression_list_tac ctxt i
                      | _ => resolve_tac ctxt @{thms subst_expression_id_comp_tac} i
-                            THEN subst_expression_tac ctxt i)
+                            THEN subst_expression_list_tac ctxt i)
                 | _ => raise TERM("index_vars_tac: not a varterm",[t,vars]))
+  | _ => raise TERM("subst_expression_list_tac: bad shape",[t]))
+
+(* Subgoals of the form ?x (or: expression ?Q ?e) = subst_expression s e
+   where s is an explicit substitution and e is an explicit expression.
+
+   An explicit substitution may be a list of substitution1's, or a substitution_vars. *)
+fun subst_expression_tac ctxt = SUBGOAL (fn (t,i) => 
+  case Logic.strip_assums_concl t |> HOLogic.dest_Trueprop of 
+    (Const(\<^const_name>\<open>HOL.eq\<close>,_) $ _ $ (Const(\<^const_name>\<open>subst_expression\<close>,_) $ s $ _)) =>
+    (case s of Const(\<^const_name>\<open>substitute_vars\<close>,_) $ _ $ _ => 
+              resolve_tac ctxt @{thms subst_expression_convert_substitute_vars_tac} i
+              THEN substitute_vars_tac ctxt i
+              THEN subst_expression_list_tac ctxt i
+           | _ => subst_expression_list_tac ctxt i)
   | _ => raise TERM("subst_expression_tac: bad shape",[t]))
+
 
 
 fun is_explicit_expression (Const(\<^const_name>\<open>expression\<close>,_) $ Q $ _) =
