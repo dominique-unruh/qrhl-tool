@@ -19,21 +19,31 @@ lemma sym_rule:
 
 lemma assign1_rule:
   fixes A B x e
-  defines "x1 == index_var True x"
+  defines "x1 == index_vars True x"
   defines "e1 == index_expression True e"
-  defines "A == subst_expression [substitute1 x1 e1] B"
+  defines "A == subst_expression (substitute_vars x1 e1) B"
   shows "qrhl A [assign x e] [] B"
   by (cheat assign1_rule)
 
+
+(* TODO move *)
+lemma index_flip_substitute_vars: 
+  "map index_flip_substitute1 (substitute_vars xs e) = substitute_vars (index_flip_vars xs) (index_flip_expression e)"
+  by (cheat index_flip_substitute_vars)
+
+(* TODO move *)
+lemma index_flip_vars_index_vars: "index_flip_vars (index_vars left xs) = index_vars (\<not> left) xs"
+  by (cheat index_flip_vars_index_vars)
+
 lemma assign2_rule:
   fixes A B x e
-  defines "x1 == index_var False x"
+  defines "x1 == index_vars False x"
   defines "e1 == index_expression False e"
-  defines "A == subst_expression [substitute1 x1 e1] B"
+  defines "A == subst_expression (substitute_vars x1 e1) B"
   shows "qrhl A [] [assign x e] B"
   using [[simproc del: index_var]]
   apply (rule sym_rule)
-  apply (simp add: assms index_flip_subst_expression index_flip_substitute1 index_flip_expression_index_expression)
+  apply (simp add: assms index_flip_vars_index_vars index_flip_substitute_vars index_flip_subst_expression index_flip_substitute1 index_flip_expression_index_expression)
   by (rule assign1_rule)
 
 lemma sample1_rule:
@@ -47,17 +57,6 @@ lemma sample1_rule:
 
 thm index_flip_subst_expression
 thm index_flip_substitute1
-
-(* TODO move *)
-lemma index_flip_substitute_vars: 
-  "map index_flip_substitute1 (substitute_vars xs e) = substitute_vars (index_flip_vars xs) (index_flip_expression e)"
-  by (cheat index_flip_substitute_vars)
-find_theorems "index_flip_var (index_var _ _)"
-find_theorems "index_flip_vars (index_vars _ _)"
-
-(* TODO move *)
-lemma index_flip_vars_index_vars: "index_flip_vars (index_vars left xs) = index_vars (\<not> left) xs"
-  by (cheat index_flip_vars_index_vars)
 
 lemma sample2_rule:
   fixes A B xs e

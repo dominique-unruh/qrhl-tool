@@ -30,7 +30,7 @@ declare[[show_types,show_sorts,show_consts,eta_contract=false]]
 variables classical a :: bit and quantum A :: bit begin
 ML \<open>
 test_get_wp \<^context> true 
-            \<^term>\<open>measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
+            \<^term>\<open>measurement \<lbrakk>var_a\<rbrakk> \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
             \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
             \<^term>\<open>const_expression
                  (let M::(bit, bit) measurement = computational_basis
@@ -42,7 +42,7 @@ end
 variables classical b :: bit begin
 ML \<open>
 test_get_wp \<^context> false
-            \<^term>\<open>ifthenelse Expr[True] [assign var_b Expr[1] ] []\<close> (* program *)
+            \<^term>\<open>ifthenelse Expr[True] [assign \<lbrakk>var_b\<rbrakk> Expr[1] ] []\<close> (* program *)
             \<^term>\<open>Expr[top::predicate]\<close> (* post *)
             \<^term>\<open>const_expression ((\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> (\<CC>\<ll>\<aa>[True] + top))\<close> (* expected *)
 \<close>

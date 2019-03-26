@@ -18,7 +18,7 @@ hide_const (open) Order.top
 variables classical a :: bit and quantum A :: bit begin
 ML \<open>
 Weakest_Precondition.get_wp true 
-            \<^term>\<open>measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
+            \<^term>\<open>measurement \<lbrakk>var_a\<rbrakk> \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
             \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
  \<^context>
 \<close>
@@ -123,8 +123,8 @@ variables
 begin
 
 lemma
-  assumes [simp]: "x\<ge>0"
-  shows "qrhl D [s1,sample \<lbrakk>var_x\<rbrakk> Expr[uniform {0..max x 0}]] [t1,t2,assign var_x Expr[0]] Expr[Cla[x1\<ge>x2]]"
+  assumes [simp]: "x\<ge>0"                                                  
+  shows "qrhl D [s1,sample \<lbrakk>var_x\<rbrakk> Expr[uniform {0..max x 0}]] [t1,t2,assign \<lbrakk>var_x\<rbrakk> Expr[0]] Expr[Cla[x1\<ge>x2]]"
   using [[show_types]]
   apply (tactic \<open>Weakest_Precondition.wp_seq_tac 1 1 \<^context> 1\<close>)
   apply simp
@@ -140,7 +140,7 @@ lemma test:
 
 lemma
   assumes [simp]: "x\<ge>0"
-  shows "qrhl Expr[ Cla[x1=0 \<and> x2=1] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ]] [assign var_x Expr[x-1]] Expr[Cla[x1\<ge>x2]]"
+  shows "qrhl Expr[ Cla[x1=0 \<and> x2=1] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ]] [assign \<lbrakk>var_x\<rbrakk> Expr[x-1]] Expr[Cla[x1\<ge>x2]]"
   apply (tactic \<open>Weakest_Precondition.wp_seq_tac 1 1 \<^context> 1\<close>) 
   apply simp
   apply skip
@@ -282,7 +282,7 @@ definition "ElGamal = [sample \<lbrakk>var_pk,var_sk\<rbrakk> Expr[keygen],
            (* assign var_pk Expr[fst pksk], *)
            (* assign var_sk Expr[snd pksk], *)
            sample \<lbrakk>var_c\<rbrakk> Expr[enc pk m],
-           assign var_m Expr[dec sk c]
+           assign \<lbrakk>var_m\<rbrakk> Expr[dec sk c]
           ]"
 
 lemma elgamal_correct [simp]:
