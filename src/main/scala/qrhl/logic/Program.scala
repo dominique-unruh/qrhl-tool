@@ -44,8 +44,8 @@ sealed trait Statement {
     def collectExpr(e:RichTerm):Unit = e.caVariables(environment,cvars,avars)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => cvars += v; collectExpr(e)
-      case Sample(v,e) => cvars += v; collectExpr(e)
+      case Assign(v,e) => cvars ++= v; collectExpr(e)
+      case Sample(v,e) => cvars ++= v; collectExpr(e)
       case Call(name, args @ _*) =>
         val p = environment.programs(name)
         progs += p
@@ -57,7 +57,7 @@ sealed trait Statement {
       case While(e,body) => collectExpr(e); collect(body)
       case IfThenElse(e,p1,p2) => collectExpr(e); collect(p1); collect(p2)
       case QInit(vs,e) => qvars ++= vs; collectExpr(e)
-      case Measurement(v,vs,e) => cvars += v; collectExpr(e); qvars ++= vs
+      case Measurement(v,vs,e) => cvars ++= v; collectExpr(e); qvars ++= vs
       case QApply(vs,e) => qvars ++= vs; collectExpr(e)
     }
     collect(this)
@@ -71,13 +71,13 @@ sealed trait Statement {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars += v.name; vars ++= e.variables
-      case Sample(v,e) => vars += v.name; vars ++= e.variables
+      case Assign(v,e) => vars ++= v.map(_.name); vars ++= e.variables
+      case Sample(v,e) => vars ++= v.map(_.name); vars ++= e.variables
       case Call(_, _*) =>
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
       case QInit(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
-      case Measurement(v,vs,e) => vars += v.name; vars ++= vs.map(_.name); vars ++= e.variables
+      case Measurement(v,vs,e) => vars ++= v.map(_.name); vars ++= vs.map(_.name); vars ++= e.variables
       case QApply(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
     }
     collect(this)
@@ -89,8 +89,8 @@ sealed trait Statement {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars += v.name; vars ++= e.variables
-      case Sample(v,e) => vars += v.name; vars ++= e.variables
+      case Assign(v,e) => vars ++= v.map(_.name); vars ++= e.variables
+      case Sample(v,e) => vars ++= v.map(_.name); vars ++= e.variables
       case Call(name, args @ _*) =>
         val (cvars,qvars,_,_) = env.programs(name).variablesRecursive
         vars ++= cvars.map(_.name)
@@ -99,7 +99,7 @@ sealed trait Statement {
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
       case QInit(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
-      case Measurement(v,vs,e) => vars += v.name; vars ++= vs.map(_.name); vars ++= e.variables
+      case Measurement(v,vs,e) => vars ++= v.map(_.name); vars ++= vs.map(_.name); vars ++= e.variables
       case QApply(vs,e) => vars ++= vs.map(_.name); vars ++= e.variables
     }
     collect(this)
@@ -118,9 +118,9 @@ object Statement {
   def decodeFromTerm(context: Isabelle.Context, t:Term) : Statement = t match {
     case App(Const(Isabelle.block.name,_), statements) => decodeFromListTerm(context, statements)
     case App(App(Const(Isabelle.assignName,_),x),e) =>
-      Assign(CVariable.fromTerm_var(context, x),RichTerm.decodeFromExpression(context, e))
+      Assign(CVariable.fromCVarList(context, x), RichTerm.decodeFromExpression(context, e))
     case App(App(Const(Isabelle.sampleName,_),x),e) =>
-      Sample(CVariable.fromTerm_var(context, x),RichTerm.decodeFromExpression(context, e))
+      Sample(CVariable.fromCVarList(context, x),RichTerm.decodeFromExpression(context, e))
     case Free(name,_) => Call(name)
     case App(App(Const(Isabelle.instantiateOracles.name,_), Free(name,_)), args) =>
       val args2 = Isabelle.dest_list(args).map(decodeFromTerm(context,_).asInstanceOf[Call])
@@ -135,7 +135,7 @@ object Statement {
     case App(App(Const(Isabelle.qapplyName, _), vs), e) =>
       QApply(QVariable.fromQVarList(context, vs), RichTerm.decodeFromExpression(context,e))
     case App(App(App(Const(Isabelle.measurementName, _), x), vs), e) =>
-      Measurement(CVariable.fromTerm_var(context, x), QVariable.fromQVarList(context, vs),
+      Measurement(CVariable.fromCVarList(context, x), QVariable.fromQVarList(context, vs),
         RichTerm.decodeFromExpression(context,e))
     case _ => throw new RuntimeException(s"term $t cannot be decoded as a statement")
   }
@@ -159,13 +159,18 @@ object Statement {
           yield Call(name, args : _*)
     }
 
+    def string_list_encode(l:List[String]) = XML.Elem(("l",Nil), l.map( s => Codec.string.encode(s)))
+    def string_list_decode(xml:XML.Tree): XMLResult[List[String]] = xml match {
+      case XML.Elem(("l",Nil), l) => l.traverse(Codec.string.decode)
+    }
+
     override def encode(t: Statement): XML.Tree = t match {
       case Block(stmts@_*) => XML.Elem(("block", Nil), stmts.map(encode).toList)
-      case Assign(v, rhs) => XML.Elem(("assign", List(("lhs", v.name))), List(RichTerm.codec.encode(rhs)))
-      case Sample(v, rhs) => XML.Elem(("sample", List(("lhs", v.name))), List(RichTerm.codec.encode(rhs)))
+      case Assign(v, rhs) => XML.Elem(("assign", Nil), List(string_list_encode(v.map(_.name)), RichTerm.codec.encode(rhs)))
+      case Sample(v, rhs) => XML.Elem(("sample", Nil), List(string_list_encode(v.map(_.name)), RichTerm.codec.encode(rhs)))
       case call: Call => encode_call(call)
-      case Measurement(v, loc, exp) => XML.Elem(("measurement", List(("lhs", v.name))),
-        RichTerm.codec.encode(exp) :: loc.map { l => Codec.string.encode(l.name) })
+      case Measurement(v, loc, exp) => XML.Elem(("measurement", Nil),
+        List(string_list_encode(v.map(_.name)), string_list_encode(loc.map(_.name)), RichTerm.codec.encode(exp)))
       case QInit(loc, exp) => XML.Elem(("qinit", Nil),
         RichTerm.codec.encode(exp) :: loc.map { l => Codec.string.encode(l.name) })
       case QApply(loc, exp) => XML.Elem(("qapply", Nil),
@@ -174,6 +179,17 @@ object Statement {
         List(RichTerm.codec.encode(e), encode(p1), encode(p2)))
       case While(e, p1) => XML.Elem(("while", Nil),
         List(RichTerm.codec.encode(e), encode(p1)))
+    }
+
+    def mk_cvar_list(names : List[String], typ : Typ) : List[CVariable] = names match {
+      case Nil =>
+        assert(typ == Isabelle.unitT)
+        Nil
+      case List(x) =>
+        List(CVariable(x,typ))
+      case x::xs =>
+        val (xT,xsT) = Isabelle.dest_prodT(typ)
+        CVariable(x,xT) :: mk_cvar_list(xs, xsT)
     }
 
     def mk_qvar_list(names : List[String], typ : Typ) : List[QVariable] = names match {
@@ -191,18 +207,21 @@ object Statement {
       case XML.Elem(("block", Nil), stmtsXml) =>
         for (stmts <- stmtsXml.traverse(decode))
           yield Block(stmts : _*)
-      case XML.Elem(("assign", List(("lhs", vName))), List(rhsXml)) =>
-        for (rhs <- RichTerm.codec.decode(rhsXml))
-          yield Assign(CVariable(vName,rhs.typ), rhs)
-      case XML.Elem(("sample", List(("lhs", vName))), List(rhsXml)) =>
-        for (rhs <- RichTerm.codec.decode(rhsXml))
-        yield Sample(CVariable(vName, Isabelle.dest_distrT(rhs.typ)), rhs)
+      case XML.Elem(("assign", Nil), List(lhsXml,rhsXml)) =>
+        for (lhs <- string_list_decode(lhsXml);
+             rhs <- RichTerm.codec.decode(rhsXml))
+          yield Assign(mk_cvar_list(lhs, rhs.typ), rhs)
+      case XML.Elem(("sample", Nil), List(lhsXml,rhsXml)) =>
+        for (lhs <- string_list_decode(lhsXml);
+             rhs <- RichTerm.codec.decode(rhsXml))
+          yield Sample(mk_cvar_list(lhs, Isabelle.dest_distrT(rhs.typ)), rhs)
       case call @ XML.Elem(("call",_),_) => decode_call(call)
-      case XML.Elem(("measurement", List(("lhs", vName))), expXML :: locXML) =>
-        for (exp <- RichTerm.codec.decode(expXML);
-             loc <- locXML.traverse(Codec.string.decode);
+      case XML.Elem(("measurement", Nil), List(lhsXml,locXml,expXml)) =>
+        for (lhs <- string_list_decode(lhsXml);
+             loc <- string_list_decode(locXml);
+             exp <- RichTerm.codec.decode(expXml);
              (vT,locT) = Isabelle.dest_measurementT(exp.typ))
-          yield Measurement(CVariable(vName, vT), mk_qvar_list(loc,locT), exp)
+          yield Measurement(mk_cvar_list(lhs,vT), mk_qvar_list(loc,locT), exp)
       case XML.Elem(("qinit", Nil), expXML :: locXML) =>
         for (exp <- RichTerm.codec.decode(expXML);
              loc <- locXML.traverse(Codec.string.decode))
@@ -294,22 +313,22 @@ object Block {
 }
 
 
-final case class Assign(variable:CVariable, expression:RichTerm) extends Statement {
-  override def toString: String = s"""${variable.name} <- $expression;"""
+final case class Assign(variable:List[CVariable], expression:RichTerm) extends Statement {
+  override def toString: String = s"""${Variable.varlistToString(variable)} <- $expression;"""
   override def inline(name: String, statement: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
-    expression.checkWelltyped(context, variable.valueTyp)
+    expression.checkWelltyped(context, Isabelle.tupleT(variable.map(_.valueTyp):_*))
 
 //  override def programTermOLD(context: Isabelle.Context): Term =
 //    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
 }
-final case class Sample(variable:CVariable, expression:RichTerm) extends Statement {
-  override def toString: String = s"""${variable.name} <$$ $expression;"""
+final case class Sample(variable:List[CVariable], expression:RichTerm) extends Statement {
+  override def toString: String = s"""${Variable.varlistToString(variable)} <$$ $expression;"""
   override def inline(name: String, statement: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
-    expression.checkWelltyped(context, Isabelle.distrT(variable.valueTyp))
+    expression.checkWelltyped(context, Isabelle.distrT(Isabelle.tupleT(variable.map(_.valueTyp):_*)))
 
 //  override def programTermOLD(context: Isabelle.Context): Term =
 //    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
@@ -364,12 +383,12 @@ final case class QApply(location:List[QVariable], expression:RichTerm) extends S
 //  override def programTermOLD(context: Isabelle.Context): Term =
 //    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
 }
-final case class Measurement(result:CVariable, location:List[QVariable], e:RichTerm) extends Statement {
+final case class Measurement(result:List[CVariable], location:List[QVariable], e:RichTerm) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
-  override def toString: String = s"${result.name} <- measure ${location.map(_.name).mkString(",")} in $e;"
+  override def toString: String = s"${Variable.varlistToString(result)} <- measure ${location.map(_.name).mkString(",")} in $e;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
-    val expected = pure.Type("QRHL_Core.measurement",List(result.variableTyp, Isabelle.tupleT(location.map(_.valueTyp):_*)))
+    val expected = pure.Type("QRHL_Core.measurement",List(Isabelle.tupleT(result.map(_.valueTyp):_*), Isabelle.tupleT(location.map(_.valueTyp):_*)))
     e.checkWelltyped(context, expected)
   }
 //  override def programTermOLD(context: Isabelle.Context): Term =

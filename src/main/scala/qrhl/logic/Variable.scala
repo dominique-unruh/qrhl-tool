@@ -17,6 +17,12 @@ sealed trait Variable {
 }
 
 object Variable {
+  def varlistToString(vars: List[Variable]) = vars match {
+    case Nil => "()"
+    case List(x) => x.name;
+    case _ => s"(${vars.mkString(",")})"
+  }
+
   def index1(name:String) : String = name+"1"
   def index2(name:String) : String = name+"2"
   def index(left:Boolean, name:String) : String =
@@ -70,5 +76,16 @@ object CVariable {
       assert(name.startsWith("var_"))
       CVariable(name.stripPrefix("var_"), Isabelle.dest_variableT(typ))
     case _ => throw new RuntimeException("Illformed variable term")
+  }
+
+  def fromCVarList(context: Isabelle.Context, cvs: Term): List[CVariable] = cvs match {
+    case Const(Isabelle.variable_unit.name, _) => Nil
+    case App(Const(Isabelle.variable_singletonName,_), v) => List(fromTerm_var(context, v))
+    case App(App(Const(Isabelle.variable_concatName,_), v), vs) =>
+      val v2 = fromCVarList(context, v)
+      assert(v2.length==1)
+      val vs2 = fromCVarList(context, vs)
+      v2.head :: vs2
+    case _ => throw new RuntimeException("Illformed variable list")
   }
 }

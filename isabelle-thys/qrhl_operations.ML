@@ -135,13 +135,15 @@ fun call_decode (XML.Elem(("call",[("name",name)]), args)) =
   map_result (fn a => CALL (name,a)) (traverse_results call_decode args)
   | call_decode xml = Codec.Failure ("invalid encoding for a call specification",[xml])
 
+fun string_list_encode l = XML.Elem(("l",[]),map (Codec.encode Codec.string) l)
+fun string_list_decode (XML.Elem(("l",[]), l)) = traverse_results (Codec.decode Codec.string) l
 
 fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode ctxt (s)) stmts)
-  | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[("lhs",var)]), [richterm_encode ctxt rhs])
-  | statement_encode ctxt (Sample (var, rhs)) = XML.Elem(("sample",[("lhs",var)]), [richterm_encode ctxt rhs])
+  | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[]), [string_list_encode var, richterm_encode ctxt rhs])
+  | statement_encode ctxt (Sample (var, rhs)) = XML.Elem(("sample",[]), [string_list_encode var, richterm_encode ctxt rhs])
   | statement_encode _ (Call c) = call_encode c
-  | statement_encode ctxt (Measurement (var,loc,exp)) = XML.Elem(("measurement",[("lhs",var)]), 
-        richterm_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+  | statement_encode ctxt (Measurement (var,loc,exp)) = XML.Elem(("measurement",[]), 
+        [string_list_encode var, string_list_encode loc, richterm_encode ctxt exp])
   | statement_encode ctxt (QInit (loc,exp)) = XML.Elem(("qinit",[]), 
         richterm_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
   | statement_encode ctxt (QApply (loc,exp)) = XML.Elem(("qapply",[]), 
@@ -153,15 +155,16 @@ fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => st
 
 fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
       block_decode xml |> map_result Block
-  | statement_decode (XML.Elem(("assign",[("lhs",var)]), [e])) = 
-      Codec.map_result (fn e => Assign (var, e)) (richterm_decode e)
-  | statement_decode (XML.Elem(("sample",[("lhs",var)]), [e])) = 
-      Codec.map_result (fn e => Sample (var, e)) (richterm_decode e)
+  | statement_decode (XML.Elem(("assign",[]), [lhs,e])) = 
+      bind_result (fn lhs' => map_result (fn e' => Assign (lhs',e'))
+        (richterm_decode e)) (string_list_decode lhs)
+  | statement_decode (XML.Elem(("sample",[]), [lhs,e])) = 
+      bind_result (fn lhs' => map_result (fn e' => Sample (lhs',e'))
+        (richterm_decode e)) (string_list_decode lhs)
   | statement_decode (xml as XML.Elem(("call",_),_)) = Codec.map_result Call (call_decode xml)
-  | statement_decode (XML.Elem(("measurement",[("lhs",var)]), exp :: loc)) =
-      bind_result (fn exp => map_result (fn loc => Measurement (var,loc,exp))
-          (traverse_results (Codec.decode Codec.string) loc))
-         (richterm_decode exp)
+  | statement_decode (XML.Elem(("measurement",[]), [lhs,loc,exp])) =
+      bind_result (fn lhs' => bind_result (fn loc' => map_result (fn exp' => Measurement(lhs',loc',exp'))
+        (richterm_decode exp)) (string_list_decode loc)) (string_list_decode lhs)
   | statement_decode (XML.Elem(("qinit",[]), exp :: loc)) =
       bind_result (fn exp => map_result (fn loc => QInit (loc,exp))
           (traverse_results (Codec.decode Codec.string) loc))

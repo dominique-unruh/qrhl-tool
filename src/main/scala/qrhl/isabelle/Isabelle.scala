@@ -367,9 +367,9 @@ object Isabelle {
   def expressionT(typ:ITyp) = Type("Expressions.expression", List(typ))
   val instantiateOracles = Const("Programs.instantiateOracles", oracle_programT -->: listT(programT) -->: programT)
   val assignName = "Programs.assign"
-  def assign(typ:ITyp) : Const = Const(assignName, variableT(typ) -->: expressionT(typ) -->: programT)
+  def assign(typ:ITyp) : Const = Const(assignName, variablesT(typ) -->: expressionT(typ) -->: programT)
   val sampleName = "Programs.sample"
-  def sample(typ:ITyp) : Const = Const(sampleName, variableT(typ) -->: expressionT(distrT(typ)) -->: programT)
+  def sample(typ:ITyp) : Const = Const(sampleName, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
   val ifthenelseName = "Programs.ifthenelse"
   val ifthenelse = Const(ifthenelseName, expressionT(HOLogic.boolT) -->: listT(programT) -->: listT(programT) -->: programT)
   val whileName = "Programs.while"
@@ -383,7 +383,7 @@ object Isabelle {
   val qapplyName = "Programs.qapply"
   def qapply(typ:ITyp) = Const(qapplyName, variablesT(typ) -->: expressionT(boundedT(typ)) -->: programT)
   val measurementName = "Programs.measurement"
-  def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variableT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
+  def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
   val unitT = Type("Product_Type.unit")
   val prodT_name = "Product_Type.prod"
   def prodT(t1:ITyp, t2:ITyp) = Type(prodT_name, List(t1,t2))

@@ -65,7 +65,7 @@ object Parser extends JavaTokenParsers {
          typ = context.environment.getCVariable(v).valueTyp;
          e <- expression(typ);
          _ <- statementSeparator)
-     yield Assign(context.environment.getCVariable(v), e)
+     yield Assign(List(context.environment.getCVariable(v)), e)
 
   private val sampleSymbol = literal("<$")
   def sample(implicit context:ParserContext) : Parser[Sample] =
@@ -75,7 +75,7 @@ object Parser extends JavaTokenParsers {
          typ = context.environment.getCVariable(v).valueTyp;
          e <- expression(Isabelle.distrT(typ));
          _ <- statementSeparator)
-      yield Sample(context.environment.getCVariable(v), e)
+      yield Sample(List(context.environment.getCVariable(v)), e)
 
   def programExp(implicit context:ParserContext) : Parser[Call] = identifier ~
     (literal("(") ~ rep1sep(programExp,identifierListSep) ~ ")").? ^^ {
@@ -130,7 +130,7 @@ object Parser extends JavaTokenParsers {
          etyp = Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*));
          e <- expression(etyp);
          _ <- statementSeparator)
-      yield Measurement(resv,qvs,e)
+      yield Measurement(List(resv),qvs,e)
 
   def ifThenElse(implicit context:ParserContext) : Parser[IfThenElse] =
     for (_ <- literal("if");

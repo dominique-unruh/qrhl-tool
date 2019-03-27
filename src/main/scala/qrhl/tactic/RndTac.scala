@@ -10,8 +10,10 @@ import RichTerm.term_tight_codec
 
 case class RndTac(map:Option[(CVariable,CVariable,RichTerm)]=None) extends WpBothStyleTac {
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm,Nil.type) = (left,right) match {
-    case (Sample(x,e), Sample(y,f)) =>
+    case (Sample(xs,e), Sample(ys,f)) =>
 //      val isabelle = post.isabelle
+      val List(x) = xs // TODO: support tuples
+      val List(y) = ys // TODO: support tuples
       val env = state.environment
       val e1 = e.index1(env)
       val x1 = x.index1

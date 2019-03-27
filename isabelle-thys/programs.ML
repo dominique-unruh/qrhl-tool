@@ -4,10 +4,10 @@ datatype call = CALL of string * call list
 
 datatype statement = 
   Block of statement list
-| Assign of string * term
-| Sample of string * term
+| Assign of string list * term
+| Sample of string list * term
 | Call of call
-| Measurement of string * string list * term
+| Measurement of string list * string list * term
 | QInit of string list * term
 | QApply of string list * term
 | IfThenElse of term * statement list * statement list
@@ -36,13 +36,15 @@ fun varterm_instantiate \<^typ>\<open>unit\<close> VTUnit = VTUnit
 
 fun statement_to_term ctxt (Assign(lhs,rhs)) = let 
       val T = fastype_of rhs
-      in Const(\<^const_name>\<open>assign\<close>, mk_variableT T --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
-         Free("var_"^lhs, mk_variableT T) $ term_to_expression ctxt rhs end
+      val lhs' : term = lhs |> map (fn v => "var_"^v) |> varterm_from_list_untyped |> varterm_instantiate T |> mk_varterm |> fst
+      in Const(\<^const_name>\<open>assign\<close>, mk_variablesT T --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
+         lhs' $ term_to_expression ctxt rhs end
   | statement_to_term ctxt (Sample(lhs,rhs)) = let 
       val T = fastype_of rhs
-      val lhsT = Discrete_Distributions.dest_distrT T |> mk_variableT
-      in Const(\<^const_name>\<open>sample\<close>, lhsT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
-         Free("var_"^lhs, lhsT) $ term_to_expression ctxt rhs end
+      val lhsT = Discrete_Distributions.dest_distrT T
+      val lhs' : term = lhs |> map (fn v => "var_"^v) |> varterm_from_list_untyped |> varterm_instantiate lhsT |> mk_varterm |> fst
+      in Const(\<^const_name>\<open>sample\<close>, mk_variablesT lhsT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
+         lhs' $ term_to_expression ctxt rhs end
   | statement_to_term ctxt (Block stmts) = \<^const>\<open>block\<close> $ statements_to_term ctxt stmts
   | statement_to_term _ (Call call) = call_to_term call
   | statement_to_term ctxt (IfThenElse (e, p1, p2)) =
@@ -52,9 +54,10 @@ fun statement_to_term ctxt (Assign(lhs,rhs)) = let
   | statement_to_term ctxt (Measurement (lhs,loc,e)) = let
     val T = fastype_of e
     val (vT,locT) = QRHL.dest_measurementT T
+    val lhs' : term = lhs |> map (fn v => "var_"^v) |> varterm_from_list_untyped |> varterm_instantiate vT |> mk_varterm |> fst
     val loc' : term = loc |> varterm_from_list_untyped |> varterm_instantiate locT |> mk_varterm |> fst
-    in Const(\<^const_name>\<open>measurement\<close>, mk_variableT vT --> mk_variablesT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
-         Free("var_"^lhs, mk_variableT vT) $ loc' $ term_to_expression ctxt e end
+    in Const(\<^const_name>\<open>measurement\<close>, mk_variablesT vT --> mk_variablesT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
+         lhs' $ loc' $ term_to_expression ctxt e end
   | statement_to_term ctxt (QApply (loc,e)) = let
     val T = fastype_of e
     val (locT,locT') = QRHL.dest_boundedT T
@@ -72,10 +75,10 @@ fun statement_to_term ctxt (Assign(lhs,rhs)) = let
 and statements_to_term ctxt statements = map (statement_to_term ctxt) statements |> HOLogic.mk_list \<^typ>\<open>program\<close>
 
 fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statements) = Block (term_to_statements ctxt statements)
-  | term_to_statement ctxt (Const(\<^const_name>\<open>assign\<close>,_) $ Free(x,_) $ e) = 
-      Assign (strip_var_prefix x, expression_to_term ctxt e)
-  | term_to_statement ctxt (Const(\<^const_name>\<open>sample\<close>,_) $ Free(x,_) $ e) = 
-      Sample (strip_var_prefix x, expression_to_term ctxt e)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>assign\<close>,_) $ x $ e) = 
+      Assign (parse_varlist x |> map fst |> map strip_var_prefix, expression_to_term ctxt e)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>sample\<close>,_) $ x $ e) = 
+      Sample (parse_varlist x |> map fst |> map strip_var_prefix, expression_to_term ctxt e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>while\<close>,_) $ e $ body) =
       While (expression_to_term ctxt e, term_to_statements ctxt body)
   | term_to_statement ctxt (Const(\<^const_name>\<open>ifthenelse\<close>,_) $ e $ p1 $ p2) =
@@ -84,8 +87,9 @@ fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statem
       QInit (parse_varlist vs |> map fst, expression_to_term ctxt e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>qapply\<close>,_) $ vs $ e) =
       QApply (parse_varlist vs |> map fst, expression_to_term ctxt e)
-  | term_to_statement ctxt (Const(\<^const_name>\<open>measurement\<close>,_) $ Free(x,_) $ vs $ e) =
-      Measurement (strip_var_prefix x, parse_varlist vs |> map fst, expression_to_term ctxt e)
+  | term_to_statement ctxt (Const(\<^const_name>\<open>measurement\<close>,_) $ x $ vs $ e) =
+      Measurement (parse_varlist x |> map fst |> map strip_var_prefix, 
+                   parse_varlist vs |> map fst, expression_to_term ctxt e)
   | term_to_statement _ (t as Free _) = Call (term_to_call t)
   | term_to_statement _ (t as Const(\<^const_name>\<open>instantiateOracles\<close>,_) $ _ $ _) = Call (term_to_call t)
   | term_to_statement _ t = raise TERM("term_to_statement",[t])
