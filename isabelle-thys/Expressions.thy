@@ -207,6 +207,22 @@ lemma map_expression3'[simp]:
   unfolding map_expression3'_def pair_expression map_expression'
   apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
+definition map_expression4' ::
+ "('e1 \<Rightarrow> 'e2 \<Rightarrow> 'e3 \<Rightarrow> ('z \<Rightarrow> 'e4) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('e2 expression) \<Rightarrow> ('e3 expression) \<Rightarrow> ('z \<Rightarrow> 'e4 expression) \<Rightarrow> 'f expression" where
+  "map_expression4' f e1 e2 e3 e4 = map_expression'
+           (\<lambda>x1234. let x1 = fst (x1234 undefined) in
+              let x2 = fst (snd (x1234 undefined)) in
+              let x3 = fst (snd (snd (x1234 undefined))) in
+              let x4 = \<lambda>z. snd (snd (snd (x1234 z))) in
+              f x1 x2 x3 x4)
+         (\<lambda>z. (pair_expression e1 (pair_expression e2 (pair_expression e3 (e4 z)))))"
+
+lemma map_expression4'[simp]:
+  "map_expression4' f (expression Q1 e1) (expression Q2 e2) (expression Q3 e3) (\<lambda>z. expression Q4 (e4 z))
+     = expression (variable_concat Q1 (variable_concat Q2 (variable_concat Q3 Q4))) (\<lambda>(x1,x2,x3,x4). f (e1 x1) (e2 x2) (e3 x3) (\<lambda>z. e4 z x4))"
+  unfolding map_expression4'_def pair_expression map_expression'
+  apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
+
 lemma range_cases[case_names 1]: "x : range f \<Longrightarrow> (\<And>y. P (f y)) \<Longrightarrow> P x"
   unfolding image_def by auto 
 

@@ -293,7 +293,7 @@ object Parser extends JavaTokenParsers {
         EqualTac(ps)
     }
 
-  def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
+  def tactic_rnd(implicit context:ParserContext): Parser[Tactic] =
     literal("rnd") ~> (for (
       x <- identifier;
       xVar = context.environment.getCVariable(x);
@@ -302,7 +302,10 @@ object Parser extends JavaTokenParsers {
       yVar = context.environment.getCVariable(y);
       _ <- sampleSymbol | assignSymbol;
       e <- expression(Isabelle.distrT(Isabelle.prodT(xVar.valueTyp,yVar.valueTyp)))
-    ) yield (xVar,yVar,e)).? ^^ RndTac
+    ) yield (xVar,yVar,e)).? ^^ {
+      case None => RndEqualTac
+      case Some((xVar,yVar,e)) => RndWitnessTac(xVar,yVar,e)
+    }
 
   def tactic_case(implicit context:ParserContext): Parser[CaseTac] =
     literal("case") ~> OnceParser(for (

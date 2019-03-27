@@ -1,7 +1,33 @@
 isabelle.
 
-classical var x : int.
-classical var y : int.
+classical var x : bit.
+classical var y : bit.
+classical var z : bit*bit.
+
+program s1 := {
+  (x,y) <$ uniform UNIV;
+}.
+
+program s2 := {
+  z <$ uniform UNIV;
+}.
+
+qrhl {top} call s1; ~ call s2; {Cla[z2=(x1,y1)]}.
+  inline s1.
+  inline s2.
+  rnd.
+  simp.
+  skip.
+  simp.
+qed.
+
+qrhl {top} (x,y) <$ uniform UNIV; ~ x <$ uniform UNIV; {Cla[x1=x2]}.
+  rnd z,x <- map_distr (%(x,y). ((x,y),x)) (uniform UNIV).
+  simp case_prod_beta.
+  admit.
+qed.
+
+
 
 program p1 := {
   (x,y) <- (1,2);

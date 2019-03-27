@@ -1,6 +1,6 @@
 theory QRHL_Operations
   imports "HOL-Protocol.Protocol_Main" QRHL_Core Tactics Hashed_Terms Joint_Measure Bounded_Operators.Extended_Sorry
-    Weakest_Precondition
+    Weakest_Precondition Joint_Sample
 begin
 
 ML_file "qrhl_operations.ML"
@@ -125,6 +125,7 @@ operation_setup fixTac = {*
           QRHL.fixTac expr var |> Codec.encode (Codec.tuple (richterm_codec' ctxt) typ_tight_codec) end}
 *}
 
+(* TODO remove (incl QRHL.rndWp). Same for rndWp2 *)
 operation_setup rndWp = {*
   {from_lib = Codec.triple Codec.int (Codec.triple Codec.string term_tight_codec Codec.string) (Codec.triple term_tight_codec typ_tight_codec term_tight_codec),
    to_lib = Codec.id,
@@ -225,6 +226,20 @@ operation_setup joint_measure_simple_tac = {*
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Measure.joint_measure_simple_seq_tac ctxt 1)}
+*}
+
+operation_setup joint_sample_equal_tac = {*
+  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Sample.joint_sample_equal_seq_tac ctxt 1)}
+*}
+
+operation_setup joint_sample_tac = {*
+  {from_lib = Codec.triple term_tight_codec subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term_concl (fn ctxt => fn witness => 
+      let val witness_expr = witness |> Expressions.term_to_expression ctxt |> Thm.cterm_of ctxt in
+      Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)}
 *}
 
 (* (* TODO remove *)
