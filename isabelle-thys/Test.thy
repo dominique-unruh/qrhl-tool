@@ -371,4 +371,6 @@ Extended_Sorry.show_oracles @{thm elgamal_correct3}
 \<close>
 
 
+term "variable_concat \<lbrakk>z\<rbrakk> \<lbrakk>x,y\<rbrakk>"
+
 end

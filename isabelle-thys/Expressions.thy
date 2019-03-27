@@ -597,10 +597,13 @@ proof (rule rel_funI, rule rel_funI, rename_tac s1 s2 m1 m2)
 qed
 
 (* TODO define *)
+
+(* Note: substitute_vars adds variables from varterm right-to-left to the substition1 list.
+   This means, right variables have priority in case of name clashes *)
 axiomatization substitute_vars :: "'a variables \<Rightarrow> 'a expression \<Rightarrow> substitution1 list"
 axiomatization where substitute_vars_unit: "substitute_vars variable_unit e = []"
 axiomatization where substitute_vars_concat: "substitute_vars (variable_concat v1 v2) e
-   = (substitute_vars v1 (map_expression fst e)) @ (substitute_vars v2 (map_expression snd e))" for e :: "('a::universe*'b::universe) expression"
+   = (substitute_vars v2 (map_expression snd e)) @ (substitute_vars v1 (map_expression fst e))" for e :: "('a::universe*'b::universe) expression"
 axiomatization where substitute_vars_singleton: "substitute_vars (variable_singleton v) e = [substitute1 v e]" for e :: "('a::universe) expression"
 
 
@@ -1399,7 +1402,7 @@ lemma substitute_vars_concat_tac: \<comment> \<open>Helper for ML function subst
   assumes "e2 = map_expression snd e"
   assumes "lQ = substitute_vars Q e1"
   assumes "lR = substitute_vars R e2"
-  assumes "lQR = lQ @ lR"
+  assumes "lQR = lR @ lQ"
   shows "lQR = substitute_vars (variable_concat Q R) e"
   apply (subst substitute_vars_concat) unfolding assms by simp
 

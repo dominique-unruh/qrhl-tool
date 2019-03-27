@@ -26,4 +26,7 @@ program p3 := {
 
 qrhl {top} call p3; ~ call p3; {Cla[x1=2]}.
 inline p3.
-wp left.
+wp 1 1.
+skip.
+simp.
+qed.
