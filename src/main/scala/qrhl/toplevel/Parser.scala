@@ -1,7 +1,7 @@
 package qrhl.toplevel
 
 import info.hupel.isabelle.pure
-import qrhl._
+import qrhl.{toplevel, _}
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
 import qrhl.tactic._
@@ -18,6 +18,8 @@ object Parser extends JavaTokenParsers {
   val identifierListSep : Parser[String] = ","
   val identifierList : Parser[List[String]] = rep1sep(identifier,identifierListSep)
   val identifierList0 : Parser[List[String]] = repsep(identifier,identifierListSep)
+  val identifierTuple: Parser[List[String]] = "(" ~> identifierList0 <~ ")"
+  val identifierOrTuple: Parser[List[String]] = identifierTuple | (identifier ^^ {s:String => List(s)})
 
   //  val natural : Parser[BigInt] = """[0-9]+""".r ^^ { BigInt(_) }
   val natural: Parser[Int] = """[0-9]+""".r ^^ { _.toInt }
@@ -59,23 +61,25 @@ object Parser extends JavaTokenParsers {
 
   private val assignSymbol = literal("<-")
   def assign(implicit context:ParserContext) : Parser[Assign] =
-    for (v <- identifier;
+    for (lhs <- identifierOrTuple;
          _ <- assignSymbol;
          // TODO: add a cut
-         typ = context.environment.getCVariable(v).valueTyp;
+         lhsV = lhs.map { context.environment.getCVariable };
+         typ = Isabelle.tupleT(lhsV.map(_.valueTyp):_*);
          e <- expression(typ);
          _ <- statementSeparator)
-     yield Assign(List(context.environment.getCVariable(v)), e)
+     yield Assign(lhsV, e)
 
   private val sampleSymbol = literal("<$")
   def sample(implicit context:ParserContext) : Parser[Sample] =
-    for (v <- identifier;
+    for (lhs <- identifierOrTuple;
          _ <- sampleSymbol;
          // TODO: add a cut
-         typ = context.environment.getCVariable(v).valueTyp;
+         lhsV = lhs.map { context.environment.getCVariable };
+         typ = Isabelle.tupleT(lhsV.map(_.valueTyp):_*);
          e <- expression(Isabelle.distrT(typ));
          _ <- statementSeparator)
-      yield Sample(List(context.environment.getCVariable(v)), e)
+      yield Sample(lhsV, e)
 
   def programExp(implicit context:ParserContext) : Parser[Call] = identifier ~
     (literal("(") ~ rep1sep(programExp,identifierListSep) ~ ")").? ^^ {
@@ -120,17 +124,17 @@ object Parser extends JavaTokenParsers {
 
   val measureSymbol : Parser[String] = assignSymbol
   def measure(implicit context:ParserContext) : Parser[Measurement] =
-    for (res <- identifier;
+    for (res <- identifierOrTuple;
          _ <- measureSymbol;
          _ <- literal("measure");
          vs <- identifierList;
-         resv = context.environment.getCVariable(res);
+         resv = res.map { context.environment.getCVariable };
          qvs = vs.map { context.environment.getQVariable };
          _ <- literal("with");
-         etyp = Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*));
+         etyp = Isabelle.measurementT(Isabelle.tupleT(resv.map(_.valueTyp):_*), Isabelle.tupleT(qvs.map(_.valueTyp):_*));
          e <- expression(etyp);
          _ <- statementSeparator)
-      yield Measurement(List(resv),qvs,e)
+      yield Measurement(resv,qvs,e)
 
   def ifThenElse(implicit context:ParserContext) : Parser[IfThenElse] =
     for (_ <- literal("if");

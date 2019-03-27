@@ -1,3 +1,29 @@
-isabelle TestEx.
+isabelle.
 
-xxx.
+classical var x : int.
+classical var y : int.
+
+program p1 := {
+  (x,y) <- (1,2);
+}.
+
+program p2 := {
+  x <- 1;
+  y <- 2;
+}.
+
+qrhl {top} call p1; ~ call p2; {Cla[x1=x2 ∧ y1=y2]}.
+  inline p1.
+  inline p2.
+  wp 1 2.
+  skip.
+  simp.
+qed.
+
+program p3 := {
+  (x,x) <- (1,2);
+}.
+
+qrhl {top} call p3; ~ call p3; {Cla[x1=2]}.
+inline p3.
+wp left.

@@ -19,8 +19,23 @@ class ParserTest extends FunSuite {
     tl.state.parserContext
   }
 
+  test("assign tuple") {
+    val assign = Parser.parseAll(Parser.assign, "(x,y) <- (y,x);").get
+    println(assign)
+    assert(assign.variable.map(_.name)==List("x","y"))
+    assign.checkWelltyped(parserContext.isabelle.get)
+  }
+
+  test("sample tuple") {
+    val sample = Parser.parseAll(Parser.sample, "(x,y) <$ uniform UNIV;").get
+    println(sample)
+    assert(sample.variable.map(_.name)==List("x","y"))
+    sample.checkWelltyped(parserContext.isabelle.get)
+  }
+
   test("parse while loop") {
-    val whileLoop = Parser.parseAll(Parser.whileLoop, "while (True) { skip; };")
+    val whileLoop = Parser.parseAll(Parser.whileLoop, "while (True) { skip; }").get
+    println(whileLoop)
   }
 
   test("parse undeclared variable") {
@@ -31,7 +46,7 @@ class ParserTest extends FunSuite {
 
   test("fail to parse while loop") {
     assertThrows[ProverResult.Failure] {
-      val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; };")
+      val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; }")
     }
   }
 
