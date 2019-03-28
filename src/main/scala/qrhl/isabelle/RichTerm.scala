@@ -94,9 +94,7 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): (RichTerm,Isabelle.Thm) = simplify(isabelle.get,facts)
 
   def simplify(context: Isabelle.Context, facts:List[String]): (RichTerm,Isabelle.Thm) =
-    context.simplify(isabelleTerm,facts)/* match {
-      case (t,thm) => (Expression(typ, t), thm)
-    }*/
+    context.simplify(isabelleTerm, facts)
 
   def map(f : Term => Term) : RichTerm = RichTerm(typ, f(isabelleTerm))
 

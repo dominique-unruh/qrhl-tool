@@ -255,9 +255,11 @@ object Parser extends JavaTokenParsers {
         (literal("right") ~> natural.? ^^ { n => WpTac(right = n.getOrElse(1), left = 0) }) |
         (natural ~ natural ^^ { case l ~ r => WpTac(left = l, right = r) })
     }
-  OnceParser("left|right".r) ^^ {
-      case "left" => WpTac(left=1,right=0)
-      case "right" => WpTac(left=0,right=1)
+
+  val tactic_squash: Parser[SquashTac] =
+    literal("squash") ~> OnceParser("left|right".r) ^^ {
+      case "left" => SquashTac(left=true)
+      case "right" => SquashTac(left=false)
     }
 
   val tactic_swap: Parser[SwapTac] =
@@ -352,6 +354,7 @@ object Parser extends JavaTokenParsers {
       tactic_split |
       tactic_case |
       tactic_fix |
+      tactic_squash |
       literal("measure") ^^ { _ => JointMeasureTac }
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand

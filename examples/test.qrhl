@@ -1,8 +1,8 @@
-isabelle.
+isabelle TestEx.
 
-classical var x : bit.
-classical var y : bit.
-classical var z : bit*bit.
+classical var x : int.
+classical var y : int.
+classical var z : int*int.
 
 program s1 := {
   (x,y) <$ uniform UNIV;
@@ -30,21 +30,30 @@ qed.
 
 
 program p1 := {
-  (x,y) <- (1,2);
+  (x,y) <$ uniform {(1,2)};
 }.
 
 program p2 := {
-  x <- 1;
-  y <- 2;
+  x <$ uniform {1,2};
+  y <$ uniform {2};
 }.
 
-qrhl {top} call p1; ~ call p2; {Cla[x1=x2 ∧ y1=y2]}.
+qrhl {top} call p1; ~ call p2; {Cla[top]}.
   inline p1.
   inline p2.
-  wp 1 2.
-  skip.
+  squash right.
+  rnd.
   simp.
+  skip.
+  simp!.
+
 qed.
+
+lemma ⊤ ≤ ℭ𝔩𝔞[uniform {(1, 2)} = bind_distr (uniform {1, 3}) (λz. map_distr (Pair z) (uniform {2}))] ⊓ (⨅z∈supp (uniform {(1, 2)}). ℭ𝔩𝔞[fst z = fst z]).
+simp.
+admit.
+qed.
+
 
 program p3 := {
   (x,x) <- (1,2);

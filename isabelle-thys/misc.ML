@@ -66,7 +66,7 @@ structure MethodErrorStack = Proof_Data (
 datatype lazy_error = Lazy_Error of unit -> string
 exception LAZY_ERROR of lazy_error
 fun lazy_error msg = LAZY_ERROR (Lazy_Error msg)
-val _ = ML_system_pp (fn depth => fn _ => fn Lazy_Error msg => Pretty.to_polyml (Pretty.str (msg ())))
+val _ = ML_system_pp (fn _ => fn _ => fn Lazy_Error msg => Pretty.to_polyml (Pretty.str (msg ())))
 fun method_error_push msg = MethodErrorStack.map (fn st => msg::st)
 (* val method_error = Attrib.setup_config_bool \<^binding>\<open>method_error\<close> (K false) *)
 fun msg_to_string ctxt msg () = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt))
@@ -117,11 +117,43 @@ fun append_list_tac ctxt = SUBGOAL (fn (t,i) => case t |> Logic.strip_assums_con
       THEN append_list_tac ctxt i
   | _ => raise TERM("rhs is not a concatenation of explicit lists",[t]))
 
-(* Expects a goal of the form ?lhs = ?rhs
-   where $lhs is built from schematic variables and # and @
-   and ?rhs is an explicit list.
+(* Expects a goal of the form lhs = rhs
+   where lhs is built from schematic variables and # and @
+   and rhs is an explicit list.
+
+   The lhs may contain at most one schematic variable matching lists (i.e., ?a @ ?b is not allowed)
 
    Solves that goal by instantiating the schematic variable on the lhs *)
-(* fun match_list_tac ctxt *)
+fun match_list_tac ctxt = SUBGOAL (fn (t,i) => case t |> Logic.strip_assums_concl |> HOLogic.dest_Trueprop |> HOLogic.dest_eq of
+  (Const(\<^const_name>\<open>Cons\<close>,_) $ _ $ _, Const(\<^const_name>\<open>Cons\<close>,_) $ _ $ _) =>
+      resolve_tac ctxt @{thms match_list_tac_aux1} i
+      THEN match_list_tac ctxt i
+  | (Const(\<^const_name>\<open>append\<close>,_) $ (Const(\<^const_name>\<open>Cons\<close>,_) $ _ $ _) $ _, Const(\<^const_name>\<open>Cons\<close>,_) $ _ $ _) =>
+      resolve_tac ctxt @{thms match_list_tac_aux2} i
+      THEN match_list_tac ctxt i
+  | (Const(\<^const_name>\<open>append\<close>,_) $ Const(\<^const_name>\<open>Nil\<close>,_) $ _, _) =>
+      resolve_tac ctxt @{thms match_list_tac_aux3} i
+      THEN match_list_tac ctxt i
+  | (Const(\<^const_name>\<open>append\<close>,_) $ Var _ $ rest, rhs) =>
+      let val rlen = length (HOLogic.dest_list rest)
+                     handle TERM _ => raise TERM("match_list_tac: need an explicit list on rhs of lhs",[t,rest])
+          val llen = length (HOLogic.dest_list rhs)
+                     handle TERM _ => raise TERM("match_list_tac: need an explicit list on lhs",[t,rhs])
+      in
+        if rlen < llen then
+          resolve_tac ctxt @{thms match_list_tac_aux2} i
+          THEN match_list_tac ctxt i
+        else if rlen = llen then
+          resolve_tac ctxt @{thms match_list_tac_aux3} i
+          THEN match_list_tac ctxt i
+        else
+          raise TERM("match_list_tac: mismatch (not enough elements on rhs)",[t])
+      end
+  | (Var _, _) =>
+      resolve_tac ctxt @{thms refl} i
+  | (Const(\<^const_name>\<open>Nil\<close>,_), Const(\<^const_name>\<open>Nil\<close>,_)) => 
+      resolve_tac ctxt @{thms refl} i
+  | (_,_) => raise TERM("match_list_tac: mismatch",[t])
+)
 
 end

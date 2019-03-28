@@ -1,6 +1,6 @@
 theory QRHL_Operations
   imports "HOL-Protocol.Protocol_Main" QRHL_Core Tactics Hashed_Terms Joint_Measure Bounded_Operators.Extended_Sorry
-    Weakest_Precondition Joint_Sample
+    Weakest_Precondition Joint_Sample Squash_Sampling
 begin
 
 ML_file "qrhl_operations.ML"
@@ -218,6 +218,12 @@ operation_setup wp_tac = {*
      val ctxt = Refs.Ctxt.read ctx_id
      val result = Weakest_Precondition.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm
     in result |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int)) end} *)
+*}
+
+operation_setup squash_tac = {*
+  {from_lib = Codec.triple Codec.bool subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term_concl (fn ctxt => fn left => Squash_Sampling.squash_sampling_tac left ctxt 1)}
 *}
 
 
