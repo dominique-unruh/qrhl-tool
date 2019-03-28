@@ -134,10 +134,15 @@ lemma pat_lambda_conv_aux: \<comment> \<open>Helper for ML function pat_lambda_c
 
 lemma eq_reflection_swap: "a = b \<Longrightarrow> b\<equiv>a" by auto
 
+lemma append_list_tac_aux: \<comment> \<open>Helper lemma for append_list_tac\<close>
+  assumes "x = b@c"
+  shows "a#x = (a#b)@c"
+  by (simp add: assms)
+
 ML_file "misc.ML"
 
 (* TODO remove *)
-schematic_goal "?x = [1,2] @ [3,4] @ []" and "?x = abc"
+schematic_goal "?x = [1,2] @ [3,4]" and "?x = abc"
   apply (tactic \<open>Misc.append_list_tac \<^context> 1\<close>)
   oops
 

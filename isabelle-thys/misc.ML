@@ -110,10 +110,18 @@ fun schematic_tac_conv ctxt tac ct = let
   (* val goal = Logic *)
   in thm end
 
+fun append_list_tac ctxt = SUBGOAL (fn (t,i) => case t |> Logic.strip_assums_concl |> HOLogic.dest_Trueprop |> HOLogic.dest_eq |> snd of
+  Const(\<^const_name>\<open>append\<close>,_) $ Const(\<^const_name>\<open>Nil\<close>,_) $ _ => resolve_tac ctxt @{thms append_Nil[symmetric]} i
+  | Const(\<^const_name>\<open>append\<close>,_) $ (Const(\<^const_name>\<open>Cons\<close>,_) $ _ $ _) $ _ => 
+      resolve_tac ctxt @{thms append_list_tac_aux} i
+      THEN append_list_tac ctxt i
+  | _ => raise TERM("rhs is not a concatenation of explicit lists",[t]))
 
-fun append_list_tac ctxt =
-  CONVERSION (Raw_Simplifier.rewrite ctxt false
-   @{thms append_Nil[THEN eq_reflection] append_Cons[THEN eq_reflection]})
-  THEN' resolve_tac ctxt @{thms refl}
+(* Expects a goal of the form ?lhs = ?rhs
+   where $lhs is built from schematic variables and # and @
+   and ?rhs is an explicit list.
+
+   Solves that goal by instantiating the schematic variable on the lhs *)
+(* fun match_list_tac ctxt *)
 
 end
