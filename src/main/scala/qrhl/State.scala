@@ -1,8 +1,10 @@
 package qrhl
 
-import java.nio.file.{Files, Path, Paths}
+import java.io.FileNotFoundException
+import java.nio.file.attribute.FileTime
+import java.nio.file.{Files, NoSuchFileException, Path, Paths}
 
-import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
+import info.hupel.isabelle.{Codec, Operation, ProverResult, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Term, Typ => ITyp}
 import org.log4s
@@ -221,15 +223,40 @@ trait Tactic {
   def apply(state: State, goal : Subgoal) : List[Subgoal]
 }
 
-case class UserException(msg:String) extends RuntimeException(msg)
+class UserException private (private val msg:String, private var _position:String=null) extends RuntimeException(msg) {
+  def setPosition(position:String): Unit = {
+    if (_position==null)
+      _position = position
+  }
+  def position : String = _position
+  def positionMessage : String = s"$position: $msg"
+}
+object UserException {
+  private val logger = log4s.getLogger
+
+  def apply(msg: String) = new UserException(msg)
+  def apply(e: ProverResult.Failure, position: String): UserException = {
+    logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
+    val e2 = UserException("(in Isabelle) "+Isabelle.symbolsToUnicode(e.msg))
+    e2.setPosition(position)
+    e2
+  }
+}
 
 /** A path together with a last-modification time. */
 class FileTimeStamp(val file:Path) {
-  private val time = Files.getLastModifiedTime(file)
+  private val time = FileTimeStamp.getLastModifiedTime(file)
   /** Returns whether the file has changed since the FileTimeStamp was created. */
-  def changed : Boolean = time!=Files.getLastModifiedTime(file)
+  def changed : Boolean = time!=FileTimeStamp.getLastModifiedTime(file)
 
   override def toString: String = s"$file@$time"
+}
+object FileTimeStamp {
+  def getLastModifiedTime(file:Path): FileTime = try
+    Files.getLastModifiedTime(file)
+  catch {
+    case _ : NoSuchFileException => FileTime.fromMillis(-1)
+  }
 }
 
 class CheatMode private (
@@ -264,7 +291,13 @@ class State private (val environment: Environment,
                      val cheatMode : CheatMode,
                      val includedFiles : Set[Path]) {
   def include(file: Path): State = {
-    val fullpath = currentDirectory.resolve(file).toRealPath()
+    val fullpath =
+      try {
+        currentDirectory.resolve(file).toRealPath()
+      } catch {
+        case e:NoSuchFileException => throw UserException(s"File not found: $file (relative to $currentDirectory)")
+      }
+
     logger.debug(s"Including $fullpath")
     if (includedFiles.contains(fullpath)) {
       println(s"Already included $file. Skipping.")
@@ -406,9 +439,10 @@ class State private (val environment: Environment,
         return this
     
     val isabelle = Isabelle.globalIsabelle
-    val isa = isabelle.getQRHLContextWithFiles(theoryPath : _*)
-    val files = theoryPath map { new FileTimeStamp(_) }
-    copy(isabelle = Some(isa), dependencies=files:::dependencies, isabelleTheory=theoryPath)
+    val (ctxt,deps) = isabelle.getQRHLContextWithFiles(theoryPath : _*)
+    logger.debug(s"Dependencies of theory $theory: $deps")
+    val stamps = deps.map(new FileTimeStamp(_))
+    copy(isabelle = Some(ctxt), dependencies=stamps:::dependencies, isabelleTheory=theoryPath)
   }
 
   def filesChanged : List[Path] = {

@@ -9,8 +9,8 @@ import qrhl.toplevel.{Toplevel, ToplevelTest}
 class QRHLSubgoalTest extends FunSuite {
   lazy val tl: Toplevel = {
     val tl = Toplevel.makeToplevelWithTheory()
-    tl.execCmd("classical var x : int")
-    tl.execCmd("classical var y : int")
+    tl.execCmd("classical var x : int", "<test>")
+    tl.execCmd("classical var y : int", "<test>")
     tl
   }
   def pb(str:String): RichTerm = tl.state.parseExpression(Isabelle.boolT,str)

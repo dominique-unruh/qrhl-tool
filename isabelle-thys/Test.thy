@@ -5,10 +5,46 @@ theory Test
 (* Hashed_Terms Extended_Sorry *)
 QRHL.QRHL
 Main
+TestEx2
 (*   keywords
     "relift_definition" :: thy_goal
  *)
 begin
+
+ML \<open>
+\<^theory>\<open>TestEx2\<close>
+|> Context.theory_long_name
+|> Thy_Info.master_directory
+\<close>
+
+
+ML \<open>
+\<^theory> |> Theory.ancestors_of 
+|> map Context.theory_long_name
+|> filter (not o Resources.loaded_theory)
+|> List.mapPartial Resources.known_theory
+\<close>
+
+ML \<open>Thy_Info.use_thy\<close>
+
+ML \<open>
+Resources.loaded_theory "QRHL.Tactics"
+\<close>
+
+ML \<open>
+Resources.imports_of \<^theory>\<open>Tactics\<close>
+\<close>
+
+ML_file "test.ML"
+
+ML Resources.provide 
+
+
+ML \<open>
+\<^theory>\<open>Main\<close>
+\<close>
+
+
 
 ML YXML.string_of
 

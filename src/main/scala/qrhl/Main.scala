@@ -30,7 +30,8 @@ object Main {
     } else if (conf.file.isDefined) {
       val tl = Toplevel.makeToplevel(cheating=conf.cheating.getOrElse(false))
       try
-        tl.run(Paths.get(conf.file.toOption.get))
+        if (!tl.runWithErrorHandler(Paths.get(conf.file.toOption.get), abortOnError = true))
+          sys.exit(1)
       catch {
         case e : Throwable =>
           e.printStackTrace()

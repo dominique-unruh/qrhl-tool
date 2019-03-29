@@ -16,12 +16,8 @@ ML \<open>open QRHL_Operations\<close>
 
 operation_setup create_context = {*
   {from_lib = Codec.list Codec.string,
-   to_lib = Codec.int,
-   action = fn thy_names => let
-     val thys = map Thy_Info.get_theory thy_names
-     val thy = Theory.begin_theory ("QRHL_Session", Position.none) thys
-     val ctx = Proof_Context.init_global thy
-   in make_ctxt_ref ctx end}
+   to_lib = Codec.tuple Codec.int (Codec.list Codec.string),
+   action = create_context}
 *}
 
 operation_setup check_type = {*
