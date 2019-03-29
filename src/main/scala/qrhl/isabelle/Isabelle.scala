@@ -233,7 +233,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
     val (ctxId, dependencies) = invoke(Isabelle.createContextOp, imports)
     val ctxt = new Isabelle.Context(this, ctxId)
-    val paths = dependencies.map(Path.of(_))
+    val paths = dependencies.map(Paths.get(_))
 
     for (p <- paths)
       if (!Files.exists(p))
