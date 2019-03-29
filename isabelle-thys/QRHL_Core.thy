@@ -4,7 +4,7 @@ theory QRHL_Core
   keywords "declare_variable_type" :: thy_decl
 begin
 
-hide_const (open) span
+hide_const (open) Real_Vector_Spaces.span
 
 section \<open>Miscellaneous\<close>
 
@@ -723,18 +723,17 @@ lemma mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket 
 lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
   by (cheat TODO13)
 
-
 section \<open>Quantum predicates (ctd.)\<close>
 
 subsection \<open>Subspace division\<close>
 
-consts space_div :: "predicate \<Rightarrow> 'a vector \<Rightarrow> 'a::universe variables \<Rightarrow> predicate"
+consts space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a::universe variables \<Rightarrow> predicate"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
 lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
   by (cheat TODO14)
 
-definition space_div_unlifted :: "('a*'b) subspace \<Rightarrow> 'b vector \<Rightarrow> 'a subspace" where
-  [code del]: "space_div_unlifted S \<psi> = Abs_subspace {\<phi>. \<phi>\<otimes>\<psi> \<in> subspace_as_set S}"
+definition space_div_unlifted :: "('a*'b) subspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a subspace" where
+  [code del]: "space_div_unlifted S \<psi> = Abs_subspace {\<phi>. \<phi>\<otimes>\<psi> \<in> subspace_to_set S}"
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
   by (cheat space_div_space_div_unlifted)
@@ -828,7 +827,7 @@ lemma quantum_eq_unique[simp]: "distinct_qvars (variable_concat Q R) \<Longright
   = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{V* \<cdot> U \<cdot> \<psi>}) R"
   for Q::"'a::universe variables" and R::"'b::universe variables"
     and U::"('a,'c) bounded" and V::"('b,'c) bounded"
-    and \<psi>::"'a vector"
+    and \<psi>::"'a ell2"
   by (cheat TODO14)
 
 (* Proof in paper *)
@@ -837,7 +836,7 @@ lemma
     "distinct_qvars (variable_concat Q (variable_concat R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
     quantum_equality_full U Q V R \<sqinter> span {\<psi>}\<guillemotright>T
              = quantum_equality_full (U \<otimes> idOp) (variable_concat Q T) (addState \<psi> \<cdot> V) R"
-    for U :: "('a::universe,'c) bounded" and V :: "('b::universe,'c) bounded" and \<psi> :: "'d::universe vector"
+    for U :: "('a::universe,'c) bounded" and V :: "('b::universe,'c) bounded" and \<psi> :: "'d::universe ell2"
     and Q :: "'a::universe variables"    and R :: "'b::universe variables"    and T :: "'d variables"
   by (cheat TODO14)
 
@@ -937,7 +936,7 @@ lemma Y_Y[simp]: "pauliY \<cdot> pauliY = idOp"
 lemma adjoint_Y[simp]: "pauliY* = pauliY"
   by (cheat TODO15)
 
-consts EPR :: "(bit*bit) vector" 
+consts EPR :: "(bit*bit) ell2" 
 lemma EPR_normalized[simp]: "norm EPR = 1"
   by (cheat TODO15)
 
