@@ -1,5 +1,7 @@
 package qrhl
 
+import java.io.FileNotFoundException
+import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, NoSuchFileException, Path, Paths}
 
 import info.hupel.isabelle.{Codec, Operation, ProverResult, XMLResult, pure}
@@ -243,11 +245,18 @@ object UserException {
 
 /** A path together with a last-modification time. */
 class FileTimeStamp(val file:Path) {
-  private val time = Files.getLastModifiedTime(file)
+  private val time = FileTimeStamp.getLastModifiedTime(file)
   /** Returns whether the file has changed since the FileTimeStamp was created. */
-  def changed : Boolean = time!=Files.getLastModifiedTime(file)
+  def changed : Boolean = time!=FileTimeStamp.getLastModifiedTime(file)
 
   override def toString: String = s"$file@$time"
+}
+object FileTimeStamp {
+  def getLastModifiedTime(file:Path): FileTime = try
+    Files.getLastModifiedTime(file)
+  catch {
+    case _ : NoSuchFileException => FileTime.fromMillis(-1)
+  }
 }
 
 class CheatMode private (
