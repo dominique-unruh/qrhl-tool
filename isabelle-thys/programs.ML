@@ -2,14 +2,16 @@ structure Programs = struct
 
 datatype call = CALL of string * call list
 
+type varterm_names = string Prog_Variables.tree
+
 datatype statement = 
   Block of statement list
-| Assign of string list * term
-| Sample of string list * term
+| Assign of varterm_names * term
+| Sample of varterm_names * term
 | Call of call
-| Measurement of string list * string list * term
-| QInit of string list * term
-| QApply of string list * term
+| Measurement of varterm_names * varterm_names * term
+| QInit of varterm_names * term
+| QApply of varterm_names * term
 | IfThenElse of term * statement list * statement list
 | While of term * statement list
 
@@ -27,22 +29,16 @@ fun term_to_call (Free(name,_)) = CALL (name,[])
   | term_to_call t = raise TERM ("term_to_call",[t])
 
 local open Expressions open Prog_Variables in
-(* TODO move *)
-fun varterm_instantiate \<^typ>\<open>unit\<close> VTUnit = VTUnit
-  | varterm_instantiate T VTUnit = raise TYPE ("varterm_instantiate: invalid type for VTUnit",[T],[])
-  | varterm_instantiate (Type(\<^type_name>\<open>prod\<close>,[T1,T2])) (VTCons (v1,v2)) = VTCons (varterm_instantiate T1 v1, varterm_instantiate T2 v2)
-  | varterm_instantiate T (VTCons _) = raise TYPE ("varterm_instantiate: invalid type for VTCons",[T],[])
-  | varterm_instantiate T (VTSingle (v,_)) = VTSingle (v,T)
 
 fun statement_to_term ctxt (Assign(lhs,rhs)) = let 
       val T = fastype_of rhs
-      val lhs' : term = lhs |> map (fn v => "var_"^v) |> varterm_from_list_untyped |> varterm_instantiate T |> mk_varterm |> fst
+      val lhs' : term = lhs |> map_tree (fn v => "var_"^v) |> varterm_instantiate' T |> mk_varterm |> fst
       in Const(\<^const_name>\<open>assign\<close>, mk_variablesT T --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
          lhs' $ term_to_expression ctxt rhs end
   | statement_to_term ctxt (Sample(lhs,rhs)) = let 
       val T = fastype_of rhs
       val lhsT = Discrete_Distributions.dest_distrT T
-      val lhs' : term = lhs |> map (fn v => "var_"^v) |> varterm_from_list_untyped |> varterm_instantiate lhsT |> mk_varterm |> fst
+      val lhs' : term = lhs |> map_tree (fn v => "var_"^v) |> varterm_instantiate' lhsT |> mk_varterm |> fst
       in Const(\<^const_name>\<open>sample\<close>, mk_variablesT lhsT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
          lhs' $ term_to_expression ctxt rhs end
   | statement_to_term ctxt (Block stmts) = \<^const>\<open>block\<close> $ statements_to_term ctxt stmts
@@ -54,21 +50,21 @@ fun statement_to_term ctxt (Assign(lhs,rhs)) = let
   | statement_to_term ctxt (Measurement (lhs,loc,e)) = let
     val T = fastype_of e
     val (vT,locT) = QRHL.dest_measurementT T
-    val lhs' : term = lhs |> map (fn v => "var_"^v) |> varterm_from_list_untyped |> varterm_instantiate vT |> mk_varterm |> fst
-    val loc' : term = loc |> varterm_from_list_untyped |> varterm_instantiate locT |> mk_varterm |> fst
+    val lhs' : term = lhs |> map_tree (fn v => "var_"^v) |> varterm_instantiate' vT |> mk_varterm |> fst
+    val loc' : term = loc |> varterm_instantiate' locT |> mk_varterm |> fst
     in Const(\<^const_name>\<open>measurement\<close>, mk_variablesT vT --> mk_variablesT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
          lhs' $ loc' $ term_to_expression ctxt e end
   | statement_to_term ctxt (QApply (loc,e)) = let
     val T = fastype_of e
     val (locT,locT') = QRHL.dest_boundedT T
     val _ = if locT = locT' then () else raise TYPE("statement_to_term QApply locT<>locT'",[T],[e])
-    val loc' : term = loc |> varterm_from_list_untyped |> varterm_instantiate locT |> mk_varterm |> fst
+    val loc' : term = loc |> varterm_instantiate' locT |> mk_varterm |> fst
     in Const(\<^const_name>\<open>qapply\<close>, mk_variablesT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
          loc' $ term_to_expression ctxt e end
   | statement_to_term ctxt (QInit (loc,e)) = let
     val T = fastype_of e
     val locT = QRHL.dest_vectorT T
-    val loc' : term = loc |> varterm_from_list_untyped |> varterm_instantiate locT |> mk_varterm |> fst
+    val loc' : term = loc |> varterm_instantiate' locT |> mk_varterm |> fst
     in Const(\<^const_name>\<open>qinit\<close>, mk_variablesT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
          loc' $ term_to_expression ctxt e end
 
@@ -76,20 +72,20 @@ and statements_to_term ctxt statements = map (statement_to_term ctxt) statements
 
 fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statements) = Block (term_to_statements ctxt statements)
   | term_to_statement ctxt (Const(\<^const_name>\<open>assign\<close>,_) $ x $ e) = 
-      Assign (parse_varlist x |> map fst |> map strip_var_prefix, expression_to_term ctxt e)
+      Assign (parse_varterm x |> map_tree fst |> map_tree strip_var_prefix, expression_to_term ctxt e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>sample\<close>,_) $ x $ e) = 
-      Sample (parse_varlist x |> map fst |> map strip_var_prefix, expression_to_term ctxt e)
+      Sample (parse_varterm x |> map_tree fst |> map_tree strip_var_prefix, expression_to_term ctxt e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>while\<close>,_) $ e $ body) =
       While (expression_to_term ctxt e, term_to_statements ctxt body)
   | term_to_statement ctxt (Const(\<^const_name>\<open>ifthenelse\<close>,_) $ e $ p1 $ p2) =
       IfThenElse (expression_to_term ctxt e, term_to_statements ctxt p1, term_to_statements ctxt p2)
   | term_to_statement ctxt (Const(\<^const_name>\<open>qinit\<close>,_) $ vs $ e) =
-      QInit (parse_varlist vs |> map fst, expression_to_term ctxt e)
+      QInit (parse_varterm vs |> map_tree fst, expression_to_term ctxt e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>qapply\<close>,_) $ vs $ e) =
-      QApply (parse_varlist vs |> map fst, expression_to_term ctxt e)
+      QApply (parse_varterm vs |> map_tree fst, expression_to_term ctxt e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>measurement\<close>,_) $ x $ vs $ e) =
-      Measurement (parse_varlist x |> map fst |> map strip_var_prefix, 
-                   parse_varlist vs |> map fst, expression_to_term ctxt e)
+      Measurement (parse_varterm x |> map_tree fst |> map_tree strip_var_prefix, 
+                   parse_varterm vs |> map_tree fst, expression_to_term ctxt e)
   | term_to_statement _ (t as Free _) = Call (term_to_call t)
   | term_to_statement _ (t as Const(\<^const_name>\<open>instantiateOracles\<close>,_) $ _ $ _) = Call (term_to_call t)
   | term_to_statement _ t = raise TERM("term_to_statement",[t])

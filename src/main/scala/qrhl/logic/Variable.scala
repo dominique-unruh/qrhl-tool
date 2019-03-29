@@ -17,11 +17,28 @@ sealed trait Variable {
 }
 
 object Variable {
-  def varlistToString(vars: List[Variable]) = vars match {
-    case Nil => "()"
-    case List(x) => x.name;
-    case _ => s"(${vars.mkString(",")})"
+//  def varlistToString(vars: List[Variable]) = vars match {
+//    case Nil => "()"
+//    case List(x) => x.name;
+//    case _ => s"(${vars.mkString(",")})"
+//  }
+
+  def vartermToString[A](toStr:A=>String, vars: VarTerm[A]): String = vars match {
+    case VTUnit => "()"
+    case VTSingle(x) => toStr(x)
+    case VTCons(VTSingle(x),xs) => toStr(x) + "," + vartermToString(toStr,xs)
+    case VTCons(VTUnit,xs) => "()," + vartermToString(toStr,xs)
+    case VTCons(a,b) => s"(${vartermToString(toStr,a)}),${vartermToString(toStr,b)}"
   }
+
+  def vartermToString(vars: VarTerm[Variable]): String = vartermToString[Variable](_.name, vars)
+  /*def vartermToString(vars: VarTerm[Variable]): String = vars match {
+    case VTUnit => "()"
+    case VTSingle(x) => x.name
+    case VTCons(VTSingle(x),xs) => x.name + "," + vartermToString(xs)
+    case VTCons(VTUnit,xs) => "()," + vartermToString(xs)
+    case VTCons(a,b) => s"(${vartermToString(a)},${vartermToString(b)})"
+  }*/
 
   def index1(name:String) : String = name+"1"
   def index2(name:String) : String = name+"2"

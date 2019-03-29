@@ -7,6 +7,8 @@ import qrhl.logic._
 import qrhl.tactic._
 import java.nio.file.{Path, Paths}
 
+import info.hupel.isabelle.pure.Typ
+
 import scala.util.parsing.combinator._
 
 case class ParserContext(environment: Environment,
@@ -64,8 +66,8 @@ object Parser extends JavaTokenParsers {
     for (lhs <- identifierOrTuple;
          _ <- assignSymbol;
          // TODO: add a cut
-         lhsV = lhs.map { context.environment.getCVariable };
-         typ = Isabelle.tupleT(lhsV.map(_.valueTyp):_*);
+         lhsV = VarTerm.varlist(lhs.map { context.environment.getCVariable }:_*);
+         typ = Isabelle.tupleT(lhsV.map[Typ](_.valueTyp));
          e <- expression(typ);
          _ <- statementSeparator)
      yield Assign(lhsV, e)
@@ -75,8 +77,8 @@ object Parser extends JavaTokenParsers {
     for (lhs <- identifierOrTuple;
          _ <- sampleSymbol;
          // TODO: add a cut
-         lhsV = lhs.map { context.environment.getCVariable };
-         typ = Isabelle.tupleT(lhsV.map(_.valueTyp):_*);
+         lhsV = VarTerm.varlist(lhs.map { context.environment.getCVariable }:_*);
+         typ = Isabelle.tupleT(lhsV.map[Typ](_.valueTyp));
          e <- expression(Isabelle.distrT(typ));
          _ <- statementSeparator)
       yield Sample(lhsV, e)
@@ -104,8 +106,8 @@ object Parser extends JavaTokenParsers {
     // TODO: add a cut
          _ = assert(vs.nonEmpty);
          _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-         qvs = vs.map { context.environment.getQVariable };
-         typ = Isabelle.vectorT(Isabelle.tupleT(qvs.map(_.valueTyp):_*));
+         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+         typ = Isabelle.vectorT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
          e <- expression(typ);
          _ <- statementSeparator)
       yield QInit(qvs,e)
@@ -116,8 +118,8 @@ object Parser extends JavaTokenParsers {
            _ <- literal("apply");
            _ = assert(vs.nonEmpty);
            _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-           qvs = vs.map { context.environment.getQVariable };
-           typ = Isabelle.boundedT(Isabelle.tupleT(qvs.map(_.valueTyp):_*));
+           qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+           typ = Isabelle.boundedT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
            e <- expression(typ);
            _ <- statementSeparator)
         yield QApply(qvs,e)
@@ -128,10 +130,10 @@ object Parser extends JavaTokenParsers {
          _ <- measureSymbol;
          _ <- literal("measure");
          vs <- identifierList;
-         resv = res.map { context.environment.getCVariable };
-         qvs = vs.map { context.environment.getQVariable };
+         resv = VarTerm.varlist(res.map { context.environment.getCVariable }:_*);
+         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
          _ <- literal("with");
-         etyp = Isabelle.measurementT(Isabelle.tupleT(resv.map(_.valueTyp):_*), Isabelle.tupleT(qvs.map(_.valueTyp):_*));
+         etyp = Isabelle.measurementT(Isabelle.tupleT(resv.map[Typ](_.valueTyp)), Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
          e <- expression(etyp);
          _ <- statementSeparator)
       yield Measurement(resv,qvs,e)

@@ -86,6 +86,7 @@ object Subgoal {
       thm.show_oracles()
   }
 
+/*
   def apply(context: Isabelle.Context, e : RichTerm) : Subgoal = {
     val assms = new ListBuffer[RichTerm]()
     var t = e.isabelleTerm
@@ -111,6 +112,7 @@ object Subgoal {
         AmbientSubgoal(e)
     }
   }
+*/
 }
 
 object QRHLSubgoal {

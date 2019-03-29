@@ -164,7 +164,8 @@ val _ =
         --| Parse.begin)
 
 
-datatype varterm = VTCons of varterm * varterm | VTSingle of string*typ | VTUnit
+datatype 'a tree = VTCons of 'a tree * 'a tree | VTSingle of 'a | VTUnit
+type varterm = (string*typ) tree
 
 fun parse_varterm (Const(\<^const_name>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
   | parse_varterm (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ Free(n,Type(\<^type_name>\<open>variable\<close>,[T]))) = VTSingle (n,T)
@@ -195,6 +196,18 @@ fun varterm_from_list [] = VTUnit
 fun varterm_from_list_untyped [] = VTUnit
   | varterm_from_list_untyped [n] = VTSingle (n,dummyT)
   | varterm_from_list_untyped (n::xs) = VTCons (VTSingle (n,dummyT), varterm_from_list_untyped xs)
+
+fun map_tree _ VTUnit = VTUnit
+  | map_tree f (VTSingle x) = VTSingle (f x)
+  | map_tree f (VTCons (a, b)) = VTCons (map_tree f a, map_tree f b)
+
+fun varterm_instantiate \<^typ>\<open>unit\<close> VTUnit = VTUnit
+  | varterm_instantiate T VTUnit = raise TYPE ("varterm_instantiate: invalid type for VTUnit",[T],[])
+  | varterm_instantiate (Type(\<^type_name>\<open>prod\<close>,[T1,T2])) (VTCons (v1,v2)) = VTCons (varterm_instantiate T1 v1, varterm_instantiate T2 v2)
+  | varterm_instantiate T (VTCons _) = raise TYPE ("varterm_instantiate: invalid type for VTCons",[T],[])
+  | varterm_instantiate T (VTSingle (v,_)) = VTSingle (v,T)
+
+fun varterm_instantiate' T v = varterm_instantiate T (map_tree (fn n => (n,dummyT)) v)
 
 fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
   | vars_in_varterm (VTSingle nT) = [nT]

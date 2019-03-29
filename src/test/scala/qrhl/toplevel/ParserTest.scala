@@ -22,14 +22,14 @@ class ParserTest extends FunSuite {
   test("assign tuple") {
     val assign = Parser.parseAll(Parser.assign, "(x,y) <- (y,x);").get
     println(assign)
-    assert(assign.variable.map(_.name)==List("x","y"))
+    assert(assign.variable.toList.map(_.name)==List("x","y"))
     assign.checkWelltyped(parserContext.isabelle.get)
   }
 
   test("sample tuple") {
     val sample = Parser.parseAll(Parser.sample, "(x,y) <$ uniform UNIV;").get
     println(sample)
-    assert(sample.variable.map(_.name)==List("x","y"))
+    assert(sample.variable.toList.map(_.name)==List("x","y"))
     sample.checkWelltyped(parserContext.isabelle.get)
   }
 

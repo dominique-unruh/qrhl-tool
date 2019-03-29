@@ -15,7 +15,7 @@ import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platfo
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
-import qrhl.logic.QVariable
+import qrhl.logic._
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -481,6 +481,12 @@ object Isabelle {
     case Nil => unitT
     case List(typ) => typ
     case typ :: rest => prodT(typ,tupleT(rest :_*))
+  }
+
+  def tupleT(typs: VarTerm[ITyp]): ITyp = typs match {
+    case VTUnit => unitT
+    case VTCons(a, b) => prodT(tupleT(a),tupleT(b))
+    case VTSingle(v) => v
   }
 
   def freeVars(term: Term): Set[String] = {
