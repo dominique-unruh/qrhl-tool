@@ -18,11 +18,12 @@ import RichTerm.term_tight_codec
 import Statement.codec
 
 
-sealed trait VarTerm[+A] extends Iterable[A] {
-//  override def apply(idx: Int): A = ???
+sealed trait VarTerm[+A] {
+  def toList: List[A] = iterator.toList
+  def toSeq: Seq[A] = iterator.toSeq
   def map[B](f:A=>B) : VarTerm[B]
   /** Not thread safe */
-  override def iterator: Iterator[A] = new AbstractIterator[A] {
+  def iterator: Iterator[A] = new AbstractIterator[A] {
     private var stack : List[VarTerm[A]] = List(VarTerm.this)
     /** Has the additional side effect of making sure that [stack.head] is a VTSingle if it exists */
     @tailrec override def hasNext: Boolean = stack match {
@@ -75,17 +76,19 @@ object VarTerm {
 
 case object VTUnit extends VarTerm[Nothing] {
   override def map[B](f: Nothing => B): VTUnit.type = VTUnit
-//  override def length: Int = 0
   override def iterator: Iterator[Nothing] = Iterator.empty
+  override def toString: String = "()"
 }
 case class VTSingle[+A](v:A) extends VarTerm[A] {
   override def map[B](f: A => B): VarTerm[B] = VTSingle(f(v))
-//  override def length: Int = 1
   override def iterator: Iterator[A] = Iterator.single(v)
+  override def toString: String = v.toString
 }
 case class VTCons[+A](a:VarTerm[A], b:VarTerm[A]) extends VarTerm[A] {
+  assert(a!=null)
+  assert(b!=null)
   override def map[B](f: A => B): VarTerm[B] = VTCons(a.map(f),b.map(f))
-//  override def length: Int = a.length + b.length
+  override def toString: String = s"(${a.toString},${b.toString})"
 }
 
 // Programs
@@ -119,8 +122,8 @@ sealed trait Statement {
     def collectExpr(e:RichTerm):Unit = e.caVariables(environment,cvars,avars)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => cvars ++= v; collectExpr(e)
-      case Sample(v,e) => cvars ++= v; collectExpr(e)
+      case Assign(v,e) => cvars ++= v.iterator; collectExpr(e)
+      case Sample(v,e) => cvars ++= v.iterator; collectExpr(e)
       case Call(name, args @ _*) =>
         val p = environment.programs(name)
         progs += p
@@ -131,9 +134,9 @@ sealed trait Statement {
         args.foreach(collect)
       case While(e,body) => collectExpr(e); collect(body)
       case IfThenElse(e,p1,p2) => collectExpr(e); collect(p1); collect(p2)
-      case QInit(vs,e) => qvars ++= vs; collectExpr(e)
-      case Measurement(v,vs,e) => cvars ++= v; collectExpr(e); qvars ++= vs
-      case QApply(vs,e) => qvars ++= vs; collectExpr(e)
+      case QInit(vs,e) => qvars ++= vs.iterator; collectExpr(e)
+      case Measurement(v,vs,e) => cvars ++= v.iterator; collectExpr(e); qvars ++= vs.iterator
+      case QApply(vs,e) => qvars ++= vs.iterator; collectExpr(e)
     }
     collect(this)
   }
@@ -146,14 +149,14 @@ sealed trait Statement {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars ++= v.map[String](_.name); vars ++= e.variables
-      case Sample(v,e) => vars ++= v.map[String](_.name); vars ++= e.variables
+      case Assign(v,e) => vars ++= v.iterator.map(_.name); vars ++= e.variables
+      case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
       case Call(_, _*) =>
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
-      case QInit(vs,e) => vars ++= vs.map[String](_.name); vars ++= e.variables
-      case Measurement(v,vs,e) => vars ++= v.map[String](_.name); vars ++= vs.map[String](_.name); vars ++= e.variables
-      case QApply(vs,e) => vars ++= vs.map[String](_.name); vars ++= e.variables
+      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
     }
     collect(this)
     vars.result
@@ -164,8 +167,8 @@ sealed trait Statement {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars ++= v.map[String](_.name); vars ++= e.variables
-      case Sample(v,e) => vars ++= v.map[String](_.name); vars ++= e.variables
+      case Assign(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
+      case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
       case Call(name, args @ _*) =>
         val (cvars,qvars,_,_) = env.programs(name).variablesRecursive
         vars ++= cvars.map(_.name)
@@ -173,9 +176,9 @@ sealed trait Statement {
         args.foreach(collect)
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
-      case QInit(vs,e) => vars ++= vs.map[String](_.name); vars ++= e.variables
-      case Measurement(v,vs,e) => vars ++= v.map[String](_.name); vars ++= vs.map[String](_.name); vars ++= e.variables
-      case QApply(vs,e) => vars ++= vs.map[String](_.name); vars ++= e.variables
+      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
     }
     collect(this)
     vars.result

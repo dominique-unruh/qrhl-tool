@@ -21,7 +21,23 @@ object Parser extends JavaTokenParsers {
   val identifierList : Parser[List[String]] = rep1sep(identifier,identifierListSep)
   val identifierList0 : Parser[List[String]] = repsep(identifier,identifierListSep)
   val identifierTuple: Parser[List[String]] = "(" ~> identifierList0 <~ ")"
-  val identifierOrTuple: Parser[List[String]] = identifierTuple | (identifier ^^ {s:String => List(s)})
+//  val identifierOrTuple: Parser[List[String]] = identifierTuple | (identifier ^^ {s:String => List(s)})
+
+  val identifierAsVarterm: Parser[VTSingle[String]] = identifier ^^ VTSingle[String]
+  val vartermParens : Parser[VarTerm[String]] = "(" ~> varterm <~ ")"
+  val varterm: Parser[VarTerm[String]] =
+    rep1sep(vartermParens | identifierAsVarterm, identifierListSep) ^^ vartermListToVarterm
+//  val varterm0 = vartermParens | vartermNoParens0
+//  val varterm: toplevel.Parser.Parser[VarTerm[String]] = vartermNoParens1 | vartermParens
+  private def vartermListToVarterm(vts:List[VarTerm[String]]) = {
+    vts match {
+    case Nil => VTUnit
+    case _ => vts.foldRight(null:VarTerm[String]) { (a,b) => if (b==null) a else VTCons(a,b) }
+  }}
+//  val vartermNoParens1 : Parser[VarTerm[String]] =
+//    rep1sep(vartermParens | identifierAsVarterm, identifierListSep) ^^ vartermListToVarterm
+//  val vartermNoParens0 : Parser[VarTerm[String]] =
+//    repsep(vartermParens | identifierAsVarterm, identifierListSep) ^^ vartermListToVarterm
 
   //  val natural : Parser[BigInt] = """[0-9]+""".r ^^ { BigInt(_) }
   val natural: Parser[Int] = """[0-9]+""".r ^^ { _.toInt }
@@ -63,10 +79,10 @@ object Parser extends JavaTokenParsers {
 
   private val assignSymbol = literal("<-")
   def assign(implicit context:ParserContext) : Parser[Assign] =
-    for (lhs <- identifierOrTuple;
+    for (lhs <- varterm;
          _ <- assignSymbol;
          // TODO: add a cut
-         lhsV = VarTerm.varlist(lhs.map { context.environment.getCVariable }:_*);
+         lhsV = lhs.map[CVariable] { context.environment.getCVariable };
          typ = Isabelle.tupleT(lhsV.map[Typ](_.valueTyp));
          e <- expression(typ);
          _ <- statementSeparator)
@@ -74,10 +90,10 @@ object Parser extends JavaTokenParsers {
 
   private val sampleSymbol = literal("<$")
   def sample(implicit context:ParserContext) : Parser[Sample] =
-    for (lhs <- identifierOrTuple;
+    for (lhs <- varterm;
          _ <- sampleSymbol;
          // TODO: add a cut
-         lhsV = VarTerm.varlist(lhs.map { context.environment.getCVariable }:_*);
+         lhsV = lhs.map[CVariable] { context.environment.getCVariable };
          typ = Isabelle.tupleT(lhsV.map[Typ](_.valueTyp));
          e <- expression(Isabelle.distrT(typ));
          _ <- statementSeparator)
@@ -126,12 +142,12 @@ object Parser extends JavaTokenParsers {
 
   val measureSymbol : Parser[String] = assignSymbol
   def measure(implicit context:ParserContext) : Parser[Measurement] =
-    for (res <- identifierOrTuple;
+    for (res <- varterm;
          _ <- measureSymbol;
          _ <- literal("measure");
-         vs <- identifierList;
-         resv = VarTerm.varlist(res.map { context.environment.getCVariable }:_*);
-         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+         vs <- varterm;
+         resv = res.map[CVariable] { context.environment.getCVariable };
+         qvs = vs.map[QVariable] { context.environment.getQVariable };
          _ <- literal("with");
          etyp = Isabelle.measurementT(Isabelle.tupleT(resv.map[Typ](_.valueTyp)), Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
          e <- expression(etyp);

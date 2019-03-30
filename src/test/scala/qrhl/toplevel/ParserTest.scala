@@ -4,7 +4,7 @@ import info.hupel.isabelle.ProverResult
 import info.hupel.isabelle.hol.HOLogic
 import org.scalatest.FunSuite
 import qrhl.UserException
-import qrhl.logic.Call
+import qrhl.logic.{Call, VTCons, VTSingle}
 
 class ParserTest extends FunSuite {
   implicit lazy val parserContext: ParserContext = {
@@ -12,11 +12,27 @@ class ParserTest extends FunSuite {
     // If this fails for parsing reasons, just directly compose commands instead
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var y : int")
+    tl.execCmd("classical var z : int")
+    tl.execCmd("classical var w : int")
     tl.execCmd("adversary A0 vars x")
     tl.execCmd("adversary B0 vars x")
     tl.execCmd("adversary A1 vars x calls ?")
     tl.execCmd("adversary A2 vars x calls ?, ?")
     tl.state.parserContext
+  }
+
+  test("nested varterm paren") {
+    implicit val vtSingle: String => VTSingle[String] = VTSingle[String]
+    val vt = Parser.parseAll(Parser.varterm, "((x,y),w,z)")
+    println(vt)
+    assert(vt.get==VTCons(VTCons("x","y"),VTCons("w","z")))
+  }
+
+  test("nested varterm noparen") {
+    implicit val vtSingle: String => VTSingle[String] = VTSingle[String]
+    val vt = Parser.parseAll(Parser.varterm, "(x,y),w,z")
+    println(vt)
+    assert(vt.get==VTCons(VTCons("x","y"),VTCons("w","z")))
   }
 
   test("assign tuple") {
