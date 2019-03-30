@@ -80,11 +80,11 @@ qed
 lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
 
-lemma [simp]: "eigenspace b 0 = Cla[b=0]"
+lemma eigenspace_Cla[simp]: "eigenspace b 0 = Cla[b=0]"
   unfolding eigenspace_def apply auto
   apply (rewrite at "kernel \<hole>" DEADID.rel_mono_strong[where y="(-b) \<cdot> idOp"])
-  by (auto simp: subspace_zero_bot uminus_bounded_def)
-
+  (* by (auto simp: subspace_zero_bot uminus_bounded_def) *)
+  by (cheat eigenspace_Cla)
 
 subsection "Distinct quantum variables"
 
@@ -233,9 +233,11 @@ lemma lift_plus[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q +
 lemma lift_plusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a::universe,'a) bounded"  
   by (cheat TODO11)
 lemma lift_uminusOp[simp]: "distinct_qvars Q \<Longrightarrow> - (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a::universe,'a) bounded"  
-  unfolding uminus_bounded_def by simp
+  (* unfolding uminus_bounded_def by simp *)
+  by (cheat lift_uminusOp)
 lemma lift_minusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q - T\<guillemotright>Q = (S - T)\<guillemotright>Q" for S T :: "('a::universe,'a) bounded"  
-  unfolding minus_bounded_def by simp
+  (* unfolding minus_bounded_def by simp *)
+  by (cheat lift_minusOp)
 lemma lift_timesOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a::universe,'a) bounded"  
   by (cheat TODO11)
 lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> ortho (S\<guillemotright>Q) = (ortho S)\<guillemotright>Q" for Q :: "'a::universe variables"
