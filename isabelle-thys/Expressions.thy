@@ -2,6 +2,14 @@ theory Expressions
   imports Prog_Variables Misc_Missing Bounded_Operators.Extended_Sorry Multi_Transfer
 begin
 
+(* TODO: are expressions actually necessary?
+
+   Why can't we just use terms of the form (\<lambda>m. ... (eval_variable x m))?
+
+   (We won't have the guarantee that the set of variables used by an expression
+   is finite, or even well-defined, but do we ever use those facts?)
+*)
+
 typedef 'a expression = "{(vs,f::_\<Rightarrow>'a). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)}"
   apply (rule exI[of _ "({},(\<lambda>x. undefined))"]) by auto
 setup_lifting type_definition_expression
