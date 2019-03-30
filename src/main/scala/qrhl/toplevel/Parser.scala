@@ -24,9 +24,11 @@ object Parser extends JavaTokenParsers {
 //  val identifierOrTuple: Parser[List[String]] = identifierTuple | (identifier ^^ {s:String => List(s)})
 
   val identifierAsVarterm: Parser[VTSingle[String]] = identifier ^^ VTSingle[String]
+  //noinspection ForwardReference
   val vartermParens : Parser[VarTerm[String]] = "(" ~> varterm <~ ")"
+  val vartermAtomic: Parser[VarTerm[String]] = vartermParens | identifierAsVarterm
   val varterm: Parser[VarTerm[String]] =
-    rep1sep(vartermParens | identifierAsVarterm, identifierListSep) ^^ vartermListToVarterm
+    rep1sep(vartermAtomic, identifierListSep) ^^ vartermListToVarterm
 //  val varterm0 = vartermParens | vartermNoParens0
 //  val varterm: toplevel.Parser.Parser[VarTerm[String]] = vartermNoParens1 | vartermParens
   private def vartermListToVarterm(vts:List[VarTerm[String]]) = {
@@ -315,13 +317,15 @@ object Parser extends JavaTokenParsers {
 
   def tactic_rnd(implicit context:ParserContext): Parser[Tactic] =
     literal("rnd") ~> (for (
-      x <- identifier;
-      xVar = context.environment.getCVariable(x);
+      x <- vartermAtomic;
+      xVar = x.map[CVariable](context.environment.getCVariable);
+      xTyp = Isabelle.tupleT(xVar.map[Typ](_.valueTyp));
       _ <- literal(",");
-      y <- identifier;
-      yVar = context.environment.getCVariable(y);
+      y <- vartermAtomic;
+      yVar = y.map[CVariable](context.environment.getCVariable);
+      yTyp = Isabelle.tupleT(yVar.map[Typ](_.valueTyp));
       _ <- sampleSymbol | assignSymbol;
-      e <- expression(Isabelle.distrT(Isabelle.prodT(xVar.valueTyp,yVar.valueTyp)))
+      e <- expression(Isabelle.distrT(Isabelle.prodT(xTyp,yTyp)))
     ) yield (xVar,yVar,e)).? ^^ {
       case None => RndEqualTac
       case Some((xVar,yVar,e)) => RndWitnessTac(xVar,yVar,e)
