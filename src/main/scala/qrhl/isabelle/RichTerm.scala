@@ -14,6 +14,8 @@ import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import Isabelle.applicativeXMLResult
 
+import scala.collection.mutable.ListBuffer
+
 final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _isabelleTerm:Option[Term]=None, _pretty:Option[String]=None) {
   class debug_codec[A](codec : Codec[A]) extends Codec[A] { // TODO remove
     override val mlType: String = codec.mlType
@@ -92,6 +94,12 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
 
 //  val isabelleTerm : Term = isabelleTerm
   def simplify(isabelle: Option[Isabelle.Context], facts:List[String]): (RichTerm,Isabelle.Thm) = simplify(isabelle.get,facts)
+
+  def simplify(context: Isabelle.Context, facts:List[String], thms:ListBuffer[Isabelle.Thm]) : RichTerm = {
+    val (t,thm) = context.simplify(isabelleTerm, facts)
+    thms += thm
+    t
+  }
 
   def simplify(context: Isabelle.Context, facts:List[String]): (RichTerm,Isabelle.Thm) =
     context.simplify(isabelleTerm, facts)

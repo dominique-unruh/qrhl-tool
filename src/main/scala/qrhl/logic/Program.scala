@@ -5,9 +5,11 @@ import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.pure.{App, Const, Free, Term, Typ}
 import qrhl.UserException
+import qrhl.isabelle.Isabelle.Thm
 import qrhl.isabelle.{Isabelle, RichTerm}
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 import scala.collection.{AbstractIterator, mutable}
 
 // Implicits
@@ -88,8 +90,10 @@ case class VTCons[+A](a:VarTerm[A], b:VarTerm[A]) extends VarTerm[A] {
 
 // Programs
 sealed trait Statement {
+  def simplify(isabelle: Isabelle.Context, facts: List[String], thms:ListBuffer[Thm]): Statement
+
   def toBlock: Block = Block(this)
-Nil
+
 //  @deprecated("too slow, use programTerm instead","now")
 //  def programTermOLD(context: Isabelle.Context) : Term
 
@@ -346,7 +350,10 @@ object Statement {
 }
 
 class Block(val statements:List[Statement]) extends Statement {
-//  @deprecated("too slow", "now")
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Block =
+    Block(statements.map(_.simplify(isabelle,facts,thms)):_*)
+
+  //  @deprecated("too slow", "now")
 //  def programListTermOld(context: Isabelle.Context): Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTermOLD(context)))
 
   def programListTerm(context: Isabelle.Context): RichTerm =
@@ -416,8 +423,10 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
   override def checkWelltyped(context: Isabelle.Context): Unit =
     expression.checkWelltyped(context, Isabelle.tupleT(variable.map[Typ](_.valueTyp)))
 
-//  override def programTermOLD(context: Isabelle.Context): Term =
-//    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
+  //  override def programTermOLD(context: Isabelle.Context): Term =
+  //    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms:ListBuffer[Thm]): Assign =
+    Assign(variable, expression.simplify(isabelle, facts, thms))
 }
 final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
   override def toString: String = s"""${Variable.vartermToString(variable)} <$$ $expression;"""
@@ -426,8 +435,10 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
   override def checkWelltyped(context: Isabelle.Context): Unit =
     expression.checkWelltyped(context, Isabelle.distrT(Isabelle.tupleT(variable.map[Typ](_.valueTyp))))
 
-//  override def programTermOLD(context: Isabelle.Context): Term =
-//    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
+  //  override def programTermOLD(context: Isabelle.Context): Term =
+  //    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Sample =
+    Sample(variable, expression.simplify(isabelle,facts,thms))
 }
 final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, program: Statement): Statement =
@@ -439,8 +450,12 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
     thenBranch.checkWelltyped(context)
     elseBranch.checkWelltyped(context)
   }
-//  override def programTermOLD(context: Isabelle.Context): Term =
-//    Isabelle.ifthenelse $ condition.encodeAsExpression(context).isabelleTerm $ thenBranch.programListTermOld(context) $ elseBranch.programListTermOld(context)
+  //  override def programTermOLD(context: Isabelle.Context): Term =
+  //    Isabelle.ifthenelse $ condition.encodeAsExpression(context).isabelleTerm $ thenBranch.programListTermOld(context) $ elseBranch.programListTermOld(context)
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): IfThenElse =
+    IfThenElse(condition.simplify(isabelle,facts,thms),
+      thenBranch.simplify(isabelle,facts,thms),
+      elseBranch.simplify(isabelle,facts,thms))
 }
 
 final case class While(condition:RichTerm, body: Block) extends Statement {
@@ -452,8 +467,11 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
     condition.checkWelltyped(context, HOLogic.boolT)
     body.checkWelltyped(context)
   }
-//  override def programTermOLD(context: Isabelle.Context): Term =
-//    Isabelle.whileProg $ condition.encodeAsExpression(context).isabelleTerm $ body.programListTermOld(context)
+  //  override def programTermOLD(context: Isabelle.Context): Term =
+  //    Isabelle.whileProg $ condition.encodeAsExpression(context).isabelleTerm $ body.programListTermOld(context)
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): While =
+    While(condition.simplify(isabelle,facts,thms),
+      body.simplify(isabelle,facts,thms))
 }
 
 final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
@@ -464,8 +482,10 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
     val expected = Isabelle.vectorT(Isabelle.tupleT(location.map[Typ](_.valueTyp)))
     expression.checkWelltyped(context, expected)
   }
-//  override def programTermOLD(context: Isabelle.Context): Term =
-//    Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
+  //  override def programTermOLD(context: Isabelle.Context): Term =
+  //    Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): QInit =
+    QInit(location, expression.simplify(isabelle,facts,thms))
 }
 final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -476,8 +496,10 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
     val expected = pure.Type("Bounded_Operators.bounded",List(varType,varType))
     expression.checkWelltyped(context, expected)
   }
-//  override def programTermOLD(context: Isabelle.Context): Term =
-//    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
+  //  override def programTermOLD(context: Isabelle.Context): Term =
+  //    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): QApply =
+    QApply(location, expression.simplify(isabelle,facts,thms))
 }
 final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariable], e:RichTerm) extends Statement {
   override def inline(name: String, program: Statement): Statement = this
@@ -489,9 +511,11 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
       Isabelle.tupleT(location.map[Typ](_.valueTyp))))
     e.checkWelltyped(context, expected)
   }
-//  override def programTermOLD(context: Isabelle.Context): Term =
-//    Isabelle.measurement(Isabelle.tupleT(location.map(_.valueTyp):_*), result.valueTyp) $
-//      result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context).isabelleTerm
+  //  override def programTermOLD(context: Isabelle.Context): Term =
+  //    Isabelle.measurement(Isabelle.tupleT(location.map(_.valueTyp):_*), result.valueTyp) $
+  //      result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context).isabelleTerm
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Measurement =
+    Measurement(result,location,e.simplify(isabelle,facts,thms))
 }
 final case class Call(name:String, args:Call*) extends Statement {
   override def toString: String = "call "+toStringShort+";"
@@ -508,4 +532,5 @@ final case class Call(name:String, args:Call*) extends Statement {
 //    } else
 //      Free(name, Isabelle.programT)
 //  }
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Call = this
 }

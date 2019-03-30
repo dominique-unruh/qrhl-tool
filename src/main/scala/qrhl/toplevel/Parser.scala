@@ -320,9 +320,10 @@ object Parser extends JavaTokenParsers {
     ) yield CaseTac(x,e))
 
   val tactic_simp : Parser[SimpTac] =
-    literal("simp") ~> OnceParser(literal("!").? ~ rep(identifier)) ^^ {
-      case None ~ lemmas => SimpTac(lemmas)
-      case Some(_) ~ lemmas => SimpTac(lemmas, force = true)
+    literal("simp") ~> OnceParser("[!\\*]".r.? ~ rep(identifier)) ^^ {
+      case None ~ lemmas => SimpTac(lemmas, force=false, everywhere = false)
+      case Some("!") ~ lemmas => SimpTac(lemmas, force = true, everywhere = false)
+      case Some("*") ~ lemmas => SimpTac(lemmas, force = false, everywhere = true)
     }
 
   val tactic_rule : Parser[RuleTac] =
