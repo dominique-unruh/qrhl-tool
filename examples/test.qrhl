@@ -1,3 +1,79 @@
 isabelle TestEx.
 
-xxx.
+classical var x : int.
+classical var y : int.
+classical var a : int.
+classical var b : int.
+classical var z : int*int.
+
+program s1 := {
+  (x,y) <$ uniform UNIV;
+}.
+
+program s2 := {
+  z <$ uniform UNIV;
+}.
+
+qrhl {top} call s1; ~ call s2; {Cla[z2=(x1,y1)]}.
+  inline s1.
+  inline s2.
+  rnd.
+  simp.
+  skip.
+  simp.
+qed.
+
+qrhl {top} (x,y) <$ uniform UNIV; ~ x <$ uniform UNIV; {Cla[x1=x2]}.
+  rnd z,x <- map_distr (%(x,y). ((x,y),x)) (uniform UNIV).
+  simp case_prod_beta.
+  admit.
+qed.
+
+
+
+program p1 := {
+  (x,y) <$ uniform {(1,2)};
+}.
+
+program p2 := {
+  x <$ uniform {1};
+  y <$ uniform {2};
+}.
+
+qrhl {top} call p1; ~ call p2; {Cla[top]}.
+  inline p1.
+  inline p2.
+  squash right.
+  rnd.
+  simp.
+  skip.
+  simp!.
+
+qed.
+
+program p3 := {
+  (x,x) <- (1,2);
+}.
+
+qrhl {top} call p3; ~ call p3; {Cla[x1=2]}.
+inline p3.
+wp 1 1.
+skip.
+simp.
+qed.
+
+program p4 := {
+  (a,b) <$ uniform {(1,2)};
+  (x,y) <$ uniform {(1,2)};
+}.
+
+qrhl {top} call p4; ~ call p4; {top}.
+  inline p4.
+  squash left.
+  swap right.
+  squash right.
+  rnd.
+  simp.
+  skip.
+  simp!.
+qed.

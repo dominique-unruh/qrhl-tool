@@ -134,7 +134,36 @@ lemma pat_lambda_conv_aux: \<comment> \<open>Helper for ML function pat_lambda_c
 
 lemma eq_reflection_swap: "a = b \<Longrightarrow> b\<equiv>a" by auto
 
+lemma append_list_tac_aux: \<comment> \<open>Helper lemma for append_list_tac\<close>
+  assumes "x = b@c"
+  shows "a#x = (a#b)@c"
+  by (simp add: assms)
+
+lemma match_list_tac_aux1: \<comment> \<open>Helper lemma for match_list_tac\<close>
+  assumes "x = y"
+  shows "a#x = a#y"
+  using assms by simp
+
+lemma match_list_tac_aux2: \<comment> \<open>Helper lemma for match_list_tac\<close>
+  assumes "x@z = y"
+  shows "(a#x)@z = a#y"
+  using assms by simp
+
+lemma match_list_tac_aux3: \<comment> \<open>Helper lemma for match_list_tac\<close>
+  assumes "z = y"
+  shows "[]@z = y"
+  using assms by simp
+
 ML_file "misc.ML"
 
+(* TODO remove *)
+schematic_goal xxx: "[] @ [?a,?b] @ ?c @ [?x,?y] = [1,2,4,5]"
+  by (tactic \<open>Misc.match_list_tac \<^context> 1\<close>)
+print_theorems
+
+(* TODO remove *)
+schematic_goal "?x = [1,2] @ [3,4]" and "?x = abc"
+  apply (tactic \<open>Misc.append_list_tac \<^context> 1\<close>)
+  oops
 
 end

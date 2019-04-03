@@ -18,6 +18,8 @@
     <buffered bufClass="qrhl.QRHLSubgoalTest" />
     <buffered bufClass="qrhl.isabelle.IsabelleTest" />
     <buffered bufClass="qrhl.isabelle.IsabelleTest" />
+    <buffered bufClass="qrhl.logic.VariableTest" />
+    <buffered bufClass="qrhl.logic.VariableTest" />
     <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
     <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
     <buffered bufClass="qrhl.tactic.CaseTacTest" />

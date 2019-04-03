@@ -30,7 +30,7 @@ declare[[show_types,show_sorts,show_consts,eta_contract=false]]
 variables classical a :: bit and quantum A :: bit begin
 ML \<open>
 test_get_wp \<^context> true 
-            \<^term>\<open>measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
+            \<^term>\<open>measurement \<lbrakk>var_a\<rbrakk> \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
             \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
             \<^term>\<open>const_expression
                  (let M::(bit, bit) measurement = computational_basis
@@ -42,7 +42,7 @@ end
 variables classical b :: bit begin
 ML \<open>
 test_get_wp \<^context> false
-            \<^term>\<open>ifthenelse Expr[True] [assign var_b Expr[1] ] []\<close> (* program *)
+            \<^term>\<open>ifthenelse Expr[True] [assign \<lbrakk>var_b\<rbrakk> Expr[1] ] []\<close> (* program *)
             \<^term>\<open>Expr[top::predicate]\<close> (* post *)
             \<^term>\<open>const_expression ((\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> (\<CC>\<ll>\<aa>[True] + top))\<close> (* expected *)
 \<close>
@@ -62,13 +62,13 @@ variables classical x :: bit begin
 declare [[show_types,show_consts]]
 ML \<open>
 test_get_wp \<^context> false
-            \<^term>\<open>sample var_x Expr[undefined]\<close>
+            \<^term>\<open>sample \<lbrakk>var_x\<rbrakk> Expr[undefined]\<close>
             \<^term>\<open>Expr[top::predicate]\<close>
             \<^term>\<open>Expr[\<CC>\<ll>\<aa>[weight (undefined::bit distr) = (1::real)] \<sqinter> (INF z::bit:supp undefined. (top::predicate))]\<close>
-\<close>   
+\<close>
 end
 
-variables classical b :: int begin
+(* variables classical b :: int begin
 ML \<open>
 local
 val t = \<^term>\<open>qrhl Expr[top] [assign var_b Expr[1]] [assign var_b Expr[2]] Expr[top]\<close>
@@ -76,6 +76,6 @@ val t' = Weakest_Precondition.wp_tac_on_term true \<^context> t |> the |> the_si
 val _ = assert_aconv \<^term>\<open>qrhl Expr[top] [] [assign var_b Expr[2]] Expr[top]\<close> t'
 in end
 \<close>
-end
+end *)
 
 end
