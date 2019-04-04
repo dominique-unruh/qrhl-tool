@@ -8,10 +8,23 @@ import qrhl.{State, UserException}
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 
-case class RndTac(map:Option[(CVariable,CVariable,RichTerm)]=None) extends WpBothStyleTac {
+case object RndEqualTac
+  extends IsabelleTac[Unit]("joint_sample_equal_tac", { _ => () }) {
+  override def toString: String = s"rnd"
+}
+
+case class RndWitnessTac(left:CVariable, right:CVariable, witness:RichTerm)
+  extends IsabelleTac[Term]("joint_sample_tac", { _ => witness.isabelleTerm }) {
+  override def toString: String = s"rnd $left,$right <- $witness"
+}
+
+/*
+case class RndTacOld(map:Option[(CVariable,CVariable,RichTerm)]=None) extends WpBothStyleTac {
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm,Nil.type) = (left,right) match {
-    case (Sample(x,e), Sample(y,f)) =>
+    case (Sample(xs,e), Sample(ys,f)) =>
 //      val isabelle = post.isabelle
+      val List(x) = xs
+      val List(y) = ys 
       val env = state.environment
       val e1 = e.index1(env)
       val x1 = x.index1
@@ -46,4 +59,4 @@ case class RndTac(map:Option[(CVariable,CVariable,RichTerm)]=None) extends WpBot
     Operation.implicitly[(BigInt, (String, pure.Term, String), (pure.Term, pure.Typ, pure.Term)), RichTerm]("rndWp")
   val rndWp2Op: Operation[((String, Typ, Term), (String, Typ, Term), (Term, Term, BigInt)), RichTerm] =
     Operation.implicitly[((String, pure.Typ, pure.Term), (String, pure.Typ, pure.Term), (pure.Term, pure.Term, BigInt)), RichTerm]("rndWp2")
-}
+}*/

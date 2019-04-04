@@ -17,6 +17,29 @@ sealed trait Variable {
 }
 
 object Variable {
+//  def varlistToString(vars: List[Variable]) = vars match {
+//    case Nil => "()"
+//    case List(x) => x.name;
+//    case _ => s"(${vars.mkString(",")})"
+//  }
+
+  def vartermToString[A](toStr:A=>String, vars: VarTerm[A]): String = vars match {
+    case VTUnit => "()"
+    case VTSingle(x) => toStr(x)
+    case VTCons(VTSingle(x),xs) => toStr(x) + "," + vartermToString(toStr,xs)
+    case VTCons(VTUnit,xs) => "()," + vartermToString(toStr,xs)
+    case VTCons(a,b) => s"(${vartermToString(toStr,a)}),${vartermToString(toStr,b)}"
+  }
+
+  def vartermToString(vars: VarTerm[Variable]): String = vartermToString[Variable](_.name, vars)
+  /*def vartermToString(vars: VarTerm[Variable]): String = vars match {
+    case VTUnit => "()"
+    case VTSingle(x) => x.name
+    case VTCons(VTSingle(x),xs) => x.name + "," + vartermToString(xs)
+    case VTCons(VTUnit,xs) => "()," + vartermToString(xs)
+    case VTCons(a,b) => s"(${vartermToString(a)},${vartermToString(b)})"
+  }*/
+
   def index1(name:String) : String = name+"1"
   def index2(name:String) : String = name+"2"
   def index(left:Boolean, name:String) : String =
@@ -70,5 +93,16 @@ object CVariable {
       assert(name.startsWith("var_"))
       CVariable(name.stripPrefix("var_"), Isabelle.dest_variableT(typ))
     case _ => throw new RuntimeException("Illformed variable term")
+  }
+
+  def fromCVarList(context: Isabelle.Context, cvs: Term): List[CVariable] = cvs match {
+    case Const(Isabelle.variable_unit.name, _) => Nil
+    case App(Const(Isabelle.variable_singletonName,_), v) => List(fromTerm_var(context, v))
+    case App(App(Const(Isabelle.variable_concatName,_), v), vs) =>
+      val v2 = fromCVarList(context, v)
+      assert(v2.length==1)
+      val vs2 = fromCVarList(context, vs)
+      v2.head :: vs2
+    case _ => throw new RuntimeException("Illformed variable list")
   }
 }

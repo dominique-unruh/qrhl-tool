@@ -25,7 +25,7 @@ import Subgoal.codec
 import qrhl.State.logger
 
 sealed trait Subgoal {
-  def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
+  def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): Subgoal
 
   /** Checks whether all isabelle terms in this goal are well-typed.
     * Should always succeed, unless there are bugs somewhere. */
@@ -88,6 +88,7 @@ object Subgoal {
       thm.show_oracles()
   }
 
+/*
   def apply(context: Isabelle.Context, e : RichTerm) : Subgoal = {
     val assms = new ListBuffer[RichTerm]()
     var t = e.isabelleTerm
@@ -113,6 +114,7 @@ object Subgoal {
         AmbientSubgoal(e)
     }
   }
+*/
 }
 
 object QRHLSubgoal {
@@ -179,14 +181,18 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     post.checkWelltyped(context, Isabelle.predicateT)
   }
 
-  override def simplify(isabelle: Isabelle.Context, facts: List[String]): QRHLSubgoal = {
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): QRHLSubgoal = {
 //    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptions for simplification")
-    val (assms2,thms) = assumptions.map(_.simplify(isabelle,facts)).unzip
+    val thms = new ListBuffer[Thm]()
+    val assms2 = assumptions.map(_.simplify(isabelle,facts,thms))
     val assms3: List[RichTerm] = assms2.filter(_.isabelleTerm!=HOLogic.True)
-    val (pre2,thm2) = pre.simplify(isabelle,facts)
-    val (post2,thm3) = post.simplify(isabelle,facts)
-    Subgoal.printOracles(thm2::thm3::thms : _*)
-    QRHLSubgoal(left, right, pre2, post2, assms2)
+    val pre2 = pre.simplify(isabelle,facts,thms)
+    val post2 = post.simplify(isabelle,facts,thms)
+    val left2 = if (everywhere) left.simplify(isabelle,facts,thms) else left
+    val right2 = if (everywhere) right.simplify(isabelle,facts,thms) else right
+
+    Subgoal.printOracles(thms : _*)
+    QRHLSubgoal(left2, right2, pre2, post2, assms2)
   }
 }
 
@@ -212,7 +218,7 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
     * Should always succeed, unless there are bugs somewhere. */
   override def checkWelltyped(context: Isabelle.Context): Unit = goal.checkWelltyped(context,HOLogic.boolT)
 
-  override def simplify(isabelle: Isabelle.Context, facts: List[String]): AmbientSubgoal = {
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): AmbientSubgoal = {
     val (term, thm) = goal.simplify(isabelle, facts)
     Subgoal.printOracles(thm)
     AmbientSubgoal(term)

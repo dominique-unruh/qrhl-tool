@@ -21,6 +21,7 @@ val vars_in_varterm = Prog_Variables.vars_in_varterm
 val mk_varterm = Prog_Variables.mk_varterm
 val type_of_varterm = Prog_Variables.type_of_varterm
 datatype varterm = datatype Prog_Variables.varterm
+datatype tree = datatype Prog_Variables.tree
 
 
 fun mk_INFIMUM A f = 

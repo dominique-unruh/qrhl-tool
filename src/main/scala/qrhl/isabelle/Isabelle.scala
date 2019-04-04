@@ -15,7 +15,7 @@ import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platfo
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.UserException
-import qrhl.logic.QVariable
+import qrhl.logic._
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -90,14 +90,14 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     }
   }
 
-//  private val resources = Resources.dumpIsabelleResources() match { // TODO remove
+//  private val resources = Resources.dumpIsabelleResources() match {
 //    case Left(error) => throw new IOException(error.explain)
 //    case Right(r) => r
 //  }
 //  Files.delete(resources.component.resolve("ROOTS"))
 
   private val components = List(
-//    resources.component, // TODO remove
+//    resources.component,
     DistributionDirectory.distributionDirectory.resolve("isabelle-afp"),
 //    DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
     DistributionDirectory.distributionDirectory.resolve("isabelle-thys")
@@ -368,9 +368,9 @@ object Isabelle {
   def expressionT(typ:ITyp) = Type("Expressions.expression", List(typ))
   val instantiateOracles = Const("Programs.instantiateOracles", oracle_programT -->: listT(programT) -->: programT)
   val assignName = "Programs.assign"
-  def assign(typ:ITyp) : Const = Const(assignName, variableT(typ) -->: expressionT(typ) -->: programT)
+  def assign(typ:ITyp) : Const = Const(assignName, variablesT(typ) -->: expressionT(typ) -->: programT)
   val sampleName = "Programs.sample"
-  def sample(typ:ITyp) : Const = Const(sampleName, variableT(typ) -->: expressionT(distrT(typ)) -->: programT)
+  def sample(typ:ITyp) : Const = Const(sampleName, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
   val ifthenelseName = "Programs.ifthenelse"
   val ifthenelse = Const(ifthenelseName, expressionT(HOLogic.boolT) -->: listT(programT) -->: listT(programT) -->: programT)
   val whileName = "Programs.while"
@@ -384,7 +384,7 @@ object Isabelle {
   val qapplyName = "Programs.qapply"
   def qapply(typ:ITyp) = Const(qapplyName, variablesT(typ) -->: expressionT(boundedT(typ)) -->: programT)
   val measurementName = "Programs.measurement"
-  def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variableT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
+  def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
   val unitT = Type("Product_Type.unit")
   val prodT_name = "Product_Type.prod"
   def prodT(t1:ITyp, t2:ITyp) = Type(prodT_name, List(t1,t2))
@@ -482,6 +482,12 @@ object Isabelle {
     case Nil => unitT
     case List(typ) => typ
     case typ :: rest => prodT(typ,tupleT(rest :_*))
+  }
+
+  def tupleT(typs: VarTerm[ITyp]): ITyp = typs match {
+    case VTUnit => unitT
+    case VTCons(a, b) => prodT(tupleT(a),tupleT(b))
+    case VTSingle(v) => v
   }
 
   def freeVars(term: Term): Set[String] = {

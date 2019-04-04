@@ -1,11 +1,13 @@
 package qrhl.toplevel
 
 import info.hupel.isabelle.pure
-import qrhl._
+import qrhl.{toplevel, _}
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
 import qrhl.tactic._
 import java.nio.file.{Path, Paths}
+
+import info.hupel.isabelle.pure.Typ
 
 import scala.util.parsing.combinator._
 
@@ -18,6 +20,8 @@ object Parser extends JavaTokenParsers {
   val identifierListSep : Parser[String] = ","
   val identifierList : Parser[List[String]] = rep1sep(identifier,identifierListSep)
   val identifierList0 : Parser[List[String]] = repsep(identifier,identifierListSep)
+  val identifierTuple: Parser[List[String]] = "(" ~> identifierList0 <~ ")"
+  val identifierOrTuple: Parser[List[String]] = identifierTuple | (identifier ^^ {s:String => List(s)})
 
   //  val natural : Parser[BigInt] = """[0-9]+""".r ^^ { BigInt(_) }
   val natural: Parser[Int] = """[0-9]+""".r ^^ { _.toInt }
@@ -59,23 +63,25 @@ object Parser extends JavaTokenParsers {
 
   private val assignSymbol = literal("<-")
   def assign(implicit context:ParserContext) : Parser[Assign] =
-    for (v <- identifier;
+    for (lhs <- identifierOrTuple;
          _ <- assignSymbol;
          // TODO: add a cut
-         typ = context.environment.getCVariable(v).valueTyp;
+         lhsV = VarTerm.varlist(lhs.map { context.environment.getCVariable }:_*);
+         typ = Isabelle.tupleT(lhsV.map[Typ](_.valueTyp));
          e <- expression(typ);
          _ <- statementSeparator)
-     yield Assign(context.environment.getCVariable(v), e)
+     yield Assign(lhsV, e)
 
   private val sampleSymbol = literal("<$")
   def sample(implicit context:ParserContext) : Parser[Sample] =
-    for (v <- identifier;
+    for (lhs <- identifierOrTuple;
          _ <- sampleSymbol;
          // TODO: add a cut
-         typ = context.environment.getCVariable(v).valueTyp;
+         lhsV = VarTerm.varlist(lhs.map { context.environment.getCVariable }:_*);
+         typ = Isabelle.tupleT(lhsV.map[Typ](_.valueTyp));
          e <- expression(Isabelle.distrT(typ));
          _ <- statementSeparator)
-      yield Sample(context.environment.getCVariable(v), e)
+      yield Sample(lhsV, e)
 
   def programExp(implicit context:ParserContext) : Parser[Call] = identifier ~
     (literal("(") ~ rep1sep(programExp,identifierListSep) ~ ")").? ^^ {
@@ -100,8 +106,8 @@ object Parser extends JavaTokenParsers {
     // TODO: add a cut
          _ = assert(vs.nonEmpty);
          _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-         qvs = vs.map { context.environment.getQVariable };
-         typ = Isabelle.vectorT(Isabelle.tupleT(qvs.map(_.valueTyp):_*));
+         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+         typ = Isabelle.vectorT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
          e <- expression(typ);
          _ <- statementSeparator)
       yield QInit(qvs,e)
@@ -112,22 +118,22 @@ object Parser extends JavaTokenParsers {
            _ <- literal("apply");
            _ = assert(vs.nonEmpty);
            _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-           qvs = vs.map { context.environment.getQVariable };
-           typ = Isabelle.boundedT(Isabelle.tupleT(qvs.map(_.valueTyp):_*));
+           qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+           typ = Isabelle.boundedT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
            e <- expression(typ);
            _ <- statementSeparator)
         yield QApply(qvs,e)
 
   val measureSymbol : Parser[String] = assignSymbol
   def measure(implicit context:ParserContext) : Parser[Measurement] =
-    for (res <- identifier;
+    for (res <- identifierOrTuple;
          _ <- measureSymbol;
          _ <- literal("measure");
          vs <- identifierList;
-         resv = context.environment.getCVariable(res);
-         qvs = vs.map { context.environment.getQVariable };
+         resv = VarTerm.varlist(res.map { context.environment.getCVariable }:_*);
+         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
          _ <- literal("with");
-         etyp = Isabelle.measurementT(resv.valueTyp, Isabelle.tupleT(qvs.map(_.valueTyp):_*));
+         etyp = Isabelle.measurementT(Isabelle.tupleT(resv.map[Typ](_.valueTyp)), Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
          e <- expression(etyp);
          _ <- statementSeparator)
       yield Measurement(resv,qvs,e)
@@ -251,9 +257,11 @@ object Parser extends JavaTokenParsers {
         (literal("right") ~> natural.? ^^ { n => WpTac(right = n.getOrElse(1), left = 0) }) |
         (natural ~ natural ^^ { case l ~ r => WpTac(left = l, right = r) })
     }
-  OnceParser("left|right".r) ^^ {
-      case "left" => WpTac(left=1,right=0)
-      case "right" => WpTac(left=0,right=1)
+
+  val tactic_squash: Parser[SquashTac] =
+    literal("squash") ~> OnceParser("left|right".r) ^^ {
+      case "left" => SquashTac(left=true)
+      case "right" => SquashTac(left=false)
     }
 
   val tactic_swap: Parser[SwapTac] =
@@ -289,7 +297,7 @@ object Parser extends JavaTokenParsers {
         EqualTac(ps)
     }
 
-  def tactic_rnd(implicit context:ParserContext): Parser[RndTac] =
+  def tactic_rnd(implicit context:ParserContext): Parser[Tactic] =
     literal("rnd") ~> (for (
       x <- identifier;
       xVar = context.environment.getCVariable(x);
@@ -298,7 +306,10 @@ object Parser extends JavaTokenParsers {
       yVar = context.environment.getCVariable(y);
       _ <- sampleSymbol | assignSymbol;
       e <- expression(Isabelle.distrT(Isabelle.prodT(xVar.valueTyp,yVar.valueTyp)))
-    ) yield (xVar,yVar,e)).? ^^ RndTac
+    ) yield (xVar,yVar,e)).? ^^ {
+      case None => RndEqualTac
+      case Some((xVar,yVar,e)) => RndWitnessTac(xVar,yVar,e)
+    }
 
   def tactic_case(implicit context:ParserContext): Parser[CaseTac] =
     literal("case") ~> OnceParser(for (
@@ -309,9 +320,10 @@ object Parser extends JavaTokenParsers {
     ) yield CaseTac(x,e))
 
   val tactic_simp : Parser[SimpTac] =
-    literal("simp") ~> OnceParser(literal("!").? ~ rep(identifier)) ^^ {
-      case None ~ lemmas => SimpTac(lemmas)
-      case Some(_) ~ lemmas => SimpTac(lemmas, force = true)
+    literal("simp") ~> OnceParser("[!\\*]".r.? ~ rep(identifier)) ^^ {
+      case None ~ lemmas => SimpTac(lemmas, force=false, everywhere = false)
+      case Some("!") ~ lemmas => SimpTac(lemmas, force = true, everywhere = false)
+      case Some("*") ~ lemmas => SimpTac(lemmas, force = false, everywhere = true)
     }
 
   val tactic_rule : Parser[RuleTac] =
@@ -345,6 +357,7 @@ object Parser extends JavaTokenParsers {
       tactic_split |
       tactic_case |
       tactic_fix |
+      tactic_squash |
       literal("measure") ^^ { _ => JointMeasureTac }
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
