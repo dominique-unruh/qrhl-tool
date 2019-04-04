@@ -4,7 +4,7 @@ import info.hupel.isabelle.ProverResult
 import info.hupel.isabelle.hol.HOLogic
 import org.scalatest.FunSuite
 import qrhl.UserException
-import qrhl.logic.Call
+import qrhl.logic.{Call, VTCons, VTSingle}
 
 class ParserTest extends FunSuite {
   implicit lazy val parserContext: ParserContext = {
@@ -12,6 +12,8 @@ class ParserTest extends FunSuite {
     // If this fails for parsing reasons, just directly compose commands instead
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var y : int")
+    tl.execCmd("classical var z : int")
+    tl.execCmd("classical var w : int")
     tl.execCmd("adversary A0 vars x")
     tl.execCmd("adversary B0 vars x")
     tl.execCmd("adversary A1 vars x calls ?")
@@ -19,8 +21,37 @@ class ParserTest extends FunSuite {
     tl.state.parserContext
   }
 
+  test("nested varterm paren") {
+    implicit val vtSingle: String => VTSingle[String] = VTSingle[String]
+    val vt = Parser.parseAll(Parser.varterm, "((x,y),w,z)")
+    println(vt)
+    assert(vt.get==VTCons(VTCons("x","y"),VTCons("w","z")))
+  }
+
+  test("nested varterm noparen") {
+    implicit val vtSingle: String => VTSingle[String] = VTSingle[String]
+    val vt = Parser.parseAll(Parser.varterm, "(x,y),w,z")
+    println(vt)
+    assert(vt.get==VTCons(VTCons("x","y"),VTCons("w","z")))
+  }
+
+  test("assign tuple") {
+    val assign = Parser.parseAll(Parser.assign, "(x,y) <- (y,x);").get
+    println(assign)
+    assert(assign.variable.toList.map(_.name)==List("x","y"))
+    assign.checkWelltyped(parserContext.isabelle.get)
+  }
+
+  test("sample tuple") {
+    val sample = Parser.parseAll(Parser.sample, "(x,y) <$ uniform UNIV;").get
+    println(sample)
+    assert(sample.variable.toList.map(_.name)==List("x","y"))
+    sample.checkWelltyped(parserContext.isabelle.get)
+  }
+
   test("parse while loop") {
-    val whileLoop = Parser.parseAll(Parser.whileLoop, "while (True) { skip; };")
+    val whileLoop = Parser.parseAll(Parser.whileLoop, "while (True) { skip; }").get
+    println(whileLoop)
   }
 
   test("parse undeclared variable") {
@@ -31,7 +62,7 @@ class ParserTest extends FunSuite {
 
   test("fail to parse while loop") {
     assertThrows[ProverResult.Failure] {
-      val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; };")
+      val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; }")
     }
   }
 

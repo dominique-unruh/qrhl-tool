@@ -16,6 +16,7 @@ class QRHLSubgoalTest extends FunSuite {
   def pb(str:String): RichTerm = tl.state.parseExpression(Isabelle.boolT,str)
   def pp(str:String): RichTerm = tl.state.parseExpression(Isabelle.predicateT,str)
 
+/*
   def testToExpressionWelltypedRoundtrip(context: Isabelle.Context, left:Block, right:Block, pre:RichTerm, post:RichTerm): Unit = {
     val context = tl.state.isabelle
     val qrhl = QRHLSubgoal(left,right,pre,post,Nil)
@@ -30,7 +31,9 @@ class QRHLSubgoalTest extends FunSuite {
 
     assert(qrhl2 == qrhl)
   }
+*/
 
+/*
   test("toExpression welltyped roundtrip") {
     val left = Block()
     val right = Block()
@@ -54,5 +57,6 @@ class QRHLSubgoalTest extends FunSuite {
     val post = pp("Cla[x1=x2]")
     testToExpressionWelltypedRoundtrip(tl.state.isabelle, left,right,pre,post)
   }
+*/
 
 }

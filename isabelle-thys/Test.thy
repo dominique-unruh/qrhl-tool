@@ -5,48 +5,18 @@ theory Test
 (* Hashed_Terms Extended_Sorry *)
 QRHL.QRHL
 Main
-TestEx2
+(* TestEx2 *)
 (*   keywords
     "relift_definition" :: thy_goal
  *)
 begin
 
-ML \<open>
-\<^theory>\<open>TestEx2\<close>
-|> Context.theory_long_name
-|> Thy_Info.master_directory
-\<close>
+lemma 
+"
+qrhl (expression \<lbrakk>var_S1, var_S2, var_G1, var_G2, var_H1, var_H2, var_z1, var_z2, var_pk1, var_pk2, var_cstar1, var_cstar2, var_classA1, var_classA2, var_b1, var_b2, var_sk1, var_sk2, var_mstar1, var_mstar2, var_rstar1, var_rstar2\<rbrakk> (\<lambda>(S1, S2, G1, G2, H1, H2, z1, z2, pk1, pk2, cstar1, cstar2, classA1, classA2, b1, b2, sk1, sk2, mstar1, mstar2, rstar1, rstar2). \<CC>\<ll>\<aa>[S1 = S2 \<and> G1 = G2 \<and> H1 = H2 \<and> z1 = z2 \<and> pk1 = pk2 \<and> cstar1 = cstar2 \<and> classA1 = classA2 \<and> b1 = b2 \<and> sk1 = sk2 \<and> mstar1 = mstar2 \<and> rstar1 = rstar2] \<sqinter> \<lbrakk>quantA1, Gin1, Gout1\<rbrakk> \<equiv>\<qq> \<lbrakk>quantA2, Gin2, Gout2\<rbrakk>)) [sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> (const_expression o2h_distr)] [sample \<lbrakk>var_G\<rbrakk> (const_expression (uniform UNIV)), sample \<lbrakk>var_pk, var_sk\<rbrakk> (const_expression (keygen ())), sample \<lbrakk>var_mstar\<rbrakk> (const_expression (uniform (msg_space ()))), sample \<lbrakk>var_rstar\<rbrakk> (const_expression (uniform UNIV)), assign \<lbrakk>var_H\<rbrakk> (expression \<lbrakk>var_G, var_mstar, var_rstar\<rbrakk> (\<lambda>(G, mstar, rstar). G(mstar := rstar))), assign \<lbrakk>var_z\<rbrakk> (expression \<lbrakk>var_pk, var_mstar, var_rstar\<rbrakk> (\<lambda>(pk, mstar, rstar). (pk, encr () pk mstar rstar))), assign \<lbrakk>var_S\<rbrakk> (expression \<lbrakk>var_mstar\<rbrakk> (\<lambda>mstar. {mstar}))] (expression \<lbrakk>var_pk1, var_pk2, var_cstar1, var_cstar2, var_z1, var_z2, var_classA1, var_classA2, var_b1, var_b2, var_H1, var_H2\<rbrakk> (\<lambda>(pk1, pk2, cstar1, cstar2, z1, z2, classA1, classA2, b1, b2, H1, H2). \<CC>\<ll>\<aa>[pk1 = pk2 \<and> cstar1 = cstar2 \<and> z1 = z2 \<and> classA1 = classA2 \<and> b1 = b2 \<and> H1 = H2] \<sqinter> \<lbrakk>quantA1, Gin1, Gout1\<rbrakk> \<equiv>\<qq> \<lbrakk>quantA2, Gin2, Gout2\<rbrakk>))
+"
 
 
-ML \<open>
-\<^theory> |> Theory.ancestors_of 
-|> map Context.theory_long_name
-|> filter (not o Resources.loaded_theory)
-|> List.mapPartial Resources.known_theory
-\<close>
-
-ML \<open>Thy_Info.use_thy\<close>
-
-ML \<open>
-Resources.loaded_theory "QRHL.Tactics"
-\<close>
-
-ML \<open>
-Resources.imports_of \<^theory>\<open>Tactics\<close>
-\<close>
-
-ML_file "test.ML"
-
-ML Resources.provide 
-
-
-ML \<open>
-\<^theory>\<open>Main\<close>
-\<close>
-
-
-
-ML YXML.string_of
 
 axiomatization xxx :: "int \<Rightarrow> bool" (* REMOVE *)
 
@@ -55,7 +25,7 @@ hide_const (open) Order.top
 variables classical a :: bit and quantum A :: bit begin
 ML \<open>
 Weakest_Precondition.get_wp true 
-            \<^term>\<open>measurement var_a \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
+            \<^term>\<open>measurement \<lbrakk>var_a\<rbrakk> \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
             \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
  \<^context>
 \<close>
@@ -160,8 +130,8 @@ variables
 begin
 
 lemma
-  assumes [simp]: "x\<ge>0"
-  shows "qrhl D [s1,sample var_x Expr[uniform {0..max x 0}]] [t1,t2,assign var_x Expr[0]] Expr[Cla[x1\<ge>x2]]"
+  assumes [simp]: "x\<ge>0"                                                  
+  shows "qrhl D [s1,sample \<lbrakk>var_x\<rbrakk> Expr[uniform {0..max x 0}]] [t1,t2,assign \<lbrakk>var_x\<rbrakk> Expr[0]] Expr[Cla[x1\<ge>x2]]"
   using [[show_types]]
   apply (tactic \<open>Weakest_Precondition.wp_seq_tac 1 1 \<^context> 1\<close>)
   apply simp
@@ -177,7 +147,7 @@ lemma test:
 
 lemma
   assumes [simp]: "x\<ge>0"
-  shows "qrhl Expr[ Cla[x1=0 \<and> x2=1] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ]] [assign var_x Expr[x-1]] Expr[Cla[x1\<ge>x2]]"
+  shows "qrhl Expr[ Cla[x1=0 \<and> x2=1] ] [qinit \<lbrakk>q\<rbrakk> Expr[ ket 0 ]] [assign \<lbrakk>var_x\<rbrakk> Expr[x-1]] Expr[Cla[x1\<ge>x2]]"
   apply (tactic \<open>Weakest_Precondition.wp_seq_tac 1 1 \<^context> 1\<close>) 
   apply simp
   apply skip
@@ -315,11 +285,11 @@ lemma correct: "(g \<^sup>^ x) \<^sup>^ r * m * (g \<^sup>^ r) \<^sup>^ -x = m"
 variables classical c :: "G*G" and classical m :: G and classical pksk :: "G*int"
 and classical pk :: G and classical sk :: int begin
 
-definition "ElGamal = [sample var_pksk Expr[keygen],
-           assign var_pk Expr[fst pksk],
-           assign var_sk Expr[snd pksk],
-           sample var_c Expr[enc pk m],
-           assign var_m Expr[dec sk c]
+definition "ElGamal = [sample \<lbrakk>var_pk,var_sk\<rbrakk> Expr[keygen],
+           (* assign var_pk Expr[fst pksk], *)
+           (* assign var_sk Expr[snd pksk], *)
+           sample \<lbrakk>var_c\<rbrakk> Expr[enc pk m],
+           assign \<lbrakk>var_m\<rbrakk> Expr[dec sk c]
           ]"
 
 lemma elgamal_correct [simp]:
@@ -334,7 +304,7 @@ lemma elgamal_correct [simp]:
   (* unfolding enc_def *)
   (* unfolding  *)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 3 0 \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
@@ -383,7 +353,7 @@ lemma elgamal_correct2 [simp]:
   apply (simp add: dec_def)
   apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: weight_enc supp_enc)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 3 0 \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
@@ -397,7 +367,7 @@ lemma elgamal_correct3 [simp]:
   apply (simp add: dec_def case_prod_beta)
   apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 1 \<^context> 1\<close>)
   apply (simp add: weight_enc supp_enc case_prod_beta)
-  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 3 \<^context> 1\<close>)
+  apply (tactic  \<open>Weakest_Precondition.wp_seq_tac 0 1 \<^context> 1\<close>)
   apply (simp add: weight_keygen supp_keygen)
   apply skip
   by (auto simp: correct)
@@ -407,5 +377,7 @@ ML \<open>
 Extended_Sorry.show_oracles @{thm elgamal_correct3}
 \<close>
 
+
+term "variable_concat \<lbrakk>z\<rbrakk> \<lbrakk>x,y\<rbrakk>"
 
 end
