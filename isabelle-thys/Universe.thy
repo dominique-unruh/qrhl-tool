@@ -643,7 +643,7 @@ proof (intro_classes, fold embedding'_UNCONSTRAINED_def)
     unfolding emb apply simp using embedding'_range by auto
   have "inj Rep" apply (rule injI) using inj by simp
   show "inj (fst ?e)"
-    unfolding emb using inj inj_embedding' `inj Rep` by (auto intro: inj_comp)
+    unfolding emb using inj inj_embedding' `inj Rep` by (auto intro: inj_compose)
 qed
 
 

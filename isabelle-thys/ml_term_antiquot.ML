@@ -25,14 +25,14 @@ type conf = {mlmap: (string * Input.source list)}
 fun print_typ conf (Type arg) = "Term.Type " ^ print_pair print_string (print_list (print_typ conf)) arg
   | print_typ conf (TFree (arg as (n,_))) = 
       (case AList.lookup op= (#mlmap conf) n of
-          SOME str => atomic (Input.source_content str)
+          SOME str => atomic (Input.source_content str |> fst)
         | NONE => "Term.TFree " ^ print_pair print_string print_sort arg)
   | print_typ _ (TVar arg) = "Term.TVar " ^ print_pair print_indexname print_sort arg
 
 fun print_term conf (Const arg) = "Term.Const " ^ print_pair print_string (print_typ conf) arg
   | print_term conf (Free (arg as (n,_))) =
       (case AList.lookup op= (#mlmap conf) n of
-          SOME str => atomic (Input.source_content str)
+          SOME str => atomic (Input.source_content str |> fst)
         | NONE => "Term.Free " ^ print_pair print_string (print_typ conf) arg)
   | print_term conf (Var arg) = "Term.Var " ^ print_pair print_indexname (print_typ conf) arg
   | print_term _ (Bound i) = "Term.Bound " ^ print_int i

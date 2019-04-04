@@ -279,8 +279,6 @@ variables classical c :: "G*G" and classical m :: G and classical pksk :: "G*int
 and classical pk :: G and classical sk :: int begin
 
 definition "ElGamal = [sample \<lbrakk>var_pk,var_sk\<rbrakk> Expr[keygen],
-           (* assign var_pk Expr[fst pksk], *)
-           (* assign var_sk Expr[snd pksk], *)
            sample \<lbrakk>var_c\<rbrakk> Expr[enc pk m],
            assign \<lbrakk>var_m\<rbrakk> Expr[dec sk c]
           ]"
