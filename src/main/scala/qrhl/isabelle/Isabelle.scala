@@ -350,7 +350,8 @@ object Isabelle {
   }
   def listT(typ:ITyp) : Type = Type("List.list", List(typ))
   val block = Const("Programs.block", listT(programT) -->: programT)
-  val vectorT_name = "Complex_L2.vector"
+  // TODO rename constants
+  val vectorT_name = "Complex_L2.ell2"
   def vectorT(typ:ITyp) = Type(vectorT_name, List(typ))
   def dest_vectorT(typ:ITyp) : ITyp = typ match {
     case Type(`vectorT_name`, List(t1)) => t1

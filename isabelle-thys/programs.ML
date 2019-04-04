@@ -63,7 +63,7 @@ fun statement_to_term ctxt (Assign(lhs,rhs)) = let
          loc' $ term_to_expression ctxt e end
   | statement_to_term ctxt (QInit (loc,e)) = let
     val T = fastype_of e
-    val locT = QRHL.dest_vectorT T
+    val locT = QRHL.dest_ell2T T
     val loc' : term = loc |> varterm_instantiate' locT |> mk_varterm |> fst
     in Const(\<^const_name>\<open>qinit\<close>, mk_variablesT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
          loc' $ term_to_expression ctxt e end

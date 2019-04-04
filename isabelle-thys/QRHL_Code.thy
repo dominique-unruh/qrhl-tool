@@ -8,7 +8,7 @@ hide_const (open) Lattice.inf
 hide_const (open) Order.top
 hide_const (open) card_UNIV
 hide_const (open) Coset.kernel
-hide_const (open) span
+hide_const (open) Real_Vector_Spaces.span
 no_notation "Order.bottom" ("\<bottom>\<index>")
 no_notation "Order.top" ("\<top>\<index>")
 no_notation "Lattice.meet" (infixl "\<sqinter>\<index>" 70)
@@ -21,15 +21,15 @@ no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<in
 
 consts bounded_of_mat :: "complex mat \<Rightarrow> ('a::enum,'b::enum) bounded"
        mat_of_bounded :: "('a::enum,'b::enum) bounded \<Rightarrow> complex mat"
-consts vector_of_vec :: "complex vec \<Rightarrow> ('a::enum) vector"
-       vec_of_vector :: "('a::enum) vector \<Rightarrow> complex vec"
+consts ell2_of_vec :: "complex vec \<Rightarrow> ('a::enum) ell2"
+       vec_of_ell2 :: "('a::enum) ell2 \<Rightarrow> complex vec"
 
 lemma mat_of_bounded_inverse [code abstype]:
   "bounded_of_mat (mat_of_bounded B) = B" for B::"('a::enum,'b::enum)bounded"
   by (cheat 15)
 
-lemma vec_of_vector_inverse [code abstype]:
-  "vector_of_vec (vec_of_vector B) = B" for B::"('a::enum)vector"
+lemma vec_of_ell2_inverse [code abstype]:
+  "ell2_of_vec (vec_of_ell2 B) = B" for B::"('a::enum) ell2"
   by (cheat 15)
 
 fun index_of where
@@ -55,8 +55,8 @@ lemma bounded_of_mat_minusOp[code]:
 lemma bounded_of_mat_uminusOp[code]:
   "mat_of_bounded (- M) = - mat_of_bounded M" for M::"('a::enum,'b::enum) bounded"
   by (cheat 15)
-lemma vector_of_vec_applyOp[code]:
-  "vec_of_vector (M \<cdot> x) =  (mult_mat_vec (mat_of_bounded M) (vec_of_vector x))" for M :: "('a::enum,'b::enum) bounded"
+lemma ell2_of_vec_applyOp[code]:
+  "vec_of_ell2 (M \<cdot> x) =  (mult_mat_vec (mat_of_bounded M) (vec_of_ell2 x))" for M :: "('a::enum,'b::enum) bounded"
   by (cheat 15)
 lemma mat_of_bounded_scalarMult[code]:
   "mat_of_bounded ((a::complex) \<cdot> M) = smult_mat a (mat_of_bounded M)" for M :: "('a::enum,'b::enum) bounded"
@@ -73,15 +73,16 @@ instance
   using mat_of_bounded_inj injD by fastforce 
 end
 
-lemma vec_of_vector_inj: "inj vec_of_vector"
+lemma vec_of_ell2_inj: "inj vec_of_ell2"
   by (cheat 16)
 
-instantiation vector :: (enum) equal begin
-definition [code]: "equal_vector M N \<longleftrightarrow> vec_of_vector M = vec_of_vector N" for M N :: "'a vector"
+instantiation ell2 :: (enum) equal begin
+definition [code]: "equal_ell2 M N \<longleftrightarrow> vec_of_ell2 M = vec_of_ell2 N" for M N :: "'a ell2"
 instance 
   apply intro_classes
-  unfolding equal_vector_def 
-  using vec_of_vector_inj injD by fastforce 
+  unfolding equal_ell2_def 
+  using vec_of_ell2_inj injD
+  by fastforce
 end
 
 
@@ -135,13 +136,13 @@ lemma bounded_of_mat_comm_op[code]:
   "mat_of_bounded (comm_op :: ('a::enum*'b::enum,_) bounded) = comm_op_mat TYPE('a) TYPE('b)"
   by (cheat 17)
 
-lemma vec_of_vector_zero[code]:
-  "vec_of_vector (0::'a::enum vector) = zero_vec (CARD('a))"
+lemma vec_of_ell2_zero[code]:
+  "vec_of_ell2 (0::'a::enum ell2) = zero_vec (CARD('a))"
   by (cheat 17)
 
 
-lemma vec_of_vector_ket[code]:
-  "vec_of_vector (ket i) = unit_vec (CARD('a)) (enum_idx i)" for i::"'a::enum"
+lemma vec_of_ell2_ket[code]:
+  "vec_of_ell2 (ket i) = unit_vec (CARD('a)) (enum_idx i)" for i::"'a::enum"
   by (cheat 17)
 
 instantiation bit :: linorder begin
@@ -173,11 +174,11 @@ definition "vec_tensor (A::'a::times vec) (B::'a vec) =
        vec_index B (r mod dim_vec B))"
 
 
-lemma tensorVec_code[code]: "vec_of_vector (\<psi> \<otimes> \<phi>) = vec_tensor (vec_of_vector \<psi>) (vec_of_vector \<phi>)"
-  for \<psi>::"'a::enum vector" and \<phi>::"'b::enum vector"
+lemma tensorVec_code[code]: "vec_of_ell2 (\<psi> \<otimes> \<phi>) = vec_tensor (vec_of_ell2 \<psi>) (vec_of_ell2 \<phi>)"
+  for \<psi>::"'a::enum ell2" and \<phi>::"'b::enum ell2"
   by (cheat 17)
 
-definition [code del]: "SPAN x = span (vector_of_vec ` set x)"
+definition [code del]: "SPAN x = span (ell2_of_vec ` set x)"
 code_datatype SPAN
 
 definition "mk_projector (S::'a::enum subspace) = mat_of_bounded (Proj S)" 
@@ -215,21 +216,21 @@ lemma plus_spans[code]: "SPAN A + SPAN B = SPAN (A @ B)"
 
 lemma ortho_SPAN[code]: "ortho (SPAN S :: 'a::enum subspace) = SPAN (orthogonal_complement_vec (CARD('a)) S)"
   by (cheat 17)
-lemma span_Set_Monad[code]: "span (Set_Monad l) = SPAN (map vec_of_vector l)"
-  for l :: "'a::enum vector list"
+lemma span_Set_Monad[code]: "span (Set_Monad l) = SPAN (map vec_of_ell2 l)"
+  for l :: "'a::enum ell2 list"
   by (cheat 17)
 lemma tensorSpace_SPAN[code]: "tensorSpace (SPAN A) (SPAN B) = SPAN [vec_tensor a b. a<-A, b<-B]"
   by (cheat 17)
 
-lemma vec_of_vector_timesScalarVec[code]: "vec_of_vector (timesScalarVec a \<psi>) = smult_vec a (vec_of_vector \<psi>)"
-  for \<psi> :: "'a::enum vector"
+lemma vec_of_ell2_timesScalarVec[code]: "vec_of_ell2 (timesScalarVec a \<psi>) = smult_vec a (vec_of_ell2 \<psi>)"
+  for \<psi> :: "'a::enum ell2"
   by (cheat 17)
 
-lemma vector_of_vec_plus[code]:
-  "vec_of_vector (x + y) =  (vec_of_vector x) + (vec_of_vector y)" for x y :: "'a::enum vector"
+lemma ell2_of_vec_plus[code]:
+  "vec_of_ell2 (x + y) =  (vec_of_ell2 x) + (vec_of_ell2 y)" for x y :: "'a::enum ell2"
   by (cheat 17)
 
-lemma vec_of_vector_EPR[code]: "vec_of_vector EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
+lemma vec_of_ell2_EPR[code]: "vec_of_ell2 EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
   by (cheat 17)
 
 lemma [code_post]: 
@@ -273,17 +274,18 @@ lemma [code]: "HOL.equal (A::_ subspace) B = (A\<le>B \<and> B\<le>A)"
   unfolding equal_subspace_def by auto
 
 
-lemma mat_of_bounded_vector_to_bounded[code]: "mat_of_bounded (vector_to_bounded \<psi>) = mat_of_cols (CARD('a)) [vec_of_vector \<psi>]" 
-  for \<psi>::"'a::enum vector"
+lemma mat_of_bounded_ell2_to_bounded[code]: "mat_of_bounded (ell2_to_bounded \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
+  for \<psi>::"'a::enum ell2"
   by (cheat 17)
 
 lemma mat_of_bounded_remove_qvar_unit_op[code]:
   "mat_of_bounded (remove_qvar_unit_op::(_,'a::enum) bounded) = mat_of_bounded (idOp::(_,'a) bounded)" 
   by (cheat 17)
 
+(* TODO: prove this in Complex_L2 *)
 lemma [code]: "(A::'a subspace) \<sqinter> B = ortho (ortho A + ortho B)"
   unfolding subspace_sup_plus[symmetric]
-  by (smt inf.absorb2 inf.orderE inf_assoc_subspace inf_sup_ord(1) inf_sup_ord(2) leq_plus_subspace leq_plus_subspace2 ortho_leq ortho_twice subspace_plus_sup subspace_sup_plus)
+  by (cheat demorgan) 
 
 lemma [code]: "Inf (Set_Monad l :: 'a subspace set) = fold inf l top"
   unfolding Set_Monad_def
@@ -315,9 +317,9 @@ derive (no) ccompare complex
 derive (eq) ceq subspace
 derive (no) ccompare subspace
 derive (monad) set_impl subspace
-derive (eq) ceq vector
-derive (no) ccompare vector
-derive (monad) set_impl vector
+derive (eq) ceq ell2
+derive (no) ccompare ell2
+derive (monad) set_impl ell2
 
 
 

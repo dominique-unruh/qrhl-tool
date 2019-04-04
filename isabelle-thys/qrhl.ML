@@ -4,9 +4,9 @@ struct
 val mk_variablesT = Prog_Variables.mk_variablesT
 val mk_variableT = Prog_Variables.mk_variableT
 val mk_conjs = Prog_Variables.mk_conjs
-fun mk_vectorT T = Type(\<^type_name>\<open>vector\<close>, [T])
-fun dest_vectorT (Type(\<^type_name>\<open>vector\<close>, [T])) = T
-  | dest_vectorT T = raise TYPE("dest_vectorT",[T],[])
+fun mk_ell2T T = Type(\<^type_name>\<open>ell2\<close>, [T])
+fun dest_ell2T (Type(\<^type_name>\<open>ell2\<close>, [T])) = T
+  | dest_ell2T T = raise TYPE("dest_ell2T",[T],[])
 fun mk_boundedT T T' = Type(\<^type_name>\<open>bounded\<close>, [T,T'])
 fun dest_boundedT (Type(\<^type_name>\<open>bounded\<close>, [T,T'])) = (T,T')
   | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
@@ -92,10 +92,10 @@ end
 (* TODO remove *)
 fun qinitWp post e Q =
   let val (vs,vsT) = variables Q 
-      val qpre = Const(\<^const_name>\<open>space_div\<close>, \<^typ>\<open>predicate\<close> --> mk_vectorT vsT --> mk_variablesT vsT --> \<^typ>\<open>predicate\<close>) $
+      val qpre = Const(\<^const_name>\<open>space_div\<close>, \<^typ>\<open>predicate\<close> --> mk_ell2T vsT --> mk_variablesT vsT --> \<^typ>\<open>predicate\<close>) $
                     post $ e $ vs
       val isunit = \<^const>\<open>classical_subspace\<close> $ HOLogic.mk_eq 
-              (Const(\<^const_name>\<open>norm\<close>, mk_vectorT vsT --> \<^typ>\<open>real\<close>) $ e, \<^term>\<open>1::real\<close>)
+              (Const(\<^const_name>\<open>norm\<close>, mk_ell2T vsT --> \<^typ>\<open>real\<close>) $ e, \<^term>\<open>1::real\<close>)
   in
     @{const inf(predicate)} $ isunit $ qpre
   end
