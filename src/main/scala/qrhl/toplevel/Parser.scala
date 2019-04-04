@@ -307,12 +307,15 @@ object Parser extends JavaTokenParsers {
     }
 
   def tactic_equal(implicit context:ParserContext) : Parser[EqualTac] =
-    literal("equal") ~> (literal("exclude") ~> identifierList).? ^^ {
-      case None => EqualTac(Nil)
-      case Some(ps) =>
-        for (p <- ps if !context.environment.programs.contains(p))
+    literal("equal") ~> (literal("exclude") ~> identifierList).? ~ (literal("qvars") ~> identifierList).? ^^ {
+      case exclude ~ qvars =>
+        val exclude2 = exclude.getOrElse(Nil)
+        for (p <- exclude2 if !context.environment.programs.contains(p))
           throw UserException(s"Undeclared program $p")
-        EqualTac(ps)
+
+        val qvars2 = qvars.getOrElse(Nil) map { context.environment.getQVariable }
+
+        EqualTac(exclude=exclude2, qvariables = qvars2)
     }
 
   def tactic_rnd(implicit context:ParserContext): Parser[Tactic] =

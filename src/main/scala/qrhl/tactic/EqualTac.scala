@@ -8,14 +8,10 @@ import qrhl.logic._
 
 import scala.collection.mutable
 
-object EqualTac {
-  def apply(): EqualTac = EqualTac(Nil)
-}
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 
-case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
+case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends WpBothStyleTac() {
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm, List[Subgoal]) = {
     val cvars = new mutable.LinkedHashSet[CVariable]()
     val qvars = new mutable.LinkedHashSet[QVariable]()
@@ -60,6 +56,11 @@ case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
     collect(left,right)
     // For left=C[l1,...,ln], right=C[r1,...,rn] for programs li, ri, mismatches contains all (li,ri) (in order but without duplicates)
     // And cvars/qvars contains all classical/quantum variables in left,right.
+
+    if (qvariables.nonEmpty) {
+      qvars.clear()
+      qvars ++= qvariables
+    }
 
     val cvarsIdx1 = cvars.toList.map(_.index1)
     val cvarsIdx2 = cvars.toList.map(_.index2)
