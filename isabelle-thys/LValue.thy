@@ -301,7 +301,7 @@ next
 qed
 
 lemma dependent_functions_split:
-  assumes disjoint: "I\<inter>J={}"
+  assumes disjoint: "disjnt I J"
   shows "bij_betw (\<lambda>f. (restrict f I, restrict f J))
       (dependent_functions (I\<union>J) A)
       (dependent_functions I A \<times> dependent_functions J A)"
@@ -341,7 +341,7 @@ next
     apply (rule ext, rename_tac i)
     unfolding restrict_def x_def
     using b apply cases
-    using disjoint by auto
+    using disjoint unfolding disjnt_def by auto
   ultimately show "\<exists>x\<in>dependent_functions (I \<union> J) A.
               a = restrict x I \<and> b = restrict x J"
     by auto
@@ -369,10 +369,10 @@ record ('a,'b,'c) lvalue_factorization =
 locale lvalue_factorization =
   fixes F :: "('a,'b,'c) lvalue_factorization"
 begin
-definition "domain = lvf_domain F"
-definition "I = lvf_index_set F"
-definition "sets = lvf_sets F"
-definition "isom = lvf_isomorphism F"
+abbreviation "domain == lvf_domain F"
+abbreviation "I == lvf_index_set F"
+abbreviation "sets == lvf_sets F"
+abbreviation "isom == lvf_isomorphism F"
 end
 
 (* 'a=domain, 'b=index set, 'c=factor set *)
@@ -421,10 +421,10 @@ locale lvalue_basic = (* lvalue_factorization "lv_factorization lvb" + *)
   fixes lvb :: "('a,'b,'c,'d) lvalue_basic" begin
 definition "F = lv_factorization lvb" 
 sublocale lvalue_factorization F.
-definition "factors = lv_factors lvb"
-definition "repr = lv_representation lvb"
+abbreviation "factors == lv_factors lvb"
+abbreviation "repr == lv_representation lvb"
 lemma lvb_def: "lvb = \<lparr> lv_factorization=F, lv_factors=factors, lv_representation=repr \<rparr>"
-  unfolding F_def factors_def repr_def by auto
+  unfolding F_def by auto
 end
 
 locale valid_lvalue_basic = lvalue_basic + valid_lvalue_factorization F +
@@ -466,14 +466,13 @@ qed
 locale lvalue_basic_compatible =
   a: valid_lvalue_basic lv1 + b: valid_lvalue_basic lv2 for lv1::"('a,'b,'c,'d) lvalue_basic" and  lv2::"('a,'b,'c,'e) lvalue_basic" +
 assumes same_F: "a.F = b.F"
-  and same_factors: "disjnt a.factors b.factors"
+  and disj_factors: "disjnt a.factors b.factors"
 
 lemma (in lvalue_basic_compatible) same_sets: "a.sets = b.sets"
-  unfolding a.sets_def b.sets_def same_F by simp
+  unfolding same_F by simp
 
-
-lemmas lvalue_locale_defs = lvalue_basic.factors_def lvalue_basic.repr_def
-  lvalue_basic.F_def lvalue_factorization.I_def 
+(* TODO remove *)
+lemmas lvalue_locale_defs = lvalue_basic.F_def 
 
 (* inductive lvalue_basic_compatible :: "('a,'b,'c,'d) lvalue_basic \<Rightarrow> ('a,'b,'c,'e) lvalue_basic \<Rightarrow> bool" where
   "\<lbrakk> valid_lvalue_basic lv1; valid_lvalue_basic lv2;
@@ -487,7 +486,7 @@ lemma (in lvalue_basic_compatible) lvalue_basic_compatible_sym:
   apply intro_locales
   apply unfold_locales
   apply (simp add: same_F)
-  by (simp add: disjnt_sym same_factors)
+  by (simp add: disjnt_sym disj_factors)
 
   
 
@@ -526,7 +525,7 @@ lemma (in valid_lvalue_basic) valid_lvalue_basic_map:
 (* TODO same for lvalue *)
 
 lemma (in lvalue_basic) lvalue_basic_range_map[simp]: "lvalue_basic.lvrange (lvbmap f) = f ` lvrange"
-  by (smt image_cong image_image lvalue_basic.lvbmap_def lvalue_basic.lvrange_def lvalue_basic.select_convs(2) lvalue_basic.select_convs(3) lvalue_basic.simps(1) lvalue_locale_defs(1) lvalue_locale_defs(2) lvalue_locale_defs(3) o_def restrict_simp)
+  by (smt image_cong image_image lvalue_basic.lvbmap_def lvalue_basic.lvrange_def lvalue_basic.select_convs(2) lvalue_basic.select_convs(3) lvalue_basic.simps(1) lvalue_locale_defs(1) o_def restrict_simp)
 (* TODO same for lvalue *)
 
 definition (in lvalue_basic) "lvbdomain = domain"
@@ -564,7 +563,7 @@ proof -
   have "leq_card (lvalue_basic_corange_raw) (UNIV::'a set)"
   proof -
     have "lvalue_basic_corange_raw = dependent_functions (I - factors) sets"
-      by (metis I_def lvalue_basic_corange_raw_def sets_def)
+      by (metis lvalue_basic_corange_raw_def)
     also have "leq_card \<dots> (dependent_functions I sets)"
       apply (rule leq_cardI_surj[where f="%f. restrict f (I-factors)"])
       apply (rule equalityD2)
@@ -623,7 +622,7 @@ proof -
         using factors_I by auto
       show ?thesis
         apply (subst uni, rule dependent_functions_split)
-        by simp
+        by (simp add: disjnt_def)
     qed
     also 
     have "bij_betw (map_prod repr id)
@@ -672,12 +671,12 @@ definition (in lvalue_basic_compatible)
 
 
 (* fun lvalue_basic_compose :: "('a,'b,'c,'d) lvalue_basic \<Rightarrow> ('a,'b,'c,'e) lvalue_basic \<Rightarrow> ('a,'b,'c,'d*'e) lvalue_basic" where
-  "lvalue_basic_compose \<lparr> lv_factorization=factorization1, lv_factors=factors1, lv_representation=repr1 \<rparr>
-                        \<lparr> lv_factorization=factorization2, lv_factors=factors2, lv_representation=repr2 \<rparr> 
-    =  \<lparr> lv_factorization=factorization1, lv_factors=factors1 \<union> factors2, 
-         lv_representation=restrict (\<lambda>x. (repr1 (restrict x factors1), 
-                                          repr2 (restrict x factors2)))
-                                      (dependent_functions (factors1\<union>factors2) (lvf_sets factorization1)) \<rparr>"
+  "lvalue_basic_compose \<lparr> lv_factorization=factorization1, lv_factors=a.factors, lv_representation=repr1 \<rparr>
+                        \<lparr> lv_factorization=factorization2, lv_factors=b.factors, lv_representation=repr2 \<rparr> 
+    =  \<lparr> lv_factorization=factorization1, lv_factors=a.factors \<union> b.factors, 
+         lv_representation=restrict (\<lambda>x. (repr1 (restrict x a.factors), 
+                                          repr2 (restrict x b.factors)))
+                                      (dependent_functions (a.factors\<union>b.factors) (lvf_sets factorization1)) \<rparr>"
  *)
 
 lemma (in lvalue_basic_compatible) lvalue_basic_compose_fun:
@@ -688,15 +687,15 @@ lemma (in lvalue_basic_compatible) lvalue_basic_compose_fun:
 (* TODO same for lvalue *)
 proof -
   (* have same_fact: "lv_factorization lv1 = lv_factorization lv2" by cases    *)
-  (* obtain factorization factors1 repr1 where *)
-    (* lv1: "lv1 = \<lparr> lv_factorization=factorization, lv_factors=factors1, lv_representation=repr1 \<rparr>" *)
+  (* obtain factorization a.factors repr1 where *)
+    (* lv1: "lv1 = \<lparr> lv_factorization=factorization, lv_factors=a.factors, lv_representation=repr1 \<rparr>" *)
     (* apply atomize_elim apply (cases lv1) by simp *)
-  (* with same_fact obtain factors2 repr2 where *)
-    (* lv2: "lv2 = \<lparr> lv_factorization=factorization, lv_factors=factors2, lv_representation=repr2 \<rparr>" *)
+  (* with same_fact obtain b.factors repr2 where *)
+    (* lv2: "lv2 = \<lparr> lv_factorization=factorization, lv_factors=b.factors, lv_representation=repr2 \<rparr>" *)
     (* apply atomize_elim apply (cases lv1) apply auto *)
     (* by (metis (full_types) lvalue_basic.surjective old.unit.exhaust) *)
 
-  (* from compat have factors_disj: "factors1 \<inter> factors2 = {}" apply cases unfolding lv1 lv2 by simp *)
+  (* from compat have factors_disj: "a.factors \<inter> b.factors = {}" apply cases unfolding lv1 lv2 by simp *)
 (*   have valid1: "valid_lvalue_basic lv1"
     by (simp add: a.valid_lvalue_basic_axioms) apply cases by simp
   then have "valid_lvalue_factorization factorization" unfolding lv1 apply cases by simp *)
@@ -727,7 +726,7 @@ proof -
 (*     using bij x bij_betwE factorization apply auto[1]
     apply blast
     apply blast
-    by (simp add: factors1 factors2)
+    by (simp add: a.factors b.factors)
  *)
 
   have "fst (lvalue_basic.lvalue_basic_fun (lvalue_basic_compose) x) = a.lvalue_basic_fun x"
@@ -744,29 +743,30 @@ proof -
     by (metis prod.collapse)
 qed
 
-
+(* 
 lemma (in lvalue_basic_compatible) lvalue_basic_compose_valid:
   (* assumes "lvalue_basic_compatible lv1 lv2" *)
-  shows "valid_lvalue_basic (lvalue_basic_compose)"
+  shows "valid_lvalue_basic (lvalue_basic_compose)" *)
+sublocale lvalue_basic_compatible \<subseteq> valid_lvalue_basic lvalue_basic_compose
 (* TODO same for lvalue *)
 proof -
   (* from assms have same_fact: "lv_factorization lv1 = lv_factorization lv2" by cases    *)
-  (* obtain factorization factors1 repr1 where *)
-    (* lv1: "lv1 = \<lparr> lv_factorization=factorization, lv_factors=factors1, lv_representation=repr1 \<rparr>" *)
+  (* obtain factorization a.factors repr1 where *)
+    (* lv1: "lv1 = \<lparr> lv_factorization=factorization, lv_factors=a.factors, lv_representation=repr1 \<rparr>" *)
     (* apply atomize_elim apply (cases lv1) by simp *)
-  (* with same_fact obtain factors2 repr2 where *)
-    (* lv2: "lv2 = \<lparr> lv_factorization=factorization, lv_factors=factors2, lv_representation=repr2 \<rparr>" *)
+  (* with same_fact obtain b.factors repr2 where *)
+    (* lv2: "lv2 = \<lparr> lv_factorization=factorization, lv_factors=b.factors, lv_representation=repr2 \<rparr>" *)
     (* apply atomize_elim apply (cases lv1) apply auto *)
     (* by (metis (full_types) lvalue_basic.surjective old.unit.exhaust) *)
 
   (* from assms have valid1: "valid_lvalue_basic lv1" by cases *)
   (* then have valid_fact: "valid_lvalue_factorization factorization" *)
     (* apply cases unfolding lv1 by simp *)
-(*   from valid1 have inj_repr1: "inj_on repr1 (dependent_functions factors1 (lvf_sets factorization))"
+(*   from valid1 have inj_repr1: "inj_on repr1 (dependent_functions a.factors (lvf_sets factorization))"
     apply cases unfolding lv1 by simp *)
 
 (*   from assms have valid2: "valid_lvalue_basic lv2" by cases
-  from valid2 have inj_repr2: "inj_on repr2 (dependent_functions factors2 (lvf_sets factorization))"
+  from valid2 have inj_repr2: "inj_on repr2 (dependent_functions b.factors (lvf_sets factorization))"
     apply cases unfolding lv2 by simp *)
 
   have fact_union: "a.factors \<union> b.factors \<subseteq> a.I"
@@ -835,7 +835,7 @@ proof -
     unfolding restrict_def by simp
  *)
 
-  show ?thesis
+  show "valid_lvalue_basic lvalue_basic_compose"
     apply intro_locales
      apply (metis (mono_tags, lifting) b.valid_lvalue_factorization_axioms lvalue_basic.F_def lvalue_basic.select_convs(1) lvalue_basic_compose_def same_F)
     apply unfold_locales
@@ -847,44 +847,43 @@ proof -
 qed
 
 
-lemma lvalue_basic_domain_compose:
-  assumes compat: "lvalue_basic_compatible lvb1 lvb2"
-  shows "lvalue_basic_domain (lvalue_basic_compose lvb1 lvb2) = lvalue_basic_domain lvb1"
-    and "lvalue_basic_domain (lvalue_basic_compose lvb1 lvb2) = lvalue_basic_domain lvb2"
-   apply (cases lvb1, cases lvb2, hypsubst_thin, simp add: lvalue_basic_domain_def)
-  apply (insert compat)
-  by (cases lvb1, cases lvb2, hypsubst_thin, simp add: lvalue_basic_domain_def lvalue_basic_compatible.simps)
+lemma (in lvalue_basic_compatible) lvalue_basic_domain_compose:
+  (* assumes compat: "lvalue_basic_compatible lvb1 lvb2" *)
+  shows "domain = a.domain"
+    and "domain = b.domain"
+  using F_def lvalue_basic_compose_def apply auto[1]
+  using F_def lvalue_basic_compose_def same_F by auto
 (* TODO same for lvalue *)
 
-lemma lvalue_basic_range_compose:
-  assumes compat: "lvalue_basic_compatible lvb1 lvb2"
-  shows "lvalue_basic_range (lvalue_basic_compose lvb1 lvb2)
-           = lvalue_basic_range lvb1 \<times> lvalue_basic_range lvb2"
+lemma (in lvalue_basic_compatible) lvalue_basic_range_compose:
+  (* assumes compat: "lvalue_basic_compatible lvb1 lvb2" *)
+  shows "lvrange = a.lvrange \<times> b.lvrange"
 (* TODO same for lvalue *)
 proof -
-  from assms have same_fact: "lv_factorization lvb1 = lv_factorization lvb2" by cases   
-  obtain factorization factors1 repr1 where
-    lv1: "lvb1 = \<lparr> lv_factorization=factorization, lv_factors=factors1, lv_representation=repr1 \<rparr>"
+  (* from assms have same_fact: "lv_factorization lvb1 = lv_factorization lvb2" by cases    *)
+(*   obtain factorization a.factors repr1 where
+    lv1: "lvb1 = \<lparr> lv_factorization=factorization, lv_factors=a.factors, lv_representation=repr1 \<rparr>"
     apply atomize_elim apply (cases lvb1) by simp
-  with same_fact obtain factors2 repr2 where
-    lv2: "lvb2 = \<lparr> lv_factorization=factorization, lv_factors=factors2, lv_representation=repr2 \<rparr>"
+  with same_fact obtain b.factors repr2 where
+    lv2: "lvb2 = \<lparr> lv_factorization=factorization, lv_factors=b.factors, lv_representation=repr2 \<rparr>"
     apply atomize_elim apply (cases lvb1) apply auto
     by (metis (full_types) lvalue_basic.surjective old.unit.exhaust)
 
-  from assms have factors_disj: "factors1 \<inter> factors2 = {}" apply cases unfolding lv1 lv2 by simp
+  from assms have factors_disj: "a.factors \<inter> b.factors = {}" apply cases unfolding lv1 lv2 by simp *)
 
-  have "(\<lambda>x. (restrict x factors1, restrict x factors2)) `
-        dependent_functions (factors1 \<union> factors2) (lvf_sets factorization) =
-            dependent_functions factors1 (lvf_sets factorization) \<times>
-            dependent_functions factors2 (lvf_sets factorization)"
-    using dependent_functions_split[OF factors_disj, where A="lvf_sets factorization"]
+  have "(\<lambda>x. (restrict x a.factors, restrict x b.factors)) `
+        dependent_functions (a.factors \<union> b.factors) a.sets =
+            dependent_functions a.factors a.sets \<times>
+            dependent_functions b.factors a.sets"
+    using dependent_functions_split[OF disj_factors, where A="a.sets"]
     by (simp add: bij_betw_def)
-  also have "(map_prod repr1 repr2) ` \<dots> = lvalue_basic_range lvb1 \<times> lvalue_basic_range lvb2"
+  also have "(map_prod a.repr b.repr) ` \<dots> = a.lvrange \<times> b.lvrange"
     apply (rule map_prod_surj_on)
-    unfolding lvalue_basic_range_def lv1 lv2 by simp_all
+    unfolding a.lvrange_def b.lvrange_def same_sets by simp_all
   finally show ?thesis
-    unfolding lvalue_basic_range_def lv1 lv2 
-    unfolding map_prod_def image_comp o_def by (simp add: restrict_image)
+    unfolding a.lvrange_def b.lvrange_def same_sets 
+    unfolding map_prod_def image_comp o_def
+    using lvalue_basic_compose_def lvb_def lvrange_def same_F by auto
 qed
 
 locale squash_factorization = valid_lvalue_factorization begin
@@ -895,9 +894,12 @@ definition "sets_map (i::'b) = (SOME f::'c\<Rightarrow>'a. inj_on f (sets i))"
 definition "inv_sets_map i = inv_into (sets i) (sets_map i)"
 definition "sets' = (\<lambda>i\<in>I'. sets_map (inv_I_map i) ` sets (inv_I_map i))"
 definition "isom' = (\<lambda>a\<in>domain. \<lambda>i\<in>I'. sets_map (inv_I_map i) (isom a (inv_I_map i)))"
+definition "F' = \<lparr>lvf_domain = domain, lvf_index_set = I', 
+                       lvf_sets = sets',
+                       lvf_isomorphism = isom'\<rparr>"
 end
 
-fun factorization_squash :: "('a,'b,'c) lvalue_factorization \<Rightarrow> (('a,'a,'a) lvalue_factorization * _ * _)" where
+(* fun factorization_squash :: "('a,'b,'c) lvalue_factorization \<Rightarrow> (('a,'a,'a) lvalue_factorization * _ * _)" where
   "factorization_squash \<lparr>lvf_domain = domain, lvf_index_set = I, lvf_sets = sets, lvf_isomorphism = isom\<rparr>
   = 
 (let I_map = SOME f::'b\<Rightarrow>'a. inj_on f I; 
@@ -910,24 +912,167 @@ fun factorization_squash :: "('a,'b,'c) lvalue_factorization \<Rightarrow> (('a,
      factorization' = \<lparr>lvf_domain = domain, lvf_index_set = I', 
                        lvf_sets = sets',
                        lvf_isomorphism = isom'\<rparr> in
-  (factorization',I_map,sets_map))"
+  (factorization',I_map,sets_map))" *)
+
 
 lemma extensionalI:
   assumes "\<And>x. x\<notin>D \<Longrightarrow> f x = undefined"
   shows "f : extensional D"
   unfolding extensional_def using assms by simp
 
-lemma 
+lemma (in squash_factorization) I_map_I'[simp]: "i\<in>I \<Longrightarrow> I_map i \<in> I'" for i
+    unfolding I'_def by simp
+
+lemma (in squash_factorization) inj_I_map: "inj_on I_map I"
+    unfolding I_map_def apply (rule someI_ex[where P="\<lambda>f. inj_on f I"])
+    by (meson I_leq_domain leq_card_def)
+
+lemma (in squash_factorization) inv_I_map[simp]: "inv_I_map (I_map i) = i" if "i\<in>I" for i
+    unfolding inv_I_map_def using that
+    using inj_I_map by auto
+
+lemma (in squash_factorization) inj_sets_map: "inj_on (sets_map i) (sets i)" if "i\<in>I" for i
+proof -
+  have "leq_card (sets i) (dependent_functions I sets)"
+  proof -
+    obtain S where S: "S \<in> dependent_functions I sets"
+      apply atomize_elim
+      using bij_betwE bij_betw_isom domain_nonempty by blast
+    show ?thesis
+      apply (rule leq_cardI[where f="\<lambda>x. S(i:=x)"])
+       apply (simp add: fun_upd_eqD inj_onI)
+      using S by (auto simp: that)
+  qed
+  also have "leq_card (dependent_functions I sets) (UNIV::'a set)"
+    by (meson I_sets_leq_domain leq_card_def top_greatest)
+  finally have "\<exists>f::'c\<Rightarrow>'a. inj_on f (sets i)"
+    unfolding leq_card_def by auto
+  then show ?thesis
+    unfolding sets_map_def by (rule someI_ex[where P="\<lambda>f. inj_on f _"]) 
+qed
+
+definition (in lvalue_factorization) "inv_isom = inv_into domain isom"
+
+
+lemma (in squash_factorization) inv_sets_map[simp]: "inv_sets_map i (sets_map i x) = x" if "i\<in>I" and "x\<in>sets i" for i x
+  by (simp add: that inj_sets_map inv_sets_map_def)
+
+lemma (in valid_lvalue_factorization) isom_sets[simp]: "isom a i \<in> sets i" if "i\<in>I" and "a\<in>domain" for i a
+  by (meson that PiE_iff bij_betwE bij_betw_isom)
+
+lemma (in valid_lvalue_factorization) isom_I_sets[simp]: "isom a \<in> Pi\<^sub>E I sets" if "a\<in>domain" for a
+  using bij_betwE bij_betw_isom that by blast
+
+lemma (in valid_lvalue_factorization) [simp]: "isom a \<in> extensional I" if "a\<in>domain" for a
+  using that
+  using PiE_iff isom_I_sets by blast
+
+lemma (in valid_lvalue_factorization) restrict_isom[simp]: "restrict (isom a) I = isom a" if "a\<in>domain" for a
+  by (meson PiE_restrict isom_I_sets that)
+
+lemma (in valid_lvalue_factorization) inv_isom_isom[simp]: "inv_isom (isom a) = a" if "a\<in>domain" for a
+  using bij_betw_inv_into_left bij_betw_isom inv_isom_def that by fastforce
+
+lemma (in valid_lvalue_factorization) isom_inv_isom[simp]: "isom (inv_isom f) = f" if "f \<in> Pi\<^sub>E I sets" for f
+  using bij_betw_inv_into_right bij_betw_isom inv_isom_def that by fastforce
+
+lemma (in squash_factorization) inv_sets_map_sets: "inv_sets_map i f \<in> sets i" if "i \<in> I" and "f\<in>sets' (I_map i)" for i f
+  unfolding inv_sets_map_def 
+  apply (rule inv_into_into)
+  using that unfolding sets'_def
+  by simp
+
+sublocale squash_factorization \<subseteq> squash: lvalue_factorization F'.
+
+sublocale squash_factorization \<subseteq> squash: valid_lvalue_factorization F'
+proof (unfold_locales)
+  show "squash.domain \<noteq> {}"
+    by (simp add: F'_def)
+  show "squash.sets \<in> extensional squash.I"
+    by (simp add: F'_def sets'_def)
+  show "squash.isom \<in> extensional squash.domain"
+    by (simp add: F'_def isom'_def)
+  show "leq_card squash.I squash.domain"
+    by (metis F'_def I'_def I_leq_domain I_map_def bij_betw_def leq_cardI_bij' leq_card_def leq_card_trans lvalue_factorization.select_convs(1) lvalue_factorization.select_convs(2) someI_ex)
+  note restrict_cong[cong]  
+  show "bij_betw squash.isom squash.domain (dependent_functions squash.I squash.sets)"
+  proof -
+    have "(isom' x = isom' y) = (x = y)" if [simp]:"x\<in>domain" and [simp]:"y\<in>domain" for x y
+    proof (rule)
+      assume "isom' x = isom' y"
+      then have "(\<lambda>i\<in>I'. sets_map (inv_I_map i) (isom x (inv_I_map i))) =
+                  (\<lambda>i\<in>I'. sets_map (inv_I_map i) (isom y (inv_I_map i)))"
+        using that unfolding isom'_def by simp
+      then have "(sets_map (inv_I_map i) (isom x (inv_I_map i))) =
+                  (sets_map (inv_I_map i) (isom y (inv_I_map i)))" if "i\<in>I'" for i
+        using that
+        by (metis (mono_tags, lifting) restrict_simp)
+      then have "(sets_map i (isom x i)) =
+                  (sets_map i (isom y i))" if "i\<in>I" for i
+        using that I_map_I' by fastforce
+      then have "((isom x i)) =
+                  ((isom y i))" if "i\<in>I" for i
+        apply (rule inj_onD[OF inj_sets_map, OF that])
+        using that by auto
+      then have "isom x = isom y"
+        apply (rule_tac extensionalityI[where A=I])
+        by auto
+      then show "x=y"
+        using inv_isom_isom that by fastforce
+    qed simp
+    moreover have "isom' x \<in> dependent_functions I' sets'" if [simp]:"x\<in>domain" for x
+    proof (rule PiE_I)
+      fix i assume i[simp]:"i \<in> I'"
+      show "isom' x i \<in> sets' i"
+        unfolding isom'_def sets'_def
+        apply simp using isom_sets i that
+        by (metis I'_def imageI inv_I_map_def inv_into_into)
+    next
+      fix i assume [simp]:"i \<notin> I'"
+      show "isom' x i = undefined"
+        unfolding isom'_def by simp
+    qed
+    moreover have "\<exists>x\<in>domain. y = isom' x" if y:"y \<in> dependent_functions I' sets'" for y
+    proof -
+      have "(\<lambda>i\<in>I. inv_sets_map i (y (I_map i))) \<in> dependent_functions I sets"
+        using inv_sets_map_sets y by fastforce
+      with bij_betw_isom obtain x where isom_x:"isom x = (\<lambda>i\<in>I. inv_sets_map i (y (I_map i)))" and [simp]:"x:domain"
+        apply atomize_elim unfolding bij_betw_def
+        by (metis (mono_tags, lifting) imageE)
+      then have "inv_sets_map i (y (I_map i)) = (isom x i)" if "i:I" for i
+        using that by simp
+      then have "y (I_map i) = (sets_map i (isom x i))" if "i:I" for i
+        by (smt I_map_I' PiE_iff y f_inv_into_f inv_I_map inv_sets_map_def restrict_simp sets'_def that)
+      then have "y i = (sets_map (inv_I_map i) (isom x (inv_I_map i)))" if "i:I'" for i
+        by (metis I'_def f_inv_into_f inv_I_map_def inv_into_into that)
+      then have "y = (\<lambda>i\<in>I'. sets_map (inv_I_map i) (isom x (inv_I_map i)))"
+        using that by fastforce
+      then show ?thesis
+        unfolding isom'_def
+        by auto
+    qed
+    ultimately have "bij_betw isom' domain (dependent_functions I' sets')"
+      by (rule bij_betwI', simp_all)
+    then show ?thesis
+      by (simp add: F'_def)
+  qed
+qed
+
+
+lemma (in squash_factorization) factorization_squash_index_sets_map: "\<And>i. i\<in>I \<Longrightarrow> bij_betw (sets_map i) (sets i) (sets' (I_map i))"
+  by (simp add: bij_betw_def inj_sets_map sets'_def)
+
+(* lemma 
   fixes F :: "('a,'b,'c) lvalue_factorization"
   assumes valid: "valid_lvalue_factorization F"
   assumes squash: "factorization_squash F = (F',I_map',sets_map')"
-  shows factorization_squash_valid: "valid_lvalue_factorization F'"
+  (* shows factorization_squash_valid: "valid_lvalue_factorization F'" *)
     and factorization_squash_sets: "lvf_sets F' = (\<lambda>i\<in>lvf_index_set F'. sets_map' (inv_into (lvf_index_set F) I_map' i) ` lvf_sets F (inv_into (lvf_index_set F) I_map' i))"
     and factorization_squash_index_set: "lvf_index_set F' = I_map' ` lvf_index_set F"
     and factorization_squash_index_sets_map: "\<And>i. i\<in>lvf_index_set F \<Longrightarrow> bij_betw (sets_map' i) (lvf_sets F i) (lvf_sets F' (I_map' i))"
   using assms apply cases defer using assms apply cases defer using assms apply cases defer using assms
 proof cases
-  case (1 domain sets I isom)
+ *)(*   case (1 domain sets I isom)
   define I_map I' inv_I_map sets_map inv_sets_map sets' isom' factorization' inv_isom where
     "I_map = (SOME f::'b\<Rightarrow>'a. inj_on f I)" and
     "I' = I_map ` I" and 
@@ -945,63 +1090,11 @@ proof cases
     by (simp add: 1 defs[symmetric] Let_def)
   then have F': "F' = factorization'"
     using squash by auto
-
-  have inj_I_map: "inj_on I_map I"
-    unfolding I_map_def apply (rule someI_ex[where P="\<lambda>f. inj_on f I"])
-    by (meson "1"(5) leq_card_def)
-
-  then have inv_I_map[simp]: "inv_I_map (I_map i) = i" if "i\<in>I" for i
-    unfolding inv_I_map_def using that by simp
-(*   have "I_map i \<in> I' \<longleftrightarrow> i \<in> I" for i
-    unfolding  *)
-
-  have I_map_I'[simp]: "i\<in>I \<Longrightarrow> I_map i \<in> I'" for i
-    unfolding I'_def by simp
+ *)
 
 
-  have inj_sets_map: "inj_on (sets_map i) (sets i)" if "i\<in>I" for i
-  proof -
-    have "leq_card (sets i) (dependent_functions I sets)"
-    proof -
-      obtain S where S: "S \<in> dependent_functions I sets"
-        apply atomize_elim using "1"(2) "1"(6) bij_betwE by blast
-      show ?thesis
-        apply (rule leq_cardI[where f="\<lambda>x. S(i:=x)"])
-         apply (simp add: fun_upd_eqD inj_onI)
-        using S by (auto simp: that)
-    qed
-    also have "leq_card (dependent_functions I sets) (UNIV::'a set)"
-      using "1"(6) leq_cardI_bij' leq_card_UNIV leq_card_trans by blast
-    finally have "\<exists>f::'c\<Rightarrow>'a. inj_on f (sets i)"
-      unfolding leq_card_def by auto
-    then show ?thesis
-      unfolding sets_map_def by (rule someI_ex[where P="\<lambda>f. inj_on f _"]) 
-  qed
 
-  then have [simp]: "inv_sets_map i (sets_map i x) = x" if "i\<in>I" and "x\<in>sets i" for i x
-    using that by (simp add: inv_sets_map_def)
 
-  have isom_sets[simp]: "isom a i \<in> sets i" if "i\<in>I" and "a\<in>domain" for i a
-    using that 1 apply auto by (meson PiE_mem bij_betwE)
-
-  have [simp]: "isom a \<in> extensional I" if "a\<in>domain" for a
-    by (meson "1"(6) PiE_iff bij_betwE that)    
-
-  have [simp]: "restrict (isom a) I = isom a" if "a\<in>domain" for a
-    using that 1 apply auto by (meson PiE_restrict bij_betwE)
-
-  have inv_isom_isom[simp]: "inv_isom (isom a) = a" if "a\<in>domain" for a
-    using that 1 apply auto by (simp add: bij_betw_inv_into_left inv_isom_def) 
-
-  have isom_inv_isom[simp]: "isom (inv_isom f) = f" if "f \<in> dependent_functions I sets" for f
-    unfolding inv_isom_def apply (rule bij_betw_inv_into_right)
-    using that 1 by simp_all
-
-  have inv_sets_map_sets: "inv_sets_map i f \<in> sets i" if "i \<in> I" and "f\<in>sets' (I_map i)" for i f
-    unfolding inv_sets_map_def 
-    apply (rule inv_into_into)
-    using that unfolding sets'_def
-    by simp
 (*   have [simp]: "(\<lambda>i\<in>I. inv_sets_map i f) \<in> dependent_functions I sets" if "f \<in> sets' (I_map x)" for f
     (* unfolding inv_sets_map_def *)
     apply (rule PiE_I)
@@ -1010,89 +1103,9 @@ proof cases
     (* apply (rule dependent_functions_restrict[where D=I]) *)
     find_theorems intro PiE *)
 
-  show "valid_lvalue_factorization F'"
+(*   show "valid_lvalue_factorization F'"
     unfolding F' factorization'_def
   proof (rule valid_lvalue_factorization.intros)
-    show "domain \<noteq> {}"
-      by (simp add: "1"(2))
-    show "sets' \<in> extensional I'"
-      unfolding sets'_def by simp
-    show "isom' \<in> extensional domain"
-      unfolding isom'_def by simp
-    show "leq_card I' domain"
-      using "1"(5) I'_def leq_cardI_surj leq_card_trans by blast
-    note restrict_cong[cong]  
-    show "bij_betw isom' domain (dependent_functions I' sets')"
-    proof -
-(*       define inv_isom' where "inv_isom' = inv_isom o (\<lambda>f. \<lambda>i\<in>I. inv_sets_map i (f (I_map i)))"
-      have "\<forall>a\<in>domain. inv_isom' (isom' a) = a"
-        by (simp add: inv_isom'_def isom'_def)
-      moreover have "\<forall>a'\<in>dependent_functions I' sets'. isom' (inv_isom' a') = a'" 
-        unfolding inv_isom'_def isom'_def apply auto
-        apply (rule ext) apply auto
-        apply (subst isom_inv_isom)
-        (* apply (smt PiE_iff \<open>\<And>i. i \<in> I \<Longrightarrow> I_map i \<in> I'\<close> \<open>\<And>x ia. \<lbrakk>ia \<in> I; x \<in> sets ia\<rbrakk> \<Longrightarrow> inv_sets_map ia (sets_map ia x) = x\<close> image_iff inv_I_map restrict_extensional restrict_simp sets'_def) *)
-      then show ?thesis
-        apply (rule bij_betw_byWitness[where f'="inv_isom'"])
-       by auto *)
-      have "(isom' x = isom' y) = (x = y)" if [simp]:"x\<in>domain" and [simp]:"y\<in>domain" for x y
-      proof (rule)
-        assume "isom' x = isom' y"
-        then have "(\<lambda>i\<in>I'. sets_map (inv_I_map i) (isom x (inv_I_map i))) =
-                  (\<lambda>i\<in>I'. sets_map (inv_I_map i) (isom y (inv_I_map i)))"
-          using that unfolding isom'_def by simp
-        then have "(sets_map (inv_I_map i) (isom x (inv_I_map i))) =
-                  (sets_map (inv_I_map i) (isom y (inv_I_map i)))" if "i\<in>I'" for i
-          using that
-          by (metis (mono_tags, lifting) restrict_simp)
-        then have "(sets_map i (isom x i)) =
-                  (sets_map i (isom y i))" if "i\<in>I" for i
-          using that I_map_I' by fastforce
-        then have "((isom x i)) =
-                  ((isom y i))" if "i\<in>I" for i
-          apply (rule inj_onD[OF inj_sets_map, OF that])
-          using that by auto
-        then have "isom x = isom y"
-          apply (rule_tac extensionalityI[where A=I])
-          by auto
-        then show "x=y"
-          using inv_isom_isom that by fastforce
-      qed simp
-      moreover have "isom' x \<in> dependent_functions I' sets'" if [simp]:"x\<in>domain" for x
-      proof (rule PiE_I)
-        fix i assume i[simp]:"i \<in> I'"
-        show "isom' x i \<in> sets' i"
-          unfolding isom'_def sets'_def
-          apply simp using isom_sets i that
-          by (metis I'_def imageI inv_I_map_def inv_into_into)
-      next
-        fix i assume [simp]:"i \<notin> I'"
-        show "isom' x i = undefined"
-          unfolding isom'_def by simp
-      qed
-      moreover have "\<exists>x\<in>domain. y = isom' x" if y:"y \<in> dependent_functions I' sets'" for y
-      proof -
-        have "(\<lambda>i\<in>I. inv_sets_map i (y (I_map i))) \<in> dependent_functions I sets"
-          using inv_sets_map_sets y by fastforce
-        then obtain x where isom_x:"isom x = (\<lambda>i\<in>I. inv_sets_map i (y (I_map i)))" and [simp]:"x:domain"
-          apply atomize_elim
-          by (smt "1"(6) bij_betw_def imageE)
-        then have "inv_sets_map i (y (I_map i)) = (isom x i)" if "i:I" for i
-          using that by simp
-        then have "y (I_map i) = (sets_map i (isom x i))" if "i:I" for i
-          by (smt I_map_I' PiE_iff y f_inv_into_f inv_I_map inv_sets_map_def restrict_simp sets'_def that)
-        then have "y i = (sets_map (inv_I_map i) (isom x (inv_I_map i)))" if "i:I'" for i
-          by (metis I'_def f_inv_into_f inv_I_map_def inv_into_into that)
-        then have "y = (\<lambda>i\<in>I'. sets_map (inv_I_map i) (isom x (inv_I_map i)))"
-          using that by fastforce
-        then show ?thesis
-          unfolding isom'_def
-          by auto
-      qed
-      ultimately show ?thesis
-        by (rule bij_betwI', simp_all)
-    qed
-  qed
 
   show "lvf_sets F' = (\<lambda>i\<in>lvf_index_set F'. sets_map' (inv_into (lvf_index_set F) I_map' i) ` lvf_sets F (inv_into (lvf_index_set F) I_map' i))"
     using "1"(1) factorization'_def inv_I_map_def sets'_def squash squashF by auto
@@ -1102,9 +1115,17 @@ proof cases
 
   show "\<And>i. i \<in> lvf_index_set F \<Longrightarrow> bij_betw (sets_map' i) (lvf_sets F i) (lvf_sets F' (I_map' i))"
     by (metis (mono_tags, lifting) "1"(1) I_map_I' Pair_inject bij_betw_def factorization'_def inj_sets_map inv_I_map lvalue_factorization.select_convs(2) lvalue_factorization.select_convs(3) restrict_simp sets'_def squash squashF)
-qed
+qed *)
 
-fun lvalue_basic_squash1 :: "('a,'b,'c,'d) lvalue_basic \<Rightarrow> ('a,'a,'a,'d) lvalue_basic" where
+locale lvalue_basic_squash = valid_lvalue_basic + squash_factorization F
+begin
+definition "factors' = I_map ` factors"
+definition "repr' = (\<lambda>f\<in>dependent_functions factors' sets'. repr (\<lambda>i\<in>factors. (inv_sets_map i (f (I_map i)))))"
+definition "lv' =  \<lparr> lv_factorization=F', lv_factors=I_map ` factors, 
+                     lv_representation=repr' \<rparr>"
+end
+
+(* fun lvalue_basic_squash1 :: "('a,'b,'c,'d) lvalue_basic \<Rightarrow> ('a,'a,'a,'d) lvalue_basic" where
   "lvalue_basic_squash1 \<lparr> lv_factorization=factorization, lv_factors=factors, lv_representation=repr \<rparr> = 
     (let (factorization',I_map,sets_map) = factorization_squash factorization;
          inv_sets_map = \<lambda>i. inv_into (lvf_sets factorization i) (sets_map i);
@@ -1113,7 +1134,7 @@ fun lvalue_basic_squash1 :: "('a,'b,'c,'d) lvalue_basic \<Rightarrow> ('a,'a,'a,
          lv' =  \<lparr> lv_factorization=factorization', lv_factors=I_map ` factors, 
                   lv_representation=repr' \<rparr>;
          f::'d\<Rightarrow>'a = SOME f. inj_on f (lvalue_basic_range lv')
-     in lv')"
+     in lv')" *)
 
 (* lemma 
   fixes A :: "'a set" and C :: "'c set"
