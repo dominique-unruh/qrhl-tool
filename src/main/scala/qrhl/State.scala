@@ -1,29 +1,31 @@
 package qrhl
 
-import java.nio.file.{Files, Path, Paths}
+import java.io.FileNotFoundException
+import java.nio.file.attribute.FileTime
+import java.nio.file.{Files, NoSuchFileException, Path, Paths}
 
-import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
+import info.hupel.isabelle.{Codec, Operation, ProverResult, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.{App, Const, Term, Typ => ITyp}
 import org.log4s
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.isabelle.Isabelle.Thm
 import qrhl.logic._
-import qrhl.toplevel.{Command, Parser, ParserContext}
+import qrhl.toplevel.{Command, Parser, ParserContext, Toplevel}
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
 import info.hupel.isabelle.api.XML
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import Isabelle.applicativeXMLResult
 import Isabelle.Context.codec
 import Subgoal.codec
+import qrhl.State.logger
 
 sealed trait Subgoal {
-  def simplify(isabelle: Isabelle.Context, facts: List[String]): Subgoal
+  def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): Subgoal
 
   /** Checks whether all isabelle terms in this goal are well-typed.
     * Should always succeed, unless there are bugs somewhere. */
@@ -86,6 +88,7 @@ object Subgoal {
       thm.show_oracles()
   }
 
+/*
   def apply(context: Isabelle.Context, e : RichTerm) : Subgoal = {
     val assms = new ListBuffer[RichTerm]()
     var t = e.isabelleTerm
@@ -111,6 +114,7 @@ object Subgoal {
         AmbientSubgoal(e)
     }
   }
+*/
 }
 
 object QRHLSubgoal {
@@ -177,14 +181,18 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     post.checkWelltyped(context, Isabelle.predicateT)
   }
 
-  override def simplify(isabelle: Isabelle.Context, facts: List[String]): QRHLSubgoal = {
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): QRHLSubgoal = {
 //    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptions for simplification")
-    val (assms2,thms) = assumptions.map(_.simplify(isabelle,facts)).unzip
+    val thms = new ListBuffer[Thm]()
+    val assms2 = assumptions.map(_.simplify(isabelle,facts,thms))
     val assms3: List[RichTerm] = assms2.filter(_.isabelleTerm!=HOLogic.True)
-    val (pre2,thm2) = pre.simplify(isabelle,facts)
-    val (post2,thm3) = post.simplify(isabelle,facts)
-    Subgoal.printOracles(thm2::thm3::thms : _*)
-    QRHLSubgoal(left, right, pre2, post2, assms2)
+    val pre2 = pre.simplify(isabelle,facts,thms)
+    val post2 = post.simplify(isabelle,facts,thms)
+    val left2 = if (everywhere) left.simplify(isabelle,facts,thms) else left
+    val right2 = if (everywhere) right.simplify(isabelle,facts,thms) else right
+
+    Subgoal.printOracles(thms : _*)
+    QRHLSubgoal(left2, right2, pre2, post2, assms2)
   }
 }
 
@@ -210,7 +218,7 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
     * Should always succeed, unless there are bugs somewhere. */
   override def checkWelltyped(context: Isabelle.Context): Unit = goal.checkWelltyped(context,HOLogic.boolT)
 
-  override def simplify(isabelle: Isabelle.Context, facts: List[String]): AmbientSubgoal = {
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): AmbientSubgoal = {
     val (term, thm) = goal.simplify(isabelle, facts)
     Subgoal.printOracles(thm)
     AmbientSubgoal(term)
@@ -221,23 +229,102 @@ trait Tactic {
   def apply(state: State, goal : Subgoal) : List[Subgoal]
 }
 
-case class UserException(msg:String) extends RuntimeException(msg)
+class UserException private (private val msg:String, private var _position:String=null) extends RuntimeException(msg) {
+  def setPosition(position:String): Unit = {
+    if (_position==null)
+      _position = position
+  }
+  def position : String = _position
+  def positionMessage : String = s"$position: $msg"
+}
+object UserException {
+  private val logger = log4s.getLogger
+
+  def apply(msg: String) = new UserException(msg)
+  def apply(e: ProverResult.Failure, position: String): UserException = {
+    logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
+    val e2 = UserException("(in Isabelle) "+Isabelle.symbolsToUnicode(e.msg))
+    e2.setPosition(position)
+    e2
+  }
+}
 
 /** A path together with a last-modification time. */
 class FileTimeStamp(val file:Path) {
-  private val time = Files.getLastModifiedTime(file)
+  private val time = FileTimeStamp.getLastModifiedTime(file)
   /** Returns whether the file has changed since the FileTimeStamp was created. */
-  def changed : Boolean = time!=Files.getLastModifiedTime(file)
+  def changed : Boolean = time!=FileTimeStamp.getLastModifiedTime(file)
 
   override def toString: String = s"$file@$time"
+}
+object FileTimeStamp {
+  def getLastModifiedTime(file:Path): FileTime = try
+    Files.getLastModifiedTime(file)
+  catch {
+    case _ : NoSuchFileException => FileTime.fromMillis(-1)
+  }
+}
+
+class CheatMode private (
+                    private val cheatAtAll : Boolean, // whether any cheating should happen at all
+                    private val cheatInProof : Boolean, // cheating till the end of the current proof
+                    private val cheatInFile : Boolean, // cheating till the end of current file
+                    private val inInclude : Boolean // in included file
+                    ) {
+//  assert(includeLevel >= 0)
+//  def endInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=false, includeLevel=includeLevel-1)
+  def endProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=false, cheatInFile=cheatInFile, inInclude=inInclude)
+  def cheating: Boolean = cheatAtAll && (cheatInFile || cheatInProof || inInclude)
+  def startCheatInProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=true, cheatInFile=cheatInFile, inInclude=inInclude)
+  def startCheatInFile = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=true, inInclude=inInclude)
+  def startInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=cheatInFile, inInclude=true)
+  def stopCheatInFile(inProof:Boolean) = new CheatMode(cheatAtAll=cheatAtAll,
+    cheatInProof=cheatInProof || (inProof && cheatInFile),
+    cheatInFile=false, inInclude=inInclude)
+}
+
+object CheatMode {
+  def make(cheatAtAll:Boolean): CheatMode = new CheatMode(cheatAtAll=cheatAtAll,false,false,false)
 }
 
 class State private (val environment: Environment,
                      val goal: List[Subgoal],
                      val currentLemma: Option[(String,RichTerm)],
                      private val _isabelle: Option[Isabelle.Context],
+                     private val _isabelleTheory: List[Path],
                      val dependencies: List[FileTimeStamp],
-                     val currentDirectory: Path) {
+                     val currentDirectory: Path,
+                     val cheatMode : CheatMode,
+                     val includedFiles : Set[Path]) {
+  def include(file: Path): State = {
+    val fullpath =
+      try {
+        currentDirectory.resolve(file).toRealPath()
+      } catch {
+        case e:NoSuchFileException => throw UserException(s"File not found: $file (relative to $currentDirectory)")
+      }
+
+    logger.debug(s"Including $fullpath")
+    if (includedFiles.contains(fullpath)) {
+      println(s"Already included $file. Skipping.")
+      this
+    } else {
+      val state1 = copy(includedFiles = includedFiles + fullpath, cheatMode=cheatMode.startInclude)
+      val toplevel = Toplevel.makeToplevelFromState(state1)
+      toplevel.run(fullpath)
+      val state2 = toplevel.state
+      val state3 = toplevel.state.copy(
+        dependencies=new FileTimeStamp(fullpath)::state2.dependencies,
+        cheatMode = cheatMode, // restore original cheatMode
+        currentDirectory = currentDirectory) // restore original currentDirectory
+      state3
+    }
+  }
+
+  def cheatInFile: State = copy(cheatMode=cheatMode.startCheatInFile)
+  def cheatInProof: State = copy(cheatMode=cheatMode.startCheatInProof)
+  def stopCheating: State = copy(cheatMode=cheatMode.stopCheatInFile(currentLemma.isDefined))
+
   def isabelle: Isabelle.Context = _isabelle match {
     case Some(isa) => isa
     case None => throw UserException(Parser.noIsabelleError)
@@ -250,7 +337,7 @@ class State private (val environment: Environment,
 
     val (name,prop) = currentLemma.get
     val isa = if (name!="") _isabelle.map(_.addAssumption(name,prop.isabelleTerm)) else _isabelle
-    copy(isabelle=isa, currentLemma=None)
+    copy(isabelle=isa, currentLemma=None, cheatMode=cheatMode.endProof)
   }
 
   def declareProgram(name: String, program: Block): State = {
@@ -271,27 +358,35 @@ class State private (val environment: Environment,
   }
 
 
-  def applyTactic(tactic:Tactic) : State = goal match {
-    case Nil =>
-      throw UserException("No pending proof")
-    case subgoal::subgoals =>
-      copy(goal=tactic.apply(this,subgoal)++subgoals)
-  }
+  def applyTactic(tactic:Tactic) : State =
+    if (cheatMode.cheating)
+      copy(goal=Nil)
+    else
+      goal match {
+        case Nil =>
+          throw UserException("No pending proof")
+        case subgoal::subgoals =>
+          copy(goal=tactic.apply(this,subgoal)++subgoals)
+      }
 
   private def copy(environment:Environment=environment,
                    goal:List[Subgoal]=goal,
                    isabelle:Option[Isabelle.Context]=_isabelle,
                    dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,RichTerm)]=currentLemma,
-                   currentDirectory:Path=currentDirectory) : State =
-    new State(environment=environment, goal=goal, _isabelle=isabelle,
-      currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory)
+                   currentDirectory:Path=currentDirectory,
+                   cheatMode:CheatMode=cheatMode,
+                   isabelleTheory:List[Path]=_isabelleTheory,
+                   includedFiles:Set[Path]=includedFiles) : State =
+    new State(environment=environment, goal=goal, _isabelle=isabelle, cheatMode=cheatMode,
+      currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory,
+      includedFiles=includedFiles, _isabelleTheory=isabelleTheory)
 
   def changeDirectory(dir:Path): State = {
     assert(dir!=null)
     if (dir==currentDirectory) return this
     if (!Files.isDirectory(dir)) throw UserException(s"Non-existent directory: $dir")
-    if (hasIsabelle) throw UserException("Cannot change directory after loading Isabelle")
+//    if (hasIsabelle) throw UserException("Cannot change directory after loading Isabelle")
     copy(currentDirectory=dir)
   }
 
@@ -302,7 +397,9 @@ class State private (val environment: Environment,
     case _ => throw UserException("There is still a pending proof.")
   }
 
-  override def toString: String = goal match {
+  override def toString: String = if (cheatMode.cheating)
+    "In cheat mode."
+  else goal match {
     case Nil => "No current goal."
     case List(goal1) => s"Goal:\n\n" + goal1
     case List(goal1,rest @ _*) =>
@@ -338,20 +435,20 @@ class State private (val environment: Environment,
     }
   }
 
-  def loadIsabelle(theory:Option[String]) : State = {
+  def loadIsabelle(theory:Seq[String]) : State = {
+    val theoryPath = theory.toList map { thy => currentDirectory.resolve(thy+".thy") }
+
     if (_isabelle.isDefined)
-      throw UserException("Only one isabelle-command allowed")
+      if (theoryPath != _isabelleTheory)
+        throw UserException(s"Isabelle loaded twice with different theories: ${if (_isabelleTheory.isEmpty) "none" else _isabelleTheory.mkString(", ")} vs. ${if (theoryPath.isEmpty) "none" else theoryPath.mkString(", ")}")
+      else
+        return this
+    
     val isabelle = Isabelle.globalIsabelle
-    val (isa,files) = theory match {
-      case None =>
-        (isabelle.getQRHLContextWithFiles(), dependencies)
-      case Some(thy) =>
-        val filename = currentDirectory.resolve(thy+".thy")
-//        println("State.loadIsabelle",thy,currentDirectory,filename)
-//        val thyname = currentDirectory.resolve(thy)
-        (isabelle.getQRHLContextWithFiles(filename), new FileTimeStamp(filename) :: dependencies)
-    }
-    copy(isabelle = Some(isa), dependencies=files)
+    val (ctxt,deps) = isabelle.getQRHLContextWithFiles(theoryPath : _*)
+    logger.debug(s"Dependencies of theory $theory: $deps")
+    val stamps = deps.map(new FileTimeStamp(_))
+    copy(isabelle = Some(ctxt), dependencies=stamps:::dependencies, isabelleTheory=theoryPath)
   }
 
   def filesChanged : List[Path] = {
@@ -393,8 +490,10 @@ class State private (val environment: Environment,
 }
 
 object State {
-  val empty = new State(environment=Environment.empty,goal=Nil,_isabelle=None,
-    dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""))
+  def empty(cheating:Boolean) = new State(environment=Environment.empty, goal=Nil,
+    _isabelle=None, _isabelleTheory=null,
+    dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""),
+    cheatMode=CheatMode.make(cheating), includedFiles=Set.empty)
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
   val declare_quantum_variable: Operation[(String, ITyp, BigInt), BigInt] =
@@ -402,4 +501,6 @@ object State {
 
   val declare_classical_variable: Operation[(String, ITyp, BigInt), BigInt] =
     Operation.implicitly[(String,ITyp,BigInt), BigInt]("declare_classical_variable")
+
+  private val logger = log4s.getLogger
 }

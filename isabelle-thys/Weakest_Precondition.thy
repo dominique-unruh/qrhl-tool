@@ -4,34 +4,34 @@ begin
 
 lemma wp1_assign_tac:
   fixes A B x e
-  assumes "x1 = index_var True x"
+  assumes "x1 = index_vars True x"
   assumes "e1 = index_expression True e"
-  assumes "A = subst_expression [substitute1 x1 e1] B"
+  assumes "A = subst_expression (substitute_vars x1 e1) B"
   shows "qrhl A [assign x e] [] B"
   unfolding assms by (fact assign1_rule)
 
 lemma wp2_assign_tac:
   fixes A B x e
-  assumes "x1 = index_var False x"
+  assumes "x1 = index_vars False x"
   assumes "e1 = index_expression False e"
-  assumes "A = subst_expression [substitute1 x1 e1] B"
+  assumes "A = subst_expression (substitute_vars x1 e1) B"
   shows "qrhl A [] [assign x e] B"
   unfolding assms by (fact assign2_rule)
 
 lemma wp1_sample_tac:
   fixes A B x e
-  assumes "x1 = index_var True x"
+  assumes "x1 = index_vars True x"
   assumes "e1 = index_expression True e"
-  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
   shows "qrhl A [sample x e] [] B"
   unfolding assms by (fact sample1_rule)
 
 lemma wp2_sample_tac:
   fixes A B x e
-  assumes "x1 = index_var False x"
+  assumes "x1 = index_vars False x"
   assumes "e1 = index_expression False e"
-  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
   shows "qrhl A [] [sample x e] B"
   unfolding assms by (fact sample2_rule)
@@ -101,10 +101,10 @@ lemma wp2_block_tac:
 
 lemma wp1_measure_tac:
   fixes A B x Q e
-  assumes "x1 = index_var True x"
+  assumes "x1 = index_vars True x"
   assumes "Q1 = index_vars True Q"
   assumes "e\<^sub>1 = index_expression True e"
-  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q1) \<cdot> top"
   assumes "A = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
                          (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
@@ -113,10 +113,10 @@ lemma wp1_measure_tac:
 
 lemma wp2_measure_tac:
   fixes A B x Q e
-  assumes "x1 = index_var False x"
+  assumes "x1 = index_vars False x"
   assumes "Q1 = index_vars False Q"
   assumes "e\<^sub>1 = index_expression False e"
-  assumes "\<And>z. B' z = subst_expression [substitute1 x1 (const_expression z)] B"
+  assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q1) \<cdot> top"
   assumes "A = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
                          (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
@@ -134,6 +134,12 @@ lemma wp2_cons_tac:
     and "qrhl B' [] ps B"
   shows "qrhl A [] (p#ps) B"
   using assms seqREMOVE by fastforce
+
+lemma wp_split_left_right_tac:
+  assumes "qrhl B c [] C"
+    and "qrhl A [] d B"
+  shows "qrhl A c d C"
+  by (rule seqREMOVE[OF _ _ assms(2) assms(1)], simp_all)
 
 (* TODO move or remove *)
 ML \<open>

@@ -8,14 +8,10 @@ import qrhl.logic._
 
 import scala.collection.mutable
 
-object EqualTac {
-  def apply(): EqualTac = EqualTac(Nil)
-}
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 
-case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
+case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends WpBothStyleTac() {
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm, List[Subgoal]) = {
     val cvars = new mutable.LinkedHashSet[CVariable]()
     val qvars = new mutable.LinkedHashSet[QVariable]()
@@ -31,9 +27,9 @@ case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
     // Also adds all classical/quantum variables in l,r to cvars/qvars
     def collect(l: Statement, r: Statement) : Unit = (l,r) match {
       case (Assign(xl,el), Assign(xr,er)) if xl==xr && el==er =>
-        cvars += xl; collectExpr(el)
+        cvars ++= xl.iterator; collectExpr(el)
       case (Sample(xl,el), Sample(xr,er)) if xl==xr && el==er =>
-        cvars += xl; el.caVariables(env,cvars,dummy)
+        cvars ++= xl.iterator; el.caVariables(env,cvars,dummy)
       case (Block(ssl @ _*), Block(ssr @ _*)) if ssl.length==ssr.length =>
         for ((sl,sr) <- ssl.zip(ssr))
           collect(sl,sr)
@@ -49,17 +45,22 @@ case class EqualTac(exclude: List[String]) extends WpBothStyleTac() {
       case (IfThenElse(el,p1l,p2l), IfThenElse(er,p1r,p2r)) if el==er =>
         collectExpr(el); collect(p1l,p1r); collect(p2l,p2r)
       case (QInit(vs1,e1),QInit(vs2,e2)) if vs1==vs2 && e1==e2 =>
-        qvars ++= vs1; collectExpr(e1)
+        qvars ++= vs1.iterator; collectExpr(e1)
       case (Measurement(vl,vsl,el),Measurement(vr,vsr,er)) if vl==vr && vsl==vsr && el==er =>
-        cvars += vl; collectExpr(el); qvars ++= vsl
+        cvars ++= vl.iterator; collectExpr(el); qvars ++= vsl.iterator
       case (QApply(vsl,el), QApply(vsr,er)) if vsl==vsr && el==er =>
-        qvars ++= vsl; collectExpr(el)
+        qvars ++= vsl.iterator; collectExpr(el)
       case lr => mismatches.add(lr)
     }
 
     collect(left,right)
     // For left=C[l1,...,ln], right=C[r1,...,rn] for programs li, ri, mismatches contains all (li,ri) (in order but without duplicates)
     // And cvars/qvars contains all classical/quantum variables in left,right.
+
+    if (qvariables.nonEmpty) {
+      qvars.clear()
+      qvars ++= qvariables
+    }
 
     val cvarsIdx1 = cvars.toList.map(_.index1)
     val cvarsIdx2 = cvars.toList.map(_.index2)

@@ -20,7 +20,7 @@ object ChangeDirectoryCommand {
   def apply(dir:String) : ChangeDirectoryCommand = apply(Paths.get(dir))
 }
 
-case class IsabelleCommand(thy:Option[String]=None) extends Command {
+case class IsabelleCommand(thy:Seq[String]) extends Command {
   override def act(state: State): State = {
     println(s"Loading Isabelle.")
     val newState = state.loadIsabelle(thy)
@@ -71,7 +71,8 @@ case class GoalCommand(name: String, goal: Subgoal) extends Command {
 
 case class TacticCommand(tactic:Tactic) extends Command {
   override def act(state: State): State = {
-    println(s"Applying tactic $tactic.")
+    if (!state.cheatMode.cheating)
+      println(s"Applying tactic $tactic.")
     val state2 = state.applyTactic(tactic)
     state2
   }
@@ -114,3 +115,37 @@ object DebugCommand {
   def goals(action: (Isabelle.Context, List[Subgoal]) => Unit): DebugCommand =
     new DebugCommand({state:State => action(state.isabelle, state.goal); state})
 }
+
+case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=false) extends Command {
+  assert(! (file&&proof))
+  assert(! (file&&stop))
+  assert(! (proof&&stop))
+
+  override def act(state: State): State = {
+    val infile = {
+      if (file) true
+      else if (proof) false
+      else if (state.currentLemma.isDefined) false
+      else true
+    }
+    if (stop) {
+      state.stopCheating
+    } else if (infile) {
+      println("Cheating (till end of file)")
+      state.cheatInFile
+    } else {
+      println("Cheating (till end of proof)")
+      state.cheatInProof
+    }
+  }
+}
+
+case class IncludeCommand(file:Path) extends Command {
+  assert(file!=null)
+  println("Including file "+file)
+  override def act(state: State): State = state.include(file)
+}
+object IncludeCommand {
+  def apply(file:String) : IncludeCommand = apply(Paths.get(file))
+}
+

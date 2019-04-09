@@ -8,21 +8,21 @@ typedecl program
 typedecl oracle_program
 consts
   block :: "program list \<Rightarrow> program"
-  assign :: "'a::universe variable \<Rightarrow> 'a expression \<Rightarrow> program"
-  sample :: "'a variable \<Rightarrow> 'a distr expression \<Rightarrow> program"
+  assign :: "'a::universe variables \<Rightarrow> 'a expression \<Rightarrow> program"
+  sample :: "'a variables \<Rightarrow> 'a distr expression \<Rightarrow> program"
   ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program"
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program"
-  qinit :: "'a variables \<Rightarrow> 'a vector expression \<Rightarrow> program"
+  qinit :: "'a variables \<Rightarrow> 'a ell2 expression \<Rightarrow> program"
   qapply :: "'a variables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program"
-  measurement :: "'a variable \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
+  measurement :: "'a variables \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
   instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
 
 consts fv_program :: "program \<Rightarrow> string set"
 lemma fv_program_sequence: "fv_program (block b) = (\<Union>s\<in>set b. fv_program s)"
   by (cheat TODO7)
-lemma fv_program_assign: "fv_program (assign x e) = {variable_name x} \<union> fv_expression e"
+lemma fv_program_assign: "fv_program (assign x e) = set (variable_names x) \<union> fv_expression e"
   by (cheat TODO7)
-lemma fv_program_sample: "fv_program (sample x e2) = {variable_name x} \<union> fv_expression e2"
+lemma fv_program_sample: "fv_program (sample xs e2) = set (variable_names xs) \<union> fv_expression e2"
   by (cheat TODO7)
 lemma fv_program_ifthenelse: "fv_program (ifthenelse c p1 p2) =
   fv_expression c \<union> (\<Union>s\<in>set p1. fv_program s) \<union> (\<Union>s\<in>set p2. fv_program s)"
@@ -33,7 +33,7 @@ lemma fv_program_qinit: "fv_program (qinit Q e3) = set (variable_names Q) \<unio
   by (cheat TODO7)
 lemma fv_program_qapply: "fv_program (qapply Q e4) = set (variable_names Q) \<union> fv_expression e4"
   by (cheat TODO7)
-lemma fv_program_measurement: "fv_program (measurement x R e5) = {variable_name x} \<union> set (variable_names R) \<union> fv_expression e5"
+lemma fv_program_measurement: "fv_program (measurement x R e5) = set (variable_names x) \<union> set (variable_names R) \<union> fv_expression e5"
   by (cheat TODO7)
 
 typedecl program_state

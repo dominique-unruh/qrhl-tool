@@ -1,6 +1,14 @@
 theory Expressions
-  imports Prog_Variables Misc_Missing Extended_Sorry Multi_Transfer
+  imports Prog_Variables Misc_Missing Bounded_Operators.Extended_Sorry Multi_Transfer
 begin
+
+(* TODO: are expressions actually necessary?
+
+   Why can't we just use terms of the form (\<lambda>m. ... (eval_variable x m))?
+
+   (We won't have the guarantee that the set of variables used by an expression
+   is finite, or even well-defined, but do we ever use those facts?)
+*)
 
 typedef 'a expression = "{(vs,f::_\<Rightarrow>'a). finite vs \<and> (\<forall>m1 m2. (\<forall>v\<in>vs. Rep_mem2 m1 v = Rep_mem2 m2 v) \<longrightarrow> f m1 = f m2)}"
   apply (rule exI[of _ "({},(\<lambda>x. undefined))"]) by auto
@@ -205,6 +213,22 @@ lemma map_expression3'[simp]:
   "map_expression3' f (expression Q1 e1) (expression Q2 e2) (\<lambda>z. expression Q3 (e3 z))
      = expression (variable_concat Q1 (variable_concat Q2 Q3)) (\<lambda>(x1,x2,x3). f (e1 x1) (e2 x2) (\<lambda>z. e3 z x3))"
   unfolding map_expression3'_def pair_expression map_expression'
+  apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
+
+definition map_expression4' ::
+ "('e1 \<Rightarrow> 'e2 \<Rightarrow> 'e3 \<Rightarrow> ('z \<Rightarrow> 'e4) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('e2 expression) \<Rightarrow> ('e3 expression) \<Rightarrow> ('z \<Rightarrow> 'e4 expression) \<Rightarrow> 'f expression" where
+  "map_expression4' f e1 e2 e3 e4 = map_expression'
+           (\<lambda>x1234. let x1 = fst (x1234 undefined) in
+              let x2 = fst (snd (x1234 undefined)) in
+              let x3 = fst (snd (snd (x1234 undefined))) in
+              let x4 = \<lambda>z. snd (snd (snd (x1234 z))) in
+              f x1 x2 x3 x4)
+         (\<lambda>z. (pair_expression e1 (pair_expression e2 (pair_expression e3 (e4 z)))))"
+
+lemma map_expression4'[simp]:
+  "map_expression4' f (expression Q1 e1) (expression Q2 e2) (expression Q3 e3) (\<lambda>z. expression Q4 (e4 z))
+     = expression (variable_concat Q1 (variable_concat Q2 (variable_concat Q3 Q4))) (\<lambda>(x1,x2,x3,x4). f (e1 x1) (e2 x2) (e3 x3) (\<lambda>z. e4 z x4))"
+  unfolding map_expression4'_def pair_expression map_expression'
   apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
 lemma range_cases[case_names 1]: "x : range f \<Longrightarrow> (\<And>y. P (f y)) \<Longrightarrow> P x"
@@ -595,6 +619,16 @@ proof (rule rel_funI, rule rel_funI, rename_tac s1 s2 m1 m2)
     apply transfer unfolding rel_fun_def rel_set_def apply auto
     by (metis UNIV_I image_subset_iff inv_into_injective)
 qed
+
+(* TODO define *)
+
+(* Note: substitute_vars adds variables from varterm right-to-left to the substition1 list.
+   This means, right variables have priority in case of name clashes *)
+axiomatization substitute_vars :: "'a variables \<Rightarrow> 'a expression \<Rightarrow> substitution1 list"
+axiomatization where substitute_vars_unit: "substitute_vars variable_unit e = []"
+axiomatization where substitute_vars_concat: "substitute_vars (variable_concat v1 v2) e
+   = (substitute_vars v2 (map_expression snd e)) @ (substitute_vars v1 (map_expression fst e))" for e :: "('a::universe*'b::universe) expression"
+axiomatization where substitute_vars_singleton: "substitute_vars (variable_singleton v) e = [substitute1 v e]" for e :: "('a::universe) expression"
 
 
 lift_definition subst_mem2 :: "substitution1 list \<Rightarrow> mem2 \<Rightarrow> mem2" is
@@ -1372,7 +1406,30 @@ lemma expression_id_comp_aux: \<comment> \<open>Helper for ML function clean_exp
   apply (rule eq_reflection)
   using assms[THEN meta_eq_to_obj_eq] apply transfer
   by (auto simp add: o_def)
-  
+
+lemma subst_expression_convert_substitute_vars_tac: \<comment> \<open>Helper for ML function subst_expression_tac\<close>
+  assumes "\<sigma> = substitute_vars xs e"
+  assumes "g = subst_expression \<sigma> f"
+  shows "g = subst_expression (substitute_vars xs e) f"
+  using assms by simp
+
+lemma substitute_vars_unit_tac: \<comment> \<open>Helper for ML function substitute_vars_tac\<close>
+  shows "[] = substitute_vars \<lbrakk>\<rbrakk> e"
+  by (simp add: substitute_vars_unit)
+
+lemma substitute_vars_singleton_tac: \<comment> \<open>Helper for ML function substitute_vars_tac\<close>
+  shows "[substitute1 x e] = substitute_vars \<lbrakk>x\<rbrakk> e"
+  by (simp add: substitute_vars_singleton)
+
+lemma substitute_vars_concat_tac: \<comment> \<open>Helper for ML function substitute_vars_tac\<close>
+  assumes "e1 = map_expression fst e"
+  assumes "e2 = map_expression snd e"
+  assumes "lQ = substitute_vars Q e1"
+  assumes "lR = substitute_vars R e2"
+  assumes "lQR = lR @ lQ"
+  shows "lQR = substitute_vars (variable_concat Q R) e"
+  apply (subst substitute_vars_concat) unfolding assms by simp
+
 section "Orderings on expressions"
 
 instantiation expression :: (ord) ord begin
@@ -1395,5 +1452,11 @@ simproc_setup clean_expression ("expression Q e") = Expressions.clean_expression
 consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
 parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Expressions.term_to_expression_untyped ctx e)]\<close>
 hide_const expression_syntax
+
+(* TODO remove *)
+schematic_goal "?x = substitute_vars \<lbrakk>var_z,var_x\<rbrakk> Expr[x]" and "?x = xxx"
+apply (tactic \<open>Expressions.substitute_vars_tac \<^context> 1\<close>)
+print_theorems
+  oops
 
 end

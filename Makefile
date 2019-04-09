@@ -9,6 +9,7 @@ doc/manual.pdf :
 	make -C doc manual.pdf
 
 target/universal/qrhl-$(VERSION).zip : build.sbt $(SOURCES)
+	sbt managedResources # Makes sure that the next sbt command sees all files in isabelle-afp
 	sbt universal:packageBin
 
 test-distrib0 : qrhl.zip
@@ -28,5 +29,10 @@ test-distrib : test-distrib0
 test :
 	sbt test
 
-owncloud : test qrhl.zip
+owncloud : qrhl.zip
 	cp -v qrhl.zip /home/unruh/ownCloud/qrhl/
+
+push_docker:
+	docker login registry.gitlab.com
+	docker build -t registry.gitlab.com/unruh/qrhl-tool/build-image src/docker
+	docker push registry.gitlab.com/unruh/qrhl-tool/build-image

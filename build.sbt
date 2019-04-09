@@ -1,3 +1,4 @@
+import java.io.PrintWriter
 import java.nio.file.Files
 
 import NativePackagerHelper._
@@ -113,7 +114,14 @@ downloadPG := {
 
 lazy val makeGITREVISION = taskKey[Unit]("Create GITREVISION")
 makeGITREVISION := {
-  Process(List("bash","-c","( git describe --tags --long --always --dirty --broken && git describe --always --all ) > target/GITREVISION")).!!
+  (baseDirectory.value / "target").mkdir()
+  if ((baseDirectory.value / ".git").exists())
+    Process(List("bash","-c","( git describe --tags --long --always --dirty --broken && git describe --always --all ) > target/GITREVISION")).!!
+  else {
+    val pr = new PrintWriter(baseDirectory.value / "target" / "GITREVISION")
+    pr.println("Not built from a GIT worktree.")
+    pr.close()
+  }
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
@@ -140,7 +148,9 @@ mappings in Universal ++= {
   val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl")
   val excluded = List("isabelle-thys/Test.thy", "examples/TestEx.thy", "examples/test.qrhl", "isabelle-thys/Scratch.thy")
   val files2 = files.filter { f => ! excluded.exists(e => f.getPath.endsWith(e)) }
-  files2 pair relativeTo(base)
+  val excludedPat = List(".*examples/test.*\\.qrhl")
+  val files3 = files2.filter { f => ! excludedPat.exists(e => f.getPath.matches(e)) }
+  files3 pair relativeTo(base)
 }
 
 mappings in Universal ++= {

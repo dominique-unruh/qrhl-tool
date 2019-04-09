@@ -128,24 +128,37 @@ fun richterm_codec' ctxt = Codec.basic { encode=richterm_encode ctxt, decode=ric
 
 (* Statement codec *)
 
-local open Programs open Codec in
+local open Programs open Codec open Prog_Variables in
 fun call_encode (CALL (name,args)) = XML.Elem(("call",[("name",name)]), map call_encode args)
 
 fun call_decode (XML.Elem(("call",[("name",name)]), args)) =
   map_result (fn a => CALL (name,a)) (traverse_results call_decode args)
   | call_decode xml = Codec.Failure ("invalid encoding for a call specification",[xml])
 
+fun string_tree_encode VTUnit = XML.Elem(("u",[]),[])
+  | string_tree_encode (VTCons(a,b)) = XML.Elem(("c",[]),[string_tree_encode a,string_tree_encode b])
+  | string_tree_encode (VTSingle s) = XML.Elem(("s",[]),[XML.Text s])
+
+fun string_tree_decode (XML.Elem(("u",[]),[])) : string tree result = Codec.Success VTUnit
+  | string_tree_decode (XML.Elem(("c",[]),[a,b])) =
+      bind_result (fn a' => map_result (fn b' => VTCons(a',b'))
+        (string_tree_decode b)) (string_tree_decode a)
+  | string_tree_decode (XML.Elem(("s",[]),[XML.Text s])) = Codec.Success (VTSingle s)
+  | string_tree_decode xml = Codec.Failure ("invalid encoding for a string tree",[xml])
+
+(* fun string_list_encode l = XML.Elem(("l",[]),map (Codec.encode Codec.string) l) *)
+(* fun string_list_decode (XML.Elem(("l",[]), l)) = traverse_results (Codec.decode Codec.string) l *)
 
 fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode ctxt (s)) stmts)
-  | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[("lhs",var)]), [richterm_encode ctxt rhs])
-  | statement_encode ctxt (Sample (var, rhs)) = XML.Elem(("sample",[("lhs",var)]), [richterm_encode ctxt rhs])
+  | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[]), [string_tree_encode var, richterm_encode ctxt rhs])
+  | statement_encode ctxt (Sample (var, rhs)) = XML.Elem(("sample",[]), [string_tree_encode var, richterm_encode ctxt rhs])
   | statement_encode _ (Call c) = call_encode c
-  | statement_encode ctxt (Measurement (var,loc,exp)) = XML.Elem(("measurement",[("lhs",var)]), 
-        richterm_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+  | statement_encode ctxt (Measurement (var,loc,exp)) = XML.Elem(("measurement",[]), 
+        [string_tree_encode var, string_tree_encode loc, richterm_encode ctxt exp])
   | statement_encode ctxt (QInit (loc,exp)) = XML.Elem(("qinit",[]), 
-        richterm_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+        [string_tree_encode loc, richterm_encode ctxt (exp)])
   | statement_encode ctxt (QApply (loc,exp)) = XML.Elem(("qapply",[]), 
-        richterm_encode ctxt (exp) :: map (Codec.encode Codec.string) loc)
+        [string_tree_encode loc, richterm_encode ctxt (exp)])
   | statement_encode ctxt (IfThenElse (e,p1,p2)) = XML.Elem(("ifte",[]),
         [richterm_encode ctxt (e), statement_encode ctxt ( Block p1), statement_encode ctxt ( Block p2)])
   | statement_encode ctxt (While (e,p1)) = XML.Elem(("while",[]),
@@ -153,23 +166,22 @@ fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => st
 
 fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
       block_decode xml |> map_result Block
-  | statement_decode (XML.Elem(("assign",[("lhs",var)]), [e])) = 
-      Codec.map_result (fn e => Assign (var, e)) (richterm_decode e)
-  | statement_decode (XML.Elem(("sample",[("lhs",var)]), [e])) = 
-      Codec.map_result (fn e => Sample (var, e)) (richterm_decode e)
+  | statement_decode (XML.Elem(("assign",[]), [lhs,e])) = 
+      bind_result (fn lhs' => map_result (fn e' => Assign (lhs',e'))
+        (richterm_decode e)) (string_tree_decode lhs)
+  | statement_decode (XML.Elem(("sample",[]), [lhs,e])) = 
+      bind_result (fn lhs' => map_result (fn e' => Sample (lhs',e'))
+        (richterm_decode e)) (string_tree_decode lhs)
   | statement_decode (xml as XML.Elem(("call",_),_)) = Codec.map_result Call (call_decode xml)
-  | statement_decode (XML.Elem(("measurement",[("lhs",var)]), exp :: loc)) =
-      bind_result (fn exp => map_result (fn loc => Measurement (var,loc,exp))
-          (traverse_results (Codec.decode Codec.string) loc))
-         (richterm_decode exp)
-  | statement_decode (XML.Elem(("qinit",[]), exp :: loc)) =
-      bind_result (fn exp => map_result (fn loc => QInit (loc,exp))
-          (traverse_results (Codec.decode Codec.string) loc))
-         (richterm_decode exp)
-  | statement_decode (XML.Elem(("qapply",[]), exp :: loc)) =
-      bind_result (fn exp => map_result (fn loc => QApply (loc,exp))
-          (traverse_results (Codec.decode Codec.string) loc))
-         (richterm_decode exp)
+  | statement_decode (XML.Elem(("measurement",[]), [lhs,loc,exp])) =
+      bind_result (fn lhs' => bind_result (fn loc' => map_result (fn exp' => Measurement(lhs',loc',exp'))
+        (richterm_decode exp)) (string_tree_decode loc)) (string_tree_decode lhs)
+  | statement_decode (XML.Elem(("qinit",[]), [loc,exp])) =
+      bind_result (fn loc' => map_result (fn e' => QInit (loc',e'))
+        (richterm_decode exp)) (string_tree_decode loc)
+  | statement_decode (XML.Elem(("qapply",[]), [loc,exp])) =
+      bind_result (fn loc' => map_result (fn e' => QApply (loc',e'))
+        (richterm_decode exp)) (string_tree_decode loc)
   | statement_decode (XML.Elem(("ifte",[]), [e, p1, p2])) =
       bind_result (fn e => bind_result (fn p1 => map_result (fn p2 => IfThenElse (e,p1,p2))
          (block_decode p2)) (block_decode p1)) (richterm_decode e)
@@ -253,5 +265,21 @@ fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
   val subgoals' = map HOLogic.dest_Trueprop subgoals
   in SOME (subgoals' |> map (term_to_subgoal ctxt),goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec)) end
 end
+
+fun local_thy_file thy = let val name = Context.theory_long_name thy in
+  if String.isPrefix "Draft." name then
+  let val short = Context.theory_name thy
+      val dir = Thy_Info.master_directory name
+  in SOME (Path.append dir (Path.basic (short^".thy")) |> Path.implode) end
+  else NONE 
+end
+  
+fun create_context thy_names = let
+     val thys = map Thy_Info.get_theory thy_names
+     val thy = Theory.begin_theory ("QRHL_Session", Position.none) thys
+     val files = thy |> Theory.ancestors_of 
+                     |> map_filter local_thy_file 
+     val ctxt = Proof_Context.init_global thy
+in (make_ctxt_ref ctxt,files) end
 
 end

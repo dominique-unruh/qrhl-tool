@@ -1,6 +1,6 @@
 theory QRHL_Operations
-  imports "HOL-Protocol.Protocol_Main" QRHL_Core Tactics Hashed_Terms Joint_Measure Extended_Sorry
-    Weakest_Precondition
+  imports "HOL-Protocol.Protocol_Main" QRHL_Core Tactics Hashed_Terms Joint_Measure Bounded_Operators.Extended_Sorry
+    Weakest_Precondition Joint_Sample Squash_Sampling
 begin
 
 ML_file "qrhl_operations.ML"
@@ -16,12 +16,8 @@ ML \<open>open QRHL_Operations\<close>
 
 operation_setup create_context = {*
   {from_lib = Codec.list Codec.string,
-   to_lib = Codec.int,
-   action = fn thy_names => let
-     val thys = map Thy_Info.get_theory thy_names
-     val thy = Theory.begin_theory ("QRHL_Session", Position.none) thys
-     val ctx = Proof_Context.init_global thy
-   in make_ctxt_ref ctx end}
+   to_lib = Codec.tuple Codec.int (Codec.list Codec.string),
+   action = create_context}
 *}
 
 operation_setup check_type = {*
@@ -129,6 +125,7 @@ operation_setup fixTac = {*
           QRHL.fixTac expr var |> Codec.encode (Codec.tuple (richterm_codec' ctxt) typ_tight_codec) end}
 *}
 
+(* TODO remove (incl QRHL.rndWp). Same for rndWp2 *)
 operation_setup rndWp = {*
   {from_lib = Codec.triple Codec.int (Codec.triple Codec.string term_tight_codec Codec.string) (Codec.triple term_tight_codec typ_tight_codec term_tight_codec),
    to_lib = Codec.id,
@@ -214,13 +211,19 @@ operation_setup seq_tac = {*
 *}
 
 operation_setup wp_tac = {*
-  {from_lib = Codec.triple Codec.bool subgoal_codec context_codec,
+  {from_lib = Codec.triple (Codec.tuple Codec.int Codec.int) subgoal_codec context_codec,
    to_lib = Codec.id,
-   action = apply_tactic_on_term_concl (fn ctxt => fn left => Weakest_Precondition.wp_seq_tac left ctxt 1)}
+   action = apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Weakest_Precondition.wp_seq_tac left right ctxt 1)}
 (* fn (left,goal,ctx_id) => let
      val ctxt = Refs.Ctxt.read ctx_id
      val result = Weakest_Precondition.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm
     in result |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int)) end} *)
+*}
+
+operation_setup squash_tac = {*
+  {from_lib = Codec.triple Codec.bool subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term_concl (fn ctxt => fn left => Squash_Sampling.squash_sampling_tac left ctxt 1)}
 *}
 
 
@@ -229,6 +232,20 @@ operation_setup joint_measure_simple_tac = {*
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Measure.joint_measure_simple_seq_tac ctxt 1)}
+*}
+
+operation_setup joint_sample_equal_tac = {*
+  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Sample.joint_sample_equal_seq_tac ctxt 1)}
+*}
+
+operation_setup joint_sample_tac = {*
+  {from_lib = Codec.triple term_tight_codec subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term_concl (fn ctxt => fn witness => 
+      let val witness_expr = witness |> Expressions.term_to_expression ctxt |> Thm.cterm_of ctxt in
+      Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)}
 *}
 
 (* (* TODO remove *)

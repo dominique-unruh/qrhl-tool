@@ -193,6 +193,16 @@ The source code is published on GitHub \cite{github-source}.
 For installation instructions see the included \texttt{README.md}.
 
 
+\TODOQ{Document commands: include, cheat}
+
+\TODOQ{Document: isabelle command can be repeated if same theory is included,
+  isabelle command can have more than one theory as argument}
+
+\TODOQ{Document: tactic squash}
+
+\TODOQ{Document: equal-tactic arguments exclude, qvars}
+
+
 \subsection{Architecture}
 
 The tool consists of three main components: a ProofGeneral
@@ -1901,7 +1911,7 @@ The tactic implements the following rule:
 \text{with}\quad e_1 := \idx1e,\ e'_2 := \idx2e'.
 \end{multline*}
 Here $\yy^{(1)},\dots,\yy^{(n)}$
-are the free classical variables of $P,P'$.
+are the free classical variables of $P,P'$.\TODOQ{Should also include fv's of $e,e'$?}
 And $\qq^{(1)},\dots,\qq^{(m)}$
 are the free quantum variables of $P,P'$.
 (Including those of any programs included recursively within $P,P'$
@@ -2557,7 +2567,7 @@ When invoked as ``\texttt{swap left}'' or ``\texttt{swap right}'', then $n=1$ is
 
 \tactic{wp} 
 
-Removes the last statement from the left or right program of a qRHL
+Removes the last statement(s) from the left or right program of a qRHL
 subgoal and adapts the postcondition accordingly.
 
 \newcommand\WP{\operatorname{wp}}%
@@ -2666,6 +2676,14 @@ the precondition returned by $\WP_1$
 or $\WP_2$ is indeed the \emph{weakest} precondition.
 (We have merely tried to make them as weak as possible.)
 
+\medskip
+
+\texttt{wp left} and \texttt{wp right} apply only to the very last statement.
+The following variants can be used to handle several statements in one go:
+\texttt{wp left $n$} with $n\geq0$ is equivalent to $n$
+invocations of \texttt{wp left}.
+Analogously \texttt{wp right $n$}.
+And \texttt{wp $n$ $m$} is equivalent to \texttt{wp left $n$. wp right $n$.}
 
 \subsection{Accompanying Isabelle theories}
 \label{sec:isabelle}

@@ -1,0 +1,3 @@
+vector -> ell2
+timesScalarVec -> scaleC
+cdot -> scaleC for scalar*vector
