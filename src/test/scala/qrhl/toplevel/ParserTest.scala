@@ -4,7 +4,7 @@ import info.hupel.isabelle.ProverResult
 import info.hupel.isabelle.hol.HOLogic
 import org.scalatest.FunSuite
 import qrhl.UserException
-import qrhl.logic.{Call, VTCons, VTSingle}
+import qrhl.logic.{Block, Call, VTCons, VTSingle}
 
 class ParserTest extends FunSuite {
   implicit lazy val parserContext: ParserContext = {
@@ -115,8 +115,13 @@ class ParserTest extends FunSuite {
         |program test(a,b,c) := { call a; call b; call A1(c); }
       """.stripMargin)
 
-    println(progDecl)
-    assert(false) // TODO: assertions
+    assert(progDecl.successful)
+    val progDecl2 = progDecl.get
+
+    println(progDecl2)
+    assert(progDecl2.name == "test")
+    assert(progDecl2.oracles == List("a","b","c"))
+    assert(progDecl2.program == Block(Call("a"),Call("b"),Call("A1",Call("c"))))
   }
 
 }

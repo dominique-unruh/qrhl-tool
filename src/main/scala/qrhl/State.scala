@@ -363,15 +363,16 @@ class State private (val environment: Environment,
     if (this.environment.variableExists(name))
       throw UserException(s"Name $name already used for a variable or program.")
 
-    // TODO: Should be oracle_programT if there are oracles
-    val isa = _isabelle.get.declareVariable(name, Isabelle.programT)
+    val isa = _isabelle.get.declareVariable(name,
+      if (oracles.isEmpty) Isabelle.programT else Isabelle.oracle_programT)
 
-    copy(environment = environment.declareProgram(name, oracles, program))
+    copy(environment = environment.declareProgram(name, oracles, program), isabelle=Some(isa))
   }
 
   def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], numOracles : Int): State = {
-    // TODO: declare variable as in declareProgram
-    copy(environment = environment.declareAdversary(name, cvars, qvars, numOracles))
+    val isa = _isabelle.get.declareVariable(name,
+      if (numOracles==0) Isabelle.programT else Isabelle.oracle_programT)
+    copy(environment = environment.declareAdversary(name, cvars, qvars, numOracles), isabelle=Some(isa))
   }
 
 
