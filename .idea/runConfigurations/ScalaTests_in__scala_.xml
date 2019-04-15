@@ -18,6 +18,8 @@
     <buffered bufClass="qrhl.QRHLSubgoalTest" />
     <buffered bufClass="qrhl.isabelle.IsabelleTest" />
     <buffered bufClass="qrhl.isabelle.IsabelleTest" />
+    <buffered bufClass="qrhl.logic.BlockTest" />
+    <buffered bufClass="qrhl.logic.BlockTest" />
     <buffered bufClass="qrhl.logic.VariableTest" />
     <buffered bufClass="qrhl.logic.VariableTest" />
     <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
@@ -36,6 +38,8 @@
     <buffered bufClass="qrhl.tactic.SeqTacTest" />
     <buffered bufClass="qrhl.tactic.WpTacTest" />
     <buffered bufClass="qrhl.tactic.WpTacTest" />
+    <buffered bufClass="qrhl.toplevel.DeclareProgramCommandTest" />
+    <buffered bufClass="qrhl.toplevel.DeclareProgramCommandTest" />
     <buffered bufClass="qrhl.toplevel.ParserTest" />
     <buffered bufClass="qrhl.toplevel.ParserTest" />
     <buffered bufClass="qrhl.toplevel.ToplevelTest" />

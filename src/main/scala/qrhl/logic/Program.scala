@@ -94,6 +94,8 @@ case class VTCons[+A](a:VarTerm[A], b:VarTerm[A]) extends VarTerm[A] {
 
 // Programs
 sealed trait Statement {
+  def substituteOracles(subst: Map[String, Call]) : Statement
+
   def simplify(isabelle: Isabelle.Context, facts: List[String], thms:ListBuffer[Thm]): Statement
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
@@ -194,7 +196,13 @@ sealed trait Statement {
     vars.result
   }
 
-  def inline(name: String, program: Statement): Statement
+  def inline(name: String, oracles: List[String], program: Statement): Statement
+
+  def unwrapBlock : Seq[Statement] = this  match {
+    case Block(st @_*) => st
+    case _ => List(this)
+  }
+
 }
 
 object Statement {
@@ -397,24 +405,26 @@ class Block(val statements:List[Statement]) extends Statement {
   def inline(environment: Environment, name: String): Block = {
     environment.programs(name) match {
       case decl : ConcreteProgramDecl =>
-        inline(name: String, decl.program)
+        inline(name: String, decl.oracles, decl.program)
       case _ : AbstractProgramDecl =>
         throw UserException(s"Cannot inline '$name'. It is an abstract program (declared with 'adversary').")
     }
 //    inline(name: String, environment.programs(name).asInstanceOf[ConcreteProgramDecl].program)
   }
 
-  override def inline(name:String, program:Statement): Block = {
-    val programStatements = program match {
-      case Block(st @_*) => st
-      case _ => List(program)
-    }
+  override def inline(name:String, oracles:List[String], program:Statement): Block = {
+//    val programStatements = program match {
+//      case Block(st @_*) => st
+//      case _ => List(program)
+//    }
     val newStatements = for (s <- statements;
                              s2 <- s match {
                                case Call(name2, args @ _*) if name==name2 =>
-                                 assert(args.isEmpty, s"Cannot inline $s, oracles not supported.")
-                                 programStatements
-                               case _ => List(s.inline(name,program))
+                                 assert(args.length==oracles.length)
+                                 val subst = Map(oracles.zip(args) : _*)
+//                                 assert(args.isEmpty, s"""Cannot inline "$s", oracles not supported.""")
+                                 program.substituteOracles(subst).unwrapBlock
+                               case _ => List(s.inline(name,oracles,program))
                              }) yield s2
     Block(newStatements : _*)
   }
@@ -423,6 +433,8 @@ class Block(val statements:List[Statement]) extends Statement {
     for (s <- statements) s.checkWelltyped(context)
 
   override def markOracles(oracles: List[String]): Block = new Block(statements.map(_.markOracles(oracles)))
+
+  override def substituteOracles(subst: Map[String, Call]): Block = Block(statements.map(_.substituteOracles(subst)):_*)
 }
 
 object Block {
@@ -434,7 +446,7 @@ object Block {
 
 final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
   override def toString: String = s"""${Variable.vartermToString(variable)} <- $expression;"""
-  override def inline(name: String, statement: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
     expression.checkWelltyped(context, Isabelle.tupleT(variable.map[Typ](_.valueTyp)))
@@ -448,10 +460,12 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
     * Fails if [this] already contains program names of the form @...
     */
   override def markOracles(oracles: List[String]): Assign = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
   override def toString: String = s"""${Variable.vartermToString(variable)} <$$ $expression;"""
-  override def inline(name: String, statement: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
     expression.checkWelltyped(context, Isabelle.distrT(Isabelle.tupleT(variable.map[Typ](_.valueTyp))))
@@ -465,10 +479,12 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
     * Fails if [this] already contains program names of the form @...
     */
   override def markOracles(oracles: List[String]): Sample = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
-  override def inline(name: String, program: Statement): Statement =
-    IfThenElse(condition,thenBranch.inline(name,program),elseBranch.inline(name,program))
+  override def inline(name: String, oracles: List[String], program: Statement): Statement =
+    IfThenElse(condition,thenBranch.inline(name,oracles,program),elseBranch.inline(name,oracles,program))
   override def toString: String = s"if ($condition) $thenBranch else $elseBranch;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -487,11 +503,14 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
     * Fails if [this] already contains program names of the form @...
     */
   override def markOracles(oracles: List[String]): IfThenElse = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = IfThenElse(condition,thenBranch.substituteOracles(subst),elseBranch.substituteOracles(subst))
+
 }
 
 final case class While(condition:RichTerm, body: Block) extends Statement {
-  override def inline(name: String, program: Statement): Statement =
-    While(condition,body.inline(name,program))
+  override def inline(name: String, oracles: List[String], program: Statement): Statement =
+    While(condition,body.inline(name,oracles,program))
   override def toString: String = s"while ($condition) $body"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -508,10 +527,12 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
     * Fails if [this] already contains program names of the form @...
     */
   override def markOracles(oracles: List[String]): While = new While(condition, body.markOracles(oracles))
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = While(condition,body.substituteOracles(subst))
 }
 
 final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
-  override def inline(name: String, program: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"${Variable.vartermToString(location)} <q $expression;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -527,9 +548,11 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
     * Fails if [this] already contains program names of the form @...
     */
   override def markOracles(oracles: List[String]): QInit = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
-  override def inline(name: String, program: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"on ${Variable.vartermToString(location)} apply $expression;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -546,9 +569,11 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
     * Fails if [this] already contains program names of the form @...
     */
   override def markOracles(oracles: List[String]): QApply = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariable], e:RichTerm) extends Statement {
-  override def inline(name: String, program: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"${Variable.vartermToString(result)} <- measure ${Variable.vartermToString(location)} in $e;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -567,12 +592,14 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
     * Fails if [this] already contains program names of the form @...
     */
   override def markOracles(oracles: List[String]): Measurement = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class Call(name:String, args:Call*) extends Statement {
   override def toString: String = "call "+toStringShort+";"
   def toStringShort: String =
     if (args.isEmpty) name else s"$name(${args.map(_.toStringShort).mkString(",")})"
-  override def inline(name: String, program: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], program: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {}
 //  override def programTermOLD(context: Isabelle.Context): Term = {
@@ -593,5 +620,18 @@ final case class Call(name:String, args:Call*) extends Statement {
       throw UserException(s"Program code contains program name $name (invalid, @ is for internal names)")
     val name2 = if (oracles.contains(name)) "@"+name else name
     Call(name2, args.map(_.markOracles(oracles)):_*)
+  }
+
+  override def substituteOracles(subst: Map[String, Call]): Call = {
+    val args2 = args.map(_.substituteOracles(subst))
+
+    val name2 = if (name.head=='@') {
+      val repl = subst(name.substring(1))
+      assert(repl.args.isEmpty)
+      repl.name
+    } else
+      name
+
+    Call(name2,args2:_*)
   }
 }
