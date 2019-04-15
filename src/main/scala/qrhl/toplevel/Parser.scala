@@ -233,9 +233,15 @@ object Parser extends JavaTokenParsers {
 //    }
 
   def declareProgram(implicit context:ParserContext) : Parser[DeclareProgramCommand] =
-    literal("program") ~> OnceParser(identifier ~ literal(":=") ~ parenBlock) ^^ { case id~_~prog =>
-      DeclareProgramCommand(id,prog)
-    }
+    literal("program") ~> OnceParser(for (
+      name <- identifier;
+      args <- identifierTuple.?;
+      args2 = args.getOrElse(Nil);
+      _ <- literal(":=");
+      // temporarily add oracles to environment to allow them to occur in call-expressions during parsing
+      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(p,Nil,Block())) };
+      body <- parenBlock(context2))
+      yield DeclareProgramCommand(name,args2,body))
 
   private def declareAdversaryCalls: Parser[Int] = (literal("calls") ~ rep1sep(literal("?"),identifierListSep)).? ^^ {
     case None => 0

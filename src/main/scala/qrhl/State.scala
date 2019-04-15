@@ -24,6 +24,8 @@ import Isabelle.Context.codec
 import Subgoal.codec
 import qrhl.State.logger
 
+import scala.collection.mutable
+
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): Subgoal
 
@@ -340,7 +342,19 @@ class State private (val environment: Environment,
     copy(isabelle=isa, currentLemma=None, cheatMode=cheatMode.endProof)
   }
 
-  def declareProgram(name: String, program: Block): State = {
+  private def containsDuplicates[A](seq: Seq[A]): Boolean = {
+    val seen = new mutable.HashSet[A]()
+    for (e <- seq) {
+      if (seen.contains(e)) return true
+      seen += e
+    }
+    false
+  }
+
+  def declareProgram(name: String, oracles: List[String], program: Block): State = {
+    if (containsDuplicates(oracles))
+      throw UserException("Oracles "+oracles.mkString(",")+" must not contain duplicates")
+
     for (x <- program.variablesDirect)
       if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in program")
@@ -348,12 +362,15 @@ class State private (val environment: Environment,
     if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
     if (this.environment.variableExists(name))
       throw UserException(s"Name $name already used for a variable or program.")
+
+    // TODO: Should be oracle_programT if there are oracles
     val isa = _isabelle.get.declareVariable(name, Isabelle.programT)
 
-    copy(environment = environment.declareProgram(name, program))
+    copy(environment = environment.declareProgram(name, oracles, program))
   }
 
   def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], numOracles : Int): State = {
+    // TODO: declare variable as in declareProgram
     copy(environment = environment.declareAdversary(name, cvars, qvars, numOracles))
   }
 

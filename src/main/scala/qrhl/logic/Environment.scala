@@ -86,11 +86,11 @@ final class Environment private
     copy(ambientVariables=ambientVariables.updated(name, typ))
   }
 
-  def declareProgram(name: String, program: Block): Environment = {
+  def declareProgram(name: String, oracles:List[String], program: Block): Environment = {
     if (programs.contains(name))
       throw UserException(s"A program with name $name was already declared.")
     assert(!variableExists(name))
-    copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,program)))
+    copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,oracles,program)))
   }
 
   def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], numOracles: Int): Environment = {
@@ -151,8 +151,8 @@ final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:L
   }*/
 }
 
-final case class ConcreteProgramDecl(environment: Environment, name:String, program:Block) extends ProgramDecl {
-  override val numOracles: Int = 0
+final case class ConcreteProgramDecl(environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {
+  override val numOracles: Int = oracles.length
   lazy val ambientVars: List[String] = {
     val vars = new mutable.LinkedHashSet[String]
     def scan(st:Statement) : Unit = st match {

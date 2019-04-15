@@ -43,10 +43,10 @@ case class DeclareVariableCommand(name: String, typ: pure.Typ, ambient:Boolean=f
   }
 }
 
-case class DeclareProgramCommand(name: String, program : Block) extends Command {
+case class DeclareProgramCommand(name: String, oracles: List[String], program : Block) extends Command {
   override def act(state: State): State = {
     println(s"Declaring program $name. ")
-    state.declareProgram(name,program)
+    state.declareProgram(name,oracles,program.markOracles(oracles))
   }
 }
 

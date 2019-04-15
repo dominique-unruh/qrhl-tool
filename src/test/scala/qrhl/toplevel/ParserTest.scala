@@ -108,4 +108,15 @@ class ParserTest extends FunSuite {
       print(call)
     }
   }
+
+  test("program with oracles") {
+    val progDecl = Parser.parseAll(Parser.declareProgram,
+      """
+        |program test(a,b,c) := { call a; call b; call A1(c); }
+      """.stripMargin)
+
+    println(progDecl)
+    assert(false) // TODO: assertions
+  }
+
 }
