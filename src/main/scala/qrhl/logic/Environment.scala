@@ -89,7 +89,8 @@ final class Environment private
   def declareProgram(name: String, oracles:List[String], program: Block): Environment = {
     if (programs.contains(name))
       throw UserException(s"A program with name $name was already declared.")
-    assert(!variableExists(name))
+    if (variableExists(name))
+      throw UserException(s"Program name $name conflicts with an existing variable name")
     copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,oracles,program)))
   }
 

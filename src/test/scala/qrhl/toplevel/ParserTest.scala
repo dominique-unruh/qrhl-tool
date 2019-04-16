@@ -124,4 +124,10 @@ class ParserTest extends FunSuite {
     assert(progDecl2.program == Block(Call("a"),Call("b"),Call("A1",Call("c"))))
   }
 
+  test("program with oracles - name conflict with program variable") {
+    assertThrows[UserException] {
+      Parser.parseAll(Parser.declareProgram, "program P(x) := { call x; }.").get
+    }
+  }
+
 }
