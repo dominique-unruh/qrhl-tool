@@ -625,13 +625,11 @@ final case class Call(name:String, args:Call*) extends Statement {
   override def substituteOracles(subst: Map[String, Call]): Call = {
     val args2 = args.map(_.substituteOracles(subst))
 
-    val name2 = if (name.head=='@') {
-      val repl = subst(name.substring(1))
-      assert(repl.args.isEmpty)
-      repl.name
+    if (name.head=='@') {
+      if (args.nonEmpty)
+        throw UserException(s"Call to oracle $name must not have oracles itself")
+      subst(name.substring(1))
     } else
-      name
-
-    Call(name2,args2:_*)
+      Call(name,args2:_*)
   }
 }
