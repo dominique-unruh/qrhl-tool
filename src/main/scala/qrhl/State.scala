@@ -127,7 +127,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
   override def toString: String = {
     val assms = if (assumptions.isEmpty) "" else
       s"Assumptions:\n${assumptions.map(a => s"* $a\n").mkString}\n"
-    s"${assms}Pre:   $pre\nLeft:  ${left.toStringNoParens}\nRight: ${right.toStringNoParens}\nPost:  $post"
+    s"${assms}Pre:   $pre\n\n${left.toStringMultiline("Left:  ")}\n\n${right.toStringMultiline("Right: ")}\n\nPost:  $post"
   }
 
   override def checkVariablesDeclared(environment: Environment): Unit = {

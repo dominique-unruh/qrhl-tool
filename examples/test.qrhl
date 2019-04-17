@@ -6,6 +6,18 @@ classical var a : bit.
 classical var b : bit.
 classical var z : bit*bit.
 
+program p := {
+  x <- 1;
+  y <$ undefined;
+}.
+
+qrhl {top} call p; ~ call p; {top}.
+inline p.
+wp right.
+simp.
+wp right.
+
+
 program s1(zz) := {
   (x,y) <$ uniform UNIV;
   call zz;

@@ -353,6 +353,7 @@ object Parser extends JavaTokenParsers {
       case None ~ lemmas => SimpTac(lemmas, force=false, everywhere = false)
       case Some("!") ~ lemmas => SimpTac(lemmas, force = true, everywhere = false)
       case Some("*") ~ lemmas => SimpTac(lemmas, force = false, everywhere = true)
+      case _ => throw new RuntimeException("Internal error") // cannot happen
     }
 
   val tactic_rule : Parser[RuleTac] =

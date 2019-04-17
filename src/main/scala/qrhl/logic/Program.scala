@@ -371,7 +371,6 @@ object Statement {
 }
 
 class Block(val statements:List[Statement]) extends Statement {
-
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Block =
     Block(statements.map(_.simplify(isabelle,facts,thms)):_*)
 
@@ -396,10 +395,22 @@ class Block(val statements:List[Statement]) extends Statement {
     case List(s) => s.toString
     case _ => "{ " + statements.map{ _.toString}.mkString(" ") + " }"
   }
+
   def toStringNoParens: String = statements match {
     case Nil => "skip;"
     case _ => statements.map{ _.toString }.mkString(" ")
   }
+
+  def toStringMultiline(header: String): String = statements match {
+    case Nil => header+"skip;"
+    case _ =>
+      val blanks = "\n" + " " * header.length
+      statements.mkString(header,blanks,"")
+  }
+
+
+
+
   def length : Int = statements.size
 
   def inline(environment: Environment, name: String): Block = {
