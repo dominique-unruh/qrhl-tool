@@ -11,12 +11,13 @@ program p := {
   y <$ undefined;
 }.
 
-qrhl {top} call p; ~ call p; {top}.
+qrhl bla: {top} call p; ~ call p; {top}.
 inline p.
 wp right.
 simp.
 wp right.
-
+admit.
+qed.
 
 program s1(zz) := {
   (x,y) <$ uniform UNIV;

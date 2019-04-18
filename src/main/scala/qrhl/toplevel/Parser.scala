@@ -1,13 +1,13 @@
 package qrhl.toplevel
 
 import info.hupel.isabelle.pure
-import qrhl.{toplevel, _}
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
 import qrhl.tactic._
 import java.nio.file.{Path, Paths}
 
 import info.hupel.isabelle.pure.Typ
+import qrhl.{AmbientSubgoal, QRHLSubgoal, Tactic, UserException}
 
 import scala.util.parsing.combinator._
 
@@ -264,6 +264,7 @@ object Parser extends JavaTokenParsers {
 
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
+    name <- (identifier <~ ":").?;
     _ <- literal("{");
     pre <- expression(Isabelle.predicateT);
     _ <- literal("}");
@@ -273,7 +274,7 @@ object Parser extends JavaTokenParsers {
     _ <- literal("{");
     post <- expression(Isabelle.predicateT);
     _ <- literal("}")
-  ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post,Nil)))
+  ) yield GoalCommand(name.getOrElse(""), QRHLSubgoal(left,right,pre,post,Nil)))
 
   val tactic_wp: Parser[WpTac] =
     literal("wp") ~> {
