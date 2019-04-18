@@ -328,6 +328,7 @@ object Isabelle {
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
+  val predicate_top = Const ("Orderings.top_class.top", predicateT)
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
   val distrT_name = "Discrete_Distributions.distr"
   def distrT(typ:ITyp): Type = Type(distrT_name, List(typ))
@@ -428,6 +429,8 @@ object Isabelle {
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
   val simplifyTermOp: Operation[(Term, List[String], BigInt), (RichTerm,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (RichTerm,BigInt)]("simplify_term")
   val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
+  val one_name = "Groups.one_class.one"
+  val True_const = Const("HOL.True", boolT)
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
 
@@ -641,4 +644,6 @@ object Isabelle {
       override def decode(tree: XML.Tree): XMLResult[Context] = throw new RuntimeException("Use Context.codec.decode(Isabelle,XML.Tree) instead")
     }
   }
+
+
 }
