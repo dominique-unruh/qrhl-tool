@@ -265,6 +265,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 }
 
 object Isabelle {
+  val less_eq_name: String = "Orderings.ord_class.less_eq"
+
   private var globalIsabellePeek : Isabelle = _
   lazy val globalIsabelle: Isabelle = {
     val isabelle = new Isabelle("auto")
@@ -320,7 +322,7 @@ object Isabelle {
     terms.foldRight[Term](nil)( cons $ _ $ _ )
   }
 
-
+  val natT = Type("Nat.nat")
   val bitT = Type("Bit.bit", Nil)
   val predicateT = Type("Complex_L2.subspace", List(Type("Prog_Variables.mem2",Nil)))
   val programT = Type("Programs.program")

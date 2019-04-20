@@ -254,6 +254,13 @@ fun apply_tactic_on_term_concl tac (arg,subgoal,ctxt) = let
   (* val _ = warning "STEP 6" *)
   in encoded end
 
+fun atomize ctxt t =
+  let val t' = Object_Logic.atomize_term ctxt t
+      val _ = if fastype_of t' <> \<^typ>\<open>bool\<close> then
+                raise TERM("QRHL_Operations.atomize: could not convert term to a bool",[t])
+              else ()
+  in t' end
+
 fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
   val goal = subgoal_to_term ctxt subgoal
   val cgoal = Thm.cterm_of ctxt (HOLogic.mk_Trueprop goal)
@@ -262,7 +269,8 @@ fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
                 NONE => raise TERM(name arg^" could not be applied", [goal])
                | SOME x => x
   val subgoals = Thm.prems_of goal''
-  val subgoals' = map HOLogic.dest_Trueprop subgoals
+  val subgoals' = map (atomize ctxt) subgoals
+(* TODO: fail if subgoals contain schematic variables -- otherwise unsoundness? *)
   in SOME (subgoals' |> map (term_to_subgoal ctxt),goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec)) end
 end
 

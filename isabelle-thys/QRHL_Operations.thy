@@ -1,6 +1,6 @@
 theory QRHL_Operations
   imports "HOL-Protocol.Protocol_Main" QRHL_Core Tactics Hashed_Terms Joint_Measure Bounded_Operators.Extended_Sorry
-    Weakest_Precondition Joint_Sample Squash_Sampling
+    Weakest_Precondition Joint_Sample Squash_Sampling O2H
 begin
 
 ML_file "qrhl_operations.ML"
@@ -9,10 +9,18 @@ ML \<open>
 (* Codec.add_exception_printer (fn pr => fn exn => case Par_Exn.dest exn of 
   NONE => NONE | 
   SOME exns => exns |> map pr |> String.concatWith "\n" |> SOME);; *)
-Codec.add_exception_printer (fn _ => fn exn => Runtime.exn_message exn |> YXML.parse_body |> XML.content_of |> SOME)
+Codec.add_exception_printer (fn _ => fn exn => exn |> Runtime.thread_context |> Runtime.exn_context (SOME \<^context>) |> Runtime.exn_message |> YXML.parse_body |> XML.content_of |> SOME)
 \<close>
 
 ML \<open>open QRHL_Operations\<close>
+
+operation_setup o2h_tac = {*
+  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term 
+      (fn ctxt => fn _ => resolve_tac ctxt @{thms o2h} 1) 
+      (fn _ => "o2h")}
+*}
 
 operation_setup create_context = {*
   {from_lib = Codec.list Codec.string,
