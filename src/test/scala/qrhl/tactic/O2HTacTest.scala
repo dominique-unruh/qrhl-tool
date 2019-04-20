@@ -1,5 +1,6 @@
 package qrhl.tactic
 
+import info.hupel.isabelle.ProverResult
 import org.scalatest.FunSuite
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.toplevel.{Toplevel, ToplevelTest}
@@ -18,7 +19,14 @@ class O2HTacTest extends FunSuite {
         | lemma abs ( Pr[b=1:p(rho)] - Pr[b=1:p(rho)] ) <= 2 * sqrt( (1+real q) * Pr[Find:p(rho)] ).
       """.stripMargin)
 
-    val state2 = tl.state.applyTactic(O2HTac)
+    val state2 = try {
+      tl.state.applyTactic(O2HTac)
+    } catch {
+      case e : ProverResult.Failure =>
+        println(e.fullMessage)
+        throw e
+    }
+
     println(state2)
 
     ???

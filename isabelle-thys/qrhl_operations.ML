@@ -204,7 +204,15 @@ fun subgoal_to_term ctxt (Subgoal_QRHL (qrhl, assms)) =
     fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms (Relational_Hoare.qrhl_judgment_to_term ctxt qrhl)
   | subgoal_to_term _ (Subgoal_Ambient t) = t
 
+fun contains_var (t $ u) = contains_var t orelse contains_var u
+  | contains_var (Const _) = false
+  | contains_var (Abs (_,_,t)) = contains_var t
+  | contains_var (Free _) = false
+  | contains_var (Var _) = true
+  | contains_var (Bound _) = false
+
 fun term_to_subgoal ctxt t = let
+  val _ = if contains_var t then raise TERM("New subgoal contains schematic variables",[t]) else ()
   fun split_assms assms (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) = split_assms (a::assms) b
     | split_assms assms t = (assms,t)
   val (assms,t') = split_assms [] t
@@ -270,7 +278,6 @@ fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
                | SOME x => x
   val subgoals = Thm.prems_of goal''
   val subgoals' = map (atomize ctxt) subgoals
-(* TODO: fail if subgoals contain schematic variables -- otherwise unsoundness? *)
   in SOME (subgoals' |> map (term_to_subgoal ctxt),goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec)) end
 end
 
