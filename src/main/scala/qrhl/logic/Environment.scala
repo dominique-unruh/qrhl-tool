@@ -149,7 +149,7 @@ final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:L
   def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {
     val op = Operation.implicitly[((BigInt,String,List[(String,Typ)]),BigInt),BigInt]("declare_abstract_program")
     val (cv,qv,_,_) = variablesRecursive
-    val vars = (cv++qv) map { v => (v.name, v.variableTyp) }
+    val vars = (cv++qv) map { v => (v.variableName, v.valueTyp) }
     val id = isabelle.isabelle.invoke(op, ((isabelle.contextId, name, vars), BigInt(numOracles)))
     new Context(isabelle.isabelle,id)
   }
@@ -245,7 +245,7 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
   def declareInIsabelle(context: Isabelle.Context): Isabelle.Context = {
     val op = Operation.implicitly[((BigInt,String,List[(String,Typ)]),(List[String],Statement)),BigInt]("declare_concrete_program")
     val (cv,qv,_,_) = variablesRecursive
-    val vars = (cv++qv) map { v => (v.name, v.variableTyp) }
+    val vars = (cv++qv) map { v => (v.variableName, v.valueTyp) }
     val id = context.isabelle.invoke(op, ((context.contextId, name, vars), (oracles, program)))
     new Context(context.isabelle,id)
   }

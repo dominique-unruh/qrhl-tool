@@ -307,7 +307,16 @@ fun declare_abstract_program ctxt (name:string) (vars:(string*typ)list) (numOrac
   val T = if numOracles=0 then \<^typ>\<open>program\<close> else \<^typ>\<open>oracle_program\<close>
   val (vs,ctxt) = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctxt
   val _ = if vs<>[name] then error("variable "^name^" already declared") else ()
-(* TODO declare free vars *)
+
+  val fv_lhs = (if numOracles=0 then \<^const>\<open>fv_program\<close> else \<^const>\<open>fv_oracle_program\<close>) $ Free(name,T) 
+  val (varterm,vartermT) = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+  val fv_rhs = @{const set(string)} $
+          (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm)
+  val fv = HOLogic.mk_eq (fv_lhs, fv_rhs) |> HOLogic.mk_Trueprop
+  val fv_thm_name = Binding.name ("fv_"^name)
+  val ([(_,fv_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
+                               [((fv_thm_name, []), [(fv,[])])] ctxt
+  val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [O2H.program_fv]}), [(fv_thm,[])])] ctxt
 in ctxt end
 
 fun declare_concrete_program ctxt (name:string) (vars:(string*typ)list) (oracles:string list) (body:Programs.statement) = let
@@ -330,7 +339,7 @@ in ctxt end
 
 
 fun debug ctxt = let
-  val obj = Proof_Context.get_fact ctxt (Facts.named "O2H.program_bodies")
+  val obj = Proof_Context.get_fact ctxt (Facts.named "O2H.program_fv")
   val str = \<^make_string> obj |> YXML.content_of
   in str end
 end

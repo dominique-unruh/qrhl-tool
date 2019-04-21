@@ -69,11 +69,19 @@ fun program_body_tac ctxt = SUBGOAL (fn (t,i) =>
 
 fun free_vars_tac ctxt =
   let val fact = Proof_Context.get_fact ctxt (Facts.named "program_fv")
-  in SOLVED' (simp_tac (ctxt addsimps fact)) end
+  in 
+     Misc.succeed_or_error_tac' (simp_tac (clear_simpset ctxt addsimps fact)) ctxt
+      (fn t => "Could not determine free variables of adversary. Problematic claim: "^Syntax.string_of_term ctxt t)
+   THEN'
+     Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt))
+        ctxt (fn t => "Could not prove that the adversary contains no forbidden variables. Problematic claim: "^Syntax.string_of_term ctxt t)
+  end
+
+fun distinct_vars_tac ctxt =
+  Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are distinct: " ^ Syntax.string_of_term ctxt t)
 
 fun o2h_tac ctxt = 
   let val pb_tac = program_body_tac ctxt
-      val fv_tac = free_vars_tac ctxt
       val resolve_o2h = Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms o2h}) ctxt
          (K "Goal should be exactly of the form '(Pr[b=1:left(rho)] - Pr[b=1:right(rho)]) <= 2 * sqrt( (1+real q) * Pr[Find:find(rho)])'")
    in
@@ -85,9 +93,8 @@ fun o2h_tac ctxt =
     THEN' pb_tac
     THEN' pb_tac
     THEN' pb_tac
-(* TODO: add proper errors *)
-    (* THEN' SOLVED' (simp_tac ctxt) *)
-    (* THEN' fv_tac *)
+    THEN' distinct_vars_tac ctxt
+    THEN' free_vars_tac ctxt
   end
 end
 \<close>
