@@ -30,6 +30,8 @@
     <buffered bufClass="qrhl.tactic.EqualTacTest" />
     <buffered bufClass="qrhl.tactic.ExpressionTest" />
     <buffered bufClass="qrhl.tactic.ExpressionTest" />
+    <buffered bufClass="qrhl.tactic.O2HTacTest" />
+    <buffered bufClass="qrhl.tactic.O2HTacTest" />
     <buffered bufClass="qrhl.tactic.RndTacTest" />
     <buffered bufClass="qrhl.tactic.RndTacTest" />
     <buffered bufClass="qrhl.tactic.RuleTacTest" />

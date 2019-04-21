@@ -2,7 +2,7 @@ package qrhl.toplevel
 
 import java.nio.file.{Path, Paths}
 
-import info.hupel.isabelle.pure
+import info.hupel.isabelle.{Operation, pure}
 import qrhl.isabelle.Isabelle
 import qrhl.logic.{Block, CVariable, QVariable}
 import qrhl.{State, Subgoal, Tactic, UserException}
@@ -114,6 +114,11 @@ object DebugCommand {
   def state(action: State => Unit): DebugCommand = new DebugCommand({ state => action(state); state})
   def goals(action: (Isabelle.Context, List[Subgoal]) => Unit): DebugCommand =
     new DebugCommand({state:State => action(state.isabelle, state.goal); state})
+  val isabelle: DebugCommand = DebugCommand.state({
+    state : State =>
+      val str = state.isabelle.isabelle.invoke(Operation.implicitly[BigInt,String]("debug"), state.isabelle.contextId)
+      println(s"DEBUG: $str")
+  })
 }
 
 case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=false) extends Command {

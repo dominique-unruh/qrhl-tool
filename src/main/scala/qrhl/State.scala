@@ -363,16 +363,24 @@ class State private (val environment: Environment,
     if (this.environment.variableExists(name))
       throw UserException(s"Name $name already used for a variable or program.")
 
-    val isa = _isabelle.get.declareVariable(name,
-      if (oracles.isEmpty) Isabelle.programT else Isabelle.oracle_programT)
+    val decl = ConcreteProgramDecl(environment,name,oracles,program)
+    val env1 = environment.declareProgram(decl)
+    val isa = decl.declareInIsabelle(_isabelle.get)
 
-    copy(environment = environment.declareProgram(name, oracles, program), isabelle=Some(isa))
+//    val isa1 = _isabelle.get.declareVariable(name, if (oracles.isEmpty) Isabelle.programT else Isabelle.oracle_programT)
+
+//    val isa2 = decl.getSimplifierRules.foldLeft(isa1) { (isa,rule) => isa.addAssumption("", rule.isabelleTerm, simplifier = true) }
+
+    copy(environment = env1, isabelle=Some(isa))
   }
 
   def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], numOracles : Int): State = {
-    val isa = _isabelle.get.declareVariable(name,
-      if (numOracles==0) Isabelle.programT else Isabelle.oracle_programT)
-    copy(environment = environment.declareAdversary(name, cvars, qvars, numOracles), isabelle=Some(isa))
+//    val isa1 = _isabelle.get.declareVariable(name,
+//      if (numOracles==0) Isabelle.programT else Isabelle.oracle_programT)
+    val decl = AbstractProgramDecl(name, cvars.toList, qvars.toList, numOracles)
+    val isa = decl.declareInIsabelle(_isabelle.get)
+//    val isa2 = decl.getSimplifierRules.foldLeft(isa1) { (isa,rule) => isa.addAssumption("", rule.isabelleTerm, simplifier = true) }
+    copy(environment = environment.declareProgram(decl), isabelle=Some(isa))
   }
 
 

@@ -239,7 +239,7 @@ object Parser extends JavaTokenParsers {
       args2 = args.getOrElse(Nil);
       _ <- literal(":=");
       // temporarily add oracles to environment to allow them to occur in call-expressions during parsing
-      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(p,Nil,Block())) };
+      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,0))) };
       body <- parenBlock(context2))
       yield DeclareProgramCommand(name,args2,body))
 
@@ -399,7 +399,8 @@ object Parser extends JavaTokenParsers {
 //  val quit: Parser[QuitCommand] = "quit" ^^ { _ => QuitCommand() }
 
   val debug : Parser[DebugCommand] = "debug:" ~>
-    ("goal" ^^ { _ => DebugCommand.goals((context,goals) => for (g <- goals) println(g.toTerm(context))) })
+    ("goal" ^^ { _ => DebugCommand.goals((context,goals) => for (g <- goals) println(g.toTerm(context))) } |
+      "isabelle" ^^ { _ => DebugCommand.isabelle })
 
   val changeDirectory : Parser[ChangeDirectoryCommand] = literal("changeDirectory") ~> quotedString ^^ ChangeDirectoryCommand.apply
 

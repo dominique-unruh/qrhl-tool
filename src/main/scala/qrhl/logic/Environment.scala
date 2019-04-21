@@ -1,10 +1,15 @@
 package qrhl.logic
 
-import info.hupel.isabelle.pure
+import info.hupel.isabelle.{Operation, pure}
 import info.hupel.isabelle.pure.Typ
 import qrhl.UserException
+import qrhl.isabelle.Isabelle.{Context, declareVariableOp}
+import qrhl.isabelle.{Isabelle, RichTerm}
 
 import scala.collection.mutable
+
+import RichTerm.term_tight_codec
+import RichTerm.typ_tight_codec
 
 /** Represents a logic environment in which programs and expressions are interpreted.
   * @param cVariables All declared classical variables
@@ -86,23 +91,31 @@ final class Environment private
     copy(ambientVariables=ambientVariables.updated(name, typ))
   }
 
-  def declareProgram(name: String, oracles:List[String], program: Block): Environment = {
-    if (programs.contains(name))
-      throw UserException(s"A program with name $name was already declared.")
-    if (variableExists(name))
-      throw UserException(s"Program name $name conflicts with an existing variable name")
-    copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,oracles,program)))
+  def declareProgram(decl: ProgramDecl) : Environment = {
+    if (programs.contains(decl.name))
+      throw UserException(s"A program with name ${decl.name} was already declared.")
+    if (variableExists(decl.name))
+      throw UserException(s"Program name ${decl.name} conflicts with an existing variable name")
+    copy(programs=programs.updated(decl.name, decl))
   }
 
-  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], numOracles: Int): Environment = {
-    if (programs.contains(name))
-      throw UserException(s"A program with name $name was already declared.")
-//    for (p <- calls)
-//      if (!programs.contains(p))
-//        throw UserException(s"Please declare program $p first.")
-    assert(!variableExists(name))
-    copy(programs=programs.updated(name, AbstractProgramDecl(name, cvars.toList, qvars.toList, numOracles)))
-  }
+//  def declareProgram(name: String, oracles:List[String], program: Block): Environment = {
+//    if (programs.contains(name))
+//      throw UserException(s"A program with name $name was already declared.")
+//    if (variableExists(name))
+//      throw UserException(s"Program name $name conflicts with an existing variable name")
+//    copy(programs=programs.updated(name, ConcreteProgramDecl(this,name,oracles,program)))
+//  }
+//
+//  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], numOracles: Int): Environment = {
+//    if (programs.contains(name))
+//      throw UserException(s"A program with name $name was already declared.")
+////    for (p <- calls)
+////      if (!programs.contains(p))
+////        throw UserException(s"Please declare program $p first.")
+//    assert(!variableExists(name))
+//    copy(programs=programs.updated(name, AbstractProgramDecl(name, cvars.toList, qvars.toList, numOracles)))
+//  }
 
 
   private def copy(cVariables:Map[String,CVariable]=cVariables,
@@ -126,30 +139,38 @@ sealed trait ProgramDecl {
 //  val subprograms : List[ProgramDecl]
   val name: String
   val numOracles : Int
-
-//  val cqapVariablesRecursive
-
+  def declareInIsabelle(context: Isabelle.Context): Isabelle.Context
 }
+
 final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], numOracles:Int) extends ProgramDecl {
   override val variablesRecursive: (List[CVariable], List[QVariable], List[String], List[ProgramDecl]) =
     (cvars, qvars, Nil, Nil)
-/*  {
-    val cvarsAll = new mutable.LinkedHashSet[CVariable]()
-    cvarsAll ++= cvars
-    val qvarsAll = new mutable.LinkedHashSet[QVariable]()
-    qvarsAll ++= qvars
-    val ambAll = new mutable.LinkedHashSet[String]()
-    val callsAll = new mutable.LinkedHashSet[ProgramDecl]()
-    callsAll ++= calls
-    for (p <- calls) {
-      val (c, q, a, pr) = p.variablesRecursive
-      cvarsAll ++= c
-      qvarsAll ++= q
-      ambAll ++= a
-      callsAll ++= pr
-    }
-    (cvarsAll.toList, qvarsAll.toList, ambAll.toList, callsAll.toList)
-  }*/
+
+  def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {
+    val op = Operation.implicitly[((BigInt,String,List[(String,Typ)]),BigInt),BigInt]("declare_abstract_program")
+    val (cv,qv,_,_) = variablesRecursive
+    val vars = (cv++qv) map { v => (v.name, v.variableTyp) }
+    val id = isabelle.isabelle.invoke(op, ((isabelle.contextId, name, vars), BigInt(numOracles)))
+    new Context(isabelle.isabelle,id)
+  }
+
+  /*  {
+      val cvarsAll = new mutable.LinkedHashSet[CVariable]()
+      cvarsAll ++= cvars
+      val qvarsAll = new mutable.LinkedHashSet[QVariable]()
+      qvarsAll ++= qvars
+      val ambAll = new mutable.LinkedHashSet[String]()
+      val callsAll = new mutable.LinkedHashSet[ProgramDecl]()
+      callsAll ++= calls
+      for (p <- calls) {
+        val (c, q, a, pr) = p.variablesRecursive
+        cvarsAll ++= c
+        qvarsAll ++= q
+        ambAll ++= a
+        callsAll ++= pr
+      }
+      (cvarsAll.toList, qvarsAll.toList, ambAll.toList, callsAll.toList)
+    }*/
 }
 
 final case class ConcreteProgramDecl(environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {
@@ -221,5 +242,12 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
 //    println(s"variablesRecursive $name, $cvars, $qvars")
     (cvars.toList, qvars.toList)
   }*/
+  def declareInIsabelle(context: Isabelle.Context): Isabelle.Context = {
+    val op = Operation.implicitly[((BigInt,String,List[(String,Typ)]),(List[String],Statement)),BigInt]("declare_concrete_program")
+    val (cv,qv,_,_) = variablesRecursive
+    val vars = (cv++qv) map { v => (v.name, v.variableTyp) }
+    val id = context.isabelle.invoke(op, ((context.contextId, name, vars), (oracles, program)))
+    new Context(context.isabelle,id)
+  }
 }
 

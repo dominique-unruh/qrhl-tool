@@ -425,7 +425,7 @@ object Isabelle {
   val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_thm")
   val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt,Term),String]("print_term")
   val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
-  val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String,Term,BigInt), BigInt]("add_assumption")
+  val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String, Term, BigInt), BigInt]("add_assumption")
   val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
   @deprecated("use readExpression","now")
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
@@ -593,7 +593,7 @@ object Isabelle {
     }
   }
 
-  class Context private[Isabelle](val isabelle:Isabelle, val contextId: BigInt) {
+  class Context(val isabelle:Isabelle, val contextId: BigInt) {
     _theContext = this
 
     def checkType(term:Term) : ITyp = {

@@ -18,7 +18,7 @@ operation_setup o2h_tac = {*
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
-      (fn ctxt => fn _ => resolve_tac ctxt @{thms o2h} 1) 
+      (fn ctxt => fn _ => O2H.o2h_tac ctxt 1) 
       (fn _ => "o2h")}
 *}
 
@@ -60,7 +60,7 @@ operation_setup print_typ = {*
 operation_setup add_assumption = {*
   {from_lib = Codec.triple Codec.string term_tight_codec Codec.int,
    to_lib = Codec.int,
-   action = fn (name,assm,ctx_id) => make_ctxt_ref (QRHL.addAssumption name assm (Refs.Ctxt.read ctx_id))}
+   action = fn (name,assm,ctx_id) => make_ctxt_ref (QRHL_Operations.addAssumption name assm (Refs.Ctxt.read ctx_id))}
 *}
 
 operation_setup read_typ = {*
@@ -97,10 +97,10 @@ operation_setup byQRHLPre = {*
 operation_setup declare_variable = {*
   {from_lib = Codec.triple Codec.int Codec.string typ_tight_codec,
    to_lib = Codec.int,
-   action = fn (ctx_id, name, T) =>
-            let val ([v],ctx') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] (Refs.Ctxt.read ctx_id)
-                val _ = if v<>name then error("variable v already declared") else ()
-            in make_ctxt_ref ctx' end }
+   action = fn (ctxt_id, name, T) =>
+            let val ([v],ctxt') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] (Refs.Ctxt.read ctxt_id)
+                val _ = if v<>name then error("variable "^name^" already declared") else ()
+            in make_ctxt_ref ctxt' end }
 *}
 
 operation_setup declare_quantum_variable = {*
@@ -307,5 +307,25 @@ operation_setup retrieve_term_string = \<open>
   {from_lib = Codec.int,
    to_lib = Codec.string,
    action = Terms.id_to_string}\<close>
+
+operation_setup declare_abstract_program = \<open>
+  {from_lib = Codec.tuple (Codec.triple Codec.int Codec.string (Codec.list (Codec.tuple Codec.string typ_tight_codec)))
+                          Codec.int,
+   to_lib = Codec.int,
+   action = fn ((ctxt_id,name,vars),numOracles) => make_ctxt_ref (QRHL_Operations.declare_abstract_program (Refs.Ctxt.read ctxt_id) name vars numOracles)}
+\<close>
+
+operation_setup declare_concrete_program = \<open>
+  {from_lib = Codec.tuple (Codec.triple Codec.int Codec.string (Codec.list (Codec.tuple Codec.string typ_tight_codec)))
+                          (Codec.tuple (Codec.list Codec.string) statement_codec),
+   to_lib = Codec.int,
+   action = fn ((ctxt_id,name,vars),(oracles,body)) => make_ctxt_ref (QRHL_Operations.declare_concrete_program (Refs.Ctxt.read ctxt_id) name vars oracles body)}
+\<close>
+
+operation_setup debug = \<open>
+  {from_lib = Codec.int,
+   to_lib = Codec.string,
+   action = fn ctxt_id => QRHL_Operations.debug (Refs.Ctxt.read ctxt_id)}
+\<close>
 
 end

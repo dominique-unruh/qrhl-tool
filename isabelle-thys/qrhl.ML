@@ -379,16 +379,6 @@ fun byQRHLPre cvars qvars =
     @{const inf(predicate)} $ cEqs' $ qvarsEq
   end
 
-fun addAssumption name term ctx =
-  let val _ = if fastype_of term = HOLogic.boolT then ()
-              else raise (TYPE("expected a boolean expression",[fastype_of term],[term]))
-      val prop = HOLogic.mk_Trueprop term
-      val (_,ctx) = Proof_Context.add_assms Assumption.assume_export
-                               [((Binding.name name,[]), [(prop,[])])] ctx
-  in
-    ctx
-  end
-
 fun checkType ctx term =
   let val ct = Thm.cterm_of ctx term
   in
