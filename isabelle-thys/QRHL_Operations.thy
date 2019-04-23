@@ -152,20 +152,20 @@ operation_setup rndWp2 = {*
          QRHL.rndWp2 v1 T1 e1 v2 T2 e2 f B |> richterm_encode ctxt end}
 *}
 
-operation_setup apply_rule = {*
-  {from_lib = Codec.triple Codec.string subgoal_codec context_codec,
+operation_setup apply_rule = {* let
+fun tac ctxt (name, inst) = let
+    val thm0 = Proof_Context.get_thm ctxt name
+    val inst' = map (fn (v,t) => ((v,0), Thm.cterm_of ctxt t)) inst
+    val thm = infer_instantiate ctxt inst' thm0
+    in resolve_tac ctxt [thm] 1
+    end
+in
+  {from_lib = Codec.triple (Codec.tuple Codec.string (Codec.list (Codec.tuple Codec.string term_tight_codec))) subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
-      (fn ctxt => fn name => resolve_tac ctxt (Proof_Context.get_thms ctxt name) 1) 
-      (fn rule => "rule "^rule)
-
-(*  fn (name,goal,ctx_id) => let
-     val ctxt = Refs.Ctxt.read ctx_id
-     val (ts,thm) = QRHL.applyRule name goal ctxt
-     in SOME (ts,make_thm_ref thm) 
-          |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int))
-      end *)
-}
+      tac 
+      (fn (rule,_) => "rule "^rule)}
+end
 *}
 
 operation_setup simplify_term = {*

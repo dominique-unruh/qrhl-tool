@@ -12,6 +12,17 @@ Main
 begin
 
 ML \<open>
+val ctxt = \<^context> |> Proof_Context.set_mode Proof_Context.mode_schematic
+val t = Syntax.parse_term ctxt "1::?'a::one" |> Syntax.check_term ctxt
+val res = infer_instantiate \<^context> [(("j",0),Thm.cterm_of \<^context> t)] @{thm le_trans[of "1::nat"]}
+\<close>
+
+
+find_theorems "abs _ \<le> _ + _"
+
+thm abs_triangle_ineq
+
+ML \<open>
 fun robust f x =
   (case try f x of
     SOME s => s

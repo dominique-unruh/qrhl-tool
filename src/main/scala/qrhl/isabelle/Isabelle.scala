@@ -120,7 +120,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
   private val config: Configuration = Configuration.simple("QRHL")
 
   private def doBuild() {
-    println("*** Building Isabelle (may take a while, especially the first time, e.g., 10-25min)...")
+    println("*** Building Isabelle (may take a while, especially the first time, e.g., 20-60min)...")
     if (!System.build(environment, config))
       throw qrhl.UserException("Building Isabelle failed")
   }
@@ -322,6 +322,7 @@ object Isabelle {
     terms.foldRight[Term](nil)( cons $ _ $ _ )
   }
 
+  val dummyT = Type("dummy")
   val natT = Type("Nat.nat")
   val bitT = Type("Bit.bit", Nil)
   val predicateT = Type("Complex_L2.subspace", List(Type("Prog_Variables.mem2",Nil)))

@@ -342,4 +342,5 @@ fun debug ctxt = let
   val obj = Proof_Context.get_fact ctxt (Facts.named "O2H.program_fv")
   val str = \<^make_string> obj |> YXML.content_of
   in str end
+
 end

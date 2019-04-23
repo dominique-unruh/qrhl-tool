@@ -4,10 +4,8 @@ import info.hupel.isabelle.pure
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
 import qrhl.tactic._
-import java.nio.file.{Path, Paths}
-
 import info.hupel.isabelle.pure.Typ
-import qrhl.{AmbientSubgoal, QRHLSubgoal, Tactic, UserException}
+import qrhl.{toplevel, _}
 
 import scala.util.parsing.combinator._
 
@@ -357,8 +355,14 @@ object Parser extends JavaTokenParsers {
       case _ => throw new RuntimeException("Internal error") // cannot happen
     }
 
-  val tactic_rule : Parser[RuleTac] =
-    literal("rule") ~> OnceParser(identifier) ^^ RuleTac.apply
+  def tactic_rule(implicit context:ParserContext) : Parser[RuleTac] = {
+    val inst: toplevel.Parser.Parser[(String, RichTerm)] = (identifier <~ literal(":=")) ~ expression(Isabelle.dummyT) ^^ { case a~b => (a,b) }
+
+    literal("rule") ~> OnceParser(for (
+      rule <- identifier;
+      instantiations <- (literal("where") ~> rep1sep(inst, statementSeparator)).?
+    ) yield RuleTac(rule, instantiations.getOrElse(Nil)))
+  }
 
   val tactic_clear : Parser[ClearTac] =
     literal("clear") ~> OnceParser(natural) ^^ ClearTac.apply
