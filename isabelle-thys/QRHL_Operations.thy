@@ -1,6 +1,6 @@
 theory QRHL_Operations
   imports "HOL-Protocol.Protocol_Main" QRHL_Core Tactics Hashed_Terms Joint_Measure Bounded_Operators.Extended_Sorry
-    Weakest_Precondition Joint_Sample Squash_Sampling O2H
+    Weakest_Precondition Joint_Sample Squash_Sampling O2H Semi_Classical_Search
 begin
 
 ML_file "qrhl_operations.ML"
@@ -19,6 +19,14 @@ operation_setup o2h_tac = {*
    to_lib = Codec.id,
    action = apply_tactic_on_term 
       (fn ctxt => fn _ => O2H.o2h_tac ctxt 1) 
+      (fn _ => "o2h")}
+*}
+
+operation_setup semiclassical_tac = {*
+  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term 
+      (fn ctxt => fn _ => Semi_Classical_Search.semi_classical_search_tac ctxt 1) 
       (fn _ => "o2h")}
 *}
 

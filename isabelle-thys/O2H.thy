@@ -2,15 +2,6 @@ theory O2H
   imports Programs
 begin
 
-(* TODO: correctly define type measurement, then define the following *)
-(* TODO: move *)
-axiomatization binary_measurement :: "('a,'a) bounded \<Rightarrow> (bit,'a) measurement"
-  where binary_measurement_true[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 1 = P"
-    and binary_measurement_false[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 0 = idOp-P"
-
-(* TODO move (& rename?) *)
-definition "projS S = Proj (span {ket s|s. s\<in>S})"
-
 (* TODO remove *)
 definition "PROGRAM_EQUAL x y = (x=y)" for x y :: program
 
@@ -28,7 +19,7 @@ lemma o2h[unfolded PROGRAM_EQUAL_def]:
   assumes "\<And>P. PROGRAM_EQUAL (instantiateOracles Count [P]) (block [P, assign \<lbrakk>count\<rbrakk> (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count+1))])"
 
   assumes "PROGRAM_EQUAL queryG (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>G\<rbrakk> (\<lambda>G. Uoracle G))])"
-  assumes "PROGRAM_EQUAL queryGS (block [measurement \<lbrakk>in_S\<rbrakk> \<lbrakk>X\<rbrakk> (expression \<lbrakk>S\<rbrakk> (\<lambda>S. binary_measurement (projS S))),
+  assumes "PROGRAM_EQUAL queryGS (block [measurement \<lbrakk>in_S\<rbrakk> \<lbrakk>X\<rbrakk> (expression \<lbrakk>S\<rbrakk> (\<lambda>S. binary_measurement (proj_classical_set S))),
                             ifthenelse (expression \<lbrakk>in_S\<rbrakk> (\<lambda>in_S. in_S=1)) [assign \<lbrakk>Find\<rbrakk> Expr[True]] [],
                             queryG])"
   assumes "PROGRAM_EQUAL queryH (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>H\<rbrakk> (\<lambda>H. Uoracle H))])"
@@ -111,19 +102,19 @@ definition test_distr :: "(string set * (string\<Rightarrow>bit) * (string\<Righ
 definition adv :: oracle_program where "adv = undefined"
 definition Count :: oracle_program where "Count = undefined"
 
-definition [program_bodies]: "queryG = (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>var_G\<rbrakk> (\<lambda>G. Uoracle G))])"
-definition [program_bodies]: "queryH = (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>var_H\<rbrakk> (\<lambda>G. Uoracle G))])"
-definition [program_bodies]: "queryGS =  (block [measurement \<lbrakk>var_in_S\<rbrakk> \<lbrakk>X\<rbrakk> (expression \<lbrakk>var_S\<rbrakk> (\<lambda>S. binary_measurement (projS S))),
-                            ifthenelse (expression \<lbrakk>var_in_S\<rbrakk> (\<lambda>in_S. in_S=1)) [assign \<lbrakk>var_Find\<rbrakk> Expr[True]] [],
+definition [program_bodies]: "queryG = (block [qapply \<lbrakk>X,Y\<rbrakk> Expr[Uoracle G]])"
+definition [program_bodies]: "queryH = (block [qapply \<lbrakk>X,Y\<rbrakk> Expr[Uoracle H]])"
+definition [program_bodies]: "queryGS =  (block [measurement \<lbrakk>var_in_S\<rbrakk> \<lbrakk>X\<rbrakk> Expr[binary_measurement (proj_classical_set S)],
+                            ifthenelse Expr[in_S=1] [assign \<lbrakk>var_Find\<rbrakk> Expr[True]] [],
                             queryG])"
 
-definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> (const_expression 0), sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> (const_expression test_distr),
+definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
         instantiateOracles adv [instantiateOracles Count [queryG]]]"
-definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> (const_expression 0), sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> (const_expression test_distr),
+definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
         instantiateOracles adv [instantiateOracles Count [queryH]]]"
 definition [program_bodies]: "findG = (block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S,var_G,var_H,var_z\<rbrakk> Expr[test_distr], assign \<lbrakk>var_Find\<rbrakk> Expr[False], instantiateOracles adv [instantiateOracles Count [queryGS]]])"
 
-lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>c\<rbrakk> (expression \<lbrakk>c\<rbrakk> (\<lambda>count::nat. count + 1))]" for P c 
+lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>var_count\<rbrakk> Expr[count+1]]" for P  
   by (cheat Count)
 
 lemma fv_adv[program_fv]: "fv_oracle_program adv = set (variable_names \<lbrakk>X,Y,var_b,var_z\<rbrakk>)" by (cheat fv_adv)
