@@ -288,11 +288,11 @@ object Parser extends JavaTokenParsers {
     }
 
   val tactic_swap: Parser[SwapTac] =
-    literal("swap") ~> OnceParser("left|right".r ~ natural.?) ^^ {
-      case "left" ~ n => SwapTac(left=true, n.getOrElse(1))
-      case "right" ~ n => SwapTac(left=false, n.getOrElse(1))
-      case _ ~ _ => throw new InternalError("Should not occur")
-    }
+    literal("swap") ~> OnceParser(for (
+      lr <- "left|right".r;
+      left = lr match { case "left" => true; case "right" => false; case _ => throw new InternalError("Should not occur") };
+      (numStatements,steps) <- natural~natural ^^ { case x~y => (x,y) } | (natural ^^ { (1,_) }) | success((1,1)))
+      yield SwapTac(left=left, numStatements=numStatements, steps=steps))
 
   val tactic_inline: Parser[InlineTac] =
     literal("inline") ~> identifier ^^ InlineTac

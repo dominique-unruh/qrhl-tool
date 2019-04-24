@@ -1,12 +1,15 @@
 package qrhl.tactic
 
+import org.log4s
 import qrhl._
 import qrhl.logic.{Block, Environment}
 
 
-case class SwapTac(left:Boolean, number:Int=1) extends Tactic {
-  if (number < 1)
-    throw UserException(s"swap tactic must get numeric argument >=1, not $number")
+case class SwapTac(left:Boolean, numStatements:Int, steps:Int) extends Tactic {
+  if (steps < 1)
+    throw UserException(s"swap tactic must get numeric argument >=1, not $steps")
+  if (numStatements < 1)
+    throw UserException(s"swap tactic must get numeric argument >=1, not $numStatements")
 
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case QRHLSubgoal(l,r,pre,post,assms) =>
@@ -20,14 +23,21 @@ case class SwapTac(left:Boolean, number:Int=1) extends Tactic {
   }
 
   def swap(env:Environment, prog: Block) : Block = {
-    if (prog.length<number+1)
-      throw UserException(s"Program must have at least ${number+1} statements (on top level)")
-    val (rest,rotate) = prog.statements.splitAt(prog.length-number-1)
-    val last = rotate.last
-    val jump = rotate.dropRight(1)
-    val shared = last.variablesAll(env).intersect(Block(jump:_*).variablesAll(env))
+    SwapTac.logger.debug(this.toString)
+    if (prog.length<steps+1)
+      throw UserException(s"Program must have at least ${steps+1} statements (on top level)")
+    val (rest,rotate) = prog.statements.splitAt(prog.length-steps-numStatements)
+    val (jump,last) = rotate.splitAt(steps)
+    SwapTac.logger.debug(s"$jump")
+    SwapTac.logger.debug(s"$last")
+    val shared = Block(last:_*).variablesAll(env).intersect(Block(jump:_*).variablesAll(env))
     if (shared.nonEmpty)
-      throw UserException(s"Cannot swap $last and ${jump.mkString(" ")}, they have shared variables (${shared.mkString(", ")})")
-    Block(rest ++ (last :: jump) : _*)
+      throw UserException(s"Cannot swap ${last.mkString(" ")} and ${jump.mkString(" ")}, they have shared variables (${shared.mkString(", ")})")
+    Block(rest ++ (last ::: jump) : _*)
   }
+}
+
+
+object SwapTac {
+  private val logger = log4s.getLogger
 }
