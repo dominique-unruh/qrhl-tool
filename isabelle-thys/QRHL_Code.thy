@@ -222,7 +222,7 @@ lemma span_Set_Monad[code]: "span (Set_Monad l) = SPAN (map vec_of_ell2 l)"
 lemma tensorSpace_SPAN[code]: "tensorSpace (SPAN A) (SPAN B) = SPAN [vec_tensor a b. a<-A, b<-B]"
   by (cheat 17)
 
-lemma vec_of_ell2_timesScalarVec[code]: "vec_of_ell2 (timesScalarVec a \<psi>) = smult_vec a (vec_of_ell2 \<psi>)"
+lemma vec_of_ell2_timesScalarVec[code]: "vec_of_ell2 (scaleC a \<psi>) = smult_vec a (vec_of_ell2 \<psi>)"
   for \<psi> :: "'a::enum ell2"
   by (cheat 17)
 
