@@ -29,7 +29,7 @@ class O2HTacTest extends FunSuite {
         |
         | program queryG := { on X,Y apply (Uoracle G); }.
         | program queryGS := {
-        |   hit <- measure X with binary_measurement (projS S);
+        |   hit <- measure X with binary_measurement (proj_classical_set S);
         |   if (hit=1) then Find <- True; else skip;
         |   call queryG;
         | }.
