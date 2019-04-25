@@ -24,6 +24,8 @@ import Isabelle.Context.codec
 import Subgoal.codec
 import qrhl.State.logger
 
+import scala.collection.mutable
+
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): Subgoal
 
@@ -125,7 +127,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
   override def toString: String = {
     val assms = if (assumptions.isEmpty) "" else
       s"Assumptions:\n${assumptions.map(a => s"* $a\n").mkString}\n"
-    s"${assms}Pre:   $pre\nLeft:  ${left.toStringNoParens}\nRight: ${right.toStringNoParens}\nPost:  $post"
+    s"${assms}Pre:   $pre\n\n${left.toStringMultiline("Left:  ")}\n\n${right.toStringMultiline("Right: ")}\n\nPost:  $post"
   }
 
   override def checkVariablesDeclared(environment: Environment): Unit = {
@@ -340,7 +342,19 @@ class State private (val environment: Environment,
     copy(isabelle=isa, currentLemma=None, cheatMode=cheatMode.endProof)
   }
 
-  def declareProgram(name: String, program: Block): State = {
+  private def containsDuplicates[A](seq: Seq[A]): Boolean = {
+    val seen = new mutable.HashSet[A]()
+    for (e <- seq) {
+      if (seen.contains(e)) return true
+      seen += e
+    }
+    false
+  }
+
+  def declareProgram(name: String, oracles: List[String], program: Block): State = {
+    if (containsDuplicates(oracles))
+      throw UserException("Oracles "+oracles.mkString(",")+" must not contain duplicates")
+
     for (x <- program.variablesDirect)
       if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in program")
@@ -348,13 +362,25 @@ class State private (val environment: Environment,
     if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
     if (this.environment.variableExists(name))
       throw UserException(s"Name $name already used for a variable or program.")
-    val isa = _isabelle.get.declareVariable(name, Isabelle.programT)
 
-    copy(environment = environment.declareProgram(name, program))
+    val decl = ConcreteProgramDecl(environment,name,oracles,program)
+    val env1 = environment.declareProgram(decl)
+    val isa = decl.declareInIsabelle(_isabelle.get)
+
+//    val isa1 = _isabelle.get.declareVariable(name, if (oracles.isEmpty) Isabelle.programT else Isabelle.oracle_programT)
+
+//    val isa2 = decl.getSimplifierRules.foldLeft(isa1) { (isa,rule) => isa.addAssumption("", rule.isabelleTerm, simplifier = true) }
+
+    copy(environment = env1, isabelle=Some(isa))
   }
 
   def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], numOracles : Int): State = {
-    copy(environment = environment.declareAdversary(name, cvars, qvars, numOracles))
+//    val isa1 = _isabelle.get.declareVariable(name,
+//      if (numOracles==0) Isabelle.programT else Isabelle.oracle_programT)
+    val decl = AbstractProgramDecl(name, cvars.toList, qvars.toList, numOracles)
+    val isa = decl.declareInIsabelle(_isabelle.get)
+//    val isa2 = decl.getSimplifierRules.foldLeft(isa1) { (isa,rule) => isa.addAssumption("", rule.isabelleTerm, simplifier = true) }
+    copy(environment = environment.declareProgram(decl), isabelle=Some(isa))
   }
 
 

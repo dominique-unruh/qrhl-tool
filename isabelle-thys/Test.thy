@@ -12,11 +12,128 @@ Main
 begin
 
 ML \<open>
-Path.variable "ISABELLE_VERSION"
+val ctxt = \<^context> |> Proof_Context.set_mode Proof_Context.mode_schematic
+val t = Syntax.parse_term ctxt "1::?'a::one" |> Syntax.check_term ctxt
+val res = infer_instantiate \<^context> [(("j",0),Thm.cterm_of \<^context> t)] @{thm le_trans[of "1::nat"]}
 \<close>
+
+
+find_theorems "abs _ \<le> _ + _"
+
+thm abs_triangle_ineq
+
 ML \<open>
-OS.Process.system "set >/tmp/xxx"
+fun robust f x =
+  (case try f x of
+    SOME s => s
+  | NONE => Markup.markup Markup.intensify "<malformed>");
+
+fun robust2 f x y = robust (fn () => f x y) ();
+
+fun robust_context NONE _ _ = []
+  | robust_context (SOME ctxt) f xs = map (robust2 f ctxt) xs;
+
+
+fun identify exn =
+  let
+    val exn' = Par_Exn.identify [] exn;
+    val exec_id = Properties.get (Exn_Properties.get exn') Markup.exec_idN;
+    val i = Par_Exn.the_serial exn' handle Option.Option => serial ();
+  in ((i, exn'), exec_id) end;
+
+
+fun (* flatten _ (CONTEXT (ctxt, exn)) = flatten (SOME ctxt) exn
+  |  *)flatten context (Exn.EXCEPTIONS exns) = maps (flatten context) exns
+  | flatten context exn =
+      (case Par_Exn.dest exn of
+        SOME exns => maps (flatten context) exns
+      | NONE => [(context, identify exn)]);
+
+
+val print_thy = Pretty.unformatted_string_of o Context.pretty_abbrev_thy;
+
+    fun raised exn name msgs =
+        (case msgs of
+          [] => "exception " ^ name ^ " raised" 
+        | [msg] => "exception " ^ name ^ " raised"  ^ ": " ^ msg
+        | _ =>
+            cat_lines (("exception " ^ name ^ " raised"  ^ ":") ::
+              map (Markup.markup Markup.item) msgs))
+      
+
+fun exn_messages e =
+  let
+
+    fun exn_msgs (context, ((i, exn), id)) =
+      (case exn of
+        Runtime.EXCURSION_FAIL (exn, loc) =>
+          map (fn ((i, msg), id) => ((i, msg ^ Markup.markup Markup.no_report ("\n" ^ loc)), id))
+            (sorted_msgs context exn)
+      | _ =>
+        let
+          val msg =
+            (case exn of
+              Timeout.TIMEOUT t => Timeout.print t
+            | Runtime.TOPLEVEL_ERROR => "Error"
+            | ERROR "" => "Error"
+            | ERROR msg => msg
+            | Fail msg => raised exn "Fail" [msg]
+            | THEORY (msg, thys) => raised exn "THEORY" (msg :: map (robust print_thy) thys)
+            | Ast.AST (msg, asts) =>
+                raised exn "AST" (msg :: map (robust (Pretty.string_of o Ast.pretty_ast)) asts)
+            | TYPE (msg, Ts, ts) =>
+                raised exn "TYPE" (msg ::
+                  (robust_context context Syntax.string_of_typ Ts @
+                    robust_context context Syntax.string_of_term ts))
+            | TERM (msg, ts) =>
+                (\<^print> ts; raised exn "TERM" (msg :: \<^print> (robust_context context Syntax.string_of_term ts)))
+            | CTERM (msg, cts) =>
+                raised exn "CTERM"
+                  (msg :: robust_context context Syntax.string_of_term (map Thm.term_of cts))
+            | THM (msg, i, thms) =>
+                raised exn ("THM " ^ string_of_int i)
+                  (msg :: robust_context context Thm.string_of_thm thms)
+            | _ => raised exn (robust (Pretty.string_of o Runtime.pretty_exn) exn) []);
+        in [((i, msg), id)] end)
+      and sorted_msgs context exn =
+        sort_distinct (int_ord o apply2 (fst o fst)) (maps exn_msgs (flatten context exn));
+
+  in sorted_msgs NONE e end;
+
+
 \<close>
+
+ML \<open>
+exn_messages (TERM("bla",[\<^term>\<open>blue\<close>]))
+\<close>
+
+ML \<open>         
+(raise TERM("bla",[\<^term>\<open>1=2\<close>,\<^term>\<open>blu\<close>]))
+handle e => e |> Runtime.thread_context |> Runtime.exn_messages |> hd 
+  (* |> YXML.parse_body |> XML.content_of  *)
+\<close>
+
+
+ML \<open>
+raise TERM("bla",[\<^term>\<open>blue\<close>])
+\<close>
+
+
+
+ML \<open>
+Object_Logic.atomize_term \<^context> \<^prop>\<open>P \<Longrightarrow> 1=1\<close> |> fastype_of
+\<close>
+
+
+ML \<open>
+\<^term>\<open>(\<le>)\<close>
+\<close>
+
+
+lemma 
+"
+qrhl (expression \<lbrakk>var_S1, var_S2, var_G1, var_G2, var_H1, var_H2, var_z1, var_z2, var_pk1, var_pk2, var_cstar1, var_cstar2, var_classA1, var_classA2, var_b1, var_b2, var_sk1, var_sk2, var_mstar1, var_mstar2, var_rstar1, var_rstar2\<rbrakk> (\<lambda>(S1, S2, G1, G2, H1, H2, z1, z2, pk1, pk2, cstar1, cstar2, classA1, classA2, b1, b2, sk1, sk2, mstar1, mstar2, rstar1, rstar2). \<CC>\<ll>\<aa>[S1 = S2 \<and> G1 = G2 \<and> H1 = H2 \<and> z1 = z2 \<and> pk1 = pk2 \<and> cstar1 = cstar2 \<and> classA1 = classA2 \<and> b1 = b2 \<and> sk1 = sk2 \<and> mstar1 = mstar2 \<and> rstar1 = rstar2] \<sqinter> \<lbrakk>quantA1, Gin1, Gout1\<rbrakk> \<equiv>\<qq> \<lbrakk>quantA2, Gin2, Gout2\<rbrakk>)) [sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> (const_expression o2h_distr)] [sample \<lbrakk>var_G\<rbrakk> (const_expression (uniform UNIV)), sample \<lbrakk>var_pk, var_sk\<rbrakk> (const_expression (keygen ())), sample \<lbrakk>var_mstar\<rbrakk> (const_expression (uniform (msg_space ()))), sample \<lbrakk>var_rstar\<rbrakk> (const_expression (uniform UNIV)), assign \<lbrakk>var_H\<rbrakk> (expression \<lbrakk>var_G, var_mstar, var_rstar\<rbrakk> (\<lambda>(G, mstar, rstar). G(mstar := rstar))), assign \<lbrakk>var_z\<rbrakk> (expression \<lbrakk>var_pk, var_mstar, var_rstar\<rbrakk> (\<lambda>(pk, mstar, rstar). (pk, encr () pk mstar rstar))), assign \<lbrakk>var_S\<rbrakk> (expression \<lbrakk>var_mstar\<rbrakk> (\<lambda>mstar. {mstar}))] (expression \<lbrakk>var_pk1, var_pk2, var_cstar1, var_cstar2, var_z1, var_z2, var_classA1, var_classA2, var_b1, var_b2, var_H1, var_H2\<rbrakk> (\<lambda>(pk1, pk2, cstar1, cstar2, z1, z2, classA1, classA2, b1, b2, H1, H2). \<CC>\<ll>\<aa>[pk1 = pk2 \<and> cstar1 = cstar2 \<and> z1 = z2 \<and> classA1 = classA2 \<and> b1 = b2 \<and> H1 = H2] \<sqinter> \<lbrakk>quantA1, Gin1, Gout1\<rbrakk> \<equiv>\<qq> \<lbrakk>quantA2, Gin2, Gout2\<rbrakk>))
+"
 
 
 

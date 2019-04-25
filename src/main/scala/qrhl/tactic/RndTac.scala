@@ -2,9 +2,8 @@ package qrhl.tactic
 import info.hupel.isabelle.pure.{Term, Typ}
 import info.hupel.isabelle.{Operation, pure}
 import qrhl.isabelle.{Isabelle, RichTerm}
-import qrhl.logic.{CVariable, Sample, Statement}
+import qrhl.logic.{CVariable, Sample, Statement, VarTerm}
 import qrhl.{State, UserException}
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 
@@ -13,7 +12,7 @@ case object RndEqualTac
   override def toString: String = s"rnd"
 }
 
-case class RndWitnessTac(left:CVariable, right:CVariable, witness:RichTerm)
+case class RndWitnessTac(left:VarTerm[CVariable], right:VarTerm[CVariable], witness:RichTerm)
   extends IsabelleTac[Term]("joint_sample_tac", { _ => witness.isabelleTerm }) {
   override def toString: String = s"rnd $left,$right <- $witness"
 }

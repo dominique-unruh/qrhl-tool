@@ -1,13 +1,11 @@
 package qrhl.toplevel
 
 import info.hupel.isabelle.pure
-import qrhl.{toplevel, _}
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
 import qrhl.tactic._
-import java.nio.file.{Path, Paths}
-
 import info.hupel.isabelle.pure.Typ
+import qrhl.{toplevel, _}
 
 import scala.util.parsing.combinator._
 
@@ -21,7 +19,25 @@ object Parser extends JavaTokenParsers {
   val identifierList : Parser[List[String]] = rep1sep(identifier,identifierListSep)
   val identifierList0 : Parser[List[String]] = repsep(identifier,identifierListSep)
   val identifierTuple: Parser[List[String]] = "(" ~> identifierList0 <~ ")"
-  val identifierOrTuple: Parser[List[String]] = identifierTuple | (identifier ^^ {s:String => List(s)})
+//  val identifierOrTuple: Parser[List[String]] = identifierTuple | (identifier ^^ {s:String => List(s)})
+
+  val identifierAsVarterm: Parser[VTSingle[String]] = identifier ^^ VTSingle[String]
+  //noinspection ForwardReference
+  val vartermParens : Parser[VarTerm[String]] = "(" ~> varterm <~ ")"
+  val vartermAtomic: Parser[VarTerm[String]] = vartermParens | identifierAsVarterm
+  val varterm: Parser[VarTerm[String]] =
+    rep1sep(vartermAtomic, identifierListSep) ^^ vartermListToVarterm
+//  val varterm0 = vartermParens | vartermNoParens0
+//  val varterm: toplevel.Parser.Parser[VarTerm[String]] = vartermNoParens1 | vartermParens
+  private def vartermListToVarterm(vts:List[VarTerm[String]]) = {
+    vts match {
+    case Nil => VTUnit
+    case _ => vts.foldRight(null:VarTerm[String]) { (a,b) => if (b==null) a else VTCons(a,b) }
+  }}
+//  val vartermNoParens1 : Parser[VarTerm[String]] =
+//    rep1sep(vartermParens | identifierAsVarterm, identifierListSep) ^^ vartermListToVarterm
+//  val vartermNoParens0 : Parser[VarTerm[String]] =
+//    repsep(vartermParens | identifierAsVarterm, identifierListSep) ^^ vartermListToVarterm
 
   //  val natural : Parser[BigInt] = """[0-9]+""".r ^^ { BigInt(_) }
   val natural: Parser[Int] = """[0-9]+""".r ^^ { _.toInt }
@@ -63,10 +79,10 @@ object Parser extends JavaTokenParsers {
 
   private val assignSymbol = literal("<-")
   def assign(implicit context:ParserContext) : Parser[Assign] =
-    for (lhs <- identifierOrTuple;
+    for (lhs <- varterm;
          _ <- assignSymbol;
          // TODO: add a cut
-         lhsV = VarTerm.varlist(lhs.map { context.environment.getCVariable }:_*);
+         lhsV = lhs.map[CVariable] { context.environment.getCVariable };
          typ = Isabelle.tupleT(lhsV.map[Typ](_.valueTyp));
          e <- expression(typ);
          _ <- statementSeparator)
@@ -74,10 +90,10 @@ object Parser extends JavaTokenParsers {
 
   private val sampleSymbol = literal("<$")
   def sample(implicit context:ParserContext) : Parser[Sample] =
-    for (lhs <- identifierOrTuple;
+    for (lhs <- varterm;
          _ <- sampleSymbol;
          // TODO: add a cut
-         lhsV = VarTerm.varlist(lhs.map { context.environment.getCVariable }:_*);
+         lhsV = lhs.map[CVariable] { context.environment.getCVariable };
          typ = Isabelle.tupleT(lhsV.map[Typ](_.valueTyp));
          e <- expression(Isabelle.distrT(typ));
          _ <- statementSeparator)
@@ -126,12 +142,12 @@ object Parser extends JavaTokenParsers {
 
   val measureSymbol : Parser[String] = assignSymbol
   def measure(implicit context:ParserContext) : Parser[Measurement] =
-    for (res <- identifierOrTuple;
+    for (res <- varterm;
          _ <- measureSymbol;
          _ <- literal("measure");
-         vs <- identifierList;
-         resv = VarTerm.varlist(res.map { context.environment.getCVariable }:_*);
-         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+         vs <- varterm;
+         resv = res.map[CVariable] { context.environment.getCVariable };
+         qvs = vs.map[QVariable] { context.environment.getQVariable };
          _ <- literal("with");
          etyp = Isabelle.measurementT(Isabelle.tupleT(resv.map[Typ](_.valueTyp)), Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
          e <- expression(etyp);
@@ -215,9 +231,15 @@ object Parser extends JavaTokenParsers {
 //    }
 
   def declareProgram(implicit context:ParserContext) : Parser[DeclareProgramCommand] =
-    literal("program") ~> OnceParser(identifier ~ literal(":=") ~ parenBlock) ^^ { case id~_~prog =>
-      DeclareProgramCommand(id,prog)
-    }
+    literal("program") ~> OnceParser(for (
+      name <- identifier;
+      args <- identifierTuple.?;
+      args2 = args.getOrElse(Nil);
+      _ <- literal(":=");
+      // temporarily add oracles to environment to allow them to occur in call-expressions during parsing
+      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,0))) };
+      body <- parenBlock(context2))
+      yield DeclareProgramCommand(name,args2,body))
 
   private def declareAdversaryCalls: Parser[Int] = (literal("calls") ~ rep1sep(literal("?"),identifierListSep)).? ^^ {
     case None => 0
@@ -240,6 +262,7 @@ object Parser extends JavaTokenParsers {
 
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
+    name <- (identifier <~ ":").?;
     _ <- literal("{");
     pre <- expression(Isabelle.predicateT);
     _ <- literal("}");
@@ -249,7 +272,7 @@ object Parser extends JavaTokenParsers {
     _ <- literal("{");
     post <- expression(Isabelle.predicateT);
     _ <- literal("}")
-  ) yield GoalCommand("",QRHLSubgoal(left,right,pre,post,Nil)))
+  ) yield GoalCommand(name.getOrElse(""), QRHLSubgoal(left,right,pre,post,Nil)))
 
   val tactic_wp: Parser[WpTac] =
     literal("wp") ~> {
@@ -265,11 +288,11 @@ object Parser extends JavaTokenParsers {
     }
 
   val tactic_swap: Parser[SwapTac] =
-    literal("swap") ~> OnceParser("left|right".r ~ natural.?) ^^ {
-      case "left" ~ n => SwapTac(left=true, n.getOrElse(1))
-      case "right" ~ n => SwapTac(left=false, n.getOrElse(1))
-      case _ ~ _ => throw new InternalError("Should not occur")
-    }
+    literal("swap") ~> OnceParser(for (
+      lr <- "left|right".r;
+      left = lr match { case "left" => true; case "right" => false; case _ => throw new InternalError("Should not occur") };
+      (numStatements,steps) <- natural~natural ^^ { case x~y => (x,y) } | (natural ^^ { (1,_) }) | success((1,1)))
+      yield SwapTac(left=left, numStatements=numStatements, steps=steps))
 
   val tactic_inline: Parser[InlineTac] =
     literal("inline") ~> identifier ^^ InlineTac
@@ -289,23 +312,28 @@ object Parser extends JavaTokenParsers {
     }
 
   def tactic_equal(implicit context:ParserContext) : Parser[EqualTac] =
-    literal("equal") ~> (literal("exclude") ~> identifierList).? ^^ {
-      case None => EqualTac(Nil)
-      case Some(ps) =>
-        for (p <- ps if !context.environment.programs.contains(p))
+    literal("equal") ~> (literal("exclude") ~> identifierList).? ~ (literal("qvars") ~> identifierList).? ^^ {
+      case exclude ~ qvars =>
+        val exclude2 = exclude.getOrElse(Nil)
+        for (p <- exclude2 if !context.environment.programs.contains(p))
           throw UserException(s"Undeclared program $p")
-        EqualTac(ps)
+
+        val qvars2 = qvars.getOrElse(Nil) map { context.environment.getQVariable }
+
+        EqualTac(exclude=exclude2, qvariables = qvars2)
     }
 
   def tactic_rnd(implicit context:ParserContext): Parser[Tactic] =
     literal("rnd") ~> (for (
-      x <- identifier;
-      xVar = context.environment.getCVariable(x);
+      x <- vartermAtomic;
+      xVar = x.map[CVariable](context.environment.getCVariable);
+      xTyp = Isabelle.tupleT(xVar.map[Typ](_.valueTyp));
       _ <- literal(",");
-      y <- identifier;
-      yVar = context.environment.getCVariable(y);
+      y <- vartermAtomic;
+      yVar = y.map[CVariable](context.environment.getCVariable);
+      yTyp = Isabelle.tupleT(yVar.map[Typ](_.valueTyp));
       _ <- sampleSymbol | assignSymbol;
-      e <- expression(Isabelle.distrT(Isabelle.prodT(xVar.valueTyp,yVar.valueTyp)))
+      e <- expression(Isabelle.distrT(Isabelle.prodT(xTyp,yTyp)))
     ) yield (xVar,yVar,e)).? ^^ {
       case None => RndEqualTac
       case Some((xVar,yVar,e)) => RndWitnessTac(xVar,yVar,e)
@@ -324,10 +352,17 @@ object Parser extends JavaTokenParsers {
       case None ~ lemmas => SimpTac(lemmas, force=false, everywhere = false)
       case Some("!") ~ lemmas => SimpTac(lemmas, force = true, everywhere = false)
       case Some("*") ~ lemmas => SimpTac(lemmas, force = false, everywhere = true)
+      case _ => throw new RuntimeException("Internal error") // cannot happen
     }
 
-  val tactic_rule : Parser[RuleTac] =
-    literal("rule") ~> OnceParser(identifier) ^^ RuleTac.apply
+  def tactic_rule(implicit context:ParserContext) : Parser[RuleTac] = {
+    val inst: toplevel.Parser.Parser[(String, RichTerm)] = (identifier <~ literal(":=")) ~ expression(Isabelle.dummyT) ^^ { case a~b => (a,b) }
+
+    literal("rule") ~> OnceParser(for (
+      rule <- identifier;
+      instantiations <- (literal("where") ~> rep1sep(inst, statementSeparator)).?
+    ) yield RuleTac(rule, instantiations.getOrElse(Nil)))
+  }
 
   val tactic_clear : Parser[ClearTac] =
     literal("clear") ~> OnceParser(natural) ^^ ClearTac.apply
@@ -358,7 +393,9 @@ object Parser extends JavaTokenParsers {
       tactic_case |
       tactic_fix |
       tactic_squash |
-      literal("measure") ^^ { _ => JointMeasureTac }
+      literal("measure") ^^ { _ => JointMeasureTac } |
+      literal("o2h") ^^ { _ => O2HTac } |
+      literal("semiclassical") ^^ { _ => SemiClassicalTac }
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 
@@ -367,7 +404,8 @@ object Parser extends JavaTokenParsers {
 //  val quit: Parser[QuitCommand] = "quit" ^^ { _ => QuitCommand() }
 
   val debug : Parser[DebugCommand] = "debug:" ~>
-    ("goal" ^^ { _ => DebugCommand.goals((context,goals) => for (g <- goals) println(g.toTerm(context))) })
+    ("goal" ^^ { _ => DebugCommand.goals((context,goals) => for (g <- goals) println(g.toTerm(context))) } |
+      "isabelle" ^^ { _ => DebugCommand.isabelle })
 
   val changeDirectory : Parser[ChangeDirectoryCommand] = literal("changeDirectory") ~> quotedString ^^ ChangeDirectoryCommand.apply
 

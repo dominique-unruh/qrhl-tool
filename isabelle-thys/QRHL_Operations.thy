@@ -1,7 +1,6 @@
 theory QRHL_Operations
-  imports 
-    "HOL-Protocol.Protocol_Main" QRHL_Core Tactics Hashed_Terms Joint_Measure Bounded_Operators.Extended_Sorry
-    Weakest_Precondition Joint_Sample Squash_Sampling
+  imports "HOL-Protocol.Protocol_Main" QRHL_Core Tactics Hashed_Terms Joint_Measure Bounded_Operators.Extended_Sorry
+    Weakest_Precondition Joint_Sample Squash_Sampling O2H Semi_Classical_Search
 begin
 
 ML_file "qrhl_operations.ML"
@@ -10,10 +9,26 @@ ML \<open>
 (* Codec.add_exception_printer (fn pr => fn exn => case Par_Exn.dest exn of 
   NONE => NONE | 
   SOME exns => exns |> map pr |> String.concatWith "\n" |> SOME);; *)
-Codec.add_exception_printer (fn _ => fn exn => Runtime.exn_message exn |> YXML.parse_body |> XML.content_of |> SOME)
+Codec.add_exception_printer (fn _ => fn exn => exn |> Runtime.thread_context |> Runtime.exn_context (SOME \<^context>) |> Runtime.exn_message |> YXML.parse_body |> XML.content_of |> SOME)
 \<close>
 
 ML \<open>open QRHL_Operations\<close>
+
+operation_setup o2h_tac = {*
+  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term 
+      (fn ctxt => fn _ => O2H.o2h_tac ctxt 1) 
+      (fn _ => "o2h")}
+*}
+
+operation_setup semiclassical_tac = {*
+  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term 
+      (fn ctxt => fn _ => Semi_Classical_Search.semi_classical_search_tac ctxt 1) 
+      (fn _ => "o2h")}
+*}
 
 operation_setup create_context = {*
   {from_lib = Codec.list Codec.string,
@@ -53,7 +68,7 @@ operation_setup print_typ = {*
 operation_setup add_assumption = {*
   {from_lib = Codec.triple Codec.string term_tight_codec Codec.int,
    to_lib = Codec.int,
-   action = fn (name,assm,ctx_id) => make_ctxt_ref (QRHL.addAssumption name assm (Refs.Ctxt.read ctx_id))}
+   action = fn (name,assm,ctx_id) => make_ctxt_ref (QRHL_Operations.addAssumption name assm (Refs.Ctxt.read ctx_id))}
 *}
 
 operation_setup read_typ = {*
@@ -90,10 +105,10 @@ operation_setup byQRHLPre = {*
 operation_setup declare_variable = {*
   {from_lib = Codec.triple Codec.int Codec.string typ_tight_codec,
    to_lib = Codec.int,
-   action = fn (ctx_id, name, T) =>
-            let val ([v],ctx') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] (Refs.Ctxt.read ctx_id)
-                val _ = if v<>name then error("variable v already declared") else ()
-            in make_ctxt_ref ctx' end }
+   action = fn (ctxt_id, name, T) =>
+            let val ([v],ctxt') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] (Refs.Ctxt.read ctxt_id)
+                val _ = if v<>name then error("variable "^name^" already declared") else ()
+            in make_ctxt_ref ctxt' end }
 *}
 
 operation_setup declare_quantum_variable = {*
@@ -145,20 +160,20 @@ operation_setup rndWp2 = {*
          QRHL.rndWp2 v1 T1 e1 v2 T2 e2 f B |> richterm_encode ctxt end}
 *}
 
-operation_setup apply_rule = {*
-  {from_lib = Codec.triple Codec.string subgoal_codec context_codec,
+operation_setup apply_rule = {* let
+fun tac ctxt (name, inst) = let
+    val thm0 = Proof_Context.get_thm ctxt name
+    val inst' = map (fn (v,t) => ((v,0), Thm.cterm_of ctxt t)) inst
+    val thm = infer_instantiate ctxt inst' thm0
+    in resolve_tac ctxt [thm] 1
+    end
+in
+  {from_lib = Codec.triple (Codec.tuple Codec.string (Codec.list (Codec.tuple Codec.string term_tight_codec))) subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
-      (fn ctxt => fn name => resolve_tac ctxt (Proof_Context.get_thms ctxt name) 1) 
-      (fn rule => "rule "^rule)
-
-(*  fn (name,goal,ctx_id) => let
-     val ctxt = Refs.Ctxt.read ctx_id
-     val (ts,thm) = QRHL.applyRule name goal ctxt
-     in SOME (ts,make_thm_ref thm) 
-          |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int))
-      end *)
-}
+      tac 
+      (fn (rule,_) => "rule "^rule)}
+end
 *}
 
 operation_setup simplify_term = {*
@@ -300,5 +315,25 @@ operation_setup retrieve_term_string = \<open>
   {from_lib = Codec.int,
    to_lib = Codec.string,
    action = Terms.id_to_string}\<close>
+
+operation_setup declare_abstract_program = \<open>
+  {from_lib = Codec.tuple (Codec.triple Codec.int Codec.string (Codec.list (Codec.tuple Codec.string typ_tight_codec)))
+                          Codec.int,
+   to_lib = Codec.int,
+   action = fn ((ctxt_id,name,vars),numOracles) => make_ctxt_ref (QRHL_Operations.declare_abstract_program (Refs.Ctxt.read ctxt_id) name vars numOracles)}
+\<close>
+
+operation_setup declare_concrete_program = \<open>
+  {from_lib = Codec.tuple (Codec.triple Codec.int Codec.string (Codec.list (Codec.tuple Codec.string typ_tight_codec)))
+                          (Codec.tuple (Codec.list Codec.string) statement_codec),
+   to_lib = Codec.int,
+   action = fn ((ctxt_id,name,vars),(oracles,body)) => make_ctxt_ref (QRHL_Operations.declare_concrete_program (Refs.Ctxt.read ctxt_id) name vars oracles body)}
+\<close>
+
+operation_setup debug = \<open>
+  {from_lib = Codec.int,
+   to_lib = Codec.string,
+   action = fn ctxt_id => QRHL_Operations.debug (Refs.Ctxt.read ctxt_id)}
+\<close>
 
 end

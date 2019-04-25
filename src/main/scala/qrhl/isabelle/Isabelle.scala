@@ -120,7 +120,7 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
   private val config: Configuration = Configuration.simple("QRHL")
 
   private def doBuild() {
-    println("*** Building Isabelle (may take a while, especially the first time, e.g., 10-25min)...")
+    println("*** Building Isabelle (may take a while, especially the first time, e.g., 20-60min)...")
     if (!System.build(environment, config))
       throw qrhl.UserException("Building Isabelle failed")
   }
@@ -265,6 +265,8 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 }
 
 object Isabelle {
+  val less_eq_name: String = "Orderings.ord_class.less_eq"
+
   private var globalIsabellePeek : Isabelle = _
   lazy val globalIsabelle: Isabelle = {
     val isabelle = new Isabelle("auto")
@@ -320,7 +322,8 @@ object Isabelle {
     terms.foldRight[Term](nil)( cons $ _ $ _ )
   }
 
-
+  val dummyT = Type("dummy")
+  val natT = Type("Nat.nat")
   val bitT = Type("Bit.bit", Nil)
   val predicateT = Type("Complex_L2.subspace", List(Type("Prog_Variables.mem2",Nil)))
   val programT = Type("Programs.program")
@@ -328,6 +331,7 @@ object Isabelle {
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
   val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
+  val predicate_top = Const ("Orderings.top_class.top", predicateT)
   val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
   val distrT_name = "Discrete_Distributions.distr"
   def distrT(typ:ITyp): Type = Type(distrT_name, List(typ))
@@ -422,12 +426,14 @@ object Isabelle {
   val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_thm")
   val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt,Term),String]("print_term")
   val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
-  val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String,Term,BigInt), BigInt]("add_assumption")
+  val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String, Term, BigInt), BigInt]("add_assumption")
   val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
   @deprecated("use readExpression","now")
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
   val simplifyTermOp: Operation[(Term, List[String], BigInt), (RichTerm,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (RichTerm,BigInt)]("simplify_term")
   val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
+  val one_name = "Groups.one_class.one"
+  val True_const = Const("HOL.True", boolT)
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const("HOL.eq", typ -->: typ -->: HOLogic.boolT) $ a $ b
 
@@ -588,7 +594,7 @@ object Isabelle {
     }
   }
 
-  class Context private[Isabelle](val isabelle:Isabelle, val contextId: BigInt) {
+  class Context(val isabelle:Isabelle, val contextId: BigInt) {
     _theContext = this
 
     def checkType(term:Term) : ITyp = {
@@ -641,4 +647,6 @@ object Isabelle {
       override def decode(tree: XML.Tree): XMLResult[Context] = throw new RuntimeException("Use Context.codec.decode(Isabelle,XML.Tree) instead")
     }
   }
+
+
 }
