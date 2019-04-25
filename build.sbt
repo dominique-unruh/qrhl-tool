@@ -27,7 +27,7 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 //isabelleSourceFilter := (- ".*") && (- "*~")
 //isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
 
-libraryDependencies ++= { val version = "1.1.0-RC1"; Seq(
+libraryDependencies ++= { val version = "1.1.0-RC2"; Seq(
   "info.hupel" %% "libisabelle" % version,
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version
@@ -51,16 +51,18 @@ assemblyMergeStrategy in assembly := {
 lazy val extractLibisabelleProtocol = taskKey[Unit]("Extract libisabelle Protocol session")
 val libisabelleExtractPath = "target/downloads/libisabelle"
 val classyExtractPath = "target/downloads/classy"
+val multiIsabelleExtractPath = "target/downloads/multi-isabelle"
 managedResources in Compile := (managedResources in Compile).dependsOn(extractLibisabelleProtocol).value
 
 extractLibisabelleProtocol := {
   val up = (update in Compile).value
   extractJar(up, "libisabelle_", baseDirectory.value / libisabelleExtractPath)
   extractJar(up, "classy-", baseDirectory.value / classyExtractPath)
+  extractJar(up, "multi-isabelle-", baseDirectory.value / multiIsabelleExtractPath)
 }
 
 //val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
-val afpUrl = "https://bitbucket.org/isa-afp/afp-2018/get/015ec037f36d.tar.gz"
+val afpUrl = "https://bitbucket.org/isa-afp/afp-devel/get/7c585d0056e3.tar.gz"
 val afpExtractPath = "target/downloads/afp"
 
 lazy val downloadAFP = taskKey[Unit]("Download the AFP")

@@ -204,7 +204,15 @@ fun subgoal_to_term ctxt (Subgoal_QRHL (qrhl, assms)) =
     fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms (Relational_Hoare.qrhl_judgment_to_term ctxt qrhl)
   | subgoal_to_term _ (Subgoal_Ambient t) = t
 
+fun contains_var (t $ u) = contains_var t orelse contains_var u
+  | contains_var (Const _) = false
+  | contains_var (Abs (_,_,t)) = contains_var t
+  | contains_var (Free _) = false
+  | contains_var (Var _) = true
+  | contains_var (Bound _) = false
+
 fun term_to_subgoal ctxt t = let
+  val _ = if contains_var t then raise TERM("New subgoal contains schematic variables",[t]) else ()
   fun split_assms assms (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) = split_assms (a::assms) b
     | split_assms assms t = (assms,t)
   val (assms,t') = split_assms [] t
@@ -241,18 +249,19 @@ val subgoal_codec = Codec.basic {encode=fn _ => error "subgoal_codec: encode not
 fun subgoal_codec' ctxt = Codec.basic {encode=subgoal_encode ctxt, decode=subgoal_decode}
 
 fun apply_tactic_on_term_concl tac (arg,subgoal,ctxt) = let
-  (* val _ = warning "STEP 1" *)
   val goal = subgoal_to_term ctxt subgoal
-  (* val _ = warning "STEP 2" *)
   val subgoals = Tactics.tac_on_term_concl (tac ctxt arg) ctxt goal
-  (* val _ = warning "STEP 3" *)
   val subgoals = subgoals |> Option.map (map (term_to_subgoal ctxt))
-  (* val _ = warning "STEP 4" *)
   val subgoals = subgoals |> tac_dummy_thm
-  (* val _ = warning "STEP 5" *)
   val encoded = subgoals |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec))
-  (* val _ = warning "STEP 6" *)
   in encoded end
+
+fun atomize ctxt t =
+  let val t' = Object_Logic.atomize_term ctxt t
+      val _ = if fastype_of t' <> \<^typ>\<open>bool\<close> then
+                raise TERM("QRHL_Operations.atomize: could not convert term to a bool",[t])
+              else ()
+  in t' end
 
 fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
   val goal = subgoal_to_term ctxt subgoal
@@ -262,7 +271,7 @@ fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
                 NONE => raise TERM(name arg^" could not be applied", [goal])
                | SOME x => x
   val subgoals = Thm.prems_of goal''
-  val subgoals' = map HOLogic.dest_Trueprop subgoals
+  val subgoals' = map (atomize ctxt) subgoals
   in SOME (subgoals' |> map (term_to_subgoal ctxt),goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec)) end
 end
 
@@ -281,5 +290,57 @@ fun create_context thy_names = let
                      |> map_filter local_thy_file 
      val ctxt = Proof_Context.init_global thy
 in (make_ctxt_ref ctxt,files) end
+
+
+fun addAssumption name term ctx =
+  let val prop = case fastype_of term of
+                   \<^typ>\<open>bool\<close> => HOLogic.mk_Trueprop term
+                 | \<^typ>\<open>prop\<close> => term
+                 | T => raise (TYPE("expected a boolean expression",[T],[term]))
+      val (_,ctx) = Proof_Context.add_assms Assumption.assume_export
+                               [((Binding.name name,[]), [(prop,[])])] ctx
+  in
+    ctx
+  end
+
+fun declare_abstract_program ctxt (name:string) (vars:(string*typ)list) (numOracles:int)= let
+  val T = if numOracles=0 then \<^typ>\<open>program\<close> else \<^typ>\<open>oracle_program\<close>
+  val (vs,ctxt) = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctxt
+  val _ = if vs<>[name] then error("variable "^name^" already declared") else ()
+
+  val fv_lhs = (if numOracles=0 then \<^const>\<open>fv_program\<close> else \<^const>\<open>fv_oracle_program\<close>) $ Free(name,T) 
+  val (varterm,vartermT) = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+  val fv_rhs = @{const set(string)} $
+          (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm)
+  val fv = HOLogic.mk_eq (fv_lhs, fv_rhs) |> HOLogic.mk_Trueprop
+  val fv_thm_name = Binding.name ("fv_"^name)
+  val ([(_,fv_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
+                               [((fv_thm_name, []), [(fv,[])])] ctxt
+  val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [O2H.program_fv]}), [(fv_thm,[])])] ctxt
+in ctxt end
+
+fun declare_concrete_program ctxt (name:string) (vars:(string*typ)list) (oracles:string list) (body:Programs.statement) = let
+  val ctxt = declare_abstract_program ctxt name vars (length oracles)
+
+  fun tag ora = "@"^ora
+  val body_rhs = Programs.statement_to_term ctxt body
+  val body_lhs = if null oracles
+                 then Free(name,\<^typ>\<open>program\<close>)
+                 else \<^const>\<open>instantiateOracles\<close> $ Free(name,\<^typ>\<open>oracle_program\<close>) $ 
+                      HOLogic.mk_list \<^typ>\<open>program\<close> (map (fn n => Free(tag n,\<^typ>\<open>program\<close>)) oracles)
+  val body_def = HOLogic.mk_eq (body_lhs, body_rhs) |> HOLogic.mk_Trueprop
+  val body_def = fold_rev (fn ora => fn t => Logic.all (Free(tag ora,\<^typ>\<open>program\<close>)) t) oracles body_def
+  val body_def_name = Binding.name name |> Binding.suffix_name "_def"
+  val ([(_,body_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
+                               [((body_def_name, []), [(body_def,[])])] ctxt
+  val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [O2H.program_bodies]}), [(body_thm,[])])] ctxt
+
+in ctxt end
+
+
+fun debug ctxt = let
+  val obj = Proof_Context.get_fact ctxt (Facts.named "O2H.program_fv")
+  val str = \<^make_string> obj |> YXML.content_of
+  in str end
 
 end

@@ -8,6 +8,7 @@ hide_const (open) Real_Vector_Spaces.span
 
 section \<open>Miscellaneous\<close>
 
+declare Inf_class.INF_image[simp]
 
 (* definition [code]: "(sqrt2::complex) = sqrt 2"
 lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
@@ -725,6 +726,10 @@ lemma mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket 
 lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
   by (cheat TODO13)
 
+axiomatization binary_measurement :: "('a,'a) bounded \<Rightarrow> (bit,'a) measurement"
+  where binary_measurement_true[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 1 = P"
+    and binary_measurement_false[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 0 = idOp-P"
+
 section \<open>Quantum predicates (ctd.)\<close>
 
 subsection \<open>Subspace division\<close>
@@ -998,7 +1003,9 @@ lemma Uoracle_selfadjoint[simp]: "(Uoracle f)* = Uoracle f" for f :: "_ \<Righta
 
 lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = idOp" for f :: "_ \<Rightarrow> _::xor_group"
   apply (subst Uoracle_selfadjoint[symmetric]) apply (rule adjUU) by simp
-                                                                    
+
+definition "proj_classical_set S = Proj (span {ket s|s. s\<in>S})"
+
 section \<open>Misc\<close>
 
 lemma bij_add_const[simp]: "bij (\<lambda>x. x+(y::_::ab_group_add))" 

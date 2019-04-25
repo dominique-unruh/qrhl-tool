@@ -7,13 +7,14 @@ import qrhl.isabelle.Isabelle
 // Variables
 sealed trait Variable {
   val name:String
+  val variableName: String
   def index1: Variable
   def index2: Variable
   def index(left:Boolean): Variable = if (left) index1 else index2
   def variableTyp: pure.Typ = Isabelle.variableT(valueTyp)
   def valueTyp : pure.Typ
 //  @deprecated("use valueType / variableTyp","") def typ : Typ
-  def variableTerm: Term
+  def variableTerm: Term = Free(variableName,variableTyp)
 }
 
 object Variable {
@@ -51,9 +52,7 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
   override def index1: QVariable = QVariable(Variable.index1(name),valueTyp)
   override def index2: QVariable = QVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): QVariable = if (left) index1 else index2
-
-//  override def valueTyp: pure.Typ = typ.isabelleTyp
-  override def variableTerm: Term = Free(name,variableTyp)
+  override val variableName: String = name
   override def toString: String = s"$name : ${Isabelle.pretty(valueTyp)} (quantum)"
 }
 
@@ -81,7 +80,7 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
   override def index2: CVariable = CVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): CVariable = if (left) index1 else index2
 //  override def valueTyp: pure.Typ = typ.isabelleTyp
-  override def variableTerm: Term = Free("var_"+name,variableTyp)
+  override val variableName : String= "var_"+name
   def valueTerm: Term = Free(name,valueTyp)
 
   override def toString: String = s"$name : ${Isabelle.pretty(valueTyp)} (classical)"

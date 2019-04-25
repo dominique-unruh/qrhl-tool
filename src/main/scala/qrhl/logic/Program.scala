@@ -4,6 +4,7 @@ import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.pure.{App, Const, Free, Term, Typ}
+import jdk.jshell.spi.ExecutionControl
 import qrhl.UserException
 import qrhl.isabelle.Isabelle.Thm
 import qrhl.isabelle.{Isabelle, RichTerm}
@@ -18,11 +19,12 @@ import RichTerm.term_tight_codec
 import Statement.codec
 
 
-sealed trait VarTerm[+A] extends Iterable[A] {
-//  override def apply(idx: Int): A = ???
+sealed trait VarTerm[+A] {
+  def toList: List[A] = iterator.toList
+  def toSeq: Seq[A] = iterator.toSeq
   def map[B](f:A=>B) : VarTerm[B]
   /** Not thread safe */
-  override def iterator: Iterator[A] = new AbstractIterator[A] {
+  def iterator: Iterator[A] = new AbstractIterator[A] {
     private var stack : List[VarTerm[A]] = List(VarTerm.this)
     /** Has the additional side effect of making sure that [stack.head] is a VTSingle if it exists */
     @tailrec override def hasNext: Boolean = stack match {
@@ -75,22 +77,31 @@ object VarTerm {
 
 case object VTUnit extends VarTerm[Nothing] {
   override def map[B](f: Nothing => B): VTUnit.type = VTUnit
-//  override def length: Int = 0
   override def iterator: Iterator[Nothing] = Iterator.empty
+  override def toString: String = "()"
 }
 case class VTSingle[+A](v:A) extends VarTerm[A] {
   override def map[B](f: A => B): VarTerm[B] = VTSingle(f(v))
-//  override def length: Int = 1
   override def iterator: Iterator[A] = Iterator.single(v)
+  override def toString: String = v.toString
 }
 case class VTCons[+A](a:VarTerm[A], b:VarTerm[A]) extends VarTerm[A] {
+  assert(a!=null)
+  assert(b!=null)
   override def map[B](f: A => B): VarTerm[B] = VTCons(a.map(f),b.map(f))
-//  override def length: Int = a.length + b.length
+  override def toString: String = s"(${a.toString},${b.toString})"
 }
 
 // Programs
 sealed trait Statement {
+  def substituteOracles(subst: Map[String, Call]) : Statement
+
   def simplify(isabelle: Isabelle.Context, facts: List[String], thms:ListBuffer[Thm]): Statement
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  def markOracles(oracles: List[String]): Statement
 
   def toBlock: Block = Block(this)
 
@@ -104,7 +115,9 @@ sealed trait Statement {
 
   /** Returns all variables used in the statement.
     * @param recurse Recurse into programs embedded via Call
-    * @return (cvars,qvars,avars,pnames) Classical, quantum, ambient variables, program declarations. */
+    * @return (cvars,qvars,avars,pnames) Classical, quantum, ambient variables, program declarations.
+    * Oracle names (starting with @) are not included or recursed into
+    * */
   def cqapVariables(environment: Environment, recurse: Boolean) : (List[CVariable],List[QVariable],List[String],List[ProgramDecl]) = {
     val cvars = new mutable.LinkedHashSet[CVariable]()
     val qvars = new mutable.LinkedHashSet[QVariable]()
@@ -119,21 +132,23 @@ sealed trait Statement {
     def collectExpr(e:RichTerm):Unit = e.caVariables(environment,cvars,avars)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => cvars ++= v; collectExpr(e)
-      case Sample(v,e) => cvars ++= v; collectExpr(e)
+      case Assign(v,e) => cvars ++= v.iterator; collectExpr(e)
+      case Sample(v,e) => cvars ++= v.iterator; collectExpr(e)
       case Call(name, args @ _*) =>
-        val p = environment.programs(name)
-        progs += p
-        if (recurse) {
-          val (cv,qv,av,ps) = p.variablesRecursive
-          cvars ++= cv; qvars ++= qv; avars ++= av; progs ++= ps
+        if (name.head!='@') {
+          val p = environment.programs(name)
+          progs += p
+          if (recurse) {
+            val (cv,qv,av,ps) = p.variablesRecursive
+            cvars ++= cv; qvars ++= qv; avars ++= av; progs ++= ps
+          }
         }
         args.foreach(collect)
       case While(e,body) => collectExpr(e); collect(body)
       case IfThenElse(e,p1,p2) => collectExpr(e); collect(p1); collect(p2)
-      case QInit(vs,e) => qvars ++= vs; collectExpr(e)
-      case Measurement(v,vs,e) => cvars ++= v; collectExpr(e); qvars ++= vs
-      case QApply(vs,e) => qvars ++= vs; collectExpr(e)
+      case QInit(vs,e) => qvars ++= vs.iterator; collectExpr(e)
+      case Measurement(v,vs,e) => cvars ++= v.iterator; collectExpr(e); qvars ++= vs.iterator
+      case QApply(vs,e) => qvars ++= vs.iterator; collectExpr(e)
     }
     collect(this)
   }
@@ -146,14 +161,14 @@ sealed trait Statement {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars ++= v.map[String](_.name); vars ++= e.variables
-      case Sample(v,e) => vars ++= v.map[String](_.name); vars ++= e.variables
+      case Assign(v,e) => vars ++= v.iterator.map(_.name); vars ++= e.variables
+      case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
       case Call(_, _*) =>
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
-      case QInit(vs,e) => vars ++= vs.map[String](_.name); vars ++= e.variables
-      case Measurement(v,vs,e) => vars ++= v.map[String](_.name); vars ++= vs.map[String](_.name); vars ++= e.variables
-      case QApply(vs,e) => vars ++= vs.map[String](_.name); vars ++= e.variables
+      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
     }
     collect(this)
     vars.result
@@ -164,8 +179,8 @@ sealed trait Statement {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars ++= v.map[String](_.name); vars ++= e.variables
-      case Sample(v,e) => vars ++= v.map[String](_.name); vars ++= e.variables
+      case Assign(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
+      case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
       case Call(name, args @ _*) =>
         val (cvars,qvars,_,_) = env.programs(name).variablesRecursive
         vars ++= cvars.map(_.name)
@@ -173,15 +188,21 @@ sealed trait Statement {
         args.foreach(collect)
       case While(e,body) => vars ++= e.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
-      case QInit(vs,e) => vars ++= vs.map[String](_.name); vars ++= e.variables
-      case Measurement(v,vs,e) => vars ++= v.map[String](_.name); vars ++= vs.map[String](_.name); vars ++= e.variables
-      case QApply(vs,e) => vars ++= vs.map[String](_.name); vars ++= e.variables
+      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
     }
     collect(this)
     vars.result
   }
 
-  def inline(name: String, program: Statement): Statement
+  def inline(name: String, oracles: List[String], program: Statement): Statement
+
+  def unwrapBlock : Seq[Statement] = this  match {
+    case Block(st @_*) => st
+    case _ => List(this)
+  }
+
 }
 
 object Statement {
@@ -374,39 +395,57 @@ class Block(val statements:List[Statement]) extends Statement {
     case List(s) => s.toString
     case _ => "{ " + statements.map{ _.toString}.mkString(" ") + " }"
   }
+
   def toStringNoParens: String = statements match {
     case Nil => "skip;"
     case _ => statements.map{ _.toString }.mkString(" ")
   }
+
+  def toStringMultiline(header: String): String = statements match {
+    case Nil => header+"skip;"
+    case _ =>
+      val blanks = "\n" + " " * header.length
+      statements.mkString(header,blanks,"")
+  }
+
+
+
+
   def length : Int = statements.size
 
   def inline(environment: Environment, name: String): Block = {
     environment.programs(name) match {
       case decl : ConcreteProgramDecl =>
-        inline(name: String, decl.program)
+        inline(name: String, decl.oracles, decl.program)
       case _ : AbstractProgramDecl =>
         throw UserException(s"Cannot inline '$name'. It is an abstract program (declared with 'adversary').")
     }
 //    inline(name: String, environment.programs(name).asInstanceOf[ConcreteProgramDecl].program)
   }
 
-  override def inline(name:String, program:Statement): Block = {
-    val programStatements = program match {
-      case Block(st @_*) => st
-      case _ => List(program)
-    }
+  override def inline(name:String, oracles:List[String], program:Statement): Block = {
+//    val programStatements = program match {
+//      case Block(st @_*) => st
+//      case _ => List(program)
+//    }
     val newStatements = for (s <- statements;
                              s2 <- s match {
                                case Call(name2, args @ _*) if name==name2 =>
-                                 assert(args.isEmpty, s"Cannot inline $s, oracles not supported.")
-                                 programStatements
-                               case _ => List(s.inline(name,program))
+                                 assert(args.length==oracles.length)
+                                 val subst = Map(oracles.zip(args) : _*)
+//                                 assert(args.isEmpty, s"""Cannot inline "$s", oracles not supported.""")
+                                 program.substituteOracles(subst).unwrapBlock
+                               case _ => List(s.inline(name,oracles,program))
                              }) yield s2
     Block(newStatements : _*)
   }
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
     for (s <- statements) s.checkWelltyped(context)
+
+  override def markOracles(oracles: List[String]): Block = new Block(statements.map(_.markOracles(oracles)))
+
+  override def substituteOracles(subst: Map[String, Call]): Block = Block(statements.map(_.substituteOracles(subst)):_*)
 }
 
 object Block {
@@ -418,7 +457,7 @@ object Block {
 
 final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
   override def toString: String = s"""${Variable.vartermToString(variable)} <- $expression;"""
-  override def inline(name: String, statement: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
     expression.checkWelltyped(context, Isabelle.tupleT(variable.map[Typ](_.valueTyp)))
@@ -427,10 +466,17 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
   //    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms:ListBuffer[Thm]): Assign =
     Assign(variable, expression.simplify(isabelle, facts, thms))
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  override def markOracles(oracles: List[String]): Assign = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
   override def toString: String = s"""${Variable.vartermToString(variable)} <$$ $expression;"""
-  override def inline(name: String, statement: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
     expression.checkWelltyped(context, Isabelle.distrT(Isabelle.tupleT(variable.map[Typ](_.valueTyp))))
@@ -439,10 +485,17 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
   //    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Sample =
     Sample(variable, expression.simplify(isabelle,facts,thms))
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  override def markOracles(oracles: List[String]): Sample = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
-  override def inline(name: String, program: Statement): Statement =
-    IfThenElse(condition,thenBranch.inline(name,program),elseBranch.inline(name,program))
+  override def inline(name: String, oracles: List[String], program: Statement): Statement =
+    IfThenElse(condition,thenBranch.inline(name,oracles,program),elseBranch.inline(name,oracles,program))
   override def toString: String = s"if ($condition) $thenBranch else $elseBranch;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -456,11 +509,19 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
     IfThenElse(condition.simplify(isabelle,facts,thms),
       thenBranch.simplify(isabelle,facts,thms),
       elseBranch.simplify(isabelle,facts,thms))
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  override def markOracles(oracles: List[String]): IfThenElse = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = IfThenElse(condition,thenBranch.substituteOracles(subst),elseBranch.substituteOracles(subst))
+
 }
 
 final case class While(condition:RichTerm, body: Block) extends Statement {
-  override def inline(name: String, program: Statement): Statement =
-    While(condition,body.inline(name,program))
+  override def inline(name: String, oracles: List[String], program: Statement): Statement =
+    While(condition,body.inline(name,oracles,program))
   override def toString: String = s"while ($condition) $body"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -472,10 +533,17 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): While =
     While(condition.simplify(isabelle,facts,thms),
       body.simplify(isabelle,facts,thms))
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  override def markOracles(oracles: List[String]): While = new While(condition, body.markOracles(oracles))
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = While(condition,body.substituteOracles(subst))
 }
 
 final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
-  override def inline(name: String, program: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"${Variable.vartermToString(location)} <q $expression;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -486,9 +554,16 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
   //    Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): QInit =
     QInit(location, expression.simplify(isabelle,facts,thms))
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  override def markOracles(oracles: List[String]): QInit = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
-  override def inline(name: String, program: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"on ${Variable.vartermToString(location)} apply $expression;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -500,9 +575,16 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
   //    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): QApply =
     QApply(location, expression.simplify(isabelle,facts,thms))
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  override def markOracles(oracles: List[String]): QApply = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariable], e:RichTerm) extends Statement {
-  override def inline(name: String, program: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"${Variable.vartermToString(result)} <- measure ${Variable.vartermToString(location)} in $e;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
@@ -516,12 +598,19 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
   //      result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context).isabelleTerm
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Measurement =
     Measurement(result,location,e.simplify(isabelle,facts,thms))
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  override def markOracles(oracles: List[String]): Measurement = this
+
+  override def substituteOracles(subst: Map[String, Call]): Statement = this
 }
 final case class Call(name:String, args:Call*) extends Statement {
   override def toString: String = "call "+toStringShort+";"
   def toStringShort: String =
     if (args.isEmpty) name else s"$name(${args.map(_.toStringShort).mkString(",")})"
-  override def inline(name: String, program: Statement): Statement = this
+  override def inline(name: String, oracles: List[String], program: Statement): Statement = this
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {}
 //  override def programTermOLD(context: Isabelle.Context): Term = {
@@ -533,4 +622,25 @@ final case class Call(name:String, args:Call*) extends Statement {
 //      Free(name, Isabelle.programT)
 //  }
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Call = this
+
+  /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
+    * Fails if [this] already contains program names of the form @...
+    */
+  override def markOracles(oracles: List[String]): Call = {
+    if (name.head=='@')
+      throw UserException(s"Program code contains program name $name (invalid, @ is for internal names)")
+    val name2 = if (oracles.contains(name)) "@"+name else name
+    Call(name2, args.map(_.markOracles(oracles)):_*)
+  }
+
+  override def substituteOracles(subst: Map[String, Call]): Call = {
+    val args2 = args.map(_.substituteOracles(subst))
+
+    if (name.head=='@') {
+      if (args.nonEmpty)
+        throw UserException(s"Call to oracle $name must not have oracles itself")
+      subst(name.substring(1))
+    } else
+      Call(name,args2:_*)
+  }
 }

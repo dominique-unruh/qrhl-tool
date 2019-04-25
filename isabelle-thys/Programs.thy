@@ -17,6 +17,8 @@ consts
   measurement :: "'a variables \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
   instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
 
+consts fv_oracle_program :: "oracle_program \<Rightarrow> string set"
+
 consts fv_program :: "program \<Rightarrow> string set"
 lemma fv_program_sequence: "fv_program (block b) = (\<Union>s\<in>set b. fv_program s)"
   by (cheat TODO7)

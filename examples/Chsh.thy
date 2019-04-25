@@ -2,7 +2,7 @@ theory Chsh
   imports CryptHOL.CryptHOL
 begin
 
-(* To run this file, open it in Isabelle 2018,
+(* To run this file, open it in Isabelle 2019,
    select "CryptHOL" in the dropdown in the Theories panel and, 
    if needed, restart Isabelle.
 
