@@ -8,6 +8,7 @@ hide_const (open) Real_Vector_Spaces.span
 
 section \<open>Miscellaneous\<close>
 
+declare Inf_class.INF_image[simp]
 
 (* definition [code]: "(sqrt2::complex) = sqrt 2"
 lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
