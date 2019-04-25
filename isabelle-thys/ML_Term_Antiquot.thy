@@ -4,10 +4,10 @@ begin
 
 ML_file "ml_term_antiquot.ML"
 
-setup {* 
+setup \<open>
   ML_Antiquotation.inline \<^binding>\<open>ml_term\<close> ML_Term_Antiquot.ml_term_antiquot
   #>
-  ML_Antiquotation.inline \<^binding>\<open>ml_typ\<close> ML_Term_Antiquot.ml_typ_antiquot *}
+  ML_Antiquotation.inline \<^binding>\<open>ml_typ\<close> ML_Term_Antiquot.ml_typ_antiquot \<close>
 
 (* setup {* ML_Antiquotation.inline @{binding typx} TermX_Antiquot.typx_antiquot *} *)
 (* 
@@ -21,13 +21,13 @@ setup {* let val parser = Args.context -- Scan.lift Args.name
          end *}
  *)
 
-ML {*
+(* ML \<open>
   val bla = \<^typ>\<open>prop=>prop\<close>
   val tmp = \<^term>\<open>bla::prop\<Rightarrow>prop\<close>
   val res = @{ml_term "x==y" for x=tmp 'a=bla} |> Thm.cterm_of \<^context>
   (* val res2 = @{ml_typ "prop\<Rightarrow>'a" for 'a=\<open>@{typ prop}\<close>} *)
-*}
-
+\<close>
+ *)
 
 
 (*

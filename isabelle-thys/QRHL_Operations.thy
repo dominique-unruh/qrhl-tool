@@ -14,116 +14,116 @@ Codec.add_exception_printer (fn _ => fn exn => exn |> Runtime.thread_context |> 
 
 ML \<open>open QRHL_Operations\<close>
 
-operation_setup o2h_tac = {*
+operation_setup o2h_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
       (fn ctxt => fn _ => O2H.o2h_tac ctxt 1) 
       (fn _ => "o2h")}
-*}
+\<close>
 
-operation_setup semiclassical_tac = {*
+operation_setup semiclassical_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
       (fn ctxt => fn _ => Semi_Classical_Search.semi_classical_search_tac ctxt 1) 
       (fn _ => "o2h")}
-*}
+\<close>
 
-operation_setup create_context = {*
+operation_setup create_context = \<open>
   {from_lib = Codec.list Codec.string,
    to_lib = Codec.tuple Codec.int (Codec.list Codec.string),
    action = create_context}
-*}
+\<close>
 
-operation_setup check_type = {*
+operation_setup check_type = \<open>
   {from_lib = Codec.tuple Codec.int term_tight_codec,
    to_lib = typ_tight_codec,
-   action = fn (ctx_id,t) => QRHL.checkType (Refs.Ctxt.read ctx_id) t} *}
+   action = fn (ctx_id,t) => QRHL.checkType (Refs.Ctxt.read ctx_id) t} \<close>
 
-operation_setup delete_context = {*
+operation_setup delete_context = \<open>
   {from_lib = Codec.int,
    to_lib = Codec.unit,
    action = Refs.Ctxt.delete}
-*}
+\<close>
 
-operation_setup delete_thm = {*
+operation_setup delete_thm = \<open>
   {from_lib = Codec.int,
    to_lib = Codec.unit,
    action = Refs.Thm.delete}
-*}
+\<close>
 
-operation_setup print_term = {*
+operation_setup print_term = \<open>
   {from_lib = Codec.tuple Codec.int term_tight_codec,
    to_lib = Codec.string,
    action = fn (ctx_id, t) => YXML.content_of (Syntax.string_of_term (Refs.Ctxt.read ctx_id) t)}
-*}
+\<close>
 
-operation_setup print_typ = {*
+operation_setup print_typ = \<open>
   {from_lib = Codec.tuple Codec.int typ_tight_codec,
    to_lib = Codec.string,
    action = fn (ctx_id, t) => YXML.content_of (Syntax.string_of_typ (Refs.Ctxt.read ctx_id) t)}
-*}
+\<close>
 
-operation_setup add_assumption = {*
+operation_setup add_assumption = \<open>
   {from_lib = Codec.triple Codec.string term_tight_codec Codec.int,
    to_lib = Codec.int,
    action = fn (name,assm,ctx_id) => make_ctxt_ref (QRHL_Operations.addAssumption name assm (Refs.Ctxt.read ctx_id))}
-*}
+\<close>
 
-operation_setup read_typ = {*
+operation_setup read_typ = \<open>
   {from_lib = Codec.tuple Codec.int Codec.string,
    to_lib = typ_tight_codec,
    action = fn (ctx_id, str) => Syntax.read_typ (Refs.Ctxt.read ctx_id) str}
-*}
+\<close>
 
 (* DEPRECATED, use read_expression *)
-operation_setup read_term = {*
+operation_setup read_term = \<open>
   {from_lib = Codec.triple Codec.int Codec.string typ_tight_codec,
    to_lib = term_tight_codec,
    action = fn (ctx_id, str, T) => parse_term (Refs.Ctxt.read ctx_id) str T}
-*}
+\<close>
 
 (* TODO: rename to read_term *)
-operation_setup read_expression = {*
+operation_setup read_expression = \<open>
   {from_lib = Codec.triple Codec.int Codec.string typ_tight_codec,
    to_lib = Codec.id,
    action = fn (ctx_id, str, T) => 
       let val ctxt = Refs.Ctxt.read ctx_id in
         parse_term ctxt str T |> richterm_encode ctxt end}
-*}
+\<close>
 
-operation_setup byQRHLPre = {*
+operation_setup byQRHLPre = \<open>
   {from_lib = Codec.triple Codec.int (Codec.list (Codec.triple Codec.string Codec.string typ_tight_codec)) (Codec.list (Codec.triple Codec.string Codec.string typ_tight_codec)),
    to_lib = Codec.id,
    action = fn (ctxt_id,cvars,qvars) => 
       let val ctxt = Refs.Ctxt.read ctxt_id in
           QRHL.byQRHLPre cvars qvars |> richterm_encode ctxt end}
-*}
+\<close>
 
 (* Ambient variables *)
-operation_setup declare_variable = {*
+operation_setup declare_variable = \<open>
   {from_lib = Codec.triple Codec.int Codec.string typ_tight_codec,
    to_lib = Codec.int,
    action = fn (ctxt_id, name, T) =>
             let val ([v],ctxt') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] (Refs.Ctxt.read ctxt_id)
                 val _ = if v<>name then error("variable "^name^" already declared") else ()
             in make_ctxt_ref ctxt' end }
-*}
+\<close>
 
-operation_setup declare_quantum_variable = {*
+operation_setup declare_quantum_variable = \<open>
   {from_lib = Codec.triple Codec.string typ_tight_codec Codec.int,
    to_lib = Codec.int,
    action = fn (name,typ,ctx_id) => make_ctxt_ref (Prog_Variables.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ Prog_Variables.Quantum)}
-*}
+\<close>
 
-operation_setup declare_classical_variable = {*
+operation_setup declare_classical_variable = \<open>
   {from_lib = Codec.triple Codec.string typ_tight_codec Codec.int,
    to_lib = Codec.int,
    action = fn (name,typ,ctx_id) => make_ctxt_ref (Prog_Variables.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ Prog_Variables.Classical)}
-*}
+\<close>
 
-operation_setup callWp = {*
+operation_setup callWp = \<open>
   {from_lib = Codec.tuple (Codec.triple (Codec.list term_tight_codec) (Codec.list term_tight_codec) (Codec.list term_tight_codec))
                           (Codec.triple  (Codec.list term_tight_codec) term_tight_codec Codec.int),
    to_lib = Codec.id,
@@ -131,26 +131,26 @@ operation_setup callWp = {*
     let val ctxt = Refs.Ctxt.read ctxt_id in
         QRHL.callWp cvars1 cvars2 qvars1 qvars2 B
         |> Codec.encode (Codec.tuple (richterm_codec' ctxt) (richterm_codec' ctxt)) end}
-*}
+\<close>
 
-operation_setup fixTac = {*
+operation_setup fixTac = \<open>
   {from_lib = Codec.triple Codec.int term_tight_codec Codec.string,
    to_lib = Codec.id,
    action = fn (ctxt_id,expr,var) => 
       let val ctxt = Refs.Ctxt.read ctxt_id in
           QRHL.fixTac expr var |> Codec.encode (Codec.tuple (richterm_codec' ctxt) typ_tight_codec) end}
-*}
+\<close>
 
 (* TODO remove (incl QRHL.rndWp). Same for rndWp2 *)
-operation_setup rndWp = {*
+operation_setup rndWp = \<open>
   {from_lib = Codec.triple Codec.int (Codec.triple Codec.string term_tight_codec Codec.string) (Codec.triple term_tight_codec typ_tight_codec term_tight_codec),
    to_lib = Codec.id,
    action = fn (ctxt_id, (v1, e1, v2), (e2, T, B)) => 
      let val ctxt = Refs.Ctxt.read ctxt_id in
          QRHL.rndWp v1 e1 v2 e2 T B |> richterm_encode ctxt end}
-*}
+\<close>
 
-operation_setup rndWp2 = {*
+operation_setup rndWp2 = \<open>
   {from_lib = Codec.triple (Codec.triple Codec.string typ_tight_codec term_tight_codec) 
                            (Codec.triple Codec.string typ_tight_codec term_tight_codec)
                            (Codec.triple term_tight_codec term_tight_codec Codec.int),
@@ -158,9 +158,9 @@ operation_setup rndWp2 = {*
    action = fn ((v1, T1, e1), (v2, T2, e2), (f, B, ctxt_id)) => 
      let val ctxt = Refs.Ctxt.read ctxt_id in
          QRHL.rndWp2 v1 T1 e1 v2 T2 e2 f B |> richterm_encode ctxt end}
-*}
+\<close>
 
-operation_setup apply_rule = {* let
+operation_setup apply_rule = \<open> let
 fun tac ctxt (name, inst) = let
     val thm0 = Proof_Context.get_thm ctxt name
     val inst' = map (fn (v,t) => ((v,0), Thm.cterm_of ctxt t)) inst
@@ -174,9 +174,9 @@ in
       tac 
       (fn (rule,_) => "rule "^rule)}
 end
-*}
+\<close>
 
-operation_setup simplify_term = {*
+operation_setup simplify_term = \<open>
   {from_lib = Codec.triple term_tight_codec (Codec.list Codec.string) Codec.int,
    to_lib = Codec.id,
    action = fn (t,thms,ctx_id) => let
@@ -185,33 +185,33 @@ operation_setup simplify_term = {*
      in (t,make_thm_ref thm)
         |> Codec.encode (Codec.tuple (richterm_codec' ctxt) Codec.int)
        end}
-*}
+\<close>
 
-operation_setup add_index_to_expression = {*
+operation_setup add_index_to_expression = \<open>
   {from_lib = Codec.triple Codec.int term_tight_codec Codec.bool,
    to_lib = Codec.id,
    action = fn (ctxt_id,t,left) => let
      val ctxt = Refs.Ctxt.read ctxt_id in
      Expressions.add_index_to_expression t left |> richterm_encode ctxt end}
-*}
+\<close>
 
-operation_setup term_to_expression = {*
+operation_setup term_to_expression = \<open>
   {from_lib = Codec.tuple Codec.int term_tight_codec,
    to_lib = Codec.id,
    action = fn (ctxId, t) => let
      val ctxt = Refs.Ctxt.read ctxId in
         Expressions.term_to_expression ctxt t |> richterm_encode ctxt end}
-*}
+\<close>
 
-operation_setup expression_to_term = {*
+operation_setup expression_to_term = \<open>
   {from_lib = Codec.tuple Codec.int term_tight_codec,
    to_lib = Codec.id,
    action = fn (ctxId, t) => let
      val ctxt = Refs.Ctxt.read ctxId in
      Expressions.expression_to_term (Refs.Ctxt.read ctxId) t |> richterm_encode ctxt end}
-*}
+\<close>
 
-operation_setup seq_tac = {*
+operation_setup seq_tac = \<open>
   {from_lib = Codec.triple (Codec.triple Codec.int Codec.int richterm_codec) subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn (i,j,B) => Tactics.seq_tac i j B ctxt 1)}
@@ -224,9 +224,9 @@ operation_setup seq_tac = {*
     in result 
         |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int))
     end} *)
-*}
+\<close>
 
-operation_setup wp_tac = {*
+operation_setup wp_tac = \<open>
   {from_lib = Codec.triple (Codec.tuple Codec.int Codec.int) subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Weakest_Precondition.wp_seq_tac left right ctxt 1)}
@@ -234,48 +234,48 @@ operation_setup wp_tac = {*
      val ctxt = Refs.Ctxt.read ctx_id
      val result = Weakest_Precondition.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm
     in result |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int)) end} *)
-*}
+\<close>
 
-operation_setup squash_tac = {*
+operation_setup squash_tac = \<open>
   {from_lib = Codec.triple Codec.bool subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn left => Squash_Sampling.squash_sampling_tac left ctxt 1)}
-*}
+\<close>
 
 
 
-operation_setup joint_measure_simple_tac = {*
+operation_setup joint_measure_simple_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Measure.joint_measure_simple_seq_tac ctxt 1)}
-*}
+\<close>
 
-operation_setup joint_sample_equal_tac = {*
+operation_setup joint_sample_equal_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Sample.joint_sample_equal_seq_tac ctxt 1)}
-*}
+\<close>
 
-operation_setup joint_sample_tac = {*
+operation_setup joint_sample_tac = \<open>
   {from_lib = Codec.triple term_tight_codec subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn witness => 
       let val witness_expr = witness |> Expressions.term_to_expression ctxt |> Thm.cterm_of ctxt in
       Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)}
-*}
+\<close>
 
 (* (* TODO remove *)
-operation_setup term_test = {*
+operation_setup term_test = \<open>
   {from_lib = Codec.unit,
    to_lib = Hashed_Terms.term_codec,
    action = fn () => \<^term>\<open>True\<close>}
-*} *)
+\<close> *)
 
-operation_setup show_oracles_lines = {*
+operation_setup show_oracles_lines = \<open>
   {from_lib = Codec.int,
    to_lib = Codec.list Codec.string,
    action = map YXML.content_of o Extended_Sorry.show_oracles_lines o Refs.Thm.read}
-*}
+\<close>
 
 (* operation_setup (sequential, bracket) use_thys2 = \<open>
   {from_lib = Codec.list Codec.string,

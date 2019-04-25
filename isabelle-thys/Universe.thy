@@ -218,13 +218,13 @@ proof -
 qed
 
 (* Hack to allow to state lemma universe_classI. Is there a cleaner way? *)
-ML {*  
+ML \<open>
   val consts_to_unconstrain = [\<^const_name>\<open>embedding'\<close>]
   val consts_orig_constraints = map (Sign.the_const_constraint \<^theory>) consts_to_unconstrain
-*}
-setup {*
+\<close>
+setup \<open>
   fold (fn c => fn thy => Sign.add_const_constraint (c,NONE) thy) consts_to_unconstrain
-*}
+\<close>
 
 lemma universe_classI:
   assumes emb: "(embedding'::'a universe_embedding) = embedding'_default"
@@ -233,10 +233,10 @@ lemma universe_classI:
 apply intro_classes using universe_classI'[OF inj] unfolding emb by auto
 
 (* Recover stored type constraints *)
-setup {*
+setup \<open>
   fold2 (fn c => fn T => fn thy => Sign.add_const_constraint (c,SOME (Logic.unvarifyT_global T)) thy)
       consts_to_unconstrain consts_orig_constraints
-*}
+\<close>
 
 definition universe_powertower_level :: "universe \<Rightarrow> nat" where
   "universe_powertower_level x = (SOME n. x \<in> universe_powertower n)"
@@ -627,10 +627,10 @@ instance apply (rule universe_classI[OF embedding'_list_def, of "\<lambda>l. (le
   by (rule injI, metis nth_equalityI old.prod.inject)
 end *)
 
-local_setup {* 
+local_setup \<open>
   Local_Theory.define ((\<^binding>\<open>embedding'_UNCONSTRAINED\<close>,NoSyn),((\<^binding>\<open>embedding'_UNCONSTRAINED_def\<close>,[]),
       Const(\<^const_name>\<open>embedding'\<close>,\<^typ>\<open>'a universe_embedding\<close>))) #> snd
-*}
+\<close>
 
 lemma OFCLASS_universe_typedef[unfolded embedding'_UNCONSTRAINED_def]:
   fixes Rep::"'a\<Rightarrow>'b::universe"
