@@ -11,6 +11,15 @@ Main
  *)
 begin
 
+ML \<open>
+Path.variable "ISABELLE_VERSION"
+\<close>
+ML \<open>
+OS.Process.system "set >/tmp/xxx"
+\<close>
+
+
+
 axiomatization xxx :: "int \<Rightarrow> bool" (* REMOVE *)
 
 hide_const (open) Order.top
