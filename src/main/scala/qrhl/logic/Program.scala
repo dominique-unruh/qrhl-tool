@@ -513,7 +513,7 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
     * Fails if [this] already contains program names of the form @...
     */
-  override def markOracles(oracles: List[String]): IfThenElse = this
+  override def markOracles(oracles: List[String]): IfThenElse = IfThenElse(condition,thenBranch.markOracles(oracles),elseBranch.markOracles(oracles))
 
   override def substituteOracles(subst: Map[String, Call]): Statement = IfThenElse(condition,thenBranch.substituteOracles(subst),elseBranch.substituteOracles(subst))
 
@@ -537,7 +537,7 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
     * Fails if [this] already contains program names of the form @...
     */
-  override def markOracles(oracles: List[String]): While = new While(condition, body.markOracles(oracles))
+  override def markOracles(oracles: List[String]): While = While(condition, body.markOracles(oracles))
 
   override def substituteOracles(subst: Map[String, Call]): Statement = While(condition,body.substituteOracles(subst))
 }

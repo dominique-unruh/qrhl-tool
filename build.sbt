@@ -27,6 +27,8 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 //isabelleSourceFilter := (- ".*") && (- "*~")
 //isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
 
+libraryDependencies += "info.hupel" % "multi-isabelle" % "0.1.4" // TODO remove
+
 libraryDependencies ++= { val version = "1.1.0-RC2"; Seq(
   "info.hupel" %% "libisabelle" % version,
   "info.hupel" %% "libisabelle-setup" % version,
@@ -174,3 +176,5 @@ resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
 
 // To avoid that several tests simultaneously try to download Isabelle
 parallelExecution in Test := false
+
+//javaOptions in Universal += "-J-Xss1m"
