@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import org.log4s
 import qrhl._
-import qrhl.logic.{Block, Environment, Statement}
+import qrhl.logic.{Block, Environment, Statement, Variable}
 
 
 case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic {
@@ -21,9 +21,30 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic 
   }
 
   private def checkSwappable(env: Environment, block1 : List[Statement], block2: List[Statement]): Unit = {
-    val shared = Block(block1:_*).variablesAll(env).intersect(Block(block2:_*).variablesAll(env))
-    if (shared.nonEmpty)
-      throw UserException(s"Cannot swap ${block1.mkString(" ")} and ${block2.mkString(" ")}, they have shared variables (${shared.mkString(", ")})")
+    val (c1,w1,q1,_,_) = Block(block1:_*).cwqapVariables(recurse=true, environment = env)
+    val (c2,w2,q2,_,_) = Block(block2:_*).cwqapVariables(recurse=true, environment = env)
+
+    def error(msg: String) =
+      throw UserException(s"Cannot swap\n    ${block1.mkString(" ")}\nand\n    ${block2.mkString(" ")},\n$msg")
+
+    def vars(vars:Seq[Variable]) : String =
+      vars.map(_.name).mkString(", ")
+
+    val qshared = q1.intersect(q2)
+    if (qshared.nonEmpty)
+      error(s"they have shared quantum variables (${vars(qshared)})")
+
+    val wshared = w1.intersect(w2)
+    if (wshared.nonEmpty)
+      error(s"they have shared written classical variables (${vars(wshared)})")
+
+    val w1r2 = w1.intersect(c2)
+    if (w1r2.nonEmpty)
+      error(s"the first block writes classical variables that the second reads (${vars(w1r2)})")
+
+    val w2r1 = w2.intersect(c1)
+    if (w2r1.nonEmpty)
+      error(s"the first block reads classical variables that the second writes (${vars(w2r1)})")
   }
 
   def swap(env:Environment, prog: Block) : Block = {
@@ -59,6 +80,7 @@ object SwapTac {
       (before,range,Nil)
     }
   }
+
   final case class MiddleRange(start:Int, end:Int) extends Range {
     if (start<=0)
       throw UserException(s"Start of range must be >=1 (not $start)")

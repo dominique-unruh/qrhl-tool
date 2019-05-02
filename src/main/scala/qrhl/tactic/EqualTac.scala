@@ -35,7 +35,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
           collect(sl,sr)
       case (Call(namel, argsl @ _*), Call(namer, argsr @ _*)) if namel==namer && !exclude.contains(namel) =>
         val p = env.programs(namel)
-        val (cv,qv,_,_) = p.variablesRecursive
+        val (cv,_,qv,_,_) = p.variablesRecursive
         cvars ++= cv; qvars ++= qv
         assert(argsl.length==argsr.length)
         for ((pl,pr) <- argsl.zip(argsr))
@@ -87,6 +87,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
     Operation.implicitly[((List[pure.Term], List[pure.Term], List[pure.Term]), (List[pure.Term], Term, BigInt)), (RichTerm, RichTerm)]("callWp")
 }
 
+/*
 case object EqualTacOld extends WpBothStyleTac() {
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm, List[Subgoal]) = {
     if (left!=right) throw UserException(s"The last statement on both sides needs to be the same")
@@ -110,3 +111,4 @@ case object EqualTacOld extends WpBothStyleTac() {
   val callWpOp: Operation[((List[Term], List[Term], List[Term]), (List[Term], Term, BigInt)), (RichTerm, RichTerm)] =
     Operation.implicitly[((List[pure.Term], List[pure.Term], List[pure.Term]), (List[pure.Term], pure.Term, BigInt)), (RichTerm, RichTerm)]("callWp")
 }
+*/

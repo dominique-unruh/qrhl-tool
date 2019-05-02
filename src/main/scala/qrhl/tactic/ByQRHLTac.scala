@@ -62,8 +62,8 @@ case object ByQRHLTac extends Tactic {
           case _ => throw UserException("There should be = or <= or >= between the lhs and the rhs")
         }
 
-        val (cvars1,qvars1,_,_) = p1.cqapVariables(state.environment,recurse = true)
-        val (cvars2,qvars2,_,_) = p2.cqapVariables(state.environment,recurse = true)
+        val (cvars1,_,qvars1,_,_) = p1.cwqapVariables(state.environment,recurse = true)
+        val (cvars2,_,qvars2,_,_) = p2.cwqapVariables(state.environment,recurse = true)
         val cvars = (cvars1 ++ cvars2).distinct
         val qvars = (qvars1 ++ qvars2).distinct
 
