@@ -1,5 +1,23 @@
 isabelle.
 
+classical var x : string.
+classical var bad : bool.
+quantum var q : string.
+
+adversary adv vars q, x calls ?.
+
+program p1 := {}.
+program p2 := {}.
+
+qrhl {top} call adv(p1); ~ call adv(p2); {Cla[bad1] + (ℭ𝔩𝔞[x1 = x2] ⊓ ⟦q1⟧ ≡𝔮 ⟦q2⟧)}.
+
+equal.
+ simp!.
+
+simp.
+
+
+
 classical var x : bit.
 classical var y : bit.
 classical var a : bit.

@@ -287,12 +287,19 @@ object Parser extends JavaTokenParsers {
       case "right" => SquashTac(left=false)
     }
 
+  val swap_range: Parser[SwapTac.Range] =
+    (natural ~ "-" ~ natural) ^^ { case i~_~j => SwapTac.MiddleRange(i,j) } |
+      natural ^^ SwapTac.FinalRange |
+      success(SwapTac.FinalRange(1))
+
   val tactic_swap: Parser[SwapTac] =
     literal("swap") ~> OnceParser(for (
       lr <- "left|right".r;
       left = lr match { case "left" => true; case "right" => false; case _ => throw new InternalError("Should not occur") };
-      (numStatements,steps) <- natural~natural ^^ { case x~y => (x,y) } | (natural ^^ { (1,_) }) | success((1,1)))
-      yield SwapTac(left=left, numStatements=numStatements, steps=steps))
+      range <- swap_range;
+      steps <- natural)
+//      (numStatements,steps) <- natural~natural ^^ { case x~y => (x,y) } | (natural ^^ { (1,_) }) | success((1,1)))
+      yield SwapTac(left=left, range=range, steps=steps))
 
   val tactic_inline: Parser[InlineTac] =
     literal("inline") ~> identifier ^^ InlineTac
