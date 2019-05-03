@@ -179,7 +179,7 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     val vars = new mutable.LinkedHashSet[String]
     def scan(st:Statement) : Unit = st match {
       case Block(sts@_*) => sts.foreach(scan)
-      case Call(_) =>
+      case Call(_,_*) =>
       case Assign(_,e) =>
         vars ++= e.variables.filter(environment.ambientVariables.contains)
       case Sample(_,e) =>
