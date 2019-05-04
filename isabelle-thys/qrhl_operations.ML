@@ -326,24 +326,43 @@ fun addAssumption name term ctx =
     ctx
   end
 
-fun declare_abstract_program ctxt (name:string) (vars:(string*typ)list) (numOracles:int)= let
+fun declare_abstract_program ctxt (name:string) (cvars:(string*typ)list) (qvars:(string*typ)list) (numOracles:int)= let
   val T = if numOracles=0 then \<^typ>\<open>program\<close> else \<^typ>\<open>oracle_program\<close>
+
+  (* Declare the program name as a fixed variable *)
   val (vs,ctxt) = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctxt
   val _ = if vs<>[name] then error("variable "^name^" already declared") else ()
 
+  (* Add theorem fv_name: "fv_program/fv_oracle_program name = variable_names \<lbrakk>cvars,qvars\<rbrakk> *)
   val fv_lhs = (if numOracles=0 then \<^const>\<open>fv_program\<close> else \<^const>\<open>fv_oracle_program\<close>) $ Free(name,T) 
-  val (varterm,vartermT) = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+  val var_cvars = map (fn (n,T) => ("var_"^n,T)) cvars
+  val (varterm,vartermT) = (var_cvars@qvars) |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
   val fv_rhs = @{const set(string)} $
           (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm)
   val fv = HOLogic.mk_eq (fv_lhs, fv_rhs) |> HOLogic.mk_Trueprop
   val fv_thm_name = Binding.name ("fv_"^name)
   val ([(_,fv_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
                                [((fv_thm_name, []), [(fv,[])])] ctxt
+  (* Add fv_name to dynamic fact program_fv *)
   val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [O2H.program_fv]}), [(fv_thm,[])])] ctxt
+
+  (* Add abbreviations:
+        name_cvars1 == (x1,y1,z1) if cvars=x,y,z (same with 2, and w/o index)
+        name_qvars1 == \<lbrakk>x1,y1,z1\<rbrakk> if qvars=x,y,z (same with 2, and w/o index) *)
+  fun add_vars_abbrev suffix ctxt = let
+    val cvartuple = HOLogic.mk_tuple (map (fn (n,T) => Free(n^suffix,T)) cvars)
+    val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvartuple) ctxt
+    val (qvarterm,_) = qvars |> (map (fn (n,T) => (n^suffix,T))) |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+    val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_qvars"^suffix), qvarterm) ctxt
+  in ctxt end
+
+  val ctxt = add_vars_abbrev "" ctxt
+  val ctxt = add_vars_abbrev "1" ctxt
+  val ctxt = add_vars_abbrev "2" ctxt
 in ctxt end
 
-fun declare_concrete_program ctxt (name:string) (vars:(string*typ)list) (oracles:string list) (body:Programs.statement) = let
-  val ctxt = declare_abstract_program ctxt name vars (length oracles)
+fun declare_concrete_program ctxt (name:string) (cvars:(string*typ)list) (qvars:(string*typ)list) (oracles:string list) (body:Programs.statement) = let
+  val ctxt = declare_abstract_program ctxt name cvars qvars (length oracles)
 
   fun tag ora = "@"^ora
   val body_rhs = Programs.statement_to_term ctxt body

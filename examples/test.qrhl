@@ -2,6 +2,22 @@ isabelle.
 
 classical var x : string.
 classical var bad : bool.
+quantum var q : int.
+quantum var r : int.
+quantum var s : int.
+
+program p1 := {
+x <- x;
+bad <- bad;
+on q,r,s apply undefined;
+}.
+
+lemma p1_qvars2 = undefined.
+ simp.
+
+
+classical var x : string.
+classical var bad : bool.
 quantum var q : string.
 
 adversary adv vars q, x calls ?.
