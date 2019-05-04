@@ -1,6 +1,29 @@
 structure QRHL_Operations = 
 struct
 
+fun tuple4 a b c d =
+  Codec.tuple a (Codec.triple b c d)
+  |> Codec.transform (fn (a, (b, c, d)) => (a, b, c, d)) (fn (a, b, c, d) => (a, (b, c, d)))
+
+fun tuple5 a b c d e =
+  Codec.tuple a (tuple4 b c d e)
+  |> Codec.transform (fn (a, (b, c, d, e)) => (a, b, c, d, e)) (fn (a, b, c, d, e) => (a, (b, c, d, e)))
+
+
+fun tuple6 a b c d e f =
+  Codec.tuple a (tuple5 b c d e f)
+  |> Codec.transform (fn (a, (b, c, d, e, f)) => (a, b, c, d, e, f)) (fn (a, b, c, d, e, f) => (a, (b, c, d, e, f)))
+
+
+fun tuple7 a b c d e f g =
+  Codec.tuple a (tuple6 b c d e f g)
+  |> Codec.transform (fn (a, (b, c, d, e, f, g)) => (a, b, c, d, e, f, g)) (fn (a, b, c, d, e, f, g) => (a, (b, c, d, e, f, g)))
+
+fun tuple8 a b c d e f g h =
+  Codec.tuple a (tuple7 b c d e f g h)
+  |> Codec.transform (fn (a, (b, c, d, e, f, g, h)) => (a, b, c, d, e, f, g, h)) (fn (a, b, c, d, e, f, g, h) => (a, (b, c, d, e, f, g, h)))
+
+
 fun make_ctxt_ref ctx = let
   val id = serial ()
   val _ = Refs.Ctxt.write id ctx

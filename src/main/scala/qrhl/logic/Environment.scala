@@ -10,6 +10,7 @@ import scala.collection.mutable
 
 import RichTerm.term_tight_codec
 import RichTerm.typ_tight_codec
+import qrhl.isabelle.Codecs._
 
 /** Represents a logic environment in which programs and expressions are interpreted.
   * @param cVariables All declared classical variables
@@ -243,11 +244,12 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     (cvars.toList, qvars.toList)
   }*/
   def declareInIsabelle(context: Isabelle.Context): Isabelle.Context = {
-    val op = Operation.implicitly[((BigInt,String,List[(String,Typ)]),(List[String],Statement)),BigInt]("declare_concrete_program")
+    val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],List[String],Statement),BigInt]("declare_concrete_program")
     val (cv,_,qv,_,_) = variablesRecursive
-    val vars = (cv++qv) map { v => (v.variableName, v.valueTyp) }
-    val id = context.isabelle.invoke(op, ((context.contextId, name, vars), (oracles, program)))
-    new Context(context.isabelle,id)
+    val cvars = cv map { v => (v.variableName, v.valueTyp) }
+    val qvars = qv map { v => (v.variableName, v.valueTyp) }
+    val id = context.isabelle.invoke(op, (context.contextId, name, cvars, qvars, oracles, program))
+    new Context(context.isabelle, id)
   }
 }
 
