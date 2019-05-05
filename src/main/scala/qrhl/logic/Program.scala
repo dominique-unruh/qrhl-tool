@@ -5,7 +5,7 @@ import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import info.hupel.isabelle.pure.{App, Const, Free, Term, Typ}
 import jdk.jshell.spi.ExecutionControl
-import qrhl.UserException
+import qrhl.{UserException, Utils}
 import qrhl.isabelle.Isabelle.Thm
 import qrhl.isabelle.{Isabelle, RichTerm}
 
@@ -20,6 +20,8 @@ import Statement.codec
 
 
 sealed trait VarTerm[+A] {
+  def areDistinct: Boolean = Utils.areDistinct(this.iterator)
+
   def toList: List[A] = iterator.toList
   def toSeq: Seq[A] = iterator.toSeq
   def map[B](f:A=>B) : VarTerm[B]

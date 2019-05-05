@@ -117,12 +117,13 @@ object Parser extends JavaTokenParsers {
 
   private val qInitSymbol = literal("<q")
   def qInit(implicit context:ParserContext) : Parser[QInit] =
-    for (vs <- identifierList;
+    for (vs <- varterm;
          _ <- qInitSymbol;
     // TODO: add a cut
-         _ = assert(vs.nonEmpty);
-         _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+//         _ = assert(vs.nonEmpty);
+         _ = assert(vs.areDistinct); // checks if all vs are distinct
+         qvs = vs.map[QVariable] { context.environment.getQVariable };
+//         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
          typ = Isabelle.vectorT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
          e <- expression(typ);
          _ <- statementSeparator)
@@ -130,11 +131,13 @@ object Parser extends JavaTokenParsers {
 
   def qApply(implicit context:ParserContext) : Parser[QApply] =
       for (_ <- literal("on");
-           vs <- identifierList;
+           vs <- varterm;
            _ <- literal("apply");
-           _ = assert(vs.nonEmpty);
-           _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-           qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+//           _ = assert(vs.nonEmpty);
+           _ = assert(vs.areDistinct); // checks if all vs are distinct
+           qvs = vs.map[QVariable] { context.environment.getQVariable };
+//           _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
+//           qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
            typ = Isabelle.boundedT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
            e <- expression(typ);
            _ <- statementSeparator)
@@ -146,6 +149,7 @@ object Parser extends JavaTokenParsers {
          _ <- measureSymbol;
          _ <- literal("measure");
          vs <- varterm;
+         _ = assert(vs.areDistinct); // checks if all vs are distinct
          resv = res.map[CVariable] { context.environment.getCVariable };
          qvs = vs.map[QVariable] { context.environment.getQVariable };
          _ <- literal("with");
