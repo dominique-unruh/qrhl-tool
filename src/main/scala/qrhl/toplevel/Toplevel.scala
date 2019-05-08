@@ -56,7 +56,7 @@ class Toplevel private(initialState : State) {
             return str2
           }
 
-          str.append(line).append('\n')
+          str.append(line).append(' ') // linebreaks are translated into ' ', that way lines read from the file are the same as lines send by ProofGeneral
 
           if (Toplevel.commandEnd.findFirstIn(line).isDefined)
             return Toplevel.commandEnd.replaceAllIn(str.toString, "")
