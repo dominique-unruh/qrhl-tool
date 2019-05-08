@@ -366,14 +366,8 @@ object Parser extends JavaTokenParsers {
       case _ => throw new RuntimeException("Internal error") // cannot happen
     }
 
-  def tactic_rule(implicit context:ParserContext) : Parser[RuleTac] = {
-    val inst: toplevel.Parser.Parser[(String, RichTerm)] = (identifier <~ literal(":=")) ~ expression(Isabelle.dummyT) ^^ { case a~b => (a,b) }
-
-    literal("rule") ~> OnceParser(for (
-      rule <- identifier;
-      instantiations <- (literal("where") ~> rep1sep(inst, statementSeparator)).?
-    ) yield RuleTac(rule, instantiations.getOrElse(Nil)))
-  }
+  def tactic_rule(implicit context:ParserContext) : Parser[RuleTac] =
+    literal("rule") ~> ".*".r ^^ RuleTac.apply
 
   val tactic_clear : Parser[ClearTac] =
     literal("clear") ~> OnceParser(natural) ^^ ClearTac.apply

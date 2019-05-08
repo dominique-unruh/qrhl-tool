@@ -17,6 +17,10 @@ val t = Syntax.parse_term ctxt "1::?'a::one" |> Syntax.check_term ctxt
 val res = infer_instantiate \<^context> [(("j",0),Thm.cterm_of \<^context> t)] @{thm le_trans[of "1::nat"]}
 \<close>
 
+ML \<open>
+Parse.attrib
+\<close>
+
 
 find_theorems "abs _ \<le> _ + _"
 

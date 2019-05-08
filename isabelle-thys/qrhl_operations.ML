@@ -379,6 +379,18 @@ fun declare_concrete_program ctxt (name:string) (cvars:(string*typ)list) (qvars:
 
 in ctxt end
 
+fun get_thms ctxt spec = let
+  val toks = Token.explode0 (Thy_Header.get_keywords' ctxt) spec
+             |> filter (not o Token.is_blank)
+             |> (fn t => t @ [Token.eof])
+  val (parsed,leftover) = Scan.catch Parse.thm toks
+  val _ = case leftover of [eof] => ()
+          | _ => error ("Error parsing theorem name \"" ^ spec ^ 
+                "\". Leftover tokens: " ^ Pretty.string_of (Token.pretty_src ctxt leftover))
+  val fact = Attrib.eval_thms ctxt [parsed] (* Gives me "?t=?t", not "x=x" *)
+in fact end
+
+(* val _ = get_thms \<^context> "refl" |> \<^print>  *)
 
 fun debug ctxt = let
   val obj = Proof_Context.get_fact ctxt (Facts.named "O2H.program_fv")

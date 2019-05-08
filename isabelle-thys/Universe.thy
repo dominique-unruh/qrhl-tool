@@ -647,7 +647,7 @@ proof (intro_classes, fold embedding'_UNCONSTRAINED_def)
 qed
 
 
-subsection {* Automatically instantiate new types using @{command derive} *}
+subsection "Automatically instantiate new types using @{command derive}"
 
 (* datatype 'a::finite xxx = XXX 'a 
 typedef 'a::finite y = "UNIV :: 'a set" by simp

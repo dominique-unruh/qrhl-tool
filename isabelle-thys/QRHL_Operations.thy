@@ -161,18 +161,13 @@ operation_setup rndWp2 = \<open>
 \<close>
 
 operation_setup apply_rule = \<open> let
-fun tac ctxt (name, inst) = let
-    val thm0 = Proof_Context.get_thm ctxt name
-    val inst' = map (fn (v,t) => ((v,0), Thm.cterm_of ctxt t)) inst
-    val thm = infer_instantiate ctxt inst' thm0
-    in resolve_tac ctxt [thm] 1
-    end
+fun tac ctxt name = resolve_tac ctxt (get_thms ctxt name) 1
 in
-  {from_lib = Codec.triple (Codec.tuple Codec.string (Codec.list (Codec.tuple Codec.string term_tight_codec))) subgoal_codec context_codec,
+  {from_lib = Codec.triple Codec.string subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
       tac 
-      (fn (rule,_) => "rule "^rule)}
+      (fn rule => "rule "^rule)}
 end
 \<close>
 
