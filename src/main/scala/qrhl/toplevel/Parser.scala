@@ -316,11 +316,15 @@ object Parser extends JavaTokenParsers {
       inner <- expression(Isabelle.predicateT))
       yield SeqTac(left,right,inner))
 
-  def tactic_conseq(implicit context:ParserContext): Parser[ConseqTac] =
-    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(Isabelle.predicateT)) ^^ {
+  def tactic_conseq(implicit context:ParserContext): Parser[Tactic] =
+    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(Isabelle.predicateT) ^^ {
       case "pre" ~ _ ~ e => ConseqTac(pre=Some(e))
       case "post" ~ _ ~ e => ConseqTac(post=Some(e))
-    }
+    } |
+      OnceParser(literal("qrhl") ~ literal(":") ~ ".*".r) ^^ {
+        case _ ~ _ ~ rule => ConseqQrhlTac(rule)
+      }
+    )
 
   def tactic_equal(implicit context:ParserContext) : Parser[EqualTac] =
     literal("equal") ~> (literal("exclude") ~> identifierList).? ~ (literal("qvars") ~> identifierList).? ^^ {

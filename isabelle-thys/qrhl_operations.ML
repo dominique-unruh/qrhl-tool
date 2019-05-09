@@ -237,6 +237,7 @@ fun contains_var (t $ u) = contains_var t orelse contains_var u
 fun term_to_subgoal ctxt t = let
   val _ = if contains_var t then raise TERM("New subgoal contains schematic variables",[t]) else ()
   fun split_assms assms (Const(\<^const_name>\<open>implies\<close>,_) $ a $ b) = split_assms (a::assms) b
+    | split_assms assms (Const(\<^const_name>\<open>Trueprop\<close>,_) $ t) = split_assms assms t
     | split_assms assms t = (assms,t)
   val (assms,t') = split_assms [] t
   in
@@ -244,6 +245,8 @@ fun term_to_subgoal ctxt t = let
       Subgoal_QRHL (Relational_Hoare.term_to_qrhl_judgment ctxt t', assms)
    | _ => Subgoal_Ambient t
   end
+
+val _ = term_to_subgoal \<^context> @{term "qrhl Expr[top] [xxx] [xxx] Expr[top]"} |> \<^print>
 
 fun qrhl_encode (ctxt, Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) = XML.Elem(("qrhl",[]),
   [richterm_encode ctxt (pre), statement_encode ctxt (Programs.Block p1), statement_encode ctxt (Programs.Block p2),

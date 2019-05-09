@@ -338,4 +338,16 @@ operation_setup debug = \<open>
    action = fn ctxt_id => QRHL_Operations.debug (Refs.Ctxt.read ctxt_id)}
 \<close>
 
+operation_setup thms_as_subgoals = \<open>
+  {from_lib = Codec.tuple Codec.int (* ctxt *)
+                          Codec.string (* rule *),
+   to_lib = Codec.id,
+   action = fn (ctxt_id, rule) => let
+     val ctxt = Refs.Ctxt.read ctxt_id
+     val thms = get_thms ctxt rule
+     val subgoals = thms |> map Thm.prop_of |> map (term_to_subgoal ctxt)
+     val encoded = Codec.encode (Codec.list (subgoal_codec' ctxt)) subgoals
+   in encoded end}
+\<close>
+
 end
