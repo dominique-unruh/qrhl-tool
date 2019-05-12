@@ -12,6 +12,7 @@ import qrhl.isabelle.{Isabelle, RichTerm}
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.collection.{AbstractIterator, mutable}
+import scala.language.higherKinds
 
 // Implicits
 import RichTerm.typ_tight_codec
@@ -77,6 +78,46 @@ object VarTerm {
   }
 }
 
+trait PolymorphicFunction[-S[_], +T[_]] {
+  def f[A](x:S[A]): T[A]
+}
+trait PolymorphicConstant[+S[_]] {
+  def f[A]: S[A]
+}
+object PolymorphicConstant {
+  object linkedHashSet extends PolymorphicConstant[mutable.LinkedHashSet] {
+    override def f[A]: mutable.LinkedHashSet[A] = new mutable.LinkedHashSet()
+  }
+}
+object PolymorphicFunction {
+  object linkedHashSetToList extends PolymorphicFunction[mutable.LinkedHashSet,List] {
+    override def f[A](hashSet:mutable.LinkedHashSet[A]) : List[A] = hashSet.toList
+  }
+}
+
+case class VariableUse[+S[_]]
+(cvars : S[CVariable],
+ wcvars : S[CVariable],
+ qvars: S[QVariable],
+ avars : S[String],
+ progs : S[ProgramDecl]) {
+
+  def map[T[_]](f: PolymorphicFunction[S,T]) : VariableUse[T] =
+    VariableUse(cvars = f.f(cvars),
+      wcvars = f.f(wcvars),
+      qvars = f.f(qvars),
+      avars = f.f(avars),
+      progs = f.f(progs))
+}
+object VariableUse {
+  def make[S[_]](f: PolymorphicConstant[S]) : VariableUse[S] =
+    VariableUse(cvars = f.f,
+      wcvars = f.f,
+      qvars = f.f,
+      avars = f.f,
+      progs = f.f)
+}
+
 case object VTUnit extends VarTerm[Nothing] {
   override def map[B](f: Nothing => B): VTUnit.type = VTUnit
   override def iterator: Iterator[Nothing] = Iterator.empty
@@ -121,38 +162,34 @@ sealed trait Statement {
     * Oracle names (starting with @) are not included or recursed into
     * wcvars = written classical vars
     * */
-  def cwqapVariables(environment: Environment, recurse: Boolean) : (List[CVariable],List[CVariable],List[QVariable],List[String],List[ProgramDecl]) = {
-    val cvars = new mutable.LinkedHashSet[CVariable]()
-    val wcvars = new mutable.LinkedHashSet[CVariable]()
-    val qvars = new mutable.LinkedHashSet[QVariable]()
-    val avars = new mutable.LinkedHashSet[String]()
-    val progs = new mutable.LinkedHashSet[ProgramDecl]()
-    cwqapVariables(environment,cvars,wcvars,qvars,avars,progs,recurse=recurse)
-    (cvars.toList,wcvars.toList,qvars.toList,avars.toList,progs.toList)
+  def cwqapVariables(environment: Environment, recurse: Boolean) : VariableUse[List] = {
+    val vars = VariableUse.make(PolymorphicConstant.linkedHashSet)
+    cwqapVariables(environment,vars=vars,recurse=recurse)
+    vars.map(PolymorphicFunction.linkedHashSetToList)
   }
 
-  def cwqapVariables(environment : Environment, cvars : mutable.Set[CVariable], wcvars : mutable.Set[CVariable], qvars: mutable.Set[QVariable],
-                   avars : mutable.Set[String], progs : mutable.Set[ProgramDecl], recurse:Boolean): Unit = {
-    def collectExpr(e:RichTerm):Unit = e.caVariables(environment,cvars,avars)
+  def cwqapVariables(environment : Environment, vars : VariableUse[mutable.Set], recurse:Boolean): Unit = {
+    def collectExpr(e:RichTerm):Unit = e.caVariables(environment,vars)
     def collect(s:Statement) : Unit = s match {
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => cvars ++= v.iterator; wcvars ++= v.iterator; collectExpr(e)
-      case Sample(v,e) => cvars ++= v.iterator; wcvars ++= v.iterator; collectExpr(e)
+      case Assign(v,e) => vars.cvars ++= v.iterator; vars.wcvars ++= v.iterator; collectExpr(e)
+      case Sample(v,e) => vars.cvars ++= v.iterator; vars.wcvars ++= v.iterator; collectExpr(e)
       case Call(name, args @ _*) =>
         if (name.head!='@') {
           val p = environment.programs(name)
-          progs += p
+          vars.progs += p
           if (recurse) {
-            val (cv,wc,qv,av,ps) = p.variablesRecursive
-            cvars ++= cv; wcvars ++= wc; qvars ++= qv; avars ++= av; progs ++= ps
+            val pvars = p.variablesRecursive
+            vars.cvars ++= pvars.cvars; vars.wcvars ++= pvars.wcvars;
+            vars.qvars ++= pvars.qvars; vars.avars ++= pvars.avars; vars.progs ++= pvars.progs
           }
         }
         args.foreach(collect)
       case While(e,body) => collectExpr(e); collect(body)
       case IfThenElse(e,p1,p2) => collectExpr(e); collect(p1); collect(p2)
-      case QInit(vs,e) => qvars ++= vs.iterator; collectExpr(e)
-      case Measurement(v,vs,e) => cvars ++= v.iterator; wcvars ++= v.iterator; collectExpr(e); qvars ++= vs.iterator
-      case QApply(vs,e) => qvars ++= vs.iterator; collectExpr(e)
+      case QInit(vs,e) => vars.qvars ++= vs.iterator; collectExpr(e)
+      case Measurement(v,vs,e) => vars.cvars ++= v.iterator; vars.wcvars ++= v.iterator; collectExpr(e); vars.qvars ++= vs.iterator
+      case QApply(vs,e) => vars.qvars ++= vs.iterator; collectExpr(e)
     }
     collect(this)
   }

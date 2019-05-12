@@ -21,8 +21,8 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic 
   }
 
   private def checkSwappable(env: Environment, block1 : List[Statement], block2: List[Statement]): Unit = {
-    val (c1,w1,q1,_,_) = Block(block1:_*).cwqapVariables(recurse=true, environment = env)
-    val (c2,w2,q2,_,_) = Block(block2:_*).cwqapVariables(recurse=true, environment = env)
+    val vars1 = Block(block1:_*).cwqapVariables(recurse=true, environment = env)
+    val vars2 = Block(block2:_*).cwqapVariables(recurse=true, environment = env)
 
     def error(msg: String) =
       throw UserException(s"Cannot swap\n    ${block1.mkString(" ")}\nand\n    ${block2.mkString(" ")},\n$msg")
@@ -30,19 +30,19 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic 
     def vars(vars:Seq[Variable]) : String =
       vars.map(_.name).mkString(", ")
 
-    val qshared = q1.intersect(q2)
+    val qshared = vars1.qvars.intersect(vars2.qvars)
     if (qshared.nonEmpty)
       error(s"they have shared quantum variables (${vars(qshared)})")
 
-    val wshared = w1.intersect(w2)
+    val wshared = vars1.wcvars.intersect(vars2.wcvars)
     if (wshared.nonEmpty)
       error(s"they have shared written classical variables (${vars(wshared)})")
 
-    val w1r2 = w1.intersect(c2)
+    val w1r2 = vars1.wcvars.intersect(vars2.cvars)
     if (w1r2.nonEmpty)
       error(s"the first block writes classical variables that the second reads (${vars(w1r2)})")
 
-    val w2r1 = w2.intersect(c1)
+    val w2r1 = vars2.wcvars.intersect(vars1.cvars)
     if (w2r1.nonEmpty)
       error(s"the first block reads classical variables that the second writes (${vars(w2r1)})")
   }

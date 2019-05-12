@@ -135,7 +135,7 @@ object Environment {
 
 sealed trait ProgramDecl {
   /** All variables used by this program (classical, classical-written, quantum, ambient, program names), recursively. */
-  val variablesRecursive : (List[CVariable],List[CVariable],List[QVariable],List[String],List[ProgramDecl])
+  val variablesRecursive : VariableUse[List]
 //  val variables : (List[CVariable],List[QVariable])
 //  val subprograms : List[ProgramDecl]
   val name: String
@@ -144,14 +144,14 @@ sealed trait ProgramDecl {
 }
 
 final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], numOracles:Int) extends ProgramDecl {
-  override val variablesRecursive: (List[CVariable], List[CVariable], List[QVariable], List[String], List[ProgramDecl]) =
-    (cvars, cvars, qvars, Nil, Nil)
+  override val variablesRecursive: VariableUse[List] =
+    VariableUse[List](cvars=cvars, wcvars = cvars, qvars=qvars, avars=Nil, progs=Nil)
 
   def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {
     val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],BigInt),BigInt]("declare_abstract_program")
-    val (cv,_,qv,_,_) = variablesRecursive
-    val cvars = cv map { v => (v.name, v.valueTyp) }
-    val qvars = qv map { v => (v.name, v.valueTyp) }
+    val vars = variablesRecursive
+    val cvars = vars.cvars map { v => (v.name, v.valueTyp) }
+    val qvars = vars.qvars map { v => (v.name, v.valueTyp) }
     val id = isabelle.isabelle.invoke(op, (isabelle.contextId, name, cvars, qvars, BigInt(numOracles)))
     new Context(isabelle.isabelle,id)
   }
@@ -204,7 +204,7 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     vars.toList
   }
 
-  override lazy val variablesRecursive: (List[CVariable], List[CVariable], List[QVariable], List[String], List[ProgramDecl]) =
+  override lazy val variablesRecursive: VariableUse[List] =
     program.cwqapVariables(environment,recurse = true)
 
   /*{
@@ -246,9 +246,9 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
   }*/
   def declareInIsabelle(context: Isabelle.Context): Isabelle.Context = {
     val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],List[String],Statement),BigInt]("declare_concrete_program")
-    val (cv,_,qv,_,_) = variablesRecursive
-    val cvars = cv map { v => (v.name, v.valueTyp) }
-    val qvars = qv map { v => (v.name, v.valueTyp) }
+    val vars = variablesRecursive
+    val cvars = vars.cvars map { v => (v.name, v.valueTyp) }
+    val qvars = vars.qvars map { v => (v.name, v.valueTyp) }
     val id = context.isabelle.invoke(op, (context.contextId, name, cvars, qvars, oracles, program))
     new Context(context.isabelle, id)
   }

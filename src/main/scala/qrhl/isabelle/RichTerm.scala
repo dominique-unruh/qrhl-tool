@@ -7,7 +7,7 @@ import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, TFree, TVar, Term
 import info.hupel.isabelle.{Codec, DecodingException, Operation, XMLResult, pure}
 import org.log4s
 import org.log4s.Logger
-import qrhl.logic.{CVariable, Environment, Variable}
+import qrhl.logic.{CVariable, Environment, Variable, VariableUse}
 
 import scala.collection.mutable
 import RichTerm.typ_tight_codec
@@ -73,12 +73,12 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
   def variables : Set[String] = freeVars(isabelleTerm)
 
   /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */
-  def caVariables(environment: Environment, cvars : mutable.Set[CVariable], avars : mutable.Set[String]): Unit = {
+  def caVariables(environment: Environment, vars : VariableUse[mutable.Set]): Unit = {
 //    val cvars = mutable.LinkedHashSet[CVariable]()
 //    val avars = mutable.LinkedHashSet[String]()
     for (v<-variables) environment.cVariables.get(v) match {
-      case Some(cv) => cvars += cv
-      case None => avars += v
+      case Some(cv) => vars.cvars += cv
+      case None => vars.avars += v
     }
   }
 
