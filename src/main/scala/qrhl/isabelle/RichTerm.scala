@@ -10,10 +10,12 @@ import org.log4s.Logger
 import qrhl.logic.{CVariable, Environment, Variable, VariableUse}
 
 import scala.collection.mutable
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
 import Isabelle.applicativeXMLResult
+import info.hupel.isabelle.Codec.text
+import qrhl.isabelle.RichTerm.term_tight_codec
+import qrhl.logic
 
+import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 
 final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _isabelleTerm:Option[Term]=None, _pretty:Option[String]=None) {
@@ -27,6 +29,8 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
       codec.decode(tree)
     }
   }
+
+
 
   lazy val isabelleTerm : Term = _isabelleTerm match {
     case Some(te) => te
@@ -73,14 +77,26 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
   def variables : Set[String] = freeVars(isabelleTerm)
 
   /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */
-  def caVariables(environment: Environment, vars : VariableUse[mutable.Set]): Unit = {
-//    val cvars = mutable.LinkedHashSet[CVariable]()
-//    val avars = mutable.LinkedHashSet[String]()
+  def caVariables(environment: Environment): VariableUse = {
+    val avars = new ListBuffer[String]
+    val cvars = new ListBuffer[CVariable]
     for (v<-variables) environment.cVariables.get(v) match {
-      case Some(cv) => vars.cvars += cv
-      case None => vars.avars += v
+      case Some(cv) => cvars += cv
+      case None => avars += v
     }
+    import ListSet.empty
+    VariableUse(cvars=ListSet(cvars:_*), avars=ListSet(avars:_*), wcvars=empty, qvars=empty, progs=empty)
   }
+
+//    /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */
+//  def caVariables(environment: Environment, vars : VariableUse[mutable.Set]): Unit = {
+////    val cvars = mutable.LinkedHashSet[CVariable]()
+////    val avars = mutable.LinkedHashSet[String]()
+//    for (v<-variables) environment.cVariables.get(v) match {
+//      case Some(cv) => vars.cvars += cv
+//      case None => vars.avars += v
+//    }
+//  }
 
   override lazy val toString: String = _pretty match {
     case Some(s) => s

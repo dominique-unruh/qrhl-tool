@@ -33,7 +33,7 @@ case object ByQRHLTac extends Tactic {
       case Const(Isabelle.one_name,_) =>
         Some((Isabelle.True_const, Block(), null))
       case _ =>
-        ByQRHLTac.logger.debug(s"Term: ${term}")
+        ByQRHLTac.logger.debug(s"Term: $term")
         None
     }
   }
@@ -62,16 +62,16 @@ case object ByQRHLTac extends Tactic {
           case _ => throw UserException("There should be = or <= or >= between the lhs and the rhs")
         }
 
-        val vars1 = p1.cwqapVariables(state.environment,recurse = true)
-        val vars2 = p2.cwqapVariables(state.environment,recurse = true)
-        val cvars = (vars1.cvars ++ vars2.cvars).distinct
-        val qvars = (vars1.qvars ++ vars2.qvars).distinct
+        val vars1 = p1.variableUse(state.environment)
+        val vars2 = p2.variableUse(state.environment)
+        val cvars = vars1.cvars ++ vars2.cvars
+        val qvars = vars1.qvars ++ vars2.qvars
 
         val isa = state.isabelle
         val pre = isa.isabelle.invoke(byQRHLPreOp,
           (isa.contextId,
-            cvars.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
-            qvars.map(v => (v.index1.name, v.index2.name, v.valueTyp))))
+            cvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
+            qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))))
 
         val left = p1.toBlock
         val right = p2.toBlock

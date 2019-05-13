@@ -1,6 +1,9 @@
 package qrhl
 
+import scalaz.Memo
+
 import scala.collection.mutable
+import scala.ref.SoftReference
 
 object Utils {
   def areDistinct[A](values:TraversableOnce[A]): Boolean = {
@@ -9,5 +12,19 @@ object Utils {
       if (!seen.add(v))
         return false
     true
+  }
+
+  def singleMemo[K<:AnyRef,V]: Memo[K, V] = {
+    var previous : SoftReference[(K,V)] = SoftReference(null)
+    Memo.memo[K,V] { f => k =>
+      previous match {
+        case SoftReference((prevK,prevV)) if prevK eq k =>
+          prevV
+        case _ =>
+          val v = f(k)
+          previous = SoftReference((k,v))
+          v
+      }
+    }
   }
 }

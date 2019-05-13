@@ -13,28 +13,34 @@ import RichTerm.term_tight_codec
 
 case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends WpBothStyleTac() {
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm, List[Subgoal]) = {
-    val vars = VariableUse.make[mutable.LinkedHashSet](PolymorphicConstant.linkedHashSet)
+    val cvars = new mutable.LinkedHashSet[CVariable]()
+    val qvars = new mutable.LinkedHashSet[QVariable]()
+    val dummy = new mutable.LinkedHashSet[String]()
 
     val mismatches = new mutable.LinkedHashSet[(Statement,Statement)]()
     val env = state.environment
 
     // Adds the classical variables in e to cvars
-    def collectExpr(e: RichTerm): Unit = e.caVariables(env,vars)
+    def collectExpr(e: RichTerm): Unit = {
+      val vars = e.caVariables(env)
+      cvars ++= vars.cvars
+    }
 
     // For l=C[l1,...,ln], r=C[r1,...,rn] for programs li, ri, adds all (li,ri) to mismatches
     // Also adds all classical/quantum variables in l,r to cvars/qvars
     def collect(l: Statement, r: Statement) : Unit = (l,r) match {
       case (Assign(xl,el), Assign(xr,er)) if xl==xr && el==er =>
-        vars.cvars ++= xl.iterator; collectExpr(el)
+        cvars ++= xl.iterator; collectExpr(el)
       case (Sample(xl,el), Sample(xr,er)) if xl==xr && el==er =>
-        vars.cvars ++= xl.iterator; el.caVariables(env,vars)
+        cvars ++= xl.iterator; collectExpr(el)
       case (Block(ssl @ _*), Block(ssr @ _*)) if ssl.length==ssr.length =>
         for ((sl,sr) <- ssl.zip(ssr))
           collect(sl,sr)
       case (Call(namel, argsl @ _*), Call(namer, argsr @ _*)) if namel==namer && !exclude.contains(namel) =>
         val p = env.programs(namel)
-        val pvars = p.variablesRecursive
-        vars.cvars ++= pvars.cvars; vars.qvars ++= pvars.qvars
+        val pvars =p.variablesRecursive
+        val (cv,qv) = (pvars.cvars,pvars.qvars)
+        cvars ++= cv; qvars ++= qv
         assert(argsl.length==argsr.length)
         for ((pl,pr) <- argsl.zip(argsr))
           collect(pl,pr)
@@ -43,11 +49,11 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
       case (IfThenElse(el,p1l,p2l), IfThenElse(er,p1r,p2r)) if el==er =>
         collectExpr(el); collect(p1l,p1r); collect(p2l,p2r)
       case (QInit(vs1,e1),QInit(vs2,e2)) if vs1==vs2 && e1==e2 =>
-        vars.qvars ++= vs1.iterator; collectExpr(e1)
+        qvars ++= vs1.iterator; collectExpr(e1)
       case (Measurement(vl,vsl,el),Measurement(vr,vsr,er)) if vl==vr && vsl==vsr && el==er =>
-        vars.cvars ++= vl.iterator; collectExpr(el); vars.qvars ++= vsl.iterator
+        cvars ++= vl.iterator; collectExpr(el); qvars ++= vsl.iterator
       case (QApply(vsl,el), QApply(vsr,er)) if vsl==vsr && el==er =>
-        vars.qvars ++= vsl.iterator; collectExpr(el)
+        qvars ++= vsl.iterator; collectExpr(el)
       case lr => mismatches.add(lr)
     }
 
@@ -56,14 +62,14 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
     // And cvars/qvars contains all classical/quantum variables in left,right.
 
     if (qvariables.nonEmpty) {
-      vars.qvars.clear()
-      vars.qvars ++= qvariables
+      qvars.clear()
+      qvars ++= qvariables
     }
 
-    val cvarsIdx1 = vars.cvars.toList.map(_.index1)
-    val cvarsIdx2 = vars.cvars.toList.map(_.index2)
-    val qvarsIdx1 = vars.qvars.toList.map(_.index1)
-    val qvarsIdx2 = vars.qvars.toList.map(_.index2)
+    val cvarsIdx1 = cvars.toList.map(_.index1)
+    val cvarsIdx2 = cvars.toList.map(_.index2)
+    val qvarsIdx1 = qvars.toList.map(_.index1)
+    val qvarsIdx2 = qvars.toList.map(_.index2)
 
     // Computes wp and colocality, see QRHL.callWp in Isabelle/ML sources
     val (wp, colocality) = state.isabelle.isabelle.invoke(callWpOp,

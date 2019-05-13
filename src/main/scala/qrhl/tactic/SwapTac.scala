@@ -4,6 +4,8 @@ import org.log4s
 import qrhl._
 import qrhl.logic.{Block, Environment, Statement, Variable}
 
+import scala.collection.immutable.ListSet
+
 
 case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic {
   if (steps < 1)
@@ -21,13 +23,13 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic 
   }
 
   private def checkSwappable(env: Environment, block1 : List[Statement], block2: List[Statement]): Unit = {
-    val vars1 = Block(block1:_*).cwqapVariables(recurse=true, environment = env)
-    val vars2 = Block(block2:_*).cwqapVariables(recurse=true, environment = env)
+    val vars1 = Block(block1:_*).variableUse(env)
+    val vars2 = Block(block2:_*).variableUse(env)
 
     def error(msg: String) =
       throw UserException(s"Cannot swap\n    ${block1.mkString(" ")}\nand\n    ${block2.mkString(" ")},\n$msg")
 
-    def vars(vars:Seq[Variable]) : String =
+    def vars(vars:ListSet[_<:Variable]) : String =
       vars.map(_.name).mkString(", ")
 
     val qshared = vars1.qvars.intersect(vars2.qvars)

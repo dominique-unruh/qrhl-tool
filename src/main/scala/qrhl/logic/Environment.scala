@@ -7,10 +7,11 @@ import qrhl.isabelle.Isabelle.{Context, declareVariableOp}
 import qrhl.isabelle.{Isabelle, RichTerm}
 
 import scala.collection.mutable
-
 import RichTerm.term_tight_codec
 import RichTerm.typ_tight_codec
 import qrhl.isabelle.Codecs._
+
+import scala.collection.immutable.ListSet
 
 /** Represents a logic environment in which programs and expressions are interpreted.
   * @param cVariables All declared classical variables
@@ -135,7 +136,7 @@ object Environment {
 
 sealed trait ProgramDecl {
   /** All variables used by this program (classical, classical-written, quantum, ambient, program names), recursively. */
-  val variablesRecursive : VariableUse[List]
+  val variablesRecursive : VariableUse
 //  val variables : (List[CVariable],List[QVariable])
 //  val subprograms : List[ProgramDecl]
   val name: String
@@ -144,15 +145,17 @@ sealed trait ProgramDecl {
 }
 
 final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], numOracles:Int) extends ProgramDecl {
-  override val variablesRecursive: VariableUse[List] =
-    VariableUse[List](cvars=cvars, wcvars = cvars, qvars=qvars, avars=Nil, progs=Nil)
+  override val variablesRecursive: VariableUse = {
+    val cvars2 = ListSet(cvars: _*)
+    VariableUse(cvars = cvars2, wcvars = cvars2, qvars = ListSet(qvars: _*), avars = ListSet.empty, progs = ListSet.empty)
+  }
 
   def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {
     val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],BigInt),BigInt]("declare_abstract_program")
     val vars = variablesRecursive
     val cvars = vars.cvars map { v => (v.name, v.valueTyp) }
     val qvars = vars.qvars map { v => (v.name, v.valueTyp) }
-    val id = isabelle.isabelle.invoke(op, (isabelle.contextId, name, cvars, qvars, BigInt(numOracles)))
+    val id = isabelle.isabelle.invoke(op, (isabelle.contextId, name, cvars.toList, qvars.toList, BigInt(numOracles)))
     new Context(isabelle.isabelle,id)
   }
 
@@ -204,8 +207,8 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     vars.toList
   }
 
-  override lazy val variablesRecursive: VariableUse[List] =
-    program.cwqapVariables(environment,recurse = true)
+  override lazy val variablesRecursive: VariableUse =
+    program.variableUse(environment)
 
   /*{
     val qvars = new mutable.LinkedHashSet[QVariable]
@@ -249,7 +252,7 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     val vars = variablesRecursive
     val cvars = vars.cvars map { v => (v.name, v.valueTyp) }
     val qvars = vars.qvars map { v => (v.name, v.valueTyp) }
-    val id = context.isabelle.invoke(op, (context.contextId, name, cvars, qvars, oracles, program))
+    val id = context.isabelle.invoke(op, (context.contextId, name, cvars.toList, qvars.toList, oracles, program))
     new Context(context.isabelle, id)
   }
 }
