@@ -371,6 +371,8 @@ class State private (val environment: Environment,
 
 //    val isa2 = decl.getSimplifierRules.foldLeft(isa1) { (isa,rule) => isa.addAssumption("", rule.isabelleTerm, simplifier = true) }
 
+    logger.debug(s"Program variables: ${env1.programs(name).variablesRecursive}")
+
     copy(environment = env1, isabelle=Some(isa))
   }
 
@@ -380,7 +382,11 @@ class State private (val environment: Environment,
     val decl = AbstractProgramDecl(name, cvars.toList, qvars.toList, numOracles)
     val isa = decl.declareInIsabelle(_isabelle.get)
 //    val isa2 = decl.getSimplifierRules.foldLeft(isa1) { (isa,rule) => isa.addAssumption("", rule.isabelleTerm, simplifier = true) }
-    copy(environment = environment.declareProgram(decl), isabelle=Some(isa))
+    val env1 = environment.declareProgram(decl)
+
+    logger.debug(s"Program variables: ${env1.programs(name).variablesRecursive}")
+
+    copy(environment = env1, isabelle=Some(isa))
   }
 
 

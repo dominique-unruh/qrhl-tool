@@ -64,8 +64,8 @@ case object ByQRHLTac extends Tactic {
 
         val vars1 = p1.variableUse(state.environment)
         val vars2 = p2.variableUse(state.environment)
-        val cvars = vars1.cvars ++ vars2.cvars
-        val qvars = vars1.qvars ++ vars2.qvars
+        val cvars = vars1.classical ++ vars2.classical
+        val qvars = vars1.quantum ++ vars2.quantum
 
         val isa = state.isabelle
         val pre = isa.isabelle.invoke(byQRHLPreOp,

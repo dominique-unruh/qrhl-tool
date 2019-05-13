@@ -81,30 +81,71 @@ object VarTerm {
 
 
 case class VariableUse
-(cvars : ListSet[CVariable],
- wcvars : ListSet[CVariable],
- qvars: ListSet[QVariable],
- avars : ListSet[String],
- progs : ListSet[ProgramDecl]) {
-  def addClassicalVar(variables: CVariable*): VariableUse = copy(cvars=cvars ++ variables)
-  def addAmbientVar(variables: String*): VariableUse = copy(avars=avars ++ variables)
-  def addProgramVar(p: ProgramDecl*): VariableUse = copy(progs=progs ++ p)
+(classical : ListSet[CVariable],
+ writtenClassical : ListSet[CVariable],
+ quantum: ListSet[QVariable],
+ ambient : ListSet[String],
+ programs : ListSet[ProgramDecl],
+ overwrittenClassical : ListSet[CVariable],
+ overwrittenQuantum : ListSet[QVariable],
+ oracles : ListSet[String]) {
+
+  override def toString: String = s"""
+      | Classical:       ${classical.map(_.name).mkString(", ")}
+      | Quantum:         ${quantum.map(_.name).mkString(", ")}
+      | Ambient:         ${ambient.mkString(", ")}
+      | Programs:        ${programs.map(_.name).mkString(", ")}
+      | Overwritten cl.: ${overwrittenClassical.map(_.name).mkString(", ")}
+      | Overwritten qu.: ${overwrittenQuantum.map(_.name).mkString(", ")}
+      | Oracles:         ${oracles.mkString(", ")}
+    """.stripMargin
+
+  def addClassicalVar(variables: CVariable*): VariableUse = copy(classical=classical ++ variables)
+  def addAmbientVar(variables: String*): VariableUse = copy(ambient=ambient ++ variables)
+  def addProgramVar(p: ProgramDecl*): VariableUse = copy(programs=programs ++ p)
 
   def ++(other: VariableUse) = VariableUse(
-    cvars=cvars++other.cvars,
-    wcvars=wcvars++other.wcvars,
-    qvars=qvars++other.qvars,
-    avars=avars++other.avars,
-    progs=progs++other.progs)
+    classical=classical++other.classical,
+    writtenClassical=writtenClassical++other.writtenClassical,
+    quantum=quantum++other.quantum,
+    ambient=ambient++other.ambient,
+    programs=programs++other.programs,
+    overwrittenClassical = overwrittenClassical++other.overwrittenClassical,
+    overwrittenQuantum = overwrittenQuantum++other.overwrittenQuantum,
+    oracles = oracles++other.oracles)
+
+  //noinspection MutatorLikeMethodIsParameterless
+  def removeOverwritten: VariableUse = copy(overwrittenClassical=ListSet.empty, overwrittenQuantum = ListSet.empty)
+  def removeOverwrittenClassical(vars: CVariable*): VariableUse = copy(overwrittenClassical=overwrittenClassical -- vars)
+  def removeOverwrittenQuantum(vars: QVariable*): VariableUse = copy(overwrittenQuantum=overwrittenQuantum -- vars)
 
 }
 object VariableUse {
-  def writtenClassicalVariables(variables: CVariable*): VariableUse =
-    new VariableUse(cvars=ListSet(variables:_*), wcvars=ListSet(variables:_*), avars=ListSet.empty, progs=ListSet.empty, qvars=ListSet.empty)
+  def oracle(oracles: String*): VariableUse =
+    new VariableUse(quantum=emptySet, classical=emptySet, ambient=emptySet, programs=emptySet, writtenClassical=emptySet,
+    overwrittenClassical = emptySet, overwrittenQuantum = emptySet, oracles=ListSet(oracles:_*))
 
-  def quantumVariables(vs: QVariable*): VariableUse = new VariableUse(qvars=ListSet(vs:_*), cvars=ListSet.empty, avars=ListSet.empty, progs=ListSet.empty, wcvars=ListSet.empty)
 
-  def empty = new VariableUse(cvars=ListSet.empty, wcvars=ListSet.empty, qvars=ListSet.empty, avars=ListSet.empty, progs=ListSet.empty)
+  private def emptySet[A] = ListSet.empty[A]
+
+  def writtenClassicalVariables(variables: CVariable*): VariableUse = {
+    val vars = ListSet(variables: _*)
+    new VariableUse(classical = vars, writtenClassical = vars, ambient = emptySet, programs = emptySet, quantum = emptySet,
+      overwrittenClassical = vars, overwrittenQuantum = emptySet, oracles=emptySet)
+  }
+
+  def quantumVariables(vs: QVariable*): VariableUse =
+    new VariableUse(quantum=ListSet(vs:_*), classical=emptySet, ambient=emptySet, programs=emptySet, writtenClassical=emptySet,
+      overwrittenClassical = emptySet, overwrittenQuantum = emptySet, oracles=emptySet)
+
+  def overwrittenQuantumVariables(vs: QVariable*): VariableUse = {
+    val vars = ListSet(vs:_*)
+    new VariableUse(quantum=vars, classical=emptySet, ambient=emptySet, programs=emptySet, writtenClassical=emptySet,
+      overwrittenClassical = emptySet, overwrittenQuantum = vars, oracles=emptySet)
+  }
+
+  def empty = new VariableUse(classical=emptySet, writtenClassical=emptySet, quantum=emptySet, ambient=emptySet, programs=emptySet,
+    overwrittenClassical = emptySet, overwrittenQuantum = emptySet, oracles=emptySet)
 }
 
 case object VTUnit extends VarTerm[Nothing] {
@@ -144,59 +185,83 @@ sealed trait Statement {
     context.isabelle.invoke(Statement.statement_to_term_op, (context.contextId, this))
   }
 
+  private def mergeSequential(a: VariableUse, b: VariableUse) : VariableUse = {
+    val result =
+      if (a.oracles.isEmpty)
+        a ++ b.removeOverwrittenClassical(a.classical.toSeq:_*).removeOverwrittenQuantum(a.quantum.toSeq:_*)
+      else
+        a ++ b.removeOverwritten
+//    println(s"A: $a\nB: $b\nA+B: $result") // TODO REMOVE
+    result
+  }
+  private def mergeAlternative(a: VariableUse, b: VariableUse) : VariableUse = {
+    val ab = a ++ b
+    ab.copy(overwrittenClassical = a.overwrittenClassical.intersect(b.overwrittenClassical),
+      overwrittenQuantum = a.overwrittenQuantum.intersect(b.overwrittenQuantum))
+  }
+
   val variableUse : Environment => VariableUse = Utils.singleMemo { env =>
     this match {
-      case Block(ss @ _*) =>
-        ss.foldLeft(VariableUse.empty) { (vars,s) => vars ++ s.variableUse(env) }
-//        ss.foreach(collect)
-      case Assign(v,e) =>
-        val cvars = ListSet(v.toSeq:_*)
+      case Block(ss@_*) =>
+        ss.foldLeft(VariableUse.empty) { (vars, s) => mergeSequential(vars, s.variableUse(env)) }
+      //        ss.foreach(collect)
+      case Assign(v, e) =>
         val eVars = e.caVariables(env)
-        new VariableUse(cvars = cvars, wcvars = cvars, qvars = ListSet.empty, avars = ListSet.empty, progs = ListSet.empty) ++ eVars
-      case Sample(v,e) =>
+        val lhsVars = VariableUse.writtenClassicalVariables(v.toSeq: _*)
+        mergeSequential(eVars, lhsVars)
+      case Sample(v, e) =>
         // Hack for simply doing the same as in Assign case
-        Assign(v,e).variableUse(env)
-      case Call(name, args @ _*) =>
-        if (name.head!='@') {
+        Assign(v, e).variableUse(env)
+      case Call(name, args@_*) =>
+        if (name.head != '@') {
           val p = env.programs(name)
           val headVars = p.variablesRecursive.addProgramVar(p)
-          args.foldLeft(headVars) { (vars,arg) => vars ++ arg.variableUse(env) }
+          args.foldLeft(headVars) { (vars, arg) => vars ++ arg.variableUse(env).removeOverwritten }
         } else {
-          args.foldLeft(VariableUse.empty) { (vars, arg) => vars ++ arg.variableUse(env) }
+          assert(args.isEmpty)
+          VariableUse.oracle(name.tail)
+//          args.foldLeft(VariableUse.empty) { (vars, arg) => vars ++ arg.variableUse(env) }
         }
-      case While(e,body) =>
-        val eVars = e.caVariables(env)
+      case While(e, body) =>
+        val vars = e.caVariables(env) ++ body.variableUse(env)
+        vars.removeOverwritten
+      val eVars = e.caVariables(env)
         val bodyVars = body.variableUse(env)
         eVars ++ bodyVars
-      case IfThenElse(e,p1,p2) =>
+      case IfThenElse(e, p1, p2) =>
         val eVars = e.caVariables(env)
         val p1Vars = p1.variableUse(env)
         val p2Vars = p2.variableUse(env)
-        eVars ++ p1Vars ++ p2Vars
-      case QInit(vs,e) =>
-        val lhsVars = VariableUse.quantumVariables(vs.toSeq:_*)
+        val p12Vars = mergeAlternative(p1Vars, p2Vars)
+        mergeSequential(eVars, p12Vars)
+      case QInit(vs, e) =>
+        val lhsVars = VariableUse.overwrittenQuantumVariables(vs.toSeq: _*)
         val rhsVars = e.caVariables(env)
-        lhsVars ++ rhsVars
-      case QApply(vs,e) =>
-        val lhsVars = VariableUse.quantumVariables(vs.toSeq:_*)
+        mergeSequential(rhsVars, lhsVars)
+      case QApply(vs, e) =>
+        val lhsVars = VariableUse.quantumVariables(vs.toSeq: _*)
         val rhsVars = e.caVariables(env)
-        lhsVars ++ rhsVars
-      case Measurement(v,vs,e) =>
-        val lhsVars = VariableUse.writtenClassicalVariables(v.toSeq:_*)
-        val qVars = VariableUse.quantumVariables(vs.toSeq:_*)
+        rhsVars ++ lhsVars
+      case Measurement(v, vs, e) =>
         val eVars = e.caVariables(env)
-        lhsVars ++ qVars ++ eVars
-//        vars.cvars ++= v.iterator; vars.wcvars ++= v.iterator; collectExpr(e); vars.qvars ++= vs.iterator
+        val qVars = VariableUse.quantumVariables(vs.toSeq:_*)
+        val lhsVars = VariableUse.writtenClassicalVariables(v.toSeq:_*)
+        mergeSequential(eVars,lhsVars) ++ qVars
     }
   }
 
-  /** Returns all variables used in the statement.
-    * @param recurse Recurse into programs embedded via Call
-    * @return (cvars,wcvars,qvars,avars,pnames) Classical, quantum, ambient variables, program declarations.
-    * Oracle names (starting with @) are not included or recursed into
-    * wcvars = written classical vars
-    * */
-//  @deprecated
+//  /** Returns all variables used in the statement.
+//    * @param recurse Recurse into programs embedded via Call
+//    * @return (cvars,wcvars,qvars,avars,pnames) Classical, quantum, ambient variables, program declarations.
+//    * Oracle names (starting with @) are not included or recursed into
+//    * wcvars = written classical vars
+//    * */
+
+
+
+
+
+  //  @deprecated
 //  def cwqapVariables(environment: Environment, recurse: Boolean) : VariableUse[List] = {
 //    val vars = VariableUse.make(PolymorphicConstant.linkedHashSet)
 //    cwqapVariables(environment,vars=vars,recurse=recurse)

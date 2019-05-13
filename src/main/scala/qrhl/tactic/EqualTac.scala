@@ -23,7 +23,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
     // Adds the classical variables in e to cvars
     def collectExpr(e: RichTerm): Unit = {
       val vars = e.caVariables(env)
-      cvars ++= vars.cvars
+      cvars ++= vars.classical
     }
 
     // For l=C[l1,...,ln], r=C[r1,...,rn] for programs li, ri, adds all (li,ri) to mismatches
@@ -39,7 +39,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
       case (Call(namel, argsl @ _*), Call(namer, argsr @ _*)) if namel==namer && !exclude.contains(namel) =>
         val p = env.programs(namel)
         val pvars =p.variablesRecursive
-        val (cv,qv) = (pvars.cvars,pvars.qvars)
+        val (cv,qv) = (pvars.classical,pvars.quantum)
         cvars ++= cv; qvars ++= qv
         assert(argsl.length==argsr.length)
         for ((pl,pr) <- argsl.zip(argsr))

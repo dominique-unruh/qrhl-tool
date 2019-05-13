@@ -147,14 +147,14 @@ sealed trait ProgramDecl {
 final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], numOracles:Int) extends ProgramDecl {
   override val variablesRecursive: VariableUse = {
     val cvars2 = ListSet(cvars: _*)
-    VariableUse(cvars = cvars2, wcvars = cvars2, qvars = ListSet(qvars: _*), avars = ListSet.empty, progs = ListSet.empty)
+    VariableUse(classical = cvars2, writtenClassical = cvars2, quantum = ListSet(qvars: _*), ambient = ListSet.empty, programs = ListSet.empty, overwrittenClassical = ListSet.empty, overwrittenQuantum = ListSet.empty, oracles=ListSet.empty)
   }
 
   def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {
     val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],BigInt),BigInt]("declare_abstract_program")
     val vars = variablesRecursive
-    val cvars = vars.cvars map { v => (v.name, v.valueTyp) }
-    val qvars = vars.qvars map { v => (v.name, v.valueTyp) }
+    val cvars = vars.classical map { v => (v.name, v.valueTyp) }
+    val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
     val id = isabelle.isabelle.invoke(op, (isabelle.contextId, name, cvars.toList, qvars.toList, BigInt(numOracles)))
     new Context(isabelle.isabelle,id)
   }
@@ -250,8 +250,8 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
   def declareInIsabelle(context: Isabelle.Context): Isabelle.Context = {
     val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],List[String],Statement),BigInt]("declare_concrete_program")
     val vars = variablesRecursive
-    val cvars = vars.cvars map { v => (v.name, v.valueTyp) }
-    val qvars = vars.qvars map { v => (v.name, v.valueTyp) }
+    val cvars = vars.classical map { v => (v.name, v.valueTyp) }
+    val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
     val id = context.isabelle.invoke(op, (context.contextId, name, cvars.toList, qvars.toList, oracles, program))
     new Context(context.isabelle, id)
   }

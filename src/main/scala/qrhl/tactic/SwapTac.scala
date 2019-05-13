@@ -32,19 +32,19 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic 
     def vars(vars:ListSet[_<:Variable]) : String =
       vars.map(_.name).mkString(", ")
 
-    val qshared = vars1.qvars.intersect(vars2.qvars)
+    val qshared = vars1.quantum.intersect(vars2.quantum)
     if (qshared.nonEmpty)
       error(s"they have shared quantum variables (${vars(qshared)})")
 
-    val wshared = vars1.wcvars.intersect(vars2.wcvars)
+    val wshared = vars1.writtenClassical.intersect(vars2.writtenClassical)
     if (wshared.nonEmpty)
       error(s"they have shared written classical variables (${vars(wshared)})")
 
-    val w1r2 = vars1.wcvars.intersect(vars2.cvars)
+    val w1r2 = vars1.writtenClassical.intersect(vars2.classical)
     if (w1r2.nonEmpty)
       error(s"the first block writes classical variables that the second reads (${vars(w1r2)})")
 
-    val w2r1 = vars2.wcvars.intersect(vars1.cvars)
+    val w2r1 = vars2.writtenClassical.intersect(vars1.classical)
     if (w2r1.nonEmpty)
       error(s"the first block reads classical variables that the second writes (${vars(w2r1)})")
   }

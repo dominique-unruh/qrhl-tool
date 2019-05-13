@@ -3,6 +3,8 @@ package qrhl.toplevel
 import java.nio.file.{Path, Paths}
 
 import info.hupel.isabelle.{Operation, pure}
+import org.log4s
+import org.log4s.Logger
 import qrhl.isabelle.Isabelle
 import qrhl.logic.{Block, CVariable, QVariable}
 import qrhl.{State, Subgoal, Tactic, UserException}
