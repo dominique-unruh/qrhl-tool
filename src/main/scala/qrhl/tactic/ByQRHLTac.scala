@@ -10,9 +10,10 @@ import qrhl.logic._
 import qrhl.isabelle.RichTerm.term_tight_codec
 import qrhl.isabelle.RichTerm.typ_tight_codec
 
-case object ByQRHLTac extends Tactic {
-  private val logger = log4s.getLogger
+import scala.collection.immutable.ListSet
+import scala.collection.mutable
 
+case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
   class Probability(left : Boolean, state : State) {
     def unapply(term: pure.Term): Option[(pure.Term,Statement,pure.Term)] = term match {
       case App(App(App(Const(Isabelle.probability.name,_),v),p),rho) =>
@@ -65,7 +66,17 @@ case object ByQRHLTac extends Tactic {
         val vars1 = p1.variableUse(state.environment)
         val vars2 = p2.variableUse(state.environment)
         val cvars = vars1.classical ++ vars2.classical
-        val qvars = (vars1.quantum -- vars1.overwrittenQuantum) ++ (vars2.quantum -- vars2.overwrittenQuantum)
+        val requiredQvars = (vars1.quantum -- vars1.overwrittenQuantum) ++ (vars2.quantum -- vars2.overwrittenQuantum)
+
+        val qvars =
+          if (qvariables.isEmpty)
+            requiredQvars
+          else {
+            val qvariables2 = ListSet(qvariables:_*)
+            if (!requiredQvars.subsetOf(qvariables2))
+              throw UserException(s"You must specify at least the following qvars: ${qvariables2}")
+            qvariables2
+          }
 
         val isa = state.isabelle
         val pre = isa.isabelle.invoke(byQRHLPreOp,
@@ -82,4 +93,8 @@ case object ByQRHLTac extends Tactic {
         throw UserException("""Expected subgoal of the form "Pr[e:p(rho)] = Pr[f:q(rho2)]" (or with <= or >=) where p,q are program names""")
     }
   }
+}
+
+object ByQRHLTac {
+  private val logger = log4s.getLogger
 }

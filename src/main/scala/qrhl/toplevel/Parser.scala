@@ -5,7 +5,7 @@ import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic._
 import qrhl.tactic._
 import info.hupel.isabelle.pure.Typ
-import qrhl.{toplevel, _}
+import qrhl.{tactic, toplevel, _}
 
 import scala.util.parsing.combinator._
 
@@ -338,6 +338,12 @@ object Parser extends JavaTokenParsers {
         EqualTac(exclude=exclude2, qvariables = qvars2)
     }
 
+  def tactic_byqrhl(implicit context:ParserContext) : Parser[ByQRHLTac] =
+    literal("byqrhl") ~> (literal("qvars") ~> identifierList).? ^^ { qvars =>
+        val qvars2 = qvars.getOrElse(Nil) map { context.environment.getQVariable }
+        ByQRHLTac(qvariables = qvars2)
+    }
+
   def tactic_rnd(implicit context:ParserContext): Parser[Tactic] =
     literal("rnd") ~> (for (
       x <- vartermAtomic;
@@ -397,7 +403,7 @@ object Parser extends JavaTokenParsers {
       literal("call") ^^ { _ => ErrorTac("Call tactic was renamed. Use \"equal\" instead.") } |
       tactic_equal |
       tactic_rnd |
-      literal("byqrhl") ^^ { _ => ByQRHLTac } |
+      tactic_byqrhl |
       tactic_split |
       tactic_case |
       tactic_fix |
