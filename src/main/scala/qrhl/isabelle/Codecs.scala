@@ -32,4 +32,16 @@ object Codecs {
     { case (a, b, c, d, e, f, g, h) => (a, (b, c, d, e, f, g, h)) },
     s"(${Codec[A].mlType}) * (${Codec[B].mlType}) * (${Codec[C].mlType}) * (${Codec[D].mlType} * (${Codec[E].mlType} * (${Codec[F].mlType} * (${Codec[G].mlType} * (${Codec[H].mlType}"
   )
+
+  implicit def tuple9[A : Codec, B : Codec, C : Codec, D : Codec, E : Codec, F : Codec, G : Codec, H : Codec, I : Codec]: Codec[(A, B, C, D, E, F, G, H, I)] = Codec[(A, (B, C, D, E, F, G, H, I))].transform[(A, B, C, D, E, F, G, H, I)](
+    { case (a, (b, c, d, e, f, g, h, i)) => (a, b, c, d, e, f, g, h, i)  },
+    { case (a, b, c, d, e, f, g, h, i) => (a, (b, c, d, e, f, g, h, i)) },
+    s"(${Codec[A].mlType}) * (${Codec[B].mlType}) * (${Codec[C].mlType}) * (${Codec[D].mlType} * (${Codec[E].mlType} * (${Codec[F].mlType} * (${Codec[G].mlType} * (${Codec[H].mlType} * (${Codec[I].mlType}"
+  )
+
+  implicit def tuple10[A : Codec, B : Codec, C : Codec, D : Codec, E : Codec, F : Codec, G : Codec, H : Codec, I : Codec, J : Codec]: Codec[(A, B, C, D, E, F, G, H, I, J)] = Codec[(A, (B, C, D, E, F, G, H, I, J))].transform[(A, B, C, D, E, F, G, H, I, J)](
+    { case (a, (b, c, d, e, f, g, h, i, j)) => (a, b, c, d, e, f, g, h, i, j)  },
+    { case (a, b, c, d, e, f, g, h, i, j) => (a, (b, c, d, e, f, g, h, i, j)) },
+    s"(${Codec[A].mlType}) * (${Codec[B].mlType}) * (${Codec[C].mlType}) * (${Codec[D].mlType} * (${Codec[E].mlType} * (${Codec[F].mlType} * (${Codec[G].mlType} * (${Codec[H].mlType} * (${Codec[I].mlType} * (${Codec[J].mlType}"
+  )
 }
