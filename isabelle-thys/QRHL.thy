@@ -3,6 +3,8 @@ theory QRHL
     Joint_Measure Joint_Sample Squash_Sampling Universe_Instances_Bounded_Operators O2H Semi_Classical_Search
 begin
 
+unbundle notation_norm
+
 declare [[quick_and_dirty]]
 
 end
