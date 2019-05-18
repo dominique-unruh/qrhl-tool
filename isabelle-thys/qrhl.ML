@@ -7,8 +7,8 @@ val mk_conjs = Prog_Variables.mk_conjs
 fun mk_ell2T T = Type(\<^type_name>\<open>ell2\<close>, [T])
 fun dest_ell2T (Type(\<^type_name>\<open>ell2\<close>, [T])) = T
   | dest_ell2T T = raise TYPE("dest_ell2T",[T],[])
-fun mk_boundedT T T' = Type(\<^type_name>\<open>bounded\<close>, [T,T'])
-fun dest_boundedT (Type(\<^type_name>\<open>bounded\<close>, [T,T'])) = (T,T')
+fun mk_boundedT T T' = Type(\<^type_name>\<open>l2bounded\<close>, [T,T'])
+fun dest_boundedT (Type(\<^type_name>\<open>l2bounded\<close>, [T,T'])) = (T,T')
   | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
 fun mk_bounded2T T = mk_boundedT T T
 fun mk_measurementT T T' = Type(\<^type_name>\<open>measurement\<close>, [T,T'])
@@ -82,7 +82,7 @@ fun extend_lift_conv ctxt vtR ct = let
   val extend_thm = infer_instantiate ctxt [(("Q",0),Thm.cterm_of ctxt Q),
                                            (("R",0),Thm.cterm_of ctxt vtR),
                                            (("S",0),Thm.cterm_of ctxt S)]
-                        (lift_kind @{thm extend_space_lift_aux} @{thm extend_bounded_lift_aux})
+                        (lift_kind @{thm extend_space_lift_aux} @{thm extend_l2bounded_lift_aux})
   val extend_thm' = extend_thm |> simp_conv_premises ctxt
 in
   extend_thm'
@@ -424,7 +424,7 @@ val (lift,S,Q,R) = case Thm.term_of ct of
     (Const(\<^const_name>\<open>join_variables_hint\<close>,_)) $ (Const(lift,_) $ S $ Q) $ R => (lift,S,Q,R)
     | _ => raise CTERM("variable_extension_hint_conv: wrong shape",[ct])
 val conv_rule = case lift of \<^const_name>\<open>liftSpace\<close> => @{thm join_variables_hint_subspace_conv_aux}
-                           | \<^const_name>\<open>liftOp\<close> => @{thm join_variables_hint_bounded_conv_aux}
+                           | \<^const_name>\<open>liftOp\<close> => @{thm join_variables_hint_l2bounded_conv_aux}
                            | _ => raise CTERM("variable_extension_hint_conv: lift is "^lift, [ct])
 val vtQ = parse_varterm Q
 val vtR = parse_varterm R
@@ -519,7 +519,7 @@ val thm = case sort_variables vtQ of
            (("A",0),Thm.cterm_of ctxt sorter),
            (("R",0),mk_varterm vt |> fst |> Thm.cterm_of ctxt),
            (("Q",0),Thm.cterm_of ctxt Q)] 
-          (lift_kind @{thm trafo_lift_space_aux} @{thm trafo_lift_bounded_aux})
+          (lift_kind @{thm trafo_lift_space_aux} @{thm trafo_lift_l2bounded_aux})
                          |> simp_conv_premises ctxt
 in
 thm
@@ -532,7 +532,7 @@ val (lift,S,Q) = case Thm.term_of ct of
     (Const(\<^const_name>\<open>sort_variables_hint\<close>,_)) $ (Const(lift,_) $ S $ Q) => (lift,S,Q)
     | _ => raise CTERM("sort_variables_hint_hint_conv: wrong shape",[ct])
 val conv_rule = case lift of \<^const_name>\<open>liftSpace\<close> => @{thm sort_variables_hint_subspace_conv_aux}
-                           | \<^const_name>\<open>liftOp\<close> => @{thm sort_variables_hint_bounded_conv_aux}
+                           | \<^const_name>\<open>liftOp\<close> => @{thm sort_variables_hint_l2bounded_conv_aux}
                            | _ => raise CTERM("sort_variables_hint_hint_conv: lift is "^lift, [ct])
 val vtQ = parse_varterm Q
 in
@@ -568,7 +568,7 @@ fun reorder_lift_conv ctxt vtR ct = let
              (("A",0),Thm.cterm_of ctxt sorter),
              (("R",0),mk_varterm vt |> fst |> Thm.cterm_of ctxt),
              (("Q",0),mk_varterm vtR |> fst |> Thm.cterm_of ctxt) ] 
-            (lift_kind @{thm trafo_lift_space_bw_aux} @{thm trafo_lift_bounded_bw_aux})
+            (lift_kind @{thm trafo_lift_space_bw_aux} @{thm trafo_lift_l2bounded_bw_aux})
                            |> simp_conv_premises ctxt
 in
   Thm.transitive (Thm.transitive extend_thm sorted_thm) antisorted_thm

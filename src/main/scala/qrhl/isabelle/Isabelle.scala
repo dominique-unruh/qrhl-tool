@@ -35,7 +35,7 @@ object DistributionDirectory {
     */
   lazy val distributionDirectory: Path = {
     val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
-    assert(location.getScheme=="file")
+    assert(location.getScheme == "file")
     val path = Paths.get(location)
     val dir =
       if (path.getFileName.toString.endsWith(".jar")) {
@@ -55,61 +55,61 @@ object DistributionDirectory {
   private val logger = log4s.getLogger
 }
 
-class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) {
+class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   val version = Version.Stable("2019-RC0")
-  private val auto = path=="auto"
+  private val auto = path == "auto"
 
   /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
   private val localStoragePath = DistributionDirectory.distributionDirectory.resolve("isabelle-temp")
 
-  private val platform : Platform = Platform.guess match {
+  private val platform: Platform = Platform.guess match {
     case None if auto => throw UserException(""""isabelle auto" used, but cannot detect platform. Use "isabelle <path>" with an existing Isabelle install at <path> instead""")
     case None if !auto => Platform.genericPlatform(localStoragePath)
     case Some(p) => p.withLocalStorage(localStoragePath)
   }
 
-  private val setup : Setup = {
+  private val setup: Setup = {
     if (auto) {
       //      Setup.default(version,updateIfDevel = false).right.get
       assert(platform.isInstanceOf[OfficialPlatform])
-      Setup.detect(platform, version, updateIfDevel=false) match {
+      Setup.detect(platform, version, updateIfDevel = false) match {
         case Right(install) => install
         case Left(Absent) =>
           println(s"*** Downloading Isabelle into ${platform.localStorage}. May take a while...")
           Setup.install(platform.asInstanceOf[OfficialPlatform], version) match {
             case Right(install) => install
-            case Left(reason) => throw UserException("Could not install Isabelle: "+reason.explain)
+            case Left(reason) => throw UserException("Could not install Isabelle: " + reason.explain)
           }
-        case Left(reason) => throw UserException("Could not setup Isabelle: "+reason.explain)
+        case Left(reason) => throw UserException("Could not setup Isabelle: " + reason.explain)
       }
     } else {
-//      val platformPath = Paths.get("tmp-isabelle")
-//      val platform = Platform.genericPlatform(platformPath)
-//      Setup(Paths.get(path), Platform.guess.get, version)
+      //      val platformPath = Paths.get("tmp-isabelle")
+      //      val platform = Platform.genericPlatform(platformPath)
+      //      Setup(Paths.get(path), Platform.guess.get, version)
       Setup(Paths.get(path), platform, version)
     }
   }
 
-//  private val resources = Resources.dumpIsabelleResources() match {
-//    case Left(error) => throw new IOException(error.explain)
-//    case Right(r) => r
-//  }
-//  Files.delete(resources.component.resolve("ROOTS"))
+  //  private val resources = Resources.dumpIsabelleResources() match {
+  //    case Left(error) => throw new IOException(error.explain)
+  //    case Right(r) => r
+  //  }
+  //  Files.delete(resources.component.resolve("ROOTS"))
 
   private val components = List(
-//    resources.component,
+    //    resources.component,
     DistributionDirectory.distributionDirectory.resolve("isabelle-afp"),
-//    DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
+    //    DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
     DistributionDirectory.distributionDirectory.resolve("isabelle-thys")
   )
 
   private val environment: info.hupel.isabelle.api.Environment = {
-//    if (path == "auto") println("Downloading Isabelle if needed (may take a while)")
+    //    if (path == "auto") println("Downloading Isabelle if needed (may take a while)")
     try {
-      val env = setup.makeEnvironment(resolver=Resolver.Default,
-        user=platform.userStorage(version),
-        components=components,
-        options=Nil)
+      val env = setup.makeEnvironment(resolver = Resolver.Default,
+        user = platform.userStorage(version),
+        components = components,
+        options = Nil)
       Await.result(env, Duration.Inf)
     } catch {
       case e: RuntimeException if e.getMessage.startsWith("Generic environment does not support unofficial platform") =>
@@ -125,19 +125,21 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
       throw qrhl.UserException("Building Isabelle failed")
   }
 
-  private def checkBuilt() : Boolean = {
-//    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
-//    assert(location.getScheme=="file")
-//    println("LOC "+Paths.get(location))
-//    val comparedTo = Files.getLastModifiedTime(Paths.get(location))
-//    println(comparedTo)
+  private def checkBuilt(): Boolean = {
+    //    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
+    //    assert(location.getScheme=="file")
+    //    println("LOC "+Paths.get(location))
+    //    val comparedTo = Files.getLastModifiedTime(Paths.get(location))
+    //    println(comparedTo)
 
     import scala.collection.JavaConverters._
 
     val isabelleThys = Files.find(DistributionDirectory.distributionDirectory.resolve("isabelle-thys"),
-                          10, (path: Path, _: BasicFileAttributes) => true).iterator.asScala.toList
+      10, (path: Path, _: BasicFileAttributes) => true).iterator.asScala.toList
     assert(isabelleThys.nonEmpty)
-    val newest = isabelleThys.map { Files.getLastModifiedTime(_) }.max
+    val newest = isabelleThys.map {
+      Files.getLastModifiedTime(_)
+    }.max
 
     /* TODO: Correct heap dir should be
       environment.isabelleSetting("ISABELLE_HEAPS") + "/" +
@@ -158,10 +160,12 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
 
     if (heaps.isEmpty)
       return false
-    val newestHeap = heaps.map { Files.getLastModifiedTime(_) }.max
+    val newestHeap = heaps.map {
+      Files.getLastModifiedTime(_)
+    }.max
 
-//    println("Newest:      ",newest)
-//    println("Newest heap: ",newestHeap)
+    //    println("Newest:      ",newest)
+    //    println("Newest heap: ",newestHeap)
 
     if (newestHeap.compareTo(newest) > 0)
       return true
@@ -169,15 +173,15 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     false
   }
 
-//    try {
-//      val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
-//        path.endsWith("QRHL-Protocol") && !path.getParent.endsWith("log")
-////        path.endsWith("QRHL") && !path.endsWith("log")/*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
-//      })
-//      files.findAny().isPresent
-//    } catch {
-//      case _ : IOException => false
-//    }
+  //    try {
+  //      val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
+  //        path.endsWith("QRHL-Protocol") && !path.getParent.endsWith("log")
+  ////        path.endsWith("QRHL") && !path.endsWith("log")/*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
+  //      })
+  //      files.findAny().isPresent
+  //    } catch {
+  //      case _ : IOException => false
+  //    }
 
   private val system = {
     if (build || !checkBuilt())
@@ -186,33 +190,33 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     Await.result(System.create(environment, config), Duration.Inf)
   }
 
-//  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
+  //  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
 
-  def invoke[I,O](op: Operation[I,O], arg: I) : O = {
+  def invoke[I, O](op: Operation[I, O], arg: I): O = {
     val start = lang.System.nanoTime
     val result = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
-    Isabelle.logger.debug(s"Operation ${op.name} ${(lang.System.nanoTime-start)/1000000}ms")
+    Isabelle.logger.debug(s"Operation ${op.name} ${(lang.System.nanoTime - start) / 1000000}ms")
     result
   }
 
-//  // TODO remove
-//  new Timer().schedule(new TimerTask {
-//    override def run(): Unit = { invoke(Operation.Hello,"world") }
-//  },100,100)
+  //  // TODO remove
+  //  new Timer().schedule(new TimerTask {
+  //    override def run(): Unit = { invoke(Operation.Hello,"world") }
+  //  },100,100)
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
     *
     * @param thys Path pointing to theory files (including the suffix .thy)
     * @return the context
     */
-  def getQRHLContextWithFiles(thys: Path*) : (Isabelle.Context, List[Path]) = {
-    getContextWithThys(List("QRHL.QRHL","QRHL.QRHL_Operations"), thys.toList)
+  def getQRHLContextWithFiles(thys: Path*): (Isabelle.Context, List[Path]) = {
+    getContextWithThys(List("QRHL.QRHL", "QRHL.QRHL_Operations"), thys.toList)
     // TODO: Do we need to include QRHL.QRHL_Operations?
   }
 
   /** Creates a new context that imports the given theories.
     *
-    * @param thys Names of theories that have to be contained in the current session
+    * @param thys  Names of theories that have to be contained in the current session
     * @param files Path pointing to theory files (including the suffix .thy)
     * @return the context
     */
@@ -222,13 +226,13 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
       if (!Files.isRegularFile(f))
         throw UserException(s"Isabelle theory file not found: $f")
     val filesThyPath = files.map { f =>
-//      println("XXX",f,Paths.get(""))
+      //      println("XXX",f,Paths.get(""))
       val relative = Paths.get("").toAbsolutePath.relativize(f.toAbsolutePath)
       val names = relative.iterator().asScala.toList
       names.mkString("/").stripSuffix(".thy")
     }
-    val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount-1).toString.stripSuffix(".thy") }
-//    println("Isabelle getContextWithThys", files, filesThyPath)
+    val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount - 1).toString.stripSuffix(".thy") }
+    //    println("Isabelle getContextWithThys", files, filesThyPath)
     invoke(Operation.UseThys, filesThyPath)
     val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
     val (ctxId, dependencies) = invoke(Isabelle.createContextOp, imports)
@@ -261,27 +265,30 @@ class Isabelle(path:String, build:Boolean=sys.env.contains("QRHL_FORCE_BUILD")) 
     super.finalize()
   }
 
-  def runJEdit(files:Seq[String]=Nil): Unit = environment.exec("jedit",List("-l","QRHL") ++ files.toList)
+  def runJEdit(files: Seq[String] = Nil): Unit = environment.exec("jedit", List("-l", "QRHL") ++ files.toList)
 }
 
 object Isabelle {
   val less_eq_name: String = "Orderings.ord_class.less_eq"
 
-  private var globalIsabellePeek : Isabelle = _
+  private var globalIsabellePeek: Isabelle = _
   lazy val globalIsabelle: Isabelle = {
     val isabelle = new Isabelle("auto")
     globalIsabellePeek = isabelle
     isabelle
   }
-  def isGlobalIsabelle(isabelle : Isabelle): Boolean =
+
+  def isGlobalIsabelle(isabelle: Isabelle): Boolean =
     (globalIsabellePeek != null) && (globalIsabelle == isabelle)
 
-  @deprecated("use Expression.toString","now")
+  @deprecated("use Expression.toString", "now")
   def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
+
   def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
 
   implicit object applicativeXMLResult extends Applicative[XMLResult] {
     override def point[A](a: => A): XMLResult[A] = Right(a)
+
     override def ap[A, B](fa: => XMLResult[A])(f: => XMLResult[A => B]): XMLResult[B] = fa match {
       case Left(error) => Left(error)
       case Right(a) => f match {
@@ -290,7 +297,6 @@ object Isabelle {
       }
     }
   }
-
 
 
   object Thm {
@@ -306,75 +312,101 @@ object Isabelle {
         override def decode(xml: XML.Tree): XMLResult[Thm] = xml match {
           case XML.Elem(("thm", List(("id", id))), Nil) => Right(new Thm(isabelle, BigInt(id)))
         }
-    }
+      }
   }
 
   private val logger = log4s.getLogger
-  def mk_conj(t1: Term, t2: Term) : Term = HOLogic.conj $ t1 $ t2
+
+  def mk_conj(t1: Term, t2: Term): Term = HOLogic.conj $ t1 $ t2
+
   def mk_conjs(terms: Term*): Term = terms match {
     case t :: ts => ts.foldLeft(t)(mk_conj)
     case Nil => HOLogic.True
   }
-  def mk_list(typ:ITyp, terms: List[Term]): Term = {
+
+  def mk_list(typ: ITyp, terms: List[Term]): Term = {
     val lT = listT(typ)
     val cons = Const("List.list.Cons", typ -->: lT -->: lT)
-    val nil = Const("List.list.Nil",lT)
-    terms.foldRight[Term](nil)( cons $ _ $ _ )
+    val nil = Const("List.list.Nil", lT)
+    terms.foldRight[Term](nil)(cons $ _ $ _)
   }
 
   val dummyT = Type("dummy")
   val natT = Type("Nat.nat")
   val bitT = Type("Bit.bit", Nil)
-  val predicateT = Type("Complex_L2.subspace", List(Type("Prog_Variables.mem2",Nil)))
+  val predicateT = Type("Complex_L2.subspace", List(Type("Prog_Variables.mem2", Nil)))
   val programT = Type("Programs.program")
   val oracle_programT = Type("Programs.oracle_program")
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
-  val predicate_inf = Const ("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
-  val predicate_bot = Const ("Orderings.bot_class.bot", predicateT)
-  val predicate_top = Const ("Orderings.top_class.top", predicateT)
-  val predicate_0 = Const ("Groups.zero_class.zero", predicateT)
+  val predicate_inf = Const("Lattices.inf_class.inf", predicateT -->: predicateT -->: predicateT)
+  val predicate_bot = Const("Orderings.bot_class.bot", predicateT)
+  val predicate_top = Const("Orderings.top_class.top", predicateT)
+  val predicate_0 = Const("Groups.zero_class.zero", predicateT)
   val distrT_name = "Discrete_Distributions.distr"
-  def distrT(typ:ITyp): Type = Type(distrT_name, List(typ))
+
+  def distrT(typ: ITyp): Type = Type(distrT_name, List(typ))
+
   def dest_distrT(typ: ITyp): ITyp = typ match {
     case Type(`distrT_name`, List(typ2)) => typ2
-    case _ => throw new RuntimeException("expected type 'distr', not "+typ)
+    case _ => throw new RuntimeException("expected type 'distr', not " + typ)
   }
-  val boundedT_name = "Bounded_Operators.bounded"
-  def boundedT(typ:ITyp): Type = boundedT(typ,typ)
-  def boundedT(inT:ITyp, outT:ITyp) = Type(boundedT_name, List(inT,outT))
-  def dest_boundedT(typ:ITyp): (ITyp, ITyp) = typ match {
-    case Type(`boundedT_name`, List(t1,t2)) => (t1,t2)
-    case _ => throw new RuntimeException("expected type 'bounded', not "+typ)
+
+  val l2boundedT_name = "Bounded_Operators.l2bounded"
+
+  def l2boundedT(typ: ITyp): Type = l2boundedT(typ, typ)
+
+  def l2boundedT(inT: ITyp, outT: ITyp) = Type(l2boundedT_name, List(inT, outT))
+
+  def dest_l2boundedT(typ: ITyp): (ITyp, ITyp) = typ match {
+    case Type(`l2boundedT_name`, List(t1, t2)) => (t1, t2)
+    case _ => throw new RuntimeException("expected type 'l2bounded', not " + typ)
   }
+
   val measurementT_name = "QRHL_Core.measurement"
-  def measurementT(resultT:ITyp, qT: ITyp) = Type(measurementT_name, List(resultT, qT))
-  def dest_measurementT(typ: ITyp): (ITyp,ITyp) = typ match {
-    case Type(`measurementT_name`, List(typ1,typ2)) => (typ1,typ2)
-    case _ => throw new RuntimeException("expected type 'measurement', not "+typ)
+
+  def measurementT(resultT: ITyp, qT: ITyp) = Type(measurementT_name, List(resultT, qT))
+
+  def dest_measurementT(typ: ITyp): (ITyp, ITyp) = typ match {
+    case Type(`measurementT_name`, List(typ1, typ2)) => (typ1, typ2)
+    case _ => throw new RuntimeException("expected type 'measurement', not " + typ)
   }
-  def listT(typ:ITyp) : Type = Type("List.list", List(typ))
+
+  def listT(typ: ITyp): Type = Type("List.list", List(typ))
+
   val block = Const("Programs.block", listT(programT) -->: programT)
   // TODO rename constants
   val vectorT_name = "Complex_L2.ell2"
-  def vectorT(typ:ITyp) = Type(vectorT_name, List(typ))
-  def dest_vectorT(typ:ITyp) : ITyp = typ match {
+
+  def vectorT(typ: ITyp) = Type(vectorT_name, List(typ))
+
+  def dest_vectorT(typ: ITyp): ITyp = typ match {
     case Type(`vectorT_name`, List(t1)) => t1
-    case _ => throw new RuntimeException("expected type 'vector', not "+typ)
+    case _ => throw new RuntimeException("expected type 'vector', not " + typ)
   }
-  def variableT(typ:ITyp) = Type("Prog_Variables.variable", List(typ))
+
+  def variableT(typ: ITyp) = Type("Prog_Variables.variable", List(typ))
+
   def dest_variableT(typ: ITyp): ITyp = typ match {
     case Type("Prog_Variables.variable", List(typ2)) => typ2
-    case _ => throw new RuntimeException("expected type 'variable', not "+typ)
+    case _ => throw new RuntimeException("expected type 'variable', not " + typ)
   }
-  def variablesT(typ:ITyp) : Type = Type("Prog_Variables.variables", List(typ))
-  def variablesT(typs:List[ITyp]) : Type = variablesT(tupleT(typs:_*))
+
+  def variablesT(typ: ITyp): Type = Type("Prog_Variables.variables", List(typ))
+
+  def variablesT(typs: List[ITyp]): Type = variablesT(tupleT(typs: _*))
+
   //val cvariableT: ITyp => Type = variableT
-  def expressionT(typ:ITyp) = Type("Expressions.expression", List(typ))
+  def expressionT(typ: ITyp) = Type("Expressions.expression", List(typ))
+
   val instantiateOracles = Const("Programs.instantiateOracles", oracle_programT -->: listT(programT) -->: programT)
   val assignName = "Programs.assign"
-  def assign(typ:ITyp) : Const = Const(assignName, variablesT(typ) -->: expressionT(typ) -->: programT)
+
+  def assign(typ: ITyp): Const = Const(assignName, variablesT(typ) -->: expressionT(typ) -->: programT)
+
   val sampleName = "Programs.sample"
-  def sample(typ:ITyp) : Const = Const(sampleName, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
+
+  def sample(typ: ITyp): Const = Const(sampleName, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
+
   val ifthenelseName = "Programs.ifthenelse"
   val ifthenelse = Const(ifthenelseName, expressionT(HOLogic.boolT) -->: listT(programT) -->: listT(programT) -->: programT)
   val whileName = "Programs.while"
@@ -384,54 +416,69 @@ object Isabelle {
   val implies = Const("HOL.implies", boolT -->: boolT -->: boolT)
   val qrhl = Const("Relational_Hoare.qrhl", expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
   val qinitName = "Programs.qinit"
-  def qinit(typ:ITyp) = Const(qinitName, variablesT(typ) -->: expressionT(vectorT(typ)) -->: programT)
+
+  def qinit(typ: ITyp) = Const(qinitName, variablesT(typ) -->: expressionT(vectorT(typ)) -->: programT)
+
   val qapplyName = "Programs.qapply"
-  def qapply(typ:ITyp) = Const(qapplyName, variablesT(typ) -->: expressionT(boundedT(typ)) -->: programT)
+
+  def qapply(typ: ITyp) = Const(qapplyName, variablesT(typ) -->: expressionT(l2boundedT(typ)) -->: programT)
+
   val measurementName = "Programs.measurement"
-  def measurement(resultT:ITyp, qT:ITyp) = Const(measurementName, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT,qT)) -->: programT)
+
+  def measurement(resultT: ITyp, qT: ITyp) = Const(measurementName, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT, qT)) -->: programT)
+
   val unitT = Type("Product_Type.unit")
   val prodT_name = "Product_Type.prod"
-  def prodT(t1:ITyp, t2:ITyp) = Type(prodT_name, List(t1,t2))
+
+  def prodT(t1: ITyp, t2: ITyp) = Type(prodT_name, List(t1, t2))
+
   def dest_prodT(typ: ITyp): (ITyp, ITyp) = typ match {
-    case Type(`prodT_name`, List(t1,t2)) => (t1,t2)
-    case _ => throw new RuntimeException("expected type 'prod', not "+typ)
+    case Type(`prodT_name`, List(t1, t2)) => (t1, t2)
+    case _ => throw new RuntimeException("expected type 'prod', not " + typ)
   }
-  private def qvarTuple_var0(qvs:List[QVariable]) : (Term,ITyp) = qvs match {
+
+  private def qvarTuple_var0(qvs: List[QVariable]): (Term, ITyp) = qvs match {
     case Nil => (variable_unit, unitT)
     case List(qv) => (variable_singleton(qv.valueTyp) $ qv.variableTerm,
-                      qv.valueTyp)
-    case qv::rest =>
+      qv.valueTyp)
+    case qv :: rest =>
       val (qvTuple, qvTyp) = qvarTuple_var0(List(qv))
       val (restTuple, restTyp) = qvarTuple_var0(rest)
       (variable_concat(qvTyp, restTyp) $ qvTuple $ restTuple,
-       prodT(qvTyp, restTyp))
+        prodT(qvTyp, restTyp))
   }
-  def qvarTuple_var(qvs:List[QVariable]) : Term = qvarTuple_var0(qvs)._1
+
+  def qvarTuple_var(qvs: List[QVariable]): Term = qvarTuple_var0(qvs)._1
+
   val variable_unit = Const("Prog_Variables.variable_unit", variablesT(unitT))
   val variable_singletonName = "Prog_Variables.variable_singleton"
-  def variable_singleton(typ:ITyp) = Const(variable_singletonName, variableT(typ) -->: variablesT(typ))
+
+  def variable_singleton(typ: ITyp) = Const(variable_singletonName, variableT(typ) -->: variablesT(typ))
+
   val variable_concatName = "Prog_Variables.variable_concat"
-  def variable_concat(t1:ITyp, t2:ITyp) = Const(variable_concatName, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1,t2)))
+
+  def variable_concat(t1: ITyp, t2: ITyp) = Const(variable_concatName, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1, t2)))
+
   val realT = Type("Real.real")
   val stringT: Type = listT(Type("String.char"))
   val program_stateT = Type("Programs.program_state")
   val probability = Const("Programs.probability", expressionT(boolT) -->: programT -->: program_stateT -->: realT)
-//  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
+  //  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
 
-  val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt,Term), ITyp]("check_type")
-//  val useThys2Op: Operation[List[String], Unit] = Operation.implicitly[List[String], Unit]("use_thys2")
-  val createContextOp: Operation[List[String], (BigInt,List[String])] =
-    Operation.implicitly[List[String],(BigInt,List[String])]("create_context")
-  val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_context")
-  val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt,Unit]("delete_thm")
-  val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt,Term),String]("print_term")
-  val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt,ITyp),String]("print_typ")
+  val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt, Term), ITyp]("check_type")
+  //  val useThys2Op: Operation[List[String], Unit] = Operation.implicitly[List[String], Unit]("use_thys2")
+  val createContextOp: Operation[List[String], (BigInt, List[String])] =
+    Operation.implicitly[List[String], (BigInt, List[String])]("create_context")
+  val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt, Unit]("delete_context")
+  val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt, Unit]("delete_thm")
+  val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt, Term), String]("print_term")
+  val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt, ITyp), String]("print_typ")
   val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String, Term, BigInt), BigInt]("add_assumption")
   val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
-  @deprecated("use readExpression","now")
+  @deprecated("use readExpression", "now")
   val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
-  val simplifyTermOp: Operation[(Term, List[String], BigInt), (RichTerm,BigInt)] = Operation.implicitly[(Term,List[String],BigInt), (RichTerm,BigInt)]("simplify_term")
-  val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt,String,ITyp), BigInt]("declare_variable")
+  val simplifyTermOp: Operation[(Term, List[String], BigInt), (RichTerm, BigInt)] = Operation.implicitly[(Term, List[String], BigInt), (RichTerm, BigInt)]("simplify_term")
+  val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt, String, ITyp), BigInt]("declare_variable")
   val one_name = "Groups.one_class.one"
   val True_const = Const("HOL.True", boolT)
 
@@ -445,7 +492,7 @@ object Isabelle {
   }
 
   /** Analogous to Isabelle's HOLogic.dest_numeral. Throws [[MatchError]] if it's not a numeral */
-  def dest_numeral(term:Term) : BigInt = term match {
+  def dest_numeral(term: Term): BigInt = term match {
     case Const("Num.num.One", _) => 1
     case App(Const("Num.num.Bit0", _), bs) => 2 * dest_numeral(bs)
     case App(Const("Num.num.Bit1", _), bs) => 2 * dest_numeral(bs) + 1
@@ -453,69 +500,71 @@ object Isabelle {
   }
 
   /** Analogous to Isabelle's HOLogic.dest_bit. Throws [[MatchError]] if it's not a char */
-  def dest_bit(term:Term) : Int = term match {
+  def dest_bit(term: Term): Int = term match {
     case HOLogic.True => 1
     case HOLogic.False => 0
     case _ => throw new MatchError(term)
   }
 
-  def dest_bits(bits:Term*) : Int = {
+  def dest_bits(bits: Term*): Int = {
     val bits2 = bits.map(dest_bit)
-//    println(bits)
+    //    println(bits)
     var value = 1
     var result = 0
     for (b <- bits2) {
-      result += b*value
-//      println(b,result)
+      result += b * value
+      //      println(b,result)
       value *= 2
     }
-//    println(result.toChar)
+    //    println(result.toChar)
     result
   }
 
   /** Analogous to Isabelle's HOLogic.dest_char. Throws [[MatchError]] if it's not a char */
-  def dest_char(term:Term) : Char = term match {
-      case App(App(App(App(App(App(App(App(Const("String.char.Char", _), b0), b1), b2), b3), b4), b5), b6), b7) =>
-        dest_bits(b0, b1, b2, b3, b4, b5, b6, b7).toChar
-      case _ => throw new MatchError(term)
-    }
+  def dest_char(term: Term): Char = term match {
+    case App(App(App(App(App(App(App(App(Const("String.char.Char", _), b0), b1), b2), b3), b4), b5), b6), b7) =>
+      dest_bits(b0, b1, b2, b3, b4, b5, b6, b7).toChar
+    case _ => throw new MatchError(term)
+  }
 
   /** Analogous to Isabelle's HOLogic.dest_string. Throws [[MatchError]] if it's not a string */
-  def dest_string(term:Term) : String =
+  def dest_string(term: Term): String =
     dest_list(term).map(dest_char).mkString
 
   def tupleT(typs: ITyp*): ITyp = typs match {
     case Nil => unitT
     case List(typ) => typ
-    case typ :: rest => prodT(typ,tupleT(rest :_*))
+    case typ :: rest => prodT(typ, tupleT(rest: _*))
   }
 
   def tupleT(typs: VarTerm[ITyp]): ITyp = typs match {
     case VTUnit => unitT
-    case VTCons(a, b) => prodT(tupleT(a),tupleT(b))
+    case VTCons(a, b) => prodT(tupleT(a), tupleT(b))
     case VTSingle(v) => v
   }
 
   def freeVars(term: Term): Set[String] = {
-    val fv = new mutable.SetBuilder[String,Set[String]](Set.empty)
-    def collect(t:Term) : Unit = t match {
-      case Free(v,_) => fv += v
-      case Const(_,_) | Bound(_) | Var(_,_) =>
-      case App(t1,t2) => collect(t1); collect(t2)
-      case Abs(_,_,body) => collect(body)
+    val fv = new mutable.SetBuilder[String, Set[String]](Set.empty)
+
+    def collect(t: Term): Unit = t match {
+      case Free(v, _) => fv += v
+      case Const(_, _) | Bound(_) | Var(_, _) =>
+      case App(t1, t2) => collect(t1); collect(t2)
+      case Abs(_, _, body) => collect(body)
     }
+
     collect(term)
     fv.result
   }
 
-//  private val configureContext: ml.Expr[IContext => IContext] =
-//    ml.Expr.uncheckedLiteral("(fn ctx => ctx (*|> Config.put show_types true |> Config.put show_sorts true*) )")
-//  private def simplifyTerm(term: Term, facts:List[String]) : ml.Expr[IContext => Term] = {
-//    val lit = ml.Expr.uncheckedLiteral[Term => List[String] => IContext => Term]("QRHL.simp")
-//    lit(term)(implicitly)(facts)
-//  }
+  //  private val configureContext: ml.Expr[IContext => IContext] =
+  //    ml.Expr.uncheckedLiteral("(fn ctx => ctx (*|> Config.put show_types true |> Config.put show_sorts true*) )")
+  //  private def simplifyTerm(term: Term, facts:List[String]) : ml.Expr[IContext => Term] = {
+  //    val lit = ml.Expr.uncheckedLiteral[Term => List[String] => IContext => Term]("QRHL.simp")
+  //    lit(term)(implicitly)(facts)
+  //  }
 
-  def absfree(varName: String, varTyp: ITyp, term: Term) : ml.Expr[Term] = {
+  def absfree(varName: String, varTyp: ITyp, term: Term): ml.Expr[Term] = {
     val lit = ml.Expr.uncheckedLiteral[String => ITyp => Term => Term](
       "(fn name => fn T => fn t => Term.absfree (name,T) t)")
     val eval1 = lit(varName)
@@ -523,35 +572,38 @@ object Isabelle {
     eval2(term)
   }
 
-  val (symbols,symbolsInv) = {
+  val (symbols, symbolsInv) = {
     import scala.collection.JavaConverters._
 
     val lineRegex = """^\\<([a-zA-Z0-9^_]+)>\s+code:\s+0x([0-9a-fA-F]+)\b.*""".r
     val reader = new BufferedReader(new InputStreamReader(this.getClass.getResource("symbols").openStream()))
-    val results = new ListBuffer[(String,Int)]
+    val results = new ListBuffer[(String, Int)]
     for (line <- reader.lines().iterator.asScala) {
-//      println(line)
+      //      println(line)
       line match {
-        case lineRegex(name,codepoint) => results.append((name,Integer.parseInt(codepoint, 16)))
+        case lineRegex(name, codepoint) => results.append((name, Integer.parseInt(codepoint, 16)))
         case _ => assert(!line.startsWith("\\")) // Lines with \ at the beginning should be matched by lineRegex
       }
     }
     reader.close()
-//    println(results map { case (n,i) => new String(Character.toChars(i))+" " } mkString)
-    val symbols = Map(results : _*)
-    val symbolsInv = Map(results map { case (n,i) => (i,n) } : _*)
+    //    println(results map { case (n,i) => new String(Character.toChars(i))+" " } mkString)
+    val symbols = Map(results: _*)
+    val symbolsInv = Map(results map { case (n, i) => (i, n) }: _*)
     (symbols, symbolsInv)
   }
 
   private val symbolRegex = """\\<([a-zA-Z0-9^_]+)>""".r
-  def symbolsToUnicode(str:String) : String = symbolRegex.replaceAllIn(str,
-    { m:Regex.Match => symbols.get(m.group(1)) match {
-      case Some(i) => new String(Character.toChars(i))
-      case None => m.matched
-    }})
+
+  def symbolsToUnicode(str: String): String = symbolRegex.replaceAllIn(str,
+    { m: Regex.Match =>
+      symbols.get(m.group(1)) match {
+        case Some(i) => new String(Character.toChars(i))
+        case None => m.matched
+      }
+    })
 
   // following https://stackoverflow.com/a/1527891/2646248
-  private def codepoints(str:String) : Seq[Int] = {
+  private def codepoints(str: String): Seq[Int] = {
     val len = str.length
     val result = new ArrayBuffer[Int](len)
     var offset = 0
@@ -563,89 +615,101 @@ object Isabelle {
     result
   }
 
-  def unicodeToSymbols(str:String) : String = {
+  def unicodeToSymbols(str: String): String = {
     val sb = new StringBuffer(str.length() * 11 / 10)
     for (cp <- codepoints(str)) {
       if (cp <= 128) sb.append(cp.toChar)
       else symbolsInv.get(cp) match {
         case Some(sym) => sb.append("\\<"); sb.append(sym); sb.append('>')
         case None =>
-          if (cp>255) throw UserException(f"""Character "${new String(Character.toChars(cp))}%s" (Ux$cp%04X) not supported by Isabelle""")
+          if (cp > 255) throw UserException(f"""Character "${new String(Character.toChars(cp))}%s" (Ux$cp%04X) not supported by Isabelle""")
           sb.appendCodePoint(cp)
       }
     }
     sb.toString
   }
 
-  private var _theContext : Context = _
+  private var _theContext: Context = _
+
   def theContext: Context = _theContext
 
-  class Thm(val isabelle:Isabelle, val thmId: BigInt) {
+  class Thm(val isabelle: Isabelle, val thmId: BigInt) {
     def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbolsToUnicode)
+
     def show_oracles(): Unit = {
       Thm.logger.debug(show_oracles_lines().mkString("\n"))
     }
 
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting theorem $thmId")
-      isabelle.invoke(deleteThmOp,thmId)
+      isabelle.invoke(deleteThmOp, thmId)
       //noinspection ScalaDeprecation
       super.finalize()
     }
   }
 
-  class Context(val isabelle:Isabelle, val contextId: BigInt) {
+  class Context(val isabelle: Isabelle, val contextId: BigInt) {
     _theContext = this
 
-    def checkType(term:Term) : ITyp = {
-      isabelle.invoke(checkTypeOp, (contextId,term))
+    def checkType(term: Term): ITyp = {
+      isabelle.invoke(checkTypeOp, (contextId, term))
     }
 
     override protected def finalize(): Unit = {
       logger.debug(s"Deleting context $contextId")
-      isabelle.invoke(deleteContextOp,contextId)
+      isabelle.invoke(deleteContextOp, contextId)
       //noinspection ScalaDeprecation
       super.finalize()
     }
 
     def declareVariable(name: String, isabelleTyp: ITyp): Context = {
       val id = isabelle.invoke(declareVariableOp, (contextId, name, isabelleTyp))
-      new Context(isabelle,id)
+      new Context(isabelle, id)
     }
 
     def addAssumption(name: String, assumption: Term): Context = {
-      val id = isabelle.invoke(addAssumptionOp, (name,assumption,contextId))
-      new Context(isabelle,id)
+      val id = isabelle.invoke(addAssumptionOp, (name, assumption, contextId))
+      new Context(isabelle, id)
     }
 
-    def map(f:BigInt => BigInt) : Context =
-      new Context(isabelle,f(contextId))
+    def map(f: BigInt => BigInt): Context =
+      new Context(isabelle, f(contextId))
 
-    @deprecated("Use Expression.read","now")
-    def readTerm(str:String, typ:ITyp): Term = {
-      isabelle.invoke(readTermOp, (contextId,str,typ))
+    @deprecated("Use Expression.read", "now")
+    def readTerm(str: String, typ: ITyp): Term = {
+      isabelle.invoke(readTermOp, (contextId, str, typ))
     }
 
-    @deprecated("Use Expression.toString","now")
-    def prettyExpression(term:Term): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTermOp,(contextId,term)))
+    @deprecated("Use Expression.toString", "now")
+    def prettyExpression(term: Term): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTermOp, (contextId, term)))
 
-    def readTyp(str:String) : ITyp = isabelle.invoke(readTypOp, (contextId,str))
-    def readTypUnicode(str:String) : ITyp = readTyp(unicodeToSymbols(str))
-    def prettyTyp(typ:ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp,(contextId,typ)))
-    def simplify(term: Term, facts:List[String]) : (RichTerm,Thm) =
-      isabelle.invoke(simplifyTermOp, (term,facts,contextId)) match {case (t,thmId) => (t,new Thm(isabelle,thmId))}
+    def readTyp(str: String): ITyp = isabelle.invoke(readTypOp, (contextId, str))
+
+    def readTypUnicode(str: String): ITyp = readTyp(unicodeToSymbols(str))
+
+    def prettyTyp(typ: ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp, (contextId, typ)))
+
+    def simplify(term: Term, facts: List[String]): (RichTerm, Thm) =
+      isabelle.invoke(simplifyTermOp, (term, facts, contextId)) match {
+        case (t, thmId) => (t, new Thm(isabelle, thmId))
+      }
   }
 
   object Context {
+
     implicit object codec extends Codec[Context] {
       override val mlType: String = "Proof.context"
-      override def encode(ctxt: Context): XML.Tree = XML.elem(("context", List(("id", ctxt.contextId.toString))),Nil)
-      def decode(isabelle : Isabelle, xml: XML.Tree): XMLResult[Context] = xml match {
+
+      override def encode(ctxt: Context): XML.Tree = XML.elem(("context", List(("id", ctxt.contextId.toString))), Nil)
+
+      def decode(isabelle: Isabelle, xml: XML.Tree): XMLResult[Context] = xml match {
         case XML.Elem(("context", List(("id", id))), Nil) => Right(new Context(isabelle, BigInt(id)))
       }
+
       // TODO: use an implicit isabelle argument
       override def decode(tree: XML.Tree): XMLResult[Context] = throw new RuntimeException("Use Context.codec.decode(Isabelle,XML.Tree) instead")
     }
+
   }
 
 

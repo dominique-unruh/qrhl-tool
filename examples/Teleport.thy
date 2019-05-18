@@ -3,15 +3,15 @@ theory Teleport
 begin
 
 lemma assoc_op_lift_aux:
-  fixes U :: "(_,_) bounded" and Q R S
+  fixes U :: "(_,_) l2bounded" and Q R S
   assumes "distinct_qvars (variable_concat Q R)" and "distinct_qvars (variable_concat R S)" and "distinct_qvars (variable_concat Q S)"
   defines "V == assoc_op* \<cdot> U \<cdot> assoc_op"
   shows
     "U\<guillemotright>(variable_concat (variable_concat Q R) S) = V\<guillemotright>(variable_concat Q (variable_concat R S))"
-  using assms by (metis (no_types, lifting) V_def adjoint_twice distinct_qvars_split2 distinct_qvars_swap qvar_trafo_adj qvar_trafo_assoc_op qvar_trafo_bounded)
+  using assms by (metis (no_types, lifting) V_def adjoint_twice distinct_qvars_split2 distinct_qvars_swap qvar_trafo_adj qvar_trafo_assoc_op qvar_trafo_l2bounded)
 
 lemma assoc_replace: 
-  fixes A B C D :: "(_,_) bounded"
+  fixes A B C D :: "(_,_) l2bounded"
   assumes "A \<cdot> B = C"
   shows "D \<cdot> A \<cdot> B = D \<cdot> C"
   by (simp add: timesOp_assoc assms) 

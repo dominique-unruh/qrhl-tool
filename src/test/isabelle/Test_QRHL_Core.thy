@@ -6,7 +6,7 @@ begin
 variables quantum a :: int begin
 ML \<open>
 local
-val ct = \<^cterm>\<open>(A::(_,_)bounded) \<guillemotright> variable_concat \<lbrakk>a\<rbrakk> \<lbrakk>\<rbrakk>\<close>
+val ct = \<^cterm>\<open>(A::(_,_)l2bounded) \<guillemotright> variable_concat \<lbrakk>a\<rbrakk> \<lbrakk>\<rbrakk>\<close>
 val ct' = QRHL.sort_lift_conv \<^context> ct |> Thm.rhs_of |> \<^print>
 val (_,_,Q') = QRHL.dest_lift (Thm.term_of ct')
 val () = assert_aconv \<^term>\<open>\<lbrakk>a\<rbrakk>\<close> Q'

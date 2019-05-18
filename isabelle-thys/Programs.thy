@@ -13,7 +13,7 @@ consts
   ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program"
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program"
   qinit :: "'a variables \<Rightarrow> 'a ell2 expression \<Rightarrow> program"
-  qapply :: "'a variables \<Rightarrow> ('a,'a) bounded expression \<Rightarrow> program"
+  qapply :: "'a variables \<Rightarrow> ('a,'a) l2bounded expression \<Rightarrow> program"
   measurement :: "'a variables \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
   instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
 

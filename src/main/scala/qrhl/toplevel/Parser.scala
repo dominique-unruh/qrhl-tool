@@ -133,12 +133,12 @@ object Parser extends JavaTokenParsers {
       for (_ <- literal("on");
            vs <- varterm;
            _ <- literal("apply");
-//           _ = assert(vs.nonEmpty);
+           //           _ = assert(vs.nonEmpty);
            _ = assert(vs.areDistinct); // checks if all vs are distinct
            qvs = vs.map[QVariable] { context.environment.getQVariable };
-//           _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
-//           qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
-           typ = Isabelle.boundedT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
+           //           _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
+           //           qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+           typ = Isabelle.l2boundedT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
            e <- expression(typ);
            _ <- statementSeparator)
         yield QApply(qvs,e)

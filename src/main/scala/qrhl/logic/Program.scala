@@ -492,7 +492,7 @@ object Statement {
       case XML.Elem(("qapply", Nil), List(locXML,expXML)) =>
         for (loc <- VarTerm.codecString.decode(locXML);
              exp <- RichTerm.codec.decode(expXML))
-          yield QApply(mk_qvar_term(loc, Isabelle.dest_boundedT(exp.typ)._1), exp)
+          yield QApply(mk_qvar_term(loc, Isabelle.dest_l2boundedT(exp.typ)._1), exp)
       case XML.Elem(("ifte", Nil), List(eXml,p1Xml,p2Xml)) =>
         for (e <- RichTerm.codec.decode(eXml);
              p1 <- decode(p1Xml);
