@@ -1,6 +1,6 @@
 theory QRHL_Core
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators.Bounded_Operators Discrete_Distributions 
-    Universe Misc_Missing Prog_Variables Bounded_Operators.Legacy
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators.Bounded_Operators Bounded_Operators.Legacy Discrete_Distributions 
+    Universe Misc_Missing Prog_Variables
   keywords "declare_variable_type" :: thy_decl
 begin
 
@@ -59,7 +59,8 @@ lemma applyOp_Cla[simp]:
   shows "A \<cdot> Cla[b] = Cla[b]"
   apply (cases b) using assms by auto
 
-lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]" unfolding sup_subspace_def[symmetric] by auto
+lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]" 
+  unfolding sup_linear_space_def[symmetric] by auto
 lemma BINF_Cla[simp]: "(INF z:Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
 proof (rule Inf_eqI)
   show "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> \<CC>\<ll>\<aa>[\<forall>z\<in>Z. x z] \<le> i" by auto
@@ -121,11 +122,13 @@ consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
 adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (* colocal_qvars_qvars *)
 
 lemma colocal_top[simp]: "distinct_qvars Q \<Longrightarrow> colocal_pred_qvars top Q"
-  using [[transfer_del_const cr_subspace]]
-  unfolding distinct_qvars_def apply transfer by (auto intro: predicate_local_raw_top exI[of _ "{}"])
+  using [[transfer_del_const pcr_linear_space]]
+  unfolding distinct_qvars_def apply transfer 
+  by (auto intro: predicate_local_raw_top exI[of _ "{}"])
 lemma colocal_bot[simp]: "distinct_qvars Q \<Longrightarrow> colocal bot Q"
-  using [[transfer_del_const cr_subspace]]
-  unfolding distinct_qvars_def apply transfer by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
+  using [[transfer_del_const pcr_linear_space]]
+  unfolding distinct_qvars_def apply transfer
+  by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
 
 lemma colocal_inf[simp]: assumes "colocal A Q" and "colocal B Q" shows "colocal (A \<sqinter> B) Q"
 proof -
@@ -156,7 +159,7 @@ proof -
 qed
 
 lemma colocal_sup[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A \<squnion> B) Q"
-  unfolding subspace_sup_plus by simp
+  unfolding linear_space_sup_plus by simp
 lemma colocal_Cla[simp]: "distinct_qvars Q \<Longrightarrow> colocal (Cla[b]) Q"
   by (cases b; simp)
 
@@ -739,8 +742,8 @@ consts space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a::universe 
 lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
   by (cheat TODO14)
 
-definition space_div_unlifted :: "('a*'b) subspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a subspace" where
-  [code del]: "space_div_unlifted S \<psi> = Abs_subspace {\<phi>. \<phi>\<otimes>\<psi> \<in> subspace_to_set S}"
+definition space_div_unlifted :: "('a*'b) ell2 linear_space \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 linear_space" where
+  [code del]: "space_div_unlifted S \<psi> = Abs_linear_space {\<phi>. \<phi>\<otimes>\<psi> \<in> Rep_linear_space S}"
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
   by (cheat space_div_space_div_unlifted)
