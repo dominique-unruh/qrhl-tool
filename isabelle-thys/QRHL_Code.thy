@@ -249,8 +249,6 @@ lemma ortho_SPAN[code]: "ortho (SPAN S :: 'a::basis_enum linear_space)
   by (cheat 17)
 
 definition [code del,code_abbrev]: "span_code (S::'a::enum ell2 set) = (span S)"
-(* lemma [symmetric,code_abbrev]: "span S = Rep_code_l2linear_space (span_code S)" *)
-  (* sorry *)
 
 lemma span_Set_Monad[code]: "span_code (Set_Monad l) = (SPAN (map vec_of_ell2 l))"
   (* for l :: "'a::enum ell2 list" *)
@@ -350,12 +348,12 @@ lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = ad
   by (cheat space_div_unlifted_code)
 
 lemma cinner_ell2_code [code]: "cinner \<psi> \<phi> = scalar_prod (map_vec cnj (vec_of_ell2 \<psi>)) (vec_of_ell2 \<phi>)"
-  sorry
+  by (cheat cinner_ell2_code)
 
 lemma norm_ell2_code [code]: "norm \<psi> = 
   (let \<psi>' = vec_of_ell2 \<psi> in
     sqrt (\<Sum> i \<in> {0 ..< dim_vec \<psi>'}. let z = vec_index \<psi>' i in (Re z)\<^sup>2 + (Im z)\<^sup>2))"
-  sorry
+  by (cheat norm_ell2_code)
 
 (* Hack: Without this definition, code generation produces invalid code. *)
 lemma [code]: "(uniformity :: ('a ell2 * _) filter) = Filter.abstract_filter (%_. 

@@ -331,10 +331,21 @@ object Isabelle {
     terms.foldRight[Term](nil)(cons $ _ $ _)
   }
 
+  // TODO rename constants
+  val vectorT_name = "Complex_L2.ell2"
+
+  def vectorT(typ: ITyp) = Type(vectorT_name, List(typ))
+
+  def dest_vectorT(typ: ITyp): ITyp = typ match {
+    case Type(`vectorT_name`, List(t1)) => t1
+    case _ => throw new RuntimeException("expected type 'vector', not " + typ)
+  }
+
   val dummyT = Type("dummy")
   val natT = Type("Nat.nat")
   val bitT = Type("Bit.bit", Nil)
-  val predicateT = Type("Complex_L2.subspace", List(Type("Prog_Variables.mem2", Nil)))
+  val linear_spaceT_name = "Complex_Inner_Product.linear_space"
+  val predicateT = Type(linear_spaceT_name, List(vectorT(Type("Prog_Variables.mem2", Nil))))
   val programT = Type("Programs.program")
   val oracle_programT = Type("Programs.oracle_program")
   val classical_subspace = Const("QRHL_Core.classical_subspace", HOLogic.boolT -->: predicateT)
@@ -351,14 +362,19 @@ object Isabelle {
     case _ => throw new RuntimeException("expected type 'distr', not " + typ)
   }
 
-  val l2boundedT_name = "Bounded_Operators.l2bounded"
+  val BoundedT_name: String = "Bounded_Operators.Bounded"
+  def BoundedT(inT: ITyp, outT: ITyp) = Type(BoundedT_name, List(inT, outT))
+  def dest_BoundedT(typ: ITyp): (ITyp, ITyp) = typ match {
+    case Type(`BoundedT_name`, List(t1, t2)) => (t1, t2)
+    case _ => throw new RuntimeException("expected type 'Bounded', not " + typ)
+  }
 
   def l2boundedT(typ: ITyp): Type = l2boundedT(typ, typ)
 
-  def l2boundedT(inT: ITyp, outT: ITyp) = Type(l2boundedT_name, List(inT, outT))
+  def l2boundedT(inT: ITyp, outT: ITyp): Type = BoundedT(vectorT(inT), vectorT(outT))
 
   def dest_l2boundedT(typ: ITyp): (ITyp, ITyp) = typ match {
-    case Type(`l2boundedT_name`, List(t1, t2)) => (t1, t2)
+    case Type(`BoundedT_name`, List(Type(`vectorT_name`, List(t1)), Type(`vectorT_name`, List(t2)))) => (t1, t2)
     case _ => throw new RuntimeException("expected type 'l2bounded', not " + typ)
   }
 
@@ -374,15 +390,6 @@ object Isabelle {
   def listT(typ: ITyp): Type = Type("List.list", List(typ))
 
   val block = Const("Programs.block", listT(programT) -->: programT)
-  // TODO rename constants
-  val vectorT_name = "Complex_L2.ell2"
-
-  def vectorT(typ: ITyp) = Type(vectorT_name, List(typ))
-
-  def dest_vectorT(typ: ITyp): ITyp = typ match {
-    case Type(`vectorT_name`, List(t1)) => t1
-    case _ => throw new RuntimeException("expected type 'vector', not " + typ)
-  }
 
   def variableT(typ: ITyp) = Type("Prog_Variables.variable", List(typ))
 
