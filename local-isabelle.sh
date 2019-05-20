@@ -20,4 +20,4 @@ else
     FILES=()
 fi
 
-"$ISABELLE_DIR"/bin/isabelle jedit -s -l QRHL-Examples-Prerequisites -d "$DIR" "$@" "${FILES[@]}" &
+"$ISABELLE_DIR"/bin/isabelle jedit -l QRHL-Examples-Prerequisites -d "$DIR" "$@" "${FILES[@]}" &
