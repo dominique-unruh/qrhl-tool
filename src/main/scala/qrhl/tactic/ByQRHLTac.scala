@@ -5,7 +5,7 @@ import info.hupel.isabelle.pure.{App, Const, Free, Term, Type}
 import info.hupel.isabelle.{Operation, pure}
 import org.log4s
 import qrhl._
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabelle.{Isabelle, IsabelleConsts, RichTerm}
 import qrhl.logic._
 import qrhl.isabelle.RichTerm.term_tight_codec
 import qrhl.isabelle.RichTerm.typ_tight_codec
@@ -31,7 +31,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
           throw UserException(s"Program $p expects arguments, that is not supported in a Pr[...] statement")
 
         Some((v3,Call(prog.name),rho))
-      case Const(Isabelle.one_name,_) =>
+      case Const(IsabelleConsts.one,_) =>
         Some((Isabelle.True_const, Block(), null))
       case _ =>
         ByQRHLTac.logger.debug(s"Term: $term")
@@ -74,7 +74,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
           else {
             val qvariables2 = ListSet(qvariables:_*)
             if (!requiredQvars.subsetOf(qvariables2))
-              throw UserException(s"You must specify at least the following qvars: ${qvariables2}")
+              throw UserException(s"You must specify at least the following qvars: $qvariables2")
             qvariables2
           }
 

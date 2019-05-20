@@ -2,7 +2,7 @@ package qrhl.logic
 
 import info.hupel.isabelle.pure
 import info.hupel.isabelle.pure.{App, Const, Free, Term}
-import qrhl.isabelle.Isabelle
+import qrhl.isabelle.{Isabelle, IsabelleConsts}
 
 // Variables
 sealed trait Variable {
@@ -65,8 +65,8 @@ object QVariable {
 
   def fromQVarList(context: Isabelle.Context, qvs: Term): List[QVariable] = qvs match {
     case Const(Isabelle.variable_unit.name, _) => Nil
-    case App(Const(Isabelle.variable_singletonName,_), v) => List(fromTerm_var(context, v))
-    case App(App(Const(Isabelle.variable_concatName,_), v), vs) =>
+    case App(Const(IsabelleConsts.variable_singleton,_), v) => List(fromTerm_var(context, v))
+    case App(App(Const(IsabelleConsts.variable_concat,_), v), vs) =>
       val v2 = fromQVarList(context, v)
       assert(v2.length==1)
       val vs2 = fromQVarList(context, vs)
@@ -96,8 +96,8 @@ object CVariable {
 
   def fromCVarList(context: Isabelle.Context, cvs: Term): List[CVariable] = cvs match {
     case Const(Isabelle.variable_unit.name, _) => Nil
-    case App(Const(Isabelle.variable_singletonName,_), v) => List(fromTerm_var(context, v))
-    case App(App(Const(Isabelle.variable_concatName,_), v), vs) =>
+    case App(Const(IsabelleConsts.variable_singleton,_), v) => List(fromTerm_var(context, v))
+    case App(App(Const(IsabelleConsts.variable_concat,_), v), vs) =>
       val v2 = fromCVarList(context, v)
       assert(v2.length==1)
       val vs2 = fromCVarList(context, vs)

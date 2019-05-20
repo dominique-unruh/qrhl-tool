@@ -11,3 +11,7 @@ session "QRHL-Prerequisites" = "HOL-Library" +
     "HOL-ex.Sqrt" CryptHOL.Misc_CryptHOL
     (* "HOL-Protocol.Protocol_Main" *) (* Temporarily removed till libisabelle is updated to Isabelle2019 *)
     "HOL-Eisbach.Eisbach_Tools"
+
+session "QRHL-Scala" = QRHL +
+  sessions QRHL
+  theories Scala
