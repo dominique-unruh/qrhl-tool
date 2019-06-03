@@ -29,7 +29,7 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
 libraryDependencies += "info.hupel" % "multi-isabelle" % "0.1.4" // TODO remove
 
-libraryDependencies ++= { val version = "1.1.0-RC2"; Seq(
+libraryDependencies ++= { val version = "1.1.0-RC3"; Seq(
   "info.hupel" %% "libisabelle" % version,
   "info.hupel" %% "libisabelle-setup" % version,
   "info.hupel" %% "pide-package" % version
@@ -64,7 +64,8 @@ extractLibisabelleProtocol := {
 }
 
 //val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
-val afpUrl = "https://bitbucket.org/isa-afp/afp-devel/get/7c585d0056e3.tar.gz"
+//val afpUrl = "https://bitbucket.org/isa-afp/afp-devel/get/7c585d0056e3.tar.gz"
+val afpUrl = "https://isabelle.sketis.net/repos/afp-2019/archive/1a623915bf3f.tar.gz"
 val afpExtractPath = "target/downloads/afp"
 
 lazy val downloadAFP = taskKey[Unit]("Download the AFP")

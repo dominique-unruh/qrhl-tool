@@ -4,13 +4,13 @@
 
 set -e
 
-ISABELLE_DIR=/opt/Isabelle2019-RC0
+ISABELLE_DIR=/opt/Isabelle2019-RC4
 
 DIR="$(dirname "$BASH_SOURCE[0]")"
 
 if ! [ -e "$DIR/isabelle-thys" ]; then
     echo >/dev/stderr "Cannot determine the installation directory that contains the qrhl tool."
-    echo >/dev/stderr "Please edit the line 'DIR=...' in proofgeneral.sh, it should set DIR to the installation directory."
+    echo >/dev/stderr "Please edit the line 'DIR=...' in local-isabelle.sh, it should set DIR to the installation directory."
     exit 1
 fi
 
