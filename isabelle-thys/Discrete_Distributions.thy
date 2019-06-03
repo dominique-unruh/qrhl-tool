@@ -120,7 +120,7 @@ next
     by (rule infsetsum_all_0)
 qed
 
-lemma Prob_pos: "Prob \<mu> E \<ge> 0"
+lemma Prob_pos[simp]: "Prob \<mu> E \<ge> 0"
   apply transfer
   by (rule infsetsum_nonneg) auto
 
@@ -137,7 +137,7 @@ proof (transfer fixing: E F)
     using assms distr by auto
 qed
 
-lemma Prob_leq1: "Prob \<mu> E \<le> 1"
+lemma Prob_leq1[simp]: "Prob \<mu> E \<le> 1"
 proof -
   have "Prob \<mu> UNIV \<le> 1"
     apply transfer apply (subst infsetsum_nonneg_is_SUPREMUM)
