@@ -6,12 +6,43 @@ theory Discrete_Distributions
     Bounded_Operators.Extended_Sorry
 begin
 
-typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}" 
+definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"
+
+(* typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}"  *)
+typedef 'a distr = "{f::'a\<Rightarrow>real. is_distribution f}"
   morphisms prob Abs_distr
+  unfolding is_distribution_def
   apply (rule exI[of _ "\<lambda>x. 0"]) by auto
 setup_lifting type_definition_distr
 derive universe distr
 
+lemma is_distribution_def': "is_distribution f \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)"
+proof
+  assume f[unfolded is_distribution_def]: "is_distribution f"
+  have "sum f M \<le> 1" if [simp]: "finite M" for M
+  proof -
+    have "sum f M = infsetsum f M"
+      using f by simp
+    also have "\<dots> \<le> infsetsum f UNIV"
+      using f
+      by (metis diff_ge_0_iff_ge infsetsum_Diff infsetsum_nonneg top_greatest)
+    also have "\<dots> \<le> 1"
+      using f by simp
+    finally show ?thesis.
+  qed
+  with f show "(\<forall>x. 0 \<le> f x) \<and> (\<forall>M. finite M \<longrightarrow> sum f M \<le> 1)"
+    unfolding is_distribution_def by simp
+next
+  assume assm: "(\<forall>x. 0 \<le> f x) \<and> (\<forall>M. finite M \<longrightarrow> sum f M \<le> 1)"
+  then have "f abs_summable_on UNIV"
+    by (rule_tac abs_summable_finiteI[where B=1], simp)
+  moreover from assm have "infsetsum f UNIV \<le> 1"
+    by (rule_tac infsetsum_finite_sets, simp_all)
+  ultimately show "is_distribution f"
+    unfolding is_distribution_def using assm by simp
+qed
+
+(* TODO needed? *)
 lemma distr_abs_summable_on:
   fixes f :: "'a \<Rightarrow> real"
   assumes "\<forall>x. f x \<ge> 0" and "\<forall> M. finite M \<longrightarrow> sum f M \<le> 1"
@@ -19,6 +50,7 @@ lemma distr_abs_summable_on:
   apply (rule abs_summable_finiteI)
   using assms by auto
 
+(* TODO needed? *)
 lemma distr_infsetsum:
   fixes f :: "'a \<Rightarrow> real"
   assumes "\<forall>x. f x \<ge> 0" and "\<forall> M. finite M \<longrightarrow> sum f M \<le> 1"
@@ -28,7 +60,7 @@ lemma distr_infsetsum:
 
 
 instantiation distr :: (type)zero begin
-lift_definition zero_distr :: "'a distr" is "(\<lambda>_. 0)" by simp
+lift_definition zero_distr :: "'a distr" is "(\<lambda>_. 0)" by (simp add: is_distribution_def)
 instance .. 
 end
 
@@ -36,12 +68,10 @@ end
 lift_definition supp :: "'a distr \<Rightarrow> 'a set" is "\<lambda>\<mu>. {x. \<mu> x > 0}" .
 
 lemma "countable (supp \<mu>)"
-proof (transfer, auto)
+proof (transfer, auto simp: is_distribution_def)
   fix \<mu> :: "'a => real"
-  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and "\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1"
-  then have "\<mu> abs_summable_on UNIV"
-    by (rule distr_abs_summable_on)
-  then have "countable {x\<in>UNIV. 0 \<noteq> \<mu> x}" (is "countable ?X")
+  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and \<mu>sum: "\<mu> abs_summable_on UNIV"
+  from \<mu>sum have "countable {x\<in>UNIV. 0 \<noteq> \<mu> x}" (is "countable ?X")
     by (rule abs_summable_countable)
   also have "?X = {x. 0 < \<mu> x}"
     using less_eq_real_def \<mu>pos by auto 
@@ -50,11 +80,10 @@ proof (transfer, auto)
 qed
 
 lift_definition uniform :: "'a set \<Rightarrow> 'a distr" is "\<lambda>M. (\<lambda>m. if m\<in>M then 1/card M else 0)"
-proof (rule conjI; rule allI; (rule impI)?)
-  fix M and x :: 'a
-  show "0 \<le> (if x \<in> M then 1 / real (card M) else 0)" by auto
-  fix F
-  show "(\<Sum>m\<in>F. if m \<in> M then 1 / real (card M) else 0) \<le> 1" if "finite F"
+proof (rename_tac M, auto simp: is_distribution_def)
+  fix M :: "'a set" and x :: 'a
+  (* show "0 \<le> (if x \<in> M then 1 / real (card M) else 0)" by auto *)
+  have "(\<Sum>m\<in>F. if m \<in> M then 1 / real (card M) else 0) \<le> 1" if "finite F" for F
   proof (cases "finite M")
     case True
     show ?thesis
@@ -68,6 +97,9 @@ proof (rule conjI; rule allI; (rule impI)?)
       apply (rewrite asm_rl[of "1/real 0 = 0"]) apply auto[1]
       by auto
   qed
+  then show "(\<lambda>m. if m \<in> M then 1 / real (card M) else 0) abs_summable_on UNIV"
+    and "(\<Sum>\<^sub>am. if m \<in> M then 1 / real (card M) else 0) \<le> 1"
+    by (simp_all add: distr_abs_summable_on distr_infsetsum)
 qed
 
 
@@ -87,13 +119,13 @@ abbreviation "weight \<mu> == Prob \<mu> UNIV"
 
 lemma Prob_is_0:
   "Prob \<mu> E = 0 \<longleftrightarrow> disjnt (supp \<mu>) E"
-proof (transfer fixing: E, rule)
+proof (transfer fixing: E, unfold is_distribution_def, rule)
   fix \<mu> :: "'a\<Rightarrow>real"
-  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
   then have "0 \<le> \<mu> x" for x
       using distr by simp
-  from distr have "\<mu> abs_summable_on E"
-    by (simp add: distr_abs_summable_on)
+    from distr have "\<mu> abs_summable_on E"
+      using abs_summable_on_subset by blast
   assume sum0: "infsetsum \<mu> E = 0"
   have "\<mu> x = 0" if "x : E" for x
   proof -
@@ -111,7 +143,7 @@ proof (transfer fixing: E, rule)
     using \<open>0 \<le> \<mu> _\<close> unfolding disjnt_def by auto
 next
   fix \<mu> :: "'a\<Rightarrow>real"
-  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
   assume "disjnt {x. 0 < \<mu> x} E"
   then have "\<mu> x = 0" if "x:E" for x
     unfolding disjnt_def distr
@@ -122,16 +154,16 @@ qed
 
 lemma Prob_pos[simp]: "Prob \<mu> E \<ge> 0"
   apply transfer
-  by (rule infsetsum_nonneg) auto
+  by (rule infsetsum_nonneg) (auto simp: is_distribution_def)
 
 lemma Prob_mono:
   assumes "E \<subseteq> F"
   shows "Prob \<mu> E \<le> Prob \<mu> F"
-proof (transfer fixing: E F)
+proof (transfer fixing: E F, unfold is_distribution_def)
   fix \<mu> :: "'a \<Rightarrow> real"
-  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
   then have "\<mu> abs_summable_on E" and "\<mu> abs_summable_on F"
-    by (simp_all add: distr_abs_summable_on)
+    using abs_summable_on_subset by blast+
   then show "infsetsum \<mu> E \<le> infsetsum \<mu> F"
     apply (rule infsetsum_mono_neutral_left)
     using assms distr by auto
@@ -141,9 +173,10 @@ lemma Prob_leq1[simp]: "Prob \<mu> E \<le> 1"
 proof -
   have "Prob \<mu> UNIV \<le> 1"
     apply transfer apply (subst infsetsum_nonneg_is_SUPREMUM)
+    unfolding is_distribution_def
     using distr_abs_summable_on apply blast
      apply simp
-    by (rule cSUP_least, auto)
+    using infsetsum_nonneg_is_SUPREMUM by fastforce
   then show ?thesis
     using Prob_mono[of E UNIV \<mu>] by auto
 qed
@@ -160,14 +193,12 @@ qed
 
 lift_definition "map_distr" :: "('a\<Rightarrow>'b) \<Rightarrow> 'a distr \<Rightarrow> 'b distr" 
   is "\<lambda>(f::'a\<Rightarrow>'b) \<mu> x. infsetsum \<mu> (f -` {x})"
-proof auto
+proof (auto simp: is_distribution_def)
   fix f :: "'a \<Rightarrow> 'b" and \<mu> :: "'a \<Rightarrow> real" and x and M :: "'b set"
-  assume "(\<forall>x. 0 \<le> \<mu> x)" and sumM: "(\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
-  then have summable: "\<mu> abs_summable_on UNIV"
-    by (rule distr_abs_summable_on)
-  from \<open>(\<forall>x. 0 \<le> \<mu> x)\<close> have \<mu>pos: "0 \<le> \<mu> x" for x by simp
+  assume "(\<forall>x. 0 \<le> \<mu> x)" and summable: "\<mu> abs_summable_on UNIV" and sum: "infsetsum \<mu> UNIV \<le> 1"
+  then have \<mu>pos: "0 \<le> \<mu> x" for x by simp
 
-  have reindex: "bij_betw snd (SIGMA x:M. f -` {x}) (f -` M)"
+  have reindex: "bij_betw snd (SIGMA x:M. f -` {x}) (f -` M)" for M
     by (rule bij_betwI, auto)
 
   have "0 = infsetsum (\<lambda>_. 0) (f -` {x})" by simp
@@ -176,7 +207,8 @@ proof auto
     using abs_summable_on_subset[OF summable] \<mu>pos by auto
   finally show "0 \<le> infsetsum \<mu> (f -` {x})" .
 
-  assume "finite M"
+
+  {fix M :: "'b set" assume "finite M"
   then have "(\<Sum>x\<in>M. infsetsum \<mu> (f -` {x})) = (\<Sum>\<^sub>ax\<in>M. infsetsum \<mu> (f -` {x}))" (is "?lhs = _")
     by simp
   also have "\<dots> = (\<Sum>\<^sub>a(x, y)\<in>(SIGMA x:M. f -` {x}). \<mu> y)"
@@ -191,19 +223,20 @@ proof auto
     apply (rule infsetsum_mono_neutral_left)
     using abs_summable_on_subset[OF summable] \<mu>pos by auto
   also have "\<dots> \<le> 1"
-    by (simp add: \<mu>pos distr_infsetsum sumM)
-  finally show "?lhs \<le> 1" .
+    by (fact sum)
+  finally have "?lhs \<le> 1" .}
+  then show "(\<lambda>x. infsetsum \<mu> (f -` {x})) abs_summable_on UNIV"
+    and "(\<Sum>\<^sub>ax. infsetsum \<mu> (f -` {x})) \<le> 1"
+    using \<mu>pos by (auto intro!: infsetsum_nonneg distr_abs_summable_on distr_infsetsum)
 qed
 
 lemma map_distr_0[simp]: "map_distr f 0 = 0"
   by (transfer, simp)
 
 lemma weight_map_distr[simp]: "weight (map_distr f \<mu>) = weight \<mu>"
-proof (transfer, auto)
+proof (transfer, auto simp: is_distribution_def)
   fix f :: "'b \<Rightarrow> 'a" and \<mu> :: "'b => real"
-  assume "\<forall>x. 0 \<le> \<mu> x" and "\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1"
-  then have summable: "\<mu> abs_summable_on UNIV"
-    by (rule distr_abs_summable_on)
+  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> abs_summable_on UNIV" and "infsetsum \<mu> UNIV \<le> 1"
   have reindex: "bij_betw snd (SIGMA x:UNIV. f -` {x}) UNIV"
     by (rule bij_betwI, auto)
   show "(\<Sum>\<^sub>ax. infsetsum \<mu> (f -` {x})) = infsetsum \<mu> UNIV"
@@ -214,11 +247,9 @@ proof (transfer, auto)
 qed
 
 lemma supp_map_distr[simp]: "supp (map_distr f \<mu>) = f ` (supp \<mu>)"
-proof (transfer, auto)
+proof (transfer, auto simp: is_distribution_def)
   fix f :: "'b \<Rightarrow> 'a" and \<mu> :: "'b \<Rightarrow> real" and x :: 'a and y :: 'b
-  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and "\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1"
-  then have summable: "\<mu> abs_summable_on UNIV"
-    by (rule distr_abs_summable_on)
+  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> abs_summable_on UNIV" and "infsetsum \<mu> UNIV \<le> 1"
   show "0 < infsetsum \<mu> (f -` {x}) \<Longrightarrow> x \<in> f ` {x. 0 < \<mu> x}"
     using \<mu>pos by (smt image_iff infsetsum_all_0 mem_Collect_eq vimage_singleton_eq)
   show "0 < infsetsum \<mu> (f -` {f y})" if "0 < \<mu> y"
@@ -289,11 +320,11 @@ qed
 lemma compose_map_distr[simp]:
   fixes f::"'a\<Rightarrow>'b" and g::"'b\<Rightarrow>'c"
   shows "map_distr g (map_distr f \<mu>) = map_distr (\<lambda>x. g (f x)) \<mu>"  
-proof (transfer fixing: f g, rule ext)
+proof (transfer fixing: f g, rule ext, unfold is_distribution_def)
   fix \<mu> :: "'a => real" and x
-  assume "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
-  then have summable: "\<mu> abs_summable_on UNIV"
-    using distr_abs_summable_on by auto
+  assume "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
+  then have \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> abs_summable_on UNIV" and "infsetsum \<mu> UNIV \<le> 1"
+    by auto
   have reindex0: "bij_betw snd (SIGMA x:UNIV. f -` {x}) UNIV"
     by (rule bij_betwI, auto)
   have reindex: "bij_betw snd (SIGMA y:g -` {x}. f -` {y}) (f -` g -` {x})"
@@ -312,7 +343,6 @@ proof (transfer fixing: f g, rule ext)
 
   also have "\<dots> = infsetsum \<mu> ((\<lambda>x. g (f x)) -` {x})" (is "_ = ?rhs")
     by (simp add: vimage_def) 
-
   finally show "?lhs = ?rhs" .
 qed
 
@@ -325,20 +355,29 @@ lift_definition expectation :: "'a distr \<Rightarrow> ('a\<Rightarrow>'b) \<Rig
 lift_definition expectation_exists :: "'a distr \<Rightarrow> ('a\<Rightarrow>'b::{banach, second_countable_topology}) \<Rightarrow> bool" is
   "\<lambda>\<mu> f. (\<lambda>x. \<mu> x *\<^sub>R f x) abs_summable_on UNIV" .
 
+(* TODO move *)
+lemma sum_leq_infsetsum:
+  assumes "f abs_summable_on M"
+  assumes "finite M"
+  assumes "M \<subseteq> N"
+  shows "sum f M \<le> infsetsum f N"
+  sorry
+
 lemma expectation_exists_bounded:
   fixes a b :: real
   assumes "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x \<ge> a"
   assumes "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x \<le> b"
   shows "expectation_exists \<mu> f"
-proof (insert assms, transfer fixing: a b f)
+proof (insert assms, transfer fixing: a b f, unfold is_distribution_def)
   fix \<mu> :: "'a \<Rightarrow> real"
   define \<mu>f where "\<mu>f x = \<mu> x *\<^sub>R f x" for x
   obtain B where "B \<ge> -a" and "B \<ge> b" and "B \<ge> 0"
     by (meson linear order_trans)
-  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
   then have \<mu>pos: "\<mu> x \<ge> 0" for x by auto
   from distr have sum: "sum \<mu> F \<le> 1" if "finite F" for F
-    using that by auto
+    apply (rule_tac sum_leq_infsetsum[THEN order.trans], auto intro!: that abs_summable_on_finite)
+    by (metis (full_types) abs_summable_on_finite infsetsum_finite order_trans subset_UNIV sum_leq_infsetsum that)
   assume "(\<And>x. x \<in> {x. 0 < \<mu> x} \<Longrightarrow> a \<le> f x)"
   then have fx1: "f x \<ge> -B" if "0 < \<mu> x" for x
     using that \<open>- a \<le> B\<close> by force
@@ -371,16 +410,16 @@ lemma expectation_mono:
   assumes "expectation_exists \<mu> g"
   assumes leq: "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x \<le> g x"
   shows "expectation \<mu> f \<le> expectation \<mu> g"
-proof (insert assms, transfer)
+proof (insert assms, transfer, auto simp: is_distribution_def)
   fix \<mu> :: "'a\<Rightarrow>real" and f g :: "'a\<Rightarrow>real"
-  assume "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
+  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> abs_summable_on UNIV" and "infsetsum \<mu> UNIV \<le> 1"
   then have pos: "\<mu> x \<ge> 0" for x by simp
-  assume leq: "(\<And>x. x \<in> {x. 0 < \<mu> x} \<Longrightarrow> f x \<le> g x)"
-  have leq': "\<mu> x *\<^sub>R f x \<le> \<mu> x *\<^sub>R g x" for x
+  assume leq: "(\<And>x. 0 < \<mu> x \<Longrightarrow> f x \<le> g x)"
+  have leq': "\<mu> x * f x \<le> \<mu> x * g x" for x
     apply (cases "\<mu> x = 0") using pos[of x] leq[of x] by auto
-  assume sumf: "(\<lambda>x. \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
-    and sumg: "(\<lambda>x. \<mu> x *\<^sub>R g x) abs_summable_on UNIV"
-  from sumf sumg leq' show "infsetsum (\<lambda>x. \<mu> x *\<^sub>R f x) UNIV \<le> infsetsum (\<lambda>x. \<mu> x *\<^sub>R g x) UNIV"
+  assume sumf: "(\<lambda>x. \<mu> x * f x) abs_summable_on UNIV"
+    and sumg: "(\<lambda>x. \<mu> x * g x) abs_summable_on UNIV"
+  from sumf sumg leq' show "infsetsum (\<lambda>x. \<mu> x * f x) UNIV \<le> infsetsum (\<lambda>x. \<mu> x * g x) UNIV"
     by (rule infsetsum_mono)
 qed
 
@@ -450,16 +489,12 @@ lemma expectation_upper_bound:
   assumes "\<And>x. x \<in> supp \<mu> \<Longrightarrow> f x \<le> B"
   shows "expectation \<mu> f \<le> B"
   using assms 
-proof (transfer fixing: B C f)
+proof (transfer fixing: B C f, unfold is_distribution_def)
   fix \<mu> :: "'a\<Rightarrow>real"
   assume \<mu>1_or_Bpos: "infsetsum \<mu> UNIV = 1 \<or> 0 \<le> B"
-  assume \<mu>: "(\<forall>x. 0 \<le> \<mu> x) \<and> (\<forall>M. finite M \<longrightarrow> sum \<mu> M \<le> 1)"
-  then have \<mu>sum: "\<mu> abs_summable_on UNIV"
-    by (simp add: distr_abs_summable_on)
-  from \<mu> have \<mu>sum1: "infsetsum \<mu> UNIV \<le> 1"
-    by (simp add: distr_infsetsum)
-  have \<mu>pos: "\<mu> x \<ge> 0" for x
-    using \<mu> by simp
+  assume \<mu>: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
+  then have \<mu>sum: "\<mu> abs_summable_on UNIV" and \<mu>sum1: "infsetsum \<mu> UNIV \<le> 1" and \<mu>pos: "\<mu> x \<ge> 0" for x
+    by simp_all
   obtain BC where "BC\<ge>B" and "BC\<ge>-C" and "BC\<ge>0" 
     apply atomize_elim
     by (meson linorder_linear order_trans_rules(23))
