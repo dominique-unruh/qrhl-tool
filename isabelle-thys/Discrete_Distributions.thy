@@ -357,11 +357,19 @@ lift_definition expectation_exists :: "'a distr \<Rightarrow> ('a\<Rightarrow>'b
 
 (* TODO move *)
 lemma sum_leq_infsetsum:
-  assumes "f abs_summable_on M"
+  fixes f :: "_ \<Rightarrow> real"
+  assumes "f abs_summable_on N"
   assumes "finite M"
   assumes "M \<subseteq> N"
+  assumes "\<And>x. x\<in>N-M \<Longrightarrow> f x \<ge> 0"
   shows "sum f M \<le> infsetsum f N"
-  sorry
+proof -
+  have "infsetsum f M \<le> infsetsum f N"
+    apply (rule infsetsum_mono_neutral_left)
+    using assms by auto
+  then show ?thesis
+    using assms by auto
+qed
 
 lemma expectation_exists_bounded:
   fixes a b :: real
@@ -377,7 +385,7 @@ proof (insert assms, transfer fixing: a b f, unfold is_distribution_def)
   then have \<mu>pos: "\<mu> x \<ge> 0" for x by auto
   from distr have sum: "sum \<mu> F \<le> 1" if "finite F" for F
     apply (rule_tac sum_leq_infsetsum[THEN order.trans], auto intro!: that abs_summable_on_finite)
-    by (metis (full_types) abs_summable_on_finite infsetsum_finite order_trans subset_UNIV sum_leq_infsetsum that)
+    by (metis (full_types) infsetsum_finite order_trans subset_UNIV sum_leq_infsetsum that)
   assume "(\<And>x. x \<in> {x. 0 < \<mu> x} \<Longrightarrow> a \<le> f x)"
   then have fx1: "f x \<ge> -B" if "0 < \<mu> x" for x
     using that \<open>- a \<le> B\<close> by force
