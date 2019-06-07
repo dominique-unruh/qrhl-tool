@@ -319,7 +319,7 @@ lemma mat_of_l2bounded_classical_operator[code]:
 lemma [code]: "HOL.equal (A::_ linear_space) B = (A\<le>B \<and> B\<le>A)"
   unfolding equal_linear_space_def by auto
 
-definition [code del,code_abbrev]: "ell2_to_Bounded_code (\<psi>::'a ell2) = (ell2_to_Bounded \<psi>)"
+definition [code del,abs_def,code_abbrev]: "ell2_to_Bounded_code (\<psi>::'a ell2) = (ell2_to_Bounded \<psi>)"
 
 lemma mat_of_l2bounded_ell2_to_l2bounded[code]: 
   "mat_of_l2bounded (ell2_to_Bounded_code \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
