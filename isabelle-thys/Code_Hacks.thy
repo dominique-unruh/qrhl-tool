@@ -42,7 +42,7 @@ fun fixup_code_conv' ctxt idx consts ct = (* case Thm.term_of ct of
 
 fun fixup_code_conv ctxt ct = let
   val t = (Thm.term_of ct)
-val _ = \<^print> ct
+(* val _ = \<^print> ct *)
   val idx = Thm.maxidx_of_cterm ct
   val consts = fold_aterms (fn t => fn l => case t of 
     Const nT => Const nT::l | _ => l) t [] 
@@ -65,22 +65,22 @@ fun fixup_code ctxt thm = let
 in thm3 end
 \<close>
 
-setup \<open>
+(* setup \<open>
 Code_Preproc.add_functrans ("deduplicate_consts", Code_Preproc.simple_functrans (fn ctxt => fn thms => 
-  case thms of [thm] => (case fixup_code ctxt thm of SOME thm' => SOME [thm'] |> \<^print>| _ => NONE) | _ => NONE))
-\<close>
+  case thms of [thm] => (case fixup_code ctxt thm of SOME thm' => SOME [thm'] (* |> \<^print> *)| _ => NONE) | _ => NONE))
+\<close> *)
 
 definition [code del]: "mark_for_let_simproc x == x"
 lemma mark_for_let_simprocE: "mark_for_let_simproc x \<Longrightarrow> x"
   unfolding mark_for_let_simproc_def by simp
 
-setup \<open>let fun simproc morph ctxt ct =
+(* setup \<open>let fun simproc morph ctxt ct =
   SOME ((Conv.rewr_conv @{thm mark_for_let_simproc_def}
          then_conv 
          fixup_code_conv ctxt)
         ct) in
     Code_Preproc.map_pre (fn ctxt => ctxt
     addsimprocs [Simplifier.make_simproc ctxt "let" {lhss=[\<^term>\<open>mark_for_let_simproc x\<close>], proc=simproc}]) end
-\<close>
+\<close> *)
 
 end
