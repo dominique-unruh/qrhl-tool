@@ -31,7 +31,7 @@ build:
 test:
   image: registry.gitlab.com/unruh/qrhl-tool/build-image
   stage: test
-  script: sbt test
+  script: sbt "testOnly -- -l SuperSlow"
   artifacts:
     reports:
       junit: target/test-reports/TEST-*.xml

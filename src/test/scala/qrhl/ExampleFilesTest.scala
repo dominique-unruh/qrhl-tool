@@ -3,7 +3,7 @@ package qrhl
 import java.io.File
 import java.nio.file.Paths
 
-import org.scalatest.{FlatSpec, FunSuite}
+import org.scalatest.{FlatSpec, FunSuite, Tag}
 import qrhl.toplevel.Toplevel
 import org.scalatest.tags.Slow
 
@@ -20,7 +20,8 @@ class ExampleFilesTest extends FunSuite {
        name = file.getName
        if name.endsWith(".qrhl")
        if !name.matches("test.*")) {
-    println(s"Creating test $name")
-    test(name) { testFile(name) }
+    val tags = if (name.matches("teleport.*")) List(Tag("SuperSlow")) else Nil
+    println(s"Creating test $name, $tags")
+    test(name,tags:_*) { testFile(name) }
   }
 }
