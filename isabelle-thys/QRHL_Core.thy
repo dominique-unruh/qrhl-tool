@@ -109,6 +109,11 @@ lemma predicate_local_raw_apply_op: "operator_local_raw U Q \<Longrightarrow> pr
 lemma operator_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> operator_local_raw A Q \<Longrightarrow> operator_local_raw A Q'" 
   by (cheat operator_local_raw_mono)
 
+lift_definition predicate_local :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool" 
+  is  "\<lambda>A (vs,_). predicate_local_raw A (set (flatten_tree vs))" .
+lift_definition operator_local :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool" 
+  is  "\<lambda>A (vs,_). operator_local_raw A (set (flatten_tree vs))" .
+
 lift_definition colocal_pred_qvars :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
   is "\<lambda>A (vs,_). \<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> predicate_local_raw A vs'" .
 
@@ -804,7 +809,7 @@ lemma colocal_quantum_eq[simp]: "distinct_qvars (variable_concat (variable_conca
   by (cheat TODO14)
 
 lemma applyOpSpace_colocal[simp]:
-  "colocal U S \<Longrightarrow> U\<noteq>0 \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) l2bounded" and S :: predicate
+  "colocal U S \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) l2bounded" and S :: predicate
   by (cheat TODO14)
 
 lemma qeq_collect:

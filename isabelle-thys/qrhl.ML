@@ -62,7 +62,7 @@ fun variables [] = (\<^const>\<open>variable_unit\<close>,\<^typ>\<open>unit\<cl
 (* Transforms "\<lbrakk>\<dots>\<rbrakk> \<Longrightarrow> A==B" into "A==B" if all the premises can be solved by simp_tac *) 
 fun simp_conv_premises ctxt thm =
   let val res = thm |> ALLGOALS (fn i => TRY (Simplifier.simp_tac ctxt i)) |> Seq.hd
-      val _ = if Thm.nprems_of res > 0 then raise TERM("unresolved premises",Thm.prems_of res) else ()
+      val _ = if Thm.nprems_of res > 0 then raise TERM("Unresolved premises. Perhaps increase simp_depth_limit?",Thm.prems_of res) else ()
   in res end
 
 (* Given a term of the form "A\<guillemotright>Q", returns (lift,A,Q) where "lift x y" evaluates 

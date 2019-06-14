@@ -81,7 +81,9 @@ class Toplevel private(initialState : State) {
     try {
       cmd match {
         case UndoCommand(n) =>
-          assert(n < states.length)
+          if (n >= states.length)
+            throw UserException(s"Cannot undo $n steps (only ${states.length-1} steps performed so far)")
+//          assert(n < states.length)
           val isabelleLoaded = state.hasIsabelle
           states = states.drop(n)
           // If state after undo has no Isabelle, run GC to give the system the chance to finalize a possibly loaded Isabelle
@@ -160,7 +162,13 @@ class Toplevel private(initialState : State) {
           if (abortOnError) return false
         case e : Throwable =>
           println("[ERROR] [INTERNAL ERROR!!!]")
-          e.printStackTrace(System.out)
+          val stringWriter = new StringWriter()
+          val printWriter = new PrintWriter(stringWriter)
+          e.printStackTrace(printWriter)
+          printWriter.flush()
+          // Making sure there are no *** in the string as this confuses ProofGeneral (*** is the marker for out of band messages)
+          val msg = stringWriter.toString.replaceAll("""\*\*+""", "**")
+          print(msg)
           if (abortOnError) return false
       }
     }
