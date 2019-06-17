@@ -64,11 +64,3 @@ equal.
 inline hInit.
 inline hInit'.
 wp right.
- simp.
-# Postcondition is: ℭ𝔩𝔞[h1 = π ∘ r2] + some equalities
-rnd h,r <- map_distr (λr. (π o r, r)) (uniform UNIV).
- simp bij_pi.
-skip.
-simp! o_def.
-
-qed.
