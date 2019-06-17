@@ -242,9 +242,6 @@ seq 1: (true) 1%r 0%r _ 0%r (C.a<>a) => //.
 qed.
 
 (* An auxiliary function to abbreviate the losing condition of CHSH *)
-op lose x y a b = !(win x y a b).
-
-(* This is a simple corollary of ab_prob that gives an explicit formula
    (in term of the product of A's and B's individual output probabilities pa,pb)
    for the probability that A and B output given values a and b and lose
    (for fixed initial states and inputs).
