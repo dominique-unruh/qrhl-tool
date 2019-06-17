@@ -40,16 +40,6 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
  seq 2 0: quantum_equality_full idOp ⟦C1,A1,B1⟧
           ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
-  wp left.
-  wp left.
-  skip.
-  simp.
-  rule teleport_goal1.
-   simp!.
-
- seq 1 0: Proj (span {ket a1})»⟦A1⟧ ⋅ 
-             quantum_equality_full
-                idOp ⟦C1,A1,B1⟧
                 ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
   wp left.
   simp.
