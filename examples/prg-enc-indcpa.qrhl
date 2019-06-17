@@ -101,13 +101,6 @@ lemma prg1B1_prg1B21: Pr[b=1:prg1B1(rho)] = Pr[b=1:prg1B2(rho)].
  skip.
  simp!.
 qed.
-
-lemma indcpa1_prg0B2: Pr[b=1:indcpa1(rho)] = Pr[b=1:prg0B2(rho)].
-
- byqrhl.
- simp.
- inline indcpa1.
- inline prg0B2.
  inline B2.
  equal.
   simp!.
