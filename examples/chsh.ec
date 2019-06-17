@@ -379,14 +379,6 @@ local lemma xyab_prob x y pa0 pa1 pb0 pb1 (globs:glob A*glob B) &m:
       C.x=x /\ C.y=y /\ lose C.x C.y C.a C.b ] = 
       (quarter*failpoly_xy x y pa0 pa1 pb0 pb1).
 proof.
-move => globA globB Hpa0 Hpa1 Hpb0 Hpb1.
-proc.
-pose pa := if x then pa1 else pa0.
-pose pb := if y then pb1 else pb0.
-cut Hfp: failpoly_xy x y pa0 pa1 pb0 pb1 = failprob1 pa pb x y.
-  by rewrite /failpoly_xy; auto.
-seq 1: (C.x = x) half (half*(failpoly_xy x y pa0 pa1 pb0 pb1))
-                 half 0%r ((glob A)=globs.`1 /\ (glob B)=globs.`2).
   by auto.
   by rnd; rewrite /half; auto; smt. 
 seq 1: (C.y = y) half (failpoly_xy x y pa0 pa1 pb0 pb1)
