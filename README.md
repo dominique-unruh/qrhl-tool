@@ -41,8 +41,6 @@ because it will download and build Isabelle.
 You need to be online the first time you execute this step. 
 
 
-## Editing the Isabelle theory files
-
 Some examples depend on an accompanying Isabelle theory. (E.g., 
  `prg-enc-rorcpa.qrhl` depends on the Isabelle theory `PrgEnc.thy`.)
 To edit that theory, run Isabelle using the `run-isabelle.{sh,bat}` script.
