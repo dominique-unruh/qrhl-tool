@@ -27,7 +27,6 @@ require import DBool.
 a joint initial state, and two players A and B that play the actual
 CHSH game.
 
-We will assume (below) that A and B may not have shared variables, but
 they may share variables with the setup routine.
 
 The setup routine is modeled as a module of type Setup, and A an B are
