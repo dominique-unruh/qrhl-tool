@@ -267,9 +267,6 @@ op failprob1 (pa pb:real) (x y:bool) : real =
 (* This lemma shows that the probability that A and B lose (for fixed inputs and initial states)
    is indeed failprob1.
   
-   This lemma follows from ab_prob2 basically by summing over all possible values 
-   for the outputs a,b of A,B. (In EasyCrypt, at the core, this is done using 
-   the phoare split tactic.)
 
 *)
 local lemma ab_prob3 x y pa pb (globs:glob A*glob B) &m:
