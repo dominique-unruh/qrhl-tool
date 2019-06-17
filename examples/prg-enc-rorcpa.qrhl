@@ -29,8 +29,6 @@ program rorcpa0 := {
   k <$ uniform UNIV;
   call A1;
   c <- enc(k,m);
-  call A2;
-}.
 
 program rorcpa1 := {
   k <$ uniform UNIV;
