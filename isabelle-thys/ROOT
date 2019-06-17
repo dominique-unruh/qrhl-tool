@@ -1,5 +1,5 @@
 session QRHL = "QRHL-Prerequisites" +
-  options [(* quick_and_dirty=true, *) record_proofs=1]
+  options [skip_proofs=true, (* quick_and_dirty=true, *) record_proofs=1]
   sessions CryptHOL "HOL-Protocol" Bounded_Operators
   theories QRHL QRHL_Operations
 

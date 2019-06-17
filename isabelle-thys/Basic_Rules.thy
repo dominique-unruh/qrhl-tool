@@ -17,16 +17,15 @@ lift_definition index_flip_vector :: "mem2 ell2 \<Rightarrow> mem2 ell2" is
   "\<lambda>\<psi>. \<psi> o index_flip_mem2"
   by (cheat xxx)
 
-(* lift_definition index_flip_subspace :: "mem2 ell2 linear_space \<Rightarrow> mem2 ell2 linear_space" is
+lift_definition index_flip_subspace :: "mem2 ell2 linear_space \<Rightarrow> mem2 ell2 linear_space" is
   "\<lambda>S. index_flip_vector ` S"
-  sorry
- *)
+  by (cheat TODO)
 
-typedef 'a bla = "UNIV::'a set set" by auto
+(* typedef 'a bla = "UNIV::'a set set" by auto
 setup_lifting type_definition_bla
 
 lift_definition index_flip_subspace :: "'a::chilbert_space bla \<Rightarrow> 'a bla" is
-  "undefined :: 'a set \<Rightarrow> 'a set".
+  "undefined :: 'a set \<Rightarrow> 'a set". *)
 
 
 (* lemma sym_rule:
