@@ -231,13 +231,6 @@ local lemma ab_prob x y a b pa pb (globs:glob A*glob B) &m:
     ((if a then pa else 1%r-pa)*(if b then pb else 1%r-pb)).
 proof.
 move => HglobA HglobB Hpa Hpb.
-proc.
-seq 1: (C.a=a)
-       (if a then pa else 1%r - pa) (if b then pb else 1%r - pb)
-       _ 0%r ((glob B) = globs.`2 /\ C.x=x /\ C.y=y)  => //.
-(* The following tactic solves a quantum unsound goal.
-   Namely: it assumes that if A does not touch glob B, 
-   then glob B will be unchanged.
    That is not true for quantum variables entangled with A.
 
    (We assume here that "glob A"/"glob B" refers to all variables of
