@@ -2,7 +2,7 @@
 
 set -ex
 
-time /opt/Isabelle2019-RC4/bin/isabelle build -d . QRHL &>minex.log || true
+time /opt/Isabelle2019/bin/isabelle build -d . QRHL &>minex.log || true
 
 cat minex.log
 
