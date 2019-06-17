@@ -48,11 +48,6 @@ module type Player = {
 (* This module contains the description of the CHSH game.
 
     CHSH(S,A,B).run() returns a Boolean that indicates whether the
-    adversary consisting of setup routine S and players A and B wins.
-*)
-module CHSH(S:Setup,A:Player,B:Player) = {
-  proc run() : bool = {
-    var a,b,x,y : bool;
     S.setup();
     x = ${0,1};
     y = ${0,1};
