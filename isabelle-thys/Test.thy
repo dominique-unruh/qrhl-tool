@@ -11,6 +11,12 @@ Main
  *)
 begin
 
+variables quantum Q :: bit and classical x :: bit begin
+lemma "qrhl Expr[H\<guillemotright>\<lbrakk>Q1,Q2\<rbrakk>] c d Expr[Cla[x1=1]]"
+  apply (rule sym_rule)
+  apply simp
+end
+
 hide_const (open) Order.top
 
 variables classical a :: bit and quantum A :: bit begin

@@ -410,7 +410,8 @@ object Parser extends JavaTokenParsers {
       tactic_squash |
       literal("measure") ^^ { _ => JointMeasureTac } |
       literal("o2h") ^^ { _ => O2HTac } |
-      literal("semiclassical") ^^ { _ => SemiClassicalTac }
+      literal("semiclassical") ^^ { _ => SemiClassicalTac } |
+      literal("sym") ^^ { _ => SymTac }
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

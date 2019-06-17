@@ -12,10 +12,33 @@ lemma conseq_rule:
   shows "qrhl A b c B"
   by (cheat conseq_rule)
 
-lemma sym_rule:
-  assumes "qrhl (index_flip_expression A) c b (index_flip_expression B)"
+
+lift_definition index_flip_vector :: "mem2 ell2 \<Rightarrow> mem2 ell2" is
+  "\<lambda>\<psi>. \<psi> o index_flip_mem2"
+  by (cheat xxx)
+
+(* lift_definition index_flip_subspace :: "mem2 ell2 linear_space \<Rightarrow> mem2 ell2 linear_space" is
+  "\<lambda>S. index_flip_vector ` S"
+  sorry
+ *)
+
+typedef 'a bla = "UNIV::'a set set" by auto
+setup_lifting type_definition_bla
+
+lift_definition index_flip_subspace :: "'a::chilbert_space bla \<Rightarrow> 'a bla" is
+  "undefined :: 'a set \<Rightarrow> 'a set".
+
+
+(* lemma sym_rule:
+  assumes "qrhl (index_flip_expression (map_expression index_flip_subspace A)) c b (index_flip_expression (map_expression index_flip_subspace B))"
   shows "qrhl A b c B"
-  by (cheat sym_rule)
+  by (cheat sym_rule)  *)
+
+
+lemma sym_rule:
+  assumes "qrhl (index_flip_expression (A)) c b (index_flip_expression (B))"
+  shows "qrhl A b c B"
+  by (cheat sym_rule)  
 
 lemma assign1_rule:
   fixes A B x e
@@ -44,7 +67,8 @@ lemma assign2_rule:
   using [[simproc del: index_var]]
   apply (rule sym_rule)
   apply (simp add: assms index_flip_vars_index_vars index_flip_substitute_vars index_flip_subst_expression index_flip_substitute1 index_flip_expression_index_expression)
-  by (rule assign1_rule)
+  (* by (rule assign1_rule) *)
+  by (cheat TODO)
 
 lemma sample1_rule:
   fixes A B xs e
@@ -70,6 +94,7 @@ lemma sample2_rule:
   apply (simp add: assms index_flip_subst_expression index_flip_substitute1 
       index_flip_expression_index_expression index_flip_substitute_vars index_flip_vars_index_vars
       index_flip_map_expression2' o_def)
-  by (rule sample1_rule)
+  (* by (rule sample1_rule) *)
+  by (cheat TODO)
 
 end
