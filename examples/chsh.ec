@@ -342,12 +342,6 @@ op half = 1%r/2%r.
 *)
 op failpoly pa0 pa1 pb0 pb1 =
   quarter*(failprob1 pa1 pb1 true true)
-+ quarter*(failprob1 pa1 pb0 true false)
-+ quarter*(failprob1 pa0 pb1 false true)
-+ quarter*(failprob1 pa0 pb0 false false).
-
-(* The probability (times 4) that A and B lose and that the inputs are x,y 
-   (for uniformly random x,y).
 
   pa0,pa1,pb0,pb1 are as in failpoly above.
 *)
