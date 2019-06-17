@@ -234,12 +234,6 @@ move => HglobA HglobB Hpa Hpb.
 
    (We assume here that "glob A"/"glob B" refers to all variables of
    A/B. If it refers only to the classical variables, the lemma is
-   wrong, too, because it relies (even in the classical case) on the
-   fact that all variables of A are present in the precondition.)
-*)
-by call (_:true); auto.
-call (_: (glob A) = globs.`1 /\ t=x ==> res=a);
-  [ by apply (a_prob x a pa globs &m) => // | by auto ].
 call (_: (glob B) = globs.`2 /\ t=y ==> res=b);
   [ by apply (b_prob y b pb globs &m) => // | by auto ].
 seq 1: (true) 1%r 0%r _ 0%r (C.a<>a) => //.
