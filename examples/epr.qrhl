@@ -15,13 +15,6 @@ program right := {
   q,r <q EPR;
   on r apply hadamard;
 }.
-
-qrhl {Cla[True]} call left; ~ call right; {Qeq[q1,r1=q2,r2]}.
-
-inline left.
-inline right.
-wp left.
- simp.
 wp right.
  simp.
 wp left.
