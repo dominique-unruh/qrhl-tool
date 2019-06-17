@@ -76,9 +76,6 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
     simp!.
    simp ! assoc_right.
 
- case c':=c1.
-
- casesplit a'=0.
  casesplit c'=0.
 
  # Case a1=0 c1=0
