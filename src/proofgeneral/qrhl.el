@@ -36,7 +36,7 @@
 	    (set-variable 'electric-indent-mode nil)))
 
 (defun qr () ; Just for testing
-  "Restarts the prover, restarts it, and then processes the buffer to current position"
+  "Restarts the prover and then processes the buffer to the current position"
   (interactive)
   (proof-shell-exit t)
   (proof-goto-point))
