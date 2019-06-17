@@ -46,15 +46,6 @@ def extractJar(update : UpdateReport, name : String, target : File): Unit = {
 }
 
 assemblyMergeStrategy in assembly := {
-  case PathList(ps @ _*) if ps.last == ".files" => MergeStrategy.discard
-  case x => (assemblyMergeStrategy in assembly).value(x)
-}
-
-lazy val extractLibisabelleProtocol = taskKey[Unit]("Extract libisabelle Protocol session")
-val libisabelleExtractPath = "target/downloads/libisabelle"
-val classyExtractPath = "target/downloads/classy"
-val multiIsabelleExtractPath = "target/downloads/multi-isabelle"
-managedResources in Compile := (managedResources in Compile).dependsOn(extractLibisabelleProtocol).value
 
 extractLibisabelleProtocol := {
   val up = (update in Compile).value
