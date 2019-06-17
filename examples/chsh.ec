@@ -455,9 +455,6 @@ lemma failpoly_bound pa0 pa1 pb0 pb1:
     + pa0*(1%r-pa1)*pb0*pb1*            quarter
     + pa0*(1%r-pa1)*pb0*(1%r-pb1)*      quarter
     + pa0*(1%r-pa1)*(1%r-pb0)*pb1*      quarter
-    + pa0*(1%r-pa1)*(1%r-pb0)*(1%r-pb1)*quarter
-
-    + (1%r-pa0)*pa1*pb0*pb1*                  quarter
     + (1%r-pa0)*pa1*pb0*(1%r-pb1)*            quarter
     + (1%r-pa0)*pa1*(1%r-pb0)*pb1*            quarter
     + (1%r-pa0)*pa1*(1%r-pb0)*(1%r-pb1)*      quarter
