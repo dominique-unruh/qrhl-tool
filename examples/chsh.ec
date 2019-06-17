@@ -445,16 +445,6 @@ lemma failpoly_bound pa0 pa1 pb0 pb1:
     quarter <= failpoly pa0 pa1 pb0 pb1.
     move => pa0leq pa0geq pa1leq pa1geq pb0leq pb0geq pb1leq pb1geq. 
 
-    cut help1: quarter >= quarter; first by smt.
-    cut help2: quarter+quarter+quarter >= quarter; first by smt.
-
-    cut pure: forall a b c d, (a=0%r\/a=1%r) => (b=0%r\/b=1%r) => (c=0%r\/c=1%r) => (d=0%r\/d=1%r) => failpoly a b c d >= quarter.
-      move => a b c d Ha Hb Hc Hd.
-      case Ha; case Hb; case Hc; case Hd;
-      rewrite /failpoly /failprob1; progress; by (apply help1 || apply help1).
-    clear help1 help2.
-
-    pose failpoly_explicit :=
       pa0*pa1*pb0*pb1*                  failpoly 1%r 1%r 1%r 1%r
     + pa0*pa1*pb0*(1%r-pb1)*            failpoly 1%r 1%r 1%r 0%r
     + pa0*pa1*(1%r-pb0)*pb1*            failpoly 1%r 1%r 0%r 1%r
