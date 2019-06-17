@@ -628,13 +628,6 @@ proof.
     print chsh1.
   exact (chsh1 &m).
 qed.
-
-end section.
-
-(* The final result.
-
-   This is just a restatement of lemma chsh2, but not inside the
-   "section" above. That is, all assumptions introduced in the section
    are now explicitly stated in the lemma.
  *)
 lemma chsh (S<:Setup) (A<:Player) (B<:Player{A}) &m: 
