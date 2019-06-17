@@ -24,12 +24,6 @@ test-distrib0 : qrhl.zip
 
 test-distrib : test-distrib0
 	set -e && cd tmp/qrhl-$(VERSION)/examples && \
-		for i in *.qrhl; do ../bin/qrhl "$$i"; done
-
-test :
-	sbt test
-
-owncloud : qrhl.zip
 	cp -v qrhl.zip /home/unruh/ownCloud/qrhl/
 
 push_docker:
