@@ -23,11 +23,6 @@ adversary A1 vars m,cglobA,qglobA.
 adversary A2 vars c,b,cglobA,qglobA.
 
 # B: inputs: r; outputs: b
-program B := { call A1; c <- r+m; call A2; }.
-
-program rorcpa0 := {
-  k <$ uniform UNIV;
-  call A1;
   c <- enc(k,m);
 
 program rorcpa1 := {
