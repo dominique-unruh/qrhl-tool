@@ -254,17 +254,6 @@ local lemma ab_prob2 x y a b pa pb (globs:glob A*glob B) &m:
     phoare [ C.ab : (glob A) = globs.`1 /\ (glob B) = globs.`2 /\ C.x = x /\ C.y = y ==> 
       C.a = a /\ C.b = b /\ lose C.x C.y C.a C.b ] = 
     (if (win x y a b) then 0%r else ((if a then pa else 1%r-pa)*(if b then pb else 1%r-pb))).
-proof.
-move => globA globB Hpa Hpb.
-conseq (_: _ ==> C.a = a /\ C.b = b /\ C.x=x /\ C.y=y /\ lose C.x C.y C.a C.b); first by progress; auto.
-case (win x y a b) => Hwin.
-(* Case: win *)
-hoare.
-conseq (_:true==>true); [ by smt | by auto ].
-(* Case: lose *)
-conseq (_:_==> C.a = a /\ C.b = b /\ C.x = x /\ C.y = y).
-  by smt.
-  by apply (ab_prob x y a b pa pb globs &m) => //.
 qed.
 
 (* A formula for the probability that A and B lose in terms of their inputs and
