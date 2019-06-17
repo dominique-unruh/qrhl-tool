@@ -14,17 +14,6 @@ classical var c : msg.
 classical var r : msg.
 classical var b : bit.
 
-quantum var qglobA : string.
-classical var cglobA : string.
-
-# A1: inputs: none; outputs m
-adversary A1 vars m,cglobA,qglobA.
-# A2: inputs: c; outputs: b
-adversary A2 vars c,b,cglobA,qglobA.
-
-# B: inputs: r; outputs: b
-  c <- enc(k,m);
-
 program rorcpa1 := {
   k <$ uniform UNIV;
   call A1;
