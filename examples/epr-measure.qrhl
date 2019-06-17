@@ -10,7 +10,6 @@ program left := {
   q,r <q EPR;
   on q apply hadamard;
   x <- measure q,r with computational_basis;
-}.
 
 program right := {
   q,r <q EPR;
