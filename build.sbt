@@ -1,13 +1,6 @@
 import java.io.PrintWriter
 import java.nio.file.Files
 
-import NativePackagerHelper._
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import sbt.Keys.update
-import sbt.io.Using
-
-import scala.collection.mutable.ListBuffer
-import scala.sys.process.Process
 
 name := "qrhl"
 
