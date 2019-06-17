@@ -19,14 +19,6 @@ scalacOptions += "-deprecation"
 
 //enablePlugins(LibisabellePlugin)
 
-libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
-
-//isabelleSessions in Compile := Seq("QRHL")
-//isabelleSourceFilter := (- ".*") && (- "*~")
-//isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
-
 libraryDependencies += "info.hupel" % "multi-isabelle" % "0.1.4" // TODO remove
 
 libraryDependencies ++= { val version = "1.1.0-RC3"; Seq(
