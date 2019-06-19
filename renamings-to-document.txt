@@ -1,5 +1,7 @@
 vector -> ell2
 timesScalarVec -> scaleC
 cdot -> scaleC for scalar*vector
+timesScalarSpace -> scaleC
+timesScalarOp -> scaleC
 bounded -> ell2 Bounded / l2bounded
 subspace -> ell2 linear_space
