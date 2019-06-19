@@ -4,7 +4,7 @@
 
 set -e
 
-ISABELLE_DIR=/opt/Isabelle2019-RC4
+ISABELLE_DIR=/opt/Isabelle2019
 
 DIR="$(dirname "$BASH_SOURCE[0]")"
 
@@ -15,9 +15,9 @@ if ! [ -e "$DIR/isabelle-thys" ]; then
 fi
 
 if [ "$#" = 0 ]; then
-    FILES=("$DIR/isabelle-thys/Test.thy" "$ISABELLE_DIR/src/Pure/ROOT.ML")
+    FILES=("$DIR/isabelle-thys/QRHL.thy" "$ISABELLE_DIR/src/Pure/ROOT.ML")
 else
     FILES=()
 fi
 
-"$ISABELLE_DIR"/bin/isabelle jedit -l QRHL-Examples-Prerequisites -d "$DIR" "$@" "${FILES[@]}" &
+"$ISABELLE_DIR"/bin/isabelle jedit -l QRHL-Prerequisites -d "$DIR/isabelle-thys" "$@" "${FILES[@]}" &

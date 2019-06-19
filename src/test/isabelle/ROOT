@@ -1,3 +1,0 @@
-session "QRHL-Tests" = "QRHL" +
-  sessions "CryptHOL" "QRHL-Examples"
-  theories All_Tests
