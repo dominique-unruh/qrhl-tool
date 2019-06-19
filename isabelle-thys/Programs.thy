@@ -40,7 +40,12 @@ lemma fv_program_measurement: "fv_program (measurement x R e5) = set (variable_n
 
 typedecl program_state
 
-consts probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real"
+axiomatization
+  denotation :: "program \<Rightarrow> program_state \<Rightarrow> program_state" and
+  program_state_distrib :: "program_state \<Rightarrow> mem2 distr"
+
+definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" where
+  "probability e p \<rho> = Prob (program_state_distrib (denotation p \<rho>)) {m. expression_eval e m}"
 
 consts "probability_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:(_'(_'))]")
 translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c"
