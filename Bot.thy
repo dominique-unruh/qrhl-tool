@@ -4,7 +4,7 @@ theory Bot
 begin
 
 
-typedef 'a t = \<open>{S::'a set. True}\<close>
+typedef 'a t = \<open>{S::'a. True}\<close>
   by simp
 
 setup_lifting type_definition_t

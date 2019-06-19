@@ -3,7 +3,7 @@ theory B
 begin
 
 lift_definition index_flip_subspace :: "int t \<Rightarrow> int t" is
-  "\<lambda>S. (undefined :: int \<Rightarrow> int) ` S"
+  "undefined :: int \<Rightarrow> int"
   by simp
 
 end
