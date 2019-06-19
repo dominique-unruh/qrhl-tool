@@ -1,4 +1,0 @@
-session "Bounded_Operators-Prerequisites" = "HOL-Analysis" +
-  sessions "HOL-Library" "Jordan_Normal_Form" "HOL-Analysis"
-session Bounded_Operators = "Bounded_Operators-Prerequisites" +
-  theories Bounded_Operators Legacy
