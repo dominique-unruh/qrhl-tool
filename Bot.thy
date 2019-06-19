@@ -1,13 +1,13 @@
 
 theory Bot  
-  imports Complex_Main 
+  imports Main
 begin
 
 
-typedef (overloaded) 'a linear_space = \<open>{S::'a set. True}\<close>
+typedef 'a t = \<open>{S::'a set. True}\<close>
   by simp
 
-setup_lifting type_definition_linear_space
+setup_lifting type_definition_t
 
 
 end

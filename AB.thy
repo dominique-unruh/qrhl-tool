@@ -1,6 +1,3 @@
 theory AB
-  imports
-    Bot
-    A
-    B
+  imports A B
 begin
