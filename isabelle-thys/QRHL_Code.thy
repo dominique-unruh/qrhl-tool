@@ -18,8 +18,8 @@ hide_const (open) Order.bottom Order.top
 no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
 no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
 
-consts l2bounded_of_mat :: "complex mat \<Rightarrow> ('a::basis_enum,'b::basis_enum) Bounded"
-       mat_of_l2bounded :: "('a::basis_enum,'b::basis_enum) Bounded \<Rightarrow> complex mat"
+consts l2bounded_of_mat :: "complex mat \<Rightarrow> ('a::basis_enum,'b::basis_enum) bounded"
+       mat_of_l2bounded :: "('a::basis_enum,'b::basis_enum) bounded \<Rightarrow> complex mat"
 
 (* Wrapper class so that we can define a code datatype constructors for that type (does not work with type synonyms) *)
 typedef ('a::enum,'b::enum) code_l2bounded = "UNIV::('a,'b) l2bounded set" by simp
@@ -37,7 +37,7 @@ definition vec_of_ell2 :: "'a::enum ell2 \<Rightarrow> complex vec" where "vec_o
 
 lemma mat_of_l2bounded_inverse [code abstype]:
   "l2bounded_of_mat (mat_of_l2bounded B) = B" 
-  for B::"('a::basis_enum,'b::basis_enum)Bounded"
+  for B::"('a::basis_enum,'b::basis_enum) bounded"
   by (cheat 15)
 
 lemma mat_of_l2bounded_inverse' [code abstype]:
@@ -60,23 +60,23 @@ fun index_of where
 definition "enum_idx (x::'a::enum) = index_of x (enum_class.enum :: 'a list)"
 
 lemma l2bounded_of_mat_id[code]:
-  "mat_of_l2bounded (idOp :: ('a::basis_enum,'a) Bounded) = one_mat (canonical_basis_length TYPE('a))"
+  "mat_of_l2bounded (idOp :: ('a::basis_enum,'a) bounded) = one_mat (canonical_basis_length TYPE('a))"
   by (cheat 15)
 
 lemma l2bounded_of_mat_timesOp[code]:
   "mat_of_l2bounded (M \<cdot> N) =  (mat_of_l2bounded M * mat_of_l2bounded N)" 
-  for M::"('b::basis_enum,'c::basis_enum) Bounded" and N::"('a::basis_enum,'b) Bounded"
+  for M::"('b::basis_enum,'c::basis_enum) bounded" and N::"('a::basis_enum,'b) bounded"
   by (cheat 15)
 lemma l2bounded_of_mat_plusOp[code]:
   "mat_of_l2bounded (M + N) =  (mat_of_l2bounded M + mat_of_l2bounded N)" 
-  for M::"('a::basis_enum,'b::basis_enum) Bounded" and N::"('a::basis_enum,'b) Bounded"
+  for M::"('a::basis_enum,'b::basis_enum) bounded" and N::"('a::basis_enum,'b) bounded"
   by (cheat 15)
 lemma l2bounded_of_mat_minusOp[code]:
   "mat_of_l2bounded (M - N) =  (mat_of_l2bounded M - mat_of_l2bounded N)" 
-  for M::"('a::basis_enum,'b::basis_enum) Bounded" and N::"('a::basis_enum,'b) Bounded"
+  for M::"('a::basis_enum,'b::basis_enum) bounded" and N::"('a::basis_enum,'b) bounded"
   by (cheat 15)
 lemma l2bounded_of_mat_uminusOp[code]:
-  "mat_of_l2bounded (- M) = - mat_of_l2bounded M" for M::"('a::basis_enum,'b::basis_enum) Bounded"
+  "mat_of_l2bounded (- M) = - mat_of_l2bounded M" for M::"('a::basis_enum,'b::basis_enum) bounded"
   by (cheat 15)
 
 definition [code del]: "applyOp_code M x = applyOp (Rep_code_l2bounded M) x"
@@ -88,18 +88,18 @@ lemma ell2_of_vec_applyOp[code]:
 
 
 lemma mat_of_l2bounded_scalarMult[code]:
-  "mat_of_l2bounded ((a::complex) \<cdot> M) = smult_mat a (mat_of_l2bounded M)" for M :: "('a::basis_enum,'b::basis_enum) Bounded"
+  "mat_of_l2bounded ((a::complex) *\<^sub>C M) = smult_mat a (mat_of_l2bounded M)" for M :: "('a::basis_enum,'b::basis_enum) bounded"
   by (cheat 16)
 
 lemma mat_of_l2bounded_inj: "inj mat_of_l2bounded"
   by (cheat 16)
 
-instantiation Bounded :: (basis_enum,basis_enum) equal begin
-definition [code]: "equal_Bounded M N \<longleftrightarrow> mat_of_l2bounded M = mat_of_l2bounded N" 
-  for M N :: "('a,'b) Bounded"
+instantiation bounded :: (basis_enum,basis_enum) equal begin
+definition [code]: "equal_bounded M N \<longleftrightarrow> mat_of_l2bounded M = mat_of_l2bounded N" 
+  for M N :: "('a,'b) bounded"
 instance 
   apply intro_classes
-  unfolding equal_Bounded_def 
+  unfolding equal_bounded_def 
   using mat_of_l2bounded_inj injD by fastforce
 end
 
@@ -148,7 +148,7 @@ and B :: "('c::enum,'d::enum) l2bounded"
 definition "adjoint_mat M = transpose_mat (map_mat cnj M)"
 lemma l2bounded_of_mat_adjoint[code]:
   "mat_of_l2bounded (adjoint A) = adjoint_mat (mat_of_l2bounded A)"
-for A :: "('a::basis_enum,'b::basis_enum) Bounded"
+for A :: "('a::basis_enum,'b::basis_enum) bounded"
   by (cheat 17)
 
 lemma l2bounded_of_mat_assoc_op[code]: 
@@ -190,7 +190,7 @@ instance apply intro_classes unfolding finite_UNIV_bit_def card_UNIV_bit_def
 end
 
 lemma mat_of_l2bounded_zero[code]:
-  "mat_of_l2bounded (0::('a::basis_enum,'b::basis_enum) Bounded)
+  "mat_of_l2bounded (0::('a::basis_enum,'b::basis_enum) bounded)
        = zero_mat (canonical_basis_length TYPE('b)) (canonical_basis_length TYPE('a))"
   by (cheat 17)
 
@@ -300,14 +300,14 @@ lemma SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a::basis_enum linear_space) \<lo
   by (cheat 17)
 
 lemma applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (map (mult_mat_vec (mat_of_l2bounded A)) S)"
-  for A::"('a::basis_enum,'b::basis_enum) Bounded"
+  for A::"('a::basis_enum,'b::basis_enum) bounded"
   by (cheat 17)
 
 lemma kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_single (mat_of_l2bounded A)))" 
-  for A::"('a::basis_enum,'b::basis_enum) Bounded"
+  for A::"('a::basis_enum,'b::basis_enum) bounded"
   by (cheat 17)
 
-lemma [code_abbrev]: "kernel (A-a\<cdot>idOp) = eigenspace a A" 
+lemma [code_abbrev]: "kernel (A - a *\<^sub>C idOp) = eigenspace a A" 
   unfolding eigenspace_def by simp
 
 lemma mat_of_l2bounded_classical_operator[code]: 
@@ -319,10 +319,10 @@ lemma mat_of_l2bounded_classical_operator[code]:
 lemma [code]: "HOL.equal (A::_ linear_space) B = (A\<le>B \<and> B\<le>A)"
   unfolding equal_linear_space_def by auto
 
-definition [code del,code_abbrev]: "ell2_to_Bounded_code (\<psi>::'a ell2) = (ell2_to_Bounded \<psi>)"
+definition [code del,code_abbrev]: "ell2_to_bounded_code (\<psi>::'a ell2) = (ell2_to_bounded \<psi>)"
 
 lemma mat_of_l2bounded_ell2_to_l2bounded[code]: 
-  "mat_of_l2bounded (ell2_to_Bounded_code \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
+  "mat_of_l2bounded (ell2_to_bounded_code \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
   for \<psi>::"'a::enum ell2"
   by (cheat 17)
 

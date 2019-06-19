@@ -84,7 +84,7 @@ lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
 
 lemma eigenspace_Cla[simp]: "eigenspace b 0 = Cla[b=0]"
   unfolding eigenspace_def apply auto
-  apply (rewrite at "kernel \<hole>" DEADID.rel_mono_strong[where y="(-b) \<cdot> idOp"])
+  apply (rewrite at "kernel \<hole>" DEADID.rel_mono_strong[where y="(-b) *\<^sub>C idOp"])
   (* by (auto simp: subspace_zero_bot uminus_l2bounded_def) *)
   by (cheat eigenspace_Cla)
 
@@ -235,7 +235,7 @@ lemma lift_eqSp[simp]: "(S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" f
   by (cheat TODO11)
 lemma lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a::universe,'a) l2bounded" 
   by (cheat TODO11)
-lemma lift_timesScalarOp[simp]: "distinct_qvars Q \<Longrightarrow> a \<cdot> (A\<guillemotright>Q) = (a \<cdot> A)\<guillemotright>Q" for a::complex and A::"('a::universe,'a)l2bounded"
+lemma lift_timesScalarOp[simp]: "distinct_qvars Q \<Longrightarrow> a *\<^sub>C (A\<guillemotright>Q) = (a *\<^sub>C A)\<guillemotright>Q" for a::complex and A::"('a::universe,'a)l2bounded"
   by (cheat TODO11)
 lemma lift_plus[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a::universe subspace"  
   by (cheat TODO11)
