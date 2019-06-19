@@ -1,5 +1,5 @@
-theory Basic_Rules
-  imports Complex_Inner_Product Complex_Main
+theory B
+  imports Bot Complex_Main
 begin
 
 lift_definition index_flip_subspace :: "int linear_space \<Rightarrow> int linear_space" is

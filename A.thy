@@ -1,5 +1,5 @@
-theory QRHL_Code
-  imports Complex_Inner_Product
+theory A
+  imports Bot
 begin
 
 definition [code del]: "SPAN = (undefined :: complex list \<Rightarrow> 'a linear_space)"

@@ -1,5 +1,5 @@
 
-theory Complex_Inner_Product
+theory Bot  
   imports Complex_Main 
 begin
 
