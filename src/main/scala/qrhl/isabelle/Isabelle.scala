@@ -365,10 +365,10 @@ object Isabelle {
   }
 
 //  val BoundedT_name: String = "Bounded_Operators.Bounded"
-  def BoundedT(inT: ITyp, outT: ITyp) = Type(t.Bounded, List(inT, outT))
+  def BoundedT(inT: ITyp, outT: ITyp) = Type(t.bounded, List(inT, outT))
   def dest_BoundedT(typ: ITyp): (ITyp, ITyp) = typ match {
-    case Type(t.Bounded, List(t1, t2)) => (t1, t2)
-    case _ => throw new RuntimeException(s"expected type ${t.Bounded}, not " + typ)
+    case Type(t.`bounded`, List(t1, t2)) => (t1, t2)
+    case _ => throw new RuntimeException(s"expected type ${t.bounded}, not " + typ)
   }
 
   def l2boundedT(typ: ITyp): Type = l2boundedT(typ, typ)
@@ -376,7 +376,7 @@ object Isabelle {
   def l2boundedT(inT: ITyp, outT: ITyp): Type = BoundedT(vectorT(inT), vectorT(outT))
 
   def dest_l2boundedT(typ: ITyp): (ITyp, ITyp) = typ match {
-    case Type(t.Bounded, List(Type(t.ell2, List(t1)), Type(t.ell2, List(t2)))) => (t1, t2)
+    case Type(t.`bounded`, List(Type(t.ell2, List(t1)), Type(t.ell2, List(t2)))) => (t1, t2)
     case _ => throw new RuntimeException("expected type 'l2bounded', not " + typ)
   }
 

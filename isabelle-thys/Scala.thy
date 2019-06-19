@@ -34,7 +34,7 @@ object IsabelleTypes {
   val program = \<open>\<^type_name>\<open>program\<close>\<close>
   val oracle_program = \<open>\<^type_name>\<open>oracle_program\<close>\<close>
   val distr = \<open>\<^type_name>\<open>distr\<close>\<close>
-  val Bounded = \<open>\<^type_name>\<open>Bounded\<close>\<close>
+  val bounded = \<open>\<^type_name>\<open>bounded\<close>\<close>
   val measurement = \<open>\<^type_name>\<open>measurement\<close>\<close>
   val list = \<open>\<^type_name>\<open>list\<close>\<close>
   val variable = \<open>\<^type_name>\<open>variable\<close>\<close>
@@ -82,6 +82,6 @@ object IsabelleConsts {
 }
 \<close>
 
-export_generated_files
+export_generated_files _
 
 end
