@@ -11,6 +11,37 @@ Main
  *)
 begin
 
+
+definition "transfer_hint  (t::'a itself) b = b"
+
+
+syntax "_transfer_hint" :: "'a \<Rightarrow> type => 'a" ("_ ::: _")
+
+
+
+translations "a ::: 't" == "CONST transfer_hint TYPE('t) a"
+
+term "a ::: 't"
+
+
+definition "idx = id"
+
+declare [[show_types]]
+
+lemma [transfer_rule]: 
+  includes lifting_syntax
+  shows "(R ===> R) (\<lambda>x::'a. x) (transfer_hint TYPE('a))"
+  sorry
+
+lemma [transfer_rule]:
+  includes lifting_syntax
+  shows "(=) idx id"
+  sorry
+
+lemma "id (x:::bool) = (x::bit)"
+  apply (transfer)
+  term Bit
+
 hide_const (open) Order.top
 
 variables classical a :: bit and quantum A :: bit begin

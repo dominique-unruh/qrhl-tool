@@ -83,10 +83,23 @@ lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
 
 lemma eigenspace_Cla[simp]: "eigenspace b 0 = Cla[b=0]"
-  unfolding eigenspace_def apply auto
-  apply (rewrite at "kernel \<hole>" DEADID.rel_mono_strong[where y="(-b) *\<^sub>C idOp"])
-  (* by (auto simp: subspace_zero_bot uminus_l2bounded_def) *)
-  by (cheat eigenspace_Cla)
+proof (cases "b=0")
+  case True
+  then show ?thesis 
+    by (auto simp: eigenspace_def)
+next
+  case False
+  have "eigenspace b 0 = kernel ((-b) *\<^sub>C idOp)"
+    by (auto simp: eigenspace_def)
+  also have "\<dots> = kernel idOp"
+    using False apply (subst kernel_scalar_times) by auto
+  also have "\<dots> = 0"
+    by simp
+  also have "\<dots> = Cla[b=0]"
+    using False by (simp add: linear_space_zero_bot)
+  finally show ?thesis 
+      by assumption
+qed
 
 subsection "Distinct quantum variables"
 
@@ -722,21 +735,90 @@ lemma qvar_trafo_protecterd_comm_op[simp]:
  
 section \<open>Measurements\<close>
 
-typedecl ('a,'b) measurement
-consts mproj :: "('a,'b) measurement \<Rightarrow> 'a \<Rightarrow> ('b,'b) l2bounded"
-       mtotal :: "('a,'b) measurement \<Rightarrow> bool"
+(* definition "infsetsums f M x = ((\<lambda>F. sum f F) \<longlongrightarrow> x) (finite_subsets_at_top M)"
+definition "infsetsummable f M = (\<exists>x. infsetsums f M x)"
+(* I think this is equal to infsetsum, except that infsetsum is only defined on second countable topologies *)
+definition "infsetsum' f M = (if infsetsummable f M then THE x. infsetsums f M x else 0)" *)
+
+(* TODO move *)
+definition "positive_op A = (\<exists>B::('a::chilbert_space,'a) bounded. A = B* \<cdot> B)"
+
+lemma adj0[simp]: "0* = 0"
+  apply transfer 
+  by (cheat adj0)
+lemma timesOp0[simp]: "timesOp 0 A = 0"
+  apply transfer by simp
+lemma timesOp0'[simp]: "timesOp A 0 = 0"
+  apply transfer
+  by (simp add: additive.zero bounded_clinear_def clinear.axioms(1))
+
+lemma positive_idOp[simp]: "positive_op idOp"
+  unfolding positive_op_def apply (rule exI[of _ idOp]) by simp
+lemma positive_0[simp]: "positive_op 0"
+  unfolding positive_op_def apply (rule exI[of _ 0]) by auto
+
+abbreviation "loewner_leq A B == (positive_op (B-A))"
+
+(* TODO move *)
+lemma isProjector0[simp]: "isProjector 0"
+  unfolding isProjector_def 
+  by (cheat isProjector0)
+
+lemma isProjectoridMinus[simp]: "isProjector P \<Longrightarrow> isProjector (idOp-P)"
+  unfolding isProjector_def apply auto
+  by (cheat isProjectoridMinus)
+
+(* TODO move *)
+lemma applyOp0[simp]: "applyOp 0 \<psi> = 0"
+  apply transfer by simp
+
+definition "is_measurement M = ((\<forall>i. isProjector (M i)) \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i \<cdot> \<psi>\<rangle>) = \<langle>\<phi>, P \<cdot> \<psi>\<rangle>) \<and> loewner_leq P idOp))"
+lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
+  unfolding is_measurement_def by (auto intro: exI[of _ 0])
+
+
+typedef ('a,'b) measurement = "{M::'a\<Rightarrow>('b,'b) l2bounded. is_measurement M}"
+  morphisms mproj Abs_measurement
+  by (rule exI[of _ "\<lambda>i. 0"], simp)
+setup_lifting type_definition_measurement
+
+lift_definition mtotal :: "('a,'b) measurement \<Rightarrow> bool" is
+  "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i \<cdot> \<psi>\<rangle>) = \<langle>\<phi>, \<psi>\<rangle>".
+
 lemma isProjector_mproj[simp]: "isProjector (mproj M i)"
-  by (cheat TODO13)
+  using mproj[of M] unfolding is_measurement_def by auto
 
-consts computational_basis :: "('a, 'a) measurement"
+lift_definition computational_basis :: "('a, 'a) measurement" is
+  "\<lambda>i. proj (ket i)"
+  by (cheat computational_basis)
+
 lemma mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
-  by (cheat TODO13)
-lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
-  by (cheat TODO13)
+  unfolding computational_basis.rep_eq by simp
 
-axiomatization binary_measurement :: "('a,'a) l2bounded \<Rightarrow> (bit,'a) measurement"
-  where binary_measurement_true[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 1 = P"
-    and binary_measurement_false[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 0 = idOp-P"
+lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
+  by (cheat mtotal_computational_basis)
+
+lift_definition binary_measurement :: "('a,'a) l2bounded \<Rightarrow> (bit,'a) measurement" is
+  "\<lambda>(P::('a,'a) l2bounded) (b::bit). (if isProjector P then (if b=1 then P else idOp-P) else 0)"
+proof (rename_tac P, case_tac "isProjector P")
+  fix P :: "('a ell2, 'a ell2) bounded"
+  assume [simp]: "isProjector P"
+  show "is_measurement (\<lambda>b::bit. if isProjector P then if b = 1 then P else idOp - P else 0)"
+    apply simp
+    unfolding is_measurement_def apply (auto intro!: exI[of _ idOp] simp: UNIV_bit cinner_right_distrib[symmetric])
+    by (metis apply_idOp ordered_field_class.sign_simps(9) plus_bounded.rep_eq)
+next
+  fix P :: "('a ell2, 'a ell2) bounded"
+  assume [simp]: "\<not> isProjector P"
+  show "is_measurement (\<lambda>b. if isProjector P then if b = 1 then P else idOp - P else 0)"
+    by simp
+qed
+
+lemma binary_measurement_true[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 1 = P"
+  apply transfer by simp
+
+lemma binary_measurement_false[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 0 = idOp-P"
+  unfolding binary_measurement.rep_eq by auto
 
 section \<open>Quantum predicates (ctd.)\<close>
 
