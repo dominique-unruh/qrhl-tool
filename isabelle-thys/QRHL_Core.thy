@@ -123,15 +123,16 @@ lemma operator_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> operator_loca
   by (cheat operator_local_raw_mono)
 
 lift_definition predicate_local :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool" 
-  is  "\<lambda>A (vs,_). predicate_local_raw A (set (flatten_tree vs))" .
+  is  "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> predicate_local_raw A (set (flatten_tree vs))" .
+
 lift_definition operator_local :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool" 
-  is  "\<lambda>A (vs,_). operator_local_raw A (set (flatten_tree vs))" .
+  is  "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> operator_local_raw A (set (flatten_tree vs))" .
 
 lift_definition colocal_pred_qvars :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
-  is "\<lambda>A (vs,_). \<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> predicate_local_raw A vs'" .
+  is "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> (\<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> predicate_local_raw A vs')" .
 
 lift_definition colocal_op_qvars :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
-  is "\<lambda>A (vs,_). \<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> operator_local_raw A vs'" .
+  is "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> (\<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> operator_local_raw A vs')" .
 
 lift_definition colocal_op_pred :: "(mem2,mem2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
   is "\<lambda>A B. \<exists>vs1 vs2. vs1 \<inter> vs2 = {} \<and> operator_local_raw A vs1 \<and> predicate_local_raw B vs2" .
@@ -155,10 +156,13 @@ proof -
   obtain vsA vsB where "set (flatten_tree vsQ) \<inter> vsA = {}" and "predicate_local_raw A vsA"
     and "set (flatten_tree vsQ) \<inter> vsB = {}" and "predicate_local_raw B vsB"
     apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
-  then show ?thesis
-    unfolding colocal_pred_qvars.rep_eq Q apply simp
-    apply (rule exI[of _ "vsA \<union> vsB"])
-    by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_inter )
+  then have "\<exists>vs'. set (flatten_tree vsQ) \<inter> vs' = {} \<and> predicate_local_raw (A \<sqinter> B) vs'"
+    apply (rule_tac exI[of _ "vsA \<union> vsB"])
+    by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_inter)
+  moreover from assms have "distinct (flatten_tree vsQ)"
+    unfolding colocal_pred_qvars.rep_eq Q by simp
+  ultimately show ?thesis
+    unfolding colocal_pred_qvars.rep_eq Q by simp
 qed
 
 lemma colocal_plus[simp]: 
@@ -170,10 +174,13 @@ proof -
   obtain vsA vsB where "set (flatten_tree vsQ) \<inter> vsA = {}" and "predicate_local_raw A vsA"
     and "set (flatten_tree vsQ) \<inter> vsB = {}" and "predicate_local_raw B vsB"
     apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
-  then show ?thesis
-    unfolding colocal_pred_qvars.rep_eq Q apply simp
-    apply (rule exI[of _ "vsA \<union> vsB"])
+  then have "\<exists>vs'. set (flatten_tree vsQ) \<inter> vs' = {} \<and> predicate_local_raw (A + B) vs'"
+    apply (rule_tac exI[of _ "vsA \<union> vsB"])
     by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_plus)
+  moreover from assms have "distinct (flatten_tree vsQ)"
+    unfolding colocal_pred_qvars.rep_eq Q by simp
+  ultimately show ?thesis
+    unfolding colocal_pred_qvars.rep_eq Q by simp
 qed
 
 lemma colocal_sup[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A \<squnion> B) Q"
@@ -189,10 +196,13 @@ proof -
   obtain vsU vsS where "set (flatten_tree vsQ) \<inter> vsU = {}" and "operator_local_raw U vsU"
     and "set (flatten_tree vsQ) \<inter> vsS = {}" and "predicate_local_raw S vsS"
     apply atomize_elim unfolding colocal_pred_qvars.rep_eq colocal_op_qvars.rep_eq unfolding Q by auto
-  then show ?thesis
-    unfolding colocal_pred_qvars.rep_eq Q apply simp
-    apply (rule exI[of _ "vsU \<union> vsS"])
+  then have "\<exists>vs'. set (flatten_tree vsQ) \<inter> vs' = {} \<and> predicate_local_raw (U \<cdot> S) vs'"
+    apply (rule_tac exI[of _ "vsU \<union> vsS"])
     by (auto intro: predicate_local_raw_mono operator_local_raw_mono intro!: predicate_local_raw_apply_op)
+  moreover from assms have "distinct (flatten_tree vsQ)"
+    unfolding colocal_pred_qvars.rep_eq Q by simp
+  ultimately show ?thesis
+    unfolding colocal_pred_qvars.rep_eq Q by simp
 qed
 
 lemma colocal_ortho[simp]: "colocal (ortho S) Q = colocal S Q"
@@ -203,10 +213,13 @@ proof -
     from that
     obtain vsS where "set (flatten_tree vsQ) \<inter> vsS = {}" and "predicate_local_raw S vsS"
       apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
-    then show ?thesis
-      unfolding colocal_pred_qvars.rep_eq Q apply simp
-      apply (rule exI[of _ vsS])
+    then have "\<exists>vs'. set (flatten_tree vsQ) \<inter> vs' = {} \<and> predicate_local_raw (ortho S) vs'"
+      apply (rule_tac exI[of _ vsS])
       by (auto intro: intro!: predicate_local_raw_ortho)
+    moreover from that have "distinct (flatten_tree vsQ)"
+      unfolding colocal_pred_qvars.rep_eq Q by simp
+    ultimately show ?thesis
+      unfolding colocal_pred_qvars.rep_eq Q by simp
   qed
   from this this[where S="ortho S"]
   show ?thesis 
@@ -215,15 +228,28 @@ qed
 
 subsection \<open>Lifting\<close>
 
-consts
-    liftOp :: "('a,'a) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> (mem2,mem2) l2bounded"
-    liftSpace :: "'a subspace \<Rightarrow> 'a::universe variables \<Rightarrow> predicate"
-
+axiomatization
+  liftOp :: "('a,'a) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> (mem2,mem2) l2bounded" and
+  liftSpace :: "'a subspace \<Rightarrow> 'a::universe variables \<Rightarrow> predicate" and
+  (* lift_vector \<psi> Q \<psi>' = \<psi> \<otimes> \<psi>' where \<psi> is interpreted as a vector over Q, and \<psi>' as a vector over the complement of Q *)
+  lift_vector :: "'a ell2 \<Rightarrow> 'a variables \<Rightarrow> mem2 ell2 \<Rightarrow> mem2 ell2" and
+  (* lift_rest Q is the set of valid \<psi>' in lift_vector *)
+  lift_rest :: "'a variables \<Rightarrow> mem2 ell2 set"
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<guillemotright>_"  [91,91] 90)
 syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_>>_"  [91,91] 90)
 adhoc_overloading
   lift liftOp liftSpace
+
+lemma predicate_localE:
+  assumes "predicate_local S Q"
+  shows "\<exists>S'. S=S'\<guillemotright>Q"
+  by (cheat predicate_localE)
+
+lemma operator_localE:
+  assumes "operator_local S Q"
+  shows "\<exists>S'. S=S'\<guillemotright>Q"
+  by (cheat operator_localE)
 
 lemma adjoint_lift[simp]: "adjoint (liftOp U Q) = liftOp (adjoint U) Q" 
   by (cheat TODO10)
@@ -338,6 +364,22 @@ lemma move_plus_meas_rule:
   shows "A \<le> (B\<sqinter>C\<guillemotright>Q) + (ortho C)\<guillemotright>Q"
   apply (rule move_plus) 
   using Proj_leq[of "C\<guillemotright>Q"] assms by simp
+
+lemma applyOp_lift: "distinct_qvars Q \<Longrightarrow> A\<guillemotright>Q \<cdot> lift_vector \<psi> Q \<psi>' = lift_vector (A\<cdot>\<psi>) Q \<psi>'"
+  by (cheat applyOp_lift)
+
+lemma span_lift: "distinct_qvars Q \<Longrightarrow> span G \<guillemotright> Q = span {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
+  by (cheat span_lift)
+
+lemma lift_rest_nonempty: "lift_rest Q - {0} \<noteq> {}"
+  by (cheat lift_rest_nonempty)
+
+lemma lift_vector_inj:
+  assumes "r \<in> lift_rest Q"
+  assumes "r \<noteq> 0"
+  assumes "lift_vector \<psi>1 Q r = lift_vector \<psi>2 Q r"
+  shows "\<psi>1 = \<psi>2"
+  by (cheat lift_vector_inj)
 
 
 subsection "Rewriting quantum variable lifting"
