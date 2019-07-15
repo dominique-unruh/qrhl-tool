@@ -384,6 +384,7 @@ lemma lift_vector_inj:
 
 subsection "Rewriting quantum variable lifting"
 
+(* TODO: use new constant conjugate for A\<cdot>B\<cdot>A* expressions to avoid duplication *)
 
 (* Means that operator A can be used to transform an expression \<dots>\<guillemotright>Q into \<dots>\<guillemotright>R *)
 definition "qvar_trafo A Q R = (distinct_qvars Q \<and> distinct_qvars R \<and> (\<forall>C::(_,_)l2bounded. C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R))" for A::"('a::universe,'b::universe) l2bounded"
@@ -890,6 +891,7 @@ lemma space_div_add_extend_lift_as_var_concat_hint:
 
 subsection \<open>Quantum equality\<close>
 
+(* TODO: 'c doesn't have to be ell2 *)
 definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> ('b,'c) l2bounded \<Rightarrow> 'b::universe variables \<Rightarrow> predicate" where
   [code del]: "quantum_equality_full U Q V R = 
                  (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> variable_concat Q R"

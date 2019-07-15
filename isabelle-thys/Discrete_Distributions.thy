@@ -117,6 +117,9 @@ lift_definition Prob :: "'a distr \<Rightarrow> 'a set \<Rightarrow> real" is in
 
 abbreviation "weight \<mu> == Prob \<mu> UNIV"
 
+lemma weight_0[simp]: "weight 0 = 0"
+  apply transfer by simp
+
 lemma Prob_is_0:
   "Prob \<mu> E = 0 \<longleftrightarrow> disjnt (supp \<mu>) E"
 proof (transfer fixing: E, unfold is_distribution_def, rule)
