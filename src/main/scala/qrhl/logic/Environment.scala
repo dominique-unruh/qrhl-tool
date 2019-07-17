@@ -151,11 +151,12 @@ final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:L
   }
 
   def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {
-    val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],BigInt),BigInt]("declare_abstract_program")
+    val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],BigInt),BigInt]("declare_abstract_program")
     val vars = variablesRecursive
     val cvars = vars.classical map { v => (v.name, v.valueTyp) }
+    val cwvars = vars.writtenClassical map { v => (v.name, v.valueTyp) }
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val id = isabelle.isabelle.invoke(op, (isabelle.contextId, name, cvars.toList, qvars.toList, BigInt(numOracles)))
+    val id = isabelle.isabelle.invoke(op, (isabelle.contextId, name, cvars.toList, cwvars.toList, qvars.toList, BigInt(numOracles)))
     new Context(isabelle.isabelle,id)
   }
 
@@ -248,11 +249,12 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     (cvars.toList, qvars.toList)
   }*/
   def declareInIsabelle(context: Isabelle.Context): Isabelle.Context = {
-    val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],List[String],Statement),BigInt]("declare_concrete_program")
+    val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement),BigInt]("declare_concrete_program")
     val vars = variablesRecursive
     val cvars = vars.classical map { v => (v.name, v.valueTyp) }
+    val cwvars = vars.writtenClassical map { v => (v.name, v.valueTyp) }
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val id = context.isabelle.invoke(op, (context.contextId, name, cvars.toList, qvars.toList, oracles, program))
+    val id = context.isabelle.invoke(op, (context.contextId, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program))
     new Context(context.isabelle, id)
   }
 }

@@ -95,6 +95,7 @@ case class VariableUse
       | Quantum:         ${quantum.map(_.name).mkString(", ")}
       | Ambient:         ${ambient.mkString(", ")}
       | Programs:        ${programs.map(_.name).mkString(", ")}
+      | Written class.:  ${writtenClassical.map(_.name).mkString(", ")}
       | Overwritten cl.: ${overwrittenClassical.map(_.name).mkString(", ")}
       | Overwritten qu.: ${overwrittenQuantum.map(_.name).mkString(", ")}
       | Oracles:         ${oracles.mkString(", ")}

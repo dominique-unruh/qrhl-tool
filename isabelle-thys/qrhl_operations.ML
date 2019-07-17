@@ -337,25 +337,32 @@ fun addAssumption name term ctx =
     ctx
   end
 
-fun declare_abstract_program ctxt (name:string) (cvars:(string*typ)list) (qvars:(string*typ)list) (numOracles:int)= let
+fun declare_abstract_program ctxt (name:string) (cvars:(string*typ)list) (cwvars:(string*typ)list) (qvars:(string*typ)list) (numOracles:int)= let
   val T = if numOracles=0 then \<^typ>\<open>program\<close> else \<^typ>\<open>oracle_program\<close>
 
   (* Declare the program name as a fixed variable *)
   val (vs,ctxt) = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctxt
   val _ = if vs<>[name] then error("variable "^name^" already declared") else ()
 
-  (* Add theorem fv_name: "fv_program/fv_oracle_program name = variable_names \<lbrakk>cvars,qvars\<rbrakk> *)
-  val fv_lhs = (if numOracles=0 then \<^const>\<open>fv_program\<close> else \<^const>\<open>fv_oracle_program\<close>) $ Free(name,T) 
+  fun declare_prog_vars vars pfx fv_program fv_oracle_program ctxt = let
+    (* Add theorem pfx^name: "fv_program/fv_oracle_program name = variable_names \<lbrakk>vars\<rbrakk> *)
+    val fv_lhs = (if numOracles=0 then fv_program else fv_oracle_program) $ Free(name,T) 
+    val (varterm,vartermT) = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+    val fv_rhs = @{const set(string)} $
+            (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm)
+    val fv = HOLogic.mk_eq (fv_lhs, fv_rhs) |> HOLogic.mk_Trueprop
+    val fv_thm_name = Binding.name (pfx^name)
+    val ([(_,fv_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
+                                 [((fv_thm_name, []), [(fv,[])])] ctxt
+    (* Add fv_name to dynamic fact program_fv *)
+    val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [Programs.program_fv]}), [(fv_thm,[])])] ctxt
+  in ctxt end
+
   val var_cvars = map (fn (n,T) => ("var_"^n,T)) cvars
-  val (varterm,vartermT) = (var_cvars@qvars) |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
-  val fv_rhs = @{const set(string)} $
-          (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm)
-  val fv = HOLogic.mk_eq (fv_lhs, fv_rhs) |> HOLogic.mk_Trueprop
-  val fv_thm_name = Binding.name ("fv_"^name)
-  val ([(_,fv_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
-                               [((fv_thm_name, []), [(fv,[])])] ctxt
-  (* Add fv_name to dynamic fact program_fv *)
-  val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [O2H.program_fv]}), [(fv_thm,[])])] ctxt
+  val var_cwvars = map (fn (n,T) => ("var_"^n,T)) cwvars
+  val ctxt = declare_prog_vars var_cvars "fvc_" \<^const>\<open>fvc_program\<close> \<^const>\<open>fvc_oracle_program\<close> ctxt
+  val ctxt = declare_prog_vars var_cwvars "fvcw_" \<^const>\<open>fvcw_program\<close> \<^const>\<open>fvcw_oracle_program\<close> ctxt
+  val ctxt = declare_prog_vars qvars "fvq_" \<^const>\<open>fvq_program\<close> \<^const>\<open>fvq_oracle_program\<close> ctxt
 
   (* Add abbreviations:
         name_cvars1 == (x1,y1,z1) if cvars=x,y,z (same with 2, and w/o index)
@@ -372,8 +379,8 @@ fun declare_abstract_program ctxt (name:string) (cvars:(string*typ)list) (qvars:
   val ctxt = add_vars_abbrev "2" ctxt
 in ctxt end
 
-fun declare_concrete_program ctxt (name:string) (cvars:(string*typ)list) (qvars:(string*typ)list) (oracles:string list) (body:Programs.statement) = let
-  val ctxt = declare_abstract_program ctxt name cvars qvars (length oracles)
+fun declare_concrete_program ctxt (name:string) (cvars:(string*typ)list) (cwvars:(string*typ)list) (qvars:(string*typ)list) (oracles:string list) (body:Programs.statement) = let
+  val ctxt = declare_abstract_program ctxt name cvars cwvars qvars (length oracles)
 
   fun tag ora = "@"^ora
   val body_rhs = Programs.statement_to_term ctxt body
@@ -386,7 +393,7 @@ fun declare_concrete_program ctxt (name:string) (cvars:(string*typ)list) (qvars:
   val body_def_name = Binding.name name |> Binding.suffix_name "_def"
   val ([(_,body_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
                                [((body_def_name, []), [(body_def,[])])] ctxt
-  val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [O2H.program_bodies]}), [(body_thm,[])])] ctxt
+  val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [Programs.program_bodies]}), [(body_thm,[])])] ctxt
 
 in ctxt end
 
@@ -404,7 +411,7 @@ in fact end
 (* val _ = get_thms \<^context> "refl" |> \<^print>  *)
 
 fun debug ctxt = let
-  val obj = Proof_Context.get_fact ctxt (Facts.named "O2H.program_fv")
+  val obj = Proof_Context.get_fact ctxt (Facts.named "Programs.program_fv")
   val str = \<^make_string> obj |> YXML.content_of
   in str end
 

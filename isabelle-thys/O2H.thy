@@ -26,7 +26,7 @@ lemma o2h[unfolded PROGRAM_EQUAL_def]:
 
   assumes "distinct_qvars \<lbrakk>b,count,Find,z,G,H,S,in_S,X,Y\<rbrakk>"
 
-  assumes "disjnt (fv_oracle_program adv) (set (variable_names \<lbrakk>count,Find,G,H,S,in_S\<rbrakk>))" (* adv can access b,z,X,Y *)
+  assumes "disjnt (fvc_oracle_program adv) (set (variable_names \<lbrakk>count,Find,G,H,S,in_S\<rbrakk>))" (* adv can access b,z,X,Y *)
 
   assumes "probability (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count\<le>q)) game_left rho = 1"
   assumes "probability (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count\<le>q)) game_right rho = 1"
@@ -90,9 +90,6 @@ fun o2h_tac ctxt =
 end
 \<close>
 
-named_theorems program_bodies
-named_theorems program_fv
-
 variables classical b :: bit and classical Find :: bool
   and classical S :: "string set" and classical G :: "string \<Rightarrow> bit" and classical H :: "string \<Rightarrow> bit"
   and classical z :: "nat list" and classical count :: nat and quantum X :: string and quantum Y :: bit
@@ -117,7 +114,7 @@ definition [program_bodies]: "findG = (block [assign \<lbrakk>var_count\<rbrakk>
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>var_count\<rbrakk> Expr[count+1]]" for P  
   by (cheat Count)
 
-lemma fv_adv[program_fv]: "fv_oracle_program adv = set (variable_names \<lbrakk>X,Y,var_b,var_z\<rbrakk>)" by (cheat fv_adv)
+lemma fv_adv[program_fv]: "fvc_oracle_program adv = set (variable_names \<lbrakk>X,Y,var_b,var_z\<rbrakk>)" by (cheat fv_adv)
 
 lemma "abs ( Pr[b=1:left(rho)] - Pr[b=1:right(rho)] ) <= 2 * sqrt( (1+real q) * Pr[Find:findG(rho)] )"
   apply (tactic \<open>O2H.o2h_tac \<^context> 1\<close>)

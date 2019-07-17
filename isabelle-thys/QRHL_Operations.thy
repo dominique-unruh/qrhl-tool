@@ -321,24 +321,28 @@ operation_setup retrieve_term_string = \<open>
    action = Terms.id_to_string}\<close>
 
 operation_setup declare_abstract_program = \<open>
-  {from_lib = tuple5 Codec.int (* ctxt *)
-                     Codec.string (* prog name *)
-                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* cvars *)
-                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* qvars *)
-                     Codec.int, (* num oracles *)
-   to_lib = Codec.int,
-   action = fn (ctxt_id,name,cvars,qvars,numOracles) => make_ctxt_ref (QRHL_Operations.declare_abstract_program (Refs.Ctxt.read ctxt_id) name cvars qvars numOracles)}
-\<close>
-
-operation_setup declare_concrete_program = \<open>
   {from_lib = tuple6 Codec.int (* ctxt *)
                      Codec.string (* prog name *)
                      (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* cvars *)
+                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* cwvars *)
+                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* qvars *)
+                     Codec.int, (* num oracles *)
+   to_lib = Codec.int,
+   action = fn (ctxt_id,name,cvars,cwvars,qvars,numOracles) => 
+     make_ctxt_ref (QRHL_Operations.declare_abstract_program (Refs.Ctxt.read ctxt_id) name cvars cwvars  qvars numOracles)}
+\<close>
+
+operation_setup declare_concrete_program = \<open>
+  {from_lib = tuple7 Codec.int (* ctxt *)
+                     Codec.string (* prog name *)
+                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* cvars *)
+                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* cwvars *)
                      (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* qvars *)
                      (Codec.list Codec.string) (* oracles *)
                      statement_codec, (* body *)
    to_lib = Codec.int,
-   action = fn ((ctxt_id,name,cvars,qvars,oracles,body)) => make_ctxt_ref (QRHL_Operations.declare_concrete_program (Refs.Ctxt.read ctxt_id) name cvars qvars oracles body)}
+   action = fn ((ctxt_id,name,cvars,cwvars,qvars,oracles,body)) => 
+     make_ctxt_ref (QRHL_Operations.declare_concrete_program (Refs.Ctxt.read ctxt_id) name cvars cwvars qvars oracles body)}
 \<close>
 
 operation_setup debug = \<open>

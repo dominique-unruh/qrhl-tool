@@ -29,7 +29,7 @@ lemma semi_classical_search:
 
   assumes "distinct_qvars \<lbrakk>count,Find,z,G,S,in_S,X,Y,stop_at,guess\<rbrakk>"
 
-  assumes "disjnt (fv_oracle_program adv) (set (variable_names \<lbrakk>count,stop_at,guess,Find,G,S,in_S\<rbrakk>))" (* adv can access b,z,X,Y *)
+  assumes "disjnt (fvc_oracle_program adv) (set (variable_names \<lbrakk>count,stop_at,guess,Find,G,S,in_S\<rbrakk>))" (* adv can access b,z,X,Y *)
 
   assumes "probability (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count\<le>q)) game_left rho = 1"
   assumes "probability (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count\<le>q)) game_right rho = 1"
@@ -97,7 +97,7 @@ definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> 
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>var_count\<rbrakk> Expr[count+1]]" for P  
   by (cheat Count)
 
-lemma fv_adv[program_fv]: "fv_oracle_program adv = set (variable_names \<lbrakk>X,Y,var_b,var_z\<rbrakk>)" by (cheat fv_adv)
+lemma fv_adv[program_fv]: "fvc_oracle_program adv = set (variable_names \<lbrakk>X,Y,var_b,var_z\<rbrakk>)" by (cheat fv_adv)
 
 lemma "Pr[Find:left(rho)] \<le> 4 * real q * Pr[guess\<in>S:right(rho)]"
   apply (tactic \<open>Semi_Classical_Search.semi_classical_search_tac \<^context> 1\<close>)

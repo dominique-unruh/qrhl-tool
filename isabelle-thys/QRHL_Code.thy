@@ -330,6 +330,9 @@ lemma mat_of_l2bounded_remove_qvar_unit_op[code]:
   "mat_of_l2bounded (remove_qvar_unit_op::(_,'a::enum) l2bounded) = mat_of_l2bounded (idOp::(_,'a) l2bounded)" 
   by (cheat 17)
 
+lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (ell2_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
+  by (cheat addState_remove_qvar_unit_op)
+
 (* TODO: prove this in Complex_L2 *)
 lemma [code]: "(A::'a::basis_enum linear_space) \<sqinter> B = ortho (ortho A + ortho B)"
   unfolding linear_space_sup_plus[symmetric]

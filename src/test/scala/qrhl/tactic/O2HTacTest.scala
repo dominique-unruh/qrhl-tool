@@ -54,8 +54,6 @@ class O2HTacTest extends FunSuite {
         |  call Adv_O2H(Count(queryH));
         | }.
         |
-        | debug:isabelle.
-        |
         | lemma abs ( Pr[b=1:left(rho)] - Pr[b=1:right(rho)] ) <= 2 * sqrt( (1+real q) * Pr[Find:find(rho)] ).
       """.stripMargin)
 
