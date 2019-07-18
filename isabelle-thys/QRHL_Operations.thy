@@ -254,6 +254,12 @@ operation_setup joint_measure_simple_tac = \<open>
    action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Measure.joint_measure_simple_seq_tac ctxt 1)}
 \<close>
 
+operation_setup sym_tac = \<open>
+  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term_concl (fn ctxt => fn _ => Basic_Rules.sym_tac ctxt 1)}
+\<close>
+
 operation_setup joint_sample_equal_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,

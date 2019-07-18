@@ -110,17 +110,17 @@ lift_definition index_flip_subspace :: "mem2 ell2 linear_space \<Rightarrow> mem
   by (cheat index_flip_subspace)
 
 lemma index_flip_subspace_top[simp]: "index_flip_subspace top = top"
-  sorry
+  by (cheat index_flip_subspace_top)
 lemma index_flip_subspace_bot[simp]: "index_flip_subspace bot = bot"
-  sorry
+  by (cheat index_flip_subspace_bot)
 lemma index_flip_subspace_zero[simp]: "index_flip_subspace 0 = 0"
   by (simp add: linear_space_zero_bot)
 lemma index_flip_subspace_Cla[simp]: "index_flip_subspace (Cla[b]) = Cla[b]"
   by auto
 lemma index_flip_subspace_inf[simp]: "index_flip_subspace (A\<sqinter>B) = (index_flip_subspace A) \<sqinter> (index_flip_subspace B)"
-  sorry
+  by (cheat index_flip_subspace_inf)
 lemma index_flip_subspace_plus[simp]: "index_flip_subspace (A+B) = (index_flip_subspace A) + (index_flip_subspace B)"
-  sorry
+  by (cheat index_flip_subspace_plus)
 
 
 subsection "Distinct quantum variables"
@@ -422,7 +422,7 @@ lemma lift_vector_inj:
 
 
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_vars Q"
-  sorry
+  by (cheat index_flip_subspace_lift)
 
 subsection "Rewriting quantum variable lifting"
 
@@ -1025,6 +1025,15 @@ lemma
     for U :: "('a::universe,'c) l2bounded" and V :: "('b::universe,'c) l2bounded" and \<psi> :: "'d::universe ell2"
     and Q :: "'a::universe variables"    and R :: "'b::universe variables"    and T :: "'d variables"
   by (cheat TODO14)
+
+
+(* We flip the lhs/rhs of the quantum equality in addition to changing the indices.
+   This is because quantum equalities are typically written with 1-variables on the left and 2-variables on the right. *)
+lemma index_flip_subspace_quantum_equality[simp]: 
+  "index_flip_subspace (quantum_equality_full U Q V R) = 
+      quantum_equality_full V (index_flip_vars R) U (index_flip_vars Q)"
+  by (cheat index_flip_subspace_quantum_equality)
+
 
 section \<open>Common quantum objects\<close>
 

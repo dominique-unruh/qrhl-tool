@@ -2,13 +2,14 @@ structure Expressions = struct
 
 fun mk_expressionT T = Type(\<^type_name>\<open>expression\<close>, [T])
 
-(* Rewrites all index_{flip_var,var,vars,expression} subterms (e.g., index_var True x \<rightarrow> x1, etc.).
+(* Rewrites all index_{flip_var,var,vars,expression,flip_expression} subterms (e.g., index_var True x \<rightarrow> x1, etc.).
    If the involved variables, variable lists, and expressions are all explicit, this will
    remove all occurrences of index_{...}.
 *)
 fun index_conv ctxt =
   Raw_Simplifier.rewrite ctxt false @{thms 
         index_expression[THEN eq_reflection]
+        index_flip_expression[THEN eq_reflection]
         index_vars_concat[THEN eq_reflection]
         index_vars_singleton[THEN eq_reflection]
         index_vars_unit[THEN eq_reflection]

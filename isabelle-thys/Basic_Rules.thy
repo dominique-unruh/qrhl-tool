@@ -99,7 +99,7 @@ lemma uniform_expression_family_subst_expression[simp]:
   assumes "uniform_expression_family e1"
   assumes "uniform_expression_family e2"
   shows "uniform_expression_family (\<lambda>z. subst_expression (substitute_vars V (e1 z)) (e2 z))"
-  sorry
+  by (cheat uniform_expression_family_subst_expression)
 
 lemma sample2_rule:
   fixes A B xs e
@@ -126,7 +126,7 @@ structure Basic_Rules =
 struct
 
 fun after_sym_rule_conv ctxt =
-  (Conv.bottom_conv (K (Conv.try_conv Expressions.map_expression_conv)) ctxt) 
+  (Conv.bottom_conv (fn ctxt => (Conv.try_conv (Expressions.map_expression_conv then_conv Expressions.clean_expression_conv ctxt))) ctxt) 
 then_conv
   (Raw_Simplifier.rewrite ctxt false @{thms 
       index_flip_subspace_lift[THEN eq_reflection]
@@ -136,12 +136,32 @@ then_conv
       index_flip_subspace_inf[THEN eq_reflection]
       index_flip_subspace_plus[THEN eq_reflection]
       index_flip_subspace_Cla[THEN eq_reflection]
+      index_flip_subspace_quantum_equality[THEN eq_reflection]
     })
 then_conv
   (Expressions.index_conv ctxt)
 
+fun sym_tac ctxt =
+  resolve_tac ctxt @{thms sym_rule}
+  THEN'
+  CONVERSION (after_sym_rule_conv ctxt)
 end
 \<close>
 
+(* Testing *)
+variables quantum Q :: bit and classical x :: bit and classical G :: bit and classical H :: bit 
+and quantum quantA :: string
+and quantum Hout :: string
+and quantum Hin :: string
+and quantum Gout :: string
+and quantum Gin :: string
+begin
+lemma "qrhl Expr[\<CC>\<ll>\<aa>[G1 = G2 \<and> Hr1 = Hr2 \<and> H01 = H02 \<and> Hq1 = Hq2 \<and> H1 = H2 \<and> pk1 = pk2 \<and> skfo1 = skfo2 \<and> mstar1 = mstar2 \<and> cstar1 = cstar2 \<and> Kstar1 = Kstar2 \<and> in_pk1 = in_pk2 \<and> in_cstar1 = in_cstar2 \<and> classA1 = classA2 \<and> c1 = c2 \<and> K'1 = K'2 \<and> b1 = b2]
+         \<sqinter> \<lbrakk>quantA1, Hin1, Hout1, Gin1, Gout1\<rbrakk> \<equiv>\<qq> \<lbrakk>quantA2, Hin2, Hout2, Gin2, Gout2\<rbrakk>]
+  [] [] Expr[top]"
+  (* lemma "qrhl Expr[HX\<guillemotright>\<lbrakk>Q1,Q2\<rbrakk>] c d Expr[Cla[x1=x2]]" *)
+  apply (tactic \<open>Basic_Rules.sym_tac \<^context> 1\<close>)
+  oops
+end
 
 end
