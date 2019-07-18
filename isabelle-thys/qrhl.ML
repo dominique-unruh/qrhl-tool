@@ -270,7 +270,7 @@ fun callWp in_cvars1 in_cvars2 in_qvars1 in_qvars2 cvars1 cvars2 qvars1 qvars2 B
       val (in_qvars1',in_qvars1T) = variables in_qvars1
       val (in_qvars2',in_qvars2T) = variables in_qvars2
       val (qvars12',qvars12T) = variables (qvars1 @ qvars2)
-      val (in_qvars12',in_qvars12T) = variables (in_qvars1 @ in_qvars2)
+      (* val (in_qvars12',in_qvars12T) = variables (in_qvars1 @ in_qvars2) *)
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()
       val _ = if in_qvars1T <> in_qvars2T then raise TYPE("mismatch in",[in_qvars1T,in_qvars2T],[]) else ()
       val in_qvarsEq = if in_qvars1=[] then @{const top(predicate)} else mk_quantum_equality in_qvars1' in_qvars2' in_qvars1T

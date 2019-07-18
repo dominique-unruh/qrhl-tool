@@ -131,95 +131,112 @@ lift_definition operator_local :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::unive
 lift_definition colocal_pred_qvars :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
   is "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> (\<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> predicate_local_raw A vs')" .
 
+lift_definition colocal_pred_qvars_str :: "predicate \<Rightarrow> string set \<Rightarrow> bool"
+  is "\<lambda>A vs. (\<exists>vs'. vs \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw A vs')" .
+
 lift_definition colocal_op_qvars :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
   is "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> (\<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> operator_local_raw A vs')" .
+
+lift_definition colocal_op_qvars_str :: "(mem2,mem2) l2bounded \<Rightarrow> string set \<Rightarrow> bool"
+  is "\<lambda>A vs. (\<exists>vs'. vs \<inter> variable_raw_name ` vs' = {} \<and> operator_local_raw A vs')" .
 
 lift_definition colocal_op_pred :: "(mem2,mem2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
   is "\<lambda>A B. \<exists>vs1 vs2. vs1 \<inter> vs2 = {} \<and> operator_local_raw A vs1 \<and> predicate_local_raw B vs2" .
 
+lift_definition colocal_qvars_qvars_str :: "'a::universe variables \<Rightarrow> string set \<Rightarrow> bool"
+  is "\<lambda>(vs,_) vs'. distinct (flatten_tree vs) \<and> variable_raw_name ` set (flatten_tree vs) \<inter> vs' = {}" .
+
 consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
 adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (* colocal_qvars_qvars *)
 
-lemma colocal_top[simp]: "distinct_qvars Q \<Longrightarrow> colocal_pred_qvars top Q"
+lemma colocal_qvars_qvars_str[simp]:
+  assumes "distinct_qvars Q"
+  assumes "set (variable_names Q) \<inter> R = {}"
+  shows "colocal_qvars_qvars_str Q R"
+  by (cheat colocal_qvars_qvars_str)
+
+lemma colocal_pred_qvars[simp]:
+  assumes "distinct_qvars Q"
+  assumes "colocal_pred_qvars_str S (set (variable_names Q))"
+  shows "colocal_pred_qvars S Q"
+  by (cheat colocal_pred_qvars)
+
+lemma colocal_op_qvars[simp]:
+  assumes "distinct_qvars Q"
+  assumes "colocal_op_qvars_str U (set (variable_names Q))"
+  shows "colocal_op_qvars U Q"
+  by (cheat colocal_op_qvars)
+
+lemma colocal_top[simp]: "colocal_pred_qvars_str top Q"
   using [[transfer_del_const pcr_linear_space]]
   unfolding distinct_qvars_def apply transfer 
   by (auto intro: predicate_local_raw_top exI[of _ "{}"])
-lemma colocal_bot[simp]: "distinct_qvars Q \<Longrightarrow> colocal bot Q"
+lemma colocal_bot[simp]: "colocal_pred_qvars_str bot Q"
   using [[transfer_del_const pcr_linear_space]]
   unfolding distinct_qvars_def apply transfer
   by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
 
-lemma colocal_inf[simp]: assumes "colocal A Q" and "colocal B Q" shows "colocal (A \<sqinter> B) Q"
+lemma colocal_inf[simp]: 
+  assumes "colocal_pred_qvars_str A Q" and "colocal_pred_qvars_str B Q" 
+  shows "colocal_pred_qvars_str (A \<sqinter> B) Q"
 proof -
-  obtain vsQ Qe where Q: "Rep_variables Q = (vsQ,Qe)" apply atomize_elim by simp
   from assms
-  obtain vsA vsB where "set (flatten_tree vsQ) \<inter> vsA = {}" and "predicate_local_raw A vsA"
-    and "set (flatten_tree vsQ) \<inter> vsB = {}" and "predicate_local_raw B vsB"
-    apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
-  then have "\<exists>vs'. set (flatten_tree vsQ) \<inter> vs' = {} \<and> predicate_local_raw (A \<sqinter> B) vs'"
+  obtain vsA vsB where "Q \<inter> variable_raw_name ` vsA = {}" and "predicate_local_raw A vsA"
+    and "Q \<inter> variable_raw_name ` vsB = {}" and "predicate_local_raw B vsB"
+    apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq by auto
+  then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (A \<sqinter> B) vs'"
     apply (rule_tac exI[of _ "vsA \<union> vsB"])
     by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_inter)
-  moreover from assms have "distinct (flatten_tree vsQ)"
-    unfolding colocal_pred_qvars.rep_eq Q by simp
-  ultimately show ?thesis
-    unfolding colocal_pred_qvars.rep_eq Q by simp
+  then show ?thesis
+    unfolding colocal_pred_qvars_str.rep_eq by simp
 qed
 
 lemma colocal_plus[simp]: 
   fixes A :: "_ subspace"
-  assumes "colocal A Q" and "colocal B Q" shows "colocal (A + B) Q" 
+  assumes "colocal_pred_qvars_str A Q" and "colocal_pred_qvars_str B Q" shows "colocal_pred_qvars_str (A + B) Q" 
 proof -
-  obtain vsQ Qe where Q: "Rep_variables Q = (vsQ,Qe)" apply atomize_elim by simp
   from assms
-  obtain vsA vsB where "set (flatten_tree vsQ) \<inter> vsA = {}" and "predicate_local_raw A vsA"
-    and "set (flatten_tree vsQ) \<inter> vsB = {}" and "predicate_local_raw B vsB"
-    apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
-  then have "\<exists>vs'. set (flatten_tree vsQ) \<inter> vs' = {} \<and> predicate_local_raw (A + B) vs'"
+  obtain vsA vsB where "Q \<inter> variable_raw_name ` vsA = {}" and "predicate_local_raw A vsA"
+    and "Q \<inter> variable_raw_name ` vsB = {}" and "predicate_local_raw B vsB"
+    apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq by auto
+  then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (A + B) vs'"
     apply (rule_tac exI[of _ "vsA \<union> vsB"])
     by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_plus)
-  moreover from assms have "distinct (flatten_tree vsQ)"
-    unfolding colocal_pred_qvars.rep_eq Q by simp
-  ultimately show ?thesis
-    unfolding colocal_pred_qvars.rep_eq Q by simp
+  then show ?thesis
+    unfolding colocal_pred_qvars_str.rep_eq by simp
 qed
 
-lemma colocal_sup[simp]: "colocal A Q \<Longrightarrow> colocal B Q \<Longrightarrow> colocal (A \<squnion> B) Q"
+lemma colocal_sup[simp]: "colocal_pred_qvars_str A Q \<Longrightarrow> colocal_pred_qvars_str B Q \<Longrightarrow> colocal_pred_qvars_str (A \<squnion> B) Q"
   unfolding linear_space_sup_plus by simp
-lemma colocal_Cla[simp]: "distinct_qvars Q \<Longrightarrow> colocal (Cla[b]) Q"
+lemma colocal_Cla[simp]: "colocal_pred_qvars_str (Cla[b]) Q"
   by (cases b; simp)
 
 lemma colocal_pred_qvars_mult[simp]:
-  assumes "colocal_op_qvars U Q" and "colocal_pred_qvars S Q" shows "colocal_pred_qvars (U\<cdot>S) Q"
+  assumes "colocal_op_qvars_str U Q" and "colocal_pred_qvars_str S Q" shows "colocal_pred_qvars_str (U\<cdot>S) Q"
 proof -
-  obtain vsQ Qe where Q: "Rep_variables Q = (vsQ,Qe)" apply atomize_elim by simp
   from assms
-  obtain vsU vsS where "set (flatten_tree vsQ) \<inter> vsU = {}" and "operator_local_raw U vsU"
-    and "set (flatten_tree vsQ) \<inter> vsS = {}" and "predicate_local_raw S vsS"
-    apply atomize_elim unfolding colocal_pred_qvars.rep_eq colocal_op_qvars.rep_eq unfolding Q by auto
-  then have "\<exists>vs'. set (flatten_tree vsQ) \<inter> vs' = {} \<and> predicate_local_raw (U \<cdot> S) vs'"
+  obtain vsU vsS where "Q \<inter> variable_raw_name ` vsU = {}" and "operator_local_raw U vsU"
+    and "Q \<inter> variable_raw_name ` vsS = {}" and "predicate_local_raw S vsS"
+    apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq colocal_op_qvars_str.rep_eq by auto
+  then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (U \<cdot> S) vs'"
     apply (rule_tac exI[of _ "vsU \<union> vsS"])
     by (auto intro: predicate_local_raw_mono operator_local_raw_mono intro!: predicate_local_raw_apply_op)
-  moreover from assms have "distinct (flatten_tree vsQ)"
-    unfolding colocal_pred_qvars.rep_eq Q by simp
-  ultimately show ?thesis
-    unfolding colocal_pred_qvars.rep_eq Q by simp
+  then show ?thesis
+    unfolding colocal_pred_qvars_str.rep_eq by simp
 qed
 
-lemma colocal_ortho[simp]: "colocal (ortho S) Q = colocal S Q"
+lemma colocal_ortho[simp]: "colocal_pred_qvars_str (ortho S) Q = colocal_pred_qvars_str S Q"
 proof -
-  have "colocal (ortho S) Q" if "colocal S Q" for S
+  have "colocal_pred_qvars_str (ortho S) Q" if "colocal_pred_qvars_str S Q" for S
   proof -
-    obtain vsQ Qe where Q: "Rep_variables Q = (vsQ,Qe)" apply atomize_elim by simp
     from that
-    obtain vsS where "set (flatten_tree vsQ) \<inter> vsS = {}" and "predicate_local_raw S vsS"
-      apply atomize_elim unfolding colocal_pred_qvars.rep_eq unfolding Q by auto
-    then have "\<exists>vs'. set (flatten_tree vsQ) \<inter> vs' = {} \<and> predicate_local_raw (ortho S) vs'"
+    obtain vsS where "Q \<inter> variable_raw_name ` vsS = {}" and "predicate_local_raw S vsS"
+      apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq by auto
+    then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (ortho S) vs'"
       apply (rule_tac exI[of _ vsS])
       by (auto intro: intro!: predicate_local_raw_ortho)
-    moreover from that have "distinct (flatten_tree vsQ)"
-      unfolding colocal_pred_qvars.rep_eq Q by simp
-    ultimately show ?thesis
-      unfolding colocal_pred_qvars.rep_eq Q by simp
+    then show ?thesis
+      unfolding colocal_pred_qvars_str.rep_eq by simp
   qed
   from this this[where S="ortho S"]
   show ?thesis 
@@ -333,18 +350,18 @@ for A::"(_,_)l2bounded" and Q::"'a::universe variables"
 
 
 lemma colocal_op_pred_lift1[simp]:
- "colocal S Q \<Longrightarrow> colocal (U\<guillemotright>Q) S"
+ "colocal_pred_qvars S Q \<Longrightarrow> colocal_op_pred (U\<guillemotright>Q) S"
 for Q :: "'a::universe variables" and U :: "('a,'a) l2bounded" and S :: predicate
   by (cheat TODO12)
 
 lemma colocal_op_qvars_lift1[simp]:
-  "distinct_qvars (variable_concat Q R) \<Longrightarrow> colocal (U\<guillemotright>Q) R"
-for Q :: "'a::universe variables" and R :: "'b::universe variables" and U :: "('a,'a) l2bounded"  
+  "colocal_qvars_qvars_str Q R \<Longrightarrow> colocal_op_qvars_str (U\<guillemotright>Q) R"
+for Q :: "'a::universe variables" and R :: "string set" and U :: "('a,'a) l2bounded"  
   by (cheat TODO12)
 
 lemma colocal_pred_qvars_lift1[simp]:
-  "distinct_qvars (variable_concat Q R) \<Longrightarrow> colocal_pred_qvars (S\<guillemotright>Q) R"
-for Q :: "'a::universe variables" and R :: "'b::universe variables"
+  "colocal_qvars_qvars_str Q R \<Longrightarrow> colocal_pred_qvars_str (S\<guillemotright>Q) R"
+for Q :: "'a::universe variables" and R :: "string set"
   by (cheat TODO12)
 
 lemma lift_extendR:
@@ -925,13 +942,16 @@ proof -
 qed
 
 lemma colocal_quantum_equality_full[simp]:
-  "distinct_qvars (variable_concat Q1 (variable_concat Q2 Q3)) \<Longrightarrow> colocal (quantum_equality_full U1 Q1 U2 Q2) Q3"
-for Q1::"'a::universe variables" and Q2::"'b::universe variables" and Q3::"'c::universe variables"
+  "colocal_qvars_qvars_str (variable_concat Q1 Q2) Q3 \<Longrightarrow> 
+    colocal_pred_qvars_str (quantum_equality_full U1 Q1 U2 Q2) Q3"
+for Q1::"'a::universe variables" and Q2::"'b::universe variables" and Q3::"string set"
 and U1 U2::"(_,'d)l2bounded" 
   by (cheat TODO14)
 
-lemma colocal_quantum_eq[simp]: "distinct_qvars (variable_concat (variable_concat Q1 Q2) R) \<Longrightarrow> colocal (Q1 \<equiv>\<qq> Q2) R"
- for Q1 Q2 :: "'c::universe variables" and R :: "'a::universe variables"
+(* TODO can probably be removed because it's a special case of colocal_quantum_equality_full *)
+lemma colocal_quantum_eq[simp]: 
+  "colocal_qvars_qvars_str (variable_concat Q1 Q2) R \<Longrightarrow> colocal_pred_qvars_str (Q1 \<equiv>\<qq> Q2) R"
+  for Q1 Q2 :: "'c::universe variables" and R :: "string set"
   by (cheat TODO14)
 
 lemma applyOpSpace_colocal[simp]:

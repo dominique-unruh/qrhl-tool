@@ -347,12 +347,16 @@ lemma eval_variables_singleton: "eval_variables \<lbrakk>x::'a::universe variabl
 
 section \<open>Indexed variables\<close>
 
-lift_definition index_var_raw  :: "bool \<Rightarrow> variable_raw \<Rightarrow> variable_raw" is
-  "\<lambda>left (n,dom). (n @ (if left then ''1'' else ''2''), dom)"
+fun index_var_name :: "bool \<Rightarrow> string \<Rightarrow> string" where
+  "index_var_name True n = n @ ''1''"
+| "index_var_name False n = n @ ''2''"
+
+lift_definition index_var_raw :: "bool \<Rightarrow> variable_raw \<Rightarrow> variable_raw" is
+  "\<lambda>left (n,dom). (index_var_name left n, dom)"
   by auto
 
 lemma index_var_raw_inject: "index_var_raw left x = index_var_raw left y \<Longrightarrow> x = y"
-  apply transfer by auto
+  apply (cases left) by (transfer; auto)+
 
 lemma variable_raw_domain_index_var_raw[simp]: "variable_raw_domain (index_var_raw left v) = variable_raw_domain v"
   apply transfer by auto
@@ -380,8 +384,12 @@ lemma index_flip_var_twice[simp]: "index_flip_var_raw (index_flip_var_raw x) = x
 lemma index_flip_var_raw_inject: "index_flip_var_raw x = index_flip_var_raw y \<Longrightarrow> x = y"
   apply transfer by (auto simp: index_flip_name_inject)
 
+lemma index_flip_name_index_var_name[simp]: "index_flip_name (index_var_name left x) = index_var_name (\<not> left) x"
+  unfolding index_flip_name_def apply (cases left) by auto
+
 lemma index_flip_var_index_var_raw[simp]: "index_flip_var_raw (index_var_raw left x) = index_var_raw (\<not> left) x"
-  apply transfer
+  apply (transfer fixing: left)
+  apply (cases left) 
   by (auto simp: index_flip_name_def)
 
 lemma variable_raw_domain_index_flip_var_raw[simp]: "variable_raw_domain (index_flip_var_raw v) = variable_raw_domain v"
