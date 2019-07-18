@@ -278,6 +278,30 @@ fun index_var_conv ctxt ct =
 (* Simproc that simplifies using index_var_conv, see there.  *)
 fun index_var_simproc _ ctxt ct = SOME (index_var_conv ctxt ct) handle CTERM _ => NONE
 
+(* Converts "index_flip_var x1/2" (where x1/2 is a free variable) into "x2/1",
+   assuming x1/2 is declared via the variables-command or equivalent.
+   (More specifically, it requires that simp rules "variable_name x/x1/x2 = ''...''" with 
+   the correct names are declared.) *)
+(* TODO: use context data for the variable name theorem (instead of simplifier) *)
+fun index_flip_var_conv ctxt ct = let
+  val v = case Thm.term_of ct of Const(\<^const_name>\<open>index_flip_var\<close>, _) $ v => v | _ => raise CTERM("index_flip_var_conv: expecting 'index_flip_var v'",[ct])
+  val (name,T) = case v of Free(n,T) => (n,T) | _ => raise CTERM("index_flip_var_conv: not a free variable",[ct])
+  val _ = case T of Type(\<^type_name>\<open>variable\<close>,_) => () | _ => raise CTERM("index_flip_var_conv: wrong type for a variable",[ct])
+  val len = String.size name
+  val basename = String.substring (name, 0, len-1)
+  (* val index =  *)
+  val left = case String.substring (name, len-1, 1) of "1" => true | "2" => false | _ => raise CTERM("index_flip_var_conv: variable name does not end in 1 or 2",[ct])
+  val thm = infer_instantiate ctxt [(("v",0), Free(basename,T) |> Thm.cterm_of ctxt)]
+            (if left then @{thm index_flip_var_conv_aux1} else @{thm index_flip_var_conv_aux2})
+  val thm = thm |> Conv.fconv_rule (Conv.arg1_conv(*lhs*) (Conv.arg_conv(*index_var_flip*) (index_var_conv ctxt)))
+  val thm = thm |> Conv.fconv_rule (Conv.arg_conv(*rhs*) (index_var_conv ctxt))
+in
+  thm
+end
+
+(* Simproc that simplifies using index_flip_var_conv, see there.  *)
+fun index_flip_var_simproc _ ctxt ct = SOME (index_flip_var_conv ctxt ct) handle CTERM _ => NONE
+
 (* Subgoals of the form "variable_name x ~= variable_name y"
    where x,y are explicit variables *)
 (* TODO: something more specific than just simplifier? *)

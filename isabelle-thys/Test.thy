@@ -30,6 +30,19 @@ lemma [transfer_rule]:
 lemma "id (x:::bool) = (x::bit)"
   apply (transfer)
   term Bit
+  oops
+
+hide_const (open) Order.top
+
+variables quantum Q :: bit and classical x :: bit begin
+
+lemma "qrhl Expr[H\<guillemotright>\<lbrakk>Q1,Q2\<rbrakk>] c d Expr[Cla[x1=1]]"
+  apply (rule sym_rule)
+  apply (tactic \<open>CONVERSION (Basic_Rules.after_sym_rule_conv \<^context>) 1\<close>)
+  apply (simp)
+  oops
+
+end
 
 hide_const (open) Order.top
 

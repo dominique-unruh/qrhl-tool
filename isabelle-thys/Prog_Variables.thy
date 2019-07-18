@@ -581,6 +581,11 @@ lemma index_var_conv2_aux: \<comment> \<open>Helper for ML function index_var_co
   shows "index_var False v \<equiv> v2"
   using assms index_var2I by smt
 
+lemma index_flip_var_conv_aux1: "index_flip_var (index_var True v) \<equiv> index_var False v"
+  by simp
+lemma index_flip_var_conv_aux2: "index_flip_var (index_var False v) \<equiv> index_var True v"
+  by simp
+
 ML_file "prog_variables.ML"
 
 section {* Simprocs *}
@@ -593,6 +598,7 @@ parse_translation \<open>[("_declared_qvars", Prog_Variables.declared_qvars_pars
 simproc_setup warn_declared_qvars ("variable_name q") = Prog_Variables.warn_declared_qvars_simproc
 
 simproc_setup index_var ("index_var lr v") = Prog_Variables.index_var_simproc
+simproc_setup index_flip_var ("index_flip_var v") = Prog_Variables.index_flip_var_simproc
 
 section \<open>Cleanup\<close>
 

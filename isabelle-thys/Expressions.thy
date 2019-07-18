@@ -334,6 +334,12 @@ next
   finally show ?thesis by metis
 qed
 
+lemma index_flip_expression_map_expression: "index_flip_expression (map_expression f e)
+  = map_expression f (index_flip_expression e)"
+  unfolding map_expression_def
+  apply (subst index_flip_expression_map_expression') 
+  by (simp add: o_def)
+
 lemma index_flip_map_expression2': "index_flip_expression (map_expression2' f e1 e2) = 
   map_expression2' f (index_flip_expression e1) (index_flip_expression o e2)"
   unfolding map_expression2'_def by (simp add: index_flip_expression_pair_expression index_flip_expression_map_expression' o_def)

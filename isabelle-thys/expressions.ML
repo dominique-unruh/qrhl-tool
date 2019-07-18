@@ -2,7 +2,7 @@ structure Expressions = struct
 
 fun mk_expressionT T = Type(\<^type_name>\<open>expression\<close>, [T])
 
-(* Rewrites all index_{var,vars,expression} subterms (e.g., index_var True x \<rightarrow> x1, etc.).
+(* Rewrites all index_{flip_var,var,vars,expression} subterms (e.g., index_var True x \<rightarrow> x1, etc.).
    If the involved variables, variable lists, and expressions are all explicit, this will
    remove all occurrences of index_{...}.
 *)
@@ -11,9 +11,15 @@ fun index_conv ctxt =
         index_expression[THEN eq_reflection]
         index_vars_concat[THEN eq_reflection]
         index_vars_singleton[THEN eq_reflection]
-        index_vars_unit[THEN eq_reflection]}
+        index_vars_unit[THEN eq_reflection]
+        index_flip_vars_concat[THEN eq_reflection]
+        index_flip_vars_singleton[THEN eq_reflection]
+        index_flip_vars_unit[THEN eq_reflection]
+}
 then_conv
   Conv.top_sweep_conv Prog_Variables.index_var_conv ctxt
+then_conv
+  Conv.top_sweep_conv Prog_Variables.index_flip_var_conv ctxt
 
 val index_tac = Misc.schematic_conv_tac "valid indexing expression" index_conv
 

@@ -101,6 +101,28 @@ next
       by assumption
 qed
 
+lift_definition index_flip_vector :: "mem2 ell2 \<Rightarrow> mem2 ell2" is
+  "\<lambda>\<psi>. \<psi> o index_flip_mem2"
+  by (cheat index_flip_vector)
+
+lift_definition index_flip_subspace :: "mem2 ell2 linear_space \<Rightarrow> mem2 ell2 linear_space" is
+  "\<lambda>S. index_flip_vector ` S"
+  by (cheat index_flip_subspace)
+
+lemma index_flip_subspace_top[simp]: "index_flip_subspace top = top"
+  sorry
+lemma index_flip_subspace_bot[simp]: "index_flip_subspace bot = bot"
+  sorry
+lemma index_flip_subspace_zero[simp]: "index_flip_subspace 0 = 0"
+  by (simp add: linear_space_zero_bot)
+lemma index_flip_subspace_Cla[simp]: "index_flip_subspace (Cla[b]) = Cla[b]"
+  by auto
+lemma index_flip_subspace_inf[simp]: "index_flip_subspace (A\<sqinter>B) = (index_flip_subspace A) \<sqinter> (index_flip_subspace B)"
+  sorry
+lemma index_flip_subspace_plus[simp]: "index_flip_subspace (A+B) = (index_flip_subspace A) + (index_flip_subspace B)"
+  sorry
+
+
 subsection "Distinct quantum variables"
 
 consts predicate_local_raw :: "predicate \<Rightarrow> variable_raw set \<Rightarrow> bool"
@@ -398,6 +420,9 @@ lemma lift_vector_inj:
   shows "\<psi>1 = \<psi>2"
   by (cheat lift_vector_inj)
 
+
+lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_vars Q"
+  sorry
 
 subsection "Rewriting quantum variable lifting"
 
