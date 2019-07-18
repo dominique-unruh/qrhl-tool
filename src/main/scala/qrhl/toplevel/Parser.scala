@@ -408,6 +408,7 @@ object Parser extends JavaTokenParsers {
       tactic_case |
       tactic_fix |
       tactic_squash |
+      literal("frame") ^^ { _ => FrameRuleTac } |
       literal("measure") ^^ { _ => JointMeasureTac } |
       literal("o2h") ^^ { _ => O2HTac } |
       literal("semiclassical") ^^ { _ => SemiClassicalTac }

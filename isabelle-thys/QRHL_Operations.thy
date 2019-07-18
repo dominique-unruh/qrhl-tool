@@ -363,4 +363,18 @@ operation_setup thms_as_subgoals = \<open>
    in encoded end}
 \<close>
 
+operation_setup colocal_pred_qvars = \<open>
+  {from_lib = Codec.triple
+              Codec.int (* ctxt *)
+              term_tight_codec (* predicate *)
+              (Codec.list (Codec.tuple Codec.string typ_tight_codec)), (* qvars *)
+   to_lib = Codec.id,
+   action = fn (ctxt_id, predicate, qvars) => let
+     val ctxt = Refs.Ctxt.read ctxt_id
+     val (varterm,vartermT) = qvars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+     val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT vartermT --> HOLogic.boolT)
+               $ predicate $ varterm
+   in Codec.encode (richterm_codec' ctxt) colocality end}\<close>
+   
+
 end
