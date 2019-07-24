@@ -41,12 +41,14 @@ lemma o2h[unfolded PROGRAM_EQUAL_def]:
 
 ML \<open>
 structure O2H = struct
-fun program_body_tac ctxt = SUBGOAL (fn (t,i) =>
+fun program_body_tac forwhom ctxt = SUBGOAL (fn (t,i) =>
   let val fact = Proof_Context.get_fact ctxt (Facts.named "program_bodies")
-      val progname = case Logic.strip_assums_concl t of
-         Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>HOL.eq\<close>,_) $ prog $ _) =>
-           Syntax.string_of_term ctxt prog
+      val prog = case Logic.strip_assums_concl t of
+         Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>HOL.eq\<close>,_) $ prog $ _) => prog
        | _ => raise TERM("program_body_tac: internal error",[t])
+      val progname = Syntax.string_of_term ctxt prog
+      val _ = if null (Term.add_vars prog []) then () else 
+        raise TERM("program_body_tac: expected program name without schematic vars",[t,prog])
   in 
     Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms trans}) ctxt (K "internal error") i
   THEN
@@ -54,7 +56,7 @@ fun program_body_tac ctxt = SUBGOAL (fn (t,i) =>
            "'" ^ progname ^ "' is not the name of a concrete program") i
   THEN
     Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms refl}) ctxt (fn t =>
-          "The body of program '" ^ progname ^ "' is not of the right form for O2H:\n(Problematic equality:" ^
+          "The body of program '" ^ progname ^ "' is not of the right form for "^forwhom^":\n(The following does not hold: " ^
           Syntax.string_of_term ctxt t ^ ")") i
   end)
 
@@ -72,7 +74,7 @@ fun distinct_vars_tac ctxt =
   Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are distinct: " ^ Syntax.string_of_term ctxt t)
 
 fun o2h_tac ctxt = 
-  let val pb_tac = program_body_tac ctxt
+  let val pb_tac = program_body_tac "O2H" ctxt
       val resolve_o2h = Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms o2h}) ctxt
          (K "Goal should be exactly of the form '(Pr[b=1:left(rho)] - Pr[b=1:right(rho)]) <= 2 * sqrt( (1+real q) * Pr[Find:find(rho)])'")
    in

@@ -19,13 +19,13 @@ lemma semi_classical_search:
 
   assumes "\<And>P. (instantiateOracles Count [P]) = (block [P, assign \<lbrakk>count\<rbrakk> (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count+1))])"
 
-  assumes "queryG = (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>G\<rbrakk> (\<lambda>G. Uoracle G))])"
   assumes "queryGS = (block [measurement \<lbrakk>in_S\<rbrakk> \<lbrakk>X\<rbrakk> (expression \<lbrakk>S\<rbrakk> (\<lambda>S. binary_measurement (proj_classical_set S))),
                             ifthenelse (expression \<lbrakk>in_S\<rbrakk> (\<lambda>in_S. in_S=1)) [assign \<lbrakk>Find\<rbrakk> Expr[True]] [],
                             queryG])"
   assumes "queryGM = block [ifthenelse (expression \<lbrakk>count,stop_at\<rbrakk> (\<lambda>(c,s). c=s)) 
                              [measurement \<lbrakk>guess\<rbrakk> \<lbrakk>X\<rbrakk> Expr[computational_basis]] [], 
                             queryG]"
+  assumes "queryG = (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>G\<rbrakk> (\<lambda>G. Uoracle G))])"
 
   assumes "distinct_qvars \<lbrakk>count,Find,z,G,S,in_S,X,Y,stop_at,guess\<rbrakk>"
 
@@ -44,7 +44,7 @@ ML \<open>
 structure Semi_Classical_Search = struct
 
 fun semi_classical_search_tac ctxt = 
-  let val pb_tac = O2H.program_body_tac ctxt
+  let val pb_tac = O2H.program_body_tac "semiclassical search" ctxt
       val resolve_scs = Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms semi_classical_search}) ctxt
          (K "Goal should be exactly of the form 'Pr[Find:left(rho)] \<le> 4 * real q * Pr[guess\<in>S:right(rho)]'")
    in
