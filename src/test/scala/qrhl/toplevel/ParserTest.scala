@@ -21,6 +21,18 @@ class ParserTest extends FunSuite {
     tl.state.parserContext
   }
 
+  test("fact") {
+    val vt = Parser.parseAll(Parser.fact, "a[b, c]")
+    println(vt)
+    assert(vt.get=="a[b, c]")
+  }
+
+  test("fact (multiple)") {
+    val vt = Parser.parseAll(Parser.rep(Parser.fact), "a[b, c] hello(1) bla[blubb[hello]]")
+    println(vt)
+    assert(vt.get==List("a[b, c]", "hello(1)", "bla[blubb[hello]]"))
+  }
+
   test("nested varterm paren") {
     implicit val vtSingle: String => VTSingle[String] = VTSingle[String]
     val vt = Parser.parseAll(Parser.varterm, "((x,y),w,z)")

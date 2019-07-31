@@ -307,46 +307,6 @@ fun callWp in_cvars1 in_cvars2 in_qvars1 in_qvars2 cvars1 cvars2 qvars1 qvars2 B
   end
 
 
-fun simp_any t ctx =
-  let val ct = Thm.cterm_of ctx t
-      val ct_eq_thm = Simplifier.asm_full_rewrite ctx ct
-      val ct_eq = ct_eq_thm |> Thm.prop_of
-      val (lhs,rhs) = Logic.dest_equals ct_eq
-      val _ = if lhs<>t then raise TERM("conversion returned wrong lhs\n",[t,lhs,rhs]) else ()
-  in
-    (rhs,ct_eq_thm)
-  end
-
-fun simp_prop t ctx = 
-  let val ct = Thm.cterm_of ctx t
-      val goal = Goal.init ct
-      val result = SINGLE (asm_full_simp_tac ctx 1) goal
-  in
-    case result of
-      NONE => raise TERM("asm_full_simp_tac failed",[t])
-    | SOME thm => case Thm.prems_of thm of
-                    [t'] => (t',thm)
-                  | [] => (\<^prop>\<open>True\<close>,thm)
-                  | _ => raise THM("asm_full_simp_tac produced multiple subgoals",0,[thm])
-  end       
-
-fun simp_bool t ctx =
-  let val prop = HOLogic.mk_Trueprop t
-      val (res,thm) = simp_prop prop ctx
-  in
-    case res of
-      (Const (\<^const_name>\<open>Trueprop\<close>, _) $ P) => (P,thm)
-    | _ => raise TERM("simp_prop did not return a term starting with Trueprop",[t,res])
-  end
-
-fun simp t facts ctx =
-  let val ctx'  = fold (fn name => fn ctx => ctx addsimps (Proof_Context.get_thms ctx name)) facts ctx
-  in case fastype_of t of
-        Type(\<^type_name>\<open>prop\<close>,_) => simp_prop t ctx'
-      | Type(\<^type_name>\<open>bool\<close>,_) => simp_bool t ctx'
-      | _ => simp_any t ctx'
-  end
-
 (* fun simp t facts ctx =
   let val ct = Thm.cterm_of ctx t
       val ctx'  = fold (fn name => fn ctx => ctx addsimps (Proof_Context.get_thms ctx name)) facts ctx

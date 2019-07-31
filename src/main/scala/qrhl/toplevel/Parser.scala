@@ -49,6 +49,9 @@ object Parser extends JavaTokenParsers {
   def repWithState[S](p : S => Parser[S], start : S) : Parser[S] =
     p(start).?.flatMap { case Some(s) => repWithState(p,s); case None => success(start) }
 
+  def rep1WithState[S](p : S => Parser[S], start : S) : Parser[S] =
+    p(start).flatMap { s => repWithState[S](p,s) }
+
   val scanInnerSyntax : Parser[String] = repWithState[(Int,List[Char])]({
     case (0, chars) =>
       elem("expression", { c => c != ';' && c != ')' && c != '}' }) ^^ { c =>
@@ -64,6 +67,23 @@ object Parser extends JavaTokenParsers {
         (lvl, cs)
       }
   }, (0,Nil)) ^^ { case (_,chars) => chars.reverse.mkString.trim }
+
+  val fact : Parser[String] = """\s*""".r ~> rep1WithState[(Int,List[Char])]({
+    case (0, chars) =>
+      elem("lemma name", { c => !c.isWhitespace && c != ']' && c != ')' && c != '}' }) ^^ { c =>
+        val cs = c :: chars
+        val lvl = if (c == '(' || c == '{' || c == '[') 1 else 0
+        (lvl, cs)
+      }
+    case (level, chars) =>
+      elem("lemma name", { c => true }) ^^ { c =>
+        assert(level > 0)
+        val cs = c :: chars
+        val lvl = if (c == '(' || c== '{' || c == '[') level + 1 else if (c == ')' || c=='}' || c == ']') level - 1 else level
+        (lvl, cs)
+      }
+  }, (0,Nil)) ^^ { case (_,chars) => chars.reverse.mkString.trim }
+
 
   def expression(typ:pure.Typ)(implicit context:ParserContext) : Parser[RichTerm] =
 //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
@@ -369,7 +389,7 @@ object Parser extends JavaTokenParsers {
     ) yield CaseTac(x,e))
 
   val tactic_simp : Parser[SimpTac] =
-    literal("simp") ~> OnceParser("[!\\*]".r.? ~ rep(identifier)) ^^ {
+    literal("simp") ~> OnceParser("[!\\*]".r.? ~ rep(fact)) ^^ {
       case None ~ lemmas => SimpTac(lemmas, force=false, everywhere = false)
       case Some("!") ~ lemmas => SimpTac(lemmas, force = true, everywhere = false)
       case Some("*") ~ lemmas => SimpTac(lemmas, force = false, everywhere = true)

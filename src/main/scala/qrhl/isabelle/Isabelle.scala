@@ -701,7 +701,7 @@ object Isabelle {
     def prettyTyp(typ: ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp, (contextId, typ)))
 
     def simplify(term: Term, facts: List[String]): (RichTerm, Thm) =
-      isabelle.invoke(simplifyTermOp, (term, facts, contextId)) match {
+      isabelle.invoke(simplifyTermOp, (term, facts.map(Isabelle.unicodeToSymbols), contextId)) match {
         case (t, thmId) => (t, new Thm(isabelle, thmId))
       }
   }

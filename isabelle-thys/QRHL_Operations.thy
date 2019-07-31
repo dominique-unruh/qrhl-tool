@@ -185,7 +185,7 @@ operation_setup simplify_term = \<open>
    to_lib = Codec.id,
    action = fn (t,thms,ctx_id) => let
      val ctxt = Refs.Ctxt.read ctx_id
-     val (t,thm) = QRHL.simp t thms ctxt
+     val (t,thm) = simp t thms ctxt
      in (t,make_thm_ref thm)
         |> Codec.encode (Codec.tuple (richterm_codec' ctxt) Codec.int)
        end}
