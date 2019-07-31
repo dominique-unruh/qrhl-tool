@@ -260,7 +260,7 @@ proof -
     then show ?thesis
       unfolding colocal_pred_qvars_str.rep_eq by simp
   qed
-  from this this[where S="ortho S"]
+  from this[where S=S] this[where S="ortho S"]
   show ?thesis 
     by auto
 qed
@@ -429,7 +429,7 @@ subsection "Rewriting quantum variable lifting"
 (* TODO: use new constant conjugate for A\<cdot>B\<cdot>A* expressions to avoid duplication *)
 
 (* Means that operator A can be used to transform an expression \<dots>\<guillemotright>Q into \<dots>\<guillemotright>R *)
-definition "qvar_trafo A Q R = (distinct_qvars Q \<and> distinct_qvars R \<and> (\<forall>C::(_,_)l2bounded. C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R))" for A::"('a::universe,'b::universe) l2bounded"
+definition "qvar_trafo A Q R \<longleftrightarrow> distinct_qvars Q \<and> distinct_qvars R \<and> (\<forall>C::(_,_)l2bounded. C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R)" for A::"('a::universe,'b::universe) l2bounded"
 
 lemma qvar_trafo_id[simp]: "distinct_qvars Q \<Longrightarrow> qvar_trafo idOp Q Q" unfolding qvar_trafo_def by auto
 
@@ -524,7 +524,9 @@ proof -
   also have "\<dots> = (Proj S)\<guillemotright>Q \<cdot> top" by simp
   also have "\<dots> = (A \<cdot> Proj S \<cdot> A*)\<guillemotright>R \<cdot> top"
     apply (subst qvar_trafo_l2bounded) using assms by auto
-  also have "\<dots> = (Proj (A\<cdot>S))\<guillemotright>R \<cdot> top" apply (subst Proj_times) by simp
+  also have "\<dots> = (Proj (A\<cdot>S))\<guillemotright>R \<cdot> top"
+    apply (subst Proj_times)
+    using assms by (simp_all add: qvar_trafo_unitary)
   also have "\<dots> = (Proj (A\<cdot>S) \<cdot> top)\<guillemotright>R" by auto
   also have "\<dots> = (A\<cdot>S)\<guillemotright>R" by auto
   ultimately show ?thesis by simp
@@ -828,9 +830,6 @@ definition "infsetsum' f M = (if infsetsummable f M then THE x. infsetsums f M x
 (* TODO move *)
 definition "positive_op A = (\<exists>B::('a::chilbert_space,'a) bounded. A = B* \<cdot> B)"
 
-lemma adj0[simp]: "0* = 0"
-  apply transfer 
-  by (cheat adj0)
 lemma timesOp0[simp]: "timesOp 0 A = 0"
   apply transfer by simp
 lemma timesOp0'[simp]: "timesOp A 0 = 0"
@@ -843,19 +842,6 @@ lemma positive_0[simp]: "positive_op 0"
   unfolding positive_op_def apply (rule exI[of _ 0]) by auto
 
 abbreviation "loewner_leq A B == (positive_op (B-A))"
-
-(* TODO move *)
-lemma isProjector0[simp]: "isProjector 0"
-  unfolding isProjector_def 
-  by (cheat isProjector0)
-
-lemma isProjectoridMinus[simp]: "isProjector P \<Longrightarrow> isProjector (idOp-P)"
-  unfolding isProjector_def apply auto
-  by (cheat isProjectoridMinus)
-
-(* TODO move *)
-lemma applyOp0[simp]: "applyOp 0 \<psi> = 0"
-  apply transfer by simp
 
 definition "is_measurement M = ((\<forall>i. isProjector (M i)) \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i \<cdot> \<psi>\<rangle>) = \<langle>\<phi>, P \<cdot> \<psi>\<rangle>) \<and> loewner_leq P idOp))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"

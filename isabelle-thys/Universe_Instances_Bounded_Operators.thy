@@ -1,5 +1,5 @@
 theory Universe_Instances_Bounded_Operators
-  imports Bounded_Operators.Bounded_Operators Universe_Instances_Complex_Main
+  imports Bounded_Operators.Complex_L2 Universe_Instances_Complex_Main
 begin
 
 derive universe ell2
