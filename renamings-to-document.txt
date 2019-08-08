@@ -5,3 +5,4 @@ timesScalarSpace -> scaleC
 timesScalarOp -> scaleC
 bounded -> ell2 Bounded / l2bounded
 subspace -> ell2 linear_space
+span -> Span

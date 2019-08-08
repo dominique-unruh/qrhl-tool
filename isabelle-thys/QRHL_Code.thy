@@ -208,7 +208,7 @@ lemma tensorVec_code[code]: "vec_of_ell2 (\<psi> \<otimes> \<phi>) = vec_tensor 
   for \<psi>::"'a::enum ell2" and \<phi>::"'b::enum ell2"
   by (cheat 17)
 
-definition [code del]: "SPAN x = span (ell2_of_vec' ` set x)"
+definition [code del]: "SPAN x = Span (ell2_of_vec' ` set x)"
 code_datatype SPAN
 
 definition "mk_projector (S::'a::basis_enum linear_space) = mat_of_l2bounded (Proj S)" 
@@ -248,7 +248,7 @@ lemma ortho_SPAN[code]: "ortho (SPAN S :: 'a::basis_enum linear_space)
         = SPAN (orthogonal_complement_vec (canonical_basis_length TYPE('a)) S)"
   by (cheat 17)
 
-definition [code del,code_abbrev]: "span_code (S::'a::enum ell2 set) = (span S)"
+definition [code del,code_abbrev]: "span_code (S::'a::enum ell2 set) = (Span S)"
 
 lemma span_Set_Monad[code]: "span_code (Set_Monad l) = (SPAN (map vec_of_ell2 l))"
   (* for l :: "'a::enum ell2 list" *)

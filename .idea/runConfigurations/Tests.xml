@@ -13,6 +13,40 @@
     <envs />
     <setting name="testKind" value="All in package" />
     <setting name="package" value="" />
+    <buffered bufClass="qrhl.ExampleFilesTest" />
+    <buffered bufClass="qrhl.ExampleFilesTest" />
+    <buffered bufClass="qrhl.QRHLSubgoalTest" />
+    <buffered bufClass="qrhl.QRHLSubgoalTest" />
+    <buffered bufClass="qrhl.isabelle.IsabelleTest" />
+    <buffered bufClass="qrhl.isabelle.IsabelleTest" />
+    <buffered bufClass="qrhl.logic.BlockTest" />
+    <buffered bufClass="qrhl.logic.BlockTest" />
+    <buffered bufClass="qrhl.logic.VariableTest" />
+    <buffered bufClass="qrhl.logic.VariableTest" />
+    <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
+    <buffered bufClass="qrhl.tactic.ByQRHLTacTest" />
+    <buffered bufClass="qrhl.tactic.CaseTacTest" />
+    <buffered bufClass="qrhl.tactic.CaseTacTest" />
+    <buffered bufClass="qrhl.tactic.EqualTacTest" />
+    <buffered bufClass="qrhl.tactic.EqualTacTest" />
+    <buffered bufClass="qrhl.tactic.ExpressionTest" />
+    <buffered bufClass="qrhl.tactic.ExpressionTest" />
+    <buffered bufClass="qrhl.tactic.O2HTacTest" />
+    <buffered bufClass="qrhl.tactic.O2HTacTest" />
+    <buffered bufClass="qrhl.tactic.RndTacTest" />
+    <buffered bufClass="qrhl.tactic.RndTacTest" />
+    <buffered bufClass="qrhl.tactic.RuleTacTest" />
+    <buffered bufClass="qrhl.tactic.RuleTacTest" />
+    <buffered bufClass="qrhl.tactic.SeqTacTest" />
+    <buffered bufClass="qrhl.tactic.SeqTacTest" />
+    <buffered bufClass="qrhl.tactic.WpTacTest" />
+    <buffered bufClass="qrhl.tactic.WpTacTest" />
+    <buffered bufClass="qrhl.toplevel.DeclareProgramCommandTest" />
+    <buffered bufClass="qrhl.toplevel.DeclareProgramCommandTest" />
+    <buffered bufClass="qrhl.toplevel.ParserTest" />
+    <buffered bufClass="qrhl.toplevel.ParserTest" />
+    <buffered bufClass="qrhl.toplevel.ToplevelTest" />
+    <buffered bufClass="qrhl.toplevel.ToplevelTest" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

@@ -407,7 +407,7 @@ lemma move_plus_meas_rule:
 lemma applyOp_lift: "distinct_qvars Q \<Longrightarrow> A\<guillemotright>Q \<cdot> lift_vector \<psi> Q \<psi>' = lift_vector (A\<cdot>\<psi>) Q \<psi>'"
   by (cheat applyOp_lift)
 
-lemma span_lift: "distinct_qvars Q \<Longrightarrow> span G \<guillemotright> Q = span {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
+lemma span_lift: "distinct_qvars Q \<Longrightarrow> Span G \<guillemotright> Q = Span {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
   by (cheat span_lift)
 
 lemma lift_rest_nonempty: "lift_rest Q - {0} \<noteq> {}"
@@ -833,8 +833,8 @@ definition "positive_op A = (\<exists>B::('a::chilbert_space,'a) bounded. A = B*
 lemma timesOp0[simp]: "timesOp 0 A = 0"
   apply transfer by simp
 lemma timesOp0'[simp]: "timesOp A 0 = 0"
-  apply transfer
-  by (simp add: additive.zero bounded_clinear_def clinear.axioms(1))
+  apply transfer apply auto
+  by (metis bounded_clinear_def mult_zero_left norm_le_zero_iff norm_zero)
 
 lemma positive_idOp[simp]: "positive_op idOp"
   unfolding positive_op_def apply (rule exI[of _ idOp]) by simp
@@ -897,11 +897,11 @@ subsection \<open>Subspace division\<close>
 
 consts space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a::universe variables \<Rightarrow> predicate"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
-lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> span {\<psi>}\<guillemotright>Q \<le> B)"
+lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> Span {\<psi>}\<guillemotright>Q \<le> B)"
   by (cheat TODO14)
 
 definition space_div_unlifted :: "('a*'b) ell2 linear_space \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 linear_space" where
-  [code del]: "space_div_unlifted S \<psi> = Abs_linear_space {\<phi>. \<phi>\<otimes>\<psi> \<in> Rep_linear_space S}"
+  [code del]: "space_div_unlifted S \<psi> = Abs_linear_space {\<phi>. \<phi>\<otimes>\<psi> \<in> space_as_set S}"
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
   by (cheat space_div_space_div_unlifted)
@@ -995,8 +995,8 @@ lemma Qeq_mult2[simp]:
 (* Proof in paper *)
 lemma quantum_eq_unique[simp]: "distinct_qvars (variable_concat Q R) \<Longrightarrow>
   isometry U \<Longrightarrow> isometry (adjoint V) \<Longrightarrow> 
-  quantum_equality_full U Q V R \<sqinter> span{\<psi>}\<guillemotright>Q
-  = liftSpace (span{\<psi>}) Q \<sqinter> liftSpace (span{V* \<cdot> U \<cdot> \<psi>}) R"
+  quantum_equality_full U Q V R \<sqinter> Span{\<psi>}\<guillemotright>Q
+  = liftSpace (Span{\<psi>}) Q \<sqinter> liftSpace (Span{V* \<cdot> U \<cdot> \<psi>}) R"
   for Q::"'a::universe variables" and R::"'b::universe variables"
     and U::"('a,'c) l2bounded" and V::"('b,'c) l2bounded"
     and \<psi>::"'a ell2"
@@ -1006,7 +1006,7 @@ lemma quantum_eq_unique[simp]: "distinct_qvars (variable_concat Q R) \<Longright
 lemma
   quantum_eq_add_state: 
     "distinct_qvars (variable_concat Q (variable_concat R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
-    quantum_equality_full U Q V R \<sqinter> span {\<psi>}\<guillemotright>T
+    quantum_equality_full U Q V R \<sqinter> Span {\<psi>}\<guillemotright>T
              = quantum_equality_full (U \<otimes> idOp) (variable_concat Q T) (addState \<psi> \<cdot> V) R"
     for U :: "('a::universe,'c) l2bounded" and V :: "('b::universe,'c) l2bounded" and \<psi> :: "'d::universe ell2"
     and Q :: "'a::universe variables"    and R :: "'b::universe variables"    and T :: "'d variables"
@@ -1178,7 +1178,7 @@ lemma Uoracle_selfadjoint[simp]: "(Uoracle f)* = Uoracle f" for f :: "_ \<Righta
 lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = idOp" for f :: "_ \<Rightarrow> _::xor_group"
   apply (subst Uoracle_selfadjoint[symmetric]) apply (rule adjUU) by simp
 
-definition "proj_classical_set S = Proj (span {ket s|s. s\<in>S})"
+definition "proj_classical_set S = Proj (Span {ket s|s. s\<in>S})"
 
 section \<open>Misc\<close>
 
