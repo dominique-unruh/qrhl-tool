@@ -1,6 +1,6 @@
 \newif\ifdraft
 
-%\drafttrue
+\drafttrue
 
 \documentclass{article}
 \usepackage[utf8]{inputenc}
@@ -2058,16 +2058,20 @@ be the free quantum variables of $S$
 initialization, measurements, and apply-statements).
 This includes the variables of any programs included recursively within $S$
 via \texttt{call} statements, but not programs that are replaced by holes.
+\TODOQ{Let $X^\mathit{write}$ consist of all $x^{(i)}$
+  that occur on the lhs of an assignment, sampling, or measurement. (Then $S$ is $
+  \pb\paren{\{\xx^{(1)},\dots,\xx^{(n)}\}\setminus X^\mathit{write}}$-readonly.)
+Let $X^\mathit{write}_j:=\idx j X^\mathit{write}$.}
 
 First, we rewrite the postcondition $B$
 is several steps. This is in order to get a new postcondition $C$ that does
-not share any free variables with $S$ (if possible) while strengthening the postcondition as little as
+not share any free \TODOQ{non-readonly} variables with $S$ (if possible) while strengthening the postcondition as little as
 possible.
 
 $B'$
 is $B$
 with occurrences of $\xx^{(i)}_1=\xx^{(i)}_2$
-for all $i$,
+for all $i$ \TODOQ{$\xx_1=\xx_2$ for $\xx\in X^\mathit{write}$},
 and occurrences of
 $\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
 \mathrel{\mathord\equiv\mathfrak q} \llbracket
@@ -2079,7 +2083,7 @@ $B'\sqcap\mathfrak{Cla}[\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
 
 Let $i_1,\dots,i_k$
 be all indices such that both $\xx^{(i)}_1$
-and $\xx^{(i)}_2$ are free variables in $B'$.
+and $\xx^{(i)}_2$ are free variables in $B'$ \TODOQ{and $\xx^{(i)}\in X^\mathit{write}$}.
 Let
 \[
  B'':=\mathfrak{Cla}\pb\parenthesis[]{\lnot (\xx_1^{(i_1)}=\xx_2^{(i_1)}\land\dots\land\xx_1^{(i_k)}=\xx_2^{(i_k)})} + B'.
@@ -2097,7 +2101,7 @@ Let
 where $X_1X_2$
 are all classical variables $\xx^{(i)}_j$
 (for $j=1,2$)
-such that $\xx^{(i)}$
+such that $\xx^{(i)}$ \TODOQ{$\in X^\mathit{write}$}
 is a free variable of $s$, and $\xx^{(i)}_j$ is free in $B''$.
 
 Let
@@ -2108,7 +2112,7 @@ Let
 \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket.
 \]
 Note that $C$ is a subset of $B$, and 
-note that $\cl{\fv(B''')}\cap\fv(S)=\varnothing$.
+note that $\cl{\fv(B''')}\cap\fv(S)\TODOQ{$X_1^\mathit{write}X_2^\mathit{write}$}=\varnothing$.
 
 
 With this definitions, the rule implemented by the tactic is:
@@ -2131,15 +2135,18 @@ This rule is shown as follows:
 From $\mathtt{colocal}\ B'\ \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)},
 \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$, we have
 $\qu{\fv(B''')}\cap(\idx1 \qu{\fv(C)}\cup\idx2\qu{\fv(C)})=\varnothing$.
+\TODOQ{From ...,
+  we have that $S$ is $\paren{\cl{\fv(S)}\cap \Tilde X}$-readonly
+  where $\Tilde X:=\cl{\fv(B''')}$ with indices removed.}\TODOQ{check}
 
-From \ruleref{Adversary} and $\rhl{C}{s_i}{s_i'}{C}$, we have $\rhl{C}{s}{s}{C}$
-(Here \ruleref{Adversary} is instantiated with $C:=S$, $X:=\cl{\fv(S)}$, $Y:=\qu{\fv(C)}$,
+From \ruleref{Adversary} and $\rhl{C}{s_i}{s_i'}{C}$, we have $\rhl{C}{s}{s'}{C}$
+(Here \ruleref{Adversary} is instantiated with $C:=S$, $X:=\cl{\fv(S)}$, $Y:=\qu{\fv(S)}$,
 $W:=\varnothing$, $\Tilde X:=\cl{\fv(B''')}$ with indices removed,
 $Z:=\qu{\fv(B''')}$, $R:=B'''$, $\bc_i:=s_i$, $\bc'_i:=s'_i$.)
 
 Then with \ruleref{Seq} and $\rhl{A}{\bc}{\bc'}C$, we get 
 $\rhl{A}{\bc;s}{\bc's'}C$. And with \ruleref{Conseq} and $C\subseteq B$,
-we get $\rhl{A}{\bc;s}{\bc's'}B$.
+we get $\rhl{A}{\bc;s}{\bc';s'}B$.
 
 
 The first subgoal intuitively means that the quantum variables from
@@ -2175,7 +2182,7 @@ is an attempt of finding a reasonably large $B'''$
 For this, we start with $B$,
 and remove as many terms containing program variables of $S$
 from $B$
-as we can. Namely, since $C=B'''\sqcap \mathit{Eqs}$,
+as we can \TODOQ{(except for read-only classical ones)}\TODOQ{Continue fixup explanation}. Namely, since $C=B'''\sqcap \mathit{Eqs}$,
 we can remove all equations
 from $B$ that occur in $\mathit{Eqs}$ anyway
 without weakening the predicate. This leads to $B'$.

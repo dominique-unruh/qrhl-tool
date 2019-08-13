@@ -124,7 +124,9 @@ operation_setup declare_classical_variable = \<open>
 \<close>
 
 operation_setup callWp = \<open>
-  {from_lib = tuple10 
+  {from_lib = tuple12 
+      (Codec.list term_tight_codec)
+      (Codec.list term_tight_codec)
       (Codec.list term_tight_codec)
       (Codec.list term_tight_codec)
       (Codec.list term_tight_codec)
@@ -136,9 +138,9 @@ operation_setup callWp = \<open>
       term_tight_codec
       Codec.int,
    to_lib = Codec.id,
-   action = fn (in_cvars1, in_cvars2, in_qvars1, in_qvars2, cvars1, cvars2, qvars1, qvars2, B, ctxt_id) => 
+   action = fn (in_cvars1, in_cvars2, in_qvars1, in_qvars2, cvars1, cvars2, cwvars1, cwvars2, qvars1, qvars2, B, ctxt_id) => 
     let val ctxt = Refs.Ctxt.read ctxt_id in
-        QRHL.callWp in_cvars1 in_cvars2 in_qvars1 in_qvars2 cvars1 cvars2 qvars1 qvars2 B
+        QRHL.callWp in_cvars1 in_cvars2 in_qvars1 in_qvars2 cvars1 cvars2 cwvars1 cwvars2 qvars1 qvars2 B
         |> Codec.encode (Codec.triple (richterm_codec' ctxt) (richterm_codec' ctxt) (richterm_codec' ctxt)) end}
 \<close>
 

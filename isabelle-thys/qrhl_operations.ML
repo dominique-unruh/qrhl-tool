@@ -31,6 +31,15 @@ fun tuple10 a b c d e f g h i j =
   Codec.tuple a (tuple9 b c d e f g h i j)
   |> Codec.transform (fn (a, (b, c, d, e, f, g, h, i, j)) => (a, b, c, d, e, f, g, h, i, j)) (fn (a, b, c, d, e, f, g, h, i, j) => (a, (b, c, d, e, f, g, h, i, j)))
 
+fun tuple11 a b c d e f g h i j k =
+  Codec.tuple a (tuple10 b c d e f g h i j k)
+  |> Codec.transform (fn (a, (b, c, d, e, f, g, h, i, j, k)) => (a, b, c, d, e, f, g, h, i, j, k)) (fn (a, b, c, d, e, f, g, h, i, j, k) => (a, (b, c, d, e, f, g, h, i, j, k)))
+
+fun tuple12 a b c d e f g h i j k l =
+  Codec.tuple a (tuple11 b c d e f g h i j k l)
+  |> Codec.transform (fn (a, (b, c, d, e, f, g, h, i, j, k, l)) => (a, b, c, d, e, f, g, h, i, j, k, l))
+                     (fn (a, b, c, d, e, f, g, h, i, j, k, l) => (a, (b, c, d, e, f, g, h, i, j, k, l)))
+
 
 fun make_ctxt_ref ctx = let
   val id = serial ()

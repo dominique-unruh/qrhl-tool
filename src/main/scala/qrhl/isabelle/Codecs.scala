@@ -44,4 +44,18 @@ object Codecs {
     { case (a, b, c, d, e, f, g, h, i, j) => (a, (b, c, d, e, f, g, h, i, j)) },
     s"(${Codec[A].mlType}) * (${Codec[B].mlType}) * (${Codec[C].mlType}) * (${Codec[D].mlType} * (${Codec[E].mlType} * (${Codec[F].mlType} * (${Codec[G].mlType} * (${Codec[H].mlType} * (${Codec[I].mlType} * (${Codec[J].mlType}"
   )
+
+  implicit def tuple11[A:Codec, B:Codec, C:Codec, D:Codec, E:Codec, F:Codec, G:Codec, H:Codec, I :Codec, J: Codec, K:Codec]:
+  Codec[(A,B,C,D,E,F,G,H,I,J,K)] = Codec[(A,(B,C,D,E,F,G,H,I,J,K))].transform[(A,B,C,D,E,F,G,H,I,J,K)](
+    { case (a, (b, c, d, e, f, g, h, i, j, k)) => (a, b, c, d, e, f, g, h, i, j, k)  },
+    { case (a, b, c, d, e, f, g, h, i, j, k) => (a, (b, c, d, e, f, g, h, i, j, k)) },
+    s"(${Codec[A].mlType}) * (${Codec[B].mlType}) * (${Codec[C].mlType}) * (${Codec[D].mlType} * (${Codec[E].mlType} * (${Codec[F].mlType} * (${Codec[G].mlType} * (${Codec[H].mlType} * (${Codec[I].mlType} * (${Codec[J].mlType} * (${Codec[K].mlType})"
+  )
+
+  implicit def tuple12[A:Codec, B:Codec, C:Codec, D:Codec, E:Codec, F:Codec, G:Codec, H:Codec, I :Codec, J: Codec, K:Codec, L:Codec]:
+  Codec[(A,B,C,D,E,F,G,H,I,J,K,L)] = Codec[(A,(B,C,D,E,F,G,H,I,J,K,L))].transform[(A,B,C,D,E,F,G,H,I,J,K,L)](
+    { case (a, (b, c, d, e, f, g, h, i, j, k, l)) => (a, b, c, d, e, f, g, h, i, j, k, l)  },
+    { case (a, b, c, d, e, f, g, h, i, j, k, l) => (a, (b, c, d, e, f, g, h, i, j, k, l)) },
+    s"(${Codec[A].mlType}) * (${Codec[B].mlType}) * (${Codec[C].mlType}) * (${Codec[D].mlType} * (${Codec[E].mlType} * (${Codec[F].mlType} * (${Codec[G].mlType} * (${Codec[H].mlType} * (${Codec[I].mlType} * (${Codec[J].mlType} * (${Codec[K].mlType})"
+  )
 }

@@ -17,6 +17,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
   def diff(left:Statement, right:Statement): (Statement, List[(Statement,Statement)]) = {
     val mismatches = new mutable.ListBuffer[(Statement,Statement)]()
 
+    // Finds a common context matching both l,r, and collects the differences in mismatches
     def collect(l: Statement, r: Statement) : Statement = (l,r) match {
       case (Assign(xl,el), Assign(xr,er)) if xl==xr && el==er =>
         Assign(xl,el)
@@ -60,6 +61,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
     val varUse = context.variableUse(env)
 
     val cvars = varUse.classical
+    val cwvars = varUse.writtenClassical
     val qvars =
       if (qvariables.isEmpty)
         varUse.quantum
@@ -74,6 +76,8 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
 
     val cvarsIdx1 = cvars.toList.map(_.index1)
     val cvarsIdx2 = cvars.toList.map(_.index2)
+    val cwvarsIdx1 = cwvars.toList.map(_.index1)
+    val cwvarsIdx2 = cwvars.toList.map(_.index2)
     val qvarsIdx1 = qvars.toList.map(_.index1)
     val qvarsIdx2 = qvars.toList.map(_.index2)
 
@@ -87,6 +91,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
       (in_cvarsIdx1.map(_.valueTerm), in_cvarsIdx2.map(_.valueTerm),
         in_qvarsIdx1.map(_.variableTerm), in_qvarsIdx2.map(_.variableTerm),
         cvarsIdx1.map(_.valueTerm), cvarsIdx2.map(_.valueTerm),
+        cwvarsIdx1.map(_.valueTerm), cwvarsIdx2.map(_.valueTerm),
         qvarsIdx1.map(_.variableTerm), qvarsIdx2.map(_.variableTerm),
         post.isabelleTerm, state.isabelle.contextId))
 
@@ -100,8 +105,8 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
     (in_wp, AmbientSubgoal(colocality)::mismatchGoals)
   }
 
-  val callWpOp: Operation[(List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], Term, BigInt), (RichTerm, RichTerm, RichTerm)] =
-    Operation.implicitly[(List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], Term, BigInt), (RichTerm, RichTerm, RichTerm)]("callWp")
+  val callWpOp: Operation[(List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], Term, BigInt), (RichTerm, RichTerm, RichTerm)] =
+    Operation.implicitly[(List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], Term, BigInt), (RichTerm, RichTerm, RichTerm)]("callWp")
 }
 
 /*

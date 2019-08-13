@@ -264,7 +264,7 @@ fun tidyTrueTop t =
     if t=t' then t else tidyTrueTop t'
   end
 
-fun callWp in_cvars1 in_cvars2 in_qvars1 in_qvars2 cvars1 cvars2 qvars1 qvars2 B =
+fun callWp in_cvars1 in_cvars2 in_qvars1 in_qvars2 cvars1 cvars2 cwvars1 cwvars2 qvars1 qvars2 B =
   let val (qvars1',qvars1T) = variables qvars1
       val (qvars2',qvars2T) = variables qvars2
       val (in_qvars1',in_qvars1T) = variables in_qvars1
@@ -278,19 +278,20 @@ fun callWp in_cvars1 in_cvars2 in_qvars1 in_qvars2 cvars1 cvars2 qvars1 qvars2 B
       val B0 = B |> removeInf qvarsEq (* invariant: post \<sqinter> qvarsEq \<Longrightarrow> original post *)
 
       val cvarEqs = ListPair.zip (cvars1,cvars2) |> map HOLogic.mk_eq
+      val cwvarEqs = ListPair.zip (cvars1,cvars2) |> map HOLogic.mk_eq
       val in_cvarEqs = ListPair.zip (in_cvars1,in_cvars2) |> map HOLogic.mk_eq
       val claCvarsEq = \<^const>\<open>classical_subspace\<close> $ mk_conjs cvarEqs
       val in_claCvarsEq = \<^const>\<open>classical_subspace\<close> $ mk_conjs in_cvarEqs
-      val B' = fold (fn eq => fn post => removeAnd eq post) cvarEqs B0
+      val B' = fold (fn eq => fn post => removeAnd eq post) cwvarEqs B0
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
-      
       val freeCVars = Term.add_frees B' [] |> inter (op=) (cvars1 @ cvars2 |> map Term.dest_Free) |> rev
+      val freeCWVars = Term.add_frees B' [] |> inter (op=) (cwvars1 @ cwvars2 |> map Term.dest_Free) |> rev
       fun inf_over (v,T) p = mk_INFIMUM (HOLogic.mk_UNIV T) (Term.absfree (v,T) p)
-      val usedEqs = filter (fn (v1,v2) => member op= freeCVars (dest_Free v1) andalso member op= freeCVars (dest_Free v2))
+      val usedEqs = filter (fn (v1,v2) => member op= freeCWVars (dest_Free v1) andalso member op= freeCWVars (dest_Free v2))
                     (ListPair.zip (cvars1,cvars2)) |> map HOLogic.mk_eq |> mk_conjs 
       val B'' = @{const plus(predicate)} $ (\<^const>\<open>classical_subspace\<close> $ HOLogic.mk_not usedEqs) $ B'
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
-      val B''' = fold inf_over freeCVars B''
+      val B''' = fold inf_over freeCWVars B''
              (* post \<sqinter> qvarsEq \<sqinter> claCvarsEq ==> original post *)
 
       val wp = @{const inf(predicate)} $ (@{const inf(predicate)} $ B''' $ claCvarsEq) $ qvarsEq
