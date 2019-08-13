@@ -129,7 +129,7 @@ object VariableUse {
 
   private def emptySet[A] = ListSet.empty[A]
 
-  def writtenClassicalVariables(variables: CVariable*): VariableUse = {
+  def overwrittenClassicalVariables(variables: CVariable*): VariableUse = {
     val vars = ListSet(variables: _*)
     new VariableUse(classical = vars, writtenClassical = vars, ambient = emptySet, programs = emptySet, quantum = emptySet,
       overwrittenClassical = vars, overwrittenQuantum = emptySet, oracles=emptySet)
@@ -208,7 +208,7 @@ sealed trait Statement {
       //        ss.foreach(collect)
       case Assign(v, e) =>
         val eVars = e.caVariables(env)
-        val lhsVars = VariableUse.writtenClassicalVariables(v.toSeq: _*)
+        val lhsVars = VariableUse.overwrittenClassicalVariables(v.toSeq: _*)
         mergeSequential(eVars, lhsVars)
       case Sample(v, e) =>
         // Hack for simply doing the same as in Assign case
@@ -246,7 +246,7 @@ sealed trait Statement {
       case Measurement(v, vs, e) =>
         val eVars = e.caVariables(env)
         val qVars = VariableUse.quantumVariables(vs.toSeq:_*)
-        val lhsVars = VariableUse.writtenClassicalVariables(v.toSeq:_*)
+        val lhsVars = VariableUse.overwrittenClassicalVariables(v.toSeq:_*)
         mergeSequential(eVars,lhsVars) ++ qVars
     }
   }
