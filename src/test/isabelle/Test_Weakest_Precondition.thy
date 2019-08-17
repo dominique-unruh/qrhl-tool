@@ -34,7 +34,7 @@ test_get_wp \<^context> true
             \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
             \<^term>\<open>const_expression
                  (let M::(bit, bit) measurement = computational_basis
-                  in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (INF z::bit. let P::mem2 subspace = mproj M z\<guillemotright>\<lbrakk>A1::bit variable\<rbrakk> \<cdot> top in top \<sqinter> P + ortho P))\<close> (* expected *)
+                  in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (INF z::bit. let P::mem2 subspace = mproj M z\<guillemotright>\<lbrakk>A1::bit variable\<rbrakk> \<cdot> top in top \<sqinter> P + - P))\<close> (* expected *)
 \<close>
 end
 

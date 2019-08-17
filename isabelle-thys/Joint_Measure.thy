@@ -17,7 +17,7 @@ lemma joint_measure_simple:
   defines "\<And>f\<^sub>2 z. fbar f\<^sub>2 z \<equiv> ((mproj f\<^sub>2 z)\<guillemotright>R\<^sub>2) \<cdot> top"
   defines "A \<equiv> map_expression3' (\<lambda>e\<^sub>1 f\<^sub>2 B'. 
     Cla[e\<^sub>1=f\<^sub>2] \<sqinter> quantum_equality Q\<^sub>1 R\<^sub>2 \<sqinter> 
-    (INF z. ((B' z \<sqinter> ebar e\<^sub>1 z \<sqinter> fbar f\<^sub>2 z) + ortho (ebar e\<^sub>1 z) + ortho (fbar f\<^sub>2 z)))) e\<^sub>1 f\<^sub>2 B'"
+    (INF z. ((B' z \<sqinter> ebar e\<^sub>1 z \<sqinter> fbar f\<^sub>2 z) + (- ebar e\<^sub>1 z) + (- fbar f\<^sub>2 z)))) e\<^sub>1 f\<^sub>2 B'"
   shows "qrhl A [measurement x Q e] [measurement y R f] B"
   by (cheat joint_measure_simple)
 
@@ -38,7 +38,7 @@ lemma joint_measure_simple_tac:
   defines "\<And>f\<^sub>2 z. fbar f\<^sub>2 z \<equiv> ((mproj f\<^sub>2 z)\<guillemotright>R\<^sub>2) \<cdot> top"
   assumes "A = map_expression3' (\<lambda>e\<^sub>1 f\<^sub>2 B'. 
     Cla[e\<^sub>1=f\<^sub>2] \<sqinter> quantum_equality Q\<^sub>1 R\<^sub>2 \<sqinter> 
-    (INF z. let ebar = ebar e\<^sub>1 z; fbar = fbar f\<^sub>2 z in ((B' z \<sqinter> ebar \<sqinter> fbar) + ortho ebar + ortho fbar))) e\<^sub>1 f\<^sub>2 B'"
+    (INF z. let ebar = ebar e\<^sub>1 z; fbar = fbar f\<^sub>2 z in ((B' z \<sqinter> ebar \<sqinter> fbar) + - ebar + - fbar))) e\<^sub>1 f\<^sub>2 B'"
   shows "qrhl A [measurement x Q e] [measurement y R f] B"
 unfolding assms Let_def by (rule joint_measure_simple)
 

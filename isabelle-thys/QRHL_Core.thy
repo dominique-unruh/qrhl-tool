@@ -51,7 +51,7 @@ lemma classical_sort[simp]:
 
 lemma Cla_split[split]: "P (Cla[Q]) = ((Q \<longrightarrow> P top) \<and> (\<not> Q \<longrightarrow> P bot))"
   by (cases Q, auto) 
-lemma classical_ortho[simp]: "ortho Cla[b] = Cla[\<not> b]"
+lemma classical_ortho[simp]: "- Cla[b] = Cla[\<not> b]"
   by auto
 
 lemma applyOp_Cla[simp]:
@@ -60,6 +60,8 @@ lemma applyOp_Cla[simp]:
   apply (cases b) using assms by auto
 
 lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]" 
+  unfolding sup_linear_space_def[symmetric] by auto
+lemma Cla_sup[simp]: "Cla[x] \<squnion> Cla[y] = Cla[x\<or>y]" 
   unfolding sup_linear_space_def[symmetric] by auto
 lemma BINF_Cla[simp]: "(INF z:Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
 proof (rule Inf_eqI)
@@ -134,7 +136,9 @@ lemma predicate_local_raw_inter: "predicate_local_raw A Q \<Longrightarrow> pred
   by (cheat predicate_local_raw_inter)
 lemma predicate_local_raw_plus: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw B Q \<Longrightarrow> predicate_local_raw (A+B) Q" 
   by (cheat predicate_local_raw_plus)
-lemma predicate_local_raw_ortho: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw (ortho A) Q" 
+lemma predicate_local_raw_sup: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw B Q \<Longrightarrow> predicate_local_raw (sup A B) Q" 
+  by (cheat predicate_local_raw_sup)
+lemma predicate_local_raw_ortho: "predicate_local_raw A Q \<Longrightarrow> predicate_local_raw (- A) Q" 
   by (cheat predicate_local_raw_ortho)
 lemma predicate_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> predicate_local_raw A Q \<Longrightarrow> predicate_local_raw A Q'"
   by (cheat predicate_local_raw_mono)
@@ -223,13 +227,13 @@ proof -
     apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq by auto
   then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (A + B) vs'"
     apply (rule_tac exI[of _ "vsA \<union> vsB"])
-    by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_plus)
+    by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_sup)
   then show ?thesis
     unfolding colocal_pred_qvars_str.rep_eq by simp
 qed
 
 lemma colocal_sup[simp]: "colocal_pred_qvars_str A Q \<Longrightarrow> colocal_pred_qvars_str B Q \<Longrightarrow> colocal_pred_qvars_str (A \<squnion> B) Q"
-  unfolding linear_space_sup_plus by simp
+  by (simp flip: plus_linear_space_def)
 lemma colocal_Cla[simp]: "colocal_pred_qvars_str (Cla[b]) Q"
   by (cases b; simp)
 
@@ -247,20 +251,20 @@ proof -
     unfolding colocal_pred_qvars_str.rep_eq by simp
 qed
 
-lemma colocal_ortho[simp]: "colocal_pred_qvars_str (ortho S) Q = colocal_pred_qvars_str S Q"
+lemma colocal_ortho[simp]: "colocal_pred_qvars_str (- S) Q = colocal_pred_qvars_str S Q"
 proof -
-  have "colocal_pred_qvars_str (ortho S) Q" if "colocal_pred_qvars_str S Q" for S
+  have "colocal_pred_qvars_str (- S) Q" if "colocal_pred_qvars_str S Q" for S
   proof -
     from that
     obtain vsS where "Q \<inter> variable_raw_name ` vsS = {}" and "predicate_local_raw S vsS"
       apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq by auto
-    then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (ortho S) vs'"
+    then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (- S) vs'"
       apply (rule_tac exI[of _ vsS])
       by (auto intro: intro!: predicate_local_raw_ortho)
     then show ?thesis
       unfolding colocal_pred_qvars_str.rep_eq by simp
   qed
-  from this[where S=S] this[where S="ortho S"]
+  from this[where S=S] this[where S="- S"]
   show ?thesis 
     by auto
 qed
@@ -317,6 +321,8 @@ lemma lift_timesScalarOp[simp]: "distinct_qvars Q \<Longrightarrow> a *\<^sub>C 
   by (cheat TODO11)
 lemma lift_plus[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a::universe subspace"  
   by (cheat TODO11)
+lemma lift_sup[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<squnion> T\<guillemotright>Q = (S \<squnion> T)\<guillemotright>Q" for S T :: "'a::universe subspace"  
+  by (cheat TODO11)
 lemma lift_plusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a::universe,'a) l2bounded"  
   by (cheat TODO11)
 lemma lift_uminusOp[simp]: "distinct_qvars Q \<Longrightarrow> - (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a::universe,'a) l2bounded"  
@@ -327,7 +333,7 @@ lemma lift_minusOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>
   by (cheat lift_minusOp)
 lemma lift_timesOp[simp]: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a::universe,'a) l2bounded"  
   by (cheat TODO11)
-lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> ortho (S\<guillemotright>Q) = (ortho S)\<guillemotright>Q" for Q :: "'a::universe variables"
+lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> - (S\<guillemotright>Q) = (- S)\<guillemotright>Q" for Q :: "'a::universe variables" and S :: "'a ell2 linear_space"
   by (cheat TODO11)
 lemma lift_tensorOp: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>variable_concat Q R" for Q :: "'a::universe variables" and R :: "'b::universe variables" and S T :: "(_,_) l2bounded" 
   by (cheat TODO11)
@@ -339,6 +345,7 @@ lemma INF_lift: "distinct_qvars Q \<Longrightarrow> (INF x. S x\<guillemotright>
   by (cheat TODO11)
 lemma Cla_inf_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<sqinter> (S\<guillemotright>Q) = (if b then S else bot)\<guillemotright>Q" by auto
 lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
+lemma Cla_sup_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<squnion> (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 lemma Proj_lift[simp]: "distinct_qvars Q \<Longrightarrow> Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
   for Q::"'a::universe variables"
   by (cheat TODO11)
@@ -396,11 +403,13 @@ lemma lift_extendL:
   shows "U\<guillemotright>Q = (idOp\<otimes>U)\<guillemotright>(variable_concat R Q)"
   by (metis assms distinct_qvars_swap lift_idOp lift_tensorOp times_idOp2)
 
+(* TODO: rename: plus \<rightarrow> sup *)
 lemma move_plus_meas_rule:
   fixes Q::"'a::universe variables"
   assumes "distinct_qvars Q"
   assumes "(Proj C)\<guillemotright>Q \<cdot> A \<le> B"
-  shows "A \<le> (B\<sqinter>C\<guillemotright>Q) + (ortho C)\<guillemotright>Q"
+  shows "A \<le> (B\<sqinter>C\<guillemotright>Q) \<squnion> (- C)\<guillemotright>Q"
+  (* apply simp *)
   apply (rule move_plus) 
   using Proj_leq[of "C\<guillemotright>Q"] assms by simp
 
@@ -703,6 +712,7 @@ lemma add_join_variables_hint:
     and A :: "('a,'a) l2bounded" and B :: "('b,'b) l2bounded"
   shows "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>R = join_variables_hint (S\<guillemotright>Q) R \<sqinter> join_variables_hint (T\<guillemotright>R) Q"
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>R = join_variables_hint (S\<guillemotright>Q) R + join_variables_hint (T\<guillemotright>R) Q"
+    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<squnion> T\<guillemotright>R = join_variables_hint (S\<guillemotright>Q) R \<squnion> join_variables_hint (T\<guillemotright>R) Q"
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> A\<guillemotright>Q \<cdot> T\<guillemotright>R = join_variables_hint (A\<guillemotright>Q) R \<cdot> join_variables_hint (T\<guillemotright>R) Q"
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>R) = (join_variables_hint (S\<guillemotright>Q) R \<le> join_variables_hint (T\<guillemotright>R) Q)"
     and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>R) = (join_variables_hint (S\<guillemotright>Q) R = join_variables_hint (T\<guillemotright>R) Q)"

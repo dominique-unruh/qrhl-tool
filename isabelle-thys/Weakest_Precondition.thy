@@ -107,7 +107,7 @@ lemma wp1_measure_tac:
   assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q1) \<cdot> top"
   assumes "A = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
-                         (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
+                         (INF z. let P = ebar M z in ((B' z \<sqinter> P) + - P))) e\<^sub>1 B'"
   shows "qrhl A [measurement x Q e] [] B"
   by (cheat wp1_measure_tac)
 
@@ -119,7 +119,7 @@ lemma wp2_measure_tac:
   assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   defines "\<And>e\<^sub>1 z. ebar e\<^sub>1 z \<equiv> ((mproj e\<^sub>1 z)\<guillemotright>Q1) \<cdot> top"
   assumes "A = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in Cla[mtotal M] \<sqinter> 
-                         (INF z. let P = ebar M z in ((B' z \<sqinter> P) + ortho P))) e\<^sub>1 B'"
+                         (INF z. let P = ebar M z in ((B' z \<sqinter> P) + - P))) e\<^sub>1 B'"
   shows "qrhl A [] [measurement x Q e] B"
   by (cheat wp2_measure_tac)
 

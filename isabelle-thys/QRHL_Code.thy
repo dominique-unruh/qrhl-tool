@@ -1,6 +1,9 @@
 theory QRHL_Code
   imports QRHL_Core "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Code_Target_Numeral"
+    Jordan_Normal_Form_Notation
 begin
+
+unbundle jnf_notation
 
 (* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
 hide_const (open) Lattice.sup
@@ -241,10 +244,10 @@ lemma top_as_span[code]: "(top::'a linear_space) = SPAN (computational_basis_vec
   by (cheat 17)
 lemma bot_as_span[code]: "(bot::'a::basis_enum linear_space) = SPAN []"
   by (cheat 17)
-lemma plus_spans[code]: "SPAN A + SPAN B = SPAN (A @ B)" 
+lemma sup_spans[code]: "SPAN A \<squnion> SPAN B = SPAN (A @ B)" 
   by (cheat 17)
 
-lemma ortho_SPAN[code]: "ortho (SPAN S :: 'a::basis_enum linear_space)
+lemma ortho_SPAN[code]: "- (SPAN S :: 'a::basis_enum linear_space)
         = SPAN (orthogonal_complement_vec (canonical_basis_length TYPE('a)) S)"
   by (cheat 17)
 
@@ -333,10 +336,8 @@ lemma mat_of_l2bounded_remove_qvar_unit_op[code]:
 lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (ell2_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
   by (cheat addState_remove_qvar_unit_op)
 
-(* TODO: prove this in Complex_L2 *)
-lemma [code]: "(A::'a::basis_enum linear_space) \<sqinter> B = ortho (ortho A + ortho B)"
-  unfolding linear_space_sup_plus[symmetric]
-  by (cheat demorgan) 
+lemma [code]: "(A::'a::basis_enum linear_space) \<sqinter> B = - (- A \<squnion> - B)"
+  by (subst ortho_involution[symmetric], subst demorgan_inf, simp)
 
 lemma [code]: "Inf (Set_Monad l :: 'a::basis_enum linear_space set) = fold inf l top"
   unfolding Set_Monad_def
@@ -390,8 +391,10 @@ derive (monad) set_impl ell2
 
 
 lemmas prepare_for_code = quantum_equality_full_def_let add_join_variables_hint space_div_space_div_unlifted
-  space_div_add_extend_lift_as_var_concat_hint INF_lift Cla_inf_lift Cla_plus_lift
+  space_div_add_extend_lift_as_var_concat_hint INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
   top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2
 
+
+unbundle no_jnf_notation
 
 end
