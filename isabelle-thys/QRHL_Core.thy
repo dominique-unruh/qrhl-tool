@@ -590,7 +590,7 @@ lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x"
     - the term should be rewritten into x'\<guillemotright>(variable_concat Q' R) for some Q', x'
 *)
 definition "extend_lift_as_var_concat_hint A R = A"
-lemma [cong]: "A=A' \<Longrightarrow> extend_lift_as_var_concat_hint A R = extend_lift_as_var_concat_hint A' R" by simp
+lemma extend_lift_as_var_concat_hint_cong[cong]: "A=A' \<Longrightarrow> extend_lift_as_var_concat_hint A R = extend_lift_as_var_concat_hint A' R" by simp
 lemma extend_lift_as_var_concat_hint_remove_aux: "extend_lift_as_var_concat_hint A R \<equiv> A"
   by (simp add: extend_lift_as_var_concat_hint_def)
 
@@ -602,11 +602,11 @@ lemma extend_lift_as_var_concat_hint_remove_aux: "extend_lift_as_var_concat_hint
   Rewriting the term is done by the simplifier rules declared below.
 *)
 definition "variable_renaming_hint x (A::('a,'b) l2bounded) (R::'b::universe variables) = x"
-lemma [cong]: "x=x' \<Longrightarrow> variable_renaming_hint x A R = variable_renaming_hint x' A R" by simp
+lemma variable_renaming_hint_cong[cong]: "x=x' \<Longrightarrow> variable_renaming_hint x A R = variable_renaming_hint x' A R" by simp
 
 (* A copy of qvars_trafo that is protected from unintentional rewriting *)
 definition "qvar_trafo_protected = qvar_trafo"
-lemma [cong]: "qvar_trafo_protected A Q R = qvar_trafo_protected A Q R" ..
+lemma qvar_trafo_protected_cong[cong]: "qvar_trafo_protected A Q R = qvar_trafo_protected A Q R" ..
 
 lemma variable_renaming_hint_subspace[simp]:
   fixes S::"_ subspace"
@@ -814,7 +814,7 @@ lemma qvar_trafo_protected_remove_qvar_unit_op2[simp]:
   by (auto simp: remove_qvar_unit_op)
 
 
-lemma qvar_trafo_protecterd_id_tensor[simp]:
+lemma qvar_trafo_protected_id_tensor[simp]:
   assumes [simp]: "distinct_qvars (variable_concat Q R)" and [simp]: "distinct_qvars (variable_concat Q R')"
     and "qvar_trafo_protected A R R'"
   shows "qvar_trafo_protected (id_tensor A) (variable_concat Q R) (variable_concat Q R')"
@@ -825,7 +825,7 @@ lemma qvar_trafo_protecterd_id_tensor[simp]:
   using assms(2) apply (rule distinct_qvarsL) 
   using assms(3) unfolding qvar_trafo_protected_def by assumption
 
-lemma qvar_trafo_protecterd_comm_op[simp]:
+lemma qvar_trafo_protected_comm_op[simp]:
   assumes [simp]: "distinct_qvars (variable_concat Q R)"
   shows "qvar_trafo_protected comm_op (variable_concat Q R) (variable_concat R Q)"
   unfolding qvar_trafo_protected_def by simp                                                  
@@ -837,21 +837,6 @@ definition "infsetsummable f M = (\<exists>x. infsetsums f M x)"
 (* I think this is equal to infsetsum, except that infsetsum is only defined on second countable topologies *)
 definition "infsetsum' f M = (if infsetsummable f M then THE x. infsetsums f M x else 0)" *)
 
-(* TODO move *)
-definition "positive_op A = (\<exists>B::('a::chilbert_space,'a) bounded. A = B* \<cdot> B)"
-
-lemma timesOp0[simp]: "timesOp 0 A = 0"
-  apply transfer by simp
-lemma timesOp0'[simp]: "timesOp A 0 = 0"
-  apply transfer apply auto
-  by (metis bounded_clinear_def mult_zero_left norm_le_zero_iff norm_zero)
-
-lemma positive_idOp[simp]: "positive_op idOp"
-  unfolding positive_op_def apply (rule exI[of _ idOp]) by simp
-lemma positive_0[simp]: "positive_op 0"
-  unfolding positive_op_def apply (rule exI[of _ 0]) by auto
-
-abbreviation "loewner_leq A B == (positive_op (B-A))"
 
 definition "is_measurement M = ((\<forall>i. isProjector (M i)) \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i \<cdot> \<psi>\<rangle>) = \<langle>\<phi>, P \<cdot> \<psi>\<rangle>) \<and> loewner_leq P idOp))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
