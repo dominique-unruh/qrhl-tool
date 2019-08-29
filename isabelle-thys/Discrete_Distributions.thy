@@ -3,7 +3,7 @@ chapter \<open>Discrete (subprobability) distributions\<close>
 theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum" 
     Universe_Instances_Complex_Main Bounded_Operators.Infinite_Set_Sum_Missing
-    Bounded_Operators.Extended_Sorry
+    Bounded_Operators.Extended_Sorry "HOL-Library.Bit" Misc_Missing Multi_Transfer
 begin
 
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"
@@ -550,6 +550,121 @@ proof -
   then show ?thesis
     unfolding expectation_uminus by simp
 qed
+
+lemma prob_bind_distr: "prob (bind_distr \<mu> f) x = (\<Sum>\<^sub>a y\<in>UNIV. prob \<mu> y * prob (f y) x)"
+  apply transfer by simp
+
+lemma Prob_singleton[simp]: "Prob D {x} = prob D x"
+  apply transfer by simp
+
+lemma prob_leq1[simp]: "prob \<mu> x \<le> 1"
+  by (simp flip: Prob_singleton)
+
+
+(* TODO move to missing *)
+lemma local_defE: "(\<And>x. x=y \<Longrightarrow> P) \<Longrightarrow> P" by metis
+
+
+lemma bind_distr_summable: "(\<lambda>y. prob \<mu> y * prob (f y) x) abs_summable_on UNIV"
+  apply (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f)
+  apply (subgoal_tac "\<And>x y. prob (f y) x \<le> 1")
+  apply transfer
+  apply (rule abs_summable_on_comparison_test')
+  unfolding is_distribution_def by (auto simp: mult_left_le)
+
+lemma prob_geq_0[simp]: "prob \<mu> f \<ge> 0"
+  apply transfer by (auto simp: is_distribution_def)
+
+lemma prob_abs_summable: "prob \<mu> abs_summable_on UNIV"
+  apply transfer unfolding is_distribution_def
+  using distr_abs_summable_on by blast
+
+
+lemma supp_bind_distr[simp]: 
+  shows "supp (bind_distr \<mu> f) = (\<Union>x\<in>supp \<mu>. supp (f x))"
+proof (rule; rule)
+  show "y \<in> (\<Union>x\<in>supp \<mu>. supp (f x))"
+    if "y \<in> supp (bind_distr \<mu> f)"
+    for y :: 'a
+  proof -
+    from that have "prob (bind_distr \<mu> f) y > 0"
+      by (simp add: supp.rep_eq)
+    also have "prob (bind_distr \<mu> f) y = (\<Sum>\<^sub>a x\<in>UNIV. prob \<mu> x * prob (f x) y)"
+      unfolding prob_bind_distr by simp
+    finally obtain x where "prob \<mu> x * prob (f x) y \<noteq> 0"
+      by (smt infsetsum_all_0)
+    then have "prob \<mu> x > 0" and "prob (f x) y > 0"
+      using prob_geq_0 less_eq_real_def by fastforce+
+    then have "x \<in> supp \<mu>" and "y \<in> supp (f x)"
+      by (simp_all add: supp.rep_eq)
+    then show ?thesis
+      by auto
+  qed
+  show "y \<in> supp (bind_distr \<mu> f)"
+    if "y \<in> (\<Union>x\<in>supp \<mu>. supp (f x))"
+    for y :: 'a
+  proof -
+    have [trans]: "a \<ge> b \<Longrightarrow> b > c \<Longrightarrow> a > c" for a b c :: real by auto
+
+    from that obtain x where x_supp: "x\<in>supp \<mu>" and y_supp: "y \<in> supp (f x)"
+      by auto
+    have "(\<Sum>\<^sub>a x\<in>UNIV. prob \<mu> x * prob (f x) y) \<ge> (\<Sum>\<^sub>a x\<in>{x}. prob \<mu> x * prob (f x) y)" (is "_ \<ge> \<dots>")
+      apply (rule infsetsum_mono_neutral)
+      using bind_distr_summable[where x=y] by auto
+    also have "\<dots> = prob \<mu> x * prob (f x) y"
+      by auto
+    also have "\<dots> > 0"
+      using x_supp y_supp by (simp_all add: supp.rep_eq)
+    finally have "prob (bind_distr \<mu> f) y > 0"
+      unfolding prob_bind_distr by auto
+    then show "y \<in> supp (bind_distr \<mu> f)"
+      by (simp add: supp.rep_eq)
+  qed
+qed
+
+lemma supp_product_distr[simp]: "supp (product_distr \<mu> \<nu>) = supp \<mu> \<times> supp \<nu>"
+  by auto
+
+
+lift_definition bernoulli :: "real \<Rightarrow> bit distr" is
+  "\<lambda>p::real. let p' = min (max p 0) 1 in (\<lambda>b::bit. if b=0 then 1-p' else p')"
+proof (rename_tac p)
+  fix p :: real
+  define D where "D = (let p' = min (max p 0) 1 in (\<lambda>b::bit. if b = 0 then 1 - p' else p'))"
+  define p' where "p' = min (max p 0) 1"
+  then have p': "p' \<ge> 0" "p' \<le> 1" by auto
+  from p'_def D_def have D: "D = (\<lambda>b. if b = 0 then 1 - p' else p')" unfolding Let_def by auto
+  have Dpos: "\<forall>x. 0 \<le> D x"
+    unfolding D using p' by auto
+  moreover have "D abs_summable_on UNIV"
+    by simp
+  moreover have "infsetsum D UNIV \<le> 1"
+    by (simp add: D UNIV_bit)
+  ultimately show "is_distribution D"
+    unfolding is_distribution_def by simp
+qed
+
+lemma bernoulli1:
+  assumes "p\<ge>0" and "p\<le>1"
+  shows "prob (bernoulli p) 1 = p"
+  apply (transfer fixing: p)
+  using assms by (auto simp: Let_def)
+
+lemma bernoulli0:
+  assumes "p\<ge>0" and "p\<le>1"
+  shows "prob (bernoulli p) 0 = 1-p"
+  apply (transfer fixing: p)
+  using assms by (auto simp: Let_def)
+
+lemma bernoulli_fix:
+  shows "bernoulli p = bernoulli (max 0 (min 1 p))"
+  apply (transfer fixing: p)
+  by (auto intro!: ext simp: Let_def)
+
+lemma weight_bernoulli[simp]: "weight (bernoulli p) = 1"
+  using [[transfer_del_const pcr_bit]]
+  apply (transfer fixing: p)
+  by (simp add: UNIV_bit Let_def)
 
 
 ML_file "discrete_distributions.ML"
