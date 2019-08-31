@@ -148,7 +148,9 @@ lemma predicate_local_raw_apply_op: "operator_local_raw U Q \<Longrightarrow> pr
 lemma operator_local_raw_mono: "Q \<subseteq> Q' \<Longrightarrow> operator_local_raw A Q \<Longrightarrow> operator_local_raw A Q'" 
   by (cheat operator_local_raw_mono)
 
-lift_definition predicate_local :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool" 
+definition "qvariables_local R Q \<longleftrightarrow> set (raw_variables R) \<subseteq> set (raw_variables Q) \<and> distinct_qvars R \<and> distinct_qvars Q"
+
+lift_definition predicate_local :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
   is  "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> predicate_local_raw A (set (flatten_tree vs))" .
 
 lift_definition operator_local :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool" 
@@ -269,6 +271,20 @@ proof -
     by auto
 qed
 
+lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
+  by (cheat predicate_local_inf)
+lemma predicate_local_applyOpSpace[intro!]: "operator_local A Q \<Longrightarrow> predicate_local S Q \<Longrightarrow> predicate_local (A\<cdot>S) Q"
+  by (cheat predicate_local_applyOpSpace)
+lemma qvariables_localI[intro!]: "set (raw_variables R) \<subseteq> set (raw_variables Q) \<Longrightarrow> distinct_qvars R \<Longrightarrow> distinct_qvars Q
+\<Longrightarrow> qvariables_local R Q"
+  unfolding qvariables_local_def by simp
+lemma predicate_local[intro!]: 
+  assumes "qvariables_local (variable_concat Q R) S"
+  shows "predicate_local (quantum_equality_full U Q V R) S"
+  by (cheat predicate_local)
+lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> operator_local B Q \<Longrightarrow> operator_local (A\<cdot>B) Q"
+  by (cheat operator_local_timesOp)
+
 subsection \<open>Lifting\<close>
 
 axiomatization
@@ -296,6 +312,11 @@ lemma operator_localE:
   shows "\<exists>S'. S=S'\<guillemotright>Q"
   by (cheat operator_localE)
 
+lemma lift_predicate_local[intro!]: "qvariables_local R Q \<Longrightarrow> predicate_local (S\<guillemotright>R) Q"
+  by (cheat lift_predicate_local)
+lemma lift_operator_local[intro!]: "qvariables_local R Q \<Longrightarrow> operator_local (S\<guillemotright>R) Q"
+  by (cheat lift_operator_local)
+
 lemma adjoint_lift[simp]: "adjoint (liftOp U Q) = liftOp (adjoint U) Q" 
   by (cheat adjoint_lift)
 lemma scaleC_lift[simp]: "c *\<^sub>C (A\<guillemotright>Q) = (c *\<^sub>C A) \<guillemotright> Q" for A :: "(_,_) bounded"
@@ -313,7 +334,11 @@ lemma bot_lift[simp]: "liftSpace bot Q = bot"
   by (cheat bot_lift)
 lemma unitary_lift[simp]: "distinct_qvars Q \<Longrightarrow> unitary (liftOp U Q) = unitary U"
   by (cheat unitary_lift)
-(* for U :: "('a::universe,'a) l2bounded" *)
+lemma tensor_lift: 
+  fixes A B :: "_ subspace"
+  assumes "distinct_qvars (variable_concat Q R)"
+  shows "(A\<otimes>B)\<guillemotright>(variable_concat Q R) = (A\<guillemotright>Q) \<sqinter> (B\<guillemotright>R)"
+  by (cheat tensor_lift)
 
 lemma lift_inf[simp]: "S\<guillemotright>Q \<sqinter> T\<guillemotright>Q = (S \<sqinter> T)\<guillemotright>Q" for S::"'a::universe subspace"
   by (cheat lift_inf)
@@ -488,15 +513,23 @@ hide_fact qvar_trafo_coiso (* Subsumed by qvar_trafo_unitary *)
 
 lemma assoc_op_lift: "(assoc_op \<cdot> A \<cdot> assoc_op*)\<guillemotright>(variable_concat (variable_concat Q R) T)
      = A\<guillemotright>(variable_concat Q (variable_concat R T))" for A::"('a::universe*'b::universe*'c::universe,_)l2bounded" 
-  by (cheat TODO12)
+  by (cheat assoc_op_lift)
+lemma assoc_op_lift': "(assoc_op* \<cdot> A \<cdot> assoc_op)\<guillemotright>(variable_concat Q (variable_concat R T))
+     = A\<guillemotright>(variable_concat (variable_concat Q R) T)" for A::"(('a::universe*'b::universe)*'c::universe,_)l2bounded" 
+  by (cheat assoc_op_lift')
 lemma comm_op_lift: "(comm_op \<cdot> A \<cdot> comm_op*)\<guillemotright>(variable_concat Q R)
      = A\<guillemotright>(variable_concat R Q)" for A::"('a::universe*'b::universe,_)l2bounded" 
-  by (cheat TODO12)
+  by (cheat comm_op_lift)
 lemma lift_tensor_id: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars (variable_concat Q R) \<Longrightarrow>
    (\<And>D::(_,_) l2bounded. (A \<cdot> D \<cdot> A*)\<guillemotright>Q = D\<guillemotright>Q') \<Longrightarrow> (\<And>D::(_,_) l2bounded. (A' \<cdot> D \<cdot> A'*)\<guillemotright>R = D\<guillemotright>R') \<Longrightarrow> 
   ((A\<otimes>A') \<cdot> C \<cdot> (A\<otimes>A')*)\<guillemotright>variable_concat Q R = C\<guillemotright>variable_concat Q' R'"
   for A :: "('a::universe,'b::universe) l2bounded" and A' :: "('c::universe,'d::universe) l2bounded" and C::"(_,_) l2bounded" and Q R :: "_ variables"
   by (cheat lift_tensor_id)
+
+lemma comm_op_sym:
+  "comm_op \<guillemotright> variable_concat Q R = comm_op \<guillemotright> variable_concat R Q"
+  using comm_op_lift[where A=comm_op and Q=Q and R=R] by simp
+
 
 
 lemma qvar_trafo_assoc_op[simp]:
@@ -1425,6 +1458,16 @@ lemma Uoracle_selfadjoint[simp]: "(Uoracle f)* = Uoracle f" for f :: "_ \<Righta
 
 lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = idOp" for f :: "_ \<Rightarrow> _::xor_group"
   apply (subst Uoracle_selfadjoint[symmetric]) apply (rule adjUU) by simp
+
+lemma applyOp_Uoracle[simp]:
+  shows "Uoracle f \<cdot> ket (x, y) = ket (x, y + f x)"
+  unfolding Uoracle_def
+  apply (subst classical_operator_basis)
+  by (auto simp: inj_on_def)
+
+lemma applyOp_Uoracle'[simp]:
+  shows "Uoracle f \<cdot> (ket x \<otimes> ket y) = ket x \<otimes> ket (y + f x)"
+  by (simp flip: ket_product)
 
 definition "proj_classical_set S = Proj (Span {ket s|s. s\<in>S})"
 

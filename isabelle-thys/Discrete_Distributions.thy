@@ -64,6 +64,32 @@ lift_definition zero_distr :: "'a distr" is "(\<lambda>_. 0)" by (simp add: is_d
 instance .. 
 end
 
+instantiation distr :: (type) scaleR begin
+lift_definition scaleR_distr :: "real \<Rightarrow> 'a distr \<Rightarrow> 'a distr"
+  is "\<lambda>r \<mu> x. min 1 (max 0 r) * \<mu> x"
+proof -
+  fix r :: real and \<mu> :: "'a\<Rightarrow>real"
+  assume \<mu>: "is_distribution \<mu>"
+  define r' where "r' = min 1 (max 0 r)"
+  then have r'pos: "r' \<ge> 0" and r'leq1: "r' \<le> 1"
+    by auto
+  have leq: "(\<Sum>x\<in>M. r' * \<mu> x) \<le> 1" if "finite M" for M :: "'a set"
+  proof -
+    have "(\<Sum>x\<in>M. r' * \<mu> x) = r' * (\<Sum>x\<in>M. \<mu> x)"
+      by (simp add: sum_distrib_left)
+    also have "\<dots> \<le> 1"
+      using r'leq1 apply (rule mult_le_one)
+      using \<mu> by (auto simp: that sum_nonneg is_distribution_def')
+    finally show ?thesis by assumption
+  qed
+  show "is_distribution (\<lambda>x. r' * \<mu> x)"
+    unfolding is_distribution_def' apply auto
+    using r'pos \<mu> unfolding is_distribution_def' apply simp
+    using leq by simp
+qed
+instance..
+end
+
 
 lift_definition supp :: "'a distr \<Rightarrow> 'a set" is "\<lambda>\<mu>. {x. \<mu> x > 0}" .
 
@@ -444,7 +470,7 @@ lemma expectation_point_distr[simp]: "expectation (point_distr x) f = f x"
   apply (subst infsetsum_cong_neutral[where B="{x}"])
   by auto
 
-(* TODO move *)
+
 lift_definition "bind_distr" :: "'a distr \<Rightarrow> ('a \<Rightarrow> 'b distr) \<Rightarrow> 'b distr" 
   is "\<lambda>(\<mu>::'a\<Rightarrow>real) (f::'a\<Rightarrow>'b\<Rightarrow>real) x. \<Sum>\<^sub>a y\<in>UNIV. \<mu> y * f y x"
   by (cheat bind_distr)
@@ -665,6 +691,177 @@ lemma weight_bernoulli[simp]: "weight (bernoulli p) = 1"
   using [[transfer_del_const pcr_bit]]
   apply (transfer fixing: p)
   by (simp add: UNIV_bit Let_def)
+
+lemma map_distr_const[simp]: 
+  shows "map_distr (\<lambda>x. c) D = weight D *\<^sub>R point_distr c"
+  apply (transfer fixing: c, rule ext) apply auto
+  by (metis infsetsum_nonneg is_distribution_def max_def min.commute min.orderE)
+
+lemma bind_distr_const[simp]:
+  shows "bind_distr \<mu> (\<lambda>x. \<nu>) = weight \<mu> *\<^sub>R \<nu>"
+  apply (transfer, rule ext) apply auto
+  apply (subst max_absorb2)
+   apply (simp add: infsetsum_nonneg is_distribution_def')
+  apply (subst min_absorb2)
+  using is_distribution_def apply blast
+  using infsetsum_cmult_left is_distribution_def by fastforce
+
+lemma prob_map_distr_bij:
+  assumes "bij f"
+  shows "prob (map_distr f \<mu>) x = prob \<mu> (Hilbert_Choice.inv f x)"
+  apply (transfer fixing: f) 
+  apply (subst bij_vimage_eq_inv_image)
+  using assms by auto
+
+lemma swap_product_distr: "map_distr prod.swap (product_distr \<mu> \<nu>) = (product_distr \<nu> \<mu>)"
+proof (rule prob_inject[THEN iffD1], rule ext, rename_tac xy)
+  fix xy :: "'a*'b" obtain x y where xy: "xy = (x,y)" 
+    apply atomize_elim by auto
+  have "prob (map_distr prod.swap (product_distr \<mu> \<nu>)) xy = prob (product_distr \<mu> \<nu>) (Hilbert_Choice.inv prod.swap xy)"
+    apply (subst prob_map_distr_bij)
+    using bij_swap by auto
+  also have "\<dots> = prob (product_distr \<mu> \<nu>) (y,x)"
+    unfolding xy
+    by (metis inv_equality swap_simp swap_swap) 
+  also have "\<dots> = prob \<mu> y * prob \<nu> x"
+    by simp
+  also have "\<dots> = prob (product_distr \<nu> \<mu>) xy"
+    unfolding xy by simp
+  finally show "prob (map_distr prod.swap (product_distr \<mu> \<nu>)) xy = prob (product_distr \<nu> \<mu>) xy"
+    by simp
+qed
+
+lemma map_distr_fst_product_distr[simp]:
+  "map_distr fst (product_distr \<mu> \<nu>) = weight \<nu> *\<^sub>R \<mu>"
+proof (transfer, rule ext)
+  fix \<mu> :: "'a \<Rightarrow> real"
+    and \<nu> :: "'b \<Rightarrow> real"
+    and x :: 'a
+  assume "is_distribution (\<mu>)" and \<nu>: "is_distribution (\<nu>)"
+
+  have \<mu>sumgeq0: "infsetsum \<nu> UNIV \<ge> 0"
+    using \<nu> unfolding is_distribution_def
+    by (simp add: infsetsum_nonneg)
+  have maxmin: "min 1 (max 0 (infsetsum \<nu> (UNIV))) = infsetsum \<nu> UNIV"
+    apply (subst min_absorb2)
+    using \<nu> unfolding is_distribution_def apply simp
+    using \<mu>sumgeq0 by simp
+
+  have "(\<Sum>\<^sub>axy\<in>fst -` {x}. \<Sum>\<^sub>ax. \<mu> x * infsetsum \<nu> (Pair x -` {xy})) = (\<Sum>\<^sub>axy\<in>range (Pair x). \<Sum>\<^sub>ax. \<mu> x * infsetsum \<nu> (Pair x -` {xy}))"
+    by (rewrite at _ asm_rl[of "fst -` {x} = Pair x ` UNIV"], auto)
+  also have "\<dots> = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax'. \<mu> x' * infsetsum \<nu> (Pair x' -` {(x, y)}))"
+    by (subst infsetsum_reindex, auto simp add: inj_on_def)
+  also have "\<dots> = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax'\<in>{x}. \<mu> x' * infsetsum \<nu> (Pair x' -` {(x, y)}))"
+    apply (rule infsetsum_cong)
+     apply (rule infsetsum_cong_neutral)
+       apply auto
+    by (meson Pair_inject infsetsum_all_0 vimage_singleton_eq)
+  also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> x * infsetsum \<nu> (Pair x -` {(x, y)}))"
+    by auto
+  also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> x * infsetsum \<nu> {y})"
+    by (subgoal_tac "\<And>y::'b. Pair x -` {(x, y)} = {y}", auto)
+  also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> x * \<nu> y)"
+    by simp
+  also have "\<dots> = \<mu> x * (\<Sum>\<^sub>ay. \<nu> y)"
+    using \<open>is_distribution \<nu>\<close> infsetsum_cmult_right is_distribution_def by blast
+  also have "\<dots> = (\<Sum>\<^sub>ay. \<nu> y) * \<mu> x"
+    by simp
+  also have "\<dots> = (min 1 (max 0 (infsetsum \<nu> (UNIV::'b set))) * \<mu> x)"
+    unfolding maxmin by simp
+
+  finally show "(\<Sum>\<^sub>ax\<in>fst -` {x}. \<Sum>\<^sub>ay. \<mu> (y::'a) * infsetsum \<nu> (Pair y -` {x}))
+                  = (min 1 (max 0 (infsetsum \<nu> (UNIV::'b set))) * \<mu> x)"
+    by assumption
+qed
+
+
+lemma map_distr_snd_product_distr[simp]: 
+  "map_distr snd (product_distr \<mu> \<nu>) = weight \<mu> *\<^sub>R \<nu>"
+proof -
+  have "map_distr snd (product_distr \<mu> \<nu>) = map_distr fst (map_distr prod.swap (product_distr \<mu> \<nu>))"
+    by (simp add: case_prod_beta)
+  also have "\<dots> = map_distr fst (product_distr \<nu> \<mu>)"
+    by (subst swap_product_distr, simp)
+  also have "\<dots> = weight \<mu> *\<^sub>R \<nu>"
+    by (rule map_distr_fst_product_distr)
+  finally show ?thesis
+    by simp
+qed
+
+lemma distr_scaleR1[simp]: "1 *\<^sub>R \<mu> = \<mu>" for \<mu> :: "_ distr"
+  apply transfer by simp
+
+
+lemma Prob_union: "Prob \<mu> (A\<union>B) = Prob \<mu> A + Prob \<mu> B - Prob \<mu> (A\<inter>B)"
+  apply (transfer fixing: A B)
+  apply (rule infsetsum_Un_Int)
+  using is_distribution_def abs_summable_on_subset by blast
+
+lemma Prob_setdiff: "Prob \<mu> (A-B) = Prob \<mu> A - Prob \<mu> B + Prob \<mu> (B-A)"
+proof (transfer fixing: A B)
+  fix \<mu> :: "'a \<Rightarrow> real"
+  assume \<mu>: "is_distribution \<mu>"
+
+  have Bsplit: "B = (B-A) \<union> (B\<inter>A)"
+    by (simp add: Un_Diff_Int)
+  have 1: "infsetsum \<mu> B = infsetsum \<mu> (B-A) + infsetsum \<mu> (B\<inter>A)"
+    apply (rewrite at "infsetsum _ \<hole>" Bsplit)
+    apply (rule infsetsum_Un_disjoint)
+    using \<mu> is_distribution_def abs_summable_on_subset by blast+
+
+  have "infsetsum \<mu> (A - B) = infsetsum \<mu> (A - (B\<inter>A))"
+    by (metis Diff_Compl Diff_Diff_Int Diff_eq Int_commute)
+  also have "\<dots> = infsetsum \<mu> A - infsetsum \<mu> (B\<inter>A)"
+    apply (rule infsetsum_Diff)
+    using \<mu> is_distribution_def abs_summable_on_subset apply blast by simp
+  also have "\<dots> = infsetsum \<mu> A - (infsetsum \<mu> B - infsetsum \<mu> (B-A))"
+    using 1 by linarith
+  finally show "infsetsum \<mu> (A - B) = infsetsum \<mu> A - infsetsum \<mu> B + infsetsum \<mu> (B - A)"
+    by linarith
+qed
+
+lift_definition product_distr' :: "('a::finite \<Rightarrow> 'b distr) \<Rightarrow> ('a \<Rightarrow> 'b) distr" is
+  "\<lambda>F f. \<Prod>x\<in>UNIV. F x (f x)"
+proof -
+  fix F :: "'a \<Rightarrow> 'b \<Rightarrow> real"
+  assume distr_F: "is_distribution (F x)" for x
+  then have [simp]: "F x y \<ge> 0" for x y
+    unfolding is_distribution_def by simp
+  have prod_pos: "0 \<le> (\<Prod>x\<in>UNIV. F x (f x))" for f
+    by (rule prod_nonneg, simp)
+  moreover have "(\<Sum>f\<in>M. \<Prod>x\<in>UNIV. F x (f x)) \<le> 1"
+    if [simp]: "finite M" for M
+  proof -
+    define R and M' :: "('a\<Rightarrow>'b) set" where "R = (\<Union>f\<in>M. range f)" and "M' = UNIV \<rightarrow>\<^sub>E R"
+    have [simp]: "M \<subseteq> M'"
+      unfolding M'_def R_def by auto
+    have [simp]: "finite R"
+      unfolding R_def 
+      by (rule finite_UN_I, simp_all)
+    then have [simp]: "finite M'"
+      unfolding M'_def by (simp add: finite_PiE)
+    have "(\<Sum>f\<in>M. \<Prod>x\<in>UNIV. F x (f x)) \<le>
+          (\<Sum>f\<in>M'. \<Prod>x\<in>UNIV. F x (f x))"
+      by (rule sum_mono2, simp_all add: prod_pos)
+    also have "\<dots> = (\<Prod>x\<in>UNIV. \<Sum>y\<in>R. F x y)"
+      unfolding M'_def apply (rule sum_prod_swap) by auto
+    also have "\<dots> \<le> (\<Prod>(x::'a)\<in>UNIV. 1)"
+    proof -
+      have "0 \<le> sum (F x) R" for x
+        by (simp add: sum_nonneg)
+      moreover have "sum (F x) R \<le> 1" for x
+        using distr_F \<open>finite R\<close> is_distribution_def' by blast
+      ultimately show ?thesis
+        by (rule_tac prod_mono, simp)
+    qed
+    also have "\<dots> = 1"
+      by (rule prod.neutral_const)
+    finally show ?thesis
+      by -
+  qed
+  ultimately show "is_distribution (\<lambda>f. \<Prod>x\<in>UNIV. F x (f x))"
+    unfolding is_distribution_def' by simp
+qed
 
 
 ML_file "discrete_distributions.ML"

@@ -231,6 +231,31 @@ lemma map_expression4'[simp]:
   unfolding map_expression4'_def pair_expression map_expression'
   apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
+lemma expression_eval_map_expression':
+  assumes "\<And>z. expression_vars (e z) = expression_vars (e undefined)"
+  shows "expression_eval (map_expression' f e) x = f (\<lambda>z. expression_eval (e z) x)"
+  using assms
+  apply (transfer fixing: f x)
+  by (simp add: case_prod_beta)
+
+lemma expression_eval_map_expression[simp]:
+  shows "expression_eval (map_expression f e) x = f (expression_eval e x)"
+  unfolding map_expression_def
+  by (rule expression_eval_map_expression', simp)
+
+lemma expression_eval_pair_expression[simp]:
+  shows "expression_eval (pair_expression e g) x = (expression_eval e x, expression_eval g x)"
+  apply (transfer fixing: x)
+  by (simp add: case_prod_beta)
+
+
+lemma expression_eval_map_expression2[simp]:
+  shows "expression_eval (map_expression2 f e g) x = f (expression_eval e x) (expression_eval g x)"
+  unfolding map_expression2_def
+  apply (subst expression_eval_map_expression)
+  apply (subst expression_eval_pair_expression)
+  by simp
+
 lemma range_cases[case_names 1]: "x : range f \<Longrightarrow> (\<And>y. P (f y)) \<Longrightarrow> P x"
   unfolding image_def by auto 
 

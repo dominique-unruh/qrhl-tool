@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main Universe "HOL-Library.Bit"
+  imports Main Universe "HOL-Library.Bit" "HOL-Library.FuncSet"
 begin
 
 section \<open>Misc\<close>
@@ -165,5 +165,58 @@ print_theorems
 schematic_goal "?x = [1,2] @ [3,4]" and "?x = abc"
   apply (tactic \<open>Misc.append_list_tac \<^context> 1\<close>)
   oops
+
+
+lemma sum_prod_swap:
+  fixes g :: "'a\<Rightarrow>'b\<Rightarrow>'c::comm_ring_1"
+  assumes "finite A"
+  assumes "\<And>x. finite (B x)"
+  shows "(\<Sum>f\<in>Pi\<^sub>E A B. \<Prod>x\<in>A. g x (f x)) = (\<Prod>x\<in>A. \<Sum>y\<in>B x. g x y)"
+  using \<open>finite A\<close> 
+proof induction
+  case empty
+  then show ?case by auto
+next
+  case (insert x F)
+  define \<pi> where "\<pi> = (\<lambda>(y::'b,f). f(x:=y))"
+  have \<pi>: "bij_betw \<pi> (B x \<times> Pi\<^sub>E F B) (Pi\<^sub>E (insert x F) B)"
+    apply (rule bij_betwI[where g="\<lambda>f. (f x, f(x:=undefined))"])
+    unfolding \<pi>_def
+    (* Sledgehammer proofs *)
+    using PiE_fun_upd apply fastforce
+    apply (simp add: PiE_mem fun_upd_in_PiE local.insert(2))
+    using local.insert(2) apply fastforce
+    by simp
+  have "(\<Sum>f\<in>Pi\<^sub>E (insert x F) B. \<Prod>x'\<in>insert x F. g x' (f x'))
+      = (\<Sum>(y,f)\<in>B x \<times> Pi\<^sub>E F B. \<Prod>x'\<in>insert x F. g x' (if x'=x then y else f x'))"
+    apply (subst sum.reindex_bij_betw[where h=\<pi>, symmetric])
+     apply (fact \<pi>)
+    by (simp add: \<pi>_def case_prod_beta fun_upd_def)
+  also have "\<dots> = (\<Sum>(y,f)\<in>B x \<times> Pi\<^sub>E F B. 
+                     g x y * (\<Prod>x'\<in>F. g x' (f x')))"
+  proof -
+    have *: "(\<Prod>x'\<in>F. g x' (if x' = x then y else f x')) = (\<Prod>x'\<in>F. g x' (f x'))" 
+      for f y
+      apply (rule prod.cong)
+       apply simp
+      using insert by auto
+    show ?thesis
+      apply (subst prod.insert)
+      using insert * by auto
+  qed
+  also have "\<dots> = (\<Sum>y\<in>B x. \<Sum>f\<in>Pi\<^sub>E F B. g x y * (\<Prod>x'\<in>F. g x' (f x')))"
+    by (rule sum.cartesian_product[symmetric])
+  also have "\<dots> = (\<Sum>y\<in>B x. g x y * (\<Sum>f\<in>Pi\<^sub>E F B. \<Prod>x'\<in>F. g x' (f x')))"
+    apply (subst sum_distrib_left) by (rule refl)
+  also have "\<dots> = (\<Sum>y\<in>B x. g x y * (\<Prod>x'\<in>F. \<Sum>y'\<in>B x'. g x' y'))"
+    using insert by simp
+  also have "\<dots> = (\<Sum>y\<in>B x. g x y) * (\<Prod>x'\<in>F. \<Sum>y'\<in>B x'. g x' y')"
+    by (rule sum_distrib_right[symmetric])
+  also have "\<dots> = (\<Prod>x'\<in>insert x F. \<Sum>y\<in>B x'. g x' y)"
+    apply (rule prod.insert[symmetric])
+    using insert by simp_all
+  finally show ?case
+    by -
+qed
 
 end
