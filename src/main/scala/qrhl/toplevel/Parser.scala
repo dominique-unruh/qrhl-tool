@@ -446,6 +446,9 @@ object Parser extends JavaTokenParsers {
 
   val changeDirectory : Parser[ChangeDirectoryCommand] = literal("changeDirectory") ~> quotedString ^^ ChangeDirectoryCommand.apply
 
+  val print_cmd : Parser[PrintCommand] =
+    literal("print") ~> fact ^^ PrintCommand
+
   val cheat : Parser[CheatCommand] =
     ("cheat:file" ^^ {_ => CheatCommand(file=true)}) |
       ("cheat:proof" ^^ {_ => CheatCommand(proof=true)}) |
@@ -457,5 +460,5 @@ object Parser extends JavaTokenParsers {
 
   def command(implicit context:ParserContext): Parser[Command] =
     (debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
-      include | undo | qed | changeDirectory | cheat).named("command")
+      include | undo | qed | changeDirectory | cheat | print_cmd).named("command")
 }

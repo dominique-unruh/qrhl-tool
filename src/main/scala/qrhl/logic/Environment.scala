@@ -142,6 +142,7 @@ sealed trait ProgramDecl {
   val name: String
   val numOracles : Int
   def declareInIsabelle(context: Isabelle.Context): Isabelle.Context
+  def toStringMultiline : String
 }
 
 final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], numOracles:Int) extends ProgramDecl {
@@ -177,6 +178,11 @@ final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:L
       }
       (cvarsAll.toList, qvarsAll.toList, ambAll.toList, callsAll.toList)
     }*/
+  override def toStringMultiline: String = {
+    val calls = if (numOracles==0) "" else " calls " + Seq.fill(numOracles)("?").mkString(", ")
+    val vars = (cvars ::: qvars) map { _.name } mkString ", "
+    s"adversary $name vars $vars$calls"
+  }
 }
 
 final case class ConcreteProgramDecl(environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {
@@ -256,6 +262,11 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
     val id = context.isabelle.invoke(op, (context.contextId, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program))
     new Context(context.isabelle, id)
+  }
+
+  override def toStringMultiline: String = {
+    val args = if (oracles.isEmpty) "" else "(" + oracles.mkString(",") + ")"
+    s"program $name$args = {\n${this.program.toStringMultiline("  ")}\n}"
   }
 }
 

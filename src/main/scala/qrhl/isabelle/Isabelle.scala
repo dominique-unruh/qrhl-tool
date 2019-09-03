@@ -14,7 +14,7 @@ import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
 import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
 import monix.execution.Scheduler.Implicits.global
 import org.log4s
-import qrhl.UserException
+import qrhl.{Subgoal, UserException}
 import qrhl.logic._
 
 import scala.collection.mutable
@@ -26,7 +26,7 @@ import scala.util.{Left, Right}
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import qrhl.isabelle.Isabelle.Thm
-import qrhl.isabelle.{IsabelleTypes => t, IsabelleConsts => c}
+import qrhl.isabelle.{IsabelleConsts => c, IsabelleTypes => t}
 import scalaz.Applicative
 
 object DistributionDirectory {
@@ -492,6 +492,8 @@ object Isabelle {
   val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt, String, ITyp), BigInt]("declare_variable")
 //  val one_name = "Groups.one_class.one"
   val True_const = Const(c.True, boolT)
+  val thms_as_subgoals: Operation[(BigInt, String), List[Subgoal]] = Operation.implicitly[(BigInt,String),List[Subgoal]]("thms_as_subgoals")
+
 
   def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const(c.eq, typ -->: typ -->: HOLogic.boolT) $ a $ b
 

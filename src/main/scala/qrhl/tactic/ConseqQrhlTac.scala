@@ -3,16 +3,14 @@ package qrhl.tactic
 import info.hupel.isabelle.Operation
 import org.log4s
 import qrhl._
-import qrhl.isabelle.RichTerm
+import qrhl.isabelle.{Isabelle, RichTerm}
 
 case class ConseqQrhlTac(rule: String) extends Tactic {
   import ConseqQrhlTac.logger
 
-  private val thms_as_subgoals = Operation.implicitly[(BigInt,String),List[Subgoal]]("thms_as_subgoals")
-
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case QRHLSubgoal(left,right,pre,post,assms) =>
-      state.isabelle.isabelle.invoke(thms_as_subgoals,(state.isabelle.contextId,rule)) match {
+      state.isabelle.isabelle.invoke(Isabelle.thms_as_subgoals,(state.isabelle.contextId,rule)) match {
         case List(QRHLSubgoal(left2,right2,pre2,post2,assms2)) =>
           if (left!=left2)
             throw UserException(s"Left program in current subgoal and in $rule are not identical.\n  $left\nvs.\n  $left2")

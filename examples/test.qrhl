@@ -1,6 +1,39 @@
 isabelle.
 
-classical var x : string.
+classical var c : string.
+ambient var a : string.
+quantum var q : string.
+program p := { c <- undefined; }.
+program po(qq) := { call qq; }.
+adversary A vars c.
+adversary B vars q calls ?,?.
+
+lemma lem: 1=2.
+admit.
+qed.
+
+qrhl qr: {Cla[top]} skip; ~ skip; {Cla[top]}.
+ admit.
+qed.
+
+print a.
+print c.
+print q.
+print p.
+print po.
+print A.
+print B.
+print lem.
+print qr.
+print lem[symmetric].
+print nope.
+
+
+
+
+
+
+
 classical var bad : bool.
 quantum var q : int.
 quantum var r : int.

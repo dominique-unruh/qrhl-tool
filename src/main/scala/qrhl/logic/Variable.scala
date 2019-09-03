@@ -53,7 +53,7 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
   override def index2: QVariable = QVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): QVariable = if (left) index1 else index2
   override val variableName: String = name
-  override def toString: String = s"$name : ${Isabelle.pretty(valueTyp)} (quantum)"
+  override def toString: String = s"quantum var $name : ${Isabelle.pretty(valueTyp)}"
 }
 
 object QVariable {
@@ -83,7 +83,7 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
   override val variableName : String= "var_"+name
   def valueTerm: Term = Free(name,valueTyp)
 
-  override def toString: String = s"$name : ${Isabelle.pretty(valueTyp)} (classical)"
+  override def toString: String = s"classical var $name : ${Isabelle.pretty(valueTyp)}"
 }
 
 object CVariable {
