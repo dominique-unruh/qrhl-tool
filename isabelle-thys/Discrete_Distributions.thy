@@ -210,14 +210,25 @@ proof -
     using Prob_mono[of E UNIV \<mu>] by auto
 qed
 
-lemma weight_uniform[simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> weight (uniform M) = 1"
-proof transfer
-  fix M :: "'a set"
-  assume "M \<noteq> {}" and "finite M"
-  then have "(\<Sum>\<^sub>ax\<in>M. 1 / real (card M)) = 1"
-    by (subst infsetsum_finite, auto)
-  then show "(\<Sum>\<^sub>am. if m \<in> M then 1 / real (card M) else 0) = 1"
-    by (subst infsetsum_cong_neutral[where B=M], auto)
+lemma weight_uniform[simp]: "weight (uniform M) = (if M \<noteq> {} \<and> finite M then 1 else 0)"
+proof -
+  have "weight (uniform M) = 0" if "\<not> (M \<noteq> {} \<and> finite M)"
+  proof -
+    from that have "card M = 0"
+      using card_empty card_infinite by blast
+    then show ?thesis
+      apply (transfer fixing: M)
+      by (simp add: infsetsum_all_0)
+  qed
+  moreover have "weight (uniform M) = 1" if "M \<noteq> {}" and "finite M"
+  proof (transfer fixing: M)
+    from that have "(\<Sum>\<^sub>ax\<in>M. 1 / real (card M)) = 1"
+      by (subst infsetsum_finite, auto)
+    then show "(\<Sum>\<^sub>am. if m \<in> M then 1 / real (card M) else 0) = 1"
+      by (subst infsetsum_cong_neutral[where B=M], auto)
+  qed
+  ultimately show ?thesis
+    by auto
 qed
 
 lift_definition "map_distr" :: "('a\<Rightarrow>'b) \<Rightarrow> 'a distr \<Rightarrow> 'b distr" 
