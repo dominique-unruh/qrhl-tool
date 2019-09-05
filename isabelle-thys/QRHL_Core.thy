@@ -98,7 +98,7 @@ next
   also have "\<dots> = 0"
     by simp
   also have "\<dots> = Cla[b=0]"
-    using False by (simp add: linear_space_zero_bot)
+    using False by simp
   finally show ?thesis 
       by assumption
 qed
@@ -116,7 +116,7 @@ lemma index_flip_subspace_top[simp]: "index_flip_subspace top = top"
 lemma index_flip_subspace_bot[simp]: "index_flip_subspace bot = bot"
   by (cheat index_flip_subspace_bot)
 lemma index_flip_subspace_zero[simp]: "index_flip_subspace 0 = 0"
-  by (simp add: linear_space_zero_bot)
+  by simp
 lemma index_flip_subspace_Cla[simp]: "index_flip_subspace (Cla[b]) = Cla[b]"
   by auto
 lemma index_flip_subspace_inf[simp]: "index_flip_subspace (A\<sqinter>B) = (index_flip_subspace A) \<sqinter> (index_flip_subspace B)"

@@ -286,8 +286,11 @@ operation_setup term_test = \<open>
 operation_setup show_oracles_lines = \<open>
   {from_lib = Codec.int,
    to_lib = Codec.list Codec.string,
-   action = map YXML.content_of o Extended_Sorry.show_oracles_lines o Refs.Thm.read}
-\<close>
+   action = fn thm_id =>
+    let val thm :thm= Refs.Thm.read thm_id
+        val ctxt = thm |> Thm.theory_of_thm |> Proof_Context.init_global
+        val text = Extended_Sorry.show_oracles_lines ctxt [thm] |> map YXML.content_of
+    in text end}\<close>
 
 (* operation_setup (sequential, bracket) use_thys2 = \<open>
   {from_lib = Codec.list Codec.string,
