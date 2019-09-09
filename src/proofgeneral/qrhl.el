@@ -28,17 +28,42 @@
 		   proof-shell-cd-cmd "changeDirectory \"%s\"."
 		   )
 
+
+
+
+; buttoning functions follow https://superuser.com/a/331896/748969
+(define-button-type 'qrhl-find-file-button
+  'follow-link t
+  'action #'qrhl-find-file-button)
+
+(defun qrhl-find-file-button (button)
+  (find-file (buffer-substring (button-start button) (button-end button))))
+
+(defun qrhl-buttonize-buffer ()
+ "turn all include's into clickable buttons"
+ (interactive)
+ (remove-overlays)
+ (save-excursion
+  (goto-char (point-min))
+  (while (re-search-forward "include\s*\"\\([^\"]+\\)\"\s*\\." nil t)
+   (make-button (match-beginning 1) (match-end 1) :type 'qrhl-find-file-button))))
+
+
+
+
 (add-hook 'qrhl-mode-hook
 	  (lambda ()
 	    (set-input-method "qrhl")
 	    (set-language-environment "UTF-8")
 	    (set-variable 'indent-tabs-mode nil)
-	    (set-variable 'electric-indent-mode nil)))
+	    (set-variable 'electric-indent-mode nil)
+	    (qrhl-buttonize-buffer)))
 
 (defun qr () ; Just for testing
   "Restarts the prover and then processes the buffer to the current position"
   (interactive)
   (proof-shell-exit t)
   (proof-goto-point))
+
 
 (provide 'qrhl)
