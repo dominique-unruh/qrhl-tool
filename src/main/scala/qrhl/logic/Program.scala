@@ -81,14 +81,28 @@ object VarTerm {
 
 
 case class VariableUse
-(classical : ListSet[CVariable],
- writtenClassical : ListSet[CVariable],
- quantum: ListSet[QVariable],
- ambient : ListSet[String],
- programs : ListSet[ProgramDecl],
- overwrittenClassical : ListSet[CVariable],
- overwrittenQuantum : ListSet[QVariable],
- oracles : ListSet[String]) {
+(
+  /** All classical variables. */
+  classical : ListSet[CVariable],
+  /** All classical variables that are not ever written */
+  writtenClassical : ListSet[CVariable],
+  /** All quantum variables */
+  quantum: ListSet[QVariable],
+  /** All ambient variables */
+  ambient : ListSet[String],
+  /** All included programs */
+  programs : ListSet[ProgramDecl],
+  /** All classical variables that are overwritten.
+    * That is, their initial value is never used, and they will be overwritten with a value
+    * independent of their initial value. */
+  overwrittenClassical : ListSet[CVariable],
+  /** All quantum variables that are overwritten.
+    * That is, their initial value is never used, and they will be overwritten with a value
+    * independent of their initial value. */
+  overwrittenQuantum : ListSet[QVariable],
+  /** All oracles used by this program */
+  oracles : ListSet[String]
+) {
 
   override def toString: String = s"""
       | Classical:       ${classical.map(_.name).mkString(", ")}

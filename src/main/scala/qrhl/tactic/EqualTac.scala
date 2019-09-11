@@ -9,6 +9,7 @@ import qrhl.logic._
 import scala.collection.mutable
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
+import org.log4s
 import qrhl.isabelle.Codecs._
 
 import scala.collection.immutable.ListSet
@@ -56,9 +57,13 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm, List[Subgoal]) = {
     val (context, mismatches) = diff(left,right)
 
+    EqualTac.logger.debug(s"Context: $context")
+
     val env = state.environment
 
     val varUse = context.variableUse(env)
+
+    EqualTac.logger.debug(s"Context has the following variable use: $varUse")
 
     val cvars = varUse.classical
     val cwvars = varUse.writtenClassical
@@ -107,6 +112,10 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
 
   val callWpOp: Operation[(List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], Term, BigInt), (RichTerm, RichTerm, RichTerm)] =
     Operation.implicitly[(List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], Term, BigInt), (RichTerm, RichTerm, RichTerm)]("callWp")
+}
+
+object EqualTac {
+  private val logger = log4s.getLogger
 }
 
 /*
