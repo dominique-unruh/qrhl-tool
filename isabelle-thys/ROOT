@@ -1,12 +1,17 @@
-session QRHL = "QRHL-Bounded_Operators" +
+session QRHL = "QRHL-Tensor_Product" +
   options [record_proofs=1]
   sessions CryptHOL "HOL-Protocol" Bounded_Operators
   theories QRHL QRHL_Operations
 
+session "QRHL-Tensor_Product" = "QRHL-Bounded_Operators" +
+  options [record_proofs=1]
+  sessions Tensor_Product
+  theories Tensor_Product.All
+
 session "QRHL-Bounded_Operators" = "QRHL-Prerequisites" +
   options [record_proofs=1]
   sessions Bounded_Operators
-  theories Bounded_Operators.Legacy
+  theories Bounded_Operators.All
 
 session "QRHL-Prerequisites" = "Bounded_Operators-Prerequisites" +
   sessions "HOL-Library" "Jordan_Normal_Form" "HOL-Analysis" "HOL-ZF" "HOL-ex" CryptHOL "HOL-Protocol"

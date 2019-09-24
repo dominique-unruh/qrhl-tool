@@ -1,3 +1,0 @@
-[submodule "isabelle-thys/Bounded_Operators"]
-	path = isabelle-thys/Bounded_Operators
-	url = ../bounded-operators.git

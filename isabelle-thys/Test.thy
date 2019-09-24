@@ -243,7 +243,6 @@ definition "dec x c = (let (c1,c2) = c in c2 * c1 \<^sup>^ (-x))"
 
 lemma weight_enc: "weight (enc var_pk1 var_m1) = 1"
   unfolding enc_def
-  apply (rule weight_uniform)
   by auto
 
 lemma supp_enc: "supp (enc pk m) = {(g \<^sup>^ r, pk \<^sup>^ r * m) |r::int. r \<in> {0..order G-1}}"
@@ -252,7 +251,6 @@ lemma supp_enc: "supp (enc pk m) = {(g \<^sup>^ r, pk \<^sup>^ r * m) |r::int. r
 
 lemma weight_keygen: "weight keygen = 1"
   unfolding keygen_def
-  apply (rule weight_uniform)
   by auto
 
 lemma supp_keygen: "supp keygen = {(g \<^sup>^ x, x) |x::int. x \<in> {0..order G - 1}}"
@@ -344,11 +342,11 @@ lemma lem2:
 lemma lem3:
   assumes "xxx 1"
   shows "xxx 3"
-  ML_val \<open>@{Isar.goal} |> #goal |> Extended_Sorry.show_oracles\<close>
+  ML_val \<open>@{Isar.goal} |> #goal |> single |> Extended_Sorry.show_oracles \<^context>\<close>
   apply (rule lem2)  
-  ML_val \<open>@{Isar.goal} |> #goal |> Extended_Sorry.show_oracles\<close>
+  ML_val \<open>@{Isar.goal} |> #goal |> single |> Extended_Sorry.show_oracles \<^context>\<close>
   apply (rule lem1)
-  ML_val \<open>@{Isar.goal} |> #goal |> Extended_Sorry.show_oracles\<close>
+  ML_val \<open>@{Isar.goal} |> #goal |> single |> Extended_Sorry.show_oracles \<^context>\<close>
   by (fact assms)
 
 ML \<open>
@@ -394,10 +392,7 @@ lemma elgamal_correct3 [simp]:
   by (auto simp: correct)
   
 
-ML \<open>
-Extended_Sorry.show_oracles @{thm elgamal_correct3}
-\<close>
-
+print_oracles elgamal_correct3
 
 term "variable_concat \<lbrakk>z\<rbrakk> \<lbrakk>x,y\<rbrakk>"
 

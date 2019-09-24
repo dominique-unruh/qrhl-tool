@@ -1,5 +1,5 @@
 theory QRHL_Core
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators.Bounded_Operators Bounded_Operators.Legacy Discrete_Distributions 
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators.Bounded_Operators BOLegacy Discrete_Distributions 
     Universe Misc_Missing Prog_Variables
   keywords "declare_variable_type" :: thy_decl
 begin
@@ -20,7 +20,7 @@ lemma [simp]: "cnj sqrt2 = sqrt2" unfolding sqrt2_def by simp *)
 
 (* TODO move into theory Predicates.thy *)
 section \<open>Quantum predicates\<close>
-    
+
 type_synonym predicate = "mem2 subspace"
 
 subsection \<open>Classical predicates\<close>
