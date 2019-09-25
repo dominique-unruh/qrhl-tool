@@ -1,6 +1,6 @@
 theory QRHL_Code
   imports QRHL_Core "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Code_Target_Numeral"
-    Jordan_Normal_Form_Notation
+    Bounded_Operators.Bounded_Operators_Code
 begin
 
 unbundle jnf_notation
@@ -21,9 +21,6 @@ hide_const (open) Order.bottom Order.top
 no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
 no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
 
-consts l2bounded_of_mat :: "complex mat \<Rightarrow> ('a::basis_enum,'b::basis_enum) bounded"
-       mat_of_l2bounded :: "('a::basis_enum,'b::basis_enum) bounded \<Rightarrow> complex mat"
-
 (* Wrapper class so that we can define a code datatype constructors for that type (does not work with type synonyms) *)
 typedef ('a::enum,'b::enum) code_l2bounded = "UNIV::('a,'b) l2bounded set" by simp
 
@@ -35,13 +32,6 @@ consts ell2_of_vec' :: "complex vec \<Rightarrow> 'a::basis_enum"
 
 definition ell2_of_vec :: "complex vec \<Rightarrow> 'a::enum ell2" where "ell2_of_vec = ell2_of_vec'"
 definition vec_of_ell2 :: "'a::enum ell2 \<Rightarrow> complex vec" where "vec_of_ell2 = vec_of_ell2'"
-
-
-
-lemma mat_of_l2bounded_inverse [code abstype]:
-  "l2bounded_of_mat (mat_of_l2bounded B) = B" 
-  for B::"('a::basis_enum,'b::basis_enum) bounded"
-  by (cheat 15)
 
 lemma mat_of_l2bounded_inverse' [code abstype]:
   "l2bounded_of_mat' (mat_of_l2bounded' B) = B" 
@@ -62,25 +52,6 @@ fun index_of where
 
 definition "enum_idx (x::'a::enum) = index_of x (enum_class.enum :: 'a list)"
 
-lemma l2bounded_of_mat_id[code]:
-  "mat_of_l2bounded (idOp :: ('a::basis_enum,'a) bounded) = one_mat (canonical_basis_length TYPE('a))"
-  by (cheat 15)
-
-lemma l2bounded_of_mat_timesOp[code]:
-  "mat_of_l2bounded (M \<cdot> N) =  (mat_of_l2bounded M * mat_of_l2bounded N)" 
-  for M::"('b::basis_enum,'c::basis_enum) bounded" and N::"('a::basis_enum,'b) bounded"
-  by (cheat 15)
-lemma l2bounded_of_mat_plusOp[code]:
-  "mat_of_l2bounded (M + N) =  (mat_of_l2bounded M + mat_of_l2bounded N)" 
-  for M::"('a::basis_enum,'b::basis_enum) bounded" and N::"('a::basis_enum,'b) bounded"
-  by (cheat 15)
-lemma l2bounded_of_mat_minusOp[code]:
-  "mat_of_l2bounded (M - N) =  (mat_of_l2bounded M - mat_of_l2bounded N)" 
-  for M::"('a::basis_enum,'b::basis_enum) bounded" and N::"('a::basis_enum,'b) bounded"
-  by (cheat 15)
-lemma l2bounded_of_mat_uminusOp[code]:
-  "mat_of_l2bounded (- M) = - mat_of_l2bounded M" for M::"('a::basis_enum,'b::basis_enum) bounded"
-  by (cheat 15)
 
 definition [code del]: "applyOp_code M x = applyOp (Rep_code_l2bounded M) x"
 lemma [symmetric,code_abbrev]: "applyOp M = applyOp_code (Abs_code_l2bounded M)"
@@ -89,22 +60,6 @@ lemma ell2_of_vec_applyOp[code]:
   "vec_of_ell2 (applyOp_code M x) = (mult_mat_vec (mat_of_l2bounded' M) (vec_of_ell2 x))" 
   by (cheat 15)
 
-
-lemma mat_of_l2bounded_scalarMult[code]:
-  "mat_of_l2bounded ((a::complex) *\<^sub>C M) = smult_mat a (mat_of_l2bounded M)" for M :: "('a::basis_enum,'b::basis_enum) bounded"
-  by (cheat 16)
-
-lemma mat_of_l2bounded_inj: "inj mat_of_l2bounded"
-  by (cheat 16)
-
-instantiation bounded :: (basis_enum,basis_enum) equal begin
-definition [code]: "equal_bounded M N \<longleftrightarrow> mat_of_l2bounded M = mat_of_l2bounded N" 
-  for M N :: "('a,'b) bounded"
-instance 
-  apply intro_classes
-  unfolding equal_bounded_def 
-  using mat_of_l2bounded_inj injD by fastforce
-end
 
 lemma vec_of_ell2_inj: "inj vec_of_ell2"
   by (cheat 16)
@@ -148,11 +103,6 @@ for A :: "('a::enum,'b::enum) l2bounded"
 and B :: "('c::enum,'d::enum) l2bounded"
   by (cheat 17)
 
-definition "adjoint_mat M = transpose_mat (map_mat cnj M)"
-lemma l2bounded_of_mat_adjoint[code]:
-  "mat_of_l2bounded (adjoint A) = adjoint_mat (mat_of_l2bounded A)"
-for A :: "('a::basis_enum,'b::basis_enum) bounded"
-  by (cheat 17)
 
 lemma l2bounded_of_mat_assoc_op[code]: 
   "mat_of_l2bounded (assoc_op :: ('a::enum*'b::enum*'c::enum,_) l2bounded) = one_mat (Enum.card_UNIV TYPE('a)*Enum.card_UNIV TYPE('b)*Enum.card_UNIV TYPE('c))"
@@ -177,25 +127,20 @@ lemma vec_of_ell2_ket[code]:
   "vec_of_ell2 (ket i) = unit_vec (CARD('a)) (enum_idx i)" for i::"'a::enum"
   by (cheat 17)
 
+(* TODO move *)
 instantiation bit :: linorder begin
 definition "less_bit (a::bit) (b::bit) = (a=0 \<and> b=1)"
 definition "less_eq_bit (a::bit) b = (a=b \<or> a<b)"
 instance apply intro_classes unfolding less_bit_def less_eq_bit_def by auto
 end
 
-
-
+(* TODO move *)
 instantiation bit :: card_UNIV begin
 definition "finite_UNIV_bit = Phantom(bit) True"
 definition "card_UNIV_bit = Phantom(bit) (2::nat)"
 instance apply intro_classes unfolding finite_UNIV_bit_def card_UNIV_bit_def 
   apply auto unfolding UNIV_bit by simp 
 end
-
-lemma mat_of_l2bounded_zero[code]:
-  "mat_of_l2bounded (0::('a::basis_enum,'b::basis_enum) bounded)
-       = zero_mat (canonical_basis_length TYPE('b)) (canonical_basis_length TYPE('a))"
-  by (cheat 17)
 
 definition "computational_basis_vec n = map (unit_vec n) [0..<n]"
 definition "orthogonal_complement_vec n vs = 
@@ -205,7 +150,6 @@ definition "vec_tensor (A::'a::times vec) (B::'a vec) =
   vec (dim_vec A*dim_vec B) 
   (\<lambda>r. vec_index A (r div dim_vec B) *
        vec_index B (r mod dim_vec B))"
-
 
 lemma tensorVec_code[code]: "vec_of_ell2 (\<psi> \<otimes> \<phi>) = vec_tensor (vec_of_ell2 \<psi>) (vec_of_ell2 \<phi>)"
   for \<psi>::"'a::enum ell2" and \<phi>::"'b::enum ell2"
@@ -313,12 +257,6 @@ lemma kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_singl
 lemma [code_abbrev]: "kernel (A - a *\<^sub>C idOp) = eigenspace a A" 
   unfolding eigenspace_def by simp
 
-lemma mat_of_l2bounded_classical_operator[code]: 
-  "mat_of_l2bounded (classical_operator f) = mat (CARD('b)) (CARD('a))
-  (\<lambda>(r,c). if f (Enum.enum!c) = Some (Enum.enum!r) then 1 else 0)" 
-  for f::"'a::enum \<Rightarrow> 'b::enum option"
-  by (cheat 17)
-
 lemma [code]: "HOL.equal (A::_ linear_space) B = (A\<le>B \<and> B\<le>A)"
   unfolding equal_linear_space_def by auto
 
@@ -359,16 +297,10 @@ lemma norm_ell2_code [code]: "norm \<psi> =
     sqrt (\<Sum> i \<in> {0 ..< dim_vec \<psi>'}. let z = vec_index \<psi>' i in (Re z)\<^sup>2 + (Im z)\<^sup>2))"
   by (cheat norm_ell2_code)
 
-(* Hack: Without this definition, code generation produces invalid code. *)
-lemma [code]: "(uniformity :: ('a ell2 * _) filter) = Filter.abstract_filter (%_. 
-    Code.abort STR ''no uniformity'' (%_. 
-    let x = ((=)::'a\<Rightarrow>_\<Rightarrow>_) in uniformity))"
-  by auto
-
-
 declare [[code drop: UNIV]]
 declare enum_class.UNIV_enum[code]
 
+(* TODO: remove once it's added at the definitions themselves *)
 declare ord_linear_space_inst.less_eq_linear_space[code del]
 declare ord_linear_space_inst.less_linear_space[code del]
 
@@ -393,7 +325,6 @@ derive (monad) set_impl ell2
 lemmas prepare_for_code = quantum_equality_full_def_let add_join_variables_hint space_div_space_div_unlifted
   space_div_add_extend_lift_as_var_concat_hint INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
   top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2
-
 
 unbundle no_jnf_notation
 
