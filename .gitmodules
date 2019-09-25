@@ -1,0 +1,3 @@
+[submodule "isabelle-thys/Tensor_Product"]
+	path = isabelle-thys/Tensor_Product
+	url = ../tensor-product.git
