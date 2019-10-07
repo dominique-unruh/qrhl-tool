@@ -336,8 +336,10 @@ object Parser extends JavaTokenParsers {
       inner <- expression(Isabelle.predicateT))
       yield SeqTac(left,right,inner))
 
+  val identifierListOrDot: Parser[List[String]] = identifierList | (literal(".") ^^^ Nil)
+
   def var_subst(implicit context:ParserContext): Parser[((List[QVariable],List[QVariable]),(List[QVariable],List[QVariable]))] = {
-    val qvarList : Parser[List[QVariable]] = identifierList ^^ { _ map context.environment.getQVariable }
+    val qvarList : Parser[List[QVariable]] = identifierListOrDot ^^ { _ map context.environment.getQVariable }
     val subst1 : Parser[(List[QVariable],List[QVariable])] = OnceParser(qvarList ~ "->" ~ qvarList) ^^ {
       case v1 ~ _ ~ v2 => (v1,v2) }
 

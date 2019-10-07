@@ -7,6 +7,7 @@ quantum var r : int.
 quantum var s : int.
 quantum var t : int.
 quantum var Z : int.
+quantum var u : unit.
 
 classical var x : int.
 
@@ -25,5 +26,16 @@ qrhl q2: {Cla[x1=1] ⊓ Qeq[q1,s1,t1 = q2,s2,t2]} call A; ~ call A; {Cla[x1>1] �
  simp!.
  simp!.
 qed.
+
+qrhl q3: {Cla[x1=1] ⊓ Qeq[q1 = q2]} call A; ~ call A; {Cla[x1>1] ⊓ Qeq[r1 = q2]}.
+ conseq qrhl (Z -> .): q1.
+
+ simp!.
+ simp!.
+ simp!.
+ simp!.
+ simp!.
+qed.
+
 
 
