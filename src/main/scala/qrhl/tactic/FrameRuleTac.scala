@@ -45,7 +45,6 @@ case object FrameRuleTac extends Tactic {
 
       val qVars12 = leftVarUse.quantum.map(_.index1).union(rightVarUse.quantum.map(_.index2))
       val qVars12list = qVars12.toList.map { v => (v.variableName, v.valueTyp) }
-      val colocalityOp = Operation.implicitly[(BigInt,Term,List[(String,Typ)]), RichTerm]("colocal_pred_qvars")
       val colocality = AmbientSubgoal(state.isabelle.isabelle.invoke(colocalityOp,
         (state.isabelle.contextId, r, qVars12list)))
 
@@ -53,4 +52,6 @@ case object FrameRuleTac extends Tactic {
 
       List(colocality, qrhlSubgoal)
   }
+
+  val colocalityOp: Operation[(BigInt, Term, List[(String, Typ)]), RichTerm] = Operation.implicitly[(BigInt,Term,List[(String,Typ)]), RichTerm]("colocal_pred_qvars")
 }

@@ -386,6 +386,48 @@ operation_setup colocal_pred_qvars = \<open>
      val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT vartermT --> HOLogic.boolT)
                $ predicate $ varterm
    in Codec.encode (richterm_codec' ctxt) colocality end}\<close>
-   
+
+ML \<open>
+\<^term>\<open>infinite (UNIV::int set)\<close>
+\<close>
+
+
+operation_setup conseq_qrhl_cardinality_condition = \<open>
+  {from_lib = Codec.triple
+              Codec.int (* ctxt *)
+              (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* qvars before *)
+              (Codec.list (Codec.tuple Codec.string typ_tight_codec)), (* qvars after *)
+   to_lib = Codec.id, (* subgoal *)
+   action = fn (ctxt_id,befor,after) => let
+     val ctxt = Refs.Ctxt.read ctxt_id
+     val (_,beforeT) = befor |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+     val (_,afterT) = after |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+     val before_UNIV = HOLogic.mk_UNIV beforeT
+     val after_UNIV = HOLogic.mk_UNIV afterT
+     val before_finite = Const(\<^const_name>\<open>finite\<close>, HOLogic.mk_setT beforeT --> HOLogic.boolT) $ before_UNIV
+     val before_infinite = HOLogic.mk_not before_finite
+     val after_finite = Const(\<^const_name>\<open>finite\<close>, HOLogic.mk_setT afterT --> HOLogic.boolT) $ after_UNIV
+     val before_card = Const(\<^const_name>\<open>card\<close>, HOLogic.mk_setT beforeT --> HOLogic.natT) $ before_UNIV
+     val after_card = Const(\<^const_name>\<open>card\<close>, HOLogic.mk_setT afterT --> HOLogic.natT) $ after_UNIV
+     val before_geq_after = \<^term>\<open>(\<ge>) :: nat\<Rightarrow>_\<Rightarrow>_\<close> $ before_card $ after_card
+     val term = HOLogic.mk_disj (before_infinite, HOLogic.mk_conj (after_finite, before_geq_after))
+  in Codec.encode (richterm_codec' ctxt) term end}
+\<close>
+
+operation_setup conseq_qrhl_replace_in_predicate = \<open>
+  {from_lib = tuple6
+              Codec.int (* context *)
+              term_tight_codec (* predicate *)
+              (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* beforeLeft *)
+              (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* afterLeft *)
+              (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* beforeRight *)
+              (Codec.list (Codec.tuple Codec.string typ_tight_codec)), (* afterRight *)
+   to_lib = Codec.id, (* changed predicate, colocality condition *)
+   action = fn (ctxt_id, predicate, beforeLeft, afterLeft, beforeRight, afterRight) => let
+     val ctxt = Refs.Ctxt.read ctxt_id
+     val (predicate', colocality) = conseq_qrhl_replace_in_predicate ctxt predicate beforeLeft afterLeft beforeRight afterRight
+   in Codec.encode (Codec.tuple (richterm_codec' ctxt) (richterm_codec' ctxt)) (predicate', colocality) end
+  }
+\<close>
 
 end

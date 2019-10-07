@@ -1,0 +1,29 @@
+isabelle.
+
+# TODO: document this
+
+quantum var q : int.
+quantum var r : int.
+quantum var s : int.
+quantum var t : int.
+quantum var Z : int.
+
+classical var x : int.
+
+adversary A vars q.
+
+qrhl q1: {Cla[x1=1] ⊓ Qeq[q1,Z1 = q2,Z2]} call A; ~ call A; {Cla[x1=2] ⊓ Qeq[r1,Z1 = q2,Z2]}.
+ admit.
+qed.
+
+qrhl q2: {Cla[x1=1] ⊓ Qeq[q1,s1,t1 = q2,s2,t2]} call A; ~ call A; {Cla[x1>1] ⊓ Qeq[r1,s1,t1 = q2,s2,t2]}.
+ conseq qrhl (Z -> s,t): q1.
+
+ simp!.
+ simp!.
+ simp!.
+ simp!.
+ simp!.
+qed.
+
+
