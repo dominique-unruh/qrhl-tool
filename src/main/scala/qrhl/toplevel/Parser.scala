@@ -336,13 +336,26 @@ object Parser extends JavaTokenParsers {
       inner <- expression(Isabelle.predicateT))
       yield SeqTac(left,right,inner))
 
+  val identifierListOrDot: Parser[List[String]] = identifierList | (literal(".") ^^^ Nil)
+
+  def var_subst(implicit context:ParserContext): Parser[((List[QVariable],List[QVariable]),(List[QVariable],List[QVariable]))] = {
+    val qvarList : Parser[List[QVariable]] = identifierListOrDot ^^ { _ map context.environment.getQVariable }
+    val subst1 : Parser[(List[QVariable],List[QVariable])] = OnceParser(qvarList ~ "->" ~ qvarList) ^^ {
+      case v1 ~ _ ~ v2 => (v1,v2) }
+
+    literal("(") ~ subst1 ~ (literal(";") ~> subst1).? ~ literal(")") ^^ {
+      case _ ~ s1 ~ Some(s2) ~ _ => (s1,s2)
+      case _ ~ s ~ None ~ _ => (s,s)
+    }
+  }
+
   def tactic_conseq(implicit context:ParserContext): Parser[Tactic] =
     literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(Isabelle.predicateT) ^^ {
       case "pre" ~ _ ~ e => ConseqTac(pre=Some(e))
       case "post" ~ _ ~ e => ConseqTac(post=Some(e))
     } |
-      OnceParser(literal("qrhl") ~ literal(":") ~ ".*".r) ^^ {
-        case _ ~ _ ~ rule => ConseqQrhlTac(rule)
+      OnceParser(literal("qrhl") ~ var_subst.? ~ literal(":") ~ ".*".r) ^^ {
+        case _ ~ subst ~ _ ~ rule => ConseqQrhlTac(rule, subst)
       }
     )
 

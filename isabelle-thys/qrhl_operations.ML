@@ -161,6 +161,7 @@ fun richterm_encode ctxt t = let
   | richterm_decode xml = Codec.Failure ("invalid encoding for a term (richterm codec)",[xml]) *)
 fun richterm_decode (XML.Elem (("richterm",[]),[t])) = term_tight_decode t
   | richterm_decode (XML.Elem(("richterm",[("id",id)]), [])) = Terms.id_to_term (parse_int id) |> Codec.Success
+  | richterm_decode _ = error "richterm_decode"
 
 val richterm_codec = Codec.basic { encode=fn _ => error "richterm_codec: encode not allowed", decode=richterm_decode }
 fun richterm_codec' ctxt = Codec.basic { encode=richterm_encode ctxt, decode=richterm_decode }
@@ -263,7 +264,7 @@ fun term_to_subgoal ctxt t = let
    | _ => Subgoal_Ambient t
   end
 
-val _ = term_to_subgoal \<^context> @{term "qrhl Expr[top] [xxx] [xxx] Expr[top]"} |> \<^print>
+(* val _ = term_to_subgoal \<^context> @{term "qrhl Expr[top] [xxx] [xxx] Expr[top]"} |> \<^print> *)
 
 fun qrhl_encode (ctxt, Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) = XML.Elem(("qrhl",[]),
   [richterm_encode ctxt (pre), statement_encode ctxt (Programs.Block p1), statement_encode ctxt (Programs.Block p2),
@@ -411,7 +412,7 @@ fun get_thms ctxt spec = let
              |> filter (not o Token.is_blank)
              |> (fn t => t @ [Token.eof])
   val (parsed,leftover) = Scan.catch Parse.thm toks
-  val _ = case leftover of [eof] => ()
+  val _ = case leftover of [_] => ()
           | _ => error ("Error parsing theorem name \"" ^ spec ^ 
                 "\". Leftover tokens: " ^ Pretty.string_of (Token.pretty_src ctxt leftover))
   val fact = Attrib.eval_thms ctxt [parsed] (* Gives me "?t=?t", not "x=x" *)
@@ -465,5 +466,51 @@ fun simp t facts ctxt =
       | Type(\<^type_name>\<open>bool\<close>,_) => simp_bool t ctxt
       | _ => simp_any t ctxt
   end
+
+fun conseq_qrhl_replace_in_predicate ctxt predicate beforeLeft afterLeft beforeRight afterRight = let
+(* val _ = \<^print> predicate *)
+  val (pred_lhs, qeq_left, qeq_right) = case predicate of
+      Const(\<^const_name>\<open>inf\<close>,_) $ pred_lhs $ (Const(\<^const_name>\<open>quantum_equality_full\<close>,_) $ U $ Q $ V $ R) => let
+        val _ = case U of Const(\<^const_name>\<open>idOp\<close>,_) => () | _ => 
+            raise TERM("The quantum equality must be a simple one (\<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>), not one with operators (quantum_equality_full U \<lbrakk>...\<rbrakk> V \<lbrakk>...\<rbrakk>)", [predicate])
+        val _ = case V of Const(\<^const_name>\<open>idOp\<close>,_) => () | _ => 
+            raise TERM("The quantum equality must be a simple one (\<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>), not one with operators (quantum_equality_full U \<lbrakk>...\<rbrakk> V \<lbrakk>...\<rbrakk>)", [predicate])
+        in (pred_lhs, Q, R) end
+    | _ => raise TERM("Pre/postcondition must be of the form {... \<sqinter> \<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>}", [predicate])
+  val vt_left = Prog_Variables.parse_varlist qeq_left
+  val vt_right = Prog_Variables.parse_varlist qeq_right
+  val _ = if List.drop (vt_left, (length vt_left - length beforeLeft)) = beforeLeft
+          then ()
+          else raise TERM("Lhs of quantum equality does not end with the right variables",[predicate,qeq_left])
+  val _ = if List.drop (vt_right, (length vt_right - length beforeRight)) = beforeRight
+          then ()
+          else raise TERM("Rhs of quantum equality does not end with the right variables",[predicate,qeq_right])
+  val keep_left = List.take (vt_left, (length vt_left - length beforeLeft))
+  val keep_right = List.take (vt_right, (length vt_right - length beforeRight))
+  val (keep_left_vt,keep_leftT) = Prog_Variables.varterm_from_list keep_left |> Prog_Variables.mk_varterm
+  val (keep_right_vt,keep_rightT) = Prog_Variables.varterm_from_list keep_right |> Prog_Variables.mk_varterm
+  val _ = if keep_leftT = keep_rightT then ()
+          else error "conseq_qrhl_replace_in_predicate: type error"
+  val qeq_keep = QRHL.mk_quantum_equality keep_left_vt keep_right_vt keep_leftT
+  val (replaced_left_vt,replaced_leftT) = Prog_Variables.varterm_from_list (keep_left @ afterLeft) |> Prog_Variables.mk_varterm
+  val (replaced_right_vt,replaced_rightT) = Prog_Variables.varterm_from_list (keep_right @ afterRight) |> Prog_Variables.mk_varterm
+  val _ = if replaced_leftT = replaced_rightT then ()
+          else error "conseq_qrhl_replace_in_predicate: type error"
+  val qeq_replaced = QRHL.mk_quantum_equality replaced_left_vt replaced_right_vt replaced_leftT
+  val pred' = @{const inf(predicate)} $ pred_lhs $ qeq_replaced
+  val pred_keep = @{const inf(predicate)} $ pred_lhs $ qeq_keep
+  val (all_vars, all_varsT) = beforeLeft @ beforeRight @ afterLeft @ afterRight (* TODO: remove duplicates *)
+                 |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+  val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT all_varsT --> HOLogic.boolT)
+                 $ pred_keep $ all_vars
+in
+  (pred', colocality)
+end
+;;
+
+val _ = conseq_qrhl_replace_in_predicate \<^context> \<^term>\<open>Cla[x1=1] \<sqinter> Qeq[q1,Z1::int variable = r2,Z2]\<close>
+        [("Z1",\<^typ>\<open>int\<close>)] [("s1",\<^typ>\<open>int\<close>),("t1",\<^typ>\<open>int\<close>)]
+        [("Z2",\<^typ>\<open>int\<close>)] [("s2",\<^typ>\<open>int\<close>),("t2",\<^typ>\<open>int\<close>)]
+|> \<^print>
 
 end
