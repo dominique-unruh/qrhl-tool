@@ -2,23 +2,21 @@ package qrhl.logic
 
 import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.hol.HOLogic
+import info.hupel.isabelle.pure.Typ
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
-import info.hupel.isabelle.pure.{App, Const, Free, Term, Typ}
-import jdk.jshell.spi.ExecutionControl
-import qrhl.{UserException, Utils}
 import qrhl.isabelle.Isabelle.Thm
 import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.{UserException, Utils}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
-import scala.collection.{AbstractIterator, GenTraversableLike, TraversableLike, mutable}
+import scala.collection.{AbstractIterator, mutable}
 import scala.language.higherKinds
 
 // Implicits
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
-import Statement.codec
+import qrhl.isabelle.RichTerm.{term_tight_codec, typ_tight_codec}
+import qrhl.logic.Statement.codec
 
 
 sealed trait VarTerm[+A] {
@@ -59,20 +57,35 @@ object VarTerm {
     result
   }
 
-  object codecString extends Codec[VarTerm[String]] {
-    override lazy val mlType: String = "string tree"
-    override def encode(t: VarTerm[String]): XML.Tree = t match {
+
+  val codecString = new codec[String](new Codec[String] {
+    override val mlType: String = "string"
+    override def encode(t: String): XML.Tree = XML.Text(t)
+    override def decode(tree: XML.Tree): XMLResult[String] = tree match {
+      case XML.Text(s) => Right(s)
+      case _ => Left(("Expected XML.Text",List(tree)))
+    }
+  })
+
+  val codecC = new codec[CVariable](CVariable.codec)
+  val codecQ = new codec[QVariable](QVariable.codec)
+
+  class codec[A](vCodec : Codec[A]) extends Codec[VarTerm[A]] {
+    override lazy val mlType: String = vCodec.mlType + " tree"
+    override def encode(t: VarTerm[A]): XML.Tree = t match {
       case VTUnit => XML.Elem(("u",Nil),Nil)
       case VTCons(a,b) => XML.Elem(("c",Nil),List(encode(a),encode(b)))
-      case VTSingle(v) => XML.Elem(("s",Nil),List(XML.Text(v)))
+      case VTSingle(v) => XML.Elem(("s",Nil),List(vCodec.encode(v)))
     }
 
-    override def decode(xml: XML.Tree): XMLResult[VarTerm[String]] = xml match {
+    override def decode(xml: XML.Tree): XMLResult[VarTerm[A]] = xml match {
       case XML.Elem(("c",Nil),List(aXml,bXml)) =>
         for (a <- decode(aXml);
              b <- decode(bXml))
           yield VTCons(a,b)
-      case XML.Elem(("s",Nil),List(XML.Text(s))) => Right(VTSingle(s))
+      case XML.Elem(("s",Nil),List(v)) =>
+        for (vv <- vCodec.decode(v))
+          yield VTSingle(vv)
       case XML.Elem(("u",Nil),Nil) => Right(VTUnit)
       case _ => Left(("No a valid varterm",List(xml)))
     }
@@ -103,6 +116,13 @@ case class VariableUse
   /** All oracles used by this program */
   oracles : ListSet[String]
 ) {
+
+  def hideLocals(cvars : Traversable[CVariable], qvars : Traversable[QVariable]): VariableUse = {
+    copy(classical = classical -- cvars, writtenClassical = writtenClassical -- cvars,
+      quantum = quantum -- qvars, overwrittenClassical = overwrittenClassical -- cvars,
+      overwrittenQuantum = overwrittenQuantum -- qvars)
+  }
+
 
   override def toString: String = s"""
       | Classical:       ${classical.map(_.name).mkString(", ")}
@@ -191,6 +211,7 @@ sealed trait Statement {
     */
   def markOracles(oracles: List[String]): Statement
 
+  /** Converts this statement into a block by wrapping it in Block() if necessary */
   def toBlock: Block = Block(this)
 
 //  @deprecated("too slow, use programTerm instead","now")
@@ -217,6 +238,8 @@ sealed trait Statement {
 
   val variableUse : Environment => VariableUse = Utils.singleMemo { env =>
     this match {
+      case Local(cvars, qvars, body) =>
+        body.variableUse(env).hideLocals(cvars, qvars)
       case Block(ss@_*) =>
         ss.foldLeft(VariableUse.empty) { (vars, s) => mergeSequential(vars, s.variableUse(env)) }
       //        ss.foreach(collect)
@@ -313,10 +336,16 @@ sealed trait Statement {
   def checkWelltyped(context: Isabelle.Context): Unit
 
   /** All ambient and program variables.
-    * Not including nested programs (via Call) */
+    * Not including nested programs (via Call).
+    * Includes local variables.
+    * */
   def variablesDirect : Set[String] = {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
+      case Local(cvars, qvars, body) =>
+        vars ++= cvars map { _.name }
+        vars ++= qvars map { _.name }
+        collect(body)
       case Block(ss @ _*) => ss.foreach(collect)
       case Assign(v,e) => vars ++= v.iterator.map(_.name); vars ++= e.variables
       case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
@@ -331,27 +360,27 @@ sealed trait Statement {
     vars.result
   }
 
-  /** Including nested programs (via Call). (Missing ambient variables from nested calls.) */
-/*  def variablesAll(env:Environment) : Set[String] = {
-    val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
-    def collect(s:Statement) : Unit = s match {
-      case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
-      case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
-      case Call(name, args @ _*) =>
-        val (cvars,_,qvars,_,_) = env.programs(name).variablesRecursive
-        vars ++= cvars.map(_.name)
-        vars ++= qvars.map(_.name)
-        args.foreach(collect)
-      case While(e,body) => vars ++= e.variables; collect(body)
-      case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
-      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
-      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
-      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
-    }
-    collect(this)
-    vars.result
-  }*/
+  /*  /** Including nested programs (via Call). (Missing ambient variables from nested calls.) */
+    def variablesAll(env:Environment) : Set[String] = {
+      val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
+      def collect(s:Statement) : Unit = s match {
+        case Block(ss @ _*) => ss.foreach(collect)
+        case Assign(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
+        case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
+        case Call(name, args @ _*) =>
+          val (cvars,_,qvars,_,_) = env.programs(name).variablesRecursive
+          vars ++= cvars.map(_.name)
+          vars ++= qvars.map(_.name)
+          args.foreach(collect)
+        case While(e,body) => vars ++= e.variables; collect(body)
+        case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
+        case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+        case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+        case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      }
+      collect(this)
+      vars.result
+    }*/
 
   def inline(name: String, oracles: List[String], program: Statement): Statement
 
@@ -403,10 +432,10 @@ object Statement {
     }
 
 
+    import Isabelle.applicativeXMLResult
     import scalaz._
     import std.list._
     import syntax.traverse._
-    import Isabelle.applicativeXMLResult
 
     def decode_call(xml : XML.Tree): XMLResult[Call] = xml match {
       case XML.Elem(("call",List(("name",name))), argsXml) =>
@@ -420,6 +449,10 @@ object Statement {
 //    }
 
     override def encode(t: Statement): XML.Tree = t match {
+      case Local(cvars, qvars, body) => XML.Elem(("local", Nil),
+        List(VarTerm.codecC.encode(VarTerm.varlist(cvars:_*)),
+          VarTerm.codecQ.encode(VarTerm.varlist(qvars:_*)),
+          encode(body)))
       case Block(stmts@_*) => XML.Elem(("block", Nil), stmts.map(encode).toList)
       case Assign(v, rhs) => XML.Elem(("assign", Nil), List(VarTerm.codecString.encode(v.map[String](_.name)), RichTerm.codec.encode(rhs)))
       case Sample(v, rhs) => XML.Elem(("sample", Nil), List(VarTerm.codecString.encode(v.map[String](_.name)), RichTerm.codec.encode(rhs)))
@@ -525,6 +558,50 @@ object Statement {
 
   val statements_to_term_op: Operation[(BigInt, List[Statement]), RichTerm] =
     Operation.implicitly[(BigInt, List[Statement]), RichTerm]("statements_to_term")
+}
+
+class Local(val cvars: List[CVariable], val qvars: List[QVariable], val body : Block) extends Statement {
+  assert(cvars.nonEmpty || qvars.nonEmpty)
+
+  override def equals(obj: Any): Boolean = obj match {
+    case o : Local =>
+      (cvars == o.cvars) && (qvars == o.qvars) && (body == o.body)
+    case _ => false
+  }
+
+  override def substituteOracles(subst: Map[String, Call]): Statement =
+    new Local(cvars=cvars, qvars=qvars, body=body.substituteOracles(subst))
+
+  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Statement =
+    new Local(cvars=cvars, qvars=qvars, body=body.simplify(isabelle, facts, thms))
+
+  override def markOracles(oracles: List[String]): Statement =
+    new Local(cvars=cvars, qvars=qvars, body=body.markOracles(oracles))
+
+  override def checkWelltyped(context: Isabelle.Context): Unit =
+    body.checkWelltyped(context)
+
+  override def inline(name: String, oracles: List[String], program: Statement): Statement =
+    body.inline(name, oracles, program) match {
+      case Block(Local(cvars2, qvars2, body)) => new Local(cvars ++ cvars2, qvars ++ qvars2, body)
+      case stmt => new Local(cvars, qvars, stmt)
+  }
+
+  override def toString: String = body.statements match {
+    case Nil => "{ local " + (cvars ++ qvars).mkString(", ") + "; skip; }"
+    case stmts => "{ local " + (cvars ++ qvars).mkString(", ") + "; " + stmts.map {_.toString}.mkString(" ") + " }"
+  }
+}
+
+object Local {
+  def apply(env : Environment, vars : Seq[String], body : Block): Local = {
+    val vars2 = vars map env.getProgVariable
+    val cvars = vars2 collect { case v : CVariable => v }
+    val qvars = vars2 collect { case v : QVariable => v }
+
+    new Local(cvars.toList, qvars.toList, body)
+  }
+  def unapply(x : Local): Some[(List[CVariable], List[QVariable], Block)] = Some((x.cvars, x.qvars, x.body))
 }
 
 class Block(val statements:List[Statement]) extends Statement {

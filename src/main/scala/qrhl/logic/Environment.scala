@@ -31,6 +31,9 @@ final class Environment private
     cVariables.getOrElse(res, throw UserException(s"Classical variable $res not declared"))
   def getQVariable(res: String): QVariable =
     qVariables.getOrElse(res, throw UserException(s"Quantum variable $res not declared"))
+  def getProgVariable(name: String): Variable =
+    qVariables.getOrElse(name, cVariables.getOrElse(name, throw UserException(s"Program variable $name not declared")))
+
   def getAmbientVariable(res: String): Typ =
     ambientVariables.getOrElse(res, throw UserException(s"Ambient variable $res not declared"))
 
@@ -190,6 +193,7 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
   lazy val ambientVars: List[String] = {
     val vars = new mutable.LinkedHashSet[String]
     def scan(st:Statement) : Unit = st match {
+      case Local(_,_,body) => scan(body)
       case Block(sts@_*) => sts.foreach(scan)
       case Call(_,_*) =>
       case Assign(_,e) =>

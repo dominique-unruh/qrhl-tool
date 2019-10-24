@@ -187,7 +187,7 @@ object Parser extends JavaTokenParsers {
          thenBranch <- statementOrParenBlock; // TODO: allow nested block
          _ <- literal("else");
          elseBranch <- statementOrParenBlock)  // TODO: allow nested block
-      yield IfThenElse(e,thenBranch,elseBranch)
+      yield IfThenElse(e,thenBranch.toBlock,elseBranch.toBlock)
 
   def whileLoop(implicit context:ParserContext) : Parser[While] =
     for (_ <- literal("while");
@@ -195,7 +195,7 @@ object Parser extends JavaTokenParsers {
          e <- expression(Isabelle.boolT);
          _ <- literal(")");
          body <- statementOrParenBlock)
-      yield While(e,body)
+      yield While(e,body.toBlock)
 
   def statement(implicit context:ParserContext) : Parser[Statement] = measure | assign | sample | call | qInit | qApply | ifThenElse | whileLoop
 
@@ -203,12 +203,18 @@ object Parser extends JavaTokenParsers {
 
   def skip : Parser[Block] = "skip" ~! statementSeparator ^^ { _ => Block.empty }
 
-  def statementOrParenBlock(implicit context:ParserContext) : Parser[Block] =
+  def statementOrParenBlock(implicit context:ParserContext) : Parser[Statement] =
     parenBlock | skip | (statement ^^ { s => Block(s) })
 
-  def parenBlock(implicit context:ParserContext) : Parser[Block] =
-    ("{" ~ "}" ^^ { _ => Block() }) |
-    ("{" ~> block <~ "}")
+  def locals(implicit context:ParserContext) : Parser[List[String]] =
+    "local" ~> identifierList <~ statementSeparator ^^ { vars =>
+      for (v <- vars) context.environment.getProgVariable(v)
+      vars }
+
+  def parenBlock(implicit context:ParserContext) : Parser[Statement] =
+    ("{" ~ "}" ^^ { _ => Block.empty }) |
+      ("{" ~ locals ~ block ~ "}" ^^ { case _ ~ l ~ b ~ _ => Local(context.environment, l, b) }) |
+      ("{" ~> block <~ "}")
 
   def block(implicit context:ParserContext) : Parser[Block] =
     (statementSeparator ^^ { _ => Block.empty }) |
@@ -263,7 +269,7 @@ object Parser extends JavaTokenParsers {
       // temporarily add oracles to environment to allow them to occur in call-expressions during parsing
       context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,0))) };
       body <- parenBlock(context2))
-      yield DeclareProgramCommand(name,args2,body))
+      yield DeclareProgramCommand(name,args2,body.toBlock))
 
   private def declareAdversaryCalls: Parser[Int] = (literal("calls") ~ rep1sep(literal("?"),identifierListSep)).? ^^ {
     case None => 0
@@ -418,6 +424,9 @@ object Parser extends JavaTokenParsers {
   def tactic_split(implicit context:ParserContext) : Parser[CaseSplitTac] =
     literal("casesplit") ~> OnceParser(expression(Isabelle.boolT)) ^^ CaseSplitTac
 
+  def tactic_local : Parser[LocalTac] =
+    literal("local") ~> OnceParser("left" ^^^ LocalTac.left | "right" ^^^ LocalTac.right | "joint" ^^^ LocalTac.joint) ^^ LocalTac.apply
+
   def tactic_fix : Parser[FixTac] =
     literal("fix") ~> identifier ^^ FixTac
 
@@ -445,7 +454,8 @@ object Parser extends JavaTokenParsers {
       literal("measure") ^^ { _ => JointMeasureTac } |
       literal("o2h") ^^ { _ => O2HTac } |
       literal("semiclassical") ^^ { _ => SemiClassicalTac } |
-      literal("sym") ^^ { _ => SymTac }
+      literal("sym") ^^ { _ => SymTac } |
+      tactic_local
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

@@ -187,10 +187,26 @@ fun string_tree_decode (XML.Elem(("u",[]),[])) : string tree result = Codec.Succ
   | string_tree_decode (XML.Elem(("s",[]),[XML.Text s])) = Codec.Success (VTSingle s)
   | string_tree_decode xml = Codec.Failure ("invalid encoding for a string tree",[xml])
 
+fun varterm_encode VTUnit = XML.Elem(("u",[]),[])
+  | varterm_encode (VTCons(a,b)) = XML.Elem(("c",[]),[varterm_encode a, varterm_encode b])
+  | varterm_encode (VTSingle (n,T)) = XML.Elem(("s",[]),[XML.Elem(("V",[("name",n)]), [typ_tight_encode T])])
+
+
+fun varterm_decode (XML.Elem(("u",[]),[])) : (string*typ) tree result = Codec.Success VTUnit
+  | varterm_decode (XML.Elem(("c",[]),[a,b])) =
+      bind_result (fn a' => map_result (fn b' => VTCons(a',b'))
+        (varterm_decode b)) (varterm_decode a)
+  | varterm_decode (XML.Elem(("s",[]),[XML.Elem(("V",[("name",n)]), [typ])])) = 
+      map_result (fn T => VTSingle (n,T)) (typ_tight_decode typ)
+  | varterm_decode xml = Codec.Failure ("invalid encoding for a string tree",[xml])
+
+
 (* fun string_list_encode l = XML.Elem(("l",[]),map (Codec.encode Codec.string) l) *)
 (* fun string_list_decode (XML.Elem(("l",[]), l)) = traverse_results (Codec.decode Codec.string) l *)
 
 fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode ctxt (s)) stmts)
+  | statement_encode ctxt (Local(cvars,qvars,stmts)) = (XML.Elem(("local",[]), 
+      [varterm_encode cvars, varterm_encode qvars, statement_encode ctxt (Block stmts)]))
   | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[]), [string_tree_encode var, richterm_encode ctxt rhs])
   | statement_encode ctxt (Sample (var, rhs)) = XML.Elem(("sample",[]), [string_tree_encode var, richterm_encode ctxt rhs])
   | statement_encode _ (Call c) = call_encode c
@@ -201,12 +217,15 @@ fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => st
   | statement_encode ctxt (QApply (loc,exp)) = XML.Elem(("qapply",[]), 
         [string_tree_encode loc, richterm_encode ctxt (exp)])
   | statement_encode ctxt (IfThenElse (e,p1,p2)) = XML.Elem(("ifte",[]),
-        [richterm_encode ctxt (e), statement_encode ctxt ( Block p1), statement_encode ctxt ( Block p2)])
+        [richterm_encode ctxt (e), statement_encode ctxt (Block p1), statement_encode ctxt (Block p2)])
   | statement_encode ctxt (While (e,p1)) = XML.Elem(("while",[]),
-        [richterm_encode ctxt (e), statement_encode ctxt ( Block p1)])
+        [richterm_encode ctxt (e), statement_encode ctxt (Block p1)])
 
 fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
       block_decode xml |> map_result Block
+  | statement_decode (XML.Elem(("local",_), [cvars,qvars,body])) =
+      bind_result (fn cvars' => bind_result (fn qvars' => map_result (fn stmts => Local(cvars',qvars',stmts))
+        (block_decode body)) (varterm_decode qvars)) (varterm_decode cvars)
   | statement_decode (XML.Elem(("assign",[]), [lhs,e])) = 
       bind_result (fn lhs' => map_result (fn e' => Assign (lhs',e'))
         (richterm_decode e)) (string_tree_decode lhs)
@@ -508,9 +527,9 @@ in
 end
 ;;
 
-val _ = conseq_qrhl_replace_in_predicate \<^context> \<^term>\<open>Cla[x1=1] \<sqinter> Qeq[q1,Z1::int variable = r2,Z2]\<close>
+(* val _ = conseq_qrhl_replace_in_predicate \<^context> \<^term>\<open>Cla[x1=1] \<sqinter> Qeq[q1,Z1::int variable = r2,Z2]\<close>
         [("Z1",\<^typ>\<open>int\<close>)] [("s1",\<^typ>\<open>int\<close>),("t1",\<^typ>\<open>int\<close>)]
         [("Z2",\<^typ>\<open>int\<close>)] [("s2",\<^typ>\<open>int\<close>),("t2",\<^typ>\<open>int\<close>)]
-|> \<^print>
+|> \<^print> *)
 
 end

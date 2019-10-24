@@ -13,7 +13,7 @@ import scala.collection.mutable
 import Isabelle.applicativeXMLResult
 import info.hupel.isabelle.Codec.text
 import qrhl.isabelle.RichTerm.term_tight_codec
-import qrhl.logic
+import qrhl.{Utils, logic}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
@@ -80,10 +80,21 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
   def caVariables(environment: Environment): VariableUse = {
     val avars = new ListBuffer[String]
     val cvars = new ListBuffer[CVariable]
-    for (v<-variables) environment.cVariables.get(v) match {
-      case Some(cv) => cvars += cv
-      case None => avars += v
+
+    val C = new Utils.MapMatch(environment.cVariables)
+    val Q = new Utils.MapMatch(environment.qVariables)
+    val A = new Utils.MapMatch(environment.ambientVariables)
+
+    for (v<-variables) v match {
+      case C(cv) => cvars += cv
+      case Q(_) =>
+      case A(_) => v
+      case Variable.Indexed(C(cv), left) => cvars += cv.index(left)
+      case Variable.Indexed(Q(_), _) =>
     }
+
+
+
     import ListSet.empty
     VariableUse(classical=ListSet(cvars:_*), ambient=ListSet(avars:_*), writtenClassical=empty, quantum=empty, programs=empty, overwrittenClassical = empty, overwrittenQuantum = empty, oracles=empty)
   }

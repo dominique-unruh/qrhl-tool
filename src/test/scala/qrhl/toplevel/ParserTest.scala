@@ -4,7 +4,8 @@ import info.hupel.isabelle.ProverResult
 import info.hupel.isabelle.hol.HOLogic
 import org.scalatest.FunSuite
 import qrhl.UserException
-import qrhl.logic.{Block, Call, VTCons, VTSingle}
+import qrhl.isabelle.Isabelle
+import qrhl.logic.{Block, CVariable, Call, Local, VTCons, VTSingle}
 
 class ParserTest extends FunSuite {
   implicit lazy val parserContext: ParserContext = {
@@ -133,7 +134,7 @@ class ParserTest extends FunSuite {
     println(progDecl2)
     assert(progDecl2.name == "test")
     assert(progDecl2.oracles == List("a","b","c"))
-    assert(progDecl2.program == Block(Call("a"),Call("b"),Call("A1",Call("c"))))
+    assert(progDecl2.program == Block(Call("a"), Call("b"), Call("A1", Call("c"))))
   }
 
   test("program with oracles - name conflict with program variable") {
@@ -142,4 +143,16 @@ class ParserTest extends FunSuite {
     }
   }
 
+  test("local variables") {
+    val block = Parser.parseAll(Parser.parenBlock,
+      """{
+        |  local x;
+        |  skip;
+        |}""".stripMargin)
+
+    println(block)
+
+    assert(new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()) == new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()))
+//    assert(block.get == new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()))
+  }
 }

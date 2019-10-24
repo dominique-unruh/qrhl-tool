@@ -36,12 +36,12 @@ case object FrameRuleTac extends Tactic {
       val leftCW1 = leftVarUse.writtenClassical.map(_.index1)
       val leftCWinter = rCVars.intersect(leftCW1)
       if (leftCWinter.nonEmpty)
-        throw UserException(s"Rhs of postcondition ($rRich) and left program share written classical variables ${leftCWinter.mkString(", ")}")
+        throw UserException(s"Rhs of postcondition ($rRich) and left program share written classical variable(s) ${leftCWinter.mkString(", ")}")
 
       val rightCW2 = rightVarUse.writtenClassical.map(_.index2)
       val rightCWinter = rCVars.intersect(rightCW2)
       if (rightCWinter.nonEmpty)
-        throw UserException(s"Rhs of postcondition ($rRich) and right program share written classical variables ${rightCWinter.mkString(", ")}")
+        throw UserException(s"Rhs of postcondition ($rRich) and right program share written classical variable(s) ${rightCWinter.mkString(", ")}")
 
       val qVars12 = leftVarUse.quantum.map(_.index1).union(rightVarUse.quantum.map(_.index2))
       val qVars12list = qVars12.toList.map { v => (v.variableName, v.valueTyp) }

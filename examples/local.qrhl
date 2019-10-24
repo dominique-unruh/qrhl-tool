@@ -1,0 +1,24 @@
+isabelle.
+
+quantum var q : bit.
+quantum var r : bit.
+classical var x : bit.
+
+program p := {
+  local x,q;
+  on q,r apply comm_op;
+}.
+
+qrhl {Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
+
+ inline p.
+
+ local left.
+  simp!.
+  simp!.
+
+ local right.
+  simp!.
+  simp!.
+
+# TODO

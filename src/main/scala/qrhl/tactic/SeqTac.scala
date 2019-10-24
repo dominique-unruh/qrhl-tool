@@ -9,7 +9,7 @@ import qrhl.logic.Block
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 
-@deprecated("Use SeqTac","now")
+/*@deprecated("Use SeqTac","now")
 case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
   assert(left>=0)
   assert(right>=0)
@@ -29,7 +29,7 @@ case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
       )
     case _ => throw UserException("Expected a qRHL subgoal")
   }
-}
+}*/
 
 case class SeqTac(left:Int, right:Int, inner:RichTerm)
   extends IsabelleTac[(BigInt, BigInt, RichTerm)]("seq_tac", { ctx => (BigInt(left),BigInt(right),inner.encodeAsExpression(ctx) /* TODO: encodeAsExpression should be done on Isabelle side */) }) {

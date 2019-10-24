@@ -32,7 +32,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         Some((v3,Call(prog.name),rho))
       case Const(IsabelleConsts.one,_) =>
-        Some((Isabelle.True_const, Block(), null))
+        Some((Isabelle.True_const, Block.empty, null))
       case _ =>
         ByQRHLTac.logger.debug(s"Term: $term")
         None

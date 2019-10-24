@@ -1,12 +1,15 @@
 package qrhl.logic
 
-import info.hupel.isabelle.pure
+import info.hupel.isabelle.api.XML
+import info.hupel.isabelle.{Codec, XMLResult, pure}
 import info.hupel.isabelle.pure.{App, Const, Free, Term}
+import qrhl.isabelle.RichTerm.typ_tight_codec
 import qrhl.isabelle.{Isabelle, IsabelleConsts}
 
 // Variables
 sealed trait Variable {
   val name:String
+  /** Name of the variable on Isabelle side (prefixed with var_ for classical variables) */
   val variableName: String
   def index1: Variable
   def index2: Variable
@@ -45,6 +48,19 @@ object Variable {
   def index2(name:String) : String = name+"2"
   def index(left:Boolean, name:String) : String =
     if (left) index1(name) else index2(name)
+
+  object Indexed {
+    def unapply(name: String): Option[(String, Boolean)] = {
+      if (name.isEmpty) return None
+      def basename = name.substring(0, name.length-1)
+
+      name.last match {
+        case '1' => Some((basename, true))
+        case '2' => Some((basename, false))
+        case _ => None
+      }
+    }
+  }
 }
 
 final case class QVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
@@ -73,6 +89,15 @@ object QVariable {
       v2.head :: vs2
     case _ => throw new RuntimeException("Illformed variable list")
   }
+
+  object codec extends Codec[QVariable] {
+    override val mlType: String = "(string * typ)"
+    override def encode(v: QVariable): XML.Tree = XML.Elem(("V",List(("name",v.name))), List(typ_tight_codec.encode(v.valueTyp)))
+    override def decode(tree: XML.Tree): XMLResult[QVariable] = ???
+  }
+
+
+
 }
 
 final case class CVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
@@ -104,4 +129,11 @@ object CVariable {
       v2.head :: vs2
     case _ => throw new RuntimeException("Illformed variable list")
   }
+
+  object codec extends Codec[CVariable] {
+    override val mlType: String = "(string * typ)"
+    override def encode(v: CVariable): XML.Tree = XML.Elem(("V",List(("name",v.name))), List(typ_tight_codec.encode(v.valueTyp)))
+    override def decode(tree: XML.Tree): XMLResult[CVariable] = ???
+  }
+
 }

@@ -14,6 +14,10 @@ object Utils {
     true
   }
 
+  class MapMatch[A,B](map : Map[A,B]) {
+    def unapply(name: A): Option[B] = map.get(name)
+  }
+
   def singleMemo[K<:AnyRef,V]: Memo[K, V] = {
     var previous : SoftReference[(K,V)] = SoftReference(null)
     Memo.memo[K,V] { f => k =>

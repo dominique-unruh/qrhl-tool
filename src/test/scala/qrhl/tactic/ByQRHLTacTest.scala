@@ -32,7 +32,7 @@ class ByQRHLTacTest extends FunSuite {
     println(subgoal.right.getClass)
     println(subgoal.right.statements)
 
-    assert(subgoal.right == Block())
+    assert(subgoal.right == Block.empty)
     assert(subgoal.post.toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 1 ⟶ True]")
   }
 

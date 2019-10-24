@@ -4,6 +4,7 @@ import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.pure.Free
 import org.scalatest.FunSuite
 import qrhl.isabelle.Isabelle
+import qrhl.logic.ConcreteProgramDecl
 import qrhl.toplevel.{TacticCommand, Toplevel, ToplevelTest}
 import qrhl.{QRHLSubgoal, UserException}
 

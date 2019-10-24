@@ -2,8 +2,6 @@ theory Programs
   imports Expressions QRHL_Core
 begin
 
-
-
 typedecl program
 typedecl oracle_program
 consts
@@ -16,6 +14,7 @@ consts
   qapply :: "'a variables \<Rightarrow> ('a,'a) l2bounded expression \<Rightarrow> program"
   measurement :: "'a variables \<Rightarrow> 'b variables \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
   instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
+  localvars :: "'a variables \<Rightarrow> 'b variables \<Rightarrow> program list \<Rightarrow> program"
 
 consts fvq_oracle_program :: "oracle_program \<Rightarrow> string set"
 consts fvc_oracle_program :: "oracle_program \<Rightarrow> string set"

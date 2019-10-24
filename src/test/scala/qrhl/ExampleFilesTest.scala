@@ -24,4 +24,8 @@ class ExampleFilesTest extends FunSuite {
     println(s"Creating test $name, $tags")
     test(name,tags:_*) { testFile(name) }
   }
+
+//  test("local -- REMOVE") {
+//    testFile("local.qrhl")
+//  }
 }

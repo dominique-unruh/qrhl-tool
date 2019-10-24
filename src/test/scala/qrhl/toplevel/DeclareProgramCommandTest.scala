@@ -7,8 +7,8 @@ import qrhl.logic.{Block, Call, ConcreteProgramDecl}
 class DeclareProgramCommandTest extends FunSuite {
 
   test("oracles") {
-    val cmd0 = DeclareProgramCommand("b",Nil,Block())
-    val cmd = DeclareProgramCommand("test",List("a"),Block(Call("a"),Call("b")))
+    val cmd0 = DeclareProgramCommand("b", Nil, Block.empty)
+    val cmd = DeclareProgramCommand("test",List("a"), Block(Call("a"), Call("b")))
     println(cmd)
     val state = State.empty(false).loadIsabelle(Nil)
     val state2 = cmd0.act(state)
@@ -19,6 +19,6 @@ class DeclareProgramCommandTest extends FunSuite {
     assert(decl.numOracles == 1)
     val decl2 = decl.asInstanceOf[ConcreteProgramDecl]
     assert(decl2.oracles == List("a"))
-    assert(decl2.program == Block(Call("@a"),Call("b")))
+    assert(decl2.program == Block(Call("@a"), Call("b")))
   }
 }
