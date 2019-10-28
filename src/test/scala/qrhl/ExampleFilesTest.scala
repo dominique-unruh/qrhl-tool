@@ -25,7 +25,7 @@ class ExampleFilesTest extends FunSuite {
     test(name,tags:_*) { testFile(name) }
   }
 
-//  test("local -- REMOVE") {
-//    testFile("local.qrhl")
-//  }
+  test("local -- REMOVE") {
+    testFile("local.qrhl")
+  }
 }

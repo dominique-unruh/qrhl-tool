@@ -9,6 +9,18 @@ program p := {
   on q,r apply comm_op;
 }.
 
+qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
+
+ inline p.
+
+ local joint.
+
+ wp 1 1.
+ simp.
+ skip.
+ simp!.
+qed.
+
 qrhl {Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
 
  inline p.
@@ -21,4 +33,6 @@ qrhl {Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
   simp!.
   simp!.
 
-# TODO
+admit.
+qed.
+

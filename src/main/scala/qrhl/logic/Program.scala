@@ -781,7 +781,7 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
   override def toString: String = s"${Variable.vartermToString(location)} <q $expression;"
 
   override def checkWelltyped(context: Isabelle.Context): Unit = {
-    val expected = Isabelle.vectorT(Isabelle.tupleT(location.map[Typ](_.valueTyp)))
+    val expected = Isabelle.ell2T(Isabelle.tupleT(location.map[Typ](_.valueTyp)))
     expression.checkWelltyped(context, expected)
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =

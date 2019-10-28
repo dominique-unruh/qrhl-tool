@@ -8,7 +8,7 @@ import java.util.{Timer, TimerTask}
 
 import info.hupel.isabelle.api.{Configuration, Version, XML}
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Typ => ITyp}
+import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Typ}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
 import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
@@ -270,8 +270,20 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
 }
 
 object Isabelle {
+  def unitary(t: Typ, u: Typ): Const = Const(c.unitary, boundedT(t,u) -->: boolT)
+  def unitary(u: Term): Term = Const(c.unitary, fastype_of(u) -->: boolT) $ u
 
-  val less_eq_name: String = "Orderings.ord_class.less_eq"
+  def tensorOp(a : Term, b : Term): Term = (a,b) match {
+    case (OfType(L2BoundedT(ta,tb)), OfType(L2BoundedT(tc,td))) => tensorOp(ta,tb,tc,td) $ a $ b
+    case _ => throw new RuntimeException(s"Cannot apply tensorOp to types ${fastype_of(a)}, ${fastype_of(b)}")
+  }
+  def tensorOp(ta: Typ, tb: Typ, tc: Typ, td: Typ): Const =
+    Const(c.tensorOp, l2boundedT(ta,tb) -->: l2boundedT(tc,td) -->: l2boundedT(prodT(ta,tc),prodT(tb,td)))
+
+  def idOp(valueTyp: Typ) = Const(c.idOp, boundedT(valueTyp, valueTyp))
+
+  // TODO remove
+  val less_eq_name: String = c.less_eq
 
   private var globalIsabellePeek: Isabelle = _
   lazy val globalIsabelle: Isabelle = {
@@ -286,7 +298,7 @@ object Isabelle {
   @deprecated("use Expression.toString", "now")
   def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
 
-  def pretty(t: ITyp): String = Isabelle.theContext.prettyTyp(t)
+  def pretty(t: Typ): String = Isabelle.theContext.prettyTyp(t)
 
   implicit object applicativeXMLResult extends Applicative[XMLResult] {
     override def point[A](a: => A): XMLResult[A] = Right(a)
@@ -322,11 +334,11 @@ object Isabelle {
   def mk_conj(t1: Term, t2: Term): Term = HOLogic.conj $ t1 $ t2
 
   def mk_conjs(terms: Term*): Term = terms match {
-    case t :: ts => ts.foldLeft(t)(mk_conj)
+    case Seq(t, ts @ _*) => ts.foldLeft(t)(mk_conj)
     case Nil => HOLogic.True
   }
 
-  def mk_list(typ: ITyp, terms: List[Term]): Term = {
+  def mk_list(typ: Typ, terms: List[Term]): Term = {
     val lT = listT(typ)
     val cons = Const(c.Cons, typ -->: lT -->: lT)
     val nil = Const(c.Nil, lT)
@@ -336,9 +348,15 @@ object Isabelle {
   // TODO rename constants
 //  val vectorT_name = "Complex_L2.ell2"
 
-  def vectorT(typ: ITyp) = Type(t.ell2, List(typ))
+  def ell2T(typ: Typ) = Type(t.ell2, List(typ))
+  object Ell2T {
+    def unapply(typ: Typ) = typ match {
+      case Type(t.ell2, List(typ)) => Some(typ)
+      case _ => None
+    }
+  }
 
-  def dest_vectorT(typ: ITyp): ITyp = typ match {
+  def dest_vectorT(typ: Typ): Typ = typ match {
     case Type(t.ell2, List(t1)) => t1
     case _ => throw new RuntimeException("expected type 'vector', not " + typ)
   }
@@ -347,7 +365,7 @@ object Isabelle {
   val natT = Type(t.nat)
   val bitT = Type(t.bit, Nil)
 //  val linear_spaceT_name = "Complex_Inner_Product.linear_space"
-  val predicateT = Type(t.linear_space, List(vectorT(Type(t.mem2, Nil))))
+  val predicateT = Type(t.linear_space, List(ell2T(Type(t.mem2, Nil))))
   val programT = Type(t.program)
   val oracle_programT = Type(t.oracle_program)
   val classical_subspace = Const(c.classical_subspace, HOLogic.boolT -->: predicateT)
@@ -357,64 +375,103 @@ object Isabelle {
   val predicate_0 = Const(c.zero, predicateT)
 //  val distrT_name = "Discrete_Distributions.distr"
 
-  def distrT(typ: ITyp): Type = Type(t.distr, List(typ))
 
-  def dest_distrT(typ: ITyp): ITyp = typ match {
+  object Inf {
+    def unapply(term: Term): Option[(Term, Term)] = term match {
+      case App(App(Const(IsabelleConsts.inf,_), a), b) => Some((a,b))
+      case _ => None
+    }
+  }
+  def inf(typ: Typ) : Const = Const(c.inf, typ -->: typ -->: typ)
+  def inf(term: Term, terms: Term*): Term = {
+    val typ = fastype_of(term)
+    val inf_ = inf(typ)
+    terms.foldLeft(term) { (a,b) => inf_ $ a $ b }
+  }
+
+  def distrT(typ: Typ): Type = Type(t.distr, List(typ))
+
+  def dest_distrT(typ: Typ): Typ = typ match {
     case Type(t.distr, List(typ2)) => typ2
     case _ => throw new RuntimeException(s"expected type ${t.distr}, not " + typ)
   }
 
 //  val BoundedT_name: String = "Bounded_Operators.Bounded"
-  def BoundedT(inT: ITyp, outT: ITyp) = Type(t.bounded, List(inT, outT))
-  def dest_BoundedT(typ: ITyp): (ITyp, ITyp) = typ match {
+  def boundedT(inT: Typ, outT: Typ) = Type(t.bounded, List(inT, outT))
+  object BoundedT {
+    def unapply(typ: Typ): Option[(Typ,Typ)] = typ match {
+      case Type(t.bounded, List(t1, t2)) => Some((t1, t2))
+      case _ => None
+    }
+  }
+
+  @deprecated("use BoundedT")
+  def dest_boundedT(typ: Typ): (Typ, Typ) = typ match {
     case Type(t.`bounded`, List(t1, t2)) => (t1, t2)
     case _ => throw new RuntimeException(s"expected type ${t.bounded}, not " + typ)
   }
 
-  def l2boundedT(typ: ITyp): Type = l2boundedT(typ, typ)
+  def l2boundedT(typ: Typ): Type = l2boundedT(typ, typ)
+  def l2boundedT(inT: Typ, outT: Typ): Type = boundedT(ell2T(inT), ell2T(outT))
+  object L2BoundedT {
+    def unapply(typ: Typ): Option[(Typ,Typ)] = typ match {
+      case BoundedT(Ell2T(t1),Ell2T(t2)) => Some((t1,t2))
+      case _ => None
+    }
+  }
 
-  def l2boundedT(inT: ITyp, outT: ITyp): Type = BoundedT(vectorT(inT), vectorT(outT))
-
-  def dest_l2boundedT(typ: ITyp): (ITyp, ITyp) = typ match {
+  def dest_l2boundedT(typ: Typ): (Typ, Typ) = typ match {
     case Type(t.`bounded`, List(Type(t.ell2, List(t1)), Type(t.ell2, List(t2)))) => (t1, t2)
     case _ => throw new RuntimeException("expected type 'l2bounded', not " + typ)
   }
 
 //  val measurementT_name = "QRHL_Core.measurement"
 
-  def measurementT(resultT: ITyp, qT: ITyp) = Type(t.measurement, List(resultT, qT))
+  def measurementT(resultT: Typ, qT: Typ) = Type(t.measurement, List(resultT, qT))
 
-  def dest_measurementT(typ: ITyp): (ITyp, ITyp) = typ match {
+  def dest_measurementT(typ: Typ): (Typ, Typ) = typ match {
     case Type(t.measurement, List(typ1, typ2)) => (typ1, typ2)
     case _ => throw new RuntimeException(s"expected type ${t.measurement}, not " + typ)
   }
 
-  def listT(typ: ITyp): Type = Type(t.list, List(typ))
+  def listT(typ: Typ): Type = Type(t.list, List(typ))
 
   val block = Const(c.block, listT(programT) -->: programT)
 
-  def variableT(typ: ITyp) = Type(t.variable, List(typ))
-
-  def dest_variableT(typ: ITyp): ITyp = typ match {
+  def variableT(typ: Typ) = Type(t.variable, List(typ))
+  object VariableT {
+    def unapply(typ: Typ): Option[Typ] = typ match {
+      case Type(t.variable, List(typ)) => Some(typ)
+      case _ => None
+    }
+  }
+  @deprecated("use VariableT.unapply instead")
+  def dest_variableT(typ: Typ): Typ = typ match {
     case Type(t.variable, List(typ2)) => typ2
     case _ => throw new RuntimeException(s"expected type ${t.variable}, not " + typ)
   }
 
-  def variablesT(typ: ITyp): Type = Type(t.variables, List(typ))
+  def variablesT(typ: Typ): Type = Type(t.variables, List(typ))
+  object VariablesT {
+    def unapply(typ: Typ): Option[Typ] = typ match {
+      case Type(t.variables, List(typ)) => Some(typ)
+      case _ => None
+    }
+  }
 
-  def variablesT(typs: List[ITyp]): Type = variablesT(tupleT(typs: _*))
+  def variablesT(typs: List[Typ]): Type = variablesT(tupleT(typs: _*))
 
-  //val cvariableT: ITyp => Type = variableT
-  def expressionT(typ: ITyp) = Type(t.expression, List(typ))
+  //val cvariableT: Typ => Type = variableT
+  def expressionT(typ: Typ) = Type(t.expression, List(typ))
 
   val instantiateOracles = Const(c.instantiateOracles, oracle_programT -->: listT(programT) -->: programT)
 //  val assignName = c.assign
 
-  def assign(typ: ITyp): Const = Const(c.assign, variablesT(typ) -->: expressionT(typ) -->: programT)
+  def assign(typ: Typ): Const = Const(c.assign, variablesT(typ) -->: expressionT(typ) -->: programT)
 
 //  val sampleName = c.sample
 
-  def sample(typ: ITyp): Const = Const(c.sample, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
+  def sample(typ: Typ): Const = Const(c.sample, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
 
   val propT = Type(t.prop)
 
@@ -423,32 +480,32 @@ object Isabelle {
 //  val whileName = "Programs.while"
   val whileProg = Const(c.`while`, expressionT(HOLogic.boolT) -->: listT(programT) -->: programT)
   val metaImp = Const(c.imp, propT -->: propT -->: propT)
-  val boolT: ITyp = HOLogic.boolT
+  val boolT: Typ = HOLogic.boolT
   val implies = Const(c.implies, boolT -->: boolT -->: boolT)
   val qrhl = Const(c.qrhl, expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
 //  val qinitName = c.qinit
 
-  def qinit(typ: ITyp) = Const(c.qinit, variablesT(typ) -->: expressionT(vectorT(typ)) -->: programT)
+  def qinit(typ: Typ) = Const(c.qinit, variablesT(typ) -->: expressionT(ell2T(typ)) -->: programT)
 
 //  val qapplyName = "Programs.qapply"
 
-  def qapply(typ: ITyp) = Const(c.qapply, variablesT(typ) -->: expressionT(l2boundedT(typ)) -->: programT)
+  def qapply(typ: Typ) = Const(c.qapply, variablesT(typ) -->: expressionT(l2boundedT(typ)) -->: programT)
 
 //  val measurementName = c.measurement
 
-  def measurement(resultT: ITyp, qT: ITyp) = Const(c.measurement, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT, qT)) -->: programT)
+  def measurement(resultT: Typ, qT: Typ) = Const(c.measurement, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT, qT)) -->: programT)
 
   val unitT = Type(t.unit)
 //  val prodT_name = "Product_Type.prod"
 
-  def prodT(t1: ITyp, t2: ITyp) = Type(t.prod, List(t1, t2))
+  def prodT(t1: Typ, t2: Typ) = Type(t.prod, List(t1, t2))
 
-  def dest_prodT(typ: ITyp): (ITyp, ITyp) = typ match {
+  def dest_prodT(typ: Typ): (Typ, Typ) = typ match {
     case Type(t.prod, List(t1, t2)) => (t1, t2)
     case _ => throw new RuntimeException(s"expected type ${t.prod}, not " + typ)
   }
 
-  private def qvarTuple_var0(qvs: List[QVariable]): (Term, ITyp) = qvs match {
+  private def qvarTuple_var0(qvs: List[QVariable]): (Term, Typ) = qvs match {
     case Nil => (variable_unit, unitT)
     case List(qv) => (variable_singleton(qv.valueTyp) $ qv.variableTerm,
       qv.valueTyp)
@@ -464,11 +521,36 @@ object Isabelle {
   val variable_unit = Const(c.variable_unit, variablesT(unitT))
 //  val variable_singletonName = c.variable_singleton
 
-  def variable_singleton(typ: ITyp) = Const(c.variable_singleton, variableT(typ) -->: variablesT(typ))
+  def variable_singleton(typ: Typ) = Const(c.variable_singleton, variableT(typ) -->: variablesT(typ))
+  def variable_singleton(t: Term): Term = t match {
+    case OfType(VariableT(typ)) => variable_singleton(typ) $ t
+  }
 
 //  val variable_concatName = c.variable_concat
 
-  def variable_concat(t1: ITyp, t2: ITyp) = Const(c.variable_concat, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1, t2)))
+  def variable_concat(t1: Typ, t2: Typ) = Const(c.variable_concat, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1, t2)))
+
+  def variable_concat(t1: Term, t2: Term) : Term = (t1,t2) match {
+    case (OfType(VariablesT(typ1)), OfType(VariablesT(typ2))) =>
+      variable_concat(typ1,typ2) $ t1 $ t2
+  }
+
+  object OfType {
+    def unapply(t: Term) = Some(fastype_of(t))
+  }
+
+  def fastype_of(t: Term, typs: List[Typ] = Nil): Typ = t match {
+    case App(f,u) => fastype_of(f, typs) match {
+      case Type("fun", List(_,typ)) => typ
+    }
+    case Const(_, typ) => typ
+    case Free(_, typ) => typ
+    case Var(_, typ) => typ
+    case Bound(i) => typs(i.intValue)
+    case Abs(_,typ,u) => typ -->: fastype_of(u, typ::typs)
+  }
+
+
 
   val realT = Type(t.real)
   val stringT: Type = listT(Type(t.char))
@@ -476,26 +558,26 @@ object Isabelle {
   val probability = Const(c.probability, expressionT(boolT) -->: programT -->: program_stateT -->: realT)
   //  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
 
-  val checkTypeOp: Operation[(BigInt, Term), ITyp] = Operation.implicitly[(BigInt, Term), ITyp]("check_type")
+  val checkTypeOp: Operation[(BigInt, Term), Typ] = Operation.implicitly[(BigInt, Term), Typ]("check_type")
   //  val useThys2Op: Operation[List[String], Unit] = Operation.implicitly[List[String], Unit]("use_thys2")
   val createContextOp: Operation[List[String], (BigInt, List[String])] =
     Operation.implicitly[List[String], (BigInt, List[String])]("create_context")
   val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt, Unit]("delete_context")
   val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt, Unit]("delete_thm")
   val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt, Term), String]("print_term")
-  val printTypOp: Operation[(BigInt, ITyp), String] = Operation.implicitly[(BigInt, ITyp), String]("print_typ")
+  val printTypOp: Operation[(BigInt, Typ), String] = Operation.implicitly[(BigInt, Typ), String]("print_typ")
   val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String, Term, BigInt), BigInt]("add_assumption")
-  val readTypOp: Operation[(BigInt, String), ITyp] = Operation.implicitly[(BigInt, String), ITyp]("read_typ")
+  val readTypOp: Operation[(BigInt, String), Typ] = Operation.implicitly[(BigInt, String), Typ]("read_typ")
   @deprecated("use readExpression", "now")
-  val readTermOp: Operation[(BigInt, String, ITyp), Term] = Operation.implicitly[(BigInt, String, ITyp), Term]("read_term")
+  val readTermOp: Operation[(BigInt, String, Typ), Term] = Operation.implicitly[(BigInt, String, Typ), Term]("read_term")
   val simplifyTermOp: Operation[(Term, List[String], BigInt), (RichTerm, BigInt)] = Operation.implicitly[(Term, List[String], BigInt), (RichTerm, BigInt)]("simplify_term")
-  val declareVariableOp: Operation[(BigInt, String, ITyp), BigInt] = Operation.implicitly[(BigInt, String, ITyp), BigInt]("declare_variable")
+  val declareVariableOp: Operation[(BigInt, String, Typ), BigInt] = Operation.implicitly[(BigInt, String, Typ), BigInt]("declare_variable")
 //  val one_name = "Groups.one_class.one"
   val True_const = Const(c.True, boolT)
   val thms_as_subgoals: Operation[(BigInt, String), List[Subgoal]] = Operation.implicitly[(BigInt,String),List[Subgoal]]("thms_as_subgoals")
 
 
-  def mk_eq(typ: ITyp, a: Term, b: Term): Term = Const(c.eq, typ -->: typ -->: HOLogic.boolT) $ a $ b
+  def mk_eq(typ: Typ, a: Term, b: Term): Term = Const(c.eq, typ -->: typ -->: HOLogic.boolT) $ a $ b
 
   /** Analogous to Isabelle's HOLogic.dest_list. Throws [[MatchError]] if it's not a list */
   def dest_list(term: Term): List[Term] = term match {
@@ -544,13 +626,13 @@ object Isabelle {
   def dest_string(term: Term): String =
     dest_list(term).map(dest_char).mkString
 
-  def tupleT(typs: ITyp*): ITyp = typs match {
+  def tupleT(typs: Typ*): Typ = typs match {
     case Nil => unitT
     case List(typ) => typ
     case typ :: rest => prodT(typ, tupleT(rest: _*))
   }
 
-  def tupleT(typs: VarTerm[ITyp]): ITyp = typs match {
+  def tupleT(typs: VarTerm[Typ]): Typ = typs match {
     case VTUnit => unitT
     case VTCons(a, b) => prodT(tupleT(a), tupleT(b))
     case VTSingle(v) => v
@@ -577,8 +659,8 @@ object Isabelle {
   //    lit(term)(implicitly)(facts)
   //  }
 
-/*  def absfree(varName: String, varTyp: ITyp, term: Term): ml.Expr[Term] = {
-    val lit = ml.Expr.uncheckedLiteral[String => ITyp => Term => Term](
+/*  def absfree(varName: String, varTyp: Typ, term: Term): ml.Expr[Term] = {
+    val lit = ml.Expr.uncheckedLiteral[String => Typ => Term => Term](
       "(fn name => fn T => fn t => Term.absfree (name,T) t)")
     val eval1 = lit(varName)
     val eval2 = eval1(varTyp)
@@ -664,7 +746,7 @@ object Isabelle {
   class Context(val isabelle: Isabelle, val contextId: BigInt) {
     _theContext = this
 
-    def checkType(term: Term): ITyp = {
+    def checkType(term: Term): Typ = {
       isabelle.invoke(checkTypeOp, (contextId, term))
     }
 
@@ -675,7 +757,7 @@ object Isabelle {
       super.finalize()
     }
 
-    def declareVariable(name: String, isabelleTyp: ITyp): Context = {
+    def declareVariable(name: String, isabelleTyp: Typ): Context = {
       val id = isabelle.invoke(declareVariableOp, (contextId, name, isabelleTyp))
       new Context(isabelle, id)
     }
@@ -689,18 +771,18 @@ object Isabelle {
       new Context(isabelle, f(contextId))
 
     @deprecated("Use Expression.read", "now")
-    def readTerm(str: String, typ: ITyp): Term = {
+    def readTerm(str: String, typ: Typ): Term = {
       isabelle.invoke(readTermOp, (contextId, str, typ))
     }
 
     @deprecated("Use Expression.toString", "now")
     def prettyExpression(term: Term): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTermOp, (contextId, term)))
 
-    def readTyp(str: String): ITyp = isabelle.invoke(readTypOp, (contextId, str))
+    def readTyp(str: String): Typ = isabelle.invoke(readTypOp, (contextId, str))
 
-    def readTypUnicode(str: String): ITyp = readTyp(unicodeToSymbols(str))
+    def readTypUnicode(str: String): Typ = readTyp(unicodeToSymbols(str))
 
-    def prettyTyp(typ: ITyp): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp, (contextId, typ)))
+    def prettyTyp(typ: Typ): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp, (contextId, typ)))
 
     def simplify(term: Term, facts: List[String]): (RichTerm, Thm) =
       isabelle.invoke(simplifyTermOp, (term, facts.map(Isabelle.unicodeToSymbols), contextId)) match {
@@ -725,5 +807,19 @@ object Isabelle {
 
   }
 
+
+  def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ) =
+    Const(IsabelleConsts.quantum_equality_full, Isabelle.l2boundedT(typLeft,typZ) -->: Isabelle.variablesT(typLeft) -->: Isabelle.l2boundedT(typRight,typZ) -->: Isabelle.variablesT(typRight) -->: Isabelle.predicateT)
+  def quantum_equality_full(u: Term, q: Term, v: Term, r: Term): Term = {
+    val OfType(L2BoundedT(typL, typZ)) = u
+    val OfType(L2BoundedT(typR, _)) = v
+    quantum_equality_full(typL, typR, typZ) $ u $ q $ v $ r
+  }
+  object QuantumEqualityFull {
+    def unapply(term: Term): Option[(Term, Term, Term, Term)] = term match {
+      case App(App(App(App(Const(IsabelleConsts.quantum_equality_full,_), u), q), v), r) => Some((u,q,v,r))
+      case _ => None
+    }
+  }
 
 }

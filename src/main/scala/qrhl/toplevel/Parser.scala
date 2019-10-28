@@ -139,12 +139,12 @@ object Parser extends JavaTokenParsers {
   def qInit(implicit context:ParserContext) : Parser[QInit] =
     for (vs <- varterm;
          _ <- qInitSymbol;
-    // TODO: add a cut
-//         _ = assert(vs.nonEmpty);
+         // TODO: add a cut
+         //         _ = assert(vs.nonEmpty);
          _ = assert(vs.areDistinct); // checks if all vs are distinct
          qvs = vs.map[QVariable] { context.environment.getQVariable };
-//         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
-         typ = Isabelle.vectorT(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
+         //         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
+         typ = Isabelle.ell2T(Isabelle.tupleT(qvs.map[Typ](_.valueTyp)));
          e <- expression(typ);
          _ <- statementSeparator)
       yield QInit(qvs,e)

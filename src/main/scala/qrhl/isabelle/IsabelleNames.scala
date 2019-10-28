@@ -69,4 +69,9 @@ object IsabelleConsts {
   val numBit0 = "Num.num.Bit0"
   val numBit1 = "Num.num.Bit1"
   val Char = "String.char.Char"
+  val quantum_equality_full = "QRHL_Core.quantum_equality_full"
+  val idOp = "Bounded_Operators.idOp"
+  val less_eq = "Orderings.ord_class.less_eq"
+  val tensorOp = "Tensor_Product.tensorOp"
+  val unitary = "Bounded_Operators.unitary"
 }

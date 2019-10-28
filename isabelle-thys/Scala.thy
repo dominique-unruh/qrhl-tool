@@ -79,6 +79,11 @@ object IsabelleConsts {
   val numBit0 = \<open>\<^const_name>\<open>num.Bit0\<close>\<close>
   val numBit1 = \<open>\<^const_name>\<open>num.Bit1\<close>\<close>
   val Char = \<open>\<^const_name>\<open>Char\<close>\<close>
+  val quantum_equality_full = \<open>\<^const_name>\<open>quantum_equality_full\<close>\<close>
+  val idOp = \<open>\<^const_name>\<open>idOp\<close>\<close>
+  val less_eq = \<open>\<^const_name>\<open>less_eq\<close>\<close>
+  val tensorOp = \<open>\<^const_name>\<open>tensorOp\<close>\<close>
+  val unitary = \<open>\<^const_name>\<open>unitary\<close>\<close>
 }
 \<close>
 
