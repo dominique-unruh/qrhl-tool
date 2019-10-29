@@ -614,4 +614,23 @@ val _ =
     (Parse.type_args_constrained -- Parse.binding -- Parse.opt_mixfix -- Scan.option (Parse.$$$ "::" |-- Parse.!!! Parse.sort)
       >> (fn (((args, a), mx), sort) => declare_variable_type_cmd args sort a mx))
 
+fun swap_variables_conv ctxt = 
+  Raw_Simplifier.rewrite_cterm (false,false,false)
+  (SINGLE o (K (ALLGOALS (simp_tac ctxt))))
+   (Raw_Simplifier.init_simpset @{thms
+        swap_variables_subspace_lift[THEN eq_reflection]
+        swap_variables_subspace_top[THEN eq_reflection]
+        swap_variables_subspace_bot[THEN eq_reflection]
+        swap_variables_subspace_zero[THEN eq_reflection]
+        swap_variables_subspace_inf[THEN eq_reflection]
+        swap_variables_subspace_plus[THEN eq_reflection]
+        swap_variables_subspace_Cla[THEN eq_reflection]
+        swap_variables_subspace_quantum_equality[THEN eq_reflection]
+        swap_variables_vars_concat[THEN eq_reflection]
+        swap_variables_vars_singleton1[THEN eq_reflection]
+        swap_variables_vars_singleton2[THEN eq_reflection]
+        swap_variables_vars_singleton3[THEN eq_reflection]
+  } ctxt)
+
+
 end

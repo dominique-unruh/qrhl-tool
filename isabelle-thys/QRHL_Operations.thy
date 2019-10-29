@@ -430,4 +430,16 @@ operation_setup conseq_qrhl_replace_in_predicate = \<open>
   }
 \<close>
 
+operation_setup swap_variables_conv = \<open>
+  {from_lib = Codec.tuple
+              Codec.int (* context *)
+              term_tight_codec (* predicate *),
+   to_lib = Codec.id, (* cleanup up predicate *)
+   action = fn (ctxt_id, pred) => let
+     val ctxt = Refs.Ctxt.read ctxt_id
+     val pred' = QRHL.swap_variables_conv ctxt (Thm.cterm_of ctxt pred)
+                 |> Thm.prop_of |> Logic.dest_equals |> snd
+   in richterm_encode ctxt pred' end}
+\<close>
+
 end

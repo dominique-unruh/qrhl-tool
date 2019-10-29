@@ -74,4 +74,5 @@ object IsabelleConsts {
   val less_eq = "Orderings.ord_class.less_eq"
   val tensorOp = "Tensor_Product.tensorOp"
   val unitary = "Bounded_Operators.unitary"
+  val swap_variables_subspace = "QRHL_Core.swap_variables_subspace"
 }

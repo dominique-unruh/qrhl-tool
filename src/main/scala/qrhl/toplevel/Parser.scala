@@ -384,7 +384,7 @@ object Parser extends JavaTokenParsers {
     }
 
   def tactic_rnd(implicit context:ParserContext): Parser[Tactic] =
-    literal("rnd") ~> (for (
+    literal("rnd") ~> OnceParser(for (
       x <- vartermAtomic;
       xVar = x.map[CVariable](context.environment.getCVariable);
       xTyp = Isabelle.tupleT(xVar.map[Typ](_.valueTyp));
@@ -427,6 +427,18 @@ object Parser extends JavaTokenParsers {
   def tactic_local : Parser[LocalTac] =
     literal("local") ~> OnceParser("left" ^^^ LocalTac.left | "right" ^^^ LocalTac.right | "joint" ^^^ LocalTac.joint) ^^ LocalTac.apply
 
+  def tactic_rename(implicit context: ParserContext) : Parser[RenameTac] =
+    literal("rename") ~> OnceParser(for (
+      (left,right) <- OnceParser("left" ^^^ (true,false) | "right" ^^^ (false,true) | "both" ^^^ (true,true));
+      _ <- literal(":");
+      a <- identifier;
+      av = context.environment.getProgVariable(a);
+      _ <- literal("->");
+      b <- identifier;
+      bv = context.environment.getProgVariable(b))
+        yield RenameTac(left,right,av,bv))
+
+
   def tactic_fix : Parser[FixTac] =
     literal("fix") ~> identifier ^^ FixTac
 
@@ -455,7 +467,8 @@ object Parser extends JavaTokenParsers {
       literal("o2h") ^^ { _ => O2HTac } |
       literal("semiclassical") ^^ { _ => SemiClassicalTac } |
       literal("sym") ^^ { _ => SymTac } |
-      tactic_local
+      tactic_local |
+      tactic_rename
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

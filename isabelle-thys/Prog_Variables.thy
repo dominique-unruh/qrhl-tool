@@ -371,7 +371,6 @@ lift_definition index_flip_var_raw  :: "variable_raw \<Rightarrow> variable_raw"
   "\<lambda>(n,dom). (index_flip_name n, dom)"
   by auto
 
-
 lemma index_flip_name_twice[simp]: "index_flip_name (index_flip_name x) = x"
   apply (cases x rule: rev_cases) unfolding index_flip_name_def by auto
 
@@ -494,6 +493,13 @@ lift_definition index_flip_mem2 :: "mem2 \<Rightarrow> mem2" is
   "\<lambda>(f::_\<Rightarrow>universe) v. f (index_flip_var_raw v)"
   using variable_raw_domain_index_flip_var_raw by blast
 
+(* TODO move *)
+definition "transposition a b v = (if v=a then b else if v=b then a else v)"
+
+lift_definition swap_variables_mem2 :: "'a::universe variable \<Rightarrow> 'a variable \<Rightarrow> mem2 \<Rightarrow> mem2" is
+  "\<lambda>a b (f::_\<Rightarrow>universe) v. f (transposition a b v)"
+  by (auto simp: transposition_def)
+
 lemma Rep_mem2_index_flip_mem2[simp]: "Rep_mem2 (index_flip_mem2 m) v = Rep_mem2 m (index_flip_var_raw v)"
   unfolding index_flip_mem2.rep_eq by simp
 
@@ -503,6 +509,8 @@ lemma tree_domain_index_vartree[simp]: "tree_domain (index_vartree left vt) = tr
   unfolding index_vartree_def by (induction vt, auto)
 
 definition "index_flip_vartree = map_vtree (index_flip_var_raw)"
+
+definition "swap_variables_vartree v w = map_vtree (transposition v w)"
 
 lemma tree_domain_index_flip_vartree[simp]: "tree_domain (index_flip_vartree vt) = tree_domain vt"
   unfolding index_flip_vartree_def by (induction vt, auto)
@@ -535,6 +543,10 @@ lemma index_vars_unit[simp]: "index_vars left \<lbrakk>\<rbrakk> = \<lbrakk>\<rb
 
 lift_definition index_flip_vars :: "'a::universe variables \<Rightarrow> 'a variables" is
   "\<lambda>(vt,e). (index_flip_vartree vt,e)" by auto
+
+lift_definition swap_variables_vars :: "'a::universe variable \<Rightarrow> 'a variable \<Rightarrow> 'b::universe variables \<Rightarrow> 'b variables" is
+  "\<lambda>v w (vt,e). (swap_variables_vartree v w vt,e)" 
+  by (cheat swap_variables_vars)
 
 lemma eval_variables_index_flip_mem2[simp]: 
   "eval_variables Q (index_flip_mem2 m) = eval_variables (index_flip_vars Q) m"

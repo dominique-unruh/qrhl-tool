@@ -270,6 +270,11 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
 }
 
 object Isabelle {
+  def swap_variables_subspace(v: Term, w: Term, pre: Term): Term = {
+    val typ = fastype_of(v)
+    Const(c.swap_variables_subspace, typ -->: typ -->: predicateT -->: predicateT) $ v $ w $ pre
+  }
+
   def unitary(t: Typ, u: Typ): Const = Const(c.unitary, boundedT(t,u) -->: boolT)
   def unitary(u: Term): Term = Const(c.unitary, fastype_of(u) -->: boolT) $ u
 

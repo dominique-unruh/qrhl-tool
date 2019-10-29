@@ -107,9 +107,18 @@ lift_definition index_flip_vector :: "mem2 ell2 \<Rightarrow> mem2 ell2" is
   "\<lambda>\<psi>. \<psi> o index_flip_mem2"
   by (cheat index_flip_vector)
 
+lift_definition swap_variables_vector :: "'a::universe variable \<Rightarrow> 'a variable \<Rightarrow> mem2 ell2 \<Rightarrow> mem2 ell2" is
+  "\<lambda>v w \<psi>. \<psi> o swap_variables_mem2 v w"
+  by (cheat swap_variables_vector)
+
 lift_definition index_flip_subspace :: "mem2 ell2 linear_space \<Rightarrow> mem2 ell2 linear_space" is
   "\<lambda>S. index_flip_vector ` S"
   by (cheat index_flip_subspace)
+
+lift_definition swap_variables_subspace :: "'a::universe variable \<Rightarrow> 'a variable \<Rightarrow> mem2 ell2 linear_space \<Rightarrow> mem2 ell2 linear_space" is
+  "\<lambda>v w S. swap_variables_vector v w ` S"
+  by (cheat swap_variables_subspace)
+
 
 lemma index_flip_subspace_top[simp]: "index_flip_subspace top = top"
   by (cheat index_flip_subspace_top)
@@ -124,6 +133,39 @@ lemma index_flip_subspace_inf[simp]: "index_flip_subspace (A\<sqinter>B) = (inde
 lemma index_flip_subspace_plus[simp]: "index_flip_subspace (A+B) = (index_flip_subspace A) + (index_flip_subspace B)"
   by (cheat index_flip_subspace_plus)
 
+lemma swap_variables_subspace_top[simp]: "swap_variables_subspace v w top = top"
+  by (cheat swap_variables_subspace_top)
+lemma swap_variables_subspace_bot[simp]: "swap_variables_subspace v w bot = bot"
+  by (cheat swap_variables_subspace_bot)
+lemma swap_variables_subspace_zero[simp]: "swap_variables_subspace v w 0 = 0"
+  by simp
+lemma swap_variables_subspace_Cla[simp]: "swap_variables_subspace v w (Cla[b]) = Cla[b]"
+  by auto
+lemma swap_variables_subspace_inf[simp]: "swap_variables_subspace v w (A\<sqinter>B) = (swap_variables_subspace v w A) \<sqinter> (swap_variables_subspace v w B)"
+  by (cheat swap_variables_subspace_inf)
+lemma swap_variables_subspace_plus[simp]: "swap_variables_subspace v w (A+B) = (swap_variables_subspace v w A) + (swap_variables_subspace v w B)"
+  by (cheat swap_variables_subspace_plus)
+
+lemma swap_variables_vars_concat[simp]: 
+  "swap_variables_vars v w (variable_concat Q R)
+   = variable_concat (swap_variables_vars v w Q) (swap_variables_vars v w R)"
+  by (cheat swap_variables_vars_concat)
+
+lemma swap_variables_vars_unit[simp]: 
+  "swap_variables_vars v w variable_unit = variable_unit"
+  by (cheat swap_variables_vars_unit)
+
+lemma swap_variables_vars_singleton1[simp]: 
+  "swap_variables_vars v w (variable_singleton v) = variable_singleton w"
+  by (cheat swap_variables_vars_singleton1)
+
+lemma swap_variables_vars_singleton2[simp]: 
+  "swap_variables_vars v w (variable_singleton w) = variable_singleton v"
+  by (cheat swap_variables_vars_singleton2)
+
+lemma swap_variables_vars_singleton3[simp]: 
+  "NO_MATCH v z \<Longrightarrow> NO_MATCH w z \<Longrightarrow> distinct_qvars \<lbrakk>v,z\<rbrakk> \<Longrightarrow> distinct_qvars \<lbrakk>w,z\<rbrakk> \<Longrightarrow> swap_variables_vars v w (variable_singleton z) = variable_singleton z"
+  by (cheat swap_variables_vars_singleton2)
 
 subsection "Distinct quantum variables"
 
@@ -459,6 +501,9 @@ lemma lift_vector_inj:
 
 
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_vars Q"
+  by (cheat index_flip_subspace_lift)
+
+lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q"
   by (cheat index_flip_subspace_lift)
 
 subsection "Rewriting quantum variable lifting"
@@ -1130,6 +1175,11 @@ lemma index_flip_subspace_quantum_equality[simp]:
   "index_flip_subspace (quantum_equality_full U Q V R) = 
       quantum_equality_full V (index_flip_vars R) U (index_flip_vars Q)"
   by (cheat index_flip_subspace_quantum_equality)
+
+lemma swap_variables_subspace_quantum_equality[simp]: 
+  "swap_variables_subspace v w (quantum_equality_full U Q V R) = 
+      quantum_equality_full U (swap_variables_vars v w Q) V (swap_variables_vars v w R)"
+  by (cheat swap_variables_subspace_quantum_equality)
 
 lemma quantum_equality_reorder:
   fixes U :: "('a::universe,'c) l2bounded" and V :: "('b::universe,'c) l2bounded"

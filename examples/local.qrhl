@@ -1,7 +1,10 @@
 isabelle.
 
+# TODO: make proper example file out of this
+
 quantum var q : bit.
 quantum var r : bit.
+quantum var s : bit.
 classical var x : bit.
 
 program p := {
@@ -9,7 +12,23 @@ program p := {
   on q,r apply comm_op;
 }.
 
+
 qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
+ inline p.
+# rename left: q -> s.
+ rename both: r -> s.
+
+ local joint.
+  simp.
+
+ wp 1 1.
+ simp.
+ skip.
+ simp!.
+qed.
+
+
+qrhl {Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
 
  inline p.
 
