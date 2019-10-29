@@ -6,7 +6,7 @@ type varterm_names = string Prog_Variables.tree
 
 datatype statement = 
   Block of statement list
-| Local of Prog_Variables.varterm * Prog_Variables.varterm * statement list
+| Local of Prog_Variables.varterm(*cvars*) * Prog_Variables.varterm(*qvars*) * statement list
 | Assign of varterm_names * term
 | Sample of varterm_names * term
 | Call of call
@@ -44,7 +44,7 @@ fun statement_to_term ctxt (Assign(lhs,rhs)) = let
          lhs' $ term_to_expression ctxt rhs end
   | statement_to_term ctxt (Block stmts) = \<^const>\<open>block\<close> $ statements_to_term ctxt stmts
   | statement_to_term ctxt (Local (cvars,qvars,stmts)) = let
-      val (cvars',cT) = mk_varterm cvars
+      val (cvars',cT) = cvars |> map_tree (fn (v,T) => ("var_"^v,T)) |> mk_varterm
       val (qvars',qT) = mk_varterm qvars
       in Const(\<^const_name>\<open>localvars\<close>, mk_variablesT cT --> mk_variablesT qT --> \<^typ>\<open>program list \<Rightarrow> program\<close>) 
           $ cvars' $ qvars' $ statements_to_term ctxt stmts
@@ -79,7 +79,7 @@ and statements_to_term ctxt statements = map (statement_to_term ctxt) statements
 
 fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statements) = Block (term_to_statements ctxt statements)
   | term_to_statement ctxt (Const(\<^const_name>\<open>localvars\<close>, _) $ cvars $ qvars $ body) =
-      Local (parse_varterm cvars, parse_varterm qvars, term_to_statements ctxt body)
+      Local (parse_varterm cvars |> map_tree (apfst strip_var_prefix), parse_varterm qvars, term_to_statements ctxt body)
   | term_to_statement ctxt (Const(\<^const_name>\<open>assign\<close>,_) $ x $ e) = 
       Assign (parse_varterm x |> map_tree fst |> map_tree strip_var_prefix, expression_to_term ctxt e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>sample\<close>,_) $ x $ e) = 
