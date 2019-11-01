@@ -52,10 +52,12 @@ case class DeclareProgramCommand(name: String, oracles: List[String], program : 
   }
 }
 
-case class DeclareAdversaryCommand(name: String, cvars: Seq[CVariable], qvars : Seq[QVariable], numOracles: Int) extends Command {
+case class DeclareAdversaryCommand(name: String, cvars: Seq[CVariable], qvars : Seq[QVariable],
+                                   innerCVars: Seq[CVariable], innerQVars : Seq[QVariable],
+                                   numOracles: Int) extends Command {
   override def act(state: State): State = {
     println(s"Declaring adversary $name. ")
-    state.declareAdversary(name,cvars,qvars,numOracles)
+    state.declareAdversary(name,cvars,qvars,innerCVars,innerQVars,numOracles)
   }
 }
 

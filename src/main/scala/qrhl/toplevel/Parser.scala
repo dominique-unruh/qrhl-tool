@@ -267,7 +267,7 @@ object Parser extends JavaTokenParsers {
       args2 = args.getOrElse(Nil);
       _ <- literal(":=");
       // temporarily add oracles to environment to allow them to occur in call-expressions during parsing
-      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,0))) };
+      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,Nil,Nil,0))) };
       body <- parenBlock(context2))
       yield DeclareProgramCommand(name,args2,body.toBlock))
 
@@ -277,14 +277,20 @@ object Parser extends JavaTokenParsers {
   }
 
   def declareAdversary(implicit context:ParserContext) : Parser[DeclareAdversaryCommand] =
-    literal("adversary") ~> OnceParser(identifier ~ literal("vars") ~ identifierList ~ declareAdversaryCalls) ^^ {
-      case name ~ _ ~ vars ~ calls =>
-        for (v <- vars) if (!context.environment.cVariables.contains(v) && !context.environment.qVariables.contains(v))
+    literal("adversary") ~> OnceParser(for (
+      name <- identifier;
+      vars <- literal("vars") ~> identifierList;
+      innerVars <- (literal("inner") ~> identifierList) | success(Nil);
+      calls <- declareAdversaryCalls)
+      yield {
+        for (v <- vars++innerVars) if (!context.environment.cVariables.contains(v) && !context.environment.qVariables.contains(v))
           throw UserException(s"Not a program variable: $v")
         val cvars = vars.flatMap(context.environment.cVariables.get)
         val qvars = vars.flatMap(context.environment.qVariables.get)
-        DeclareAdversaryCommand(name,cvars,qvars,calls)
-    }
+        val innercvars = innerVars.flatMap(context.environment.cVariables.get)
+        val innerqvars = innerVars.flatMap(context.environment.qVariables.get)
+        DeclareAdversaryCommand(name,cvars,qvars,innercvars,innerqvars,calls)
+      })
 
   def goal(implicit context:ParserContext) : Parser[GoalCommand] =
     literal("lemma") ~> OnceParser((identifier <~ ":").? ~ expression(Isabelle.boolT)) ^^ {
@@ -424,8 +430,12 @@ object Parser extends JavaTokenParsers {
   def tactic_split(implicit context:ParserContext) : Parser[CaseSplitTac] =
     literal("casesplit") ~> OnceParser(expression(Isabelle.boolT)) ^^ CaseSplitTac
 
-  def tactic_local : Parser[LocalTac] =
-    literal("local") ~> OnceParser("left" ^^^ LocalTac.left | "right" ^^^ LocalTac.right | "joint" ^^^ LocalTac.joint) ^^ LocalTac.apply
+  def tactic_local : Parser[Tactic] =
+    literal("local") ~> OnceParser(
+      "left" ^^^ LocalTac(LocalTac.left) |
+        "right" ^^^ LocalTac(LocalTac.right) |
+        "joint" ^^^ LocalTac(LocalTac.joint) |
+        "up" ^^^ LocalUpTac)
 
   def tactic_rename(implicit context: ParserContext) : Parser[RenameTac] =
     literal("rename") ~> OnceParser(for (
@@ -496,5 +506,5 @@ object Parser extends JavaTokenParsers {
 
   def command(implicit context:ParserContext): Parser[Command] =
     (debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
-      include | undo | qed | changeDirectory | cheat | print_cmd).named("command")
+      include | undo | qed | changeDirectory | cheat | print_cmd | failure("expecting command"))
 }

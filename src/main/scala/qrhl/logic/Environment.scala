@@ -148,10 +148,11 @@ sealed trait ProgramDecl {
   def toStringMultiline : String
 }
 
-final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], numOracles:Int) extends ProgramDecl {
+final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], innerCVars:List[CVariable], innerQVars:List[QVariable], numOracles:Int) extends ProgramDecl {
   override val variablesRecursive: VariableUse = {
     val cvars2 = ListSet(cvars: _*)
-    VariableUse(classical = cvars2, writtenClassical = cvars2, quantum = ListSet(qvars: _*), ambient = ListSet.empty, programs = ListSet.empty, overwrittenClassical = ListSet.empty, overwrittenQuantum = ListSet.empty, oracles=ListSet.empty)
+    VariableUse(classical = cvars2, writtenClassical = cvars2, quantum = ListSet(qvars: _*), ambient = ListSet.empty, programs = ListSet.empty, overwrittenClassical = ListSet.empty, overwrittenQuantum = ListSet.empty, oracles=ListSet.empty,
+      innerClassical = ListSet(innerCVars:_*), innerQuantum = ListSet(innerQVars:_*))
   }
 
   def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {

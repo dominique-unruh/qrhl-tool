@@ -96,7 +96,8 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
 
 
     import ListSet.empty
-    VariableUse(classical=ListSet(cvars:_*), ambient=ListSet(avars:_*), writtenClassical=empty, quantum=empty, programs=empty, overwrittenClassical = empty, overwrittenQuantum = empty, oracles=empty)
+    VariableUse(classical=ListSet(cvars:_*), ambient=ListSet(avars:_*), writtenClassical=empty, quantum=empty, programs=empty, overwrittenClassical = empty, overwrittenQuantum = empty, oracles=empty,
+      innerClassical = empty, innerQuantum = empty)
   }
 
 //    /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */

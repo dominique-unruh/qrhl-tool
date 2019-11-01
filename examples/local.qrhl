@@ -7,16 +7,24 @@ quantum var r : bit.
 quantum var s : bit.
 classical var x : bit.
 
+program Q := {
+  local s;
+  on s apply hadamard;
+}.
+
 program p := {
   local x,q;
   on q,r apply comm_op;
+  call Q;
 }.
 
 
 qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
  inline p.
 # rename left: q -> s.
- rename both: r -> s.
+# rename both: r -> s.
+
+ local up.
 
  local joint.
   simp.

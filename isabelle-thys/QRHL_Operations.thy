@@ -123,26 +123,35 @@ operation_setup declare_classical_variable = \<open>
    action = fn (name,typ,ctx_id) => make_ctxt_ref (Prog_Variables.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ Prog_Variables.Classical)}
 \<close>
 
-operation_setup callWp = \<open>
-  {from_lib = tuple12 
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      (Codec.list term_tight_codec)
-      term_tight_codec
-      Codec.int,
+operation_setup mk_equals_wp = \<open>
+  {from_lib = tuple6
+              Codec.int (* context *)
+              richterm_codec (* R *)
+              (Codec.list term_tight_codec) (* cvars1 *)
+              (Codec.list term_tight_codec) (* cvars2 *)
+              (Codec.list term_tight_codec) (* qvars1 *)
+              (Codec.list term_tight_codec) (* qvars2 *),
    to_lib = Codec.id,
-   action = fn (in_cvars1, in_cvars2, in_qvars1, in_qvars2, cvars1, cvars2, cwvars1, cwvars2, qvars1, qvars2, B, ctxt_id) => 
-    let val ctxt = Refs.Ctxt.read ctxt_id in
-        QRHL.callWp in_cvars1 in_cvars2 in_qvars1 in_qvars2 cvars1 cvars2 cwvars1 cwvars2 qvars1 qvars2 B
-        |> Codec.encode (Codec.triple (richterm_codec' ctxt) (richterm_codec' ctxt) (richterm_codec' ctxt)) end}
-\<close>
+   action = fn (ctxt_id, R, cvars1, cvars2, qvars1, qvars2) => let
+      val ctxt = Refs.Ctxt.read ctxt_id
+      val result = QRHL.mk_equals_wp R cvars1 cvars2 qvars1 qvars2
+      in richterm_encode ctxt result end}\<close>
+
+
+operation_setup equal_get_R = \<open>
+  {from_lib = tuple7
+              Codec.int (* context *)
+              richterm_codec (* postcondition *)
+              (Codec.list term_tight_codec) (* out_cvars1 *)
+              (Codec.list term_tight_codec) (* out_cvars2 *)
+              (Codec.list term_tight_codec) (* out_qvars1 *)
+              (Codec.list term_tight_codec) (* out_qvars2 *)
+              (Codec.list term_tight_codec) (* overwritten_classical *),
+   to_lib = Codec.id,
+   action = fn (ctxt_id, post, cvars1, cvars2, qvars1, qvars2, owc) => let
+      val ctxt = Refs.Ctxt.read ctxt_id
+      val R = QRHL.equal_get_R post cvars1 cvars2 qvars1 qvars2 owc
+      in richterm_encode ctxt R end}\<close>
 
 operation_setup fixTac = \<open>
   {from_lib = Codec.triple Codec.int term_tight_codec Codec.string,

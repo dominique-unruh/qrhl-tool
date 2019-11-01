@@ -1,128 +1,35 @@
 isabelle.
 
-classical var c : string.
-ambient var a : string.
-quantum var q : string.
-program p := { c <- undefined; }.
-program po(qq) := { call qq; }.
-adversary A vars c.
-adversary B vars q calls ?,?.
-
-lemma lem: 1=2.
-admit.
-qed.
-
-qrhl qr: {Cla[top]} skip; ~ skip; {Cla[top]}.
- admit.
-qed.
-
-print a.
-print c.
-print q.
-print p.
-print po.
-print A.
-print B.
-print lem.
-print qr.
-print lem[symmetric].
-print nope.
-
-
-
-
-
-
-
-classical var bad : bool.
-quantum var q : int.
-quantum var r : int.
-quantum var s : int.
-
-program p1 := {
-x <- x;
-bad <- bad;
-on q,r,s apply undefined;
-}.
-
-lemma p1_qvars2 = undefined.
- simp.
-
-
-classical var x : string.
-classical var bad : bool.
-quantum var q : string.
-
-adversary adv vars q, x calls ?.
-
-program p1 := {}.
-program p2 := {}.
-
-qrhl {top} call adv(p1); ~ call adv(p2); {Cla[bad1] + (ℭ𝔩𝔞[x1 = x2] ⊓ ⟦q1⟧ ≡𝔮 ⟦q2⟧)}.
-
-equal.
- simp!.
-
-simp.
-
-
-
+quantum var q : bit.
+quantum var r : bit.
+quantum var s : bit.
 classical var x : bit.
-classical var y : bit.
-classical var a : bit.
-classical var b : bit.
-classical var z : bit*bit.
+
+program Q := {
+  local s;
+  on s apply hadamard;
+}.
 
 program p := {
-  x <- 1;
-  y <$ undefined;
+  local x,q;
+  r <q undefined;
+  on q,r apply comm_op;
+  call Q;
 }.
 
-qrhl bla: {top} call p; ~ call p; {top}.
-inline p.
-wp right.
+
+qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
+ inline p.
+
+ equal exclude Q.
+
+simp!.
 simp.
-wp right.
-admit.
-qed.
-
-program s1(zz) := {
-  (x,y) <$ uniform UNIV;
-  call zz;
-}.
-
-program s3 := {
-  x <$ uniform UNIV;
-}.
-
-program s2 := {
-  z <$ uniform UNIV;
-  call s1(s3);
-}.
-
-qrhl {top} call s1(s2); ~ call s2; {Cla[(x2,y2)=(x1,y1)]}.
-inline s1.
-inline s2.
-inline s1.
-inline s3.
-
-rnd.
-simp.
-rnd.
-simp.
-rnd.
-simp.
-wp left.
+inline Q.
+equal.
 simp.
 skip.
 simp.
-
+skip.
+simp.
 qed.
-
-
-
-# Bad error message
-program s1(x) := {
-  (x,y) <$ uniform UNIV;
-  call x;
-}.

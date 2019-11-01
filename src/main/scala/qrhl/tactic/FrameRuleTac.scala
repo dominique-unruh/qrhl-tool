@@ -53,5 +53,6 @@ case object FrameRuleTac extends Tactic {
       List(colocality, qrhlSubgoal)
   }
 
+  // TODO: Replace Term by RichTerm
   val colocalityOp: Operation[(BigInt, Term, List[(String, Typ)]), RichTerm] = Operation.implicitly[(BigInt,Term,List[(String,Typ)]), RichTerm]("colocal_pred_qvars")
 }

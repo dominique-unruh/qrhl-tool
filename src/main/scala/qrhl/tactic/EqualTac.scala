@@ -11,6 +11,7 @@ import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import org.log4s
 import qrhl.isabelle.Codecs._
+import qrhl.tactic.EqualTac.logger
 
 import scala.collection.immutable.ListSet
 
@@ -39,6 +40,9 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
         Measurement(vl,vsl,el)
       case (QApply(vsl,el), QApply(vsr,er)) if vsl==vsr && el==er =>
         QApply(vsl,el)
+      case (Local(cvarsl, qvarsl, bodyl), Local(cvarsr, qvarsr, bodyr))
+        if Set(cvarsl :_*) == Set(cvarsr :_*) && Set(qvarsl :_*) == Set(qvarsr :_*) =>
+        Local(cvarsl, qvarsl, collect(bodyl, bodyr).toBlock)
       case lr =>
         val idx = mismatches.indexOf(lr)
         if (idx == -1) {
@@ -55,91 +59,135 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
   }
 
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm, List[Subgoal]) = {
+    val env = state.environment
+    val isabelle = state.isabelle
+    val contextId = isabelle.contextId
+
+    // ==== Get the context and the mismatches
+
     val (context, mismatches) = diff(left,right)
 
-    EqualTac.logger.debug(s"Context: $context")
-
-    val env = state.environment
+    logger.debug(s"Context: $context")
 
     val varUse = context.variableUse(env)
 
-    EqualTac.logger.debug(s"Context has the following variable use: $varUse")
+    logger.debug(s"Context has the following variable use: $varUse")
 
-    val cvars = varUse.classical
+    // ==== Choose in/out/mid variables
+
+    val out_cvars = varUse.classical
     val cwvars = varUse.writtenClassical
-    val qvars =
+    val out_qvars =
       if (qvariables.isEmpty)
         varUse.quantum
       else {
-        if (!varUse.quantum.subsetOf(qvariables.toSet))
-          throw UserException(s"You need to list at least the following qvars: ${varUse.quantum.mkString(", ")}")
         ListSet(qvariables:_*)
       }
 
-    val in_cvars = cvars -- varUse.overwrittenClassical
-    val in_qvars = qvars -- varUse.overwrittenQuantum
+    // TODO: could be user choosable
+    val in_cvars = out_cvars -- varUse.overwrittenClassical
+    val in_qvars = out_qvars -- varUse.overwrittenQuantum
 
-    val cvarsIdx1 = cvars.toList.map(_.index1)
-    val cvarsIdx2 = cvars.toList.map(_.index2)
-    val cwvarsIdx1 = cwvars.toList.map(_.index1)
-    val cwvarsIdx2 = cwvars.toList.map(_.index2)
-    val qvarsIdx1 = qvars.toList.map(_.index1)
-    val qvarsIdx2 = qvars.toList.map(_.index2)
+    val inner_cvars = varUse.innerClassical
+    val inner_qvars = varUse.innerQuantum
 
-    val in_cvarsIdx1 = in_cvars.toList.map(_.index1)
-    val in_cvarsIdx2 = in_cvars.toList.map(_.index2)
-    val in_qvarsIdx1 = in_qvars.toList.map(_.index1)
-    val in_qvarsIdx2 = in_qvars.toList.map(_.index2)
+    // TODO: could be user choosable
+    val mid_cvars = out_cvars ++ inner_cvars
+    val mid_qvars = out_qvars ++ inner_qvars
 
-    // Computes wp and colocality, see QRHL.callWp in Isabelle/ML sources
-    val (in_wp, wp, colocality) = state.isabelle.isabelle.invoke(callWpOp,
-      (in_cvarsIdx1.map(_.valueTerm), in_cvarsIdx2.map(_.valueTerm),
-        in_qvarsIdx1.map(_.variableTerm), in_qvarsIdx2.map(_.variableTerm),
-        cvarsIdx1.map(_.valueTerm), cvarsIdx2.map(_.valueTerm),
-        cwvarsIdx1.map(_.valueTerm), cwvarsIdx2.map(_.valueTerm),
-        qvarsIdx1.map(_.variableTerm), qvarsIdx2.map(_.variableTerm),
-        post.isabelleTerm, state.isabelle.contextId))
+    logger.debug(s"In variables: $in_cvars, $in_qvars; out variables: $out_cvars, $out_qvars; mid variables: $mid_cvars, $mid_qvars")
 
+    // ==== Convenient abbreviations
+
+    val out_cvarsIdx1 = out_cvars.toList.map(_.index1).map(_.valueTerm)
+    val out_cvarsIdx2 = out_cvars.toList.map(_.index2).map(_.valueTerm)
+    val cwvarsIdx1 = cwvars.toList.map(_.index1).map(_.valueTerm)
+    val cwvarsIdx2 = cwvars.toList.map(_.index2).map(_.valueTerm)
+    val out_qvarsIdx1 = out_qvars.toList.map(_.index1).map(_.variableTerm)
+    val out_qvarsIdx2 = out_qvars.toList.map(_.index2).map(_.variableTerm)
+    val in_cvarsIdx1 = in_cvars.toList.map(_.index1).map(_.valueTerm)
+    val in_cvarsIdx2 = in_cvars.toList.map(_.index2).map(_.valueTerm)
+    val in_qvarsIdx1 = in_qvars.toList.map(_.index1).map(_.variableTerm)
+    val in_qvarsIdx2 = in_qvars.toList.map(_.index2).map(_.variableTerm)
+    val mid_cvarsIdx1 = mid_cvars.toList.map(_.index1).map(_.valueTerm)
+    val mid_cvarsIdx2 = mid_cvars.toList.map(_.index2).map(_.valueTerm)
+    val mid_qvarsIdx1 = mid_qvars.toList.map(_.index1).map(_.variableTerm)
+    val mid_qvarsIdx2 = mid_qvars.toList.map(_.index2).map(_.variableTerm)
+
+    // ==== Get R (the "rest" of the predicate), and the resulting pre/postconditions
+    val R = isabelle.isabelle.invoke(
+      Operation.implicitly[(BigInt, RichTerm, List[Term], List[Term], List[Term], List[Term], List[Term]),RichTerm]("equal_get_R"),
+      (contextId, post,
+        out_cvarsIdx1, out_cvarsIdx2,
+        out_qvarsIdx1, out_qvarsIdx2,
+        (cwvarsIdx1 ++ cwvarsIdx2)))
+
+    logger.debug(s"R: $R")
+
+    val rVarUse = R.caVariables(env)
+
+    val mk_equals_wp = Operation.implicitly[(BigInt, RichTerm, List[Term], List[Term], List[Term], List[Term]), RichTerm]("mk_equals_wp")
+
+//    val Aout = isabelle.isabelle.invoke(mk_equals_wp, (contextId, R, out_cvarsIdx1, out_cvarsIdx2, out_qvarsIdx1, out_qvarsIdx2))
+//    logger.debug(s"Aout: $Aout")
+
+    val Ain = isabelle.isabelle.invoke(mk_equals_wp, (contextId, R, in_cvarsIdx1, in_cvarsIdx2, in_qvarsIdx1, in_qvarsIdx2))
+    logger.debug(s"Ain: $Ain")
+
+    val Amid = isabelle.isabelle.invoke(mk_equals_wp, (contextId, R, mid_cvarsIdx1, mid_cvarsIdx2, mid_qvarsIdx1, mid_qvarsIdx2))
+    logger.debug(s"Amid: $Amid")
+
+    // ==== Check choices
+
+    // fv(C) <= Xout Qout
+    assert (varUse.classical.subsetOf(out_cvars))
+    if (!varUse.quantum.subsetOf(out_qvars))
+      throw UserException(s"You need to list at least the following qvars: ${varUse.quantum.mkString(", ")}")
+
+    // Qout \ ow(C) <= Qin <= Qout
+    assert((out_qvars -- varUse.overwrittenQuantum).subsetOf(in_qvars))
+    assert(in_qvars.subsetOf(out_qvars))
+    // Xout \ ow(C) <= Xin <= Xout
+    assert((out_cvars -- varUse.overwrittenClassical).subsetOf(in_cvars))
+    assert(in_cvars.subsetOf(out_cvars))
+    // Qmid >= Qout + inner(C)^qu
+    assert((out_qvars ++ inner_qvars).subsetOf(mid_qvars))
+    // Xmid >= Xout + inner(C)^cl
+    assert((out_cvars ++ inner_cvars).subsetOf(mid_cvars))
+    
+    // # means disjoint
+    // fv(R)^qu # fv(C)^qu: by subgoal below
+
+    // C is fv(R)^cl-readonly
+    assert(rVarUse.classical.intersect(varUse.writtenClassical).isEmpty)
+
+    // fv(R)^qu # Qout \ Qmid: by subgoal below
+
+    // fv(R)^cl # Xout \ Xmid
+    assert(rVarUse.classical.intersect(out_cvars -- mid_cvars).isEmpty)
+
+
+    // ==== Create subgoals
+
+    // fv(R)^qu # fv(C)^qu: by subgoal
+    // fv(R)^qu # Qout \ Qmid: by subgoal
+    val forbidden = varUse.quantum ++ (mid_qvars -- out_qvars)
+    val forbidden12 = (forbidden.map(_.index1) ++ forbidden.map(_.index2)) map { v => (v.variableName, v.valueTyp) }
+    val colocality = isabelle.isabelle.invoke(FrameRuleTac.colocalityOp,
+      (contextId, R.isabelleTerm, forbidden12.toList))
+
+    logger.debug(s"Colocality: $colocality")
+
+
+    // For each element (l,e) of mismatches, mismatchGoals contains a goal of the form {Amid}l~r{Amid}
     val mismatchGoals = mismatches.map {
-      case (l,r) => QRHLSubgoal(l.toBlock,r.toBlock,wp,wp,Nil)
+      case (l,r) => QRHLSubgoal(l.toBlock,r.toBlock,Amid,Amid,Nil)
     }
 
-    // For each element (l,e) of mismatches, mismatchGoals contains a goal of the form {wp}l~r{wp}
-
-    // Returns wp as the "weakest precondition", and colocality and mismatchGoals as additional goals.
-    (in_wp, AmbientSubgoal(colocality)::mismatchGoals)
+    (Ain, AmbientSubgoal(colocality)::mismatchGoals)
   }
-
-  val callWpOp: Operation[(List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], Term, BigInt), (RichTerm, RichTerm, RichTerm)] =
-    Operation.implicitly[(List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], List[Term], Term, BigInt), (RichTerm, RichTerm, RichTerm)]("callWp")
 }
 
 object EqualTac {
   private val logger = log4s.getLogger
 }
-
-/*
-case object EqualTacOld extends WpBothStyleTac() {
-  override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm, List[Subgoal]) = {
-    if (left!=right) throw UserException(s"The last statement on both sides needs to be the same")
-    val (cvars,qvars,_,_) = left.cqapVariables(state.environment,recurse = true)
-    val cvarsIdx1 = cvars.map(_.index1)
-    val cvarsIdx2 = cvars.map(_.index2)
-    val qvarsIdx1 = qvars.map(_.index1)
-    val qvarsIdx2 = qvars.map(_.index2)
-//    val forbidden = cvarsIdx1.map(_.name).toSet ++ cvarsIdx2.map(_.name) ++ qvarsIdx1.map(_.name) ++ qvarsIdx2.map(_.name)
-
-    val (wp, colocality) = state.isabelle.isabelle.invoke(callWpOp,
-      ((cvarsIdx1.map(_.valueTerm), cvarsIdx2.map(_.valueTerm),
-        qvarsIdx1.map(_.variableTerm)), (qvarsIdx2.map(_.variableTerm),
-        post.isabelleTerm, state.isabelle.contextId)))
-
-//    val wp2 = Expression(Isabelle.predicateT, wp)
-//    val colocality2 = Expression(Isabelle.boolT, colocality)
-    (wp,List(AmbientSubgoal(colocality)))
-  }
-
-  val callWpOp: Operation[((List[Term], List[Term], List[Term]), (List[Term], Term, BigInt)), (RichTerm, RichTerm)] =
-    Operation.implicitly[((List[pure.Term], List[pure.Term], List[pure.Term]), (List[pure.Term], pure.Term, BigInt)), (RichTerm, RichTerm)]("callWp")
-}
-*/
