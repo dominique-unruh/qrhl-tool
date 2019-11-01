@@ -7,8 +7,8 @@
       <list>
         <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.ExampleFilesTest" />
-        <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.ExampleFilesTest" />
+        <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.isabelle.IsabelleTest" />
         <option value="qrhl.isabelle.IsabelleTest" />
         <option value="qrhl.logic.BlockTest" />
@@ -30,15 +30,15 @@
         <option value="qrhl.tactic.EqualTacTest" />
         <option value="qrhl.tactic.ByQRHLTacTest" />
         <option value="qrhl.tactic.ExpressionTest" />
-        <option value="qrhl.tactic.ExpressionTest" />
-        <option value="qrhl.tactic.ByQRHLTacTest" />
-        <option value="qrhl.tactic.SeqTacTest" />
-        <option value="qrhl.tactic.WpTacTest" />
         <option value="qrhl.tactic.CaseTacTest" />
-        <option value="qrhl.tactic.RuleTacTest" />
-        <option value="qrhl.tactic.RndTacTest" />
+        <option value="qrhl.tactic.ByQRHLTacTest" />
+        <option value="qrhl.tactic.WpTacTest" />
         <option value="qrhl.tactic.O2HTacTest" />
+        <option value="qrhl.tactic.ExpressionTest" />
         <option value="qrhl.tactic.EqualTacTest" />
+        <option value="qrhl.tactic.RuleTacTest" />
+        <option value="qrhl.tactic.SeqTacTest" />
+        <option value="qrhl.tactic.RndTacTest" />
       </list>
     </option>
     <option name="envs">

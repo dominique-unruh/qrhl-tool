@@ -30,15 +30,15 @@
         <option value="qrhl.tactic.EqualTacTest" />
         <option value="qrhl.tactic.ByQRHLTacTest" />
         <option value="qrhl.tactic.ExpressionTest" />
-        <option value="qrhl.tactic.SeqTacTest" />
-        <option value="qrhl.tactic.ExpressionTest" />
+        <option value="qrhl.tactic.ByQRHLTacTest" />
         <option value="qrhl.tactic.WpTacTest" />
+        <option value="qrhl.tactic.ExpressionTest" />
+        <option value="qrhl.tactic.RndTacTest" />
+        <option value="qrhl.tactic.O2HTacTest" />
+        <option value="qrhl.tactic.EqualTacTest" />
         <option value="qrhl.tactic.CaseTacTest" />
         <option value="qrhl.tactic.RuleTacTest" />
-        <option value="qrhl.tactic.O2HTacTest" />
-        <option value="qrhl.tactic.ByQRHLTacTest" />
-        <option value="qrhl.tactic.EqualTacTest" />
-        <option value="qrhl.tactic.RndTacTest" />
+        <option value="qrhl.tactic.SeqTacTest" />
       </list>
     </option>
     <option name="envs">

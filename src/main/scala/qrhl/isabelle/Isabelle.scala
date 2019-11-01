@@ -2,13 +2,14 @@ package qrhl.isabelle
 
 import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.lang
+import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Timer, TimerTask}
 
 import info.hupel.isabelle.api.{Configuration, Version, XML}
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Type, Var, Typ}
+import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Typ, Type, Var}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
 import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
@@ -270,6 +271,8 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
 }
 
 object Isabelle {
+  private val cleaner = Cleaner.create()
+
   def swap_variables_subspace(v: Term, w: Term, pre: Term): Term = {
     val typ = fastype_of(v)
     Const(c.swap_variables_subspace, typ -->: typ -->: predicateT -->: predicateT) $ v $ w $ pre
@@ -332,6 +335,14 @@ object Isabelle {
           case XML.Elem(("thm", List(("id", id))), Nil) => Right(new Thm(isabelle, BigInt(id)))
         }
       }
+
+    class CleaningAction(isabelle: Isabelle, thmId: BigInt) extends Runnable {
+      override def run(): Unit = {
+        logger.debug(s"Deleting theorem $thmId")
+        isabelle.invoke(deleteThmOp, thmId)
+      }
+    }
+
   }
 
   private val logger = log4s.getLogger
@@ -736,16 +747,18 @@ object Isabelle {
   class Thm(val isabelle: Isabelle, val thmId: BigInt) {
     def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbolsToUnicode)
 
+    Isabelle.cleaner.register(this, new Thm.CleaningAction(isabelle, thmId))
+
     def show_oracles(): Unit = {
       Thm.logger.debug(show_oracles_lines().mkString("\n"))
     }
 
-    override protected def finalize(): Unit = {
-      logger.debug(s"Deleting theorem $thmId")
-      isabelle.invoke(deleteThmOp, thmId)
-      //noinspection ScalaDeprecation
-      super.finalize()
-    }
+//    override protected def finalize(): Unit = {
+//      logger.debug(s"Deleting theorem $thmId")
+//      isabelle.invoke(deleteThmOp, thmId)
+//      //noinspection ScalaDeprecation
+//      super.finalize()
+//    }
   }
 
   class Context(val isabelle: Isabelle, val contextId: BigInt) {
@@ -755,12 +768,7 @@ object Isabelle {
       isabelle.invoke(checkTypeOp, (contextId, term))
     }
 
-    override protected def finalize(): Unit = {
-      logger.debug(s"Deleting context $contextId")
-      isabelle.invoke(deleteContextOp, contextId)
-      //noinspection ScalaDeprecation
-      super.finalize()
-    }
+    Isabelle.cleaner.register(this, new Context.CleaningAction(isabelle, contextId))
 
     def declareVariable(name: String, isabelleTyp: Typ): Context = {
       val id = isabelle.invoke(declareVariableOp, (contextId, name, isabelleTyp))
@@ -810,6 +818,12 @@ object Isabelle {
       override def decode(tree: XML.Tree): XMLResult[Context] = throw new RuntimeException("Use Context.codec.decode(Isabelle,XML.Tree) instead")
     }
 
+    class CleaningAction(isabelle: Isabelle, contextId: BigInt) extends Runnable {
+      override def run(): Unit = {
+        logger.debug(s"Deleting context $contextId")
+        isabelle.invoke(deleteContextOp, contextId)
+      }
+    }
   }
 
 
