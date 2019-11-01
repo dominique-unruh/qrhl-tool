@@ -14,7 +14,7 @@ program p := {
   local x,q;
   r <q undefined;
   on q,r apply comm_op;
-  call Q;
+  { local s; call Q; }
 }.
 
 

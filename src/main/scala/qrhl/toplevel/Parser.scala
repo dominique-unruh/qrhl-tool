@@ -197,7 +197,7 @@ object Parser extends JavaTokenParsers {
          body <- statementOrParenBlock)
       yield While(e,body.toBlock)
 
-  def statement(implicit context:ParserContext) : Parser[Statement] = measure | assign | sample | call | qInit | qApply | ifThenElse | whileLoop
+  def statement(implicit context:ParserContext) : Parser[Statement] = measure | assign | sample | call | qInit | qApply | ifThenElse | whileLoop | parenBlock
 
 //  def statementWithSep(implicit context:ParserContext) : Parser[Statement] = statement ~ statementSeparator ^^ { case s ~ _ => s }
 
