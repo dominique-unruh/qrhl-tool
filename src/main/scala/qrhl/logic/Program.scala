@@ -554,6 +554,13 @@ object Statement {
 
 
     override def decode(xml: XML.Tree): XMLResult[Statement] = xml match {
+      case XML.Elem(("local",Nil), List(cvarsXml, qvarsXml, bodyXml)) =>
+        for (cvarsVt <- VarTerm.codecC.decode(cvarsXml);
+             cvars = cvarsVt.toList;
+             qvarsVt <- VarTerm.codecQ.decode(qvarsXml);
+             qvars = qvarsVt.toList;
+             body <- decode(bodyXml))
+          yield Local(cvars, qvars, body.toBlock)
       case XML.Elem(("block", Nil), stmtsXml) =>
         for (stmts <- stmtsXml.traverse(decode))
           yield Block(stmts : _*)

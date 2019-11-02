@@ -342,11 +342,12 @@ object Parser extends JavaTokenParsers {
 
   def tactic_seq(implicit context:ParserContext): Parser[SeqTac] =
     literal("seq") ~> OnceParser(for (
+      swap <- ("<->" ^^^ true) | success(false);
       left <- natural;
       right <- natural;
       _ <- literal(":");
       inner <- expression(Isabelle.predicateT))
-      yield SeqTac(left,right,inner))
+      yield SeqTac(left,right,inner,swap=swap))
 
   val identifierListOrDot: Parser[List[String]] = identifierList | (literal(".") ^^^ Nil)
 

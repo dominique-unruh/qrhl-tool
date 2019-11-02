@@ -30,10 +30,12 @@ abstract class IsabelleTac[A](operationName : String, arg : Isabelle.Context => 
 
     Subgoal.printOracles(thm)
 
-    newGoals
+    postprocess(state,goal,newGoals)
   }
 
   def check(state: State, goal: Subgoal, newGoals : List[Subgoal]): Unit = {}
+  def postprocess(state: State, goal: Subgoal, newGoals : List[Subgoal]): List[Subgoal] = newGoals
+
 
   override def toString: String = f"IsabelleTac($operationName,$arg)"
 }

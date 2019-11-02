@@ -21,6 +21,8 @@ program p := {
 qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
  inline p.
 
+ seq <-> 1 1: top.
+
  equal exclude Q.
 
 simp!.

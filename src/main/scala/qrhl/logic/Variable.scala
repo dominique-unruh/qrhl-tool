@@ -93,7 +93,11 @@ object QVariable {
   object codec extends Codec[QVariable] {
     override val mlType: String = "(string * typ)"
     override def encode(v: QVariable): XML.Tree = XML.Elem(("V",List(("name",v.name))), List(typ_tight_codec.encode(v.valueTyp)))
-    override def decode(tree: XML.Tree): XMLResult[QVariable] = ???
+    override def decode(tree: XML.Tree): XMLResult[QVariable] = tree match {
+      case XML.Elem(("V",List(("name",name))), List(typXml)) =>
+        for (typ <- typ_tight_codec.decode(typXml))
+          yield QVariable(name,typ)
+    }
   }
 
 
@@ -133,7 +137,11 @@ object CVariable {
   object codec extends Codec[CVariable] {
     override val mlType: String = "(string * typ)"
     override def encode(v: CVariable): XML.Tree = XML.Elem(("V",List(("name",v.name))), List(typ_tight_codec.encode(v.valueTyp)))
-    override def decode(tree: XML.Tree): XMLResult[CVariable] = ???
+    override def decode(tree: XML.Tree): XMLResult[CVariable] = tree match {
+      case XML.Elem(("V",List(("name",name))), List(typXml)) =>
+        for (typ <- typ_tight_codec.decode(typXml))
+          yield CVariable(name,typ)
+    }
   }
 
 }
