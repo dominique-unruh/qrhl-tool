@@ -1,12 +1,13 @@
 package qrhl.tactic
 
 import info.hupel.isabelle.pure.{App, Const, Term, Typ}
+import org.log4s
 import qrhl.isabelle.Isabelle.{Inf, QuantumEqualityFull, predicateT, predicate_inf, predicate_top}
 import qrhl.isabelle.{Isabelle, IsabelleConsts, RichTerm}
 import qrhl.logic.{Block, Local, QVariable}
 import qrhl.tactic.FrameRuleTac.colocalityOp
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
-import qrhl.tactic.LocalTac.Mode
+import qrhl.tactic.LocalTac.{Mode, logger}
 
 case class LocalTac(mode: Mode) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = mode match {
@@ -53,7 +54,7 @@ case class LocalTac(mode: Mode) extends Tactic {
 
 
       def decomposePredicate(which: String, pred: RichTerm) = {
-        pre.isabelleTerm match {
+        pred.isabelleTerm match {
           case Inf(main,QuantumEqualityFull(u1,v1,u2,v2)) => (main,u1,v1,u2,v2)
           case QuantumEqualityFull(u1,v1,u2,v2) => (predicate_top,u1,v1,u2,v2)
           case _ => throw UserException(s"""Expected $which to be of the form "A ⊓ Q" where Q is a quantum equality""")
@@ -65,16 +66,16 @@ case class LocalTac(mode: Mode) extends Tactic {
 
       // TODO remove
       def p(t:Term) = Isabelle.pretty(t)
-      println(s"A:   ${p(a)}")
-      println(s"US:  ${p(us1)}")
-      println(s"S:   ${p(s1)}")
-      println(s"US': ${p(us2)}")
-      println(s"S':  ${p(s2)}")
-      println(s"B:   ${p(b)}")
-      println(s"UR:  ${p(ur1)}")
-      println(s"R:   ${p(r1)}")
-      println(s"UR': ${p(ur2)}")
-      println(s"R':  ${p(r2)}")
+      logger.debug(s"A:   ${p(a)}")
+      logger.debug(s"US:  ${p(us1)}")
+      logger.debug(s"S:   ${p(s1)}")
+      logger.debug(s"US': ${p(us2)}")
+      logger.debug(s"S':  ${p(s2)}")
+      logger.debug(s"B:   ${p(b)}")
+      logger.debug(s"UR:  ${p(ur1)}")
+      logger.debug(s"R:   ${p(r1)}")
+      logger.debug(s"UR': ${p(ur2)}")
+      logger.debug(s"R':  ${p(r2)}")
 
       // TODO check qvars1, qvars2 has same length and same types
 
@@ -83,8 +84,8 @@ case class LocalTac(mode: Mode) extends Tactic {
       val unitarity = Isabelle.classical_subspace $ Isabelle.mk_conjs(Isabelle.unitary(ur1), Isabelle.unitary(ur2))
       val newPost = Isabelle.inf(b, unitarity, extendQeq(ur1,r1,ur2,r2,qvarsL,qvarsR))
 
-      println(s"Pre: ${p(newPre)}")
-      println(s"Pre: ${p(newPost)}")
+      logger.debug(s"Pre: ${p(newPre)}")
+      logger.debug(s"Post: ${p(newPost)}")
 
       val newQrhl = QRHLSubgoal(bodyL, bodyR, RichTerm(predicateT, newPre), RichTerm(predicateT, newPost), assumptions)
 
@@ -139,9 +140,9 @@ case class LocalTac(mode: Mode) extends Tactic {
       else
         QRHLSubgoal(leftProg, body, pre, post, assumptions)
 
-      println(colocalityPre)
-      println(colocalityPost)
-      println(newQRHLGoal)
+      logger.debug(colocalityPre.toString)
+      logger.debug(colocalityPost.toString)
+      logger.debug(newQRHLGoal.toString)
 
       List(colocalityPre, colocalityPost, newQRHLGoal)
   }
@@ -152,4 +153,6 @@ object LocalTac {
   case object left extends Mode
   case object right extends Mode
   case object joint extends Mode
+
+  private val logger = log4s.getLogger
 }
