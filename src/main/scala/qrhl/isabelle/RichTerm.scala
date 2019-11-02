@@ -13,12 +13,29 @@ import scala.collection.mutable
 import Isabelle.applicativeXMLResult
 import info.hupel.isabelle.Codec.text
 import qrhl.isabelle.RichTerm.term_tight_codec
-import qrhl.{Utils, logic}
+import qrhl.{UserException, Utils, logic}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 
 final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _isabelleTerm:Option[Term]=None, _pretty:Option[String]=None) {
+  def renameCVariable(from: CVariable, to: CVariable): RichTerm = {
+    assert(from.valueTyp==to.valueTyp)
+    val fromTerm = from.valueTerm
+    val toTerm = to.valueTerm
+    def rename(t: Term): Term = t match {
+      case App(t,u) => App(rename(t), rename(u))
+      case Abs(name,typ,body) => Abs(name,typ,rename(body))
+      case _ : Bound | _ : Const | _ : Var => t
+      case v : Free if v==fromTerm => toTerm
+      case v : Free if v==toTerm =>
+        throw UserException(s"Replacing ${from.name} by ${to.name}, but ${to.name} already occurs in $this")
+      case _ : Free => t
+    }
+
+    RichTerm(typ, rename(isabelleTerm))
+  }
+
   class debug_codec[A](codec : Codec[A]) extends Codec[A] { // TODO remove
     override val mlType: String = codec.mlType
 

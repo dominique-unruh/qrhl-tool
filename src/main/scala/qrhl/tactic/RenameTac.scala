@@ -14,19 +14,30 @@ case class RenameTac(left: Boolean, right: Boolean, a: Variable, b: Variable) ex
     case _ : AmbientSubgoal =>
       throw UserException("Expected qRHL subgoal")
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>
+      val env = state.environment
       if (a==b)
         throw UserException(s"Trying to replace ${a.name} by itself")
+      if (a.valueTyp != b.valueTyp)
+        throw UserException("The two variables need to have the same type")
 
       (a,b) match {
         case (a : CVariable, b : CVariable) =>
-          throw UserException("Not yet implemented: renaming of classical variables")
-          // TODO
+          val newLeft = if (left) leftProg.renameCVariable(env, a, b) else leftProg
+          val newRight = if (right) rightProg.renameCVariable(env, a, b) else rightProg
+
+          def swap(predicate: RichTerm) = {
+            val pred1 = if (left) predicate.renameCVariable(a.index1, b.index1) else predicate
+            val pred2 = if (right) pred1.renameCVariable(a.index2, b.index2) else pred1
+            pred2
+          }
+
+          val newPre = swap(pre)
+          val newPost = swap(post)
+
+          val newQrhl = QRHLSubgoal(newLeft, newRight, newPre, newPost, assumptions)
+
+          List(newQrhl)
         case (a : QVariable, b : QVariable) =>
-          val env = state.environment
-
-          if (a.valueTyp != b.valueTyp)
-            throw UserException("The two variables need to have the same type")
-
           val newLeft = if (left) leftProg.renameQVariable(env, a, b) else leftProg
           val newRight = if (right) rightProg.renameQVariable(env, a, b) else rightProg
 

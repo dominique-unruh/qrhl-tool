@@ -4,6 +4,7 @@ quantum var q : bit.
 quantum var r : bit.
 quantum var s : bit.
 classical var x : bit.
+classical var y : bit.
 
 program Q := {
   local s;
@@ -11,7 +12,8 @@ program Q := {
 }.
 
 program p := {
-  local x,q;
+  local q;
+  x <- x+1;
   r <q undefined;
   on q,r apply comm_op;
   { local s; call Q; }
@@ -20,6 +22,8 @@ program p := {
 
 qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
  inline p.
+
+ rename left: x -> y.
 
  seq <-> 1 1: top.
 

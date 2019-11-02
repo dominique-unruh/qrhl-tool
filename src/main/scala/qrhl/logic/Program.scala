@@ -219,7 +219,9 @@ case class VTSingle[+A](v:A) extends VarTerm[A] {
   override def replace[A1 >: A, A2 >: A](from: A1, to: A2): VarTerm[A2] =
     if (this.v == from)
       new VTSingle(to)
-  else
+    else if (this.v == to)
+      throw UserException(s"Trying to replace $from to $to, but $to is already in use")
+    else
       this
 
   override def contains[A1 >: A](v: A1): Boolean = this.v == v
@@ -240,6 +242,7 @@ case class VTCons[+A](a:VarTerm[A], b:VarTerm[A]) extends VarTerm[A] {
 // Programs
 sealed trait Statement {
   def renameQVariable(env: Environment, from: QVariable, to: QVariable) : Statement
+  def renameCVariable(env: Environment, from: CVariable, to: CVariable) : Statement
 
   def substituteOracles(subst: Map[String, Call]) : Statement
 
@@ -650,6 +653,18 @@ class Local(val cvars: List[CVariable], val qvars: List[QVariable], val body : B
       new Local(cvars, qvars, body.renameQVariable(env, from, to))
   }
 
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Local = {
+    if (cvars.contains(from)) {
+      if (this.variableUse(env).classical.contains(to))
+        throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${to.name} is free variable in $this.")
+      else
+        this
+    } else if (cvars.contains(to))
+      throw UserException(s"Cannot rename ${from.name} -> ${to.name} in ${this}: ${to.name} is a local variable")
+    else
+      new Local(cvars, qvars, body.renameCVariable(env, from, to))
+  }
+
   def simplifyEmpty: Statement =
     if (cvars.isEmpty && qvars.isEmpty) body
     else this
@@ -750,6 +765,8 @@ class Block(val statements:List[Statement]) extends Statement {
 
   override def renameQVariable(env: Environment, from: QVariable, to: QVariable): Block =
     new Block(statements map { _.renameQVariable(env,from,to) })
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Block =
+    new Block(statements map { _.renameCVariable(env,from,to) })
 }
 
 object Block {
@@ -778,7 +795,10 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
 
   override def substituteOracles(subst: Map[String, Call]): Statement = this
 
-  override def renameQVariable(env: Environment, from: QVariable, to: QVariable): Statement = this
+  override def renameQVariable(env: Environment, from: QVariable, to: QVariable): Assign = this
+
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Assign =
+    Assign(variable.replace(from, to), expression.renameCVariable(from, to))
 }
 final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
   override def toString: String = s"""${Variable.vartermToString(variable)} <$$ $expression;"""
@@ -800,6 +820,9 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
   override def substituteOracles(subst: Map[String, Call]): Statement = this
 
   override def renameQVariable(env: Environment, from: QVariable, to: QVariable): Sample = this
+
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Sample =
+    Sample(variable.replace(from,to), expression.renameCVariable(from, to))
 }
 final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, oracles: List[String], program: Statement): Statement =
@@ -825,8 +848,11 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
 
   override def substituteOracles(subst: Map[String, Call]): Statement = IfThenElse(condition,thenBranch.substituteOracles(subst),elseBranch.substituteOracles(subst))
 
-  override def renameQVariable(env: Environment, from: QVariable, to: QVariable): Statement =
+  override def renameQVariable(env: Environment, from: QVariable, to: QVariable): IfThenElse =
     IfThenElse(condition, thenBranch.renameQVariable(env,from,to), elseBranch.renameQVariable(env,from,to))
+
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): IfThenElse =
+    IfThenElse(condition.renameCVariable(from,to), thenBranch.renameCVariable(env,from,to), elseBranch.renameCVariable(env,from,to))
 }
 
 final case class While(condition:RichTerm, body: Block) extends Statement {
@@ -853,6 +879,9 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
 
   override def renameQVariable(env: Environment, from: QVariable, to: QVariable): While =
     While(condition, body.renameQVariable(env, from, to))
+
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): While =
+    While(condition.renameCVariable(from, to), body.renameCVariable(env, from, to))
 }
 
 final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
@@ -881,7 +910,10 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
     QInit(location.replace(from, to), expression)
   }
 
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): QInit =
+    QInit(location, expression.renameCVariable(from, to))
 }
+
 final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"on ${Variable.vartermToString(location)} apply $expression;"
@@ -908,6 +940,9 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
       throw UserException(s"Cannot rename ${from.name} -> ${to.name} in $this: ${to.name} is already in use")
     QApply(location.replace(from, to), expression)
   }
+
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): QApply =
+    QApply(location, expression.renameCVariable(from, to))
 }
 final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariable], e:RichTerm) extends Statement {
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
@@ -937,6 +972,9 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
       throw UserException(s"Cannot rename ${from.name} -> ${to.name} in $this: ${to.name} is already in use")
     Measurement(result, location.replace(from, to), e)
   }
+
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Measurement =
+    Measurement(result.replace(from, to), location, e.renameCVariable(from, to))
 }
 
 final case class Call(name:String, args:Call*) extends Statement {
@@ -982,6 +1020,15 @@ final case class Call(name:String, args:Call*) extends Statement {
     if (varUse.quantum.contains(from))
       throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${from.name} must not occur in $this. Consider inlining ${this.name}")
     if (varUse.quantum.contains(to))
+      throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${to.name} already occurs in $this")
+    this
+  }
+
+  override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Call = {
+    val varUse = this.variableUse(env)
+    if (varUse.classical.contains(from))
+      throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${from.name} must not occur in $this. Consider inlining ${this.name}")
+    if (varUse.classical.contains(to))
       throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${to.name} already occurs in $this")
     this
   }
