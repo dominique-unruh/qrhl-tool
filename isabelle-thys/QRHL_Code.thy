@@ -23,28 +23,33 @@ no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<in
 
 (* Wrapper class so that we can define a code datatype constructors for that type (does not work with type synonyms) *)
 typedef ('a::enum,'b::enum) code_l2bounded = "UNIV::('a,'b) l2bounded set" by simp
+setup_lifting type_definition_code_l2bounded
 
-consts l2bounded_of_mat' :: "complex mat \<Rightarrow> ('a::enum,'b::enum) code_l2bounded"
-       mat_of_l2bounded' :: "('a::enum,'b::enum) code_l2bounded \<Rightarrow> complex mat"
+lift_definition l2bounded_of_mat' :: "complex mat \<Rightarrow> ('a::enum,'b::enum) code_l2bounded"
+  is bounded_of_mat.
+lift_definition mat_of_l2bounded' :: "('a::enum,'b::enum) code_l2bounded \<Rightarrow> complex mat"
+  is mat_of_bounded.
 
-consts ell2_of_vec' :: "complex vec \<Rightarrow> 'a::basis_enum"
-       vec_of_ell2' :: "'a::basis_enum \<Rightarrow> complex vec"
+(* abbreviation "basis_enum_of_vec == basis_enum_of_vec" *)
+(* abbreviation "vec_of_basis_enum == vec_of_basis_enum" *)
 
-definition ell2_of_vec :: "complex vec \<Rightarrow> 'a::enum ell2" where "ell2_of_vec = ell2_of_vec'"
-definition vec_of_ell2 :: "'a::enum ell2 \<Rightarrow> complex vec" where "vec_of_ell2 = vec_of_ell2'"
+definition ell2_of_vec :: "complex vec \<Rightarrow> 'a::enum ell2" where "ell2_of_vec = basis_enum_of_vec"
+definition vec_of_ell2 :: "'a::enum ell2 \<Rightarrow> complex vec" where "vec_of_ell2 = vec_of_basis_enum"
 
 lemma mat_of_bounded_inverse' [code abstype]:
   "l2bounded_of_mat' (mat_of_l2bounded' B) = B" 
-  by (cheat 15)
+  apply transfer
+  using mat_of_bounded_inverse by blast
 
 lemma [code]: "mat_of_l2bounded' (Abs_code_l2bounded X) = mat_of_bounded X"
-  by (cheat 15)
+  apply transfer by simp
 lemma [code]: "mat_of_bounded (Rep_code_l2bounded X) = mat_of_l2bounded' X"
-  by (cheat 15)
+  apply transfer by simp
 
 lemma vec_of_ell2_inverse [code abstype]:
   "ell2_of_vec (vec_of_ell2 B) = B" 
-  by (cheat 15)
+  unfolding ell2_of_vec_def vec_of_ell2_def
+  by (simp add: basis_enum_of_vec_COMP_vec_of_basis_enum pointfree_idE)
 
 fun index_of where
   "index_of x [] = (0::nat)"
@@ -52,17 +57,20 @@ fun index_of where
 
 definition "enum_idx (x::'a::enum) = index_of x (enum_class.enum :: 'a list)"
 
+lift_definition applyOp_code :: "('a::enum, 'b::enum) code_l2bounded \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2" 
+  is "applyOp :: ('a ell2,'b ell2) bounded \<Rightarrow> _ \<Rightarrow> _".
+(* definition [code del]: "applyOp_code M x = applyOp (Rep_code_l2bounded M) x" *)
 
-definition [code del]: "applyOp_code M x = applyOp (Rep_code_l2bounded M) x"
 lemma [symmetric,code_abbrev]: "applyOp M = applyOp_code (Abs_code_l2bounded M)"
-  by (cheat 15)
+  apply transfer by simp
 lemma ell2_of_vec_applyOp[code]:
   "vec_of_ell2 (applyOp_code M x) = (mult_mat_vec (mat_of_l2bounded' M) (vec_of_ell2 x))" 
   by (cheat 15)
 
 
 lemma vec_of_ell2_inj: "inj vec_of_ell2"
-  by (cheat 16)
+  unfolding vec_of_ell2_def
+  by (metis injI vec_of_ell2_def vec_of_ell2_inverse)
 
 instantiation ell2 :: (enum) equal begin
 definition [code]: "equal_ell2 M N \<longleftrightarrow> vec_of_ell2 M = vec_of_ell2 N" 
@@ -99,8 +107,8 @@ definition "matrix_tensor (A::'a::times mat) (B::'a mat) =
 
 lemma bounded_of_mat_tensorOp[code]:
   "mat_of_bounded (tensorOp A B) = matrix_tensor (mat_of_bounded A) (mat_of_bounded B)"
-for A :: "('a::enum,'b::enum) l2bounded"
-and B :: "('c::enum,'d::enum) l2bounded"
+  for A :: "('a::enum,'b::enum) l2bounded"
+    and B :: "('c::enum,'d::enum) l2bounded"
   by (cheat 17)
 
 
@@ -155,7 +163,7 @@ lemma tensorVec_code[code]: "vec_of_ell2 (\<psi> \<otimes> \<phi>) = vec_tensor 
   for \<psi>::"'a::enum ell2" and \<phi>::"'b::enum ell2"
   by (cheat 17)
 
-definition [code del]: "SPAN x = Span (ell2_of_vec' ` set x)"
+definition [code del]: "SPAN x = Span (basis_enum_of_vec ` set x)"
 code_datatype SPAN
 
 definition "mk_projector (S::'a::basis_enum linear_space) = mat_of_bounded (Proj S)" 
@@ -213,15 +221,18 @@ lemma vec_of_ell2_scaleR[code]: "vec_of_ell2 (scaleR a \<psi>) = smult_vec (comp
 
 lemma ell2_of_vec_plus[code]:
   "vec_of_ell2 (x + y) =  (vec_of_ell2 x) + (vec_of_ell2 y)" for x y :: "'a::enum ell2"
-  by (cheat 17)
+  unfolding vec_of_ell2_def
+  by (simp add: vec_of_basis_enum_add) 
 
 lemma ell2_of_vec_minus[code]:
   "vec_of_ell2 (x - y) =  (vec_of_ell2 x) - (vec_of_ell2 y)" for x y :: "'a::enum ell2"
+  unfolding vec_of_ell2_def 
   by (cheat 17)
 
 lemma ell2_of_vec_uminus[code]:
   "vec_of_ell2 (- y) =  - (vec_of_ell2 y)" for y :: "'a::enum ell2"
-  by (cheat 17)
+  unfolding vec_of_ell2_def
+  by (metis carrier_vecI diff_0 dim_vec_of_basis_enum_list ell2_of_vec_minus index_zero_vec(2) vec_of_basis_enum_def vec_of_ell2_def vec_of_ell2_zero zero_minus_vec) 
 
 lemma vec_of_ell2_EPR[code]: "vec_of_ell2 EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
   by (cheat 17)
@@ -265,12 +276,15 @@ definition [code del,code_abbrev]: "ell2_to_bounded_code (\<psi>::'a ell2) = (el
 lemma mat_of_bounded_ell2_to_l2bounded[code]: 
   "mat_of_bounded (ell2_to_bounded_code \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
   for \<psi>::"'a::enum ell2"
+  unfolding ell2_to_bounded_code_def
   by (cheat 17)
 
+(* See comment at definition of remove_qvar_unit_op before proving *)
 lemma mat_of_bounded_remove_qvar_unit_op[code]:
   "mat_of_bounded (remove_qvar_unit_op::(_,'a::enum) l2bounded) = mat_of_bounded (idOp::(_,'a) l2bounded)" 
   by (cheat 17)
 
+(* TODO: more direct code equation (w/o remove_qvar_unit_op) *)
 lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (ell2_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
   by (cheat addState_remove_qvar_unit_op)
 
@@ -286,12 +300,19 @@ lemma quantum_equality_full_def_let:
                  (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> variable_concat Q R)"
   unfolding quantum_equality_full_def by auto
 
-lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))" 
+lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"
   by (cheat space_div_unlifted_code)
 
+(* Although this code would for any type 'a::basis_enum, we only define it 
+   for 'a ell2 because otherwise the code generation mechanism does not accept it
+   (Message "Overloaded constant as head in equation" *)
 lemma cinner_ell2_code [code]: "cinner \<psi> \<phi> = scalar_prod (map_vec cnj (vec_of_ell2 \<psi>)) (vec_of_ell2 \<phi>)"
+  unfolding vec_of_ell2_def
   by (cheat cinner_ell2_code)
 
+(* Although this code would for any type 'a::basis_enum, we only define it 
+   for 'a ell2 because otherwise the code generation mechanism does not accept it
+   (Message "Overloaded constant as head in equation" *)
 lemma norm_ell2_code [code]: "norm \<psi> = 
   (let \<psi>' = vec_of_ell2 \<psi> in
     sqrt (\<Sum> i \<in> {0 ..< dim_vec \<psi>'}. let z = vec_index \<psi>' i in (Re z)\<^sup>2 + (Im z)\<^sup>2))"
@@ -300,7 +321,7 @@ lemma norm_ell2_code [code]: "norm \<psi> =
 declare [[code drop: UNIV]]
 declare enum_class.UNIV_enum[code]
 
-(* TODO: remove once it's added at the definitions themselves *)
+(* TODO: remove once "code del" is added at the definitions themselves *)
 declare ord_linear_space_inst.less_eq_linear_space[code del]
 declare ord_linear_space_inst.less_linear_space[code del]
 
