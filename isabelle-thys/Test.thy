@@ -18,12 +18,14 @@ begin
 variables quantum q :: int and quantum r :: int and quantum s :: int
 begin
 lemma "(swap_variables_subspace q1 r1 Qeq[q1,r1=q2,s2]) = undefined"
-  apply (tactic \<open>CONVERSION (swap_variables_conv \<^context>) 1\<close>)
+  apply (tactic \<open>CONVERSION (QRHL.swap_variables_conv \<^context>) 1\<close>)
+  oops
   
 lemma "distinct_qvars \<lbrakk>q1,q2\<rbrakk>"
   using [[simp_trace]]
-  apply (simp only: Prog_Variables.distinct_variable_names)
+  (* apply (simp only: distinct_variable_names) *)
   apply simp
+  oops
 
 end
 

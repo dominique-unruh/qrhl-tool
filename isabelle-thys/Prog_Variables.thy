@@ -1,5 +1,5 @@
 theory Prog_Variables
-  imports Universe Bounded_Operators.Extended_Sorry Multi_Transfer
+  imports Universe Extended_Sorry Multi_Transfer
   keywords "variables" :: thy_decl_block
 begin
 

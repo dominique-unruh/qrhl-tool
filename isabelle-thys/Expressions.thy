@@ -1,5 +1,5 @@
 theory Expressions
-  imports Prog_Variables Misc_Missing Bounded_Operators.Extended_Sorry Multi_Transfer
+  imports Prog_Variables Misc_Missing Extended_Sorry Multi_Transfer
 begin
 
 (* TODO: are expressions actually necessary?
