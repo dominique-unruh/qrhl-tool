@@ -278,6 +278,10 @@ object Isabelle {
     Const(c.swap_variables_subspace, typ -->: typ -->: predicateT -->: predicateT) $ v $ w $ pre
   }
 
+  def default(t: Typ): Const = Const(c.default, t)
+  def ket(t: Typ): Const = Const(c.ket, t -->: ell2T(t))
+  def ket(term: Term) : Term = ket(fastype_of(term)) $ term
+
   def unitary(t: Typ, u: Typ): Const = Const(c.unitary, boundedT(t,u) -->: boolT)
   def unitary(u: Term): Term = Const(c.unitary, fastype_of(u) -->: boolT) $ u
 
@@ -421,7 +425,7 @@ object Isabelle {
     }
   }
 
-  @deprecated("use BoundedT")
+  @deprecated("use BoundedT","now")
   def dest_boundedT(typ: Typ): (Typ, Typ) = typ match {
     case Type(t.`bounded`, List(t1, t2)) => (t1, t2)
     case _ => throw new RuntimeException(s"expected type ${t.bounded}, not " + typ)
@@ -461,7 +465,7 @@ object Isabelle {
       case _ => None
     }
   }
-  @deprecated("use VariableT.unapply instead")
+  @deprecated("use VariableT.unapply instead","now")
   def dest_variableT(typ: Typ): Typ = typ match {
     case Type(t.variable, List(typ2)) => typ2
     case _ => throw new RuntimeException(s"expected type ${t.variable}, not " + typ)

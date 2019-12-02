@@ -75,4 +75,6 @@ object IsabelleConsts {
   val tensorOp = "Tensor_Product.tensorOp"
   val unitary = "Bounded_Operators.unitary"
   val swap_variables_subspace = "QRHL_Core.swap_variables_subspace"
+  val default = "HOL.default_class.default"
+  val ket = "Complex_L2.ket"
 }

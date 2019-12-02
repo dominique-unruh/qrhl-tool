@@ -85,6 +85,8 @@ object IsabelleConsts {
   val tensorOp = \<open>\<^const_name>\<open>tensorOp\<close>\<close>
   val unitary = \<open>\<^const_name>\<open>unitary\<close>\<close>
   val swap_variables_subspace = \<open>\<^const_name>\<open>swap_variables_subspace\<close>\<close>
+  val default = \<open>\<^const_name>\<open>default\<close>\<close>
+  val ket = \<open>\<^const_name>\<open>ket\<close>\<close>
 }
 \<close>
 

@@ -77,6 +77,9 @@ case class LocalTac(mode: Mode) extends Tactic {
       logger.debug(s"UR': ${p(ur2)}")
       logger.debug(s"R':  ${p(r2)}")
 
+      println(s"*** Unsound (incomplete) tactic local applied.")
+
+
       // TODO check qvars1, qvars2 has same length and same types
 
       val newPre = predicate_inf $ a $ extendQeq(us1,s1,us2,s2,qvarsL,qvarsR)

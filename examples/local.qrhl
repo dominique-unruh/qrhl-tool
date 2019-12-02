@@ -13,8 +13,12 @@ program Q := {
 }.
 
 program p := {
-  local x,q;
+  local q;
   on q,r apply comm_op;
+  while (True) {
+   local x,r;
+   x <- 1;
+  }
   call Q;
 }.
 

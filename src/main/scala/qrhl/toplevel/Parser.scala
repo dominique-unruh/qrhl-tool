@@ -436,7 +436,7 @@ object Parser extends JavaTokenParsers {
       "left" ^^^ LocalTac(LocalTac.left) |
         "right" ^^^ LocalTac(LocalTac.right) |
         "joint" ^^^ LocalTac(LocalTac.joint) |
-        "up" ^^^ LocalUpTac)
+        "up" ^^^ LocalUpTac(LocalUpTac.AllVars))
 
   def tactic_rename(implicit context: ParserContext) : Parser[RenameTac] =
     literal("rename") ~> OnceParser(for (

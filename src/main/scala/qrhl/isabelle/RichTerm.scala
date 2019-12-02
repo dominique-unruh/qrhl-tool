@@ -319,6 +319,8 @@ object RichTerm {
 //    Expression(typ, term)
   }
 
+  def apply(term:Term) : RichTerm = RichTerm(typ=Isabelle.fastype_of(term), term)
+
   def apply(typ: pure.Typ, term:Term) : RichTerm =
     new RichTerm(typ=typ, _isabelleTerm = Some(term))
 

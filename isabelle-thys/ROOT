@@ -4,12 +4,12 @@ session QRHL = "QRHL-Tensor_Product" +
   theories QRHL QRHL_Operations
 
 session "QRHL-Tensor_Product" = "QRHL-Bounded_Operators" +
-  options [record_proofs=1]
+  options [record_proofs=1, quick_and_dirty=true]
   sessions Tensor_Product
   theories Tensor_Product.All
 
 session "QRHL-Bounded_Operators" = "QRHL-Prerequisites" +
-  options [record_proofs=1]
+  options [record_proofs=1, quick_and_dirty=true]
   sessions Bounded_Operators
   theories Bounded_Operators.All
 

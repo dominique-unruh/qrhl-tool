@@ -673,6 +673,18 @@ class Local(val cvars: List[CVariable], val qvars: List[QVariable], val body : B
 object Local {
   def apply(cvars: Seq[CVariable], qvars: Seq[QVariable], body : Block): Local =
     new Local(cvars.toList, qvars.toList, body)
+
+  def makeIfNeeded(cvars: Seq[CVariable], qvars: Seq[QVariable], body : Statement): Statement =
+    if (cvars.nonEmpty || qvars.nonEmpty)
+      body match {
+        case Local(cvars0, qvars0, body0) =>
+          new Local(ListSet(cvars++cvars0 :_*).toList, ListSet(qvars++qvars0 :_*).toList, body0)
+        case _ =>
+          new Local(cvars.toList, qvars.toList, body.toBlock)
+      }
+    else
+      body
+
   def apply(env : Environment, vars : Seq[String], body : Block): Local = {
     val vars2 = vars map env.getProgVariable
     val cvars = vars2 collect { case v : CVariable => v }
@@ -684,6 +696,11 @@ object Local {
 }
 
 class Block(val statements:List[Statement]) extends Statement {
+  def unwrapTrivialBlock: Statement = statements match {
+    case List(s) => s
+    case _ => this
+  }
+
   def ++(other: Block) = new Block(statements ::: other.statements)
 
 
