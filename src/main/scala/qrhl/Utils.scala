@@ -6,6 +6,28 @@ import scala.collection.mutable
 import scala.ref.SoftReference
 
 object Utils {
+  def isSorted[A](list: List[A])(implicit ord: Ordering[A]): Boolean = {
+    if (list.isEmpty) return true
+    var previous = list.head
+    for (x <- list.tail) {
+      if (ord.lt(x,previous))
+        return false
+      previous = x
+    }
+    return true
+  }
+
+  def isSortedUnique[A](list: List[A])(implicit ord: Ordering[A]): Boolean = {
+    if (list.isEmpty) return true
+    var previous = list.head
+    for (x <- list.tail) {
+      if (ord.lteq(x,previous))
+        return false
+      previous = x
+    }
+    return true
+  }
+
   def areDistinct[A](values:TraversableOnce[A]): Boolean = {
     val seen = new mutable.HashSet[A]()
     for (v <- values)

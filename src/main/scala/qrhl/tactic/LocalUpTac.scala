@@ -1,8 +1,8 @@
 package qrhl.tactic
 
 import org.log4s
-import qrhl.logic.{Assign, Block, CVariable, Call, Environment, IfThenElse, Local, Measurement, QApply, QInit, QVariable, Sample, Statement, VarTerm, While}
-import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
+import qrhl.logic.{Assign, Block, CVariable, Call, Environment, IfThenElse, Local, Measurement, QApply, QInit, QVariable, Sample, Statement, VarTerm, Variable, While}
+import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
@@ -18,7 +18,9 @@ case class LocalUpTac(varID: VarID) extends Tactic {
       val env = state.environment
       println(s"*** Possibly unsound (not proven) tactic 'local up' applied.")
       val (left2, id) = up2(env, varID, left)
-      val (right2, _) = up2(env, id, right)
+      val (right2, id2) = up2(env, id, right)
+      if (!id2.consumed())
+        throw UserException(s"Not all variables found in $varID")
       List(QRHLSubgoal(left2.toBlock, right2.toBlock, pre, post, assumptions))
   }
 
@@ -89,6 +91,7 @@ case class LocalUpTac(varID: VarID) extends Tactic {
       }
 
       logger.debug(s"Statements after inner processing: $statements2")
+      logger.debug(s"VarID after inner processing: $id2")
       logger.debug(s"Candidates (preliminary): ${cCandidates.keys}; ${qCandidates.keys}")
 
       // Collect free variables of this block (those cannot be put under a Local)
@@ -129,10 +132,15 @@ case class LocalUpTac(varID: VarID) extends Tactic {
       val (cvars2, qvars2, id2) = id.select(cvars, qvars)
       val (body2, cvars3, qvars3, id3) = up(env,id2,body.unwrapTrivialBlock)
 
+      val allCVars = ListSet(cvars:_*) ++ cvars3
+      val keepCVars = allCVars -- cvars2
+      val allQVars = ListSet(qvars:_*) ++ qvars3
+      val keepQVars = allQVars -- qvars2
+
       logger.debug(s"Local: $statement, ${(cvars2,qvars2)} ${(body2,cvars3,qvars3)}")
 
-      val body3 = Local.makeIfNeeded((cvars3--cvars2).toSeq, (qvars3--qvars2).toSeq, body2)
-      (body3, ListSet(cvars2:_*), ListSet(qvars2:_*), id2)
+      val body3 = Local.makeIfNeeded(keepCVars.toSeq, keepQVars.toSeq, body2)
+      (body3, ListSet(cvars2:_*), ListSet(qvars2:_*), id3)
   }
 }
 
@@ -140,11 +148,105 @@ object LocalUpTac {
   private val logger = log4s.getLogger
 
   sealed trait VarID {
+    def consumed() : Boolean
     def select(cvars: List[CVariable], qvars: List[QVariable]) : (List[CVariable], List[QVariable], VarID)
   }
 
   final case object AllVars extends VarID {
     override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = (cvars,qvars,AllVars)
+    override def consumed(): Boolean = true
+  }
+
+  final case class IdxVarId(cvars : Map[CVariable, List[Int]], qvars : Map[QVariable, List[Int]]) extends VarID {
+    for (l <- cvars.valuesIterator ++ qvars.valuesIterator) {
+      assert (Utils.isSortedUnique(l))
+      assert (l.forall(_>0))
+    }
+
+    override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = {
+      val selectedCVars = new ListBuffer[CVariable]()
+      val selectedQVars = new ListBuffer[QVariable]()
+
+      var cvarsID = this.cvars
+      var qvarsID = this.qvars
+
+      for (v <- cvars) {
+        cvarsID.get(v) match {
+          case None =>
+          case Some(Nil) =>
+            selectedCVars += v
+          case Some(List(1)) =>
+            cvarsID = cvarsID - v
+            selectedCVars += v
+          case Some(1 :: l) =>
+            cvarsID = cvarsID.updated(v, l.map(_-1))
+            selectedCVars += v
+          case Some(l) =>
+            cvarsID = cvarsID.updated(v, l.map(_-1))
+        }
+      }
+
+      for (v <- qvars) {
+        qvarsID.get(v) match {
+          case None =>
+          case Some(Nil) =>
+            selectedQVars += v
+          case Some(List(1)) =>
+            qvarsID = qvarsID - v
+            selectedQVars += v
+          case Some(1 :: l) =>
+            qvarsID = qvarsID.updated(v, l.map(_-1))
+            selectedQVars += v
+          case Some(l) =>
+            qvarsID = qvarsID.updated(v, l.map(_-1))
+        }
+      }
+
+      (selectedCVars.toList, selectedQVars.toList, new IdxVarId(cvarsID, qvarsID))
+    }
+
+    override def consumed(): Boolean =
+      (cvars.valuesIterator ++ qvars.valuesIterator).forall(_.isEmpty)
+  }
+
+  object IdxVarId {
+    def apply(vars : List[(Variable,Option[Int])]) : IdxVarId = {
+      val cvars = new mutable.HashMap[CVariable,List[Int]]()
+      val qvars = new mutable.HashMap[QVariable,List[Int]]()
+
+      for (vi <- vars) vi match {
+        case (v : CVariable, None) =>
+          if (cvars.contains(v))
+            throw UserException(s"Incompatible local variable specification for ${v.name}")
+          cvars.update(v,Nil)
+        case (v : QVariable, None) =>
+          if (qvars.contains(v))
+            throw UserException(s"Incompatible local variable specification for ${v.name}")
+          qvars.update(v,Nil)
+        case (v : CVariable, Some(i)) =>
+          val sofar = cvars.get(v) match {
+            case None => Nil
+            case Some(Nil) =>
+              throw UserException(s"Incompatible local variable specification for ${v.name}")
+            case Some(l) => l
+          }
+          if (sofar.contains(i))
+            throw UserException(s"Incompatible local variable specification for ${v.name}")
+          cvars.update(v, sofar ++ List(i))
+        case (v : QVariable, Some(i)) =>
+          val sofar = qvars.get(v) match {
+            case None => Nil
+            case Some(Nil) =>
+              throw UserException(s"Incompatible local variable specification for ${v.name}")
+            case Some(l) => l
+          }
+          if (sofar.contains(i))
+            throw UserException(s"Incompatible local variable specification for ${v.name}")
+          qvars.update(v, sofar ++ List(i))
+      }
+
+      IdxVarId(cvars.toMap.mapValues(_.sorted), qvars.toMap.mapValues(_.sorted))
+    }
   }
 }
 

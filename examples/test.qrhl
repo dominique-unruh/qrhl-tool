@@ -1,5 +1,7 @@
 isabelle.
 
+# TODO: make proper example file out of this
+
 quantum var q : bit.
 quantum var r : bit.
 quantum var s : bit.
@@ -12,30 +14,30 @@ program Q := {
 }.
 
 program p := {
-  local q;
-  x <- x+1;
-  r <q undefined;
+  local x,q;
   on q,r apply comm_op;
-  { local s; call Q; }
+  while (True) {
+   local x,r;
+   x <- 1;
+  }
+  call Q;
+}.
+
+program p2 := {
+  while (True) {
+   local x,r;
+   x <- 1;
+  }
 }.
 
 
 qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
  inline p.
+ inline p2.
+# rename left: q -> s.
+# rename both: r -> s.
 
- rename left: x -> y.
+ local up.
+ local up x.
 
- seq <-> 1 1: top.
-
- equal exclude Q.
-
-simp!.
-simp.
-inline Q.
-equal.
-simp.
-skip.
-simp.
-skip.
-simp.
-qed.
+local up s.

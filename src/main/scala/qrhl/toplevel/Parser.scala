@@ -431,12 +431,22 @@ object Parser extends JavaTokenParsers {
   def tactic_split(implicit context:ParserContext) : Parser[CaseSplitTac] =
     literal("casesplit") ~> OnceParser(expression(Isabelle.boolT)) ^^ CaseSplitTac
 
-  def tactic_local : Parser[Tactic] =
+  def localUpVarId1(implicit context: ParserContext): toplevel.Parser.Parser[(Variable, Option[Int])] =
+    identifier ~ (":" ~> natural).? ^^ { case x ~ i =>
+      val x2 = context.environment.getProgVariable(x)
+      (x2,i)
+    }
+
+  def localUpVarId(implicit context: ParserContext) : Parser[LocalUpTac.VarID] =
+    (rep1sep(localUpVarId1, ",") ^^ LocalUpTac.IdxVarId.apply) |
+      success(LocalUpTac.AllVars)
+
+  def tactic_local(implicit context: ParserContext) : Parser[Tactic] =
     literal("local") ~> OnceParser(
       "left" ^^^ LocalTac(LocalTac.left) |
         "right" ^^^ LocalTac(LocalTac.right) |
         "joint" ^^^ LocalTac(LocalTac.joint) |
-        "up" ^^^ LocalUpTac(LocalUpTac.AllVars))
+        ("up" ~> localUpVarId) ^^ LocalUpTac.apply)
 
   def tactic_rename(implicit context: ParserContext) : Parser[RenameTac] =
     literal("rename") ~> OnceParser(for (
