@@ -219,6 +219,12 @@ lift_definition colocal_qvars_qvars_str :: "'a::universe variables \<Rightarrow>
 consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
 adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (* colocal_qvars_qvars *)
 
+lemma colocal_pred_qvars_unit[simp]: "colocal_pred_qvars A \<lbrakk>\<rbrakk>"
+  by (cheat colocal_pred_qvars_unit)
+
+lemma colocal_op_qvars_unit[simp]: "colocal_op_qvars A \<lbrakk>\<rbrakk>"
+  by (cheat colocal_op_qvars_unit)
+
 lemma colocal_qvars_qvars_str[simp]:
   assumes "distinct_qvars Q"
   assumes "set (variable_names Q) \<inter> R = {}"
