@@ -10,15 +10,15 @@ import scala.collection.mutable.ListBuffer
 import LocalUpTac.{VarID, _}
 import qrhl.isabelle.{Isabelle, RichTerm}
 
-case class LocalUpTac(varID: VarID) extends Tactic {
+case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case AmbientSubgoal(goal) =>
       throw UserException("Expected a qRHL subgoal")
     case QRHLSubgoal(left, right, pre, post, assumptions) =>
       val env = state.environment
       println(s"*** Possibly unsound (not proven) tactic 'local up' applied.")
-      val (left2, id) = up2(env, varID, left)
-      val (right2, id2) = up2(env, id, right)
+      val (left2, id) = if (side.forall(_==true)) up2(env, varID, left) else (left,varID)
+      val (right2, id2) = if (side.forall(_==false)) up2(env, id, right) else (right,id)
       if (!id2.consumed())
         throw UserException(s"Not all variables found in $varID")
       List(QRHLSubgoal(left2.toBlock, right2.toBlock, pre, post, assumptions))

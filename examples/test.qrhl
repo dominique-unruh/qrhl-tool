@@ -37,7 +37,7 @@ qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
 # rename left: q -> s.
 # rename both: r -> s.
 
- local up.
+ local up right r.
  local up x.
 
 local up s.

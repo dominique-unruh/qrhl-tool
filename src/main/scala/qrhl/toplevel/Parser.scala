@@ -441,12 +441,15 @@ object Parser extends JavaTokenParsers {
     (rep1sep(localUpVarId1, ",") ^^ LocalUpTac.IdxVarId.apply) |
       success(LocalUpTac.AllVars)
 
+  def localUpSide : Parser[Option[Boolean]] =
+    ("left" ^^^ true | "right" ^^^ false).?
+
   def tactic_local(implicit context: ParserContext) : Parser[Tactic] =
     literal("local") ~> OnceParser(
       "left" ^^^ LocalTac(LocalTac.left) |
         "right" ^^^ LocalTac(LocalTac.right) |
         "joint" ^^^ LocalTac(LocalTac.joint) |
-        ("up" ~> localUpVarId) ^^ LocalUpTac.apply)
+        ("up" ~> localUpSide ~ localUpVarId) ^^ { case side~varID => LocalUpTac(side,varID) })
 
   def tactic_rename(implicit context: ParserContext) : Parser[RenameTac] =
     literal("rename") ~> OnceParser(for (
