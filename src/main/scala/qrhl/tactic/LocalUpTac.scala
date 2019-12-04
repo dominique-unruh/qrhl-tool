@@ -149,6 +149,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
       (resultBlock, ListSet(cCandidates.keys.toSeq:_*), ListSet(qCandidates.keys.toSeq:_*), id2)
     case Local(cvars, qvars, body) =>
+      val varUse = body.variableUse(env)
       val (cvars2, qvars2, id2) = id.select(cvars, qvars)
       val (body2, cvars3, qvars3, id3) = up(env,id2,body.unwrapTrivialBlock)
 
@@ -157,10 +158,15 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       val allQVars = ListSet(qvars:_*) ++ qvars3
       val keepQVars = allQVars -- qvars2
 
+      // Variables that need to be propagated upwards. We remove variables not occurring in the body since
+      // they can just be removed
+      val upCVars = ListSet(cvars2:_*).intersect(varUse.classical)
+      val upQVars = ListSet(qvars2:_*).intersect(varUse.quantum)
+
       logger.debug(s"Local: $statement, ${(cvars2,qvars2)} ${(body2,cvars3,qvars3)}")
 
       val body3 = Local.makeIfNeeded(keepCVars.toSeq, keepQVars.toSeq, body2)
-      (body3, ListSet(cvars2:_*), ListSet(qvars2:_*), id3)
+      (body3, upCVars, upQVars, id3)
   }
 }
 
