@@ -69,7 +69,27 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
       (While(condition, body4.toBlock), upCvars, qVars, id2)
     case IfThenElse(condition, thenBranch, elseBranch) =>
-      ???
+      val thenVarUse = thenBranch.variableUse(env)
+      val elseVarUse = elseBranch.variableUse(env)
+      val condVars = condition.caVariables(env).classical
+
+      val (thenBody, thenC, thenQ, id2) = up(env, id, thenBranch)
+      val (elseBody, elseC, elseQ, id3) = up(env, id2, elseBranch)
+
+      val thenUpC = thenC -- elseVarUse.classical -- condVars
+      val thenUpQ = thenQ -- elseVarUse.quantum
+      val elseUpC = elseC -- thenVarUse.classical -- condVars
+      val elseUpQ = elseQ -- thenVarUse.quantum
+
+      val thenDownC = thenC -- thenUpC
+      val thenDownQ = thenQ -- thenUpQ
+      val elseDownC = elseC -- elseUpC
+      val elseDownQ = elseQ -- elseUpQ
+
+      val thenBody2 = Local.makeIfNeeded(thenDownC.toSeq, thenDownQ.toSeq, thenBody)
+      val elseBody2 = Local.makeIfNeeded(elseDownC.toSeq, elseDownQ.toSeq, elseBody)
+
+      (IfThenElse(condition,thenBody2.toBlock,elseBody2.toBlock), thenUpC++elseUpC, thenUpQ++elseUpQ, id3)
     case Block() => (statement, empty, empty, id)
     case Block(s) =>
       up(env, id, s)
