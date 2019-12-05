@@ -11,10 +11,11 @@ lemma o2h[unfolded PROGRAM_EQUAL_def]:
     and z :: "_ variable" and G H :: "('a::universe \<Rightarrow> 'b::{universe,xor_group}) variable" and S :: "'a set variable"
     and adv :: oracle_program and X :: "'a variable" and Y :: "'b variable"
     and in_S :: "bit variable" and Count :: "oracle_program"
+    and localsC :: "'c variables" and localsQ :: "'d variables"
 
-  assumes "PROGRAM_EQUAL game_left (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], instantiateOracles adv [instantiateOracles Count [queryG]]])"
-  assumes "PROGRAM_EQUAL game_right (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], instantiateOracles adv [instantiateOracles Count [queryH]]])"
-  assumes "PROGRAM_EQUAL game_find (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], assign \<lbrakk>Find\<rbrakk> Expr[False], instantiateOracles adv [instantiateOracles Count [queryGS]]])"
+  assumes "PROGRAM_EQUAL game_left (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryG]]]])"
+  assumes "PROGRAM_EQUAL game_right (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryH]]]])"
+  assumes "PROGRAM_EQUAL game_find (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], assign \<lbrakk>Find\<rbrakk> Expr[False], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
   assumes "\<And>P. PROGRAM_EQUAL (instantiateOracles Count [P]) (block [P, assign \<lbrakk>count\<rbrakk> (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count+1))])"
 
@@ -108,10 +109,11 @@ definition [program_bodies]: "queryGS =  (block [measurement \<lbrakk>var_in_S\<
                             queryG])"
 
 definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
-        instantiateOracles adv [instantiateOracles Count [queryG]]]"
+        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryG]]]]"
 definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
-        instantiateOracles adv [instantiateOracles Count [queryH]]]"
-definition [program_bodies]: "findG = (block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S,var_G,var_H,var_z\<rbrakk> Expr[test_distr], assign \<lbrakk>var_Find\<rbrakk> Expr[False], instantiateOracles adv [instantiateOracles Count [queryGS]]])"
+        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryH]]]]"
+definition [program_bodies]: "findG = (block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S,var_G,var_H,var_z\<rbrakk> Expr[test_distr], assign \<lbrakk>var_Find\<rbrakk> Expr[False], 
+        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>var_count\<rbrakk> Expr[count+1]]" for P  
   by (cheat Count)
