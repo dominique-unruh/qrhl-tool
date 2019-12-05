@@ -9,13 +9,14 @@ lemma semi_classical_search:
     and adv :: oracle_program and X :: "'a variable" and Y :: "'b variable"
     and in_S :: "bit variable" and Count :: "oracle_program"
     and stop_at :: "nat variable" and "guess" :: "'a variable"
+    and localsC :: "'c variables" and localsQ :: "'d variables"
 
   assumes "game_left  = block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,z\<rbrakk> Expr[distr], 
                         assign \<lbrakk>var_Find\<rbrakk> Expr[False],
-                        instantiateOracles adv [instantiateOracles Count [queryGS]]]"
+                        localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]]"
   assumes "game_right = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>stop_at\<rbrakk> Expr[uniform {..<q}],
                          sample \<lbrakk>S,G,z\<rbrakk> Expr[distr], 
-                         instantiateOracles adv [instantiateOracles Count [queryGM]]])"
+                         localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGM]]]])"
 
   assumes "\<And>P. (instantiateOracles Count [P]) = (block [P, assign \<lbrakk>count\<rbrakk> (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count+1))])"
 
@@ -88,11 +89,11 @@ definition "q = (123::nat)"
 definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], 
         sample \<lbrakk>var_S, var_G, var_z\<rbrakk> Expr[test_distr],
         assign \<lbrakk>var_Find\<rbrakk> (const_expression False),
-        instantiateOracles adv [instantiateOracles Count [queryGS]]]"
+        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]]"
 definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], 
         sample \<lbrakk>var_stop_at\<rbrakk> Expr[uniform {..<q}],
         sample \<lbrakk>var_S, var_G, var_z\<rbrakk> Expr[test_distr],
-        instantiateOracles adv [instantiateOracles Count [queryGM]]]"
+        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGM]]]]"
 
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>var_count\<rbrakk> Expr[count+1]]" for P  
   by (cheat Count)
