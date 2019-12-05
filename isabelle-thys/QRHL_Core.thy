@@ -326,10 +326,6 @@ lemma predicate_local_applyOpSpace[intro!]: "operator_local A Q \<Longrightarrow
 lemma qvariables_localI[intro!]: "set (raw_variables R) \<subseteq> set (raw_variables Q) \<Longrightarrow> distinct_qvars R \<Longrightarrow> distinct_qvars Q
 \<Longrightarrow> qvariables_local R Q"
   unfolding qvariables_local_def by simp
-lemma predicate_local[intro!]: 
-  assumes "qvariables_local (variable_concat Q R) S"
-  shows "predicate_local (quantum_equality_full U Q V R) S"
-  by (cheat predicate_local)
 lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> operator_local B Q \<Longrightarrow> operator_local (A\<cdot>B) Q"
   by (cheat operator_local_timesOp)
 
@@ -1113,6 +1109,11 @@ proof -
     apply (subst eigenspace_lift[symmetric, OF dist])
     using op_eq by simp
 qed
+
+lemma predicate_local[intro!]: 
+  assumes "qvariables_local (variable_concat Q R) S"
+  shows "predicate_local (quantum_equality_full U Q V R) S"
+  by (cheat predicate_local)
 
 lemma colocal_quantum_equality_full[simp]:
   "colocal_qvars_qvars_str (variable_concat Q1 Q2) Q3 \<Longrightarrow> 
