@@ -74,7 +74,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
           else {
             val qvariables2 = ListSet(qvariables:_*)
             if (!requiredQvars.subsetOf(qvariables2))
-              throw UserException(s"You must specify at least the following qvars: $qvariables2")
+              throw UserException(s"You must specify at least the following qvars: $requiredQvars")
             qvariables2
           }
 
