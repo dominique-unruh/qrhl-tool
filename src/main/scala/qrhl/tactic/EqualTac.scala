@@ -15,7 +15,7 @@ import qrhl.tactic.EqualTac.logger
 
 import scala.collection.immutable.ListSet
 
-case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends WpBothStyleTac() {
+case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvariables: List[QVariable]) extends WpBothStyleTac() {
   def diff(left:Statement, right:Statement): (Statement, List[(Statement,Statement)]) = {
     val mismatches = new mutable.ListBuffer[(Statement,Statement)]()
 
@@ -91,9 +91,12 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable]) extends 
     val inner_cvars = varUse.innerClassical
     val inner_qvars = varUse.innerQuantum
 
-    // TODO: could be user choosable
     val mid_cvars = out_cvars ++ inner_cvars
-    val mid_qvars = out_qvars ++ inner_qvars
+    val mid_qvars =
+      if (midqvariables.isEmpty)
+        out_qvars ++ inner_qvars
+      else
+        ListSet(midqvariables:_*)
 
     logger.debug(s"In variables: $in_cvars, $in_qvars; out variables: $out_cvars, $out_qvars; mid variables: $mid_cvars, $mid_qvars")
 

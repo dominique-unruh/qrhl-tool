@@ -373,16 +373,21 @@ object Parser extends JavaTokenParsers {
     )
 
   def tactic_equal(implicit context:ParserContext) : Parser[EqualTac] =
-    literal("equal") ~> (literal("exclude") ~> identifierList).? ~ (literal("qvars") ~> identifierList).? ^^ {
-      case exclude ~ qvars =>
-        val exclude2 = exclude.getOrElse(Nil)
-        for (p <- exclude2 if !context.environment.programs.contains(p))
-          throw UserException(s"Undeclared program $p")
+    literal("equal") ~> OnceParser(
+      for (exclude <- (literal("exclude") ~> identifierList).?;
+           qvars <- (literal("qvars") ~> identifierList).?;
+           midQVars <- (literal("innerqvars") ~> identifierList).?
+           )
+        yield {
+          val exclude2 = exclude.getOrElse(Nil)
+          for (p <- exclude2 if !context.environment.programs.contains(p))
+            throw UserException(s"Undeclared program $p")
 
-        val qvars2 = qvars.getOrElse(Nil) map { context.environment.getQVariable }
+          val qvars2 = qvars.getOrElse(Nil) map { context.environment.getQVariable }
+          val midqvars2 = midQVars.getOrElse(Nil) map { context.environment.getQVariable }
 
-        EqualTac(exclude=exclude2, qvariables = qvars2)
-    }
+          EqualTac(exclude=exclude2, qvariables = qvars2, midqvariables = midqvars2)
+        })
 
   def tactic_byqrhl(implicit context:ParserContext) : Parser[ByQRHLTac] =
     literal("byqrhl") ~> (literal("qvars") ~> identifierList).? ^^ { qvars =>
