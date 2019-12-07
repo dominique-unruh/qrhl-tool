@@ -73,6 +73,9 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
 }
 
 object QVariable {
+  def filter(vars: List[Variable]): List[QVariable] =
+    vars.collect { case v : QVariable => v }
+
   def fromTerm_var(context: Isabelle.Context, x: Term): QVariable = x match {
     case Free(name,typ) =>
       QVariable(name, Isabelle.dest_variableT(typ))
@@ -116,6 +119,9 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
 }
 
 object CVariable {
+  def filter(vars: List[Variable]): List[CVariable] =
+    vars.collect { case v : CVariable => v }
+
   def fromTerm_var(context: Isabelle.Context, x: Term): CVariable = x match {
     case Free(name,typ) =>
       assert(name.startsWith("var_"))

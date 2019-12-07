@@ -1,11 +1,15 @@
 package qrhl
 
+import qrhl.logic.CVariable
 import scalaz.Memo
 
 import scala.collection.mutable
 import scala.ref.SoftReference
 
 object Utils {
+  def symmetricDifferrence[A](a: Set[A], b: Set[A]) : Set[A] =
+    (a -- b) ++ (b -- a)
+
   def isSorted[A](list: List[A])(implicit ord: Ordering[A]): Boolean = {
     if (list.isEmpty) return true
     var previous = list.head

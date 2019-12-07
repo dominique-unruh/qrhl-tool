@@ -449,11 +449,14 @@ object Parser extends JavaTokenParsers {
   def localUpSide : Parser[Option[Boolean]] =
     ("left" ^^^ true | "right" ^^^ false).?
 
+  def progVariables(implicit context: ParserContext): Parser[List[Variable]] =
+    identifierList ^^ { _.map(context.environment.getProgVariable) }
+
   def tactic_local(implicit context: ParserContext) : Parser[Tactic] =
     literal("local") ~> OnceParser(
-      "left" ^^^ LocalTac(LocalTac.left) |
-        "right" ^^^ LocalTac(LocalTac.right) |
-        "joint" ^^^ LocalTac(LocalTac.joint) |
+      ("left" ~> (":" ~> progVariables).?) ^^ { vs => LocalTac(left=true, cVariables = CVariable.filter(vs.getOrElse(Nil)), qVariables = QVariable.filter(vs.getOrElse(Nil))) } |
+        ("right" ~> (":" ~> progVariables).?) ^^ { vs => LocalTac(left=false, cVariables = CVariable.filter(vs.getOrElse(Nil)), qVariables = QVariable.filter(vs.getOrElse(Nil))) } |
+        "joint" ^^^ LocalJointTac |
         ("up" ~> localUpSide ~ localUpVarId) ^^ { case side~varID => LocalUpTac(side,varID) })
 
   def tactic_rename(implicit context: ParserContext) : Parser[RenameTac] =
