@@ -1,5 +1,43 @@
 isabelle.
 
+classical var x : bool.
+classical var y : bool.
+classical var z : bool.
+quantum var Avar : string.
+adversary A vars Avar.
+adversary B vars Avar.
+
+program p1 := {
+  if (x) then { call A; } else { call B; }
+}.
+
+program p2 := {
+  if (x) then { call B; } else { call A; }
+}.
+
+# lemma ((<=) :: mem2 ell2 linear_space ⇒ mem2 ell2 linear_space ⇒ mem2 ell2 linear_space == x).
+
+qrhl { Cla[x1≠x2] ⊓ ⟦Avar1⟧ ≡𝔮 ⟦Avar2⟧ } call p1; ~ call p2; { ⟦Avar1⟧ ≡𝔮 ⟦Avar2⟧ }.
+ inline p1.
+ inline p2.
+ jointif true-false false-true.
+  simp!.
+
+ equal.
+  simp!.
+
+ skip.
+ simp!.
+
+ equal.
+  simp!.
+
+ skip.
+ simp!.
+qed.
+
+
+
 # TODO: make proper example file out of this
 
 quantum var q : bit.

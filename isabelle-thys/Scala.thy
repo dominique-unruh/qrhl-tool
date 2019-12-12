@@ -87,6 +87,7 @@ object IsabelleConsts {
   val swap_variables_subspace = \<open>\<^const_name>\<open>swap_variables_subspace\<close>\<close>
   val default = \<open>\<^const_name>\<open>default\<close>\<close>
   val ket = \<open>\<^const_name>\<open>ket\<close>\<close>
+  val not = \<open>\<^const_name>\<open>Not\<close>\<close>
 }
 \<close>
 

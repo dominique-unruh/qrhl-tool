@@ -76,7 +76,7 @@ case object LocalJointTac extends Tactic {
 
       val newPre = predicate_inf $ a $ extendQeq(us1,s1,us2,s2,qvarsL,qvarsR)
       // TODO: unitarity condition
-      val unitarity = Isabelle.classical_subspace $ Isabelle.mk_conjs(Isabelle.unitary(ur1), Isabelle.unitary(ur2))
+      val unitarity = Isabelle.classical_subspace $ Isabelle.conj(Isabelle.unitary(ur1), Isabelle.unitary(ur2))
       val newPost = Isabelle.inf(b, unitarity, extendQeq(ur1,r1,ur2,r2,qvarsL,qvarsR))
 
       logger.debug(s"Pre: ${p(newPre)}")

@@ -271,6 +271,11 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
 }
 
 object Isabelle {
+  val not : Const = Const(c.not, HOLogic.boolT -->: HOLogic.boolT)
+  def not(t: Term) : Term = not $ t
+  def less_eq(typ : Typ) = Const(c.less_eq, typ -->: typ -->: boolT)
+  def less_eq(t: Term, u:Term) : Term = less_eq(fastype_of(t)) $ t $ u
+
   private val cleaner = Cleaner.create()
 
   def swap_variables_subspace(v: Term, w: Term, pre: Term): Term = {
@@ -293,9 +298,6 @@ object Isabelle {
     Const(c.tensorOp, l2boundedT(ta,tb) -->: l2boundedT(tc,td) -->: l2boundedT(prodT(ta,tc),prodT(tb,td)))
 
   def idOp(valueTyp: Typ) = Const(c.idOp, boundedT(valueTyp, valueTyp))
-
-  // TODO remove
-  val less_eq_name: String = c.less_eq
 
   private var globalIsabellePeek: Isabelle = _
   lazy val globalIsabelle: Isabelle = {
@@ -351,11 +353,16 @@ object Isabelle {
 
   private val logger = log4s.getLogger
 
-  def mk_conj(t1: Term, t2: Term): Term = HOLogic.conj $ t1 $ t2
+//  def mk_conj(t1: Term, t2: Term): Term = HOLogic.conj $ t1 $ t2
 
-  def mk_conjs(terms: Term*): Term = terms match {
-    case Seq(t, ts @ _*) => ts.foldLeft(t)(mk_conj)
+  def conj(terms: Term*): Term = terms match {
+    case Seq(t, ts @ _*) => ts.foldLeft(t) { (t1,t2) => HOLogic.conj $ t1 $ t2 }
     case Nil => HOLogic.True
+  }
+
+  def disj(terms: Term*): Term = terms match {
+    case Seq(t, ts @ _*) => ts.foldLeft(t) { (t1,t2) => HOLogic.disj $ t1 $ t2 }
+    case Nil => HOLogic.False
   }
 
   def mk_list(typ: Typ, terms: List[Term]): Term = {
@@ -388,7 +395,9 @@ object Isabelle {
   val predicateT = Type(t.linear_space, List(ell2T(Type(t.mem2, Nil))))
   val programT = Type(t.program)
   val oracle_programT = Type(t.oracle_program)
-  val classical_subspace = Const(c.classical_subspace, HOLogic.boolT -->: predicateT)
+  val classical_subspace : Term= Const(c.classical_subspace, HOLogic.boolT -->: predicateT)
+  def classical_subspace(t:Term) : Term = classical_subspace $ t
+
   val predicate_inf = Const(c.inf, predicateT -->: predicateT -->: predicateT)
   val predicate_bot = Const(c.bot, predicateT)
   val predicate_top = Const(c.top, predicateT)
@@ -597,7 +606,10 @@ object Isabelle {
   val thms_as_subgoals: Operation[(BigInt, String), List[Subgoal]] = Operation.implicitly[(BigInt,String),List[Subgoal]]("thms_as_subgoals")
 
 
-  def mk_eq(typ: Typ, a: Term, b: Term): Term = Const(c.eq, typ -->: typ -->: HOLogic.boolT) $ a $ b
+  def mk_eq(a: Term, b: Term): Term = {
+    val typ = fastype_of(a)
+    Const(c.eq, typ -->: typ -->: HOLogic.boolT) $ a $ b
+  }
 
   /** Analogous to Isabelle's HOLogic.dest_list. Throws [[MatchError]] if it's not a list */
   def dest_list(term: Term): List[Term] = term match {

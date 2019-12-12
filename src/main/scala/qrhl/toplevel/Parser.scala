@@ -474,6 +474,27 @@ object Parser extends JavaTokenParsers {
   def tactic_fix : Parser[FixTac] =
     literal("fix") ~> identifier ^^ FixTac
 
+  def boolean : Parser[Boolean] =
+    ("true" | "false") ^^ { case "true" => true; case "false" => false }
+
+  def tactic_if : Parser[IfTac] =
+    literal("if") ~> OnceParser(for
+      (left <- ("left" | "right") ^^ { case "left" => true; case "right" => false };
+      trueFalse <- boolean.?)
+      yield IfTac(left,trueFalse))
+
+  def tactic_jointif : Parser[JointIfTac] =
+    literal("jointif") ~> OnceParser(for
+    (cases <- rep {
+      (boolean ~ "-" ~ boolean) ^^ { case l ~ _ ~ r => (l,r) }
+    })
+    yield {
+      if (cases.isEmpty)
+        JointIfTac(List((true,true),(false,false)))
+      else
+        JointIfTac(cases)
+    })
+
   def tactic(implicit context:ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
       tactic_wp |
@@ -500,7 +521,9 @@ object Parser extends JavaTokenParsers {
       literal("semiclassical") ^^ { _ => SemiClassicalTac } |
       literal("sym") ^^ { _ => SymTac } |
       tactic_local |
-      tactic_rename
+      tactic_rename |
+      tactic_if |
+      tactic_jointif
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

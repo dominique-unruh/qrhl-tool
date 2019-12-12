@@ -41,7 +41,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
   private val connectiveT = HOLogic.boolT -->: HOLogic.boolT -->: HOLogic.boolT
   private def bitToBool(b:Term) =
-    Isabelle.mk_eq(Isabelle.bitT, b, Const("Groups.one_class.one", Isabelle.bitT))
+    Isabelle.mk_eq(b, Const("Groups.one_class.one", Isabelle.bitT))
 
   val byQRHLPreOp: Operation[(BigInt, List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), RichTerm]
     = Operation.implicitly[(BigInt, List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), RichTerm]("byQRHLPre") // TODO: move
