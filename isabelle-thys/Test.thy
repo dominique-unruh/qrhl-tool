@@ -11,7 +11,22 @@ Main
  *)
 begin
 
+consts a :: bool
+consts b :: bool
+definition "bla = (a \<and> b)"
 
+ML \<open>
+fun apply_method ctxt str goal = let
+  val (text,_) = Method.read_closure_input ctxt (Input.string str)
+  val state = Proof.theorem NONE (K I) [[(goal,[])]] ctxt
+  val result = Proof.apply (text,Position.no_range) state |> Seq.the_result "bla"
+  val subgoals = result |> Proof.simple_goal |> #goal |> Thm.prems_of
+in subgoals end
+\<close>
+
+ML \<open>
+apply_method \<^context> "simp?, auto simp: bla_def" \<^prop>\<open>bla\<close> 
+\<close>
 
 
 
