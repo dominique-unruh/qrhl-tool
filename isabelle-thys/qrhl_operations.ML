@@ -532,4 +532,9 @@ end
         [("Z2",\<^typ>\<open>int\<close>)] [("s2",\<^typ>\<open>int\<close>),("t2",\<^typ>\<open>int\<close>)]
 |> \<^print> *)
 
+fun method_tac ctxt str = let
+  val (text,_) = Method.read_closure_input ctxt (Input.string str)
+  val tactic = Method.evaluate text ctxt [] |> Method.NO_CONTEXT_TACTIC ctxt
+in tactic end
+
 end

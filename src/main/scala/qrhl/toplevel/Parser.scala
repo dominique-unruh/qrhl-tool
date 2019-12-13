@@ -427,6 +427,13 @@ object Parser extends JavaTokenParsers {
       case _ => throw new RuntimeException("Internal error") // cannot happen
     }
 
+  val tactic_isa : Parser[IsaTac] =
+    literal("isa") ~> OnceParser("!".? ~ ".*".r) ^^ {
+      case None ~ method => IsaTac(method, force=false)
+      case Some("!") ~ method => IsaTac(method, force = true)
+      case _ => throw new RuntimeException("Internal error") // cannot happen
+    }
+
   def tactic_rule(implicit context:ParserContext) : Parser[RuleTac] =
     literal("rule") ~> ".*".r ^^ RuleTac.apply
 
@@ -523,7 +530,8 @@ object Parser extends JavaTokenParsers {
       tactic_local |
       tactic_rename |
       tactic_if |
-      tactic_jointif
+      tactic_jointif |
+      tactic_isa
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 

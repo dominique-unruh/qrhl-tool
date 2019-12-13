@@ -191,6 +191,15 @@ in
 end
 \<close>
 
+operation_setup apply_method = \<open>
+  {from_lib = Codec.triple Codec.string subgoal_codec context_codec,
+   to_lib = Codec.id,
+   action = apply_tactic_on_term 
+      method_tac 
+      (fn str => "method "^str)}
+\<close>
+
+
 operation_setup simplify_term = \<open>
   {from_lib = Codec.triple term_tight_codec (Codec.list Codec.string) Codec.int,
    to_lib = Codec.id,

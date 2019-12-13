@@ -7,6 +7,16 @@ quantum var Avar : string.
 adversary A vars Avar.
 adversary B vars Avar.
 
+lemma x=z --> z=x.
+isa! auto.
+qed.
+
+lemma ∃x. x=x.
+isa rule exI[of _ "undefined"].
+simp.
+qed.
+
+
 program p1 := {
   if (x) then { call A; } else { call B; }
 }.
