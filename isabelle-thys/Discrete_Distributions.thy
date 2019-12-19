@@ -1022,6 +1022,344 @@ proof -
     unfolding is_distribution_def' by simp
 qed
 
+lemma bind_distr_twice_indep:
+  "bind_distr A (\<lambda>a. bind_distr B (\<lambda>b. F a b)) 
+ = bind_distr B (\<lambda>b. bind_distr A (\<lambda>a. F a b))"
+  by (cheat bind_distr_twice_indep)
+
+lemma bind_distr_point_distr[simp]: "bind_distr D point_distr = D"
+proof (transfer, rule ext)
+  fix D :: "'a \<Rightarrow> real" and x :: 'a
+  assume "is_distribution D"
+  have "(\<Sum>\<^sub>ay. D y * (if x \<in> {y} then 1 / real (card {y}) else 0)) = (\<Sum>\<^sub>ay\<in>{x}. D y)"
+    apply (rule infsetsum_cong_neutral) by auto
+  also have "\<dots> = D x"
+    by auto
+  finally show "(\<Sum>\<^sub>ay. D y * (if x \<in> {y} then 1 / real (card {y}) else 0)) = D x"
+    by simp
+qed
+
+lemma distribution_leq1: assumes "is_distribution \<mu>" shows "\<mu> x \<le> 1"
+proof -
+  have "\<mu> x = infsetsum \<mu> {x}"
+    by auto
+  also have "\<dots> \<le> infsetsum \<mu> UNIV"
+    apply (rule infsetsum_mono_neutral_left)
+    using assms unfolding is_distribution_def by auto
+  also have "\<dots> \<le> 1"
+    using assms unfolding is_distribution_def by auto
+  finally show ?thesis.
+qed
+
+lemma bind_distr_map_distr: "bind_distr \<mu> (\<lambda>x. map_distr g (f x)) = map_distr g (bind_distr \<mu> f)"
+proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer, rule ext)
+  fix \<mu> :: "'b \<Rightarrow> real"
+    and g :: "'c \<Rightarrow> 'a"
+    and f :: "'b \<Rightarrow> 'c \<Rightarrow> real"
+    and x :: 'a
+    and \<mu>f :: "'c \<Rightarrow> real"
+  assume \<mu>: "is_distribution \<mu>"
+  assume f: "pred_fun top is_distribution f"
+  then have fpos: "(0 \<le> f y x)" and fy_sum: "f y abs_summable_on UNIV" and fy_sum1: "infsetsum (f y) UNIV \<le> 1" for y x
+    by (auto simp: is_distribution_def)
+  from f have fyx1: "f y x \<le> 1" for y x
+    by (auto simp: is_distribution_def intro: distribution_leq1)
+  assume \<mu>f_def: "\<mu>f = (\<lambda>x. \<Sum>\<^sub>ay. \<mu> y * f y x)"
+  assume \<mu>f: "is_distribution \<mu>f"
+  then have summable1: "(\<lambda>x. \<Sum>\<^sub>ay. \<mu> y * f y x) abs_summable_on UNIV"
+    unfolding \<mu>f_def is_distribution_def by simp
+  have summable2: "(\<lambda>y. \<mu> y * f y x) abs_summable_on UNIV" for x
+    apply (rule abs_summable_on_comparison_test'[where g="\<mu>"])
+    using \<mu>[unfolded is_distribution_def] apply simp_all
+    using fyx1 fpos by (simp add: mult_left_le)
+  have prod_summable: "(\<lambda>(x, y). \<mu> y * f y x) abs_summable_on UNIV \<times> UNIV"
+    apply (rule abs_summable_product')
+    by (simp_all add: fpos is_distribution_def summable1 summable2 \<mu>[unfolded is_distribution_def])
+  have "(\<Sum>\<^sub>ay. \<mu> y * (\<Sum>\<^sub>ax\<in>g -` {x}. f y x)) = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax\<in>g -` {x}. \<mu> y * f y x)"
+    apply (subst infsetsum_cmult_right)
+    using fy_sum abs_summable_on_subset apply blast by auto
+  also have "\<dots> = (\<Sum>\<^sub>ax\<in>g -` {x}. \<Sum>\<^sub>ay. \<mu> y * f y x)"
+    apply (rule infsetsum_swap[symmetric])
+    apply (rule abs_summable_on_subset[where B=UNIV])
+    using prod_summable by simp_all
+  finally show "(\<Sum>\<^sub>ay. (\<mu> y) * (\<Sum>\<^sub>ax\<in>g -` {x}. f y x)) 
+      = (\<Sum>\<^sub>ax\<in>g -` {x}. \<Sum>\<^sub>ay. \<mu> y * f y x)" .
+qed
+
+
+\<comment> \<open>\<^term>\<open>\<mu> = below_bernoulli D E p\<close> is a distribution such that: the first marginal is \<^term>\<open>D\<close>,
+    the second marginal is \<^term>\<open>p\<close>-Bernoulli distributed, and if the first output is in \<^term>\<open>E\<close>,
+    then the second output is \<^term>\<open>1\<close>\<close>
+definition below_bernoulli :: "'a distr \<Rightarrow> ('a set) \<Rightarrow> real \<Rightarrow> ('a*bit) distr" where
+  "below_bernoulli D E p = (let pE = Prob D E in bind_distr D (\<lambda>x. map_distr (Pair x) 
+       (bernoulli (if x\<in>E then 1 else (p-pE)/(1-pE)))))"
+
+  
+lemma below_bernoulli_fst[simp]: "map_distr fst (below_bernoulli D E p) = D"
+  unfolding below_bernoulli_def by (simp add: Let_def bind_distr_map_distr[symmetric])
+
+
+lift_definition restrict_distr :: "'a distr \<Rightarrow> 'a set \<Rightarrow> 'a distr" is
+  "\<lambda>\<mu> S x. if x\<in>S then \<mu> x else 0"
+  unfolding is_distribution_def apply auto
+  apply (simp add: abs_summable_on_comparison_test')
+  by (smt infsetsum_mono not_summable_infsetsum_eq)
+
+lemma bind_distr_cong:
+  assumes "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x = g x"
+  shows "bind_distr \<mu> f = bind_distr \<mu> g"
+  using assms apply transfer apply (rule ext)
+  apply (rule infsetsum_cong_neutral)
+  apply (auto simp: is_distribution_def)
+  by (metis order_trans_rules(17))
+
+lemma supp_restrict_distr[simp]:
+  "supp (restrict_distr \<mu> S) = S \<inter> supp \<mu>"
+  apply transfer by auto
+
+lemma Prob_restrict_distr[simp]:
+  "Prob (restrict_distr \<mu> S) T = Prob \<mu> (S\<inter>T)"
+  apply transfer
+  apply (rule infsetsum_cong_neutral)
+  by auto
+
+lemma prob_scaleR[simp]:
+  "prob (r *\<^sub>R \<mu>) x = min 1 (max 0 r) * prob \<mu> x"
+  apply transfer by simp
+
+lemma max0Prob[simp]: "max 0 (Prob \<mu> E) = Prob \<mu> E"
+  by (metis (no_types) Prob_pos max_def_raw)
+
+lemma min1Prob[simp]: "min 1 (Prob \<mu> E) = Prob \<mu> E"
+  by (simp add: min_absorb2)
+
+
+lemma bind_distr_split: "prob (bind_distr \<mu> f) x = 
+  prob (bind_distr (restrict_distr \<mu> E) f) x +
+  prob (bind_distr (restrict_distr \<mu> (-E)) f) x"
+  apply transfer
+  apply (subst infsetsum_add[symmetric], auto simp: is_distribution_def)
+  apply (smt Rings.mult_sign_intros(1) abs_summable_on_comparison_test' distribution_leq1 is_distribution_def mult_left_le real_norm_def)
+  apply (smt Rings.mult_sign_intros(1) abs_summable_on_comparison_test' distribution_leq1 is_distribution_def mult_left_le real_norm_def)
+  by (smt infsetsum_cong mult_cancel_left2)
+
+lemma weight1_bind_distr[simp]:
+  shows "weight (bind_distr \<mu> f) = 1 \<longleftrightarrow> weight \<mu> = 1 \<and> (\<forall>x\<in>supp \<mu>. weight (f x) = 1)"
+proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer)
+  fix \<mu>f :: "'a \<Rightarrow> real"
+    and \<mu> :: "'b \<Rightarrow> real"
+    and f :: "'b \<Rightarrow> 'a \<Rightarrow> real"
+  assume \<mu>: "is_distribution \<mu>"
+  then have \<mu>pos: "\<mu> x \<ge> 0" for x by (simp add: is_distribution_def)
+  assume f: "pred_fun top is_distribution f"
+  then have fpos[simp]: "0 \<le> f y x" and fy_sum: "f y abs_summable_on UNIV"
+    and fy_sum1: "infsetsum (f y) UNIV \<le> 1" 
+    for y x
+    by (auto simp: is_distribution_def)
+  from f have fyx1: "f y x \<le> 1" for y x 
+    by (auto simp: distribution_leq1)
+(*   from fy_sum1 fy_sum fpos have fyx1: "f y x \<le> 1" for y x
+  proof -
+    have "f y x = infsetsum (f y) {x}"
+      by auto
+    also have "\<dots> \<le> infsetsum (f y) UNIV"
+      apply (rule infsetsum_mono_neutral_left)
+      using fy_sum by auto
+    also have "\<dots> \<le> 1"
+      using fy_sum1 by simp
+    finally show ?thesis.
+  qed *)
+  assume \<mu>f_def: "\<mu>f = (\<lambda>x. \<Sum>\<^sub>ay. \<mu> y * f y x)"
+  assume \<mu>f: "is_distribution \<mu>f"
+  then have summable1: "(\<lambda>x. \<Sum>\<^sub>ay. \<mu> y * f y x) abs_summable_on UNIV"
+    unfolding \<mu>f_def is_distribution_def by simp
+  have summable2: "(\<lambda>y. \<mu> y * f y x) abs_summable_on UNIV" for x
+    apply (rule abs_summable_on_comparison_test'[where g="\<mu>"])
+    using \<mu>[unfolded is_distribution_def] apply simp_all
+    using fyx1 mult_left_le by blast
+  have prod_summable: "(\<lambda>(x, y). \<mu> y * f y x) abs_summable_on UNIV \<times> UNIV"
+    apply (rule abs_summable_product')
+    by (simp_all add: is_distribution_def summable1 summable2 \<mu>[unfolded is_distribution_def])
+  show "((\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = 1) \<longleftrightarrow>
+       (infsetsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsetsum (f x) UNIV = 1))"
+  proof
+    assume assm[symmetric]: "(\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = 1" (is "\<dots> = _")
+    also have "\<dots> = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax. \<mu> y * f y x)"
+      by (rule infsetsum_swap, fact prod_summable)
+    also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> y * (\<Sum>\<^sub>ax. f y x))"
+      apply (rule infsetsum_cong)
+      using fy_sum apply (rule infsetsum_cmult_right)
+      by simp
+    also 
+    note calc_start = calculation
+    have "\<dots> \<le> (\<Sum>\<^sub>ay. \<mu> y)"
+      apply (rule infsetsum_mono)
+      using calculation not_summable_infsetsum_eq apply fastforce
+      using \<mu>[unfolded is_distribution_def] apply blast
+      using \<mu>[unfolded is_distribution_def] fy_sum1 mult_left_le by blast
+    finally have "infsetsum \<mu> UNIV = 1"
+      using \<mu>[unfolded is_distribution_def] by linarith
+
+    moreover have "infsetsum (f y) UNIV = 1" if "0 < \<mu> y" for y
+    proof (rule ccontr)
+      assume "infsetsum (f y) UNIV \<noteq> 1"
+      then have less1: "infsetsum (f y) UNIV < 1"
+        using fy_sum1 le_less by blast
+      from calc_start have "1 = (\<Sum>\<^sub>ay. \<mu> y * infsetsum (f y) UNIV)".
+      also have "\<dots> = (\<Sum>\<^sub>ay\<in>-{y}. \<mu> y * infsetsum (f y) UNIV) + \<mu> y * infsetsum (f y) UNIV"
+        apply (subst Compl_partition2[symmetric, where A="{y}"], subst infsetsum_Un_disjoint)
+           apply (metis (full_types) abs_summable_on_subset calculation not_summable_infsetsum_eq semiring_norm(160) subset_UNIV)
+        by simp_all
+      also have "\<dots> < (\<Sum>\<^sub>ay\<in>-{y}. \<mu> y * infsetsum (f y) UNIV) + \<mu> y"
+        apply (rule add_strict_left_mono)
+        using less1 that by simp
+      also have "\<dots> \<le> (\<Sum>\<^sub>ay\<in>-{y}. \<mu> y) + \<mu> y"
+        apply (rule add_right_mono)
+        apply (rule infsetsum_mono)
+          apply (metis (full_types) calc_start abs_summable_on_subset not_summable_infsetsum_eq semiring_norm(160) subset_UNIV)
+        using \<mu>[unfolded is_distribution_def] abs_summable_on_subset apply blast
+        using \<mu>[unfolded is_distribution_def] fy_sum1 mult_left_le by blast
+      also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> y)"
+        apply (subst Compl_partition2[symmetric, where A="{y}"], subst infsetsum_Un_disjoint)
+        using \<mu>[unfolded is_distribution_def] abs_summable_on_subset apply blast
+        by simp_all
+      also have "\<dots> \<le> 1"
+        using \<mu>[unfolded is_distribution_def] by blast
+      finally have "1 < 1" by simp
+      then show False by auto
+    qed
+    ultimately show "infsetsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsetsum (f x) UNIV = 1)"
+      by auto
+  next
+    assume assm: "infsetsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsetsum (f x) UNIV = 1)"
+    have "(\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax. \<mu> y * f y x)"
+      by (rule infsetsum_swap, fact prod_summable)
+    also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> y * (\<Sum>\<^sub>ax. f y x))"
+      apply (rule infsetsum_cong)
+      using fy_sum apply (rule infsetsum_cmult_right)
+      by simp
+    also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> y)"
+      using assm apply auto
+      by (smt \<mu>[unfolded is_distribution_def] infsetsum_cong mult_cancel_left2)
+    also have "\<dots> = 1"
+      using assm by simp
+    finally show "(\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = 1".
+  qed
+qed
+
+lemma Prob_complement: "Prob \<mu> (-E) = weight \<mu> - Prob \<mu> E"
+  apply (transfer fixing: E)
+  apply (rewrite at UNIV asm_rl[of "UNIV = -E \<union> E"], simp)
+  apply (rule add_implies_diff)
+  apply (rule infsetsum_Un_disjoint[symmetric])
+  by (simp_all add: distr_abs_summable_on is_distribution_def')
+
+lemma below_bernoulli_snd[simp]: 
+  assumes [simp]: "weight D = 1"
+  shows "map_distr snd (below_bernoulli D E p) = bernoulli (max (min p 1) (Prob D E))"
+proof -
+  define pE p' p'' where "pE = Prob D E" and "p' = (p - pE) / (1 - pE)" and "p'' = max 0 (min 1 p')"
+  then have [simp]: "p'' \<ge> 0" and [simp]: "p'' \<le> 1" by auto
+  have pEpos[simp]: "pE \<ge> 0" and pEleq1[simp]: "pE \<le> 1"
+    unfolding pE_def apply (metis Prob_pos) by (metis Prob_leq1)
+  have "map_distr snd (below_bernoulli D E p) = bind_distr D (\<lambda>x. bernoulli (if x \<in> E then 1 else p'))"
+    apply (simp add: below_bernoulli_def Let_def bind_distr_map_distr[symmetric])
+    unfolding p'_def pE_def by simp
+  also have "\<dots> = bind_distr D (\<lambda>x. bernoulli (if x \<in> E then 1 else p''))"
+  proof -
+    have "bernoulli (if x \<in> E then 1 else p') = bernoulli (if x \<in> E then 1 else p'')" for x
+      apply (cases "x\<in>E", simp_all)
+      unfolding p''_def by (rule bernoulli_fix)
+    then show ?thesis by auto
+  qed
+  also have "\<dots> = bernoulli (pE + (1-pE) * p'')" (is "_ = bernoulli ?p")
+  proof (rule prob_inject[THEN iffD1], rule ext)
+    fix x :: bit
+    have [simp]: "(pE + (1 - pE) * p'') \<ge> 0"
+      by simp
+    have [simp]: "(pE + (1 - pE) * p'') \<le> 1"
+      by (metis \<open>p'' \<le> 1\<close> linepath_le_1 mult_cancel_left2 order_refl pEleq1 pEpos semiring_normalization_rules(24))
+
+    have "prob (bind_distr D (\<lambda>x. bernoulli (if x \<in> E then 1 else p''))) x = 
+          prob (bind_distr (restrict_distr D E) (\<lambda>x. bernoulli 1)) x +
+          prob (bind_distr (restrict_distr D (- E)) (\<lambda>x. bernoulli p'')) x"
+      apply (subst bind_distr_split[where E=E])
+      apply (subst bind_distr_cong[where g="%x. bernoulli 1"], simp)
+      by (subst (2) bind_distr_cong[where g="%x. bernoulli p''"], simp_all)
+    also have "\<dots> = Prob D E * prob (bernoulli 1) x + Prob D (- E) * prob (bernoulli p'') x"
+      by simp
+    also have "\<dots> = pE * prob (bernoulli 1) x + (1-pE) * prob (bernoulli p'') x"
+      by (simp add: pE_def Prob_complement)
+    also have "\<dots> = prob (bernoulli (pE + (1 - pE) * p'')) x"
+      apply (cases x)
+       apply (auto simp: bernoulli1 bernoulli0)
+      by (simp add: right_diff_distrib')
+    finally show "prob (bind_distr D (\<lambda>x. bernoulli (if x \<in> E then 1 else p''))) x = prob (bernoulli (pE + (1 - pE) * p'')) x"
+      by assumption
+  qed
+  also
+  consider (leqPE) "p \<le> pE" "p \<ge> 0" "p \<le> 1" | (geqPE) "p \<ge> pE" "p \<ge> 0" "p \<le> 1" | (less0) "p \<le> 0" | (gr1) "p \<ge> 1" "pE\<noteq>1" | (pE1) "pE=1"
+    apply atomize_elim by auto
+  then have "?p = max (min p 1) pE"
+  proof cases
+    case leqPE
+    then have "p' \<le> 0"
+      unfolding p'_def
+      by (simp add: linordered_field_class.divide_nonpos_nonneg)
+    then have "p'' = 0"
+      unfolding p''_def
+      by linarith
+    then show ?thesis
+      by (simp add: leqPE min_absorb1 max_absorb2)
+  next
+    case geqPE
+    then have "p' \<ge> 0" and "p' \<le> 1"
+      unfolding p'_def apply auto
+      by (metis diff_right_mono divide_eq_0_iff ge_iff_diff_ge_0 geqPE(3) le_numeral_extra(1) less_eq_real_def nice_ordered_field_class.divide_le_eq_1_pos p'_def pEleq1)
+    then have "p'' = p'"
+      unfolding p''_def
+      by linarith
+    then show ?thesis
+      apply (simp add: p'_def)
+      using geqPE(1) geqPE(3) by linarith
+  next
+    case less0
+    then have "p' \<le> 0"
+      unfolding p'_def
+      using pEpos pEleq1
+      by (meson basic_trans_rules(23) diff_ge_0_iff_ge diff_le_0_iff_le divide_le_0_iff)
+    then have "p'' = 0"
+      unfolding p''_def by simp
+    then show ?thesis
+      apply (simp add: p'_def)
+      using less0 pEpos by linarith
+  next
+    case gr1
+    then have "p' \<ge> 1"
+      unfolding p'_def
+      using less_eq_real_def pEleq1 by auto
+    then have "p'' = 1"
+      unfolding p''_def by simp
+    then show ?thesis 
+      apply (simp add: p'_def)
+      using gr1 
+      by (simp add: min_absorb2 max_absorb1)
+  next
+    case pE1
+    then show ?thesis
+      by simp
+  qed
+  finally show ?thesis
+    unfolding pE_def by simp
+qed
+
+lemma below_bernoulli_supp:
+  assumes "x \<in> supp (below_bernoulli D E p)"
+  shows "fst x : E \<Longrightarrow> snd x = 1"
+  using assms apply (simp add: below_bernoulli_def Let_def)
+  apply (transfer fixing: x E D p)
+  using divide_less_cancel by fastforce 
+
 
 ML_file "discrete_distributions.ML"
 
