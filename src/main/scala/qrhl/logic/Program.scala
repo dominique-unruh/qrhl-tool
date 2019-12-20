@@ -787,6 +787,11 @@ class Block(val statements:List[Statement]) extends Statement {
 }
 
 object Block {
+  def makeBlockIfNeeded(statements: Seq[Statement]): Statement = statements match {
+    case Seq(s) => s
+    case _ => Block(statements:_*)
+  }
+
   def apply(statements: Statement*) : Block = new Block(statements.toList)
   val empty = Block()
   def unapplySeq(block: Block): Some[Seq[Statement]] = Some(block.statements)

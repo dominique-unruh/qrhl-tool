@@ -372,9 +372,12 @@ object Parser extends JavaTokenParsers {
       }
     )
 
+  def wp_amount: Parser[Int] = (natural | ("all" ^^^ -1)).? ^^ { _.getOrElse(1) }
+
   def tactic_equal(implicit context:ParserContext) : Parser[EqualTac] =
     literal("equal") ~> OnceParser(
-      for (exclude <- (literal("exclude") ~> identifierList).?;
+      for (amount <- wp_amount;
+           exclude <- (literal("exclude") ~> identifierList).?;
            qvars <- (literal("qvars") ~> identifierList).?;
            midQVars <- (literal("innerqvars") ~> identifierList).?
            )
@@ -386,7 +389,7 @@ object Parser extends JavaTokenParsers {
           val qvars2 = qvars.getOrElse(Nil) map { context.environment.getQVariable }
           val midqvars2 = midQVars.getOrElse(Nil) map { context.environment.getQVariable }
 
-          EqualTac(exclude=exclude2, qvariables = qvars2, midqvariables = midqvars2)
+          EqualTac(exclude=exclude2, qvariables = qvars2, midqvariables = midqvars2, amount=amount)
         })
 
   def tactic_byqrhl(implicit context:ParserContext) : Parser[ByQRHLTac] =
