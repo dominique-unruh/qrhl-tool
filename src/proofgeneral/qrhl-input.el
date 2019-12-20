@@ -31,6 +31,9 @@
 
 ;;; Code:
 
+(if (version< emacs-version "26")
+    (error "Emacs version >= 26 required"))
+
 (require 'quail)
 
 (quail-define-package
