@@ -27,8 +27,8 @@ case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
       }
 
       val env = state.environment
-      val condLIdx = condR.index1(env).isabelleTerm
-      val condRIdx = condL.index2(env).isabelleTerm
+      val condLIdx = condL.index1(env).isabelleTerm
+      val condRIdx = condR.index2(env).isabelleTerm
       val casesSet = Set(cases:_*)
 
       val subgoals = new ListBuffer[Subgoal]
