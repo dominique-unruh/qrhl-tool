@@ -26,6 +26,7 @@
 		   proof-no-fully-processed-buffer t
 		   proof-shell-filename-escapes '(("\\\\" . "\\\\") ("\"" . "\\\""))
 		   proof-shell-cd-cmd "changeDirectory \"%s\"."
+		   proof-save-command-regexp "^adfuaisdfaoidsfasd" ; ProofGeneral produces warning when this is not set. But we don't want goal/save commands to be recognized because that makes ProofGeneral do an atomic undo.
 		   )
 
 
