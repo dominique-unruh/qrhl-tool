@@ -34,10 +34,10 @@ case class LocalTac(left : Boolean, cVariables : List[CVariable], qVariables : L
       val cvarsIdx = cvars map { _.index(left) }
       val preConflict = pre.caVariables(env).classical.intersect(cvarsIdx)
       if (preConflict.nonEmpty)
-        throw UserException(s"Precondition must not contain the classical variable(s) ${cvarsIdx map { _.name } mkString ", "}")
+        throw UserException(s"Precondition must not contain the classical variable(s) ${preConflict map { _.name } mkString ", "}")
       val postConflict = post.caVariables(env).classical.intersect(cvarsIdx)
       if (postConflict.nonEmpty)
-        throw UserException(s"Postcondition must not contain the classical variable(s) ${cvarsIdx map { _.name } mkString ", "}")
+        throw UserException(s"Postcondition must not contain the classical variable(s) ${postConflict map { _.name } mkString ", "}")
 
       // Subgoals for checking that pre/postcondition do not contain local quantum variables
       val qvarsIdx = qvars map { _.index(left) }
