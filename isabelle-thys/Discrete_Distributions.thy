@@ -1361,6 +1361,190 @@ lemma below_bernoulli_supp:
   using divide_less_cancel by fastforce 
 
 
+lemma map_distr_uniform_regular[simp]: 
+  fixes f::"'a\<Rightarrow>'b" 
+  assumes reg: "regular_betw f A B"
+  shows "map_distr f (uniform A) = uniform B"
+proof (cases "finite A")
+  case True
+  show ?thesis
+  proof (transfer fixing: f A B, rule ext)
+    from reg obtain n where reg_n: "regular_betw_n f A B n" 
+      unfolding regular_betw_def by auto
+        (* then have "finite " *)
+    from True reg have "finite B"
+      using regular_betw_finite by blast
+    from reg_n have cardAB[simp]: "card A = n * card B"
+      using regular_betw_n_card by blast
+    show "(\<Sum>\<^sub>am\<in>f -` {y}. if m \<in> A then 1 / real (card A) else 0) = (if y \<in> B then 1 / real (card B) else 0)" 
+      (is "?lhs = ?rhs") for y
+    proof (cases "y \<in> B")
+      case True
+      define R where "R = (f -` {y}) \<inter> -A"
+      from reg_n have card_y: "card (f -` {y} \<inter> A) = n" and "n\<noteq>0"
+        unfolding regular_betw_n_def apply auto
+        using True by blast
+      then have fin_y: "finite (f -` {y} \<inter> A)"
+        by (meson card_eq_0_iff)
+      have "?lhs = (\<Sum>\<^sub>am\<in>f-`{y} \<inter> A. 1 / real (card A))"
+        apply (rule infsetsum_cong_neutral)
+        by auto
+      also have "\<dots> = (\<Sum>m\<in>f-`{y} \<inter> A. 1 / real (card A))"
+        using fin_y by (rule infsetsum_finite)
+      also have "\<dots> = n / real (card A)"
+        apply (subst sum_constant_scale) unfolding card_y by auto
+      also have "\<dots> = 1 / real (card B)"
+        using \<open>n\<noteq>0\<close> by simp
+      also have "\<dots> = ?rhs"
+        using True by auto
+      finally show ?thesis .
+    next
+      case False
+      then have rhs: "?rhs = 0" by simp
+      from reg_n have "n\<noteq>0"
+        unfolding regular_betw_n_def by auto
+      from False have yA: "x \<in> f -` {y} \<Longrightarrow> x \<notin> A" for x
+        using reg_n unfolding regular_betw_n_def 
+        by (metis image_eqI vimage_singleton_eq) 
+      have "?lhs = (\<Sum>\<^sub>am\<in>f -` {y}. 0)"
+        apply (rule infsetsum_cong)
+        using yA by auto
+      also have "\<dots> = 0"
+        by auto
+      finally have "?lhs = 0" .
+      with rhs show ?thesis by simp
+    qed
+  qed  
+next
+  assume "infinite A"
+  moreover with assms have "infinite B"
+    using regular_betw_finite by auto
+  ultimately have "uniform A = 0" and "uniform B = 0"
+    by (simp_all add: uniform_infinite)
+  then show ?thesis 
+    by simp
+qed
+
+lemma bind_product_distr':
+  fixes G :: "'i::finite \<Rightarrow> 'g distr"
+    and F :: "'g \<Rightarrow> 'i \<Rightarrow> 'f distr"
+  shows "bind_distr (product_distr' G) (\<lambda>D. product_distr' (\<lambda>i. F (D i) i))
+         = product_distr' (\<lambda>i. bind_distr (G i) (\<lambda>d. F d i))"
+  by (cheat bind_product_distr')
+
+lemma product_distr'_uniform[simp]:
+  "product_distr' (\<lambda>m. uniform (S m)) = uniform {f. \<forall>m. f m \<in> S m}"
+  by (cheat product_distr'_uniform)
+
+lemma product_distr'_point_distr[simp]:
+  "product_distr' (\<lambda>i. point_distr (f i)) = point_distr f"
+  apply simp
+  apply (rewrite asm_rl[of "{fa. \<forall>i. fa i = f i} = {f}"])
+  by auto
+
+lemma bind_point_distr[simp]: "bind_distr D (\<lambda>d. point_distr (f d)) = map_distr f D"
+  by (cheat bind_point_distr)
+
+lemma point_distr_bind[simp]: "bind_distr (point_distr x) f = f x"
+  apply transfer apply auto
+  by (cheat point_distr_bind)
+
+lemma map_product_distr':
+  shows "map_distr (\<lambda>D i. F (D i) i) (product_distr' G)
+         = product_distr' (\<lambda>i. map_distr (\<lambda>d. F d i) (G i))"
+  unfolding bind_point_distr[symmetric] product_distr'_point_distr[symmetric]
+  by (subst bind_product_distr', rule)
+
+lemma total_product_distr'I:
+  assumes "\<And>x. weight (f x) = 1"
+  shows "weight (product_distr' f) = 1"
+  by (cheat total_product_distr'I)
+
+lemma bernoulli_combine_uniform:
+  assumes "disjnt A B"
+  assumes [simp]: "finite A"
+  assumes [simp]: "finite B"
+  assumes [simp]: "A \<noteq> {}"
+  assumes [simp]: "B \<noteq> {}"
+  assumes p_def: "p = card B / card (A\<union>B)"
+  shows "bind_distr (uniform A) (\<lambda>a. bind_distr (uniform B) (\<lambda>b.
+    map_distr (\<lambda>c. if c = 1 then b else a) (bernoulli p)))
+  = uniform (A\<union>B)"
+proof (rule distr_eqI)
+  fix x :: 'a
+  define select where "select a b c = (if c = 1 then b else a)" for a b :: 'a and c :: bit
+  define UA UB Ber where "UA = uniform A" and "UB = uniform B" and "Ber = bernoulli p" 
+  have [simp]: "p \<ge> 0" and [simp]: "p \<le> 1"
+    unfolding p_def by (auto simp: card_gt_0_iff card_mono)
+  have [simp]: "prob Ber 0 = 1-p" and [simp]: "prob Ber 1 = p"
+    unfolding Ber_def 
+     apply (subst bernoulli0, auto)
+    by (subst bernoulli1, auto)
+  have [simp]: "select a b 0 = a" and [simp]: "select a b 1 = b" for a b
+    unfolding select_def by auto
+  have [simp]: "weight UA = 1" and [simp]: "weight UB = 1"
+    unfolding UA_def UB_def by auto
+  from \<open>disjnt A B\<close> have [simp]: "A \<inter> B = {}"
+    by (simp add: disjnt_def)
+
+  have "prob (bind_distr UA (\<lambda>a. bind_distr UB (\<lambda>b. map_distr (select a b) Ber))) x = 
+        prob (bind_distr Ber (\<lambda>c. bind_distr UA (\<lambda>a. bind_distr UB (\<lambda>b. point_distr (select a b c))))) x"
+    (is "?lhs = _")
+    apply (subst bind_distr_twice_indep[where A=Ber])
+    apply (subst bind_distr_twice_indep[where A=Ber])
+    by simp
+  also have "\<dots> = (1 - p) * prob UA x + p * prob UB x"
+    apply (subst prob_bind_distr)
+    by (auto simp: UNIV_bit)
+  also
+  consider (A) "x\<in>A" and "x\<notin>B" | (B) "x\<in>B" and "x\<notin>A" | (none) "x\<notin>A" and "x\<notin>B"
+    using \<open>disjnt A B\<close>
+    by (meson disjnt_iff)
+  then have "(1 - p) * prob UA x + p * prob UB x = prob (uniform (A \<union> B)) x"
+  proof cases
+    case A
+    have [simp]: "real (card A) + real (card B) \<noteq> 0"
+      apply (rule order.strict_implies_not_eq[symmetric])
+      apply (rule add_pos_nonneg)
+       apply (subst of_nat_0_less_iff)
+       apply (simp add: card_gt_0_iff)
+      by simp
+    have "1 - real (card B) / real (card (A \<union> B)) = real (card A) / real (card (A \<union> B))"
+      apply (subst card_Un_disjoint; simp)
+      apply (subst card_Un_disjoint; simp)
+      apply (subst diff_divide_eq_iff)
+      by auto
+    with A show ?thesis
+      unfolding UA_def UB_def p_def by simp
+  next
+    case B
+    then show ?thesis
+      unfolding UA_def UB_def p_def by simp
+  next
+    case none
+    then show ?thesis       
+      unfolding UA_def UB_def p_def by simp
+  qed
+  finally show "?lhs = prob (uniform (A\<union>B)) x"
+    by -
+qed
+
+lemma bernoulli_p0: "bernoulli 0 = point_distr 0"
+  apply (rule distr_eqI)
+  by (auto simp: bernoulli0 bernoulli1)
+
+lemma bernoulli_p1: "bernoulli 1 = point_distr 1"
+  apply (rule distr_eqI)
+  by (auto simp: bernoulli0 bernoulli1)
+
+lemma bind_distr_map_distr': "bind_distr (map_distr f A) G = bind_distr A (\<lambda>x. G (f x))"
+  by (cheat bind_distr_map_distr')
+
+lemma map_distr_product_distr: 
+  "map_distr (\<lambda>(x,y). (f x, g y)) (product_distr A B) = product_distr (map_distr f A) (map_distr g B)"
+  by (auto simp: bind_distr_map_distr[symmetric] bind_distr_map_distr')
+
+
 ML_file "discrete_distributions.ML"
 
 end

@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main Universe "HOL-Library.Bit" "HOL-Library.FuncSet"
+  imports Main Universe "HOL-Library.Bit" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
 begin
 
 section \<open>Misc\<close>
@@ -217,6 +217,111 @@ next
     using insert by simp_all
   finally show ?case
     by -
+qed
+
+definition "regular_betw_n f A B n \<longleftrightarrow> n\<noteq>0 \<and> f ` A = B \<and> (\<forall>y\<in>B. card (f -` {y} \<inter> A) = n)"
+definition "regular_betw f A B \<longleftrightarrow> (\<exists>n. regular_betw_n f A B n)"
+
+lemma regular_betwI:
+  assumes "n\<noteq>0"
+  assumes "f ` A = B"
+  assumes "\<And>y. y\<in>B \<Longrightarrow> card (f -` {y} \<inter> A) = n"
+  shows "regular_betw f A B"
+  using assms unfolding regular_betw_n_def regular_betw_def by auto
+
+lemma regular_betw_finite:
+  assumes "regular_betw f A B"
+  shows "finite A \<longleftrightarrow> finite B"
+proof
+  assume "finite A"
+  then show "finite B"
+    using assms unfolding regular_betw_def regular_betw_n_def by blast
+next
+  from assms obtain n where reg_n: "regular_betw_n f A B n"
+    unfolding regular_betw_def by auto
+  then have finite_y: "finite (f -` {y} \<inter> A)" if "y\<in>B" for y
+    by (metis regular_betw_n_def card_infinite that)
+  assume "finite B"
+  have "A = (\<Union>y\<in>B. f -` {y} \<inter> A)"
+    using reg_n unfolding regular_betw_n_def by auto
+  moreover have "finite \<dots>"
+    using \<open>finite B\<close> finite_y by (rule finite_UN_I)
+  ultimately show "finite A"
+    by simp
+qed
+
+lemma regular_betw_n_card:
+  assumes "regular_betw_n f A B n"
+  shows "card A = n * card B"
+proof (cases "finite B")
+  case True
+  have "A = (\<Union>y\<in>B. f -` {y} \<inter> A)"
+    using assms unfolding regular_betw_n_def by auto
+  also have "card \<dots> = (\<Sum>y\<in>B. card (f -` {y} \<inter> A))"
+    apply (rule card_UN_disjoint)
+    using True assms apply (auto simp: regular_betw_n_def)
+    using card_infinite by force
+  also have "\<dots> = (\<Sum>y\<in>B. n)"
+    using True assms by (auto simp: regular_betw_n_def)
+  also have "\<dots> = n * card B"
+    using True by simp
+  finally show ?thesis .
+next
+  case False
+  then have B: "card B = 0" by simp
+  from False have "infinite A"
+    using regular_betw_finite assms regular_betw_def by metis
+  then have A: "card A = 0" by simp
+  from A B show ?thesis by simp
+qed
+
+lemma card_extensional:
+  assumes "finite X"
+  shows "card (extensional X :: ('a\<Rightarrow>'b) set) = CARD('b) ^ card X"
+  using assms
+proof induction
+  case empty
+  then show ?case by simp
+next
+  case (insert x F)
+  have "card (extensional (insert x F) :: ('a\<Rightarrow>'b) set) = card ((UNIV::'b set) \<times> (extensional F::('a\<Rightarrow>'b) set))"
+    apply (rule bij_betw_same_card[where f="\<lambda>f. (f x, f(x:=undefined))"])
+    apply (rule bij_betwI[where g="\<lambda>(y,f). f(x:=y)"])
+    apply auto
+    using extensional_arb local.insert(2) by fastforce
+  also have "\<dots> = CARD('b) * card (extensional F::('a\<Rightarrow>'b) set)"
+    using card_cartesian_product by blast
+  also have "\<dots> = CARD('b) * CARD('b) ^ card F"
+    unfolding insert by auto
+  also have "\<dots> = CARD('b) ^ (card F + 1)"
+    by auto
+  also have "\<dots> = CARD('b) ^ card (insert x F)"
+    using insert by auto
+  finally show ?case
+    by -
+qed
+
+lemma reindex_regular:
+  fixes i :: "'x \<Rightarrow> 'y::finite"
+  assumes [simp]: "inj i"
+  shows "regular_betw (\<lambda>f x. (f (i x)) :: 'z::finite) UNIV UNIV"
+proof (rule regular_betwI)
+  show \<open>surj (\<lambda>f x. f (i x))\<close>
+    by (rule surjI[where f="\<lambda>f y. f (Hilbert_Choice.inv i y)"], auto)
+  define n where "n = CARD('z) ^ card (- range i)"
+  show "n \<noteq> 0"
+    unfolding n_def by auto
+  fix g :: "'x \<Rightarrow> 'z"
+  have "card ((\<lambda>f x. f (i x)) -` {g}) = card (extensional (- range i) :: ('y\<Rightarrow>'z) set)"
+    apply (rule bij_betw_same_card[where f="(\<lambda>f::'y\<Rightarrow>'z. restrict f (- range i))"])
+    apply (rule bij_betwI[where g="\<lambda>(f::'y\<Rightarrow>'z) (y::'y). if y\<in>range i then g (Hilbert_Choice.inv i y) else f y"])
+    using ext[rule del]
+       apply (auto intro!: ext)
+    using extensional_arb by fastforce
+  also have "\<dots> = n"
+    apply (subst card_extensional) unfolding n_def by simp_all
+  finally show "card ((\<lambda>f x. f (i x)) -` {g} \<inter> UNIV) = n"
+    by simp
 qed
 
 end

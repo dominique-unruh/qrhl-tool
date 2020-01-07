@@ -90,6 +90,12 @@ consts "probability_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program
 translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c"
 hide_const probability_syntax
 
+lemma probability_sample: 
+  "probability (expression \<lbrakk>m\<rbrakk> f) (block [sample \<lbrakk>m\<rbrakk> (const_expression D)]) rho
+  = Prob D (Collect f)"
+  by (cheat probability_sample)
+
+
 named_theorems program_bodies
 named_theorems program_fv
 
