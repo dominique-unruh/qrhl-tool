@@ -96,6 +96,50 @@ lemma probability_sample:
   by (cheat probability_sample)
 
 
+lemma equal_until_bad: 
+  assumes "probability (map_expression2 (|) e b) g3 rho \<ge> probability b g4 rho"
+  assumes "probability (map_expression2 (\<lambda>e b. \<not>e&b) e b) g3 rho \<le> probability b g4 rho"
+  shows "abs (probability b g3 rho - probability b g4 rho) \<le> probability e g3 rho"
+proof -
+  define d3 d4 B E where "d3 = program_state_distrib (Programs.denotation g3 rho)"
+    and "d4 = program_state_distrib (Programs.denotation g4 rho)"
+    and "B = Collect (expression_eval b)"
+    and "E = Collect (expression_eval e)"
+  note defs = this
+
+  have EorB: "B\<union>E = Collect (expression_eval (map_expression2 (|) e b))"
+    unfolding defs by auto
+  have EandB: "B-E = Collect (expression_eval (map_expression2 (\<lambda>e b. \<not>e&b) e b))"
+    unfolding defs by auto
+
+  from assms(1) have a1: "Prob d4 B \<le> Prob d3 (B\<union>E)"
+    unfolding EorB unfolding defs probability_def by auto
+  from assms(2) have a2: "Prob d3 (B-E) \<le> Prob d4 B"
+    unfolding EandB unfolding defs probability_def by auto
+
+  have "Prob d3 B \<le> Prob d3 (B-E) + Prob d3 E"
+    apply (subst Prob_setdiff) by simp
+  also have "\<dots> \<le> Prob d4 B + Prob d3 E"
+    using a2 by linarith
+  finally have bound1: "Prob d3 B - Prob d4 B \<le> Prob d3 E"
+    by linarith
+
+  have "Prob d4 B \<le> Prob d3 (B\<union>E)"
+    using a1 by assumption
+  also have "\<dots> \<le> Prob d3 B + Prob d3 E"
+    unfolding Prob_union by simp
+  finally have bound2: "Prob d4 B - Prob d3 B \<le> Prob d3 E"
+    by linarith
+
+  from bound1 bound2 have "\<bar>Prob d3 B - Prob d4 B\<bar> \<le> Prob d3 E"
+    by linarith
+
+  then show ?thesis
+    unfolding probability_def defs by simp
+qed
+
+
+
 named_theorems program_bodies
 named_theorems program_fv
 

@@ -445,6 +445,11 @@ lemma bot_eq_lift2: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q = bo
   apply (subst bot_lift[symmetric]) apply (subst lift_eqSp, assumption) by simp
 
 
+lemma colocal_op_commute:
+  assumes "colocal_op_qvars A Q"
+  shows "A *\<^sub>o B\<guillemotright>Q = B\<guillemotright>Q *\<^sub>o A"
+  by (cheat colocal_op_commute)
+
 lemma remove_qvar_unit_op:
   "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op*)\<guillemotright>Q = A\<guillemotright>(variable_concat Q \<lbrakk>\<rbrakk>)"
 for A::"(_,_)l2bounded" and Q::"'a::universe variables"
@@ -502,11 +507,67 @@ lemma lift_vector_inj:
   by (cheat lift_vector_inj)
 
 
+lemma applyOpSpace_eq':
+  fixes S :: "_ linear_space" and A B :: "(_,_) bounded"
+  assumes [simp]: "distinct_qvars Q"
+  assumes "predicate_local S Q"
+  assumes "operator_local A Q"
+  assumes "operator_local B Q"
+  assumes AB: "\<And>x \<psi>'. x \<in> G \<Longrightarrow> \<psi>' \<in> lift_rest Q \<Longrightarrow> A \<cdot> (lift_vector x Q \<psi>') = B \<cdot> (lift_vector x Q \<psi>')"
+  assumes S_spanG: "Span G \<guillemotright> Q \<ge> S"
+  shows "A \<cdot> S = B \<cdot> S"
+proof -
+  obtain S' where S: "S = S'\<guillemotright>Q"
+    apply atomize_elim using \<open>predicate_local S Q\<close> by (rule predicate_localE)
+  obtain A' where A: "A = A'\<guillemotright>Q"
+    apply atomize_elim using \<open>operator_local A Q\<close> by (rule operator_localE)
+  obtain B' where B: "B = B'\<guillemotright>Q"
+    apply atomize_elim using \<open>operator_local B Q\<close> by (rule operator_localE)
+
+  have A'B': "A' \<cdot> x = B' \<cdot> x" if "x \<in> G" for x
+    using AB[OF that] unfolding A B 
+    apply (simp add: applyOp_lift)
+    apply (rule lift_vector_inj)
+    using lift_rest_nonempty[folded some_in_eq, of Q] by auto
+
+  have S'_spanG: "S' \<le> Span G"
+    using S_spanG unfolding S by simp
+
+  have "A' \<cdot> S' = B' \<cdot> S'"
+    using A'B' S'_spanG by (rule applyOpSpace_eq)
+
+  then show ?thesis
+    unfolding S A B by simp
+qed
+
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_vars Q"
   by (cheat index_flip_subspace_lift)
 
 lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q"
   by (cheat index_flip_subspace_lift)
+
+
+lemma ket_less_specific:
+  assumes "distinct_qvars (variable_concat X Y)"
+  shows "Span {ket (x,y)}\<guillemotright>variable_concat X Y \<le> Span {ket y}\<guillemotright>Y"
+proof -
+  have "Span {ket (x,y)}\<guillemotright>variable_concat X Y = Span {x' \<otimes> y' | x' y'. x'\<in>{ket x} \<and> y'\<in>{ket y}}\<guillemotright>variable_concat X Y"
+    unfolding ket_product by simp
+  also have "\<dots> = Span {ket x}\<guillemotright>X \<sqinter> Span {ket y}\<guillemotright>Y"
+    apply (subst span_tensor[symmetric])
+    apply (subst tensor_lift)
+    using assms by auto
+  also have "\<dots> \<le> Span {ket y}\<guillemotright>Y"
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+
+lemma comm_op_twice[simp]: "distinct_qvars Q \<Longrightarrow> comm_op\<guillemotright>Q \<cdot> (comm_op\<guillemotright>Q \<cdot> S) = (S::_ linear_space)"
+  apply (subst adj_comm_op[symmetric])
+  by (simp del: adj_comm_op flip: adjoint_lift timesOp_assoc_linear_space)
+
 
 subsection "Rewriting quantum variable lifting"
 
@@ -992,6 +1053,200 @@ lemma qvar_trafo_ex_trans:
    apply (rule qvar_trafo_mult)
   using assms by (auto simp: times_applyOp)
 
+subsection \<open>Rewriting quantum variable lifting, alternative approach\<close>
+
+definition "qvar_trafo' A Q R \<longleftrightarrow> distinct_qvars Q \<and> distinct_qvars R \<and> isometry A \<and> (\<forall>C::(_,_)l2bounded. C\<guillemotright>Q = A\<cdot>(C\<guillemotright>R)\<cdot>A*)"
+  for A::"(mem2,mem2) l2bounded"
+
+lemma qvar_trafo'_unitary: assumes "qvar_trafo' A Q R" shows "unitary A"
+proof -
+  have colocalQ: "distinct_qvars Q" and colocalR: "distinct_qvars R" using assms unfolding qvar_trafo'_def by auto
+  have "A \<cdot> A* = idOp"
+  proof -
+    have "idOp\<guillemotright>Q = A \<cdot> idOp\<guillemotright>R \<cdot> A*"
+      using assms unfolding qvar_trafo'_def by auto 
+    then show ?thesis 
+      apply (subst (asm) lift_idOp, simp add: colocalQ)
+      apply (subst (asm) lift_idOp, simp add: colocalR)
+      by simp
+  qed
+  moreover have "isometry A"
+    using assms unfolding qvar_trafo'_def by auto
+  ultimately show ?thesis
+    using isometry_def unitary_def by blast
+qed
+
+lemma qvar_trafo'_concat:
+  fixes Q R Q' R'
+  defines "QR \<equiv> variable_concat Q R" and "QR' \<equiv> variable_concat Q' R'"
+  assumes "qvar_trafo' A Q Q'"
+    and "qvar_trafo' A R R'"
+  assumes [simp]: "distinct_qvars QR"
+    and  [simp]: "distinct_qvars QR'"
+  shows "qvar_trafo' A QR QR'"
+proof -
+  have "isometry A"
+    using assms(3) unfolding qvar_trafo'_def by simp
+  define f1 f2 where "f1 C = C\<guillemotright>QR" and "f2 C = A \<cdot> C\<guillemotright>QR' \<cdot> A*" for C :: "(_,_)bounded"
+  define tensors where "tensors = {C1 \<otimes> C2| (C1::('a,'a) l2bounded) (C2::('b,'b) l2bounded). True}"
+  have "bounded_clinear f1"
+  proof (rule bounded_clinear_intro)
+    fix X :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
+      and Y :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
+      and c :: complex
+    show "f1 (X + Y) = f1 X + f1 Y"
+      by (simp add: f1_def) 
+    show "f1 (c *\<^sub>C X) = c *\<^sub>C f1 X"
+      by (simp add: f1_def) 
+    show "norm (f1 X) \<le> norm X * 1"
+      unfolding f1_def by simp
+  qed
+  have "bounded_clinear f2"
+  proof (rule bounded_clinear_intro)
+    fix X :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
+      and Y :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
+      and c :: complex
+    show "f2 (X + Y) = f2 X + f2 Y"
+      by (simp add: f2_def timesOp_dist1 timesOp_dist2 flip: lift_plusOp)
+    show "f2 (c *\<^sub>C X) = c *\<^sub>C f2 X"
+      apply (simp add: f2_def)
+      by (metis op_scalar_op scalar_op_op scaleC_lift)
+    have "norm (f2 X) \<le> norm (A \<cdot> X\<guillemotright>QR') * norm (A*)"
+      unfolding f2_def by (rule norm_mult_ineq_bounded)
+    also have "\<dots> \<le> norm A * norm (X\<guillemotright>QR') * norm (A*)"
+      apply (rule mult_right_mono)
+       apply (rule norm_mult_ineq_bounded)
+      by simp
+    also have "\<dots> = norm A * norm X * norm (A*)"
+      by simp
+    finally show "norm (f2 X) \<le> norm X * (norm A * norm (A*))"
+      unfolding f2_def 
+      by (simp add: mult.assoc mult.left_commute)
+  qed
+  have "f1 (C1 \<otimes> C2) = f2 (C1 \<otimes> C2)" for C1 C2
+  proof -
+    have "(C1\<otimes>C2)\<guillemotright>QR = C1\<guillemotright>Q \<cdot> C2\<guillemotright>R"
+      unfolding assms apply (subst lift_tensorOp[symmetric]) using assms by auto
+    also have "\<dots> = (A \<cdot> C1\<guillemotright>Q' \<cdot> A*) \<cdot> (A \<cdot> C2\<guillemotright>R' \<cdot> A*)"
+      using assms unfolding qvar_trafo'_def by metis
+    also have "\<dots> = A \<cdot> C1\<guillemotright>Q' \<cdot> (A* \<cdot> A) \<cdot> C2\<guillemotright>R' \<cdot> A*"
+      by (simp add: timesOp_assoc)
+    also have "\<dots> = A \<cdot> C1\<guillemotright>Q' \<cdot> C2\<guillemotright>R' \<cdot> A*"
+      apply (subst adjUU)
+      using qvar_trafo'_unitary
+      using assms(3) unitary_isometry by auto 
+    also have "\<dots> = A \<cdot> (C1\<otimes>C2)\<guillemotright>QR' \<cdot> A*"
+      unfolding assms apply (subst lift_tensorOp[symmetric])
+      using assms by (auto simp: timesOp_assoc)
+    finally show ?thesis 
+      unfolding f1_def f2_def by simp
+  qed
+  then have f1_f2_tensors: "f1 C = f2 C" if "C \<in> tensors" for C
+    using that unfolding tensors_def by auto
+  have "f1 = f2"
+    apply (rule ext)
+    using \<open>bounded_clinear f1\<close> \<open>bounded_clinear f2\<close> f1_f2_tensors
+    apply (rule equal_span'[where f=f1 and G=tensors])
+    using span_tensors tensors_def
+    unfolding Complex_Vector_Spaces.span_raw_def
+    by auto
+  then show ?thesis
+    unfolding f1_def f2_def qvar_trafo'_def using assms(5-6) \<open>isometry A\<close> apply auto by metis
+qed
+
+lemma qvar_trafo'_l2bounded:
+  fixes C::"(_,_) l2bounded"
+  assumes "qvar_trafo' A Q R"
+  shows "C\<guillemotright>Q = A \<cdot> C\<guillemotright>R \<cdot> A*"
+  using assms unfolding qvar_trafo'_def by auto
+
+lemma qvar_trafo'_subspace:
+  fixes S::"'a::universe subspace"
+  assumes "qvar_trafo' A Q R"
+  shows "S\<guillemotright>Q = A \<cdot>(S\<guillemotright>R)"
+proof -
+  define C where "C = Proj S"
+  have "S\<guillemotright>Q = (Proj S \<cdot> top)\<guillemotright>Q" by simp
+  also have "\<dots> = (Proj S)\<guillemotright>Q \<cdot> top" by simp
+  also have "\<dots> = (A \<cdot> Proj S\<guillemotright>R \<cdot> A*) \<cdot> top"
+    apply (subst qvar_trafo'_l2bounded) using assms by auto
+  also have "\<dots> = (A \<cdot> Proj (S\<guillemotright>R) \<cdot> A*) \<cdot> top"
+    using Proj_lift assms qvar_trafo'_def by fastforce
+  also have "\<dots> = (Proj (A \<cdot> S\<guillemotright>R)) \<cdot> top"
+    apply (subst Proj_times)
+    using assms by (simp_all add: qvar_trafo'_unitary)
+  also have "\<dots> = A \<cdot> S\<guillemotright>R" by auto
+  ultimately show ?thesis by simp
+qed
+
+lemma qvar_trafo'_colocal:
+  assumes "colocal_op_qvars A Q"
+  assumes "unitary A"
+  shows "qvar_trafo' A Q Q"
+proof -
+  from \<open>colocal_op_qvars A Q\<close> have "distinct_qvars Q"
+    unfolding distinct_qvars_def apply transfer by auto
+  moreover have "C\<guillemotright>Q = A *\<^sub>o C\<guillemotright>Q *\<^sub>o A*" for C
+  proof -
+    from \<open>unitary A\<close> have "C\<guillemotright>Q = C\<guillemotright>Q *\<^sub>o A *\<^sub>o A*"
+      by (simp add: assoc_right)
+    also from \<open>colocal_op_qvars A Q\<close> have "\<dots> = A *\<^sub>o C\<guillemotright>Q *\<^sub>o A*"
+      by (subst colocal_op_commute, simp_all)
+    finally show ?thesis by -
+  qed
+  ultimately show ?thesis
+    unfolding qvar_trafo'_def
+    using assms by auto
+qed
+
+lemma qvar_trafo'_comm_op:
+  assumes "distinct_qvars (variable_concat Q R)"
+  shows "qvar_trafo' (comm_op\<guillemotright>variable_concat Q R) Q R"
+proof -
+  define QR where "QR = variable_concat Q R"
+  from assms have dist_RQ: "distinct_qvars (variable_concat R Q)"
+    using distinct_qvars_swap by auto
+  from assms have "distinct_qvars Q" and "distinct_qvars R"
+    using dist_RQ distinct_qvarsR by blast+
+  have "C\<guillemotright>Q = comm_op\<guillemotright>QR \<cdot> C\<guillemotright>R *\<^sub>o (comm_op\<guillemotright>QR)*" for C
+  proof -
+    thm comm_op_lift[symmetric]
+    have "C\<guillemotright>Q = (C \<otimes> idOp)\<guillemotright>QR"
+      apply (subst lift_extendR) by (auto intro: assms simp: QR_def)
+    also have "\<dots> = (comm_op \<cdot> (idOp \<otimes> C) \<cdot> comm_op*) \<guillemotright> QR"
+      by (simp add: comm_op_lift)
+    also have "\<dots> = comm_op\<guillemotright>QR \<cdot> (idOp \<otimes> C)\<guillemotright>QR \<cdot> (comm_op\<guillemotright>QR)*"
+      by (simp add: QR_def assms)
+    also have "\<dots> = comm_op\<guillemotright>QR \<cdot> C\<guillemotright>R \<cdot> (comm_op\<guillemotright>QR)*"
+      unfolding QR_def apply (subst lift_extendL[symmetric, where U=C])
+      using dist_RQ by simp_all
+    finally show ?thesis
+      by auto
+  qed
+  with assms \<open>distinct_qvars Q\<close> \<open>distinct_qvars R\<close> show ?thesis
+    unfolding qvar_trafo'_def QR_def by auto
+qed
+
+lemma qvar_trafo'_comm_op':
+  assumes "distinct_qvars (variable_concat Q R)"
+  shows "qvar_trafo' (comm_op\<guillemotright>variable_concat R Q) Q R"
+  using qvar_trafo'_comm_op
+  by (metis adj_comm_op assms comm_op_lift comm_op_times_comm_op times_adjoint times_idOp1)
+
+
+lemma comm_op_space_lifted[simp]:
+  fixes Q R :: "_ variables" and S :: "_ subspace"
+  assumes "distinct_qvars (variable_concat Q R)"
+  shows "comm_op\<guillemotright>(variable_concat Q R) \<cdot> S\<guillemotright>R = S\<guillemotright>Q"
+  using assms qvar_trafo'_comm_op qvar_trafo'_subspace by fastforce
+
+lemma comm_op_space_lifted'[simp]:
+  fixes Q R :: "_ variables" and S :: "_ subspace"
+  assumes "distinct_qvars (variable_concat Q R)"
+  shows "comm_op\<guillemotright>(variable_concat Q R) \<cdot> S\<guillemotright>Q = S\<guillemotright>R"
+  by (metis assms comm_op_space_lifted comm_op_sym distinct_qvars_swap)
+
+
 
 section \<open>Measurements\<close>
 
@@ -1048,6 +1303,12 @@ lemma binary_measurement_true[simp]: "isProjector P \<Longrightarrow> mproj (bin
 
 lemma binary_measurement_false[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 0 = idOp-P"
   unfolding binary_measurement.rep_eq by auto
+
+lemma mtotal_binary_measurement[simp]: "mtotal (binary_measurement P) = isProjector P"
+  apply (transfer fixing: P) apply (cases "isProjector P") apply (auto simp: UNIV_bit)
+   apply (metis apply_idOp cinner_simps(2) diff_add_cancel plus_bounded.rep_eq) 
+  by (rule exI[of _ "ket undefined"], rule exI[of _ "ket undefined"], simp)
+
 
 section \<open>Quantum predicates (ctd.)\<close>
 
@@ -1109,6 +1370,17 @@ proof -
     apply (subst eigenspace_lift[symmetric, OF dist])
     using op_eq by simp
 qed
+
+
+lemma qvar_trafo'_quantum_equality_full:
+  fixes Q Q' U V R R'
+  defines "QR \<equiv> variable_concat Q R" and "QR' \<equiv> variable_concat Q' R'"
+  assumes "qvar_trafo' CO QR' QR"
+  shows "CO \<cdot> quantum_equality_full U Q V R = quantum_equality_full U Q' V R'"
+  unfolding quantum_equality_full_def QR_def[symmetric] QR'_def[symmetric]
+  apply (subst qvar_trafo'_subspace[where Q=QR'])
+  using assms by auto
+
 
 lemma predicate_local[intro!]: 
   assumes "qvariables_local (variable_concat Q R) S"
@@ -1526,7 +1798,20 @@ lemma applyOp_Uoracle'[simp]:
   shows "Uoracle f \<cdot> (ket x \<otimes> ket y) = ket x \<otimes> ket (y + f x)"
   by (simp flip: ket_product)
 
+
+lemma Uoracle_twice[simp]: 
+  fixes f :: "_ \<Rightarrow> _::xor_group"
+  assumes "distinct_qvars Q"
+  shows "Uoracle f\<guillemotright>Q \<cdot> (Uoracle f\<guillemotright>Q \<cdot> S) = (S::_ linear_space)"
+  apply (subst Uoracle_selfadjoint[symmetric])
+  using assms by (simp del: Uoracle_selfadjoint flip: adjoint_lift timesOp_assoc_linear_space)
+
+
 definition "proj_classical_set S = Proj (Span {ket s|s. s\<in>S})"
+
+lemma isProjector_proj_classical_set[simp]: "isProjector (proj_classical_set S)"
+  unfolding proj_classical_set_def by simp
+
 
 section \<open>Misc\<close>
 

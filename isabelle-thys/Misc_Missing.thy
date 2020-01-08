@@ -324,4 +324,9 @@ proof (rule regular_betwI)
     by simp
 qed
 
+
+lemma Collect_UNIV: "Collect P = UNIV \<longleftrightarrow> (\<forall>x. P x)"
+  by auto
+
+
 end
