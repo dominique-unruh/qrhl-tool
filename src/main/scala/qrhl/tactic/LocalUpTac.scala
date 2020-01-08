@@ -149,24 +149,36 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
       (resultBlock, ListSet(cCandidates.keys.toSeq:_*), ListSet(qCandidates.keys.toSeq:_*), id2)
     case Local(cvars, qvars, body) =>
-      val varUse = body.variableUse(env)
-      val (cvars2, qvars2, id2) = id.select(cvars, qvars)
-      val (body2, cvars3, qvars3, id3) = up(env,id2,body.unwrapTrivialBlock)
+      // cvars_sel, qvars_sel -- variables that are selected for moving up
+      val (cvars_sel, qvars_sel, id2) = id.select(cvars, qvars)
+      // cvars_body, qvars_body -- variables that are moving up from the body
+      val (body2, cvars_body, qvars_body, id3) = up(env,id2,body.unwrapTrivialBlock)
 
-      val allCVars = ListSet(cvars:_*) ++ cvars3
-      val keepCVars = allCVars -- cvars2
-      val allQVars = ListSet(qvars:_*) ++ qvars3
-      val keepQVars = allQVars -- qvars2
+      // cvars_up, qvars_up -- variables that are supposed to move further up
+      // (namely: the ones selected explicitly, and the ones moving up from the body that are not shadowed by this local)
+      val cvars_up = ListSet(cvars_sel:_*) ++ (cvars_body -- cvars)
+      val qvars_up = ListSet(qvars_sel:_*) ++ (qvars_body -- qvars)
 
-      // Variables that need to be propagated upwards. We remove variables not occurring in the body since
-      // they can just be removed
-      val upCVars = ListSet(cvars2:_*).intersect(varUse.classical)
-      val upQVars = ListSet(qvars2:_*).intersect(varUse.quantum)
+      val cvars_all = ListSet(cvars:_*) ++ cvars_body
+      val cvars_keep = cvars_all -- cvars_up
+      val qvars_all = ListSet(qvars:_*) ++ qvars_body
+      val qvars_keep = qvars_all -- qvars_up
 
-      logger.debug(s"Local: $statement, ${(cvars2,qvars2)} ${(body2,cvars3,qvars3)}")
+      assert(cvars_keep.intersect(cvars_up).isEmpty)
+      assert(qvars_keep.intersect(qvars_up).isEmpty)
+      assert(cvars_keep.union(cvars_up) == cvars_all)
+      assert(qvars_keep.union(qvars_up) == qvars_all)
 
-      val body3 = Local.makeIfNeeded(keepCVars.toSeq, keepQVars.toSeq, body2)
-      (body3, upCVars, upQVars, id3)
+      val varUse2 = body2.variableUse(env)
+      // Removing variables that do not occur in the body from those that should be propagated upwards
+      // (justification: unused local variables can be removed)
+      val cvars_up2 = cvars_up.intersect(varUse2.classical)
+      val qvars_up2 = qvars_up.intersect(varUse2.quantum)
+
+      logger.debug(s"Local: $statement, $qvars $qvars_keep $qvars_up $qvars_up2")
+
+      val body3 = Local.makeIfNeeded(cvars_keep.toSeq, qvars_keep.toSeq, body2)
+      (body3, cvars_up2, qvars_up2, id3)
   }
 }
 
