@@ -511,6 +511,7 @@ object Isabelle {
   val metaImp = Const(c.imp, propT -->: propT -->: propT)
   val boolT: Typ = HOLogic.boolT
   val implies = Const(c.implies, boolT -->: boolT -->: boolT)
+  def implies(a: Term, b: Term): Term = implies $ a $ b
   val qrhl = Const(c.qrhl, expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
 //  val qinitName = c.qinit
 

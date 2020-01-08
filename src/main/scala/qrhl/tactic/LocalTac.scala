@@ -1,6 +1,7 @@
 package qrhl.tactic
 
 import org.log4s
+import qrhl.isabelle.Isabelle
 import qrhl.logic.{Block, CVariable, Local, QVariable}
 import qrhl.tactic.FrameRuleTac.colocalityOp
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
@@ -42,10 +43,11 @@ case class LocalTac(left : Boolean, cVariables : List[CVariable], qVariables : L
       // Subgoals for checking that pre/postcondition do not contain local quantum variables
       val qvarsIdx = qvars map { _.index(left) }
       val qVarsIdxPairs = qvarsIdx.map { v => (v.variableName, v.valueTyp) }
-      val colocalityPre = AmbientSubgoal(state.isabelle.isabelle.invoke(colocalityOp,
-        (state.isabelle.contextId, pre.isabelleTerm, qVarsIdxPairs.toList)))
-      val colocalityPost = AmbientSubgoal(state.isabelle.isabelle.invoke(colocalityOp,
-        (state.isabelle.contextId, post.isabelleTerm, qVarsIdxPairs.toList)))
+      val colocalityPre = state.isabelle.isabelle.invoke(colocalityOp,
+        (state.isabelle.contextId, pre.isabelleTerm, qVarsIdxPairs.toList))
+      val colocalityPost = state.isabelle.isabelle.invoke(colocalityOp,
+        (state.isabelle.contextId, post.isabelleTerm, qVarsIdxPairs.toList))
+      val colocality = AmbientSubgoal(Isabelle.conj(colocalityPre.isabelleTerm, colocalityPost.isabelleTerm), assumptions.map(_.isabelleTerm))
 
       val newProg = Local.makeIfNeeded(cVariables, qVariables, body).toBlock
 
@@ -59,7 +61,7 @@ case class LocalTac(left : Boolean, cVariables : List[CVariable], qVariables : L
       logger.debug(colocalityPost.toString)
       logger.debug(newQRHLGoal.toString)
 
-      List(colocalityPre, colocalityPost, newQRHLGoal)
+      List(colocality, newQRHLGoal)
   }
 }
 
