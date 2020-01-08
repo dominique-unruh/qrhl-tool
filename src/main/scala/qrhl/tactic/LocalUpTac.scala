@@ -19,7 +19,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       println(s"*** Possibly unsound (not proven) tactic 'local up' applied.")
       val (left2, id) = if (side.forall(_==true)) up2(env, varID, left) else (left,varID)
       val (right2, id2) = if (side.forall(_==false)) up2(env, id, right) else (right,id)
-      if (!id2.consumed())
+      if (!id2.consumed)
         throw UserException(s"Not all variables found in $varID")
       List(QRHLSubgoal(left2.toBlock, right2.toBlock, pre, post, assumptions))
   }
@@ -186,21 +186,49 @@ object LocalUpTac {
   private val logger = log4s.getLogger
 
   sealed trait VarID {
-    def consumed() : Boolean
+    def consumed : Boolean
     def select(cvars: List[CVariable], qvars: List[QVariable]) : (List[CVariable], List[QVariable], VarID)
   }
 
+  final case object AllVarsConsumed extends VarID {
+    override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = (cvars,qvars,AllVarsConsumed)
+    override def consumed: Boolean = true
+  }
   final case object AllVars extends VarID {
-    override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = (cvars,qvars,AllVars)
-    override def consumed(): Boolean = true
+    override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = (cvars,qvars,AllVarsConsumed)
+    override def consumed: Boolean = false
   }
 
-  final case class IdxVarId(cvars : Map[CVariable, List[Int]], qvars : Map[QVariable, List[Int]]) extends VarID {
-    for (l <- cvars.valuesIterator ++ qvars.valuesIterator) {
-      assert (Utils.isSortedUnique(l))
-      assert (l.forall(_>0))
-    }
+  sealed trait SingleVarID {
+    def consumed : Boolean
+    def select : (Boolean, SingleVarID)
+  }
+  final case object AllOccurrences extends SingleVarID {
+    override def consumed: Boolean = false
+    override def select: (Boolean, SingleVarID) = (true, AllOccurrencesConsumed)
+  }
+  final case object AllOccurrencesConsumed extends SingleVarID {
+    override def consumed: Boolean = true
+    override def select: (Boolean, SingleVarID) = (true, AllOccurrencesConsumed)
+  }
+  final class Occurrences private (occurrences: List[Int]) extends SingleVarID {
+    override def consumed: Boolean = occurrences.isEmpty
 
+    override def select: (Boolean, Occurrences) = occurrences match {
+      case Nil => (false, this)
+      case 1 :: rest => (true, new Occurrences(rest.map(_-1)))
+      case rest => (false, new Occurrences(rest.map(_-1)))
+    }
+  }
+  object Occurrences {
+    def apply(occurrences: List[Int]): Occurrences = {
+      assert (Utils.isSortedUnique(occurrences))
+      assert (occurrences.forall(_>0))
+      new Occurrences(occurrences)
+    }
+  }
+
+  final case class IdxVarId(cvars : Map[CVariable, SingleVarID], qvars : Map[QVariable, SingleVarID]) extends VarID {
     override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = {
       val selectedCVars = new ListBuffer[CVariable]()
       val selectedQVars = new ListBuffer[QVariable]()
@@ -211,40 +239,28 @@ object LocalUpTac {
       for (v <- cvars) {
         cvarsID.get(v) match {
           case None =>
-          case Some(Nil) =>
-            selectedCVars += v
-          case Some(List(1)) =>
-            cvarsID = cvarsID - v
-            selectedCVars += v
-          case Some(1 :: l) =>
-            cvarsID = cvarsID.updated(v, l.map(_-1))
-            selectedCVars += v
-          case Some(l) =>
-            cvarsID = cvarsID.updated(v, l.map(_-1))
+          case Some(svID) =>
+            val (selected, svID2) = svID.select
+            if (selected) selectedCVars += v
+            cvarsID = cvarsID.updated(v, svID2)
         }
       }
 
       for (v <- qvars) {
         qvarsID.get(v) match {
           case None =>
-          case Some(Nil) =>
-            selectedQVars += v
-          case Some(List(1)) =>
-            qvarsID = qvarsID - v
-            selectedQVars += v
-          case Some(1 :: l) =>
-            qvarsID = qvarsID.updated(v, l.map(_-1))
-            selectedQVars += v
-          case Some(l) =>
-            qvarsID = qvarsID.updated(v, l.map(_-1))
+          case Some(svID) =>
+            val (selected, svID2) = svID.select
+            if (selected) selectedQVars += v
+            qvarsID = qvarsID.updated(v, svID2)
         }
       }
 
       (selectedCVars.toList, selectedQVars.toList, new IdxVarId(cvarsID, qvarsID))
     }
 
-    override def consumed(): Boolean =
-      (cvars.valuesIterator ++ qvars.valuesIterator).forall(_.isEmpty)
+    override def consumed: Boolean =
+      (cvars.valuesIterator ++ qvars.valuesIterator).forall(_.consumed)
   }
 
   object IdxVarId {
@@ -283,7 +299,12 @@ object LocalUpTac {
           qvars.update(v, sofar ++ List(i))
       }
 
-      IdxVarId(cvars.toMap.mapValues(_.sorted), qvars.toMap.mapValues(_.sorted))
+      def toSVID(l: List[Int]) = l match {
+        case Nil => AllOccurrences
+        case l => Occurrences(l.sorted)
+      }
+
+      IdxVarId(cvars.toMap.mapValues(toSVID), qvars.toMap.mapValues(toSVID))
     }
   }
 }
