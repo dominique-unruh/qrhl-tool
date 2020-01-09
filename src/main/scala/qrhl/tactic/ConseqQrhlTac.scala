@@ -39,6 +39,8 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
             val isabelle = state.isabelle.isabelle
             val contextId = state.isabelle.contextId
 
+            println(s"*** Unsound (incomplete) tactic conseq qrhl applied.")
+
             logger.warn("Not rewriting pre/post")
             // TODO
 
