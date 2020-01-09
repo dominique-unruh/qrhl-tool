@@ -10,7 +10,12 @@ theory BOLegacy
 imports Bounded_Operators.Bounded_Operators Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Bounded_Operators.ToDo Tensor_Product.ToDo_Tensor
 begin
 
-(* TODO use vector_to_bounded instead *)
+abbreviation "ell2_to_bounded :: 'a::chilbert_space \<Rightarrow> ('b::{CARD_1,enum} ell2,'a) bounded
+== vector_to_bounded"
+abbreviation "complex_to_C1 :: complex \<Rightarrow> 'a::{CARD_1,enum} ell2 == of_complex"
+abbreviation "C1_to_complex == one_dim_to_complex"
+
+(* (* TODO use vector_to_bounded instead *)
 lemma ell2_to_bounded_times_vec[simp]:
   includes bounded_notation
   shows "ell2_to_bounded \<phi> *\<^sub>v \<gamma> = one_dim_to_complex \<gamma> *\<^sub>C \<phi>"
@@ -47,19 +52,19 @@ proof -
     using  bounded_ext[where A = "ell2_to_bounded \<psi>* *\<^sub>o ell2_to_bounded \<phi>"
         and B = "\<langle>\<psi>, \<phi>\<rangle> *\<^sub>C idOp"]
     by auto
-qed
+qed *)
 
 
-lemma ortho_bot[simp]: "- bot = (top::'a::chilbert_space linear_space)"
+(* lemma ortho_bot[simp]: "- bot = (top::'a::chilbert_space linear_space)"
   apply transfer by auto
 
 lemma ortho_top[simp]: "- top = (bot::'a::chilbert_space linear_space)"
-  apply transfer by auto
+  apply transfer by auto *)
 
-lemma cinner_1_C1: "cinner 1 \<psi> = C1_to_complex \<psi>"
-  by (simp add: one_dim_to_complex_def)
+(* lemma cinner_1_C1: "cinner 1 \<psi> = C1_to_complex \<psi>"
+  by (simp add: one_dim_to_complex_def) *)
 
-lemma cinner_adjoint:
+(* lemma cinner_adjoint:
   includes bounded_notation
   shows "cinner \<psi> (A *\<^sub>v \<phi>) = cinner (A* *\<^sub>v \<psi>) \<phi>"
   by (rule adjoint_I[symmetric])
@@ -67,18 +72,18 @@ lemma cinner_adjoint:
 lemma cinner_adjoint':
   includes bounded_notation
   shows "cinner (A *\<^sub>v \<phi>) \<psi> = cinner \<phi> (A* *\<^sub>v \<psi>)"
-  by (simp add: cinner_adjoint)
+  by (simp add: cinner_adjoint) *)
 
-lemma demorgan_inf: "- ((A::_::orthocomplemented_lattice) \<sqinter> B) = - A \<squnion> - B"
+(* lemma demorgan_inf: "- ((A::_::orthocomplemented_lattice) \<sqinter> B) = - A \<squnion> - B"
   by simp
 
 lemma demorgan_sup: "- ((A::_::orthocomplemented_lattice) \<squnion> B) = - A \<sqinter> - B"
-  by simp
+  by simp *)
 
 type_synonym ('a,'b) l2bounded = "('a ell2, 'b ell2) bounded"
 type_synonym 'a subspace = "'a ell2 linear_space"
 
-declare ortho_involution[simp]
+(* declare ortho_involution[simp] *)
 
 abbreviation "applyOp == times_bounded_vec"
 
@@ -87,10 +92,10 @@ unbundle bounded_notation
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 
 adhoc_overloading
-  cdot timesOp applyOp applyOpSpace
+  cdot timesOp times_bounded_vec applyOpSpace
 
-lemma [simp]: "isProjector (Proj S)"
-  by (rule Proj_isProjector)
+(* lemma [simp]: "isProjector (Proj S)"
+  by (rule Proj_isProjector) *)
 
 lemma equal_span':
   fixes f g :: "'a::cbanach \<Rightarrow> 'b::cbanach"

@@ -271,12 +271,12 @@ lemma [code_abbrev]: "kernel (A - a *\<^sub>C idOp) = eigenspace a A"
 lemma [code]: "HOL.equal (A::_ linear_space) B = (A\<le>B \<and> B\<le>A)"
   unfolding equal_linear_space_def by auto
 
-definition [code del,code_abbrev]: "ell2_to_bounded_code (\<psi>::'a ell2) = (ell2_to_bounded \<psi>)"
+definition [code del,code_abbrev]: "vector_to_bounded_code (\<psi>::'a ell2) = (vector_to_bounded \<psi>)"
 
 lemma mat_of_bounded_ell2_to_l2bounded[code]: 
-  "mat_of_bounded (ell2_to_bounded_code \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
+  "mat_of_bounded (vector_to_bounded_code \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
   for \<psi>::"'a::enum ell2"
-  unfolding ell2_to_bounded_code_def
+  unfolding vector_to_bounded_code_def
   by (cheat 17)
 
 (* See comment at definition of remove_qvar_unit_op before proving *)
@@ -285,11 +285,11 @@ lemma mat_of_bounded_remove_qvar_unit_op[code]:
   by (cheat 17)
 
 (* TODO: more direct code equation (w/o remove_qvar_unit_op) *)
-lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (ell2_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
+lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (vector_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
   by (cheat addState_remove_qvar_unit_op)
 
 lemma [code]: "(A::'a::basis_enum linear_space) \<sqinter> B = - (- A \<squnion> - B)"
-  by (subst ortho_involution[symmetric], subst demorgan_inf, simp)
+  by (subst ortho_involution[symmetric], subst compl_inf, simp)
 
 lemma [code]: "Inf (Set_Monad l :: 'a::basis_enum linear_space set) = fold inf l top"
   unfolding Set_Monad_def
