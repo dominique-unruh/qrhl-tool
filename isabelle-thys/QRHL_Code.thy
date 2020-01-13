@@ -303,20 +303,27 @@ lemma quantum_equality_full_def_let:
 lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"
   by (cheat space_div_unlifted_code)
 
-(* Although this code would for any type 'a::basis_enum, we only define it 
+(* Although this code would work for any type 'a::basis_enum, we only define it 
    for 'a ell2 because otherwise the code generation mechanism does not accept it
-   (Message "Overloaded constant as head in equation" *)
+   (Message "Overloaded constant as head in equation") *)
 lemma cinner_ell2_code [code]: "cinner \<psi> \<phi> = scalar_prod (map_vec cnj (vec_of_ell2 \<psi>)) (vec_of_ell2 \<phi>)"
   unfolding vec_of_ell2_def
   by (cheat cinner_ell2_code)
 
-(* Although this code would for any type 'a::basis_enum, we only define it 
+(* Although this code would work for any type 'a::basis_enum, we only define it 
    for 'a ell2 because otherwise the code generation mechanism does not accept it
-   (Message "Overloaded constant as head in equation" *)
+   (Message "Overloaded constant as head in equation") *)
 lemma norm_ell2_code [code]: "norm \<psi> = 
   (let \<psi>' = vec_of_ell2 \<psi> in
     sqrt (\<Sum> i \<in> {0 ..< dim_vec \<psi>'}. let z = vec_index \<psi>' i in (Re z)\<^sup>2 + (Im z)\<^sup>2))"
   by (cheat norm_ell2_code)
+
+lemma times_ell2_code[code]: "vec_of_ell2 (\<psi> * \<phi>) == vec_of_list [vec_index (vec_of_ell2 \<psi>) 0 * vec_index (vec_of_ell2 \<phi>) 0]"
+  for \<psi> \<phi>
+  by (cheat times_ell2_code)
+
+lemma one_ell2_code[code]: "vec_of_ell2 (1 :: 'a::{CARD_1,enum} ell2) == vec_of_list [1]" 
+  by (cheat one_ell2_code)
 
 declare [[code drop: UNIV]]
 declare enum_class.UNIV_enum[code]

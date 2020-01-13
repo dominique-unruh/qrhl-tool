@@ -38,20 +38,20 @@ class O2HTacTest extends FunSuite {
         | program left := {
         |  count <- 0;
         |  (S,G,H,z) <$ o2h_distr;
-        |  call Adv_O2H(Count(queryG));
+        |  { local X,Y; call Adv_O2H(Count(queryG)); }
         | }.
         |
         | program find := {
         |  count <- 0;
         |  (S,G,H,z) <$ o2h_distr;
         |  Find <- False;
-        |  call Adv_O2H(Count(queryGS));
+        |  { local X,Y; call Adv_O2H(Count(queryGS)); }
         | }.
         |
         | program right := {
         |  count <- 0;
         |  (S,G,H,z) <$ o2h_distr;
-        |  call Adv_O2H(Count(queryH));
+        |  { local X,Y; call Adv_O2H(Count(queryH)); }
         | }.
         |
         | lemma abs ( Pr[b=1:left(rho)] - Pr[b=1:right(rho)] ) <= 2 * sqrt( (1+real q) * Pr[Find:find(rho)] ).
