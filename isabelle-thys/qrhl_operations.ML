@@ -506,22 +506,37 @@ fun conseq_qrhl_replace_in_predicate ctxt predicate beforeLeft afterLeft beforeR
           else raise TERM("Rhs of quantum equality does not end with the right variables",[predicate,qeq_right])
   val keep_left = List.take (vt_left, (length vt_left - length beforeLeft))
   val keep_right = List.take (vt_right, (length vt_right - length beforeRight))
-  val (keep_left_vt,keep_leftT) = Prog_Variables.varterm_from_list keep_left |> Prog_Variables.mk_varterm
-  val (keep_right_vt,keep_rightT) = Prog_Variables.varterm_from_list keep_right |> Prog_Variables.mk_varterm
+  val (_,keep_leftT) = Prog_Variables.varterm_from_list keep_left |> Prog_Variables.mk_varterm
+  val (_,keep_rightT) = Prog_Variables.varterm_from_list keep_right |> Prog_Variables.mk_varterm
   val _ = if keep_leftT = keep_rightT then ()
           else error "conseq_qrhl_replace_in_predicate: type error"
-  val qeq_keep = QRHL.mk_quantum_equality keep_left_vt keep_right_vt keep_leftT
+  (* val qeq_keep = QRHL.mk_quantum_equality keep_left_vt keep_right_vt keep_leftT *)
   val (replaced_left_vt,replaced_leftT) = Prog_Variables.varterm_from_list (keep_left @ afterLeft) |> Prog_Variables.mk_varterm
   val (replaced_right_vt,replaced_rightT) = Prog_Variables.varterm_from_list (keep_right @ afterRight) |> Prog_Variables.mk_varterm
   val _ = if replaced_leftT = replaced_rightT then ()
           else error "conseq_qrhl_replace_in_predicate: type error"
   val qeq_replaced = QRHL.mk_quantum_equality replaced_left_vt replaced_right_vt replaced_leftT
   val pred' = @{const inf(predicate)} $ pred_lhs $ qeq_replaced
-  val pred_keep = @{const inf(predicate)} $ pred_lhs $ qeq_keep
-  val (all_vars, all_varsT) = beforeLeft @ beforeRight @ afterLeft @ afterRight (* TODO: remove duplicates *)
+  (* val pred_keep = @{const inf(predicate)} $ pred_lhs $ qeq_keep *)
+  val all_vars0 = beforeLeft @ beforeRight @ afterLeft @ afterRight
+  val (all_vars, all_varsT) = all_vars0
                  |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+(*   val beforeLeft_set = Symtab.make_set (map fst beforeLeft)
+  val beforeRight_set = Symtab.make_set (map fst beforeRight)
+  val afterLeft_set = Symtab.make_set (map fst afterLeft)
+  val afterRight_set = Symtab.make_set (map fst afterRight) *)
+  val keepLeft_set = Symtab.make_set (map fst keep_left)
+  val keepRight_set = Symtab.make_set (map fst keep_right)
+  val _ = if not (List.exists (fn (n,_) => Symtab.defined keepLeft_set n) beforeLeft) then ()
+          else error "Left quantum equality has duplicate variables"
+  val _ = if not (List.exists (fn (n,_) => Symtab.defined keepRight_set n) beforeRight) then ()
+          else error "Right quantum equality has duplicate variables"
+  val _ = if not (List.exists (fn (n,_) => Symtab.defined keepLeft_set n) afterLeft) then ()
+          else error "Left quantum equality has variables that conflict with replacement variables"
+  val _ = if not (List.exists (fn (n,_) => Symtab.defined keepRight_set n) afterRight) then ()
+          else error "Left quantum equality has variables that conflict with replacement variables"
   val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT all_varsT --> HOLogic.boolT)
-                 $ pred_keep $ all_vars
+                 $ pred_lhs $ all_vars
 in
   (pred', colocality)
 end

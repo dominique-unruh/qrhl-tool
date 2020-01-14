@@ -230,6 +230,8 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
 object AmbientSubgoal {
   def apply(goal: Term, assms: Seq[Term]): AmbientSubgoal =
     new AmbientSubgoal(RichTerm(Isabelle.boolT, assms.foldRight(goal) { (assm,goal) => Isabelle.implies(assm,goal) }))
+  def apply(goal: RichTerm, assms: Seq[RichTerm]): AmbientSubgoal =
+    AmbientSubgoal(goal.isabelleTerm, assms.map(_.isabelleTerm))
 }
 
 trait Tactic {

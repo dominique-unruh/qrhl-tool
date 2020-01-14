@@ -8,10 +8,11 @@ import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic.QVariable
 
 import scala.collection.mutable.ListBuffer
-
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import qrhl.isabelle.Codecs._
+
+import scala.collection.immutable.ListSet
 
 case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],List[QVariable]),(List[QVariable],List[QVariable]))]) extends Tactic {
   import ConseqQrhlTac.logger
@@ -38,27 +39,30 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
             val env = state.environment
             val isabelle = state.isabelle.isabelle
             val contextId = state.isabelle.contextId
-
-            println(s"*** Unsound (incomplete) tactic conseq qrhl applied.")
-
-            logger.warn("Not rewriting pre/post")
-            // TODO
-
-            logger.warn("Missing conditions")
+            var easyGoals = ListSet.empty : ListSet[Term]
 
             val leftVars = qvariableSubst.get._1
             val rightVars = qvariableSubst.get._2
+            // Variables on the left that should be replaced
             val beforeLeft = leftVars._1
+            // Variables on the right that should be replaced
             val beforeRight = rightVars._1
+            // Variables by which should be replaced on the left
             val afterLeft = leftVars._2
+            // Variables by which should be replaced on the right
             val afterRight = rightVars._2
 
-            // Check that leftVars/rightVars do not occur in left/right program
-            val leftInter = beforeLeft.toSet.union(afterLeft.toSet).intersect(left.variableUse(env).quantum.toSet)
+            if (Isabelle.tupleT(beforeLeft.map(_.valueTyp):_*) != Isabelle.tupleT(beforeRight.map(_.valueTyp):_*))
+              throw UserException(s"Variables ${varNames(beforeLeft)} and ${varNames((beforeRight))} must have the same type.")
 
+            if (Isabelle.tupleT(afterLeft.map(_.valueTyp):_*) != Isabelle.tupleT(afterRight.map(_.valueTyp):_*))
+              throw UserException(s"Variables ${varNames(afterLeft)} and ${varNames((afterRight))} must have the same type.")
+            
+            // Check that leftVars/rightVars do not occur in left/right program
+            val leftInter = beforeLeft.toSet.union(afterLeft.toSet).intersect(left.variableUse(env).quantum)
             if (leftInter.nonEmpty)
               throw UserException(s"Cannot replace variable(s) ${varNames(leftInter)}, they are used in the left program.")
-            val rightInter = beforeRight.toSet.union(afterRight.toSet).intersect(right.variableUse(env).quantum.toSet)
+            val rightInter = beforeRight.toSet.union(afterRight.toSet).intersect(right.variableUse(env).quantum)
             if (rightInter.nonEmpty)
               throw UserException(s"Cannot replace variable(s) ${varNames(rightInter)}, they are used in the right program.")
 
@@ -77,15 +81,15 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
             val afterLeftPairs = afterLeft map { v => (v.variableName, v.valueTyp)}
             val afterRightPairs = afterRight map { v => (v.variableName, v.valueTyp)}
 
-            val cardinalityCondition1 = AmbientSubgoal(isabelle.invoke(ConseqQrhlTac.conseq_qrhl_cardinality_condition,
-              (contextId, beforeLeftPairs, afterLeftPairs)))
-            goals += cardinalityCondition1
+            val cardinalityCondition1 = isabelle.invoke(ConseqQrhlTac.conseq_qrhl_cardinality_condition,
+              (contextId, beforeLeftPairs, afterLeftPairs))
+            easyGoals += cardinalityCondition1.isabelleTerm
 
-            if (leftVars != rightVars) {
-              val cardinalityCondition2 = AmbientSubgoal(isabelle.invoke(ConseqQrhlTac.conseq_qrhl_cardinality_condition,
-                (contextId, beforeRightPairs, afterRightPairs)))
-              goals += cardinalityCondition2
-            }
+//            if (leftVars != rightVars) {
+//              val cardinalityCondition2 = AmbientSubgoal(isabelle.invoke(ConseqQrhlTac.conseq_qrhl_cardinality_condition,
+//                (contextId, beforeRightPairs, afterRightPairs)))
+//              goals += cardinalityCondition2
+//            }
 
 //            val beforeIdx = (beforeLeft.map(_.index1) ++ beforeRight.map(_.index2))  map { v => (v.variableName, v.valueTyp)}
 //            val afterIdx = (afterLeft.map(_.index1) ++ afterRight.map(_.index2))  map { v => (v.variableName, v.valueTyp)}
@@ -96,24 +100,21 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
             val beforeRightIdxPairs = beforeRight.map(_.index2)  map { v => (v.variableName, v.valueTyp)}
             val afterRightIdxPairs = afterRight.map(_.index2)  map { v => (v.variableName, v.valueTyp)}
 
-            // TODO: not correct - the pre/postcondition is allowed to contain the replaced variables in the qeq
             val (pre3, colocalityPre) = isabelle.invoke(ConseqQrhlTac.conseq_qrhl_replace_in_predicate,
               (contextId, pre2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))
-            goals += AmbientSubgoal(colocalityPre)
+            easyGoals += colocalityPre.isabelleTerm
             
-            val post3 = if (pre2 != post2) {
-              val (post3, colocalityPost) = isabelle.invoke(ConseqQrhlTac.conseq_qrhl_replace_in_predicate,
-                (contextId, post2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))
-              goals += AmbientSubgoal(colocalityPost)
-              post3
-            } else
-              pre3
+            val (post3, colocalityPost) = isabelle.invoke(ConseqQrhlTac.conseq_qrhl_replace_in_predicate,
+              (contextId, post2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))
+            easyGoals += colocalityPost.isabelleTerm
+
+            goals += AmbientSubgoal(Isabelle.conj(easyGoals.toSeq : _*), assms.map(_.isabelleTerm))
 
             (pre3, post3)
           }
 
-          goals += AmbientSubgoal(pre.leq(pre3))
-          goals += AmbientSubgoal(post3.leq(post))
+          goals += AmbientSubgoal(pre.leq(pre3), assms)
+          goals += AmbientSubgoal(post3.leq(post), assms)
 
           goals.toList
         case List(goal : AmbientSubgoal) =>
