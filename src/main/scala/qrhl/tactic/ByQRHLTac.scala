@@ -63,9 +63,12 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
           case _ => throw UserException("There should be = or <= or >= between the lhs and the rhs")
         }
 
-        val vars1 = p1.variableUse(state.environment)
-        val vars2 = p2.variableUse(state.environment)
-        val cvars = vars1.classical ++ vars2.classical
+        val vars1 = p1.variableUse(env)
+        val vars2 = p2.variableUse(env)
+        val vars1expr = RichTerm(Isabelle.boolT, v1).caVariables(env)
+        val vars2expr = RichTerm(Isabelle.boolT, v1).caVariables(env)
+
+        val cvars = vars1.classical ++ vars2.classical ++ vars1expr.classical ++ vars2expr.classical
         val requiredQvars = (vars1.quantum -- vars1.overwrittenQuantum) ++ (vars2.quantum -- vars2.overwrittenQuantum)
 
         val qvars =
