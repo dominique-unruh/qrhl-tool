@@ -1,6 +1,6 @@
 \newif\ifdraft
 
-%\drafttrue
+\drafttrue
 
 \documentclass{article}
 \usepackage[utf8]{inputenc}
@@ -192,17 +192,9 @@ The source code is published on GitHub \cite{github-source}.
 
 For installation instructions see the included \texttt{README.md}.
 
-
-\TODOQ{Document commands: include, cheat}
-
-\TODOQ{Document: isabelle command can be repeated if same theory is included,
-  isabelle command can have more than one theory as argument}
-
 \TODOQ{Document: tactic squash}
 
 \TODOQ{Document: equal-tactic arguments exclude, qvars}
-
-\TODOQ{Document: byqrhl tactic allows 1 on lhs/rhs}
 
 \TODOQ{Document: qrhl-command allows to give a name}
 
@@ -317,7 +309,27 @@ custom Isabelle/HOL theory ``\texttt{Example.thy}'' is to be used, use
 the command ``\texttt{isabelle Example.}'' instead. Custom
 Isabelle/HOL theories should import the theory \texttt{QRHL} to get
 access to qRHL-related definitions, lemmas, and simplification rules.
+Several theories can be specified in one \texttt{isabelle} command (comma separated). 
+Repeated \emph{identical} \texttt{isabelle} commands are allowed.
 See \autoref{sec:isabelle} for more information on accompanying theories.
+
+\paragraph{Including files.} The \toolidx{include}\texttt{include}
+command allows us to include a another qrhl file. ``\texttt{include
+  "filename".} includes the file \texttt{filename}.  The effect of
+including a file is the same as directly copying its content into the
+current file, with two differences:
+\begin{compactitem}
+\item A command to include a file that has already been included will
+  be ignored. This means that several files can include the same file without
+  duplicating declarations, allowing for a dag dependency structure.
+\item In interactive mode (i.e., in ProofGeneral), the content of an
+  included file is executed in ``cheat mode''\index{cheat mode}.  That
+  is, the proofs in those files are assumed to be correct and not
+  checked.  This speeds up development.  (To check a file
+  \texttt{file.qrhl} and all recursively included files, use the
+  command line \texttt{bin/qrhl file.qrhl}.)
+\end{compactitem}
+
 
 \paragraph{Declaring variables.} There are three different kinds of
 variables: classical, quantum, and ambient variables. Classical and
@@ -1922,7 +1934,8 @@ The tactic implements the following rule:
 \text{with}\quad e_1 := \idx1e,\ e'_2 := \idx2e'.
 \end{multline*}
 Here $\yy^{(1)},\dots,\yy^{(n)}$
-are the free classical variables of $P,P'$.\TODOQ{Should also include fv's of $e,e'$?}
+are the free classical variables of $P,P'$.\TODOQ{Should also include fv's of $e,e'$? 
+It's currently sound, but including those fv, it would also be sound and stronger.}
 And $\qq^{(1)},\dots,\qq^{(m)}$
 are the free quantum variables of $P,P'$.
 (Including those of any programs included recursively within $P,P'$
@@ -1943,8 +1956,11 @@ $\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
 The rule is a special case of \ruleref{QrhlElimEq}.
 
 
+\bigskip
 
-
+As a special case, the lhs or rhs can also be ``$1$'' instead of an
+expression $\mathtt{Pr}[e:P(\rho)]$. This is then interpreted as if
+the lhs/rhs was $\mathtt{Pr}[\mathtt{True}:\mathtt{skip}(\rho)]$.
 
 
 \tactic{case}
