@@ -192,8 +192,6 @@ The source code is published on GitHub \cite{github-source}.
 
 For installation instructions see the included \texttt{README.md}.
 
-\TODOQ{Document: tactic squash}
-
 \TODOQ{Document: equal-tactic arguments exclude, qvars}
 
 \TODOQ{Document: qrhl-command allows to give a name}
@@ -1150,9 +1148,26 @@ for getting the special characters (marked ``How to input:'' in the table below)
   and $\mathtt{map\_distr}\ \mathtt{snd}\ \mu$, respectively.
   \\
   \hline
+  \constdef{$\mathtt{bind\_distr}\ \mu\ f$}{\beta\ \mathtt{distr}}{
+    $\mu :: \TODOQ{}$
+    and
+    $f :: \TODOQ{}$}
+  \toolconst{bind\_distr} &
+  %
+  \TODOQ{}
+  \\
+  \hline
+  \constdef{$\mathtt{point\_distr}\ x$}{\alpha\ \mathtt{distr}}{
+    $x :: \alpha$}
+  \toolconst{point\_distr} &
+  %
+  \TODOQ{}
+  \\
+  \hline
   \constdef{$\mathtt{prob}\ \mu\ x$}{\mathtt{real}}
   {$\mathtt{\mu :: \alpha\ distr}$ and $x::\alpha$}
   \toolconst{prob} &
+  %
   %
   The probability $\mu(x)$ of $x$ according to distribution $\mu$.
   \\
@@ -2557,6 +2572,39 @@ into an ambient logic subgoal.
 }
 \]
 This rule is an immediate consequence of rules \rulerefx{Skip} and \rulerefx{Conseq}.
+
+\tactic{squash}
+
+When invoked as \texttt{squash left} (or \texttt{squash right}) on a
+qRHL subgoal, it replaces the last two assign/sample statements $\bc_1;\bc_2$ in the
+left (or right) subgoal by a single assign/sample statement $\bc'$ with the same effect.
+If the last two statements are not assign/sample statements, the tactic fails.
+
+This tactic is useful, e.g., when we want to use the \texttt{rnd}
+tactic but in one program variables $\xx$ and $\yy$ are sampled in two
+separate statements while on the other side they are sampled
+simultaneously using a joint distribution. Then we can join the two
+statements in the first program using \texttt{squash} before using
+\texttt{rnd}.
+
+We distinguish four cases.
+In the following $X,Y$ are tuples of variables, $d,e$ are expressions.
+And $e'\ z:=e\{z/X\}$.
+\begin{compactitem}
+\item $\bc_1=\sample X d$ and $\bc_2=\sample Y e$:\\
+  Then $\bc'=\sample{(X,Y)}{\mathtt{bind\_distr}\ d\ (\lambda z.\ \mathtt{map\_distr}\ (\lambda y.\ (z,y))\ (e'\ z))}$.
+\item $\bc_1=\assign X d$ and $\bc_2=\sample Y e$:\\
+  Then $\bc'=\sample{(X,Y)}{\mathtt{bind\_distr}\ (\mathtt{point\_distr}\ d)\ (\lambda z.\ \mathtt{map\_distr}\ (\lambda y.\ (z,y))\ (e'\ z))}$.
+\item $\bc_1=\sample X d$ and $\bc_2=\assign Y e$:
+  Then $\bc'=\sample{(X,Y)}{\mathtt{map\_distr}\ (\lambda y.\ (y, e\ y))\ (e'\ z)}$.
+\item $\bc_1=\assign X d$ and $\bc_2=\assign Y e$:
+  Then $\bc'=\assign{(X,Y)}{(d, e' d)}$.
+\end{compactitem}
+Note that this is allowed even if $X$ and $Y$ share
+variables.\footnote{This works because if $X$ and $Y$ share a variable $\xx$,
+  then in $(X,Y)$, the rightmost occurrence of $\xx$ determines what is assigned to $\xx$,
+  which is the intended behavior in this case.}
+
 
 \tactic{swap}
 
