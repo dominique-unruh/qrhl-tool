@@ -192,17 +192,6 @@ The source code is published on GitHub \cite{github-source}.
 
 For installation instructions see the included \texttt{README.md}.
 
-\TODOQ{Document: equal-tactic arguments exclude, qvars}
-
-\TODOQ{Document: qrhl-command allows to give a name}
-
-\TODOQ{Document: o2h tactic}
-
-\TODOQ{Document: rule where x:=y; ...}
-
-\TODOQ{Document: swap-tactic left/right x-y z., swap left/right x y. Syntax swap left discontinued}
-
-\TODOQ{Document: swap-tactic: allows to swap overlapping read variables}
 
 \subsection{Architecture}
 
@@ -445,6 +434,9 @@ programs \texttt{enc} and \texttt{dec}.)
 Note that the variables \texttt{v1,v2,v3,...,vn} do not have to include variables contained
 in the programs \texttt{p1,\dots,pn}.
 
+\TODOQ{Document: adversary has additional option for inner vars}
+
+
 Since the language in this paper does not model procedure calls,
 adversaries are simply program fragments that get executed as part of
 a larger program. In particular, there is no syntactic provision for
@@ -498,10 +490,11 @@ statements. A qRHL judgement goal is opened using the
 \begin{center}
   \toolidx{qrhl}
   \begin{lstlisting}
-    qrhl {pre} code1 ~ code2 {post}.
+    qrhl name: {pre} code1 ~ code2 {post}.
   \end{lstlisting}
 \end{center}
-Here \texttt{pre} and \texttt{post} are quantum predicates (parsed by
+Here \texttt{name} is the name under which the proven fact will be
+stored. And \texttt{pre} and \texttt{post} are quantum predicates (parsed by
 Isabelle/HOL, see \autoref{sec:tool.pred}), and \texttt{code1},
 \texttt{code2} are programs (see \autoref{sec:tool.programs} for the
 syntax). The meaning of this command is that we start a proof of the
@@ -516,9 +509,8 @@ The second kind of goal is an ambient logic goal, opened using the
     lemma name: formula.
   \end{lstlisting}
 \end{center}
-Here \texttt{name} is the name under which the proven fact will be
-stored. And \texttt{formula} is an arbitrary formula that Isabelle/HOL
-understands. For example,
+Here \texttt{formula} is an arbitrary formula that Isabelle/HOL
+understands (ambient logic). For example,
 \begin{center}
   \toolidx{qed}
   \begin{lstlisting}
@@ -871,7 +863,7 @@ A program is represented as a list of statements.\footnote{This
   \hline
 \end{longtable}
 
-
+\TODOQ{Document: local variable syntax}
 
 \subsection{Expressions and predicates}
 \label{sec:tool.pred}
@@ -1130,6 +1122,20 @@ for getting the special characters (marked ``How to input:'' in the table below)
   %
   \\
   \hline
+  \constdef{$\mathtt{prob}\ \mu\ x$}{\mathtt{real}}
+  {$\mathtt{\mu :: \alpha\ distr}$ and $x::\alpha$}
+  \toolconst{prob} &
+  %
+  %
+  The probability $\mu(x)$ of $x$ according to distribution $\mu$.
+  \\
+  \hline \constdef{$\mathtt{point\_distr}\ x$}{\alpha\
+    \mathtt{distr}}{ $x :: \alpha$} \toolconst{point\_distr} &
+  %
+  Probability distribution that samples $x$ with proability $1$. That is,
+  $\mu(y)=1$ if $y=x$ and $\mu(y)=0$ otherwise for $\mu:=\mathtt{point\_distr}\ x$.
+  \\
+  \hline
   \constdef{$\mathtt{map\_distr}\ f\ \mu$}{\beta\ \mathtt{distr}}{
     $f :: \alpha \Rightarrow \beta$
     and
@@ -1149,27 +1155,18 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \\
   \hline
   \constdef{$\mathtt{bind\_distr}\ \mu\ f$}{\beta\ \mathtt{distr}}{
-    $\mu :: \TODOQ{}$
+    $\mu :: \alpha\ \mathtt{distr}$
     and
-    $f :: \TODOQ{}$}
+    $f :: \alpha \Rightarrow \beta\ \mathtt{distr}$}
   \toolconst{bind\_distr} &
   %
-  \TODOQ{}
-  \\
-  \hline
-  \constdef{$\mathtt{point\_distr}\ x$}{\alpha\ \mathtt{distr}}{
-    $x :: \alpha$}
-  \toolconst{point\_distr} &
-  %
-  \TODOQ{}
-  \\
-  \hline
-  \constdef{$\mathtt{prob}\ \mu\ x$}{\mathtt{real}}
-  {$\mathtt{\mu :: \alpha\ distr}$ and $x::\alpha$}
-  \toolconst{prob} &
-  %
-  %
-  The probability $\mu(x)$ of $x$ according to distribution $\mu$.
+  The distribution of $y$ if $x$ is sampled according to $\mu$ and $y$
+  according to $f(x)$. (Monadic bind.) That is, $\nu(y)
+  = \sum_x \mu(x) f(x)(y)$
+  for $\nu := \mathtt{bind\_distr}\ f\ \mu$.
+
+  In particular, $\mathtt{map\_distr}\ f\ \mu
+  = \mathtt{bind\_distr}\ \mu\ (\lambda x.\ \mathtt{point\_distr}\ (f\ x))$.
   \\
   \hline
   \constdef{$\mathtt{uniform}\ M$}{\alpha\ \mathtt{distr}}
@@ -2056,6 +2053,10 @@ Both rules are special cases of \ruleref{Conseq}.
 
 \tactic{equal}
 
+\TODOQ{Document: equal-tactic arguments exclude, qvars}
+
+
+
 Converts a subgoal of the form
 $\rhl{A}{\bc;s}{\bc';s'}{B}$
 where $s,s'$ are single statements with $s=s'$ (up to few differences)
@@ -2346,6 +2347,12 @@ and the fact that $\im e$ replaced by the equivalent $e\cdot\mathtt{top}$.)
 Then with $\rhl{A}{\bc}{\bc'}{B'}$
 and \ruleref{Seq}, we get the conclusion of the rule.
 
+\tactic{o2h}
+
+
+\TODOQ{Document: o2h tactic}
+
+
 \tactic{rnd}
 
 Converts a subgoal of the form
@@ -2502,6 +2509,11 @@ $\mathtt{distinct\_qvars}\ \llbracket \qq_1,\dots,\qq_n\rrbracket$
 that will then become new subgoals in the tool and can be resolved
 using the \texttt{simp}-tactic).
 
+$l$ can be any specification of a lemma that Isabelle
+understands. That is, we can also write, e.g., $f(3)$ for the third
+part of the fact $f$, or $f[\mathtt{where}\ x=1]$ to instantiate $x$
+with $1$ in $f$, etc.
+
 \tactic{seq}
 
 When invoked as ``\texttt{\frenchspacing seq $i$ $j$: $C$}'', the tactic applies the rule
@@ -2607,6 +2619,12 @@ variables.\footnote{This works because if $X$ and $Y$ share a variable $\xx$,
 
 
 \tactic{swap}
+
+
+\TODOQ{Document: swap-tactic left/right x-y z., swap left/right x y. Syntax swap left discontinued}
+
+\TODOQ{Document: swap-tactic: allows to swap overlapping read variables}
+
 
 This tactic swaps the last two statements on the left or the right side of a qRHL subgoal,
 assuming those statements are independent (have no joint variables),
