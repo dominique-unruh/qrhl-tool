@@ -16,6 +16,8 @@ case class LocalTac(left : Boolean, cVariables : List[CVariable], qVariables : L
       val lrWord = if (left) "left" else "right"
       val env = state.environment
 
+      // cvarsInProg / qvarsInProg: local variables declared at the top of the program
+      // body: the body of that program
       val (cvarsInProg, qvarsInProg, body) = (if (left) leftProg else rightProg) match {
         case Block(Local(cvars, qvars, body)) => (cvars, qvars, body)
         case body =>

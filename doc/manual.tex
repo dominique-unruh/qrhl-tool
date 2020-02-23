@@ -434,8 +434,22 @@ programs \texttt{enc} and \texttt{dec}.)
 Note that the variables \texttt{v1,v2,v3,...,vn} do not have to include variables contained
 in the programs \texttt{p1,\dots,pn}.
 
-\TODOQ{Document: adversary has additional option for inner vars}
-
+Adversaries that call oracles introduce an additional subtlety: An
+oracle $O$ may access a global variable $\xx$, but the adversary may
+invoke $O$ in a context where $\xx$ is declared as a local
+variable. This will hide the global state of $\xx$ from $O$. Thus we
+need to know for which variables this happens. We say $\xx$ is an
+inner variable of $A$ iff $\xx$ is not a free variable, but $\xx$ is
+declared as a local variable over an oracle call. Inner variables \texttt{i1,...,in} are
+declared via:
+\begin{center}
+  \toolidx{adversary}
+  \begin{lstlisting}
+    adversary name vars ... inner i1,...,in calls ...
+  \end{lstlisting}
+\end{center}
+If \texttt{inner i1,...,in} is not given, the adversary has no inner
+variables.
 
 Since the language in this paper does not model procedure calls,
 adversaries are simply program fragments that get executed as part of
@@ -814,7 +828,27 @@ A program is represented as a list of statements.\footnote{This
   
     \textbf{Example:} ``\texttt{while (x≤0) \{ x <- x+1; y <- y+1; \}}''
     increases both \texttt{x} and \texttt{y} until \texttt{x} is positive.
-  \\
+    \\
+    \hline
+    \texttt{\{ local $X$; P \}}
+    \toolprog{local}
+    &
+    Declares local variables $X$ in the program $P$.
+
+    $X$ is a comma separated list of quantum and classical
+    variables. Those variables must have been declared using the
+    \texttt{classical\textnormal/quantum var} command. The variables
+    $X$ will then be local in the program $P$. $P$ may be a single or
+    several statements.
+
+    Semantically, \texttt{\{ local $X$; P \}} first stores the
+    variables $X$ on a stack and initializes them with a default
+    value, then runs $P$, and then restores the original value of $X$.
+
+    \textbf{Example:} ``\texttt{\{ local z; z <- x; x <- y; y <- z
+      \}}'' swaps \texttt{x} and \texttt{y} without any side effect on
+    \texttt{z}.
+    \\
   \hline
   \texttt{call $\mathit{prog}$;}
   \toolprog{call}
@@ -862,8 +896,6 @@ A program is represented as a list of statements.\footnote{This
   \\
   \hline
 \end{longtable}
-
-\TODOQ{Document: local variable syntax}
 
 \subsection{Expressions and predicates}
 \label{sec:tool.pred}
@@ -2053,7 +2085,8 @@ Both rules are special cases of \ruleref{Conseq}.
 
 \tactic{equal}
 
-\TODOQ{Document: equal-tactic arguments exclude, qvars}
+\TODOQ{Document: equal-tactic arguments:
+equal [amount:nat/all] [exclude progs-comma-sep] [qvars vars-comma-sep] [innerqvars vars-comma-sep]}
 
 
 
@@ -2095,7 +2128,7 @@ via \texttt{call} statements, but not programs that are replaced by holes.
 Let $X^\mathit{write}_j:=\idx j X^\mathit{write}$.}
 
 First, we rewrite the postcondition $B$
-is several steps. This is in order to get a new postcondition $C$ that does
+in several steps. This is in order to get a new postcondition $C$ that does
 not share any free \TODOQ{non-readonly} variables with $S$ (if possible) while strengthening the postcondition as little as
 possible.
 
@@ -2293,6 +2326,57 @@ The current goal must be a qRHL subgoal.
 Logically, this does not change the subgoal since \texttt{call $P$;}
 is just an abbreviation for the code of $P$.
 
+\tactic{local}
+
+The \texttt{local} tactic modifies the local variable declarations in
+a qRHL subgoal. It comes in several forms described below:
+
+When invoked as \texttt{local left: $X$} (for some variables $X$) on a
+qRHL subgoal of the form $\rhl A{\texttt{\{~local $Y$;
+    $P_1$~\}}}{P_2} B$, it replaces the right program by
+$\rhl A{\texttt{\{~local $X$; $P_1$~\}}}{P_2} B$.  The requirements is
+$(X\symdiff Y)\cap\fv(P_1)\cap\fv(A,B) = \varnothing$. (Basically, one
+cannot change local variables that occur in the pre-/postcondition.)
+For classical variables, this requirement is checked by the tactic,
+and for quantum variables, a new subgoal is generated for this
+requirement (which can almost always be solved with \texttt{simp!}).
+
+Analogously with \texttt{right} instead of \texttt{left}.
+
+\bigskip
+
+When invoked as \texttt{local left} on a
+qRHL subgoal of the form $\rhl A{\texttt{\{~local $Y$;
+    $P_1$~\}}}{P_2} B$, it replaces the right program by
+$\rhl A{P_1}{P_2} B$.  The requirements is
+$Y\cap\fv(P_1)\cap\fv(A,B) = \varnothing$. (Basically, one
+cannot change local variables that occur in the pre-/postcondition.)
+For classical variables, this requirement is checked by the tactic,
+and for quantum variables, a new subgoal is generated for this
+requirement (which can almost always be solved with \texttt{simp!}).
+
+Analogously with \texttt{right} instead of \texttt{left}.
+
+\bigskip
+
+When invoked as \texttt{local up} or \texttt{local up left} or
+\texttt{local up right}, it moves all local variable declarations in
+both, the left, or the right program upwards as far as possible. No
+additional subgoals are created.
+
+\bigskip
+
+When invoked as \texttt{local up $v_1,\dots,v_n$} or \texttt{local up
+  left $v_1,\dots,v_n$} or \texttt{local up right $v_1,\dots,v_n$}, it
+moves the local variable declarations specified by $v_1,\dots,v_n$
+upwards as far as possible. No additional subgoals are created. Each
+$v_i$ is either a variable name (in which case all occurrences of
+\texttt{local\ $v_i$} are moved upwards), or $v_i$ is of the form
+$v:i$, in which case the $i$-th occurrence of \texttt{local\ $v$} is
+moved upwards.
+
+\showafter{2020}{03}{01}{\TODOQ{Document: local joint tactic (when writing local-variable paper)}}
+
 \tactic{measure}
 
 When invoked as  ``\texttt{measure.}'',
@@ -2352,6 +2436,7 @@ and \ruleref{Seq}, we get the conclusion of the rule.
 
 \TODOQ{Document: o2h tactic}
 
+\TODOQ{Document: semiclassical tactic}
 
 \tactic{rnd}
 
@@ -2620,49 +2705,23 @@ variables.\footnote{This works because if $X$ and $Y$ share a variable $\xx$,
 
 \tactic{swap}
 
+When invoked as \texttt{swap left \textit{range} $n$} (or \texttt{swap
+  left \textit{range} $n$}) on a qRHL subgoal, it moves the block of
+lines identified by the range $r$ in the left (or right) program
+forward by $n$ lines. Here $r$ is either for the form ``$a$--$b$''
+(meaning lines $a$ till $b$) or ``$a$'' (meaning the last $a$ lines).
 
-\TODOQ{Document: swap-tactic left/right x-y z., swap left/right x y. Syntax swap left discontinued}
-
-\TODOQ{Document: swap-tactic: allows to swap overlapping read variables}
-
-
-This tactic swaps the last two statements on the left or the right side of a qRHL subgoal,
-assuming those statements are independent (have no joint variables),
-or more generally performs a cyclic rotation of the last $n+1$ statements.
-
-Specifically, when invoked as ``\texttt{swap left $n$}'' for $n\geq1$, it applies the rule
-\[
-  \inferrule
-  {\rhl A{s_1;\dots;s_{m};s'';s'_{1};\dots;s'_{n}}{\bc}{B}}
-  {\rhl A{s_1;\dots;s_{m};s'_{1};\dots;s'_{n};s''}{\bc}{B}}
-  \qquad
-  \text{if}
-  \qquad
-  \fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing.
-\]
-This rule holds since $s'_{1};\dots;s'_{n}$
-is $\fv(s'_{1};\dots;s'_{n})$-local
-and $s''$
-is $\fv(s'')$-local,
-and thus $\denotc{s'_{1};\dots;s'_{n};s''}=\denotc{s'';s'_{1};\dots;s'_{n}}$
-since $\fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing$.
-
-If-statements count as single statements, even if their bodies contain
-multiple statements.
-
-When invoked as ``\texttt{swap right $n$}'', the analogous rule 
-\[
-  \inferrule
-  {\rhl A{\bc}{s_1;\dots;s_{m};s'';s'_{1};\dots;s'_{n}}{B}}
-  {\rhl A{\bc}{s_1;\dots;s_{m};s'_{1};\dots;s'_{n};s''}{B}}
-  \qquad
-  \text{if}
-  \qquad
-  \fv(s'_{1};\dots;s'_{n})\cap \fv(s'')=\varnothing.
-\]
-is applied.
-
-When invoked as ``\texttt{swap left}'' or ``\texttt{swap right}'', then $n=1$ is assumed.
+The tactic can only be applied if the following condition is
+satisfied: Let $\bc$ denote the program fragment to be moved, and
+$\bd$ the $n$ lines before $\bc$.
+\begin{compactitem}
+\item The quantum variables of $\bc$ and $\bd$ must be disjoint.
+\item The written classical variables\footnote{Written classical variables
+    are those on the lhs of an assign/sample/measurement statement
+    that are not hidden under a \texttt{local} statement.}
+  of $\bc$ must be disjoint from the classical variables of $\bd$.
+\item The written classical variables of $\bd$ must be disjoint from the classical variables of $\bc$.
+\end{compactitem}
 
 \tactic{wp} 
 
