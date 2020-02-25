@@ -61,6 +61,19 @@ object Variable {
       }
     }
   }
+
+  object IndexedC {
+    def unapply(v: CVariable): Option[(CVariable, Boolean)] = {
+      if (v.name.isEmpty) return None
+      def basename = v.name.substring(0, v.name.length-1)
+
+      v.name.last match {
+        case '1' => Some((CVariable(basename, v.valueTyp), true))
+        case '2' => Some((CVariable(basename, v.valueTyp), false))
+        case _ => None
+      }
+    }
+  }
 }
 
 final case class QVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
