@@ -108,6 +108,7 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
       case A(_) => v
       case Variable.Indexed(C(cv), left) => cvars += cv.index(left)
       case Variable.Indexed(Q(_), _) =>
+      case _ => throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
     }
 
 
