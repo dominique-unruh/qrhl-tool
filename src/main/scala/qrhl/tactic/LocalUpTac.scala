@@ -50,14 +50,21 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
     *
     * If upwards movement does not stop, the variable is returned
     *
-    * It is guaranteed that Local(cVars,qVars,returnStatement) is denotationally equivalent to statement.
+    * It is guaranteed that Local(cVars,qVars,newStatement) is denotationally equivalent to statement.
     *
-    * @return (statement,cVars,qVars,id) where statement is the rewritten statement, and cVars,qVars are
+    * @return (newStatement,cVars,qVars,id) where newStatement is the rewritten statement, and cVars,qVars are
     *         lists of the variables that moved to the top. id is the updated [[VarID]] (in case some variables have been selected by id for moving).
     * */
   def up(env: Environment, id: VarID, statement: Statement): (Statement,ListSet[CVariable],ListSet[QVariable],VarID) = statement match {
     case _: Assign | _: Sample | _: QInit | _: QApply | _: Measurement | _: Call => (statement,empty,empty,id)
     case While(condition, body) =>
+      /* Uses the fact:
+
+         [[ while (e) { local V; c } ]] = [[ local Vu; while (e) { local Vd; init Vu; c } ]]
+         for Vd := V \cap fv(e), Vu := V - fv(e)
+
+       */
+
       val (body2, cVars, qVars, id2) = up(env, id, body)
       /** classical variables that can move further */
       val upCvars = cVars.diff(condition.caVariables(env).classical)
@@ -69,6 +76,19 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
       (While(condition, body4.toBlock), upCvars, qVars, id2)
     case IfThenElse(condition, thenBranch, elseBranch) =>
+      /* Uses the fact:
+
+        [[ if (e) { local Vthen; cthen } else { local Velse; celse } ]]
+        =
+        [[ local thenUp,elseUp; if (e) { local thenDown; cthen } else { local elseDown; celse } ]]
+
+        thenUp = Vthen \ fv(celse) \ fv(e)
+        elseUp = Velse \ fv(cthen) \ fv(e)
+
+        thenDown = Vthen \ thenUp
+        elseDown = Velse \ elseUp
+
+       */
       val thenVarUse = thenBranch.variableUse(env)
       val elseVarUse = elseBranch.variableUse(env)
       val condVars = condition.caVariables(env).classical
@@ -94,6 +114,19 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
     case Block(s) =>
       up(env, id, s)
     case Block(statements@_*) =>
+      /*
+
+        [[ c := {local V1; c1}; ...; {local Vn; cn} ]]
+        =
+        [[ local V; c_1'; ...; c_n' ]]
+
+        Here V := (\union V_i) - fv(c)
+        and c_i' :=  init V_i'; local V_i''; c_i'
+        where V_i' := V_i \cap V \cap (\union_{j<i} V_j)
+        and V_i'' := V_i \ V
+
+       */
+
       logger.debug("Operating on a block")
 
       // keys = variables that should be moved into the joint Local
@@ -139,16 +172,18 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
           for (c <- cvarsUp) cCandidates(c) = true
           for (q <- qvarsUp) qCandidates(q) = true
 
-          if (cvarsDown.isEmpty && qvarsDown.isEmpty)
-            statements3.append(st.toBlock.statements : _*)
-          else
-            statements3.append(Local(cvarsDown.toSeq, qvarsDown.toSeq, st.toBlock))
+          statements3.append(Local.makeIfNeeded(cvarsDown.toSeq, qvarsDown.toSeq, st.toBlock).toSeq :_*)
       }
 
       val resultBlock = Block(statements3: _*)
 
       (resultBlock, ListSet(cCandidates.keys.toSeq:_*), ListSet(qCandidates.keys.toSeq:_*), id2)
     case Local(cvars, qvars, body) =>
+      /* Uses fact:
+
+         [[ local V; c ]] = [[ c ]] if V \cap fv(c) = {}
+
+       */
       // cvars_sel, qvars_sel -- variables that are selected for moving up
       val (cvars_sel, qvars_sel, id2) = id.select(cvars, qvars)
       // cvars_body, qvars_body -- variables that are moving up from the body

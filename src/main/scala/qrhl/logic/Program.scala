@@ -241,6 +241,11 @@ case class VTCons[+A](a:VarTerm[A], b:VarTerm[A]) extends VarTerm[A] {
 
 // Programs
 sealed trait Statement {
+  def toSeq: Seq[Statement] = this match {
+    case Block(statements @ _*) => statements
+    case _ => List(this)
+  }
+
   def renameQVariable(env: Environment, from: QVariable, to: QVariable) : Statement
   def renameCVariable(env: Environment, from: CVariable, to: CVariable) : Statement
 
