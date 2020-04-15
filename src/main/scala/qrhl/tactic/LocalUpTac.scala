@@ -120,9 +120,9 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
         =
         [[ local V; c_1'; ...; c_n' ]]
 
-        Here V := (\union V_i) - fv(c)
-        and c_i' :=  init V_i'; local V_i''; c_i'
-        where V_i' := V_i \cap V \cap (\union_{j<i} V_j)
+        Here V := (union V_i) - fv(c)
+        and c_i' :=  init V_i'; local V_i''; c_i
+        where V_i' := V_i \cap V \cap (union_{j<i} V_j)
         and V_i'' := V_i \ V
 
        */

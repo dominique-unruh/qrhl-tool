@@ -13,7 +13,7 @@ name := "qrhl"
 
 version := "0.5alpha"
 
-scalaVersion := "2.12.7"
+scalaVersion := "2.12.11"
 
 scalacOptions += "-deprecation"
 
