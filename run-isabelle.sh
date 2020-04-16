@@ -11,4 +11,4 @@ if ! [ -e "$DIR/PG" ]; then
 fi
 
 chmod +x "$DIR/bin/qrhl"
-"$DIR"/bin/qrhl --isabelle auto "$@"
+"$DIR"/bin/qrhl --isabelle "$DIR/Isabelle2019-RC4" "$@"

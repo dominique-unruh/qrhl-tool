@@ -301,7 +301,7 @@ object Isabelle {
 
   private var globalIsabellePeek: Isabelle = _
   lazy val globalIsabelle: Isabelle = {
-    val isabelle = new Isabelle("auto")
+    val isabelle = new Isabelle(DistributionDirectory.distributionDirectory.resolve("Isabelle2019-RC4").normalize.toAbsolutePath.toString)
     globalIsabellePeek = isabelle
     isabelle
   }

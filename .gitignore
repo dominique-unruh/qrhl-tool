@@ -31,7 +31,7 @@
 /doc/manual.pdf
 *.synctex.gz
 /isabelle-thys/Scratch.thy
-
+/Isabelle2019-RC4
 
 # From:	https://github.com/github/gitignore/blob/master/Global/JetBrains.gitignore
 

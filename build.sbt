@@ -90,6 +90,24 @@ downloadAFP := {
   }
 }
 
+lazy val extractIsabelle = taskKey[Unit]("Extract Isabelle distribution directory")
+managedResources in Compile := (managedResources in Compile).dependsOn(extractIsabelle).value
+extractIsabelle := {
+  import scala.sys.process._
+  val extractPath = baseDirectory.value / "Isabelle2019-RC4"
+  if (!extractPath.exists) {
+    println("Extracting Isabelle")
+    try {
+      print((Process(List("tar", "xf", "Isabelle2019-RC4-linux-no-heaps.tar.xz"), cwd = baseDirectory.value)).!!)
+    } catch {
+      case e: Throwable =>
+        print("Removing " + extractPath)
+        IO.delete(extractPath)
+        throw e
+    }
+  }
+}
+
 val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c3968054988b50da7f6c02c6b.tar.gz"
 val pgPatch = "src/proofgeneral/proof-site.el.patch"
 val pgExtractPath = "target/downloads/PG"
@@ -144,14 +162,15 @@ test in assembly := {}
 enablePlugins(JavaAppPackaging)
 
 mappings in Universal ++=
-  List("proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat", "README.md", "LICENSE").
+  List("proofgeneral.sh", "run-isabelle.sh", "README.md", "LICENSE").
     map { f => baseDirectory.value / f -> f }
 
 mappings in Universal ++= {
   val base = baseDirectory.value
   val dirs = base / "isabelle-thys" +++ base / "examples"
-  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl" || "root.tex")
-  val excluded = List("isabelle-thys/Test.thy", "examples/TestEx.thy", "examples/test.qrhl", "isabelle-thys/Scratch.thy")
+  val Isabelle_files = (base / "Isabelle2019-RC4" allPaths)
+  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl" || "root.tex") +++ Isabelle_files
+  val excluded = List("isabelle-thys/Test.thy", "examples/TestEx.thy", "examples/test.qrhl", "isabelle-thys/Scratch.thy", "Isabelle2019-RC4/contrib/polyml-5.8/src/compile")
   val files2 = files.filter { f => ! excluded.exists(e => f.getPath.endsWith(e)) }
   val excludedPat = List(".*examples/test.*\\.qrhl")
   val files3 = files2.filter { f => ! excludedPat.exists(e => f.getPath.matches(e)) }
