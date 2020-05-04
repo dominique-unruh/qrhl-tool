@@ -7,6 +7,8 @@ import qrhl.UserException
 import qrhl.isabelle.Isabelle
 import qrhl.toplevel.Toplevel.ReadLine
 
+import scala.util.Random
+
 class ToplevelTest extends FunSuite {
   test("assign statement should throw UserException on undefined variable") {
     val toplevel = Toplevel.makeToplevelWithTheory()
@@ -25,7 +27,7 @@ class ToplevelTest extends FunSuite {
 }
 
 object ToplevelTest {
-
+  def randomCommandString : String = "<fake> "+Random.nextLong
   //  val isabellePath = "auto"
   //  lazy val isabelle = new Isabelle(isabellePath)
   //  def makeToplevel(): Toplevel = Toplevel.makeToplevel()

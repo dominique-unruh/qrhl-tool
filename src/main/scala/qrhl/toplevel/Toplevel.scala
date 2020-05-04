@@ -4,26 +4,31 @@ import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
+import hashedcomputation.{Computation, Hashed}
 import info.hupel.isabelle.ProverResult
+import org.eclipse.jgit.diff.HashedSequenceComparator
 import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder
 import org.jline.terminal.impl.DumbTerminal
 import org.log4s
 import qrhl.isabelle.Isabelle
 import qrhl.toplevel.Toplevel.{ReadLine, logger}
-import qrhl.{State, UserException}
+import qrhl.{State, UserException, Utils}
 
 import scala.io.StdIn
 import scala.util.matching.Regex
+import hashedcomputation.Context.default
+import org.apache.commons.codec.binary.Hex
 
 /** Not thread safe */
-class Toplevel private(initialState : State) {
+class Toplevel private(initialState : default.Hashed[State]) {
+//  val initialState: default.Hashed[State] = Hashed(_initialState, default.hash(getClass.descriptorString))
 //  def dispose(): Unit = {
 //    if (state.hasIsabelle) state.isabelle.isabelle.dispose()
 //    states = null
 //  }
 
-  def isabelle: Isabelle = state.isabelle.isabelle
+  def isabelle: Isabelle = state.value.isabelle.isabelle
 
   /** Reads one command from the input. The last line of the command must end with ".".
     * Comment lines (starting with whitespace + #) are skipped.
@@ -68,11 +73,33 @@ class Toplevel private(initialState : State) {
   }
 
 
-  private var states : List[State] = List(initialState)
+  private var states : List[default.Hashed[State]] = List(initialState)
+
+  def commandAct(commandString: String, command: Command, state: default.Hashed[State]) : default.Hashed[State] =
+    command match {
+      case includeCommand : IncludeCommand =>
+        state.value.include(state.hash, includeCommand.file)
+      case _ : IsabelleCommand =>
+        val newState = command.act(state.value)
+        val newFiles = newState.dependencies.map(_.file).toSet -- state.value.dependencies.map(_.file)
+        val filesHash = Utils.hashFileSet(newFiles)
+        logger.debug(s"Included files: $newFiles")
+        logger.debug(s"Files hash: ${Hex.encodeHexString(filesHash)}")
+        val newHash = default.hash(995424066, commandString, state.hash, filesHash)
+        Hashed(newState, newHash)
+      case _ =>
+        logger.debug(s"Command string: '${commandString}'")
+        val hash = default.hash(commandString, state)
+        val hashed = Hashed((command,state.value), hash=hash)
+        val newState = Toplevel.commandActComputation(hashed).result
+        val tag = getClass + " @ " +getClass.getClassLoader.getName
+        val newHash = default.hash(tag, hash)
+        Hashed(newState, newHash)
+  }
 
   /** Executes a single command. */
-  def execCmd(cmd:Command, position: => String) : Unit = {
-    state.filesChanged match {
+  def execCmd(cmdString:String, cmd:Command, position: => String) : Unit = {
+    state.value.filesChanged match {
       case Nil =>
       case files =>
         println(s"***** [WARNING] Some files changed (${files.mkString(", ")}).\n***** Please retract the current proof script. (C-c C-r or Proof-General->Retract Buffer)\n\n")
@@ -84,13 +111,14 @@ class Toplevel private(initialState : State) {
           if (n >= states.length)
             throw UserException(s"Cannot undo $n steps (only ${states.length-1} steps performed so far)")
 //          assert(n < states.length)
-          val isabelleLoaded = state.hasIsabelle
+          val isabelleLoaded = state.value.hasIsabelle
           states = states.drop(n)
           // If state after undo has no Isabelle, run GC to give the system the chance to finalize a possibly loaded Isabelle
-          if (!state.hasIsabelle && isabelleLoaded)
+          if (!state.value.hasIsabelle && isabelleLoaded)
             System.gc()
         case _ =>
-          val newState = cmd.act(state)
+          val normalizedCmdString = cmdString.trim.replace("  "," ").replace("  "," ").replace("  "," ").replace("  "," ")
+          val newState = commandAct(normalizedCmdString, cmd, state) // cmd.act(state)
           states = newState :: states
       }
     } catch {
@@ -98,21 +126,22 @@ class Toplevel private(initialState : State) {
       case e: ProverResult.Failure => throw UserException(e,position)
     }
 
-    println(state)
+    println(state.value)
+    logger.debug(s"State hash: ${state.hash}")
   }
 
   /** Returns the current state of the toplevel */
-  def state: State = states.head
+  def state: default.Hashed[State] = states.head
 
   /** Executes a single command. The command must be given without a final ".". */
   def execCmd(cmd:String, position: => String = "<string>") : Unit = {
     val cmd2 = try {
-      state.parseCommand(cmd)
+      state.value.parseCommand(cmd)
     } catch {
       case e:UserException => e.setPosition(position); throw e
       case e:ProverResult.Failure => throw UserException(e,position)
     }
-    execCmd(cmd2, position)
+    execCmd(cmd, cmd2, position)
   }
 
   def run(script: String): Unit = {
@@ -123,13 +152,17 @@ class Toplevel private(initialState : State) {
     //    val reader = new InputStreamReader(new FileInputStream(script.toFile), StandardCharsets.UTF_8)
     //    println("Toplevel.run",script,script.toAbsolutePath.normalize.getParent)
     val readLine = new Toplevel.ReadLine.File(script)
-    execCmd(ChangeDirectoryCommand(script.toAbsolutePath.normalize.getParent), readLine.position)
+    val directory = script.toAbsolutePath.normalize.getParent
+    val fakeCmdString = "@@@ CD @@@ "+directory.toString
+    execCmd(fakeCmdString, ChangeDirectoryCommand(directory), readLine.position)
     run(readLine)
   }
 
   def runWithErrorHandler(script: Path, abortOnError:Boolean): Boolean = {
     val readLine = new Toplevel.ReadLine.File(script)
-    execCmd(ChangeDirectoryCommand(script.toAbsolutePath.normalize.getParent), readLine.position)
+    val directory = script.toAbsolutePath.normalize.getParent
+    val fakeCmdString = "@@@ CD @@@ "+directory.toString
+    execCmd(fakeCmdString, ChangeDirectoryCommand(directory), readLine.position)
     runWithErrorHandler(readLine, abortOnError=abortOnError)
   }
 
@@ -178,6 +211,13 @@ class Toplevel private(initialState : State) {
 }
 
 object Toplevel {
+
+  // TODO: this should use a hashed computation. But not for include commands or Isabelle commands. How do we make sure that after an include,
+  // hashing still works if nothing changed inside the included file but comments?
+  private val commandActComputation : default.Function[(Command,State), State] = default.createFunction {
+    case Hashed.Value((command, state)) => command.act(state)
+  }
+
   private val commandEnd: Regex = """\.\s*$""".r
   private val commentRegex = """^\s*\#.*$""".r
 
@@ -192,15 +232,18 @@ object Toplevel {
 
   def makeToplevelWithTheory(theory:Seq[String]=Nil) : Toplevel = {
     val state = State.empty(cheating = false).loadIsabelle(theory)
-    new Toplevel(state)
+    val fileHash = Utils.hashFileSet(state.dependencies.map(_.file))
+    val hash = default.hash(519787306, fileHash)
+    new Toplevel(Hashed(state, hash))
   }
 
-  def makeToplevelFromState(state:State) : Toplevel =
+  def makeToplevelFromState(state:default.Hashed[State]) : Toplevel =
     new Toplevel(state)
 
   def makeToplevel(cheating:Boolean) : Toplevel = {
     val state = State.empty(cheating = cheating)
-    new Toplevel(state)
+    val hash = default.hash(18118772, cheating)
+    new Toplevel(Hashed(state,hash))
   }
 
   abstract class ReadLine {

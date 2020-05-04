@@ -1,4 +1,4 @@
-isabelle.
+isabelle TestEx.
 
 classical var x : bool.
 classical var y : bool.

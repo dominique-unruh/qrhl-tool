@@ -152,7 +152,8 @@ case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=fa
 case class IncludeCommand(file:Path) extends Command {
   assert(file!=null)
   println("Including file "+file)
-  override def act(state: State): State = state.include(file)
+  override def act(state: State): State =
+    throw new RuntimeException("IncludeCommand.act must not be called.")
 }
 object IncludeCommand {
   def apply(file:String) : IncludeCommand = apply(Paths.get(file))

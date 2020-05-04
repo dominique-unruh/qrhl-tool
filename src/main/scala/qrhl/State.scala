@@ -25,6 +25,8 @@ import Subgoal.codec
 import qrhl.State.logger
 
 import scala.collection.mutable
+import hashedcomputation.Context.default
+import hashedcomputation.Hashed
 
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): Subgoal
@@ -305,7 +307,7 @@ class State private (val environment: Environment,
                      val currentDirectory: Path,
                      val cheatMode : CheatMode,
                      val includedFiles : Set[Path]) {
-  def include(file: Path): State = {
+  def include(hash: default.Hash, file: Path): default.Hashed[State] = {
     val fullpath =
       try {
         currentDirectory.resolve(file).toRealPath()
@@ -316,17 +318,19 @@ class State private (val environment: Environment,
     logger.debug(s"Including $fullpath")
     if (includedFiles.contains(fullpath)) {
       println(s"Already included $file. Skipping.")
-      this
+      Hashed(this,hash)
     } else {
       val state1 = copy(includedFiles = includedFiles + fullpath, cheatMode=cheatMode.startInclude)
-      val toplevel = Toplevel.makeToplevelFromState(state1)
+      val hash1 = default.hash(43246596, hash, fullpath.toString)
+      val toplevel = Toplevel.makeToplevelFromState(Hashed(state1,hash1))
       toplevel.run(fullpath)
-      val state2 = toplevel.state
-      val state3 = toplevel.state.copy(
+      val Hashed(state2,hash2) = toplevel.state
+      val state3 = state2.copy(
         dependencies=new FileTimeStamp(fullpath)::state2.dependencies,
         cheatMode = cheatMode, // restore original cheatMode
         currentDirectory = currentDirectory) // restore original currentDirectory
-      state3
+      val hash3 = default.hash(187408913, hash2)
+      Hashed(state3, hash3)
     }
   }
 
