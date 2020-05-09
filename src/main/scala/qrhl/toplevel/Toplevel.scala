@@ -88,7 +88,7 @@ class Toplevel private(initialState : default.Hashed[State]) {
         val newHash = default.hash(995424066, commandString, state.hash, filesHash)
         Hashed(newState, newHash)
       case _ =>
-        logger.debug(s"Command string: '${commandString}'")
+//        logger.debug(s"Command string: '${commandString}'")
         val hash = default.hash(commandString, state)
         val hashed = Hashed((command,state.value), hash=hash)
         val newState = Toplevel.commandActComputation(hashed).result
