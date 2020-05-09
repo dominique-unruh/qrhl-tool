@@ -13,12 +13,21 @@ session "QRHL-Bounded_Operators" = "QRHL-Prerequisites" +
   sessions Bounded_Operators
   theories Bounded_Operators.All
 
-session "QRHL-Prerequisites" = "Bounded_Operators-Prerequisites" +
-  sessions "HOL-Library" "Jordan_Normal_Form" "HOL-Analysis" "HOL-ZF" "HOL-ex" CryptHOL "HOL-Protocol"
-  theories "Jordan_Normal_Form.Matrix_Impl" "HOL-Analysis.Inner_Product"
+(* Breaking down the prerequisites into several sessions to avoid
+   overloading computers with restricted memory *)
+session "QRHL-Prerequisites1" = "Bounded_Operators-Prerequisites" +
+  sessions "Jordan_Normal_Form"
+  theories "Jordan_Normal_Form.Matrix_Impl"
+
+session "QRHL-Prerequisites2" = "QRHL-Prerequisites1" +
+  sessions CryptHOL
+  theories CryptHOL.Misc_CryptHOL
+
+session "QRHL-Prerequisites" = "QRHL-Prerequisites2" +
+  sessions "HOL-Library"  "HOL-Analysis" "HOL-ZF" "HOL-ex"  "HOL-Protocol"
+  theories "HOL-Analysis.Inner_Product" "HOL-ex.Sqrt"  "HOL-Library.Bit"
     "HOL-Analysis.Infinite_Set_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
     "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral" "HOL-ZF.HOLZF"
-    "HOL-ex.Sqrt" CryptHOL.Misc_CryptHOL "HOL-Library.Bit"
     "HOL-Protocol.Protocol_Main" "HOL-Eisbach.Eisbach_Tools" "HOL-ex.Sketch_and_Explore"
 
 session "QRHL-Scala" = QRHL +
