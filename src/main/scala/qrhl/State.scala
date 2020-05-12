@@ -3,6 +3,7 @@ package qrhl
 import java.io.FileNotFoundException
 import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, NoSuchFileException, Path, Paths}
+import java.util
 
 import info.hupel.isabelle.{Codec, Operation, ProverResult, XMLResult, pure}
 import info.hupel.isabelle.hol.HOLogic
@@ -25,6 +26,9 @@ import Subgoal.codec
 import qrhl.State.logger
 
 import scala.collection.mutable
+import hashedcomputation.Context.default
+import hashedcomputation.Hashed
+import org.apache.commons.codec.binary.Hex
 
 sealed trait Subgoal {
   def simplify(isabelle: Isabelle.Context, facts: List[String], everywhere:Boolean): Subgoal
@@ -258,15 +262,33 @@ object UserException {
   }
 }
 
-/** A path together with a last-modification time. */
+/** A path together with a last-modification time and content hash. */
 class FileTimeStamp(val file:Path) {
-  private val time = FileTimeStamp.getLastModifiedTime(file)
-  /** Returns whether the file has changed since the FileTimeStamp was created. */
-  def changed : Boolean = time!=FileTimeStamp.getLastModifiedTime(file)
+  import FileTimeStamp.logger
 
-  override def toString: String = s"$file@$time"
+  private var time = FileTimeStamp.getLastModifiedTime(file)
+  private val hash = Utils.hashFile(file)
+  /** Returns whether the file (content) has changed since the FileTimeStamp was created.
+   * Uses the last modification time as a shortcut – the assumption is that
+   * the content will be unmodified if the time is */
+  def changed : Boolean =
+    if (time==FileTimeStamp.getLastModifiedTime(file))
+      false
+    else {
+      val newHash = Utils.hashFile(file)
+      if (util.Arrays.equals(hash,newHash)) {
+        time = FileTimeStamp.getLastModifiedTime(file)
+        false
+      } else {
+        logger.debug(s"File change detected: ${Hex.encodeHexString(hash)} -> ${Hex.encodeHexString(newHash)}")
+        true
+      }
+    }
+
+  override def toString: String = s"$file@$time@${Hex.encodeHexString(hash).substring(0,8)}"
 }
 object FileTimeStamp {
+  private val logger = log4s.getLogger
   def getLastModifiedTime(file:Path): FileTime = try
     Files.getLastModifiedTime(file)
   catch {
@@ -305,7 +327,7 @@ class State private (val environment: Environment,
                      val currentDirectory: Path,
                      val cheatMode : CheatMode,
                      val includedFiles : Set[Path]) {
-  def include(file: Path): State = {
+  def include(hash: default.Hash, file: Path): default.Hashed[State] = {
     val fullpath =
       try {
         currentDirectory.resolve(file).toRealPath()
@@ -316,17 +338,21 @@ class State private (val environment: Environment,
     logger.debug(s"Including $fullpath")
     if (includedFiles.contains(fullpath)) {
       println(s"Already included $file. Skipping.")
-      this
+      Hashed(this,hash)
     } else {
       val state1 = copy(includedFiles = includedFiles + fullpath, cheatMode=cheatMode.startInclude)
-      val toplevel = Toplevel.makeToplevelFromState(state1)
+      val hash1 = default.hash(43246596, hash, fullpath.toString)
+      val toplevel = Toplevel.makeToplevelFromState(Hashed(state1,hash1))
       toplevel.run(fullpath)
-      val state2 = toplevel.state
-      val state3 = toplevel.state.copy(
+      val Hashed(state2,hash2) = toplevel.state
+      val state3 = state2.copy(
         dependencies=new FileTimeStamp(fullpath)::state2.dependencies,
         cheatMode = cheatMode, // restore original cheatMode
         currentDirectory = currentDirectory) // restore original currentDirectory
-      state3
+
+      // We can drop the file-hash from hash3, but then we get spurious warnings about changed files
+      val hash3 = default.hash(187408913, hash2, Utils.hashFile(fullpath))
+      Hashed(state3, hash3)
     }
   }
 

@@ -13,8 +13,8 @@ class QRHLSubgoalTest extends FunSuite {
     tl.execCmd("classical var y : int", "<test>")
     tl
   }
-  def pb(str:String): RichTerm = tl.state.parseExpression(Isabelle.boolT,str)
-  def pp(str:String): RichTerm = tl.state.parseExpression(Isabelle.predicateT,str)
+  def pb(str:String): RichTerm = tl.state.value.parseExpression(Isabelle.boolT,str)
+  def pp(str:String): RichTerm = tl.state.value.parseExpression(Isabelle.predicateT,str)
 
 /*
   def testToExpressionWelltypedRoundtrip(context: Isabelle.Context, left:Block, right:Block, pre:RichTerm, post:RichTerm): Unit = {

@@ -58,7 +58,7 @@ class O2HTacTest extends FunSuite {
       """.stripMargin)
 
     val state2 = try {
-      tl.state.applyTactic(O2HTac)
+      tl.state.value.applyTactic(O2HTac)
     } catch {
       case e : ProverResult.Failure =>
         println(e.fullMessage)

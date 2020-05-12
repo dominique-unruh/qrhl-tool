@@ -1,5 +1,10 @@
 package qrhl
 
+import java.io.FileInputStream
+import java.nio.file.Path
+import java.security.MessageDigest
+
+import hashedcomputation.Context.default
 import qrhl.logic.CVariable
 import scalaz.Memo
 
@@ -9,6 +14,26 @@ import scala.ref.SoftReference
 object Utils {
   def symmetricDifferrence[A](a: Set[A], b: Set[A]) : Set[A] =
     (a -- b) ++ (b -- a)
+
+  private val digest = MessageDigest.getInstance("SHA-1")
+  def hashFile(file: Path): Array[Byte] = {
+    val inputStream = new FileInputStream(file.toFile)
+    val content = inputStream.readAllBytes()
+    digest.synchronized {
+      digest.reset()
+      digest.digest(content)
+    }
+  }
+
+  def hashFileSet(files: Iterable[Path]) : Array[Byte] = {
+    val hashes = files.toSeq.sorted.map(Utils.hashFile)
+    digest.synchronized {
+      digest.reset()
+      for (h <- hashes)
+        digest.update(h)
+      digest.digest()
+    }
+  }
 
   def isSorted[A](list: List[A])(implicit ord: Ordering[A]): Boolean = {
     if (list.isEmpty) return true

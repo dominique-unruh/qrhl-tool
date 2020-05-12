@@ -1,6 +1,7 @@
-isabelle.
+isabelle TestEx.
 
 classical var x : int.
+
 
 program P := {
   x <- x + 1;

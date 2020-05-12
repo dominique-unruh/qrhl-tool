@@ -21,14 +21,14 @@ class RndTacTest extends FunSuite {
     tl.execCmd("qrhl {top} x <$ uniform UNIV; ~ x <$ uniform UNIV; {top}")
     val st =
       try
-        tl.state.applyTactic(RndEqualTac)
+        tl.state.value.applyTactic(RndEqualTac)
       catch {
         case e : ProverResult.Failure => println(e.fullMessage); throw e }
 
     assert(st.goal.length==1)
     val post = st.goal.head.asInstanceOf[QRHLSubgoal].post
     assert(post.toString == "ℭ𝔩𝔞[uniform UNIV = uniform UNIV] ⊓ (⨅z∈supp (uniform UNIV). ⊤)")
-    post.checkWelltyped(tl.state.isabelle, Isabelle.predicateT)
+    post.checkWelltyped(tl.state.value.isabelle, Isabelle.predicateT)
   }
 
   test("rnd witness") {
@@ -37,9 +37,9 @@ class RndTacTest extends FunSuite {
     tl.execCmd("rnd x,x <- map_distr (%x. (x,x)) (uniform UNIV)")
     val st = tl.state
 
-    assert(st.goal.length==1)
-    val post = st.goal.head.asInstanceOf[QRHLSubgoal].post
+    assert(st.value.goal.length==1)
+    val post = st.value.goal.head.asInstanceOf[QRHLSubgoal].post
 //    assert(post.toString == "???")
-    post.checkWelltyped(tl.state.isabelle, Isabelle.predicateT)
+    post.checkWelltyped(tl.state.value.isabelle, Isabelle.predicateT)
   }
 }

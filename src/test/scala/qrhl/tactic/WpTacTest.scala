@@ -13,9 +13,9 @@ class WpTacTest extends FunSuite {
         |wp left.
         |wp right.
       """.stripMargin)
-    val goals = toplevel.state.goal
+    val goals = toplevel.state.value.goal
     assert(goals.length==1)
-    goals.head.checkWelltyped(toplevel.state.isabelle)
+    goals.head.checkWelltyped(toplevel.state.value.isabelle)
   }
 
   test("WpTac well-typed (qinit, two in one)") {
@@ -26,9 +26,9 @@ class WpTacTest extends FunSuite {
         |qrhl {top} q <q ket 0; ~ q <q ket 0; {top}.
         |wp 1 1.
       """.stripMargin)
-    val goals = toplevel.state.goal
+    val goals = toplevel.state.value.goal
     assert(goals.length==1)
-    goals.head.checkWelltyped(toplevel.state.isabelle)
+    goals.head.checkWelltyped(toplevel.state.value.isabelle)
   }
 
   test("WpTac well-typed (assign)") {
@@ -38,11 +38,11 @@ class WpTacTest extends FunSuite {
         |classical var q : bit.
         |qrhl {top} q <- 0; ~ q <- 0; {top}.
       """.stripMargin)
-    toplevel.execCmd(TacticCommand(WpTac(left=1,right=0)), "<test>")
-    toplevel.execCmd(TacticCommand(WpTac(left=0,right=1)), "<test>")
-    val goals = toplevel.state.goal
+    toplevel.execCmd(ToplevelTest.randomCommandString, TacticCommand(WpTac(left=1,right=0)), "<test>")
+    toplevel.execCmd(ToplevelTest.randomCommandString, TacticCommand(WpTac(left=0,right=1)), "<test>")
+    val goals = toplevel.state.value.goal
     assert(goals.length==1)
-    goals.head.checkWelltyped(toplevel.state.isabelle)
+    goals.head.checkWelltyped(toplevel.state.value.isabelle)
   }
 
   test("WpTac well-typed (sample)") {
@@ -54,8 +54,8 @@ class WpTacTest extends FunSuite {
         |wp left.
         |wp right.
       """.stripMargin)
-    val goals = toplevel.state.goal
+    val goals = toplevel.state.value.goal
     assert(goals.length==1)
-    goals.head.checkWelltyped(toplevel.state.isabelle)
+    goals.head.checkWelltyped(toplevel.state.value.isabelle)
   }
 }
