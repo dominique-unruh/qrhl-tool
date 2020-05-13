@@ -118,80 +118,97 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       val elseBody = Local.makeIfNeeded(class_Velsedown.toSeq, quant_Velsedown.toSeq, celse)
 
       (IfThenElse(condition,thenBody.toBlock,elseBody.toBlock), class_Vup, quant_Vup, id3)
-    case Block() => (statement, empty, empty, id)
+    case Block() =>
+      /* Here the statement is not changed, so no lemma is needed */
+      (statement, empty, empty, id)
     case Block(s) =>
+      /* Block(s) is semantically equal to s, so we replace it by s before proceeding */
       up(env, id, s)
     case Block(statements@_*) =>
       /*
 
         [[ c := {local V1; c1}; ...; {local Vn; cn} ]]
         =
-        [[ local V; c_1'; ...; c_n' ]]
+        [[ local Vup; c_1'; ...; c_n' ]]
 
-        Here V := (union V_i) - fv(c)
-        and c_i' :=  init V_i'; local V_i''; c_i
-        where V_i' := V_i \cap V \cap (union_{j<i} V_j)
-        and V_i'' := V_i \ V
+        Vup := (union V_i) - fv(c)
+        c_i' :=  init V*_i; local Vdown_i; c_i
+        W_1 := Vup
+        W_{i+1} := W_i \cup V*_i - (fv(c_i) - Vdown_i)
+        Vdown_i := V_i - Vup
+        V*_i := V_i - Vdown_i - W_i
 
        */
 
       logger.debug("Operating on a block")
 
-      // keys = variables that should be moved into the joint Local
-      // true = variable has already occurred in the statements processed so far (in the loop below)
-      val cCandidates = new mutable.LinkedHashMap[CVariable, Boolean]()
-      val qCandidates = new mutable.LinkedHashMap[QVariable, Boolean]()
-
-      var id2 = id
-      val statements2 = for (s <- statements) yield {
-        val (s2,cVars,qVars,id_) = up(env, id2, s)
-        for (c <- cVars) cCandidates(c) = false
-        for (q <- qVars) qCandidates(q) = false
-        id2 = id_
-        (s2,cVars,qVars)
+      // Contains the triples (class_Vi, quant_Vi, ci) for all i
+      val Vi_ci_list = mutable.ListBuffer[(ListSet[CVariable], ListSet[QVariable], Statement)]()
+      var idVar = id
+      for (s <- statements) {
+        val (ci, class_Vi, quant_Vi, newId) = up(env, idVar, s)
+        idVar = newId
+        Vi_ci_list += ((class_Vi, quant_Vi, ci))
       }
 
-      logger.debug(s"Statements after inner processing: $statements2")
-      logger.debug(s"VarID after inner processing: $id2")
-      logger.debug(s"Candidates (preliminary): ${cCandidates.keys}; ${qCandidates.keys}")
+      logger.debug(s"Vi / ci: $Vi_ci_list")
+      logger.debug(s"VarID after inner processing: $idVar")
 
-      // Collect free variables of this block (those cannot be put under a Local)
-      val varUse = statement.variableUse(env)
+      val c = Block(Vi_ci_list map { case (class_V,quant_V,c) => Local.makeIfNeeded(class_V.toSeq,quant_V.toSeq,c.toBlock) } : _*)
 
-      for (c <- varUse.classical)
-        cCandidates.remove(c)
-      for (q <- varUse.quantum)
-        qCandidates.remove(q)
+      val cVarUse = c.variableUse(env)
 
-      logger.debug(s"Candidates (cleaned):     ${cCandidates.keys}; ${qCandidates.keys}")
+      val class_Vup = ListSet(Vi_ci_list.flatMap(_._1):_*) -- cVarUse.classical
+      val quant_Vup = ListSet(Vi_ci_list.flatMap(_._2):_*) -- cVarUse.quantum
 
-      val statements3 = new ListBuffer[Statement]
+      logger.debug(s"Vup: $class_Vup, $quant_Vup")
 
-      for ((st, cvars, qvars) <- statements2) {
-          val cvarsUp = cvars.filter(cCandidates.contains)
-          val cvarsDown = cvars.filterNot(cCandidates.contains)
-          val qvarsUp = qvars.filter(qCandidates.contains)
-          val qvarsDown = qvars.filterNot(qCandidates.contains)
+      // W_i is initially W_1
+      var class_W_i = class_Vup
+      var quant_W_i = quant_Vup
 
-          val cvarsInit = cvarsUp.filter(cCandidates(_) == true)
-          val qvarsInit = qvarsUp.filter(qCandidates(_) == true)
+      // Will contain c1';c2';...;cn'
+      var ci_prime_joined = new ListBuffer[Statement]()
 
-          statements3.append(init(cvarsInit.toSeq, qvarsInit.toSeq).statements: _*)
-          for (c <- cvarsUp) cCandidates(c) = true
-          for (q <- qvarsUp) qCandidates(q) = true
+      for ((class_Vi, quant_Vi, ci) <- Vi_ci_list) {
 
-          statements3.append(Local.makeIfNeeded(cvarsDown.toSeq, qvarsDown.toSeq, st.toBlock).toSeq :_*)
+        logger.debug(s"Processing $ci with locals $class_Vi, $quant_Vi")
+
+        // Vdown_i := V_i - Vup
+        val class_Vdown_i = class_Vi -- class_Vup
+        val quant_Vdown_i = quant_Vi -- quant_Vup
+
+        // Wi is initialized in previous iteration of the loop
+
+        // V*_i := V_i - Vdown_i - W_i
+        val class_Vstar_i = class_Vi -- class_Vdown_i -- class_W_i
+        val quant_Vstar_i = quant_Vi -- quant_Vdown_i -- quant_W_i
+
+        // c_i' :=  init V*_i; local Vdown_i; c_i
+        // appending it to ci_prime_joined directly
+        ci_prime_joined ++= init(class_Vstar_i.toSeq, quant_Vstar_i.toSeq).statements
+        ci_prime_joined ++= Local.makeIfNeeded(class_Vdown_i.toSeq, quant_Vdown_i.toSeq, ci).unwrapBlock
+
+        val ci_varuse = ci.variableUse(env)
+
+        logger.debug(s"XXXXX ${ci_varuse.quantum -- quant_Vdown_i}")
+
+        // Value of Wi for the next iteration
+        // W_{i+1} := W_i \cup V*_i - (fv(c_i) - Vdown_i)
+        class_W_i = class_W_i ++ class_Vstar_i -- (ci_varuse.classical -- class_Vdown_i)
+        quant_W_i = quant_W_i ++ quant_Vstar_i -- (ci_varuse.quantum   -- quant_Vdown_i)
+
+        logger.debug(s"Next Wi is: $class_W_i, $quant_W_i")
       }
 
-      val resultBlock = Block(statements3: _*)
+      // c1';c2';...;cn'
+      val ci_prime_block = Block(ci_prime_joined: _*)
 
-      (resultBlock, ListSet(cCandidates.keys.toSeq:_*), ListSet(qCandidates.keys.toSeq:_*), id2)
+      (ci_prime_block, class_Vup, quant_Vup, idVar)
     case Local(cvars, qvars, body) =>
-      /* Uses fact:
+      /* Uses fact (lemma:unused):
 
          [[ local V; c ]] = [[ c ]] if V \cap fv(c) = {}
-
-TODO check, reference lemma, and make sure that we remove unused vars
 
        */
       // cvars_sel, qvars_sel -- variables that are selected for moving up
