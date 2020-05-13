@@ -43,38 +43,46 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
   import ListSet.empty
 
   /** Moves the local variable declarations specified by id upwards as far as possible.
-    *
-    * Upwards movement stops when:
-    * * A [[Local]] statement with the same variable occurs (then the variable is merged into that [[Local]])
-    * * A variable cannot be moved further upward due to a conflicting variable use (then a suitable [[Local]] statement is inserted)
-    *
-    * If upwards movement does not stop, the variable is returned
-    *
-    * It is guaranteed that Local(cVars,qVars,newStatement) is denotationally equivalent to statement.
-    *
-    * @return (newStatement,cVars,qVars,id) where newStatement is the rewritten statement, and cVars,qVars are
-    *         lists of the variables that moved to the top. id is the updated [[VarID]] (in case some variables have been selected by id for moving).
-    * */
+   *
+   * Upwards movement stops when:
+   * * A [[Local]] statement with the same variable occurs (then the variable is merged into that [[Local]])
+   * * A variable cannot be moved further (then a suitable [[Local]] statement is inserted)
+   *
+   * Upwards movements are justified with various lemmas from the paper "Local Variables and Quantum Relational Hoare Logic"
+   * as mentioned in the comments inside this function.
+   *
+   * If upwards movement does not stop, the variable is returned
+   *
+   * It is guaranteed that Local(cVars,qVars,newStatement) is denotationally equivalent to statement.
+   *
+   * @return (newStatement,cVars,qVars,id) where newStatement is the rewritten statement, and cVars,qVars are
+   *         lists of the variables that moved to the top. id is the updated [[VarID]] (in case some variables have been selected by id for moving).
+   **/
   def up(env: Environment, id: VarID, statement: Statement): (Statement,ListSet[CVariable],ListSet[QVariable],VarID) = statement match {
-    case _: Assign | _: Sample | _: QInit | _: QApply | _: Measurement | _: Call => (statement,empty,empty,id)
+    case _: Assign | _: Sample | _: QInit | _: QApply | _: Measurement | _: Call =>
+      /* Here the statement is not changed, so no lemma is needed */
+      (statement,empty,empty,id)
     case While(condition, body) =>
-      /* Uses the fact:
+      /* Uses the fact (lemma:move.while):
 
          [[ while (e) { local V; c } ]] = [[ local Vu; while (e) { local Vd; init Vu; c } ]]
-         for Vd := V \cap fv(e), Vu := V - fv(e)
+         for Vu := V - fv(e), Vd := V - Vu = V \cap fv(e)
 
        */
 
-      val (body2, cVars, qVars, id2) = up(env, id, body)
-      /** classical variables that can move further */
-      val upCvars = cVars.diff(condition.caVariables(env).classical)
-      /** classical variables that have to stop here */
-      val downCvars = cVars.intersect(condition.caVariables(env).classical)
-      // Re-initialize local variables in each loop body iteration
-      val body3 = (init(classical = upCvars.toSeq, quantum = qVars.toSeq) ++ body2.toBlock).unwrapTrivialBlock
-      val body4 = Local.makeIfNeeded(cvars=downCvars.toSeq, qvars=Nil, body=body3)
+      val (c, class_V, quant_V, id2) = up(env, id, body)
+      /** variables that can move further (Vu).  */
+      val class_Vu = class_V.diff(condition.caVariables(env).classical)
+      val quant_Vu = quant_V
+      /** variables that have to stop here (Vd). */
+      val class_Vd = class_V.intersect(condition.caVariables(env).classical)
+      val quant_Vd = Nil
+      // Add "init Vu" in front of c
+      val body3 = (init(classical = class_Vu.toSeq, quantum = quant_Vu.toSeq) ++ c.toBlock).unwrapTrivialBlock
+      // Put local Vd in front
+      val body4 = Local.makeIfNeeded(cvars=class_Vd.toSeq, qvars=quant_Vd, body=body3)
 
-      (While(condition, body4.toBlock), upCvars, qVars, id2)
+      (While(condition, body4.toBlock), class_Vu, quant_Vu, id2)
     case IfThenElse(condition, thenBranch, elseBranch) =>
       /* Uses the fact:
 
