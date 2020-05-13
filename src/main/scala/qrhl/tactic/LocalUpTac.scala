@@ -48,6 +48,8 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
    * * A [[Local]] statement with the same variable occurs (then the variable is merged into that [[Local]])
    * * A variable cannot be moved further (then a suitable [[Local]] statement is inserted)
    *
+   * Selected local variables that are not used below their declaration are simply removed.
+   *
    * Upwards movements are justified with various lemmas from the paper "Local Variables and Quantum Relational Hoare Logic"
    * as mentioned in the comments inside this function.
    *
@@ -65,59 +67,57 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
     case While(condition, body) =>
       /* Uses the fact (lemma:move.while):
 
-         [[ while (e) { local V; c } ]] = [[ local Vu; while (e) { local Vd; init Vu; c } ]]
-         for Vu := V - fv(e), Vd := V - Vu = V \cap fv(e)
+         [[ while (e) { local V; c } ]] = [[ local Vup; while (e) { local Vddown; init Vup; c } ]]
+         for Vup := V - fv(e), Vdown := V - Vup = V \cap fv(e)
 
        */
 
       val (c, class_V, quant_V, id2) = up(env, id, body)
       /** variables that can move further (Vu).  */
-      val class_Vu = class_V.diff(condition.caVariables(env).classical)
-      val quant_Vu = quant_V
+      val class_Vup = class_V.diff(condition.caVariables(env).classical)
+      val quant_Vup = quant_V
       /** variables that have to stop here (Vd). */
-      val class_Vd = class_V.intersect(condition.caVariables(env).classical)
-      val quant_Vd = Nil
+      val class_Vdown = class_V.intersect(condition.caVariables(env).classical)
+      val quant_Vdown = Nil
       // Add "init Vu" in front of c
-      val body3 = (init(classical = class_Vu.toSeq, quantum = quant_Vu.toSeq) ++ c.toBlock).unwrapTrivialBlock
+      val body3 = (init(classical = class_Vup.toSeq, quantum = quant_Vup.toSeq) ++ c.toBlock).unwrapTrivialBlock
       // Put local Vd in front
-      val body4 = Local.makeIfNeeded(cvars=class_Vd.toSeq, qvars=quant_Vd, body=body3)
+      val body4 = Local.makeIfNeeded(cvars=class_Vdown.toSeq, qvars=quant_Vdown, body=body3)
 
-      (While(condition, body4.toBlock), class_Vu, quant_Vu, id2)
+      (While(condition, body4.toBlock), class_Vup, quant_Vup, id2)
     case IfThenElse(condition, thenBranch, elseBranch) =>
-      /* Uses the fact:
+      /* Uses the fact (lemma:move.if):
 
         [[ if (e) { local Vthen; cthen } else { local Velse; celse } ]]
         =
-        [[ local thenUp,elseUp; if (e) { local thenDown; cthen } else { local elseDown; celse } ]]
+        [[ local Vup; if (e) { local Vthendown; cthen } else { local Velsedown; celse } ]]
 
-        thenUp = Vthen \ fv(celse) \ fv(e)
-        elseUp = Velse \ fv(cthen) \ fv(e)
-
-        thenDown = Vthen \ thenUp
-        elseDown = Velse \ elseUp
+        Vup := (Vthen + Velse) - (fv(cthen) - Vthen) - (fv(celse) - Velse) - fv(e)
+        Vthendown := Vthen - Vup
+        Velsedown := Velse - Vup
 
        */
       val thenVarUse = thenBranch.variableUse(env)
       val elseVarUse = elseBranch.variableUse(env)
       val condVars = condition.caVariables(env).classical
 
-      val (thenBody, thenC, thenQ, id2) = up(env, id, thenBranch)
-      val (elseBody, elseC, elseQ, id3) = up(env, id2, elseBranch)
+      val (cthen, class_Vthen, quant_Vthen, id2) = up(env, id, thenBranch)
+      val (celse, class_Velse, quant_Velse, id3) = up(env, id2, elseBranch)
 
-      val thenUpC = thenC -- elseVarUse.classical -- condVars
-      val thenUpQ = thenQ -- elseVarUse.quantum
-      val elseUpC = elseC -- thenVarUse.classical -- condVars
-      val elseUpQ = elseQ -- thenVarUse.quantum
+      val class_Vup = (class_Vthen ++ class_Velse) -- (thenVarUse.classical -- class_Vthen) -- (elseVarUse.classical -- class_Velse) -- condVars
+      val quant_Vup = (quant_Vthen ++ quant_Velse) -- (thenVarUse.quantum -- quant_Vthen) -- (elseVarUse.quantum -- quant_Velse)
 
-      val thenDownC = thenC -- thenUpC
-      val thenDownQ = thenQ -- thenUpQ
-      val elseDownC = elseC -- elseUpC
-      val elseDownQ = elseQ -- elseUpQ
+      val class_Vthendown = class_Vthen -- class_Vup
+      val quant_Vthendown = quant_Vthen -- quant_Vup
+      val class_Velsedown = class_Velse -- class_Vup
+      val quant_Velsedown = quant_Velse -- quant_Vup
 
-      val thenBody2 = Local.makeIfNeeded(thenDownC.toSeq, thenDownQ.toSeq, thenBody)
-      val elseBody2 = Local.makeIfNeeded(elseDownC.toSeq, elseDownQ.toSeq, elseBody)
+      // local Vthendown; cthen
+      val thenBody = Local.makeIfNeeded(class_Vthendown.toSeq, quant_Vthendown.toSeq, cthen)
+      // local Velsedown; celse
+      val elseBody = Local.makeIfNeeded(class_Velsedown.toSeq, quant_Velsedown.toSeq, celse)
 
-      (IfThenElse(condition,thenBody2.toBlock,elseBody2.toBlock), thenUpC++elseUpC, thenUpQ++elseUpQ, id3)
+      (IfThenElse(condition,thenBody.toBlock,elseBody.toBlock), class_Vup, quant_Vup, id3)
     case Block() => (statement, empty, empty, id)
     case Block(s) =>
       up(env, id, s)
@@ -190,6 +190,8 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       /* Uses fact:
 
          [[ local V; c ]] = [[ c ]] if V \cap fv(c) = {}
+
+TODO check, reference lemma, and make sure that we remove unused vars
 
        */
       // cvars_sel, qvars_sel -- variables that are selected for moving up
