@@ -24,6 +24,13 @@ object Utils {
   implicit def listSetUpcast[B, A <: B](set : ListSet[A]) : ListSet[B] =
     set.asInstanceOf[ListSet[B]]
 
+  implicit class ListSetUtils[A](set : ListSet[A]) {
+    def upcast[B >: A] : ListSet[B] = listSetUpcast(set)
+    /** Like ListSet.++, but makes sure that the appended collection is not inserted in reverse order */
+    def +++[B >: A](other : TraversableOnce[B]): ListSet[B] =
+      set ++ other.toSeq
+  }
+
   private val digest = MessageDigest.getInstance("SHA-1")
   def hashFile(file: Path): Array[Byte] = {
     val inputStream = new FileInputStream(file.toFile)

@@ -18,6 +18,7 @@ import scala.language.higherKinds
 import qrhl.isabelle.RichTerm.{term_tight_codec, typ_tight_codec}
 import qrhl.logic.Statement.codec
 import qrhl.Utils.listSetUpcast
+import qrhl.Utils.ListSetUtils
 
 sealed trait VarTerm[+A] {
   def replace[A1 >: A, A2 >: A](from: A1, to: A2): VarTerm[A2]
@@ -142,18 +143,18 @@ case class VariableUse
       | Oracles:        ${oracles.mkString(", ")}
     """.stripMargin
 
-//  def addFreeVariable(variables: Variable*): VariableUse = copy(freeVariables ++ variables)
-//  def addAmbientVar(variables: String*): VariableUse = copy(ambient=ambient ++ variables)
-//  def addProgramVar(p: ProgramDecl*): VariableUse = copy(programs=programs ++ p)
+//  def addFreeVariable(variables: Variable*): VariableUse = copy(freeVariables +++ variables)
+//  def addAmbientVar(variables: String*): VariableUse = copy(ambient=ambient +++ variables)
+//  def addProgramVar(p: ProgramDecl*): VariableUse = copy(programs=programs +++ p)
 
-/*  def ++(other: VariableUse): VariableUse = VariableUse(
-    freeVariables=freeVariables++other.freeVariables,
-    written=written++other.written,
-    ambient=ambient++other.ambient,
-    programs=programs++other.programs,
-    overwritten = overwritten++other.overwritten,
-    oracles = oracles++other.oracles,
-    inner = inner++other.inner)*/
+/*  def +++(other: VariableUse): VariableUse = VariableUse(
+    freeVariables=freeVariables+++other.freeVariables,
+    written=written+++other.written,
+    ambient=ambient+++other.ambient,
+    programs=programs+++other.programs,
+    overwritten = overwritten+++other.overwritten,
+    oracles = oracles+++other.oracles,
+    inner = inner+++other.inner)*/
 
   //noinspection MutatorLikeMethodIsParameterless
 //  def removeOverwritten: VariableUse = copy(overwritten=ListSet.empty)
@@ -267,13 +268,13 @@ sealed trait Statement {
 //  private def mergeSequential(a: VariableUse, b: VariableUse) : VariableUse = {
 //    val result =
 //      if (a.oracles.isEmpty)
-//        a ++ b.removeOverwrittenClassical(a.classical.toSeq:_*).removeOverwrittenQuantum(a.quantum.toSeq:_*)
+//        a +++ b.removeOverwrittenClassical(a.classical.toSeq:_*).removeOverwrittenQuantum(a.quantum.toSeq:_*)
 //      else
-//        a ++ b.removeOverwritten
+//        a +++ b.removeOverwritten
 //    result
 //  }
 //  private def mergeAlternative(a: VariableUse, b: VariableUse) : VariableUse = {
-//    val ab = a ++ b
+//    val ab = a +++ b
 //    ab.copy(overwritten = a.overwritten.intersect(b.overwritten))
 //  }
 
@@ -290,7 +291,7 @@ sealed trait Statement {
           programs = bodyVars.programs,
           overwritten = bodyVars.overwritten -- vars,
           oracles = bodyVars.oracles,
-          inner = if (isProgram) emptySet; else ListSet(vars:_*) ++ bodyVars.inner)
+          inner = if (isProgram) emptySet; else ListSet(vars:_*) +++ bodyVars.inner)
       case Block() =>
         // This is "skip"
         new VariableUse(
@@ -306,18 +307,18 @@ sealed trait Statement {
         val sVars = s.variableUse(env)
         val ssVars = Block(ss:_*).variableUse(env)
         new VariableUse(
-          freeVariables = sVars.freeVariables ++ ssVars.freeVariables,
-          written = sVars.written ++ ssVars.written,
-          ambient = sVars.ambient ++ ssVars.ambient,
-          programs = sVars.programs ++ ssVars.programs,
+          freeVariables = sVars.freeVariables +++ ssVars.freeVariables,
+          written = sVars.written +++ ssVars.written,
+          ambient = sVars.ambient +++ ssVars.ambient,
+          programs = sVars.programs +++ ssVars.programs,
           overwritten =
             // TODO: improve once we have "covered"
             if (sVars.isProgram)
-              sVars.overwritten ++ (ssVars.overwritten -- sVars.freeVariables)
+              sVars.overwritten +++ (ssVars.overwritten -- sVars.freeVariables)
             else
               sVars.overwritten,
-          oracles = sVars.oracles ++ ssVars.oracles,
-          inner = sVars.inner ++ ssVars.inner
+          oracles = sVars.oracles +++ ssVars.oracles,
+          inner = sVars.inner +++ ssVars.inner
         )
       case Sample(v, e) =>
         // Hack for simply doing the same as in Assign case
@@ -327,7 +328,7 @@ sealed trait Statement {
         val vSet = ListSet(v.toSeq :_*)
         val fvE = e.caVariables(env)
         new VariableUse(
-          freeVariables = vSet ++ fvE.classical,
+          freeVariables = vSet +++ fvE.classical,
           written = vSet,
           ambient = fvE.ambient,
           programs = emptySet,
@@ -343,22 +344,22 @@ sealed trait Statement {
           val progDecl = env.programs(name)
           val progVars = progDecl.variablesRecursive
           val argVars = args map ( _.variableUse(env) )
-          val oracles = argVars.foldLeft(emptySet : ListSet[String]) { _ ++ _.oracles }
+          val oracles = argVars.foldLeft(emptySet : ListSet[String]) { _ +++ _.oracles }
           val isProgram = oracles.isEmpty
           new VariableUse(
             // By Helping_Lemmas.fv_subst' (note that freeVariables is an upper bound)
             // TODO: can be improved by taking into account "covered"
-            freeVariables = argVars.foldLeft(progVars.freeVariables) { _ ++ _.freeVariables },
+            freeVariables = argVars.foldLeft(progVars.freeVariables) { _ +++ _.freeVariables },
             // By Helping_Lemmas.fv_written' (note that freeVariables is an upper bound)
-            written = argVars.foldLeft(progVars.written) { _ ++ _.written },
-            ambient = argVars.foldLeft(progVars.ambient) { _ ++ _.ambient },
-            programs = argVars.foldLeft(progVars.programs + progDecl) { _ ++ _.programs },
+            written = argVars.foldLeft(progVars.written) { _ +++ _.written },
+            ambient = argVars.foldLeft(progVars.ambient) { _ +++ _.ambient },
+            programs = argVars.foldLeft(progVars.programs + progDecl) { _ +++ _.programs },
             // By Helping_Lemmas.overwr_subst (note that overwritten is a lower bound)
             overwritten = progVars.overwritten,
             oracles = oracles,
-            // By Heling_Lemmas program_inner and inner_subst (note that inner is an upper bound)
+            // By Helping_Lemmas program_inner and inner_subst (note that inner is an upper bound)
             inner = if (isProgram) emptySet else
-                    argVars.foldLeft(progVars.inner) { _ ++ _.inner }
+                    argVars.foldLeft(progVars.inner) { _ +++ _.inner }
           )
         } else {
           assert(args.isEmpty)
@@ -377,9 +378,9 @@ sealed trait Statement {
         val fvE = e.caVariables(env)
         val bodyVars = body.variableUse(env)
         new VariableUse(
-          freeVariables = fvE.classical ++ bodyVars.freeVariables,
+          freeVariables = fvE.classical +++ bodyVars.freeVariables,
           written = bodyVars.written,
-          ambient = fvE.ambient ++ bodyVars.ambient,
+          ambient = fvE.ambient +++ bodyVars.ambient,
           programs = bodyVars.programs,
           overwritten = emptySet,
           oracles = bodyVars.oracles,
@@ -390,19 +391,19 @@ sealed trait Statement {
         val p1Vars = p1.variableUse(env)
         val p2Vars = p2.variableUse(env)
         new VariableUse(
-          freeVariables = fvE.classical ++ p1Vars.freeVariables ++ p2Vars.freeVariables,
-          written = p1Vars.written ++ p2Vars.written,
-          ambient = fvE.ambient ++ p1Vars.ambient ++ p2Vars.ambient,
-          programs = p1Vars.programs ++ p2Vars.programs,
+          freeVariables = fvE.classical +++ p1Vars.freeVariables +++ p2Vars.freeVariables,
+          written = p1Vars.written +++ p2Vars.written,
+          ambient = fvE.ambient +++ p1Vars.ambient +++ p2Vars.ambient,
+          programs = p1Vars.programs +++ p2Vars.programs,
           overwritten = p1Vars.overwritten.intersect(p2Vars.overwritten) -- fvE.classical,
-          oracles = p1Vars.oracles ++ p2Vars.oracles,
-          inner = p1Vars.inner ++ p2Vars.inner
+          oracles = p1Vars.oracles +++ p2Vars.oracles,
+          inner = p1Vars.inner +++ p2Vars.inner
         )
       case QInit(q, e) =>
         val qSet = ListSet(q.toSeq :_*)
         val fvE = e.caVariables(env)
         new VariableUse(
-          freeVariables = qSet ++ fvE.classical,
+          freeVariables = qSet +++ fvE.classical,
           written = qSet,
           ambient = fvE.ambient,
           programs = emptySet,
@@ -414,7 +415,7 @@ sealed trait Statement {
         val qSet = ListSet(q.toSeq :_*)
         val fvE = e.caVariables(env)
         new VariableUse(
-          freeVariables = qSet ++ fvE.classical,
+          freeVariables = qSet +++ fvE.classical,
           written = qSet,
           ambient = fvE.ambient,
           programs = emptySet,
@@ -423,12 +424,12 @@ sealed trait Statement {
           inner = emptySet
         )
       case Measurement(x, q, e) =>
-        val xSet = ListSet(x.toSeq :_*)
-        val qSet = ListSet(q.toSeq :_*)
+        val xSet = ListSet[Variable](x.toSeq :_*)
+        val qSet = ListSet[Variable](q.toSeq :_*)
         val fvE = e.caVariables(env)
         new VariableUse(
-          freeVariables = xSet ++ qSet ++ fvE.classical,
-          written = xSet ++ qSet,
+          freeVariables = xSet +++ qSet +++ fvE.classical,
+          written = xSet +++ qSet,
           ambient = fvE.ambient,
           programs = emptySet,
           overwritten = xSet -- fvE.classical,
@@ -754,8 +755,8 @@ class Local(val vars: List[Variable], val body : Block) extends Statement {
   }
 
   override def toString: String = body.statements match {
-    case Nil => "{ local " + (vars ).map(_.name).mkString(", ") + "; skip; }"
-    case stmts => "{ local " + (vars).map(_.name).mkString(", ") + "; " + stmts.map {_.toString}.mkString(" ") + " }"
+    case Nil => "{ local " + vars.map(_.name).mkString(", ") + "; skip; }"
+    case stmts => "{ local " + vars.map(_.name).mkString(", ") + "; " + stmts.map {_.toString}.mkString(" ") + " }"
   }
 
   override def renameQVariable(env: Environment, from: QVariable, to: QVariable): Local = {

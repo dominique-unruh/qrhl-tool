@@ -16,6 +16,7 @@ import qrhl.tactic.EqualTac.logger
 import scala.collection.immutable.ListSet
 
 import Utils.listSetUpcast
+import Utils.ListSetUtils
 
 case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvariables: List[QVariable], amount:Int=1) extends WpBothStyleTac(leftAmount=amount, rightAmount=amount) {
   def diff(left:Statement, right:Statement): (Statement, List[(Statement,Statement)]) = {
@@ -93,12 +94,13 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvari
     val inner_cvars = varUse.innerClassical
     val inner_qvars = varUse.innerQuantum
 
-    val mid_cvars = out_cvars ++ inner_cvars
+    val mid_cvars = out_cvars +++ inner_cvars
     val mid_qvars =
       if (midqvariables.isEmpty)
-        out_qvars ++ inner_qvars
+        out_qvars +++ inner_qvars
       else
         ListSet(midqvariables:_*)
+    logger.debug(s"XXXXX mid_qvars=${mid_qvars}")
 
     logger.debug(s"In variables: $in_cvars, $in_qvars; out variables: $out_cvars, $out_qvars; mid variables: $mid_cvars, $mid_qvars")
 
@@ -156,15 +158,15 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvari
     assert((out_cvars -- varUse.overwrittenClassical).subsetOf(in_cvars))
     assert(in_cvars.subsetOf(out_cvars))
     // Qmid >= Qout + inner(C)^qu
-    assert((out_qvars ++ inner_qvars).subsetOf(mid_qvars))
+    assert((out_qvars +++ inner_qvars).subsetOf(mid_qvars))
     // Xmid >= Xout + inner(C)^cl
-    assert((out_cvars ++ inner_cvars).subsetOf(mid_cvars))
+    assert((out_cvars +++ inner_cvars).subsetOf(mid_cvars))
     
     // # means disjoint
     // fv(R)^qu # fv(C)^qu: by subgoal below
 
     // C is fv(R)^cl-readonly
-    assert(rVarUse.classical.intersect(varUse.written).isEmpty)
+    assert(rVarUse.classical.intersect(varUse.writtenClassical).isEmpty)
 
     // fv(R)^qu # Qout \ Qmid: by subgoal below
 
@@ -176,8 +178,8 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvari
 
     // fv(R)^qu # fv(C)^qu: by subgoal
     // fv(R)^qu # Qout \ Qmid: by subgoal
-    val forbidden = varUse.quantum ++ (mid_qvars -- out_qvars)
-    val forbidden12 = (forbidden.map(_.index1) ++ forbidden.map(_.index2)) map { v => (v.variableName, v.valueTyp) }
+    val forbidden = varUse.quantum +++ (mid_qvars -- out_qvars)
+    val forbidden12 = (forbidden.map(_.index1) +++ forbidden.map(_.index2)) map { v => (v.variableName, v.valueTyp) }
     val colocality = isabelle.isabelle.invoke(FrameRuleTac.colocalityOp,
       (contextId, R.isabelleTerm, forbidden12.toList))
 
