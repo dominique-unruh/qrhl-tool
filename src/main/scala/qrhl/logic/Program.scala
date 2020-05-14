@@ -6,7 +6,7 @@ import info.hupel.isabelle.pure.Typ
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import qrhl.isabelle.Isabelle.Thm
 import qrhl.isabelle.{Isabelle, RichTerm}
-import qrhl.{UserException, Utils}
+import qrhl.{AllSet, MaybeAllSet, UserException, Utils}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ListSet
@@ -121,8 +121,11 @@ case class VariableUse
   oracles : ListSet[String],
   /** Local variables that have an oracle call in their scope (upper bound). */
   inner: ListSet[Variable],
-// TODO: add: covered
+  /** Covered variables: A variable is covered if it is declared local above every hole (lower bound) */
+  covered: MaybeAllSet[Variable]
 ) {
+  assert(oracles.isEmpty == covered.isAll, (oracles, covered))
+
   def isProgram: Boolean = oracles.isEmpty
 
   @deprecated def classical: ListSet[CVariable] = freeVariables collect { case v : CVariable => v }
@@ -134,13 +137,14 @@ case class VariableUse
   @deprecated def writtenClassical : ListSet[CVariable] = written collect { case v : CVariable => v }
 
   override def toString: String = s"""
-      | Free:           ${freeVariables.map(_.name).mkString(", ")}
-      | Ambient:        ${ambient.mkString(", ")}
-      | Programs:       ${programs.map(_.name).mkString(", ")}
-      | Written:        ${written.map(_.name).mkString(", ")}
-      | Overwritten:    ${overwritten.map(_.name).mkString(", ")}
-      | Inner:          ${inner.map(_.name).mkString(", ")}
-      | Oracles:        ${oracles.mkString(", ")}
+      | Free        ⊆ ${freeVariables.map(_.name).mkString(", ")}
+      | Ambient     ⊆ ${ambient.mkString(", ")}
+      | Programs    = ${programs.map(_.name).mkString(", ")}
+      | Written     ⊆ ${written.map(_.name).mkString(", ")}
+      | Overwritten ⊇ ${overwritten.map(_.name).mkString(", ")}
+      | Inner       ⊆ ${inner.map(_.name).mkString(", ")}
+      | Covered     ⊇ ${if (covered.isAll) "all variables" else covered.map(_.name).mkString(", ")}
+      | Oracles     ⊆ ${oracles.mkString(", ")}
     """.stripMargin
 
 //  def addFreeVariable(variables: Variable*): VariableUse = copy(freeVariables +++ variables)
@@ -197,7 +201,7 @@ object VariableUse {
 
   val empty = new VariableUse(freeVariables=emptySet, written=emptySet, ambient=emptySet, programs=emptySet,
     overwritten = emptySet, oracles=emptySet,
-    inner = emptySet)
+    inner = emptySet, covered = MaybeAllSet.empty)
 }
 
 case object VTUnit extends VarTerm[Nothing] {
@@ -291,7 +295,9 @@ sealed trait Statement {
           programs = bodyVars.programs,
           overwritten = bodyVars.overwritten -- vars,
           oracles = bodyVars.oracles,
-          inner = if (isProgram) emptySet; else ListSet(vars:_*) +++ bodyVars.inner)
+          inner = if (isProgram) emptySet; else ListSet(vars:_*) +++ bodyVars.inner,
+          covered = bodyVars.covered ++ vars
+        )
       case Block() =>
         // This is "skip"
         new VariableUse(
@@ -301,7 +307,8 @@ sealed trait Statement {
           programs = emptySet,
           overwritten = emptySet,
           oracles = emptySet,
-          inner = emptySet
+          inner = emptySet,
+          covered = MaybeAllSet.all
         )
       case Block(s, ss@_*) =>
         val sVars = s.variableUse(env)
@@ -311,14 +318,10 @@ sealed trait Statement {
           written = sVars.written +++ ssVars.written,
           ambient = sVars.ambient +++ ssVars.ambient,
           programs = sVars.programs +++ ssVars.programs,
-          overwritten =
-            // TODO: improve once we have "covered"
-            if (sVars.isProgram)
-              sVars.overwritten +++ (ssVars.overwritten -- sVars.freeVariables)
-            else
-              sVars.overwritten,
+          overwritten = sVars.overwritten +++ ((ssVars.overwritten -- sVars.freeVariables).intersect(sVars.covered)),
           oracles = sVars.oracles +++ ssVars.oracles,
-          inner = sVars.inner +++ ssVars.inner
+          inner = sVars.inner +++ ssVars.inner,
+          covered = sVars.covered.intersect(ssVars.covered)
         )
       case Sample(v, e) =>
         // Hack for simply doing the same as in Assign case
@@ -334,7 +337,8 @@ sealed trait Statement {
           programs = emptySet,
           overwritten = vSet -- fvE.classical,
           oracles = emptySet,
-          inner = emptySet
+          inner = emptySet,
+          covered = MaybeAllSet.all
         )
       case Call(name, args@_*) =>
         if (name.head != '@') {
@@ -348,8 +352,8 @@ sealed trait Statement {
           val isProgram = oracles.isEmpty
           new VariableUse(
             // By Helping_Lemmas.fv_subst' (note that freeVariables is an upper bound)
-            // TODO: can be improved by taking into account "covered"
-            freeVariables = argVars.foldLeft(progVars.freeVariables) { _ +++ _.freeVariables },
+            freeVariables = progVars.freeVariables ++
+              MaybeAllSet.subtract(argVars.foldLeft[ListSet[Variable]](emptySet) { _ +++ _.freeVariables }, progVars.covered),
             // By Helping_Lemmas.fv_written' (note that freeVariables is an upper bound)
             written = argVars.foldLeft(progVars.written) { _ +++ _.written },
             ambient = argVars.foldLeft(progVars.ambient) { _ +++ _.ambient },
@@ -357,9 +361,14 @@ sealed trait Statement {
             // By Helping_Lemmas.overwr_subst (note that overwritten is a lower bound)
             overwritten = progVars.overwritten,
             oracles = oracles,
-            // By Helping_Lemmas program_inner and inner_subst (note that inner is an upper bound)
+            // By Helping_Lemmas.program_inner and .inner_subst (note that inner is an upper bound)
             inner = if (isProgram) emptySet else
-                    argVars.foldLeft(progVars.inner) { _ +++ _.inner }
+                    argVars.foldLeft(progVars.inner) { _ +++ _.inner },
+            // By Helping_Lemmas.program_covered and .covered_subst (note that covered is a lower bound)
+            covered = if (isProgram) MaybeAllSet.all[Variable]
+            else if (progVars.covered.isAll) MaybeAllSet.all // shortcut for the next line
+            else progVars.covered ++ argVars.foldLeft[MaybeAllSet[Variable]]
+              (MaybeAllSet.all) { (cov,a) => cov.intersect(a.covered) }
           )
         } else {
           assert(args.isEmpty)
@@ -371,7 +380,8 @@ sealed trait Statement {
             programs = emptySet,
             overwritten = emptySet,
             oracles = ListSet(name.tail),
-            inner = emptySet
+            inner = emptySet,
+            covered = MaybeAllSet.empty
           )
         }
       case While(e, body) =>
@@ -384,7 +394,8 @@ sealed trait Statement {
           programs = bodyVars.programs,
           overwritten = emptySet,
           oracles = bodyVars.oracles,
-          inner = bodyVars.inner
+          inner = bodyVars.inner,
+          covered = bodyVars.covered
         )
       case IfThenElse(e, p1, p2) =>
         val fvE = e.caVariables(env)
@@ -397,7 +408,8 @@ sealed trait Statement {
           programs = p1Vars.programs +++ p2Vars.programs,
           overwritten = p1Vars.overwritten.intersect(p2Vars.overwritten) -- fvE.classical,
           oracles = p1Vars.oracles +++ p2Vars.oracles,
-          inner = p1Vars.inner +++ p2Vars.inner
+          inner = p1Vars.inner +++ p2Vars.inner,
+          covered = p1Vars.covered.intersect(p2Vars.covered)
         )
       case QInit(q, e) =>
         val qSet = ListSet(q.toSeq :_*)
@@ -409,7 +421,8 @@ sealed trait Statement {
           programs = emptySet,
           overwritten = qSet,
           oracles = emptySet,
-          inner = emptySet
+          inner = emptySet,
+          covered = MaybeAllSet.all
         )
       case QApply(q, e) =>
         val qSet = ListSet(q.toSeq :_*)
@@ -421,8 +434,8 @@ sealed trait Statement {
           programs = emptySet,
           overwritten = emptySet,
           oracles = emptySet,
-          inner = emptySet
-        )
+          inner = emptySet,
+          covered = MaybeAllSet.all)
       case Measurement(x, q, e) =>
         val xSet = ListSet[Variable](x.toSeq :_*)
         val qSet = ListSet[Variable](q.toSeq :_*)
@@ -434,8 +447,8 @@ sealed trait Statement {
           programs = emptySet,
           overwritten = xSet -- fvE.classical,
           oracles = emptySet,
-          inner = emptySet
-        )
+          inner = emptySet,
+          covered = MaybeAllSet.all)
     }
   }
 

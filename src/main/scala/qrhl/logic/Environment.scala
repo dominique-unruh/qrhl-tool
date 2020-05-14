@@ -2,7 +2,7 @@ package qrhl.logic
 
 import info.hupel.isabelle.{Operation, pure}
 import info.hupel.isabelle.pure.Typ
-import qrhl.UserException
+import qrhl.{MaybeAllSet, UserException}
 import qrhl.isabelle.Isabelle.{Context, declareVariableOp}
 import qrhl.isabelle.{Isabelle, RichTerm}
 
@@ -12,7 +12,6 @@ import RichTerm.typ_tight_codec
 import qrhl.isabelle.Codecs._
 
 import scala.collection.immutable.ListSet
-
 import qrhl.Utils.listSetUpcast
 
 /** Represents a logic environment in which programs and expressions are interpreted.
@@ -150,13 +149,15 @@ sealed trait ProgramDecl {
   def toStringMultiline : String
 }
 
-final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], innerCVars:List[CVariable], innerQVars:List[QVariable], numOracles:Int) extends ProgramDecl {
+final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], innerCVars:List[CVariable],
+                                     innerQVars:List[QVariable], numOracles:Int) extends ProgramDecl {
   override val variablesRecursive: VariableUse = {
     val cvars2 = ListSet(cvars: _*)
     val qvars2 = ListSet(qvars: _*)
     VariableUse(freeVariables = cvars2 ++ qvars2, written = cvars2, ambient = ListSet.empty,
-      programs = ListSet.empty, overwritten = ListSet.empty, oracles=ListSet.empty,
-      inner = ListSet(innerCVars:_*) ++ ListSet(innerQVars:_*))
+      programs = ListSet.empty, overwritten = ListSet.empty, oracles=ListSet((1 to numOracles) map (_.toString) :_*),
+      inner = ListSet(innerCVars:_*) ++ ListSet(innerQVars:_*),
+      covered = if (numOracles==0) MaybeAllSet.all else MaybeAllSet.empty)
   }
 
   def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {

@@ -126,8 +126,8 @@ class Toplevel private(initialState : default.Hashed[State]) {
       case e: ProverResult.Failure => throw UserException(e,position)
     }
 
+    //    logger.debug(s"State hash: ${state.hash}")
     println(state.value)
-    logger.debug(s"State hash: ${state.hash}")
   }
 
   /** Returns the current state of the toplevel */

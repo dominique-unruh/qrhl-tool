@@ -197,14 +197,9 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
   def invoke[I, O](op: Operation[I, O], arg: I): O = {
     val start = lang.System.nanoTime
     val result = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
-    Isabelle.logger.debug(s"Operation ${op.name} ${(lang.System.nanoTime - start) / 1000000}ms")
+//    Isabelle.logger.debug(s"Operation ${op.name} ${(lang.System.nanoTime - start) / 1000000}ms")
     result
   }
-
-  //  // TODO remove
-  //  new Timer().schedule(new TimerTask {
-  //    override def run(): Unit = { invoke(Operation.Hello,"world") }
-  //  },100,100)
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
     *
@@ -344,7 +339,7 @@ object Isabelle {
 
     class CleaningAction(isabelle: Isabelle, thmId: BigInt) extends Runnable {
       override def run(): Unit = {
-        logger.debug(s"Deleting theorem $thmId")
+//        logger.debug(s"Deleting theorem $thmId")
         isabelle.invoke(deleteThmOp, thmId)
       }
     }
@@ -837,14 +832,14 @@ object Isabelle {
 
     class CleaningAction(isabelle: Isabelle, contextId: BigInt) extends Runnable {
       override def run(): Unit = {
-        logger.debug(s"Deleting context $contextId")
+//        logger.debug(s"Deleting context $contextId")
         isabelle.invoke(deleteContextOp, contextId)
       }
     }
   }
 
 
-  def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ) =
+  def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ): Const =
     Const(IsabelleConsts.quantum_equality_full, Isabelle.l2boundedT(typLeft,typZ) -->: Isabelle.variablesT(typLeft) -->: Isabelle.l2boundedT(typRight,typZ) -->: Isabelle.variablesT(typRight) -->: Isabelle.predicateT)
   def quantum_equality_full(u: Term, q: Term, v: Term, r: Term): Term = {
     val OfType(L2BoundedT(typL, typZ)) = u

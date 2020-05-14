@@ -45,7 +45,7 @@ class DefaultContext extends Context {
     new H(digest.digest())
   }
 
-  // TODO should be thread safe
+  // TODO: should be a soft reference map or something like that
   type HashTable[T] = ConcurrentHashMap[Hash,Computation[T]]
 
 //  private def createHashTable[T]: HashTable[T] = new mutable.HashMap[Hash,T]()
