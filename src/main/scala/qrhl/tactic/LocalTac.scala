@@ -19,7 +19,10 @@ case class LocalTac(left : Boolean, cVariables : List[CVariable], qVariables : L
       // cvarsInProg / qvarsInProg: local variables declared at the top of the program
       // body: the body of that program
       val (cvarsInProg, qvarsInProg, body) = (if (left) leftProg else rightProg) match {
-        case Block(Local(cvars, qvars, body)) => (cvars, qvars, body)
+        case Block(Local(vars, body)) =>
+          val qvars = vars collect { case v : QVariable => v }
+          val cvars = vars collect { case v : CVariable => v }
+          (cvars, qvars, body)
         case body =>
           if (cVariables.isEmpty && qVariables.isEmpty)
             throw UserException(s"Expected $lrWord program to be of the form { local ...; ... }")

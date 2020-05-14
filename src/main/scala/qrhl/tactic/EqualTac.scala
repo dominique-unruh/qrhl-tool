@@ -15,6 +15,8 @@ import qrhl.tactic.EqualTac.logger
 
 import scala.collection.immutable.ListSet
 
+import Utils.listSetUpcast
+
 case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvariables: List[QVariable], amount:Int=1) extends WpBothStyleTac(leftAmount=amount, rightAmount=amount) {
   def diff(left:Statement, right:Statement): (Statement, List[(Statement,Statement)]) = {
     val mismatches = new mutable.ListBuffer[(Statement,Statement)]()
@@ -40,9 +42,9 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvari
         Measurement(vl,vsl,el)
       case (QApply(vsl,el), QApply(vsr,er)) if vsl==vsr && el==er =>
         QApply(vsl,el)
-      case (Local(cvarsl, qvarsl, bodyl), Local(cvarsr, qvarsr, bodyr))
-        if Set(cvarsl :_*) == Set(cvarsr :_*) && Set(qvarsl :_*) == Set(qvarsr :_*) =>
-        Local(cvarsl, qvarsl, collect(bodyl, bodyr).toBlock)
+      case (Local(varsl, bodyl), Local(varsr, bodyr))
+        if Set(varsl :_*) == Set(varsr :_*) =>
+        Local(varsl, collect(bodyl, bodyr).toBlock)
       case lr =>
         val idx = mismatches.indexOf(lr)
         if (idx == -1) {
@@ -76,7 +78,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvari
     // ==== Choose in/out/mid variables
 
     val out_cvars = varUse.classical
-    val cwvars = varUse.writtenClassical
+    val cwvars = varUse.written collect { case v : CVariable => v }
     val out_qvars =
       if (qvariables.isEmpty)
         varUse.quantum
@@ -162,7 +164,7 @@ case class EqualTac(exclude: List[String], qvariables: List[QVariable], midqvari
     // fv(R)^qu # fv(C)^qu: by subgoal below
 
     // C is fv(R)^cl-readonly
-    assert(rVarUse.classical.intersect(varUse.writtenClassical).isEmpty)
+    assert(rVarUse.classical.intersect(varUse.written).isEmpty)
 
     // fv(R)^qu # Qout \ Qmid: by subgoal below
 

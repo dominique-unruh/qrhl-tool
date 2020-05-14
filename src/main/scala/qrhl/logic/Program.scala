@@ -17,7 +17,7 @@ import scala.language.higherKinds
 // Implicits
 import qrhl.isabelle.RichTerm.{term_tight_codec, typ_tight_codec}
 import qrhl.logic.Statement.codec
-
+import qrhl.Utils.listSetUpcast
 
 sealed trait VarTerm[+A] {
   def replace[A1 >: A, A2 >: A](from: A1, to: A2): VarTerm[A2]
@@ -96,111 +96,107 @@ object VarTerm {
   }
 }
 
+case class ExprVariableUse
+(
+  classical : ListSet[CVariable],
+  ambient : ListSet[String]
+)
 
 case class VariableUse
 (
-  /** All classical variables. */
-  classical : ListSet[CVariable],
-  /** All classical variables that are not ever written */
-  writtenClassical : ListSet[CVariable],
-  /** All quantum variables */
-  quantum: ListSet[QVariable],
-  /** All ambient variables */
+  /** Free variables (upper bound) */
+  freeVariables : ListSet[Variable],
+  /** All written variables (upper bound) */
+  written : ListSet[Variable],
+  /** All ambient variables (upper bound) */
   ambient : ListSet[String],
   /** All included programs */
   programs : ListSet[ProgramDecl],
-  /** All classical variables that are overwritten.
+  /** All variables that are overwritten (lower bound).
     * That is, their initial value is never used, and they will be overwritten with a value
     * independent of their initial value. */
-  overwrittenClassical : ListSet[CVariable],
-  /** All quantum variables that are overwritten.
-    * That is, their initial value is never used, and they will be overwritten with a value
-    * independent of their initial value. */
-  overwrittenQuantum : ListSet[QVariable],
-  /** All oracles used by this program */
+  overwritten : ListSet[Variable],
+  /** All oracles used by this program (upper bound) */
   oracles : ListSet[String],
-  /** Local variables that have an oracle call in their scope. */
-  innerClassical: ListSet[CVariable],
-  /** Analogous to [[innerClassical]] */
-  innerQuantum: ListSet[QVariable]
+  /** Local variables that have an oracle call in their scope (upper bound). */
+  inner: ListSet[Variable],
+// TODO: add: covered
 ) {
+  def isProgram: Boolean = oracles.isEmpty
 
-  def hideLocals(cvars : Traversable[CVariable], qvars : Traversable[QVariable]): VariableUse = {
-    val hasOracles = oracles.nonEmpty
-    copy(classical = classical -- cvars, writtenClassical = writtenClassical -- cvars,
-      quantum = quantum -- qvars, overwrittenClassical = overwrittenClassical -- cvars,
-      overwrittenQuantum = overwrittenQuantum -- qvars,
-      innerClassical = if (hasOracles) innerClassical ++ cvars else innerClassical,
-      innerQuantum = if (hasOracles) innerQuantum ++ qvars else innerQuantum)
-  }
-
+  @deprecated def classical: ListSet[CVariable] = freeVariables collect { case v : CVariable => v }
+  @deprecated def quantum: ListSet[QVariable] = freeVariables collect { case v : QVariable => v }
+  @deprecated def overwrittenClassical : ListSet[CVariable] = overwritten collect { case v : CVariable => v }
+  @deprecated def overwrittenQuantum : ListSet[QVariable] = overwritten collect { case v : QVariable => v }
+  @deprecated def innerClassical : ListSet[CVariable] = inner collect { case v : CVariable => v }
+  @deprecated def innerQuantum : ListSet[QVariable] = inner collect { case v : QVariable => v }
+  @deprecated def writtenClassical : ListSet[CVariable] = written collect { case v : CVariable => v }
 
   override def toString: String = s"""
-      | Classical:       ${classical.map(_.name).mkString(", ")}
-      | Quantum:         ${quantum.map(_.name).mkString(", ")}
-      | Ambient:         ${ambient.mkString(", ")}
-      | Programs:        ${programs.map(_.name).mkString(", ")}
-      | Written class.:  ${writtenClassical.map(_.name).mkString(", ")}
-      | Overwritten cl.: ${overwrittenClassical.map(_.name).mkString(", ")}
-      | Overwritten qu.: ${overwrittenQuantum.map(_.name).mkString(", ")}
-      | Inner classical: ${innerClassical.map(_.name).mkString(", ")}
-      | Inner quantum:   ${innerQuantum.map(_.name).mkString(", ")}
-      | Oracles:         ${oracles.mkString(", ")}
+      | Free:           ${freeVariables.map(_.name).mkString(", ")}
+      | Ambient:        ${ambient.mkString(", ")}
+      | Programs:       ${programs.map(_.name).mkString(", ")}
+      | Written:        ${written.map(_.name).mkString(", ")}
+      | Overwritten:    ${overwritten.map(_.name).mkString(", ")}
+      | Inner:          ${inner.map(_.name).mkString(", ")}
+      | Oracles:        ${oracles.mkString(", ")}
     """.stripMargin
 
-  def addClassicalVar(variables: CVariable*): VariableUse = copy(classical=classical ++ variables)
-  def addAmbientVar(variables: String*): VariableUse = copy(ambient=ambient ++ variables)
-  def addProgramVar(p: ProgramDecl*): VariableUse = copy(programs=programs ++ p)
+//  def addFreeVariable(variables: Variable*): VariableUse = copy(freeVariables ++ variables)
+//  def addAmbientVar(variables: String*): VariableUse = copy(ambient=ambient ++ variables)
+//  def addProgramVar(p: ProgramDecl*): VariableUse = copy(programs=programs ++ p)
 
-  def ++(other: VariableUse) = VariableUse(
-    classical=classical++other.classical,
-    writtenClassical=writtenClassical++other.writtenClassical,
-    quantum=quantum++other.quantum,
+/*  def ++(other: VariableUse): VariableUse = VariableUse(
+    freeVariables=freeVariables++other.freeVariables,
+    written=written++other.written,
     ambient=ambient++other.ambient,
     programs=programs++other.programs,
-    overwrittenClassical = overwrittenClassical++other.overwrittenClassical,
-    overwrittenQuantum = overwrittenQuantum++other.overwrittenQuantum,
+    overwritten = overwritten++other.overwritten,
     oracles = oracles++other.oracles,
-    innerClassical = innerClassical++other.innerClassical,
-    innerQuantum = innerQuantum++other.innerQuantum)
+    inner = inner++other.inner)*/
 
   //noinspection MutatorLikeMethodIsParameterless
-  def removeOverwritten: VariableUse = copy(overwrittenClassical=ListSet.empty, overwrittenQuantum = ListSet.empty)
-  def removeOverwrittenClassical(vars: CVariable*): VariableUse = copy(overwrittenClassical=overwrittenClassical -- vars)
-  def removeOverwrittenQuantum(vars: QVariable*): VariableUse = copy(overwrittenQuantum=overwrittenQuantum -- vars)
+//  def removeOverwritten: VariableUse = copy(overwritten=ListSet.empty)
+//  def removeOverwrittenClassical(vars: CVariable*): VariableUse = copy(overwritten=overwritten -- vars)
+//  def removeOverwrittenQuantum(vars: QVariable*): VariableUse = copy(overwritten=overwritten -- vars)
 
 }
 object VariableUse {
-  def oracle(oracles: String*): VariableUse =
-    new VariableUse(quantum=emptySet, classical=emptySet, ambient=emptySet, programs=emptySet, writtenClassical=emptySet,
-      overwrittenClassical = emptySet, overwrittenQuantum = emptySet, oracles=ListSet(oracles:_*),
-      innerClassical = emptySet, innerQuantum = emptySet)
+  // TODO get rid of most (all?) of the helper functions
+
+/*  def oracle(oracles: String*): VariableUse =
+    new VariableUse(freeVariables=emptySet, ambient=emptySet, programs=emptySet, written=emptySet,
+      overwritten = emptySet, oracles=ListSet(oracles:_*),
+      inner = emptySet)*/
 
 
-  private def emptySet[A] = ListSet.empty[A]
+  private val emptySet = ListSet.empty[Nothing]
 
-  def overwrittenClassicalVariables(variables: CVariable*): VariableUse = {
+/*  def overwrittenClassicalVariables(variables: CVariable*): VariableUse = {
     val vars = ListSet(variables: _*)
-    new VariableUse(classical = vars, writtenClassical = vars, ambient = emptySet, programs = emptySet, quantum = emptySet,
-      overwrittenClassical = vars, overwrittenQuantum = emptySet, oracles=emptySet,
-      innerClassical = emptySet, innerQuantum = emptySet)
-  }
+    new VariableUse(freeVariables = vars, written = vars,
+      ambient = emptySet, programs = emptySet,
+      overwritten = vars, oracles=emptySet,
+      inner = emptySet)
+  }*/
 
-  def quantumVariables(vs: QVariable*): VariableUse =
-    new VariableUse(quantum=ListSet(vs:_*), classical=emptySet, ambient=emptySet, programs=emptySet, writtenClassical=emptySet,
-      overwrittenClassical = emptySet, overwrittenQuantum = emptySet, oracles=emptySet,
-      innerClassical = emptySet, innerQuantum = emptySet)
+/*  def quantumVariables(vs: QVariable*): VariableUse =
+    new VariableUse(freeVariables=ListSet(vs:_*), ambient=emptySet, programs=emptySet, written=emptySet,
+      overwritten = emptySet, oracles=emptySet,
+      inner = emptySet)*/
 
+/*
   def overwrittenQuantumVariables(vs: QVariable*): VariableUse = {
     val vars = ListSet(vs:_*)
-    new VariableUse(quantum=vars, classical=emptySet, ambient=emptySet, programs=emptySet, writtenClassical=emptySet,
-      overwrittenClassical = emptySet, overwrittenQuantum = vars, oracles=emptySet,
-      innerClassical = emptySet, innerQuantum = emptySet)
+    new VariableUse(freeVariables=vars, ambient=emptySet, programs=emptySet, written=emptySet,
+      overwritten = vars, oracles=emptySet,
+      inner = emptySet)
   }
+*/
 
-  def empty = new VariableUse(classical=emptySet, writtenClassical=emptySet, quantum=emptySet, ambient=emptySet, programs=emptySet,
-    overwrittenClassical = emptySet, overwrittenQuantum = emptySet, oracles=emptySet,
-    innerClassical = emptySet, innerQuantum = emptySet)
+  val empty = new VariableUse(freeVariables=emptySet, written=emptySet, ambient=emptySet, programs=emptySet,
+    overwritten = emptySet, oracles=emptySet,
+    inner = emptySet)
 }
 
 case object VTUnit extends VarTerm[Nothing] {
@@ -218,7 +214,7 @@ case class VTSingle[+A](v:A) extends VarTerm[A] {
 
   override def replace[A1 >: A, A2 >: A](from: A1, to: A2): VarTerm[A2] =
     if (this.v == from)
-      new VTSingle(to)
+      VTSingle(to)
     else if (this.v == to)
       throw UserException(s"Trying to replace $from to $to, but $to is already in use")
     else
@@ -233,7 +229,7 @@ case class VTCons[+A](a:VarTerm[A], b:VarTerm[A]) extends VarTerm[A] {
   override def toString: String = s"(${a.toString},${b.toString})"
 
   override def replace[A1 >: A, A2 >: A](from: A1, to: A2): VarTerm[A2] =
-    new VTCons(a.replace(from,to), b.replace(from,to))
+    VTCons(a.replace(from, to), b.replace(from, to))
 
   override def contains[A1 >: A](v: A1): Boolean =
     a.contains(v) || b.contains(v)
@@ -268,70 +264,177 @@ sealed trait Statement {
     context.isabelle.invoke(Statement.statement_to_term_op, (context.contextId, this))
   }
 
-  private def mergeSequential(a: VariableUse, b: VariableUse) : VariableUse = {
-    val result =
-      if (a.oracles.isEmpty)
-        a ++ b.removeOverwrittenClassical(a.classical.toSeq:_*).removeOverwrittenQuantum(a.quantum.toSeq:_*)
-      else
-        a ++ b.removeOverwritten
-//    println(s"A: $a\nB: $b\nA+B: $result") // TODO REMOVE
-    result
-  }
-  private def mergeAlternative(a: VariableUse, b: VariableUse) : VariableUse = {
-    val ab = a ++ b
-    ab.copy(overwrittenClassical = a.overwrittenClassical.intersect(b.overwrittenClassical),
-      overwrittenQuantum = a.overwrittenQuantum.intersect(b.overwrittenQuantum))
-  }
+//  private def mergeSequential(a: VariableUse, b: VariableUse) : VariableUse = {
+//    val result =
+//      if (a.oracles.isEmpty)
+//        a ++ b.removeOverwrittenClassical(a.classical.toSeq:_*).removeOverwrittenQuantum(a.quantum.toSeq:_*)
+//      else
+//        a ++ b.removeOverwritten
+//    result
+//  }
+//  private def mergeAlternative(a: VariableUse, b: VariableUse) : VariableUse = {
+//    val ab = a ++ b
+//    ab.copy(overwritten = a.overwritten.intersect(b.overwritten))
+//  }
 
+  private val emptySet = ListSet.empty
   val variableUse : Environment => VariableUse = Utils.singleMemo { env =>
     this match {
-      case Local(cvars, qvars, body) =>
-        body.variableUse(env).hideLocals(cvars, qvars)
-      case Block(ss@_*) =>
-        ss.foldLeft(VariableUse.empty) { (vars, s) => mergeSequential(vars, s.variableUse(env)) }
-      //        ss.foreach(collect)
-      case Assign(v, e) =>
-        val eVars = e.caVariables(env)
-        val lhsVars = VariableUse.overwrittenClassicalVariables(v.toSeq: _*)
-        mergeSequential(eVars, lhsVars)
+      case Local(vars, body) =>
+        val bodyVars = body.variableUse(env)
+        val isProgram = bodyVars.oracles.isEmpty
+        new VariableUse(
+          freeVariables = bodyVars.freeVariables -- vars,
+          written = bodyVars.written -- vars,
+          ambient = bodyVars.ambient,
+          programs = bodyVars.programs,
+          overwritten = bodyVars.overwritten -- vars,
+          oracles = bodyVars.oracles,
+          inner = if (isProgram) emptySet; else ListSet(vars:_*) ++ bodyVars.inner)
+      case Block() =>
+        // This is "skip"
+        new VariableUse(
+          freeVariables = emptySet,
+          written = emptySet,
+          ambient = emptySet,
+          programs = emptySet,
+          overwritten = emptySet,
+          oracles = emptySet,
+          inner = emptySet
+        )
+      case Block(s, ss@_*) =>
+        val sVars = s.variableUse(env)
+        val ssVars = Block(ss:_*).variableUse(env)
+        new VariableUse(
+          freeVariables = sVars.freeVariables ++ ssVars.freeVariables,
+          written = sVars.written ++ ssVars.written,
+          ambient = sVars.ambient ++ ssVars.ambient,
+          programs = sVars.programs ++ ssVars.programs,
+          overwritten =
+            // TODO: improve once we have "covered"
+            if (sVars.isProgram)
+              sVars.overwritten ++ (ssVars.overwritten -- sVars.freeVariables)
+            else
+              sVars.overwritten,
+          oracles = sVars.oracles ++ ssVars.oracles,
+          inner = sVars.inner ++ ssVars.inner
+        )
       case Sample(v, e) =>
         // Hack for simply doing the same as in Assign case
         Assign(v, e).variableUse(env)
+      case Assign(v, e) =>
+        // Also handling Sample(v,e)
+        val vSet = ListSet(v.toSeq :_*)
+        val fvE = e.caVariables(env)
+        new VariableUse(
+          freeVariables = vSet ++ fvE.classical,
+          written = vSet,
+          ambient = fvE.ambient,
+          programs = emptySet,
+          overwritten = vSet -- fvE.classical,
+          oracles = emptySet,
+          inner = emptySet
+        )
       case Call(name, args@_*) =>
         if (name.head != '@') {
-          val p = env.programs(name)
-          val headVars = p.variablesRecursive.addProgramVar(p)
-          args.foldLeft(headVars) { (vars, arg) => vars ++ arg.variableUse(env).removeOverwritten }
+          // Call(name, args@_*) is an application C[a1,...,an] where C is referenced by name, and args=(a1,...,an)
+          // TODO: As an alternative to the stuff below, we instantiate this call and then compute the variables
+          // that would give a tighter estimate
+          val progDecl = env.programs(name)
+          val progVars = progDecl.variablesRecursive
+          val argVars = args map ( _.variableUse(env) )
+          val oracles = argVars.foldLeft(emptySet : ListSet[String]) { _ ++ _.oracles }
+          val isProgram = oracles.isEmpty
+          new VariableUse(
+            // By Helping_Lemmas.fv_subst' (note that freeVariables is an upper bound)
+            // TODO: can be improved by taking into account "covered"
+            freeVariables = argVars.foldLeft(progVars.freeVariables) { _ ++ _.freeVariables },
+            // By Helping_Lemmas.fv_written' (note that freeVariables is an upper bound)
+            written = argVars.foldLeft(progVars.written) { _ ++ _.written },
+            ambient = argVars.foldLeft(progVars.ambient) { _ ++ _.ambient },
+            programs = argVars.foldLeft(progVars.programs + progDecl) { _ ++ _.programs },
+            // By Helping_Lemmas.overwr_subst (note that overwritten is a lower bound)
+            overwritten = progVars.overwritten,
+            oracles = oracles,
+            // By Heling_Lemmas program_inner and inner_subst (note that inner is an upper bound)
+            inner = if (isProgram) emptySet else
+                    argVars.foldLeft(progVars.inner) { _ ++ _.inner }
+          )
         } else {
           assert(args.isEmpty)
-          VariableUse.oracle(name.tail)
-//          args.foldLeft(VariableUse.empty) { (vars, arg) => vars ++ arg.variableUse(env) }
+          // The current program is a hole
+          new VariableUse(
+            freeVariables = emptySet,
+            written = emptySet,
+            ambient = emptySet,
+            programs = emptySet,
+            overwritten = emptySet,
+            oracles = ListSet(name.tail),
+            inner = emptySet
+          )
         }
       case While(e, body) =>
-        val vars = e.caVariables(env) ++ body.variableUse(env)
-        vars.removeOverwritten
-      val eVars = e.caVariables(env)
+        val fvE = e.caVariables(env)
         val bodyVars = body.variableUse(env)
-        eVars ++ bodyVars
+        new VariableUse(
+          freeVariables = fvE.classical ++ bodyVars.freeVariables,
+          written = bodyVars.written,
+          ambient = fvE.ambient ++ bodyVars.ambient,
+          programs = bodyVars.programs,
+          overwritten = emptySet,
+          oracles = bodyVars.oracles,
+          inner = bodyVars.inner
+        )
       case IfThenElse(e, p1, p2) =>
-        val eVars = e.caVariables(env)
+        val fvE = e.caVariables(env)
         val p1Vars = p1.variableUse(env)
         val p2Vars = p2.variableUse(env)
-        val p12Vars = mergeAlternative(p1Vars, p2Vars)
-        mergeSequential(eVars, p12Vars)
-      case QInit(vs, e) =>
-        val lhsVars = VariableUse.overwrittenQuantumVariables(vs.toSeq: _*)
-        val rhsVars = e.caVariables(env)
-        mergeSequential(rhsVars, lhsVars)
-      case QApply(vs, e) =>
-        val lhsVars = VariableUse.quantumVariables(vs.toSeq: _*)
-        val rhsVars = e.caVariables(env)
-        rhsVars ++ lhsVars
-      case Measurement(v, vs, e) =>
-        val eVars = e.caVariables(env)
-        val qVars = VariableUse.quantumVariables(vs.toSeq:_*)
-        val lhsVars = VariableUse.overwrittenClassicalVariables(v.toSeq:_*)
-        mergeSequential(eVars,lhsVars) ++ qVars
+        new VariableUse(
+          freeVariables = fvE.classical ++ p1Vars.freeVariables ++ p2Vars.freeVariables,
+          written = p1Vars.written ++ p2Vars.written,
+          ambient = fvE.ambient ++ p1Vars.ambient ++ p2Vars.ambient,
+          programs = p1Vars.programs ++ p2Vars.programs,
+          overwritten = p1Vars.overwritten.intersect(p2Vars.overwritten) -- fvE.classical,
+          oracles = p1Vars.oracles ++ p2Vars.oracles,
+          inner = p1Vars.inner ++ p2Vars.inner
+        )
+      case QInit(q, e) =>
+        val qSet = ListSet(q.toSeq :_*)
+        val fvE = e.caVariables(env)
+        new VariableUse(
+          freeVariables = qSet ++ fvE.classical,
+          written = qSet,
+          ambient = fvE.ambient,
+          programs = emptySet,
+          overwritten = qSet,
+          oracles = emptySet,
+          inner = emptySet
+        )
+      case QApply(q, e) =>
+        val qSet = ListSet(q.toSeq :_*)
+        val fvE = e.caVariables(env)
+        new VariableUse(
+          freeVariables = qSet ++ fvE.classical,
+          written = qSet,
+          ambient = fvE.ambient,
+          programs = emptySet,
+          overwritten = emptySet,
+          oracles = emptySet,
+          inner = emptySet
+        )
+      case Measurement(x, q, e) =>
+        val xSet = ListSet(x.toSeq :_*)
+        val qSet = ListSet(q.toSeq :_*)
+        val fvE = e.caVariables(env)
+        new VariableUse(
+          freeVariables = xSet ++ qSet ++ fvE.classical,
+          written = xSet ++ qSet,
+          ambient = fvE.ambient,
+          programs = emptySet,
+          overwritten = xSet -- fvE.classical,
+          oracles = emptySet,
+          inner = emptySet
+        )
     }
   }
 
@@ -380,6 +483,12 @@ sealed trait Statement {
 //    collect(this)
 //  }
 
+  @deprecated
+  private def expr2VariableUse(eVars: ExprVariableUse) = {
+    VariableUse.empty.copy(freeVariables = eVars.classical,
+      ambient = eVars.ambient)
+  }
+
   def checkWelltyped(context: Isabelle.Context): Unit
 
   /** All ambient and program variables.
@@ -389,9 +498,8 @@ sealed trait Statement {
   def variablesDirect : Set[String] = {
     val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
     def collect(s:Statement) : Unit = s match {
-      case Local(cvars, qvars, body) =>
-        vars ++= cvars map { _.name }
-        vars ++= qvars map { _.name }
+      case Local(vars2, body) =>
+        vars ++= vars2 map { _.name }
         collect(body)
       case Block(ss @ _*) => ss.foreach(collect)
       case Assign(v,e) => vars ++= v.iterator.map(_.name); vars ++= e.variables
@@ -496,7 +604,10 @@ object Statement {
 //    }
 
     override def encode(t: Statement): XML.Tree = t match {
-      case Local(cvars, qvars, body) => XML.Elem(("local", Nil),
+      case Local(vars, body) =>
+        val qvars = vars collect { case v : QVariable => v }
+        val cvars = vars collect { case v : CVariable => v }
+        XML.Elem(("local", Nil),
         List(VarTerm.codecC.encode(VarTerm.varlist(cvars:_*)),
           VarTerm.codecQ.encode(VarTerm.varlist(qvars:_*)),
           encode(body)))
@@ -614,90 +725,96 @@ object Statement {
     Operation.implicitly[(BigInt, List[Statement]), RichTerm]("statements_to_term")
 }
 
-class Local(val cvars: List[CVariable], val qvars: List[QVariable], val body : Block) extends Statement {
-  assert(cvars.nonEmpty || qvars.nonEmpty)
+class Local(val vars: List[Variable], val body : Block) extends Statement {
+  assert(vars.nonEmpty)
 
   override def equals(obj: Any): Boolean = obj match {
     case o : Local =>
-      (cvars == o.cvars) && (qvars == o.qvars) && (body == o.body)
+      (vars == o.vars) && (body == o.body)
     case _ => false
   }
 
   override def substituteOracles(subst: Map[String, Call]): Statement =
-    new Local(cvars=cvars, qvars=qvars, body=body.substituteOracles(subst))
+    new Local(vars=vars, body=body.substituteOracles(subst))
 
   override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Statement =
-    new Local(cvars=cvars, qvars=qvars, body=body.simplify(isabelle, facts, thms))
+    new Local(vars=vars, body=body.simplify(isabelle, facts, thms))
 
   override def markOracles(oracles: List[String]): Statement =
-    new Local(cvars=cvars, qvars=qvars, body=body.markOracles(oracles))
+    new Local(vars=vars, body=body.markOracles(oracles))
 
   override def checkWelltyped(context: Isabelle.Context): Unit =
     body.checkWelltyped(context)
 
   override def inline(name: String, oracles: List[String], program: Statement): Statement =
     body.inline(name, oracles, program) match {
-      case Block(Local(cvars2, qvars2, body)) => new Local(cvars ++ cvars2, qvars ++ qvars2, body)
-      case stmt => new Local(cvars, qvars, stmt)
+      case Block(Local(vars2, body)) =>
+        new Local(vars ++ vars2, body)
+      case stmt => new Local(vars, stmt)
   }
 
   override def toString: String = body.statements match {
-    case Nil => "{ local " + (cvars ++ qvars).map(_.name).mkString(", ") + "; skip; }"
-    case stmts => "{ local " + (cvars ++ qvars).map(_.name).mkString(", ") + "; " + stmts.map {_.toString}.mkString(" ") + " }"
+    case Nil => "{ local " + (vars ).map(_.name).mkString(", ") + "; skip; }"
+    case stmts => "{ local " + (vars).map(_.name).mkString(", ") + "; " + stmts.map {_.toString}.mkString(" ") + " }"
   }
 
   override def renameQVariable(env: Environment, from: QVariable, to: QVariable): Local = {
-    if (qvars.contains(from)) {
+    if (vars.contains(from)) {
       if (this.variableUse(env).quantum.contains(to))
         throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${to.name} is free variable in $this.")
       else
         this
-    } else if (qvars.contains(to))
+    } else if (vars.contains(to))
       throw UserException(s"Cannot rename ${from.name} -> ${to.name} in ${this}: ${to.name} is a local variable")
     else
-      new Local(cvars, qvars, body.renameQVariable(env, from, to))
+      new Local(vars, body.renameQVariable(env, from, to))
   }
 
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Local = {
-    if (cvars.contains(from)) {
+    if (vars.contains(from)) {
       if (this.variableUse(env).classical.contains(to))
         throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${to.name} is free variable in $this.")
       else
         this
-    } else if (cvars.contains(to))
+    } else if (vars.contains(to))
       throw UserException(s"Cannot rename ${from.name} -> ${to.name} in ${this}: ${to.name} is a local variable")
     else
-      new Local(cvars, qvars, body.renameCVariable(env, from, to))
+      new Local(vars, body.renameCVariable(env, from, to))
   }
 
   def simplifyEmpty: Statement =
-    if (cvars.isEmpty && qvars.isEmpty) body
+    if (vars.isEmpty) body
     else this
 }
 
 object Local {
-  def apply(cvars: Seq[CVariable], qvars: Seq[QVariable], body : Block): Local =
-    new Local(cvars.toList, qvars.toList, body)
+  def apply(cvars: Seq[CVariable], qvars: Seq[QVariable], body : Block): Local = {
+    new Local(cvars.toList ++ qvars.toList, body)
+  }
+
+  def apply(vars: Seq[Variable], body : Block): Local = {
+    new Local(vars.toList, body)
+  }
 
   def makeIfNeeded(cvars: Seq[CVariable], qvars: Seq[QVariable], body : Statement): Statement =
-    if (cvars.nonEmpty || qvars.nonEmpty)
+    makeIfNeeded(cvars ++ qvars, body)
+
+  def makeIfNeeded(vars: Seq[Variable], body : Statement): Statement =
+    if (vars.nonEmpty)
       body match {
-        case Local(cvars0, qvars0, body0) =>
-          new Local(ListSet(cvars++cvars0 :_*).toList, ListSet(qvars++qvars0 :_*).toList, body0)
+        case Local(vars0, body0) =>
+          new Local(ListSet(vars++vars0 :_*).toList, body0)
         case _ =>
-          new Local(cvars.toList, qvars.toList, body.toBlock)
+          new Local(vars.toList, body.toBlock)
       }
     else
       body
 
   def apply(env : Environment, vars : Seq[String], body : Block): Local = {
     val vars2 = vars map env.getProgVariable
-    val cvars = vars2 collect { case v : CVariable => v }
-    val qvars = vars2 collect { case v : QVariable => v }
-
-    new Local(cvars.toList, qvars.toList, body)
+    new Local(vars2.toList, body)
   }
-  def unapply(x : Local): Some[(List[CVariable], List[QVariable], Block)] = Some((x.cvars, x.qvars, x.body))
+  def unapply(x : Local): Some[(List[Variable], Block)] = Some((x.vars, x.body))
 }
 
 class Block(val statements:List[Statement]) extends Statement {

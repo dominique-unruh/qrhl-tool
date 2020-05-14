@@ -8,12 +8,21 @@ import hashedcomputation.Context.default
 import qrhl.logic.CVariable
 import scalaz.Memo
 
+import scala.collection.immutable.ListSet
 import scala.collection.mutable
+import scala.language.implicitConversions
 import scala.ref.SoftReference
 
 object Utils {
   def symmetricDifferrence[A](a: Set[A], b: Set[A]) : Set[A] =
     (a -- b) ++ (b -- a)
+
+//  implicit class ListSetUpcast[A](set : ListSet[A]) {
+//    def upcast[B >: A]: ListSet[B] = set.asInstanceOf[ListSet[B]]
+//  }
+
+  implicit def listSetUpcast[B, A <: B](set : ListSet[A]) : ListSet[B] =
+    set.asInstanceOf[ListSet[B]]
 
   private val digest = MessageDigest.getInstance("SHA-1")
   def hashFile(file: Path): Array[Byte] = {

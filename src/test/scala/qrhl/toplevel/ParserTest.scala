@@ -152,7 +152,7 @@ class ParserTest extends FunSuite {
 
     println(block)
 
-    assert(new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()) == new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()))
+    assert(new Local(List(CVariable("x", HOLogic.intT)), Block()) == new Local(List(CVariable("x", HOLogic.intT)), Block()))
 //    assert(block.get == new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()))
   }
 }

@@ -5,7 +5,7 @@ import org.log4s
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import qrhl.isabelle.Isabelle.{Inf, QuantumEqualityFull, predicateT, predicate_inf, predicate_top}
 import qrhl.isabelle.{Isabelle, RichTerm}
-import qrhl.logic.{Block, Local, QVariable}
+import qrhl.logic.{Block, CVariable, Local, QVariable}
 
 case object LocalJointTac extends Tactic {
   /** Assumes that s1,s2 have same length and matching types */
@@ -35,12 +35,18 @@ case object LocalJointTac extends Tactic {
 
       // Decomposing left/right program
       val (cvarsL, qvarsL, bodyL) = leftProg match {
-        case Block(Local(cvars, qvars, body)) => (cvars, qvars, body)
+        case Block(Local(vars, body)) =>
+          val qvars = vars collect { case v : QVariable => v }
+          val cvars = vars collect { case v : CVariable => v }
+          (cvars, qvars, body)
         case _ => throw UserException(s"Expected left program to be of the form { local ...; ... }")
       }
 
       val (cvarsR, qvarsR, bodyR) = rightProg match {
-        case Block(Local(cvars, qvars, body)) => (cvars, qvars, body)
+        case Block(Local(vars, body)) =>
+          val qvars = vars collect { case v : QVariable => v }
+          val cvars = vars collect { case v : CVariable => v }
+          (cvars, qvars, body)
         case _ => throw UserException(s"Expected right program to be of the form { local ...; ... }")
       }
 

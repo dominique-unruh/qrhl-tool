@@ -205,7 +205,10 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       val ci_prime_block = Block(ci_prime_joined: _*)
 
       (ci_prime_block, class_Vup, quant_Vup, idVar)
-    case Local(cvars, qvars, body) =>
+    case Local(vars, body) =>
+      val qvars = vars collect { case v : QVariable => v }
+      val cvars = vars collect { case v : CVariable => v }
+
       /* Uses fact (lemma:unused):
 
          [[ local V; c ]] = [[ c ]] if V \cap fv(c) = {}
