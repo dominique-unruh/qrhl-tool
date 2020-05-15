@@ -378,18 +378,19 @@ object Parser extends JavaTokenParsers {
     literal("equal") ~> OnceParser(
       for (amount <- wp_amount;
            exclude <- (literal("exclude") ~> identifierList).?;
-           qvars <- (literal("qvars") ~> identifierList).?;
-           midQVars <- (literal("innerqvars") ~> identifierList).?
-           )
+           in <- (literal("in") ~> identifierList).?;
+           mid <- (literal("mid") ~> identifierList).?;
+           out <- (literal("out") ~> identifierList).?)
         yield {
           val exclude2 = exclude.getOrElse(Nil)
           for (p <- exclude2 if !context.environment.programs.contains(p))
             throw UserException(s"Undeclared program $p")
 
-          val qvars2 = qvars.getOrElse(Nil) map { context.environment.getQVariable }
-          val midqvars2 = midQVars.getOrElse(Nil) map { context.environment.getQVariable }
+          val in2 = in.getOrElse(Nil) map { context.environment.getProgVariable }
+          val mid2 = mid.getOrElse(Nil) map { context.environment.getProgVariable }
+          val out2 = out.getOrElse(Nil) map { context.environment.getProgVariable }
 
-          EqualTac(exclude=exclude2, qvariables = qvars2, midqvariables = midqvars2, amount=amount)
+          EqualTac(exclude=exclude2, in=in2, mid=mid2, out=out2, amount=amount)
         })
 
   def tactic_byqrhl(implicit context:ParserContext) : Parser[ByQRHLTac] =

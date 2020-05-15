@@ -191,8 +191,6 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
         val ci_varuse = ci.variableUse(env)
 
-        logger.debug(s"XXXXX ${ci_varuse.quantum -- quant_Vdown_i}")
-
         // Value of Wi for the next iteration
         // W_{i+1} := W_i \cup V*_i - (fv(c_i) - Vdown_i)
         class_W_i = class_W_i ++ class_Vstar_i -- (ci_varuse.classical -- class_Vdown_i)

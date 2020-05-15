@@ -6,8 +6,14 @@ import info.hupel.isabelle.pure.{App, Const, Free, Term}
 import qrhl.isabelle.RichTerm.typ_tight_codec
 import qrhl.isabelle.{Isabelle, IsabelleConsts}
 
+import scala.collection.generic.CanBuildFrom
+import scala.collection.immutable.ListSet
+import scala.collection.mutable
+
 // Variables
 sealed trait Variable {
+  def isQuantum: Boolean
+
   val name:String
   /** Name of the variable on Isabelle side (prefixed with var_ for classical variables) */
   val variableName: String
@@ -21,7 +27,9 @@ sealed trait Variable {
 }
 
 object Variable {
-//  def varlistToString(vars: List[Variable]) = vars match {
+  def quantum(vars: ListSet[Variable]): ListSet[QVariable] = vars collect { case v : QVariable => v }
+
+  //  def varlistToString(vars: List[Variable]) = vars match {
 //    case Nil => "()"
 //    case List(x) => x.name;
 //    case _ => s"(${vars.mkString(",")})"
@@ -83,6 +91,8 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
   override def index(left:Boolean): QVariable = if (left) index1 else index2
   override val variableName: String = name
   override def toString: String = s"quantum var $name : ${Isabelle.pretty(valueTyp)}"
+
+  override def isQuantum: Boolean = true
 }
 
 object QVariable {
@@ -129,6 +139,8 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
   def valueTerm: Term = Free(name,valueTyp)
 
   override def toString: String = s"classical var $name : ${Isabelle.pretty(valueTyp)}"
+
+  override def isQuantum: Boolean = false
 }
 
 object CVariable {

@@ -1,91 +1,17 @@
-isabelle TestEx.
+isabelle.
 
-classical var x : bool.
-classical var y : bool.
-classical var z : bool.
-quantum var Avar : string.
-adversary A vars Avar.
-adversary B vars Avar.
-
-lemma x=z --> z=x.
-isa! auto.
-qed.
-
-lemma ∃x. x=x.
-isa rule exI[of _ "undefined"].
-simp.
-qed.
-
+quantum var x : bit.
+quantum var y : bit.
 
 program p1 := {
-  if (x) then { call A; } else { call B; }
+  { local x; y <q ket 0; x <q ket 1;  }
 }.
 
 program p2 := {
-  if (x) then { call B; } else { call A; }
+  { local x; y <q ket 0; x <q ket 0; }
 }.
 
-# lemma ((<=) :: mem2 ell2 linear_space ⇒ mem2 ell2 linear_space ⇒ mem2 ell2 linear_space == x).
-
-qrhl { Cla[x1≠x2] ⊓ ⟦Avar1⟧ ≡𝔮 ⟦Avar2⟧ } call p1; ~ call p2; { ⟦Avar1⟧ ≡𝔮 ⟦Avar2⟧ }.
+qrhl {top} call p1; ~ call p2; {top}.
  inline p1.
  inline p2.
- jointif true-false false-true.
-  simp!.
-
  equal.
-  simp!.
-
- skip.
- simp!.
-
- equal.
-  simp!.
-
- skip.
- simp!.
-qed.
-
-
-
-# TODO: make proper example file out of this
-
-quantum var q : bit.
-quantum var r : bit.
-quantum var s : bit.
-classical var x : bit.
-classical var y : bit.
-
-program Q := {
-  local s;
-  on s apply hadamard;
-}.
-
-program p := {
-  local x,q;
-  on q,r apply comm_op;
-  while (True) {
-   local x,r;
-   x <- 1;
-  }
-  call Q;
-}.
-
-program p2 := {
-  while (True) {
-   local x,r;
-   x <- 1;
-  }
-}.
-
-
-qrhl {top ⊓ Qeq[r1=r2]} call p; ~ call p; {Qeq[r1=r2]}.
- inline p.
- inline p2.
-# rename left: q -> s.
-# rename both: r -> s.
-
- local up right r.
- local up x.
-
-local up s.
