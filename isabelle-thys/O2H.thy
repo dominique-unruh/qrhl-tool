@@ -37,6 +37,8 @@ lemma o2h[unfolded PROGRAM_EQUAL_def]:
   defines "Pright == probability (expression \<lbrakk>b\<rbrakk> (\<lambda>b. b=1)) game_right rho"
   defines "Pfind == probability (expression \<lbrakk>Find\<rbrakk> (\<lambda>Find. Find)) game_find rho"
 
+  assumes "\<And>S G H z x. (S,G,H,z) \<in> supp distr \<Longrightarrow> x\<notin>S \<Longrightarrow> G x = H x"
+
   shows "abs (Pleft - Pright) \<le> 2 * sqrt( (1 + real q)*Pfind )"
     by (cheat O2H)
 
