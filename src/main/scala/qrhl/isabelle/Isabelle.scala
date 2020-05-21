@@ -26,7 +26,7 @@ import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
-import qrhl.isabelle.Isabelle.Thm
+import qrhl.isabelle.Isabelle.{Thm, fastype_of}
 import qrhl.isabelle.{IsabelleConsts => c, IsabelleTypes => t}
 import scalaz.Applicative
 
@@ -292,6 +292,12 @@ object Isabelle {
   def tensorOp(ta: Typ, tb: Typ, tc: Typ, td: Typ): Const =
     Const(c.tensorOp, l2boundedT(ta,tb) -->: l2boundedT(tc,td) -->: l2boundedT(prodT(ta,tc),prodT(tb,td)))
 
+  object IdOp {
+    def unapply(arg: Term): Boolean = arg match {
+      case Const(IsabelleConsts.idOp, _) => true
+      case _ => false
+    }
+  }
   def idOp(valueTyp: Typ) = Const(c.idOp, boundedT(valueTyp, valueTyp))
 
   private var globalIsabellePeek: Isabelle = _
@@ -392,11 +398,41 @@ object Isabelle {
   val oracle_programT = Type(t.oracle_program)
   val classical_subspace : Term= Const(c.classical_subspace, HOLogic.boolT -->: predicateT)
   def classical_subspace(t:Term) : Term = classical_subspace $ t
+  def classical_subspace_optimized(t: Term): Term = t match {
+    case True_const => predicate_top
+    case False_const => predicate_0
+    case _ => classical_subspace(t)
+  }
 
-  val predicate_inf = Const(c.inf, predicateT -->: predicateT -->: predicateT)
-  val predicate_bot = Const(c.bot, predicateT)
-  val predicate_top = Const(c.top, predicateT)
-  val predicate_0 = Const(c.zero, predicateT)
+  def top(typ: Typ) = Const(c.top, typ)
+  object Top {
+    def unapply(arg: Term): Boolean = arg match {
+      case Const(c.top, _) => true
+      case _ => false
+    }
+  }
+
+  def bot(typ: Typ) = Const(c.bot, typ)
+  object Bot {
+    def unapply(arg: Term): Boolean = arg match {
+      case Const(c.bot, _) => true
+      case _ => false
+    }
+  }
+
+
+  def zero(typ: Typ) = Const(c.zero, typ)
+  object Zero {
+    def unapply(arg: Term): Boolean = arg match {
+      case Const(c.zero, _) => true
+      case _ => false
+    }
+  }
+
+  val predicate_inf: Const = Const(c.inf, predicateT -->: predicateT -->: predicateT)
+  val predicate_bot: Const = Const(c.bot, predicateT)
+  val predicate_top: Const = Const(c.top, predicateT)
+  val predicate_0: Const = Const(c.zero, predicateT)
 //  val distrT_name = "Discrete_Distributions.distr"
 
 
@@ -412,6 +448,45 @@ object Isabelle {
     val inf_ = inf(typ)
     terms.foldLeft(term) { (a,b) => inf_ $ a $ b }
   }
+  def infOptimized(term: Term, terms: Term*): Term = {
+    val typ = fastype_of(term)
+    val terms2 = (term :: terms.toList).filterNot(Top.unapply)
+    if (terms2.exists(Zero.unapply))
+      return zero(typ)
+    if (terms2.exists(Bot.unapply))
+      return bot(typ)
+    if (terms2.isEmpty)
+      return top(typ)
+    val infConst = inf(typ)
+    terms2.tail.foldLeft(terms2.head) { (a,b) => infConst $ a $ b }
+  }
+
+  object Sup {
+    def unapply(term: Term): Option[(Term, Term)] = term match {
+      case App(App(Const(IsabelleConsts.sup,_), a), b) => Some((a,b))
+      case _ => None
+    }
+  }
+  def sup(typ: Typ) : Const = Const(c.sup, typ -->: typ -->: typ)
+  def sup(term: Term, terms: Term*): Term = {
+    val typ = fastype_of(term)
+    val sup_ = sup(typ)
+    terms.foldLeft(term) { (a,b) => sup_ $ a $ b }
+  }
+
+  object Plus {
+    def unapply(term: Term): Option[(Term, Term)] = term match {
+      case App(App(Const(IsabelleConsts.plus,_), a), b) => Some((a,b))
+      case _ => None
+    }
+  }
+  def plus(typ: Typ) : Const = Const(c.plus, typ -->: typ -->: typ)
+  def plus(term: Term, terms: Term*): Term = {
+    val typ = fastype_of(term)
+    val plus_ = plus(typ)
+    terms.foldLeft(term) { (a,b) => plus_ $ a $ b }
+  }
+
 
   def distrT(typ: Typ): Type = Type(t.distr, List(typ))
 
@@ -543,21 +618,35 @@ object Isabelle {
 
   def qvarTuple_var(qvs: List[QVariable]): Term = qvarTuple_var0(qvs)._1
 
-  val variable_unit = Const(c.variable_unit, variablesT(unitT))
-//  val variable_singletonName = c.variable_singleton
+  val variable_unit: Const = Const(c.variable_unit, variablesT(unitT))
+  object Variable_Unit {
+    def unapply(term: Term): Boolean = term match {
+      case Const(c.variable_unit, _) => true
+      case _ => false
+    }
+  }
 
-  def variable_singleton(typ: Typ) = Const(c.variable_singleton, variableT(typ) -->: variablesT(typ))
+  def variable_singleton(typ: Typ): Const = Const(c.variable_singleton, variableT(typ) -->: variablesT(typ))
   def variable_singleton(t: Term): Term = t match {
     case OfType(VariableT(typ)) => variable_singleton(typ) $ t
   }
+  object Variable_Singleton {
+    def unapply(term: Term): Option[Term] = term match {
+      case App(Const(c.variable_singleton, _), v) => Some(v)
+      case _ => None
+    }
+  }
 
-//  val variable_concatName = c.variable_concat
-
-  def variable_concat(t1: Typ, t2: Typ) = Const(c.variable_concat, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1, t2)))
-
+  def variable_concat(t1: Typ, t2: Typ): Const = Const(c.variable_concat, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1, t2)))
   def variable_concat(t1: Term, t2: Term) : Term = (t1,t2) match {
     case (OfType(VariablesT(typ1)), OfType(VariablesT(typ2))) =>
       variable_concat(typ1,typ2) $ t1 $ t2
+  }
+  object Variable_Concat {
+    def unapply(term: Term): Option[(Term,Term)] = term match {
+      case App(App(Const(c.variable_concat,_), vt1), vt2) => Some((vt1,vt2))
+      case _ => None
+    }
   }
 
   object OfType {
@@ -577,14 +666,12 @@ object Isabelle {
 
 
 
-  val realT = Type(t.real)
+  val realT: Type = Type(t.real)
   val stringT: Type = listT(Type(t.char))
-  val program_stateT = Type(t.program_state)
-  val probability = Const(c.probability, expressionT(boolT) -->: programT -->: program_stateT -->: realT)
-  //  val probability_old = Const("Encoding.probability_old", stringT -->: programT -->: program_stateT -->: realT)
+  val program_stateT: Type = Type(t.program_state)
+  val probability: Const = Const(c.probability, expressionT(boolT) -->: programT -->: program_stateT -->: realT)
 
   val checkTypeOp: Operation[(BigInt, Term), Typ] = Operation.implicitly[(BigInt, Term), Typ]("check_type")
-  //  val useThys2Op: Operation[List[String], Unit] = Operation.implicitly[List[String], Unit]("use_thys2")
   val createContextOp: Operation[List[String], (BigInt, List[String])] =
     Operation.implicitly[List[String], (BigInt, List[String])]("create_context")
   val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt, Unit]("delete_context")
@@ -599,7 +686,9 @@ object Isabelle {
   val declareVariableOp: Operation[(BigInt, String, Typ), BigInt] = Operation.implicitly[(BigInt, String, Typ), BigInt]("declare_variable")
 //  val one_name = "Groups.one_class.one"
   val True_const = Const(c.True, boolT)
+  val False_const = Const(c.False, boolT)
   val thms_as_subgoals: Operation[(BigInt, String), List[Subgoal]] = Operation.implicitly[(BigInt,String),List[Subgoal]]("thms_as_subgoals")
+
 
 
   def mk_eq(a: Term, b: Term): Term = {
@@ -841,6 +930,13 @@ object Isabelle {
 
   def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ): Const =
     Const(IsabelleConsts.quantum_equality_full, Isabelle.l2boundedT(typLeft,typZ) -->: Isabelle.variablesT(typLeft) -->: Isabelle.l2boundedT(typRight,typZ) -->: Isabelle.variablesT(typRight) -->: Isabelle.predicateT)
+  def quantum_equality(q: Term, r: Term): Term = {
+    val typQ = fastype_of(q)
+    assert(typQ == fastype_of(r))
+    val typ = VariablesT.unapply(typQ).get
+    val id = idOp(typ)
+    quantum_equality_full(id, q, id, r)
+  }
   def quantum_equality_full(u: Term, q: Term, v: Term, r: Term): Term = {
     val OfType(L2BoundedT(typL, typZ)) = u
     val OfType(L2BoundedT(typR, _)) = v

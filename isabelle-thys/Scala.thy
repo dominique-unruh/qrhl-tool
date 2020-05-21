@@ -16,7 +16,7 @@ Source is in isabelle-thys/Scala.thy
 
 Run
 
-  /opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabelle/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+/opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabelle/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
 
 to recreate/update
 
@@ -53,6 +53,8 @@ object IsabelleConsts {
   val Nil = \<open>\<^const_name>\<open>Nil\<close>\<close>
   val classical_subspace = \<open>\<^const_name>\<open>classical_subspace\<close>\<close>
   val inf = \<open>\<^const_name>\<open>inf\<close>\<close>
+  val sup = \<open>\<^const_name>\<open>sup\<close>\<close>
+  val plus = \<open>\<^const_name>\<open>plus\<close>\<close>
   val bot = \<open>\<^const_name>\<open>bot\<close>\<close>
   val top = \<open>\<^const_name>\<open>top\<close>\<close>
   val zero = \<open>\<^const_name>\<open>zero\<close>\<close>
@@ -73,6 +75,7 @@ object IsabelleConsts {
   val variable_concat = \<open>\<^const_name>\<open>variable_concat\<close>\<close>
   val one = \<open>\<^const_name>\<open>one_class.one\<close>\<close>
   val True = \<open>\<^const_name>\<open>True\<close>\<close>
+  val False = \<open>\<^const_name>\<open>False\<close>\<close>
   val probability = \<open>\<^const_name>\<open>probability\<close>\<close>
   val eq = \<open>\<^const_name>\<open>HOL.eq\<close>\<close>
   val numOne = \<open>\<^const_name>\<open>num.One\<close>\<close>

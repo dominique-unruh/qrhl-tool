@@ -11,7 +11,7 @@ import qrhl.{AllSet, MaybeAllSet, UserException, Utils}
 import scala.annotation.tailrec
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
-import scala.collection.{AbstractIterator, mutable}
+import scala.collection.{AbstractIterator, GenSet, mutable}
 import scala.language.higherKinds
 
 // Implicits
@@ -99,9 +99,12 @@ object VarTerm {
 
 case class ExprVariableUse
 (
-  classical : ListSet[CVariable],
+  program : ListSet[Variable],
   ambient : ListSet[String]
-)
+) {
+  @deprecated def classical : ListSet[CVariable] = Variable.classical(program)
+  @deprecated def quantum : ListSet[QVariable] = Variable.quantum(program)
+}
 
 case class VariableUse
 (

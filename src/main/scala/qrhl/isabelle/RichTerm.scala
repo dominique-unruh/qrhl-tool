@@ -7,7 +7,7 @@ import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, TFree, TVar, Term
 import info.hupel.isabelle.{Codec, DecodingException, Operation, XMLResult, pure}
 import org.log4s
 import org.log4s.Logger
-import qrhl.logic.{CVariable, Environment, ExprVariableUse, Variable, VariableUse}
+import qrhl.logic.{CVariable, Environment, ExprVariableUse, QVariable, Variable, VariableUse}
 
 import scala.collection.mutable
 import Isabelle.applicativeXMLResult
@@ -93,25 +93,30 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
 
   def variables : Set[String] = freeVars(isabelleTerm)
 
-  /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */
-  def caVariables(environment: Environment): ExprVariableUse = {
+  /** Finds all classical and ambient variables in an expression.
+   * The quantum variables are an estimate, it is possible to have terms that contain quantum variables that are not detected by this function.
+   * @param deindex If true, indexed program variables are replaced by their unindexed counterparts
+   * */
+  def caVariables(environment: Environment, deindex: Boolean=false): ExprVariableUse = {
     val avars = new ListBuffer[String]
-    val cvars = new ListBuffer[CVariable]
+    val pvars = new ListBuffer[Variable]
 
     val C = new Utils.MapMatch(environment.cVariables)
     val Q = new Utils.MapMatch(environment.qVariables)
     val A = new Utils.MapMatch(environment.ambientVariables)
 
     for (v<-variables) v match {
-      case C(cv) => cvars += cv
-      case Q(_) =>
+      case C(cv) => pvars += cv
+      case Q(qv) => pvars += qv
       case A(_) => v
-      case Variable.Indexed(C(cv), left) => cvars += cv.index(left)
-      case Variable.Indexed(Q(_), _) =>
+      case Variable.Indexed(C(cv), left) =>
+        pvars += (if (deindex) cv else cv.index(left))
+      case Variable.Indexed(Q(qv), left) =>
+        pvars += (if (deindex) qv else qv.index(left))
       case _ => throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
     }
 
-    ExprVariableUse(classical = ListSet(cvars:_*), ambient = ListSet(avars:_*))
+    ExprVariableUse(program = ListSet(pvars:_*), ambient = ListSet(avars:_*))
   }
 
 //    /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */

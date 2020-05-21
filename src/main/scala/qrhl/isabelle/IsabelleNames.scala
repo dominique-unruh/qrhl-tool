@@ -6,7 +6,7 @@ Source is in isabelle-thys/Scala.thy
 
 Run
 
-  /opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabelle/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+/opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabelle/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
 
 to recreate/update
 
@@ -43,6 +43,8 @@ object IsabelleConsts {
   val Nil = "List.list.Nil"
   val classical_subspace = "QRHL_Core.classical_subspace"
   val inf = "Lattices.inf_class.inf"
+  val sup = "Lattices.sup_class.sup"
+  val plus = "Groups.plus_class.plus"
   val bot = "Orderings.bot_class.bot"
   val top = "Orderings.top_class.top"
   val zero = "Ring.ring.zero"
@@ -63,6 +65,7 @@ object IsabelleConsts {
   val variable_concat = "Prog_Variables.variable_concat"
   val one = "Groups.one_class.one"
   val True = "HOL.True"
+  val False = "HOL.False"
   val probability = "Programs.probability"
   val eq = "HOL.eq"
   val numOne = "Num.num.One"

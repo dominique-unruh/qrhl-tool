@@ -552,4 +552,13 @@ fun method_tac ctxt str = let
   val tactic = Method.evaluate text ctxt [] |> Method.NO_CONTEXT_TACTIC ctxt
 in tactic end
 
+fun is_finite ctxt T = let
+  val goal = Const(\<^const_name>\<open>finite\<close>, HOLogic.mk_setT T --> HOLogic.boolT) $ HOLogic.mk_UNIV T
+   |> HOLogic.mk_not
+   |> HOLogic.mk_Trueprop
+   |> Thm.cterm_of ctxt
+  val result = Raw_Simplifier.rewrite_cterm (false,false,false) (K (K NONE)) ctxt goal |> Thm.rhs_of |> Thm.term_of
+  (* val _ = \<^print> result *)
+in result = \<^prop>\<open>True\<close> end
+
 end

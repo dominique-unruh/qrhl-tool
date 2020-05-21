@@ -460,4 +460,13 @@ operation_setup swap_variables_conv = \<open>
    in richterm_encode ctxt pred' end}
 \<close>
 
+
+operation_setup is_finite = \<open>
+  {from_lib = Codec.tuple
+              Codec.int (* context *)
+              typ_tight_codec (* type *),
+  to_lib = Codec.bool,
+  action = fn (ctxt_id, T) => QRHL_Operations.is_finite (Refs.Ctxt.read ctxt_id) T}
+\<close>
+
 end

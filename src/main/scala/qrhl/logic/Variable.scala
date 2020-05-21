@@ -12,6 +12,7 @@ import scala.collection.mutable
 
 // Variables
 sealed trait Variable {
+  def isClassical: Boolean
   def isQuantum: Boolean
 
   val name:String
@@ -28,6 +29,11 @@ sealed trait Variable {
 
 object Variable {
   def quantum(vars: ListSet[Variable]): ListSet[QVariable] = vars collect { case v : QVariable => v }
+  def quantum(vars: Traversable[Variable]): Traversable[QVariable] = vars collect { case v : QVariable => v }
+  def quantum(vars: Set[Variable]): Set[QVariable] = vars collect { case v : QVariable => v }
+  def classical(vars: ListSet[Variable]): ListSet[CVariable] = vars collect { case v : CVariable => v }
+  def classical(vars: Traversable[Variable]): Traversable[CVariable] = vars collect { case v : CVariable => v }
+  def classical(vars: Set[Variable]): Set[CVariable] = vars collect { case v : CVariable => v }
 
   //  def varlistToString(vars: List[Variable]) = vars match {
 //    case Nil => "()"
@@ -82,6 +88,10 @@ object Variable {
       }
     }
   }
+
+  def varsToString(vars: Traversable[Variable]): String =
+    if (vars.isEmpty) "∅" else
+      vars.map(_.name).mkString(", ")
 }
 
 final case class QVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
@@ -93,6 +103,7 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
   override def toString: String = s"quantum var $name : ${Isabelle.pretty(valueTyp)}"
 
   override def isQuantum: Boolean = true
+  override def isClassical: Boolean = false
 }
 
 object QVariable {
@@ -141,6 +152,7 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
   override def toString: String = s"classical var $name : ${Isabelle.pretty(valueTyp)}"
 
   override def isQuantum: Boolean = false
+  override def isClassical: Boolean = true
 }
 
 object CVariable {
