@@ -74,10 +74,10 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
       val (c, class_V, quant_V, id2) = up(env, id, body)
       /** variables that can move further (Vu).  */
-      val class_Vup = class_V.diff(condition.caVariables(env).classical)
+      val class_Vup = class_V.diff(condition.variables(env).classical)
       val quant_Vup = quant_V
       /** variables that have to stop here (Vd). */
-      val class_Vdown = class_V.intersect(condition.caVariables(env).classical)
+      val class_Vdown = class_V.intersect(condition.variables(env).classical)
       val quant_Vdown = Nil
       // Add "init Vu" in front of c
       val body3 = (init(classical = class_Vup.toSeq, quantum = quant_Vup.toSeq) ++ c.toBlock).unwrapTrivialBlock
@@ -99,7 +99,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
        */
       val thenVarUse = thenBranch.variableUse(env)
       val elseVarUse = elseBranch.variableUse(env)
-      val condVars = condition.caVariables(env).classical
+      val condVars = condition.variables(env).classical
 
       val (cthen, class_Vthen, quant_Vthen, id2) = up(env, id, thenBranch)
       val (celse, class_Velse, quant_Velse, id3) = up(env, id2, elseBranch)

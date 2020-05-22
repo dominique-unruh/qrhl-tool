@@ -17,6 +17,7 @@ package qrhl.isabelle
 object IsabelleTypes {
   val dummy = "dummy" 
   val nat = "Nat.nat"
+  val set = "Set.set"
   val ell2 = "Complex_L2.ell2"
   val bit = "Bit.bit"
   val linear_space = "Complex_Vector_Spaces.linear_space"
@@ -42,6 +43,8 @@ object IsabelleConsts {
   val Cons = "List.list.Cons"
   val Nil = "List.list.Nil"
   val classical_subspace = "QRHL_Core.classical_subspace"
+  val Inf = "Complete_Lattices.Inf_class.Inf"
+  val image = "Set.image"
   val inf = "Lattices.inf_class.inf"
   val sup = "Lattices.sup_class.sup"
   val plus = "Groups.plus_class.plus"

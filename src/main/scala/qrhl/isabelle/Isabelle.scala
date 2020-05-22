@@ -266,9 +266,36 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
 }
 
 object Isabelle {
+  def setT(typ: Typ): Type = Type(t.set, List(typ))
+
+  def INF(typ: Typ): Const = Const(c.Inf, Isabelle.setT(typ) -->: typ)
+
+  def image(a: Typ, b:Typ) : Const = Const(c.image, (a -->: b) -->: setT(a) -->: setT(b))
+
+  def INF(varName: String, varTyp: Typ, term: Term): Term = {
+    val typ = fastype_of(term)
+    INF(typ) $ (image(varTyp,typ) $ absfree(varName, varTyp, term) $ univ(varTyp))
+  }
+
+  def univ(typ: Typ): Const = top(setT(typ))
+
+  def abstract_over(v: Free, body: Term): Term = {
+    def abs(level: Int, term: Term): Term = term match {
+      case Abs(name, typ, body) => Abs(name, typ, abs(level+1, body))
+      case App(fun, arg) => App(abs(level, fun), abs(level, arg))
+      case v2 : Free if v==v2 => Bound(level)
+      case term => term
+    }
+    abs(0, body)
+  }
+
+  def absfree(varName: String, varTyp: Typ, term: Term): Term =
+    Abs(varName, varTyp, abstract_over(Free(varName, varTyp), term))
+
+
   val not : Const = Const(c.not, HOLogic.boolT -->: HOLogic.boolT)
   def not(t: Term) : Term = not $ t
-  def less_eq(typ : Typ) = Const(c.less_eq, typ -->: typ -->: boolT)
+  def less_eq(typ : Typ): Const = Const(c.less_eq, typ -->: typ -->: boolT)
   def less_eq(t: Term, u:Term) : Term = less_eq(fastype_of(t)) $ t $ u
 
   private val cleaner = Cleaner.create()
@@ -298,7 +325,7 @@ object Isabelle {
       case _ => false
     }
   }
-  def idOp(valueTyp: Typ) = Const(c.idOp, boundedT(valueTyp, valueTyp))
+  def idOp(valueTyp: Typ): Const = Const(c.idOp, boundedT(valueTyp, valueTyp))
 
   private var globalIsabellePeek: Isabelle = _
   lazy val globalIsabelle: Isabelle = {
@@ -389,13 +416,13 @@ object Isabelle {
     case _ => throw new RuntimeException("expected type 'vector', not " + typ)
   }
 
-  val dummyT = Type(t.dummy)
-  val natT = Type(t.nat)
-  val bitT = Type(t.bit, Nil)
+  val dummyT: Type = Type(t.dummy)
+  val natT: Type = Type(t.nat)
+  val bitT: Type = Type(t.bit, Nil)
 //  val linear_spaceT_name = "Complex_Inner_Product.linear_space"
-  val predicateT = Type(t.linear_space, List(ell2T(Type(t.mem2, Nil))))
-  val programT = Type(t.program)
-  val oracle_programT = Type(t.oracle_program)
+  val predicateT: Type = Type(t.linear_space, List(ell2T(Type(t.mem2, Nil))))
+  val programT: Type = Type(t.program)
+  val oracle_programT: Type = Type(t.oracle_program)
   val classical_subspace : Term= Const(c.classical_subspace, HOLogic.boolT -->: predicateT)
   def classical_subspace(t:Term) : Term = classical_subspace $ t
   def classical_subspace_optimized(t: Term): Term = t match {
@@ -934,8 +961,8 @@ object Isabelle {
     val typQ = fastype_of(q)
     assert(typQ == fastype_of(r))
     val typ = VariablesT.unapply(typQ).get
-    val id = idOp(typ)
-    quantum_equality_full(id, q, id, r)
+    val id = idOp(ell2T(typ))
+    quantum_equality_full(typ, typ, typ) $ id $ q $ id $ r
   }
   def quantum_equality_full(u: Term, q: Term, v: Term, r: Term): Term = {
     val OfType(L2BoundedT(typL, typZ)) = u

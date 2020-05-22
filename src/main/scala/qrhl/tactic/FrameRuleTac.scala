@@ -31,7 +31,7 @@ case object FrameRuleTac extends Tactic {
       val leftVarUse = left.variableUse(env)
       val rightVarUse = right.variableUse(env)
 
-      val rCVars = rRich.caVariables(env).classical
+      val rCVars = rRich.variables(env).classical
 
       val leftCW1 = leftVarUse.writtenClassical.map(_.index1)
       val leftCWinter = rCVars.intersect(leftCW1)

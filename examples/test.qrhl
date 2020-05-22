@@ -1,4 +1,4 @@
-isabelle.
+isabelle TestEx.
 
 quantum var x : bit.
 quantum var y : bit.
@@ -6,16 +6,22 @@ quantum var aux : int.
 classical var a : bit.
 
 program p1 := {
-  { local x; y <q ket a; x <q ket 1;  }
+  { local x; y <q ket a; a <- a; x <q ket 1;  }
 }.
 
 program p2 := {
-  { local x; y <q ket a; x <q ket 0; }
+  { local x; y <q ket a; a <- a; x <q ket 0; }
 }.
 
-qrhl {top} call p1; ~ call p2; {(⟦x2,y2⟧ ==q ⟦x1,y1⟧) ⊓ (⟦y2,x2⟧ ==q ⟦y1,x1⟧)}.
+qrhl {top} call p1; ~ call p2; {Cla[undefined a1] ⊓ Cla[undefined a2] ⊓ (⟦x2,y2⟧ ==q ⟦x1,y1⟧) ⊓ (⟦y2,x2⟧ ==q ⟦y1,x1⟧)}.
  inline p1.
  inline p2.
  equal.
+isa auto.
+simp.
+admit.
+simp.
+skip.
+isa auto.
 
 

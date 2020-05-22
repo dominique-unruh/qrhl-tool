@@ -2,7 +2,7 @@ package qrhl.logic
 
 import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.Typ
+import info.hupel.isabelle.pure.{Term, Typ}
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import qrhl.isabelle.Isabelle.Thm
 import qrhl.isabelle.{Isabelle, RichTerm}
@@ -51,6 +51,12 @@ sealed trait VarTerm[+A] {
   }
 }
 object VarTerm {
+  def isabelleTerm(vt:VarTerm[Variable]) : Term = vt match {
+    case VTUnit => Isabelle.variable_unit
+    case VTSingle(v) => Isabelle.variable_singleton(v.variableTerm)
+    case VTCons(a, b) => Isabelle.variable_concat(isabelleTerm(a), isabelleTerm(b))
+  }
+
   def varlist[A](elems: A*) : VarTerm[A] = {
     var result : VarTerm[A] = VTUnit
     for (e <- elems.reverseIterator) {
@@ -332,7 +338,7 @@ sealed trait Statement {
       case Assign(v, e) =>
         // Also handling Sample(v,e)
         val vSet = ListSet(v.toSeq :_*)
-        val fvE = e.caVariables(env)
+        val fvE = e.variables(env)
         new VariableUse(
           freeVariables = vSet +++ fvE.classical,
           written = vSet,
@@ -388,7 +394,7 @@ sealed trait Statement {
           )
         }
       case While(e, body) =>
-        val fvE = e.caVariables(env)
+        val fvE = e.variables(env)
         val bodyVars = body.variableUse(env)
         new VariableUse(
           freeVariables = fvE.classical +++ bodyVars.freeVariables,
@@ -401,7 +407,7 @@ sealed trait Statement {
           covered = bodyVars.covered
         )
       case IfThenElse(e, p1, p2) =>
-        val fvE = e.caVariables(env)
+        val fvE = e.variables(env)
         val p1Vars = p1.variableUse(env)
         val p2Vars = p2.variableUse(env)
         new VariableUse(
@@ -416,7 +422,7 @@ sealed trait Statement {
         )
       case QInit(q, e) =>
         val qSet = ListSet(q.toSeq :_*)
-        val fvE = e.caVariables(env)
+        val fvE = e.variables(env)
         new VariableUse(
           freeVariables = qSet +++ fvE.classical,
           written = qSet,
@@ -429,7 +435,7 @@ sealed trait Statement {
         )
       case QApply(q, e) =>
         val qSet = ListSet(q.toSeq :_*)
-        val fvE = e.caVariables(env)
+        val fvE = e.variables(env)
         new VariableUse(
           freeVariables = qSet +++ fvE.classical,
           written = qSet,
@@ -442,7 +448,7 @@ sealed trait Statement {
       case Measurement(x, q, e) =>
         val xSet = ListSet[Variable](x.toSeq :_*)
         val qSet = ListSet[Variable](q.toSeq :_*)
-        val fvE = e.caVariables(env)
+        val fvE = e.variables(env)
         new VariableUse(
           freeVariables = xSet +++ qSet +++ fvE.classical,
           written = xSet +++ qSet,

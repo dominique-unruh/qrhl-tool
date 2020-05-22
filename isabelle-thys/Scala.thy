@@ -27,6 +27,7 @@ package qrhl.isabelle
 object IsabelleTypes {
   val dummy = \<open>\<^type_name>\<open>dummy\<close>\<close> 
   val nat = \<open>\<^type_name>\<open>nat\<close>\<close>
+  val set = \<open>\<^type_name>\<open>set\<close>\<close>
   val ell2 = \<open>\<^type_name>\<open>ell2\<close>\<close>
   val bit = \<open>\<^type_name>\<open>bit\<close>\<close>
   val linear_space = \<open>\<^type_name>\<open>linear_space\<close>\<close>
@@ -52,6 +53,8 @@ object IsabelleConsts {
   val Cons = \<open>\<^const_name>\<open>Cons\<close>\<close>
   val Nil = \<open>\<^const_name>\<open>Nil\<close>\<close>
   val classical_subspace = \<open>\<^const_name>\<open>classical_subspace\<close>\<close>
+  val Inf = \<open>\<^const_name>\<open>Inf\<close>\<close>
+  val image = \<open>\<^const_name>\<open>image\<close>\<close>
   val inf = \<open>\<^const_name>\<open>inf\<close>\<close>
   val sup = \<open>\<^const_name>\<open>sup\<close>\<close>
   val plus = \<open>\<^const_name>\<open>plus\<close>\<close>

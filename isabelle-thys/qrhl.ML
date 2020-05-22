@@ -275,7 +275,7 @@ fun mk_equals_wp R cvars1 cvars2 qvars1 qvars2 = let
       (* val wp = tidyTrueTop wp *)
 in wp end
 
-fun equal_get_R B cvars1 cvars2 qvars1 qvars2 overwritten_classical =
+(* fun equal_get_R B cvars1 cvars2 qvars1 qvars2 overwritten_classical =
   let val (qvars1',qvars1T) = variables qvars1
       val (qvars2',qvars2T) = variables qvars2
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()
@@ -296,7 +296,7 @@ fun equal_get_R B cvars1 cvars2 qvars1 qvars2 overwritten_classical =
 
   in
     tidyTrueTop B'''
-  end
+  end *)
 
 
 

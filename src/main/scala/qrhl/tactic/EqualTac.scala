@@ -15,7 +15,7 @@ import org.log4s
 import qrhl.isabelle.Codecs._
 import qrhl.tactic.EqualTac.{isInfinite_op, logger}
 
-import scala.collection.immutable.ListSet
+import scala.collection.immutable.{HashSet, ListSet}
 import Utils.listSetUpcast
 import Utils.ListSetUtils
 import qrhl.isabelle.Isabelle.{Context, QuantumEqualityFull}
@@ -24,7 +24,6 @@ import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 import info.hupel.isabelle.hol.HOLogic
 import Variable.varsToString
-
 import EqualTac._
 
 import scala.collection.mutable.ListBuffer
@@ -115,10 +114,14 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 
     // Classical variables that we remove from the postcondition
     // This will be done at the end in one go
-    val classicalsRemovedPost = mutable.LinkedHashSet[CVariable]()
+    val classicalsRemovedFromPost = mutable.LinkedHashSet[CVariable]()
     // Quantum variables that we removed from the postcondition
     // The postcondition will be updated right away
     var removedQeq : ListSet[QVariable] = null
+    // Quantum variables that we do not want to occur in the postcondition
+    // We remove them right away anyway, but there is a possibility that some occur in the postcondition that we do not "see"
+    // So we keep track here
+    var forbiddenQuantumInPostcondition = mutable.HashSet[QVariable]()
 
     var updated = false
     def add(msg: String, extraIn:Set[Variable]=Set.empty, extraMid:Set[Variable]=Set.empty,
@@ -153,23 +156,28 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       }
     }
 
-    // TODO: this should be a list that also excludes the removed classical vars
-    var varUsePostcondition = post.caVariables(env, deindex=true)
     var postcondition = post
+    // Free variables of postcondition, with variables in
+    val postconditionVariables: mutable.Set[Variable] =
+      mutable.HashSet(post.variables(env, deindex=true).program.toSeq :_*)
 
     def removeFromPost(msg: String, vars: Set[Variable]): Unit = {
-      val quantum = Variable.quantum(vars) & varUsePostcondition.quantum
-      val classical = Variable.classical(vars) & varUsePostcondition.classical -- classicalsRemovedPost
+      // variables that actually need removing
+      val vars2 = vars & postconditionVariables
+      val quantum = Variable.quantum(vars2)
+      val classical = Variable.classical(vars2)
+      forbiddenQuantumInPostcondition ++= quantum
 
-      logger.debug(s"removeFromPost ${msg}, ${varsToString(quantum ++ classical)}")
+      logger.debug(s"removeFromPost ${msg}, ${varsToString(vars)}")
 
-      if (msg != null && (quantum.nonEmpty || classical.nonEmpty))
+      if (msg != null && vars2.nonEmpty)
         println(s"""Trying to make "$msg" true:""")
 
       if (classical.nonEmpty) {
         updated = true
         println(s"Removing classical variables $classical from postcondition")
-        classicalsRemovedPost ++= classical
+        classicalsRemovedFromPost ++= classical
+        postconditionVariables --= classical
       }
 
       if (quantum.nonEmpty) {
@@ -180,10 +188,12 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
         val (newPostcondition, newRemovedQeq) = EqualTac.removeQeq(env, postcondition, quantum)
         postcondition = newPostcondition
         removedQeq = newRemovedQeq
-        varUsePostcondition = postcondition.caVariables(env)
+        postconditionVariables.clear()
+        postconditionVariables ++= postcondition.variables(env, deindex = true).program
+        postconditionVariables --= classicalsRemovedFromPost
 
-        if (!out.subsetOf(removedQeq))
-          throw UserException(s"Should remove quantum equality for variables ${varsToString(removedQeq)}, but Vout already contains ${varsToString(out)}")
+        if (!Variable.quantum(out).toSet.subsetOf(removedQeq))
+          throw UserException(s"Should remove quantum equality for variables ${varsToString(removedQeq)}, but Vout already contains ${varsToString(Variable.quantum(out))}")
         println(s"Removing quantum variables ${varsToString(removedQeq)} from postcondition")
         out ++= removedQeq
       }
@@ -276,87 +286,46 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       // (They could still become less) So we hold off adding quantum variables to `in` until things have stabilized (!updated)
       if (removedQeq!=null || !updated) {
         //    assumes C_Vin_R: "fv C ∩ Rv ⊆ Vin"
-        add("fv(C) ∩ Rv ⊆ Vin", extraIn = varUse.freeVariables & varUsePostcondition.program)
+        add("fv(C) ∩ Rv ⊆ Vin", extraIn = varUse.freeVariables & postconditionVariables)
         //    assumes Vmid_R_Vin_covered: "Vmid ∩ Rv ⊆ Vin ∪ covered C"
-        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = (mid.toSet & varUsePostcondition.program) -- varUse.covered)
+        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = (mid.toSet & postconditionVariables) -- varUse.covered)
         //    assumes Vmid_R_Vout_covered: "quantum' (Vmid ∩ Rv) ⊆ Vout ∪ covered C"
-        add("quantum' (Vmid ∩ Rv) ⊆ Vout ∪ covered(C)", extraOut = (mid.toSet.filter(_.isQuantum) & varUsePostcondition.program) -- varUse.covered)
+        add("quantum' (Vmid ∩ Rv) ⊆ Vout ∪ covered(C)", extraOut = (mid.toSet.filter(_.isQuantum) & postconditionVariables) -- varUse.covered)
       } else {
         //    assumes C_Vin_R: "fv C ∩ Rv ⊆ Vin"
-        add("fv(C) ∩ Rv ⊆ Vin", extraIn = varUse.freeVariables.filter(_.isClassical) & varUsePostcondition.program)
+        add("fv(C) ∩ Rv ⊆ Vin", extraIn = varUse.freeVariables.filter(_.isClassical) & postconditionVariables)
         //    assumes Vmid_R_Vin_covered: "Vmid ∩ Rv ⊆ Vin ∪ covered C"
-        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = (mid.toSet.filter(_.isClassical) & varUsePostcondition.program) -- varUse.covered)
+        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = (mid.toSet.filter(_.isClassical) & postconditionVariables) -- varUse.covered)
       }
 
     } while (updated)
 
+    // Adding some additional classical variables to out. This will make the call to removeClassicals produce a better postcondition
+    // We need to make sure that these conditions stay satisfied:
+    //    assumes Vout_overwr_Vin: "Vout - overwr C ⊆ Vin"
+    //    assumes Vout_Vmid: "Vout ⊆ Vmid"
+    //    assumes Vout_Vin_R: "(Vout - Vin) ∩ Rv = {}"
+    //    assumes Vin_Vout_R: "quantum' (Vin - Vout) ∩ Rv = {}"
+    add("as many classical variables in out as possible",
+      extraOut = mid.toSet & (in ++ varUse.overwritten) & classicalsRemovedFromPost.toSet)
+
     printVars()
-    logger.debug(s"Postcondition: ${postcondition}; without ${varsToString(classicalsRemovedPost)}")
-    // TODO: do something with classicalsRemovedPost
+    logger.debug(s"Postcondition: ${postcondition}; without ${varsToString(classicalsRemovedFromPost)}")
 
-//    // ==== Convenient abbreviations
-//
-//    val out_cvarsIdx1 = out.toList collect { case v : CVariable => v.index1.valueTerm }
-//    val out_cvarsIdx2 = out.toList collect { case v : CVariable => v.index2.valueTerm }
-//    val cwvarsIdx1 = varUse.written.toList collect { case v : CVariable => v.index1.valueTerm }
-//    val cwvarsIdx2 = varUse.written.toList collect { case v : CVariable => v.index2.valueTerm }
-//    val out_qvarsIdx1 = out.toList collect { case v : QVariable => v.index1.variableTerm }
-//    val out_qvarsIdx2 = out.toList collect { case v : QVariable => v.index2.variableTerm }
-//    val in_cvarsIdx1 = in.toList collect { case v : CVariable => v.index1.valueTerm }
-//    val in_cvarsIdx2 = in.toList collect { case v : CVariable => v.index2.valueTerm }
-//    val in_qvarsIdx1 = in.toList collect { case v : QVariable => v.index1.variableTerm }
-//    val in_qvarsIdx2 = in.toList collect { case v : QVariable => v.index2.variableTerm }
-//    val mid_cvarsIdx1 = mid.toList collect { case v : CVariable => v.index1.valueTerm }
-//    val mid_cvarsIdx2 = mid.toList collect { case v : CVariable => v.index2.valueTerm }
-//    val mid_qvarsIdx1 = mid.toList collect { case v : QVariable => v.index1.variableTerm }
-//    val mid_qvarsIdx2 = mid.toList collect { case v : QVariable => v.index2.variableTerm }
-//
-    // TODO: Remove from Isabelle source, too
-//    // ==== Get R (the "rest" of the predicate), and the resulting pre/postconditions
-//    val R = isabelle.isabelle.invoke(
-//      Operation.implicitly[(BigInt, RichTerm, List[Term], List[Term], List[Term], List[Term], List[Term]),RichTerm]("equal_get_R"),
-//      (contextId, post,
-//        out_cvarsIdx1, out_cvarsIdx2,
-//        out_qvarsIdx1, out_qvarsIdx2,
-//        (cwvarsIdx1 ++ cwvarsIdx2)))
-//
-//    logger.debug(s"R: $R")
-//
-//    val rVarUse = R.caVariables(env)
-//
-//
-//
-//    val mk_equals_wp = Operation.implicitly[(BigInt, RichTerm, List[Term], List[Term], List[Term], List[Term]), RichTerm]("mk_equals_wp")
-//
-//    val Ain = isabelle.isabelle.invoke(mk_equals_wp, (contextId, R, in_cvarsIdx1, in_cvarsIdx2, in_qvarsIdx1, in_qvarsIdx2))
-//    logger.debug(s"Ain: $Ain")
-//
-//    val Amid = isabelle.isabelle.invoke(mk_equals_wp, (contextId, R, mid_cvarsIdx1, mid_cvarsIdx2, mid_qvarsIdx1, mid_qvarsIdx2))
-//    logger.debug(s"Amid: $Amid")
+    postcondition = removeClassicals(env, postcondition, classicalsRemovedFromPost.toSet, Variable.classical(out).toSet)
+    logger.debug(s"Postcondition: ${postcondition}")
 
-    // ==== Check choices
+    val colocality = isabelle.isabelle.invoke(FrameRuleTac.colocalityOp,
+      (isabelle.contextId, postcondition.isabelleTerm,
+        forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) }))
 
-//    // fv(R)^qu # fv(C)^qu: by subgoal
-//    // fv(R)^qu # Qout \ Qmid: by subgoal
-//    val forbidden = varUse.quantum +++ (quantum(mid) -- quantum(out))
-//    val forbidden12 = (forbidden.map(_.index1) +++ forbidden.map(_.index2)) map { v => (v.variableName, v.valueTyp) }
-//    val colocality = isabelle.isabelle.invoke(FrameRuleTac.colocalityOp,
-//      (contextId, R.isabelleTerm, forbidden12.toList))
-
-    // TODO
-    val colocality = RichTerm(Isabelle.True_const)
     logger.debug(s"Colocality: $colocality")
-
-    // TODO
-
-    //    assumes qrhl_s: "⋀i. qRHL (R ⊓ Eq Vmid) (s i) (s' i) (R ⊓ Eq Vmid)"
-    // TODO
-    println("*** MISSING CHECKS ***")
 
     val Amid = makePredicate(mid,postcondition)
     val Ain = makePredicate(in,postcondition)
 
     // For each element (l,e) of mismatches, mismatchGoals contains a goal of the form {Amid}l~r{Amid}
+    //    assumes qrhl_s: "⋀i. qRHL (R ⊓ Eq Vmid) (s i) (s' i) (R ⊓ Eq Vmid)"
     val mismatchGoals = mismatches.map {
       case (l,r) => QRHLSubgoal(l.toBlock,r.toBlock,Amid,Amid,Nil)
     }
@@ -373,15 +342,15 @@ object EqualTac {
     val qeq : Term =
       if (quantum.isEmpty) Isabelle.predicate_top
       else {
-        val left = VarTerm.varlist(quantum.map(_.index1)).toIsabellTerm
-        val right = VarTerm.varlist(quantum.map(_.index2)).toIsabellTerm
+        val left = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index1).toSeq:_*))
+        val right = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index2).toSeq:_*))
         Isabelle.quantum_equality(left, right)
       }
 
     val ceq : Term =
       if (classical.isEmpty) Isabelle.True_const
       else {
-        val eqs = classical.map { v => Isabelle.mk_eq(v.index1.variableTerm, v.index2.variableTerm) }
+        val eqs = classical.map { v => Isabelle.mk_eq(v.index1.valueTerm, v.index2.valueTerm) }
         Isabelle.conj(eqs.toSeq :_*)
       }
 
@@ -434,8 +403,10 @@ object EqualTac {
           case `noMatch` => return None
         }
 
-        // TODO check no repetitions
-        Some(result.to[ListSet])
+        val resultSet = result.to[ListSet]
+        if (resultSet.size != result.size)
+          throw UserException(s"Encountered a quantum equality with repreated variables: $arg")
+        Some(resultSet)
       case _ => None
     }
   }
@@ -451,7 +422,7 @@ object EqualTac {
     var qeqVars : Option[ListSet[QVariable]] = None
     val simpleQeq = new SimpleQeq(env)
     def replace(term: Term) : Term = term match {
-      case Isabelle.Inf(t1,t2) => Isabelle.inf(replace(t1), replace(t2))
+      case Isabelle.Inf(t1,t2) => Isabelle.infOptimized(replace(t1), replace(t2))
       case `simpleQeq`(qeqVars2) =>
         logger.debug(s"qeqVars = ${qeqVars.map(varsToString)}")
         if (qeqVars.isEmpty) {
@@ -469,4 +440,30 @@ object EqualTac {
     }
     (RichTerm(Isabelle.predicateT, result), resultVars)
   }
+
+  private def removeClassicals(env: Environment, postcondition: RichTerm, remove: Set[CVariable],
+                               equalities: Set[CVariable]): RichTerm = {
+    val vars = Variable.classical(postcondition.variables(env).program)
+    val equalities2 = (equalities & remove).collect(Function.unlift { v =>
+      val v1 = v.index1; val v2 = v.index2
+      if (vars.contains(v1) && vars.contains(v2))
+        Some(Isabelle.mk_eq(v1.valueTerm,v2.valueTerm))
+      else
+        None
+    })
+    logger.debug(s"remove $remove, vars = ${vars}, equalities = ${equalities}, equalities2 = ${equalities2}")
+    val postcondition2 =
+      if (equalities2.isEmpty)
+        postcondition.isabelleTerm
+      else
+        Isabelle.plus(Isabelle.classical_subspace(Isabelle.not(Isabelle.conj(equalities2.toSeq : _*))),
+          postcondition.isabelleTerm)
+    val remove12 = (remove.map(_.index1) ++ remove.map(_.index2)) & vars
+    val postcondition3 : Term = remove12.foldLeft(postcondition2) {
+      (pc:Term, v:CVariable) => Isabelle.INF(v.name, v.valueTyp, pc)
+    }
+    RichTerm(Isabelle.predicateT, postcondition3)
+  }
+
+
 }

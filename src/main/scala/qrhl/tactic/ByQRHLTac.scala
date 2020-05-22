@@ -70,8 +70,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         val vars1 = p1.variableUse(env)
         val vars2 = p2.variableUse(env)
-        val vars1expr = stripIndices(RichTerm(Isabelle.boolT, v1).caVariables(env).classical)
-        val vars2expr = stripIndices(RichTerm(Isabelle.boolT, v2).caVariables(env).classical)
+        val vars1expr = stripIndices(RichTerm(Isabelle.boolT, v1).variables(env).classical)
+        val vars2expr = stripIndices(RichTerm(Isabelle.boolT, v2).variables(env).classical)
 
         val cvars = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
         val requiredQvars = (vars1.quantum -- vars1.overwrittenQuantum) ++ (vars2.quantum -- vars2.overwrittenQuantum)

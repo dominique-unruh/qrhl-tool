@@ -138,7 +138,7 @@ operation_setup mk_equals_wp = \<open>
       in richterm_encode ctxt result end}\<close>
 
 
-operation_setup equal_get_R = \<open>
+(* operation_setup equal_get_R = \<open>
   {from_lib = tuple7
               Codec.int (* context *)
               richterm_codec (* postcondition *)
@@ -151,7 +151,7 @@ operation_setup equal_get_R = \<open>
    action = fn (ctxt_id, post, cvars1, cvars2, qvars1, qvars2, owc) => let
       val ctxt = Refs.Ctxt.read ctxt_id
       val R = QRHL.equal_get_R post cvars1 cvars2 qvars1 qvars2 owc
-      in richterm_encode ctxt R end}\<close>
+      in richterm_encode ctxt R end}\<close> *)
 
 operation_setup fixTac = \<open>
   {from_lib = Codec.triple Codec.int term_tight_codec Codec.string,

@@ -225,19 +225,19 @@ lemma colocal_pred_qvars_unit[simp]: "colocal_pred_qvars A \<lbrakk>\<rbrakk>"
 lemma colocal_op_qvars_unit[simp]: "colocal_op_qvars A \<lbrakk>\<rbrakk>"
   by (cheat colocal_op_qvars_unit)
 
-lemma colocal_qvars_qvars_str[simp]:
+lemma colocal_qvars_qvars_str[simp, intro!]:
   assumes "distinct_qvars Q"
   assumes "set (variable_names Q) \<inter> R = {}"
   shows "colocal_qvars_qvars_str Q R"
   by (cheat colocal_qvars_qvars_str)
 
-lemma colocal_pred_qvars[simp]:
+lemma colocal_pred_qvars[simp, intro!]:
   assumes "distinct_qvars Q"
   assumes "colocal_pred_qvars_str S (set (variable_names Q))"
   shows "colocal_pred_qvars S Q"
   by (cheat colocal_pred_qvars)
 
-lemma colocal_op_qvars[simp]:
+lemma colocal_op_qvars[simp, intro!]:
   assumes "distinct_qvars Q"
   assumes "colocal_op_qvars_str U (set (variable_names Q))"
   shows "colocal_op_qvars U Q"
@@ -252,7 +252,7 @@ lemma colocal_bot[simp]: "colocal_pred_qvars_str bot Q"
   unfolding distinct_qvars_def apply transfer
   by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
 
-lemma colocal_inf[simp]: 
+lemma colocal_inf[simp, intro!]: 
   assumes "colocal_pred_qvars_str A Q" and "colocal_pred_qvars_str B Q" 
   shows "colocal_pred_qvars_str (A \<sqinter> B) Q"
 proof -
@@ -267,7 +267,12 @@ proof -
     unfolding colocal_pred_qvars_str.rep_eq by simp
 qed
 
-lemma colocal_plus[simp]: 
+lemma colocal_Inf[simp, intro!]: 
+  assumes "\<And>A. A\<in>AA \<Longrightarrow> colocal_pred_qvars_str A Q" 
+  shows "colocal_pred_qvars_str (Inf AA) Q"
+  by (cheat colocal_Inf)
+
+lemma colocal_plus[simp, intro!]: 
   fixes A :: "_ subspace"
   assumes "colocal_pred_qvars_str A Q" and "colocal_pred_qvars_str B Q" shows "colocal_pred_qvars_str (A + B) Q" 
 proof -
@@ -282,12 +287,12 @@ proof -
     unfolding colocal_pred_qvars_str.rep_eq by simp
 qed
 
-lemma colocal_sup[simp]: "colocal_pred_qvars_str A Q \<Longrightarrow> colocal_pred_qvars_str B Q \<Longrightarrow> colocal_pred_qvars_str (A \<squnion> B) Q"
+lemma colocal_sup[simp,intro!]: "colocal_pred_qvars_str A Q \<Longrightarrow> colocal_pred_qvars_str B Q \<Longrightarrow> colocal_pred_qvars_str (A \<squnion> B) Q"
   by (simp flip: plus_linear_space_def)
 lemma colocal_Cla[simp]: "colocal_pred_qvars_str (Cla[b]) Q"
   by (cases b; simp)
 
-lemma colocal_pred_qvars_mult[simp]:
+lemma colocal_pred_qvars_mult[simp,intro!]:
   assumes "colocal_op_qvars_str U Q" and "colocal_pred_qvars_str S Q" shows "colocal_pred_qvars_str (U\<cdot>S) Q"
 proof -
   from assms
@@ -456,17 +461,17 @@ for A::"(_,_)l2bounded" and Q::"'a::universe variables"
   by (cheat TODO12)
 
 
-lemma colocal_op_pred_lift1[simp]:
+lemma colocal_op_pred_lift1[simp,intro!]:
  "colocal_pred_qvars S Q \<Longrightarrow> colocal_op_pred (U\<guillemotright>Q) S"
 for Q :: "'a::universe variables" and U :: "('a,'a) l2bounded" and S :: predicate
   by (cheat TODO12)
 
-lemma colocal_op_qvars_lift1[simp]:
+lemma colocal_op_qvars_lift1[simp,intro!]:
   "colocal_qvars_qvars_str Q R \<Longrightarrow> colocal_op_qvars_str (U\<guillemotright>Q) R"
 for Q :: "'a::universe variables" and R :: "string set" and U :: "('a,'a) l2bounded"  
   by (cheat TODO12)
 
-lemma colocal_pred_qvars_lift1[simp]:
+lemma colocal_pred_qvars_lift1[simp,intro!]:
   "colocal_qvars_qvars_str Q R \<Longrightarrow> colocal_pred_qvars_str (S\<guillemotright>Q) R"
 for Q :: "'a::universe variables" and R :: "string set"
   by (cheat TODO12)
@@ -1387,7 +1392,7 @@ lemma predicate_local[intro!]:
   shows "predicate_local (quantum_equality_full U Q V R) S"
   by (cheat predicate_local)
 
-lemma colocal_quantum_equality_full[simp]:
+lemma colocal_quantum_equality_full[simp,intro!]:
   "colocal_qvars_qvars_str (variable_concat Q1 Q2) Q3 \<Longrightarrow> 
     colocal_pred_qvars_str (quantum_equality_full U1 Q1 U2 Q2) Q3"
 for Q1::"'a::universe variables" and Q2::"'b::universe variables" and Q3::"string set"
@@ -1395,7 +1400,7 @@ and U1 U2::"(_,'d)l2bounded"
   by (cheat TODO14)
 
 (* TODO can probably be removed because it's a special case of colocal_quantum_equality_full *)
-lemma colocal_quantum_eq[simp]: 
+lemma colocal_quantum_eq[simp,intro!]: 
   "colocal_qvars_qvars_str (variable_concat Q1 Q2) R \<Longrightarrow> colocal_pred_qvars_str (Q1 \<equiv>\<qq> Q2) R"
   for Q1 Q2 :: "'c::universe variables" and R :: "string set"
   by (cheat TODO14)

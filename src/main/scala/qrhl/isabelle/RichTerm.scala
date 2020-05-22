@@ -97,7 +97,7 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
    * The quantum variables are an estimate, it is possible to have terms that contain quantum variables that are not detected by this function.
    * @param deindex If true, indexed program variables are replaced by their unindexed counterparts
    * */
-  def caVariables(environment: Environment, deindex: Boolean=false): ExprVariableUse = {
+  def variables(environment: Environment, deindex: Boolean=false): ExprVariableUse = {
     val avars = new ListBuffer[String]
     val pvars = new ListBuffer[Variable]
 

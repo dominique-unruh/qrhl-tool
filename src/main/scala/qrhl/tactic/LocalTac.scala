@@ -38,10 +38,10 @@ case class LocalTac(left : Boolean, cVariables : List[CVariable], qVariables : L
 
       // Checking that pre/postcondition do not contain local classical variables
       val cvarsIdx = cvars map { _.index(left) }
-      val preConflict = pre.caVariables(env).classical.intersect(cvarsIdx)
+      val preConflict = pre.variables(env).classical.intersect(cvarsIdx)
       if (preConflict.nonEmpty)
         throw UserException(s"Precondition must not contain the classical variable(s) ${preConflict map { _.name } mkString ", "}")
-      val postConflict = post.caVariables(env).classical.intersect(cvarsIdx)
+      val postConflict = post.variables(env).classical.intersect(cvarsIdx)
       if (postConflict.nonEmpty)
         throw UserException(s"Postcondition must not contain the classical variable(s) ${postConflict map { _.name } mkString ", "}")
 
