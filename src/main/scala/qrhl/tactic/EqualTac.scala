@@ -186,14 +186,14 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
           throw UserException(s"Cannot remove quantum variables because we already remove one quantum equality from postcondition")
 
         val (newPostcondition, newRemovedQeq) = EqualTac.removeQeq(env, postcondition, quantum)
+        if (!Variable.quantum(out).toSet.subsetOf(newRemovedQeq))
+          throw UserException(s"Should remove quantum equality for variables ${varsToString(newRemovedQeq)}, but Vout already contains ${varsToString(Variable.quantum(out))}")
         postcondition = newPostcondition
         removedQeq = newRemovedQeq
         postconditionVariables.clear()
         postconditionVariables ++= postcondition.variables(env, deindex = true).program
         postconditionVariables --= classicalsRemovedFromPost
 
-        if (!Variable.quantum(out).toSet.subsetOf(removedQeq))
-          throw UserException(s"Should remove quantum equality for variables ${varsToString(removedQeq)}, but Vout already contains ${varsToString(Variable.quantum(out))}")
         println(s"Removing quantum variables ${varsToString(removedQeq)} from postcondition")
         out ++= removedQeq
       }
@@ -310,6 +310,15 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     //    assumes Vin_Vout_R: "quantum' (Vin - Vout) ∩ Rv = {}"
     add("as many classical variables in Vout as possible",
       extraOut = mid.toSet & (in ++ varUse.overwritten) & classicalsRemovedFromPost.toSet)
+
+    // It is possible that we did not remove any quantum equality yet.
+    // So we try to remove the quantum equality containing the quantum variables in out
+    // This may fail if there is only a quantum equality with the wrong variables, then we just skip this.
+    try
+      removeFromPost("trying to get rid of quantum equality in postcondition", out.filter(_.isQuantum).toSet)
+    catch {
+      case _ : UserException =>
+    }
 
     printVars()
     logger.debug(s"Postcondition: ${postcondition}; without ${varsToString(classicalsRemovedFromPost)}")

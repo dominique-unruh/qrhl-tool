@@ -1833,6 +1833,7 @@ lemma infinite_infinite[simp]: "infinite (UNIV::infinite set)"
   using Abs_infinite_inject apply auto
   by (metis finite_imageI infinite_UNIV_nat type_definition.Rep_range type_definition_infinite)
 derive universe infinite
+declare infinite_UNIV_listI[simp]
 
 section "ML Code"
 
