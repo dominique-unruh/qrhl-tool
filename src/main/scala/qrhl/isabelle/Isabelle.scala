@@ -266,6 +266,8 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
 }
 
 object Isabelle {
+  val infiniteT: Typ = Type(t.infinite, Nil)
+
   def setT(typ: Typ): Type = Type(t.set, List(typ))
 
   def INF(typ: Typ): Const = Const(c.Inf, Isabelle.setT(typ) -->: typ)

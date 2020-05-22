@@ -1828,6 +1828,11 @@ lemma bij_add_const[simp]: "bij (\<lambda>x. x+(y::_::ab_group_add))"
 
 declare imp_conjL[simp]
 
+typedef infinite = "UNIV::nat set" ..
+lemma infinite_infinite[simp]: "infinite (UNIV::infinite set)"
+  using Abs_infinite_inject apply auto
+  by (metis finite_imageI infinite_UNIV_nat type_definition.Rep_range type_definition_infinite)
+derive universe infinite
 
 section "ML Code"
 

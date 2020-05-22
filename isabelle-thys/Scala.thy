@@ -47,6 +47,7 @@ object IsabelleTypes {
   val char = \<open>\<^type_name>\<open>char\<close>\<close>
   val real = \<open>\<^type_name>\<open>real\<close>\<close>
   val program_state = \<open>\<^type_name>\<open>program_state\<close>\<close>
+  val infinite = \<open>\<^type_name>\<open>infinite\<close>\<close>
 }
 
 object IsabelleConsts {

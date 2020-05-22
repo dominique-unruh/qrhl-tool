@@ -277,7 +277,9 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
               add(msg = null, extraMid = Set(v))
               Breaks.break()
             }
-          throw UserException(s"""Need an infinite quantum variable in Vmid that does not occur in any of the mismatches. I.e., not one of ${mismatchesFree.filter(_.isQuantum)}. If there is such a variable already, make sure the Isabelle simplified can prove "infinite (UNIV::typ)" where typ is the type of that variable.""")
+          throw UserException(
+            s"""Need an infinite quantum variable in Vmid that does not occur in any of the mismatches.
+               |I.e., not one of ${varsToString(mismatchesFree.filter(_.isQuantum))}. If there is such a variable already, make sure the Isabelle simplifier can prove "infinite (UNIV::typ)" where typ is the type of that variable.""".stripMargin)
         }
       }
 
@@ -288,14 +290,14 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
         //    assumes C_Vin_R: "fv C ∩ Rv ⊆ Vin"
         add("fv(C) ∩ Rv ⊆ Vin", extraIn = varUse.freeVariables & postconditionVariables)
         //    assumes Vmid_R_Vin_covered: "Vmid ∩ Rv ⊆ Vin ∪ covered C"
-        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = (mid.toSet & postconditionVariables) -- varUse.covered)
+        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = MaybeAllSet.subtract(mid.toSet & postconditionVariables, varUse.covered))
         //    assumes Vmid_R_Vout_covered: "quantum' (Vmid ∩ Rv) ⊆ Vout ∪ covered C"
-        add("quantum' (Vmid ∩ Rv) ⊆ Vout ∪ covered(C)", extraOut = (mid.toSet.filter(_.isQuantum) & postconditionVariables) -- varUse.covered)
+        add("quantum' (Vmid ∩ Rv) ⊆ Vout ∪ covered(C)", extraOut = MaybeAllSet.subtract(mid.toSet.filter(_.isQuantum) & postconditionVariables, varUse.covered))
       } else {
         //    assumes C_Vin_R: "fv C ∩ Rv ⊆ Vin"
         add("fv(C) ∩ Rv ⊆ Vin", extraIn = varUse.freeVariables.filter(_.isClassical) & postconditionVariables)
         //    assumes Vmid_R_Vin_covered: "Vmid ∩ Rv ⊆ Vin ∪ covered C"
-        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = (mid.toSet.filter(_.isClassical) & postconditionVariables) -- varUse.covered)
+        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = MaybeAllSet.subtract(mid.toSet.filter(_.isClassical) & postconditionVariables, varUse.covered))
       }
 
     } while (updated)
@@ -306,7 +308,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     //    assumes Vout_Vmid: "Vout ⊆ Vmid"
     //    assumes Vout_Vin_R: "(Vout - Vin) ∩ Rv = {}"
     //    assumes Vin_Vout_R: "quantum' (Vin - Vout) ∩ Rv = {}"
-    add("as many classical variables in out as possible",
+    add("as many classical variables in Vout as possible",
       extraOut = mid.toSet & (in ++ varUse.overwritten) & classicalsRemovedFromPost.toSet)
 
     printVars()

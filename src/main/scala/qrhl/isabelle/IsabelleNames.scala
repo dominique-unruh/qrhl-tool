@@ -37,6 +37,7 @@ object IsabelleTypes {
   val char = "String.char"
   val real = "Real.real"
   val program_state = "Programs.program_state"
+  val infinite = "QRHL_Core.infinite"
 }
 
 object IsabelleConsts {

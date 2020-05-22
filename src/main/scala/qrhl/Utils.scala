@@ -121,6 +121,11 @@ object MaybeAllSet extends GenericCompanion[MaybeAllSet] {
     case NotAllSet(set2) => set1 -- set2
   }
 
+  def subtract[A](set1: Set[A], set2: MaybeAllSet[A]) : Set[A] = set2 match {
+    case _ : AllSet[A] => ListSet.empty
+    case NotAllSet(set2) => set1 -- set2
+  }
+
   val emptyInstance: NotAllSet[Any] = NotAllSet[Any](ListSet.empty)
   private val allInstance : AllSet[Nothing] = AllSet()
 //  override def empty[A] : NotAllSet[A] = emptyInstance.asInstanceOf

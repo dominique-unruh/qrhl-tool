@@ -7,20 +7,20 @@
       <list>
         <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.ExampleFilesTest" />
-        <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.ExampleFilesTest" />
+        <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.isabelle.IsabelleTest" />
         <option value="qrhl.isabelle.IsabelleTest" />
         <option value="qrhl.logic.BlockTest" />
         <option value="qrhl.logic.VariableTest" />
-        <option value="qrhl.logic.BlockTest" />
         <option value="qrhl.logic.VariableTest" />
+        <option value="qrhl.logic.BlockTest" />
         <option value="qrhl.toplevel.ParserTest" />
         <option value="qrhl.toplevel.ToplevelTest" />
         <option value="qrhl.toplevel.DeclareProgramCommandTest" />
-        <option value="qrhl.toplevel.DeclareProgramCommandTest" />
-        <option value="qrhl.toplevel.ParserTest" />
         <option value="qrhl.toplevel.ToplevelTest" />
+        <option value="qrhl.toplevel.ParserTest" />
+        <option value="qrhl.toplevel.DeclareProgramCommandTest" />
         <option value="qrhl.tactic.WpTacTest" />
         <option value="qrhl.tactic.O2HTacTest" />
         <option value="qrhl.tactic.RndTacTest" />
@@ -31,12 +31,12 @@
         <option value="qrhl.tactic.ByQRHLTacTest" />
         <option value="qrhl.tactic.ExpressionTest" />
         <option value="qrhl.tactic.RndTacTest" />
-        <option value="qrhl.tactic.SeqTacTest" />
-        <option value="qrhl.tactic.ExpressionTest" />
-        <option value="qrhl.tactic.O2HTacTest" />
         <option value="qrhl.tactic.RuleTacTest" />
-        <option value="qrhl.tactic.CaseTacTest" />
+        <option value="qrhl.tactic.SeqTacTest" />
         <option value="qrhl.tactic.ByQRHLTacTest" />
+        <option value="qrhl.tactic.O2HTacTest" />
+        <option value="qrhl.tactic.ExpressionTest" />
+        <option value="qrhl.tactic.CaseTacTest" />
         <option value="qrhl.tactic.WpTacTest" />
         <option value="qrhl.tactic.EqualTacTest" />
       </list>
@@ -47,6 +47,7 @@
     <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />
     <option name="jrePath" />
     <option name="searchTest" value="Across module dependencies" />
+    <option name="shortenClasspath" />
     <option name="showProgressMessages" value="true" />
     <option name="testArgs" value="-l org.scalatest.tags.Slow" />
     <option name="testPackagePath" value="" />
