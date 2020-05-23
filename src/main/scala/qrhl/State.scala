@@ -409,10 +409,10 @@ class State private (val environment: Environment,
     copy(environment = env1, isabelle=Some(isa))
   }
 
-  def declareAdversary(name: String, cvars: Seq[CVariable], qvars: Seq[QVariable], innerCVars: Seq[CVariable], innerQVars: Seq[QVariable], numOracles : Int): State = {
+  def declareAdversary(name: String, free: Seq[Variable], inner: Seq[Variable], written: Seq[Variable], covered: Seq[Variable], overwritten: Seq[Variable], numOracles : Int): State = {
 //    val isa1 = _isabelle.get.declareVariable(name,
 //      if (numOracles==0) Isabelle.programT else Isabelle.oracle_programT)
-    val decl = AbstractProgramDecl(name, cvars.toList, qvars.toList, innerCVars.toList, innerQVars.toList, numOracles)
+    val decl = AbstractProgramDecl(name, free=free.toList,inner=inner.toList,written=written.toList,covered=covered.toList,overwritten=overwritten.toList, numOracles=numOracles)
     val isa = decl.declareInIsabelle(_isabelle.get)
 //    val isa2 = decl.getSimplifierRules.foldLeft(isa1) { (isa,rule) => isa.addAssumption("", rule.isabelleTerm, simplifier = true) }
     val env1 = environment.declareProgram(decl)

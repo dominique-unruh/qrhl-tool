@@ -267,7 +267,7 @@ object Parser extends JavaTokenParsers {
       args2 = args.getOrElse(Nil);
       _ <- literal(":=");
       // temporarily add oracles to environment to allow them to occur in call-expressions during parsing
-      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,Nil,Nil,0))) };
+      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,Nil,Nil,Nil,0))) };
       body <- parenBlock(context2))
       yield DeclareProgramCommand(name,args2,body.toBlock))
 
@@ -279,17 +279,21 @@ object Parser extends JavaTokenParsers {
   def declareAdversary(implicit context:ParserContext) : Parser[DeclareAdversaryCommand] =
     literal("adversary") ~> OnceParser(for (
       name <- identifier;
-      vars <- literal("vars") ~> identifierList;
-      innerVars <- (literal("inner") ~> identifierList) | success(Nil);
+      free <- literal("free") ~> identifierList;
+      readonly <- (literal("readonly") ~> identifierList) | success(Nil);
+      overwritten <- (literal("overwritten") ~> identifierList) | success(Nil);
+      inner <- (literal("inner") ~> identifierList) | success(Nil);
+      covered <- (literal("covered") ~> identifierList) | success(Nil);
       calls <- declareAdversaryCalls)
       yield {
-        for (v <- vars++innerVars) if (!context.environment.cVariables.contains(v) && !context.environment.qVariables.contains(v))
+        for (v <- free++readonly++inner++covered) if (!context.environment.cVariables.contains(v) && !context.environment.qVariables.contains(v))
           throw UserException(s"Not a program variable: $v")
-        val cvars = vars.flatMap(context.environment.cVariables.get)
-        val qvars = vars.flatMap(context.environment.qVariables.get)
-        val innercvars = innerVars.flatMap(context.environment.cVariables.get)
-        val innerqvars = innerVars.flatMap(context.environment.qVariables.get)
-        DeclareAdversaryCommand(name,cvars,qvars,innercvars,innerqvars,calls)
+        val free2 = free.map(context.environment.getProgVariable)
+        val inner2 = inner.map(context.environment.getProgVariable)
+        val covered2 = covered.map(context.environment.getProgVariable)
+        val overwritten2 = overwritten.map(context.environment.getProgVariable)
+        val readonly2 = readonly.map(context.environment.getProgVariable)
+        DeclareAdversaryCommand(name,free=free2,inner=inner2,covered=covered2,readonly=readonly2,overwritten=overwritten2,numOracles=calls)
       })
 
   def goal(implicit context:ParserContext) : Parser[GoalCommand] =

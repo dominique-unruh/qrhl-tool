@@ -82,16 +82,14 @@ class ParserTest extends FunSuite {
   test("adversary") {
     val decl = Parser.parseAll(Parser.declareAdversary, "adversary A vars x, y").get
     assert(decl.name=="A")
-    assert(decl.cvars.map(_.name)==List("x","y"))
-    assert(decl.qvars.isEmpty)
+    assert(decl.free.map(_.name)==List("x","y"))
     assert(decl.numOracles==0)
   }
 
   test("adversary calls") {
     val decl = Parser.parseAll(Parser.declareAdversary, "adversary A vars x, y calls ?, ?").get
     assert(decl.name=="A")
-    assert(decl.cvars.map(_.name)==List("x","y"))
-    assert(decl.qvars.isEmpty)
+    assert(decl.free.map(_.name)==List("x","y"))
     assert(decl.numOracles==2)
   }
 

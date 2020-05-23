@@ -149,15 +149,13 @@ sealed trait ProgramDecl {
   def toStringMultiline : String
 }
 
-final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:List[QVariable], innerCVars:List[CVariable],
-                                     innerQVars:List[QVariable], numOracles:Int) extends ProgramDecl {
+final case class AbstractProgramDecl(name:String, free:List[Variable], inner:List[Variable], written:List[Variable],
+                                     overwritten:List[Variable], covered:List[Variable], numOracles:Int) extends ProgramDecl {
   override val variablesRecursive: VariableUse = {
-    val cvars2 = ListSet(cvars: _*)
-    val qvars2 = ListSet(qvars: _*)
-    VariableUse(freeVariables = cvars2 ++ qvars2, written = cvars2, ambient = ListSet.empty,
-      programs = ListSet.empty, overwritten = ListSet.empty, oracles=ListSet((1 to numOracles) map (_.toString) :_*),
-      inner = ListSet(innerCVars:_*) ++ ListSet(innerQVars:_*),
-      covered = if (numOracles==0) MaybeAllSet.all else MaybeAllSet.empty)
+    VariableUse(freeVariables = ListSet(free:_*), written = ListSet(written:_*), ambient = ListSet.empty,
+      programs = ListSet.empty, overwritten = ListSet(overwritten:_*), oracles=ListSet((1 to numOracles) map (_.toString) :_*),
+      inner = ListSet(inner:_*),
+      covered = if (numOracles==0) MaybeAllSet.all else MaybeAllSet(covered:_*))
   }
 
   def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {
@@ -189,8 +187,7 @@ final case class AbstractProgramDecl(name:String, cvars:List[CVariable], qvars:L
     }*/
   override def toStringMultiline: String = {
     val calls = if (numOracles==0) "" else " calls " + Seq.fill(numOracles)("?").mkString(", ")
-    val vars = (cvars ::: qvars) map { _.name } mkString ", "
-    s"adversary $name vars $vars$calls"
+    s"adversary $name$calls"
   }
 }
 

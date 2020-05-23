@@ -6,8 +6,10 @@ import info.hupel.isabelle.{Operation, pure}
 import org.log4s
 import org.log4s.Logger
 import qrhl.isabelle.Isabelle
-import qrhl.logic.{Block, CVariable, QVariable}
+import qrhl.logic.{Block, CVariable, QVariable, Variable}
 import qrhl.{State, Subgoal, Tactic, UserException}
+
+import scala.collection.immutable.ListSet
 
 
 trait Command {
@@ -52,12 +54,21 @@ case class DeclareProgramCommand(name: String, oracles: List[String], program : 
   }
 }
 
-case class DeclareAdversaryCommand(name: String, cvars: Seq[CVariable], qvars : Seq[QVariable],
-                                   innerCVars: Seq[CVariable], innerQVars : Seq[QVariable],
-                                   numOracles: Int) extends Command {
+case class DeclareAdversaryCommand(name: String, free: Seq[Variable], inner : Seq[Variable],
+                                   readonly: Seq[Variable], covered : Seq[Variable],
+                                   overwritten: Seq[Variable], numOracles: Int) extends Command {
   override def act(state: State): State = {
     println(s"Declaring adversary $name. ")
-    state.declareAdversary(name,cvars,qvars,innerCVars,innerQVars,numOracles)
+    if (numOracles==0 && inner.nonEmpty)
+      throw UserException("An adversary without oracles cannot have inner variables")
+    if (numOracles==0 && covered.nonEmpty)
+      throw UserException("An adversary without oracles cannot have explicitly specified covered variables")
+    if ((overwritten.toSet & readonly.toSet).nonEmpty)
+      throw UserException("A variable cannot be overwritten and readonly at the same time")
+    val free2 = free ++ readonly ++ overwritten
+    val written = (ListSet(free:_*) -- readonly).toList
+    val inner2 = inner ++ covered
+    state.declareAdversary(name,free=free2,inner=inner2,written=written,covered=covered,overwritten=overwritten,numOracles=numOracles)
   }
 }
 
