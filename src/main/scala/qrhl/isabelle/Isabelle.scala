@@ -386,7 +386,8 @@ object Isabelle {
 //  def mk_conj(t1: Term, t2: Term): Term = HOLogic.conj $ t1 $ t2
 
   def conj(terms: Term*): Term = terms match {
-    case Seq(t, ts @ _*) => ts.foldLeft(t) { (t1,t2) => HOLogic.conj $ t1 $ t2 }
+    case Seq(ts @ _*) =>
+      ts.dropRight(1).foldRight(ts.last) { (t1,t2) => HOLogic.conj $ t1 $ t2 }
     case Nil => HOLogic.True
   }
 

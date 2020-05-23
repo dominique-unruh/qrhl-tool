@@ -332,8 +332,14 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 
     logger.debug(s"Colocality: $colocality")
 
-    val Amid = makePredicate(mid,postcondition)
-    val Ain = makePredicate(in,postcondition)
+    val sort_reference = (if (removedQeq==null) Nil else removedQeq.toList) ++ this.in ++ this.out ++ this.mid
+    def sort(list: Seq[Variable], reference: Seq[Variable]) = {
+      val ref = reference.toList ++ sort_reference
+      list.sortBy(ref.indexOf)
+    }
+
+    val Amid = makePredicate(sort(mid.toSeq,this.mid),postcondition)
+    val Ain = makePredicate(sort(in.toSeq,this.in),postcondition)
 
     // For each element (l,e) of mismatches, mismatchGoals contains a goal of the form {Amid}l~r{Amid}
     //    assumes qrhl_s: "⋀i. qRHL (R ⊓ Eq Vmid) (s i) (s' i) (R ⊓ Eq Vmid)"

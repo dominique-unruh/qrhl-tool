@@ -90,7 +90,7 @@ derive universe bit
   by (metis add_cancel_left_right bit.exhaust one_add_one)  *)
 lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
   apply transfer by auto
-lemma bit_neq[simp]: "(a \<noteq> b) = (a = b+1)" for a b :: bit
+lemma bit_neq: "(a \<noteq> b) = (a = b+1)" for a b :: bit
   apply (cases a rule:bit.exhaust; cases b rule:bit.exhaust) by auto
 
 (* declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]] *)

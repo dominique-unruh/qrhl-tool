@@ -1830,8 +1830,7 @@ declare imp_conjL[simp]
 
 typedef infinite = "UNIV::nat set" ..
 lemma infinite_infinite[simp]: "infinite (UNIV::infinite set)"
-  using Abs_infinite_inject apply auto
-  by (metis finite_imageI infinite_UNIV_nat type_definition.Rep_range type_definition_infinite)
+  by (metis (full_types) Abs_infinite_inverse UNIV_I ex_new_if_finite finite_imageI image_eqI infinite_UNIV_nat)
 derive universe infinite
 declare infinite_UNIV_listI[simp]
 
