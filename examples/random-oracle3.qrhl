@@ -34,7 +34,7 @@ program hQuery' := {
 # (I.e., the adversary may access the query registers of the random oracle.)
 quantum var qglobA : string.
 classical var cglobA : string.
-adversary A vars cglobA, qglobA, x, y calls ?.
+adversary A free cglobA, qglobA, x, y calls ?.
 
 # A game where the adversary can perform a single query to the random oracle
 program prog1 := {

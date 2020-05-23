@@ -17,7 +17,7 @@ ambient var q : nat.
 ambient var rho : program_state.
 ambient var distr : (X set * (X => Y) * (X => Y) * Aux) distr.
 
-adversary A vars IN, OUT, b, z
+adversary A free IN, OUT, b, z
             calls ?.
 
 program queryG := {

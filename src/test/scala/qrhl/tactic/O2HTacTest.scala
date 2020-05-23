@@ -25,7 +25,7 @@ class O2HTacTest extends FunSuite {
         | classical var hit : bit.
         |
         | program Count(O) := { call O; count <- count + 1; }.
-        | adversary Adv_O2H vars z, b, X, Y calls ?.
+        | adversary Adv_O2H free z, b, X, Y calls ?.
         |
         | program queryG := { on X,Y apply (Uoracle G); }.
         | program queryGS := {

@@ -11,7 +11,7 @@ quantum var u : unit.
 
 classical var x : int.
 
-adversary A vars q.
+adversary A free q.
 
 qrhl q1: {Cla[x1=1] ⊓ Qeq[q1,Z1 = q2,Z2]} call A; ~ call A; {Cla[x1=2] ⊓ Qeq[r1,Z1 = q2,Z2]}.
  admit.

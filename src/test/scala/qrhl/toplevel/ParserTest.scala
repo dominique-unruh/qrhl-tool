@@ -15,10 +15,10 @@ class ParserTest extends FunSuite {
     tl.execCmd("classical var y : int")
     tl.execCmd("classical var z : int")
     tl.execCmd("classical var w : int")
-    tl.execCmd("adversary A0 vars x")
-    tl.execCmd("adversary B0 vars x")
-    tl.execCmd("adversary A1 vars x calls ?")
-    tl.execCmd("adversary A2 vars x calls ?, ?")
+    tl.execCmd("adversary A0 free x")
+    tl.execCmd("adversary B0 free x")
+    tl.execCmd("adversary A1 free x calls ?")
+    tl.execCmd("adversary A2 free x calls ?, ?")
     tl.state.value.parserContext
   }
 
@@ -80,14 +80,14 @@ class ParserTest extends FunSuite {
   }
 
   test("adversary") {
-    val decl = Parser.parseAll(Parser.declareAdversary, "adversary A vars x, y").get
+    val decl = Parser.parseAll(Parser.declareAdversary, "adversary A free x, y").get
     assert(decl.name=="A")
     assert(decl.free.map(_.name)==List("x","y"))
     assert(decl.numOracles==0)
   }
 
   test("adversary calls") {
-    val decl = Parser.parseAll(Parser.declareAdversary, "adversary A vars x, y calls ?, ?").get
+    val decl = Parser.parseAll(Parser.declareAdversary, "adversary A free x, y calls ?, ?").get
     assert(decl.name=="A")
     assert(decl.free.map(_.name)==List("x","y"))
     assert(decl.numOracles==2)

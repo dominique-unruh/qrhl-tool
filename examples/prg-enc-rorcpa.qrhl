@@ -18,9 +18,9 @@ quantum var qglobA : string.
 classical var cglobA : string.
 
 # A1: inputs: none; outputs m
-adversary A1 vars m,cglobA,qglobA.
+adversary A1 free m,cglobA,qglobA.
 # A2: inputs: c; outputs: b
-adversary A2 vars c,b,cglobA,qglobA.
+adversary A2 free c,b,cglobA,qglobA.
 
 # B: inputs: r; outputs: b
 program B := { call A1; c <- r+m; call A2; }.
