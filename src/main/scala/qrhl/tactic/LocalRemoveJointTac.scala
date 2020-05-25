@@ -7,7 +7,7 @@ import qrhl.isabelle.Isabelle.{Inf, QuantumEqualityFull, predicateT, predicate_i
 import qrhl.isabelle.{Isabelle, RichTerm}
 import qrhl.logic.{Block, CVariable, Local, QVariable}
 
-case object LocalJointTac extends Tactic {
+case object LocalRemoveJointTac extends Tactic {
   /** Assumes that s1,s2 have same length and matching types */
   private def extendQeq(us1: Term, s1: Term, us2: Term, s2: Term, qvarsL: List[QVariable], qvarsR: List[QVariable]) = {
     import Isabelle.{variable_concat, variable_singleton, quantum_equality_full, idOp, ell2T}

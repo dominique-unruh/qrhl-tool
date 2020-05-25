@@ -5,9 +5,9 @@ import qrhl.isabelle.Isabelle
 import qrhl.logic.{Block, CVariable, Local, QVariable}
 import qrhl.tactic.FrameRuleTac.colocalityOp
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
-import qrhl.tactic.LocalTac.logger
+import qrhl.tactic.LocalRemoveTac.logger
 
-case class LocalTac(left : Boolean, cVariables : List[CVariable], qVariables : List[QVariable]) extends Tactic {
+case class LocalRemoveTac(left : Boolean, cVariables : List[CVariable], qVariables : List[QVariable]) extends Tactic {
 
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case AmbientSubgoal(_) =>
@@ -70,6 +70,6 @@ case class LocalTac(left : Boolean, cVariables : List[CVariable], qVariables : L
   }
 }
 
-object LocalTac {
+object LocalRemoveTac {
   private val logger = log4s.getLogger
 }
