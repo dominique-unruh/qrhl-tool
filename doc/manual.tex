@@ -180,10 +180,12 @@
 
 \tableofcontents
 
+\bigskip
+
+\noindent
+
 This is a user manual for our proof assistant for
-performing qRHL-based security proofs.  The tool is a prototype to
-demonstrate the logic and to experiment with security proofs. At this
-point, it is not yet meant for larger developments.
+performing qRHL-based security proofs.  
 
 This manual assumes knowledge of the underlying qRHL formalism, see
 \cite{qrhl-paper-from-manual}.
@@ -2065,6 +2067,8 @@ $A_n$ is considered to be the $n$-th assumption.
 
 \tactic{conseq}
 
+\TODOQ{document conseq qrhl}
+
 When invoked as ``\texttt{conseq pre: $C$.}'',
 it rewrites the precondition of the current qRHL subgoal to become~$C$.
 When invoked as ``\texttt{conseq post: $C$.}'',
@@ -2085,23 +2089,34 @@ Both rules are special cases of \ruleref{Conseq}.
 
 \tactic{equal}
 
-\TODOQ{Document: equal-tactic arguments:
-equal [amount:nat/all] [exclude progs-comma-sep] [qvars vars-comma-sep] [innerqvars vars-comma-sep]}
+\TODOQ{Needs updating. 
+  In particular local-vars treatment. 
+  Options qvars, innerqvars}
 
-
-
-Converts a subgoal of the form
-$\rhl{A}{\bc;s}{\bc';s'}{B}$
-where $s,s'$ are single statements with $s=s'$ (up to few differences)
+This tactic is invoked as:
+\[
+\texttt{equal \textnormal[$n$\textnormal] \textnormal[exclude $\mathit{programs}$\textnormal]
+  \textnormal[qvars $\mathit{qvars}$\textnormal]
+  \textnormal[innerqvars $\mathit{qvars'}$\textnormal]}
+\]
+It 
+converts a subgoal of the form
+$\rhl{A}{\bc;\bd}{\bc';\bd'}{B}$
+where $\bd,\bd'$ are the last $n$ statements (default: $n=1$) of the
+left and right program
 into a subgoal $\rhl{A}{\bc}{\bc'}{C}$
 with suitably updated postcondition $C$.
 (Note: an if- or while-statement counts as a single statement.)
 In addition, a subgoal about free variables,
-as well as subgoals corresponding to the differences between $s,s'$ (if any) are produced.
+as well as subgoals corresponding to the differences between $\bd,\bd'$ (if any) are produced.
+(I.e., the tactic assumed that $\bd,\bd'$ are similar programs, with potentially a few
+statements being different.)
+
+\bigskip
 
 \textbf{In detail:}
-By comparing $s,s'$, a context $S$ with multiple holes is obtained
-such that $s=S[s_1,\dots,s_n]$ and $s'=S[s'_1,\dots,s'_n]$.\footnote{%
+By comparing $\bd,\bd'$, a context $S$ with multiple holes is obtained
+such that $\bd=S[s_1,\dots,s_n]$ and $\bd'=S[s'_1,\dots,s'_n]$.\footnote{%
   The definition of multi-hole contexts is given in \qrhlautoref{footnote:context}.
   
   Note that in statements of the form \texttt{call A(p1,\dots,pn)},
@@ -2110,70 +2125,80 @@ such that $s=S[s_1,\dots,s_n]$ and $s'=S[s'_1,\dots,s'_n]$.\footnote{%
   (E.g., when $s=\mathtt{call A(enc1)}$ and $s'=\mathtt{call A(enc2)}$,
   then $s_1=\mathtt{enc1}$ and $s_1'=\mathtt{enc2}$.)
 }
-(In particular, if $s=s'$, then simply $S=s=s'$.)
+By default, the tactic attempts to find a minimal set of differences.
+(In particular, if $\bd=\bd'$, then simply $S=\bd=\bd'$.)
+But if the option ``\texttt{exclude} $\mathit{programs}$'' is given
+(where $\mathit{programs}$ is a comma-separated list of program
+names), then additionally those programs are included in the differences. 
+(I.e., $S$ is guaranteed not to contain any of $\mathit{programs}$.)
+
 
 The postcondition $C$ is derived as follows:
 
-Let $\xx^{(1)},\dots,\xx^{(n)}$
+Let $X$
 be the free classical variables of $S$,
-and $\qq^{(1)},\dots,\qq^{(m)}$
-be the free quantum variables of $S$
-(free quantum variables means quantum variables on the lhs of
-initialization, measurements, and apply-statements).
+and $Q$
+be the free quantum variables of $S$.
 This includes the variables of any programs included recursively within $S$
-via \texttt{call} statements, but not programs that are replaced by holes.
-\TODOQ{Let $X^\mathit{write}$ consist of all $x^{(i)}$
-  that occur on the lhs of an assignment, sampling, or measurement. (Then $S$ is $
-  \pb\paren{\{\xx^{(1)},\dots,\xx^{(n)}\}\setminus X^\mathit{write}}$-readonly.)
-Let $X^\mathit{write}_j:=\idx j X^\mathit{write}$.}
+via \texttt{call} statements, but not the programs $s_i,s_i'$ that are replaced by holes.
+Let $X^\mathit{write}$ consist of all $\xx$
+that occur on the lhs of an assignment, sampling, or measurement in $S$ (but not under
+a \texttt{local}-statement). (Then $S$ is $
+\pb\paren{X\setminus X^\mathit{write}}$-readonly.)
+We write $X_1,X_2$ for the variables $X$ with added index $1,2$, and analogously
+for $Q$ and $X^\mathit{write}$.
 
-First, we rewrite the postcondition $B$
-in several steps. This is in order to get a new postcondition $C$ that does
-not share any free \TODOQ{non-readonly} variables with $S$ (if possible) while strengthening the postcondition as little as
-possible.
+
+First, we rewrite the postcondition $B$ in several steps. This is in
+order to get a new postcondition $C$ that does not share any written
+or quantum variables with $S$ (if possible) while strengthening the
+postcondition as little as possible.
+
 
 $B'$
 is $B$
-with occurrences of $\xx^{(i)}_1=\xx^{(i)}_2$
-for all $i$ \TODOQ{$\xx_1=\xx_2$ for $\xx\in X^\mathit{write}$},
+with occurrences of $\xx_1=\xx_2$
+for all $\xx\in X^\mathit{write}$,
 and occurrences of
-$\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
+$\llbracket Q_1 \rrbracket
 \mathrel{\mathord\equiv\mathfrak q} \llbracket
-\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$ removed. (In such a way that
-$B'\sqcap\mathfrak{Cla}[\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
-\xx^{(n)}_1=\xx^{(n)}_2]\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)}
+Q_2 \rrbracket$ removed. (In such a way that
+$B'\sqcap\mathfrak{Cla}[
+\forall \xx\in X^\mathit{write}.\ \xx_1=\xx_2
+]\sqcap\llbracket Q_1
 \rrbracket \mathrel{\mathord\equiv\mathfrak q} \llbracket
-\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$ is a subset of $B$.)
+Q_2 \rrbracket$ is a subspace of $B$.)
 
-Let $i_1,\dots,i_k$
-be all indices such that both $\xx^{(i)}_1$
-and $\xx^{(i)}_2$ are free variables in $B'$ \TODOQ{and $\xx^{(i)}\in X^\mathit{write}$}.
+Let $\tilde\xx^{(1)},\dots,\tilde\xx^{(k)}$ be all $\xx\in X^\mathit{write}$
+that are free in $B'$.
 Let
 \[
- B'':=\mathfrak{Cla}\pb\parenthesis[]{\lnot (\xx_1^{(i_1)}=\xx_2^{(i_1)}\land\dots\land\xx_1^{(i_k)}=\xx_2^{(i_k)})} + B'.
+ B'':=\mathfrak{Cla}\pb\parenthesis[]{\lnot (\tilde\xx_1^{(1)}=\tilde\xx_2^{(1)}\land\dots\land\xx_1^{(k)}=\xx_2^{(k)})} + B'.
 \]
 Note that also
-$B''\sqcap\mathfrak{Cla}\pb\parenthesis[]{\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
-\xx^{(n)}_1=\xx^{(n)}_2}\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
-\mathrel{\mathord\equiv\mathfrak q} \llbracket
-\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket$ is a subset of $B$.
+$B''\sqcap\mathfrak{Cla}[
+\forall \xx\in X^\mathit{write}.\ \xx_1=\xx_2
+]\sqcap\llbracket Q_1
+\rrbracket \mathrel{\mathord\equiv\mathfrak q} \llbracket
+Q_2 \rrbracket$ is a subspace of $B$.
 
 Let 
 \[
-  B''':=\mathtt{INF}\ X_1X_2.\ B''
+  B''':=\mathtt{INF}\ \Hat X.\ B''
 \]
-where $X_1X_2$
+where $\Hat X$
 are all classical variables $\xx^{(i)}_j$
 (for $j=1,2$)
-such that $\xx^{(i)}$ \TODOQ{$\in X^\mathit{write}$}
-is a free variable of $s$, and $\xx^{(i)}_j$ is free in $B''$.
+such that $\xx^{(i)}\in X^\mathit{write}$, and $\xx^{(i)}_j$ is free in $B''$.
 
 Let
 \[
   C:=B'''\sqcap\mathfrak{Cla}[\xx^{(1)}_1=\xx^{(1)}_2\land\dots\land
-\xx^{(n)}_1=\xx^{(n)}_2]\sqcap\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)}
+\xx^{(n)}_1=\xx^{(k)}_2]\sqcap\llbracket Q_1
 \rrbracket \mathrel{\mathord\equiv\mathfrak q} \llbracket
-\qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket.
+Q_2 \rrbracket
+\qquad
+\text{for } \xx^{(1)},\dots,\xx^{(k)} := X
 \]
 Note that $C$ is a subset of $B$, and 
 note that $\cl{\fv(B''')}\cap\fv(S)\TODOQ{$X_1^\mathit{write}X_2^\mathit{write}$}=\varnothing$.
@@ -2190,7 +2215,7 @@ With this definitions, the rule implemented by the tactic is:
     \rhl{A}{\bc}{\bc'}C
   }
   {
-    \rhl{A}{\bc;s}{\bc';s'}{B}
+    \rhl{A}{\bc;\bd}{\bc';\bd'}{B}
   }
 \]
 
@@ -2203,14 +2228,15 @@ $\qu{\fv(B''')}\cap(\idx1 \qu{\fv(C)}\cup\idx2\qu{\fv(C)})=\varnothing$.
   we have that $S$ is $\paren{\cl{\fv(S)}\cap \Tilde X}$-readonly
   where $\Tilde X:=\cl{\fv(B''')}$ with indices removed.}\TODOQ{check}
 
-From \ruleref{Adversary} and $\rhl{C}{s_i}{s_i'}{C}$, we have $\rhl{C}{s}{s'}{C}$
+From \ruleref{Adversary} \TODOQ{use from local-var paper}
+and $\rhl{C}{s_i}{s_i'}{C}$, we have $\rhl{C}{\bd}{\bd'}{C}$
 (Here \ruleref{Adversary} is instantiated with $C:=S$, $X:=\cl{\fv(S)}$, $Y:=\qu{\fv(S)}$,
 $W:=\varnothing$, $\Tilde X:=\cl{\fv(B''')}$ with indices removed,
 $Z:=\qu{\fv(B''')}$, $R:=B'''$, $\bc_i:=s_i$, $\bc'_i:=s'_i$.)
 
 Then with \ruleref{Seq} and $\rhl{A}{\bc}{\bc'}C$, we get 
-$\rhl{A}{\bc;s}{\bc's'}C$. And with \ruleref{Conseq} and $C\subseteq B$,
-we get $\rhl{A}{\bc;s}{\bc';s'}B$.
+$\rhl{A}{\bc;\bd}{\bc';\bd'}C$. And with \ruleref{Conseq} and $C\subseteq B$,
+we get $\rhl{A}{\bc;\bd}{\bc';\bd'}B$.
 
 
 The first subgoal intuitively means that the quantum variables from
