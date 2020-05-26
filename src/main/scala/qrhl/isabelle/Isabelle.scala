@@ -266,9 +266,39 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
 }
 
 object Isabelle {
+  def undefined(typ: Typ) : Const = Const(c.undefined, typ)
+
+  def liftSpace(typ: Typ) : Const = Const(c.liftSpace, linear_spaceT(ell2T(typ)) -->: variablesT(typ) -->: predicateT)
+  def liftSpace(space: Term, vars: Term) : Term = {
+    val typ = VariablesT.unapply(fastype_of(vars)).get
+    liftSpace(typ) $ space $ vars
+  }
+
+  def span(typ: Typ): Const = Const(c.Span, setT(typ) -->: linear_spaceT(typ))
+  def span(term: Term): Term = fastype_of(term) match {
+    case SetT(typ) => span(typ) $ term
+  }
+
+  def span1(term: Term): Term = span(singleton_set(term))
+
+  def singleton_set(term: Term): Term = insert(term, empty_set(fastype_of(term)))
+
+  def insert(typ: Typ): Const = Const(c.insert, typ -->: setT(typ) -->: setT(typ))
+  def insert(elem: Term, set: Term): Term = insert(fastype_of(elem)) $ elem $ set
+
+  def empty_set(typ: Typ): Const = bot(setT(typ))
+
+  def linear_spaceT(typ: Typ): Type = Type(t.linear_space, List(typ))
+
   val infiniteT: Typ = Type(t.infinite, Nil)
 
   def setT(typ: Typ): Type = Type(t.set, List(typ))
+  object SetT {
+    def unapply(arg: Typ): Option[Typ] = arg match {
+      case Type(t.set, List(typ)) => Some(typ)
+      case _ => None
+    }
+  }
 
   def INF(typ: Typ): Const = Const(c.Inf, Isabelle.setT(typ) -->: typ)
 
@@ -388,7 +418,7 @@ object Isabelle {
   def conj(terms: Term*): Term = terms match {
     case Seq(ts @ _*) =>
       ts.dropRight(1).foldRight(ts.last) { (t1,t2) => HOLogic.conj $ t1 $ t2 }
-    case Nil => HOLogic.True
+//    case Nil => HOLogic.True
   }
 
   def disj(terms: Term*): Term = terms match {
@@ -406,9 +436,9 @@ object Isabelle {
   // TODO rename constants
 //  val vectorT_name = "Complex_L2.ell2"
 
-  def ell2T(typ: Typ) = Type(t.ell2, List(typ))
+  def ell2T(typ: Typ): Type = Type(t.ell2, List(typ))
   object Ell2T {
-    def unapply(typ: Typ) = typ match {
+    def unapply(typ: Typ): Option[Typ] = typ match {
       case Type(t.ell2, List(typ)) => Some(typ)
       case _ => None
     }

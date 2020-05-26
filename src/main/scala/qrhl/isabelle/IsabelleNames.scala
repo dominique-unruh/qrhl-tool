@@ -85,4 +85,8 @@ object IsabelleConsts {
   val default = "HOL.default_class.default"
   val ket = "Complex_L2.ket"
   val not = "HOL.Not"
+  val undefined = "HOL.undefined"
+  val Span = "Complex_Vector_Spaces.Span"
+  val liftSpace = "QRHL_Core.liftSpace"
+  val insert = "Set.insert"
 }

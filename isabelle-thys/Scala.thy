@@ -95,6 +95,10 @@ object IsabelleConsts {
   val default = \<open>\<^const_name>\<open>default\<close>\<close>
   val ket = \<open>\<^const_name>\<open>ket\<close>\<close>
   val not = \<open>\<^const_name>\<open>Not\<close>\<close>
+  val undefined = \<open>\<^const_name>\<open>undefined\<close>\<close>
+  val Span = \<open>\<^const_name>\<open>Span\<close>\<close>
+  val liftSpace = \<open>\<^const_name>\<open>liftSpace\<close>\<close>
+  val insert = \<open>\<^const_name>\<open>insert\<close>\<close>
 }
 \<close>
 

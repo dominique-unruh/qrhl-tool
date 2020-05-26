@@ -12,6 +12,8 @@ import scala.collection.mutable
 
 // Variables
 sealed trait Variable {
+  def rename(name: String): Variable
+
   def isClassical: Boolean
   def isQuantum: Boolean
 
@@ -63,6 +65,15 @@ object Variable {
   def index(left:Boolean, name:String) : String =
     if (left) index1(name) else index2(name)
 
+/*
+  class Indexed(left: Boolean) {
+    def unapply(variable: Variable) : Option[Variable] = variable match {
+      case Indexed(var2, `left`) => Some(var2)
+      case _ => None
+    }
+  }
+*/
+
   object Indexed {
     def unapply(name: String): Option[(String, Boolean)] = {
       if (name.isEmpty) return None
@@ -73,6 +84,10 @@ object Variable {
         case '2' => Some((basename, false))
         case _ => None
       }
+    }
+    def unapply(variable: Variable): Option[(Variable, Boolean)] = variable.name match {
+      case Indexed(name, left) => Some(variable.rename(name), left)
+      case _ => None
     }
   }
 
@@ -104,12 +119,11 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
 
   override def isQuantum: Boolean = true
   override def isClassical: Boolean = false
+
+  override def rename(name: String): Variable = copy(name=name)
 }
 
 object QVariable {
-  def filter(vars: List[Variable]): List[QVariable] =
-    vars.collect { case v : QVariable => v }
-
   def fromTerm_var(context: Isabelle.Context, x: Term): QVariable = x match {
     case Free(name,typ) =>
       QVariable(name, Isabelle.dest_variableT(typ))
@@ -153,12 +167,11 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
 
   override def isQuantum: Boolean = false
   override def isClassical: Boolean = true
+
+  override def rename(name: String): Variable = copy(name=name)
 }
 
 object CVariable {
-  def filter(vars: List[Variable]): List[CVariable] =
-    vars.collect { case v : CVariable => v }
-
   def fromTerm_var(context: Isabelle.Context, x: Term): CVariable = x match {
     case Free(name,typ) =>
       assert(name.startsWith("var_"))

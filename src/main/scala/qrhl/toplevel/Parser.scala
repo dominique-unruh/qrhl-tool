@@ -467,10 +467,15 @@ object Parser extends JavaTokenParsers {
   def progVariables(implicit context: ParserContext): Parser[List[Variable]] =
     identifierList ^^ { _.map(context.environment.getProgVariable) }
 
+  def side : Parser[Boolean] =
+    ("left" ^^^ true | "right" ^^^ false)
+
+  def exclamOpt: Parser[Boolean] =
+    (literal("!") ^^^ true) | success(false)
+
   def tactic_local_remove(implicit context: ParserContext): Parser[Tactic] =
     "remove" ~> OnceParser(
-      ("left" ~> (":" ~> progVariables).?) ^^ { vs => LocalRemoveTac(left=true, cVariables = CVariable.filter(vs.getOrElse(Nil)), qVariables = QVariable.filter(vs.getOrElse(Nil))) } |
-        ("right" ~> (":" ~> progVariables).?) ^^ { vs => LocalRemoveTac(left=false, cVariables = CVariable.filter(vs.getOrElse(Nil)), qVariables = QVariable.filter(vs.getOrElse(Nil))) } |
+      (side ~ exclamOpt ~ (":" ~> progVariables).?) ^^ { case left ~ withInit ~ vs => LocalRemoveTac(left=left, withInit=withInit, variablesToRemove = vs.getOrElse(Nil)) } |
         "joint" ^^^ LocalRemoveJointTac)
 
   def tactic_local_up(implicit context: ParserContext): Parser[LocalUpTac] =
