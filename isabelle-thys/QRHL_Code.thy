@@ -30,11 +30,11 @@ lift_definition l2bounded_of_mat' :: "complex mat \<Rightarrow> ('a::enum,'b::en
 lift_definition mat_of_l2bounded' :: "('a::enum,'b::enum) code_l2bounded \<Rightarrow> complex mat"
   is mat_of_bounded.
 
-(* abbreviation "basis_enum_of_vec == basis_enum_of_vec" *)
-(* abbreviation "vec_of_basis_enum == vec_of_basis_enum" *)
+(* abbreviation "onb_enum_of_vec == onb_enum_of_vec" *)
+(* abbreviation "vec_of_onb_enum == vec_of_onb_enum" *)
 
-definition ell2_of_vec :: "complex vec \<Rightarrow> 'a::enum ell2" where "ell2_of_vec = basis_enum_of_vec"
-definition vec_of_ell2 :: "'a::enum ell2 \<Rightarrow> complex vec" where "vec_of_ell2 = vec_of_basis_enum"
+definition ell2_of_vec :: "complex vec \<Rightarrow> 'a::enum ell2" where "ell2_of_vec = onb_enum_of_vec"
+definition vec_of_ell2 :: "'a::enum ell2 \<Rightarrow> complex vec" where "vec_of_ell2 = vec_of_onb_enum"
 
 lemma mat_of_bounded_inverse' [code abstype]:
   "l2bounded_of_mat' (mat_of_l2bounded' B) = B" 
@@ -49,7 +49,8 @@ lemma [code]: "mat_of_bounded (Rep_code_l2bounded X) = mat_of_l2bounded' X"
 lemma vec_of_ell2_inverse [code abstype]:
   "ell2_of_vec (vec_of_ell2 B) = B" 
   unfolding ell2_of_vec_def vec_of_ell2_def
-  by (simp add: basis_enum_of_vec_COMP_vec_of_basis_enum pointfree_idE)
+  using pointfree_idE
+  by (simp add: pointfree_idE onb_enum_of_vec_COMP_vec_of_onb_enum)
 
 fun index_of where
   "index_of x [] = (0::nat)"
@@ -163,10 +164,10 @@ lemma tensorVec_code[code]: "vec_of_ell2 (\<psi> \<otimes> \<phi>) = vec_tensor 
   for \<psi>::"'a::enum ell2" and \<phi>::"'b::enum ell2"
   by (cheat 17)
 
-definition [code del]: "SPAN x = Span (basis_enum_of_vec ` set x)"
+definition [code del]: "SPAN x = Span (onb_enum_of_vec ` set x)"
 code_datatype SPAN
 
-definition "mk_projector (S::'a::basis_enum linear_space) = mat_of_bounded (Proj S)" 
+definition "mk_projector (S::'a::onb_enum linear_space) = mat_of_bounded (Proj S)" 
 fun mk_projector_orthog :: "nat \<Rightarrow> complex vec list \<Rightarrow> complex mat" where
   "mk_projector_orthog d [] = zero_mat d d"
 | "mk_projector_orthog d [v] = (let norm2 = cscalar_prod v v in
@@ -178,7 +179,7 @@ fun mk_projector_orthog :: "nat \<Rightarrow> complex vec list \<Rightarrow> com
                                         + mk_projector_orthog d vs)"
 
 lemma mk_projector_SPAN[code]: 
-  "mk_projector (SPAN S :: 'a::basis_enum linear_space) = 
+  "mk_projector (SPAN S :: 'a::onb_enum linear_space) = 
     (let d = canonical_basis_length TYPE('a) in mk_projector_orthog d (gram_schmidt d S))"
   by (cheat 17)
 
@@ -188,18 +189,18 @@ lemma mk_projector_SPAN[code]:
                             smult_mat (1/norm2) (mat_of_cols d [v] * mat_of_rows d [v]))
   | _ \<Rightarrow> Code.abort (STR ''Computation of 'Proj S' only implemented for singleton S'') (\<lambda>_. mat_of_bounded (Proj (SPAN S :: 'a subspace))))"*)
 
-lemma [code]: "mat_of_bounded (Proj S) = mk_projector S" for S :: "'a::basis_enum linear_space"
+lemma [code]: "mat_of_bounded (Proj S) = mk_projector S" for S :: "'a::onb_enum linear_space"
   unfolding mk_projector_def by simp
 
 
-lemma top_as_span[code]: "(top::'a linear_space) = SPAN (computational_basis_vec (canonical_basis_length TYPE('a::basis_enum)))"
+lemma top_as_span[code]: "(top::'a linear_space) = SPAN (computational_basis_vec (canonical_basis_length TYPE('a::onb_enum)))"
   by (cheat 17)
-lemma bot_as_span[code]: "(bot::'a::basis_enum linear_space) = SPAN []"
+lemma bot_as_span[code]: "(bot::'a::onb_enum linear_space) = SPAN []"
   by (cheat 17)
 lemma sup_spans[code]: "SPAN A \<squnion> SPAN B = SPAN (A @ B)" 
   by (cheat 17)
 
-lemma ortho_SPAN[code]: "- (SPAN S :: 'a::basis_enum linear_space)
+lemma ortho_SPAN[code]: "- (SPAN S :: 'a::onb_enum linear_space)
         = SPAN (orthogonal_complement_vec (canonical_basis_length TYPE('a)) S)"
   by (cheat 17)
 
@@ -222,7 +223,7 @@ lemma vec_of_ell2_scaleR[code]: "vec_of_ell2 (scaleR a \<psi>) = smult_vec (comp
 lemma ell2_of_vec_plus[code]:
   "vec_of_ell2 (x + y) =  (vec_of_ell2 x) + (vec_of_ell2 y)" for x y :: "'a::enum ell2"
   unfolding vec_of_ell2_def
-  by (simp add: vec_of_basis_enum_add) 
+  by (simp add: vec_of_onb_enum_add) 
 
 lemma ell2_of_vec_minus[code]:
   "vec_of_ell2 (x - y) =  (vec_of_ell2 x) - (vec_of_ell2 y)" for x y :: "'a::enum ell2"
@@ -232,7 +233,7 @@ lemma ell2_of_vec_minus[code]:
 lemma ell2_of_vec_uminus[code]:
   "vec_of_ell2 (- y) =  - (vec_of_ell2 y)" for y :: "'a::enum ell2"
   unfolding vec_of_ell2_def
-  by (metis carrier_vecI diff_0 dim_vec_of_basis_enum_list ell2_of_vec_minus index_zero_vec(2) vec_of_basis_enum_def vec_of_ell2_def vec_of_ell2_zero zero_minus_vec) 
+  by (metis carrier_vecI diff_0 dim_vec_of_onb_enum_list ell2_of_vec_minus index_zero_vec(2) vec_of_onb_enum_def vec_of_ell2_def vec_of_ell2_zero zero_minus_vec) 
 
 lemma vec_of_ell2_EPR[code]: "vec_of_ell2 EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
   by (cheat 17)
@@ -246,7 +247,7 @@ lemma [code_post]:
   and "complex_of_real (-r) = - complex_of_real r"
   using complex_eq_cancel_iff2 by auto
 
-instantiation linear_space :: (basis_enum) equal begin
+instantiation linear_space :: (onb_enum) equal begin
 definition [code del]: "equal_linear_space (A::'a linear_space) B = (A=B)"
 instance apply intro_classes unfolding equal_linear_space_def by simp
 end
@@ -254,15 +255,15 @@ end
 definition "is_subspace_of n vs ws =  
   list_all ((=) (zero_vec n)) (drop (length ws) (gram_schmidt n (ws @ vs)))"
 
-lemma SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a::basis_enum linear_space) \<longleftrightarrow> is_subspace_of (canonical_basis_length TYPE('a)) A B" 
+lemma SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a::onb_enum linear_space) \<longleftrightarrow> is_subspace_of (canonical_basis_length TYPE('a)) A B" 
   by (cheat 17)
 
 lemma applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (map (mult_mat_vec (mat_of_bounded A)) S)"
-  for A::"('a::basis_enum,'b::basis_enum) bounded"
+  for A::"('a::onb_enum,'b::onb_enum) bounded"
   by (cheat 17)
 
 lemma kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_single (mat_of_bounded A)))" 
-  for A::"('a::basis_enum,'b::basis_enum) bounded"
+  for A::"('a::onb_enum,'b::onb_enum) bounded"
   by (cheat 17)
 
 lemma [code_abbrev]: "kernel (A - a *\<^sub>C idOp) = eigenspace a A" 
@@ -288,10 +289,10 @@ lemma mat_of_bounded_remove_qvar_unit_op[code]:
 lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (vector_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
   by (cheat addState_remove_qvar_unit_op)
 
-lemma [code]: "(A::'a::basis_enum linear_space) \<sqinter> B = - (- A \<squnion> - B)"
+lemma [code]: "(A::'a::onb_enum linear_space) \<sqinter> B = - (- A \<squnion> - B)"
   by (subst ortho_involution[symmetric], subst compl_inf, simp)
 
-lemma [code]: "Inf (Set_Monad l :: 'a::basis_enum linear_space set) = fold inf l top"
+lemma [code]: "Inf (Set_Monad l :: 'a::onb_enum linear_space set) = fold inf l top"
   unfolding Set_Monad_def
   by (simp add: Inf_set_fold)
 
@@ -303,14 +304,14 @@ lemma quantum_equality_full_def_let:
 lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"
   by (cheat space_div_unlifted_code)
 
-(* Although this code would work for any type 'a::basis_enum, we only define it 
+(* Although this code would work for any type 'a::onb_enum, we only define it 
    for 'a ell2 because otherwise the code generation mechanism does not accept it
    (Message "Overloaded constant as head in equation") *)
 lemma cinner_ell2_code [code]: "cinner \<psi> \<phi> = scalar_prod (map_vec cnj (vec_of_ell2 \<psi>)) (vec_of_ell2 \<phi>)"
   unfolding vec_of_ell2_def
   by (cheat cinner_ell2_code)
 
-(* Although this code would work for any type 'a::basis_enum, we only define it 
+(* Although this code would work for any type 'a::onb_enum, we only define it 
    for 'a ell2 because otherwise the code generation mechanism does not accept it
    (Message "Overloaded constant as head in equation") *)
 lemma norm_ell2_code [code]: "norm \<psi> = 

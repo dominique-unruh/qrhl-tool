@@ -2,7 +2,7 @@ chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum" 
-    Universe_Instances_Complex_Main Bounded_Operators.Infinite_Set_Sum_Missing
+    Universe_Instances_Complex_Main Bounded_Operators.Preliminaries
     Extended_Sorry "HOL-Library.Bit" Misc_Missing Multi_Transfer
 begin
 

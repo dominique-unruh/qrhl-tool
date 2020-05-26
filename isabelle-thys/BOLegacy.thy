@@ -7,7 +7,7 @@ be removed eventually.
 *)
 
 theory BOLegacy
-imports Bounded_Operators.Bounded_Operators Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Bounded_Operators.ToDo Tensor_Product.ToDo_Tensor
+imports Bounded_Operators.Bounded_Operators Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
 begin
 
 abbreviation "ell2_to_bounded :: 'a::chilbert_space \<Rightarrow> ('b::{CARD_1,enum} ell2,'a) bounded
@@ -99,8 +99,8 @@ adhoc_overloading
 
 lemma equal_span':
   fixes f g :: "'a::cbanach \<Rightarrow> 'b::cbanach"
-  assumes "bounded_clinear f"
-    and "bounded_clinear g"
+  assumes "cbounded_linear f"
+    and "cbounded_linear g"
   assumes "\<And>x. x\<in>G \<Longrightarrow> f x = g x"
   assumes "x\<in>closure (complex_vector.span G)"
   shows "f x = g x"
