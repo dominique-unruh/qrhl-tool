@@ -1542,8 +1542,6 @@ lemma quantum_equality_merge:
   assumes "distinct_qvars (variable_concat (variable_concat Q1 R1) (variable_concat Q2 R2))"
   shows "quantum_equality_full U1 Q1 V1 R1 \<sqinter> quantum_equality_full U2 Q2 V2 R2 
     \<le> quantum_equality_full (U1\<otimes>U2) (variable_concat Q1 Q2) (V1\<otimes>V2) (variable_concat R1 R2)"
-  sorry
-(*
 proof (rule linear_space_leI)
   fix x :: "mem2 ell2"
   assume "x \<in> space_as_set (quantum_equality_full U1 Q1 V1 R1 \<sqinter> quantum_equality_full U2 Q2 V2 R2)"
@@ -1566,9 +1564,9 @@ proof (rule linear_space_leI)
   have [simp]: "distinct_qvars (variable_concat Q12 R12)"
     using assms unfolding Q12_def R12_def
     by (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)
-      (* Ask to Dominique *)
+  include no_notation_blinfun_apply
   obtain T where qvar_trafo_T: "qvar_trafo T QR12 QR12'"
-    and apply_T[simp]: "T *\<^sub>v ((q1\<otimes>q2)\<otimes>(r1\<otimes>r2)) = (q1\<otimes>r1)\<otimes>(q2\<otimes>r2)" for q1 q2 r1 r2
+    and apply_T[simp]: "T *\<^sub>v ((q1\<otimes>q2)\<otimes>(r1\<otimes>r2)) = (q1\<otimes>r1)\<otimes>(q2\<otimes>r2)" for q1 q2 r1 r2 :: "_ ell2"
     apply atomize_elim apply (rule exI) apply (rule all_simps(2)[THEN iffD1], rule allI)+
     unfolding QR12_def Q12_def R12_def
     apply (rule qvar_trafo_ex_trans)
@@ -1637,7 +1635,6 @@ proof (rule linear_space_leI)
     apply (rule eigenspace_memberI)
     by simp
 qed
-*)
 
 section \<open>Common quantum objects\<close>
 
