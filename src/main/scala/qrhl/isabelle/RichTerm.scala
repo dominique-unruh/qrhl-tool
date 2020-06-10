@@ -19,6 +19,25 @@ import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 
 final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _isabelleTerm:Option[Term]=None, _pretty:Option[String]=None) {
+  def renameCVariables(renaming: List[(Variable, Variable)]): RichTerm = {
+    def s(t: Term) : Term = t match {
+      case Const(name, typ) => t
+      case Free(name, typ) =>
+        renaming.find { case (x,y) => x.isClassical && x.name == name } match {
+          case None => t
+          case Some((x,y)) =>
+            assert(y.isClassical)
+            assert(x.valueTyp == y.valueTyp)
+            Free(y.name, typ)
+        }
+      case Var(name, typ) => t
+      case Bound(index) => t
+      case Abs(name, typ, body) => Abs(name, typ, s(body))
+      case App(fun, arg) => App(s(fun), s(arg))
+    }
+    RichTerm(typ, s(isabelleTerm))
+  }
+
   def renameCVariable(from: CVariable, to: CVariable): RichTerm = {
     assert(from.valueTyp==to.valueTyp)
     val fromTerm = from.valueTerm

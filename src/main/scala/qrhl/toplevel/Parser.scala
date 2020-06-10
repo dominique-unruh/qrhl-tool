@@ -484,16 +484,21 @@ object Parser extends JavaTokenParsers {
   def tactic_local(implicit context: ParserContext) : Parser[Tactic] =
     literal("local") ~> OnceParser(tactic_local_remove | tactic_local_up)
 
+  def single_var_renaming(implicit context: ParserContext) : Parser[(Variable,Variable)] =
+    for (a <- identifier;
+         _ <- literal("->");
+         b <- identifier)
+      yield (context.environment.getProgVariable(a), context.environment.getProgVariable(b))
+
+  def var_renaming(implicit context: ParserContext): Parser[List[(Variable, Variable)]] =
+    rep1sep(single_var_renaming, ",")
+
   def tactic_rename(implicit context: ParserContext) : Parser[RenameTac] =
     literal("rename") ~> OnceParser(for (
       (left,right) <- OnceParser("left" ^^^ (true,false) | "right" ^^^ (false,true) | "both" ^^^ (true,true));
       _ <- literal(":");
-      a <- identifier;
-      av = context.environment.getProgVariable(a);
-      _ <- literal("->");
-      b <- identifier;
-      bv = context.environment.getProgVariable(b))
-        yield RenameTac(left,right,av,bv))
+      renaming <- var_renaming)
+        yield RenameTac(left,right,renaming))
 
 
   def tactic_fix : Parser[FixTac] =

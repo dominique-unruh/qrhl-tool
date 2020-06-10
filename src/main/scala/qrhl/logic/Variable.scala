@@ -14,6 +14,14 @@ import scala.collection.mutable
 sealed trait Variable {
   def rename(name: String): Variable
 
+  /** Renames this variable.
+   * @param renaming - the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y'). */
+  def substitute(renaming: List[(Variable, Variable)]): Variable =
+    renaming.find { case (x,y) => x==this }match {
+      case None => this
+      case Some((x,y)) => y
+    }
+
   def isClassical: Boolean
   def isQuantum: Boolean
 
@@ -27,6 +35,7 @@ sealed trait Variable {
   def valueTyp : pure.Typ
 //  @deprecated("use valueType / variableTyp","") def typ : Typ
   def variableTerm: Term = Free(variableName,variableTyp)
+  def classicalQuantumWord : String
 }
 
 object Variable {
@@ -121,6 +130,11 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
   override def isClassical: Boolean = false
 
   override def rename(name: String): Variable = copy(name=name)
+
+  override def classicalQuantumWord: String = "quantum"
+
+  override def substitute(renaming: List[(Variable, Variable)]): QVariable =
+    super.substitute(renaming).asInstanceOf[QVariable]
 }
 
 object QVariable {
@@ -156,6 +170,7 @@ object QVariable {
 }
 
 final case class CVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
+
   override def index1: CVariable = CVariable(Variable.index1(name),valueTyp)
   override def index2: CVariable = CVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): CVariable = if (left) index1 else index2
@@ -169,6 +184,11 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
   override def isClassical: Boolean = true
 
   override def rename(name: String): Variable = copy(name=name)
+
+  override def classicalQuantumWord: String = "classical"
+
+  override def substitute(renaming: List[(Variable, Variable)]): CVariable =
+    super.substitute(renaming).asInstanceOf[CVariable]
 }
 
 object CVariable {

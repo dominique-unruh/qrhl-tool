@@ -2,63 +2,130 @@ package qrhl.tactic
 
 import info.hupel.isabelle.Operation
 import qrhl.isabelle.{Isabelle, RichTerm}
-import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
-import qrhl.logic.{CVariable, QVariable, Variable}
-import info.hupel.isabelle.pure.Term
-
+import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
+import qrhl.logic.{QVariable, Variable}
+import info.hupel.isabelle.pure.{Term, Typ}
 import RichTerm.term_tight_codec
 import RichTerm.typ_tight_codec
+import qrhl.tactic.FrameRuleTac.colocalityOp
 
-case class RenameTac(left: Boolean, right: Boolean, a: Variable, b: Variable) extends Tactic {
+import scala.collection.immutable.ListSet
+import scala.language.postfixOps
+
+case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Variable)]) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
     case _ : AmbientSubgoal =>
       throw UserException("Expected qRHL subgoal")
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>
       val env = state.environment
-      if (a==b)
-        throw UserException(s"Trying to replace ${a.name} by itself")
-      if (a.valueTyp != b.valueTyp)
-        throw UserException("The two variables need to have the same type")
+      def typStr(typ: Typ) = state.isabelle.prettyTyp(typ)
 
-      (a,b) match {
-        case (a : CVariable, b : CVariable) =>
-          val newLeft = if (left) leftProg.renameCVariable(env, a, b) else leftProg
-          val newRight = if (right) rightProg.renameCVariable(env, a, b) else rightProg
+      val fv1 : ListSet[Variable] = if (left) leftProg.variableUse(env).freeVariables else ListSet.empty
+      val fv2 : ListSet[Variable] = if (right) rightProg.variableUse(env).freeVariables else ListSet.empty
+      val fv12 = fv1 ++ fv2
 
-          def swap(predicate: RichTerm) = {
-            val pred1 = if (left) predicate.renameCVariable(a.index1, b.index1) else predicate
-            val pred2 = if (right) pred1.renameCVariable(a.index2, b.index2) else pred1
-            pred2
-          }
+      // The following conditions are required by the contract of Statement.noConflict
+      // No x->x mappings, and no duplicates in domain
 
-          val newPre = swap(pre)
-          val newPost = swap(post)
+      val renaming = this.renaming.distinct
+        .filterNot { case (x,y) => x==y }
 
-          val newQrhl = QRHLSubgoal(newLeft, newRight, newPre, newPost, assumptions)
+      val dom = renaming map { _._1 }
+      if (!Utils.areDistinct(dom))
+        throw UserException("Conflicting variable renamings")
 
-          List(newQrhl)
-        case (a : QVariable, b : QVariable) =>
-          val newLeft = if (left) leftProg.renameQVariable(env, a, b) else leftProg
-          val newRight = if (right) rightProg.renameQVariable(env, a, b) else rightProg
+      // Checking conditions from lemma rename_qrhl_left / rename_qrhl_right
 
-          def swap(predicate: RichTerm) = {
-            val pred1 = if (left) Isabelle.swap_variables_subspace(a.index1.variableTerm, b.index1.variableTerm, predicate.isabelleTerm) else predicate.isabelleTerm
-            val pred2 = if (right) Isabelle.swap_variables_subspace(a.index2.variableTerm, b.index2.variableTerm, pred1) else pred1
-            val pred3 = state.isabelle.isabelle.invoke(RenameTac.swapOp, (state.isabelle.contextId, pred2))
-            pred3
-          }
-
-          val newPre = swap(pre)
-          val newPost = swap(post)
-
-          val newQrhl = QRHLSubgoal(newLeft, newRight, newPre, newPost, assumptions)
-
-          List(newQrhl)
-        case  (_ : CVariable, _ : QVariable) =>
-          throw UserException("You cannot rename classical variables into quantum variables")
-        case  (_ : QVariable, _ : CVariable) =>
-          throw UserException("You cannot rename quantum variables into classical variables")
+      // A variable is only renamed to a compatible variable (same quantum/classical kind, same type)
+      //        assumes valid[simp]: "valid_var_subst σ"
+      for ((x,y) <- renaming) {
+        if (x.isClassical != y.isClassical)
+          throw UserException(s"${x.name} is a ${x.classicalQuantumWord} variable while ${y.name} is a ${x.classicalQuantumWord} variable")
+        if (x.valueTyp != y.valueTyp)
+          throw UserException(s"${x.name} has type ${typStr(x.valueTyp)} while ${y.name} has ${typStr(y.valueTyp)}")
       }
+
+      //  assumes [simp]: "no_conflict σ c"
+      if (left)
+        if (!leftProg.noConflict(env, renaming))
+          throw UserException("no_conflict condition does not hold for left program")
+      //  assumes [simp]: "no_conflict σ d"
+      if (right)
+        if (!rightProg.noConflict(env, renaming))
+          throw UserException("no_conflict condition does not hold for right program")
+
+      //  assumes inj: "inj_on σ (fv c ∪ deidx1 (fvp A) ∪ deidx1 (fvp B))"
+      // We break this into two checks:
+      // - `renaming` is injective on its domain
+      val range = renaming map { _._2 }
+      if (!Utils.areDistinct(range))
+        throw UserException("Non-injective variable renaming")
+      // - "fv c ∪ deidx1 (fvp A) ∪ deidx1 (fvp B)" contains no variables in `forbidden`, the range but outside the domain of `renaming`
+      val forbidden = range.toSet -- dom
+
+      if ((forbidden & fv12).nonEmpty)
+        throw UserException(s"Renaming target(s) ${Variable.varsToString(forbidden & fv12)} conflict with local variables of the program(s)")
+
+      // The variables that must not occur in the invariant: this includes the variables from forbidden above,
+      // as well as all quantum variables in the range of `renaming` (because our method for renaming quantum variables in the predicate does not work correctly otherwise)
+      val forbiddenInInvariant : Set[Variable] = (if (left)  (forbidden++range.filter(_.isQuantum)).map(_.index1) else Set.empty) ++
+                                                 (if (right) (forbidden++range.filter(_.isQuantum)).map(_.index2) else Set.empty)
+
+      val varsPre = pre.variables(env)
+      if ((forbiddenInInvariant & varsPre.program).nonEmpty)
+        throw UserException(s"Renaming target(s) ${Variable.varsToString(forbiddenInInvariant & varsPre.program)} conflict with local variables of the precondition")
+
+      val varsPost = post.variables(env)
+      if ((forbiddenInInvariant & varsPost.program).nonEmpty)
+        throw UserException(s"Renaming target(s) ${Variable.varsToString(forbiddenInInvariant & varsPost.program)} conflict with local variables of the postcondition")
+
+      // TODO: add a subgoal checking that quantum(forbiddenInInvariant) does not occur in pre/postcondition
+
+      // TODO
+      //  defines "σ1 ≡ idx_var_subst True σ"
+
+      //  shows "qRHL A c d B ⟷
+      //         qRHL (substp σ1 A) (subst_vars σ c) d (substp σ1 B)"
+
+      val renamedLeft = if (left) leftProg.renameVariables(env, renaming) else leftProg
+      val renamedRight = if (right) rightProg.renameVariables(env, renaming) else rightProg
+
+      def renameInvariant1(side: Boolean, inv: RichTerm) : RichTerm = {
+        val inv1 = inv.renameCVariables(renaming map { case (x,y) => (x.index(side), y.index(side)) })
+        val inv2 = inv1.isabelleTerm
+        val qRenaming = renaming collect { case (x : QVariable, y : QVariable) => (x.index(side), y.index(side)) }
+        val inv3 = qRenaming.foldLeft(inv2)
+          { case (inv, (x,y)) => Isabelle.swap_variables_subspace(x.variableTerm, y.variableTerm, inv) }
+        RichTerm(Isabelle.predicateT, inv3)
+      }
+
+      def renameInvariant(inv: RichTerm) : RichTerm = {
+        val inv2 = if (left) renameInvariant1(side = true, inv) else inv
+        val inv3 = if (right) renameInvariant1(side = false, inv2) else inv2
+        state.isabelle.isabelle.invoke(RenameTac.swapOp, (state.isabelle.contextId, inv3.isabelleTerm))
+      }
+
+      val renamedPre = renameInvariant(pre)
+      val renamedPost = renameInvariant(post)
+
+      val forbiddenQInInvariant12 = forbiddenInInvariant collect { case v: QVariable => (v.variableName, v.valueTyp) } toList
+      val colocalitySubgoal =
+        if (forbiddenQInInvariant12.isEmpty) null
+        else {
+          val colocalityPre = state.isabelle.isabelle.invoke(colocalityOp,
+            (state.isabelle.contextId, pre.isabelleTerm, forbiddenQInInvariant12))
+          val colocalityPost = state.isabelle.isabelle.invoke(colocalityOp,
+            (state.isabelle.contextId, post.isabelleTerm, forbiddenQInInvariant12))
+          AmbientSubgoal(Isabelle.conj(colocalityPre.isabelleTerm, colocalityPost.isabelleTerm),
+            assumptions.map(_.isabelleTerm))
+        }
+
+      val newQrhl = QRHLSubgoal(renamedLeft, renamedRight, renamedPre, renamedPost, assumptions)
+
+      if (colocalitySubgoal==null)
+        List(newQrhl)
+      else
+        List(colocalitySubgoal, newQrhl)
   }
 }
 

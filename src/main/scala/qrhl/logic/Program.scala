@@ -12,7 +12,7 @@ import scala.annotation.tailrec
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.{AbstractIterator, GenSet, mutable}
-import scala.language.higherKinds
+import scala.language.{higherKinds, postfixOps}
 
 // Implicits
 import qrhl.isabelle.RichTerm.{term_tight_codec, typ_tight_codec}
@@ -208,9 +208,9 @@ object VariableUse {
   }
 */
 
-  val empty = new VariableUse(freeVariables=emptySet, written=emptySet, ambient=emptySet, programs=emptySet,
-    overwritten = emptySet, oracles=emptySet,
-    inner = emptySet, covered = MaybeAllSet.empty)
+//  val empty = new VariableUse(freeVariables=emptySet, written=emptySet, ambient=emptySet, programs=emptySet,
+//    overwritten = emptySet, oracles=emptySet,
+//    inner = emptySet, covered = MaybeAllSet.empty)
 }
 
 case object VTUnit extends VarTerm[Nothing] {
@@ -256,7 +256,18 @@ sealed trait Statement {
     case _ => List(this)
   }
 
+  /** Checks whether "no_conflict renaming this" holds.
+   * @param renaming the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y').
+   * @return false if no_conflict does not hold. May returns false negatives. */
+  def noConflict(env: Environment, renaming: List[(Variable, Variable)]) : Boolean
+
+  /** Renames all program variables. (subst_vars in Isabelle)
+   * @param renaming the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y'). */
+  def renameVariables(env: Environment, renaming: List[(Variable, Variable)]) : Statement
+
+  // TODO: remove?
   def renameQVariable(env: Environment, from: QVariable, to: QVariable) : Statement
+  // TODO: remove?
   def renameCVariable(env: Environment, from: CVariable, to: CVariable) : Statement
 
   def substituteOracles(subst: Map[String, Call]) : Statement
@@ -505,12 +516,6 @@ sealed trait Statement {
 //    }
 //    collect(this)
 //  }
-
-  @deprecated
-  private def expr2VariableUse(eVars: ExprVariableUse) = {
-    VariableUse.empty.copy(freeVariables = eVars.classical,
-      ambient = eVars.ambient)
-  }
 
   def checkWelltyped(context: Isabelle.Context): Unit
 
@@ -808,6 +813,29 @@ class Local(val vars: List[Variable], val body : Block) extends Statement {
   def simplifyEmpty: Statement =
     if (vars.isEmpty) body
     else this
+
+  // lemma no_conflict_locals:
+  //  assumes "finite X"
+  //  assumes "no_conflict (λx. if x ∈ X then x else σ x) c"
+  //  assumes "X ∩ σ ` (fv c ∩ var_subst_dom σ) = {}"
+  //  shows "no_conflict σ (locals X c)"
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = {
+    val dom = renaming map { _._1 }
+    val fv = variableUse(env).freeVariables
+    val fvDom = fv & dom.toSet
+    // σ ` (fv c ∩ var_subst_dom σ)
+    val renaming_fv_dom = renaming.collect { case (x,y) if fvDom.contains(x) => y }.toSet
+    //  assumes "X ∩ σ ` (fv c ∩ var_subst_dom σ) = {}"
+    if ((this.vars.toSet & renaming_fv_dom).nonEmpty)
+      return false
+    val renamingFiltered = renaming filterNot { case (x,y) => vars.contains(x) }
+    //  assumes "no_conflict (λx. if x ∈ X then x else σ x) c"
+    this.body.noConflict(env, renamingFiltered)
+  }
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Local =
+    Local(this.vars, body.renameVariables(env, renaming.filterNot { case (x,y) => vars.contains(x) }))
+
 }
 
 object Local {
@@ -841,6 +869,7 @@ object Local {
 }
 
 class Block(val statements:List[Statement]) extends Statement {
+
   def unwrapTrivialBlock: Statement = statements match {
     case List(s) => s
     case _ => this
@@ -929,6 +958,13 @@ class Block(val statements:List[Statement]) extends Statement {
     new Block(statements map { _.renameQVariable(env,from,to) })
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Block =
     new Block(statements map { _.renameCVariable(env,from,to) })
+
+  // nc_Seq: "no_conflict σ c1 ⟹ no_conflict σ c2 ⟹ no_conflict σ (c1; c2)"
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
+    this.statements.forall(_.noConflict(env, renaming))
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Block =
+    Block(statements.map(_.renameVariables(env, renaming)) :_*)
 }
 
 object Block {
@@ -938,7 +974,7 @@ object Block {
   }
 
   def apply(statements: Statement*) : Block = new Block(statements.toList)
-  val empty = Block()
+  val empty: Block = Block()
   def unapplySeq(block: Block): Some[Seq[Statement]] = Some(block.statements)
 }
 
@@ -966,6 +1002,11 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
 
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Assign =
     Assign(variable.replace(from, to), expression.renameCVariable(from, to))
+
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Assign =
+    Assign(variable.map(_.substitute(renaming)), expression.renameCVariables(renaming))
 }
 final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
   override def toString: String = s"""${Variable.vartermToString(variable)} <$$ $expression;"""
@@ -990,7 +1031,13 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
 
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Sample =
     Sample(variable.replace(from,to), expression.renameCVariable(from, to))
+
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Sample =
+    Sample(variable.map(_.substitute(renaming)), expression.renameCVariables(renaming))
 }
+
 final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
   override def inline(name: String, oracles: List[String], program: Statement): Statement =
     IfThenElse(condition,thenBranch.inline(name,oracles,program),elseBranch.inline(name,oracles,program))
@@ -1020,6 +1067,13 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
 
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): IfThenElse =
     IfThenElse(condition.renameCVariable(from,to), thenBranch.renameCVariable(env,from,to), elseBranch.renameCVariable(env,from,to))
+
+  // nc_IfTE: "no_conflict σ c1 ⟹ no_conflict σ c2 ⟹ no_conflict σ (IfTE e c1 c2)"
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
+    thenBranch.noConflict(env,renaming) && elseBranch.noConflict(env,renaming)
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Statement =
+    IfThenElse(condition.renameCVariables(renaming), thenBranch.renameVariables(env, renaming), elseBranch.renameVariables(env, renaming))
 }
 
 final case class While(condition:RichTerm, body: Block) extends Statement {
@@ -1049,6 +1103,13 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
 
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): While =
     While(condition.renameCVariable(from, to), body.renameCVariable(env, from, to))
+
+  // nc_While: "no_conflict σ c ⟹ no_conflict σ (While e c)"
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
+    body.noConflict(env, renaming)
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): While =
+    While(condition.renameCVariables(renaming), body.renameVariables(env, renaming))
 }
 
 final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
@@ -1079,6 +1140,11 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
 
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): QInit =
     QInit(location, expression.renameCVariable(from, to))
+
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): QInit =
+    QInit(location.map(_.substitute(renaming)), expression.renameCVariables(renaming))
 }
 
 final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
@@ -1110,6 +1176,11 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
 
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): QApply =
     QApply(location, expression.renameCVariable(from, to))
+
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): QApply =
+    QApply(location.map(_.substitute(renaming)), expression.renameCVariables(renaming))
 }
 final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariable], e:RichTerm) extends Statement {
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
@@ -1142,6 +1213,15 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
 
   override def renameCVariable(env: Environment, from: CVariable, to: CVariable): Measurement =
     Measurement(result.replace(from, to), location, e.renameCVariable(from, to))
+
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+
+  /** Renames all program variables. (subst_vars in Isabelle)
+   *
+   * @param renaming the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y'). */
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Measurement =
+    Measurement(result.map(_.substitute(renaming)), location.map(_.substitute(renaming)), e.renameCVariables(renaming))
+
 }
 
 final case class Call(name:String, args:Call*) extends Statement {
@@ -1197,6 +1277,22 @@ final case class Call(name:String, args:Call*) extends Statement {
       throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${from.name} must not occur in $this. Consider inlining ${this.name}")
     if (varUse.classical.contains(to))
       throw UserException(s"Cannot rename ${from.name} -> ${to.name}: ${to.name} already occurs in $this")
+    this
+  }
+
+  // lemma no_conflict_fv:
+  //  assumes "var_subst_dom σ ∩ fv c = {}"
+  //  shows "no_conflict σ c"
+  // This lemma does not give the tightest bound (localvars_dom_no_conflict is tighter, for example, or we could traverse known programs).
+  // But since replacing fails anyways if the domain of sigma contains free variables of a Call-statement, we use this simple overapproximation
+  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
+    (variableUse(env).freeVariables & (renaming map { _._1 }).toSet).isEmpty
+
+  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Call = {
+    val fv = variableUse(env).freeVariables
+    for ((x,y) <- renaming)
+      if (fv.contains(x))
+        throw UserException(s"Cannot rename ${x.name} -> ${y.name} in ${this} because ${x.name} is in the free variables. Consider inlining ${this.name}")
     this
   }
 }
