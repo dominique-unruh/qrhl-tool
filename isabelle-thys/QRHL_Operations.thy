@@ -422,12 +422,19 @@ operation_setup conseq_qrhl_cardinality_condition = \<open>
      val (_,afterT) = after |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
      val before_UNIV = HOLogic.mk_UNIV beforeT
      val after_UNIV = HOLogic.mk_UNIV afterT
+     (* finite (UNIV::beforeT set) *)
      val before_finite = Const(\<^const_name>\<open>finite\<close>, HOLogic.mk_setT beforeT --> HOLogic.boolT) $ before_UNIV
+     (* infinite (UNIV::beforeT set) *)
      val before_infinite = HOLogic.mk_not before_finite
+     (* finite (UNIV::afterT set) *)
      val after_finite = Const(\<^const_name>\<open>finite\<close>, HOLogic.mk_setT afterT --> HOLogic.boolT) $ after_UNIV
+     (* card (UNIV::beforeT set) *)
      val before_card = Const(\<^const_name>\<open>card\<close>, HOLogic.mk_setT beforeT --> HOLogic.natT) $ before_UNIV
+     (* card (UNIV::afterT set) *)
      val after_card = Const(\<^const_name>\<open>card\<close>, HOLogic.mk_setT afterT --> HOLogic.natT) $ after_UNIV
+     (* card (UNIV::beforeT set) \<ge> card (UNIV::afterT set) *)
      val before_geq_after = \<^term>\<open>(\<ge>) :: nat\<Rightarrow>_\<Rightarrow>_\<close> $ before_card $ after_card
+     (* infinite (UNIV::beforeT set) \<or> (finite (UNIV::afterT set) \<and> card (UNIV::beforeT set) \<ge> card (UNIV::afterT set) *)
      val term = HOLogic.mk_disj (before_infinite, HOLogic.mk_conj (after_finite, before_geq_after))
   in Codec.encode (richterm_codec' ctxt) term end}
 \<close>
@@ -443,7 +450,7 @@ operation_setup conseq_qrhl_replace_in_predicate = \<open>
    to_lib = Codec.id, (* changed predicate, colocality condition *)
    action = fn (ctxt_id, predicate, beforeLeft, afterLeft, beforeRight, afterRight) => let
      val ctxt = Refs.Ctxt.read ctxt_id
-     val (predicate', colocality) = conseq_qrhl_replace_in_predicate ctxt predicate beforeLeft afterLeft beforeRight afterRight
+     val (predicate', colocality) = conseq_qrhl_replace_in_predicate predicate beforeLeft afterLeft beforeRight afterRight
    in Codec.encode (Codec.tuple (richterm_codec' ctxt) (richterm_codec' ctxt)) (predicate', colocality) end
   }
 \<close>

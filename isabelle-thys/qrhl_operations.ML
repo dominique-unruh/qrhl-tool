@@ -486,8 +486,8 @@ fun simp t facts ctxt =
       | _ => simp_any t ctxt
   end
 
-fun conseq_qrhl_replace_in_predicate ctxt predicate beforeLeft afterLeft beforeRight afterRight = let
-(* val _ = \<^print> predicate *)
+fun conseq_qrhl_replace_in_predicate predicate beforeLeft afterLeft beforeRight afterRight = let
+  (* Parse predicate as \<open>pred_lhs \<sqinter> \<lbrakk>vt_left\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>vt_right\<rbrakk>\<close> *)
   val (pred_lhs, qeq_left, qeq_right) = case predicate of
       Const(\<^const_name>\<open>inf\<close>,_) $ pred_lhs $ (Const(\<^const_name>\<open>quantum_equality_full\<close>,_) $ U $ Q $ V $ R) => let
         val _ = case U of Const(\<^const_name>\<open>idOp\<close>,_) => () | _ => 
@@ -498,54 +498,79 @@ fun conseq_qrhl_replace_in_predicate ctxt predicate beforeLeft afterLeft beforeR
     | _ => raise TERM("Pre/postcondition must be of the form {... \<sqinter> \<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>}", [predicate])
   val vt_left = Prog_Variables.parse_varlist qeq_left
   val vt_right = Prog_Variables.parse_varlist qeq_right
+
+  (* Check: no duplicate variables in qeq *)
+  val _ = if has_duplicates Prog_Variables.nameq (vt_left @ vt_right)
+          then raise TERM("Quantum equality has duplicate variables",[predicate,qeq_left])
+          else ()
+
+  (* Check: beforeLeft is suffix of vt_left,
+            beforeRight is suffix of vt_right *)
   val _ = if List.drop (vt_left, (length vt_left - length beforeLeft)) = beforeLeft
           then ()
           else raise TERM("Lhs of quantum equality does not end with the right variables",[predicate,qeq_left])
   val _ = if List.drop (vt_right, (length vt_right - length beforeRight)) = beforeRight
           then ()
           else raise TERM("Rhs of quantum equality does not end with the right variables",[predicate,qeq_right])
+
+  (* keep_left, keep_right are the vars before beforeLeft/beforeRight (in vt_left/right) *)
   val keep_left = List.take (vt_left, (length vt_left - length beforeLeft))
   val keep_right = List.take (vt_right, (length vt_right - length beforeRight))
   val (_,keep_leftT) = Prog_Variables.varterm_from_list keep_left |> Prog_Variables.mk_varterm
   val (_,keep_rightT) = Prog_Variables.varterm_from_list keep_right |> Prog_Variables.mk_varterm
+
+  (* Check: keep_left/right have the same type (as variable tuple *)
+  (* (Should never fail.) *)
   val _ = if keep_leftT = keep_rightT then ()
           else error "conseq_qrhl_replace_in_predicate: type error"
-  (* val qeq_keep = QRHL.mk_quantum_equality keep_left_vt keep_right_vt keep_leftT *)
-  val (replaced_left_vt,replaced_leftT) = Prog_Variables.varterm_from_list (keep_left @ afterLeft) |> Prog_Variables.mk_varterm
-  val (replaced_right_vt,replaced_rightT) = Prog_Variables.varterm_from_list (keep_right @ afterRight) |> Prog_Variables.mk_varterm
+
+  (* replaced_left_vt := left_vt with beforeLeft replace by afterLeft
+     replaced_right_vt analogous *)
+  val replaced_left = keep_left @ afterLeft
+  val (replaced_left_vt,replaced_leftT) = Prog_Variables.varterm_from_list replaced_left |> Prog_Variables.mk_varterm
+  val replaced_right = keep_right @ afterRight
+  val (replaced_right_vt,replaced_rightT) = Prog_Variables.varterm_from_list replaced_right |> Prog_Variables.mk_varterm
+  (* Should never fail: *)
   val _ = if replaced_leftT = replaced_rightT then ()
           else error "conseq_qrhl_replace_in_predicate: type error"
+
+  (* qeq_replaced := \<lbrakk>replaced_left_vt\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>replaced_right_vt\<rbrakk> *)
   val qeq_replaced = QRHL.mk_quantum_equality replaced_left_vt replaced_right_vt replaced_leftT
+
+  (* Check: after replacement, qeq has no duplicate variables *)
+  val _ = if has_duplicates Prog_Variables.nameq (replaced_left @ replaced_right)
+          then raise TERM("Quantum equality has duplicate variables",[predicate,qeq_left])
+          else ()
+
+  (* predicate, with \<lbrakk>vt_left\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>vt_right\<rbrakk> replaced by \<lbrakk>replaced_left_vt\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>replaced_right_vt\<rbrakk> *)
+  (* This is the first return value. *)
   val pred' = @{const inf(predicate)} $ pred_lhs $ qeq_replaced
-  (* val pred_keep = @{const inf(predicate)} $ pred_lhs $ qeq_keep *)
+
+  (* All of before/afterLeft/Right *)
   val all_vars0 = beforeLeft @ beforeRight @ afterLeft @ afterRight
   val (all_vars, all_varsT) = all_vars0
                  |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
-(*   val beforeLeft_set = Symtab.make_set (map fst beforeLeft)
-  val beforeRight_set = Symtab.make_set (map fst beforeRight)
-  val afterLeft_set = Symtab.make_set (map fst afterLeft)
-  val afterRight_set = Symtab.make_set (map fst afterRight) *)
+
   val keepLeft_set = Symtab.make_set (map fst keep_left)
   val keepRight_set = Symtab.make_set (map fst keep_right)
+(*   (* Check: beforeLeft disjoint from keep_left (the vars in the lhs of the qeq that are not replaced) *)
   val _ = if not (List.exists (fn (n,_) => Symtab.defined keepLeft_set n) beforeLeft) then ()
           else error "Left quantum equality has duplicate variables"
+  (* Check: analogous for beforeRight, afterLeft, afterRight *)
   val _ = if not (List.exists (fn (n,_) => Symtab.defined keepRight_set n) beforeRight) then ()
           else error "Right quantum equality has duplicate variables"
   val _ = if not (List.exists (fn (n,_) => Symtab.defined keepLeft_set n) afterLeft) then ()
           else error "Left quantum equality has variables that conflict with replacement variables"
   val _ = if not (List.exists (fn (n,_) => Symtab.defined keepRight_set n) afterRight) then ()
-          else error "Left quantum equality has variables that conflict with replacement variables"
+          else error "Left quantum equality has variables that conflict with replacement variables" *)
+
+  (* Condition that implies that `all_vars` do not occur in `pred_lhs` (the predictate without the qeq) *)
   val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT all_varsT --> HOLogic.boolT)
                  $ pred_lhs $ all_vars
 in
   (pred', colocality)
 end
 ;;
-
-(* val _ = conseq_qrhl_replace_in_predicate \<^context> \<^term>\<open>Cla[x1=1] \<sqinter> Qeq[q1,Z1::int variable = r2,Z2]\<close>
-        [("Z1",\<^typ>\<open>int\<close>)] [("s1",\<^typ>\<open>int\<close>),("t1",\<^typ>\<open>int\<close>)]
-        [("Z2",\<^typ>\<open>int\<close>)] [("s2",\<^typ>\<open>int\<close>),("t2",\<^typ>\<open>int\<close>)]
-|> \<^print> *)
 
 fun method_tac ctxt str = let
   val (text,_) = Method.read_closure_input ctxt (Input.string str)
