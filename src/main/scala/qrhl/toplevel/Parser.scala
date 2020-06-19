@@ -475,8 +475,8 @@ object Parser extends JavaTokenParsers {
 
   def tactic_local_remove(implicit context: ParserContext): Parser[Tactic] =
     "remove" ~> OnceParser(
-      (side ~ exclamOpt ~ (":" ~> progVariables).?) ^^ { case left ~ withInit ~ vs => LocalRemoveTac(left=left, withInit=withInit, variablesToRemove = vs.getOrElse(Nil)) } |
-        "joint" ^^^ LocalRemoveJointTac)
+      (side ~ exclamOpt ~ (":" ~> progVariables).?) ^^ { case left ~ withInit ~ vs => LocalRemoveTac(left=left, withInit=withInit, variablesToRemove = vs.getOrElse(Nil)) })
+//        | "joint" ^^^ LocalRemoveJointTac)
 
   def tactic_local_up(implicit context: ParserContext): Parser[LocalUpTac] =
     ("up" ~> OnceParser(localUpSide ~ localUpVarId)) ^^ { case side~varID => LocalUpTac(side,varID) }
