@@ -1,6 +1,6 @@
 \newif\ifdraft
 
-%\drafttrue
+\drafttrue
 
 \documentclass{article}
 \usepackage[utf8]{inputenc}
@@ -401,15 +401,16 @@ embedded in other code fragments (see the \texttt{call} statement in
 the syntax of programs, \autoref{sec:tool.programs}). For the syntax of \texttt{code},
 see \autoref{sec:tool.programs}.
 
+
 The second kind of declaration declares an unspecified program:
 \begin{center}
   \toolidx{adversary}
   \begin{lstlisting}
-    adversary name vars v1,v2,v3,...,vn.
+    adversary name free v1,v2,v3,...,vn.
   \end{lstlisting}
 \end{center}
 That is, after this declaration, \texttt{name} is assumed to refer to
-some program containing (at most) the program variables
+some program containing (at most) the free program variables
 \texttt{v1},\dots,\texttt{vn}. Nothing beyond that restriction on its
 variables is assumed. Thus, if we prove a statement referring to
 \texttt{name}, this statement holds for any program \texttt{name}. We
@@ -420,7 +421,7 @@ In that case, we declare an adversary with ``holes'' using:
 \begin{center}
   \toolidx{adversary}
   \begin{lstlisting}
-    adversary name vars v1,v2,v3,...,vn calls ?,?,...,?.
+    adversary name free v1,v2,v3,...,vn calls ?,?,...,?.
   \end{lstlisting}
 \end{center}
 This means the program \texttt{name} contains variables \texttt{v1,v2,v3,...,vn},
@@ -434,22 +435,47 @@ programs \texttt{enc} and \texttt{dec}.)
 Note that the variables \texttt{v1,v2,v3,...,vn} do not have to include variables contained
 in the programs \texttt{p1,\dots,pn}.
 
-Adversaries that call oracles introduce an additional subtlety: An
-oracle $O$ may access a global variable $\xx$, but the adversary may
-invoke $O$ in a context where $\xx$ is declared as a local
-variable. This will hide the global state of $\xx$ from $O$. Thus we
-need to know for which variables this happens. We say $\xx$ is an
-inner variable of $A$ iff $\xx$ is not a free variable, but $\xx$ is
-declared as a local variable over an oracle call. Inner variables \texttt{i1,...,in} are
-declared via:
+In addition to specifying the free variables of \texttt{name}, the
+\texttt{adversary} command allows us to specify various other variable
+sets. The full syntax of the command is:
 \begin{center}
   \toolidx{adversary}
   \begin{lstlisting}
-    adversary name vars ... inner i1,...,in calls ...
+    adversary $A$ free $F$
+              readonly $R$
+              overwritten $O$
+              inner $I$
+              covered $C$
+              calls ?,?,...,?.
   \end{lstlisting}
 \end{center}
-If \texttt{inner i1,...,in} is not given, the adversary has no inner
-variables.
+All variable specifications except \texttt{free $F$} are optional but
+they have to occur in this order.  $F$ are (an upper bound on) the
+free variables of \texttt{name}.  $A$. $R$ are a lower bound on the
+readonly variables.\footnote{That is, $F\setminus R$ is an upper bound
+  for the written variables of $A$ are at most.} $O$ is a lower bound
+on the overwritten variables, that is, variables in $O$ are guaranteed
+to be overwritten before they are read by $A$ (or any of the oracles
+invoked by $A$). $I$ is an upper bound on the inner variables of $A$,
+that is, all local variables that have an oracle call in their
+scope. $C$ are a lower bound for the covered variables of $A$, i.e.,
+those variables that are local over \emph{every} hole of $A$. Precise
+definitions of these variable sets are given in \cite{local-variables}.
+The default value for all these variable sets are the empty set.
+
+These variable sets are necessary to avoid certain subtleties
+involving oracle calls. For example, an oracle $O$ may access a global
+variable $\xx$, but the adversary may invoke $O$ in a context where
+$\xx$ is declared as a local variable. This will hide the global state
+of $\xx$ from $O$. Thus we need to know for which variables this
+happens. This is precisely described by the inner variables $I$.
+
+Note that besides declaring the different variable sets, the user does
+not have to care about them. When defining programs explicitly (using
+the \texttt{program} command), all variable sets will be automatically
+derived. Some tactics such as the \texttt{frame} and the
+\texttt{equal} tactic heavily rely on the various variable sets to
+decide whether they can be applied.
 
 Since the language in this paper does not model procedure calls,
 adversaries are simply program fragments that get executed as part of
@@ -472,7 +498,7 @@ a bit \texttt{b}. The declaration is:
     classical var c : msg.
     classical var b : bit.
     # A2: inputs: c; outputs: b
-    adversary A2 vars c,b,cglobA,qglobA.
+    adversary A2 free c,b,cglobA,qglobA.
   \end{lstlisting}
 \end{center}
 (Here the adversary state is in \texttt{cglobA} and \texttt{qglobA},
@@ -1950,6 +1976,11 @@ subgoal out of the way temporarily and focus on other subgoals first).
 
 \tactic{byqrhl}
 
+\TODOQ{Document changed byqrhl tactic}
+
+\TODOQ{Prove stronger QrhlElim rule to match that tactic}
+
+\TODOQ{byqrhl gets optional list of qvars}
 
 When invoked as ``\texttt{byqrhl.}'', transforms a goal of the form
 $\mathtt{Pr}[e:P(\rho)] =\mathtt{Pr}[e':P'(\rho)]$
@@ -2081,9 +2112,11 @@ That is, one of the following two rules is applied (left for
 %
 Both rules are special cases of \ruleref{Conseq}.
 
-
+\TODOQ{New tactic "conseq qrhl".}
 
 \tactic{equal}
+
+\TODOQ{Complete rewrite needed}
 
 \TODOQ{Document: equal-tactic arguments:
 equal [amount:nat/all] [exclude progs-comma-sep] [qvars vars-comma-sep] [innerqvars vars-comma-sep]}
@@ -2313,6 +2346,7 @@ command.
 This rule is justified by the fact that free ambient variables are
 implicitly all-quantified.
 
+\TODOQ{Added tactics: if / jointif}
 
 \tactic{inline}
 
@@ -2326,36 +2360,51 @@ The current goal must be a qRHL subgoal.
 Logically, this does not change the subgoal since \texttt{call $P$;}
 is just an abbreviation for the code of $P$.
 
+\tactic{isa}
+
+When invoked as ``\texttt{isa $M$}'', it applies the Isabelle-method
+$M$ to the first subgoal. For example, \texttt{isa simp} would be very
+similar to the builtin \texttt{simp} tactic. This is particularly
+useful to apply Isabelle methods that have no counterpart in the
+\texttt{qrhl-tool}.
+
+For example, a particularly useful tactic for understanding why a
+certain ambient subgoal cannot be solved is to invoke \texttt{isa
+  auto}. Since the \texttt{auto} method in Isabelle performs case
+distinctions, the resulting subgoals will often make it clearer what
+the remaining problem is than \texttt{simp} does.
+
+When invoked as ``\texttt{isa ! $M$}'', the tactic does the same thing
+but fails only the Isabelle method $M$ completely solves the first
+subgoal.
+
+
 \tactic{local}
 
 The \texttt{local} tactic modifies the local variable declarations in
 a qRHL subgoal. It comes in several forms described below:
 
-When invoked as \texttt{local left: $X$} (for some variables $X$) on a
+When invoked as \texttt{local remove left: $X$} (for some variables $X$) on a
 qRHL subgoal of the form $\rhl A{\texttt{\{~local $Y$;
-    $P_1$~\}}}{P_2} B$, it replaces the right program by
-$\rhl A{\texttt{\{~local $X$; $P_1$~\}}}{P_2} B$.  The requirements is
-$(X\symdiff Y)\cap\fv(P_1)\cap\fv(A,B) = \varnothing$. (Basically, one
-cannot change local variables that occur in the pre-/postcondition.)
+    $P_1$~\}}}{P_2} B$, it replaces the left program by
+$\rhl A{\texttt{\{~local $(Y\setminus X)$; $P_1$~\}}}{P_2} B$.
+Each variable $v\in X$ must satisfy one of:
+\begin{compactitem}
+  \item $v$ is not a free variable of $P_1$, or
+  \item $v_1$ is not a free variable of $A,B$.
+\end{compactitem}
 For classical variables, this requirement is checked by the tactic,
 and for quantum variables, a new subgoal is generated for this
 requirement (which can almost always be solved with \texttt{simp!}).
 
 Analogously with \texttt{right} instead of \texttt{left}.
 
-\bigskip
+When invoked as \texttt{local remove left} or \texttt{local remove
+  right} (i.e., without explicitly specified variables) it removes as
+many variables as possible.
 
-When invoked as \texttt{local left} on a
-qRHL subgoal of the form $\rhl A{\texttt{\{~local $Y$;
-    $P_1$~\}}}{P_2} B$, it replaces the right program by
-$\rhl A{P_1}{P_2} B$.  The requirements is
-$Y\cap\fv(P_1)\cap\fv(A,B) = \varnothing$. (Basically, one
-cannot change local variables that occur in the pre-/postcondition.)
-For classical variables, this requirement is checked by the tactic,
-and for quantum variables, a new subgoal is generated for this
-requirement (which can almost always be solved with \texttt{simp!}).
-
-Analogously with \texttt{right} instead of \texttt{left}.
+This use of the tactic is justified by the RemoveLocal1/2 rules in
+\cite{local-variables}.
 
 \bigskip
 
@@ -2363,6 +2412,8 @@ When invoked as \texttt{local up} or \texttt{local up left} or
 \texttt{local up right}, it moves all local variable declarations in
 both, the left, or the right program upwards as far as possible. No
 additional subgoals are created.
+
+\TODOQ{cite justification}
 
 \bigskip
 
@@ -2374,8 +2425,6 @@ $v_i$ is either a variable name (in which case all occurrences of
 \texttt{local\ $v_i$} are moved upwards), or $v_i$ is of the form
 $v:i$, in which case the $i$-th occurrence of \texttt{local\ $v$} is
 moved upwards.
-
-\showafter{2020}{03}{01}{\TODOQ{Document: local joint tactic (when writing local-variable paper)}}
 
 \tactic{measure}
 
@@ -2437,6 +2486,8 @@ and \ruleref{Seq}, we get the conclusion of the rule.
 \TODOQ{Document: o2h tactic}
 
 \TODOQ{Document: semiclassical tactic}
+
+\TODOQ{document rename-tactic}
 
 \tactic{rnd}
 

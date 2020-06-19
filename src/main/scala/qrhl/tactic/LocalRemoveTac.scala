@@ -28,7 +28,7 @@ case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove :
       }
 
       if (!variablesToRemove.toSet.subsetOf(varsInProg.toSet))
-        throw UserException(s"Trying to remove variables ${Variable.varsToString(variablesToRemove.toSet -- varsInProg.toSet)} that are not in the toplevel tlocal-statement")
+        throw UserException(s"Trying to remove variables ${Variable.varsToString(variablesToRemove.toSet -- varsInProg.toSet)} that are not in the toplevel local-statement")
       // variablesToRemove, but with default in case of Nil
       val variablesToRemove2 = if (variablesToRemove.isEmpty) varsInProg else variablesToRemove
 
