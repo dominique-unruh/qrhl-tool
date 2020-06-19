@@ -507,12 +507,37 @@ object Parser extends JavaTokenParsers {
   def boolean : Parser[Boolean] =
     ("true" | "false") ^^ { case "true" => true; case "false" => false }
 
+
+  def tactic_if_lr(lr: String) : Parser[IfTac] =
+      OnceParser(boolean.? ^^ { trueFalse => IfTac(lr match { case "left" => true; case "right" => false },  trueFalse) })
+
+  def tactic_if_joint : Parser[JointIfTac] =
+    OnceParser(for
+      (cases <- rep {
+      (boolean ~ "-" ~ boolean) ^^ { case l ~ _ ~ r => (l,r) }
+    })
+      yield {
+        if (cases.isEmpty)
+          JointIfTac(List((true,true),(false,false)))
+        else
+          JointIfTac(cases)
+      })
+
+  def tactic_if : Parser[Tactic] =
+    literal("if") ~> OnceParser(("left" | "right" | "joint") >> {
+      case lr @ ("left" | "right") => tactic_if_lr(lr)
+      case "joint" => tactic_if_joint
+    })
+
+/*
   def tactic_if : Parser[IfTac] =
     literal("if") ~> OnceParser(for
       (left <- ("left" | "right") ^^ { case "left" => true; case "right" => false };
       trueFalse <- boolean.?)
       yield IfTac(left,trueFalse))
+*/
 
+/*
   def tactic_jointif : Parser[JointIfTac] =
     literal("jointif") ~> OnceParser(for
     (cases <- rep {
@@ -524,6 +549,7 @@ object Parser extends JavaTokenParsers {
       else
         JointIfTac(cases)
     })
+*/
 
   def tactic(implicit context:ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
@@ -553,7 +579,6 @@ object Parser extends JavaTokenParsers {
       tactic_local |
       tactic_rename |
       tactic_if |
-      tactic_jointif |
       tactic_isa
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
