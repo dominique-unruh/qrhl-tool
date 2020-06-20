@@ -2346,7 +2346,94 @@ command.
 This rule is justified by the fact that free ambient variables are
 implicitly all-quantified.
 
-\TODOQ{Added tactics: if / jointif}
+\tactic{if}
+
+The \texttt{if} tactic allows to replace an if-statement at the
+beginning of the left and/or right program by its then- or
+else-branch.
+
+When invoked as ``\texttt{if left}'', it applies the following rule:
+\[
+  \inferrule
+  {
+    \rhl{A \sqcap \CL{e_1}}{\bc_{\true}}\bd{B} \\
+    \rhl{A \sqcap \CL{\lnot e_1}}{\bc_{\false}}\bd{B}
+  }
+  {
+    \rhl{A}{\langif{e}{\bc_{\true}}{\bc_{\false}}}\bd{B}
+  }
+\]
+That is, it splits the if-statement into two subgoals for each of the
+branches. Here $e_1$ is $e$ with all variables $\xx$ replaced by $\xx_1$.
+
+If we know that only the then-branch will be executed anyway, we can
+use ``\texttt{if left true}'' which applies the rule:
+\[
+  \inferrule
+  {
+    A \subseteq \CL{e_1} \\
+    \rhl{A \sqcap \CL{e_1}}{\bc_{\true}}\bd{B}
+  }
+  {
+    \rhl{A}{\langif{e}{\bc_{\true}}{\bc_{\false}}}\bd{B}
+  }
+\]
+Or if only the else-branch will be executed, we can use
+``\texttt{if left false}'' which applies the rule:
+\[
+  \inferrule
+  {
+    A \subseteq \CL{\lnot e_1} \\
+    \rhl{A \sqcap \CL{\lnot e_1}}{\bc_{\false}}\bd{B}
+  }
+  {
+    \rhl{A}{\langif{e}{\bc_{\true}}{\bc_{\false}}}\bd{B}
+  }
+\]
+
+Furthermore, we can invoke the tactic as ``\texttt{if right}'',
+``\texttt{if right true}'', or ``\texttt{if right false}'', with
+analogous behavior on the right program.
+
+\bigskip
+
+If both programs start with an if-statement, we can split both
+if-statements simultaneously using the \texttt{if joint} tactic. If is
+invoked as \texttt{if joint $l_1$-$r_1$ \dots $l_n$-$r_n$} where each
+$l_i,r_i$ is a boolean (\texttt{true} or \texttt{false}). Each pair
+$l_i$-$r_i$ stands for one of the possible combinations of value the
+left and right conditional can take. For example \texttt{if joint
+  true-true false-false} means we claim that the left and right
+conditional will be equal. Then for each of these combinations, a
+subgoal is added containing the corresponding then- or else-branch in
+the left and right program. More precisely, the following rule is
+applied:
+\[
+  \inferrule{
+    A \subseteq \CL{\exists i.\ e_1=l_i \land f_2=r_i}
+    \\
+    \text{for each $i$: }
+    \rhl{A \sqcap \CL{e_1=l_i \land f_2=r_i}}
+    {\bc_{l_i};\bc_\mathit{rest}}
+    {\bd_{r_i};\bd_\mathit{rest}}{B}
+  }{
+    \rhl{A}
+    {\langif e{\bc_{\true}}{\bc_{\false}}; \bc_\mathit{rest}}
+    {\langif f{\bd_{\true}}{\bd_{\false}}; \bd_\mathit{rest}}
+    {B}
+  }
+\]
+Here $e_1$ is $e$ with all variables $\xx$ replaced by $\xx_1$ and
+$f_2$ analogously.
+
+Note that the expression $\exists i.\ e_1=l_i \land f_2=r_i$ in first
+subgoal will not be stated in this precise form but in a logically
+equivalent one. (E.g., in case of the arguments \texttt{true-true
+  false-false}, the expression is written $e_1=f_2$.)
+
+The common case \texttt{if joint true-true false-false} is the default
+when the tactic is invoked as \texttt{if joint}.
+
 
 \tactic{inline}
 
@@ -2412,8 +2499,6 @@ When invoked as \texttt{local up} or \texttt{local up left} or
 \texttt{local up right}, it moves all local variable declarations in
 both, the left, or the right program upwards as far as possible. No
 additional subgoals are created.
-
-\TODOQ{cite justification}
 
 \bigskip
 

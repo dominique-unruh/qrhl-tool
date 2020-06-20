@@ -11,6 +11,7 @@ case class IfTac(left:Boolean, trueFalse:Option[Boolean]=None) extends Tactic {
     case AmbientSubgoal(_) =>
       throw UserException("Expected a qRHL subgoal")
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>
+      // Parses the left/right as "if (cond) thenBranch else elseBranch; rest"
       val (cond,thenBranch,elseBranch,rest) = (if (left) leftProg else rightProg) match {
         case Block(IfThenElse(cond,thenBranch,elseBranch), rest @_*) => (cond,thenBranch,elseBranch,Block(rest:_*))
         case _ => throw UserException(s"First statement on ${if (left) "left" else "right"} side must be an if-statement")
@@ -37,6 +38,7 @@ case class IfTac(left:Boolean, trueFalse:Option[Boolean]=None) extends Tactic {
 
       // Constructing the then-branch goal
       if (!trueFalse.contains(false)) {
+        // pre ⊓ Cla[cond1]
         val pre2 = Isabelle.inf(pre.isabelleTerm, Isabelle.classical_subspace(condIdx.isabelleTerm))
         val prog2 = thenBranch ++ rest
         val subgoal = QRHLSubgoal(if (left) prog2 else leftProg, if (left) rightProg else prog2,

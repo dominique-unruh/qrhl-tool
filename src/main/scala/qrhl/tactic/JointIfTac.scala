@@ -37,6 +37,7 @@ case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
         if (truth) t else Isabelle.not(t)
 
       assert(cases.nonEmpty)
+      // Logically equivalent to "there is a (l,r) <- cases such condLIdx=l, condRIdx=r"
       val excludedCasesCond =
         if (casesSet == allCases)
           HOLogic.True
