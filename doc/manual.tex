@@ -2007,15 +2007,15 @@ Here $\yy^{(1)},\dots,\yy^{(n)}$
 are the free classical variables of $P,P',e,e'$.
 And $\qq^{(1)},\dots,\qq^{(m)}$
 are required to be a superset of the quantum variables in
-$(\fv P\setminus\overwr P) \union
-(\fv{P'}\setminus\overwr{P'})$.
-($\fv{P}$ are the free variables, and $\overwr P$ the overwritten
+$\pb\paren{\fv(P)\setminus\overwr(P)} \cup
+\pb\paren{\fv\paren{P'}\setminus\overwr\paren{P'}}$.
+($\fv\paren{P}$ are the free variables, and $\overwr\paren P$ the overwritten
 variables of $P$.)\footnote{Those sets are defined in \cite{local-variables}.
   The command ``\texttt{print $P$}'' shows those variables.}
 
 If the tactic is invoked simply as \texttt{byqrhl}, then
-$\qq^{(1)},\dots,\qq^{(m)}$ will simply be
-$(\fv P\setminus\overwr P) \union (\fv{P'}\setminus\overwr{P'})$.
+$\qq^{(1)},\dots,\qq^{(m)}$ will simply be the quantum variables in
+$\pb\paren{\fv\paren P\setminus\overwr\paren P} \cup \pb\paren{\fv\paren{P'}\setminus\overwr\paren{P'}}$, i.e., the minimum allowed set of quantum variables.
 
 If the conclusion contains $\leq$
 or $\geq$
@@ -2115,7 +2115,82 @@ That is, one of the following two rules is applied (left for
 %
 Both rules are special cases of \ruleref{Conseq}.
 
-\TODOQ{New tactic "conseq qrhl".}
+\bigskip
+
+An alternative invocation is ``\texttt{conseq qrhl:\
+  \textit{lemma}}''. In this case, \textit{lemma} has must be the name
+of an already proven theorem (using the \texttt{qrhl} command) stating
+$\rhl{A'}\bc\bd{B'}$. Then \texttt{conseq qrhl:\ \textit{lemma}} applies the rule:
+\[
+  \inferrule{
+    A \leq A' \\
+    B' \leq B
+  }{
+    \rhl A\bc\bd B
+  }
+\]
+That is, this form can be used when the current qRHL judgment has
+already been proven, except with slightly different
+pre-/postconditions. (But the programs need to be
+identical.)
+
+This is still a special case of \ruleref{Conseq}.
+
+
+\bigskip
+
+In many cases, already proven qRHL judgments \textit{lemma} are of the
+form $\rhl{A \sqcap L\quanteq R}\bc\bd {B \sqcap L'\quanteq R'}$ where
+the variables in the quantum equality are not exactly the ones needed
+in the present subgoal. In this case, we can use the tactic
+``\texttt{conseq qrhl ($L_\mathit{old}$->$L_\mathit{new}$;
+  $R_\mathit{old}$->$R_\mathit{new}$): \textit{lemma}}''.  In this
+form, the tactic will first attempt to rewrite the quantum equality
+\textit{lemma}: In both $L,L'$, $L_\mathit{old}$ is replaced by
+$L_\mathit{new}$, and in $R,R'$, $R_\mathit{old}$ is replaced by
+$R_\mathit{new}$.  Then the tactic behaves like ``\texttt{conseq qrhl:
+  \textit{lemma}}'' above except that the rewritten lemma is used.
+
+For the rewriting to be possible, the following conditions need to be
+satisfied:
+\begin{compactitem}
+\item $L_\mathit{old}$ is a suffix of both $L,L'$. $R_\mathit{old}$ is a suffix of both $R,R'$.
+   (Checked by the tactic.)
+\item $(L_\mathit{old}\cup L_\mathit{new}) \cap \fv(\bc) = \varnothing$. (Checked by the tactic.)
+\item $(R_\mathit{old}\cup R_\mathit{new}) \cap \fv(\bd) = \varnothing$. (Checked by the tactic.)
+\item
+  \begin{compactitem}
+    \item $\abs{\types{L_{\mathit{new}}}} = \infty \vee \abs{\types{L_\mathit{new}}} \geq \abs{\types{L_\mathit{old}}}$.
+    \item $\abs{\types{R_{\mathit{new}}}} = \infty \vee \abs{\types{R_\mathit{new}}} \geq \abs{\types{R_\mathit{old}}}$.
+    \item $L_{\mathit{old}}, L_{\mathit{new}}$ (indexed with 1) and
+       $R_{\mathit{old}}, R_{\mathit{new}}$ (indexed with 1) are disjoint from the free variables of $A,B$.
+  \end{compactitem}
+  (These three conditions are returned as a single subgoal, usually easy to solve using \texttt{simp}.)
+\end{compactitem}
+The rewriting is justified by \ruleref{EqVarChange} in \cite{local-variables}.
+
+If any of
+$L_\mathit{old},L_\mathit{new},R_\mathit{old},R_\mathit{new}$ should
+be the empty list, then the notation ``\texttt{.}'' can be
+used. (E.g., \mathtt{x,y->.} means variables $x,y$ are simply
+removed.)
+
+When invoking ``\texttt{conseq qrhl
+  ($V_\mathit{old}$->$V_\mathit{new}$): \textit{lemma}}'', this is
+short for ``\texttt{conseq qrhl ($V_\mathit{old}$->$V_\mathit{new}$;
+  $V_\mathit{old}$->$V_\mathit{new}$): \textit{lemma}}''. (Same
+replacement on left/right side.)
+
+To be able to use this tactic, it is a good idea to set aside a
+variable \texttt{aux} of some infinite type\footnote{Such a variable
+  \texttt{aux} is predeclared by the tool.} that never occurs in any
+programs, and then to always prove qRHL judgments of the form
+$\rhl{A \sqcap L\quanteq R}\bc\bd {B \sqcap L'\quanteq R'}$ where
+$L,R,L',R'$ all end in \texttt{aux}. (Intuitively, this means the
+judgment in question also preserves equality of an uninvolved variable
+\texttt{aux}.) Then \texttt{aux} can be replaced by other quantum
+variables as needed when the qRHL judgement is used in a subproof.
+
 
 \tactic{equal}
 

@@ -15,7 +15,17 @@ import qrhl.isabelle.Codecs._
 import scala.collection.immutable.ListSet
 
 /**
- * TODO: describe case when no variable substitution is given
+ * If qvariableSubst=None, applies the rule:
+ *
+ * {pre2} left ~ right {post2}        (1)
+ * pre <= pre2                        (8a)
+ * post2 <= post                      (8b)
+ * -------------------------
+ * {pre} left ~ right {post}
+ *
+ *  Here (1) has to be given as the already proven theorem given by the argument `rule`
+ *
+ * ----------------------------------------------------------------
  *
  * Given qvariable substitution beforeLeft->afterLeft, beforeRight->afterRight, applies the rule
  *
@@ -31,7 +41,7 @@ import scala.collection.immutable.ListSet
  * pre <= A ⊓ ⟦L*⟧ ≡𝔮 ⟦R*⟧        (8a)
  * post >= B ⊓ ⟦L'*⟧ ≡𝔮 ⟦R'*⟧    (8b)
  * --------------------------------------
- * assms ==> {pre} left ~ right {post}
+ * {pre} left ~ right {post}
  *
  * where L*, L'* is L, L' with the suffix beforeLeft1 replaced by afterLeft1
  * and R*, R'* analogous with beforeRight2, afterRight2
@@ -40,7 +50,7 @@ import scala.collection.immutable.ListSet
  *
  * Here (1) has to be given as the already proven theorem given by the argument `rule`
  *
- * Premises (5), (6), (7) are given as a single subgoal
+ * Premises (5), (7) are given as a single subgoal
  * (8a), (8b) are given as separate subgoals
  * (Three subgoals in total)
  *
