@@ -1976,13 +1976,8 @@ subgoal out of the way temporarily and focus on other subgoals first).
 
 \tactic{byqrhl}
 
-\TODOQ{Document changed byqrhl tactic}
 
-\TODOQ{Prove stronger QrhlElim rule to match that tactic}
-
-\TODOQ{byqrhl gets optional list of qvars}
-
-When invoked as ``\texttt{byqrhl.}'', transforms a goal of the form
+When invoked as ``\texttt{byqrhl qvars $\qq^{(1)},\dots,\qq^{(m)}$.}'', transforms a goal of the form
 $\mathtt{Pr}[e:P(\rho)] =\mathtt{Pr}[e':P'(\rho)]$
 into a qRHL subgoal. (Also works for $\leq$ or $\geq$ instead of $=$.)
 
@@ -2011,9 +2006,16 @@ The tactic implements the following rule:
 Here $\yy^{(1)},\dots,\yy^{(n)}$
 are the free classical variables of $P,P',e,e'$.
 And $\qq^{(1)},\dots,\qq^{(m)}$
-are the free quantum variables of $P,P'$.
-(Including those of any programs included recursively within $P,P'$
-via \texttt{call}.)
+are required to be a superset of the quantum variables in
+$(\fv P\setminus\overwr P) \union
+(\fv{P'}\setminus\overwr{P'})$.
+($\fv{P}$ are the free variables, and $\overwr P$ the overwritten
+variables of $P$.)\footnote{Those sets are defined in \cite{local-variables}.
+  The command ``\texttt{print $P$}'' shows those variables.}
+
+If the tactic is invoked simply as \texttt{byqrhl}, then
+$\qq^{(1)},\dots,\qq^{(m)}$ will simply be
+$(\fv P\setminus\overwr P) \union (\fv{P'}\setminus\overwr{P'})$.
 
 If the conclusion contains $\leq$
 or $\geq$
@@ -2027,7 +2029,8 @@ $\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
 \mathrel{\mathord\equiv\mathfrak q} \llbracket
 \qq_n^{(1)},\dots,\qq_n^{(m)} \rrbracket$ is replaced by \texttt{top}.
 
-The rule is a special case of \ruleref{QrhlElimEq}.
+The rule is a special case of \ruleref{QrhlElimEqNew} in
+\cite{local-variables}.
 
 
 \bigskip

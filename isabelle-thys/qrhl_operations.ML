@@ -586,4 +586,17 @@ fun is_finite ctxt T = let
   (* val _ = \<^print> result *)
 in result = \<^prop>\<open>True\<close> end
 
+
+fun byQRHLPre cvars qvars =
+  let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
+      val cEqs' = \<^const>\<open>classical_subspace\<close> $ QRHL.mk_conjs cEqs
+      val (qvars1',qvars1T) = QRHL.variables (map (fn (v1,_ ,T) => Free(v1,QRHL.mk_variableT T)) qvars)
+      val (qvars2',qvars2T) = QRHL.variables (map (fn (_ ,v2,T) => Free(v2,QRHL.mk_variableT T)) qvars)
+      val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
+      val qvarsEq = if qvars=[] then @{const top(predicate)} else QRHL.mk_quantum_equality qvars1' qvars2' qvars1T
+  in
+    @{const inf(predicate)} $ cEqs' $ qvarsEq
+  end
+
+
 end

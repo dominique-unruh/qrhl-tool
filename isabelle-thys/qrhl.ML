@@ -331,17 +331,6 @@ fun dest_list_syntax (Const (\<^const_syntax>\<open>Nil\<close>, _)) = []
 val dest_string_syntax = implode o map (chr o dest_char_syntax) o dest_list_syntax;
 
 
-fun byQRHLPre cvars qvars =
-  let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
-      val cEqs' = \<^const>\<open>classical_subspace\<close> $ mk_conjs cEqs
-      val (qvars1',qvars1T) = variables (map (fn (v1,_ ,T) => Free(v1,mk_variableT T)) qvars)
-      val (qvars2',qvars2T) = variables (map (fn (_ ,v2,T) => Free(v2,mk_variableT T)) qvars)
-      val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
-      val qvarsEq = if qvars=[] then @{const top(predicate)} else mk_quantum_equality qvars1' qvars2' qvars1T
-  in
-    @{const inf(predicate)} $ cEqs' $ qvarsEq
-  end
-
 fun checkType ctx term =
   let val ct = Thm.cterm_of ctx term
   in

@@ -9,18 +9,26 @@ import qrhl.isabelle.{Isabelle, IsabelleConsts, RichTerm}
 import qrhl.logic._
 import qrhl.isabelle.RichTerm.term_tight_codec
 import qrhl.isabelle.RichTerm.typ_tight_codec
+import qrhl.tactic.ByQRHLTac.byQRHLPreOp
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
 
 case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
+  /** Pattern-matcher that matches Pr[e : prog (rho)]
+   * and returns e1 (e indexed with 1/2 depending on `left`
+   *             Call(prog) (prog must be a program)
+   *             rho
+   *
+   * Special case: if the term to be matches is "1", return (True, empty program, null)
+   */
   class Probability(left : Boolean, state : State) {
     def unapply(term: pure.Term): Option[(pure.Term,Statement,pure.Term)] = term match {
-      case App(App(App(Const(Isabelle.probability.name,_),v),p),rho) =>
+      case App(App(App(Const(Isabelle.probability.name,_),e),p),rho) =>
         val addIndexToExpressionOp = Operation.implicitly[(BigInt,Term,Boolean), RichTerm]("add_index_to_expression")
 
-        val v2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (state.isabelle.contextId,v,left))
-        val v3 = RichTerm.decodeFromExpression(state.isabelle, v2.isabelleTerm).isabelleTerm
+        val e2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (state.isabelle.contextId,e,left))
+        val e3 = RichTerm.decodeFromExpression(state.isabelle, e2.isabelleTerm).isabelleTerm
 
         val pname = p match {
           case Free(n,_) => n
@@ -30,7 +38,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         if (prog.numOracles != 0)
           throw UserException(s"Program $p expects arguments, that is not supported in a Pr[...] statement")
 
-        Some((v3,Call(prog.name),rho))
+        Some((e3,Call(prog.name),rho))
       case Const(IsabelleConsts.one,_) =>
         Some((Isabelle.True_const, Block.empty, null))
       case _ =>
@@ -43,20 +51,36 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
   private def bitToBool(b:Term) =
     Isabelle.mk_eq(b, Const("Groups.one_class.one", Isabelle.bitT))
 
-  val byQRHLPreOp: Operation[(BigInt, List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), RichTerm]
-    = Operation.implicitly[(BigInt, List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), RichTerm]("byQRHLPre") // TODO: move
 
+  /**
+   * Implements the rule
+   *
+   * {q...r} ⊇ quantum( fv(p)-overwr(p), fv(q)-overwr(q) )
+   * {Cla[x1=x2 /\ ... /\ z1=z2] ⊓ [q1...r1] ==q [q2...r2]
+   * ------------------------------
+   * Pr[e:p(rho)] =/<= Pr[f:q(rho)]
+   *
+   * Here {x...z} := classical( fv(p), fv(q), fv(e), fv(f) )
+   * And {q...r] := user chosen quantum variables, or minimal set satisfying the rule
+   *
+   * Rule is proven in local variables paper, QrhlElimEqNew.
+   */
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
     val ProbLeft = new Probability(true, state)
     val ProbRight = new Probability(false, state)
 
     goal match {
-      case AmbientSubgoal(RichTerm(App(App(Const(rel,_),ProbLeft(v1,p1,rho1)),ProbRight(v2,p2,rho2)))) =>
+        // Subgoal must be: Pr[e1:p1(rho)] R Pr[e2:p2(rho)]
+        // lhs or rhs can also be just "1"
+        // Variables `e1`, `e2` contain *indexed* expressions!
+      case AmbientSubgoal(RichTerm(App(App(Const(rel,_),ProbLeft(e1,p1,rho1)),ProbRight(e2,p2,rho2)))) =>
         if (rho1!=null && rho2!=null && rho1!=rho2)
           throw UserException("The initial state in lhs and rhs must be identical (syntactically same term, not just equal)")
 
         val env = state.environment
 
+        // R must be one of <= or =
+        // connective := --> or = then.
         val connective = rel match {
           case "Orderings.ord_class.less_eq" => Const("HOL.implies", connectiveT)
           case "HOL.eq" => Const("HOL.eq", connectiveT)
@@ -68,14 +92,19 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
             case Variable.IndexedC(v, _) => v
           }
 
+
         val vars1 = p1.variableUse(env)
         val vars2 = p2.variableUse(env)
-        val vars1expr = stripIndices(RichTerm(Isabelle.boolT, v1).variables(env).classical)
-        val vars2expr = stripIndices(RichTerm(Isabelle.boolT, v2).variables(env).classical)
+        val vars1expr = stripIndices(RichTerm(Isabelle.boolT, e1).variables(env).classical)
+        val vars2expr = stripIndices(RichTerm(Isabelle.boolT, e2).variables(env).classical)
 
+        // fv(p1), fv(p2), fv(e1), fv(e2) (not indexed, only classical)
         val cvars = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
+        // fv(p1)-overwr(p1)  \union   fv(p2)-overwr(p2)   (only classical)
+        // The minimum set that have to be included in the quantum equality
         val requiredQvars = (vars1.quantum -- vars1.overwrittenQuantum) ++ (vars2.quantum -- vars2.overwrittenQuantum)
 
+        // variables to include in the quantum equality
         val qvars =
           if (qvariables.isEmpty)
             requiredQvars
@@ -87,6 +116,9 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
           }
 
         val isa = state.isabelle
+
+        // Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
+        // if cvars =: x...z and qvars =: q...r
         val pre = isa.isabelle.invoke(byQRHLPreOp,
           (isa.contextId,
             cvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
@@ -94,7 +126,9 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         val left = p1.toBlock
         val right = p2.toBlock
-        val post = RichTerm(Isabelle.predicateT, Isabelle.classical_subspace $ (connective $ v1 $ v2))
+
+        // Cla[e1 -->/= e2]
+        val post = RichTerm(Isabelle.predicateT, Isabelle.classical_subspace $ (connective $ e1 $ e2))
 
         List(QRHLSubgoal(left,right,pre,post,Nil))
       case _ =>
@@ -105,4 +139,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
 object ByQRHLTac {
   private val logger = log4s.getLogger
+
+  private val byQRHLPreOp: Operation[(BigInt, List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), RichTerm]
+  = Operation.implicitly[(BigInt, List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), RichTerm]("byQRHLPre")
 }

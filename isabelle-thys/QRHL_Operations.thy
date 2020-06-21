@@ -94,7 +94,10 @@ operation_setup read_expression = \<open>
 \<close>
 
 operation_setup byQRHLPre = \<open>
-  {from_lib = Codec.triple Codec.int (Codec.list (Codec.triple Codec.string Codec.string typ_tight_codec)) (Codec.list (Codec.triple Codec.string Codec.string typ_tight_codec)),
+  {from_lib = Codec.triple 
+              Codec.int (* Context *)
+              (Codec.list (Codec.triple Codec.string Codec.string typ_tight_codec)) (* qvars *)
+              (Codec.list (Codec.triple Codec.string Codec.string typ_tight_codec)), (* cvars *)
    to_lib = Codec.id,
    action = fn (ctxt_id,cvars,qvars) => 
       let val ctxt = Refs.Ctxt.read ctxt_id in
