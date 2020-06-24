@@ -471,7 +471,7 @@ class State private (val environment: Environment,
       s"${goal.size} subgoals:\n\n" + goal1 + "\n\n----------------------------------------------------\n\n" + rest.mkString("\n\n")
   }
 
-  lazy val parserContext = ParserContext(isabelle=_isabelle, environment=environment)
+  lazy val parserContext: ParserContext = ParserContext(isabelle=_isabelle, environment=environment)
 
   def parseCommand(str:String): Command = {
     implicit val parserContext: ParserContext = this.parserContext

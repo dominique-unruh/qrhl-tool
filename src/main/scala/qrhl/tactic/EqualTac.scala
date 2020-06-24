@@ -482,5 +482,4 @@ object EqualTac {
     RichTerm(Isabelle.predicateT, postcondition3)
   }
 
-
 }
