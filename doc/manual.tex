@@ -27,7 +27,7 @@
 \expandafter\ifx\csname opt@preview.sty\endcsname\relax
 \usepackage[a4paper,margin=1in]{geometry}
 \fi
-\usepackage[users=QR]{uchanges}
+\usepackage[users=Q]{uchanges}
 \usepackage{circuits}
 \ChangesSetUserColor[Dominique]{Q}{red}
 \ChangesSetUserColor[Reviewer]{R}{invalid}
@@ -35,6 +35,66 @@
 \usepackage[delaytext,envcountsame,multiautoref]{latexhacks}
 
 \usetikzlibrary{decorations.pathreplacing}
+
+\lstdefinelanguage{qrhl}{
+  morekeywords={vars,inner,calls,if,then,else,local,isabelle,classical,var,quantum,program,qrhl,lemma,qed,ambient,include,call,adversary,measure,with,inline,simp,wp,conseq,post,rule,skip},
+  sensitive=true,
+  commentstyle=\empty,
+  extendedchars=false,
+  string=[b]",
+  stringstyle=\ttfamily,
+  escapeinside=\^^A\^^B,
+  %backgroundcolor=\color{gray!10},
+  numbers=left,
+  numbersep=5pt,
+  numberstyle=\tiny\color{gray}
+}
+
+\lstdefinelanguage{isabelle}{
+  morekeywords={axiomatization,where,simp,and,definition},
+  sensitive=true,
+  extendedchars=false,
+  commentstyle=\empty,
+  escapeinside=\^^A\^^B,
+  %backgroundcolor=\color{gray!10},
+  numbers=left,
+  numbersep=5pt,
+  numberstyle=\tiny\color{gray}
+}
+
+\DeclareUnicodeCharacter{2265}{\ensuremath{\geq}}
+\DeclareUnicodeCharacter{27F7}{\ensuremath{\longleftrightarrow}}
+\DeclareUnicodeCharacter{22C3}{\ensuremath{\bigcup}}
+\DeclareUnicodeCharacter{2A06}{\ensuremath{\bigsqcup}}
+\DeclareUnicodeCharacter{27F9}{\ensuremath{\Longrightarrow}}
+\DeclareUnicodeCharacter{212D}{\ensuremath{\mathfrak C}}
+\DeclareUnicodeCharacter{1D529}{\ensuremath{\mathfrak l}}
+\DeclareUnicodeCharacter{1D51E}{\ensuremath{\mathfrak a}}
+\DeclareUnicodeCharacter{1D52E}{\ensuremath{\mathfrak q}}
+\DeclareUnicodeCharacter{2260}{\ensuremath{\neq}}
+\DeclareUnicodeCharacter{3BB}{\ensuremath{\lambda}}
+\DeclareUnicodeCharacter{2293}{\ensuremath{\sqcap}}
+\DeclareUnicodeCharacter{27E6}{\ensuremath{\llbracket}}
+\DeclareUnicodeCharacter{301A}{\ensuremath{\llbracket}}
+\DeclareUnicodeCharacter{27E7}{\ensuremath{\rrbracket}}
+\DeclareUnicodeCharacter{301B}{\ensuremath{\rrbracket}}
+\DeclareUnicodeCharacter{2297}{\ensuremath{\otimes}}
+\DeclareUnicodeCharacter{22C5}{\ensuremath{\cdot}}
+\DeclareUnicodeCharacter{B7}{\ensuremath{\cdot}}
+\DeclareUnicodeCharacter{BB}{\text\guillemotright}
+\DeclareUnicodeCharacter{2227}{\ensuremath{\land}}
+\DeclareUnicodeCharacter{2261}{\ensuremath{\equiv}}
+\DeclareUnicodeCharacter{2208}{\ensuremath\in}
+\DeclareUnicodeCharacter{2264}{\ensuremath\leq}
+\DeclareUnicodeCharacter{2228}{\ensuremath\vee}
+\DeclareUnicodeCharacter{2200}{\ensuremath\forall}
+\DeclareUnicodeCharacter{22A5}{\ensuremath\bot}
+\DeclareUnicodeCharacter{AC}{\ensuremath\lnot}
+\DeclareUnicodeCharacter{2286}{\ensuremath\subseteq}
+\DeclareUnicodeCharacter{2209}{\ensuremath\notin}
+\DeclareUnicodeCharacter{21D2}{\ensuremath\Rightarrow}
+\DeclareUnicodeCharacter{3B4}{\ensuremath\delta}
+\DeclareUnicodeCharacter{27F6}{\ensuremath\rightarrow}
 
 \newcommand\mytilde{\raise.17ex\hbox{$\scriptstyle\sim$}}
 
@@ -1471,6 +1531,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   When axiomatizing a type \texttt{T}, you can use \texttt{instance T
     :: group\_add sorry} to declare that \texttt{T} has this property. (Without specifying
   \texttt{T} any further.)
+  \TODOQ{We have a command for that}
   \\
   \hline
   \subhead{States}
@@ -2623,8 +2684,130 @@ and \ruleref{Seq}, we get the conclusion of the rule.
 
 \tactic{o2h}
 
+\TODOQ{ensure documented: 
+binary-measurement proj-classical-set  }
 
-\TODOQ{Document: o2h tactic}
+This tactic allows to apply the Semiclassical O2H Theorem from
+\cite{ambainis19semiclassical} (Theorem 1, variant (1)).  We refer to
+\cite{ambainis19semiclassical} for details about the O2H Theorem.  To
+apply the O2H Theorem in \texttt{qrhl-tool}, we have the tactic
+\texttt{o2h}. As a precondition for applying this tactic, the games
+listed in \autoref{fig:games.o2h.tactic} must be defined. The games
+must be defined exactly as written there, except that the names of the
+games, as well as the names of the variables (IN, OUT, G, S, H, z,
+in\_S, found, count) may be chosen arbitrarily. And \texttt{distr} can
+be an arbitrary constant expression (meaning, the expression must not
+contain any program variables but may contain ambient variables).
+Furthermore, we require that the type of the oracle outputs (i.e.,
+$\beta$ if $G$ has type $\alpha\Rightarrow\beta$) is of type class
+\texttt{xor\_group},\footnote{This specifies
+  an Abelian group with $x+x=0$.} otherwise \texttt{Uoracle} does not have the required behavior.
+%
+\begin{figure}[t]
+  {\smaller\smaller  \lstset{language=qrhl}
+\begin{lstlisting}
+program queryG := {
+  on IN, OUT apply (Uoracle G);
+}.
+
+program queryGS := {
+  in_S <- measure IN with binary_measurement (proj_classical_set S);
+  if (in_S=1) then found <- True; else skip;
+  call queryG;
+}.
+
+program queryH := {
+  on IN, OUT apply (Uoracle H);
+}.
+
+program Count(O) := {
+  call O;
+  count <- count + 1;
+}.
+
+program left := {
+  count <- 0;
+  (S,G,H,z) <$ distr;
+  { local IN, OUT; call A(Count(queryG)); }
+}.
+
+program right := {
+  count <- 0;
+  (S,G,H,z) <$ distr;
+  { local IN, OUT; call A(Count(queryH)); }
+}.
+
+program find := {
+  count <- 0;
+  (S,G,H,z) <$ distr;
+  found <- False;
+  { local IN, OUT; call A(Count(queryGS)); }
+}.
+\end{lstlisting}
+  }
+  \caption[Games required by o2h tactic.]{\label{fig:games.o2h.tactic}Games required by \texttt{o2h} tactic.}
+\end{figure}
+%
+
+That is, \texttt{queryG} and \texttt{queryH} are implementations of
+the oracles that perform superposition queries to the functions
+$G$ and
+$H$ (using input/output registers IN, OUT).  \texttt{Count} is a
+wrapper oracle that counts oracle queries (to express the bound on the
+number of queries performed by
+$A$).  Let the programs \texttt{left}, \texttt{right} are just the
+programs defined in $P_\mathit{left},
+P_\mathit{right}$ in the O2H Theorem (see
+\cite{ambainis19semiclassical}). (Except that we additionally added a
+counter \texttt{count} that explicitly counts the oracle queries.)
+Finally, \texttt{queryGS} implements the ``punctured oracle'' $G\setminus
+S$ and stores in the variable \texttt{found} whether a value in
+$S$ was queried. (A punctured oracle is one that
+allows superposition queries but measures whether the input register contains
+a value in $S$. In the definition of that program,
+``\verb|binary_measurement (proj_classical_set S)|'' constructs the
+binary measurement that checks this.) Thus the game \texttt{find} corresponds to
+$P_\mathit{find}$ in the O2H Theorem.
+
+Since the games have to be in this precise form, the first step before
+applying the tactic \texttt{o2h} will typically be to rewrite the
+games of interest in this specific form (for a suitably defined
+distribution \texttt{distr}) and show that the original and rewritten
+game have the same probability of $b=1$.
+
+The tactic \texttt{o2h} can then be applied to proof goals of the exact form:
+\begin{lstlisting}
+abs ( Pr[b=1 : left(rho)] - Pr[b=1 : right(rho)] )
+         <= 2 * sqrt( (1+real q) * Pr[found : find(rho)] )
+\end{lstlisting}
+where \texttt{left} and \texttt{right} are the games from \autoref{fig:games.o2h.tactic}
+and \texttt{q} is an expression (of type \texttt{nat}).  
+
+When applying the tactic \texttt{o2h} (without any additional
+arguments), it checks whether all involved games have the right form
+and that none of the variables \verb|count,found,G,H,S,in_S| are in
+the free variables of $A$ (but $A$ is allowed to access
+\texttt{IN,OUT,b,z}). If these checks succeeds, the tactic produces
+four subgoals:
+{\lstset{language=qrhl}%
+\begin{lstlisting}
+Pr[count ≤ q : left(rho)] = 1
+Pr[count ≤ q : right(rho)] = 1
+Pr[count ≤ q : find(rho)] = 1
+∀S G H z x. (S,G,H,z) ∈ supp distr ⟶ x ∉ S ⟶ G x = H x
+\end{lstlisting}}
+The first three of them express the requirement that $A$ makes at most
+$q$ oracle queries (recall that \texttt{count} counts the oracle
+queries because of the wrapper oracle \texttt{Count}).  And the fourth
+one expresses the fact that $\forall x\notin S, G(x)=H(x)$ when $S,G,H$ are chosen
+according to \texttt{distr}. (This is one of the premises of the O2H
+Theorem.)
+
+Note that the program \texttt{find} contains a punctured oracle
+\texttt{queryGS}. To transform \texttt{find} into a game with normal
+oracles (such as \texttt{queryG}), see the tactic
+\texttt{semiclassical}.
+
 
 \tactic{rename}
 
@@ -2793,7 +2976,98 @@ with $1$ in $f$, etc.
 
 \tactic{semiclassical}
 
-\TODOQ{Document: semiclassical tactic}
+\TODOQ{Document: semiclassical tactic (using text below)}
+
+To invoke \autoref{thm:semiclassical.search}, we use the tactic
+\texttt{semiclassical}. This tactic requires that games of the exact
+form as in \autoref{fig:games.semiclassical.tactic} are
+defined.
+%
+\begin{figure}[t]
+  {\smaller\smaller  \lstset{language=qrhl}
+\begin{lstlisting}
+program queryG := {
+  on IN, OUT apply (Uoracle G);
+}.
+
+program queryGS := {
+  in_S <- measure IN with binary_measurement (proj_classical_set S);
+  if (in_S=1) then found <- True; else skip;
+  call queryG;
+}.
+
+program queryGM := {
+  if (count=stop_at) then
+    guess <- measure IN with computational_basis;
+  else
+    skip;
+
+  call queryG;
+}.
+
+program Count(O) := {
+  call O;
+  count <- count + 1;
+}.
+
+program left := {
+  count <- 0;
+  (S,G,z) <$ distr;
+  found <- False;
+  { local IN, OUT; call A(Count(queryGS)); }
+}.
+
+
+program right := {
+  count <- 0;
+  stop_at <$ uniform {..<q};
+  (S,G,z) <$ distr;
+  { local IN, OUT; call A(Count(queryGM)); }
+}.
+\end{lstlisting}
+  }
+  \caption[Games required by semiclassical tactic.]{\label{fig:games.semiclassical.tactic}Games required by \texttt{semiclassical} tactic.}
+\end{figure}
+%
+(Again, the names of the games, as well as the variables (IN,
+OUT, G, S, H, z, in\_S, found, count, stop\_at, guess) can be
+arbitrary, and the output type of $G$ must be of type class
+\texttt{xor\_group}. \texttt{distr} and \texttt{q} are arbitrary
+constant expressions.)  See the description of the tactic \texttt{o2h}
+for programs \texttt{queryG}, \texttt{queryGS}, \texttt{Count}.  The
+program \textrm{queryGM} is an oracle that measures first checks
+whether the number of the current oracle query is \texttt{stop\_at}
+before querying $G$.  If so, the input to $G$ is measured in the
+computational basis and stored in \texttt{guess}.  This corresponds to
+the queried performed by the adversary $B$ in
+\autoref{thm:semiclassical.search}. (Where \texttt{stop\_at} is $i$ in
+$B$.)  And finally, the game \texttt{left} is like the \texttt{find}
+game in tactic \texttt{o2h} (i.e., lhs of the conclusion of
+\autoref{thm:semiclassical.search}) while the right game is rhs of the
+conclusion of \autoref{thm:semiclassical.search}.
+
+Then the tactic \texttt{semiclassical}, invoked without any arguments,
+expects a subgoal of the form:
+{\lstset{language=isabelle}
+\begin{lstlisting}
+Pr[found : left(rho)]
+        <= 4 * real q * Pr[guess∈S : right(rho)]
+\end{lstlisting}}
+It 
+checks whether all games are as
+in \autoref{fig:games.semiclassical.tactic} and whether the free
+variables of $A$ contain none of \verb|G, S, H, in\_S, found, count, stop\_at, guess| (but $A$ may access \verb|IN, OUT, z, b|).
+If so, the tactic produces the following new subgoals:
+{\lstset{language=qrhl}%
+\begin{lstlisting}
+Pr[count ≤ q : left(rho)] = 1
+Pr[count ≤ q : right(rho)] = 1
+\end{lstlisting}}
+%
+Here \texttt{q} is the same expression as in the definition of
+program \texttt{queryGM} and \texttt{right}.  These subgoals express
+the fact that the adversary makes at most $q$ oracle queries.
+
 
 \tactic{seq}
 
