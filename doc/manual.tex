@@ -748,7 +748,7 @@ A program is represented as a list of statements.\footnote{This
   All $q_i$
   must be distinct variables. $\emph{expr}$
   must be an Isabelle/HOL expression of type
-  $(T_1\times\dots\times T_n)\ \mathtt{vector}$,
+  $(T_1\times\dots\times T_n)\ \mathtt{ell2}$,
   the type of vectors with basis $T_1\times\dots\times T_n$.
   (See the tables below for constants for constructing states.)
   $\emph{expr}$
@@ -1006,7 +1006,7 @@ expressions of type $\alpha$
 \texttt{distr} (distributions), and the various quantum operations
 need expressions of types $(\alpha,\alpha)$
 \texttt{bounded}, $\alpha$
-\texttt{vector}, and $(\alpha,\beta)$
+\texttt{ell2}, and $(\alpha,\beta)$
 \texttt{measurement}. Various predefined constants for constructing
 expressions of those types are described in the table below.
 
@@ -1070,7 +1070,7 @@ When defining your own types in an accompanying theory, please consult \autoref{
   statements (e.g., \texttt{e} in \texttt{x <\$ e;}).
   \\
   \hline
-  $\alpha$ \texttt{vector}\tooltype{vector} & Vectors in $\elltwo \alpha$.
+  $\alpha$ \texttt{ell2}\tooltype{ell2} & Vectors in $\elltwo \alpha$.
   
   The type is endowed with the type class
   \texttt{normed\_real\_vector}, so operations such as $+$
@@ -1078,17 +1078,13 @@ When defining your own types in an accompanying theory, please consult \autoref{
 
   Expressions of this type occur on the rhs of quantum initialization
   statements (e.g., \texttt{e} in \texttt{q <q e;}).
-  
-  % \\
-  % \hline $\alpha$
-  % \texttt{state}\tooltype{state} & Normalized vectors in $\elltwo\alpha$.
-  %
-  % Expressions of this type occur on the right hand side of quantum initialization
-  % statements (e.g., \texttt{e} in \texttt{q <q e;}).
+
   \\
   \hline
   $\alpha$ \texttt{subspace}\tooltype{subspace} &
   Closed subspaces of $\elltwo\alpha$.
+
+    \TODOQ{outdated name}
 
   This type is used mostly for constructing quantum predicates.
   
@@ -1123,6 +1119,8 @@ When defining your own types in an accompanying theory, please consult \autoref{
   \hline $(\alpha,\beta)$ \texttt{bounded}\tooltype{bounded} &
   Bounded operators $\bounded{\alpha,\beta}$.
 
+    \TODOQ{outdated name}
+
   Expressions of this type occur in quantum operation statements,
   e.g., \texttt{U} in ``\texttt{on q apply U}''. In that case, \texttt{U}
   should always describe an isometry. (See the description of quantum
@@ -1131,6 +1129,17 @@ When defining your own types in an accompanying theory, please consult \autoref{
   Expressions of this type also occur in predicates, e.g., as an
   argument to \texttt{quantum\_equality\_full} or due to application
   of the \texttt{wp} tactic (implementing \ruleref{QApply1}).
+
+  This type will almost always be used as
+  $(\alpha'\ \mathtt{ell2}, \beta'\ \mathtt{ell2})\
+  \mathtt{bounded})$. (I.e., elements of $\boundedv{\alpha,\beta}$.)
+  This can be abbreviated as $(\alpha',\beta')\ \mathtt{l2bounded}$.
+  
+  \\
+  \hline $(\alpha,\beta)$ \texttt{l2bounded}\tooltype{l2bounded} &
+  Abbreviation for
+  $(\alpha\ \mathtt{ell2}, \beta\ \mathtt{ell2})\ \mathtt{bounded})$.
+  
   \\
   \hline
   $(\alpha,\beta)$ \texttt{measurement}\tooltype{measurement} & Measurements $\Meas\alpha\beta$.
@@ -1350,14 +1359,14 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \texinput{\\cdot}
   \\
   \hline \constdef{$A\cdot \psi$\par$\mathtt{applyOp}\
-    A\ \psi$} {\beta\ \mathtt{vector}}
+    A\ \psi$} {\beta\ \mathtt{ell2}}
   {$A::(\alpha,\beta)\ \mathtt{bounded}$
     \par and
-    $\psi::\alpha\ \mathtt{vector}$}
+    $\psi::\alpha\ \mathtt{ell2}$}
   \toolconst{applyOp}
   \symbolindexmark\TOOLcdot
   &
-  The result $A\psi$ of applying the operator $A$ to the vector $\psi$.
+  The result $A\psi$ of applying the operator $A$ to the ell2 $\psi$.
 
   The syntax $A\cdot \psi$
   is overloaded. If Isabelle/HOL has trouble recognizing which meaning
@@ -1398,7 +1407,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   %
   \constdef{$\mathtt{addState}\ \psi$}
   {(\beta,\beta\times\alpha)\ \mathtt{bounded}}
-  {$\psi::\alpha\ \mathtt{vector}$}
+  {$\psi::\alpha\ \mathtt{ell2}$}
   \toolconst{addState}
   &
   %
@@ -1439,6 +1448,15 @@ for getting the special characters (marked ``How to input:'' in the table below)
   The projector onto subspace $S$.
   \\
   \hline
+  \constdef{$\mathtt{proj\_classical\_set}\ S$}
+  {(\alpha,\alpha)\ \mathtt{bounded}}
+  {$S :: \alpha\ \mathtt{set}$}
+  \toolconst{proj_classical_set}
+  & The projector onto the span
+  of $\basis{} s$ with $s\in S$.
+  (Equivalently $\sum_{s\in S}\basis{}s\langle s\rvert$.)
+  \\
+  \hline  
   \constdef{\texttt{hadamard,pauliX,pauliY,pauliZ}}
   {(\mathtt{bit},\mathtt{bit})\ \mathtt{bounded}}
   {}
@@ -1517,35 +1535,36 @@ for getting the special characters (marked ``How to input:'' in the table below)
   (This is a useful construct when modeling, e.g., function that can be queried in superposition
   by a quantum algorithm.)
 
-  The type $\beta$
-  must have sort $\texttt{group\_add}$. This guarantees that
-  $y+f(x)$ is well-defined and has suitable properties (in particular, this
-  makes $\mathtt{Uoracle}\ f$ unitary).
+  The type $\beta$ must have sort $\texttt{group\_add}$. This
+  guarantees that $y+f(x)$ is well-defined and has suitable properties
+  (in particular, this makes $\mathtt{Uoracle}\ f$ unitary). If
+  $\beta$ has even sort $\mathtt{xor\_group}$ (Abelian group with
+  $x+x=0$), then additional laws for $\mathtt{Uoracle}$ will be
+  available.
 
-  Examples of types that have this sort are \texttt{bit},
+  Examples of types that have these sorts are \texttt{bit},
   \texttt{int}, $(\dots,\dots)\ \mathtt{nlist}$.
   (The latter is defined in CryptHOL \cite{crypthol}, but you
   additionally need to import the theory
   \texttt{QRHL.CryptHOL\_Missing}.)
 
-  When axiomatizing a type \texttt{T}, you can use \texttt{instance T
-    :: group\_add sorry} to declare that \texttt{T} has this property. (Without specifying
-  \texttt{T} any further.)
-  \TODOQ{We have a command for that}
+  When axiomatizing a type \texttt{T}, use the
+  \texttt{declare\_variable\_type} command in Isabelle to ensure that
+  it has the relevant sorts.  (See \autoref{sec:deftypes}.)
   \\
   \hline
   \subhead{States}
   %
   \hline \constdef{$\basis{}x$\par
     $\mathtt{ket}\ x$}
-  {\alpha\ \mathtt{vector}} {$x :: \alpha$}
+  {\alpha\ \mathtt{ell2}} {$x :: \alpha$}
   \toolconst{ket} & The basis state $\basis{}{x}$ of $\elltwo\alpha$.
 
   \texinput{\\ket}
   \\
   \hline
   \constdef{$\mathtt{EPR}$}
-  {(\mathtt{bit}\times\mathtt{bit})\ \mathtt{vector}}
+  {(\mathtt{bit}\times\mathtt{bit})\ \mathtt{ell2}}
   {}
   \toolconst{EPR}
   &
@@ -1555,8 +1574,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$\psi\tensor\phi$\par
     $\mathtt{tensor}\ \psi\ \phi$\par
     $\mathtt{tensorVec}\ \psi\ \phi$}
-  {(\alpha,\beta)\ \mathtt{vector}}
-  {$\psi::\alpha\ \mathtt{vector}$ and $\phi::\beta\ \mathtt{vector}$}
+  {(\alpha,\beta)\ \mathtt{ell2}}
+  {$\psi::\alpha\ \mathtt{ell2}$ and $\phi::\beta\ \mathtt{ell2}$}
   \toolconst{tensor}
   \toolconst{tensorVec}
   \symbolindexmark\TOOLotimes
@@ -1824,7 +1843,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \hline
   \constdef{$\mathtt{span}\ M$}
   {\alpha\ \mathtt{subspace}}
-  {$M::\alpha\ \mathtt{vector}\ \mathtt{set}$}
+  {$M::\alpha\ \mathtt{ell2}\ \mathtt{set}$}
   \toolconst{span}
   \toolconst{spanVector}
   &
@@ -1904,7 +1923,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   {\mathtt{predicate}}
   {$P::\mathtt{predicate}$
     \par and
-    $\psi::\alpha\ \mathtt{vector}$
+    $\psi::\alpha\ \mathtt{ell2}$
     \par and
     $Q::\alpha\ \mathtt{variables}$
   }
@@ -1961,6 +1980,15 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \\
   \hline
   \subhead{Measurements}
+  \hline
+  \constdef{$\mathtt{binary\_measurement}\ P$}
+  {(\mathtt{bit},\alpha)\ \mathtt{measurement}}
+  {$P :: (\alpha,\alpha)\ \mathtt{bounded}$}
+  \toolconst{binary_measurement}
+  &
+  Constructs a binary measurement from the project $P$. (I.e., outcome $1$ corresponds to $P$
+  and outcome $0$ to $1-P$.)  
+  \\
   \hline
   \constdef{$\mathtt{computational\_basis}$}
   {(\alpha,\alpha)\ \mathtt{measurement}}
@@ -2683,9 +2711,6 @@ Then with $\rhl{A}{\bc}{\bc'}{B'}$
 and \ruleref{Seq}, we get the conclusion of the rule.
 
 \tactic{o2h}
-
-\TODOQ{ensure documented: 
-binary-measurement proj-classical-set  }
 
 This tactic allows to apply the Semiclassical O2H Theorem from
 \cite{ambainis19semiclassical} (Theorem 1, variant (1)).  We refer to
