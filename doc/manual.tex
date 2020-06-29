@@ -3001,10 +3001,13 @@ with $1$ in $f$, etc.
 
 \tactic{semiclassical}
 
-\TODOQ{Document: semiclassical tactic (using text below)}
-
-To invoke \autoref{thm:semiclassical.search}, we use the tactic
-\texttt{semiclassical}. This tactic requires that games of the exact
+The tactic \texttt{o2h} above introduces games that contain
+``punctured oracles'', i.e., oracles that allow superposition queries
+to a function but measure whether the input is in a given set $S$. At
+some point, it is usually necessary to get rid of the punctured
+oracle. Theorem 2 in \cite{ambainis19semiclassical} gives a method to do so. The
+tactic \texttt{semiclassical} (invoked without any arguments) implements that theorem.
+This tactic requires that games of the exact
 form as in \autoref{fig:games.semiclassical.tactic} are
 defined.
 %
@@ -3054,22 +3057,20 @@ program right := {
   \caption[Games required by semiclassical tactic.]{\label{fig:games.semiclassical.tactic}Games required by \texttt{semiclassical} tactic.}
 \end{figure}
 %
-(Again, the names of the games, as well as the variables (IN,
+(The names of the games, as well as the variables (IN,
 OUT, G, S, H, z, in\_S, found, count, stop\_at, guess) can be
 arbitrary, and the output type of $G$ must be of type class
 \texttt{xor\_group}. \texttt{distr} and \texttt{q} are arbitrary
 constant expressions.)  See the description of the tactic \texttt{o2h}
 for programs \texttt{queryG}, \texttt{queryGS}, \texttt{Count}.  The
-program \textrm{queryGM} is an oracle that measures first checks
+program \textrm{queryGM} is an oracle that first checks
 whether the number of the current oracle query is \texttt{stop\_at}
 before querying $G$.  If so, the input to $G$ is measured in the
 computational basis and stored in \texttt{guess}.  This corresponds to
-the queried performed by the adversary $B$ in
-\autoref{thm:semiclassical.search}. (Where \texttt{stop\_at} is $i$ in
+the query performed by the adversary $B$ in
+Theorem 2in \cite{ambainis19semiclassical}. (Where \texttt{stop\_at} is $i$ in
 $B$.)  And finally, the game \texttt{left} is like the \texttt{find}
-game in tactic \texttt{o2h} (i.e., lhs of the conclusion of
-\autoref{thm:semiclassical.search}) while the right game is rhs of the
-conclusion of \autoref{thm:semiclassical.search}.
+game in tactic \texttt{o2h}.
 
 Then the tactic \texttt{semiclassical}, invoked without any arguments,
 expects a subgoal of the form:
