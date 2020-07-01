@@ -34,7 +34,7 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       if (!Utils.areDistinct(dom))
         throw UserException("Conflicting variable renamings")
 
-      // Checking conditions from lemma rename_qrhl_left / rename_qrhl_right
+      // Checking conditions from lemma   / rename_qrhl_right
 
       // A variable is only renamed to a compatible variable (same quantum/classical kind, same type)
       //        assumes valid[simp]: "valid_var_subst σ"
@@ -60,7 +60,7 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       val range = renaming map { _._2 }
       if (!Utils.areDistinct(range))
         throw UserException("Non-injective variable renaming")
-      // - "fv c ∪ deidx1 (fvp A) ∪ deidx1 (fvp B)" contains no variables in `forbidden`, the range but outside the domain of `renaming`
+      // - "fv c ∪ deidx1 (fvp A) ∪ deidx1 (fvp B)" contains no variables in `forbidden` (the range of `renaming` without the domain)
       val forbidden = range.toSet -- dom
 
       if ((forbidden & fv12).nonEmpty)
@@ -79,11 +79,7 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       if ((forbiddenInInvariant & varsPost.program).nonEmpty)
         throw UserException(s"Renaming target(s) ${Variable.varsToString(forbiddenInInvariant & varsPost.program)} conflict with local variables of the postcondition")
 
-      // TODO: add a subgoal checking that quantum(forbiddenInInvariant) does not occur in pre/postcondition
-
-      // TODO
       //  defines "σ1 ≡ idx_var_subst True σ"
-
       //  shows "qRHL A c d B ⟷
       //         qRHL (substp σ1 A) (subst_vars σ c) d (substp σ1 B)"
 

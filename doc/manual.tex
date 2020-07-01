@@ -1451,7 +1451,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$\mathtt{proj\_classical\_set}\ S$}
   {(\alpha,\alpha)\ \mathtt{bounded}}
   {$S :: \alpha\ \mathtt{set}$}
-  \toolconst{proj_classical_set}
+  \toolconst{proj\_classical\_set}
   & The projector onto the span
   of $\basis{} s$ with $s\in S$.
   (Equivalently $\sum_{s\in S}\basis{}s\langle s\rvert$.)
@@ -1984,7 +1984,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$\mathtt{binary\_measurement}\ P$}
   {(\mathtt{bit},\alpha)\ \mathtt{measurement}}
   {$P :: (\alpha,\alpha)\ \mathtt{bounded}$}
-  \toolconst{binary_measurement}
+  \toolconst{binary\_measurement}
   &
   Constructs a binary measurement from the project $P$. (I.e., outcome $1$ corresponds to $P$
   and outcome $0$ to $1-P$.)  
@@ -2836,7 +2836,87 @@ oracles (such as \texttt{queryG}), see the tactic
 
 \tactic{rename}
 
-\TODOQ{document rename-tactic}
+When invoked as \texttt{rename left: $\sigma$} or \texttt{rename
+  right: $\sigma$} or \texttt{rename both: $\sigma$}, renames free variables in the left/right/both programs
+according to the substitution $\sigma$.  $\sigma$ must be specified as
+a sequence of mappings of the form \texttt{a->b, c->d, e->f, ...}.
+
+Assume the current subgoal is $\rhl A\bc\bd B$.
+
+\medskip
+\noindent
+%
+For the tactic to be applicable, the following conditions must be satisfied:
+\begin{compactitem}
+\item The variables in the domain $D$ of the substitution (i.e.,
+  \texttt{a,c,e,...}) have to be distinct.
+\item The variables in the range $R$ of the substitution (i.e.,
+  \texttt{a,c,e,...}) have to be distinct.
+\item For each mapping \texttt{a->b} in the substitution, the
+  variables must have the same type, and must be both classical or
+  both quantum.
+\item Applying $\sigma$ to the left/right/both programs must no lead
+  to a collision between local and renamed free variables.  (Formally,
+  $\mathit{noconflict}(\sigma,\bc)$ and/or
+  $\mathit{noconflict}(\sigma,\bd)$ must hold where
+  $\mathit{noconflict}$ is defined in \cite{local-variables}.)
+\item
+  $R\setminus D \cap (\fv(\bc) \cup V_{A1} \cup V_{B1})=\varnothing$
+  where $V_{A1} := \{\xx: \xx_1\in \fv(A)\}$ and
+  $V_{B1} := \{\xx: \xx_1\in \fv(B)\}$ (free variables of $A,B$ with
+  index $1$ removed).  (Only in cases \texttt{left} and
+  \texttt{both}.)
+\item
+  $R\setminus D \cap (\fv(\bd) \cup V_{A2} \cup V_{B2})=\varnothing$
+  where $V_{A2} := \{\xx: \xx_2\in \fv(A)\}$ and
+  $V_{B2} := \{\xx: \xx_2\in \fv(B)\}$ (free variables of $A,B$ with
+  index $2$ removed).  (Only in cases \texttt{right} and
+  \texttt{both}.)
+\item $\qu R \cap (V_{A1} \cup V_{B1}) = \varnothing$ in cases
+  \texttt{left} and \texttt{both}, and
+  $\qu R \cap (V_{A2} \cup V_{B2}) = \varnothing$ in cases
+  \texttt{right} and \texttt{both}.  (Here $\qu R$ are the quantum
+  variables in $R$.)\footnote{This condition is not required by
+    \ruleref{RenameQrhl1/2}. However, the tactic requires it because
+    of the way how the renaming of quantum variables is computed
+    internally.}
+\item Renaming $\bc\sigma$ and/or $\bd\sigma$ (depending on
+  \texttt{left/right/both}) must be possible without renaming a
+  variable inside a declared program (included via a
+  \texttt{call}-statement).\footnote{This condition is not required by
+    \ruleref{RenameQrhl1/2}. However, if it is not satisfied, the
+    result of renaming cannot be expressed without renaming the
+    declared programs.}
+\end{compactitem}
+
+\medskip
+\noindent
+%
+The tactic creates one or two subgoals:
+\begin{compactitem}
+\item A subgoal that checks some of the above variable
+  conditions. (This subgoal may be missing if the tactic can check
+  everything internally.)
+\item $\rhl{A\sigma_1}{\bc\sigma}\bd{B\sigma_1}$
+  or
+  $\rhl{A\sigma_2}{\bc}{\bd\sigma}{B\sigma_2}$
+  or
+  $\rhl{A\sigma_1\sigma_2}{\bc\sigma}{\bd\sigma}{B\sigma_1\sigma_2}$
+  (in cases \texttt{left}, \texttt{right}, \texttt{both}).
+  
+  Here $\sigma_1,\sigma_2$ are the substitutions that rename the
+  1-indexed/2-indexed variables according to sigma. (I.e., $\sigma_1$
+  renames \texttt{a1->b1, c1->d1, e1->f1, ...} and $\sigma_2$ renames
+  \texttt{a2->b2, c2->d2, e2->f2, ...})
+\end{compactitem}
+
+\medskip
+\noindent
+The tactic is justified by \ruleref{RenameQrhl1/2} in
+\cite{local-variables}.
+
+
+
 
 \tactic{rnd}
 
