@@ -100,7 +100,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         // fv(p1), fv(p2), fv(e1), fv(e2) (not indexed, only classical)
         val cvars = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
-        // fv(p1)-overwr(p1)  \union   fv(p2)-overwr(p2)   (only classical)
+        // fv(p1)-overwr(p1)  union   fv(p2)-overwr(p2)   (only classical)
         // The minimum set that have to be included in the quantum equality
         val requiredQvars = (vars1.quantum -- vars1.overwrittenQuantum) ++ (vars2.quantum -- vars2.overwrittenQuantum)
 

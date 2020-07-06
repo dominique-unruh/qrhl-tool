@@ -101,7 +101,7 @@ operation_setup byQRHLPre = \<open>
    to_lib = Codec.id,
    action = fn (ctxt_id,cvars,qvars) => 
       let val ctxt = Refs.Ctxt.read ctxt_id in
-          QRHL.byQRHLPre cvars qvars |> richterm_encode ctxt end}
+          QRHL_Operations.byQRHLPre cvars qvars |> richterm_encode ctxt end}
 \<close>
 
 (* Ambient variables *)
