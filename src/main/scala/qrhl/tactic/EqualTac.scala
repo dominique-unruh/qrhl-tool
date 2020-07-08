@@ -107,9 +107,9 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     val out = mutable.LinkedHashSet(this.out:_*)
 
     def printVars(): Unit = {
-      println(s"In variables  (Vin):  $in")
-      println(s"Mid variables (Vmid): $mid")
-      println(s"Out variables (Vout): $out")
+      println(s"In variables  (Vin):  ${varsToString(in)}")
+      println(s"Mid variables (Vmid): ${varsToString(mid)}")
+      println(s"Out variables (Vout): ${varsToString(out)}")
     }
 
     // Classical variables that we remove from the postcondition
