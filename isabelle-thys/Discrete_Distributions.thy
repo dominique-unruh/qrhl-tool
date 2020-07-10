@@ -6,6 +6,8 @@ theory Discrete_Distributions
     Extended_Sorry "HOL-Library.Bit" Misc_Missing Multi_Transfer
 begin
 
+unbundle no_notation_blinfun_apply
+
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"
 
 (* typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}"  *)

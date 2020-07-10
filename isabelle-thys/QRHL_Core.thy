@@ -1,5 +1,5 @@
 theory QRHL_Core
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" Bounded_Operators.Bounded_Operators BOLegacy Discrete_Distributions 
+  imports Complex_Main "HOL-Library.Adhoc_Overloading" BOLegacy Discrete_Distributions 
     Universe Misc_Missing Prog_Variables
   keywords "declare_variable_type" :: thy_decl
 begin
@@ -452,7 +452,7 @@ lemma bot_eq_lift2: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q = bo
 
 lemma colocal_op_commute:
   assumes "colocal_op_qvars A Q"
-  shows "A *\<^sub>o B\<guillemotright>Q = B\<guillemotright>Q *\<^sub>o A"
+  shows "A o\<^sub>C\<^sub>L B\<guillemotright>Q = B\<guillemotright>Q o\<^sub>C\<^sub>L A"
   by (cheat colocal_op_commute)
 
 lemma remove_qvar_unit_op:
@@ -980,14 +980,14 @@ lemma qvar_trafo_protected_comm_op[simp]:
 
 subsubsection \<open>For manually showing existence of qvar_trafo's\<close>
 
-
 lemma qvar_trafo_ex_tensorL:
   fixes q r s t
+  fixes B :: "_ \<Rightarrow>\<^sub>C\<^sub>L _"
   assumes "distinct_qvars (variable_concat Q R)"
-  assumes "qvar_trafo B Q S \<and> B *\<^sub>v q = s"
+  assumes "qvar_trafo B Q S \<and> B *\<^sub>V q = s"
   assumes "distinct_qvars (variable_concat S R)"
   defines "D == (B \<otimes> idOp)"
-  shows "qvar_trafo D (variable_concat Q R) (variable_concat S R) \<and> D *\<^sub>v (q\<otimes>r) = (s\<otimes>r)"
+  shows "qvar_trafo D (variable_concat Q R) (variable_concat S R) \<and> D *\<^sub>V (q\<otimes>r) = (s\<otimes>r)"
   unfolding D_def apply (rule conjI)
    apply (rule qvar_trafo_tensor[rotated 2])
   using assms apply simp
@@ -1000,10 +1000,10 @@ lemma qvar_trafo_ex_tensorL:
 lemma qvar_trafo_ex_tensorR:
   fixes q r s t u
   assumes "distinct_qvars (variable_concat Q R)"
-  assumes "qvar_trafo B R T \<and> B *\<^sub>v r = t"
+  assumes "qvar_trafo B R T \<and> B *\<^sub>V r = t"
   assumes "distinct_qvars (variable_concat Q T)"
   defines "D == (idOp \<otimes> B)"
-  shows "qvar_trafo D (variable_concat Q R) (variable_concat Q T) \<and> D *\<^sub>v (q\<otimes>r) = (q\<otimes>t)"
+  shows "qvar_trafo D (variable_concat Q R) (variable_concat Q T) \<and> D *\<^sub>V (q\<otimes>r) = (q\<otimes>t)"
   unfolding D_def apply (rule conjI)
    apply (rule qvar_trafo_tensor[rotated 2])
       apply (rule qvar_trafo_id)
@@ -1017,7 +1017,7 @@ lemma qvar_trafo_ex_assoc1:
   fixes Q :: "'q::universe variables" and R :: "'r::universe variables" and S :: "'s::universe variables" and T :: "'t::universe variables"
   fixes q r s :: "_ ell2"
   assumes "distinct_qvars (variable_concat Q (variable_concat R S))"
-  shows "qvar_trafo (assoc_op*) (variable_concat (variable_concat Q R) S) (variable_concat Q (variable_concat R S)) \<and> (assoc_op*) *\<^sub>v ((q\<otimes>r)\<otimes>s) = (q\<otimes>(r\<otimes>s))"
+  shows "qvar_trafo (assoc_op*) (variable_concat (variable_concat Q R) S) (variable_concat Q (variable_concat R S)) \<and> (assoc_op*) *\<^sub>V ((q\<otimes>r)\<otimes>s) = (q\<otimes>(r\<otimes>s))"
   apply (rule conjI)
    apply (rule qvar_trafo_adj)
    apply (rule qvar_trafo_assoc_op)
@@ -1029,7 +1029,7 @@ lemma qvar_trafo_ex_assoc2:
   fixes Q :: "'q::universe variables" and R :: "'r::universe variables" and S :: "'s::universe variables" and T :: "'t::universe variables"
   fixes q r s :: "_ ell2"
   assumes "distinct_qvars (variable_concat Q (variable_concat R S))"
-  shows "qvar_trafo assoc_op (variable_concat Q (variable_concat R S)) (variable_concat (variable_concat Q R) S) \<and> assoc_op *\<^sub>v (q\<otimes>(r\<otimes>s)) = ((q\<otimes>r)\<otimes>s)"
+  shows "qvar_trafo assoc_op (variable_concat Q (variable_concat R S)) (variable_concat (variable_concat Q R) S) \<and> assoc_op *\<^sub>V (q\<otimes>(r\<otimes>s)) = ((q\<otimes>r)\<otimes>s)"
   apply (rule conjI)
    apply (rule qvar_trafo_assoc_op)
   using assms by simp_all
@@ -1038,7 +1038,7 @@ lemma qvar_trafo_ex_comm:
   fixes Q :: "'q::universe variables" and R :: "'r::universe variables" and T :: "'t::universe variables"
   fixes q r :: "_ ell2"
   assumes [simp]: "distinct_qvars (variable_concat Q R)"
-  shows "qvar_trafo comm_op (variable_concat Q R) (variable_concat R Q) \<and> comm_op *\<^sub>v (q\<otimes>r) = (r\<otimes>q)"
+  shows "qvar_trafo comm_op (variable_concat Q R) (variable_concat R Q) \<and> comm_op *\<^sub>V (q\<otimes>r) = (r\<otimes>q)"
   apply (rule conjI)
    apply (rule qvar_trafo_comm_op, simp)
   by (auto simp: times_applyOp)
@@ -1046,14 +1046,14 @@ lemma qvar_trafo_ex_comm:
 
 lemma qvar_trafo_ex_id:
   assumes "distinct_qvars Q"
-  shows "qvar_trafo idOp Q Q \<and> idOp *\<^sub>v \<psi> = \<psi>"
+  shows "qvar_trafo idOp Q Q \<and> idOp *\<^sub>V \<psi> = \<psi>"
   using assms by auto
 
 lemma qvar_trafo_ex_trans:
-  assumes "qvar_trafo A Q R \<and> A *\<^sub>v \<psi> = \<phi>"
-  assumes "qvar_trafo B R S \<and> B *\<^sub>v \<phi> = \<tau>"
-  defines "C == B *\<^sub>o A"
-  shows "qvar_trafo C Q S \<and> C *\<^sub>v \<psi> = \<tau>"
+  assumes "qvar_trafo A Q R \<and> A *\<^sub>V \<psi> = \<phi>"
+  assumes "qvar_trafo B R S \<and> B *\<^sub>V \<phi> = \<tau>"
+  defines "C == B o\<^sub>C\<^sub>L A"
+  shows "qvar_trafo C Q S \<and> C *\<^sub>V \<psi> = \<tau>"
   unfolding C_def apply (rule conjI)
    apply (rule qvar_trafo_mult)
   using assms by (auto simp: times_applyOp)
@@ -1117,10 +1117,10 @@ proof -
       apply (simp add: f2_def)
       by (metis op_scalar_op scalar_op_op scaleC_lift)
     have "norm (f2 X) \<le> norm (A \<cdot> X\<guillemotright>QR') * norm (A*)"
-      unfolding f2_def by (rule norm_mult_ineq_bounded)
+      unfolding f2_def by (rule norm_mult_ineq_cblinfun)
     also have "\<dots> \<le> norm A * norm (X\<guillemotright>QR') * norm (A*)"
       apply (rule mult_right_mono)
-       apply (rule norm_mult_ineq_bounded)
+       apply (rule norm_mult_ineq_cblinfun)
       by simp
     also have "\<dots> = norm A * norm X * norm (A*)"
       by simp
@@ -1191,11 +1191,11 @@ lemma qvar_trafo'_colocal:
 proof -
   from \<open>colocal_op_qvars A Q\<close> have "distinct_qvars Q"
     unfolding distinct_qvars_def apply transfer by auto
-  moreover have "C\<guillemotright>Q = A *\<^sub>o C\<guillemotright>Q *\<^sub>o A*" for C
+  moreover have "C\<guillemotright>Q = A o\<^sub>C\<^sub>L C\<guillemotright>Q o\<^sub>C\<^sub>L A*" for C
   proof -
-    from \<open>unitary A\<close> have "C\<guillemotright>Q = C\<guillemotright>Q *\<^sub>o A *\<^sub>o A*"
+    from \<open>unitary A\<close> have "C\<guillemotright>Q = C\<guillemotright>Q o\<^sub>C\<^sub>L A o\<^sub>C\<^sub>L A*"
       by (simp add: assoc_right)
-    also from \<open>colocal_op_qvars A Q\<close> have "\<dots> = A *\<^sub>o C\<guillemotright>Q *\<^sub>o A*"
+    also from \<open>colocal_op_qvars A Q\<close> have "\<dots> = A o\<^sub>C\<^sub>L C\<guillemotright>Q o\<^sub>C\<^sub>L A*"
       by (subst colocal_op_commute, simp_all)
     finally show ?thesis by -
   qed
@@ -1213,7 +1213,7 @@ proof -
     using distinct_qvars_swap by auto
   from assms have "distinct_qvars Q" and "distinct_qvars R"
     using dist_RQ distinct_qvarsR by blast+
-  have "C\<guillemotright>Q = comm_op\<guillemotright>QR \<cdot> C\<guillemotright>R *\<^sub>o (comm_op\<guillemotright>QR)*" for C
+  have "C\<guillemotright>Q = comm_op\<guillemotright>QR \<cdot> C\<guillemotright>R o\<^sub>C\<^sub>L (comm_op\<guillemotright>QR)*" for C
   proof -
     thm comm_op_lift[symmetric]
     have "C\<guillemotright>Q = (C \<otimes> idOp)\<guillemotright>QR"
@@ -1295,7 +1295,7 @@ proof (rename_tac P, case_tac "isProjector P")
   show "is_measurement (\<lambda>b::bit. if isProjector P then if b = 1 then P else idOp - P else 0)"
     apply simp
     unfolding is_measurement_def apply (auto intro!: exI[of _ idOp] simp: UNIV_bit cinner_right_distrib[symmetric])
-    by (metis apply_idOp ordered_field_class.sign_simps(9) plus_bounded.rep_eq)
+    by (metis apply_idOp diff_add_cancel plus_cblinfun.rep_eq)
 next
   fix P :: "('a ell2, 'a ell2) bounded"
   assume [simp]: "\<not> isProjector P"
@@ -1311,7 +1311,7 @@ lemma binary_measurement_false[simp]: "isProjector P \<Longrightarrow> mproj (bi
 
 lemma mtotal_binary_measurement[simp]: "mtotal (binary_measurement P) = isProjector P"
   apply (transfer fixing: P) apply (cases "isProjector P") apply (auto simp: UNIV_bit)
-   apply (metis apply_idOp cinner_simps(2) diff_add_cancel plus_bounded.rep_eq) 
+  apply (metis apply_idOp cinner_right_distrib diff_add_cancel minus_cblinfun.rep_eq)
   by (rule exI[of _ "ket undefined"], rule exI[of _ "ket undefined"], simp)
 
 
@@ -1566,7 +1566,7 @@ proof (rule linear_space_leI)
     by (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)
   include no_notation_blinfun_apply
   obtain T where qvar_trafo_T: "qvar_trafo T QR12 QR12'"
-    and apply_T[simp]: "T *\<^sub>v ((q1\<otimes>q2)\<otimes>(r1\<otimes>r2)) = (q1\<otimes>r1)\<otimes>(q2\<otimes>r2)" for q1 q2 r1 r2 :: "_ ell2"
+    and apply_T[simp]: "T *\<^sub>V ((q1\<otimes>q2)\<otimes>(r1\<otimes>r2)) = (q1\<otimes>r1)\<otimes>(q2\<otimes>r2)" for q1 q2 r1 r2 :: "_ ell2"
     apply atomize_elim apply (rule exI) apply (rule all_simps(2)[THEN iffD1], rule allI)+
     unfolding QR12_def Q12_def R12_def
     apply (rule qvar_trafo_ex_trans)
@@ -1593,40 +1593,40 @@ proof (rule linear_space_leI)
     apply (rule qvar_trafo_ex_assoc2)
     using assms by (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)[1]
 
-  have apply_T_adj[simp]: "T* *\<^sub>v ((q1\<otimes>q2)\<otimes>(r1\<otimes>r2)) = (q1\<otimes>r1)\<otimes>(q2\<otimes>r2)" (is "?lhs=?rhs") for q1 q2 r1 r2
+  have apply_T_adj[simp]: "T* *\<^sub>V ((q1\<otimes>q2)\<otimes>(r1\<otimes>r2)) = (q1\<otimes>r1)\<otimes>(q2\<otimes>r2)" (is "?lhs=?rhs") for q1 q2 r1 r2
   proof -
     note apply_T[simp del]
     from qvar_trafo_T have [simp]: "isometry T"
       using qvar_trafo_unitary unitary_def' by blast
-    have "?lhs = T* *\<^sub>v (T *\<^sub>v (q1\<otimes>r1)\<otimes>(q2\<otimes>r2))"
+    have "?lhs = T* *\<^sub>V (T *\<^sub>V (q1\<otimes>r1)\<otimes>(q2\<otimes>r2))"
       by (subst apply_T, simp)
     also have "\<dots> = ?rhs"
       by (simp add: times_applyOp[symmetric])
     finally show ?thesis by -
   qed
 
-  from x1 have x1': "(comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<guillemotright> QR1 *\<^sub>v x = x"
+  from x1 have x1': "(comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<guillemotright> QR1 *\<^sub>V x = x"
     unfolding quantum_equality_full_def QR1_def[symmetric]
     apply (subst (asm) eigenspace_lift[symmetric], simp)
     by (frule eigenspace_memberE, simp)
-  from x2 have x2': "(comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2)) \<guillemotright> QR2 *\<^sub>v x = x"
+  from x2 have x2': "(comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2)) \<guillemotright> QR2 *\<^sub>V x = x"
     unfolding quantum_equality_full_def QR2_def[symmetric]
     apply (subst (asm) eigenspace_lift[symmetric], simp)
     by (frule eigenspace_memberE, simp)
 
-  have x12: "((comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<otimes> (comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2))) \<guillemotright> QR12' *\<^sub>v x = x"
+  have x12: "((comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<otimes> (comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2))) \<guillemotright> QR12' *\<^sub>V x = x"
     unfolding QR12'_def apply (subst lift_tensorOp[symmetric])
     unfolding QR12'_def[symmetric] apply simp
     by (simp add: x1' x2' times_applyOp)
 
-  have same_op: "(comm_op \<cdot> (((V1 \<otimes> V2)* *\<^sub>o (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* *\<^sub>o (V1 \<otimes> V2))))\<guillemotright>QR12
+  have same_op: "(comm_op \<cdot> (((V1 \<otimes> V2)* o\<^sub>C\<^sub>L (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* o\<^sub>C\<^sub>L (V1 \<otimes> V2))))\<guillemotright>QR12
       = ((comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<otimes> (comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2))) \<guillemotright> QR12'"
     apply (subst qvar_trafo_l2bounded[OF qvar_trafo_T])
     apply (subst lift_eqOp, simp)
     apply (rule equal_ket)
     by (auto simp: ket_product times_applyOp tensorOp_applyOp_distr)
 
-  have "(comm_op \<cdot> (((V1 \<otimes> V2)* *\<^sub>o (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* *\<^sub>o (V1 \<otimes> V2))))\<guillemotright>QR12 *\<^sub>v x = x"
+  have "(comm_op \<cdot> (((V1 \<otimes> V2)* o\<^sub>C\<^sub>L (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* o\<^sub>C\<^sub>L (V1 \<otimes> V2))))\<guillemotright>QR12 *\<^sub>V x = x"
     apply (subst same_op) by (rule x12)
 
   then show "x \<in> space_as_set (quantum_equality_full (U1 \<otimes> U2) Q12 (V1 \<otimes> V2) R12)"

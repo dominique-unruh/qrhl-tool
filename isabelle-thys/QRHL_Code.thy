@@ -26,9 +26,9 @@ typedef ('a::enum,'b::enum) code_l2bounded = "UNIV::('a,'b) l2bounded set" by si
 setup_lifting type_definition_code_l2bounded
 
 lift_definition l2bounded_of_mat' :: "complex mat \<Rightarrow> ('a::enum,'b::enum) code_l2bounded"
-  is bounded_of_mat.
+  is cblinfun_of_mat.
 lift_definition mat_of_l2bounded' :: "('a::enum,'b::enum) code_l2bounded \<Rightarrow> complex mat"
-  is mat_of_bounded.
+  is mat_of_cblinfun.
 
 (* abbreviation "onb_enum_of_vec == onb_enum_of_vec" *)
 (* abbreviation "vec_of_onb_enum == vec_of_onb_enum" *)
@@ -36,21 +36,20 @@ lift_definition mat_of_l2bounded' :: "('a::enum,'b::enum) code_l2bounded \<Right
 definition ell2_of_vec :: "complex vec \<Rightarrow> 'a::enum ell2" where "ell2_of_vec = onb_enum_of_vec"
 definition vec_of_ell2 :: "'a::enum ell2 \<Rightarrow> complex vec" where "vec_of_ell2 = vec_of_onb_enum"
 
-lemma mat_of_bounded_inverse' [code abstype]:
+lemma mat_of_cblinfun_inverse' [code abstype]:
   "l2bounded_of_mat' (mat_of_l2bounded' B) = B" 
   apply transfer
-  using mat_of_bounded_inverse by blast
+  using mat_of_cblinfun_inverse by blast
 
-lemma [code]: "mat_of_l2bounded' (Abs_code_l2bounded X) = mat_of_bounded X"
+lemma [code]: "mat_of_l2bounded' (Abs_code_l2bounded X) = mat_of_cblinfun X"
   apply transfer by simp
-lemma [code]: "mat_of_bounded (Rep_code_l2bounded X) = mat_of_l2bounded' X"
+lemma [code]: "mat_of_cblinfun (Rep_code_l2bounded X) = mat_of_l2bounded' X"
   apply transfer by simp
 
 lemma vec_of_ell2_inverse [code abstype]:
   "ell2_of_vec (vec_of_ell2 B) = B" 
   unfolding ell2_of_vec_def vec_of_ell2_def
-  using pointfree_idE
-  by (simp add: pointfree_idE onb_enum_of_vec_COMP_vec_of_onb_enum)
+  by (simp add: onb_enum_of_vec_inverse)
 
 fun index_of where
   "index_of x [] = (0::nat)"
@@ -86,19 +85,19 @@ end
 
 
 definition "matrix_X = mat_of_rows_list 2 [ [0::complex,1], [1,0] ]"
-lemma bounded_of_mat_X[code]: "mat_of_bounded pauliX = matrix_X"
+lemma bounded_of_mat_X[code]: "mat_of_cblinfun pauliX = matrix_X"
   by (cheat 16)
 definition "matrix_Z = mat_of_rows_list 2 [ [1::complex,0], [0,-1] ]"
-lemma bounded_of_mat_Z[code]: "mat_of_bounded pauliZ = matrix_Z"
+lemma bounded_of_mat_Z[code]: "mat_of_cblinfun pauliZ = matrix_Z"
   by (cheat 16)
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
-lemma bounded_of_mat_Y[code]: "mat_of_bounded pauliY = matrix_Y"
+lemma bounded_of_mat_Y[code]: "mat_of_cblinfun pauliY = matrix_Y"
   by (cheat 16)
 definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
-lemma bounded_of_mat_hadamard[code]: "mat_of_bounded hadamard = matrix_hadamard"
+lemma bounded_of_mat_hadamard[code]: "mat_of_cblinfun hadamard = matrix_hadamard"
   by (cheat 16)
 definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]"
-lemma bounded_of_mat_CNOT[code]: "mat_of_bounded CNOT = matrix_CNOT"
+lemma bounded_of_mat_CNOT[code]: "mat_of_cblinfun CNOT = matrix_CNOT"
   by (cheat 17)
 
 definition "matrix_tensor (A::'a::times mat) (B::'a mat) =
@@ -107,14 +106,14 @@ definition "matrix_tensor (A::'a::times mat) (B::'a mat) =
            B $$ (r mod dim_row B, c mod dim_col B))"
 
 lemma bounded_of_mat_tensorOp[code]:
-  "mat_of_bounded (tensorOp A B) = matrix_tensor (mat_of_bounded A) (mat_of_bounded B)"
+  "mat_of_cblinfun (tensorOp A B) = matrix_tensor (mat_of_cblinfun A) (mat_of_cblinfun B)"
   for A :: "('a::enum,'b::enum) l2bounded"
     and B :: "('c::enum,'d::enum) l2bounded"
   by (cheat 17)
 
 
 lemma bounded_of_mat_assoc_op[code]: 
-  "mat_of_bounded (assoc_op :: ('a::enum*'b::enum*'c::enum,_) l2bounded) = one_mat (Enum.card_UNIV TYPE('a)*Enum.card_UNIV TYPE('b)*Enum.card_UNIV TYPE('c))"
+  "mat_of_cblinfun (assoc_op :: ('a::enum*'b::enum*'c::enum,_) l2bounded) = one_mat (Enum.card_UNIV TYPE('a)*Enum.card_UNIV TYPE('b)*Enum.card_UNIV TYPE('c))"
   by (cheat 17)
 
 definition "comm_op_mat TYPE('a::enum) TYPE('b::enum) =
@@ -124,7 +123,7 @@ definition "comm_op_mat TYPE('a::enum) TYPE('b::enum) =
                 r mod da = c div db) then 1 else 0)))"
 
 lemma bounded_of_mat_comm_op[code]:
-  "mat_of_bounded (comm_op :: ('a::enum*'b::enum,_) l2bounded) = comm_op_mat TYPE('a) TYPE('b)"
+  "mat_of_cblinfun (comm_op :: ('a::enum*'b::enum,_) l2bounded) = comm_op_mat TYPE('a) TYPE('b)"
   by (cheat 17)
 
 lemma vec_of_ell2_zero[code]:
@@ -167,7 +166,7 @@ lemma tensorVec_code[code]: "vec_of_ell2 (\<psi> \<otimes> \<phi>) = vec_tensor 
 definition [code del]: "SPAN x = Span (onb_enum_of_vec ` set x)"
 code_datatype SPAN
 
-definition "mk_projector (S::'a::onb_enum linear_space) = mat_of_bounded (Proj S)" 
+definition "mk_projector (S::'a::onb_enum linear_space) = mat_of_cblinfun (Proj S)" 
 fun mk_projector_orthog :: "nat \<Rightarrow> complex vec list \<Rightarrow> complex mat" where
   "mk_projector_orthog d [] = zero_mat d d"
 | "mk_projector_orthog d [v] = (let norm2 = cscalar_prod v v in
@@ -187,9 +186,9 @@ lemma mk_projector_SPAN[code]:
     [v] \<Rightarrow> (let d = dim_vec v in let norm2 = cscalar_prod v v in
                 if norm2=0 then zero_mat d d else
                             smult_mat (1/norm2) (mat_of_cols d [v] * mat_of_rows d [v]))
-  | _ \<Rightarrow> Code.abort (STR ''Computation of 'Proj S' only implemented for singleton S'') (\<lambda>_. mat_of_bounded (Proj (SPAN S :: 'a subspace))))"*)
+  | _ \<Rightarrow> Code.abort (STR ''Computation of 'Proj S' only implemented for singleton S'') (\<lambda>_. mat_of_cblinfun (Proj (SPAN S :: 'a subspace))))"*)
 
-lemma [code]: "mat_of_bounded (Proj S) = mk_projector S" for S :: "'a::onb_enum linear_space"
+lemma [code]: "mat_of_cblinfun (Proj S) = mk_projector S" for S :: "'a::onb_enum linear_space"
   unfolding mk_projector_def by simp
 
 
@@ -233,7 +232,7 @@ lemma ell2_of_vec_minus[code]:
 lemma ell2_of_vec_uminus[code]:
   "vec_of_ell2 (- y) =  - (vec_of_ell2 y)" for y :: "'a::enum ell2"
   unfolding vec_of_ell2_def
-  by (metis carrier_vecI diff_0 dim_vec_of_onb_enum_list ell2_of_vec_minus index_zero_vec(2) vec_of_onb_enum_def vec_of_ell2_def vec_of_ell2_zero zero_minus_vec) 
+  by (metis (mono_tags, hide_lams) carrier_vec_dim_vec diff_0 diff_self ell2_of_vec_minus minus_cancel_vec vec_of_ell2_def zero_minus_vec)
 
 lemma vec_of_ell2_EPR[code]: "vec_of_ell2 EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
   by (cheat 17)
@@ -258,11 +257,11 @@ definition "is_subspace_of n vs ws =
 lemma SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a::onb_enum linear_space) \<longleftrightarrow> is_subspace_of (canonical_basis_length TYPE('a)) A B" 
   by (cheat 17)
 
-lemma applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (map (mult_mat_vec (mat_of_bounded A)) S)"
+lemma applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (map (mult_mat_vec (mat_of_cblinfun A)) S)"
   for A::"('a::onb_enum,'b::onb_enum) bounded"
   by (cheat 17)
 
-lemma kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_single (mat_of_bounded A)))" 
+lemma kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_single (mat_of_cblinfun A)))" 
   for A::"('a::onb_enum,'b::onb_enum) bounded"
   by (cheat 17)
 
@@ -272,21 +271,21 @@ lemma [code_abbrev]: "kernel (A - a *\<^sub>C idOp) = eigenspace a A"
 lemma [code]: "HOL.equal (A::_ linear_space) B = (A\<le>B \<and> B\<le>A)"
   unfolding equal_linear_space_def by auto
 
-definition [code del,code_abbrev]: "vector_to_bounded_code (\<psi>::'a ell2) = (vector_to_bounded \<psi>)"
+definition [code del,code_abbrev]: "vector_to_cblinfun_code (\<psi>::'a ell2) = (vector_to_cblinfun \<psi>)"
 
-lemma mat_of_bounded_ell2_to_l2bounded[code]: 
-  "mat_of_bounded (vector_to_bounded_code \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
+lemma mat_of_cblinfun_ell2_to_l2bounded[code]: 
+  "mat_of_cblinfun (vector_to_cblinfun_code \<psi>) = mat_of_cols (CARD('a)) [vec_of_ell2 \<psi>]" 
   for \<psi>::"'a::enum ell2"
-  unfolding vector_to_bounded_code_def
+  unfolding vector_to_cblinfun_code_def
   by (cheat 17)
 
 (* See comment at definition of remove_qvar_unit_op before proving *)
-lemma mat_of_bounded_remove_qvar_unit_op[code]:
-  "mat_of_bounded (remove_qvar_unit_op::(_,'a::enum) l2bounded) = mat_of_bounded (idOp::(_,'a) l2bounded)" 
+lemma mat_of_cblinfun_remove_qvar_unit_op[code]:
+  "mat_of_cblinfun (remove_qvar_unit_op::(_,'a::enum) l2bounded) = mat_of_cblinfun (idOp::(_,'a) l2bounded)" 
   by (cheat 17)
 
 (* TODO: more direct code equation (w/o remove_qvar_unit_op) *)
-lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (vector_to_bounded \<psi>) \<cdot> remove_qvar_unit_op*"
+lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (vector_to_cblinfun \<psi>) \<cdot> remove_qvar_unit_op*"
   by (cheat addState_remove_qvar_unit_op)
 
 lemma [code]: "(A::'a::onb_enum linear_space) \<sqinter> B = - (- A \<squnion> - B)"

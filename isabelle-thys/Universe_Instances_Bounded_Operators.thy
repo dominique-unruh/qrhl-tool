@@ -5,7 +5,7 @@ begin
 derive universe ell2
 derive universe linear_space
 (* derive universe subspace *)
-derive universe bounded
+derive universe cblinfun
 (* derive universe l2bounded *)
 
 end

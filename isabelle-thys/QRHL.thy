@@ -4,7 +4,7 @@ theory QRHL
 begin
 
 unbundle notation_norm
-unbundle bounded_notation
+unbundle cblinfun_notation
 unbundle no_jnf_notation
 
 declare [[quick_and_dirty]]
