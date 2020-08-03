@@ -17,7 +17,20 @@ object Main {
     val file: ScallopOption[String] = trailArg[String](required=false)
   }
 
+  def checkJavaVersion() : Unit = {
+    val version = System.getProperty("java.version")
+//    println(version)
+    val major = version.split("\\.")(0).toInt
+//    println(major)
+    if (major < 9) {
+      System.err.println(s"Requiring at least Java version 9, got $version")
+      System.exit(1)
+    }
+  }
+
   def main(args: Array[String]): Unit = {
+    checkJavaVersion()
+
     val conf = new CLIConf(args)
     conf.verify()
     if (conf.rebuild.getOrElse(false)) {

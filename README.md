@@ -1,17 +1,14 @@
 # Binary installation
 
-The binaries should run on Windows, Linux, and MacOS.
-But if you have the choice, Linux should be easiest, especially if Java and Emacs are already installed.
+The binaries require Linux to run.
 You can download the binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases). 
-
-On Windows, font problems have been observed (strange characters in the proof state).  
 
 ## Prerequisites
 
-* Java must be installed (at least Java 8), and the `java` executable must be in the path.
+* Java must be installed (at least Java 9), and the `java` executable must be in the path.
 * Emacs must be installed, and the `emacs` executable must be in the path (otherwise edit `proofgeneral.{bat,sh}`).
 
-To check whether this is the case, go into a terminal (or Command Prompt in Windows),
+To check whether this is the case, go into a terminal,
 and enter `java` or `emacs`, respectively, and see whether the commands are found.
 
 
@@ -25,7 +22,7 @@ redownloaded/recompiled.)
 
 ## Executing the demos
 
-In the `qrhl-0.4` directory, execute `proofgeneral.sh` (or `proofgeneral.bat` on Windows).
+In the `qrhl-0.5` directory, execute `proofgeneral.sh`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
@@ -52,7 +49,7 @@ Then open and edit the file normally.
 
 * Make sure that `sbt` (Scala Build Tool) is on the path.
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
-* Use `git checkout v0.4` (replace `v0.4` by the version you wish to compile, or by `master` for the current development snapshot). 
+* Use `git checkout v0.5` (replace `v0.5` by the version you wish to compile, or by `master` for the current development snapshot). 
 * Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
 * Run `sbt packageBin` to generate the binary `qrhl.zip`.
