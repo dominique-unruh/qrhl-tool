@@ -14,5 +14,10 @@ hide_const rhl_syntax
 
 ML_file "relational_hoare.ML"
 
+lemma qrhl_denotation_replace:
+  assumes "denotation (block c) = denotation (block c')"
+    and "denotation (block d) = denotation (block d')"
+  shows "qrhl A c d B = qrhl A c' d' B"
+  by (cheat qrhl_denotation_replace)
 
 end

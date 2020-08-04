@@ -2,20 +2,6 @@ theory Squash_Sampling
   imports Programs Relational_Hoare
 begin
 
-(* TODO move *)
-axiomatization denotation :: "program \<Rightarrow> program_state \<Rightarrow> program_state"
-
-(* TODO move *)
-lemma denotation_block: "denotation (block ps) = fold denotation ps"
-  by (cheat denotation_block)
-
-(* TODO move *)
-lemma qrhl_denotation_replace:
-  assumes "denotation (block c) = denotation (block c')"
-    and "denotation (block d) = denotation (block d')"
-  shows "qrhl A c d B = qrhl A c' d' B"
-  by (cheat qrhl_denotation_replace)
-
 lemma squash_sampling: 
   fixes Q R d e
   defines "\<And>z. e' z \<equiv> subst_expression (substitute_vars Q (const_expression z)) e"
