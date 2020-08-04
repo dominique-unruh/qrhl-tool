@@ -2,10 +2,9 @@ theory O2H
   imports Programs
 begin
 
-(* TODO remove *)
-definition "PROGRAM_EQUAL x y = (x=y)" for x y :: program
+(* definition "PROGRAM_EQUAL x y = (x=y)" for x y :: program *)
 
-lemma o2h[unfolded PROGRAM_EQUAL_def]:
+lemma o2h:
   fixes q :: nat and b :: "bit variable" and rho :: program_state and count :: "nat variable"
     and Find :: "bool variable" and distr :: "_ distr"
     and z :: "_ variable" and G H :: "('a::universe \<Rightarrow> 'b::{universe,xor_group}) variable" and S :: "'a set variable"
@@ -13,17 +12,17 @@ lemma o2h[unfolded PROGRAM_EQUAL_def]:
     and in_S :: "bit variable" and Count :: "oracle_program"
     and localsC :: "'c variables" and localsQ :: "'d variables"
 
-  assumes "PROGRAM_EQUAL game_left (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryG]]]])"
-  assumes "PROGRAM_EQUAL game_right (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryH]]]])"
-  assumes "PROGRAM_EQUAL game_find (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], assign \<lbrakk>Find\<rbrakk> Expr[False], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
+assumes "game_left = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryG]]]])"
+  assumes "game_right = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryH]]]])"
+  assumes "game_find = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], assign \<lbrakk>Find\<rbrakk> Expr[False], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
-  assumes "\<And>P. PROGRAM_EQUAL (instantiateOracles Count [P]) (block [P, assign \<lbrakk>count\<rbrakk> (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count+1))])"
+  assumes "\<And>P. (instantiateOracles Count [P]) = (block [P, assign \<lbrakk>count\<rbrakk> (expression \<lbrakk>count\<rbrakk> (\<lambda>count. count+1))])"
 
-  assumes "PROGRAM_EQUAL queryG (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>G\<rbrakk> (\<lambda>G. Uoracle G))])"
-  assumes "PROGRAM_EQUAL queryGS (block [measurement \<lbrakk>in_S\<rbrakk> \<lbrakk>X\<rbrakk> (expression \<lbrakk>S\<rbrakk> (\<lambda>S. binary_measurement (proj_classical_set S))),
+  assumes "queryG = (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>G\<rbrakk> (\<lambda>G. Uoracle G))])"
+  assumes "queryGS = (block [measurement \<lbrakk>in_S\<rbrakk> \<lbrakk>X\<rbrakk> (expression \<lbrakk>S\<rbrakk> (\<lambda>S. binary_measurement (proj_classical_set S))),
                             ifthenelse (expression \<lbrakk>in_S\<rbrakk> (\<lambda>in_S. in_S=1)) [assign \<lbrakk>Find\<rbrakk> Expr[True]] [],
                             queryG])"
-  assumes "PROGRAM_EQUAL queryH (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>H\<rbrakk> (\<lambda>H. Uoracle H))])"
+  assumes "queryH = (block [qapply \<lbrakk>X,Y\<rbrakk> (expression \<lbrakk>H\<rbrakk> (\<lambda>H. Uoracle H))])"
 
   assumes "distinct_qvars \<lbrakk>b,count,Find,z,G,H,S,in_S,X,Y\<rbrakk>"
 
@@ -82,13 +81,13 @@ fun o2h_tac ctxt =
          (K "Goal should be exactly of the form '(Pr[b=1:left(rho)] - Pr[b=1:right(rho)]) <= 2 * sqrt( (1+real q) * Pr[Find:find(rho)])'")
    in
     resolve_o2h
-    THEN' pb_tac
-    THEN' pb_tac
-    THEN' pb_tac
-    THEN' pb_tac
-    THEN' pb_tac
-    THEN' pb_tac
-    THEN' pb_tac
+    THEN' pb_tac (* game_left *)
+    THEN' pb_tac (* game_right *)
+    THEN' pb_tac (* game_find *)
+    THEN' pb_tac (* Count *)
+    THEN' pb_tac (* queryG *)
+    THEN' pb_tac (* queryGS *)
+    THEN' pb_tac (* queryH *)
     THEN' distinct_vars_tac ctxt
     THEN' free_vars_tac ctxt
   end
@@ -111,7 +110,7 @@ definition [program_bodies]: "queryGS =  (block [measurement \<lbrakk>var_in_S\<
                             queryG])"
 
 definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
-        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryG]]]]"
+        instantiateOracles adv [instantiateOracles Count [queryG]]]"
 definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
         localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryH]]]]"
 definition [program_bodies]: "findG = (block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S,var_G,var_H,var_z\<rbrakk> Expr[test_distr], assign \<lbrakk>var_Find\<rbrakk> Expr[False], 
