@@ -41,12 +41,14 @@ lemma semi_classical_search:
   shows "Pleft \<le> 4 * real q * Pright"
     by (cheat Semi_Classical_Search)
 
+lemmas semi_classical_search' = semi_classical_search[where localsC="\<lbrakk>\<rbrakk>" and localsQ="\<lbrakk>\<rbrakk>", unfolded localvars_empty[of "[_]", unfolded singleton_block]]
+
 ML \<open>
 structure Semi_Classical_Search = struct
 
-fun semi_classical_search_tac ctxt = 
+fun semi_classical_search_tac' scs_rule ctxt = 
   let val pb_tac = O2H.program_body_tac "semiclassical search" ctxt
-      val resolve_scs = Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms semi_classical_search}) ctxt
+      val resolve_scs = Misc.succeed_or_error_tac' (resolve_tac ctxt [scs_rule]) ctxt
          (K "Goal should be exactly of the form 'Pr[Find:left(rho)] \<le> 4 * real q * Pr[guess\<in>S:right(rho)]'")
    in
     resolve_scs
@@ -59,6 +61,10 @@ fun semi_classical_search_tac ctxt =
     THEN' O2H.distinct_vars_tac ctxt
     THEN' O2H.free_vars_tac ctxt
   end
+
+fun semi_classical_search_tac ctxt i = Misc.fail_tac_on_LAZY_ERROR (DETERM (semi_classical_search_tac' @{thm semi_classical_search'} ctxt i))
+                     ORELSE semi_classical_search_tac' @{thm semi_classical_search} ctxt i
+
 end
 \<close>
 

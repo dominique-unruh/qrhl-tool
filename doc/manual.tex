@@ -3123,7 +3123,7 @@ program left := {
   count <- 0;
   (S,G,z) <$ distr;
   found <- False;
-  { local IN, OUT; call A(Count(queryGS)); }
+  { local vars; call A(Count(queryGS)); }
 }.
 
 
@@ -3131,11 +3131,12 @@ program right := {
   count <- 0;
   stop_at <$ uniform {..<q};
   (S,G,z) <$ distr;
-  { local IN, OUT; call A(Count(queryGM)); }
+  { local vars; call A(Count(queryGM)); }
 }.
 \end{lstlisting}
   }
-  \caption[Games required by semiclassical tactic.]{\label{fig:games.semiclassical.tactic}Games required by \texttt{semiclassical} tactic.}
+  \caption[Games required by semiclassical tactic.]{\label{fig:games.semiclassical.tactic}Games required by \texttt{semiclassical} tactic.
+      The local variable declaration \texttt{local vars} can be omitted (but then must be omitted in all games).}
 \end{figure}
 %
 (The names of the games, as well as the variables (IN,
