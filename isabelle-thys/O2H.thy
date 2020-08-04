@@ -2,8 +2,6 @@ theory O2H
   imports Programs
 begin
 
-(* definition "PROGRAM_EQUAL x y = (x=y)" for x y :: program *)
-
 lemma o2h:
   fixes q :: nat and b :: "bit variable" and rho :: program_state and count :: "nat variable"
     and Find :: "bool variable" and distr :: "_ distr"
@@ -12,7 +10,7 @@ lemma o2h:
     and in_S :: "bit variable" and Count :: "oracle_program"
     and localsC :: "'c variables" and localsQ :: "'d variables"
 
-assumes "game_left = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryG]]]])"
+  assumes "game_left = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryG]]]])"
   assumes "game_right = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryH]]]])"
   assumes "game_find = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], assign \<lbrakk>Find\<rbrakk> Expr[False], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
@@ -40,6 +38,8 @@ assumes "game_left = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lb
 
   shows "abs (Pleft - Pright) \<le> 2 * sqrt( (1 + real q)*Pfind )"
     by (cheat O2H)
+
+lemmas o2h' = o2h[where localsC="\<lbrakk>\<rbrakk>" and localsQ="\<lbrakk>\<rbrakk>", unfolded localvars_empty[of "[_]", unfolded singleton_block]]
 
 ML \<open>
 structure O2H = struct
@@ -75,9 +75,9 @@ fun free_vars_tac ctxt =
 fun distinct_vars_tac ctxt =
   Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are distinct: " ^ Syntax.string_of_term ctxt t)
 
-fun o2h_tac ctxt = 
+fun o2h_tac' o2h_rule ctxt = 
   let val pb_tac = program_body_tac "O2H" ctxt
-      val resolve_o2h = Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms o2h}) ctxt
+      val resolve_o2h = Misc.succeed_or_error_tac' (resolve_tac ctxt [o2h_rule]) ctxt
          (K "Goal should be exactly of the form '(Pr[b=1:left(rho)] - Pr[b=1:right(rho)]) <= 2 * sqrt( (1+real q) * Pr[Find:find(rho)])'")
    in
     resolve_o2h
@@ -91,6 +91,14 @@ fun o2h_tac ctxt =
     THEN' distinct_vars_tac ctxt
     THEN' free_vars_tac ctxt
   end
+
+fun o2h_tac ctxt i = Misc.fail_tac_on_LAZY_ERROR (DETERM (o2h_tac' @{thm o2h'} ctxt i))
+                     ORELSE o2h_tac' @{thm o2h} ctxt i
+
+(* (* DETERM is needed to make sure LAZY_ERROR is thrown early enough for fail_on_LAZY_ERROR
+   to catch it *)
+fun o2h_tac ctxt i = Misc.fail_on_LAZY_ERROR (DETERM (o2h_tac' @{thm o2h'} ctxt i))
+                     ORELSE o2h_tac' @{thm o2h} ctxt i *)
 end
 \<close>
 
@@ -109,12 +117,20 @@ definition [program_bodies]: "queryGS =  (block [measurement \<lbrakk>var_in_S\<
                             ifthenelse Expr[in_S=1] [assign \<lbrakk>var_Find\<rbrakk> Expr[True]] [],
                             queryG])"
 
-definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
+(* definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
         instantiateOracles adv [instantiateOracles Count [queryG]]]"
 definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
-        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryH]]]]"
+        instantiateOracles adv [instantiateOracles Count [queryH]]]"
 definition [program_bodies]: "findG = (block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S,var_G,var_H,var_z\<rbrakk> Expr[test_distr], assign \<lbrakk>var_Find\<rbrakk> Expr[False], 
-        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
+        instantiateOracles adv [instantiateOracles Count [queryGS]]])"
+*)
+
+definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
+        localvars \<lbrakk>X\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryG]]]]"
+definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S, var_G, var_H, var_z\<rbrakk> Expr[test_distr],
+        localvars \<lbrakk>X\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryH]]]]"
+definition [program_bodies]: "findG = (block [assign \<lbrakk>var_count\<rbrakk> Expr[0], sample \<lbrakk>var_S,var_G,var_H,var_z\<rbrakk> Expr[test_distr], assign \<lbrakk>var_Find\<rbrakk> Expr[False], 
+        localvars \<lbrakk>X\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>var_count\<rbrakk> Expr[count+1]]" for P  
   by (cheat Count)

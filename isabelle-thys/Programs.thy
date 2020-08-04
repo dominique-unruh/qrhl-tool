@@ -77,6 +77,12 @@ lemma fvcw_program_qapply: "fvcw_program (qapply Q e4) = {}"
 lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = set (variable_names x)"
   by (cheat TODO7)
 
+lemma localvars_empty: "localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> P = block P"
+  by (cheat localvars_empty)
+
+lemma singleton_block: "block [P] = P"
+  by (cheat singleton_block)
+
 typedecl program_state
 
 axiomatization

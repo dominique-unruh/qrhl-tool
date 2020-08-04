@@ -2753,24 +2753,25 @@ program Count(O) := {
 program left := {
   count <- 0;
   (S,G,H,z) <$ distr;
-  { local IN, OUT; call A(Count(queryG)); }
+  { local vars; call A(Count(queryG)); }
 }.
 
 program right := {
   count <- 0;
   (S,G,H,z) <$ distr;
-  { local IN, OUT; call A(Count(queryH)); }
+  { local vars; call A(Count(queryH)); }
 }.
 
 program find := {
   count <- 0;
   (S,G,H,z) <$ distr;
   found <- False;
-  { local IN, OUT; call A(Count(queryGS)); }
+  { local vars; call A(Count(queryGS)); }
 }.
 \end{lstlisting}
   }
-  \caption[Games required by o2h tactic.]{\label{fig:games.o2h.tactic}Games required by \texttt{o2h} tactic.}
+  \caption[Games required by o2h tactic.]{\label{fig:games.o2h.tactic}Games required by \texttt{o2h} tactic.
+    The local variable declaration \texttt{local vars} can be omitted (but then must be omitted in all games).}
 \end{figure}
 %
 

@@ -75,6 +75,15 @@ fun error_tac msg ctx _ = raise lazy_error (msg_to_string ctx msg)
 fun error_tac' msg ctxt i st = error_tac (fn _ => msg (nth (Thm.prems_of st) (i-1))) ctxt i st
 fun error_method msg = CONTEXT_METHOD (K (error_ctac msg))
 fun fail_on_LAZY_ERROR f x = f x handle LAZY_ERROR (Lazy_Error msg) => raise ERROR (msg())
+fun remove_LAZY_ERROR_in_seq xq =
+  Seq.make (fn () => (case Seq.pull xq of NONE => NONE 
+                   | SOME (x, xq') => SOME (x, remove_LAZY_ERROR_in_seq xq')
+                  handle LAZY_ERROR _ => NONE))
+
+fun fail_tac_on_LAZY_ERROR tac st = 
+  (tac st |> remove_LAZY_ERROR_in_seq)
+  handle LAZY_ERROR _ => Seq.empty
+
 fun succeed_or_error_tac' tac ctxt msg = SUBGOAL (fn (_,i) => tac i ORELSE error_tac' msg ctxt i)
 
 (* Solves a goal of the form "?x = a"
