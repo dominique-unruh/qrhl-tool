@@ -14,7 +14,7 @@ and enter `java` or `emacs`, respectively, and see whether the commands are foun
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.4`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.5`.
 
 To update, simply extract the new version over the old one. (You can
 delete the old one first, but then Isabelle will be

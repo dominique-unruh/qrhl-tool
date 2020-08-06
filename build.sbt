@@ -11,7 +11,7 @@ import scala.sys.process.Process
 
 name := "qrhl"
 
-version := "0.5alpha"
+version := "0.5"
 
 scalaVersion := "2.12.11"
 
@@ -169,7 +169,7 @@ mappings in Universal ++= {
   val base = baseDirectory.value
   val dirs = base / "isabelle-thys" +++ base / "examples"
   val Isabelle_files = (base / "Isabelle2019-RC4" allPaths)
-  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl" || "root.tex") +++ Isabelle_files
+  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl" || "root.tex" || "root.bib") +++ Isabelle_files
   val excluded = List("isabelle-thys/Test.thy", "examples/TestEx.thy", "examples/test.qrhl", "isabelle-thys/Scratch.thy", "Isabelle2019-RC4/contrib/polyml-5.8/src/compile")
   val files2 = files.filter { f => ! excluded.exists(e => f.getPath.endsWith(e)) }
   val excludedPat = List(".*examples/test.*\\.qrhl")
