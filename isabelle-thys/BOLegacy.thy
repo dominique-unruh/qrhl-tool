@@ -12,7 +12,7 @@ begin
 
 type_synonym ('a,'b) bounded = "('a,'b) cblinfun"
 type_synonym ('a,'b) l2bounded = "('a ell2, 'b ell2) bounded"
-type_synonym 'a subspace = "'a ell2 linear_space"
+type_synonym 'a subspace = "'a ell2 clinear_space"
 
 abbreviation "ell2_to_bounded :: 'a::chilbert_space \<Rightarrow> ('b::{CARD_1,enum} ell2,'a) bounded
     == vector_to_cblinfun"

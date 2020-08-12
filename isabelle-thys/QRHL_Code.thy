@@ -1,6 +1,6 @@
 theory QRHL_Code
   imports QRHL_Core "Jordan_Normal_Form.Matrix_Impl" "HOL-Library.Code_Target_Numeral"
-    Bounded_Operators.Bounded_Operators_Code
+    Tensor_Product.Tensor_Product_Code
 begin
 
 unbundle jnf_notation
@@ -81,7 +81,6 @@ instance
   using vec_of_ell2_inj injD
   by fastforce
 end
-
 
 
 definition "matrix_X = mat_of_rows_list 2 [ [0::complex,1], [1,0] ]"
@@ -166,7 +165,7 @@ lemma tensorVec_code[code]: "vec_of_ell2 (\<psi> \<otimes> \<phi>) = vec_tensor 
 definition [code del]: "SPAN x = Span (onb_enum_of_vec ` set x)"
 code_datatype SPAN
 
-definition "mk_projector (S::'a::onb_enum linear_space) = mat_of_cblinfun (Proj S)" 
+definition "mk_projector (S::'a::onb_enum clinear_space) = mat_of_cblinfun (Proj S)" 
 fun mk_projector_orthog :: "nat \<Rightarrow> complex vec list \<Rightarrow> complex mat" where
   "mk_projector_orthog d [] = zero_mat d d"
 | "mk_projector_orthog d [v] = (let norm2 = cscalar_prod v v in
@@ -178,7 +177,7 @@ fun mk_projector_orthog :: "nat \<Rightarrow> complex vec list \<Rightarrow> com
                                         + mk_projector_orthog d vs)"
 
 lemma mk_projector_SPAN[code]: 
-  "mk_projector (SPAN S :: 'a::onb_enum linear_space) = 
+  "mk_projector (SPAN S :: 'a::onb_enum clinear_space) = 
     (let d = canonical_basis_length TYPE('a) in mk_projector_orthog d (gram_schmidt d S))"
   by (cheat 17)
 
@@ -188,18 +187,18 @@ lemma mk_projector_SPAN[code]:
                             smult_mat (1/norm2) (mat_of_cols d [v] * mat_of_rows d [v]))
   | _ \<Rightarrow> Code.abort (STR ''Computation of 'Proj S' only implemented for singleton S'') (\<lambda>_. mat_of_cblinfun (Proj (SPAN S :: 'a subspace))))"*)
 
-lemma [code]: "mat_of_cblinfun (Proj S) = mk_projector S" for S :: "'a::onb_enum linear_space"
+lemma [code]: "mat_of_cblinfun (Proj S) = mk_projector S" for S :: "'a::onb_enum clinear_space"
   unfolding mk_projector_def by simp
 
 
-lemma top_as_span[code]: "(top::'a linear_space) = SPAN (computational_basis_vec (canonical_basis_length TYPE('a::onb_enum)))"
+lemma top_as_span[code]: "(top::'a clinear_space) = SPAN (computational_basis_vec (canonical_basis_length TYPE('a::onb_enum)))"
   by (cheat 17)
-lemma bot_as_span[code]: "(bot::'a::onb_enum linear_space) = SPAN []"
+lemma bot_as_span[code]: "(bot::'a::onb_enum clinear_space) = SPAN []"
   by (cheat 17)
 lemma sup_spans[code]: "SPAN A \<squnion> SPAN B = SPAN (A @ B)" 
   by (cheat 17)
 
-lemma ortho_SPAN[code]: "- (SPAN S :: 'a::onb_enum linear_space)
+lemma ortho_SPAN[code]: "- (SPAN S :: 'a::onb_enum clinear_space)
         = SPAN (orthogonal_complement_vec (canonical_basis_length TYPE('a)) S)"
   by (cheat 17)
 
@@ -246,15 +245,15 @@ lemma [code_post]:
   and "complex_of_real (-r) = - complex_of_real r"
   using complex_eq_cancel_iff2 by auto
 
-instantiation linear_space :: (onb_enum) equal begin
-definition [code del]: "equal_linear_space (A::'a linear_space) B = (A=B)"
-instance apply intro_classes unfolding equal_linear_space_def by simp
+instantiation clinear_space :: (onb_enum) equal begin
+definition [code del]: "equal_clinear_space (A::'a clinear_space) B = (A=B)"
+instance apply intro_classes unfolding equal_clinear_space_def by simp
 end
 
 definition "is_subspace_of n vs ws =  
   list_all ((=) (zero_vec n)) (drop (length ws) (gram_schmidt n (ws @ vs)))"
 
-lemma SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a::onb_enum linear_space) \<longleftrightarrow> is_subspace_of (canonical_basis_length TYPE('a)) A B" 
+lemma SPAN_leq[code]: "SPAN A \<le> (SPAN B :: 'a::onb_enum clinear_space) \<longleftrightarrow> is_subspace_of (canonical_basis_length TYPE('a)) A B" 
   by (cheat 17)
 
 lemma applyOpSpace_SPAN[code]: "applyOpSpace A (SPAN S) = SPAN (map (mult_mat_vec (mat_of_cblinfun A)) S)"
@@ -268,8 +267,8 @@ lemma kernel_SPAN[code]: "kernel A = SPAN (find_base_vectors (gauss_jordan_singl
 lemma [code_abbrev]: "kernel (A - a *\<^sub>C idOp) = eigenspace a A" 
   unfolding eigenspace_def by simp
 
-lemma [code]: "HOL.equal (A::_ linear_space) B = (A\<le>B \<and> B\<le>A)"
-  unfolding equal_linear_space_def by auto
+lemma [code]: "HOL.equal (A::_ clinear_space) B = (A\<le>B \<and> B\<le>A)"
+  unfolding equal_clinear_space_def by auto
 
 definition [code del,code_abbrev]: "vector_to_cblinfun_code (\<psi>::'a ell2) = (vector_to_cblinfun \<psi>)"
 
@@ -288,10 +287,10 @@ lemma mat_of_cblinfun_remove_qvar_unit_op[code]:
 lemma addState_remove_qvar_unit_op[code]: "addState \<psi> = idOp \<otimes> (vector_to_cblinfun \<psi>) \<cdot> remove_qvar_unit_op*"
   by (cheat addState_remove_qvar_unit_op)
 
-lemma [code]: "(A::'a::onb_enum linear_space) \<sqinter> B = - (- A \<squnion> - B)"
+lemma [code]: "(A::'a::onb_enum clinear_space) \<sqinter> B = - (- A \<squnion> - B)"
   by (subst ortho_involution[symmetric], subst compl_inf, simp)
 
-lemma [code]: "Inf (Set_Monad l :: 'a::onb_enum linear_space set) = fold inf l top"
+lemma [code]: "Inf (Set_Monad l :: 'a::onb_enum clinear_space set) = fold inf l top"
   unfolding Set_Monad_def
   by (simp add: Inf_set_fold)
 
@@ -328,9 +327,9 @@ lemma one_ell2_code[code]: "vec_of_ell2 (1 :: 'a::{CARD_1,enum} ell2) == vec_of_
 declare [[code drop: UNIV]]
 declare enum_class.UNIV_enum[code]
 
-(* TODO: remove once "code del" is added at the definitions themselves *)
-declare ord_linear_space_inst.less_eq_linear_space[code del]
-declare ord_linear_space_inst.less_linear_space[code del]
+(* TODO: remove once "code del" is added at the definitions themselves \<longrightarrow> is already done! *)
+declare ord_clinear_space_inst.less_eq_clinear_space[code del]
+declare ord_clinear_space_inst.less_clinear_space[code del]
 
 derive (eq) ceq bit
 derive (linorder) compare_order bit
@@ -341,14 +340,12 @@ derive (linorder) compare real
 derive (compare) ccompare real
 derive (eq) ceq complex
 derive (no) ccompare complex
-derive (eq) ceq linear_space
-derive (no) ccompare linear_space
-derive (monad) set_impl linear_space
+derive (eq) ceq clinear_space
+derive (no) ccompare clinear_space
+derive (monad) set_impl clinear_space
 derive (eq) ceq ell2
 derive (no) ccompare ell2
 derive (monad) set_impl ell2
-
-
 
 lemmas prepare_for_code = quantum_equality_full_def_let add_join_variables_hint space_div_space_div_unlifted
   space_div_add_extend_lift_as_var_concat_hint INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift

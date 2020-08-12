@@ -3,7 +3,7 @@ theory Universe_Instances_Bounded_Operators
 begin
 
 derive universe ell2
-derive universe linear_space
+derive universe clinear_space
 (* derive universe subspace *)
 derive universe cblinfun
 (* derive universe l2bounded *)
