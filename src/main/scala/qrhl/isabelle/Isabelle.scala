@@ -288,7 +288,7 @@ object Isabelle {
 
   def empty_set(typ: Typ): Const = bot(setT(typ))
 
-  def linear_spaceT(typ: Typ): Type = Type(t.linear_space, List(typ))
+  def linear_spaceT(typ: Typ): Type = Type(t.clinear_space, List(typ))
 
   val infiniteT: Typ = Type(t.infinite, Nil)
 
@@ -453,7 +453,7 @@ object Isabelle {
   val natT: Type = Type(t.nat)
   val bitT: Type = Type(t.bit, Nil)
 //  val linear_spaceT_name = "Complex_Inner_Product.linear_space"
-  val predicateT: Type = Type(t.linear_space, List(ell2T(Type(t.mem2, Nil))))
+  val predicateT: Type = Type(t.clinear_space, List(ell2T(Type(t.mem2, Nil))))
   val programT: Type = Type(t.program)
   val oracle_programT: Type = Type(t.oracle_program)
   val classical_subspace : Term= Const(c.classical_subspace, HOLogic.boolT -->: predicateT)

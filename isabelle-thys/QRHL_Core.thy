@@ -1797,7 +1797,7 @@ lemma applyOp_Uoracle[simp]:
   shows "Uoracle f \<cdot> ket (x, y) = ket (x, y + f x)"
   unfolding Uoracle_def
   apply (subst classical_operator_basis)
-  by (auto simp: inj_on_def)
+  by (auto simp: inj_on_def intro: classical_operator_exists_inj)
 
 lemma applyOp_Uoracle'[simp]:
   shows "Uoracle f \<cdot> (ket x \<otimes> ket y) = ket x \<otimes> ket (y + f x)"
