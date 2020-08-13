@@ -7,8 +7,29 @@ be removed eventually.
 *)
 
 theory BOLegacy
-imports Bounded_Operators.Bounded_Operators Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
+  imports 
+
+    (* This should not be imported here, but in QRHL_Code. But if we import it there, 
+       we run into this bug: 
+       https://lists.cam.ac.uk/pipermail/cl-isabelle-users/2019-June/msg00063.html *)
+    Tensor_Product.Tensor_Product_Code
+
+    Bounded_Operators.Bounded_Operators Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
+
 begin
+
+(* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
+hide_const (open) Lattice.sup
+hide_const (open) Lattice.inf
+hide_const (open) Order.top
+hide_const (open) card_UNIV
+hide_const (open) Real_Vector_Spaces.span
+no_notation "Order.bottom" ("\<bottom>\<index>")
+no_notation "Order.top" ("\<top>\<index>")
+no_notation "Lattice.meet" (infixl "\<sqinter>\<index>" 70)
+no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
+hide_const (open) Order.bottom Order.top
+
 
 type_synonym ('a,'b) bounded = "('a,'b) cblinfun"
 type_synonym ('a,'b) l2bounded = "('a ell2, 'b ell2) bounded"
