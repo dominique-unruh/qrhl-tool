@@ -48,6 +48,7 @@ Then open and edit the file normally.
 # Compiling / running from source
 
 * Make sure that `sbt` (Scala Build Tool) is on the path.
+* Make sure `git` has [lfs](https://git-lfs.github.com/) support (try `git lfs version`)
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
 * Use `git checkout v0.5` (replace `v0.5` by the version you wish to compile, or by `master` for the current development snapshot). 
 * Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
