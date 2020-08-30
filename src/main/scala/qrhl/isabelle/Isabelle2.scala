@@ -1,6 +1,8 @@
 package qrhl.isabelle
 
 import java.io.{BufferedWriter, FileInputStream, FileOutputStream, IOException, OutputStreamWriter}
+import java.lang
+import java.lang.ProcessBuilder.Redirect
 import java.nio.file.{Files, Path}
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, ConcurrentHashMap}
 
@@ -110,7 +112,7 @@ class Isabelle2 {
     }
   }
 
-  private def startProcess() : Process = {
+  private def startProcess() : java.lang.Process = {
     val isabelle = distributionDir.resolve(this.isabelle).toString
     val mlFile = distributionDir.resolve(this.mlFile).toString
 
@@ -135,7 +137,11 @@ class Isabelle2 {
     val cmd : List[String] = List(isabelle,"process","-l",logic,"-e",initInOut,"-f",mlFile) ++
       (for (r <- roots; a <- List("-d",distributionDir.resolve(r).toString)) yield a)
 
-    val processBuilder = Process(cmd, distributionDir.toFile, "USER_HOME" -> userDir.getParent.toString)
+    val processBuilder = new java.lang.ProcessBuilder(cmd :_*)
+    processBuilder.directory(distributionDir.toFile)
+    processBuilder.environment.put("USER_HOME", userDir.getParent.toString)
+    processBuilder.redirectError(Redirect.INHERIT)
+    processBuilder.redirectOutput(Redirect.INHERIT)
 
     val processQueueThread = new Thread("Send to Isabelle") {
       override def run(): Unit = processQueue(inputPipe) }
@@ -147,11 +153,10 @@ class Isabelle2 {
     parseIsabelleThread.setDaemon(true)
     parseIsabelleThread.start()
 
-    // TODO: This creates non-daemon threads
-    processBuilder.run()
+    processBuilder.start()
   }
 
-  val process = startProcess()
+  val process: lang.Process = startProcess()
 
   def send(str: String, callback: String => Unit = null) : Unit =
     sendQueue.put((str,callback))
@@ -221,7 +226,7 @@ object Test {
 
     Thread.sleep(2000)
 
-    isabelle.process.destroy()
+//    isabelle.process.destroy()
 
     Thread.sleep(2000)
 
@@ -231,7 +236,8 @@ object Test {
 
     import scala.collection.JavaConverters._
     for (t <- Thread.getAllStackTraces.keySet.asScala)
-        println((t.isDaemon,t.getName,t))
+      if (!t.isDaemon)
+        println(t)
 
   }
 
