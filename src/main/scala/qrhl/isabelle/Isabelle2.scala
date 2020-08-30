@@ -1,13 +1,14 @@
 package qrhl.isabelle
 
-import java.io.{BufferedWriter, FileInputStream, FileOutputStream, OutputStreamWriter}
+import java.io.{BufferedWriter, FileInputStream, FileOutputStream, IOException, OutputStreamWriter}
+import java.nio.file.{Files, Path}
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, ConcurrentHashMap}
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.io.Source
-import scala.sys.process.Process
+import scala.sys.process.{Process, ProcessIO}
 
 /*
 trait MLType
@@ -17,6 +18,7 @@ object MLType {
 }
 */
 
+// TODO: Install cleaner that garbage collects on ML side
 class MLValue[A](val id : Future[Isabelle2.ID]) {
 //  def retrieve()(implicit ec: ExecutionContext) : Future[A] = throw new UnsupportedOperationException(s"Retrieving value of $this")
   def retrieve()(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle2, ec: ExecutionContext) : Future[A] =
@@ -61,9 +63,9 @@ class Isabelle2 {
   private val sendQueue : BlockingQueue[(String, String => Unit)] = new ArrayBlockingQueue(1000)
   private val callbacks : ConcurrentHashMap[Int, String => Unit] = new ConcurrentHashMap()
 
-  private def processQueue() : Unit = {
+  private def processQueue(inFifo: Path) : Unit = {
     println("Process queue thread started")
-    val stream = new FileOutputStream("/home/unruh/svn/qrhl-tool/isabelle-fifo-in")
+    val stream = new FileOutputStream(inFifo.toFile)
     val writer = new BufferedWriter(new OutputStreamWriter(stream, "ascii"))
     var count = 0
 
@@ -96,8 +98,8 @@ class Isabelle2 {
     }
   }
 
-  private def parseIsabelle() : Unit = {
-    val output = new FileInputStream("/home/unruh/svn/qrhl-tool/isabelle-fifo-out")
+  private def parseIsabelle(outFifo: Path) : Unit = {
+    val output = new FileInputStream(outFifo.toFile)
     Source.fromInputStream(output, "ascii").getLines.foreach { line =>
       val (seq,content) = line.splitAt(line.indexOf(' ')+1)
       println(s"Received: [$line]")
@@ -115,11 +117,20 @@ class Isabelle2 {
     val userDir = distributionDir.resolve(this.userDir)
     assert(userDir.endsWith(".isabelle"))
 
-    // TODO: use temporary names, delete later, escape for ML
-    val inputPipeName = "/home/unruh/svn/qrhl-tool/isabelle-fifo-in"
-    val outputPipeName = "/home/unruh/svn/qrhl-tool/isabelle-fifo-out"
+    val tempDir = Files.createTempDirectory("isabellecontrol")
+    tempDir.toFile.deleteOnExit()
+    println(s"tempDir: $tempDir")
+    val inputPipe = tempDir.resolve("in-fifo").toAbsolutePath
+    inputPipe.toFile.deleteOnExit()
+    val outputPipe = tempDir.resolve("out-fifo").toAbsolutePath
+    outputPipe.toFile.deleteOnExit()
+    if (Process(List("mkfifo", inputPipe.toString)).! != 0)
+      throw new IOException(s"Cannot create fifo ${inputPipe}")
+    if (Process(List("mkfifo", outputPipe.toString)).! != 0)
+      throw new IOException(s"Cannot create fifo ${outputPipe}")
 
-    val initInOut = s"""val (inputPipeName,outputPipeName) = ("${inputPipeName}","${outputPipeName}")"""
+    // TODO: escape pipe name for ML
+    val initInOut = s"""val (inputPipeName,outputPipeName) = ("${inputPipe}","${outputPipe}")"""
 
     val cmd : List[String] = List(isabelle,"process","-l",logic,"-e",initInOut,"-f",mlFile) ++
       (for (r <- roots; a <- List("-d",distributionDir.resolve(r).toString)) yield a)
@@ -127,19 +138,20 @@ class Isabelle2 {
     val processBuilder = Process(cmd, distributionDir.toFile, "USER_HOME" -> userDir.getParent.toString)
 
     val processQueueThread = new Thread("Send to Isabelle") {
-      override def run(): Unit = processQueue() }
+      override def run(): Unit = processQueue(inputPipe) }
     processQueueThread.setDaemon(true)
     processQueueThread.start()
 
     val parseIsabelleThread = new Thread("Read from Isabelle") {
-      override def run(): Unit = parseIsabelle() }
+      override def run(): Unit = parseIsabelle(outputPipe) }
     parseIsabelleThread.setDaemon(true)
     parseIsabelleThread.start()
 
+    // TODO: This creates non-daemon threads
     processBuilder.run()
   }
 
-  private val process = startProcess()
+  val process = startProcess()
 
   def send(str: String, callback: String => Unit = null) : Unit =
     sendQueue.put((str,callback))
@@ -185,6 +197,7 @@ object Test {
   def await[A](x: Future[A]): A = Await.result(x, Duration.Inf)
 
   def main(args: Array[String]): Unit = {
+
     implicit val ec: ExecutionContext = ExecutionContext.global
     implicit val isabelle: Isabelle2 = new Isabelle2()
 
@@ -206,7 +219,20 @@ object Test {
        print(await(result))
    */
 
-    Thread.sleep(5000)
+    Thread.sleep(2000)
+
+    isabelle.process.destroy()
+
+    Thread.sleep(2000)
+
+    println("Exiting")
+
+
+
+    import scala.collection.JavaConverters._
+    for (t <- Thread.getAllStackTraces.keySet.asScala)
+        println((t.isDaemon,t.getName,t))
+
   }
 
 }

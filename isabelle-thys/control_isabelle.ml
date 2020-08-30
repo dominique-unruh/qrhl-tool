@@ -14,7 +14,7 @@ val objectsMax = Unsynchronized.ref 0
 val objects : exn Inttab.table Unsynchronized.ref = Unsynchronized.ref Inttab.empty
 
 fun sendReply int ints = let
-  val _ = OS.Process.sleep (seconds 1.0)
+  val _ = OS.Process.sleep (seconds 0.1)
   val str = (String.concatWith " " (map string_of_int (int::ints)) ^ "\n")
   val _ = tracing ("sendReply: "^str)
   val _ = TextIO.output (outStream, str)
