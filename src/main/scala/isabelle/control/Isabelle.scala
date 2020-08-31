@@ -1,29 +1,29 @@
-package qrhl.isabelle
+package isabelle.control
 
 import java.io.{BufferedWriter, FileInputStream, FileOutputStream, IOException, OutputStreamWriter}
 import java.lang
 import java.lang.ProcessBuilder.Redirect
 import java.lang.ref.Cleaner
-import java.lang.ref.Cleaner.Cleanable
 import java.nio.file.{Files, Path}
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, ConcurrentHashMap, ConcurrentLinkedQueue}
+
+import qrhl.isabelle.DistributionDirectory
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.io.Source
-import scala.ref.{PhantomReference, ReferenceQueue}
-import scala.sys.process.{Process, ProcessIO}
+import scala.sys.process.Process
 
 // TODO: Add type argument that binds this to the right Isabelle2 instance
-class MLValue[A] private[isabelle] (val id : Future[Isabelle2.ID], isabelle: Isabelle2) {
-  def retrieve()(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle2, ec: ExecutionContext): Future[A] =
+class MLValue[A] private[isabelle] (val id : Future[Isabelle.ID], isabelle: Isabelle) {
+  def retrieve()(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle, ec: ExecutionContext): Future[A] =
     retriever.retrieve(this)
 
   /*  def apply[B,C](arg: MLValue[B])(implicit applier: MLValue.Applier[A,B,C], isabelle: Isabelle2, ec: ExecutionContext) : MLValue[C] =
     applier.apply(this,arg)*/
 
-  def apply[D, R](arg: MLValue[D])(implicit ev: MLValue[A] =:= MLValue[D => R], isabelle: Isabelle2, ec: ExecutionContext): MLValue[R] = {
+  def apply[D, R](arg: MLValue[D])(implicit ev: MLValue[A] =:= MLValue[D => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] = {
     new MLValue(
       for (fVal <- ev(this).id;
            xVal <- arg.id;
@@ -33,26 +33,27 @@ class MLValue[A] private[isabelle] (val id : Future[Isabelle2.ID], isabelle: Isa
     )
   }
 
-  def apply[D1, D2, R](arg1: MLValue[D1], arg2: MLValue[D2])(implicit ev: MLValue[A] =:= MLValue[D1 => D2 => R], isabelle: Isabelle2, ec: ExecutionContext): MLValue[R] =
+  def apply[D1, D2, R](arg1: MLValue[D1], arg2: MLValue[D2])(implicit ev: MLValue[A] =:= MLValue[D1 => D2 => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] =
     ev(this).apply[D1, D2 => R](arg1).apply[D2, R](arg2)
 
-  def apply[D1, D2, D3, R](arg1: MLValue[D1], arg2: MLValue[D2], arg3: MLValue[D3])(implicit ev: MLValue[A] =:= MLValue[D1 => D2 => D3 => R], isabelle: Isabelle2, ec: ExecutionContext): MLValue[R] =
+  def apply[D1, D2, D3, R](arg1: MLValue[D1], arg2: MLValue[D2], arg3: MLValue[D3])(implicit ev: MLValue[A] =:= MLValue[D1 => D2 => D3 => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] =
     ev(this).apply[D1, D2 => D3 => R](arg1).apply[D2, D3 => R](arg2).apply[D3, R](arg3)
 }
 
 object MLValue {
   abstract class Retriever[A] {
-    def retrieve(value: MLValue[A])(implicit isabelle: Isabelle2, ec: ExecutionContext) : Future[A]
+    def retrieve(value: MLValue[A])(implicit isabelle: Isabelle, ec: ExecutionContext) : Future[A]
   }
   implicit object IntRetriever extends Retriever[Int] {
-    override def retrieve(value: MLValue[Int])(implicit isabelle: Isabelle2, ec: ExecutionContext): Future[Int] =
+    override def retrieve(value: MLValue[Int])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Int] =
       value.id.flatMap(isabelle.retrieveInteger(_).future)
   }
   abstract class Applier[A,B,C] {
-    def apply(f: MLValue[A], x: MLValue[B])(implicit isabelle: Isabelle2, ec: ExecutionContext) : MLValue[C]
+    def apply(f: MLValue[A], x: MLValue[B])(implicit isabelle: Isabelle, ec: ExecutionContext) : MLValue[C]
   }
+
   implicit class FunApplier[D,R](unit: Unit) extends Applier[D=>R,D,R] {
-    override def apply(f: MLValue[D => R], x: MLValue[D])(implicit isabelle: Isabelle2, ec: ExecutionContext): MLValue[R] =
+    override def apply(f: MLValue[D => R], x: MLValue[D])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[R] =
       new MLValue(
         for (fVal <- f.id;
              xVal <- x.id;
@@ -62,16 +63,16 @@ object MLValue {
       )
   }
 
-  def apply(i: Int)(implicit isabelle: Isabelle2) =
+  def apply(i: Int)(implicit isabelle: Isabelle) =
     new MLValue[Int](isabelle.storeInteger(i).future, isabelle)
 
   // TODO: Automatically add wrapping and unwrapping of exceptions
-  def compileFunction[A,B](ml: String)(implicit isabelle: Isabelle2) =
+  def compileFunction[A,B](ml: String)(implicit isabelle: Isabelle) =
     new MLValue[A => B](isabelle.storeFunction(ml).future, isabelle)
 }
 
-class Isabelle2 {
-  import Isabelle2._
+class Isabelle {
+  import Isabelle._
 
   private val distributionDir = DistributionDirectory.distributionDirectory
   private val isabelle = "Isabelle2019-RC4/bin/isabelle"
@@ -245,12 +246,12 @@ class Isabelle2 {
 
 }
 
-object Isabelle2 {
+object Isabelle {
   // TODO: Bind this to a specific Isabelle2 instance via typing
-  final class ID private[Isabelle2] (private [Isabelle2] val id: Int, isabelle: Isabelle2) {
+  final class ID private[Isabelle](private [Isabelle] val id: Int, isabelle: Isabelle) {
     isabelle.cleaner.register(this, new IDCleaner(id, isabelle))
   }
-  private [Isabelle2] final class IDCleaner(id: Int, isabelle: Isabelle2) extends Runnable {
+  private [Isabelle] final class IDCleaner(id: Int, isabelle: Isabelle) extends Runnable {
     def run(): Unit = isabelle.garbageQueue.add(id)
   }
 }
@@ -263,7 +264,7 @@ object Test {
     import MLValue.IntRetriever
 
     implicit val ec: ExecutionContext = ExecutionContext.global
-    implicit val isabelle: Isabelle2 = new Isabelle2()
+    implicit val isabelle: Isabelle = new Isabelle()
     implicit val ev1: MLValue[Int=>Int] =:= MLValue[Int=>Int] = =:=.tpEquals
     implicit val ev2: MLValue[Int=>Int=>Int] =:= MLValue[Int=>Int=>Int] = =:=.tpEquals
 
