@@ -21,7 +21,7 @@ class Isabelle {
 
   private val distributionDir = DistributionDirectory.distributionDirectory
   private val isabelle = "Isabelle2019-RC4/bin/isabelle"
-  private val logic = "QRHL"
+  private val logic = "HOL"
   private val roots = List("isabelle-thys","isabelle-afp")
   private val userDir = "isabelle-temp/user/Isabelle2019-RC4/.isabelle"
   private val mlFile = "isabelle-thys/control_isabelle.ml"
@@ -229,11 +229,11 @@ class MLValue[A] private[isabelle] (private val id : Future[Isabelle.ID]) {
 
   def isReady: Boolean = id.isCompleted
 
-  @inline def retrieve()(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle, ec: ExecutionContext): Future[A] =
+  @inline def retrieve(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle, ec: ExecutionContext): Future[A] =
     retriever.retrieve(this)
 
-  @inline def retrieveNow()(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle, ec: ExecutionContext): A =
-    Await.result(retrieve(), Duration.Inf)
+  @inline def retrieveNow(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle, ec: ExecutionContext): A =
+    Await.result(retrieve, Duration.Inf)
 
   def apply[D, R](arg: MLValue[D])
                  (implicit ev: MLValue[A] =:= MLValue[D => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] = {
