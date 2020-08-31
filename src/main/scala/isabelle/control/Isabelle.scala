@@ -14,6 +14,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.io.Source
 import scala.sys.process.Process
+import scala.util.{Failure, Success}
 
 
 class Isabelle {
@@ -225,7 +226,13 @@ object Isabelle {
 }
 
 class MLValue[A] private[isabelle] (private val id : Future[Isabelle.ID]) {
-//  @inline val isabelle : Isabelle.this.type = Isabelle.this
+  def stateString: String = id.value match {
+    case Some(Success(_)) => ""
+    case Some(Failure(_)) => " (failed)"
+    case None => " (loading)"
+  }
+
+  //  @inline val isabelle : Isabelle.this.type = Isabelle.this
 
   def isReady: Boolean = id.isCompleted
 

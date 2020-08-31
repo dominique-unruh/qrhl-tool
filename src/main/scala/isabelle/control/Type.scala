@@ -1,5 +1,6 @@
 package isabelle.control
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
 sealed abstract class Typ {
@@ -24,22 +25,65 @@ final class MLValueType(val mlValue: MLValue[Typ])(implicit val isabelle: Isabel
     }
   }
 
-  override def toString: String = "type"
+  // TODO: should check if concrete has already been loaded, and if so, print the concrete type
+  override def toString: String = s"‹type${mlValue.stateString}›"
 }
 
-final class Type private[control] (val name: String, val args: List[Typ], val initialMlValue: MLValue[Typ]=null)(implicit val isabelle: Isabelle) extends Typ {
+final class Type private[control] (val name: String, val args: List[Typ], val initialMlValue: MLValue[Typ]=null)
+                                  (implicit val isabelle: Isabelle) extends Typ {
   lazy val mlValue : MLValue[Typ] = if (initialMlValue!=null) initialMlValue else ???
   @inline override val concrete: Type = this
+  override def toString: String =
+    if (args.isEmpty) name
+    else s"$name(${args.mkString(", ")})"
 }
 
-final class TFree(val name: String, val sort: List[String], val initialMlValue: MLValue[Typ]=null)(implicit val isabelle: Isabelle) extends Typ {
+object Type {
+  def apply(name: String, args: Typ*)(implicit isabelle: Isabelle) = new Type(name, args.toList)
+
+  @tailrec
+  def unapply(typ: Typ): Option[(String, List[Typ])] = typ match {
+    case typ : Type => Some((typ.name,typ.args))
+    case typ : MLValueType => unapply(typ.concrete)
+  }
+}
+
+final class TFree private (val name: String, val sort: List[String], val initialMlValue: MLValue[Typ]=null)(implicit val isabelle: Isabelle) extends Typ {
   lazy val mlValue : MLValue[Typ] = if (initialMlValue!=null) initialMlValue else ???
   @inline override val concrete: TFree = this
+  override def toString: String = sort match {
+    case List(clazz) => s"$name::$clazz"
+    case _ => s"$name::{${sort.mkString(",")}}"
+  }
 }
 
-final case class TVar(val name: String, val index: Int, val sort: List[String], val initialMlValue: MLValue[Typ]=null)(implicit val isabelle: Isabelle) extends Typ {
+object TFree {
+  def apply(name: String, sort: String*)(implicit isabelle: Isabelle) = new TFree(name, sort.toList)
+
+  @tailrec
+  def unapply(typ: Typ): Option[(String, List[String])] = typ match {
+    case typ : TFree => Some((typ.name,typ.sort))
+    case typ : MLValueType => unapply(typ.concrete)
+  }
+}
+
+final class TVar private (val name: String, val index: Int, val sort: List[String], val initialMlValue: MLValue[Typ]=null)(implicit val isabelle: Isabelle) extends Typ {
   lazy val mlValue : MLValue[Typ] = if (initialMlValue!=null) initialMlValue else ???
   @inline override val concrete: TVar = this
+  override def toString: String = sort match {
+    case List(clazz) => s"?$name$index::$clazz"
+    case _ => s"?$name$index::{${sort.mkString(",")}}"
+  }
+}
+
+object TVar {
+  def apply(name: String, index: Int, sort: String*)(implicit isabelle: Isabelle) = new TVar(name, index, sort.toList)
+
+  @tailrec
+  def unapply(typ: Typ): Option[(String, Int, List[String])] = typ match {
+    case typ : TVar => Some((typ.name,typ.index,typ.sort))
+    case typ : MLValueType => unapply(typ.concrete)
+  }
 }
 
 object Typ {
@@ -81,6 +125,11 @@ object TestType {
     Typ.init(isabelle)
     val ctxt = Context("Main")
     val typ = Typ(ctxt, "nat list")
+    typ match {
+      case Type(listName,List(Type(natName,List()))) => println(s"XXXX ${(listName, natName)}")
+
+    }
+
     println("****",typ.pretty(ctxt))
     val typ2 = typ.concrete.asInstanceOf[Type]
     println("****", typ2)
