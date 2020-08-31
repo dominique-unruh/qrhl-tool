@@ -13,12 +13,12 @@ object Context {
 
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle): Unit = synchronized {
-    if (contextFromTheory == null) {
-      Theory.init(isabelle)
+    if (this.isabelle == null) {
+      this.isabelle = isabelle
       implicit val _ = isabelle
+      Theory.init(isabelle)
       isabelle.executeMLCodeNow("exception E_Context of Proof.context")
       contextFromTheory = MLValue.compileFunction[Theory, Context]("fn (E_Theory thy) => Proof_Context.init_global thy |> E_Context")
-      this.isabelle = isabelle
     }
   }
 

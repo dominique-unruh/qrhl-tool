@@ -98,9 +98,9 @@ object Typ {
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle): Unit = synchronized {
     if (this.isabelle == null) {
+      this.isabelle = isabelle
       implicit val _ = isabelle
       Context.init(isabelle)
-      this.isabelle = isabelle
       isabelle.executeMLCodeNow("exception E_Typ of typ")
       readType = MLValue.compileFunction[Context, String => Typ]("fn (E_Context ctxt) => E_ExnExn (fn (E_String str) => Syntax.read_typ ctxt str |> E_Typ)")
       stringOfType = MLValue.compileFunction[Context, Typ => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_Typ typ) => Syntax.string_of_typ ctxt typ |> E_String)")
