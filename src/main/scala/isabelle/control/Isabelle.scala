@@ -149,11 +149,12 @@ class Isabelle {
     processBuilder.start()
   }
 
-  val process: lang.Process = startProcess()
+  private val process: lang.Process = startProcess()
 
-  def send(str: String, callback: String => Unit = null) : Unit =
+  private def send(str: String, callback: String => Unit = null) : Unit =
     sendQueue.put((str,callback))
 
+  @deprecated("Remove", "now")
   def computeInteger(ml: String): Promise[Int] = {
     val promise : Promise[Int] = Promise()
     assert(!ml.contains('\n'))
@@ -161,35 +162,35 @@ class Isabelle {
     promise
   }
 
-  def intStringToID(str: String) : ID =
+  private def intStringToID(str: String) : ID =
     new ID(str.toInt, this)
 
-  def storeFunction(ml : String): Promise[ID] = {
+  private def storeFunction(ml : String): Promise[ID] = {
     val promise : Promise[ID] = Promise()
     assert(!ml.contains('\n'))
     send(s"f$ml\n", { result => promise.success(intStringToID(result)) })
     promise
   }
 
-  def storeInteger(i: Int): Promise[ID] = {
+  private def storeInteger(i: Int): Promise[ID] = {
     val promise : Promise[ID] = Promise()
     send(s"s$i\n", { result => promise.success(intStringToID(result)) })
     promise
   }
 
-  def retrieveInteger(id: ID): Promise[Int] = {
+  private def retrieveInteger(id: ID): Promise[Int] = {
     val promise: Promise[Int] = Promise()
     send(s"r${id.id}\n", { result => promise.success(result.toInt) })
     promise
   }
 
-  def applyFunction(f: ID, x: ID): Promise[ID] = {
+  private def applyFunction(f: ID, x: ID): Promise[ID] = {
     val promise: Promise[ID] = Promise()
     send(s"a${f.id} ${x.id}\n", { result => promise.success(intStringToID(result)) })
     promise
   }
 
-  class MLValue[A] private[isabelle] (val id : Future[Isabelle.ID]) {
+  class MLValue[A] private[isabelle] (private val id : Future[Isabelle.ID]) {
 //    final def isabelle : Isabelle = Isabelle.this
 
     def retrieve()(implicit retriever: MLValue.Retriever[A], ec: ExecutionContext): Future[A] =
@@ -216,11 +217,11 @@ class Isabelle {
 
   object MLValue {
     abstract class Retriever[A] {
-      def retrieve(value: MLValue[A])(implicit ec: ExecutionContext) : Future[A]
+      protected[Isabelle] def retrieve(value: MLValue[A])(implicit ec: ExecutionContext) : Future[A]
     }
 
     implicit object IntRetriever extends Retriever[Int] {
-      override def retrieve(value: MLValue[Int])(implicit ec: ExecutionContext): Future[Int] =
+      override protected[Isabelle] def retrieve(value: MLValue[Int])(implicit ec: ExecutionContext): Future[Int] =
         value.id.flatMap(retrieveInteger(_).future)
     }
 
@@ -235,11 +236,10 @@ class Isabelle {
 }
 
 object Isabelle {
-  // TODO: Bind this to a specific Isabelle2 instance via typing
-  final class ID private[Isabelle](private [Isabelle] val id: Int, isabelle: Isabelle) {
+  private final class ID(val id: Int, isabelle: Isabelle) {
     isabelle.cleaner.register(this, new IDCleaner(id, isabelle))
   }
-  private [Isabelle] final class IDCleaner(id: Int, isabelle: Isabelle) extends Runnable {
+  private final class IDCleaner(id: Int, isabelle: Isabelle) extends Runnable {
     def run(): Unit = isabelle.garbageQueue.add(id)
   }
 }
