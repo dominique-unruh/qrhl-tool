@@ -1,6 +1,6 @@
 structure Control_Isabelle : sig
   (* TODO: Does this need to be exported? *)
-  val sendReply : int -> int list -> unit
+  (* val sendReply : int -> int list -> unit *)
   val handleLines : unit -> unit
   exception E_ExnExn of exn -> exn
   exception E_Int of int
@@ -26,8 +26,8 @@ val objects : exn Inttab.table Unsynchronized.ref = Unsynchronized.ref Inttab.em
 fun numObjects () = Inttab.fold (fn _ => fn i => i+1) (!objects) 0
 
 fun sendReplyStr seq str = let
-  (* val _ = OS.Process.sleep (seconds 0.1) *)
-  val str = string_of_int seq ^ " " ^ str
+  val _ = if Char.contains str #"\n" then error "Trying to send string containing newline" else ()
+  val str = string_of_int seq ^ " " ^ str ^ "\n"
   val _ = tracing ("sendReply: "^str)
   val _ = TextIO.output (outStream, str)
   val _ = TextIO.flushOut outStream
@@ -39,7 +39,7 @@ fun sendReply seq ints = let
   val _ = tracing ("sendReply: "^str)
   val _ = TextIO.output (outStream, str)
   val _ = TextIO.flushOut outStream
-  in sendReplyStr seq str end
+  in () end
 
 exception E_ExnExn of exn -> exn
 exception E_Int of int
@@ -104,7 +104,7 @@ fun handleLine seq line = (tracing ("COMMAND:"^line);
     (*   | #"i" => executeMLInt seq (String.extract (line, 1, NONE)) *)
 
     (* Sxxx - stores xxx as a string in objects, response 'seq ID' *)
-  | #"S" => store seq (E_String (String.extract (line, 1, NONE)))
+  | #"S" => store seq (E_String (String.substring (line, 1, String.size line - 2)))
 
     (* snnn - Parses nnn as integer, stores result as object, response 'seq object#' *)
   | #"s" => store seq (E_Int (int_of_string (String.extract (line, 1, NONE))))

@@ -94,7 +94,9 @@ class Isabelle {
   private def parseIsabelle(outFifo: Path) : Unit = {
     val output = new FileInputStream(outFifo.toFile)
     Source.fromInputStream(output, "ascii").getLines.foreach { line =>
-      val (seq,content) = line.splitAt(line.indexOf(' ')+1)
+      println(s"Received: [$line]")
+      val spaceIdx = line.indexOf(' ')
+      val (seq,content) = if (spaceIdx == -1) (line,"") else line.splitAt(spaceIdx+1)
       println(s"Received: [$line]")
       callbacks.remove(seq.trim.toInt) match {
         case null => println(s"No callback $seq")
@@ -207,7 +209,7 @@ class Isabelle {
 
   private[control] def retrieveString(id: ID): Promise[String] = {
     val promise: Promise[String] = Promise()
-    send(s"R${id.id}\n", { result => promise.success(result.stripSuffix("\n")) })
+    send(s"R${id.id}\n", { result => promise.success(result) })
     promise
   }
 
