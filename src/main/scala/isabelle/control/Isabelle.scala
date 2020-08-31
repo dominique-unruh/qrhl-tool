@@ -227,6 +227,8 @@ object Isabelle {
 class MLValue[A] private[isabelle] (private val id : Future[Isabelle.ID]) {
 //  @inline val isabelle : Isabelle.this.type = Isabelle.this
 
+  def isReady: Boolean = id.isCompleted
+
   @inline def retrieve()(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle, ec: ExecutionContext): Future[A] =
     retriever.retrieve(this)
 
