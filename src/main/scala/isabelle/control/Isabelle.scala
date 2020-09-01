@@ -36,7 +36,7 @@ class Isabelle {
   private val garbageQueue = new ConcurrentLinkedQueue[Integer]()
 
   private def garbageCollect() : Option[String] = {
-    println("Checking for garbage")
+//    println("Checking for garbage")
     @tailrec def drain(objs: List[Int]) : List[Int] = garbageQueue.poll() match {
       case null => objs
       case obj =>
@@ -86,7 +86,7 @@ class Isabelle {
         writer.write(cmd)
         count += 1
       }
-      println("Flushing.")
+//      println("Flushing.")
       writer.flush()
       Thread.sleep(100)
     }
@@ -95,15 +95,14 @@ class Isabelle {
   private def parseIsabelle(outFifo: Path) : Unit = {
     val output = new FileInputStream(outFifo.toFile)
     Source.fromInputStream(output, "ascii").getLines.foreach { line =>
-      println(s"Received: [$line]")
+//      println(s"Received: [$line]")
       val spaceIdx = line.indexOf(' ')
       val (seq,content) = if (spaceIdx == -1) (line,"") else line.splitAt(spaceIdx+1)
-      println(s"Received: [$line]")
       callbacks.remove(seq.trim.toInt) match {
         case null => println(s"No callback $seq")
         case callback => callback(content)
       }
-      println(s"#callbacks = ${callbacks.size}")
+//      println(s"#callbacks = ${callbacks.size}")
     }
   }
 

@@ -28,7 +28,7 @@ fun numObjects () = Inttab.fold (fn _ => fn i => i+1) (!objects) 0
 fun sendReplyStr seq str = let
   val _ = if Char.contains str #"\n" then error "Trying to send string containing newline" else ()
   val str = string_of_int seq ^ " " ^ str ^ "\n"
-  val _ = tracing ("sendReply: "^str)
+  (* val _ = tracing ("sendReply: "^str) *)
   val _ = TextIO.output (outStream, str)
   val _ = TextIO.flushOut outStream
   in () end
@@ -36,7 +36,7 @@ fun sendReplyStr seq str = let
 fun sendReply seq ints = let
   (* val _ = OS.Process.sleep (seconds 0.1) *)
   val str = (String.concatWith " " (map string_of_int (seq::ints)) ^ "\n")
-  val _ = tracing ("sendReply: "^str)
+  (* val _ = tracing ("sendReply: "^str) *)
   val _ = TextIO.output (outStream, str)
   val _ = TextIO.flushOut outStream
   in () end
@@ -53,7 +53,8 @@ exception E_Cterm of cterm
 exception E_Thm of thm *)
 
 fun executeML ml =
-  ML_Compiler.eval (ML_Compiler.verbose true ML_Compiler.flags) Position.none (ML_Lex.tokenize ml)
+  ML_Compiler.eval ML_Compiler.flags Position.none (ML_Lex.tokenize ml)
+  (* ML_Compiler.eval (ML_Compiler.verbose true ML_Compiler.flags) Position.none (ML_Lex.tokenize ml) *)
 
 (* fun executeMLInt seq ml = let
   val _ = tracing ("executeMLInt "^string_of_int seq ^" : " ^ml)
@@ -95,7 +96,7 @@ fun int_of_string str = case Int.fromString str of
   NONE => error ("Failed to parse '" ^ str ^ "' as an int")
   | SOME i => i
 
-fun handleLine seq line = (tracing ("COMMAND:"^line);
+fun handleLine seq line = ((* tracing ("COMMAND:"^line); *)
   case String.sub (line, 0) of
     (* Mxxx - executes ML code xxx *)
     #"M" => (executeML (String.extract (line, 1, NONE)); sendReply seq [])
