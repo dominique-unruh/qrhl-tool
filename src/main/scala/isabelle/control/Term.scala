@@ -9,6 +9,7 @@ sealed abstract class Term {
   def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
     Term.stringOfTerm[Context,Term,String](ctxt.mlValue, mlValue).retrieveNow
   val concrete : Term
+  def $(that: Term): Term = App(this, that)
 }
 
 final class MLValueTerm(val mlValue: MLValue[Term])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
@@ -68,6 +69,60 @@ object Var {
     case term : MLValueTerm => unapply(term.concrete)
   }
 }
+
+final class App private (val fun: Term, val arg: Term, val initialMlValue: MLValue[Term]=null)
+                        (implicit val isabelle: Isabelle) extends Term {
+  lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
+  @inline override val concrete: App = this
+  override def toString: String = s"($fun $$ $arg)"
+}
+
+object App {
+  def apply(fun: Term, arg: Term)(implicit isabelle: Isabelle) = new App(fun, arg)
+
+  @tailrec
+  def unapply(term: Term): Option[(Term, Term)] = term match {
+    case app : App => Some((app.fun,app.arg))
+    case term : MLValueTerm => unapply(term.concrete)
+  }
+}
+
+final class Abs private (val name: String, val typ: Typ, val body: Term, val initialMlValue: MLValue[Term]=null)
+                        (implicit val isabelle: Isabelle) extends Term {
+  lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
+  @inline override val concrete: Abs = this
+  override def toString: String = s"(λ$name. $body)"
+}
+
+object Abs {
+  def apply(name: String, typ: Typ, body: Term)(implicit isabelle: Isabelle) = new Abs(name,typ,body)
+
+  @tailrec
+  def unapply(term: Term): Option[(String, Typ, Term)] = term match {
+    case abs : Abs => Some((abs.name,abs.typ,abs.body))
+    case term : MLValueTerm => unapply(term.concrete)
+  }
+}
+
+
+final class Bound private (val index: Int, val initialMlValue: MLValue[Term]=null)
+                          (implicit val isabelle: Isabelle) extends Term {
+  lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
+  @inline override val concrete: Bound = this
+  override def toString: String = s"Bound $index"
+}
+
+object Bound {
+  def apply(index: Int)(implicit isabelle: Isabelle) = new Bound(index)
+
+  @tailrec
+  def unapply(term: Term): Option[Int] = term match {
+    case bound : Bound => Some(bound.index)
+    case term : MLValueTerm => unapply(term.concrete)
+  }
+}
+
+
 
 object Term {
   private implicit var isabelle: Isabelle = _

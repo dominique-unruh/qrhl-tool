@@ -404,16 +404,12 @@ object Isabelle {
 
     class CleaningAction(isabelle: Isabelle, thmId: BigInt) extends Runnable {
       override def run(): Unit = {
-//        logger.debug(s"Deleting theorem $thmId")
         isabelle.invoke(deleteThmOp, thmId)
       }
     }
-
   }
 
   private val logger = log4s.getLogger
-
-//  def mk_conj(t1: Term, t2: Term): Term = HOLogic.conj $ t1 $ t2
 
   def conj(terms: Term*): Term = terms match {
     case Seq(ts @ _*) =>
