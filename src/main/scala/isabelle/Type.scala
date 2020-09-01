@@ -1,4 +1,6 @@
-package isabelle.control
+package isabelle
+
+import isabelle.control.{Isabelle, MLValue}
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
@@ -29,7 +31,7 @@ final class MLValueType(val mlValue: MLValue[Typ])(implicit val isabelle: Isabel
   override def toString: String = s"‹type${mlValue.stateString}›"
 }
 
-final class Type private[control] (val name: String, val args: List[Typ], val initialMlValue: MLValue[Typ]=null)
+final class Type private[isabelle] (val name: String, val args: List[Typ], val initialMlValue: MLValue[Typ]=null)
                                   (implicit val isabelle: Isabelle) extends Typ {
   lazy val mlValue : MLValue[Typ] = if (initialMlValue!=null) initialMlValue else ???
   @inline override val concrete: Type = this
@@ -90,10 +92,10 @@ object Typ {
   private implicit var isabelle: Isabelle = _
   private var readType: MLValue[Context => String => Typ] = _
   private var stringOfType: MLValue[Context => Typ => String] = _
-  private[control] var whatType: MLValue[Typ => Int] = _
-  private[control] var numArgs: MLValue[Typ => Int] = _
-  private[control] var typeName: MLValue[Typ => String] = _
-  private[control] var getArg: MLValue[Typ => Int => Typ] = _
+  private[isabelle] var whatType: MLValue[Typ => Int] = _
+  private[isabelle] var numArgs: MLValue[Typ => Int] = _
+  private[isabelle] var typeName: MLValue[Typ => String] = _
+  private[isabelle] var getArg: MLValue[Typ => Int => Typ] = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle): Unit = synchronized {

@@ -1,8 +1,10 @@
-package isabelle.control
+package isabelle
+
+import isabelle.control.{Isabelle, MLValue}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-final class Context private [Context] (val mlValue : MLValue[Context]) {
+final class Context private [Context](val mlValue : MLValue[Context]) {
   override def toString: String =
     if (mlValue.isReady) "context (loaded)" else "context"
 }

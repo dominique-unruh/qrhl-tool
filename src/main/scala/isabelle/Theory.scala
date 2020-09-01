@@ -1,8 +1,10 @@
-package isabelle.control
+package isabelle
+
+import isabelle.control.{Isabelle, MLValue}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-final class Theory private [Theory] (val name: String, val mlValue : MLValue[Theory]) {
+final class Theory private [Theory](val name: String, val mlValue : MLValue[Theory]) {
   override def toString: String = s"theory $name${if (mlValue.isReady) " (loaded)" else ""}"
 }
 

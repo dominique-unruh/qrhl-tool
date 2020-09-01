@@ -1,4 +1,6 @@
-package isabelle.control
+package isabelle
+
+import isabelle.control.{Isabelle, MLValue}
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
@@ -19,7 +21,7 @@ final class MLValueTerm(val mlValue: MLValue[Term])(implicit val isabelle: Isabe
   override def toString: String = s"‹Terme${mlValue.stateString}›"
 }
 
-final class Const private[control] (val name: String, val typ: Typ, val initialMlValue: MLValue[Term]=null)
+final class Const private[isabelle] (val name: String, val typ: Typ, val initialMlValue: MLValue[Term]=null)
                                   (implicit val isabelle: Isabelle) extends Term {
   lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
   @inline override val concrete: Const = this
@@ -154,7 +156,7 @@ object Term {
   }
 }
 
-object TestTerme {
+object TestTerm {
   import ExecutionContext.Implicits.global
 
   def main(args: Array[String]): Unit = {
