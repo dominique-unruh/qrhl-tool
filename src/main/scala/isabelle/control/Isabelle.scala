@@ -1,6 +1,6 @@
 package isabelle.control
 
-import java.io.{BufferedWriter, FileInputStream, FileOutputStream, IOException, OutputStreamWriter}
+import java.io.{BufferedInputStream, BufferedOutputStream, BufferedReader, BufferedWriter, FileInputStream, FileOutputStream, IOException, InputStream, InputStreamReader, OutputStreamWriter}
 import java.lang
 import java.lang.ProcessBuilder.Redirect
 import java.lang.ref.Cleaner
@@ -10,6 +10,7 @@ import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, ConcurrentHashMa
 
 import isabelle.control.Isabelle.Setup
 import org.log4s
+import org.log4s.{Debug, LogLevel, Warn}
 import qrhl.isabelle.DistributionDirectory
 
 import scala.annotation.tailrec
@@ -49,7 +50,7 @@ class Isabelle(setup: Setup = Setup()) {
   }
 
   private def processQueue(inFifo: Path) : Unit = {
-    println("Process queue thread started")
+    logger.debug("Process queue thread started")
     val stream = new FileOutputStream(inFifo.toFile)
     val writer = new BufferedWriter(new OutputStreamWriter(stream, "ascii"))
     var count = 0
@@ -60,7 +61,7 @@ class Isabelle(setup: Setup = Setup()) {
       if (elem!=null) {
         val (line,callback) = elem
         assert(line.endsWith("\n"))
-        println(s"Writing ${line.trim}")
+//        logger.debug(s"Writing ${line.trim}")
         if (callback != null)
           callbacks.put(count, callback)
         writer.write(line)
@@ -71,14 +72,14 @@ class Isabelle(setup: Setup = Setup()) {
 
     while (true) {
       val (line,callback) = sendQueue.take()
-      println(s"Writing! ${line.trim}")
+//      logger.debug(s"Writing! ${line.trim}")
       if (callback != null)
         callbacks.put(count, callback)
       writer.write(line)
       count += 1
       drainQueue()
       for (cmd <- garbageCollect()) {
-        println("Sending GC command")
+        logger.debug("Sending GC command to Isabelle")
         writer.write(cmd)
         count += 1
       }
@@ -154,10 +155,6 @@ class Isabelle(setup: Setup = Setup()) {
     processBuilder.directory(wd.toAbsolutePath.toFile)
     for (userDir <- setup.userDir)
       processBuilder.environment.put("USER_HOME", str(userDir.getParent))
-    // TODO: It seems like the output is buffered somewhere and returned at the end of the execution. Why?
-    // TODO: Redirect into log messages anyway
-    processBuilder.redirectError(Redirect.INHERIT)
-    processBuilder.redirectOutput(Redirect.INHERIT)
 
     val processQueueThread = new Thread("Send to Isabelle") {
       override def run(): Unit = processQueue(inputPipe) }
@@ -169,7 +166,12 @@ class Isabelle(setup: Setup = Setup()) {
     parseIsabelleThread.setDaemon(true)
     parseIsabelleThread.start()
 
-    processBuilder.start()
+    val process = processBuilder.start()
+
+    logStream(process.getErrorStream, Warn) // stderr
+    logStream(process.getInputStream, Debug) // stdout
+
+    process
   }
 
   private val process: lang.Process = startProcess()
@@ -257,6 +259,20 @@ class Isabelle(setup: Setup = Setup()) {
 
 object Isabelle {
   private val logger = log4s.getLogger
+
+  def logStream(stream: InputStream, level: LogLevel) : Unit = {
+    val log = logger(level)
+    val thread = new Thread(s"Isabelle output logger, $level") {
+      override def run(): Unit = {
+        new BufferedReader(new InputStreamReader(stream)).lines().forEach(line => logger.debug(line))
+
+//        for (line <- Source.fromInputStream(stream).getLines())
+//          log(line)
+      }
+    }
+    thread.setDaemon(true)
+    thread.start()
+  }
 
   private[control] final class ID(val id: Int, isabelle: Isabelle) {
     isabelle.cleaner.register(this, new IDCleaner(id, isabelle))

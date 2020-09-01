@@ -216,5 +216,7 @@ object TestTerm {
     val cterm = CTerm(ctxt, Const("HOL.True", Type("HOL.bool")))
     val termAgain = cterm.concrete
     println(s"termAgain: ${termAgain.pretty(ctxt)}")
+
+//    isabelle.destroy()
   }
 }

@@ -52,9 +52,13 @@ exception E_Term of term
 exception E_Cterm of cterm
 exception E_Thm of thm *)
 
-fun executeML ml =
-  ML_Compiler.eval ML_Compiler.flags Position.none (ML_Lex.tokenize ml)
-  (* ML_Compiler.eval (ML_Compiler.verbose true ML_Compiler.flags) Position.none (ML_Lex.tokenize ml) *)
+fun executeML ml = let
+  (* val _ = TextIO.print ("Compiling "^ ml^"\n") *)
+  (* val flags = ML_Compiler.verbose true ML_Compiler.flags *)
+  val flags = ML_Compiler.flags
+  val _ = ML_Compiler.eval flags Position.none (ML_Lex.tokenize ml)
+  (* val _ = TextIO.flushOut TextIO.stdOut (* Doesn't see to work *) *)
+  in () end
 
 (* fun executeMLInt seq ml = let
   val _ = tracing ("executeMLInt "^string_of_int seq ^" : " ^ml)
@@ -130,7 +134,7 @@ fun handleLine seq line = ((* tracing ("COMMAND:"^line); *)
   | cmd => error ("Unknown command " ^ str cmd))
 
 fun handleLines' number = case TextIO.inputLine inStream of
-    NONE => (TextIO.print "No input\n"; ())
+    NONE => (tracing "End of input"; ())
     | SOME line => (handleLine number line; handleLines' (number+1))
     ;;
 
