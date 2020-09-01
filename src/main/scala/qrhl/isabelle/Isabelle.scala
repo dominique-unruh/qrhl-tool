@@ -26,6 +26,7 @@ import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
+import isabelle.Symbols
 import qrhl.isabelle.Isabelle.{Thm, fastype_of}
 import qrhl.isabelle.{IsabelleConsts => c, IsabelleTypes => t}
 import scalaz.Applicative
@@ -840,69 +841,16 @@ object Isabelle {
     eval2(term)
   }*/
 
-  val (symbols, symbolsInv) = {
-    import scala.collection.JavaConverters._
-
-    val lineRegex = """^\\<([a-zA-Z0-9^_]+)>\s+code:\s+0x([0-9a-fA-F]+)\b.*""".r
-    val reader = new BufferedReader(new InputStreamReader(this.getClass.getResource("symbols").openStream()))
-    val results = new ListBuffer[(String, Int)]
-    for (line <- reader.lines().iterator.asScala) {
-      //      println(line)
-      line match {
-        case lineRegex(name, codepoint) => results.append((name, Integer.parseInt(codepoint, 16)))
-        case _ => assert(!line.startsWith("\\")) // Lines with \ at the beginning should be matched by lineRegex
-      }
-    }
-    reader.close()
-    //    println(results map { case (n,i) => new String(Character.toChars(i))+" " } mkString)
-    val symbols = Map(results: _*)
-    val symbolsInv = Map(results map { case (n, i) => (i, n) }: _*)
-    (symbols, symbolsInv)
-  }
-
-  private val symbolRegex = """\\<([a-zA-Z0-9^_]+)>""".r
-
-  def symbolsToUnicode(str: String): String = symbolRegex.replaceAllIn(str,
-    { m: Regex.Match =>
-      symbols.get(m.group(1)) match {
-        case Some(i) => new String(Character.toChars(i))
-        case None => m.matched
-      }
-    })
-
-  // following https://stackoverflow.com/a/1527891/2646248
-  private def codepoints(str: String): Seq[Int] = {
-    val len = str.length
-    val result = new ArrayBuffer[Int](len)
-    var offset = 0
-    while (offset < len) {
-      val cp = str.codePointAt(offset)
-      result.append(cp)
-      offset += Character.charCount(cp)
-    }
-    result
-  }
-
-  def unicodeToSymbols(str: String): String = {
-    val sb = new StringBuffer(str.length() * 11 / 10)
-    for (cp <- codepoints(str)) {
-      if (cp <= 128) sb.append(cp.toChar)
-      else symbolsInv.get(cp) match {
-        case Some(sym) => sb.append("\\<"); sb.append(sym); sb.append('>')
-        case None =>
-          if (cp > 255) throw UserException(f"""Character "${new String(Character.toChars(cp))}%s" (Ux$cp%04X) not supported by Isabelle""")
-          sb.appendCodePoint(cp)
-      }
-    }
-    sb.toString
-  }
+  val symbols = new Symbols(extraSymbols = List(
+    // Own additions (because Emacs's TeX input method produces these chars):
+    ("\\<lbrakk>", 0x00301A), ("\\<rbrakk>", 0x00301B), ("\\<cdot>", 0x0000B7)))
 
   private var _theContext: Context = _
 
   def theContext: Context = _theContext
 
   class Thm(val isabelle: Isabelle, val thmId: BigInt) {
-    def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbolsToUnicode)
+    def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbols.symbolsToUnicode)
 
     Isabelle.cleaner.register(this, new Thm.CleaningAction(isabelle, thmId))
 
@@ -946,16 +894,16 @@ object Isabelle {
     }
 
     @deprecated("Use Expression.toString", "now")
-    def prettyExpression(term: Term): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTermOp, (contextId, term)))
+    def prettyExpression(term: Term): String = symbols.symbolsToUnicode(isabelle.invoke(printTermOp, (contextId, term)))
 
     def readTyp(str: String): Typ = isabelle.invoke(readTypOp, (contextId, str))
 
-    def readTypUnicode(str: String): Typ = readTyp(unicodeToSymbols(str))
+    def readTypUnicode(str: String): Typ = readTyp(symbols.unicodeToSymbols(str))
 
-    def prettyTyp(typ: Typ): String = Isabelle.symbolsToUnicode(isabelle.invoke(printTypOp, (contextId, typ)))
+    def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(isabelle.invoke(printTypOp, (contextId, typ)))
 
     def simplify(term: Term, facts: List[String]): (RichTerm, Thm) =
-      isabelle.invoke(simplifyTermOp, (term, facts.map(Isabelle.unicodeToSymbols), contextId)) match {
+      isabelle.invoke(simplifyTermOp, (term, facts.map(symbols.unicodeToSymbols), contextId)) match {
         case (t, thmId) => (t, new Thm(isabelle, thmId))
       }
   }

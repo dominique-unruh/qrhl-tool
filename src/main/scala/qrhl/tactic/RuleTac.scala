@@ -13,7 +13,7 @@ import RichTerm.typ_tight_codec
 import RichTerm.term_tight_codec
 
 case class RuleTac(rule:String) extends IsabelleTac[String]("apply_rule",
-  { _ => Isabelle.unicodeToSymbols(rule) }) {
+  { _ => Isabelle.symbols.unicodeToSymbols(rule) }) {
   override def toString: String = "rule "+rule
 }
 

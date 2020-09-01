@@ -153,7 +153,7 @@ final class RichTerm private(val id: Option[BigInt]=None, val typ: pure.Typ, _is
     case _ => id match {
       case Some(id2) =>
         val retrieve_term_string_op = Operation.implicitly[BigInt,String]("retrieve_term_string") // TODO move
-        Isabelle.symbolsToUnicode(Isabelle.theContext.isabelle.invoke(retrieve_term_string_op, id.get))
+        Isabelle.symbols.symbolsToUnicode(Isabelle.theContext.isabelle.invoke(retrieve_term_string_op, id.get))
       case None => Isabelle.theContext.prettyExpression (isabelleTerm)
     }
   }
@@ -335,7 +335,7 @@ object RichTerm {
 
   private val readExpressionOp : Operation[(BigInt, String, ITyp), RichTerm] = Operation.implicitly[(BigInt, String, ITyp), RichTerm]("read_expression")
   def apply(context: Isabelle.Context, str:String, typ:pure.Typ) : RichTerm = {
-    context.isabelle.invoke(readExpressionOp,(context.contextId,Isabelle.unicodeToSymbols(str),typ))
+    context.isabelle.invoke(readExpressionOp,(context.contextId,Isabelle.symbols.unicodeToSymbols(str),typ))
 //    val term = context.readTerm(Isabelle.unicodeToSymbols(str),typ)
 //    Expression(typ, term)
   }

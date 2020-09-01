@@ -256,7 +256,7 @@ object UserException {
   def apply(msg: String) = new UserException(msg)
   def apply(e: ProverResult.Failure, position: String): UserException = {
     logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
-    val e2 = UserException("(in Isabelle) "+Isabelle.symbolsToUnicode(e.msg))
+    val e2 = UserException("(in Isabelle) "+Isabelle.symbols.symbolsToUnicode(e.msg))
     e2.setPosition(position)
     e2
   }
