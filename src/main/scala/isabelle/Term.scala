@@ -17,12 +17,16 @@ sealed abstract class Term {
 
 final class CTerm private (val ctermMlValue: MLValue[CTerm])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
   override lazy val mlValue: MLValue[Term] = Term.termOfCterm[CTerm, Term](ctermMlValue)
-  override def pretty(ctxt: Context)(implicit ec: ExecutionContext): String = pretty
-  def pretty : String = ???
+  override def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
+    Term.stringOfCterm[Context,CTerm,String](ctxt.mlValue, ctermMlValue).retrieveNow
   lazy val concrete: Term = new MLValueTerm(mlValue).concrete
 }
 
 object CTerm {
+  def apply(mlValue: MLValue[CTerm])
+           (implicit isabelle: Isabelle, executionContext: ExecutionContext) =
+    new CTerm(mlValue)
+
   def apply(ctxt: Context, term: Term)(implicit isabelle: Isabelle, ec: ExecutionContext) : CTerm = {
     implicit val _ = ctxt
     new CTerm(Term.ctermOfTerm[Context,Term,CTerm](ctxt.mlValue, term.mlValue))
@@ -169,6 +173,7 @@ object Term {
   private implicit var isabelle: Isabelle = _
   private var readTerm: MLValue[Context => String => Term] = _
   private var stringOfTerm: MLValue[Context => Term => String] = _
+  private[isabelle] var stringOfCterm: MLValue[Context => CTerm => String] = _
   private[isabelle] var termOfCterm: MLValue[CTerm => Term] = _
   private[isabelle] var ctermOfTerm: MLValue[Context => Term => CTerm] = _
 
@@ -186,6 +191,7 @@ object Term {
       isabelle.executeMLCodeNow("exception E_Term of term;; exception E_CTerm of cterm")
       readTerm = MLValue.compileFunction[Context, String => Term]("fn (E_Context ctxt) => E_ExnExn (fn (E_String str) => Syntax.read_term ctxt str |> E_Term)")
       stringOfTerm = MLValue.compileFunction[Context, Term => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_Term term) => Syntax.string_of_term ctxt term |> E_String)")
+      stringOfCterm = MLValue.compileFunction[Context, CTerm => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_CTerm cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm) |> E_String)")
       whatTerm = MLValue.compileFunction[Term, Int]("fn (E_Term term) => (case term of Const _ => 1 | Free _ => 2 | Var _ => 3 | Bound _ => 4 | Abs _ => 5 | _ $ _ => 6) |> E_Int")
       termName = MLValue.compileFunction[Term, String]("fn (E_Term term) => (case term of Const (name,_) => name | Free (name,_) => name | Var ((name,_),_) => name | Abs(name,_,_) => name) |> E_String")
       termTyp = MLValue.compileFunction[Term, Typ]("fn (E_Term term) => (case term of Const (_,typ) => typ | Free (_,typ) => typ | Var (_,typ) => typ | Abs(_,typ,_) => typ) |> E_Typ")
@@ -197,26 +203,5 @@ object Term {
 
   def apply(context: Context, string: String)(implicit ec: ExecutionContext): MLValueTerm = {
     new MLValueTerm(readTerm[Context, String, Term](context.mlValue, MLValue(string)))
-  }
-}
-
-object TestTerm {
-  import ExecutionContext.Implicits.global
-
-  def main(args: Array[String]): Unit = {
-    implicit val isabelle : Isabelle = new Isabelle
-    Term.init(isabelle)
-    val ctxt = Context("Main")
-    val term = Term(ctxt, "(1::nat)")
-    println("****", term.pretty(ctxt))
-    term match {
-      case Const(one,typ) => println(s"XXXX ${(one, typ.pretty(ctxt))}")
-    }
-
-    val cterm = CTerm(ctxt, Const("HOL.True", Type("HOL.bool")))
-    val termAgain = cterm.concrete
-    println(s"termAgain: ${termAgain.pretty(ctxt)}")
-
-//    isabelle.destroy()
   }
 }

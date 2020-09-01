@@ -32,16 +32,3 @@ object Context {
   def apply(name: String)(implicit ec: ExecutionContext) : Context =
     Context(Theory(name))
 }
-
-object ContextTest {
-  def main(args: Array[String]): Unit = {
-    implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-    val isabelle = new Isabelle()
-    Context.init(isabelle)
-    val ctxt = Context("QRHL.QRHL")
-    println(ctxt)
-    Thread.sleep(1000)
-    println(ctxt)
-    Thread.sleep(1000)
-  }
-}

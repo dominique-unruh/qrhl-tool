@@ -28,16 +28,3 @@ object Theory {
     new Theory(name, mlThy)
   }
 }
-
-object TheoryTest {
-  def main(args: Array[String]): Unit = {
-    implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-    val isabelle = new Isabelle()
-    Theory.init(isabelle)
-    val thy = Theory("QRHL.QRHL")
-    println(thy)
-    Thread.sleep(1000)
-    println(thy)
-    Thread.sleep(1000)
-  }
-}
