@@ -1,0 +1,37 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Tests" type="ScalaTestRunConfiguration" factoryName="ScalaTest" singleton="true" show_console_on_std_err="false" show_console_on_std_out="false">
+    <module name="qrhl" />
+    <option name="allowRunningInParallel" value="false" />
+    <option name="selectedOptions">
+      <set />
+    </option>
+    <option name="testKind" value="All in package" />
+    <option name="classBuf">
+      <list>
+        <option value="qrhl.QRHLSubgoalTest" />
+        <option value="qrhl.ExampleFilesTest" />
+        <option value="qrhl.isabelle.IsabelleTest" />
+        <option value="qrhl.logic.BlockTest" />
+        <option value="qrhl.logic.VariableTest" />
+        <option value="qrhl.toplevel.ParserTest" />
+        <option value="qrhl.toplevel.ToplevelTest" />
+        <option value="qrhl.toplevel.DeclareProgramCommandTest" />
+        <option value="qrhl.tactic.WpTacTest" />
+        <option value="qrhl.tactic.O2HTacTest" />
+        <option value="qrhl.tactic.RndTacTest" />
+        <option value="qrhl.tactic.SeqTacTest" />
+        <option value="qrhl.tactic.CaseTacTest" />
+        <option value="qrhl.tactic.RuleTacTest" />
+        <option value="qrhl.tactic.EqualTacTest" />
+        <option value="qrhl.tactic.ByQRHLTacTest" />
+        <option value="qrhl.tactic.ExpressionTest" />
+      </list>
+    </option>
+    <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />
+    <option name="jrePath" value="" />
+    <option name="workingDirectory" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
