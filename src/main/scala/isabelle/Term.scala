@@ -4,9 +4,9 @@ import isabelle.control.{Isabelle, MLValue}
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Awaitable, ExecutionContext}
-
+import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
 import MLValue.Implicits._
+import isabelle.control.MLValue.{Retriever, Storer}
 
 sealed abstract class Term {
   val mlValue : MLValue[Term]
@@ -205,5 +205,20 @@ object Term {
 
   def apply(context: Context, string: String)(implicit ec: ExecutionContext): MLValueTerm = {
     new MLValueTerm(readTerm[Context, String, Term](context.mlValue, MLValue(string)))
+  }
+
+  object TermRetriever extends Retriever[Term] {
+    override protected def retrieve(value: MLValue[Term])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Term] =
+      Future.successful(new MLValueTerm(mlValue = value))
+  }
+
+  object TermStorer extends Storer[Term] {
+    override protected def store(value: Term)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Term] =
+      value.mlValue
+  }
+
+  object Implicits {
+    implicit val termRetriever: TermRetriever.type = TermRetriever
+    implicit val termStorer: TermStorer.type = TermStorer
   }
 }

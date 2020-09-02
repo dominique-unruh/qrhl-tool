@@ -13,6 +13,10 @@ sealed abstract class Typ {
   def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
     Typ.stringOfType[Context,Typ,String](ctxt.mlValue, mlValue).retrieveNow
   val concrete : Typ
+
+  def -->:(that: Typ)(implicit ec: ExecutionContext): Type = Type("fun", that, this)
+  def --->:(thats: List[Typ])(implicit ec: ExecutionContext): Typ = thats.foldRight(this)(_ -->: _)
+
 }
 
 final class MLValueTyp(val mlValue: MLValue[Typ])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Typ {

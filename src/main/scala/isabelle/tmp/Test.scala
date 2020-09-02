@@ -5,7 +5,7 @@ import java.nio.file.{Path, Paths}
 import isabelle.{Context, Thm}
 import isabelle.control.Isabelle
 import isabelle.control.Isabelle.Setup
-import qrhl.isabelle.DistributionDirectory
+import qrhl.isabellex.DistributionDirectory
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 

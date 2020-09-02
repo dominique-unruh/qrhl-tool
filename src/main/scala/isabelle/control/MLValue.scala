@@ -91,22 +91,58 @@ object MLValue {
     @inline override protected[MLValue] def retrieve(value: MLValue[List[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[List[A]] = ???
   }
 
-  @inline class PairRetriever[A,B](a: Retriever[A], b: Retriever[B]) extends Retriever[(A,B)] {
+  @inline class Tuple2Retriever[A,B](a: Retriever[A], b: Retriever[B]) extends Retriever[(A,B)] {
     @inline override protected[MLValue] def retrieve(value: MLValue[(A, B)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B)] = ???
   }
+  @inline class Tuple3Retriever[A,B,C](a: Retriever[A], b: Retriever[B], c: Retriever[C]) extends Retriever[(A,B,C)] {
+    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C)] = ???
+  }
+  @inline class Tuple4Retriever[A,B,C,D](a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D]) extends Retriever[(A,B,C,D)] {
+    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C, D)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D)] = ???
+  }
+  @inline class Tuple5Retriever[A,B,C,D,E](a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D], e: Retriever[E]) extends Retriever[(A,B,C,D,E)] {
+    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C, D, E)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E)] = ???
+  }
+  @inline class Tuple6Retriever[A,B,C,D,E,F](a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D], e: Retriever[E], f: Retriever[F]) extends Retriever[(A,B,C,D,E,F)] {
+    @inline override protected[MLValue] def retrieve(value: MLValue[(A,B,C,D,E,F)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E,F)] = ???
+  }
 
-  @inline class PairStorer[A,B](a: Storer[A], b: Storer[B]) extends Storer[(A,B)] {
+  @inline class Tuple2Storer[A,B](a: Storer[A], b: Storer[B]) extends Storer[(A,B)] {
     @inline override protected[MLValue] def store(value: (A,B))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B)] = ???
+  }
+
+  @inline class Tuple3Storer[A,B,C](a: Storer[A], b: Storer[B], c: Storer[C]) extends Storer[(A,B,C)] {
+    @inline override protected[MLValue] def store(value: (A,B,C))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C)] = ???
+  }
+
+  @inline class Tuple4Storer[A,B,C,D](a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D]) extends Storer[(A,B,C,D)] {
+    @inline override protected[MLValue] def store(value: (A,B,C,D))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D)] = ???
+  }
+
+  @inline class Tuple5Storer[A,B,C,D,E](a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D], e: Storer[E]) extends Storer[(A,B,C,D,E)] {
+    @inline override protected[MLValue] def store(value: (A,B,C,D,E))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E)] = ???
+  }
+
+  @inline class Tuple6Storer[A,B,C,D,E,F](a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D], e: Storer[E], f: Storer[F]) extends Storer[(A,B,C,D,E,F)] {
+    @inline override protected[MLValue] def store(value: (A,B,C,D,E,F))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E,F)] = ???
   }
 
   object Implicits {
     @inline implicit val intStorer: IntStorer.type = IntStorer
     @inline implicit val stringStorer: StringStorer.type = StringStorer
     @inline implicit def listStorer[A](implicit storer: Storer[A]): ListStorer[A] = new ListStorer(storer)
-    @inline implicit def pairStorer[A,B](implicit a: Storer[A], b: Storer[B]): PairStorer[A, B] = new PairStorer(a,b)
+    @inline implicit def tuple2Storer[A,B](implicit a: Storer[A], b: Storer[B]): Tuple2Storer[A, B] = new Tuple2Storer(a,b)
+    @inline implicit def tuple3Storer[A,B,C](implicit a: Storer[A], b: Storer[B], c: Storer[C]): Tuple3Storer[A, B, C] = new Tuple3Storer(a,b,c)
+    @inline implicit def tuple4Storer[A,B,C,D](implicit a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D]): Tuple4Storer[A, B, C, D] = new Tuple4Storer(a,b,c,d)
+    @inline implicit def tuple5Storer[A,B,C,D,E](implicit a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D], e: Storer[E]): Tuple5Storer[A, B, C, D, E] = new Tuple5Storer(a,b,c,d,e)
+    @inline implicit def tuple6Storer[A,B,C,D,E,F](implicit a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D], e: Storer[E], f: Storer[F]): Tuple6Storer[A, B, C, D, E, F] = new Tuple6Storer(a,b,c,d,e,f)
     @inline implicit val intRetriever: IntRetriever.type = IntRetriever
     @inline implicit val stringRetriever: StringRetriever.type = StringRetriever
     @inline implicit def listRetriever[A](implicit Retriever: Retriever[A]): ListRetriever[A] = new ListRetriever(Retriever)
-    @inline implicit def pairRetriever[A,B](implicit a: Retriever[A], b: Retriever[B]): PairRetriever[A, B] = new PairRetriever(a,b)
+    @inline implicit def tuple2Retriever[A,B](implicit a: Retriever[A], b: Retriever[B]): Tuple2Retriever[A, B] = new Tuple2Retriever(a,b)
+    @inline implicit def tuple3Retriever[A,B,C](implicit a: Retriever[A], b: Retriever[B], c: Retriever[C]): Tuple3Retriever[A,B,C] = new Tuple3Retriever(a,b,c)
+    @inline implicit def tuple4Retriever[A,B,C,D](implicit a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D]): Tuple4Retriever[A,B,C,D] = new Tuple4Retriever(a,b,c,d)
+    @inline implicit def tuple5Retriever[A,B,C,D,E](implicit a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D], e: Retriever[E]): Tuple5Retriever[A,B,C,D,E] = new Tuple5Retriever(a,b,c,d,e)
+    @inline implicit def tuple6Retriever[A,B,C,D,E,F](implicit a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D], e: Retriever[E], f: Retriever[F]): Tuple6Retriever[A,B,C,D,E,F] = new Tuple6Retriever(a,b,c,d,e,f)
   }
 }

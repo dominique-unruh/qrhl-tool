@@ -11,7 +11,6 @@ import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, ConcurrentHashMa
 import isabelle.control.Isabelle.Setup
 import org.log4s
 import org.log4s.{Debug, LogLevel, Warn}
-import qrhl.isabelle.DistributionDirectory
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters.{asScalaIteratorConverter, collectionAsScalaIterableConverter, enumerationAsScalaIteratorConverter}

@@ -1,9 +1,9 @@
 package isabelle
 
-import isabelle.control.MLValue.Retriever
+import isabelle.control.MLValue.{Retriever, Storer}
 import isabelle.control.{Isabelle, MLValue}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 final class Context private [Context](val mlValue : MLValue[Context]) {
   override def toString: String =
@@ -38,7 +38,12 @@ object Context {
       Future.successful(new Context(mlValue = value))
   }
 
+  object ContextStorer extends Storer[Context] {
+    override protected def store(value: Context)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Context] = ???
+  }
+
   object Implicits {
     implicit val contextRetriever: ContextRetriever.type = ContextRetriever
+    implicit val contextStorer: ContextStorer.type = ContextStorer
   }
 }
