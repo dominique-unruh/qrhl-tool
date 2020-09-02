@@ -2,9 +2,9 @@ package qrhl.tactic
 
 import org.scalatest.FunSuite
 import qrhl.QRHLSubgoal
-import qrhl.isabelle.Isabelle
-import qrhl.logic.Statement
+import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.{Toplevel, ToplevelTest}
+import IsabelleX.{globalIsabelle => GIsabelle}
 
 class SeqTacTest extends FunSuite {
   def testSeqRule(pre:String,post:String,left:String,right:String,middle:String) : Unit = {
@@ -13,10 +13,10 @@ class SeqTacTest extends FunSuite {
     val state = tl.state.value
     val left2 = state.parseBlock(left)
     val right2 = state.parseBlock(right)
-    val pre2 = state.parseExpression(Isabelle.predicateT,pre)
-    val post2 = state.parseExpression(Isabelle.predicateT,post)
+    val pre2 = state.parseExpression(GIsabelle.predicateT,pre)
+    val post2 = state.parseExpression(GIsabelle.predicateT,post)
     val qrhl = QRHLSubgoal(left2,right2,pre2,post2,Nil)
-    val middle2 = state.parseExpression(Isabelle.predicateT,middle)
+    val middle2 = state.parseExpression(GIsabelle.predicateT,middle)
     val tac = SeqTac(1,1,middle2)
     val goals = tac(state,qrhl)
     assert(goals.length == 2)

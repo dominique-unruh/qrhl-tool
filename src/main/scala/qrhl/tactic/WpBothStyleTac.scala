@@ -1,7 +1,7 @@
 package qrhl.tactic
 
 import qrhl._
-import qrhl.isabelle.RichTerm
+import qrhl.isabellex.RichTerm
 import qrhl.logic.{Block, Statement}
 
 /** amount -1 means "all" */

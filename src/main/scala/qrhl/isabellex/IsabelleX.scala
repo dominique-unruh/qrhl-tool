@@ -1,4 +1,4 @@
-package qrhl.isabelle
+package qrhl.isabellex
 
 import java.io.{BufferedReader, IOException, InputStreamReader}
 import java.lang
@@ -9,7 +9,11 @@ import java.util.{Timer, TimerTask}
 
 import info.hupel.isabelle.api.{Configuration, Version, XML}
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Typ, Type, Var}
+import isabelle.{Abs, App, Bound, Const, Free, Term, Typ, Type, Var}
+import qrhl.isabellex.IsabelleX.globalIsabelle.simplifyTermOp
+
+import scala.concurrent.ExecutionContext
+//import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Typ, Type, Var}
 import info.hupel.isabelle.setup.Setup.Absent
 import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
 import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
@@ -24,12 +28,21 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
-import isabelle.Symbols
-import qrhl.isabelle.Isabelle.{Thm, fastype_of}
-import qrhl.isabelle.{IsabelleConsts => c, IsabelleTypes => t}
+import isabelle.control.MLValue
+import isabelle.{Context, Symbols, Thm, control}
+import qrhl.isabellex.IsabelleX.fastype_of
+import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 import scalaz.Applicative
+import isabelle.control.MLValue.Implicits._
+import isabelle.Context.Implicits._
+import isabelle.control.MLValue.Implicits._
+
+import MLValue.Implicits._
+import Context.Implicits._
+import Term.Implicits._
+import Typ.Implicits._
+import Thm.Implicits._
+import Subgoal.Implicits._
 
 object DistributionDirectory {
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
@@ -58,75 +71,22 @@ object DistributionDirectory {
   private val logger = log4s.getLogger
 }
 
-class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
-  val version = Version.Stable("2019-RC4")
-  private val auto = path == "auto"
+class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
+  import IsabelleX._
+  // TODO: Check whether this is really the version we instantiate
+  val version = "2019-RC4"
 
   /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
   private val localStoragePath = DistributionDirectory.distributionDirectory.resolve("isabelle-temp")
 
-  private val platform: Platform = Platform.guess match {
-    case None if auto => throw UserException(""""isabelle auto" used, but cannot detect platform. Use "isabelle <path>" with an existing Isabelle install at <path> instead""")
-    case None if !auto => Platform.genericPlatform(localStoragePath)
-    case Some(p) => p.withLocalStorage(localStoragePath)
-  }
-
-  private val setup: Setup = {
-    if (auto) {
-      //      Setup.default(version,updateIfDevel = false).right.get
-      assert(platform.isInstanceOf[OfficialPlatform])
-      Setup.detect(platform, version, updateIfDevel = false) match {
-        case Right(install) => install
-        case Left(Absent) =>
-          println(s"*** Downloading Isabelle into ${platform.localStorage}. May take a while...")
-          Setup.install(platform.asInstanceOf[OfficialPlatform], version) match {
-            case Right(install) => install
-            case Left(reason) => throw UserException("Could not install Isabelle: " + reason.explain)
-          }
-        case Left(reason) => throw UserException("Could not setup Isabelle: " + reason.explain)
-      }
-    } else {
-      //      val platformPath = Paths.get("tmp-isabelle")
-      //      val platform = Platform.genericPlatform(platformPath)
-      //      Setup(Paths.get(path), Platform.guess.get, version)
-      Setup(Paths.get(path), platform, version)
-    }
-  }
-
-  //  private val resources = Resources.dumpIsabelleResources() match {
-  //    case Left(error) => throw new IOException(error.explain)
-  //    case Right(r) => r
-  //  }
-  //  Files.delete(resources.component.resolve("ROOTS"))
-
-  private val components = List(
-    //    resources.component,
-    DistributionDirectory.distributionDirectory.resolve("isabelle-afp"),
-    //    DistributionDirectory.distributionDirectory.resolve("isabelle-thys/protocol"),
-    DistributionDirectory.distributionDirectory.resolve("isabelle-thys")
-  )
-
-  private val environment: info.hupel.isabelle.api.Environment = {
-    //    if (path == "auto") println("Downloading Isabelle if needed (may take a while)")
-    try {
-      val env = setup.makeEnvironment(resolver = Resolver.Default,
-        user = platform.userStorage(version),
-        components = components,
-        options = Nil)
-      Await.result(env, Duration.Inf)
-    } catch {
-      case e: RuntimeException if e.getMessage.startsWith("Generic environment does not support unofficial platform") =>
-        throw UserException("Bad Isabelle root directory (probably)")
-    }
-  }
-
-  private val config: Configuration = Configuration.simple("QRHL")
-
-  private def doBuild() {
-    println("*** Building Isabelle (may take a while, especially the first time, e.g., 20-60min)...")
-    if (!System.build(environment, config))
-      throw qrhl.UserException("Building Isabelle failed")
-  }
+  val setup = new isabelle.control.Isabelle.Setup(
+                    workingDirectory = DistributionDirectory.distributionDirectory,
+                    isabelleHome = Paths.get(s"Isabelle${version}"),
+                    logic = "QRHL",
+                    sessionRoots = List(Paths.get("isabelle-thys"),Paths.get("isabelle-afp")),
+                    /** Must end in .isabelle if provided */
+                    userDir = Some(Paths.get(s"isabelle-temp/user/Isabelle${version}/.isabelle"))
+                  )
 
   private def checkBuilt(): Boolean = {
     //    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
@@ -154,7 +114,7 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
      */
 
     val heaps = try {
-      Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
+      Files.find(setup.userDir.get.resolve(s"Isabelle${version}").resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
         path.endsWith("QRHL") && !path.getParent.endsWith("log")
       }).iterator.asScala.toList
     } catch {
@@ -176,38 +136,15 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
     false
   }
 
-  //    try {
-  //      val files = Files.find(environment.etc.getParent.resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
-  //        path.endsWith("QRHL-Protocol") && !path.getParent.endsWith("log")
-  ////        path.endsWith("QRHL") && !path.endsWith("log")/*&& attr.lastModifiedTime().compareTo(comparedTo) > 0*/
-  //      })
-  //      files.findAny().isPresent
-  //    } catch {
-  //      case _ : IOException => false
-  //    }
-
-  private val system = {
-    if (build || !checkBuilt())
-      doBuild()
-
-    Await.result(System.create(environment, config), Duration.Inf)
-  }
-
-  //  private def unitConv[A]: Expr[A => Unit] = ml.Expr.uncheckedLiteral("(fn _ => ())")
-
-  def invoke[I, O](op: Operation[I, O], arg: I): O = {
-    val start = lang.System.nanoTime
-    val result = Await.result(system.invoke(op)(arg), Duration.Inf).unsafeGet
-//    Isabelle.logger.debug(s"Operation ${op.name} ${(lang.System.nanoTime - start) / 1000000}ms")
-    result
-  }
+  implicit val isabelleControl: control.Isabelle = new control.Isabelle(setup = setup, build = !checkBuilt())
+  isabelle.Thm.init(isabelleControl)
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
     *
     * @param thys Path pointing to theory files (including the suffix .thy)
     * @return the context
     */
-  def getQRHLContextWithFiles(thys: Path*): (Isabelle.Context, List[Path]) = {
+  def getQRHLContextWithFiles(thys: Path*): (ContextX, List[Path]) = {
     getContextWithThys(List("QRHL.QRHL", "QRHL.QRHL_Operations"), thys.toList)
     // TODO: Do we need to include QRHL.QRHL_Operations?
   }
@@ -218,7 +155,7 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
     * @param files Path pointing to theory files (including the suffix .thy)
     * @return the context
     */
-  private def getContextWithThys(thys: List[String], files: List[Path]): (Isabelle.Context, List[Path]) = {
+  private def getContextWithThys(thys: List[String], files: List[Path]): (ContextX, List[Path]) = {
     import scala.collection.JavaConverters._
     for (f <- files)
       if (!Files.isRegularFile(f))
@@ -231,28 +168,30 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
     }
     val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount - 1).toString.stripSuffix(".thy") }
     //    println("Isabelle getContextWithThys", files, filesThyPath)
-    invoke(Operation.UseThys, filesThyPath)
+
+    ??? // TODO: invoke(Operation.UseThys, filesThyPath)
+
     val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
-    val (ctxId, dependencies) = invoke(Isabelle.createContextOp, imports)
-    val ctxt = new Isabelle.Context(this, ctxId)
+    val (ctxt, dependencies) =
+      createContextOp[List[String], (Context, List[String])](MLValue(imports)).retrieveNow
+
     val paths = dependencies.map(Paths.get(_))
 
     for (p <- paths)
       if (!Files.exists(p))
         println(s"*** Theory has non-existing dependency $p. This is a bug. Please report.")
 
-    (ctxt, paths.filter(Files.exists(_)))
+    (new ContextX(this, ctxt), paths.filter(Files.exists(_)))
   }
 
   private var disposed = false
 
   def dispose(): Unit = this.synchronized {
-    if (Isabelle.isGlobalIsabelle(this))
+    if (IsabelleX.isGlobalIsabelle(this))
       throw new lang.RuntimeException("Trying to dispose Isabelle.globalIsabelle")
     if (!disposed) {
-      Isabelle.logger.debug("Disposing Isabelle.")
-      Await.result(system.dispose, Duration.Inf)
-      Isabelle.logger.debug("Disposing Isabelle (done).")
+      IsabelleX.logger.debug("Disposing Isabelle.")
+      isabelleControl.destroy()
       disposed = true
     }
   }
@@ -263,10 +202,43 @@ class Isabelle(path: String, build: Boolean = sys.env.contains("QRHL_FORCE_BUILD
     super.finalize()
   }
 
-  def runJEdit(files: Seq[String] = Nil): Unit = environment.exec("jedit", List("-l", "QRHL") ++ files.toList)
-}
 
-object Isabelle {
+  val checkTypeOp: MLValue[((Context, Term)) => Typ] =
+    MLValue.compileFunction[(Context, Term), Typ]("QRHL_Operations.check_type")
+  val createContextOp: MLValue[List[String] => (Context, List[String])] =
+    MLValue.compileFunction[List[String], (Context, List[String])]("QRHL_Operations.create_context")
+  val addAssumptionOp: MLValue[((String, Term, Context)) => Context] =
+    MLValue.compileFunction[(String, Term, Context), Context]("QRHL_Operations.add_assumption")
+  val simplifyTermOp: MLValue[((Term, List[String], Context)) => (Term, Thm)] =
+    MLValue.compileFunction[(Term, List[String], Context), (Term, Thm)]("QRHL_Operations.simplify_term")
+  val declareVariableOp: MLValue[((Context, String, Typ)) => Context] =
+    MLValue.compileFunction[(Context, String, Typ), Context]("QRHL_Operations.declare_variable")
+  val thms_as_subgoals: MLValue[((Context, String)) => List[Subgoal]] =
+    MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
+
+  val boolT: Typ = Type(t.bool)
+  val True_const: Const = Const(c.True, boolT)
+  val False_const: Const = Const(c.False, boolT)
+  val dummyT: Type = Type(t.dummy)
+  val natT: Type = Type(t.nat)
+  val intT: Type = Type(t.int)
+  val bitT: Type = Type(t.bit)
+  //  val linear_spaceT_name = "Complex_Inner_Product.linear_space"
+  val predicateT: Type = Type(t.clinear_space, ell2T(Type(t.mem2)))
+  val programT: Type = Type(t.program)
+  val oracle_programT: Type = Type(t.oracle_program)
+  val classical_subspace : Term= Const(c.classical_subspace, boolT -->: predicateT)
+  def classical_subspace(t:Term) : Term = classical_subspace $ t
+  def classical_subspace_optimized(t: Term): Term = t match {
+    case True_const => predicate_top
+    case False_const => predicate_0
+    case _ => classical_subspace(t)
+  }
+  val predicate_inf: Const = Const(c.inf, predicateT -->: predicateT -->: predicateT)
+  val predicate_bot: Const = Const(c.bot, predicateT)
+  val predicate_top: Const = Const(c.top, predicateT)
+  val predicate_0: Const = Const(c.zero, predicateT)
+
   def undefined(typ: Typ) : Const = Const(c.undefined, typ)
 
   def liftSpace(typ: Typ) : Const = Const(c.liftSpace, linear_spaceT(ell2T(typ)) -->: variablesT(typ) -->: predicateT)
@@ -289,11 +261,11 @@ object Isabelle {
 
   def empty_set(typ: Typ): Const = bot(setT(typ))
 
-  def linear_spaceT(typ: Typ): Type = Type(t.clinear_space, List(typ))
+  def linear_spaceT(typ: Typ): Type = Type(t.clinear_space, typ)
 
-  val infiniteT: Typ = Type(t.infinite, Nil)
+  val infiniteT: Typ = Type(t.infinite)
 
-  def setT(typ: Typ): Type = Type(t.set, List(typ))
+  def setT(typ: Typ): Type = Type(t.set, typ)
   object SetT {
     def unapply(arg: Typ): Option[Typ] = arg match {
       case Type(t.set, List(typ)) => Some(typ)
@@ -301,7 +273,7 @@ object Isabelle {
     }
   }
 
-  def INF(typ: Typ): Const = Const(c.Inf, Isabelle.setT(typ) -->: typ)
+  def INF(typ: Typ): Const = Const(c.Inf, setT(typ) -->: typ)
 
   def image(a: Typ, b:Typ) : Const = Const(c.image, (a -->: b) -->: setT(a) -->: setT(b))
 
@@ -326,12 +298,10 @@ object Isabelle {
     Abs(varName, varTyp, abstract_over(Free(varName, varTyp), term))
 
 
-  val not : Const = Const(c.not, HOLogic.boolT -->: HOLogic.boolT)
+  val not : Const = Const(c.not, boolT -->: boolT)
   def not(t: Term) : Term = not $ t
   def less_eq(typ : Typ): Const = Const(c.less_eq, typ -->: typ -->: boolT)
   def less_eq(t: Term, u:Term) : Term = less_eq(fastype_of(t)) $ t $ u
-
-  private val cleaner = Cleaner.create()
 
   def swap_variables_subspace(v: Term, w: Term, pre: Term): Term = {
     val typ = fastype_of(v)
@@ -360,67 +330,26 @@ object Isabelle {
   }
   def idOp(valueTyp: Typ): Const = Const(c.idOp, boundedT(valueTyp, valueTyp))
 
-  private var globalIsabellePeek: Isabelle = _
-  lazy val globalIsabelle: Isabelle = {
-    val isabelle = new Isabelle(DistributionDirectory.distributionDirectory.resolve("Isabelle2019-RC4").normalize.toAbsolutePath.toString)
-    globalIsabellePeek = isabelle
-    isabelle
+  val show_oracles_lines_op: MLValue[Thm => List[String]] = ???
+//    Operation.implicitly[Thm, List[String]]("show_oracles_lines")
+  def show_oracles_lines(thm: Thm): List[String] = {
+    show_oracles_lines_op[Thm, List[String]](thm.mlValue).retrieveNow.map(IsabelleX.symbols.symbolsToUnicode)
+  }
+  def show_oracles(thm: Thm): Unit = {
+    logger.debug(show_oracles_lines(thm).mkString("\n"))
   }
 
-  def isGlobalIsabelle(isabelle: Isabelle): Boolean =
-    (globalIsabellePeek != null) && (globalIsabelle == isabelle)
-
-  @deprecated("use Expression.toString", "now")
-  def pretty(t: Term): String = Isabelle.theContext.prettyExpression(t)
-
-  def pretty(t: Typ): String = Isabelle.theContext.prettyTyp(t)
-
-  implicit object applicativeXMLResult extends Applicative[XMLResult] {
-    override def point[A](a: => A): XMLResult[A] = Right(a)
-
-    override def ap[A, B](fa: => XMLResult[A])(f: => XMLResult[A => B]): XMLResult[B] = fa match {
-      case Left(error) => Left(error)
-      case Right(a) => f match {
-        case Left(error) => Left(error)
-        case Right(ab) => Right(ab(a))
-      }
-    }
-  }
-
-
-  object Thm {
-    private val logger = log4s.getLogger
-    val show_oracles_lines_op: Operation[BigInt, List[String]] = Operation.implicitly[BigInt, List[String]]("show_oracles_lines")
-
-    implicit def codec(implicit isabelle: Isabelle): Codec[Isabelle.Thm] =
-      new Codec[Isabelle.Thm] {
-        override val mlType: String = "thm"
-
-        override def encode(thm: Thm): XML.Tree = XML.elem(("thm", List(("id", thm.thmId.toString))), Nil)
-
-        override def decode(xml: XML.Tree): XMLResult[Thm] = xml match {
-          case XML.Elem(("thm", List(("id", id))), Nil) => Right(new Thm(isabelle, BigInt(id)))
-        }
-      }
-
-    class CleaningAction(isabelle: Isabelle, thmId: BigInt) extends Runnable {
-      override def run(): Unit = {
-        isabelle.invoke(deleteThmOp, thmId)
-      }
-    }
-  }
-
-  private val logger = log4s.getLogger
-
+  val conj: Const = Const(c.conj, boolT -->: boolT -->: boolT)
   def conj(terms: Term*): Term = terms match {
     case Seq(ts @ _*) =>
-      ts.dropRight(1).foldRight(ts.last) { (t1,t2) => HOLogic.conj $ t1 $ t2 }
-//    case Nil => HOLogic.True
+      ts.dropRight(1).foldRight(ts.last) { (t1,t2) => conj $ t1 $ t2 }
+    //    case Nil => HOLogic.True
   }
 
+  val disj: Const = Const(c.disj, boolT -->: boolT -->: boolT)
   def disj(terms: Term*): Term = terms match {
-    case Seq(t, ts @ _*) => ts.foldLeft(t) { (t1,t2) => HOLogic.disj $ t1 $ t2 }
-    case Nil => HOLogic.False
+    case Seq(t, ts @ _*) => ts.foldLeft(t) { (t1,t2) => disj $ t1 $ t2 }
+    case Nil => False_const
   }
 
   def mk_list(typ: Typ, terms: List[Term]): Term = {
@@ -431,9 +360,9 @@ object Isabelle {
   }
 
   // TODO rename constants
-//  val vectorT_name = "Complex_L2.ell2"
+  //  val vectorT_name = "Complex_L2.ell2"
 
-  def ell2T(typ: Typ): Type = Type(t.ell2, List(typ))
+  def ell2T(typ: Typ): Type = Type(t.ell2, typ)
   object Ell2T {
     def unapply(typ: Typ): Option[Typ] = typ match {
       case Type(t.ell2, List(typ)) => Some(typ)
@@ -446,20 +375,6 @@ object Isabelle {
     case _ => throw new RuntimeException("expected type 'vector', not " + typ)
   }
 
-  val dummyT: Type = Type(t.dummy)
-  val natT: Type = Type(t.nat)
-  val bitT: Type = Type(t.bit, Nil)
-//  val linear_spaceT_name = "Complex_Inner_Product.linear_space"
-  val predicateT: Type = Type(t.clinear_space, List(ell2T(Type(t.mem2, Nil))))
-  val programT: Type = Type(t.program)
-  val oracle_programT: Type = Type(t.oracle_program)
-  val classical_subspace : Term= Const(c.classical_subspace, HOLogic.boolT -->: predicateT)
-  def classical_subspace(t:Term) : Term = classical_subspace $ t
-  def classical_subspace_optimized(t: Term): Term = t match {
-    case True_const => predicate_top
-    case False_const => predicate_0
-    case _ => classical_subspace(t)
-  }
 
   def top(typ: Typ) = Const(c.top, typ)
   object Top {
@@ -486,11 +401,7 @@ object Isabelle {
     }
   }
 
-  val predicate_inf: Const = Const(c.inf, predicateT -->: predicateT -->: predicateT)
-  val predicate_bot: Const = Const(c.bot, predicateT)
-  val predicate_top: Const = Const(c.top, predicateT)
-  val predicate_0: Const = Const(c.zero, predicateT)
-//  val distrT_name = "Discrete_Distributions.distr"
+  //  val distrT_name = "Discrete_Distributions.distr"
 
 
   object Inf {
@@ -545,15 +456,16 @@ object Isabelle {
   }
 
 
-  def distrT(typ: Typ): Type = Type(t.distr, List(typ))
+  def distrT(typ: Typ): Type = Type(t.distr, typ)
 
   def dest_distrT(typ: Typ): Typ = typ match {
     case Type(t.distr, List(typ2)) => typ2
     case _ => throw new RuntimeException(s"expected type ${t.distr}, not " + typ)
   }
 
-//  val BoundedT_name: String = "Bounded_Operators.Bounded"
-  def boundedT(inT: Typ, outT: Typ) = Type(t.bounded, List(inT, outT))
+
+  //  val BoundedT_name: String = "Bounded_Operators.Bounded"
+  def boundedT(inT: Typ, outT: Typ) = Type(t.bounded, inT, outT)
   object BoundedT {
     def unapply(typ: Typ): Option[(Typ,Typ)] = typ match {
       case Type(t.bounded, List(t1, t2)) => Some((t1, t2))
@@ -581,20 +493,20 @@ object Isabelle {
     case _ => throw new RuntimeException("expected type 'l2bounded', not " + typ)
   }
 
-//  val measurementT_name = "QRHL_Core.measurement"
+  //  val measurementT_name = "QRHL_Core.measurement"
 
-  def measurementT(resultT: Typ, qT: Typ) = Type(t.measurement, List(resultT, qT))
+  def measurementT(resultT: Typ, qT: Typ) = Type(t.measurement, resultT, qT)
 
   def dest_measurementT(typ: Typ): (Typ, Typ) = typ match {
     case Type(t.measurement, List(typ1, typ2)) => (typ1, typ2)
     case _ => throw new RuntimeException(s"expected type ${t.measurement}, not " + typ)
   }
 
-  def listT(typ: Typ): Type = Type(t.list, List(typ))
+  def listT(typ: Typ): Type = Type(t.list, typ)
 
   val block = Const(c.block, listT(programT) -->: programT)
 
-  def variableT(typ: Typ) = Type(t.variable, List(typ))
+  def variableT(typ: Typ) = Type(t.variable, typ)
   object VariableT {
     def unapply(typ: Typ): Option[Typ] = typ match {
       case Type(t.variable, List(typ)) => Some(typ)
@@ -607,7 +519,7 @@ object Isabelle {
     case _ => throw new RuntimeException(s"expected type ${t.variable}, not " + typ)
   }
 
-  def variablesT(typ: Typ): Type = Type(t.variables, List(typ))
+  def variablesT(typ: Typ): Type = Type(t.variables, typ)
   object VariablesT {
     def unapply(typ: Typ): Option[Typ] = typ match {
       case Type(t.variables, List(typ)) => Some(typ)
@@ -618,44 +530,44 @@ object Isabelle {
   def variablesT(typs: List[Typ]): Type = variablesT(tupleT(typs: _*))
 
   //val cvariableT: Typ => Type = variableT
-  def expressionT(typ: Typ) = Type(t.expression, List(typ))
+  def expressionT(typ: Typ) = Type(t.expression, typ)
 
   val instantiateOracles = Const(c.instantiateOracles, oracle_programT -->: listT(programT) -->: programT)
-//  val assignName = c.assign
+  //  val assignName = c.assign
 
   def assign(typ: Typ): Const = Const(c.assign, variablesT(typ) -->: expressionT(typ) -->: programT)
 
-//  val sampleName = c.sample
+  //  val sampleName = c.sample
 
   def sample(typ: Typ): Const = Const(c.sample, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
 
   val propT = Type(t.prop)
 
-//  val ifthenelseName = "Programs.ifthenelse"
-  val ifthenelse = Const(c.ifthenelse, expressionT(HOLogic.boolT) -->: listT(programT) -->: listT(programT) -->: programT)
-//  val whileName = "Programs.while"
-  val whileProg = Const(c.`while`, expressionT(HOLogic.boolT) -->: listT(programT) -->: programT)
+  //  val ifthenelseName = "Programs.ifthenelse"
+  val ifthenelse = Const(c.ifthenelse, expressionT(boolT) -->: listT(programT) -->: listT(programT) -->: programT)
+  //  val whileName = "Programs.while"
+  val whileProg = Const(c.`while`, expressionT(boolT) -->: listT(programT) -->: programT)
   val metaImp = Const(c.imp, propT -->: propT -->: propT)
-  val boolT: Typ = HOLogic.boolT
   val implies = Const(c.implies, boolT -->: boolT -->: boolT)
   def implies(a: Term, b: Term): Term = implies $ a $ b
+  val iff = Const(c.eq, boolT -->: boolT -->: boolT)
   val qrhl = Const(c.qrhl, expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
-//  val qinitName = c.qinit
+  //  val qinitName = c.qinit
 
   def qinit(typ: Typ) = Const(c.qinit, variablesT(typ) -->: expressionT(ell2T(typ)) -->: programT)
 
-//  val qapplyName = "Programs.qapply"
+  //  val qapplyName = "Programs.qapply"
 
   def qapply(typ: Typ) = Const(c.qapply, variablesT(typ) -->: expressionT(l2boundedT(typ)) -->: programT)
 
-//  val measurementName = c.measurement
+  //  val measurementName = c.measurement
 
   def measurement(resultT: Typ, qT: Typ) = Const(c.measurement, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT, qT)) -->: programT)
 
   val unitT = Type(t.unit)
-//  val prodT_name = "Product_Type.prod"
+  //  val prodT_name = "Product_Type.prod"
 
-  def prodT(t1: Typ, t2: Typ) = Type(t.prod, List(t1, t2))
+  def prodT(t1: Typ, t2: Typ) = Type(t.prod, t1, t2)
 
   def dest_prodT(typ: Typ): (Typ, Typ) = typ match {
     case Type(t.prod, List(t1, t2)) => (t1, t2)
@@ -710,47 +622,17 @@ object Isabelle {
     def unapply(t: Term) = Some(fastype_of(t))
   }
 
-  def fastype_of(t: Term, typs: List[Typ] = Nil): Typ = t match {
-    case App(f,u) => fastype_of(f, typs) match {
-      case Type("fun", List(_,typ)) => typ
-    }
-    case Const(_, typ) => typ
-    case Free(_, typ) => typ
-    case Var(_, typ) => typ
-    case Bound(i) => typs(i.intValue)
-    case Abs(_,typ,u) => typ -->: fastype_of(u, typ::typs)
-  }
-
-
-
   val realT: Type = Type(t.real)
   val stringT: Type = listT(Type(t.char))
   val program_stateT: Type = Type(t.program_state)
   val probability: Const = Const(c.probability, expressionT(boolT) -->: programT -->: program_stateT -->: realT)
 
-  val checkTypeOp: Operation[(BigInt, Term), Typ] = Operation.implicitly[(BigInt, Term), Typ]("check_type")
-  val createContextOp: Operation[List[String], (BigInt, List[String])] =
-    Operation.implicitly[List[String], (BigInt, List[String])]("create_context")
-  val deleteContextOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt, Unit]("delete_context")
-  val deleteThmOp: Operation[BigInt, Unit] = Operation.implicitly[BigInt, Unit]("delete_thm")
-  val printTermOp: Operation[(BigInt, Term), String] = Operation.implicitly[(BigInt, Term), String]("print_term")
-  val printTypOp: Operation[(BigInt, Typ), String] = Operation.implicitly[(BigInt, Typ), String]("print_typ")
-  val addAssumptionOp: Operation[(String, Term, BigInt), BigInt] = Operation.implicitly[(String, Term, BigInt), BigInt]("add_assumption")
-  val readTypOp: Operation[(BigInt, String), Typ] = Operation.implicitly[(BigInt, String), Typ]("read_typ")
-  @deprecated("use readExpression", "now")
-  val readTermOp: Operation[(BigInt, String, Typ), Term] = Operation.implicitly[(BigInt, String, Typ), Term]("read_term")
-  val simplifyTermOp: Operation[(Term, List[String], BigInt), (RichTerm, BigInt)] = Operation.implicitly[(Term, List[String], BigInt), (RichTerm, BigInt)]("simplify_term")
-  val declareVariableOp: Operation[(BigInt, String, Typ), BigInt] = Operation.implicitly[(BigInt, String, Typ), BigInt]("declare_variable")
-//  val one_name = "Groups.one_class.one"
-  val True_const = Const(c.True, boolT)
-  val False_const = Const(c.False, boolT)
-  val thms_as_subgoals: Operation[(BigInt, String), List[Subgoal]] = Operation.implicitly[(BigInt,String),List[Subgoal]]("thms_as_subgoals")
 
 
 
   def mk_eq(a: Term, b: Term): Term = {
     val typ = fastype_of(a)
-    Const(c.eq, typ -->: typ -->: HOLogic.boolT) $ a $ b
+    Const(c.eq, typ -->: typ -->: boolT) $ a $ b
   }
 
   /** Analogous to Isabelle's HOLogic.dest_list. Throws [[MatchError]] if it's not a list */
@@ -817,7 +699,7 @@ object Isabelle {
 
     def collect(t: Term): Unit = t match {
       case Free(v, _) => fv += v
-      case Const(_, _) | Bound(_) | Var(_, _) =>
+      case Const(_, _) | Bound(_) | Var(_, _, _) =>
       case App(t1, t2) => collect(t1); collect(t2)
       case Abs(_, _, body) => collect(body)
     }
@@ -826,114 +708,9 @@ object Isabelle {
     fv.result
   }
 
-  //  private val configureContext: ml.Expr[IContext => IContext] =
-  //    ml.Expr.uncheckedLiteral("(fn ctx => ctx (*|> Config.put show_types true |> Config.put show_sorts true*) )")
-  //  private def simplifyTerm(term: Term, facts:List[String]) : ml.Expr[IContext => Term] = {
-  //    val lit = ml.Expr.uncheckedLiteral[Term => List[String] => IContext => Term]("QRHL.simp")
-  //    lit(term)(implicitly)(facts)
-  //  }
-
-/*  def absfree(varName: String, varTyp: Typ, term: Term): ml.Expr[Term] = {
-    val lit = ml.Expr.uncheckedLiteral[String => Typ => Term => Term](
-      "(fn name => fn T => fn t => Term.absfree (name,T) t)")
-    val eval1 = lit(varName)
-    val eval2 = eval1(varTyp)
-    eval2(term)
-  }*/
-
-  val symbols = new Symbols(extraSymbols = List(
-    // Own additions (because Emacs's TeX input method produces these chars):
-    ("lbrakk", 0x00301A), ("rbrakk", 0x00301B), ("cdot", 0x0000B7)))
-
-  private var _theContext: Context = _
-
-  def theContext: Context = _theContext
-
-  class Thm(val isabelle: Isabelle, val thmId: BigInt) {
-    def show_oracles_lines(): List[String] = isabelle.invoke(Thm.show_oracles_lines_op, thmId).map(Isabelle.symbols.symbolsToUnicode)
-
-    Isabelle.cleaner.register(this, new Thm.CleaningAction(isabelle, thmId))
-
-    def show_oracles(): Unit = {
-      Thm.logger.debug(show_oracles_lines().mkString("\n"))
-    }
-
-//    override protected def finalize(): Unit = {
-//      logger.debug(s"Deleting theorem $thmId")
-//      isabelle.invoke(deleteThmOp, thmId)
-//      //noinspection ScalaDeprecation
-//      super.finalize()
-//    }
-  }
-
-  class Context(val isabelle: Isabelle, val contextId: BigInt) {
-    _theContext = this
-
-    def checkType(term: Term): Typ = {
-      isabelle.invoke(checkTypeOp, (contextId, term))
-    }
-
-    Isabelle.cleaner.register(this, new Context.CleaningAction(isabelle, contextId))
-
-    def declareVariable(name: String, isabelleTyp: Typ): Context = {
-      val id = isabelle.invoke(declareVariableOp, (contextId, name, isabelleTyp))
-      new Context(isabelle, id)
-    }
-
-    def addAssumption(name: String, assumption: Term): Context = {
-      val id = isabelle.invoke(addAssumptionOp, (name, assumption, contextId))
-      new Context(isabelle, id)
-    }
-
-    def map(f: BigInt => BigInt): Context =
-      new Context(isabelle, f(contextId))
-
-    @deprecated("Use Expression.read", "now")
-    def readTerm(str: String, typ: Typ): Term = {
-      isabelle.invoke(readTermOp, (contextId, str, typ))
-    }
-
-    @deprecated("Use Expression.toString", "now")
-    def prettyExpression(term: Term): String = symbols.symbolsToUnicode(isabelle.invoke(printTermOp, (contextId, term)))
-
-    def readTyp(str: String): Typ = isabelle.invoke(readTypOp, (contextId, str))
-
-    def readTypUnicode(str: String): Typ = readTyp(symbols.unicodeToSymbols(str))
-
-    def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(isabelle.invoke(printTypOp, (contextId, typ)))
-
-    def simplify(term: Term, facts: List[String]): (RichTerm, Thm) =
-      isabelle.invoke(simplifyTermOp, (term, facts.map(symbols.unicodeToSymbols), contextId)) match {
-        case (t, thmId) => (t, new Thm(isabelle, thmId))
-      }
-  }
-
-  object Context {
-
-    implicit object codec extends Codec[Context] {
-      override val mlType: String = "Proof.context"
-
-      override def encode(ctxt: Context): XML.Tree = XML.elem(("context", List(("id", ctxt.contextId.toString))), Nil)
-
-      def decode(isabelle: Isabelle, xml: XML.Tree): XMLResult[Context] = xml match {
-        case XML.Elem(("context", List(("id", id))), Nil) => Right(new Context(isabelle, BigInt(id)))
-      }
-
-      // TODO: use an implicit isabelle argument
-      override def decode(tree: XML.Tree): XMLResult[Context] = throw new RuntimeException("Use Context.codec.decode(Isabelle,XML.Tree) instead")
-    }
-
-    class CleaningAction(isabelle: Isabelle, contextId: BigInt) extends Runnable {
-      override def run(): Unit = {
-//        logger.debug(s"Deleting context $contextId")
-        isabelle.invoke(deleteContextOp, contextId)
-      }
-    }
-  }
-
 
   def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ): Const =
-    Const(IsabelleConsts.quantum_equality_full, Isabelle.l2boundedT(typLeft,typZ) -->: Isabelle.variablesT(typLeft) -->: Isabelle.l2boundedT(typRight,typZ) -->: Isabelle.variablesT(typRight) -->: Isabelle.predicateT)
+    Const(IsabelleConsts.quantum_equality_full,  l2boundedT(typLeft,typZ) -->: variablesT(typLeft) -->: l2boundedT(typRight,typZ) -->: variablesT(typRight) -->: predicateT)
   def quantum_equality(q: Term, r: Term): Term = {
     val typQ = fastype_of(q)
     assert(typQ == fastype_of(r))
@@ -952,5 +729,93 @@ object Isabelle {
       case _ => None
     }
   }
+
+  def funT(domain: Typ, range: Typ): Type = Type("fun", domain, range)
+
+}
+
+object IsabelleX {
+
+
+  private var globalIsabellePeek: IsabelleX = _
+  lazy val globalIsabelle: IsabelleX = {
+    val isabelle = new IsabelleX()
+    globalIsabellePeek = isabelle
+    isabelle
+  }
+
+  def isGlobalIsabelle(isabelle: IsabelleX): Boolean =
+    (globalIsabellePeek != null) && (globalIsabelle == isabelle)
+
+  @deprecated("use Expression.toString", "now")
+  def pretty(t: Term): String = IsabelleX.theContext.prettyExpression(t)
+
+  def pretty(t: Typ): String = IsabelleX.theContext.prettyTyp(t)
+
+  private val logger = log4s.getLogger
+
+
+  // TODO: Reimplement in isabelle.Term
+  def fastype_of(t: Term, typs: List[Typ] = Nil): Typ = t match {
+    case App(f,u) => fastype_of(f, typs) match {
+      case Type("fun", List(_,typ)) => typ
+    }
+    case Const(_, typ) => typ
+    case Free(_, typ) => typ
+    case Var(_, _, typ) => typ
+    case Bound(i) => typs(i.intValue)
+    case Abs(_,typ,u) => typ -->: fastype_of(u, typ::typs)
+  }
+
+
+  val symbols = new Symbols(extraSymbols = List(
+    // Own additions (because Emacs's TeX input method produces these chars):
+    ("lbrakk", 0x00301A), ("rbrakk", 0x00301B), ("cdot", 0x0000B7)))
+
+  private var _theContext: ContextX = _
+  def theContext: ContextX = _theContext
+
+  class ContextX(val isabelle: IsabelleX, val context: _root_.isabelle.Context) {
+    private implicit val isabelleControl = isabelle.isabelleControl
+    _theContext = this
+
+    def checkType(term: Term): Typ =
+      isabelle.checkTypeOp[(Context, Term), Typ](MLValue(context,term)).retrieveNow
+
+    def declareVariable(name: String, isabelleTyp: Typ): ContextX = {
+      val ctxt = isabelle.declareVariableOp[(Context,String,Typ), Context](
+                    MLValue((context, name, isabelleTyp))).retrieveNow
+      new ContextX(isabelle, ctxt)
+    }
+
+    def addAssumption(name: String, assumption: Term): ContextX = {
+      val ctxt = isabelle.addAssumptionOp[(String,Term,Context), Context](
+        MLValue((name, assumption, context))).retrieveNow
+      new ContextX(isabelle, ctxt)
+    }
+
+    def map(f: Context => Context): ContextX =
+      new ContextX(isabelle, f(context))
+
+    @deprecated("Use Expression.read", "now")
+    def readTerm(str: String, typ: Typ): Term =
+      Term(context, str, typ)
+
+    @deprecated("Use Expression.toString", "now")
+    def prettyExpression(term: Term): String =
+      symbols.symbolsToUnicode(term.pretty(context))
+
+    def readTyp(str: String): Typ = Typ(context, str)
+
+    def readTypUnicode(str: String): Typ = readTyp(symbols.unicodeToSymbols(str))
+
+    def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(typ.pretty(context))
+
+    def simplify(term: Term, facts: List[String])(implicit executionContext: ExecutionContext): (RichTerm, Thm) = {
+      val (t,thm) = simplifyTermOp[(Term, List[String], Context), (Term,Thm)](MLValue((term, facts.map(symbols.unicodeToSymbols), context))).retrieveNow
+      (RichTerm(t), thm)
+    }
+  }
+
 
 }

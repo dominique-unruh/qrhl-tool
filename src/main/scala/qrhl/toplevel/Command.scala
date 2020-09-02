@@ -2,14 +2,20 @@ package qrhl.toplevel
 
 import java.nio.file.{Path, Paths}
 
-import info.hupel.isabelle.{Operation, pure}
-import org.log4s
-import org.log4s.Logger
-import qrhl.isabelle.Isabelle
+import isabelle.{Context, Typ}
+import isabelle.control.MLValue
+import qrhl.isabellex.IsabelleX
 import qrhl.logic.{Block, CVariable, QVariable, Variable}
 import qrhl.{State, Subgoal, Tactic, UserException}
+import IsabelleX.{globalIsabelle => GIsabelle}
 
 import scala.collection.immutable.ListSet
+
+// Implicits
+import GIsabelle.isabelleControl
+import MLValue.Implicits._
+import Context.Implicits._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 trait Command {
@@ -33,7 +39,7 @@ case class IsabelleCommand(thy:Seq[String]) extends Command {
   }
 }
 
-case class DeclareVariableCommand(name: String, typ: pure.Typ, ambient:Boolean=false, quantum:Boolean=false) extends Command {
+case class DeclareVariableCommand(name: String, typ: Typ, ambient:Boolean=false, quantum:Boolean=false) extends Command {
   assert(!(ambient && quantum))
 
   override def act(state: State): State = {
@@ -41,7 +47,7 @@ case class DeclareVariableCommand(name: String, typ: pure.Typ, ambient:Boolean=f
       println(s"Declaring ambient variable $name : $typ.")
       state.declareAmbientVariable(name,typ)
     } else {
-      println(s"Declaring ${if (quantum) "quantum" else "classical"} variable $name : ${Isabelle.pretty(typ)}.")
+      println(s"Declaring ${if (quantum) "quantum" else "classical"} variable $name : ${IsabelleX.pretty(typ)}.")
       state.declareVariable(name, typ, quantum = quantum)
     }
   }
@@ -127,13 +133,16 @@ class DebugCommand private (action: State => State) extends Command {
 }
 object DebugCommand {
   def state(action: State => Unit): DebugCommand = new DebugCommand({ state => action(state); state})
-  def goals(action: (Isabelle.Context, List[Subgoal]) => Unit): DebugCommand =
+  def goals(action: (IsabelleX.ContextX, List[Subgoal]) => Unit): DebugCommand =
     new DebugCommand({state:State => action(state.isabelle, state.goal); state})
   val isabelle: DebugCommand = DebugCommand.state({
     state : State =>
-      val str = state.isabelle.isabelle.invoke(Operation.implicitly[BigInt,String]("debug"), state.isabelle.contextId)
+      val str = debugOp[Context,String](MLValue(state.isabelle.context)).retrieveNow
       println(s"DEBUG: $str")
   })
+
+  val debugOp: MLValue[Context => String] =
+    MLValue.compileFunction[Context, String]("QRHL_Operations.debug")
 }
 
 case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=false) extends Command {

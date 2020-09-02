@@ -3,9 +3,10 @@ package qrhl.tactic
 import info.hupel.isabelle.ProverResult
 import org.scalatest.FunSuite
 import qrhl.QRHLSubgoal
-import qrhl.isabelle.Isabelle
+import qrhl.isabellex.IsabelleX
 import qrhl.logic.CVariable
 import qrhl.toplevel.{Toplevel, ToplevelTest}
+import IsabelleX.{globalIsabelle => GIsabelle}
 
 class RndTacTest extends FunSuite {
   def toplevel(): Toplevel = {
@@ -28,7 +29,7 @@ class RndTacTest extends FunSuite {
     assert(st.goal.length==1)
     val post = st.goal.head.asInstanceOf[QRHLSubgoal].post
     assert(post.toString == "ℭ𝔩𝔞[uniform UNIV = uniform UNIV] ⊓ (⨅z∈supp (uniform UNIV). ⊤)")
-    post.checkWelltyped(tl.state.value.isabelle, Isabelle.predicateT)
+    post.checkWelltyped(tl.state.value.isabelle, GIsabelle.predicateT)
   }
 
   test("rnd witness") {
@@ -40,6 +41,6 @@ class RndTacTest extends FunSuite {
     assert(st.value.goal.length==1)
     val post = st.value.goal.head.asInstanceOf[QRHLSubgoal].post
 //    assert(post.toString == "???")
-    post.checkWelltyped(tl.state.value.isabelle, Isabelle.predicateT)
+    post.checkWelltyped(tl.state.value.isabelle, GIsabelle.predicateT)
   }
 }

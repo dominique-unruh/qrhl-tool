@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
 import qrhl._
-import qrhl.isabelle.RichTerm
+import qrhl.isabellex.RichTerm
 
 case class CaseSplitTac(expr:RichTerm) extends Tactic {
   assert(expr.typ==HOLogic.boolT)

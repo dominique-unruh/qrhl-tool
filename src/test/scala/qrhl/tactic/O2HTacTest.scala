@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import info.hupel.isabelle.ProverResult
 import org.scalatest.FunSuite
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 
 class O2HTacTest extends FunSuite {

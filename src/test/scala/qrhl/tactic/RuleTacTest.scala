@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import info.hupel.isabelle.{Operation, ProverResult}
 import org.scalatest.FunSuite
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.toplevel.Toplevel
 
 //noinspection ZeroIndexToHead
@@ -26,7 +26,7 @@ class RuleTacTest extends FunSuite {
       tl.state.value.applyTactic(RuleTac("add_le_mono"))
     } catch {
       case e : ProverResult.Failure =>
-        println(Isabelle.symbols.symbolsToUnicode(e.fullMessage))
+        println(IsabelleX.symbols.symbolsToUnicode(e.fullMessage))
         throw e
     }
     print("New goals: ",state2.goal)
@@ -50,7 +50,7 @@ class RuleTacTest extends FunSuite {
       assert(goals(1).toString == "0 ≤ c")
     } catch {
       case e : ProverResult.Failure =>
-        println(Isabelle.symbols.symbolsToUnicode(e.fullMessage))
+        println(IsabelleX.symbols.symbolsToUnicode(e.fullMessage))
         throw e
     }
   }
@@ -63,7 +63,7 @@ class RuleTacTest extends FunSuite {
       tl.state.value.applyTactic(rule)
     } catch {
       case e : ProverResult.Failure =>
-        println(Isabelle.symbols.symbolsToUnicode(e.fullMessage))
+        println(IsabelleX.symbols.symbolsToUnicode(e.fullMessage))
         throw e
     }
   }

@@ -1,8 +1,17 @@
 package qrhl.toplevel
-import info.hupel.isabelle.ProverResult
-import qrhl.State
-import qrhl.isabelle.Isabelle
-import qrhl.logic.{AbstractProgramDecl, ConcreteProgramDecl}
+
+import qrhl.{State, Subgoal}
+import qrhl.isabellex.IsabelleX
+import IsabelleX.{globalIsabelle => GIsabelle}
+import isabelle.Context
+import isabelle.control.MLValue
+
+// Implicits
+import MLValue.Implicits._
+import Context.Implicits._
+import Subgoal.Implicits._
+import scala.concurrent.ExecutionContext.Implicits.global
+import GIsabelle.isabelleControl
 
 case class PrintCommand(symbol : String) extends Command {
   override def act(state: State): State = {
@@ -31,15 +40,16 @@ case class PrintCommand(symbol : String) extends Command {
       println(v.toString)
     }
 
-    try {
-      val fact = state.isabelle.isabelle.invoke(Isabelle.thms_as_subgoals, (state.isabelle.contextId, symbol))
+//    try {
+      val fact = GIsabelle.thms_as_subgoals[(Context, String), List[Subgoal]](MLValue((state.isabelle.context, symbol))).retrieveNow
       found = true
       println(s"The name $symbol refers to ${fact.length} lemmas:\n")
       for (lemma <- fact)
         println(lemma+"\n\n")
-    } catch {
-      case e : ProverResult.Failure => // Means there is no such lemma
-    }
+//    } catch {
+      // TODO: Catch exception
+//      case e : ProverResult.Failure => // Means there is no such lemma
+//    }
 
     if (!found)
       println(s"No variable/program/lemma with name $symbol found.")

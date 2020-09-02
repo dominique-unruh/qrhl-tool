@@ -4,7 +4,7 @@ import java.nio.file.{Path, Paths}
 
 import org.scalatest.{FlatSpec, FunSuite}
 import qrhl.UserException
-import qrhl.isabelle.Isabelle
+import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel.ReadLine
 
 import scala.util.Random

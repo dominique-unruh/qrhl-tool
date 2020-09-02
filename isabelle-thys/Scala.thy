@@ -16,17 +16,19 @@ Source is in isabelle-thys/Scala.thy
 
 Run
 
-/opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabelle/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+/opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
 
 to recreate/update
 
 */
 
-package qrhl.isabelle
+package qrhl.isabellex
 
 object IsabelleTypes {
   val dummy = \<open>\<^type_name>\<open>dummy\<close>\<close> 
   val nat = \<open>\<^type_name>\<open>nat\<close>\<close>
+  val int = \<open>\<^type_name>\<open>int\<close>\<close>
+  val bool = \<open>\<^type_name>\<open>bool\<close>\<close>
   val set = \<open>\<^type_name>\<open>set\<close>\<close>
   val ell2 = \<open>\<^type_name>\<open>ell2\<close>\<close>
   val bit = \<open>\<^type_name>\<open>bit\<close>\<close>
@@ -99,6 +101,8 @@ object IsabelleConsts {
   val Span = \<open>\<^const_name>\<open>Span\<close>\<close>
   val liftSpace = \<open>\<^const_name>\<open>liftSpace\<close>\<close>
   val insert = \<open>\<^const_name>\<open>insert\<close>\<close>
+  val conj = \<open>\<^const_name>\<open>conj\<close>\<close>
+  val disj = \<open>\<^const_name>\<open>disj\<close>\<close>
 }
 \<close>
 

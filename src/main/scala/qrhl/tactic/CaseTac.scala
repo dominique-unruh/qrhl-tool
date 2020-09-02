@@ -1,9 +1,10 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{Free, Term}
 import qrhl._
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
+import IsabelleX.{globalIsabelle => GIsabelle}
+import isabelle.{Free, Term}
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 
 case class CaseTac(variable:String, expr:RichTerm) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
@@ -29,10 +30,10 @@ case class CaseTac(variable:String, expr:RichTerm) extends Tactic {
           throw UserException(s"Undeclared (or non-indexed) variable $x in precondition")
 
 
-      val caseExpr : Term = Isabelle.classical_subspace $
-        (HOLogic.equ(varTyp) $ expr.isabelleTerm $ Free(variable,varTyp))
-      val pre2 = Isabelle.predicate_inf $ caseExpr $ pre.isabelleTerm
-      val pre3 = RichTerm(Isabelle.predicateT, pre2)
+      val caseExpr : Term = GIsabelle.classical_subspace(
+        GIsabelle.mk_eq(expr.isabelleTerm, Free(variable,varTyp)))
+      val pre2 = GIsabelle.predicate_inf $ caseExpr $ pre.isabelleTerm
+      val pre3 = RichTerm(GIsabelle.predicateT, pre2)
 
 
       List(QRHLSubgoal(left,right,pre3,post,assms))

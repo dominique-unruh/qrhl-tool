@@ -1,14 +1,25 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.pure.Term
+import isabelle.control.MLValue
+import isabelle.{Context, Term, Typ}
 import org.log4s
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, CVariable, Local, QVariable, VTSingle, VarTerm, Variable}
 import qrhl.tactic.FrameRuleTac.colocalityOp
-import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
+import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import qrhl.tactic.LocalRemoveTac.logger
+import IsabelleX.{globalIsabelle => GIsabelle}
 
 import scala.collection.immutable.ListSet
+
+// Implicits
+import scala.concurrent.ExecutionContext.Implicits.global
+import GIsabelle.isabelleControl
+import MLValue.Implicits._
+import Term.Implicits._
+import Typ.Implicits._
+import Context.Implicits._
+
 
 case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove : List[Variable]) extends Tactic {
 
@@ -57,11 +68,11 @@ case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove :
       // (we checked that above already, but detection of quantum variables is not 100% sound)
       val qvarsIdx = variablesToRemoveViaRule map { _.index(left) }
       val qVarsIdxPairs = qvarsIdx.map { v => (v.variableName, v.valueTyp) }
-      val colocalityPre = state.isabelle.isabelle.invoke(colocalityOp,
-        (state.isabelle.contextId, pre.isabelleTerm, qVarsIdxPairs.toList))
-      val colocalityPost = state.isabelle.isabelle.invoke(colocalityOp,
-        (state.isabelle.contextId, post.isabelleTerm, qVarsIdxPairs.toList))
-      val colocality = AmbientSubgoal(Isabelle.conj(colocalityPre.isabelleTerm, colocalityPost.isabelleTerm), assumptions.map(_.isabelleTerm))
+      val colocalityPre = colocalityOp[(Context, Term, List[(String, Typ)]), Term](
+        MLValue((state.isabelle.context, pre.isabelleTerm, qVarsIdxPairs.toList))).retrieveNow
+      val colocalityPost = colocalityOp[(Context, Term, List[(String, Typ)]), Term](
+        MLValue((state.isabelle.context, post.isabelleTerm, qVarsIdxPairs.toList))).retrieveNow
+      val colocality = AmbientSubgoal(GIsabelle.conj(colocalityPre, colocalityPost), assumptions.map(_.isabelleTerm))
 
       val newProg = Local.makeIfNeeded(variablesToKeep.toSeq, body).toBlock
 
@@ -70,14 +81,14 @@ case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove :
           pre
         else {
           def addQInitToPre(pre: Term, v: QVariable) = {
-            import Isabelle._
+            import GIsabelle._
             inf(pre, liftSpace(span1(ket(undefined(v.valueTyp))), VarTerm.isabelleTerm(VTSingle(v))))
           }
 
           def addCInitToPre(pre: Term, vs: Seq[CVariable]): Term = {
-            import Isabelle._
+            import GIsabelle._
             if (vs.isEmpty) return pre
-            val eqs = vs map { v => Isabelle.mk_eq(v.valueTerm, undefined(v.valueTyp)) }
+            val eqs = vs map { v => mk_eq(v.valueTerm, undefined(v.valueTyp)) }
             inf(pre, classical_subspace(conj(eqs: _*)))
           }
 
@@ -87,7 +98,7 @@ case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove :
             Variable.quantum(variablesToRemoveViaRule).foldLeft(newPre1) {
               addQInitToPre
             }
-          RichTerm(Isabelle.predicateT, newPre2)
+          RichTerm(GIsabelle.predicateT, newPre2)
         }
 
       // qRHL goal with removed "local"

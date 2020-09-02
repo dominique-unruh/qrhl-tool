@@ -1,13 +1,11 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.pure.Term
-import info.hupel.isabelle.{Operation, pure}
+import isabelle.Term
 import qrhl._
-import qrhl.isabelle.RichTerm
+import qrhl.isabellex.RichTerm
 import qrhl.logic.Block
-
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
+import isabelle.control.MLValue.Implicits._
+import isabelle.Term.Implicits._
 
 /*@deprecated("Use SeqTac","now")
 case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
@@ -32,7 +30,8 @@ case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
 }*/
 
 case class SeqTac(left:Int, right:Int, inner:RichTerm, swap: Boolean = false)
-  extends IsabelleTac[(BigInt, BigInt, RichTerm)]("seq_tac", { ctx => (BigInt(left),BigInt(right),inner.encodeAsExpression(ctx) /* TODO: encodeAsExpression should be done on Isabelle side */) }) {
+  extends IsabelleTac[(Int, Int, Term)]("seq_tac", {
+    ctx => (left,right,inner.encodeAsExpression(ctx).isabelleTerm /* TODO: encodeAsExpression should be done on Isabelle side */) }) {
   override def toString: String = s"seq${if (swap) "<->" else ""} $left $right"
 
   override def postprocess(state: State, goal: Subgoal, newGoals: List[Subgoal]): List[Subgoal] =

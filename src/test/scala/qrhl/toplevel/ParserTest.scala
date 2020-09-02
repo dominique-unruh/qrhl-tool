@@ -1,11 +1,12 @@
 package qrhl.toplevel
 
-import info.hupel.isabelle.ProverResult
-import info.hupel.isabelle.hol.HOLogic
+import java.io.IOException
+
 import org.scalatest.FunSuite
 import qrhl.UserException
-import qrhl.isabelle.Isabelle
+import qrhl.isabellex.IsabelleX
 import qrhl.logic.{Block, CVariable, Call, Local, VTCons, VTSingle}
+import IsabelleX.{globalIsabelle => GIsabelle}
 
 class ParserTest extends FunSuite {
   implicit lazy val parserContext: ParserContext = {
@@ -69,12 +70,12 @@ class ParserTest extends FunSuite {
 
   test("parse undeclared variable") {
     assertThrows[UserException] {
-      Parser.parseAll(Parser.expression(HOLogic.boolT), "hello")
+      Parser.parseAll(Parser.expression(GIsabelle.boolT), "hello")
     }
   }
 
   test("fail to parse while loop") {
-    assertThrows[ProverResult.Failure] {
+    assertThrows[IOException] { // TODO: Mark which exception is actually thrown
       val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; }")
     }
   }
@@ -150,7 +151,7 @@ class ParserTest extends FunSuite {
 
     println(block)
 
-    assert(new Local(List(CVariable("x", HOLogic.intT)), Block()) == new Local(List(CVariable("x", HOLogic.intT)), Block()))
+    assert(new Local(List(CVariable("x", GIsabelle.intT)), Block()) == new Local(List(CVariable("x", GIsabelle.intT)), Block()))
 //    assert(block.get == new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()))
   }
 }

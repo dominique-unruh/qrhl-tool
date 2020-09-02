@@ -1,10 +1,10 @@
 package qrhl.logic
 
 import info.hupel.isabelle.api.XML
-import info.hupel.isabelle.{Codec, XMLResult, pure}
-import info.hupel.isabelle.pure.{App, Const, Free, Term}
-import qrhl.isabelle.RichTerm.typ_tight_codec
-import qrhl.isabelle.{Isabelle, IsabelleConsts}
+import info.hupel.isabelle.{Codec, XMLResult}
+import qrhl.isabellex.{IsabelleX, IsabelleConsts}
+import IsabelleX.{globalIsabelle => GIsabelle}
+import isabelle.{App, Const, Free, Term, Typ}
 
 import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable.ListSet
@@ -31,10 +31,10 @@ sealed trait Variable {
   def index1: Variable
   def index2: Variable
   def index(left:Boolean): Variable = if (left) index1 else index2
-  def variableTyp: pure.Typ = Isabelle.variableT(valueTyp)
-  def valueTyp : pure.Typ
+  def variableTyp: Typ = GIsabelle.variableT(valueTyp)
+  def valueTyp : Typ
 //  @deprecated("use valueType / variableTyp","") def typ : Typ
-  def variableTerm: Term = Free(variableName,variableTyp)
+  def variableTerm(implicit isa: isabelle.control.Isabelle): Term = Free(variableName,variableTyp)
   def classicalQuantumWord : String
 }
 
@@ -118,13 +118,13 @@ object Variable {
       vars.map(_.name).mkString(", ")
 }
 
-final case class QVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
+final case class QVariable(name:String, override val valueTyp: Typ) extends Variable {
 
   override def index1: QVariable = QVariable(Variable.index1(name),valueTyp)
   override def index2: QVariable = QVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): QVariable = if (left) index1 else index2
   override val variableName: String = name
-  override def toString: String = s"quantum var $name : ${Isabelle.pretty(valueTyp)}"
+  override def toString: String = s"quantum var $name : ${IsabelleX.pretty(valueTyp)}"
 
   override def isQuantum: Boolean = true
   override def isClassical: Boolean = false
@@ -138,14 +138,14 @@ final case class QVariable(name:String, override val valueTyp: pure.Typ) extends
 }
 
 object QVariable {
-  def fromTerm_var(context: Isabelle.Context, x: Term): QVariable = x match {
+  def fromTerm_var(context: IsabelleX.ContextX, x: Term): QVariable = x match {
     case Free(name,typ) =>
-      QVariable(name, Isabelle.dest_variableT(typ))
+      QVariable(name, GIsabelle.dest_variableT(typ))
     case _ => throw new java.lang.RuntimeException(f"Cannot transform $x into QVariable")
   }
 
-  def fromQVarList(context: Isabelle.Context, qvs: Term): List[QVariable] = qvs match {
-    case Const(Isabelle.variable_unit.name, _) => Nil
+  def fromQVarList(context: IsabelleX.ContextX, qvs: Term): List[QVariable] = qvs match {
+    case Const(GIsabelle.variable_unit.name, _) => Nil
     case App(Const(IsabelleConsts.variable_singleton,_), v) => List(fromTerm_var(context, v))
     case App(App(Const(IsabelleConsts.variable_concat,_), v), vs) =>
       val v2 = fromQVarList(context, v)
@@ -155,30 +155,21 @@ object QVariable {
     case _ => throw new RuntimeException("Illformed variable list")
   }
 
-  object codec extends Codec[QVariable] {
-    override val mlType: String = "(string * typ)"
-    override def encode(v: QVariable): XML.Tree = XML.Elem(("V",List(("name",v.name))), List(typ_tight_codec.encode(v.valueTyp)))
-    override def decode(tree: XML.Tree): XMLResult[QVariable] = tree match {
-      case XML.Elem(("V",List(("name",name))), List(typXml)) =>
-        for (typ <- typ_tight_codec.decode(typXml))
-          yield QVariable(name,typ)
-    }
-  }
 
 
 
 }
 
-final case class CVariable(name:String, override val valueTyp: pure.Typ) extends Variable {
+final case class CVariable(name:String, override val valueTyp: Typ) extends Variable {
 
   override def index1: CVariable = CVariable(Variable.index1(name),valueTyp)
   override def index2: CVariable = CVariable(Variable.index2(name),valueTyp)
   override def index(left:Boolean): CVariable = if (left) index1 else index2
 //  override def valueTyp: pure.Typ = typ.isabelleTyp
   override val variableName : String= "var_"+name
-  def valueTerm: Term = Free(name,valueTyp)
+  def valueTerm(implicit isa: isabelle.control.Isabelle): Term = Free(name, valueTyp)
 
-  override def toString: String = s"classical var $name : ${Isabelle.pretty(valueTyp)}"
+  override def toString: String = s"classical var $name : ${IsabelleX.pretty(valueTyp)}"
 
   override def isQuantum: Boolean = false
   override def isClassical: Boolean = true
@@ -192,15 +183,15 @@ final case class CVariable(name:String, override val valueTyp: pure.Typ) extends
 }
 
 object CVariable {
-  def fromTerm_var(context: Isabelle.Context, x: Term): CVariable = x match {
+  def fromTerm_var(context: IsabelleX.ContextX, x: Term): CVariable = x match {
     case Free(name,typ) =>
       assert(name.startsWith("var_"))
-      CVariable(name.stripPrefix("var_"), Isabelle.dest_variableT(typ))
+      CVariable(name.stripPrefix("var_"), GIsabelle.dest_variableT(typ))
     case _ => throw new RuntimeException("Illformed variable term")
   }
 
-  def fromCVarList(context: Isabelle.Context, cvs: Term): List[CVariable] = cvs match {
-    case Const(Isabelle.variable_unit.name, _) => Nil
+  def fromCVarList(context: IsabelleX.ContextX, cvs: Term): List[CVariable] = cvs match {
+    case Const(GIsabelle.variable_unit.name, _) => Nil
     case App(Const(IsabelleConsts.variable_singleton,_), v) => List(fromTerm_var(context, v))
     case App(App(Const(IsabelleConsts.variable_concat,_), v), vs) =>
       val v2 = fromCVarList(context, v)
@@ -209,15 +200,4 @@ object CVariable {
       v2.head :: vs2
     case _ => throw new RuntimeException("Illformed variable list")
   }
-
-  object codec extends Codec[CVariable] {
-    override val mlType: String = "(string * typ)"
-    override def encode(v: CVariable): XML.Tree = XML.Elem(("V",List(("name",v.name))), List(typ_tight_codec.encode(v.valueTyp)))
-    override def decode(tree: XML.Tree): XMLResult[CVariable] = tree match {
-      case XML.Elem(("V",List(("name",name))), List(typXml)) =>
-        for (typ <- typ_tight_codec.decode(typXml))
-          yield CVariable(name,typ)
-    }
-  }
-
 }

@@ -1,4 +1,4 @@
-package qrhl.isabelle
+package qrhl.isabellex
 
 import info.hupel.isabelle.Codec
 

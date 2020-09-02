@@ -10,7 +10,6 @@
       <list>
         <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.ExampleFilesTest" />
-        <option value="qrhl.isabelle.IsabelleTest" />
         <option value="qrhl.logic.BlockTest" />
         <option value="qrhl.logic.VariableTest" />
         <option value="qrhl.toplevel.ParserTest" />
@@ -25,6 +24,8 @@
         <option value="qrhl.tactic.EqualTacTest" />
         <option value="qrhl.tactic.ByQRHLTacTest" />
         <option value="qrhl.tactic.ExpressionTest" />
+        <option value="qrhl.isabellex.IsabelleTest" />
+        <option value="isabelle.SymbolsTest" />
       </list>
     </option>
     <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />

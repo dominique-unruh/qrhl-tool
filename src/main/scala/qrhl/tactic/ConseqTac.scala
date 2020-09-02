@@ -1,7 +1,7 @@
 package qrhl.tactic
 
 import qrhl._
-import qrhl.isabelle.RichTerm
+import qrhl.isabellex.RichTerm
 
 case class ConseqTac(pre: Option[RichTerm]=None, post:Option[RichTerm]=None) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {

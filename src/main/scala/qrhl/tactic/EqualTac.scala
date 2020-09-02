@@ -1,33 +1,29 @@
 package qrhl.tactic
 
-import java.io.IOException
-
-import info.hupel.isabelle.pure.{Free, Term, Typ}
-import info.hupel.isabelle.{Operation, pure}
-import qrhl._
-import qrhl.isabelle.{Isabelle, RichTerm}
-import qrhl.logic._
-
-import scala.collection.mutable
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
 import org.log4s
-import qrhl.isabelle.Codecs._
-import qrhl.tactic.EqualTac.{isInfinite_op, logger}
+import qrhl._
+import qrhl.isabellex.{IsabelleX, RichTerm}
+import qrhl.logic.Variable.varsToString
+import qrhl.logic._
+import qrhl.tactic.EqualTac.{isInfinite_op, logger, _}
+import IsabelleX.{globalIsabelle => GIsabelle}
+import isabelle.{Context, Free, Term, Typ}
+import isabelle.control.MLValue
+import GIsabelle.QuantumEqualityFull
 
-import scala.collection.immutable.{HashSet, ListSet}
-import Utils.listSetUpcast
-import Utils.ListSetUtils
-import qrhl.isabelle.Isabelle.{Context, QuantumEqualityFull}
-import qrhl.logic.Variable.quantum
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
-import info.hupel.isabelle.hol.HOLogic
-import Variable.varsToString
-import EqualTac._
-
+import scala.collection.immutable.ListSet
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.control.{Breaks, ControlThrowable}
+
+// Implicits
+import scala.concurrent.ExecutionContext.Implicits.global
+import GIsabelle.isabelleControl
+import MLValue.Implicits._
+import Context.Implicits._
+import Term.Implicits._
+import Typ.Implicits._
+
 
 case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variable], out: List[Variable], amount:Int=1) extends WpBothStyleTac(leftAmount=amount, rightAmount=amount) {
   def diff(left:Statement, right:Statement): (Statement, List[(Statement,Statement)]) = {
@@ -80,7 +76,6 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm): (RichTerm, List[Subgoal]) = {
     val env = state.environment
     val isabelle = state.isabelle
-    val contextId = isabelle.contextId
 
     // ==== Get the context and the mismatches
 
@@ -145,7 +140,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       if (extraOut2.nonEmpty) {
         if (removedQeq != null) {
           val quantum = Variable.quantum(extraOut2)
-          logger.debug(s"add extraOut ${quantum} # ${removedQeq}")
+          logger.debug(s"add extraOut $quantum # $removedQeq")
           if (!quantum.toSet.subsetOf(removedQeq))
             throw UserException(s"Trying to add ${varsToString(quantum)} to Vout, but we already committed on removing " +
               s"quantum equality for ${varsToString(removedQeq)} from the postcondition")
@@ -202,7 +197,8 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     val isInfiniteHashtable = mutable.HashMap[Variable, Boolean]()
     def isInfinite(v: Variable): Boolean =
       isInfiniteHashtable.getOrElseUpdate(v, {
-        val result = state.isabelle.isabelle.invoke(isInfinite_op, (isabelle.contextId, v.valueTyp))
+        val result =
+          isInfinite_op[(Context, Typ), Boolean](MLValue((isabelle.context, v.valueTyp))).retrieveNow
         logger.debug(s"Checking infiniteness of $v: $result")
         result
       })
@@ -326,9 +322,9 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     postcondition = removeClassicals(env, postcondition, classicalsRemovedFromPost.toSet, Variable.classical(out).toSet)
     logger.debug(s"Postcondition: ${postcondition}")
 
-    val colocality = isabelle.isabelle.invoke(FrameRuleTac.colocalityOp,
-      (isabelle.contextId, postcondition.isabelleTerm,
-        forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) }))
+    val colocality = RichTerm(FrameRuleTac.colocalityOp[(Context, Term, List[(String, Typ)]), Term](
+      MLValue((isabelle.context, postcondition.isabelleTerm,
+        forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) }))).retrieveNow)
 
     logger.debug(s"Colocality: $colocality")
 
@@ -357,22 +353,22 @@ object EqualTac {
     val quantum = Variable.quantum(vars)
 
     val qeq : Term =
-      if (quantum.isEmpty) Isabelle.predicate_top
+      if (quantum.isEmpty) GIsabelle.predicate_top
       else {
         val left = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index1).toSeq:_*))
         val right = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index2).toSeq:_*))
-        Isabelle.quantum_equality(left, right)
+        GIsabelle.quantum_equality(left, right)
       }
 
     val ceq : Term =
-      if (classical.isEmpty) Isabelle.True_const
+      if (classical.isEmpty) GIsabelle.True_const
       else {
-        val eqs = classical.map { v => Isabelle.mk_eq(v.index1.valueTerm, v.index2.valueTerm) }
-        Isabelle.conj(eqs.toSeq :_*)
+        val eqs = classical.map { v => GIsabelle.mk_eq(v.index1.valueTerm, v.index2.valueTerm) }
+        GIsabelle.conj(eqs.toSeq :_*)
       }
 
-    val newPred = Isabelle.infOptimized(predicate.isabelleTerm, Isabelle.classical_subspace_optimized(ceq), qeq)
-    RichTerm(Isabelle.predicateT, newPred)
+    val newPred = GIsabelle.infOptimized(predicate.isabelleTerm, GIsabelle.classical_subspace_optimized(ceq), qeq)
+    RichTerm(GIsabelle.predicateT, newPred)
   }
 
   private val logger = log4s.getLogger
@@ -383,20 +379,21 @@ object EqualTac {
 //  }
 //  private case class UnfixableConditionException(msg: String) extends Exception
 
-  private val isInfinite_op = Operation.implicitly[(BigInt, Typ), Boolean]("is_finite")
+  private val isInfinite_op: MLValue[((Context, Typ)) => Boolean] =
+    MLValue.compileFunction[(Context, Typ), Boolean]("QRHL_Operations.is_finite")
 
   class SimpleQeq(env: Environment) {
     private object trySwapped extends ControlThrowable
     private object noMatch extends ControlThrowable
 
     def unapply(arg: Term): Option[ListSet[QVariable]] = arg match {
-      case QuantumEqualityFull(Isabelle.IdOp(),q,Isabelle.IdOp(),r) =>
+      case QuantumEqualityFull(GIsabelle.IdOp(),q,GIsabelle.IdOp(),r) =>
         val result = ListBuffer[QVariable]()
 
         def parse(vt1: Term, vt2: Term): Unit = (vt1, vt2) match {
-          case (Isabelle.Variable_Unit(), Isabelle.Variable_Unit()) =>
-          case (Isabelle.Variable_Singleton(Free(Variable.Indexed(name1, left1), typ1)),
-                Isabelle.Variable_Singleton(Free(Variable.Indexed(name2, left2), typ2))) =>
+          case (GIsabelle.Variable_Unit(), GIsabelle.Variable_Unit()) =>
+          case (GIsabelle.Variable_Singleton(Free(Variable.Indexed(name1, left1), typ1)),
+                GIsabelle.Variable_Singleton(Free(Variable.Indexed(name2, left2), typ2))) =>
             if (name1 != name2) throw noMatch
             val v = env.qVariables.getOrElse(name1, throw noMatch)
             if (v.variableTyp != typ1) throw noMatch
@@ -404,7 +401,7 @@ object EqualTac {
             if (!left1 || left2)
               throw trySwapped
             result += v
-          case (Isabelle.Variable_Concat(vt1a, vt1b), Isabelle.Variable_Concat(vt2a, vt2b)) =>
+          case (GIsabelle.Variable_Concat(vt1a, vt1b), GIsabelle.Variable_Concat(vt2a, vt2b)) =>
             parse(vt1a, vt2a); parse(vt1b, vt2b)
           case _ =>
             throw noMatch
@@ -435,18 +432,18 @@ object EqualTac {
    * @param pred a quantum predicate
    * @return (result, qeqVars) result = the predicate, qeqVars = x,y,z…
    */
-  private def removeQeq(env: Environment, pred: RichTerm, vars: Traversable[QVariable]) = {
+  private def removeQeq(env: Environment, pred: RichTerm, vars: Traversable[QVariable]): (RichTerm, ListSet[QVariable]) = {
     var qeqVars : Option[ListSet[QVariable]] = None
     val simpleQeq = new SimpleQeq(env)
     def replace(term: Term) : Term = term match {
-      case Isabelle.Inf(t1,t2) => Isabelle.infOptimized(replace(t1), replace(t2))
+      case GIsabelle.Inf(t1,t2) => GIsabelle.infOptimized(replace(t1), replace(t2))
       case `simpleQeq`(qeqVars2) =>
         logger.debug(s"qeqVars = ${qeqVars.map(varsToString)}")
         if (qeqVars.isEmpty) {
           qeqVars = Some(qeqVars2)
-          Isabelle.predicate_top
+          GIsabelle.predicate_top
         } else if (qeqVars.get == qeqVars2)
-          Isabelle.predicate_top
+          GIsabelle.predicate_top
         else term
       case term => term
     }
@@ -455,7 +452,7 @@ object EqualTac {
     val resultVars = qeqVars.getOrElse {
       throw UserException(s"Could not find a quantum equality involving ${varsToString(vars)}")
     }
-    (RichTerm(Isabelle.predicateT, result), resultVars)
+    (RichTerm(GIsabelle.predicateT, result), resultVars)
   }
 
   private def removeClassicals(env: Environment, postcondition: RichTerm, remove: Set[CVariable],
@@ -464,22 +461,22 @@ object EqualTac {
     val equalities2 = (equalities & remove).collect(Function.unlift { v =>
       val v1 = v.index1; val v2 = v.index2
       if (vars.contains(v1) && vars.contains(v2))
-        Some(Isabelle.mk_eq(v1.valueTerm,v2.valueTerm))
+        Some(GIsabelle.mk_eq(v1.valueTerm,v2.valueTerm))
       else
         None
     })
-    logger.debug(s"remove $remove, vars = ${vars}, equalities = ${equalities}, equalities2 = ${equalities2}")
+    logger.debug(s"remove $remove, vars = ${vars}, equalities = ${equalities}, equalities2 = $equalities2")
     val postcondition2 =
       if (equalities2.isEmpty)
         postcondition.isabelleTerm
       else
-        Isabelle.plus(Isabelle.classical_subspace(Isabelle.not(Isabelle.conj(equalities2.toSeq : _*))),
+        GIsabelle.plus(GIsabelle.classical_subspace(GIsabelle.not(GIsabelle.conj(equalities2.toSeq : _*))),
           postcondition.isabelleTerm)
     val remove12 = (remove.map(_.index1) ++ remove.map(_.index2)) & vars
     val postcondition3 : Term = remove12.foldLeft(postcondition2) {
-      (pc:Term, v:CVariable) => Isabelle.INF(v.name, v.valueTyp, pc)
+      (pc:Term, v:CVariable) => GIsabelle.INF(v.name, v.valueTyp, pc)
     }
-    RichTerm(Isabelle.predicateT, postcondition3)
+    RichTerm(GIsabelle.predicateT, postcondition3)
   }
 
 }

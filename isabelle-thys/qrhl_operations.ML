@@ -352,7 +352,7 @@ fun create_context thy_names = let
      val files = thy |> Theory.ancestors_of 
                      |> map_filter local_thy_file 
      val ctxt = Proof_Context.init_global thy
-in (make_ctxt_ref ctxt,files) end
+in (ctxt,files) end
 
 
 fun addAssumption name term ctx =

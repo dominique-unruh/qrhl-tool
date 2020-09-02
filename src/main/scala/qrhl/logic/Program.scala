@@ -1,24 +1,32 @@
 package qrhl.logic
 
+import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{Term, Typ}
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
-import qrhl.isabelle.Isabelle.Thm
-import qrhl.isabelle.{Isabelle, RichTerm}
+import isabelle.control.MLValue
+import isabelle.control.MLValue.Converter
+import isabelle.control.MLValue.Implicits.tuple2Converter
+import isabelle.{Context, Term, Thm, Typ, Type, control}
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.{AllSet, MaybeAllSet, UserException, Utils}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.{AbstractIterator, GenSet, mutable}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.{higherKinds, postfixOps}
 
 // Implicits
-import qrhl.isabelle.RichTerm.{term_tight_codec, typ_tight_codec}
-import qrhl.logic.Statement.codec
 import qrhl.Utils.listSetUpcast
 import qrhl.Utils.ListSetUtils
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+import MLValue.Implicits._
+import Context.Implicits._
+import Term.Implicits._
+import Statement.Implicits._
+import scala.concurrent.ExecutionContext.Implicits._
 
 sealed trait VarTerm[+A] {
   def replace[A1 >: A, A2 >: A](from: A1, to: A2): VarTerm[A2]
@@ -52,9 +60,9 @@ sealed trait VarTerm[+A] {
 }
 object VarTerm {
   def isabelleTerm(vt:VarTerm[Variable]) : Term = vt match {
-    case VTUnit => Isabelle.variable_unit
-    case VTSingle(v) => Isabelle.variable_singleton(v.variableTerm)
-    case VTCons(a, b) => Isabelle.variable_concat(isabelleTerm(a), isabelleTerm(b))
+    case VTUnit => GIsabelle.variable_unit
+    case VTSingle(v) => GIsabelle.variable_singleton(v.variableTerm)
+    case VTCons(a, b) => GIsabelle.variable_concat(isabelleTerm(a), isabelleTerm(b))
   }
 
   def varlist[A](elems: A*) : VarTerm[A] = {
@@ -67,40 +75,6 @@ object VarTerm {
     }
     result
   }
-
-
-  val codecString = new codec[String](new Codec[String] {
-    override val mlType: String = "string"
-    override def encode(t: String): XML.Tree = XML.Text(t)
-    override def decode(tree: XML.Tree): XMLResult[String] = tree match {
-      case XML.Text(s) => Right(s)
-      case _ => Left(("Expected XML.Text",List(tree)))
-    }
-  })
-
-  val codecC = new codec[CVariable](CVariable.codec)
-  val codecQ = new codec[QVariable](QVariable.codec)
-
-  class codec[A](vCodec : Codec[A]) extends Codec[VarTerm[A]] {
-    override lazy val mlType: String = vCodec.mlType + " tree"
-    override def encode(t: VarTerm[A]): XML.Tree = t match {
-      case VTUnit => XML.Elem(("u",Nil),Nil)
-      case VTCons(a,b) => XML.Elem(("c",Nil),List(encode(a),encode(b)))
-      case VTSingle(v) => XML.Elem(("s",Nil),List(vCodec.encode(v)))
-    }
-
-    override def decode(xml: XML.Tree): XMLResult[VarTerm[A]] = xml match {
-      case XML.Elem(("c",Nil),List(aXml,bXml)) =>
-        for (a <- decode(aXml);
-             b <- decode(bXml))
-          yield VTCons(a,b)
-      case XML.Elem(("s",Nil),List(v)) =>
-        for (vv <- vCodec.decode(v))
-          yield VTSingle(vv)
-      case XML.Elem(("u",Nil),Nil) => Right(VTUnit)
-      case _ => Left(("No a valid varterm",List(xml)))
-    }
-  }
 }
 
 case class ExprVariableUse
@@ -108,8 +82,8 @@ case class ExprVariableUse
   program : ListSet[Variable],
   ambient : ListSet[String]
 ) {
-  @deprecated def classical : ListSet[CVariable] = Variable.classical(program)
-  @deprecated def quantum : ListSet[QVariable] = Variable.quantum(program)
+  @deprecated("","") def classical : ListSet[CVariable] = Variable.classical(program)
+  @deprecated("","") def quantum : ListSet[QVariable] = Variable.quantum(program)
 }
 
 case class VariableUse
@@ -137,13 +111,13 @@ case class VariableUse
 
   def isProgram: Boolean = oracles.isEmpty
 
-  @deprecated def classical: ListSet[CVariable] = freeVariables collect { case v : CVariable => v }
-  @deprecated def quantum: ListSet[QVariable] = freeVariables collect { case v : QVariable => v }
-  @deprecated def overwrittenClassical : ListSet[CVariable] = overwritten collect { case v : CVariable => v }
-  @deprecated def overwrittenQuantum : ListSet[QVariable] = overwritten collect { case v : QVariable => v }
-  @deprecated def innerClassical : ListSet[CVariable] = inner collect { case v : CVariable => v }
-  @deprecated def innerQuantum : ListSet[QVariable] = inner collect { case v : QVariable => v }
-  @deprecated def writtenClassical : ListSet[CVariable] = written collect { case v : CVariable => v }
+  @deprecated("","") def classical: ListSet[CVariable] = freeVariables collect { case v : CVariable => v }
+  @deprecated("","") def quantum: ListSet[QVariable] = freeVariables collect { case v : QVariable => v }
+  @deprecated("","") def overwrittenClassical : ListSet[CVariable] = overwritten collect { case v : CVariable => v }
+  @deprecated("","") def overwrittenQuantum : ListSet[QVariable] = overwritten collect { case v : QVariable => v }
+  @deprecated("","") def innerClassical : ListSet[CVariable] = inner collect { case v : CVariable => v }
+  @deprecated("","") def innerQuantum : ListSet[QVariable] = inner collect { case v : QVariable => v }
+  @deprecated("","") def writtenClassical : ListSet[CVariable] = written collect { case v : CVariable => v }
 
   override def toString: String = s"""
       | Free        ⊆ ${freeVariables.map(_.name).mkString(", ")}
@@ -272,7 +246,7 @@ sealed trait Statement {
 
   def substituteOracles(subst: Map[String, Call]) : Statement
 
-  def simplify(isabelle: Isabelle.Context, facts: List[String], thms:ListBuffer[Thm]): Statement
+  def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms:ListBuffer[Thm]): Statement
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
     * Fails if [this] already contains program names of the form @...
@@ -285,22 +259,9 @@ sealed trait Statement {
 //  @deprecated("too slow, use programTerm instead","now")
 //  def programTermOLD(context: Isabelle.Context) : Term
 
-  def programTerm(context: Isabelle.Context): RichTerm = {
-    context.isabelle.invoke(Statement.statement_to_term_op, (context.contextId, this))
-  }
-
-//  private def mergeSequential(a: VariableUse, b: VariableUse) : VariableUse = {
-//    val result =
-//      if (a.oracles.isEmpty)
-//        a +++ b.removeOverwrittenClassical(a.classical.toSeq:_*).removeOverwrittenQuantum(a.quantum.toSeq:_*)
-//      else
-//        a +++ b.removeOverwritten
-//    result
-//  }
-//  private def mergeAlternative(a: VariableUse, b: VariableUse) : VariableUse = {
-//    val ab = a +++ b
-//    ab.copy(overwritten = a.overwritten.intersect(b.overwritten))
-//  }
+  def programTerm(context: IsabelleX.ContextX): RichTerm =
+    RichTerm(Statement.statement_to_term_op[(Context, Statement), Term](
+      MLValue((context.context, this))).retrieveNow)
 
   private val emptySet = ListSet.empty
   val variableUse : Environment => VariableUse = Utils.singleMemo { env =>
@@ -517,7 +478,7 @@ sealed trait Statement {
 //    collect(this)
 //  }
 
-  def checkWelltyped(context: Isabelle.Context): Unit
+  def checkWelltyped(context: IsabelleX.ContextX): Unit
 
   /** All ambient and program variables.
     * Not including nested programs (via Call).
@@ -575,182 +536,22 @@ sealed trait Statement {
 }
 
 object Statement {
-/*
-  def decodeFromListTerm(context: Isabelle.Context, t:Term) : Block = {
-    val statements = Isabelle.dest_list(t).map(decodeFromTerm(context,_))
-    Block(statements:_*)
+
+  object StatementConverter extends Converter[Statement] {
+    override def store(value: Statement)(implicit isabelle: control.Isabelle, ec: ExecutionContext): MLValue[Statement] = ???
+    override def retrieve(value: MLValue[Statement])(implicit isabelle: control.Isabelle, ec: ExecutionContext): Future[Statement] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
-*/
-
-/*  def decodeFromTerm(context: Isabelle.Context, t:Term) : Statement = t match {
-    case App(Const(Isabelle.block.name,_), statements) => decodeFromListTerm(context, statements)
-    case App(App(Const(Isabelle.assignName,_),x),e) =>
-      Assign(CVariable.fromCVarList(context, x), RichTerm.decodeFromExpression(context, e))
-    case App(App(Const(Isabelle.sampleName,_),x),e) =>
-      Sample(CVariable.fromCVarList(context, x),RichTerm.decodeFromExpression(context, e))
-    case Free(name,_) => Call(name)
-    case App(App(Const(Isabelle.instantiateOracles.name,_), Free(name,_)), args) =>
-      val args2 = Isabelle.dest_list(args).map(decodeFromTerm(context,_).asInstanceOf[Call])
-      Call(name,args2 : _*)
-    case App(App(Const(Isabelle.whileName,_),e),body) =>
-      While(RichTerm.decodeFromExpression(context,e), decodeFromListTerm(context, body))
-    case App(App(App(Const(Isabelle.ifthenelseName,_),e),thenBody),elseBody) =>
-      IfThenElse(RichTerm.decodeFromExpression(context,e),
-        decodeFromListTerm(context, thenBody), decodeFromListTerm(context, elseBody))
-    case App(App(Const(Isabelle.qinitName, _), vs), e) =>
-      QInit(QVariable.fromQVarList(context, vs), RichTerm.decodeFromExpression(context,e))
-    case App(App(Const(Isabelle.qapplyName, _), vs), e) =>
-      QApply(QVariable.fromQVarList(context, vs), RichTerm.decodeFromExpression(context,e))
-    case App(App(App(Const(Isabelle.measurementName, _), x), vs), e) =>
-      Measurement(CVariable.fromCVarList(context, x), QVariable.fromQVarList(context, vs),
-        RichTerm.decodeFromExpression(context,e))
-    case _ => throw new RuntimeException(s"term $t cannot be decoded as a statement")
-  }*/
-
-  implicit object codec extends Codec[Statement] {
-    override val mlType: String = "Programs.statement"
-
-    def encode_call(c : Call): XML.Tree = c match {
-      case Call(name,args@_*) => XML.Elem(("call",List(("name",name))), args.map(encode_call).toList)
-    }
-
-
-    import Isabelle.applicativeXMLResult
-    import scalaz._
-    import std.list._
-    import syntax.traverse._
-
-    def decode_call(xml : XML.Tree): XMLResult[Call] = xml match {
-      case XML.Elem(("call",List(("name",name))), argsXml) =>
-        for (args <- argsXml.traverse(decode_call))
-          yield Call(name, args : _*)
-    }
-
-//    def string_list_encode(l:List[String]) = XML.Elem(("l",Nil), l.map( s => Codec.string.encode(s)))
-//    def string_list_decode(xml:XML.Tree): XMLResult[List[String]] = xml match {
-//      case XML.Elem(("l",Nil), l) => l.traverse(Codec.string.decode)
-//    }
-
-    override def encode(t: Statement): XML.Tree = t match {
-      case Local(vars, body) =>
-        val qvars = vars collect { case v : QVariable => v }
-        val cvars = vars collect { case v : CVariable => v }
-        XML.Elem(("local", Nil),
-        List(VarTerm.codecC.encode(VarTerm.varlist(cvars:_*)),
-          VarTerm.codecQ.encode(VarTerm.varlist(qvars:_*)),
-          encode(body)))
-      case Block(stmts@_*) => XML.Elem(("block", Nil), stmts.map(encode).toList)
-      case Assign(v, rhs) => XML.Elem(("assign", Nil), List(VarTerm.codecString.encode(v.map[String](_.name)), RichTerm.codec.encode(rhs)))
-      case Sample(v, rhs) => XML.Elem(("sample", Nil), List(VarTerm.codecString.encode(v.map[String](_.name)), RichTerm.codec.encode(rhs)))
-      case call: Call => encode_call(call)
-      case Measurement(v, loc, exp) => XML.Elem(("measurement", Nil),
-        List(VarTerm.codecString.encode(v.map[String](_.name)), VarTerm.codecString.encode(loc.map[String](_.name)), RichTerm.codec.encode(exp)))
-      case QInit(loc, exp) => XML.Elem(("qinit", Nil),
-        List(VarTerm.codecString.encode(loc.map[String](_.name)), RichTerm.codec.encode(exp)))
-      case QApply(loc, exp) => XML.Elem(("qapply", Nil),
-        List(VarTerm.codecString.encode(loc.map[String](_.name)), RichTerm.codec.encode(exp)))
-      case IfThenElse(e, p1, p2) => XML.Elem(("ifte", Nil),
-        List(RichTerm.codec.encode(e), encode(p1), encode(p2)))
-      case While(e, p1) => XML.Elem(("while", Nil),
-        List(RichTerm.codec.encode(e), encode(p1)))
-    }
-
-//    def mk_cvar_list(names : List[String], typ : Typ) : List[CVariable] = names match {
-//      case Nil =>
-//        assert(typ == Isabelle.unitT)
-//        Nil
-//      case List(x) =>
-//        List(CVariable(x,typ))
-//      case x::xs =>
-//        val (xT,xsT) = Isabelle.dest_prodT(typ)
-//        CVariable(x,xT) :: mk_cvar_list(xs, xsT)
-//    }
-
-    def mk_cvar_term(names : VarTerm[String], typ : Typ) : VarTerm[CVariable] = names match {
-      case VTUnit =>
-        assert(typ == Isabelle.unitT)
-        VTUnit
-      case VTSingle(x) =>
-        VTSingle(CVariable(x,typ))
-      case VTCons(a,b) =>
-        val (aT,bT) = Isabelle.dest_prodT(typ)
-        VTCons(mk_cvar_term(a,aT), mk_cvar_term(b,bT))
-    }
-
-//    def mk_qvar_list(names : List[String], typ : Typ) : List[QVariable] = names match {
-//      case Nil =>
-//        assert(typ == Isabelle.unitT)
-//        Nil
-//      case List(x) =>
-//        List(QVariable(x,typ))
-//      case x::xs =>
-//        val (xT,xsT) = Isabelle.dest_prodT(typ)
-//        QVariable(x,xT) :: mk_qvar_list(xs, xsT)
-//    }
-
-    def mk_qvar_term(names : VarTerm[String], typ : Typ) : VarTerm[QVariable] = names match {
-      case VTUnit =>
-        assert(typ == Isabelle.unitT)
-        VTUnit
-      case VTSingle(x) =>
-        VTSingle(QVariable(x,typ))
-      case VTCons(a,b) =>
-        val (aT,bT) = Isabelle.dest_prodT(typ)
-        VTCons(mk_qvar_term(a,aT), mk_qvar_term(b,bT))
-    }
-
-
-    override def decode(xml: XML.Tree): XMLResult[Statement] = xml match {
-      case XML.Elem(("local",Nil), List(cvarsXml, qvarsXml, bodyXml)) =>
-        for (cvarsVt <- VarTerm.codecC.decode(cvarsXml);
-             cvars = cvarsVt.toList;
-             qvarsVt <- VarTerm.codecQ.decode(qvarsXml);
-             qvars = qvarsVt.toList;
-             body <- decode(bodyXml))
-          yield Local(cvars, qvars, body.toBlock)
-      case XML.Elem(("block", Nil), stmtsXml) =>
-        for (stmts <- stmtsXml.traverse(decode))
-          yield Block(stmts : _*)
-      case XML.Elem(("assign", Nil), List(lhsXml,rhsXml)) =>
-        for (lhs <- VarTerm.codecString.decode(lhsXml);
-             rhs <- RichTerm.codec.decode(rhsXml))
-          yield Assign(mk_cvar_term(lhs, rhs.typ), rhs)
-      case XML.Elem(("sample", Nil), List(lhsXml,rhsXml)) =>
-        for (lhs <- VarTerm.codecString.decode(lhsXml);
-             rhs <- RichTerm.codec.decode(rhsXml))
-          yield Sample(mk_cvar_term(lhs, Isabelle.dest_distrT(rhs.typ)), rhs)
-      case call @ XML.Elem(("call",_),_) => decode_call(call)
-      case XML.Elem(("measurement", Nil), List(lhsXml,locXml,expXml)) =>
-        for (lhs <- VarTerm.codecString.decode(lhsXml);
-             loc <- VarTerm.codecString.decode(locXml);
-             exp <- RichTerm.codec.decode(expXml);
-             (vT,locT) = Isabelle.dest_measurementT(exp.typ))
-          yield Measurement(mk_cvar_term(lhs,vT), mk_qvar_term(loc,locT), exp)
-      case XML.Elem(("qinit", Nil), List(locXML,expXML)) =>
-        for (loc <- VarTerm.codecString.decode(locXML);
-             exp <- RichTerm.codec.decode(expXML))
-          yield QInit(mk_qvar_term(loc, Isabelle.dest_vectorT(exp.typ)), exp)
-      case XML.Elem(("qapply", Nil), List(locXML,expXML)) =>
-        for (loc <- VarTerm.codecString.decode(locXML);
-             exp <- RichTerm.codec.decode(expXML))
-          yield QApply(mk_qvar_term(loc, Isabelle.dest_l2boundedT(exp.typ)._1), exp)
-      case XML.Elem(("ifte", Nil), List(eXml,p1Xml,p2Xml)) =>
-        for (e <- RichTerm.codec.decode(eXml);
-             p1 <- decode(p1Xml);
-             p2 <- decode(p2Xml))
-          yield IfThenElse(e, p1.asInstanceOf[Block], p2.asInstanceOf[Block])
-      case XML.Elem(("while", Nil), List(eXml,p1Xml)) =>
-        for (e <- RichTerm.codec.decode(eXml);
-             p1 <- decode(p1Xml))
-          yield While(e, p1.asInstanceOf[Block])
-    }
+  object Implicits {
+    implicit val statementConverter: StatementConverter.type = StatementConverter
   }
 
-  val statement_to_term_op: Operation[(BigInt, Statement), RichTerm] =
-    Operation.implicitly[(BigInt, Statement), RichTerm]("statement_to_term")
+  val statement_to_term_op: MLValue[((Context, Statement)) => Term] =
+    MLValue.compileFunction[(Context, Statement), Term]("QRHL_Operations.statement_to_term")
 
-  val statements_to_term_op: Operation[(BigInt, List[Statement]), RichTerm] =
-    Operation.implicitly[(BigInt, List[Statement]), RichTerm]("statements_to_term")
+  val statements_to_term_op: MLValue[((Context, List[Statement])) => Term] =
+    MLValue.compileFunction[(Context, List[Statement]), Term]("QRHL_Operations.statements_to_term")
 }
 
 class Local(val vars: List[Variable], val body : Block) extends Statement {
@@ -765,13 +566,13 @@ class Local(val vars: List[Variable], val body : Block) extends Statement {
   override def substituteOracles(subst: Map[String, Call]): Statement =
     new Local(vars=vars, body=body.substituteOracles(subst))
 
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Statement =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): Statement =
     new Local(vars=vars, body=body.simplify(isabelle, facts, thms))
 
   override def markOracles(oracles: List[String]): Statement =
     new Local(vars=vars, body=body.markOracles(oracles))
 
-  override def checkWelltyped(context: Isabelle.Context): Unit =
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit =
     body.checkWelltyped(context)
 
   override def inline(name: String, oracles: List[String], program: Statement): Statement =
@@ -878,14 +679,15 @@ class Block(val statements:List[Statement]) extends Statement {
   def ++(other: Block) = new Block(statements ::: other.statements)
 
 
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Block =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): Block =
     Block(statements.map(_.simplify(isabelle,facts,thms)):_*)
 
   //  @deprecated("too slow", "now")
 //  def programListTermOld(context: Isabelle.Context): Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTermOLD(context)))
 
-  def programListTerm(context: Isabelle.Context): RichTerm =
-    context.isabelle.invoke(Statement.statements_to_term_op, (context.contextId, this.statements))
+  def programListTerm(context: IsabelleX.ContextX): RichTerm =
+    RichTerm(Statement.statements_to_term_op[(Context, List[Statement]), Term](
+      MLValue((context.context, statements))).retrieveNow)
 
 
 //  override def programTermOLD(context: Isabelle.Context) : Term = Isabelle.block $ programListTermOld(context)
@@ -947,7 +749,7 @@ class Block(val statements:List[Statement]) extends Statement {
     Block(newStatements : _*)
   }
 
-  override def checkWelltyped(context: Isabelle.Context): Unit =
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit =
     for (s <- statements) s.checkWelltyped(context)
 
   override def markOracles(oracles: List[String]): Block = new Block(statements.map(_.markOracles(oracles)))
@@ -983,12 +785,12 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
   override def toString: String = s"""${Variable.vartermToString(variable)} <- $expression;"""
   override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
-  override def checkWelltyped(context: Isabelle.Context): Unit =
-    expression.checkWelltyped(context, Isabelle.tupleT(variable.map[Typ](_.valueTyp)))
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit =
+    expression.checkWelltyped(context, GIsabelle.tupleT(variable.map[Typ](_.valueTyp)))
 
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms:ListBuffer[Thm]): Assign =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms:ListBuffer[Thm]): Assign =
     Assign(variable, expression.simplify(isabelle, facts, thms))
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
@@ -1012,12 +814,12 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
   override def toString: String = s"""${Variable.vartermToString(variable)} <$$ $expression;"""
   override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
-  override def checkWelltyped(context: Isabelle.Context): Unit =
-    expression.checkWelltyped(context, Isabelle.distrT(Isabelle.tupleT(variable.map[Typ](_.valueTyp))))
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit =
+    expression.checkWelltyped(context, GIsabelle.distrT(GIsabelle.tupleT(variable.map[Typ](_.valueTyp))))
 
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Sample =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): Sample =
     Sample(variable, expression.simplify(isabelle,facts,thms))
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
@@ -1043,14 +845,14 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
     IfThenElse(condition,thenBranch.inline(name,oracles,program),elseBranch.inline(name,oracles,program))
   override def toString: String = s"if ($condition) $thenBranch else $elseBranch;"
 
-  override def checkWelltyped(context: Isabelle.Context): Unit = {
-    condition.checkWelltyped(context, HOLogic.boolT)
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
+    condition.checkWelltyped(context, GIsabelle.boolT)
     thenBranch.checkWelltyped(context)
     elseBranch.checkWelltyped(context)
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.ifthenelse $ condition.encodeAsExpression(context).isabelleTerm $ thenBranch.programListTermOld(context) $ elseBranch.programListTermOld(context)
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): IfThenElse =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): IfThenElse =
     IfThenElse(condition.simplify(isabelle,facts,thms),
       thenBranch.simplify(isabelle,facts,thms),
       elseBranch.simplify(isabelle,facts,thms))
@@ -1081,13 +883,13 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
     While(condition,body.inline(name,oracles,program))
   override def toString: String = s"while ($condition) $body"
 
-  override def checkWelltyped(context: Isabelle.Context): Unit = {
-    condition.checkWelltyped(context, HOLogic.boolT)
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
+    condition.checkWelltyped(context, GIsabelle.boolT)
     body.checkWelltyped(context)
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.whileProg $ condition.encodeAsExpression(context).isabelleTerm $ body.programListTermOld(context)
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): While =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): While =
     While(condition.simplify(isabelle,facts,thms),
       body.simplify(isabelle,facts,thms))
 
@@ -1116,13 +918,13 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"${Variable.vartermToString(location)} <q $expression;"
 
-  override def checkWelltyped(context: Isabelle.Context): Unit = {
-    val expected = Isabelle.ell2T(Isabelle.tupleT(location.map[Typ](_.valueTyp)))
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
+    val expected = GIsabelle.ell2T(GIsabelle.tupleT(location.map[Typ](_.valueTyp)))
     expression.checkWelltyped(context, expected)
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): QInit =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): QInit =
     QInit(location, expression.simplify(isabelle,facts,thms))
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
@@ -1151,14 +953,14 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"on ${Variable.vartermToString(location)} apply $expression;"
 
-  override def checkWelltyped(context: Isabelle.Context): Unit = {
-    val varType = Isabelle.tupleT(location.map[Typ](_.valueTyp))
-    val expected = pure.Type("Bounded_Operators.bounded",List(varType,varType))
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
+    val varType = GIsabelle.tupleT(location.map[Typ](_.valueTyp))
+    val expected = Type("Bounded_Operators.bounded", varType, varType)
     expression.checkWelltyped(context, expected)
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): QApply =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): QApply =
     QApply(location, expression.simplify(isabelle,facts,thms))
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
@@ -1186,16 +988,16 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"${Variable.vartermToString(result)} <- measure ${Variable.vartermToString(location)} in $e;"
 
-  override def checkWelltyped(context: Isabelle.Context): Unit = {
-    val expected = pure.Type("QRHL_Core.measurement",List(
-      Isabelle.tupleT(result.map[Typ](_.valueTyp)),
-      Isabelle.tupleT(location.map[Typ](_.valueTyp))))
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
+    val expected = Type("QRHL_Core.measurement",
+      GIsabelle.tupleT(result.map[Typ](_.valueTyp)),
+      GIsabelle.tupleT(location.map[Typ](_.valueTyp)))
     e.checkWelltyped(context, expected)
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.measurement(Isabelle.tupleT(location.map(_.valueTyp):_*), result.valueTyp) $
   //      result.variableTerm $ Isabelle.qvarTuple_var(location) $ e.encodeAsExpression(context).isabelleTerm
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Measurement =
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): Measurement =
     Measurement(result,location,e.simplify(isabelle,facts,thms))
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
@@ -1230,7 +1032,7 @@ final case class Call(name:String, args:Call*) extends Statement {
     if (args.isEmpty) name else s"$name(${args.map(_.toStringShort).mkString(",")})"
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
 
-  override def checkWelltyped(context: Isabelle.Context): Unit = {}
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit = {}
 //  override def programTermOLD(context: Isabelle.Context): Term = {
 //    if (args.nonEmpty) {
 //      val argTerms = args.map(_.programTermOLD(context)).toList
@@ -1239,7 +1041,7 @@ final case class Call(name:String, args:Call*) extends Statement {
 //    } else
 //      Free(name, Isabelle.programT)
 //  }
-  override def simplify(isabelle: Isabelle.Context, facts: List[String], thms: ListBuffer[Thm]): Call = this
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): Call = this
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
     * Fails if [this] already contains program names of the form @...

@@ -1,30 +1,44 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.{Codec, Operation}
-import info.hupel.isabelle.pure.Term
+import java.util.concurrent.ConcurrentHashMap
+
+import isabelle.control.MLValue.Converter
+import isabelle.{Context, Thm}
+import isabelle.control.{Isabelle, MLValue}
 import qrhl._
-import qrhl.isabelle.{Isabelle, RichTerm}
-import qrhl.toplevel.Parser
+import qrhl.isabellex.IsabelleX
+import MLValue.Implicits._
+import Subgoal.Implicits._
+import Context.Implicits._
+import Thm.Implicits._
+import qrhl.tactic.IsabelleTac.tactics
 
-abstract class IsabelleTac[A](operationName : String, arg : Isabelle.Context => A)(implicit codec : Codec[A]) extends Tactic {
+import scala.collection.JavaConverters.mapAsScalaConcurrentMapConverter
+import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
 
+abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX => A)(implicit storer: Converter[A]) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
-    val ctx = state.isabelle
-//    println("IsabelleTac",Isabelle.pretty(goal.toExpression(ctx).isabelleTerm))
+    implicit val isabelle: Isabelle = state.isabelle.isabelle.isabelleControl
+    val ctxt = state.isabelle.context
 
-    implicit val isabelle: Isabelle = ctx.isabelle
-    implicit val _ : Codec[A] = codec
-    import Isabelle.Thm.codec
+    type In = (A, Subgoal, Context)
+    type Out = (List[Subgoal], Thm)
 
-    val operation : Operation[(A, Subgoal, Isabelle.Context), Option[(List[Subgoal],Isabelle.Thm)]] = {
-      Operation.implicitly[(A, Subgoal, Isabelle.Context), Option[(List[Subgoal],Isabelle.Thm)]](operationName)
+    // TODO memoize
+    val tacMlValue : MLValue[In => Out] = {
+      val exnToValue = storer.exnToValue
+      tactics.getOrElseUpdate((operationName,exnToValue),
+        MLValue.compileFunctionRaw[In, Out](
+          s"fn (a',E_Subgoal subgoal,E_Context ctxt) => " +
+            s"let val (subgoals, thm) = QRHL_Operations.$operationName (${storer.exnToValue} a') subgoal ctxt " +
+            s"in E_Pair (E_List (map E_Subgoal subgoals), E_Thm thm) end)")).
+        asInstanceOf
     }
 
-    val (newGoals,thm) = ctx.isabelle.invoke(operation, (arg(ctx), goal, ctx)).getOrElse {
+    val (newGoals, thm) = tacMlValue[In, Out](
+      MLValue((arg(state.isabelle), goal, ctxt))).retrieveNowOrElse {
       throw UserException("tactic failed") }
-//    val thm = if (thmId==0) null else new Isabelle.Thm(ctx.isabelle, thmId)
-
-//    val newGoals = for (t <- goals) yield Subgoal(ctx, t)
 
     check(state, goal, newGoals)
 
@@ -38,4 +52,8 @@ abstract class IsabelleTac[A](operationName : String, arg : Isabelle.Context => 
 
 
   override def toString: String = f"IsabelleTac($operationName,$arg)"
+}
+
+object IsabelleTac {
+  private val tactics: mutable.Map[(String, String), MLValue[_]] = new ConcurrentHashMap[(String,String), MLValue[_]]().asScala
 }

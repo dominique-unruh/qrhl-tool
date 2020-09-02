@@ -3,13 +3,12 @@ package qrhl
 import java.nio.file.{Path, Paths}
 
 import org.rogach.scallop.{ScallopConf, ScallopOption, Subcommand}
-import qrhl.isabelle.Isabelle
+import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
 import qrhl.toplevel.Toplevel.runFromTerminal
 
 object Main {
   class CLIConf(args: Seq[String]) extends ScallopConf(args) {
-    val isabelle: ScallopOption[String] = opt[String]()
     val rebuild : ScallopOption[Boolean] = toggle()
     // if cheating is false, cheating cannot be activated
     val cheating : ScallopOption[Boolean] = toggle() // Default: interactive mode: true, from file: false
@@ -34,11 +33,7 @@ object Main {
     val conf = new CLIConf(args)
     conf.verify()
     if (conf.rebuild.getOrElse(false)) {
-      val isabelle = new Isabelle("auto", build=true)
-      isabelle.dispose()
-    } else if (conf.isabelle.supplied) {
-      val isabelle = new Isabelle(conf.isabelle.toOption.get, build=true)
-      isabelle.runJEdit(if (conf.file.supplied) List(conf.file.toOption.get) else Nil)
+      val isabelle = new IsabelleX(build=true)
       isabelle.dispose()
     } else if (conf.file.isDefined) {
       val tl = Toplevel.makeToplevel(cheating=conf.cheating.getOrElse(false))

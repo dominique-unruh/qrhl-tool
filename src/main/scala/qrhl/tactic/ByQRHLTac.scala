@@ -1,18 +1,24 @@
 package qrhl.tactic
 
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{App, Const, Free, Term, Type}
-import info.hupel.isabelle.{Operation, pure}
 import org.log4s
 import qrhl._
-import qrhl.isabelle.{Isabelle, IsabelleConsts, RichTerm}
+import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.logic._
-import qrhl.isabelle.RichTerm.term_tight_codec
-import qrhl.isabelle.RichTerm.typ_tight_codec
-import qrhl.tactic.ByQRHLTac.byQRHLPreOp
+import qrhl.tactic.ByQRHLTac.{addIndexToExpressionOp, byQRHLPreOp}
+import IsabelleX.{globalIsabelle => GIsabelle}
+import isabelle.{App, Const, Context, Free, Term, Typ}
+import isabelle.control.MLValue
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
+
+import MLValue.Implicits._
+import Context.Implicits._
+import Term.Implicits._
+import Typ.Implicits._
+import scala.concurrent.ExecutionContext.Implicits._
 
 case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
   /** Pattern-matcher that matches Pr[e : prog (rho)]
@@ -23,12 +29,12 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
    * Special case: if the term to be matches is "1", return (True, empty program, null)
    */
   class Probability(left : Boolean, state : State) {
-    def unapply(term: pure.Term): Option[(pure.Term,Statement,pure.Term)] = term match {
-      case App(App(App(Const(Isabelle.probability.name,_),e),p),rho) =>
-        val addIndexToExpressionOp = Operation.implicitly[(BigInt,Term,Boolean), RichTerm]("add_index_to_expression")
+    def unapply(term: Term): Option[(Term,Statement,Term)] = term match {
+      case App(App(App(Const(GIsabelle.probability.name,_),e),p),rho) =>
 
-        val e2 = state.isabelle.isabelle.invoke(addIndexToExpressionOp, (state.isabelle.contextId,e,left))
-        val e3 = RichTerm.decodeFromExpression(state.isabelle, e2.isabelleTerm).isabelleTerm
+        val e2 = addIndexToExpressionOp[(Context,Term,Boolean), Term](
+                    MLValue((state.isabelle.context, e, left))).retrieveNow
+        val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
 
         val pname = p match {
           case Free(n,_) => n
@@ -40,7 +46,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         Some((e3,Call(prog.name),rho))
       case Const(IsabelleConsts.one,_) =>
-        Some((Isabelle.True_const, Block.empty, null))
+        Some((GIsabelle.True_const, Block.empty, null))
       case _ =>
         ByQRHLTac.logger.debug(s"Term: $term")
         None
@@ -49,7 +55,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
   private val connectiveT = HOLogic.boolT -->: HOLogic.boolT -->: HOLogic.boolT
   private def bitToBool(b:Term) =
-    Isabelle.mk_eq(b, Const("Groups.one_class.one", Isabelle.bitT))
+    GIsabelle.mk_eq(b, Const("Groups.one_class.one", GIsabelle.bitT))
 
 
   /**
@@ -82,8 +88,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         // R must be one of <= or =
         // connective := --> or = then.
         val connective = rel match {
-          case "Orderings.ord_class.less_eq" => Const("HOL.implies", connectiveT)
-          case "HOL.eq" => Const("HOL.eq", connectiveT)
+          case IsabelleConsts.less_eq => GIsabelle.implies
+          case IsabelleConsts.eq => GIsabelle.iff
           case _ => throw UserException("There should be = or <= or >= between the lhs and the rhs")
         }
 
@@ -95,8 +101,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         val vars1 = p1.variableUse(env)
         val vars2 = p2.variableUse(env)
-        val vars1expr = stripIndices(RichTerm(Isabelle.boolT, e1).variables(env).classical)
-        val vars2expr = stripIndices(RichTerm(Isabelle.boolT, e2).variables(env).classical)
+        val vars1expr = stripIndices(RichTerm(GIsabelle.boolT, e1).variables(env).classical)
+        val vars2expr = stripIndices(RichTerm(GIsabelle.boolT, e2).variables(env).classical)
 
         // fv(p1), fv(p2), fv(e1), fv(e2) (not indexed, only classical)
         val cvars = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
@@ -119,18 +125,18 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         // Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
         // if cvars =: x...z and qvars =: q...r
-        val pre = isa.isabelle.invoke(byQRHLPreOp,
-          (isa.contextId,
+        val pre = byQRHLPreOp[(Context, List[(String, String, Typ)], List[(String, String, Typ)]), Term](
+          MLValue((isa.context,
             cvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
-            qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))))
+            qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))))).retrieveNow
 
         val left = p1.toBlock
         val right = p2.toBlock
 
         // Cla[e1 -->/= e2]
-        val post = RichTerm(Isabelle.predicateT, Isabelle.classical_subspace $ (connective $ e1 $ e2))
+        val post = RichTerm(GIsabelle.predicateT, GIsabelle.classical_subspace(connective $ e1 $ e2))
 
-        List(QRHLSubgoal(left,right,pre,post,Nil))
+        List(QRHLSubgoal(left,right,RichTerm(pre),post,Nil))
       case _ =>
         throw UserException("""Expected subgoal of the form "Pr[e:p(rho)] = Pr[f:q(rho2)]" (or with <= or >=) where p,q are program names""")
     }
@@ -140,6 +146,10 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 object ByQRHLTac {
   private val logger = log4s.getLogger
 
-  private val byQRHLPreOp: Operation[(BigInt, List[(String, String, pure.Typ)], List[(String, String, pure.Typ)]), RichTerm]
-  = Operation.implicitly[(BigInt, List[(String,String,pure.Typ)], List[(String,String,pure.Typ)]), RichTerm]("byQRHLPre")
+  private val byQRHLPreOp =
+    MLValue.compileFunction[(Context, List[(String, String, Typ)], List[(String, String, Typ)]), Term]("QRHL_Operations.byQRHLPre")
+
+  private val addIndexToExpressionOp =
+    MLValue.compileFunction[(Context,Term,Boolean), Term]("QRHL_Operations.add_index_to_expression")
+
 }

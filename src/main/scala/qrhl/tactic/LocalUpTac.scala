@@ -8,7 +8,11 @@ import scala.collection.immutable.ListSet
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import LocalUpTac.{VarID, _}
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
+import IsabelleX.{globalIsabelle => GIsabelle}
+
+
+
 
 case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
@@ -28,9 +32,9 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
   def init(classical: Seq[CVariable] = Nil, quantum: Seq[QVariable] = Nil): Block = {
     val statements = new ListBuffer[Statement]()
     for (c <- classical)
-      statements.append(Assign(VarTerm.varlist(c), RichTerm(Isabelle.default(c.valueTyp))))
+      statements.append(Assign(VarTerm.varlist(c), RichTerm(GIsabelle.default(c.valueTyp))))
     for (q <- quantum)
-      statements.append(QInit(VarTerm.varlist(q), RichTerm(Isabelle.ket(Isabelle.default(q.valueTyp)))))
+      statements.append(QInit(VarTerm.varlist(q), RichTerm(GIsabelle.ket(GIsabelle.default(q.valueTyp)))))
     Block(statements: _*)
   }
 

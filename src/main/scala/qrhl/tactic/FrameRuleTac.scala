@@ -2,12 +2,20 @@ package qrhl.tactic
 
 import info.hupel.isabelle.Operation
 import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.{App, Const, Term, Typ}
-import qrhl.isabelle.{Isabelle, IsabelleConsts, RichTerm}
+import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
+import isabelle.{App, Const, Context, Term, Typ}
+import isabelle.control.MLValue
+import IsabelleX.{globalIsabelle => GIsabelle}
 
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
+// Implicits
+import MLValue.Implicits._
+import Context.Implicits._
+import Term.Implicits._
+import Typ.Implicits._
+import GIsabelle.isabelleControl
+import scala.concurrent.ExecutionContext.Implicits.global
+
 
 case object FrameRuleTac extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
@@ -17,12 +25,12 @@ case object FrameRuleTac extends Tactic {
         case App(App(Const(IsabelleConsts.inf, _), b2), r2) => (b2, r2)
         case _ => throw UserException(s"""Postcondition must be of the form "B ⊓ R", not $post""")
       }
-      val rRich = RichTerm(Isabelle.predicateT, r)
+      val rRich = RichTerm(GIsabelle.predicateT, r)
 
       val a = pre.isabelleTerm match {
         case App(App(Const(IsabelleConsts.inf, _), a2), r2) =>
           if (r2!=r)
-            throw UserException(s"Rhs of precondition and rhs of postcondition must be equal ($rRich vs ${RichTerm(Isabelle.predicateT, r2)})")
+            throw UserException(s"Rhs of precondition and rhs of postcondition must be equal ($rRich vs ${RichTerm(GIsabelle.predicateT, r2)})")
           a2
         case _ => throw UserException(s"""Precondition must be of the form "A ⊓ R", not $pre""")
       }
@@ -45,14 +53,14 @@ case object FrameRuleTac extends Tactic {
 
       val qVars12 = leftVarUse.quantum.map(_.index1).union(rightVarUse.quantum.map(_.index2))
       val qVars12list = qVars12.toList.map { v => (v.variableName, v.valueTyp) }
-      val colocality = AmbientSubgoal(state.isabelle.isabelle.invoke(colocalityOp,
-        (state.isabelle.contextId, r, qVars12list)))
+      val colocality = AmbientSubgoal(RichTerm(colocalityOp[(Context, Term, List[(String, Typ)]), Term](
+        MLValue((state.isabelle.context, r, qVars12list))).retrieveNow))
 
-      val qrhlSubgoal = QRHLSubgoal(left, right, RichTerm(Isabelle.predicateT, a), RichTerm(Isabelle.predicateT, b), assumptions)
+      val qrhlSubgoal = QRHLSubgoal(left, right, RichTerm(GIsabelle.predicateT, a), RichTerm(GIsabelle.predicateT, b), assumptions)
 
       List(colocality, qrhlSubgoal)
   }
 
-  // TODO: Replace Term by RichTerm
-  val colocalityOp: Operation[(BigInt, Term, List[(String, Typ)]), RichTerm] = Operation.implicitly[(BigInt,Term,List[(String,Typ)]), RichTerm]("colocal_pred_qvars")
+  val colocalityOp: MLValue[((Context, Term, List[(String, Typ)])) => Term] =
+    MLValue.compileFunction[(Context, Term, List[(String, Typ)]), Term]("QRHL_Operations.colocal_pred_qvars")
 }

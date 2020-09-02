@@ -1,10 +1,11 @@
 package qrhl
 
 import org.scalatest.FunSuite
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, IfThenElse, While}
 import qrhl.tactic.SeqTac
 import qrhl.toplevel.{Toplevel, ToplevelTest}
+import IsabelleX.{globalIsabelle => GIsabelle}
 
 class QRHLSubgoalTest extends FunSuite {
   lazy val tl: Toplevel = {
@@ -13,8 +14,8 @@ class QRHLSubgoalTest extends FunSuite {
     tl.execCmd("classical var y : int", "<test>")
     tl
   }
-  def pb(str:String): RichTerm = tl.state.value.parseExpression(Isabelle.boolT,str)
-  def pp(str:String): RichTerm = tl.state.value.parseExpression(Isabelle.predicateT,str)
+  def pb(str:String): RichTerm = tl.state.value.parseExpression(GIsabelle.boolT,str)
+  def pp(str:String): RichTerm = tl.state.value.parseExpression(GIsabelle.predicateT,str)
 
 /*
   def testToExpressionWelltypedRoundtrip(context: Isabelle.Context, left:Block, right:Block, pre:RichTerm, post:RichTerm): Unit = {

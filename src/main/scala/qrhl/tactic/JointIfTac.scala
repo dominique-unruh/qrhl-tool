@@ -1,12 +1,11 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.pure.Term
-import qrhl.isabelle.Isabelle.{classical_subspace, conj, inf, less_eq, mk_eq, predicateT}
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, IfThenElse}
 import qrhl.tactic.JointIfTac.{allCases, differentCases, sameCases}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
+import IsabelleX.{globalIsabelle => GIsabelle}
+import isabelle.Term
 
 import scala.collection.mutable.ListBuffer
 
@@ -34,32 +33,32 @@ case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
       val subgoals = new ListBuffer[Subgoal]
 
       def eqBool(t: Term, truth: Boolean) =
-        if (truth) t else Isabelle.not(t)
+        if (truth) t else GIsabelle.not(t)
 
       assert(cases.nonEmpty)
       // Logically equivalent to "there is a (l,r) <- cases such condLIdx=l, condRIdx=r"
       val excludedCasesCond =
         if (casesSet == allCases)
-          HOLogic.True
+          GIsabelle.True_const
         else if (casesSet == sameCases)
-          mk_eq(condLIdx, condRIdx)
+          GIsabelle.mk_eq(condLIdx, condRIdx)
         else if (casesSet == differentCases)
-          Isabelle.not(mk_eq(condLIdx, condRIdx))
+          GIsabelle.not(GIsabelle.mk_eq(condLIdx, condRIdx))
         else
-          Isabelle.disj({
+          GIsabelle.disj({
             for ((l,r) <- cases)
               yield
-                conj(eqBool(condLIdx,l),eqBool(condRIdx,r))
+                GIsabelle.conj(eqBool(condLIdx,l),eqBool(condRIdx,r))
           } :_*)
 
-      val casesSubgoal = less_eq(pre.isabelleTerm, classical_subspace(excludedCasesCond))
-      subgoals.append(AmbientSubgoal(RichTerm(predicateT, casesSubgoal)))
+      val casesSubgoal = GIsabelle.less_eq(pre.isabelleTerm, GIsabelle.classical_subspace(excludedCasesCond))
+      subgoals.append(AmbientSubgoal(RichTerm(GIsabelle.predicateT, casesSubgoal)))
 
       for ((l,r) <- cases) {
         val newLeft = (if (l) thenBranchL else elseBranchL) ++ restL
         val newRight = (if (r) thenBranchR else elseBranchR) ++ restR
-        val newPre = inf(pre.isabelleTerm, classical_subspace(conj(eqBool(condLIdx,l),eqBool(condRIdx,r))))
-        subgoals.append(QRHLSubgoal(newLeft,newRight,RichTerm(predicateT,newPre),post,assumptions))
+        val newPre = GIsabelle.inf(pre.isabelleTerm, GIsabelle.classical_subspace(GIsabelle.conj(eqBool(condLIdx,l),eqBool(condRIdx,r))))
+        subgoals.append(QRHLSubgoal(newLeft,newRight,RichTerm(GIsabelle.predicateT,newPre),post,assumptions))
       }
 
       subgoals.toList

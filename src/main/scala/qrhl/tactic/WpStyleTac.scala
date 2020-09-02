@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import qrhl.logic.{Block, Statement}
 import qrhl._
-import qrhl.isabelle.RichTerm
+import qrhl.isabellex.RichTerm
 
 
 abstract class WpStyleTac(val left:Boolean) extends Tactic {

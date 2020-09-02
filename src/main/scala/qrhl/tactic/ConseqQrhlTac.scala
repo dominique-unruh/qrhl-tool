@@ -1,18 +1,24 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.Operation
-import info.hupel.isabelle.pure.{Term, Typ}
+import isabelle.{Context, Term, Typ}
+import isabelle.control.MLValue
 import org.log4s
 import qrhl._
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{QVariable, Variable}
+import IsabelleX.{globalIsabelle => GIsabelle}
 
 import scala.collection.mutable.ListBuffer
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
-import qrhl.isabelle.Codecs._
-
 import scala.collection.immutable.ListSet
+
+// Implicits
+import isabelle.control.MLValue.Implicits._
+import isabelle.Context.Implicits._
+import isabelle.Typ.Implicits._
+import isabelle.Term.Implicits._
+import Subgoal.Implicits._
+import scala.concurrent.ExecutionContext.Implicits._
+import GIsabelle.isabelleControl
 
 /**
  * If qvariableSubst=None, applies the rule:
@@ -62,9 +68,12 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
     case QRHLSubgoal(left,right,pre,post,assms) =>
       val env = state.environment
       val isabelle = state.isabelle.isabelle
-      val contextId = state.isabelle.contextId
+      val context = state.isabelle.context
 
-      state.isabelle.isabelle.invoke(Isabelle.thms_as_subgoals,(state.isabelle.contextId,rule)) match {
+      val ruleAsSubgoals = GIsabelle.thms_as_subgoals[(Context, String), List[Subgoal]](
+        MLValue((context,rule))).retrieveNow
+
+      ruleAsSubgoals match {
         case List(QRHLSubgoal(left2, right2, pre2, post2, assms2)) =>
           if (left != left2)
             throw UserException(s"Left program in current subgoal and in $rule are not identical.\n  $left\nvs.\n  $left2")
@@ -86,12 +95,12 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
               var easyGoals = ListSet.empty: ListSet[Term]
 
               // Checking premise (2a)
-              if (Isabelle.tupleT(beforeLeft.map(_.valueTyp): _*) != Isabelle.tupleT(beforeRight.map(_.valueTyp): _*))
-                throw UserException(s"Variables ${Variable.varsToString(beforeLeft)} and ${Variable.varsToString((beforeRight))} must have the same type.")
+              if (GIsabelle.tupleT(beforeLeft.map(_.valueTyp): _*) != GIsabelle.tupleT(beforeRight.map(_.valueTyp): _*))
+                throw UserException(s"Variables ${Variable.varsToString(beforeLeft)} and ${Variable.varsToString(beforeRight)} must have the same type.")
 
               // Checking premise (2b)
-              if (Isabelle.tupleT(afterLeft.map(_.valueTyp): _*) != Isabelle.tupleT(afterRight.map(_.valueTyp): _*))
-                throw UserException(s"Variables ${Variable.varsToString(afterLeft)} and ${Variable.varsToString((afterRight))} must have the same type.")
+              if (GIsabelle.tupleT(afterLeft.map(_.valueTyp): _*) != GIsabelle.tupleT(afterRight.map(_.valueTyp): _*))
+                throw UserException(s"Variables ${Variable.varsToString(afterLeft)} and ${Variable.varsToString(afterRight)} must have the same type.")
 
               // Check that leftVars/rightVars do not occur in left/right program (premises (3a,3b))
               val leftInter = beforeLeft.toSet.union(afterLeft.toSet).intersect(left.variableUse(env).quantum)
@@ -121,10 +130,10 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
               // Equivalent to (5).
               // In Isabelle, we need to explicitly make a case distinction on the finiteness of afterT because
               // card is the cardinality only in case of finite sets
-              val cardinalityCondition1 = isabelle.invoke(ConseqQrhlTac.conseq_qrhl_cardinality_condition,
-                (contextId, beforeLeftPairs, afterLeftPairs))
+              val cardinalityCondition1 = ConseqQrhlTac.conseq_qrhl_cardinality_condition[(Context, List[(String,Typ)], List[(String,Typ)]), Term](
+                MLValue((context, beforeLeftPairs, afterLeftPairs))).retrieveNow
               // Add this to the goals that we need to check
-              easyGoals += cardinalityCondition1.isabelleTerm
+              easyGoals += cardinalityCondition1
 
               // Like before/afterLeftPairs, but with index 1
               val beforeLeftIdxPairs = beforeLeft.map(_.index1) map { v => (v.variableName, v.valueTyp) }
@@ -140,18 +149,18 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
               //   quantum equality has no duplicate variables before replacement (6)
               //   quantum equality has no duplicate variables after replacement (6)
               // colocalityPre: subgoal that ensures that X is disjoint with beforeLeft/RightIdxPairs, afterLeft/RightIdxPairs, (7)
-              val (pre3, colocalityPre) = isabelle.invoke(ConseqQrhlTac.conseq_qrhl_replace_in_predicate,
-                (contextId, pre2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))
-              easyGoals += colocalityPre.isabelleTerm
+              val (pre3, colocalityPre) = ConseqQrhlTac.conseq_qrhl_replace_in_predicate[(Context, Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)]), (Term, Term)](
+                MLValue((context, pre2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))).retrieveNow
+              easyGoals += colocalityPre
 
               // Same for postcondition
-              val (post3, colocalityPost) = isabelle.invoke(ConseqQrhlTac.conseq_qrhl_replace_in_predicate,
-                (contextId, post2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))
-              easyGoals += colocalityPost.isabelleTerm
+              val (post3, colocalityPost) = ConseqQrhlTac.conseq_qrhl_replace_in_predicate[(Context, Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)]), (Term, Term)](
+                MLValue((context, post2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))).retrieveNow
+              easyGoals += colocalityPost
 
-              goals += AmbientSubgoal(Isabelle.conj(easyGoals.toSeq: _*), assms.map(_.isabelleTerm))
+              goals += AmbientSubgoal(GIsabelle.conj(easyGoals.toSeq: _*), assms.map(_.isabelleTerm))
 
-              (pre3, post3)
+              (RichTerm(pre3), RichTerm(post3))
           }
 
           // (8a), (8b)
@@ -186,11 +195,10 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
 object ConseqQrhlTac {
   private val logger = log4s.getLogger
 
-  private val conseq_qrhl_cardinality_condition = Operation.implicitly[
-    (BigInt,List[(String,Typ)],List[(String,Typ)]),
-    RichTerm]("conseq_qrhl_cardinality_condition")
+  private val conseq_qrhl_cardinality_condition =
+    MLValue.compileFunction[(Context, List[(String,Typ)], List[(String,Typ)]), Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")
 
-  private val conseq_qrhl_replace_in_predicate = Operation.implicitly[
-    (BigInt, Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)]),
-    (RichTerm, RichTerm)]("conseq_qrhl_replace_in_predicate")
+  private val conseq_qrhl_replace_in_predicate =
+    MLValue.compileFunction[(Context, Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)]), (Term, Term)](
+      "QRHL_Operations.conseq_qrhl_replace_in_predicate")
 }

@@ -11,7 +11,7 @@ import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder
 import org.jline.terminal.impl.DumbTerminal
 import org.log4s
-import qrhl.isabelle.Isabelle
+import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel.{ReadLine, logger}
 import qrhl.{State, UserException, Utils}
 
@@ -28,7 +28,7 @@ class Toplevel private(initialState : default.Hashed[State]) {
 //    states = null
 //  }
 
-  def isabelle: Isabelle = state.value.isabelle.isabelle
+  def isabelle: IsabelleX = state.value.isabelle.isabelle
 
   /** Reads one command from the input. The last line of the command must end with ".".
     * Comment lines (starting with whitespace + #) are skipped.

@@ -1,16 +1,21 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.pure.Term
 import org.log4s
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
-import qrhl.isabelle.Isabelle.{Inf, QuantumEqualityFull, predicateT, predicate_inf, predicate_top}
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, CVariable, Local, QVariable}
+import IsabelleX.{globalIsabelle => GIsabelle}
+import GIsabelle.{Inf, QuantumEqualityFull, predicateT, predicate_inf, predicate_top}
+import isabelle.Term
+
+// Implicits
+import GIsabelle.isabelleControl
+
 
 case object LocalRemoveJointTac extends Tactic {
   /** Assumes that s1,s2 have same length and matching types */
   private def extendQeq(us1: Term, s1: Term, us2: Term, s2: Term, qvarsL: List[QVariable], qvarsR: List[QVariable]) = {
-    import Isabelle.{variable_concat, variable_singleton, quantum_equality_full, idOp, ell2T}
+    import GIsabelle.{variable_concat, variable_singleton, quantum_equality_full, idOp, ell2T}
     var us1_ = us1
     var us2_ = us2
     var s1_ = s1
@@ -19,8 +24,8 @@ case object LocalRemoveJointTac extends Tactic {
     for ((q1,q2) <- qvarsL.zip(qvarsR).reverse) {
       s1_ = variable_concat(variable_singleton(q1.index1.variableTerm),s1_)
       s2_ = variable_concat(variable_singleton(q2.index2.variableTerm),s2_)
-      us1_ = Isabelle.tensorOp(idOp(ell2T(q1.valueTyp)), us1_)
-      us2_ = Isabelle.tensorOp(idOp(ell2T(q2.valueTyp)), us2_)
+      us1_ = GIsabelle.tensorOp(idOp(ell2T(q1.valueTyp)), us1_)
+      us2_ = GIsabelle.tensorOp(idOp(ell2T(q2.valueTyp)), us2_)
     }
 
     quantum_equality_full(us1_, s1_, us2_, s2_)
@@ -32,6 +37,8 @@ case object LocalRemoveJointTac extends Tactic {
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>
       val env = state.environment
       val context = state.isabelle
+
+      println("*** WARNING: Tactic 'local remove joint' is not sound (incomplete implementation)")
 
       // Decomposing left/right program
       val (cvarsL, qvarsL, bodyL) = leftProg match {
@@ -63,7 +70,7 @@ case object LocalRemoveJointTac extends Tactic {
       val (b, ur1, r1, ur2, r2) = decomposePredicate("postcondition", post)
 
       // TODO remove
-      def p(t:Term) = Isabelle.pretty(t)
+      def p(t:Term) = IsabelleX.pretty(t)
       logger.debug(s"A:   ${p(a)}")
       logger.debug(s"US:  ${p(us1)}")
       logger.debug(s"S:   ${p(s1)}")
@@ -82,8 +89,8 @@ case object LocalRemoveJointTac extends Tactic {
 
       val newPre = predicate_inf $ a $ extendQeq(us1,s1,us2,s2,qvarsL,qvarsR)
       // TODO: unitarity condition
-      val unitarity = Isabelle.classical_subspace $ Isabelle.conj(Isabelle.unitary(ur1), Isabelle.unitary(ur2))
-      val newPost = Isabelle.inf(b, unitarity, extendQeq(ur1,r1,ur2,r2,qvarsL,qvarsR))
+      val unitarity = GIsabelle.classical_subspace $ GIsabelle.conj(GIsabelle.unitary(ur1), GIsabelle.unitary(ur2))
+      val newPost = GIsabelle.inf(b, unitarity, extendQeq(ur1,r1,ur2,r2,qvarsL,qvarsR))
 
       logger.debug(s"Pre: ${p(newPre)}")
       logger.debug(s"Post: ${p(newPost)}")

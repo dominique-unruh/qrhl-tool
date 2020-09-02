@@ -1,12 +1,7 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.{Operation, pure}
-import info.hupel.isabelle.pure.Term
 import org.log4s
-import qrhl.isabelle.RichTerm
-
-import RichTerm.typ_tight_codec
-import RichTerm.term_tight_codec
+import isabelle.control.MLValue.Implicits._
 
 //object JointMeasureTacTmp {
 //  val op: Operation[(Unit, Term, BigInt), Option[(List[RichTerm],BigInt)]] =

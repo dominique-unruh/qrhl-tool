@@ -1,18 +1,23 @@
 package qrhl.logic
 
-import info.hupel.isabelle.{Operation, pure}
-import info.hupel.isabelle.pure.Typ
+import info.hupel.isabelle.Operation
 import qrhl.{MaybeAllSet, UserException}
-import qrhl.isabelle.Isabelle.{Context, declareVariableOp}
-import qrhl.isabelle.{Isabelle, RichTerm}
+import qrhl.isabellex.IsabelleX.ContextX
+import qrhl.isabellex.{IsabelleX, RichTerm}
 
 import scala.collection.mutable
-import RichTerm.term_tight_codec
-import RichTerm.typ_tight_codec
-import qrhl.isabelle.Codecs._
+import isabelle.{Context, Typ}
+import IsabelleX.{globalIsabelle => GIsabelle}
+import isabelle.control.MLValue
 
 import scala.collection.immutable.ListSet
-import qrhl.Utils.listSetUpcast
+import MLValue.Implicits._
+import isabelle.Term.Implicits._
+import Statement.Implicits._
+import isabelle.Typ.Implicits._
+import isabelle.Context.Implicits._
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /** Represents a logic environment in which programs and expressions are interpreted.
   * @param cVariables All declared classical variables
@@ -23,7 +28,7 @@ import qrhl.Utils.listSetUpcast
 final class Environment private
   (val cVariables : Map[String,CVariable],
    val qVariables : Map[String,QVariable],
-   val ambientVariables : Map[String,pure.Typ],
+   val ambientVariables : Map[String,Typ],
    val cqVariables12 : Set[String],
 //   val indexedNames : Set[String], // all variable names together, program variables indexed with 1/2
 //   val nonindexedNames : Set[String], // all variable names together, without 1/2-index
@@ -70,7 +75,7 @@ final class Environment private
 //  /** Variable declared as indexed program variable or ambient variable or program */
 //  def variableExistsForGoal(name:String) : Boolean = cqVariables12.contains(name) || ambientVariables.contains(name) || programs.contains(name)
 
-  def declareVariable(name: String, typ: pure.Typ, quantum:Boolean=false): Environment = {
+  def declareVariable(name: String, typ: Typ, quantum:Boolean=false): Environment = {
     if (variableExists(name))
       throw UserException(s"Variable name $name already in use (as variable or program name)")
 //    val nonidxNames = nonindexedNames + name
@@ -85,14 +90,14 @@ final class Environment private
 //    assert(!cVariables.contains(name))
 //    assert(!qVariables.contains(name))
     if (quantum)
-      copy(qVariables = qVariables.updated(name, QVariable(name,typ)),
+      copy(qVariables = qVariables.updated(name, QVariable(name, typ)),
         cqVariables12=cqVariables12++newIdxNames)
     else
       copy(cVariables = cVariables.updated(name, CVariable(name,typ)),
         cqVariables12=cqVariables12++newIdxNames)
   }
 
-  def declareAmbientVariable(name: String, typ:pure.Typ) : Environment = {
+  def declareAmbientVariable(name: String, typ:Typ) : Environment = {
     assert(!variableExists(name))
     copy(ambientVariables=ambientVariables.updated(name, typ))
   }
@@ -126,7 +131,7 @@ final class Environment private
 
   private def copy(cVariables:Map[String,CVariable]=cVariables,
                    qVariables:Map[String,QVariable]=qVariables,
-                   ambientVariables:Map[String,pure.Typ]=ambientVariables,
+                   ambientVariables:Map[String,Typ]=ambientVariables,
                    programs:Map[String,ProgramDecl]=programs,
                    cqVariables12:Set[String]=cqVariables12) =
     new Environment(cVariables=cVariables, qVariables=qVariables, programs=programs,
@@ -145,12 +150,13 @@ sealed trait ProgramDecl {
 //  val subprograms : List[ProgramDecl]
   val name: String
   val numOracles : Int
-  def declareInIsabelle(context: Isabelle.Context): Isabelle.Context
+  def declareInIsabelle(context: IsabelleX.ContextX): IsabelleX.ContextX
   def toStringMultiline : String
 }
 
 final case class AbstractProgramDecl(name:String, free:List[Variable], inner:List[Variable], written:List[Variable],
                                      overwritten:List[Variable], covered:List[Variable], numOracles:Int) extends ProgramDecl {
+  import AbstractProgramDecl._
   override val variablesRecursive: VariableUse = {
     VariableUse(freeVariables = ListSet(free:_*), written = ListSet(written:_*), ambient = ListSet.empty,
       programs = ListSet.empty, overwritten = ListSet(overwritten:_*), oracles=ListSet((1 to numOracles) map (_.toString) :_*),
@@ -158,40 +164,31 @@ final case class AbstractProgramDecl(name:String, free:List[Variable], inner:Lis
       covered = if (numOracles==0) MaybeAllSet.all else MaybeAllSet(covered:_*))
   }
 
-  def declareInIsabelle(isabelle: Isabelle.Context): Isabelle.Context = {
-    val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],BigInt),BigInt]("declare_abstract_program")
+  def declareInIsabelle(isabelle: IsabelleX.ContextX): IsabelleX.ContextX = {
     val vars = variablesRecursive
     val cvars = vars.classical map { v => (v.name, v.valueTyp) }
     val cwvars = vars.written collect { case v : CVariable => (v.name, v.valueTyp) }
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val id = isabelle.isabelle.invoke(op, (isabelle.contextId, name, cvars.toList, cwvars.toList, qvars.toList, BigInt(numOracles)))
-    new Context(isabelle.isabelle,id)
+    val ctxt = declare_abstract_program_op[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int), Context](
+      MLValue((isabelle.context, name, cvars.toList, cwvars.toList, qvars.toList, numOracles))).retrieveNow
+    new ContextX(isabelle.isabelle,ctxt)
   }
 
-  /*  {
-      val cvarsAll = new mutable.LinkedHashSet[CVariable]()
-      cvarsAll ++= cvars
-      val qvarsAll = new mutable.LinkedHashSet[QVariable]()
-      qvarsAll ++= qvars
-      val ambAll = new mutable.LinkedHashSet[String]()
-      val callsAll = new mutable.LinkedHashSet[ProgramDecl]()
-      callsAll ++= calls
-      for (p <- calls) {
-        val (c, q, a, pr) = p.variablesRecursive
-        cvarsAll ++= c
-        qvarsAll ++= q
-        ambAll ++= a
-        callsAll ++= pr
-      }
-      (cvarsAll.toList, qvarsAll.toList, ambAll.toList, callsAll.toList)
-    }*/
   override def toStringMultiline: String = {
     val calls = if (numOracles==0) "" else " calls " + Seq.fill(numOracles)("?").mkString(", ")
     s"adversary $name$calls"
   }
 }
 
+object AbstractProgramDecl {
+  private val declare_abstract_program_op =
+    MLValue.compileFunction[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int), Context](
+      "QRHL_Operations.declare_abstract_program")
+}
+
 final case class ConcreteProgramDecl(environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {
+  import ConcreteProgramDecl._
+
   override val numOracles: Int = oracles.length
   lazy val ambientVars: List[String] = {
     val vars = new mutable.LinkedHashSet[String]
@@ -224,51 +221,14 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
   override lazy val variablesRecursive: VariableUse =
     program.variableUse(environment)
 
-  /*{
-    val qvars = new mutable.LinkedHashSet[QVariable]
-    val cvars = new mutable.LinkedHashSet[CVariable]
-    def scan(st:Statement) : Unit = st match {
-      case Block(sts@_*) => sts.foreach(scan)
-      case Call(n) =>
-        val (c,q) = environment.programs(n).variablesRecursive
-        cvars ++= c
-        qvars ++= q
-      case Assign(v,e) =>
-        cvars += v
-        cvars ++= e.variables.flatMap(environment.cVariables.get)
-      case Sample(v,e) =>
-        cvars += v
-        cvars ++= e.variables.flatMap(environment.cVariables.get)
-      case QApply(loc,e) =>
-        qvars ++= loc
-        cvars ++= e.variables.flatMap(environment.cVariables.get)
-      case While(e,body) =>
-        cvars ++= e.variables.flatMap(environment.cVariables.get)
-        scan(body)
-      case IfThenElse(e,thenBranch,elseBranch) =>
-        cvars ++= e.variables.flatMap(environment.cVariables.get)
-        scan(thenBranch)
-        scan(elseBranch)
-      case Measurement(res,loc,e) =>
-        cvars += res
-        qvars ++= loc
-        cvars ++= e.variables.flatMap(environment.cVariables.get)
-      case QInit(loc,e) =>
-        qvars ++= loc
-        cvars ++= e.variables.flatMap(environment.cVariables.get)
-    }
-    scan(program)
-//    println(s"variablesRecursive $name, $cvars, $qvars")
-    (cvars.toList, qvars.toList)
-  }*/
-  def declareInIsabelle(context: Isabelle.Context): Isabelle.Context = {
-    val op = Operation.implicitly[(BigInt,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement),BigInt]("declare_concrete_program")
+  def declareInIsabelle(context: IsabelleX.ContextX): IsabelleX.ContextX = {
     val vars = variablesRecursive
     val cvars = vars.classical map { v => (v.name, v.valueTyp) }
     val cwvars = vars.written collect { case v : CVariable => (v.name, v.valueTyp) }
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val id = context.isabelle.invoke(op, (context.contextId, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program))
-    new Context(context.isabelle, id)
+    val ctxt = declare_concrete_program_op[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement), Context](
+      MLValue((context.context, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program))).retrieveNow
+    new ContextX(context.isabelle, ctxt)
   }
 
   override def toStringMultiline: String = {
@@ -277,3 +237,7 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
   }
 }
 
+object ConcreteProgramDecl {
+  val declare_concrete_program_op: MLValue[((Context, String, List[(String, Typ)], List[(String, Typ)], List[(String, Typ)], List[String], Statement)) => Context] =
+    MLValue.compileFunction[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement), Context]("QRHL_Operations.declare_concrete_program")
+}

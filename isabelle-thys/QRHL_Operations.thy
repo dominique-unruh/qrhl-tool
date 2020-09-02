@@ -30,12 +30,6 @@ operation_setup semiclassical_tac = \<open>
       (fn _ => "o2h")}
 \<close>
 
-operation_setup create_context = \<open>
-  {from_lib = Codec.list Codec.string,
-   to_lib = Codec.tuple Codec.int (Codec.list Codec.string),
-   action = create_context}
-\<close>
-
 operation_setup check_type = \<open>
   {from_lib = Codec.tuple Codec.int term_tight_codec,
    to_lib = typ_tight_codec,

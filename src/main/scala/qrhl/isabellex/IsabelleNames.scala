@@ -6,17 +6,19 @@ Source is in isabelle-thys/Scala.thy
 
 Run
 
-/opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabelle/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+/opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
 
 to recreate/update
 
 */
 
-package qrhl.isabelle
+package qrhl.isabellex
 
 object IsabelleTypes {
   val dummy = "dummy" 
   val nat = "Nat.nat"
+  val int = "Int.int"
+  val bool = "HOL.bool"
   val set = "Set.set"
   val ell2 = "Complex_L2.ell2"
   val bit = "Bit.bit"
@@ -89,4 +91,6 @@ object IsabelleConsts {
   val Span = "Complex_Vector_Spaces.Span"
   val liftSpace = "QRHL_Core.liftSpace"
   val insert = "Set.insert"
+  val conj = "HOL.conj"
+  val disj = "HOL.disj"
 }
