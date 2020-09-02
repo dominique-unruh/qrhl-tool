@@ -15,6 +15,7 @@ sealed abstract class Term {
     Term.stringOfTerm[Context,Term,String](ctxt.mlValue, mlValue).retrieveNow
   val concrete : Term
   def $(that: Term): Term = App(this, that)
+  override def equals(obj: Any): Boolean = ???
 }
 
 final class CTerm private (val ctermMlValue: MLValue[CTerm])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {

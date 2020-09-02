@@ -3,9 +3,9 @@ package isabelle
 import isabelle.control.{Isabelle, MLValue}
 
 import scala.annotation.tailrec
-import scala.concurrent.ExecutionContext
-
+import scala.concurrent.{ExecutionContext, Future}
 import MLValue.Implicits._
+import isabelle.control.MLValue.{Retriever, Storer}
 
 sealed abstract class Typ {
   val mlValue : MLValue[Typ]
@@ -15,8 +15,9 @@ sealed abstract class Typ {
   val concrete : Typ
 
   def -->:(that: Typ)(implicit ec: ExecutionContext): Type = Type("fun", that, this)
-  def --->:(thats: List[Typ])(implicit ec: ExecutionContext): Typ = thats.foldRight(this)(_ -->: _)
+//  def --->:(thats: List[Typ])(implicit ec: ExecutionContext): Typ = thats.foldRight(this)(_ -->: _)
 
+  override def equals(obj: Any): Boolean = ???
 }
 
 final class MLValueTyp(val mlValue: MLValue[Typ])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Typ {
@@ -137,6 +138,21 @@ object Typ {
   def apply(context: Context, string: String)(implicit ec: ExecutionContext): MLValueTyp = {
 //    implicit val _ = =:=.tpEquals[MLValue[Context => String => Typ]]
     new MLValueTyp(readType[Context, String, Typ](context.mlValue, MLValue(string)))
+  }
+
+  object TypRetriever extends Retriever[Typ] {
+    override protected def retrieve(value: MLValue[Typ])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Typ] =
+      Future.successful(new MLValueTyp(mlValue = value))
+  }
+
+  object TypStorer extends Storer[Typ] {
+    override protected def store(value: Typ)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Typ] =
+      value.mlValue
+  }
+
+  object Implicits {
+    implicit val typRetriever: TypRetriever.type = TypRetriever
+    implicit val typStorer: TypStorer.type = TypStorer
   }
 }
 
