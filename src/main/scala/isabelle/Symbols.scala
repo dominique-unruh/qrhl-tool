@@ -8,9 +8,11 @@ import qrhl.UserException
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.util.matching.Regex
 
-class Symbols(symbolsFile: URL = getClass.getResource("symbols"),
+class Symbols(symbolsFile: URL = classOf[Symbols].getResource("symbols"),
               extraSymbols: Traversable[(String,Int)] = Nil) {
   import Symbols._
+
+  assert(symbolsFile != null)
 
   private val (symbols, symbolsInv) = {
     import scala.collection.JavaConverters._
@@ -22,7 +24,7 @@ class Symbols(symbolsFile: URL = getClass.getResource("symbols"),
       //      println(line)
       line match {
         case lineRegex(name, codepoint) => results.append((name, Integer.parseInt(codepoint, 16)))
-        case _ => assert(!line.startsWith("\\")) // Lines with \ at the beginning should be matched by lineRegex
+        case _ => // Ignoring lines that do not introduce a symbol or do not contain a code point
       }
     }
     reader.close()
