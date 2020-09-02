@@ -6,6 +6,8 @@ import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, ExecutionContext}
 
+import MLValue.Implicits._
+
 sealed abstract class Term {
   val mlValue : MLValue[Term]
   implicit val isabelle : Isabelle

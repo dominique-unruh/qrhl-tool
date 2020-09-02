@@ -4,6 +4,8 @@ import isabelle.control.{Isabelle, MLValue}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
+import MLValue.Implicits._
+
 final class Thm private [Thm](val mlValue : MLValue[Thm])(implicit ec: ExecutionContext, isabelle: Isabelle) {
   override def toString: String = s"thm${mlValue.stateString}"
   lazy val cterm : CTerm = CTerm(Thm.cpropOf[Thm,CTerm](mlValue))

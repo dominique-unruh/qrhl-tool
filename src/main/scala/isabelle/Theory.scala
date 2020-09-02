@@ -4,6 +4,8 @@ import isabelle.control.{Isabelle, MLValue}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
+import MLValue.Implicits._
+
 final class Theory private [Theory](val name: String, val mlValue : MLValue[Theory]) {
   override def toString: String = s"theory $name${if (mlValue.isReady) " (loaded)" else ""}"
 }

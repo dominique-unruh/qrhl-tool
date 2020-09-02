@@ -5,6 +5,8 @@ import isabelle.control.{Isabelle, MLValue}
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
+import MLValue.Implicits._
+
 sealed abstract class Typ {
   val mlValue : MLValue[Typ]
   implicit val isabelle : Isabelle
@@ -134,23 +136,3 @@ object Typ {
   }
 }
 
-object TestType {
-  import ExecutionContext.Implicits.global
-
-  def main(args: Array[String]): Unit = {
-    implicit val isabelle : Isabelle = new Isabelle
-    Typ.init(isabelle)
-    val ctxt = Context("Main")
-    val typ = Typ(ctxt, "nat list")
-    typ match {
-      case Type(listName,List(Type(natName,List()))) => println(s"XXXX ${(listName, natName)}")
-
-    }
-
-    println("****",typ.pretty(ctxt))
-    val typ2 = typ.concrete.asInstanceOf[Type]
-    println("****", typ2)
-    val typ3 = typ2.args.head.concrete
-    println("****", typ3.pretty(ctxt))
-  }
-}
