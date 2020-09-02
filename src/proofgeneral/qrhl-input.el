@@ -122,10 +122,7 @@
  ("$^2$" ?²)
  ("$^3$" ?³)
  ("\\P" ?¶) ;; ("{\\P}" ?¶)
- ;; Fixme: Yudit has the equivalent of ("\\cdot" ?⋅), for U+22C5, DOT
- ;; OPERATOR, whereas · is MIDDLE DOT.  JadeTeX translates both to
- ;; \cdot.
- ("$\\cdot$" ?·) ("\\cdot" ?·)
+ ("$\\cdot$" ?⋅) ("\\cdot" ?⋅)
  ("$^1$" ?¹)
  ("$^o$" ?º)
  ("?`" ?¿)
@@ -320,7 +317,7 @@
  ("\\bumpeq" ?≏)
  ("\\cap" ?∩)
  ("\\cdots" ?⋯)
- ("\\centerdot" ?·)
+ ("\\centerdot" ?⋅)
  ("\\checkmark" ?✓)
  ("\\chi" ?χ)
  ("\\circ" ?∘)

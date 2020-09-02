@@ -843,7 +843,7 @@ object Isabelle {
 
   val symbols = new Symbols(extraSymbols = List(
     // Own additions (because Emacs's TeX input method produces these chars):
-    ("\\<lbrakk>", 0x00301A), ("\\<rbrakk>", 0x00301B), ("\\<cdot>", 0x0000B7)))
+    ("lbrakk", 0x00301A), ("rbrakk", 0x00301B), ("cdot", 0x0000B7)))
 
   private var _theContext: Context = _
 
