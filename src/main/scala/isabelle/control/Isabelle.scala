@@ -22,7 +22,7 @@ import scala.io.Source
 import scala.sys.process.Process
 import scala.util.{Failure, Success}
 
-class Isabelle(setup: Setup = Setup()) {
+class Isabelle(setup: Setup, build: Boolean = false) {
   import Isabelle._
 
   private val sendQueue : BlockingQueue[(String, String => Unit)] = new ArrayBlockingQueue(1000)
@@ -174,6 +174,9 @@ class Isabelle(setup: Setup = Setup()) {
     process
   }
 
+  private def buildSession() : Unit = ???
+
+  if (build) buildSession()
   private val process: lang.Process = startProcess()
 
   @volatile private var destroyed = false
@@ -282,12 +285,12 @@ object Isabelle {
   }
 
   case class Setup(
-                    workingDirectory : Path = DistributionDirectory.distributionDirectory,
-                    isabelleHome : Path = Paths.get("Isabelle2019-RC4"),
+                    workingDirectory : Path = Paths.get(""),
+                    isabelleHome : Path,
                     logic : String = "HOL",
-                    sessionRoots : Seq[Path] = List(Paths.get("isabelle-thys"),Paths.get("isabelle-afp")),
+                    sessionRoots : Seq[Path] = Nil,
                     /** Must end in .isabelle if provided */
-                    userDir : Option[Path] = Some(Paths.get("isabelle-temp/user/Isabelle2019-RC4/.isabelle"))
+                    userDir : Option[Path] = None
                   )
 }
 
