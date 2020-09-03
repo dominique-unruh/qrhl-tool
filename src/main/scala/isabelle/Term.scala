@@ -5,9 +5,12 @@ import isabelle.control.{Isabelle, MLValue}
 import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
+import isabelle.control.MLValue.Converter
+
 import MLValue.Implicits._
 import Term.Implicits._
-import isabelle.control.MLValue.Converter
+import Typ.Implicits._
+import Context.Implicits._
 
 sealed abstract class Term {
   val mlValue : MLValue[Term]
@@ -190,7 +193,8 @@ object Bound {
 object Term {
 
   private implicit var isabelle: Isabelle = _
-  private var readTerm: MLValue[Context => String => Term] = _
+  private var readTerm: MLValue[((Context, String)) => Term] = _
+  private var readTermConstrained: MLValue[((Context, String, Typ)) => Term] = _
   private var stringOfTerm: MLValue[Context => Term => String] = _
   private[isabelle] var dest_App: MLValue[Term => (Term,Term)] = _
   private[isabelle] var stringOfCterm: MLValue[Context => CTerm => String] = _
@@ -209,7 +213,8 @@ object Term {
       implicit val _ = isabelle
       Typ.init(isabelle)
       isabelle.executeMLCodeNow("exception E_Term of term;; exception E_CTerm of cterm")
-      readTerm = MLValue.compileFunctionRaw[Context, String => Term]("fn (E_Context ctxt) => E_ExnExn (fn (E_String str) => Syntax.read_term ctxt str |> E_Term)")
+      readTerm = MLValue.compileFunction[(Context, String), Term]("fn (ctxt, str) => Syntax.read_term ctxt str")
+      readTermConstrained = MLValue.compileFunction[(Context, String, Typ), Term]("fn (ctxt,str,typ) => Syntax.parse_term ctxt str |> Type.constraint typ |> Syntax.check_term ctxt")
       stringOfTerm = MLValue.compileFunctionRaw[Context, Term => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_Term term) => Syntax.string_of_term ctxt term |> E_String)")
       stringOfCterm = MLValue.compileFunctionRaw[Context, CTerm => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_CTerm cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm) |> E_String)")
       whatTerm = MLValue.compileFunctionRaw[Term, Int]("fn (E_Term term) => (case term of Const _ => 1 | Free _ => 2 | Var _ => 3 | Bound _ => 4 | Abs _ => 5 | _ $ _ => 6) |> E_Int")
@@ -223,7 +228,11 @@ object Term {
   }
 
   def apply(context: Context, string: String)(implicit ec: ExecutionContext): MLValueTerm = {
-    new MLValueTerm(readTerm[Context, String, Term](context.mlValue, MLValue(string)))
+    new MLValueTerm(readTerm[(Context, String), Term](MLValue((context, string))))
+  }
+
+  def apply(context: Context, string: String, typ: Typ)(implicit ec: ExecutionContext): MLValueTerm = {
+    new MLValueTerm(readTermConstrained[(Context, String, Typ), Term](MLValue((context, string, typ))))
   }
 
   object TermConverter extends Converter[Term] {
