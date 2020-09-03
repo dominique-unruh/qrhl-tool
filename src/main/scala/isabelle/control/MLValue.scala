@@ -64,12 +64,28 @@ object MLValue {
   def compileFunction[A, B](ml: String)(implicit isabelle: Isabelle): MLValue[A => B] =
     new MLValue(isabelle.storeFunction(ml).future)
 
+  object UnitConverter extends Converter[Unit] {
+    override protected[MLValue] def retrieve(value: MLValue[Unit])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Unit] =
+      Future.successful(())
+    override protected[MLValue] def store(value: Unit)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Unit] =
+      new MLValue(isabelle.storeInteger(0).future)
+
+    override val exnToValue: String = "(K())"
+    override val valueToExn: String = "(E_Int 0)"
+  }
   object IntConverter extends Converter[Int] {
     @inline override protected[MLValue] def store(value: Int)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Int] =
       new MLValue(isabelle.storeInteger(value).future)
     @inline override protected[MLValue] def retrieve(value: MLValue[Int])
                                                     (implicit isabelle: Isabelle, ec: ExecutionContext): Future[Int] =
       value.id.flatMap(isabelle.retrieveInteger(_).future)
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
+  }
+
+  object BooleanConverter extends Converter[Boolean] {
+    override protected[MLValue] def retrieve(value: MLValue[Boolean])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Boolean] = ???
+    override protected[MLValue] def store(value: Boolean)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Boolean] = ???
     override lazy val exnToValue: String = ???
     override lazy val valueToExn: String = ???
   }
@@ -123,7 +139,9 @@ object MLValue {
   }
 
   object Implicits {
-    @inline implicit val intStorer: IntConverter.type = IntConverter
+    @inline implicit val booleanConverter: BooleanConverter.type = BooleanConverter
+    @inline implicit val intConverter: IntConverter.type = IntConverter
+    @inline implicit val unitConverter: UnitConverter.type = UnitConverter
     @inline implicit val stringConverter: StringConverter.type = StringConverter
     @inline implicit def listConverter[A](implicit Converter: Converter[A]): ListConverter[A] = new ListConverter(Converter)
     @inline implicit def tuple2Converter[A,B](implicit a: Converter[A], b: Converter[B]): Tuple2Converter[A, B] = new Tuple2Converter(a,b)
