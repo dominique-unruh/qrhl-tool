@@ -8,21 +8,24 @@ import org.scalatest.FunSuite
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
+import MLValue.Implicits._
+import Context.Implicits._
+import IsabelleTest.isabelle
+
 object MLValueTest {
   def main(args: Array[String]): Unit = {
-    val setup: Setup = Setup(
-      workingDirectory = Paths.get("/home/unruh/svn/qrhl-tool"),
-      isabelleHome = Paths.get("Isabelle2019-RC4"),
-      sessionRoots = Nil,
-      userDir = Some(Paths.get("isabelle-temp/user/Isabelle2019-RC4/.isabelle"))
-    )
 
     implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-    val isabelle = new Isabelle(setup)
     Thm.init(isabelle)
     val ctxt = Context("Main")
+//    ctxt.mlValue.retrieve
     val thm = Thm(ctxt, "refl")
     println(thm)
     println(thm.pretty(ctxt))
+    val cprop = thm.cterm
+    println(cprop)
+    println(cprop.pretty(ctxt))
+    val term = cprop.concrete
+    println(term)
   }
 }

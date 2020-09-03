@@ -59,7 +59,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
       val elem = sendQueue.poll()
       if (elem!=null) {
         val (line,callback) = elem
-        assert(line.endsWith("\n"))
+        assert(line.endsWith("\n"), line)
 //        logger.debug(s"Writing ${line.trim}")
         if (callback != null)
           callbacks.put(count, callback)
@@ -71,6 +71,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
 
     while (true) {
       val (line,callback) = sendQueue.take()
+      assert(line.endsWith("\n"), line)
 //      logger.debug(s"Writing! ${line.trim}")
       if (callback != null)
         callbacks.put(count, callback)
@@ -213,6 +214,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
   def executeMLCode(ml : String) : Future[Unit] = {
     val promise : Promise[Unit] = Promise()
     assert(!ml.contains('\n'))
+    logger.debug(s"Executing ML code: $ml")
     send(s"M$ml\n", { result => promise.success(()) })
     promise.future
   }
@@ -222,6 +224,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
   private[control] def storeFunction(ml : String): Promise[ID] = {
     val promise : Promise[ID] = Promise()
     assert(!ml.contains('\n'))
+    logger.debug(s"Compiling ML function: $ml")
     send(s"f$ml\n", { result => promise.success(intStringToID(result)) })
     promise
   }
@@ -229,6 +232,19 @@ class Isabelle(setup: Setup, build: Boolean = false) {
   private[control] def storeInteger(i: Int): Promise[ID] = {
     val promise : Promise[ID] = Promise()
     send(s"s$i\n", { result => promise.success(intStringToID(result)) })
+    promise
+  }
+
+  private[control] def makePair(a: ID, b: ID) : Promise[ID] = {
+    val promise : Promise[ID] = Promise()
+    send(s"p${a.id} ${b.id}\n", { result => promise.success(intStringToID(result)) })
+    promise
+  }
+
+  private[control] def splitPair(pair: ID) : Promise[(ID,ID)] = {
+    val promise : Promise[(ID,ID)] = Promise()
+    send(s"P${pair.id}\n", { result => result.split(' ') match {
+      case Array(a,b) => promise.success((intStringToID(a), intStringToID(b))) } })
     promise
   }
 

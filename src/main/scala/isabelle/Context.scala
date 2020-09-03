@@ -15,13 +15,13 @@ object Context {
   private implicit var isabelle : Isabelle = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
-  def init(isabelle: Isabelle): Unit = synchronized {
+  def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
     if (this.isabelle == null) {
       this.isabelle = isabelle
       implicit val _ = isabelle
       Theory.init(isabelle)
       isabelle.executeMLCodeNow("exception E_Context of Proof.context")
-      contextFromTheory = MLValue.compileFunction[Theory, Context]("fn (E_Theory thy) => Proof_Context.init_global thy |> E_Context")
+      contextFromTheory = MLValue.compileFunctionRaw[Theory, Context]("fn (E_Theory thy) => Proof_Context.init_global thy |> E_Context")
     }
   }
 
@@ -34,11 +34,15 @@ object Context {
     Context(Theory(name))
 
   object ContextConverter extends Converter[Context] {
-    override def retrieve(value: MLValue[Context])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Context] =
-      Future.successful(new Context(mlValue = value))
-    override def store(value: Context)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Context] = ???
-    override lazy val exnToValue: String = ???
-    override lazy val valueToExn: String = ???
+    override def retrieve(value: MLValue[Context])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Context] = {
+      for (_ <- value.id)
+        yield new Context(mlValue = value)
+    }
+
+    override def store(value: Context)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Context] =
+      value.mlValue
+    override lazy val exnToValue: String = "fn E_Context ctxt => ctxt"
+    override lazy val valueToExn: String = "E_Context"
   }
 
   object Implicits {

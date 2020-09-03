@@ -4,6 +4,8 @@ import isabelle.control.{Isabelle, MLValue}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import MLValue.Implicits._
+import Thm.Implicits._
+import Context.Implicits._
 import isabelle.control.MLValue.Converter
 
 final class Thm private [Thm](val mlValue : MLValue[Thm])(implicit ec: ExecutionContext, isabelle: Isabelle) {
@@ -14,7 +16,7 @@ final class Thm private [Thm](val mlValue : MLValue[Thm])(implicit ec: Execution
 }
 
 object Thm {
-  private var getThm : MLValue[Context => String => Thm] = _
+  private var getThm : MLValue[((Context, String)) => Thm] = _
   private var cpropOf : MLValue[Thm => CTerm] = _
   private var stringOfThm: MLValue[Context => Thm => String] = _
   private implicit var isabelle : Isabelle = _
@@ -26,15 +28,14 @@ object Thm {
       implicit val _ = isabelle
       Term.init(isabelle)
       isabelle.executeMLCodeNow("exception E_Thm of thm")
-      getThm = MLValue.compileFunction[Context, String => Thm]("fn (E_Context ctxt) => E_ExnExn (fn (E_String name) => Proof_Context.get_thm ctxt name |> E_Thm)")
-      cpropOf = MLValue.compileFunction[Thm, CTerm]("fn (E_Thm thm) => Thm.cprop_of thm |> E_CTerm")
-      stringOfThm = MLValue.compileFunction[Context, Thm => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_Thm thm) => Thm.string_of_thm ctxt thm |> E_String)")
+      getThm = MLValue.compileFunction[(Context, String), Thm]("fn (ctxt, name) => Proof_Context.get_thm ctxt name")
+      cpropOf = MLValue.compileFunctionRaw[Thm, CTerm]("fn (E_Thm thm) => Thm.cprop_of thm |> E_CTerm")
+      stringOfThm = MLValue.compileFunctionRaw[Context, Thm => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_Thm thm) => Thm.string_of_thm ctxt thm |> E_String)")
     }
   }
 
   def apply(context: Context, name: String)(implicit ec: ExecutionContext): Thm = {
-    val mlName = MLValue(name)
-    val mlThm : MLValue[Thm] = getThm[Context,String,Thm](context.mlValue, mlName)
+    val mlThm : MLValue[Thm] = getThm[(Context,String),Thm](MLValue((context, name)))
     new Thm(mlThm)
   }
 
@@ -43,7 +44,7 @@ object Thm {
       Future.successful(new Thm(mlValue = value))
     override def store(value: Thm)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Thm] = ???
     override lazy val exnToValue: String = ???
-    override lazy val valueToExn: String = ???
+    override lazy val valueToExn: String = "E_Thm"
   }
 
   object Implicits {

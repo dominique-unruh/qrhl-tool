@@ -15,12 +15,13 @@ object Theory {
   private implicit var isabelle : Isabelle = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
-  def init(isabelle: Isabelle): Unit = synchronized {
+  def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
     if (this.isabelle == null) {
       this.isabelle = isabelle
       implicit val _ = isabelle
+      MLValue.init(isabelle)
       isabelle.executeMLCodeNow("exception E_Theory of theory")
-      loadTheory = MLValue.compileFunction[String, Theory]("fn (E_String name) => (Thy_Info.use_thy name; Thy_Info.get_theory name |> E_Theory)")
+      loadTheory = MLValue.compileFunctionRaw[String, Theory]("fn (E_String name) => (Thy_Info.use_thy name; Thy_Info.get_theory name |> E_Theory)")
     }
   }
 

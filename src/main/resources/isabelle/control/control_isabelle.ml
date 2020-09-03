@@ -5,6 +5,7 @@ structure Control_Isabelle : sig
   exception E_ExnExn of exn -> exn
   exception E_Int of int
   exception E_String of string
+  exception E_Pair of exn * exn
 (*   exception E_Context of Proof.context
   exception E_Theory of theory
   exception E_Typ of typ
@@ -45,12 +46,7 @@ exception E_ExnExn of exn -> exn
 exception E_Int of int
 exception E_Unit
 exception E_String of string
-(* exception E_Context of Proof.context
-exception E_Theory of theory
-exception E_Typ of typ
-exception E_Term of term
-exception E_Cterm of cterm
-exception E_Thm of thm *)
+exception E_Pair of exn * exn
 
 fun executeML ml = let
   (* val _ = TextIO.print ("Compiling "^ ml^"\n") *)
@@ -64,11 +60,15 @@ fun executeML ml = let
   val _ = tracing ("executeMLInt "^string_of_int seq ^" : " ^ml)
   in  executeML ("Control_Isabelle.sendReply "^string_of_int seq^" [" ^ ml ^ "]") end *)
 
-fun store seq exn = let
+fun addToObjects exn = let
   val idx = !objectsMax
   val _ = objects := Inttab.update_new (idx, exn) (!objects)
   val _ = objectsMax := idx + 1
-  in sendReply seq [idx] end
+  in idx end
+
+fun store seq exn = sendReply seq [addToObjects exn]
+
+fun storeMany seq exns = sendReply seq (map addToObjects exns)
 
 fun storeMLExnExn seq ml =
   executeML ("let open Control_Isabelle val result = E_ExnExn ("^ml^") in store "^string_of_int seq^" result end")
@@ -89,6 +89,18 @@ fun applyFunc seq f x = case (Inttab.lookup (!objects) f, Inttab.lookup (!object
   | (_,NONE) => error ("no object " ^ string_of_int x)
   | (SOME (E_ExnExn f), SOME x) => store seq (f x)
   | _ => error ("object " ^ string_of_int f ^ " is not an E_ExnExn")
+
+
+
+fun mkPair seq a b = case (Inttab.lookup (!objects) a, Inttab.lookup (!objects) b) of
+  (NONE,_) => error ("no object " ^ string_of_int a)
+  | (_,NONE) => error ("no object " ^ string_of_int b)
+  | (SOME x, SOME y) => store seq (E_Pair (x,y))
+
+fun splitPair seq id = case (Inttab.lookup (!objects) id) of
+  NONE => error ("no object " ^ string_of_int id)
+  | SOME (E_Pair (x,y)) => storeMany seq [x,y]
+  | SOME _ => error ("object " ^ string_of_int id ^ " is not an E_Pair")
 
 (* fun executeML' ml =
   executeML ("local open Control_Isabelle in " ^ ml ^ " end") *)
@@ -130,6 +142,14 @@ fun handleLine seq line = ((* tracing ("COMMAND:"^line); *)
 
     (* gi j k ... - removes object i,j,k,... from objects *)
   | #"g" => removeObjects (String.extract (line, 1, NONE) |> String.fields (fn c => #" "=c) |> map int_of_string)
+
+    (* pi j - takes objects i j, creates new object with content E_Pair (i,j), returns 'seq object' *)
+  | #"p" => let val (a,b) = case String.fields (fn c => #" "=c) (String.extract (line, 1, NONE)) |> map int_of_string
+                            of [a,b] => (a,b) | _ => raise Match
+        in mkPair seq a b end
+
+    (* Px - takes object x, parses as E_Pair (a,b), stores a,b as objects, returns "seq a b" *)
+  | #"P" => splitPair seq (int_of_string (String.extract (line, 1, NONE)))
 
   | cmd => error ("Unknown command " ^ str cmd))
 
