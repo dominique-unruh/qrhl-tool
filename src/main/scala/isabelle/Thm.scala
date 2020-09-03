@@ -39,9 +39,9 @@ object Thm {
   }
 
   object ThmConverter extends Converter[Thm] {
-    override protected def retrieve(value: MLValue[Thm])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Thm] =
+    override def retrieve(value: MLValue[Thm])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Thm] =
       Future.successful(new Thm(mlValue = value))
-    override protected def store(value: Thm)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Thm] = ???
+    override def store(value: Thm)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Thm] = ???
     override lazy val exnToValue: String = ???
     override lazy val valueToExn: String = ???
   }

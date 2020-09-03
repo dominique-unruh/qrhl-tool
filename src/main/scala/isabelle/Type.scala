@@ -141,9 +141,9 @@ object Typ {
   }
 
   object TypConverter extends Converter[Typ] {
-    override protected def retrieve(value: MLValue[Typ])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Typ] =
+    override def retrieve(value: MLValue[Typ])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Typ] =
       Future.successful(new MLValueTyp(mlValue = value))
-    override protected def store(value: Typ)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Typ] =
+    override def store(value: Typ)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Typ] =
       value.mlValue
     override lazy val exnToValue: String = ???
     override lazy val valueToExn: String = ???

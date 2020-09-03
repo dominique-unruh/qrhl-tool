@@ -34,9 +34,9 @@ object Context {
     Context(Theory(name))
 
   object ContextConverter extends Converter[Context] {
-    override protected def retrieve(value: MLValue[Context])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Context] =
+    override def retrieve(value: MLValue[Context])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Context] =
       Future.successful(new Context(mlValue = value))
-    override protected def store(value: Context)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Context] = ???
+    override def store(value: Context)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Context] = ???
     override lazy val exnToValue: String = ???
     override lazy val valueToExn: String = ???
   }

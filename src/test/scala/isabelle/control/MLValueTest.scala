@@ -1,23 +1,22 @@
-package isabelle.tmp
+package isabelle.control
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 
 import isabelle.{Context, Thm}
-import isabelle.control.Isabelle
 import isabelle.control.Isabelle.Setup
-import qrhl.isabellex.DistributionDirectory
+import org.scalatest.FunSuite
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-object Test {
-  val setup = Setup(
-    workingDirectory = DistributionDirectory.distributionDirectory,
-    isabelleHome = Paths.get("Isabelle2019-RC4"),
-    sessionRoots = Nil,
-    userDir = Some(Paths.get("isabelle-temp/user/Isabelle2019-RC4/.isabelle"))
-  )
-
+object MLValueTest {
   def main(args: Array[String]): Unit = {
+    val setup: Setup = Setup(
+      workingDirectory = Paths.get("/home/unruh/svn/qrhl-tool"),
+      isabelleHome = Paths.get("Isabelle2019-RC4"),
+      sessionRoots = Nil,
+      userDir = Some(Paths.get("isabelle-temp/user/Isabelle2019-RC4/.isabelle"))
+    )
+
     implicit val ec: ExecutionContextExecutor = ExecutionContext.global
     val isabelle = new Isabelle(setup)
     Thm.init(isabelle)

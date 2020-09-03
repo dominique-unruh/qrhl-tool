@@ -209,9 +209,9 @@ object Term {
   }
 
   object TermConverter extends Converter[Term] {
-    override protected def store(value: Term)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Term] =
+    override def store(value: Term)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Term] =
       value.mlValue
-    override protected def retrieve(value: MLValue[Term])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Term] =
+    override def retrieve(value: MLValue[Term])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Term] =
       Future.successful(new MLValueTerm(mlValue = value))
     override lazy val exnToValue: String = ???
     override lazy val valueToExn: String = ???
