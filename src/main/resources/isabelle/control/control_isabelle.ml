@@ -35,7 +35,6 @@ fun sendReplyStr seq str = let
   in () end
 
 fun sendReply seq ints = let
-  (* val _ = OS.Process.sleep (seconds 0.1) *)
   val str = (String.concatWith " " (map string_of_int (seq::ints)) ^ "\n")
   (* val _ = tracing ("sendReply: "^str) *)
   val _ = TextIO.output (outStream, str)
@@ -112,7 +111,8 @@ fun int_of_string str = case Int.fromString str of
   NONE => error ("Failed to parse '" ^ str ^ "' as an int")
   | SOME i => i
 
-fun handleLine seq line = ((* tracing ("COMMAND:"^line); *)
+(* Without error handling *)
+fun handleLine' seq line =
   case String.sub (line, 0) of
     (* Mxxx - executes ML code xxx *)
     #"M" => (executeML (String.extract (line, 1, NONE)); sendReply seq [])
@@ -151,7 +151,19 @@ fun handleLine seq line = ((* tracing ("COMMAND:"^line); *)
     (* Px - takes object x, parses as E_Pair (a,b), stores a,b as objects, returns "seq a b" *)
   | #"P" => splitPair seq (int_of_string (String.extract (line, 1, NONE)))
 
-  | cmd => error ("Unknown command " ^ str cmd))
+  | cmd => error ("Unknown command " ^ str cmd)
+
+fun reportException seq exn = let
+  val msg = Runtime.exn_message exn
+  val idx = addToObjects (E_String msg)
+  val str = string_of_int seq ^ " !" ^ string_of_int idx ^ "\n"
+  val _ = TextIO.output (outStream, str)
+  val _ = TextIO.flushOut outStream
+  in () end
+
+fun handleLine seq line =
+  handleLine' seq line
+  handle exn => reportException seq exn
 
 fun handleLines' number = case TextIO.inputLine inStream of
     NONE => (tracing "End of input"; ())

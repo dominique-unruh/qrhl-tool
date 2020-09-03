@@ -4,11 +4,17 @@ import java.nio.file.Paths
 
 import isabelle.{Context, Term, Typ}
 import isabelle.control.Isabelle.Setup
+import isabelle.control.IsabelleTest.isabelle
 import org.scalatest.FunSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class IsabelleTest extends FunSuite {
+  test("handle compilation error") {
+    assertThrows[IsabelleException] {
+      isabelle.executeMLCodeNow("1+true")
+    }
+  }
 }
 
 object IsabelleTest {

@@ -19,13 +19,13 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.io.Source
 import scala.sys.process.Process
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class Isabelle(setup: Setup, build: Boolean = false) {
   import Isabelle._
 
-  private val sendQueue : BlockingQueue[(String, String => Unit)] = new ArrayBlockingQueue(1000)
-  private val callbacks : ConcurrentHashMap[Int, String => Unit] = new ConcurrentHashMap()
+  private val sendQueue : BlockingQueue[(String, Try[String] => Unit)] = new ArrayBlockingQueue(1000)
+  private val callbacks : ConcurrentHashMap[Int, Try[String] => Unit] = new ConcurrentHashMap()
   private val cleaner = Cleaner.create()
 
   // Must be Integer, not Int, because ConcurrentLinkedList uses null to indicate that it is empty
@@ -97,7 +97,11 @@ class Isabelle(setup: Setup, build: Boolean = false) {
       val (seq,content) = if (spaceIdx == -1) (line,"") else line.splitAt(spaceIdx+1)
       callbacks.remove(seq.trim.toInt) match {
         case null => println(s"No callback $seq")
-        case callback => callback(content)
+        case callback =>
+          if (content.nonEmpty && content(0) == '!')
+            callback(Failure(IsabelleException(content.substring(1))))
+          else
+            callback(Success(content))
       }
 //      println(s"#callbacks = ${callbacks.size}")
     }
@@ -185,7 +189,8 @@ class Isabelle(setup: Setup, build: Boolean = false) {
     garbageQueue.clear()
     process.destroy()
 
-    def callCallback(cb: String => Unit): Unit = {} // TODO: call callback with an exception
+    def callCallback(cb: Try[String] => Unit): Unit =
+      cb(Failure(IsabelleDestroyedException("Isabelle process has been destroyed")))
 
     for ((_,cb) <- sendQueue.asScala)
       callCallback(cb)
@@ -195,7 +200,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
       callCallback(cb)
   }
 
-  private def send(str: String, callback: String => Unit = null) : Unit = {
+  private def send(str: String, callback: Try[String] => Unit) : Unit = {
     if (destroyed)
       throw new IllegalStateException("Isabelle instance has been destroyed")
     sendQueue.put((str,callback))
@@ -215,7 +220,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
     val promise : Promise[Unit] = Promise()
     assert(!ml.contains('\n'))
     logger.debug(s"Executing ML code: $ml")
-    send(s"M$ml\n", { result => promise.success(()) })
+    send(s"M$ml\n", { result => promise.complete(result.map(_ => ())) })
     promise.future
   }
 
@@ -225,51 +230,52 @@ class Isabelle(setup: Setup, build: Boolean = false) {
     val promise : Promise[ID] = Promise()
     assert(!ml.contains('\n'))
     logger.debug(s"Compiling ML function: $ml")
-    send(s"f$ml\n", { result => promise.success(intStringToID(result)) })
+    send(s"f$ml\n", { result => promise.complete(result.map(intStringToID)) })
     promise
   }
 
   private[control] def storeInteger(i: Int): Promise[ID] = {
     val promise : Promise[ID] = Promise()
-    send(s"s$i\n", { result => promise.success(intStringToID(result)) })
+    send(s"s$i\n", { result => promise.complete(result.map(intStringToID)) })
     promise
   }
 
   private[control] def makePair(a: ID, b: ID) : Promise[ID] = {
     val promise : Promise[ID] = Promise()
-    send(s"p${a.id} ${b.id}\n", { result => promise.success(intStringToID(result)) })
+    send(s"p${a.id} ${b.id}\n", { result => promise.complete(result.map(intStringToID)) })
     promise
   }
 
   private[control] def splitPair(pair: ID) : Promise[(ID,ID)] = {
     val promise : Promise[(ID,ID)] = Promise()
-    send(s"P${pair.id}\n", { result => result.split(' ') match {
-      case Array(a,b) => promise.success((intStringToID(a), intStringToID(b))) } })
+    send(s"P${pair.id}\n", { result => promise.complete(result.map { resultStr =>
+      resultStr.split(' ') match {
+      case Array(a,b) => (intStringToID(a), intStringToID(b)) } }) })
     promise
   }
 
   private[control] def storeString(str: String): Promise[ID] = {
     val promise : Promise[ID] = Promise()
     assert(!str.contains('\n'))
-    send(s"S$str\n", { result => promise.success(intStringToID(result)) })
+    send(s"S$str\n", { result => promise.complete(result.map(intStringToID)) })
     promise
   }
 
   private[control] def applyFunction(f: ID, x: ID): Promise[ID] = {
     val promise: Promise[ID] = Promise()
-    send(s"a${f.id} ${x.id}\n", { result => promise.success(intStringToID(result)) })
+    send(s"a${f.id} ${x.id}\n", { result => promise.complete(result.map(intStringToID)) })
     promise
   }
 
   private[control] def retrieveInteger(id: ID): Promise[Int] = {
     val promise: Promise[Int] = Promise()
-    send(s"r${id.id}\n", { result => promise.success(result.toInt) })
+    send(s"r${id.id}\n", { result => promise.complete(result.map(_.toInt)) })
     promise
   }
 
   private[control] def retrieveString(id: ID): Promise[String] = {
     val promise: Promise[String] = Promise()
-    send(s"R${id.id}\n", { result => promise.success(result) })
+    send(s"R${id.id}\n", { result => promise.complete(result) })
     promise
   }
 
@@ -307,7 +313,13 @@ object Isabelle {
                     /** Must end in .isabelle if provided */
                     userDir : Option[Path] = None
                   )
+
 }
+
+abstract class IsabelleControllerException(message: String) extends IOException(message)
+case class IsabelleDestroyedException(message: String) extends IsabelleControllerException(message)
+case class IsabelleException(message: String) extends IsabelleControllerException(message)
+
 
 
 
