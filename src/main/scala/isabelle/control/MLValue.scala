@@ -1,6 +1,5 @@
 package isabelle.control
 
-import cats.Show
 import isabelle.control.MLValue.Converter
 
 import scala.concurrent.duration.Duration
@@ -172,7 +171,7 @@ object MLValue {
   @inline class Tuple3Converter[A,B,C](a: Converter[A], b: Converter[B], c: Converter[C]) extends Converter[(A,B,C)] {
     @inline override def retrieve(value: MLValue[(A, B, C)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C)] = ???
     @inline override def store(value: (A,B,C))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C)] = ???
-    override lazy val exnToValue: String = ???
+    override lazy val exnToValue: String = "fn E_Pair (x, E_Pair (y, z)) => (x,y,z)"
     override lazy val valueToExn: String = ???
   }
   @inline class Tuple4Converter[A,B,C,D](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D]) extends Converter[(A,B,C,D)] {
@@ -193,6 +192,12 @@ object MLValue {
     override lazy val exnToValue: String = ???
     override lazy val valueToExn: String = ???
   }
+  @inline class Tuple7Converter[A,B,C,D,E,F,G](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F], g: Converter[G]) extends Converter[(A,B,C,D,E,F,G)] {
+    @inline override def retrieve(value: MLValue[(A,B,C,D,E,F,G)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E,F,G)] = ???
+    @inline override def store(value: (A,B,C,D,E,F,G))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E,F,G)] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
+  }
 
   object Implicits {
     @inline implicit val booleanConverter: BooleanConverter.type = BooleanConverter
@@ -205,5 +210,6 @@ object MLValue {
     @inline implicit def tuple4Converter[A,B,C,D](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D]): Tuple4Converter[A, B, C, D] = new Tuple4Converter(a,b,c,d)
     @inline implicit def tuple5Converter[A,B,C,D,E](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E]): Tuple5Converter[A, B, C, D, E] = new Tuple5Converter(a,b,c,d,e)
     @inline implicit def tuple6Converter[A,B,C,D,E,F](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F]): Tuple6Converter[A, B, C, D, E, F] = new Tuple6Converter(a,b,c,d,e,f)
+    @inline implicit def tuple7Converter[A,B,C,D,E,F,G](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F], g: Converter[G]): Tuple7Converter[A,B,C,D,E,F,G] = new Tuple7Converter(a,b,c,d,e,f,g)
   }
 }
