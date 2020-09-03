@@ -6,7 +6,7 @@ import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
 import MLValue.Implicits._
-import isabelle.control.MLValue.{Retriever, Storer}
+import isabelle.control.MLValue.Converter
 
 sealed abstract class Term {
   val mlValue : MLValue[Term]
@@ -208,18 +208,16 @@ object Term {
     new MLValueTerm(readTerm[Context, String, Term](context.mlValue, MLValue(string)))
   }
 
-  object TermRetriever extends Retriever[Term] {
-    override protected def retrieve(value: MLValue[Term])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Term] =
-      Future.successful(new MLValueTerm(mlValue = value))
-  }
-
-  object TermStorer extends Storer[Term] {
+  object TermConverter extends Converter[Term] {
     override protected def store(value: Term)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Term] =
       value.mlValue
+    override protected def retrieve(value: MLValue[Term])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Term] =
+      Future.successful(new MLValueTerm(mlValue = value))
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
 
   object Implicits {
-    implicit val termRetriever: TermRetriever.type = TermRetriever
-    implicit val termStorer: TermStorer.type = TermStorer
+    implicit val termConverter: TermConverter.type = TermConverter
   }
 }

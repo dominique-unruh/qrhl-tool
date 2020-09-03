@@ -1,6 +1,7 @@
 package isabelle.control
 
 import cats.Show
+import isabelle.control.MLValue.Converter
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -17,11 +18,16 @@ class MLValue[A] private[isabelle](private val id: Future[Isabelle.ID]) {
 
   def isReady: Boolean = id.isCompleted
 
-  @inline def retrieve(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle, ec: ExecutionContext): Future[A] =
-    retriever.retrieve(this)
+  @inline def retrieve(implicit converter: Converter[A], isabelle: Isabelle, ec: ExecutionContext): Future[A] =
+    converter.retrieve(this)
 
-  @inline def retrieveNow(implicit retriever: MLValue.Retriever[A], isabelle: Isabelle, ec: ExecutionContext): A =
+  @inline def retrieveNow(implicit converter: Converter[A], isabelle: Isabelle, ec: ExecutionContext): A =
     Await.result(retrieve, Duration.Inf)
+
+  @inline def retrieveOrElse(default: => A)(implicit converter: Converter[A], isabelle: Isabelle, ec: ExecutionContext): Future[A] =
+    retrieve.recover { case _ => default }
+  @inline def retrieveNowOrElse(default: => A)(implicit converter: Converter[A], isabelle: Isabelle, ec: ExecutionContext): A =
+    Await.result(retrieveOrElse(default), Duration.Inf)
 
   def apply[D, R](arg: MLValue[D])
                  (implicit ev: MLValue[A] =:= MLValue[D => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] = {
@@ -44,105 +50,86 @@ class MLValue[A] private[isabelle](private val id: Future[Isabelle.ID]) {
 
 object MLValue {
 
-  abstract class Retriever[A] {
+  abstract class Converter[A] {
     protected[MLValue] def retrieve(value: MLValue[A])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[A]
-  }
-
-
-  abstract class Storer[A] {
     protected[MLValue] def store(value: A)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[A]
+    val exnToValue : String
+    val valueToExn : String
   }
 
-  @inline def apply[A](value: A)(implicit storer: Storer[A], isabelle: Isabelle, executionContext: ExecutionContext) : MLValue[A] =
-    storer.store(value)
-
+  @inline def apply[A](value: A)(implicit conv: Converter[A], isabelle: Isabelle, executionContext: ExecutionContext) : MLValue[A] =
+    conv.store(value)
 
   // TODO: Automatically add wrapping and unwrapping of exceptions
   def compileFunction[A, B](ml: String)(implicit isabelle: Isabelle): MLValue[A => B] =
     new MLValue(isabelle.storeFunction(ml).future)
 
-  object IntStorer extends Storer[Int] {
+  object IntConverter extends Converter[Int] {
     @inline override protected[MLValue] def store(value: Int)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Int] =
       new MLValue(isabelle.storeInteger(value).future)
+    @inline override protected[MLValue] def retrieve(value: MLValue[Int])
+                                                    (implicit isabelle: Isabelle, ec: ExecutionContext): Future[Int] =
+      value.id.flatMap(isabelle.retrieveInteger(_).future)
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
 
-  object StringStorer extends Storer[String] {
+  object StringConverter extends Converter[String] {
     @inline override protected[MLValue] def store(value: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[String] =
       new MLValue(isabelle.storeString(value).future)
-  }
-
-  @inline class ListStorer[A](storer: Storer[A]) extends Storer[List[A]] {
-    @inline override protected[MLValue] def store(value: List[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[List[A]] = ???
-  }
-
-  object IntRetriever extends Retriever[Int] {
-    @inline override protected[MLValue] def retrieve(value: MLValue[Int])
-                                            (implicit isabelle: Isabelle, ec: ExecutionContext): Future[Int] =
-      value.id.flatMap(isabelle.retrieveInteger(_).future)
-  }
-
-  object StringRetriever extends Retriever[String] {
     @inline override protected[MLValue] def retrieve(value: MLValue[String])
-                                            (implicit isabelle: Isabelle, ec: ExecutionContext): Future[String] =
+                                                    (implicit isabelle: Isabelle, ec: ExecutionContext): Future[String] =
       value.id.flatMap(isabelle.retrieveString(_).future)
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
 
-  @inline class ListRetriever[A](a: Retriever[A]) extends Retriever[List[A]] {
+  @inline class ListConverter[A](storer: Converter[A]) extends Converter[List[A]] {
+    @inline override protected[MLValue] def store(value: List[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[List[A]] = ???
     @inline override protected[MLValue] def retrieve(value: MLValue[List[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[List[A]] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
 
-  @inline class Tuple2Retriever[A,B](a: Retriever[A], b: Retriever[B]) extends Retriever[(A,B)] {
+  @inline class Tuple2Converter[A,B](a: Converter[A], b: Converter[B]) extends Converter[(A,B)] {
     @inline override protected[MLValue] def retrieve(value: MLValue[(A, B)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B)] = ???
-  }
-  @inline class Tuple3Retriever[A,B,C](a: Retriever[A], b: Retriever[B], c: Retriever[C]) extends Retriever[(A,B,C)] {
-    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C)] = ???
-  }
-  @inline class Tuple4Retriever[A,B,C,D](a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D]) extends Retriever[(A,B,C,D)] {
-    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C, D)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D)] = ???
-  }
-  @inline class Tuple5Retriever[A,B,C,D,E](a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D], e: Retriever[E]) extends Retriever[(A,B,C,D,E)] {
-    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C, D, E)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E)] = ???
-  }
-  @inline class Tuple6Retriever[A,B,C,D,E,F](a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D], e: Retriever[E], f: Retriever[F]) extends Retriever[(A,B,C,D,E,F)] {
-    @inline override protected[MLValue] def retrieve(value: MLValue[(A,B,C,D,E,F)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E,F)] = ???
-  }
-
-  @inline class Tuple2Storer[A,B](a: Storer[A], b: Storer[B]) extends Storer[(A,B)] {
     @inline override protected[MLValue] def store(value: (A,B))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B)] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
-
-  @inline class Tuple3Storer[A,B,C](a: Storer[A], b: Storer[B], c: Storer[C]) extends Storer[(A,B,C)] {
+  @inline class Tuple3Converter[A,B,C](a: Converter[A], b: Converter[B], c: Converter[C]) extends Converter[(A,B,C)] {
+    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C)] = ???
     @inline override protected[MLValue] def store(value: (A,B,C))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C)] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
-
-  @inline class Tuple4Storer[A,B,C,D](a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D]) extends Storer[(A,B,C,D)] {
+  @inline class Tuple4Converter[A,B,C,D](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D]) extends Converter[(A,B,C,D)] {
+    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C, D)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D)] = ???
     @inline override protected[MLValue] def store(value: (A,B,C,D))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D)] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
-
-  @inline class Tuple5Storer[A,B,C,D,E](a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D], e: Storer[E]) extends Storer[(A,B,C,D,E)] {
+  @inline class Tuple5Converter[A,B,C,D,E](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E]) extends Converter[(A,B,C,D,E)] {
+    @inline override protected[MLValue] def retrieve(value: MLValue[(A, B, C, D, E)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E)] = ???
     @inline override protected[MLValue] def store(value: (A,B,C,D,E))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E)] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
-
-  @inline class Tuple6Storer[A,B,C,D,E,F](a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D], e: Storer[E], f: Storer[F]) extends Storer[(A,B,C,D,E,F)] {
+  @inline class Tuple6Converter[A,B,C,D,E,F](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F]) extends Converter[(A,B,C,D,E,F)] {
+    @inline override protected[MLValue] def retrieve(value: MLValue[(A,B,C,D,E,F)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E,F)] = ???
     @inline override protected[MLValue] def store(value: (A,B,C,D,E,F))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E,F)] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
 
   object Implicits {
-    @inline implicit val intStorer: IntStorer.type = IntStorer
-    @inline implicit val stringStorer: StringStorer.type = StringStorer
-    @inline implicit def listStorer[A](implicit storer: Storer[A]): ListStorer[A] = new ListStorer(storer)
-    @inline implicit def tuple2Storer[A,B](implicit a: Storer[A], b: Storer[B]): Tuple2Storer[A, B] = new Tuple2Storer(a,b)
-    @inline implicit def tuple3Storer[A,B,C](implicit a: Storer[A], b: Storer[B], c: Storer[C]): Tuple3Storer[A, B, C] = new Tuple3Storer(a,b,c)
-    @inline implicit def tuple4Storer[A,B,C,D](implicit a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D]): Tuple4Storer[A, B, C, D] = new Tuple4Storer(a,b,c,d)
-    @inline implicit def tuple5Storer[A,B,C,D,E](implicit a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D], e: Storer[E]): Tuple5Storer[A, B, C, D, E] = new Tuple5Storer(a,b,c,d,e)
-    @inline implicit def tuple6Storer[A,B,C,D,E,F](implicit a: Storer[A], b: Storer[B], c: Storer[C], d: Storer[D], e: Storer[E], f: Storer[F]): Tuple6Storer[A, B, C, D, E, F] = new Tuple6Storer(a,b,c,d,e,f)
-    @inline implicit val intRetriever: IntRetriever.type = IntRetriever
-    @inline implicit val stringRetriever: StringRetriever.type = StringRetriever
-    @inline implicit def listRetriever[A](implicit Retriever: Retriever[A]): ListRetriever[A] = new ListRetriever(Retriever)
-    @inline implicit def tuple2Retriever[A,B](implicit a: Retriever[A], b: Retriever[B]): Tuple2Retriever[A, B] = new Tuple2Retriever(a,b)
-    @inline implicit def tuple3Retriever[A,B,C](implicit a: Retriever[A], b: Retriever[B], c: Retriever[C]): Tuple3Retriever[A,B,C] = new Tuple3Retriever(a,b,c)
-    @inline implicit def tuple4Retriever[A,B,C,D](implicit a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D]): Tuple4Retriever[A,B,C,D] = new Tuple4Retriever(a,b,c,d)
-    @inline implicit def tuple5Retriever[A,B,C,D,E](implicit a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D], e: Retriever[E]): Tuple5Retriever[A,B,C,D,E] = new Tuple5Retriever(a,b,c,d,e)
-    @inline implicit def tuple6Retriever[A,B,C,D,E,F](implicit a: Retriever[A], b: Retriever[B], c: Retriever[C], d: Retriever[D], e: Retriever[E], f: Retriever[F]): Tuple6Retriever[A,B,C,D,E,F] = new Tuple6Retriever(a,b,c,d,e,f)
+    @inline implicit val intStorer: IntConverter.type = IntConverter
+    @inline implicit val stringConverter: StringConverter.type = StringConverter
+    @inline implicit def listConverter[A](implicit Converter: Converter[A]): ListConverter[A] = new ListConverter(Converter)
+    @inline implicit def tuple2Converter[A,B](implicit a: Converter[A], b: Converter[B]): Tuple2Converter[A, B] = new Tuple2Converter(a,b)
+    @inline implicit def tuple3Converter[A,B,C](implicit a: Converter[A], b: Converter[B], c: Converter[C]): Tuple3Converter[A, B, C] = new Tuple3Converter(a,b,c)
+    @inline implicit def tuple4Converter[A,B,C,D](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D]): Tuple4Converter[A, B, C, D] = new Tuple4Converter(a,b,c,d)
+    @inline implicit def tuple5Converter[A,B,C,D,E](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E]): Tuple5Converter[A, B, C, D, E] = new Tuple5Converter(a,b,c,d,e)
+    @inline implicit def tuple6Converter[A,B,C,D,E,F](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F]): Tuple6Converter[A, B, C, D, E, F] = new Tuple6Converter(a,b,c,d,e,f)
   }
 }

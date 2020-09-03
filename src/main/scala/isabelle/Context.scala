@@ -1,6 +1,6 @@
 package isabelle
 
-import isabelle.control.MLValue.{Retriever, Storer}
+import isabelle.control.MLValue.Converter
 import isabelle.control.{Isabelle, MLValue}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,17 +33,15 @@ object Context {
   def apply(name: String)(implicit ec: ExecutionContext) : Context =
     Context(Theory(name))
 
-  object ContextRetriever extends Retriever[Context] {
+  object ContextConverter extends Converter[Context] {
     override protected def retrieve(value: MLValue[Context])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Context] =
       Future.successful(new Context(mlValue = value))
-  }
-
-  object ContextStorer extends Storer[Context] {
     override protected def store(value: Context)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Context] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
 
   object Implicits {
-    implicit val contextRetriever: ContextRetriever.type = ContextRetriever
-    implicit val contextStorer: ContextStorer.type = ContextStorer
+    implicit val contextConverter: ContextConverter.type = ContextConverter
   }
 }

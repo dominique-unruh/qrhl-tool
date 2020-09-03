@@ -5,7 +5,7 @@ import isabelle.control.{Isabelle, MLValue}
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future}
 import MLValue.Implicits._
-import isabelle.control.MLValue.{Retriever, Storer}
+import isabelle.control.MLValue.Converter
 
 sealed abstract class Typ {
   val mlValue : MLValue[Typ]
@@ -140,19 +140,17 @@ object Typ {
     new MLValueTyp(readType[Context, String, Typ](context.mlValue, MLValue(string)))
   }
 
-  object TypRetriever extends Retriever[Typ] {
+  object TypConverter extends Converter[Typ] {
     override protected def retrieve(value: MLValue[Typ])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Typ] =
       Future.successful(new MLValueTyp(mlValue = value))
-  }
-
-  object TypStorer extends Storer[Typ] {
     override protected def store(value: Typ)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Typ] =
       value.mlValue
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
   }
 
   object Implicits {
-    implicit val typRetriever: TypRetriever.type = TypRetriever
-    implicit val typStorer: TypStorer.type = TypStorer
+    implicit val typConverter: TypConverter.type = TypConverter
   }
 }
 

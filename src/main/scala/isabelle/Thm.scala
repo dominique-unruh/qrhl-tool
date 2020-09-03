@@ -2,9 +2,9 @@ package isabelle
 
 import isabelle.control.{Isabelle, MLValue}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import MLValue.Implicits._
+import isabelle.control.MLValue.Converter
 
 final class Thm private [Thm](val mlValue : MLValue[Thm])(implicit ec: ExecutionContext, isabelle: Isabelle) {
   override def toString: String = s"thm${mlValue.stateString}"
@@ -36,6 +36,18 @@ object Thm {
     val mlName = MLValue(name)
     val mlThm : MLValue[Thm] = getThm[Context,String,Thm](context.mlValue, mlName)
     new Thm(mlThm)
+  }
+
+  object ThmConverter extends Converter[Thm] {
+    override protected def retrieve(value: MLValue[Thm])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Thm] =
+      Future.successful(new Thm(mlValue = value))
+    override protected def store(value: Thm)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Thm] = ???
+    override lazy val exnToValue: String = ???
+    override lazy val valueToExn: String = ???
+  }
+
+  object Implicits {
+    implicit val thmConverter: ThmConverter.type = ThmConverter
   }
 }
 
