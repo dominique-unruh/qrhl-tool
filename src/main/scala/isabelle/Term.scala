@@ -21,22 +21,27 @@ sealed abstract class Term {
   def $(that: Term): Term = App(this, that)
   override def equals(that: Any): Boolean = (this, that) match {
     case (t1, t2: AnyRef) if t1 eq t2 => true
-    case (t1: App, t2: App) => ???
-    case (t1: Bound, t2: Bound) => ???
-    case (t1: Var, t2: Var) => ???
-    case (t1: Free, t2: Free) => ???
+    case (t1: App, t2: App) => t1.fun == t2.fun && t1.arg == t2.arg
+    case (t1: Bound, t2: Bound) => t1.index == t2.index
+    case (t1: Var, t2: Var) => t1.name == t2.name && t1.index == t2.index && t1.typ == t2.typ
+    case (t1: Free, t2: Free) => t1.name == t2.name && t1.typ == t2.typ
     case (t1: Const, t2: Const) => t1.name == t2.name && t1.typ == t2.typ
-    case (t1: Abs, t2: Abs) => ???
+    case (t1: Abs, t2: Abs) => t1.name == t2.name && t1.typ == t2.typ && t1.body == t2.body
     case (t1: CTerm, t2: CTerm) => t1.mlValueTerm == t2.mlValueTerm
     case (t1: CTerm, t2: Term) => t1.mlValueTerm == t2
     case (t1: Term, t2: CTerm) => t1 == t2.mlValueTerm
+    case (t1: MLValueTerm, t2: MLValueTerm) =>
+      import ExecutionContext.Implicits.global
+      if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
+      else Term.equalsTerm[(Term,Term), Boolean](MLValue((t1,t2))).retrieveNow
     case (t1: MLValueTerm, t2: Term) =>
       import ExecutionContext.Implicits.global
-      if (t1.concreteComputed)
-        t1.concrete == t2
-      else
-        Term.equalsTerm[(Term,Term), Boolean](MLValue((t1,t2))).retrieveNow
-    case (t1: Term, t2: MLValueTerm) => ???
+      if (t1.concreteComputed) t1.concrete == t2
+      else Term.equalsTerm[(Term,Term), Boolean](MLValue((t1,t2))).retrieveNow
+    case (t1: Term, t2: MLValueTerm) =>
+      import ExecutionContext.Implicits.global
+      if (t2.concreteComputed) t1 == t2.concrete
+      else Term.equalsTerm[(Term,Term), Boolean](MLValue((t1,t2))).retrieveNow
     case _ => false
   }
 }
@@ -63,7 +68,7 @@ object CTerm {
 final class MLValueTerm(val mlValue: MLValue[Term])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
   @inline private def await[A](awaitable: Awaitable[A]) : A = Await.result(awaitable, Duration.Inf)
 
-  def concreteComputed = concreteLoaded
+  def concreteComputed: Boolean = concreteLoaded
   @volatile private var concreteLoaded = false
   lazy val concrete : Term = {
     val term = Term.whatTerm[Term,Int](mlValue).retrieveNow match {

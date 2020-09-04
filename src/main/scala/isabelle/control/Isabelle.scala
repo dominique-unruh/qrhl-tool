@@ -107,6 +107,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
     }
   }
 
+  //noinspection SameParameterValue
   private def filePathFromResource(name: String): Path = {
     val url = getClass.getResource(name)
     assert(url != null, name)
@@ -255,7 +256,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
   private[control] def storeFunction(ml : String): Promise[ID] = {
     val promise : Promise[ID] = Promise()
     assert(!ml.contains('\n'))
-    logger.debug(s"Compiling ML function: $ml")
+//    logger.debug(s"Compiling ML function: $ml")
     send(s"f$ml\n", { result => promise.complete(result.map(intStringToID)) })
     promise
   }

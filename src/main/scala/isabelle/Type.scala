@@ -21,15 +21,20 @@ sealed abstract class Typ {
   override def equals(that: Any): Boolean = (this, that) match {
     case (t1, t2: AnyRef) if t1 eq t2 => true
     case (t1: Type, t2: Type) => t1.name == t2.name && t1.args == t2.args
-    case (t1: TVar, t2: TVar) => ???
-    case (t1: TFree, t2: TFree) => ???
+    case (t1: TVar, t2: TVar) => t1.name == t2.name && t1.index == t2.index && t1.sort == t2.sort
+    case (t1: TFree, t2: TFree) => t1.name == t2.name && t1.sort == t2.sort
+    case (t1: MLValueTyp, t2: MLValueTyp) =>
+      import ExecutionContext.Implicits.global
+      if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
+      else Typ.equalsTyp[(Typ,Typ), Boolean](MLValue((t1,t2))).retrieveNow
     case (t1: MLValueTyp, t2: Typ) =>
       import ExecutionContext.Implicits.global
-      if (t1.concreteComputed)
-        t1.concrete == t2
-      else
-        Typ.equalsTyp[(Typ,Typ), Boolean](MLValue((t1,t2))).retrieveNow
-    case (t1: Typ, t2: MLValueTyp) => ???
+      if (t1.concreteComputed) t1.concrete == t2
+      else Typ.equalsTyp[(Typ,Typ), Boolean](MLValue((t1,t2))).retrieveNow
+    case (t1: Typ, t2: MLValueTyp) =>
+      import ExecutionContext.Implicits.global
+      if (t2.concreteComputed) t1 == t2.concrete
+      else Typ.equalsTyp[(Typ,Typ), Boolean](MLValue((t1,t2))).retrieveNow
     case _ => false
   }
 }

@@ -207,25 +207,33 @@ object MLValue {
   @inline class Tuple4Converter[A,B,C,D](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D]) extends Converter[(A,B,C,D)] {
     @inline override def retrieve(value: MLValue[(A, B, C, D)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D)] = ???
     @inline override def store(value: (A,B,C,D))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D)] = ???
-    override lazy val exnToValue: String = ???
+    override lazy val exnToValue: String = s"fn E_Pair (a, E_Pair (b, E_Pair (c, d))) => ((${a.exnToValue}) a, (${b.exnToValue}) b, (${c.exnToValue}) c, (${d.exnToValue}) d)"
     override lazy val valueToExn: String = ???
   }
   @inline class Tuple5Converter[A,B,C,D,E](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E]) extends Converter[(A,B,C,D,E)] {
     @inline override def retrieve(value: MLValue[(A, B, C, D, E)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E)] = ???
     @inline override def store(value: (A,B,C,D,E))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E)] = ???
-    override lazy val exnToValue: String = ???
+    override lazy val exnToValue: String = s"fn E_Pair (a, E_Pair (b, E_Pair (c, E_Pair (d, e)))) => ((${a.exnToValue}) a, (${b.exnToValue}) b, (${c.exnToValue}) c, (${d.exnToValue}) d, (${e.exnToValue}) e)"
     override lazy val valueToExn: String = ???
   }
   @inline class Tuple6Converter[A,B,C,D,E,F](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F]) extends Converter[(A,B,C,D,E,F)] {
     @inline override def retrieve(value: MLValue[(A,B,C,D,E,F)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E,F)] = ???
     @inline override def store(value: (A,B,C,D,E,F))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E,F)] = ???
-    override lazy val exnToValue: String = ???
+    override lazy val exnToValue: String = s"fn E_Pair (a, E_Pair (b, E_Pair (c, E_Pair (d, E_Pair (e,f))))) => ((${a.exnToValue}) a, (${b.exnToValue}) b, (${c.exnToValue}) c, (${d.exnToValue}) d, (${e.exnToValue}) e, (${e.exnToValue}) f)"
     override lazy val valueToExn: String = ???
   }
   @inline class Tuple7Converter[A,B,C,D,E,F,G](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F], g: Converter[G]) extends Converter[(A,B,C,D,E,F,G)] {
     @inline override def retrieve(value: MLValue[(A,B,C,D,E,F,G)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A,B,C,D,E,F,G)] = ???
-    @inline override def store(value: (A,B,C,D,E,F,G))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E,F,G)] = ???
-    override lazy val exnToValue: String = ???
+    @inline override def store(value: (A,B,C,D,E,F,G))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C,D,E,F,G)] = {
+      implicit val (aI,bI,cI,dI,eI,fI,gI) = (a,b,c,d,e,f,g)
+      val (aV,bV,cV,dV,eV,fV,gV) = value
+      val mlvalue = MLValue((aV,(bV,(cV,(dV,(eV,(fV,gV))))))) (
+        tuple2Converter(aI,tuple2Converter(bI,tuple2Converter(cI,tuple2Converter(dI,tuple2Converter(eI,tuple2Converter(fI,gI)))))),
+        implicitly, implicitly)
+      mlvalue.asInstanceOf[MLValue[(A,B,C,D,E,F,G)]]
+    }
+
+    override lazy val exnToValue: String = s"fn E_Pair (a, E_Pair (b, E_Pair (c, E_Pair (d, E_Pair (e, E_Pair (f, g)))))) => ((${a.exnToValue}) a, (${b.exnToValue}) b, (${c.exnToValue}) c, (${d.exnToValue}) d, (${e.exnToValue}) e, (${e.exnToValue}) f, (${g.exnToValue}) g)"
     override lazy val valueToExn: String = ???
   }
 
