@@ -1,6 +1,9 @@
 structure QRHL_Operations = 
 struct
 
+open Programs
+open Prog_Variables
+
 fun tuple4 a b c d =
   Codec.tuple a (Codec.triple b c d)
   |> Codec.transform (fn (a, (b, c, d)) => (a, b, c, d)) (fn (a, b, c, d) => (a, (b, c, d)))
@@ -169,7 +172,7 @@ fun richterm_codec' ctxt = Codec.basic { encode=richterm_encode ctxt, decode=ric
 
 (* Statement codec *)
 
-local open Programs open Codec open Prog_Variables in
+local open Codec open Prog_Variables in
 fun call_encode (CALL (name,args)) = XML.Elem(("call",[("name",name)]), map call_encode args)
 
 fun call_decode (XML.Elem(("call",[("name",name)]), args)) =
@@ -598,5 +601,32 @@ fun byQRHLPre cvars qvars =
     @{const inf(predicate)} $ cEqs' $ qvarsEq
   end
 
+type statement = Programs.statement
+exception E_Subgoal of subgoal
+exception E_Statement of statement
+exception E_Varterm of exn Prog_Variables.tree
+
+fun whatStatement (Block _) = "block"
+  | whatStatement (Local _) = "local"
+  | whatStatement (Assign _) = "assign"
+  | whatStatement (Sample _) = "sample"
+  | whatStatement (Call _) = "call"
+  | whatStatement (Measurement _) = "measurement"
+  | whatStatement (QInit _) = "qinit"
+  | whatStatement (QApply _) = "qapply"
+  | whatStatement (IfThenElse _) = "ifthenelse"
+  | whatStatement (While _) = "while"
+
+fun declare_quantum_variable (name,typ,ctxt) =
+  Prog_Variables.declare_variable ctxt (Binding.name name) typ Prog_Variables.Quantum
+
+fun declare_classical_variable (name,typ,ctxt) =
+  Prog_Variables.declare_variable ctxt (Binding.name name) typ Prog_Variables.Classical
+
+fun term_to_expression (ctxt,t) =
+  Expressions.term_to_expression ctxt t
+
+fun expression_to_term (ctxt,t) =
+  Expressions.expression_to_term ctxt t
 
 end

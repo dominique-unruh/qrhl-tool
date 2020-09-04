@@ -4,7 +4,7 @@ import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
-import isabelle.control.MLValue
+import isabelle.control.{Isabelle, MLValue}
 import isabelle.control.MLValue.Converter
 import isabelle.control.MLValue.Implicits.tuple2Converter
 import isabelle.{Context, Term, Thm, Typ, Type, control}
@@ -25,6 +25,7 @@ import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 import MLValue.Implicits._
 import Context.Implicits._
 import Term.Implicits._
+import VarTerm.Implicits._
 import Statement.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 
@@ -74,6 +75,18 @@ object VarTerm {
       }
     }
     result
+  }
+
+  class VarTermConverter[A](conv: Converter[A]) extends Converter[VarTerm[A]] {
+    override def retrieve(value: MLValue[VarTerm[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[VarTerm[A]] = ???
+    override def store(value: VarTerm[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[VarTerm[A]] = ???
+    override val exnToValue: String = s"fn E_Varterm vt => QRHL_Operations.map_tree (${conv.exnToValue}) vt"
+    override val valueToExn: String = s"E_Varterm o QRHL_Operations.map_tree (${conv.valueToExn})"
+  }
+
+  object Implicits {
+    @inline implicit def vartermConverter[A](implicit conv: Converter[A]): VarTermConverter[A] =
+      new VarTermConverter[A](conv)
   }
 }
 
@@ -536,12 +549,45 @@ sealed trait Statement {
 }
 
 object Statement {
-
   object StatementConverter extends Converter[Statement] {
-    override def store(value: Statement)(implicit isabelle: control.Isabelle, ec: ExecutionContext): MLValue[Statement] = ???
-    override def retrieve(value: MLValue[Statement])(implicit isabelle: control.Isabelle, ec: ExecutionContext): Future[Statement] = ???
-    override lazy val exnToValue: String = ???
-    override lazy val valueToExn: String = ???
+    override def store(value: Statement)(implicit isabelle: control.Isabelle, ec: ExecutionContext): MLValue[Statement] = value match {
+      case local: Local => ???
+      case block: Block =>
+        val isabelleControl = null; val global = null
+        val mlValues = MLValue(block.statements)
+        GIsabelle.listToBlock[List[Statement], Statement](mlValues)
+      case Assign(variable, expression) =>
+        val isabelleControl = null; val global = null
+        GIsabelle.makeAssign[(VarTerm[String],Term), Statement](MLValue((variable.map(_.name), expression.isabelleTerm)))
+      case Sample(variable, expression) =>
+        val isabelleControl = null; val global = null
+        GIsabelle.makeSample[(VarTerm[String],Term), Statement](MLValue((variable.map(_.name), expression.isabelleTerm)))
+      case IfThenElse(condition, thenBranch, elseBranch) => ???
+      case While(condition, body) => ???
+      case QInit(location, expression) => ???
+      case QApply(location, expression) => ???
+      case Measurement(result, location, e) => ???
+      case Call(name, args@_*) => ???
+    }
+    override def retrieve(value: MLValue[Statement])(implicit isabelle: control.Isabelle, ec: ExecutionContext): Future[Statement] = {
+      val isabelleControl = null // Hiding global implicit import
+      val global = null // Hiding global implicit import
+      GIsabelle.whatStatementOp[Statement,String](value).retrieve.flatMap {
+        case "block" => ???
+        case "local" => ???
+        case "assign" => ???
+        case "sample" => ???
+        case "call" => ???
+        case "measurement" => ???
+        case "qinit" => ???
+        case "qapply" => ???
+        case "ifthenelse" => ???
+        case "while" => ???
+      }
+    }
+
+    override lazy val exnToValue: String = "fn QRHL_Operations.E_Statement s => s"
+    override lazy val valueToExn: String = "QRHL_Operations.E_Statement"
   }
   object Implicits {
     implicit val statementConverter: StatementConverter.type = StatementConverter

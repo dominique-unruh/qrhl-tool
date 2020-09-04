@@ -202,11 +202,13 @@ object RichTerm {
 
   def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(GIsabelle.boolT, GIsabelle.True_const)
 
-  private val readExpressionOp =
-    MLValue.compileFunction[(Context, String, Typ), Term]("QRHL_Operations.read_expression")
+//  private val readExpressionOp =
+//    MLValue.compileFunction[(Context, String, Typ), Term]("QRHL_Operations.read_expression")
 
-  def apply(context: IsabelleX.ContextX, str:String, typ:Typ) : RichTerm =
-    RichTerm(readExpressionOp[(Context,String,Typ), Term](MLValue((context.context,IsabelleX.symbols.unicodeToSymbols(str),typ))).retrieveNow)
+  def apply(context: IsabelleX.ContextX, str:String, typ:Typ) : RichTerm = {
+    RichTerm(Term(context.context,IsabelleX.symbols.unicodeToSymbols(str),typ))
+//    RichTerm(readExpressionOp[(Context,String,Typ), Term](MLValue((context.context,IsabelleX.symbols.unicodeToSymbols(str),typ))).retrieveNow)
+  }
 
   //    val term = context.readTerm(Isabelle.unicodeToSymbols(str),typ)
 //    Expression(typ, term)

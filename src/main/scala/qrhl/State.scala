@@ -5,8 +5,7 @@ import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, NoSuchFileException, Path, Paths}
 import java.util
 
-import info.hupel.isabelle.{Codec, Operation, ProverResult, XMLResult, pure}
-import info.hupel.isabelle.hol.HOLogic
+import info.hupel.isabelle.{Codec, Operation, ProverResult}
 import org.log4s
 import isabellex.{IsabelleX, RichTerm}
 import qrhl.logic._
@@ -26,15 +25,19 @@ import hashedcomputation.Hashed
 import org.apache.commons.codec.binary.Hex
 import qrhl.isabellex.IsabelleX.globalIsabelle.show_oracles
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
+import isabelle.control.MLValue.Converter
+
+import scala.concurrent.{ExecutionContext, Future}
+
+// Implicits
 import MLValue.Implicits._
 import isabelle.Context.Implicits._
 import isabelle.Term.Implicits._
 import isabelle.Typ.Implicits._
 import Statement.Implicits._
-import isabelle.control.MLValue.Converter
-
-import scala.concurrent.{ExecutionContext, Future}
+import Subgoal.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
+import GIsabelle.isabelleControl
 
 sealed trait Subgoal {
   def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): Subgoal
@@ -116,7 +119,6 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
 //    val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
 //    val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
 //    RichTerm(Isabelle.boolT, term)
-    implicit val isa = context.isabelle.isabelleControl
     val mlVal = MLValue((context.context,left:Statement,right:Statement,pre.isabelleTerm,post.isabelleTerm,assumptions.map(_.isabelleTerm)))
     val term = subgoal_to_term_op[
       (_root_.isabelle.Context, Statement, Statement,_root_.isabelle.Term, _root_.isabelle.Term, List[_root_.isabelle.Term]),
@@ -482,14 +484,12 @@ class State private (val environment: Environment,
   }
 
   private def declare_quantum_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ) : IsabelleX.ContextX = {
-    implicit val isa = isabelle.isabelle.isabelleControl
     val ctxt = State.declare_quantum_variable[(String, Typ, Context), Context](MLValue((name, typ, isabelle.context))).retrieveNow
     new ContextX(isabelle.isabelle, ctxt)
 //    isabelle.map(id => isabelle.isabelle.invoke(State.declare_quantum_variable, (name,typ,id)))
   }
 
   private def declare_classical_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ) : IsabelleX.ContextX = {
-    implicit val isa = isabelle.isabelle.isabelleControl
     val ctxt = State.declare_classical_variable[(String, Typ, Context), Context](MLValue((name, typ, isabelle.context))).retrieveNow
     new ContextX(isabelle.isabelle, ctxt)
 //    isabelle.map(id => isabelle.isabelle.invoke(State.declare_classical_variable, (name,typ,id)))
@@ -529,18 +529,15 @@ object State {
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
   val declare_quantum_variable: MLValue[((String, Typ, Context)) => Context] =
-    ???
-//    Operation.implicitly[(String,Typ,BigInt), BigInt]("declare_quantum_variable")
+    MLValue.compileFunction[((String, Typ, Context)), Context]("QRHL_Operations.declare_quantum_variable")
 
 
   val declare_classical_variable: MLValue[((String, Typ, Context)) => Context] =
-    ???
-//    Operation.implicitly[(String,Typ,BigInt), BigInt]("declare_classical_variable")
+    MLValue.compileFunction[(String,Typ,Context), Context]("QRHL_Operations.declare_classical_variable")
 
   private val logger = log4s.getLogger
 
   // left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]
-  val subgoal_to_term_op: MLValue[((_root_.isabelle.Context, Statement, Statement, Term, Term, List[Term])) => Term] =
-    ???
-//    Operation.implicitly[(Isabelle.Context,Subgoal),RichTerm]("subgoal_to_term")
+  val subgoal_to_term_op: MLValue[((Context, Statement, Statement, Term, Term, List[Term])) => Term] =
+    MLValue.compileFunction[(Context, Statement, Statement, Term, Term, List[Term]), Term]("QRHL_Operations.subgoal_to_term")
 }

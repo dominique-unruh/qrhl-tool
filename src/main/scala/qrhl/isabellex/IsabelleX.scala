@@ -42,7 +42,9 @@ import Context.Implicits._
 import Term.Implicits._
 import Typ.Implicits._
 import Thm.Implicits._
+import VarTerm.Implicits._
 import Subgoal.Implicits._
+import Statement.Implicits._
 
 object DistributionDirectory {
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
@@ -139,7 +141,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   implicit val isabelleControl: control.Isabelle = new control.Isabelle(setup = setup, build = !checkBuilt())
   isabelle.Thm.init(isabelleControl)
   Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
-  isabelleControl.executeMLCodeNow("exception E_Subgoal of QRHL_Operations.subgoal")
 
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
@@ -206,7 +207,14 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     super.finalize()
   }
 
-
+  val listToBlock =
+    MLValue.compileFunction[List[Statement], Statement]("QRHL_Operations.Block")
+  val makeAssign =
+    MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.Assign")
+  val makeSample =
+    MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.Sample")
+  val whatStatementOp =
+    MLValue.compileFunction[Statement, String]("QRHL_Operations.whatStatement")
   val checkTypeOp: MLValue[((Context, Term)) => Typ] =
     MLValue.compileFunction[(Context, Term), Typ]("QRHL_Operations.check_type")
   val createContextOp: MLValue[List[String] => (Context, List[String])] =

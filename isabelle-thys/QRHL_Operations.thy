@@ -108,18 +108,6 @@ operation_setup declare_variable = \<open>
             in make_ctxt_ref ctxt' end }
 \<close>
 
-operation_setup declare_quantum_variable = \<open>
-  {from_lib = Codec.triple Codec.string typ_tight_codec Codec.int,
-   to_lib = Codec.int,
-   action = fn (name,typ,ctx_id) => make_ctxt_ref (Prog_Variables.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ Prog_Variables.Quantum)}
-\<close>
-
-operation_setup declare_classical_variable = \<open>
-  {from_lib = Codec.triple Codec.string typ_tight_codec Codec.int,
-   to_lib = Codec.int,
-   action = fn (name,typ,ctx_id) => make_ctxt_ref (Prog_Variables.declare_variable (Refs.Ctxt.read ctx_id) (Binding.name name) typ Prog_Variables.Classical)}
-\<close>
-
 operation_setup mk_equals_wp = \<open>
   {from_lib = tuple6
               Codec.int (* context *)
@@ -214,14 +202,6 @@ operation_setup add_index_to_expression = \<open>
    action = fn (ctxt_id,t,left) => let
      val ctxt = Refs.Ctxt.read ctxt_id in
      Expressions.add_index_to_expression t left |> richterm_encode ctxt end}
-\<close>
-
-operation_setup term_to_expression = \<open>
-  {from_lib = Codec.tuple Codec.int term_tight_codec,
-   to_lib = Codec.id,
-   action = fn (ctxId, t) => let
-     val ctxt = Refs.Ctxt.read ctxId in
-        Expressions.term_to_expression ctxt t |> richterm_encode ctxt end}
 \<close>
 
 operation_setup expression_to_term = \<open>
