@@ -217,6 +217,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     MLValue.compileFunction[(Term,List[Statement],List[Statement]), Statement]("QRHL_Operations.IfThenElse")
   val whatStatementOp =
     MLValue.compileFunction[Statement, String]("QRHL_Operations.whatStatement")
+  val whatVartermOp =
+    MLValue.compileFunction[VarTerm[MLValue[Nothing]], String]("QRHL_Operations.whatVarterm")
   val checkTypeOp =
     MLValue.compileFunction[(Context, Term), Typ]("QRHL_Operations.check_type")
   val createContextOp =

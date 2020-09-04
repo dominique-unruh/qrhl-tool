@@ -629,4 +629,8 @@ fun term_to_expression (ctxt,t) =
 fun expression_to_term (ctxt,t) =
   Expressions.expression_to_term ctxt t
 
+fun whatVarterm (VTCons _) = "cons"
+  | whatVarterm (VTSingle _) = "single"
+  | whatVarterm VTUnit = "unit"
+
 end

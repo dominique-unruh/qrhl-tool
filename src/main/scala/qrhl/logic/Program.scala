@@ -4,7 +4,7 @@ import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 import info.hupel.isabelle.api.XML
 import info.hupel.isabelle.hol.HOLogic
 import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
-import isabelle.control.{Isabelle, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLValue}
 import isabelle.control.MLValue.Converter
 import isabelle.control.MLValue.Implicits.tuple2Converter
 import isabelle.{Context, Term, Thm, Typ, Type, control}
@@ -78,7 +78,15 @@ object VarTerm {
   }
 
   class VarTermConverter[A](conv: Converter[A]) extends Converter[VarTerm[A]] {
-    override def retrieve(value: MLValue[VarTerm[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[VarTerm[A]] = ???
+    override def retrieve(value: MLValue[VarTerm[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[VarTerm[A]] = {
+      val isabelleControl = null; val global = null
+      GIsabelle.whatVartermOp.asInstanceOf[MLFunction[VarTerm[MLValue[A]], String]](value.asInstanceOf[MLValue[VarTerm[MLValue[A]]]]).retrieve.flatMap {
+        case "cons" => ???
+        case "single" => ???
+        case "unit" => ???
+      }
+    }
+
     override def store(value: VarTerm[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[VarTerm[A]] = ???
     override val exnToValue: String = s"fn E_Varterm vt => QRHL_Operations.map_tree (${conv.exnToValue}) vt"
     override val valueToExn: String = s"E_Varterm o QRHL_Operations.map_tree (${conv.valueToExn})"
