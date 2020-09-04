@@ -19,11 +19,31 @@ sealed abstract class Term {
     Term.stringOfTerm[Context,Term,String](ctxt.mlValue, mlValue).retrieveNow
   val concrete : Term
   def $(that: Term): Term = App(this, that)
-  override def equals(obj: Any): Boolean = ???
+  override def equals(that: Any): Boolean = (this, that) match {
+    case (t1, t2: AnyRef) if t1 eq t2 => true
+    case (t1: App, t2: App) => ???
+    case (t1: Bound, t2: Bound) => ???
+    case (t1: Var, t2: Var) => ???
+    case (t1: Free, t2: Free) => ???
+    case (t1: Const, t2: Const) => t1.name == t2.name && t1.typ == t2.typ
+    case (t1: Abs, t2: Abs) => ???
+    case (t1: CTerm, t2: CTerm) => t1.mlValueTerm == t2.mlValueTerm
+    case (t1: CTerm, t2: Term) => t1.mlValueTerm == t2
+    case (t1: Term, t2: CTerm) => t1 == t2.mlValueTerm
+    case (t1: MLValueTerm, t2: Term) =>
+      import ExecutionContext.Implicits.global
+      if (t1.concreteComputed)
+        t1.concrete == t2
+      else
+        Term.equalsTerm[(Term,Term), Boolean](MLValue((t1,t2))).retrieveNow
+    case (t1: Term, t2: MLValueTerm) => ???
+    case _ => false
+  }
 }
 
 final class CTerm private (val ctermMlValue: MLValue[CTerm])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
   override lazy val mlValue: MLValue[Term] = Term.termOfCterm[CTerm, Term](ctermMlValue)
+  def mlValueTerm = new MLValueTerm(mlValue)
   override def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
     Term.stringOfCterm[Context,CTerm,String](ctxt.mlValue, ctermMlValue).retrieveNow
   lazy val concrete: Term = new MLValueTerm(mlValue).concrete
@@ -43,6 +63,7 @@ object CTerm {
 final class MLValueTerm(val mlValue: MLValue[Term])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
   @inline private def await[A](awaitable: Awaitable[A]) : A = Await.result(awaitable, Duration.Inf)
 
+  def concreteComputed = concreteLoaded
   @volatile private var concreteLoaded = false
   lazy val concrete : Term = {
     val term = Term.whatTerm[Term,Int](mlValue).retrieveNow match {
@@ -71,7 +92,6 @@ final class MLValueTerm(val mlValue: MLValue[Term])(implicit val isabelle: Isabe
     term
   }
 
-  // TODO: should check if concrete has already been loaded, and if so, print the concrete Term
   override def toString: String =
     if (concreteLoaded) concrete.toString
     else s"‹term${mlValue.stateString}›"
@@ -200,6 +220,7 @@ object Term {
   private[isabelle] var stringOfCterm: MLValue[Context => CTerm => String] = _
   private[isabelle] var termOfCterm: MLValue[CTerm => Term] = _
   private[isabelle] var ctermOfTerm: MLValue[Context => Term => CTerm] = _
+  private var equalsTerm: MLValue[((Term,Term)) => Boolean] = _
 
   private[isabelle] var whatTerm : MLValue[Term => Int] = _
   private[isabelle] var termName: MLValue[Term => String] = _
@@ -224,6 +245,7 @@ object Term {
       ctermOfTerm = MLValue.compileFunctionRaw[Context, Term => CTerm]("fn (E_Context ctxt) => E_ExnExn (fn (E_Term term) => E_CTerm (Thm.cterm_of ctxt term))")
       makeConst = MLValue.compileFunctionRaw[String, Typ => Term]("fn (E_String name) => E_ExnExn (fn (E_Typ typ) => E_Term (Const (name, typ)))")
       dest_App = MLValue.compileFunction[Term, (Term,Term)]("Term.dest_comb")
+      equalsTerm = MLValue.compileFunction[(Term,Term), Boolean]("op=")
     }
   }
 

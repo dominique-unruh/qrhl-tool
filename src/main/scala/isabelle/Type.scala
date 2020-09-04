@@ -18,21 +18,41 @@ sealed abstract class Typ {
   def -->:(that: Typ)(implicit ec: ExecutionContext): Type = Type("fun", that, this)
 //  def --->:(thats: List[Typ])(implicit ec: ExecutionContext): Typ = thats.foldRight(this)(_ -->: _)
 
-  override def equals(obj: Any): Boolean = ???
+  override def equals(that: Any): Boolean = (this, that) match {
+    case (t1, t2: AnyRef) if t1 eq t2 => true
+    case (t1: Type, t2: Type) => t1.name == t2.name && t1.args == t2.args
+    case (t1: TVar, t2: TVar) => ???
+    case (t1: TFree, t2: TFree) => ???
+    case (t1: MLValueTyp, t2: Typ) =>
+      import ExecutionContext.Implicits.global
+      if (t1.concreteComputed)
+        t1.concrete == t2
+      else
+        Typ.equalsTyp[(Typ,Typ), Boolean](MLValue((t1,t2))).retrieveNow
+    case (t1: Typ, t2: MLValueTyp) => ???
+    case _ => false
+  }
 }
 
 final class MLValueTyp(val mlValue: MLValue[Typ])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Typ {
-  lazy val concrete : Typ =
-    Typ.whatTyp[Typ,Int](mlValue).retrieveNow match {
+  def concreteComputed: Boolean = concreteLoaded
+  @volatile private var concreteLoaded = false
+
+  lazy val concrete : Typ = {
+    val typ = Typ.whatTyp[Typ,Int](mlValue).retrieveNow match {
       case 1 =>
         val (name,args) = Typ.destType[Typ, (String,List[Typ])](mlValue).retrieveNow
         new Type(name, args.toList, mlValue)
       case 2 => ??? // TFree
       case 3 => ??? // TVar
     }
+    concreteLoaded = true
+    typ
+  }
 
-  // TODO: should check if concrete has already been loaded, and if so, print the concrete type
-  override def toString: String = s"‹type${mlValue.stateString}›"
+  override def toString: String =
+    if (concreteLoaded) concrete.toString
+    else s"‹term${mlValue.stateString}›"
 }
 
 final class Type private[isabelle] (val name: String, val args: List[Typ], val initialMlValue: MLValue[Typ]=null)
@@ -101,14 +121,10 @@ object Typ {
   private implicit var isabelle: Isabelle = _
   private var readType: MLValue[Context => String => Typ] = _
   private var stringOfType: MLValue[Context => Typ => String] = _
-//  private var typeListNil: MLValue[List[Typ]] = _
-//  private var typeListCons: MLValue[Typ => List[Typ] => List[Typ]] = _
   private[isabelle] var makeType: MLValue[((String, List[Typ])) => Typ] = _
   private[isabelle] var whatTyp: MLValue[Typ => Int] = _
   private[isabelle] var destType: MLValue[Typ => (String, List[Typ])] = _
-//  private[isabelle] var numArgs: MLValue[Typ => Int] = _
-//  private[isabelle] var typeName: MLValue[Typ => String] = _
-//  private[isabelle] var getArg: MLValue[Typ => Int => Typ] = _
+  private var equalsTyp: MLValue[((Typ,Typ)) => Boolean] = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
@@ -121,27 +137,12 @@ object Typ {
       stringOfType = MLValue.compileFunctionRaw[Context, Typ => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_Typ typ) => Syntax.string_of_typ ctxt typ |> E_String)")
       whatTyp = MLValue.compileFunctionRaw[Typ, Int]("fn (E_Typ typ) => (case typ of Type _ => 1 | TFree _ => 2 | TVar _ => 3) |> E_Int")
       destType = MLValue.compileFunction[Typ, (String, List[Typ])]("Term.dest_Type")
-//      typeName = MLValue.compileFunctionRaw[Typ, String]("fn (E_Typ typ) => (case typ of Type (name,_) => name | TFree (name,_) => name | TVar ((name,_),_) => name) |> E_String")
-//      numArgs = MLValue.compileFunctionRaw[Typ, Int]("fn (E_Typ typ) => (case typ of Type (_,args) => length args | TFree (_,sort) => length sort | TVar (_,sort) => length sort) |> E_Int")
-//      getArg = MLValue.compileFunctionRaw[Typ, Int => Typ]("fn (E_Typ (Type (_,args))) => E_ExnExn (fn (E_Int i) => nth args i |> E_Typ)")
-//      typeListNil = MLValue.compileFunctionRaw[Int, List[Typ]]("fn _ => E_TypList []").apply[Int, List[Typ]](MLValue(0))
-//      typeListCons = MLValue.compileFunctionRaw[Typ, List[Typ] => List[Typ]]("fn (E_Typ typ) => E_ExnExn (fn (E_TypList typs) => E_TypList (typ::typs))")
       makeType = MLValue.compileFunction[(String, List[Typ]), Typ]("Term.Type")
+      equalsTyp = MLValue.compileFunction[(Typ,Typ), Boolean]("op=")
     }
   }
 
-/*
-  def makeTypList(typs: List[Typ])(implicit ec: ExecutionContext) : MLValue[List[Typ]] = typs match {
-    case Nil => typeListNil
-    case typ::typs =>
-      val typsMLVal = makeTypList(typs)
-      typeListCons[Typ, List[Typ], List[Typ]](typ.mlValue, typsMLVal)
-  }
-*/
-
-
   def apply(context: Context, string: String)(implicit ec: ExecutionContext): MLValueTyp = {
-//    implicit val _ = =:=.tpEquals[MLValue[Context => String => Typ]]
     new MLValueTyp(readType[Context, String, Typ](context.mlValue, MLValue(string)))
   }
 

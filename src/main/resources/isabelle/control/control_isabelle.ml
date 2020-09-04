@@ -73,22 +73,24 @@ fun storeMany seq exns = sendReply seq (map addToObjects exns)
 fun storeMLExnExn seq ml =
   executeML ("let open Control_Isabelle val result = E_ExnExn ("^ml^") in store "^string_of_int seq^" result end")
 
+fun exn_str exn = Runtime.pretty_exn exn |> Pretty.unformatted_string_of
+
 fun retrieveInt seq id = case Inttab.lookup (!objects) id of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_Int i) => sendReply seq [i]
-  | SOME _ => error ("expected E_Int, got different exn")
+  | SOME exn => error ("expected E_Int, got: " ^ exn_str exn)
 
 fun retrieveString seq id = case Inttab.lookup (!objects) id of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_String str) => sendReplyStr seq str
-  | SOME _ => error ("expected E_String, got different exn")
+  | SOME exn => error ("expected E_String, got: " ^ exn_str exn)
 
 
 fun applyFunc seq f x = case (Inttab.lookup (!objects) f, Inttab.lookup (!objects) x) of
   (NONE,_) => error ("no object " ^ string_of_int f)
   | (_,NONE) => error ("no object " ^ string_of_int x)
   | (SOME (E_ExnExn f), SOME x) => store seq (f x)
-  | _ => error ("object " ^ string_of_int f ^ " is not an E_ExnExn")
+  | (SOME exn, _) => error ("object " ^ string_of_int f ^ " is not an E_ExnExn but: " ^ exn_str exn)
 
 
 
@@ -100,7 +102,7 @@ fun mkPair seq a b = case (Inttab.lookup (!objects) a, Inttab.lookup (!objects) 
 fun splitPair seq id = case (Inttab.lookup (!objects) id) of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_Pair (x,y)) => storeMany seq [x,y]
-  | SOME _ => error ("object " ^ string_of_int id ^ " is not an E_Pair")
+  | SOME exn => error ("object " ^ string_of_int id ^ " is not an E_Pair but: " ^ exn_str exn)
 
 (* fun executeML' ml =
   executeML ("local open Control_Isabelle in " ^ ml ^ " end") *)
