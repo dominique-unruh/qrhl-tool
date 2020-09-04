@@ -9,7 +9,7 @@ import java.util.{Timer, TimerTask}
 
 import info.hupel.isabelle.api.{Configuration, Version, XML}
 import info.hupel.isabelle.hol.HOLogic
-import isabelle.{Abs, App, Bound, Const, Free, Term, Typ, Type, Var}
+import isabelle.{Abs, App, Bound, Const, Free, Term, Theory, Typ, Type, Var}
 import qrhl.isabellex.IsabelleX.globalIsabelle.simplifyTermOp
 
 import scala.concurrent.ExecutionContext
@@ -138,6 +138,9 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   implicit val isabelleControl: control.Isabelle = new control.Isabelle(setup = setup, build = !checkBuilt())
   isabelle.Thm.init(isabelleControl)
+  Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
+  isabelleControl.executeMLCodeNow("exception E_Subgoal of QRHL_Operations.subgoal")
+
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
     *
@@ -330,8 +333,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
   def idOp(valueTyp: Typ): Const = Const(c.idOp, boundedT(valueTyp, valueTyp))
 
-  val show_oracles_lines_op: MLValue[Thm => List[String]] = ???
-//    Operation.implicitly[Thm, List[String]]("show_oracles_lines")
+  val show_oracles_lines_op: MLValue[Thm => List[String]] =
+    MLValue.compileFunction[Thm, List[String]]("QRHL_Operations.show_oracles_lines")
   def show_oracles_lines(thm: Thm): List[String] = {
     show_oracles_lines_op[Thm, List[String]](thm.mlValue).retrieveNow.map(IsabelleX.symbols.symbolsToUnicode)
   }

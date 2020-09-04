@@ -70,8 +70,8 @@ object Subgoal {
   object SubgoalConverter extends Converter[Subgoal] {
     override def retrieve(value: MLValue[Subgoal])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Subgoal] = ???
     override def store(value: Subgoal)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Subgoal] = ???
-    override lazy val exnToValue: String = ???
-    override lazy val valueToExn: String = ???
+    override lazy val exnToValue: String = "fn E_Subgoal s => s"
+    override lazy val valueToExn: String = "E_Subgoal"
   }
 
   object Implicits {
