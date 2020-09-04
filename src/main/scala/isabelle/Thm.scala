@@ -1,6 +1,6 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLValue}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import MLValue.Implicits._
@@ -10,15 +10,15 @@ import isabelle.control.MLValue.Converter
 
 final class Thm private [Thm](val mlValue : MLValue[Thm])(implicit ec: ExecutionContext, isabelle: Isabelle) {
   override def toString: String = s"thm${mlValue.stateString}"
-  lazy val cterm : CTerm = CTerm(Thm.cpropOf[Thm,CTerm](mlValue))
+  lazy val cterm : Cterm = Cterm(Thm.cpropOf(mlValue))
   def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
-    Thm.stringOfThm[Context,Thm,String](ctxt.mlValue, mlValue).retrieveNow
+    Thm.stringOfThm(MLValue(ctxt, this)).retrieveNow
 }
 
 object Thm {
-  private var getThm : MLValue[((Context, String)) => Thm] = _
-  private var cpropOf : MLValue[Thm => CTerm] = _
-  private var stringOfThm: MLValue[Context => Thm => String] = _
+  private var getThm : MLFunction[(Context, String), Thm] = _
+  private var cpropOf : MLFunction[Thm, Cterm] = _
+  private var stringOfThm: MLFunction[(Context, Thm), String] = _
   private implicit var isabelle : Isabelle = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
@@ -29,13 +29,13 @@ object Thm {
       Term.init(isabelle)
       isabelle.executeMLCodeNow("exception E_Thm of thm")
       getThm = MLValue.compileFunction[(Context, String), Thm]("fn (ctxt, name) => Proof_Context.get_thm ctxt name")
-      cpropOf = MLValue.compileFunctionRaw[Thm, CTerm]("fn (E_Thm thm) => Thm.cprop_of thm |> E_CTerm")
-      stringOfThm = MLValue.compileFunctionRaw[Context, Thm => String]("fn (E_Context ctxt) => E_ExnExn (fn (E_Thm thm) => Thm.string_of_thm ctxt thm |> E_String)")
+      cpropOf = MLValue.compileFunctionRaw[Thm, Cterm]("fn (E_Thm thm) => Thm.cprop_of thm |> E_CTerm")
+      stringOfThm = MLValue.compileFunction[(Context, Thm), String]("fn (ctxt, thm) => Thm.string_of_thm ctxt thm")
     }
   }
 
   def apply(context: Context, name: String)(implicit ec: ExecutionContext): Thm = {
-    val mlThm : MLValue[Thm] = getThm[(Context,String),Thm](MLValue((context, name)))
+    val mlThm : MLValue[Thm] = getThm(MLValue((context, name)))
     new Thm(mlThm)
   }
 

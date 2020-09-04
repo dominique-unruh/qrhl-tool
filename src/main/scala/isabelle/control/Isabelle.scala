@@ -42,9 +42,10 @@ class Isabelle(setup: Setup, build: Boolean = false) {
           drain(obj::objs)
     }
     val objs = drain(Nil)
-    if (objs.nonEmpty)
+    if (objs.nonEmpty) {
+      logger.debug(s"Sending GC command to Isabelle, ${objs.size} freed objects")
       Some(s"g${objs.mkString(" ")}\n")
-    else
+    } else
       None
   }
 
@@ -79,7 +80,6 @@ class Isabelle(setup: Setup, build: Boolean = false) {
       count += 1
       drainQueue()
       for (cmd <- garbageCollect()) {
-        logger.debug("Sending GC command to Isabelle")
         writer.write(cmd)
         count += 1
       }
@@ -349,9 +349,3 @@ case class IsabelleBuildException(message: String, errors: List[String]) extends
 case class IsabelleException(isabelle: Isabelle, msgID: Isabelle.ID) extends IsabelleControllerException("Isabelle exception") {
   override def getMessage: String =  Await.result(isabelle.retrieveString(msgID).future, Duration.Inf)
 }
-
-
-
-
-
-

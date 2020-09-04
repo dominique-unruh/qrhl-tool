@@ -6,12 +6,13 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import MLValue.Implicits._
+import isabelle.control.Isabelle.ID
 import org.log4s
 
 class MLValue[A] private[isabelle](val id: Future[Isabelle.ID]) {
   private def mlValueOfItself = this.asInstanceOf[MLValue[MLValue[A]]]
   def debugInfo(implicit isabelle: Isabelle, ec: ExecutionContext): String =
-    MLValue.debugInfo.asInstanceOf[MLValue[MLValue[A] => String]].apply[MLValue[A], String](mlValueOfItself).retrieveNow
+    MLValue.debugInfo.asInstanceOf[MLFunction[MLValue[A], String]].apply(mlValueOfItself).retrieveNow
 
   def stateString: String = id.value match {
     case Some(Success(_)) => ""
@@ -34,7 +35,11 @@ class MLValue[A] private[isabelle](val id: Future[Isabelle.ID]) {
   @inline def retrieveNowOrElse(default: => A)(implicit converter: Converter[A], isabelle: Isabelle, ec: ExecutionContext): A =
     Await.result(retrieveOrElse(default), Duration.Inf)
 
-  def apply[D, R](arg: MLValue[D])
+  def function[D, R](implicit ev: MLValue[A] =:= MLValue[D => R]): MLFunction[D, R] =
+    new MLFunction(id)
+
+/*  @deprecated("Convert to MLFunction instead (using .function)","")
+  def applyOld[D, R](arg: MLValue[D])
                  (implicit ev: MLValue[A] =:= MLValue[D => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] = {
     new MLValue(
       for (fVal <- ev(this).id;
@@ -42,15 +47,29 @@ class MLValue[A] private[isabelle](val id: Future[Isabelle.ID]) {
            fx <- isabelle.applyFunction(fVal, xVal).future)
         yield fx
     )
-  }
+  }*/
 
+/*  @deprecated("Convert to MLFunction instead using .function","")
   def apply[D1, D2, R](arg1: MLValue[D1], arg2: MLValue[D2])
                       (implicit ev: MLValue[A] =:= MLValue[D1 => D2 => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] =
-    ev(this).apply[D1, D2 => R](arg1).apply[D2, R](arg2)
+    ev(this).applyOld[D1, D2 => R](arg1).applyOld[D2, R](arg2)
 
+  @deprecated("Convert to MLFunction instead using .function","")
   def apply[D1, D2, D3, R](arg1: MLValue[D1], arg2: MLValue[D2], arg3: MLValue[D3])
                           (implicit ev: MLValue[A] =:= MLValue[D1 => D2 => D3 => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] =
-    ev(this).apply[D1, D2 => D3 => R](arg1).apply[D2, D3 => R](arg2).apply[D3, R](arg3)
+    ev(this).applyOld[D1, D2 => D3 => R](arg1).applyOld[D2, D3 => R](arg2).applyOld[D3, R](arg3)*/
+}
+
+class MLFunction[D,R] private[isabelle] (id: Future[ID]) extends MLValue[D => R](id) {
+  def apply(arg: MLValue[D])
+           (implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[R] = {
+    new MLValue(
+      for (fVal <- this.id;
+           xVal <- arg.id;
+           fx <- isabelle.applyFunction(fVal, xVal).future)
+        yield fx
+    )
+  }
 }
 
 object MLValue {
@@ -58,14 +77,14 @@ object MLValue {
 
   // TODO: UGLY HACK (make compatible with several instances of Isabelle, avoid need to call MLValue.init)
   private var isabelle : Isabelle = _
-  private var listCons : MLValue[((_,List[_])) => List[_]] = _
+  private var listCons : MLFunction[(_,List[_]), List[_]] = _
   private var listNil : MLValue[List[_]] = _
-  private var listIsNil : MLValue[List[_] => Boolean] = _
-  private var destCons : MLValue[List[_] => (_,List[_])] = _
-  private var boolToInt : MLValue[Boolean => Int] = _
+  private var listIsNil : MLFunction[List[_], Boolean] = _
+  private var destCons : MLFunction[List[_], (_,List[_])] = _
+  private var boolToInt : MLFunction[Boolean, Int] = _
   private var boolTrue : MLValue[Boolean] = _
   private var boolFalse : MLValue[Boolean] = _
-  private var debugInfo : MLValue[MLValue[Any] => String] = _
+  private var debugInfo : MLFunction[MLValue[Any], String] = _
 
   def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
     if (this.isabelle == null) {
@@ -73,13 +92,13 @@ object MLValue {
       implicit val isa = isabelle
       isabelle.executeMLCodeNow("exception E_List of exn list;; exception E_Bool of bool")
       listCons = MLValue.compileFunctionRaw[(_,List[_]), List[_]]("fn E_Pair (x, E_List xs) => E_List (x::xs)")
-      listNil = MLValue.compileFunctionRaw[Int, List[_]]("K (E_List [])").apply[Int, List[_]](MLValue(0))
+      listNil = MLValue.compileFunctionRaw[Int, List[_]]("K (E_List [])").apply(MLValue(0))
       listIsNil = MLValue.compileFunctionRaw[List[_], Boolean]("fn E_List [] => E_Bool true | E_List _ => E_Bool false")
       destCons = MLValue.compileFunctionRaw[List[_], (_,List[_])]("fn E_List (x::xs) => E_Pair (x, E_List xs)")
       boolToInt = MLValue.compileFunction[Boolean, Int]("fn true => 1 | false => 0")
       val intToBool = MLValue.compileFunction[Int, Boolean]("fn 0 => false | _ => true")
-      boolTrue = intToBool[Int, Boolean](MLValue(1))
-      boolFalse = intToBool[Int, Boolean](MLValue(0))
+      boolTrue = intToBool(MLValue(1))
+      boolFalse = intToBool(MLValue(0))
       debugInfo = MLValue.compileFunctionRaw[MLValue[Any], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
     }
   }
@@ -94,10 +113,10 @@ object MLValue {
   @inline def apply[A](value: A)(implicit conv: Converter[A], isabelle: Isabelle, executionContext: ExecutionContext) : MLValue[A] =
     conv.store(value)
 
-  def compileFunctionRaw[A, B](ml: String)(implicit isabelle: Isabelle): MLValue[A => B] =
-    new MLValue(isabelle.storeFunction(ml).future)
+  def compileFunctionRaw[A, B](ml: String)(implicit isabelle: Isabelle): MLFunction[A, B] =
+    new MLFunction(isabelle.storeFunction(ml).future)
 
-  def compileFunction[A, B](ml: String)(implicit isabelle: Isabelle, converterA: Converter[A], converterB: Converter[B]): MLValue[A => B] =
+  def compileFunction[A, B](ml: String)(implicit isabelle: Isabelle, converterA: Converter[A], converterB: Converter[B]): MLFunction[A, B] =
     compileFunctionRaw(s"(${converterB.valueToExn}) o ($ml) o (${converterA.exnToValue})")
 
   object UnitConverter extends Converter[Unit] {
@@ -122,7 +141,7 @@ object MLValue {
 
   object BooleanConverter extends Converter[Boolean] {
     override def retrieve(value: MLValue[Boolean])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Boolean] =
-      for (i <- boolToInt[Boolean, Int](value).retrieve)
+      for (i <- boolToInt(value).retrieve)
         yield i != 0
     override def store(value: Boolean)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Boolean] =
       if (value) boolTrue else boolFalse
@@ -155,13 +174,13 @@ object MLValue {
       case x::xs =>
         implicit val convA: Converter[A] = converter
         val pairMLVal = MLValue((x, xs))
-        listCons.asInstanceOf[MLValue[((A,List[A])) => List[A]]].apply[(A,List[A]), List[A]](pairMLVal)
+        listCons.asInstanceOf[MLFunction[(A,List[A]), List[A]]].apply(pairMLVal)
     }
     @inline override def retrieve(value: MLValue[List[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[List[A]] = {
       implicit val conv: Converter[A] = converter
-      listIsNil.asInstanceOf[MLValue[List[A] => Boolean]].apply[List[A], Boolean](value).retrieve.flatMap {
+      listIsNil.asInstanceOf[MLFunction[List[A], Boolean]].apply(value).retrieve.flatMap {
         case true => Future.successful(Nil)
-        case false => for ((hd,tail) <- destCons.asInstanceOf[MLValue[List[A] => (A,List[A])]].apply[List[A], (A,List[A])](value).retrieve)
+        case false => for ((hd,tail) <- destCons.asInstanceOf[MLFunction[List[A], (A,List[A])]](value).retrieve)
           yield hd::tail
       }
     }

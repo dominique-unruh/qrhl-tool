@@ -1,7 +1,7 @@
 package isabelle
 
 import isabelle.control.MLValue.Converter
-import isabelle.control.{Isabelle, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLValue}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -11,7 +11,7 @@ final class Context private [Context](val mlValue : MLValue[Context]) {
 }
 
 object Context {
-  private var contextFromTheory : MLValue[Theory => Context] = _
+  private var contextFromTheory : MLFunction[Theory, Context] = _
   private implicit var isabelle : Isabelle = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
@@ -26,7 +26,7 @@ object Context {
   }
 
   def apply(theory: Theory)(implicit ec: ExecutionContext): Context = {
-    val mlCtxt : MLValue[Context] = contextFromTheory[Theory,Context](theory.mlValue)
+    val mlCtxt : MLValue[Context] = contextFromTheory(theory.mlValue)
     new Context(mlCtxt)
   }
 
