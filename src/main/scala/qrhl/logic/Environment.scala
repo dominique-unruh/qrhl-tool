@@ -169,7 +169,7 @@ final case class AbstractProgramDecl(name:String, free:List[Variable], inner:Lis
     val cvars = vars.classical map { v => (v.name, v.valueTyp) }
     val cwvars = vars.written collect { case v : CVariable => (v.name, v.valueTyp) }
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val ctxt = declare_abstract_program_op[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int), Context](
+    val ctxt = declare_abstract_program_op(
       MLValue((isabelle.context, name, cvars.toList, cwvars.toList, qvars.toList, numOracles))).retrieveNow
     new ContextX(isabelle.isabelle,ctxt)
   }
@@ -226,7 +226,7 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     val cvars = vars.classical map { v => (v.name, v.valueTyp) }
     val cwvars = vars.written collect { case v : CVariable => (v.name, v.valueTyp) }
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val ctxt = declare_concrete_program_op[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement), Context](
+    val ctxt = declare_concrete_program_op(
       MLValue((context.context, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program))).retrieveNow
     new ContextX(context.isabelle, ctxt)
   }
@@ -238,6 +238,6 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
 }
 
 object ConcreteProgramDecl {
-  val declare_concrete_program_op: MLValue[((Context, String, List[(String, Typ)], List[(String, Typ)], List[(String, Typ)], List[String], Statement)) => Context] =
+  val declare_concrete_program_op =
     MLValue.compileFunction[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement), Context]("QRHL_Operations.declare_concrete_program")
 }

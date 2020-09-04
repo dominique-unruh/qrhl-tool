@@ -137,11 +137,11 @@ object DebugCommand {
     new DebugCommand({state:State => action(state.isabelle, state.goal); state})
   val isabelle: DebugCommand = DebugCommand.state({
     state : State =>
-      val str = debugOp[Context,String](MLValue(state.isabelle.context)).retrieveNow
+      val str = debugOp(MLValue(state.isabelle.context)).retrieveNow
       println(s"DEBUG: $str")
   })
 
-  val debugOp: MLValue[Context => String] =
+  val debugOp =
     MLValue.compileFunction[Context, String]("QRHL_Operations.debug")
 }
 

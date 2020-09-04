@@ -59,7 +59,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
   }
 
   def encodeAsExpression(context: IsabelleX.ContextX) : RichTerm =
-    RichTerm(RichTerm.termToExpressionOp[(Context,Term), Term](MLValue((context.context, isabelleTerm))).retrieveNow)
+    RichTerm(RichTerm.termToExpressionOp(MLValue((context.context, isabelleTerm))).retrieveNow)
 
   def stripAssumption(number: Int): RichTerm = RichTerm(typ,RichTerm.stripAssumption(isabelleTerm,number))
 
@@ -192,12 +192,12 @@ object RichTerm {
   private val logger: Logger = log4s.getLogger
 
   def decodeFromExpression(context:IsabelleX.ContextX, t: Term): RichTerm =
-    RichTerm(decodeFromExpressionOp[(Context,Term), Term](MLValue((context.context,t))).retrieveNow)
+    RichTerm(decodeFromExpressionOp(MLValue((context.context,t))).retrieveNow)
 
-  val decodeFromExpressionOp: MLValue[((Context, Term)) => Term] =
+  val decodeFromExpressionOp =
     MLValue.compileFunction[(Context,Term), Term]("QRHL_Operations.expression_to_term")
 
-  val termToExpressionOp: MLValue[((Context, Term)) => Term] =
+  val termToExpressionOp =
     MLValue.compileFunction[(Context, Term), Term]("QRHL_Operations.term_to_expression")
 
   def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(GIsabelle.boolT, GIsabelle.True_const)

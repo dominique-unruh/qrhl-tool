@@ -273,7 +273,7 @@ sealed trait Statement {
 //  def programTermOLD(context: Isabelle.Context) : Term
 
   def programTerm(context: IsabelleX.ContextX): RichTerm =
-    RichTerm(Statement.statement_to_term_op[(Context, Statement), Term](
+    RichTerm(Statement.statement_to_term_op(
       MLValue((context.context, this))).retrieveNow)
 
   private val emptySet = ListSet.empty
@@ -555,14 +555,16 @@ object Statement {
       case block: Block =>
         val isabelleControl = null; val global = null
         val mlValues = MLValue(block.statements)
-        GIsabelle.listToBlock[List[Statement], Statement](mlValues)
+        GIsabelle.listToBlock(mlValues)
       case Assign(variable, expression) =>
         val isabelleControl = null; val global = null
-        GIsabelle.makeAssign[(VarTerm[String],Term), Statement](MLValue((variable.map(_.name), expression.isabelleTerm)))
+        GIsabelle.makeAssign(MLValue((variable.map(_.name), expression.isabelleTerm)))
       case Sample(variable, expression) =>
         val isabelleControl = null; val global = null
-        GIsabelle.makeSample[(VarTerm[String],Term), Statement](MLValue((variable.map(_.name), expression.isabelleTerm)))
-      case IfThenElse(condition, thenBranch, elseBranch) => ???
+        GIsabelle.makeSample(MLValue((variable.map(_.name), expression.isabelleTerm)))
+      case IfThenElse(condition, thenBranch, elseBranch) =>
+        val isabelleControl = null; val global = null
+        GIsabelle.makeIfThenElse(MLValue((condition.isabelleTerm,thenBranch.statements,elseBranch.statements)))
       case While(condition, body) => ???
       case QInit(location, expression) => ???
       case QApply(location, expression) => ???
@@ -572,7 +574,7 @@ object Statement {
     override def retrieve(value: MLValue[Statement])(implicit isabelle: control.Isabelle, ec: ExecutionContext): Future[Statement] = {
       val isabelleControl = null // Hiding global implicit import
       val global = null // Hiding global implicit import
-      GIsabelle.whatStatementOp[Statement,String](value).retrieve.flatMap {
+      GIsabelle.whatStatementOp(value).retrieve.flatMap {
         case "block" => ???
         case "local" => ???
         case "assign" => ???
@@ -593,10 +595,10 @@ object Statement {
     implicit val statementConverter: StatementConverter.type = StatementConverter
   }
 
-  val statement_to_term_op: MLValue[((Context, Statement)) => Term] =
+  val statement_to_term_op =
     MLValue.compileFunction[(Context, Statement), Term]("QRHL_Operations.statement_to_term")
 
-  val statements_to_term_op: MLValue[((Context, List[Statement])) => Term] =
+  val statements_to_term_op =
     MLValue.compileFunction[(Context, List[Statement]), Term]("QRHL_Operations.statements_to_term")
 }
 
@@ -732,7 +734,7 @@ class Block(val statements:List[Statement]) extends Statement {
 //  def programListTermOld(context: Isabelle.Context): Term = Isabelle.mk_list(Isabelle.programT, statements.map(_.programTermOLD(context)))
 
   def programListTerm(context: IsabelleX.ContextX): RichTerm =
-    RichTerm(Statement.statements_to_term_op[(Context, List[Statement]), Term](
+    RichTerm(Statement.statements_to_term_op(
       MLValue((context.context, statements))).retrieveNow)
 
 

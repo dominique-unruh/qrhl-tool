@@ -32,7 +32,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
     def unapply(term: Term): Option[(Term,Statement,Term)] = term match {
       case App(App(App(Const(GIsabelle.probability.name,_),e),p),rho) =>
 
-        val e2 = addIndexToExpressionOp[(Context,Term,Boolean), Term](
+        val e2 = addIndexToExpressionOp(
                     MLValue((state.isabelle.context, e, left))).retrieveNow
         val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
 
@@ -125,7 +125,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         // Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
         // if cvars =: x...z and qvars =: q...r
-        val pre = byQRHLPreOp[(Context, List[(String, String, Typ)], List[(String, String, Typ)]), Term](
+        val pre = byQRHLPreOp(
           MLValue((isa.context,
             cvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
             qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))))).retrieveNow

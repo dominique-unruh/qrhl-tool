@@ -35,7 +35,7 @@ case class FixTac(variable:String) extends Tactic {
       //      val lit = ml.Expr.uncheckedLiteral[Term => String => (Term,pure.Typ)]("QRHL.fixTac")
       //      val mlExpr = lit(expr.isabelleTerm)(implicitly) (variable)
       //      val (result,varTyp2) = state.isabelle.runExpr(mlExpr)
-      val (result,varTyp2) = FixTac.fixTacOp[(Context, Term, String), (Term, Typ)](
+      val (result,varTyp2) = FixTac.fixTacOp(
         MLValue((state.isabelle.context, expr.isabelleTerm, variable))).retrieveNow
       val varTyp3 = varTyp2
 
@@ -47,6 +47,6 @@ case class FixTac(variable:String) extends Tactic {
 }
 
 object FixTac {
-  val fixTacOp: MLValue[((Context, Term, String)) => (Term, Typ)] =
+  val fixTacOp =
     MLValue.compileFunction[(Context, Term, String), (Term, Typ)]("QRHL_Operations.fixTac")
 }

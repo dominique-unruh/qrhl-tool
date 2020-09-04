@@ -173,12 +173,12 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount - 1).toString.stripSuffix(".thy") }
     //    println("Isabelle getContextWithThys", files, filesThyPath)
 
-    for (future <- filesThyPath.map(path => use_thy_op[String, Unit](MLValue(path)).retrieve))
+    for (future <- filesThyPath.map(path => use_thy_op(MLValue(path)).retrieve))
       Await.result(future, Duration.Inf)
 
     val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
     val (ctxt, dependencies) =
-      createContextOp[List[String], (Context, List[String])](MLValue(imports)).retrieveNow
+      createContextOp(MLValue(imports)).retrieveNow
 
     val paths = dependencies.map(Paths.get(_))
 
@@ -213,22 +213,24 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.Assign")
   val makeSample =
     MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.Sample")
+  val makeIfThenElse =
+    MLValue.compileFunction[(Term,List[Statement],List[Statement]), Statement]("QRHL_Operations.IfThenElse")
   val whatStatementOp =
     MLValue.compileFunction[Statement, String]("QRHL_Operations.whatStatement")
-  val checkTypeOp: MLValue[((Context, Term)) => Typ] =
+  val checkTypeOp =
     MLValue.compileFunction[(Context, Term), Typ]("QRHL_Operations.check_type")
-  val createContextOp: MLValue[List[String] => (Context, List[String])] =
+  val createContextOp =
     MLValue.compileFunction[List[String], (Context, List[String])]("QRHL_Operations.create_context")
-  val addAssumptionOp: MLValue[((String, Term, Context)) => Context] =
+  val addAssumptionOp =
     MLValue.compileFunction[(String, Term, Context), Context]("QRHL_Operations.add_assumption")
-  val simplifyTermOp: MLValue[((Term, List[String], Context)) => (Term, Thm)] =
+  val simplifyTermOp =
     MLValue.compileFunction[(Term, List[String], Context), (Term, Thm)]("QRHL_Operations.simplify_term")
-  val declareVariableOp: MLValue[((Context, String, Typ)) => Context] =
+  val declareVariableOp =
     MLValue.compileFunction[(Context, String, Typ), Context]("QRHL_Operations.declare_variable")
-  val thms_as_subgoals: MLValue[((Context, String)) => List[Subgoal]] =
+  val thms_as_subgoals =
     MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
 
-  val use_thy_op: MLValue[String => Unit] =
+  val use_thy_op =
     MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
 
   val boolT: Typ = Type(t.bool)
@@ -345,10 +347,10 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
   def idOp(valueTyp: Typ): Const = Const(c.idOp, boundedT(valueTyp, valueTyp))
 
-  val show_oracles_lines_op: MLValue[Thm => List[String]] =
+  val show_oracles_lines_op =
     MLValue.compileFunction[Thm, List[String]]("QRHL_Operations.show_oracles_lines")
   def show_oracles_lines(thm: Thm): List[String] = {
-    show_oracles_lines_op[Thm, List[String]](thm.mlValue).retrieveNow.map(IsabelleX.symbols.symbolsToUnicode)
+    show_oracles_lines_op(thm.mlValue).retrieveNow.map(IsabelleX.symbols.symbolsToUnicode)
   }
   def show_oracles(thm: Thm): Unit = {
     logger.debug(show_oracles_lines(thm).mkString("\n"))
@@ -795,16 +797,15 @@ object IsabelleX {
     _theContext = this
 
     def checkType(term: Term): Typ =
-      isabelle.checkTypeOp[(Context, Term), Typ](MLValue(context,term)).retrieveNow
+      isabelle.checkTypeOp(MLValue(context,term)).retrieveNow
 
     def declareVariable(name: String, isabelleTyp: Typ): ContextX = {
-      val ctxt = isabelle.declareVariableOp[(Context,String,Typ), Context](
-                    MLValue((context, name, isabelleTyp))).retrieveNow
+      val ctxt = isabelle.declareVariableOp(MLValue((context, name, isabelleTyp))).retrieveNow
       new ContextX(isabelle, ctxt)
     }
 
     def addAssumption(name: String, assumption: Term): ContextX = {
-      val ctxt = isabelle.addAssumptionOp[(String,Term,Context), Context](
+      val ctxt = isabelle.addAssumptionOp(
         MLValue((name, assumption, context))).retrieveNow
       new ContextX(isabelle, ctxt)
     }
@@ -827,7 +828,7 @@ object IsabelleX {
     def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(typ.pretty(context))
 
     def simplify(term: Term, facts: List[String])(implicit executionContext: ExecutionContext): (RichTerm, Thm) = {
-      val (t,thm) = simplifyTermOp[(Term, List[String], Context), (Term,Thm)](MLValue((term, facts.map(symbols.unicodeToSymbols), context))).retrieveNow
+      val (t,thm) = simplifyTermOp(MLValue((term, facts.map(symbols.unicodeToSymbols), context))).retrieveNow
       (RichTerm(t), thm)
     }
   }

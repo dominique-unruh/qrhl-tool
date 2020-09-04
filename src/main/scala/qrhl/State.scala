@@ -120,9 +120,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
 //    val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
 //    RichTerm(Isabelle.boolT, term)
     val mlVal = MLValue((context.context,left:Statement,right:Statement,pre.isabelleTerm,post.isabelleTerm,assumptions.map(_.isabelleTerm)))
-    val term = subgoal_to_term_op[
-      (_root_.isabelle.Context, Statement, Statement,_root_.isabelle.Term, _root_.isabelle.Term, List[_root_.isabelle.Term]),
-      _root_.isabelle.Term](mlVal).retrieveNow
+    val term = subgoal_to_term_op(mlVal).retrieveNow
     RichTerm(term)
   }
 
@@ -484,13 +482,13 @@ class State private (val environment: Environment,
   }
 
   private def declare_quantum_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ) : IsabelleX.ContextX = {
-    val ctxt = State.declare_quantum_variable[(String, Typ, Context), Context](MLValue((name, typ, isabelle.context))).retrieveNow
+    val ctxt = State.declare_quantum_variable(MLValue((name, typ, isabelle.context))).retrieveNow
     new ContextX(isabelle.isabelle, ctxt)
 //    isabelle.map(id => isabelle.isabelle.invoke(State.declare_quantum_variable, (name,typ,id)))
   }
 
   private def declare_classical_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ) : IsabelleX.ContextX = {
-    val ctxt = State.declare_classical_variable[(String, Typ, Context), Context](MLValue((name, typ, isabelle.context))).retrieveNow
+    val ctxt = State.declare_classical_variable(MLValue((name, typ, isabelle.context))).retrieveNow
     new ContextX(isabelle.isabelle, ctxt)
 //    isabelle.map(id => isabelle.isabelle.invoke(State.declare_classical_variable, (name,typ,id)))
   }
@@ -528,16 +526,16 @@ object State {
     cheatMode=CheatMode.make(cheating), includedFiles=Set.empty)
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
-  val declare_quantum_variable: MLValue[((String, Typ, Context)) => Context] =
+  val declare_quantum_variable =
     MLValue.compileFunction[((String, Typ, Context)), Context]("QRHL_Operations.declare_quantum_variable")
 
 
-  val declare_classical_variable: MLValue[((String, Typ, Context)) => Context] =
+  val declare_classical_variable =
     MLValue.compileFunction[(String,Typ,Context), Context]("QRHL_Operations.declare_classical_variable")
 
   private val logger = log4s.getLogger
 
   // left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]
-  val subgoal_to_term_op: MLValue[((Context, Statement, Statement, Term, Term, List[Term])) => Term] =
+  val subgoal_to_term_op =
     MLValue.compileFunction[(Context, Statement, Statement, Term, Term, List[Term]), Term]("QRHL_Operations.subgoal_to_term")
 }

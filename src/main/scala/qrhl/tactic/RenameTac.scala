@@ -107,7 +107,7 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       def renameInvariant(inv: RichTerm) : RichTerm = {
         val inv2 = if (left) renameInvariant1(side = true, inv) else inv
         val inv3 = if (right) renameInvariant1(side = false, inv2) else inv2
-        RichTerm(RenameTac.swapOp[(Context, Term), Term](MLValue((state.isabelle.context, inv3.isabelleTerm))).retrieveNow)
+        RichTerm(RenameTac.swapOp(MLValue((state.isabelle.context, inv3.isabelleTerm))).retrieveNow)
       }
 
       val renamedPre = renameInvariant(pre)
@@ -117,9 +117,9 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       val colocalitySubgoal =
         if (forbiddenQInInvariant12.isEmpty) null
         else {
-          val colocalityPre = colocalityOp[(Context, Term, List[(String, Typ)]), Term](
+          val colocalityPre = colocalityOp(
             MLValue((state.isabelle.context, pre.isabelleTerm, forbiddenQInInvariant12))).retrieveNow
-          val colocalityPost = colocalityOp[(Context, Term, List[(String, Typ)]), Term](
+          val colocalityPost = colocalityOp(
             MLValue((state.isabelle.context, post.isabelleTerm, forbiddenQInInvariant12))).retrieveNow
           AmbientSubgoal(GIsabelle.conj(colocalityPre, colocalityPost),
             assumptions.map(_.isabelleTerm))
@@ -135,6 +135,6 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
 }
 
 object RenameTac {
-  val swapOp: MLValue[((Context, Term)) => Term] =
+  val swapOp =
     MLValue.compileFunction[(Context, Term), Term]("QRHL_Operations.swap_variables_conv")
 }

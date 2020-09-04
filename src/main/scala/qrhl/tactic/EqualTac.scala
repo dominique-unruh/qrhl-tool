@@ -198,7 +198,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     def isInfinite(v: Variable): Boolean =
       isInfiniteHashtable.getOrElseUpdate(v, {
         val result =
-          isInfinite_op[(Context, Typ), Boolean](MLValue((isabelle.context, v.valueTyp))).retrieveNow
+          isInfinite_op(MLValue((isabelle.context, v.valueTyp))).retrieveNow
         logger.debug(s"Checking infiniteness of $v: $result")
         result
       })
@@ -322,7 +322,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     postcondition = removeClassicals(env, postcondition, classicalsRemovedFromPost.toSet, Variable.classical(out).toSet)
     logger.debug(s"Postcondition: ${postcondition}")
 
-    val colocality = RichTerm(FrameRuleTac.colocalityOp[(Context, Term, List[(String, Typ)]), Term](
+    val colocality = RichTerm(FrameRuleTac.colocalityOp(
       MLValue((isabelle.context, postcondition.isabelleTerm,
         forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) }))).retrieveNow)
 
@@ -379,7 +379,7 @@ object EqualTac {
 //  }
 //  private case class UnfixableConditionException(msg: String) extends Exception
 
-  private val isInfinite_op: MLValue[((Context, Typ)) => Boolean] =
+  private val isInfinite_op =
     MLValue.compileFunction[(Context, Typ), Boolean]("QRHL_Operations.is_finite")
 
   class SimpleQeq(env: Environment) {

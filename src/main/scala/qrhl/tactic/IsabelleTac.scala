@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import isabelle.control.MLValue.Converter
 import isabelle.{Context, Thm}
-import isabelle.control.{Isabelle, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLValue}
 import qrhl._
 import qrhl.isabellex.IsabelleX
 import MLValue.Implicits._
@@ -25,8 +25,7 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
     type In = (A, Subgoal, Context)
     type Out = (List[Subgoal], Thm)
 
-    // TODO memoize
-    val tacMlValue : MLValue[In => Out] = {
+    val tacMlValue : MLFunction[In, Out] = {
       val exnToValue = storer.exnToValue
       tactics.getOrElseUpdate((operationName,exnToValue),
         MLValue.compileFunctionRaw[In, Out](
@@ -36,7 +35,7 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
         asInstanceOf
     }
 
-    val (newGoals, thm) = tacMlValue[In, Out](
+    val (newGoals, thm) = tacMlValue(
       MLValue((arg(state.isabelle), goal, ctxt))).retrieveNowOrElse {
       throw UserException("tactic failed") }
 

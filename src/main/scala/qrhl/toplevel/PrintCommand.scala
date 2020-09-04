@@ -4,7 +4,7 @@ import qrhl.{State, Subgoal}
 import qrhl.isabellex.IsabelleX
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.Context
-import isabelle.control.MLValue
+import isabelle.control.{IsabelleException, MLValue}
 
 // Implicits
 import MLValue.Implicits._
@@ -40,16 +40,15 @@ case class PrintCommand(symbol : String) extends Command {
       println(v.toString)
     }
 
-//    try {
-      val fact = GIsabelle.thms_as_subgoals[(Context, String), List[Subgoal]](MLValue((state.isabelle.context, symbol))).retrieveNow
+    try {
+      val fact = GIsabelle.thms_as_subgoals(MLValue((state.isabelle.context, symbol))).retrieveNow
       found = true
       println(s"The name $symbol refers to ${fact.length} lemmas:\n")
       for (lemma <- fact)
         println(lemma+"\n\n")
-//    } catch {
-      // TODO: Catch exception
-//      case e : ProverResult.Failure => // Means there is no such lemma
-//    }
+    } catch {
+      case e : IsabelleException => // Means there is no such lemma
+    }
 
     if (!found)
       println(s"No variable/program/lemma with name $symbol found.")
