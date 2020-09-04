@@ -103,7 +103,7 @@ object MLValue {
     }
   }
 
-    abstract class Converter[A] {
+  abstract class Converter[A] {
     def retrieve(value: MLValue[A])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[A]
     def store(value: A)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[A]
     val exnToValue : String
@@ -116,7 +116,7 @@ object MLValue {
   def compileFunctionRaw[A, B](ml: String)(implicit isabelle: Isabelle): MLFunction[A, B] =
     new MLFunction(isabelle.storeFunction(ml).future)
 
-  def compileFunction[A, B](ml: String)(implicit isabelle: Isabelle, converterA: Converter[A], converterB: Converter[B]): MLFunction[A, B] =
+  def compileFunction[D, R](ml: String)(implicit isabelle: Isabelle, converterA: Converter[D], converterB: Converter[R]): MLFunction[D, R] =
     compileFunctionRaw(s"(${converterB.valueToExn}) o ($ml) o (${converterA.exnToValue})")
 
   object UnitConverter extends Converter[Unit] {
@@ -159,7 +159,7 @@ object MLValue {
     override lazy val valueToExn: String = "E_String"
   }
 
-  @inline class MLValueConverter[A]() extends Converter[MLValue[A]] {
+  @inline class MLValueConverter[A] extends Converter[MLValue[A]] {
     override def retrieve(value: MLValue[MLValue[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[MLValue[A]] =
       Future.successful(value.asInstanceOf[MLValue[A]])
     override def store(value: MLValue[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[MLValue[A]] =
@@ -268,5 +268,6 @@ object MLValue {
     @inline implicit def tuple5Converter[A,B,C,D,E](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E]): Tuple5Converter[A, B, C, D, E] = new Tuple5Converter(a,b,c,d,e)
     @inline implicit def tuple6Converter[A,B,C,D,E,F](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F]): Tuple6Converter[A, B, C, D, E, F] = new Tuple6Converter(a,b,c,d,e,f)
     @inline implicit def tuple7Converter[A,B,C,D,E,F,G](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D], e: Converter[E], f: Converter[F], g: Converter[G]): Tuple7Converter[A,B,C,D,E,F,G] = new Tuple7Converter(a,b,c,d,e,f,g)
+    @inline implicit def mlValueConverter[A]: MLValueConverter[A] = new MLValueConverter[A]
   }
 }
