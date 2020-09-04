@@ -27,7 +27,8 @@ val objects : exn Inttab.table Unsynchronized.ref = Unsynchronized.ref Inttab.em
 fun numObjects () = Inttab.fold (fn _ => fn i => i+1) (!objects) 0
 
 fun sendReplyStr seq str = let
-  val _ = if Char.contains str #"\n" then error "Trying to send string containing newline" else ()
+(*  val _ = if Char.contains str #"\n" then error "Trying to send string containing newline" else () *)
+  val str = String.map (fn c => case c of #"\n" => #" " | _ => c) str  (* TODO: Support newlines *)
   val str = string_of_int seq ^ " " ^ str ^ "\n"
   (* val _ = tracing ("sendReply: "^str) *)
   val _ = TextIO.output (outStream, str)

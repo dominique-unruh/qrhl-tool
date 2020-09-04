@@ -18,7 +18,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.io.Source
-import scala.sys.process.Process
+import scala.sys.process.{Process, ProcessLogger}
 import scala.util.{Failure, Success, Try}
 
 class Isabelle(setup: Setup, build: Boolean = false) {
@@ -99,7 +99,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
         case null => println(s"No callback $seq")
         case callback =>
           if (content.nonEmpty && content(0) == '!')
-            callback(Failure(IsabelleException(content.substring(1))))
+            callback(Failure(IsabelleException(this, intStringToID(content.substring(1)))))
           else
             callback(Success(content))
       }
@@ -178,7 +178,33 @@ class Isabelle(setup: Setup, build: Boolean = false) {
     process
   }
 
-  private def buildSession() : Unit = ???
+  private def buildSession() : Unit = {
+    def wd = setup.workingDirectory
+    /** Path to absolute string, interpreted relative to wd */
+    def str(path: Path) = wd.resolve(path).toAbsolutePath.toString
+    val isabelleBinary = setup.isabelleHome.resolve("bin").resolve("isabelle")
+    val cmd = ListBuffer[String]()
+
+    cmd += str(isabelleBinary) += "build"
+    cmd += "-b" // Build heap image
+
+    for (root <- setup.sessionRoots)
+      cmd += "-d" += str(root)
+
+    cmd += setup.logic
+
+    logger.debug(s"Cmd line: $cmd")
+
+    val extraEnv =
+      for (userDir <- setup.userDir.toList)
+        yield ("USER_HOME", str(userDir.getParent))
+
+    val processBuilder = scala.sys.process.Process(cmd.toSeq, wd.toAbsolutePath.toFile, extraEnv :_*)
+    val errors = ListBuffer[String]()
+    if (0 != processBuilder.!(ProcessLogger(line => logger.debug(s"Isabelle build: $line"),
+                                           {line => errors.append(line); logger.warn(s"Isabelle build: $line")})))
+      throw IsabelleBuildException(s"Isabelle build for session ${setup.logic} failed", errors.toList)
+  }
 
   if (build) buildSession()
   private val process: lang.Process = startProcess()
@@ -318,7 +344,10 @@ object Isabelle {
 
 abstract class IsabelleControllerException(message: String) extends IOException(message)
 case class IsabelleDestroyedException(message: String) extends IsabelleControllerException(message)
-case class IsabelleException(message: String) extends IsabelleControllerException(message)
+case class IsabelleBuildException(message: String, errors: List[String]) extends IsabelleControllerException(message + ": " + errors.last)
+case class IsabelleException(isabelle: Isabelle, msgID: Isabelle.ID) extends IsabelleControllerException("Isabelle exception") {
+  override def getMessage: String =  Await.result(isabelle.retrieveString(msgID).future, Duration.Inf)
+}
 
 
 
