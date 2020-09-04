@@ -172,7 +172,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount - 1).toString.stripSuffix(".thy") }
     //    println("Isabelle getContextWithThys", files, filesThyPath)
 
-    ??? // TODO: invoke(Operation.UseThys, filesThyPath)
+    for (future <- filesThyPath.map(path => use_thy_op[String, Unit](MLValue(path)).retrieve))
+      Await.result(future, Duration.Inf)
 
     val imports = filesThyName ::: thys // Order is important. This way, namespace elements of "files" shadow namespace elements of "thys", not the other way around
     val (ctxt, dependencies) =
@@ -218,6 +219,9 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     MLValue.compileFunction[(Context, String, Typ), Context]("QRHL_Operations.declare_variable")
   val thms_as_subgoals: MLValue[((Context, String)) => List[Subgoal]] =
     MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
+
+  val use_thy_op: MLValue[String => Unit] =
+    MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
 
   val boolT: Typ = Type(t.bool)
   val True_const: Const = Const(c.True, boolT)
@@ -655,8 +659,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   /** Analogous to Isabelle's HOLogic.dest_bit. Throws [[MatchError]] if it's not a char */
   def dest_bit(term: Term): Int = term match {
-    case HOLogic.True => 1
-    case HOLogic.False => 0
+    case True_const => 1
+    case False_const => 0
     case _ => throw new MatchError(term)
   }
 
