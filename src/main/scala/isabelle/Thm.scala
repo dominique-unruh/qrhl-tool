@@ -41,10 +41,12 @@ object Thm {
 
   object ThmConverter extends Converter[Thm] {
     override def retrieve(value: MLValue[Thm])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Thm] =
-      Future.successful(new Thm(mlValue = value))
-    override def store(value: Thm)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Thm] = ???
-    override lazy val exnToValue: String = ???
-    override lazy val valueToExn: String = "E_Thm"
+      for (_ <- value.id)
+        yield new Thm(mlValue = value)
+    override def store(value: Thm)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Thm] =
+      value.mlValue
+    override val exnToValue: String = "fn E_Thm thm => thm"
+    override val valueToExn: String = "E_Thm"
   }
 
   object Implicits {

@@ -93,12 +93,13 @@ object MLValue {
 
   object UnitConverter extends Converter[Unit] {
     override def retrieve(value: MLValue[Unit])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Unit] =
-      Future.successful(())
+      for (_ <- value.id) yield ()
+
     override def store(value: Unit)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Unit] =
       new MLValue(isabelle.storeInteger(0).future)
 
-    override val exnToValue: String = "(K())"
-    override val valueToExn: String = "(E_Int 0)"
+    override val exnToValue: String = "K()"
+    override val valueToExn: String = "K(E_Int 0)"
   }
   object IntConverter extends Converter[Int] {
     @inline override def store(value: Int)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Int] =
@@ -170,8 +171,13 @@ object MLValue {
   }
   @inline class Tuple3Converter[A,B,C](a: Converter[A], b: Converter[B], c: Converter[C]) extends Converter[(A,B,C)] {
     @inline override def retrieve(value: MLValue[(A, B, C)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C)] = ???
-    @inline override def store(value: (A,B,C))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C)] = ???
-    override lazy val exnToValue: String = "fn E_Pair (x, E_Pair (y, z)) => (x,y,z)"
+    @inline override def store(value: (A,B,C))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B,C)] = {
+      implicit val (aI,bI,cI) = (a,b,c)
+      val (aV,bV,cV) = value
+      val mlvalue = MLValue((aV,(bV,cV))) (tuple2Converter(aI,implicitly), implicitly, implicitly)
+      mlvalue.asInstanceOf[MLValue[(A,B,C)]]
+    }
+    override lazy val exnToValue: String = s"fn E_Pair (a, E_Pair (b, c)) => ((${a.exnToValue}) a, (${b.exnToValue}) b, (${c.exnToValue}) c)"
     override lazy val valueToExn: String = ???
   }
   @inline class Tuple4Converter[A,B,C,D](a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D]) extends Converter[(A,B,C,D)] {

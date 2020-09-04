@@ -25,7 +25,7 @@ object IsabelleTest {
     userDir = Some(Paths.get("isabelle-temp/user/Isabelle2019-RC4/.isabelle"))
   )
 
-  lazy val isabelle: Isabelle = {
+  implicit lazy val isabelle: Isabelle = {
     println("Starting Isabelle")
     val isa = new Isabelle(setup)
     println("Started. Initializing Term/Typ/Context")
