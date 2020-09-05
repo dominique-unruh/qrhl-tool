@@ -5,6 +5,7 @@ import isabelle.control.{Isabelle, MLFunction, MLValue}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import MLValue.Implicits._
 import Thm.Implicits._
+import Cterm.Implicits._
 import Context.Implicits._
 import isabelle.control.MLValue.Converter
 
@@ -29,7 +30,7 @@ object Thm {
       Term.init(isabelle)
       isabelle.executeMLCodeNow("exception E_Thm of thm")
       getThm = MLValue.compileFunction[(Context, String), Thm]("fn (ctxt, name) => Proof_Context.get_thm ctxt name")
-      cpropOf = MLValue.compileFunctionRaw[Thm, Cterm]("fn (E_Thm thm) => Thm.cprop_of thm |> E_CTerm")
+      cpropOf = MLValue.compileFunction[Thm, Cterm]("Thm.cprop_of thm")
       stringOfThm = MLValue.compileFunction[(Context, Thm), String]("fn (ctxt, thm) => Thm.string_of_thm ctxt thm")
     }
   }

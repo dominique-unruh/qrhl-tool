@@ -253,13 +253,16 @@ class Isabelle(setup: Setup, build: Boolean = false) {
 
   def executeMLCodeNow(ml : String): Unit = Await.result(executeMLCode(ml), Duration.Inf)
 
-  private[control] def storeFunction(ml : String): Promise[ID] = {
+  private[control] def storeValue(ml : String): Promise[ID] = {
     val promise : Promise[ID] = Promise()
     assert(!ml.contains('\n'))
 //    logger.debug(s"Compiling ML function: $ml")
     send(s"f$ml\n", { result => promise.complete(result.map(intStringToID)) })
     promise
   }
+
+  @deprecated("use storeValue","")
+  private[control] def storeFunction(ml : String): Promise[ID] = storeValue(s"E_ExnExn ($ml)")
 
   private[control] def storeInteger(i: Int): Promise[ID] = {
     val promise : Promise[ID] = Promise()
@@ -345,7 +348,8 @@ object Isabelle {
 
 abstract class IsabelleControllerException(message: String) extends IOException(message)
 case class IsabelleDestroyedException(message: String) extends IsabelleControllerException(message)
-case class IsabelleBuildException(message: String, errors: List[String]) extends IsabelleControllerException(message + ": " + errors.last)
+case class IsabelleBuildException(message: String, errors: List[String])
+  extends IsabelleControllerException(if (errors.nonEmpty) message + ": " + errors.last else message)
 case class IsabelleException(isabelle: Isabelle, msgID: Isabelle.ID) extends IsabelleControllerException("Isabelle exception") {
   override def getMessage: String =  Await.result(isabelle.retrieveString(msgID).future, Duration.Inf)
 }

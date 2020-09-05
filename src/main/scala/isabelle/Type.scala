@@ -29,15 +29,15 @@ sealed abstract class Typ {
     case (t1: MLValueTyp, t2: MLValueTyp) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
-      else Typ.equalsTyp(MLValue((t1,t2))).retrieveNow
+      else Typ.equalsTyp((t1,t2)).retrieveNow
     case (t1: MLValueTyp, t2: Typ) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed) t1.concrete == t2
-      else Typ.equalsTyp(MLValue((t1,t2))).retrieveNow
+      else Typ.equalsTyp((t1,t2)).retrieveNow
     case (t1: Typ, t2: MLValueTyp) =>
       import ExecutionContext.Implicits.global
       if (t2.concreteComputed) t1 == t2.concrete
-      else Typ.equalsTyp(MLValue((t1,t2))).retrieveNow
+      else Typ.equalsTyp((t1,t2)).retrieveNow
     case _ => false
   }
 }
@@ -51,8 +51,12 @@ final class MLValueTyp(val mlValue: MLValue[Typ])(implicit val isabelle: Isabell
       case 1 =>
         val (name,args) = Typ.destType(mlValue).retrieveNow
         new Type(name, args.toList, mlValue)
-      case 2 => ??? // TFree
-      case 3 => ??? // TVar
+      case 2 =>
+        val (name,sort) = Typ.destTFree(mlValue).retrieveNow
+        TFree(name,sort :_*)
+      case 3 =>
+        val (name,index,sort) = Typ.destTVar(mlValue).retrieveNow
+        TVar(name,index,sort :_*)
     }
     concreteLoaded = true
     typ
@@ -132,6 +136,8 @@ object Typ {
   private[isabelle] var makeType: MLFunction[(String, List[Typ]), Typ] = _
   private[isabelle] var whatTyp: MLFunction[Typ, Int] = _
   private[isabelle] var destType: MLFunction[Typ, (String, List[Typ])] = _
+  private[isabelle] var destTFree: MLFunction[Typ, (String, List[String])] = _
+  private[isabelle] var destTVar: MLFunction[Typ, (String, Int, List[String])] = _
   private var equalsTyp: MLFunction[((Typ,Typ)), Boolean] = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
@@ -143,10 +149,12 @@ object Typ {
       isabelle.executeMLCodeNow("exception E_Typ of typ") // ;; exception E_TypList of typ list
       readType = MLValue.compileFunction[(Context, String), Typ]("fn (ctxt, str) => Syntax.read_typ ctxt str")
       stringOfType = MLValue.compileFunction[(Context, Typ), String]("fn (ctxt, typ) => Syntax.string_of_typ ctxt typ")
-      whatTyp = MLValue.compileFunctionRaw[Typ, Int]("fn (E_Typ typ) => (case typ of Type _ => 1 | TFree _ => 2 | TVar _ => 3) |> E_Int")
-      destType = MLValue.compileFunction[Typ, (String, List[Typ])]("Term.dest_Type")
+      whatTyp = MLValue.compileFunctionRaw("fn (E_Typ typ) => (case typ of Type _ => 1 | TFree _ => 2 | TVar _ => 3) |> E_Int")
+      destType = MLValue.compileFunction("Term.dest_Type")
+      destTFree = MLValue.compileFunction("Term.dest_TFree")
+      destTVar = MLValue.compileFunction("fn TVar ((n,i),s) => (n,i,s)")
       makeType = MLValue.compileFunction[(String, List[Typ]), Typ]("Term.Type")
-      equalsTyp = MLValue.compileFunction[(Typ,Typ), Boolean]("op=")
+      equalsTyp = MLValue.compileFunction("op=")
     }
   }
 

@@ -70,8 +70,8 @@ fun store seq exn = sendReply seq [addToObjects exn]
 
 fun storeMany seq exns = sendReply seq (map addToObjects exns)
 
-fun storeMLExnExn seq ml =
-  executeML ("let open Control_Isabelle val result = E_ExnExn ("^ml^") in store "^string_of_int seq^" result end")
+fun storeMLValue seq ml =
+  executeML ("let open Control_Isabelle val result = ("^ml^") in store "^string_of_int seq^" result end")
 
 fun exn_str exn = Runtime.pretty_exn exn |> Pretty.unformatted_string_of
 
@@ -130,7 +130,7 @@ fun handleLine' seq line =
   | #"s" => store seq (E_Int (int_of_string (String.extract (line, 1, NONE))))
 
     (* fxxx - Parses xxx as ML function of type exn \<rightarrow> exn, stores xxx as object #seq *)
-  | #"f" => storeMLExnExn seq (String.extract (line, 1, NONE))
+  | #"f" => storeMLValue seq (String.extract (line, 1, NONE))
 
     (* rID - Parses ID as object# and returns the object, assuming it's (E_Int i), response 'seq i' *)
   | #"r" => retrieveInt seq (int_of_string (String.extract (line, 1, NONE)))

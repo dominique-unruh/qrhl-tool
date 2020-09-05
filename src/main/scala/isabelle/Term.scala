@@ -33,15 +33,15 @@ sealed abstract class Term {
     case (t1: MLValueTerm, t2: MLValueTerm) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
-      else Term.equalsTerm(MLValue((t1,t2))).retrieveNow
+      else Term.equalsTerm((t1,t2)).retrieveNow
     case (t1: MLValueTerm, t2: Term) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed) t1.concrete == t2
-      else Term.equalsTerm(MLValue((t1,t2))).retrieveNow
+      else Term.equalsTerm((t1,t2)).retrieveNow
     case (t1: Term, t2: MLValueTerm) =>
       import ExecutionContext.Implicits.global
       if (t2.concreteComputed) t1 == t2.concrete
-      else Term.equalsTerm(MLValue((t1,t2))).retrieveNow
+      else Term.equalsTerm((t1,t2)).retrieveNow
     case _ => false
   }
 }
@@ -88,24 +88,22 @@ final class MLValueTerm(val mlValue: MLValue[Term])(implicit val isabelle: Isabe
   lazy val concrete : Term = {
     val term = Term.whatTerm(mlValue).retrieveNow match {
       case 1 => // Const
-        val name = Term.termName(mlValue).retrieve
-        val typ = new MLValueTyp(Term.termTyp(mlValue))
-        new Const(await(name), typ, mlValue)
+        val (name,typ) = Term.destConst(mlValue).retrieveNow
+        Const(name, typ)
       case 2 => // Free
-        val name = Term.termName(mlValue).retrieve
-        val typ = new MLValueTyp(Term.termTyp(mlValue))
-        new Free(await(name), typ, mlValue)
+        val (name,typ) = Term.destFree(mlValue).retrieveNow
+        Free(name, typ)
       case 3 =>
-        val name = Term.termName(mlValue).retrieve
-        val typ = new MLValueTyp(Term.termTyp(mlValue))
-        ??? // Var
-      case 4 => ??? // Bound
+        val (name, index, typ) = Term.destVar(mlValue).retrieveNow
+        Var(name, index, typ)
+      case 4 =>
+        val index = Term.destBound(mlValue).retrieveNow
+        Bound(index)
       case 5 =>
-        val name = Term.termName(mlValue).retrieve
-        val typ = new MLValueTyp(Term.termTyp(mlValue))
-        ??? // Abs
-      case 6 => // App
-        val (t1,t2) = Term.dest_App(this.mlValue).retrieveNow
+        val (name,typ,body) = Term.destAbs(mlValue).retrieveNow
+        Abs(name,typ,body)
+      case 6 =>
+        val (t1,t2) = Term.destApp(this.mlValue).retrieveNow
         t1 $ t2
     }
     concreteLoaded = true
@@ -236,15 +234,20 @@ object Term {
   private var readTerm: MLFunction[((Context, String)), Term] = _
   private var readTermConstrained: MLFunction[(Context, String, Typ), Term] = _
   private var stringOfTerm: MLFunction[(Context, Term), String] = _
-  private[isabelle] var dest_App: MLFunction[Term, (Term,Term)] = _
   private[isabelle] var stringOfCterm: MLFunction[(Context, Cterm), String] = _
   private[isabelle] var termOfCterm: MLFunction[Cterm, Term] = _
   private[isabelle] var ctermOfTerm: MLFunction[(Context, Term), Cterm] = _
   private var equalsTerm: MLFunction[(Term,Term), Boolean] = _
 
   private[isabelle] var whatTerm : MLFunction[Term, Int] = _
-  private[isabelle] var termName: MLFunction[Term, String] = _
-  private[isabelle] var termTyp: MLFunction[Term, Typ] = _
+  private[isabelle] var destConst : MLFunction[Term, (String,Typ)] = _
+  private[isabelle] var destFree : MLFunction[Term, (String,Typ)] = _
+  private[isabelle] var destVar : MLFunction[Term, (String,Int,Typ)] = _
+  private[isabelle] var destBound : MLFunction[Term, Int] = _
+  private[isabelle] var destAbs : MLFunction[Term, (String,Typ,Term)] = _
+  private[isabelle] var destApp: MLFunction[Term, (Term,Term)] = _
+//  private[isabelle] var termName: MLFunction[Term, String] = _
+//  private[isabelle] var termTyp: MLFunction[Term, Typ] = _
   private[isabelle] var makeConst: MLFunction[(String, Typ), Term] = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
@@ -253,19 +256,24 @@ object Term {
       this.isabelle = isabelle
       implicit val _ = isabelle
       Typ.init(isabelle)
-      isabelle.executeMLCodeNow("exception E_Term of term;; exception E_CTerm of cterm")
-      readTerm = MLValue.compileFunction[(Context, String), Term]("fn (ctxt, str) => Syntax.read_term ctxt str")
-      readTermConstrained = MLValue.compileFunction[(Context, String, Typ), Term]("fn (ctxt,str,typ) => Syntax.parse_term ctxt str |> Type.constraint typ |> Syntax.check_term ctxt")
-      stringOfTerm = MLValue.compileFunction[(Context, Term), String]("fn (ctxt, term) => Syntax.string_of_term ctxt term")
-      stringOfCterm = MLValue.compileFunction[(Context, Cterm), String]("fn (ctxt, cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm)")
-      whatTerm = MLValue.compileFunctionRaw[Term, Int]("fn (E_Term term) => (case term of Const _ => 1 | Free _ => 2 | Var _ => 3 | Bound _ => 4 | Abs _ => 5 | _ $ _ => 6) |> E_Int")
-      termName = MLValue.compileFunctionRaw[Term, String]("fn (E_Term term) => (case term of Const (name,_) => name | Free (name,_) => name | Var ((name,_),_) => name | Abs(name,_,_) => name) |> E_String")
-      termTyp = MLValue.compileFunctionRaw[Term, Typ]("fn (E_Term term) => (case term of Const (_,typ) => typ | Free (_,typ) => typ | Var (_,typ) => typ | Abs(_,typ,_) => typ) |> E_Typ")
-      termOfCterm = MLValue.compileFunctionRaw[Cterm, Term]("fn (E_CTerm cterm) => E_Term (Thm.term_of cterm)")
-      ctermOfTerm = MLValue.compileFunction[(Context, Term), Cterm]("fn (ctxt, term) => Thm.cterm_of ctxt term")
-      makeConst = MLValue.compileFunction[(String, Typ), Term]("fn (name, typ) => Const (name, typ)")
-      dest_App = MLValue.compileFunction[Term, (Term,Term)]("Term.dest_comb")
-      equalsTerm = MLValue.compileFunction[(Term,Term), Boolean]("op=")
+      isabelle.executeMLCodeNow("exception E_Term of term;; exception E_Cterm of cterm")
+      readTerm = MLValue.compileFunction("fn (ctxt, str) => Syntax.read_term ctxt str")
+      readTermConstrained = MLValue.compileFunction("fn (ctxt,str,typ) => Syntax.parse_term ctxt str |> Type.constraint typ |> Syntax.check_term ctxt")
+      stringOfTerm = MLValue.compileFunction("fn (ctxt, term) => Syntax.string_of_term ctxt term")
+      stringOfCterm = MLValue.compileFunction("fn (ctxt, cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm)")
+      whatTerm = MLValue.compileFunctionRaw("fn (E_Term term) => (case term of Const _ => 1 | Free _ => 2 | Var _ => 3 | Bound _ => 4 | Abs _ => 5 | _ $ _ => 6) |> E_Int")
+//      termName = MLValue.compileFunctionRaw[Term, String]("fn (E_Term term) => (case term of Const (name,_) => name | Free (name,_) => name | Var ((name,_),_) => name | Abs(name,_,_) => name) |> E_String")
+//      termTyp = MLValue.compileFunctionRaw[Term, Typ]("fn (E_Term term) => (case term of Const (_,typ) => typ | Free (_,typ) => typ | Var (_,typ) => typ | Abs(_,typ,_) => typ) |> E_Typ")
+      termOfCterm = MLValue.compileFunction("Thm.term_of")
+      ctermOfTerm = MLValue.compileFunction("fn (ctxt, term) => Thm.cterm_of ctxt term")
+      makeConst = MLValue.compileFunction("fn (name, typ) => Const (name, typ)")
+      destApp = MLValue.compileFunction("Term.dest_comb")
+      destAbs = MLValue.compileFunction("fn Abs x => x")
+      destBound = MLValue.compileFunction("fn Bound x => x")
+      destConst = MLValue.compileFunction("fn Const x => x")
+      destFree = MLValue.compileFunction("fn Free x => x")
+      destVar = MLValue.compileFunction("fn Var ((n,i),s) => (n,i,s)")
+      equalsTerm = MLValue.compileFunction("op=")
     }
   }
 
