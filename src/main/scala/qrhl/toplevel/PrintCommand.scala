@@ -5,11 +5,12 @@ import qrhl.isabellex.IsabelleX
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.Context
 import isabelle.control.{IsabelleException, MLValue}
+import GIsabelle.Ops
 
 // Implicits
 import MLValue.Implicits._
+import qrhl.isabellex.MLValueConverters.Implicits._
 import Context.Implicits._
-import Subgoal.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 import GIsabelle.isabelleControl
 
@@ -41,7 +42,7 @@ case class PrintCommand(symbol : String) extends Command {
     }
 
     try {
-      val fact = GIsabelle.thms_as_subgoals(MLValue((state.isabelle.context, symbol))).retrieveNow
+      val fact = Ops.thms_as_subgoals(MLValue((state.isabelle.context, symbol))).retrieveNow
       found = true
       println(s"The name $symbol refers to ${fact.length} lemmas:\n")
       for (lemma <- fact)

@@ -17,7 +17,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
 import info.hupel.isabelle.api.XML
-import qrhl.State.{logger, subgoal_to_term_op}
+import qrhl.State.{logger, qrhl_subgoal_to_term_op}
 
 import scala.collection.mutable
 import hashedcomputation.Context.default
@@ -34,8 +34,7 @@ import MLValue.Implicits._
 import isabelle.Context.Implicits._
 import isabelle.Term.Implicits._
 import isabelle.Typ.Implicits._
-import Statement.Implicits._
-import Subgoal.Implicits._
+import qrhl.isabellex.MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import GIsabelle.isabelleControl
 
@@ -69,17 +68,6 @@ object Subgoal {
     for (thm <- thms)
       show_oracles(thm)
   }
-
-  object SubgoalConverter extends Converter[Subgoal] {
-    override def retrieve(value: MLValue[Subgoal])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Subgoal] = ???
-    override def store(value: Subgoal)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Subgoal] = ???
-    override lazy val exnToValue: String = "fn E_Subgoal s => s"
-    override lazy val valueToExn: String = "E_Subgoal"
-  }
-
-  object Implicits {
-    implicit val subgoalConverter: SubgoalConverter.type = SubgoalConverter
-  }
 }
 
 object QRHLSubgoal {
@@ -112,15 +100,8 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
   }
 
   override def toTerm(context: IsabelleX.ContextX): RichTerm = {
-//    val leftTerm = left.programListTerm(context).isabelleTerm
-//    val rightTerm = right.programListTerm(context).isabelleTerm
-//    val preTerm = pre.encodeAsExpression(context).isabelleTerm
-//    val postTerm = post.encodeAsExpression(context).isabelleTerm
-//    val qrhl : Term = Isabelle.qrhl $ preTerm $ leftTerm $ rightTerm $ postTerm
-//    val term = assumptions.foldRight[Term](qrhl) { HOLogic.imp $ _.isabelleTerm $ _ }
-//    RichTerm(Isabelle.boolT, term)
     val mlVal = MLValue((context.context,left:Statement,right:Statement,pre.isabelleTerm,post.isabelleTerm,assumptions.map(_.isabelleTerm)))
-    val term = subgoal_to_term_op(mlVal).retrieveNow
+    val term = qrhl_subgoal_to_term_op(mlVal).retrieveNow
     RichTerm(term)
   }
 
@@ -467,7 +448,7 @@ class State private (val environment: Environment,
         throw UserException(s"Isabelle loaded twice with different theories: ${if (_isabelleTheory.isEmpty) "none" else _isabelleTheory.mkString(", ")} vs. ${if (theoryPath.isEmpty) "none" else theoryPath.mkString(", ")}")
       else
         return this
-    
+
     val isabelle = IsabelleX.globalIsabelle
     val (ctxt,deps) = isabelle.getQRHLContextWithFiles(theoryPath : _*)
     logger.debug(s"Dependencies of theory $theory: $deps")
@@ -536,6 +517,6 @@ object State {
   private val logger = log4s.getLogger
 
   // left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]
-  val subgoal_to_term_op =
-    MLValue.compileFunction[(Context, Statement, Statement, Term, Term, List[Term]), Term]("QRHL_Operations.subgoal_to_term")
+  val qrhl_subgoal_to_term_op =
+    MLValue.compileFunction[(Context, Statement, Statement, Term, Term, List[Term]), Term]("QRHL_Operations.qrhl_subgoal_to_term")
 }

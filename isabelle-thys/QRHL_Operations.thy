@@ -30,10 +30,10 @@ operation_setup semiclassical_tac = \<open>
       (fn _ => "o2h")}
 \<close>
 
-operation_setup check_type = \<open>
+(* operation_setup check_type = \<open>
   {from_lib = Codec.tuple Codec.int term_tight_codec,
    to_lib = typ_tight_codec,
-   action = fn (ctx_id,t) => QRHL.checkType (Refs.Ctxt.read ctx_id) t} \<close>
+   action = fn (ctx_id,t) => QRHL.checkType (Refs.Ctxt.read ctx_id) t} \<close> *)
 
 operation_setup delete_context = \<open>
   {from_lib = Codec.int,
@@ -59,11 +59,11 @@ operation_setup print_typ = \<open>
    action = fn (ctx_id, t) => YXML.content_of (Syntax.string_of_typ (Refs.Ctxt.read ctx_id) t)}
 \<close>
 
-operation_setup add_assumption = \<open>
+(* operation_setup add_assumption = \<open>
   {from_lib = Codec.triple Codec.string term_tight_codec Codec.int,
    to_lib = Codec.int,
    action = fn (name,assm,ctx_id) => make_ctxt_ref (QRHL_Operations.addAssumption name assm (Refs.Ctxt.read ctx_id))}
-\<close>
+\<close> *)
 
 operation_setup read_typ = \<open>
   {from_lib = Codec.tuple Codec.int Codec.string,
@@ -98,7 +98,7 @@ operation_setup byQRHLPre = \<open>
           QRHL_Operations.byQRHLPre cvars qvars |> richterm_encode ctxt end}
 \<close>
 
-(* Ambient variables *)
+(* (* Ambient variables *)
 operation_setup declare_variable = \<open>
   {from_lib = Codec.triple Codec.int Codec.string typ_tight_codec,
    to_lib = Codec.int,
@@ -106,7 +106,7 @@ operation_setup declare_variable = \<open>
             let val ([v],ctxt') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] (Refs.Ctxt.read ctxt_id)
                 val _ = if v<>name then error("variable "^name^" already declared") else ()
             in make_ctxt_ref ctxt' end }
-\<close>
+\<close> *)
 
 operation_setup mk_equals_wp = \<open>
   {from_lib = tuple6
@@ -185,7 +185,7 @@ operation_setup apply_method = \<open>
 \<close>
 
 
-operation_setup simplify_term = \<open>
+(* operation_setup simplify_term = \<open>
   {from_lib = Codec.triple term_tight_codec (Codec.list Codec.string) Codec.int,
    to_lib = Codec.id,
    action = fn (t,thms,ctx_id) => let
@@ -194,7 +194,7 @@ operation_setup simplify_term = \<open>
      in (t,make_thm_ref thm)
         |> Codec.encode (Codec.tuple (richterm_codec' ctxt) Codec.int)
        end}
-\<close>
+\<close> *)
 
 operation_setup add_index_to_expression = \<open>
   {from_lib = Codec.triple Codec.int term_tight_codec Codec.bool,
@@ -278,14 +278,14 @@ operation_setup term_test = \<open>
    action = fn () => \<^term>\<open>True\<close>}
 \<close> *)
 
-operation_setup show_oracles_lines = \<open>
+(* operation_setup show_oracles_lines = \<open>
   {from_lib = Codec.int,
    to_lib = Codec.list Codec.string,
    action = fn thm_id =>
     let val thm :thm= Refs.Thm.read thm_id
         val ctxt = thm |> Thm.theory_of_thm |> Proof_Context.init_global
         val text = Extended_Sorry.show_oracles_lines ctxt [thm] |> map YXML.content_of
-    in text end}\<close>
+    in text end}\<close> *)
 
 (* operation_setup (sequential, bracket) use_thys2 = \<open>
   {from_lib = Codec.list Codec.string,
@@ -338,26 +338,13 @@ operation_setup declare_abstract_program = \<open>
      make_ctxt_ref (QRHL_Operations.declare_abstract_program (Refs.Ctxt.read ctxt_id) name cvars cwvars  qvars numOracles)}
 \<close>
 
-operation_setup declare_concrete_program = \<open>
-  {from_lib = tuple7 Codec.int (* ctxt *)
-                     Codec.string (* prog name *)
-                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* cvars *)
-                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* cwvars *)
-                     (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* qvars *)
-                     (Codec.list Codec.string) (* oracles *)
-                     statement_codec, (* body *)
-   to_lib = Codec.int,
-   action = fn ((ctxt_id,name,cvars,cwvars,qvars,oracles,body)) => 
-     make_ctxt_ref (QRHL_Operations.declare_concrete_program (Refs.Ctxt.read ctxt_id) name cvars cwvars qvars oracles body)}
-\<close>
-
 operation_setup debug = \<open>
   {from_lib = Codec.int,
    to_lib = Codec.string,
    action = fn ctxt_id => QRHL_Operations.debug (Refs.Ctxt.read ctxt_id)}
 \<close>
 
-operation_setup thms_as_subgoals = \<open>
+(* operation_setup thms_as_subgoals = \<open>
   {from_lib = Codec.tuple Codec.int (* ctxt *)
                           Codec.string (* rule *),
    to_lib = Codec.id,
@@ -368,6 +355,7 @@ operation_setup thms_as_subgoals = \<open>
      val encoded = Codec.encode (Codec.list (subgoal_codec' ctxt)) subgoals
    in encoded end}
 \<close>
+ *)
 
 operation_setup colocal_pred_qvars = \<open>
   {from_lib = Codec.triple
@@ -452,5 +440,12 @@ operation_setup is_finite = \<open>
   to_lib = Codec.bool,
   action = fn (ctxt_id, T) => QRHL_Operations.is_finite (Refs.Ctxt.read ctxt_id) T}
 \<close>
+
+
+
+ML \<open>
+QRHL_Operations.declare_variable
+\<close>
+
 
 end

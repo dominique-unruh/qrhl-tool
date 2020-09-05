@@ -8,7 +8,7 @@ import isabelle.control.{Isabelle, MLFunction, MLValue}
 import qrhl._
 import qrhl.isabellex.IsabelleX
 import MLValue.Implicits._
-import Subgoal.Implicits._
+import qrhl.isabellex.MLValueConverters.Implicits._
 import Context.Implicits._
 import Thm.Implicits._
 import qrhl.tactic.IsabelleTac.tactics

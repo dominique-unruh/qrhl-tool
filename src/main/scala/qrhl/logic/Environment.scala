@@ -9,11 +9,14 @@ import scala.collection.mutable
 import isabelle.{Context, Typ}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.control.MLValue
+import GIsabelle.Ops
 
 import scala.collection.immutable.ListSet
+
+// Implicits
 import MLValue.Implicits._
 import isabelle.Term.Implicits._
-import Statement.Implicits._
+import qrhl.isabellex.MLValueConverters.Implicits._
 import isabelle.Typ.Implicits._
 import isabelle.Context.Implicits._
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
@@ -226,8 +229,7 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     val cvars = vars.classical map { v => (v.name, v.valueTyp) }
     val cwvars = vars.written collect { case v : CVariable => (v.name, v.valueTyp) }
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val ctxt = declare_concrete_program_op(
-      MLValue((context.context, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program))).retrieveNow
+    val ctxt = Ops.declare_concrete_program_op((context.context, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program)).retrieveNow
     new ContextX(context.isabelle, ctxt)
   }
 
@@ -235,9 +237,4 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
     val args = if (oracles.isEmpty) "" else "(" + oracles.mkString(",") + ")"
     s"program $name$args = {\n${this.program.toStringMultiline("  ")}\n}"
   }
-}
-
-object ConcreteProgramDecl {
-  val declare_concrete_program_op =
-    MLValue.compileFunction[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement), Context]("QRHL_Operations.declare_concrete_program")
 }

@@ -3,6 +3,7 @@ struct
 
 open Programs
 open Prog_Variables
+open QRHL
 
 fun tuple4 a b c d =
   Codec.tuple a (Codec.triple b c d)
@@ -263,6 +264,11 @@ fun statement_codec' ctxt = Codec.basic {encode=statement_encode ctxt, decode=st
 
 datatype subgoal = Subgoal_QRHL of Relational_Hoare.qrhl_judgment * term list | Subgoal_Ambient of term
 
+fun qrhl_subgoal_to_term (ctxt,left,right,pre,post,assms) =
+  fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms 
+    (Relational_Hoare.qrhl_judgment_to_term ctxt (Relational_Hoare.QRHL_Judgment (pre,left,right,post)))
+
+(* TODO unused? *)
 fun subgoal_to_term ctxt (Subgoal_QRHL (qrhl, assms)) = 
     fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms (Relational_Hoare.qrhl_judgment_to_term ctxt qrhl)
   | subgoal_to_term _ (Subgoal_Ambient t) = t
@@ -358,7 +364,7 @@ fun create_context thy_names = let
 in (ctxt,files) end
 
 
-fun addAssumption name term ctx =
+fun addAssumption (name, term, ctx) =
   let val prop = case fastype_of term of
                    \<^typ>\<open>bool\<close> => HOLogic.mk_Trueprop term
                  | \<^typ>\<open>prop\<close> => term
@@ -411,7 +417,7 @@ fun declare_abstract_program ctxt (name:string) (cvars:(string*typ)list) (cwvars
   val ctxt = add_vars_abbrev "2" ctxt
 in ctxt end
 
-fun declare_concrete_program ctxt (name:string) (cvars:(string*typ)list) (cwvars:(string*typ)list) (qvars:(string*typ)list) (oracles:string list) (body:Programs.statement) = let
+fun declare_concrete_program (ctxt, name:string, cvars:(string*typ)list, cwvars:(string*typ) list, qvars:(string*typ)list, oracles:string list, body:Programs.statement) = let
   val ctxt = declare_abstract_program ctxt name cvars cwvars qvars (length oracles)
 
   fun tag ora = "@"^ora
@@ -480,7 +486,7 @@ fun simp_bool t ctx =
     | _ => raise TERM("simp_prop did not return a term starting with Trueprop",[t,res])
   end
 
-fun simp t facts ctxt =
+fun simp (t, facts, ctxt) =
   let val thms = (map (get_thms ctxt) facts |> List.concat)
       val ctxt  = fold (fn name => fn ctx => ctx addsimps thms) facts ctxt
   in case fastype_of t of
@@ -605,6 +611,7 @@ type statement = Programs.statement
 exception E_Subgoal of subgoal
 exception E_Statement of statement
 exception E_Varterm of exn Prog_Variables.tree
+exception E_Call of call
 
 fun whatStatement (Block _) = "block"
   | whatStatement (Local _) = "local"
@@ -632,5 +639,20 @@ fun expression_to_term (ctxt,t) =
 fun whatVarterm (VTCons _) = "cons"
   | whatVarterm (VTSingle _) = "single"
   | whatVarterm VTUnit = "unit"
+
+fun show_oracles_lines thm : string list = let
+  val ctxt = thm |> Thm.theory_of_thm |> Proof_Context.init_global
+  val text = Extended_Sorry.show_oracles_lines ctxt [thm] |> map YXML.content_of
+  in text end
+
+fun thms_as_subgoals (ctxt, rule) = let
+  val thms = get_thms ctxt rule
+  val subgoals = thms |> map Thm.prop_of |> map (term_to_subgoal ctxt)
+  in subgoals end 
+
+fun declare_variable (ctxt, name, T) = let
+  val ([v],ctxt') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctxt
+  val _ = if v<>name then error("variable "^name^" already declared") else ()
+  in ctxt' end
 
 end

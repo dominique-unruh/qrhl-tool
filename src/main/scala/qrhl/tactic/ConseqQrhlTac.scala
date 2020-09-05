@@ -4,9 +4,10 @@ import isabelle.{Context, Term, Typ}
 import isabelle.control.MLValue
 import org.log4s
 import qrhl._
-import qrhl.isabellex.{IsabelleX, RichTerm}
+import qrhl.isabellex.{IsabelleX, MLValueConverters, RichTerm}
 import qrhl.logic.{QVariable, Variable}
 import IsabelleX.{globalIsabelle => GIsabelle}
+import GIsabelle.Ops
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListSet
@@ -16,7 +17,7 @@ import isabelle.control.MLValue.Implicits._
 import isabelle.Context.Implicits._
 import isabelle.Typ.Implicits._
 import isabelle.Term.Implicits._
-import Subgoal.Implicits._
+import MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import GIsabelle.isabelleControl
 
@@ -70,7 +71,7 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
       val isabelle = state.isabelle.isabelle
       val context = state.isabelle.context
 
-      val ruleAsSubgoals = GIsabelle.thms_as_subgoals(
+      val ruleAsSubgoals = Ops.thms_as_subgoals(
         MLValue((context,rule))).retrieveNow
 
       ruleAsSubgoals match {

@@ -1,16 +1,14 @@
 package qrhl.isabellex
 
-import java.io.{BufferedReader, IOException, InputStreamReader}
+import java.io.IOException
 import java.lang
 import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Timer, TimerTask}
 
-import info.hupel.isabelle.api.{Configuration, Version, XML}
-import info.hupel.isabelle.hol.HOLogic
+import isabelle.control.{Isabelle, MLFunction}
 import isabelle.{Abs, App, Bound, Const, Free, Term, Theory, Typ, Type, Var}
-import qrhl.isabellex.IsabelleX.globalIsabelle.simplifyTermOp
 
 import scala.concurrent.ExecutionContext
 //import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Typ, Type, Var}
@@ -33,18 +31,13 @@ import isabelle.{Context, Symbols, Thm, control}
 import qrhl.isabellex.IsabelleX.fastype_of
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 import scalaz.Applicative
-import isabelle.control.MLValue.Implicits._
-import isabelle.Context.Implicits._
-import isabelle.control.MLValue.Implicits._
 
 import MLValue.Implicits._
 import Context.Implicits._
 import Term.Implicits._
 import Typ.Implicits._
 import Thm.Implicits._
-import VarTerm.Implicits._
-import Subgoal.Implicits._
-import Statement.Implicits._
+import MLValueConverters.Implicits._
 
 object DistributionDirectory {
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
@@ -75,6 +68,8 @@ object DistributionDirectory {
 
 class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   import IsabelleX._
+  import Ops._
+
   // TODO: Check whether this is really the version we instantiate
   val version = "2019-RC4"
 
@@ -207,33 +202,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     super.finalize()
   }
 
-  val listToBlock =
-    MLValue.compileFunction[List[Statement], Statement]("QRHL_Operations.Block")
-  val makeAssign =
-    MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.Assign")
-  val makeSample =
-    MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.Sample")
-  val makeIfThenElse =
-    MLValue.compileFunction[(Term,List[Statement],List[Statement]), Statement]("QRHL_Operations.IfThenElse")
-  val whatStatementOp =
-    MLValue.compileFunction[Statement, String]("QRHL_Operations.whatStatement")
-  val whatVartermOp =
-    MLValue.compileFunction[VarTerm[MLValue[Nothing]], String]("QRHL_Operations.whatVarterm")
-  val checkTypeOp =
-    MLValue.compileFunction[(Context, Term), Typ]("QRHL_Operations.check_type")
-  val createContextOp =
-    MLValue.compileFunction[List[String], (Context, List[String])]("QRHL_Operations.create_context")
-  val addAssumptionOp =
-    MLValue.compileFunction[(String, Term, Context), Context]("QRHL_Operations.add_assumption")
-  val simplifyTermOp =
-    MLValue.compileFunction[(Term, List[String], Context), (Term, Thm)]("QRHL_Operations.simplify_term")
-  val declareVariableOp =
-    MLValue.compileFunction[(Context, String, Typ), Context]("QRHL_Operations.declare_variable")
-  val thms_as_subgoals =
-    MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
-
-  val use_thy_op =
-    MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
 
   val boolT: Typ = Type(t.bool)
   val True_const: Const = Const(c.True, boolT)
@@ -349,8 +317,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
   def idOp(valueTyp: Typ): Const = Const(c.idOp, boundedT(valueTyp, valueTyp))
 
-  val show_oracles_lines_op =
-    MLValue.compileFunction[Thm, List[String]]("QRHL_Operations.show_oracles_lines")
   def show_oracles_lines(thm: Thm): List[String] = {
     show_oracles_lines_op(thm.mlValue).retrieveNow.map(IsabelleX.symbols.symbolsToUnicode)
   }
@@ -563,7 +529,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   val propT = Type(t.prop)
 
   //  val ifthenelseName = "Programs.ifthenelse"
-  val ifthenelse = Const(c.ifthenelse, expressionT(boolT) -->: listT(programT) -->: listT(programT) -->: programT)
+  val ifthenelse: Const = Const(c.ifthenelse, expressionT(boolT) -->: listT(programT) -->: listT(programT) -->: programT)
   //  val whileName = "Programs.while"
   val whileProg = Const(c.`while`, expressionT(boolT) -->: listT(programT) -->: programT)
   val metaImp = Const(c.imp, propT -->: propT -->: propT)
@@ -751,6 +717,77 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def funT(domain: Typ, range: Typ): Type = Type("fun", domain, range)
 
+  //noinspection TypeAnnotation
+  object Ops {
+    val declare_concrete_program_op =
+      MLValue.compileFunction[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement), Context]("QRHL_Operations.declare_concrete_program")
+
+    val show_oracles_lines_op =
+      MLValue.compileFunction[Thm, List[String]]("QRHL_Operations.show_oracles_lines")
+
+    val statement_to_term_op =
+      MLValue.compileFunction[(Context, Statement), Term]("fn (ctxt,st) => QRHL_Operations.statement_to_term ctxt st")
+    val statements_to_term_op =
+      MLValue.compileFunction[(Context, List[Statement]), Term]("fn (ctxt,st) => QRHL_Operations.statements_to_term ctxt st")
+    val listToBlock =
+      MLValue.compileFunction[List[Statement], Statement]("QRHL_Operations.Block")
+    val makeLocal =
+      MLValue.compileFunction[(VarTerm[(String,Typ)],VarTerm[(String,Typ)],List[Statement]), Statement]("QRHL_Operations.Local")
+    val makeAssign =
+      MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.Assign")
+    val makeSample =
+      MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.Sample")
+    val makeIfThenElse =
+      MLValue.compileFunction[(Term,List[Statement],List[Statement]), Statement]("QRHL_Operations.IfThenElse")
+    val makeQApply =
+      MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.QApply")
+    val makeQInit =
+      MLValue.compileFunction[(VarTerm[String],Term), Statement]("QRHL_Operations.QInit")
+    val makeWhile =
+      MLValue.compileFunction[(Term,List[Statement]), Statement]("QRHL_Operations.While")
+    val makeCALL =
+      MLValue.compileFunction[(String, List[Call]), Call]("QRHL_Operations.CALL")
+    val destCALL =
+      MLValue.compileFunction[Call, (String, List[Call])]("fn QRHL_Operations.CALL x => x")
+    val makeCall =
+      MLValue.compileFunction[Call, Statement]("QRHL_Operations.Call")
+    val makeMeasurement =
+      MLValue.compileFunction[(VarTerm[String],VarTerm[String],Term), Statement]("QRHL_Operations.Measurement")
+    val whatStatementOp =
+      MLValue.compileFunction[Statement, String]("QRHL_Operations.whatStatement")
+    private val whatVartermOp_ =
+      MLValue.compileFunction[VarTerm[MLValue[Nothing]], String]("QRHL_Operations.whatVarterm")
+    def whatVartermOp[A] = whatVartermOp_.asInstanceOf[MLFunction[VarTerm[MLValue[A]], String]]
+    private val destVartermCons_ =
+      MLValue.compileFunction[VarTerm[MLValue[Nothing]], (VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]])]("fn QRHL_Operations.VTCons x => x")
+    def destVartermCons[A] = destVartermCons_.asInstanceOf[MLFunction[VarTerm[MLValue[A]], (VarTerm[MLValue[A]], VarTerm[MLValue[A]])]]
+    private val destVartermSingle_ =
+      MLValue.compileFunction[VarTerm[MLValue[Nothing]], MLValue[Nothing]]("fn QRHL_Operations.VTSingle x => x")
+    def destVartermSingle[A] = destVartermSingle_.asInstanceOf[MLFunction[VarTerm[MLValue[A]], MLValue[A]]]
+    private val vartermUnit_ =
+      MLValue.compileValue[VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTUnit")
+    def vartermUnit[A] = vartermUnit_.asInstanceOf[VarTerm[A]]
+    private val vartermCons_ =
+      MLValue.compileFunction[(VarTerm[MLValue[Nothing]],VarTerm[MLValue[Nothing]]), VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTCons")
+    def vartermCons[A] = vartermCons_.asInstanceOf[MLFunction[(VarTerm[MLValue[A]],VarTerm[MLValue[A]]), VarTerm[MLValue[A]]]]
+    private val vartermSingle_ =
+      MLValue.compileFunction[MLValue[Nothing], VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTSingle")
+    def vartermSingle[A] = vartermSingle_.asInstanceOf[MLFunction[MLValue[A], VarTerm[MLValue[A]]]]
+    val checkTypeOp =
+      MLValue.compileFunction[(Context, Term), Typ]("fn (ctxt,t) => QRHL_Operations.checkType ctxt t")
+    val createContextOp =
+      MLValue.compileFunction[List[String], (Context, List[String])]("QRHL_Operations.create_context")
+    val addAssumptionOp =
+      MLValue.compileFunction[(String, Term, Context), Context]("QRHL_Operations.addAssumption")
+    val simplifyTermOp =
+      MLValue.compileFunction[(Term, List[String], Context), (Term, Thm)]("QRHL_Operations.simp")
+    val declareVariableOp =
+      MLValue.compileFunction[(Context, String, Typ), Context]("QRHL_Operations.declare_variable")
+    val thms_as_subgoals =
+      MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
+    val use_thy_op =
+      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
+  }
 }
 
 object IsabelleX {
@@ -795,19 +832,21 @@ object IsabelleX {
   def theContext: ContextX = _theContext
 
   class ContextX(val isabelle: IsabelleX, val context: _root_.isabelle.Context) {
-    private implicit val isabelleControl = isabelle.isabelleControl
+    private implicit val isabelleControl: Isabelle = isabelle.isabelleControl
+    import isabelle.Ops._
+
     _theContext = this
 
     def checkType(term: Term): Typ =
-      isabelle.checkTypeOp(MLValue(context,term)).retrieveNow
+      checkTypeOp(MLValue(context,term)).retrieveNow
 
     def declareVariable(name: String, isabelleTyp: Typ): ContextX = {
-      val ctxt = isabelle.declareVariableOp(MLValue((context, name, isabelleTyp))).retrieveNow
+      val ctxt = declareVariableOp(MLValue((context, name, isabelleTyp))).retrieveNow
       new ContextX(isabelle, ctxt)
     }
 
     def addAssumption(name: String, assumption: Term): ContextX = {
-      val ctxt = isabelle.addAssumptionOp(
+      val ctxt = addAssumptionOp(
         MLValue((name, assumption, context))).retrieveNow
       new ContextX(isabelle, ctxt)
     }
@@ -834,6 +873,5 @@ object IsabelleX {
       (RichTerm(t), thm)
     }
   }
-
 
 }

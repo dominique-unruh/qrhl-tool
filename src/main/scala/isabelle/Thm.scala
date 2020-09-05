@@ -30,7 +30,7 @@ object Thm {
       Term.init(isabelle)
       isabelle.executeMLCodeNow("exception E_Thm of thm")
       getThm = MLValue.compileFunction[(Context, String), Thm]("fn (ctxt, name) => Proof_Context.get_thm ctxt name")
-      cpropOf = MLValue.compileFunction[Thm, Cterm]("Thm.cprop_of thm")
+      cpropOf = MLValue.compileFunction[Thm, Cterm]("Thm.cprop_of")
       stringOfThm = MLValue.compileFunction[(Context, Thm), String]("fn (ctxt, thm) => Thm.string_of_thm ctxt thm")
     }
   }
