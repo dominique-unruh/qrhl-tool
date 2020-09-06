@@ -1,6 +1,6 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLFunction, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLValue}
 
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future}
@@ -138,7 +138,7 @@ object Typ {
   private[isabelle] var destType: MLFunction[Typ, (String, List[Typ])] = _
   private[isabelle] var destTFree: MLFunction[Typ, (String, List[String])] = _
   private[isabelle] var destTVar: MLFunction[Typ, (String, Int, List[String])] = _
-  private var equalsTyp: MLFunction[((Typ,Typ)), Boolean] = _
+  private var equalsTyp: MLFunction2[Typ, Typ, Boolean] = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {

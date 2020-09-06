@@ -1,6 +1,7 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLFunction, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLFunction4, MLValue}
+import Term.Ops
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
@@ -16,9 +17,9 @@ sealed abstract class Term {
   val mlValue : MLValue[Term]
   implicit val isabelle : Isabelle
   def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
-    Term.stringOfTerm(MLValue((ctxt, this))).retrieveNow
+    Ops.stringOfTerm(MLValue((ctxt, this))).retrieveNow
   val concrete : Term
-  def $(that: Term): Term = App(this, that)
+  def $(that: Term)(implicit ec: ExecutionContext): Term = App(this, that)
   override def equals(that: Any): Boolean = (this, that) match {
     case (t1, t2: AnyRef) if t1 eq t2 => true
     case (t1: App, t2: App) => t1.fun == t2.fun && t1.arg == t2.arg
@@ -33,24 +34,24 @@ sealed abstract class Term {
     case (t1: MLValueTerm, t2: MLValueTerm) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
-      else Term.equalsTerm((t1,t2)).retrieveNow
+      else Ops.equalsTerm((t1,t2)).retrieveNow
     case (t1: MLValueTerm, t2: Term) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed) t1.concrete == t2
-      else Term.equalsTerm((t1,t2)).retrieveNow
+      else Ops.equalsTerm((t1,t2)).retrieveNow
     case (t1: Term, t2: MLValueTerm) =>
       import ExecutionContext.Implicits.global
       if (t2.concreteComputed) t1 == t2.concrete
-      else Term.equalsTerm((t1,t2)).retrieveNow
+      else Ops.equalsTerm((t1,t2)).retrieveNow
     case _ => false
   }
 }
 
 final class Cterm private(val ctermMlValue: MLValue[Cterm])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
-  override lazy val mlValue: MLValue[Term] = Term.termOfCterm(ctermMlValue)
+  override lazy val mlValue: MLValue[Term] = Ops.termOfCterm(ctermMlValue)
   def mlValueTerm = new MLValueTerm(mlValue)
   override def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
-    Term.stringOfCterm(MLValue((ctxt, this))).retrieveNow
+    Ops.stringOfCterm(MLValue((ctxt, this))).retrieveNow
   lazy val concrete: Term = new MLValueTerm(mlValue).concrete
 }
 
@@ -61,7 +62,7 @@ object Cterm {
 
   def apply(ctxt: Context, term: Term)(implicit isabelle: Isabelle, ec: ExecutionContext) : Cterm = {
     implicit val _ = ctxt
-    new Cterm(Term.ctermOfTerm(MLValue((ctxt, term))))
+    new Cterm(Ops.ctermOfTerm(MLValue((ctxt, term))))
   }
 
   object CtermConverter extends Converter[Cterm] {
@@ -86,24 +87,24 @@ final class MLValueTerm(val mlValue: MLValue[Term])(implicit val isabelle: Isabe
   def concreteComputed: Boolean = concreteLoaded
   @volatile private var concreteLoaded = false
   lazy val concrete : Term = {
-    val term = Term.whatTerm(mlValue).retrieveNow match {
+    val term = Ops.whatTerm(mlValue).retrieveNow match {
       case 1 => // Const
-        val (name,typ) = Term.destConst(mlValue).retrieveNow
+        val (name,typ) = Ops.destConst(mlValue).retrieveNow
         Const(name, typ)
       case 2 => // Free
-        val (name,typ) = Term.destFree(mlValue).retrieveNow
+        val (name,typ) = Ops.destFree(mlValue).retrieveNow
         Free(name, typ)
       case 3 =>
-        val (name, index, typ) = Term.destVar(mlValue).retrieveNow
+        val (name, index, typ) = Ops.destVar(mlValue).retrieveNow
         Var(name, index, typ)
       case 4 =>
-        val index = Term.destBound(mlValue).retrieveNow
+        val index = Ops.destBound(mlValue).retrieveNow
         Bound(index)
       case 5 =>
-        val (name,typ,body) = Term.destAbs(mlValue).retrieveNow
+        val (name,typ,body) = Ops.destAbs(mlValue).retrieveNow
         Abs(name,typ,body)
       case 6 =>
-        val (t1,t2) = Term.destApp(this.mlValue).retrieveNow
+        val (t1,t2) = Ops.destApp(this.mlValue).retrieveNow
         t1 $ t2
     }
     concreteLoaded = true
@@ -119,7 +120,7 @@ final class Const private[isabelle] (val name: String, val typ: Typ, val initial
                                   (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
   lazy val mlValue : MLValue[Term] =
     if (initialMlValue!=null) initialMlValue
-    else Term.makeConst(MLValue((name,typ)))
+    else Ops.makeConst(MLValue((name,typ)))
   @inline override val concrete: Const = this
   override def toString: String = name
 }
@@ -136,14 +137,16 @@ object Const {
 }
 
 final class Free private[isabelle] (val name: String, val typ: Typ, val initialMlValue: MLValue[Term]=null)
-                                   (implicit val isabelle: Isabelle) extends Term {
-  lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
+                                   (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
+  lazy val mlValue : MLValue[Term] =
+    if (initialMlValue!=null) initialMlValue
+    else Ops.makeFree(name, typ)
   @inline override val concrete: Free = this
   override def toString: String = name
 }
 
 object Free {
-  def apply(name: String, typ: Typ)(implicit isabelle: Isabelle) = new Free(name, typ)
+  def apply(name: String, typ: Typ)(implicit isabelle: Isabelle, ec: ExecutionContext) = new Free(name, typ)
 
   @tailrec
   def unapply(term: Term): Option[(String, Typ)] = term match {
@@ -172,14 +175,17 @@ object Var {
 }
 
 final class App private (val fun: Term, val arg: Term, val initialMlValue: MLValue[Term]=null)
-                        (implicit val isabelle: Isabelle) extends Term {
-  lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
+                        (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
+  lazy val mlValue : MLValue[Term] =
+    if (initialMlValue!=null) initialMlValue
+    else Ops.makeApp(fun,arg)
+
   @inline override val concrete: App = this
   override def toString: String = s"($fun $$ $arg)"
 }
 
 object App {
-  def apply(fun: Term, arg: Term)(implicit isabelle: Isabelle) = new App(fun, arg)
+  def apply(fun: Term, arg: Term)(implicit isabelle: Isabelle, ec: ExecutionContext) = new App(fun, arg)
 
   @tailrec
   def unapply(term: Term): Option[(Term, Term)] = term match {
@@ -229,60 +235,45 @@ object Bound {
 
 
 object Term {
+  private[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+    Typ.init(isabelle)
+    isabelle.executeMLCodeNow("exception E_Term of term;; exception E_Cterm of cterm")
 
-  private implicit var isabelle: Isabelle = _
-  private var readTerm: MLFunction[((Context, String)), Term] = _
-  private var readTermConstrained: MLFunction[(Context, String, Typ), Term] = _
-  private var stringOfTerm: MLFunction[(Context, Term), String] = _
-  private[isabelle] var stringOfCterm: MLFunction[(Context, Cterm), String] = _
-  private[isabelle] var termOfCterm: MLFunction[Cterm, Term] = _
-  private[isabelle] var ctermOfTerm: MLFunction[(Context, Term), Cterm] = _
-  private var equalsTerm: MLFunction[(Term,Term), Boolean] = _
+    val readTerm: MLFunction2[Context, String, Term] = MLValue.compileFunction("fn (ctxt, str) => Syntax.read_term ctxt str")
+    val readTermConstrained: MLFunction3[Context, String, Typ, Term] = MLValue.compileFunction("fn (ctxt,str,typ) => Syntax.parse_term ctxt str |> Type.constraint typ |> Syntax.check_term ctxt")
+    val stringOfTerm: MLFunction2[Context, Term, String] = MLValue.compileFunction("fn (ctxt, term) => Syntax.string_of_term ctxt term")
+    val stringOfCterm: MLFunction2[Context, Cterm, String] = MLValue.compileFunction("fn (ctxt, cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm)")
+    val termOfCterm: MLFunction[Cterm, Term] = MLValue.compileFunction("Thm.term_of")
+    val ctermOfTerm: MLFunction2[Context, Term, Cterm] = MLValue.compileFunction("fn (ctxt, term) => Thm.cterm_of ctxt term")
+    val equalsTerm: MLFunction2[Term, Term, Boolean] = MLValue.compileFunction("op=")
+    val whatTerm : MLFunction[Term, Int] = MLValue.compileFunctionRaw("fn (E_Term term) => (case term of Const _ => 1 | Free _ => 2 | Var _ => 3 | Bound _ => 4 | Abs _ => 5 | _ $ _ => 6) |> E_Int")
+    val destConst : MLFunction[Term, (String,Typ)] = MLValue.compileFunction("fn Const x => x")
+    val destFree : MLFunction[Term, (String,Typ)] = MLValue.compileFunction("fn Free x => x")
+    val destVar : MLFunction[Term, (String,Int,Typ)] = MLValue.compileFunction("fn Var ((n,i),s) => (n,i,s)")
+    val destBound : MLFunction[Term, Int] = MLValue.compileFunction("fn Bound x => x")
+    val destAbs : MLFunction[Term, (String,Typ,Term)] = MLValue.compileFunction("fn Abs x => x")
+    val destApp: MLFunction[Term, (Term,Term)] = MLValue.compileFunction("Term.dest_comb")
+    val makeConst : MLFunction2[String, Typ, Term] = MLValue.compileFunction("Const")
+    val makeFree : MLFunction2[String, Typ, Term] = MLValue.compileFunction("Free")
+    val makeVar : MLFunction3[String, Int, Typ, Term] = MLValue.compileFunction("fn (n,i,s) => Var ((n,i),s)")
+    val makeApp : MLFunction2[Term, Term, Term] = MLValue.compileFunction("op$")
+    val makeBound : MLFunction[Int, Term] = MLValue.compileFunction("Bound")
+  }
 
-  private[isabelle] var whatTerm : MLFunction[Term, Int] = _
-  private[isabelle] var destConst : MLFunction[Term, (String,Typ)] = _
-  private[isabelle] var destFree : MLFunction[Term, (String,Typ)] = _
-  private[isabelle] var destVar : MLFunction[Term, (String,Int,Typ)] = _
-  private[isabelle] var destBound : MLFunction[Term, Int] = _
-  private[isabelle] var destAbs : MLFunction[Term, (String,Typ,Term)] = _
-  private[isabelle] var destApp: MLFunction[Term, (Term,Term)] = _
-//  private[isabelle] var termName: MLFunction[Term, String] = _
-//  private[isabelle] var termTyp: MLFunction[Term, Typ] = _
-  private[isabelle] var makeConst: MLFunction[(String, Typ), Term] = _
+  private[isabelle] var Ops : Ops = null
 
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (this.isabelle == null) {
-      this.isabelle = isabelle
-      implicit val _ = isabelle
-      Typ.init(isabelle)
-      isabelle.executeMLCodeNow("exception E_Term of term;; exception E_Cterm of cterm")
-      readTerm = MLValue.compileFunction("fn (ctxt, str) => Syntax.read_term ctxt str")
-      readTermConstrained = MLValue.compileFunction("fn (ctxt,str,typ) => Syntax.parse_term ctxt str |> Type.constraint typ |> Syntax.check_term ctxt")
-      stringOfTerm = MLValue.compileFunction("fn (ctxt, term) => Syntax.string_of_term ctxt term")
-      stringOfCterm = MLValue.compileFunction("fn (ctxt, cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm)")
-      whatTerm = MLValue.compileFunctionRaw("fn (E_Term term) => (case term of Const _ => 1 | Free _ => 2 | Var _ => 3 | Bound _ => 4 | Abs _ => 5 | _ $ _ => 6) |> E_Int")
-//      termName = MLValue.compileFunctionRaw[Term, String]("fn (E_Term term) => (case term of Const (name,_) => name | Free (name,_) => name | Var ((name,_),_) => name | Abs(name,_,_) => name) |> E_String")
-//      termTyp = MLValue.compileFunctionRaw[Term, Typ]("fn (E_Term term) => (case term of Const (_,typ) => typ | Free (_,typ) => typ | Var (_,typ) => typ | Abs(_,typ,_) => typ) |> E_Typ")
-      termOfCterm = MLValue.compileFunction("Thm.term_of")
-      ctermOfTerm = MLValue.compileFunction("fn (ctxt, term) => Thm.cterm_of ctxt term")
-      makeConst = MLValue.compileFunction("fn (name, typ) => Const (name, typ)")
-      destApp = MLValue.compileFunction("Term.dest_comb")
-      destAbs = MLValue.compileFunction("fn Abs x => x")
-      destBound = MLValue.compileFunction("fn Bound x => x")
-      destConst = MLValue.compileFunction("fn Const x => x")
-      destFree = MLValue.compileFunction("fn Free x => x")
-      destVar = MLValue.compileFunction("fn Var ((n,i),s) => (n,i,s)")
-      equalsTerm = MLValue.compileFunction("op=")
-    }
+    if (Ops == null)
+      Ops = new Ops()(isabelle, ec)
   }
 
-  def apply(context: Context, string: String)(implicit ec: ExecutionContext): MLValueTerm = {
-    new MLValueTerm(readTerm(MLValue((context, string))))
+  def apply(context: Context, string: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValueTerm = {
+    new MLValueTerm(Ops.readTerm(MLValue((context, string))))
   }
 
-  def apply(context: Context, string: String, typ: Typ)(implicit ec: ExecutionContext): MLValueTerm = {
-    new MLValueTerm(readTermConstrained(MLValue((context, string, typ))))
+  def apply(context: Context, string: String, typ: Typ)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValueTerm = {
+    new MLValueTerm(Ops.readTermConstrained(MLValue((context, string, typ))))
   }
 
   object TermConverter extends Converter[Term] {
