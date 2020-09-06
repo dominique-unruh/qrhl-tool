@@ -6,6 +6,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import MLValue.Implicits._
+import MLValue.Ops
 import isabelle.control.Isabelle.ID
 import org.log4s
 
@@ -20,7 +21,7 @@ class MLValue[A] private[isabelle](val id: Future[Isabelle.ID]) {
 
   def mlValueOfItself: MLValue[MLValue[A]] = this.asInstanceOf[MLValue[MLValue[A]]]
   def debugInfo(implicit isabelle: Isabelle, ec: ExecutionContext): String =
-    MLValue.debugInfo.asInstanceOf[MLFunction[MLValue[A], String]].apply(mlValueOfItself).retrieveNow
+    Ops.debugInfo.asInstanceOf[MLFunction[MLValue[A], String]].apply(mlValueOfItself).retrieveNow
 
   def stateString: String = id.value match {
     case Some(Success(_)) => ""
@@ -172,32 +173,44 @@ class MLFunction7[D1, D2, D3, D4, D5, D6, D7, R] private[isabelle] (id: Future[I
 object MLValue {
   private val logger = log4s.getLogger
 
-  // TODO: UGLY HACK (make compatible with several instances of Isabelle, avoid need to call MLValue.init)
-  private var isabelle : Isabelle = _
-  private var listCons : MLFunction[(_,List[_]), List[_]] = _
-  private var listNil : MLValue[List[_]] = _
-  private var listIsNil : MLFunction[List[_], Boolean] = _
-  private var destCons : MLFunction[List[_], (_,List[_])] = _
-  private var boolToInt : MLFunction[Boolean, Int] = _
-  private var boolTrue : MLValue[Boolean] = _
-  private var boolFalse : MLValue[Boolean] = _
-  private var debugInfo : MLFunction[MLValue[Any], String] = _
+  private[control] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+    isabelle.executeMLCodeNow("exception E_List of exn list; exception E_Bool of bool; exception E_Option of exn options")
 
+    private val optionNone_ = MLValue.compileValueRaw[Option[_]]("E_Option NONE")
+    def optionNone[A]: MLValue[Option[A]] = optionNone_.asInstanceOf[MLValue[Option[A]]]
+    private val optionSome_ = MLValue.compileFunctionRaw[Nothing, Option[Nothing]]("E_Option o SOME")
+    def optionSome[A]: MLFunction[A, Option[A]] = optionSome_.asInstanceOf[MLFunction[A, Option[A]]]
+    private val optionIsNone_ = MLValue.compileFunctionRaw[Option[Nothing], Boolean]("fn E_Option NONE => true | E_Option _ => false")
+    def optionIsNone[A]: MLFunction[Option[A], Boolean] = optionIsNone_.asInstanceOf[MLFunction[Option[A], Boolean]]
+    private val destSome_ = MLValue.compileFunctionRaw[Option[Nothing], Nothing]("fn E_Option (SOME x) => x")
+    def destSome[A]: MLFunction[Option[A], A] = destSome_.asInstanceOf[MLFunction[Option[A], A]]
+
+    private val listCons_  =
+      MLValue.compileFunctionRaw[(Nothing,List[Nothing]), List[Nothing]]("fn E_Pair (x, E_List xs) => E_List (x::xs)")
+        .function2[Nothing, List[Nothing], List[Nothing]]
+    def listCons[A]: MLFunction2[A, List[A], List[A]] =
+      listCons_.asInstanceOf[MLFunction2[A, List[A], List[A]]]
+    private val listNil_ : MLValue[List[_]] = MLValue.compileValueRaw("E_List []")
+    def listNil[A]: MLValue[List[A]] = listNil_.asInstanceOf[MLValue[List[A]]]
+    val listIsNil_ : MLFunction[List[_], Boolean] =
+      MLValue.compileFunctionRaw[List[_], Boolean]("fn E_List [] => E_Bool true | E_List _ => E_Bool false")
+    def listIsNil[A]: MLFunction[List[A], Boolean] = listIsNil_.asInstanceOf[MLFunction[List[A], Boolean]]
+    val destCons_ : MLFunction[List[_], (_,List[_])] = MLValue.compileFunctionRaw[List[_], (_,List[_])]("fn E_List (x::xs) => E_Pair (x, E_List xs)")
+    def destCons[A]: MLFunction[List[A], (A, List[A])] = destCons_.asInstanceOf[MLFunction[List[A], (A,List[A])]]
+
+    val boolToInt : MLFunction[Boolean, Int] = MLValue.compileFunction[Boolean, Int]("fn true => 1 | false => 0")
+    val boolTrue : MLValue[Boolean] = MLValue.compileValue("true")
+    val boolFalse : MLValue[Boolean] = MLValue.compileValue("false")
+
+    val debugInfo : MLFunction[MLValue[Any], String] = MLValue.compileFunctionRaw[MLValue[Any], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
+  }
+
+  private[isabelle] var Ops : Ops = _
+
+  // TODO: UGLY HACK (make compatible with several instances of Isabelle, avoid need to call MLValue.init)
   def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (this.isabelle == null) {
-      this.isabelle = isabelle
-      implicit val isa = isabelle
-      isabelle.executeMLCodeNow("exception E_List of exn list;; exception E_Bool of bool")
-      listCons = MLValue.compileFunctionRaw[(_,List[_]), List[_]]("fn E_Pair (x, E_List xs) => E_List (x::xs)")
-      listNil = MLValue.compileValueRaw[List[_]]("E_List []")
-      listIsNil = MLValue.compileFunctionRaw[List[_], Boolean]("fn E_List [] => E_Bool true | E_List _ => E_Bool false")
-      destCons = MLValue.compileFunctionRaw[List[_], (_,List[_])]("fn E_List (x::xs) => E_Pair (x, E_List xs)")
-      boolToInt = MLValue.compileFunction[Boolean, Int]("fn true => 1 | false => 0")
-//      val intToBool = MLValue.compileFunction[Int, Boolean]("fn 0 => false | _ => true")
-      boolTrue = MLValue.compileValue("true")
-      boolFalse = MLValue.compileValue("false")
-      debugInfo = MLValue.compileFunctionRaw[MLValue[Any], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
-    }
+    if (Ops == null)
+      Ops = new Ops()(isabelle, ec)
   }
 
   abstract class Converter[A] {
@@ -278,10 +291,10 @@ object MLValue {
 
   object BooleanConverter extends Converter[Boolean] {
     override def retrieve(value: MLValue[Boolean])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Boolean] =
-      for (i <- boolToInt(value).retrieve)
+      for (i <- Ops.boolToInt(value).retrieve)
         yield i != 0
     override def store(value: Boolean)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Boolean] =
-      if (value) boolTrue else boolFalse
+      if (value) Ops.boolTrue else Ops.boolFalse
     override lazy val exnToValue: String = "fn E_Bool b => b"
     override lazy val valueToExn: String = "E_Bool"
   }
@@ -305,24 +318,36 @@ object MLValue {
     override lazy val valueToExn: String = "fn x => x"
   }
 
-  @inline class ListConverter[A](converter: Converter[A]) extends Converter[List[A]] {
+  @inline class ListConverter[A](implicit converter: Converter[A]) extends Converter[List[A]] {
     @inline override def store(value: List[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[List[A]] = value match {
-      case Nil => listNil.asInstanceOf[MLValue[List[A]]]
-      case x::xs =>
-        implicit val convA: Converter[A] = converter
-        val pairMLVal = MLValue((x, xs))
-        listCons.asInstanceOf[MLFunction[(A,List[A]), List[A]]].apply(pairMLVal)
+      case Nil => Ops.listNil
+      case x::xs => Ops.listCons(x, xs)
     }
     @inline override def retrieve(value: MLValue[List[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[List[A]] = {
-      implicit val conv: Converter[A] = converter
-      listIsNil.asInstanceOf[MLFunction[List[A], Boolean]].apply(value).retrieve.flatMap {
+      Ops.listIsNil(value).retrieve.flatMap {
         case true => Future.successful(Nil)
-        case false => for ((hd,tail) <- destCons.asInstanceOf[MLFunction[List[A], (A,List[A])]](value).retrieve)
+        case false => for ((hd,tail) <- Ops.destCons(value).retrieve)
           yield hd::tail
       }
     }
     override lazy val exnToValue: String = s"fn E_List list => map (${converter.exnToValue}) list"
     override lazy val valueToExn: String = s"E_List o map (${converter.valueToExn})"
+  }
+
+  @inline class OptionConverter[A](implicit converter: Converter[A]) extends Converter[Option[A]] {
+    @inline override def store(value: Option[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Option[A]] = value match {
+      case None => Ops.optionNone
+      case Some(x) =>
+        Ops.optionSome(x)
+    }
+    @inline override def retrieve(value: MLValue[Option[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Option[A]] = {
+      Ops.optionIsNone[A].apply(value).retrieve.flatMap {
+        case true => Future.successful(None)
+        case false => for (x <- Ops.destSome(value).retrieve) yield Some(x)
+      }
+    }
+    override lazy val exnToValue: String = s"fn E_Option x => Option.map (${converter.exnToValue}) x"
+    override lazy val valueToExn: String = s"E_Option o Option.map (${converter.valueToExn})"
   }
 
   @inline class Tuple2Converter[A,B](converterA: Converter[A], converterB: Converter[B]) extends Converter[(A,B)] {
@@ -441,7 +466,8 @@ object MLValue {
     @inline implicit val intConverter: IntConverter.type = IntConverter
     @inline implicit val unitConverter: UnitConverter.type = UnitConverter
     @inline implicit val stringConverter: StringConverter.type = StringConverter
-    @inline implicit def listConverter[A](implicit Converter: Converter[A]): ListConverter[A] = new ListConverter(Converter)
+    @inline implicit def listConverter[A](implicit converter: Converter[A]): ListConverter[A] = new ListConverter()(converter)
+    @inline implicit def optionConverter[A](implicit converter: Converter[A]): OptionConverter[A] = new OptionConverter()(converter)
     @inline implicit def tuple2Converter[A,B](implicit a: Converter[A], b: Converter[B]): Tuple2Converter[A, B] = new Tuple2Converter(a,b)
     @inline implicit def tuple3Converter[A,B,C](implicit a: Converter[A], b: Converter[B], c: Converter[C]): Tuple3Converter[A, B, C] = new Tuple3Converter(a,b,c)
     @inline implicit def tuple4Converter[A,B,C,D](implicit a: Converter[A], b: Converter[B], c: Converter[C], d: Converter[D]): Tuple4Converter[A, B, C, D] = new Tuple4Converter(a,b,c,d)

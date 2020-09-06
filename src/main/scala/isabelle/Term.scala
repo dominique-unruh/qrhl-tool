@@ -1,6 +1,6 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLFunction4, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue}
 import Term.Ops
 
 import scala.annotation.tailrec
@@ -157,14 +157,16 @@ object Free {
 }
 
 final class Var private(val name: String, val index: Int, val typ: Typ, val initialMlValue: MLValue[Term]=null)
-                       (implicit val isabelle: Isabelle) extends Term {
-  lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
+                       (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
+  lazy val mlValue : MLValue[Term] =
+    if (initialMlValue!=null) initialMlValue
+    else Ops.makeVar(name, index, typ)
   @inline override val concrete: Var = this
   override def toString: String = s"?$name$index"
 }
 
 object Var {
-  def apply(name: String, index: Int, typ: Typ)(implicit isabelle: Isabelle) = new Var(name, index, typ)
+  def apply(name: String, index: Int, typ: Typ)(implicit isabelle: Isabelle, ec: ExecutionContext) = new Var(name, index, typ)
 
   @tailrec
   def unapply(term: Term): Option[(String, Int, Typ)] = term match {
@@ -196,14 +198,16 @@ object App {
 }
 
 final class Abs private (val name: String, val typ: Typ, val body: Term, val initialMlValue: MLValue[Term]=null)
-                        (implicit val isabelle: Isabelle) extends Term {
-  lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
+                        (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
+  lazy val mlValue : MLValue[Term] =
+    if (initialMlValue!=null) initialMlValue
+    else Ops.makeAbs(name,typ,body)
   @inline override val concrete: Abs = this
   override def toString: String = s"(λ$name. $body)"
 }
 
 object Abs {
-  def apply(name: String, typ: Typ, body: Term)(implicit isabelle: Isabelle) = new Abs(name,typ,body)
+  def apply(name: String, typ: Typ, body: Term)(implicit isabelle: Isabelle, ec: ExecutionContext) = new Abs(name,typ,body)
 
   @tailrec
   def unapply(term: Term): Option[(String, Typ, Term)] = term match {
@@ -215,14 +219,16 @@ object Abs {
 
 
 final class Bound private (val index: Int, val initialMlValue: MLValue[Term]=null)
-                          (implicit val isabelle: Isabelle) extends Term {
-  lazy val mlValue : MLValue[Term] = if (initialMlValue!=null) initialMlValue else ???
+                          (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
+  lazy val mlValue : MLValue[Term] =
+    if (initialMlValue!=null) initialMlValue
+    else Ops.makeBound(index)
   @inline override val concrete: Bound = this
   override def toString: String = s"Bound $index"
 }
 
 object Bound {
-  def apply(index: Int)(implicit isabelle: Isabelle) = new Bound(index)
+  def apply(index: Int)(implicit isabelle: Isabelle, ec: ExecutionContext) = new Bound(index)
 
   @tailrec
   def unapply(term: Term): Option[Int] = term match {
@@ -258,9 +264,10 @@ object Term {
     val makeVar : MLFunction3[String, Int, Typ, Term] = MLValue.compileFunction("fn (n,i,s) => Var ((n,i),s)")
     val makeApp : MLFunction2[Term, Term, Term] = MLValue.compileFunction("op$")
     val makeBound : MLFunction[Int, Term] = MLValue.compileFunction("Bound")
+    val makeAbs : MLFunction3[String, Typ, Term, Term] = MLValue.compileFunction("Abs")
   }
 
-  private[isabelle] var Ops : Ops = null
+  private[isabelle] var Ops : Ops = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
