@@ -174,13 +174,13 @@ object MLValue {
   private val logger = log4s.getLogger
 
   private[control] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
-    isabelle.executeMLCodeNow("exception E_List of exn list; exception E_Bool of bool; exception E_Option of exn options")
+    isabelle.executeMLCodeNow("exception E_List of exn list; exception E_Bool of bool; exception E_Option of exn option")
 
     private val optionNone_ = MLValue.compileValueRaw[Option[_]]("E_Option NONE")
     def optionNone[A]: MLValue[Option[A]] = optionNone_.asInstanceOf[MLValue[Option[A]]]
     private val optionSome_ = MLValue.compileFunctionRaw[Nothing, Option[Nothing]]("E_Option o SOME")
     def optionSome[A]: MLFunction[A, Option[A]] = optionSome_.asInstanceOf[MLFunction[A, Option[A]]]
-    private val optionIsNone_ = MLValue.compileFunctionRaw[Option[Nothing], Boolean]("fn E_Option NONE => true | E_Option _ => false")
+    private val optionIsNone_ = MLValue.compileFunctionRaw[Option[Nothing], Boolean]("fn E_Option NONE => E_Bool true | E_Option _ => E_Bool false")
     def optionIsNone[A]: MLFunction[Option[A], Boolean] = optionIsNone_.asInstanceOf[MLFunction[Option[A], Boolean]]
     private val destSome_ = MLValue.compileFunctionRaw[Option[Nothing], Nothing]("fn E_Option (SOME x) => x")
     def destSome[A]: MLFunction[Option[A], A] = destSome_.asInstanceOf[MLFunction[Option[A], A]]

@@ -255,9 +255,9 @@ class Isabelle(setup: Setup, build: Boolean = false) {
 
   private[control] def storeValue(ml : String): Promise[ID] = {
     val promise : Promise[ID] = Promise()
-    assert(!ml.contains('\n'))
+    val ml2 = ml.replace('\n', ' ')
 //    logger.debug(s"Compiling ML function: $ml")
-    send(s"f$ml\n", { result => promise.complete(result.map(intStringToID)) })
+    send(s"f$ml2\n", { result => promise.complete(result.map(intStringToID)) })
     promise
   }
 
