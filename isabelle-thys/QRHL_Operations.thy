@@ -212,11 +212,14 @@ operation_setup expression_to_term = \<open>
      Expressions.expression_to_term (Refs.Ctxt.read ctxId) t |> richterm_encode ctxt end}
 \<close>
 
-operation_setup seq_tac = \<open>
+(* operation_setup seq_tac = \<open>
   {from_lib = Codec.triple (Codec.triple Codec.int Codec.int richterm_codec) subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn (i,j,B) => Tactics.seq_tac i j B ctxt 1)}
-(* 
+\<close>
+ *)
+
+(*
   {from_lib = Codec.triple (Codec.triple Codec.int Codec.int term_tight_codec) term_tight_codec Codec.int,
    to_lib = Codec.id,
    action = fn ((i,j,B),goal,ctx_id) => let
@@ -225,9 +228,9 @@ operation_setup seq_tac = \<open>
     in result 
         |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int))
     end} *)
-\<close>
 
-operation_setup wp_tac = \<open>
+
+(* operation_setup wp_tac = \<open>
   {from_lib = Codec.triple (Codec.tuple Codec.int Codec.int) subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Weakest_Precondition.wp_seq_tac left right ctxt 1)}
@@ -235,41 +238,27 @@ operation_setup wp_tac = \<open>
      val ctxt = Refs.Ctxt.read ctx_id
      val result = Weakest_Precondition.wp_tac_on_term left (Refs.Ctxt.read ctx_id) goal |> tac_dummy_thm
     in result |> Codec.encode (Codec.option (Codec.tuple (Codec.list (richterm_codec' ctxt)) Codec.int)) end} *)
-\<close>
+\<close> *)
 
-operation_setup squash_tac = \<open>
+(* operation_setup squash_tac = \<open>
   {from_lib = Codec.triple Codec.bool subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn left => Squash_Sampling.squash_sampling_tac left ctxt 1)}
-\<close>
+\<close> *)
 
 
 
-operation_setup joint_measure_simple_tac = \<open>
+(* operation_setup joint_measure_simple_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Measure.joint_measure_simple_seq_tac ctxt 1)}
-\<close>
+\<close> *)
 
-operation_setup sym_tac = \<open>
+(* operation_setup sym_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term_concl (fn ctxt => fn _ => Basic_Rules.sym_tac ctxt 1)}
-\<close>
-
-operation_setup joint_sample_equal_tac = \<open>
-  {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
-   to_lib = Codec.id,
-   action = apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Sample.joint_sample_equal_seq_tac ctxt 1)}
-\<close>
-
-operation_setup joint_sample_tac = \<open>
-  {from_lib = Codec.triple term_tight_codec subgoal_codec context_codec,
-   to_lib = Codec.id,
-   action = apply_tactic_on_term_concl (fn ctxt => fn witness => 
-      let val witness_expr = witness |> Expressions.term_to_expression ctxt |> Thm.cterm_of ctxt in
-      Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)}
-\<close>
+\<close> *)
 
 (* (* TODO remove *)
 operation_setup term_test = \<open>
@@ -421,7 +410,7 @@ operation_setup conseq_qrhl_replace_in_predicate = \<open>
   }
 \<close>
 
-operation_setup swap_variables_conv = \<open>
+(* operation_setup swap_variables_conv = \<open>
   {from_lib = Codec.tuple
               Codec.int (* context *)
               term_tight_codec (* predicate *),
@@ -432,7 +421,7 @@ operation_setup swap_variables_conv = \<open>
                  |> Thm.prop_of |> Logic.dest_equals |> snd
    in richterm_encode ctxt pred' end}
 \<close>
-
+ *)
 
 (* operation_setup is_finite = \<open>
   {from_lib = Codec.tuple
@@ -443,10 +432,23 @@ operation_setup swap_variables_conv = \<open>
 \<close> *)
 
 
-
 ML \<open>
-QRHL_Operations.colocal_pred_qvars
+local
+exception E_Context of Proof.context (* TODO remove *)
+exception E_Option of exn option (* TODO remove *)
+exception E_Pair of exn * exn
+exception E_List of exn list
+exception E_Thm of thm
+in
+val isabelleTac = fn (a', E_Subgoal subgoal, E_Context ctxt) =>
+  case joint_sample_equal_tac ((K()) a', subgoal, ctxt) of
+    NONE => E_Option NONE
+   | SOME (subgoals, thm) =>
+      E_Pair (E_List (map QRHL_Operations.E_Subgoal subgoals), E_Thm thm)
+end
 \<close>
 
+(* 
+ *)
 
 end

@@ -325,8 +325,8 @@ fun apply_tactic_on_term_concl tac (arg,subgoal,ctxt) = let
   val subgoals = Tactics.tac_on_term_concl (tac ctxt arg) ctxt goal
   val subgoals = subgoals |> Option.map (map (term_to_subgoal ctxt))
   val subgoals = subgoals |> tac_dummy_thm
-  val encoded = subgoals |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec))
-  in encoded end
+  (* val encoded = subgoals |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec)) *)
+  in subgoals end
 
 fun atomize ctxt t =
   let val t' = Object_Logic.atomize_term ctxt t
@@ -661,5 +661,27 @@ fun colocal_pred_qvars (predicate, qvars) = let
                $ predicate $ varterm
    in colocality end
 
+fun swap_variables_conv (ctxt, pred) =
+     QRHL.swap_variables_conv ctxt (Thm.cterm_of ctxt pred)
+           |> Thm.prop_of |> Logic.dest_equals |> snd
+
+fun makeQrhlSubgoal (left,right,pre,post,assms) =
+  Subgoal_QRHL (Relational_Hoare.QRHL_Judgment (pre,left,right,post), assms)
+
+fun destQrhlSubgoal (Subgoal_QRHL (Relational_Hoare.QRHL_Judgment (pre,left,right,post), assms)) =
+  (left,right,pre,post,assms)
+
+val joint_sample_equal_tac : unit * subgoal * Proof.context -> (subgoal list * thm) option =
+   apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Sample.joint_sample_equal_seq_tac ctxt 1)
+
+val joint_sample_tac =
+  apply_tactic_on_term_concl (fn ctxt => fn witness => 
+      let val witness_expr = witness |> Expressions.term_to_expression ctxt |> Thm.cterm_of ctxt in
+      Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)
+
+val seq_tac =
+  apply_tactic_on_term_concl (fn ctxt => fn witness => 
+      let val witness_expr = witness |> Expressions.term_to_expression ctxt |> Thm.cterm_of ctxt in
+      Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)
 
 end

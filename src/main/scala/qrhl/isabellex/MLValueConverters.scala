@@ -6,7 +6,7 @@ import qrhl.logic.{Assign, Block, CVariable, Call, IfThenElse, Local, Measuremen
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import isabelle.control
-import qrhl.Subgoal
+import qrhl.{AmbientSubgoal, QRHLSubgoal, Subgoal}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -111,8 +111,21 @@ object MLValueConverters {
   }
 
   object SubgoalConverter extends Converter[Subgoal] {
-    override def retrieve(value: MLValue[Subgoal])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Subgoal] = ???
-    override def store(value: Subgoal)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Subgoal] = ???
+    override def retrieve(value: MLValue[Subgoal])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Subgoal] =
+      Ops.isQrhlSubgoal(value).retrieve.flatMap { isQrhl =>
+        if (isQrhl)
+          for ((left,right,pre,post,assms) <- Ops.destQrhlSubgoal(value).retrieve)
+            yield QRHLSubgoal(Block(left:_*), Block(right:_*), RichTerm(pre), RichTerm(post), assms.map(RichTerm.apply))
+        else
+          for (t <- Ops.destAmbientSubgoal(value).retrieve)
+            yield new AmbientSubgoal(RichTerm(t))
+      }
+
+    override def store(value: Subgoal)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Subgoal] = value match {
+      case QRHLSubgoal(left, right, pre, post, assumptions) =>
+        Ops.makeQrhlSubgoal(left.statements, right.statements, pre.isabelleTerm, post.isabelleTerm, assumptions.map(_.isabelleTerm))
+      case AmbientSubgoal(goal) => Ops.makeAmbientSubgoal(goal.isabelleTerm)
+    }
     override lazy val exnToValue: String = "fn QRHL_Operations.E_Subgoal s => s"
     override lazy val valueToExn: String = "QRHL_Operations.E_Subgoal"
   }
