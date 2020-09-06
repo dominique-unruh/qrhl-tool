@@ -718,6 +718,12 @@ val apply_rule = let
 val joint_measure_simple_tac : unit * subgoal * Proof.context -> (subgoal list * thm) option = 
   apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Measure.joint_measure_simple_seq_tac ctxt 1)
 
+val o2h_tac : unit * subgoal * Proof.context -> (subgoal list * thm) option =
+  apply_tactic_on_term (fn ctxt => fn _ => O2H.o2h_tac ctxt 1) (fn _ => "o2h")
 
+val semiclassical_tac : unit * subgoal * Proof.context -> (subgoal list * thm) option =
+  apply_tactic_on_term 
+    (fn ctxt => fn _ => Semi_Classical_Search.semi_classical_search_tac ctxt 1) 
+    (fn _ => "o2h")
 
 end

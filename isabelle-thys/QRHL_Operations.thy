@@ -433,10 +433,7 @@ ML \<open>
 
 
 ML \<open>
-QRHL_Operations.conseq_qrhl_replace_in_predicate
+QRHL_Operations.semiclassical_tac
 \<close>
-
-(* 
- *)
 
 end
