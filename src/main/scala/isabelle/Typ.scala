@@ -1,10 +1,11 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue}
 
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future}
 import isabelle.control.MLValue.Converter
+import Typ.Ops
 
 // Implicits
 import MLValue.Implicits._
@@ -15,7 +16,7 @@ sealed abstract class Typ {
   val mlValue : MLValue[Typ]
   implicit val isabelle : Isabelle
   def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
-    Typ.stringOfType(MLValue((ctxt, this))).retrieveNow
+    Ops.stringOfType(MLValue((ctxt, this))).retrieveNow
   val concrete : Typ
 
   def -->:(that: Typ)(implicit ec: ExecutionContext): Type = Type("fun", that, this)
@@ -29,15 +30,15 @@ sealed abstract class Typ {
     case (t1: MLValueTyp, t2: MLValueTyp) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
-      else Typ.equalsTyp((t1,t2)).retrieveNow
+      else Ops.equalsTyp((t1,t2)).retrieveNow
     case (t1: MLValueTyp, t2: Typ) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed) t1.concrete == t2
-      else Typ.equalsTyp((t1,t2)).retrieveNow
+      else Ops.equalsTyp((t1,t2)).retrieveNow
     case (t1: Typ, t2: MLValueTyp) =>
       import ExecutionContext.Implicits.global
       if (t2.concreteComputed) t1 == t2.concrete
-      else Typ.equalsTyp((t1,t2)).retrieveNow
+      else Ops.equalsTyp((t1,t2)).retrieveNow
     case _ => false
   }
 }
@@ -47,15 +48,15 @@ final class MLValueTyp(val mlValue: MLValue[Typ])(implicit val isabelle: Isabell
   @volatile private var concreteLoaded = false
 
   lazy val concrete : Typ = {
-    val typ = Typ.whatTyp(mlValue).retrieveNow match {
+    val typ = Ops.whatTyp(mlValue).retrieveNow match {
       case 1 =>
-        val (name,args) = Typ.destType(mlValue).retrieveNow
-        new Type(name, args.toList, mlValue)
+        val (name,args) = Ops.destType(mlValue).retrieveNow
+        new Type(name, args, mlValue)
       case 2 =>
-        val (name,sort) = Typ.destTFree(mlValue).retrieveNow
+        val (name,sort) = Ops.destTFree(mlValue).retrieveNow
         TFree(name,sort :_*)
       case 3 =>
-        val (name,index,sort) = Typ.destTVar(mlValue).retrieveNow
+        val (name,index,sort) = Ops.destTVar(mlValue).retrieveNow
         TVar(name,index,sort :_*)
     }
     concreteLoaded = true
@@ -71,7 +72,7 @@ final class Type private[isabelle] (val name: String, val args: List[Typ], val i
                                   (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Typ {
   lazy val mlValue : MLValue[Typ] =
     if (initialMlValue!=null) initialMlValue
-    else Typ.makeType(MLValue(name,args))
+    else Ops.makeType(MLValue(name,args))
   @inline override val concrete: Type = this
   override def toString: String =
     if (args.isEmpty) name
@@ -89,8 +90,11 @@ object Type {
   }
 }
 
-final class TFree private (val name: String, val sort: List[String], val initialMlValue: MLValue[Typ]=null)(implicit val isabelle: Isabelle) extends Typ {
-  lazy val mlValue : MLValue[Typ] = if (initialMlValue!=null) initialMlValue else ???
+final class TFree private (val name: String, val sort: List[String], val initialMlValue: MLValue[Typ]=null)
+                          (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Typ {
+  lazy val mlValue : MLValue[Typ] =
+    if (initialMlValue!=null) initialMlValue
+    else Ops.makeTFree(name, sort)
   @inline override val concrete: TFree = this
   override def toString: String = sort match {
     case List(clazz) => s"$name::$clazz"
@@ -99,7 +103,8 @@ final class TFree private (val name: String, val sort: List[String], val initial
 }
 
 object TFree {
-  def apply(name: String, sort: String*)(implicit isabelle: Isabelle) = new TFree(name, sort.toList)
+  def apply(name: String, sort: String*)
+           (implicit isabelle: Isabelle, ec: ExecutionContext) = new TFree(name, sort.toList)
 
   @tailrec
   def unapply(typ: Typ): Option[(String, List[String])] = typ match {
@@ -109,8 +114,11 @@ object TFree {
   }
 }
 
-final class TVar private (val name: String, val index: Int, val sort: List[String], val initialMlValue: MLValue[Typ]=null)(implicit val isabelle: Isabelle) extends Typ {
-  lazy val mlValue : MLValue[Typ] = if (initialMlValue!=null) initialMlValue else ???
+final class TVar private (val name: String, val index: Int, val sort: List[String], val initialMlValue: MLValue[Typ]=null)
+                         (implicit val isabelle: Isabelle, ec: ExecutionContext) extends Typ {
+  lazy val mlValue : MLValue[Typ] =
+    if (initialMlValue!=null) initialMlValue
+    else Ops.makeTVar(name,index,sort)
   @inline override val concrete: TVar = this
   override def toString: String = sort match {
     case List(clazz) => s"?$name$index::$clazz"
@@ -119,7 +127,8 @@ final class TVar private (val name: String, val index: Int, val sort: List[Strin
 }
 
 object TVar {
-  def apply(name: String, index: Int, sort: String*)(implicit isabelle: Isabelle) = new TVar(name, index, sort.toList)
+  def apply(name: String, index: Int, sort: String*)
+           (implicit isabelle: Isabelle, ec: ExecutionContext) = new TVar(name, index, sort.toList)
 
   @tailrec
   def unapply(typ: Typ): Option[(String, Int, List[String])] = typ match {
@@ -130,36 +139,45 @@ object TVar {
 }
 
 object Typ {
-  private implicit var isabelle: Isabelle = _
-  private var readType: MLFunction[(Context, String), Typ] = _
-  private var stringOfType: MLFunction[(Context, Typ), String] = _
-  private[isabelle] var makeType: MLFunction[(String, List[Typ]), Typ] = _
-  private[isabelle] var whatTyp: MLFunction[Typ, Int] = _
-  private[isabelle] var destType: MLFunction[Typ, (String, List[Typ])] = _
-  private[isabelle] var destTFree: MLFunction[Typ, (String, List[String])] = _
-  private[isabelle] var destTVar: MLFunction[Typ, (String, Int, List[String])] = _
-  private var equalsTyp: MLFunction2[Typ, Typ, Boolean] = _
+  private[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+    import MLValue.compileFunction
+    isabelle.executeMLCodeNow("exception E_Typ of typ") // ;; exception E_TypList of typ list
+    Context.init(isabelle)
+
+    val makeType: MLFunction2[String, List[Typ], Typ] =
+      compileFunction("Term.Type")
+    val makeTFree: MLFunction2[String, List[String], Typ] =
+      compileFunction("Term.TFree")
+    val makeTVar: MLFunction3[String, Int, List[String], Typ] =
+      compileFunction("fn (n,i,s) => TVar ((n,i),s)")
+
+
+    val readType: MLFunction2[Context, String, Typ] =
+      compileFunction("fn (ctxt, str) => Syntax.read_typ ctxt str")
+    val stringOfType: MLFunction2[Context, Typ, String] = 
+      compileFunction("fn (ctxt, typ) => Syntax.string_of_typ ctxt typ")
+    val whatTyp: MLFunction[Typ, Int] =
+      compileFunction("fn Type _ => 1 | TFree _ => 2 | TVar _ => 3")
+    val destType: MLFunction[Typ, (String, List[Typ])] =
+      compileFunction("Term.dest_Type")
+    val destTFree: MLFunction[Typ, (String, List[String])] =
+      compileFunction("Term.dest_TFree")
+    val destTVar: MLFunction[Typ, (String, Int, List[String])] =
+      compileFunction("fn TVar ((n,i),s) => (n,i,s)")
+    var equalsTyp: MLFunction2[Typ, Typ, Boolean] =
+      compileFunction("op=")
+  }
+
+  var Ops : Ops = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (this.isabelle == null) {
-      this.isabelle = isabelle
-      implicit val _ = isabelle
-      Context.init(isabelle)
-      isabelle.executeMLCodeNow("exception E_Typ of typ") // ;; exception E_TypList of typ list
-      readType = MLValue.compileFunction[(Context, String), Typ]("fn (ctxt, str) => Syntax.read_typ ctxt str")
-      stringOfType = MLValue.compileFunction[(Context, Typ), String]("fn (ctxt, typ) => Syntax.string_of_typ ctxt typ")
-      whatTyp = MLValue.compileFunctionRaw("fn (E_Typ typ) => (case typ of Type _ => 1 | TFree _ => 2 | TVar _ => 3) |> E_Int")
-      destType = MLValue.compileFunction("Term.dest_Type")
-      destTFree = MLValue.compileFunction("Term.dest_TFree")
-      destTVar = MLValue.compileFunction("fn TVar ((n,i),s) => (n,i,s)")
-      makeType = MLValue.compileFunction[(String, List[Typ]), Typ]("Term.Type")
-      equalsTyp = MLValue.compileFunction("op=")
-    }
+    if (Ops == null)
+      Ops = new Ops()(isabelle, ec)
   }
 
-  def apply(context: Context, string: String)(implicit ec: ExecutionContext): MLValueTyp = {
-    new MLValueTyp(readType(MLValue((context, string))))
+  def apply(context: Context, string: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValueTyp = {
+    new MLValueTyp(Ops.readType(MLValue((context, string))))
   }
 
   object TypConverter extends Converter[Typ] {
