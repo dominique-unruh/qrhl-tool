@@ -1,11 +1,11 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.hol.HOLogic
 import qrhl._
 import qrhl.isabellex.RichTerm
+import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 
 case class CaseSplitTac(expr:RichTerm) extends Tactic {
-  assert(expr.typ==HOLogic.boolT)
+  assert(expr.typ==GIsabelle.boolT)
 
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {
     if (goal.isInstanceOf[QRHLSubgoal])

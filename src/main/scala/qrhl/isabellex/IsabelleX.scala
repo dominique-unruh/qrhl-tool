@@ -7,7 +7,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Timer, TimerTask}
 
-import isabelle.control.{Isabelle, MLFunction}
+import isabelle.control.{Isabelle, MLFunction, MLFunction2}
 import isabelle.{Abs, App, Bound, Const, Free, Term, Theory, Typ, Type, Var}
 
 import scala.concurrent.ExecutionContext
@@ -161,8 +161,11 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
         throw UserException(s"Isabelle theory file not found: $f")
     val filesThyPath = files.map { f =>
       //      println("XXX",f,Paths.get(""))
-      val relative = Paths.get("").toAbsolutePath.relativize(f.toAbsolutePath)
-      val names = relative.iterator().asScala.toList
+      val relative = setup.workingDirectory.toAbsolutePath.relativize(f.toAbsolutePath)
+      val names = relative.iterator().asScala.toList /*match {
+        case List(name) => List(".", name) // Otherwise Isabelle does not recognise this as a path
+        case names => names
+      }*/
       names.mkString("/").stripSuffix(".thy")
     }
     val filesThyName = files.map { f => "Draft." + f.getName(f.getNameCount - 1).toString.stripSuffix(".thy") }
@@ -824,6 +827,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.QInit x => x")
     val destWhile =
       MLValue.compileFunction[Statement, (Term,List[Statement])]("fn QRHL_Operations.While x => x")
+    val destCall =
+      MLValue.compileFunction[Statement, Call]("fn QRHL_Operations.Call x => x")
 
     private val whatVartermOp_ =
       MLValue.compileFunction[VarTerm[MLValue[Nothing]], String]("QRHL_Operations.whatVarterm")
@@ -835,14 +840,15 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       MLValue.compileFunction[VarTerm[MLValue[Nothing]], MLValue[Nothing]]("fn QRHL_Operations.VTSingle x => x")
     def destVartermSingle[A] = destVartermSingle_.asInstanceOf[MLFunction[VarTerm[MLValue[A]], MLValue[A]]]
     private val vartermUnit_ =
-      MLValue.compileValue[VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTUnit")
-    def vartermUnit[A] = vartermUnit_.asInstanceOf[VarTerm[A]]
+      MLValue.compileValueRaw[VarTerm[Nothing]]("QRHL_Operations.E_Varterm QRHL_Operations.VTUnit")
+    def vartermUnit[A] = vartermUnit_.asInstanceOf[MLValue[VarTerm[A]]]
     private val vartermCons_ =
-      MLValue.compileFunction[(VarTerm[MLValue[Nothing]],VarTerm[MLValue[Nothing]]), VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTCons")
-    def vartermCons[A] = vartermCons_.asInstanceOf[MLFunction[(VarTerm[MLValue[A]],VarTerm[MLValue[A]]), VarTerm[MLValue[A]]]]
+      MLValue.compileFunction[VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTCons")
+    def vartermCons[A] = vartermCons_.asInstanceOf[MLFunction2[VarTerm[MLValue[A]],VarTerm[MLValue[A]], VarTerm[MLValue[A]]]]
     private val vartermSingle_ =
       MLValue.compileFunction[MLValue[Nothing], VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTSingle")
     def vartermSingle[A] = vartermSingle_.asInstanceOf[MLFunction[MLValue[A], VarTerm[MLValue[A]]]]
+
     val checkTypeOp =
       MLValue.compileFunction[(Context, Term), Typ]("fn (ctxt,t) => QRHL_Operations.checkType ctxt t")
     val createContextOp =

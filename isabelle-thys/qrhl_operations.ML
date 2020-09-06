@@ -707,4 +707,17 @@ fun conseq_qrhl_cardinality_condition (ctxt,befor,after) = let
 fun add_index_to_expression (t,left) =
   Expressions.add_index_to_expression t left
 
+val wp_tac = 
+  apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Weakest_Precondition.wp_seq_tac left right ctxt 1)
+
+val apply_rule = let
+  fun tac ctxt name = resolve_tac ctxt (get_thms ctxt name) 1
+  in apply_tactic_on_term tac (fn rule => "rule "^rule) end
+
+
+val joint_measure_simple_tac : unit * subgoal * Proof.context -> (subgoal list * thm) option = 
+  apply_tactic_on_term_concl (fn ctxt => fn _ => Joint_Measure.joint_measure_simple_seq_tac ctxt 1)
+
+
+
 end

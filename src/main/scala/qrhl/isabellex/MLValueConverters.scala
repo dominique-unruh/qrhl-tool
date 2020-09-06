@@ -7,6 +7,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import isabelle.control
 import qrhl.{AmbientSubgoal, QRHLSubgoal, Subgoal}
+import scalaz.Id.Id
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -63,7 +64,7 @@ object MLValueConverters {
           for ((vars, expr) <- Ops.destSample(value).retrieve)
             yield Sample(vars.map { case (name, typ) => CVariable(name,typ) }, RichTerm(expr))
         case "call" =>
-          value.asInstanceOf[MLValue[Call]].retrieve
+          Ops.destCall(value).retrieve
         case "measurement" =>
           for ((result, location, e) <- Ops.destMeasurement(value).retrieve)
             yield Measurement(
@@ -103,17 +104,25 @@ object MLValueConverters {
 
   class VarTermConverter[A](implicit conv: Converter[A]) extends Converter[VarTerm[A]] {
     override def retrieve(value: MLValue[VarTerm[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[VarTerm[A]] = {
-      val valueM = value.asInstanceOf[MLValue[VarTerm[MLValue[A]]]]
+      val valueM = value.insertMLValue[VarTerm,A]
+//        .asInstanceOf[MLValue[VarTerm[MLValue[A]]]]
       Ops.whatVartermOp[A](valueM).retrieve.flatMap {
         case "cons" =>
-          Ops.destVartermCons[A](valueM).retrieve.flatMap { case (left,right) =>
+          type C[X] = (VarTerm[X], VarTerm[X])
+          val dest = Ops.destVartermCons[A](valueM)
+            .removeMLValue[C,A]
+//            .asInstanceOf[MLValue[(VarTerm[A], VarTerm[A])]]
+          for ((left,right) <- dest.retrieve)
+            yield VTCons(left, right)
+          /*dest.retrieve.flatMap { case (left,right) =>
             val leftFuture = left.asInstanceOf[MLValue[VarTerm[A]]].retrieve
             val rightFuture = right.asInstanceOf[MLValue[VarTerm[A]]].retrieve
             for (leftVal <- leftFuture; rightVal <- rightFuture)
               yield VTCons(leftVal, rightVal)
-          }
+          }*/
         case "single" =>
-          for (a <- Ops.destVartermSingle[A](valueM).asInstanceOf[MLValue[A]].retrieve)
+          val dest = Ops.destVartermSingle[A](valueM).removeMLValue[Id,A]
+          for (a <- dest.retrieve)
             yield VTSingle(a)
         case "unit" => Future.successful(VTUnit)
       }
@@ -121,15 +130,15 @@ object MLValueConverters {
 
     override def store(value: VarTerm[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[VarTerm[A]] = value match {
       case VTUnit =>
-        Ops.vartermUnit.asInstanceOf[MLValue[VarTerm[A]]]
+        Ops.vartermUnit[A]
       case VTSingle(v) =>
-        Ops.vartermSingle.asInstanceOf[MLFunction[MLValue[A], VarTerm[MLValue[A]]]]
-          .apply(MLValue(v).mlValueOfItself)
-          .asInstanceOf[MLValue[VarTerm[A]]]
+        Ops.vartermSingle[A](MLValue(v).insertMLValue[Id, A])
+          .removeMLValue[VarTerm, A]
+//          .asInstanceOf[MLValue[VarTerm[A]]]
       case VTCons(a, b) =>
         Ops.vartermCons[A]
-          .apply(MLValue(a).asInstanceOf, MLValue(b).asInstanceOf)
-          .asInstanceOf[MLValue[VarTerm[A]]]
+          .apply(MLValue(a).insertMLValue[VarTerm,A], MLValue(b).insertMLValue[VarTerm,A])
+          .removeMLValue[VarTerm,A]
     }
     override val exnToValue: String = s"fn QRHL_Operations.E_Varterm vt => QRHL_Operations.map_tree (${conv.exnToValue}) vt"
     override val valueToExn: String = s"QRHL_Operations.E_Varterm o QRHL_Operations.map_tree (${conv.valueToExn})"

@@ -22,19 +22,21 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
     implicit val isabelle: Isabelle = state.isabelle.isabelle.isabelleControl
     val ctxt = state.isabelle.context
 
+    type In = (A, Subgoal, Context)
     type Out = Option[(List[Subgoal], Thm)]
+    type Fun = MLFunction3[A, Subgoal, Context, Out]
 
     val tacMlValue : MLFunction3[A, Subgoal, Context, Out] = {
       val exnToValue = converter.exnToValue
       tactics.getOrElseUpdate((operationName, exnToValue),
-        MLValue.compileFunctionRaw[(A, Subgoal, Context), Out](
+        MLValue.compileFunctionRaw[In, Out](
           s"""fn E_Pair (a', E_Pair (QRHL_Operations.E_Subgoal subgoal, E_Context ctxt)) =>
                 case QRHL_Operations.$operationName ((${converter.exnToValue}) a', subgoal, ctxt) of
                   NONE => E_Option NONE
                  | SOME (subgoals, thm) =>
                     E_Option (SOME (E_Pair (E_List (map QRHL_Operations.E_Subgoal subgoals), E_Thm thm)))""")
           .function3[A, Subgoal, Context, Out])
-        .asInstanceOf[MLFunction3[A, Subgoal, Context, Out]]
+        .asInstanceOf[Fun]
     }
 
     val (newGoals, thm) = tacMlValue(arg(state.isabelle), goal, ctxt).retrieveNow.getOrElse {

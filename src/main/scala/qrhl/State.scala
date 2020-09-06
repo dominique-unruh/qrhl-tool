@@ -451,6 +451,7 @@ class State private (val environment: Environment,
         return this
 
     val isabelle = IsabelleX.globalIsabelle
+    logger.debug(s"Paths of theories to load: $theoryPath")
     val (ctxt,deps) = isabelle.getQRHLContextWithFiles(theoryPath : _*)
     logger.debug(s"Dependencies of theory ${theory.mkString(", ")}: ${deps.mkString(", ")}")
     val stamps = deps.map(new FileTimeStamp(_))

@@ -1,27 +1,16 @@
-isabelle TestEx.
+isabelle.
 
-quantum var x : bit.
-quantum var y : bit.
-quantum var aux : int.
-classical var a : bit.
+classical var c : nat.
 
-program p1 := {
-  { local x; y <q ket a; a <- a; x <q ket 1;  }
+# Initializes the random oracle
+program hInit := {
 }.
 
-program p2 := {
-  { local x; y <q ket a; a <- a; x <q ket 0; }
-}.
+qrhl {top}
+        call hInit; c <- 0; ~ skip; 
+     {top}.
 
-qrhl {top} call p1; ~ call p2; {Cla[undefined a1] ⊓ Cla[undefined a2] ⊓ (⟦x2,y2⟧ ==q ⟦x1,y1⟧) ⊓ (⟦y2,x2⟧ ==q ⟦y1,x1⟧)}.
- inline p1.
- inline p2.
- equal.
-isa auto.
-simp.
-admit.
-simp.
-skip.
-isa auto.
+wp left.
+
 
 

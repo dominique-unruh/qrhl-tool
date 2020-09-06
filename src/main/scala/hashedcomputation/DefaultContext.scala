@@ -55,11 +55,11 @@ class DefaultContext extends Context {
 
     def apply(argument: Hashed[T]): Computation[U] = {
       val hashStr = argument.hash.toString
-      logger.debug(s"Checking: $hashStr")
+//      logger.debug(s"Checking: $hashStr")
       hashTable.computeIfAbsent(argument.hash,
         { _ =>
           new Computation[U]({
-            logger.debug(s"Computing: $hashStr")
+//            logger.debug(s"Computing: $hashStr")
             function(argument)
           })})
     }
