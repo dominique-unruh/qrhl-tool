@@ -9,6 +9,9 @@ import MLValue.Implicits._
 import MLValue.Ops
 import isabelle.control.Isabelle.ID
 import org.log4s
+import scalaz.Id.{Id, Identity}
+
+import scala.language.higherKinds
 
 class MLValue[A] private[isabelle](val id: Future[Isabelle.ID]) {
   def logError(message: => String)(implicit executionContext: ExecutionContext): this.type = {
@@ -19,9 +22,12 @@ class MLValue[A] private[isabelle](val id: Future[Isabelle.ID]) {
     this
   }
 
-  def mlValueOfItself: MLValue[MLValue[A]] = this.asInstanceOf[MLValue[MLValue[A]]]
-  def debugInfo(implicit isabelle: Isabelle, ec: ExecutionContext): String =
-    Ops.debugInfo.asInstanceOf[MLFunction[MLValue[A], String]].apply(mlValueOfItself).retrieveNow
+//  def mlValueOfItself: MLValue[MLValue[A]] = this.asInstanceOf[MLValue[MLValue[A]]]
+
+  def debugInfo(implicit isabelle: Isabelle, ec: ExecutionContext): String = {
+    Ops.debugInfo[A](this).retrieveNow
+//    Ops.debugInfo.asInstanceOf[MLFunction[MLValue[A], String]].apply(mlValueOfItself).retrieveNow
+  }
 
   def stateString: String = id.value match {
     case Some(Success(_)) => ""
@@ -85,6 +91,9 @@ class MLValue[A] private[isabelle](val id: Future[Isabelle.ID]) {
   def apply[D1, D2, D3, R](arg1: MLValue[D1], arg2: MLValue[D2], arg3: MLValue[D3])
                           (implicit ev: MLValue[A] =:= MLValue[D1 => D2 => D3 => R], isabelle: Isabelle, ec: ExecutionContext): MLValue[R] =
     ev(this).applyOld[D1, D2 => D3 => R](arg1).applyOld[D2, D3 => R](arg2).applyOld[D3, R](arg3)*/
+
+  @inline def insertMLValue[C[_],B](implicit ev: A =:= C[B]): MLValue[C[MLValue[B]]] = this.asInstanceOf[MLValue[C[MLValue[B]]]]
+  @inline def removeMLValue[C[_],B](implicit ev: A =:= C[MLValue[B]]): MLValue[C[B]] = this.asInstanceOf[MLValue[C[B]]]
 }
 
 class MLFunction[D,R] private[isabelle] (id: Future[ID]) extends MLValue[D => R](id) {
@@ -108,7 +117,9 @@ class MLFunction2[D1, D2, R] private[isabelle] (id: Future[ID]) extends MLFuncti
     apply((arg1,arg2))
   def apply(arg1: MLValue[D1], arg2: MLValue[D2])
            (implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[R] = {
-    apply(MLValue((arg1,arg2)).asInstanceOf[MLValue[(D1,D2)]])
+    type C1[X] = Tuple2[X,MLValue[D2]]
+    type C2[X] = Tuple2[D1,X]
+    apply(MLValue((arg1, arg2)).removeMLValue[C1, D1].removeMLValue[C2, D2])
   }
 }
 
@@ -202,7 +213,8 @@ object MLValue {
     val boolTrue : MLValue[Boolean] = MLValue.compileValue("true")
     val boolFalse : MLValue[Boolean] = MLValue.compileValue("false")
 
-    val debugInfo : MLFunction[MLValue[Any], String] = MLValue.compileFunctionRaw[MLValue[Any], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
+    val debugInfo_ : MLFunction[MLValue[Nothing], String] = MLValue.compileFunctionRaw[MLValue[Nothing], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
+    def debugInfo[A]: MLFunction[MLValue[A], String] = debugInfo_.asInstanceOf[MLFunction[MLValue[A], String]]
   }
 
   private[isabelle] var Ops : Ops = _
@@ -311,9 +323,9 @@ object MLValue {
 
   @inline class MLValueConverter[A] extends Converter[MLValue[A]] {
     override def retrieve(value: MLValue[MLValue[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[MLValue[A]] =
-      Future.successful(value.asInstanceOf[MLValue[A]])
+      Future.successful(value.removeMLValue[Id, A])
     override def store(value: MLValue[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[MLValue[A]] =
-      value.mlValueOfItself
+      value.insertMLValue[Id, A]
     override lazy val exnToValue: String = "fn x => x"
     override lazy val valueToExn: String = "fn x => x"
   }

@@ -89,18 +89,18 @@ object IsabelleTest {
 
     def double(x: Tree) = Tree(List(x,x))
 
-    val tree = double(double(double(double(double(double(double(double(double(double(
-      double(double(double(double(double(double(double(double(double(double(emptyTree))))))))))))))))))))
-
-    println(s"size: ${tree.size}")
-
-    time ("tree", 1) {
-      MLValue(tree).retrieveNow
-    }
-
-    val list = (1 to 1000).toList
-    time ("list", 1) {
-      MLValue(list).retrieveNow
-    }
+//    val tree = double(double(double(double(double(double(double(double(double(double(
+//      double(double(double(double(double(double(double(double(double(double(emptyTree))))))))))))))))))))
+//
+//    println(s"size: ${tree.size}")
+//
+//    time ("tree", 1) {
+//      MLValue(tree).retrieveNow
+//    }
+//
+//    val list = (1 to 1000).toList
+//    time ("list", 1) {
+//      MLValue(list).retrieveNow
+//    }
   }
 }

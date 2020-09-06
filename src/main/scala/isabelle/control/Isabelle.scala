@@ -5,10 +5,11 @@ import java.lang
 import java.lang.ProcessBuilder.Redirect
 import java.lang.ref.Cleaner
 import java.net.URL
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{FileSystemNotFoundException, Files, Path, Paths}
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, ConcurrentHashMap, ConcurrentLinkedQueue}
 
 import isabelle.control.Isabelle.Setup
+import org.apache.commons.io.FileUtils
 import org.log4s
 import org.log4s.{Debug, LogLevel, Warn}
 
@@ -21,7 +22,7 @@ import scala.io.Source
 import scala.sys.process.{Process, ProcessLogger}
 import scala.util.{Failure, Success, Try}
 
-class Isabelle(setup: Setup, build: Boolean = false) {
+class Isabelle(val setup: Setup, build: Boolean = false) {
   import Isabelle._
 
   private val sendQueue : BlockingQueue[(String, Try[String] => Unit)] = new ArrayBlockingQueue(1000)
@@ -108,11 +109,19 @@ class Isabelle(setup: Setup, build: Boolean = false) {
   }
 
   //noinspection SameParameterValue
-  private def filePathFromResource(name: String): Path = {
+  private def filePathFromResource(name: String, tmpDir: Path): Path = {
     val url = getClass.getResource(name)
     assert(url != null, name)
-    // TODO: Copy url to temp folder if not a file
-    Path.of(url.toURI)
+    try
+      Path.of(url.toURI)
+    catch {
+      case _ : FileSystemNotFoundException =>
+        val tmpPath = tmpDir.resolve(name.split('/').last)
+        val tmpFile = tmpPath.toFile
+        tmpFile.deleteOnExit()
+        FileUtils.copyURLToFile(url, tmpFile)
+        tmpPath
+    }
   }
 
   private def startProcess() : java.lang.Process = {
@@ -120,14 +129,15 @@ class Isabelle(setup: Setup, build: Boolean = false) {
     /** Path to absolute string, interpreted relative to wd */
     def str(path: Path) = wd.resolve(path).toAbsolutePath.toString
 
-    val isabelleBinary = setup.isabelleHome.resolve("bin").resolve("isabelle")
-    val mlFile = filePathFromResource("control_isabelle.ml")
-
-    assert(setup.userDir.forall(_.endsWith(".isabelle")))
-
     val tempDir = Files.createTempDirectory("isabellecontrol").toAbsolutePath
     tempDir.toFile.deleteOnExit()
     logger.debug(s"Temp directory: $tempDir")
+
+    val isabelleBinary = setup.isabelleHome.resolve("bin").resolve("isabelle")
+    val mlFile = filePathFromResource("control_isabelle.ml", tempDir)
+
+    assert(setup.userDir.forall(_.endsWith(".isabelle")))
+
 
     val inputPipe = tempDir.resolve("in-fifo").toAbsolutePath
     inputPipe.toFile.deleteOnExit()
@@ -154,7 +164,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
     for (root <- setup.sessionRoots)
       cmd += "-d" += str(root)
 
-    logger.debug(s"Cmd line: $cmd")
+    logger.debug(s"Cmd line: ${cmd.mkString(" ")}")
 
     val processBuilder = new java.lang.ProcessBuilder(cmd.toSeq :_*)
     processBuilder.directory(wd.toAbsolutePath.toFile)
@@ -194,7 +204,7 @@ class Isabelle(setup: Setup, build: Boolean = false) {
 
     cmd += setup.logic
 
-    logger.debug(s"Cmd line: $cmd")
+    logger.debug(s"Cmd line: ${cmd.mkString(" ")}")
 
     val extraEnv =
       for (userDir <- setup.userDir.toList)
