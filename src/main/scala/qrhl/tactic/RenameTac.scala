@@ -4,12 +4,12 @@ import isabelle.{Context, Term, Typ}
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
 import qrhl.logic.{QVariable, Variable}
-import qrhl.tactic.FrameRuleTac.colocalityOp
 
 import scala.collection.immutable.ListSet
 import scala.language.postfixOps
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.control.MLValue
+import GIsabelle.Ops
 
 // Implicits
 import MLValue.Implicits._
@@ -107,7 +107,7 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       def renameInvariant(inv: RichTerm) : RichTerm = {
         val inv2 = if (left) renameInvariant1(side = true, inv) else inv
         val inv3 = if (right) renameInvariant1(side = false, inv2) else inv2
-        RichTerm(RenameTac.swapOp(MLValue((state.isabelle.context, inv3.isabelleTerm))).retrieveNow)
+        RichTerm(Ops.swapOp(MLValue((state.isabelle.context, inv3.isabelleTerm))).retrieveNow)
       }
 
       val renamedPre = renameInvariant(pre)
@@ -117,10 +117,8 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       val colocalitySubgoal =
         if (forbiddenQInInvariant12.isEmpty) null
         else {
-          val colocalityPre = colocalityOp(
-            MLValue((state.isabelle.context, pre.isabelleTerm, forbiddenQInInvariant12))).retrieveNow
-          val colocalityPost = colocalityOp(
-            MLValue((state.isabelle.context, post.isabelleTerm, forbiddenQInInvariant12))).retrieveNow
+          val colocalityPre = Ops.colocalityOp((pre.isabelleTerm, forbiddenQInInvariant12)).retrieveNow
+          val colocalityPost = Ops.colocalityOp((post.isabelleTerm, forbiddenQInInvariant12)).retrieveNow
           AmbientSubgoal(GIsabelle.conj(colocalityPre, colocalityPost),
             assumptions.map(_.isabelleTerm))
         }
@@ -132,9 +130,4 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       else
         List(colocalitySubgoal, newQrhl)
   }
-}
-
-object RenameTac {
-  val swapOp =
-    MLValue.compileFunction[(Context, Term), Term]("QRHL_Operations.swap_variables_conv")
 }

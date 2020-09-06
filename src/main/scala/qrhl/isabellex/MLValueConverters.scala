@@ -46,6 +46,7 @@ object MLValueConverters {
     }
     override def retrieve(value: MLValue[Statement])(implicit isabelle: control.Isabelle, ec: ExecutionContext): Future[Statement] = {
       Ops.whatStatementOp(value).retrieve.flatMap {
+            // Operations are already defined, Ops.destBlock etc.
         case "block" => ???
         case "local" => ???
         case "assign" => ???

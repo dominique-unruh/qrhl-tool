@@ -5,11 +5,11 @@ import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.Variable.varsToString
 import qrhl.logic._
-import qrhl.tactic.EqualTac.{isInfinite_op, logger, _}
+import qrhl.tactic.EqualTac._
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.{Context, Free, Term, Typ}
 import isabelle.control.MLValue
-import GIsabelle.QuantumEqualityFull
+import GIsabelle.{QuantumEqualityFull, Ops}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
@@ -198,7 +198,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     def isInfinite(v: Variable): Boolean =
       isInfiniteHashtable.getOrElseUpdate(v, {
         val result =
-          isInfinite_op(MLValue((isabelle.context, v.valueTyp))).retrieveNow
+          Ops.isInfinite_op(MLValue((isabelle.context, v.valueTyp))).retrieveNow
         logger.debug(s"Checking infiniteness of $v: $result")
         result
       })
@@ -322,8 +322,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     postcondition = removeClassicals(env, postcondition, classicalsRemovedFromPost.toSet, Variable.classical(out).toSet)
     logger.debug(s"Postcondition: ${postcondition}")
 
-    val colocality = RichTerm(FrameRuleTac.colocalityOp(
-      MLValue((isabelle.context, postcondition.isabelleTerm,
+    val colocality = RichTerm(Ops.colocalityOp(((postcondition.isabelleTerm,
         forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) }))).retrieveNow)
 
     logger.debug(s"Colocality: $colocality")
@@ -379,8 +378,6 @@ object EqualTac {
 //  }
 //  private case class UnfixableConditionException(msg: String) extends Exception
 
-  private val isInfinite_op =
-    MLValue.compileFunction[(Context, Typ), Boolean]("QRHL_Operations.is_finite")
 
   class SimpleQeq(env: Environment) {
     private object trySwapped extends ControlThrowable

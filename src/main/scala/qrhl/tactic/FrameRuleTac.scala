@@ -7,6 +7,7 @@ import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import isabelle.{App, Const, Context, Term, Typ}
 import isabelle.control.MLValue
 import IsabelleX.{globalIsabelle => GIsabelle}
+import GIsabelle.Ops
 
 // Implicits
 import MLValue.Implicits._
@@ -53,14 +54,11 @@ case object FrameRuleTac extends Tactic {
 
       val qVars12 = leftVarUse.quantum.map(_.index1).union(rightVarUse.quantum.map(_.index2))
       val qVars12list = qVars12.toList.map { v => (v.variableName, v.valueTyp) }
-      val colocality = AmbientSubgoal(RichTerm(colocalityOp(
-        MLValue((state.isabelle.context, r, qVars12list))).retrieveNow))
+      val colocality = AmbientSubgoal(RichTerm(Ops.colocalityOp(((r, qVars12list))).retrieveNow))
 
       val qrhlSubgoal = QRHLSubgoal(left, right, RichTerm(GIsabelle.predicateT, a), RichTerm(GIsabelle.predicateT, b), assumptions)
 
       List(colocality, qrhlSubgoal)
   }
 
-  val colocalityOp =
-    MLValue.compileFunction[(Context, Term, List[(String, Typ)]), Term]("QRHL_Operations.colocal_pred_qvars")
 }

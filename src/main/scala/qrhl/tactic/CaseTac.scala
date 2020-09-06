@@ -4,7 +4,10 @@ import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.{Free, Term}
+
+// Implicits
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+import scala.concurrent.ExecutionContext.Implicits._
 
 case class CaseTac(variable:String, expr:RichTerm) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {

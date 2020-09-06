@@ -7,6 +7,8 @@ import qrhl.{QRHLSubgoal, UserException}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.Free
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 // Implicits
 import GIsabelle.isabelleControl
 

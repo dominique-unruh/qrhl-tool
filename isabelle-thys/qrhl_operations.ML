@@ -586,7 +586,7 @@ fun method_tac ctxt str = let
   val tactic = Method.evaluate text ctxt [] |> Method.NO_CONTEXT_TACTIC ctxt
 in tactic end
 
-fun is_finite ctxt T = let
+fun is_finite (ctxt, T) = let
   val goal = Const(\<^const_name>\<open>finite\<close>, HOLogic.mk_setT T --> HOLogic.boolT) $ HOLogic.mk_UNIV T
    |> HOLogic.mk_not
    |> HOLogic.mk_Trueprop
@@ -654,5 +654,12 @@ fun declare_variable (ctxt, name, T) = let
   val ([v],ctxt') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctxt
   val _ = if v<>name then error("variable "^name^" already declared") else ()
   in ctxt' end
+
+fun colocal_pred_qvars (predicate, qvars) = let
+     val (varterm,vartermT) = qvars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+     val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT vartermT --> HOLogic.boolT)
+               $ predicate $ varterm
+   in colocality end
+
 
 end

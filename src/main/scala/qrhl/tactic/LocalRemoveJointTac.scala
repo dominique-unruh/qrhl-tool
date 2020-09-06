@@ -10,7 +10,7 @@ import isabelle.Term
 
 // Implicits
 import GIsabelle.isabelleControl
-
+import scala.concurrent.ExecutionContext.Implicits._
 
 case object LocalRemoveJointTac extends Tactic {
   /** Assumes that s1,s2 have same length and matching types */

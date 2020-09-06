@@ -719,6 +719,20 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   //noinspection TypeAnnotation
   object Ops {
+    val swapOp =
+      MLValue.compileFunction[(Context, Term), Term]("QRHL_Operations.swap_variables_conv")
+    val colocalityOp =
+      MLValue.compileFunction[(Term, List[(String, Typ)]), Term]("QRHL_Operations.colocal_pred_qvars")
+    val isInfinite_op =
+      MLValue.compileFunction[(Context, Typ), Boolean]("QRHL_Operations.is_finite")
+    val declare_quantum_variable =
+      MLValue.compileFunction[((String, Typ, Context)), Context]("QRHL_Operations.declare_quantum_variable")
+    val declare_classical_variable =
+      MLValue.compileFunction[(String,Typ,Context), Context]("QRHL_Operations.declare_classical_variable")
+    // left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]
+    val qrhl_subgoal_to_term_op =
+      MLValue.compileFunction[(Context, List[Statement], List[Statement], Term, Term, List[Term]), Term]("QRHL_Operations.qrhl_subgoal_to_term")
+
     val declare_concrete_program_op =
       MLValue.compileFunction[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],List[String],Statement), Context]("QRHL_Operations.declare_concrete_program")
 
@@ -755,6 +769,24 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       MLValue.compileFunction[(VarTerm[String],VarTerm[String],Term), Statement]("QRHL_Operations.Measurement")
     val whatStatementOp =
       MLValue.compileFunction[Statement, String]("QRHL_Operations.whatStatement")
+    val destBlock =
+      MLValue.compileFunction[Statement, List[Statement]]("fn QRHL_Operations.Block x => x")
+    val destLocal =
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],VarTerm[(String,Typ)],List[Statement])](
+        "QRHL_Operations.Local x => x")
+    val destAssign =
+      MLValue.compileFunction[Statement, (VarTerm[String],Term)]("fn QRHL_Operations.Assign x => x")
+    val destSample =
+      MLValue.compileFunction[Statement, (VarTerm[String],Term)]("fn QRHL_Operations.Sample x => x")
+    val destIfThenElse =
+      MLValue.compileFunction[Statement, (Term,List[Statement],List[Statement])]("fn QRHL_Operations.IfThenElse")
+    val destQApply =
+      MLValue.compileFunction[Statement, (VarTerm[String],Term)]("fn QRHL_Operations.QApply x => x")
+    val destQInit =
+      MLValue.compileFunction[Statement, (VarTerm[String],Term)]("fn QRHL_Operations.QInit x => x")
+    val destWhile =
+      MLValue.compileFunction[Statement, (Term,List[Statement])]("fn QRHL_Operations.While x => x")
+
     private val whatVartermOp_ =
       MLValue.compileFunction[VarTerm[MLValue[Nothing]], String]("QRHL_Operations.whatVarterm")
     def whatVartermOp[A] = whatVartermOp_.asInstanceOf[MLFunction[VarTerm[MLValue[A]], String]]
