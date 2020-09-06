@@ -131,7 +131,7 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
               // Equivalent to (5).
               // In Isabelle, we need to explicitly make a case distinction on the finiteness of afterT because
               // card is the cardinality only in case of finite sets
-              val cardinalityCondition1 = ConseqQrhlTac.conseq_qrhl_cardinality_condition(
+              val cardinalityCondition1 = Ops.conseq_qrhl_cardinality_condition(
                 MLValue((context, beforeLeftPairs, afterLeftPairs))).retrieveNow
               // Add this to the goals that we need to check
               easyGoals += cardinalityCondition1
@@ -150,13 +150,13 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
               //   quantum equality has no duplicate variables before replacement (6)
               //   quantum equality has no duplicate variables after replacement (6)
               // colocalityPre: subgoal that ensures that X is disjoint with beforeLeft/RightIdxPairs, afterLeft/RightIdxPairs, (7)
-              val (pre3, colocalityPre) = ConseqQrhlTac.conseq_qrhl_replace_in_predicate(
-                MLValue((context, pre2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))).retrieveNow
+              val (pre3, colocalityPre) = Ops.conseq_qrhl_replace_in_predicate(
+                pre2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs).retrieveNow
               easyGoals += colocalityPre
 
               // Same for postcondition
-              val (post3, colocalityPost) = ConseqQrhlTac.conseq_qrhl_replace_in_predicate(
-                MLValue((context, post2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs))).retrieveNow
+              val (post3, colocalityPost) = Ops.conseq_qrhl_replace_in_predicate(
+                post2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs).retrieveNow
               easyGoals += colocalityPost
 
               goals += AmbientSubgoal(GIsabelle.conj(easyGoals.toSeq: _*), assms.map(_.isabelleTerm))
@@ -196,10 +196,4 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
 object ConseqQrhlTac {
   private val logger = log4s.getLogger
 
-  private val conseq_qrhl_cardinality_condition =
-    MLValue.compileFunction[(Context, List[(String,Typ)], List[(String,Typ)]), Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")
-
-  private val conseq_qrhl_replace_in_predicate =
-    MLValue.compileFunction[(Context, Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)]), (Term, Term)](
-      "QRHL_Operations.conseq_qrhl_replace_in_predicate")
 }

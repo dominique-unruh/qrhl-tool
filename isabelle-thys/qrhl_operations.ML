@@ -375,7 +375,8 @@ fun addAssumption (name, term, ctx) =
     ctx
   end
 
-fun declare_abstract_program ctxt (name:string) (cvars:(string*typ)list) (cwvars:(string*typ)list) (qvars:(string*typ)list) (numOracles:int)= let
+fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:(string*typ)list, 
+                              qvars:(string*typ)list, numOracles:int) = let
   val T = if numOracles=0 then \<^typ>\<open>program\<close> else \<^typ>\<open>oracle_program\<close>
 
   (* Declare the program name as a fixed variable *)
@@ -418,7 +419,7 @@ fun declare_abstract_program ctxt (name:string) (cvars:(string*typ)list) (cwvars
 in ctxt end
 
 fun declare_concrete_program (ctxt, name:string, cvars:(string*typ)list, cwvars:(string*typ) list, qvars:(string*typ)list, oracles:string list, body:Programs.statement) = let
-  val ctxt = declare_abstract_program ctxt name cvars cwvars qvars (length oracles)
+  val ctxt = declare_abstract_program (ctxt, name, cvars, cwvars, qvars, length oracles)
 
   fun tag ora = "@"^ora
   val body_rhs = Programs.statement_to_term ctxt body
@@ -495,7 +496,7 @@ fun simp (t, facts, ctxt) =
       | _ => simp_any t ctxt
   end
 
-fun conseq_qrhl_replace_in_predicate predicate beforeLeft afterLeft beforeRight afterRight = let
+fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRight, afterRight) = let
   (* Parse predicate as \<open>pred_lhs \<sqinter> \<lbrakk>vt_left\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>vt_right\<rbrakk>\<close> *)
   val (pred_lhs, qeq_left, qeq_right) = case predicate of
       Const(\<^const_name>\<open>inf\<close>,_) $ pred_lhs $ (Const(\<^const_name>\<open>quantum_equality_full\<close>,_) $ U $ Q $ V $ R) => let
@@ -596,7 +597,7 @@ fun is_finite (ctxt, T) = let
 in result = \<^prop>\<open>True\<close> end
 
 
-fun byQRHLPre cvars qvars =
+fun byQRHLPre (cvars, qvars) =
   let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
       val cEqs' = \<^const>\<open>classical_subspace\<close> $ QRHL.mk_conjs cEqs
       val (qvars1',qvars1T) = QRHL.variables (map (fn (v1,_ ,T) => Free(v1,QRHL.mk_variableT T)) qvars)
@@ -681,5 +682,29 @@ val joint_sample_tac =
 
 val seq_tac =
  apply_tactic_on_term_concl (fn ctxt => fn (i,j,B) => Tactics.seq_tac i j B ctxt 1)
+
+fun conseq_qrhl_cardinality_condition (ctxt,befor,after) = let
+     val (_,beforeT) = befor |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+     val (_,afterT) = after |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+     val before_UNIV = HOLogic.mk_UNIV beforeT
+     val after_UNIV = HOLogic.mk_UNIV afterT
+     (* finite (UNIV::beforeT set) *)
+     val before_finite = Const(\<^const_name>\<open>finite\<close>, HOLogic.mk_setT beforeT --> HOLogic.boolT) $ before_UNIV
+     (* infinite (UNIV::beforeT set) *)
+     val before_infinite = HOLogic.mk_not before_finite
+     (* finite (UNIV::afterT set) *)
+     val after_finite = Const(\<^const_name>\<open>finite\<close>, HOLogic.mk_setT afterT --> HOLogic.boolT) $ after_UNIV
+     (* card (UNIV::beforeT set) *)
+     val before_card = Const(\<^const_name>\<open>card\<close>, HOLogic.mk_setT beforeT --> HOLogic.natT) $ before_UNIV
+     (* card (UNIV::afterT set) *)
+     val after_card = Const(\<^const_name>\<open>card\<close>, HOLogic.mk_setT afterT --> HOLogic.natT) $ after_UNIV
+     (* card (UNIV::beforeT set) \<ge> card (UNIV::afterT set) *)
+     val before_geq_after = \<^term>\<open>(\<ge>) :: nat\<Rightarrow>_\<Rightarrow>_\<close> $ before_card $ after_card
+     (* infinite (UNIV::beforeT set) \<or> (finite (UNIV::afterT set) \<and> card (UNIV::beforeT set) \<ge> card (UNIV::afterT set) *)
+     val term = HOLogic.mk_disj (before_infinite, HOLogic.mk_conj (after_finite, before_geq_after))
+  in term end
+
+fun add_index_to_expression (t,left) =
+  Expressions.add_index_to_expression t left
 
 end

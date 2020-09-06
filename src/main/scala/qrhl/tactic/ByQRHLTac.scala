@@ -5,20 +5,19 @@ import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.logic._
-import qrhl.tactic.ByQRHLTac.{addIndexToExpressionOp, byQRHLPreOp}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.{App, Const, Context, Free, Term, Typ}
 import isabelle.control.MLValue
-import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+import GIsabelle.Ops
 
 import scala.collection.immutable.ListSet
-import scala.collection.mutable
 
 import MLValue.Implicits._
 import Context.Implicits._
 import Term.Implicits._
 import Typ.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 
 case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
   /** Pattern-matcher that matches Pr[e : prog (rho)]
@@ -32,8 +31,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
     def unapply(term: Term): Option[(Term,Statement,Term)] = term match {
       case App(App(App(Const(GIsabelle.probability.name,_),e),p),rho) =>
 
-        val e2 = addIndexToExpressionOp(
-                    MLValue((state.isabelle.context, e, left))).retrieveNow
+        val e2 = Ops.addIndexToExpressionOp(e, left).retrieveNow
         val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
 
         val pname = p match {
@@ -125,10 +123,9 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         // Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
         // if cvars =: x...z and qvars =: q...r
-        val pre = byQRHLPreOp(
-          MLValue((isa.context,
+        val pre = Ops.byQRHLPreOp(
             cvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
-            qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))))).retrieveNow
+            qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))).retrieveNow
 
         val left = p1.toBlock
         val right = p2.toBlock
@@ -146,10 +143,5 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 object ByQRHLTac {
   private val logger = log4s.getLogger
 
-  private val byQRHLPreOp =
-    MLValue.compileFunction[(Context, List[(String, String, Typ)], List[(String, String, Typ)]), Term]("QRHL_Operations.byQRHLPre")
-
-  private val addIndexToExpressionOp =
-    MLValue.compileFunction[(Context,Term,Boolean), Term]("QRHL_Operations.add_index_to_expression")
 
 }

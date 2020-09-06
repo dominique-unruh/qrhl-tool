@@ -720,6 +720,29 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   //noinspection TypeAnnotation
   object Ops {
     import MLValue.{compileFunction, compileFunctionRaw, compileValue, compileValueRaw}
+
+    val conseq_qrhl_cardinality_condition =
+      MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")
+    val conseq_qrhl_replace_in_predicate =
+      MLValue.compileFunction[Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], (Term, Term)](
+        "QRHL_Operations.conseq_qrhl_replace_in_predicate")
+    val declare_abstract_program_op =
+      compileFunction[Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int, Context](
+        "QRHL_Operations.declare_abstract_program")
+    val decodeFromExpressionOp =
+      MLValue.compileFunction[Context,Term, Term]("QRHL_Operations.expression_to_term")
+    val termToExpressionOp =
+      MLValue.compileFunction[Context, Term, Term]("QRHL_Operations.term_to_expression")
+    val byQRHLPreOp =
+      MLValue.compileFunction[List[(String, String, Typ)], List[(String, String, Typ)], Term]("QRHL_Operations.byQRHLPre")
+    val addIndexToExpressionOp =
+      MLValue.compileFunction[Term, Boolean, Term]("QRHL_Operations.add_index_to_expression")
+    val fixTacOp =
+      MLValue.compileFunction[Term, String, (Term, Typ)]("QRHL_Operations.fixTac")
+    val debugOp =
+      MLValue.compileFunction[Context, String]("QRHL_Operations.debug")
+
+
     val makeQrhlSubgoal =
       MLValue.compileFunction[List[Statement], List[Statement], Term, Term, List[Term], Subgoal]("QRHL_Operations.makeQrhlSubgoal")
     val makeAmbientSubgoal =

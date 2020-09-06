@@ -172,7 +172,7 @@ final case class AbstractProgramDecl(name:String, free:List[Variable], inner:Lis
     val cvars = vars.classical map { v => (v.name, v.valueTyp) }
     val cwvars = vars.written collect { case v : CVariable => (v.name, v.valueTyp) }
     val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val ctxt = declare_abstract_program_op(
+    val ctxt = Ops.declare_abstract_program_op(
       MLValue((isabelle.context, name, cvars.toList, cwvars.toList, qvars.toList, numOracles))).retrieveNow
     new ContextX(isabelle.isabelle,ctxt)
   }
@@ -184,9 +184,6 @@ final case class AbstractProgramDecl(name:String, free:List[Variable], inner:Lis
 }
 
 object AbstractProgramDecl {
-  private val declare_abstract_program_op =
-    MLValue.compileFunction[(Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int), Context](
-      "QRHL_Operations.declare_abstract_program")
 }
 
 final case class ConcreteProgramDecl(environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {

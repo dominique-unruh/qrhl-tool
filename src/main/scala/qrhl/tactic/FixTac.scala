@@ -12,6 +12,7 @@ import Term.Implicits._
 import Typ.Implicits._
 import Context.Implicits._
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+import qrhl.isabellex.IsabelleX.globalIsabelle.Ops
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
@@ -35,8 +36,7 @@ case class FixTac(variable:String) extends Tactic {
       //      val lit = ml.Expr.uncheckedLiteral[Term => String => (Term,pure.Typ)]("QRHL.fixTac")
       //      val mlExpr = lit(expr.isabelleTerm)(implicitly) (variable)
       //      val (result,varTyp2) = state.isabelle.runExpr(mlExpr)
-      val (result,varTyp2) = FixTac.fixTacOp(
-        MLValue((state.isabelle.context, expr.isabelleTerm, variable))).retrieveNow
+      val (result,varTyp2) = Ops.fixTacOp(expr.isabelleTerm, variable).retrieveNow
       val varTyp3 = varTyp2
 
       if (varTyp!=varTyp3)
@@ -46,7 +46,3 @@ case class FixTac(variable:String) extends Tactic {
   }
 }
 
-object FixTac {
-  val fixTacOp =
-    MLValue.compileFunction[(Context, Term, String), (Term, Typ)]("QRHL_Operations.fixTac")
-}

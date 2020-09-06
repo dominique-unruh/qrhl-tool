@@ -87,7 +87,7 @@ operation_setup read_expression = \<open>
         parse_term ctxt str T |> richterm_encode ctxt end}
 \<close>
 
-operation_setup byQRHLPre = \<open>
+(* operation_setup byQRHLPre = \<open>
   {from_lib = Codec.triple 
               Codec.int (* Context *)
               (Codec.list (Codec.triple Codec.string Codec.string typ_tight_codec)) (* qvars *)
@@ -96,7 +96,7 @@ operation_setup byQRHLPre = \<open>
    action = fn (ctxt_id,cvars,qvars) => 
       let val ctxt = Refs.Ctxt.read ctxt_id in
           QRHL_Operations.byQRHLPre cvars qvars |> richterm_encode ctxt end}
-\<close>
+\<close> *)
 
 (* (* Ambient variables *)
 operation_setup declare_variable = \<open>
@@ -138,13 +138,13 @@ operation_setup mk_equals_wp = \<open>
       val R = QRHL.equal_get_R post cvars1 cvars2 qvars1 qvars2 owc
       in richterm_encode ctxt R end}\<close> *)
 
-operation_setup fixTac = \<open>
+(* operation_setup fixTac = \<open>
   {from_lib = Codec.triple Codec.int term_tight_codec Codec.string,
    to_lib = Codec.id,
    action = fn (ctxt_id,expr,var) => 
       let val ctxt = Refs.Ctxt.read ctxt_id in
           QRHL.fixTac expr var |> Codec.encode (Codec.tuple (richterm_codec' ctxt) typ_tight_codec) end}
-\<close>
+\<close> *)
 
 (* TODO remove (incl QRHL.rndWp). Same for rndWp2 *)
 operation_setup rndWp = \<open>
@@ -315,7 +315,7 @@ operation_setup retrieve_term_string = \<open>
    to_lib = Codec.string,
    action = Terms.id_to_string}\<close>
 
-operation_setup declare_abstract_program = \<open>
+(* operation_setup declare_abstract_program = \<open>
   {from_lib = tuple6 Codec.int (* ctxt *)
                      Codec.string (* prog name *)
                      (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* cvars *)
@@ -325,7 +325,7 @@ operation_setup declare_abstract_program = \<open>
    to_lib = Codec.int,
    action = fn (ctxt_id,name,cvars,cwvars,qvars,numOracles) => 
      make_ctxt_ref (QRHL_Operations.declare_abstract_program (Refs.Ctxt.read ctxt_id) name cvars cwvars  qvars numOracles)}
-\<close>
+\<close> *)
 
 operation_setup debug = \<open>
   {from_lib = Codec.int,
@@ -365,7 +365,7 @@ ML \<open>
 \<close>
 
 
-operation_setup conseq_qrhl_cardinality_condition = \<open>
+(* operation_setup conseq_qrhl_cardinality_condition = \<open>
   {from_lib = Codec.triple
               Codec.int (* ctxt *)
               (Codec.list (Codec.tuple Codec.string typ_tight_codec)) (* qvars before *)
@@ -392,9 +392,9 @@ operation_setup conseq_qrhl_cardinality_condition = \<open>
      (* infinite (UNIV::beforeT set) \<or> (finite (UNIV::afterT set) \<and> card (UNIV::beforeT set) \<ge> card (UNIV::afterT set) *)
      val term = HOLogic.mk_disj (before_infinite, HOLogic.mk_conj (after_finite, before_geq_after))
   in Codec.encode (richterm_codec' ctxt) term end}
-\<close>
+ *)
 
-operation_setup conseq_qrhl_replace_in_predicate = \<open>
+(* operation_setup conseq_qrhl_replace_in_predicate = \<open>
   {from_lib = tuple6
               Codec.int (* context *)
               term_tight_codec (* predicate *)
@@ -408,7 +408,7 @@ operation_setup conseq_qrhl_replace_in_predicate = \<open>
      val (predicate', colocality) = conseq_qrhl_replace_in_predicate predicate beforeLeft afterLeft beforeRight afterRight
    in Codec.encode (Codec.tuple (richterm_codec' ctxt) (richterm_codec' ctxt)) (predicate', colocality) end
   }
-\<close>
+\<close> *)
 
 (* operation_setup swap_variables_conv = \<open>
   {from_lib = Codec.tuple
@@ -433,6 +433,7 @@ operation_setup conseq_qrhl_replace_in_predicate = \<open>
 
 
 ML \<open>
+QRHL_Operations.conseq_qrhl_replace_in_predicate
 \<close>
 
 (* 

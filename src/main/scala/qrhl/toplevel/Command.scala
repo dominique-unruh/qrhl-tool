@@ -10,6 +10,7 @@ import qrhl.{State, Subgoal, Tactic, UserException}
 import IsabelleX.{globalIsabelle => GIsabelle}
 
 import scala.collection.immutable.ListSet
+import GIsabelle.Ops
 
 // Implicits
 import GIsabelle.isabelleControl
@@ -137,12 +138,10 @@ object DebugCommand {
     new DebugCommand({state:State => action(state.isabelle, state.goal); state})
   val isabelle: DebugCommand = DebugCommand.state({
     state : State =>
-      val str = debugOp(MLValue(state.isabelle.context)).retrieveNow
+      val str = Ops.debugOp(MLValue(state.isabelle.context)).retrieveNow
       println(s"DEBUG: $str")
   })
 
-  val debugOp =
-    MLValue.compileFunction[Context, String]("QRHL_Operations.debug")
 }
 
 case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=false) extends Command {

@@ -337,7 +337,7 @@ fun checkType ctx term =
     Thm.typ_of_cterm ct
   end
 
-fun fixTac term var =
+fun fixTac (term, var) =
   let val (typ,body) = dest_All term
       val res = Term.subst_bound (Free(var,typ), body)
   in
