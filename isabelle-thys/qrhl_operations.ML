@@ -208,7 +208,7 @@ fun varterm_decode (XML.Elem(("u",[]),[])) : (string*typ) tree result = Codec.Su
 (* fun string_list_encode l = XML.Elem(("l",[]),map (Codec.encode Codec.string) l) *)
 (* fun string_list_decode (XML.Elem(("l",[]), l)) = traverse_results (Codec.decode Codec.string) l *)
 
-fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode ctxt (s)) stmts)
+(* fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => statement_encode ctxt (s)) stmts)
   | statement_encode ctxt (Local(cvars,qvars,stmts)) = (XML.Elem(("local",[]), 
       [varterm_encode cvars, varterm_encode qvars, statement_encode ctxt (Block stmts)]))
   | statement_encode ctxt (Assign (var, rhs)) = XML.Elem(("assign",[]), [string_tree_encode var, richterm_encode ctxt rhs])
@@ -223,9 +223,9 @@ fun statement_encode ctxt (Block stmts) = XML.Elem(("block",[]), map (fn s => st
   | statement_encode ctxt (IfThenElse (e,p1,p2)) = XML.Elem(("ifte",[]),
         [richterm_encode ctxt (e), statement_encode ctxt (Block p1), statement_encode ctxt (Block p2)])
   | statement_encode ctxt (While (e,p1)) = XML.Elem(("while",[]),
-        [richterm_encode ctxt (e), statement_encode ctxt (Block p1)])
+        [richterm_encode ctxt (e), statement_encode ctxt (Block p1)]) *)
 
-fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
+(* fun statement_decode (xml as XML.Elem(("block",_), _)) : statement result = 
       block_decode xml |> map_result Block
   | statement_decode (XML.Elem(("local",_), [cvars,qvars,body])) =
       bind_result (fn cvars' => bind_result (fn qvars' => map_result (fn stmts => Local(cvars',qvars',stmts))
@@ -260,7 +260,7 @@ and
   | block_decode xml = Codec.Failure ("invalid encoding for a block",[xml])
 
 val statement_codec = Codec.basic {encode=fn _ => error "statement_codec: encode not allowed", decode=statement_decode}
-fun statement_codec' ctxt = Codec.basic {encode=statement_encode ctxt, decode=statement_decode}
+fun statement_codec' ctxt = Codec.basic {encode=statement_encode ctxt, decode=statement_decode} *)
 
 datatype subgoal = Subgoal_QRHL of Relational_Hoare.qrhl_judgment * term list | Subgoal_Ambient of term
 
@@ -294,7 +294,7 @@ fun term_to_subgoal ctxt t = let
 
 (* val _ = term_to_subgoal \<^context> @{term "qrhl Expr[top] [xxx] [xxx] Expr[top]"} |> \<^print> *)
 
-fun qrhl_encode (ctxt, Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) = XML.Elem(("qrhl",[]),
+(* fun qrhl_encode (ctxt, Relational_Hoare.QRHL_Judgment (pre,p1,p2,post)) = XML.Elem(("qrhl",[]),
   [richterm_encode ctxt (pre), statement_encode ctxt (Programs.Block p1), statement_encode ctxt (Programs.Block p2),
    richterm_encode ctxt (post)])
 
@@ -318,7 +318,7 @@ fun subgoal_decode (XML.Elem(("qrhlgoal",[]), qrhl::assms)) =
   | subgoal_decode xml = Codec.Failure ("invalid encoding for a subgoal",[xml])
 
 val subgoal_codec = Codec.basic {encode=fn _ => error "subgoal_codec: encode not allowed", decode=subgoal_decode}
-fun subgoal_codec' ctxt = Codec.basic {encode=subgoal_encode ctxt, decode=subgoal_decode}
+fun subgoal_codec' ctxt = Codec.basic {encode=subgoal_encode ctxt, decode=subgoal_decode} *)
 
 fun apply_tactic_on_term_concl tac (arg,subgoal,ctxt) = let
   val goal = subgoal_to_term ctxt subgoal
@@ -344,7 +344,7 @@ fun apply_tactic_on_term tac name (arg,subgoal,ctxt) = let
                | SOME x => x
   val subgoals = Thm.prems_of goal''
   val subgoals' = map (atomize ctxt) subgoals
-  in SOME (subgoals' |> map (term_to_subgoal ctxt),goal'')  |> Codec.encode (Codec.option (Codec.tuple (Codec.list (subgoal_codec' ctxt)) thm_codec)) end
+  in SOME (subgoals' |> map (term_to_subgoal ctxt),goal'') end
 end
 
 fun local_thy_file thy = let val name = Context.theory_long_name thy in
@@ -680,8 +680,6 @@ val joint_sample_tac =
       Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)
 
 val seq_tac =
-  apply_tactic_on_term_concl (fn ctxt => fn witness => 
-      let val witness_expr = witness |> Expressions.term_to_expression ctxt |> Thm.cterm_of ctxt in
-      Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)
+ apply_tactic_on_term_concl (fn ctxt => fn (i,j,B) => Tactics.seq_tac i j B ctxt 1)
 
 end

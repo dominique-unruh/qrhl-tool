@@ -28,35 +28,60 @@ object MLValueConverters {
       case block: Block =>
         Ops.listToBlock(block.statements)
       case Assign(variable, expression) =>
-        Ops.makeAssign((variable.map(_.name), expression.isabelleTerm))
+        Ops.makeAssign((variable.map(v => (v.name,v.valueTyp)), expression.isabelleTerm))
       case Sample(variable, expression) =>
-        Ops.makeSample((variable.map(_.name), expression.isabelleTerm))
+        Ops.makeSample((variable.map(v => (v.name,v.valueTyp)), expression.isabelleTerm))
       case IfThenElse(condition, thenBranch, elseBranch) =>
         Ops.makeIfThenElse((condition.isabelleTerm,thenBranch.statements,elseBranch.statements))
       case While(condition, body) =>
         Ops.makeWhile((condition.isabelleTerm,body.statements))
       case QInit(location, expression) =>
-        Ops.makeQInit((location.map(_.name), expression.isabelleTerm))
+        Ops.makeQInit((location.map(v => (v.name,v.valueTyp)), expression.isabelleTerm))
       case QApply(location, expression) =>
-        Ops.makeQApply((location.map(_.name), expression.isabelleTerm))
+        Ops.makeQApply((location.map(v => (v.name,v.valueTyp)), expression.isabelleTerm))
       case Measurement(result, location, e) =>
-        Ops.makeMeasurement((result.map(_.name), location.map(_.name), e.isabelleTerm))
+        Ops.makeMeasurement((result.map(v => (v.name,v.valueTyp)), location.map(v => (v.name,v.valueTyp)), e.isabelleTerm))
       case call : Call =>
         Ops.makeCall(call)
     }
     override def retrieve(value: MLValue[Statement])(implicit isabelle: control.Isabelle, ec: ExecutionContext): Future[Statement] = {
       Ops.whatStatementOp(value).retrieve.flatMap {
             // Operations are already defined, Ops.destBlock etc.
-        case "block" => ???
-        case "local" => ???
-        case "assign" => ???
-        case "sample" => ???
-        case "call" => ???
-        case "measurement" => ???
-        case "qinit" => ???
-        case "qapply" => ???
-        case "ifthenelse" => ???
-        case "while" => ???
+        case "block" =>
+          for (statements <- Ops.destBlock(value).retrieve)
+            yield Block(statements :_*)
+        case "local" =>
+          for ((cvars,qvars,stmts) <- Ops.destLocal(value).retrieve)
+            yield Local(
+              cvars.toList.map { case (name, typ) => CVariable(name,typ) },
+              qvars.toList.map { case (name, typ) => QVariable(name,typ) },
+              Block(stmts :_*))
+        case "assign" =>
+          for ((vars, expr) <- Ops.destAssign(value).retrieve)
+            yield Assign(vars.map { case (name, typ) => CVariable(name,typ) }, RichTerm(expr))
+        case "sample" =>
+          for ((vars, expr) <- Ops.destSample(value).retrieve)
+            yield Sample(vars.map { case (name, typ) => CVariable(name,typ) }, RichTerm(expr))
+        case "call" =>
+          value.asInstanceOf[MLValue[Call]].retrieve
+        case "measurement" =>
+          for ((result, location, e) <- Ops.destMeasurement(value).retrieve)
+            yield Measurement(
+              result.map { case (name, typ) => CVariable(name,typ) },
+              location.map { case (name, typ) => QVariable(name,typ) },
+              RichTerm(e))
+        case "qinit" =>
+          for ((vars, expr) <- Ops.destQInit(value).retrieve)
+            yield QInit(vars.map { case (name, typ) => QVariable(name,typ) }, RichTerm(expr))
+        case "qapply" =>
+          for ((vars, expr) <- Ops.destQApply(value).retrieve)
+            yield QApply(vars.map { case (name, typ) => QVariable(name,typ) }, RichTerm(expr))
+        case "ifthenelse" =>
+          for ((cond,thens,elses) <- Ops.destIfThenElse(value).retrieve)
+            yield IfThenElse(RichTerm(cond), Block(thens:_*), Block(elses:_*))
+        case "while" =>
+          for ((cond,body) <- Ops.destWhile(value).retrieve)
+            yield While(RichTerm(cond), Block(body:_*))
       }
     }
 

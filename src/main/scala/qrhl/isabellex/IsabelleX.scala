@@ -761,15 +761,15 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val makeLocal =
       MLValue.compileFunction[VarTerm[(String,Typ)], VarTerm[(String,Typ)], List[Statement], Statement]("QRHL_Operations.Local")
     val makeAssign =
-      MLValue.compileFunction[VarTerm[String], Term, Statement]("QRHL_Operations.Assign")
+      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.Assign")
     val makeSample =
-      MLValue.compileFunction[VarTerm[String], Term, Statement]("QRHL_Operations.Sample")
+      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.Sample")
     val makeIfThenElse =
       MLValue.compileFunction[Term, List[Statement], List[Statement], Statement]("QRHL_Operations.IfThenElse")
     val makeQApply =
-      MLValue.compileFunction[VarTerm[String], Term, Statement]("QRHL_Operations.QApply")
+      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.QApply")
     val makeQInit =
-      MLValue.compileFunction[VarTerm[String], Term, Statement]("QRHL_Operations.QInit")
+      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.QInit")
     val makeWhile =
       MLValue.compileFunction[Term, List[Statement], Statement]("QRHL_Operations.While")
     val makeCALL =
@@ -779,24 +779,26 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val makeCall =
       MLValue.compileFunction[Call, Statement]("QRHL_Operations.Call")
     val makeMeasurement =
-      MLValue.compileFunction[VarTerm[String], VarTerm[String], Term, Statement]("QRHL_Operations.Measurement")
+      MLValue.compileFunction[VarTerm[(String,Typ)], VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.Measurement")
     val whatStatementOp =
       MLValue.compileFunction[Statement, String]("QRHL_Operations.whatStatement")
+    val destMeasurement =
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)], VarTerm[(String,Typ)], Term)]("fn QRHL_Operations.Measurement x => x")
     val destBlock =
       MLValue.compileFunction[Statement, List[Statement]]("fn QRHL_Operations.Block x => x")
     val destLocal =
       MLValue.compileFunction[Statement, (VarTerm[(String,Typ)], VarTerm[(String,Typ)],List[Statement])](
         "fn QRHL_Operations.Local x => x")
     val destAssign =
-      MLValue.compileFunction[Statement, (VarTerm[String],Term)]("fn QRHL_Operations.Assign x => x")
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.Assign x => x")
     val destSample =
-      MLValue.compileFunction[Statement, (VarTerm[String],Term)]("fn QRHL_Operations.Sample x => x")
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.Sample x => x")
     val destIfThenElse =
       MLValue.compileFunction[Statement, (Term,List[Statement],List[Statement])]("fn QRHL_Operations.IfThenElse x => x")
     val destQApply =
-      MLValue.compileFunction[Statement, (VarTerm[String],Term)]("fn QRHL_Operations.QApply x => x")
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.QApply x => x")
     val destQInit =
-      MLValue.compileFunction[Statement, (VarTerm[String],Term)]("fn QRHL_Operations.QInit x => x")
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.QInit x => x")
     val destWhile =
       MLValue.compileFunction[Statement, (Term,List[Statement])]("fn QRHL_Operations.While x => x")
 

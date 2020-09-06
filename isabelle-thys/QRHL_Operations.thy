@@ -14,21 +14,21 @@ Codec.add_exception_printer (fn _ => fn exn => exn |> Runtime.thread_context |> 
 
 ML \<open>open QRHL_Operations\<close>
 
-operation_setup o2h_tac = \<open>
+(* operation_setup o2h_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
       (fn ctxt => fn _ => O2H.o2h_tac ctxt 1) 
       (fn _ => "o2h")}
-\<close>
+\<close> *)
 
-operation_setup semiclassical_tac = \<open>
+(* operation_setup semiclassical_tac = \<open>
   {from_lib = Codec.triple Codec.unit subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
       (fn ctxt => fn _ => Semi_Classical_Search.semi_classical_search_tac ctxt 1) 
       (fn _ => "o2h")}
-\<close>
+\<close> *)
 
 (* operation_setup check_type = \<open>
   {from_lib = Codec.tuple Codec.int term_tight_codec,
@@ -165,7 +165,7 @@ operation_setup rndWp2 = \<open>
          QRHL.rndWp2 v1 T1 e1 v2 T2 e2 f B |> richterm_encode ctxt end}
 \<close>
 
-operation_setup apply_rule = \<open> let
+(* operation_setup apply_rule = \<open> let
 fun tac ctxt name = resolve_tac ctxt (get_thms ctxt name) 1
 in
   {from_lib = Codec.triple Codec.string subgoal_codec context_codec,
@@ -174,15 +174,15 @@ in
       tac 
       (fn rule => "rule "^rule)}
 end
-\<close>
+\<close> *)
 
-operation_setup apply_method = \<open>
+(* operation_setup apply_method = \<open>
   {from_lib = Codec.triple Codec.string subgoal_codec context_codec,
    to_lib = Codec.id,
    action = apply_tactic_on_term 
       method_tac 
       (fn str => "method "^str)}
-\<close>
+\<close> *)
 
 
 (* operation_setup simplify_term = \<open>
@@ -282,28 +282,28 @@ operation_setup term_test = \<open>
    action = List.app Thy_Info.use_thy}
 \<close> *)
 
-operation_setup statement_to_term = \<open>
+(* operation_setup statement_to_term = \<open>
   {from_lib = Codec.tuple Codec.int statement_codec,
    to_lib = Codec.id,
    action = fn (ctxt_id, statement) =>
      let val ctxt = Refs.Ctxt.read ctxt_id
      in Programs.statement_to_term ctxt statement
          |> richterm_encode ctxt  end}
-\<close>
+\<close> *)
 
-operation_setup statements_to_term = \<open>
+(* operation_setup statements_to_term = \<open>
   {from_lib = Codec.tuple Codec.int (Codec.list statement_codec),
    to_lib = Codec.id,
    action = fn (ctxt_id, statements) =>
      let val ctxt = Refs.Ctxt.read ctxt_id
      in Programs.statements_to_term ctxt statements |> richterm_encode ctxt end}
-\<close>
+\<close> *)
 
-operation_setup subgoal_to_term = \<open>
+(* operation_setup subgoal_to_term = \<open>
   {from_lib = Codec.tuple context_codec subgoal_codec,
    to_lib = Codec.id,
    action = fn (ctxt, subgoal) => subgoal_to_term ctxt subgoal
-      |> Codec.encode (richterm_codec' ctxt)}\<close>
+      |> Codec.encode (richterm_codec' ctxt)}\<close> *)
 
 operation_setup retrieve_term = \<open>
   {from_lib = Codec.int,
@@ -433,19 +433,6 @@ operation_setup conseq_qrhl_replace_in_predicate = \<open>
 
 
 ML \<open>
-local
-exception E_Context of Proof.context (* TODO remove *)
-exception E_Option of exn option (* TODO remove *)
-exception E_Pair of exn * exn
-exception E_List of exn list
-exception E_Thm of thm
-in
-val isabelleTac = fn (a', E_Subgoal subgoal, E_Context ctxt) =>
-  case joint_sample_equal_tac ((K()) a', subgoal, ctxt) of
-    NONE => E_Option NONE
-   | SOME (subgoals, thm) =>
-      E_Pair (E_List (map QRHL_Operations.E_Subgoal subgoals), E_Thm thm)
-end
 \<close>
 
 (* 

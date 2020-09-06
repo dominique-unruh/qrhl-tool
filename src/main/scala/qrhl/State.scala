@@ -452,7 +452,7 @@ class State private (val environment: Environment,
 
     val isabelle = IsabelleX.globalIsabelle
     val (ctxt,deps) = isabelle.getQRHLContextWithFiles(theoryPath : _*)
-    logger.debug(s"Dependencies of theory $theory: $deps")
+    logger.debug(s"Dependencies of theory ${theory.mkString(", ")}: ${deps.mkString(", ")}")
     val stamps = deps.map(new FileTimeStamp(_))
     val newState = copy(isabelle = Some(ctxt), dependencies=stamps:::dependencies, isabelleTheory=theoryPath)
     // We declare a quantum variable aux :: infinite by default (for use in equal-tac, for example)
