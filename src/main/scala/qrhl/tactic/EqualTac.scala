@@ -178,7 +178,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       if (quantum.nonEmpty) {
         updated = true
         if (removedQeq != null)
-          throw UserException(s"Cannot remove quantum variables because we already remove one quantum equality from postcondition")
+          throw UserException(s"Cannot remove quantum variables because we already removed one quantum equality from postcondition")
 
         val (newPostcondition, newRemovedQeq) = EqualTac.removeQeq(env, postcondition, quantum)
         if (!Variable.quantum(out).toSet.subsetOf(newRemovedQeq))

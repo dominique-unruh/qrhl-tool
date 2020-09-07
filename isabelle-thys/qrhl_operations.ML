@@ -726,4 +726,8 @@ val semiclassical_tac : unit * subgoal * Proof.context -> (subgoal list * thm) o
     (fn ctxt => fn _ => Semi_Classical_Search.semi_classical_search_tac ctxt 1) 
     (fn _ => "o2h")
 
+val apply_method = 
+  apply_tactic_on_term method_tac (fn str => "method "^str)
+
+
 end
