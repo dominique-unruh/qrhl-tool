@@ -175,4 +175,9 @@ fun handleLines' number = case TextIO.inputLine inStream of
 
 fun handleLines () = handleLines' 0
 
+(* 
+TODO: try this to flush stderr/stdout:
+TextIO.StreamIO.setBufferMode (TextIO.getOutstream TextIO.stdOut, IO.LINE_BUF)
+ *)
+
 end

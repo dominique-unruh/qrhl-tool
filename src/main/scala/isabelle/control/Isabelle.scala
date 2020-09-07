@@ -340,6 +340,11 @@ object Isabelle {
 
   private[control] final class ID(val id: Int, isabelle: Isabelle) {
     isabelle.cleaner.register(this, new IDCleaner(id, isabelle))
+
+    override def equals(obj: Any): Boolean = obj match {
+      case obj: ID => id == obj.id
+      case _ => false
+    }
   }
   private final class IDCleaner(id: Int, isabelle: Isabelle) extends Runnable {
     def run(): Unit = isabelle.garbageQueue.add(id)

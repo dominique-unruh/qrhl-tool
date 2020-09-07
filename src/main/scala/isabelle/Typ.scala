@@ -3,9 +3,12 @@ package isabelle
 import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue}
 
 import scala.annotation.tailrec
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import isabelle.control.MLValue.Converter
 import Typ.Ops
+import org.apache.commons.lang3.builder.HashCodeBuilder
+
+import scala.concurrent.duration.Duration
 
 // Implicits
 import MLValue.Implicits._
@@ -22,6 +25,8 @@ sealed abstract class Typ {
   def -->:(that: Typ)(implicit ec: ExecutionContext): Type = Type("fun", that, this)
 //  def --->:(thats: List[Typ])(implicit ec: ExecutionContext): Typ = thats.foldRight(this)(_ -->: _)
 
+  override def hashCode(): Int = throw new NotImplementedError("Should be overridden")
+
   override def equals(that: Any): Boolean = (this, that) match {
     case (t1, t2: AnyRef) if t1 eq t2 => true
     case (t1: Type, t2: Type) => t1.name == t2.name && t1.args == t2.args
@@ -29,16 +34,17 @@ sealed abstract class Typ {
     case (t1: TFree, t2: TFree) => t1.name == t2.name && t1.sort == t2.sort
     case (t1: MLValueTyp, t2: MLValueTyp) =>
       import ExecutionContext.Implicits.global
-      if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
-      else Ops.equalsTyp((t1,t2)).retrieveNow
+      if (Await.result(t1.mlValue.id, Duration.Inf) == Await.result(t2.mlValue.id, Duration.Inf)) true
+      else if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
+      else Ops.equalsTyp(t1,t2).retrieveNow
     case (t1: MLValueTyp, t2: Typ) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed) t1.concrete == t2
-      else Ops.equalsTyp((t1,t2)).retrieveNow
+      else Ops.equalsTyp(t1,t2).retrieveNow
     case (t1: Typ, t2: MLValueTyp) =>
       import ExecutionContext.Implicits.global
       if (t2.concreteComputed) t1 == t2.concrete
-      else Ops.equalsTyp((t1,t2)).retrieveNow
+      else Ops.equalsTyp(t1,t2).retrieveNow
     case _ => false
   }
 }
@@ -63,6 +69,8 @@ final class MLValueTyp(val mlValue: MLValue[Typ])(implicit val isabelle: Isabell
     typ
   }
 
+  override def hashCode(): Int = concrete.hashCode()
+
   override def toString: String =
     if (concreteLoaded) concrete.toString
     else s"‹term${mlValue.stateString}›"
@@ -77,6 +85,9 @@ final class Type private[isabelle] (val name: String, val args: List[Typ], val i
   override def toString: String =
     if (args.isEmpty) name
     else s"$name(${args.mkString(", ")})"
+
+  override def hashCode(): Int = new HashCodeBuilder(342534543,34774653)
+    .append(name).toHashCode
 }
 
 object Type {
@@ -100,6 +111,9 @@ final class TFree private (val name: String, val sort: List[String], val initial
     case List(clazz) => s"$name::$clazz"
     case _ => s"$name::{${sort.mkString(",")}}"
   }
+
+  override def hashCode(): Int = new HashCodeBuilder(335434265,34255633)
+    .append(name).append(sort).toHashCode
 }
 
 object TFree {
@@ -124,6 +138,9 @@ final class TVar private (val name: String, val index: Int, val sort: List[Strin
     case List(clazz) => s"?$name$index::$clazz"
     case _ => s"?$name$index::{${sort.mkString(",")}}"
   }
+
+  override def hashCode(): Int = new HashCodeBuilder(342524363,354523249)
+    .append(name).append(index).append(sort).toHashCode
 }
 
 object TVar {

@@ -12,6 +12,7 @@ import Term.Implicits._
 import Cterm.Implicits._
 import Typ.Implicits._
 import Context.Implicits._
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 sealed abstract class Term {
   val mlValue : MLValue[Term]
@@ -20,6 +21,9 @@ sealed abstract class Term {
     Ops.stringOfTerm(MLValue((ctxt, this))).retrieveNow
   val concrete : Term
   def $(that: Term)(implicit ec: ExecutionContext): Term = App(this, that)
+
+  override def hashCode(): Int = throw new NotImplementedError("Should be overridden")
+
   override def equals(that: Any): Boolean = (this, that) match {
     case (t1, t2: AnyRef) if t1 eq t2 => true
     case (t1: App, t2: App) => t1.fun == t2.fun && t1.arg == t2.arg
@@ -28,21 +32,24 @@ sealed abstract class Term {
     case (t1: Free, t2: Free) => t1.name == t2.name && t1.typ == t2.typ
     case (t1: Const, t2: Const) => t1.name == t2.name && t1.typ == t2.typ
     case (t1: Abs, t2: Abs) => t1.name == t2.name && t1.typ == t2.typ && t1.body == t2.body
-    case (t1: Cterm, t2: Cterm) => t1.mlValueTerm == t2.mlValueTerm
+    case (t1: Cterm, t2: Cterm) =>
+      if (Await.result(t1.ctermMlValue.id, Duration.Inf) == Await.result(t2.ctermMlValue.id, Duration.Inf)) true
+      else t1.mlValueTerm == t2.mlValueTerm
     case (t1: Cterm, t2: Term) => t1.mlValueTerm == t2
     case (t1: Term, t2: Cterm) => t1 == t2.mlValueTerm
     case (t1: MLValueTerm, t2: MLValueTerm) =>
       import ExecutionContext.Implicits.global
-      if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
-      else Ops.equalsTerm((t1,t2)).retrieveNow
+      if (Await.result(t1.mlValue.id, Duration.Inf) == Await.result(t2.mlValue.id, Duration.Inf)) true
+      else if (t1.concreteComputed && t2.concreteComputed) t1.concrete == t2.concrete
+      else Ops.equalsTerm(t1,t2).retrieveNow
     case (t1: MLValueTerm, t2: Term) =>
       import ExecutionContext.Implicits.global
       if (t1.concreteComputed) t1.concrete == t2
-      else Ops.equalsTerm((t1,t2)).retrieveNow
+      else Ops.equalsTerm(t1,t2).retrieveNow
     case (t1: Term, t2: MLValueTerm) =>
       import ExecutionContext.Implicits.global
       if (t2.concreteComputed) t1 == t2.concrete
-      else Ops.equalsTerm((t1,t2)).retrieveNow
+      else Ops.equalsTerm(t1,t2).retrieveNow
     case _ => false
   }
 }
@@ -53,6 +60,7 @@ final class Cterm private(val ctermMlValue: MLValue[Cterm])(implicit val isabell
   override def pretty(ctxt: Context)(implicit ec: ExecutionContext): String =
     Ops.stringOfCterm(MLValue((ctxt, this))).retrieveNow
   lazy val concrete: Term = new MLValueTerm(mlValue).concrete
+  override def hashCode(): Int = concrete.hashCode
 }
 
 object Cterm {
@@ -83,6 +91,8 @@ object Cterm {
 
 final class MLValueTerm(val mlValue: MLValue[Term])(implicit val isabelle: Isabelle, ec: ExecutionContext) extends Term {
   @inline private def await[A](awaitable: Awaitable[A]) : A = Await.result(awaitable, Duration.Inf)
+
+  override def hashCode(): Int = concrete.hashCode
 
   def concreteComputed: Boolean = concreteLoaded
   @volatile private var concreteLoaded = false
@@ -123,6 +133,9 @@ final class Const private[isabelle] (val name: String, val typ: Typ, val initial
     else Ops.makeConst(MLValue((name,typ)))
   @inline override val concrete: Const = this
   override def toString: String = name
+
+  override def hashCode(): Int = new HashCodeBuilder(162389433,568734237)
+    .append(name).toHashCode
 }
 
 object Const {
@@ -143,6 +156,9 @@ final class Free private[isabelle] (val name: String, val typ: Typ, val initialM
     else Ops.makeFree(name, typ)
   @inline override val concrete: Free = this
   override def toString: String = name
+
+  override def hashCode(): Int = new HashCodeBuilder(384673423,678423475)
+    .append(name).toHashCode
 }
 
 object Free {
@@ -163,6 +179,9 @@ final class Var private(val name: String, val index: Int, val typ: Typ, val init
     else Ops.makeVar(name, index, typ)
   @inline override val concrete: Var = this
   override def toString: String = s"?$name$index"
+
+  override def hashCode(): Int = new HashCodeBuilder(3474285, 342683425)
+    .append(name).append(index).toHashCode
 }
 
 object Var {
@@ -184,6 +203,9 @@ final class App private (val fun: Term, val arg: Term, val initialMlValue: MLVal
 
   @inline override val concrete: App = this
   override def toString: String = s"($fun $$ $arg)"
+
+  override def hashCode(): Int = new HashCodeBuilder(334234237,465634533)
+    .append(arg).toHashCode
 }
 
 object App {
@@ -204,6 +226,9 @@ final class Abs private (val name: String, val typ: Typ, val body: Term, val ini
     else Ops.makeAbs(name,typ,body)
   @inline override val concrete: Abs = this
   override def toString: String = s"(λ$name. $body)"
+
+  override def hashCode(): Int = new HashCodeBuilder(342345635,564562379)
+    .append(name).append(body).toHashCode
 }
 
 object Abs {
@@ -225,6 +250,9 @@ final class Bound private (val index: Int, val initialMlValue: MLValue[Term]=nul
     else Ops.makeBound(index)
   @inline override val concrete: Bound = this
   override def toString: String = s"Bound $index"
+
+  override def hashCode(): Int = new HashCodeBuilder(442344345,423645769)
+    .append(index).toHashCode
 }
 
 object Bound {
