@@ -729,5 +729,7 @@ val semiclassical_tac : unit * subgoal * Proof.context -> (subgoal list * thm) o
 val apply_method = 
   apply_tactic_on_term method_tac (fn str => "method "^str)
 
+val squash_tac = 
+  apply_tactic_on_term_concl (fn ctxt => fn left => Squash_Sampling.squash_sampling_tac left ctxt 1)
 
 end

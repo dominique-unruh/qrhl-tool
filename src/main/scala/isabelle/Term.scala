@@ -270,17 +270,26 @@ object Bound {
 
 object Term {
   private[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+    import MLValue.{compileFunction, compileFunctionRaw}
     Typ.init(isabelle)
     isabelle.executeMLCodeNow("exception E_Term of term;; exception E_Cterm of cterm")
 
-    val readTerm: MLFunction2[Context, String, Term] = MLValue.compileFunction("fn (ctxt, str) => Syntax.read_term ctxt str")
-    val readTermConstrained: MLFunction3[Context, String, Typ, Term] = MLValue.compileFunction("fn (ctxt,str,typ) => Syntax.parse_term ctxt str |> Type.constraint typ |> Syntax.check_term ctxt")
-    val stringOfTerm: MLFunction2[Context, Term, String] = MLValue.compileFunction("fn (ctxt, term) => Syntax.string_of_term ctxt term")
-    val stringOfCterm: MLFunction2[Context, Cterm, String] = MLValue.compileFunction("fn (ctxt, cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm)")
-    val termOfCterm: MLFunction[Cterm, Term] = MLValue.compileFunction("Thm.term_of")
-    val ctermOfTerm: MLFunction2[Context, Term, Cterm] = MLValue.compileFunction("fn (ctxt, term) => Thm.cterm_of ctxt term")
-    val equalsTerm: MLFunction2[Term, Term, Boolean] = MLValue.compileFunction("op=")
-    val whatTerm : MLFunction[Term, Int] = MLValue.compileFunctionRaw("fn (E_Term term) => (case term of Const _ => 1 | Free _ => 2 | Var _ => 3 | Bound _ => 4 | Abs _ => 5 | _ $ _ => 6) |> E_Int")
+    val readTerm: MLFunction2[Context, String, Term] =
+      compileFunction("fn (ctxt, str) => Syntax.read_term ctxt str")
+    val readTermConstrained: MLFunction3[Context, String, Typ, Term] =
+      compileFunction("fn (ctxt,str,typ) => Syntax.parse_term ctxt str |> Type.constraint typ |> Syntax.check_term ctxt")
+    val stringOfTerm: MLFunction2[Context, Term, String] =
+      compileFunction("fn (ctxt, term) => Syntax.string_of_term ctxt term")
+    val stringOfCterm: MLFunction2[Context, Cterm, String] =
+      compileFunction("fn (ctxt, cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm)")
+    val termOfCterm: MLFunction[Cterm, Term] =
+      compileFunction("Thm.term_of")
+    val ctermOfTerm: MLFunction2[Context, Term, Cterm] =
+      compileFunction("fn (ctxt, term) => Thm.cterm_of ctxt term")
+    val equalsTerm: MLFunction2[Term, Term, Boolean] =
+      compileFunction("op=")
+    val whatTerm : MLFunction[Term, Int] =
+      compileFunctionRaw("fn (E_Term term) => (case term of Const _ => 1 | Free _ => 2 | Var _ => 3 | Bound _ => 4 | Abs _ => 5 | _ $ _ => 6) |> E_Int")
     val destConst : MLFunction[Term, (String,Typ)] = MLValue.compileFunction("fn Const x => x")
     val destFree : MLFunction[Term, (String,Typ)] = MLValue.compileFunction("fn Free x => x")
     val destVar : MLFunction[Term, (String,Int,Typ)] = MLValue.compileFunction("fn Var ((n,i),s) => (n,i,s)")

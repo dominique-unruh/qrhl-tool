@@ -4,13 +4,12 @@ import isabelle.control.{Isabelle, IsabelleTest}
 import org.scalatest.FunSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import IsabelleTest.isabelle
 
 class TypTest extends FunSuite {
   lazy val ctxt: Context = Context("Main")
 
   test("parse: nat") {
-    implicit val isa: Isabelle = IsabelleTest.isabelle
-
     val str = "nat"
     val typ = Typ(ctxt, str)
     println(typ.getClass, typ)

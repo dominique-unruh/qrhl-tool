@@ -213,7 +213,8 @@ object MLValue {
     val boolTrue : MLValue[Boolean] = MLValue.compileValue("true")
     val boolFalse : MLValue[Boolean] = MLValue.compileValue("false")
 
-    val debugInfo_ : MLFunction[MLValue[Nothing], String] = MLValue.compileFunctionRaw[MLValue[Nothing], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
+    val debugInfo_ : MLFunction[MLValue[Nothing], String] =
+      compileFunctionRaw[MLValue[Nothing], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
     def debugInfo[A]: MLFunction[MLValue[A], String] = debugInfo_.asInstanceOf[MLFunction[MLValue[A], String]]
   }
 

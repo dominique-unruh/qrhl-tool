@@ -11,26 +11,28 @@ final class Context private [Context](val mlValue : MLValue[Context]) {
 }
 
 object Context {
-  private var contextFromTheory : MLFunction[Theory, Context] = _
-  private implicit var isabelle : Isabelle = _
+  private[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+    import MLValue.compileFunctionRaw
+    Theory.init(isabelle)
+    isabelle.executeMLCodeNow("exception E_Context of Proof.context")
+    val contextFromTheory : MLFunction[Theory, Context] =
+      compileFunctionRaw[Theory, Context]("fn (E_Theory thy) => Proof_Context.init_global thy |> E_Context")
+  }
+
+  var Ops : Ops = _
 
   // TODO Ugly hack, fails if there are several Isabelle objects
   def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (this.isabelle == null) {
-      this.isabelle = isabelle
-      implicit val _ = isabelle
-      Theory.init(isabelle)
-      isabelle.executeMLCodeNow("exception E_Context of Proof.context")
-      contextFromTheory = MLValue.compileFunctionRaw[Theory, Context]("fn (E_Theory thy) => Proof_Context.init_global thy |> E_Context")
-    }
+    if (Ops == null)
+      Ops = new Ops()(isabelle, ec)
   }
 
-  def apply(theory: Theory)(implicit ec: ExecutionContext): Context = {
-    val mlCtxt : MLValue[Context] = contextFromTheory(theory.mlValue)
+  def apply(theory: Theory)(implicit isabelle: Isabelle, ec: ExecutionContext): Context = {
+    val mlCtxt : MLValue[Context] = Ops.contextFromTheory(theory.mlValue)
     new Context(mlCtxt)
   }
 
-  def apply(name: String)(implicit ec: ExecutionContext) : Context =
+  def apply(name: String)(implicit isabelle: Isabelle, ec: ExecutionContext) : Context =
     Context(Theory(name))
 
   object ContextConverter extends Converter[Context] {
