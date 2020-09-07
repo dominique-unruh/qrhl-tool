@@ -69,9 +69,9 @@ class O2HTacTest extends FunSuite {
 
     assert(state2.goal.length==4)
     //noinspection ZeroIndexToHead
-    assert(state2.goal(0).toString == "probability  (expression 〚var_count〛 (λcount. count ≤ q))  left rho = 1")
-    assert(state2.goal(1).toString == "probability  (expression 〚var_count〛 (λcount. count ≤ q))  right rho = 1")
-    assert(state2.goal(2).toString == "probability  (expression 〚var_count〛 (λcount. count ≤ q))  find rho = 1")
-    assert(state2.goal(3).toString == "∀S G H z x.    (S, G, H, z) ∈ supp o2h_distr ⟶    x ∉ S ⟶ G x = H x")
+    assert(state2.goal(0).toString == "probability (expression 〚var_count〛 (λcount. count ≤ q)) left rho = 1")
+    assert(state2.goal(1).toString == "probability (expression 〚var_count〛 (λcount. count ≤ q)) right rho = 1")
+    assert(state2.goal(2).toString == "probability (expression 〚var_count〛 (λcount. count ≤ q)) find rho = 1")
+    assert(state2.goal(3).toString == "∀S G H z x. (S, G, H, z) ∈ supp o2h_distr ⟶  x ∉ S ⟶ G x = H x")
   }
 }

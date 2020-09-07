@@ -134,8 +134,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
 
   implicit val isabelleControl: control.Isabelle = new control.Isabelle(setup = setup, build = !checkBuilt())
-  Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
-
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
     *
@@ -724,7 +722,11 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   object Ops {
     import MLValue.{compileFunction, compileFunctionRaw, compileValue, compileValueRaw}
     Thm.init()
-
+    Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
+    val isabelleVersion : MLValue[String] =
+      MLValue.compileValue("Distribution.version")
+    if (!Ops.isabelleVersion.retrieveNow.startsWith("Isabelle"+version+":"))
+      throw UserException(s"Expected Isabelle $version but got ${Ops.isabelleVersion.retrieveNow}")
     val conseq_qrhl_cardinality_condition =
       MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")
     val conseq_qrhl_replace_in_predicate =
