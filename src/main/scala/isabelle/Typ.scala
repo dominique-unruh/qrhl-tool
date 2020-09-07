@@ -172,7 +172,7 @@ object Typ {
     val readType: MLFunction2[Context, String, Typ] =
       compileFunction("fn (ctxt, str) => Syntax.read_typ ctxt str")
     val stringOfType: MLFunction2[Context, Typ, String] = 
-      compileFunction("fn (ctxt, typ) => Syntax.string_of_typ ctxt typ")
+      compileFunction("fn (ctxt, typ) => Syntax.pretty_typ ctxt typ |> Pretty.unformatted_string_of |> YXML.content_of")
     val whatTyp: MLFunction[Typ, Int] =
       compileFunction("fn Type _ => 1 | TFree _ => 2 | TVar _ => 3")
     val destType: MLFunction[Typ, (String, List[Typ])] =

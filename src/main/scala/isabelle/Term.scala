@@ -279,9 +279,9 @@ object Term {
     val readTermConstrained: MLFunction3[Context, String, Typ, Term] =
       compileFunction("fn (ctxt,str,typ) => Syntax.parse_term ctxt str |> Type.constraint typ |> Syntax.check_term ctxt")
     val stringOfTerm: MLFunction2[Context, Term, String] =
-      compileFunction("fn (ctxt, term) => Syntax.string_of_term ctxt term")
+      compileFunction("fn (ctxt, term) => Syntax.pretty_term ctxt term |> Pretty.unformatted_string_of |> YXML.content_of")
     val stringOfCterm: MLFunction2[Context, Cterm, String] =
-      compileFunction("fn (ctxt, cterm) => Syntax.string_of_term ctxt (Thm.term_of cterm)")
+      compileFunction("fn (ctxt, cterm) => Thm.term_of cterm |> Syntax.pretty_term ctxt |> Pretty.unformatted_string_of |> YXML.content_of")
     val termOfCterm: MLFunction[Cterm, Term] =
       compileFunction("Thm.term_of")
     val ctermOfTerm: MLFunction2[Context, Term, Cterm] =

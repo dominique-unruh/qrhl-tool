@@ -29,7 +29,7 @@ object Thm {
     val cpropOf: MLFunction[Thm, Cterm] =
       compileFunction[Thm, Cterm]("Thm.cprop_of")
     val stringOfThm: MLFunction2[Context, Thm, String] =
-      compileFunction("fn (ctxt, thm) => Thm.string_of_thm ctxt thm")
+      compileFunction("fn (ctxt, thm) => Thm.pretty_thm ctxt thm |> Pretty.unformatted_string_of |> YXML.content_of")
   }
 
   var Ops : Ops = _
