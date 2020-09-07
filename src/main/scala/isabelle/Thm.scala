@@ -1,6 +1,6 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLValue, OperationCollection}
 import isabelle.control.MLValue.Converter
 import Thm.Ops
 
@@ -8,7 +8,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 // Implicits
 import MLValue.Implicits._
-import Thm.Implicits._
+import Thm.Implicits.thmConverter
 import Cterm.Implicits._
 import Context.Implicits._
 
@@ -19,10 +19,11 @@ final class Thm private [Thm](val mlValue : MLValue[Thm])(implicit ec: Execution
     Ops.stringOfThm(MLValue(ctxt, this)).retrieveNow
 }
 
-object Thm {
-  private[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+object Thm extends OperationCollection {
+  override protected def newOps(implicit isabelle: Isabelle, ec: ExecutionContext): Ops = new Ops()
+  protected[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     import MLValue.compileFunction
-    Term.init(isabelle)
+    Term.init()
     isabelle.executeMLCodeNow("exception E_Thm of thm")
     val getThm: MLFunction2[Context, String, Thm] =
       compileFunction("fn (ctxt, name) => Proof_Context.get_thm ctxt name")
@@ -30,14 +31,6 @@ object Thm {
       compileFunction[Thm, Cterm]("Thm.cprop_of")
     val stringOfThm: MLFunction2[Context, Thm, String] =
       compileFunction("fn (ctxt, thm) => Thm.pretty_thm ctxt thm |> Pretty.unformatted_string_of |> YXML.content_of")
-  }
-
-  var Ops : Ops = _
-
-  // TODO Ugly hack, fails if there are several Isabelle objects
-  def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (Ops == null)
-      Ops = new Ops()(isabelle, ec)
   }
 
   def apply(context: Context, name: String)(implicit isabelle: Isabelle, ec: ExecutionContext): Thm = {

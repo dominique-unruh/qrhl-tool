@@ -33,9 +33,6 @@ object IsabelleTest {
     println("Starting Isabelle")
     val isa = new Isabelle(setup)
     println("Started. Initializing Term/Typ/Context")
-    Term.init(isa)
-    Typ.init(isa)
-    Context.init(isa)
     println("Initialized.")
     isa
   }

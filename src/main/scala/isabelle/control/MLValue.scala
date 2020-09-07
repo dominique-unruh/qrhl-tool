@@ -181,10 +181,11 @@ class MLFunction7[D1, D2, D3, D4, D5, D6, D7, R] private[isabelle] (id: Future[I
   }
 }
 
-object MLValue {
+object MLValue extends OperationCollection {
   private val logger = log4s.getLogger
 
-  private[control] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+  override protected def newOps(implicit isabelle: Isabelle, ec: ExecutionContext) : Ops = new Ops()
+  protected[control] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     isabelle.executeMLCodeNow("exception E_List of exn list; exception E_Bool of bool; exception E_Option of exn option")
 
     private val optionNone_ = MLValue.compileValueRaw[Option[_]]("E_Option NONE")
@@ -216,14 +217,6 @@ object MLValue {
     val debugInfo_ : MLFunction[MLValue[Nothing], String] =
       compileFunctionRaw[MLValue[Nothing], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
     def debugInfo[A]: MLFunction[MLValue[A], String] = debugInfo_.asInstanceOf[MLFunction[MLValue[A], String]]
-  }
-
-  private[isabelle] var Ops : Ops = _
-
-  // TODO: UGLY HACK (make compatible with several instances of Isabelle, avoid need to call MLValue.init)
-  def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (Ops == null)
-      Ops = new Ops()(isabelle, ec)
   }
 
   abstract class Converter[A] {

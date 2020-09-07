@@ -134,7 +134,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
 
   implicit val isabelleControl: control.Isabelle = new control.Isabelle(setup = setup, build = !checkBuilt())
-  isabelle.Thm.init(isabelleControl)
   Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
 
 
@@ -724,6 +723,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   //noinspection TypeAnnotation
   object Ops {
     import MLValue.{compileFunction, compileFunctionRaw, compileValue, compileValueRaw}
+    Thm.init()
 
     val conseq_qrhl_cardinality_condition =
       MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")

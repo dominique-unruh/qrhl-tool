@@ -1,7 +1,7 @@
 package isabelle
 
 import isabelle.control.MLValue.Converter
-import isabelle.control.{Isabelle, MLFunction, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLValue, OperationCollection}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -10,21 +10,14 @@ final class Context private [Context](val mlValue : MLValue[Context]) {
     if (mlValue.isReady) "context (loaded)" else "context"
 }
 
-object Context {
-  private[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+object Context extends OperationCollection {
+  override protected def newOps(implicit isabelle: Isabelle, ec: ExecutionContext): Ops = new Ops()
+  protected[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     import MLValue.compileFunctionRaw
-    Theory.init(isabelle)
+    Theory.init()
     isabelle.executeMLCodeNow("exception E_Context of Proof.context")
     val contextFromTheory : MLFunction[Theory, Context] =
       compileFunctionRaw[Theory, Context]("fn (E_Theory thy) => Proof_Context.init_global thy |> E_Context")
-  }
-
-  var Ops : Ops = _
-
-  // TODO Ugly hack, fails if there are several Isabelle objects
-  def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (Ops == null)
-      Ops = new Ops()(isabelle, ec)
   }
 
   def apply(theory: Theory)(implicit isabelle: Isabelle, ec: ExecutionContext): Context = {
@@ -50,4 +43,5 @@ object Context {
   object Implicits {
     implicit val contextConverter: ContextConverter.type = ContextConverter
   }
+
 }

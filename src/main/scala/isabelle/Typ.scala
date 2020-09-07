@@ -1,6 +1,6 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue, OperationCollection}
 
 import scala.annotation.tailrec
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -12,7 +12,7 @@ import scala.concurrent.duration.Duration
 
 // Implicits
 import MLValue.Implicits._
-import Typ.Implicits._
+import Typ.Implicits.typConverter
 import Context.Implicits._
 
 sealed abstract class Typ {
@@ -155,11 +155,12 @@ object TVar {
   }
 }
 
-object Typ {
-  private[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+object Typ extends OperationCollection {
+  override protected def newOps(implicit isabelle: Isabelle, ec: ExecutionContext): Ops = new Ops()
+  protected[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     import MLValue.compileFunction
+    Context.init()
     isabelle.executeMLCodeNow("exception E_Typ of typ") // ;; exception E_TypList of typ list
-    Context.init(isabelle)
 
     val makeType: MLFunction2[String, List[Typ], Typ] =
       compileFunction("Term.Type")
@@ -183,14 +184,6 @@ object Typ {
       compileFunction("fn TVar ((n,i),s) => (n,i,s)")
     var equalsTyp: MLFunction2[Typ, Typ, Boolean] =
       compileFunction("op=")
-  }
-
-  var Ops : Ops = _
-
-  // TODO Ugly hack, fails if there are several Isabelle objects
-  def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (Ops == null)
-      Ops = new Ops()(isabelle, ec)
   }
 
   def apply(context: Context, string: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValueTyp = {

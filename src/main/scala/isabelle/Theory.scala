@@ -1,49 +1,44 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLFunction, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLFunction3, MLValue, OperationCollection}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import isabelle.control.MLValue.Converter
+import Theory.Ops
 
 // Implicits
 import MLValue.Implicits._
-import Theory.Implicits._
+import Theory.Implicits.theoryConverter
 
 final class Theory private [Theory](val name: String, val mlValue : MLValue[Theory]) {
   override def toString: String = s"theory $name${if (mlValue.isReady) " (loaded)" else ""}"
   def importMLStructure(name: String, newName: String)
                        (implicit isabelle: Isabelle, executionContext: ExecutionContext): Unit =
-    Theory.importMLStructure(MLValue((this, name, newName))).retrieveNow
+    Ops.importMLStructure(this, name, newName).retrieveNow
 }
 
-object Theory {
-  private var loadTheory : MLFunction[String, Theory] = _
-  private var importMLStructure : MLFunction[((Theory,String,String)), Unit] = _
-  private implicit var isabelle : Isabelle = _
-
-  // TODO Ugly hack, fails if there are several Isabelle objects
-  def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (this.isabelle == null) {
-      this.isabelle = isabelle
-      implicit val _ = isabelle
-      MLValue.init(isabelle)
-      isabelle.executeMLCodeNow("exception E_Theory of theory")
-      loadTheory = MLValue.compileFunction[String, Theory]("fn name => (Thy_Info.use_thy name; Thy_Info.get_theory name)")
-      importMLStructure = MLValue.compileFunction[(Theory,String,String), Unit](
-        """fn (thy,theirName,hereStruct) => let
+object Theory extends OperationCollection {
+  override protected def newOps(implicit isabelle: Isabelle, ec: ExecutionContext): Ops = new Ops()
+  protected[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+    import MLValue.compileFunction
+    MLValue.init()
+    isabelle.executeMLCodeNow("exception E_Theory of theory")
+    val loadTheory : MLFunction[String, Theory] =
+      MLValue.compileFunction[String, Theory]("fn name => (Thy_Info.use_thy name; Thy_Info.get_theory name)")
+    val importMLStructure : MLFunction3[Theory, String, String, Unit] = compileFunction(
+      """fn (thy,theirName,hereStruct) => let
                   val theirAllStruct = Context.setmp_generic_context (SOME (Context.Theory thy))
                                        (#allStruct ML_Env.name_space) ()
                   val theirStruct = case List.find (fn (n,_) => n=theirName) theirAllStruct of
                            NONE => error ("Structure " ^ theirName ^ " not declared in given context")
-                           | SOME (_,s) => s
+        | SOME (_,s) => s
                   val _ = #enterStruct ML_Env.name_space (hereStruct, theirStruct)
                   in () end""".replace('\n', ' '))
-    }
   }
 
-  def apply(name: String)(implicit ec: ExecutionContext): Theory = {
+  def apply(name: String)(implicit isabelle: Isabelle, ec: ExecutionContext): Theory = {
     val mlName = MLValue(name)
-    val mlThy : MLValue[Theory] = loadTheory(mlName)
+    val mlThy : MLValue[Theory] = Ops.loadTheory(mlName)
     new Theory(name, mlThy)
   }
 

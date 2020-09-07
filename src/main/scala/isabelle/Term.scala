@@ -1,6 +1,6 @@
 package isabelle
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue}
+import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue, OperationCollection}
 import Term.Ops
 
 import scala.annotation.tailrec
@@ -8,7 +8,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
 import isabelle.control.MLValue.Converter
 import MLValue.Implicits._
-import Term.Implicits._
+import Term.Implicits.termConverter
 import Cterm.Implicits._
 import Typ.Implicits._
 import Context.Implicits._
@@ -268,10 +268,11 @@ object Bound {
 
 
 
-object Term {
-  private[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+object Term extends OperationCollection {
+  override protected def newOps(implicit isabelle: Isabelle, ec: ExecutionContext): Ops = new Ops()
+  protected[isabelle] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     import MLValue.{compileFunction, compileFunctionRaw}
-    Typ.init(isabelle)
+    Typ.init()
     isabelle.executeMLCodeNow("exception E_Term of term;; exception E_Cterm of cterm")
 
     val readTerm: MLFunction2[Context, String, Term] =
@@ -302,14 +303,6 @@ object Term {
     val makeApp : MLFunction2[Term, Term, Term] = MLValue.compileFunction("op$")
     val makeBound : MLFunction[Int, Term] = MLValue.compileFunction("Bound")
     val makeAbs : MLFunction3[String, Typ, Term, Term] = MLValue.compileFunction("Abs")
-  }
-
-  private[isabelle] var Ops : Ops = _
-
-  // TODO Ugly hack, fails if there are several Isabelle objects
-  def init(isabelle: Isabelle)(implicit ec: ExecutionContext): Unit = synchronized {
-    if (Ops == null)
-      Ops = new Ops()(isabelle, ec)
   }
 
   def apply(context: Context, string: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValueTerm = {

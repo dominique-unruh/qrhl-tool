@@ -8,7 +8,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class TheoryTest extends FunSuite {
   test("import structure") {
-    Theory.init(isabelle)
     assertThrows[IsabelleException] {
       isabelle.executeMLCodeNow("HOLogic.boolT") }
     val thy = Theory("Main")
