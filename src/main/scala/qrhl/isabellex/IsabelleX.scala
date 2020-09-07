@@ -274,11 +274,12 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def univ(typ: Typ): Const = top(setT(typ))
 
+  // TODO: Do in Isabelle (should be faster for partially retrieved terms)
   def abstract_over(v: Free, body: Term): Term = {
     def abs(level: Int, term: Term): Term = term match {
       case Abs(name, typ, body) => Abs(name, typ, abs(level+1, body))
       case App(fun, arg) => App(abs(level, fun), abs(level, arg))
-      case v2 : Free if v==v2 => Bound(level)
+      case v2 @ Free(_) if v==v2 => Bound(level)
       case term => term
     }
     abs(0, body)

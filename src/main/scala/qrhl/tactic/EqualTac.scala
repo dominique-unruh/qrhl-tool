@@ -452,9 +452,12 @@ object EqualTac {
     (RichTerm(GIsabelle.predicateT, result), resultVars)
   }
 
-  private def removeClassicals(env: Environment, postcondition: RichTerm, remove: Set[CVariable],
+  private[tactic] /* Should be private but need access in test case */
+  def removeClassicals(env: Environment, postcondition: RichTerm, remove: Set[CVariable],
                                equalities: Set[CVariable]): RichTerm = {
+    // Classical variables in postcondition (indexed)
     val vars = Variable.classical(postcondition.variables(env).program)
+    // x1=x2 for every x in equalities&remove that also appeard in postcondition
     val equalities2 = (equalities & remove).collect(Function.unlift { v =>
       val v1 = v.index1; val v2 = v.index2
       if (vars.contains(v1) && vars.contains(v2))
@@ -466,12 +469,17 @@ object EqualTac {
     val postcondition2 =
       if (equalities2.isEmpty)
         postcondition.isabelleTerm
-      else
+      else {
+        // Cla[~ (x1=x2 /\ ...)] + postcondition (see equalities2 for which x are used)
         GIsabelle.plus(GIsabelle.classical_subspace(GIsabelle.not(GIsabelle.conj(equalities2.toSeq : _*))),
           postcondition.isabelleTerm)
+      }
+    // All variables in remove (indexed) that occur in vars
     val remove12 = (remove.map(_.index1) ++ remove.map(_.index2)) & vars
     val postcondition3 : Term = remove12.foldLeft(postcondition2) {
-      (pc:Term, v:CVariable) => GIsabelle.INF(v.name, v.valueTyp, pc)
+      (pc:Term, v:CVariable) =>
+        logger.debug(s"${v.name}, ${v.valueTyp}")
+        GIsabelle.INF(v.name, v.valueTyp, pc)
     }
     RichTerm(GIsabelle.predicateT, postcondition3)
   }

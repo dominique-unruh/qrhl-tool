@@ -1,9 +1,15 @@
 package qrhl.tactic
 
+import isabelle.Term
+import isabelle.control.Isabelle
 import org.scalatest.FunSuite
 import qrhl.QRHLSubgoal
+import qrhl.isabellex.RichTerm
 import qrhl.logic.Assign
-import qrhl.toplevel.{Toplevel, ToplevelTest}
+import qrhl.toplevel.{Parser, Toplevel, ToplevelTest}
+
+import scala.collection.immutable.ListSet
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class EqualTacTest extends FunSuite {
   def toplevel(): Toplevel = {
@@ -14,6 +20,20 @@ class EqualTacTest extends FunSuite {
         |program p := { x <- undefined; on q apply undefined; }.
       """.stripMargin)
     tl
+  }
+
+  test("removeClassicals") {
+    val tl = toplevel()
+    implicit val isa: Isabelle = tl.isabelle.isabelleControl
+    val state = tl.state.value
+    val ctxt = state.isabelle.context
+    val env = state.environment
+    val term = Term(ctxt, "Cla[x1=0]")
+    val x = env.getCVariable("x")
+    val result = EqualTac.removeClassicals(env, RichTerm(term), ListSet(x), ListSet(x))
+    val resultStr = result.toString
+    println(resultStr)
+    assert(resultStr == "⨅x1. ℭ𝔩𝔞[x1 = 0]")
   }
 
   test("permit postcondition to contain the quantum variable equality") {
