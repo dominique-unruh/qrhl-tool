@@ -1,11 +1,11 @@
 package qrhl.isabellex
 
-import java.io.IOException
+import java.io.{FileInputStream, IOException}
 import java.lang
 import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
-import java.util.{Timer, TimerTask}
+import java.util.{Properties, Timer, TimerTask}
 
 import isabelle.control.{Isabelle, MLFunction, MLFunction2}
 import isabelle.{Abs, App, Bound, Const, Free, Term, Theory, Typ, Type, Var}
@@ -39,7 +39,7 @@ import Typ.Implicits._
 import Thm.Implicits._
 import MLValueConverters.Implicits._
 
-object DistributionDirectory {
+object Configuration {
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
     * and when running from installation, the installation directory.
     * Returned as an absolute path.
@@ -63,6 +63,34 @@ object DistributionDirectory {
     dir
   }
 
+  private lazy val config = {
+    val config = new Properties()
+    val filename = distributionDirectory.resolve("qrhl-tool.conf")
+    val stream = try {
+      new FileInputStream(filename.toFile)
+    } catch {
+      case e : IOException =>
+        throw UserException(s"Could not open $filename. (Reason: ${e.getMessage}) Make sure it exists and is readable.")
+    }
+    config.load(stream)
+    config
+  }
+
+  def isabelleHome : Path = config.getProperty("isabelle-home") match {
+    case null => throw UserException("Please set isabelle-home in qrhl-tool.conf")
+    case path => distributionDirectory.resolve(path)
+  }
+
+  def isabelleUserDir : Path = config.getProperty("isabelle-user") match {
+    case null => Path.of(lang.System.getProperty("user.home")).resolve(".isabelle")
+    case path => distributionDirectory.resolve(path)
+  }
+
+  def afpRoot : Path = config.getProperty("afp-root") match {
+    case null => Paths.get("isabelle-afp")
+    case path => distributionDirectory.resolve(path)
+  }
+
   private val logger = log4s.getLogger
 }
 
@@ -74,15 +102,15 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   val version = "2019-RC4"
 
   /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
-  private val localStoragePath = DistributionDirectory.distributionDirectory.resolve("isabelle-temp")
+  private val localStoragePath = Configuration.distributionDirectory.resolve("isabelle-temp")
 
   val setup = new isabelle.control.Isabelle.Setup(
-                    workingDirectory = DistributionDirectory.distributionDirectory,
-                    isabelleHome = Paths.get(s"Isabelle${version}"),
+                    workingDirectory = Configuration.distributionDirectory,
+                    isabelleHome = Configuration.isabelleHome,
                     logic = "QRHL",
-                    sessionRoots = List(Paths.get("isabelle-thys"),Paths.get("isabelle-afp")),
+                    sessionRoots = List(Paths.get("isabelle-thys"), Configuration.afpRoot),
                     /** Must end in .isabelle if provided */
-                    userDir = Some(Paths.get(s"isabelle-temp/user/Isabelle${version}/.isabelle"))
+                    userDir = Some(Configuration.isabelleUserDir)
                   )
 
   private def checkBuilt(): Boolean = {
@@ -94,7 +122,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
     import scala.collection.JavaConverters._
 
-    val isabelleThys = Files.find(DistributionDirectory.distributionDirectory.resolve("isabelle-thys"),
+    val isabelleThys = Files.find(Configuration.distributionDirectory.resolve("isabelle-thys"),
       10, (path: Path, _: BasicFileAttributes) => true).iterator.asScala.toList
     assert(isabelleThys.nonEmpty)
     val newest = isabelleThys.map {
@@ -725,8 +753,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
     val isabelleVersion : MLValue[String] =
       MLValue.compileValue("Distribution.version")
-    if (!Ops.isabelleVersion.retrieveNow.startsWith("Isabelle"+version+":"))
-      throw UserException(s"Expected Isabelle $version but got ${Ops.isabelleVersion.retrieveNow}")
+    if (!isabelleVersion.retrieveNow.startsWith("Isabelle"+version+":"))
+      throw UserException(s"Expected Isabelle $version but got ${isabelleVersion.retrieveNow}")
     val conseq_qrhl_cardinality_condition =
       MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")
     val conseq_qrhl_replace_in_predicate =
