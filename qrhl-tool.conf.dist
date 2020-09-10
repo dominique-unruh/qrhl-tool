@@ -1,7 +1,8 @@
 # isabelle-home indicates the directory where the Isabelle distribution is located.
 # This option is required.
 
-isabelle-home = /opt/Isabelle2019
+# isabelle-home = /opt/Isabelle2020
+
 
 # isabelle-user indicates the Isabelle user directory.
 # (Used by Isabelle for user configuration, and possibly compiled heap images.)
@@ -10,7 +11,8 @@ isabelle-home = /opt/Isabelle2019
 
 # isabelle-user = /home/username/.isabelle
 
+
 # AFP (Archive of Formal Proofs) theory directory.
 # This option is optional. If it is not included, it is required that Isabelle is already configured to include the AFP
 
-# afp-root = /opt/afp-2019
+# afp-root = /opt/afp-2020

@@ -11,7 +11,7 @@ import scala.sys.process.Process
 
 name := "qrhl"
 
-version := "0.5"
+version := "0.6alpha"
 
 scalaVersion := "2.12.11"
 
@@ -46,33 +46,6 @@ def extractJar(update : UpdateReport, name : String, target : File): Unit = {
 assemblyMergeStrategy in assembly := {
   case PathList(ps @ _*) if ps.last == ".files" => MergeStrategy.discard
   case x => (assemblyMergeStrategy in assembly).value(x)
-}
-
-//val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"
-//val afpUrl = "https://bitbucket.org/isa-afp/afp-devel/get/7c585d0056e3.tar.gz"
-val afpUrl = "https://isabelle.sketis.net/repos/afp-2019/archive/1a623915bf3f.tar.gz"
-val afpExtractPath = "target/downloads/afp"
-
-lazy val downloadAFP = taskKey[Unit]("Download the AFP")
-managedResources in Compile := (managedResources in Compile).dependsOn(downloadAFP).value
-
-downloadAFP := {
-  import scala.sys.process._
-
-  val extractPath = baseDirectory.value / afpExtractPath
-
-  if (!extractPath.exists()) {
-    println("Downloading AFP.")
-    try {
-      extractPath.mkdirs()
-      print ( ( new URL(afpUrl) #> Process(List("tar", "xz", "--strip-components=1"), cwd = extractPath) ).!! )
-    } catch {
-      case e : Throwable =>
-        print("Removing "+extractPath)
-        IO.delete(extractPath)
-        throw e
-    }
-  }
 }
 
 val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c3968054988b50da7f6c02c6b.tar.gz"
@@ -143,15 +116,9 @@ mappings in Universal ++= {
   files3 pair relativeTo(base)
 }
 
-mappings in Universal ++= {
-  val base = baseDirectory.value
-  val files = base / "isabelle-afp" * (- ("*~" || "link-afp.sh")) ** (- "*~")
-//  println("FILES",files)
-  files pair relativeTo(base)
-}
-
 mappings in Universal += (baseDirectory.value / "doc" / "manual.pdf" -> "manual.pdf")
 mappings in Universal += (baseDirectory.value / "target" / "GITREVISION" -> "GITREVISION")
+mappings in Universal += (baseDirectory.value / "qrhl-tool.conf.dist" -> "qrhl-tool.conf")
 
 mappings in Universal ++= directory("PG")
 
