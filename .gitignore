@@ -31,7 +31,6 @@
 /doc/manual.pdf
 *.synctex.gz
 /isabelle-thys/Scratch.thy
-/Isabelle2019-RC4
 
 
 _region_.tex

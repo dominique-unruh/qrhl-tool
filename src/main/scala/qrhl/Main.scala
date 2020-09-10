@@ -2,6 +2,7 @@ package qrhl
 
 import java.nio.file.{Path, Paths}
 
+import isabelle.control.Isabelle
 import org.rogach.scallop.{ScallopConf, ScallopOption, Subcommand}
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
@@ -13,6 +14,7 @@ object Main {
     // if cheating is false, cheating cannot be activated
     val cheating : ScallopOption[Boolean] = toggle() // Default: interactive mode: true, from file: false
     val emacs : ScallopOption[Boolean] = toggle() // Ignored but ProofGeneral needs to give some option to support spaces in paths
+    val isabelle : ScallopOption[Boolean] = toggle() // Ignored but ProofGeneral needs to give some option to support spaces in paths
     val file: ScallopOption[String] = trailArg[String](required=false)
   }
 
@@ -33,8 +35,10 @@ object Main {
     val conf = new CLIConf(args)
     conf.verify()
     if (conf.rebuild.getOrElse(false)) {
-      val isabelle = new IsabelleX(build=true)
+      val isabelle = new IsabelleX(build = true)
       isabelle.dispose()
+    } else if (conf.isabelle.getOrElse(false)) {
+      Isabelle.jedit(IsabelleX.setup, conf.file.toOption.toList.map(Path.of(_:String)))
     } else if (conf.file.isDefined) {
       val tl = Toplevel.makeToplevel(cheating=conf.cheating.getOrElse(false))
       try

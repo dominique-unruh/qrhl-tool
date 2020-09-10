@@ -83,9 +83,9 @@ object Configuration {
     case path => distributionDirectory.resolve(path)
   }
 
-  def afpRoot : Path = config.getProperty("afp-root") match {
-    case null => Paths.get("isabelle-afp")
-    case path => distributionDirectory.resolve(path)
+  def afpThyRoot : Option[Path] = config.getProperty("afp-root") match {
+    case null => None
+    case path => Some(distributionDirectory.resolve(path).resolve("thys"))
   }
 
   private val logger = log4s.getLogger
@@ -95,20 +95,10 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   import IsabelleX._
   import Ops._
 
-  // TODO: Check whether this is really the version we instantiate
-  val version = "2019-RC4"
+  val version = "2019"
 
   /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
   private val localStoragePath = Configuration.distributionDirectory.resolve("isabelle-temp")
-
-  val setup = new isabelle.control.Isabelle.Setup(
-                    workingDirectory = Configuration.distributionDirectory,
-                    isabelleHome = Configuration.isabelleHome,
-                    logic = "QRHL",
-                    sessionRoots = List(Paths.get("isabelle-thys"), Configuration.afpRoot),
-                    /** Must end in .isabelle if provided */
-                    userDir = Some(Configuration.isabelleUserDir)
-                  )
 
   private def checkBuilt(): Boolean = {
     //    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
@@ -978,5 +968,14 @@ object IsabelleX {
       (RichTerm(t), thm)
     }
   }
+
+  lazy val setup: Isabelle.Setup = isabelle.control.Isabelle.Setup(
+    workingDirectory = Configuration.distributionDirectory,
+    isabelleHome = Configuration.isabelleHome,
+    logic = "QRHL",
+    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpThyRoot,
+    /** Must end in .isabelle if provided */
+    userDir = Some(Configuration.isabelleUserDir)
+  )
 
 }

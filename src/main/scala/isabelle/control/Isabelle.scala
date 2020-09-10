@@ -189,35 +189,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     process
   }
 
-  private def buildSession() : Unit = {
-    def wd = setup.workingDirectory
-    /** Path to absolute string, interpreted relative to wd */
-    def str(path: Path) = wd.resolve(path).toAbsolutePath.toString
-    val isabelleBinary = setup.isabelleHome.resolve("bin").resolve("isabelle")
-    val cmd = ListBuffer[String]()
-
-    cmd += str(isabelleBinary) += "build"
-    cmd += "-b" // Build heap image
-
-    for (root <- setup.sessionRoots)
-      cmd += "-d" += str(root)
-
-    cmd += setup.logic
-
-    logger.debug(s"Cmd line: ${cmd.mkString(" ")}")
-
-    val extraEnv =
-      for (userDir <- setup.userDir.toList)
-        yield ("USER_HOME", str(userDir.getParent))
-
-    val processBuilder = scala.sys.process.Process(cmd.toSeq, wd.toAbsolutePath.toFile, extraEnv :_*)
-    val errors = ListBuffer[String]()
-    if (0 != processBuilder.!(ProcessLogger(line => logger.debug(s"Isabelle build: $line"),
-                                           {line => errors.append(line); logger.warn(s"Isabelle build: $line")})))
-      throw IsabelleBuildException(s"Isabelle build for session ${setup.logic} failed", errors.toList)
-  }
-
-  if (build) buildSession()
+  if (build) buildSession(setup)
   private val process: lang.Process = startProcess()
 
   def isDestroyed = destroyed
@@ -361,6 +333,63 @@ object Isabelle {
                     userDir : Option[Path] = None
                   )
 
+  def buildSession(setup: Setup) : Unit = {
+    def wd = setup.workingDirectory
+    /** Path to absolute string, interpreted relative to wd */
+    def str(path: Path) = wd.resolve(path).toAbsolutePath.toString
+    val isabelleBinary = setup.isabelleHome.resolve("bin").resolve("isabelle")
+    val cmd = ListBuffer[String]()
+
+    cmd += str(isabelleBinary) += "build"
+    cmd += "-b" // Build heap image
+
+    for (root <- setup.sessionRoots)
+      cmd += "-d" += str(root)
+
+    cmd += setup.logic
+
+    logger.debug(s"Cmd line: ${cmd.mkString(" ")}")
+
+    val extraEnv =
+      for (userDir <- setup.userDir.toList)
+        yield ("USER_HOME", str(userDir.getParent))
+
+    val processBuilder = scala.sys.process.Process(cmd.toSeq, wd.toAbsolutePath.toFile, extraEnv :_*)
+    val errors = ListBuffer[String]()
+    if (0 != processBuilder.!(ProcessLogger(line => logger.debug(s"Isabelle build: $line"),
+      {line => errors.append(line); logger.warn(s"Isabelle build: $line")})))
+      throw IsabelleBuildException(s"Isabelle build for session ${setup.logic} failed", errors.toList)
+  }
+
+  def jedit(setup: Setup, files: Seq[Path]) : Unit = {
+    def wd = setup.workingDirectory
+    /** Path to absolute string, interpreted relative to wd */
+    def str(path: Path) = wd.resolve(path).toAbsolutePath.toString
+    val isabelleBinary = setup.isabelleHome.resolve("bin").resolve("isabelle")
+    val cmd = ListBuffer[String]()
+
+    cmd += str(isabelleBinary) += "jedit"
+
+    for (root <- setup.sessionRoots)
+      cmd += "-d" += str(root)
+
+    cmd += "-l" += setup.logic
+
+    cmd += "--"
+    cmd ++= files.map { _.toAbsolutePath.toString }
+
+    logger.debug(s"Cmd line: ${cmd.mkString(" ")}")
+
+    val extraEnv =
+      for (userDir <- setup.userDir.toList)
+        yield ("USER_HOME", str(userDir.getParent))
+
+    val processBuilder = scala.sys.process.Process(cmd.toSeq, wd.toAbsolutePath.toFile, extraEnv :_*)
+    val errors = ListBuffer[String]()
+    if (0 != processBuilder.!(ProcessLogger(line => logger.debug(s"Isabelle build: $line"),
+      {line => errors.append(line); logger.warn(s"Isabelle build: $line")})))
+      throw IsabelleBuildException(s"Isabelle build for session ${setup.logic} failed", errors.toList)
+  }
 }
 
 abstract class IsabelleControllerException(message: String) extends IOException(message)

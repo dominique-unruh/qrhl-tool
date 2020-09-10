@@ -21,7 +21,6 @@ test-distrib0 : qrhl.zip
 	rm -rf tmp/qrhl-$(VERSION)/isabelle-afp
 	rm -rf tmp/qrhl-$(VERSION)/isabelle-thys
 	rm -rf tmp/qrhl-$(VERSION)/conf
-	rm -rf tmp/qrhl-$(VERSION)/Isabelle2019-RC4
 	unzip -d tmp qrhl.zip
 
 test-distrib : test-distrib0

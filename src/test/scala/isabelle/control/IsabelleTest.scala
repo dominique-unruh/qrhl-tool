@@ -24,9 +24,9 @@ class IsabelleTest extends FunSuite {
 object IsabelleTest {
   val setup: Setup = Setup(
     workingDirectory = Paths.get("/home/unruh/svn/qrhl-tool"),
-    isabelleHome = Paths.get("Isabelle2019-RC4"),
+    isabelleHome = Paths.get("/opt/Isabelle2020"),
     sessionRoots = Nil,
-    userDir = Some(Paths.get("isabelle-temp/user/Isabelle2019-RC4/.isabelle"))
+    userDir = None
   )
 
   implicit lazy val isabelle: Isabelle = {
