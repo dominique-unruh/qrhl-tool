@@ -1,6 +1,5 @@
 package qrhl.toplevel
 
-import info.hupel.isabelle.pure
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic._
 import qrhl.tactic._

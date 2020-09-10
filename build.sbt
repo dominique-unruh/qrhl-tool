@@ -17,23 +17,21 @@ scalaVersion := "2.12.11"
 
 scalacOptions += "-deprecation"
 
-//enablePlugins(LibisabellePlugin)
-
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 
-//isabelleSessions in Compile := Seq("QRHL")
-//isabelleSourceFilter := (- ".*") && (- "*~")
-//isabelleSourceFilter := (- "*") // effectively disables the collection of Isabelle sources by sbt-libisabelle
+// https://mvnrepository.com/artifact/commons-codec/commons-codec
+libraryDependencies += "commons-codec" % "commons-codec" % "1.15"
+// https://mvnrepository.com/artifact/org.log4s/log4s
+libraryDependencies += "org.log4s" %% "log4s" % "1.8.2"
+// https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.11"
+// https://mvnrepository.com/artifact/commons-io/commons-io
+libraryDependencies += "commons-io" % "commons-io" % "2.8.0"
+// https://mvnrepository.com/artifact/org.scalaz/scalaz-core
+libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.3.2"
 
-libraryDependencies += "info.hupel" % "multi-isabelle" % "0.1.4" // TODO remove
-
-libraryDependencies ++= { val version = "1.1.0-RC3"; Seq(
-  "info.hupel" %% "libisabelle" % version,
-  "info.hupel" %% "libisabelle-setup" % version,
-  "info.hupel" %% "pide-package" % version
-) }
 
 def extractJar(update : UpdateReport, name : String, target : File): Unit = {
   val jar = update
@@ -48,19 +46,6 @@ def extractJar(update : UpdateReport, name : String, target : File): Unit = {
 assemblyMergeStrategy in assembly := {
   case PathList(ps @ _*) if ps.last == ".files" => MergeStrategy.discard
   case x => (assemblyMergeStrategy in assembly).value(x)
-}
-
-lazy val extractLibisabelleProtocol = taskKey[Unit]("Extract libisabelle Protocol session")
-val libisabelleExtractPath = "target/downloads/libisabelle"
-val classyExtractPath = "target/downloads/classy"
-val multiIsabelleExtractPath = "target/downloads/multi-isabelle"
-managedResources in Compile := (managedResources in Compile).dependsOn(extractLibisabelleProtocol).value
-
-extractLibisabelleProtocol := {
-  val up = (update in Compile).value
-  extractJar(up, "libisabelle_", baseDirectory.value / libisabelleExtractPath)
-  extractJar(up, "classy-", baseDirectory.value / classyExtractPath)
-  extractJar(up, "multi-isabelle-", baseDirectory.value / multiIsabelleExtractPath)
 }
 
 //val afpUrl = "https://downloads.sourceforge.net/project/afp/afp-Isabelle2017/afp-2018-01-12.tar.gz"

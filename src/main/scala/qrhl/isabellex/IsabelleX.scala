@@ -11,11 +11,6 @@ import isabelle.control.{Isabelle, MLFunction, MLFunction2}
 import isabelle.{Abs, App, Bound, Const, Free, Term, Theory, Typ, Type, Var}
 
 import scala.concurrent.ExecutionContext
-//import info.hupel.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Typ, Type, Var}
-import info.hupel.isabelle.setup.Setup.Absent
-import info.hupel.isabelle.setup.{Resolver, Resources, Setup}
-import info.hupel.isabelle.{Codec, Observer, OfficialPlatform, Operation, Platform, System, XMLResult, ml}
-import monix.execution.Scheduler.Implicits.global
 import org.log4s
 import qrhl.{Subgoal, UserException}
 import qrhl.logic._
@@ -30,8 +25,10 @@ import isabelle.control.MLValue
 import isabelle.{Context, Symbols, Thm, control}
 import qrhl.isabellex.IsabelleX.fastype_of
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
-import scalaz.Applicative
 
+//import scalaz.Applicative
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import MLValue.Implicits._
 import Context.Implicits._
 import Term.Implicits._
@@ -304,7 +301,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     def abs(level: Int, term: Term): Term = term match {
       case Abs(name, typ, body) => Abs(name, typ, abs(level+1, body))
       case App(fun, arg) => App(abs(level, fun), abs(level, arg))
-      case v2 @ Free(_) if v==v2 => Bound(level)
+      case v2 @ Free(_,_) if v==v2 => Bound(level)
       case term => term
     }
     abs(0, body)
@@ -976,6 +973,7 @@ object IsabelleX {
     def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(typ.pretty(context))
 
     def simplify(term: Term, facts: List[String])(implicit executionContext: ExecutionContext): (RichTerm, Thm) = {
+      val global = null
       val (t,thm) = simplifyTermOp(MLValue((term, facts.map(symbols.unicodeToSymbols), context))).retrieveNow
       (RichTerm(t), thm)
     }

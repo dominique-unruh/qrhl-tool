@@ -1,7 +1,5 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.Operation
-import info.hupel.isabelle.hol.HOLogic
 import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import isabelle.{App, Const, Context, Term, Typ}

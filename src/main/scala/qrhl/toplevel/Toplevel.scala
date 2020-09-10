@@ -5,8 +5,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
 import hashedcomputation.{Computation, Hashed}
-import info.hupel.isabelle.ProverResult
-import org.eclipse.jgit.diff.HashedSequenceComparator
+import isabelle.control.IsabelleException
+//import org.eclipse.jgit.diff.HashedSequenceComparator
 import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder
 import org.jline.terminal.impl.DumbTerminal
@@ -122,8 +122,8 @@ class Toplevel private(initialState : default.Hashed[State]) {
           states = newState :: states
       }
     } catch {
-      case e:UserException => e.setPosition(position); throw e
-      case e: ProverResult.Failure => throw UserException(e,position)
+      case e: UserException => e.setPosition(position); throw e
+      case e: IsabelleException => throw UserException(e,position)
     }
 
     //    logger.debug(s"State hash: ${state.hash}")
@@ -138,8 +138,8 @@ class Toplevel private(initialState : default.Hashed[State]) {
     val cmd2 = try {
       state.value.parseCommand(cmd)
     } catch {
-      case e:UserException => e.setPosition(position); throw e
-      case e:ProverResult.Failure => throw UserException(e,position)
+      case e: UserException => e.setPosition(position); throw e
+      case e: IsabelleException => throw UserException(e,position)
     }
     execCmd(cmd, cmd2, position)
   }

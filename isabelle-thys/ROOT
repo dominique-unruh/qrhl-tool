@@ -1,6 +1,6 @@
 session QRHL = "QRHL-Tensor_Product" +
   options [record_proofs=1]
-  sessions CryptHOL "HOL-Protocol" Bounded_Operators
+  sessions CryptHOL Bounded_Operators
   theories QRHL QRHL_Operations
 
 session "QRHL-Tensor_Product" = "QRHL-Bounded_Operators" +
@@ -24,11 +24,11 @@ session "QRHL-Prerequisites2" = "QRHL-Prerequisites1" +
   theories CryptHOL.Misc_CryptHOL
 
 session "QRHL-Prerequisites" = "QRHL-Prerequisites2" +
-  sessions "HOL-Library"  "HOL-Analysis" "HOL-ZF" "HOL-ex"  "HOL-Protocol"
+  sessions "HOL-Library" "HOL-Analysis" "HOL-ZF" "HOL-ex"
   theories "HOL-Analysis.Inner_Product" "HOL-ex.Sqrt"  "HOL-Library.Bit"
     "HOL-Analysis.Infinite_Set_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
     "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral" "HOL-ZF.HOLZF"
-    "HOL-Protocol.Protocol_Main" "HOL-Eisbach.Eisbach_Tools" "HOL-ex.Sketch_and_Explore"
+    "HOL-Eisbach.Eisbach_Tools" "HOL-ex.Sketch_and_Explore"
 
 session "QRHL-Scala" = QRHL +
   sessions QRHL

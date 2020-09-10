@@ -9,7 +9,8 @@ import MLValue.Implicits._
 import MLValue.Ops
 import isabelle.control.Isabelle.ID
 import org.log4s
-import scalaz.Id.{Id, Identity}
+import scalaz.Id
+import scalaz.Id.Id
 
 import scala.language.higherKinds
 

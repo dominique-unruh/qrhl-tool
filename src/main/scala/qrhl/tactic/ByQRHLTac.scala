@@ -1,6 +1,5 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.hol.HOLogic
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
@@ -51,7 +50,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
     }
   }
 
-  private val connectiveT = HOLogic.boolT -->: HOLogic.boolT -->: HOLogic.boolT
+//  private val connectiveT = HOLogic.boolT -->: HOLogic.boolT -->: HOLogic.boolT
   private def bitToBool(b:Term) =
     GIsabelle.mk_eq(b, Const("Groups.one_class.one", GIsabelle.bitT))
 

@@ -1,6 +1,5 @@
 package qrhl.logic
 
-import info.hupel.isabelle.Operation
 import qrhl.{MaybeAllSet, UserException}
 import qrhl.isabellex.IsabelleX.ContextX
 import qrhl.isabellex.{IsabelleX, RichTerm}

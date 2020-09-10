@@ -1,9 +1,7 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.ProverResult
 import org.scalatest.FunSuite
-import qrhl.isabellex.{IsabelleX, RichTerm}
-import qrhl.toplevel.{Toplevel, ToplevelTest}
+import qrhl.toplevel.Toplevel
 
 class O2HTacTest extends FunSuite {
   test("o2h tac") {
@@ -57,13 +55,7 @@ class O2HTacTest extends FunSuite {
         | lemma abs ( Pr[b=1:left(rho)] - Pr[b=1:right(rho)] ) <= 2 * sqrt( (1+real q) * Pr[Find:find(rho)] ).
       """.stripMargin)
 
-    val state2 = try {
-      tl.state.value.applyTactic(O2HTac)
-    } catch {
-      case e : ProverResult.Failure =>
-        println(e.fullMessage)
-        throw e
-    }
+    val state2 = tl.state.value.applyTactic(O2HTac)
 
     println(state2)
 
@@ -72,6 +64,6 @@ class O2HTacTest extends FunSuite {
     assert(state2.goal(0).toString == "probability (expression 〚var_count〛 (λcount. count ≤ q)) left rho = 1")
     assert(state2.goal(1).toString == "probability (expression 〚var_count〛 (λcount. count ≤ q)) right rho = 1")
     assert(state2.goal(2).toString == "probability (expression 〚var_count〛 (λcount. count ≤ q)) find rho = 1")
-    assert(state2.goal(3).toString == "∀S G H z x. (S, G, H, z) ∈ supp o2h_distr ⟶  x ∉ S ⟶ G x = H x")
+    assert(state2.goal(3).toString == "∀S G H z x. (S, G, H, z) ∈ supp o2h_distr ⟶ x ∉ S ⟶ G x = H x")
   }
 }

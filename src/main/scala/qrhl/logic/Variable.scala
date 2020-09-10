@@ -1,7 +1,5 @@
 package qrhl.logic
 
-import info.hupel.isabelle.api.XML
-import info.hupel.isabelle.{Codec, XMLResult}
 import qrhl.isabellex.{IsabelleConsts, IsabelleX}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import isabelle.{App, Const, Free, Term, Typ}

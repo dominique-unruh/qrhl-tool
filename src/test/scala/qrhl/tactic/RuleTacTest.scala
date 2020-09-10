@@ -1,8 +1,7 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.{Operation, ProverResult}
 import org.scalatest.FunSuite
-import qrhl.isabellex.{IsabelleX, RichTerm}
+import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
 
 //noinspection ZeroIndexToHead
@@ -22,13 +21,7 @@ class RuleTacTest extends FunSuite {
   test("produce new subgoals") {
     val tl = toplevel()
     tl.execCmd("lemma test: a+b <= c+d")
-    val state2 = try {
-      tl.state.value.applyTactic(RuleTac("add_le_mono"))
-    } catch {
-      case e : ProverResult.Failure =>
-        println(IsabelleX.symbols.symbolsToUnicode(e.fullMessage))
-        throw e
-    }
+    val state2 = tl.state.value.applyTactic(RuleTac("add_le_mono"))
     print("New goals: ",state2.goal)
     state2.goal.foreach(_.checkWelltyped(tl.state.value.isabelle))
     assert(state2.goal.length==2)
@@ -37,7 +30,6 @@ class RuleTacTest extends FunSuite {
 
 
   test("instantiations") {
-    try {
       val tl = toplevel()
       tl.execCmd("lemma test: a <= c")
 //      val inst = List(("j", RichTerm(tl.state.isabelle, "0::nat", Isabelle.dummyT)))
@@ -48,24 +40,13 @@ class RuleTacTest extends FunSuite {
       assert(goals.length == 2)
       assert(goals(0).toString == "a ≤ 0")
       assert(goals(1).toString == "0 ≤ c")
-    } catch {
-      case e : ProverResult.Failure =>
-        println(IsabelleX.symbols.symbolsToUnicode(e.fullMessage))
-        throw e
-    }
   }
 
   test("unicode") {
     val tl = toplevel()
     tl.execCmd("lemma test: 1=1")
     val rule = RuleTac("trans[where s=α]")
-    val state2 = try {
-      tl.state.value.applyTactic(rule)
-    } catch {
-      case e : ProverResult.Failure =>
-        println(IsabelleX.symbols.symbolsToUnicode(e.fullMessage))
-        throw e
-    }
+    val state2 = tl.state.value.applyTactic(rule)
   }
 
 /*

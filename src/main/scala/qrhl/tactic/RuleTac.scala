@@ -1,8 +1,5 @@
 package qrhl.tactic
 
-import info.hupel.isabelle.ml.Expr
-import info.hupel.isabelle.pure.Term
-import info.hupel.isabelle.{Operation, pure}
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}

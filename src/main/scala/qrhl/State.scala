@@ -5,18 +5,16 @@ import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, NoSuchFileException, Path, Paths}
 import java.util
 
-import info.hupel.isabelle.{Codec, Operation, ProverResult}
 import org.log4s
 import isabellex.{IsabelleX, RichTerm}
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext, Toplevel}
 import _root_.isabelle.{Context, Term, Typ, control}
-import control.{Isabelle, MLValue}
+import control.{Isabelle, IsabelleException, MLValue}
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
-import info.hupel.isabelle.api.XML
 import qrhl.State.logger
 
 import scala.collection.mutable
@@ -195,9 +193,9 @@ object UserException {
   private val logger = log4s.getLogger
 
   def apply(msg: String) = new UserException(msg)
-  def apply(e: ProverResult.Failure, position: String): UserException = {
-    logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
-    val e2 = UserException("(in Isabelle) "+IsabelleX.symbols.symbolsToUnicode(e.msg))
+  def apply(e: IsabelleException, position: String): UserException = {
+//    logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
+    val e2 = UserException("(in Isabelle) "+IsabelleX.symbols.symbolsToUnicode(e.getMessage))
     e2.setPosition(position)
     e2
   }

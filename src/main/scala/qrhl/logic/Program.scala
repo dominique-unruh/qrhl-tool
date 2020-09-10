@@ -2,9 +2,6 @@ package qrhl.logic
 
 import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
-import info.hupel.isabelle.api.XML
-import info.hupel.isabelle.hol.HOLogic
-import info.hupel.isabelle.{Codec, Operation, XMLResult, pure}
 import isabelle.control.{Isabelle, MLFunction, MLValue}
 import isabelle.control.MLValue.Converter
 import isabelle.control.MLValue.Implicits.tuple2Converter
