@@ -86,7 +86,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       }
 //      println("Flushing.")
       writer.flush()
-      Thread.sleep(100)
+//      Thread.sleep(100)
     }
   }
 
@@ -192,7 +192,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
   if (build) buildSession(setup)
   private val process: lang.Process = startProcess()
 
-  def isDestroyed = destroyed
+  def isDestroyed: Boolean = destroyed
 
   @volatile private var destroyed = false
   def destroy(): Unit = {
