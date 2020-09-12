@@ -1,18 +1,19 @@
-package isabelle
+package isabelle.pure
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue, OperationCollection}
-import Term.Ops
+import isabelle.control.{Isabelle, OperationCollection}
+import isabelle.mlvalue.MLValue.Converter
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.mlvalue.{MLFunction, MLFunction2, MLFunction3, MLValue}
+import isabelle.pure.Context.Implicits._
+import isabelle.pure.Cterm.Implicits._
+import isabelle.pure.Term.Implicits.termConverter
+import isabelle.pure.Term.Ops
+import isabelle.pure.Typ.Implicits._
+import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
-import isabelle.control.MLValue.Converter
-import MLValue.Implicits._
-import Term.Implicits.termConverter
-import Cterm.Implicits._
-import Typ.Implicits._
-import Context.Implicits._
-import org.apache.commons.lang3.builder.HashCodeBuilder
 
 sealed abstract class Term {
   val mlValue : MLValue[Term]

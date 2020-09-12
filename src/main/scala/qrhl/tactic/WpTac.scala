@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import qrhl.{QRHLSubgoal, State, Subgoal}
 
-import isabelle.control.MLValue.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
 
 case class WpTac(left:Int, right:Int)
   extends IsabelleTac[(Int,Int)]("wp_tac", { _ => (left,right) }) {

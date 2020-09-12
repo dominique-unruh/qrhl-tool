@@ -1,19 +1,19 @@
-package isabelle
+package isabelle.pure
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLFunction3, MLValue, OperationCollection}
-
-import scala.annotation.tailrec
-import scala.concurrent.{Await, ExecutionContext, Future}
-import isabelle.control.MLValue.Converter
-import Typ.Ops
+import isabelle.control.{Isabelle, OperationCollection}
+import isabelle.mlvalue.MLValue.Converter
+import isabelle.mlvalue.{MLFunction, MLFunction2, MLFunction3, MLValue}
+import isabelle.pure.Typ.Ops
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
+import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 // Implicits
-import MLValue.Implicits._
-import Typ.Implicits.typConverter
-import Context.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.pure.Context.Implicits._
+import isabelle.pure.Typ.Implicits.typConverter
 
 sealed abstract class Typ {
   val mlValue : MLValue[Typ]

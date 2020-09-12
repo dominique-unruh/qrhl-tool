@@ -3,12 +3,13 @@ package qrhl.toplevel
 import qrhl.{State, Subgoal}
 import qrhl.isabellex.IsabelleX
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.Context
-import isabelle.control.{IsabelleException, MLValue}
+import isabelle.control.IsabelleException
 import GIsabelle.Ops
+import isabelle.mlvalue.MLValue
+import isabelle.pure.Context
 
 // Implicits
-import MLValue.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 import Context.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global

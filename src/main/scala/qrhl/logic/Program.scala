@@ -2,10 +2,12 @@ package qrhl.logic
 
 import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
-import isabelle.control.{Isabelle, MLFunction, MLValue}
-import isabelle.control.MLValue.Converter
-import isabelle.control.MLValue.Implicits.tuple2Converter
-import isabelle.{Context, Term, Thm, Typ, Type, control}
+import isabelle.control.Isabelle
+import isabelle.mlvalue.MLValue
+import isabelle.mlvalue.MLValue.Converter
+import isabelle.mlvalue.MLValue.Implicits.tuple2Converter
+import isabelle.control
+import isabelle.pure.{Term, Thm, Typ, Type}
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.{AllSet, MaybeAllSet, UserException, Utils}
 
@@ -14,15 +16,15 @@ import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.{AbstractIterator, GenSet, mutable}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.{higherKinds, postfixOps}
+import scala.language.postfixOps
 
 // Implicits
 import qrhl.Utils.listSetUpcast
 import qrhl.Utils.ListSetUtils
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
-import MLValue.Implicits._
-import Context.Implicits._
-import Term.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.pure.Context.Implicits._
+import isabelle.pure.Term.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 

@@ -5,20 +5,20 @@ import org.log4s.Logger
 import qrhl.logic.{CVariable, Environment, ExprVariableUse, QVariable, Variable, VariableUse}
 
 import scala.collection.mutable
-import isabelle.{Abs, App, Bound, Const, Context, Free, TFree, TVar, Term, Typ, Type, Var, control}
+import isabelle.control
 import qrhl.{UserException, Utils, logic}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 import IsabelleX.{globalIsabelle => GIsabelle}
-
-import isabelle.control.MLValue
-
-import isabelle.Term.Implicits._
-import isabelle.Typ.Implicits._
-import isabelle.Context.Implicits._
-import isabelle.control.MLValue.Implicits._
+import isabelle.pure.Term.Implicits._
+import isabelle.pure.Typ.Implicits._
+import isabelle.pure.Context.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.mlvalue.MLValue
+import isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Var}
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import qrhl.isabellex.IsabelleX.globalIsabelle.Ops
 
@@ -134,15 +134,15 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
   }
 
 //  val isabelleTerm : Term = isabelleTerm
-  def simplify(isabelle: Option[IsabelleX.ContextX], facts:List[String]): (RichTerm,_root_.isabelle.Thm) = simplify(isabelle.get,facts)
+  def simplify(isabelle: Option[IsabelleX.ContextX], facts:List[String]): (RichTerm,Thm) = simplify(isabelle.get,facts)
 
-  def simplify(context: IsabelleX.ContextX, facts:List[String], thms:ListBuffer[_root_.isabelle.Thm]) : RichTerm = {
+  def simplify(context: IsabelleX.ContextX, facts:List[String], thms:ListBuffer[Thm]) : RichTerm = {
     val (t,thm) = context.simplify(isabelleTerm, facts)
     thms += thm
     t
   }
 
-  def simplify(context: IsabelleX.ContextX, facts:List[String]): (RichTerm,_root_.isabelle.Thm) =
+  def simplify(context: IsabelleX.ContextX, facts:List[String]): (RichTerm,Thm) =
     context.simplify(isabelleTerm, facts)
 
   def map(f : Term => Term) : RichTerm = RichTerm(typ, f(isabelleTerm))

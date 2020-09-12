@@ -1,7 +1,5 @@
 package qrhl.tactic
 
-import isabelle.control.MLValue
-import isabelle.{Context, Term, Typ}
 import org.log4s
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, CVariable, Local, QVariable, VTSingle, VarTerm, Variable}
@@ -9,6 +7,8 @@ import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import qrhl.tactic.LocalRemoveTac.logger
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
+import isabelle.mlvalue.MLValue
+import isabelle.pure.Term
 
 import scala.collection.immutable.ListSet
 
@@ -16,9 +16,9 @@ import scala.collection.immutable.ListSet
 import scala.concurrent.ExecutionContext.Implicits.global
 import GIsabelle.isabelleControl
 import MLValue.Implicits._
-import Term.Implicits._
-import Typ.Implicits._
-import Context.Implicits._
+import isabelle.pure.Term.Implicits._
+import isabelle.pure.Typ.Implicits._
+import isabelle.pure.Context.Implicits._
 
 
 case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove : List[Variable]) extends Tactic {

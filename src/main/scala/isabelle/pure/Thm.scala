@@ -1,16 +1,17 @@
-package isabelle
+package isabelle.pure
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2, MLValue, OperationCollection}
-import isabelle.control.MLValue.Converter
-import Thm.Ops
+import isabelle.control.{Isabelle, OperationCollection}
+import isabelle.mlvalue.MLValue.Converter
+import isabelle.mlvalue.{MLFunction, MLFunction2, MLValue}
+import isabelle.pure.Thm.Ops
 
 import scala.concurrent.{ExecutionContext, Future}
 
 // Implicits
-import MLValue.Implicits._
-import Thm.Implicits.thmConverter
-import Cterm.Implicits._
-import Context.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.pure.Context.Implicits._
+import isabelle.pure.Cterm.Implicits._
+import isabelle.pure.Thm.Implicits.thmConverter
 
 final class Thm private [Thm](val mlValue : MLValue[Thm])(implicit ec: ExecutionContext, isabelle: Isabelle) {
   override def toString: String = s"thm${mlValue.stateString}"

@@ -2,16 +2,16 @@ package qrhl.tactic
 
 import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
-import isabelle.{App, Const, Context, Term, Typ}
-import isabelle.control.MLValue
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
+import isabelle.mlvalue.MLValue
+import isabelle.pure.{App, Const}
 
 // Implicits
 import MLValue.Implicits._
-import Context.Implicits._
-import Term.Implicits._
-import Typ.Implicits._
+import isabelle.pure.Context.Implicits._
+import isabelle.pure.Term.Implicits._
+import isabelle.pure.Typ.Implicits._
 import GIsabelle.isabelleControl
 import scala.concurrent.ExecutionContext.Implicits.global
 

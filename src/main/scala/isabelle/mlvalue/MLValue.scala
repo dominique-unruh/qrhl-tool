@@ -1,19 +1,17 @@
-package isabelle.control
+package isabelle.mlvalue
 
-import isabelle.control.MLValue.{Converter, logger}
+import isabelle.control.Isabelle.ID
+import isabelle.control.{Isabelle, OperationCollection}
+import isabelle.mlvalue.MLValue.Implicits.{booleanConverter, intConverter, listConverter, mlValueConverter, stringConverter,
+  tuple2Converter, tuple3Converter, tuple4Converter, tuple5Converter, tuple6Converter, tuple7Converter}
+import isabelle.mlvalue.MLValue.{Converter, logger}
+import org.log4s
+import scalaz.Id.Id
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import MLValue.Implicits.{tuple2Converter, tuple3Converter, tuple4Converter, tuple5Converter, tuple6Converter, tuple7Converter,
-  stringConverter, booleanConverter, intConverter, listConverter, mlValueConverter}
 import MLValue.Ops
-import isabelle.control.Isabelle.ID
-import org.log4s
-import scalaz.Id
-import scalaz.Id.Id
-
-import scala.language.higherKinds
 
 class MLValue[A] private[isabelle](val id: Future[Isabelle.ID]) {
   def logError(message: => String)(implicit executionContext: ExecutionContext): this.type = {
@@ -104,7 +102,7 @@ class MLFunction[D,R] private[isabelle] (id: Future[ID]) extends MLValue[D => R]
     new MLValue(
       for (fVal <- this.id;
            xVal <- arg.id;
-           fx <- isabelle.applyFunction(fVal, xVal).future)
+           fx <- isabelle.applyFunction(fVal, xVal))
         yield fx
     )
   }
@@ -187,7 +185,7 @@ object MLValue extends OperationCollection {
   private val logger = log4s.getLogger
 
   override protected def newOps(implicit isabelle: Isabelle, ec: ExecutionContext) : Ops = new Ops()
-  protected[control] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
+  protected[mlvalue] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     isabelle.executeMLCodeNow("exception E_List of exn list; exception E_Bool of bool; exception E_Option of exn option")
 
     private val optionNone_ = MLValue.compileValueRaw[Option[_]]("E_Option NONE")
@@ -232,13 +230,13 @@ object MLValue extends OperationCollection {
     conv.store(value)
 
   def compileValueRaw[A](ml: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[A] =
-    new MLValue[A](isabelle.storeValue(ml).future).logError(s"""Error while compiling value "$ml":""")
+    new MLValue[A](isabelle.storeValue(ml)).logError(s"""Error while compiling value "$ml":""")
 
   def compileValue[A](ml: String)(implicit isabelle: Isabelle, ec: ExecutionContext, converter: Converter[A]): MLValue[A] =
     compileValueRaw[A](s"(${converter.valueToExn}) ($ml)")
 
   def compileFunctionRaw[D, R](ml: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLFunction[D, R] =
-    new MLFunction[D,R](isabelle.storeValue(s"E_ExnExn ($ml)").future).logError(s"""Error while compiling function "$ml":""")
+    new MLFunction[D,R](isabelle.storeValue(s"E_Function ($ml)")).logError(s"""Error while compiling function "$ml":""")
 
   def compileFunction[D, R](ml: String)(implicit isabelle: Isabelle, ec: ExecutionContext, converterA: Converter[D], converterB: Converter[R]): MLFunction[D, R] =
     compileFunctionRaw(s"(${converterB.valueToExn}) o ($ml) o (${converterA.exnToValue})")
@@ -282,17 +280,17 @@ object MLValue extends OperationCollection {
       for (_ <- value.id) yield ()
 
     override def store(value: Unit)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Unit] =
-      new MLValue(isabelle.storeInteger(0).future)
+      new MLValue(isabelle.storeInteger(0))
 
     override val exnToValue: String = "K()"
     override val valueToExn: String = "K(E_Int 0)"
   }
   object IntConverter extends Converter[Int] {
     @inline override def store(value: Int)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Int] =
-      new MLValue(isabelle.storeInteger(value).future)
+      new MLValue(isabelle.storeInteger(value))
     @inline override def retrieve(value: MLValue[Int])
                                                     (implicit isabelle: Isabelle, ec: ExecutionContext): Future[Int] =
-      value.id.flatMap(isabelle.retrieveInteger(_).future)
+      value.id.flatMap(isabelle.retrieveInteger)
     override lazy val exnToValue: String = "fn E_Int i => i"
     override lazy val valueToExn: String = "E_Int"
   }
@@ -309,10 +307,10 @@ object MLValue extends OperationCollection {
 
   object StringConverter extends Converter[String] {
     @inline override def store(value: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[String] =
-      new MLValue(isabelle.storeString(value).future)
+      new MLValue(isabelle.storeString(value))
     @inline override def retrieve(value: MLValue[String])
                                                     (implicit isabelle: Isabelle, ec: ExecutionContext): Future[String] =
-      value.id.flatMap(isabelle.retrieveString(_).future)
+      value.id.flatMap(isabelle.retrieveString)
     override lazy val exnToValue: String = "fn E_String str => str"
     override lazy val valueToExn: String = "E_String"
   }
@@ -360,7 +358,7 @@ object MLValue extends OperationCollection {
 
   @inline class Tuple2Converter[A,B](converterA: Converter[A], converterB: Converter[B]) extends Converter[(A,B)] {
     @inline override def retrieve(value: MLValue[(A, B)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B)] = {
-      val aIDbID = for (id <- value.id; ab <- isabelle.splitPair(id).future) yield ab
+      val aIDbID = for (id <- value.id; ab <- isabelle.splitPair(id)) yield ab
       val aID = for ((a, _) <- aIDbID) yield a
       val bID = for ((_, b) <- aIDbID) yield b
       val a = converterA.retrieve(new MLValue[A](aID))
@@ -374,7 +372,7 @@ object MLValue extends OperationCollection {
       val idAB1 =
         for (aID <- mlA.id;
              bID <- mlB.id)
-          yield isabelle.makePair(aID, bID).future
+          yield isabelle.makePair(aID, bID)
       val idAB = idAB1.flatten
       new MLValue(idAB)
     }

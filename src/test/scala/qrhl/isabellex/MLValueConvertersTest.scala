@@ -1,12 +1,12 @@
 package qrhl.isabellex
 
-import isabelle.control.MLValue
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.logic.{Call, Statement}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import MLValueConverters.Implicits._
 import IsabelleX.globalIsabelle.isabelleControl
+import isabelle.mlvalue.MLValue
 
 class MLValueConvertersTest extends AnyFunSuite {
   test("Call roundtrip") {

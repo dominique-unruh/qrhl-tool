@@ -1,6 +1,6 @@
 package qrhl.tactic
 
-import isabelle.control.MLValue.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
 
 case class SquashTac(left:Boolean)
   extends IsabelleTac[Boolean]("squash_tac", { _ => left }) {

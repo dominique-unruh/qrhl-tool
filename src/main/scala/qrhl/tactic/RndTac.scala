@@ -1,10 +1,10 @@
 package qrhl.tactic
-import isabelle.Term
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{CVariable, Sample, Statement, VarTerm}
 import qrhl.{State, UserException}
-import isabelle.control.MLValue.Implicits._
-import isabelle.Term.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.pure.Term.Implicits._
+import isabelle.pure.Term
 
 case object RndEqualTac
   extends IsabelleTac[Unit]("joint_sample_equal_tac", { _ => () }) {

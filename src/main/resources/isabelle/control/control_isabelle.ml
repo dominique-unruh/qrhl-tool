@@ -1,17 +1,9 @@
 structure Control_Isabelle : sig
-  (* TODO: Does this need to be exported? *)
-  (* val sendReply : int -> int list -> unit *)
   val handleLines : unit -> unit
-  exception E_ExnExn of exn -> exn
+  exception E_Function of exn -> exn
   exception E_Int of int
   exception E_String of string
   exception E_Pair of exn * exn
-(*   exception E_Context of Proof.context
-  exception E_Theory of theory
-  exception E_Typ of typ
-  exception E_Term of term
-  exception E_Cterm of cterm
-  exception E_Thm of thm *)
   val store : int -> exn -> unit
   (* For diagnostics. Linear time *)
   val numObjects : unit -> int
@@ -42,7 +34,7 @@ fun sendReply seq ints = let
   val _ = TextIO.flushOut outStream
   in () end
 
-exception E_ExnExn of exn -> exn
+exception E_Function of exn -> exn
 exception E_Int of int
 exception E_Unit
 exception E_String of string
@@ -55,10 +47,6 @@ fun executeML ml = let
   val _ = ML_Compiler.eval flags Position.none (ML_Lex.tokenize ml)
   (* val _ = TextIO.flushOut TextIO.stdOut (* Doesn't see to work *) *)
   in () end
-
-(* fun executeMLInt seq ml = let
-  val _ = tracing ("executeMLInt "^string_of_int seq ^" : " ^ml)
-  in  executeML ("Control_Isabelle.sendReply "^string_of_int seq^" [" ^ ml ^ "]") end *)
 
 fun addToObjects exn = let
   val idx = !objectsMax
@@ -85,12 +73,11 @@ fun retrieveString seq id = case Inttab.lookup (!objects) id of
   | SOME (E_String str) => sendReplyStr seq str
   | SOME exn => error ("expected E_String, got: " ^ exn_str exn)
 
-
 fun applyFunc seq f x = case (Inttab.lookup (!objects) f, Inttab.lookup (!objects) x) of
   (NONE,_) => error ("no object " ^ string_of_int f)
   | (_,NONE) => error ("no object " ^ string_of_int x)
-  | (SOME (E_ExnExn f), SOME x) => store seq (f x)
-  | (SOME exn, _) => error ("object " ^ string_of_int f ^ " is not an E_ExnExn but: " ^ exn_str exn)
+  | (SOME (E_Function f), SOME x) => store seq (f x)
+  | (SOME exn, _) => error ("object " ^ string_of_int f ^ " is not an E_Function but: " ^ exn_str exn)
 
 
 
@@ -103,9 +90,6 @@ fun splitPair seq id = case (Inttab.lookup (!objects) id) of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_Pair (x,y)) => storeMany seq [x,y]
   | SOME exn => error ("object " ^ string_of_int id ^ " is not an E_Pair but: " ^ exn_str exn)
-
-(* fun executeML' ml =
-  executeML ("local open Control_Isabelle in " ^ ml ^ " end") *)
 
 fun removeObjects ids =
   objects := fold Inttab.delete ids (!objects)
@@ -138,7 +122,7 @@ fun handleLine' seq line =
     (* RID - Parses ID as object# and returns the object, assuming it's (E_String s), response 'seq s' *)
   | #"R" => retrieveString seq (int_of_string (String.extract (line, 1, NONE)))
 
-    (* af x - Parses f,x as object#, f of type E_ExnExn, computes f x, stores the result, response 'seq ID' *)
+    (* af x - Parses f,x as object#, f of type E_Function, computes f x, stores the result, response 'seq ID' *)
   | #"a" => let val (f,x) = case String.fields (fn c => #" "=c) (String.extract (line, 1, NONE)) |> map int_of_string
                             of [f,x] => (f,x) | _ => raise Match
         in applyFunc seq f x end

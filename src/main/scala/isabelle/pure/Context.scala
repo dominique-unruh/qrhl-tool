@@ -1,7 +1,8 @@
-package isabelle
+package isabelle.pure
 
-import isabelle.control.MLValue.Converter
-import isabelle.control.{Isabelle, MLFunction, MLValue, OperationCollection}
+import isabelle.control.{Isabelle, OperationCollection}
+import isabelle.mlvalue.MLValue.Converter
+import isabelle.mlvalue.{MLFunction, MLValue}
 
 import scala.concurrent.{ExecutionContext, Future}
 

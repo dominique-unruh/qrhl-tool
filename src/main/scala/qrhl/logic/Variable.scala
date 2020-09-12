@@ -2,7 +2,7 @@ package qrhl.logic
 
 import qrhl.isabellex.{IsabelleConsts, IsabelleX}
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.{App, Const, Free, Term, Typ}
+import isabelle.pure.{App, Const, Free, Term, Typ}
 
 import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable.ListSet

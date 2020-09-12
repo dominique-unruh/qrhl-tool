@@ -5,7 +5,7 @@ import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.toplevel.Parser
 
-import isabelle.control.MLValue.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
 
 case class RuleTac(rule:String) extends IsabelleTac[String]("apply_rule",
   { _ => IsabelleX.symbols.unicodeToSymbols(rule) }) {

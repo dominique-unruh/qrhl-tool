@@ -4,7 +4,7 @@ import org.log4s
 import qrhl.isabellex.IsabelleX
 import qrhl.{State, Subgoal, Tactic, UserException}
 
-import isabelle.control.MLValue.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
 
 case class IsaTac(method:String, force:Boolean) extends IsabelleTac[String]("apply_method",
   { _ => IsabelleX.symbols.unicodeToSymbols(method) }) {

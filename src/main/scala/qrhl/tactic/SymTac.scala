@@ -1,5 +1,5 @@
 package qrhl.tactic
 
-import isabelle.control.MLValue.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
 
 case object SymTac extends IsabelleTac("sym_tac", { _=>() })

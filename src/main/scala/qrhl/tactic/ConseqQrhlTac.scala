@@ -1,22 +1,22 @@
 package qrhl.tactic
 
-import isabelle.{Context, Term, Typ}
-import isabelle.control.MLValue
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleX, MLValueConverters, RichTerm}
 import qrhl.logic.{QVariable, Variable}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
+import isabelle.mlvalue.MLValue
+import isabelle.pure.Term
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListSet
 
 // Implicits
-import isabelle.control.MLValue.Implicits._
-import isabelle.Context.Implicits._
-import isabelle.Typ.Implicits._
-import isabelle.Term.Implicits._
+import MLValue.Implicits._
+import isabelle.pure.Context.Implicits._
+import isabelle.pure.Typ.Implicits._
+import isabelle.pure.Term.Implicits._
 import MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import GIsabelle.isabelleControl

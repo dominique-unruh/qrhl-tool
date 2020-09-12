@@ -6,7 +6,7 @@ import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, CVariable, Local, QVariable}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.{Inf, QuantumEqualityFull, predicateT, predicate_inf, predicate_top}
-import isabelle.Term
+import isabelle.pure.Term
 
 // Implicits
 import GIsabelle.isabelleControl

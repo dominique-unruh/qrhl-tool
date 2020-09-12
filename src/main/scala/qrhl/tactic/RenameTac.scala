@@ -1,6 +1,5 @@
 package qrhl.tactic
 
-import isabelle.{Context, Term, Typ}
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
 import qrhl.logic.{QVariable, Variable}
@@ -8,14 +7,15 @@ import qrhl.logic.{QVariable, Variable}
 import scala.collection.immutable.ListSet
 import scala.language.postfixOps
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.control.MLValue
 import GIsabelle.Ops
+import isabelle.mlvalue.MLValue
+import isabelle.pure.Typ
 
 // Implicits
 import MLValue.Implicits._
-import Context.Implicits._
-import Term.Implicits._
-import Typ.Implicits._
+import isabelle.pure.Context.Implicits._
+import isabelle.pure.Term.Implicits._
+import isabelle.pure.Typ.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 // Implicits

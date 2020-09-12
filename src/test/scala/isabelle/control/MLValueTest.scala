@@ -2,16 +2,15 @@ package isabelle.control
 
 import java.nio.file.Paths
 
-import isabelle.{Context, Theory, Thm}
+import isabelle.pure.{Context, Theory, Thm}
 import isabelle.control.Isabelle.Setup
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.{Await, Awaitable, ExecutionContext, ExecutionContextExecutor}
-import MLValue.Implicits._
-import Context.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.pure.Context.Implicits._
 
 import scala.concurrent.duration.Duration
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class MLValueTest extends AnyFunSuite {

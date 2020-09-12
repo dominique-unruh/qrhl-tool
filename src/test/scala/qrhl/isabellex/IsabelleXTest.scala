@@ -7,7 +7,7 @@ import org.scalatest.tags.Slow
 import qrhl.UserException
 import qrhl.toplevel.ToplevelTest
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.Const
+import isabelle.pure.Const
 
 // Implicits
 import GIsabelle.isabelleControl

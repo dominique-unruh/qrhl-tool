@@ -1,14 +1,15 @@
-package isabelle
+package isabelle.pure
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction3, MLValue, OperationCollection}
+import isabelle.control.{Isabelle, OperationCollection}
+import isabelle.mlvalue.MLValue.Converter
+import isabelle.mlvalue.{MLFunction, MLFunction3, MLValue}
+import isabelle.pure.Theory.Ops
 
 import scala.concurrent.{ExecutionContext, Future}
-import isabelle.control.MLValue.Converter
-import Theory.Ops
 
 // Implicits
-import MLValue.Implicits._
-import Theory.Implicits.theoryConverter
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.pure.Theory.Implicits.theoryConverter
 
 final class Theory private [Theory](val name: String, val mlValue : MLValue[Theory]) {
   override def toString: String = s"theory $name${if (mlValue.isReady) " (loaded)" else ""}"

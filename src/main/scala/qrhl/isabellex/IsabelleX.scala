@@ -7,8 +7,9 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
 
-import isabelle.control.{Isabelle, MLFunction, MLFunction2}
-import isabelle.{Abs, App, Bound, Const, Free, Term, Theory, Typ, Type, Var}
+import isabelle.control.Isabelle
+import isabelle.mlvalue.{MLFunction, MLFunction2, MLValue}
+import isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
 import scala.concurrent.ExecutionContext
 import org.log4s
@@ -21,8 +22,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
-import isabelle.control.MLValue
-import isabelle.{Context, Symbols, Thm, control}
+import isabelle.{Symbols, control}
 import qrhl.isabellex.IsabelleX.fastype_of
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 
@@ -31,8 +31,8 @@ import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 import scala.concurrent.ExecutionContext.Implicits.global
 import MLValue.Implicits._
 import Context.Implicits._
-import Term.Implicits._
-import Typ.Implicits._
+import isabelle.pure.Term.Implicits._
+import isabelle.pure.Typ.Implicits._
 import Thm.Implicits._
 import MLValueConverters.Implicits._
 
@@ -939,7 +939,7 @@ object IsabelleX {
   private var _theContext: ContextX = _
   def theContext: ContextX = _theContext
 
-  class ContextX(val isabelle: IsabelleX, val context: _root_.isabelle.Context) {
+  class ContextX(val isabelle: IsabelleX, val context: Context) {
     private implicit val isabelleControl: Isabelle = isabelle.isabelleControl
     import isabelle.Ops._
 

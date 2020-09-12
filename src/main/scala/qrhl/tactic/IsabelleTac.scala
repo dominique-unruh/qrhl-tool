@@ -2,20 +2,22 @@ package qrhl.tactic
 
 import java.util.concurrent.ConcurrentHashMap
 
-import isabelle.control.MLValue.Converter
-import isabelle.{Context, Thm}
-import isabelle.control.{Isabelle, MLFunction, MLFunction3, MLValue}
+import isabelle.mlvalue.MLValue.Converter
+import isabelle.control.Isabelle
 import qrhl._
 import qrhl.isabellex.IsabelleX
-import MLValue.Implicits._
-import qrhl.isabellex.MLValueConverters.Implicits._
+import isabelle.mlvalue.{MLFunction3, MLValue}
+import isabelle.pure.{Context, Thm}
+import qrhl.tactic.IsabelleTac.tactics
+import scala.collection.mutable
+
+// Implicits
+import scala.collection.JavaConverters.mapAsScalaConcurrentMapConverter
+import scala.concurrent.ExecutionContext.Implicits.global
 import Context.Implicits._
 import Thm.Implicits._
-import qrhl.tactic.IsabelleTac.tactics
-
-import scala.collection.JavaConverters.mapAsScalaConcurrentMapConverter
-import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
+import isabelle.mlvalue.MLValue.Implicits._
+import qrhl.isabellex.MLValueConverters.Implicits._
 
 abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX => A)(implicit converter: Converter[A]) extends Tactic {
   override def apply(state: State, goal: Subgoal): List[Subgoal] = {

@@ -4,7 +4,8 @@ import isabelle.control.{Isabelle, IsabelleTest}
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import IsabelleTest.isabelle
+import IsabelleTest.{isabelle => isa}
+import isabelle.pure.{Context, Typ, Type}
 
 class TypTest extends AnyFunSuite {
   lazy val ctxt: Context = Context("Main")

@@ -1,7 +1,7 @@
 package qrhl.tactic
 
-import isabelle.Term
 import isabelle.control.Isabelle
+import isabelle.pure.Term
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.QRHLSubgoal
 import qrhl.isabellex.RichTerm

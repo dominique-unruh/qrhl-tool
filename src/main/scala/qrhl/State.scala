@@ -9,8 +9,8 @@ import org.log4s
 import isabellex.{IsabelleX, RichTerm}
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext, Toplevel}
-import _root_.isabelle.{Context, Term, Typ, control}
-import control.{Isabelle, IsabelleException, MLValue}
+import _root_.isabelle.control
+import control.{Isabelle, IsabelleException}
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -23,16 +23,18 @@ import hashedcomputation.Hashed
 import org.apache.commons.codec.binary.Hex
 import qrhl.isabellex.IsabelleX.globalIsabelle.show_oracles
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
-import isabelle.control.MLValue.Converter
+import isabelle.mlvalue.MLValue.Converter
 import GIsabelle.Ops
+import isabelle.mlvalue.MLValue
+import isabelle.pure.{Term, Thm, Typ}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 // Implicits
-import MLValue.Implicits._
-import isabelle.Context.Implicits._
-import isabelle.Term.Implicits._
-import isabelle.Typ.Implicits._
+import isabelle.mlvalue.MLValue.Implicits._
+import isabelle.pure.Context.Implicits._
+import isabelle.pure.Term.Implicits._
+import isabelle.pure.Typ.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import GIsabelle.isabelleControl
@@ -63,7 +65,7 @@ sealed trait Subgoal {
 object Subgoal {
   private val logger = log4s.getLogger
 
-  def printOracles(thms : _root_.isabelle.Thm*): Unit = {
+  def printOracles(thms : Thm*): Unit = {
     for (thm <- thms)
       show_oracles(thm)
   }
@@ -128,7 +130,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
 
   override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): QRHLSubgoal = {
 //    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptions for simplification")
-    val thms = new ListBuffer[_root_.isabelle.Thm]()
+    val thms = new ListBuffer[Thm]()
     val assms2 = assumptions.map(_.simplify(isabelle,facts,thms))
     val assms3: List[RichTerm] = assms2.filter(_.isabelleTerm!=GIsabelle.True_const)
     val pre2 = pre.simplify(isabelle,facts,thms)

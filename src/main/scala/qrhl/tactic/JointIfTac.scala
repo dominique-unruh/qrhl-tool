@@ -5,7 +5,7 @@ import qrhl.logic.{Block, IfThenElse}
 import qrhl.tactic.JointIfTac.{allCases, differentCases, sameCases}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.Term
+import isabelle.pure.Term
 
 import scala.collection.mutable.ListBuffer
 
