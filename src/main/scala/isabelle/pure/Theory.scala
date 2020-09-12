@@ -34,7 +34,7 @@ object Theory extends OperationCollection {
                            NONE => error ("Structure " ^ theirName ^ " not declared in given context")
         | SOME (_,s) => s
                   val _ = #enterStruct ML_Env.name_space (hereStruct, theirStruct)
-                  in () end""".replace('\n', ' '))
+                  in () end""")
   }
 
   def apply(name: String)(implicit isabelle: Isabelle, ec: ExecutionContext): Theory = {

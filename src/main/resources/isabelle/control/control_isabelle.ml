@@ -23,8 +23,12 @@ exception E_Unit
 exception E_String of string
 exception E_Pair of exn * exn
 
-val inStream = TextIO.openIn inputPipeName
+val inStream = BinIO.openIn inputPipeName
 val outStream = BinIO.openOut outputPipeName
+
+(* TODO remove *)
+val garbageLog = TextIO.openOut "/tmp/garbage.log"
+(* fun debugLog str = (TextIO.output (garbageLog, str); TextIO.flushOut garbageLog) *)
 
 val objectsMax = Unsynchronized.ref 0
 val objects : exn Inttab.table Unsynchronized.ref = Unsynchronized.ref Inttab.empty
@@ -32,6 +36,9 @@ val objects : exn Inttab.table Unsynchronized.ref = Unsynchronized.ref Inttab.em
 fun numObjects () : int = Inttab.fold (fn _ => fn i => i+1) (!objects) 0
 
 fun sendByte b = BinIO.output1 (outStream, b)
+fun readByte () = case BinIO.input1 inStream of
+  NONE => error "unexpected end of input"
+  | SOME b => b
 
 fun sendInt32 i = let
   val word = Word32.fromInt i
@@ -40,6 +47,17 @@ fun sendInt32 i = let
   val _ = sendByte (Word8.fromLargeWord (Word32.toLargeWord (Word32.>> (word, 0w8))))
   val _ = sendByte (Word8.fromLargeWord (Word32.toLargeWord (word)))
   in () end
+
+fun readInt32 () : int = let
+  val b = readByte () |> Word8.toLargeWord |> Word32.fromLargeWord
+  val word = Word32.<< (b, 0w24)
+  val b = readByte () |> Word8.toLargeWord |> Word32.fromLargeWord
+  val word = Word32.orb (word, Word32.<< (b, 0w16))
+  val b = readByte () |> Word8.toLargeWord |> Word32.fromLargeWord
+  val word = Word32.orb (word, Word32.<< (b, 0w8))
+  val b = readByte () |> Word8.toLargeWord |> Word32.fromLargeWord
+  val word = Word32.orb (word, b)
+  in Word32.toInt word end
 
 fun sendInt64 i = let
   val word = Word64.fromInt i
@@ -53,11 +71,38 @@ fun sendInt64 i = let
   val _ = sendByte (Word8.fromLargeWord (Word64.toLargeWord (word)))
   in () end
 
+fun readInt64 () : int = let
+  val b = readByte () |> Word8.toLargeWord |> Word64.fromLargeWord
+  val word = Word64.<< (b, 0w56)
+  val b = readByte () |> Word8.toLargeWord |> Word64.fromLargeWord
+  val word = Word64.orb (word, Word64.<< (b, 0w48))
+  val b = readByte () |> Word8.toLargeWord |> Word64.fromLargeWord
+  val word = Word64.orb (word, Word64.<< (b, 0w40))
+  val b = readByte () |> Word8.toLargeWord |> Word64.fromLargeWord
+  val word = Word64.orb (word, Word64.<< (b, 0w64))
+  val b = readByte () |> Word8.toLargeWord |> Word64.fromLargeWord
+  val word = Word64.orb (word, Word64.<< (b, 0w24))
+  val b = readByte () |> Word8.toLargeWord |> Word64.fromLargeWord
+  val word = Word64.orb (word, Word64.<< (b, 0w16))
+  val b = readByte () |> Word8.toLargeWord |> Word64.fromLargeWord
+  val word = Word64.orb (word, Word64.<< (b, 0w8))
+  val b = readByte () |> Word8.toLargeWord |> Word64.fromLargeWord
+  val word = Word64.orb (word, b)
+  in Word64.toInt word end
+
 fun sendString str = let
   val len = size str
   val _ = sendInt32 len
   val _ = BinIO.output (outStream, Byte.stringToBytes str)
   in () end
+
+fun readString () = let
+  val len = readInt32 ()
+  val bytes = BinIO.inputN (inStream, len)
+  val str = Byte.bytesToString bytes
+  val _ = TextIO.output (garbageLog, "Read " ^ string_of_int len ^ " bytes as string: " ^ str ^ "\n")
+  val _ = TextIO.flushOut garbageLog
+  in str end
 
 fun sendData (D_Int i) = (sendByte 0w1; sendInt64 i)
   | sendData (D_String str) = (sendByte 0w2; sendString str)
@@ -67,6 +112,16 @@ fun sendData (D_Int i) = (sendByte 0w1; sendInt64 i)
       val _ = List.app sendData list
     in () end
       
+fun readData () : data = case readByte () of
+    0w1 => readInt64 () |> D_Int
+  | 0w2 => readString () |> D_String
+  | 0w3 => let
+      val len = readInt64 ()
+      fun readNRev 0 sofar = sofar
+        | readNRev n sofar = readNRev (n-1) (readData () :: sofar)
+      val list = readNRev len [] |> rev
+    in D_Tree list end
+
 (* Deprecated *)
 fun sendReplyStr seq str = let
   val _ = sendInt64 seq
@@ -75,7 +130,6 @@ fun sendReplyStr seq str = let
   val _ = BinIO.flushOut outStream
   in () end
 
-(* Deprecated *)
 fun sendReplyN seq ints = let
   val _ = sendInt64 seq
   val _ = sendByte 0w1
@@ -83,7 +137,6 @@ fun sendReplyN seq ints = let
   val _ = BinIO.flushOut outStream
   in () end
 
-(* Deprecated *)
 fun sendReply1 seq int = let
   val _ = sendInt64 seq
   val _ = sendByte 0w1
@@ -144,54 +197,56 @@ fun splitPair seq id = case (Inttab.lookup (!objects) id) of
   | SOME (E_Pair (x,y)) => storeMany seq [x,y]
   | SOME exn => error ("object " ^ string_of_int id ^ " is not an E_Pair but: " ^ exn_str exn)
 
-fun removeObjects ids =
-  objects := fold Inttab.delete ids (!objects)
+fun removeObjects (D_Tree ids) = let
+  val _ = objects := fold (fn D_Int id => Inttab.delete id) ids (!objects)
+  val _ = List.app (fn D_Int id => TextIO.output (garbageLog, string_of_int id ^ " ")) ids
+  val _ = TextIO.output (garbageLog, "\n")
+  in () end 
 
 fun int_of_string str = case Int.fromString str of
   NONE => error ("Failed to parse '" ^ str ^ "' as an int")
   | SOME i => i
 
 (* Without error handling *)
-fun handleLine' seq line =
-  case String.sub (line, 0) of
-    (* Mxxx - executes ML code xxx *)
-    #"M" => (executeML (String.extract (line, 1, NONE)); sendReplyN seq [])
+fun handleLine' seq =
+  case readByte () of
+    (* 1b|string - executes ML code xxx *)
+    0w1 => (executeML (readString ()); sendReplyN seq [])
 
-    (* ixxx - executes ML expression xxx (of type int) and gives response 'seq result' *)
-    (*   | #"i" => executeMLInt seq (String.extract (line, 1, NONE)) *)
+    (* 2b|string - stores string in objects, response 'seq ID' *)
+  | 0w2 => store seq (E_String (readString ()))
 
-    (* Sxxx - stores xxx as a string in objects, response 'seq ID' *)
-  | #"S" => store seq (E_String (String.substring (line, 1, String.size line - 2)))
+    (* 3b|int64 - stores int64 as object, response 'seq object#' *)
+  | 0w3 => store seq (E_Int (readInt64 ()))
 
-    (* snnn - Parses nnn as integer, stores result as object, response 'seq object#' *)
-  | #"s" => store seq (E_Int (int_of_string (String.extract (line, 1, NONE))))
+    (* 4b|string - Compiles string as ML code of type exn, stores result as object #seq *)
+  | 0w4 => storeMLValue seq (readString ())
 
-    (* fxxx - Parses xxx as ML function of type exn \<rightarrow> exn, stores xxx as object #seq *)
-  | #"f" => storeMLValue seq (String.extract (line, 1, NONE))
+    (* 5b|int64 - Interprets int64 as object# and returns the object, assuming it's (E_Int i), response 'seq i' *)
+  | 0w5 => retrieveInt seq (readInt64 ())
 
-    (* rID - Parses ID as object# and returns the object, assuming it's (E_Int i), response 'seq i' *)
-  | #"r" => retrieveInt seq (int_of_string (String.extract (line, 1, NONE)))
+    (* 6b|int64 - Interprets int64 as object# and returns the object, assuming it's (E_String s), response 'seq s' *)
+  | 0w6 => retrieveString seq (readInt64 ())
 
-    (* RID - Parses ID as object# and returns the object, assuming it's (E_String s), response 'seq s' *)
-  | #"R" => retrieveString seq (int_of_string (String.extract (line, 1, NONE)))
+    (* 7b|int64|int64 - Parses f,x as object#, f of type E_Function, computes f x, stores the result, response 'seq ID' *)
+  | 0w7 => let 
+        val f = readInt64 ()
+        val x = readInt64 ()
+      in applyFunc seq f x end
 
-    (* af x - Parses f,x as object#, f of type E_Function, computes f x, stores the result, response 'seq ID' *)
-  | #"a" => let val (f,x) = case String.fields (fn c => #" "=c) (String.extract (line, 1, NONE)) |> map int_of_string
-                            of [f,x] => (f,x) | _ => raise Match
-        in applyFunc seq f x end
+    (* 8b|data ... - data must be list of ints, removes objects with these IDs from objects *)
+  | 0w8 => removeObjects (readData ())
 
-    (* gi j k ... - removes object i,j,k,... from objects *)
-  | #"g" => removeObjects (String.extract (line, 1, NONE) |> String.fields (fn c => #" "=c) |> map int_of_string)
+    (* 9b|int64|int64 - takes objects i j, creates new object with content E_Pair (i,j), returns 'seq object' *)
+  | 0w9 => let 
+      val a = readInt64 ()
+      val b = readInt64 ()
+    in mkPair seq a b end
 
-    (* pi j - takes objects i j, creates new object with content E_Pair (i,j), returns 'seq object' *)
-  | #"p" => let val (a,b) = case String.fields (fn c => #" "=c) (String.extract (line, 1, NONE)) |> map int_of_string
-                            of [a,b] => (a,b) | _ => raise Match
-        in mkPair seq a b end
+    (* 10b|int64 - takes object int64, parses as E_Pair (a,b), stores a,b as objects, returns "seq a b" *)
+  | 0w10 => splitPair seq (readInt64 ())
 
-    (* Px - takes object x, parses as E_Pair (a,b), stores a,b as objects, returns "seq a b" *)
-  | #"P" => splitPair seq (int_of_string (String.extract (line, 1, NONE)))
-
-  | cmd => error ("Unknown command " ^ str cmd)
+  | cmd => error ("Unknown command " ^ string_of_int (Word8.toInt cmd))
 
 fun reportException seq exn = let
   val msg = Runtime.exn_message exn
@@ -201,14 +256,11 @@ fun reportException seq exn = let
   val _ = BinIO.flushOut outStream
   in () end
 
-fun handleLine seq line =
-  handleLine' seq line
+fun handleLine seq =
+  handleLine' seq
   handle exn => reportException seq exn
 
-fun handleLines' number = case TextIO.inputLine inStream of
-    NONE => (tracing "End of input"; ())
-    | SOME line => (handleLine number line; handleLines' (number+1))
-    ;;
+fun handleLines' seq = (handleLine seq; handleLines' (seq+1))
 
 fun handleLines () = handleLines' 0
 

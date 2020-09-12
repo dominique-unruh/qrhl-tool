@@ -1,6 +1,6 @@
 package isabelle.control
 
-import java.io.{BufferedReader, BufferedWriter, DataInputStream, EOFException, FileInputStream, FileOutputStream, IOException, InputStream, InputStreamReader, OutputStreamWriter}
+import java.io.{BufferedReader, BufferedWriter, DataInputStream, DataOutputStream, EOFException, FileInputStream, FileOutputStream, IOException, InputStream, InputStreamReader, OutputStreamWriter}
 import java.lang
 import java.lang.ref.Cleaner
 import java.nio.charset.StandardCharsets
@@ -76,68 +76,64 @@ import scala.util.{Failure, Success, Try}
 class Isabelle(val setup: Setup, build: Boolean = false) {
   import Isabelle._
 
-  private val sendQueue : BlockingQueue[(String, Try[Data] => Unit)] = new ArrayBlockingQueue(1000)
+  private val sendQueue : BlockingQueue[(DataOutputStream => Unit, Try[Data] => Unit)] = new ArrayBlockingQueue(1000)
   private val callbacks : ConcurrentHashMap[Long, Try[Data] => Unit] = new ConcurrentHashMap()
   private val cleaner = Cleaner.create()
 
   // Must be Integer, not Int, because ConcurrentLinkedList uses null to indicate that it is empty
   private val garbageQueue = new ConcurrentLinkedQueue[java.lang.Long]()
 
-  private def garbageCollect() : Option[String] = {
-//    println("Checking for garbage")
-    @tailrec def drain(objs: List[Long]) : List[Long] = garbageQueue.poll() match {
-      case null => objs
-      case obj =>
-        if (objs.length > 1000) // Since Poly/ML has only a 64KB string size limit, we avoid too long lists of IDs in one go
-          obj::objs
-        else
-          drain(obj::objs)
+  private def garbageCollect(stream: DataOutputStream) : Boolean = {
+    //    println("Checking for garbage")
+    if (garbageQueue.peek() == null)
+      false
+    else {
+      val buffer = ListBuffer[Data]()
+
+      @tailrec def drain(): Unit = garbageQueue.poll() match {
+        case null =>
+        case obj =>
+          buffer.addOne(DInt(obj))
+          drain()
+      }
+
+      drain()
+      logger.debug(s"Sending GC command to Isabelle, ${buffer.size} freed objects")
+      stream.writeByte(8)
+      writeData(stream, DTree(buffer.toSeq))
+      true
     }
-    val objs = drain(Nil)
-    if (objs.nonEmpty) {
-      logger.debug(s"Sending GC command to Isabelle, ${objs.size} freed objects")
-      Some(s"g${objs.mkString(" ")}\n")
-    } else
-      None
   }
 
   private def processQueue(inFifo: Path) : Unit = {
     logger.debug("Process queue thread started")
-    val stream = new FileOutputStream(inFifo.toFile)
-    val writer = new BufferedWriter(new OutputStreamWriter(stream, "ascii"))
+    val stream = new DataOutputStream(new FileOutputStream(inFifo.toFile))
     var count = 0
+
+    def sendLine(line: DataOutputStream => Unit, callback: Try[Data] => Unit) = {
+      if (callback != null)
+        callbacks.put(count, callback)
+      line(stream)
+      count += 1
+    }
 
     @tailrec @inline
     def drainQueue() : Unit = {
       val elem = sendQueue.poll()
       if (elem!=null) {
         val (line,callback) = elem
-        assert(line.endsWith("\n"), line)
-//        logger.debug(s"Writing ${line.trim}")
-        if (callback != null)
-          callbacks.put(count, callback)
-        writer.write(line)
-        count += 1
+        sendLine(line,callback)
         drainQueue()
       }
     }
 
     while (true) {
       val (line,callback) = sendQueue.take()
-      assert(line.endsWith("\n"), line)
-//      logger.debug(s"Writing! ${line.trim}")
-      if (callback != null)
-        callbacks.put(count, callback)
-      writer.write(line)
-      count += 1
+      sendLine(line, callback)
       drainQueue()
-      for (cmd <- garbageCollect()) {
-        writer.write(cmd)
+      if (garbageCollect(stream))
         count += 1
-      }
-//      println("Flushing.")
-      writer.flush()
-//      Thread.sleep(100)
+      stream.flush()
     }
   }
 
@@ -145,6 +141,23 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     val len = stream.readInt()
     val bytes = stream.readNBytes(len)
     new String(bytes, StandardCharsets.US_ASCII)
+  }
+
+  private def writeString(stream: DataOutputStream, str: String): Unit = {
+    val bytes = str.getBytes(StandardCharsets.US_ASCII)
+    stream.writeInt(bytes.length)
+//    logger.debug(s"length: ${bytes.length}, content: ${new String(bytes)}")
+    stream.write(bytes)
+  }
+
+  private def writeData(stream: DataOutputStream, data: Data): Unit = data match {
+    case DInt(i) => stream.writeByte(1); stream.writeLong(i)
+    case DString(s) => stream.writeByte(2); writeString(stream, s)
+    case DTree(list) =>
+      stream.writeByte(3)
+      stream.writeLong(list.length)
+      for (d <- list)
+        writeData(stream, d)
   }
 
   private def readData(stream: DataInputStream): Data = {
@@ -169,12 +182,12 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     *
     * 1b,2b,...: byte literals
     *
-    * int: 64 msb-first signed integer
+    * int64: 64 msb-first signed integer
     *
     * data: binary representation of [[Data]]:
-    *   1b|int - DInt
+    *   1b|int64 - DInt
     *   2b|string - DString (must be ASCII)
-    *   3b|int32|data|data|... - DTree (int32 = # of data)
+    *   3b|int64|data|data|... - DTree (int64 = # of data)
     *
     * string: int32|bytes
     *
@@ -186,6 +199,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       val seq = output.readLong()
       val answerType = output.readByte()
       val callback = callbacks.remove(seq)
+//      logger.debug(s"Seq: $seq, type: $answerType, callback: $callback")
       answerType match {
         case 1 =>
           val payload = readData(output)
@@ -307,7 +321,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       callCallback(cb)
   }
 
-  private def send(str: String, callback: Try[Data] => Unit) : Unit = {
+  private def send(str: DataOutputStream => Unit, callback: Try[Data] => Unit) : Unit = {
     if (destroyed)
       throw new IllegalStateException("Isabelle instance has been destroyed")
     sendQueue.put((str,callback))
@@ -331,9 +345,8 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def executeMLCode(ml : String) : Future[Unit] = {
     val promise : Promise[Unit] = Promise()
-    assert(!ml.contains('\n'))
     logger.debug(s"Executing ML code: $ml")
-    send(s"M$ml\n", { result => promise.complete(result.map(_ => ())) })
+    send({ stream => stream.writeByte(1); writeString(stream, ml) }, { result => promise.complete(result.map(_ => ())) })
     promise.future
   }
 
@@ -357,9 +370,9 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def storeValue(ml : String): Future[ID] = {
     val promise : Promise[ID] = Promise()
-    val ml2 = ml.replace('\n', ' ')
 //    logger.debug(s"Compiling ML function: $ml")
-    send(s"f$ml2\n", { result => promise.complete(result.map(intStringToID)) })
+    send({ stream => stream.writeByte(4); writeString(stream, ml) },
+      { result => promise.complete(result.map(intStringToID)) })
     promise.future
   }
 
@@ -370,7 +383,8 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def storeLong(i: Long): Future[ID] = {
     val promise : Promise[ID] = Promise()
-    send(s"s$i\n", { result => promise.complete(result.map(intStringToID)) })
+    send({ stream => stream.writeByte(3); stream.writeLong(i) },
+      { result => promise.complete(result.map(intStringToID)) })
     promise.future
   }
 
@@ -382,8 +396,8 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def storeString(str: String): Future[ID] = {
     val promise : Promise[ID] = Promise()
-    assert(!str.contains('\n'))
-    send(s"S$str\n", { result => promise.complete(result.map(intStringToID)) })
+    send({ stream => stream.writeByte(2); writeString(stream, str) },
+      { result => promise.complete(result.map(intStringToID)) })
     promise.future
   }
 
@@ -394,7 +408,8 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
   @deprecated
   def makePair(a: ID, b: ID) : Future[ID] = {
     val promise : Promise[ID] = Promise()
-    send(s"p${a.id} ${b.id}\n", { result => promise.complete(result.map(intStringToID)) })
+    send({ stream => stream.writeByte(9); stream.writeLong(a.id); stream.writeLong(b.id) },
+      { result => promise.complete(result.map(intStringToID)) })
     promise.future
   }
 
@@ -406,8 +421,9 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
   @deprecated
   def splitPair(pair: ID) : Future[(ID,ID)] = {
     val promise : Promise[(ID,ID)] = Promise()
-    send(s"P${pair.id}\n", { result => promise.complete(result.map {
-      case DTree(List(a,b)) => (intStringToID(a), intStringToID(b)) } ) } )
+    send({ stream => stream.writeByte(10); stream.writeLong(pair.id) },
+      { result => promise.complete(result.map {
+        case DTree(List(a,b)) => (intStringToID(a), intStringToID(b)) } ) } )
     promise.future
   }
 
@@ -420,7 +436,8 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def applyFunction(f: ID, x: ID): Future[ID] = {
     val promise: Promise[ID] = Promise()
-    send(s"a${f.id} ${x.id}\n", { result => promise.complete(result.map(intStringToID)) })
+    send({ stream => stream.writeByte(7); stream.writeLong(f.id); stream.writeLong(x.id) },
+      { result => promise.complete(result.map(intStringToID)) })
     promise.future
   }
 
@@ -433,7 +450,8 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def retrieveLong(id: ID): Future[Long] = {
     val promise: Promise[Long] = Promise()
-    send(s"r${id.id}\n", { result => promise.complete(result.map { case DInt(int) => int }) })
+    send({ stream => stream.writeByte(5); stream.writeLong(id.id) },
+      { result => promise.complete(result.map { case DInt(int) => int }) })
     promise.future
   }
 
@@ -447,7 +465,8 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def retrieveString(id: ID): Future[String] = {
     val promise: Promise[String] = Promise()
-    send(s"R${id.id}\n", { result => promise.complete(result.map { case DString(str) => str }) })
+    send({ stream => stream.writeByte(6); stream.writeLong(id.id) },
+      { result => promise.complete(result.map { case DString(str) => str }) })
     promise.future
   }
 }
