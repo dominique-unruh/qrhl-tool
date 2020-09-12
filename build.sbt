@@ -12,9 +12,9 @@ scalaVersion := "2.12.11"
 
 scalacOptions += "-deprecation"
 
-libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1"
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
-libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
+libraryDependencies += "org.rogach" %% "scallop" % "3.5.1"
 // https://mvnrepository.com/artifact/commons-codec/commons-codec
 libraryDependencies += "commons-codec" % "commons-codec" % "1.15"
 // https://mvnrepository.com/artifact/org.log4s/log4s
@@ -26,8 +26,8 @@ libraryDependencies += "commons-io" % "commons-io" % "2.8.0"
 // https://mvnrepository.com/artifact/org.scalaz/scalaz-core
 libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.3.2"
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
-libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
-libraryDependencies += "org.jline" % "jline" % "3.6.2"
+libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30"
+libraryDependencies += "org.jline" % "jline" % "3.16.0"
 
 
 val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c3968054988b50da7f6c02c6b.tar.gz"
