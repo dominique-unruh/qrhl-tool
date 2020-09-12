@@ -4,7 +4,7 @@ import java.nio.file.Paths
 
 import isabelle.{Context, Theory, Thm}
 import isabelle.control.Isabelle.Setup
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.{Await, Awaitable, ExecutionContext, ExecutionContextExecutor}
 import MLValue.Implicits._
@@ -14,7 +14,7 @@ import scala.concurrent.duration.Duration
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MLValueTest extends FunSuite {
+class MLValueTest extends AnyFunSuite {
   test ("two instances of Isabelle") {
     val isabelle1 = IsabelleTest.isabelle
     val isabelle2 = new Isabelle(IsabelleTest.setup)

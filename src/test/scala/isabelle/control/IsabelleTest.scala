@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import isabelle.{Context, Term, Typ}
 import isabelle.control.Isabelle.Setup
 import isabelle.control.IsabelleTest.isabelle
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import MLValue.Implicits._
@@ -13,7 +13,7 @@ import MLValue.Implicits._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class IsabelleTest extends FunSuite {
+class IsabelleTest extends AnyFunSuite {
   test("handle compilation error") {
     assertThrows[IsabelleException] {
       isabelle.executeMLCodeNow("1+true")

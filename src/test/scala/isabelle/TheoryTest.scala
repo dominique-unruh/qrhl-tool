@@ -1,12 +1,12 @@
 package isabelle
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import isabelle.control.IsabelleException
 
 import isabelle.control.IsabelleTest.isabelle
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class TheoryTest extends FunSuite {
+class TheoryTest extends AnyFunSuite {
   test("import structure") {
     assertThrows[IsabelleException] {
       isabelle.executeMLCodeNow("HOLogic.boolT") }

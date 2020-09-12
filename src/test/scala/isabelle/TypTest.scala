@@ -1,12 +1,12 @@
 package isabelle
 
 import isabelle.control.{Isabelle, IsabelleTest}
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import IsabelleTest.isabelle
 
-class TypTest extends FunSuite {
+class TypTest extends AnyFunSuite {
   lazy val ctxt: Context = Context("Main")
 
   test("parse: nat") {

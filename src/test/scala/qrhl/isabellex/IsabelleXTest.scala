@@ -2,7 +2,7 @@ package qrhl.isabellex
 
 import java.nio.file.Paths
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.tags.Slow
 import qrhl.UserException
 import qrhl.toplevel.ToplevelTest
@@ -14,7 +14,7 @@ import GIsabelle.isabelleControl
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Slow
-class IsabelleXTest extends FunSuite {
+class IsabelleXTest extends AnyFunSuite {
 
   test("initialize") {
     IsabelleX.globalIsabelle

@@ -1,11 +1,11 @@
 package qrhl.tactic
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
 
 //noinspection ZeroIndexToHead
-class RuleTacTest extends FunSuite {
+class RuleTacTest extends AnyFunSuite {
   def toplevel(): Toplevel = {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.run(

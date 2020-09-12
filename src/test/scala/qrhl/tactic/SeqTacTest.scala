@@ -1,12 +1,12 @@
 package qrhl.tactic
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.QRHLSubgoal
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 import IsabelleX.{globalIsabelle => GIsabelle}
 
-class SeqTacTest extends FunSuite {
+class SeqTacTest extends AnyFunSuite {
   def testSeqRule(pre:String,post:String,left:String,right:String,middle:String) : Unit = {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")

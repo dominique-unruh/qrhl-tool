@@ -3,12 +3,13 @@ package qrhl
 import java.io.File
 import java.nio.file.Paths
 
-import org.scalatest.{FlatSpec, FunSuite, Tag}
+import org.scalatest.Tag
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.toplevel.Toplevel
 import org.scalatest.tags.Slow
 
 @Slow
-class ExampleFilesTest extends FunSuite {
+class ExampleFilesTest extends AnyFunSuite {
 
   def testFile(file:String): Unit = {
     val toplevel = Toplevel.makeToplevel(cheating = false)

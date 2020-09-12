@@ -1,12 +1,12 @@
 package isabelle
 
 import isabelle.control.{Isabelle, IsabelleTest}
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import isabelle.control.IsabelleTest.isabelle
 
-class TermTest extends FunSuite {
+class TermTest extends AnyFunSuite {
   lazy val ctxt: Context = Context("Main")
 
   test("equals: Const/Const") {

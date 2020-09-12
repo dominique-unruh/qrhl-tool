@@ -1,8 +1,8 @@
 package isabelle
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
-class SymbolsTest extends FunSuite {
+class SymbolsTest extends AnyFunSuite {
 
   test("roundtrip") {
     val string = """Proj (Span {ket 0})»⟦C1⟧ · Proj (Span {ket 0})»⟦A1⟧ ⋅ """

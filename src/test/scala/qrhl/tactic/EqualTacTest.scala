@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import isabelle.Term
 import isabelle.control.Isabelle
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.QRHLSubgoal
 import qrhl.isabellex.RichTerm
 import qrhl.logic.Assign
@@ -11,7 +11,7 @@ import qrhl.toplevel.{Parser, Toplevel, ToplevelTest}
 import scala.collection.immutable.ListSet
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EqualTacTest extends FunSuite {
+class EqualTacTest extends AnyFunSuite {
   def toplevel(): Toplevel = {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.run(

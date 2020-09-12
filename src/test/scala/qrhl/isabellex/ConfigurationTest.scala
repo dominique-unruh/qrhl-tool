@@ -1,8 +1,8 @@
 package qrhl.isabellex
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
-class ConfigurationTest extends FunSuite {
+class ConfigurationTest extends AnyFunSuite {
   test("can load config") {
     val isabelleHome = Configuration.isabelleHome
     println(isabelleHome)

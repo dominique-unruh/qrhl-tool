@@ -13,7 +13,7 @@ scalaVersion := "2.12.11"
 scalacOptions += "-deprecation"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
 // https://mvnrepository.com/artifact/commons-codec/commons-codec
 libraryDependencies += "commons-codec" % "commons-codec" % "1.15"

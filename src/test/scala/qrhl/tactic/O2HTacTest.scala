@@ -1,9 +1,9 @@
 package qrhl.tactic
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.toplevel.Toplevel
 
-class O2HTacTest extends FunSuite {
+class O2HTacTest extends AnyFunSuite {
   test("o2h tac") {
     val tl = Toplevel.makeToplevelWithTheory(List("Empty"))
     tl.run(

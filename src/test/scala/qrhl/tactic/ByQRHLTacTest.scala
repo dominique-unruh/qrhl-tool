@@ -1,11 +1,11 @@
 package qrhl.tactic
 
-import org.scalatest.{FlatSpec, FunSpec, FunSuite}
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.QRHLSubgoal
 import qrhl.logic.Block
 import qrhl.toplevel.{GoalCommand, Toplevel, ToplevelTest}
 
-class ByQRHLTacTest extends FunSuite {
+class ByQRHLTacTest extends AnyFunSuite {
   test("works with Pr") {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.execCmd("classical var x : bit")

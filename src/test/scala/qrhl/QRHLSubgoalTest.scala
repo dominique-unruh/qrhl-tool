@@ -1,13 +1,13 @@
 package qrhl
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, IfThenElse, While}
 import qrhl.tactic.SeqTac
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 import IsabelleX.{globalIsabelle => GIsabelle}
 
-class QRHLSubgoalTest extends FunSuite {
+class QRHLSubgoalTest extends AnyFunSuite {
   lazy val tl: Toplevel = {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.execCmd("classical var x : int", "<test>")

@@ -1,13 +1,13 @@
 package qrhl.tactic
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 import IsabelleX.{globalIsabelle => GIsabelle}
 
 
 
-class ExpressionTest extends FunSuite {
+class ExpressionTest extends AnyFunSuite {
   test("read print roundtrip") {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")

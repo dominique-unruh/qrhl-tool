@@ -2,14 +2,14 @@ package qrhl.toplevel
 
 import java.nio.file.{Path, Paths}
 
-import org.scalatest.{FlatSpec, FunSuite}
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.UserException
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel.ReadLine
 
 import scala.util.Random
 
-class ToplevelTest extends FunSuite {
+class ToplevelTest extends AnyFunSuite {
   test("assign statement should throw UserException on undefined variable") {
     val toplevel = Toplevel.makeToplevelWithTheory()
     assertThrows[UserException] {

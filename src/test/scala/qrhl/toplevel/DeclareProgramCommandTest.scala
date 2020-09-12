@@ -1,10 +1,10 @@
 package qrhl.toplevel
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.State
 import qrhl.logic.{Block, Call, ConcreteProgramDecl}
 
-class DeclareProgramCommandTest extends FunSuite {
+class DeclareProgramCommandTest extends AnyFunSuite {
 
   test("oracles") {
     val cmd0 = DeclareProgramCommand("b", Nil, Block.empty)

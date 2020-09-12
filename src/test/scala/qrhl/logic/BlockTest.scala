@@ -1,8 +1,8 @@
 package qrhl.logic
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
-class BlockTest extends FunSuite {
+class BlockTest extends AnyFunSuite {
   test("inline") {
     val program = Block(Call("a"), Call("b"))
     val a = Call("c")

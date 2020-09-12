@@ -1,6 +1,6 @@
 package qrhl.tactic
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.{TacticCommand, Toplevel}
 import qrhl.{QRHLSubgoal, UserException}
@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 // Implicits
 import GIsabelle.isabelleControl
 
-class CaseTacTest extends FunSuite {
+class CaseTacTest extends AnyFunSuite {
   def toplevel(): Toplevel = {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.run(

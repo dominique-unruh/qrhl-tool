@@ -1,12 +1,12 @@
 package qrhl.tactic
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.QRHLSubgoal
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
 import IsabelleX.{globalIsabelle => GIsabelle}
 
-class RndTacTest extends FunSuite {
+class RndTacTest extends AnyFunSuite {
   def toplevel(): Toplevel = {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.run(

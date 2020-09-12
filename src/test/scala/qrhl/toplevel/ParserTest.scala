@@ -2,13 +2,13 @@ package qrhl.toplevel
 
 import java.io.IOException
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.UserException
 import qrhl.isabellex.IsabelleX
 import qrhl.logic.{Block, CVariable, Call, Local, VTCons, VTSingle}
 import IsabelleX.{globalIsabelle => GIsabelle}
 
-class ParserTest extends FunSuite {
+class ParserTest extends AnyFunSuite {
   implicit lazy val parserContext: ParserContext = {
     val tl = Toplevel.makeToplevelWithTheory()
     // If this fails for parsing reasons, just directly compose commands instead

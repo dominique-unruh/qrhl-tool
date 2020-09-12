@@ -1,9 +1,9 @@
 package qrhl.tactic
 
-import org.scalatest.{FlatSpec, FunSpec, FunSuite}
+import org.scalatest.funsuite.AnyFunSuite
 import qrhl.toplevel.{TacticCommand, Toplevel, ToplevelTest}
 
-class WpTacTest extends FunSuite {
+class WpTacTest extends AnyFunSuite {
   test("WpTac well-typed (qinit)") {
     val toplevel = Toplevel.makeToplevelWithTheory()
     toplevel.run(
