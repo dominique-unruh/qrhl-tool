@@ -1,8 +1,9 @@
 package isabelle.control
 
-import java.io.{BufferedReader, BufferedWriter, FileInputStream, FileOutputStream, IOException, InputStream, InputStreamReader, OutputStreamWriter}
+import java.io.{BufferedReader, BufferedWriter, DataInputStream, EOFException, FileInputStream, FileOutputStream, IOException, InputStream, InputStreamReader, OutputStreamWriter}
 import java.lang
 import java.lang.ref.Cleaner
+import java.nio.charset.StandardCharsets
 import java.nio.file.{FileSystemNotFoundException, Files, Path, Paths}
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, ConcurrentHashMap, ConcurrentLinkedQueue}
 
@@ -55,6 +56,8 @@ import scala.util.{Failure, Success, Try}
   * exception E_String of string
   * exception E_Pair of exn * exn
   * }}}
+  * (That structure also exports functions `store` and `handleLines` which are for internal use only
+  * and must not be used in the ML code.)
   *
   * Note that some of the exception again refer to the exn type, e.g., `E_Pair`. Thus, to store a pair of integers,
   * we use the term `E_Pair (E_Int 1, E_Int 2)`.
@@ -73,16 +76,16 @@ import scala.util.{Failure, Success, Try}
 class Isabelle(val setup: Setup, build: Boolean = false) {
   import Isabelle._
 
-  private val sendQueue : BlockingQueue[(String, Try[String] => Unit)] = new ArrayBlockingQueue(1000)
-  private val callbacks : ConcurrentHashMap[Int, Try[String] => Unit] = new ConcurrentHashMap()
+  private val sendQueue : BlockingQueue[(String, Try[Data] => Unit)] = new ArrayBlockingQueue(1000)
+  private val callbacks : ConcurrentHashMap[Long, Try[Data] => Unit] = new ConcurrentHashMap()
   private val cleaner = Cleaner.create()
 
   // Must be Integer, not Int, because ConcurrentLinkedList uses null to indicate that it is empty
-  private val garbageQueue = new ConcurrentLinkedQueue[Integer]()
+  private val garbageQueue = new ConcurrentLinkedQueue[java.lang.Long]()
 
   private def garbageCollect() : Option[String] = {
 //    println("Checking for garbage")
-    @tailrec def drain(objs: List[Int]) : List[Int] = garbageQueue.poll() match {
+    @tailrec def drain(objs: List[Long]) : List[Long] = garbageQueue.poll() match {
       case null => objs
       case obj =>
         if (objs.length > 1000) // Since Poly/ML has only a 64KB string size limit, we avoid too long lists of IDs in one go
@@ -138,21 +141,61 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     }
   }
 
+  private def readString(stream: DataInputStream): String = {
+    val len = stream.readInt()
+    val bytes = stream.readNBytes(len)
+    new String(bytes, StandardCharsets.US_ASCII)
+  }
+
+  private def readData(stream: DataInputStream): Data = {
+    stream.readByte() match {
+      case 1 => DInt(stream.readLong())
+      case 2 => DString(readString(stream))
+      case 3 =>
+        val len = stream.readLong()
+        val list = ListBuffer[Data]()
+        for (_ <- 1L to len)
+          list.addOne(readData(stream))
+        DTree(list.toList)
+      case 4 => DTree(Nil)
+    }
+  }
+
+
+  /** Message format:
+    *
+    * int|1b|data - success response for command #int
+    * int|2b|string - failure response for command #int
+    *
+    * 1b,2b,...: byte literals
+    *
+    * int: 64 msb-first signed integer
+    *
+    * data: binary representation of [[Data]]:
+    *   1b|int - DInt
+    *   2b|string - DString (must be ASCII)
+    *   3b|int32|data|data|... - DTree (int32 = # of data)
+    *
+    * string: int32|bytes
+    *
+    * */
   private def parseIsabelle(outFifo: Path) : Unit = {
-    val output = new FileInputStream(outFifo.toFile)
-    Source.fromInputStream(output, "ascii").getLines.foreach { line =>
-//      println(s"Received: [$line]")
-      val spaceIdx = line.indexOf(' ')
-      val (seq,content) = if (spaceIdx == -1) (line,"") else line.splitAt(spaceIdx+1)
-      callbacks.remove(seq.trim.toInt) match {
-        case null => println(s"No callback $seq")
-        case callback =>
-          if (content.nonEmpty && content(0) == '!')
-            callback(Failure(IsabelleException(this, intStringToID(content.substring(1)))))
-          else
-            callback(Success(content))
+    val output = new DataInputStream(new FileInputStream(outFifo.toFile))
+    try
+    while (true) {
+      val seq = output.readLong()
+      val answerType = output.readByte()
+      val callback = callbacks.remove(seq)
+      answerType match {
+        case 1 =>
+          val payload = readData(output)
+          callback(Success(payload))
+        case 2 =>
+          val msg = readString(output)
+          callback(Failure(IsabelleException(msg)))
       }
-//      println(s"#callbacks = ${callbacks.size}")
+    } catch {
+      case _ : EOFException =>
     }
   }
 
@@ -246,14 +289,14 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
   @volatile private var destroyed = false
   /** Kills the running Isabelle process.
     * After this, no more operations on values in the object store are possible.
-    * Futures corresponding to already running computations will not complete.
+    * Futures corresponding to already running computations will throw an [[IsabelleDestroyedException]].
     */
   def destroy(): Unit = {
     destroyed = true
     garbageQueue.clear()
     process.destroy()
 
-    def callCallback(cb: Try[String] => Unit): Unit =
+    def callCallback(cb: Try[Data] => Unit): Unit =
       cb(Failure(IsabelleDestroyedException("Isabelle process has been destroyed")))
 
     for ((_,cb) <- sendQueue.asScala)
@@ -264,14 +307,16 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       callCallback(cb)
   }
 
-  private def send(str: String, callback: Try[String] => Unit) : Unit = {
+  private def send(str: String, callback: Try[Data] => Unit) : Unit = {
     if (destroyed)
       throw new IllegalStateException("Isabelle instance has been destroyed")
     sendQueue.put((str,callback))
   }
 
-  private def intStringToID(str: String) : ID =
-    new ID(str.toInt, this)
+  private def intStringToID(data: Data) : ID = data match {
+    case DInt(int) => new ID(int, this)
+  }
+
 
   /** Executes the ML code `ml` in the Isabelle process.
     * Definitions made in `ml` affect the global Isabelle name space.
@@ -323,13 +368,15 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     *
     * @return A future containing the ID in the object store.
     */
-  def storeInteger(i: Int): Future[ID] = {
+  def storeLong(i: Long): Future[ID] = {
     val promise : Promise[ID] = Promise()
     send(s"s$i\n", { result => promise.complete(result.map(intStringToID)) })
     promise.future
   }
 
   /** Stores `s` in the object store. (I.e., an object `E_String i` will be added.)
+    *
+    * Strings are required to be ASCII strings.
     *
     * @return A future containing the ID in the object store.
     */
@@ -344,6 +391,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     *
     * @return A future containing the ID of the pair in the object store.
     */
+  @deprecated
   def makePair(a: ID, b: ID) : Future[ID] = {
     val promise : Promise[ID] = Promise()
     send(s"p${a.id} ${b.id}\n", { result => promise.complete(result.map(intStringToID)) })
@@ -355,11 +403,11 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     *
     * @return A future containing the IDs of `a` and `b`
     */
+  @deprecated
   def splitPair(pair: ID) : Future[(ID,ID)] = {
     val promise : Promise[(ID,ID)] = Promise()
-    send(s"P${pair.id}\n", { result => promise.complete(result.map { resultStr =>
-      resultStr.split(' ') match {
-      case Array(a,b) => (intStringToID(a), intStringToID(b)) } }) })
+    send(s"P${pair.id}\n", { result => promise.complete(result.map {
+      case DTree(List(a,b)) => (intStringToID(a), intStringToID(b)) } ) } )
     promise.future
   }
 
@@ -378,12 +426,14 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
 
   /** Retrieves the integer `i` referenced by `id` in the object store.
     *
+    * Does not check whether the ML integer (which can be unbounded) fits into a Long
+    *
     * @return Future that contains `i`. (Or throws an [[IsabelleException]]
     *         if `id` does not refer to an `E_Int i` object.)
     */
-  def retrieveInteger(id: ID): Future[Int] = {
-    val promise: Promise[Int] = Promise()
-    send(s"r${id.id}\n", { result => promise.complete(result.map(_.toInt)) })
+  def retrieveLong(id: ID): Future[Long] = {
+    val promise: Promise[Long] = Promise()
+    send(s"r${id.id}\n", { result => promise.complete(result.map { case DInt(int) => int }) })
     promise.future
   }
 
@@ -397,7 +447,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def retrieveString(id: ID): Future[String] = {
     val promise: Promise[String] = Promise()
-    send(s"R${id.id}\n", { result => promise.complete(result) })
+    send(s"R${id.id}\n", { result => promise.complete(result.map { case DString(str) => str }) })
     promise.future
   }
 }
@@ -420,7 +470,7 @@ object Isabelle {
     * If this ID is not referenced any more, the referenced object will be garbage collected
     * in the Isabelle process, too.
     */
-  final class ID private[control] (private[control] val id: Int, isabelle: Isabelle) {
+  final class ID private[control] (private[control] val id: Long, isabelle: Isabelle) {
     isabelle.cleaner.register(this, new IDCleaner(id, isabelle))
 
     override def equals(obj: Any): Boolean = obj match {
@@ -428,7 +478,7 @@ object Isabelle {
       case _ => false
     }
   }
-  private final class IDCleaner(id: Int, isabelle: Isabelle) extends Runnable {
+  private final class IDCleaner(id: Long, isabelle: Isabelle) extends Runnable {
     def run(): Unit = isabelle.garbageQueue.add(id)
   }
 
@@ -525,6 +575,11 @@ object Isabelle {
       {line => errors.append(line); logger.warn(s"Isabelle build: $line")})))
       throw IsabelleBuildException(s"Isabelle build for session ${setup.logic} failed", errors.toList)
   }
+
+  sealed trait Data
+  final case class DInt(int: Long) extends Data
+  final case class DString(string: String) extends Data
+  final case class DTree(list: Seq[Data]) extends Data
 }
 
 /** Ancestor of all exceptions specific to [[Isabelle]] */
@@ -536,8 +591,6 @@ case class IsabelleDestroyedException(message: String) extends IsabelleControlle
 case class IsabelleBuildException(message: String, errors: List[String])
   extends IsabelleControllerException(if (errors.nonEmpty) message + ": " + errors.last else message)
 /** Thrown in case of an error in the ML process (ML compilation errors, exceptions thrown by ML code) */
-case class IsabelleException(isabelle: Isabelle, msgID: Isabelle.ID) extends IsabelleControllerException("Isabelle exception") {
-  override def getMessage: String =  Await.result(isabelle.retrieveString(msgID), Duration.Inf)
-}
+case class IsabelleException(message: String) extends IsabelleControllerException(message)
 
 

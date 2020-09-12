@@ -116,18 +116,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       Files.getLastModifiedTime(_)
     }.max
 
-    logger.debug(s"Newest:      $newest")
-
-    /* TODO: Correct heap dir should be
-      environment.isabelleSetting("ISABELLE_HEAPS") + "/" +
-      environment.isabelleSetting("ML_SYSTEM") + "/" +
-      environment.isabelleSetting("ML_PLATFORM")
-      We could just delete this heap file if checkBuilt returns false.
-      This makes sure that build is not done each time.
-      But: check how this works with Windows paths
-     */
-
-
     val heaps = for (
       isabelleDir <- List(setup.userDir.get.resolve(s"Isabelle${version}"), setup.isabelleHome);
       heapDir = isabelleDir.resolve("heaps");
@@ -142,8 +130,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val newestHeap = heaps.map {
       Files.getLastModifiedTime(_)
     }.max
-
-    logger.debug(s"Newest heap: $newestHeap")
 
     if (newestHeap.compareTo(newest) > 0)
       return true

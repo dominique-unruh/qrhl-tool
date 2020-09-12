@@ -280,17 +280,30 @@ object MLValue extends OperationCollection {
       for (_ <- value.id) yield ()
 
     override def store(value: Unit)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Unit] =
-      new MLValue(isabelle.storeInteger(0))
+      new MLValue(isabelle.storeLong(0))
 
     override val exnToValue: String = "K()"
     override val valueToExn: String = "K(E_Int 0)"
   }
   object IntConverter extends Converter[Int] {
     @inline override def store(value: Int)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Int] =
-      new MLValue(isabelle.storeInteger(value))
+      new MLValue(isabelle.storeLong(value))
     @inline override def retrieve(value: MLValue[Int])
-                                                    (implicit isabelle: Isabelle, ec: ExecutionContext): Future[Int] =
-      value.id.flatMap(isabelle.retrieveInteger)
+                                 (implicit isabelle: Isabelle, ec: ExecutionContext): Future[Int] = {
+      for (id_ <- value.id;
+           long <- isabelle.retrieveLong(id_))
+        yield long.toInt
+    }
+
+    override lazy val exnToValue: String = "fn E_Int i => i"
+    override lazy val valueToExn: String = "E_Int"
+  }
+  object LongConverter extends Converter[Long] {
+    @inline override def store(value: Long)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Long] =
+      new MLValue(isabelle.storeLong(value))
+    @inline override def retrieve(value: MLValue[Long])
+                                 (implicit isabelle: Isabelle, ec: ExecutionContext): Future[Long] =
+      value.id.flatMap(isabelle.retrieveLong)
     override lazy val exnToValue: String = "fn E_Int i => i"
     override lazy val valueToExn: String = "E_Int"
   }
