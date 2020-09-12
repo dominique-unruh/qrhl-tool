@@ -116,6 +116,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       Files.getLastModifiedTime(_)
     }.max
 
+    logger.debug(s"Newest:      $newest")
+
     /* TODO: Correct heap dir should be
       environment.isabelleSetting("ISABELLE_HEAPS") + "/" +
       environment.isabelleSetting("ML_SYSTEM") + "/" +
@@ -125,13 +127,15 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       But: check how this works with Windows paths
      */
 
-    val heaps = try {
-      Files.find(setup.userDir.get.resolve(s"Isabelle${version}").resolve("heaps"), 10, { (path: Path, _: BasicFileAttributes) =>
-        path.endsWith("QRHL") && !path.getParent.endsWith("log")
-      }).iterator.asScala.toList
-    } catch {
-      case _: IOException => return false
-    }
+
+    val heaps = for (
+      isabelleDir <- List(setup.userDir.get.resolve(s"Isabelle${version}"), setup.isabelleHome);
+      heapDir = isabelleDir.resolve("heaps");
+      heap <- try { Files.find(heapDir, 10, { (_, _) => true }).iterator.asScala }
+                  catch { case _ : IOException => Nil };
+      if heap.endsWith("QRHL");
+      if !heap.getParent.endsWith("log"))
+      yield heap
 
     if (heaps.isEmpty)
       return false
@@ -139,11 +143,21 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       Files.getLastModifiedTime(_)
     }.max
 
-    //    println("Newest:      ",newest)
-    //    println("Newest heap: ",newestHeap)
+    logger.debug(s"Newest heap: $newestHeap")
 
     if (newestHeap.compareTo(newest) > 0)
       return true
+
+    // We conclude that there is a stale heap. This will trigger a rebuild but Isabelle may decide not to rebuild anyway.
+    // Since we want to avoid triggering this every time, we delete the heap to make sure Isabelle rebuild (leading
+    // to a fresh time stamp).
+    for (heap <- heaps) {
+      try
+        Files.delete(heap)
+      catch {
+        case _ : IOException =>
+      }
+    }
 
     false
   }
