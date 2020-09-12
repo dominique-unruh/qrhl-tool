@@ -1,12 +1,7 @@
 import java.io.PrintWriter
-import java.nio.file.Files
 
 import NativePackagerHelper._
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import sbt.Keys.update
-import sbt.io.Using
 
-import scala.collection.mutable.ListBuffer
 import scala.sys.process.Process
 
 name := "qrhl"
@@ -20,7 +15,6 @@ scalacOptions += "-deprecation"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.1.2"
-
 // https://mvnrepository.com/artifact/commons-codec/commons-codec
 libraryDependencies += "commons-codec" % "commons-codec" % "1.15"
 // https://mvnrepository.com/artifact/org.log4s/log4s
@@ -31,22 +25,10 @@ libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.11"
 libraryDependencies += "commons-io" % "commons-io" % "2.8.0"
 // https://mvnrepository.com/artifact/org.scalaz/scalaz-core
 libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.3.2"
+// https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
+libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
+libraryDependencies += "org.jline" % "jline" % "3.6.2"
 
-
-def extractJar(update : UpdateReport, name : String, target : File): Unit = {
-  val jar = update
-    .select(configurationFilter("compile"))
-    .filter(_.name.startsWith(name))
-    .filter(_.name.endsWith(".jar"))
-    .head
-  IO.unzip(jar,target)
-  ()
-}
-
-assemblyMergeStrategy in assembly := {
-  case PathList(ps @ _*) if ps.last == ".files" => MergeStrategy.discard
-  case x => (assemblyMergeStrategy in assembly).value(x)
-}
 
 val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c3968054988b50da7f6c02c6b.tar.gz"
 val pgPatch = "src/proofgeneral/proof-site.el.patch"
@@ -88,14 +70,21 @@ makeGITREVISION := {
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
-// https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
-libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
-libraryDependencies += "org.jline" % "jline" % "3.6.2"
+lazy val makeQrhlToolConf = taskKey[Unit]("Create default qrhl-tool.conf")
+makeQrhlToolConf := {
+  val file = baseDirectory.value / "qrhl-tool.conf"
+  if (!file.exists()) {
+    println("Creating qrhl-tool.conf")
+    val pr = new PrintWriter(file)
+    pr.println("# This file is for local development. The distribution will get a copy of qrhl-tool.conf.dist instead.")
+    pr.println()
+    pr.println("isabelle-home = /opt/Isabelle2019")
+    pr.close()
+  }
+}
+managedResources in Compile := (managedResources in Compile).dependsOn(makeQrhlToolConf).value
 
-//import sbtassembly.AssemblyPlugin.defaultShellScript
-//assemblyOption in assembly := (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript))
 mainClass in assembly := Some("qrhl.Main")
-//assemblyJarName in assembly := "qrhl.jar"
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
 test in assembly := {}
 
@@ -121,8 +110,6 @@ mappings in Universal += (baseDirectory.value / "target" / "GITREVISION" -> "GIT
 mappings in Universal += (baseDirectory.value / "qrhl-tool.conf.dist" -> "qrhl-tool.conf")
 
 mappings in Universal ++= directory("PG")
-
-//javaOptions in Universal += "-Dfile.encoding=UTF-8" // Doesn't seem to work
 
 // Without this, updateSbtClassifiers fails (and that breaks Intelli/J support)
 resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
