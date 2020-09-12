@@ -436,28 +436,25 @@ object Isabelle {
     *
     * (The fields of this class are documents in the source code. I am not sure why they do not occur in the
     * generated API doc.)
+    *
+    * @param workingDirectory Working directory in which the Isabelle process should run. (Default:
+    *                         working directory of the Scala process.) All other paths described
+    *                         below are interpreted relative to `workingDirectory` (unless they are absolute).
+    * @param isabelleHome Path to the Isabelle distribution
+    * @param logic Heap image to load in Isabelle (e.g., `HOL`, `HOL-Analysis`, etc.)
+    * @param sessionRoots Additional session directories in which Isabelle will search for sessions
+    *                     (must contain `ROOT` files and optionally `ROOTS` files, see the Isabelle system manual).
+    *                     Default: no additional session directories
+    * @param userDir User configuration directory for Isabelle. Must end in `/.isabelle` if provided.
+    *                None (default) means to let Isabelle chose the default location.
+    *                Here Isabelle stores user configuration and heap images (unless
+    *                the location of the heap images is configured differently, see the Isabelle system manual)
     */
-  case class Setup(
-                    /** Working directory in which the Isabelle process should run. (Default:
-                      * working directory of the Scala process.) All other paths described
-                      * below are interpreted relative to `workingDirectory` (unless they are absolute).
-                      */
-                    workingDirectory : Path = Paths.get(""),
-                    /** Path to the Isabelle distribution */
-                    isabelleHome : Path,
-                    /** Heap image to load in Isabelle (e.g., `HOL`, `HOL-Analysis`, etc.) */
-                    logic : String = "HOL",
-                    /** Additional session directories in which Isabelle will search for sessions
-                      * (must contain `ROOT` files and optionally `ROOTS` files, see the Isabelle system manual).
-                      * Default: no additional session directories */
-                    sessionRoots : Seq[Path] = Nil,
-                    /** User configuration directory for Isabelle. Must end in `/.isabelle` if provided.
-                      * None (default) means to let Isabelle chose the default location.
-                      * Here Isabelle stores user configuration and heap images (unless
-                      * the location of the heap images is configured differently,
-                      * see the Isabelle system manual) */
-                    userDir : Option[Path] = None
-                  )
+  case class Setup(workingDirectory : Path = Paths.get(""),
+                   isabelleHome : Path,
+                   logic : String = "HOL",
+                   sessionRoots : Seq[Path] = Nil,
+                   userDir : Option[Path] = None)
 
   /** Runs the Isabelle build process to build the session heap image `setup.logic`
     *
@@ -530,6 +527,7 @@ object Isabelle {
   }
 }
 
+/** Ancestor of all exceptions specific to [[Isabelle]] */
 abstract class IsabelleControllerException(message: String) extends IOException(message)
 
 /** Thrown if an operation cannot be executed because [[Isabelle.destroy()]] has already been invoked. */
