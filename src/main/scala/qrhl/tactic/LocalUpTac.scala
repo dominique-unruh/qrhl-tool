@@ -35,7 +35,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       statements.append(Assign(VarTerm.varlist(c), RichTerm(GIsabelle.default(c.valueTyp))))
     for (q <- quantum)
       statements.append(QInit(VarTerm.varlist(q), RichTerm(GIsabelle.ket(GIsabelle.default(q.valueTyp)))))
-    Block(statements: _*)
+    Block(statements.toSeq: _*)
   }
 
   def up2(env: Environment, id: VarID, statement: Statement): (Statement,VarID) = {
@@ -158,12 +158,12 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       logger.debug(s"Vi / ci: $Vi_ci_list")
       logger.debug(s"VarID after inner processing: $idVar")
 
-      val c = Block(Vi_ci_list map { case (class_V,quant_V,c) => Local.makeIfNeeded(class_V.toSeq,quant_V.toSeq,c.toBlock) } : _*)
+      val c = Block(Vi_ci_list.toSeq map { case (class_V,quant_V,c) => Local.makeIfNeeded(class_V.toSeq,quant_V.toSeq,c.toBlock) } : _*)
 
       val cVarUse = c.variableUse(env)
 
-      val class_Vup = ListSet(Vi_ci_list.flatMap(_._1):_*) -- cVarUse.classical
-      val quant_Vup = ListSet(Vi_ci_list.flatMap(_._2):_*) -- cVarUse.quantum
+      val class_Vup = ListSet(Vi_ci_list.toSeq.flatMap(_._1):_*) -- cVarUse.classical
+      val quant_Vup = ListSet(Vi_ci_list.toSeq.flatMap(_._2):_*) -- cVarUse.quantum
 
       logger.debug(s"Vup: $class_Vup, $quant_Vup")
 
@@ -204,7 +204,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       }
 
       // c1';c2';...;cn'
-      val ci_prime_block = Block(ci_prime_joined: _*)
+      val ci_prime_block = Block(ci_prime_joined.toSeq: _*)
 
       (ci_prime_block, class_Vup, quant_Vup, idVar)
     case Local(vars, body) =>
@@ -371,7 +371,7 @@ object LocalUpTac {
         case l => Occurrences(l.sorted)
       }
 
-      IdxVarId(cvars.toMap.mapValues(toSVID), qvars.toMap.mapValues(toSVID))
+      IdxVarId(cvars.toMap.view.mapValues(toSVID).toMap, qvars.toMap.view.mapValues(toSVID).toMap)
     }
   }
 }

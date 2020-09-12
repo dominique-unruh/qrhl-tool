@@ -484,7 +484,7 @@ sealed trait Statement {
     * Includes local variables.
     * */
   def variablesDirect : Set[String] = {
-    val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
+    val vars = Set.newBuilder[String]
     def collect(s:Statement) : Unit = s match {
       case Local(vars2, body) =>
         vars ++= vars2 map { _.name }

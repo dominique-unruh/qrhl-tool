@@ -32,8 +32,8 @@ class Symbols(symbolsFile: URL = classOf[Symbols].getResource("symbols"),
     results.appendAll(extraSymbols)
 
     //    println(results map { case (n,i) => new String(Character.toChars(i))+" " } mkString)
-    val symbols = Map(results: _*)
-    val symbolsInv = Map(results map { case (n, i) => (i, n) }: _*)
+    val symbols = Map(results.toSeq: _*)
+    val symbolsInv = Map(results.toSeq.map { case (n, i) => (i, n) }: _*)
     (symbols, symbolsInv)
   }
 
@@ -77,7 +77,7 @@ object Symbols {
       result.append(cp)
       offset += Character.charCount(cp)
     }
-    result
+    result.toSeq
   }
 
 }

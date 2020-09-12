@@ -76,7 +76,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
   /** Free variables */
   private def freeVars(term: Term): Set[String] = {
-    val fv = new mutable.SetBuilder[String,Set[String]](Set.empty)
+    val fv = Set.newBuilder[String]
     def collect(t:Term) : Unit = t match {
       case Free(v,_) => fv += v
 //      case App(App(App(Const(Isabelle.probability_old.name,_),t1),t2),t3) =>
@@ -115,7 +115,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
       case _ => throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
     }
 
-    ExprVariableUse(program = ListSet(pvars:_*), ambient = ListSet(avars:_*))
+    ExprVariableUse(program = ListSet(pvars.toSeq:_*), ambient = ListSet(avars.toSeq:_*))
   }
 
 //    /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */

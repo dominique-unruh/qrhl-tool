@@ -5,7 +5,8 @@ import isabelle.control.MLValue.{Converter, logger}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import MLValue.Implicits._
+import MLValue.Implicits.{tuple2Converter, tuple3Converter, tuple4Converter, tuple5Converter, tuple6Converter, tuple7Converter,
+  stringConverter, booleanConverter, intConverter, listConverter, mlValueConverter}
 import MLValue.Ops
 import isabelle.control.Isabelle.ID
 import org.log4s

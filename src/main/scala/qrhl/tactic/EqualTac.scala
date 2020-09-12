@@ -414,7 +414,7 @@ object EqualTac {
           case `noMatch` => return None
         }
 
-        val resultSet = result.to[ListSet]
+        val resultSet = result.to(ListSet)
         if (resultSet.size != result.size)
           throw UserException(s"Encountered a quantum equality with repreated variables: $arg")
         Some(resultSet)

@@ -136,7 +136,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     val left2 = if (everywhere) left.simplify(isabelle,facts,thms) else left
     val right2 = if (everywhere) right.simplify(isabelle,facts,thms) else right
 
-    Subgoal.printOracles(thms : _*)
+    Subgoal.printOracles(thms.toSeq : _*)
     QRHLSubgoal(left2, right2, pre2, post2, assms2)
   }
 }

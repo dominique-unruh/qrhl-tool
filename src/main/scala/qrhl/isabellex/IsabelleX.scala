@@ -710,7 +710,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
 
   def freeVars(term: Term): Set[String] = {
-    val fv = new mutable.SetBuilder[String, Set[String]](Set.empty)
+    val fv = Set.newBuilder[String]
 
     def collect(t: Term): Unit = t match {
       case Free(v, _) => fv += v
