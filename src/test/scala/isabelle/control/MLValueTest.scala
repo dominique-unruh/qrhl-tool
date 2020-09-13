@@ -14,6 +14,7 @@ import isabelle.pure.Context.Implicits._
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import isabelle.control.IsabelleTest.isabelle
+import _root_.isabelle.mlvalue.MLValue.Converter
 
 class MLValueTest extends AnyFunSuite {
   test ("two instances of Isabelle") {
@@ -29,11 +30,54 @@ class MLValueTest extends AnyFunSuite {
     assert(str2 == "?t = ?t")
   }
 
+  private def roundTrip[A](value: A)(implicit converter: Converter[A]) = {
+    println(s"Creating MLValue($value)")
+    val mlValue = MLValue(value)
+    println("Getting ID")
+    val id = await(mlValue.id)
+    println("Retrieving")
+    val future = mlValue.retrieve
+    println("Waiting for future")
+    val value2 = await(future)
+    println("Checking")
+    assert(value2==value)
+  }
+
   test ("store/retrieve int") {
-    val i = 43458
-    val mlVal = MLValue(i)
-    val i2 = mlVal.retrieveNow
-    assert(i==i2)
+    roundTrip(123590)
+  }
+
+  test ("store/retrieve tuple2") {
+    roundTrip((1,"2"))
+  }
+
+  test ("store/retrieve tuple3") {
+    roundTrip((1,"2",true))
+  }
+
+  test ("store/retrieve tuple4") {
+    roundTrip((1,"2",true,4))
+  }
+
+  test ("store/retrieve tuple5") {
+    roundTrip((1,"2",true,4,"5"))
+  }
+
+  test ("store/retrieve tuple6") {
+    roundTrip((1,"2",true,4,"5",6))
+  }
+
+  test ("store/retrieve tuple7") {
+    roundTrip((1,"2",true,4,"5",6,false))
+  }
+
+  test("store/retrieve list") {
+    roundTrip(List(1,2,3))
+  }
+
+  test("store/retrieve option") {
+    roundTrip(Some(3) : Option[Int])
+    roundTrip(None : Option[Int])
   }
 
   def await[A](x: Awaitable[A]): A = Await.result(x, Duration.Inf)

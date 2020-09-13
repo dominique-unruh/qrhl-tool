@@ -178,6 +178,7 @@ fun executeML ml = let
   (* val flags = ML_Compiler.verbose true ML_Compiler.flags *)
   val flags = ML_Compiler.flags
   val _ = ML_Compiler.eval flags Position.none (ML_Lex.tokenize ml)
+        handle ERROR msg => error (msg ^ ", when compiling " ^ ml)
   (* val _ = TextIO.flushOut TextIO.stdOut (* Doesn't seem to work *) *)
   in () end
 

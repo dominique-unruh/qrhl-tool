@@ -376,7 +376,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     */
   def storeValue(ml : String): Future[ID] = {
     val promise : Promise[ID] = Promise()
-//    logger.debug(s"Compiling ML function: $ml")
+//    logger.debug(s"Compiling ML value: $ml")
     send({ stream => stream.writeByte(4); writeString(stream, ml) },
       { result => promise.complete(result.map(intStringToID)) })
     promise.future
