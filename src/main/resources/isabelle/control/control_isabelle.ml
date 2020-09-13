@@ -17,11 +17,8 @@ struct
 datatype data = D_String of string | D_Int of int | D_List of data list | D_Object of exn
 
 exception E_Function of data -> data
-(*exception E_StoreFunction of tree -> exn*)
-(*exception E_RetrieveFunction of exn -> tree*)
 exception E_Data of data
 exception E_Int of int
-exception E_Unit
 exception E_String of string
 exception E_Pair of exn * exn
 
@@ -246,20 +243,8 @@ fun handleLine' seq =
     (* 1b|string - executes ML code xxx *)
     0w1 => (executeML (readString ()); sendReplyData seq (D_List []))
 
-    (* 2b|string - stores string in objects, response 'seq ID' *)
-  | 0w2 => store seq (E_String (readString ()))
-
-    (* 3b|int64 - stores int64 as object, response 'seq object#' *)
-  | 0w3 => store seq (E_Int (readInt64 ()))
-
     (* 4b|string - Compiles string as ML code of type exn, stores result as object #seq *)
   | 0w4 => storeMLValue seq (readString ())
-
-    (* 5b|int64 - Interprets int64 as object# and returns the object, assuming it's (E_Int i), response 'seq i' *)
-  | 0w5 => retrieveInt seq (readInt64 ())
-
-    (* 6b|int64 - Interprets int64 as object# and returns the object, assuming it's (E_String s), response 'seq s' *)
-  | 0w6 => retrieveString seq (readInt64 ())
 
     (* 7b|int64|data - Parses f,x as object#, f of type E_Function, computes f x, stores the result, response 'seq ID' *)
   | 0w7 => let 
@@ -270,20 +255,6 @@ fun handleLine' seq =
     (* 8b|data ... - data must be list of ints, removes objects with these IDs from objects *)
   | 0w8 => removeObjects (readData ())
 
-(*     (* 9b|int64|int64 - takes objects i j, creates new object with content E_Pair (i,j), returns 'seq object' *)
-  | 0w9 => let 
-      val a = readInt64 ()
-      val b = readInt64 ()
-    in mkPair seq a b end
-
-    (* 10b|int64 - takes object int64, parses as E_Pair (a,b), stores a,b as objects, returns "seq a b" *)
-  | 0w10 => splitPair seq (readInt64 ()) *)
-
-    (* 11b|int64 - retrieves object int64 as E_Data *)
-  | 0w11 => retrieveData seq (readInt64 ())
-
-  | 0w12 => store seq (E_Data (readData ()))
-  
   | cmd => error ("Unknown command " ^ string_of_int (Word8.toInt cmd))
 
 fun reportException seq exn = let
