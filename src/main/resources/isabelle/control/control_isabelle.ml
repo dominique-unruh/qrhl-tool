@@ -1,6 +1,6 @@
 structure Control_Isabelle : sig
   val handleLines : unit -> unit
-  datatype data = D_String of string | D_Int of int | D_Tree of data list
+  datatype data = D_String of string | D_Int of int | D_Tree of data list | D_Object of exn
   exception E_Function of exn -> exn
   exception E_Int of int
   exception E_String of string
@@ -12,7 +12,7 @@ structure Control_Isabelle : sig
 end
 =
 struct
-datatype data = D_String of string | D_Int of int | D_Tree of data list
+datatype data = D_String of string | D_Int of int | D_Tree of data list | D_Object of exn
 
 exception E_Function of exn -> exn
 (*exception E_StoreFunction of tree -> exn*)
@@ -28,7 +28,7 @@ val outStream = BinIO.openOut outputPipeName
 
 (* TODO remove *)
 val garbageLog = TextIO.openOut "/tmp/garbage.log"
-(* fun debugLog str = (TextIO.output (garbageLog, str); TextIO.flushOut garbageLog) *)
+fun debugLog str = (TextIO.output (garbageLog, str); TextIO.flushOut garbageLog)
 
 val objectsMax = Unsynchronized.ref 0
 val objects : exn Inttab.table Unsynchronized.ref = Unsynchronized.ref Inttab.empty
@@ -104,12 +104,24 @@ fun readString () = let
   val _ = TextIO.flushOut garbageLog
   in str end
 
+
+fun addToObjects exn = let
+  val idx = !objectsMax
+  val _ = objects := Inttab.update_new (idx, exn) (!objects)
+  val _ = objectsMax := idx + 1
+  in idx end
+
 fun sendData (D_Int i) = (sendByte 0w1; sendInt64 i)
   | sendData (D_String str) = (sendByte 0w2; sendString str)
   | sendData (D_Tree list) = let
       val _ = sendByte 0w3
       val _ = sendInt64 (length list)
       val _ = List.app sendData list
+    in () end
+  | sendData (D_Object exn) = let
+      val id = addToObjects exn
+      val _ = sendByte 0w4
+      val _ = sendInt64 id
     in () end
       
 fun readData () : data = case readByte () of
@@ -121,6 +133,19 @@ fun readData () : data = case readByte () of
         | readNRev n sofar = readNRev (n-1) (readData () :: sofar)
       val list = readNRev len [] |> rev
     in D_Tree list end
+  | 0w4 => let val id = readInt64 () in
+    case Inttab.lookup (!objects) id of
+      NONE => error ("no object " ^ string_of_int id)
+      | SOME exn => D_Object exn
+    end
+
+fun sendReplyData seq data = let
+  (* val _ = debugLog ("sendReplyData " ^ string_of_int seq) *)
+  val _ = sendInt64 seq
+  val _ = sendByte 0w1
+  val _ = sendData data
+  val _ = BinIO.flushOut outStream
+  in () end
 
 (* Deprecated *)
 fun sendReplyStr seq str = let
@@ -154,12 +179,6 @@ fun executeML ml = let
   (* val _ = TextIO.flushOut TextIO.stdOut (* Doesn't seem to work *) *)
   in () end
 
-fun addToObjects exn = let
-  val idx = !objectsMax
-  val _ = objects := Inttab.update_new (idx, exn) (!objects)
-  val _ = objectsMax := idx + 1
-  in idx end
-
 fun store seq exn = sendReply1 seq (addToObjects exn)
 
 fun storeMany seq exns = sendReplyN seq (map addToObjects exns)
@@ -178,6 +197,11 @@ fun retrieveString seq id = case Inttab.lookup (!objects) id of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_String str) => sendReplyStr seq str
   | SOME exn => error ("expected E_String, got: " ^ exn_str exn)
+
+fun retrieveData seq id = case Inttab.lookup (!objects) id of
+  NONE => error ("no object " ^ string_of_int id)
+  | SOME (E_Data data) => sendReplyData seq data
+  | SOME exn => error ("expected E_Data, got: " ^ exn_str exn)
 
 fun applyFunc seq f x = case (Inttab.lookup (!objects) f, Inttab.lookup (!objects) x) of
   (NONE,_) => error ("no object " ^ string_of_int f)
@@ -245,6 +269,9 @@ fun handleLine' seq =
 
     (* 10b|int64 - takes object int64, parses as E_Pair (a,b), stores a,b as objects, returns "seq a b" *)
   | 0w10 => splitPair seq (readInt64 ())
+
+    (* 11b|int64 - retrieves object int64 as E_Data *)
+  | 0w11 => retrieveData seq (readInt64 ())
 
   | cmd => error ("Unknown command " ^ string_of_int (Word8.toInt cmd))
 

@@ -1,9 +1,8 @@
 package isabelle.mlvalue
 
-import isabelle.control.Isabelle.ID
+import isabelle.control.Isabelle.{DObject, DTree, ID}
 import isabelle.control.{Isabelle, OperationCollection}
-import isabelle.mlvalue.MLValue.Implicits.{booleanConverter, intConverter, listConverter, mlValueConverter, stringConverter,
-  tuple2Converter, tuple3Converter, tuple4Converter, tuple5Converter, tuple6Converter, tuple7Converter}
+import isabelle.mlvalue.MLValue.Implicits.{booleanConverter, intConverter, listConverter, mlValueConverter, stringConverter, tuple2Converter, tuple3Converter, tuple4Converter, tuple5Converter, tuple6Converter, tuple7Converter}
 import isabelle.mlvalue.MLValue.{Converter, logger}
 import org.log4s
 import scalaz.Id.Id
@@ -188,6 +187,8 @@ object MLValue extends OperationCollection {
   protected[mlvalue] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     isabelle.executeMLCodeNow("exception E_List of exn list; exception E_Bool of bool; exception E_Option of exn option")
 
+    val pairToData: Future[ID] = isabelle.storeValue("E_Function (fn E_Pair (a,b) => E_Data (D_Tree [D_Object a, D_Object b]))")
+
     private val optionNone_ = MLValue.compileValueRaw[Option[_]]("E_Option NONE")
     def optionNone[A]: MLValue[Option[A]] = optionNone_.asInstanceOf[MLValue[Option[A]]]
     private val optionSome_ = MLValue.compileFunctionRaw[Nothing, Option[Nothing]]("E_Option o SOME")
@@ -371,12 +372,29 @@ object MLValue extends OperationCollection {
 
   @inline class Tuple2Converter[A,B](converterA: Converter[A], converterB: Converter[B]) extends Converter[(A,B)] {
     @inline override def retrieve(value: MLValue[(A, B)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B)] = {
+      for (id <- value.id;
+           _ = logger.debug("STEP 1");
+           pairToData <- Ops.pairToData;
+           _ = logger.debug("STEP 2");
+           data <- isabelle.applyFunction(pairToData, id);
+           _ = logger.debug("STEP 3");
+           data2 <- isabelle.retrieveData(data);
+           _ = logger.debug("STEP 3b");
+           DTree(List(DObject(aID), DObject(bID))) = data2;
+           _ = logger.debug("STEP 4");
+           a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
+           _ = logger.debug("STEP 5");
+           b <- converterB.retrieve(new MLValue[B](Future.successful(bID)));
+           _ = logger.debug("STEP 6"))
+        yield (a,b)
+/*
       val aIDbID = for (id <- value.id; ab <- isabelle.splitPair(id)) yield ab
       val aID = for ((a, _) <- aIDbID) yield a
       val bID = for ((_, b) <- aIDbID) yield b
       val a = converterA.retrieve(new MLValue[A](aID))
       val b = converterB.retrieve(new MLValue[B](bID))
       for (x <- a; y <- b) yield (x, y)
+*/
     }
     @inline override def store(value: (A,B))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B)] = {
       val (a,b) = value

@@ -110,7 +110,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     val stream = new DataOutputStream(new FileOutputStream(inFifo.toFile))
     var count = 0
 
-    def sendLine(line: DataOutputStream => Unit, callback: Try[Data] => Unit) = {
+    def sendLine(line: DataOutputStream => Unit, callback: Try[Data] => Unit): Unit = {
       if (callback != null)
         callbacks.put(count, callback)
       line(stream)
@@ -158,6 +158,9 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       stream.writeLong(list.length)
       for (d <- list)
         writeData(stream, d)
+    case DObject(id) =>
+      stream.writeByte(4)
+      stream.writeLong(id.id)
   }
 
   private def readData(stream: DataInputStream): Data = {
@@ -170,7 +173,9 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
         for (_ <- 1L to len)
           list.addOne(readData(stream))
         DTree(list.toList)
-      case 4 => DTree(Nil)
+      case 4 =>
+        val id = stream.readLong()
+        DObject(new ID(id, this))
     }
   }
 
@@ -188,6 +193,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     *   1b|int64 - DInt
     *   2b|string - DString (must be ASCII)
     *   3b|int64|data|data|... - DTree (int64 = # of data)
+    *   4b|int64 - DObject (responsibility for GC is on Scala side)
     *
     * string: int32|bytes
     *
@@ -199,7 +205,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       val seq = output.readLong()
       val answerType = output.readByte()
       val callback = callbacks.remove(seq)
-//      logger.debug(s"Seq: $seq, type: $answerType, callback: $callback")
+      logger.debug(s"Seq: $seq, type: $answerType, callback: $callback")
       answerType match {
         case 1 =>
           val payload = readData(output)
@@ -448,6 +454,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     * @return Future that contains `i`. (Or throws an [[IsabelleException]]
     *         if `id` does not refer to an `E_Int i` object.)
     */
+  @deprecated
   def retrieveLong(id: ID): Future[Long] = {
     val promise: Promise[Long] = Promise()
     send({ stream => stream.writeByte(5); stream.writeLong(id.id) },
@@ -463,10 +470,18 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     * @return Future that contains `s`. (Or throws an [[IsabelleException]]
     *         if `id` does not refer to an `E_String s` object.)
     */
+  @deprecated
   def retrieveString(id: ID): Future[String] = {
     val promise: Promise[String] = Promise()
     send({ stream => stream.writeByte(6); stream.writeLong(id.id) },
       { result => promise.complete(result.map { case DString(str) => str }) })
+    promise.future
+  }
+
+  def retrieveData(id: ID): Future[Data] = {
+    val promise: Promise[Data] = Promise()
+    send({ stream => stream.writeByte(11); stream.writeLong(id.id) },
+      { result => promise.complete(result) })
     promise.future
   }
 }
@@ -599,6 +614,7 @@ object Isabelle {
   final case class DInt(int: Long) extends Data
   final case class DString(string: String) extends Data
   final case class DTree(list: Seq[Data]) extends Data
+  final case class DObject(id: ID) extends Data
 }
 
 /** Ancestor of all exceptions specific to [[Isabelle]] */
