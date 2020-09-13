@@ -29,11 +29,11 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
     type Fun = MLFunction3[A, Subgoal, Context, Out]
 
     val tacMlValue : MLFunction3[A, Subgoal, Context, Out] = {
-      val exnToValue = converter.exnToValue
+      val exnToValue = converter.exnToValueProtected
       tactics.getOrElseUpdate((operationName, exnToValue),
         MLValue.compileFunctionRaw[In, Out](
           s"""fn E_Pair (a', E_Pair (QRHL_Operations.E_Subgoal subgoal, E_Context ctxt)) =>
-                case QRHL_Operations.$operationName ((${converter.exnToValue}) a', subgoal, ctxt) of
+                case QRHL_Operations.$operationName (($exnToValue) a', subgoal, ctxt) of
                   NONE => E_Option NONE
                  | SOME (subgoals, thm) =>
                     E_Option (SOME (E_Pair (E_List (map QRHL_Operations.E_Subgoal subgoals), E_Thm thm)))""")

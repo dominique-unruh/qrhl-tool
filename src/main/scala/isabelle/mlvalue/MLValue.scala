@@ -1,6 +1,6 @@
 package isabelle.mlvalue
 
-import isabelle.control.Isabelle.{DObject, DTree, ID}
+import isabelle.control.Isabelle.{DInt, DObject, DString, DTree, Data, ID}
 import isabelle.control.{Isabelle, OperationCollection}
 import isabelle.mlvalue.MLValue.Implicits.{booleanConverter, intConverter, listConverter, mlValueConverter, stringConverter, tuple2Converter, tuple3Converter, tuple4Converter, tuple5Converter, tuple6Converter, tuple7Converter}
 import isabelle.mlvalue.MLValue.{Converter, logger}
@@ -180,6 +180,31 @@ class MLFunction7[D1, D2, D3, D4, D5, D6, D7, R] private[isabelle] (id: Future[I
   }
 }
 
+class MLStoreFunction[A](val id: Future[ID]) {
+  def apply(data: Data)(implicit isabelle: Isabelle, ec: ExecutionContext, converter: Converter[A]): MLValue[A] =
+    new MLValue(isabelle.applyFunction(this.id, data).map { case DObject(id) => id})
+  def apply(data: Future[Data])(implicit isabelle: Isabelle, ec: ExecutionContext, converter: Converter[A]): MLValue[A] =
+    new MLValue(for (data <- data; DObject(id) <- isabelle.applyFunction(this.id, data)) yield id)
+}
+
+object MLStoreFunction {
+  def apply[A](ml: String)(implicit isabelle: Isabelle, converter: Converter[A]) : MLStoreFunction[A] =
+    new MLStoreFunction(isabelle.storeValue(s"E_Function (D_Object o (${converter.valueToExn}) o ($ml))"))
+}
+
+class MLRetrieveFunction[A](val id: Future[ID]) {
+  def apply(id: ID)(implicit isabelle: Isabelle, ec: ExecutionContext, converter: Converter[A]): Future[Isabelle.Data] =
+    isabelle.applyFunction(this.id, DObject(id))
+  def apply(id: Future[ID])(implicit isabelle: Isabelle, ec: ExecutionContext, converter: Converter[A]): Future[Isabelle.Data] =
+    for (id <- id; data <- apply(id)) yield data
+  def apply(value: MLValue[A])(implicit isabelle: Isabelle, ec: ExecutionContext, converter: Converter[A]): Future[Data] =
+    apply(value.id)
+}
+object MLRetrieveFunction {
+  def apply[A](ml: String)(implicit isabelle: Isabelle, converter: Converter[A]) : MLRetrieveFunction[A] =
+    new MLRetrieveFunction(isabelle.storeValue(s"E_Function (fn D_Object x => ($ml) ((${converter.exnToValueProtected}) x))"))
+}
+
 object MLValue extends OperationCollection {
   private val logger = log4s.getLogger
 
@@ -187,8 +212,20 @@ object MLValue extends OperationCollection {
   protected[mlvalue] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     isabelle.executeMLCodeNow("exception E_List of exn list; exception E_Bool of bool; exception E_Option of exn option")
 
-    val pairToData: Future[ID] = isabelle.storeValue("E_Function (fn D_Object (E_Pair (a,b)) => D_Tree [D_Object a, D_Object b])")
-    val dataToPair: Future[ID] = isabelle.storeValue("E_Function (fn D_Tree [D_Object a, D_Object b] => D_Object (E_Pair (a,b)))")
+    private val retrievePair_ =
+      MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing])]("fn (a,b) => D_Tree [D_Object a, D_Object b]")
+    def retrievePair[A,B]: MLRetrieveFunction[(MLValue[A], MLValue[B])] =
+      retrievePair_.asInstanceOf[MLRetrieveFunction[(MLValue[A], MLValue[B])]]
+//      isabelle.storeValue("E_Function (fn D_Object (E_Pair (a,b)) => D_Tree [D_Object a, D_Object b])")
+    private val storePair_ =
+      MLStoreFunction[(MLValue[Nothing], MLValue[Nothing])]("fn D_Tree [D_Object a, D_Object b] => (a,b)")
+    def storePair[A,B]: MLStoreFunction[(MLValue[A], MLValue[B])] =
+      storePair_.asInstanceOf[MLStoreFunction[(MLValue[A], MLValue[B])]]
+//      isabelle.storeValue("E_Function (fn D_Tree [D_Object a, D_Object b] => D_Object (E_Pair (a,b)))")
+    val retrieveInt: MLRetrieveFunction[Int] = MLRetrieveFunction[Int]("D_Int")
+    val storeInt: MLStoreFunction[Int] = MLStoreFunction[Int]("fn D_Int i => i")
+    val retrieveString: MLRetrieveFunction[String] = MLRetrieveFunction[String]("D_String")
+    val storeString: MLStoreFunction[String] = MLStoreFunction[String]("fn D_String str => str")
 
     private val optionNone_ = MLValue.compileValueRaw[Option[_]]("E_Option NONE")
     def optionNone[A]: MLValue[Option[A]] = optionNone_.asInstanceOf[MLValue[Option[A]]]
@@ -217,7 +254,7 @@ object MLValue extends OperationCollection {
     val boolFalse : MLValue[Boolean] = MLValue.compileValue("false")
 
     val debugInfo_ : MLFunction[MLValue[Nothing], String] =
-      compileFunctionRaw[MLValue[Nothing], String]("E_String o Pretty.unformatted_string_of o Runtime.pretty_exn")
+      compileFunctionRaw[MLValue[Nothing], String]("E_String o string_of_exn")
     def debugInfo[A]: MLFunction[MLValue[A], String] = debugInfo_.asInstanceOf[MLFunction[MLValue[A], String]]
   }
 
@@ -226,6 +263,7 @@ object MLValue extends OperationCollection {
     def store(value: A)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[A]
     val exnToValue : String
     val valueToExn : String
+    final def exnToValueProtected = s"""fn e => (($exnToValue) e handle Match => error ("Match failed in exnToValue (" ^ string_of_exn e ^ ")"))"""
   }
 
   @inline def apply[A](value: A)(implicit conv: Converter[A], isabelle: Isabelle, executionContext: ExecutionContext) : MLValue[A] =
@@ -241,7 +279,7 @@ object MLValue extends OperationCollection {
     new MLFunction[D,R](isabelle.storeValue(s"E_Function (fn D_Object x => ($ml) x |> D_Object)")).logError(s"""Error while compiling function "$ml":""")
 
   def compileFunction[D, R](ml: String)(implicit isabelle: Isabelle, ec: ExecutionContext, converterA: Converter[D], converterB: Converter[R]): MLFunction[D, R] =
-    compileFunctionRaw(s"(${converterB.valueToExn}) o ($ml) o (${converterA.exnToValue})")
+    compileFunctionRaw(s"(${converterB.valueToExn}) o ($ml) o (${converterA.exnToValueProtected})")
 
   def compileFunction[D1, D2, R](ml: String)
                                  (implicit isabelle: Isabelle, ec: ExecutionContext,
@@ -289,12 +327,11 @@ object MLValue extends OperationCollection {
   }
   object IntConverter extends Converter[Int] {
     @inline override def store(value: Int)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Int] =
-      new MLValue(isabelle.storeLong(value))
+      Ops.storeInt(DInt(value))
     @inline override def retrieve(value: MLValue[Int])
                                  (implicit isabelle: Isabelle, ec: ExecutionContext): Future[Int] = {
-      for (id_ <- value.id;
-           long <- isabelle.retrieveLong(id_))
-        yield long.toInt
+//      logger.debug(s"Retrieving int: ${Ops.debugInfo(value).retrieveNow}")
+      for (DInt(i) <- Ops.retrieveInt(value.id)) yield i.toInt
     }
 
     override lazy val exnToValue: String = "fn E_Int i => i"
@@ -321,11 +358,16 @@ object MLValue extends OperationCollection {
   }
 
   object StringConverter extends Converter[String] {
-    @inline override def store(value: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[String] =
-      new MLValue(isabelle.storeString(value))
+    @inline override def store(value: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[String] = {
+      Ops.storeString(DString(value))
+    }
+
     @inline override def retrieve(value: MLValue[String])
-                                                    (implicit isabelle: Isabelle, ec: ExecutionContext): Future[String] =
-      value.id.flatMap(isabelle.retrieveString)
+                                 (implicit isabelle: Isabelle, ec: ExecutionContext): Future[String] = {
+      for (DString(str) <- Ops.retrieveString(value.id))
+        yield str
+    }
+
     override lazy val exnToValue: String = "fn E_String str => str"
     override lazy val valueToExn: String = "E_String"
   }
@@ -373,10 +415,10 @@ object MLValue extends OperationCollection {
 
   @inline class Tuple2Converter[A,B](converterA: Converter[A], converterB: Converter[B]) extends Converter[(A,B)] {
     @inline override def retrieve(value: MLValue[(A, B)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B)] = {
-      for (id <- value.id;
-           pairToData <- Ops.pairToData;
-           data <- isabelle.applyFunction(pairToData, DObject(id));
-           DTree(DObject(aID), DObject(bID)) = data;
+      type C1[X] = (X,B)
+      type C2[X] = (MLValue[A],X)
+      val value2 = value.insertMLValue[C1, A].insertMLValue[C2, B]
+      for (DTree(DObject(aID), DObject(bID)) <- Ops.retrievePair(value2);
            a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
            b <- converterB.retrieve(new MLValue[B](Future.successful(bID))))
         yield (a,b)
@@ -385,14 +427,10 @@ object MLValue extends OperationCollection {
       val (a,b) = value
       val mlA = converterA.store(a)
       val mlB = converterB.store(b)
-      val pairID =
-        for (aID <- mlA.id;
-             bID <- mlB.id;
-             data = DTree(DObject(aID), DObject(bID));
-             dataToPair <- Ops.dataToPair;
-             DObject(pairID) <- isabelle.applyFunction(dataToPair, data))
-          yield pairID
-      new MLValue(pairID)
+      val mlAB = Ops.storePair[A,B](for (idA <- mlA.id; idB <- mlB.id) yield (DTree(DObject(idA), DObject(idB))))
+      type C1[X] = (X,MLValue[B])
+      type C2[X] = (A,X)
+      mlAB.removeMLValue[C1,A].removeMLValue[C2,B]
     }
 
     override lazy val exnToValue: String = s"fn E_Pair (a,b) => ((${converterA.exnToValue}) a, (${converterB.exnToValue}) b)"

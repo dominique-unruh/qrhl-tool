@@ -9,6 +9,8 @@ structure Control_Isabelle : sig
   val store : int -> exn -> unit
   (* For diagnostics. Linear time *)
   val numObjects : unit -> int
+  val string_of_exn : exn -> string
+  val string_of_data : data -> string
 end
 =
 struct
@@ -186,39 +188,46 @@ fun storeMany seq exns = sendReplyN seq (map addToObjects exns)
 fun storeMLValue seq ml =
   executeML ("let open Control_Isabelle val result = ("^ml^") in store "^string_of_int seq^" result end")
 
-fun exn_str exn = Runtime.pretty_exn exn |> Pretty.unformatted_string_of
+fun string_of_exn exn = Runtime.pretty_exn exn |> Pretty.unformatted_string_of
+
+fun string_of_data (D_Int i) = string_of_int i
+  | string_of_data (D_String s) = "\"" ^ s ^ "\""
+  | string_of_data (D_Tree l) = "[" ^ (String.concatWith ", " (map string_of_data l)) ^ "]"
+  | string_of_data (D_Object e) = string_of_exn e
 
 fun retrieveInt seq id = case Inttab.lookup (!objects) id of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_Int i) => sendReply1 seq i
-  | SOME exn => error ("expected E_Int, got: " ^ exn_str exn)
+  | SOME exn => error ("expected E_Int, got: " ^ string_of_exn exn)
 
 fun retrieveString seq id = case Inttab.lookup (!objects) id of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_String str) => sendReplyStr seq str
-  | SOME exn => error ("expected E_String, got: " ^ exn_str exn)
+  | SOME exn => error ("expected E_String, got: " ^ string_of_exn exn)
 
 fun retrieveData seq id = case Inttab.lookup (!objects) id of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_Data data) => sendReplyData seq data
-  | SOME exn => error ("expected E_Data, got: " ^ exn_str exn)
+  | SOME exn => error ("expected E_Data, got: " ^ string_of_exn exn)
 
 fun applyFunc seq f (x:data) = case Inttab.lookup (!objects) f of
   NONE => error ("no object " ^ string_of_int f)
   | SOME (E_Function f) => sendReplyData seq (f x)
-  | SOME exn => error ("object " ^ string_of_int f ^ " is not an E_Function but: " ^ exn_str exn)
+  | SOME exn => error ("object " ^ string_of_int f ^ " is not an E_Function but: " ^ string_of_exn exn)
 
 
-
+(* (* Deprecated *)
 fun mkPair seq a b = case (Inttab.lookup (!objects) a, Inttab.lookup (!objects) b) of
   (NONE,_) => error ("no object " ^ string_of_int a)
   | (_,NONE) => error ("no object " ^ string_of_int b)
   | (SOME x, SOME y) => store seq (E_Pair (x,y))
 
+(* Deprecated *)
 fun splitPair seq id = case (Inttab.lookup (!objects) id) of
   NONE => error ("no object " ^ string_of_int id)
   | SOME (E_Pair (x,y)) => storeMany seq [x,y]
   | SOME exn => error ("object " ^ string_of_int id ^ " is not an E_Pair but: " ^ exn_str exn)
+ *)
 
 fun removeObjects (D_Tree ids) = let
   val _ = objects := fold (fn D_Int id => Inttab.delete id) ids (!objects)
@@ -234,7 +243,7 @@ fun int_of_string str = case Int.fromString str of
 fun handleLine' seq =
   case readByte () of
     (* 1b|string - executes ML code xxx *)
-    0w1 => (executeML (readString ()); sendReplyN seq [])
+    0w1 => (executeML (readString ()); sendReplyData seq (D_Tree []))
 
     (* 2b|string - stores string in objects, response 'seq ID' *)
   | 0w2 => store seq (E_String (readString ()))
@@ -260,14 +269,14 @@ fun handleLine' seq =
     (* 8b|data ... - data must be list of ints, removes objects with these IDs from objects *)
   | 0w8 => removeObjects (readData ())
 
-    (* 9b|int64|int64 - takes objects i j, creates new object with content E_Pair (i,j), returns 'seq object' *)
+(*     (* 9b|int64|int64 - takes objects i j, creates new object with content E_Pair (i,j), returns 'seq object' *)
   | 0w9 => let 
       val a = readInt64 ()
       val b = readInt64 ()
     in mkPair seq a b end
 
     (* 10b|int64 - takes object int64, parses as E_Pair (a,b), stores a,b as objects, returns "seq a b" *)
-  | 0w10 => splitPair seq (readInt64 ())
+  | 0w10 => splitPair seq (readInt64 ()) *)
 
     (* 11b|int64 - retrieves object int64 as E_Data *)
   | 0w11 => retrieveData seq (readInt64 ())

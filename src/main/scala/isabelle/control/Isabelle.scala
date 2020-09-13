@@ -205,7 +205,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       val seq = output.readLong()
       val answerType = output.readByte()
       val callback = callbacks.remove(seq)
-      logger.debug(s"Seq: $seq, type: $answerType, callback: $callback")
+//      logger.debug(s"Seq: $seq, type: $answerType, callback: $callback")
       answerType match {
         case 1 =>
           val payload = readData(output)
@@ -387,6 +387,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     *
     * @return A future containing the ID in the object store.
     */
+    @deprecated
   def storeLong(i: Long): Future[ID] = {
     val promise : Promise[ID] = Promise()
     send({ stream => stream.writeByte(3); stream.writeLong(i) },
@@ -407,6 +408,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     promise.future
   }
 
+/*
   /** Given two objects `a`,`b` in the object store, create a pair `E_Pair (a,b)`.
     *
     * @return A future containing the ID of the pair in the object store.
@@ -418,7 +420,9 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       { result => promise.complete(result.map(intStringToID)) })
     promise.future
   }
+*/
 
+/*
   /** Given an object `E_Pair (a,b)` in the object store, store
     * `a` and `b` as objects and return their IDs
     *
@@ -432,6 +436,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
         case DTree(a,b) => (intStringToID(a), intStringToID(b)) } ) } )
     promise.future
   }
+*/
 
   /** // TODO Not true any more
     *
@@ -448,6 +453,9 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       { result => promise.complete(result) })
     promise.future
   }
+
+  def applyFunction(f: Future[ID], x: Data)(implicit ec: ExecutionContext) : Future[Data] =
+    for (f2 <- f; fx <- applyFunction(f2, x)) yield fx
 
   @deprecated
   def applyFunctionOld(f: ID, x: ID)(implicit ec: ExecutionContext): Future[ID] = {

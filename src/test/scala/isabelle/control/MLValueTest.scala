@@ -4,6 +4,7 @@ import java.nio.file.Paths
 
 import isabelle.pure.{Context, Theory, Thm}
 import isabelle.control.Isabelle.Setup
+import isabelle.mlvalue.MLValue
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.{Await, Awaitable, ExecutionContext, ExecutionContextExecutor}
@@ -12,6 +13,7 @@ import isabelle.pure.Context.Implicits._
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
+import isabelle.control.IsabelleTest.isabelle
 
 class MLValueTest extends AnyFunSuite {
   test ("two instances of Isabelle") {
@@ -25,6 +27,13 @@ class MLValueTest extends AnyFunSuite {
     val str2 = thm2.pretty(ctxt2)
     assert(str1 == "?x \\<equiv> ?x")
     assert(str2 == "?t = ?t")
+  }
+
+  test ("store/retrieve int") {
+    val i = 43458
+    val mlVal = MLValue(i)
+    val i2 = mlVal.retrieveNow
+    assert(i==i2)
   }
 
   def await[A](x: Awaitable[A]): A = Await.result(x, Duration.Inf)
