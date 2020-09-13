@@ -25,9 +25,8 @@ exception E_Pair of exn * exn
 val inStream = BinIO.openIn inputPipeName
 val outStream = BinIO.openOut outputPipeName
 
-(* TODO remove *)
-val garbageLog = TextIO.openOut "/tmp/garbage.log"
-fun debugLog str = (TextIO.output (garbageLog, str); TextIO.flushOut garbageLog)
+(*val garbageLog = TextIO.openOut "/tmp/garbage.log"*)
+(*fun debugLog str = (TextIO.output (garbageLog, str); TextIO.flushOut garbageLog)*)
 
 val objectsMax = Unsynchronized.ref 0
 val objects : exn Inttab.table Unsynchronized.ref = Unsynchronized.ref Inttab.empty
@@ -99,8 +98,6 @@ fun readString () = let
   val len = readInt32 ()
   val bytes = BinIO.inputN (inStream, len)
   val str = Byte.bytesToString bytes
-  val _ = TextIO.output (garbageLog, "Read " ^ string_of_int len ^ " bytes as string: " ^ str ^ "\n")
-  val _ = TextIO.flushOut garbageLog
   in str end
 
 
@@ -137,27 +134,13 @@ fun readData () : data = case readByte () of
       NONE => error ("no object " ^ string_of_int id)
       | SOME exn => D_Object exn
     end
+  | byte => error ("readData: unexpected byte " ^ string_of_int (Word8.toInt byte))
 
 fun sendReplyData seq data = let
   (* val _ = debugLog ("sendReplyData " ^ string_of_int seq) *)
   val _ = sendInt64 seq
   val _ = sendByte 0w1
   val _ = sendData data
-  val _ = BinIO.flushOut outStream
-  in () end
-
-(* Deprecated *)
-fun sendReplyStr seq str = let
-  val _ = sendInt64 seq
-  val _ = sendByte 0w1
-  val _ = sendData (D_String str)
-  val _ = BinIO.flushOut outStream
-  in () end
-
-fun sendReplyN seq ints = let
-  val _ = sendInt64 seq
-  val _ = sendByte 0w1
-  val _ = sendData (D_List (map D_Int ints))
   val _ = BinIO.flushOut outStream
   in () end
 
@@ -176,12 +159,9 @@ fun executeML ml = let
   val flags = ML_Compiler.flags
   val _ = ML_Compiler.eval flags Position.none (ML_Lex.tokenize ml)
         handle ERROR msg => error (msg ^ ", when compiling " ^ ml)
-  (* val _ = TextIO.flushOut TextIO.stdOut (* Doesn't seem to work *) *)
   in () end
 
 fun store seq exn = sendReply1 seq (addToObjects exn)
-
-fun storeMany seq exns = sendReplyN seq (map addToObjects exns)
 
 fun storeMLValue seq ml =
   executeML ("let open Control_Isabelle val result = ("^ml^") in store "^string_of_int seq^" result end")
@@ -193,49 +173,16 @@ fun string_of_data (D_Int i) = string_of_int i
   | string_of_data (D_List l) = "[" ^ (String.concatWith ", " (map string_of_data l)) ^ "]"
   | string_of_data (D_Object e) = string_of_exn e
 
-fun retrieveInt seq id = case Inttab.lookup (!objects) id of
-  NONE => error ("no object " ^ string_of_int id)
-  | SOME (E_Int i) => sendReply1 seq i
-  | SOME exn => error ("expected E_Int, got: " ^ string_of_exn exn)
-
-fun retrieveString seq id = case Inttab.lookup (!objects) id of
-  NONE => error ("no object " ^ string_of_int id)
-  | SOME (E_String str) => sendReplyStr seq str
-  | SOME exn => error ("expected E_String, got: " ^ string_of_exn exn)
-
-fun retrieveData seq id = case Inttab.lookup (!objects) id of
-  NONE => error ("no object " ^ string_of_int id)
-  | SOME (E_Data data) => sendReplyData seq data
-  | SOME exn => error ("expected E_Data, got: " ^ string_of_exn exn)
-
 fun applyFunc seq f (x:data) = case Inttab.lookup (!objects) f of
   NONE => error ("no object " ^ string_of_int f)
   | SOME (E_Function f) => sendReplyData seq (f x)
   | SOME exn => error ("object " ^ string_of_int f ^ " is not an E_Function but: " ^ string_of_exn exn)
 
-
-(* (* Deprecated *)
-fun mkPair seq a b = case (Inttab.lookup (!objects) a, Inttab.lookup (!objects) b) of
-  (NONE,_) => error ("no object " ^ string_of_int a)
-  | (_,NONE) => error ("no object " ^ string_of_int b)
-  | (SOME x, SOME y) => store seq (E_Pair (x,y))
-
-(* Deprecated *)
-fun splitPair seq id = case (Inttab.lookup (!objects) id) of
-  NONE => error ("no object " ^ string_of_int id)
-  | SOME (E_Pair (x,y)) => storeMany seq [x,y]
-  | SOME exn => error ("object " ^ string_of_int id ^ " is not an E_Pair but: " ^ exn_str exn)
- *)
-
 fun removeObjects (D_List ids) = let
-  val _ = objects := fold (fn D_Int id => Inttab.delete id) ids (!objects)
-  val _ = List.app (fn D_Int id => TextIO.output (garbageLog, string_of_int id ^ " ")) ids
-  val _ = TextIO.output (garbageLog, "\n")
-  in () end 
-
-fun int_of_string str = case Int.fromString str of
-  NONE => error ("Failed to parse '" ^ str ^ "' as an int")
-  | SOME i => i
+  val _ = objects := fold (fn D_Int id => Inttab.delete id
+                            | d => error ("remove_objects.fold: " ^ string_of_data d)) ids (!objects)
+  in () end
+  | removeObjects d = error ("remove_objects: " ^ string_of_data d)
 
 (* Without error handling *)
 fun handleLine' seq =
