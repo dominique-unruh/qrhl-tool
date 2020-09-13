@@ -87,7 +87,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
       case Abs(_,_,body) => collect(body)
     }
     collect(term)
-    fv.result
+    fv.result()
   }
 
   def variables : Set[String] = freeVars(isabelleTerm)

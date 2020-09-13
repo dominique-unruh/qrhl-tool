@@ -49,8 +49,8 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
   /** Moves the local variable declarations specified by id upwards as far as possible.
    *
    * Upwards movement stops when:
-   * * A [[Local]] statement with the same variable occurs (then the variable is merged into that [[Local]])
-   * * A variable cannot be moved further (then a suitable [[Local]] statement is inserted)
+   * * A [[qrhl.logic.Local]] statement with the same variable occurs (then the variable is merged into that [[qrhl.logic.Local]])
+   * * A variable cannot be moved further (then a suitable [[qrhl.logic.Local]] statement is inserted)
    *
    * Selected local variables that are not used below their declaration are simply removed.
    *
@@ -62,7 +62,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
    * It is guaranteed that Local(cVars,qVars,newStatement) is denotationally equivalent to statement.
    *
    * @return (newStatement,cVars,qVars,id) where newStatement is the rewritten statement, and cVars,qVars are
-   *         lists of the variables that moved to the top. id is the updated [[VarID]] (in case some variables have been selected by id for moving).
+   *         lists of the variables that moved to the top. id is the updated [[LocalUpTac.VarID]] (in case some variables have been selected by id for moving).
    **/
   def up(env: Environment, id: VarID, statement: Statement): (Statement,ListSet[CVariable],ListSet[QVariable],VarID) = statement match {
     case _: Assign | _: Sample | _: QInit | _: QApply | _: Measurement | _: Call =>

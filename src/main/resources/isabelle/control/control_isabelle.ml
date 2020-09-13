@@ -1,6 +1,6 @@
 structure Control_Isabelle : sig
   val handleLines : unit -> unit
-  datatype data = D_String of string | D_Int of int | D_Tree of data list | D_Object of exn
+  datatype data = D_String of string | D_Int of int | D_List of data list | D_Object of exn
   exception E_Function of data -> data
   exception E_Int of int
   exception E_String of string
@@ -14,7 +14,7 @@ structure Control_Isabelle : sig
 end
 =
 struct
-datatype data = D_String of string | D_Int of int | D_Tree of data list | D_Object of exn
+datatype data = D_String of string | D_Int of int | D_List of data list | D_Object of exn
 
 exception E_Function of data -> data
 (*exception E_StoreFunction of tree -> exn*)
@@ -115,7 +115,7 @@ fun addToObjects exn = let
 
 fun sendData (D_Int i) = (sendByte 0w1; sendInt64 i)
   | sendData (D_String str) = (sendByte 0w2; sendString str)
-  | sendData (D_Tree list) = let
+  | sendData (D_List list) = let
       val _ = sendByte 0w3
       val _ = sendInt64 (length list)
       val _ = List.app sendData list
@@ -134,7 +134,7 @@ fun readData () : data = case readByte () of
       fun readNRev 0 sofar = sofar
         | readNRev n sofar = readNRev (n-1) (readData () :: sofar)
       val list = readNRev len [] |> rev
-    in D_Tree list end
+    in D_List list end
   | 0w4 => let val id = readInt64 () in
     case Inttab.lookup (!objects) id of
       NONE => error ("no object " ^ string_of_int id)
@@ -160,7 +160,7 @@ fun sendReplyStr seq str = let
 fun sendReplyN seq ints = let
   val _ = sendInt64 seq
   val _ = sendByte 0w1
-  val _ = sendData (D_Tree (map D_Int ints))
+  val _ = sendData (D_List (map D_Int ints))
   val _ = BinIO.flushOut outStream
   in () end
 
@@ -193,7 +193,7 @@ fun string_of_exn exn = Runtime.pretty_exn exn |> Pretty.unformatted_string_of
 
 fun string_of_data (D_Int i) = string_of_int i
   | string_of_data (D_String s) = "\"" ^ s ^ "\""
-  | string_of_data (D_Tree l) = "[" ^ (String.concatWith ", " (map string_of_data l)) ^ "]"
+  | string_of_data (D_List l) = "[" ^ (String.concatWith ", " (map string_of_data l)) ^ "]"
   | string_of_data (D_Object e) = string_of_exn e
 
 fun retrieveInt seq id = case Inttab.lookup (!objects) id of
@@ -230,7 +230,7 @@ fun splitPair seq id = case (Inttab.lookup (!objects) id) of
   | SOME exn => error ("object " ^ string_of_int id ^ " is not an E_Pair but: " ^ exn_str exn)
  *)
 
-fun removeObjects (D_Tree ids) = let
+fun removeObjects (D_List ids) = let
   val _ = objects := fold (fn D_Int id => Inttab.delete id) ids (!objects)
   val _ = List.app (fn D_Int id => TextIO.output (garbageLog, string_of_int id ^ " ")) ids
   val _ = TextIO.output (garbageLog, "\n")
@@ -244,7 +244,7 @@ fun int_of_string str = case Int.fromString str of
 fun handleLine' seq =
   case readByte () of
     (* 1b|string - executes ML code xxx *)
-    0w1 => (executeML (readString ()); sendReplyData seq (D_Tree []))
+    0w1 => (executeML (readString ()); sendReplyData seq (D_List []))
 
     (* 2b|string - stores string in objects, response 'seq ID' *)
   | 0w2 => store seq (E_String (readString ()))

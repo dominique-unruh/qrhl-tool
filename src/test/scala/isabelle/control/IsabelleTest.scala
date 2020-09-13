@@ -29,19 +29,6 @@ class IsabelleTest extends AnyFunSuite {
     await(exec)
   }
 
-  test("storeValue / retrieveString") {
-    val id = await(isa.storeValue("E_Int 123"))
-    val int = await(isa.retrieveLong(id))
-    assert(int == 123)
-  }
-
-  test("storeValue / retrieveData") {
-    val id = await(isa.storeValue("E_Data (D_Int 123)"))
-    println(s"ID: $id")
-    val data = await(isa.retrieveData(id))
-    println(s"Data: $data")
-    assert(data == DInt(123))
-  }
 }
 
 object IsabelleTest {

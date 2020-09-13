@@ -636,14 +636,14 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     Const(c.eq, typ -->: typ -->: boolT) $ a $ b
   }
 
-  /** Analogous to Isabelle's HOLogic.dest_list. Throws [[MatchError]] if it's not a list */
+  /** Analogous to Isabelle's HOLogic.dest_list. Throws [[scala.MatchError]] if it's not a list */
   def dest_list(term: Term): List[Term] = term match {
     case Const(c.Nil, _) => Nil
     case App(App(Const(c.Cons, _), t), u) => t :: dest_list(u)
     case _ => throw new MatchError(term)
   }
 
-  /** Analogous to Isabelle's HOLogic.dest_numeral. Throws [[MatchError]] if it's not a numeral */
+  /** Analogous to Isabelle's HOLogic.dest_numeral. Throws [[scala.MatchError]] if it's not a numeral */
   def dest_numeral(term: Term): BigInt = term match {
     case Const(c.numOne, _) => 1
     case App(Const(c.numBit0, _), bs) => 2 * dest_numeral(bs)
@@ -651,7 +651,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     case _ => throw new MatchError(term)
   }
 
-  /** Analogous to Isabelle's HOLogic.dest_bit. Throws [[MatchError]] if it's not a char */
+  /** Analogous to Isabelle's HOLogic.dest_bit. Throws [[scala.MatchError]] if it's not a char */
   def dest_bit(term: Term): Int = term match {
     case True_const => 1
     case False_const => 0
@@ -672,14 +672,14 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     result
   }
 
-  /** Analogous to Isabelle's HOLogic.dest_char. Throws [[MatchError]] if it's not a char */
+  /** Analogous to Isabelle's HOLogic.dest_char. Throws [[scala.MatchError]] if it's not a char */
   def dest_char(term: Term): Char = term match {
     case App(App(App(App(App(App(App(App(Const(c.Char, _), b0), b1), b2), b3), b4), b5), b6), b7) =>
       dest_bits(b0, b1, b2, b3, b4, b5, b6, b7).toChar
     case _ => throw new MatchError(term)
   }
 
-  /** Analogous to Isabelle's HOLogic.dest_string. Throws [[MatchError]] if it's not a string */
+  /** Analogous to Isabelle's HOLogic.dest_string. Throws [[scala.MatchError]] if it's not a string */
   def dest_string(term: Term): String =
     dest_list(term).map(dest_char).mkString
 
@@ -706,7 +706,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     }
 
     collect(term)
-    fv.result
+    fv.result()
   }
 
 

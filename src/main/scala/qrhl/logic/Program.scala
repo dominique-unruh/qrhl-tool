@@ -502,7 +502,7 @@ sealed trait Statement {
       case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
     }
     collect(this)
-    vars.result
+    vars.result()
   }
 
   /*  /** Including nested programs (via Call). (Missing ambient variables from nested calls.) */

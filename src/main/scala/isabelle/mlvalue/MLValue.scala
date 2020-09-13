@@ -1,6 +1,6 @@
 package isabelle.mlvalue
 
-import isabelle.control.Isabelle.{DInt, DObject, DString, DTree, Data, ID}
+import isabelle.control.Isabelle.{DInt, DObject, DString, DList, Data, ID}
 import isabelle.control.{Isabelle, OperationCollection}
 import isabelle.mlvalue.MLValue.Implicits.{booleanConverter, intConverter, longConverter, listConverter,
   mlValueConverter, stringConverter, optionConverter,
@@ -223,49 +223,49 @@ object MLValue extends OperationCollection {
     val unitValue = MLValue.compileValueRaw[Unit]("E_Int 0")
 
     val retrieveTuple2 =
-      MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing])]("fn (a,b) => D_Tree [D_Object a, D_Object b]")
+      MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing])]("fn (a,b) => D_List [D_Object a, D_Object b]")
     /*@inline def retrieveTuple2[A,B]: MLRetrieveFunction[(MLValue[A], MLValue[B])] =
       retrieveTuple2_.asInstanceOf[MLRetrieveFunction[(MLValue[A], MLValue[B])]]*/
     private val storeTuple2_ =
-      MLStoreFunction[(MLValue[Nothing], MLValue[Nothing])](s"fn D_Tree [D_Object a, D_Object b] => (a,b) | ${matchFailData("storeTuple2")}")
+      MLStoreFunction[(MLValue[Nothing], MLValue[Nothing])](s"fn D_List [D_Object a, D_Object b] => (a,b) | ${matchFailData("storeTuple2")}")
     @inline def storeTuple2[A,B]: MLStoreFunction[(MLValue[A], MLValue[B])] =
       storeTuple2_.asInstanceOf[MLStoreFunction[(MLValue[A], MLValue[B])]]
 
     val retrieveTuple3: MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])] =
-      MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](s"fn (a,b,c) => D_Tree [D_Object a, D_Object b, D_Object c]")
+      MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](s"fn (a,b,c) => D_List [D_Object a, D_Object b, D_Object c]")
     private val storeTuple3_ =
-      MLStoreFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](s"fn D_Tree [D_Object a, D_Object b, D_Object c] => (a,b,c) | ${matchFailData("storeTuple3")}")
+      MLStoreFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](s"fn D_List [D_Object a, D_Object b, D_Object c] => (a,b,c) | ${matchFailData("storeTuple3")}")
     @inline def storeTuple3[A,B,C]: MLStoreFunction[(MLValue[A], MLValue[B], MLValue[C])] =
       storeTuple3_.asInstanceOf[MLStoreFunction[(MLValue[A], MLValue[B], MLValue[C])]]
 
     val retrieveTuple4: MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])] =
-      MLRetrieveFunction(s"fn (a,b,c,d) => D_Tree [D_Object a, D_Object b, D_Object c, D_Object d]")
+      MLRetrieveFunction(s"fn (a,b,c,d) => D_List [D_Object a, D_Object b, D_Object c, D_Object d]")
     private val storeTuple4_ =
-      MLStoreFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](s"fn D_Tree [D_Object a, D_Object b, D_Object c, D_Object d] => (a,b,c,d) | ${matchFailData("storeTuple4")}")
+      MLStoreFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](s"fn D_List [D_Object a, D_Object b, D_Object c, D_Object d] => (a,b,c,d) | ${matchFailData("storeTuple4")}")
     @inline def storeTuple4[A,B,C,D] =
       storeTuple4_.asInstanceOf[MLStoreFunction[(MLValue[A], MLValue[B], MLValue[C], MLValue[D])]]
 
     val retrieveTuple5: MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])] =
-      MLRetrieveFunction(s"fn (a,b,c,d,e) => D_Tree [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e]")
+      MLRetrieveFunction(s"fn (a,b,c,d,e) => D_List [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e]")
     private val storeTuple5_ =
       MLStoreFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](
-        s"fn D_Tree [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e] => (a,b,c,d,e) | ${matchFailData("storeTuple5")}")
+        s"fn D_List [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e] => (a,b,c,d,e) | ${matchFailData("storeTuple5")}")
     @inline def storeTuple5[A,B,C,D,E] =
       storeTuple5_.asInstanceOf[MLStoreFunction[(MLValue[A], MLValue[B], MLValue[C], MLValue[D], MLValue[E])]]
 
     val retrieveTuple6: MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])] =
-      MLRetrieveFunction(s"fn (a,b,c,d,e,f) => D_Tree [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e, D_Object f]")
+      MLRetrieveFunction(s"fn (a,b,c,d,e,f) => D_List [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e, D_Object f]")
     private val storeTuple6_ =
       MLStoreFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](
-        s"fn D_Tree [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e, D_Object f] => (a,b,c,d,e,f) | ${matchFailData("storeTuple6")}")
+        s"fn D_List [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e, D_Object f] => (a,b,c,d,e,f) | ${matchFailData("storeTuple6")}")
     @inline def storeTuple6[A,B,C,D,E,F] =
       storeTuple6_.asInstanceOf[MLStoreFunction[(MLValue[A], MLValue[B], MLValue[C], MLValue[D], MLValue[E], MLValue[F])]]
 
     val retrieveTuple7: MLRetrieveFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])] =
-      MLRetrieveFunction(s"fn (a,b,c,d,e,f,g) => D_Tree [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e, D_Object f, D_Object g]")
+      MLRetrieveFunction(s"fn (a,b,c,d,e,f,g) => D_List [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e, D_Object f, D_Object g]")
     private val storeTuple7_ =
       MLStoreFunction[(MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing], MLValue[Nothing])](
-        s"fn D_Tree [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e, D_Object f, D_Object g] => (a,b,c,d,e,f,g) | ${matchFailData("storeTuple7")}")
+        s"fn D_List [D_Object a, D_Object b, D_Object c, D_Object d, D_Object e, D_Object f, D_Object g] => (a,b,c,d,e,f,g) | ${matchFailData("storeTuple7")}")
     @inline def storeTuple7[A,B,C,D,E,F,G] =
       storeTuple7_.asInstanceOf[MLStoreFunction[(MLValue[A], MLValue[B], MLValue[C], MLValue[D], MLValue[E], MLValue[F], MLValue[G])]]
 
@@ -288,13 +288,13 @@ object MLValue extends OperationCollection {
     private val optionSome_ = MLValue.compileFunctionRaw[Nothing, Option[Nothing]]("E_Option o SOME")
     def optionSome[A]: MLFunction[A, Option[A]] = optionSome_.asInstanceOf[MLFunction[A, Option[A]]]
     val retrieveOption : MLRetrieveFunction[Option[MLValue[Nothing]]] =
-      MLRetrieveFunction("fn NONE => D_Tree [] | SOME x => D_Tree [D_Object x]")
+      MLRetrieveFunction("fn NONE => D_List [] | SOME x => D_List [D_Object x]")
 
 
     val retrieveList : MLRetrieveFunction[List[MLValue[Nothing]]] =
-      MLRetrieveFunction("D_Tree o map D_Object")
+      MLRetrieveFunction("D_List o map D_Object")
     val storeList : MLStoreFunction[List[MLValue[Nothing]]] =
-      MLStoreFunction(s"fn D_Tree list => map (fn D_Object obj => obj | ${matchFailData("storeList.map")}) list | ${matchFailData("storeList")}")
+      MLStoreFunction(s"fn D_List list => map (fn D_Object obj => obj | ${matchFailData("storeList.map")}) list | ${matchFailData("storeList")}")
 
 /*    private val listCons_  =
       MLValue.compileFunctionRaw[(Nothing,List[Nothing]), List[Nothing]]("fn E_Pair (x, E_List xs) => E_List (x::xs)")
@@ -437,12 +437,12 @@ object MLValue extends OperationCollection {
   @inline class ListConverter[A](implicit converter: Converter[A]) extends Converter[List[A]] {
     @inline override def store(value: List[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[List[A]] = {
       val listID : Future[List[ID]] = Future.traverse(value) { converter.store(_).id }
-      val data : Future[Data] = for (listID <- listID) yield DTree(listID map DObject :_*)
+      val data : Future[Data] = for (listID <- listID) yield DList(listID map DObject :_*)
       val result : MLValue[List[MLValue[Nothing]]] = Ops.storeList(data)
       result.asInstanceOf[MLValue[List[A]]]
     }
     @inline override def retrieve(value: MLValue[List[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[List[A]] = {
-      for (DTree(listObj@_*) <- Ops.retrieveList(value.asInstanceOf[MLValue[List[MLValue[Nothing]]]]);
+      for (DList(listObj@_*) <- Ops.retrieveList(value.asInstanceOf[MLValue[List[MLValue[Nothing]]]]);
            listMLValue = listObj map { case DObject(id) => new MLValue[A](Future.successful(id)) };
            list <- Future.traverse(listMLValue) { converter.retrieve(_) })
         yield list.toList
@@ -460,8 +460,8 @@ object MLValue extends OperationCollection {
     @inline override def retrieve(value: MLValue[Option[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Option[A]] = {
       for (data <- Ops.retrieveOption(value.id);
            option <- data match {
-             case DTree() => Future.successful(None) : Future[Option[A]]
-             case DTree(DObject(id)) => converter.retrieve(new MLValue[A](Future.successful(id))).map(Some(_)) : Future[Option[A]]
+             case DList() => Future.successful(None) : Future[Option[A]]
+             case DList(DObject(id)) => converter.retrieve(new MLValue[A](Future.successful(id))).map(Some(_)) : Future[Option[A]]
            })
         yield option
     }
@@ -471,7 +471,7 @@ object MLValue extends OperationCollection {
 
   @inline class Tuple2Converter[A,B](converterA: Converter[A], converterB: Converter[B]) extends Converter[(A,B)] {
     @inline override def retrieve(value: MLValue[(A, B)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B)] = {
-      for (DTree(DObject(aID), DObject(bID)) <- Ops.retrieveTuple2(value.id);
+      for (DList(DObject(aID), DObject(bID)) <- Ops.retrieveTuple2(value.id);
            a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
            b <- converterB.retrieve(new MLValue[B](Future.successful(bID))))
         yield (a,b)
@@ -480,7 +480,7 @@ object MLValue extends OperationCollection {
       val (a,b) = value
       val mlA = converterA.store(a)
       val mlB = converterB.store(b)
-      Ops.storeTuple2[A,B](for (idA <- mlA.id; idB <- mlB.id) yield (DTree(DObject(idA), DObject(idB))))
+      Ops.storeTuple2[A,B](for (idA <- mlA.id; idB <- mlB.id) yield (DList(DObject(idA), DObject(idB))))
         .asInstanceOf[MLValue[(A,B)]]
     }
 
@@ -490,7 +490,7 @@ object MLValue extends OperationCollection {
   
   @inline class Tuple3Converter[A,B,C](converterA: Converter[A], converterB: Converter[B], converterC: Converter[C]) extends Converter[(A,B,C)] {
     @inline override def retrieve(value: MLValue[(A, B, C)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C)] = {
-      for (DTree(DObject(aID), DObject(bID), DObject(cID)) <- Ops.retrieveTuple3(value.id);
+      for (DList(DObject(aID), DObject(bID), DObject(cID)) <- Ops.retrieveTuple3(value.id);
            a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
            b <- converterB.retrieve(new MLValue[B](Future.successful(bID)));
            c <- converterC.retrieve(new MLValue[C](Future.successful(cID))))
@@ -501,7 +501,7 @@ object MLValue extends OperationCollection {
       val mlA = converterA.store(a)
       val mlB = converterB.store(b)
       val mlC = converterC.store(c)
-      Ops.storeTuple3[A,B,C](for (idA <- mlA.id; idB <- mlB.id; idC <- mlC.id) yield (DTree(DObject(idA), DObject(idB), DObject(idC))))
+      Ops.storeTuple3[A,B,C](for (idA <- mlA.id; idB <- mlB.id; idC <- mlC.id) yield (DList(DObject(idA), DObject(idB), DObject(idC))))
         .asInstanceOf[MLValue[(A,B,C)]]
     }
     override lazy val exnToValue: String = s"fn E_Pair (a, E_Pair (b, c)) => ((${converterA.exnToValue}) a, (${converterB.exnToValue}) b, (${converterC.exnToValue}) c)"
@@ -509,7 +509,7 @@ object MLValue extends OperationCollection {
   }
   @inline class Tuple4Converter[A,B,C,D](converterA: Converter[A], converterB: Converter[B], converterC: Converter[C], converterD: Converter[D]) extends Converter[(A,B,C,D)] {
     @inline override def retrieve(value: MLValue[(A, B, C, D)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C, D)] = {
-      for (DTree(DObject(aID), DObject(bID), DObject(cID), DObject(dID)) <- Ops.retrieveTuple4(value.id);
+      for (DList(DObject(aID), DObject(bID), DObject(cID), DObject(dID)) <- Ops.retrieveTuple4(value.id);
            a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
            b <- converterB.retrieve(new MLValue[B](Future.successful(bID)));
            c <- converterC.retrieve(new MLValue[C](Future.successful(cID)));
@@ -522,7 +522,7 @@ object MLValue extends OperationCollection {
       val mlB = converterB.store(b)
       val mlC = converterC.store(c)
       val mlD = converterD.store(d)
-      Ops.storeTuple4[A,B,C,D](for (idA <- mlA.id; idB <- mlB.id; idC <- mlC.id; idD <- mlD.id) yield (DTree(DObject(idA), DObject(idB), DObject(idC), DObject(idD))))
+      Ops.storeTuple4[A,B,C,D](for (idA <- mlA.id; idB <- mlB.id; idC <- mlC.id; idD <- mlD.id) yield (DList(DObject(idA), DObject(idB), DObject(idC), DObject(idD))))
         .asInstanceOf[MLValue[(A,B,C,D)]]
     }
 
@@ -532,7 +532,7 @@ object MLValue extends OperationCollection {
   @inline class Tuple5Converter[A,B,C,D,E](converterA: Converter[A], converterB: Converter[B], converterC: Converter[C], converterD: Converter[D], converterE: Converter[E])
     extends Converter[(A,B,C,D,E)] {
     @inline override def retrieve(value: MLValue[(A, B, C, D, E)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C, D, E)] = {
-      for (DTree(DObject(aID), DObject(bID), DObject(cID), DObject(dID), DObject(eID)) <- Ops.retrieveTuple5(value.id);
+      for (DList(DObject(aID), DObject(bID), DObject(cID), DObject(dID), DObject(eID)) <- Ops.retrieveTuple5(value.id);
            a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
            b <- converterB.retrieve(new MLValue[B](Future.successful(bID)));
            c <- converterC.retrieve(new MLValue[C](Future.successful(cID)));
@@ -548,7 +548,7 @@ object MLValue extends OperationCollection {
       val mlD = converterD.store(d)
       val mlE = converterE.store(e)
       Ops.storeTuple5[A,B,C,D,E](for (idA <- mlA.id; idB <- mlB.id; idC <- mlC.id; idD <- mlD.id; idE <- mlE.id)
-        yield (DTree(DObject(idA), DObject(idB), DObject(idC), DObject(idD), DObject(idE))))
+        yield (DList(DObject(idA), DObject(idB), DObject(idC), DObject(idD), DObject(idE))))
         .asInstanceOf[MLValue[(A,B,C,D,E)]]
     }
 
@@ -558,7 +558,7 @@ object MLValue extends OperationCollection {
   @inline class Tuple6Converter[A,B,C,D,E,F](converterA: Converter[A], converterB: Converter[B], converterC: Converter[C], converterD: Converter[D],
                                              converterE: Converter[E], converterF: Converter[F]) extends Converter[(A,B,C,D,E,F)] {
     @inline override def retrieve(value: MLValue[(A, B, C, D, E, F)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C, D, E, F)] = {
-      for (DTree(DObject(aID), DObject(bID), DObject(cID), DObject(dID), DObject(eID), DObject(fID)) <- Ops.retrieveTuple6(value.id);
+      for (DList(DObject(aID), DObject(bID), DObject(cID), DObject(dID), DObject(eID), DObject(fID)) <- Ops.retrieveTuple6(value.id);
            a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
            b <- converterB.retrieve(new MLValue[B](Future.successful(bID)));
            c <- converterC.retrieve(new MLValue[C](Future.successful(cID)));
@@ -576,7 +576,7 @@ object MLValue extends OperationCollection {
       val mlE = converterE.store(e)
       val mlF = converterF.store(f)
       Ops.storeTuple6[A,B,C,D,E,F](for (idA <- mlA.id; idB <- mlB.id; idC <- mlC.id; idD <- mlD.id; idE <- mlE.id; idF <- mlF.id)
-        yield (DTree(DObject(idA), DObject(idB), DObject(idC), DObject(idD), DObject(idE), DObject(idF))))
+        yield (DList(DObject(idA), DObject(idB), DObject(idC), DObject(idD), DObject(idE), DObject(idF))))
         .asInstanceOf[MLValue[(A,B,C,D,E,F)]]
     }
 
@@ -587,7 +587,7 @@ object MLValue extends OperationCollection {
                                                converterD: Converter[D], converterE: Converter[E], converterF: Converter[F],
                                                converterG: Converter[G]) extends Converter[(A,B,C,D,E,F,G)] {
     @inline override def retrieve(value: MLValue[(A, B, C, D, E, F, G)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B, C, D, E, F, G)] = {
-      for (DTree(DObject(aID), DObject(bID), DObject(cID), DObject(dID), DObject(eID), DObject(fID), DObject(gID)) <- Ops.retrieveTuple7(value.id);
+      for (DList(DObject(aID), DObject(bID), DObject(cID), DObject(dID), DObject(eID), DObject(fID), DObject(gID)) <- Ops.retrieveTuple7(value.id);
            a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
            b <- converterB.retrieve(new MLValue[B](Future.successful(bID)));
            c <- converterC.retrieve(new MLValue[C](Future.successful(cID)));
@@ -607,7 +607,7 @@ object MLValue extends OperationCollection {
       val mlF = converterF.store(f)
       val mlG = converterG.store(g)
       Ops.storeTuple7[A,B,C,D,E,F,G](for (idA <- mlA.id; idB <- mlB.id; idC <- mlC.id; idD <- mlD.id; idE <- mlE.id; idF <- mlF.id; idG <- mlG.id)
-        yield (DTree(DObject(idA), DObject(idB), DObject(idC), DObject(idD), DObject(idE), DObject(idF), DObject(idG))))
+        yield (DList(DObject(idA), DObject(idB), DObject(idC), DObject(idD), DObject(idE), DObject(idF), DObject(idG))))
         .asInstanceOf[MLValue[(A,B,C,D,E,F,G)]]
     }
 

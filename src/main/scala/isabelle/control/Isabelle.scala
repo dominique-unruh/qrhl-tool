@@ -35,7 +35,7 @@ import scala.util.{Failure, Success, Try}
   * (e.g., creating new objects, retrieving the value of an object, performing operations on objects).
   *
   * The operations provided by this class are very lowlevel. For more convenient and type-safe operations on
-  * values in the object store, see [[MLValue]].
+  * values in the object store, see [[isabelle.mlvalue.MLValue]].
   *
   * Operations on objects are asynchronous and return futures.
   *
@@ -64,7 +64,7 @@ import scala.util.{Failure, Success, Try}
   *
   * New exceptions for storing other types can be defined at runtime using [[executeMLCode]].
   *
-  * @param setup Configuration object that specifies the path of the Isabelle binary etc. See [[Setup]]. This also
+  * @param setup Configuration object that specifies the path of the Isabelle binary etc. See [[isabelle.control.Isabelle.Setup]]. This also
   *              specifies with Isabelle heap to load.
   * @param build Whether to build the Isabelle heap before running Isabelle. If false, the heap will never be
   *              built. (This means changes in the Isabelle theories will not be reflected. And if the heap was never
@@ -100,7 +100,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       drain()
       logger.debug(s"Sending GC command to Isabelle, ${buffer.size} freed objects")
       stream.writeByte(8)
-      writeData(stream, DTree(buffer.toSeq :_*))
+      writeData(stream, DList(buffer.toSeq :_*))
       true
     }
   }
@@ -153,7 +153,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
   private def writeData(stream: DataOutputStream, data: Data): Unit = data match {
     case DInt(i) => stream.writeByte(1); stream.writeLong(i)
     case DString(s) => stream.writeByte(2); writeString(stream, s)
-    case DTree(list@_*) =>
+    case DList(list@_*) =>
       stream.writeByte(3)
       stream.writeLong(list.length)
       for (d <- list)
@@ -172,7 +172,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
         val list = ListBuffer[Data]()
         for (_ <- 1L to len)
           list.addOne(readData(stream))
-        DTree(list.toSeq:_*)
+        DList(list.toSeq:_*)
       case 4 =>
         val id = stream.readLong()
         DObject(new ID(id, this))
@@ -365,7 +365,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     * The ML code is executed in a context where the structure `Control_Isabelle` is opened
     * (i.e., you can write `E_Int` instead of `Control_Isabelle.E_Int`).
     *
-    * Example: `storeValue("exception E_Term of term")` (this is actually done by [[Term]]).
+    * Example: `storeValue("exception E_Term of term")` (this is actually done by [[isabelle.pure.Term]]).
     *
     * In code that is supposed to support multiple instances of Isabelle, it can be cumbersome to
     * keep track in which instances a given ML code fragment was already executed. See [[OperationCollection]]
@@ -382,71 +382,70 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     promise.future
   }
 
-  /** Stores `i` in the object store. (I.e., an object `E_Int i` will be added.)
-    * Equivalent to `storeValue(i.toString)` but does not invoke the ML compiler (faster).
-    *
-    * @return A future containing the ID in the object store.
-    */
-    @deprecated
-  def storeLong(i: Long): Future[ID] = {
-    val promise : Promise[ID] = Promise()
-    send({ stream => stream.writeByte(3); stream.writeLong(i) },
-      { result => promise.complete(result.map(intStringToID)) })
-    promise.future
-  }
-
-  /** Stores `s` in the object store. (I.e., an object `E_String i` will be added.)
-    *
-    * Strings are required to be ASCII strings.
-    *
-    * @return A future containing the ID in the object store.
-    */
-  def storeString(str: String): Future[ID] = {
-    val promise : Promise[ID] = Promise()
-    send({ stream => stream.writeByte(2); writeString(stream, str) },
-      { result => promise.complete(result.map(intStringToID)) })
-    promise.future
-  }
-
-/*
-  /** Given two objects `a`,`b` in the object store, create a pair `E_Pair (a,b)`.
-    *
-    * @return A future containing the ID of the pair in the object store.
-    */
-  @deprecated
-  def makePair(a: ID, b: ID) : Future[ID] = {
-    val promise : Promise[ID] = Promise()
-    send({ stream => stream.writeByte(9); stream.writeLong(a.id); stream.writeLong(b.id) },
-      { result => promise.complete(result.map(intStringToID)) })
-    promise.future
-  }
-*/
-
-/*
-  /** Given an object `E_Pair (a,b)` in the object store, store
-    * `a` and `b` as objects and return their IDs
-    *
-    * @return A future containing the IDs of `a` and `b`
-    */
-  @deprecated
-  def splitPair(pair: ID) : Future[(ID,ID)] = {
-    val promise : Promise[(ID,ID)] = Promise()
-    send({ stream => stream.writeByte(10); stream.writeLong(pair.id) },
-      { result => promise.complete(result.map {
-        case DTree(a,b) => (intStringToID(a), intStringToID(b)) } ) } )
-    promise.future
-  }
-*/
-
-  /** // TODO Not true any more
-    *
-    * If `f` and `x` refer to objects in the object store,
-    * and `f` is of the form `E_Function f'`
-    * compute `f' x` and store the result in the object store.
-    *
-    * @return A future containing the ID of the result (or throwing an exception
-    *         if the evaluation `f` is not `E_Function f'` or `f' x` throws an exception in ML)
-    */
+  /** Applies `f` to `x` and returns the result.
+   *
+   * `f` must be the ID of an object in the object store of the form `E_Function f'` (and thus `f'` of ML type `data -> data`).
+   *
+   * `x` is serialized and transferred to the Isabelle process, the value `f' x` is computed, serialized and transferred back.
+   *
+   * By definition of the type [[Isabelle.Data]], `x` can be a tree containing integers, strings, and object IDs.
+   * When transferring an object ID to the Isabelle process, it is replaced by the object (exception) that is referred by the ID.
+   * And similarly, objects (exceptions) in the return value are added to the object store and replaced by IDs upon transfer to the Scala side.
+   *
+   * This behavior gives rise to two simple use patterns:
+   *
+   * Retrieving values: Say `tree` is some algebraic data type on the ML side, `Tree` is a corresponding Scala class,
+   * `encode : tree -> data` is a function that
+   * encodes a tree as `data` (using the D_List, D_Int, and D_String constructors only), and `E_Tree of tree`
+   * is an exception type to store trees in the object store. Then we can define a function for retrieving a tree from
+   * the object store to Scala as follows:
+   * {{{
+   * val encodeID : Future[ID] = isabelle.storeValue("fn D_Object (E_Tree tree) => encode tree")
+   * def decode(data: Data) : Tree = ??? // The opposite of the ML function encode
+   * def retrieve(id: ID) : Tree = {
+   *   // Apply encode to the element referenced by id, result is an encoding of the tree as Data
+   *   val dataFuture : Future[Data] = isabelle.applyFunction(encodeID, DObject(id))
+   *   // For simplicitly, we force synchronous execution
+   *   val data : Data = Await.result(dataFuture, Duration.Inf)
+   *   decode(data)
+   * }
+   * }}}
+   *
+   * Storing values: Continuing the above example, say `decode : data -> tree` is an ML function that decodes trees
+   * (inverse of `encode` above). Then we can store trees in the object store from Scala using the following function
+   * `store`:
+   * {{{
+   * val decodeID : Future[ID] = isabelle.storeValue("fn data => D_Object (E_Tree (decode data))")
+   * def encode(tree: Tree) : Data = ??? // The opposite of the ML function decode
+   * def store(tree: Tree) : ID = {
+   *   // Apply ML-decode to the Scala-encoded tree, store it in the object store, and return the ID (inside a Data)
+   *   val dataFuture : Future[Data] = isabelle.applyFunction(decodeID, encode(tree))
+   *   // For simplicitly, we force synchronous execution
+   *   val data : Data = Await.result(dataFuture, Duration.Inf)
+   *   // get the ID inside the returned data (referring to the tree object in the object store)
+   *   val DObject(id) = data
+   *   id
+   * }
+   * }}}
+   *
+   * Of course, arbitrary combinations of these two ideas are possible. For example, one could have a Scala data structure
+   * that contains IDs of objects still on the ML side. These data structures can be serialized and deserialized
+   * similar to the above example, using the fact that the type [[Isabelle.Data]] allows IDs to occur anywhere in
+   * the tree.
+   *
+   * Objects added to the object store by this mechanism are garbage collected on the ML side when the corresponding
+   * IDs are not used any more on the Scala side.
+   *
+   * This approach is very low level. In particular, there is no type system support to ensure that the IDs contained
+   * in the serialized data actually refer to objects of the right type. A higher level typesafe approach for accessing data
+   * in the object store is given by [[MLValue]] (see there). However, [[MLValue]]s internally use the mechanism
+   * described here to transfer data to/from the Isabelle process. Thus, to add support for [[MLValue]]s of new types,
+   * the `applyFunction` needs to be used.
+   *
+   * @return A future holding the ID of the result (or holding an exception
+   *         if the `f` is not `E_Function f'` or `f' x` throws an exception in ML)
+   * @see [[Isabelle.Data]] for information what kind of data can be contained in `x` and the result
+   */
   def applyFunction(f: ID, x: Data): Future[Data] = {
     val promise: Promise[Data] = Promise()
     send({ stream => stream.writeByte(7); stream.writeLong(f.id); writeData(stream,x) },
@@ -454,57 +453,13 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     promise.future
   }
 
+  /** Like [[applyFunction(f:isa* applyFunction(ID,Data)]], except `f` is a future. */
   def applyFunction(f: Future[ID], x: Data)(implicit ec: ExecutionContext) : Future[Data] =
     for (f2 <- f; fx <- applyFunction(f2, x)) yield fx
 
   @deprecated
   def applyFunctionOld(f: ID, x: ID)(implicit ec: ExecutionContext): Future[ID] = {
     applyFunction(f, DObject(x)).map { case DObject(id) => id }
-  }
-
-  /** Retrieves the integer `i` referenced by `id` in the object store.
-    *
-    * Does not check whether the ML integer (which can be unbounded) fits into a Long
-    *
-    * @return Future that contains `i`. (Or throws an [[IsabelleException]]
-    *         if `id` does not refer to an `E_Int i` object.)
-    */
-  @deprecated
-  def retrieveLong(id: ID): Future[Long] = {
-    val promise: Promise[Long] = Promise()
-    send({ stream => stream.writeByte(5); stream.writeLong(id.id) },
-      { result => promise.complete(result.map { case DInt(int) => int }) })
-    promise.future
-  }
-
-  /** Retrieves the string `s` referenced by `id` in the object store.
-    *
-    * Note: Currently, newlines will be replaced by spaces in the retrieved string.
-    * This will change in the future.
-    *
-    * @return Future that contains `s`. (Or throws an [[IsabelleException]]
-    *         if `id` does not refer to an `E_String s` object.)
-    */
-  @deprecated
-  def retrieveString(id: ID): Future[String] = {
-    val promise: Promise[String] = Promise()
-    send({ stream => stream.writeByte(6); stream.writeLong(id.id) },
-      { result => promise.complete(result.map { case DString(str) => str }) })
-    promise.future
-  }
-
-  def retrieveData(id: ID): Future[Data] = {
-    val promise: Promise[Data] = Promise()
-    send({ stream => stream.writeByte(11); stream.writeLong(id.id) },
-      { result => promise.complete(result) })
-    promise.future
-  }
-
-  def storeData(data: Data): Future[ID] = {
-    val promise : Promise[ID] = Promise()
-    send({ stream => stream.writeByte(12); writeData(stream, data) },
-      { result => promise.complete(result.map(intStringToID)) })
-    promise.future
   }
 }
 
@@ -632,17 +587,34 @@ object Isabelle {
       throw IsabelleBuildException(s"Isabelle build for session ${setup.logic} failed", errors.toList)
   }
 
+  /** An algebraic datatype that allows to encode trees of data containing integers ([[DInt]]), strings ([[DString]]), and IDs of
+   * objects ([[DObject]]) in the object store of the Isabelle process. A constructor [[DList]] is used to create a tree
+   * structure.
+   *
+   * No particular semantics is given to these trees, their purpose is to be a sufficiently flexible datatype to be able
+   * to encode arbitrary data types for transfer.
+   *
+   * A corresponding datatype is defined in the `Control_Isabelle` ML structure in the Isabelle process:
+   * {{{
+   * datatype data = D_String of string | D_Int of int | D_List of data list | D_Object of exn
+   * }}}
+   * Note that while [[DObject]] on the Scala side contains an ID of an object, on the ML side we instead
+   * directly have the object that is references (of type `exn`). Serialization and deserialization creates and
+   * dereferences object IDs as needed.
+   *
+   * @see [[Isabelle.applyFunction(f:isa* applyFunction]] for details how to use this type to transfer data
+   * */
   sealed trait Data
   final case class DInt(int: Long) extends Data
   final case class DString(string: String) extends Data
-  final case class DTree(list: Data*) extends Data
+  final case class DList(list: Data*) extends Data
   final case class DObject(id: ID) extends Data
 }
 
 /** Ancestor of all exceptions specific to [[Isabelle]] */
 abstract class IsabelleControllerException(message: String) extends IOException(message)
 
-/** Thrown if an operation cannot be executed because [[Isabelle.destroy()]] has already been invoked. */
+/** Thrown if an operation cannot be executed because [[Isabelle.destroy]] has already been invoked. */
 case class IsabelleDestroyedException(message: String) extends IsabelleControllerException(message)
 /** Thrown if the build process of Isabelle fails */
 case class IsabelleBuildException(message: String, errors: List[String])

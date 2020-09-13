@@ -69,10 +69,8 @@ object Cterm {
            (implicit isabelle: Isabelle, executionContext: ExecutionContext) =
     new Cterm(mlValue)
 
-  def apply(ctxt: Context, term: Term)(implicit isabelle: Isabelle, ec: ExecutionContext) : Cterm = {
-    implicit val _ = ctxt
+  def apply(ctxt: Context, term: Term)(implicit isabelle: Isabelle, ec: ExecutionContext) : Cterm =
     new Cterm(Ops.ctermOfTerm(MLValue((ctxt, term))))
-  }
 
   object CtermConverter extends Converter[Cterm] {
     override def store(value: Cterm)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Cterm] =

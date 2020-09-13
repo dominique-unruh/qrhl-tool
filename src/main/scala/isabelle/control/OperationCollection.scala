@@ -103,7 +103,7 @@ import scala.concurrent.ExecutionContext
   * - Ops must be not be called differently
   * - In `protected class Ops`, `protected` can be replaced by something weaker if the operations should be accessible
   *   outside the current object (e.g. `protected[packagename]`)
-  * - When `Obs` is used like an object, implicit of types [[Isabelle]] and [[ExecutionContext]] must be in scope
+  * - When `Obs` is used like an object, implicit of types [[Isabelle]] and [[scala.concurrent.ExecutionContext]] must be in scope
   * - The function `newOps` must be defined exactly as specified here
   */
 trait OperationCollection {
