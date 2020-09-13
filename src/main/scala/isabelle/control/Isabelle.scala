@@ -100,7 +100,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
       drain()
       logger.debug(s"Sending GC command to Isabelle, ${buffer.size} freed objects")
       stream.writeByte(8)
-      writeData(stream, DTree(buffer.toSeq))
+      writeData(stream, DTree(buffer.toSeq :_*))
       true
     }
   }
@@ -153,7 +153,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
   private def writeData(stream: DataOutputStream, data: Data): Unit = data match {
     case DInt(i) => stream.writeByte(1); stream.writeLong(i)
     case DString(s) => stream.writeByte(2); writeString(stream, s)
-    case DTree(list) =>
+    case DTree(list@_*) =>
       stream.writeByte(3)
       stream.writeLong(list.length)
       for (d <- list)
@@ -172,7 +172,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
         val list = ListBuffer[Data]()
         for (_ <- 1L to len)
           list.addOne(readData(stream))
-        DTree(list.toList)
+        DTree(list.toSeq:_*)
       case 4 =>
         val id = stream.readLong()
         DObject(new ID(id, this))
@@ -429,7 +429,7 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     val promise : Promise[(ID,ID)] = Promise()
     send({ stream => stream.writeByte(10); stream.writeLong(pair.id) },
       { result => promise.complete(result.map {
-        case DTree(List(a,b)) => (intStringToID(a), intStringToID(b)) } ) } )
+        case DTree(a,b) => (intStringToID(a), intStringToID(b)) } ) } )
     promise.future
   }
 
@@ -482,6 +482,13 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     val promise: Promise[Data] = Promise()
     send({ stream => stream.writeByte(11); stream.writeLong(id.id) },
       { result => promise.complete(result) })
+    promise.future
+  }
+
+  def storeData(data: Data): Future[ID] = {
+    val promise : Promise[ID] = Promise()
+    send({ stream => stream.writeByte(12); writeData(stream, data) },
+      { result => promise.complete(result.map(intStringToID)) })
     promise.future
   }
 }
@@ -613,7 +620,7 @@ object Isabelle {
   sealed trait Data
   final case class DInt(int: Long) extends Data
   final case class DString(string: String) extends Data
-  final case class DTree(list: Seq[Data]) extends Data
+  final case class DTree(list: Data*) extends Data
   final case class DObject(id: ID) extends Data
 }
 

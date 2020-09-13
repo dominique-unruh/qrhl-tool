@@ -273,6 +273,8 @@ fun handleLine' seq =
     (* 11b|int64 - retrieves object int64 as E_Data *)
   | 0w11 => retrieveData seq (readInt64 ())
 
+  | 0w12 => store seq (E_Data (readData ()))
+  
   | cmd => error ("Unknown command " ^ string_of_int (Word8.toInt cmd))
 
 fun reportException seq exn = let
