@@ -1,7 +1,7 @@
 structure Control_Isabelle : sig
   val handleLines : unit -> unit
   datatype data = D_String of string | D_Int of int | D_Tree of data list | D_Object of exn
-  exception E_Function of exn -> exn
+  exception E_Function of data -> data
   exception E_Int of int
   exception E_String of string
   exception E_Data of data
@@ -14,7 +14,7 @@ end
 struct
 datatype data = D_String of string | D_Int of int | D_Tree of data list | D_Object of exn
 
-exception E_Function of exn -> exn
+exception E_Function of data -> data
 (*exception E_StoreFunction of tree -> exn*)
 (*exception E_RetrieveFunction of exn -> tree*)
 exception E_Data of data
@@ -203,11 +203,10 @@ fun retrieveData seq id = case Inttab.lookup (!objects) id of
   | SOME (E_Data data) => sendReplyData seq data
   | SOME exn => error ("expected E_Data, got: " ^ exn_str exn)
 
-fun applyFunc seq f x = case (Inttab.lookup (!objects) f, Inttab.lookup (!objects) x) of
-  (NONE,_) => error ("no object " ^ string_of_int f)
-  | (_,NONE) => error ("no object " ^ string_of_int x)
-  | (SOME (E_Function f), SOME x) => store seq (f x)
-  | (SOME exn, _) => error ("object " ^ string_of_int f ^ " is not an E_Function but: " ^ exn_str exn)
+fun applyFunc seq f (x:data) = case Inttab.lookup (!objects) f of
+  NONE => error ("no object " ^ string_of_int f)
+  | SOME (E_Function f) => sendReplyData seq (f x)
+  | SOME exn => error ("object " ^ string_of_int f ^ " is not an E_Function but: " ^ exn_str exn)
 
 
 
@@ -252,10 +251,10 @@ fun handleLine' seq =
     (* 6b|int64 - Interprets int64 as object# and returns the object, assuming it's (E_String s), response 'seq s' *)
   | 0w6 => retrieveString seq (readInt64 ())
 
-    (* 7b|int64|int64 - Parses f,x as object#, f of type E_Function, computes f x, stores the result, response 'seq ID' *)
+    (* 7b|int64|data - Parses f,x as object#, f of type E_Function, computes f x, stores the result, response 'seq ID' *)
   | 0w7 => let 
         val f = readInt64 ()
-        val x = readInt64 ()
+        val x = readData ()
       in applyFunc seq f x end
 
     (* 8b|data ... - data must be list of ints, removes objects with these IDs from objects *)

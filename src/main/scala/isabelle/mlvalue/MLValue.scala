@@ -101,7 +101,7 @@ class MLFunction[D,R] private[isabelle] (id: Future[ID]) extends MLValue[D => R]
     new MLValue(
       for (fVal <- this.id;
            xVal <- arg.id;
-           fx <- isabelle.applyFunction(fVal, xVal))
+           fx <- isabelle.applyFunctionOld(fVal, xVal))
         yield fx
     )
   }
@@ -187,8 +187,8 @@ object MLValue extends OperationCollection {
   protected[mlvalue] class Ops(implicit val isabelle: Isabelle, ec: ExecutionContext) {
     isabelle.executeMLCodeNow("exception E_List of exn list; exception E_Bool of bool; exception E_Option of exn option")
 
-    val pairToData: Future[ID] = isabelle.storeValue("E_Function (fn E_Pair (a,b) => E_Data (D_Tree [D_Object a, D_Object b]))")
-    val dataToPair: Future[ID] = isabelle.storeValue("E_Function (fn E_Data (D_Tree [D_Object a, D_Object b]) => E_Pair (a,b))")
+    val pairToData: Future[ID] = isabelle.storeValue("E_Function (fn D_Object (E_Pair (a,b)) => D_Tree [D_Object a, D_Object b])")
+    val dataToPair: Future[ID] = isabelle.storeValue("E_Function (fn D_Tree [D_Object a, D_Object b] => D_Object (E_Pair (a,b)))")
 
     private val optionNone_ = MLValue.compileValueRaw[Option[_]]("E_Option NONE")
     def optionNone[A]: MLValue[Option[A]] = optionNone_.asInstanceOf[MLValue[Option[A]]]
@@ -238,7 +238,7 @@ object MLValue extends OperationCollection {
     compileValueRaw[A](s"(${converter.valueToExn}) ($ml)")
 
   def compileFunctionRaw[D, R](ml: String)(implicit isabelle: Isabelle, ec: ExecutionContext): MLFunction[D, R] =
-    new MLFunction[D,R](isabelle.storeValue(s"E_Function ($ml)")).logError(s"""Error while compiling function "$ml":""")
+    new MLFunction[D,R](isabelle.storeValue(s"E_Function (fn D_Object x => ($ml) x |> D_Object)")).logError(s"""Error while compiling function "$ml":""")
 
   def compileFunction[D, R](ml: String)(implicit isabelle: Isabelle, ec: ExecutionContext, converterA: Converter[D], converterB: Converter[R]): MLFunction[D, R] =
     compileFunctionRaw(s"(${converterB.valueToExn}) o ($ml) o (${converterA.exnToValue})")
@@ -375,20 +375,11 @@ object MLValue extends OperationCollection {
     @inline override def retrieve(value: MLValue[(A, B)])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[(A, B)] = {
       for (id <- value.id;
            pairToData <- Ops.pairToData;
-           data <- isabelle.applyFunction(pairToData, id);
-           data2 <- isabelle.retrieveData(data);
-           DTree(DObject(aID), DObject(bID)) = data2;
+           data <- isabelle.applyFunction(pairToData, DObject(id));
+           DTree(DObject(aID), DObject(bID)) = data;
            a <- converterA.retrieve(new MLValue[A](Future.successful(aID)));
            b <- converterB.retrieve(new MLValue[B](Future.successful(bID))))
         yield (a,b)
-/*
-      val aIDbID = for (id <- value.id; ab <- isabelle.splitPair(id)) yield ab
-      val aID = for ((a, _) <- aIDbID) yield a
-      val bID = for ((_, b) <- aIDbID) yield b
-      val a = converterA.retrieve(new MLValue[A](aID))
-      val b = converterB.retrieve(new MLValue[B](bID))
-      for (x <- a; y <- b) yield (x, y)
-*/
     }
     @inline override def store(value: (A,B))(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[(A,B)] = {
       val (a,b) = value
@@ -398,9 +389,8 @@ object MLValue extends OperationCollection {
         for (aID <- mlA.id;
              bID <- mlB.id;
              data = DTree(DObject(aID), DObject(bID));
-             dataId <- isabelle.storeData(data);
              dataToPair <- Ops.dataToPair;
-             pairID <- isabelle.applyFunction(dataToPair, dataId))
+             DObject(pairID) <- isabelle.applyFunction(dataToPair, data))
           yield pairID
       new MLValue(pairID)
     }

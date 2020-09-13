@@ -433,18 +433,25 @@ class Isabelle(val setup: Setup, build: Boolean = false) {
     promise.future
   }
 
-  /** If `f` and `x` refer to objects in the object store,
+  /** // TODO Not true any more
+    *
+    * If `f` and `x` refer to objects in the object store,
     * and `f` is of the form `E_Function f'`
     * compute `f' x` and store the result in the object store.
     *
     * @return A future containing the ID of the result (or throwing an exception
     *         if the evaluation `f` is not `E_Function f'` or `f' x` throws an exception in ML)
     */
-  def applyFunction(f: ID, x: ID): Future[ID] = {
-    val promise: Promise[ID] = Promise()
-    send({ stream => stream.writeByte(7); stream.writeLong(f.id); stream.writeLong(x.id) },
-      { result => promise.complete(result.map(intStringToID)) })
+  def applyFunction(f: ID, x: Data): Future[Data] = {
+    val promise: Promise[Data] = Promise()
+    send({ stream => stream.writeByte(7); stream.writeLong(f.id); writeData(stream,x) },
+      { result => promise.complete(result) })
     promise.future
+  }
+
+  @deprecated
+  def applyFunctionOld(f: ID, x: ID)(implicit ec: ExecutionContext): Future[ID] = {
+    applyFunction(f, DObject(x)).map { case DObject(id) => id }
   }
 
   /** Retrieves the integer `i` referenced by `id` in the object store.
