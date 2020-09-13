@@ -7,7 +7,6 @@
 /target
 /qrhl.jar
 /qrhl.zip
-/isabelle-temp
 .*.marks
 /tmp
 /doc/*.lst
@@ -32,14 +31,12 @@
 *.synctex.gz
 /isabelle-thys/Scratch.thy
 /qrhl-tool.conf
-
 _region_.tex
 _region_.prv
 prv_manual.fmt
-
 manual.toc
 _region_.pdf
-
 /.idea
 /examplein.txt
 /exampleout.txt
+/Scratch.thy
