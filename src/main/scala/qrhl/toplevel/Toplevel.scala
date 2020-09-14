@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
 import hashedcomputation.{Computation, Hashed}
-import isabelle.control.IsabelleException
+import de.unruh.isabelle.control.IsabelleException
 //import org.eclipse.jgit.diff.HashedSequenceComparator
 import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder

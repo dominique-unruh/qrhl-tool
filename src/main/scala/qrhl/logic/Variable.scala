@@ -2,7 +2,7 @@ package qrhl.logic
 
 import qrhl.isabellex.{IsabelleConsts, IsabelleX}
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.pure.{App, Const, Free, Term, Typ}
+import de.unruh.isabelle.pure.{App, Const, Free, Term, Typ}
 
 import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable.ListSet
@@ -33,7 +33,7 @@ sealed trait Variable {
   def variableTyp: Typ = GIsabelle.variableT(valueTyp)
   def valueTyp : Typ
 //  @deprecated("use valueType / variableTyp","") def typ : Typ
-  def variableTerm(implicit isa: isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(variableName,variableTyp)
+  def variableTerm(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(variableName,variableTyp)
   def classicalQuantumWord : String
 }
 
@@ -166,7 +166,7 @@ final case class CVariable(name:String, override val valueTyp: Typ) extends Vari
   override def index(left:Boolean): CVariable = if (left) index1 else index2
 //  override def valueTyp: pure.Typ = typ.isabelleTyp
   override val variableName : String= "var_"+name
-  def valueTerm(implicit isa: isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(name, valueTyp)
+  def valueTerm(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(name, valueTyp)
 
   override def toString: String = s"classical var $name : ${IsabelleX.pretty(valueTyp)}"
 

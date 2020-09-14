@@ -8,14 +8,14 @@ import scala.collection.immutable.ListSet
 import scala.language.postfixOps
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
-import isabelle.mlvalue.MLValue
-import isabelle.pure.Typ
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.Typ
 
 // Implicits
 import MLValue.Implicits._
-import isabelle.pure.Context.Implicits._
-import isabelle.pure.Term.Implicits._
-import isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Typ.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 // Implicits

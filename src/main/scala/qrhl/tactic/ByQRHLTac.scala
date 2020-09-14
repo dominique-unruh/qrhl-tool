@@ -6,15 +6,15 @@ import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.logic._
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
-import isabelle.mlvalue.MLValue
-import isabelle.pure.{App, Const, Free, Term}
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.{App, Const, Free, Term}
 
 import scala.collection.immutable.ListSet
 
 // Implicits
-import isabelle.pure.Context.Implicits._
-import isabelle.pure.Term.Implicits._
-import isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Typ.Implicits._
 import MLValue.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl

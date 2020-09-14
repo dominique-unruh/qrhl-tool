@@ -2,7 +2,7 @@ package qrhl
 
 import java.nio.file.{Path, Paths}
 
-import isabelle.control.Isabelle
+import de.unruh.isabelle.control.Isabelle
 import org.rogach.scallop.{ScallopConf, ScallopOption, Subcommand}
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel

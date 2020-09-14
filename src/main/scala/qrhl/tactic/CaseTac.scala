@@ -3,7 +3,7 @@ package qrhl.tactic
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.pure.{Free, Term}
+import de.unruh.isabelle.pure.{Free, Term}
 
 // Implicits
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl

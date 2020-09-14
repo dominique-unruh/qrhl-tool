@@ -4,14 +4,14 @@ import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
-import isabelle.mlvalue.MLValue
-import isabelle.pure.{App, Const}
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.{App, Const}
 
 // Implicits
 import MLValue.Implicits._
-import isabelle.pure.Context.Implicits._
-import isabelle.pure.Term.Implicits._
-import isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Typ.Implicits._
 import GIsabelle.isabelleControl
 import scala.concurrent.ExecutionContext.Implicits.global
 

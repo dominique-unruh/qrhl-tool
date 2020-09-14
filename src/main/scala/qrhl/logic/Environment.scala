@@ -5,20 +5,20 @@ import qrhl.isabellex.IsabelleX.ContextX
 import qrhl.isabellex.{IsabelleX, RichTerm}
 
 import scala.collection.mutable
-import isabelle.pure.Typ
+import de.unruh.isabelle.pure.Typ
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
-import isabelle.mlvalue.MLValue
-import isabelle.pure.Typ
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.Typ
 
 import scala.collection.immutable.ListSet
 
 // Implicits
 import MLValue.Implicits._
-import isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Term.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
-import isabelle.pure.Typ.Implicits._
-import isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.pure.Context.Implicits._
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 import scala.concurrent.ExecutionContext.Implicits.global
 

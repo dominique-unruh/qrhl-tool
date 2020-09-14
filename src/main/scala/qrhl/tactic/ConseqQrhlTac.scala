@@ -6,17 +6,17 @@ import qrhl.isabellex.{IsabelleX, MLValueConverters, RichTerm}
 import qrhl.logic.{QVariable, Variable}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
-import isabelle.mlvalue.MLValue
-import isabelle.pure.Term
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.Term
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListSet
 
 // Implicits
 import MLValue.Implicits._
-import isabelle.pure.Context.Implicits._
-import isabelle.pure.Typ.Implicits._
-import isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.pure.Term.Implicits._
 import MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import GIsabelle.isabelleControl

@@ -7,7 +7,7 @@ import qrhl.{tactic, toplevel, _}
 
 import scala.util.parsing.combinator._
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.pure.Typ
+import de.unruh.isabelle.pure.Typ
 
 case class ParserContext(environment: Environment,
                          isabelle: Option[IsabelleX.ContextX])

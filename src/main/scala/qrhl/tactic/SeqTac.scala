@@ -3,9 +3,9 @@ package qrhl.tactic
 import qrhl._
 import qrhl.isabellex.RichTerm
 import qrhl.logic.Block
-import isabelle.mlvalue.MLValue.Implicits._
-import isabelle.pure.Term.Implicits._
-import isabelle.pure.Term
+import de.unruh.isabelle.mlvalue.MLValue.Implicits._
+import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Term
 
 /*@deprecated("Use SeqTac","now")
 case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {

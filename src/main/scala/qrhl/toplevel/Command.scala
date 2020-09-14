@@ -2,7 +2,7 @@ package qrhl.toplevel
 
 import java.nio.file.{Path, Paths}
 
-import isabelle.pure.Typ
+import de.unruh.isabelle.pure.Typ
 import qrhl.isabellex.IsabelleX
 import qrhl.logic.{Block, CVariable, QVariable, Variable}
 import qrhl.{State, Subgoal, Tactic, UserException}
@@ -10,13 +10,13 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 
 import scala.collection.immutable.ListSet
 import GIsabelle.Ops
-import isabelle.mlvalue.MLValue
-import isabelle.pure.Typ
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.Typ
 
 // Implicits
 import GIsabelle.isabelleControl
 import MLValue.Implicits._
-import isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Context.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 

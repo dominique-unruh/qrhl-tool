@@ -4,6 +4,9 @@ import NativePackagerHelper._
 
 import scala.sys.process.Process
 
+lazy val root = (project in file("."))
+  .dependsOn(RootProject(file("../scala-isabelle")))
+
 name := "qrhl"
 
 version := "0.6alpha"
@@ -19,16 +22,9 @@ libraryDependencies += "org.rogach" %% "scallop" % "3.5.1"
 libraryDependencies += "commons-codec" % "commons-codec" % "1.15"
 // https://mvnrepository.com/artifact/org.log4s/log4s
 libraryDependencies += "org.log4s" %% "log4s" % "1.8.2"
-// https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
-libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.11"
-// https://mvnrepository.com/artifact/commons-io/commons-io
-libraryDependencies += "commons-io" % "commons-io" % "2.8.0"
-// https://mvnrepository.com/artifact/org.scalaz/scalaz-core
-libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.3.2"
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30"
 libraryDependencies += "org.jline" % "jline" % "3.16.0"
-
 
 val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c3968054988b50da7f6c02c6b.tar.gz"
 val pgPatch = "src/proofgeneral/proof-site.el.patch"

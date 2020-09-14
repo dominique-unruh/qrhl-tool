@@ -1,21 +1,21 @@
 package qrhl.isabellex
 
-import isabelle.control.Isabelle
-import isabelle.mlvalue.MLValue.Converter
+import de.unruh.isabelle.control.Isabelle
+import de.unruh.isabelle.mlvalue.MLValue.Converter
 import qrhl.logic.{Assign, Block, CVariable, Call, IfThenElse, Local, Measurement, QApply, QInit, QVariable, Sample, Statement, VTCons, VTSingle, VTUnit, VarTerm, While}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
-import isabelle.control
-import isabelle.mlvalue.MLValue
+import de.unruh.isabelle.control
+import de.unruh.isabelle.mlvalue.MLValue
 import qrhl.{AmbientSubgoal, QRHLSubgoal, Subgoal}
 import scalaz.Id.Id
 
 import scala.concurrent.{ExecutionContext, Future}
 
 // Implicits
-import isabelle.mlvalue.MLValue.Implicits._
-import isabelle.pure.Term.Implicits._
-import isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.mlvalue.MLValue.Implicits._
+import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Typ.Implicits._
 import MLValueConverters.Implicits._
 
 

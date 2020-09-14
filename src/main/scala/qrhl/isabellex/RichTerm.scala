@@ -5,18 +5,18 @@ import org.log4s.Logger
 import qrhl.logic.{CVariable, Environment, ExprVariableUse, QVariable, Variable, VariableUse}
 
 import scala.collection.mutable
-import isabelle.control
+import de.unruh.isabelle.control
 import qrhl.{UserException, Utils, logic}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 import IsabelleX.{globalIsabelle => GIsabelle}
-import isabelle.pure.Term.Implicits._
-import isabelle.pure.Typ.Implicits._
-import isabelle.pure.Context.Implicits._
-import isabelle.mlvalue.MLValue.Implicits._
-import isabelle.mlvalue.MLValue
-import isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Var}
+import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.mlvalue.MLValue.Implicits._
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Var}
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 
 import scala.concurrent.ExecutionContext.Implicits.global

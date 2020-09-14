@@ -6,7 +6,7 @@ import qrhl.logic.{Call, Statement}
 import scala.concurrent.ExecutionContext.Implicits.global
 import MLValueConverters.Implicits._
 import IsabelleX.globalIsabelle.isabelleControl
-import isabelle.mlvalue.MLValue
+import de.unruh.isabelle.mlvalue.MLValue
 
 class MLValueConvertersTest extends AnyFunSuite {
   test("Call roundtrip") {

@@ -8,8 +8,8 @@ import qrhl.logic._
 import qrhl.tactic.EqualTac._
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.{Ops, QuantumEqualityFull}
-import isabelle.mlvalue.MLValue
-import isabelle.pure.{Free, Term}
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.{Free, Term}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
@@ -20,9 +20,9 @@ import scala.util.control.{Breaks, ControlThrowable}
 import scala.concurrent.ExecutionContext.Implicits.global
 import GIsabelle.isabelleControl
 import MLValue.Implicits._
-import isabelle.pure.Context.Implicits._
-import isabelle.pure.Term.Implicits._
-import isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.pure.Typ.Implicits._
 
 
 case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variable], out: List[Variable], amount:Int=1) extends WpBothStyleTac(leftAmount=amount, rightAmount=amount) {

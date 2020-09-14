@@ -1,7 +1,7 @@
 package qrhl.tactic
 
 import org.log4s
-import isabelle.mlvalue.MLValue.Implicits._
+import de.unruh.isabelle.mlvalue.MLValue.Implicits._
 
 //object JointMeasureTacTmp {
 //  val op: Operation[(Unit, Term, BigInt), Option[(List[RichTerm],BigInt)]] =
