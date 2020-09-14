@@ -69,6 +69,7 @@ managedResources in Compile := (managedResources in Compile).dependsOn(makeGITRE
 lazy val makeQrhlToolConf = taskKey[Unit]("Create default qrhl-tool.conf")
 makeQrhlToolConf := {
   val file = baseDirectory.value / "qrhl-tool.conf"
+//  println(s"qrhl-conf path: $file")
   if (!file.exists()) {
     println("Creating qrhl-tool.conf")
     val pr = new PrintWriter(file)

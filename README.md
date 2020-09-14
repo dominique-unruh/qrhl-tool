@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/dominique-unruh/qrhl-tool.svg?branch=master)](https://travis-ci.com/dominique-unruh/qrhl-tool)
+
 # Binary installation
 
 The binaries require Linux to run.
