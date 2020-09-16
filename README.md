@@ -3,11 +3,11 @@
 # Binary installation
 
 The binaries require Linux to run.
-You can download the binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases). 
+You can download the binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases).
 
 ## Prerequisites
 
-* Java must be installed (at least Java 9), and the `java` executable must be in the path.
+* Java must be installed (at least Java 11), and the `java` executable must be in the path.
 * Emacs must be installed, and the `emacs` executable must be in the path (otherwise edit `proofgeneral.{bat,sh}`).
 
 To check whether this is the case, go into a terminal,
