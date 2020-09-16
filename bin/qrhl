@@ -11,6 +11,6 @@ if ! [ -e "$DIR/isabelle-thys" ]; then
     exit 1
 fi
 
-( cd  "$DIR" && setsid sbt +assembly )
+( cd  "$DIR" && setsid sbt assembly )
 #export QRHL_FORCE_BUILD=1
 java -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Xss100M -jar "$DIR/qrhl.jar" "$@"

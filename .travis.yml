@@ -1,17 +1,15 @@
-language: scala
+language: java
 
-scala:
-  - 2.13.3
+os:
+  - linux
+  - osx
 
-sbt_args: -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
+before_script: scripts/travis-setup.sh
+
+script: ~/bin/sbt -Dorg.slf4j.simpleLogger.defaultLogLevel=debug +test
 
 cache:
-  - directories: [/opt, $HOME/.isabelle]
+  - directories:
+      - $HOME/install
+      - $HOME/.isabelle
 
-before_script:
-  - mkdir -p /opt/afp-2019
-  - if ! [ -e /opt/Isabelle2019 ]; then curl https://isabelle.in.tum.de/website-Isabelle2019/dist/Isabelle2019_linux.tar.gz | tar -x -z -C /opt/; fi
-  - if ! [ -e /opt/afp-2019/thys ]; then curl https://master.dl.sourceforge.net/project/afp/afp-Isabelle2019/afp-2019-08-19.tar.gz | tar -x -z -C /opt/afp-2019 --strip 1; fi
-  - /opt/Isabelle2019/bin/isabelle build -b -v -d isabelle-thys -d /opt/afp-2019/thys QRHL-Prerequisites
-  - git clone --depth 1 https://github.com/dominique-unruh/scala-isabelle.git ../scala-isabelle
-  - echo -e "isabelle-home = /opt/Isabelle2019\nafp-root = /opt/afp-2019" > qrhl-tool.conf
