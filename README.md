@@ -13,18 +13,27 @@ You can download the binaries [here](https://github.com/dominique-unruh/qrhl-too
 To check whether this is the case, go into a terminal,
 and enter `java` or `emacs`, respectively, and see whether the commands are found.
 
+* Isabelle2019 must be installed. (qrhl-tool is currently not compatible with 
+  Isabelle2020.) Download it at https://isabelle.in.tum.de/website-Isabelle2019/ and 
+  unpack it somewhere.
+* The AFP must be installed (latest Isabelle2019 version). Download it at
+  https://sourceforge.net/projects/afp/files/afp-Isabelle2019/ and unpack it 
+  somewhere.
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.5`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.6alpha`.
 
-To update, simply extract the new version over the old one. (You can
-delete the old one first, but then Isabelle will be
-redownloaded/recompiled.)
+In the `qrhl-0.6alpha` directory, edit the file `qrhl-tool.conf`: 
+Add the configuration keys `isabelle-home = <where you unpackaged Isabelle2019>`
+and `afp-home = <where you unpackaged AFP>`.
+
+To update, simply extract the new version.
+(But make sure to save your `qrhl-tool.conf`.)
 
 ## Executing the demos
 
-In the `qrhl-0.5` directory, execute `proofgeneral.sh`.
+In the `qrhl-0.6alpha` directory, execute `proofgeneral.sh`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
@@ -50,9 +59,9 @@ Then open and edit the file normally.
 # Compiling / running from source
 
 * Make sure that `sbt` (Scala Build Tool) is on the path.
-* Make sure `git` has [lfs](https://git-lfs.github.com/) support (try `git lfs version`)
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
 * Use `git checkout v0.5` (replace `v0.5` by the version you wish to compile, or by `master` for the current development snapshot). 
+* Create a `qrhl-tool.conf` file as described in the binary installation section above.
 * Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
 * Run `sbt packageBin` to generate the binary `qrhl.zip`.
