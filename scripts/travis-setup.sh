@@ -27,9 +27,9 @@ if ! [ -e /opt/afp-2019/thys ]; then
       tar -x -z -C ~/install/afp-2019 --strip 1
 fi
 
-"$ISABELLE_HOME/bin/isabelle" build -b -v -d isabelle-thys -d /opt/afp-2019/thys QRHL-Prerequisites
+"$ISABELLE_HOME/bin/isabelle" build -b -v -d isabelle-thys -d ~/install/afp-2019/thys QRHL-Prerequisites
 
 git clone --depth 1 https://github.com/dominique-unruh/scala-isabelle.git ../scala-isabelle
 
-echo "isabelle-home = $HOME/install/Isabelle2019" > qrhl-tool.conf
+echo "isabelle-home = $ISABELLE_HOME" > qrhl-tool.conf
 echo "afp-root = $HOME/install/afp-2019" >> qrhl-tool.conf
