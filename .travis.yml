@@ -14,4 +14,3 @@ jobs:
     - os: osx
 #    - {os: linux, jdk: openjdk11}
 #    - {os: linux, jdk: openjdk14}
-

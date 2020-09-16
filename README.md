@@ -2,7 +2,7 @@
 
 # Binary installation
 
-The binaries require Linux to run.
+The binaries require Linux or OS/X to run.
 You can download the binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases).
 
 ## Prerequisites
