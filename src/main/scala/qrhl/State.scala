@@ -31,10 +31,8 @@ import de.unruh.isabelle.pure.{Term, Thm, Typ}
 import scala.concurrent.{ExecutionContext, Future}
 
 // Implicits
-import de.unruh.isabelle.mlvalue.MLValue.Implicits._
-import de.unruh.isabelle.pure.Context.Implicits._
-import de.unruh.isabelle.pure.Term.Implicits._
-import de.unruh.isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
+import de.unruh.isabelle.pure.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import GIsabelle.isabelleControl

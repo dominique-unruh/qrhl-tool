@@ -15,8 +15,8 @@ import de.unruh.isabelle.pure.Typ
 
 // Implicits
 import GIsabelle.isabelleControl
-import MLValue.Implicits._
-import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 

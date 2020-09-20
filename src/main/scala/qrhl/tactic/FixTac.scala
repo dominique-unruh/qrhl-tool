@@ -3,15 +3,13 @@ package qrhl.tactic
 import de.unruh.isabelle.mlvalue.MLValue
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
+import qrhl.isabellex.IsabelleX.globalIsabelle.Ops
 
 
 // Implicits
-import MLValue.Implicits._
-import de.unruh.isabelle.pure.Term.Implicits._
-import de.unruh.isabelle.pure.Typ.Implicits._
-import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
-import qrhl.isabellex.IsabelleX.globalIsabelle.Ops
 import scala.concurrent.ExecutionContext.Implicits.global
 
 

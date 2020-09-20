@@ -11,16 +11,15 @@ import qrhl.{UserException, Utils, logic}
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 import IsabelleX.{globalIsabelle => GIsabelle}
-import de.unruh.isabelle.pure.Term.Implicits._
-import de.unruh.isabelle.pure.Typ.Implicits._
-import de.unruh.isabelle.pure.Context.Implicits._
-import de.unruh.isabelle.mlvalue.MLValue.Implicits._
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Var}
-import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import qrhl.isabellex.IsabelleX.globalIsabelle.Ops
+
+// Implicits
+import scala.concurrent.ExecutionContext.Implicits.global
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+import de.unruh.isabelle.pure.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
 
 final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option[String]=None) {
   def renameCVariables(renaming: List[(Variable, Variable)]): RichTerm = {

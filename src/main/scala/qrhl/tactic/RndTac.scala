@@ -2,8 +2,8 @@ package qrhl.tactic
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{CVariable, Sample, Statement, VarTerm}
 import qrhl.{State, UserException}
-import de.unruh.isabelle.mlvalue.MLValue.Implicits._
-import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
+import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.pure.Term
 
 case object RndEqualTac

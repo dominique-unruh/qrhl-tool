@@ -19,10 +19,8 @@ import scala.util.control.{Breaks, ControlThrowable}
 // Implicits
 import scala.concurrent.ExecutionContext.Implicits.global
 import GIsabelle.isabelleControl
-import MLValue.Implicits._
-import de.unruh.isabelle.pure.Context.Implicits._
-import de.unruh.isabelle.pure.Term.Implicits._
-import de.unruh.isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.pure.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
 
 
 case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variable], out: List[Variable], amount:Int=1) extends WpBothStyleTac(leftAmount=amount, rightAmount=amount) {

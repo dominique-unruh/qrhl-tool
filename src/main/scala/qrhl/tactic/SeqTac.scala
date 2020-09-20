@@ -3,8 +3,8 @@ package qrhl.tactic
 import qrhl._
 import qrhl.isabellex.RichTerm
 import qrhl.logic.Block
-import de.unruh.isabelle.mlvalue.MLValue.Implicits._
-import de.unruh.isabelle.pure.Term.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
+import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.pure.Term
 
 /*@deprecated("Use SeqTac","now")

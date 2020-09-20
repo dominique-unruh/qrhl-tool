@@ -15,10 +15,8 @@ import scala.collection.immutable.ListSet
 // Implicits
 import scala.concurrent.ExecutionContext.Implicits.global
 import GIsabelle.isabelleControl
-import MLValue.Implicits._
-import de.unruh.isabelle.pure.Term.Implicits._
-import de.unruh.isabelle.pure.Typ.Implicits._
-import de.unruh.isabelle.pure.Context.Implicits._
+import de.unruh.isabelle.pure.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
 
 
 case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove : List[Variable]) extends Tactic {

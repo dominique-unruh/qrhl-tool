@@ -14,9 +14,8 @@ import scala.collection.mutable
 // Implicits
 import scala.collection.JavaConverters.mapAsScalaConcurrentMapConverter
 import scala.concurrent.ExecutionContext.Implicits.global
-import Context.Implicits._
-import Thm.Implicits._
-import de.unruh.isabelle.mlvalue.MLValue.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
+import de.unruh.isabelle.pure.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 
 abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX => A)(implicit converter: Converter[A]) extends Tactic {

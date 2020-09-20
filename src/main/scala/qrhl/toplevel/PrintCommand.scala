@@ -9,9 +9,9 @@ import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Context
 
 // Implicits
-import de.unruh.isabelle.mlvalue.MLValue.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
+import de.unruh.isabelle.pure.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
-import Context.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 import GIsabelle.isabelleControl
 

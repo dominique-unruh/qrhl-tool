@@ -13,9 +13,8 @@ import scalaz.Id.Id
 import scala.concurrent.{ExecutionContext, Future}
 
 // Implicits
-import de.unruh.isabelle.mlvalue.MLValue.Implicits._
-import de.unruh.isabelle.pure.Term.Implicits._
-import de.unruh.isabelle.pure.Typ.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
+import de.unruh.isabelle.pure.Implicits._
 import MLValueConverters.Implicits._
 
 
@@ -89,6 +88,8 @@ object MLValueConverters {
 
     override lazy val exnToValue: String = "fn QRHL_Operations.E_Statement s => s"
     override lazy val valueToExn: String = "QRHL_Operations.E_Statement"
+
+    override def mlType: String = "QRHL_Operations.statement"
   }
 
   object CallConverter extends Converter[Call] {
@@ -101,6 +102,8 @@ object MLValueConverters {
 
     override val exnToValue: String = "fn QRHL_Operations.E_Call x => x"
     override val valueToExn: String = "QRHL_Operations.E_Call"
+
+    override def mlType: String = "QRHL_Operations.call"
   }
 
   class VarTermConverter[A](implicit conv: Converter[A]) extends Converter[VarTerm[A]] {
@@ -143,6 +146,7 @@ object MLValueConverters {
     }
     override val exnToValue: String = s"fn QRHL_Operations.E_Varterm vt => QRHL_Operations.map_tree (${conv.exnToValue}) vt"
     override val valueToExn: String = s"QRHL_Operations.E_Varterm o QRHL_Operations.map_tree (${conv.valueToExn})"
+    override def mlType: String = s"(${conv.mlType}) QRHL_Operations.tree"
   }
 
   object SubgoalConverter extends Converter[Subgoal] {
@@ -163,6 +167,7 @@ object MLValueConverters {
     }
     override lazy val exnToValue: String = "fn QRHL_Operations.E_Subgoal s => s"
     override lazy val valueToExn: String = "QRHL_Operations.E_Subgoal"
+    override def mlType: String = "QRHL_Operations.subgoal"
   }
 
   object Implicits {

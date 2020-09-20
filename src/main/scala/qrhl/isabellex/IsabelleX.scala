@@ -22,18 +22,16 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
-import de.unruh.isabelle.{Symbols, control}
+import de.unruh.isabelle.control
+import de.unruh.isabelle.misc.Symbols
 import qrhl.isabellex.IsabelleX.fastype_of
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 
 //import scalaz.Applicative
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import MLValue.Implicits._
-import Context.Implicits._
-import de.unruh.isabelle.pure.Term.Implicits._
-import de.unruh.isabelle.pure.Typ.Implicits._
-import Thm.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
+import de.unruh.isabelle.pure.Implicits._
 import MLValueConverters.Implicits._
 
 object Configuration {
