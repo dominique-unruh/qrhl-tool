@@ -28,7 +28,7 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
     type Fun = MLFunction3[A, Subgoal, Context, Out]
 
     val tacMlValue : MLFunction3[A, Subgoal, Context, Out] = {
-      val exnToValue = converter.exnToValueProtected
+      val exnToValue = converter.exnToValue
       tactics.getOrElseUpdate((operationName, exnToValue),
         MLValue.compileFunctionRaw[In, Out](
           s"""fn E_Pair (a', E_Pair (QRHL_Operations.E_Subgoal subgoal, E_Context ctxt)) =>

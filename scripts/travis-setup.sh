@@ -37,7 +37,7 @@ if ! [ -e ~/install/afp-2019/thys ]; then
       tar -x -z -C ~/install/afp-2019 --strip 1
 fi
 
-if ! timeout -v --kill-after 1m $TIME_LIMIT "$ISABELLE_HOME/bin/isabelle" build -o threads=8 -b -v -d isabelle-thys -d ~/install/afp-2019/thys QRHL-Prerequisites; then
+if ! timeout --kill-after 1m $TIME_LIMIT "$ISABELLE_HOME/bin/isabelle" build -o threads=8 -b -v -d isabelle-thys -d ~/install/afp-2019/thys QRHL-Prerequisites; then
   echo "Build failed. Aborting without error to get a chance to upload the cache."
   exit 0
 fi

@@ -16,7 +16,7 @@ scalaVersion := "2.13.3"
 
 scalacOptions += "-deprecation"
 
-libraryDependencies += "de.unruh" %% "scala-isabelle" % "0.1.0-SNAPSHOT" changing()
+libraryDependencies += "de.unruh" %% "scala-isabelle" % "0.1.0"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.5.1"
@@ -113,7 +113,6 @@ mappings in Universal ++= directory("PG")
 // Without this, updateSbtClassifiers fails (and that breaks Intelli/J support)
 resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
 resolvers += Resolver.sonatypeRepo("snapshots")
-//  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 // To avoid that several tests simultaneously try to build Isabelle
 parallelExecution in Test := false
