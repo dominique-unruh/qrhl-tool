@@ -1,4 +1,8 @@
 [![Build Status](https://travis-ci.com/dominique-unruh/qrhl-tool.svg?branch=master)](https://travis-ci.com/dominique-unruh/qrhl-tool)
+[![Gitter chat](https://img.shields.io/badge/gitter-chat-brightgreen.svg)](https://gitter.im/dominique-unruh/qrhl-tool?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+**This describes the installation process for the development snapshot. See [here](https://github.com/dominique-unruh/qrhl-tool/blob/31b2ef3c9b91e74e0e1bc56b476e211e03590672/README.md) for instructions
+for [v0.5](https://github.com/dominique-unruh/qrhl-tool/releases/tag/v0.5).**
 
 # Binary installation
 
@@ -58,13 +62,12 @@ Then open and edit the file normally.
 
 # Compiling / running from source
 
-* Make sure that `sbt` (Scala Build Tool) is on the path.
+* Make sure that [sbt](https://www.scala-sbt.org/) (Scala Build Tool) is on the path.
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
-* Use `git checkout v0.5` (replace `v0.5` by the version you wish to compile, or by `master` for the current development snapshot). 
+* Use `git checkout master` (replace `v0.5` by the version/git revision you wish to compile). 
 * Create a `qrhl-tool.conf` file as described in the binary installation section above.
 * Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
 * Run `sbt packageBin` to generate the binary `qrhl.zip`.
 * Run `sbt test` to run the unit tests.
-* You can also open the directory as a project in Intelli/J, but you need to run `sbt assembly` before the first run,
-  and after each change of the files in `src/main/isabelle`.
+* You can also open the directory as a project in [Intelli/J IDEA](https://www.jetbrains.com/idea/), but you should invoke `sbt assembly` before the first time.
