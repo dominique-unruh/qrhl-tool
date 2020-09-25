@@ -273,7 +273,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   def setT(typ: Typ): Type = Type(t.set, typ)
   object SetT {
     def unapply(arg: Typ): Option[Typ] = arg match {
-      case Type(t.set, List(typ)) => Some(typ)
+      case Type(t.set, typ) => Some(typ)
       case _ => None
     }
   }
@@ -369,18 +369,18 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   def ell2T(typ: Typ): Type = Type(t.ell2, typ)
   object Ell2T {
     def unapply(typ: Typ): Option[Typ] = typ match {
-      case Type(t.ell2, List(typ)) => Some(typ)
+      case Type(t.ell2, typ) => Some(typ)
       case _ => None
     }
   }
 
   def dest_vectorT(typ: Typ): Typ = typ match {
-    case Type(t.ell2, List(t1)) => t1
+    case Type(t.ell2, t1) => t1
     case _ => throw new RuntimeException("expected type 'vector', not " + typ)
   }
 
 
-  def top(typ: Typ) = Const(c.top, typ)
+  def top(typ: Typ): Const = Const(c.top, typ)
   object Top {
     def unapply(arg: Term): Boolean = arg match {
       case Const(c.top, _) => true
@@ -463,23 +463,23 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   def distrT(typ: Typ): Type = Type(t.distr, typ)
 
   def dest_distrT(typ: Typ): Typ = typ match {
-    case Type(t.distr, List(typ2)) => typ2
+    case Type(t.distr, typ2) => typ2
     case _ => throw new RuntimeException(s"expected type ${t.distr}, not " + typ)
   }
 
 
   //  val BoundedT_name: String = "Bounded_Operators.Bounded"
-  def boundedT(inT: Typ, outT: Typ) = Type(t.bounded, inT, outT)
+  def boundedT(inT: Typ, outT: Typ): Type = Type(t.bounded, inT, outT)
   object BoundedT {
     def unapply(typ: Typ): Option[(Typ,Typ)] = typ match {
-      case Type(t.bounded, List(t1, t2)) => Some((t1, t2))
+      case Type(t.bounded, t1, t2) => Some((t1, t2))
       case _ => None
     }
   }
 
   @deprecated("use BoundedT","now")
   def dest_boundedT(typ: Typ): (Typ, Typ) = typ match {
-    case Type(t.`bounded`, List(t1, t2)) => (t1, t2)
+    case Type(t.`bounded`, t1, t2) => (t1, t2)
     case _ => throw new RuntimeException(s"expected type ${t.bounded}, not " + typ)
   }
 
@@ -493,40 +493,38 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
 
   def dest_l2boundedT(typ: Typ): (Typ, Typ) = typ match {
-    case Type(t.`bounded`, List(Type(t.ell2, List(t1)), Type(t.ell2, List(t2)))) => (t1, t2)
+    case Type(t.`bounded`, Type(t.ell2, t1), Type(t.ell2, t2)) => (t1, t2)
     case _ => throw new RuntimeException("expected type 'l2bounded', not " + typ)
   }
 
-  //  val measurementT_name = "QRHL_Core.measurement"
-
-  def measurementT(resultT: Typ, qT: Typ) = Type(t.measurement, resultT, qT)
+  def measurementT(resultT: Typ, qT: Typ): Type = Type(t.measurement, resultT, qT)
 
   def dest_measurementT(typ: Typ): (Typ, Typ) = typ match {
-    case Type(t.measurement, List(typ1, typ2)) => (typ1, typ2)
+    case Type(t.measurement, typ1, typ2) => (typ1, typ2)
     case _ => throw new RuntimeException(s"expected type ${t.measurement}, not " + typ)
   }
 
   def listT(typ: Typ): Type = Type(t.list, typ)
 
-  val block = Const(c.block, listT(programT) -->: programT)
+  val block: Const = Const(c.block, listT(programT) -->: programT)
 
-  def variableT(typ: Typ) = Type(t.variable, typ)
+  def variableT(typ: Typ): Type = Type(t.variable, typ)
   object VariableT {
     def unapply(typ: Typ): Option[Typ] = typ match {
-      case Type(t.variable, List(typ)) => Some(typ)
+      case Type(t.variable, typ) => Some(typ)
       case _ => None
     }
   }
   @deprecated("use VariableT.unapply instead","now")
   def dest_variableT(typ: Typ): Typ = typ match {
-    case Type(t.variable, List(typ2)) => typ2
+    case Type(t.variable, typ2) => typ2
     case _ => throw new RuntimeException(s"expected type ${t.variable}, not " + typ)
   }
 
   def variablesT(typ: Typ): Type = Type(t.variables, typ)
   object VariablesT {
     def unapply(typ: Typ): Option[Typ] = typ match {
-      case Type(t.variables, List(typ)) => Some(typ)
+      case Type(t.variables, typ) => Some(typ)
       case _ => None
     }
   }
@@ -568,13 +566,12 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def measurement(resultT: Typ, qT: Typ) = Const(c.measurement, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT, qT)) -->: programT)
 
-  val unitT = Type(t.unit)
-  //  val prodT_name = "Product_Type.prod"
+  val unitT: Type = Type(t.unit)
 
-  def prodT(t1: Typ, t2: Typ) = Type(t.prod, t1, t2)
+  def prodT(t1: Typ, t2: Typ): Type = Type(t.prod, t1, t2)
 
   def dest_prodT(typ: Typ): (Typ, Typ) = typ match {
-    case Type(t.prod, List(t1, t2)) => (t1, t2)
+    case Type(t.prod, t1, t2) => (t1, t2)
     case _ => throw new RuntimeException(s"expected type ${t.prod}, not " + typ)
   }
 
@@ -911,7 +908,7 @@ object IsabelleX {
   // TODO: Reimplement in isabelle.Term
   def fastype_of(t: Term, typs: List[Typ] = Nil): Typ = t match {
     case App(f,u) => fastype_of(f, typs) match {
-      case Type("fun", List(_,typ)) => typ
+      case Type("fun", _, typ) => typ
     }
     case Const(_, typ) => typ
     case Free(_, typ) => typ
