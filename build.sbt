@@ -5,8 +5,8 @@ import scala.sys.process.Process
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-//lazy val root = (project in file("."))
-//  .dependsOn(RootProject(file("../scala-isabelle")))
+lazy val root = (project in file("."))
+  .dependsOn(RootProject(file("../scala-isabelle")))
 
 name := "qrhl"
 
@@ -16,7 +16,7 @@ scalaVersion := "2.13.3"
 
 scalacOptions += "-deprecation"
 
-libraryDependencies += "de.unruh" %% "scala-isabelle" % "0.1.0"
+//libraryDependencies += "de.unruh" %% "scala-isabelle" % "0.1.0"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.5.1"

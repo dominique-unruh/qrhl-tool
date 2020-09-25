@@ -337,7 +337,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   def idOp(valueTyp: Typ): Const = Const(c.idOp, boundedT(valueTyp, valueTyp))
 
   def show_oracles_lines(thm: Thm): List[String] = {
-    show_oracles_lines_op(thm.mlValue).retrieveNow.map(IsabelleX.symbols.symbolsToUnicode)
+    show_oracles_lines_op(thm.mlValue).retrieveNow.map(IsabelleX.symbols.symbolsToUnicode(_))
   }
   def show_oracles(thm: Thm): Unit = {
     logger.debug(show_oracles_lines(thm).mkString("\n"))
@@ -738,7 +738,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   //noinspection TypeAnnotation
   object Ops {
-    import MLValue.{compileFunction, compileFunctionRaw, compileValue, compileValueRaw}
+    import MLValue.{compileFunction, compileValue, compileValueRaw}
     Thm.init()
     Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
     val isabelleVersion : MLValue[String] =
@@ -967,7 +967,7 @@ object IsabelleX {
 
     def simplify(term: Term, facts: List[String])(implicit executionContext: ExecutionContext): (RichTerm, Thm) = {
       val global = null
-      val (t,thm) = simplifyTermOp(MLValue((term, facts.map(symbols.unicodeToSymbols), context))).retrieveNow
+      val (t,thm) = simplifyTermOp(MLValue((term, facts.map(symbols.unicodeToSymbols(_)), context))).retrieveNow
       (RichTerm(t), thm)
     }
   }
