@@ -27,16 +27,10 @@
         <option value="qrhl.isabellex.IsabelleXTest" />
         <option value="qrhl.isabellex.ConfigurationTest" />
         <option value="qrhl.isabellex.MLValueConvertersTest" />
-        <option value="de.unruh.isabelle.SymbolsTest" />
-        <option value="de.unruh.isabelle.mlvalue.MLValueTest" />
-        <option value="de.unruh.isabelle.pure.TypTest" />
-        <option value="de.unruh.isabelle.pure.TermTest" />
-        <option value="de.unruh.isabelle.pure.TheoryTest" />
-        <option value="de.unruh.isabelle.control.IsabelleTest" />
       </list>
     </option>
     <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />
-    <option name="jrePath" value="" />
+    <option name="searchTest" value="In single module" />
     <option name="workingDirectory" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />

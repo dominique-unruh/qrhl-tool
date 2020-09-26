@@ -6,7 +6,7 @@ import scala.sys.process.Process
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 lazy val root = (project in file("."))
-  .dependsOn(RootProject(file("../scala-isabelle")))
+  .dependsOn(RootProject(file("scala-isabelle")))
 
 name := "qrhl"
 

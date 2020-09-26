@@ -42,7 +42,7 @@ if ! timeout --kill-after 1m $TIME_LIMIT "$ISABELLE_HOME/bin/isabelle" build -o 
   exit 0
 fi
 
-git clone --depth 1 https://github.com/dominique-unruh/scala-isabelle.git ../scala-isabelle
+#git clone --depth 1 https://github.com/dominique-unruh/scala-isabelle.git ../scala-isabelle
 
 echo "isabelle-home = $ISABELLE_HOME" > qrhl-tool.conf
 echo "afp-root = $HOME/install/afp-2019" >> qrhl-tool.conf

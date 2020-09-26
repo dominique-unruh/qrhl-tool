@@ -1,3 +1,6 @@
 [submodule "isabelle-thys/Tensor_Product"]
 	path = isabelle-thys/Tensor_Product
 	url = ../tensor-product.git
+[submodule "scala-isabelle"]
+	path = scala-isabelle
+	url = ../scala-isabelle.git
