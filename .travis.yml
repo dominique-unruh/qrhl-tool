@@ -3,8 +3,7 @@ language: java
 before_script: scripts/travis-setup.sh
 
 script:
-  - timeout --help
-  - timeout --foreground --kill-after 1m "`cat ~/remaining-time`"   ~/install/sbt +test
+  - timeout --foreground --kill-after 1m "`cat ~/remaining-time`"   ~/install/sbt test
 #  - false
 #  - ~/install/sbt +compile
 #  - timeout -v --kill-after 1m "`cat ~/remaining-time`" ~/install/sbt -v -d -Dorg.slf4j.simpleLogger.defaultLogLevel=debug "+testOnly xxx" </dev/null | cat
