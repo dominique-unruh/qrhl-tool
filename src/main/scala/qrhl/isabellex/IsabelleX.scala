@@ -150,7 +150,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val shouldBuild = build || !checkBuilt()
     if (shouldBuild)
       println("*** Building Isabelle (may take a while, especially the first time, e.g., 20-60min)...")
-    new control.Isabelle(setup = setup, build = shouldBuild)
+    new control.Isabelle(setup = setup.copy(build = shouldBuild))
   }
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.

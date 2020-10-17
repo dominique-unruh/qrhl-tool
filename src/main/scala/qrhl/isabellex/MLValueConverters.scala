@@ -86,10 +86,10 @@ object MLValueConverters {
       }
     }
 
-    override lazy val exnToValue: String = "fn QRHL_Operations.E_Statement s => s"
-    override lazy val valueToExn: String = "QRHL_Operations.E_Statement"
+    override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = "fn QRHL_Operations.E_Statement s => s"
+    override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = "QRHL_Operations.E_Statement"
 
-    override def mlType: String = "QRHL_Operations.statement"
+    override def mlType(implicit isabelle: Isabelle, ec: ExecutionContext): String = "QRHL_Operations.statement"
   }
 
   object CallConverter extends Converter[Call] {
@@ -100,10 +100,10 @@ object MLValueConverters {
     override def store(value: Call)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Call] =
       Ops.makeCALL((value.name, value.args.toList))
 
-    override val exnToValue: String = "fn QRHL_Operations.E_Call x => x"
-    override val valueToExn: String = "QRHL_Operations.E_Call"
+    override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = "fn QRHL_Operations.E_Call x => x"
+    override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = "QRHL_Operations.E_Call"
 
-    override def mlType: String = "QRHL_Operations.call"
+    override def mlType(implicit isabelle: Isabelle, ec: ExecutionContext): String = "QRHL_Operations.call"
   }
 
   class VarTermConverter[A](implicit conv: Converter[A]) extends Converter[VarTerm[A]] {
@@ -144,9 +144,9 @@ object MLValueConverters {
           .apply(MLValue(a).insertMLValue[VarTerm,A], MLValue(b).insertMLValue[VarTerm,A])
           .removeMLValue[VarTerm,A]
     }
-    override val exnToValue: String = s"fn QRHL_Operations.E_Varterm vt => QRHL_Operations.map_tree (${conv.exnToValue}) vt"
-    override val valueToExn: String = s"QRHL_Operations.E_Varterm o QRHL_Operations.map_tree (${conv.valueToExn})"
-    override def mlType: String = s"(${conv.mlType}) QRHL_Operations.tree"
+    override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"fn QRHL_Operations.E_Varterm vt => QRHL_Operations.map_tree (${conv.exnToValue}) vt"
+    override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"QRHL_Operations.E_Varterm o QRHL_Operations.map_tree (${conv.valueToExn})"
+    override def mlType(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"(${conv.mlType}) QRHL_Operations.tree"
   }
 
   object SubgoalConverter extends Converter[Subgoal] {
@@ -165,9 +165,9 @@ object MLValueConverters {
         Ops.makeQrhlSubgoal(left.statements, right.statements, pre.isabelleTerm, post.isabelleTerm, assumptions.map(_.isabelleTerm))
       case AmbientSubgoal(goal) => Ops.makeAmbientSubgoal(goal.isabelleTerm)
     }
-    override lazy val exnToValue: String = "fn QRHL_Operations.E_Subgoal s => s"
-    override lazy val valueToExn: String = "QRHL_Operations.E_Subgoal"
-    override def mlType: String = "QRHL_Operations.subgoal"
+    override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = "fn QRHL_Operations.E_Subgoal s => s"
+    override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = "QRHL_Operations.E_Subgoal"
+    override def mlType(implicit isabelle: Isabelle, ec: ExecutionContext): String = "QRHL_Operations.subgoal"
   }
 
   object Implicits {
