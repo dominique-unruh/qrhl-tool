@@ -12,6 +12,8 @@ to recreate/update
 
 */
 
+// TODO Rerun the command above
+
 package qrhl.isabellex
 
 object IsabelleTypes {
