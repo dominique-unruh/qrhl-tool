@@ -17,11 +17,10 @@ You can download the binaries [here](https://github.com/dominique-unruh/qrhl-too
 To check whether this is the case, go into a terminal,
 and enter `java` or `emacs`, respectively, and see whether the commands are found.
 
-* Isabelle2019 must be installed. (qrhl-tool is currently not compatible with 
-  Isabelle2020.) Download it at https://isabelle.in.tum.de/website-Isabelle2019/ and 
+* Isabelle2020 must be installed. Download it at https://isabelle.in.tum.de/website-Isabelle2020/ and 
   unpack it somewhere.
-* The AFP must be installed (latest Isabelle2019 version). Download it at
-  https://sourceforge.net/projects/afp/files/afp-Isabelle2019/ and unpack it 
+* The AFP must be installed (Isabelle2020 version). Download it at
+  https://www.isa-afp.org/download.html and unpack it 
   somewhere.
 
 ## Installation
@@ -29,7 +28,7 @@ and enter `java` or `emacs`, respectively, and see whether the commands are foun
 Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.6alpha`.
 
 In the `qrhl-0.6alpha` directory, edit the file `qrhl-tool.conf`: 
-Add the configuration keys `isabelle-home = <where you unpackaged Isabelle2019>`
+Add the configuration keys `isabelle-home = <where you unpackaged Isabelle2020>`
 and `afp-home = <where you unpackaged AFP>`.
 
 To update, simply extract the new version.
