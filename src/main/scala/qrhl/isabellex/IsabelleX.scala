@@ -150,10 +150,11 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val shouldBuild = build || !checkBuilt()
     if (shouldBuild)
       println("*** Building Isabelle (may take a while, especially the first time, e.g., 20-60min)...")
-    new control.Isabelle(setup = setup.copy(build = shouldBuild))
+    new control.Isabelle(setup = setup.copy(build = shouldBuild)).force
   }
 
-  /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations the given theories.
+  /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations
+   * and the given theories.
     *
     * @param thys Path pointing to theory files (including the suffix .thy)
     * @return the context
