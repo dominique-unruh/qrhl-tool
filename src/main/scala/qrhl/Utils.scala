@@ -99,6 +99,11 @@ object Utils {
       }
     }
   }
+
+/*  /** Like [[Path.relativize]], but if relativizing is not possible, just returns `path` as is. */
+  def tryRelativize(path: Path, other: Path): Path =
+    try path.relativize(other)
+    catch { case _ : IllegalArgumentException => path }*/
 }
 
 /** A set that can either be finite, or the set of all elements.

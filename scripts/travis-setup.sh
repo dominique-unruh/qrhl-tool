@@ -2,7 +2,7 @@
 
 set -ex
 
-TIME_LIMIT=2700
+TIME_LIMIT=2400
 
 date +%s > ~/start-time
 

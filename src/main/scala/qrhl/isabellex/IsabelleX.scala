@@ -24,6 +24,7 @@ import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import de.unruh.isabelle.control
 import de.unruh.isabelle.misc.Symbols
+//import qrhl.Utils.tryRelativize
 import qrhl.isabellex.IsabelleX.fastype_of
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 
@@ -175,9 +176,15 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     for (f <- files)
       if (!Files.isRegularFile(f))
         throw UserException(s"Isabelle theory file not found: $f")
-    val filesThyPath = files.map { f =>
+
+    val theories = thys.map(Theory.apply) ++ files.map(Theory.apply)
+    val jointTheory : Theory = Theory.mergeTheories(/*"QRHL_Session",*/ theories :_*)
+    val ctxt = Context(jointTheory)
+
+/*    val filesThyPath = files.map { f =>
       //      println("XXX",f,Paths.get(""))
-      val relative = setup.workingDirectory.toAbsolutePath.relativize(f.toAbsolutePath)
+      val relative = tryRelativize(setup.workingDirectory.toAbsolutePath, f.toAbsolutePath)
+      // TODO: Does not work if path wasn't relativized. Use PathConverter related methods instead?
       val names = relative.iterator().asScala.toList /*match {
         case List(name) => List(".", name) // Otherwise Isabelle does not recognise this as a path
         case names => names
@@ -194,7 +201,9 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val (ctxt, dependencies) =
       createContextOp(MLValue(imports)).retrieveNow
 
-    val paths = dependencies.map(Paths.get(_))
+    val paths = dependencies.map(Paths.get(_)) */
+
+    val paths : List[Path] = dependenciesOfTheory(jointTheory).retrieveNow
 
     for (p <- paths)
       if (!Files.exists(p))
@@ -621,7 +630,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
 
   object OfType {
-    def unapply(t: Term) = Some(fastype_of(t))
+    def unapply(t: Term): Some[Typ] = Some(fastype_of(t))
   }
 
   val realT: Type = Type(t.real)
@@ -738,7 +747,12 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   object Ops {
     import MLValue.{compileFunction, compileValue, compileValueRaw}
     Thm.init()
+
+    // TODO use one-arg importMLStructure
     Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
+
+    val dependenciesOfTheory =
+      MLValue.compileFunction[Theory, List[Path]]("map_filter QRHL_Operations.local_thy_file o Theory.ancestors_of")
     val isabelleVersion : MLValue[String] =
       MLValue.compileValue("Distribution.version")
     if (!isabelleVersion.retrieveNow.startsWith("Isabelle"+version+":"))
@@ -870,8 +884,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
     val checkTypeOp =
       MLValue.compileFunction[(Context, Term), Typ]("fn (ctxt,t) => QRHL_Operations.checkType ctxt t")
-    val createContextOp =
-      MLValue.compileFunction[List[String], (Context, List[String])]("QRHL_Operations.create_context")
+//    val createContextOp =
+//      MLValue.compileFunction[List[String], (Context, List[String])]("QRHL_Operations.create_context")
     val addAssumptionOp =
       MLValue.compileFunction[(String, Term, Context), Context]("QRHL_Operations.addAssumption")
     val simplifyTermOp =
@@ -880,8 +894,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       MLValue.compileFunction[(Context, String, Typ), Context]("QRHL_Operations.declare_variable")
     val thms_as_subgoals =
       MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
-    val use_thy_op =
-      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
+//    val use_thy_op =
+//      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
   }
 }
 

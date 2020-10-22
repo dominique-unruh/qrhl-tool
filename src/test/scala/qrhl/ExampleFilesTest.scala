@@ -20,6 +20,7 @@ class ExampleFilesTest extends AnyFunSuite {
   for (file <- new File("examples").listFiles();
        name = file.getName
        if name.endsWith(".qrhl")
+//       if name == "example.qrhl"
        if !name.matches("test.*")) {
     val tags = if (name.matches("teleport.*")) List(Tag("SuperSlow")) else Nil
     println(s"Creating test $name, $tags")
