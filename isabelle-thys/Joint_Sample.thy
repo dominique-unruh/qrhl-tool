@@ -12,7 +12,7 @@ lemma joint_sample:
                                      substitute_vars y\<^sub>2 (const_expression (snd z))) B"
   defines "A \<equiv> map_expression4' (\<lambda>witness e\<^sub>1 f\<^sub>2 B'. 
     Cla[map_distr fst witness = e\<^sub>1 \<and> map_distr snd witness = f\<^sub>2] \<sqinter>  
-    (INF z:supp witness. ((B' z)))) witness e\<^sub>1 f\<^sub>2 B'"
+    (INF z\<in>supp witness. ((B' z)))) witness e\<^sub>1 f\<^sub>2 B'"
   shows "qrhl A [sample x e] [sample y f] B"
   by (cheat joint_sample)
 
@@ -26,7 +26,7 @@ lemma joint_sample_equal:
   defines "B' z \<equiv> subst_expression (substitute_vars x\<^sub>1 (const_expression z) @
                                      substitute_vars y\<^sub>2 (const_expression z)) B"
   defines "A \<equiv> map_expression3' (\<lambda>e\<^sub>1 f\<^sub>2 B'. 
-    Cla[e\<^sub>1 = f\<^sub>2] \<sqinter> (INF z:supp e\<^sub>1. ((B' z)))) e\<^sub>1 f\<^sub>2 B'"
+    Cla[e\<^sub>1 = f\<^sub>2] \<sqinter> (INF z\<in>supp e\<^sub>1. ((B' z)))) e\<^sub>1 f\<^sub>2 B'"
   shows "qrhl A [sample x e] [sample y f] B"
   (* apply (rule conseq_rule[rotated], rule)
   apply (rule joint_sample[where witness="map_expression (\<lambda>e. map_distr (\<lambda>x. (x,x)) e) e\<^sub>1"]) *)
@@ -44,7 +44,7 @@ lemma joint_sample_tac:
   assumes "\<And>z. B' z = subst_expression (\<sigma> z) B"
   assumes "A = map_expression4' (\<lambda>witness e\<^sub>1 f\<^sub>2 B'. 
     Cla[map_distr fst witness = e\<^sub>1 \<and> map_distr snd witness = f\<^sub>2] \<sqinter>  
-    (INF z:supp witness. ((B' z)))) witness e\<^sub>1 f\<^sub>2 B'"
+    (INF z\<in>supp witness. ((B' z)))) witness e\<^sub>1 f\<^sub>2 B'"
   shows "qrhl A [sample x e] [sample y f] B"
 unfolding assms Let_def by (rule joint_sample)
 
@@ -59,7 +59,7 @@ lemma joint_sample_equal_tac:
   assumes "\<And>z. \<sigma> z = \<sigma>1 z @ \<sigma>2 z"
   assumes "\<And>z. B' z = subst_expression (\<sigma> z) B"
   assumes "A = map_expression3' (\<lambda>e\<^sub>1 f\<^sub>2 B'. Cla[e\<^sub>1 = f\<^sub>2] \<sqinter>  
-    (INF z:supp e\<^sub>1. ((B' z)))) e\<^sub>1 f\<^sub>2 B'"
+    (INF z\<in>supp e\<^sub>1. ((B' z)))) e\<^sub>1 f\<^sub>2 B'"
   shows "qrhl A [sample x e] [sample y f] B"
 unfolding assms Let_def by (rule joint_sample_equal)
 

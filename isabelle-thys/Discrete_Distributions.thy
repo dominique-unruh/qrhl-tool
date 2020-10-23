@@ -1342,7 +1342,8 @@ proof -
     have [simp]: "(pE + (1 - pE) * p'') \<ge> 0"
       by simp
     have [simp]: "(pE + (1 - pE) * p'') \<le> 1"
-      by (metis \<open>p'' \<le> 1\<close> linepath_le_1 mult_cancel_left2 order_refl pEleq1 pEpos semiring_normalization_rules(24))
+      using \<open>p'' \<le> 1\<close>
+      by (smt mult_left_le pEleq1)
 
     have "prob (bind_distr D (\<lambda>x. bernoulli (if x \<in> E then 1 else p''))) x = 
           prob (bind_distr (restrict_distr D E) (\<lambda>x. bernoulli 1)) x +
@@ -1770,7 +1771,7 @@ proof -
     apply (rule add_increasing2)
      apply (rule infsetsum_nonneg)
     using pos apply auto
-    by (metis linorder_le_less_linear linordered_field_class.sign_simps(24) mult_eq_0_iff pos prob_geq_0 zero_le_mult_iff)
+    by (metis (full_types) mult_less_0_iff not_less prob_geq_0)
   also have "\<dots> \<ge> (\<Sum>\<^sub>ax\<in>{a..}. prob \<mu> x * a)" (is "_ \<ge> \<dots>")
     apply (rule infsetsum_mono, simp, simp)
     apply (rule mult_left_mono)

@@ -63,7 +63,7 @@ lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]"
   unfolding sup_clinear_space_def[symmetric] by auto
 lemma Cla_sup[simp]: "Cla[x] \<squnion> Cla[y] = Cla[x\<or>y]" 
   unfolding sup_clinear_space_def[symmetric] by auto
-lemma BINF_Cla[simp]: "(INF z:Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
+lemma BINF_Cla[simp]: "(INF z\<in>Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
 proof (rule Inf_eqI)
   show "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> \<CC>\<ll>\<aa>[\<forall>z\<in>Z. x z] \<le> i" by auto
   fix y assume assm: "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> y \<le> i"
@@ -81,7 +81,7 @@ proof (rule Inf_eqI)
   qed
 qed
 
-lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
+lemma free_INF[simp]: "(INF x\<in>X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
 
 lemma eigenspace_Cla[simp]: "eigenspace b 0 = Cla[b=0]"

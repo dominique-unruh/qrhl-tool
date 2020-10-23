@@ -59,7 +59,7 @@ lemma sample1_rule:
   defines "xs1 == index_vars True xs"
   defines "e1 == index_expression True e"
   defines "\<And>z. B' z == subst_expression (substitute_vars xs1 (const_expression z)) B"
-  defines "A == map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
+  defines "A == map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z\<in>supp e1. B' z)) e1 B'"
   shows "qrhl A [sample xs e] [] B"
   by (cheat sample1_rule)
 
@@ -106,7 +106,7 @@ lemma sample2_rule:
   defines "xs1 == index_vars False xs"
   defines "e1 == index_expression False e"
   defines "\<And>z. B' z == subst_expression (substitute_vars xs1 (const_expression z)) B"
-  defines "A == map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
+  defines "A == map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z\<in>supp e1. B' z)) e1 B'"
   shows "qrhl A [] [sample xs e] B"
 (*   using [[simproc del: index_var]]
   apply (rule sym_rule)

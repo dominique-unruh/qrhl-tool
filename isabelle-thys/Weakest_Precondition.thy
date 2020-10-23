@@ -23,7 +23,7 @@ lemma wp1_sample_tac:
   assumes "x1 = index_vars True x"
   assumes "e1 = index_expression True e"
   assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
-  assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
+  assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z\<in>supp e1. B' z)) e1 B'"
   shows "qrhl A [sample x e] [] B"
   unfolding assms by (fact sample1_rule)
 
@@ -32,7 +32,7 @@ lemma wp2_sample_tac:
   assumes "x1 = index_vars False x"
   assumes "e1 = index_expression False e"
   assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
-  assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z:supp e1. B' z)) e1 B'"
+  assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z\<in>supp e1. B' z)) e1 B'"
   shows "qrhl A [] [sample x e] B"
   unfolding assms by (fact sample2_rule)
 
