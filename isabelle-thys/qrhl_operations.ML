@@ -329,7 +329,7 @@ end
 
 fun method_tac ctxt str = let
   val (text,_) = Method.read_closure_input ctxt (Input.string str)
-  val tactic = Method.evaluate text ctxt [] |> Method.NO_CONTEXT_TACTIC ctxt
+  val tactic = Method.evaluate text ctxt [] |> Context_Tactic.NO_CONTEXT_TACTIC ctxt
 in tactic end
 
 fun is_finite (ctxt, T) = let
