@@ -121,7 +121,9 @@ javaOptions in Universal += "-J-Xss10m"
 
 lazy val travisRandomize = taskKey[Unit]("Randomize which test is run on Travis next time")
 travisRandomize := {
-  if (Process("git diff --quiet", cwd=baseDirectory.value).! != 0)
+  if (Process("git diff --quiet", cwd=baseDirectory.value).! != 0) {
     print(Process("scripts/travis-randomize.py", cwd=baseDirectory.value).!!)
+    print(Process("scala-isabelle/scripts/circleci-randomize.py", cwd=baseDirectory.value).!!)
+  }
 }
 compile in Compile := (compile in Compile).dependsOn(travisRandomize).value
