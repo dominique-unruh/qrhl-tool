@@ -184,7 +184,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 /*    val filesThyPath = files.map { f =>
       //      println("XXX",f,Paths.get(""))
       val relative = tryRelativize(setup.workingDirectory.toAbsolutePath, f.toAbsolutePath)
-      // TODO: Does not work if path wasn't relativized. Use PathConverter related methods instead?
       val names = relative.iterator().asScala.toList /*match {
         case List(name) => List(".", name) // Otherwise Isabelle does not recognise this as a path
         case names => names
