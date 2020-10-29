@@ -988,6 +988,7 @@ object IsabelleX {
     isabelleHome = Configuration.isabelleHome,
     logic = "QRHL",
     sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpThyRoot,
+    verbose = true,
     /** Must end in .isabelle if provided */
     userDir = Some(Configuration.isabelleUserDir)
   )
