@@ -14,7 +14,7 @@ lemma assoc_replace:
   fixes A B C D :: "(_,_) l2bounded"
   assumes "A \<cdot> B = C"
   shows "D \<cdot> A \<cdot> B = D \<cdot> C"
-  by (simp add: timesOp_assoc assms) 
+  by (simp add: cblinfun_apply_assoc assms) 
 
 lemma teleport_goal1:
   assumes[simp]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
@@ -26,7 +26,7 @@ proof -
   have hadamard: "hadamard \<otimes> idOp \<cdot> hadamard \<otimes> idOp = idOp" by simp
   have CNOT: "CNOT \<otimes> idOp \<cdot> CNOT \<otimes> idOp = idOp" by simp
   show ?thesis
-    by (simp add: distinct_qvars_split1 distinct_qvars_split2 timesOp_assoc[symmetric] assoc_op_lift_aux
+    by (simp add: distinct_qvars_split1 distinct_qvars_split2 cblinfun_apply_assoc[symmetric] assoc_op_lift_aux
         lift_extendR[where U=hadamard and R="\<lbrakk>A1,B1\<rbrakk>"] lift_extendR[where U=CNOT and R="\<lbrakk>B1\<rbrakk>"]
         assoc_replace[OF hadamard] assoc_replace[OF UadjU] assoc_replace[OF CNOT] assoc_replace[OF adjUU])
 qed
