@@ -1,18 +1,9 @@
 pick: random
 
 configs:
-#  win2020:
-#    os: windows
-#    isabelle: 2020
-#  win2019:
-#    os: windows
-#    isabelle: 2019
   linux:
     os: linux
-    isabelle: 2019
-#  linux2020:
-#    os: linux
-#    isabelle: 2020
+    isabelle: 2020
 
 defaults:
   machine_config: |
