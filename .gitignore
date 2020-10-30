@@ -30,6 +30,7 @@
 /doc/manual.pdf
 *.synctex.gz
 /isabelle-thys/Scratch.thy
+/isabelle-thys/#Scratch.thy#
 /qrhl-tool.conf
 _region_.tex
 _region_.prv
