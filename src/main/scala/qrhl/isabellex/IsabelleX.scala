@@ -968,13 +968,13 @@ object IsabelleX {
 
     @deprecated("Use Expression.toString", "now")
     def prettyExpression(term: Term): String =
-      symbols.symbolsToUnicode(term.pretty(context))
+      symbols.symbolsToUnicode(term.prettyRaw(context))
 
     def readTyp(str: String): Typ = Typ(context, str)
 
     def readTypUnicode(str: String): Typ = readTyp(symbols.unicodeToSymbols(str))
 
-    def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(typ.pretty(context))
+    def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(typ.prettyRaw(context))
 
     def simplify(term: Term, facts: List[String])(implicit executionContext: ExecutionContext): (RichTerm, Thm) = {
       val global = null
