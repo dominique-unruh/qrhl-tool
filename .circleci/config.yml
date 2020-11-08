@@ -7,7 +7,7 @@ orbs:
 
 workflows:
   version: 2
-  linux:
+  windows:
     jobs:
       - test:
           filters:
@@ -20,7 +20,7 @@ workflows:
 jobs:
   test:
 
-    machine: {image: ubuntu-2004:202010-01}
+    executor: { name: windows/default }
 
     steps:
       - checkout
@@ -32,31 +32,31 @@ jobs:
       # Download and cache Isabelle
       - restore_cache:
           keys:
-            - v2-isabelle-2019-linux
+            - v2-isabelle-2019-windows
       - run:
           name: Downloading Isabelle 2019 (if needed)
           shell: bash
           command: |
             if ! [ -e "$HOME/install/Isabelle2019" ]; then
               mkdir -p ~/install
-              case linux in
+              case windows in
                 windows)
                   curl "https://isabelle.in.tum.de/website-Isabelle2019/dist/Isabelle2019.exe" -o /tmp/isabelle.exe
                   7z x -y -o"$HOME/install" /tmp/isabelle.exe;;
                 linux|macos)
-                  curl https://isabelle.in.tum.de/website-Isabelle2019/dist/Isabelle2019_linux.tar.gz | tar -x -z -C ~/install;;
+                  curl https://isabelle.in.tum.de/website-Isabelle2019/dist/Isabelle2019_windows.tar.gz | tar -x -z -C ~/install;;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
             - ~/install/Isabelle2019
-          key: v2-isabelle-2019-linux
+          key: v2-isabelle-2019-windows
 
       # Download and cache AFP
       - restore_cache:
           keys:
-            - v1-afp-2019-unix
+            - v1-afp-2019-windows
       - run:
           name: Downloading AFP 2019
           shell: bash
@@ -73,7 +73,7 @@ jobs:
       - save_cache:
           paths:
             - ~/install/afp-2019
-          key: v1-afp-2019-unix
+          key: v1-afp-2019-windows
 
       # Build QRHL theory
       - run:
@@ -84,17 +84,17 @@ jobs:
             echo v5 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
-            - v5-isabelle-heaps-2019-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2019-linux-QRHL-
-            - v4-isabelle-heaps-2019-linux-QRHL-
-            - v3-isabelle-heaps-2019-linux-QRHL-
+            - v5-isabelle-heaps-2019-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2019-windows-QRHL-
+            - v4-isabelle-heaps-2019-windows-QRHL-
+            - v3-isabelle-heaps-2019-windows-QRHL-
       - run:
           name: Building QRHL theories
           shell: bash
           command: |
             set -e
             if ! sha1sum -c ~/qrhl-sha1sum; then
-              case linux in
+              case windows in
                 windows)
                   # Isabelle process calls rebaseall and then fails, unless we deactivate it
                   > ~/install/Isabelle2019/contrib/cygwin/isabelle/rebaseall
@@ -110,13 +110,13 @@ jobs:
           paths:
             - ~/.isabelle
             - ~/qrhl-sha1sum
-          key: v5-isabelle-heaps-2019-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2019-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
 
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v1-dependencies-linux-{{ checksum "build.sbt" }}
-            - v1-dependencies-linux-
+            - v1-dependencies-windows-{{ checksum "build.sbt" }}
+            - v1-dependencies-windows-
       - run:
           name: Downloading build dependencies (if needed)
 
@@ -138,13 +138,13 @@ jobs:
             - $LOCALAPPDATA\Coursier\Cache
             - ~/.cache/coursier
             - ~/dependencies-sha1sum
-          key: v1-dependencies-linux-{{ checksum "build.sbt" }}
+          key: v1-dependencies-windows-{{ checksum "build.sbt" }}
 
       - run:
           name: Running tests
           shell: bash
           command: |
-            case linux in
+            case windows in
               windows)
                 # Isabelle process calls rebaseall and then fails, unless we deactivate it
                 > ~/install/Isabelle2019/contrib/cygwin/isabelle/rebaseall
