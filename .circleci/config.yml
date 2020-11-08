@@ -15,6 +15,7 @@ workflows:
               only:
                 - master
                 - tmp
+                - test-windows
 
 jobs:
   test:
@@ -80,7 +81,7 @@ jobs:
           shell: bash
           command: |
             find isabelle-thys -type f | xargs sha1sum ROOTS > ~/isabelle-thys-checksums
-            echo v3 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
+            echo v5 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
             - v5-isabelle-heaps-2019-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
