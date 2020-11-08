@@ -12,16 +12,12 @@ workflows:
             branches:
               only:
                 - master
+                - tmp
 
 jobs:
   test:
 
     @{machine_config}
-
-#    environment:
-#      # Customize the JVM maximum heap limit
-#      JVM_OPTS: -Xmx3200m
-#      TERM: dumb
 
     steps:
       - checkout
@@ -29,7 +25,6 @@ jobs:
           name: "Pull Submodules"
           command: |
             git submodule update --init --recursive
-
 
       # Download and cache Isabelle
       - restore_cache:
@@ -45,20 +40,20 @@ jobs:
                 windows)
                   curl "https://isabelle.in.tum.de/website-Isabelle@{isabelle}/dist/Isabelle@{isabelle}.exe" -o /tmp/isabelle.exe
                   7z x -y -o"$HOME/install" /tmp/isabelle.exe;;
-                linux)
-                  curl https://isabelle.in.tum.de/website-Isabelle@{isabelle}/dist/Isabelle@{isabelle}_linux.tar.gz | tar -x -z -C ~/install;;
+                linux|macos)
+                  curl https://isabelle.in.tum.de/website-Isabelle@{isabelle}/dist/Isabelle@{isabelle}_@{os}.tar.gz | tar -x -z -C ~/install;;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
-            - ~/install/Isabelle@{isabelle}
+            - @{isabellehome}
           key: v2-isabelle-@{isabelle}-@{os}
 
       # Download and cache AFP
       - restore_cache:
           keys:
-            - v2-afp-@{isabelle}
+            - v1-afp-@{isabelle}-@{win_or_unix}
       - run:
           name: Downloading AFP @{isabelle}
           shell: bash
@@ -66,50 +61,16 @@ jobs:
             if ! [ -e ~/install/afp-@{isabelle} ]; then
               mkdir -p ~/install/afp-@{isabelle}
               case @{isabelle} in
-                2019) curl https://master.dl.sourceforge.net/project/afp/afp-Isabelle2019/afp-2019-08-19.tar.gz | tar -x -z -C ~/install/afp-2019 --strip 1;;
+                2019)
+                  curl https://master.dl.sourceforge.net/project/afp/afp-Isabelle2019/afp-2019-08-19.tar.gz -o /tmp/afp.tar.gz
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2019 --strip 1;;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
             - ~/install/afp-@{isabelle}
-          key: v2-afp-@{isabelle}
-
-#      - restore_cache:
-#          keys:
-#            - v1-isabelle-heaps-@{isabelle}-@{os}-Analysis
-#            - v1-isabelle-heaps-@{isabelle}-@{os}-
-#      - run:
-#          name: Building HOL-Analysis
-#          shell: bash
-#          command: |
-#            if ! compgen -G ~/".isabelle/Isabelle@{isabelle}/heaps/*/HOL-Analysis"; then
-#              ~/install/Isabelle@{isabelle}/bin/isabelle build -v -b -d ~/install/afp-@{isabelle}/thys HOL-Analysis
-#            fi
-#      - save_cache:
-#          paths:
-#            - ~/.isabelle
-#          key: v1-isabelle-heaps-@{isabelle}-@{os}-Analysis
-
-
-#      - restore_cache:
-#          keys:
-#            - v1-isabelle-heaps-@{isabelle}-@{os}-Prerequisites-{{ checksum "isabelle-thys/ROOT" }}-{{ checksum isabelle-thys/Tensor_Product/Bounded_Operators/ROOT }}
-#            - v1-isabelle-heaps-@{isabelle}-@{os}-Prerequisites-
-#      - run:
-#          name: Building QRHL Prerequisites
-#          shell: bash
-#          command: |
-#            if ! sha1sum -c ~/qrhl-prerequisites-sha1sum; then
-#              ~/install/Isabelle@{isabelle}/bin/isabelle build -v -b -d ~/install/afp-@{isabelle}/thys -d . QRHL-Prerequisites
-#            fi
-#            find -name 'ROOT*' | xargs sha1sum > ~/qrhl-prerequisites-sha1sum
-#            cat ~/qrhl-prerequisites-sha1sum
-#      - save_cache:
-#          paths:
-#            - ~/.isabelle
-#            - ~/qrhl-prerequisites-sha1sum
-#          key: v1-isabelle-heaps-@{isabelle}-@{os}-Prerequisites-{{ checksum "isabelle-thys/ROOT" }}-{{ checksum "isabelle-thys/Tensor_Product/Bounded_Operators/ROOT" }}
+          key: v1-afp-@{isabelle}-@{win_or_unix}
 
       # Build QRHL theory
       - run:
@@ -120,25 +81,30 @@ jobs:
             echo v3 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
-            - v3-isabelle-heaps-@{isabelle}-@{os}-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v4-isabelle-heaps-@{isabelle}-@{os}-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v4-isabelle-heaps-@{isabelle}-@{os}-QRHL-
             - v3-isabelle-heaps-@{isabelle}-@{os}-QRHL-
-            - v1-isabelle-heaps-@{isabelle}-@{os}-QRHL-
       - run:
           name: Building QRHL theories
           shell: bash
           command: |
-            ls -lhR ~/.isabelle/*/heaps # TODO remove
+            set -e
             if ! sha1sum -c ~/qrhl-sha1sum; then
-              ~/install/Isabelle@{isabelle}/bin/isabelle build -v -b -d ~/install/afp-@{isabelle}/thys -d . QRHL
+              case @{os} in
+                windows)
+                  # TODO: Under windows, need a different invocation, check whether this works
+                  @{isabellehome}/contrib/cygwin/bin/bash @{isabellehome}/bin/isabelle build -o threads=8 -v -b -d ~/install/afp-@{isabelle}/thys -d . QRHL;;
+                *)
+                  @{isabellehome}/bin/isabelle build -o threads=8 -v -b -d ~/install/afp-@{isabelle}/thys -d . QRHL;;
+              esac
             fi
-            ls -lhR ~/.isabelle/*/heaps # TODO remove
             sha1sum ~/isabelle-thys-checksums > ~/qrhl-sha1sum
             cat ~/qrhl-sha1sum
       - save_cache:
           paths:
             - ~/.isabelle
             - ~/qrhl-sha1sum
-          key: v3-isabelle-heaps-@{isabelle}-@{os}-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v4-isabelle-heaps-@{isabelle}-@{os}-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
 
       # Download and cache dependencies
       - restore_cache:
@@ -150,13 +116,13 @@ jobs:
 
           shell: bash
           command: |
-            if ! sha1sum -c ~/dependencies-sha1sum; then
+            if ! @{sha1sum} -c ~/dependencies-sha1sum; then
               mkdir -p ~/install
               curl -Ls https://git.io/sbt > ~/install/sbt
               chmod +x ~/install/sbt
               ~/install/sbt update test/update </dev/null
             fi
-            sha1sum build.sbt > ~/dependencies-sha1sum
+            @{sha1sum} build.sbt > ~/dependencies-sha1sum
       - save_cache:
           paths:
             - ~/install/sbt
@@ -172,7 +138,16 @@ jobs:
           name: Running tests
           shell: bash
           command: |
-            echo "isabelle-home = $HOME/install/Isabelle@{isabelle}" > qrhl-tool.conf
+            case @{os} in
+              windows)
+                # Isabelle process calls rebaseall and then fails, unless we deactivate it
+                > @{isabellehome}/contrib/cygwin/isabelle/rebaseall
+                ISABELLE_HOME="`cygpath -w @{isabellehome}`";;
+              linux|macos)
+                ISABELLE_HOME=@{isabellehome};;
+            esac
+
+            echo "isabelle-home = $ISABELLE_HOME" > qrhl-tool.conf
             echo "afp-root = $HOME/install/afp-@{isabelle}" >> qrhl-tool.conf
 
             ~/install/sbt "testOnly -- -u scalatest-reports" </dev/null

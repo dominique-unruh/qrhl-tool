@@ -55,8 +55,7 @@ jobs:
       # Download and cache AFP
       - restore_cache:
           keys:
-            - v3-afp-2019
-            - v2-afp-2019
+            - v1-afp-2019-unix
       - run:
           name: Downloading AFP 2019
           shell: bash
@@ -73,7 +72,7 @@ jobs:
       - save_cache:
           paths:
             - ~/install/afp-2019
-          key: v3-afp-2019
+          key: v1-afp-2019-unix
 
       # Build QRHL theory
       - run:

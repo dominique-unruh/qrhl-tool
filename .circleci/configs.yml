@@ -1,20 +1,25 @@
 pick: random
 
 configs:
-#  win2020:
+#  windows:
 #    os: windows
-#    isabelle: 2020
-#  win2019:
-#    os: windows
-#    isabelle: 2019
   linux:
     os: linux
-    isabelle: 2019
-#  linux2020:
-#    os: linux
-#    isabelle: 2020
+  macos:
+    os: macos
 
 defaults:
+  isabelle: return "2019"
+  isabellehome: |
+    if os=="macos": return f"~/install/Isabelle{get('isabelle')}.app/Isabelle"
+    return f"~/install/Isabelle{get('isabelle')}"
   machine_config: |
     if os=="windows": return "executor: { name: windows/default }"
     if os=="linux": return "machine: {image: ubuntu-2004:202010-01}"
+    if os=="macos": return "macos: {xcode: 11.6.0}"
+  sha1sum: |
+    if os=="macos": return "shasum"
+    return "sha1sum"
+  win_or_unix: |
+    if os=="windows": return "windows"
+    return "unix"
