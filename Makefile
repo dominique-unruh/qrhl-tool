@@ -21,6 +21,12 @@ test-distrib : test-distrib0
 	set -e && cd tmp/qrhl-$(VERSION)/examples && \
 		for i in *.qrhl; do ../bin/qrhl "$$i"; done
 
+test-pqfo : test-distrib
+	QRHL_DIR="$$PWD/tmp/qrhl-$(VERSION)" && cd ../pq-fo-verify/proofs && git pull && "$$QRHL_DIR/bin/qrhl" all.qrhl
+
+test-hsku : test-distrib
+	QRHL_DIR="$$PWD/tmp/qrhl-$(VERSION)" && cd ../hksu-verification && git pull && "$$QRHL_DIR/bin/qrhl" all.qrhl
+
 test :
 	sbt test
 

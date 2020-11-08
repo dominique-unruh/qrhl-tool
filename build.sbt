@@ -16,6 +16,10 @@ scalaVersion := "2.13.3"
 
 scalacOptions += "-deprecation"
 
+// TODO: in qrhl-tool.conf: Document to use \\ instead of \ (or fix that)
+
+// TODO: *.pretty now applies Symbols. No need to to it oneself. Fix where needed!
+
 //libraryDependencies += "de.unruh" %% "scala-isabelle" % "0.1.0"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
