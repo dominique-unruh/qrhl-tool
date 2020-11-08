@@ -83,7 +83,8 @@ jobs:
             echo v3 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
-            - v4-isabelle-heaps-2019-macos-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2019-macos-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2019-macos-QRHL-
             - v4-isabelle-heaps-2019-macos-QRHL-
             - v3-isabelle-heaps-2019-macos-QRHL-
       - run:
@@ -106,7 +107,7 @@ jobs:
           paths:
             - ~/.isabelle
             - ~/qrhl-sha1sum
-          key: v4-isabelle-heaps-2019-macos-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2019-macos-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
 
       # Download and cache dependencies
       - restore_cache:
