@@ -1,8 +1,10 @@
 pick: random
 
+# TODO test with different JDKs
+
 configs:
-#  windows:
-#    os: windows
+  windows:
+    os: windows
   linux:
     os: linux
   macos:

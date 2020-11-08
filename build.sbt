@@ -18,8 +18,6 @@ scalacOptions += "-deprecation"
 
 // TODO: in qrhl-tool.conf: Document to use \\ instead of \ (or fix that)
 
-// TODO: *.pretty now applies Symbols. No need to to it oneself. Fix where needed!
-
 //libraryDependencies += "de.unruh" %% "scala-isabelle" % "0.1.0"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
@@ -36,7 +34,8 @@ val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c39680549
 val pgPatch = "src/proofgeneral/proof-site.el.patch"
 val pgExtractPath = "target/downloads/PG"
 lazy val downloadPG = taskKey[Unit]("Download ProofGeneral")
-managedResources in Compile := (managedResources in Compile).dependsOn(downloadPG).value
+//managedResources in Compile := (managedResources in Compile).dependsOn(downloadPG).value
+packageBin in Universal := (packageBin in Universal).dependsOn(downloadPG).value
 
 downloadPG := {
   import scala.sys.process._

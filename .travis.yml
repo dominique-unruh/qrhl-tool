@@ -18,5 +18,5 @@ cache:
 jobs:
   include:
 #    - os: osx
-#    - {os: linux, jdk: openjdk11}
-    - {os: linux, jdk: openjdk14}
+    - {os: linux, jdk: openjdk11}
+#    - {os: linux, jdk: openjdk14}

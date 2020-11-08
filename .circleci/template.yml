@@ -93,7 +93,7 @@ jobs:
               case @{os} in
                 windows)
                   # TODO: Under windows, need a different invocation, check whether this works
-                  @{isabellehome}/contrib/cygwin/bin/bash @{isabellehome}/bin/isabelle build -o threads=8 -v -b -d ~/install/afp-@{isabelle}/thys -d . QRHL;;
+                  @{isabellehome}/contrib/cygwin/bin/bash @{isabellehome}/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-@{isabelle}/thys -d . QRHL;;
                 *)
                   @{isabellehome}/bin/isabelle build -o threads=8 -v -b -d ~/install/afp-@{isabelle}/thys -d . QRHL;;
               esac
