@@ -1,6 +1,6 @@
 package qrhl.isabellex
 
-import java.io.{FileInputStream, IOException}
+import java.io.{FileInputStream, FileReader, IOException, StringReader}
 import java.lang
 import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
@@ -68,7 +68,9 @@ object Configuration {
       case e : IOException =>
         throw UserException(s"Could not open $filename. (Reason: ${e.getMessage}) Make sure it exists and is readable.")
     }
-    config.load(stream)
+    val escaped = new String(stream.readAllBytes()).replace("\\","\\\\")
+    stream.close()
+    config.load(new StringReader(escaped))
     config
   }
 
