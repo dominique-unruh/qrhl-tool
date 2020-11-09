@@ -6,7 +6,7 @@ for [v0.5](https://github.com/dominique-unruh/qrhl-tool/releases/tag/v0.5).**
 
 # Binary installation
 
-The binaries require Linux or OS/X to run.
+The binaries require Linux, OS/X, or Windows to run.
 You can download the binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases).
 
 ## Prerequisites
@@ -37,7 +37,7 @@ To update, simply extract the new version.
 
 ## Executing the demos
 
-In the `qrhl-0.6alpha` directory, execute `proofgeneral.sh`.
+In the `qrhl-0.6alpha` directory, execute `proofgeneral.{sh,bat}`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
@@ -64,10 +64,10 @@ Then open and edit the file normally.
 
 * Make sure that [sbt](https://www.scala-sbt.org/) (Scala Build Tool) is on the path.
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
-* Use `git checkout master` (replace `v0.5` by the version/git revision you wish to compile). 
+* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.5`). 
 * Create a `qrhl-tool.conf` file as described in the binary installation section above.
 * Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
-* Run `sbt packageBin` to generate the binary `qrhl.zip`.
+* Run `make qrhl.zip` to generate the binary `qrhl.zip`.
 * Run `sbt test` to run the unit tests.
 * You can also open the directory as a project in [Intelli/J IDEA](https://www.jetbrains.com/idea/), but you should invoke `sbt assembly` before the first time.
