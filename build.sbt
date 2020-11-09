@@ -91,7 +91,7 @@ test in assembly := {}
 enablePlugins(JavaAppPackaging)
 
 mappings in Universal ++=
-  List("proofgeneral.sh", "run-isabelle.sh", "README.md", "LICENSE").
+  List("proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat", "README.md", "LICENSE").
     map { f => baseDirectory.value / f -> f }
 
 mappings in Universal ++= {
