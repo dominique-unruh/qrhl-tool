@@ -13,9 +13,10 @@ You can download the binaries [here](https://github.com/dominique-unruh/qrhl-too
 
 * Java must be installed (at least Java 11), and the `java` executable must be in the path.
 * Emacs must be installed, and the `emacs` executable must be in the path (otherwise edit `proofgeneral.{bat,sh}`).
+  At least Emacs 26 is required.
 
 To check whether this is the case, go into a terminal,
-and enter `java` or `emacs`, respectively, and see whether the commands are found.
+and enter `java -version` or `emacs -version`, respectively, and see whether the commands are found.
 
 * Isabelle2019 must be installed. (qrhl-tool is currently not compatible with 
   Isabelle2020.) Download it at https://isabelle.in.tum.de/website-Isabelle2019/ and 
