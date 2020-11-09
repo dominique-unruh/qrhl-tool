@@ -10,7 +10,7 @@ lazy val root = (project in file("."))
 
 name := "qrhl"
 
-version := "0.6alpha"
+version := "0.6"
 
 scalaVersion := "2.13.3"
 

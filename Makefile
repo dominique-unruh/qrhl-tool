@@ -1,4 +1,4 @@
-VERSION="0.6alpha"
+VERSION="0.6"
 SOURCES := $(shell find src) $(wildcard *.qrhl) $(wildcard *.thy) doc/manual.pdf
 
 qrhl.zip : target/universal/qrhl-$(VERSION).zip
