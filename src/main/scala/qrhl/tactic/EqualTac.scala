@@ -90,8 +90,8 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       mismatchesFree ++= r.freeVariables
     }
 
-    println("Variable use of the context:")
-    println(varUse)
+    output.println("Variable use of the context:")
+    output.println(varUse)
 
     // ==== Choose in/out/mid variables
 
@@ -100,9 +100,9 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     val out = mutable.LinkedHashSet(this.out:_*)
 
     def printVars(): Unit = {
-      println(s"In variables  (Vin):  ${varsToString(in)}")
-      println(s"Mid variables (Vmid): ${varsToString(mid)}")
-      println(s"Out variables (Vout): ${varsToString(out)}")
+      output.println(s"In variables  (Vin):  ${varsToString(in)}")
+      output.println(s"Mid variables (Vmid): ${varsToString(mid)}")
+      output.println(s"Out variables (Vout): ${varsToString(out)}")
     }
 
     // Classical variables that we remove from the postcondition
@@ -123,15 +123,15 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       val extraOut2 = extraOut -- out
       val extraMid2 = extraMid -- mid
       if (msg != null && (extraIn2.nonEmpty || extraMid2.nonEmpty || extraOut2.nonEmpty))
-        println(s"""Trying to make "$msg" true:""")
+        output.println(s"""Trying to make "$msg" true:""")
 
       if (extraIn2.nonEmpty) {
-        println(s"Adding to Vin:  ${varsToString(extraIn2)}")
+        output.println(s"Adding to Vin:  ${varsToString(extraIn2)}")
         updated = true
         in ++= extraIn2
       }
       if (extraMid2.nonEmpty) {
-        println(s"Adding to Vmid: ${varsToString(extraMid2)}")
+        output.println(s"Adding to Vmid: ${varsToString(extraMid2)}")
         updated = true
         mid ++= extraMid2
       }
@@ -143,7 +143,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
             throw UserException(s"Trying to add ${varsToString(quantum)} to Vout, but we already committed on removing " +
               s"quantum equality for ${varsToString(removedQeq)} from the postcondition")
         }
-        println(s"Adding to Vout: ${varsToString(extraOut2)}")
+        output.println(s"Adding to Vout: ${varsToString(extraOut2)}")
         updated = true
         out ++= extraOut2
       }
@@ -164,11 +164,11 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       logger.debug(s"removeFromPost ${msg}, ${varsToString(vars)}")
 
       if (msg != null && vars2.nonEmpty)
-        println(s"""Trying to make "$msg" true:""")
+        output.println(s"""Trying to make "$msg" true:""")
 
       if (classical.nonEmpty) {
         updated = true
-        println(s"Removing classical variables $classical from postcondition")
+        output.println(s"Removing classical variables $classical from postcondition")
         classicalsRemovedFromPost ++= classical
         postconditionVariables --= classical
       }
@@ -187,7 +187,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
         postconditionVariables ++= postcondition.variables(env, deindex = true).program
         postconditionVariables --= classicalsRemovedFromPost
 
-        println(s"Removing quantum variables ${varsToString(removedQeq)} from postcondition")
+        output.println(s"Removing quantum variables ${varsToString(removedQeq)} from postcondition")
         out ++= removedQeq
       }
     }
@@ -267,7 +267,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
         Breaks.breakable {
           for (v <- env.qVariables.values)
             if (!mismatchesFree.contains(v) && isInfinite(v)) {
-              println("Adding an infinite quantum variable (that does not occur in any of the mismatches) in Vmid")
+              output.println("Adding an infinite quantum variable (that does not occur in any of the mismatches) in Vmid")
               add(msg = null, extraMid = Set(v))
               Breaks.break()
             }

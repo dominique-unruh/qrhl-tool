@@ -80,7 +80,8 @@ class Toplevel private(initialState : default.Hashed[State]) {
       case includeCommand : IncludeCommand =>
         state.value.include(state.hash, includeCommand.file)
       case _ : IsabelleCommand =>
-        val newState = command.act(state.value)
+        val (newState, output) = command.actString(state.value)
+        println(output)
         val newFiles = newState.dependencies.map(_.file).toSet -- state.value.dependencies.map(_.file)
         val filesHash = Utils.hashFileSet(newFiles)
         logger.debug(s"Included files: $newFiles")
@@ -91,7 +92,8 @@ class Toplevel private(initialState : default.Hashed[State]) {
 //        logger.debug(s"Command string: '${commandString}'")
         val hash = default.hash(commandString, state)
         val hashed = Hashed((command,state.value), hash=hash)
-        val newState = Toplevel.commandActComputation(hashed).result
+        val (newState, output) = Toplevel.commandActComputation(hashed).result
+        println(output)
         val tag = getClass + " @ " +getClass.getClassLoader.getName
         val newHash = default.hash(tag, hash)
         Hashed(newState, newHash)
@@ -214,8 +216,8 @@ object Toplevel {
 
   // TODO: this should use a hashed computation. But not for include commands or Isabelle commands. How do we make sure that after an include,
   // hashing still works if nothing changed inside the included file but comments?
-  private val commandActComputation : default.Function[(Command,State), State] = default.createFunction {
-    case Hashed.Value((command, state)) => command.act(state)
+  private val commandActComputation : default.Function[(Command,State), (State,String)] = default.createFunction {
+    case Hashed.Value((command, state)) => command.actString(state)
   }
 
   private val commandEnd: Regex = """\.\s*$""".r

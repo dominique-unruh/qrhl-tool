@@ -563,7 +563,7 @@ object Parser extends JavaTokenParsers {
   val qed : Parser[QedCommand] = "qed" ^^ { _ => QedCommand() }
 
   val debug : Parser[DebugCommand] = "debug:" ~>
-    ("goal" ^^ { _ => DebugCommand.goals((context,goals) => for (g <- goals) println(g.toTerm(context))) } |
+    ("goal" ^^ { _ => DebugCommand.goals((context,goals) => for (g <- goals) output.println(g.toTerm(context))) } |
       "isabelle" ^^ { _ => DebugCommand.isabelle })
 
   val changeDirectory : Parser[ChangeDirectoryCommand] = literal("changeDirectory") ~> quotedString ^^ ChangeDirectoryCommand.apply

@@ -1,5 +1,6 @@
 package qrhl.toplevel
 
+import java.io.{PrintWriter, StringWriter}
 import java.nio.file.{Path, Paths}
 
 import de.unruh.isabelle.pure.Typ
@@ -21,22 +22,31 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 
 trait Command {
-  def act(state: State): State
+  def act(state: State, output: PrintWriter): State
+  def actString(state: State): (State, String) = {
+    val stringWriter = new StringWriter()
+    val writer = new PrintWriter(stringWriter)
+    val newState = act(state, writer)
+    writer.flush()
+    (state, stringWriter.toString)
+  }
+  def actPrint(state: State): State =
+    act(state, new PrintWriter(System.out))
 }
 
 case class ChangeDirectoryCommand(dir:Path) extends Command {
   assert(dir!=null)
-  override def act(state: State): State = state.changeDirectory(dir)
+  override def act(state: State, output: PrintWriter): State = state.changeDirectory(dir)
 }
 object ChangeDirectoryCommand {
   def apply(dir:String) : ChangeDirectoryCommand = apply(Paths.get(dir))
 }
 
 case class IsabelleCommand(thy:Seq[String]) extends Command {
-  override def act(state: State): State = {
-    println(s"Loading Isabelle.")
+  override def act(state: State, output: PrintWriter): State = {
+//    output.println(s"Loading Isabelle.")
     val newState = state.loadIsabelle(thy)
-    println("Isabelle loaded.")
+    output.println("Isabelle loaded.")
     newState
   }
 }
@@ -44,20 +54,20 @@ case class IsabelleCommand(thy:Seq[String]) extends Command {
 case class DeclareVariableCommand(name: String, typ: Typ, ambient:Boolean=false, quantum:Boolean=false) extends Command {
   assert(!(ambient && quantum))
 
-  override def act(state: State): State = {
+  override def act(state: State, output: PrintWriter): State = {
     if (ambient) {
-      println(s"Declaring ambient variable $name : $typ.")
+      output.println(s"Declaring ambient variable $name : $typ.")
       state.declareAmbientVariable(name,typ)
     } else {
-      println(s"Declaring ${if (quantum) "quantum" else "classical"} variable $name : ${IsabelleX.pretty(typ)}.")
+      output.println(s"Declaring ${if (quantum) "quantum" else "classical"} variable $name : ${IsabelleX.pretty(typ)}.")
       state.declareVariable(name, typ, quantum = quantum)
     }
   }
 }
 
 case class DeclareProgramCommand(name: String, oracles: List[String], program : Block) extends Command {
-  override def act(state: State): State = {
-    println(s"Declaring program $name. ")
+  override def act(state: State, output: PrintWriter): State = {
+    output.println(s"Declaring program $name. ")
     state.declareProgram(name,oracles,program.markOracles(oracles))
   }
 }
@@ -65,8 +75,8 @@ case class DeclareProgramCommand(name: String, oracles: List[String], program : 
 case class DeclareAdversaryCommand(name: String, free: Seq[Variable], inner : Seq[Variable],
                                    readonly: Seq[Variable], covered : Seq[Variable],
                                    overwritten: Seq[Variable], numOracles: Int) extends Command {
-  override def act(state: State): State = {
-    println(s"Declaring adversary $name. ")
+  override def act(state: State, output: PrintWriter): State = {
+    output.println(s"Declaring adversary $name. ")
     if (numOracles==0 && inner.nonEmpty)
       throw UserException("An adversary without oracles cannot have inner variables")
     if (numOracles==0 && covered.nonEmpty)
@@ -85,17 +95,17 @@ case class DeclareAdversaryCommand(name: String, free: Seq[Variable], inner : Se
   * @param goal the subgoal to be opened
   */
 case class GoalCommand(name: String, goal: Subgoal) extends Command {
-  override def act(state: State): State = {
-    println("Starting proof.")
+  override def act(state: State, output: PrintWriter): State = {
+    output.println("Starting proof.")
     val state2 = state.openGoal(name, goal)
     state2
   }
 }
 
 case class TacticCommand(tactic:Tactic) extends Command {
-  override def act(state: State): State = {
+  override def act(state: State, output: PrintWriter): State = {
     if (!state.cheatMode.cheating)
-      println(s"Applying tactic $tactic.")
+      output.println(s"Applying tactic $tactic.")
     val state2 = state.applyTactic(tactic)
     state2
   }
@@ -104,34 +114,34 @@ case class TacticCommand(tactic:Tactic) extends Command {
 case class UndoCommand(n:Int) extends Command {
   assert(n>0)
 
-  override def act(state: State): State = throw new RuntimeException() // should not be called
+  override def act(state: State, output: PrintWriter): State = throw new RuntimeException() // should not be called
 }
 
 //case object QuitCommand extends Command {
-//  override def act(state: State): State = throw new RuntimeException() // should not be called
+//  override def act(state: State, output: PrintWriter): State = throw new RuntimeException() // should not be called
 //}
 
 //case class DummyCommand() extends Command {
-//  override def act(state: State): State = state
+//  override def act(state: State, output: PrintWriter): State = state
 //}
 
 case class QedCommand() extends Command {
-  override def act(state: State): State = {
+  override def act(state: State, output: PrintWriter): State = {
     if (state.goal.nonEmpty)
       throw UserException("Pending subgoals.")
     if (state.currentLemma.isEmpty)
       throw UserException("Not in a proof.")
     if (state.currentLemma.get._1 != "")
-      println(s"Finished and saved current lemma as '${state.currentLemma.get._1}':\n${state.currentLemma.get._2}")
+      output.println(s"Finished and saved current lemma as '${state.currentLemma.get._1}':\n${state.currentLemma.get._2}")
     else
-      println("Finished current lemma.")
+      output.println("Finished current lemma.")
     state.qed
   }
 }
 
 
 class DebugCommand private (action: State => State) extends Command {
-  override def act(state: State): State = action(state)
+  override def act(state: State, output: PrintWriter): State = action(state)
 }
 object DebugCommand {
   def state(action: State => Unit): DebugCommand = new DebugCommand({ state => action(state); state})
@@ -140,7 +150,7 @@ object DebugCommand {
   val isabelle: DebugCommand = DebugCommand.state({
     state : State =>
       val str = Ops.debugOp(MLValue(state.isabelle.context)).retrieveNow
-      println(s"DEBUG: $str")
+      output.println(s"DEBUG: $str")
   })
 
 }
@@ -150,7 +160,7 @@ case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=fa
   assert(! (file&&stop))
   assert(! (proof&&stop))
 
-  override def act(state: State): State = {
+  override def act(state: State, output: PrintWriter): State = {
     val infile = {
       if (file) true
       else if (proof) false
@@ -160,10 +170,10 @@ case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=fa
     if (stop) {
       state.stopCheating
     } else if (infile) {
-      println("Cheating (till end of file)")
+      output.println("Cheating (till end of file)")
       state.cheatInFile
     } else {
-      println("Cheating (till end of proof)")
+      output.println("Cheating (till end of proof)")
       state.cheatInProof
     }
   }
@@ -171,8 +181,8 @@ case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=fa
 
 case class IncludeCommand(file:Path) extends Command {
   assert(file!=null)
-  println("Including file "+file)
-  override def act(state: State): State =
+  output.println("Including file "+file)
+  override def act(state: State, output: PrintWriter): State =
     throw new RuntimeException("IncludeCommand.act must not be called.")
 }
 object IncludeCommand {

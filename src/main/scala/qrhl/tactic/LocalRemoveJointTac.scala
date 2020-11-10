@@ -38,7 +38,7 @@ case object LocalRemoveJointTac extends Tactic {
       val env = state.environment
       val context = state.isabelle
 
-      println("*** WARNING: Tactic 'local remove joint' is not sound (incomplete implementation)")
+      output.println("*** WARNING: Tactic 'local remove joint' is not sound (incomplete implementation)")
 
       // Decomposing left/right program
       val (cvarsL, qvarsL, bodyL) = leftProg match {
@@ -82,7 +82,7 @@ case object LocalRemoveJointTac extends Tactic {
       logger.debug(s"UR': ${p(ur2)}")
       logger.debug(s"R':  ${p(r2)}")
 
-      println(s"*** Unsound (incomplete) tactic local applied.")
+      output.println(s"*** Unsound (incomplete) tactic local applied.")
 
 
       // TODO check qvars1, qvars2 has same length and same types
