@@ -1,7 +1,0 @@
-session "QRHL-Examples" = "QRHL" +
-  sessions "CryptHOL"
-  theories PrgEnc Chsh Code_Example Example Teleport_Terse Teleport EPR RandomOracle
-
-session "QRHL-Examples-Prerequisites" = "QRHL-Prerequisites" +
-  sessions "CryptHOL"
-  theories CryptHOL.CryptHOL
