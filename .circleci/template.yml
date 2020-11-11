@@ -13,6 +13,7 @@ workflows:
               only:
                 - master
                 - tmp
+                - release-candidate
 
 jobs:
   test:
