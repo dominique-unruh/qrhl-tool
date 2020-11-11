@@ -30,7 +30,7 @@
 /doc/manual.pdf
 *.synctex.gz
 /isabelle-thys/Scratch.thy
-/isabelle-thys/#Scratch.thy#
+/isabelle-thys/#*.thy#
 /qrhl-tool.conf
 _region_.tex
 _region_.prv
@@ -41,3 +41,5 @@ _region_.pdf
 /examplein.txt
 /exampleout.txt
 /Scratch.thy
+/out/manual-blx.bib
+/out/manual.pdf
