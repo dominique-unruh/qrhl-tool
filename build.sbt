@@ -10,7 +10,7 @@ lazy val root = (project in file("."))
 
 name := "qrhl"
 
-version := "0.6alpha"
+version := "snapshot"
 
 scalaVersion := "2.13.3"
 
@@ -128,3 +128,26 @@ travisRandomize := {
   }
 }
 compile in Compile := (compile in Compile).dependsOn(travisRandomize).value
+
+
+/*
+
+Steps when releasing a release/release candidate:
+
+ - git checkout release-candidate
+ - If this is the first RC for a new release, reset release-candidate to master
+ - Edit version in README.md, Makefile, build.sbt
+ - git commit
+ - git tag vXXX (XXX is the version)
+ - sbt clean
+ - sbt test
+ - ./test.sh in pq-fo-verify
+ - make qrhl.zip
+ - git push origin vXXX
+ - git push
+ - Create a new release here: https://github.com/dominique-unruh/qrhl-tool/releases/new
+ - git checkout master
+ - Edit README.md to refer to newest version
+ - Update hksu-verification, edit README, test it, tag it
+
+ */

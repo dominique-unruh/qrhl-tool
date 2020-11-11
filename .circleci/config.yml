@@ -7,7 +7,7 @@ orbs:
 
 workflows:
   version: 2
-  linux:
+  linux-jdk15:
     jobs:
       - test:
           filters:
@@ -15,6 +15,7 @@ workflows:
               only:
                 - master
                 - tmp
+                - release-candidate
 
 jobs:
   test:
@@ -26,17 +27,17 @@ jobs:
       - run:
           name: "Pull Submodules"
           command: |
-            git submodule update --init --recursive
+            git submodule update --init --recursive --depth 1
 
       # Download and cache Isabelle
       - restore_cache:
           keys:
-            - v2-isabelle-2019-linux
+            - v3-isabelle-2019-linux
       - run:
           name: Downloading Isabelle 2019 (if needed)
           shell: bash
           command: |
-            if ! [ -e "$HOME/install/Isabelle2019" ]; then
+            if ! [ -e ~/install/Isabelle2019 ]; then
               mkdir -p ~/install
               case linux in
                 windows)
@@ -50,12 +51,12 @@ jobs:
       - save_cache:
           paths:
             - ~/install/Isabelle2019
-          key: v2-isabelle-2019-linux
+          key: v3-isabelle-2019-linux
 
       # Download and cache AFP
       - restore_cache:
           keys:
-            - v1-afp-2019-unix
+            - v1-afp-2019-linux
       - run:
           name: Downloading AFP 2019
           shell: bash
@@ -72,7 +73,7 @@ jobs:
       - save_cache:
           paths:
             - ~/install/afp-2019
-          key: v1-afp-2019-unix
+          key: v1-afp-2019-linux
 
       # Build QRHL theory
       - run:
@@ -80,10 +81,11 @@ jobs:
           shell: bash
           command: |
             find isabelle-thys -type f | xargs sha1sum ROOTS > ~/isabelle-thys-checksums
-            echo v3 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
+            echo v5 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
-            - v4-isabelle-heaps-2019-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2019-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2019-linux-QRHL-
             - v4-isabelle-heaps-2019-linux-QRHL-
             - v3-isabelle-heaps-2019-linux-QRHL-
       - run:
@@ -106,7 +108,7 @@ jobs:
           paths:
             - ~/.isabelle
             - ~/qrhl-sha1sum
-          key: v4-isabelle-heaps-2019-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2019-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
 
       # Download and cache dependencies
       - restore_cache:
@@ -135,6 +137,26 @@ jobs:
             - ~/.cache/coursier
             - ~/dependencies-sha1sum
           key: v1-dependencies-linux-{{ checksum "build.sbt" }}
+
+      - run:
+          name: Setting up Java
+          shell: bash
+          command: |
+            case linux in
+              linux)
+                if [ 15 != 11 ]; then
+                  sudo apt install --yes openjdk-15-jdk
+                  sudo update-alternatives --set java /usr/lib/jvm/java-15-openjdk-amd64/bin/java
+                fi;;
+              macos)
+                if [ 15 != 11 ]; then
+                  brew cask install adoptopenjdk15
+                fi;;
+            esac
+
+            # Check if we have the right Java version
+            java -version
+            java -version 2>&1 | grep 'version "15\b' -q
 
       - run:
           name: Running tests

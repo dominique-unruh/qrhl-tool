@@ -1,8 +1,8 @@
 [![Build Status](https://travis-ci.com/dominique-unruh/qrhl-tool.svg?branch=master)](https://travis-ci.com/dominique-unruh/qrhl-tool)
 [![Gitter chat](https://img.shields.io/badge/gitter-chat-brightgreen.svg)](https://gitter.im/dominique-unruh/qrhl-tool?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-**This describes the installation process for the development snapshot. See [here](https://github.com/dominique-unruh/qrhl-tool/blob/31b2ef3c9b91e74e0e1bc56b476e211e03590672/README.md) for instructions
-for [v0.5](https://github.com/dominique-unruh/qrhl-tool/releases/tag/v0.5).**
+**This describes the installation process for the development snapshot. See [here](https://github.com/dominique-unruh/qrhl-tool/blob/v0.6/README.md) for instructions
+for [v0.6](https://github.com/dominique-unruh/qrhl-tool/releases/tag/v0.6).**
 
 # Binary installation
 
@@ -27,9 +27,9 @@ and enter `java -version` or `emacs -version`, respectively, and see whether the
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.6alpha`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-snapshot`.
 
-In the `qrhl-0.6alpha` directory, edit the file `qrhl-tool.conf`: 
+In the `qrhl-snapshot` directory, edit the file `qrhl-tool.conf`: 
 Add the configuration keys `isabelle-home = <where you unpackaged Isabelle2019>`
 and `afp-home = <where you unpackaged AFP>`.
 
@@ -38,7 +38,7 @@ To update, simply extract the new version.
 
 ## Executing the demos
 
-In the `qrhl-0.6alpha` directory, execute `proofgeneral.{sh,bat}`.
+In the `qrhl-snapshot` directory, execute `proofgeneral.{sh,bat}`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
@@ -65,7 +65,7 @@ Then open and edit the file normally.
 
 * Make sure that [sbt](https://www.scala-sbt.org/) (Scala Build Tool) is on the path.
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
-* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.5`). 
+* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.6`). 
 * Create a `qrhl-tool.conf` file as described in the binary installation section above.
 * Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
