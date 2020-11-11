@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import org.log4s
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import qrhl.isabellex.{IsabelleX, RichTerm}
@@ -31,14 +33,14 @@ case object LocalRemoveJointTac extends Tactic {
     quantum_equality_full(us1_, s1_, us2_, s2_)
   }
 
-  def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(goal) =>
       throw UserException("Expected qRHL goal")
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>
       val env = state.environment
       val context = state.isabelle
 
-      println("*** WARNING: Tactic 'local remove joint' is not sound (incomplete implementation)")
+      output.println("*** WARNING: Tactic 'local remove joint' is not sound (incomplete implementation)")
 
       // Decomposing left/right program
       val (cvarsL, qvarsL, bodyL) = leftProg match {
@@ -82,7 +84,7 @@ case object LocalRemoveJointTac extends Tactic {
       logger.debug(s"UR': ${p(ur2)}")
       logger.debug(s"R':  ${p(r2)}")
 
-      println(s"*** Unsound (incomplete) tactic local applied.")
+      output.println(s"*** Unsound (incomplete) tactic local applied.")
 
 
       // TODO check qvars1, qvars2 has same length and same types

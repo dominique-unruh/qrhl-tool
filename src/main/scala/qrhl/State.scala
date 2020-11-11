@@ -1,6 +1,6 @@
 package qrhl
 
-import java.io.FileNotFoundException
+import java.io.{FileNotFoundException, PrintWriter}
 import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, NoSuchFileException, Path, Paths}
 import java.util
@@ -178,7 +178,7 @@ object AmbientSubgoal {
 }
 
 trait Tactic {
-  def apply(state: State, goal : Subgoal) : List[Subgoal]
+  def apply(state: State, goal : Subgoal)(implicit output: PrintWriter) : List[Subgoal]
 }
 
 class UserException private (private val msg:String, private var _position:String=null) extends RuntimeException(msg) {
@@ -267,6 +267,7 @@ class State private (val environment: Environment,
                      val cheatMode : CheatMode,
                      val includedFiles : Set[Path]) {
   def include(hash: default.Hash, file: Path): default.Hashed[State] = {
+    println("Including file "+file)
     val fullpath =
       try {
         currentDirectory.resolve(file).toRealPath()
@@ -362,7 +363,7 @@ class State private (val environment: Environment,
   }
 
 
-  def applyTactic(tactic:Tactic) : State =
+  def applyTactic(tactic:Tactic)(implicit output: PrintWriter) : State =
     if (cheatMode.cheating)
       copy(goal=Nil)
     else

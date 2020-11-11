@@ -5,6 +5,7 @@ import qrhl.QRHLSubgoal
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
 import IsabelleX.{globalIsabelle => GIsabelle}
+import qrhl.toplevel.ToplevelTest.output
 
 class RndTacTest extends AnyFunSuite {
   def toplevel(): Toplevel = {

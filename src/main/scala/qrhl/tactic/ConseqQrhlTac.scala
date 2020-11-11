@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleX, MLValueConverters, RichTerm}
@@ -63,7 +65,7 @@ import GIsabelle.isabelleControl
 case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],List[QVariable]),(List[QVariable],List[QVariable]))]) extends Tactic {
   import ConseqQrhlTac.logger
 
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(left,right,pre,post,assms) =>
       val env = state.environment
       val isabelle = state.isabelle.isabelle

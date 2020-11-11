@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import de.unruh.isabelle.mlvalue.MLValue
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
@@ -15,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 
 case class FixTac(variable:String) extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(_, _, _, _, _) =>
       throw UserException("Expecting an ambient logic goal")
     case AmbientSubgoal(expr) =>

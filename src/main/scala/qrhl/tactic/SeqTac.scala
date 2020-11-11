@@ -11,7 +11,7 @@ import de.unruh.isabelle.pure.Term
 case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
   assert(left>=0)
   assert(right>=0)
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(leftProg,rightProg,pre,post,assms) =>
       if (leftProg.length < left)
         throw UserException(s"Left program contains ${leftProg.length} statements, but we try to split after the ${left}th")

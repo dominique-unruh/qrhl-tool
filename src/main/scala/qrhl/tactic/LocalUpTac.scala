@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import org.log4s
 import qrhl.logic.{Assign, Block, CVariable, Call, Environment, IfThenElse, Local, Measurement, QApply, QInit, QVariable, Sample, Statement, VarTerm, Variable, While}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
@@ -15,7 +17,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 
 
 case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(goal) =>
       throw UserException("Expected a qRHL subgoal")
     case QRHLSubgoal(left, right, pre, post, assumptions) =>

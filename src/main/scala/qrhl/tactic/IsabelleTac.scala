@@ -1,5 +1,6 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
 import java.util.concurrent.ConcurrentHashMap
 
 import de.unruh.isabelle.mlvalue.MLValue.Converter
@@ -9,6 +10,7 @@ import qrhl.isabellex.IsabelleX
 import de.unruh.isabelle.mlvalue.{MLFunction3, MLValue}
 import de.unruh.isabelle.pure.{Context, Thm}
 import qrhl.tactic.IsabelleTac.tactics
+
 import scala.collection.mutable
 
 // Implicits
@@ -19,7 +21,7 @@ import de.unruh.isabelle.pure.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 
 abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX => A)(implicit converter: Converter[A]) extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = {
     implicit val isabelle: Isabelle = state.isabelle.isabelle.isabelleControl
     val ctxt = state.isabelle.context
 

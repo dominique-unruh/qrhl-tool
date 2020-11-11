@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
@@ -67,7 +69,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
    *
    * Rule is proven in local variables paper, QrhlElimEqNew.
    */
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = {
     val ProbLeft = new Probability(true, state)
     val ProbRight = new Probability(false, state)
 

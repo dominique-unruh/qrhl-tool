@@ -3,6 +3,7 @@ package qrhl.tactic
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
+import qrhl.toplevel.ToplevelTest.output
 
 //noinspection ZeroIndexToHead
 class RuleTacTest extends AnyFunSuite {

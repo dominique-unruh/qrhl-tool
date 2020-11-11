@@ -6,6 +6,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import qrhl.QRHLSubgoal
 import qrhl.isabellex.RichTerm
 import qrhl.logic.Assign
+import qrhl.toplevel.ToplevelTest.output
 import qrhl.toplevel.{Parser, Toplevel, ToplevelTest}
 
 import scala.collection.immutable.ListSet

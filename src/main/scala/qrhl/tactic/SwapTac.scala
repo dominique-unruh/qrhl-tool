@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import org.log4s
 import qrhl._
 import qrhl.logic.{Block, Environment, Statement, Variable}
@@ -11,7 +13,7 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic 
   if (steps < 1)
     throw UserException(s"swap tactic must get numeric argument >=1, not $steps")
 
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(l,r,pre,post,assms) =>
       val env = state.environment
       List(QRHLSubgoal(

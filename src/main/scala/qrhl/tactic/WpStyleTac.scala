@@ -1,12 +1,14 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import qrhl.logic.{Block, Statement}
 import qrhl._
 import qrhl.isabellex.RichTerm
 
 
 abstract class WpStyleTac(val left:Boolean) extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(leftProg, rightProg, pre, post, assms) =>
       if (left) {
         val last = leftProg.statements.lastOption.getOrElse(throw UserException(s"No last statement of ${if (left) "left" else "right"} side"))

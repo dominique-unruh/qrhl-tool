@@ -5,6 +5,7 @@ import qrhl.QRHLSubgoal
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 import IsabelleX.{globalIsabelle => GIsabelle}
+import qrhl.toplevel.ToplevelTest.output
 
 class SeqTacTest extends AnyFunSuite {
   def testSeqRule(pre:String,post:String,left:String,right:String,middle:String) : Unit = {

@@ -1,12 +1,14 @@
 package qrhl.tactic
 
 
+import java.io.PrintWriter
+
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import IsabelleX.{globalIsabelle => GIsabelle}
 
 object TrueTac extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] =
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] =
     if (isTrivial(goal)) Nil
     else throw UserException("""Tactic true expects a subgoal that is simply "true", or a QRHL subgoal with one assumption being "False" or the precondition being "bot" or "0"""")
 

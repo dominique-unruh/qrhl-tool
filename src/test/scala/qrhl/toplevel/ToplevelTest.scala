@@ -1,5 +1,6 @@
 package qrhl.toplevel
 
+import java.io.PrintWriter
 import java.nio.file.{Path, Paths}
 
 import org.scalatest.funsuite.AnyFunSuite
@@ -27,7 +28,9 @@ class ToplevelTest extends AnyFunSuite {
 }
 
 object ToplevelTest {
-  def randomCommandString : String = "<fake> "+Random.nextLong
+  implicit val output: PrintWriter = new PrintWriter(System.out, false)
+
+  def randomCommandString : String = "<fake> "+Random.nextLong()
   //  val isabellePath = "auto"
   //  lazy val isabelle = new Isabelle(isabellePath)
   //  def makeToplevel(): Toplevel = Toplevel.makeToplevel()

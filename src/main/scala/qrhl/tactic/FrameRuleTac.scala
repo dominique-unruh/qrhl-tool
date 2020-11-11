@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import IsabelleX.{globalIsabelle => GIsabelle}
@@ -15,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 
 case object FrameRuleTac extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(_) => throw UserException("Expected qRHL judgment")
     case QRHLSubgoal(left, right, pre, post, assumptions) =>
       val (b, r) = post.isabelleTerm match {

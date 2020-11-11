@@ -1,12 +1,14 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import qrhl._
 import qrhl.isabellex.RichTerm
 import qrhl.logic.{Block, Statement}
 
 /** amount -1 means "all" */
 abstract class WpBothStyleTac(leftAmount:Int=1, rightAmount:Int=1) extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(leftProg, rightProg, pre, post, assms) =>
       val leftAmount2 = if (leftAmount == -1) leftProg.statements.length else leftAmount
       val rightAmount2 = if (rightAmount == -1) rightProg.statements.length else rightAmount
@@ -27,5 +29,5 @@ abstract class WpBothStyleTac(leftAmount:Int=1, rightAmount:Int=1) extends Tacti
   /** Returns a (preferably weakest) precondition for post given programs left/right.
     * @return (wp,assms), where wp is the precondition, and assms are potential additional subgoals that need to be proven
     */
-  def getWP(state: State, left:Statement, right:Statement, post:RichTerm) : (RichTerm,Seq[Subgoal])
+  def getWP(state: State, left:Statement, right:Statement, post:RichTerm)(implicit output: PrintWriter) : (RichTerm,Seq[Subgoal])
 }

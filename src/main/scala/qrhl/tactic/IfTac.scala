@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, IfThenElse}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
@@ -11,7 +13,7 @@ import scala.collection.mutable.ListBuffer
 import GIsabelle.isabelleControl
 
 case class IfTac(left:Boolean, trueFalse:Option[Boolean]=None) extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(_) =>
       throw UserException("Expected a qRHL subgoal")
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>

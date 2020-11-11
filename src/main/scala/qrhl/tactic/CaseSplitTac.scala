@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import qrhl._
 import qrhl.isabellex.RichTerm
 import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
@@ -7,7 +9,7 @@ import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 case class CaseSplitTac(expr:RichTerm) extends Tactic {
   assert(expr.typ==GIsabelle.boolT)
 
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = {
     if (goal.isInstanceOf[QRHLSubgoal])
       for (x <- expr.variables)
         if (!state.environment.ambientVariables.contains(x))

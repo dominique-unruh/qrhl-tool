@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, IfThenElse}
 import qrhl.tactic.JointIfTac.{allCases, differentCases, sameCases}
@@ -12,7 +14,7 @@ import scala.collection.mutable.ListBuffer
 case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
   assert(Utils.areDistinct(cases))
 
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(_) =>
       throw UserException("Expected a qRHL subgoal")
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>

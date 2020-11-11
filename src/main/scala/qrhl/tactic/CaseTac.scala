@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import IsabelleX.{globalIsabelle => GIsabelle}
@@ -10,7 +12,7 @@ import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 import scala.concurrent.ExecutionContext.Implicits._
 
 case class CaseTac(variable:String, expr:RichTerm) extends Tactic {
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(left,right,pre,post,assms) =>
 
       if (goal.containsAmbientVar(variable))

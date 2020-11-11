@@ -6,6 +6,7 @@ import qrhl.toplevel.{TacticCommand, Toplevel}
 import qrhl.{QRHLSubgoal, UserException}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.Free
+import qrhl.toplevel.ToplevelTest.output
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

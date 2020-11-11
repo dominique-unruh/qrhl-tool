@@ -1,5 +1,7 @@
 package qrhl.tactic
 
+import java.io.PrintWriter
+
 import org.log4s
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, CVariable, Local, QVariable, VTSingle, VarTerm, Variable}
@@ -21,7 +23,7 @@ import de.unruh.isabelle.mlvalue.Implicits._
 
 case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove : List[Variable]) extends Tactic {
 
-  override def apply(state: State, goal: Subgoal): List[Subgoal] = goal match {
+  override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(_) =>
       throw UserException("Expected qRHL goal")
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>
