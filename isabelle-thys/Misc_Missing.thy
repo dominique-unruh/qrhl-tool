@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main Universe "HOL-Library.Bit" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
+  imports Main Universe "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
 begin
 
 section \<open>Misc\<close>

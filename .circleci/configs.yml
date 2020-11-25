@@ -19,7 +19,7 @@ configs:
     jdk: 15
 
 defaults:
-  isabelle: return "2019"
+  isabelle: return "2020"
   isabellehome: |
     if os=="macos": return f"~/install/Isabelle{get('isabelle')}.app/Isabelle"
     return f"~/install/Isabelle{get('isabelle')}"

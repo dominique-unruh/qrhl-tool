@@ -63,7 +63,7 @@ lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]"
   unfolding sup_clinear_space_def[symmetric] by auto
 lemma Cla_sup[simp]: "Cla[x] \<squnion> Cla[y] = Cla[x\<or>y]" 
   unfolding sup_clinear_space_def[symmetric] by auto
-lemma BINF_Cla[simp]: "(INF z:Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
+lemma BINF_Cla[simp]: "(INF z\<in>Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
 proof (rule Inf_eqI)
   show "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> \<CC>\<ll>\<aa>[\<forall>z\<in>Z. x z] \<le> i" by auto
   fix y assume assm: "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> y \<le> i"
@@ -81,7 +81,7 @@ proof (rule Inf_eqI)
   qed
 qed
 
-lemma free_INF[simp]: "(INF x:X. A) = Cla[X={}] + A"
+lemma free_INF[simp]: "(INF x\<in>X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
 
 lemma eigenspace_Cla[simp]: "eigenspace b 0 = Cla[b=0]"
@@ -571,7 +571,7 @@ qed
 
 lemma comm_op_twice[simp]: "distinct_qvars Q \<Longrightarrow> comm_op\<guillemotright>Q \<cdot> (comm_op\<guillemotright>Q \<cdot> S) = (S::_ clinear_space)"
   apply (subst adj_comm_op[symmetric])
-  by (simp del: adj_comm_op flip: adjoint_lift timesOp_assoc_clinear_space)
+  by (simp del: adj_comm_op flip: adjoint_lift cblinfun_apply_assoc_clinear_space)
 
 
 subsection "Rewriting quantum variable lifting"
@@ -603,7 +603,7 @@ proof (unfold qvar_trafo_def, auto)
     have "(A* \<cdot> C \<cdot> A)\<guillemotright>Q = (A \<cdot> (A* \<cdot> C \<cdot> A) \<cdot> A*)\<guillemotright>R"
       using assms unfolding qvar_trafo_def by auto 
     also have "\<dots> = ((A \<cdot> A*) \<cdot> C \<cdot> (A \<cdot> A*)*)\<guillemotright>R"
-      by (simp add: timesOp_assoc)
+      by (simp add: cblinfun_apply_assoc)
     also have "\<dots> = C\<guillemotright>R" apply (subst qvar_trafo_coiso[OF assms])+ by auto 
     finally show ?thesis ..
   qed
@@ -700,7 +700,7 @@ proof (unfold qvar_trafo_def, auto)
   proof -
     have "C\<guillemotright>Q = (A \<cdot> C \<cdot> A*)\<guillemotright>R" apply (rule qvar_trafo_l2bounded) using assms by simp
     also have "\<dots> = (B \<cdot> (A \<cdot> C \<cdot> A*) \<cdot> B*)\<guillemotright>S" apply (rule qvar_trafo_l2bounded) using assms by simp
-    also have "\<dots> = (B \<cdot> A \<cdot> C \<cdot> (A* \<cdot> B*))\<guillemotright>S" using timesOp_assoc by metis
+    also have "\<dots> = (B \<cdot> A \<cdot> C \<cdot> (A* \<cdot> B*))\<guillemotright>S" using cblinfun_apply_assoc by metis
     finally show ?thesis .
   qed
 qed
@@ -1112,7 +1112,7 @@ proof -
       and Y :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
       and c :: complex
     show "f2 (X + Y) = f2 X + f2 Y"
-      by (simp add: f2_def timesOp_dist1 timesOp_dist2 flip: lift_plusOp)
+      by (simp add: f2_def cblinfun_apply_dist1 cblinfun_apply_dist2 flip: lift_plusOp)
     show "f2 (c *\<^sub>C X) = c *\<^sub>C f2 X"
       apply (simp add: f2_def)
       by (metis op_scalar_op scalar_op_op scaleC_lift)
@@ -1135,14 +1135,14 @@ proof -
     also have "\<dots> = (A \<cdot> C1\<guillemotright>Q' \<cdot> A*) \<cdot> (A \<cdot> C2\<guillemotright>R' \<cdot> A*)"
       using assms unfolding qvar_trafo'_def by metis
     also have "\<dots> = A \<cdot> C1\<guillemotright>Q' \<cdot> (A* \<cdot> A) \<cdot> C2\<guillemotright>R' \<cdot> A*"
-      by (simp add: timesOp_assoc)
+      by (simp add: cblinfun_apply_assoc)
     also have "\<dots> = A \<cdot> C1\<guillemotright>Q' \<cdot> C2\<guillemotright>R' \<cdot> A*"
       apply (subst adjUU)
       using qvar_trafo'_unitary
       using assms(3) unitary_isometry by auto 
     also have "\<dots> = A \<cdot> (C1\<otimes>C2)\<guillemotright>QR' \<cdot> A*"
       unfolding assms apply (subst lift_tensorOp[symmetric])
-      using assms by (auto simp: timesOp_assoc)
+      using assms by (auto simp: cblinfun_apply_assoc)
     finally show ?thesis 
       unfolding f1_def f2_def by simp
   qed
@@ -1153,7 +1153,6 @@ proof -
     using \<open>cbounded_linear f1\<close> \<open>cbounded_linear f2\<close> f1_f2_tensors
     apply (rule equal_span'[where f=f1 and G=tensors])
     using span_tensors tensors_def
-    unfolding Complex_Vector_Spaces.span_raw_def
     by auto
   then show ?thesis
     unfolding f1_def f2_def qvar_trafo'_def using assms(5-6) \<open>isometry A\<close> apply auto by metis
@@ -1484,8 +1483,8 @@ proof -
     have "(A\<otimes>B) \<cdot> comm_op = (comm_op \<cdot> comm_op) \<cdot> ((A\<otimes>B) \<cdot> comm_op)"
       by simp
     also have "\<dots> = comm_op \<cdot> (B\<otimes>A)"
-      apply (subst timesOp_assoc)
-      apply (subst timesOp_assoc[symmetric], subst comm_op_swap)
+      apply (subst cblinfun_apply_assoc)
+      apply (subst cblinfun_apply_assoc[symmetric], subst comm_op_swap)
       by rule
     finally show ?thesis
       by -
@@ -1495,12 +1494,12 @@ proof -
     ((A\<otimes>B) \<cdot> (comm_op \<cdot> (V* \<cdot> U) \<otimes> (U* \<cdot> V)) \<cdot> (A\<otimes>B)*) \<guillemotright> QR'" (is "_ = liftOp ?rhs _")
     using qvar_trafo_l2bounded by blast
   also have "?rhs = comm_op \<cdot> ((B\<otimes>A) \<cdot> ((V* \<cdot> U) \<otimes> (U* \<cdot> V)) \<cdot> (A\<otimes>B)*)"
-    apply (subst timesOp_assoc[symmetric])+
+    apply (subst cblinfun_apply_assoc[symmetric])+
     apply (subst ABcomm)
-    apply (subst timesOp_assoc)+ by rule
+    apply (subst cblinfun_apply_assoc)+ by rule
   also have "\<dots> = comm_op \<cdot> (VB* \<cdot> UA) \<otimes> (UA* \<cdot> VB)"
     unfolding VB_def UA_def
-    by (simp add: timesOp_assoc)
+    by (simp add: cblinfun_apply_assoc)
   finally show "quantum_equality_full U Q V R = quantum_equality_full UA Q' VB R'"
     unfolding quantum_equality_full_def QR_def QR'_def
     apply (subst eigenspace_lift[symmetric], simp)+
@@ -1719,7 +1718,7 @@ lemma unitaryZ[simp]: "unitary pauliZ"
   unfolding pauliZ_def by simp
 
 lemma adjoint_Z[simp]: "pauliZ* = pauliZ"
-  unfolding pauliZ_def apply simp apply (subst timesOp_assoc) by simp
+  unfolding pauliZ_def apply simp apply (subst cblinfun_apply_assoc) by simp
 
 lemma Z_Z[simp]: "pauliZ \<cdot> pauliZ = idOp"
   using unitaryZ unfolding unitary_def by simp
@@ -1809,7 +1808,7 @@ lemma Uoracle_twice[simp]:
   assumes "distinct_qvars Q"
   shows "Uoracle f\<guillemotright>Q \<cdot> (Uoracle f\<guillemotright>Q \<cdot> S) = (S::_ clinear_space)"
   apply (subst Uoracle_selfadjoint[symmetric])
-  using assms by (simp del: Uoracle_selfadjoint flip: adjoint_lift timesOp_assoc_clinear_space)
+  using assms by (simp del: Uoracle_selfadjoint flip: adjoint_lift cblinfun_apply_assoc_clinear_space)
 
 
 definition "proj_classical_set S = Proj (Span {ket s|s. s\<in>S})"

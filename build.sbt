@@ -78,7 +78,7 @@ makeQrhlToolConf := {
     val pr = new PrintWriter(file)
     pr.println("# This file is for local development. The distribution will get a copy of qrhl-tool.conf.dist instead.")
     pr.println()
-    pr.println("isabelle-home = /opt/Isabelle2019")
+    pr.println("isabelle-home = /opt/Isabelle2020")
     pr.close()
   }
 }

@@ -65,6 +65,9 @@ jobs:
                 2019)
                   curl https://master.dl.sourceforge.net/project/afp/afp-Isabelle2019/afp-2019-08-19.tar.gz -o /tmp/afp.tar.gz
                   tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2019 --strip 1;;
+                2020)
+                  curl https://www.isa-afp.org/release/afp-current.tar.gz -o /tmp/afp.tar.gz
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1;;
                 *) false;;
               esac
             fi

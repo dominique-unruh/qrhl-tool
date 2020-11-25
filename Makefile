@@ -14,8 +14,8 @@ target/universal/qrhl-$(VERSION).zip : build.sbt $(SOURCES)
 test-distrib0 : qrhl.zip
 	rm -rf tmp
 	unzip -d tmp qrhl.zip
-	echo 'isabelle-home = /opt/Isabelle2019' > tmp/qrhl-$(VERSION)/qrhl-tool.conf
-	echo 'afp-root = /opt/afp-2019' >> tmp/qrhl-$(VERSION)/qrhl-tool.conf
+	echo 'isabelle-home = /opt/Isabelle2020' > tmp/qrhl-$(VERSION)/qrhl-tool.conf
+	echo 'afp-root = /opt/afp-2020' >> tmp/qrhl-$(VERSION)/qrhl-tool.conf
 
 test-distrib : test-distrib0
 	set -e && cd tmp/qrhl-$(VERSION)/examples && \

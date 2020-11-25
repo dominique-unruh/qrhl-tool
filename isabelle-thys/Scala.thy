@@ -16,7 +16,7 @@ Source is in isabelle-thys/Scala.thy
 
 Run
 
-/opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+/opt/Isabelle2020/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
 
 to recreate/update
 
