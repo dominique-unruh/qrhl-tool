@@ -10,7 +10,7 @@ import qrhl.toplevel.Toplevel.runFromTerminal
 
 object Main {
   class CLIConf(args: Seq[String]) extends ScallopConf(args) {
-    val rebuild : ScallopOption[Boolean] = toggle()
+    val build : ScallopOption[Boolean] = toggle()
     // if cheating is false, cheating cannot be activated
     val cheating : ScallopOption[Boolean] = toggle() // Default: interactive mode: true, from file: false
     val emacs : ScallopOption[Boolean] = toggle() // Ignored but ProofGeneral needs to give some option to support spaces in paths
@@ -23,8 +23,8 @@ object Main {
 //    println(version)
     val major = version.split("\\.")(0).toInt
 //    println(major)
-    if (major < 9) {
-      System.err.println(s"Requiring at least Java version 9, got $version")
+    if (major < 11) {
+      System.err.println(s"Requiring at least Java version 11, got $version")
       System.exit(1)
     }
   }
@@ -34,7 +34,7 @@ object Main {
 
     val conf = new CLIConf(args)
     conf.verify()
-    if (conf.rebuild.getOrElse(false)) {
+    if (conf.build.getOrElse(false)) {
       val isabelle = new IsabelleX(build = true)
       isabelle.dispose()
     } else if (conf.isabelle.getOrElse(false)) {
