@@ -110,22 +110,15 @@ class HashedPromise[A <: HashedValue, B <: HashedValue] {
   /** Only switches from null to non-null. Never changes once non-null */
   @Nullable private var value: B = _
 
-  // TODO: should use cache
-  def peek: Option[B] = Option(value)
-
-  // TODO: should use cache
-  def peekHash: Option[Hash] =
-    if (hash!=null) Some(hash)
-    else if (value!=null) {
-      hash = value.hash
-      Some(hash)
-    } else
-      None
-
-  def getHash: Future[Hash] = {
+  // TODO: Make sure the computation is never executed twice!
+  def getHash: Future[Hash] =
     if (hash!=null) Future.successful(hash)
-    else for (value <- get) yield value.hash
-  }
+    else if (value!=null) Future.successful(value.hash)
+    else
+      for (input <- computationInput.get;
+           hash <- getHashUsingInput(input))
+        yield hash
+
 
   // TODO: Make sure the computation is never executed twice!
   def get: Future[B] = synchronized {
@@ -140,9 +133,24 @@ class HashedPromise[A <: HashedValue, B <: HashedValue] {
       yield result
   }
 
+  private def getHashUsingInput(input: A): Future[Hash] = synchronized {
+    if (hashedFunction == null) return Future.successful(hash)
+
+    Cache.getHashByInput(hashedFunction.hash, input) match {
+      case Some(hash) => return Future.successful(hash)
+      case None =>
+    }
+
+    for (value <- compute(input))
+      yield { hash = value.hash; hash }
+  }
+
+  private def compute(input: A): Future[B] =
+    for ((result, fingerprint) <- hashedFunction.compute(input);
+         _ = registerResult(result, input, fingerprint))
+      yield result
+
   private def getUsingInput(input: A): Future[B] = synchronized {
-    // Make sure this value doesn't change during computation. This method is synchronized,
-    // but asynchronous computations in the following for-comprehension might not be
     if (hashedFunction == null) return Future.successful(value)
 
     Cache.getByInput(hashedFunction.hash, input) match {
@@ -150,9 +158,7 @@ class HashedPromise[A <: HashedValue, B <: HashedValue] {
       case Some(result) => return Future.successful(result.asInstanceOf[B])
     }
 
-    for ((result, fingerprint) <- hashedFunction.compute(input);
-         _ = registerResult(result, input, fingerprint))
-      yield result
+    compute(input)
   }
 
   private def registerResult(result: B, input: A, fingerprint: Fingerprint[A]): Unit = synchronized {
@@ -204,17 +210,22 @@ object Cache {
     }
   }
 
-  def getByInput[A <: HashedValue](@NotNull computationHash: Hash, @NotNull input: A): Option[HashedValue] = fingerprints.synchronized {
+  def getHashByInput[A <: HashedValue](@NotNull computationHash: Hash, @NotNull input: A): Option[Hash] = fingerprints.synchronized {
     logger.debug(s"Searching for $computationHash($input) in fingerprints")
     for ((computationHash2, fingerprint, result) <- fingerprints) {
       logger.debug(s"Checking $computationHash2, $fingerprint, $result")
       if (computationHash == computationHash2 && fingerprint.asInstanceOf[Fingerprint[A]].matches(input)) {
         logger.debug("Found")
-        return getByHash(result)
+        return Some(result)
       }
     }
     logger.debug("Not found")
 
     None
   }
+
+  def getByInput[A <: HashedValue](@NotNull computationHash: Hash, @NotNull input: A): Option[HashedValue] =
+    for (hash <- getHashByInput(computationHash, input);
+         value <- getByHash(hash))
+      yield value
 }
