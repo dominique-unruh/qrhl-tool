@@ -32,4 +32,4 @@ session "QRHL-Prerequisites" in "fake-session-dir/5" = "QRHL-Prerequisites2" +
 
 session "QRHL-Scala" in "fake-session-dir/6" = QRHL +
   sessions QRHL
-  theories Scala
+  theories QRHL.Scala
