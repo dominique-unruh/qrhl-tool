@@ -8,12 +8,14 @@ import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 
 import com.google.common.cache
 import hashedcomputation.Fingerprint.Entry
+import hashedcomputation.FingerprintMap.MapElement
 import hashedcomputation.HashedPromise.State
 import org.apache.commons.codec.binary.Hex
 import org.jetbrains.annotations.{NotNull, Nullable}
 import org.log4s
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -450,16 +452,84 @@ object Cache {
 */
 }
 
-/*
 
-trait Fingerprintable[A] {
-  def fingerprinter: Fingerprinter[A] with A
+trait Fingerprintable[A <: HashedValue] {
+  def fingerprinter: Fingerprinter[A]
 }
 
-trait Fingerprinter[A] {
-  def fingerprint: A
+trait Fingerprinter[A <: HashedValue] {
+  /** Returns the fingerprint of all actions since creation (implies [[dispose]]) */
+  def fingerprint(): Fingerprint[A]
+  /** Stops tracking accesses */
+  def dispose(): Unit
 }
 
-class FingerprintMap[A,B](map: Map[A,B]) {
-  class MapFingerpri
-} */
+trait HashedOption[+A <: HashedValue] extends HashedValue
+object HashedOption {
+  def hash[A <: HashedValue](value: Option[A]): Hash = value match {
+    case None => HashedNone.hash
+    case Some(value2) => hash(value2)
+  }
+  def hash[A <: HashedValue](value: A): Hash = Hash.hashString("OPTION " + value.hash.toString) // TODO adhoc
+  def apply[A <: HashedValue](value: Option[A]): HashedOption[A] = value match {
+    case None => HashedNone
+    case Some(x) => HashedSome(x)
+  }
+}
+case object HashedNone extends HashedOption[Nothing] {
+  override def hash: Hash = Hash.hashString(getClass.descriptorString())
+}
+case class HashedSome[A <: HashedValue](value: A) extends HashedOption[A] {
+  override def hash: Hash = HashedOption.hash[A](value)
+}
+
+
+// TODO: Should not implement HashedValue, hashing a large map might be slow
+final class FingerprintMap[A <: HashedValue, B <: HashedValue](private val map: Map[A,B]) extends Map[A,B] with Fingerprintable[FingerprintMap[A,B]] with HashedValue {
+  private type M = Map[A,B]
+  private type FM = FingerprintMap[A,B]
+  private type E = MapElement[A,B]
+  private class MapFingerprinter extends Fingerprinter[FM] {
+    private[FingerprintMap] val accesses = new mutable.LinkedHashSet[A]
+    override def fingerprint(): Fingerprint[FM] = {
+      val entries = for (access <- accesses.toList) yield {
+        val value = map.get(access)
+        Entry[FM,HashedOption[B]](MapElement(access) : E, Fingerprint[HashedOption[B]](HashedOption.hash(value)))
+      }
+      val fingerprint = new Fingerprint[FingerprintMap[A,B]](null, Some(entries))
+      dispose()
+      fingerprint
+    }
+    override def dispose(): Unit = {
+      fingerprinters -= this
+      accesses.clear()
+    }
+  }
+  private val fingerprinters = new mutable.ArrayDeque[MapFingerprinter]
+  override def fingerprinter: Fingerprinter[FM] = {
+    val fingerprinter = new MapFingerprinter
+    fingerprinters += fingerprinter
+    fingerprinter
+  }
+
+  override def hash: Hash = Hash.hashString(toString()) // TODO: ad-hoc
+  override def removed(key: A): Map[A, B] = ???
+  override def updated[V1 >: B](key: A, value: V1): Map[A, V1] = ???
+  override def get(key: A): Option[B] = {
+    val result = map.get(key)
+    for (fp <- fingerprinters) fp.accesses += key
+    result
+  }
+  override def iterator: Iterator[(A, B)] = ???
+
+  override def toString(): String = "Fingerprint"+map
+}
+
+object FingerprintMap {
+  case class MapElement[A <: HashedValue, B <: HashedValue](key: A) extends Element[FingerprintMap[A,B], HashedOption[B]] {
+    override def hash: Hash = ???
+
+    override def extract(value: FingerprintMap[A, B]): HashedOption[B] =
+      HashedOption(value.map.get(key))
+  }
+}
