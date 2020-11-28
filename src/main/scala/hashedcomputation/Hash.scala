@@ -463,11 +463,6 @@ object Cache {
 */
 }
 
-
-trait Fingerprintable[A <: HashedValue] {
-  def fingerprinter: Fingerprinter[A]
-}
-
 trait Fingerprinter[A <: HashedValue] {
   /** Returns the fingerprint of all actions since creation (implies [[dispose]]) */
   def fingerprint(): Fingerprint[A]
@@ -495,51 +490,57 @@ case class HashedSome[A <: HashedValue](value: A) extends HashedOption[A] {
   override def hash: Hash[this.type] = HashedOption.hash[A](value).asInstanceOf[Hash[this.type]]
 }
 
+final class HashedMap[A <: HashedValue, B <: HashedValue]
+  (val _hash: Hash[Map[A,B]], val map: Map[A,B]) extends Map[A,B] with HashedValue {
 
-// TODO: Should not implement HashedValue, hashing a large map might be slow
-final class FingerprintMap[A <: HashedValue, B <: HashedValue](private val map: Map[A,B]) extends Map[A,B] with Fingerprintable[FingerprintMap[A,B]] with HashedValue {
-  private type M = Map[A,B]
-  private type FM = FingerprintMap[A,B]
-  private type E = MapElement[A,B]
-  private class MapFingerprinter extends Fingerprinter[FM] {
-    private[FingerprintMap] val accesses = new mutable.LinkedHashSet[A]
-    override def fingerprint(): Fingerprint[FM] = {
-      val entries = for (access <- accesses.toList) yield {
-        val value = map.get(access)
-        Entry[FM,HashedOption[B]](MapElement(access) : E, Fingerprint[HashedOption[B]](HashedOption.hash(value)))
-      }
-      val fingerprint = new Fingerprint[FingerprintMap[A,B]](null, Some(entries))
-      dispose()
-      fingerprint
-    }
-    override def dispose(): Unit = fingerprinters -= this
-  }
-  private val fingerprinters = new mutable.ArrayDeque[MapFingerprinter]
-  override def fingerprinter: Fingerprinter[FM] = {
-    val fingerprinter = new MapFingerprinter
-    fingerprinters += fingerprinter
-    fingerprinter
+  override def removed(key: A): Map[A, B] = map.removed(key)
+  override def updated[V1 >: B](key: A, value: V1): Map[A, V1] = map.updated(key, value)
+  override def get(key: A): Option[B] = map.get(key)
+  override def iterator: Iterator[(A, B)] = map.iterator
+
+  override def hash: Hash[this.type] = _hash.asInstanceOf[Hash[this.type]]
+}
+
+/** Not thread safe */
+final class FingerprintMap[A <: HashedValue, B <: HashedValue]
+  (private val map: HashedMap[A,B]) extends Map[A,B] {
+
+  private val accesses = new mutable.LinkedHashSet[A]
+
+  def get(key: A): Option[B] = {
+    accesses += key
+    map.get(key)
   }
 
-  override def hash: Hash[this.type] = Hash.hashString(toString()) // TODO: ad-hoc
+  private def fingerprint(): Fingerprint[HashedMap[A,B]] = {
+    val entries: List[Entry[HashedMap[A,B], HashedOption[B]]] =
+      for (key <- accesses.toList) yield
+        Entry(MapElement(key), Fingerprint(HashedOption(map.get(key))))
+    Fingerprint(map.hash, Some(entries))
+  }
+
   override def removed(key: A): Map[A, B] = ???
-  override def updated[V1 >: B](key: A, value: V1): Map[A, V1] = ???
-  override def get(key: A): Option[B] = {
-    val result = map.get(key)
-    for (fp <- fingerprinters) fp.accesses += key
-    result
-  }
-  override def iterator: Iterator[(A, B)] = ???
 
-  override def toString(): String = "Fingerprint"+map
+  override def updated[V1 >: B](key: A, value: V1): Map[A, V1] = ???
+
+  override def iterator: Iterator[(A, B)] = ???
 }
 
 object FingerprintMap {
-  case class MapElement[A <: HashedValue, B <: HashedValue](key: A) extends Element[FingerprintMap[A,B], HashedOption[B]] {
+  def withFingerprint[A <: HashedValue, B <: HashedValue]
+    (map: HashedMap[A,B]):
+    (FingerprintMap[A,B], () => Fingerprint[HashedMap[A,B]]) = {
+
+    val fpMap = new FingerprintMap(map)
+    (fpMap, fpMap.fingerprint)
+  }
+
+  case class MapElement[A <: HashedValue, B <: HashedValue](key: A)
+    extends Element[HashedMap[A,B], HashedOption[B]] {
     override def hash: Hash[this.type] = ???
 
-    override def extract(value: FingerprintMap[A, B]): HashedOption[B] =
-      HashedOption(value.map.get(key))
+    override def extract(value: HashedMap[A, B]): HashedOption[B] =
+      HashedOption(value.get(key))
   }
 }
 
@@ -638,7 +639,6 @@ object Directory {
         listeners.getIfPresent(key) match {
           case null => logger.error(s"Did not find a listener for key $key")
           case listener =>
-            // TODO catch exceptions
             events.forEach { event => try {
               event.kind() match {
                 case OVERFLOW => listener.onOverflow()
@@ -653,7 +653,6 @@ object Directory {
     }
   }
 }
-
 
 sealed trait DirectoryEntry extends HashedValue
 

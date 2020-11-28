@@ -97,19 +97,19 @@ class CacheTest extends AnyFunSuite {
 
   test ("fingerprinted caching") {
     var counter = 0
-    type FM = FingerprintMap[HashedInt, HashedInt]
+    type FM = HashedMap[HashedInt, HashedInt]
     val computation: HashedFunction[FM, HashedInt] = new HashedFunction[FM, HashedInt] {
       override def compute(input: FM): Future[(HashedInt, Fingerprint[FM])] = Future {
 //        val map = input.map
         println(s"Computing $input")
-        val fingerprinter = (input : Fingerprintable[FM]).fingerprinter
+        val (map, getFingerprint) = FingerprintMap.withFingerprint(input)
         counter += 1
 //        val looked = new ListBuffer[Int]
         var length = 0
         var current = 0
         Breaks.breakable {
           while (true) {
-            val next = input.get(HashedInt(current))
+            val next = map.get(HashedInt(current))
 //            looked += current
             if (next.isEmpty) Breaks.break();
             length += 1
@@ -121,17 +121,15 @@ class CacheTest extends AnyFunSuite {
 //        val fingerprintEntries = for (i <- looked.toList)
 //          yield Entry(MapElement(i), Fingerprint(HashedInt(map.getOrElse(i, emptyInt))))
 //        val fingerprint = Fingerprint(input.hash, Some(fingerprintEntries))
-        val fingerprint = fingerprinter.fingerprint()
-        (HashedInt(length), fingerprint)
+        (HashedInt(length), getFingerprint())
       }
 
       override val hash: Hash[this.type] = Hash.randomHash()
     }
 
     def compute(map : Map[Int,Int]) : Int = {
-      val map2 = map.map({case (i,j) => (HashedInt(i), HashedInt(j))})
-      val hashedI = new FingerprintMap(map2)
-      val hashedResultPromise = HashedPromise[FM,HashedInt](computation, hashedI)
+      val map2 = new HashedMap(Hash.randomHash(), map.map({case (i,j) => (HashedInt(i), HashedInt(j))}))
+      val hashedResultPromise = HashedPromise[FM,HashedInt](computation, map2)
       val hashedResult = await(hashedResultPromise.get)
       hashedResult.int
     }
@@ -202,31 +200,32 @@ class CacheTest extends AnyFunSuite {
   }
 
   test("DirectorySnapshot") {
+    val delay = 500
     val dirPath = Files.createTempDirectory("test-DirectorySnapshot")
     dirPath.toFile.deleteOnExit()
 
     Files.writeString(dirPath.resolve("test1"), "test1")
-    Thread.sleep(100)
+    Thread.sleep(delay)
 
     val dir = Directory(dirPath)
     val snapshot1 = dir.snapshot()
     assert(snapshot1.keySet == Set("test1"))
 
     Files.writeString(dirPath.resolve("test2"), "test2")
-    Thread.sleep(100)
+    Thread.sleep(delay)
     val snapshot2 = dir.snapshot()
     assert(snapshot2.keySet == Set("test1","test2"))
     assert(snapshot2.hash != snapshot1.hash)
 
     Files.writeString(dirPath.resolve("test2"), "test2 new")
-    Thread.sleep(100)
+    Thread.sleep(delay)
     val snapshot3 = dir.snapshot()
     assert(snapshot3.keySet == Set("test1","test2"))
     assert(snapshot3.hash != snapshot2.hash)
     assert(snapshot3.hash != snapshot1.hash)
 
     Files.delete(dirPath.resolve("test2"))
-    Thread.sleep(100)
+    Thread.sleep(delay)
     val snapshot4 = dir.snapshot()
     assert(snapshot4.keySet == Set("test1"))
     assert(snapshot4.hash == snapshot1.hash)
