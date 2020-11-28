@@ -3,8 +3,9 @@ pick: random
 configs:
   windows-jdk12:
     os: windows
-    # We haven't configure downloading of JDKs in Windows, so we need to select the JDK that is preinstalled on Windows
+    # We haven't configured downloading of JDKs in Windows, so we need to select the JDK that is preinstalled on Windows
     jdk: 12
+    weight: 50
   linux-jdk11:
     os: linux
     jdk: 11

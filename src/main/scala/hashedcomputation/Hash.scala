@@ -488,7 +488,7 @@ object HashedOption {
   }
 }
 case object HashedNone extends HashedOption[Nothing] {
-  override def hash: Hash[this.type] = Hash.hashString(getClass.descriptorString())
+  override def hash: Hash[this.type] = Hash.hashString(getClass.getName)
 }
 case class HashedSome[A <: HashedValue](value: A) extends HashedOption[A] {
   override def hash: Hash[this.type] = HashedOption.hash[A](value).asInstanceOf[Hash[this.type]]
