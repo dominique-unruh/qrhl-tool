@@ -22,12 +22,12 @@ import scala.concurrent.Future
 import scala.util.Random
 import scala.util.control.Breaks
 
-class Hash private (private val hash: Array[Byte]) {
+class Hash[+B] private (private val hash: Array[Byte]) {
   override def toString: String = Hex.encodeHexString(hash).substring(0,7)
 
   override def hashCode(): Int = util.Arrays.hashCode(hash)
   override def equals(obj: Any): Boolean = obj match {
-    case obj : Hash =>
+    case obj : Hash[_] =>
       util.Arrays.equals(hash, obj.hash)
     case _ => false
   }
@@ -38,15 +38,15 @@ object Hash {
   private val digest = MessageDigest.getInstance("SHA-256")
   private val hashLen = digest.getDigestLength
 
-  def hashBytes(bytes: Array[Byte]): Hash = digest.synchronized {
+  def hashBytes(bytes: Array[Byte]): Hash[Nothing] = digest.synchronized {
     digest.reset()
     digest.update(bytes)
     new Hash(digest.digest())
   }
 
-  def hashInt(int: Int): Hash = hashBytes(ByteBuffer.allocate(hashLen).put(0:Byte).putInt(int).array())
-  def hashString(str: String): Hash = hashBytes(str.getBytes)
-  def randomHash(): Hash = new Hash(Random.nextBytes(hashLen))
+  def hashInt(int: Int): Hash[Nothing] = hashBytes(ByteBuffer.allocate(hashLen).put(0:Byte).putInt(int).array())
+  def hashString(str: String): Hash[Nothing] = hashBytes(str.getBytes)
+  def randomHash(): Hash[Nothing] = new Hash(Random.nextBytes(hashLen))
 }
 
 trait Element[A <: HashedValue, B <: HashedValue] extends HashedValue {
@@ -55,7 +55,7 @@ trait Element[A <: HashedValue, B <: HashedValue] extends HashedValue {
 
 final case class IDElement[A <: HashedValue]() extends Element[A,A] {
   override def extract(value: A): A = value
-  override def hash: Hash = ???
+  override def hash: Hash[this.type] = ???
 }
 
 final case class NestedElement[A <: HashedValue, B <: HashedValue, C <: HashedValue](outer: Element[A,B], inner: Element[B,C])
@@ -63,7 +63,7 @@ final case class NestedElement[A <: HashedValue, B <: HashedValue, C <: HashedVa
   override def extract(value: A): C =
     inner.extract(outer.extract(value))
 
-  override def hash: Hash = ???
+  override def hash: Hash[this.type] = ???
 }
 
 object NestedElement {
@@ -74,7 +74,7 @@ object NestedElement {
   }
 }
 
-case class Fingerprint[A <: HashedValue](hash: Hash, fingerprints: Option[Seq[Entry[A, _<:HashedValue]]]) {
+case class Fingerprint[A <: HashedValue](hash: Hash[A], fingerprints: Option[Seq[Entry[A, _<:HashedValue]]]) {
   def matches(value: A): Boolean = {
     if (hash == value.hash) true
     else {
@@ -86,10 +86,11 @@ case class Fingerprint[A <: HashedValue](hash: Hash, fingerprints: Option[Seq[En
     }
   }
 
-  def unfold: Seq[(Element[A,_<:HashedValue], Hash)] = {
-    val result = new ListBuffer[(Element[A,_<:HashedValue], Hash)]
+  type U[B <: HashedValue] = (Element[A,B], Hash[B])
+  def unfold: Seq[U[_ <: HashedValue]] = {
+    val result = new ListBuffer[U[_ <: HashedValue]]
     def unfold[B <: HashedValue](fp: Fingerprint[B], element: Element[A,B]): Unit = fp.fingerprints match {
-      case None => result.append((element, fp.hash))
+      case None => result.append((element, fp.hash) : U[B])
       case Some(fingerprints) =>
         def doEntry[C <: HashedValue](entry: Entry[B,C]): Unit = {
           val subElement = NestedElement(element, entry.element)
@@ -113,18 +114,18 @@ object Fingerprint {
     }
   }
 
-  def apply[A <: HashedValue](hash: Hash) = new Fingerprint[A](hash, None)
+  def apply[A <: HashedValue](hash: Hash[A]) = new Fingerprint[A](hash, None)
   def apply[A <: HashedValue](value: A) = new Fingerprint[A](value.hash, None)
 }
 
 trait HashedValue {
   /** Must return a stable value */
-  @NotNull def hash: Hash
+  @NotNull def hash: Hash[this.type]
 }
 
 trait HashedFunction[A <: HashedValue, B <: HashedValue] {
   @NotNull def compute(input: A): Future[(B @NotNull, Fingerprint[A] @NotNull)]
-  @NotNull def hash: Hash
+  @NotNull def hash: Hash[this.type]
 }
 object HashedFunction {
   def apply[A <: HashedValue, B <: HashedValue](f: A => B): HashedFunction[A, B] = new HashedFunction[A,B] {
@@ -133,7 +134,7 @@ object HashedFunction {
       (result, Fingerprint(input.hash))
     }
 
-    override val hash: Hash = Hash.randomHash()
+    override val hash: Hash[this.type] = Hash.randomHash()
   }
 }
 
@@ -148,7 +149,8 @@ object HashedPromise {
   def apply[A <: HashedValue, B <: HashedValue](function: HashedFunction[A, B], input: HashedPromise[_ <: HashedValue, A]): HashedPromise[A, B] =
     apply(State.FunctionOnly(function, input))
 
-  def apply[A <: HashedValue, B <: HashedValue](function: HashedFunction[A, B], input: HashedPromise[_ <: HashedValue, A], hash: Hash): HashedPromise[A, B] =
+  def apply[A <: HashedValue, B <: HashedValue](function: HashedFunction[A, B],
+                                                input: HashedPromise[_ <: HashedValue, A], hash: Hash[B]): HashedPromise[A, B] =
     apply(State.FunctionAndHash(function, input, hash))
 
   def apply[A <: HashedValue, B <: HashedValue](hashedFunction: HashedFunction[A, B], input: A): HashedPromise[A, B] =
@@ -164,32 +166,32 @@ object HashedPromise {
     }
     /** A state where a future with the hash is available (hash computation started or finished) */
     sealed trait HashFutureState[A,B] extends State[A,B] {
-      def hashFuture : Future[Hash]
+      def hashFuture : Future[Hash[B]]
     }
     /** A state where a future with the result is available (hash computation started or finished) */
     sealed trait ResultFutureState[A,B <: HashedValue] extends HashFutureState[A,B] {
       def resultFuture : Future[B]
-      override def hashFuture: Future[Hash] = resultFuture.map(_.hash)
+      override def hashFuture: Future[Hash[B]] = resultFuture.map(_.hash)
     }
     /** A state where all computations have been performed (but possibly failed) */
     sealed trait FinalState[A <: HashedValue, B <: HashedValue] extends HashFutureState[A,B] with ResultFutureState[A,B]
     sealed trait Computing[A <: HashedValue, B <: HashedValue] extends State[A,B]
 
-    final case class HashAndInput[A <: HashedValue, B <: HashedValue](function: HashedFunction[A,B], input: A, hash: Hash)
+    final case class HashAndInput[A <: HashedValue, B <: HashedValue](function: HashedFunction[A,B], input: A, hash: Hash[B])
       extends HashFutureState[A,B] with StateWithFunction[A,B] {
-      override def hashFuture: Future[Hash] = Future.successful(hash)
+      override def hashFuture: Future[Hash[B]] = Future.successful(hash)
       override def inputFuture: Future[A] = Future.successful(input)
       override def inputPromise: HashedPromise[_ <: HashedValue, A] = HashedPromise(input)
     }
     final case class Failed[A <: HashedValue, B <: HashedValue](exception: Throwable) extends FinalState[A,B] {
-      override def hashFuture: Future[Hash] = Future.failed(exception)
+      override def hashFuture: Future[Hash[B]] = Future.failed(exception)
       override def resultFuture: Future[B] = Future.failed(exception)
     }
     final case class Locked[A <: HashedValue, B <: HashedValue]() extends State[A,B]
-    final case class ComputingHash[A <: HashedValue, B <: HashedValue](override val hashFuture: Future[Hash]) extends HashFutureState[A,B] with Computing[A,B]
+    final case class ComputingHash[A <: HashedValue, B <: HashedValue](override val hashFuture: Future[Hash[B]]) extends HashFutureState[A,B] with Computing[A,B]
     final case class ComputingResult[A <: HashedValue, B <: HashedValue](override val resultFuture: Future[B]) extends ResultFutureState[A,B] with Computing[A,B]
     final case class Result[A <: HashedValue, B <: HashedValue](result: B) extends FinalState[A,B] {
-      override def hashFuture: Future[Hash] = Future.successful(result.hash)
+      override def hashFuture: Future[Hash[B]] = Future.successful(result.hash)
       override def resultFuture: Future[B] = Future.successful(result)
     }
     final case class FunctionOnly[A <: HashedValue, B <: HashedValue](override val function: HashedFunction[A, B], input: HashedPromise[_ <: HashedValue, A]) extends StateWithFunction[A,B] {
@@ -198,9 +200,9 @@ object HashedPromise {
     }
     final case class FunctionAndHash[A <: HashedValue, B <: HashedValue]
           (override val function: HashedFunction[A, B], val input: HashedPromise[_ <: HashedValue, A],
-           hash: Hash)
+           hash: Hash[B])
       extends StateWithFunction[A,B] with HashFutureState[A,B] {
-      override def hashFuture: Future[Hash] = Future.successful(hash)
+      override def hashFuture: Future[Hash[B]] = Future.successful(hash)
       override def inputFuture: Future[A] = input.get
       override def inputPromise: HashedPromise[_ <: HashedValue, A] = input
     }
@@ -219,7 +221,7 @@ class HashedPromise[A <: HashedValue, B <: HashedValue](private val state: Atomi
   }
 
   /** Tries to get the hash of the result, but without running the function (but potentially computing the input) */
-  private def getHashByInputPromise(function: HashedFunction[A,B], inputPromise: HashedPromise[_<:HashedValue,A]): Future[Option[Hash]] = {
+  private def getHashByInputPromise(function: HashedFunction[A,B], inputPromise: HashedPromise[_<:HashedValue,A]): Future[Option[Hash[B]]] = {
     val functionHash = function.hash
     for (inputHash <- inputPromise.getHash; // TODO: catch exception
          hashOption = Cache.getHashByInputHash(functionHash, inputHash);
@@ -301,7 +303,7 @@ class HashedPromise[A <: HashedValue, B <: HashedValue](private val state: Atomi
   }
 
 
-  def getHash: Future[Hash] = state.get() match {
+  def getHash: Future[Hash[B]] = state.get() match {
     case st: State.HashFutureState[A, B] => st.hashFuture
     case _ =>
       triggerHashComputation()
@@ -326,12 +328,12 @@ class HashedPromise[A <: HashedValue, B <: HashedValue](private val state: Atomi
 object Cache {
   private val logger = log4s.getLogger
 
-  private val hashCache: cache.Cache[Hash, HashedValue] = cache.CacheBuilder.newBuilder()
+  private val hashCache: cache.Cache[Hash[_], HashedValue] = cache.CacheBuilder.newBuilder()
     .softValues()
     .expireAfterAccess(1, HOURS)
     .build()
 
-  private val outputCache: cache.Cache[(Hash,Hash), Hash] = cache.CacheBuilder.newBuilder()
+  private val outputCache: cache.Cache[(Hash[_],Hash[_]), Hash[_]] = cache.CacheBuilder.newBuilder()
     .softValues()
     .expireAfterAccess(1, HOURS)
     .build()
@@ -341,17 +343,17 @@ object Cache {
    * Done when getting a hash instead of an Element
    * The (id,Element) is actually a Seq, then need to backtrace over all choices
    * */
-  private val fingerprintCache: cache.Cache[(Long,Hash), Either[(Long,Element[_,_]), Hash]] = cache.CacheBuilder.newBuilder()
+  private val fingerprintCache: cache.Cache[(Long,Hash[_]), Either[(Long,Element[_,_]), Hash[_]]] = cache.CacheBuilder.newBuilder()
     .softValues()
     .expireAfterAccess(1, HOURS)
     .build()
 
   private val fingerprintIdCounter = new AtomicLong(1)
 
-  def getByHash(@NotNull hash: Hash): Option[HashedValue] = Option(hashCache.getIfPresent(hash))
+  def getByHash[T <: HashedValue](@NotNull hash: Hash[T]): Option[T] = Option(hashCache.getIfPresent(hash)).asInstanceOf[Option[T]]
 
   private[hashedcomputation] def register[A <: HashedValue, B <: HashedValue]
-  (@NotNull value: B, @NotNull computationHash: Hash, @NotNull fingerprint: Fingerprint[A]): Unit = {
+  (@NotNull value: B, @NotNull computationHash: Hash[_], @NotNull fingerprint: Fingerprint[A]): Unit = {
     logger.debug(s"Registering $value in cache")
     val valueHash = value.hash
     hashCache.put(valueHash, value)
@@ -359,7 +361,7 @@ object Cache {
 
     logger.debug(s"Registering ${(computationHash, fingerprint, value.hash)} in fingerprints")
 
-    def put[C <: HashedValue](id: Long, hash: Hash, element: Element[C, _ <: HashedValue]): Long = {
+    def put[C <: HashedValue](id: Long, hash: Hash[_], element: Element[C, _ <: HashedValue]): Long = {
       val entry = fingerprintCache.asMap().compute((id, hash), { (_, entry) =>
         entry match {
           case null =>
@@ -384,9 +386,10 @@ object Cache {
 
     // TODO: We are ignoring the Fingerprint.hash entries when there are subfingerprints which would allow shortcutting
 
-    val (id, hash) = fingerprint.unfold.foldLeft((0L,computationHash)) { case ((id, currentHash), (element, elementHash)) =>
-      val id2 = put(id, currentHash, element)
-      (id2, elementHash)
+    val (id, hash) = fingerprint.unfold.foldLeft[(Long,Hash[_])]((0L,computationHash : Hash[_])) {
+      case ((id, currentHash), (element, elementHash : Hash[_])) =>
+        val id2 = put(id, currentHash, element)
+        (id2, elementHash)
     }
     fingerprintCache.put((id, hash), Right(valueHash))
 
@@ -419,22 +422,19 @@ object Cache {
     }*/
   }
 
-  def getHashByInputHash(@NotNull computationHash: Hash, @NotNull inputHash: Hash): Option[Hash] = {
-    outputCache.getIfPresent((computationHash, inputHash)) match {
-      case null => None
-      case hash => Some(hash)
-    }
-  }
+  def getHashByInputHash[A <: HashedValue, B <: HashedValue](@NotNull computationHash: Hash[HashedFunction[A,B]], @NotNull inputHash: Hash[A]): Option[Hash[B]] =
+    Option(outputCache.getIfPresent((computationHash, inputHash))).asInstanceOf[Option[Hash[B]]]
 
-  def getHashByInput[A <: HashedValue](@NotNull computationHash: Hash, @NotNull input: A): Option[Hash] = {
+  def getHashByInput[A <: HashedValue, B <: HashedValue](@NotNull computationHash: Hash[HashedFunction[A,B]],
+                                                         @NotNull input: A): Option[Hash[B]] = {
     logger.debug(s"Searching for $computationHash($input) in fingerprints")
 
-    var hash = computationHash
+    var hash : Hash[_] = computationHash
     var id = 0L
     while (true) {
       fingerprintCache.getIfPresent((id,hash)) match {
         case null => return None
-        case Right(hash) => return Some(hash)
+        case Right(hash) => return Some(hash.asInstanceOf[Hash[B]])
         case Left((id2, element)) =>
           val element2 = element.asInstanceOf[Element[A,_<:HashedValue]]
           id = id2
@@ -466,21 +466,21 @@ trait Fingerprinter[A <: HashedValue] {
 
 trait HashedOption[+A <: HashedValue] extends HashedValue
 object HashedOption {
-  def hash[A <: HashedValue](value: Option[A]): Hash = value match {
+  def hash[A <: HashedValue](value: Option[A]): Hash[HashedOption[A]] = value match {
     case None => HashedNone.hash
     case Some(value2) => hash(value2)
   }
-  def hash[A <: HashedValue](value: A): Hash = Hash.hashString("OPTION " + value.hash.toString) // TODO adhoc
+  def hash[A <: HashedValue](value: A): Hash[HashedSome[A]] = Hash.hashString("OPTION " + value.hash.toString) // TODO adhoc
   def apply[A <: HashedValue](value: Option[A]): HashedOption[A] = value match {
     case None => HashedNone
     case Some(x) => HashedSome(x)
   }
 }
 case object HashedNone extends HashedOption[Nothing] {
-  override def hash: Hash = Hash.hashString(getClass.descriptorString())
+  override def hash: Hash[this.type] = Hash.hashString(getClass.descriptorString())
 }
 case class HashedSome[A <: HashedValue](value: A) extends HashedOption[A] {
-  override def hash: Hash = HashedOption.hash[A](value)
+  override def hash: Hash[this.type] = HashedOption.hash[A](value).asInstanceOf[Hash[this.type]]
 }
 
 
@@ -512,7 +512,7 @@ final class FingerprintMap[A <: HashedValue, B <: HashedValue](private val map: 
     fingerprinter
   }
 
-  override def hash: Hash = Hash.hashString(toString()) // TODO: ad-hoc
+  override def hash: Hash[this.type] = Hash.hashString(toString()) // TODO: ad-hoc
   override def removed(key: A): Map[A, B] = ???
   override def updated[V1 >: B](key: A, value: V1): Map[A, V1] = ???
   override def get(key: A): Option[B] = {
@@ -527,7 +527,7 @@ final class FingerprintMap[A <: HashedValue, B <: HashedValue](private val map: 
 
 object FingerprintMap {
   case class MapElement[A <: HashedValue, B <: HashedValue](key: A) extends Element[FingerprintMap[A,B], HashedOption[B]] {
-    override def hash: Hash = ???
+    override def hash: Hash[this.type] = ???
 
     override def extract(value: FingerprintMap[A, B]): HashedOption[B] =
       HashedOption(value.map.get(key))

@@ -13,12 +13,12 @@ class CacheTest extends AnyFunSuite {
   def await[A](a : Awaitable[A]) : A = Await.result(a, Duration.Inf)
 
   case class HashedInt(int: Int) extends HashedValue {
-    override def hash: Hash = Hash.hashInt(int)
+    override def hash: Hash[this.type] = Hash.hashInt(int)
     override def toString: String = s"$int#$hash"
   }
 
   case class HashedIntMap(map: Map[Int,Int]) extends HashedValue {
-    override lazy val hash: Hash = Hash.hashString(getClass.toString + map.toString())
+    override lazy val hash: Hash[this.type] = Hash.hashString(getClass.toString + map.toString())
     // Hack to simplify MapElement
   }
 
@@ -28,7 +28,7 @@ class CacheTest extends AnyFunSuite {
     override def extract(value: HashedIntMap): HashedInt =
       HashedInt(value.map.getOrElse(i, emptyInt))
 
-    override def hash: Hash = HashedInt(i).hash
+    override def hash: Hash[this.type] = HashedInt(i).hash.asInstanceOf[Hash[this.type]]
   }
 
 
@@ -59,7 +59,7 @@ class CacheTest extends AnyFunSuite {
         (HashedInt(length), fingerprint)
       }
 
-      override val hash: Hash = Hash.randomHash()
+      override val hash: Hash[this.type] = Hash.randomHash()
     }
 
     def compute(map : Map[Int,Int]) : Int = {
@@ -123,7 +123,7 @@ class CacheTest extends AnyFunSuite {
         (HashedInt(length), fingerprint)
       }
 
-      override val hash: Hash = Hash.randomHash()
+      override val hash: Hash[this.type] = Hash.randomHash()
     }
 
     def compute(map : Map[Int,Int]) : Int = {
