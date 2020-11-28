@@ -1,12 +1,19 @@
 package hashedcomputation
 
+import java.io.{ByteArrayInputStream, IOException, InputStream}
 import java.nio.ByteBuffer
+import java.nio.file.LinkOption.NOFOLLOW_LINKS
+import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY, OVERFLOW}
+import java.nio.file.{FileSystem, Files, LinkOption, Path, Paths, StandardWatchEventKinds, WatchEvent, WatchKey, WatchService}
 import java.security.MessageDigest
 import java.util
 import java.util.concurrent.TimeUnit.HOURS
 import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
+import java.util.function.Consumer
 
 import com.google.common.cache
+import com.google.common.cache.{CacheBuilder, RemovalNotification}
+import hashedcomputation.Directory.DirectoryListener
 import hashedcomputation.Fingerprint.Entry
 import hashedcomputation.FingerprintMap.MapElement
 import hashedcomputation.HashedPromise.State
@@ -15,10 +22,12 @@ import org.jetbrains.annotations.{NotNull, Nullable}
 import org.log4s
 
 import scala.annotation.tailrec
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.ref.{ReferenceWrapper, SoftReference, WeakReference}
 import scala.util.Random
 import scala.util.control.Breaks
 
@@ -500,10 +509,7 @@ final class FingerprintMap[A <: HashedValue, B <: HashedValue](private val map: 
       dispose()
       fingerprint
     }
-    override def dispose(): Unit = {
-      fingerprinters -= this
-      accesses.clear()
-    }
+    override def dispose(): Unit = fingerprinters -= this
   }
   private val fingerprinters = new mutable.ArrayDeque[MapFingerprinter]
   override def fingerprinter: Fingerprinter[FM] = {
@@ -533,3 +539,168 @@ object FingerprintMap {
       HashedOption(value.map.get(key))
   }
 }
+
+class Directory private (val path: Path, parent: Directory, parentKey: Path) extends DirectoryListener {
+//  def snapshot : DirectorySnapshot = new DirectorySnapshot(this)
+  Directory.watchDirectory(path, this)
+  private val subdirs = new TrieMap[Path, Directory]
+  private var currentSnapshot = makeSnapshot
+
+  private def makeSnapshot : DirectorySnapshot = ???
+
+  def dispose(): Unit = Directory.unwatchDirectory(this)
+
+  def snapshot: DirectorySnapshot = currentSnapshot
+
+  override def onCreate(path: Path): Unit = {
+    assert(path.getNameCount==1)
+    for (subdir <- subdirs.remove(path)) subdir.dispose()
+    val fullPath = this.path.resolve(path)
+    if (Files.isDirectory(fullPath, NOFOLLOW_LINKS)) {
+      val dir = new Directory(fullPath, this, path)
+      currentSnapshot = currentSnapshot.updated(path.toString, dir.snapshot)
+    } else if (Files.isRegularFile(fullPath, NOFOLLOW_LINKS)) {
+      ???
+    } else
+      ???
+
+    if (parent!=null)
+      parent.onModify(parentKey)
+  }
+  override def onModify(path: Path): Unit = onCreate(path)
+  override def onDelete(path: Path): Unit = {
+    assert(path.getNameCount==1)
+    subdirs.remove(path)
+    currentSnapshot = currentSnapshot.removed(path.toString)
+  }
+  override def onOverflow(): Unit = currentSnapshot = makeSnapshot
+}
+
+object Directory {
+  trait DirectoryListener {
+    def onCreate(path: Path): Unit
+    def onModify(path: Path): Unit
+    def onDelete(path: Path): Unit
+    def onOverflow(): Unit
+  }
+  private val listeners = CacheBuilder
+    .newBuilder()
+    .weakValues()
+    .removalListener[WatchKey, DirectoryListener]((notification:RemovalNotification[WatchKey,DirectoryListener]) => notification.getKey.cancel())
+    .build[WatchKey, DirectoryListener]()
+
+  private val logger = log4s.getLogger
+  private val watchServices = new TrieMap[FileSystem, WatchService]
+
+  def unwatchDirectory(listener: DirectoryListener): Unit =
+    listeners.invalidate(listener)
+
+  def watchDirectory(path: Path, listener: DirectoryListener): Unit = {
+    val filesystem = path.getFileSystem
+    val watchService = watchServices.getOrElseUpdate(filesystem, {
+      logger.debug(s"Found new filesystem: $filesystem")
+      val watchService = filesystem.newWatchService()
+      val thread = new Thread(new PollWatchService(watchService), s"Filesystem watcher for $filesystem")
+      thread.setDaemon(true)
+      thread.start()
+      watchService
+    })
+    val watchKey = path.register(watchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
+    listeners.put(watchKey, listener)
+  }
+
+  private class PollWatchService(watchService: WatchService) extends Runnable {
+    override def run(): Unit = {
+      while (true) {
+        val key = watchService.take()
+        val events = key.pollEvents()
+        key.reset()
+        listeners.getIfPresent(key) match {
+          case null => logger.error(s"Did not find a listener for key $key")
+          case listener =>
+            // TODO catch exceptions
+            events.forEach { event => event.kind() match {
+            case OVERFLOW => listener.onOverflow()
+            case ENTRY_CREATE => listener.onCreate(event.context().asInstanceOf[Path])
+            case ENTRY_MODIFY => listener.onModify(event.context().asInstanceOf[Path])
+            case ENTRY_DELETE => listener.onDelete(event.context().asInstanceOf[Path])
+          }}
+        }
+      }
+    }
+  }
+}
+
+sealed trait DirectoryEntry extends HashedValue
+
+final class FileSnapshot(path: Path) extends DirectoryEntry {
+  private var contentRef : ReferenceWrapper[Array[Byte]] = _
+  val hash: Hash[this.type] = {
+    val content = Files.readAllBytes(path)
+    val hash = hashContent(content)
+    contentRef = WeakReference(content)
+    hash
+  }
+  private def hashContent(content: Array[Byte]): Hash[this.type] =
+    Hash.hashBytes(content) // TODO: should be tagged
+
+  def content: Array[Byte] = {
+    contentRef match {
+      case WeakReference(content) =>
+        contentRef = SoftReference(content)
+        content
+      case SoftReference(content) => content
+      case _ =>
+        val content = Files.readAllBytes(path)
+        if (hash != hashContent(content))
+          throw new IOException("Snapshot outdated")
+        contentRef = SoftReference(content)
+        content
+    }
+  }
+}
+
+class DirectorySnapshot(content: Map[String, DirectoryEntry]) extends DirectoryEntry with Map[String, DirectoryEntry] with HashedValue {
+
+/*  class DirectoryFingerprinter extends Fingerprinter[DirectorySnapshot] {
+    val accesses = new mutable.ArrayDeque[String]
+
+    override def fingerprint(): Fingerprint[DirectorySnapshot] = {
+      val entries : List[Entry[DirectorySnapshot, _ <: HashedValue]] =
+        for (access <- accesses.toList) yield
+          Entry(DirectoryElement(access), Fingerprint(HashedOption(contents(access))))
+      dispose()
+      Fingerprint(hash, Some(entries))
+    }
+    override def dispose(): Unit = fingerprinters -= this
+  }
+
+  private val fingerprinters = new mutable.ArrayDeque[DirectoryFingerprinter]
+  override def fingerprinter: Fingerprinter[DirectorySnapshot] = {
+    val fingerprinter = new DirectoryFingerprinter
+    fingerprinters += fingerprinter
+    fingerprinter
+  }*/
+
+  override def hash: Hash[this.type] =
+    Hash.hashString(content.toList.map { case (s,h) => (s,h.hash) }.toString()) // TODO: proper hash
+
+  override def get(key: String): Option[DirectoryEntry] = content.get(key)
+  override def iterator: Iterator[(String, DirectoryEntry)] = content.iterator
+  override def removed(key: String): DirectorySnapshot =
+    new DirectorySnapshot(content.removed(key))
+
+  override def updated[V1 >: DirectoryEntry](key: String, value: V1): Map[String, V1] =
+    content.updated(key, value)
+
+  def updated(key: String, value: DirectoryEntry) : DirectorySnapshot =
+    new DirectorySnapshot(content.updated(key, value))
+}
+
+/*
+case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, HashedOption[FileContent]] {
+  override def extract(directorySnapshot: DirectorySnapshot): HashedOption[FileContent] =
+    HashedOption(directorySnapshot.get(path))
+
+  override def hash: Hash[DirectoryElement.this.type] = ???
+}*/
