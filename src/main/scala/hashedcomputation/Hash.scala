@@ -22,11 +22,13 @@ import org.jetbrains.annotations.{NotNull, Nullable}
 import org.log4s
 
 import scala.annotation.tailrec
+import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.jdk.StreamConverters.StreamHasToScala
 import scala.ref.{ReferenceWrapper, SoftReference, WeakReference}
 import scala.util.Random
 import scala.util.control.Breaks
@@ -544,25 +546,34 @@ class Directory private (val path: Path, parent: Directory, parentKey: Path) ext
 //  def snapshot : DirectorySnapshot = new DirectorySnapshot(this)
   Directory.watchDirectory(path, this)
   private val subdirs = new TrieMap[Path, Directory]
-  private var currentSnapshot = makeSnapshot
+  @volatile private var currentSnapshot = makeSnapshot
 
-  private def makeSnapshot : DirectorySnapshot = ???
+  private def makeSnapshot : DirectorySnapshot =
+    Files.list(path).iterator().asScala.foldLeft(DirectorySnapshot.empty) { (snapshot, file) =>
+      updateSnapshot(this.path.relativize(file), snapshot)
+    }
 
   def dispose(): Unit = Directory.unwatchDirectory(this)
 
-  def snapshot: DirectorySnapshot = currentSnapshot
+  def snapshot(): DirectorySnapshot = currentSnapshot
+
+  private def updateSnapshot(path: Path, snapshot: DirectorySnapshot): DirectorySnapshot = {
+    val fullPath = this.path.resolve(path)
+    if (Files.isDirectory(fullPath, NOFOLLOW_LINKS)) {
+      val dir = new Directory(fullPath, this, path)
+      snapshot.updated(path.toString, dir.snapshot())
+    } else if (Files.isRegularFile(fullPath, NOFOLLOW_LINKS)) {
+      val file = new FileSnapshot(fullPath)
+      snapshot.updated(path.toString, file)
+    } else
+      ???
+  }
 
   override def onCreate(path: Path): Unit = {
     assert(path.getNameCount==1)
     for (subdir <- subdirs.remove(path)) subdir.dispose()
-    val fullPath = this.path.resolve(path)
-    if (Files.isDirectory(fullPath, NOFOLLOW_LINKS)) {
-      val dir = new Directory(fullPath, this, path)
-      currentSnapshot = currentSnapshot.updated(path.toString, dir.snapshot)
-    } else if (Files.isRegularFile(fullPath, NOFOLLOW_LINKS)) {
-      ???
-    } else
-      ???
+
+    currentSnapshot = updateSnapshot(path, currentSnapshot)
 
     if (parent!=null)
       parent.onModify(parentKey)
@@ -572,11 +583,19 @@ class Directory private (val path: Path, parent: Directory, parentKey: Path) ext
     assert(path.getNameCount==1)
     subdirs.remove(path)
     currentSnapshot = currentSnapshot.removed(path.toString)
+    if (parent!=null)
+      parent.onModify(parentKey)
   }
-  override def onOverflow(): Unit = currentSnapshot = makeSnapshot
+  override def onOverflow(): Unit = {
+    currentSnapshot = makeSnapshot
+    if (parent!=null)
+      parent.onModify(parentKey)
+  }
 }
 
 object Directory {
+  def apply(path: Path) = new Directory(path.normalize.toAbsolutePath, null, null)
+
   trait DirectoryListener {
     def onCreate(path: Path): Unit
     def onModify(path: Path): Unit
@@ -660,7 +679,7 @@ final class FileSnapshot(path: Path) extends DirectoryEntry {
   }
 }
 
-class DirectorySnapshot(content: Map[String, DirectoryEntry]) extends DirectoryEntry with Map[String, DirectoryEntry] with HashedValue {
+class DirectorySnapshot private (content: Map[String, DirectoryEntry]) extends DirectoryEntry with Map[String, DirectoryEntry] with HashedValue {
 
 /*  class DirectoryFingerprinter extends Fingerprinter[DirectorySnapshot] {
     val accesses = new mutable.ArrayDeque[String]
@@ -695,6 +714,11 @@ class DirectorySnapshot(content: Map[String, DirectoryEntry]) extends DirectoryE
 
   def updated(key: String, value: DirectoryEntry) : DirectorySnapshot =
     new DirectorySnapshot(content.updated(key, value))
+}
+
+
+object DirectorySnapshot {
+  val empty = new DirectorySnapshot(Map.empty)
 }
 
 /*

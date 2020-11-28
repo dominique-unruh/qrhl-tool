@@ -1,5 +1,7 @@
 package hashedcomputation
 
+import java.nio.file.Files
+
 import hashedcomputation.Fingerprint.Entry
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -197,5 +199,36 @@ class CacheTest extends AnyFunSuite {
     println("Compute(4)")
     assert(compute(4) == 16)
     assert(!somethingHappened)
+  }
+
+  test("DirectorySnapshot") {
+    val dirPath = Files.createTempDirectory("test-DirectorySnapshot")
+    dirPath.toFile.deleteOnExit()
+
+    Files.writeString(dirPath.resolve("test1"), "test1")
+    Thread.sleep(100)
+
+    val dir = Directory(dirPath)
+    val snapshot1 = dir.snapshot()
+    assert(snapshot1.keySet == Set("test1"))
+
+    Files.writeString(dirPath.resolve("test2"), "test2")
+    Thread.sleep(100)
+    val snapshot2 = dir.snapshot()
+    assert(snapshot2.keySet == Set("test1","test2"))
+    assert(snapshot2.hash != snapshot1.hash)
+
+    Files.writeString(dirPath.resolve("test2"), "test2 new")
+    Thread.sleep(100)
+    val snapshot3 = dir.snapshot()
+    assert(snapshot3.keySet == Set("test1","test2"))
+    assert(snapshot3.hash != snapshot2.hash)
+    assert(snapshot3.hash != snapshot1.hash)
+
+    Files.delete(dirPath.resolve("test2"))
+    Thread.sleep(100)
+    val snapshot4 = dir.snapshot()
+    assert(snapshot4.keySet == Set("test1"))
+    assert(snapshot4.hash == snapshot1.hash)
   }
 }
