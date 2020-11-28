@@ -487,6 +487,7 @@ object HashedOption {
     case Some(x) => HashedSome(x)
   }
 }
+
 case object HashedNone extends HashedOption[Nothing] {
   override def hash: Hash[this.type] = Hash.hashString(getClass.getName)
 }
@@ -638,17 +639,21 @@ object Directory {
           case null => logger.error(s"Did not find a listener for key $key")
           case listener =>
             // TODO catch exceptions
-            events.forEach { event => event.kind() match {
-            case OVERFLOW => listener.onOverflow()
-            case ENTRY_CREATE => listener.onCreate(event.context().asInstanceOf[Path])
-            case ENTRY_MODIFY => listener.onModify(event.context().asInstanceOf[Path])
-            case ENTRY_DELETE => listener.onDelete(event.context().asInstanceOf[Path])
-          }}
-        }
+            events.forEach { event => try {
+              event.kind() match {
+                case OVERFLOW => listener.onOverflow()
+                case ENTRY_CREATE => listener.onCreate(event.context().asInstanceOf[Path])
+                case ENTRY_MODIFY => listener.onModify(event.context().asInstanceOf[Path])
+                case ENTRY_DELETE => listener.onDelete(event.context().asInstanceOf[Path])
+              }}
+            catch {
+              case e : Throwable => logger.error(e)(s"Listener threw exception on event $event")
+            }}}
       }
     }
   }
 }
+
 
 sealed trait DirectoryEntry extends HashedValue
 
@@ -680,31 +685,26 @@ final class FileSnapshot(path: Path) extends DirectoryEntry {
 }
 
 class DirectorySnapshot private (content: Map[String, DirectoryEntry]) extends DirectoryEntry with Map[String, DirectoryEntry] with HashedValue {
-
-/*  class DirectoryFingerprinter extends Fingerprinter[DirectorySnapshot] {
-    val accesses = new mutable.ArrayDeque[String]
-
-    override def fingerprint(): Fingerprint[DirectorySnapshot] = {
-      val entries : List[Entry[DirectorySnapshot, _ <: HashedValue]] =
-        for (access <- accesses.toList) yield
-          Entry(DirectoryElement(access), Fingerprint(HashedOption(contents(access))))
-      dispose()
-      Fingerprint(hash, Some(entries))
-    }
-    override def dispose(): Unit = fingerprinters -= this
-  }
-
-  private val fingerprinters = new mutable.ArrayDeque[DirectoryFingerprinter]
-  override def fingerprinter: Fingerprinter[DirectorySnapshot] = {
-    val fingerprinter = new DirectoryFingerprinter
-    fingerprinters += fingerprinter
-    fingerprinter
-  }*/
-
   override def hash: Hash[this.type] =
     Hash.hashString(content.toList.map { case (s,h) => (s,h.hash) }.toString()) // TODO: proper hash
 
   override def get(key: String): Option[DirectoryEntry] = content.get(key)
+  def get(path: Path): Option[DirectoryEntry] = {
+    assert(!path.isAbsolute)
+    var entry : DirectoryEntry = this
+    for (name <- path.normalize.iterator().asScala) {
+      entry match {
+        case dir : DirectorySnapshot =>
+          dir.get(name.toString) match {
+            case None => return None
+            case Some(entry) => entry
+          }
+        case _ : FileSnapshot => return None
+      }
+    }
+    Some(entry)
+  }
+
   override def iterator: Iterator[(String, DirectoryEntry)] = content.iterator
   override def removed(key: String): DirectorySnapshot =
     new DirectorySnapshot(content.removed(key))
@@ -721,10 +721,34 @@ object DirectorySnapshot {
   val empty = new DirectorySnapshot(Map.empty)
 }
 
-/*
-case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, HashedOption[FileContent]] {
-  override def extract(directorySnapshot: DirectorySnapshot): HashedOption[FileContent] =
+/** Not thread safe */
+class FingerprintedDirectorySnapshot private (directory: DirectorySnapshot) {
+  private val accesses = new mutable.LinkedHashSet[Path]
+
+  def get(path: Path): Option[DirectoryEntry] = {
+    val path2 = path.normalize
+    accesses += path2
+    directory.get(path2)
+  }
+
+  private def fingerprint(): Fingerprint[DirectorySnapshot] = {
+    val entries: List[Entry[DirectorySnapshot, _ <: HashedValue]] =
+      for (file <- accesses.toList) yield
+        Entry(DirectoryElement(file), Fingerprint(HashedOption(directory.get(file))))
+    Fingerprint(directory.hash, Some(entries))
+  }
+}
+
+object FingerprintedDirectorySnapshot {
+  def withFingerprint(directory: DirectorySnapshot): (FingerprintedDirectorySnapshot, () => Fingerprint[DirectorySnapshot]) = {
+    val fpds = new FingerprintedDirectorySnapshot(directory)
+    (fpds, fpds.fingerprint)
+  }
+}
+
+case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, HashedOption[DirectoryEntry]] {
+  override def extract(directorySnapshot: DirectorySnapshot): HashedOption[DirectoryEntry] =
     HashedOption(directorySnapshot.get(path))
 
   override def hash: Hash[DirectoryElement.this.type] = ???
-}*/
+}
