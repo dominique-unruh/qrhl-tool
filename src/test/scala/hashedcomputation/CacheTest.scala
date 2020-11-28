@@ -14,26 +14,30 @@ import scala.util.control.Breaks
 class CacheTest extends AnyFunSuite {
   def await[A](a : Awaitable[A]) : A = Await.result(a, Duration.Inf)
 
-  case class HashedInt(int: Int) extends HashedValue {
-    override def hash: Hash[this.type] = Hash.hashInt(int)
-    override def toString: String = s"$int#$hash"
+  implicit object hashableInt extends Hashable[Int] {
+    override def hash[A1 <: Int](int: A1): Hash[A1] = Hash.hashInt(int)
   }
 
+/*
   case class HashedIntMap(map: Map[Int,Int]) extends HashedValue {
     override lazy val hash: Hash[this.type] = Hash.hashString(getClass.toString + map.toString())
     // Hack to simplify MapElement
   }
+*/
 
   val emptyInt: Int = -472834729
 
+/*
   case class MapElement(i: Int) extends Element[HashedIntMap, HashedInt] {
     override def extract(value: HashedIntMap): HashedInt =
       HashedInt(value.map.getOrElse(i, emptyInt))
 
     override def hash: Hash[this.type] = HashedInt(i).hash.asInstanceOf[Hash[this.type]]
   }
+*/
 
 
+/*
   test ("fingerprinted caching OLD") {
     var counter = 0
     val computation: HashedFunction[HashedIntMap, HashedInt] = new HashedFunction[HashedIntMap, HashedInt] {
@@ -94,12 +98,13 @@ class CacheTest extends AnyFunSuite {
     assert(compute(m3) == 4)
     assert(somethingHappened)
   }
+*/
 
   test ("fingerprinted caching") {
     var counter = 0
-    type FM = HashedMap[HashedInt, HashedInt]
-    val computation: HashedFunction[FM, HashedInt] = new HashedFunction[FM, HashedInt] {
-      override def compute(input: FM): Future[(HashedInt, Fingerprint[FM])] = Future {
+    type FM = HashedMap[Int, Int]
+    val computation: HashedFunction[FM, Int] = new HashedFunction[FM, Int] {
+      override def compute(input: FM): Future[(Int, Fingerprint[FM])] = Future {
 //        val map = input.map
         println(s"Computing $input")
         val (map, getFingerprint) = FingerprintMap.withFingerprint(input)
@@ -109,11 +114,11 @@ class CacheTest extends AnyFunSuite {
         var current = 0
         Breaks.breakable {
           while (true) {
-            val next = map.get(HashedInt(current))
+            val next = map.get(current)
 //            looked += current
             if (next.isEmpty) Breaks.break();
             length += 1
-            current = next.get.int
+            current = next.get
             if (length >= 100) Breaks.break()
           }
         }
@@ -121,17 +126,17 @@ class CacheTest extends AnyFunSuite {
 //        val fingerprintEntries = for (i <- looked.toList)
 //          yield Entry(MapElement(i), Fingerprint(HashedInt(map.getOrElse(i, emptyInt))))
 //        val fingerprint = Fingerprint(input.hash, Some(fingerprintEntries))
-        (HashedInt(length), getFingerprint())
+        (length, getFingerprint())
       }
 
       override val hash: Hash[this.type] = Hash.randomHash()
     }
 
     def compute(map : Map[Int,Int]) : Int = {
-      val map2 = new HashedMap(Hash.randomHash(), map.map({case (i,j) => (HashedInt(i), HashedInt(j))}))
-      val hashedResultPromise = HashedPromise[FM,HashedInt](computation, map2)
+      val map2 = new HashedMap(Hash.randomHash(), map)
+      val hashedResultPromise = HashedPromise[FM,Int](computation, map2)
       val hashedResult = await(hashedResultPromise.get)
-      hashedResult.int
+      hashedResult
     }
 
     def somethingHappened: Boolean = {
@@ -161,17 +166,16 @@ class CacheTest extends AnyFunSuite {
 
   test ("simple caching") {
     var counter = 0
-    val computation: HashedFunction[HashedInt, HashedInt] = HashedFunction[HashedInt, HashedInt] { case HashedInt(i) =>
+    val computation: HashedFunction[Int, Int] = HashedFunction[Int, Int] { i =>
       println(s"compute($i)")
       counter += 1;
-      HashedInt(i*i)
+      i*i
     }
 
     def compute(i: Int) : Int = {
-      val hashedI = HashedInt(i)
-      val hashedResultPromise = HashedPromise[HashedInt,HashedInt](computation, hashedI)
+      val hashedResultPromise = HashedPromise[Int,Int](computation, i)
       val hashedResult = await(hashedResultPromise.get)
-      hashedResult.int
+      hashedResult
     }
 
     def somethingHappened: Boolean = {
