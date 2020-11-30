@@ -8,8 +8,8 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 class QRHLSubgoalTest extends AnyFunSuite {
   lazy val tl: Toplevel = {
     val tl = ToplevelTest.makeToplevelWithTheory(Nil)
-    tl.execCmd("classical var x : int", "<test>")
-    tl.execCmd("classical var y : int", "<test>")
+    tl.execCmd("classical var x : int")
+    tl.execCmd("classical var y : int")
     tl
   }
   def pb(str:String): RichTerm = tl.state.parseExpression(GIsabelle.boolT,str)

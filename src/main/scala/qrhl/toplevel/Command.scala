@@ -56,7 +56,7 @@ case class DeclareVariableCommand(name: String, typ: Typ, ambient:Boolean=false,
 
   override def act(state: State, output: PrintWriter): State = {
     if (ambient) {
-      output.println(s"Declaring ambient variable $name : $typ.")
+      output.println(s"Declaring ambient variable $name : ${IsabelleX.pretty(typ)}.")
       state.declareAmbientVariable(name,typ)
     } else {
       output.println(s"Declaring ${if (quantum) "quantum" else "classical"} variable $name : ${IsabelleX.pretty(typ)}.")
@@ -111,11 +111,11 @@ case class TacticCommand(tactic:Tactic) extends Command {
   }
 }
 
-case class UndoCommand(n:Int) extends Command {
+/*case class UndoCommand(n:Int) extends Command {
   assert(n>0)
 
   override def act(state: State, output: PrintWriter): State = throw new RuntimeException() // should not be called
-}
+}*/
 
 //case object QuitCommand extends Command {
 //  override def act(state: State, output: PrintWriter): State = throw new RuntimeException() // should not be called

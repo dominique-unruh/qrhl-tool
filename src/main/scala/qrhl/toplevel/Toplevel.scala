@@ -6,9 +6,12 @@ import java.nio.file.Path
 
 import hashedcomputation.filesystem
 import de.unruh.isabelle.control.IsabelleException
-import hashedcomputation.filesystem.{Directory, FileSnapshot}
+import hashedcomputation.filesystem.{Directory, DirectorySnapshot, FileSnapshot, OutdatedSnapshotException}
 import qrhl.CurrentFS
+import qrhl.toplevel.Toplevel.CommandOrString
 import sourcecode.Text.generate
+
+import scala.collection.mutable
 //import org.eclipse.jgit.diff.HashedSequenceComparator
 import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder
@@ -24,7 +27,9 @@ import org.apache.commons.codec.binary.Hex
 
 /** Not thread safe */
 class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
-//  val initialState: default.Hashed[State] = Hashed(_initialState, default.hash(getClass.descriptorString))
+  def state = currentState
+
+  //  val initialState: default.Hashed[State] = Hashed(_initialState, default.hash(getClass.descriptorString))
 //  def dispose(): Unit = {
 //    if (state.hasIsabelle) state.isabelle.isabelle.dispose()
 //    states = null
@@ -35,13 +40,13 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
     Directory(rootPath, partial = true)
   }
 
-  implicit var currentFS : CurrentFS =
-    if (fsSnapshot!=null) fsSnapshot else {
-      val snapshot = rootDirectory.snapshot()
-      new CurrentFS(snapshot, rootDirectory.path)
-    }
+//  implicit var currentFS : CurrentFS =
+//    if (fsSnapshot!=null) fsSnapshot else {
+//      val snapshot = rootDirectory.snapshot()
+//      new CurrentFS(snapshot, rootDirectory.path)
+//    }
 
-  def isabelle: IsabelleX = state.isabelle.isabelle
+//  def isabelle: IsabelleX = state.isabelle.isabelle
 
   /** Reads one command from the input. The last line of the command must end with ".".
     * Comment lines (starting with whitespace + #) are skipped.
@@ -85,53 +90,94 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
     "" // unreachable
   }
 
+  /** List of (cmdString, position) */
+  private val commands = mutable.ArrayDeque[CommandOrString]()
 
-  private var states : List[State] = List(initialState)
+  private var previousFS = null : DirectorySnapshot
 
-  def commandAct(commandString: String, command: Command, state: State) : State =
+  def computeState() : State = {
+    while (true) {
+      implicit val currentFS: CurrentFS =
+        if (fsSnapshot != null) fsSnapshot else CurrentFS(rootDirectory)
+
+      if (previousFS != null && previousFS != currentFS.directory) {
+        println("Some files changed. Replaying all affected commands.")
+        previousFS = currentFS.directory
+      }
+
+      try {
+        var state = initialState
+        for (command <- commands)
+          try {
+            val cmd = command.parse(state)
+            state = commandAct(cmd, state)
+          } catch {
+            case e: UserException => e.setPosition(command.position); throw e
+            case e: IsabelleException => throw UserException(e, command.position)
+          }
+        println(state.lastOutput)
+        return state
+      } catch {
+        case _: OutdatedSnapshotException if rootDirectory != null =>
+      }
+    }
+    throw new AssertionError("Unreachable code")
+  }
+
+  private def commandAct(command: Command, state: State)(implicit currentFS: CurrentFS) : State =
     command match {
       case includeCommand : IncludeCommand =>
         val stringWriter = new StringWriter()
         implicit val writer: PrintWriter = new PrintWriter(stringWriter)
-        state.include(includeCommand.file)
+        val newState = state.include(includeCommand.file)
+        writer.close()
+        newState.setLastOutput(stringWriter.toString)
       case cmd : IsabelleCommand =>
-        val stringWriter = new StringWriter()
-        implicit val output: PrintWriter = new PrintWriter(stringWriter)
         val newState = state.loadIsabelle(cmd.thy)
-        output.println("Isabelle loaded.")
-//        val newFiles = newState.dependencies.map(_.file).toSet -- state.value.dependencies.map(_.file)
-//        val filesHash = Utils.hashFileSet(newFiles)
-//        logger.debug(s"Included files: $newFiles")
-//        logger.debug(s"Files hash: ${Hex.encodeHexString(filesHash)}")
-//        val newHash = default.hash(995424066, commandString, state.hash, filesHash)
-//        Hashed(newState, newHash)
-        newState
+        newState.setLastOutput("Isabelle loaded.")
       case _ =>
-//        logger.debug(s"Command string: '${commandString}'")
-//        val hash = default.hash(commandString, state)
-//        val hashed = Hashed((command,state.value), hash=hash)
-        // TODO: cache this
         val newState = command.actString(state)
-        println(newState.lastOutput)
-//        val tag = getClass + " @ " +getClass.getClassLoader.getName
-//        val newHash = default.hash(tag, hash)
+//        println(newState.lastOutput)
         newState
-  }
+    }
 
-  // TODO: automatically recompute instead
-  def warnIfFilesChanged(): Unit = if ((rootDirectory!=null) && (rootDirectory.snapshot() ne currentFS.directory))
-    println(s"***** [WARNING] Some files may have changed.\n***** Please retract the current proof script. (C-c C-r or Proof-General->Retract Buffer)\n\n")
+/*  private def commandActRetry(commandString: String, position: String, command: Command, state: State): State = {
+    assert(rootDirectory!=null)
+    try {
+      commandAct(command, state)
+    } catch {
+      case _ : OutdatedSnapshotException =>
+        var success = false
+        println("Files changed. Replaying all affected commands.")
+        while (!success)
+          try {
+            currentFS = CurrentFS(rootDirectory)
+            var newStates = Nil : List[(String,String,State)]
+            var state = null : State
+            for ((str, pos, oldState) <- states.reverse) {
+              if (str == null) { // initial state
+                state = oldState
+                newStates = (null, null, state) :: newStates
+              } else {
+                val cmd = parseCommand(state, str, pos)
+                state = commandAct(cmd, state)
+                newStates = (str, pos, state) :: newStates
+              }
+            }
+            val cmd = parseCommand(state, commandString, position)
+            state = commandAct(cmd, state)
+            states = (commandString, position, state) :: newStates
+            success = true
+          } catch {
+            case _ : OutdatedSnapshotException =>
+          }
 
-  /** Executes a single command. */
-  def execCmd(cmdString:String, cmd:Command, position: => String) : Unit = {
-    logger.debug(s"#states = ${states.length}, currentFS = ${currentFS.directory}")
-    // TODO: do this properly!!!!! FIXME
-    if (states.length==2 && rootDirectory!=null)
-      currentFS = new CurrentFS(rootDirectory.snapshot(), rootDirectory.path)
-//    currentFS.directory.dump()
+    }
+  }*/
 
-    warnIfFilesChanged()
-
+/*  /** Executes a single command. */
+  private def execCmd(cmdString:String, cmd:Command, position: => String) : Unit = {
+//    warnIfFilesChanged()
     try {
       cmd match {
         case UndoCommand(n) =>
@@ -142,9 +188,12 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
           states = states.drop(n)
           println("Undo...")
         case _ =>
-          val normalizedCmdString = cmdString.trim.replace("  "," ").replace("  "," ").replace("  "," ").replace("  "," ")
-          val newState = commandAct(normalizedCmdString, cmd, state) // cmd.act(state)
-          states = newState :: states
+          val newState =
+            if (fsSnapshot!=null)
+              commandAct(cmd, state)
+            else
+              commandActRetry(cmdString, position, cmd, state)
+          states = (cmdString, position, newState) :: states
       }
     } catch {
       case e: UserException => e.setPosition(position); throw e
@@ -156,17 +205,38 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
   }
 
   /** Returns the current state of the toplevel */
-  def state: State = states.head
+  def state: State = states.head*/
 
-  /** Executes a single command. The command must be given without a final ".". */
-  def execCmd(cmd:String, position: => String = "<string>") : Unit = {
-    val cmd2 = try {
-      state.value.parseCommand(cmd)
+/*  private def parseCommand(state: State, cmdStr: String, position: String) = {
+    try {
+      state.value.parseCommand(cmdStr)
     } catch {
       case e: UserException => e.setPosition(position); throw e
       case e: IsabelleException => throw UserException(e,position)
     }
-    execCmd(cmd, cmd2, position)
+  }*/
+
+  private var currentState : State = initialState
+
+
+  def execCmd(string: String): Unit =
+    execCmd(CommandOrString.Str(string, "<no position>"))
+  def execCmd(command: Command): Unit =
+    execCmd(CommandOrString.Cmd(command, "<no position>"))
+
+  /** Executes a single command. The command must be given without a final ".". */
+  def execCmd(cmd:CommandOrString) : Unit = {
+    cmd.undo match {
+      case Some(undo) =>
+        if (undo > commands.length)
+          throw UserException(s"Cannot undo $undo steps (only ${commands.length} steps performed so far)")
+        println("Undo...\n")
+        commands.trimEnd(undo)
+        currentState = computeState()
+      case _ => // Not an undo command
+        commands.append(cmd)
+        currentState = computeState()
+    }
   }
 
   def run(script: String): Unit = {
@@ -178,18 +248,14 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
     //    println("Toplevel.run",script,script.toAbsolutePath.normalize.getParent)
     val readLine = new Toplevel.ReadLine.File(script)
     val directory = script.toAbsolutePath.normalize.getParent
-    val fakeCmdString = "@@@ CD @@@ "+directory.toString
-    execCmd(fakeCmdString, ChangeDirectoryCommand(directory), readLine.position)
+    execCmd(CommandOrString.Cmd(ChangeDirectoryCommand(directory), readLine.position))
     run(readLine)
   }
 
   def run(script: FileSnapshot, path: Path): Unit = {
-    //    val reader = new InputStreamReader(new FileInputStream(script.toFile), StandardCharsets.UTF_8)
-    //    println("Toplevel.run",script,script.toAbsolutePath.normalize.getParent)
     val readLine = new Toplevel.ReadLine.FileSnapshot(script, path)
     val directory = path.toAbsolutePath.normalize.getParent
-    val fakeCmdString = "@@@ CD @@@ "+directory.toString
-    execCmd(fakeCmdString, ChangeDirectoryCommand(directory), readLine.position)
+    execCmd(CommandOrString.Cmd(ChangeDirectoryCommand(directory), readLine.position))
     run(readLine)
   }
 
@@ -197,8 +263,7 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
   def runWithErrorHandler(script: Path, abortOnError:Boolean): Boolean = {
     val readLine = new Toplevel.ReadLine.File(script)
     val directory = script.toAbsolutePath.normalize.getParent
-    val fakeCmdString = "@@@ CD @@@ "+directory.toString
-    execCmd(fakeCmdString, ChangeDirectoryCommand(directory), readLine.position)
+    execCmd(CommandOrString.Cmd(ChangeDirectoryCommand(directory), readLine.position))
     runWithErrorHandler(readLine, abortOnError=abortOnError)
   }
 
@@ -210,7 +275,7 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
     while (true) {
         val cmdStr = readCommand(readLine)
         if (cmdStr==null) { println("EOF"); return; }
-        execCmd(cmdStr, readLine.position)
+        execCmd(CommandOrString.Str(cmdStr, readLine.position))
     }
   }
 
@@ -224,7 +289,7 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
       try {
         val cmdStr = readCommand(readLine)
         if (cmdStr==null) { println("EOF"); return true; }
-        execCmd(cmdStr, readLine.position)
+        execCmd(CommandOrString.Str(cmdStr, readLine.position))
       } catch {
         case e:UserException =>
           println(s"[ERROR] ${e.positionMessage}")
@@ -248,14 +313,13 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
 
 object Toplevel {
 
-  // TODO: this should use a hashed computation. But not for include commands or Isabelle commands. How do we make sure that after an include,
   // hashing still works if nothing changed inside the included file but comments?
 //  private val commandActComputation : default.Function[(Command,State), State] = default.createFunction {
 //    case Hashed.Value((command, state)) => command.actString(state)
 //  }
 
   private val commandEnd: Regex = """\.\s*$""".r
-  private val commentRegex = """^\s*\#.*$""".r
+  private val commentRegex = """^\s*#.*$""".r
 
   private val logger = log4s.getLogger
 
@@ -325,5 +389,26 @@ object Toplevel {
         sys.exit(1)
     } finally
       sys.exit(0) // otherwise the Isabelle process blocks termination
+  }
+
+  sealed trait CommandOrString {
+    def parse(state: State): Command
+    val position: String
+    def undo: Option[Int]
+  }
+  object CommandOrString {
+    final case class Cmd(command: Command, position: String) extends CommandOrString {
+      override def parse(state: State): Command = command
+      override def undo: Option[Int] = None
+    }
+    final case class Str(string: String, position: String) extends CommandOrString {
+      override def parse(state: State): Command =
+        state.parseCommand(string)
+      override def undo: Option[Int] =
+        Parser.parseAll(Parser.undo, string) match {
+          case Parser.Success(n, _) => Some(n)
+          case _ => None
+        }
+    }
   }
 }

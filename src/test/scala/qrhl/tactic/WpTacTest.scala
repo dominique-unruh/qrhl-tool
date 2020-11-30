@@ -38,8 +38,8 @@ class WpTacTest extends AnyFunSuite {
         |classical var q : bit.
         |qrhl {top} q <- 0; ~ q <- 0; {top}.
       """.stripMargin)
-    toplevel.execCmd(ToplevelTest.randomCommandString, TacticCommand(WpTac(left=1,right=0)), "<test>")
-    toplevel.execCmd(ToplevelTest.randomCommandString, TacticCommand(WpTac(left=0,right=1)), "<test>")
+    toplevel.execCmd(TacticCommand(WpTac(left=1,right=0)))
+    toplevel.execCmd(TacticCommand(WpTac(left=0,right=1)))
     val goals = toplevel.state.goal
     assert(goals.length==1)
     goals.head.checkWelltyped(toplevel.state.isabelle)

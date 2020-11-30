@@ -477,6 +477,7 @@ class State private (val environment: Environment,
   }
 
   def loadIsabelle(theory:Seq[String])(implicit currentFS: CurrentFS) : State = {
+    assert(currentDirectory.isAbsolute)
     val theoryPath = theory.toList map { thy => currentDirectory.resolve(thy+".thy") }
 
     // In order to get snapshot exceptions before running Isabelle (saves time)
@@ -537,8 +538,6 @@ class State private (val environment: Environment,
       .declareAmbientVariable("var_"+Variable.index2(name), typ)
     if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = _isabelle.get
-//    val typ1 = typ.isabelleTyp
-//    val typ2 = if (quantum) Type("QRHL_Core.variable",List(typ1)) else typ1
     val newIsa =
       if (quantum)
         declare_quantum_variable(isa, name, typ)

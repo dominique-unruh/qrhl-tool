@@ -31,14 +31,13 @@ class ToplevelTest extends AnyFunSuite {
 object ToplevelTest {
   def makeToplevelWithTheory(theory:Seq[String]=Nil) : Toplevel = {
     val tl = Toplevel.makeToplevelFromState(State.empty(cheating = false), emptyCurrentFS)
-    tl.execCmd("<preloaded theories>", IsabelleCommand(theory), "<fake>")
+    tl.execCmd(IsabelleCommand(theory))
     tl
   }
 
-
   implicit val output: PrintWriter = new PrintWriter(System.out, false)
 
-  def randomCommandString : String = "<fake> "+Random.nextLong()
+//  def randomCommandString : String = "<fake> "+Random.nextLong()
   //  val isabellePath = "auto"
   //  lazy val isabelle = new Isabelle(isabellePath)
   //  def makeToplevel(): Toplevel = Toplevel.makeToplevel()

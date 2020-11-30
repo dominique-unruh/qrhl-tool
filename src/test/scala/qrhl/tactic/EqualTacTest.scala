@@ -4,6 +4,7 @@ import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.pure.Term
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.QRHLSubgoal
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 import qrhl.isabellex.RichTerm
 import qrhl.logic.Assign
 import qrhl.toplevel.ToplevelTest.output
@@ -25,7 +26,6 @@ class EqualTacTest extends AnyFunSuite {
 
   test("removeClassicals") {
     val tl = toplevel()
-    implicit val isa: Isabelle = tl.isabelle.isabelleControl
     val state = tl.state
     val ctxt = state.isabelle.context
     val env = state.environment

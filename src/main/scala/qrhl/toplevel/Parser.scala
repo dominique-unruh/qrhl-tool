@@ -558,7 +558,7 @@ object Parser extends JavaTokenParsers {
       tactic_if |
       tactic_isa
 
-  val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
+  val undo: Parser[Int] = literal("undo") ~> natural
 
   val qed : Parser[QedCommand] = "qed" ^^ { _ => QedCommand() }
 
@@ -582,5 +582,5 @@ object Parser extends JavaTokenParsers {
 
   def command(implicit context:ParserContext): Parser[Command] =
     debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
-      include | undo | qed | changeDirectory | cheat | print_cmd | failure("expecting command")
+      include | qed | changeDirectory | cheat | print_cmd | failure("expecting command")
 }
