@@ -479,6 +479,9 @@ class State private (val environment: Environment,
   def loadIsabelle(theory:Seq[String])(implicit currentFS: CurrentFS) : State = {
     val theoryPath = theory.toList map { thy => currentDirectory.resolve(thy+".thy") }
 
+    // In order to get snapshot exceptions before running Isabelle (saves time)
+    for (t <- theoryPath) currentFS.get(t)
+
     if (_isabelle.isDefined)
       if (theoryPath != _isabelleTheory)
         throw UserException(s"Isabelle loaded twice with different theories: ${if (_isabelleTheory.isEmpty) "none" else _isabelleTheory.mkString(", ")} vs. ${if (theoryPath.isEmpty) "none" else theoryPath.mkString(", ")}")
@@ -492,9 +495,16 @@ class State private (val environment: Environment,
 
     for (f <- deps) assert(f.isAbsolute)
 
+    val relDeps = deps.map(currentFS.relativize)
+
+    // This ensures that even when one .get fails (and updates the Toplevel.rootDirectory), the others are
+    // tried to (so all updates happen in one go).
+    for (d <- relDeps) try { currentFS.directory.get(d) } catch { case _ : Throwable => }
+
     val deps2 = for (file <- deps) yield {
       val relfile = currentFS.relativize(file)
       val content = currentFS.directory.getFile(relfile)
+      logger.debug(s"$relfile -> $content")
       (relfile, content)
     }
 

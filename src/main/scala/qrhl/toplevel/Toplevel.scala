@@ -124,6 +124,12 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
 
   /** Executes a single command. */
   def execCmd(cmdString:String, cmd:Command, position: => String) : Unit = {
+    logger.debug(s"#states = ${states.length}, currentFS = ${currentFS.directory}")
+    // TODO: do this properly!!!!! FIXME
+    if (states.length==2 && rootDirectory!=null)
+      currentFS = new CurrentFS(rootDirectory.snapshot(), rootDirectory.path)
+//    currentFS.directory.dump()
+
     warnIfFilesChanged()
 
     try {
@@ -135,9 +141,6 @@ class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
           val isabelleLoaded = state.value.hasIsabelle
           states = states.drop(n)
           println("Undo...")
-          // If state after undo has no Isabelle, run GC to give the system the chance to finalize a possibly loaded Isabelle (probably not needed any more since we have a global Isabelle instance)
-          if (!state.value.hasIsabelle && isabelleLoaded)
-            System.gc()
         case _ =>
           val normalizedCmdString = cmdString.trim.replace("  "," ").replace("  "," ").replace("  "," ").replace("  "," ")
           val newState = commandAct(normalizedCmdString, cmd, state) // cmd.act(state)

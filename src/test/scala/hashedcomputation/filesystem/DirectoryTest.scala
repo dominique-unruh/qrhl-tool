@@ -52,4 +52,15 @@ class DirectoryTest extends AnyFunSuite {
       case _ => fail()
     }
   }
+
+  test("partial snapshot nested") {
+    val dir = Directory(Path.of(""), partial = true)
+    val file = Path.of("src/test/isabelle/ROOT")
+
+    assertThrows[OutdatedSnapshotException] { dir.snapshot().get(file) }
+    dir.snapshot().dump()
+
+    dir.snapshot().get(file)
+
+  }
 }

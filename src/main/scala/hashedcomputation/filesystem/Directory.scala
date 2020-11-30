@@ -10,7 +10,9 @@ import com.google.common.cache.{CacheBuilder, RemovalNotification}
 import hashedcomputation.Fingerprint.Entry
 import hashedcomputation.{Element, Fingerprint, Hash, HashedOption, HashedValue}
 import hashedcomputation.filesystem.Directory.DirectoryListener
+import hashedcomputation.filesystem.DirectorySnapshot.logger
 import org.log4s
+import org.log4s.Logger
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -25,16 +27,29 @@ class Directory private (val path: Path, parent: Directory, parentKey: String,
   private val interesting = if (partial) new TrieMap[String, Unit] else null
   private var currentSnapshot = new AtomicReference(makeSnapshot)
 
-  def registerInterest(file: String): Unit =
-    if (partial) {
-      interesting += file -> ()
-      currentSnapshot.updateAndGet { current =>
-        current.content.get(file) match {
-          case Some(_ : UnresolvedDirectoryEntry) =>
-            updateSnapshot(file,current)
-          case _ => current
+  def registerInterest(path: List[String]): Unit = if (partial) {
+    path match {
+      case Nil =>
+      case file :: rest =>
+        var notify = false
+        interesting += file -> ()
+        currentSnapshot.get.content.get(file) match {
+          case Some(_: UnresolvedDirectoryEntry) =>
+            currentSnapshot.updateAndGet { updateSnapshot(file, _) }
+            notify = true
+          case _ =>
         }
-      }
+        if (rest.nonEmpty)
+          for (subdir <- subdirs.get(file))
+            subdir.registerInterest(rest)
+        if (notify) notifyParent()
+    }
+  }
+
+  def registerInterest(path: Path): Unit =
+    if (partial) {
+      assert(!path.isAbsolute)
+      registerInterest(path.iterator().asScala.map(_.toString).toList)
     }
 
   def registerInterestEverything(): Unit =
@@ -43,6 +58,7 @@ class Directory private (val path: Path, parent: Directory, parentKey: String,
         interesting += file -> ()
         currentSnapshot.updateAndGet { updateSnapshot(file,_) }
       }
+      notifyParent()
     }
 
 
@@ -56,25 +72,37 @@ class Directory private (val path: Path, parent: Directory, parentKey: String,
   def snapshot(): DirectorySnapshot = currentSnapshot.get
 
   private def updateSnapshot(path: String, snapshot: DirectorySnapshot): DirectorySnapshot = {
+    Directory.logger.debug(s"updateSnapshot: $path $snapshot")
     if (partial && !interesting.contains(path))
       snapshot.updated(path, new UnresolvedDirectoryEntry(this, path))
     else {
       val fullPath = this.path.resolve(path)
-      if (Files.isDirectory(fullPath, NOFOLLOW_LINKS)) {
-        val dir = new Directory(fullPath, this, path, partial)
-        snapshot.updated(path, dir.snapshot())
-      } else if (Files.isRegularFile(fullPath, NOFOLLOW_LINKS)) {
-        val file = new FileSnapshot(fullPath)
-        snapshot.updated(path, file)
-      } else
-        ???
+      val entry = try {
+        if (Files.isDirectory(fullPath, NOFOLLOW_LINKS)) {
+          val dir = subdirs.getOrElseUpdate(path, {
+            new Directory(fullPath, this, path, partial) })
+          dir.snapshot()
+        } else if (Files.isRegularFile(fullPath, NOFOLLOW_LINKS)) {
+          new FileSnapshot(fullPath)
+        } else
+          UnknownDirectoryEntry
+      } catch {
+        case e : java.nio.file.AccessDeniedException =>
+          AccessDeniedEntry
+      }
+      snapshot.updated(path, entry)
     }
   }
 
+  private def notifyParent(): Unit = {
+    Directory.logger.debug(s"notifyParent: $parent $parentKey")
+    if (parent!=null) parent.notifySubdirectoryChange(parentKey)
+  }
+
   def notifySubdirectoryChange(subdir: String): Unit = {
+    Directory.logger.debug(s"Notification from child $subdir")
     currentSnapshot.updateAndGet { updateSnapshot(subdir, _) }
-    if (parent!=null)
-      parent.notifySubdirectoryChange(parentKey)
+    notifyParent()
   }
 
   override def onCreate(path: Path): Unit = {
@@ -83,27 +111,22 @@ class Directory private (val path: Path, parent: Directory, parentKey: String,
 
     currentSnapshot.updateAndGet { updateSnapshot(path.toString, _) }
 
-    if (parent!=null)
-      parent.notifySubdirectoryChange(parentKey)
+    notifyParent()
   }
   override def onModify(path: Path): Unit = {
     assert(path.getNameCount==1)
     currentSnapshot.updateAndGet { updateSnapshot(path.toString, _) }
-
-    if (parent!=null)
-      parent.notifySubdirectoryChange(parentKey)
+    notifyParent()
   }
   override def onDelete(path: Path): Unit = {
     assert(path.getNameCount==1)
     for (subdir <- subdirs.remove(path.toString)) subdir.dispose()
     currentSnapshot.updateAndGet { _.removed(path.toString) }
-    if (parent!=null)
-      parent.notifySubdirectoryChange(parentKey)
-  }
+    notifyParent()
+    }
   override def onOverflow(): Unit = {
     currentSnapshot.set(makeSnapshot)
-    if (parent!=null)
-      parent.notifySubdirectoryChange(parentKey)
+    notifyParent()
   }
 }
 
@@ -169,6 +192,14 @@ object Directory {
 sealed trait MaybeDirectoryEntry extends HashedValue
 sealed trait DirectoryEntry extends MaybeDirectoryEntry
 
+object UnknownDirectoryEntry extends DirectoryEntry {
+  override def hash: Hash[UnknownDirectoryEntry.this.type] = Hash.randomHash()
+}
+
+object AccessDeniedEntry extends DirectoryEntry {
+  override def hash: Hash[this.type] = Hash.randomHash()
+}
+
 final class FileSnapshot(path: Path) extends DirectoryEntry {
   def inputStream(): InputStream =
     new ByteArrayInputStream(content)
@@ -201,6 +232,20 @@ final class FileSnapshot(path: Path) extends DirectoryEntry {
 
 class DirectorySnapshot private (private[filesystem] val content: Map[String, MaybeDirectoryEntry])
   extends DirectoryEntry with Map[String, DirectoryEntry] with HashedValue {
+
+  def dump(hideUnresolved: Boolean = true, indent: String = ""): Unit = {
+    for ((file, entry) <- content) {
+      if (!(hideUnresolved && entry.isInstanceOf[UnresolvedDirectoryEntry]))
+        logger.debug(s"* $indent$file (${entry.getClass.getSimpleName})")
+      entry match {
+        case subdir: DirectorySnapshot => subdir.dump(hideUnresolved = hideUnresolved, indent = indent + "  ")
+        case _ =>
+      }
+    }
+  }
+
+  override def toString(): String = s"DirectorySnapshot#$hash"
+
   def getFile(path: Path): Option[FileSnapshot] = get(path) match {
     case Some(file : FileSnapshot) => Some(file)
     case None => None
@@ -215,25 +260,29 @@ class DirectorySnapshot private (private[filesystem] val content: Map[String, Ma
     case entry: UnresolvedDirectoryEntry => entry.failWithInterest()
   }
 
+
   def get(path: Path): Option[DirectoryEntry] = {
     assert(!path.isAbsolute)
-    var entry : DirectoryEntry = this
-    for (name <- path.normalize.iterator().asScala) {
-      entry match {
-        case dir : DirectorySnapshot =>
-          dir.get(name.toString) match {
-            case None => return None
-            case Some(entry) => entry
-          }
-        case _ : FileSnapshot => return None
+    get(path.iterator().asScala.map(_.toString).toList)
+  }
+
+
+  def get(path: List[String]): Option[DirectoryEntry] = path match {
+    case Nil => Some(this)
+    case file :: rest =>
+      content.get(file) match {
+        case Some(dir : DirectorySnapshot) => dir.get(rest)
+        case Some(entry : UnresolvedDirectoryEntry) =>
+          entry.failWithInterest(rest)
+        case Some(entry : DirectoryEntry) =>
+          if (rest.isEmpty) Some(entry) else None
+        case None => None
       }
     }
-    Some(entry)
-  }
 
   override def iterator: Iterator[(String, DirectoryEntry)] = content.iterator.map {
     case (str, entry: DirectoryEntry) => (str,entry)
-    case (_, entry: UnresolvedDirectoryEntry) => entry.failWithInterest(everything=true)
+    case (_, entry: UnresolvedDirectoryEntry) => entry.failWithInterest(everything = true)
   }
   override def removed(key: String): DirectorySnapshot =
     new DirectorySnapshot(content.removed(key))
@@ -246,11 +295,14 @@ class DirectorySnapshot private (private[filesystem] val content: Map[String, Ma
 
   def updated(key: String, value: DirectoryEntry) : DirectorySnapshot =
     updated(key, value : MaybeDirectoryEntry)
+
+  override def size: Int = content.size
 }
 
 
 object DirectorySnapshot {
   val empty = new DirectorySnapshot(Map.empty)
+  private val logger: Logger = log4s.getLogger
 }
 
 /** Not thread safe */
@@ -289,12 +341,13 @@ case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, Hashe
 }
 
 private case class UnresolvedDirectoryEntry(directory: Directory, path: String) extends MaybeDirectoryEntry {
-  def failWithInterest(everything: Boolean = false): Nothing = {
+  def failWithInterest(subdir: List[String] = Nil, everything: Boolean = false): Nothing = {
     if (everything)
       directory.registerInterestEverything()
-    else
-      directory.registerInterest(path)
-    throw new IOException(s"$path in ${directory.path} was not read yet. Try again with a fresh directory snapshot.")
+    else {
+      directory.registerInterest(path::subdir)
+    }
+    throw new OutdatedSnapshotException(s"$path in ${directory.path} was not read yet. Try again with a fresh directory snapshot.")
   }
 
   override val hash: Hash[UnresolvedDirectoryEntry.this.type] = UnresolvedDirectoryEntry.hash
@@ -302,3 +355,5 @@ private case class UnresolvedDirectoryEntry(directory: Directory, path: String) 
 private object UnresolvedDirectoryEntry {
   private val hash = Hash.randomHash() // TODO: stable hash
 }
+
+class OutdatedSnapshotException(message: String) extends IOException(message)
