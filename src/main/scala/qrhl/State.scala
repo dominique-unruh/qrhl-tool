@@ -1,6 +1,6 @@
 package qrhl
 
-import java.io.{FileNotFoundException, PrintWriter}
+import java.io.PrintWriter
 import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, NoSuchFileException, Path, Paths}
 import java.util
@@ -19,7 +19,7 @@ import qrhl.State.logger
 
 import scala.collection.mutable
 import hashedcomputation.Context.default
-import hashedcomputation.Hashed
+import hashedcomputation.{Hash, Hashable, Hashed, HashedValue}
 import org.apache.commons.codec.binary.Hex
 import qrhl.isabellex.IsabelleX.globalIsabelle.show_oracles
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
@@ -27,6 +27,7 @@ import de.unruh.isabelle.mlvalue.MLValue.Converter
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Term, Thm, Typ}
+import hashedcomputation.filesystem.{Directory, DirectoryEntry, DirectorySnapshot}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,8 +37,10 @@ import de.unruh.isabelle.pure.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import GIsabelle.isabelleControl
+import hashedcomputation.Implicits._
+import qrhl.isabellex.Implicits._
 
-sealed trait Subgoal {
+sealed trait Subgoal extends HashedValue {
   def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): Subgoal
 
   /** Checks whether all isabelle terms in this goal are well-typed.
@@ -139,6 +142,8 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     Subgoal.printOracles(thms.toSeq : _*)
     QRHLSubgoal(left2, right2, pre2, post2, assms2)
   }
+
+  override def hash: Hash[QRHLSubgoal.this.type] = ???
 }
 
 final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
@@ -168,6 +173,8 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
     Subgoal.printOracles(thm)
     AmbientSubgoal(term)
   }
+
+  override def hash: Hash[AmbientSubgoal.this.type] = ???
 }
 
 object AmbientSubgoal {
@@ -240,7 +247,7 @@ class CheatMode private (
                     private val cheatInProof : Boolean, // cheating till the end of the current proof
                     private val cheatInFile : Boolean, // cheating till the end of current file
                     private val inInclude : Boolean // in included file
-                    ) {
+                    ) extends HashedValue {
 //  assert(includeLevel >= 0)
 //  def endInclude = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=cheatInProof, cheatInFile=false, includeLevel=includeLevel-1)
   def endProof = new CheatMode(cheatAtAll=cheatAtAll, cheatInProof=false, cheatInFile=cheatInFile, inInclude=inInclude)
@@ -251,6 +258,9 @@ class CheatMode private (
   def stopCheatInFile(inProof:Boolean) = new CheatMode(cheatAtAll=cheatAtAll,
     cheatInProof=cheatInProof || (inProof && cheatInFile),
     cheatInFile=false, inInclude=inInclude)
+
+  override def hash: Hash[CheatMode.this.type] =
+    Hash.hashString(s"CHEAT MODE $cheatAtAll, $cheatInFile, $cheatInProof, $inInclude")
 }
 
 object CheatMode {
@@ -262,44 +272,54 @@ class State private (val environment: Environment,
                      val currentLemma: Option[(String,RichTerm)],
                      private val _isabelle: Option[IsabelleX.ContextX],
                      private val _isabelleTheory: List[Path],
-                     val dependencies: List[FileTimeStamp],
+//                     val dependencies: List[FileTimeStamp],
                      val currentDirectory: Path,
                      val cheatMode : CheatMode,
                      val includedFiles : Set[Path],
-                     val lastOutput : String) {
-  def include(hash: default.Hash, file: Path): default.Hashed[State] = {
-    println("Including file "+file)
-    val fullpath =
-      try {
-        currentDirectory.resolve(file).toRealPath()
-      } catch {
-        case e:NoSuchFileException => throw UserException(s"File not found: $file (relative to $currentDirectory)")
-      }
+                     val lastOutput : String,
+                     _hash : Hash[State])
+    extends HashedValue {
 
-    logger.debug(s"Including $fullpath")
-    if (includedFiles.contains(fullpath)) {
-      println(s"Already included $file. Skipping.")
-      Hashed(this,hash)
+  val hash: Hash[this.type] = _hash.asInstanceOf[Hash[this.type]]
+
+  private def updatedHash()(implicit file: sourcecode.File, line: sourcecode.Line) : Hash[State] =
+    Hash.hashString(s"State: $file:$line:${hash.hex}:empty")
+
+  private def updatedHash(hashes: Hash[Any]*)(implicit file: sourcecode.File, line: sourcecode.Line): Hash[State] =
+    // TODO: better use a macro in hashedcomputation that avoids rehashing the filename and line each time
+    Hash.hashString(s"State: $file:$line:${hash.hex}:${hashes.map(_.hex).mkString("")}")
+
+  private def updatedHash1(arguments: HashedValue*)(implicit file: sourcecode.File, line: sourcecode.Line): Hash[State] =
+    updatedHash(arguments.map(_.hash) : _*)(file, line)
+
+  def include(file: Path)(implicit output: PrintWriter, fs: CurrentFS): State = {
+    output.println("Including file "+file)
+    val fullpath = currentDirectory.resolve(file)
+    val relpath = fs.relativize(fullpath)
+
+    logger.debug(s"Including $relpath")
+    if (includedFiles.contains(relpath)) {
+      println(s"Already included $fullpath. Skipping.")
+      this
     } else {
-      val state1 = copy(includedFiles = includedFiles + fullpath, cheatMode=cheatMode.startInclude)
-      val hash1 = default.hash(43246596, hash, fullpath.toString)
-      val toplevel = Toplevel.makeToplevelFromState(Hashed(state1,hash1))
-      toplevel.run(fullpath)
-      val Hashed(state2,hash2) = toplevel.state
+      val fileContent = fs.directory.getFile(relpath).getOrElse { throw UserException(s"File $file not found (relative to ${currentDirectory})") }
+      val state1 = copy(includedFiles = includedFiles + relpath, cheatMode=cheatMode.startInclude,
+        hash = updatedHash1(fileContent))
+      val toplevel = Toplevel.makeToplevelFromState(state1, fs)
+      toplevel.run(fileContent, fullpath)
+      val state2 = toplevel.state
       val state3 = state2.copy(
-        dependencies=new FileTimeStamp(fullpath)::state2.dependencies,
         cheatMode = cheatMode, // restore original cheatMode
-        currentDirectory = currentDirectory) // restore original currentDirectory
-
-      // We can drop the file-hash from hash3, but then we get spurious warnings about changed files
-      val hash3 = default.hash(187408913, hash2, Utils.hashFile(fullpath))
-      Hashed(state3, hash3)
+        currentDirectory = currentDirectory,  // restore original currentDirectory
+        hash = updatedHash())
+      state3
     }
   }
 
-  def cheatInFile: State = copy(cheatMode=cheatMode.startCheatInFile)
-  def cheatInProof: State = copy(cheatMode=cheatMode.startCheatInProof)
-  def stopCheating: State = copy(cheatMode=cheatMode.stopCheatInFile(currentLemma.isDefined))
+  private def setCheatMode(cheatMode: CheatMode): State = copy(cheatMode = cheatMode, hash = updatedHash1(cheatMode))
+  def cheatInFile: State = setCheatMode(cheatMode.startCheatInFile)
+  def cheatInProof: State = setCheatMode(cheatMode.startCheatInProof)
+  def stopCheating: State = setCheatMode(cheatMode.stopCheatInFile(currentLemma.isDefined))
 
   def isabelle: IsabelleX.ContextX = _isabelle match {
     case Some(isa) => isa
@@ -313,7 +333,10 @@ class State private (val environment: Environment,
 
     val (name,prop) = currentLemma.get
     val isa = if (name!="") _isabelle.map(_.addAssumption(name,prop.isabelleTerm)) else _isabelle
-    copy(isabelle=isa, currentLemma=None, cheatMode=cheatMode.endProof)
+    // TODO: Base this on the state from the beginning of the proof, then the proof interna definitely won't affect the hash
+    copy(isabelle=isa, currentLemma=None, cheatMode=cheatMode.endProof,
+      hash = updatedHash()
+    )
   }
 
   private def containsDuplicates[A](seq: Seq[A]): Boolean = {
@@ -347,7 +370,8 @@ class State private (val environment: Environment,
 
     logger.debug(s"Program variables: ${env1.programs(name).variablesRecursive}")
 
-    copy(environment = env1, isabelle=Some(isa))
+    copy(environment = env1, isabelle=Some(isa),
+      hash = updatedHash1(decl))
   }
 
   def declareAdversary(name: String, free: Seq[Variable], inner: Seq[Variable], written: Seq[Variable], covered: Seq[Variable], overwritten: Seq[Variable], numOracles : Int): State = {
@@ -360,50 +384,56 @@ class State private (val environment: Environment,
 
     logger.debug(s"Program variables: ${env1.programs(name).variablesRecursive}")
 
-    copy(environment = env1, isabelle=Some(isa))
+    copy(environment = env1, isabelle=Some(isa),
+      hash = updatedHash1(decl))
   }
 
 
   def applyTactic(tactic:Tactic)(implicit output: PrintWriter) : State =
     if (cheatMode.cheating)
-      copy(goal=Nil)
+      copy(goal=Nil, hash=updatedHash())
     else
       goal match {
         case Nil =>
           throw UserException("No pending proof")
         case subgoal::subgoals =>
-          copy(goal=tactic.apply(this,subgoal)++subgoals)
+          val newSubgoals = tactic.apply(this,subgoal)
+          copy(goal=newSubgoals ++ subgoals,
+            hash=updatedHash(Hashable.hash(newSubgoals)))
       }
 
   private def copy(environment:Environment=environment,
                    goal:List[Subgoal]=goal,
                    isabelle:Option[IsabelleX.ContextX]=_isabelle,
-                   dependencies:List[FileTimeStamp]=dependencies,
+//                   dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,RichTerm)]=currentLemma,
                    currentDirectory:Path=currentDirectory,
                    cheatMode:CheatMode=cheatMode,
                    isabelleTheory:List[Path]=_isabelleTheory,
                    includedFiles:Set[Path]=includedFiles,
-                   lastOutput:String=lastOutput) : State =
+                   lastOutput:String=lastOutput,
+                   hash: Hash[State]) : State =
     new State(environment=environment, goal=goal, _isabelle=isabelle, cheatMode=cheatMode,
-      currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory,
-      includedFiles=includedFiles, _isabelleTheory=isabelleTheory, lastOutput = lastOutput)
+      currentLemma=currentLemma, currentDirectory=currentDirectory,
+      includedFiles=includedFiles, _isabelleTheory=isabelleTheory, lastOutput = lastOutput,
+      _hash = hash)
 
   def changeDirectory(dir:Path): State = {
     assert(dir!=null)
     if (dir==currentDirectory) return this
     if (!Files.isDirectory(dir)) throw UserException(s"Non-existent directory: $dir")
 //    if (hasIsabelle) throw UserException("Cannot change directory after loading Isabelle")
-    copy(currentDirectory=dir)
+    copy(currentDirectory=dir, hash = updatedHash(Hashable.hash(dir)))
   }
 
   def setLastOutput(output: String): State =
-    copy(lastOutput = output)
+    copy(lastOutput = output, hash = updatedHash(Hashable.hash(output)))
 
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
       goal.checkVariablesDeclared(environment)
-      copy(goal=List(goal), currentLemma=Some((name,goal.toTerm(_isabelle.get))))
+      copy(goal=List(goal), currentLemma=Some((name,goal.toTerm(_isabelle.get))),
+        hash = updatedHash(Hashable.hash(name), goal.hash))
     case _ => throw UserException("There is still a pending proof.")
   }
 
@@ -445,7 +475,7 @@ class State private (val environment: Environment,
     }
   }
 
-  def loadIsabelle(theory:Seq[String]) : State = {
+  def loadIsabelle(theory:Seq[String])(implicit currentFS: CurrentFS) : State = {
     val theoryPath = theory.toList map { thy => currentDirectory.resolve(thy+".thy") }
 
     if (_isabelle.isDefined)
@@ -458,15 +488,24 @@ class State private (val environment: Environment,
     logger.debug(s"Paths of theories to load: $theoryPath")
     val (ctxt,deps) = isabelle.getQRHLContextWithFiles(theoryPath : _*)
     logger.debug(s"Dependencies of theory ${theory.mkString(", ")}: ${deps.mkString(", ")}")
-    val stamps = deps.map(new FileTimeStamp(_))
-    val newState = copy(isabelle = Some(ctxt), dependencies=stamps:::dependencies, isabelleTheory=theoryPath)
+
+    for (f <- deps) assert(f.isAbsolute)
+
+    val deps2 = for (file <- deps) yield {
+      val relfile = currentFS.relativize(file)
+      val content = currentFS.directory.getFile(relfile)
+      (relfile, content)
+    }
+
+    val newState = copy(isabelle = Some(ctxt), isabelleTheory=theoryPath,
+      hash = updatedHash(Hashable.hash(theory.toList), Hashable.hash(deps2)))
     // We declare a quantum variable aux :: infinite by default (for use in equal-tac, for example)
     newState.declareVariable("aux", GIsabelle.infiniteT, quantum = true)
   }
 
-  def filesChanged : List[Path] = {
-    dependencies.filter(_.changed).map(_.file)
-  }
+//  def filesChanged : List[Path] = {
+//    dependencies.filter(_.changed).map(_.file)
+//  }
 
   private def declare_quantum_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ) : IsabelleX.ContextX = {
     val ctxt = Ops.declare_quantum_variable(MLValue((name, typ, isabelle.context))).retrieveNow
@@ -495,23 +534,28 @@ class State private (val environment: Environment,
       else
         declare_classical_variable(isa, name, typ)
 
-    copy(environment = newEnv, isabelle = Some(newIsa))
+    copy(environment = newEnv, isabelle = Some(newIsa),
+      hash = updatedHash(Hash.hashString(name), Hashable.hash(typ), Hashable.hash(quantum)))
   }
 
   def declareAmbientVariable(name: String, typ: Typ): State = {
     val newEnv = environment.declareAmbientVariable(name, typ)
     if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = _isabelle.get.declareVariable(name, typ)
-    copy(environment = newEnv, isabelle = Some(isa))
+    copy(environment = newEnv, isabelle = Some(isa),
+      hash = updatedHash(Hash.hashString(name), Hashable.hash(typ)))
   }
 }
 
 object State {
+  private def hashTag : Hash[Nothing] = Hash.randomHash()
   def empty(cheating:Boolean) = new State(environment=Environment.empty, goal=Nil,
     _isabelle=None, _isabelleTheory=null,
-    dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""),
+//    dependencies=Nil,
+    currentLemma=None, currentDirectory=Paths.get(""),
     cheatMode=CheatMode.make(cheating), includedFiles=Set.empty,
-    lastOutput = "Ready.")
+    lastOutput = "Ready.",
+    _hash = Hash.hashString(hashTag.hex + cheating).asInstanceOf[Hash[State]])
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
   private val logger = log4s.getLogger

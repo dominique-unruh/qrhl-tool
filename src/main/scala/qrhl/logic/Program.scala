@@ -7,6 +7,7 @@ import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.mlvalue.MLValue.Converter
 import de.unruh.isabelle.control
 import de.unruh.isabelle.pure.{Term, Thm, Typ, Type}
+import hashedcomputation.{Hash, Hashable, HashedValue}
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.{AllSet, MaybeAllSet, UserException, Utils}
 
@@ -15,7 +16,7 @@ import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.{AbstractIterator, GenSet, mutable}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
+import scala.language.{implicitConversions, postfixOps}
 
 // Implicits
 import qrhl.Utils.listSetUpcast
@@ -25,6 +26,8 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import de.unruh.isabelle.pure.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
+import hashedcomputation.Implicits._
+import VarTerm.VarTermHashable
 
 sealed trait VarTerm[+A] {
   def replace[A1 >: A, A2 >: A](from: A1, to: A2): VarTerm[A2]
@@ -74,6 +77,10 @@ object VarTerm {
     result
   }
 
+  implicit def varTermHashable[A : Hashable]: VarTermHashable[A] = new VarTermHashable[A](implicitly)
+  class VarTermHashable[A](val aHashable: Hashable[A]) extends AnyVal with Hashable[VarTerm[A]] {
+    override def hash[A1 <: VarTerm[A]](value: A1): Hash[A1] = ???
+  }
 }
 
 case class ExprVariableUse
@@ -192,6 +199,7 @@ case object VTUnit extends VarTerm[Nothing] {
   override def toString: String = "()"
   override def replace[A1 >: Nothing, A2 >: Nothing](from: A1, to: A2): VarTerm[A2] = this
   override def contains[A1 >: Nothing](v: A1): Boolean = false
+
 }
 
 case class VTSingle[+A](v:A) extends VarTerm[A] {
@@ -223,7 +231,7 @@ case class VTCons[+A](a:VarTerm[A], b:VarTerm[A]) extends VarTerm[A] {
 }
 
 // Programs
-sealed trait Statement {
+sealed trait Statement extends HashedValue {
   def toSeq: Seq[Statement] = this match {
     case Block(statements @ _*) => statements
     case _ => List(this)
@@ -538,6 +546,9 @@ sealed trait Statement {
 class Local(val vars: List[Variable], val body : Block) extends Statement {
   assert(vars.nonEmpty)
 
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"Local: ${Hashable.hash(vars)} ${Hashable.hash(body)}") // TODO: better hash
+
   override def equals(obj: Any): Boolean = obj match {
     case o : Local =>
       (vars == o.vars) && (body == o.body)
@@ -652,6 +663,9 @@ object Local {
 
 class Block(val statements:List[Statement]) extends Statement {
 
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"Block: ${Hashable.hash(statements)}") // TODO better hash
+
   def unwrapTrivialBlock: Statement = statements match {
     case List(s) => s
     case _ => this
@@ -763,6 +777,9 @@ object Block {
 
 
 final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"Assign: ${Hashable.hash(variable)} ${Hashable.hash(expression)}") // TODO better hash
+
   override def toString: String = s"""${Variable.vartermToString(variable)} <- $expression;"""
   override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
@@ -792,6 +809,9 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
     Assign(variable.map(_.substitute(renaming)), expression.renameCVariables(renaming))
 }
 final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"Sample: ${Hashable.hash(variable)} ${Hashable.hash(expression)}") // TODO better hash
+
   override def toString: String = s"""${Variable.vartermToString(variable)} <$$ $expression;"""
   override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
@@ -822,6 +842,9 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
 }
 
 final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"IfThenElse: ${Hashable.hash(condition)} ${Hashable.hash(thenBranch)} ${Hashable.hash(elseBranch)}") // TODO better hash
+
   override def inline(name: String, oracles: List[String], program: Statement): Statement =
     IfThenElse(condition,thenBranch.inline(name,oracles,program),elseBranch.inline(name,oracles,program))
   override def toString: String = s"if ($condition) $thenBranch else $elseBranch;"
@@ -860,6 +883,9 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
 }
 
 final case class While(condition:RichTerm, body: Block) extends Statement {
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"While: ${Hashable.hash(condition)} ${Hashable.hash(body)}") // TODO better hash
+
   override def inline(name: String, oracles: List[String], program: Statement): Statement =
     While(condition,body.inline(name,oracles,program))
   override def toString: String = s"while ($condition) $body"
@@ -896,6 +922,9 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
 }
 
 final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"QInit: ${Hashable.hash(location)} ${Hashable.hash(expression)}") // TODO better hash
+
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"${Variable.vartermToString(location)} <q $expression;"
 
@@ -931,6 +960,9 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
 }
 
 final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"QApply: ${Hashable.hash(location)} ${Hashable.hash(expression)}") // TODO better hash
+
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"on ${Variable.vartermToString(location)} apply $expression;"
 
@@ -966,6 +998,9 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
     QApply(location.map(_.substitute(renaming)), expression.renameCVariables(renaming))
 }
 final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariable], e:RichTerm) extends Statement {
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"Measurement: ${Hashable.hash(result)} ${Hashable.hash(location)} ${Hashable.hash(e)}") // TODO better hash
+
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
   override def toString: String = s"${Variable.vartermToString(result)} <- measure ${Variable.vartermToString(location)} in $e;"
 
@@ -1008,6 +1043,9 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
 }
 
 final case class Call(name:String, args:Call*) extends Statement {
+  lazy val hash : Hash[this.type] =
+    Hash.hashString(s"Call: ${Hashable.hash(name)} ${Hashable.hash(args.toList)}") // TODO better hash
+
   override def toString: String = "call "+toStringShort+";"
   def toStringShort: String =
     if (args.isEmpty) name else s"$name(${args.map(_.toStringShort).mkString(",")})"

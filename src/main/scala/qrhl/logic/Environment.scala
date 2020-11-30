@@ -10,6 +10,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ
+import hashedcomputation.{Hash, Hashable, HashedValue}
 
 import scala.collection.immutable.ListSet
 
@@ -17,8 +18,11 @@ import scala.collection.immutable.ListSet
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
+import qrhl.isabellex.Implicits._
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 import scala.concurrent.ExecutionContext.Implicits.global
+import hashedcomputation.Implicits._
+
 
 /** Represents a logic environment in which programs and expressions are interpreted.
   * @param cVariables All declared classical variables
@@ -33,7 +37,21 @@ final class Environment private
    val cqVariables12 : Set[String],
 //   val indexedNames : Set[String], // all variable names together, program variables indexed with 1/2
 //   val nonindexedNames : Set[String], // all variable names together, without 1/2-index
-   val programs : Map[String,ProgramDecl]) {
+   val programs : Map[String,ProgramDecl],
+   val _hash: Hash[Environment])
+  extends HashedValue
+{
+  override def hash: Hash[Environment.this.type] = _hash.asInstanceOf[Hash[this.type]]
+  private def updatedHash()(implicit file: sourcecode.File, line: sourcecode.Line) : Hash[Environment] =
+    Hash.hashString(s"Env: $file:$line:${hash.hex}:empty")
+
+  private def updatedHash(hashes: Hash[Any]*)(implicit file: sourcecode.File, line: sourcecode.Line): Hash[Environment] =
+  // TODO: better use a macro in hashedcomputation that avoids rehashing the filename and line each time
+    Hash.hashString(s"Env: $file:$line:${hash.hex}:${hashes.map(_.hex).mkString("")}")
+
+  private def updatedHash1(arguments: HashedValue*)(implicit file: sourcecode.File, line: sourcecode.Line): Hash[Environment] =
+    updatedHash(arguments.map(_.hash) : _*)(file, line)
+
   def getCVariable(res: String): CVariable =
     cVariables.getOrElse(res, throw UserException(s"Classical variable $res not declared"))
   def getQVariable(res: String): QVariable =
@@ -92,15 +110,18 @@ final class Environment private
 //    assert(!qVariables.contains(name))
     if (quantum)
       copy(qVariables = qVariables.updated(name, QVariable(name, typ)),
-        cqVariables12=cqVariables12++newIdxNames)
+        cqVariables12=cqVariables12++newIdxNames,
+        hash = updatedHash(Hashable.hash(name), Hashable.hash(typ)))
     else
       copy(cVariables = cVariables.updated(name, CVariable(name,typ)),
-        cqVariables12=cqVariables12++newIdxNames)
+        cqVariables12=cqVariables12++newIdxNames,
+        hash = updatedHash(Hashable.hash(name), Hashable.hash(typ)))
   }
 
   def declareAmbientVariable(name: String, typ:Typ) : Environment = {
     assert(!variableExists(name))
-    copy(ambientVariables=ambientVariables.updated(name, typ))
+    copy(ambientVariables=ambientVariables.updated(name, typ),
+      hash = updatedHash(Hashable.hash(name), Hashable.hash(typ)))
   }
 
   def declareProgram(decl: ProgramDecl) : Environment = {
@@ -108,7 +129,8 @@ final class Environment private
       throw UserException(s"A program with name ${decl.name} was already declared.")
     if (variableExists(decl.name))
       throw UserException(s"Program name ${decl.name} conflicts with an existing variable name")
-    copy(programs=programs.updated(decl.name, decl))
+    copy(programs=programs.updated(decl.name, decl),
+      hash = updatedHash1(decl))
   }
 
 //  def declareProgram(name: String, oracles:List[String], program: Block): Environment = {
@@ -134,17 +156,20 @@ final class Environment private
                    qVariables:Map[String,QVariable]=qVariables,
                    ambientVariables:Map[String,Typ]=ambientVariables,
                    programs:Map[String,ProgramDecl]=programs,
-                   cqVariables12:Set[String]=cqVariables12) =
+                   cqVariables12:Set[String]=cqVariables12,
+                   hash:Hash[Environment]) =
     new Environment(cVariables=cVariables, qVariables=qVariables, programs=programs,
-      ambientVariables=ambientVariables, cqVariables12=cqVariables12)
+      ambientVariables=ambientVariables, cqVariables12=cqVariables12, _hash=hash)
 }
 
 object Environment {
+  private val emptyHash = Hash.randomHash()
   val empty = new Environment(cVariables=Map.empty, qVariables=Map.empty,
-    ambientVariables=Map.empty, programs=Map.empty, cqVariables12=Set.empty)
+    ambientVariables=Map.empty, programs=Map.empty, cqVariables12=Set.empty,
+    _hash = emptyHash)
 }
 
-sealed trait ProgramDecl {
+sealed trait ProgramDecl extends HashedValue {
   /** All variables used by this program (classical, classical-written, quantum, ambient, program names), recursively. */
   val variablesRecursive : VariableUse
 //  val variables : (List[CVariable],List[QVariable])
@@ -157,6 +182,13 @@ sealed trait ProgramDecl {
 
 final case class AbstractProgramDecl(name:String, free:List[Variable], inner:List[Variable], written:List[Variable],
                                      overwritten:List[Variable], covered:List[Variable], numOracles:Int) extends ProgramDecl {
+
+  override lazy val hash: Hash[AbstractProgramDecl.this.type] = {
+    val argHash = List(Hashable.hash(name), Hashable.hash(free), Hashable.hash(inner), Hashable.hash(written),
+      Hashable.hash(overwritten), Hashable.hash(covered), Hashable.hash(numOracles))
+    Hash.hashString(s"AbstractProgramDecl ${argHash.map(_.hex).mkString(",")}") // TODO better hashing
+  }
+
   import AbstractProgramDecl._
   override val variablesRecursive: VariableUse = {
     VariableUse(freeVariables = ListSet(free:_*), written = ListSet(written:_*), ambient = ListSet.empty,
@@ -186,6 +218,11 @@ object AbstractProgramDecl {
 
 final case class ConcreteProgramDecl(environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {
   import ConcreteProgramDecl._
+
+  override lazy val hash: Hash[ConcreteProgramDecl.this.type] = {
+    val argHash = List(Hashable.hash(environment), Hashable.hash(name), Hashable.hash(oracles), Hashable.hash(program))
+    Hash.hashString(s"ConcreteProgramDecl ${argHash.map(_.hex).mkString(",")}") // TODO better hashing
+  }
 
   override val numOracles: Int = oracles.length
   lazy val ambientVars: List[String] = {

@@ -3,8 +3,9 @@ package qrhl.toplevel
 import java.io.PrintWriter
 import java.nio.file.{Path, Paths}
 
+import hashedcomputation.filesystem.DirectorySnapshot
 import org.scalatest.funsuite.AnyFunSuite
-import qrhl.UserException
+import qrhl.{CurrentFS, UserException}
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel.ReadLine
 
@@ -38,4 +39,6 @@ object ToplevelTest {
 //    override def readline(prompt: String): String = ???
 //    override def position: String = "<test case>"
 //  }
+
+  implicit val emptyCurrentFS: CurrentFS = new CurrentFS(DirectorySnapshot.empty, Path.of("").toAbsolutePath.getRoot)
 }

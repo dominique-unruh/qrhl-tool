@@ -31,11 +31,13 @@ import scala.jdk.StreamConverters.StreamHasToScala
 import scala.ref.{ReferenceWrapper, SoftReference, WeakReference}
 import scala.util.Random
 import scala.util.control.Breaks
-
 import HashedValue.hashedValueHashable
 
+import scala.language.implicitConversions
+
 class Hash[+B] private (private val hash: Array[Byte]) {
-  override def toString: String = Hex.encodeHexString(hash).substring(0,7)
+  override def toString: String = hex.substring(0,7)
+  def hex: String = Hex.encodeHexString(hash)
 
   override def hashCode(): Int = util.Arrays.hashCode(hash)
   override def equals(obj: Any): Boolean = obj match {
@@ -135,7 +137,7 @@ object Fingerprint {
 }
 
 /** Type class for values with hashes */
-trait Hashable[-A] {
+trait Hashable[-A] extends Any {
   @NotNull def hash[A1 <: A](value: A1): Hash[A1]
 }
 object Hashable {
@@ -498,6 +500,7 @@ trait Fingerprinter[A] {
   def dispose(): Unit
 }
 
+// TODO: remove this class
 trait HashedOption[+A] extends HashedValue
 object HashedOption {
   def hash[A : Hashable](value: Option[A]): Hash[HashedOption[A]] = value match {
@@ -574,3 +577,48 @@ object FingerprintMap {
   }
 }
 
+object Implicits {
+  implicit def optionHashable[A: Hashable]: OptionHashable[A] = new OptionHashable(implicitly)
+  implicit def listHashable[A: Hashable]: ListHashable[A] = new ListHashable(implicitly)
+  implicit def tuple2Hashable[A : Hashable, B : Hashable]: Tuple2Hashable[A,B] = new Tuple2Hashable
+  implicit val pathHashable: PathHashable.type = PathHashable
+  implicit val stringHashable: StringHashable.type = StringHashable
+  implicit val intHashable: IntHashable.type = IntHashable
+  implicit val booleanHashable: BooleanHashable.type = BooleanHashable
+}
+
+class Tuple2Hashable[A : Hashable, B : Hashable] extends Hashable[(A,B)] {
+  override def hash[A1 <: (A, B)](value: A1): Hash[A1] =
+    Hash.hashString(s"PAIR: ${Hashable.hash(value._1)} ${Hashable.hash(value._2)}")
+}
+
+class OptionHashable[A](val aHashable: Hashable[A]) extends AnyVal with Hashable[Option[A]] {
+  override def hash[A1 <: Option[A]](value: A1): Hash[A1] = HashedOption.hash(value)(aHashable).asInstanceOf[Hash[A1]]
+}
+
+class ListHashable[A](val aHashable: Hashable[A]) extends AnyVal with Hashable[List[A]] {
+  override def hash[A1 <: List[A]](value: A1): Hash[A1] =
+    Hash.hashString(value.map(Hashable.hash(_)(aHashable).hex).mkString(",")) // TODO: something better
+}
+
+object PathHashable extends Hashable[Path] {
+  override def hash[A1 <: Path](value: A1): Hash[A1] =
+    Hash.hashString("PATH " + value.toString) // TODO: something better, with tag
+}
+
+object IntHashable extends Hashable[Int] {
+  override def hash[A1 <: Int](value: A1): Hash[A1] =
+    Hash.hashString("INT " + value.toString) // TODO: something better, with tag
+}
+
+object BooleanHashable extends Hashable[Boolean] {
+  private val trueHash = Hash.randomHash()
+  private val falseHash = Hash.randomHash()
+  override def hash[A1 <: Boolean](value: A1): Hash[A1] =
+    if (value) trueHash else falseHash
+}
+
+object StringHashable extends Hashable[String] {
+  override def hash[A1 <: String](value: A1): Hash[A1] =
+    Hash.hashString("String: " + value) // TODO: something better, with tag
+}

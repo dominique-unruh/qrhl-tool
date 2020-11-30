@@ -1,6 +1,6 @@
 package hashedcomputation.filesystem
 
-import java.io.IOException
+import java.io.{ByteArrayInputStream, IOException, InputStream}
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY, OVERFLOW}
 import java.nio.file.{Files, Path, WatchKey, WatchService}
@@ -170,6 +170,9 @@ sealed trait MaybeDirectoryEntry extends HashedValue
 sealed trait DirectoryEntry extends MaybeDirectoryEntry
 
 final class FileSnapshot(path: Path) extends DirectoryEntry {
+  def inputStream(): InputStream =
+    new ByteArrayInputStream(content)
+
   private var contentRef : ReferenceWrapper[Array[Byte]] = _
   val hash: Hash[this.type] = {
     val content = Files.readAllBytes(path)
@@ -198,6 +201,11 @@ final class FileSnapshot(path: Path) extends DirectoryEntry {
 
 class DirectorySnapshot private (private[filesystem] val content: Map[String, MaybeDirectoryEntry])
   extends DirectoryEntry with Map[String, DirectoryEntry] with HashedValue {
+  def getFile(path: Path): Option[FileSnapshot] = get(path) match {
+    case Some(file : FileSnapshot) => Some(file)
+    case None => None
+  }
+
 
   override def hash: Hash[this.type] =
     Hash.hashString(content.toList.map { case (s,h) => (s,h.hash) }.toString()) // TODO: proper hash

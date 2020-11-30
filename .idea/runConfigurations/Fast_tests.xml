@@ -28,6 +28,7 @@
         <option value="qrhl.isabellex.ConfigurationTest" />
         <option value="qrhl.isabellex.MLValueConvertersTest" />
         <option value="hashedcomputation.CacheTest" />
+        <option value="hashedcomputation.filesystem.DirectoryTest" />
       </list>
     </option>
     <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />

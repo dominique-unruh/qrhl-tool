@@ -3,14 +3,19 @@ package qrhl.logic
 import qrhl.isabellex.{IsabelleConsts, IsabelleX}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.{App, Const, Free, Term, Typ}
+import hashedcomputation.{Hash, Hashable, HashedValue}
 
 import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
+// Implicits
+import hashedcomputation.Implicits._
+import qrhl.isabellex.Implicits._
+
 // Variables
-sealed trait Variable {
+sealed trait Variable extends HashedValue {
   def rename(name: String): Variable
 
   /** Renames this variable.
@@ -118,6 +123,9 @@ object Variable {
 }
 
 final case class QVariable(name:String, override val valueTyp: Typ) extends Variable {
+  override val hash: Hash[QVariable.this.type] =
+    Hash.hashString(s"QVariable ${Hashable.hash(name)} ${Hashable.hash(valueTyp)}") // TODO better hash
+
 
   override def index1: QVariable = QVariable(Variable.index1(name),valueTyp)
   override def index2: QVariable = QVariable(Variable.index2(name),valueTyp)
@@ -160,6 +168,8 @@ object QVariable {
 }
 
 final case class CVariable(name:String, override val valueTyp: Typ) extends Variable {
+  override val hash: Hash[CVariable.this.type] =
+    Hash.hashString(s"CVariable ${Hashable.hash(name)} ${Hashable.hash(valueTyp)}") // TODO better hash
 
   override def index1: CVariable = CVariable(Variable.index1(name),valueTyp)
   override def index2: CVariable = CVariable(Variable.index2(name),valueTyp)

@@ -13,6 +13,7 @@ import scala.collection.mutable.ListBuffer
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Var}
+import hashedcomputation.{Hash, Hashable, HashedValue}
 import qrhl.isabellex.IsabelleX.globalIsabelle.Ops
 
 // Implicits
@@ -20,8 +21,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
+import qrhl.isabellex.Implicits._
 
-final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option[String]=None) {
+final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option[String]=None) extends HashedValue {
+  override def hash: Hash[RichTerm.this.type] =
+    Hash.hashString(s"RichTerm: ${Hashable.hash(typ)} ${Hashable.hash(isabelleTerm)}") // TODO better hash
+
   def renameCVariables(renaming: List[(Variable, Variable)]): RichTerm = {
     def s(t: Term) : Term = t match {
       case Const(name, typ) => t

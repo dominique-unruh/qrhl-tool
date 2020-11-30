@@ -4,8 +4,9 @@ import org.scalatest.funsuite.AnyFunSuite
 import qrhl.State
 import qrhl.logic.{Block, Call, ConcreteProgramDecl}
 
-class DeclareProgramCommandTest extends AnyFunSuite {
+import ToplevelTest.emptyCurrentFS
 
+class DeclareProgramCommandTest extends AnyFunSuite {
   test("oracles") {
     val cmd0 = DeclareProgramCommand("b", Nil, Block.empty)
     val cmd = DeclareProgramCommand("test",List("a"), Block(Call("a"), Call("b")))

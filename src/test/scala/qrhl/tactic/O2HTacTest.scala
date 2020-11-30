@@ -56,7 +56,7 @@ class O2HTacTest extends AnyFunSuite {
         | lemma abs ( Pr[b=1:left(rho)] - Pr[b=1:right(rho)] ) <= 2 * sqrt( (1+real q) * Pr[Find:find(rho)] ).
       """.stripMargin)
 
-    val state2 = tl.state.value.applyTactic(O2HTac)
+    val state2 = tl.state.applyTactic(O2HTac)
 
     println(state2)
 

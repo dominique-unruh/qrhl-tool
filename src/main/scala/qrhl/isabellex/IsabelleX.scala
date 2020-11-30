@@ -24,6 +24,7 @@ import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import de.unruh.isabelle.control
 import de.unruh.isabelle.misc.Symbols
+import hashedcomputation.{Hash, HashedValue}
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.IsabelleX.fastype_of
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}

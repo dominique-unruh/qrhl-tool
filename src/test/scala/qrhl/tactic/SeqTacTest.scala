@@ -11,7 +11,7 @@ class SeqTacTest extends AnyFunSuite {
   def testSeqRule(pre:String,post:String,left:String,right:String,middle:String) : Unit = {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
-    val state = tl.state.value
+    val state = tl.state
     val left2 = state.parseBlock(left)
     val right2 = state.parseBlock(right)
     val pre2 = state.parseExpression(GIsabelle.predicateT,pre)
@@ -22,8 +22,8 @@ class SeqTacTest extends AnyFunSuite {
     val goals = tac(state,qrhl)
     assert(goals.length == 2)
     val List(goal1,goal2) = goals
-    goal1.checkWelltyped(tl.state.value.isabelle)
-    goal2.checkWelltyped(tl.state.value.isabelle)
+    goal1.checkWelltyped(tl.state.isabelle)
+    goal2.checkWelltyped(tl.state.isabelle)
     assert(goal1.isInstanceOf[QRHLSubgoal])
     assert(goal2.isInstanceOf[QRHLSubgoal])
     val qrhl1 = goal1.asInstanceOf[QRHLSubgoal]

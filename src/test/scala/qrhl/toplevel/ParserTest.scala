@@ -20,7 +20,7 @@ class ParserTest extends AnyFunSuite {
     tl.execCmd("adversary B0 free x")
     tl.execCmd("adversary A1 free x calls ?")
     tl.execCmd("adversary A2 free x calls ?, ?")
-    tl.state.value.parserContext
+    tl.state.parserContext
   }
 
   test("fact") {

@@ -13,7 +13,7 @@ class ExpressionTest extends AnyFunSuite {
     tl.execCmd("classical var x : int")
     val str = "Cla[ x=(1::int) ]"
     //    val state = tl.state
-    val e = RichTerm(tl.state.value.isabelle, str, GIsabelle.predicateT)
+    val e = RichTerm(tl.state.isabelle, str, GIsabelle.predicateT)
     println(e)
     assert(e.toString=="ℭ\uD835\uDD29\uD835\uDD1E[x = 1]")
   }
@@ -22,8 +22,8 @@ class ExpressionTest extends AnyFunSuite {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
-    val e = state.value.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]")
-    val t = e.encodeAsExpression(tl.state.value.isabelle)
+    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]")
+    val t = e.encodeAsExpression(tl.state.isabelle)
     println(e)
     println(t)
     assert(t.typ == GIsabelle.expressionT(GIsabelle.predicateT))
@@ -33,11 +33,11 @@ class ExpressionTest extends AnyFunSuite {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
-    val e = state.value.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]")
+    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]")
     println(e)
-    val t = e.encodeAsExpression(tl.state.value.isabelle)
+    val t = e.encodeAsExpression(tl.state.isabelle)
     println(t)
-    val e2 = RichTerm.decodeFromExpression(tl.state.value.isabelle, t.isabelleTerm)
+    val e2 = RichTerm.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)
 
     assert(e.isabelleTerm==e2.isabelleTerm)
@@ -50,11 +50,11 @@ class ExpressionTest extends AnyFunSuite {
     val tl = Toplevel.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
-    val e = state.value.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ]")
+    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ]")
     println(e)
-    val t = e.encodeAsExpression(tl.state.value.isabelle)
+    val t = e.encodeAsExpression(tl.state.isabelle)
     println(t)
-    val e2 = RichTerm.decodeFromExpression(tl.state.value.isabelle, t.isabelleTerm)
+    val e2 = RichTerm.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)
 
     assert(e.isabelleTerm==e2.isabelleTerm)
@@ -68,11 +68,11 @@ class ExpressionTest extends AnyFunSuite {
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var c : int")
     val state = tl.state
-    val e = state.value.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ∧ c1=c2 ]")
+    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ∧ c1=c2 ]")
     println(e)
-    val t = e.encodeAsExpression(tl.state.value.isabelle)
+    val t = e.encodeAsExpression(tl.state.isabelle)
     println(t)
-    val e2 = RichTerm.decodeFromExpression(tl.state.value.isabelle, t.isabelleTerm)
+    val e2 = RichTerm.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)
 
     assert(e.isabelleTerm==e2.isabelleTerm)

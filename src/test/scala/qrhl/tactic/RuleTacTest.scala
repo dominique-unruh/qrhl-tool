@@ -22,9 +22,9 @@ class RuleTacTest extends AnyFunSuite {
   test("produce new subgoals") {
     val tl = toplevel()
     tl.execCmd("lemma test: a+b <= c+d")
-    val state2 = tl.state.value.applyTactic(RuleTac("add_le_mono"))
+    val state2 = tl.state.applyTactic(RuleTac("add_le_mono"))
     print("New goals: ",state2.goal)
-    state2.goal.foreach(_.checkWelltyped(tl.state.value.isabelle))
+    state2.goal.foreach(_.checkWelltyped(tl.state.isabelle))
     assert(state2.goal.length==2)
     // TODO: check the goals themselves?
   }
@@ -34,10 +34,10 @@ class RuleTacTest extends AnyFunSuite {
       val tl = toplevel()
       tl.execCmd("lemma test: a <= c")
 //      val inst = List(("j", RichTerm(tl.state.isabelle, "0::nat", Isabelle.dummyT)))
-      val state2 = tl.state.value.applyTactic(RuleTac("le_trans[where j=0]"))
+      val state2 = tl.state.applyTactic(RuleTac("le_trans[where j=0]"))
       val goals = state2.goal
       print("New goals: ", goals)
-      goals.foreach(_.checkWelltyped(tl.state.value.isabelle))
+      goals.foreach(_.checkWelltyped(tl.state.isabelle))
       assert(goals.length == 2)
       assert(goals(0).toString == "a ≤ 0")
       assert(goals(1).toString == "0 ≤ c")
@@ -47,7 +47,7 @@ class RuleTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("lemma test: 1=1")
     val rule = RuleTac("trans[where s=α]")
-    val state2 = tl.state.value.applyTactic(rule)
+    val state2 = tl.state.applyTactic(rule)
   }
 
 /*

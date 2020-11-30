@@ -47,12 +47,8 @@ object ChangeDirectoryCommand {
 }
 
 case class IsabelleCommand(thy:Seq[String]) extends Command {
-  override def act(state: State, output: PrintWriter): State = {
-//    output.println(s"Loading Isabelle.")
-    val newState = state.loadIsabelle(thy)
-    output.println("Isabelle loaded.")
-    newState
-  }
+  override def act(state: State, output: PrintWriter): State =
+    throw new RuntimeException("IsabelleCommand.act must not be called.")
 }
 
 case class DeclareVariableCommand(name: String, typ: Typ, ambient:Boolean=false, quantum:Boolean=false) extends Command {

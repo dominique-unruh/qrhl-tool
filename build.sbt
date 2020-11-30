@@ -27,6 +27,7 @@ libraryDependencies += "org.log4s" %% "log4s" % "1.8.2"
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30"
 libraryDependencies += "org.jline" % "jline" % "3.16.0"
+libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.9"
 
 val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c3968054988b50da7f6c02c6b.tar.gz"
 val pgPatch = "src/proofgeneral/proof-site.el.patch"

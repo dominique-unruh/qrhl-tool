@@ -4,8 +4,11 @@ import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
-import hashedcomputation.{Computation, Hashed}
+import hashedcomputation.{Computation, Hashed, filesystem}
 import de.unruh.isabelle.control.IsabelleException
+import hashedcomputation.filesystem.{Directory, FileSnapshot}
+import qrhl.CurrentFS
+import sourcecode.Text.generate
 //import org.eclipse.jgit.diff.HashedSequenceComparator
 import org.jline.reader.LineReaderBuilder
 import org.jline.terminal.TerminalBuilder
@@ -21,14 +24,25 @@ import hashedcomputation.Context.default
 import org.apache.commons.codec.binary.Hex
 
 /** Not thread safe */
-class Toplevel private(initialState : default.Hashed[State]) {
+class Toplevel private(initialState : State, fsSnapshot: CurrentFS = null) {
 //  val initialState: default.Hashed[State] = Hashed(_initialState, default.hash(getClass.descriptorString))
 //  def dispose(): Unit = {
 //    if (state.hasIsabelle) state.isabelle.isabelle.dispose()
 //    states = null
 //  }
 
-  def isabelle: IsabelleX = state.value.isabelle.isabelle
+  private val rootDirectory : Directory = if (fsSnapshot!=null) null else {
+    val rootPath = Path.of("").toAbsolutePath.getRoot
+    Directory(rootPath, partial = true)
+  }
+
+  implicit var currentFS : CurrentFS =
+    if (fsSnapshot!=null) fsSnapshot else {
+      val snapshot = rootDirectory.snapshot()
+      new CurrentFS(snapshot, rootDirectory.path)
+    }
+
+  def isabelle: IsabelleX = state.isabelle.isabelle
 
   /** Reads one command from the input. The last line of the command must end with ".".
     * Comment lines (starting with whitespace + #) are skipped.
@@ -73,39 +87,45 @@ class Toplevel private(initialState : default.Hashed[State]) {
   }
 
 
-  private var states : List[default.Hashed[State]] = List(initialState)
+  private var states : List[State] = List(initialState)
 
-  def commandAct(commandString: String, command: Command, state: default.Hashed[State]) : default.Hashed[State] =
+  def commandAct(commandString: String, command: Command, state: State) : State =
     command match {
       case includeCommand : IncludeCommand =>
-        state.value.include(state.hash, includeCommand.file)
-      case _ : IsabelleCommand =>
-        val newState = command.actString(state.value)
-        println(newState.lastOutput)
-        val newFiles = newState.dependencies.map(_.file).toSet -- state.value.dependencies.map(_.file)
-        val filesHash = Utils.hashFileSet(newFiles)
-        logger.debug(s"Included files: $newFiles")
-        logger.debug(s"Files hash: ${Hex.encodeHexString(filesHash)}")
-        val newHash = default.hash(995424066, commandString, state.hash, filesHash)
-        Hashed(newState, newHash)
+        val stringWriter = new StringWriter()
+        implicit val writer: PrintWriter = new PrintWriter(stringWriter)
+        state.include(includeCommand.file)
+      case cmd : IsabelleCommand =>
+        val stringWriter = new StringWriter()
+        implicit val output: PrintWriter = new PrintWriter(stringWriter)
+        val newState = state.loadIsabelle(cmd.thy)
+        output.println("Isabelle loaded.")
+//        val newFiles = newState.dependencies.map(_.file).toSet -- state.value.dependencies.map(_.file)
+//        val filesHash = Utils.hashFileSet(newFiles)
+//        logger.debug(s"Included files: $newFiles")
+//        logger.debug(s"Files hash: ${Hex.encodeHexString(filesHash)}")
+//        val newHash = default.hash(995424066, commandString, state.hash, filesHash)
+//        Hashed(newState, newHash)
+        newState
       case _ =>
 //        logger.debug(s"Command string: '${commandString}'")
-        val hash = default.hash(commandString, state)
-        val hashed = Hashed((command,state.value), hash=hash)
-        val newState = Toplevel.commandActComputation(hashed).result
+//        val hash = default.hash(commandString, state)
+//        val hashed = Hashed((command,state.value), hash=hash)
+        // TODO: cache this
+        val newState = command.actString(state)
         println(newState.lastOutput)
-        val tag = getClass + " @ " +getClass.getClassLoader.getName
-        val newHash = default.hash(tag, hash)
-        Hashed(newState, newHash)
+//        val tag = getClass + " @ " +getClass.getClassLoader.getName
+//        val newHash = default.hash(tag, hash)
+        newState
   }
+
+  // TODO: automatically recompute instead
+  def warnIfFilesChanged(): Unit = if ((rootDirectory!=null) && (rootDirectory.snapshot() ne currentFS.directory))
+    println(s"***** [WARNING] Some files may have changed.\n***** Please retract the current proof script. (C-c C-r or Proof-General->Retract Buffer)\n\n")
 
   /** Executes a single command. */
   def execCmd(cmdString:String, cmd:Command, position: => String) : Unit = {
-    state.value.filesChanged match {
-      case Nil =>
-      case files =>
-        println(s"***** [WARNING] Some files changed (${files.mkString(", ")}).\n***** Please retract the current proof script. (C-c C-r or Proof-General->Retract Buffer)\n\n")
-    }
+    warnIfFilesChanged()
 
     try {
       cmd match {
@@ -134,7 +154,7 @@ class Toplevel private(initialState : default.Hashed[State]) {
   }
 
   /** Returns the current state of the toplevel */
-  def state: default.Hashed[State] = states.head
+  def state: State = states.head
 
   /** Executes a single command. The command must be given without a final ".". */
   def execCmd(cmd:String, position: => String = "<string>") : Unit = {
@@ -160,6 +180,17 @@ class Toplevel private(initialState : default.Hashed[State]) {
     execCmd(fakeCmdString, ChangeDirectoryCommand(directory), readLine.position)
     run(readLine)
   }
+
+  def run(script: FileSnapshot, path: Path): Unit = {
+    //    val reader = new InputStreamReader(new FileInputStream(script.toFile), StandardCharsets.UTF_8)
+    //    println("Toplevel.run",script,script.toAbsolutePath.normalize.getParent)
+    val readLine = new Toplevel.ReadLine.FileSnapshot(script, path)
+    val directory = path.toAbsolutePath.normalize.getParent
+    val fakeCmdString = "@@@ CD @@@ "+directory.toString
+    execCmd(fakeCmdString, ChangeDirectoryCommand(directory), readLine.position)
+    run(readLine)
+  }
+
 
   def runWithErrorHandler(script: Path, abortOnError:Boolean): Boolean = {
     val readLine = new Toplevel.ReadLine.File(script)
@@ -217,9 +248,9 @@ object Toplevel {
 
   // TODO: this should use a hashed computation. But not for include commands or Isabelle commands. How do we make sure that after an include,
   // hashing still works if nothing changed inside the included file but comments?
-  private val commandActComputation : default.Function[(Command,State), State] = default.createFunction {
-    case Hashed.Value((command, state)) => command.actString(state)
-  }
+//  private val commandActComputation : default.Function[(Command,State), State] = default.createFunction {
+//    case Hashed.Value((command, state)) => command.actString(state)
+//  }
 
   private val commandEnd: Regex = """\.\s*$""".r
   private val commentRegex = """^\s*\#.*$""".r
@@ -233,20 +264,19 @@ object Toplevel {
     toplevel
   }
 
+  // TODO: move to test classes
   def makeToplevelWithTheory(theory:Seq[String]=Nil) : Toplevel = {
-    val state = State.empty(cheating = false).loadIsabelle(theory)
-    val fileHash = Utils.hashFileSet(state.dependencies.map(_.file))
-    val hash = default.hash(519787306, fileHash)
-    new Toplevel(Hashed(state, hash))
+    val tl = new Toplevel(State.empty(cheating = false))
+    tl.execCmd("<preloaded theories>", IsabelleCommand(theory), "<fake>")
+    tl
   }
 
-  def makeToplevelFromState(state:default.Hashed[State]) : Toplevel =
-    new Toplevel(state)
+  def makeToplevelFromState(state: State, currentFS: CurrentFS) : Toplevel =
+    new Toplevel(state, currentFS)
 
-  def makeToplevel(cheating:Boolean) : Toplevel = {
+  def makeToplevel(cheating: Boolean) : Toplevel = {
     val state = State.empty(cheating = cheating)
-    val hash = default.hash(18118772, cheating)
-    new Toplevel(Hashed(state,hash))
+    new Toplevel(state)
   }
 
   abstract class ReadLine {
@@ -255,6 +285,13 @@ object Toplevel {
     def position : String
   }
   object ReadLine {
+    class FileSnapshot(file: filesystem.FileSnapshot, path: Path) extends ReadLine {
+      private val reader =
+        new LineNumberReader(new InputStreamReader(file.inputStream(), StandardCharsets.UTF_8))
+      override def readline(prompt: String): String = reader.readLine()
+      //      override def printPosition(): Unit = println(s"At $position:")
+      override def position: String = s"$path:${reader.getLineNumber}"
+    }
     class File(path: Path) extends ReadLine {
       private val reader = new LineNumberReader(new InputStreamReader(new FileInputStream(path.toFile), StandardCharsets.UTF_8))
       override def readline(prompt: String): String = reader.readLine()

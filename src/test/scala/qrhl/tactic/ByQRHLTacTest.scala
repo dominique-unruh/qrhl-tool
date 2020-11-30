@@ -13,8 +13,8 @@ class ByQRHLTacTest extends AnyFunSuite {
     tl.execCmd("program p := { skip; }")
     tl.execCmd("lemma xxx: Pr[x=1:p(rho)] <= Pr[x=1:p(rho)]")
     tl.execCmd("byqrhl")
-    assert(tl.state.value.goal.length == 1)
-    tl.state.value.goal.head.checkWelltyped(tl.state.value.isabelle)
+    assert(tl.state.goal.length == 1)
+    tl.state.goal.head.checkWelltyped(tl.state.isabelle)
   }
 
   test("lhs is 1") {
@@ -25,9 +25,9 @@ class ByQRHLTacTest extends AnyFunSuite {
     tl.execCmd("lemma xxx: Pr[x=1:p(rho)] <= 1")
     tl.execCmd("byqrhl")
 
-    tl.state.value.goal.head.checkWelltyped(tl.state.value.isabelle)
-    assert(tl.state.value.goal.length == 1)
-    val subgoal = tl.state.value.goal.head.asInstanceOf[QRHLSubgoal]
+    tl.state.goal.head.checkWelltyped(tl.state.isabelle)
+    assert(tl.state.goal.length == 1)
+    val subgoal = tl.state.goal.head.asInstanceOf[QRHLSubgoal]
 
     println(subgoal.right.getClass)
     println(subgoal.right.statements)
