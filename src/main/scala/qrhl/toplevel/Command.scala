@@ -13,6 +13,7 @@ import scala.collection.immutable.ListSet
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ
+import scalaz.Scalaz.ToIdOps
 
 // Implicits
 import GIsabelle.isabelleControl
@@ -22,16 +23,19 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 
 trait Command {
-  def act(state: State, output: PrintWriter): State
-  def actString(state: State): (State, String) = {
+  protected def act(state: State, output: PrintWriter): State
+  def actString(state: State): State = {
     val stringWriter = new StringWriter()
     val writer = new PrintWriter(stringWriter)
     val newState = act(state, writer)
     writer.flush()
-    (newState, stringWriter.toString)
+    newState.setLastOutput(stringWriter.toString)
   }
-  def actPrint(state: State): State =
-    act(state, new PrintWriter(System.out))
+  def actPrint(state: State): State = {
+    val newState = actString(state)
+    println(newState.lastOutput)
+    newState
+  }
 }
 
 case class ChangeDirectoryCommand(dir:Path) extends Command {

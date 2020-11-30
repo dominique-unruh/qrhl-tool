@@ -265,7 +265,8 @@ class State private (val environment: Environment,
                      val dependencies: List[FileTimeStamp],
                      val currentDirectory: Path,
                      val cheatMode : CheatMode,
-                     val includedFiles : Set[Path]) {
+                     val includedFiles : Set[Path],
+                     val lastOutput : String) {
   def include(hash: default.Hash, file: Path): default.Hashed[State] = {
     println("Including file "+file)
     val fullpath =
@@ -382,10 +383,11 @@ class State private (val environment: Environment,
                    currentDirectory:Path=currentDirectory,
                    cheatMode:CheatMode=cheatMode,
                    isabelleTheory:List[Path]=_isabelleTheory,
-                   includedFiles:Set[Path]=includedFiles) : State =
+                   includedFiles:Set[Path]=includedFiles,
+                   lastOutput:String=lastOutput) : State =
     new State(environment=environment, goal=goal, _isabelle=isabelle, cheatMode=cheatMode,
       currentLemma=currentLemma, dependencies=dependencies, currentDirectory=currentDirectory,
-      includedFiles=includedFiles, _isabelleTheory=isabelleTheory)
+      includedFiles=includedFiles, _isabelleTheory=isabelleTheory, lastOutput = lastOutput)
 
   def changeDirectory(dir:Path): State = {
     assert(dir!=null)
@@ -394,6 +396,9 @@ class State private (val environment: Environment,
 //    if (hasIsabelle) throw UserException("Cannot change directory after loading Isabelle")
     copy(currentDirectory=dir)
   }
+
+  def setLastOutput(output: String): State =
+    copy(lastOutput = output)
 
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
@@ -505,9 +510,9 @@ object State {
   def empty(cheating:Boolean) = new State(environment=Environment.empty, goal=Nil,
     _isabelle=None, _isabelleTheory=null,
     dependencies=Nil, currentLemma=None, currentDirectory=Paths.get(""),
-    cheatMode=CheatMode.make(cheating), includedFiles=Set.empty)
+    cheatMode=CheatMode.make(cheating), includedFiles=Set.empty,
+    lastOutput = "Ready.")
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
   private val logger = log4s.getLogger
-
 }
