@@ -3,6 +3,7 @@ package hashedcomputation
 import java.nio.file.Files
 
 import hashedcomputation.Fingerprint.Entry
+import hashedcomputation.filesystem.Directory
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.collection.mutable.ListBuffer
