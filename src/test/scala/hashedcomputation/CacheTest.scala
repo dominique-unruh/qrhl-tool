@@ -3,10 +3,8 @@ package hashedcomputation
 import java.nio.file.Files
 
 import hashedcomputation.Fingerprint.Entry
-import hashedcomputation.filesystem.Directory
 import org.scalatest.funsuite.AnyFunSuite
 
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, Future}
@@ -204,35 +202,4 @@ class CacheTest extends AnyFunSuite {
     assert(!somethingHappened)
   }
 
-  test("DirectorySnapshot") {
-    val delay = 500
-    val dirPath = Files.createTempDirectory("test-DirectorySnapshot")
-    dirPath.toFile.deleteOnExit()
-
-    Files.writeString(dirPath.resolve("test1"), "test1")
-    Thread.sleep(delay)
-
-    val dir = Directory(dirPath)
-    val snapshot1 = dir.snapshot()
-    assert(snapshot1.keySet == Set("test1"))
-
-    Files.writeString(dirPath.resolve("test2"), "test2")
-    Thread.sleep(delay)
-    val snapshot2 = dir.snapshot()
-    assert(snapshot2.keySet == Set("test1","test2"))
-    assert(snapshot2.hash != snapshot1.hash)
-
-    Files.writeString(dirPath.resolve("test2"), "test2 new")
-    Thread.sleep(delay)
-    val snapshot3 = dir.snapshot()
-    assert(snapshot3.keySet == Set("test1","test2"))
-    assert(snapshot3.hash != snapshot2.hash)
-    assert(snapshot3.hash != snapshot1.hash)
-
-    Files.delete(dirPath.resolve("test2"))
-    Thread.sleep(delay)
-    val snapshot4 = dir.snapshot()
-    assert(snapshot4.keySet == Set("test1"))
-    assert(snapshot4.hash == snapshot1.hash)
-  }
 }
