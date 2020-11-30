@@ -9,7 +9,7 @@ import qrhl.toplevel.ToplevelTest.output
 
 class SeqTacTest extends AnyFunSuite {
   def testSeqRule(pre:String,post:String,left:String,right:String,middle:String) : Unit = {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
     val left2 = state.parseBlock(left)

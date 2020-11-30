@@ -9,7 +9,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 
 class ExpressionTest extends AnyFunSuite {
   test("read print roundtrip") {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val str = "Cla[ x=(1::int) ]"
     //    val state = tl.state
@@ -19,7 +19,7 @@ class ExpressionTest extends AnyFunSuite {
   }
 
   test("encodeAsExpression") {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
     val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]")
@@ -30,7 +30,7 @@ class ExpressionTest extends AnyFunSuite {
   }
 
   test("encodeAsExpression roundtrip") {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
     val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]")
@@ -47,7 +47,7 @@ class ExpressionTest extends AnyFunSuite {
   }
 
   test("encodeAsExpression roundtrip 2") {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
     val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ]")
@@ -64,7 +64,7 @@ class ExpressionTest extends AnyFunSuite {
   }
 
   test("encodeAsExpression roundtrip 3") {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var c : int")
     val state = tl.state

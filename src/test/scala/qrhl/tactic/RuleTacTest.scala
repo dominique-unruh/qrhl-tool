@@ -2,13 +2,13 @@ package qrhl.tactic
 
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.isabellex.IsabelleX
-import qrhl.toplevel.Toplevel
+import qrhl.toplevel.{Toplevel, ToplevelTest}
 import qrhl.toplevel.ToplevelTest.output
 
 //noinspection ZeroIndexToHead
 class RuleTacTest extends AnyFunSuite {
   def toplevel(): Toplevel = {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.run(
       """ambient var a : nat.
         |ambient var b : nat.

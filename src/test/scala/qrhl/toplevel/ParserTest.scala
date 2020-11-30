@@ -10,7 +10,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 
 class ParserTest extends AnyFunSuite {
   implicit lazy val parserContext: ParserContext = {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     // If this fails for parsing reasons, just directly compose commands instead
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var y : int")

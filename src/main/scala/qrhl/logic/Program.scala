@@ -79,8 +79,16 @@ object VarTerm {
 
   implicit def varTermHashable[A : Hashable]: VarTermHashable[A] = new VarTermHashable[A](implicitly)
   class VarTermHashable[A](val aHashable: Hashable[A]) extends AnyVal with Hashable[VarTerm[A]] {
-    override def hash[A1 <: VarTerm[A]](value: A1): Hash[A1] = ???
+    implicit def aH: Hashable[A] = aHashable
+    override def hash[A1 <: VarTerm[A]](varTerm: A1): Hash[A1] = (varTerm : VarTerm[A]) match { // TODO better hashing
+      case VTUnit => hashVTUnit
+      case VTSingle(v) =>
+        Hash.hashString(s"VTSingle: ${Hashable.hash(v)}")
+      case VTCons(a, b) =>
+        Hash.hashString(s"VTCons: ${Hashable.hash(a)}, ${Hashable.hash(b)}")
+    }
   }
+  private val hashVTUnit = Hash.randomHash()
 }
 
 case class ExprVariableUse

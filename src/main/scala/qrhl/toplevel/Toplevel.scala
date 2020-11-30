@@ -4,7 +4,7 @@ import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
-import hashedcomputation.{Computation, Hashed, filesystem}
+import hashedcomputation.filesystem
 import de.unruh.isabelle.control.IsabelleException
 import hashedcomputation.filesystem.{Directory, FileSnapshot}
 import qrhl.CurrentFS
@@ -20,7 +20,6 @@ import qrhl.{State, UserException, Utils}
 
 import scala.io.StdIn
 import scala.util.matching.Regex
-import hashedcomputation.Context.default
 import org.apache.commons.codec.binary.Hex
 
 /** Not thread safe */
@@ -262,13 +261,6 @@ object Toplevel {
     val toplevel = Toplevel.makeToplevel(cheating=cheating)
     toplevel.runWithErrorHandler(new ReadLine.Terminal)
     toplevel
-  }
-
-  // TODO: move to test classes
-  def makeToplevelWithTheory(theory:Seq[String]=Nil) : Toplevel = {
-    val tl = new Toplevel(State.empty(cheating = false))
-    tl.execCmd("<preloaded theories>", IsabelleCommand(theory), "<fake>")
-    tl
   }
 
   def makeToplevelFromState(state: State, currentFS: CurrentFS) : Toplevel =

@@ -7,7 +7,7 @@ import qrhl.toplevel.{GoalCommand, Toplevel, ToplevelTest}
 
 class ByQRHLTacTest extends AnyFunSuite {
   test("works with Pr") {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : bit")
     tl.execCmd("ambient var rho : program_state")
     tl.execCmd("program p := { skip; }")
@@ -18,7 +18,7 @@ class ByQRHLTacTest extends AnyFunSuite {
   }
 
   test("lhs is 1") {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : bit")
     tl.execCmd("ambient var rho : program_state")
     tl.execCmd("program p := { skip; }")

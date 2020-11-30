@@ -5,7 +5,6 @@ import java.lang.AbstractMethodError
 import java.nio.file.Path
 import java.security.MessageDigest
 
-import hashedcomputation.Context.default
 import qrhl.logic.{CVariable, Variable}
 import scalaz.Memo
 

@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class EqualTacTest extends AnyFunSuite {
   def toplevel(): Toplevel = {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.run(
       """classical var x : bit.
         |quantum var q : bit.

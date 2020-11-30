@@ -7,7 +7,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 
 class QRHLSubgoalTest extends AnyFunSuite {
   lazy val tl: Toplevel = {
-    val tl = Toplevel.makeToplevelWithTheory()
+    val tl = ToplevelTest.makeToplevelWithTheory(Nil)
     tl.execCmd("classical var x : int", "<test>")
     tl.execCmd("classical var y : int", "<test>")
     tl

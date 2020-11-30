@@ -18,8 +18,7 @@ import scala.util.control.Breaks
 import qrhl.State.logger
 
 import scala.collection.mutable
-import hashedcomputation.Context.default
-import hashedcomputation.{Hash, Hashable, Hashed, HashedValue}
+import hashedcomputation.{Hash, Hashable, HashedValue}
 import org.apache.commons.codec.binary.Hex
 import qrhl.isabellex.IsabelleX.globalIsabelle.show_oracles
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
@@ -77,6 +76,9 @@ object QRHLSubgoal {
 }
 
 final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]) extends Subgoal {
+  override def hash: Hash[QRHLSubgoal.this.type] = // TODO better hash
+    Hash.hashString(s"QRHLSubgoal: ${left.hash.hex} ${right.hash.hex}, ${pre.hash.hex} ${post.hash.hex} ${Hashable.hash(assumptions).hex}")
+
   override def toString: String = {
     val assms = if (assumptions.isEmpty) "" else
       s"Assumptions:\n${assumptions.map(a => s"* $a\n").mkString}\n"
@@ -142,11 +144,12 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     Subgoal.printOracles(thms.toSeq : _*)
     QRHLSubgoal(left2, right2, pre2, post2, assms2)
   }
-
-  override def hash: Hash[QRHLSubgoal.this.type] = ???
 }
 
 final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
+  override def hash: Hash[AmbientSubgoal.this.type] =
+    Hash.hashString(s"AmbientSubgoal: ${goal.hash.hex}")
+
   override def toString: String = goal.toString
 
   override def checkVariablesDeclared(environment: Environment): Unit =
@@ -173,8 +176,6 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
     Subgoal.printOracles(thm)
     AmbientSubgoal(term)
   }
-
-  override def hash: Hash[AmbientSubgoal.this.type] = ???
 }
 
 object AmbientSubgoal {
