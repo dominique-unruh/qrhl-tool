@@ -305,6 +305,8 @@ object DirectorySnapshot {
   private val logger: Logger = log4s.getLogger
 }
 
+/*
+
 /** Not thread safe */
 class FingerprintedDirectorySnapshot private (directory: DirectorySnapshot) {
   private val accesses = new mutable.LinkedHashSet[Path]
@@ -322,23 +324,16 @@ class FingerprintedDirectorySnapshot private (directory: DirectorySnapshot) {
     Fingerprint(directory.hash, Some(entries))
   }
 }
+*/
 
+/*
 object FingerprintedDirectorySnapshot {
   def withFingerprint(directory: DirectorySnapshot): (FingerprintedDirectorySnapshot, () => Fingerprint[DirectorySnapshot]) = {
     val fpds = new FingerprintedDirectorySnapshot(directory)
     (fpds, fpds.fingerprint)
   }
 }
-
-case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, HashedOption[DirectoryEntry]] {
-  override def extract(directorySnapshot: DirectorySnapshot): HashedOption[DirectoryEntry] =
-    HashedOption(directorySnapshot.get(path))
-
-  override def hash: Hash[DirectoryElement.this.type] = ???
-
-  override def extractHash(value: DirectorySnapshot): Hash[HashedOption[DirectoryEntry]] =
-    extract(value).hash
-}
+*/
 
 private case class UnresolvedDirectoryEntry(directory: Directory, path: String) extends MaybeDirectoryEntry {
   def failWithInterest(subdir: List[String] = Nil, everything: Boolean = false): Nothing = {
@@ -357,3 +352,4 @@ private object UnresolvedDirectoryEntry {
 }
 
 class OutdatedSnapshotException(message: String) extends IOException(message)
+

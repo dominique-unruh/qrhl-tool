@@ -63,9 +63,24 @@ object Hash {
   def randomHash(): Hash[Nothing] = new Hash(Random.nextBytes(hashLen))
 }
 
-trait Element[A, B] extends HashedValue {
+trait Element[-A, +B] extends HashedValue {
   def extract(value: A): B
   def extractHash(value: A) : Hash[B]
+}
+
+abstract class AbstractElement[A,B : Hashable] extends Element[A,B] {
+  def extractHash(value: A): Hash[B] = Hashable.hash(extract(value))
+  override def hash: Hash[this.type] = ???
+}
+
+final case class Tuple3Element1[A:Hashable,B,C]() extends AbstractElement[(A,B,C), A] {
+  override def extract(value: (A, B, C)): A = value._1
+}
+final case class Tuple3Element2[A,B:Hashable,C]() extends AbstractElement[(A,B,C), B] {
+  override def extract(value: (A, B, C)): B = value._2
+}
+final case class Tuple3Element3[A,B,C:Hashable]() extends AbstractElement[(A,B,C), C] {
+  override def extract(value: (A, B, C)): C = value._3
 }
 
 final case class IDElement[A : Hashable]() extends Element[A,A] {
@@ -130,6 +145,10 @@ object Fingerprint {
       val extracted = element.extract(value)
       fingerprint.matches(extracted)
     }
+  }
+  object Entry {
+    def apply[A, B: Hashable](element: Element[A,B], value: A): Entry[A, B] =
+      Entry(element, Fingerprint(Hashable.hash(element.extract(value))))
   }
 
   def apply[A : Hashable](hash: Hash[A]) = new Fingerprint[A](hash, None)
@@ -546,7 +565,7 @@ final class FingerprintMap[A, B : Hashable]
   private def fingerprint(): Fingerprint[HashedMap[A,B]] = {
     val entries: List[Entry[HashedMap[A,B], HashedOption[B]]] =
       for (key <- accesses.toList) yield
-        Entry(MapElement(key), Fingerprint(HashedOption(map.get(key))))
+        Entry(MapElement[A,B](key), Fingerprint(HashedOption(map.get(key))))
     Fingerprint(map.hash, Some(entries))
   }
 
@@ -581,6 +600,7 @@ object Implicits {
   implicit def optionHashable[A: Hashable]: OptionHashable[A] = new OptionHashable(implicitly)
   implicit def listHashable[A: Hashable]: ListHashable[A] = new ListHashable(implicitly)
   implicit def tuple2Hashable[A : Hashable, B : Hashable]: Tuple2Hashable[A,B] = new Tuple2Hashable
+  implicit def tuple3Hashable[A : Hashable, B : Hashable, C : Hashable]: Tuple3Hashable[A,B,C] = new Tuple3Hashable
   implicit val pathHashable: PathHashable.type = PathHashable
   implicit val stringHashable: StringHashable.type = StringHashable
   implicit val intHashable: IntHashable.type = IntHashable
@@ -590,6 +610,11 @@ object Implicits {
 class Tuple2Hashable[A : Hashable, B : Hashable] extends Hashable[(A,B)] {
   override def hash[A1 <: (A, B)](value: A1): Hash[A1] =
     Hash.hashString(s"PAIR: ${Hashable.hash(value._1)} ${Hashable.hash(value._2)}")
+}
+
+class Tuple3Hashable[A : Hashable, B : Hashable, C : Hashable] extends Hashable[(A,B,C)] {
+  override def hash[A1 <: (A, B, C)](value: A1): Hash[A1] =
+    Hash.hashString(s"Tuple3: ${Hashable.hash(value._1)} ${Hashable.hash(value._2)} ${Hashable.hash(value._3)}")
 }
 
 class OptionHashable[A](val aHashable: Hashable[A]) extends AnyVal with Hashable[Option[A]] {
