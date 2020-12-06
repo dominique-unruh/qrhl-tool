@@ -5,10 +5,9 @@ import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY, OVERFLOW}
 import java.nio.file.{Files, Path, WatchKey, WatchService}
 import java.util.concurrent.atomic.AtomicReference
-
 import com.google.common.cache.{CacheBuilder, RemovalNotification}
 import hashedcomputation.Fingerprint.Entry
-import hashedcomputation.{Element, Fingerprint, Hash, HashedOption, HashedValue}
+import hashedcomputation.{Element, Fingerprint, Hash, HashTag, HashedOption, HashedValue, RawHash, WithByteArray}
 import hashedcomputation.filesystem.Directory.DirectoryListener
 import hashedcomputation.filesystem.DirectorySnapshot.logger
 import org.log4s
@@ -16,6 +15,7 @@ import org.log4s.Logger
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.ref.{ReferenceWrapper, SoftReference, WeakReference}
 
@@ -207,12 +207,10 @@ final class FileSnapshot(path: Path) extends DirectoryEntry {
   private var contentRef : ReferenceWrapper[Array[Byte]] = _
   val hash: Hash[this.type] = {
     val content = Files.readAllBytes(path)
-    val hash = hashContent(content)
+    val hash = FileSnapshot.hashContent(content)
     contentRef = WeakReference(content)
-    hash
+    hash.asInstanceOf[Hash[this.type]]
   }
-  private def hashContent(content: Array[Byte]): Hash[this.type] =
-    Hash.hashBytes(content) // TODO: should be tagged
 
   def content: Array[Byte] = {
     contentRef match {
@@ -222,12 +220,17 @@ final class FileSnapshot(path: Path) extends DirectoryEntry {
       case SoftReference(content) => content
       case _ =>
         val content = Files.readAllBytes(path)
-        if (hash != hashContent(content))
+        if (hash != FileSnapshot.hashContent(content))
           throw new IOException("Snapshot outdated")
         contentRef = SoftReference(content)
         content
     }
   }
+}
+object FileSnapshot {
+  private val hashTag = HashTag.create[FileSnapshot]
+  private def hashContent(content: Array[Byte]): Hash[FileSnapshot] =
+    hashTag(RawHash.hashBytes(content))
 }
 
 class DirectorySnapshot private (private[filesystem] val content: Map[String, MaybeDirectoryEntry])
@@ -252,8 +255,15 @@ class DirectorySnapshot private (private[filesystem] val content: Map[String, Ma
   }
 
 
-  override def hash: Hash[this.type] =
-    Hash.hashString(content.toList.map { case (s,h) => (s,h.hash) }.toString()) // TODO: proper hash
+  override lazy val hash: Hash[this.type] = {
+    val hashes = ListBuffer[WithByteArray]()
+    for ((s,h) <- content.toList.sortBy(_._1)) {
+      hashes += RawHash.hashString(s)
+      hashes += h.hash.rawHash
+    }
+    DirectorySnapshot.hashTag(hashes.toSeq : _*)
+      .asInstanceOf[Hash[this.type]]
+  }
 
   override def get(key: String): Option[DirectoryEntry] = content.get(key) map {
     case entry: DirectoryEntry => entry
@@ -301,6 +311,8 @@ class DirectorySnapshot private (private[filesystem] val content: Map[String, Ma
 
 
 object DirectorySnapshot {
+  private val hashTag: HashTag[DirectorySnapshot] = HashTag.create()
+
   val empty = new DirectorySnapshot(Map.empty)
   private val logger: Logger = log4s.getLogger
 }

@@ -1,21 +1,22 @@
 package hashedcomputation
 
-import java.nio.file.Files
-import hashedcomputation.Fingerprint.Entry
-import hashedcomputation.datatypes.HashedMap
+import hashedcomputation.datatypes.{FingerprintMap, HashedMap}
 import org.scalatest.funsuite.AnyFunSuite
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, Future}
 import scala.util.control.Breaks
 
+// Implicits
+import hashedcomputation.Implicits._
+import scala.concurrent.ExecutionContext.Implicits.global
+
 class CacheTest extends AnyFunSuite {
   def await[A](a : Awaitable[A]) : A = Await.result(a, Duration.Inf)
 
-  implicit object hashableInt extends Hashable[Int] {
+/*  implicit object hashableInt extends Hashable[Int] {
     override def hash[A1 <: Int](int: A1): Hash[A1] = Hash.hashInt(int)
-  }
+  }*/
 
 /*
   case class HashedIntMap(map: Map[Int,Int]) extends HashedValue {

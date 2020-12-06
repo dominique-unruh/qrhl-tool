@@ -7,6 +7,24 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 lazy val root = (project in file("."))
   .dependsOn(RootProject(file("scala-isabelle")))
+  .dependsOn(hashedcomputation)
+
+lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
+  scalaVersion := "2.13.3",
+  resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases"),
+  // https://mvnrepository.com/artifact/org.log4s/log4s
+  libraryDependencies += "org.log4s" %% "log4s" % "1.8.2",
+  // https://mvnrepository.com/artifact/com.google.guava/guava
+  libraryDependencies += "com.google.guava" % "guava" % "30.0-jre",
+  libraryDependencies += "org.jetbrains" % "annotations" % "20.1.0",
+  // https://mvnrepository.com/artifact/commons-codec/commons-codec
+  libraryDependencies += "commons-codec" % "commons-codec" % "1.15",
+  libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.9",
+  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+  libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
+)
+
+
 
 name := "qrhl"
 
@@ -20,10 +38,6 @@ scalacOptions += "-deprecation"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 libraryDependencies += "org.rogach" %% "scallop" % "3.5.1"
-// https://mvnrepository.com/artifact/commons-codec/commons-codec
-libraryDependencies += "commons-codec" % "commons-codec" % "1.15"
-// https://mvnrepository.com/artifact/org.log4s/log4s
-libraryDependencies += "org.log4s" %% "log4s" % "1.8.2"
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30"
 libraryDependencies += "org.jline" % "jline" % "3.16.0"
