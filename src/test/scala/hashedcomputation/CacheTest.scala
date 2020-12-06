@@ -1,8 +1,8 @@
 package hashedcomputation
 
 import java.nio.file.Files
-
 import hashedcomputation.Fingerprint.Entry
+import hashedcomputation.datatypes.HashedMap
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
