@@ -8,6 +8,7 @@ import org.apache.commons.codec.binary.Hex
 import org.jetbrains.annotations.NotNull
 import sourcecode.File
 
+import java.util.concurrent.atomic.{AtomicReference, AtomicStampedReference}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.experimental.macros
@@ -34,8 +35,8 @@ class RawHash private (private val hash: Array[Byte]) extends WithByteArray {
 }
 
 object RawHash {
-  def apply(hashTag: HashTag[_], hashes: WithByteArray*): RawHash = digest.synchronized {
-    digest.reset()
+  def apply(hashTag: HashTag[_], hashes: WithByteArray*): RawHash = {
+    val digest = this.digest()
     digest.update(hashTag.rawHash.hash)
     for (h <- hashes)
       digest.update(h.byteArray)
@@ -45,11 +46,13 @@ object RawHash {
   /** Should be considered private. */
   def createFromByteArray(bytes: Array[Byte]) = new RawHash(bytes)
 
-  // TODO: using synchronize to access this is probably slow. Use something else
-  private val digest = MessageDigest.getInstance("SHA-256")
+  private val sharedDigest = MessageDigest.getInstance("SHA-256")
+  private def digest() = sharedDigest.clone().asInstanceOf[MessageDigest]
+
   private val hashLen = digest.getDigestLength
 
-  def hashBytes(bytes: Array[Byte]): RawHash = digest.synchronized {
+  def hashBytes(bytes: Array[Byte]): RawHash = {
+    val digest = this.digest()
     digest.reset()
     digest.update(bytes)
     new RawHash(digest.digest())
