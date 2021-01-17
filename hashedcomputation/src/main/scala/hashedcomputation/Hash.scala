@@ -229,6 +229,8 @@ case class HashedSome[+A : Hashable](value: A) extends HashedOption[A] {
 object Implicits {
   implicit def optionHashable[A: Hashable]: OptionHashable[A] = new OptionHashable(implicitly)
   implicit def listHashable[A: Hashable]: ListHashable[A] = new ListHashable(implicitly)
+  implicit def mapHashable[A: Hashable: Ordering, B: Hashable]: MapHashable[A,B] =
+    new MapHashable[A,B](implicitly, implicitly, implicitly)
   implicit def tuple2Hashable[A : Hashable, B : Hashable]: Tuple2Hashable[A,B] = new Tuple2Hashable
   implicit def tuple3Hashable[A : Hashable, B : Hashable, C : Hashable]: Tuple3Hashable[A,B,C] = new Tuple3Hashable
   implicit val pathHashable: PathHashable.type = PathHashable
@@ -264,6 +266,19 @@ class ListHashable[A](val aHashable: Hashable[A]) extends AnyVal with Hashable[L
     ListHashable.hashTag(value.map(Hashable.hash(_)(aHashable)) :_*)
 }
 object ListHashable {
+  private val hashTag = HashTag.create()
+}
+
+class MapHashable[A,B](val aHashable: Hashable[A], val bHashable: Hashable[B], val aOrdering: Ordering[A]) extends Hashable[Map[A,B]] {
+  override def hash[A1 <: Map[A, B]](map: A1): Hash[A1] = {
+    implicit val hashable: Tuple2Hashable[A, B] = new Tuple2Hashable()(aHashable, bHashable)
+    implicit val ord: Ordering[A] = aOrdering
+    val sorted = map.toArray.sortInPlaceBy(_._1)
+    val hashed = sorted.toSeq.map(Hashable.hash(_)(hashable))
+    MapHashable.hashTag(hashed :_*)
+  }
+}
+object MapHashable {
   private val hashTag = HashTag.create()
 }
 

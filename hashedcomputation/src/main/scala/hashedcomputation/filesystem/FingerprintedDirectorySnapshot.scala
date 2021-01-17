@@ -1,39 +1,48 @@
 package hashedcomputation.filesystem
 
 import java.nio.file.Path
-
 import hashedcomputation.Implicits.optionHashable
-import hashedcomputation.{Element, Fingerprint, Fingerprinter, Hash, Hashable}
+import hashedcomputation.{Element, Fingerprint, FingerprintBuilder, FingerprintBuilderImpl, Hash, Hashable}
 
+import java.util.NoSuchElementException
+import scala.annotation.tailrec
 import scala.collection.mutable
 
+/*
+object DummyCollection extends mutable.Growable[Any] with Iterable[Nothing] {
+  override def addOne(elem: Any): DummyCollection.this.type = this
+  override def clear(): Unit = {}
+  override def iterator: Iterator[Nothing] = new Iterator[Nothing] {
+    override def hasNext: Boolean = false
+    override def next(): Nothing = throw new NoSuchElementException("DummyCollection has no elements")
+  }
+  override def knownSize: Int = 0
+}
+*/
+
 /** Not thread safe */
-class FingerprintedDirectorySnapshot(directory: DirectorySnapshot) {
-  private val fingerprinters = new mutable.ArrayDeque[MyFingerprinter]()
-
-  private final class MyFingerprinter extends Fingerprinter[DirectorySnapshot] {
-    private val accesses = new mutable.LinkedHashSet[Path]
-    def accessed(path: Path): Unit = accesses += path
-    override def fingerprint(): Fingerprint[DirectorySnapshot] = {
-      val entries = for (access <- accesses.toList)
-        yield Fingerprint.Entry(DirectoryElement(access), directory)
-      Fingerprint(directory.hash, Some(entries))
-    }
-    override def dispose(): Unit = fingerprinters.removeAll(fp => fp eq this)
-  }
-
-  def newFingerprinter : Fingerprinter[DirectorySnapshot] = {
-    val fingerprinter = new MyFingerprinter
-    fingerprinters.append(fingerprinter)
-    fingerprinter
-  }
+class FingerprintedDirectorySnapshot private (val fingerprintBuilder: FingerprintBuilder[DirectorySnapshot])
+  /*extends FingerprintingView[DirectorySnapshot, FingerprintedDirectorySnapshot]*/ {
+  private val directory = fingerprintBuilder.unsafeUnderlyingValue
 
   def getFile(path: Path): Option[FileSnapshot] = {
-    for (fp <- fingerprinters)
-      fp.accessed(path)
-    directory.getFile(path)
+    val file = directory.getFile(path)
+    fingerprintBuilder.access(DirectoryElement(path), file)
+    file
   }
 
+//  override def unsafePeekUnderlyingValue: DirectorySnapshot = directory
+
+  def everything: DirectorySnapshot = {
+    fingerprintBuilder.accessAll()
+    directory
+  }
+}
+
+object FingerprintedDirectorySnapshot {
+  def apply(directory: FingerprintBuilder[DirectorySnapshot]) = new FingerprintedDirectorySnapshot(directory)
+  def apply(directory: DirectorySnapshot): FingerprintedDirectorySnapshot = apply(new FingerprintBuilderImpl(directory))
+  def apply(directory: Directory): FingerprintedDirectorySnapshot = apply(directory.snapshot())
 }
 
 case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, Option[FileSnapshot]] {
