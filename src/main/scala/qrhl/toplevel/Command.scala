@@ -2,7 +2,6 @@ package qrhl.toplevel
 
 import java.io.{PrintWriter, StringWriter}
 import java.nio.file.{Path, Paths}
-
 import de.unruh.isabelle.pure.Typ
 import qrhl.isabellex.IsabelleX
 import qrhl.logic.{Block, CVariable, QVariable, Variable}
@@ -13,6 +12,7 @@ import scala.collection.immutable.ListSet
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ
+import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, ListHashable, PathHashable}
 import scalaz.Scalaz.ToIdOps
 
 // Implicits
@@ -20,9 +20,10 @@ import GIsabelle.isabelleControl
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
+import hashedcomputation.Implicits._
+import qrhl.isabellex.Implicits.TypHashable
 
-
-trait Command {
+trait Command extends HashedValue {
   protected def act(state: State, output: PrintWriter): State
   def actString(state: State): State = {
     val stringWriter = new StringWriter()
@@ -41,6 +42,7 @@ trait Command {
 case class ChangeDirectoryCommand(dir:Path) extends Command {
   assert(dir!=null)
   override def act(state: State, output: PrintWriter): State = state.changeDirectory(dir)
+  override def hash: Hash[ChangeDirectoryCommand.this.type] = HashTag()(PathHashable.hash(dir))
 }
 object ChangeDirectoryCommand {
   def apply(dir:String) : ChangeDirectoryCommand = apply(Paths.get(dir))
@@ -49,6 +51,8 @@ object ChangeDirectoryCommand {
 case class IsabelleCommand(thy:Seq[String]) extends Command {
   override def act(state: State, output: PrintWriter): State =
     throw new RuntimeException("IsabelleCommand.act must not be called.")
+
+  override def hash: Hash[IsabelleCommand.this.type] = HashTag()(Hashable.hash(thy.toList))
 }
 
 case class DeclareVariableCommand(name: String, typ: Typ, ambient:Boolean=false, quantum:Boolean=false) extends Command {
@@ -63,6 +67,9 @@ case class DeclareVariableCommand(name: String, typ: Typ, ambient:Boolean=false,
       state.declareVariable(name, typ, quantum = quantum)
     }
   }
+
+  override def hash: Hash[DeclareVariableCommand.this.type] =
+    HashTag()(Hashable.hash(name), Hashable.hash(typ), Hashable.hash(ambient), Hashable.hash(quantum))
 }
 
 case class DeclareProgramCommand(name: String, oracles: List[String], program : Block) extends Command {
@@ -70,11 +77,20 @@ case class DeclareProgramCommand(name: String, oracles: List[String], program : 
     output.println(s"Declaring program $name. ")
     state.declareProgram(name,oracles,program.markOracles(oracles))
   }
+
+  override def hash: Hash[DeclareProgramCommand.this.type] =
+    HashTag()(Hashable.hash(name), Hashable.hash(oracles), Hashable.hash(program))
 }
 
 case class DeclareAdversaryCommand(name: String, free: Seq[Variable], inner : Seq[Variable],
                                    readonly: Seq[Variable], covered : Seq[Variable],
                                    overwritten: Seq[Variable], numOracles: Int) extends Command {
+
+  override def hash: Hash[DeclareAdversaryCommand.this.type] =
+    HashTag()(Hashable.hash(name), Hashable.hash(free.toList), Hashable.hash(inner.toList),
+      Hashable.hash(readonly.toList), Hashable.hash(covered.toList), Hashable.hash(overwritten.toList),
+      Hashable.hash(numOracles))
+
   override def act(state: State, output: PrintWriter): State = {
     output.println(s"Declaring adversary $name. ")
     if (numOracles==0 && inner.nonEmpty)
@@ -100,6 +116,9 @@ case class GoalCommand(name: String, goal: Subgoal) extends Command {
     val state2 = state.openGoal(name, goal)
     state2
   }
+
+  override def hash: Hash[GoalCommand.this.type] =
+    HashTag()(Hashable.hash(name), goal.hash)
 }
 
 case class TacticCommand(tactic:Tactic) extends Command {
@@ -109,6 +128,9 @@ case class TacticCommand(tactic:Tactic) extends Command {
     val state2 = state.applyTactic(tactic)(output)
     state2
   }
+
+  override def hash: Hash[TacticCommand.this.type] =
+    HashTag()(tactic.hash)
 }
 
 /*case class UndoCommand(n:Int) extends Command {
@@ -137,12 +159,17 @@ case class QedCommand() extends Command {
       output.println("Finished current lemma.")
     state.qed
   }
+
+  override def hash: Hash[QedCommand.this.type] = HashTag()()
 }
 
 
 class DebugCommand private (action: (State,PrintWriter) => State) extends Command {
   override def act(state: State, output: PrintWriter): State = action(state, output)
+
+  override def hash: Hash[DebugCommand.this.type] = HashTag()() // WARNING: not the right hash
 }
+
 object DebugCommand {
   def state(action: (State,PrintWriter) => Unit): DebugCommand = new DebugCommand({ (state,output) => action(state,output); state})
   def goals(action: (IsabelleX.ContextX, List[Subgoal], PrintWriter) => Unit): DebugCommand =
@@ -159,6 +186,9 @@ case class CheatCommand(file:Boolean=false, proof:Boolean=false, stop:Boolean=fa
   assert(! (file&&proof))
   assert(! (file&&stop))
   assert(! (proof&&stop))
+
+  override def hash: Hash[CheatCommand.this.type] =
+    HashTag()(Hashable.hash(file), Hashable.hash(proof), Hashable.hash(stop))
 
   override def act(state: State, output: PrintWriter): State = {
     val infile = {
@@ -183,6 +213,9 @@ case class IncludeCommand(file:Path) extends Command {
   assert(file!=null)
   override def act(state: State, output: PrintWriter): State =
     throw new RuntimeException("IncludeCommand.act must not be called.")
+
+  override def hash: Hash[IncludeCommand.this.type] =
+    HashTag()(Hashable.hash(file))
 }
 object IncludeCommand {
   def apply(file:String) : IncludeCommand = apply(Paths.get(file))

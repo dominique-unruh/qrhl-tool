@@ -1,7 +1,6 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import org.log4s
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, CVariable, Local, QVariable, VTSingle, VarTerm, Variable}
@@ -11,6 +10,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Term
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 import scala.collection.immutable.ListSet
 
@@ -19,9 +19,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import GIsabelle.isabelleControl
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
+import hashedcomputation.Implicits._
 
 
 case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove : List[Variable]) extends Tactic {
+  override def hash: Hash[LocalRemoveTac.this.type] =
+    HashTag()(Hashable.hash(left), Hashable.hash(withInit), Hashable.hash(variablesToRemove))
 
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(_) =>
@@ -111,6 +114,7 @@ case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove :
 
       List(colocality, newQRHLGoal)
   }
+
 }
 
 object LocalRemoveTac {

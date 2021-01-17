@@ -1,11 +1,16 @@
 package qrhl.tactic
 
-import java.io.PrintWriter
+import hashedcomputation.{Hash, HashTag, Hashable}
 
+import java.io.PrintWriter
 import qrhl._
+
+import hashedcomputation.Implicits._
 
 case class ClearTac(number:Int) extends Tactic {
   if (number<=0) throw UserException(s"clear tactic must have argument >= 1, not $number")
+
+  override def hash: Hash[ClearTac.this.type] = HashTag()(Hashable.hash(number))
 
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(left,right,pre,post,assms) =>

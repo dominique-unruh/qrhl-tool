@@ -1,18 +1,22 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, IfThenElse}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import IsabelleX.{globalIsabelle => GIsabelle}
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 import scala.collection.mutable.ListBuffer
 
 // Implicits
 import GIsabelle.isabelleControl
+import hashedcomputation.Implicits._
 
 case class IfTac(left:Boolean, trueFalse:Option[Boolean]=None) extends Tactic {
+
+  override def hash: Hash[IfTac.this.type] = HashTag()(Hashable.hash(left), Hashable.hash(trueFalse))
+
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(_) =>
       throw UserException("Expected a qRHL subgoal")

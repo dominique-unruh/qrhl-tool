@@ -2,7 +2,7 @@ package qrhl.logic
 
 import qrhl.{MaybeAllSet, UserException}
 import qrhl.isabellex.IsabelleX.ContextX
-import qrhl.isabellex.{IsabelleX, RichTerm}
+import qrhl.isabellex.IsabelleX
 
 import scala.collection.mutable
 import de.unruh.isabelle.pure.Typ
@@ -10,7 +10,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ
-import hashedcomputation.{Hash, Hashable, HashedValue}
+import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 
 import scala.collection.immutable.ListSet
 
@@ -42,15 +42,6 @@ final class Environment private
   extends HashedValue
 {
   override def hash: Hash[Environment.this.type] = _hash.asInstanceOf[Hash[this.type]]
-  private def updatedHash()(implicit file: sourcecode.File, line: sourcecode.Line) : Hash[Environment] =
-    Hash.hashString(s"Env: $file:$line:${hash.hex}:empty")
-
-  private def updatedHash(hashes: Hash[Any]*)(implicit file: sourcecode.File, line: sourcecode.Line): Hash[Environment] =
-  // TODO: better use a macro in hashedcomputation that avoids rehashing the filename and line each time
-    Hash.hashString(s"Env: $file:$line:${hash.hex}:${hashes.map(_.hex).mkString("")}")
-
-  private def updatedHash1(arguments: HashedValue*)(implicit file: sourcecode.File, line: sourcecode.Line): Hash[Environment] =
-    updatedHash(arguments.map(_.hash) : _*)(file, line)
 
   def getCVariable(res: String): CVariable =
     cVariables.getOrElse(res, throw UserException(s"Classical variable $res not declared"))
@@ -111,17 +102,17 @@ final class Environment private
     if (quantum)
       copy(qVariables = qVariables.updated(name, QVariable(name, typ)),
         cqVariables12=cqVariables12++newIdxNames,
-        hash = updatedHash(Hashable.hash(name), Hashable.hash(typ)))
+        hash = HashTag()(hash, Hashable.hash(name), Hashable.hash(typ)))
     else
       copy(cVariables = cVariables.updated(name, CVariable(name,typ)),
         cqVariables12=cqVariables12++newIdxNames,
-        hash = updatedHash(Hashable.hash(name), Hashable.hash(typ)))
+        hash = HashTag()(hash, Hashable.hash(name), Hashable.hash(typ)))
   }
 
   def declareAmbientVariable(name: String, typ:Typ) : Environment = {
     assert(!variableExists(name))
     copy(ambientVariables=ambientVariables.updated(name, typ),
-      hash = updatedHash(Hashable.hash(name), Hashable.hash(typ)))
+      hash = HashTag()(hash, Hashable.hash(name), Hashable.hash(typ)))
   }
 
   def declareProgram(decl: ProgramDecl) : Environment = {
@@ -130,7 +121,7 @@ final class Environment private
     if (variableExists(decl.name))
       throw UserException(s"Program name ${decl.name} conflicts with an existing variable name")
     copy(programs=programs.updated(decl.name, decl),
-      hash = updatedHash1(decl))
+      hash = HashTag()(hash, decl.hash))
   }
 
 //  def declareProgram(name: String, oracles:List[String], program: Block): Environment = {
@@ -183,11 +174,9 @@ sealed trait ProgramDecl extends HashedValue {
 final case class AbstractProgramDecl(name:String, free:List[Variable], inner:List[Variable], written:List[Variable],
                                      overwritten:List[Variable], covered:List[Variable], numOracles:Int) extends ProgramDecl {
 
-  override lazy val hash: Hash[AbstractProgramDecl.this.type] = {
-    val argHash = List(Hashable.hash(name), Hashable.hash(free), Hashable.hash(inner), Hashable.hash(written),
+  override lazy val hash: Hash[AbstractProgramDecl.this.type] =
+    HashTag()(Hashable.hash(name), Hashable.hash(free), Hashable.hash(inner), Hashable.hash(written),
       Hashable.hash(overwritten), Hashable.hash(covered), Hashable.hash(numOracles))
-    Hash.hashString(s"AbstractProgramDecl ${argHash.map(_.hex).mkString(",")}") // TODO better hashing
-  }
 
   import AbstractProgramDecl._
   override val variablesRecursive: VariableUse = {
@@ -219,10 +208,8 @@ object AbstractProgramDecl {
 final case class ConcreteProgramDecl(environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {
   import ConcreteProgramDecl._
 
-  override lazy val hash: Hash[ConcreteProgramDecl.this.type] = {
-    val argHash = List(Hashable.hash(environment), Hashable.hash(name), Hashable.hash(oracles), Hashable.hash(program))
-    Hash.hashString(s"ConcreteProgramDecl ${argHash.map(_.hex).mkString(",")}") // TODO better hashing
-  }
+  override lazy val hash: Hash[ConcreteProgramDecl.this.type] =
+    HashTag()(Hashable.hash(environment), Hashable.hash(name), Hashable.hash(oracles), Hashable.hash(program))
 
   override val numOracles: Int = oracles.length
   lazy val ambientVars: List[String] = {

@@ -1,13 +1,16 @@
 package qrhl.tactic
 
-import java.io.PrintWriter
+import hashedcomputation.{Hash, HashTag}
 
+import java.io.PrintWriter
 import qrhl._
 import qrhl.isabellex.RichTerm
 import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 
 case class CaseSplitTac(expr:RichTerm) extends Tactic {
   assert(expr.typ==GIsabelle.boolT)
+
+  override def hash: Hash[CaseSplitTac.this.type] = HashTag()(expr.hash)
 
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = {
     if (goal.isInstanceOf[QRHLSubgoal])

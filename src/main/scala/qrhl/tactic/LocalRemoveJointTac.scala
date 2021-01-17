@@ -1,7 +1,6 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import org.log4s
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import qrhl.isabellex.{IsabelleX, RichTerm}
@@ -9,6 +8,7 @@ import qrhl.logic.{Block, CVariable, Local, QVariable}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.{Inf, QuantumEqualityFull, predicateT, predicate_inf, predicate_top}
 import de.unruh.isabelle.pure.Term
+import hashedcomputation.{Hash, HashTag}
 
 // Implicits
 import GIsabelle.isabelleControl
@@ -116,4 +116,6 @@ case object LocalRemoveJointTac extends Tactic {
   }
 
   private val logger = log4s.getLogger
+
+  override val hash: Hash[LocalRemoveJointTac.this.type] = HashTag()()
 }

@@ -1,8 +1,10 @@
 package qrhl.tactic
 
-import java.io.PrintWriter
+import hashedcomputation.{Hash, HashTag, Hashable}
 
+import java.io.PrintWriter
 import qrhl._
+import hashedcomputation.Implicits._
 
 case class InlineTac(name:String) extends Tactic {
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
@@ -12,4 +14,6 @@ case class InlineTac(name:String) extends Tactic {
       List(QRHLSubgoal(left.inline(state.environment,name), right.inline(state.environment,name), pre, post, assms))
     case _ => throw UserException("inline supported only for qRHL subgoals")
   }
+
+  override def hash: Hash[InlineTac.this.type] = HashTag()(Hashable.hash(name))
 }

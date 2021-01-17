@@ -1,12 +1,14 @@
 package qrhl.tactic
 
-import java.io.PrintWriter
+import hashedcomputation.{Hash, HashTag, Hashable}
 
+import java.io.PrintWriter
 import org.log4s
 import qrhl._
 import qrhl.toplevel.Parser
 
 import scala.collection.immutable.Nil
+import hashedcomputation.Implicits._
 
 case class SimpTac(facts:List[String], everywhere:Boolean, force:Boolean) extends Tactic {
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = {
@@ -17,6 +19,9 @@ case class SimpTac(facts:List[String], everywhere:Boolean, force:Boolean) extend
     }
 
   override def toString: String = s"simplify${if (force) " !" else ""} ${facts.mkString(" ")}"
+
+  override def hash: Hash[SimpTac.this.type] =
+    HashTag()(Hashable.hash(facts), Hashable.hash(everywhere), Hashable.hash(force))
 }
 
 object SimpTac {

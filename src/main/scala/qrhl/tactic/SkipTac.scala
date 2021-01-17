@@ -1,7 +1,8 @@
 package qrhl.tactic
 
-import java.io.PrintWriter
+import hashedcomputation.{Hash, HashTag}
 
+import java.io.PrintWriter
 import qrhl.logic.Block
 import qrhl._
 
@@ -19,4 +20,6 @@ object SkipTac extends Tactic {
   }
 
   override def toString: String = "skip"
+
+  override val hash: Hash[SkipTac.this.type] = HashTag()()
 }

@@ -1,15 +1,16 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, IfThenElse}
 import qrhl.tactic.JointIfTac.{allCases, differentCases, sameCases}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.Term
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 import scala.collection.mutable.ListBuffer
+import hashedcomputation.Implicits._
 
 case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
   assert(Utils.areDistinct(cases))
@@ -65,6 +66,8 @@ case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
 
       subgoals.toList
   }
+
+  override def hash: Hash[JointIfTac.this.type] = HashTag()(Hashable.hash(cases))
 }
 
 object JointIfTac {

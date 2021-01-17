@@ -1,7 +1,6 @@
 package qrhl.toplevel
 
 import java.io.PrintWriter
-
 import qrhl.{State, Subgoal}
 import qrhl.isabellex.IsabelleX
 import IsabelleX.{globalIsabelle => GIsabelle}
@@ -9,6 +8,7 @@ import de.unruh.isabelle.control.IsabelleException
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Context
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 // Implicits
 import de.unruh.isabelle.mlvalue.Implicits._
@@ -16,8 +16,11 @@ import de.unruh.isabelle.pure.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 import GIsabelle.isabelleControl
+import hashedcomputation.Implicits._
 
 case class PrintCommand(symbol : String) extends Command {
+  override def hash: Hash[PrintCommand.this.type] = HashTag()(Hashable.hash(symbol))
+
   override def act(state: State, output: PrintWriter): State = {
     var found = false
     val env = state.environment

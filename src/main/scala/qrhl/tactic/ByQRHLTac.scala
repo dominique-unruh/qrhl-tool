@@ -1,7 +1,6 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
@@ -10,6 +9,8 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{App, Const, Free, Term}
+import hashedcomputation.Implicits.listHashable
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 import scala.collection.immutable.ListSet
 
@@ -20,6 +21,9 @@ import scala.concurrent.ExecutionContext.Implicits._
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 
 case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
+  override def hash: Hash[ByQRHLTac.this.type] =
+    HashTag()(Hashable.hash(qvariables))
+
   /** Pattern-matcher that matches Pr[e : prog (rho)]
    * and returns e1 (e indexed with 1/2 depending on `left`
    *             Call(prog) (prog must be a program)

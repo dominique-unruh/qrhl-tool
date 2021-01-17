@@ -1,7 +1,6 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
 import qrhl.logic.{QVariable, Variable}
@@ -12,6 +11,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 // Implicits
 import de.unruh.isabelle.pure.Implicits._
@@ -20,8 +20,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 // Implicits
 import GIsabelle.isabelleControl
+import hashedcomputation.Implicits._
 
 case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Variable)]) extends Tactic {
+  override def hash: Hash[RenameTac.this.type] =
+    HashTag()(Hashable.hash(left), Hashable.hash(right), Hashable.hash(renaming))
+
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case _ : AmbientSubgoal =>
       throw UserException("Expected qRHL subgoal")

@@ -5,15 +5,20 @@ import qrhl.{State, UserException}
 import de.unruh.isabelle.mlvalue.Implicits._
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.pure.Term
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 case object RndEqualTac
   extends IsabelleTac[Unit]("joint_sample_equal_tac", { _ => () }) {
   override def toString: String = s"rnd"
+
+  override val hash: Hash[RndEqualTac.this.type] = HashTag()()
 }
 
 case class RndWitnessTac(left:VarTerm[CVariable], right:VarTerm[CVariable], witness:RichTerm)
   extends IsabelleTac[Term]("joint_sample_tac", { _ => witness.isabelleTerm }) {
   override def toString: String = s"rnd $left,$right <- $witness"
+
+  override def hash: Hash[RndWitnessTac.this.type] = HashTag()(Hashable.hash(left), Hashable.hash(right))
 }
 
 /*

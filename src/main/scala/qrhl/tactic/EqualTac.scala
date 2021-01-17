@@ -1,7 +1,6 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
@@ -12,6 +11,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.{Ops, QuantumEqualityFull}
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Free, Term}
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
@@ -24,8 +24,13 @@ import GIsabelle.isabelleControl
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
 
+import hashedcomputation.Implicits._
 
 case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variable], out: List[Variable], amount:Int=1) extends WpBothStyleTac(leftAmount=amount, rightAmount=amount) {
+
+  override def hash: Hash[EqualTac.this.type] =
+    HashTag()(Hashable.hash(exclude), Hashable.hash(in), Hashable.hash(mid), Hashable.hash(out), Hashable.hash(amount))
+
   def diff(left:Statement, right:Statement): (Statement, List[(Statement,Statement)]) = {
     val mismatches = new mutable.ListBuffer[(Statement,Statement)]()
 

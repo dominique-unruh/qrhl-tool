@@ -1,17 +1,21 @@
 package qrhl.tactic
 
-import java.io.PrintWriter
+import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 
+import java.io.PrintWriter
 import org.log4s
 import qrhl._
 import qrhl.logic.{Block, Environment, Statement, Variable}
 
 import scala.collection.immutable.ListSet
+import hashedcomputation.Implicits._
 
 
 case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic {
   if (steps < 1)
     throw UserException(s"swap tactic must get numeric argument >=1, not $steps")
+
+  override def hash: Hash[SwapTac.this.type] = HashTag()(Hashable.hash(left), range.hash, Hashable.hash(steps))
 
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(l,r,pre,post,assms) =>
@@ -71,7 +75,7 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int) extends Tactic 
 object SwapTac {
   private val logger = log4s.getLogger
 
-  sealed trait Range {
+  sealed trait Range extends HashedValue {
     def split(prog:Block) : (List[Statement], List[Statement], List[Statement])
   }
   final case class FinalRange(numStatements:Int) extends Range {
@@ -83,6 +87,8 @@ object SwapTac {
       val (before,range) = prog.statements.splitAt(prog.length-numStatements)
       (before,range,Nil)
     }
+
+    override def hash: Hash[FinalRange.this.type] = HashTag()(Hashable.hash(numStatements))
   }
 
   final case class MiddleRange(start:Int, end:Int) extends Range {
@@ -98,5 +104,7 @@ object SwapTac {
       val (range,endBlock) = rangeEnd.splitAt(end-start+1)
       (before,range,endBlock)
     }
+
+    override def hash: Hash[MiddleRange.this.type] = HashTag()(Hashable.hash(start,end))
   }
 }

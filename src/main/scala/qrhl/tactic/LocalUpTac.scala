@@ -1,7 +1,6 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import org.log4s
 import qrhl.logic.{Assign, Block, CVariable, Call, Environment, IfThenElse, Local, Measurement, QApply, QInit, QVariable, Sample, Statement, VarTerm, Variable, While}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
@@ -12,11 +11,15 @@ import scala.collection.mutable.ListBuffer
 import LocalUpTac.{VarID, _}
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import IsabelleX.{globalIsabelle => GIsabelle}
-
-
+import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
+import hashedcomputation.Implicits._
+import CVariable.ordering
+import QVariable.ordering
 
 
 case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
+  override def hash: Hash[LocalUpTac.this.type] = HashTag()(Hashable.hash(side), varID.hash)
+
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(goal) =>
       throw UserException("Expected a qRHL subgoal")
@@ -249,12 +252,13 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       val body3 = Local.makeIfNeeded(cvars_keep.toSeq, qvars_keep.toSeq, body2)
       (body3, cvars_up2, qvars_up2, id3)
   }
+
 }
 
 object LocalUpTac {
   private val logger = log4s.getLogger
 
-  sealed trait VarID {
+  sealed trait VarID extends HashedValue {
     def consumed : Boolean
     def select(cvars: List[CVariable], qvars: List[QVariable]) : (List[CVariable], List[QVariable], VarID)
   }
@@ -262,23 +266,31 @@ object LocalUpTac {
   final case object AllVarsConsumed extends VarID {
     override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = (cvars,qvars,AllVarsConsumed)
     override def consumed: Boolean = true
+
+    override val hash: Hash[AllVarsConsumed.this.type] = HashTag()()
   }
   final case object AllVars extends VarID {
     override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = (cvars,qvars,AllVarsConsumed)
     override def consumed: Boolean = false
+
+    override val hash: Hash[AllVars.this.type] = HashTag()()
   }
 
-  sealed trait SingleVarID {
+  sealed trait SingleVarID extends HashedValue {
     def consumed : Boolean
     def select : (Boolean, SingleVarID)
   }
   final case object AllOccurrences extends SingleVarID {
     override def consumed: Boolean = false
     override def select: (Boolean, SingleVarID) = (true, AllOccurrencesConsumed)
+
+    override val hash: Hash[AllOccurrences.this.type] = HashTag()()
   }
   final case object AllOccurrencesConsumed extends SingleVarID {
     override def consumed: Boolean = true
     override def select: (Boolean, SingleVarID) = (true, AllOccurrencesConsumed)
+
+    override val hash: Hash[AllOccurrencesConsumed.this.type] = HashTag()()
   }
   final class Occurrences private (occurrences: List[Int]) extends SingleVarID {
     override def consumed: Boolean = occurrences.isEmpty
@@ -288,6 +300,8 @@ object LocalUpTac {
       case 1 :: rest => (true, new Occurrences(rest.map(_-1)))
       case rest => (false, new Occurrences(rest.map(_-1)))
     }
+
+    override def hash: Hash[Occurrences.this.type] = HashTag()(Hashable.hash(occurrences))
   }
   object Occurrences {
     def apply(occurrences: List[Int]): Occurrences = {
@@ -298,6 +312,9 @@ object LocalUpTac {
   }
 
   final case class IdxVarId(cvars : Map[CVariable, SingleVarID], qvars : Map[QVariable, SingleVarID]) extends VarID {
+    override def hash: Hash[IdxVarId.this.type] =
+      HashTag()(Hashable.hash(cvars), Hashable.hash(qvars))
+
     override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = {
       val selectedCVars = new ListBuffer[CVariable]()
       val selectedQVars = new ListBuffer[QVariable]()

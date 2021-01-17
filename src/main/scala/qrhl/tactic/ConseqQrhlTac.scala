@@ -1,7 +1,6 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleX, MLValueConverters, RichTerm}
@@ -10,6 +9,8 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Term
+import hashedcomputation.Implicits.optionHashable
+import hashedcomputation.{Hash, HashTag, Hashable}
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListSet
@@ -20,6 +21,8 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import GIsabelle.isabelleControl
+
+import hashedcomputation.Implicits._
 
 /**
  * If qvariableSubst=None, applies the rule:
@@ -64,6 +67,9 @@ import GIsabelle.isabelleControl
  */
 case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],List[QVariable]),(List[QVariable],List[QVariable]))]) extends Tactic {
   import ConseqQrhlTac.logger
+
+  override def hash: Hash[ConseqQrhlTac.this.type] =
+    HashTag()(Hashable.hash(rule), Hashable.hash(qvariableSubst))
 
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(left,right,pre,post,assms) =>

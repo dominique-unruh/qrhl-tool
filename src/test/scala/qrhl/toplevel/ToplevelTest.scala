@@ -2,8 +2,7 @@ package qrhl.toplevel
 
 import java.io.PrintWriter
 import java.nio.file.{Path, Paths}
-
-import hashedcomputation.filesystem.DirectorySnapshot
+import hashedcomputation.filesystem.{DirectorySnapshot, FingerprintedDirectorySnapshot}
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.{CurrentFS, State, UserException}
 import qrhl.isabellex.IsabelleX
@@ -30,7 +29,7 @@ class ToplevelTest extends AnyFunSuite {
 
 object ToplevelTest {
   def makeToplevelWithTheory(theory:Seq[String]=Nil) : Toplevel = {
-    val tl = Toplevel.makeToplevelFromState(State.empty(cheating = false), emptyCurrentFS)
+    val tl = Toplevel.makeToplevelFromState(State.empty(cheating = false))
     tl.execCmd(IsabelleCommand(theory))
     tl
   }
@@ -46,5 +45,6 @@ object ToplevelTest {
 //    override def position: String = "<test case>"
 //  }
 
-  implicit val emptyCurrentFS: CurrentFS = new CurrentFS(DirectorySnapshot.empty, Path.of("").toAbsolutePath.getRoot)
+  implicit val emptyCurrentFS: CurrentFS =
+    new CurrentFS(Path.of("").toAbsolutePath.getRoot, FingerprintedDirectorySnapshot(DirectorySnapshot.empty))
 }

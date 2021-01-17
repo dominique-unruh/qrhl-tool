@@ -3,11 +3,9 @@ package qrhl.logic
 import qrhl.isabellex.{IsabelleConsts, IsabelleX}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.{App, Const, Free, Term, Typ}
-import hashedcomputation.{Hash, Hashable, HashedValue}
+import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
 
-import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable.ListSet
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 // Implicits
@@ -43,6 +41,21 @@ sealed trait Variable extends HashedValue {
 }
 
 object Variable {
+  implicit object ordering extends Ordering[Variable] {
+    def compareSame(x: Variable, y:Variable): Int = {
+      val nameComp = Ordering.String.compare(x.name, y.name)
+      if (nameComp==0)
+        ??? // TODO compare types
+      else
+        nameComp
+    }
+    override def compare(x: Variable, y: Variable): Int = (x,y) match {
+      case (_ : QVariable, _ : CVariable) => +1
+      case (_ : CVariable, _ : QVariable) => -1
+      case _ => compareSame(x,y)
+    }
+  }
+
   def quantum(vars: ListSet[Variable]): ListSet[QVariable] = vars collect { case v : QVariable => v }
   def quantum(vars: Traversable[Variable]): Traversable[QVariable] = vars collect { case v : QVariable => v }
   def quantum(vars: Set[Variable]): Set[QVariable] = vars collect { case v : QVariable => v }
@@ -124,7 +137,7 @@ object Variable {
 
 final case class QVariable(name:String, override val valueTyp: Typ) extends Variable {
   override val hash: Hash[QVariable.this.type] =
-    Hash.hashString(s"QVariable ${Hashable.hash(name)} ${Hashable.hash(valueTyp)}") // TODO better hash
+    HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
 
 
   override def index1: QVariable = QVariable(Variable.index1(name),valueTyp)
@@ -145,6 +158,11 @@ final case class QVariable(name:String, override val valueTyp: Typ) extends Vari
 }
 
 object QVariable {
+  implicit object ordering extends Ordering[QVariable] {
+    override def compare(x: QVariable, y: QVariable): Int =
+      Variable.ordering.compareSame(x,y)
+  }
+
   def fromTerm_var(context: IsabelleX.ContextX, x: Term): QVariable = x match {
     case Free(name,typ) =>
       QVariable(name, GIsabelle.dest_variableT(typ))
@@ -169,7 +187,7 @@ object QVariable {
 
 final case class CVariable(name:String, override val valueTyp: Typ) extends Variable {
   override val hash: Hash[CVariable.this.type] =
-    Hash.hashString(s"CVariable ${Hashable.hash(name)} ${Hashable.hash(valueTyp)}") // TODO better hash
+    HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
 
   override def index1: CVariable = CVariable(Variable.index1(name),valueTyp)
   override def index2: CVariable = CVariable(Variable.index2(name),valueTyp)
@@ -192,6 +210,11 @@ final case class CVariable(name:String, override val valueTyp: Typ) extends Vari
 }
 
 object CVariable {
+  implicit object ordering extends Ordering[CVariable] {
+    override def compare(x: CVariable, y: CVariable): Int =
+      Variable.ordering.compareSame(x,y)
+  }
+
   def fromTerm_var(context: IsabelleX.ContextX, x: Term): CVariable = x match {
     case Free(name,typ) =>
       assert(name.startsWith("var_"))
@@ -210,3 +233,5 @@ object CVariable {
     case _ => throw new RuntimeException("Illformed variable list")
   }
 }
+
+

@@ -6,6 +6,8 @@ import qrhl.logic.Block
 import de.unruh.isabelle.mlvalue.Implicits._
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.pure.Term
+import hashedcomputation.{Hash, HashTag, Hashable}
+import hashedcomputation.Implicits._
 
 /*@deprecated("Use SeqTac","now")
 case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
@@ -32,6 +34,10 @@ case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
 case class SeqTac(left:Int, right:Int, inner:RichTerm, swap: Boolean = false)
   extends IsabelleTac[(Int, Int, Term)]("seq_tac", {
     ctx => (left,right,inner.encodeAsExpression(ctx).isabelleTerm /* TODO: encodeAsExpression should be done on Isabelle side */) }) {
+
+  override def hash: Hash[SeqTac.this.type] =
+    HashTag()(Hashable.hash(left), Hashable.hash(right), Hashable.hash(inner), Hashable.hash(swap))
+
   override def toString: String = s"seq${if (swap) "<->" else ""} $left $right"
 
   override def postprocess(state: State, goal: Subgoal, newGoals: List[Subgoal]): List[Subgoal] =
