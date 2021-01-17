@@ -42,7 +42,7 @@ class FingerprintedDirectorySnapshot private (val fingerprintBuilder: Fingerprin
 object FingerprintedDirectorySnapshot {
   def apply(directory: FingerprintBuilder[DirectorySnapshot]) = new FingerprintedDirectorySnapshot(directory)
   def apply(directory: DirectorySnapshot): FingerprintedDirectorySnapshot = apply(new FingerprintBuilderImpl(directory))
-  def apply(directory: Directory): FingerprintedDirectorySnapshot = apply(directory.snapshot())
+  def apply(directory: GenericDirectory): FingerprintedDirectorySnapshot = apply(directory.snapshot())
 }
 
 case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, Option[FileSnapshot]] {

@@ -3,7 +3,7 @@ package hashedcomputation.filesystem
 import java.io.{ByteArrayInputStream, IOException, InputStream}
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY, OVERFLOW}
-import java.nio.file.{Files, Path, WatchKey, WatchService}
+import java.nio.file.{FileSystem, FileSystems, Files, Path, WatchKey, WatchService}
 import java.util.concurrent.atomic.AtomicReference
 import com.google.common.cache.{CacheBuilder, RemovalNotification}
 import hashedcomputation.Fingerprint.Entry
@@ -16,17 +16,18 @@ import org.log4s.Logger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.jdk.CollectionConverters.IteratorHasAsScala
+import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala}
 import scala.ref.{ReferenceWrapper, SoftReference, WeakReference}
 
-class Directory private (val path: Path, parent: Directory, parentKey: String,
-                         partial : Boolean) extends DirectoryListener {
-  //  def snapshot : DirectorySnapshot = new DirectorySnapshot(this)
-  Directory.watchDirectory(path, this)
+sealed abstract class GenericDirectory protected (partial: Boolean) {
+  registerWatcher()
   private val subdirs = new TrieMap[String, Directory]
   private val interesting = if (partial) new TrieMap[String, Unit] else null
   private var currentSnapshot = new AtomicReference(makeSnapshot)
 
+  protected def makeSnapshot : DirectorySnapshot
+
+  protected def registerWatcher() : Unit
   def registerInterest(path: List[String]): Unit = if (partial) {
     path match {
       case Nil =>
@@ -46,37 +47,21 @@ class Directory private (val path: Path, parent: Directory, parentKey: String,
     }
   }
 
+  private[filesystem] def pathToList(path: Path) : List[String]
+
   def registerInterest(path: Path): Unit =
-    if (partial) {
-      assert(!path.isAbsolute)
-      registerInterest(path.iterator().asScala.map(_.toString).toList)
-    }
+    if (partial)
+      registerInterest(pathToList(path))
 
-  def registerInterestEverything(): Unit =
-    if (partial) {
-      for ((file, content : UnresolvedDirectoryEntry) <- currentSnapshot.get.content) {
-        interesting += file -> ()
-        currentSnapshot.updateAndGet { updateSnapshot(file,_) }
-      }
-      notifyParent()
-    }
+  protected def notifyParent(): Unit
+  protected def resolve(path: String): Path
 
-
-  private def makeSnapshot : DirectorySnapshot =
-    Files.list(path).iterator().asScala.foldLeft(DirectorySnapshot.empty) { (snapshot, file) =>
-      updateSnapshot(this.path.relativize(file).toString, snapshot)
-    }
-
-  def dispose(): Unit = Directory.unwatchDirectory(this)
-
-  def snapshot(): DirectorySnapshot = currentSnapshot.get
-
-  private def updateSnapshot(path: String, snapshot: DirectorySnapshot): DirectorySnapshot = {
-    Directory.logger.debug(s"updateSnapshot: $path $snapshot")
+  protected def updateSnapshot(path: String, snapshot: DirectorySnapshot): DirectorySnapshot = {
+    GenericDirectory.logger.debug(s"updateSnapshot: $path $snapshot")
     if (partial && !interesting.contains(path))
       snapshot.updated(path, new UnresolvedDirectoryEntry(this, path))
     else {
-      val fullPath = this.path.resolve(path)
+      val fullPath = resolve(path)
       val entry = try {
         if (Files.isDirectory(fullPath, NOFOLLOW_LINKS)) {
           val dir = subdirs.getOrElseUpdate(path, {
@@ -94,40 +79,122 @@ class Directory private (val path: Path, parent: Directory, parentKey: String,
     }
   }
 
-  private def notifyParent(): Unit = {
-    Directory.logger.debug(s"notifyParent: $parent $parentKey")
-    if (parent!=null) parent.notifySubdirectoryChange(parentKey)
-  }
+  def registerInterestEverything(): Unit =
+    if (partial) {
+      for ((file, content : UnresolvedDirectoryEntry) <- currentSnapshot.get.content) {
+        interesting += file -> ()
+        currentSnapshot.updateAndGet { updateSnapshot(file,_) }
+      }
+      notifyParent()
+    }
 
-  def notifySubdirectoryChange(subdir: String): Unit = {
-    Directory.logger.debug(s"Notification from child $subdir")
+  def snapshot(): DirectorySnapshot = currentSnapshot.get
+
+
+  protected[filesystem] def notifySubdirectoryChange(subdir: String): Unit = {
+    GenericDirectory.logger.debug(s"Notification from child $subdir")
     currentSnapshot.updateAndGet { updateSnapshot(subdir, _) }
     notifyParent()
   }
 
-  override def onCreate(path: Path): Unit = {
-    assert(path.getNameCount==1)
-    for (subdir <- subdirs.remove(path.toString)) subdir.dispose()
+  protected def dispose(): Unit
 
-    currentSnapshot.updateAndGet { updateSnapshot(path.toString, _) }
-
+  protected def entryCreated(path: String): Unit = {
+    for (subdir <- subdirs.remove(path)) subdir.dispose()
+    currentSnapshot.updateAndGet { updateSnapshot(path, _) }
     notifyParent()
   }
-  override def onModify(path: Path): Unit = {
-    assert(path.getNameCount==1)
-    currentSnapshot.updateAndGet { updateSnapshot(path.toString, _) }
+  protected def entryModified(path: String): Unit = {
+    currentSnapshot.updateAndGet { updateSnapshot(path, _) }
     notifyParent()
   }
-  override def onDelete(path: Path): Unit = {
-    assert(path.getNameCount==1)
-    for (subdir <- subdirs.remove(path.toString)) subdir.dispose()
-    currentSnapshot.updateAndGet { _.removed(path.toString) }
+  protected def entryDeleted(path: String): Unit = {
+    for (subdir <- subdirs.remove(path)) subdir.dispose()
+    currentSnapshot.updateAndGet { _.removed(path) }
     notifyParent()
-    }
-  override def onOverflow(): Unit = {
+  }
+  protected def refreshAll(): Unit = {
     currentSnapshot.set(makeSnapshot)
     notifyParent()
   }
+
+  private[filesystem] def pathAsString: String
+}
+
+object GenericDirectory {
+  private val logger = log4s.getLogger
+}
+
+class Directory private[filesystem] (val path: Path, parent: GenericDirectory, parentKey: String,
+                                     partial : Boolean) extends GenericDirectory(partial) with DirectoryListener {
+  //  def snapshot : DirectorySnapshot = new DirectorySnapshot(this)
+  override def registerWatcher(): Unit = Directory.watchDirectory(path, this)
+
+  override def pathToList(path: Path) : List[String] = {
+    assert(!path.isAbsolute)
+    path.iterator().asScala.map(_.toString).toList
+  }
+
+  override protected def resolve(path: String): Path = this.path.resolve(path)
+
+  override protected def makeSnapshot : DirectorySnapshot =
+    Files.list(path).iterator().asScala.foldLeft(new DirectorySnapshot(this, Map.empty)) { (snapshot, file) =>
+      updateSnapshot(this.path.relativize(file).toString, snapshot)
+    }
+
+  override def dispose(): Unit = Directory.unwatchDirectory(this)
+
+  override protected def notifyParent(): Unit = {
+    Directory.logger.debug(s"notifyParent: $parent $parentKey")
+    if (parent!=null) parent.notifySubdirectoryChange(parentKey)
+  }
+
+  override def onCreate(path: Path): Unit = {
+    assert(path.getNameCount==1)
+    entryCreated(path.toString)
+  }
+  override def onModify(path: Path): Unit = {
+    assert(path.getNameCount==1)
+    entryModified(path.toString)
+  }
+  override def onDelete(path: Path): Unit = {
+    assert(path.getNameCount==1)
+    entryDeleted(path.toString)
+    }
+  override def onOverflow(): Unit = {
+    refreshAll()
+  }
+
+  override def pathAsString: String = path.toString
+}
+
+class RootsDirectory private[filesystem] (fileSystem: FileSystem)
+  extends GenericDirectory(partial=true) {
+  protected override def registerWatcher(): Unit = {}
+
+  private[filesystem] override def pathToList(path: Path): List[String] = {
+    assert(path.isAbsolute)
+    path.getRoot.toString :: path.iterator().asScala.map(_.toString).toList
+  }
+
+  override protected def resolve(path: String): Path = Path.of(path)
+
+  override protected def makeSnapshot : DirectorySnapshot = {
+    fileSystem.getRootDirectories.asScala.foldLeft(new DirectorySnapshot(this, Map.empty)) { (snapshot, root) =>
+      updateSnapshot(root.toString, snapshot)
+    }
+  }
+
+  protected override def dispose(): Unit = {}
+
+  override protected def notifyParent(): Unit = {}
+
+  override def pathAsString: String = "<roots>"
+}
+
+object RootsDirectory {
+  def apply(fileSystem: FileSystem = FileSystems.getDefault): RootsDirectory =
+    new RootsDirectory(fileSystem)
 }
 
 object Directory {
@@ -233,7 +300,8 @@ object FileSnapshot {
     hashTag(RawHash.hashBytes(content))
 }
 
-class DirectorySnapshot private (private[filesystem] val content: Map[String, MaybeDirectoryEntry])
+class DirectorySnapshot private[filesystem] (directory: GenericDirectory,
+                                             private[filesystem] val content: Map[String, MaybeDirectoryEntry])
   extends DirectoryEntry with Map[String, DirectoryEntry] with HashedValue {
 
   def dump(hideUnresolved: Boolean = true, indent: String = ""): Unit = {
@@ -271,11 +339,8 @@ class DirectorySnapshot private (private[filesystem] val content: Map[String, Ma
   }
 
 
-  def get(path: Path): Option[DirectoryEntry] = {
-    assert(!path.isAbsolute)
-    get(path.iterator().asScala.map(_.toString).toList)
-  }
-
+  def get(path: Path): Option[DirectoryEntry] =
+    get(directory.pathToList(path))
 
   def get(path: List[String]): Option[DirectoryEntry] = path match {
     case Nil => Some(this)
@@ -295,13 +360,13 @@ class DirectorySnapshot private (private[filesystem] val content: Map[String, Ma
     case (_, entry: UnresolvedDirectoryEntry) => entry.failWithInterest(everything = true)
   }
   override def removed(key: String): DirectorySnapshot =
-    new DirectorySnapshot(content.removed(key))
+    new DirectorySnapshot(directory, content.removed(key))
 
   override def updated[V1 >: DirectoryEntry](key: String, value: V1): Map[String, V1] =
     ???
 
   private[hashedcomputation] def updated(key: String, value: MaybeDirectoryEntry) : DirectorySnapshot =
-    new DirectorySnapshot(content.updated(key, value))
+    new DirectorySnapshot(directory, content.updated(key, value))
 
   def updated(key: String, value: DirectoryEntry) : DirectorySnapshot =
     updated(key, value : MaybeDirectoryEntry)
@@ -313,7 +378,6 @@ class DirectorySnapshot private (private[filesystem] val content: Map[String, Ma
 object DirectorySnapshot {
   private val hashTag: HashTag[DirectorySnapshot] = HashTag.create()
 
-  val empty = new DirectorySnapshot(Map.empty)
   private val logger: Logger = log4s.getLogger
 }
 
@@ -347,14 +411,14 @@ object FingerprintedDirectorySnapshot {
 }
 */
 
-private case class UnresolvedDirectoryEntry(directory: Directory, path: String) extends MaybeDirectoryEntry {
+private case class UnresolvedDirectoryEntry(directory: GenericDirectory, path: String) extends MaybeDirectoryEntry {
   def failWithInterest(subdir: List[String] = Nil, everything: Boolean = false): Nothing = {
     if (everything)
       directory.registerInterestEverything()
     else {
       directory.registerInterest(path::subdir)
     }
-    throw new OutdatedSnapshotException(s"$path in ${directory.path} was not read yet. Try again with a fresh directory snapshot.")
+    throw new OutdatedSnapshotException(s"$path in ${directory.pathAsString} was not read yet. Try again with a fresh directory snapshot.")
   }
 
   override val hash: Hash[UnresolvedDirectoryEntry.this.type] = UnresolvedDirectoryEntry.hash
