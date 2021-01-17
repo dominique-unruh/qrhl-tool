@@ -29,7 +29,17 @@ object Fingerprint {
 
 case class Fingerprint[A: Hashable](hash: Hash[A], fingerprints: Option[Seq[Entry[A, _]]]) {
   /** Must be fingerprints for the same value */
-  def join(other: Fingerprint[A]): Fingerprint[A] = ???
+  def join(other: Fingerprint[A]): Fingerprint[A] = {
+    type SE = Seq[Entry[A, _]]
+    assert(hash==other.hash)
+    val fp : Option[SE] = (fingerprints, other.fingerprints) match {
+      case (None,None) => None
+      case (f : Some[SE], None) => f
+      case (None, f: Some[SE]) => f
+      case (Some(f1), Some(f2)) => Some(f1 ++ f2)
+    }
+    new Fingerprint(hash, fp)
+  }
 
   def matches(value: A): Boolean = {
     if (hash == Hashable.hash(value)) true
