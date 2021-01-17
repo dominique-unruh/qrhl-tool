@@ -25,7 +25,7 @@ import de.unruh.isabelle.mlvalue.MLValue.Converter
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Term, Thm, Typ}
-import hashedcomputation.filesystem.{Directory, DirectoryEntry, DirectorySnapshot}
+import hashedcomputation.filesystem.{Directory, DirectoryEntry, DirectorySnapshot, FingerprintedDirectorySnapshot, RootsDirectory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -292,18 +292,18 @@ class State private (val environment: Environment,
 //  private def HashTag()(hash,arguments: HashedValue*)(implicit file: sourcecode.File, line: sourcecode.Line): Hash[State] =
 //    HashTag()(hash,arguments.map(_.hash) : _*)(file, line)
 
-  def include(file: Path)(implicit output: PrintWriter, fs: CurrentFS): State = {
+  def include(file: Path)(implicit output: PrintWriter, fs: FingerprintedDirectorySnapshot): State = {
     output.println("Including file "+file)
     val fullpath = currentDirectory.resolve(file)
-    val relpath = fs.relativize(fullpath)
+//    val relpath = fs.relativize(fullpath)
 
-    logger.debug(s"Including $relpath")
-    if (includedFiles.contains(relpath)) {
+    logger.debug(s"Including $fullpath")
+    if (includedFiles.contains(fullpath)) {
       println(s"Already included $fullpath. Skipping.")
       this
     } else {
-      val fileContent = fs.getFile(relpath).getOrElse { throw UserException(s"File $file not found (relative to $currentDirectory)") }
-      val state1 = copy(includedFiles = includedFiles + relpath, cheatMode=cheatMode.startInclude,
+      val fileContent = fs.getFile(fullpath).getOrElse { throw UserException(s"File $file not found (relative to $currentDirectory)") }
+      val state1 = copy(includedFiles = includedFiles + fullpath, cheatMode=cheatMode.startInclude,
         hash = HashTag()(hash, fileContent.hash))
       val state2 = Toplevel.computeStateFromFileContent(state1, fullpath, fileContent, fs)
 //      val toplevel = Toplevel.makeToplevelFromState(state1, fs)
@@ -477,12 +477,12 @@ class State private (val environment: Environment,
     }
   }
 
-  def loadIsabelle(theory:Seq[String])(implicit currentFS: CurrentFS) : State = {
+  def loadIsabelle(theory:Seq[String])(implicit fs: FingerprintedDirectorySnapshot) : State = {
     assert(currentDirectory.isAbsolute)
     val theoryPath = theory.toList map { thy => currentDirectory.resolve(thy+".thy") }
 
     // In order to get snapshot exceptions before running Isabelle (saves time)
-    for (t <- theoryPath) currentFS.getFile(t)
+    for (t <- theoryPath) fs.getFile(t)
 
     if (_isabelle.isDefined)
       if (theoryPath != _isabelleTheory)
@@ -497,15 +497,15 @@ class State private (val environment: Environment,
 
     for (f <- deps) assert(f.isAbsolute)
 
-    val relDeps = deps.map(currentFS.relativize)
+//    val relDeps = deps.map(currentFS.relativize)
 
     // This ensures that even when one .get fails (and updates the Toplevel.rootDirectory), the others are
     // tried to (so all updates happen in one go).
-    for (d <- relDeps) try { currentFS.getFile(d) } catch { case _ : Throwable => }
+    for (d <- deps) try { fs.getFile(d) } catch { case _ : Throwable => }
 
     val deps2 = for (file <- deps) yield {
 //      val relfile = currentFS.relativize(file)
-      val content = currentFS.getFile(file)
+      val content = fs.getFile(file)
       logger.debug(s"$file -> $content")
       (file, content)
     }

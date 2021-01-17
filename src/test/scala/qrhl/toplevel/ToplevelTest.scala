@@ -2,9 +2,9 @@ package qrhl.toplevel
 
 import java.io.PrintWriter
 import java.nio.file.{Path, Paths}
-import hashedcomputation.filesystem.{DirectorySnapshot, FingerprintedDirectorySnapshot}
+import hashedcomputation.filesystem.{DirectorySnapshot, FingerprintedDirectorySnapshot, RootsDirectory}
 import org.scalatest.funsuite.AnyFunSuite
-import qrhl.{CurrentFS, State, UserException}
+import qrhl.{State, UserException}
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel.ReadLine
 
@@ -45,6 +45,5 @@ object ToplevelTest {
 //    override def position: String = "<test case>"
 //  }
 
-  implicit val emptyCurrentFS: CurrentFS =
-    new CurrentFS(Path.of("").toAbsolutePath.getRoot, FingerprintedDirectorySnapshot(DirectorySnapshot.empty))
+  implicit val rootsDirectory: FingerprintedDirectorySnapshot = FingerprintedDirectorySnapshot(RootsDirectory())
 }

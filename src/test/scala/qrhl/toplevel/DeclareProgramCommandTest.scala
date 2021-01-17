@@ -3,7 +3,7 @@ package qrhl.toplevel
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.State
 import qrhl.logic.{Block, Call, ConcreteProgramDecl}
-import qrhl.toplevel.ToplevelTest.emptyCurrentFS
+import qrhl.toplevel.ToplevelTest.rootsDirectory
 
 class DeclareProgramCommandTest extends AnyFunSuite {
   test("oracles") {

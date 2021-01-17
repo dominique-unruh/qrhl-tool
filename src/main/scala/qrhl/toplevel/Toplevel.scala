@@ -5,8 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import hashedcomputation.{Element, Fingerprint, Hash, Hashable, HashedFunction, HashedPromise, NestedElement, Tuple3Element1, Tuple3Element2, Tuple3Element3, filesystem}
 import de.unruh.isabelle.control.IsabelleException
-import hashedcomputation.filesystem.{Directory, DirectorySnapshot, FileSnapshot, FingerprintedDirectorySnapshot, OutdatedSnapshotException}
-import qrhl.CurrentFS
+import hashedcomputation.filesystem.{Directory, DirectorySnapshot, FileSnapshot, FingerprintedDirectorySnapshot, OutdatedSnapshotException, RootsDirectory}
 import qrhl.toplevel.Toplevel.CommandOrString
 import sourcecode.Text.generate
 
@@ -34,10 +33,7 @@ class Toplevel private(initialState : State) {
   /** List of (cmdString, position) */
   private val commands = mutable.ArrayDeque[CommandOrString]()
   private var previousFS = null : DirectorySnapshot
-  private val rootDirectory : Directory = {
-    val rootPath = Path.of("").toAbsolutePath.getRoot
-    Directory(rootPath, partial = true)
-  }
+  private val rootDirectory : RootsDirectory = RootsDirectory()
   private var filesChanged = false
 
   def state: State = currentState
@@ -58,7 +54,7 @@ class Toplevel private(initialState : State) {
 //  def isabelle: IsabelleX = state.isabelle.isabelle
 
   def computeState() : State = {
-    val currentFS: CurrentFS = CurrentFS(rootDirectory.path, FingerprintedDirectorySnapshot(rootDirectory))
+    val fs: FingerprintedDirectorySnapshot = FingerprintedDirectorySnapshot(rootDirectory)
 
     if (filesChanged) {
       println("Some files changed. Replaying all affected commands.")
@@ -66,7 +62,7 @@ class Toplevel private(initialState : State) {
     }
 
     try {
-      val state = Toplevel.computeStateFromCommands(initialState, commands.toSeq, currentFS)
+      val state = Toplevel.computeStateFromCommands(initialState, commands.toSeq, fs)
       println(state.lastOutput)
       state
     } catch {
@@ -297,7 +293,7 @@ object Toplevel {
     }
   }
 
-  def computeStateFromReadline(initialState: State, readLine: ReadLine, currentFS: CurrentFS): State = {
+  def computeStateFromReadline(initialState: State, readLine: ReadLine, fs: FingerprintedDirectorySnapshot): State = {
     val commands = mutable.ArrayDeque[CommandOrString]()
     breakable {
       while (true) {
@@ -306,32 +302,38 @@ object Toplevel {
         commands.append(CommandOrString.Str(cmdStr, readLine.position))
       }
     }
-    computeStateFromCommands(initialState, commands.toSeq, currentFS)
+    computeStateFromCommands(initialState, commands.toSeq, fs)
   }
 
-  def computeStateFromFileContent(initialState: State, path: Path, fileContent: FileSnapshot, currentFS: CurrentFS): State =
-    computeStateFromReadline(initialState: State, new ReadLine.FileSnapshot(fileContent, path), currentFS)
+  def computeStateFromFileContent(initialState: State, path: Path, fileContent: FileSnapshot, fs: FingerprintedDirectorySnapshot): State =
+    computeStateFromReadline(initialState: State, new ReadLine.FileSnapshot(fileContent, path), fs)
 
-  def computeStateFromCommands(initialState: State, commands: Seq[CommandOrString], currentFS: CurrentFS): State = {
+//  private val cachedApplyCommandToState = HashedFunction[(command, state, currentFS)]
+
+  def applyCommandToState(command: CommandOrString, state: State, fs: FingerprintedDirectorySnapshot): State = {
+    implicit val _fs: FingerprintedDirectorySnapshot = fs
+    val cmd = command.parse(state)
+    cmd match {
+      case includeCommand : IncludeCommand =>
+        val stringWriter = new StringWriter()
+        implicit val writer: PrintWriter = new PrintWriter(stringWriter)
+        val newState = state.include(includeCommand.file)
+        writer.close()
+        newState.setLastOutput(stringWriter.toString)
+      case cmd : IsabelleCommand =>
+        val newState = state.loadIsabelle(cmd.thy)
+        newState.setLastOutput("Isabelle loaded.")
+      case _ =>
+        val newState = cmd.actString(state)
+        newState
+    }
+  }
+
+  def computeStateFromCommands(initialState: State, commands: Seq[CommandOrString], fs: FingerprintedDirectorySnapshot): State = {
     var state = initialState
-    implicit val _currentFS: CurrentFS = currentFS
     for (command <- commands)
       try {
-        val cmd = command.parse(state)
-        state = cmd match {
-          case includeCommand : IncludeCommand =>
-            val stringWriter = new StringWriter()
-            implicit val writer: PrintWriter = new PrintWriter(stringWriter)
-            val newState = state.include(includeCommand.file)
-            writer.close()
-            newState.setLastOutput(stringWriter.toString)
-          case cmd : IsabelleCommand =>
-            val newState = state.loadIsabelle(cmd.thy)
-            newState.setLastOutput("Isabelle loaded.")
-          case _ =>
-            val newState = cmd.actString(state)
-            newState
-        }
+        state = applyCommandToState(command, state, fs)
       } catch {
         case e: UserException => e.setPosition(command.position); throw e
         case e: IsabelleException => throw UserException(e, command.position)
