@@ -284,9 +284,16 @@ object Toplevel {
       override def undo: Option[Int] = None
       override def hash: Hash[Cmd.this.type] = HashTag()(command.hash, Hashable.hash(position))
     }
+
+    private val cachedParseCommand = HashedFunction.apply[(State,String),Command] {
+      case (state, string) => state.parseCommand(string)
+    }
+
     final case class Str(string: String, position: String) extends CommandOrString {
       override def parse(state: State): Command =
-        state.parseCommand(string)
+        Await.result(HashedPromise(cachedParseCommand, (state, string)).getOutput,
+          Duration.Inf)
+
       override def undo: Option[Int] =
         Parser.parseAll(Parser.undo, string) match {
           case Parser.Success(n, _) => Some(n)
@@ -345,7 +352,7 @@ object Toplevel {
   }
 
   def applyCommandToState(command: CommandOrString, state: State, fs: FingerprintedDirectorySnapshot): State = {
-    val cmd = command.parse(state) // TODO cache this as well
+    val cmd = command.parse(state)
 
     val unsafeFS = fs.fingerprintBuilder.unsafeUnderlyingValue
     val future = HashedPromise(cachedApplyCommandToState, (cmd, state, unsafeFS)).get
