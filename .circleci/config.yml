@@ -69,7 +69,7 @@ jobs:
                   tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2019 --strip 1;;
                 2020)
                   curl https://www.isa-afp.org/release/afp-current.tar.gz -o /tmp/afp.tar.gz
-                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1;;
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1 --exclude 'thys/Isabelle_C/*';;
                 *) false;;
               esac
             fi

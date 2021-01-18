@@ -37,3 +37,6 @@ defaults:
   jdkversionprefix: |
     if jdk=="8": return "1.8"
     if int(jdk)>=11: return str(int(jdk))
+  extra_tar_options: |
+    if os=="windows": return "--exclude 'thys/Isabelle_C/*'"  # this one fails to extract on Windows
+    return ""
