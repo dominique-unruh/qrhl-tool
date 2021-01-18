@@ -57,7 +57,7 @@ sealed abstract class GenericDirectory protected (partial: Boolean) {
   protected def resolve(path: String): Path
 
   protected def updateSnapshot(path: String, snapshot: DirectorySnapshot): DirectorySnapshot = {
-    GenericDirectory.logger.debug(s"updateSnapshot: $path $snapshot")
+//    GenericDirectory.logger.debug(s"updateSnapshot: $path $snapshot")
     if (partial && !interesting.contains(path))
       snapshot.updated(path, new UnresolvedDirectoryEntry(this, path))
     else {
@@ -92,7 +92,7 @@ sealed abstract class GenericDirectory protected (partial: Boolean) {
 
 
   protected[filesystem] def notifySubdirectoryChange(subdir: String): Unit = {
-    GenericDirectory.logger.debug(s"Notification from child $subdir")
+//    GenericDirectory.logger.debug(s"Notification from child $subdir")
     currentSnapshot.updateAndGet { updateSnapshot(subdir, _) }
     notifyParent()
   }
@@ -145,7 +145,7 @@ class Directory private[filesystem] (val path: Path, parent: GenericDirectory, p
   override def dispose(): Unit = Directory.unwatchDirectory(this)
 
   override protected def notifyParent(): Unit = {
-    Directory.logger.debug(s"notifyParent: $parent $parentKey")
+//    Directory.logger.debug(s"notifyParent: $parent $parentKey")
     if (parent!=null) parent.notifySubdirectoryChange(parentKey)
   }
 
@@ -174,6 +174,7 @@ class RootsDirectory private[filesystem] (fileSystem: FileSystem)
 
   private[filesystem] override def pathToList(path: Path): List[String] = {
     assert(path.isAbsolute)
+    assert(path.getFileSystem==fileSystem)
     path.getRoot.toString :: path.iterator().asScala.map(_.toString).toList
   }
 
@@ -221,7 +222,7 @@ object Directory {
   def watchDirectory(path: Path, listener: DirectoryListener): Unit = {
     val filesystem = path.getFileSystem
     val watchService = watchServices.getOrElseUpdate(filesystem, {
-      logger.debug(s"Found new filesystem: $filesystem")
+//      logger.debug(s"Found new filesystem: $filesystem")
       val watchService = filesystem.newWatchService()
       val thread = new Thread(new PollWatchService(watchService), s"Filesystem watcher for $filesystem")
       thread.setDaemon(true)

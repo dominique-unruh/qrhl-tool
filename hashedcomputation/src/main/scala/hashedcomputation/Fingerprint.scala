@@ -1,13 +1,15 @@
 package hashedcomputation
 
 import hashedcomputation.Fingerprint.Entry
-import org.jetbrains.annotations.NotNull
+import org.jetbrains.annotations.{NotNull, Nullable}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.control.Breaks
+import scala.util.control.Breaks.{break, tryBreakable}
 
 object Fingerprint {
-  case class Entry[A, B](element: Element[A, B], fingerprint: Fingerprint[B]) {
+  final case class Entry[A, B](element: Element[A, B], fingerprint: Fingerprint[B]) {
     type OutT = B
     type InT = A
 
@@ -27,15 +29,31 @@ object Fingerprint {
   def apply[A: Hashable](value: A) = new Fingerprint[A](Hashable.hash(value), None)
 }
 
-case class Fingerprint[A: Hashable](hash: Hash[A], fingerprints: Option[Seq[Entry[A, _]]]) {
+/** fingerprints==None means no fingerprinting, can only rely on the overall hash */
+case class Fingerprint[A: Hashable](@NotNull hash: Hash[A], @NotNull fingerprints: Option[Seq[Entry[A, _]]]) {
+  def project[B: Hashable](targetHash: Hash[B], projectEntry: Entry[A,_] => Option[Seq[Entry[B, _]]]): Fingerprint[B] =
+    fingerprints match {
+      case None => new Fingerprint[B](targetHash, None)
+      case Some(fingerprints) =>
+        tryBreakable {
+          val merged = for (entry <- fingerprints;
+                            projFp = projectEntry(entry).getOrElse { break() };
+                            fp2 <- projFp)
+            yield fp2
+          new Fingerprint[B](targetHash, Some(merged))
+        } catchBreak {
+          new Fingerprint[B](targetHash, None)
+        }
+    }
+
   /** Must be fingerprints for the same value */
   def join(other: Fingerprint[A]): Fingerprint[A] = {
     type SE = Seq[Entry[A, _]]
     assert(hash==other.hash)
     val fp : Option[SE] = (fingerprints, other.fingerprints) match {
-      case (None,None) => None
-      case (f : Some[SE], None) => f
-      case (None, f: Some[SE]) => f
+      case (None, None) => None
+      case (f : Some[SE], None) => None
+      case (None, f: Some[SE]) => None
       case (Some(f1), Some(f2)) => Some(f1 ++ f2)
     }
     new Fingerprint(hash, fp)
@@ -87,10 +105,22 @@ object DummyMap extends mutable.Map[Nothing, Nothing] {
 }
 
 trait FingerprintBuilder[A] {
-  def access[B : Hashable](element: Element[A,B], value: B): Unit
-  def access[B: Hashable](element: Element[A,B], hash: Hash[B]) : Unit
   def access[B](element: Element[A,B], fingerprint: Fingerprint[B]): Unit
   def accessAll(): Unit
+
+  def access[B : Hashable](element: Element[A,B], value: B): Unit =
+    access(element, Hashable.hash(value))
+  def access[B: Hashable](element: Element[A,B], hash: Hash[B]) : Unit =
+    access(element, Fingerprint(hash))
+  def access(fingerprint: Fingerprint[A]): Unit = fingerprint.fingerprints match {
+    case None => accessAll()
+    case Some(entries) =>
+      for (entry <- entries)
+        entry match {
+          case entry : Entry[A,b] =>
+            access(entry.element, entry.fingerprint)
+        }
+  }
   // TODO: rename to something like buildFingerprint
   def fingerprint : Fingerprint[A]
   def unsafeUnderlyingValue : A
@@ -103,12 +133,6 @@ final class FingerprintBuilderImpl[A : Hashable](value: A) extends FingerprintBu
     new mutable.LinkedHashMap[Element[A, _], Fingerprint[_]]
 
   override def unsafeUnderlyingValue: A = value
-
-  def access[B : Hashable](element: Element[A,B], value: B): Unit =
-    access(element, Hashable.hash(value))
-
-  def access[B: Hashable](element: Element[A,B], hash: Hash[B]) : Unit =
-    access(element, Fingerprint(hash))
 
   def access[B](element: Element[A,B], fingerprint: Fingerprint[B]): Unit =
     entries.updateWith(element) {

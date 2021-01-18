@@ -3,14 +3,16 @@ package qrhl.toplevel
 import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import hashedcomputation.{Element, Fingerprint, Hash, Hashable, HashedFunction, HashedPromise, NestedElement, Tuple3Element1, Tuple3Element2, Tuple3Element3, filesystem}
+import hashedcomputation.{Element, Fingerprint, Hash, HashTag, Hashable, HashedFunction, HashedPromise, HashedValue, NestedElement, Tuple3Element1, Tuple3Element2, Tuple3Element3, filesystem}
 import de.unruh.isabelle.control.IsabelleException
+import hashedcomputation.Fingerprint.Entry
 import hashedcomputation.filesystem.{Directory, DirectorySnapshot, FileSnapshot, FingerprintedDirectorySnapshot, OutdatedSnapshotException, RootsDirectory}
 import qrhl.toplevel.Toplevel.CommandOrString
 import sourcecode.Text.generate
 
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 import scala.util.control.Breaks.{break, breakable}
 //import org.eclipse.jgit.diff.HashedSequenceComparator
 import org.jline.reader.LineReaderBuilder
@@ -24,8 +26,7 @@ import qrhl.{State, UserException, Utils}
 import scala.io.StdIn
 import scala.util.matching.Regex
 import org.apache.commons.codec.binary.Hex
-
-// TODO: remove all the "XXX" methods
+import hashedcomputation.Implicits._
 
 /** Not thread safe */
 class Toplevel private(initialState : State) {
@@ -34,7 +35,7 @@ class Toplevel private(initialState : State) {
   private val commands = mutable.ArrayDeque[CommandOrString]()
   private var previousFS = null : DirectorySnapshot
   private val rootDirectory : RootsDirectory = RootsDirectory()
-  private var filesChanged = false
+//  private var filesChanged = false
 
   def state: State = currentState
 
@@ -56,10 +57,10 @@ class Toplevel private(initialState : State) {
   def computeState() : State = {
     val fs: FingerprintedDirectorySnapshot = FingerprintedDirectorySnapshot(rootDirectory)
 
-    if (filesChanged) {
-      println("Some files changed. Replaying all affected commands.")
-      filesChanged = false
-    }
+//    if (filesChanged) {
+//      println("Some files changed. Replaying all affected commands.")
+//      filesChanged = false
+//    }
 
     try {
       val state = Toplevel.computeStateFromCommands(initialState, commands.toSeq, fs)
@@ -67,7 +68,6 @@ class Toplevel private(initialState : State) {
       state
     } catch {
       case _: OutdatedSnapshotException if rootDirectory != null =>
-        filesChanged = true
         computeState()
     }
   }
@@ -145,12 +145,12 @@ class Toplevel private(initialState : State) {
     run(readLine)
   }
 
-  def XXXrun(script: FileSnapshot, path: Path): Unit = {
+/*  def run(script: FileSnapshot, path: Path): Unit = {
     val readLine = new Toplevel.ReadLine.FileSnapshot(script, path)
     val directory = path.toAbsolutePath.normalize.getParent
     execCmd(CommandOrString.Cmd(ChangeDirectoryCommand(directory), readLine.position))
     run(readLine)
-  }
+  }*/
 
   def runWithErrorHandler(script: Path, abortOnError:Boolean): Boolean = {
     val readLine = new Toplevel.ReadLine.File(script)
@@ -272,15 +272,17 @@ object Toplevel {
       sys.exit(0) // otherwise the Isabelle process blocks termination
   }
 
-  sealed trait CommandOrString {
+  sealed trait CommandOrString extends HashedValue {
     def parse(state: State): Command
     val position: String
     def undo: Option[Int]
   }
+
   object CommandOrString {
     final case class Cmd(command: Command, position: String) extends CommandOrString {
       override def parse(state: State): Command = command
       override def undo: Option[Int] = None
+      override def hash: Hash[Cmd.this.type] = HashTag()(command.hash, Hashable.hash(position))
     }
     final case class Str(string: String, position: String) extends CommandOrString {
       override def parse(state: State): Command =
@@ -290,6 +292,8 @@ object Toplevel {
           case Parser.Success(n, _) => Some(n)
           case _ => None
         }
+
+      override def hash: Hash[Str.this.type] = HashTag()(Hashable.hash(string), Hashable.hash(position))
     }
   }
 
@@ -308,25 +312,64 @@ object Toplevel {
   def computeStateFromFileContent(initialState: State, path: Path, fileContent: FileSnapshot, fs: FingerprintedDirectorySnapshot): State =
     computeStateFromReadline(initialState: State, new ReadLine.FileSnapshot(fileContent, path), fs)
 
-//  private val cachedApplyCommandToState = HashedFunction[(command, state, currentFS)]
+  private val cachedApplyCommandToState = HashedFunction.fingerprintedComputation[(Command, State, DirectorySnapshot), State] {
+    case (command, state, directory) =>
+      logger.debug(s"Evaluating $command")
+      type T = (Command, State, DirectorySnapshot)
+      implicit val fs: FingerprintedDirectorySnapshot = FingerprintedDirectorySnapshot(directory)
+      val newState = command match {
+        case includeCommand : IncludeCommand =>
+          val stringWriter = new StringWriter()
+          implicit val writer: PrintWriter = new PrintWriter(stringWriter)
+          val newState = state.include(includeCommand.file)
+          writer.close()
+          newState.setLastOutput(stringWriter.toString)
+        case cmd : IsabelleCommand =>
+          val newState = state.loadIsabelle(cmd.thy)
+          newState.setLastOutput("Isabelle loaded.")
+        case _ =>
+          val newState = command.actString(state)
+          newState
+      }
+
+      val fsFingerprint = fs.fingerprintBuilder.fingerprint
+      val fingerprint = Fingerprint(Hashable.hash((command, state, directory)), Some(Seq(
+        Entry[T,Command](Tuple3Element1(), Fingerprint(command.hash)),
+        Entry[T,State](Tuple3Element2(), Fingerprint(state.hash)),
+        Entry[T,DirectorySnapshot](Tuple3Element3(), fsFingerprint)
+      )))
+
+      logger.debug("Fingerprint: " + fingerprint)
+
+      (newState, fingerprint)
+  }
 
   def applyCommandToState(command: CommandOrString, state: State, fs: FingerprintedDirectorySnapshot): State = {
-    implicit val _fs: FingerprintedDirectorySnapshot = fs
-    val cmd = command.parse(state)
-    cmd match {
-      case includeCommand : IncludeCommand =>
-        val stringWriter = new StringWriter()
-        implicit val writer: PrintWriter = new PrintWriter(stringWriter)
-        val newState = state.include(includeCommand.file)
-        writer.close()
-        newState.setLastOutput(stringWriter.toString)
-      case cmd : IsabelleCommand =>
-        val newState = state.loadIsabelle(cmd.thy)
-        newState.setLastOutput("Isabelle loaded.")
-      case _ =>
-        val newState = cmd.actString(state)
-        newState
+    val cmd = command.parse(state) // TODO cache this as well
+
+    val unsafeFS = fs.fingerprintBuilder.unsafeUnderlyingValue
+    val future = HashedPromise(cachedApplyCommandToState, (cmd, state, unsafeFS)).get
+//      cachedApplyCommandToState.compute((cmd, state, unsafeFS))
+    val (result, fingerprint) = Await.result(future, Duration.Inf)
+    def projectEntry[C](entry: Entry[(Command, State, DirectorySnapshot), C]):
+          Option[Seq[Entry[DirectorySnapshot, _]]] = entry.element match {
+      case _ : Tuple3Element1[_,_,_] => Some(Nil)
+      case _ : Tuple3Element2[_,_,_] => Some(Nil)
+      case _ : Tuple3Element3[_,_,DirectorySnapshot] =>
+        // DirectorySnapshot =:= C
+        val fps: Option[Seq[Entry[C, _]]] = entry.fingerprint.fingerprints
+        fps.asInstanceOf[Option[Seq[Entry[DirectorySnapshot,_]]]]
+      case NestedElement(_: Tuple3Element1[_,_,_], _) => Some(Nil)
+      case NestedElement(_: Tuple3Element2[_,_,_], _) => Some(Nil)
+      case NestedElement(_: Tuple3Element3[_,_,DirectorySnapshot],
+                         inner : Element[DirectorySnapshot, C]) =>
+        Some(Seq(Entry(inner, entry.fingerprint)))
+      case _ => None
     }
+
+    val fsFingerprint = fingerprint.project(unsafeFS.hash, projectEntry(_))
+    fs.fingerprintBuilder.access(fsFingerprint)
+    result
   }
 
   def computeStateFromCommands(initialState: State, commands: Seq[CommandOrString], fs: FingerprintedDirectorySnapshot): State = {
@@ -380,7 +423,6 @@ object Toplevel {
       }
     }
 
-    "" // unreachable
+    throw new AssertionError("unreachable code")
   }
-
 }

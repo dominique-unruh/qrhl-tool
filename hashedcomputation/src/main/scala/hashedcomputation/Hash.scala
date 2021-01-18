@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 import java.util
 import org.apache.commons.codec.binary.Hex
-import org.jetbrains.annotations.NotNull
+import org.jetbrains.annotations.{NotNull, Nullable}
 import sourcecode.File
 
 import java.util.concurrent.atomic.{AtomicReference, AtomicStampedReference}
@@ -93,8 +93,8 @@ object HashTag {
   def createFromRawHash[B](rawHash: RawHash) = new HashTag[B](rawHash)
 }
 
-class Hash[+B] private (val rawHash: RawHash) extends AnyVal with WithByteArray {
-  override def toString: String = hex.substring(0,7)
+class Hash[+B] private (@NotNull val rawHash: RawHash) extends AnyVal with WithByteArray {
+  override def toString: String = if (rawHash == null) "<no hash>" else hex.substring(0,7)
   def hex: String = rawHash.hex
 
   override private[hashedcomputation] def byteArray = rawHash.byteArray
@@ -105,13 +105,15 @@ trait WithByteArray extends Any {
 }
 
 object Hash {
-  @inline def apply[T](hashTag: HashTag[T], hashes: WithByteArray*): Hash[T] =
+  @inline def apply[T](@NotNull hashTag: HashTag[T], @NotNull hashes: WithByteArray*): Hash[T] =
     new Hash(RawHash(hashTag, hashes: _*))
 
   def randomHash[T]() = new Hash[T](RawHash.randomHash())
 
   /** Prefer to use functions using [[HashTag]]s. */
-  def createHashFromRawHash[A](rawHash: RawHash) = new Hash[A](rawHash)
+  def createHashFromRawHash[A](@NotNull rawHash: RawHash) = new Hash[A](rawHash)
+
+//  val nullHash = new Hash[Nothing](null)
 }
 
 trait Element[-A, +B] extends HashedValue {
@@ -188,6 +190,11 @@ trait HashedFunction[A, B] {
   @NotNull def hash: Hash[this.type]
 }
 object HashedFunction {
+  def fingerprintedComputation[A, B](f: A => (B,Fingerprint[A])): HashedFunction[A, B] = new HashedFunction[A,B] {
+    override def compute(input: A): Future[(B, Fingerprint[A])] = Future { f(input) }
+    override val hash: Hash[this.type] = Hash.randomHash[this.type]()
+  }
+
   def apply[A : Hashable, B](f: A => B): HashedFunction[A, B] = new HashedFunction[A,B] {
     override def compute(input: A): Future[(B, Fingerprint[A])] = Future {
       val result = f(input)

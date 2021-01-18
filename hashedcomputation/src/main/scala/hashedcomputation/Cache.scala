@@ -30,10 +30,11 @@ object Cache {
    * Done when getting a hash instead of an Element
    * The (id,Element) is actually a Seq, then need to backtrace over all choices
    * */
-  private val fingerprintCache: cache.Cache[(Long, Hash[_]), Either[(Long, Element[_, _]), Hash[_]]] = cache.CacheBuilder.newBuilder()
-    .softValues()
-    .expireAfterAccess(1, HOURS)
-    .build()
+  private val fingerprintCache: cache.Cache[(Long, Hash[_]), Either[(Long, Element[_, _]), (Hash[_], Fingerprint[_])]] =
+    cache.CacheBuilder.newBuilder()
+      .softValues()
+      .expireAfterAccess(1, HOURS)
+      .build()
 
   private val fingerprintIdCounter = new AtomicLong(1)
 
@@ -78,7 +79,7 @@ object Cache {
         val id2 = put(id, currentHash, element)
         (id2, elementHash)
     }
-    fingerprintCache.put((id, hash), Right(valueHash))
+    fingerprintCache.put((id, hash), Right(valueHash, fingerprint))
 
     /*    def storeEntries[C](id: Long, currentHash: Hash,
                                        @Nullable outerElement: Element[A, C],
@@ -113,7 +114,7 @@ object Cache {
     Option(outputCache.getIfPresent((computationHash, inputHash))).asInstanceOf[Option[Hash[B]]]
 
   def getHashByInput[A, B](@NotNull computationHash: Hash[HashedFunction[A, B]],
-                           @NotNull input: A): Option[Hash[B]] = {
+                           @NotNull input: A): Option[(Hash[B],Fingerprint[A])] = {
     logger.debug(s"Searching for $computationHash($input) in fingerprints")
 
     var hash: Hash[_] = computationHash
@@ -121,7 +122,7 @@ object Cache {
     while (true) {
       fingerprintCache.getIfPresent((id, hash)) match {
         case null => return None
-        case Right(hash) => return Some(hash.asInstanceOf[Hash[B]])
+        case Right((hash, fingerprint)) => return Some((hash.asInstanceOf[Hash[B]], fingerprint.asInstanceOf[Fingerprint[A]]))
         case Left((id2, element)) =>
           val element2 = element.asInstanceOf[Element[A, _]]
           id = id2
@@ -146,7 +147,7 @@ object HashedPromise {
 
   /** Note: does not add hashedValue to the cache! */
   def apply[A : Hashable](hashedValue: A): HashedPromise[HashedValue, A] =
-    apply(State.Result[HashedValue,A](hashedValue))
+    apply(State.Result[HashedValue,A](hashedValue, null))
 
   def apply[A : Hashable, B : Hashable](function: HashedFunction[A, B], input: HashedPromise[_, A]): HashedPromise[A, B] =
     apply(State.FunctionOnly(function, input))
@@ -172,9 +173,9 @@ object HashedPromise {
     }
     /** A state where a future with the result is available (hash computation started or finished) */
     sealed trait ResultFutureState[A, B] extends HashFutureState[A,B] {
-      def resultFuture : Future[B]
+      def resultFuture : Future[(B, Fingerprint[A])]
       def _hashFuture(implicit hashable: Hashable[B]): Future[Hash[B]] =
-        resultFuture.map(Hashable.hash[B])
+        resultFuture.map(result => Hashable.hash[B](result._1))
     }
     /** A state where all computations have been performed (but possibly failed) */
     sealed trait FinalState[A, B] extends HashFutureState[A,B] with ResultFutureState[A,B]
@@ -188,19 +189,20 @@ object HashedPromise {
     }
     final case class Failed[A, B](exception: Throwable) extends FinalState[A,B] {
       override def hashFuture: Future[Hash[B]] = Future.failed(exception)
-      override def resultFuture: Future[B] = Future.failed(exception)
+      override def resultFuture: Future[(B, Fingerprint[A])] = Future.failed(exception)
     }
     final case class Locked[A, B]() extends State[A,B]
     final case class ComputingHash[A, B](override val hashFuture: Future[Hash[B]]) extends HashFutureState[A,B] with Computing[A,B]
-    final case class ComputingResult[A, B : Hashable](override val resultFuture: Future[B]) extends ResultFutureState[A,B] with Computing[A,B] {
+    final case class ComputingResult[A, B : Hashable](override val resultFuture: Future[(B, Fingerprint[A])])
+      extends ResultFutureState[A,B] with Computing[A,B] {
       override def hashFuture: Future[Hash[B]] = _hashFuture
     }
-    final case class Result[A, B : Hashable](result: B) extends FinalState[A,B] {
+    sealed case class Result[A, B : Hashable](result: B, fingerprint: Fingerprint[A]) extends FinalState[A,B] {
       override def hashFuture: Future[Hash[B]] = Future.successful(Hashable.hash(result))
-      override def resultFuture: Future[B] = Future.successful(result)
+      override def resultFuture: Future[(B, Fingerprint[A])] = Future.successful((result, fingerprint))
     }
     final case class FunctionOnly[A, B](override val function: HashedFunction[A, B], input: HashedPromise[_, A]) extends StateWithFunction[A,B] {
-      override def inputFuture: Future[A] = input.get
+      override def inputFuture: Future[A] = input.getOutput
       override def inputPromise: HashedPromise[_, A] = input
     }
     final case class FunctionAndHash[A, B]
@@ -208,7 +210,7 @@ object HashedPromise {
      hash: Hash[B])
       extends StateWithFunction[A,B] with HashFutureState[A,B] {
       override def hashFuture: Future[Hash[B]] = Future.successful(hash)
-      override def inputFuture: Future[A] = input.get
+      override def inputFuture: Future[A] = input.getOutput
       override def inputPromise: HashedPromise[_, A] = input
     }
   }
@@ -223,20 +225,21 @@ class HashedPromise[A : Hashable, B : Hashable]
 
     val future = for ((result, fingerprint) <- function.compute(input);
                       _ = Cache.register(result, function.hash, fingerprint))
-      yield State.Result[A,B](result)
+      yield State.Result[A,B](result, fingerprint)
 
     future.recover { exception => State.Failed[A,B](exception) }
 
   }
 
   /** Tries to get the hash of the result, but without running the function (but potentially computing the input) */
-  private def getHashByInputPromise(function: HashedFunction[A,B], inputPromise: HashedPromise[_, A]): Future[Option[Hash[B]]] = {
+  private def getHashByInputPromise(function: HashedFunction[A,B], inputPromise: HashedPromise[_, A]):
+    Future[Option[(Hash[B], Fingerprint[A])]] = {
     val functionHash = function.hash
     for (inputHash <- inputPromise.getHash; // TODO: catch exception
          hashOption = Cache.getHashByInputHash(functionHash, inputHash);
          hashOption2 <- hashOption match {
-           case Some(hash) => Future.successful(Some(hash))
-           case None => for (input <- inputPromise.get) yield Cache.getHashByInput(functionHash, input)
+           case Some(hash) => Future.successful(Some(hash, Fingerprint[A](inputHash)))
+           case None => for (input <- inputPromise.get) yield Cache.getHashByInput(functionHash, input._1)
          })
       yield hashOption2
   }
@@ -256,17 +259,17 @@ class HashedPromise[A : Hashable, B : Hashable]
           val inputPromise = st.inputPromise
           val future = for (hashOption <- getHashByInputPromise(function, inputPromise);
                             newState <- hashOption match {
-                              case Some(hash) =>
+                              case Some((hash, _)) =>
                                 inputPromise.peek match {
                                   case None =>
                                     Future.successful(State.FunctionAndHash[A,B](function, inputPromise, hash))
                                   case Some(inputFuture) =>
                                     for (inputValue <- inputFuture)
-                                      yield State.HashAndInput[A,B](function, inputValue, hash)
+                                      yield State.HashAndInput[A,B](function, inputValue._1, hash)
                                 }
                               case None =>
                                 for (inputValue <- inputPromise.get; // TODO: Catch exception!
-                                     newState <- doCompute(function, inputValue))
+                                     newState <- doCompute(function, inputValue._1))
                                   yield newState
                             };
                             _ = state.set(newState);
@@ -293,13 +296,14 @@ class HashedPromise[A : Hashable, B : Hashable]
         if (state.compareAndSet(st, State.Locked())) {
           val function = st.function
           val inputPromise = st.inputPromise
-          val future = for (hashOption <- getHashByInputPromise(function, inputPromise);
-                            resultOption = hashOption.flatMap(Cache.getByHash).asInstanceOf[Option[B]];
+          val future = for (hashFpOption <- getHashByInputPromise(function, inputPromise);
+                            hashOption = hashFpOption.map(_._1);
+                            resultOption = hashOption.flatMap(Cache.getByHash);
                             newState <- resultOption match {
-                              case Some(result) => Future.successful(State.Result[A, B](result))
+                              case Some(result) => Future.successful(State.Result[A, B](result, hashFpOption.get._2))
                               case None =>
                                 for (inputValue <- inputPromise.get; // TODO catch exceptions
-                                     result <- doCompute(function, inputValue))
+                                     result <- doCompute(function, inputValue._1))
                                   yield result
                             };
                             _ = state.set(newState);
@@ -319,12 +323,12 @@ class HashedPromise[A : Hashable, B : Hashable]
       getHash
   }
 
-  def peek: Option[Future[B]] = state.get() match {
+  def peek: Option[Future[(B, Fingerprint[A])]] = state.get() match {
     case st : State.ResultFutureState[A, B] => Some(st.resultFuture)
     case _ => None
   }
 
-  def get: Future[B] = state.get() match {
+  def get: Future[(B,Fingerprint[A])] = state.get() match {
     case st: State.ResultFutureState[A, B] => st.resultFuture
     case st: State.ComputingHash[A, B] =>
       for (_ <- st.hashFuture; result <- get) yield result
@@ -332,5 +336,7 @@ class HashedPromise[A : Hashable, B : Hashable]
       triggerComputation()
       get
   }
+
+  def getOutput: Future[B] = get.map(_._1)
 }
 

@@ -7,7 +7,7 @@ orbs:
 
 workflows:
   version: 2
-  windows-jdk12:
+  linux-jdk15:
     jobs:
       - test:
           filters:
@@ -20,7 +20,7 @@ workflows:
 jobs:
   test:
 
-    executor: { name: windows/default }
+    machine: {image: ubuntu-2004:202010-01}
 
     steps:
       - checkout
@@ -32,31 +32,31 @@ jobs:
       # Download and cache Isabelle
       - restore_cache:
           keys:
-            - v3-isabelle-2020-windows
+            - v3-isabelle-2020-linux
       - run:
           name: Downloading Isabelle 2020 (if needed)
           shell: bash
           command: |
             if ! [ -e ~/install/Isabelle2020 ]; then
               mkdir -p ~/install
-              case windows in
+              case linux in
                 windows)
                   curl "https://isabelle.in.tum.de/website-Isabelle2020/dist/Isabelle2020.exe" -o /tmp/isabelle.exe
                   7z x -y -o"$HOME/install" /tmp/isabelle.exe;;
                 linux|macos)
-                  curl https://isabelle.in.tum.de/website-Isabelle2020/dist/Isabelle2020_windows.tar.gz | tar -x -z -C ~/install;;
+                  curl https://isabelle.in.tum.de/website-Isabelle2020/dist/Isabelle2020_linux.tar.gz | tar -x -z -C ~/install;;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
             - ~/install/Isabelle2020
-          key: v3-isabelle-2020-windows
+          key: v3-isabelle-2020-linux
 
       # Download and cache AFP
       - restore_cache:
           keys:
-            - v1-afp-2020-windows
+            - v1-afp-2020-linux
       - run:
           name: Downloading AFP 2020
           shell: bash
@@ -76,7 +76,7 @@ jobs:
       - save_cache:
           paths:
             - ~/install/afp-2020
-          key: v1-afp-2020-windows
+          key: v1-afp-2020-linux
 
       # Build QRHL theory
       - run:
@@ -87,11 +87,11 @@ jobs:
             echo v5 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
-            - v5-isabelle-heaps-2020-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2020-windows-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2020-windows-QRHL-
-            - v5-isabelle-heaps-2020-windows-Prerequisites-
-            - v4-isabelle-heaps-2020-windows-QRHL-
+            - v5-isabelle-heaps-2020-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2020-linux-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2020-linux-QRHL-
+            - v5-isabelle-heaps-2020-linux-Prerequisites-
+            - v4-isabelle-heaps-2020-linux-QRHL-
       - run:
           name: Building prerequisite theories
           shell: bash
@@ -101,7 +101,7 @@ jobs:
             for i in 1 2 3 4 5 6 7 8 9 10; do sleep 300; echo "--- keep alive output --"; done &
 
             if ! sha1sum -c ~/qrhl-sha1sum; then
-              case windows in
+              case linux in
                 windows)
                   # TODO: Under windows, need a different invocation, check whether this works
                   ~/install/Isabelle2020/contrib/cygwin/bin/bash ~/install/Isabelle2020/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2020/thys -d . QRHL-Prerequisites;;
@@ -112,7 +112,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.isabelle
-          key: v5-isabelle-heaps-2020-windows-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2020-linux-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
       - run:
           name: Building QRHL theories
           shell: bash
@@ -122,7 +122,7 @@ jobs:
             for i in 1 2 3 4 5 6 7 8 9 10; do sleep 300; echo "--- keep alive output --"; done &
 
             if ! sha1sum -c ~/qrhl-sha1sum; then
-              case windows in
+              case linux in
                 windows)
                   # TODO: Under windows, need a different invocation, check whether this works
                   ~/install/Isabelle2020/contrib/cygwin/bin/bash ~/install/Isabelle2020/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2020/thys -d . QRHL;;
@@ -136,13 +136,13 @@ jobs:
           paths:
             - ~/.isabelle
             - ~/qrhl-sha1sum
-          key: v5-isabelle-heaps-2020-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2020-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
 
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v1-dependencies-windows-{{ checksum "build.sbt" }}
-            - v1-dependencies-windows-
+            - v1-dependencies-linux-{{ checksum "build.sbt" }}
+            - v1-dependencies-linux-
       - run:
           name: Downloading build dependencies (if needed)
 
@@ -164,33 +164,33 @@ jobs:
             - $LOCALAPPDATA\Coursier\Cache
             - ~/.cache/coursier
             - ~/dependencies-sha1sum
-          key: v1-dependencies-windows-{{ checksum "build.sbt" }}
+          key: v1-dependencies-linux-{{ checksum "build.sbt" }}
 
       - run:
           name: Setting up Java
           shell: bash
           command: |
-            case windows in
+            case linux in
               linux)
-                if [ 12 != 11 ]; then
-                  sudo apt install --yes openjdk-12-jdk
-                  sudo update-alternatives --set java /usr/lib/jvm/java-12-openjdk-amd64/bin/java
+                if [ 15 != 11 ]; then
+                  sudo apt install --yes openjdk-15-jdk
+                  sudo update-alternatives --set java /usr/lib/jvm/java-15-openjdk-amd64/bin/java
                 fi;;
               macos)
-                if [ 12 != 11 ]; then
-                  brew cask install adoptopenjdk12
+                if [ 15 != 11 ]; then
+                  brew cask install adoptopenjdk15
                 fi;;
             esac
 
             # Check if we have the right Java version
             java -version
-            java -version 2>&1 | grep 'version "12\b' -q
+            java -version 2>&1 | grep 'version "15\b' -q
 
       - run:
           name: Running tests
           shell: bash
           command: |
-            case windows in
+            case linux in
               windows)
                 # Isabelle process calls rebaseall and then fails, unless we deactivate it
                 > ~/install/Isabelle2020/contrib/cygwin/isabelle/rebaseall

@@ -135,7 +135,7 @@ class CacheTest extends AnyFunSuite {
     def compute(map : Map[Int,Int]) : Int = {
       val map2 = new HashedMap(Hash.randomHash(), map)
       val hashedResultPromise = HashedPromise[FM,Int](computation, map2)
-      val hashedResult = await(hashedResultPromise.get)
+      val hashedResult = await(hashedResultPromise.getOutput)
       hashedResult
     }
 
@@ -174,7 +174,7 @@ class CacheTest extends AnyFunSuite {
 
     def compute(i: Int) : Int = {
       val hashedResultPromise = HashedPromise[Int,Int](computation, i)
-      val hashedResult = await(hashedResultPromise.get)
+      val hashedResult = await(hashedResultPromise.getOutput)
       hashedResult
     }
 
