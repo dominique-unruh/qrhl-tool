@@ -316,8 +316,10 @@ object Toplevel {
     computeStateFromCommands(initialState, commands.toSeq, fs)
   }
 
+  /** path must be absolute */
   def computeStateFromFileContent(initialState: State, path: Path, fileContent: FileSnapshot, fs: FingerprintedDirectorySnapshot): State =
-    computeStateFromReadline(initialState: State, new ReadLine.FileSnapshot(fileContent, path), fs)
+    computeStateFromReadline(initialState.changeDirectory(path.getParent),
+      new ReadLine.FileSnapshot(fileContent, path), fs)
 
   private val cachedApplyCommandToState = HashedFunction.fingerprintedComputation[(Command, State, DirectorySnapshot), State] {
     case (command, state, directory) =>
