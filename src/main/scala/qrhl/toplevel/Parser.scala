@@ -563,7 +563,7 @@ object Parser extends JavaTokenParsers {
   val qed : Parser[QedCommand] = "qed" ^^ { _ => QedCommand() }
 
   val debug : Parser[DebugCommand] = "debug:" ~>
-    ("goal" ^^ { _ => DebugCommand.goals((context,goals,output) => for (g <- goals) output.println(g.toTerm(context))) } |
+    ( // "goal" ^^ { _ => DebugCommand.goals((context,goals,output) => for (g <- goals) output.println(g.toTerm(context))) } |
       "isabelle" ^^ { _ => DebugCommand.isabelle })
 
   val changeDirectory : Parser[ChangeDirectoryCommand] = literal("changeDirectory") ~> quotedString ^^ ChangeDirectoryCommand.apply
@@ -580,7 +580,10 @@ object Parser extends JavaTokenParsers {
   val include : Parser[IncludeCommand] =
     "include" ~> quotedString ^^ IncludeCommand.apply
 
+  val focus : Parser[FocusCommand] =
+    "focus" ~> "[+*-]+|[{}]".r ^^ FocusCommand.apply
+
   def command(implicit context:ParserContext): Parser[Command] =
     debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
-      include | qed | changeDirectory | cheat | print_cmd | failure("expecting command")
+      include | qed | changeDirectory | cheat | print_cmd | focus | failure("expecting command")
 }

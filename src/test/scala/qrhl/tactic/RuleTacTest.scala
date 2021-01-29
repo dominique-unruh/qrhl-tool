@@ -39,8 +39,8 @@ class RuleTacTest extends AnyFunSuite {
       print("New goals: ", goals)
       goals.foreach(_.checkWelltyped(tl.state.isabelle))
       assert(goals.length == 2)
-      assert(goals(0).toString == "a ≤ 0")
-      assert(goals(1).toString == "0 ≤ c")
+      assert(goals.toList(0).toString == "a ≤ 0")
+      assert(goals.toList(1).toString == "0 ≤ c")
   }
 
   test("unicode") {

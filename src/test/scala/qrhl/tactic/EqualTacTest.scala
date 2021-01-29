@@ -41,7 +41,7 @@ class EqualTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} call p; ~ call p; {Qeq[q1=q2]}")
     val state2 = tl.state.applyTactic(EqualTac(Nil,Nil,Nil,Nil))
-    state2.goal.foreach(_.checkWelltyped(tl.state.isabelle))
+    state2.goal.iterator.foreach(_.checkWelltyped(tl.state.isabelle))
     assert(state2.goal.length==2)
   }
 
@@ -60,7 +60,7 @@ class EqualTacTest extends AnyFunSuite {
     val state2 = tl.state.applyTactic(EqualTac(Nil,Nil,Nil,Nil))
     state2.goal.foreach(_.checkWelltyped(tl.state.isabelle))
     assert(state2.goal.length==3)
-    val goal2 = state2.goal(1).asInstanceOf[QRHLSubgoal]
+    val goal2 = state2.goal.toList(1).asInstanceOf[QRHLSubgoal]
     assert(goal2.left.statements.length==1)
     val List(left) = goal2.left.statements
     assert(left.isInstanceOf[Assign])

@@ -38,151 +38,6 @@ import GIsabelle.isabelleControl
 import hashedcomputation.Implicits._
 import qrhl.isabellex.Implicits._
 
-sealed trait Subgoal extends HashedValue {
-  def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): Subgoal
-
-  /** Checks whether all isabelle terms in this goal are well-typed.
-    * Should always succeed, unless there are bugs somewhere. */
-  def checkWelltyped(context: IsabelleX.ContextX): Unit
-
-  /** This goal as a boolean term. (A valid Isabelle representation of this goal.) */
-  def toTerm(context:IsabelleX.ContextX): RichTerm
-
-  def checkVariablesDeclared(environment: Environment): Unit
-
-  def containsAmbientVar(x: String) : Boolean
-
-  @tailrec
-  final def addAssumptions(assms: List[RichTerm]): Subgoal = assms match {
-    case Nil => this
-    case a::as => addAssumption(a).addAssumptions(as)
-  }
-
-  def addAssumption(assm: RichTerm): Subgoal
-}
-
-object Subgoal {
-  private val logger = log4s.getLogger
-
-  def printOracles(thms : Thm*): Unit = {
-    for (thm <- thms)
-      show_oracles(thm)
-  }
-}
-
-object QRHLSubgoal {
-  private val logger = log4s.getLogger
-}
-
-final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]) extends Subgoal {
-  override def hash: Hash[QRHLSubgoal.this.type] =
-    HashTag()(left.hash, right.hash, pre.hash, post.hash, Hashable.hash(assumptions))
-
-  override def toString: String = {
-    val assms = if (assumptions.isEmpty) "" else
-      s"Assumptions:\n${assumptions.map(a => s"* $a\n").mkString}\n"
-    s"${assms}Pre:   $pre\n\n${left.toStringMultiline("Left:  ")}\n\n${right.toStringMultiline("Right: ")}\n\nPost:  $post"
-  }
-
-  override def checkVariablesDeclared(environment: Environment): Unit = {
-    for (x <- pre.variables)
-      if (!environment.variableExistsForPredicate(x))
-        throw UserException(s"Undeclared variable $x in precondition")
-    for (x <- post.variables)
-      if (!environment.variableExistsForPredicate(x))
-        throw UserException(s"Undeclared variable $x in postcondition")
-    for (x <- left.variablesDirect)
-      if (!environment.variableExistsForProg(x))
-        throw UserException(s"Undeclared variable $x in left program")
-    for (x <- right.variablesDirect)
-      if (!environment.variableExistsForProg(x))
-        throw UserException(s"Undeclared variable $x in left program")
-    for (a <- assumptions; x <- a.variables)
-      if (!environment.variableExists(x))
-        throw UserException(s"Undeclared variable $x in assumptions")
-  }
-
-  override def toTerm(context: IsabelleX.ContextX): RichTerm = {
-    val mlVal = MLValue((context.context,left.statements,right.statements,pre.isabelleTerm,post.isabelleTerm,assumptions.map(_.isabelleTerm)))
-    val term = Ops.qrhl_subgoal_to_term_op(mlVal).retrieveNow
-    RichTerm(term)
-  }
-
-  /** Not including ambient vars in nested programs (via Call) */
-  override def containsAmbientVar(x: String): Boolean = {
-    pre.variables.contains(x) || post.variables.contains(x) ||
-      left.variablesDirect.contains(x) || right.variablesDirect.contains(x) ||
-      assumptions.exists(_.variables.contains(x))
-  }
-
-  override def addAssumption(assm: RichTerm): QRHLSubgoal = {
-    assert(assm.typ==GIsabelle.boolT)
-    QRHLSubgoal(left,right,pre,post,assm::assumptions)
-  }
-
-  /** Checks whether all isabelle terms in this goal are well-typed.
-    * Should always succeed, unless there are bugs somewhere. */
-  override def checkWelltyped(context:IsabelleX.ContextX): Unit = {
-    for (a <- assumptions) a.checkWelltyped(context, GIsabelle.boolT)
-    left.checkWelltyped(context)
-    right.checkWelltyped(context)
-    pre.checkWelltyped(context, GIsabelle.predicateT)
-    post.checkWelltyped(context, GIsabelle.predicateT)
-  }
-
-  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): QRHLSubgoal = {
-//    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptions for simplification")
-    val thms = new ListBuffer[Thm]()
-    val assms2 = assumptions.map(_.simplify(isabelle,facts,thms))
-    val assms3: List[RichTerm] = assms2.filter(_.isabelleTerm!=GIsabelle.True_const)
-    val pre2 = pre.simplify(isabelle,facts,thms)
-    val post2 = post.simplify(isabelle,facts,thms)
-    val left2 = if (everywhere) left.simplify(isabelle,facts,thms) else left
-    val right2 = if (everywhere) right.simplify(isabelle,facts,thms) else right
-
-    Subgoal.printOracles(thms.toSeq : _*)
-    QRHLSubgoal(left2, right2, pre2, post2, assms2)
-  }
-}
-
-final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
-  override def hash: Hash[AmbientSubgoal.this.type] =
-    HashTag()(goal.hash)
-
-  override def toString: String = goal.toString
-
-  override def checkVariablesDeclared(environment: Environment): Unit =
-    for (x <- goal.variables)
-      if (!environment.variableExists(x))
-        throw UserException(s"Undeclared variable $x")
-
-  /** This goal as a boolean expression. */
-  override def toTerm(context: IsabelleX.ContextX): RichTerm = goal
-
-  override def containsAmbientVar(x: String): Boolean = goal.variables.contains(x)
-
-  override def addAssumption(assm: RichTerm): AmbientSubgoal = {
-    assert(assm.typ == GIsabelle.boolT)
-    AmbientSubgoal(assm.implies(goal))
-  }
-
-  /** Checks whether all isabelle terms in this goal are well-typed.
-    * Should always succeed, unless there are bugs somewhere. */
-  override def checkWelltyped(context: IsabelleX.ContextX): Unit = goal.checkWelltyped(context, GIsabelle.boolT)
-
-  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): AmbientSubgoal = {
-    val (term, thm) = goal.simplify(isabelle, facts)
-    Subgoal.printOracles(thm)
-    AmbientSubgoal(term)
-  }
-}
-
-object AmbientSubgoal {
-  def apply(goal: Term, assms: Seq[Term]): AmbientSubgoal =
-    new AmbientSubgoal(RichTerm(GIsabelle.boolT, assms.foldRight(goal) { (assm,goal) => GIsabelle.implies(assm,goal) }))
-  def apply(goal: RichTerm, assms: Seq[RichTerm]): AmbientSubgoal =
-    AmbientSubgoal(goal.isabelleTerm, assms.map(_.isabelleTerm))
-}
 
 trait Tactic extends HashedValue {
   def apply(state: State, goal : Subgoal)(implicit output: PrintWriter) : List[Subgoal]
@@ -267,8 +122,9 @@ object CheatMode {
   def make(cheatAtAll:Boolean): CheatMode = new CheatMode(cheatAtAll=cheatAtAll,false,false,false)
 }
 
+
 class State private (val environment: Environment,
-                     val goal: List[Subgoal],
+                     val goal: Goal,
                      val currentLemma: Option[(String,RichTerm)],
                      private val _isabelle: Option[IsabelleX.ContextX],
                      private val _isabelleTheory: List[Path],
@@ -280,6 +136,9 @@ class State private (val environment: Environment,
                      val lastOutput : String,
                      _hash : Hash[State])
     extends HashedValue {
+  def focusOrUnfocus(focusVariant: String): State = copy(goal = goal.focusOrUnfocus(focusVariant),
+    hash = HashTag()(hash, Hashable.hash(focusVariant)))
+
 
   val hash: Hash[this.type] = _hash.asInstanceOf[Hash[this.type]]
 
@@ -330,7 +189,7 @@ class State private (val environment: Environment,
 
   def qed: State = {
     assert(currentLemma.isDefined)
-    assert(goal.isEmpty)
+    assert(goal.isProved)
 
     val (name,prop) = currentLemma.get
     val isa = if (name!="") _isabelle.map(_.addAssumption(name,prop.isabelleTerm)) else _isabelle
@@ -392,19 +251,17 @@ class State private (val environment: Environment,
 
   def applyTactic(tactic:Tactic)(implicit output: PrintWriter) : State =
     if (cheatMode.cheating)
-      copy(goal=Nil, hash=HashTag()(hash))
-    else
-      goal match {
-        case Nil =>
-          throw UserException("No pending proof")
-        case subgoal::subgoals =>
-          val newSubgoals = tactic.apply(this,subgoal)
-          copy(goal=newSubgoals ++ subgoals,
-            hash=HashTag()(hash,Hashable.hash(newSubgoals)))
-      }
+      copy(goal=Goal.empty, hash=HashTag()(hash))
+    else if (goal.isProved)
+      throw UserException("No pending proof")
+    else {
+      val newGoal = goal.applyTactic(this, tactic)
+      copy(goal = newGoal,
+        hash=HashTag()(hash, newGoal.hash))
+    }
 
   private def copy(environment:Environment=environment,
-                   goal:List[Subgoal]=goal,
+                   goal:Goal=goal,
                    isabelle:Option[IsabelleX.ContextX]=_isabelle,
 //                   dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,RichTerm)]=currentLemma,
@@ -434,19 +291,14 @@ class State private (val environment: Environment,
   def openGoal(name:String, goal:Subgoal) : State = this.currentLemma match {
     case None =>
       goal.checkVariablesDeclared(environment)
-      copy(goal=List(goal), currentLemma=Some((name,goal.toTerm(_isabelle.get))),
+      copy(goal=Goal(goal), currentLemma=Some((name,goal.toTerm(_isabelle.get))),
         hash = HashTag()(hash,Hashable.hash(name), goal.hash))
     case _ => throw UserException("There is still a pending proof.")
   }
 
   override def toString: String = if (cheatMode.cheating)
     "In cheat mode."
-  else goal match {
-    case Nil => "No current goal."
-    case List(goal1) => s"Goal:\n\n" + goal1
-    case List(goal1,rest @ _*) =>
-      s"${goal.size} subgoals:\n\n" + goal1 + "\n\n----------------------------------------------------\n\n" + rest.mkString("\n\n")
-  }
+  else goal.longDescription
 
   lazy val parserContext: ParserContext = ParserContext(isabelle=_isabelle, environment=environment)
 
@@ -559,7 +411,7 @@ class State private (val environment: Environment,
 }
 
 object State {
-  def empty(cheating:Boolean) = new State(environment=Environment.empty, goal=Nil,
+  def empty(cheating:Boolean) = new State(environment=Environment.empty, goal=Goal.empty,
     _isabelle=None, _isabelleTheory=null,
 //    dependencies=Nil,
     currentLemma=None, currentDirectory=Paths.get("").toAbsolutePath,
