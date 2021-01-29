@@ -42,12 +42,12 @@ object Cache {
 
   private[hashedcomputation] def register[A, B: Hashable]
   (@NotNull value: B, @NotNull computationHash: Hash[_], @NotNull fingerprint: Fingerprint[A]): Unit = {
-    logger.debug(s"Registering $value in cache")
+//    logger.debug(s"Registering $value in cache")
     val valueHash = Hashable.hash(value)
     hashCache.put(valueHash, value.asInstanceOf[AnyRef])
     outputCache.put((computationHash, fingerprint.hash), valueHash)
 
-    logger.debug(s"Registering ${(computationHash, fingerprint, valueHash)} in fingerprints")
+//    logger.debug(s"Registering ${(computationHash, fingerprint, valueHash)} in fingerprints")
 
     def put[C](id: Long, hash: Hash[_], element: Element[C, _]): Long = {
       val entry = fingerprintCache.asMap().compute((id, hash), { (_, entry) =>
@@ -115,7 +115,7 @@ object Cache {
 
   def getHashByInput[A, B](@NotNull computationHash: Hash[HashedFunction[A, B]],
                            @NotNull input: A): Option[(Hash[B],Fingerprint[A])] = {
-    logger.debug(s"Searching for $computationHash($input) in fingerprints")
+//    logger.debug(s"Searching for $computationHash($input) in fingerprints")
 
     var hash: Hash[_] = computationHash
     var id = 0L

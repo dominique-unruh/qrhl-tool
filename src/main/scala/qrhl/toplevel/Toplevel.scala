@@ -31,8 +31,8 @@ import hashedcomputation.Implicits._
 /** Not thread safe */
 class Toplevel private(initialState : State) {
   private var currentState : State = initialState
-  /** List of (cmdString, position) */
-  private val commands = mutable.ArrayDeque[CommandOrString]()
+  /** Reversed list of commands */
+  private var commands : List[CommandOrString] = Nil
   private var previousFS = null : DirectorySnapshot
   private val rootDirectory : RootsDirectory = RootsDirectory()
 //  private var filesChanged = false
@@ -54,7 +54,7 @@ class Toplevel private(initialState : State) {
 
 //  def isabelle: IsabelleX = state.isabelle.isabelle
 
-  def computeState() : State = {
+  def computeState(commands: Seq[CommandOrString]) : State = {
     val fs: FingerprintedDirectorySnapshot = FingerprintedDirectorySnapshot(rootDirectory)
 
 //    if (filesChanged) {
@@ -68,7 +68,7 @@ class Toplevel private(initialState : State) {
       state
     } catch {
       case _: OutdatedSnapshotException if rootDirectory != null =>
-        computeState()
+        computeState(commands)
     }
   }
 
@@ -126,11 +126,17 @@ class Toplevel private(initialState : State) {
         if (undo > commands.length)
           throw UserException(s"Cannot undo $undo steps (only ${commands.length} steps performed so far)")
         println("Undo...\n")
-        commands.trimEnd(undo)
-        currentState = computeState()
+        // Don't store the new command list unless the "computeState()" below succeeds
+        // Otherwise ProofGeneral would get out of sync
+        val newCommands = commands.drop(undo)
+        currentState = computeState(newCommands.reverse)
+        commands = newCommands
       case _ => // Not an undo command
-        commands.append(cmd)
-        currentState = computeState()
+        // Don't store the new command list unless the "computeState()" below succeeds
+        // Otherwise ProofGeneral would get out of sync
+        val newCommands = cmd :: commands
+        currentState = computeState(newCommands.reverse)
+        commands = newCommands
     }
   }
 
@@ -348,7 +354,7 @@ object Toplevel {
         Entry[T,DirectorySnapshot](Tuple3Element3(), fsFingerprint)
       )))
 
-      logger.debug("Fingerprint: " + fingerprint)
+//      logger.debug("Fingerprint: " + fingerprint)
 
       (newState, fingerprint)
   }
