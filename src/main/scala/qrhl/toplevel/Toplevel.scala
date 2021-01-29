@@ -131,12 +131,14 @@ class Toplevel private(initialState : State) {
         val newCommands = commands.drop(undo)
         currentState = computeState(newCommands.reverse)
         commands = newCommands
+        print(currentState)
       case _ => // Not an undo command
         // Don't store the new command list unless the "computeState()" below succeeds
         // Otherwise ProofGeneral would get out of sync
         val newCommands = cmd :: commands
         currentState = computeState(newCommands.reverse)
         commands = newCommands
+        print(currentState)
     }
   }
 
