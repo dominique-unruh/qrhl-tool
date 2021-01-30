@@ -1,16 +1,14 @@
 package qrhl.toplevel
 import hashedcomputation.{Hash, HashTag, Hashable}
-import qrhl.State
+import qrhl.{State, SubgoalSelector}
 
 import java.io.PrintWriter
-
 import hashedcomputation.Implicits._
 
-case class FocusCommand(focusVariant: String) extends Command {
+case class FocusCommand(selector: Option[SubgoalSelector], label: String) extends Command {
   override protected def act(state: State, output: PrintWriter): State = {
-    state.focusOrUnfocus(focusVariant)
+    state.focusOrUnfocus(selector, label)
   }
 
-  /** Must return a stable value */
-  override def hash: Hash[FocusCommand.this.type] = HashTag()(Hashable.hash(focusVariant))
+  override def hash: Hash[FocusCommand.this.type] = HashTag()(Hashable.hash(selector), Hashable.hash(label))
 }

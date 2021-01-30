@@ -580,8 +580,18 @@ object Parser extends JavaTokenParsers {
   val include : Parser[IncludeCommand] =
     "include" ~> quotedString ^^ IncludeCommand.apply
 
+  val subgoalSelector1 : Parser[SubgoalSelector] =
+    natural ~ ("-" ~> natural).? ^^ {
+      case start ~ None => SubgoalSelector.Single(start)
+      case start ~ Some(end) => SubgoalSelector.Range(start,end)
+    }
+
+  val subgoalSelector : Parser[SubgoalSelector] =
+    rep1sep(subgoalSelector1, ",") ^^ SubgoalSelector.Union.apply
+
   val focus : Parser[FocusCommand] =
-    "focus" ~> "[+*-]+|[{}]".r ^^ FocusCommand.apply
+    "focus" ~> ((subgoalSelector <~ ":").? ~ "[+*-]+|[{}]".r) ^^
+      { case selector ~ label => FocusCommand(selector, label) }
 
   def command(implicit context:ParserContext): Parser[Command] =
     debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |

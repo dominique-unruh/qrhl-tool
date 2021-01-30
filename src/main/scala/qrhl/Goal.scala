@@ -8,6 +8,7 @@ import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.{Ops, show_oracles}
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.{Block, Environment}
+import scalaz.Heap.Empty
 
 import java.io.PrintWriter
 import scala.annotation.tailrec
@@ -194,16 +195,25 @@ case class GoalFocus(label: String, subgoals: List[Subgoal]) extends IterableOnc
 
 /**
  * Invariant:
- * - every GoalFocus is nonempty except potentially the first, and brace foci
- * - if there is a GoalFocus with label "", then subgoals is a singleton
+ * - every GoalFocus is nonempty except brace foci, and the head
+ * - only the last (i.e., outer) GoalFocus can have label ""
  * @param foci
  */
 class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
+  checkInvariant()
+
+  def checkInvariant(): Unit = {
+    if (foci.nonEmpty) {
+      assert(!foci.tail.exists(f => f.isEmpty && !f.isBraceFocus))
+      assert(!foci.dropRight(1).exists(_.label == ""))
+    }
+  }
 
   def applicableUnfocusCommand: String = {
     if (foci.isEmpty) throw new IllegalStateException("Cannot unfocus with no pending foci")
     if (foci.head.nonEmpty) throw new IllegalStateException("Cannot unfocus while there are focused subgoals")
     else if (foci.head.isBraceFocus) "}"
+    else if (foci.tail.head.isBraceFocus) "}"
     else foci.tail.head.label
   }
 
@@ -233,22 +243,24 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
   def isProved: Boolean =
     foci.isEmpty || (foci.tail.isEmpty && foci.head.isEmpty && !foci.head.isBraceFocus)
 
-  def focusBrace(): Goal = {
+  def focusBrace(selector: SubgoalSelector): Goal = {
     val firstFocus = foci.head
     if (firstFocus.isEmpty) throw UserException("No subgoal to focus on")
-    val firstSubgoal = firstFocus.subgoals.head
-    val remainingSubgoals = GoalFocus(firstFocus.label, firstFocus.subgoals.tail)
-    val newFocus = GoalFocus("{", List(firstSubgoal))
-    if (remainingSubgoals.nonEmpty || remainingSubgoals.isBraceFocus)
-      new Goal(newFocus :: remainingSubgoals :: foci.tail)
+    val (focused, remaining) = selector.select(firstFocus.subgoals)
+    val remainingFocus = GoalFocus(firstFocus.label, remaining)
+    val newFocus = GoalFocus("{", focused)
+    if (remainingFocus.nonEmpty || remainingFocus.isBraceFocus)
+      new Goal(newFocus :: remainingFocus :: foci.tail)
     else
       new Goal(newFocus :: foci.tail)
   }
 
   def unfocusBrace(): Goal = {
-    val firstFocus = foci.head
-    if (firstFocus.nonEmpty) throw UserException("Cannot unfocus, there are focused subgoals remaining")
-    if (!firstFocus.isBraceFocus) throw UserException(s"Cannot unfocus using }.")
+    var foci = this.foci
+    if (foci.head.nonEmpty) throw UserException("Cannot unfocus, there are focused subgoals remaining")
+    while (foci.nonEmpty && foci.head.isEmpty && !foci.head.isBraceFocus) foci = foci.tail
+    if (foci.isEmpty) throw UserException("No enclosing {}-focus.")
+    if (!foci.head.isBraceFocus) throw UserException(s"Cannot unfocus using } here.")
     new Goal(foci.tail)
   }
 
@@ -273,25 +285,33 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
     else new Goal(foci.tail)
   }
 
-  def focus(label: String): Goal = {
+  def focus(selector: SubgoalSelector, label: String): Goal = {
     val firstFocus = foci.head
-    if (firstFocus.isEmpty)
-      throw UserException("No goal to focus on")
-    val newFoci = firstFocus.subgoals.map(subgoal => GoalFocus(label, List(subgoal)))
-    if (firstFocus.isBraceFocus)
-      new Goal(newFoci ++ (firstFocus :: foci.tail))
+    val (focused, remaining) = selector.select(firstFocus.subgoals)
+    val newFoci = focused.map(subgoal => GoalFocus(label, List(subgoal)))
+    val remainingFocus = GoalFocus(firstFocus.label, remaining)
+    if (remainingFocus.nonEmpty)
+      throw UserException(s"Cannot focus on subset of subgoals using bullets ($label). " +
+        s"""Try "$selector: {" instead. Or select all goals.""")
+    if (remainingFocus.isBraceFocus)
+      new Goal(newFoci ++ (remainingFocus :: foci.tail))
     else
       new Goal(newFoci ++ foci.tail)
   }
 
-  def focusOrUnfocus(label: String): Goal = label match {
-    case "{" => focusBrace()
-    case "}" => unfocusBrace()
+  def focusOrUnfocus(selector: Option[SubgoalSelector], label: String): Goal = label match {
+    case "{" => focusBrace(selector.getOrElse(SubgoalSelector.First))
+    case "}" =>
+      if (selector.nonEmpty)
+        throw UserException(s"Unfocusing subgoals, but a subgoal selector ${selector.get} is given.")
+      unfocusBrace()
     case _ =>
-      if (isActiveFocusLabel(label))
+      if (isActiveFocusLabel(label)) {
+        if (selector.nonEmpty)
+          throw UserException(s"Unfocusing subgoals, but a subgoal selector ${selector.get} is given.")
         unfocus(label)
-      else
-        focus(label)
+      } else
+        focus(selector.getOrElse(SubgoalSelector.All), label)
   }
 
   override def hash: Hash[Goal.this.type] = HashTag()(Hashable.hash(foci))
@@ -304,4 +324,76 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
 object Goal {
   val empty : Goal = new Goal(Nil)
   def apply(subgoal: Subgoal) = new Goal(List(GoalFocus("", List(subgoal))))
+}
+
+trait SubgoalSelector extends HashedValue {
+  def select(subgoals: List[Subgoal]): (List[Subgoal], List[Subgoal]) = {
+    val selected = select0(subgoals)
+    val unselected = subgoals.filter(s1 => !selected.exists(s2 => s1 eq s2))
+    (selected, unselected)
+  }
+  def select0(subgoals: List[Subgoal]): List[Subgoal]
+}
+
+object SubgoalSelector {
+  val First: Single = Single(1)
+
+  object All extends SubgoalSelector {
+    override def toString: String = "all"
+    override val hash: Hash[All.this.type] = HashTag()()
+    override def select0(subgoals: List[Subgoal]): List[Subgoal] = subgoals
+    override def select(subgoals: List[Subgoal]): (List[Subgoal], List[Subgoal]) = (subgoals, Nil)
+  }
+
+  case class Single(index: Int) extends SubgoalSelector {
+    assert(index >= 1)
+    override lazy val hash: Hash[Single.this.type] = HashTag()(Hashable.hash(index))
+    override def toString: String = index.toString
+    override def select0(subgoals: List[Subgoal]): (List[Subgoal]) = {
+      if (subgoals.isEmpty) throw UserException("No subgoal to focus on.")
+      if (subgoals.length < index) throw UserException(s"Only ${subgoals.length} focused subgoals, cannot focus on ${index}th")
+      List(subgoals(index-1))
+    }
+  }
+
+  case class Range(start: Int, end: Int) extends SubgoalSelector {
+    assert(start >= 1)
+    assert(end >= start)
+    override lazy val hash: Hash[Range.this.type] = HashTag()(Hashable.hash(start), Hashable.hash(end))
+    override def toString: String = s"$start-$end"
+
+    override def select0(subgoals: List[Subgoal]): List[Subgoal] =  {
+      if (subgoals.isEmpty) throw UserException("No subgoal to focus on.")
+      if (subgoals.length < end) throw UserException(s"Only ${subgoals.length} focused subgoals, cannot focus on ${end}th")
+      subgoals.slice(start-1, end)
+    }
+  }
+
+  case object Empty extends SubgoalSelector {
+    override def toString: String = "none"
+    override def hash: Hash[Empty.this.type] = HashTag()()
+
+    override def select0(subgoals: List[Subgoal]): List[Subgoal] = Nil
+    override def select(subgoals: List[Subgoal]): (List[Subgoal], List[Subgoal]) = (Nil, subgoals)
+  }
+
+  case class Union private (selectors: List[SubgoalSelector]) extends SubgoalSelector {
+    assert(selectors.nonEmpty)
+    assert(selectors.tail.nonEmpty)
+    override lazy val hash: Hash[this.type] = HashTag()(Hashable.hash(selectors))
+    override def toString: String = selectors.mkString(",")
+
+    override def select0(subgoals: List[Subgoal]): List[Subgoal] =
+      for (selector <- selectors;
+           subgoal <- selector.select0(subgoals))
+        yield subgoal
+  }
+
+  object Union {
+    def apply(selectors: List[SubgoalSelector]): SubgoalSelector = selectors match {
+      case Nil => Empty
+      case List(x) => x
+      case _ => new Union(selectors)
+    }
+  }
 }

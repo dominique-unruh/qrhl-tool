@@ -9,25 +9,18 @@ import isabellex.{IsabelleX, RichTerm}
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext, Toplevel}
 import de.unruh.isabelle.control
-import control.{Isabelle, IsabelleException}
+import control.IsabelleException
 
-import scala.annotation.tailrec
-import scala.collection.mutable.ListBuffer
-import scala.util.control.Breaks
 import qrhl.State.logger
 
 import scala.collection.mutable
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
 import org.apache.commons.codec.binary.Hex
-import qrhl.isabellex.IsabelleX.globalIsabelle.show_oracles
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
-import de.unruh.isabelle.mlvalue.MLValue.Converter
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{Term, Thm, Typ}
-import hashedcomputation.filesystem.{Directory, DirectoryEntry, DirectorySnapshot, FingerprintedDirectorySnapshot, RootsDirectory}
-
-import scala.concurrent.{ExecutionContext, Future}
+import de.unruh.isabelle.pure.Typ
+import hashedcomputation.filesystem.FingerprintedDirectorySnapshot
 
 // Implicits
 import de.unruh.isabelle.mlvalue.Implicits._
@@ -136,8 +129,9 @@ class State private (val environment: Environment,
                      val lastOutput : String,
                      _hash : Hash[State])
     extends HashedValue {
-  def focusOrUnfocus(focusVariant: String): State = copy(goal = goal.focusOrUnfocus(focusVariant),
-    hash = HashTag()(hash, Hashable.hash(focusVariant)))
+  def focusOrUnfocus(selector: Option[SubgoalSelector], focusVariant: String): State =
+    copy(goal = goal.focusOrUnfocus(selector, focusVariant),
+      hash = HashTag()(hash, Hashable.hash(focusVariant)))
 
 
   val hash: Hash[this.type] = _hash.asInstanceOf[Hash[this.type]]
