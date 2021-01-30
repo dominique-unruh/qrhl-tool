@@ -91,16 +91,16 @@ case class Fingerprint[A: Hashable](@NotNull hash: Hash[A], @NotNull fingerprint
   }
 }
 
-object DummyMap extends mutable.Map[Nothing, Nothing] {
-  override def get(key: Nothing): Option[Nothing] =
+object DummyMap extends mutable.Map[Any, Any] {
+  override def get(key: Any): Option[Nothing] =
     throw new UnsupportedOperationException
-  override def subtractOne(elem: Nothing): DummyMap.this.type = this
-  override def addOne(elem: (Nothing, Nothing)): DummyMap.this.type = this
-  override def iterator: Iterator[(Nothing, Nothing)] = new Iterator[(Nothing, Nothing)] {
+  override def subtractOne(elem: Any): DummyMap.this.type = this
+  override def addOne(elem: (Any, Any)): DummyMap.this.type = this
+  override def iterator: Iterator[(Any, Any)] = new Iterator[(Any, Any)] {
     override def hasNext: Boolean = throw new UnsupportedOperationException
     override def next(): Nothing = throw new UnsupportedOperationException
   }
-  override def updateWith(key: Nothing)(remappingFunction: Option[Nothing] => Option[Nothing]): Option[Nothing] =
+  override def updateWith(key: Any)(remappingFunction: Option[Any] => Option[Any]): Option[Any] =
     throw new UnsupportedOperationException
 }
 
@@ -135,11 +135,14 @@ final class FingerprintBuilderImpl[A : Hashable](value: A) extends FingerprintBu
   override def unsafeUnderlyingValue: A = value
 
   def access[B](element: Element[A,B], fingerprint: Fingerprint[B]): Unit =
-    entries.updateWith(element) {
-      case None => Some(fingerprint)
-      case Some(fingerprint1) =>
-        Some(fingerprint1.asInstanceOf[Fingerprint[B]].join(fingerprint))
-    }
+    if (entries eq DummyMap)
+      {}
+    else
+      entries.updateWith(element) {
+        case None => Some(fingerprint)
+        case Some(fingerprint1) =>
+          Some(fingerprint1.asInstanceOf[Fingerprint[B]].join(fingerprint))
+      }
 
   def accessAll(): Unit = entries = DummyMap.asInstanceOf[MapType]
 
