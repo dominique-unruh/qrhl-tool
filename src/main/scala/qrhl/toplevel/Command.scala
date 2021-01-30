@@ -149,8 +149,12 @@ case class TacticCommand(tactic:Tactic) extends Command {
 
 case class QedCommand() extends Command {
   override def act(state: State, output: PrintWriter): State = {
-    if (!state.goal.isProved)
-      throw UserException("Pending subgoals.")
+    if (!state.goal.isProved) {
+      if (state.goal.isEmpty)
+        throw UserException(s"You need to unfocus using ${state.goal.applicableUnfocusCommand} first.")
+      else
+        throw UserException("Pending subgoals.")
+    }
     if (state.currentLemma.isEmpty)
       throw UserException("Not in a proof.")
     if (state.currentLemma.get._1 != "")
