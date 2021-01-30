@@ -176,7 +176,7 @@ jobs:
                 fi;;
               macos)
                 if [ @{jdk} != 11 ]; then
-                  brew cask install adoptopenjdk@{jdk}
+                  brew install --cask adoptopenjdk@{jdk}
                 fi;;
             esac
 
