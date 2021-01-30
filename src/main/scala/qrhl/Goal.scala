@@ -217,7 +217,7 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
 
   def longDescription: String = {
     if (isProved)
-      "No current goal"
+      "No current goal."
     else if (foci.head.isEmpty)
       s"No focused goals (use ${applicableUnfocusCommand} to unfocus)"
     else if (foci.tail.isEmpty)
