@@ -4,3 +4,7 @@
 [submodule "scala-isabelle"]
 	path = scala-isabelle
 	url = ../scala-isabelle.git
+[submodule "proofgeneral"]
+	path = proofgeneral
+	url = https://github.com/dominique-unruh/proofgeneral.git
+	branch = qrhl-tool

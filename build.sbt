@@ -43,33 +43,6 @@ libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30"
 libraryDependencies += "org.jline" % "jline" % "3.16.0"
 libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.9"
 
-val pgUrl = "https://github.com/ProofGeneral/PG/archive/a7894708e924be6c3968054988b50da7f6c02c6b.tar.gz"
-val pgPatch = "src/proofgeneral/proof-site.el.patch"
-val pgExtractPath = "target/downloads/PG"
-lazy val downloadPG = taskKey[Unit]("Download ProofGeneral")
-//managedResources in Compile := (managedResources in Compile).dependsOn(downloadPG).value
-packageBin in Universal := (packageBin in Universal).dependsOn(downloadPG).value
-
-downloadPG := {
-  import scala.sys.process._
-  val extractPath = baseDirectory.value / pgExtractPath
-
-  if (!extractPath.exists()) {
-    println("Downloading ProofGeneral.")
-    try {
-      extractPath.mkdirs()
-      print ( ( new URL(pgUrl) #> Process(List("tar", "xz", "--strip-components=1"), cwd = extractPath) ).!! )
-      print ( ( (baseDirectory.value / pgPatch) #> Process(List("patch", "generic/proof-site.el"), cwd = extractPath) ).!! )
-      print ( ( (baseDirectory.value / pgPatch) #> Process(List("cp", "-a", "src/proofgeneral", pgExtractPath + "/qrhl"), cwd = baseDirectory.value) ).!! )
-    } catch {
-      case e : Throwable =>
-        print("Removing "+extractPath)
-        IO.delete(extractPath)
-        throw e
-    }
-  }
-}
-
 
 lazy val makeGITREVISION = taskKey[Unit]("Create GITREVISION")
 makeGITREVISION := {
@@ -124,7 +97,7 @@ mappings in Universal += (baseDirectory.value / "doc" / "manual.pdf" -> "manual.
 mappings in Universal += (baseDirectory.value / "target" / "GITREVISION" -> "GITREVISION")
 mappings in Universal += (baseDirectory.value / "qrhl-tool.conf.dist" -> "qrhl-tool.conf")
 
-mappings in Universal ++= directory("PG")
+mappings in Universal ++= directory("proofgeneral")
 
 // Without this, updateSbtClassifiers fails (and that breaks Intelli/J support)
 resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
