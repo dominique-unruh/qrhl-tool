@@ -3,7 +3,7 @@
     <module name="qrhl" />
     <option name="allowRunningInParallel" value="false" />
     <option name="selectedOptions">
-      <set />
+      <list />
     </option>
     <option name="testKind" value="All in package" />
     <option name="classBuf">
@@ -27,8 +27,6 @@
         <option value="qrhl.isabellex.IsabelleXTest" />
         <option value="qrhl.isabellex.ConfigurationTest" />
         <option value="qrhl.isabellex.MLValueConvertersTest" />
-        <option value="hashedcomputation.CacheTest" />
-        <option value="hashedcomputation.filesystem.DirectoryTest" />
       </list>
     </option>
     <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />

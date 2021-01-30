@@ -149,7 +149,7 @@ case class TacticCommand(tactic:Tactic) extends Command {
 
 case class QedCommand() extends Command {
   override def act(state: State, output: PrintWriter): State = {
-    if (state.goal.nonEmpty)
+    if (!state.goal.isProved)
       throw UserException("Pending subgoals.")
     if (state.currentLemma.isEmpty)
       throw UserException("Not in a proof.")
@@ -172,8 +172,8 @@ class DebugCommand private (action: (State,PrintWriter) => State) extends Comman
 
 object DebugCommand {
   def state(action: (State,PrintWriter) => Unit): DebugCommand = new DebugCommand({ (state,output) => action(state,output); state})
-  def goals(action: (IsabelleX.ContextX, List[Subgoal], PrintWriter) => Unit): DebugCommand =
-    new DebugCommand({(state,output) => action(state.isabelle, state.goal, output); state})
+//  def goals(action: (IsabelleX.ContextX, List[Subgoal], PrintWriter) => Unit): DebugCommand =
+//    new DebugCommand({(state,output) => action(state.isabelle, state.goal, output); state})
   val isabelle: DebugCommand = DebugCommand.state({
     (state, output) =>
       val str = Ops.debugOp(MLValue(state.isabelle.context)).retrieveNow
