@@ -168,8 +168,10 @@ object AmbientSubgoal {
     AmbientSubgoal(goal.isabelleTerm, assms.map(_.isabelleTerm))
 }
 
-case class GoalFocus(selector: String, subgoals: List[Subgoal]) extends IterableOnce[Subgoal] with HashedValue {
-  def applyTactic(state: State, tactic: Tactic)(implicit output: PrintWriter): GoalFocus = new GoalFocus(selector,
+case class GoalFocus(label: String, subgoals: List[Subgoal]) extends IterableOnce[Subgoal] with HashedValue {
+  def isBraceFocus: Boolean = label == "{"
+
+  def applyTactic(state: State, tactic: Tactic)(implicit output: PrintWriter): GoalFocus = new GoalFocus(label,
     tactic.apply(state, subgoals.head) ++ subgoals.tail)
 
   def longDescription: String = {
@@ -182,31 +184,101 @@ case class GoalFocus(selector: String, subgoals: List[Subgoal]) extends Iterable
   }
 
   def isEmpty: Boolean = subgoals.isEmpty
+  def nonEmpty: Boolean = !isEmpty
   def length: Int = subgoals.length
 
   override def iterator: Iterator[Subgoal] = subgoals.iterator
 
-  override def hash: Hash[GoalFocus.this.type] = HashTag()(Hashable.hash(selector), Hashable.hash(subgoals))
+  override def hash: Hash[GoalFocus.this.type] = HashTag()(Hashable.hash(label), Hashable.hash(subgoals))
 }
 
+/**
+ * Invariant:
+ * - every GoalFocus is nonempty except potentially the first, and brace foci
+ * - if there is a GoalFocus with label "", then subgoals is a singleton
+ * @param subgoals
+ */
 class Goal(subgoals: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
+
+  def applicableUnfocusCommand: String = {
+    if (subgoals.isEmpty) throw new IllegalStateException("Cannot unfocus with no pending foci")
+    if (subgoals.head.nonEmpty) throw new IllegalStateException("Cannot unfocus while there are focused subgoals")
+    else if (subgoals.head.isBraceFocus) "}"
+    else subgoals.tail.head.label
+  }
+
+  def unfocusedShortDescription: String = {
+    subgoals.tail.map { focus =>
+      (if (focus.isBraceFocus) "{}" else focus.label) +
+        (if (focus.length == 1) "" else " " + focus.length)
+    } mkString(", ")
+  }
+
+
   def longDescription: String = {
     if (isProved)
       "No current goal"
     else if (subgoals.head.isEmpty)
-      "No focused goals"
+      s"No focused goals (use ${applicableUnfocusCommand} to unfocus)"
     else if (subgoals.tail.isEmpty)
       subgoals.head.longDescription
     else
-      subgoals.head.longDescription + "\n\n(Additionally, there are some unfocused goals.)"
+      subgoals.head.longDescription + s"\n\n(Additionally, there are some unfocused goals: $unfocusedShortDescription)"
 
   }
 
   def applyTactic(state: State, tactic: Tactic)(implicit output: PrintWriter): Goal =
     new Goal(subgoals.head.applyTactic(state, tactic) :: subgoals.tail)
 
-  def isProved: Boolean = subgoals.forall(_.isEmpty)
-  def focusOrUnfocus(focusVariant: String): Goal = ???
+  def isProved: Boolean =
+    subgoals.isEmpty || (subgoals.tail.isEmpty && subgoals.head.isEmpty && !subgoals.head.isBraceFocus)
+
+  def focusBrace(): Goal = ???
+
+  def unfocusBrace(): Goal = ???
+
+  def isActiveFocusLabel(label: String): Boolean = {
+    for (focus <- subgoals) {
+      if (focus.isBraceFocus)
+        return false
+      else if (focus.label == label)
+        return true
+    }
+    return false
+  }
+
+  def unfocus(label: String): Goal = {
+    if (subgoals.isEmpty) throw UserException("Nothing to unfocus")
+    else if (subgoals.head.nonEmpty) throw UserException("Cannot unfocus, there are focus subgoals remaining")
+    else if (subgoals.head.isBraceFocus) throw UserException(s"Cannot unfocus using $label, use } to unfocus")
+    else if (subgoals.tail.isEmpty) throw UserException("Nothing to unfocus")
+    else if (subgoals.tail.head.isBraceFocus) throw UserException(s"Cannot unfocus using $label, use } to unfocus")
+    else if (subgoals.tail.head.label == "") throw new IllegalStateException("Unexpected \"\" focus label")
+    else if (subgoals.tail.head.label != label) throw UserException(s"Cannot unfocus using $label, use ${subgoals.tail.head.label} to unfocus")
+    else new Goal(subgoals.tail)
+  }
+
+  def focus(label: String): Goal = {
+    val firstFocus = subgoals.head
+    if (firstFocus.isEmpty)
+      throw UserException("No goal to focus on")
+    val newFoci = firstFocus.subgoals.map(subgoal => GoalFocus(label, List(subgoal)))
+    if (firstFocus.isBraceFocus)
+      new Goal(newFoci ++ (firstFocus :: subgoals.tail))
+    else
+      new Goal(newFoci ++ subgoals.tail)
+  }
+
+  def focusOrUnfocus(label: String): Goal = label match {
+    case "{" => focusBrace()
+    case "}" => unfocusBrace()
+    case _ =>
+      if (isActiveFocusLabel(label))
+        unfocus(label)
+      else
+        focus(label)
+  }
+
   override def hash: Hash[Goal.this.type] = HashTag()(Hashable.hash(subgoals))
 
   def length: Int = subgoals.map(_.length).sum

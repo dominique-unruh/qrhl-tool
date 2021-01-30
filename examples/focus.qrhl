@@ -1,0 +1,18 @@
+# Example of focusing on subgoals
+
+isabelle.
+
+lemma test: 1=1 & 2=2 & 3=3 & 4=4 & 5=5.
+  isa intro conjI.
+  focus +. 
+   simp.
+  focus +.
+   simp.
+  focus +.
+   simp.
+  focus +.
+   simp.
+  focus +.
+   simp.
+qed.
+
