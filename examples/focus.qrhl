@@ -16,3 +16,25 @@ lemma test: 1=1 & 2=2 & 3=3 & 4=4 & 5=5.
    simp.
 qed.
 
+lemma test: 1=1 & 2=2 & 3=3 & 4=4 & 5=5.
+  isa intro conjI.
+  focus {.
+   simp.
+  focus }.
+
+  focus {.
+   simp.
+  focus }.
+
+  focus {.
+   simp.
+  focus }.
+
+  focus {.
+   simp.
+  focus }.
+
+  focus {.
+   simp.
+  focus }.
+qed.
