@@ -413,7 +413,7 @@ object Toplevel {
   }
 
   private def scanCommand(string: String): Option[(String, Int)] = {
-    Parser.parse(Parser.focus0, string) match {
+    Parser.parse(Parser.focus, string) match {
       case Parser.Success(result, next) =>
         return Some((string.substring(0, next.offset), next.offset))
       case Parser.NoSuccess(msg, next) =>
