@@ -271,7 +271,7 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
       else if (focus.label == label)
         return true
     }
-    return false
+    false
   }
 
   def unfocus(label: String): Goal = {
@@ -286,6 +286,8 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
   }
 
   def focus(selector: SubgoalSelector, label: String): Goal = {
+    if (foci.isEmpty)
+      throw UserException("No subgoals.")
     val firstFocus = foci.head
     val (focused, remaining) = selector.select(firstFocus.subgoals)
     val newFoci = focused.map(subgoal => GoalFocus(label, List(subgoal)))

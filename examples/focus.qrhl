@@ -4,54 +4,45 @@ isabelle.
 
 lemma test: 1=1 & 2=2 & 3=3 & 4=4 & 5=5.
   isa intro conjI.
-  focus +. 
-   simp.
-  focus +.
-   simp.
-  focus +.
-   simp.
-  focus +.
-   simp.
-  focus +.
-   simp.
+  + simp.
+  + simp.
+  + simp.
+  + simp.
+  + simp.
 qed.
 
 lemma test: 1=1 & 2=2 & 3=3 & 4=4 & 5=5.
   isa intro conjI.
-  focus {.
-   simp.
-  focus }.
+  {
+    simp.
+  }
 
-  focus {.
-   simp.
-  focus }.
+  {
+    simp.
+  }
 
-  focus {.
-   simp.
-  focus }.
+  {
+    simp.
+  }
 
-  focus {.
-   simp.
-  focus }.
+  {
+    simp.
+  }
 
-  focus {.
-   simp.
-  focus }.
+  {
+    simp.
+  }
 qed.
 
 lemma test: 1=1 & 2=2 & 3=3 & 4=4 & 5=5.
   isa intro conjI.
-  focus 1-2: {.
+
+  1-2: {
     simp!. 
     simp!.
-  focus }.
+  }
 
-  focus 3,2,1: +.
-    simp.
-
-  focus +.
-    simp.
-
-  focus +.
-    simp.
+  3,2,1: + simp.
+         + simp.
+         + simp.
 qed.

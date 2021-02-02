@@ -129,9 +129,12 @@ class State private (val environment: Environment,
                      val lastOutput : String,
                      _hash : Hash[State])
     extends HashedValue {
-  def focusOrUnfocus(selector: Option[SubgoalSelector], focusVariant: String): State =
+  def focusOrUnfocus(selector: Option[SubgoalSelector], focusVariant: String): State = {
+    if (currentLemma.isEmpty)
+      throw UserException("No pending proof")
     copy(goal = goal.focusOrUnfocus(selector, focusVariant),
       hash = HashTag()(hash, Hashable.hash(focusVariant)))
+  }
 
 
   val hash: Hash[this.type] = _hash.asInstanceOf[Hash[this.type]]

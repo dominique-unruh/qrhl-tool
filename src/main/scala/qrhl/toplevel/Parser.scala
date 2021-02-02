@@ -589,11 +589,14 @@ object Parser extends JavaTokenParsers {
   val subgoalSelector : Parser[SubgoalSelector] =
     rep1sep(subgoalSelector1, ",") ^^ SubgoalSelector.Union.apply
 
-  val focus : Parser[FocusCommand] =
-    "focus" ~> ((subgoalSelector <~ ":").? ~ "[+*-]+|[{}]".r) ^^
+  val focus0: Parser[FocusCommand] =
+    ((subgoalSelector <~ ":").? ~ "[+*-]+|[{}]".r) ^^
       { case selector ~ label => FocusCommand(selector, label) }
+
+  val focus : Parser[FocusCommand] = // TODO: remove
+    "focus" ~> focus0
 
   def command(implicit context:ParserContext): Parser[Command] =
     debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
-      include | qed | changeDirectory | cheat | print_cmd | focus | failure("expecting command")
+      include | qed | changeDirectory | cheat | print_cmd | focus | focus0 | failure("expecting command")
 }

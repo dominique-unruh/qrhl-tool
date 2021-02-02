@@ -8,6 +8,7 @@ import de.unruh.isabelle.control.IsabelleException
 import hashedcomputation.Fingerprint.Entry
 import hashedcomputation.filesystem.{Directory, DirectorySnapshot, FileSnapshot, FingerprintedDirectorySnapshot, OutdatedSnapshotException, RootsDirectory}
 import qrhl.toplevel.Toplevel.CommandOrString
+import scalaz.Scalaz.ToIdOps
 import sourcecode.Text.generate
 
 import scala.collection.mutable
@@ -131,14 +132,14 @@ class Toplevel private(initialState : State) {
         val newCommands = commands.drop(undo)
         currentState = computeState(newCommands.reverse)
         commands = newCommands
-        print(currentState)
+        println(currentState)
       case _ => // Not an undo command
         // Don't store the new command list unless the "computeState()" below succeeds
         // Otherwise ProofGeneral would get out of sync
         val newCommands = cmd :: commands
         currentState = computeState(newCommands.reverse)
         commands = newCommands
-        print(currentState)
+        println(currentState)
     }
   }
 
@@ -233,8 +234,9 @@ object Toplevel {
   }
 
   abstract class ReadLine {
-    def readline(prompt:String) : String
+    def readline(prompt: String) : String
     def position : String
+    val unprocessed: StringBuilder = new StringBuilder()
   }
   object ReadLine {
     class FileSnapshot(file: filesystem.FileSnapshot, path: Path) extends ReadLine {
@@ -401,43 +403,70 @@ object Toplevel {
     state
   }
 
+  private def stripComment(line: String): String = line match {
+    case Toplevel.commentRegex(_*) => ""
+    case _ => line
+  }
+
+  private def clearBuilderIfWhite(str: StringBuilder): Unit = {
+    if (str.forall(_.isWhitespace)) str.clear()
+  }
+
+  private def scanCommand(string: String): Option[(String, Int)] = {
+    Parser.parse(Parser.focus0, string) match {
+      case Parser.Success(result, next) =>
+        return Some((string.substring(0, next.offset), next.offset))
+      case Parser.NoSuccess(msg, next) =>
+    }
+
+    Toplevel.commandEnd.findFirstMatchIn(string) match {
+      case Some(m) =>
+        return Some((string.substring(0,m.start), m.end))
+      case None =>
+    }
+
+    None
+  }
+
   /** Reads one command from the input. The last line of the command must end with ".".
    * Comment lines (starting with whitespace + #) are skipped.
+   *
    * @param readLine command for reading lines from the input, invoked with the prompt to show
    * @return the command (without the "."), null on EOF
    * */
   private def readCommand(readLine : ReadLine): String = {
-    val str = new StringBuilder()
-    var first = true
+    val str = readLine.unprocessed
     while (true) {
-      //      val line = StdIn.readLine("qrhl> ")
+      clearBuilderIfWhite(str)
+
+      scanCommand(str.toString()) match {
+        case Some((command, len)) =>
+          logger.debug(s"scanCommand -> ($command, $len)")
+          str.delete(0, len)
+          return command
+        case None =>
+      }
+
       val line =
         try {
-          readLine.readline(if (first) "\nqrhl> " else "\n...> ")
+          readLine.readline(if (str.isEmpty) "\nqrhl> " else "\n...> ")
         } catch {
-          case _: org.jline.reader.EndOfFileException =>
-            null;
+          case _: org.jline.reader.EndOfFileException => null
           case _: org.jline.reader.UserInterruptException =>
             println("Aborted.")
             sys.exit(1)
         }
 
-      line match {
-        case Toplevel.commentRegex(_*) =>
-        case _ =>
-
-          if (line == null) {
-            val str2 = str.toString()
-            if (str2.trim == "") return null
-            return str2
-          }
-
-          str.append(line).append(' ') // linebreaks are translated into ' ', that way lines read from the file are the same as lines send by ProofGeneral
-
-          if (Toplevel.commandEnd.findFirstIn(line).isDefined)
-            return Toplevel.commandEnd.replaceAllIn(str.toString, "")
-          first = false
+      if (line == null) {
+        if (str.isEmpty)
+          return null;
+        else {
+          println("EOF in the middle of a command")
+          sys.exit(1)
+        }
       }
+
+      str.append(stripComment(line))
     }
 
     throw new AssertionError("unreachable code")
