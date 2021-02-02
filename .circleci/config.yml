@@ -106,11 +106,14 @@ jobs:
                 windows)
                   # TODO: Figure out how to invoke in Windows
                   uname -s # --> MSYS_NT-10.0-17763
+                  uname -m
                   echo Patching
                   echo which uname >> ~/install/Isabelle2020/lib/scripts/isabelle-platform
                   echo uname -s >> ~/install/Isabelle2020/lib/scripts/isabelle-platform
-
-                  ~/install/Isabelle2020/contrib/cygwin/bin/bash ~/install/Isabelle2020/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2020/thys -d . QRHL-Prerequisites;;
+                  echo "~/install/Isabelle2020/contrib/cygwin/bin/:$PATH"
+                  ls -lhd ~/install/Isabelle2020/contrib/cygwin/bin/
+                  ls -lhd ~/install/Isabelle2020/contrib/cygwin/bin/uname
+                  PATH="~/install/Isabelle2020/contrib/cygwin/bin/:$PATH" ~/install/Isabelle2020/contrib/cygwin/bin/bash ~/install/Isabelle2020/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2020/thys -d . QRHL-Prerequisites;;
                 *)
                   ~/install/Isabelle2020/bin/isabelle build -v -b -d ~/install/afp-2020/thys -d . QRHL-Prerequisites;;
               esac
@@ -131,11 +134,6 @@ jobs:
               case windows in
                 windows)
                   # TODO: Figure out how to invoke in Windows
-                  uname -a
-                  uname -s
-                  echo Patching
-                  echo which uname >> ~/install/Isabelle2020/contrib/cygwin/lib/scripts/isabelle-platform
-                  echo uname -s >> ~/install/Isabelle2020/contrib/cygwin/lib/scripts/isabelle-platform
                   ~/install/Isabelle2020/contrib/cygwin/bin/bash ~/install/Isabelle2020/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2020/thys -d . QRHL;;
                 *)
                   ~/install/Isabelle2020/bin/isabelle build -v -b -d ~/install/afp-2020/thys -d . QRHL;;
