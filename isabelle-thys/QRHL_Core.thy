@@ -1677,22 +1677,23 @@ lemma unitaryX[simp]: "unitary pauliX"
 
 lemma adjoint_X[simp]: "pauliX* = pauliX"
 proof -
-  let ?f = "\<lambda>x::bit. x+1"
-  have[simp]: "?f o ?f = id"
-    unfolding o_def id_def by auto
-  have[simp]: "bij ?f"
-    apply (rule o_bij[where g="?f"]; rule ext) by auto
-  have[simp]: "inj ?f"
+  define f where "f = (\<lambda>x::bit. x+1)"
+  have[simp]: "f o f = id"
+    unfolding f_def o_def id_def by auto
+  have[simp]: "bij f"
+    apply (rule o_bij[where g="f"]; rule ext) by auto
+  have[simp]: "inj f"
     apply (rule bij_is_inj) by simp
-  have[simp]: "surj ?f"
+  have[simp]: "surj f"
     apply (rule bij_is_surj) by simp
-  have inv_f[simp]: "Hilbert_Choice.inv ?f = ?f"
+  have inv_f[simp]: "Hilbert_Choice.inv f = f"
     apply (rule inv_unique_comp) by auto
-  have [simp]: "inv_option (Some \<circ> ?f) = Some \<circ> ?f"
+  have [simp]: "inv_option (Some \<circ> f) = Some \<circ> f"
     apply (subst inv_option_Some) by simp_all
   show ?thesis
     unfolding pauliX_def
     apply (subst classical_operator_adjoint)
+    unfolding f_def[symmetric]
     by auto
 qed
 

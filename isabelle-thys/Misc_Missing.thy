@@ -261,7 +261,7 @@ proof (cases "finite B")
   also have "card \<dots> = (\<Sum>y\<in>B. card (f -` {y} \<inter> A))"
     apply (rule card_UN_disjoint)
     using True assms apply (auto simp: regular_betw_n_def)
-    using card_infinite by force
+    using card.infinite by force
   also have "\<dots> = (\<Sum>y\<in>B. n)"
     using True assms by (auto simp: regular_betw_n_def)
   also have "\<dots> = n * card B"

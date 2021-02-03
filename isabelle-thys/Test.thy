@@ -11,7 +11,8 @@ Main
  *)
 begin
 
-
+lemma "map_distr (\<lambda>b. b + 1) (uniform UNIV) = uniform UNIV"
+  apply simp
 
 variables quantum q :: int and quantum r :: int and quantum s :: int
 begin

@@ -20,11 +20,11 @@ section \<open>Lemmas\<close>
 
 text \<open>Three auxiliary lemmas\<close>
 
-lemma l1: "isometry (A*) \<Longrightarrow> A \<cdot> (A* \<cdot> B) = B" for B :: "(_,_) l2bounded"
+lemma l1: "isometry (A*) \<Longrightarrow> A o\<^sub>C\<^sub>L (A* o\<^sub>C\<^sub>L B) = B" for B :: "(_,_) l2bounded"
   by (metis adjUU adjoint_twice cblinfun_apply_assoc times_idOp2)
 lemma l2: "(A \<otimes> B) \<cdot> ((A' \<otimes> B') \<cdot> C) = ((A\<cdot>A') \<otimes> (B\<cdot>B')) \<cdot> C" for A A' B B' C :: "(_,_) l2bounded"
   by (subst cblinfun_apply_assoc[symmetric], auto)
-lemma l3: "isometry A \<Longrightarrow> A* \<cdot> (A \<cdot> B) = B" for B :: "(_,_) l2bounded"
+lemma l3: "isometry A \<Longrightarrow> A* o\<^sub>C\<^sub>L (A o\<^sub>C\<^sub>L B) = B" for B :: "(_,_) l2bounded"
   by (metis adjUU cblinfun_apply_assoc times_idOp2)
 
 lemma Uora_twice: 
