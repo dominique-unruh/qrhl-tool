@@ -1827,8 +1827,16 @@ lemma bij_add_const[simp]: "bij (\<lambda>x. x+(y::_::ab_group_add))"
   apply (rename_tac z) apply (rule_tac x="z-y" in exI)
   by auto
 
-lemma bij_of_bool[simp]: "bij (\<lambda>x. of_bool (f x)) \<longleftrightarrow> bij f"
-  by -
+lemma bij_bit_of_bool[simp]: "bij (\<lambda>x. of_bool (f x) :: bit) \<longleftrightarrow> bij f"
+proof rule
+  have bij_of_bool: "bij (of_bool :: _ \<Rightarrow> bit)"
+    by (smt (verit, best) add_bit_eq_xor bijI' diff_add_cancel of_bool_eq_iff xor_bit_def)
+  then show "bij (\<lambda>x. of_bool (f x) :: bit)" if "bij f"
+    using Fun.bij_comp[of f of_bool] that unfolding o_def by simp
+  show "bij f" if "bij (\<lambda>x. of_bool (f x) :: bit)"
+    using that bij_of_bool
+    by (smt (verit, best) bijI' bij_pointE)
+qed
 
 lemma bij_equal_bit[simp]: "bij (\<lambda>x::bit. x=y)" 
   apply (rule bijI') apply simp by (meson bit_neq)
