@@ -240,7 +240,8 @@ next
   from assms obtain n where reg_n: "regular_betw_n f A B n"
     unfolding regular_betw_def by auto
   then have finite_y: "finite (f -` {y} \<inter> A)" if "y\<in>B" for y
-    by (metis regular_betw_n_def card_infinite that)
+    unfolding regular_betw_n_def using that apply auto
+    by (metis card.infinite not_gr0)
   assume "finite B"
   have "A = (\<Union>y\<in>B. f -` {y} \<inter> A)"
     using reg_n unfolding regular_betw_n_def by auto

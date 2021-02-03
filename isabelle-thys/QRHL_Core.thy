@@ -1260,7 +1260,8 @@ definition "infsetsummable f M = (\<exists>x. infsetsums f M x)"
 definition "infsetsum' f M = (if infsetsummable f M then THE x. infsetsums f M x else 0)" *)
 
 
-definition "is_measurement M = ((\<forall>i. isProjector (M i)) \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i \<cdot> \<psi>\<rangle>) = \<langle>\<phi>, P \<cdot> \<psi>\<rangle>) \<and> loewner_leq P idOp))"
+definition "is_measurement M \<longleftrightarrow> ((\<forall>i. isProjector (M i)) 
+       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> loewner_leq P idOp))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
   unfolding is_measurement_def by (auto intro: exI[of _ 0])
 
@@ -1271,7 +1272,7 @@ typedef ('a,'b) measurement = "{M::'a\<Rightarrow>('b,'b) l2bounded. is_measurem
 setup_lifting type_definition_measurement
 
 lift_definition mtotal :: "('a,'b) measurement \<Rightarrow> bool" is
-  "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i \<cdot> \<psi>\<rangle>) = \<langle>\<phi>, \<psi>\<rangle>".
+  "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, \<psi>\<rangle>".
 
 lemma isProjector_mproj[simp]: "isProjector (mproj M i)"
   using mproj[of M] unfolding is_measurement_def by auto
@@ -1645,22 +1646,23 @@ lemma unitaryCNOT[simp]: "unitary CNOT"
 
 lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
 proof -
-  let ?f = "\<lambda>(x::bit,y). (x,y+x)"
-  have[simp]: "?f o ?f = id"
-    unfolding o_def id_def by auto
-  have[simp]: "bij ?f"
-    apply (rule o_bij[where g="?f"]; rule ext) by auto
-  have[simp]: "inj ?f"
-    apply (rule bij_is_inj) by simp
-  have[simp]: "surj ?f"
+  define f where "f = (\<lambda>(x::bit,y). (x,y+x))"
+  have[simp]: "f o f = id"
+    unfolding f_def o_def id_def by fastforce
+  have[simp]: "bij f"
+    apply (rule o_bij[where g="f"]; rule ext) by auto
+  then have[simp]: "inj f"
+    by (rule bij_is_inj)
+  have[simp]: "surj f"
     apply (rule bij_is_surj) by simp
-  have inv_f[simp]: "Hilbert_Choice.inv ?f = ?f"
+  have inv_f[simp]: "Hilbert_Choice.inv f = f"
     apply (rule inv_unique_comp) by auto
-  have [simp]: "inv_option (Some \<circ> ?f) = Some \<circ> ?f"
+  have [simp]: "inv_option (Some \<circ> f) = Some \<circ> f"
     apply (subst inv_option_Some) by simp_all
   show ?thesis
     unfolding CNOT_def
     apply (subst classical_operator_adjoint)
+    unfolding f_def[symmetric]
     by auto
 qed
 

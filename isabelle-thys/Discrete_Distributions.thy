@@ -121,7 +121,7 @@ proof (rename_tac M, auto simp: is_distribution_def)
   next
     case False
     show ?thesis
-      apply (subst card_infinite[OF False])
+      apply (subst card.infinite[OF False])
       apply (rewrite asm_rl[of "1/real 0 = 0"]) apply auto[1]
       by auto
   qed
@@ -230,7 +230,7 @@ proof -
   have "weight (uniform M) = 0" if "\<not> (M \<noteq> {} \<and> finite M)"
   proof -
     from that have "card M = 0"
-      using card_empty card_infinite by blast
+      using card.empty card.infinite by blast
     then show ?thesis
       apply (transfer fixing: M)
       by (simp add: infsetsum_all_0)
@@ -888,8 +888,9 @@ lemma prob_True_prob_1:
 proof -
   define f :: "bool\<Rightarrow>bit" where "f = (\<lambda>b. if b then 1 else 0)"
   have "bij f"
-    apply (rule bijI')
-    unfolding f_def by auto
+    apply (rule bijI') unfolding f_def
+    (* Sledgehammer *)
+    using bit.distinct(2) apply presburger by (meson bit.exhaust)
   moreover have "Hilbert_Choice.inv f 1 = True"
     apply (rule inv_f_eq)
     using \<open>bij f\<close> bij_betw_imp_inj_on apply blast 
