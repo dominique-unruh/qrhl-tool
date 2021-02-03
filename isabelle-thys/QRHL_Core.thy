@@ -1827,6 +1827,12 @@ lemma bij_add_const[simp]: "bij (\<lambda>x. x+(y::_::ab_group_add))"
   apply (rename_tac z) apply (rule_tac x="z-y" in exI)
   by auto
 
+lemma bij_of_bool[simp]: "bij (\<lambda>x. of_bool (f x)) \<longleftrightarrow> bij f"
+  by -
+
+lemma bij_equal_bit[simp]: "bij (\<lambda>x::bit. x=y)" 
+  apply (rule bijI') apply simp by (meson bit_neq)
+
 
 declare imp_conjL[simp]
 
