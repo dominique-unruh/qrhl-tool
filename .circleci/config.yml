@@ -7,7 +7,7 @@ orbs:
 
 workflows:
   version: 2
-  linux-jdk11:
+  windows-jdk12:
     jobs:
       - test:
           filters:
@@ -20,7 +20,7 @@ workflows:
 jobs:
   test:
 
-    machine: {image: ubuntu-2004:202010-01}
+    executor: { name: windows/default }
 
     steps:
       - checkout
@@ -32,31 +32,31 @@ jobs:
       # Download and cache Isabelle
       - restore_cache:
           keys:
-            - v3-isabelle-2021-RC4-linux
+            - v3-isabelle-2021-RC4-windows
       - run:
           name: Downloading Isabelle 2021-RC4 (if needed)
           shell: bash
           command: |
             if ! [ -e ~/install/Isabelle2021-RC4 ]; then
               mkdir -p ~/install
-              case linux in
+              case windows in
                 windows)
                   curl "https://isabelle.in.tum.de/website-Isabelle2021-RC4/dist/Isabelle2021-RC4.exe" -o /tmp/isabelle.exe
                   7z x -y -o"$HOME/install" /tmp/isabelle.exe;;
                 linux|macos)
-                  curl https://isabelle.in.tum.de/website-Isabelle2021-RC4/dist/Isabelle2021-RC4_linux.tar.gz | tar -x -z -C ~/install;;
+                  curl https://isabelle.in.tum.de/website-Isabelle2021-RC4/dist/Isabelle2021-RC4_windows.tar.gz | tar -x -z -C ~/install;;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
             - ~/install/Isabelle2021-RC4
-          key: v3-isabelle-2021-RC4-linux
+          key: v3-isabelle-2021-RC4-windows
 
       # Download and cache AFP
       - restore_cache:
           keys:
-            - v1-afp-2021-RC4-linux
+            - v1-afp-2021-RC4-windows
       - run:
           name: Downloading AFP 2021-RC4
           shell: bash
@@ -69,17 +69,17 @@ jobs:
                   tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2019 --strip 1;;
                 2020)
                   curl https://www.isa-afp.org/release/afp-current.tar.gz -o /tmp/afp.tar.gz
-                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1 ;;
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1 --exclude 'thys/Isabelle_C/*';;
                 2021-RC4)
-                  curl https://isabelle.sketis.net/repos/afp-devel/archive/03248eeafe63.tar.gz -o
-                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2021-RC4 --strip 1 ;;
+                  curl https://isabelle.sketis.net/repos/afp-devel/archive/03248eeafe63.tar.gz -o /tmp/afp.tar.gz
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2021-RC4 --strip 1 --exclude 'thys/Isabelle_C/*';;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
             - ~/install/afp-2021-RC4
-          key: v1-afp-2021-RC4-linux
+          key: v1-afp-2021-RC4-windows
 
       # Build QRHL theory
       - run:
@@ -90,11 +90,11 @@ jobs:
             echo v5 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
-            - v5-isabelle-heaps-2021-RC4-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2021-RC4-linux-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2021-RC4-linux-QRHL-
-            - v5-isabelle-heaps-2021-RC4-linux-Prerequisites-
-            - v4-isabelle-heaps-2021-RC4-linux-QRHL-
+            - v5-isabelle-heaps-2021-RC4-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2021-RC4-windows-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2021-RC4-windows-QRHL-
+            - v5-isabelle-heaps-2021-RC4-windows-Prerequisites-
+            - v4-isabelle-heaps-2021-RC4-windows-QRHL-
       - run:
           name: Building prerequisite theories
           shell: bash
@@ -104,7 +104,7 @@ jobs:
             for i in 1 2 3 4 5 6 7 8 9 10; do sleep 300; echo "--- keep alive output --"; done &
 
             if ! sha1sum -c ~/qrhl-sha1sum; then
-              case linux in
+              case windows in
                 windows)
                   # TODO: Under windows, need a different invocation, check whether this works
                   ~/install/Isabelle2021-RC4/contrib/cygwin/bin/bash ~/install/Isabelle2021-RC4/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2021-RC4/thys -d . QRHL-Prerequisites;;
@@ -115,7 +115,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.isabelle
-          key: v5-isabelle-heaps-2021-RC4-linux-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2021-RC4-windows-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
       - run:
           name: Building QRHL theories
           shell: bash
@@ -125,7 +125,7 @@ jobs:
             for i in 1 2 3 4 5 6 7 8 9 10; do sleep 300; echo "--- keep alive output --"; done &
 
             if ! sha1sum -c ~/qrhl-sha1sum; then
-              case linux in
+              case windows in
                 windows)
                   # TODO: Under windows, need a different invocation, check whether this works
                   ~/install/Isabelle2021-RC4/contrib/cygwin/bin/bash ~/install/Isabelle2021-RC4/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2021-RC4/thys -d . QRHL;;
@@ -139,13 +139,13 @@ jobs:
           paths:
             - ~/.isabelle
             - ~/qrhl-sha1sum
-          key: v5-isabelle-heaps-2021-RC4-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2021-RC4-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
 
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v1-dependencies-linux-{{ checksum "build.sbt" }}
-            - v1-dependencies-linux-
+            - v1-dependencies-windows-{{ checksum "build.sbt" }}
+            - v1-dependencies-windows-
       - run:
           name: Downloading build dependencies (if needed)
 
@@ -167,33 +167,33 @@ jobs:
             - $LOCALAPPDATA\Coursier\Cache
             - ~/.cache/coursier
             - ~/dependencies-sha1sum
-          key: v1-dependencies-linux-{{ checksum "build.sbt" }}
+          key: v1-dependencies-windows-{{ checksum "build.sbt" }}
 
       - run:
           name: Setting up Java
           shell: bash
           command: |
-            case linux in
+            case windows in
               linux)
-                if [ 11 != 11 ]; then
-                  sudo apt install --yes openjdk-11-jdk
-                  sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java
+                if [ 12 != 11 ]; then
+                  sudo apt install --yes openjdk-12-jdk
+                  sudo update-alternatives --set java /usr/lib/jvm/java-12-openjdk-amd64/bin/java
                 fi;;
               macos)
-                if [ 11 != 11 ]; then
-                  brew install --cask adoptopenjdk11
+                if [ 12 != 11 ]; then
+                  brew install --cask adoptopenjdk12
                 fi;;
             esac
 
             # Check if we have the right Java version
             java -version
-            java -version 2>&1 | grep 'version "11\b' -q
+            java -version 2>&1 | grep 'version "12\b' -q
 
       - run:
           name: Running tests
           shell: bash
           command: |
-            case linux in
+            case windows in
               windows)
                 # Isabelle process calls rebaseall and then fails, unless we deactivate it
                 > ~/install/Isabelle2021-RC4/contrib/cygwin/isabelle/rebaseall
