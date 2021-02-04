@@ -428,7 +428,7 @@ object Parser extends JavaTokenParsers {
     ) yield CaseTac(x,e))
 
   val tactic_simp : Parser[SimpTac] =
-    literal("simp") ~> OnceParser("[!\\*]".r.? ~ rep(fact)) ^^ {
+    literal("simp") ~> OnceParser("[!*]".r.? ~ rep(fact)) ^^ {
       case None ~ lemmas => SimpTac(lemmas, force=false, everywhere = false)
       case Some("!") ~ lemmas => SimpTac(lemmas, force = true, everywhere = false)
       case Some("*") ~ lemmas => SimpTac(lemmas, force = false, everywhere = true)
@@ -592,6 +592,31 @@ object Parser extends JavaTokenParsers {
   val focus: Parser[FocusCommand] =
     ((subgoalSelector <~ ":").? ~ "[+*-]+|[{}]".r) ^^
       { case selector ~ label => FocusCommand(selector, label) }
+
+  val nestedParens0 : Parser[Any] =
+    repWithState[(Int,List[Char])]({
+    case (0, chars) =>
+      elem("command", { c => c != '.' && c != ')' && c != '}' }) ^^ { c =>
+        val cs = c :: chars
+        val lvl = if (c == '(' || c == '{') 1 else 0
+        (lvl, cs)
+      }
+    case (level, chars) =>
+      elem("command", { _ => true }) ^^ { c =>
+        assert(level > 0)
+        val cs = c :: chars
+        val lvl = if (c == '(' || c== '{') level + 1 else if (c == ')' || c=='}') level - 1 else level
+        (lvl, cs)
+      }
+  }, (1,Nil)) /*^^ { case (_,chars) => chars.reverse.mkString.trim }*/
+
+  val nestedParens : Parser[Any] =
+    ("[({]".r ~ nestedParens0)
+
+  def parserOffset[A](parser: Parser[A]): Parser[Int] = Parser { in => parser(in) flatMapWithNext(_ => next => Success(next.offset, next)) }
+
+  val commandSpan : Parser[Int] =
+    parserOffset(rep("""[^.{("]""".r | nestedParens | stringLiteral | """\.\S""".r)) <~ "."
 
   def command(implicit context:ParserContext): Parser[Command] =
     debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |

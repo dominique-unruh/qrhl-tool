@@ -154,4 +154,20 @@ class ParserTest extends AnyFunSuite {
     assert(new Local(List(CVariable("x", GIsabelle.intT)), Block()) == new Local(List(CVariable("x", GIsabelle.intT)), Block()))
 //    assert(block.get == new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()))
   }
+
+  test("commandSpan") {
+    def check(str: String, expect: String) = {
+      Parser.parse(Parser.commandSpan, str) match {
+        case Parser.Success(_, next) =>
+          assert(str.substring(0, next.offset) == expect)
+        case Parser.NoSuccess(_, _) =>
+          fail(s"No match ($str)")
+      }
+    }
+
+    check("test { 1.2 }.", "test { 1.2 }.")
+    check("hello. huhu.", "hello.")
+    check("""include "x.html". bla""", """include "x.html".""")
+    check("rule x.y. bla", "rule x.y.")
+  }
 }
