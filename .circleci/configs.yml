@@ -20,7 +20,7 @@ configs:
     jdk: 15
 
 defaults:
-  isabelle: return "2021-RC4"
+  isabelle: return "2021-RC5"
   isabellehome: |
     if os=="macos": return f"~/install/Isabelle{get('isabelle')}.app/Isabelle"
     return f"~/install/Isabelle{get('isabelle')}"
