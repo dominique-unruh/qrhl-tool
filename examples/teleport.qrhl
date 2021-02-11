@@ -33,8 +33,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  seq 1 0: Qeq[C1=A2] ⊓ (Span {EPR} » ⟦A1,B1⟧).
  { wp left.
    skip.
-   simp!.
- }
+   simp!. }
 
  conseq pre: quantum_equality_full idOp ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
   simp ! quantum_eq_add_state.
@@ -46,8 +45,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    skip.
    simp.
    rule teleport_goal1.
-     simp!.
- }
+     simp!. }
 
  seq 1 0: Proj (Span {ket a1})»⟦A1⟧ ⋅ 
              quantum_equality_full
@@ -60,8 +58,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    fix a'.
    rule move_plus_meas_rule.
     simp!.
-   simp!.
- }
+   simp!. }
 
  case a':=a1.
 
@@ -77,8 +74,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    fix c'.
    rule move_plus_meas_rule.
     simp!.
-   simp ! assoc_right.
- }
+   simp ! assoc_right. }
 
  case c':=c1.
 
@@ -179,5 +175,3 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      simp!.
 
 qed.		
-
-
