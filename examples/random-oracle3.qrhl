@@ -63,13 +63,15 @@ conseq post: Cla[cglobA1=cglobA2 ∧ h1=π ∘ r2] ⊓ Qeq[qglobA1,x1,y1=qglobA2
   simp!.
 
 equal.
- simp!.
+1,2: { 
+ + simp!.
 
- inline hQuery.
- inline hQuery'.
- wp 1 1.
- skip.
- simp ! Uora_twice.
+ + inline hQuery.
+   inline hQuery'.
+   wp 1 1.
+   skip.
+   simp ! Uora_twice.
+}
 
 inline hInit.
 inline hInit'.

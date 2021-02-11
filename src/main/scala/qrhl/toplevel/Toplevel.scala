@@ -213,7 +213,7 @@ class Toplevel private(initialState : State) {
 }
 
 object Toplevel {
-  private val commandEnd: Regex = """\.\s*$""".r
+  private val commandEnd: Regex = """\.(\s*$|\s+)""".r
   private val commentRegex = """^\s*#.*$""".r
 
   private val logger = log4s.getLogger
@@ -414,18 +414,16 @@ object Toplevel {
 
   private def scanCommand(string: String): Option[(String, Int)] = {
     Parser.parse(Parser.focus, string) match {
-      case Parser.Success(result, next) =>
-        return Some((string.substring(0, next.offset), next.offset))
-      case Parser.NoSuccess(msg, next) =>
+      case Parser.Success(_, next) =>
+        Some((string.substring(0, next.offset), next.offset))
+      case Parser.NoSuccess(_, _) =>
+        Parser.parse(Parser.commandSpan, string) match {
+          case Parser.Success(endOffset, next) =>
+            Some((string.substring(0, endOffset), next.offset))
+          case Parser.NoSuccess(_, _) =>
+            None
+        }
     }
-
-    Toplevel.commandEnd.findFirstMatchIn(string) match {
-      case Some(m) =>
-        return Some((string.substring(0,m.start), m.end))
-      case None =>
-    }
-
-    None
   }
 
   /** Reads one command from the input. The last line of the command must end with ".".

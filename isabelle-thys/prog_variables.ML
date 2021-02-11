@@ -135,7 +135,7 @@ fun declare_variable ctxt bind T cq =
 
 fun variables vars gthy = 
 let val _ = app (fn (_,_,T) => check_variable_type (Proof_Context.init_global gthy) T)
-    fun elems0 idx = [
+    fun elems0 idx : Element.context_i list = [
       Element.Fixes (map_filter (fn (cq,bind,T) => 
            case cq of Classical => SOME (bind |> Binding.suffix_name idx, SOME T, Mixfix.NoSyn) | Quantum => NONE) vars),
       Element.Fixes (map (fn (cq,bind,T) => (bind |> (case cq of Classical => Binding.prefix_name "var_" | Quantum => I)
@@ -144,7 +144,8 @@ let val _ = app (fn (_,_,T) => check_variable_type (Proof_Context.init_global gt
                              [(varname_assumption cq (Binding.suffix_name idx bind) T, [])])) vars)]
     val elems = map elems0 ["", "1", "2"] |> List.concat
     (* val (_,lthy) = Bundle.context [] elems gthy *)
-    val (_,lthy) = Expression.add_locale (Binding.name ("variables_"^string_of_int(serial()))) Binding.empty ([],[]) elems gthy
+    val (_,lthy) = Expression.add_locale (Binding.name ("variables_"^string_of_int(serial()))) 
+                      Binding.empty [] ([],[]) elems gthy
     val lthy2 = fold (fn (cq,bind,_) => fn lthy' => declare_variable_lthy (Binding.name_of bind) cq lthy') vars lthy
 in lthy2 end
 
@@ -160,7 +161,7 @@ val parse_classical_quantum = (Parse.reserved "classical" >> K Classical) || (Pa
 val _ =
   Outer_Syntax.command \<^command_keyword>\<open>variables\<close> "declare quantum/classical variables"
     ((Parse.and_list (parse_classical_quantum -- Args.binding --| Parse.$$$ "::" -- Parse.typ >> (fn ((a,b),c) => (a,b,c))) >> 
-      (fn vars => Toplevel.begin_local_theory true (variables_cmd vars)))
+      (fn vars => Toplevel.begin_main_target true (variables_cmd vars)))
         --| Parse.begin)
 
 

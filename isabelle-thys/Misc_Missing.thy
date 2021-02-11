@@ -240,7 +240,8 @@ next
   from assms obtain n where reg_n: "regular_betw_n f A B n"
     unfolding regular_betw_def by auto
   then have finite_y: "finite (f -` {y} \<inter> A)" if "y\<in>B" for y
-    by (metis regular_betw_n_def card_infinite that)
+    unfolding regular_betw_n_def using that apply auto
+    by (metis card.infinite not_gr0)
   assume "finite B"
   have "A = (\<Union>y\<in>B. f -` {y} \<inter> A)"
     using reg_n unfolding regular_betw_n_def by auto
@@ -260,7 +261,7 @@ proof (cases "finite B")
   also have "card \<dots> = (\<Sum>y\<in>B. card (f -` {y} \<inter> A))"
     apply (rule card_UN_disjoint)
     using True assms apply (auto simp: regular_betw_n_def)
-    using card_infinite by force
+    using card.infinite by force
   also have "\<dots> = (\<Sum>y\<in>B. n)"
     using True assms by (auto simp: regular_betw_n_def)
   also have "\<dots> = n * card B"

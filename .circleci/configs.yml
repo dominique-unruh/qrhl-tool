@@ -5,12 +5,12 @@ configs:
     os: windows
     # We haven't configured downloading of JDKs in Windows, so we need to select the JDK that is preinstalled on Windows
     jdk: 12
-    weight: 50
+    weight: 45
 
 defaults:
-  isabelle: return "2020"
+  isabelle: return "2021-RC5"
   isabellehome: |
-    if os=="macos": return f"~/install/Isabelle{get('isabelle')}.app/Isabelle"
+    if os=="macos": return f"~/install/Isabelle{get('isabelle')}.app"
     return f"~/install/Isabelle{get('isabelle')}"
   machine_config: |
     if os=="windows": return "executor: { name: windows/default }"

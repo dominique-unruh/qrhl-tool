@@ -13,25 +13,15 @@ qed.
 
 lemma test: 1=1 & 2=2 & 3=3 & 4=4 & 5=5.
   isa intro conjI.
-  {
-    simp.
-  }
+  { simp. }
 
-  {
-    simp.
-  }
+  { simp. }
 
-  {
-    simp.
-  }
+  { simp. }
 
-  {
-    simp.
-  }
+  { simp. }
 
-  {
-    simp.
-  }
+  { simp. }
 qed.
 
 lemma test: 1=1 & 2=2 & 3=3 & 4=4 & 5=5.

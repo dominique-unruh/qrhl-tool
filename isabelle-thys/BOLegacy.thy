@@ -38,7 +38,7 @@ type_synonym 'a subspace = "'a ell2 clinear_space"
 abbreviation "ell2_to_bounded :: 'a::chilbert_space \<Rightarrow> ('b::{CARD_1,enum} ell2,'a) bounded
     == vector_to_cblinfun"
 abbreviation "complex_to_C1 :: complex \<Rightarrow> 'a::{CARD_1,enum} ell2 == of_complex"
-abbreviation "C1_to_complex == one_dim_to_complex"
+abbreviation "C1_to_complex == (one_dim_isom :: _ \<Rightarrow> complex)"
 
 abbreviation "applyOp == cblinfun_apply"
 

@@ -33,51 +33,54 @@ jobs:
       # Download and cache Isabelle
       - restore_cache:
           keys:
-            - v3-isabelle-2020-windows
+            - v3-isabelle-2021-RC5-windows
       - run:
-          name: Downloading Isabelle 2020 (if needed)
+          name: Downloading Isabelle 2021-RC5 (if needed)
           shell: bash
           command: |
-            if ! [ -e ~/install/Isabelle2020 ]; then
+            if ! [ -e ~/install/Isabelle2021-RC5 ]; then
               mkdir -p ~/install
               case windows in
                 windows)
-                  curl "https://isabelle.in.tum.de/website-Isabelle2020/dist/Isabelle2020.exe" -o /tmp/isabelle.exe
+                  curl "https://isabelle.in.tum.de/website-Isabelle2021-RC5/dist/Isabelle2021-RC5.exe" -o /tmp/isabelle.exe
                   7z x -y -o"$HOME/install" /tmp/isabelle.exe;;
                 linux|macos)
-                  curl https://isabelle.in.tum.de/website-Isabelle2020/dist/Isabelle2020_windows.tar.gz | tar -x -z -C ~/install;;
+                  curl https://isabelle.in.tum.de/website-Isabelle2021-RC5/dist/Isabelle2021-RC5_windows.tar.gz | tar -x -z -C ~/install;;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
-            - ~/install/Isabelle2020
-          key: v3-isabelle-2020-windows
+            - ~/install/Isabelle2021-RC5
+          key: v3-isabelle-2021-RC5-windows
 
       # Download and cache AFP
       - restore_cache:
           keys:
-            - v1-afp-2020-windows
+            - v1-afp-2021-RC5-windows
       - run:
-          name: Downloading AFP 2020
+          name: Downloading AFP 2021-RC5
           shell: bash
           command: |
-            if ! [ -e ~/install/afp-2020 ]; then
-              mkdir -p ~/install/afp-2020
-              case 2020 in
+            if ! [ -e ~/install/afp-2021-RC5 ]; then
+              mkdir -p ~/install/afp-2021-RC5
+              case 2021-RC5 in
                 2019)
                   curl https://master.dl.sourceforge.net/project/afp/afp-Isabelle2019/afp-2019-08-19.tar.gz -o /tmp/afp.tar.gz
                   tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2019 --strip 1;;
                 2020)
                   curl https://www.isa-afp.org/release/afp-current.tar.gz -o /tmp/afp.tar.gz
                   tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1 --exclude 'thys/Isabelle_C/*';;
+                2021-RC5)
+                  curl https://isabelle.sketis.net/repos/afp-devel/archive/03248eeafe63.tar.gz -o /tmp/afp.tar.gz
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2021-RC5 --strip 1 --exclude 'thys/Isabelle_C/*';;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
-            - ~/install/afp-2020
-          key: v1-afp-2020-windows
+            - ~/install/afp-2021-RC5
+          key: v1-afp-2021-RC5-windows
 
       # Build QRHL theory
       - run:
@@ -88,11 +91,11 @@ jobs:
             echo v5 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
-            - v5-isabelle-heaps-2020-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2020-windows-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2020-windows-QRHL-
-            - v5-isabelle-heaps-2020-windows-Prerequisites-
-            - v4-isabelle-heaps-2020-windows-QRHL-
+            - v5-isabelle-heaps-2021-RC5-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2021-RC5-windows-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2021-RC5-windows-QRHL-
+            - v5-isabelle-heaps-2021-RC5-windows-Prerequisites-
+            - v4-isabelle-heaps-2021-RC5-windows-QRHL-
       - run:
           name: Building prerequisite theories
           shell: bash
@@ -108,19 +111,19 @@ jobs:
                   uname -s # --> MSYS_NT-10.0-17763
                   uname -m
                   echo Patching
-                  echo which uname >> ~/install/Isabelle2020/lib/scripts/isabelle-platform
-                  echo uname -s >> ~/install/Isabelle2020/lib/scripts/isabelle-platform
-                  echo "~/install/Isabelle2020/contrib/cygwin/bin/:$PATH"
-                  echo ~/install/Isabelle2020/contrib/cygwin/bin/:"$PATH"
-                  PATH=~/install/Isabelle2020/contrib/cygwin/bin/:"$PATH" ~/install/Isabelle2020/contrib/cygwin/bin/bash -x ~/install/Isabelle2020/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2020/thys -d . QRHL-Prerequisites;;
+                  echo which uname >> ~/install/Isabelle2021-RC5/lib/scripts/isabelle-platform
+                  echo uname -s >> ~/install/Isabelle2021-RC5/lib/scripts/isabelle-platform
+                  echo "~/install/Isabelle2021-RC5/contrib/cygwin/bin/:$PATH"
+                  echo ~/install/Isabelle2021-RC5/contrib/cygwin/bin/:"$PATH"
+                  PATH=~/install/Isabelle2021-RC5/contrib/cygwin/bin/:"$PATH" ~/install/Isabelle2021-RC5/contrib/cygwin/bin/bash -x ~/install/Isabelle2021-RC5/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2021-RC5/thys -d . QRHL-Prerequisites;;
                 *)
-                  ~/install/Isabelle2020/bin/isabelle build -v -b -d ~/install/afp-2020/thys -d . QRHL-Prerequisites;;
+                  ~/install/Isabelle2021-RC5/bin/isabelle build -v -b -d ~/install/afp-2021-RC5/thys -d . QRHL-Prerequisites;;
               esac
             fi
       - save_cache:
           paths:
             - ~/.isabelle
-          key: v5-isabelle-heaps-2020-windows-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2021-RC5-windows-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
       - run:
           name: Building QRHL theories
           shell: bash
@@ -133,9 +136,9 @@ jobs:
               case windows in
                 windows)
                   # TODO: Figure out how to invoke in Windows
-                  ~/install/Isabelle2020/contrib/cygwin/bin/bash ~/install/Isabelle2020/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2020/thys -d . QRHL;;
+                  ~/install/Isabelle2021-RC5/contrib/cygwin/bin/bash ~/install/Isabelle2021-RC5/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2021-RC5/thys -d . QRHL;;
                 *)
-                  ~/install/Isabelle2020/bin/isabelle build -v -b -d ~/install/afp-2020/thys -d . QRHL;;
+                  ~/install/Isabelle2021-RC5/bin/isabelle build -v -b -d ~/install/afp-2021-RC5/thys -d . QRHL;;
               esac
             fi
             sha1sum ~/isabelle-thys-checksums > ~/qrhl-sha1sum
@@ -144,7 +147,7 @@ jobs:
           paths:
             - ~/.isabelle
             - ~/qrhl-sha1sum
-          key: v5-isabelle-heaps-2020-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2021-RC5-windows-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
 
       # Download and cache dependencies
       - restore_cache:
@@ -201,14 +204,14 @@ jobs:
             case windows in
               windows)
                 # Isabelle process calls rebaseall and then fails, unless we deactivate it
-                > ~/install/Isabelle2020/contrib/cygwin/isabelle/rebaseall
-                ISABELLE_HOME="`cygpath -w ~/install/Isabelle2020`";;
+                > ~/install/Isabelle2021-RC5/contrib/cygwin/isabelle/rebaseall
+                ISABELLE_HOME="`cygpath -w ~/install/Isabelle2021-RC5`";;
               linux|macos)
-                ISABELLE_HOME=~/install/Isabelle2020;;
+                ISABELLE_HOME=~/install/Isabelle2021-RC5;;
             esac
 
             echo "isabelle-home = $ISABELLE_HOME" > qrhl-tool.conf
-            echo "afp-root = $HOME/install/afp-2020" >> qrhl-tool.conf
+            echo "afp-root = $HOME/install/afp-2021-RC5" >> qrhl-tool.conf
 
             ~/install/sbt "testOnly -- -u scalatest-reports" </dev/null
 
