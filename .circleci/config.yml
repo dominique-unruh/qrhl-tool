@@ -70,10 +70,10 @@ jobs:
                   tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2019 --strip 1;;
                 2020)
                   curl https://www.isa-afp.org/release/afp-current.tar.gz -o /tmp/afp.tar.gz
-                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1 --exclude 'thys/Isabelle_C/*';;
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1 --exclude 'thys/Isabelle_C/*' --exclude 'doc';;
                 2021-RC5)
                   curl https://isabelle.sketis.net/repos/afp-devel/archive/03248eeafe63.tar.gz -o /tmp/afp.tar.gz
-                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2021-RC5 --strip 1 --exclude 'thys/Isabelle_C/*';;
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2021-RC5 --strip 1 --exclude 'thys/Isabelle_C/*' --exclude 'doc';;
                 *) false;;
               esac
             fi
