@@ -62,15 +62,9 @@ jobs:
             if ! [ -e ~/install/afp-@{isabelle} ]; then
               mkdir -p ~/install/afp-@{isabelle}
               case @{isabelle} in
-                2019)
-                  curl https://master.dl.sourceforge.net/project/afp/afp-Isabelle2019/afp-2019-08-19.tar.gz -o /tmp/afp.tar.gz
-                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2019 --strip 1;;
-                2020)
+                2021)
                   curl https://www.isa-afp.org/release/afp-current.tar.gz -o /tmp/afp.tar.gz
                   tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1 @{extra_tar_options};;
-                2021-RC5)
-                  curl https://isabelle.sketis.net/repos/afp-devel/archive/03248eeafe63.tar.gz -o /tmp/afp.tar.gz
-                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-@{isabelle} --strip 1 @{extra_tar_options};;
                 *) false;;
               esac
             fi
