@@ -9,10 +9,43 @@ Main
 (*   keywords
     "relift_definition" :: thy_goal
  *)
+QRHL.QRHL_Operations
+  keywords "test_keyword" :: thy_decl
 begin
 
-lemma "map_distr (\<lambda>b. b + 1) (uniform UNIV) = uniform UNIV"
-  apply simp
+locale bla = fixes hello
+
+ML "open QRHL_Operations"
+
+ML \<open>
+val up = update_localeXXX "VARS" [\<^locale>\<open>bla\<close>]
+ (fn ctxt => Prog_Variables.variable_elements ctxt [(Classical, Binding.name "xx", \<^typ>\<open>nat\<close>)])
+\<close>
+
+
+ML \<open>
+  Outer_Syntax.command \<^command_keyword>\<open>test_keyword\<close> "Test"
+    (Scan.succeed (Toplevel.theory up))
+\<close>
+
+ML \<open>
+fun xxx thy = let
+val tl = Toplevel.theory_toplevel thy
+val tl' = Toplevel.command_exception true (Toplevel.theory up Toplevel.empty) tl
+val (loc,tl'') = declare_variable_in_locale Classical (\<^locale>\<open>bla\<close>, "z", \<^typ>\<open>string\<close>, tl)
+val _ = \<^print> loc
+val thy' = Toplevel.theory_of tl''
+in thy' end
+\<close>
+
+setup xxx
+
+print_locale variables_13041818
+
+test_keyword
+
+print_locale VARS
+
 
 variables quantum q :: int and quantum r :: int and quantum s :: int
 begin
@@ -30,6 +63,48 @@ end
 
 
 term "a ::: 't"
+
+
+
+setup \<open>Thm.add_axiom_global (\<^binding>\<open>axi2\<close>, \<^prop>\<open>1=2\<close>) #> snd\<close>
+
+thm axi2
+
+locale test begin
+
+ML \<open>
+fun applyToplevelCommand (ctxt, command) = let
+  val thy = Proof_Context.theory_of ctxt
+  val transactions = Outer_Syntax.parse_text \<^theory> (K \<^theory>) Position.none command
+  fun map_thy thy = 
+    fold (Toplevel.command_exception true) transactions (Toplevel.theory_toplevel thy) |> Toplevel.theory_of
+  val ctxt = Proof_Context.background_theory map_thy ctxt
+in ctxt end
+\<close>
+
+ML \<open>
+val ctxt = applyToplevelCommand (\<^context>, "axiomatization where axiom: \"1=3\"")
+;;
+Proof_Context.get_thm ctxt "Test.axiom"
+\<close>
+
+
+ML \<open>
+(* val thy = \<^theory> *)
+val [trans] = Outer_Syntax.parse_text \<^theory> (K \<^theory>) Position.start "axiomatization where axio: \"1=2\""
+fun trans_on_thy trans thy = Toplevel.command_exception true trans (Toplevel.theory_toplevel thy) |> Toplevel.theory_of
+fun trans_on_ctxt trans = Proof_Context.background_theory (trans_on_thy trans)
+val ctxt = trans_on_ctxt trans \<^context>
+;;
+Proof_Context.get_thm ctxt "Test.axio"
+\<close>
+
+
+ML \<open>
+fun addax thy = Thm.add_axiom_global (\<^binding>\<open>axi\<close>, \<^prop>\<open>1=2\<close>) thy
+val (res,ctxt) = Proof_Context.background_theory_result addax ctxt
+val fact = Proof_Context.get_thm ctxt "Test.axi2"
+\<close>
 
 
 definition "idx = id"

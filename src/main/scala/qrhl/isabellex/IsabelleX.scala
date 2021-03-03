@@ -6,24 +6,22 @@ import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
-
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext, Future}
 import org.log4s
 import qrhl.{Subgoal, UserException}
 import qrhl.logic._
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
-import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import de.unruh.isabelle.control
-import de.unruh.isabelle.misc.Symbols
+import de.unruh.isabelle.misc.{FutureValue, Symbols}
 import hashedcomputation.{Hash, HashedValue}
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.IsabelleX.fastype_of
@@ -181,7 +179,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
         throw UserException(s"Isabelle theory file not found: $f")
 
     val theories = thys.map(Theory.apply) ++ files.map(Theory.apply)
-    val jointTheory : Theory = Theory.mergeTheories(/*"QRHL_Session",*/ theories :_*)
+    val jointTheory : Theory = Theory.mergeTheories(mergedName = "QRHL_Session", theories = theories, endTheory=false)
     val ctxt = Context(jointTheory)
 
 /*    val filesThyPath = files.map { f =>
@@ -898,6 +896,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
 //    val use_thy_op =
 //      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
+    lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context]("QRHL_Operations.applyToplevelCommand")
   }
 }
 
@@ -942,7 +941,10 @@ object IsabelleX {
   private var _theContext: ContextX = _
   def theContext: ContextX = _theContext
 
-  class ContextX(val isabelle: IsabelleX, val context: Context) {
+  class ContextX(val isabelle: IsabelleX, val context: Context) extends FutureValue {
+    override def await: Unit = context.await
+    override def someFuture: Future[Any] = context.someFuture
+
     private implicit val isabelleControl: Isabelle = isabelle.isabelleControl
     import isabelle.Ops._
 

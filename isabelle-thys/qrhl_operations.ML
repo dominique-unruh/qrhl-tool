@@ -480,5 +480,12 @@ val squash_tac =
 val sym_tac : unit * subgoal * Proof.context -> (subgoal list * thm) option =
   apply_tactic_on_term_concl (fn ctxt => fn _ => Basic_Rules.sym_tac ctxt 1)
 
+fun applyToplevelCommand (ctxt, command) = let
+  val thy = Proof_Context.theory_of ctxt
+  val transactions = Outer_Syntax.parse_text thy (K thy) Position.none command
+  fun map_thy thy = 
+    fold (Toplevel.command_exception true) transactions (Toplevel.theory_toplevel thy) |> Toplevel.theory_of
+  val ctxt = Proof_Context.background_theory map_thy ctxt
+in ctxt end
 
 end

@@ -129,6 +129,14 @@ class State private (val environment: Environment,
                      val lastOutput : String,
                      _hash : Hash[State])
     extends HashedValue {
+  def applyIsabelleToplevelCommand(command: String): State = {
+    if (currentLemma.isDefined)
+      throw UserException(s"""Isabelle commands are only possible outside a proof. Maybe you intended to use "isa ${command}."?""")
+    val newContext = Ops.applyToplevelCommand(isabelle.context, command).retrieveNow
+    copy(isabelle = Some(new ContextX(isabelle.isabelle, newContext)),
+      hash = HashTag()(hash, Hashable.hash(command)))
+  }
+
   def focusOrUnfocus(selector: Option[SubgoalSelector], focusVariant: String): State = {
     if (currentLemma.isEmpty)
       throw UserException("No pending proof")
@@ -259,7 +267,7 @@ class State private (val environment: Environment,
 
   private def copy(environment:Environment=environment,
                    goal:Goal=goal,
-                   isabelle:Option[IsabelleX.ContextX]=_isabelle,
+                   isabelle:Option[IsabelleX.ContextX]=_isabelle.map(_.force),
 //                   dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,RichTerm)]=currentLemma,
                    currentDirectory:Path=currentDirectory,

@@ -2,18 +2,20 @@ package qrhl.toplevel
 
 import java.io.{PrintWriter, StringWriter}
 import java.nio.file.{Path, Paths}
-import de.unruh.isabelle.pure.Typ
-import qrhl.isabellex.IsabelleX
+import de.unruh.isabelle.pure.{Context, Typ}
 import qrhl.logic.{Block, CVariable, QVariable, Variable}
-import qrhl.{State, Subgoal, Tactic, UserException}
-import IsabelleX.{globalIsabelle => GIsabelle}
+import qrhl.{State, Subgoal, Tactic, UserException, toplevel}
 
 import scala.collection.immutable.ListSet
-import GIsabelle.Ops
+import de.unruh.isabelle.control.{Isabelle, OperationCollection}
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, ListHashable, PathHashable}
+import qrhl.isabellex.IsabelleX
+import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
 import scalaz.Scalaz.ToIdOps
+
+import scala.concurrent.ExecutionContext
 
 // Implicits
 import GIsabelle.isabelleControl
@@ -53,6 +55,15 @@ case class IsabelleCommand(thy:Seq[String]) extends Command {
     throw new RuntimeException("IsabelleCommand.act must not be called.")
 
   override def hash: Hash[IsabelleCommand.this.type] = HashTag()(Hashable.hash(thy.toList))
+}
+
+// TODO test cases
+// TODO document in manual
+case class IsabelleToplevelCommand(command: String) extends Command {
+  override protected def act(state: State, output: PrintWriter): State =
+    state.applyIsabelleToplevelCommand(command)
+
+  override def hash: Hash[IsabelleToplevelCommand.this.type] = HashTag()(Hashable.hash(command))
 }
 
 case class DeclareVariableCommand(name: String, typ: Typ, ambient:Boolean=false, quantum:Boolean=false) extends Command {
@@ -180,7 +191,7 @@ object DebugCommand {
 //    new DebugCommand({(state,output) => action(state.isabelle, state.goal, output); state})
   val isabelle: DebugCommand = DebugCommand.state({
     (state, output) =>
-      val str = Ops.debugOp(MLValue(state.isabelle.context)).retrieveNow
+      val str = GIsabelle.Ops.debugOp(MLValue(state.isabelle.context)).retrieveNow
       output.println(s"DEBUG: $str")
   })
 

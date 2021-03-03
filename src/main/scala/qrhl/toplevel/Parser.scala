@@ -618,7 +618,11 @@ object Parser extends JavaTokenParsers {
   val commandSpan : Parser[Int] =
     parserOffset(rep("""[^.{("]""".r | nestedParens | stringLiteral | """\.\S""".r)) <~ "."
 
+  val isabelleToplevel : Parser[IsabelleToplevelCommand] =
+    literal("ISABELLE") ~> scanInnerSyntax ^^ IsabelleToplevelCommand.apply
+
   def command(implicit context:ParserContext): Parser[Command] =
     debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
+      isabelleToplevel |
       include | qed | changeDirectory | cheat | print_cmd | focus | failure("expecting command")
 }
