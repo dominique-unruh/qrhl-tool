@@ -7,7 +7,7 @@ orbs:
 
 workflows:
   version: 2
-  macos-jdk15:
+  macos-jdk11:
     jobs:
       - test:
           filters:
@@ -169,19 +169,19 @@ jobs:
           command: |
             case macos in
               linux)
-                if [ 15 != 11 ]; then
-                  sudo apt install --yes openjdk-15-jdk
-                  sudo update-alternatives --set java /usr/lib/jvm/java-15-openjdk-amd64/bin/java
+                if [ 11 != 11 ]; then
+                  sudo apt install --yes openjdk-11-jdk
+                  sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java
                 fi;;
               macos)
-                if [ 15 != 11 ]; then
-                  brew install --cask adoptopenjdk15
+                if [ 11 != 11 ]; then
+                  brew install --cask adoptopenjdk11
                 fi;;
             esac
 
             # Check if we have the right Java version
             java -version
-            java -version 2>&1 | grep 'version "15\b' -q
+            java -version 2>&1 | grep 'version "11\b' -q
 
       - run:
           name: Running tests

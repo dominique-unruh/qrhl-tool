@@ -6,7 +6,7 @@ import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
-import de.unruh.isabelle.control.Isabelle
+import de.unruh.isabelle.control.{Isabelle, IsabelleSetupException}
 import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
@@ -35,6 +35,8 @@ import de.unruh.isabelle.pure.Implicits._
 import MLValueConverters.Implicits._
 
 object Configuration {
+  private val logger = log4s.getLogger
+
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
     * and when running from installation, the installation directory.
     * Returned as an absolute path.
@@ -78,17 +80,18 @@ object Configuration {
     case path => distributionDirectory.resolve(path)
   }
 
-  def isabelleUserDir : Path = config.getProperty("isabelle-user") match {
+/*  def isabelleUserDir : Path = config.getProperty("isabelle-user") match {
     case null => Path.of(lang.System.getProperty("user.home")).resolve(".isabelle")
     case path => distributionDirectory.resolve(path)
-  }
+  }*/
+
+  if (config.getProperty("isabelle-user") != null)
+    throw IsabelleSetupException("Configuration option isabelle-user not supported. Set the environment variable ISABELLE_USER_HOME instead.")
 
   def afpThyRoot : Option[Path] = config.getProperty("afp-root") match {
     case null => None
     case path => Some(distributionDirectory.resolve(path).resolve("thys"))
   }
-
-  private val logger = log4s.getLogger
 }
 
 class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
@@ -117,7 +120,9 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     }.max
 
     val heaps = for (
-      isabelleDir <- List(setup.userDir.get.resolve(s"Isabelle${version}"), setup.isabelleHome);
+      // We are guessing here where the home is. Probably not optimal.
+      // Maybe the whole heap-removal thing should be skipped?
+      isabelleDir <- List(Path.of(System.getProperty("user.home")).resolve(".isabelle").resolve(s"Isabelle${version}"), setup.isabelleHome);
       heapDir = isabelleDir.resolve("heaps");
       heap <- try { Files.find(heapDir, 10, { (_, _) => true }).iterator.asScala }
                   catch { case _ : IOException => Nil };
@@ -994,8 +999,8 @@ object IsabelleX {
     logic = "QRHL",
     sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpThyRoot,
     verbose = true,
-    /** Must end in .isabelle if provided */
-    userDir = Some(Configuration.isabelleUserDir)
+//    /** Must end in .isabelle if provided */
+//    userDir = Some(Configuration.isabelleUserDir)
   )
 
 }
