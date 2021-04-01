@@ -6,7 +6,7 @@ import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
-import de.unruh.isabelle.control.{Isabelle, IsabelleSetupException}
+import de.unruh.isabelle.control.{Isabelle}
 import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
@@ -86,7 +86,7 @@ object Configuration {
   }*/
 
   if (config.getProperty("isabelle-user") != null)
-    throw IsabelleSetupException("Configuration option isabelle-user not supported. Set the environment variable ISABELLE_USER_HOME instead.")
+    throw UserException("Configuration option isabelle-user not supported. Set the environment variable ISABELLE_USER_HOME instead.")
 
   def afpThyRoot : Option[Path] = config.getProperty("afp-root") match {
     case null => None
