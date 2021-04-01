@@ -64,7 +64,7 @@ jobs:
               case @{isabelle} in
                 2021)
                   curl https://www.isa-afp.org/release/afp-current.tar.gz -o /tmp/afp.tar.gz
-                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-2020 --strip 1 @{extra_tar_options};;
+                  tar -x -z -f /tmp/afp.tar.gz -C ~/install/afp-@{isabelle} --strip 1 @{extra_tar_options};;
                 *) false;;
               esac
             fi

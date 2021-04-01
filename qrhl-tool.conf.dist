@@ -5,14 +5,6 @@
 # isabelle-home = /opt/Isabelle2021
 
 
-# isabelle-user indicates the Isabelle user directory.
-# (Used by Isabelle for user configuration, and possibly compiled heap images.)
-# This option is optional, the default is .isabelle in the home directory.
-# This path must end in .isabelle
-
-# isabelle-user = /home/username/.isabelle
-
-
 # AFP (Archive of Formal Proofs) theory directory.
 # This option is optional. If it is not included, it is required that Isabelle is already configured to include the AFP
 

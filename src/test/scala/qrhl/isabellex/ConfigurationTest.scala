@@ -6,7 +6,7 @@ class ConfigurationTest extends AnyFunSuite {
   test("can load config") {
     val isabelleHome = Configuration.isabelleHome
     println(isabelleHome)
-    val isabelleUser = Configuration.isabelleUserDir
-    println(isabelleUser)
+//    val isabelleUser = Configuration.isabelleUserDir
+//    println(isabelleUser)
   }
 }

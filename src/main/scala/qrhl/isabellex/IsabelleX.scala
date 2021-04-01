@@ -6,24 +6,22 @@ import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
-
-import de.unruh.isabelle.control.Isabelle
+import de.unruh.isabelle.control.{Isabelle}
 import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext, Future}
 import org.log4s
 import qrhl.{Subgoal, UserException}
 import qrhl.logic._
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
-import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import de.unruh.isabelle.control
-import de.unruh.isabelle.misc.Symbols
+import de.unruh.isabelle.misc.{FutureValue, Symbols}
 import hashedcomputation.{Hash, HashedValue}
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.IsabelleX.fastype_of
@@ -37,6 +35,8 @@ import de.unruh.isabelle.pure.Implicits._
 import MLValueConverters.Implicits._
 
 object Configuration {
+  private val logger = log4s.getLogger
+
   /** Tries to determine the distribution directory. I.e., when running from sources, the source distribution,
     * and when running from installation, the installation directory.
     * Returned as an absolute path.
@@ -80,17 +80,18 @@ object Configuration {
     case path => distributionDirectory.resolve(path)
   }
 
-  def isabelleUserDir : Path = config.getProperty("isabelle-user") match {
+/*  def isabelleUserDir : Path = config.getProperty("isabelle-user") match {
     case null => Path.of(lang.System.getProperty("user.home")).resolve(".isabelle")
     case path => distributionDirectory.resolve(path)
-  }
+  }*/
+
+  if (config.getProperty("isabelle-user") != null)
+    throw UserException("Configuration option isabelle-user not supported. Set the environment variable ISABELLE_USER_HOME instead.")
 
   def afpThyRoot : Option[Path] = config.getProperty("afp-root") match {
     case null => None
     case path => Some(distributionDirectory.resolve(path).resolve("thys"))
   }
-
-  private val logger = log4s.getLogger
 }
 
 class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
@@ -119,7 +120,9 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     }.max
 
     val heaps = for (
-      isabelleDir <- List(setup.userDir.get.resolve(s"Isabelle${version}"), setup.isabelleHome);
+      // We are guessing here where the home is. Probably not optimal.
+      // Maybe the whole heap-removal thing should be skipped?
+      isabelleDir <- List(Path.of(System.getProperty("user.home")).resolve(".isabelle").resolve(s"Isabelle${version}"), setup.isabelleHome);
       heapDir = isabelleDir.resolve("heaps");
       heap <- try { Files.find(heapDir, 10, { (_, _) => true }).iterator.asScala }
                   catch { case _ : IOException => Nil };
@@ -181,7 +184,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
         throw UserException(s"Isabelle theory file not found: $f")
 
     val theories = thys.map(Theory.apply) ++ files.map(Theory.apply)
-    val jointTheory : Theory = Theory.mergeTheories(/*"QRHL_Session",*/ theories :_*)
+    val jointTheory : Theory = Theory.mergeTheories(mergedName = "QRHL_Session", theories = theories, endTheory=false)
     val ctxt = Context(jointTheory)
 
 /*    val filesThyPath = files.map { f =>
@@ -898,6 +901,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
 //    val use_thy_op =
 //      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
+    lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context]("QRHL_Operations.applyToplevelCommand")
   }
 }
 
@@ -942,7 +946,10 @@ object IsabelleX {
   private var _theContext: ContextX = _
   def theContext: ContextX = _theContext
 
-  class ContextX(val isabelle: IsabelleX, val context: Context) {
+  class ContextX(val isabelle: IsabelleX, val context: Context) extends FutureValue {
+    override def await: Unit = context.await
+    override def someFuture: Future[Any] = context.someFuture
+
     private implicit val isabelleControl: Isabelle = isabelle.isabelleControl
     import isabelle.Ops._
 
@@ -992,8 +999,8 @@ object IsabelleX {
     logic = "QRHL",
     sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpThyRoot,
     verbose = true,
-    /** Must end in .isabelle if provided */
-    userDir = Some(Configuration.isabelleUserDir)
+//    /** Must end in .isabelle if provided */
+//    userDir = Some(Configuration.isabelleUserDir)
   )
 
 }
