@@ -108,15 +108,6 @@ parallelExecution in Test := false
 
 javaOptions in Universal += "-J-Xss10m"
 
-lazy val circleCIRandomize = taskKey[Unit]("Randomize which test is run on CircleCI next time")
-circleCIRandomize := {
-  if (Process("git diff --quiet", cwd=baseDirectory.value).! != 0) {
-    print(Process("scala-isabelle/scripts/circleci-randomize.py", cwd=baseDirectory.value).!!)
-  }
-}
-compile in Compile := (compile in Compile).dependsOn(circleCIRandomize).value
-
-
 /*
 
 Steps when releasing a release/release candidate:
