@@ -2,11 +2,10 @@ chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum" 
-    Universe_Instances_Complex_Main Bounded_Operators.Preliminaries
+    Universe_Instances_Complex_Main "Bounded_Operators-Extra.Extra_Infinite_Set_Sum"
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
+    "Bounded_Operators-Extra.Extra_Ordered_Fields"
 begin
-
-unbundle no_notation_blinfun_apply
 
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"
 
