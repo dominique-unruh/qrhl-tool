@@ -1,4 +1,0 @@
-This directory is needed to provide fake session directories for some
-of the sessions in ../ROOT since Isabelle requires a distinct session
-directory for every session, even those that do not contain theory
-files.

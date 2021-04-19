@@ -1,2 +1,0 @@
-Isabelle2019-RC4-linux-no-heaps.tar.xz filter=lfs diff=lfs merge=lfs -text
-ROOTS text eol=lf
