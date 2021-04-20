@@ -2,11 +2,10 @@ chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum" 
-    Universe_Instances_Complex_Main Bounded_Operators.Preliminaries
+    Universe_Instances_Complex_Main "Bounded_Operators-Extra.Extra_Infinite_Set_Sum"
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
+    "Bounded_Operators-Extra.Extra_Ordered_Fields"
 begin
-
-unbundle no_notation_blinfun_apply
 
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"
 
@@ -1704,8 +1703,9 @@ proof (transfer fixing: f, rule ext, rename_tac x y)
     by (rule infsetsum_cong_neutral, auto)
   also have "\<dots> = (if f x = y then 1 else 0)"
     apply (cases "f x = y")
-    apply auto
-    using card_eq_Suc_0_ex1 by auto
+     apply auto
+    apply (subst asm_rl[of \<open>{m. m = x \<and> f m = f x} = {x}\<close>])
+    by auto
   also have "\<dots> = (if y \<in> {f x} then 1 / real (card {f x}) else 0)"
     by auto
   finally show "(\<Sum>\<^sub>am\<in>f -` {y}. if m \<in> {x} then 1 / real (card {x}) else 0) = (if y \<in> {f x} then 1 / real (card {f x}) else 0)"

@@ -10,12 +10,6 @@ section \<open>Miscellaneous\<close>
 
 declare Inf_class.INF_image[simp]
 
-(* definition [code]: "(sqrt2::complex) = sqrt 2"
-lemma sqrt22[simp]: "sqrt2 * sqrt2 = 2" 
- by (simp add: of_real_def scaleR_2 sqrt2_def)
-lemma sqrt2_neq0[simp]: "sqrt2 \<noteq> 0" unfolding sqrt2_def by simp
-lemma [simp]: "cnj sqrt2 = sqrt2" unfolding sqrt2_def by simp *)
-
 
 
 (* TODO move into theory Predicates.thy *)
