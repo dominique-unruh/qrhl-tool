@@ -1288,7 +1288,7 @@ proof (rename_tac P, case_tac "isProjector P")
   assume [simp]: "isProjector P"
   show "is_measurement (\<lambda>b::bit. if isProjector P then if b = 1 then P else idOp - P else 0)"
     apply simp
-    unfolding is_measurement_def apply (auto intro!: exI[of _ idOp] simp: UNIV_bit cinner_right_distrib[symmetric])
+    unfolding is_measurement_def apply (auto intro!: exI[of _ idOp] simp: UNIV_bit cinner_add_right[symmetric])
     by (metis apply_idOp diff_add_cancel plus_cblinfun.rep_eq)
 next
   fix P :: "('a ell2, 'a ell2) bounded"
@@ -1305,7 +1305,7 @@ lemma binary_measurement_false[simp]: "isProjector P \<Longrightarrow> mproj (bi
 
 lemma mtotal_binary_measurement[simp]: "mtotal (binary_measurement P) = isProjector P"
   apply (transfer fixing: P) apply (cases "isProjector P") apply (auto simp: UNIV_bit)
-  apply (metis apply_idOp cinner_right_distrib diff_add_cancel minus_cblinfun.rep_eq)
+  apply (metis apply_idOp cinner_add_right diff_add_cancel minus_cblinfun.rep_eq)
   by (rule exI[of _ "ket undefined"], rule exI[of _ "ket undefined"], simp)
 
 
