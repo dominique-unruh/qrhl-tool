@@ -1088,8 +1088,8 @@ proof -
     using assms(3) unfolding qvar_trafo'_def by simp
   define f1 f2 where "f1 C = C\<guillemotright>QR" and "f2 C = A \<cdot> C\<guillemotright>QR' \<cdot> A*" for C :: "(_,_)bounded"
   define tensors where "tensors = {C1 \<otimes> C2| (C1::('a,'a) l2bounded) (C2::('b,'b) l2bounded). True}"
-  have "cbounded_linear f1"
-  proof (rule cbounded_linear_intro)
+  have "bounded_clinear f1"
+  proof (rule bounded_clinear_intro)
     fix X :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
       and Y :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
       and c :: complex
@@ -1100,8 +1100,8 @@ proof -
     show "norm (f1 X) \<le> norm X * 1"
       unfolding f1_def by simp
   qed
-  have "cbounded_linear f2"
-  proof (rule cbounded_linear_intro)
+  have "bounded_clinear f2"
+  proof (rule bounded_clinear_intro)
     fix X :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
       and Y :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
       and c :: complex
@@ -1144,7 +1144,7 @@ proof -
     using that unfolding tensors_def by auto
   have "f1 = f2"
     apply (rule ext)
-    using \<open>cbounded_linear f1\<close> \<open>cbounded_linear f2\<close> f1_f2_tensors
+    using \<open>bounded_clinear f1\<close> \<open>bounded_clinear f2\<close> f1_f2_tensors
     apply (rule equal_span'[where f=f1 and G=tensors])
     using span_tensors tensors_def
     by auto

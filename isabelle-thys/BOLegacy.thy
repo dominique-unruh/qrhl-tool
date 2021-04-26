@@ -53,8 +53,8 @@ adhoc_overloading
 
 lemma equal_span':
   fixes f g :: "'a::cbanach \<Rightarrow> 'b::cbanach"
-  assumes "cbounded_linear f"
-    and "cbounded_linear g"
+  assumes "bounded_clinear f"
+    and "bounded_clinear g"
   assumes "\<And>x. x\<in>G \<Longrightarrow> f x = g x"
   assumes "x\<in>closure (complex_vector.span G)"
   shows "f x = g x"
