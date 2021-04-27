@@ -32,7 +32,7 @@ object IsabelleTypes {
   val set = \<open>\<^type_name>\<open>set\<close>\<close>
   val ell2 = \<open>\<^type_name>\<open>ell2\<close>\<close>
   val bit = \<open>\<^type_name>\<open>bit\<close>\<close>
-  val clinear_space = \<open>\<^type_name>\<open>clinear_space\<close>\<close>
+  val ccsubspace = \<open>\<^type_name>\<open>ccsubspace\<close>\<close>
   val mem2 = \<open>\<^type_name>\<open>mem2\<close>\<close>
   val program = \<open>\<^type_name>\<open>program\<close>\<close>
   val oracle_program = \<open>\<^type_name>\<open>oracle_program\<close>\<close>

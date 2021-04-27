@@ -5,6 +5,7 @@ theory QRHL_Core
 begin
 
 hide_const (open) Real_Vector_Spaces.span
+no_notation Group.monoid.mult (infixl "\<otimes>\<index>" 70)
 
 section \<open>Miscellaneous\<close>
 
@@ -27,7 +28,7 @@ lemma classical_true[simp]: "Cla[True] = top" unfolding classical_subspace_def b
 lemma classical_false[simp]: "Cla[False] = bot" unfolding classical_subspace_def by simp
 lemma classical_mono[simp]: "(Cla[a] \<le> Cla[b]) = (a \<longrightarrow> b)" 
   apply (cases a, auto, cases b, auto)
-  using bot.extremum_uniqueI top_not_bot by blast 
+  using bot.extremum_uniqueI clinear_space_top_not_bot by blast 
 lemma classical_simp1[simp]: 
   shows "(Cla[b] \<le> A) = (b \<longrightarrow> A = top)"
   using top.extremum_unique by fastforce
@@ -54,9 +55,9 @@ lemma applyOp_Cla[simp]:
   apply (cases b) using assms by auto
 
 lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]" 
-  unfolding sup_clinear_space_def[symmetric] by auto
+  unfolding sup_ccsubspace_def[symmetric] by auto
 lemma Cla_sup[simp]: "Cla[x] \<squnion> Cla[y] = Cla[x\<or>y]" 
-  unfolding sup_clinear_space_def[symmetric] by auto
+  unfolding sup_ccsubspace_def[symmetric] by auto
 lemma BINF_Cla[simp]: "(INF z\<in>Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
 proof (rule Inf_eqI)
   show "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> \<CC>\<ll>\<aa>[\<forall>z\<in>Z. x z] \<le> i" by auto
@@ -105,11 +106,11 @@ lift_definition swap_variables_vector :: "'a::universe variable \<Rightarrow> 'a
   "\<lambda>v w \<psi>. \<psi> o swap_variables_mem2 v w"
   by (cheat swap_variables_vector)
 
-lift_definition index_flip_subspace :: "mem2 ell2 clinear_space \<Rightarrow> mem2 ell2 clinear_space" is
+lift_definition index_flip_subspace :: "mem2 ell2 ccsubspace \<Rightarrow> mem2 ell2 ccsubspace" is
   "\<lambda>S. index_flip_vector ` S"
   by (cheat index_flip_subspace)
 
-lift_definition swap_variables_subspace :: "'a::universe variable \<Rightarrow> 'a variable \<Rightarrow> mem2 ell2 clinear_space \<Rightarrow> mem2 ell2 clinear_space" is
+lift_definition swap_variables_subspace :: "'a::universe variable \<Rightarrow> 'a variable \<Rightarrow> mem2 ell2 ccsubspace \<Rightarrow> mem2 ell2 ccsubspace" is
   "\<lambda>v w S. swap_variables_vector v w ` S"
   by (cheat swap_variables_subspace)
 
@@ -238,11 +239,11 @@ lemma colocal_op_qvars[simp, intro!]:
   by (cheat colocal_op_qvars)
 
 lemma colocal_top[simp]: "colocal_pred_qvars_str top Q"
-  using [[transfer_del_const pcr_clinear_space]]
+  using [[transfer_del_const pcr_ccsubspace]]
   unfolding distinct_qvars_def apply transfer 
   by (auto intro: predicate_local_raw_top exI[of _ "{}"])
 lemma colocal_bot[simp]: "colocal_pred_qvars_str bot Q"
-  using [[transfer_del_const pcr_clinear_space]]
+  using [[transfer_del_const pcr_ccsubspace]]
   unfolding distinct_qvars_def apply transfer
   by (auto intro: predicate_local_raw_bot exI[of _ "{}"])
 
@@ -282,7 +283,7 @@ proof -
 qed
 
 lemma colocal_sup[simp,intro!]: "colocal_pred_qvars_str A Q \<Longrightarrow> colocal_pred_qvars_str B Q \<Longrightarrow> colocal_pred_qvars_str (A \<squnion> B) Q"
-  by (simp flip: plus_clinear_space_def)
+  by (simp flip: plus_ccsubspace_def)
 lemma colocal_Cla[simp]: "colocal_pred_qvars_str (Cla[b]) Q"
   by (cases b; simp)
 
@@ -405,7 +406,7 @@ lemma lift_minusOp[simp]: "S\<guillemotright>Q - T\<guillemotright>Q = (S - T)\<
   by (cheat lift_minusOp)
 lemma lift_timesOp[simp]: "S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a::universe,'a) l2bounded"  
   by (cheat TODO11)
-lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> - (S\<guillemotright>Q) = (- S)\<guillemotright>Q" for Q :: "'a::universe variables" and S :: "'a ell2 clinear_space"
+lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> - (S\<guillemotright>Q) = (- S)\<guillemotright>Q" for Q :: "'a::universe variables" and S :: "'a ell2 ccsubspace"
   by (cheat TODO11)
 lemma lift_tensorOp: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>variable_concat Q R" for Q :: "'a::universe variables" and R :: "'b::universe variables" and S T :: "(_,_) l2bounded" 
   by (cheat TODO11)
@@ -507,7 +508,7 @@ lemma lift_vector_inj:
 
 
 lemma applyOpSpace_eq':
-  fixes S :: "_ clinear_space" and A B :: "(_,_) bounded"
+  fixes S :: "_ ccsubspace" and A B :: "(_,_) bounded"
   assumes [simp]: "distinct_qvars Q"
   assumes "predicate_local S Q"
   assumes "operator_local A Q"
@@ -563,7 +564,7 @@ proof -
 qed
 
 
-lemma comm_op_twice[simp]: "distinct_qvars Q \<Longrightarrow> comm_op\<guillemotright>Q \<cdot> (comm_op\<guillemotright>Q \<cdot> S) = (S::_ clinear_space)"
+lemma comm_op_twice[simp]: "distinct_qvars Q \<Longrightarrow> comm_op\<guillemotright>Q \<cdot> (comm_op\<guillemotright>Q \<cdot> S) = (S::_ ccsubspace)"
   apply (subst adj_comm_op[symmetric])
   by (simp del: adj_comm_op flip: adjoint_lift cblinfun_apply_assoc_clinear_space)
 
@@ -1318,7 +1319,7 @@ consts space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a::universe 
 lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> Span {\<psi>}\<guillemotright>Q \<le> B)"
   by (cheat TODO14)
 
-definition space_div_unlifted :: "('a*'b) ell2 clinear_space \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 clinear_space" where
+definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" where
   [code del]: "space_div_unlifted S \<psi> = Abs_clinear_space {\<phi>. \<phi>\<otimes>\<psi> \<in> space_as_set S}"
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
@@ -1803,7 +1804,7 @@ lemma applyOp_Uoracle'[simp]:
 lemma Uoracle_twice[simp]: 
   fixes f :: "_ \<Rightarrow> _::xor_group"
   assumes "distinct_qvars Q"
-  shows "Uoracle f\<guillemotright>Q \<cdot> (Uoracle f\<guillemotright>Q \<cdot> S) = (S::_ clinear_space)"
+  shows "Uoracle f\<guillemotright>Q \<cdot> (Uoracle f\<guillemotright>Q \<cdot> S) = (S::_ ccsubspace)"
   apply (subst Uoracle_selfadjoint[symmetric])
   using assms by (simp del: Uoracle_selfadjoint flip: adjoint_lift cblinfun_apply_assoc_clinear_space)
 

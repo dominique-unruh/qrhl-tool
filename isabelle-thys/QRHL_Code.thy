@@ -95,11 +95,9 @@ lemma quantum_equality_full_def_let:
 lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"
   by (cheat space_div_unlifted_code)
 
-
-
 (* TODO: remove once "code del" is added at the definitions themselves \<longrightarrow> is already done! *)
-declare ord_clinear_space_inst.less_eq_clinear_space[code del]
-declare ord_clinear_space_inst.less_clinear_space[code del]
+(* declare ord_clinear_space_inst.less_eq_clinear_space[code del]
+declare ord_clinear_space_inst.less_clinear_space[code del] *)
 
 derive (eq) ceq bit
 derive (linorder) compare_order bit
