@@ -16,11 +16,13 @@ Source is in isabelle-thys/Scala.thy
 
 Run
 
-/opt/Isabelle2020/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+/opt/Isabelle2021/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL.Scala:IsabelleNames.scala -p 1 QRHL-Scala
 
 to recreate/update
 
 */
+
+/* TODO: make a build.sbt command for the above */
 
 package qrhl.isabellex
 

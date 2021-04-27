@@ -244,7 +244,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   val intT: Type = Type(t.int)
   val bitT: Type = Type(t.bit)
   //  val linear_spaceT_name = "Complex_Inner_Product.linear_space"
-  val predicateT: Type = Type(t.clinear_space, ell2T(Type(t.mem2)))
+  val predicateT: Type = Type(t.ccsubspace, ell2T(Type(t.mem2)))
   val programT: Type = Type(t.program)
   val oracle_programT: Type = Type(t.oracle_program)
   val classical_subspace : Term= Const(c.classical_subspace, boolT -->: predicateT)
@@ -281,7 +281,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def empty_set(typ: Typ): Const = bot(setT(typ))
 
-  def linear_spaceT(typ: Typ): Type = Type(t.clinear_space, typ)
+  def linear_spaceT(typ: Typ): Type = Type(t.ccsubspace, typ)
 
   val infiniteT: Typ = Type(t.infinite)
 

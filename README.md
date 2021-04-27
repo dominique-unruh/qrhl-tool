@@ -18,9 +18,9 @@ You can download the binaries [here](https://github.com/dominique-unruh/qrhl-too
 To check whether this is the case, go into a terminal,
 and enter `java -version` or `emacs -version`, respectively, and see whether the commands are found.
 
-* Isabelle2020 must be installed. Download it at https://isabelle.in.tum.de/website-Isabelle2020/ and 
+* Isabelle2021 must be installed. Download it at https://isabelle.in.tum.de/website-Isabelle2021/ and 
   unpack it somewhere.
-* The AFP must be installed (Isabelle2020 version). Download it at
+* The AFP must be installed (Isabelle2021 version). Download it at
   https://www.isa-afp.org/download.html and unpack it 
   somewhere.
 

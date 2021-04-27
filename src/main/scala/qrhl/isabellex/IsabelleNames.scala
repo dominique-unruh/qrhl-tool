@@ -6,13 +6,11 @@ Source is in isabelle-thys/Scala.thy
 
 Run
 
-/opt/Isabelle2019/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL-Scala.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+/opt/Isabelle2021/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL.Scala:IsabelleNames.scala -p 1 QRHL-Scala
 
 to recreate/update
 
 */
-
-// TODO Rerun the command above
 
 package qrhl.isabellex
 
@@ -23,8 +21,8 @@ object IsabelleTypes {
   val bool = "HOL.bool"
   val set = "Set.set"
   val ell2 = "Complex_L2.ell2"
-  val bit = "Bit.bit"
-  val clinear_space = "Complex_Vector_Spaces.clinear_space"
+  val bit = "Z2.bit"
+  val ccsubspace = "Complex_Vector_Spaces.ccsubspace"
   val mem2 = "Prog_Variables.mem2"
   val program = "Programs.program"
   val oracle_program = "Programs.oracle_program"
