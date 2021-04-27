@@ -493,7 +493,7 @@ lemma move_plus_meas_rule:
 lemma applyOp_lift: "distinct_qvars Q \<Longrightarrow> A\<guillemotright>Q \<cdot> lift_vector \<psi> Q \<psi>' = lift_vector (A\<cdot>\<psi>) Q \<psi>'"
   by (cheat applyOp_lift)
 
-lemma span_lift: "distinct_qvars Q \<Longrightarrow> Span G \<guillemotright> Q = Span {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
+lemma span_lift: "distinct_qvars Q \<Longrightarrow> ccspan G \<guillemotright> Q = ccspan {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
   by (cheat span_lift)
 
 lemma lift_rest_nonempty: "lift_rest Q - {0} \<noteq> {}"
@@ -514,7 +514,7 @@ lemma applyOpSpace_eq':
   assumes "operator_local A Q"
   assumes "operator_local B Q"
   assumes AB: "\<And>x \<psi>'. x \<in> G \<Longrightarrow> \<psi>' \<in> lift_rest Q \<Longrightarrow> A \<cdot> (lift_vector x Q \<psi>') = B \<cdot> (lift_vector x Q \<psi>')"
-  assumes S_spanG: "Span G \<guillemotright> Q \<ge> S"
+  assumes S_spanG: "ccspan G \<guillemotright> Q \<ge> S"
   shows "A \<cdot> S = B \<cdot> S"
 proof -
   obtain S' where S: "S = S'\<guillemotright>Q"
@@ -530,7 +530,7 @@ proof -
     apply (rule lift_vector_inj)
     using lift_rest_nonempty[folded some_in_eq, of Q] by auto
 
-  have S'_spanG: "S' \<le> Span G"
+  have S'_spanG: "S' \<le> ccspan G"
     using S_spanG unfolding S by simp
 
   have "A' \<cdot> S' = B' \<cdot> S'"
@@ -549,15 +549,15 @@ lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guill
 
 lemma ket_less_specific:
   assumes "distinct_qvars (variable_concat X Y)"
-  shows "Span {ket (x,y)}\<guillemotright>variable_concat X Y \<le> Span {ket y}\<guillemotright>Y"
+  shows "ccspan {ket (x,y)}\<guillemotright>variable_concat X Y \<le> ccspan {ket y}\<guillemotright>Y"
 proof -
-  have "Span {ket (x,y)}\<guillemotright>variable_concat X Y = Span {x' \<otimes> y' | x' y'. x'\<in>{ket x} \<and> y'\<in>{ket y}}\<guillemotright>variable_concat X Y"
+  have "ccspan {ket (x,y)}\<guillemotright>variable_concat X Y = ccspan {x' \<otimes> y' | x' y'. x'\<in>{ket x} \<and> y'\<in>{ket y}}\<guillemotright>variable_concat X Y"
     unfolding ket_product by simp
-  also have "\<dots> = Span {ket x}\<guillemotright>X \<sqinter> Span {ket y}\<guillemotright>Y"
+  also have "\<dots> = ccspan {ket x}\<guillemotright>X \<sqinter> ccspan {ket y}\<guillemotright>Y"
     apply (subst span_tensor[symmetric])
     apply (subst tensor_lift)
     using assms by auto
-  also have "\<dots> \<le> Span {ket y}\<guillemotright>Y"
+  also have "\<dots> \<le> ccspan {ket y}\<guillemotright>Y"
     by simp
   finally show ?thesis
     by -
@@ -1316,7 +1316,7 @@ subsection \<open>Subspace division\<close>
 
 consts space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a::universe variables \<Rightarrow> predicate"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
-lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> Span {\<psi>}\<guillemotright>Q \<le> B)"
+lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
   by (cheat TODO14)
 
 definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" where
@@ -1430,8 +1430,8 @@ lemma Qeq_mult2[simp]:
 (* Proof in paper *)
 lemma quantum_eq_unique[simp]: "distinct_qvars (variable_concat Q R) \<Longrightarrow>
   isometry U \<Longrightarrow> isometry (adjoint V) \<Longrightarrow> 
-  quantum_equality_full U Q V R \<sqinter> Span{\<psi>}\<guillemotright>Q
-  = liftSpace (Span{\<psi>}) Q \<sqinter> liftSpace (Span{V* \<cdot> U \<cdot> \<psi>}) R"
+  quantum_equality_full U Q V R \<sqinter> ccspan{\<psi>}\<guillemotright>Q
+  = liftSpace (ccspan{\<psi>}) Q \<sqinter> liftSpace (ccspan{V* \<cdot> U \<cdot> \<psi>}) R"
   for Q::"'a::universe variables" and R::"'b::universe variables"
     and U::"('a,'c) l2bounded" and V::"('b,'c) l2bounded"
     and \<psi>::"'a ell2"
@@ -1441,7 +1441,7 @@ lemma quantum_eq_unique[simp]: "distinct_qvars (variable_concat Q R) \<Longright
 lemma
   quantum_eq_add_state: 
     "distinct_qvars (variable_concat Q (variable_concat R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
-    quantum_equality_full U Q V R \<sqinter> Span {\<psi>}\<guillemotright>T
+    quantum_equality_full U Q V R \<sqinter> ccspan {\<psi>}\<guillemotright>T
              = quantum_equality_full (U \<otimes> idOp) (variable_concat Q T) (addState \<psi> \<cdot> V) R"
     for U :: "('a::universe,'c) l2bounded" and V :: "('b::universe,'c) l2bounded" and \<psi> :: "'d::universe ell2"
     and Q :: "'a::universe variables"    and R :: "'b::universe variables"    and T :: "'d variables"
@@ -1809,7 +1809,7 @@ lemma Uoracle_twice[simp]:
   using assms by (simp del: Uoracle_selfadjoint flip: adjoint_lift cblinfun_apply_assoc_clinear_space)
 
 
-definition "proj_classical_set S = Proj (Span {ket s|s. s\<in>S})"
+definition "proj_classical_set S = Proj (ccspan {ket s|s. s\<in>S})"
 
 lemma isProjector_proj_classical_set[simp]: "isProjector (proj_classical_set S)"
   unfolding proj_classical_set_def by simp
