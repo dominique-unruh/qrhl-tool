@@ -6,7 +6,7 @@ Source is in isabelle-thys/Scala.thy
 
 Run
 
-/opt/Isabelle2021/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+Run `sbt createIsabelleNames` to recreate/update
 
 to recreate/update
 

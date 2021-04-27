@@ -57,6 +57,8 @@ makeGITREVISION := {
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
+val isabelleHome = file("/opt/Isabelle2021")
+
 lazy val makeQrhlToolConf = taskKey[Unit]("Create default qrhl-tool.conf")
 makeQrhlToolConf := {
   val file = baseDirectory.value / "qrhl-tool.conf"
@@ -66,7 +68,7 @@ makeQrhlToolConf := {
     val pr = new PrintWriter(file)
     pr.println("# This file is for local development. The distribution will get a copy of qrhl-tool.conf.dist instead.")
     pr.println()
-    pr.println("isabelle-home = /opt/Isabelle2021")
+    pr.println(s"isabelle-home = $isabelleHome")
     pr.close()
   }
 }
@@ -107,6 +109,15 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 parallelExecution in Test := false
 
 javaOptions in Universal += "-J-Xss10m"
+
+// This needs to be run manually (because it is slow and rarely needed)
+lazy val createIsabelleNames = taskKey[Unit]("(Re)create isabellex/IsabelleNames.scala")
+createIsabelleNames := {
+  val isabelleCommand = (isabelleHome / "bin/isabelle").toString
+  val isabellexDir = (scalaSource.in(Compile).value / "qrhl" / "isabellex").toString
+  // /opt/Isabelle2021/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL.Scala:IsabelleNames.scala -p 1 QRHL-Scala
+  Process(List(isabelleCommand, "export", "-d", ".", "-O", isabellexDir, "-x", "QRHL.Scala:IsabelleNames.scala", "-p", "1", "QRHL-Scala")).!!
+}
 
 /*
 
