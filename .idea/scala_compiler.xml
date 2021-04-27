@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaCompilerConfiguration">
-    <profile name="sbt 1" modules="qrhl-tool.scala-isabelle,scala-isabelle,scala-isabelle_8454" />
+    <profile name="sbt 1" modules="hashedcomputation,qrhl-tool.scala-isabelle,qrhl-tool_7941,scala-isabelle,scala-isabelle_8454,svn.qrhl-tool.scala-isabelle" />
+    <profile name="sbt 2" modules="qrhl">
+      <option name="deprecationWarnings" value="true" />
+    </profile>
   </component>
 </project>

@@ -4,6 +4,19 @@
     <option name="customVMPath" />
     <option name="linkedExternalProjectsSettings">
       <SbtProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/hashedcomputation" />
+            <option value="$PROJECT_DIR$/project" />
+            <option value="$PROJECT_DIR$/scala-isabelle" />
+            <option value="$PROJECT_DIR$/scala-isabelle/project" />
+          </set>
+        </option>
+        <option name="sbtVersion" value="1.4.3" />
+      </SbtProjectSettings>
+      <SbtProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/scala-isabelle" />
         <option name="modules">
           <set>
