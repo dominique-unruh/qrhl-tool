@@ -1537,7 +1537,7 @@ lemma quantum_equality_merge:
   assumes "distinct_qvars (variable_concat (variable_concat Q1 R1) (variable_concat Q2 R2))"
   shows "quantum_equality_full U1 Q1 V1 R1 \<sqinter> quantum_equality_full U2 Q2 V2 R2 
     \<le> quantum_equality_full (U1\<otimes>U2) (variable_concat Q1 Q2) (V1\<otimes>V2) (variable_concat R1 R2)"
-proof (rule clinear_space_leI)
+proof (rule ccsubspace_leI, rule subsetI)
   fix x :: "mem2 ell2"
   assume "x \<in> space_as_set (quantum_equality_full U1 Q1 V1 R1 \<sqinter> quantum_equality_full U2 Q2 V2 R2)"
   then have x1: "x \<in> space_as_set (quantum_equality_full U1 Q1 V1 R1)"
