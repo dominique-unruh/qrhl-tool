@@ -52,6 +52,5 @@
     <orderEntry type="library" name="sbt: org.scalaz:scalaz-core_2.13:7.3.2:jar" level="project" />
     <orderEntry type="library" name="sbt: org.slf4j:slf4j-api:1.7.30:jar" level="project" />
     <orderEntry type="library" name="sbt: org.slf4j:slf4j-simple:1.7.30:jar" level="project" />
-    <orderEntry type="module" module-name="svn.qrhl-tool.scala-isabelle" exported="" />
   </component>
 </module>

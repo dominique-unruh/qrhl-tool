@@ -267,7 +267,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     liftSpace(typ) $ space $ vars
   }
 
-  def span(typ: Typ): Const = Const(c.Span, setT(typ) -->: linear_spaceT(typ))
+  def span(typ: Typ): Const = Const(c.ccspan, setT(typ) -->: linear_spaceT(typ))
   def span(term: Term): Term = fastype_of(term) match {
     case SetT(typ) => span(typ) $ term
   }

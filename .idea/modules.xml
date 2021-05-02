@@ -7,10 +7,12 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/qrhl.iml" filepath="$PROJECT_DIR$/.idea/modules/qrhl.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/qrhl-build.iml" filepath="$PROJECT_DIR$/.idea/modules/qrhl-build.iml" group="sbt-build-modules" />
       <module fileurl="file://$PROJECT_DIR$/scala-isabelle/.idea/modules/qrhl-tool.scala-isabelle.iml" filepath="$PROJECT_DIR$/scala-isabelle/.idea/modules/qrhl-tool.scala-isabelle.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/qrhl-tool.scala-isabelle.project.scala-isabelle-build.iml" filepath="$PROJECT_DIR$/.idea/modules/qrhl-tool.scala-isabelle.project.scala-isabelle-build.iml" />
       <module fileurl="file://$PROJECT_DIR$/scala-isabelle/.idea/modules/scala-isabelle.iml" filepath="$PROJECT_DIR$/scala-isabelle/.idea/modules/scala-isabelle.iml" />
       <module fileurl="file://$PROJECT_DIR$/scala-isabelle/.idea/modules/scala-isabelle-build.iml" filepath="$PROJECT_DIR$/scala-isabelle/.idea/modules/scala-isabelle-build.iml" />
       <module fileurl="file://$PROJECT_DIR$/scala-isabelle/.idea/modules/scala-isabelle.project.scala-isabelle-build.iml" filepath="$PROJECT_DIR$/scala-isabelle/.idea/modules/scala-isabelle.project.scala-isabelle-build.iml" group="sbt-build-modules" />
       <module fileurl="file://$PROJECT_DIR$/scala-isabelle/.idea/modules/svn.qrhl-tool.scala-isabelle.iml" filepath="$PROJECT_DIR$/scala-isabelle/.idea/modules/svn.qrhl-tool.scala-isabelle.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/unruh.svn.qrhl-tool.scala-isabelle.iml" filepath="$PROJECT_DIR$/.idea/modules/unruh.svn.qrhl-tool.scala-isabelle.iml" />
     </modules>
   </component>
 </project>

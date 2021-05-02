@@ -40,7 +40,7 @@ lemma wp1_qapply_tac:
   fixes A B Q e
   assumes "Q\<^sub>1 = index_vars True Q"
   assumes "e1 = index_expression True e"
-  assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) e1 B"
+  assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adj (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) e1 B"
   shows "qrhl A [qapply Q e] [] B"
   by (cheat wp1_qapply_tac)
 
@@ -48,7 +48,7 @@ lemma wp2_qapply_tac:
   fixes A B Q e
   assumes "Q\<^sub>1 = index_vars False Q"
   assumes "e1 = index_expression False e"
-  assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adjoint (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) e1 B"
+  assumes "A = map_expression2 (\<lambda>e\<^sub>1 B. Cla[isometry e\<^sub>1] \<sqinter> (adj (e\<^sub>1\<guillemotright>Q\<^sub>1) \<cdot> (B \<sqinter> (e\<^sub>1\<guillemotright>Q\<^sub>1 \<cdot> top)))) e1 B"
   shows "qrhl A [] [qapply Q e] B"
   by (cheat wp2_qapply_tac)
 

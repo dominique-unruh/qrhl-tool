@@ -29,7 +29,7 @@ and enter `java -version` or `emacs -version`, respectively, and see whether the
 Simply unpack `qrhl.zip`. This will create a directory called `qrhl-snapshot`.
 
 In the `qrhl-snapshot` directory, edit the file `qrhl-tool.conf`: 
-Add the configuration keys `isabelle-home = <where you unpackaged Isabelle2020>`
+Add the configuration keys `isabelle-home = <where you unpackaged Isabelle2021>`
 and `afp-home = <where you unpackaged AFP>`.
 
 To update, simply extract the new version.

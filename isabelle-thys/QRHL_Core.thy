@@ -361,7 +361,7 @@ lemma lift_predicate_local[intro!]: "qvariables_local R Q \<Longrightarrow> pred
 lemma lift_operator_local[intro!]: "qvariables_local R Q \<Longrightarrow> operator_local (S\<guillemotright>R) Q"
   by (cheat lift_operator_local)
 
-lemma adjoint_lift[simp]: "adjoint (liftOp U Q) = liftOp (adjoint U) Q" 
+lemma adjoint_lift[simp]: "adj (liftOp U Q) = liftOp (adj U) Q" 
   by (cheat adjoint_lift)
 lemma scaleC_lift[simp]: "c *\<^sub>C (A\<guillemotright>Q) = (c *\<^sub>C A) \<guillemotright> Q" for A :: "(_,_) bounded"
   by (cheat scaleC_lift)
@@ -1429,7 +1429,7 @@ lemma Qeq_mult2[simp]:
 
 (* Proof in paper *)
 lemma quantum_eq_unique[simp]: "distinct_qvars (variable_concat Q R) \<Longrightarrow>
-  isometry U \<Longrightarrow> isometry (adjoint V) \<Longrightarrow> 
+  isometry U \<Longrightarrow> isometry (adj V) \<Longrightarrow> 
   quantum_equality_full U Q V R \<sqinter> ccspan{\<psi>}\<guillemotright>Q
   = liftSpace (ccspan{\<psi>}) Q \<sqinter> liftSpace (ccspan{V* \<cdot> U \<cdot> \<psi>}) R"
   for Q::"'a::universe variables" and R::"'b::universe variables"
