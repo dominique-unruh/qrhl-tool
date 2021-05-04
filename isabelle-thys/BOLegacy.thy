@@ -61,5 +61,11 @@ lemma equal_span':
   using assms equal_span_applyOpSpace
   by metis 
 
+lemma bot_plus[simp]: "sup bot x = x" 
+  for x :: "'a::complex_normed_vector ccsubspace"
+  apply transfer
+  apply (rule closed_sum_zero_left)
+  using closed_csubspace_def by blast
+
 
 end
