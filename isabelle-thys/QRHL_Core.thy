@@ -28,7 +28,7 @@ lemma classical_true[simp]: "Cla[True] = top" unfolding classical_subspace_def b
 lemma classical_false[simp]: "Cla[False] = bot" unfolding classical_subspace_def by simp
 lemma classical_mono[simp]: "(Cla[a] \<le> Cla[b]) = (a \<longrightarrow> b)" 
   apply (cases a, auto, cases b, auto)
-  using bot.extremum_uniqueI clinear_space_top_not_bot by blast 
+  using bot.extremum_uniqueI ccsubspace_top_not_bot by blast 
 lemma classical_simp1[simp]: 
   shows "(Cla[b] \<le> A) = (b \<longrightarrow> A = top)"
   using top.extremum_unique by fastforce
