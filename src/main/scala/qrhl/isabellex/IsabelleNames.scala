@@ -27,7 +27,7 @@ object IsabelleTypes {
   val program = "Programs.program"
   val oracle_program = "Programs.oracle_program"
   val distr = "Discrete_Distributions.distr"
-  val bounded = "Bounded_Operators.cblinfun"
+  val bounded = "Complex_Bounded_Linear_Function0.cblinfun"
   val measurement = "QRHL_Core.measurement"
   val list = "List.list"
   val variable = "Prog_Variables.variable"
