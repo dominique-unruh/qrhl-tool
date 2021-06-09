@@ -8,13 +8,14 @@ lemma assoc_op_lift_aux:
   defines "V == assoc_op* \<cdot> U \<cdot> assoc_op"
   shows
     "U\<guillemotright>(variable_concat (variable_concat Q R) S) = V\<guillemotright>(variable_concat Q (variable_concat R S))"
-  using assms by (metis (no_types, lifting) V_def adjoint_twice distinct_qvars_split2 distinct_qvars_swap qvar_trafo_adj qvar_trafo_assoc_op qvar_trafo_l2bounded)
+  using assms by (metis (no_types, lifting) V_def double_adj distinct_qvars_split2 distinct_qvars_swap
+      qvar_trafo_adj qvar_trafo_assoc_op qvar_trafo_l2bounded)
 
 lemma assoc_replace: 
   fixes A B C D :: "(_,_) l2bounded"
   assumes "A \<cdot> B = C"
   shows "D \<cdot> A \<cdot> B = D \<cdot> C"
-  by (simp add: cblinfun_apply_assoc assms) 
+  by (simp add: cblinfun_compose_assoc assms) 
 
 lemma teleport_goal1:
   assumes[simp]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
@@ -26,9 +27,9 @@ proof -
   have hadamard: "hadamard \<otimes> idOp \<cdot> hadamard \<otimes> idOp = idOp" by simp
   have CNOT: "CNOT \<otimes> idOp \<cdot> CNOT \<otimes> idOp = idOp" by simp
   show ?thesis
-    by (simp add: distinct_qvars_split1 distinct_qvars_split2 cblinfun_apply_assoc[symmetric] assoc_op_lift_aux
+    by (simp add: distinct_qvars_split1 distinct_qvars_split2 cblinfun_compose_assoc[symmetric] assoc_op_lift_aux
         lift_extendR[where U=hadamard and R="\<lbrakk>A1,B1\<rbrakk>"] lift_extendR[where U=CNOT and R="\<lbrakk>B1\<rbrakk>"]
-        assoc_replace[OF hadamard] assoc_replace[OF UadjU] assoc_replace[OF CNOT] assoc_replace[OF adjUU])
+        assoc_replace[OF hadamard] assoc_replace[OF unitaryD2] assoc_replace[OF CNOT] assoc_replace[OF isometryD])
 qed
 
 lemma teleport_goal2_a0c0:
@@ -72,5 +73,3 @@ lemma teleport_goal2_a1c1:
   by eval
 
 end
-
-

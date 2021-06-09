@@ -74,7 +74,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    fix c'.
    rule move_plus_meas_rule.
     simp!.
-   simp ! assoc_right. }
+   simp ! cblinfun_assoc_right. }
 
  case c':=c1.
 
@@ -121,7 +121,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      wp left.
      wp left.
      skip.
-     simp ! assoc_left.
+     simp ! cblinfun_assoc_left.
 
      skip.
      rule teleport_goal2_a0c1.
@@ -145,7 +145,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      wp left.
      wp left.
      skip.
-     simp ! assoc_left.
+     simp ! cblinfun_assoc_left.
 
      skip.
      rule teleport_goal2_a1c0.
@@ -168,7 +168,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      wp left.
      wp left.
      skip.
-     simp ! assoc_left.
+     simp ! cblinfun_assoc_left.
 
      skip.
      rule teleport_goal2_a1c1.
