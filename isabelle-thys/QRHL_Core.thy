@@ -474,12 +474,12 @@ for Q :: "'a::universe variables" and R :: "string set"
 lemma lift_extendR:
   assumes "distinct_qvars (variable_concat Q R)"
   shows "U\<guillemotright>Q = (U\<otimes>idOp)\<guillemotright>(variable_concat Q R)"
-  by (metis assms distinct_qvarsR lift_idOp lift_tensorOp times_idOp1)
+  by (metis assms cblinfun_compose_id_right distinct_qvarsR lift_idOp lift_tensorOp)
 
 lemma lift_extendL:
   assumes "distinct_qvars (variable_concat Q R)"
   shows "U\<guillemotright>Q = (idOp\<otimes>U)\<guillemotright>(variable_concat R Q)"
-  by (metis assms distinct_qvarsR distinct_qvars_swap lift_idOp lift_tensorOp times_idOp2)
+  by (metis assms distinct_qvarsR distinct_qvars_swap lift_idOp lift_tensorOp cblinfun_compose_id_left)
 
 (* TODO: rename: plus \<rightarrow> sup *)
 lemma move_plus_meas_rule:
@@ -488,7 +488,7 @@ lemma move_plus_meas_rule:
   assumes "(Proj C)\<guillemotright>Q \<cdot> A \<le> B"
   shows "A \<le> (B\<sqinter>C\<guillemotright>Q) \<squnion> (- C)\<guillemotright>Q"
   apply (rule move_plus) 
-  using Proj_leq[of "C\<guillemotright>Q"] assms by simp
+  using Proj_image_leq[of "C\<guillemotright>Q"] assms by simp
 
 lemma applyOp_lift: "distinct_qvars Q \<Longrightarrow> A\<guillemotright>Q \<cdot> lift_vector \<psi> Q \<psi>' = lift_vector (A\<cdot>\<psi>) Q \<psi>'"
   by (cheat applyOp_lift)
@@ -534,7 +534,7 @@ proof -
     using S_spanG unfolding S by simp
 
   have "A' \<cdot> S' = B' \<cdot> S'"
-    using A'B' S'_spanG by (rule applyOpSpace_eq)
+    using A'B' S'_spanG cblinfun_image_eq by blast
 
   then show ?thesis
     unfolding S A B by simp
@@ -566,7 +566,7 @@ qed
 
 lemma comm_op_twice[simp]: "distinct_qvars Q \<Longrightarrow> comm_op\<guillemotright>Q \<cdot> (comm_op\<guillemotright>Q \<cdot> S) = (S::_ ccsubspace)"
   apply (subst adj_comm_op[symmetric])
-  by (simp del: adj_comm_op flip: adjoint_lift cblinfun_apply_assoc_clinear_space)
+  by (simp del: adj_comm_op flip: adjoint_lift cblinfun_compose_assoc add: cblinfun_assoc_left)
 
 
 subsection "Rewriting quantum variable lifting"
@@ -598,7 +598,7 @@ proof (unfold qvar_trafo_def, auto)
     have "(A* \<cdot> C \<cdot> A)\<guillemotright>Q = (A \<cdot> (A* \<cdot> C \<cdot> A) \<cdot> A*)\<guillemotright>R"
       using assms unfolding qvar_trafo_def by auto 
     also have "\<dots> = ((A \<cdot> A*) \<cdot> C \<cdot> (A \<cdot> A*)*)\<guillemotright>R"
-      by (simp add: cblinfun_apply_assoc)
+      by (simp add: cblinfun_compose_assoc)
     also have "\<dots> = C\<guillemotright>R" apply (subst qvar_trafo_coiso[OF assms])+ by auto 
     finally show ?thesis ..
   qed
@@ -678,7 +678,7 @@ proof -
   also have "\<dots> = (A \<cdot> Proj S \<cdot> A*)\<guillemotright>R \<cdot> top"
     apply (subst qvar_trafo_l2bounded) using assms by auto
   also have "\<dots> = (Proj (A\<cdot>S))\<guillemotright>R \<cdot> top"
-    apply (subst Proj_times)
+    apply (subst Proj_congruence)
     using assms by (simp_all add: qvar_trafo_unitary)
   also have "\<dots> = (Proj (A\<cdot>S) \<cdot> top)\<guillemotright>R" by auto
   also have "\<dots> = (A\<cdot>S)\<guillemotright>R" by auto
@@ -695,7 +695,7 @@ proof (unfold qvar_trafo_def, auto)
   proof -
     have "C\<guillemotright>Q = (A \<cdot> C \<cdot> A*)\<guillemotright>R" apply (rule qvar_trafo_l2bounded) using assms by simp
     also have "\<dots> = (B \<cdot> (A \<cdot> C \<cdot> A*) \<cdot> B*)\<guillemotright>S" apply (rule qvar_trafo_l2bounded) using assms by simp
-    also have "\<dots> = (B \<cdot> A \<cdot> C \<cdot> (A* \<cdot> B*))\<guillemotright>S" using cblinfun_apply_assoc by metis
+    also have "\<dots> = (B \<cdot> A \<cdot> C \<cdot> (A* \<cdot> B*))\<guillemotright>S" using cblinfun_compose_assoc by metis
     finally show ?thesis .
   qed
 qed
@@ -1107,10 +1107,10 @@ proof -
       and Y :: "(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) bounded"
       and c :: complex
     show "f2 (X + Y) = f2 X + f2 Y"
-      by (simp add: f2_def cblinfun_apply_dist1 cblinfun_apply_dist2 flip: lift_plusOp)
+      by (simp add: f2_def bounded_cbilinear.add_left bounded_cbilinear.add_right bounded_cbilinear_cblinfun_compose flip: lift_plusOp)
     show "f2 (c *\<^sub>C X) = c *\<^sub>C f2 X"
       apply (simp add: f2_def)
-      by (metis op_scalar_op scalar_op_op scaleC_lift)
+      by (metis cblinfun_compose_scaleC_left cblinfun_compose_scaleC_right scaleC_lift)
     have "norm (f2 X) \<le> norm (A \<cdot> X\<guillemotright>QR') * norm (A*)"
       unfolding f2_def by (rule norm_mult_ineq_cblinfun)
     also have "\<dots> \<le> norm A * norm (X\<guillemotright>QR') * norm (A*)"
@@ -1130,14 +1130,15 @@ proof -
     also have "\<dots> = (A \<cdot> C1\<guillemotright>Q' \<cdot> A*) \<cdot> (A \<cdot> C2\<guillemotright>R' \<cdot> A*)"
       using assms unfolding qvar_trafo'_def by metis
     also have "\<dots> = A \<cdot> C1\<guillemotright>Q' \<cdot> (A* \<cdot> A) \<cdot> C2\<guillemotright>R' \<cdot> A*"
-      by (simp add: cblinfun_apply_assoc)
+      by (simp add: cblinfun_compose_assoc)
     also have "\<dots> = A \<cdot> C1\<guillemotright>Q' \<cdot> C2\<guillemotright>R' \<cdot> A*"
-      apply (subst adjUU)
+      apply (subst isometryD)
       using qvar_trafo'_unitary
       using assms(3) unitary_isometry by auto 
     also have "\<dots> = A \<cdot> (C1\<otimes>C2)\<guillemotright>QR' \<cdot> A*"
       unfolding assms apply (subst lift_tensorOp[symmetric])
-      using assms by (auto simp: cblinfun_apply_assoc)
+      using assms apply blast
+      by (auto simp: cblinfun_compose_assoc)
     finally show ?thesis 
       unfolding f1_def f2_def by simp
   qed
@@ -1172,7 +1173,7 @@ proof -
   also have "\<dots> = (A \<cdot> Proj (S\<guillemotright>R) \<cdot> A*) \<cdot> top"
     using Proj_lift assms qvar_trafo'_def by fastforce
   also have "\<dots> = (Proj (A \<cdot> S\<guillemotright>R)) \<cdot> top"
-    apply (subst Proj_times)
+    apply (subst Proj_congruence)
     using assms by (simp_all add: qvar_trafo'_unitary)
   also have "\<dots> = A \<cdot> S\<guillemotright>R" by auto
   ultimately show ?thesis by simp
@@ -1188,7 +1189,7 @@ proof -
   moreover have "C\<guillemotright>Q = A o\<^sub>C\<^sub>L C\<guillemotright>Q o\<^sub>C\<^sub>L A*" for C
   proof -
     from \<open>unitary A\<close> have "C\<guillemotright>Q = C\<guillemotright>Q o\<^sub>C\<^sub>L A o\<^sub>C\<^sub>L A*"
-      by (simp add: assoc_right)
+      by (simp add: cblinfun_compose_assoc)
     also from \<open>colocal_op_qvars A Q\<close> have "\<dots> = A o\<^sub>C\<^sub>L C\<guillemotright>Q o\<^sub>C\<^sub>L A*"
       by (subst colocal_op_commute, simp_all)
     finally show ?thesis by -
@@ -1230,7 +1231,7 @@ lemma qvar_trafo'_comm_op':
   assumes "distinct_qvars (variable_concat Q R)"
   shows "qvar_trafo' (comm_op\<guillemotright>variable_concat R Q) Q R"
   using qvar_trafo'_comm_op
-  by (metis adj_comm_op assms comm_op_lift comm_op_times_comm_op times_adjoint times_idOp1)
+  by (simp add: qvar_trafo'_comm_op assms comm_op_sym)
 
 
 lemma comm_op_space_lifted[simp]:
@@ -1255,7 +1256,7 @@ definition "infsetsummable f M = (\<exists>x. infsetsums f M x)"
 definition "infsetsum' f M = (if infsetsummable f M then THE x. infsetsums f M x else 0)" *)
 
 
-definition "is_measurement M \<longleftrightarrow> ((\<forall>i. isProjector (M i)) 
+definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
        \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> loewner_leq P idOp))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
   unfolding is_measurement_def by (auto intro: exI[of _ 0])
@@ -1269,7 +1270,7 @@ setup_lifting type_definition_measurement
 lift_definition mtotal :: "('a,'b) measurement \<Rightarrow> bool" is
   "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, \<psi>\<rangle>".
 
-lemma isProjector_mproj[simp]: "isProjector (mproj M i)"
+lemma is_Proj_mproj[simp]: "is_Proj (mproj M i)"
   using mproj[of M] unfolding is_measurement_def by auto
 
 lift_definition computational_basis :: "('a, 'a) measurement" is
@@ -1283,30 +1284,30 @@ lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
   by (cheat mtotal_computational_basis)
 
 lift_definition binary_measurement :: "('a,'a) l2bounded \<Rightarrow> (bit,'a) measurement" is
-  "\<lambda>(P::('a,'a) l2bounded) (b::bit). (if isProjector P then (if b=1 then P else idOp-P) else 0)"
-proof (rename_tac P, case_tac "isProjector P")
+  "\<lambda>(P::('a,'a) l2bounded) (b::bit). (if is_Proj P then (if b=1 then P else idOp-P) else 0)"
+proof (rename_tac P, case_tac "is_Proj P")
   fix P :: "('a ell2, 'a ell2) bounded"
-  assume [simp]: "isProjector P"
-  show "is_measurement (\<lambda>b::bit. if isProjector P then if b = 1 then P else idOp - P else 0)"
+  assume [simp]: "is_Proj P"
+  show "is_measurement (\<lambda>b::bit. if is_Proj P then if b = 1 then P else idOp - P else 0)"
     apply simp
     unfolding is_measurement_def apply (auto intro!: exI[of _ idOp] simp: UNIV_bit cinner_add_right[symmetric])
-    by (metis apply_idOp diff_add_cancel plus_cblinfun.rep_eq)
+    by (metis apply_id_cblinfun cblinfun.add_left diff_add_cancel)
 next
   fix P :: "('a ell2, 'a ell2) bounded"
-  assume [simp]: "\<not> isProjector P"
-  show "is_measurement (\<lambda>b. if isProjector P then if b = 1 then P else idOp - P else 0)"
+  assume [simp]: "\<not> is_Proj P"
+  show "is_measurement (\<lambda>b. if is_Proj P then if b = 1 then P else idOp - P else 0)"
     by simp
 qed
 
-lemma binary_measurement_true[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 1 = P"
+lemma binary_measurement_true[simp]: "is_Proj P \<Longrightarrow> mproj (binary_measurement P) 1 = P"
   apply transfer by simp
 
-lemma binary_measurement_false[simp]: "isProjector P \<Longrightarrow> mproj (binary_measurement P) 0 = idOp-P"
+lemma binary_measurement_false[simp]: "is_Proj P \<Longrightarrow> mproj (binary_measurement P) 0 = idOp-P"
   unfolding binary_measurement.rep_eq by auto
 
-lemma mtotal_binary_measurement[simp]: "mtotal (binary_measurement P) = isProjector P"
-  apply (transfer fixing: P) apply (cases "isProjector P") apply (auto simp: UNIV_bit)
-  apply (metis apply_idOp cinner_add_right diff_add_cancel minus_cblinfun.rep_eq)
+lemma mtotal_binary_measurement[simp]: "mtotal (binary_measurement P) = is_Proj P"
+  apply (transfer fixing: P) apply (cases "is_Proj P") apply (auto simp: UNIV_bit)
+  apply (metis apply_id_cblinfun cblinfun.add_left cinner_add_right diff_add_cancel)
   by (rule exI[of _ "ket undefined"], rule exI[of _ "ket undefined"], simp)
 
 
@@ -1362,7 +1363,8 @@ proof -
   have op_eq: "((comm_op \<cdot> (V* \<cdot> U) \<otimes> (U* \<cdot> V))\<guillemotright>variable_concat Q R) =
                ((comm_op \<cdot> (U* \<cdot> V) \<otimes> (V* \<cdot> U))\<guillemotright>variable_concat R Q)"
     apply (subst comm_op_lift[symmetric])
-    using a by (simp add: assoc_right)
+    using a
+    by (simp add: cblinfun_assoc_right)
   show ?thesis
     apply (subst quantum_equality_full_def)
     apply (subst quantum_equality_full_def)
@@ -1479,8 +1481,8 @@ proof -
     have "(A\<otimes>B) \<cdot> comm_op = (comm_op \<cdot> comm_op) \<cdot> ((A\<otimes>B) \<cdot> comm_op)"
       by simp
     also have "\<dots> = comm_op \<cdot> (B\<otimes>A)"
-      apply (subst cblinfun_apply_assoc)
-      apply (subst cblinfun_apply_assoc[symmetric], subst comm_op_swap)
+      apply (subst cblinfun_compose_assoc)
+      apply (subst cblinfun_compose_assoc[symmetric], subst comm_op_swap)
       by rule
     finally show ?thesis
       by -
@@ -1490,12 +1492,12 @@ proof -
     ((A\<otimes>B) \<cdot> (comm_op \<cdot> (V* \<cdot> U) \<otimes> (U* \<cdot> V)) \<cdot> (A\<otimes>B)*) \<guillemotright> QR'" (is "_ = liftOp ?rhs _")
     using qvar_trafo_l2bounded by blast
   also have "?rhs = comm_op \<cdot> ((B\<otimes>A) \<cdot> ((V* \<cdot> U) \<otimes> (U* \<cdot> V)) \<cdot> (A\<otimes>B)*)"
-    apply (subst cblinfun_apply_assoc[symmetric])+
+    apply (subst cblinfun_compose_assoc[symmetric])+
     apply (subst ABcomm)
-    apply (subst cblinfun_apply_assoc)+ by rule
+    apply (subst cblinfun_compose_assoc)+ by rule
   also have "\<dots> = comm_op \<cdot> (VB* \<cdot> UA) \<otimes> (UA* \<cdot> VB)"
     unfolding VB_def UA_def
-    by (simp add: cblinfun_apply_assoc)
+    by (simp add: cblinfun_compose_assoc)
   finally show "quantum_equality_full U Q V R = quantum_equality_full UA Q' VB R'"
     unfolding quantum_equality_full_def QR_def QR'_def
     apply (subst eigenspace_lift[symmetric], simp)+
@@ -1592,7 +1594,7 @@ proof (rule ccsubspace_leI, rule subsetI)
   proof -
     note apply_T[simp del]
     from qvar_trafo_T have [simp]: "isometry T"
-      using qvar_trafo_unitary unitary_def' by blast
+      using qvar_trafo_unitary unitary_twosided_isometry by blast
     have "?lhs = T* *\<^sub>V (T *\<^sub>V (q1\<otimes>r1)\<otimes>(q2\<otimes>r2))"
       by (subst apply_T, simp)
     also have "\<dots> = ?rhs"
@@ -1716,7 +1718,8 @@ lemma unitaryZ[simp]: "unitary pauliZ"
   unfolding pauliZ_def by simp
 
 lemma adjoint_Z[simp]: "pauliZ* = pauliZ"
-  unfolding pauliZ_def apply simp apply (subst cblinfun_apply_assoc) by simp
+  unfolding pauliZ_def apply simp
+  by (simp add: cblinfun_compose_assoc)
 
 lemma Z_Z[simp]: "pauliZ \<cdot> pauliZ = idOp"
   using unitaryZ unfolding unitary_def by simp
@@ -1788,7 +1791,7 @@ lemma Uoracle_selfadjoint[simp]: "(Uoracle f)* = Uoracle f" for f :: "_ \<Righta
   unfolding Uoracle_adjoint unfolding Uoracle_def by simp
 
 lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = idOp" for f :: "_ \<Rightarrow> _::xor_group"
-  apply (subst Uoracle_selfadjoint[symmetric]) apply (rule adjUU) by simp
+  apply (subst Uoracle_selfadjoint[symmetric]) apply (rule isometryD) by simp
 
 lemma applyOp_Uoracle[simp]:
   shows "Uoracle f \<cdot> ket (x, y) = ket (x, y + f x)"
@@ -1806,12 +1809,12 @@ lemma Uoracle_twice[simp]:
   assumes "distinct_qvars Q"
   shows "Uoracle f\<guillemotright>Q \<cdot> (Uoracle f\<guillemotright>Q \<cdot> S) = (S::_ ccsubspace)"
   apply (subst Uoracle_selfadjoint[symmetric])
-  using assms by (simp del: Uoracle_selfadjoint flip: adjoint_lift cblinfun_apply_assoc_clinear_space)
+  using assms by (simp del: Uoracle_selfadjoint flip: adjoint_lift cblinfun_compose_assoc add: cblinfun_assoc_left)
 
 
 definition "proj_classical_set S = Proj (ccspan {ket s|s. s\<in>S})"
 
-lemma isProjector_proj_classical_set[simp]: "isProjector (proj_classical_set S)"
+lemma is_Proj_proj_classical_set[simp]: "is_Proj (proj_classical_set S)"
   unfolding proj_classical_set_def by simp
 
 

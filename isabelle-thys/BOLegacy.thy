@@ -58,7 +58,7 @@ lemma equal_span':
   assumes "\<And>x. x\<in>G \<Longrightarrow> f x = g x"
   assumes "x\<in>closure (complex_vector.span G)"
   shows "f x = g x"
-  using assms equal_span_applyOpSpace
+  using assms bounded_clinear_eq_on
   by metis 
 
 lemma bot_plus[simp]: "sup bot x = x" 

@@ -230,7 +230,7 @@ fun mk_quantum_equality Q1 Q2 T =
       val qvT = mk_variablesT T
   in
   Const(\<^const_name>\<open>quantum_equality_full\<close>, opT --> qvT --> opT --> qvT --> \<^typ>\<open>predicate\<close>) $
-    Const(\<^const_name>\<open>idOp\<close>, opT) $ Q1 $ Const(\<^const_name>\<open>idOp\<close>, opT) $ Q2
+    Const(\<^const_name>\<open>id_cblinfun\<close>, opT) $ Q1 $ Const(\<^const_name>\<open>id_cblinfun\<close>, opT) $ Q2
   end
 
 (* returns a term t' such that t'\<and>remove = t\<and>remove is true *)

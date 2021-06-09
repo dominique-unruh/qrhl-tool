@@ -245,9 +245,9 @@ fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRi
   (* Parse predicate as \<open>pred_lhs \<sqinter> \<lbrakk>vt_left\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>vt_right\<rbrakk>\<close> *)
   val (pred_lhs, qeq_left, qeq_right) = case predicate of
       Const(\<^const_name>\<open>inf\<close>,_) $ pred_lhs $ (Const(\<^const_name>\<open>quantum_equality_full\<close>,_) $ U $ Q $ V $ R) => let
-        val _ = case U of Const(\<^const_name>\<open>idOp\<close>,_) => () | _ => 
+        val _ = case U of Const(\<^const_name>\<open>id_cblinfun\<close>,_) => () | _ => 
             raise TERM("The quantum equality must be a simple one (\<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>), not one with operators (quantum_equality_full U \<lbrakk>...\<rbrakk> V \<lbrakk>...\<rbrakk>)", [predicate])
-        val _ = case V of Const(\<^const_name>\<open>idOp\<close>,_) => () | _ => 
+        val _ = case V of Const(\<^const_name>\<open>id_cblinfun\<close>,_) => () | _ => 
             raise TERM("The quantum equality must be a simple one (\<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>), not one with operators (quantum_equality_full U \<lbrakk>...\<rbrakk> V \<lbrakk>...\<rbrakk>)", [predicate])
         in (pred_lhs, Q, R) end
     | _ => raise TERM("Pre/postcondition must be of the form {... \<sqinter> \<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>}", [predicate])
