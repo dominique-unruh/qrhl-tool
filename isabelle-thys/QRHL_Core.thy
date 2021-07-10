@@ -86,10 +86,10 @@ proof (cases "b=0")
     by (auto simp: eigenspace_def)
 next
   case False
-  have "eigenspace b 0 = kernel ((-b) *\<^sub>C idOp)"
+  have "eigenspace b 0 = kernel ((-b) *\<^sub>C id_cblinfun)"
     by (auto simp: eigenspace_def)
-  also have "\<dots> = kernel idOp"
-    using False apply (subst kernel_scalar_times) by auto
+  also have "\<dots> = kernel id_cblinfun"
+    using False apply (subst kernel_scaleC) by auto
   also have "\<dots> = 0"
     by simp
   also have "\<dots> = Cla[b=0]"
@@ -412,7 +412,7 @@ lemma lift_tensorOp: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\
   by (cheat TODO11)
 lemma lift_tensorSpace: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>variable_concat Q R" for Q :: "'a::universe variables" and R :: "'b::universe variables" and S :: "_ subspace" 
   by (cheat TODO11)
-lemma lift_idOp[simp]: "distinct_qvars Q \<Longrightarrow> idOp\<guillemotright>Q = idOp" for Q :: "'a::universe variables"
+lemma lift_id_cblinfun[simp]: "distinct_qvars Q \<Longrightarrow> id_cblinfun\<guillemotright>Q = id_cblinfun" for Q :: "'a::universe variables"
   by (cheat TODO11)
 lemma INF_lift: "(INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" for Q::"'a::universe variables" and S::"'b \<Rightarrow> 'a subspace"
   by (cheat TODO11)
@@ -425,7 +425,7 @@ lemma Proj_lift[simp]: "Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
 lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q::"'a::universe variables"
   by (cheat TODO11)
 lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a::universe variables"
-  unfolding eigenspace_def apply (subst lift_idOp[symmetric, of Q], assumption) by (simp del: lift_idOp)
+  unfolding eigenspace_def apply (subst lift_id_cblinfun[symmetric, of Q], assumption) by (simp del: lift_id_cblinfun)
 
 lemma top_leq_lift: "distinct_qvars Q \<Longrightarrow> top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S" 
   apply (subst top_lift[symmetric], assumption) apply (subst lift_leq, assumption) by simp
@@ -473,21 +473,20 @@ for Q :: "'a::universe variables" and R :: "string set"
 
 lemma lift_extendR:
   assumes "distinct_qvars (variable_concat Q R)"
-  shows "U\<guillemotright>Q = (U\<otimes>idOp)\<guillemotright>(variable_concat Q R)"
-  by (metis assms cblinfun_compose_id_right distinct_qvarsR lift_idOp lift_tensorOp)
+  shows "U\<guillemotright>Q = (U\<otimes>id_cblinfun)\<guillemotright>(variable_concat Q R)"
+  by (metis assms cblinfun_compose_id_right distinct_qvarsR lift_id_cblinfun lift_tensorOp)
 
 lemma lift_extendL:
   assumes "distinct_qvars (variable_concat Q R)"
-  shows "U\<guillemotright>Q = (idOp\<otimes>U)\<guillemotright>(variable_concat R Q)"
-  by (metis assms distinct_qvarsR distinct_qvars_swap lift_idOp lift_tensorOp cblinfun_compose_id_left)
+  shows "U\<guillemotright>Q = (id_cblinfun\<otimes>U)\<guillemotright>(variable_concat R Q)"
+  by (metis assms distinct_qvarsR distinct_qvars_swap lift_id_cblinfun lift_tensorOp cblinfun_compose_id_left)
 
-(* TODO: rename: plus \<rightarrow> sup *)
-lemma move_plus_meas_rule:
+lemma move_sup_meas_rule:
   fixes Q::"'a::universe variables"
   assumes "distinct_qvars Q"
   assumes "(Proj C)\<guillemotright>Q \<cdot> A \<le> B"
   shows "A \<le> (B\<sqinter>C\<guillemotright>Q) \<squnion> (- C)\<guillemotright>Q"
-  apply (rule move_plus) 
+  apply (rule ccsubspace_supI_via_Proj) 
   using Proj_image_leq[of "C\<guillemotright>Q"] assms by simp
 
 lemma applyOp_lift: "distinct_qvars Q \<Longrightarrow> A\<guillemotright>Q \<cdot> lift_vector \<psi> Q \<psi>' = lift_vector (A\<cdot>\<psi>) Q \<psi>'"
@@ -576,16 +575,16 @@ subsection "Rewriting quantum variable lifting"
 (* Means that operator A can be used to transform an expression \<dots>\<guillemotright>Q into \<dots>\<guillemotright>R *)
 definition "qvar_trafo A Q R \<longleftrightarrow> distinct_qvars Q \<and> distinct_qvars R \<and> (\<forall>C::(_,_)l2bounded. C\<guillemotright>Q = (A\<cdot>C\<cdot>A*)\<guillemotright>R)" for A::"('a::universe,'b::universe) l2bounded"
 
-lemma qvar_trafo_id[simp]: "distinct_qvars Q \<Longrightarrow> qvar_trafo idOp Q Q" unfolding qvar_trafo_def by auto
+lemma qvar_trafo_id[simp]: "distinct_qvars Q \<Longrightarrow> qvar_trafo id_cblinfun Q Q" unfolding qvar_trafo_def by auto
 
 (* Auxiliary lemma, will be removed after generalizing to qvar_trafo_unitary *)
-lemma qvar_trafo_coiso: assumes "qvar_trafo A Q R" shows "A \<cdot> A* = idOp"
+lemma qvar_trafo_coiso: assumes "qvar_trafo A Q R" shows "A \<cdot> A* = id_cblinfun"
 proof -
   have colocalQ: "distinct_qvars Q" and colocalR: "distinct_qvars R" using assms unfolding qvar_trafo_def by auto
-  have "idOp\<guillemotright>Q = (A \<cdot> idOp \<cdot> A*)\<guillemotright>R"
+  have "id_cblinfun\<guillemotright>Q = (A \<cdot> id_cblinfun \<cdot> A*)\<guillemotright>R"
     using assms unfolding qvar_trafo_def by auto 
-  hence "idOp\<guillemotright>R = (A \<cdot> A*)\<guillemotright>R" using colocalR colocalQ by auto
-  hence "idOp = A \<cdot> A*" apply (subst lift_eqOp[symmetric])
+  hence "id_cblinfun\<guillemotright>R = (A \<cdot> A*)\<guillemotright>R" using colocalR colocalQ by auto
+  hence "id_cblinfun = A \<cdot> A*" apply (subst lift_eqOp[symmetric])
     using colocalR by auto
   then show ?thesis ..
 qed
@@ -610,9 +609,9 @@ lemma qvar_trafo_unitary:
 proof -
   have "qvar_trafo (A*) R Q"
     using assms by (rule qvar_trafo_adj)
-  hence "(A*) \<cdot> (A*)* = idOp" by (rule qvar_trafo_coiso)
-  hence "A* \<cdot> A = idOp" by simp
-  also have "A \<cdot> A* = idOp"
+  hence "(A*) \<cdot> (A*)* = id_cblinfun" by (rule qvar_trafo_coiso)
+  hence "A* \<cdot> A = id_cblinfun" by simp
+  also have "A \<cdot> A* = id_cblinfun"
     using assms by (rule qvar_trafo_coiso)
   ultimately show ?thesis unfolding unitary_def by simp
 qed
@@ -778,7 +777,7 @@ lemma extend_l2bounded_lift_aux: \<comment> \<open>Auxiliary lemma for extend_li
   fixes Q :: "'q::universe variables" and R :: "'r::universe variables"
     and S :: "('q,'q) l2bounded"
   assumes "distinct_qvars (variable_concat Q R)"
-  shows "S\<guillemotright>Q \<equiv> (S\<otimes>idOp)\<guillemotright>(variable_concat Q R)"
+  shows "S\<guillemotright>Q \<equiv> (S\<otimes>id_cblinfun)\<guillemotright>(variable_concat Q R)"
   apply (rule eq_reflection)
   using assms lift_extendR by blast
 
@@ -836,7 +835,7 @@ lemma variable_extension_hint_subspace[simp]:
 lemma variable_extension_hint_l2bounded[simp]:
   fixes S::"(_,_) l2bounded"
   assumes "distinct_qvars (variable_concat Q R)"
-  shows "variable_extension_hint (S\<guillemotright>Q) R = (S\<otimes>idOp)\<guillemotright>variable_concat Q R"
+  shows "variable_extension_hint (S\<guillemotright>Q) R = (S\<otimes>id_cblinfun)\<guillemotright>variable_concat Q R"
   unfolding variable_extension_hint_def 
   using assms
   using extend_l2bounded_lift_aux by blast
@@ -896,8 +895,8 @@ lemma sort_variables_hint_remove_aux: "sort_variables_hint x \<equiv> x"
 
 
 (* For convenience in ML code *)
-definition [simp]: "comm_op_pfx = assoc_op* \<cdot> (comm_op\<otimes>idOp) \<cdot> assoc_op"
-definition [simp]: "id_tensor A = idOp\<otimes>A"
+definition [simp]: "comm_op_pfx = assoc_op* \<cdot> (comm_op\<otimes>id_cblinfun) \<cdot> assoc_op"
+definition [simp]: "id_tensor A = id_cblinfun\<otimes>A"
 definition [simp]: "assoc_op_adj = assoc_op*"
 definition [simp]: "remove_qvar_unit_op2 = remove_qvar_unit_op \<cdot> comm_op"
 definition [simp]: "qvar_trafo_mult (Q::'b::universe variables) (B::('b,'c)l2bounded) (A::('a,'b)l2bounded) = timesOp B A"
@@ -981,7 +980,7 @@ lemma qvar_trafo_ex_tensorL:
   assumes "distinct_qvars (variable_concat Q R)"
   assumes "qvar_trafo B Q S \<and> B *\<^sub>V q = s"
   assumes "distinct_qvars (variable_concat S R)"
-  defines "D == (B \<otimes> idOp)"
+  defines "D == (B \<otimes> id_cblinfun)"
   shows "qvar_trafo D (variable_concat Q R) (variable_concat S R) \<and> D *\<^sub>V (q\<otimes>r) = (s\<otimes>r)"
   unfolding D_def apply (rule conjI)
    apply (rule qvar_trafo_tensor[rotated 2])
@@ -990,14 +989,14 @@ lemma qvar_trafo_ex_tensorL:
   using assms apply (auto intro: distinct_qvarsL distinct_qvarsR)[1]
   using assms apply simp
   using assms apply (auto intro: distinct_qvarsL distinct_qvarsR)[1]
-  by (simp add: assms tensorOp_applyOp_distr times_applyOp)
+  by (simp add: assms tensorOp_applyOp_distr cblinfun.scaleC_left)
 
 lemma qvar_trafo_ex_tensorR:
   fixes q r s t u
   assumes "distinct_qvars (variable_concat Q R)"
   assumes "qvar_trafo B R T \<and> B *\<^sub>V r = t"
   assumes "distinct_qvars (variable_concat Q T)"
-  defines "D == (idOp \<otimes> B)"
+  defines "D == (id_cblinfun \<otimes> B)"
   shows "qvar_trafo D (variable_concat Q R) (variable_concat Q T) \<and> D *\<^sub>V (q\<otimes>r) = (q\<otimes>t)"
   unfolding D_def apply (rule conjI)
    apply (rule qvar_trafo_tensor[rotated 2])
@@ -1006,7 +1005,7 @@ lemma qvar_trafo_ex_tensorR:
   using assms apply simp
   using assms apply (auto intro: distinct_qvarsL distinct_qvarsR)[1]
   using assms unfolding qvar_trafo_def apply simp
-  by (simp add: assms tensorOp_applyOp_distr times_applyOp)
+  by (simp add: assms tensorOp_applyOp_distr)
 
 lemma qvar_trafo_ex_assoc1:
   fixes Q :: "'q::universe variables" and R :: "'r::universe variables" and S :: "'s::universe variables" and T :: "'t::universe variables"
@@ -1036,12 +1035,12 @@ lemma qvar_trafo_ex_comm:
   shows "qvar_trafo comm_op (variable_concat Q R) (variable_concat R Q) \<and> comm_op *\<^sub>V (q\<otimes>r) = (r\<otimes>q)"
   apply (rule conjI)
    apply (rule qvar_trafo_comm_op, simp)
-  by (auto simp: times_applyOp)
+  by auto
 
 
 lemma qvar_trafo_ex_id:
   assumes "distinct_qvars Q"
-  shows "qvar_trafo idOp Q Q \<and> idOp *\<^sub>V \<psi> = \<psi>"
+  shows "qvar_trafo id_cblinfun Q Q \<and> id_cblinfun *\<^sub>V \<psi> = \<psi>"
   using assms by auto
 
 lemma qvar_trafo_ex_trans:
@@ -1051,7 +1050,7 @@ lemma qvar_trafo_ex_trans:
   shows "qvar_trafo C Q S \<and> C *\<^sub>V \<psi> = \<tau>"
   unfolding C_def apply (rule conjI)
    apply (rule qvar_trafo_mult)
-  using assms by (auto simp: times_applyOp)
+  using assms by (auto)
 
 subsection \<open>Rewriting quantum variable lifting, alternative approach\<close>
 
@@ -1061,13 +1060,13 @@ definition "qvar_trafo' A Q R \<longleftrightarrow> distinct_qvars Q \<and> dist
 lemma qvar_trafo'_unitary: assumes "qvar_trafo' A Q R" shows "unitary A"
 proof -
   have colocalQ: "distinct_qvars Q" and colocalR: "distinct_qvars R" using assms unfolding qvar_trafo'_def by auto
-  have "A \<cdot> A* = idOp"
+  have "A \<cdot> A* = id_cblinfun"
   proof -
-    have "idOp\<guillemotright>Q = A \<cdot> idOp\<guillemotright>R \<cdot> A*"
+    have "id_cblinfun\<guillemotright>Q = A \<cdot> id_cblinfun\<guillemotright>R \<cdot> A*"
       using assms unfolding qvar_trafo'_def by auto 
     then show ?thesis 
-      apply (subst (asm) lift_idOp, simp add: colocalQ)
-      apply (subst (asm) lift_idOp, simp add: colocalR)
+      apply (subst (asm) lift_id_cblinfun, simp add: colocalQ)
+      apply (subst (asm) lift_id_cblinfun, simp add: colocalR)
       by simp
   qed
   moreover have "isometry A"
@@ -1112,10 +1111,10 @@ proof -
       apply (simp add: f2_def)
       by (metis cblinfun_compose_scaleC_left cblinfun_compose_scaleC_right scaleC_lift)
     have "norm (f2 X) \<le> norm (A \<cdot> X\<guillemotright>QR') * norm (A*)"
-      unfolding f2_def by (rule norm_mult_ineq_cblinfun)
+      unfolding f2_def by (rule norm_cblinfun_compose)
     also have "\<dots> \<le> norm A * norm (X\<guillemotright>QR') * norm (A*)"
       apply (rule mult_right_mono)
-       apply (rule norm_mult_ineq_cblinfun)
+       apply (rule norm_cblinfun_compose)
       by simp
     also have "\<dots> = norm A * norm X * norm (A*)"
       by simp
@@ -1211,11 +1210,11 @@ proof -
   have "C\<guillemotright>Q = comm_op\<guillemotright>QR \<cdot> C\<guillemotright>R o\<^sub>C\<^sub>L (comm_op\<guillemotright>QR)*" for C
   proof -
     thm comm_op_lift[symmetric]
-    have "C\<guillemotright>Q = (C \<otimes> idOp)\<guillemotright>QR"
+    have "C\<guillemotright>Q = (C \<otimes> id_cblinfun)\<guillemotright>QR"
       apply (subst lift_extendR) by (auto intro: assms simp: QR_def)
-    also have "\<dots> = (comm_op \<cdot> (idOp \<otimes> C) \<cdot> comm_op*) \<guillemotright> QR"
+    also have "\<dots> = (comm_op \<cdot> (id_cblinfun \<otimes> C) \<cdot> comm_op*) \<guillemotright> QR"
       by (simp add: comm_op_lift)
-    also have "\<dots> = comm_op\<guillemotright>QR \<cdot> (idOp \<otimes> C)\<guillemotright>QR \<cdot> (comm_op\<guillemotright>QR)*"
+    also have "\<dots> = comm_op\<guillemotright>QR \<cdot> (id_cblinfun \<otimes> C)\<guillemotright>QR \<cdot> (comm_op\<guillemotright>QR)*"
       by (simp add: QR_def assms)
     also have "\<dots> = comm_op\<guillemotright>QR \<cdot> C\<guillemotright>R \<cdot> (comm_op\<guillemotright>QR)*"
       unfolding QR_def apply (subst lift_extendL[symmetric, where U=C])
@@ -1257,7 +1256,7 @@ definition "infsetsum' f M = (if infsetsummable f M then THE x. infsetsums f M x
 
 
 definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
-       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> loewner_leq P idOp))"
+       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> P \<le> id_cblinfun))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
   unfolding is_measurement_def by (auto intro: exI[of _ 0])
 
@@ -1284,30 +1283,30 @@ lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
   by (cheat mtotal_computational_basis)
 
 lift_definition binary_measurement :: "('a,'a) l2bounded \<Rightarrow> (bit,'a) measurement" is
-  "\<lambda>(P::('a,'a) l2bounded) (b::bit). (if is_Proj P then (if b=1 then P else idOp-P) else 0)"
+  "\<lambda>(P::('a,'a) l2bounded) (b::bit). (if is_Proj P then (if b=1 then P else id_cblinfun-P) else 0)"
 proof (rename_tac P, case_tac "is_Proj P")
   fix P :: "('a ell2, 'a ell2) bounded"
   assume [simp]: "is_Proj P"
-  show "is_measurement (\<lambda>b::bit. if is_Proj P then if b = 1 then P else idOp - P else 0)"
+  show "is_measurement (\<lambda>b::bit. if is_Proj P then if b = 1 then P else id_cblinfun - P else 0)"
     apply simp
-    unfolding is_measurement_def apply (auto intro!: exI[of _ idOp] simp: UNIV_bit cinner_add_right[symmetric])
-    by (metis apply_id_cblinfun cblinfun.add_left diff_add_cancel)
+    unfolding is_measurement_def apply (auto intro!: exI[of _ id_cblinfun] simp: UNIV_bit cinner_add_right[symmetric])
+    by (metis id_cblinfun_apply cblinfun.add_left diff_add_cancel)
 next
   fix P :: "('a ell2, 'a ell2) bounded"
   assume [simp]: "\<not> is_Proj P"
-  show "is_measurement (\<lambda>b. if is_Proj P then if b = 1 then P else idOp - P else 0)"
+  show "is_measurement (\<lambda>b. if is_Proj P then if b = 1 then P else id_cblinfun - P else 0)"
     by simp
 qed
 
 lemma binary_measurement_true[simp]: "is_Proj P \<Longrightarrow> mproj (binary_measurement P) 1 = P"
   apply transfer by simp
 
-lemma binary_measurement_false[simp]: "is_Proj P \<Longrightarrow> mproj (binary_measurement P) 0 = idOp-P"
+lemma binary_measurement_false[simp]: "is_Proj P \<Longrightarrow> mproj (binary_measurement P) 0 = id_cblinfun-P"
   unfolding binary_measurement.rep_eq by auto
 
 lemma mtotal_binary_measurement[simp]: "mtotal (binary_measurement P) = is_Proj P"
   apply (transfer fixing: P) apply (cases "is_Proj P") apply (auto simp: UNIV_bit)
-  apply (metis apply_id_cblinfun cblinfun.add_left cinner_add_right diff_add_cancel)
+  apply (metis id_cblinfun_apply cblinfun.add_left cinner_add_right diff_add_cancel)
   by (rule exI[of _ "ket undefined"], rule exI[of _ "ket undefined"], simp)
 
 
@@ -1347,7 +1346,7 @@ definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> 'a::univers
   and U V :: "(_,'c) l2bounded"
 
 abbreviation "quantum_equality" :: "'a::universe variables \<Rightarrow> 'a::universe variables \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
-  where "quantum_equality X Y \<equiv> quantum_equality_full idOp X idOp Y"
+  where "quantum_equality X Y \<equiv> quantum_equality_full id_cblinfun X id_cblinfun Y"
 syntax quantum_equality :: "'a::universe variables \<Rightarrow> 'a::universe variables \<Rightarrow> predicate" (infix "==q" 100)
 syntax "_quantum_equality" :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
 translations
@@ -1407,14 +1406,14 @@ lemma applyOpSpace_colocal[simp]:
   by (cheat TODO14)
 
 lemma qeq_collect:
- "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idOp Q2"
+ "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
  for U :: "('a::universe,'b::universe) l2bounded" and V :: "('c::universe,'b) l2bounded"
   unfolding quantum_equality_full_def by auto
 
 lemma qeq_collect_guarded[simp]:
   fixes U :: "('a::universe,'b::universe) l2bounded" and V :: "('c::universe,'b) l2bounded"
-  assumes "NO_MATCH idOp V"
-  shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 idOp Q2"
+  assumes "NO_MATCH id_cblinfun V"
+  shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
   by (fact qeq_collect)
 
 (* Proof in paper *)
@@ -1444,7 +1443,7 @@ lemma
   quantum_eq_add_state: 
     "distinct_qvars (variable_concat Q (variable_concat R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
     quantum_equality_full U Q V R \<sqinter> ccspan {\<psi>}\<guillemotright>T
-             = quantum_equality_full (U \<otimes> idOp) (variable_concat Q T) (addState \<psi> \<cdot> V) R"
+             = quantum_equality_full (U \<otimes> id_cblinfun) (variable_concat Q T) (addState \<psi> \<cdot> V) R"
     for U :: "('a::universe,'c) l2bounded" and V :: "('b::universe,'c) l2bounded" and \<psi> :: "'d::universe ell2"
     and Q :: "'a::universe variables"    and R :: "'b::universe variables"    and T :: "'d variables"
   by (cheat TODO14)
@@ -1510,7 +1509,7 @@ lemma quantum_equality_full_swap_left:
        = quantum_equality_full (U\<cdot>comm_op) (variable_concat R Q) V S"
 proof -
   have "quantum_equality_full U (variable_concat Q R) V S
-      = quantum_equality_full (U\<cdot>comm_op*) (variable_concat R Q) (V\<cdot>idOp*) S"
+      = quantum_equality_full (U\<cdot>comm_op*) (variable_concat R Q) (V\<cdot>id_cblinfun*) S"
     apply (rule quantum_equality_reorder)
     using assms apply (auto simp: distinct_qvars_split1 intro!: qvar_trafo_comm_op qvar_trafo_id)
     using distinct_qvarsR distinct_qvars_swap by blast+
@@ -1525,7 +1524,7 @@ lemma quantum_equality_full_swap_right:
        = quantum_equality_full U Q (V\<cdot>comm_op) (variable_concat S R)"
 proof -
   have "quantum_equality_full U Q V (variable_concat R S)
-      = quantum_equality_full (U\<cdot>idOp*) Q (V\<cdot>comm_op*) (variable_concat S R)"
+      = quantum_equality_full (U\<cdot>id_cblinfun*) Q (V\<cdot>comm_op*) (variable_concat S R)"
     apply (rule quantum_equality_reorder)
     using assms apply (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro!: qvar_trafo_comm_op qvar_trafo_id)
     using distinct_qvarsR distinct_qvars_swap by blast+
@@ -1598,30 +1597,30 @@ proof (rule ccsubspace_leI, rule subsetI)
     have "?lhs = T* *\<^sub>V (T *\<^sub>V (q1\<otimes>r1)\<otimes>(q2\<otimes>r2))"
       by (subst apply_T, simp)
     also have "\<dots> = ?rhs"
-      by (simp add: times_applyOp[symmetric])
+      by (simp add: cblinfun_apply_cblinfun_compose[symmetric])
     finally show ?thesis by -
   qed
 
   from x1 have x1': "(comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<guillemotright> QR1 *\<^sub>V x = x"
     unfolding quantum_equality_full_def QR1_def[symmetric]
     apply (subst (asm) eigenspace_lift[symmetric], simp)
-    by (frule eigenspace_memberE, simp)
+    by (frule eigenspace_memberD, simp)
   from x2 have x2': "(comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2)) \<guillemotright> QR2 *\<^sub>V x = x"
     unfolding quantum_equality_full_def QR2_def[symmetric]
     apply (subst (asm) eigenspace_lift[symmetric], simp)
-    by (frule eigenspace_memberE, simp)
+    by (frule eigenspace_memberD, simp)
 
   have x12: "((comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<otimes> (comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2))) \<guillemotright> QR12' *\<^sub>V x = x"
     unfolding QR12'_def apply (subst lift_tensorOp[symmetric])
     unfolding QR12'_def[symmetric] apply simp
-    by (simp add: x1' x2' times_applyOp)
+    by (simp add: x1' x2')
 
   have same_op: "(comm_op \<cdot> (((V1 \<otimes> V2)* o\<^sub>C\<^sub>L (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* o\<^sub>C\<^sub>L (V1 \<otimes> V2))))\<guillemotright>QR12
       = ((comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<otimes> (comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2))) \<guillemotright> QR12'"
     apply (subst qvar_trafo_l2bounded[OF qvar_trafo_T])
     apply (subst lift_eqOp, simp)
     apply (rule equal_ket)
-    by (auto simp: ket_product times_applyOp tensorOp_applyOp_distr)
+    by (auto simp: ket_product tensorOp_applyOp_distr)
 
   have "(comm_op \<cdot> (((V1 \<otimes> V2)* o\<^sub>C\<^sub>L (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* o\<^sub>C\<^sub>L (V1 \<otimes> V2))))\<guillemotright>QR12 *\<^sub>V x = x"
     apply (subst same_op) by (rule x12)
@@ -1654,8 +1653,8 @@ proof -
     apply (rule bij_is_surj) by simp
   have inv_f[simp]: "Hilbert_Choice.inv f = f"
     apply (rule inv_unique_comp) by auto
-  have [simp]: "inv_option (Some \<circ> f) = Some \<circ> f"
-    apply (subst inv_option_Some) by simp_all
+  have [simp]: "inv_map (Some \<circ> f) = Some \<circ> f"
+    apply (subst inv_map_total) by simp_all
   show ?thesis
     unfolding CNOT_def
     apply (subst classical_operator_adjoint)
@@ -1663,7 +1662,7 @@ proof -
     by auto
 qed
 
-lemma CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = idOp"
+lemma CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = id_cblinfun"
   using unitaryCNOT unfolding unitary_def adjoint_CNOT by simp
 
 definition [code del]: "pauliX = classical_operator (Some o (\<lambda>x::bit. x+1))"
@@ -1685,8 +1684,8 @@ proof -
     apply (rule bij_is_surj) by simp
   have inv_f[simp]: "Hilbert_Choice.inv f = f"
     apply (rule inv_unique_comp) by auto
-  have [simp]: "inv_option (Some \<circ> f) = Some \<circ> f"
-    apply (subst inv_option_Some) by simp_all
+  have [simp]: "inv_map (Some \<circ> f) = Some \<circ> f"
+    apply (subst inv_map_total) by simp_all
   show ?thesis
     unfolding pauliX_def
     apply (subst classical_operator_adjoint)
@@ -1695,7 +1694,7 @@ proof -
 qed
 
 
-lemma X_X[simp]: "pauliX \<cdot> pauliX = idOp"
+lemma X_X[simp]: "pauliX \<cdot> pauliX = id_cblinfun"
   using unitaryX unfolding unitary_def adjoint_CNOT by simp
 
 consts hadamard :: "(bit,bit) l2bounded"
@@ -1704,7 +1703,7 @@ lemma unitaryH[simp]: "unitary hadamard"
 lemma adjoint_H[simp]: "hadamard* = hadamard"
   by (cheat TODO15)
 
-lemma H_H[simp]: "hadamard \<cdot> hadamard = idOp"
+lemma H_H[simp]: "hadamard \<cdot> hadamard = id_cblinfun"
   using unitaryH unfolding unitary_def by simp
 
 (* definition "hadamard' = sqrt2 \<cdot> hadamard"
@@ -1721,13 +1720,13 @@ lemma adjoint_Z[simp]: "pauliZ* = pauliZ"
   unfolding pauliZ_def apply simp
   by (simp add: cblinfun_compose_assoc)
 
-lemma Z_Z[simp]: "pauliZ \<cdot> pauliZ = idOp"
+lemma Z_Z[simp]: "pauliZ \<cdot> pauliZ = id_cblinfun"
   using unitaryZ unfolding unitary_def by simp
 
 consts pauliY :: "(bit,bit) l2bounded"
 lemma unitaryY[simp]: "unitary pauliY"
   by (cheat TODO15)
-lemma Y_Y[simp]: "pauliY \<cdot> pauliY = idOp"
+lemma Y_Y[simp]: "pauliY \<cdot> pauliY = id_cblinfun"
   by (cheat TODO15)
 lemma adjoint_Y[simp]: "pauliY* = pauliY"
   by (cheat TODO15)
@@ -1776,8 +1775,8 @@ proof -
     using inv_unique_comp
     using \<open>\<pi> \<circ> \<pi>2 = id\<close> \<open>\<pi>2 \<circ> \<pi> = id\<close> by blast
 
-  then have "inv_option (Some o \<pi>2) = Some o \<pi>"
-    by (subst inv_option_Some, simp_all)
+  then have "inv_map (Some o \<pi>2) = Some o \<pi>"
+    by (subst inv_map_total, simp_all)
 
   then have "(classical_operator (Some \<circ> \<pi>2))* = classical_operator (Some o \<pi>)"
     apply (subst classical_operator_adjoint)
@@ -1790,7 +1789,7 @@ qed
 lemma Uoracle_selfadjoint[simp]: "(Uoracle f)* = Uoracle f" for f :: "_ \<Rightarrow> _::xor_group"
   unfolding Uoracle_adjoint unfolding Uoracle_def by simp
 
-lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = idOp" for f :: "_ \<Rightarrow> _::xor_group"
+lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = id_cblinfun" for f :: "_ \<Rightarrow> _::xor_group"
   apply (subst Uoracle_selfadjoint[symmetric]) apply (rule isometryD) by simp
 
 lemma applyOp_Uoracle[simp]:

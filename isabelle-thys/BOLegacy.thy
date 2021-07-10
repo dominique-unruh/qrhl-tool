@@ -56,16 +56,22 @@ lemma equal_span':
   assumes "bounded_clinear f"
     and "bounded_clinear g"
   assumes "\<And>x. x\<in>G \<Longrightarrow> f x = g x"
-  assumes "x\<in>closure (complex_vector.span G)"
+  assumes "x\<in>closure (cspan G)"
   shows "f x = g x"
   using assms bounded_clinear_eq_on
   by metis 
 
+(* TODO remove (seems to be a [simp] rule already) *)
 lemma bot_plus[simp]: "sup bot x = x" 
   for x :: "'a::complex_normed_vector ccsubspace"
-  apply transfer
-  apply (rule closed_sum_zero_left)
-  using closed_csubspace_def by blast
+  by simp
 
+abbreviation (input) \<open>idOp \<equiv> id_cblinfun\<close>
+
+declare cblinfun.scaleC_left[simp]
+declare cblinfun.scaleC_right[simp]
+
+(* Giving it a name to make adding/removing [simp] easier *)
+lemmas le_Inf_iff_subspace[simp] = le_Inf_iff[where 'a=\<open>_::chilbert_space ccsubspace\<close>]
 
 end

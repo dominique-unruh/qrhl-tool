@@ -56,7 +56,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    skip.
    simp.
    fix a'.
-   rule move_plus_meas_rule.
+   rule move_sup_meas_rule.
     simp!.
    simp!. }
 
@@ -72,7 +72,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    simp.
     clear 1.
    fix c'.
-   rule move_plus_meas_rule.
+   rule move_sup_meas_rule.
     simp!.
    simp ! cblinfun_assoc_right. }
 
@@ -88,7 +88,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
                       ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧).
        simp!.
      clear 2.
-     clear 1.
+clear 1.
 
      seq 2 0: Proj (ccspan {ket 0})»⟦C1⟧ · Proj (ccspan {ket 0})»⟦A1⟧ ⋅ 
                    quantum_equality_full
