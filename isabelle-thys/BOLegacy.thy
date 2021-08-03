@@ -40,7 +40,8 @@ abbreviation "ell2_to_bounded :: 'a::chilbert_space \<Rightarrow> ('b::{CARD_1,e
 abbreviation "complex_to_C1 :: complex \<Rightarrow> 'a::{CARD_1,enum} ell2 == of_complex"
 abbreviation "C1_to_complex == (one_dim_iso :: _ \<Rightarrow> complex)"
 
-abbreviation "applyOp == cblinfun_apply"
+abbreviation (input) "applyOp == cblinfun_apply"
+abbreviation (input) "applyOpSpace == cblinfun_image"
 
 unbundle no_notation_blinfun_apply
 unbundle no_blinfun_notation
