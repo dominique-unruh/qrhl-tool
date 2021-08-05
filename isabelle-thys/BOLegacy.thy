@@ -14,7 +14,7 @@ theory BOLegacy
        https://lists.cam.ac.uk/pipermail/cl-isabelle-users/2019-June/msg00063.html *)
     Tensor_Product.Tensor_Product_Code
 
-    Bounded_Operators.Bounded_Operators Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
+    Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
 
 begin
 
