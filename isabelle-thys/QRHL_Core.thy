@@ -1795,7 +1795,7 @@ lemma Uoracle_selfinverse[simp]: "Uoracle f \<cdot> Uoracle f = id_cblinfun" for
 lemma applyOp_Uoracle[simp]:
   shows "Uoracle f \<cdot> ket (x, y) = ket (x, y + f x)"
   unfolding Uoracle_def
-  apply (subst classical_operator_basis)
+  apply (subst classical_operator_ket)
   by (auto simp: inj_on_def intro: classical_operator_exists_inj)
 
 lemma applyOp_Uoracle'[simp]:

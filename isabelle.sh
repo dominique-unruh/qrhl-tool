@@ -15,7 +15,7 @@ if ! [ -e "$DIR/isabelle-thys" ]; then
 fi
 
 if [ "$#" = 0 ]; then
-    FILES=("$DIR/isabelle-thys/Test.thy" "$ISABELLE_DIR/src/Pure/ROOT.ML")
+    FILES=("$DIR/isabelle-thys/All.thy" "$ISABELLE_DIR/src/Pure/ROOT.ML")
 else
     FILES=()
 fi

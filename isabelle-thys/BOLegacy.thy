@@ -31,6 +31,13 @@ no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
 hide_const (open) Order.bottom Order.top
 
 
+lemma inf_assoc_subspace[simp]: "A \<sqinter> B \<sqinter> C = A \<sqinter> (B \<sqinter> C)" 
+  for A B C :: "_ ell2 ccsubspace"
+  by (fact inf.assoc)
+
+lemma inf_left_commute[simp]: "A \<sqinter> (B \<sqinter> C) = B \<sqinter> (A \<sqinter> C)" for A B C :: "_ ell2 ccsubspace"
+  using inf.left_commute by auto
+
 type_synonym ('a,'b) bounded = "('a,'b) cblinfun"
 type_synonym ('a,'b) l2bounded = "('a ell2, 'b ell2) bounded"
 type_synonym 'a subspace = "'a ell2 ccsubspace"
