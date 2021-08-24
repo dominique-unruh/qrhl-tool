@@ -677,7 +677,7 @@ proof -
   also have "\<dots> = (A \<cdot> Proj S \<cdot> A*)\<guillemotright>R \<cdot> top"
     apply (subst qvar_trafo_l2bounded) using assms by auto
   also have "\<dots> = (Proj (A\<cdot>S))\<guillemotright>R \<cdot> top"
-    apply (subst Proj_congruence)
+    apply (subst Proj_sandwich[unfolded sandwich_apply])
     using assms by (simp_all add: qvar_trafo_unitary)
   also have "\<dots> = (Proj (A\<cdot>S) \<cdot> top)\<guillemotright>R" by auto
   also have "\<dots> = (A\<cdot>S)\<guillemotright>R" by auto
@@ -1172,7 +1172,7 @@ proof -
   also have "\<dots> = (A \<cdot> Proj (S\<guillemotright>R) \<cdot> A*) \<cdot> top"
     using Proj_lift assms qvar_trafo'_def by fastforce
   also have "\<dots> = (Proj (A \<cdot> S\<guillemotright>R)) \<cdot> top"
-    apply (subst Proj_congruence)
+    apply (subst Proj_sandwich[unfolded sandwich_apply])
     using assms by (simp_all add: qvar_trafo'_unitary)
   also have "\<dots> = A \<cdot> S\<guillemotright>R" by auto
   ultimately show ?thesis by simp
