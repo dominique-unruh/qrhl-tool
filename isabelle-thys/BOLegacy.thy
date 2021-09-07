@@ -14,7 +14,7 @@ theory BOLegacy
        https://lists.cam.ac.uk/pipermail/cl-isabelle-users/2019-June/msg00063.html *)
     Tensor_Product.Tensor_Product_Code
 
-    Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
+    Complex_Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
 
 begin
 
@@ -49,6 +49,7 @@ abbreviation "C1_to_complex == (one_dim_iso :: _ \<Rightarrow> complex)"
 
 abbreviation (input) "applyOp == cblinfun_apply"
 abbreviation (input) "applyOpSpace == cblinfun_image"
+abbreviation (input) "timesOp == cblinfun_compose"
 
 unbundle no_notation_blinfun_apply
 unbundle no_blinfun_notation

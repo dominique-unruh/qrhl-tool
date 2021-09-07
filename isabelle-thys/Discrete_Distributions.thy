@@ -4,8 +4,8 @@ theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum" 
     Universe_Instances_Complex_Main
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
-    "Bounded_Operators-Extra.Extra_Ordered_Fields"
-    Infinite_Sums.Infsetsum
+    "Complex_Bounded_Operators-Extra.Extra_Ordered_Fields"
+    "Complex_Bounded_Operators-Extra.Extra_Infinite_Set_Sum"
 begin
 
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"
@@ -36,13 +36,16 @@ proof
     unfolding is_distribution_def by simp
 next
   assume assm: "(\<forall>x. 0 \<le> f x) \<and> (\<forall>M. finite M \<longrightarrow> sum f M \<le> 1)"
-  then have "f abs_summable_on UNIV"
-    by (rule_tac abs_summable_finite_sumsI[where B=1], simp)
-  moreover from assm have "norm (infsetsum f UNIV) \<le> 1"
-    by (rule_tac infsetsum_finite_sums_bound, simp_all)
-  then have "infsetsum f UNIV \<le> 1"
+  then have summable: "f abs_summable_on UNIV"
+    by (rule_tac abs_summable_finiteI[where B=1], simp)
+  have "norm (infsetsum f UNIV) \<le> infsetsum (\<lambda>x. norm (f x)) UNIV"
+    using norm_infsetsum_bound by blast
+  also from assm have "\<dots> \<le> 1"
+    apply (rule_tac abs_summable_finiteI0)
     by auto
-  ultimately show "is_distribution f"
+  finally have "infsetsum f UNIV \<le> 1"
+    by auto
+  with summable show "is_distribution f"
     unfolding is_distribution_def using assm by simp
 qed
 
@@ -51,7 +54,7 @@ lemma distr_abs_summable_on:
   fixes f :: "'a \<Rightarrow> real"
   assumes "\<forall>x. f x \<ge> 0" and "\<forall> M. finite M \<longrightarrow> sum f M \<le> 1"
   shows "f abs_summable_on E"
-  apply (rule abs_summable_finite_sumsI)
+  apply (rule abs_summable_finiteI)
   using assms by auto
 
 (* TODO needed? *)
@@ -60,10 +63,12 @@ lemma distr_infsetsum:
   assumes "\<forall>x. f x \<ge> 0" and "\<forall> M. finite M \<longrightarrow> sum f M \<le> 1"
   shows "infsetsum f UNIV \<le> 1"
 proof -
-  have \<open>norm (infsetsum f UNIV) \<le> 1\<close>
-    apply (rule infsetsum_finite_sums_bound)
+  have \<open>norm (infsetsum f UNIV) \<le> infsetsum (\<lambda>x. norm (f x)) UNIV\<close>
+    using norm_infsetsum_bound by blast
+  also have \<open>\<dots> \<le> 1\<close>
+    apply (rule abs_summable_finiteI0)
     using assms by auto
-  then show ?thesis
+  finally show ?thesis
     by auto
 qed
 
@@ -223,11 +228,7 @@ qed
 lemma Prob_leq1[simp]: "Prob \<mu> E \<le> 1"
 proof -
   have "Prob \<mu> UNIV \<le> 1"
-    apply transfer apply (subst infsetsum_nonneg_is_SUPREMUM_real)
-    unfolding is_distribution_def
-    using distr_abs_summable_on apply blast
-     apply simp
-    using infsetsum_nonneg_is_SUPREMUM_real by fastforce
+    apply transfer using is_distribution_def by blast
   then show ?thesis
     using Prob_mono[of E UNIV \<mu>] by auto
 qed
@@ -468,7 +469,7 @@ proof (insert assms, transfer fixing: a b, unfold is_distribution_def)
     finally show ?thesis by simp
   qed
   then show "\<mu>f abs_summable_on UNIV"
-    by (rule abs_summable_finite_sumsI)
+    by (rule abs_summable_finiteI)
 qed
 
 lemma not_expectation_exists:
@@ -1144,7 +1145,7 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer, ru
     using \<mu>[unfolded is_distribution_def] apply simp_all
     using fyx1 fpos by (simp add: mult_left_le)
   have prod_summable: "(\<lambda>(x, y). \<mu> y * f y x) abs_summable_on UNIV \<times> UNIV"
-    apply (rule abs_summable_product)
+    apply (rule abs_summable_product')
     by (simp_all add: fpos is_distribution_def summable1 summable2 \<mu>[unfolded is_distribution_def])
   have "(\<Sum>\<^sub>ay. \<mu> y * (\<Sum>\<^sub>ax\<in>g -` {x}. f y x)) = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax\<in>g -` {x}. \<mu> y * f y x)"
     apply (subst infsetsum_cmult_right)
@@ -1249,7 +1250,7 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer)
     using \<mu>[unfolded is_distribution_def] apply simp_all
     using fyx1 mult_left_le by blast
   have prod_summable: "(\<lambda>(x, y). \<mu> y * f y x) abs_summable_on UNIV \<times> UNIV"
-    apply (rule abs_summable_product)
+    apply (rule abs_summable_product')
     by (simp_all add: is_distribution_def summable1 summable2 \<mu>[unfolded is_distribution_def])
   show "((\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = 1) \<longleftrightarrow>
        (infsetsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsetsum (f x) UNIV = 1))"
@@ -1824,7 +1825,7 @@ proof -
   then obtain x where "x \<in> - A"
     by auto
   have "\<mu> x = 0"
-    using 0 \<mu>_abs_sum nneg \<open>x \<in> - A\<close> by (rule infsetsum_0D_real)
+    using 0 \<mu>_abs_sum nneg \<open>x \<in> - A\<close> by (rule infsetsum_0D)
   with pos show False
     unfolding Collect_UNIV
     by (metis rel_simps(70))
@@ -1919,7 +1920,7 @@ proof -
   have "expectation' (product_distr \<mu> \<nu>) (\<lambda>(x,y). f x) = (\<Sum>\<^sub>a(x,y). prob \<mu> x * prob \<nu> y * f x)"
     by (simp add: case_prod_beta expectation_map_distr flip: prob_product)
   also have "\<dots> = (\<Sum>\<^sub>ax. prob \<mu> x * f x) * (\<Sum>\<^sub>ay. prob \<nu> y)"
-    apply (subst infsetsum_times_product[symmetric])
+    apply (subst infsetsum_product[symmetric])
     (* using True *) using assms
       apply (metis (no_types, lifting) abs_summable_on_cong expectation_exists_map_distr real_scaleR_def)
     using prob_abs_summable apply blast
