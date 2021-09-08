@@ -17,11 +17,11 @@ manual.pdf : manual.tex qrhl.bib declmath.sty macros.tex example.qrhl.lst Exampl
 	rm -f manual.aux manual.bbl manual-blx.bib manual.out
 	-pdflatex -interaction batchmode manual
 	bibtex manual
-	python makesymind.py manual
+	python2 makesymind.py manual
 	makeindex manual
 	pdflatex -interaction batchmode manual
 	bibtex manual
-	python makesymind.py manual
+	python2 makesymind.py manual
 	makeindex manual
 	pdflatex -interaction batchmode manual
 	if grep 'LaTeX Warning: There were undefined references' manual.log; then false; fi
