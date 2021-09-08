@@ -1,21 +1,21 @@
 session QRHL = "QRHL-Tensor_Product" +
   options [record_proofs=1]
-  sessions CryptHOL Bounded_Operators
+  sessions CryptHOL Complex_Bounded_Operators
   theories QRHL QRHL_Operations
 
-session "QRHL-Tensor_Product" in "fake-session-dir/1" = "QRHL-Bounded_Operators" +
+session "QRHL-Tensor_Product" in "fake-session-dir/1" = "QRHL-Complex_Bounded_Operators" +
   options [record_proofs=1, quick_and_dirty=true]
   sessions Tensor_Product
   theories Tensor_Product.All
 
-session "QRHL-Bounded_Operators" in "fake-session-dir/2" = "QRHL-Prerequisites" +
+session "QRHL-Complex_Bounded_Operators" in "fake-session-dir/2" = "QRHL-Prerequisites" +
   options [record_proofs=1, quick_and_dirty=true]
-  sessions Bounded_Operators
-  theories Bounded_Operators.All
+  sessions Complex_Bounded_Operators
+  theories Complex_Bounded_Operators.All
 
 (* Breaking down the prerequisites into several sessions to avoid
    overloading computers with restricted memory *)
-session "QRHL-Prerequisites1" in "fake-session-dir/3" = "Bounded_Operators-Prerequisites" +
+session "QRHL-Prerequisites1" in "fake-session-dir/3" = "Complex_Bounded_Operators-Prerequisites" +
   sessions "Jordan_Normal_Form"
   theories "Jordan_Normal_Form.Matrix_Impl"
 
