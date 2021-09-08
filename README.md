@@ -49,9 +49,7 @@ You will see the current goal and some messages withing the Emacs/ProofGeneral w
 See the [ProofGeneral manual](https://proofgeneral.github.io/doc/userman/) for more information.
 
 Note: The first step of the proof script (`isabelle.`) will take **very long** upon first activation,
-because it will download and build Isabelle. 
-You need to be online the first time you execute this step. 
-
+because it will build all required Isabelle theories. 
 
 ## Editing the Isabelle theory files
 
