@@ -31,6 +31,10 @@ no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
 hide_const (open) Order.bottom Order.top
 
 
+(* TODO remove *)
+abbreviation (input) "timesOp == cblinfun_compose"
+
+
 lemma inf_assoc_subspace[simp]: "A \<sqinter> B \<sqinter> C = A \<sqinter> (B \<sqinter> C)" 
   for A B C :: "_ ell2 ccsubspace"
   by (fact inf.assoc)
