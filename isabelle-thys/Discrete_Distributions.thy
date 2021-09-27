@@ -4,8 +4,8 @@ theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum" 
     Universe_Instances_Complex_Main
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
-    "Complex_Bounded_Operators-Extra.Extra_Ordered_Fields"
-    "Complex_Bounded_Operators-Extra.Extra_Infinite_Set_Sum"
+    "Complex_Bounded_Operators.Extra_Ordered_Fields"
+    "Complex_Bounded_Operators.Extra_Infinite_Set_Sum"
 begin
 
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"
