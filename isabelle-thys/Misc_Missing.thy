@@ -329,5 +329,6 @@ qed
 lemma Collect_UNIV: "Collect P = UNIV \<longleftrightarrow> (\<forall>x. P x)"
   by auto
 
+lemma local_defE: "(\<And>x. x=y \<Longrightarrow> P) \<Longrightarrow> P" by metis
 
 end

@@ -5,12 +5,15 @@ theory Discrete_Distributions
     Universe_Instances_Complex_Main
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
     "Complex_Bounded_Operators.Extra_Ordered_Fields"
-    "Complex_Bounded_Operators.Extra_Infinite_Set_Sum"
+    "HOL-Analysis.Infinite_Sum" Infinite_Sum_Missing
 begin
 
-definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"
+no_notation Infinite_Set_Sum.abs_summable_on (infix "abs'_summable'_on" 50)
+hide_const (open) Infinite_Set_Sum.abs_summable_on
+notation Infinite_Sum.abs_summable_on (infixr "abs'_summable'_on" 46)
 
-(* typedef 'a distr = "{f::'a\<Rightarrow>real. (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)}"  *)
+definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f summable_on UNIV \<and> infsum f UNIV \<le> 1"
+
 typedef 'a distr = "{f::'a\<Rightarrow>real. is_distribution f}"
   morphisms prob Abs_distr
   unfolding is_distribution_def
@@ -18,16 +21,17 @@ typedef 'a distr = "{f::'a\<Rightarrow>real. is_distribution f}"
 setup_lifting type_definition_distr
 derive universe distr
 
+
 lemma is_distribution_def': "is_distribution f \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)"
 proof
   assume f[unfolded is_distribution_def]: "is_distribution f"
   have "sum f M \<le> 1" if [simp]: "finite M" for M
   proof -
-    have "sum f M = infsetsum f M"
+    have "sum f M = infsum f M"
       using f by simp
-    also have "\<dots> \<le> infsetsum f UNIV"
+    also have "\<dots> \<le> infsum f UNIV"
       using f
-      by (metis diff_ge_0_iff_ge infsetsum_Diff infsetsum_nonneg top_greatest)
+      by (metis (mono_tags, opaque_lifting) ge_iff_diff_ge_0 infsum_Diff infsum_nonneg summable_on_subset_banach top_greatest)
     also have "\<dots> \<le> 1"
       using f by simp
     finally show ?thesis.
@@ -36,40 +40,35 @@ proof
     unfolding is_distribution_def by simp
 next
   assume assm: "(\<forall>x. 0 \<le> f x) \<and> (\<forall>M. finite M \<longrightarrow> sum f M \<le> 1)"
-  then have summable: "f abs_summable_on UNIV"
-    by (rule_tac abs_summable_finiteI[where B=1], simp)
-  have "norm (infsetsum f UNIV) \<le> infsetsum (\<lambda>x. norm (f x)) UNIV"
-    using norm_infsetsum_bound by blast
-  also from assm have "\<dots> \<le> 1"
-    apply (rule_tac abs_summable_finiteI0)
+  then have summable: "f summable_on UNIV"
+    apply (rule_tac pos_summable_on)
     by auto
-  finally have "infsetsum f UNIV \<le> 1"
-    by auto
+  then have "infsum f UNIV \<le> 1"
+    apply (rule infsum_leq_finite_sums)
+    using assm by auto
   with summable show "is_distribution f"
     unfolding is_distribution_def using assm by simp
 qed
 
 (* TODO needed? *)
-lemma distr_abs_summable_on:
+lemma distr_summable_on:
   fixes f :: "'a \<Rightarrow> real"
   assumes "\<forall>x. f x \<ge> 0" and "\<forall> M. finite M \<longrightarrow> sum f M \<le> 1"
-  shows "f abs_summable_on E"
-  apply (rule abs_summable_finiteI)
-  using assms by auto
+  shows "f summable_on E"
+  by (meson assms(1) assms(2) is_distribution_def is_distribution_def' summable_on_subset_banach top_greatest)
 
 (* TODO needed? *)
-lemma distr_infsetsum:
+lemma distr_infsum:
   fixes f :: "'a \<Rightarrow> real"
   assumes "\<forall>x. f x \<ge> 0" and "\<forall> M. finite M \<longrightarrow> sum f M \<le> 1"
-  shows "infsetsum f UNIV \<le> 1"
+  shows "infsum f UNIV \<le> 1"
 proof -
-  have \<open>norm (infsetsum f UNIV) \<le> infsetsum (\<lambda>x. norm (f x)) UNIV\<close>
-    using norm_infsetsum_bound by blast
-  also have \<open>\<dots> \<le> 1\<close>
-    apply (rule abs_summable_finiteI0)
+  have summable: "f summable_on UNIV"
+    apply (rule pos_summable_on)
     using assms by auto
-  finally show ?thesis
-    by auto
+  then show "infsum f UNIV \<le> 1"
+    apply (rule infsum_leq_finite_sums)
+    using assms by auto
 qed
 
 
@@ -104,25 +103,25 @@ qed
 instance..
 end
 
-
 lift_definition supp :: "'a distr \<Rightarrow> 'a set" is "\<lambda>\<mu>. {x. \<mu> x > 0}" .
 
-lemma "countable (supp \<mu>)"
+lemma countable_supp[simp]: "countable (supp \<mu>)"
 proof (transfer, auto simp: is_distribution_def)
   fix \<mu> :: "'a => real"
-  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and \<mu>sum: "\<mu> abs_summable_on UNIV"
-  from \<mu>sum have "countable {x\<in>UNIV. 0 \<noteq> \<mu> x}" (is "countable ?X")
+  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and \<mu>sum: "\<mu> summable_on UNIV"
+  then have \<open>\<mu> abs_summable_on UNIV\<close>
+    by auto
+  then have "countable {x\<in>UNIV. \<mu> x \<noteq> 0}" (is "countable ?X")
     by (rule abs_summable_countable)
   also have "?X = {x. 0 < \<mu> x}"
-    using less_eq_real_def \<mu>pos by auto 
-  finally show "countable {x. 0 < \<mu> x}" 
+    using less_eq_real_def \<mu>pos by auto
+  finally show "countable {x. 0 < \<mu> x}"
     by simp 
 qed
 
 lift_definition uniform :: "'a set \<Rightarrow> 'a distr" is "\<lambda>M. (\<lambda>m. if m\<in>M then 1/card M else 0)"
 proof (rename_tac M, auto simp: is_distribution_def)
   fix M :: "'a set" and x :: 'a
-  (* show "0 \<le> (if x \<in> M then 1 / real (card M) else 0)" by auto *)
   have "(\<Sum>m\<in>F. if m \<in> M then 1 / real (card M) else 0) \<le> 1" if "finite F" for F
   proof (cases "finite M")
     case True
@@ -137,9 +136,9 @@ proof (rename_tac M, auto simp: is_distribution_def)
       apply (rewrite asm_rl[of "1/real 0 = 0"]) apply auto[1]
       by auto
   qed
-  then show "(\<lambda>m. if m \<in> M then 1 / real (card M) else 0) abs_summable_on UNIV"
-    and "(\<Sum>\<^sub>am. if m \<in> M then 1 / real (card M) else 0) \<le> 1"
-    by (simp_all add: distr_abs_summable_on distr_infsetsum)
+  then show "(\<lambda>m. if m \<in> M then 1 / real (card M) else 0) summable_on UNIV"
+    and "(\<Sum>\<^sub>\<infinity>m. if m \<in> M then 1 / real (card M) else 0) \<le> 1"
+    by (simp_all add: distr_summable_on distr_infsum)
 qed
 
 
@@ -153,7 +152,7 @@ lemma uniform_infinite: "infinite M \<Longrightarrow> uniform M = 0"
 lemma uniform_empty: "uniform {} = 0"
   apply transfer by simp
 
-lift_definition Prob :: "'a distr \<Rightarrow> 'a set \<Rightarrow> real" is infsetsum .
+lift_definition Prob :: "'a distr \<Rightarrow> 'a set \<Rightarrow> real" is infsum .
 
 abbreviation "weight \<mu> == Prob \<mu> UNIV"
 
@@ -162,7 +161,7 @@ lemma weight_supp:
   assumes "supp \<mu> \<subseteq> S"
   shows "weight \<mu> = Prob \<mu> S"
   using assms apply transfer
-  apply (rule infsetsum_cong_neutral)
+  apply (rule infsum_cong_neutral)
   apply auto
   by (metis basic_trans_rules(18) is_distribution_def mem_Collect_eq subset_eq)
 
@@ -177,19 +176,19 @@ lemma Prob_is_0:
   "Prob \<mu> E = 0 \<longleftrightarrow> disjnt (supp \<mu>) E"
 proof (transfer fixing: E, unfold is_distribution_def, rule)
   fix \<mu> :: "'a\<Rightarrow>real"
-  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> summable_on UNIV \<and> infsum \<mu> UNIV \<le> 1"
   then have "0 \<le> \<mu> x" for x
       using distr by simp
-    from distr have "\<mu> abs_summable_on E"
-      using abs_summable_on_subset by blast
-  assume sum0: "infsetsum \<mu> E = 0"
+    from distr have "\<mu> summable_on E"
+      using summable_on_subset_banach by blast
+  assume sum0: "infsum \<mu> E = 0"
   have "\<mu> x = 0" if "x : E" for x
   proof -
-    have "\<mu> x = infsetsum \<mu> {x}"
+    have "\<mu> x = infsum \<mu> {x}"
       by simp
-    also have "\<dots> \<le> infsetsum \<mu> E"
-      apply (rule infsetsum_mono_neutral_left)
-      using \<open>\<mu> abs_summable_on E\<close> that distr by auto
+    also have "\<dots> \<le> infsum \<mu> E"
+      apply (rule infsum_mono_neutral)
+      using \<open>\<mu> summable_on E\<close> that distr by auto
     also have "\<dots> = 0"
       by (fact sum0)
     finally show "\<mu> x = 0"
@@ -199,29 +198,29 @@ proof (transfer fixing: E, unfold is_distribution_def, rule)
     using \<open>0 \<le> \<mu> _\<close> unfolding disjnt_def by auto
 next
   fix \<mu> :: "'a\<Rightarrow>real"
-  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> summable_on UNIV \<and> infsum \<mu> UNIV \<le> 1"
   assume "disjnt {x. 0 < \<mu> x} E"
   then have "\<mu> x = 0" if "x:E" for x
     unfolding disjnt_def distr
     using distr less_eq_real_def that by auto 
-  then show "infsetsum \<mu> E = 0"
-    by (rule infsetsum_all_0)
+  then show "infsum \<mu> E = 0"
+    using infsum_0 by blast
 qed
 
 lemma Prob_pos[simp]: "Prob \<mu> E \<ge> 0"
   apply transfer
-  by (rule infsetsum_nonneg) (auto simp: is_distribution_def)
+  by (meson infsum_nonneg is_distribution_def summable_on_subset_banach top_greatest)
 
 lemma Prob_mono:
   assumes "E \<subseteq> F"
   shows "Prob \<mu> E \<le> Prob \<mu> F"
 proof (transfer fixing: E F, unfold is_distribution_def)
   fix \<mu> :: "'a \<Rightarrow> real"
-  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
-  then have "\<mu> abs_summable_on E" and "\<mu> abs_summable_on F"
-    using abs_summable_on_subset by blast+
-  then show "infsetsum \<mu> E \<le> infsetsum \<mu> F"
-    apply (rule infsetsum_mono_neutral_left)
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> summable_on UNIV \<and> infsum \<mu> UNIV \<le> 1"
+  then have "\<mu> summable_on E" and "\<mu> summable_on F"
+    using summable_on_subset_banach distr by blast+
+  then show "infsum \<mu> E \<le> infsum \<mu> F"
+    apply (rule infsum_mono_neutral)
     using assms distr by auto
 qed
 
@@ -241,56 +240,60 @@ proof -
       using card.empty card.infinite by blast
     then show ?thesis
       apply (transfer fixing: M)
-      by (simp add: infsetsum_all_0)
+      by (simp add: infsum_0)
   qed
   moreover have "weight (uniform M) = 1" if "M \<noteq> {}" and "finite M"
   proof (transfer fixing: M)
-    from that have "(\<Sum>\<^sub>ax\<in>M. 1 / real (card M)) = 1"
-      by (subst infsetsum_finite, auto)
-    then show "(\<Sum>\<^sub>am. if m \<in> M then 1 / real (card M) else 0) = 1"
-      by (subst infsetsum_cong_neutral[where B=M], auto)
+    from that have "(\<Sum>\<^sub>\<infinity>x\<in>M. 1 / real (card M)) = 1"
+      by simp
+    then show "(\<Sum>\<^sub>\<infinity>m. if m \<in> M then 1 / real (card M) else 0) = 1"
+      by (subst infsum_cong_neutral[where T=M], auto)
   qed
   ultimately show ?thesis
     by auto
 qed
 
+
 lift_definition "map_distr" :: "('a\<Rightarrow>'b) \<Rightarrow> 'a distr \<Rightarrow> 'b distr" 
-  is "\<lambda>(f::'a\<Rightarrow>'b) \<mu> x. infsetsum \<mu> (f -` {x})"
+  is "\<lambda>(f::'a\<Rightarrow>'b) \<mu> x. infsum \<mu> (f -` {x})"
 proof (auto simp: is_distribution_def)
   fix f :: "'a \<Rightarrow> 'b" and \<mu> :: "'a \<Rightarrow> real" and x and M :: "'b set"
-  assume "(\<forall>x. 0 \<le> \<mu> x)" and summable: "\<mu> abs_summable_on UNIV" and sum: "infsetsum \<mu> UNIV \<le> 1"
+  assume "(\<forall>x. 0 \<le> \<mu> x)" and summable: "\<mu> summable_on UNIV" and sum: "infsum \<mu> UNIV \<le> 1"
   then have \<mu>pos: "0 \<le> \<mu> x" for x by simp
 
-  have reindex: "bij_betw snd (SIGMA x:M. f -` {x}) (f -` M)" for M
+   have reindex: "bij_betw snd (SIGMA x:M. f -` {x}) (f -` M)" for M
     by (rule bij_betwI, auto)
 
-  have "0 = infsetsum (\<lambda>_. 0) (f -` {x})" by simp
-  also have "\<dots> \<le> infsetsum \<mu> (f -` {x})"
-    apply (rule infsetsum_mono_neutral_left)
-    using abs_summable_on_subset[OF summable] \<mu>pos by auto
-  finally show "0 \<le> infsetsum \<mu> (f -` {x})" .
+  have "0 = infsum (\<lambda>_. 0) (f -` {x})" by simp
+  also have "\<dots> \<le> infsum \<mu> (f -` {x})"
+    apply (rule infsum_mono_neutral)
+    using summable summable_on_subset_banach \<mu>pos by auto
+  finally show "0 \<le> infsum \<mu> (f -` {x})" .
 
 
   {fix M :: "'b set" assume "finite M"
-  then have "(\<Sum>x\<in>M. infsetsum \<mu> (f -` {x})) = (\<Sum>\<^sub>ax\<in>M. infsetsum \<mu> (f -` {x}))" (is "?lhs = _")
+  then have "(\<Sum>x\<in>M. infsum \<mu> (f -` {x})) = (\<Sum>\<^sub>\<infinity>x\<in>M. infsum \<mu> (f -` {x}))" (is "?lhs = _")
     by simp
-  also have "\<dots> = (\<Sum>\<^sub>a(x, y)\<in>(SIGMA x:M. f -` {x}). \<mu> y)"
-    apply (rule infsetsum_Sigma')
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>(x, y)\<in>(SIGMA x:M. f -` {x}). \<mu> y)"
+    apply (rule infsum_Sigma'_banach)
     unfolding case_prod_beta
-    apply (rule abs_summable_on_reindex_bij_betw[OF reindex, THEN iffD2])
-    using abs_summable_on_subset[OF summable] by simp
-  also have "\<dots> = infsetsum \<mu> (f -` M)"
+    apply (rule summable_on_reindex_bij_betw[OF reindex, THEN iffD2])
+    using local.summable summable_on_subset_banach by blast
+  also have "\<dots> = infsum \<mu> (f -` M)"
     unfolding case_prod_beta
-    by (rule infsetsum_reindex_bij_betw[OF reindex])
-  also have "\<dots> \<le> infsetsum \<mu> UNIV"
-    apply (rule infsetsum_mono_neutral_left)
-    using abs_summable_on_subset[OF summable] \<mu>pos by auto
+    by (rule infsum_reindex_bij_betw[OF reindex])
+  also have "\<dots> \<le> infsum \<mu> UNIV"
+    apply (rule infsum_mono_neutral)
+    using \<mu>pos summable apply auto
+    by (meson Diff_UNIV Diff_eq_empty_iff local.summable summable_on_subset_banach)
   also have "\<dots> \<le> 1"
     by (fact sum)
   finally have "?lhs \<le> 1" .}
-  then show "(\<lambda>x. infsetsum \<mu> (f -` {x})) abs_summable_on UNIV"
-    and "(\<Sum>\<^sub>ax. infsetsum \<mu> (f -` {x})) \<le> 1"
-    using \<mu>pos by (auto intro!: infsetsum_nonneg distr_abs_summable_on distr_infsetsum)
+  then show "(\<lambda>x. infsum \<mu> (f -` {x})) summable_on UNIV"
+    and "(\<Sum>\<^sub>\<infinity>x. infsum \<mu> (f -` {x})) \<le> 1"
+    using \<mu>pos
+     apply (metis (no_types, lifting) distr_summable_on dual_order.refl infsum_nonneg infsum_not_exists)
+    by (smt (verit, ccfv_threshold) \<open>\<And>Ma. finite Ma \<Longrightarrow> (\<Sum>x\<in>Ma. infsum \<mu> (f -` {x})) \<le> 1\<close> infsum_leq_finite_sums infsum_not_exists)
 qed
 
 lemma Prob_map_distr:
@@ -305,30 +308,31 @@ lemma map_distr_0[simp]: "map_distr f 0 = 0"
 lemma weight_map_distr[simp]: "weight (map_distr f \<mu>) = weight \<mu>"
 proof (transfer, auto simp: is_distribution_def)
   fix f :: "'b \<Rightarrow> 'a" and \<mu> :: "'b => real"
-  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> abs_summable_on UNIV" and "infsetsum \<mu> UNIV \<le> 1"
+  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> summable_on UNIV" and "infsum \<mu> UNIV \<le> 1"
   have reindex: "bij_betw snd (SIGMA x:UNIV. f -` {x}) UNIV"
     by (rule bij_betwI, auto)
-  show "(\<Sum>\<^sub>ax. infsetsum \<mu> (f -` {x})) = infsetsum \<mu> UNIV"
-    apply (subst infsetsum_Sigma')
+  show "(\<Sum>\<^sub>\<infinity>x. infsum \<mu> (f -` {x})) = infsum \<mu> UNIV"
+    apply (subst infsum_Sigma'_banach)
     unfolding case_prod_beta
-    using reindex summable apply (rule abs_summable_on_reindex_bij_betw[THEN iffD2])
-    using reindex by (subst infsetsum_reindex_bij_betw, auto)
+    using reindex summable apply (rule summable_on_reindex_bij_betw[THEN iffD2])
+    using reindex by (subst infsum_reindex_bij_betw, auto)
 qed
 
 lemma supp_map_distr[simp]: "supp (map_distr f \<mu>) = f ` (supp \<mu>)"
 proof (transfer, auto simp: is_distribution_def)
   fix f :: "'b \<Rightarrow> 'a" and \<mu> :: "'b \<Rightarrow> real" and x :: 'a and y :: 'b
-  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> abs_summable_on UNIV" and "infsetsum \<mu> UNIV \<le> 1"
-  show "0 < infsetsum \<mu> (f -` {x}) \<Longrightarrow> x \<in> f ` {x. 0 < \<mu> x}"
-    using \<mu>pos by (smt image_iff infsetsum_all_0 mem_Collect_eq vimage_singleton_eq)
-  show "0 < infsetsum \<mu> (f -` {f y})" if "0 < \<mu> y"
+  assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> summable_on UNIV" and "infsum \<mu> UNIV \<le> 1"
+  show "0 < infsum \<mu> (f -` {x}) \<Longrightarrow> x \<in> f ` {x. 0 < \<mu> x}"
+    using \<mu>pos by (smt image_iff infsum_0 mem_Collect_eq vimage_singleton_eq)
+  show "0 < infsum \<mu> (f -` {f y})" if "0 < \<mu> y"
   proof -
     from that have "0 < \<mu> y".
-    also have "\<dots> = infsetsum \<mu> {y}"
+    also have "\<dots> = infsum \<mu> {y}"
       by simp
-    also have "\<dots> \<le> infsetsum \<mu> (f -` {f y})"
-      apply (rule infsetsum_mono_neutral_left)
-      using abs_summable_on_subset[OF summable] \<mu>pos by auto
+    also have "\<dots> \<le> infsum \<mu> (f -` {f y})"
+      apply (rule infsum_mono_neutral)
+      using \<mu>pos apply auto
+      using summable summable_on_subset_banach by blast
     finally show ?thesis .
   qed
 qed
@@ -347,15 +351,15 @@ proof (cases "finite A", transfer fixing: f A B, rule ext)
     using bij_betw_finite by blast
   from bij have cardAB[simp]: "card A = card B"
     using bij_betw_same_card by blast
-  show "(\<Sum>\<^sub>am\<in>f -` {x}. if m \<in> A then 1 / real (card A) else 0) = (if x \<in> B then 1 / real (card B) else 0)" 
+  show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {x}. if m \<in> A then 1 / real (card A) else 0) = (if x \<in> B then 1 / real (card B) else 0)" 
      (is "?lhs = ?rhs")
   proof (cases "x \<in> B")
     case True
     define R where "R = (f -` {x}) \<inter> -A"
     from True bij obtain y where inv_f: "f -` {x} = {y} \<union> R" and yA: "y \<in> A"
       apply atomize_elim unfolding R_def by (auto simp: bij_betw_def inj_on_def)
-    have "?lhs = (\<Sum>\<^sub>am\<in>{y}. if m \<in> A then 1 / real (card A) else 0)"
-      unfolding inv_f apply (rule infsetsum_cong_neutral)
+    have "?lhs = (\<Sum>\<^sub>\<infinity>m\<in>{y}. if m \<in> A then 1 / real (card A) else 0)"
+      unfolding inv_f apply (rule infsum_cong_neutral)
       by (auto simp: R_def)
     also have "\<dots> = 1 / real (card A)"
       using yA by auto
@@ -367,8 +371,8 @@ proof (cases "finite A", transfer fixing: f A B, rule ext)
     then have rhs: "?rhs = 0" by simp
     from False have yA: "y \<in> f -` {x} \<Longrightarrow> y \<notin> A" for y 
       using bij bij_betwE by blast
-    have "?lhs = (\<Sum>\<^sub>am\<in>f -` {x}. 0)"
-      apply (rule infsetsum_cong)
+    have "?lhs = (\<Sum>\<^sub>\<infinity>m\<in>f -` {x}. 0)"
+      apply (rule infsum_cong)
       using yA by auto
     also have "\<dots> = 0"
       by auto
@@ -391,26 +395,26 @@ lemma compose_map_distr[simp]:
   shows "map_distr g (map_distr f \<mu>) = map_distr (\<lambda>x. g (f x)) \<mu>"  
 proof (transfer fixing: f g, rule ext, unfold is_distribution_def)
   fix \<mu> :: "'a => real" and x
-  assume "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
-  then have \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> abs_summable_on UNIV" and "infsetsum \<mu> UNIV \<le> 1"
+  assume "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> summable_on UNIV \<and> infsum \<mu> UNIV \<le> 1"
+  then have \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> summable_on UNIV" and "infsum \<mu> UNIV \<le> 1"
     by auto
   have reindex0: "bij_betw snd (SIGMA x:UNIV. f -` {x}) UNIV"
     by (rule bij_betwI, auto)
   have reindex: "bij_betw snd (SIGMA y:g -` {x}. f -` {y}) (f -` g -` {x})"
     by (rule bij_betwI, auto)
 
-  have summable1: "(\<lambda>(x, y). \<mu> y) abs_summable_on (SIGMA y:g -` {x}. f -` {y})"
+  have summable1: "(\<lambda>(x, y). \<mu> y) summable_on (SIGMA y:g -` {x}. f -` {y})"
     unfolding case_prod_beta
-    apply (rule abs_summable_on_reindex_bij_betw[OF reindex, THEN iffD2])
-    using summable abs_summable_on_subset by blast
+    apply (rule summable_on_reindex_bij_betw[OF reindex, THEN iffD2])
+    using local.summable summable_on_iff_abs_summable_on_real summable_on_subset_banach by blast
 
-  have "(\<Sum>\<^sub>ax\<in>g -` {x}. infsetsum \<mu> (f -` {x})) = infsetsum \<mu> (f -` g -` {x})" (is "?lhs = _")
-    apply (subst infsetsum_Sigma')
+  have "(\<Sum>\<^sub>\<infinity>x\<in>g -` {x}. infsum \<mu> (f -` {x})) = infsum \<mu> (f -` g -` {x})" (is "?lhs = _")
+    apply (subst infsum_Sigma'_banach)
      apply (rule summable1)
     unfolding case_prod_beta
-    by (subst infsetsum_reindex_bij_betw[OF reindex], simp)
+    by (subst infsum_reindex_bij_betw[OF reindex], simp)
 
-  also have "\<dots> = infsetsum \<mu> ((\<lambda>x. g (f x)) -` {x})" (is "_ = ?rhs")
+  also have "\<dots> = infsum \<mu> ((\<lambda>x. g (f x)) -` {x})" (is "_ = ?rhs")
     by (simp add: vimage_def) 
   finally show "?lhs = ?rhs" .
 qed
@@ -418,13 +422,14 @@ qed
 functor map_distr: map_distr using map_distr_id compose_map_distr unfolding o_def id_def by auto
 
 
-(* lift_definition expectation :: "'a distr \<Rightarrow> ('a\<Rightarrow>'b) \<Rightarrow> 'b::{banach, second_countable_topology}" is
-  "\<lambda>\<mu> f. infsetsum (\<lambda>x. \<mu> x *\<^sub>R f x) UNIV" . *)
-lift_definition expectation :: "'a distr \<Rightarrow> 'a::{banach, second_countable_topology}" is
-  "\<lambda>\<mu>. infsetsum (\<lambda>x. \<mu> x *\<^sub>R x) UNIV" .
+lift_definition expectation_exists :: "'b::real_normed_vector distr \<Rightarrow> bool" is
+  "\<lambda>\<mu>::'b\<Rightarrow>real. (\<lambda>x. \<mu> x *\<^sub>R x) abs_summable_on UNIV" .
+(* We require absolute summability, otherwise expectation_exists_map_distr and dependent lemmas
+  (expectation_mono) become problematic (even if we replace abs_summable_on \<rightarrow> summable_on there, too) *)
 
-lift_definition expectation_exists :: "'b::{banach, second_countable_topology} distr \<Rightarrow> bool" is
-  "\<lambda>\<mu>. (\<lambda>x. \<mu> x *\<^sub>R x) abs_summable_on UNIV" .
+lift_definition expectation :: "'a distr \<Rightarrow> 'a::real_normed_vector" is
+  "\<lambda>\<mu>::'a\<Rightarrow>real. infsum (\<lambda>x. \<mu> x *\<^sub>R x) UNIV" .
+  (* "\<lambda>\<mu>::'a\<Rightarrow>real. if (\<lambda>x. \<mu> x *\<^sub>R x) abs_summable_on UNIV then infsum (\<lambda>x. \<mu> x *\<^sub>R x) UNIV else 0" . *)
 
 
 abbreviation "expectation' \<mu> f == expectation (map_distr f \<mu>)"
@@ -442,7 +447,7 @@ proof (insert assms, transfer fixing: a b, unfold is_distribution_def)
   define \<mu>f where "\<mu>f x = \<mu> x *\<^sub>R x" for x
   obtain B where "B \<ge> -a" and "B \<ge> b" and "B \<ge> 0"
     by (meson linear order_trans)
-  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
+  assume distr: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> summable_on UNIV \<and> infsum \<mu> UNIV \<le> 1"
   then have \<mu>pos: "\<mu> x \<ge> 0" for x by auto
   from distr have sum: "sum \<mu> F \<le> 1" if "finite F" for F
     using is_distribution_def is_distribution_def' that by blast
@@ -469,134 +474,88 @@ proof (insert assms, transfer fixing: a b, unfold is_distribution_def)
     finally show ?thesis by simp
   qed
   then show "\<mu>f abs_summable_on UNIV"
-    by (rule abs_summable_finiteI)
+    apply (rule_tac pos_summable_on)
+    apply auto by fastforce
 qed
 
-lemma not_expectation_exists:
+(* lemma not_expectation_exists:
   assumes "\<not> expectation_exists \<mu>"
   shows "expectation \<mu> = 0"
-  using assms apply transfer
-  using not_summable_infsetsum_eq by blast
+  using assms apply transfer by auto *)
 
 lemma expectation_exists_map_distr:
-  "expectation_exists (map_distr f \<mu>) \<longleftrightarrow> (\<lambda>x. prob \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
+  fixes f :: \<open>'a \<Rightarrow> 'b::real_normed_vector\<close>
+  shows "expectation_exists (map_distr f \<mu>) \<longleftrightarrow> (\<lambda>x. prob \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
 proof -
-  have [simp]: "prob \<mu> abs_summable_on U" for U
-    using abs_summable_on_subset is_distribution_def prob by fastforce
-  have \<mu>_scaleR_summ: "(\<lambda>y. prob \<mu> y *\<^sub>R norm x) abs_summable_on f -` {x}" for x
-    apply (rule abs_summable_on_scaleR_left) by auto
+  have [simp]: "prob \<mu> summable_on U" for U
+    by (metis is_distribution_def mem_Collect_eq prob summable_on_subset_banach top_greatest)
+  have \<mu>_scaleR_summ: "(\<lambda>y. prob \<mu> y *\<^sub>R norm x) summable_on f -` {x}" for x
+    apply (rule summable_on_scaleR_left) by auto
 
-  have "expectation_exists (map_distr f \<mu>) \<longleftrightarrow> (\<lambda>x. (\<Sum>\<^sub>ay\<in>(f -` {x}). prob \<mu> y) *\<^sub>R x) abs_summable_on UNIV"
+  have "expectation_exists (map_distr f \<mu>) \<longleftrightarrow> (\<lambda>x. (\<Sum>\<^sub>\<infinity>y\<in>(f -` {x}). prob \<mu> y) *\<^sub>R x) abs_summable_on UNIV"
     apply transfer by simp
-  also have "\<dots> \<longleftrightarrow> (\<lambda>x. norm ((\<Sum>\<^sub>ay\<in>(f -` {x}). prob \<mu> y) *\<^sub>R x)) abs_summable_on UNIV"
-    using abs_summable_on_norm_iff by fastforce
-  also have "\<dots> \<longleftrightarrow> (\<lambda>x. (\<Sum>\<^sub>ay\<in>(f -` {x}). prob \<mu> y) *\<^sub>R norm x) abs_summable_on UNIV"
-    by (smt abs_summable_on_comparison_test norm_scaleR real_scaleR_def)
-  also have "\<dots> \<longleftrightarrow> (\<lambda>x. (\<Sum>\<^sub>ay\<in>(f -` {x}). prob \<mu> y *\<^sub>R norm x)) abs_summable_on UNIV"
-    apply (subst infsetsum_scaleR_left) by auto
+  also have "\<dots> \<longleftrightarrow> (\<lambda>x. norm ((\<Sum>\<^sub>\<infinity>y\<in>(f -` {x}). prob \<mu> y) *\<^sub>R x)) abs_summable_on UNIV"
+    by fastforce
+  also have "\<dots> \<longleftrightarrow> (\<lambda>x. (\<Sum>\<^sub>\<infinity>y\<in>(f -` {x}). prob \<mu> y) *\<^sub>R norm x) abs_summable_on UNIV"
+    by (smt (verit, best) norm_ge_zero norm_scaleR real_norm_def summable_on_cong)
+  also have "\<dots> \<longleftrightarrow> (\<lambda>x. (\<Sum>\<^sub>\<infinity>y\<in>(f -` {x}). prob \<mu> y *\<^sub>R norm x)) abs_summable_on UNIV"
+    apply (subst infsum_scaleR_left) by auto
   also have "\<dots> \<longleftrightarrow> (\<lambda>(x,y). prob \<mu> y *\<^sub>R norm x) abs_summable_on Sigma UNIV (\<lambda>x. f -` {x})"
     apply (subst abs_summable_on_Sigma_iff)
     using \<mu>_scaleR_summ apply simp
-    apply (subst abs_pos) 
+    apply (subst (4) abs_pos)
      apply (metis is_distribution_def mem_Collect_eq mult_nonneg_nonneg norm_ge_zero prob)
-    by simp
-  also have "\<dots> \<longleftrightarrow> (\<lambda>(x,y). prob \<mu> y *\<^sub>R norm (f y)) abs_summable_on Sigma UNIV (\<lambda>x. f -` {x})"
-    apply (subst abs_summable_on_cong)
+    apply (subst (2) abs_pos)
+     apply (metis is_distribution_def mem_Collect_eq mult_nonneg_nonneg norm_ge_zero prob)
     by auto
+  also have "\<dots> \<longleftrightarrow> (\<lambda>(x,y). prob \<mu> y *\<^sub>R norm (f y)) abs_summable_on Sigma UNIV (\<lambda>x. f -` {x})"
+    by (smt (verit) SigmaE prod.simps(2) singletonD summable_on_cong vimageE)
   also have "\<dots> \<longleftrightarrow> (\<lambda>x. prob \<mu> x *\<^sub>R norm (f x)) abs_summable_on UNIV"
-    apply (subst abs_summable_on_reindex_bij_betw[where A="Sigma UNIV (\<lambda>x. f -` {x})" and g=snd, symmetric])
+    apply (subst summable_on_reindex_bij_betw[where A="Sigma UNIV (\<lambda>x. f -` {x})" and g=snd, symmetric])
      apply (rule bij_betwI')
     by (auto simp add: case_prod_beta)
   also have "\<dots> \<longleftrightarrow> (\<lambda>x. norm (prob \<mu> x *\<^sub>R f x)) abs_summable_on UNIV"
-    apply (rule abs_summable_on_cong)
+    apply (rule summable_on_cong)
     apply auto
-    by (metis abs_of_nonneg is_distribution_def mem_Collect_eq prob)
-  thm abs_summable_on_cong
+    by (simp add: abs_mult_pos)
   also have "\<dots> \<longleftrightarrow> (\<lambda>x. prob \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
-    by (rule abs_summable_on_norm_iff)
+    by force
   finally show ?thesis
     by -
 qed
 
-
-(* lemma expectation_exists_map_distr:
-  assumes "expectation_exists (map_distr f \<mu>)"
-  shows "(\<lambda>x. prob \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
-proof -
-  have [simp]: "prob \<mu> abs_summable_on U" for U
-    using abs_summable_on_subset is_distribution_def prob by fastforce
-  have \<mu>_scaleR_summ: "(\<lambda>y. prob \<mu> y *\<^sub>R norm x) abs_summable_on f -` {x}" for x
-    apply (rule abs_summable_on_scaleR_left) by auto
-
-  from assms have "(\<lambda>x. (\<Sum>\<^sub>ay\<in>(f -` {x}). prob \<mu> y) *\<^sub>R x) abs_summable_on UNIV"
-    apply transfer by simp
-  then have "(\<lambda>x. norm ((\<Sum>\<^sub>ay\<in>(f -` {x}). prob \<mu> y) *\<^sub>R x)) abs_summable_on UNIV"
-    using abs_summable_on_norm_iff by fastforce
-  then have "(\<lambda>x. (\<Sum>\<^sub>ay\<in>(f -` {x}). prob \<mu> y) *\<^sub>R norm x) abs_summable_on UNIV"
-    by (smt abs_summable_on_comparison_test norm_scaleR real_scaleR_def)
-  then have "(\<lambda>x. (\<Sum>\<^sub>ay\<in>(f -` {x}). prob \<mu> y *\<^sub>R norm x)) abs_summable_on UNIV"
-    apply (subst infsetsum_scaleR_left) by auto
-  then have "(\<lambda>(x,y). prob \<mu> y *\<^sub>R norm x) abs_summable_on Sigma UNIV (\<lambda>x. f -` {x})"
-    apply (subst abs_summable_on_Sigma_iff)
-    using \<mu>_scaleR_summ apply auto
-    apply (subst abs_pos) apply auto
-    by (metis is_distribution_def mem_Collect_eq mult_nonneg_nonneg norm_ge_zero prob)
-  then have "(\<lambda>(x,y). prob \<mu> y *\<^sub>R norm (f y)) abs_summable_on Sigma UNIV (\<lambda>x. f -` {x})"
-    apply (rule abs_summable_on_cong[THEN iffD1, rotated -1])
-    by auto
-  then have "(\<lambda>x. prob \<mu> x *\<^sub>R norm (f x)) abs_summable_on UNIV"
-    apply (subst abs_summable_on_reindex_bij_betw[where A="Sigma UNIV (\<lambda>x. f -` {x})" and g=snd, symmetric])
-     apply (rule bij_betwI')
-    by (auto simp add: case_prod_beta)
-  then have "(\<lambda>x. norm (prob \<mu> x *\<^sub>R f x)) abs_summable_on UNIV"
-    by (simp add: abs_summable_on_comparison_test)
-  then show "(\<lambda>x. prob \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
-    by (simp add: abs_summable_on_comparison_test')
-qed*)
-
 lemma expectation_map_distr:
-  (* assumes "(\<lambda>x. prob \<mu> x *\<^sub>R f x) abs_summable_on UNIV" *)
-  shows "expectation (map_distr f \<mu>) = infsetsum (\<lambda>x. prob \<mu> x *\<^sub>R f x) UNIV"
-proof (cases "expectation_exists (map_distr f \<mu>)")
-  case False
-  then have "expectation (map_distr f \<mu>) = 0"
-    by (rule not_expectation_exists)
-  moreover
-  from False have "\<not> (\<lambda>x. prob \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
-    by (subst expectation_exists_map_distr[symmetric], metis)
-  then have "infsetsum (\<lambda>x. prob \<mu> x *\<^sub>R f x) UNIV = 0"
-    by (simp add: not_summable_infsetsum_eq)
-  ultimately show ?thesis 
-    by simp
-next
-  case True
-  from expectation_exists_map_distr[THEN iffD1, OF True] show ?thesis
+  fixes f :: \<open>'b \<Rightarrow> 'a::banach\<close>
+  assumes \<open>expectation_exists (map_distr f \<mu>)\<close>
+  shows "expectation (map_distr f \<mu>) = infsum (\<lambda>x. prob \<mu> x *\<^sub>R f x) UNIV"
+proof -
+  from expectation_exists_map_distr[THEN iffD1, OF assms] and assms show ?thesis
   proof (transfer fixing: f)
     fix \<mu> :: "'b \<Rightarrow> real"
     assume "is_distribution \<mu>"
-    then have [simp]: "\<mu> abs_summable_on U" for U
+    then have [simp]: "\<mu> summable_on U" for U
       unfolding is_distribution_def
-      using abs_summable_on_subset by blast
+      using \<open>is_distribution \<mu>\<close> distr_summable_on is_distribution_def' by blast
     assume \<mu>f_summable: "(\<lambda>x. \<mu> x *\<^sub>R f x) abs_summable_on UNIV"
 
-    have "(\<Sum>\<^sub>ax. (\<Sum>\<^sub>ay\<in>f -` {x}. \<mu> y) *\<^sub>R x) = (\<Sum>\<^sub>ax. (\<Sum>\<^sub>ay\<in>f -` {x}. \<mu> y *\<^sub>R x))"
+    have "(\<Sum>\<^sub>\<infinity>x. (\<Sum>\<^sub>\<infinity>y\<in>f -` {x}. \<mu> y) *\<^sub>R x) = (\<Sum>\<^sub>\<infinity>x. (\<Sum>\<^sub>\<infinity>y\<in>f -` {x}. \<mu> y *\<^sub>R x))"
       (is "_ = ?rhs")
-      apply (rule infsetsum_cong, simp_all)
-      apply (rule infsetsum_scaleR_left[symmetric])
+      apply (rule infsum_cong, simp_all)
+      apply (rule infsum_scaleR_left[symmetric])
       by simp
     also 
     have bij: "bij_betw (\<lambda>x. (f x, x)) UNIV (SIGMA x:UNIV. f -` {x})"
       by (rule bij_betwI', auto)
     have "(\<lambda>(x, y). \<mu> y *\<^sub>R x) abs_summable_on (SIGMA x:UNIV. f -` {x})"
-      apply (rule abs_summable_on_reindex_bij_betw[where A=UNIV and g="\<lambda>x. (f x, x)", THEN iffD1])
+      apply (rule summable_on_reindex_bij_betw[where A=UNIV and g="\<lambda>x. (f x, x)", THEN iffD1])
       using bij \<mu>f_summable by auto
-    then have "?rhs = (\<Sum>\<^sub>a(x, y)\<in>(SIGMA x:UNIV. f -` {x}). \<mu> y *\<^sub>R x)"
-      by (rule infsetsum_Sigma')
-    also have "\<dots> = (\<Sum>\<^sub>ax. \<mu> x *\<^sub>R f x)"
-      apply (subst infsetsum_reindex_bij_betw[where A=UNIV and g="\<lambda>x. (f x, x)", symmetric])
+    then have "?rhs = (\<Sum>\<^sub>\<infinity>(x, y)\<in>(SIGMA x:UNIV. f -` {x}). \<mu> y *\<^sub>R x)"
+      using abs_summable_summable infsum_Sigma'_banach by blast
+    also have "\<dots> = (\<Sum>\<^sub>\<infinity>x. \<mu> x *\<^sub>R f x)"
+      apply (subst infsum_reindex_bij_betw[where A=UNIV and g="\<lambda>x. (f x, x)", symmetric])
       using bij by auto
-    finally show "(\<Sum>\<^sub>ax. (\<Sum>\<^sub>ay\<in>f -` {x}. \<mu> y) *\<^sub>R x) = (\<Sum>\<^sub>ax. \<mu> x *\<^sub>R f x)"
-      by -
+    finally show \<open>(\<Sum>\<^sub>\<infinity>x. infsum \<mu> (f -` {x}) *\<^sub>R x) = (\<Sum>\<^sub>\<infinity>x. \<mu> x *\<^sub>R f x)\<close>
+      by auto
   qed
 qed
 
@@ -607,9 +566,6 @@ lemma expectation_mono:
   assumes leq: "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x \<le> g x"
   shows "expectation (map_distr f \<mu>) \<le> expectation (map_distr g \<mu>)"
 proof -
-(*   assume \<mu>pos: "\<forall>x. 0 \<le> \<mu> x" and summable: "\<mu> abs_summable_on UNIV" and "infsetsum \<mu> UNIV \<le> 1"
-  then have pos: "\<mu> x \<ge> 0" for x by simp
-  assume leq: "(\<And>x. 0 < \<mu> x \<Longrightarrow> f x \<le> g x)" *)
   have leq': "prob \<mu> x * f x \<le> prob \<mu> x * g x" for x
     apply (cases "prob \<mu> x = 0")
      apply simp
@@ -619,26 +575,31 @@ proof -
     apply (subst (asm) expectation_exists_map_distr) by fastforce
   from ee_g have sumg: "(\<lambda>x. prob \<mu> x * g x) abs_summable_on UNIV"
     apply (subst (asm) expectation_exists_map_distr) by fastforce
-  from sumf sumg leq' 
   show ?thesis
-    unfolding expectation_map_distr
-    apply (rule_tac infsetsum_mono)
-    by auto
+    unfolding expectation_map_distr[OF ee_f] expectation_map_distr[OF ee_g]
+    apply (rule infsum_mono)
+    using sumf sumg leq' summable_on_iff_abs_summable_on_real by auto
 qed
-
 
 lemma prob_uniform[simp]: "prob (uniform M) m = (if m\<in>M then 1/card M else 0)"
   apply transfer by simp
 
 abbreviation "point_distr x \<equiv> uniform {x}"
 lemma expectation_point_distr[simp]: "expectation (point_distr x) = x"
-  apply (transfer fixing: x)
-  apply (subst infsetsum_cong_neutral[where B="{x}"])
-  by auto
-
+proof -
+  have \<open>expectation_exists (point_distr x)\<close>
+    apply (transfer fixing: x)
+    apply (rule summable_on_cong_neutral[where S=\<open>{x}\<close>, THEN iffD1])
+    by auto
+  then show ?thesis
+    apply (transfer fixing: x)
+    apply simp
+    apply (subst infsum_cong_neutral[where T=\<open>{x}\<close>])
+    by auto
+qed
 
 lift_definition "bind_distr" :: "'a distr \<Rightarrow> ('a \<Rightarrow> 'b distr) \<Rightarrow> 'b distr" 
-  is "\<lambda>(\<mu>::'a\<Rightarrow>real) (f::'a\<Rightarrow>'b\<Rightarrow>real) x. \<Sum>\<^sub>a y\<in>UNIV. \<mu> y * f y x"
+  is "\<lambda>(\<mu>::'a\<Rightarrow>real) (f::'a\<Rightarrow>'b\<Rightarrow>real) x. \<Sum>\<^sub>\<infinity> y\<in>UNIV. \<mu> y * f y x"
   by (cheat bind_distr)
 
 abbreviation "product_distr \<mu> \<nu> \<equiv> bind_distr \<mu> (\<lambda>z. map_distr (Pair z) \<nu>)"
@@ -661,9 +622,9 @@ proof (transfer fixing: x y)
     using that by blast
   have isx: "(Pair x -` {(x, y)}) = {y}"
     by blast
-  have "(\<Sum>\<^sub>a x'. \<mu> x' * infsetsum \<nu> (Pair x' -` {(x, y)})) = (\<Sum>\<^sub>a x'\<in>{x}. \<mu> x' * infsetsum \<nu> (Pair x' -` {(x, y)}))" (is "?lhs = _")
-    apply (rule infsetsum_cong_neutral) using nonx by auto
-  also have "\<dots> = \<mu> x * infsetsum \<nu> (Pair x -` {(x, y)})"
+  have "(\<Sum>\<^sub>\<infinity> x'. \<mu> x' * infsum \<nu> (Pair x' -` {(x, y)})) = (\<Sum>\<^sub>\<infinity> x'\<in>{x}. \<mu> x' * infsum \<nu> (Pair x' -` {(x, y)}))" (is "?lhs = _")
+    apply (rule infsum_cong_neutral) using nonx by auto
+  also have "\<dots> = \<mu> x * infsum \<nu> (Pair x -` {(x, y)})"
     by simp
   also have "\<dots> = \<mu> x * \<nu> y"
     by (simp add: isx)
@@ -680,11 +641,21 @@ proof -
     by (auto intro: distr_eqI)
 qed
 
-lemma expectation_uminus: "expectation (map_distr (\<lambda>x. -f x) \<mu>) = - expectation (map_distr f \<mu>)"
-  unfolding expectation_map_distr
-  apply (transfer fixing: f)
-  apply auto
-  by (simp add: infsetsum_uminus)
+lemma expectation_uminus: "expectation (map_distr (\<lambda>x. - f x) \<mu>) = - expectation (map_distr f \<mu>)"
+proof -
+  have [simp]: \<open>inv uminus = (uminus :: 'a\<Rightarrow>_)\<close>
+    by (simp add: inv_unique_comp)
+  define f\<mu> where \<open>f\<mu> = map_distr f \<mu>\<close>
+  have \<open>expectation (map_distr (\<lambda>x. - f x) \<mu>) = expectation (map_distr uminus f\<mu>)\<close>
+    unfolding f\<mu>_def by auto
+  also have \<open>\<dots> = - expectation f\<mu>\<close>
+    apply transfer
+    apply (auto simp: bij_uminus bij_vimage_eq_inv_image)
+    apply (subst infsum_reindex_bij_betw[symmetric, where g=uminus])
+    by (auto intro!: bij_uminus infsum_uminus)
+  finally show \<open>expectation' \<mu> (\<lambda>x. - f x) = - expectation f\<mu>\<close>
+    by -
+qed
 
 lemma expectation_upper_bound:
   fixes \<mu> :: "real distr"
@@ -695,10 +666,10 @@ lemma expectation_upper_bound:
   using assms 
 proof (transfer fixing: B C, unfold is_distribution_def)
   fix \<mu> :: "real\<Rightarrow>real"
-  assume \<mu>1_or_Bpos: "infsetsum \<mu> UNIV = 1 \<or> 0 \<le> B"
-  assume \<mu>: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> abs_summable_on UNIV \<and> infsetsum \<mu> UNIV \<le> 1"
-  then have \<mu>sum: "\<mu> abs_summable_on UNIV" and \<mu>sum1: "infsetsum \<mu> UNIV \<le> 1" and \<mu>pos: "\<mu> x \<ge> 0" for x
-    by simp_all
+  assume \<mu>1_or_Bpos: "infsum \<mu> UNIV = 1 \<or> 0 \<le> B"
+  assume \<mu>: "(\<forall>x. 0 \<le> \<mu> x) \<and> \<mu> summable_on UNIV \<and> infsum \<mu> UNIV \<le> 1"
+  then have \<mu>sum: "\<mu> summable_on UNIV" and \<mu>sum1: "infsum \<mu> UNIV \<le> 1" and \<mu>pos: "\<mu> x \<ge> 0" for x
+    by auto
   obtain BC where "BC\<ge>B" and "BC\<ge>-C" and "BC\<ge>0" 
     apply atomize_elim
     by (meson linorder_linear order_trans_rules(23))
@@ -713,22 +684,24 @@ proof (transfer fixing: B C, unfold is_distribution_def)
   with \<mu>pos have \<mu>FB: "\<mu> x * x \<le> \<mu> x * B" for x
     by (metis ordered_comm_semiring_class.comm_mult_left_mono vector_space_over_itself.scale_cancel_left)
   have "(\<lambda>x. \<mu> x * BC) abs_summable_on UNIV"
-    using \<mu>sum by (rule abs_summable_on_cmult_left)
+    by (metis \<mu> summable_on_cmult_left summable_on_iff_abs_summable_on_real)
   then have sum\<mu>f: "(\<lambda>x. \<mu> x * x) abs_summable_on UNIV"
-    apply (rule abs_summable_on_comparison_test')
-    using abs_f\<mu>x by simp
+    apply (rule abs_summable_on_comparison_test)
+    by (smt (verit, best) abs_f\<mu>x real_norm_def)
   have sum\<mu>B: "(\<lambda>x. \<mu> x * B) abs_summable_on UNIV"
-    using \<mu>sum by (rule abs_summable_on_cmult_left)
+    by (metis \<mu> summable_on_cmult_left summable_on_iff_abs_summable_on_real)
 
-  have "(\<Sum>\<^sub>ax. \<mu> x *\<^sub>R x) = (\<Sum>\<^sub>ax. \<mu> x * x)" 
+  have "(\<Sum>\<^sub>\<infinity>x. \<mu> x *\<^sub>R x) = (\<Sum>\<^sub>\<infinity>x. \<mu> x * x)" 
     by simp
-  also have "\<dots> \<le> (\<Sum>\<^sub>ax. \<mu> x * B)"
-    using sum\<mu>f sum\<mu>B \<mu>FB by (rule infsetsum_mono)
-  also have "\<dots> = (\<Sum>\<^sub>ax. \<mu> x) * B"
-    using \<mu>sum infsetsum_cmult_left by blast
+  also have "\<dots> \<le> (\<Sum>\<^sub>\<infinity>x. \<mu> x * B)"
+    apply (rule infsum_mono)
+    using sum\<mu>f sum\<mu>B \<mu>FB
+    using summable_on_iff_abs_summable_on_real by auto
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>x. \<mu> x) * B"
+    using infsum_cmult_left' by blast
   also from \<mu>sum1 \<mu>1_or_Bpos have "\<dots> \<le> B"
     by (auto simp: mult_left_le ordered_field_class.sign_simps(5))
-  finally show "(\<Sum>\<^sub>ax. \<mu> x *\<^sub>R x) \<le> B" by simp
+  finally show "(\<Sum>\<^sub>\<infinity>x. \<mu> x *\<^sub>R x) \<le> B" by simp
 qed
 
 
@@ -746,7 +719,7 @@ proof -
     unfolding expectation_uminus by simp
 qed
 
-lemma prob_bind_distr: "prob (bind_distr \<mu> f) x = (\<Sum>\<^sub>a y\<in>UNIV. prob \<mu> y * prob (f y) x)"
+lemma prob_bind_distr: "prob (bind_distr \<mu> f) x = (\<Sum>\<^sub>\<infinity> y\<in>UNIV. prob \<mu> y * prob (f y) x)"
   apply transfer by simp
 
 lemma Prob_singleton[simp]: "Prob D {x} = prob D x"
@@ -756,23 +729,21 @@ lemma prob_leq1[simp]: "prob \<mu> x \<le> 1"
   by (simp flip: Prob_singleton)
 
 
-(* TODO move to missing *)
-lemma local_defE: "(\<And>x. x=y \<Longrightarrow> P) \<Longrightarrow> P" by metis
-
-
-lemma bind_distr_summable: "(\<lambda>y. prob \<mu> y * prob (f y) x) abs_summable_on UNIV"
+lemma bind_distr_summable: "(\<lambda>y. prob \<mu> y * prob (f y) x) summable_on UNIV"
   apply (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f)
+  apply (rule abs_summable_summable)
   apply (subgoal_tac "\<And>x y. prob (f y) x \<le> 1")
-  apply transfer
-  apply (rule abs_summable_on_comparison_test')
-  unfolding is_distribution_def by (auto simp: mult_left_le)
+   apply transfer
+   apply (rule_tac g=\<mu> in abs_summable_on_comparison_test)
+  using is_distribution_def summable_on_iff_abs_summable_on_real apply auto
+  by (simp_all add: is_distribution_def mult_left_le)
 
 lemma prob_geq_0[simp]: "prob \<mu> f \<ge> 0"
   apply transfer by (auto simp: is_distribution_def)
 
-lemma prob_abs_summable: "prob \<mu> abs_summable_on UNIV"
+lemma prob_abs_summable: "prob \<mu> summable_on UNIV"
   apply transfer unfolding is_distribution_def
-  using distr_abs_summable_on by blast
+  using distr_summable_on by blast
 
 lemma supp_prob: "x \<in> supp \<mu> \<longleftrightarrow> prob \<mu> x > 0"
   apply transfer by auto
@@ -791,10 +762,10 @@ proof (rule; rule)
   proof -
     from that have "prob (bind_distr \<mu> f) y > 0"
       by (simp add: supp.rep_eq)
-    also have "prob (bind_distr \<mu> f) y = (\<Sum>\<^sub>a x\<in>UNIV. prob \<mu> x * prob (f x) y)"
+    also have "prob (bind_distr \<mu> f) y = (\<Sum>\<^sub>\<infinity> x\<in>UNIV. prob \<mu> x * prob (f x) y)"
       unfolding prob_bind_distr by simp
     finally obtain x where "prob \<mu> x * prob (f x) y \<noteq> 0"
-      by (smt infsetsum_all_0)
+      by (smt infsum_0)
     then have "prob \<mu> x > 0" and "prob (f x) y > 0"
       using prob_geq_0 less_eq_real_def by fastforce+
     then have "x \<in> supp \<mu>" and "y \<in> supp (f x)"
@@ -810,8 +781,8 @@ proof (rule; rule)
 
     from that obtain x where x_supp: "x\<in>supp \<mu>" and y_supp: "y \<in> supp (f x)"
       by auto
-    have "(\<Sum>\<^sub>a x\<in>UNIV. prob \<mu> x * prob (f x) y) \<ge> (\<Sum>\<^sub>a x\<in>{x}. prob \<mu> x * prob (f x) y)" (is "_ \<ge> \<dots>")
-      apply (rule infsetsum_mono_neutral)
+    have "(\<Sum>\<^sub>\<infinity> x\<in>UNIV. prob \<mu> x * prob (f x) y) \<ge> (\<Sum>\<^sub>\<infinity> x\<in>{x}. prob \<mu> x * prob (f x) y)" (is "_ \<ge> \<dots>")
+      apply (rule infsum_mono_neutral)
       using bind_distr_summable[where x=y] by auto
     also have "\<dots> = prob \<mu> x * prob (f x) y"
       by auto
@@ -840,7 +811,7 @@ proof (rename_tac p)
     unfolding D using p' by auto
   moreover have "D abs_summable_on UNIV"
     by simp
-  moreover have "infsetsum D UNIV \<le> 1"
+  moreover have "infsum D UNIV \<le> 1"
     by (simp add: D UNIV_bit)
   ultimately show "is_distribution D"
     unfolding is_distribution_def by simp
@@ -871,16 +842,16 @@ lemma weight_bernoulli[simp]: "weight (bernoulli p) = 1"
 lemma map_distr_const[simp]: 
   shows "map_distr (\<lambda>x. c) D = weight D *\<^sub>R point_distr c"
   apply (transfer fixing: c, rule ext) apply auto
-  by (metis infsetsum_nonneg is_distribution_def max_def min.commute min.orderE)
+  by (metis infsum_nonneg is_distribution_def max_def min.commute min.orderE)
 
 lemma bind_distr_const[simp]:
   shows "bind_distr \<mu> (\<lambda>x. \<nu>) = weight \<mu> *\<^sub>R \<nu>"
-  apply (transfer, rule ext) apply auto
+  apply (transfer, rule ext)
   apply (subst max_absorb2)
-   apply (simp add: infsetsum_nonneg is_distribution_def')
+   apply (meson infsum_nonneg is_distribution_def)
   apply (subst min_absorb2)
   using is_distribution_def apply blast
-  using infsetsum_cmult_left is_distribution_def by fastforce
+  using infsum_cmult_left is_distribution_def by fastforce
 
 lemma prob_map_distr_bij:
   assumes "bij f"
@@ -933,38 +904,39 @@ proof (transfer, rule ext)
     and x :: 'a
   assume "is_distribution (\<mu>)" and \<nu>: "is_distribution (\<nu>)"
 
-  have \<mu>sumgeq0: "infsetsum \<nu> UNIV \<ge> 0"
+  have \<mu>sumgeq0: "infsum \<nu> UNIV \<ge> 0"
     using \<nu> unfolding is_distribution_def
-    by (simp add: infsetsum_nonneg)
-  have maxmin: "min 1 (max 0 (infsetsum \<nu> (UNIV))) = infsetsum \<nu> UNIV"
+    by (simp add: infsum_nonneg)
+  have maxmin: "min 1 (max 0 (infsum \<nu> (UNIV))) = infsum \<nu> UNIV"
     apply (subst min_absorb2)
     using \<nu> unfolding is_distribution_def apply simp
     using \<mu>sumgeq0 by simp
 
-  have "(\<Sum>\<^sub>axy\<in>fst -` {x}. \<Sum>\<^sub>ax. \<mu> x * infsetsum \<nu> (Pair x -` {xy})) = (\<Sum>\<^sub>axy\<in>range (Pair x). \<Sum>\<^sub>ax. \<mu> x * infsetsum \<nu> (Pair x -` {xy}))"
+  have "(\<Sum>\<^sub>\<infinity>xy\<in>fst -` {x}. \<Sum>\<^sub>\<infinity>x. \<mu> x * infsum \<nu> (Pair x -` {xy})) = (\<Sum>\<^sub>\<infinity>xy\<in>range (Pair x). \<Sum>\<^sub>\<infinity>x. \<mu> x * infsum \<nu> (Pair x -` {xy}))"
     by (rewrite at _ asm_rl[of "fst -` {x} = Pair x ` UNIV"], auto)
-  also have "\<dots> = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax'. \<mu> x' * infsetsum \<nu> (Pair x' -` {(x, y)}))"
-    by (subst infsetsum_reindex, auto simp add: inj_on_def)
-  also have "\<dots> = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax'\<in>{x}. \<mu> x' * infsetsum \<nu> (Pair x' -` {(x, y)}))"
-    apply (rule infsetsum_cong)
-     apply (rule infsetsum_cong_neutral)
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x'. \<mu> x' * infsum \<nu> (Pair x' -` {(x, y)}))"
+    apply (subst infsum_reindex)
+    by (auto simp add: inj_on_def o_def)
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x'\<in>{x}. \<mu> x' * infsum \<nu> (Pair x' -` {(x, y)}))"
+    apply (rule infsum_cong)
+     apply (rule infsum_cong_neutral)
        apply auto
-    by (meson Pair_inject infsetsum_all_0 vimage_singleton_eq)
-  also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> x * infsetsum \<nu> (Pair x -` {(x, y)}))"
+    by (meson Pair_inject infsum_0 vimage_singleton_eq)
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> x * infsum \<nu> (Pair x -` {(x, y)}))"
     by auto
-  also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> x * infsetsum \<nu> {y})"
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> x * infsum \<nu> {y})"
     by (subgoal_tac "\<And>y::'b. Pair x -` {(x, y)} = {y}", auto)
-  also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> x * \<nu> y)"
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> x * \<nu> y)"
     by simp
-  also have "\<dots> = \<mu> x * (\<Sum>\<^sub>ay. \<nu> y)"
-    using \<open>is_distribution \<nu>\<close> infsetsum_cmult_right is_distribution_def by blast
-  also have "\<dots> = (\<Sum>\<^sub>ay. \<nu> y) * \<mu> x"
+  also have "\<dots> = \<mu> x * (\<Sum>\<^sub>\<infinity>y. \<nu> y)"
+    using \<open>is_distribution \<nu>\<close> infsum_cmult_right is_distribution_def by blast
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<nu> y) * \<mu> x"
     by simp
-  also have "\<dots> = (min 1 (max 0 (infsetsum \<nu> (UNIV::'b set))) * \<mu> x)"
+  also have "\<dots> = (min 1 (max 0 (infsum \<nu> (UNIV::'b set))) * \<mu> x)"
     unfolding maxmin by simp
 
-  finally show "(\<Sum>\<^sub>ax\<in>fst -` {x}. \<Sum>\<^sub>ay. \<mu> (y::'a) * infsetsum \<nu> (Pair y -` {x}))
-                  = (min 1 (max 0 (infsetsum \<nu> (UNIV::'b set))) * \<mu> x)"
+  finally show "(\<Sum>\<^sub>\<infinity>x\<in>fst -` {x}. \<Sum>\<^sub>\<infinity>y. \<mu> (y::'a) * infsum \<nu> (Pair y -` {x}))
+                  = (min 1 (max 0 (infsum \<nu> (UNIV::'b set))) * \<mu> x)"
     by assumption
 qed
 
@@ -988,8 +960,8 @@ lemma distr_scaleR1[simp]: "1 *\<^sub>R \<mu> = \<mu>" for \<mu> :: "_ distr"
 
 lemma Prob_union: "Prob \<mu> (A\<union>B) = Prob \<mu> A + Prob \<mu> B - Prob \<mu> (A\<inter>B)"
   apply (transfer fixing: A B)
-  apply (rule infsetsum_Un_Int)
-  using is_distribution_def abs_summable_on_subset by blast
+  apply (rule infsum_Un_Int)
+  by (simp_all add: distr_summable_on is_distribution_def')
 
 lemma Prob_setdiff: "Prob \<mu> (A-B) = Prob \<mu> A - Prob \<mu> B + Prob \<mu> (B-A)"
 proof (transfer fixing: A B)
@@ -998,19 +970,21 @@ proof (transfer fixing: A B)
 
   have Bsplit: "B = (B-A) \<union> (B\<inter>A)"
     by (simp add: Un_Diff_Int)
-  have 1: "infsetsum \<mu> B = infsetsum \<mu> (B-A) + infsetsum \<mu> (B\<inter>A)"
-    apply (rewrite at "infsetsum _ \<hole>" Bsplit)
-    apply (rule infsetsum_Un_disjoint)
-    using \<mu> is_distribution_def abs_summable_on_subset by blast+
+  have 1: "infsum \<mu> B = infsum \<mu> (B-A) + infsum \<mu> (B\<inter>A)"
+    apply (rewrite at "infsum _ \<hole>" Bsplit)
+    apply (rule infsum_Un_disjoint)
+    apply auto
+    by (meson \<mu> distr_summable_on is_distribution_def')+
 
-  have "infsetsum \<mu> (A - B) = infsetsum \<mu> (A - (B\<inter>A))"
+  have "infsum \<mu> (A - B) = infsum \<mu> (A - (B\<inter>A))"
     by (metis Diff_Compl Diff_Diff_Int Diff_eq Int_commute)
-  also have "\<dots> = infsetsum \<mu> A - infsetsum \<mu> (B\<inter>A)"
-    apply (rule infsetsum_Diff)
-    using \<mu> is_distribution_def abs_summable_on_subset apply blast by simp
-  also have "\<dots> = infsetsum \<mu> A - (infsetsum \<mu> B - infsetsum \<mu> (B-A))"
+  also have "\<dots> = infsum \<mu> A - infsum \<mu> (B\<inter>A)"
+    apply (rule infsum_Diff)
+    apply auto
+    by (meson \<mu> distr_summable_on is_distribution_def')+
+  also have "\<dots> = infsum \<mu> A - (infsum \<mu> B - infsum \<mu> (B-A))"
     using 1 by linarith
-  finally show "infsetsum \<mu> (A - B) = infsetsum \<mu> A - infsetsum \<mu> B + infsetsum \<mu> (B - A)"
+  finally show "infsum \<mu> (A - B) = infsum \<mu> A - infsum \<mu> B + infsum \<mu> (B - A)"
     by linarith
 qed
 
@@ -1063,28 +1037,28 @@ lemma product_distr'_onepoint:
   shows "map_distr (\<lambda>f. f x) (product_distr' D) = D x"
   using assms
 proof transfer
-  thm infsetsum_prod_PiE
   fix x :: 'a
     and D :: "'a \<Rightarrow> 'b \<Rightarrow> real"
   assume "pred_fun top is_distribution D"
   then have distr: "is_distribution (D i)" for i
     by simp
-  assume sum1: "infsetsum (D i) UNIV = 1" if "i \<noteq> x" for i
+  assume sum1: "infsum (D i) UNIV = 1" if "i \<noteq> x" for i
   define PIE :: "_ \<Rightarrow> _ \<Rightarrow> ('a\<Rightarrow>'b) set" where "PIE F y = PiE F (\<lambda>z. if z=x then {y} else UNIV)" for F y
   have PiE: "(\<lambda>f. f x) -` {y} = PiE UNIV (\<lambda>z. if z=x then {y} else UNIV)" for y :: 'b
     apply auto
     by (smt PiE_iff UNIV_I singletonD)
-  have "(\<Sum>\<^sub>af\<in>(\<lambda>f. f x) -` {y}. \<Prod>x'\<in>UNIV. D x' (f x')) = (\<Prod>x'\<in>UNIV. infsetsum (D x') (if x' = x then {y} else UNIV))" for y
+  have "(\<Sum>\<^sub>\<infinity>f\<in>(\<lambda>f. f x) -` {y}. \<Prod>x'\<in>UNIV. D x' (f x')) = (\<Prod>x'\<in>UNIV. infsum (D x') (if x' = x then {y} else UNIV))" for y
     apply (subst PiE)
-    apply (subst infsetsum_prod_PiE)
-    using distr is_distribution_def by auto
-  also have "\<dots>y = (\<Prod>x'\<in>{x}. infsetsum (D x') (if x' = x then {y} else UNIV))" for y
+    apply (subst infsum_prod_PiE_abs)
+      apply auto
+    by (smt (verit, ccfv_threshold) distr is_distribution_def summable_on_cong)
+  also have "\<dots>y = (\<Prod>x'\<in>{x}. infsum (D x') (if x' = x then {y} else UNIV))" for y
     apply (rule prod.mono_neutral_right)
     using sum1 by auto
   also have "\<dots>y = D x y" for y
     by simp
   finally
-  show "(\<lambda>y. \<Sum>\<^sub>af\<in>(\<lambda>f. f x) -` {y}. \<Prod>x\<in>UNIV. D x (f x)) = D x"
+  show "(\<lambda>y. \<Sum>\<^sub>\<infinity>f\<in>(\<lambda>f. f x) -` {y}. \<Prod>x\<in>UNIV. D x (f x)) = D x"
     by auto
 qed
 
@@ -1103,20 +1077,20 @@ lemma bind_distr_point_distr[simp]: "bind_distr D point_distr = D"
 proof (transfer, rule ext)
   fix D :: "'a \<Rightarrow> real" and x :: 'a
   assume "is_distribution D"
-  have "(\<Sum>\<^sub>ay. D y * (if x \<in> {y} then 1 / real (card {y}) else 0)) = (\<Sum>\<^sub>ay\<in>{x}. D y)"
-    apply (rule infsetsum_cong_neutral) by auto
+  have "(\<Sum>\<^sub>\<infinity>y. D y * (if x \<in> {y} then 1 / real (card {y}) else 0)) = (\<Sum>\<^sub>\<infinity>y\<in>{x}. D y)"
+    apply (rule infsum_cong_neutral) by auto
   also have "\<dots> = D x"
     by auto
-  finally show "(\<Sum>\<^sub>ay. D y * (if x \<in> {y} then 1 / real (card {y}) else 0)) = D x"
+  finally show "(\<Sum>\<^sub>\<infinity>y. D y * (if x \<in> {y} then 1 / real (card {y}) else 0)) = D x"
     by simp
 qed
 
 lemma distribution_leq1: assumes "is_distribution \<mu>" shows "\<mu> x \<le> 1"
 proof -
-  have "\<mu> x = infsetsum \<mu> {x}"
+  have "\<mu> x = infsum \<mu> {x}"
     by auto
-  also have "\<dots> \<le> infsetsum \<mu> UNIV"
-    apply (rule infsetsum_mono_neutral_left)
+  also have "\<dots> \<le> infsum \<mu> UNIV"
+    apply (rule infsum_mono_neutral)
     using assms unfolding is_distribution_def by auto
   also have "\<dots> \<le> 1"
     using assms unfolding is_distribution_def by auto
@@ -1132,30 +1106,32 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer, ru
     and \<mu>f :: "'c \<Rightarrow> real"
   assume \<mu>: "is_distribution \<mu>"
   assume f: "pred_fun top is_distribution f"
-  then have fpos: "(0 \<le> f y x)" and fy_sum: "f y abs_summable_on UNIV" and fy_sum1: "infsetsum (f y) UNIV \<le> 1" for y x
+  then have fpos: "(0 \<le> f y x)" and fy_sum: "f y abs_summable_on UNIV" and fy_sum1: "infsum (f y) UNIV \<le> 1" for y x
     by (auto simp: is_distribution_def)
   from f have fyx1: "f y x \<le> 1" for y x
     by (auto simp: is_distribution_def intro: distribution_leq1)
-  assume \<mu>f_def: "\<mu>f = (\<lambda>x. \<Sum>\<^sub>ay. \<mu> y * f y x)"
+  assume \<mu>f_def: "\<mu>f = (\<lambda>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x)"
   assume \<mu>f: "is_distribution \<mu>f"
-  then have summable1: "(\<lambda>x. \<Sum>\<^sub>ay. \<mu> y * f y x) abs_summable_on UNIV"
+  then have summable1: "(\<lambda>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) abs_summable_on UNIV"
     unfolding \<mu>f_def is_distribution_def by simp
   have summable2: "(\<lambda>y. \<mu> y * f y x) abs_summable_on UNIV" for x
-    apply (rule abs_summable_on_comparison_test'[where g="\<mu>"])
+    apply (rule abs_summable_on_comparison_test[where g="\<mu>"])
     using \<mu>[unfolded is_distribution_def] apply simp_all
     using fyx1 fpos by (simp add: mult_left_le)
   have prod_summable: "(\<lambda>(x, y). \<mu> y * f y x) abs_summable_on UNIV \<times> UNIV"
-    apply (rule abs_summable_product')
-    by (simp_all add: fpos is_distribution_def summable1 summable2 \<mu>[unfolded is_distribution_def])
-  have "(\<Sum>\<^sub>ay. \<mu> y * (\<Sum>\<^sub>ax\<in>g -` {x}. f y x)) = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax\<in>g -` {x}. \<mu> y * f y x)"
-    apply (subst infsetsum_cmult_right)
-    using fy_sum abs_summable_on_subset apply blast by auto
-  also have "\<dots> = (\<Sum>\<^sub>ax\<in>g -` {x}. \<Sum>\<^sub>ay. \<mu> y * f y x)"
-    apply (rule infsetsum_swap[symmetric])
-    apply (rule abs_summable_on_subset[where B=UNIV])
-    using prod_summable by simp_all
-  finally show "(\<Sum>\<^sub>ay. (\<mu> y) * (\<Sum>\<^sub>ax\<in>g -` {x}. f y x)) 
-      = (\<Sum>\<^sub>ax\<in>g -` {x}. \<Sum>\<^sub>ay. \<mu> y * f y x)" .
+    apply (rule abs_summable_on_Sigma_iff[THEN iffD2])
+    using summable2 apply auto
+    by (smt (verit, ccfv_SIG) \<mu> \<mu>f \<mu>f_def fpos infsum_cong is_distribution_def mult_nonneg_nonneg summable_on_cong)
+  have "(\<Sum>\<^sub>\<infinity>y. \<mu> y * (\<Sum>\<^sub>\<infinity>x\<in>g -` {x}. f y x)) = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x\<in>g -` {x}. \<mu> y * f y x)"
+    apply (subst infsum_cmult_right)
+    apply (metis distr_summable_on f is_distribution_def' pred_fun_def top_apply top_bool_def)
+    by blast
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>g -` {x}. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x)"
+    apply (rule infsum_swap_banach[symmetric])
+    apply (rule summable_on_subset_banach[where A=UNIV])
+    using prod_summable summable_on_iff_abs_summable_on_real by auto
+  finally show "(\<Sum>\<^sub>\<infinity>y. (\<mu> y) * (\<Sum>\<^sub>\<infinity>x\<in>g -` {x}. f y x)) 
+      = (\<Sum>\<^sub>\<infinity>x\<in>g -` {x}. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x)" .
 qed
 
 
@@ -1173,15 +1149,18 @@ lemma below_bernoulli_fst[simp]: "map_distr fst (below_bernoulli D E p) = D"
 
 lift_definition restrict_distr :: "'a distr \<Rightarrow> 'a set \<Rightarrow> 'a distr" is
   "\<lambda>\<mu> S x. if x\<in>S then \<mu> x else 0"
-  unfolding is_distribution_def apply auto
-  apply (simp add: abs_summable_on_comparison_test')
-  by (smt infsetsum_mono not_summable_infsetsum_eq)
+  unfolding is_distribution_def 
+  apply auto
+   apply (rule summable_on_iff_abs_summable_on_real[THEN iffD2])
+   apply (rule_tac g="fun" in abs_summable_on_comparison_test)
+  apply auto
+  by (smt (verit, best) infsum_mono infsum_not_exists)
 
 lemma bind_distr_cong:
   assumes "\<And>x. x\<in>supp \<mu> \<Longrightarrow> f x = g x"
   shows "bind_distr \<mu> f = bind_distr \<mu> g"
   using assms apply transfer apply (rule ext)
-  apply (rule infsetsum_cong_neutral)
+  apply (rule infsum_cong_neutral)
   apply (auto simp: is_distribution_def)
   by (metis order_trans_rules(17))
 
@@ -1192,7 +1171,7 @@ lemma supp_restrict_distr[simp]:
 lemma Prob_restrict_distr[simp]:
   "Prob (restrict_distr \<mu> S) T = Prob \<mu> (S\<inter>T)"
   apply transfer
-  apply (rule infsetsum_cong_neutral)
+  apply (rule infsum_cong_neutral)
   by auto
 
 lemma prob_scaleR[simp]:
@@ -1210,10 +1189,15 @@ lemma bind_distr_split: "prob (bind_distr \<mu> f) x =
   prob (bind_distr (restrict_distr \<mu> E) f) x +
   prob (bind_distr (restrict_distr \<mu> (-E)) f) x"
   apply transfer
-  apply (subst infsetsum_add[symmetric], auto simp: is_distribution_def)
+  apply (subst infsum_add[symmetric])
+   apply (rule summable_on_iff_abs_summable_on_real[THEN iffD2])
+    apply (rule_tac g="\<mu>" in abs_summable_on_comparison_test)
+     apply (simp add: is_distribution_def)
+  apply (smt (verit, ccfv_threshold) distribution_leq1 is_distribution_def mult_left_le mult_nonneg_nonneg pred_fun_def real_norm_def top1I)
+  apply auto
+  apply (smt Rings.mult_sign_intros(1) abs_summable_on_comparison_test distribution_leq1 is_distribution_def mult_left_le real_norm_def)
   apply (smt Rings.mult_sign_intros(1) abs_summable_on_comparison_test' distribution_leq1 is_distribution_def mult_left_le real_norm_def)
-  apply (smt Rings.mult_sign_intros(1) abs_summable_on_comparison_test' distribution_leq1 is_distribution_def mult_left_le real_norm_def)
-  by (smt infsetsum_cong mult_cancel_left2)
+  by (smt infsum_cong mult_cancel_left2)x
 
 lemma weight1_bind_distr[simp]:
   shows "weight (bind_distr \<mu> f) = 1 \<longleftrightarrow> weight \<mu> = 1 \<and> (\<forall>x\<in>supp \<mu>. weight (f x) = 1)"
@@ -1225,97 +1209,97 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer)
   then have \<mu>pos: "\<mu> x \<ge> 0" for x by (simp add: is_distribution_def)
   assume f: "pred_fun top is_distribution f"
   then have fpos[simp]: "0 \<le> f y x" and fy_sum: "f y abs_summable_on UNIV"
-    and fy_sum1: "infsetsum (f y) UNIV \<le> 1" 
+    and fy_sum1: "infsum (f y) UNIV \<le> 1" 
     for y x
     by (auto simp: is_distribution_def)
   from f have fyx1: "f y x \<le> 1" for y x 
     by (auto simp: distribution_leq1)
 (*   from fy_sum1 fy_sum fpos have fyx1: "f y x \<le> 1" for y x
   proof -
-    have "f y x = infsetsum (f y) {x}"
+    have "f y x = infsum (f y) {x}"
       by auto
-    also have "\<dots> \<le> infsetsum (f y) UNIV"
-      apply (rule infsetsum_mono_neutral_left)
+    also have "\<dots> \<le> infsum (f y) UNIV"
+      apply (rule infsum_mono_neutral_left)
       using fy_sum by auto
     also have "\<dots> \<le> 1"
       using fy_sum1 by simp
     finally show ?thesis.
   qed *)
-  assume \<mu>f_def: "\<mu>f = (\<lambda>x. \<Sum>\<^sub>ay. \<mu> y * f y x)"
+  assume \<mu>f_def: "\<mu>f = (\<lambda>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x)"
   assume \<mu>f: "is_distribution \<mu>f"
-  then have summable1: "(\<lambda>x. \<Sum>\<^sub>ay. \<mu> y * f y x) abs_summable_on UNIV"
+  then have summable1: "(\<lambda>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) abs_summable_on UNIV"
     unfolding \<mu>f_def is_distribution_def by simp
   have summable2: "(\<lambda>y. \<mu> y * f y x) abs_summable_on UNIV" for x
-    apply (rule abs_summable_on_comparison_test'[where g="\<mu>"])
+    apply (rule abs_summable_on_comparison_test[where g="\<mu>"])
     using \<mu>[unfolded is_distribution_def] apply simp_all
     using fyx1 mult_left_le by blast
   have prod_summable: "(\<lambda>(x, y). \<mu> y * f y x) abs_summable_on UNIV \<times> UNIV"
-    apply (rule abs_summable_product')
-    by (simp_all add: is_distribution_def summable1 summable2 \<mu>[unfolded is_distribution_def])
-  show "((\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = 1) \<longleftrightarrow>
-       (infsetsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsetsum (f x) UNIV = 1))"
+    apply (rule abs_summable_on_Sigma_iff[THEN iffD2])
+    using summable2 apply auto
+    by (smt (verit, ccfv_SIG) \<mu>f \<mu>f_def \<mu>pos fpos infsum_cong is_distribution_def mult_nonneg_nonneg summable_on_cong)
+  show "((\<Sum>\<^sub>\<infinity>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) = 1) \<longleftrightarrow>
+       (infsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsum (f x) UNIV = 1))"
   proof
-    assume assm[symmetric]: "(\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = 1" (is "\<dots> = _")
-    also have "\<dots> = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax. \<mu> y * f y x)"
-      by (rule infsetsum_swap, fact prod_summable)
-    also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> y * (\<Sum>\<^sub>ax. f y x))"
-      apply (rule infsetsum_cong)
-      using fy_sum apply (rule infsetsum_cmult_right)
-      by simp
+    assume assm[symmetric]: "(\<Sum>\<^sub>\<infinity>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) = 1" (is "\<dots> = _")
+    also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x. \<mu> y * f y x)"
+      by (rule infsum_swap, fact prod_summable)
+    also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> y * (\<Sum>\<^sub>\<infinity>x. f y x))"
+      apply (rule infsum_cong)
+      using infsum_cmult_right' by blast
     also 
     note calc_start = calculation
-    have "\<dots> \<le> (\<Sum>\<^sub>ay. \<mu> y)"
-      apply (rule infsetsum_mono)
-      using calculation not_summable_infsetsum_eq apply fastforce
-      using \<mu>[unfolded is_distribution_def] apply blast
-      using \<mu>[unfolded is_distribution_def] fy_sum1 mult_left_le by blast
-    finally have "infsetsum \<mu> UNIV = 1"
+    have "\<dots> \<le> (\<Sum>\<^sub>\<infinity>y. \<mu> y)"
+      apply (rule infsum_mono)
+      using calculation infsum_not_exists apply force
+      using \<mu> is_distribution_def apply blast
+      using \<mu>pos fy_sum1 mult_left_le by blast
+    finally have "infsum \<mu> UNIV = 1"
       using \<mu>[unfolded is_distribution_def] by linarith
 
-    moreover have "infsetsum (f y) UNIV = 1" if "0 < \<mu> y" for y
+    moreover have "infsum (f y) UNIV = 1" if "0 < \<mu> y" for y
     proof (rule ccontr)
-      assume "infsetsum (f y) UNIV \<noteq> 1"
-      then have less1: "infsetsum (f y) UNIV < 1"
+      assume "infsum (f y) UNIV \<noteq> 1"
+      then have less1: "infsum (f y) UNIV < 1"
         using fy_sum1 le_less by blast
-      from calc_start have "1 = (\<Sum>\<^sub>ay. \<mu> y * infsetsum (f y) UNIV)".
-      also have "\<dots> = (\<Sum>\<^sub>ay\<in>-{y}. \<mu> y * infsetsum (f y) UNIV) + \<mu> y * infsetsum (f y) UNIV"
-        apply (subst Compl_partition2[symmetric, where A="{y}"], subst infsetsum_Un_disjoint)
-           apply (metis (full_types) abs_summable_on_subset calculation not_summable_infsetsum_eq semiring_norm(160) subset_UNIV)
-        by simp_all
-      also have "\<dots> < (\<Sum>\<^sub>ay\<in>-{y}. \<mu> y * infsetsum (f y) UNIV) + \<mu> y"
+      from calc_start have "1 = (\<Sum>\<^sub>\<infinity>y. \<mu> y * infsum (f y) UNIV)".
+      also have "\<dots> = (\<Sum>\<^sub>\<infinity>y\<in>-{y}. \<mu> y * infsum (f y) UNIV) + \<mu> y * infsum (f y) UNIV"
+        apply (subst Compl_partition2[symmetric, where A="{y}"], subst infsum_Un_disjoint)
+           apply (metis (full_types) add.inverse_neutral calc_start infsum_not_exists less_minus_one_simps(2) less_numeral_extra(4) subset_UNIV summable_on_subset_banach)
+        by auto
+      also have "\<dots> < (\<Sum>\<^sub>\<infinity>y\<in>-{y}. \<mu> y * infsum (f y) UNIV) + \<mu> y"
         apply (rule add_strict_left_mono)
         using less1 that by simp
-      also have "\<dots> \<le> (\<Sum>\<^sub>ay\<in>-{y}. \<mu> y) + \<mu> y"
+      also have "\<dots> \<le> (\<Sum>\<^sub>\<infinity>y\<in>-{y}. \<mu> y) + \<mu> y"
         apply (rule add_right_mono)
-        apply (rule infsetsum_mono)
-          apply (metis (full_types) calc_start abs_summable_on_subset not_summable_infsetsum_eq semiring_norm(160) subset_UNIV)
-        using \<mu>[unfolded is_distribution_def] abs_summable_on_subset apply blast
-        using \<mu>[unfolded is_distribution_def] fy_sum1 mult_left_le by blast
-      also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> y)"
-        apply (subst Compl_partition2[symmetric, where A="{y}"], subst infsetsum_Un_disjoint)
-        using \<mu>[unfolded is_distribution_def] abs_summable_on_subset apply blast
-        by simp_all
+        apply (rule infsum_mono)
+        apply (metis (full_types) calc_start infsum_not_exists summable_on_subset_banach top_greatest zero_neq_one)
+        apply (meson \<mu> distr_summable_on is_distribution_def')
+        using \<mu>pos fy_sum1 mult_left_le by blast
+      also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> y)"
+        apply (subst Compl_partition2[symmetric, where A="{y}"], subst infsum_Un_disjoint)
+        apply (meson \<mu> distr_summable_on is_distribution_def')
+        by auto
       also have "\<dots> \<le> 1"
         using \<mu>[unfolded is_distribution_def] by blast
       finally have "1 < 1" by simp
       then show False by auto
     qed
-    ultimately show "infsetsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsetsum (f x) UNIV = 1)"
+    ultimately show "infsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsum (f x) UNIV = 1)"
       by auto
   next
-    assume assm: "infsetsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsetsum (f x) UNIV = 1)"
-    have "(\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax. \<mu> y * f y x)"
-      by (rule infsetsum_swap, fact prod_summable)
-    also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> y * (\<Sum>\<^sub>ax. f y x))"
-      apply (rule infsetsum_cong)
-      using fy_sum apply (rule infsetsum_cmult_right)
+    assume assm: "infsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsum (f x) UNIV = 1)"
+    have "(\<Sum>\<^sub>\<infinity>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x. \<mu> y * f y x)"
+      by (rule infsum_swap, fact prod_summable)
+    also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> y * (\<Sum>\<^sub>\<infinity>x. f y x))"
+      apply (rule infsum_cong)
+      using fy_sum apply (rule infsum_cmult_right)
       by simp
-    also have "\<dots> = (\<Sum>\<^sub>ay. \<mu> y)"
+    also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> y)"
       using assm apply auto
-      by (smt \<mu>[unfolded is_distribution_def] infsetsum_cong mult_cancel_left2)
+      by (smt \<mu>[unfolded is_distribution_def] infsum_cong mult_cancel_left2)
     also have "\<dots> = 1"
       using assm by simp
-    finally show "(\<Sum>\<^sub>ax. \<Sum>\<^sub>ay. \<mu> y * f y x) = 1".
+    finally show "(\<Sum>\<^sub>\<infinity>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) = 1".
   qed
 qed
 
@@ -1323,8 +1307,8 @@ lemma Prob_complement: "Prob \<mu> (-E) = weight \<mu> - Prob \<mu> E"
   apply (transfer fixing: E)
   apply (rewrite at UNIV asm_rl[of "UNIV = -E \<union> E"], simp)
   apply (rule add_implies_diff)
-  apply (rule infsetsum_Un_disjoint[symmetric])
-  by (simp_all add: distr_abs_summable_on is_distribution_def')
+  apply (rule infsum_Un_disjoint[symmetric])
+  by (auto simp add: distr_summable_on is_distribution_def')
 
 lemma below_bernoulli_snd[simp]: 
   assumes [simp]: "weight D = 1"
@@ -1449,7 +1433,7 @@ proof (cases "finite A")
       using regular_betw_finite by blast
     from reg_n have cardAB[simp]: "card A = n * card B"
       using regular_betw_n_card by blast
-    show "(\<Sum>\<^sub>am\<in>f -` {y}. if m \<in> A then 1 / real (card A) else 0) = (if y \<in> B then 1 / real (card B) else 0)" 
+    show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. if m \<in> A then 1 / real (card A) else 0) = (if y \<in> B then 1 / real (card B) else 0)" 
       (is "?lhs = ?rhs") for y
     proof (cases "y \<in> B")
       case True
@@ -1459,11 +1443,11 @@ proof (cases "finite A")
         using True by blast
       then have fin_y: "finite (f -` {y} \<inter> A)"
         by (meson card_eq_0_iff)
-      have "?lhs = (\<Sum>\<^sub>am\<in>f-`{y} \<inter> A. 1 / real (card A))"
-        apply (rule infsetsum_cong_neutral)
+      have "?lhs = (\<Sum>\<^sub>\<infinity>m\<in>f-`{y} \<inter> A. 1 / real (card A))"
+        apply (rule infsum_cong_neutral)
         by auto
       also have "\<dots> = (\<Sum>m\<in>f-`{y} \<inter> A. 1 / real (card A))"
-        using fin_y by (rule infsetsum_finite)
+        using fin_y by (rule infsum_finite)
       also have "\<dots> = n / real (card A)"
         apply (subst sum_constant_scale) unfolding card_y by auto
       also have "\<dots> = 1 / real (card B)"
@@ -1479,8 +1463,8 @@ proof (cases "finite A")
       from False have yA: "x \<in> f -` {y} \<Longrightarrow> x \<notin> A" for x
         using reg_n unfolding regular_betw_n_def 
         by (metis image_eqI vimage_singleton_eq) 
-      have "?lhs = (\<Sum>\<^sub>am\<in>f -` {y}. 0)"
-        apply (rule infsetsum_cong)
+      have "?lhs = (\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. 0)"
+        apply (rule infsum_cong)
         using yA by auto
       also have "\<dots> = 0"
         by auto
@@ -1677,10 +1661,10 @@ lemma prob_bind_distr_bernoulli:
   shows "prob (bind_distr \<mu> bernoulli) 1 = expectation \<mu>"
 proof -
   have "prob (bind_distr \<mu> bernoulli) 1 
-    = (\<Sum>\<^sub>ay. prob \<mu> y * (let p' = min (max y 0) 1 in (\<lambda>b::bit. if b = 0 then 1 - p' else p')) 1)"
+    = (\<Sum>\<^sub>\<infinity>y. prob \<mu> y * (let p' = min (max y 0) 1 in (\<lambda>b::bit. if b = 0 then 1 - p' else p')) 1)"
     apply transfer by rule
-  also have "\<dots> = (\<Sum>\<^sub>ay. prob \<mu> y * y)"
-  proof (rule infsetsum_cong)
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. prob \<mu> y * y)"
+  proof (rule infsum_cong)
     fix x
     show "prob \<mu> x * (let p' = min (max x 0) 1 in (\<lambda>b::bit. if b = 0 then 1 - p' else p')) 1 =
          prob \<mu> x * x"
@@ -1694,7 +1678,7 @@ proof -
         using assms
         by (metis less_eq_real_def mem_Collect_eq mult_zero_left prob_geq_0 supp.rep_eq) 
     qed
-  qed simp
+  qed
   also have "\<dots> = expectation \<mu>"
     apply transfer by simp
   finally show ?thesis
@@ -1706,9 +1690,9 @@ lemma map_distr_point_distr[simp]:
   "map_distr f (point_distr x) = point_distr (f x)"
 proof (transfer fixing: f, rule ext, rename_tac x y)
   fix x y
-  have "(\<Sum>\<^sub>am\<in>f -` {y}. if m \<in> {x} then 1 / real (card {x}) else 0)
-      = (\<Sum>\<^sub>am\<in>{m. m=x \<and> f m = y}. if m=x then 1 else 0)"
-    by (rule infsetsum_cong_neutral, auto)
+  have "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. if m \<in> {x} then 1 / real (card {x}) else 0)
+      = (\<Sum>\<^sub>\<infinity>m\<in>{m. m=x \<and> f m = y}. if m=x then 1 else 0)"
+    by (rule infsum_cong_neutral, auto)
   also have "\<dots> = (if f x = y then 1 else 0)"
     apply (cases "f x = y")
      apply auto
@@ -1716,7 +1700,7 @@ proof (transfer fixing: f, rule ext, rename_tac x y)
     by auto
   also have "\<dots> = (if y \<in> {f x} then 1 / real (card {f x}) else 0)"
     by auto
-  finally show "(\<Sum>\<^sub>am\<in>f -` {y}. if m \<in> {x} then 1 / real (card {x}) else 0) = (if y \<in> {f x} then 1 / real (card {f x}) else 0)"
+  finally show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. if m \<in> {x} then 1 / real (card {x}) else 0) = (if y \<in> {f x} then 1 / real (card {f x}) else 0)"
     by -
 qed
 
@@ -1731,9 +1715,9 @@ proof (cases "finite A")
   case True
   then have "finite (A\<inter>B)"
     by simp
-  have "Prob (uniform A) B = (\<Sum>\<^sub>am\<in>A\<inter>B. 1 / real (card A))"
+  have "Prob (uniform A) B = (\<Sum>\<^sub>\<infinity>m\<in>A\<inter>B. 1 / real (card A))"
     apply transfer
-    apply (rule infsetsum_cong_neutral)
+    apply (rule infsum_cong_neutral)
     by auto
   also have "\<dots> = (\<Sum>m\<in>A\<inter>B. 1 / real (card A))"
     using \<open>finite (A\<inter>B)\<close> by simp
@@ -1749,7 +1733,7 @@ next
 qed
 
 
-lemma prob_map_distr: "prob (map_distr f \<mu>) x = infsetsum (prob \<mu>) (f -` {x})"
+lemma prob_map_distr: "prob (map_distr f \<mu>) x = infsum (prob \<mu>) (f -` {x})"
   apply transfer by simp
 
 
@@ -1760,33 +1744,39 @@ lemma markov_inequality:
   shows "Prob \<mu> {a..} \<le> expectation \<mu> / a"
 proof -
   have [simp]: "(\<lambda>x. prob \<mu> x) abs_summable_on A" for A
-    using prob_abs_summable abs_summable_on_subset by fastforce
+    by (metis prob_abs_summable summable_on_iff_abs_summable_on_real summable_on_subset_banach top_greatest)
   then have [simp]: "(\<lambda>x. prob \<mu> x * a) abs_summable_on A" for A
-    by auto
+    by (metis summable_on_cmult_left summable_on_iff_abs_summable_on_real)
   from exp_ex have exp_ex[simp]: "(\<lambda>x. prob \<mu> x * x) abs_summable_on A" for A
     unfolding expectation_exists.rep_eq
     apply auto
-    using abs_summable_on_subset by blast
+    using summable_on_subset_banach by blast
   have pos: "prob \<mu> x = 0" if "x < 0" for x
     using supp supp_prob' that by fastforce
 
-  have "expectation \<mu> = (\<Sum>\<^sub>ax. prob \<mu> x * x)"
+  have "expectation \<mu> = (\<Sum>\<^sub>\<infinity>x. prob \<mu> x * x)"
     apply transfer by simp
-  also have "\<dots> = (\<Sum>\<^sub>ax\<in>{a..}. prob \<mu> x * x) + (\<Sum>\<^sub>ax\<in>{..<a}. prob \<mu> x * x)"
-    apply (subst infsetsum_Un_disjoint[symmetric]) apply auto
-    apply (rewrite asm_rl[of "UNIV={a..}\<union>{..<a}"])
-    by auto
-  also have "\<dots> \<ge> (\<Sum>\<^sub>ax\<in>{a..}. prob \<mu> x * x)" (is "_ \<ge> \<dots>")
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>{a..}. prob \<mu> x * x) + (\<Sum>\<^sub>\<infinity>x\<in>{..<a}. prob \<mu> x * x)"
+    apply (subst infsum_Un_disjoint[symmetric])
+    using exp_ex summable_on_iff_abs_summable_on_real apply blast
+    using exp_ex summable_on_iff_abs_summable_on_real apply blast
+    apply (simp add: disjoint_iff_not_equal)
+    by (smt (verit) Collect_cong UNIV_def Un_def atLeast_iff lessThan_iff)
+  also have "\<dots> \<ge> (\<Sum>\<^sub>\<infinity>x\<in>{a..}. prob \<mu> x * x)" (is "_ \<ge> \<dots>")
     apply (rule add_increasing2)
-     apply (rule infsetsum_nonneg)
+     apply (rule infsum_nonneg)
     using pos apply auto
-    by (metis (full_types) mult_less_0_iff not_less prob_geq_0)
-  also have "\<dots> \<ge> (\<Sum>\<^sub>ax\<in>{a..}. prob \<mu> x * a)" (is "_ \<ge> \<dots>")
-    apply (rule infsetsum_mono, simp, simp)
+    using exp_ex summable_on_iff_abs_summable_on_real apply blast
+    using zero_le_mult_iff by force
+  also have "\<dots> \<ge> (\<Sum>\<^sub>\<infinity>x\<in>{a..}. prob \<mu> x * a)" (is "_ \<ge> \<dots>")
+    apply (rule infsum_mono)
+    apply (metis prob_abs_summable summable_on_cmult_left summable_on_subset_banach top_greatest)
+    using exp_ex summable_on_iff_abs_summable_on_real apply blast
     apply (rule mult_left_mono)
     by auto
-  moreover have "\<dots> = (\<Sum>\<^sub>ax\<in>{a..}. prob \<mu> x) * a"
-    by (rule infsetsum_cmult_left, simp)
+  moreover have "\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>{a..}. prob \<mu> x) * a"
+    apply (rule infsum_cmult_left)
+    by (meson prob_abs_summable subset_UNIV summable_on_subset_banach)
   moreover have "\<dots> = Prob \<mu> {a..} * a"
     apply transfer by simp
   ultimately have "expectation \<mu> \<ge> \<dots>"
@@ -1810,22 +1800,24 @@ proof -
   then have "\<mu> abs_summable_on UNIV" and nneg: "\<mu> x \<ge> 0" for x
     unfolding is_distribution_def by auto
   then have \<mu>_abs_sum: "\<mu> abs_summable_on M" for M
-    using abs_summable_on_subset by blast
-  assume sum_UNIV: "infsetsum \<mu> UNIV = w"
+    using summable_on_subset_banach by blast
+  assume sum_UNIV: "infsum \<mu> UNIV = w"
       and pos: "{x. \<mu> x > 0} = UNIV"
-      and sum_A: "infsetsum \<mu> A = w"
+      and sum_A: "infsum \<mu> A = w"
 
-  have 0: "infsetsum \<mu> (- A) = 0"
+  have 0: "infsum \<mu> (- A) = 0"
     unfolding Compl_eq_Diff_UNIV
-    apply (subst infsetsum_Diff)
+    apply (subst infsum_Diff)
     unfolding sum_UNIV sum_A 
-    using \<mu>_abs_sum by auto
+    using \<open>is_distribution \<mu>\<close> is_distribution_def apply auto
+    using \<mu>_abs_sum summable_on_iff_abs_summable_on_real by blast
 
   assume "A \<noteq> UNIV"
   then obtain x where "x \<in> - A"
     by auto
   have "\<mu> x = 0"
-    using 0 \<mu>_abs_sum nneg \<open>x \<in> - A\<close> by (rule infsetsum_0D)
+    using 0 \<mu>_abs_sum nneg \<open>x \<in> - A\<close>
+    by (metis dual_order.refl infsum_0D summable_on_iff_abs_summable_on_real)
   with pos show False
     unfolding Collect_UNIV
     by (metis rel_simps(70))
@@ -1837,15 +1829,16 @@ lemma supp_0[simp]: "supp 0 = {}"
 
 lemma abs_summable_on_Sigma_project1:
   assumes "(\<lambda>(x,y). f x y) abs_summable_on Sigma A B"
-  shows   "(\<lambda>x. infsetsum (\<lambda>y. norm (f x y)) (B x)) abs_summable_on A"
+  shows   "(\<lambda>x. infsum (\<lambda>y. norm (f x y)) (B x)) abs_summable_on A"
   using assms by (subst (asm) abs_summable_on_Sigma_iff) auto
 
 lemma abs_summable_on_Sigma_project1':
   assumes "(\<lambda>(x,y). f x y) abs_summable_on Sigma A B"
-  shows   "(\<lambda>x. infsetsum (\<lambda>y. f x y) (B x)) abs_summable_on A"
-  by (intro abs_summable_on_comparison_test' [OF abs_summable_on_Sigma_project1[OF assms]]
-        norm_infsetsum_bound)
-
+  shows   "(\<lambda>x. infsum (\<lambda>y. f x y) (B x)) abs_summable_on A"
+  apply (rule abs_summable_on_comparison_test)
+   apply (rule abs_summable_on_Sigma_project1)
+   apply (fact assms)
+  by -
 
 lemma expectation_exists'_bounded:
   fixes a b :: real
@@ -1870,35 +1863,35 @@ proof -
     unfolding image_def unfolding Sigma_def by auto
 
   (* We can make this assumption because of the "using bind_distr_summable[of \<mu> f a] apply -" step before the proof command *)
-  assume "(\<lambda>x. \<mu> x * f x a) abs_summable_on UNIV"
+  assume "(\<lambda>x. \<mu> x * f x a) summable_on UNIV"
   then have "(\<lambda>(x, y). \<mu> y * x) abs_summable_on (\<lambda>x. (f x a, x)) ` UNIV"
     apply (subst abs_summable_on_reindex_iff[symmetric])
      apply (rule injI)
     by auto
   then have summ1: "(\<lambda>(x, y). \<mu> y * x) abs_summable_on (SIGMA y:UNIV. {x. f x a = y})"
     unfolding Sigma by -
-  then have "(\<lambda>y. \<Sum>\<^sub>ax|f x a = y. \<mu> x * y) abs_summable_on UNIV"
+  then have "(\<lambda>y. \<Sum>\<^sub>\<infinity>x|f x a = y. \<mu> x * y) abs_summable_on UNIV"
     by (rule abs_summable_on_Sigma_project1')
-  then show "(\<lambda>y. infsetsum \<mu> ((\<lambda>x. f x a) -` {y}) *\<^sub>R y) abs_summable_on UNIV"
-    apply simp apply (subst infsetsum_cmult_left[symmetric])
+  then show "(\<lambda>y. infsum \<mu> ((\<lambda>x. f x a) -` {y}) *\<^sub>R y) abs_summable_on UNIV"
+    apply simp apply (subst infsum_cmult_left[symmetric])
     unfolding y_preimage
     using \<open>is_distribution \<mu>\<close> abs_summable_on_subset is_distribution_def by auto
 
-  have "(\<Sum>\<^sub>ax. \<mu> x * f x a) = (\<Sum>\<^sub>a(x, y)\<in>(\<lambda>x. (f x a, x)) ` UNIV. \<mu> y * x)"
-    apply (subst infsetsum_reindex)
+  have "(\<Sum>\<^sub>\<infinity>x. \<mu> x * f x a) = (\<Sum>\<^sub>\<infinity>(x, y)\<in>(\<lambda>x. (f x a, x)) ` UNIV. \<mu> y * x)"
+    apply (subst infsum_reindex)
      apply (rule injI, simp)
     by (simp add: case_prod_beta)
-  also have "\<dots> = (\<Sum>\<^sub>a(x, y)\<in>(SIGMA y:UNIV. {x. f x a = y}). \<mu> y * x)"
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>(x, y)\<in>(SIGMA y:UNIV. {x. f x a = y}). \<mu> y * x)"
     unfolding Sigma by rule
-  also have "\<dots> = (\<Sum>\<^sub>ay. \<Sum>\<^sub>ax|f x a = y. \<mu> x * y)"
-    apply (subst infsetsum_Sigma')
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x|f x a = y. \<mu> x * y)"
+    apply (subst infsum_Sigma')
     using summ1
     by simp_all
-  also have "\<dots> = (\<Sum>\<^sub>ay. infsetsum \<mu> ((\<lambda>x. f x a) -` {y}) *\<^sub>R y)"
-    apply simp apply (subst infsetsum_cmult_left[symmetric])
+  also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. infsum \<mu> ((\<lambda>x. f x a) -` {y}) *\<^sub>R y)"
+    apply simp apply (subst infsum_cmult_left[symmetric])
     unfolding y_preimage
     using \<open>is_distribution \<mu>\<close> abs_summable_on_subset is_distribution_def by auto
-  finally show "(\<Sum>\<^sub>ay. \<mu> y * f y a) = (\<Sum>\<^sub>ax. infsetsum \<mu> ((\<lambda>x. f x a) -` {x}) *\<^sub>R x)"
+  finally show "(\<Sum>\<^sub>\<infinity>y. \<mu> y * f y a) = (\<Sum>\<^sub>\<infinity>x. infsum \<mu> ((\<lambda>x. f x a) -` {x}) *\<^sub>R x)"
     by -
 qed
 
@@ -1912,21 +1905,37 @@ lemma Prob_point_distr[simp]: "Prob (point_distr x) S = indicator S x"
   apply (subst Prob_map_distr)
   by simp
 
+lemma map_distr_scaleR: \<open>map_distr f (r *\<^sub>R \<mu>) = (min 1 (max 0 r)) *\<^sub>R map_distr f \<mu>\<close>
+  apply transfer
+  using infsum_cmult_right' by auto
+
+
+
+lemma expectation_scaleR: \<open>expectation (r *\<^sub>R \<mu>) = (min 1 (max 0 r)) *\<^sub>R expectation \<mu>\<close>
+proof transfer
+  fix r :: real and \<mu> :: \<open>'a \<Rightarrow> real\<close>
+  assume \<open>is_distribution \<mu>\<close>
+  define r' where \<open>r' = min 1 (max 0 r)\<close>
+  have \<open>(\<Sum>\<^sub>\<infinity>x. (r' * \<mu> x) *\<^sub>R x) = (\<Sum>\<^sub>\<infinity>x. r' *\<^sub>R (\<mu> x *\<^sub>R x))\<close>
+    by auto
+  also have \<open>\<dots> = r' *\<^sub>R (\<Sum>\<^sub>\<infinity>x. \<mu> x *\<^sub>R x)\<close>
+    by (rule infsum_scaleR_right)
+  then show \<open>(\<Sum>\<^sub>\<infinity>x. (r' * \<mu> x) *\<^sub>R x) = r' *\<^sub>R (\<Sum>\<^sub>\<infinity>x. \<mu> x *\<^sub>R x)\<close>
+    by simp
+qed
 
 lemma expectation'_product_distr1:
   assumes "expectation_exists' \<mu> f"
   shows "expectation' (product_distr \<mu> \<nu>) (\<lambda>(x,y). f x) = weight \<nu> * expectation' \<mu> f"
 proof -
-  have "expectation' (product_distr \<mu> \<nu>) (\<lambda>(x,y). f x) = (\<Sum>\<^sub>a(x,y). prob \<mu> x * prob \<nu> y * f x)"
-    by (simp add: case_prod_beta expectation_map_distr flip: prob_product)
-  also have "\<dots> = (\<Sum>\<^sub>ax. prob \<mu> x * f x) * (\<Sum>\<^sub>ay. prob \<nu> y)"
-    apply (subst infsetsum_product[symmetric])
-    (* using True *) using assms
-      apply (metis (no_types, lifting) abs_summable_on_cong expectation_exists_map_distr real_scaleR_def)
-    using prob_abs_summable apply blast
-    by (smt UNIV_Times_UNIV infsetsum_cong mult.commute prod.case_eq_if semiring_normalization_rules(18))
-  also have "\<dots> = weight \<nu> * expectation' \<mu> f"
-    unfolding expectation_map_distr Prob.rep_eq by simp
+  have \<open>expectation' (product_distr \<mu> \<nu>) (\<lambda>(x,y). f x)
+      = expectation (map_distr f (map_distr fst (product_distr \<mu> \<nu>)))\<close>
+    by (smt (verit, ccfv_SIG) compose_map_distr cond_case_prod_eta fst_conv)
+  also have \<open>\<dots> = expectation (weight \<nu> *\<^sub>R map_distr f \<mu>)\<close>
+    apply (subst map_distr_fst_product_distr)
+    by (auto simp: map_distr_scaleR)
+  also have \<open>\<dots> = weight \<nu> * expectation' \<mu> f\<close>
+    by (simp add: expectation_scaleR)
   finally show ?thesis
     by -
 qed

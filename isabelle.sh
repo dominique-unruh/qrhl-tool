@@ -4,7 +4,8 @@
 
 set -e
 
-ISABELLE_DIR=/opt/Isabelle2021
+ISABELLE_DIR=~/svn/isabelle
+#ISABELLE_DIR=/opt/Isabelle2021-1-RC0
 
 DIR="$(dirname "$BASH_SOURCE[0]")"
 

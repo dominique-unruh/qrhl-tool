@@ -1249,12 +1249,6 @@ lemma comm_op_space_lifted'[simp]:
 
 section \<open>Measurements\<close>
 
-(* definition "infsetsums f M x = ((\<lambda>F. sum f F) \<longlongrightarrow> x) (finite_subsets_at_top M)"
-definition "infsetsummable f M = (\<exists>x. infsetsums f M x)"
-(* I think this is equal to infsetsum, except that infsetsum is only defined on second countable topologies *)
-definition "infsetsum' f M = (if infsetsummable f M then THE x. infsetsums f M x else 0)" *)
-
-
 definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
        \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> P \<le> id_cblinfun))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
@@ -1637,14 +1631,21 @@ section \<open>Common quantum objects\<close>
 definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))"
 lemma unitaryCNOT[simp]: "unitary CNOT"
   unfolding CNOT_def apply (rule unitary_classical_operator)
-  apply (rule o_bij[where g="\<lambda>(x,y). (x,y+x)"]; rule ext)
-  unfolding o_def id_def by auto
+  apply (rule o_bij[where g="\<lambda>(x,y). (x,y+x)"]; rule ext; rename_tac xy; case_tac xy)
+  using [[simp_trace_new]]
+  apply (simp add: o_def id_def) x
+  apply (metis (no_types, lifting) bit_plus_2y case_prod_conv comp_apply id_apply prod.collapse)
+  apply (metis bit_plus_2y case_prod_conv comp_apply id_apply old.prod.exhaust) x
+  apply (metis case_prod_Pair_iden comp_def) x
+  apply (simp only: o_def id_def case_prod_beta fst_conv snd_conv)
+  apply simp x
+  by auto x
 
 lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
 proof -
   define f where "f = (\<lambda>(x::bit,y). (x,y+x))"
   have[simp]: "f o f = id"
-    unfolding f_def o_def id_def by fastforce
+    unfolding f_def o_def id_def by fastforce x
   have[simp]: "bij f"
     apply (rule o_bij[where g="f"]; rule ext) by auto
   then have[simp]: "inj f"
