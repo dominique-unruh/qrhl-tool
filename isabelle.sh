@@ -21,4 +21,7 @@ else
     FILES=()
 fi
 
-"$ISABELLE_DIR"/bin/isabelle jedit -l QRHL-Examples-Prerequisites -d "$DIR" "$@" "${FILES[@]}" &
+#SESSION=QRHL-Examples-Prerequisites
+SESSION=Lots-Of-Stuff
+
+"$ISABELLE_DIR"/bin/isabelle jedit -l "$SESSION" -d "$DIR" "$@" "${FILES[@]}" &

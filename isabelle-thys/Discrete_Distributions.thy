@@ -1,16 +1,16 @@
 chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
-  imports Complex_Main "HOL-Library.Rewrite" "HOL-Analysis.Infinite_Set_Sum" 
+  imports Complex_Main "HOL-Library.Rewrite"
     Universe_Instances_Complex_Main
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
     "Complex_Bounded_Operators.Extra_Ordered_Fields"
     "HOL-Analysis.Infinite_Sum" Infinite_Sum_Missing
 begin
 
-no_notation Infinite_Set_Sum.abs_summable_on (infix "abs'_summable'_on" 50)
-hide_const (open) Infinite_Set_Sum.abs_summable_on
-notation Infinite_Sum.abs_summable_on (infixr "abs'_summable'_on" 46)
+(* no_notation Infinite_Set_Sum.abs_summable_on (infix "abs'_summable'_on" 50) *)
+(* hide_const (open) Infinite_Set_Sum.abs_summable_on *)
+(* notation Infinite_Sum.abs_summable_on (infixr "abs'_summable'_on" 46) *)
 
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f summable_on UNIV \<and> infsum f UNIV \<le> 1"
 
@@ -31,7 +31,7 @@ proof
       using f by simp
     also have "\<dots> \<le> infsum f UNIV"
       using f
-      by (metis (mono_tags, opaque_lifting) ge_iff_diff_ge_0 infsum_Diff infsum_nonneg summable_on_subset_banach top_greatest)
+      by (smt (verit, del_insts) Diff_iff in_mono infsum_mono_neutral subset_UNIV summable_on_finite that)
     also have "\<dots> \<le> 1"
       using f by simp
     finally show ?thesis.
@@ -50,7 +50,6 @@ next
     unfolding is_distribution_def using assm by simp
 qed
 
-(* TODO needed? *)
 lemma distr_summable_on:
   fixes f :: "'a \<Rightarrow> real"
   assumes "\<forall>x. f x \<ge> 0" and "\<forall> M. finite M \<longrightarrow> sum f M \<le> 1"
@@ -682,7 +681,7 @@ proof (transfer fixing: B C, unfold is_distribution_def)
   from B0 have fxB: "x \<le> B" if "\<mu> x \<noteq> 0" for x
     using \<mu>pos less_eq_real_def that by auto
   with \<mu>pos have \<mu>FB: "\<mu> x * x \<le> \<mu> x * B" for x
-    by (metis ordered_comm_semiring_class.comm_mult_left_mono vector_space_over_itself.scale_cancel_left)
+    by (metis mult.commute mult_right_mono mult_zero_right)
   have "(\<lambda>x. \<mu> x * BC) abs_summable_on UNIV"
     by (metis \<mu> summable_on_cmult_left summable_on_iff_abs_summable_on_real)
   then have sum\<mu>f: "(\<lambda>x. \<mu> x * x) abs_summable_on UNIV"
@@ -1188,16 +1187,33 @@ lemma min1Prob[simp]: "min 1 (Prob \<mu> E) = Prob \<mu> E"
 lemma bind_distr_split: "prob (bind_distr \<mu> f) x = 
   prob (bind_distr (restrict_distr \<mu> E) f) x +
   prob (bind_distr (restrict_distr \<mu> (-E)) f) x"
-  apply transfer
-  apply (subst infsum_add[symmetric])
-   apply (rule summable_on_iff_abs_summable_on_real[THEN iffD2])
-    apply (rule_tac g="\<mu>" in abs_summable_on_comparison_test)
-     apply (simp add: is_distribution_def)
-  apply (smt (verit, ccfv_threshold) distribution_leq1 is_distribution_def mult_left_le mult_nonneg_nonneg pred_fun_def real_norm_def top1I)
-  apply auto
-  apply (smt Rings.mult_sign_intros(1) abs_summable_on_comparison_test distribution_leq1 is_distribution_def mult_left_le real_norm_def)
-  apply (smt Rings.mult_sign_intros(1) abs_summable_on_comparison_test' distribution_leq1 is_distribution_def mult_left_le real_norm_def)
-  by (smt infsum_cong mult_cancel_left2)x
+  apply (rule local_defE[where y=\<open>bind_distr (restrict_distr \<mu> E) f\<close>], rename_tac b1) (* Makes transfer add some additional facts about the result of bind_distr *)
+  apply (rule local_defE[where y=\<open>bind_distr (restrict_distr \<mu> (-E)) f\<close>], rename_tac b2)
+proof (transfer fixing: E x, simp)
+  fix f :: \<open>'b \<Rightarrow> 'a \<Rightarrow> real\<close> and \<mu> :: \<open>'b \<Rightarrow> real\<close>
+  assume assms: \<open>is_distribution \<mu>\<close> \<open>\<forall>x. is_distribution (f x)\<close>
+
+  have \<open>f y x \<le> 1\<close> for y
+    by (simp add: assms distribution_leq1)
+
+  have *: \<open>(\<lambda>y. if y \<in> E then \<mu> y else 0) abs_summable_on UNIV\<close>
+    by (smt (verit, ccfv_threshold) \<open>is_distribution \<mu>\<close> distr_summable_on is_distribution_def' real_norm_def sum_mono)
+  have summable1: \<open>(\<lambda>y. (if y \<in> E then \<mu> y else 0) * f y x) summable_on UNIV\<close>
+    apply (rule summable_on_iff_abs_summable_on_real[THEN iffD2])
+    using * apply (rule abs_summable_on_comparison_test)
+    by (metis \<open>\<And>y. f y x \<le> 1\<close> abs_of_nonneg assms(2) is_distribution_def mult_left_le norm_ge_zero norm_mult real_norm_def)
+    
+  have *: \<open>(\<lambda>y. if y \<in> - E then \<mu> y else 0) abs_summable_on UNIV\<close>
+    by (smt (verit, ccfv_threshold) \<open>is_distribution \<mu>\<close> distr_summable_on is_distribution_def' real_norm_def sum_mono)
+  have summable2: \<open>(\<lambda>y. (if y \<notin> E then \<mu> y else 0) * f y x) summable_on UNIV\<close>
+    apply (rule summable_on_iff_abs_summable_on_real[THEN iffD2])
+    using * apply (rule abs_summable_on_comparison_test)
+    by (smt (z3) Compl_iff \<open>\<And>y. f y x \<le> 1\<close> assms(1) assms(2) is_distribution_def mult_left_le mult_nonneg_nonneg real_norm_def)
+
+  show \<open>(\<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) = (\<Sum>\<^sub>\<infinity>y. (if y \<in> E then \<mu> y else 0) * f y x) + (\<Sum>\<^sub>\<infinity>y. (if y \<notin> E then \<mu> y else 0) * f y x)\<close>
+    apply (subst infsum_add[symmetric])
+    using summable1 summable2 by (auto intro!: infsum_cong)
+qed
 
 lemma weight1_bind_distr[simp]:
   shows "weight (bind_distr \<mu> f) = 1 \<longleftrightarrow> weight \<mu> = 1 \<and> (\<forall>x\<in>supp \<mu>. weight (f x) = 1)"
@@ -1242,7 +1258,8 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer)
   proof
     assume assm[symmetric]: "(\<Sum>\<^sub>\<infinity>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) = 1" (is "\<dots> = _")
     also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x. \<mu> y * f y x)"
-      by (rule infsum_swap, fact prod_summable)
+      apply (rule infsum_swap_banach)
+      using prod_summable summable_on_iff_abs_summable_on_real by blast
     also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> y * (\<Sum>\<^sub>\<infinity>x. f y x))"
       apply (rule infsum_cong)
       using infsum_cmult_right' by blast
@@ -1289,11 +1306,12 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer)
   next
     assume assm: "infsum \<mu> UNIV = 1 \<and> (\<forall>x\<in>{x. 0 < \<mu> x}. infsum (f x) UNIV = 1)"
     have "(\<Sum>\<^sub>\<infinity>x. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x) = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x. \<mu> y * f y x)"
-      by (rule infsum_swap, fact prod_summable)
+      apply (rule infsum_swap_banach)
+      using prod_summable summable_on_iff_abs_summable_on_real by blast
     also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> y * (\<Sum>\<^sub>\<infinity>x. f y x))"
       apply (rule infsum_cong)
-      using fy_sum apply (rule infsum_cmult_right)
-      by simp
+      apply (rule infsum_cmult_right)
+      using fy_sum by simp
     also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<mu> y)"
       using assm apply auto
       by (smt \<mu>[unfolded is_distribution_def] infsum_cong mult_cancel_left2)
@@ -1372,7 +1390,7 @@ proof -
     case geqPE
     then have "p' \<ge> 0" and "p' \<le> 1"
       unfolding p'_def apply auto
-      by (metis diff_right_mono divide_eq_0_iff ge_iff_diff_ge_0 geqPE(3) le_numeral_extra(1) less_eq_real_def nice_ordered_field_class.divide_le_eq_1_pos p'_def pEleq1)
+      using divide_le_eq_1 by fastforce
     then have "p'' = p'"
       unfolding p''_def
       by linarith
@@ -1827,18 +1845,19 @@ qed
 lemma supp_0[simp]: "supp 0 = {}"
   apply transfer by simp
 
+(* TODO move? erase? rename? *)
 lemma abs_summable_on_Sigma_project1:
   assumes "(\<lambda>(x,y). f x y) abs_summable_on Sigma A B"
   shows   "(\<lambda>x. infsum (\<lambda>y. norm (f x y)) (B x)) abs_summable_on A"
   using assms by (subst (asm) abs_summable_on_Sigma_iff) auto
 
-lemma abs_summable_on_Sigma_project1':
+(* lemma abs_summable_on_Sigma_project1':
   assumes "(\<lambda>(x,y). f x y) abs_summable_on Sigma A B"
   shows   "(\<lambda>x. infsum (\<lambda>y. f x y) (B x)) abs_summable_on A"
   apply (rule abs_summable_on_comparison_test)
    apply (rule abs_summable_on_Sigma_project1)
    apply (fact assms)
-  by -
+  by - *)
 
 lemma expectation_exists'_bounded:
   fixes a b :: real
@@ -1848,14 +1867,16 @@ lemma expectation_exists'_bounded:
   apply (rule expectation_exists_bounded)
   using assms by auto
 
+lemma prob_expectation_exists: "expectation_exists' \<mu> (\<lambda>x. prob (f x) a)"
+  apply (rule expectation_exists_bounded[where a=0 and b=1])
+  by auto
+
 lemma prob_expectation: "prob (bind_distr \<mu> f) a = expectation' \<mu> (\<lambda>x. prob (f x) a)"
-  and prob_expectation_exists: "expectation_exists' \<mu> (\<lambda>x. prob (f x) a)"
-  using bind_distr_summable[of \<mu> f a] apply -
-   apply (transfer fixing: a) defer apply (transfer fixing: a)
+  apply (insert bind_distr_summable[of \<mu> f a])
+  apply (transfer fixing: a)
 proof -
   fix \<mu> :: "'b\<Rightarrow>real" and f :: "'b\<Rightarrow>'a\<Rightarrow>real"
   assume "is_distribution \<mu>"
-  (* assume summ: "(\<lambda>y. \<mu> y * f y a) abs_summable_on UNIV" *)
 
   have y_preimage: "(\<lambda>x. f x a) -` {y} = {x. f x a = y}" for y
     by blast
@@ -1864,33 +1885,29 @@ proof -
 
   (* We can make this assumption because of the "using bind_distr_summable[of \<mu> f a] apply -" step before the proof command *)
   assume "(\<lambda>x. \<mu> x * f x a) summable_on UNIV"
+  then have \<open>(\<lambda>x. \<mu> x * f x a) abs_summable_on UNIV\<close>
+    by (metis summable_on_iff_abs_summable_on_real)
   then have "(\<lambda>(x, y). \<mu> y * x) abs_summable_on (\<lambda>x. (f x a, x)) ` UNIV"
-    apply (subst abs_summable_on_reindex_iff[symmetric])
-     apply (rule injI)
-    by auto
-  then have summ1: "(\<lambda>(x, y). \<mu> y * x) abs_summable_on (SIGMA y:UNIV. {x. f x a = y})"
-    unfolding Sigma by -
-  then have "(\<lambda>y. \<Sum>\<^sub>\<infinity>x|f x a = y. \<mu> x * y) abs_summable_on UNIV"
-    by (rule abs_summable_on_Sigma_project1')
-  then show "(\<lambda>y. infsum \<mu> ((\<lambda>x. f x a) -` {y}) *\<^sub>R y) abs_summable_on UNIV"
-    apply simp apply (subst infsum_cmult_left[symmetric])
-    unfolding y_preimage
-    using \<open>is_distribution \<mu>\<close> abs_summable_on_subset is_distribution_def by auto
-
+    apply (subst summable_on_reindex)
+    by (auto simp: o_def intro!: injI)
+  then have summ1: "(\<lambda>(x, y). \<mu> y * x) summable_on (SIGMA y:UNIV. {x. f x a = y})"
+    using Sigma summable_on_iff_abs_summable_on_real by auto
+  
   have "(\<Sum>\<^sub>\<infinity>x. \<mu> x * f x a) = (\<Sum>\<^sub>\<infinity>(x, y)\<in>(\<lambda>x. (f x a, x)) ` UNIV. \<mu> y * x)"
     apply (subst infsum_reindex)
      apply (rule injI, simp)
-    by (simp add: case_prod_beta)
+    by (simp add: o_def case_prod_beta)
   also have "\<dots> = (\<Sum>\<^sub>\<infinity>(x, y)\<in>(SIGMA y:UNIV. {x. f x a = y}). \<mu> y * x)"
     unfolding Sigma by rule
   also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x|f x a = y. \<mu> x * y)"
-    apply (subst infsum_Sigma')
+    apply (subst infsum_Sigma'_banach)
     using summ1
     by simp_all
   also have "\<dots> = (\<Sum>\<^sub>\<infinity>y. infsum \<mu> ((\<lambda>x. f x a) -` {y}) *\<^sub>R y)"
     apply simp apply (subst infsum_cmult_left[symmetric])
     unfolding y_preimage
-    using \<open>is_distribution \<mu>\<close> abs_summable_on_subset is_distribution_def by auto
+     apply (meson \<open>is_distribution \<mu>\<close> distr_summable_on is_distribution_def')
+    by simp
   finally show "(\<Sum>\<^sub>\<infinity>y. \<mu> y * f y a) = (\<Sum>\<^sub>\<infinity>x. infsum \<mu> ((\<lambda>x. f x a) -` {x}) *\<^sub>R x)"
     by -
 qed
