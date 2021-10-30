@@ -1632,20 +1632,13 @@ definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). 
 lemma unitaryCNOT[simp]: "unitary CNOT"
   unfolding CNOT_def apply (rule unitary_classical_operator)
   apply (rule o_bij[where g="\<lambda>(x,y). (x,y+x)"]; rule ext; rename_tac xy; case_tac xy)
-  using [[simp_trace_new]]
-  apply (simp add: o_def id_def) x
-  apply (metis (no_types, lifting) bit_plus_2y case_prod_conv comp_apply id_apply prod.collapse)
-  apply (metis bit_plus_2y case_prod_conv comp_apply id_apply old.prod.exhaust) x
-  apply (metis case_prod_Pair_iden comp_def) x
-  apply (simp only: o_def id_def case_prod_beta fst_conv snd_conv)
-  apply simp x
-  by auto x
+  by (auto simp add: bit_neq)
 
 lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
 proof -
   define f where "f = (\<lambda>(x::bit,y). (x,y+x))"
   have[simp]: "f o f = id"
-    unfolding f_def o_def id_def by fastforce x
+    unfolding f_def o_def id_def by fastforce
   have[simp]: "bij f"
     apply (rule o_bij[where g="f"]; rule ext) by auto
   then have[simp]: "inj f"
