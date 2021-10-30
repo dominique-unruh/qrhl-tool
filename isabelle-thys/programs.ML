@@ -29,7 +29,7 @@ fun term_to_call (Free(name,_)) = CALL (name,[])
       in CALL (name,args') end
   | term_to_call t = raise TERM ("term_to_call",[t])
 
-local open Expressions open Prog_Variables in
+(* local open Expressions open Prog_Variables in *)
 
 fun statement_to_term ctxt (Assign(lhs,rhs)) = let 
       val T = fastype_of rhs
@@ -108,6 +108,6 @@ fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statem
 
 and term_to_statements ctxt t = HOLogic.dest_list t |> map (term_to_statement ctxt)
 
-end
+(* end *)
 
 end

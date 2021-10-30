@@ -6,6 +6,7 @@ theory Discrete_Distributions
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
     "Complex_Bounded_Operators.Extra_Ordered_Fields"
     "Complex_Bounded_Operators.Extra_Infinite_Set_Sum"
+    Registers.Misc
 begin
 
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f abs_summable_on UNIV \<and> infsetsum f UNIV \<le> 1"

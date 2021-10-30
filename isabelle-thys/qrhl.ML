@@ -4,13 +4,6 @@ struct
 val mk_variablesT = Prog_Variables.mk_variablesT
 val mk_variableT = Prog_Variables.mk_variableT
 val mk_conjs = Prog_Variables.mk_conjs
-fun mk_ell2T T = Type(\<^type_name>\<open>ell2\<close>, [T])
-fun dest_ell2T (Type(\<^type_name>\<open>ell2\<close>, [T])) = T
-  | dest_ell2T T = raise TYPE("dest_ell2T",[T],[])
-fun mk_boundedT T T' = Type(\<^type_name>\<open>cblinfun\<close>, [mk_ell2T T, mk_ell2T T'])
-fun dest_boundedT (Type(\<^type_name>\<open>cblinfun\<close>, [Type(\<^type_name>\<open>ell2\<close>,[T]),Type(\<^type_name>\<open>ell2\<close>,[T'])])) = (T,T')
-  | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
-fun mk_bounded2T T = mk_boundedT T T
 fun mk_measurementT T T' = Type(\<^type_name>\<open>measurement\<close>, [T,T'])
 fun dest_measurementT (Type(\<^type_name>\<open>measurement\<close>, [T,T'])) = (T,T')
   | dest_measurementT T = raise TYPE("dest_measurementT",[T],[])

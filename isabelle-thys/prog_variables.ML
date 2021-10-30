@@ -1,23 +1,33 @@
 structure Prog_Variables =
 struct
 
-fun mk_variablesT T = Type(\<^type_name>\<open>variables\<close>, [T])
+fun mk_ell2T T = Type(\<^type_name>\<open>ell2\<close>, [T])
+fun dest_ell2T (Type(\<^type_name>\<open>ell2\<close>, [T])) = T
+  | dest_ell2T T = raise TYPE("dest_ell2T",[T],[])
+
+fun mk_boundedT T T' = Type(\<^type_name>\<open>cblinfun\<close>, [mk_ell2T T, mk_ell2T T'])
+fun dest_boundedT (Type(\<^type_name>\<open>cblinfun\<close>, [Type(\<^type_name>\<open>ell2\<close>,[T]),Type(\<^type_name>\<open>ell2\<close>,[T'])])) = (T,T')
+  | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
+fun mk_bounded2T T = mk_boundedT T T
+
+(* fun mk_variablesT T = Type(\<^type_name>\<open>variables\<close>, [T]) *)
 fun mk_conjs [] = \<^const>\<open>True\<close>
   | mk_conjs [t] = t
   | mk_conjs (t::ts) = \<^const>\<open>conj\<close> $ t $ mk_conjs ts
-fun mk_variable_name v = 
-  Const(\<^const_name>\<open>variable_name\<close>, fastype_of v --> \<^typ>\<open>string\<close>) $ v
-fun mk_variableT T = Type(\<^type_name>\<open>variable\<close>, [T])
-fun dest_variableT (Type(\<^type_name>\<open>variable\<close>, [T])) = T
-  | dest_variableT T = raise TYPE("dest_variableT", [T], [])
-fun dest_variablesT (Type(\<^type_name>\<open>variables\<close>, [T])) = T
-  | dest_variablesT T = raise TYPE("dest_variablesT", [T], [])
+(* fun mk_variable_name v = 
+  Const(\<^const_name>\<open>variable_name\<close>, fastype_of v --> \<^typ>\<open>string\<close>) $ v *)
+fun mk_cvariableT T = (T --> Type(\<^type_name>\<open>option\<close>,[T])) --> \<^typ>\<open>cl Axioms_Classical.update\<close>
+fun mk_qvariableT T = mk_bounded2T T --> \<^typ>\<open>qu Axioms_Quantum.update\<close>
+
+fun dest_cvariableT (Type("fun",[Type("fun",[T,Type(\<^type_name>\<open>option\<close>,[U])]), \<^typ>\<open>cl Axioms_Classical.update\<close>])) =
+        if T=U then T else raise TYPE("dest_variableT", [T,U], [])
+  | dest_cvariableT T = raise TYPE("dest_variableT", [T], [])
 
 fun strip_var_prefix x = if String.isPrefix "var_" x 
   then String.extract (x,4,NONE) 
   else error ("strip_var_prefix: Expected string starting with var_, not "^x)
 
-
+(* 
 local
   fun mk_var_eq (v as Const ("_constrain", _) $ Free (n, _) $ Free _) =
       @{const HOL.eq("char list")} $ (Const (\<^const_name>\<open>variable_name\<close>, dummyT) $ v) $ HOLogic.mk_string n
@@ -32,14 +42,14 @@ in
   fun declared_qvars_parse_tr _ [vs] = mk_conjs (declared_qvars_parse_tr' vs)
     | declared_qvars_parse_tr _ ts = raise (TERM("declared_qvars_parse_tr", ts))
 end
-
+ *)
 structure WarnDeclaredQvarsData = Proof_Data
 (
   type T = bool (* Within a nested call to the simproc *)
   fun init _ = false
 )
 
-fun warn_declared_qvars_simproc _ ctx ct = 
+(* fun warn_declared_qvars_simproc _ ctx ct = 
   if WarnDeclaredQvarsData.get ctx then NONE
   else case Thm.term_of ct of
       Const(\<^const_name>\<open>variable_name\<close>, _) $ Free (n,_) =>
@@ -52,7 +62,7 @@ fun warn_declared_qvars_simproc _ ctx ct =
                             NONE)
                       | _ => SOME eq
         end
-    | _ => NONE
+    | _ => NONE *)
 
 
 datatype vartype = Classical | Quantum
@@ -70,11 +80,11 @@ fun is_classical_variable ctxt name = case lookup_variable_type ctxt name of
   SOME Classical => true
   | _ => false
 
-fun check_variable_type ctxt T =
+(* fun check_variable_type ctxt T =
   if Sign.of_sort (Proof_Context.theory_of ctxt) (T, \<^sort>\<open>universe\<close>) then () else
     error ("Type of variable ("^Syntax.string_of_typ ctxt T^") must be of sort "^Syntax.string_of_sort ctxt @{sort universe}^".\n"^
            "In the Isabelle theory, use 'derive universe T' for every type T defined using typedef/datatype,\n"^
-           "and use declare_variable_type instead of typedecl")
+           "and use declare_variable_type instead of typedecl") *)
 
 local
 fun add_varinfo morph name vartype ctxt' ctxt = let
@@ -95,24 +105,24 @@ fun declare_variable_lthy name vartype ctxt =
 fun declare_variable_ctxt name vartype ctxt = declare_variable_morph Morphism.identity name vartype ctxt ctxt
 end
 
-fun varname_assumption cq bind T = 
+(* fun varname_assumption cq bind T = 
   let val qT = mk_variableT T
       val name = Binding.name_of bind           
       val name' = if cq=Classical then "var_"^name else name
       val lhs = Const(\<^const_name>\<open>variable_name\<close>, qT --> HOLogic.stringT) $ Free(name',qT)
       val rhs = HOLogic.mk_string name
-  in HOLogic.mk_eq (lhs,rhs) |> HOLogic.mk_Trueprop end
+  in HOLogic.mk_eq (lhs,rhs) |> HOLogic.mk_Trueprop end *)
 
-fun addQVariableNameAssumption cq bind T ctxt =
+(* fun addQVariableNameAssumption cq bind T ctxt =
   let val assm = varname_assumption cq bind T
       val ctxt1 = Variable.declare_term assm ctxt
       val ([(_,[thm])],ctxt2) = Proof_Context.add_assms Assumption.assume_export
                   [((Binding.suffix_name "_varname" bind,[Simplifier.simp_add]), [(assm,[])])] ctxt1
   in
     ctxt2
-  end
+  end *)
 
-
+(* 
 fun declare_variable ctxt bind T cq =
   let val _ = check_variable_type ctxt T
       val qT = mk_variableT T
@@ -131,9 +141,9 @@ fun declare_variable ctxt bind T cq =
   in
     ctxt
   end
+ *)
 
-
-fun variables vars gthy = 
+(* fun variables vars gthy = 
 let val _ = app (fn (_,_,T) => check_variable_type (Proof_Context.init_global gthy) T)
     fun elems0 idx : Element.context_i list = [
       Element.Fixes (map_filter (fn (cq,bind,T) => 
@@ -147,33 +157,33 @@ let val _ = app (fn (_,_,T) => check_variable_type (Proof_Context.init_global gt
     val (_,lthy) = Expression.add_locale (Binding.name ("variables_"^string_of_int(serial()))) 
                       Binding.empty [] ([],[]) elems gthy
     val lthy2 = fold (fn (cq,bind,_) => fn lthy' => declare_variable_lthy (Binding.name_of bind) cq lthy') vars lthy
-in lthy2 end
+in lthy2 end *)
 
-fun variables_cmd vars thy = 
+(* fun variables_cmd vars thy = 
   let (* val ctxt = Context.proof_of gthy *)
       val vars' = map (fn (a,b,c) => (a,b,Syntax.read_typ_global thy c)) vars
   in
     variables vars' thy
-  end
+  end *)
 
 val parse_classical_quantum = (Parse.reserved "classical" >> K Classical) || (Parse.reserved "quantum" >> K Quantum)
 
-val _ =
+(* val _ =
   Outer_Syntax.command \<^command_keyword>\<open>variables\<close> "declare quantum/classical variables"
     ((Parse.and_list (parse_classical_quantum -- Args.binding --| Parse.$$$ "::" -- Parse.typ >> (fn ((a,b),c) => (a,b,c))) >> 
       (fn vars => Toplevel.begin_main_target true (variables_cmd vars)))
         --| Parse.begin)
-
+ *)
 
 datatype 'a tree = VTCons of 'a tree * 'a tree | VTSingle of 'a | VTUnit
 type varterm = (string*typ) tree
 
-fun parse_varterm (Const(\<^const_name>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
+(* fun parse_varterm (Const(\<^const_name>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
   | parse_varterm (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ Free(n,Type(\<^type_name>\<open>variable\<close>,[T]))) = VTSingle (n,T)
   | parse_varterm (Const(\<^const_name>\<open>variable_unit\<close>,_)) = VTUnit
-  | parse_varterm t = raise TERM("not a variables expression",[t])
+  | parse_varterm t = raise TERM("not a variables expression",[t]) *)
 
-fun mk_varterm (VTUnit) = (\<^const>\<open>variable_unit\<close>, \<^typ>\<open>unit\<close>)
+(* fun mk_varterm (VTUnit) = (\<^const>\<open>variable_unit\<close>, \<^typ>\<open>unit\<close>)
   | mk_varterm (VTCons(a,b)) = let
       val (vta,Ta) = mk_varterm a
       val (vtb,Tb) = mk_varterm b
@@ -184,7 +194,7 @@ fun mk_varterm (VTUnit) = (\<^const>\<open>variable_unit\<close>, \<^typ>\<open>
     end
   | mk_varterm (VTSingle(n,T)) = 
       (Const(\<^const_name>\<open>variable_singleton\<close>, mk_variableT T --> mk_variablesT T) $ 
-          Free(n,Type(\<^type_name>\<open>variable\<close>,[T])),T)
+          Free(n,Type(\<^type_name>\<open>variable\<close>,[T])),T) *)
 
 fun type_of_varterm (VTUnit) = \<^typ>\<open>unit\<close>
   | type_of_varterm (VTCons(a,b)) = HOLogic.mk_prodT(type_of_varterm a, type_of_varterm b)
@@ -214,7 +224,7 @@ fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
   | vars_in_varterm (VTSingle nT) = [nT]
   | vars_in_varterm VTUnit = []
 
-fun parse_varlist t =
+(* fun parse_varlist t =
   let val vt = parse_varterm t
       fun tol (VTSingle nT) = [nT]
         | tol VTUnit = []
@@ -223,14 +233,14 @@ fun parse_varlist t =
         | tol (VTCons _) = raise TERM("not an explicit variable list",[t])
   in
     tol vt
-  end
+  end *)
 
 (* Checks if term is a (not necessarily explict) variable list *)
-fun is_varlist (Const(\<^const_name>\<open>variable_unit\<close>,_)) = true
+(* fun is_varlist (Const(\<^const_name>\<open>variable_unit\<close>,_)) = true
   | is_varlist (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ _) = true
   | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ _ $ Const(\<^const_name>\<open>variable_unit\<close>,_)) = false
   | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ Const(\<^const_name>\<open>variable_singleton\<close>,_) $ rest) = is_varlist rest
-  | is_varlist _ = false
+  | is_varlist _ = false *)
 
 fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
 
@@ -249,7 +259,7 @@ end
    (More specifically, it requires that simp rules "variable_name x/x1/x2 = ''...''" with 
    the correct names are declared.) *)
 (* TODO: use context data for the variable name theorem (instead of simplifier) *)
-fun index_var_conv ctxt ct =
+(* fun index_var_conv ctxt ct =
   let val (lrname,x,T) = case Thm.term_of ct of
         Const(\<^const_name>\<open>index_var\<close>,_) $ Const(lrname,_) $ Free(x,T) => (lrname,x,T)
       | _ => raise CTERM("index_var_conv: wrong shape",[ct])
@@ -274,17 +284,17 @@ fun index_var_conv ctxt ct =
         (\<^term>\<open>(@) :: string\<Rightarrow>_\<Rightarrow>_\<close> $ name_x $ HOLogic.mk_string suffix |> Thm.cterm_of ctxt)
   in
     helper_thm OF [varname_x, varname_x1, name_eq]
-  end
+  end *)
 
 (* Simproc that simplifies using index_var_conv, see there.  *)
-fun index_var_simproc _ ctxt ct = SOME (index_var_conv ctxt ct) handle CTERM _ => NONE
+(* fun index_var_simproc _ ctxt ct = SOME (index_var_conv ctxt ct) handle CTERM _ => NONE *)
 
 (* Converts "index_flip_var x1/2" (where x1/2 is a free variable) into "x2/1",
    assuming x1/2 is declared via the variables-command or equivalent.
    (More specifically, it requires that simp rules "variable_name x/x1/x2 = ''...''" with 
    the correct names are declared.) *)
 (* TODO: use context data for the variable name theorem (instead of simplifier) *)
-fun index_flip_var_conv ctxt ct = let
+(* fun index_flip_var_conv ctxt ct = let
   val v = case Thm.term_of ct of Const(\<^const_name>\<open>index_flip_var\<close>, _) $ v => v | _ => raise CTERM("index_flip_var_conv: expecting 'index_flip_var v'",[ct])
   val (name,T) = case v of Free(n,T) => (n,T) | _ => raise CTERM("index_flip_var_conv: not a free variable",[ct])
   val _ = case T of Type(\<^type_name>\<open>variable\<close>,_) => () | _ => raise CTERM("index_flip_var_conv: wrong type for a variable",[ct])
@@ -298,15 +308,15 @@ fun index_flip_var_conv ctxt ct = let
   val thm = thm |> Conv.fconv_rule (Conv.arg_conv(*rhs*) (index_var_conv ctxt))
 in
   thm
-end
+end *)
 
 (* Simproc that simplifies using index_flip_var_conv, see there.  *)
-fun index_flip_var_simproc _ ctxt ct = SOME (index_flip_var_conv ctxt ct) handle CTERM _ => NONE
+(* fun index_flip_var_simproc _ ctxt ct = SOME (index_flip_var_conv ctxt ct) handle CTERM _ => NONE *)
 
 (* Subgoals of the form "variable_name x ~= variable_name y"
    where x,y are explicit variables *)
 (* TODO: something more specific than just simplifier? *)
-fun different_variable_names_tac ctxt = SOLVED' (simp_tac ctxt)
+(* fun different_variable_names_tac ctxt = SOLVED' (simp_tac ctxt) *)
 
 
 end
