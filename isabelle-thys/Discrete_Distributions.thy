@@ -5,7 +5,7 @@ theory Discrete_Distributions
     Universe_Instances_Complex_Main
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
     "Complex_Bounded_Operators.Extra_Ordered_Fields"
-    "HOL-Analysis.Infinite_Sum" Infinite_Sum_Missing
+    "HOL-Analysis.Infinite_Sum"
 begin
 
 (* no_notation Infinite_Set_Sum.abs_summable_on (infix "abs'_summable'_on" 50) *)
@@ -1784,8 +1784,7 @@ proof -
     apply (rule add_increasing2)
      apply (rule infsum_nonneg)
     using pos apply auto
-    using exp_ex summable_on_iff_abs_summable_on_real apply blast
-    using zero_le_mult_iff by force
+    by (metis mult_less_0_iff prob_geq_0 verit_comp_simplify1(3))
   also have "\<dots> \<ge> (\<Sum>\<^sub>\<infinity>x\<in>{a..}. prob \<mu> x * a)" (is "_ \<ge> \<dots>")
     apply (rule infsum_mono)
     apply (metis prob_abs_summable summable_on_cmult_left summable_on_subset_banach top_greatest)

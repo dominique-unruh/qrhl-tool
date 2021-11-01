@@ -4,7 +4,6 @@
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/doc/declmath" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/isabelle-thys/Tensor_Product" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/isabelle-thys/Tensor_Product/Bounded_Operators" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/proofgeneral" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/scala-isabelle" vcs="Git" />
   </component>
