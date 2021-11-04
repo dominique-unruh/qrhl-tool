@@ -6,8 +6,8 @@ import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
-import de.unruh.isabelle.control.{Isabelle}
-import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue}
+import de.unruh.isabelle.control.Isabelle
+import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue, Version}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -98,7 +98,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   import IsabelleX._
   import Ops._
 
-  val version = "2021"
+  val version = "2021-1-RC1"
 
   /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
   private val localStoragePath = Configuration.distributionDirectory.resolve("isabelle-temp")
@@ -758,10 +758,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
     val dependenciesOfTheory =
       MLValue.compileFunction[Theory, List[Path]]("map_filter QRHL_Operations.local_thy_file o Theory.ancestors_of")
-    val isabelleVersion : MLValue[String] =
-      MLValue.compileValue("Distribution.version")
-    if (!isabelleVersion.retrieveNow.startsWith("Isabelle"+version+":"))
-      throw UserException(s"Expected Isabelle $version but got ${isabelleVersion.retrieveNow}")
+    if (Version.versionString != "Isabelle"+version)
+      throw UserException(s"Expected Isabelle $version but got ${Version.versionString}")
     val conseq_qrhl_cardinality_condition =
       MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")
     val conseq_qrhl_replace_in_predicate =
@@ -782,7 +780,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       MLValue.compileFunction[Term, String, (Term, Typ)]("QRHL_Operations.fixTac")
     val debugOp =
       MLValue.compileFunction[Context, String]("QRHL_Operations.debug")
-
 
     val makeQrhlSubgoal =
       MLValue.compileFunction[List[Statement], List[Statement], Term, Term, List[Term], Subgoal]("QRHL_Operations.makeQrhlSubgoal")
