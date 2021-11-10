@@ -2,7 +2,7 @@
 # This option is required.
 # (On OS/X, the Isabelle home is of the form .../Isabelle2021-1.app/Isabelle.)
 
-# isabelle-home = /opt/Isabelle2021-1
+# isabelle-home = /opt/Isabelle2021-1-RC2
 
 
 # AFP (Archive of Formal Proofs) theory directory.

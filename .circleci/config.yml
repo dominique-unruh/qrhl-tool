@@ -7,7 +7,7 @@ orbs:
 
 workflows:
   version: 2
-  macos-jdk15:
+  linux-jdk15:
     jobs:
       - test:
           filters:
@@ -20,7 +20,7 @@ workflows:
 jobs:
   test:
 
-    macos: {xcode: 12.1.0}
+    machine: {image: ubuntu-2004:202010-01}
 
     steps:
       - checkout
@@ -32,31 +32,31 @@ jobs:
       # Download and cache Isabelle
       - restore_cache:
           keys:
-            - v3-isabelle-2021-macos
+            - v3-isabelle-2021-linux
       - run:
           name: Downloading Isabelle 2021 (if needed)
           shell: bash
           command: |
-            if ! [ -e ~/install/Isabelle2021.app ]; then
+            if ! [ -e ~/install/Isabelle2021 ]; then
               mkdir -p ~/install
-              case macos in
+              case linux in
                 windows)
                   curl "https://isabelle.in.tum.de/website-Isabelle2021/dist/Isabelle2021.exe" -o /tmp/isabelle.exe
                   7z x -y -o"$HOME/install" /tmp/isabelle.exe;;
                 linux|macos)
-                  curl https://isabelle.in.tum.de/website-Isabelle2021/dist/Isabelle2021_macos.tar.gz | tar -x -z -C ~/install;;
+                  curl https://isabelle.in.tum.de/website-Isabelle2021/dist/Isabelle2021_linux.tar.gz | tar -x -z -C ~/install;;
                 *) false;;
               esac
             fi
       - save_cache:
           paths:
-            - ~/install/Isabelle2021.app
-          key: v3-isabelle-2021-macos
+            - ~/install/Isabelle2021
+          key: v3-isabelle-2021-linux
 
       # Download and cache AFP
       - restore_cache:
           keys:
-            - v1-afp-2021-macos
+            - v1-afp-2021-linux
       - run:
           name: Downloading AFP 2021
           shell: bash
@@ -73,7 +73,7 @@ jobs:
       - save_cache:
           paths:
             - ~/install/afp-2021
-          key: v1-afp-2021-macos
+          key: v1-afp-2021-linux
 
       # Build QRHL theory
       - run:
@@ -84,11 +84,11 @@ jobs:
             echo v5 > ~/isabelle-thys-checksums # Adding a tag to be able to enforce rebuilding
       - restore_cache:
           keys:
-            - v5-isabelle-heaps-2021-macos-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2021-macos-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
-            - v5-isabelle-heaps-2021-macos-QRHL-
-            - v5-isabelle-heaps-2021-macos-Prerequisites-
-            - v4-isabelle-heaps-2021-macos-QRHL-
+            - v5-isabelle-heaps-2021-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2021-linux-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
+            - v5-isabelle-heaps-2021-linux-QRHL-
+            - v5-isabelle-heaps-2021-linux-Prerequisites-
+            - v4-isabelle-heaps-2021-linux-QRHL-
       - run:
           name: Building prerequisite theories
           shell: bash
@@ -97,19 +97,19 @@ jobs:
 
             for i in 1 2 3 4 5 6 7 8 9 10; do sleep 300; echo "--- keep alive output --"; done &
 
-            if ! shasum -c ~/qrhl-sha1sum; then
-              case macos in
+            if ! sha1sum -c ~/qrhl-sha1sum; then
+              case linux in
                 windows)
                   # TODO: Under windows, need a different invocation, check whether this works
-                  ~/install/Isabelle2021.app/contrib/cygwin/bin/bash ~/install/Isabelle2021.app/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2021/thys -d . QRHL-Prerequisites;;
+                  ~/install/Isabelle2021/contrib/cygwin/bin/bash ~/install/Isabelle2021/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2021/thys -d . QRHL-Prerequisites;;
                 *)
-                  ~/install/Isabelle2021.app/bin/isabelle build -v -b -d ~/install/afp-2021/thys -d . QRHL-Prerequisites;;
+                  ~/install/Isabelle2021/bin/isabelle build -v -b -d ~/install/afp-2021/thys -d . QRHL-Prerequisites;;
               esac
             fi
       - save_cache:
           paths:
             - ~/.isabelle
-          key: v5-isabelle-heaps-2021-macos-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2021-linux-Prerequisites-{{ checksum "~/isabelle-thys-checksums" }}
       - run:
           name: Building QRHL theories
           shell: bash
@@ -118,40 +118,40 @@ jobs:
 
             for i in 1 2 3 4 5 6 7 8 9 10; do sleep 300; echo "--- keep alive output --"; done &
 
-            if ! shasum -c ~/qrhl-sha1sum; then
-              case macos in
+            if ! sha1sum -c ~/qrhl-sha1sum; then
+              case linux in
                 windows)
                   # TODO: Under windows, need a different invocation, check whether this works
-                  ~/install/Isabelle2021.app/contrib/cygwin/bin/bash ~/install/Isabelle2021.app/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2021/thys -d . QRHL;;
+                  ~/install/Isabelle2021/contrib/cygwin/bin/bash ~/install/Isabelle2021/bin/isabelle build -o threads=4 -v -b -d ~/install/afp-2021/thys -d . QRHL;;
                 *)
-                  ~/install/Isabelle2021.app/bin/isabelle build -v -b -d ~/install/afp-2021/thys -d . QRHL;;
+                  ~/install/Isabelle2021/bin/isabelle build -v -b -d ~/install/afp-2021/thys -d . QRHL;;
               esac
             fi
-            shasum ~/isabelle-thys-checksums > ~/qrhl-sha1sum
+            sha1sum ~/isabelle-thys-checksums > ~/qrhl-sha1sum
             cat ~/qrhl-sha1sum
       - save_cache:
           paths:
             - ~/.isabelle
             - ~/qrhl-sha1sum
-          key: v5-isabelle-heaps-2021-macos-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
+          key: v5-isabelle-heaps-2021-linux-QRHL-{{ checksum "~/isabelle-thys-checksums" }}
 
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v1-dependencies-macos-{{ checksum "build.sbt" }}
-            - v1-dependencies-macos-
+            - v1-dependencies-linux-{{ checksum "build.sbt" }}
+            - v1-dependencies-linux-
       - run:
           name: Downloading build dependencies (if needed)
 
           shell: bash
           command: |
-            if ! shasum -c ~/dependencies-sha1sum; then
+            if ! sha1sum -c ~/dependencies-sha1sum; then
               mkdir -p ~/install
               curl -Ls https://git.io/sbt > ~/install/sbt
               chmod +x ~/install/sbt
               ~/install/sbt update test/update </dev/null
             fi
-            shasum build.sbt > ~/dependencies-sha1sum
+            sha1sum build.sbt > ~/dependencies-sha1sum
       - save_cache:
           paths:
             - ~/install/sbt
@@ -161,13 +161,13 @@ jobs:
             - $LOCALAPPDATA\Coursier\Cache
             - ~/.cache/coursier
             - ~/dependencies-sha1sum
-          key: v1-dependencies-macos-{{ checksum "build.sbt" }}
+          key: v1-dependencies-linux-{{ checksum "build.sbt" }}
 
       - run:
           name: Setting up Java
           shell: bash
           command: |
-            case macos in
+            case linux in
               linux)
                 if [ 15 != 11 ]; then
                   sudo apt install --yes openjdk-15-jdk
@@ -187,13 +187,13 @@ jobs:
           name: Running tests
           shell: bash
           command: |
-            case macos in
+            case linux in
               windows)
                 # Isabelle process calls rebaseall and then fails, unless we deactivate it
-                > ~/install/Isabelle2021.app/contrib/cygwin/isabelle/rebaseall
-                ISABELLE_HOME="`cygpath -w ~/install/Isabelle2021.app`";;
+                > ~/install/Isabelle2021/contrib/cygwin/isabelle/rebaseall
+                ISABELLE_HOME="`cygpath -w ~/install/Isabelle2021`";;
               linux|macos)
-                ISABELLE_HOME=~/install/Isabelle2021.app;;
+                ISABELLE_HOME=~/install/Isabelle2021;;
             esac
 
             echo "isabelle-home = $ISABELLE_HOME" > qrhl-tool.conf

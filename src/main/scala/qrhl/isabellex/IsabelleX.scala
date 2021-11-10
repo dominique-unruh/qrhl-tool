@@ -98,7 +98,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   import IsabelleX._
   import Ops._
 
-  val version = "2021-1-RC1"
+  val version = "2021-1-RC2"
 
   /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
   private val localStoragePath = Configuration.distributionDirectory.resolve("isabelle-temp")
