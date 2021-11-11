@@ -8,6 +8,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 lazy val root = (project in file("."))
   .dependsOn(RootProject(file("scala-isabelle")))
   .dependsOn(hashedcomputation)
+  .aggregate(hashedcomputation)
 
 lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   scalaVersion := "2.13.3",
