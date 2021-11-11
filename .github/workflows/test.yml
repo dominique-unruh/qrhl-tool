@@ -1,0 +1,32 @@
+name: test-qrhl-tool
+on: [push]
+jobs:
+    test:
+      strategy:
+        matrix:
+          os: [linux, windows]
+      runs-on: [self-hosted, "${{matrix.os}}"]
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v2
+          with:
+            submodules: true
+
+        - name: Running tests (Linux)
+          if: matrix.os == 'linux'
+          run: |
+            echo isabelle-home = /opt/Isabelle2021-1-RC2 >qrhl-tool.conf
+            sbt 'testOnly -- -h target/test-reports-html'
+            
+        - name: Running tests (Windows)
+          if: matrix.os == 'windows'
+          run: |
+            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1-RC2'
+            sbt 'testOnly -- -h target/test-reports-html'
+            
+        - name: Upload test results
+          uses: actions/upload-artifact@v2
+          if: always()
+          with:
+            name: test-reports-html
+            path: target/test-reports-html
