@@ -1,6 +1,6 @@
 import java.io.PrintWriter
-
 import NativePackagerHelper._
+
 import scala.sys.process.Process
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -50,13 +50,22 @@ libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.9"
 lazy val makeGITREVISION = taskKey[Unit]("Create GITREVISION")
 makeGITREVISION := {
   (baseDirectory.value / "target").mkdir()
-  if ((baseDirectory.value / ".git").exists())
-    Process(List("bash","-c","( git describe --tags --long --always --dirty --broken && git describe --always --all ) > target/GITREVISION")).!!
-  else {
-    val pr = new PrintWriter(baseDirectory.value / "target" / "GITREVISION")
-    pr.println("Not built from a GIT worktree.")
-    pr.close()
+
+  val text = try {
+    val builder = new org.eclipse.jgit.storage.file.FileRepositoryBuilder()
+    val repo = builder.findGitDir().build()
+    val git = new org.eclipse.jgit.api.Git(repo)
+    val describe1 = git.describe.setTags(true).setLong(true).setAlways(true).call()
+    val describe2 = git.describe.setAlways(true).setAll(true).call()
+    val clean = git.status.call().isClean
+    s"$describe1\n$describe2${if (clean) "" else "\n(modified working copy)"}"
+  } catch {
+    case _ : Exception => "Git revision was not known during build time."
   }
+
+  val pr = new PrintWriter(baseDirectory.value / "target" / "GITREVISION")
+  pr.print(text)
+  pr.close()
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
