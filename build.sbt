@@ -21,7 +21,8 @@ lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   libraryDependencies += "commons-codec" % "commons-codec" % "1.15",
   libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.9",
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-  libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
+  libraryDependencies += "com.vladsch.flexmark" % "flexmark-all" % "0.62.2" % Test, // Required by scala-test for HTML output
+  libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % Test
 )
 
 
@@ -36,7 +37,8 @@ scalacOptions += "-deprecation"
 
 //libraryDependencies += "de.unruh" %% "scala-isabelle" % "0.1.0"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
+libraryDependencies += "com.vladsch.flexmark" % "flexmark-all" % "0.62.2" % Test // Required by scala-test for HTML output
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % Test
 libraryDependencies += "org.rogach" %% "scallop" % "3.5.1"
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30"
