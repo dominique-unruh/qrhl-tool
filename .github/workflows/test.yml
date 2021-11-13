@@ -23,6 +23,7 @@ jobs:
         - name: Install OpenSSH
           if: matrix.os == 'windows'
           run: |
+            Get-CimInstance -Class Win32_OperatingSystem | Get-Member -MemberType Property
             Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH*'
             Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
             Start-Service sshd
