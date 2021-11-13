@@ -24,7 +24,7 @@ jobs:
           if: matrix.os == 'windows'
           run: |
             Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle${{env.ISA_VER}}'
-            c:\Isabelle${{env.ISA_VER}}\bin\isabelle build -b Complex_Bounded_Operators -o timeout_scale=4
+            c:\Isabelle${{env.ISA_VER}}\contrib\cygwin\bin\bash --login -c "c:\Isabelle${{env.ISA_VER}}\bin\isabelle build -b Complex_Bounded_Operators -o timeout_scale=4"
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Upload test results
