@@ -1,5 +1,7 @@
 name: test-qrhl-tool
 on: [push]
+env:
+  ISA_VER: 2021-1-RC3
 jobs:
     test:
       strategy:
@@ -15,13 +17,14 @@ jobs:
         - name: Running tests (Linux)
           if: matrix.os == 'linux'
           run: |
-            echo isabelle-home = /opt/Isabelle2021-1-RC3 >qrhl-tool.conf
+            echo isabelle-home = /opt/Isabelle$ISA_VER >qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Running tests (Windows)
           if: matrix.os == 'windows'
           run: |
-            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1-RC3'
+            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle$ISA_VER'
+            c:\Isabelle$ISA_VER\bin\isabelle build -b Complex_Bounded_Operators -o timeout_scale=4
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Upload test results
