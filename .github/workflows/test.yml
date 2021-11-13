@@ -25,7 +25,7 @@ jobs:
           # We run a build of Complex_Bounded_Operators first because we need to pass the timeout_scale=4 option
           # otherwise the build fails on my small Windows computer
           run: |
-            c:\Isabelle${{env.ISA_VER}}\contrib\cygwin\bin\bash --login -c "/cygdrive/c/Isabelle${{env.ISA_VER}}/bin/isabelle build -b -o timeout_scale=4 Complex_Bounded_Operators"
+            c:\Isabelle${{env.ISA_VER}}\contrib\cygwin\bin\bash --login -c "/cygdrive/c/Isabelle${{env.ISA_VER}}/bin/isabelle build -b -o timeout_scale=4 -v Complex_Bounded_Operators"
 
         - name: Running tests (Windows)
           if: matrix.os == 'windows'
