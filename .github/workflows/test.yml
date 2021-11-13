@@ -6,7 +6,7 @@ jobs:
     test:
       strategy:
         matrix:
-          os: [linux, windows]
+          os: [windows] # TODO linux
       runs-on: [self-hosted, "${{matrix.os}}"]
       steps:
         - name: Checkout repository
@@ -19,6 +19,14 @@ jobs:
           run: |
             echo isabelle-home = /opt/Isabelle$ISA_VER >qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
+
+        - name: Install OpenSSH
+          if: matrix.os == 'windows'
+          run: |
+            Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH*'
+            Add-WindowsCapability -Online -Name OpenSSH.Server
+            Start-Service sshd
+            Set-Service -Name sshd -StartupType 'Automatic'
 
         - name: Building Complex_Bounded_Operators (Windows)
           if: matrix.os == 'windows'
