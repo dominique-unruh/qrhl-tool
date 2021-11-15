@@ -1250,7 +1250,7 @@ lemma comm_op_space_lifted'[simp]:
 section \<open>Measurements\<close>
 
 definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
-       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> P \<le> id_cblinfun))"
+       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> P \<le> id_cblinfun))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
   unfolding is_measurement_def by (auto intro: exI[of _ 0])
 
@@ -1261,7 +1261,7 @@ typedef ('a,'b) measurement = "{M::'a\<Rightarrow>('b,'b) l2bounded. is_measurem
 setup_lifting type_definition_measurement
 
 lift_definition mtotal :: "('a,'b) measurement \<Rightarrow> bool" is
-  "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, \<psi>\<rangle>".
+  "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, \<psi>\<rangle>".
 
 lemma is_Proj_mproj[simp]: "is_Proj (mproj M i)"
   using mproj[of M] unfolding is_measurement_def by auto
