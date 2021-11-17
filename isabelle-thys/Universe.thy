@@ -70,7 +70,7 @@ proof -
     unfolding D1_def i0_def D0_def universe_powertower_def
     apply (subst image_Pow_surj) apply rule
     apply (subst image_Collect)
-    by (metis (no_types, hide_lams) Domainp.cases Rep_universe_inverse cr_universe_def universe.domain_eq universe.pcr_cr_eq)
+    using Abs_universe_inverse by force
   define i1 where i1_def: "i1 x = fst ` x" for x :: "(ZF*nat) set"
   have "inj_on i1 D1"
     apply (rule inj_onI) unfolding i1_def D1 

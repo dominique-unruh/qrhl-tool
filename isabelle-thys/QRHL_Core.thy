@@ -1061,14 +1061,8 @@ lemma comm_op_space_lifted'[simp]:
 
 section \<open>Measurements\<close>
 
-(* definition "infsetsums f M x = ((\<lambda>F. sum f F) \<longlongrightarrow> x) (finite_subsets_at_top M)"
-definition "infsetsummable f M = (\<exists>x. infsetsums f M x)"
-(* I think this is equal to infsetsum, except that infsetsum is only defined on second countable topologies *)
-definition "infsetsum' f M = (if infsetsummable f M then THE x. infsetsums f M x else 0)" *)
-
-
 definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
-       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> P \<le> id_cblinfun))"
+       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> P \<le> id_cblinfun))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
   unfolding is_measurement_def by (auto intro: exI[of _ 0])
 
@@ -1079,7 +1073,7 @@ typedef ('a,'b) measurement = "{M::'a\<Rightarrow>('b,'b) l2bounded. is_measurem
 setup_lifting type_definition_measurement
 
 lift_definition mtotal :: "('a,'b) measurement \<Rightarrow> bool" is
-  "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>a i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, \<psi>\<rangle>".
+  "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, \<psi>\<rangle>".
 
 lemma is_Proj_mproj[simp]: "is_Proj (mproj M i)"
   using mproj[of M] unfolding is_measurement_def by auto
@@ -1449,8 +1443,8 @@ section \<open>Common quantum objects\<close>
 definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))"
 lemma unitaryCNOT[simp]: "unitary CNOT"
   unfolding CNOT_def apply (rule unitary_classical_operator)
-  apply (rule o_bij[where g="\<lambda>(x,y). (x,y+x)"]; rule ext)
-  unfolding o_def id_def by auto
+  apply (rule o_bij[where g="\<lambda>(x,y). (x,y+x)"]; rule ext; rename_tac xy; case_tac xy)
+  by (auto simp add: bit_neq)
 
 lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
 proof -

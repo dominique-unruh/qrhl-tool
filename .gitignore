@@ -4,7 +4,6 @@
 /project/target
 /hashedcomputation/target
 /project/project/target
-/.idea/workspace.xml
 /target
 /qrhl.jar
 /qrhl.zip
@@ -38,10 +37,10 @@ _region_.prv
 prv_manual.fmt
 manual.toc
 _region_.pdf
-#/.idea
+/.idea
 /examplein.txt
 /exampleout.txt
 /Scratch.thy
 /out/manual-blx.bib
 /out/manual.pdf
-/.idea/libraries
+/.bsp

@@ -4,7 +4,8 @@
 
 set -e
 
-ISABELLE_DIR=/opt/Isabelle2021
+ISABELLE_DIR=~/r/isabelle
+#ISABELLE_DIR=/opt/Isabelle2021-1-RC3
 
 DIR="$(dirname "$BASH_SOURCE[0]")"
 
@@ -20,4 +21,7 @@ else
     FILES=()
 fi
 
-"$ISABELLE_DIR"/bin/isabelle jedit -l QRHL-Examples-Prerequisites -d "$DIR" "$@" "${FILES[@]}" &
+#SESSION=QRHL-Examples-Prerequisites
+SESSION=Lots-Of-Stuff
+
+"$ISABELLE_DIR"/bin/isabelle jedit -l "$SESSION" -d "$DIR" "$@" "${FILES[@]}" &

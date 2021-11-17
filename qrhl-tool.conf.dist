@@ -1,11 +1,11 @@
-# isabelle-home indicates the directory where the Isabelle2021 distribution is located.
+# isabelle-home indicates the directory where the Isabelle2021-1 distribution is located.
 # This option is required.
-# (On OS/X, the Isabelle home is of the form .../Isabelle2021.app/Isabelle.)
+# (On OS/X, the Isabelle home is of the form .../Isabelle2021-1.app/Isabelle.)
 
-# isabelle-home = /opt/Isabelle2021
+# isabelle-home = /opt/Isabelle2021-1
 
 
 # AFP (Archive of Formal Proofs) theory directory.
 # This option is optional. If it is not included, it is required that Isabelle is already configured to include the AFP
 
-# afp-root = /opt/afp-2021
+# afp-root = /opt/afp-2021-1
