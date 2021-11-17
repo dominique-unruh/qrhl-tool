@@ -5,12 +5,8 @@ theory Discrete_Distributions
     Universe_Instances_Complex_Main
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
     "Complex_Bounded_Operators.Extra_Ordered_Fields"
-    "HOL-Analysis.Infinite_Sum" Infinite_Sum_Missing
+    "HOL-Analysis.Infinite_Sum"
 begin
-
-(* no_notation Infinite_Set_Sum.abs_summable_on (infix "abs'_summable'_on" 50) *)
-(* hide_const (open) Infinite_Set_Sum.abs_summable_on *)
-(* notation Infinite_Sum.abs_summable_on (infixr "abs'_summable'_on" 46) *)
 
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f summable_on UNIV \<and> infsum f UNIV \<le> 1"
 
@@ -41,10 +37,10 @@ proof
 next
   assume assm: "(\<forall>x. 0 \<le> f x) \<and> (\<forall>M. finite M \<longrightarrow> sum f M \<le> 1)"
   then have summable: "f summable_on UNIV"
-    apply (rule_tac pos_summable_on)
+    apply (rule_tac nonneg_bdd_above_summable_on)
     by auto
   then have "infsum f UNIV \<le> 1"
-    apply (rule infsum_leq_finite_sums)
+    apply (rule infsum_le_finite_sums)
     using assm by auto
   with summable show "is_distribution f"
     unfolding is_distribution_def using assm by simp
@@ -63,10 +59,10 @@ lemma distr_infsum:
   shows "infsum f UNIV \<le> 1"
 proof -
   have summable: "f summable_on UNIV"
-    apply (rule pos_summable_on)
+    apply (rule nonneg_bdd_above_summable_on)
     using assms by auto
   then show "infsum f UNIV \<le> 1"
-    apply (rule infsum_leq_finite_sums)
+    apply (rule infsum_le_finite_sums)
     using assms by auto
 qed
 
@@ -291,8 +287,7 @@ proof (auto simp: is_distribution_def)
   then show "(\<lambda>x. infsum \<mu> (f -` {x})) summable_on UNIV"
     and "(\<Sum>\<^sub>\<infinity>x. infsum \<mu> (f -` {x})) \<le> 1"
     using \<mu>pos
-     apply (metis (no_types, lifting) distr_summable_on dual_order.refl infsum_nonneg infsum_not_exists)
-    by (smt (verit, ccfv_threshold) \<open>\<And>Ma. finite Ma \<Longrightarrow> (\<Sum>x\<in>Ma. infsum \<mu> (f -` {x})) \<le> 1\<close> infsum_leq_finite_sums infsum_not_exists)
+    by (simp_all add: distr_summable_on distr_infsum infsum_nonneg)
 qed
 
 lemma Prob_map_distr:
@@ -473,7 +468,7 @@ proof (insert assms, transfer fixing: a b, unfold is_distribution_def)
     finally show ?thesis by simp
   qed
   then show "\<mu>f abs_summable_on UNIV"
-    apply (rule_tac pos_summable_on)
+    apply (rule_tac nonneg_bdd_above_summable_on)
     apply auto by fastforce
 qed
 
@@ -1784,8 +1779,7 @@ proof -
     apply (rule add_increasing2)
      apply (rule infsum_nonneg)
     using pos apply auto
-    using exp_ex summable_on_iff_abs_summable_on_real apply blast
-    using zero_le_mult_iff by force
+    by (metis linorder_not_le mult_less_0_iff prob_geq_0)
   also have "\<dots> \<ge> (\<Sum>\<^sub>\<infinity>x\<in>{a..}. prob \<mu> x * a)" (is "_ \<ge> \<dots>")
     apply (rule infsum_mono)
     apply (metis prob_abs_summable summable_on_cmult_left summable_on_subset_banach top_greatest)
@@ -1834,8 +1828,8 @@ proof -
   then obtain x where "x \<in> - A"
     by auto
   have "\<mu> x = 0"
-    using 0 \<mu>_abs_sum nneg \<open>x \<in> - A\<close>
-    by (metis dual_order.refl infsum_0D summable_on_iff_abs_summable_on_real)
+    using 0 \<open>x \<in> - A\<close>
+    by (metis \<open>is_distribution \<mu>\<close> distr_summable_on dual_order.refl is_distribution_def' nonneg_infsum_le_0D)
   with pos show False
     unfolding Collect_UNIV
     by (metis rel_simps(70))
