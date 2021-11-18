@@ -1,5 +1,8 @@
 name: test-qrhl-tool
-on: [push]
+on:
+  push:
+    branches-ignore:
+      - topic-registers
 jobs:
     test:
       strategy:
