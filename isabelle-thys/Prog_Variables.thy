@@ -36,7 +36,9 @@ consts variable_concat :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
 adhoc_overloading variable_concat Axioms_Quantum.register_pair Axioms_Classical.register_pair
 
 consts variable_unit :: \<open>'a\<close>
-adhoc_overloading variable_unit \<open>Quantum_Extra2.empty_var :: (unit Axioms_Quantum.update \<Rightarrow> _)\<close> \<open>Classical_Extra.empty_var :: (unit Axioms_Classical.update \<Rightarrow> _)\<close>
+adhoc_overloading variable_unit
+  \<open>Quantum_Extra2.empty_var :: (unit Axioms_Quantum.update \<Rightarrow> _)\<close> 
+  \<open>Classical_Extra.empty_var :: (unit Axioms_Classical.update \<Rightarrow> _)\<close>
 
 abbreviation (input) "variable_singleton x \<equiv> x"
 
@@ -58,6 +60,7 @@ translations
 section \<open>Distinct variables\<close>
 
 abbreviation (input) "distinct_qvars Q == Axioms_Quantum.register Q"
+abbreviation (input) "distinct_cvars Q == Axioms_Classical.register Q"
 
 lemma register_pair_is_register_iff: \<open>Axioms_Quantum.register (Q;R) \<longleftrightarrow> compatible Q R\<close>
   apply auto
@@ -83,6 +86,29 @@ lemma distinct_qvarsL: "distinct_qvars (variable_concat Q R) \<Longrightarrow> d
   using register_pair_is_register_converse(1) by blast
 lemma distinct_qvarsR: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars R"
   using register_pair_is_register_converse(2) by blast
+
+lemma distinct_cvars_split1: 
+  "distinct_cvars (variable_concat (variable_concat Q R) S) = (distinct_cvars (variable_concat Q R) \<and> distinct_cvars (variable_concat Q S) \<and> distinct_cvars (variable_concat R S))"
+  by x(metis Laws_Quantum.compatible3 Laws_Quantum.compatible_comp_left Laws_Quantum.compatible_comp_right Laws_Quantum.compatible_sym Laws_Quantum.pair_is_register Laws_Quantum.register_Fst Laws_Quantum.register_Snd Laws_Quantum.register_pair_Fst Laws_Quantum.register_pair_Snd id_def register_pair_is_register_converse(1) register_pair_is_register_iff)
+lemma distinct_cvars_swap: "distinct_cvars (variable_concat Q R) \<Longrightarrow> distinct_cvars (variable_concat R Q)" 
+  by (meson Laws_Quantum.compatible_sym register_pair_is_register_iff)
+lemma distinct_cvars_split2: "distinct_cvars (variable_concat S (variable_concat Q R)) = (distinct_cvars (variable_concat Q R) \<and> distinct_cvars (variable_concat Q S) \<and> distinct_cvars (variable_concat R S))"
+  by (metis distinct_cvars_split1 distinct_cvars_swap)
+lemma distinct_cvars_concat_unit1[simp]: "distinct_cvars (variable_concat Q \<lbrakk>\<rbrakk>) = distinct_cvars Q" for Q::"'a::finite cvariable" 
+  using is_unit_register_empty_var register_pair_is_register_converse(1) register_pair_is_register_iff unit_register_compatible' by blast x
+lemma distinct_cvars_concat_unit2[simp]: "distinct_cvars (variable_concat \<lbrakk>\<rbrakk> Q) = distinct_cvars Q" for Q::"'a::finite cvariable" 
+  using is_unit_register_empty_var register_pair_is_register_converse(2) register_pair_is_register_iff unit_register_compatible by blast x
+lemma distinct_cvars_unit[simp]: "distinct_cvars \<lbrakk>\<rbrakk>" 
+  by simp
+(* lemma distinct_cvars_single[simp]: "distinct_cvars \<lbrakk>q\<rbrakk>" for q::"'a::finite cvariable"
+  unfolding distinct_cvars_def apply transfer by auto *)
+
+lemma distinct_cvarsL: "distinct_cvars (variable_concat Q R) \<Longrightarrow> distinct_cvars Q"
+  sorry (* TODO: needs slightly changed definition of register pair *)
+  (* using register_pair_is_register_converse(1) by blast *)
+lemma distinct_cvarsR: "distinct_cvars (variable_concat Q R) \<Longrightarrow> distinct_cvars R"
+  sorry
+  (* using register_pair_is_register_converse(2) by blast *)
 
 section \<open>Indexed variables\<close>
 

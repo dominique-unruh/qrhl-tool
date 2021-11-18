@@ -1,5 +1,5 @@
 theory Joint_Sample
-  imports Expressions Tactics Basic_Rules
+  imports (* Expressions *) Tactics Basic_Rules
 begin
 
 lemma joint_sample:

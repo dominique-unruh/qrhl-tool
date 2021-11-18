@@ -2,7 +2,7 @@ theory Relational_Hoare
   imports Programs
 begin
 
-consts qrhl :: "predicate expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> predicate expression \<Rightarrow> bool"
+consts qrhl :: "predicate expression2 \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> predicate expression2 \<Rightarrow> bool"
 
 consts "qrhl_syntax" :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> bool expression \<Rightarrow> bool" ("QRHL {_} _ _ {_}")
 translations "CONST qrhl_syntax a b c d" \<rightleftharpoons> "CONST qrhl (Expr[a]) b c (Expr[d])"

@@ -1,17 +1,16 @@
 structure QRHL =
 struct
 
-val mk_variablesT = Prog_Variables.mk_variablesT
-val mk_variableT = Prog_Variables.mk_variableT
+val mk_qvariableT = Prog_Variables.mk_qvariableT
 val mk_conjs = Prog_Variables.mk_conjs
 fun mk_measurementT T T' = Type(\<^type_name>\<open>measurement\<close>, [T,T'])
 fun dest_measurementT (Type(\<^type_name>\<open>measurement\<close>, [T,T'])) = (T,T')
   | dest_measurementT T = raise TYPE("dest_measurementT",[T],[])
 
-val parse_varterm = Prog_Variables.parse_varterm
+(* val parse_varterm = Prog_Variables.parse_varterm *)
 val missing_in_varterm = Prog_Variables.missing_in_varterm
 val vars_in_varterm = Prog_Variables.vars_in_varterm
-val mk_varterm = Prog_Variables.mk_varterm
+(* val mk_varterm = Prog_Variables.mk_varterm *)
 val type_of_varterm = Prog_Variables.type_of_varterm
 datatype varterm = datatype Prog_Variables.varterm
 datatype tree = datatype Prog_Variables.tree
@@ -30,7 +29,7 @@ fun mk_INFIMUM A f =
 fun dest_All (Const("HOL.All",_) $ Abs(_,T,body)) = (T,body)
   | dest_All t = raise TERM("dest_All",[t])
 
-(* TODO: superseeded by mk_varterm ? *)
+(* (* TODO: superseeded by mk_varterm ? *)
 fun variables [] = (\<^const>\<open>variable_unit\<close>,\<^typ>\<open>unit\<close>)
   | variables [v] = 
         let val vT = fastype_of v
@@ -51,6 +50,7 @@ fun variables [] = (\<^const>\<open>variable_unit\<close>,\<^typ>\<open>unit\<cl
             (Const(\<^const_name>\<open>variable_singleton\<close>, vT --> mk_variablesT vT') $ v) $ vs',
             prodT)
         end
+*)
 
 (* Transforms "\<lbrakk>\<dots>\<rbrakk> \<Longrightarrow> A==B" into "A==B" if all the premises can be solved by simp_tac *) 
 fun simp_conv_premises ctxt thm =
@@ -69,7 +69,7 @@ fun dest_lift (t as (Const(lift,_) $ S $ Q)) = let
   end
   | dest_lift t = raise TERM("dest_lift",[t])
 
-(* Converts "A >> Q" into "A' >> (Q\<otimes>R)" for some A' *)
+(* (* Converts "A >> Q" into "A' >> (Q\<otimes>R)" for some A' *)
 fun extend_lift_conv ctxt vtR ct = let
   val (lift_kind,S,Q) = dest_lift (Thm.term_of ct)
   val extend_thm = infer_instantiate ctxt [(("Q",0),Thm.cterm_of ctxt Q),
@@ -80,6 +80,7 @@ fun extend_lift_conv ctxt vtR ct = let
 in
   extend_thm'
 end
+ *)
 
 (*
 (* TODO remove *)
@@ -219,8 +220,8 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
 
 
 fun mk_quantum_equality Q1 Q2 T =
-  let val opT = mk_bounded2T T
-      val qvT = mk_variablesT T
+  let val opT = Prog_Variables.mk_bounded2T T
+      val qvT = mk_qvariableT T
   in
   Const(\<^const_name>\<open>quantum_equality_full\<close>, opT --> qvT --> opT --> qvT --> \<^typ>\<open>predicate\<close>) $
     Const(\<^const_name>\<open>id_cblinfun\<close>, opT) $ Q1 $ Const(\<^const_name>\<open>id_cblinfun\<close>, opT) $ Q2
@@ -260,8 +261,8 @@ fun tidyTrueTop t =
 fun mk_equals_wp R cvars1 cvars2 qvars1 qvars2 = let
       val cvarEqs = ListPair.zip (cvars1,cvars2) |> map HOLogic.mk_eq
       val claCvarsEq = \<^const>\<open>classical_subspace\<close> $ mk_conjs cvarEqs
-      val (qvars1',qvars1T) = variables qvars1
-      val (qvars2',qvars2T) = variables qvars2
+      val (qvars1',qvars1T) = (* variables qvars1 *) error "mk_equals_wp: nyi"
+      val (qvars2',qvars2T) = (* variables qvars2 *) error "mk_equals_wp: nyi"
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()
       val qvarsEq = if qvars1=[] then @{const top(predicate)} else mk_quantum_equality qvars1' qvars2' qvars1T
       val wp = @{const inf(predicate)} $ (@{const inf(predicate)} $ R $ claCvarsEq) $ qvarsEq
@@ -353,7 +354,7 @@ fun fixTac (term, var) =
 
 
 
-(* TODO: rewrite using extend_lift_conv *)
+(* (* TODO: rewrite using extend_lift_conv *)
 fun variable_extension_hint_conv ctx ct = let
 val (lift,S,Q,R) = case Thm.term_of ct of
     (Const(\<^const_name>\<open>join_variables_hint\<close>,_)) $ (Const(lift,_) $ S $ Q) $ R => (lift,S,Q,R)
@@ -372,9 +373,9 @@ val rule = infer_instantiate ctx
   conv_rule 
 in
 rule
-end
+end *)
 
-fun sort_variables_step (VTSingle _) = NONE
+(* fun sort_variables_step (VTSingle _) = NONE
   | sort_variables_step (VTCons (v1 as VTSingle(n1,T1), v2 as VTSingle(n2,T2))) =
       if n1<=n2 then NONE
       else SOME(Const(\<^const_name>\<open>comm_op\<close>, 
@@ -422,9 +423,9 @@ and sort_variables_step_in (VTCons(v1 as VTSingle(_,T1), rest)) =
           rest_op,
         VTCons(v1, rest_vt))
     end)
-  | sort_variables_step_in vt = raise TERM("sort_variables_step_in", [mk_varterm vt |> fst])
+  | sort_variables_step_in vt = raise TERM("sort_variables_step_in", [mk_varterm vt |> fst]) *)
 
-fun sort_variables vt =
+(* fun sort_variables vt =
   case sort_variables_step vt of
     NONE => NONE
   | SOME(A,vt') =>
@@ -440,9 +441,9 @@ fun sort_variables vt =
             SOME(Const(\<^const_name>\<open>qvar_trafo_mult\<close>, mk_variablesT vt'T --> A'T --> AT --> mk_boundedT inT outT) $
               vt't $ A' $ A,
               vt'')
-          end
+          end *)
         
-(* Converts "A >> Q" into "A' >> Q'" where Q' is a sorted explicit variable list *)
+(* (* Converts "A >> Q" into "A' >> Q'" where Q' is a sorted explicit variable list *)
 fun sort_lift_conv ctxt ct = let
 val (lift_kind,S,Q) = dest_lift (Thm.term_of ct)
 val vtQ = parse_varterm Q
@@ -458,9 +459,9 @@ val thm = case sort_variables vtQ of
                          |> simp_conv_premises ctxt
 in
 thm
-end
+end *)
 
-(* Expects: ct = sort_variables_hint (x>>Q) *)
+(* (* Expects: ct = sort_variables_hint (x>>Q) *)
 (* TODO: rewrite using sort_lift_conv *)
 fun sort_variables_hint_conv ctx ct = let
 val (lift,S,Q) = case Thm.term_of ct of
@@ -479,9 +480,9 @@ in
            (("A",0),Thm.cterm_of ctx A),
            (("R'",0),mk_varterm vt |> fst |> Thm.cterm_of ctx),
            (("Q",0),Thm.cterm_of ctx Q)] conv_rule
-end
+end *)
 
-(* Expects: ct = x>>Q, and vtR represents a varterm R
+(* (* Expects: ct = x>>Q, and vtR represents a varterm R
    where Q,R are explicit variable terms each with distinct variables,
    and R contains all variables of Q
  *)
@@ -507,9 +508,9 @@ fun reorder_lift_conv ctxt vtR ct = let
                            |> simp_conv_premises ctxt
 in
   Thm.transitive (Thm.transitive extend_thm sorted_thm) antisorted_thm
-end
+end *)
 
-fun reorder_variables_hint_conv ctxt ct =
+(* fun reorder_variables_hint_conv ctxt ct =
   let val R = case Thm.term_of ct of
         (Const(\<^const_name>\<open>reorder_variables_hint\<close>,_) $ _ $ R) => R
       | _ => raise CTERM("reoder_variables_hint_conv: wrong shape",[ct])
@@ -544,7 +545,7 @@ fun variable_rewriting_simproc _ ctx ct =
   SOME (sort_variables_hint_conv ctx ct)
   handle CTERM _ => 
   SOME (extend_lift_as_var_concat_hint_conv ctx ct)
-  handle CTERM _ => NONE
+  handle CTERM _ => NONE *)
 
 
 (* fun warn_colocal_simproc _ _ ct = 
@@ -588,7 +589,7 @@ val _ =
     (Parse.type_args_constrained -- Parse.binding -- Parse.opt_mixfix -- Scan.option (Parse.$$$ "::" |-- Parse.!!! Parse.sort)
       >> (fn (((args, a), mx), sort) => declare_variable_type_cmd args sort a mx))
 
-fun swap_variables_conv ctxt = 
+(* fun swap_variables_conv ctxt = 
   Raw_Simplifier.rewrite_cterm (false,false,false)
   (SINGLE o (K (ALLGOALS (simp_tac ctxt))))
    (Raw_Simplifier.init_simpset @{thms
@@ -604,7 +605,7 @@ fun swap_variables_conv ctxt =
         swap_variables_vars_singleton1[THEN eq_reflection]
         swap_variables_vars_singleton2[THEN eq_reflection]
         swap_variables_vars_singleton3[THEN eq_reflection]
-  } ctxt)
+  } ctxt) *)
 
 
 end

@@ -13,6 +13,7 @@ lift_definition expression :: \<open>'a cvariable \<Rightarrow> ('a\<Rightarrow>
 definition \<open>const_expression x = expression (Classical_Extra.empty_var :: (unit,_) cvariable) (\<lambda>_. x)\<close> *)
 
 type_synonym 'a expression = \<open>cl \<Rightarrow> 'a\<close>
+type_synonym 'a expression2 = \<open>cl2 \<Rightarrow> 'a\<close>
 abbreviation (input) \<open>expression_eval e \<equiv> e\<close>
 abbreviation (input) \<open>map_expression2 f e1 e2 \<equiv> (\<lambda>m. f (e1 m) (e2 m))\<close>
 
@@ -114,11 +115,6 @@ lemma denotation_block: "denotation (block ps) = fold denotation ps"
 definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" where
   "probability e p \<rho> = Prob (program_state_distrib (denotation p \<rho>)) (Collect e)"
 
-consts "probability_syntax" :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:(_'(_'))]")
-(* translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c" *) (* TODO get this syntax back *)
-translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability a b c"
-hide_const probability_syntax
-
 lemma probability_sample: 
   "probability (expression m f) (block [sample m (const_expression D)]) rho
   = Prob D (Collect f)"
@@ -171,5 +167,23 @@ named_theorems program_bodies
 named_theorems program_fv
 
 ML_file "programs.ML"
+
+consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
+parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Programs.term_to_expression_untyped ctx e)]\<close>
+hide_const expression_syntax
+
+consts "probability_syntax" :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:(_'(_'))]")
+translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c"
+(* translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability a b c" *)
+hide_const probability_syntax
+
+experiment
+  fixes x :: \<open>nat cvariable\<close>
+  assumes [variable]: \<open>Axioms_Classical.register x\<close>
+begin
+(* local_setup \<open>Prog_Variables.declare_variable_lthy (\<^term>\<open>x\<close> |> dest_Free |> fst) Prog_Variables.Classical \<^typ>\<open>nat\<close>\<close> *)
+term \<open>Expr[x1+1]\<close>
+term \<open>Pr[b=1 : left(rho)]\<close>
+end
 
 end

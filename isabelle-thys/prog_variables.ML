@@ -18,10 +18,16 @@ fun mk_conjs [] = \<^const>\<open>True\<close>
   Const(\<^const_name>\<open>variable_name\<close>, fastype_of v --> \<^typ>\<open>string\<close>) $ v *)
 fun mk_cvariableT T = (T --> Type(\<^type_name>\<open>option\<close>,[T])) --> \<^typ>\<open>cl Axioms_Classical.update\<close>
 fun mk_qvariableT T = mk_bounded2T T --> \<^typ>\<open>qu Axioms_Quantum.update\<close>
+fun mk_c2variableT T = (T --> Type(\<^type_name>\<open>option\<close>,[T])) --> \<^typ>\<open>cl2 Axioms_Classical.update\<close>
+fun mk_q2variableT T = mk_bounded2T T --> \<^typ>\<open>qu2 Axioms_Quantum.update\<close>
 
 fun dest_cvariableT (Type("fun",[Type("fun",[T,Type(\<^type_name>\<open>option\<close>,[U])]), \<^typ>\<open>cl Axioms_Classical.update\<close>])) =
-        if T=U then T else raise TYPE("dest_variableT", [T,U], [])
-  | dest_cvariableT T = raise TYPE("dest_variableT", [T], [])
+        if T=U then T else raise TYPE("dest_cvariableT", [T,U], [])
+  | dest_cvariableT T = raise TYPE("dest_cvariableT", [T], [])
+
+fun dest_qvariableT (Type("fun",[(Type(\<^type_name>\<open>cblinfun\<close>, [Type(\<^type_name>\<open>ell2\<close>,[T]),Type(\<^type_name>\<open>ell2\<close>,[U])])), \<^typ>\<open>qu Axioms_Quantum.update\<close>])) =
+        if T=U then T else raise TYPE("dest_qvariableT", [T,U], [])
+  | dest_qvariableT T = raise TYPE("dest_qvariableT", [T], [])
 
 fun strip_var_prefix x = if String.isPrefix "var_" x 
   then String.extract (x,4,NONE) 
@@ -66,14 +72,15 @@ structure WarnDeclaredQvarsData = Proof_Data
 
 
 datatype vartype = Classical | Quantum
-type varinfo = {vartype : vartype, name_thm : thm}
-structure VarInfo = Proof_Data
+type varinfo = {vartype : vartype, register: term(* , name_thm : thm *)}
+structure VarInfo = Generic_Data
 (
   type T = varinfo Symtab.table
-  fun init _ = Symtab.empty
+  val empty = Symtab.empty
+  val merge = Symtab.merge (op=)
 )
 
-fun lookup_variable ctxt = Symtab.lookup (VarInfo.get ctxt)
+fun lookup_variable ctxt = Symtab.lookup (VarInfo.get (Context.Proof ctxt))
 fun lookup_variable_type ctxt name = lookup_variable ctxt name |> Option.map #vartype
 
 fun is_classical_variable ctxt name = case lookup_variable_type ctxt name of
@@ -87,23 +94,47 @@ fun is_classical_variable ctxt name = case lookup_variable_type ctxt name of
            "and use declare_variable_type instead of typedecl") *)
 
 local
-fun add_varinfo morph name vartype ctxt' ctxt = let
-  val thm = Proof_Context.get_thm ctxt' (name ^ "_varname")
-  val varinfo = {vartype=vartype, name_thm=Morphism.thm morph thm} : varinfo
-  val ctxt = VarInfo.map (Symtab.insert (K true) (name,varinfo)) ctxt
-  in ctxt end
+fun add_varinfo morph name vartype register context = let
+  (* val thm = Proof_Context.get_thm ctxt' (name ^ "_varname") *)
+  val varinfo = {vartype=vartype, register=Morphism.term morph register(* , name_thm=Morphism.thm morph thm *)} : varinfo
+  val context = VarInfo.map (Symtab.insert (K true) (name,varinfo)) context
+  in context end
 
-fun declare_variable_morph m name vartype ctxt' =
-      add_varinfo m name vartype ctxt' #>
-      add_varinfo m (name^"1") vartype ctxt' #>
-      add_varinfo m (name^"2") vartype ctxt'
+fun declare_variable_morph m name vartype typ = let
+    val register = Free(name, if vartype=Classical then mk_cvariableT typ else mk_qvariableT typ)
+    val comp = if vartype=Classical then Const(\<^const_name>\<open>comp\<close>, \<^typ>\<open>cl c2variable\<close> --> fastype_of register --> mk_c2variableT typ)
+                                    else Const(\<^const_name>\<open>comp\<close>, \<^typ>\<open>qu q2variable\<close> --> fastype_of register --> mk_q2variableT typ)
+    val register1 = if vartype=Classical then comp $ @{const Laws_Classical.Fst(cl,cl)} $ register
+                                         else comp $ @{const Laws_Quantum.Fst(qu,qu,qu)} $ register
+    val register2 = if vartype=Classical then comp $ @{const Laws_Classical.Snd(cl,cl)} $ register
+                                         else comp $ @{const Laws_Quantum.Snd(qu,qu,qu)} $ register
+  in
+      add_varinfo m name vartype register #>
+      add_varinfo m (name^"1") vartype register1 #>
+      add_varinfo m (name^"2") vartype register2
+  end
 in
-fun declare_variable_lthy name vartype ctxt = 
+fun declare_variable_lthy name vartype typ = 
   Local_Theory.declaration {pervasive=true, syntax=false} (fn m => 
-    Context.mapping I (declare_variable_morph m name vartype ctxt)) ctxt
+    declare_variable_morph m name vartype typ)
 
-fun declare_variable_ctxt name vartype ctxt = declare_variable_morph Morphism.identity name vartype ctxt ctxt
+fun declare_variable_ctxt name vartype typ = Context.proof_map (declare_variable_morph Morphism.identity name vartype typ)
+
+fun declare_variable_from_thm (thm:thm) = let
+  val (vartype, name, T) = case Thm.prop_of thm of
+      Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>Axioms_Classical.register\<close>, _) $ Free(name, T')) =>
+            (Classical, name, dest_cvariableT T')
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>Axioms_Quantum.register\<close>, _) $ Free(name, T')) =>
+            (Quantum, name, dest_qvariableT T')
+    | _ => raise THM ("declare_variable_from_thm: theorem must be of the form 'Axioms_Classical.register x' or 'Axioms_Quantum.register x' where x is a free variable", 0, [thm])
+  in (declare_variable_morph Morphism.identity name vartype T) end
+
+val _ = Attrib.setup \<^binding>\<open>variable\<close>
+ (Scan.succeed (Thm.declaration_attribute declare_variable_from_thm))
+  "Declare a program variable (apply to a theorem of the form \"Laws_Classical/Quantum.register x\")"
+  |> Context.map_theory |> Context.>>
 end
+
 
 (* fun varname_assumption cq bind T = 
   let val qT = mk_variableT T

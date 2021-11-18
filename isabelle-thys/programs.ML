@@ -1,5 +1,21 @@
 structure Programs = struct
 
+fun term_to_expression_untyped ctx t =
+  let val lookup_var = Prog_Variables.lookup_variable ctx
+      val mem_var = Free("_memory_", dummyT)
+      (* val _ = \<^print> (Term.add_frees t [] |> map fst |> map lookup_var) *)
+      val subst = Term.add_frees t [] 
+        |> map_filter (fn (v,T) => case lookup_var v of
+              SOME {vartype=Prog_Variables.Classical, register, ...} => 
+                SOME (Free (v,T), Const(\<^const_name>\<open>getter\<close>, dummyT) $ register $ mem_var)
+            | _ => NONE)
+      (* val _ = \<^print> subst *)
+      val body = abstract_over (mem_var, subst_atomic subst t)
+      (* val _ = \<^print> body *)
+  in
+    Abs("mem", dummyT, body)
+  end
+
 datatype call = CALL of string * call list
 
 type varterm_names = string Prog_Variables.tree
@@ -31,7 +47,7 @@ fun term_to_call (Free(name,_)) = CALL (name,[])
 
 (* local open Expressions open Prog_Variables in *)
 
-fun statement_to_term ctxt (Assign(lhs,rhs)) = let 
+(* fun statement_to_term ctxt (Assign(lhs,rhs)) = let 
       val T = fastype_of rhs
       val lhs' : term = lhs |> map_tree (apfst (fn v => "var_"^v)) |> mk_varterm |> fst
       in Const(\<^const_name>\<open>assign\<close>, mk_variablesT T --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
@@ -75,9 +91,9 @@ fun statement_to_term ctxt (Assign(lhs,rhs)) = let
     in Const(\<^const_name>\<open>qinit\<close>, mk_variablesT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
          loc' $ term_to_expression ctxt e end
 
-and statements_to_term ctxt statements = map (statement_to_term ctxt) statements |> HOLogic.mk_list \<^typ>\<open>program\<close>
+and statements_to_term ctxt statements = map (statement_to_term ctxt) statements |> HOLogic.mk_list \<^typ>\<open>program\<close> *)
 
-fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statements) = Block (term_to_statements ctxt statements)
+(* fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statements) = Block (term_to_statements ctxt statements)
   | term_to_statement ctxt (Const(\<^const_name>\<open>localvars\<close>, _) $ cvars $ qvars $ body) =
       Local (parse_varterm cvars |> map_tree (apfst strip_var_prefix), parse_varterm qvars, term_to_statements ctxt body)
   | term_to_statement ctxt (Const(\<^const_name>\<open>assign\<close>,_) $ x $ e) = 
@@ -106,7 +122,7 @@ fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statem
       Call(name,args2 : _* )
 *)
 
-and term_to_statements ctxt t = HOLogic.dest_list t |> map (term_to_statement ctxt)
+and term_to_statements ctxt t = HOLogic.dest_list t |> map (term_to_statement ctxt) *)
 
 (* end *)
 

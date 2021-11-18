@@ -13,57 +13,77 @@ lemma conseq_rule:
   by (cheat conseq_rule)
 
 lemma sym_rule:
-  assumes "qrhl (index_flip_expression (map_expression index_flip_subspace A)) c b (index_flip_expression (map_expression index_flip_subspace B))"
+  assumes "qrhl (\<lambda>m. index_flip_subspace (A (prod.swap m))) c b (\<lambda>m. index_flip_subspace (B (prod.swap m)))"
   shows "qrhl A b c B"
   by (cheat sym_rule)
 
 lemma assign1_rule:
   fixes A B x e
-  defines "x1 == index_vars True x"
-  defines "e1 == index_expression True e"
-  defines "A == subst_expression (substitute_vars x1 e1) B"
+  assumes \<open>Axioms_Classical.register x\<close>
+  defines "A == (\<lambda>m::cl2. B (setter (Laws_Classical.Fst o x) (e (fst m)) m))"
   shows "qrhl A [assign x e] [] B"
   by (cheat assign1_rule)
 
-
+(* 
 (* TODO move *)
 lemma index_flip_substitute_vars: 
   "map index_flip_substitute1 (substitute_vars xs e) = substitute_vars (index_flip_vars xs) (index_flip_expression e)"
-  by (cheat index_flip_substitute_vars)
+  by (cheat index_flip_substitute_vars) *)
 
-(* TODO move *)
+(* (* TODO move *)
 lemma index_flip_vars_index_vars: "index_flip_vars (index_vars left xs) = index_vars (\<not> left) xs"
-  by (cheat index_flip_vars_index_vars)
+  by (cheat index_flip_vars_index_vars) *)
 
-lemma map_expression_subst_expression:
+(* lemma map_expression_subst_expression:
   "map_expression f (subst_expression \<sigma> e) = subst_expression \<sigma> (map_expression f e)"
   unfolding map_expression_def 
   apply (transfer fixing: f \<sigma>)
-  by auto
-  
+  by auto *)
+
+(* TODO to Registers *)
+lemma setter_chain: 
+  assumes \<open>Axioms_Classical.register F\<close> \<open>Axioms_Classical.register G\<close>
+  shows \<open>setter (F o G) a m = setter F (setter G a (getter F m)) m\<close>
+  sorry
+
+(* TODO to Registers *)
+lemma setter_Fst: \<open>setter Laws_Classical.Fst = (\<lambda>x (_,y). (x,y))\<close>
+  unfolding setter_def 
+  sorry
+
+(* TODO to Registers *)
+lemma setter_Snd: \<open>setter Laws_Classical.Snd = (\<lambda>y (x,_). (x,y))\<close>
+  sorry
+
+(* TODO to Registers *)
+lemma getter_Fst: \<open>getter Laws_Classical.Fst = fst\<close>
+  sorry
+
+(* TODO to Registers *)
+lemma getter_Snd: \<open>getter Laws_Classical.Snd = snd\<close>
+  sorry
+
 lemma assign2_rule:
   fixes A B x e
-  defines "x1 == index_vars False x"
-  defines "e1 == index_expression False e"
-  defines "A == subst_expression (substitute_vars x1 e1) B"
+  assumes [Laws_Classical.register]: \<open>Axioms_Classical.register x\<close>
+  defines "A == (\<lambda>m::cl2. B (setter (Laws_Classical.Snd o x) (e (snd m)) m))"
   shows "qrhl A [] [assign x e] B"
-  using [[simproc del: index_var]]
   apply (rule sym_rule)
-  apply (simp add: assms index_flip_vars_index_vars index_flip_substitute_vars 
-          index_flip_subst_expression index_flip_substitute1 index_flip_expression_index_expression
-          index_flip_expression_map_expression map_expression_subst_expression)
-  by (rule assign1_rule)
+  apply (subst DEADID.rel_mono_strong[of \<open>(\<lambda>m. index_flip_subspace (A (prod.swap m)))\<close>]) defer
+   apply (rule assign1_rule)
+  by (auto simp: A_def setter_chain setter_Fst setter_Snd case_prod_beta getter_Fst getter_Snd)
 
 lemma sample1_rule:
   fixes A B xs e
-  defines "xs1 == index_vars True xs"
-  defines "e1 == index_expression True e"
-  defines "\<And>z. B' z == subst_expression (substitute_vars xs1 (const_expression z)) B"
-  defines "A == map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z\<in>supp e1. B' z)) e1 B'"
+  assumes \<open>Axioms_Classical.register xs\<close>
+  defines "xs1 == Laws_Classical.Fst o xs"
+  defines "e1 == (\<lambda>m. e (fst m))"
+  defines "\<And>z. B' z == (\<lambda>m. B (setter xs1 z m))"
+  defines "A == (\<lambda>m. Cla[weight (e1 m) = 1] \<sqinter> (INF z\<in>supp (e1 m). B' z m))"
   shows "qrhl A [sample xs e] [] B"
   by (cheat sample1_rule)
 
-lift_definition uniform_expression_family :: "('a \<Rightarrow> 'b expression) \<Rightarrow> bool" is
+(* lift_definition uniform_expression_family :: "('a \<Rightarrow> 'b expression) \<Rightarrow> bool" is
   "\<lambda>e. \<forall>z. fst (e z) = fst (e undefined)" .
 
 lemma map_expression_map_expression':
@@ -71,12 +91,12 @@ lemma map_expression_map_expression':
   shows "map_expression f1 (map_expression' f2 e) = map_expression' (f1 o f2) e"
   unfolding map_expression_def
   using assms apply (transfer fixing: f1 f2)
-  by (auto simp: case_prod_beta)
+  by (auto simp: case_prod_beta) *)
 
-lemma uniform_expression_family_const[simp]: "uniform_expression_family (\<lambda>_. e)"
-  apply transfer by simp
+(* lemma uniform_expression_family_const[simp]: "uniform_expression_family (\<lambda>_. e)"
+  apply transfer by simp *)
 
-lemma uniform_expression_family_pair_expression[simp]:
+(* lemma uniform_expression_family_pair_expression[simp]:
   assumes "uniform_expression_family e1"
   assumes "uniform_expression_family e2"
   shows "uniform_expression_family (\<lambda>z. pair_expression (e1 z) (e2 z))"
@@ -92,22 +112,28 @@ lemma map_expression_map_expression2':
 
 lemma uniform_expression_family_expression[simp]:
   "uniform_expression_family (\<lambda>z. expression V (e z))"
-  apply transfer by simp
+  apply transfer by simp *)
   
-
-lemma uniform_expression_family_subst_expression[simp]:
+(* lemma uniform_expression_family_subst_expression[simp]:
   assumes "uniform_expression_family e1"
   assumes "uniform_expression_family e2"
   shows "uniform_expression_family (\<lambda>z. subst_expression (substitute_vars V (e1 z)) (e2 z))"
-  by (cheat uniform_expression_family_subst_expression)
+  by (cheat uniform_expression_family_subst_expression) *)
 
 lemma sample2_rule:
   fixes A B xs e
-  defines "xs1 == index_vars False xs"
-  defines "e1 == index_expression False e"
-  defines "\<And>z. B' z == subst_expression (substitute_vars xs1 (const_expression z)) B"
-  defines "A == map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z\<in>supp e1. B' z)) e1 B'"
+  assumes [Laws_Classical.register]: \<open>Axioms_Classical.register xs\<close>
+  defines "xs1 == Laws_Classical.Snd o xs"
+  defines "e1 == (\<lambda>m. e (snd m))"
+  defines "\<And>z. B' z == (\<lambda>m. B (setter xs1 z m))"
+  defines "A == (\<lambda>m. Cla[weight (e1 m) = 1] \<sqinter> (INF z\<in>supp (e1 m). B' z m))"
   shows "qrhl A [] [sample xs e] B"
+  apply (rule sym_rule)
+  apply (subst DEADID.rel_mono_strong[of \<open>(\<lambda>m. index_flip_subspace (A (prod.swap m)))\<close>]) defer
+   apply (rule sample1_rule)
+  by (auto simp: A_def B'_def e1_def xs1_def setter_chain setter_Fst getter_Snd getter_Fst
+      setter_Snd case_prod_beta index_flip_subspace_INF)
+
 (*   using [[simproc del: index_var]]
   apply (rule sym_rule)
   apply (simp add: assms index_flip_subst_expression index_flip_substitute1 
@@ -119,7 +145,6 @@ lemma sample2_rule:
   defer
   apply (rule sample1_rule)
  *)
-  by (cheat TODO)
 
 ML \<open>
 structure Basic_Rules =
@@ -149,12 +174,19 @@ end
 \<close>
 
 (* Testing *)
-variables quantum Q :: bit and classical x :: bit and classical G :: bit and classical H :: bit 
-and quantum quantA :: string
-and quantum Hout :: string
-and quantum Hin :: string
-and quantum Gout :: string
-and quantum Gin :: string
+experiment
+  fixes Q :: \<open>bit qvariable\<close>
+and x :: \<open>bit cvariable\<close>
+and G :: \<open>bit cvariable\<close>
+and H :: \<open>bit cvariable\<close>
+and quantA :: \<open>99 qvariable\<close>
+and Hout :: \<open>10 qvariable\<close>
+and Hin :: \<open>9 qvariable\<close>
+and Gout :: \<open>10 qvariable\<close>
+and Gin :: \<open>9 qvariable\<close>
+assumes [variable]: \<open>Axioms_Quantum.register Q\<close> \<open>Axioms_Classical.register x\<close> \<open>Axioms_Classical.register G\<close>
+ \<open>Axioms_Classical.register H\<close> \<open>Axioms_Quantum.register quantA\<close> \<open>Axioms_Quantum.register Hout\<close>
+ \<open>Axioms_Quantum.register Hin\<close> \<open>Axioms_Quantum.register Gout\<close> \<open>Axioms_Quantum.register Gin\<close>
 begin
 lemma "qrhl Expr[\<CC>\<ll>\<aa>[G1 = G2 \<and> Hr1 = Hr2 \<and> H01 = H02 \<and> Hq1 = Hq2 \<and> H1 = H2 \<and> pk1 = pk2 \<and> skfo1 = skfo2 \<and> mstar1 = mstar2 \<and> cstar1 = cstar2 \<and> Kstar1 = Kstar2 \<and> in_pk1 = in_pk2 \<and> in_cstar1 = in_cstar2 \<and> classA1 = classA2 \<and> c1 = c2 \<and> K'1 = K'2 \<and> b1 = b2]
          \<sqinter> \<lbrakk>quantA1, Hin1, Hout1, Gin1, Gout1\<rbrakk> \<equiv>\<qq> \<lbrakk>quantA2, Hin2, Hout2, Gin2, Gout2\<rbrakk>]

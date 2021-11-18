@@ -1,6 +1,6 @@
 (* TODO: distribute in separate theories *)
 theory Tactics
-  imports Expressions Relational_Hoare
+  imports (* Expressions *) Relational_Hoare
 begin
 
 

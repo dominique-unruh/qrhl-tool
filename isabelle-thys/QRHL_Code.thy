@@ -39,12 +39,16 @@ lemma bounded_of_mat_Z[code]: "mat_of_cblinfun pauliZ = matrix_Z"
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
 lemma bounded_of_mat_Y[code]: "mat_of_cblinfun pauliY = matrix_Y"
   by (cheat 16)
-definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
+(* definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]" *)
 lemma bounded_of_mat_hadamard[code]: "mat_of_cblinfun hadamard = matrix_hadamard"
-  by (cheat 16)
-definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]"
+  unfolding hadamard_def
+  apply (rule cblinfun_of_mat_inverse)
+  by (auto simp add: matrix_hadamard_def)
+(* definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]" *)
 lemma bounded_of_mat_CNOT[code]: "mat_of_cblinfun CNOT = matrix_CNOT"
-  by (cheat 17)
+  unfolding CNOT_def
+  apply (rule cblinfun_of_mat_inverse)
+  by (auto simp add: matrix_CNOT_def)
 
 
 (* TODO move *)
@@ -55,12 +59,12 @@ instance apply intro_classes unfolding less_bit_def less_eq_bit_def by auto
 end
 
 (* TODO move *)
-instantiation bit :: card_UNIV begin
+(* instantiation bit :: card_UNIV begin
 definition "finite_UNIV_bit = Phantom(bit) True"
 definition "card_UNIV_bit = Phantom(bit) (2::nat)"
 instance apply intro_classes unfolding finite_UNIV_bit_def card_UNIV_bit_def 
   apply auto unfolding UNIV_bit by simp 
-end
+end *)
 
 
 
@@ -99,18 +103,18 @@ lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = ad
 (* declare ord_clinear_space_inst.less_eq_clinear_space[code del]
 declare ord_clinear_space_inst.less_clinear_space[code del] *)
 
-derive (eq) ceq bit
+(* derive (eq) ceq bit *)
 derive (linorder) compare_order bit
-derive (compare) ccompare bit
-derive (dlist) set_impl bit
+(* derive (compare) ccompare bit *)
+(* derive (dlist) set_impl bit *)
 derive (eq) ceq real
 derive (linorder) compare real
 derive (compare) ccompare real
 derive (eq) ceq complex
 derive (no) ccompare complex
 
-lemmas prepare_for_code = quantum_equality_full_def_let add_join_variables_hint space_div_space_div_unlifted
-  space_div_add_extend_lift_as_var_concat_hint INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
+lemmas prepare_for_code = quantum_equality_full_def_let (* add_join_variables_hint *) space_div_space_div_unlifted
+  (* space_div_add_extend_lift_as_var_concat_hint *) INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
   top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2
 
 unbundle no_jnf_notation
