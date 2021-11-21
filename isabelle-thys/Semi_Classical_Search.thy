@@ -12,7 +12,7 @@ lemma semi_classical_search:
     and localsC :: "'c cvariable" and localsQ :: "'d qvariable"
 
   assumes "game_left  = block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,z\<rbrakk> Expr[distr], 
-                        assign \<lbrakk>var_Find\<rbrakk> Expr[False],
+                        assign \<lbrakk>Find\<rbrakk> Expr[False],
                         localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]]"
   assumes "game_right = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>stop_at\<rbrakk> Expr[uniform {..<q}],
                          sample \<lbrakk>S,G,z\<rbrakk> Expr[distr], 
@@ -43,7 +43,7 @@ lemma semi_classical_search:
   shows "Pleft \<le> 4 * real q * Pright"
     by (cheat Semi_Classical_Search)
 
-lemmas semi_classical_search' = semi_classical_search[where localsC="Classical_Extra.empty_var" and localsQ="Quantum_Extra2.empty_var", 
+lemmas semi_classical_search' = semi_classical_search[where localsC="empty_cregister" and localsQ="empty_qregister", 
     unfolded localvars_empty[of "[_]", unfolded singleton_block]]
 
 ML \<open>
@@ -61,8 +61,8 @@ fun semi_classical_search_tac' scs_rule ctxt =
     THEN' pb_tac
     THEN' pb_tac
     THEN' pb_tac
-    THEN' O2H.distinct_vars_tac ctxt
-    THEN' O2H.distinct_vars_tac ctxt
+    THEN' Prog_Variables.distinct_vars_tac ctxt
+    THEN' Prog_Variables.distinct_vars_tac ctxt
     (* THEN' O2H.free_vars_tac ctxt *)
   end
 
@@ -76,7 +76,7 @@ experiment
   fixes b :: \<open>bit cvariable\<close>
     and Find :: \<open>bool cvariable\<close>
     and S :: \<open>sometype set cvariable\<close>
-    and G :: \<open>sometype \<Rightarrow> bit qvariable\<close>
+    and G :: \<open>(sometype \<Rightarrow> bit) cvariable\<close>
     and z :: \<open>nat list cvariable\<close>
     and count :: \<open>nat cvariable\<close>
     and X :: \<open>sometype qvariable\<close>
@@ -84,18 +84,20 @@ experiment
     and in_S :: \<open>bit cvariable\<close>
     and guess :: \<open>sometype cvariable\<close>
     and stop_at :: \<open>nat cvariable\<close>
+  assumes [variable]: \<open>cregister b\<close> \<open>cregister Find\<close> \<open>cregister S\<close> \<open>cregister G\<close> \<open>cregister z\<close>
+    \<open>cregister count\<close> \<open>cregister in_S\<close> \<open>cregister guess\<close> \<open>cregister stop_at\<close> \<open>qregister X\<close> \<open>qregister Y\<close>
 begin
 
-definition test_distr :: "(string set * (string\<Rightarrow>bit) * nat list) distr" where "test_distr = undefined"
+definition test_distr :: "(sometype set * (sometype\<Rightarrow>bit) * nat list) distr" where "test_distr = undefined"
 definition adv :: oracle_program where "adv = undefined"
 definition Count :: oracle_program where "Count = undefined"
 
 definition [program_bodies]: "queryG = (block [qapply \<lbrakk>X,Y\<rbrakk> Expr[Uoracle G]])"
-definition [program_bodies]: "queryGS =  (block [measurement \<lbrakk>var_in_S\<rbrakk> \<lbrakk>X\<rbrakk> Expr[binary_measurement (proj_classical_set S)],
-                            ifthenelse Expr[in_S=1] [assign \<lbrakk>var_Find\<rbrakk> Expr[True]] [],
+definition [program_bodies]: "queryGS =  (block [measurement \<lbrakk>in_S\<rbrakk> \<lbrakk>X\<rbrakk> Expr[binary_measurement (proj_classical_set S)],
+                            ifthenelse Expr[in_S=1] [assign \<lbrakk>Find\<rbrakk> Expr[True]] [],
                             queryG])"
 definition [program_bodies]: "queryGM = block [
-  ifthenelse Expr[count=stop_at] [measurement \<lbrakk>var_guess\<rbrakk> \<lbrakk>X\<rbrakk> Expr[computational_basis]] [], queryG]"
+  ifthenelse Expr[count=stop_at] [measurement \<lbrakk>guess\<rbrakk> \<lbrakk>X\<rbrakk> Expr[computational_basis]] [], queryG]"
 
 (*   assumes "game_right = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>stop_at\<rbrakk> Expr[uniform {..<q}],
                          sample \<lbrakk>S,G,z\<rbrakk> Expr[distr], 
@@ -104,19 +106,19 @@ definition [program_bodies]: "queryGM = block [
 
 definition "q = (123::nat)"
 
-definition [program_bodies]: "left = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], 
-        sample \<lbrakk>var_S, var_G, var_z\<rbrakk> Expr[test_distr],
-        assign \<lbrakk>var_Find\<rbrakk> (const_expression False),
+definition [program_bodies]: "left = block [assign \<lbrakk>count\<rbrakk> Expr[0], 
+        sample \<lbrakk>S, G, z\<rbrakk> Expr[test_distr],
+        assign \<lbrakk>Find\<rbrakk> Expr[False],
         localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]]"
-definition [program_bodies]: "right = block [assign \<lbrakk>var_count\<rbrakk> Expr[0], 
-        sample \<lbrakk>var_stop_at\<rbrakk> Expr[uniform {..<q}],
-        sample \<lbrakk>var_S, var_G, var_z\<rbrakk> Expr[test_distr],
+definition [program_bodies]: "right = block [assign \<lbrakk>count\<rbrakk> Expr[0], 
+        sample \<lbrakk>stop_at\<rbrakk> Expr[uniform {..<q}],
+        sample \<lbrakk>S, G, z\<rbrakk> Expr[test_distr],
         localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGM]]]]"
 
-lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>var_count\<rbrakk> Expr[count+1]]" for P  
+lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk> Expr[count+1]]" for P  
   by (cheat Count)
 
-lemma fv_adv[program_fv]: "fvc_oracle_program adv = set (variable_names \<lbrakk>X,Y,var_b,var_z\<rbrakk>)" by (cheat fv_adv)
+lemma fv_adv[program_fv]: "fvc_oracle_program adv = set (variable_names \<lbrakk>X,Y,b,z\<rbrakk>)" by (cheat fv_adv)
 
 lemma "Pr[Find:left(rho)] \<le> 4 * real q * Pr[guess\<in>S:right(rho)]"
   apply (tactic \<open>Semi_Classical_Search.semi_classical_search_tac \<^context> 1\<close>)

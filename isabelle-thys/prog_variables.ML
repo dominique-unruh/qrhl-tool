@@ -16,17 +16,15 @@ fun mk_conjs [] = \<^const>\<open>True\<close>
   | mk_conjs (t::ts) = \<^const>\<open>conj\<close> $ t $ mk_conjs ts
 (* fun mk_variable_name v = 
   Const(\<^const_name>\<open>variable_name\<close>, fastype_of v --> \<^typ>\<open>string\<close>) $ v *)
-fun mk_cvariableT T = (T --> Type(\<^type_name>\<open>option\<close>,[T])) --> \<^typ>\<open>cl Axioms_Classical.update\<close>
-fun mk_qvariableT T = mk_bounded2T T --> \<^typ>\<open>qu Axioms_Quantum.update\<close>
-fun mk_c2variableT T = (T --> Type(\<^type_name>\<open>option\<close>,[T])) --> \<^typ>\<open>cl2 Axioms_Classical.update\<close>
-fun mk_q2variableT T = mk_bounded2T T --> \<^typ>\<open>qu2 Axioms_Quantum.update\<close>
+fun mk_cvariableT T = Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl\<close>])
+fun mk_qvariableT T = Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu\<close>])
+fun mk_c2variableT T = Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl2\<close>])
+fun mk_q2variableT T = Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu2\<close>])
 
-fun dest_cvariableT (Type("fun",[Type("fun",[T,Type(\<^type_name>\<open>option\<close>,[U])]), \<^typ>\<open>cl Axioms_Classical.update\<close>])) =
-        if T=U then T else raise TYPE("dest_cvariableT", [T,U], [])
+fun dest_cvariableT (Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl\<close>])) = T
   | dest_cvariableT T = raise TYPE("dest_cvariableT", [T], [])
 
-fun dest_qvariableT (Type("fun",[(Type(\<^type_name>\<open>cblinfun\<close>, [Type(\<^type_name>\<open>ell2\<close>,[T]),Type(\<^type_name>\<open>ell2\<close>,[U])])), \<^typ>\<open>qu Axioms_Quantum.update\<close>])) =
-        if T=U then T else raise TYPE("dest_qvariableT", [T,U], [])
+fun dest_qvariableT (Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu\<close>])) = T
   | dest_qvariableT T = raise TYPE("dest_qvariableT", [T], [])
 
 fun strip_var_prefix x = if String.isPrefix "var_" x 
@@ -102,12 +100,12 @@ fun add_varinfo morph name vartype register context = let
 
 fun declare_variable_morph m name vartype typ = let
     val register = Free(name, if vartype=Classical then mk_cvariableT typ else mk_qvariableT typ)
-    val comp = if vartype=Classical then Const(\<^const_name>\<open>comp\<close>, \<^typ>\<open>cl c2variable\<close> --> fastype_of register --> mk_c2variableT typ)
-                                    else Const(\<^const_name>\<open>comp\<close>, \<^typ>\<open>qu q2variable\<close> --> fastype_of register --> mk_q2variableT typ)
-    val register1 = if vartype=Classical then comp $ @{const Laws_Classical.Fst(cl,cl)} $ register
-                                         else comp $ @{const Laws_Quantum.Fst(qu,qu,qu)} $ register
-    val register2 = if vartype=Classical then comp $ @{const Laws_Classical.Snd(cl,cl)} $ register
-                                         else comp $ @{const Laws_Quantum.Snd(qu,qu,qu)} $ register
+    val chain = if vartype=Classical then Const(\<^const_name>\<open>cregister_chain\<close>, \<^typ>\<open>cl c2variable\<close> --> fastype_of register --> mk_c2variableT typ)
+                                    else Const(\<^const_name>\<open>qregister_chain\<close>, \<^typ>\<open>qu q2variable\<close> --> fastype_of register --> mk_q2variableT typ)
+    val register1 = if vartype=Classical then chain $ @{const cFst(cl,cl)} $ register
+                                         else chain $ @{const qFst(qu,qu)} $ register
+    val register2 = if vartype=Classical then chain $ @{const cSnd(cl,cl)} $ register
+                                         else chain $ @{const qSnd(qu,qu)} $ register
   in
       add_varinfo m name vartype register #>
       add_varinfo m (name^"1") vartype register1 #>
@@ -122,9 +120,9 @@ fun declare_variable_ctxt name vartype typ = Context.proof_map (declare_variable
 
 fun declare_variable_from_thm (thm:thm) = let
   val (vartype, name, T) = case Thm.prop_of thm of
-      Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>Axioms_Classical.register\<close>, _) $ Free(name, T')) =>
+      Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ Free(name, T')) =>
             (Classical, name, dest_cvariableT T')
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>Axioms_Quantum.register\<close>, _) $ Free(name, T')) =>
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qregister\<close>, _) $ Free(name, T')) =>
             (Quantum, name, dest_qvariableT T')
     | _ => raise THM ("declare_variable_from_thm: theorem must be of the form 'Axioms_Classical.register x' or 'Axioms_Quantum.register x' where x is a free variable", 0, [thm])
   in (declare_variable_morph Morphism.identity name vartype T) end
@@ -348,6 +346,14 @@ end *)
    where x,y are explicit variables *)
 (* TODO: something more specific than just simplifier? *)
 (* fun different_variable_names_tac ctxt = SOLVED' (simp_tac ctxt) *)
+
+fun distinct_vars_tac ctxt = let
+  val ctxt = ctxt addsimps @{thms 
+    distinct_cvars_split1 distinct_cvars_split2 cregister_pair_iff_compatible ccompatible3 ccompatible3'
+    distinct_qvars_split1 distinct_qvars_split2 qregister_pair_iff_compatible qcompatible3 qcompatible3'
+    Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
+  in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
+
 
 
 end

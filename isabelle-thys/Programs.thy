@@ -25,8 +25,8 @@ consts
   sample :: "'a cvariable \<Rightarrow> 'a distr expression \<Rightarrow> program"
   ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program"
   while :: "bool expression \<Rightarrow> program list \<Rightarrow> program"
-  qinit :: "'a::finite qvariable \<Rightarrow> 'a ell2 expression \<Rightarrow> program"
-  qapply :: "'a::finite qvariable \<Rightarrow> ('a,'a) l2bounded expression \<Rightarrow> program"
+  qinit :: "'a qvariable \<Rightarrow> 'a ell2 expression \<Rightarrow> program"
+  qapply :: "'a qvariable \<Rightarrow> ('a,'a) l2bounded expression \<Rightarrow> program"
   measurement :: "'a cvariable \<Rightarrow> 'b qvariable \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
   instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
   localvars :: "'a cvariable \<Rightarrow> 'b qvariable \<Rightarrow> program list \<Rightarrow> program"
@@ -97,7 +97,7 @@ lemma fvcw_program_qapply: "fvcw_program (qapply Q e4) = CVARIABLE_unit"
 lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CVARIABLE_of x"
   by (cheat TODO7)
 
-lemma localvars_empty: "localvars Classical_Extra.empty_var Quantum_Extra2.empty_var P = block P"
+lemma localvars_empty: "localvars empty_cregister empty_qregister P = block P"
   by (cheat localvars_empty)
 
 lemma singleton_block: "block [P] = P"
@@ -179,7 +179,7 @@ hide_const probability_syntax
 
 experiment
   fixes x :: \<open>nat cvariable\<close>
-  assumes [variable]: \<open>Axioms_Classical.register x\<close>
+  assumes [variable]: \<open>cregister x\<close>
 begin
 (* local_setup \<open>Prog_Variables.declare_variable_lthy (\<^term>\<open>x\<close> |> dest_Free |> fst) Prog_Variables.Classical \<^typ>\<open>nat\<close>\<close> *)
 term \<open>Expr[x1+1]\<close>

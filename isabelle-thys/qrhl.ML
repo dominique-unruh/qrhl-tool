@@ -60,13 +60,10 @@ fun simp_conv_premises ctxt thm =
 
 (* Given a term of the form "A\<guillemotright>Q", returns (lift,A,Q) where "lift x y" evaluates 
    to x/y if \<guillemotright> is a lifting of subspace/bounded, respectively.  *)
-fun dest_lift (t as (Const(lift,_) $ S $ Q)) = let
-  val lift_kind = case lift of \<^const_name>\<open>liftSpace\<close> => (fn x => fn _ => x)
-                             | \<^const_name>\<open>liftOp\<close> => (fn _ => fn y => y)
-                             | _ => raise TERM("dest_lift: lift is "^lift, [t])
-  in
-    (lift_kind,S,Q)
-  end
+fun dest_lift (t as (Const(lift,_) $ S $ Q)) = 
+  (case lift of \<^const_name>\<open>liftSpace\<close> => ((fn x => fn _ => x), S, Q)
+                             | \<^const_name>\<open>apply_qregister\<close> => ((fn _ => fn y => y), Q, S)
+                             | _ => raise TERM("dest_lift: lift is "^lift, [t]))
   | dest_lift t = raise TERM("dest_lift",[t])
 
 (* (* Converts "A >> Q" into "A' >> (Q\<otimes>R)" for some A' *)

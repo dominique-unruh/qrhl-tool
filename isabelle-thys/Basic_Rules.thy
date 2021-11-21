@@ -19,8 +19,8 @@ lemma sym_rule:
 
 lemma assign1_rule:
   fixes A B x e
-  assumes \<open>Axioms_Classical.register x\<close>
-  defines "A == (\<lambda>m::cl2. B (setter (Laws_Classical.Fst o x) (e (fst m)) m))"
+  assumes \<open>cregister x\<close>
+  defines "A == (\<lambda>m::cl2. B (setter (cregister_chain cFst x) (e (fst m)) m))"
   shows "qrhl A [assign x e] [] B"
   by (cheat assign1_rule)
 
@@ -42,31 +42,30 @@ lemma index_flip_vars_index_vars: "index_flip_vars (index_vars left xs) = index_
 
 (* TODO to Registers *)
 lemma setter_chain: 
-  assumes \<open>Axioms_Classical.register F\<close> \<open>Axioms_Classical.register G\<close>
-  shows \<open>setter (F o G) a m = setter F (setter G a (getter F m)) m\<close>
+  assumes \<open>cregister F\<close> \<open>cregister G\<close>
+  shows \<open>setter (cregister_chain F G) a m = setter F (setter G a (getter F m)) m\<close>
   sorry
 
 (* TODO to Registers *)
-lemma setter_Fst: \<open>setter Laws_Classical.Fst = (\<lambda>x (_,y). (x,y))\<close>
-  unfolding setter_def 
+lemma setter_Fst: \<open>setter cFst = (\<lambda>x (_,y). (x,y))\<close>
   sorry
 
 (* TODO to Registers *)
-lemma setter_Snd: \<open>setter Laws_Classical.Snd = (\<lambda>y (x,_). (x,y))\<close>
+lemma setter_Snd: \<open>setter cSnd = (\<lambda>y (x,_). (x,y))\<close>
   sorry
 
 (* TODO to Registers *)
-lemma getter_Fst: \<open>getter Laws_Classical.Fst = fst\<close>
+lemma getter_Fst: \<open>getter cFst = fst\<close>
   sorry
 
 (* TODO to Registers *)
-lemma getter_Snd: \<open>getter Laws_Classical.Snd = snd\<close>
+lemma getter_Snd: \<open>getter cSnd = snd\<close>
   sorry
 
 lemma assign2_rule:
   fixes A B x e
-  assumes [Laws_Classical.register]: \<open>Axioms_Classical.register x\<close>
-  defines "A == (\<lambda>m::cl2. B (setter (Laws_Classical.Snd o x) (e (snd m)) m))"
+  assumes [simp]: \<open>cregister x\<close>
+  defines "A == (\<lambda>m::cl2. B (setter (cregister_chain cSnd x) (e (snd m)) m))"
   shows "qrhl A [] [assign x e] B"
   apply (rule sym_rule)
   apply (subst DEADID.rel_mono_strong[of \<open>(\<lambda>m. index_flip_subspace (A (prod.swap m)))\<close>]) defer
@@ -75,8 +74,8 @@ lemma assign2_rule:
 
 lemma sample1_rule:
   fixes A B xs e
-  assumes \<open>Axioms_Classical.register xs\<close>
-  defines "xs1 == Laws_Classical.Fst o xs"
+  assumes \<open>cregister xs\<close>
+  defines "xs1 == cregister_chain cFst xs"
   defines "e1 == (\<lambda>m. e (fst m))"
   defines "\<And>z. B' z == (\<lambda>m. B (setter xs1 z m))"
   defines "A == (\<lambda>m. Cla[weight (e1 m) = 1] \<sqinter> (INF z\<in>supp (e1 m). B' z m))"
@@ -122,8 +121,8 @@ lemma uniform_expression_family_expression[simp]:
 
 lemma sample2_rule:
   fixes A B xs e
-  assumes [Laws_Classical.register]: \<open>Axioms_Classical.register xs\<close>
-  defines "xs1 == Laws_Classical.Snd o xs"
+  assumes [simp]: \<open>cregister xs\<close>
+  defines "xs1 == cregister_chain cSnd xs"
   defines "e1 == (\<lambda>m. e (snd m))"
   defines "\<And>z. B' z == (\<lambda>m. B (setter xs1 z m))"
   defines "A == (\<lambda>m. Cla[weight (e1 m) = 1] \<sqinter> (INF z\<in>supp (e1 m). B' z m))"
@@ -151,8 +150,8 @@ structure Basic_Rules =
 struct
 
 fun after_sym_rule_conv ctxt =
-  (Conv.bottom_conv (fn ctxt => (Conv.try_conv (Expressions.map_expression_conv then_conv Expressions.clean_expression_conv ctxt))) ctxt) 
-then_conv
+(*   (Conv.bottom_conv (fn ctxt => (Conv.try_conv (Expressions.map_expression_conv then_conv Expressions.clean_expression_conv ctxt))) ctxt) 
+then_conv *)
   (Raw_Simplifier.rewrite ctxt false @{thms 
       index_flip_subspace_lift[THEN eq_reflection]
       index_flip_subspace_top[THEN eq_reflection]
@@ -162,9 +161,17 @@ then_conv
       index_flip_subspace_plus[THEN eq_reflection]
       index_flip_subspace_Cla[THEN eq_reflection]
       index_flip_subspace_quantum_equality[THEN eq_reflection]
-    })
-then_conv
-  (Expressions.index_conv ctxt)
+
+      (* TODO move to general tactic? *)
+      index_flip_qvar_register_pair[THEN eq_reflection]
+      index_flip_qvar_chain[THEN eq_reflection]
+      index_flip_qvar_Fst[THEN eq_reflection]
+      index_flip_qvar_Snd[THEN eq_reflection]
+      getter_Fst_chain_swap[THEN eq_reflection]
+      getter_Snd_chain_swap[THEN eq_reflection]
+  })
+(* then_conv
+  (Expressions.index_conv ctxt) *)
 
 fun sym_tac ctxt =
   resolve_tac ctxt @{thms sym_rule}
@@ -184,9 +191,9 @@ and Hout :: \<open>10 qvariable\<close>
 and Hin :: \<open>9 qvariable\<close>
 and Gout :: \<open>10 qvariable\<close>
 and Gin :: \<open>9 qvariable\<close>
-assumes [variable]: \<open>Axioms_Quantum.register Q\<close> \<open>Axioms_Classical.register x\<close> \<open>Axioms_Classical.register G\<close>
- \<open>Axioms_Classical.register H\<close> \<open>Axioms_Quantum.register quantA\<close> \<open>Axioms_Quantum.register Hout\<close>
- \<open>Axioms_Quantum.register Hin\<close> \<open>Axioms_Quantum.register Gout\<close> \<open>Axioms_Quantum.register Gin\<close>
+assumes [variable]: \<open>qregister Q\<close> \<open>cregister x\<close> \<open>cregister G\<close>
+ \<open>cregister H\<close> \<open>qregister quantA\<close> \<open>qregister Hout\<close>
+ \<open>qregister Hin\<close> \<open>qregister Gout\<close> \<open>qregister Gin\<close>
 begin
 lemma "qrhl Expr[\<CC>\<ll>\<aa>[G1 = G2 \<and> Hr1 = Hr2 \<and> H01 = H02 \<and> Hq1 = Hq2 \<and> H1 = H2 \<and> pk1 = pk2 \<and> skfo1 = skfo2 \<and> mstar1 = mstar2 \<and> cstar1 = cstar2 \<and> Kstar1 = Kstar2 \<and> in_pk1 = in_pk2 \<and> in_cstar1 = in_cstar2 \<and> classA1 = classA2 \<and> c1 = c2 \<and> K'1 = K'2 \<and> b1 = b2]
          \<sqinter> \<lbrakk>quantA1, Hin1, Hout1, Gin1, Gout1\<rbrakk> \<equiv>\<qq> \<lbrakk>quantA2, Hin2, Hout2, Gin2, Gout2\<rbrakk>]

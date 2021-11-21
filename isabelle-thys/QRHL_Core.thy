@@ -1,6 +1,6 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" BOLegacy Discrete_Distributions 
-    Universe Misc_Missing Prog_Variables Registers.Pure_States
+    Universe Misc_Missing Prog_Variables (* Registers.Pure_States *)
   keywords "declare_variable_type" :: thy_decl
 begin
 
@@ -106,7 +106,7 @@ definition \<open>Uswap = classical_operator (\<lambda>(x,y). Some(y,x))\<close>
 
 definition index_flip_vector :: "qu2 ell2 \<Rightarrow> qu2 ell2" where \<open>index_flip_vector \<psi> = Uswap *\<^sub>V \<psi>\<close>
 
-axiomatization swap_variables_vector :: "'a::finite q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 \<Rightarrow> qu2 ell2"
+axiomatization swap_variables_vector :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 \<Rightarrow> qu2 ell2"
 
 definition index_flip_subspace :: "qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace"
   where \<open>index_flip_subspace S = Uswap *\<^sub>S S\<close>
@@ -114,7 +114,7 @@ definition index_flip_subspace :: "qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 cc
 lemma index_flip_subspace_INF: \<open>index_flip_subspace (INF i\<in>A. S i) = (INF i\<in>A. index_flip_subspace (S i))\<close>
   by (cheat index_flip_subspace_INF)
 
-axiomatization swap_variables_subspace :: "'a::finite q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace"
+axiomatization swap_variables_subspace :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace"
 
 lemma index_flip_subspace_top[simp]: "index_flip_subspace top = top"
   by (cheat index_flip_subspace_top)
@@ -167,16 +167,16 @@ lemma swap_variables_vars_singleton3[simp]:
 
 subsection "Distinct quantum variables"
 
-abbreviation (input) qvariables_local :: \<open>'a::finite q2variable \<Rightarrow> 'b::finite q2variable \<Rightarrow> bool\<close> where
-  \<open>qvariables_local Q R \<equiv> compatible Q (complement R)\<close>
+abbreviation (input) qvariables_local :: \<open>'a q2variable \<Rightarrow> 'b q2variable \<Rightarrow> bool\<close> where
+  \<open>qvariables_local Q R \<equiv> Qqcompatible (QCOMPLEMENT (QREGISTER_of R)) Q\<close>
 
-axiomatization operator_local :: "(qu2,qu2) l2bounded \<Rightarrow> 'a::finite q2variable \<Rightarrow> bool" 
+axiomatization operator_local :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool" 
 
-axiomatization predicate_local :: "predicate \<Rightarrow> 'a::finite q2variable \<Rightarrow> bool"
+axiomatization predicate_local :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool"
 
-axiomatization colocal_pred_qvars :: "predicate \<Rightarrow> 'a::finite q2variable \<Rightarrow> bool"
+axiomatization colocal_pred_qvars :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool"
 
-axiomatization colocal_op_qvars :: "(qu2,qu2) l2bounded \<Rightarrow> 'a::finite q2variable \<Rightarrow> bool"
+axiomatization colocal_op_qvars :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool"
 
 axiomatization colocal_op_pred :: "(qu2,qu2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
 
@@ -211,17 +211,18 @@ lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> oper
 
 subsection \<open>Lifting\<close>
 
-definition liftOp :: "('a,'a) l2bounded \<Rightarrow> 'a::finite q2variable \<Rightarrow> (qu2,qu2) l2bounded" 
+abbreviation (input) \<open>liftOp == (\<lambda>A (F::'a q2variable). apply_qregister F A)\<close>
+(* definition liftOp :: "('a,'a) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> (qu2,qu2) l2bounded" 
   (* Convention: If not distinct_qvars Q, then liftOp A Q := 0 *)
-  where "liftOp A x = (if register x then x A else 0)"
+  where "liftOp A x = (if register x then x A else 0)" *)
 definition
   (* Convention: If not distinct_qvars Q, then liftOp A Q := bot *)
-  liftSpace :: "'a subspace \<Rightarrow> 'a::finite q2variable \<Rightarrow> predicate"
-  where \<open>liftSpace S x = (if register x then x (Proj S) *\<^sub>S \<top> else bot)\<close>
-definition
+  liftSpace :: "'a subspace \<Rightarrow> 'a q2variable \<Rightarrow> predicate"
+  where \<open>liftSpace S x = apply_qregister x (Proj S) *\<^sub>S \<top>\<close>
+(* definition
   (* lift_vector \<psi> Q \<psi>' = \<psi> \<otimes> \<psi>' where \<psi> is interpreted as a vector over Q, and \<psi>' as a vector over the complement of Q *)
-  lift_vector :: "'a::{finite,default} ell2 \<Rightarrow> 'a q2variable \<Rightarrow> ('a, qu \<times> qu) complement_domain ell2 \<Rightarrow> qu2 ell2" 
-  where \<open>lift_vector \<psi> Q \<psi>' = (Q(\<psi>) \<otimes>\<^sub>p (complement Q)(\<psi>'))\<close>
+  lift_vector :: "'a::default ell2 \<Rightarrow> 'a q2variable \<Rightarrow> ('a, qu \<times> qu) complement_domain ell2 \<Rightarrow> qu2 ell2" 
+  where \<open>lift_vector \<psi> Q \<psi>' = (Q(\<psi>) \<otimes>\<^sub>p (complement Q)(\<psi>'))\<close> *)
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<guillemotright>_"  [91,91] 90)
 syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_>>_"  [91,91] 90)
@@ -266,50 +267,52 @@ lemma tensor_lift:
   shows "(A\<otimes>B)\<guillemotright>(variable_concat Q R) = (A\<guillemotright>Q) \<sqinter> (B\<guillemotright>R)"
   by (cheat tensor_lift)
 
-lemma lift_inf[simp]: "S\<guillemotright>Q \<sqinter> T\<guillemotright>Q = (S \<sqinter> T)\<guillemotright>Q" for S::"'a::finite subspace"
+lemma lift_inf[simp]: "S\<guillemotright>Q \<sqinter> T\<guillemotright>Q = (S \<sqinter> T)\<guillemotright>Q" for S::"'a subspace"
   by (cheat lift_inf)
-lemma lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a::finite subspace"
+lemma lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a subspace"
   by (cheat lift_leq)
-lemma lift_eqSp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a::finite subspace" 
+lemma lift_eqSp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a subspace" 
   by (cheat lift_eqSp)
-lemma lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a::finite,'a) l2bounded" 
+lemma lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a,'a) l2bounded" 
   by (cheat TODO11)
-lemma lift_plus[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a::finite subspace"  
+lemma lift_plus[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a subspace"  
   by (cheat TODO11)
-lemma lift_sup[simp]: "S\<guillemotright>Q \<squnion> T\<guillemotright>Q = (S \<squnion> T)\<guillemotright>Q" for S T :: "'a::finite subspace"  
+lemma lift_sup[simp]: "S\<guillemotright>Q \<squnion> T\<guillemotright>Q = (S \<squnion> T)\<guillemotright>Q" for S T :: "'a subspace"  
   by (cheat TODO11)
-lemma lift_plusOp[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a::finite,'a) l2bounded"  
+lemma lift_plusOp[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a,'a) l2bounded"  
   by (cheat TODO11)
-lemma lift_uminusOp[simp]: "- (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a::finite,'a) l2bounded"  
+lemma lift_uminusOp[simp]: "- (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a,'a) l2bounded"  
   (* unfolding uminus_l2bounded_def by simp *)
   by (cheat lift_uminusOp)
-lemma lift_minusOp[simp]: "S\<guillemotright>Q - T\<guillemotright>Q = (S - T)\<guillemotright>Q" for S T :: "('a::finite,'a) l2bounded"  
+lemma lift_minusOp[simp]: "S\<guillemotright>Q - T\<guillemotright>Q = (S - T)\<guillemotright>Q" for S T :: "('a,'a) l2bounded"  
   (* unfolding minus_l2bounded_def by simp *)
   by (cheat lift_minusOp)
-lemma lift_timesOp[simp]: "S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a::finite,'a) l2bounded"  
+lemma lift_timesOp[simp]: "S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a,'a) l2bounded"  
   by (cheat TODO11)
-lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> - (S\<guillemotright>Q) = (- S)\<guillemotright>Q" for Q :: "'a::finite q2variable" and S :: "'a ell2 ccsubspace"
+lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> - (S\<guillemotright>Q) = (- S)\<guillemotright>Q" for Q :: "'a q2variable" and S :: "'a ell2 ccsubspace"
   by (cheat TODO11)
-lemma lift_tensorOp: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>variable_concat Q R" for Q :: "'a::finite q2variable" and R :: "'b::finite q2variable" and S T :: "(_,_) l2bounded" 
+lemma lift_tensorOp: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>variable_concat Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S T :: "(_,_) l2bounded" 
   by (cheat TODO11)
-lemma lift_tensorSpace: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>variable_concat Q R" for Q :: "'a::finite q2variable" and R :: "'b::finite q2variable" and S :: "_ subspace" 
+lemma lift_tensorSpace: "distinct_qvars (variable_concat Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>variable_concat Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S :: "_ subspace" 
   by (cheat TODO11)
-lemma lift_id_cblinfun[simp]: "distinct_qvars Q \<Longrightarrow> id_cblinfun\<guillemotright>Q = id_cblinfun" for Q :: "'a::finite q2variable"
+lemma lift_id_cblinfun[simp]: "distinct_qvars Q \<Longrightarrow> id_cblinfun\<guillemotright>Q = id_cblinfun" for Q :: "'a q2variable"
   by (cheat TODO11)
-lemma INF_lift: "(INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" for Q::"'a::finite q2variable" and S::"'b \<Rightarrow> 'a subspace"
+lemma INF_lift: "(INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" for Q::"'a q2variable" and S::"'b \<Rightarrow> 'a subspace"
   by (cheat TODO11)
 lemma Cla_inf_lift: "Cla[b] \<sqinter> (S\<guillemotright>Q) = (if b then S else bot)\<guillemotright>Q" by auto
 lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 lemma Cla_sup_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<squnion> (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 lemma Proj_lift[simp]: "Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
-  for Q::"'a::finite q2variable"
+  for Q::"'a q2variable"
   by (cheat Proj_lift)
-lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q::"'a::finite q2variable"
+lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q::"'a q2variable"
   by (cheat TODO11)
-lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a::finite q2variable"
-  unfolding eigenspace_def apply (subst lift_id_cblinfun[symmetric, of Q], assumption) by (simp del: lift_id_cblinfun)
+lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a q2variable"
+  unfolding eigenspace_def apply (subst lift_id_cblinfun[symmetric, of Q], assumption)
+  apply (simp del: lift_id_cblinfun)
+  by (metis (no_types, lifting) apply_qregister_of_id kernel_lift lift_minusOp scaleC_lift)
 
-lemma top_leq_lift: "distinct_qvars Q \<Longrightarrow> top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S" 
+lemma top_leq_lift: "distinct_qvars Q \<Longrightarrow> top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S"
   apply (subst top_lift[symmetric], assumption) apply (subst lift_leq, assumption) by simp
 lemma top_geq_lift: "distinct_qvars Q \<Longrightarrow> top \<ge> S\<guillemotright>Q \<longleftrightarrow> top \<ge> S" 
   apply (subst top_lift[symmetric], assumption) apply (subst lift_leq, assumption) by simp
@@ -334,36 +337,40 @@ lemma colocal_op_commute:
 
 lemma remove_qvar_unit_op:
   "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op*)\<guillemotright>Q = A\<guillemotright>(variable_concat Q \<lbrakk>\<rbrakk>)"
-for A::"(_,_)l2bounded" and Q::"'a::finite q2variable"
+for A::"(_,_)l2bounded" and Q::"'a q2variable"
   by (cheat TODO12)
 
 
 lemma colocal_op_pred_lift1[simp,intro!]:
  "colocal_pred_qvars S Q \<Longrightarrow> colocal_op_pred (U\<guillemotright>Q) S"
-for Q :: "'a::finite q2variable" and U :: "('a,'a) l2bounded" and S :: predicate
+for Q :: "'a q2variable" and U :: "('a,'a) l2bounded" and S :: predicate
   by (cheat TODO12)
 
 
 lemma lift_extendR:
   assumes "distinct_qvars (variable_concat Q R)"
   shows "U\<guillemotright>Q = (U\<otimes>id_cblinfun)\<guillemotright>(variable_concat Q R)"
-  by (metis assms cblinfun_compose_id_right distinct_qvarsR lift_id_cblinfun lift_tensorOp)
+  apply (subst apply_qregister_pair)
+  using assms qregister_pair_iff_compatible apply blast
+  by (metis apply_qregister_of_id assms cblinfun_compose_id_right distinct_qvarsR)
 
 lemma lift_extendL:
   assumes "distinct_qvars (variable_concat Q R)"
   shows "U\<guillemotright>Q = (id_cblinfun\<otimes>U)\<guillemotright>(variable_concat R Q)"
-  by (metis assms distinct_qvarsR distinct_qvars_swap lift_id_cblinfun lift_tensorOp cblinfun_compose_id_left)
+  apply (subst apply_qregister_pair)
+  using assms distinct_qvars_swap qregister_pair_iff_compatible apply blast
+  by (metis apply_qregister_of_id assms cblinfun_compose_id_left distinct_qvarsR)
 
 lemma move_sup_meas_rule:
-  fixes Q::"'a::finite q2variable"
+  fixes Q::"'a q2variable"
   assumes "distinct_qvars Q"
   assumes "(Proj C)\<guillemotright>Q \<cdot> A \<le> B"
   shows "A \<le> (B\<sqinter>C\<guillemotright>Q) \<squnion> (- C)\<guillemotright>Q"
   apply (rule ccsubspace_supI_via_Proj) 
   using Proj_image_leq[of "C\<guillemotright>Q"] assms by simp
 
-lemma applyOp_lift: "distinct_qvars Q \<Longrightarrow> A\<guillemotright>Q \<cdot> lift_vector \<psi> Q \<psi>' = lift_vector (A\<cdot>\<psi>) Q \<psi>'"
-  by (cheat applyOp_lift)
+(* lemma applyOp_lift: "distinct_qvars Q \<Longrightarrow> A\<guillemotright>Q \<cdot> lift_vector \<psi> Q \<psi>' = lift_vector (A\<cdot>\<psi>) Q \<psi>'"
+  by (cheat applyOp_lift) *)
 
 lemma span_lift: "distinct_qvars Q \<Longrightarrow> ccspan G \<guillemotright> Q = ccspan {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
   by (cheat span_lift)
@@ -454,18 +461,18 @@ lemma qvar_trafo_adj[simp]: assumes "qvar_trafo A Q R" shows "qvar_trafo (inv A)
   by (metis (no_types, lifting) Laws_Quantum.iso_register_inv Laws_Quantum.iso_register_inv_comp2 assms qvar_trafo_def surj_f_inv_f surj_iff)
 
 lemma assoc_op_lift: "(assoc' A)\<guillemotright>(variable_concat (variable_concat Q R) T)
-     = A\<guillemotright>(variable_concat Q (variable_concat R T))" for A::"('a::finite*'b::finite*'c::finite,_)l2bounded" 
+     = A\<guillemotright>(variable_concat Q (variable_concat R T))" for A::"('a*'b*'c,_)l2bounded" 
   by (cheat assoc_op_lift)
 lemma assoc_op_lift': "(assoc A)\<guillemotright>(variable_concat Q (variable_concat R T))
-     = A\<guillemotright>(variable_concat (variable_concat Q R) T)" for A::"(('a::finite*'b::finite)*'c::finite,_)l2bounded" 
+     = A\<guillemotright>(variable_concat (variable_concat Q R) T)" for A::"(('a*'b)*'c,_)l2bounded" 
   by (cheat assoc_op_lift')
 lemma comm_op_lift: "(swap A)\<guillemotright>(variable_concat Q R)
-     = A\<guillemotright>(variable_concat R Q)" for A::"('a::finite*'b::finite,_)l2bounded" 
+     = A\<guillemotright>(variable_concat R Q)" for A::"('a*'b,_)l2bounded" 
   by (cheat comm_op_lift)
 lemma lift_tensor_id: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars (variable_concat Q R) \<Longrightarrow>
    (\<And>D::(_,_) l2bounded. (A D)\<guillemotright>Q = D\<guillemotright>Q') \<Longrightarrow> (\<And>D::(_,_) l2bounded. (A' D)\<guillemotright>R = D\<guillemotright>R') \<Longrightarrow> 
   ((Laws_Quantum.register_tensor A A') C)\<guillemotright>variable_concat Q R = C\<guillemotright>variable_concat Q' R'"
-  for A :: "'a::finite update \<Rightarrow> 'b::finite update" and A' :: "'c::finite update \<Rightarrow> 'd::finite update" 
+  for A :: "'a update \<Rightarrow> 'b update" and A' :: "'c update \<Rightarrow> 'd update" 
     and C::"(_,_) l2bounded" and Q R :: "_ q2variable"
   by (cheat lift_tensor_id)
 
@@ -503,7 +510,7 @@ lemma qvar_trafo_l2bounded:
   using assms unfolding qvar_trafo_def by auto
 
 lemma qvar_trafo_subspace:
-  fixes S::"'a::finite subspace"
+  fixes S::"'a subspace"
   assumes "qvar_trafo A Q R"
   shows "S\<guillemotright>Q = (A (Proj S) *\<^sub>S \<top>)\<guillemotright>R"
   by (metis (no_types, lifting) Proj_range assms imageOp_lift qvar_trafo_l2bounded)
@@ -562,7 +569,7 @@ lemma extend_lift_as_var_concat_hint_remove_aux: "extend_lift_as_var_concat_hint
      - the whole term should be rewritten into y'>>R for some y' 
   Rewriting the term is done by the simplifier rules declared below.
 *)
-definition "variable_renaming_hint x (A::'a::finite update \<Rightarrow> 'b::finite update) (R::'b::finite q2variable) = x"
+definition "variable_renaming_hint x (A::'a update \<Rightarrow> 'b update) (R::'b q2variable) = x"
 lemma variable_renaming_hint_cong[cong]: "x=x' \<Longrightarrow> variable_renaming_hint x A R = variable_renaming_hint x' A R" by simp
 
 (* A copy of qvars_trafo that is protected from unintentional rewriting *)
@@ -587,7 +594,7 @@ lemma variable_renaming_hint_l2bounded[simp]:
 
 
 lemma extend_space_lift_aux: \<comment> \<open>Auxiliary lemma for extend_lift_conv\<close>
-  fixes Q :: "'q::finite qvariable" and R :: "'r::finite qvariable"
+  fixes Q :: "'q qvariable" and R :: "'r qvariable"
     and S :: "'q subspace"
   assumes "distinct_qvars (register_pair Q R)"
   shows "liftSpace S Q \<equiv> (S\<otimes>top)\<guillemotright>(register_pair Q R)"
@@ -668,10 +675,10 @@ lemma variable_extension_hint_l2bounded[simp]:
     - the whole expression should be rewritten to x'\<guillemotright>Q\<otimes>R' such that Q\<otimes>R' has the same variables as Q\<otimes>R (duplicates removed)
   Rewriting the term is done by the simplifier rules declared below.
 *)
-definition "join_variables_hint x (R::'a::finite q2variable) = x"
+definition "join_variables_hint x (R::'a q2variable) = x"
 
 lemma add_join_variables_hint: 
-  fixes Q :: "'a::finite q2variable" and R :: "'b::universe variables" 
+  fixes Q :: "'a q2variable" and R :: "'b::universe variables" 
     and S :: "'a subspace" and T :: "'b subspace"
     and A :: "('a,'a) l2bounded" and B :: "('b,'b) l2bounded"
   shows "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>R = join_variables_hint (S\<guillemotright>Q) R \<sqinter> join_variables_hint (T\<guillemotright>R) Q"
@@ -1134,7 +1141,7 @@ section \<open>Quantum predicates (ctd.)\<close>
 
 subsection \<open>Subspace division\<close>
 
-consts space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a::finite q2variable \<Rightarrow> predicate"
+consts space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a q2variable \<Rightarrow> predicate"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
 lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
   by (cheat TODO14)
@@ -1159,15 +1166,15 @@ lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
 subsection \<open>Quantum equality\<close>
 
 (* TODO: 'c doesn't have to be ell2 *)
-definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> 'a::finite q2variable \<Rightarrow> ('b,'c) l2bounded \<Rightarrow> 'b::finite q2variable \<Rightarrow> predicate" where
+definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> ('b,'c) l2bounded \<Rightarrow> 'b q2variable \<Rightarrow> predicate" where
   [code del]: "quantum_equality_full U Q V R = 
                  (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> variable_concat Q R"
-  for Q :: "'a::finite q2variable" and R :: "'b::finite q2variable"
+  for Q :: "'a q2variable" and R :: "'b q2variable"
   and U V :: "(_,'c) l2bounded"
 
-abbreviation "quantum_equality" :: "'a::finite q2variable \<Rightarrow> 'a::finite q2variable \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
+abbreviation "quantum_equality" :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
   where "quantum_equality X Y \<equiv> quantum_equality_full id_cblinfun X id_cblinfun Y"
-syntax quantum_equality :: "'a::finite q2variable \<Rightarrow> 'a::finite q2variable \<Rightarrow> predicate" (infix "==q" 100)
+syntax quantum_equality :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> predicate" (infix "==q" 100)
 syntax "_quantum_equality" :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_variables a) (_variables b)"
@@ -1178,18 +1185,16 @@ lemma quantum_equality_sym:
 proof -
   have dist: "distinct_qvars (variable_concat R Q)"
     using assms by (rule distinct_qvars_swap)
-  have [simp]: \<open>Axioms_Quantum.register (variable_concat Q R)\<close>
+  have [simp]: \<open>qregister (variable_concat Q R)\<close>
     using assms by blast
-  have [simp]: \<open>Axioms_Quantum.register (variable_concat R Q)\<close>
+  have [simp]: \<open>qregister (variable_concat R Q)\<close>
     by (simp add: dist)
-  have [simp]: \<open>Laws_Quantum.compatible Q R\<close>
-    using assms register_pair_is_register_iff by blast
+  have [simp]: \<open>qcompatible Q R\<close>
+    using assms qregister_pair_iff_compatible by blast
   have a: "comm_op \<cdot> ((V* \<cdot> U) \<otimes> (U* \<cdot> V)) \<cdot> comm_op* = (U* \<cdot> V) \<otimes> (V* \<cdot> U)" by simp
   have op_eq: "((comm_op \<cdot> (V* \<cdot> U) \<otimes> (U* \<cdot> V))\<guillemotright>variable_concat Q R) =
                ((comm_op \<cdot> (U* \<cdot> V) \<otimes> (V* \<cdot> U))\<guillemotright>variable_concat R Q)"
-    using pair_o_swap[of Q R, symmetric, unfolded o_def]
-    unfolding liftOp_def
-    apply auto
+    using qregister_pair_chain_swap[of Q R, symmetric]
     sorry
   show ?thesis
     apply (subst quantum_equality_full_def)
@@ -1218,14 +1223,14 @@ lemma predicate_local[intro!]:
 (* lemma colocal_quantum_equality_full[simp,intro!]:
   "colocal_qvars_qvars_str (variable_concat Q1 Q2) Q3 \<Longrightarrow> 
     colocal_pred_qvars_str (quantum_equality_full U1 Q1 U2 Q2) Q3"
-for Q1::"'a::finite q2variable" and Q2::"'b::finite q2variable" and Q3::"string set"
+for Q1::"'a q2variable" and Q2::"'b q2variable" and Q3::"string set"
 and U1 U2::"(_,'d)l2bounded" 
   by (cheat TODO14) *)
 
 (* (* TODO can probably be removed because it's a special case of colocal_quantum_equality_full *)
 lemma colocal_quantum_eq[simp,intro!]: 
   "colocal_qvars_qvars_str (variable_concat Q1 Q2) R \<Longrightarrow> colocal_pred_qvars_str (Q1 \<equiv>\<qq> Q2) R"
-  for Q1 Q2 :: "'c::finite q2variable" and R :: "string set"
+  for Q1 Q2 :: "'c q2variable" and R :: "string set"
   by (cheat TODO14) *)
 
 lemma applyOpSpace_colocal[simp]:
@@ -1234,11 +1239,11 @@ lemma applyOpSpace_colocal[simp]:
 
 lemma qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
- for U :: "('a::finite,'b::finite) l2bounded" and V :: "('c::finite,'b) l2bounded"
+ for U :: "('a,'b) l2bounded" and V :: "('c,'b) l2bounded"
   unfolding quantum_equality_full_def by auto
 
 lemma qeq_collect_guarded[simp]:
-  fixes U :: "('a::finite,'b::finite) l2bounded" and V :: "('c::finite,'b) l2bounded"
+  fixes U :: "('a,'b) l2bounded" and V :: "('c,'b) l2bounded"
   assumes "NO_MATCH id_cblinfun V"
   shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
   by (fact qeq_collect)
@@ -1246,13 +1251,13 @@ lemma qeq_collect_guarded[simp]:
 (* Proof in paper *)
 lemma Qeq_mult1[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
- for U::"('a::finite,'a) l2bounded" and U2 :: "('b::finite,'c::finite) l2bounded"  
+ for U::"('a,'a) l2bounded" and U2 :: "('b,'c) l2bounded"  
   by (cheat TODO14)
 
 (* Proof in paper *)
 lemma Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
- for U::"('a::finite,'a::finite) l2bounded" and U1 :: "('b::finite,'c::finite) l2bounded"  
+ for U::"('a,'a) l2bounded" and U1 :: "('b,'c) l2bounded"  
   by (cheat TODO14)
 
 (* Proof in paper *)
@@ -1260,7 +1265,7 @@ lemma quantum_eq_unique[simp]: "distinct_qvars (variable_concat Q R) \<Longright
   isometry U \<Longrightarrow> isometry (adj V) \<Longrightarrow> 
   quantum_equality_full U Q V R \<sqinter> ccspan{\<psi>}\<guillemotright>Q
   = liftSpace (ccspan{\<psi>}) Q \<sqinter> liftSpace (ccspan{V* \<cdot> U \<cdot> \<psi>}) R"
-  for Q::"'a::finite q2variable" and R::"'b::finite q2variable"
+  for Q::"'a q2variable" and R::"'b q2variable"
     and U::"('a,'c) l2bounded" and V::"('b,'c) l2bounded"
     and \<psi>::"'a ell2"
   by (cheat TODO14)
@@ -1271,8 +1276,8 @@ lemma
     "distinct_qvars (variable_concat Q (variable_concat R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
     quantum_equality_full U Q V R \<sqinter> ccspan {\<psi>}\<guillemotright>T
              = quantum_equality_full (U \<otimes> id_cblinfun) (variable_concat Q T) (addState \<psi> \<cdot> V) R"
-    for U :: "('a::finite,'c) l2bounded" and V :: "('b::finite,'c) l2bounded" and \<psi> :: "'d::finite ell2"
-    and Q :: "'a::finite q2variable"    and R :: "'b q2variable"    and T :: "'d q2variable"
+    for U :: "('a,'c) l2bounded" and V :: "('b,'c) l2bounded" and \<psi> :: "'d ell2"
+    and Q :: "'a q2variable"    and R :: "'b q2variable"    and T :: "'d q2variable"
   by (cheat TODO14)
 
 
@@ -1289,7 +1294,7 @@ lemma swap_variables_subspace_quantum_equality[simp]:
   by (cheat swap_variables_subspace_quantum_equality)
 
 (* lemma quantum_equality_reorder:
-  fixes U :: "('a::finite,'c) l2bounded" and V :: "('b::finite,'c) l2bounded"
+  fixes U :: "('a,'c) l2bounded" and V :: "('b,'c) l2bounded"
   fixes Q :: "'a q2variable" and R :: "'b q2variable"
   assumes trafoQ: "qvar_trafo A Q Q'"
   assumes trafoR: "qvar_trafo B R R'"
@@ -1464,16 +1469,14 @@ qed *)
 
 section \<open>Common quantum objects\<close>
 
-(* definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))" for CNOT *)
+definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))" for CNOT
 lemma unitaryCNOT[simp]: "unitary CNOT"
-  sorry
-(*   unfolding CNOT_def apply (rule unitary_classical_operator)
+  unfolding CNOT_def apply (rule unitary_classical_operator)
   apply (rule o_bij[where g="\<lambda>(x,y). (x,y+x)"]; rule ext; rename_tac xy; case_tac xy)
-  by (auto simp add: bit_neq) *)
+  by (auto simp add: bit_neq)
 
 lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
-  sorry
-(* proof -
+proof -
   define f where "f = (\<lambda>(x::bit,y). (x,y+x))"
   have[simp]: "f o f = id"
     unfolding f_def o_def id_def by fastforce
@@ -1492,21 +1495,19 @@ lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
     apply (subst classical_operator_adjoint)
     unfolding f_def[symmetric]
     by auto
-qed *)
+qed
 
 lemma CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = id_cblinfun"
   using unitaryCNOT unfolding unitary_def adjoint_CNOT by simp
 
-(* definition [code del]: "pauliX = classical_operator (Some o (\<lambda>x::bit. x+1))" *)
+definition [code del]: "pauliX = classical_operator (Some o (\<lambda>x::bit. x+1))"
 lemma unitaryX[simp]: "unitary pauliX"
-  by (simp add: unitary_def)
-(*   unfolding pauliX_def apply (rule unitary_classical_operator)
+  unfolding pauliX_def apply (rule unitary_classical_operator)
   apply (rule o_bij[where g="\<lambda>x. x+1"]; rule ext)
-  unfolding o_def id_def by auto *)
+  unfolding o_def id_def by auto
 
 lemma adjoint_X[simp]: "pauliX* = pauliX"
-  by simp
-(* proof -
+proof -
   define f where "f = (\<lambda>x::bit. x+1)"
   have[simp]: "f o f = id"
     unfolding f_def o_def id_def by auto
@@ -1525,13 +1526,13 @@ lemma adjoint_X[simp]: "pauliX* = pauliX"
     apply (subst classical_operator_adjoint)
     unfolding f_def[symmetric]
     by auto
-qed *)
+qed
 
 
 lemma X_X[simp]: "pauliX \<cdot> pauliX = id_cblinfun"
   using unitaryX unfolding unitary_def adjoint_CNOT by simp
 
-(* consts hadamard :: "(bit,bit) l2bounded" *)
+consts hadamard :: "(bit,bit) l2bounded"
 lemma unitaryH[simp]: "unitary hadamard"
   by (cheat TODO14)
 lemma adjoint_H[simp]: "hadamard* = hadamard"
@@ -1546,15 +1547,13 @@ lemma [simp]: "isometry (1 / sqrt2 \<cdot> hadamard')"
   unfolding hadamard'_def by simp *)
 
 
-(* definition [code del]: "pauliZ = hadamard \<cdot> pauliX \<cdot> hadamard" *)
+definition [code del]: "pauliZ = hadamard \<cdot> pauliX \<cdot> hadamard"
 lemma unitaryZ[simp]: "unitary pauliZ"
-  by (simp add: unitary_def)
-  (* unfolding pauliZ_def by simp *)
+  unfolding pauliZ_def by simp 
 
 lemma adjoint_Z[simp]: "pauliZ* = pauliZ"
-  by simp
-(*   unfolding pauliZ_def apply simp
-  by (simp add: cblinfun_compose_assoc) *)
+  unfolding pauliZ_def apply simp
+  by (simp add: cblinfun_compose_assoc)
 
 lemma Z_Z[simp]: "pauliZ \<cdot> pauliZ = id_cblinfun"
   using unitaryZ unfolding unitary_def by simp

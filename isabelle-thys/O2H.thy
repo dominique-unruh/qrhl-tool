@@ -5,7 +5,8 @@ begin
 lemma o2h:
   fixes q :: nat and b :: "bit cvariable" and rho :: program_state and count :: "nat cvariable"
     and Find :: "bool cvariable" and distr :: "_ distr"
-    and z :: "_ cvariable" and G H :: "('a::finite \<Rightarrow> 'b::{finite,xor_group}) cvariable" and S :: "'a set cvariable"
+(* TODO: should 'b have "finite" or was that added during experiments *)
+    and z :: "_ cvariable" and G H :: "('a \<Rightarrow> 'b::{finite,xor_group}) cvariable" and S :: "'a set cvariable"
     and adv :: oracle_program and X :: "'a qvariable" and Y :: "'b qvariable"
     and in_S :: "bit cvariable" and Count :: "oracle_program"
     and localsC :: "'c cvariable" and localsQ :: "'d qvariable"
@@ -25,8 +26,7 @@ lemma o2h:
   assumes "distinct_cvars \<lbrakk>b,count,Find,z,G,H,S,in_S\<rbrakk>"
   assumes "distinct_qvars \<lbrakk>X,Y\<rbrakk>"
 
-(* TODO *)
-  (* assumes "disjnt (fvc_oracle_program adv) (set (variable_names \<lbrakk>count,Find,G,H,S,in_S\<rbrakk>))" (* adv can access b,z,X,Y *) *)
+  assumes "Cccompatible (fvc_oracle_program adv) \<lbrakk>count,Find,G,H,S,in_S\<rbrakk>" (* adv can access b,z,X,Y *)
 
   assumes "probability (\<lambda>m. getter count m \<le> q) game_left rho = 1"
   assumes "probability (\<lambda>m. getter count m \<le> q) game_right rho = 1"
@@ -41,7 +41,7 @@ lemma o2h:
   shows "abs (Pleft - Pright) \<le> 2 * sqrt( (1 + real q)*Pfind )"
     by (cheat O2H)
 
-lemmas o2h' = o2h[where localsC="Classical_Extra.empty_var" and localsQ="Quantum_Extra2.empty_var", 
+lemmas o2h' = o2h[where localsC="empty_cregister" and localsQ="empty_qregister", 
         unfolded localvars_empty[of "[_]", unfolded singleton_block]]
 
 ML \<open>
@@ -65,18 +65,28 @@ fun program_body_tac forwhom ctxt = SUBGOAL (fn (t,i) =>
           Syntax.string_of_term ctxt t ^ ")") i
   end)
 
-fun free_vars_tac ctxt =
-  let val fact = Proof_Context.get_fact ctxt (Facts.named "program_fv")
+(* fun free_vars_tac ctxt =
+  let val fact = Proof_Context.get_fact ctxt (Facts.named \<^named_theorems>\<open>program_fv\<close>)
   in 
      Misc.succeed_or_error_tac' (simp_tac (clear_simpset ctxt addsimps fact)) ctxt
       (fn t => "Could not determine free variables of adversary. Problematic claim: "^Syntax.string_of_term ctxt t)
-   THEN'
+    THEN'
      Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt))
         ctxt (fn t => "Could not prove that the adversary contains no forbidden variables. Problematic claim: "^Syntax.string_of_term ctxt t)
   end
+ *)
 
-fun distinct_vars_tac ctxt =
-  Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are distinct: " ^ Syntax.string_of_term ctxt t)
+fun free_vars_tac ctxt = let
+  val fact = Proof_Context.get_fact ctxt (Facts.named \<^named_theorems>\<open>program_fv\<close>)
+  in
+    Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms Cccompatible_antimono_left Qqcompatible_antimono_left}) ctxt
+      (fn t => "free_vars_tac: Expected 'Qq/Cccompatible ... ...', got: "^Syntax.string_of_term ctxt t)
+  THEN'
+    Misc.succeed_or_error_tac' (resolve_tac ctxt fact) ctxt
+      (fn t => "Could not determine free variables of adversary. Problematic subgoal: "^Syntax.string_of_term ctxt t)
+  THEN'
+    Prog_Variables.distinct_vars_tac ctxt
+  end
 
 fun o2h_tac' o2h_rule ctxt = 
   let val pb_tac = program_body_tac "O2H" ctxt
@@ -91,9 +101,9 @@ fun o2h_tac' o2h_rule ctxt =
     THEN' pb_tac (* queryG *)
     THEN' pb_tac (* queryGS *)
     THEN' pb_tac (* queryH *)
-    THEN' distinct_vars_tac ctxt (* cvars *)
-    THEN' distinct_vars_tac ctxt (* qvars *)
-    (* THEN' free_vars_tac ctxt *)(* TODO reinstate *)
+    THEN' Prog_Variables.distinct_vars_tac ctxt (* cvars *)
+    THEN' Prog_Variables.distinct_vars_tac ctxt (* qvars *)
+    THEN' free_vars_tac ctxt
   end
 
 fun o2h_tac ctxt i = Misc.fail_tac_on_LAZY_ERROR (DETERM (o2h_tac' @{thm o2h'} ctxt i))
@@ -107,8 +117,8 @@ end
 \<close>
 
 
-typedecl sometype
-instance sometype :: finite sorry
+typedecl sometype (* TODO remove *)
+(* instance sometype :: finite sorry *)
 
 experiment 
   fixes b :: \<open>bit cvariable\<close>
@@ -121,9 +131,10 @@ experiment
     and X :: \<open>sometype qvariable\<close>
     and Y :: \<open>bit qvariable\<close>
     and in_S :: \<open>bit cvariable\<close>
-  assumes [register]: \<open>compatible X Y\<close>
-    and [Laws_Classical.register]: \<open>mutually Laws_Classical.compatible (b,count,Find,z,G,H,S,in_S)\<close>
-    and [variable]: \<open>Axioms_Classical.register b\<close> \<open>Axioms_Classical.register Find\<close>
+  assumes [simp]: \<open>qcompatible X Y\<close>
+    and [simp]: \<open>mutually ccompatible (b,count,Find,z,G,H,S,in_S)\<close>
+    and [variable]: \<open>cregister b\<close> \<open>cregister Find\<close>
+    \<open>cregister count\<close>
 begin
 
 definition test_distr :: "(sometype set * (sometype\<Rightarrow>bit) * (sometype\<Rightarrow>bit) * nat list) distr" where "test_distr = undefined"
@@ -144,40 +155,30 @@ definition [program_bodies]: "findG = (block [assign \<lbrakk>count\<rbrakk> (\<
         instantiateOracles adv [instantiateOracles Count [queryGS]]])"
 *)
 
-(* TODO: type annotation :: unit cvariable should not be necessary *)
 definition [program_bodies]: "left = block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S, G, H, z\<rbrakk> (\<lambda>_. test_distr),
-        localvars (\<lbrakk>\<rbrakk> :: unit cvariable) \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryG]]]]"
+        localvars \<lbrakk>\<rbrakk> \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryG]]]]"
 definition [program_bodies]: "right = block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S, G, H, z\<rbrakk> (\<lambda>_. test_distr),
-        localvars (\<lbrakk>\<rbrakk> :: unit cvariable) \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryH]]]]"
+        localvars \<lbrakk>\<rbrakk> \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryH]]]]"
 definition [program_bodies]: "findG = (block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk> (\<lambda>_. test_distr), assign \<lbrakk>Find\<rbrakk> (\<lambda>_. False), 
-        localvars (\<lbrakk>\<rbrakk> :: unit cvariable) \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
+        localvars \<lbrakk>\<rbrakk> \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk> (\<lambda>m. getter count m + 1)]" for P  
   by (cheat Count)
 
-(* lemma fv_adv[program_fv]: "fvc_oracle_program adv = set (variable_names \<lbrakk>X,Y,b,z\<rbrakk>)" by (cheat fv_adv) *)
+lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>" by (cheat fv_adv)
+lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>" by (cheat fv_adv)
 
-lemma "Axioms_Classical.register
-             (variable_concat b
-               (variable_concat count
-                 (variable_concat Find
-                   (variable_concat z
-                     (variable_concat G
-                       (variable_concat H
-                         (variable_concat S
-                           in_S)))))))"
-  apply simp
-  oops
-
-(* local_setup \<open>Prog_Variables.declare_variable_lthy (\<^term>\<open>b\<close> |> dest_Free |> fst) Prog_Variables.Classical \<^typ>\<open>bit\<close>\<close> *)
-(* local_setup \<open>Prog_Variables.declare_variable_lthy (\<^term>\<open>Find\<close> |> dest_Free |> fst) Prog_Variables.Classical \<^typ>\<open>bool\<close>\<close> *)
-
-  term \<open>Expr[b=1]\<close>
-lemma "abs ( Pr[b=1:left(rho)] - Pr[b=1:right(rho)] ) 
-        <= 2 * sqrt( (1+real q) * Pr[Find:findG(rho)] )"
+lemma 
+  assumes \<open>Pr[count \<le> q : left(rho)] = 1\<close>
+  assumes \<open>Pr[count \<le> q : right(rho)] = 1\<close>
+  assumes \<open>Pr[count \<le> q : findG(rho)] = 1\<close>
+  assumes \<open>\<And>S G H z x. (S, G, H, z) \<in> supp test_distr \<Longrightarrow> x \<notin> S \<Longrightarrow> G x = H x\<close>
+  shows "abs ( Pr[b=1:left(rho)] - Pr[b=1:right(rho)] ) 
+            <= 2 * sqrt( (1+real q) * Pr[Find:findG(rho)] )"
+  ML_val \<open>Proof_Context.get_fact \<^context> (Facts.named \<^named_theorems>\<open>program_fv\<close>)\<close>
   apply (tactic \<open>O2H.o2h_tac \<^context> 1\<close>)
-  oops
-
+     apply (auto intro: assms)[4]
+  by -
 end
 
 end

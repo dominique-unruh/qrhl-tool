@@ -29,6 +29,8 @@ no_notation "Order.top" ("\<top>\<index>")
 no_notation "Lattice.meet" (infixl "\<sqinter>\<index>" 70)
 no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
 hide_const (open) Order.bottom Order.top
+no_notation Group.monoid.mult (infixl "\<otimes>\<index>" 70)
+no_notation m_inv ("inv\<index> _" [81] 80)
 
 lemma inf_assoc_subspace[simp]: "A \<sqinter> B \<sqinter> C = A \<sqinter> (B \<sqinter> C)" 
   for A B C :: "_ ell2 ccsubspace"

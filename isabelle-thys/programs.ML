@@ -8,6 +8,7 @@ fun term_to_expression_untyped ctx t =
         |> map_filter (fn (v,T) => case lookup_var v of
               SOME {vartype=Prog_Variables.Classical, register, ...} => 
                 SOME (Free (v,T), Const(\<^const_name>\<open>getter\<close>, dummyT) $ register $ mem_var)
+            | SOME {vartype=Prog_Variables.Quantum, register, ...} => SOME (Free (v,T), register)
             | _ => NONE)
       (* val _ = \<^print> subst *)
       val body = abstract_over (mem_var, subst_atomic subst t)

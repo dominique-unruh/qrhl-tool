@@ -26,4 +26,13 @@ method_setup seq = {*
     SIMPLE_METHOD (Tactics.seq_tac i j (Relational_Hoare.read_predicate ctx B) ctx 1))
 *}
 
+experiment
+begin
+lemma
+  assumes \<open>qrhl A [hello] [bye] C\<close> and \<open>qrhl C [test] [test2] B\<close>
+  shows "qrhl A [hello, test] [bye, test2] B"
+  apply (tactic \<open>Tactics.seq_tac ~2 ~2 \<^term>\<open>C :: cl2 \<Rightarrow> predicate\<close> \<^context> 1\<close>)
+  using assms by auto
+end
+
 end
