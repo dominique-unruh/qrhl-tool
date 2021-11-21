@@ -19,19 +19,19 @@ fun wp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
   in case stmts of
 
     [Const(\<^const_name>\<open>assign\<close>,_) $ _ $ _] => 
-      (resolve_tac ctxt (lr @{thms wp1_assign_tac} @{thms wp2_assign_tac}) n
+      (resolve_tac ctxt (lr @{thms assign1_rule} @{thms assign2_rule}) n
        ORELSE error "assign-statement")
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.subst_expression_tac ctxt n
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.subst_expression_tac ctxt n *)
 
   | [Const(\<^const_name>\<open>sample\<close>,_) $ _ $ _] =>
-      (resolve_tac ctxt (lr @{thms wp1_sample_tac} @{thms wp2_sample_tac}) n
+      (resolve_tac ctxt (lr @{thms sample1_rule} @{thms sample2_rule}) n
        ORELSE error "sample-statement")
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.subst_expression_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.subst_expression_tac ctxt n *)
+      (* THEN Expressions.map_expression_tac ctxt n *)
       
   | [Const(\<^const_name>\<open>block\<close>,_) $ _] => 
       resolve_tac ctxt (lr @{thms wp1_block_tac} @{thms wp2_block_tac}) n THEN wp_tac0 left ctxt n
@@ -40,33 +40,37 @@ fun wp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
   | [Const(\<^const_name>\<open>qapply\<close>,_) $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms wp1_qapply_tac} @{thms wp2_qapply_tac}) n
        ORELSE error "quantum application")
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      THEN Prog_Variables.distinct_vars_tac ctxt n
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.map_expression_tac ctxt n *)
 
   | [Const(\<^const_name>\<open>qinit\<close>,_) $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms wp1_qinit_tac} @{thms wp2_qinit_tac}) n
        ORELSE error "quantum initialization")
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      THEN Prog_Variables.distinct_vars_tac ctxt n
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.map_expression_tac ctxt n *)
 
   | [Const(\<^const_name>\<open>ifthenelse\<close>,_) $ _ $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms wp1_if_tac} @{thms wp2_if_tac}) n
        ORELSE error "if-statement")
-      THEN Expressions.index_tac ctxt n
+      (* THEN Expressions.index_tac ctxt n *)
       THEN wp_tac0 left ctxt n
       THEN wp_tac0 left ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      (* THEN Expressions.map_expression_tac ctxt n *)
       
   | [Const(\<^const_name>\<open>measurement\<close>,_) $ _ $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms wp1_measure_tac} @{thms wp2_measure_tac}) n
        ORELSE error "measurement-statement")
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.index_tac ctxt n
-      THEN Expressions.subst_expression_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      THEN Prog_Variables.distinct_vars_tac ctxt n
+      THEN Prog_Variables.distinct_vars_tac ctxt n
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.index_tac ctxt n *)
+      (* THEN Expressions.subst_expression_tac ctxt n *)
+      (* THEN Expressions.map_expression_tac ctxt n *)
 
   | [] => 
       resolve_tac ctxt @{thms skip_rule} n

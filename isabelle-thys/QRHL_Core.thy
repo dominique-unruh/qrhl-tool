@@ -111,7 +111,7 @@ axiomatization swap_variables_vector :: "'a q2variable \<Rightarrow> 'a q2variab
 definition index_flip_subspace :: "qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace"
   where \<open>index_flip_subspace S = Uswap *\<^sub>S S\<close>
 
-lemma index_flip_subspace_INF: \<open>index_flip_subspace (INF i\<in>A. S i) = (INF i\<in>A. index_flip_subspace (S i))\<close>
+lemma index_flip_subspace_INF[simp]: \<open>index_flip_subspace (INF i\<in>A. S i) = (INF i\<in>A. index_flip_subspace (S i))\<close>
   by (cheat index_flip_subspace_INF)
 
 axiomatization swap_variables_subspace :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace"
