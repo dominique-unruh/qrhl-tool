@@ -27,12 +27,19 @@ method_setup seq = {*
 *}
 
 experiment
+  fixes x :: \<open>int cvariable\<close>
+  assumes [variable,simp]: \<open>cregister x\<close>
 begin
-lemma
-  assumes \<open>qrhl A [hello] [bye] C\<close> and \<open>qrhl C [test] [test2] B\<close>
-  shows "qrhl A [hello, test] [bye, test2] B"
-  apply (tactic \<open>Tactics.seq_tac ~2 ~2 \<^term>\<open>C :: cl2 \<Rightarrow> predicate\<close> \<^context> 1\<close>)
-  using assms by auto
-end
-
+  lemma
+    assumes \<open>qrhl A [hello] [bye] C\<close> and \<open>qrhl C [test] [test2] B\<close>
+    shows "qrhl A [hello, test] [bye, test2] B"
+    apply (tactic \<open>Tactics.seq_tac ~2 ~2 \<^term>\<open>C :: cl2 \<Rightarrow> predicate\<close> \<^context> 1\<close>)
+    using assms by auto
+  
+  lemma
+    assumes \<open>qrhl A [hello] [bye] Expr[Cla[x1=x2]]\<close> and \<open>qrhl Expr[Cla[x1=x2]] [test] [test2] B\<close>
+    shows "qrhl A [hello, test] [bye, test2] B"
+    apply (seq 1 1 \<open>Cla[x1=x2]\<close>)
+    using assms by auto
+  end
 end

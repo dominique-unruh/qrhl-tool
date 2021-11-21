@@ -350,6 +350,15 @@ lemma qcompatible_chain_iso: \<open>iso_qregister I \<Longrightarrow> qcompatibl
 axiomatization getter :: \<open>('a,'b) cregister \<Rightarrow> 'b \<Rightarrow> 'a\<close>
 axiomatization setter :: \<open>('a,'b) cregister \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b\<close>
 
+axiomatization where getter_non_cregister[simp]: \<open>getter non_cregister m = undefined\<close>
+axiomatization where setter_non_cregister[simp]: \<open>setter non_cregister a = id\<close>
+
+axiomatization where getter_setter_same[simp]: \<open>cregister x \<Longrightarrow> getter x (setter x a m) = a\<close>
+axiomatization where setter_setter_same[simp]: \<open>setter x b (setter x a m) = setter x b m\<close>
+axiomatization where getter_setter_compat[simp]: \<open>ccompatible x y \<Longrightarrow> getter x (setter y a m) = getter x m\<close>
+axiomatization where setter_setter_compat: \<open>ccompatible x y \<Longrightarrow> setter x a (setter y b m) = setter y b (setter x a m)\<close>
+axiomatization where setter_getter_same[simp]: \<open>setter x (getter x m) m = m\<close>
+
 axiomatization CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
 axiomatization QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close>
 

@@ -1,6 +1,6 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" BOLegacy Discrete_Distributions 
-    Universe Misc_Missing Prog_Variables (* Registers.Pure_States *)
+    Misc_Missing Prog_Variables (* Registers.Pure_States *)
   keywords "declare_variable_type" :: thy_decl
 begin
 
@@ -1679,7 +1679,7 @@ declare imp_conjL[simp]
 typedef infinite = "UNIV::nat set" ..
 lemma infinite_infinite[simp]: "infinite (UNIV::infinite set)"
   by (metis (full_types) Abs_infinite_inverse UNIV_I ex_new_if_finite finite_imageI image_eqI infinite_UNIV_nat)
-derive universe infinite
+(* derive universe infinite *)
 declare infinite_UNIV_listI[simp]
 
 section "ML Code"

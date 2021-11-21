@@ -5,8 +5,7 @@ begin
 lemma o2h:
   fixes q :: nat and b :: "bit cvariable" and rho :: program_state and count :: "nat cvariable"
     and Find :: "bool cvariable" and distr :: "_ distr"
-(* TODO: should 'b have "finite" or was that added during experiments *)
-    and z :: "_ cvariable" and G H :: "('a \<Rightarrow> 'b::{finite,xor_group}) cvariable" and S :: "'a set cvariable"
+    and z :: "_ cvariable" and G H :: "('a \<Rightarrow> 'b::xor_group) cvariable" and S :: "'a set cvariable"
     and adv :: oracle_program and X :: "'a qvariable" and Y :: "'b qvariable"
     and in_S :: "bit cvariable" and Count :: "oracle_program"
     and localsC :: "'c cvariable" and localsQ :: "'d qvariable"
@@ -76,18 +75,6 @@ fun program_body_tac forwhom ctxt = SUBGOAL (fn (t,i) =>
   end
  *)
 
-fun free_vars_tac ctxt = let
-  val fact = Proof_Context.get_fact ctxt (Facts.named \<^named_theorems>\<open>program_fv\<close>)
-  in
-    Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms Cccompatible_antimono_left Qqcompatible_antimono_left}) ctxt
-      (fn t => "free_vars_tac: Expected 'Qq/Cccompatible ... ...', got: "^Syntax.string_of_term ctxt t)
-  THEN'
-    Misc.succeed_or_error_tac' (resolve_tac ctxt fact) ctxt
-      (fn t => "Could not determine free variables of adversary. Problematic subgoal: "^Syntax.string_of_term ctxt t)
-  THEN'
-    Prog_Variables.distinct_vars_tac ctxt
-  end
-
 fun o2h_tac' o2h_rule ctxt = 
   let val pb_tac = program_body_tac "O2H" ctxt
       val resolve_o2h = Misc.succeed_or_error_tac' (resolve_tac ctxt [o2h_rule]) ctxt
@@ -103,7 +90,7 @@ fun o2h_tac' o2h_rule ctxt =
     THEN' pb_tac (* queryH *)
     THEN' Prog_Variables.distinct_vars_tac ctxt (* cvars *)
     THEN' Prog_Variables.distinct_vars_tac ctxt (* qvars *)
-    THEN' free_vars_tac ctxt
+    THEN' Programs.free_vars_tac ctxt
   end
 
 fun o2h_tac ctxt i = Misc.fail_tac_on_LAZY_ERROR (DETERM (o2h_tac' @{thm o2h'} ctxt i))

@@ -559,7 +559,7 @@ fun variable_rewriting_simproc _ ctx ct =
   handle TERM _ => NONE *)
 
 fun declare_variable_type args sort a mx lthy = 
-  let val sort' = Sign.minimize_sort (Proof_Context.theory_of lthy) (@{class universe}::sort)
+  let val sort' = Sign.minimize_sort (Proof_Context.theory_of lthy) ((* @{class universe}:: *)sort)
       val is_base_sort = Sign.subsort (Proof_Context.theory_of lthy) (Object_Logic.get_base_sort lthy |> the_default [], sort)
       (* val _ = Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort'] |> @{print} *)
       val _ = if null (Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort']) then
@@ -570,8 +570,8 @@ fun declare_variable_type args sort a mx lthy =
       val (typname,_) = dest_Type T
       val lthy = if is_base_sort then lthy else
                      Local_Theory.background_theory (Axclass.arity_axiomatization (typname, map snd args, sort)) lthy
-      val lthy = Local_Theory.background_theory (Axclass.arity_axiomatization 
-                      (typname, map (fn (_,sort) => @{class universe}::sort) args, @{sort universe})) lthy
+(*       val lthy = Local_Theory.background_theory (Axclass.arity_axiomatization 
+                      (typname, map (fn (_,sort) => @{class universe}::sort) args, @{sort universe})) lthy *)
   in lthy end
 
 fun declare_variable_type_cmd args sort a mx lthy = let

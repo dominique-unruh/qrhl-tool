@@ -127,4 +127,16 @@ and term_to_statements ctxt t = HOLogic.dest_list t |> map (term_to_statement ct
 
 (* end *)
 
+fun free_vars_tac ctxt = let
+  val fact = Proof_Context.get_fact ctxt (Facts.named \<^named_theorems>\<open>program_fv\<close>)
+  in
+    Misc.succeed_or_error_tac' (resolve_tac ctxt @{thms Cccompatible_antimono_left Qqcompatible_antimono_left}) ctxt
+      (fn t => "free_vars_tac: Expected 'Qq/Cccompatible ... ...', got: "^Syntax.string_of_term ctxt t)
+  THEN'
+    Misc.succeed_or_error_tac' (resolve_tac ctxt fact) ctxt
+      (fn t => "Could not determine free variables of adversary. Problematic subgoal: "^Syntax.string_of_term ctxt t)
+  THEN'
+    Prog_Variables.distinct_vars_tac ctxt
+  end
+
 end

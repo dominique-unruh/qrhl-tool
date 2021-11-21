@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main Universe "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
+  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
 begin
 
 section \<open>Misc\<close>
@@ -81,7 +81,7 @@ definition[simp]: "divide_bit = (( * ) :: bit\<Rightarrow>_\<Rightarrow>_)"
 instance by intro_classes (transfer; auto)+
 end *)
 
-derive universe bit
+(* derive universe bit *)
 
 
 (* lemma bit_cases[cases type:bit]: "(x=0 \<Longrightarrow> P) \<Longrightarrow> (x=1 \<Longrightarrow> P) \<Longrightarrow> P" for x :: bit (* bit.exhaust *)

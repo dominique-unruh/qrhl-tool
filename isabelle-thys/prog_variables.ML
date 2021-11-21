@@ -352,7 +352,7 @@ fun distinct_vars_tac ctxt = let
     distinct_cvars_split1 distinct_cvars_split2 cregister_pair_iff_compatible ccompatible3 ccompatible3'
     distinct_qvars_split1 distinct_qvars_split2 qregister_pair_iff_compatible qcompatible3 qcompatible3'
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
-  in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
+  in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are variables and distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
 
 
 

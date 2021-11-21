@@ -33,16 +33,14 @@ object IsabelleTypes {
   val ell2 = \<open>\<^type_name>\<open>ell2\<close>\<close>
   val bit = \<open>\<^type_name>\<open>bit\<close>\<close>
   val ccsubspace = \<open>\<^type_name>\<open>ccsubspace\<close>\<close>
-  val mem2 = \<open>\<^type_name>\<open>mem2\<close>\<close>
+  val cl = \<open>\<^type_name>\<open>cl\<close>\<close>
+  val qu = \<open>\<^type_name>\<open>qu\<close>\<close>
   val program = \<open>\<^type_name>\<open>program\<close>\<close>
   val oracle_program = \<open>\<^type_name>\<open>oracle_program\<close>\<close>
   val distr = \<open>\<^type_name>\<open>distr\<close>\<close>
   val bounded = \<open>\<^type_name>\<open>cblinfun\<close>\<close>
   val measurement = \<open>\<^type_name>\<open>measurement\<close>\<close>
   val list = \<open>\<^type_name>\<open>list\<close>\<close>
-  val variable = \<open>\<^type_name>\<open>variable\<close>\<close>
-  val variables = \<open>\<^type_name>\<open>variables\<close>\<close>
-  val expression = \<open>\<^type_name>\<open>expression\<close>\<close>
   val prop = \<open>\<^type_name>\<open>prop\<close>\<close>
   val unit = \<open>\<^type_name>\<open>unit\<close>\<close>
   val prod = \<open>\<^type_name>\<open>prod\<close>\<close>
@@ -77,7 +75,6 @@ object IsabelleConsts {
   val implies = \<open>\<^const_name>\<open>HOL.implies\<close>\<close>
   val measurement = \<open>\<^const_name>\<open>measurement\<close>\<close>
   val variable_unit = \<open>\<^const_name>\<open>variable_unit\<close>\<close>
-  val variable_singleton = \<open>\<^const_name>\<open>variable_singleton\<close>\<close>
   val variable_concat = \<open>\<^const_name>\<open>variable_concat\<close>\<close>
   val one = \<open>\<^const_name>\<open>one_class.one\<close>\<close>
   val True = \<open>\<^const_name>\<open>True\<close>\<close>

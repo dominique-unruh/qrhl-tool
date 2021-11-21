@@ -5,7 +5,7 @@ begin
 lemma semi_classical_search:
   fixes q :: nat and b :: "bit cvariable" and rho :: program_state and count :: "nat cvariable"
     and Find :: "bool cvariable" and distr :: "_ distr"
-    and z :: "_ cvariable" and G :: "('a::finite \<Rightarrow> 'b::{finite,xor_group}) cvariable" (* TODO back to infinite *) and S :: "'a set cvariable"
+    and z :: "_ cvariable" and G :: "('a \<Rightarrow> 'b::xor_group) cvariable" and S :: "'a set cvariable"
     and adv :: oracle_program and X :: "'a qvariable" and Y :: "'b qvariable"
     and in_S :: "bit cvariable" and Count :: "oracle_program"
     and stop_at :: "nat cvariable" and "guess" :: "'a cvariable"
@@ -31,8 +31,7 @@ lemma semi_classical_search:
   assumes "distinct_cvars \<lbrakk>count,Find,z,G,S,in_S,stop_at,guess\<rbrakk>"
   assumes "distinct_qvars \<lbrakk>X,Y\<rbrakk>"
 
-(* TODO *)
-  (* assumes "disjnt (fvc_oracle_program adv) (set (variable_names \<lbrakk>count,stop_at,guess,Find,G,S,in_S\<rbrakk>))" (* adv can access b,z,X,Y *) *)
+  assumes "Cccompatible (fvc_oracle_program adv) \<lbrakk>count,stop_at,guess,Find,G,S,in_S\<rbrakk>" (* adv can access b,z,X,Y *)
 
   assumes "probability (\<lambda>m. getter count m \<le> q) game_left rho = 1"
   assumes "probability (\<lambda>m. getter count m \<le> q) game_right rho = 1"
@@ -63,7 +62,7 @@ fun semi_classical_search_tac' scs_rule ctxt =
     THEN' pb_tac
     THEN' Prog_Variables.distinct_vars_tac ctxt
     THEN' Prog_Variables.distinct_vars_tac ctxt
-    (* THEN' O2H.free_vars_tac ctxt *)
+    THEN' Programs.free_vars_tac ctxt
   end
 
 fun semi_classical_search_tac ctxt i = Misc.fail_tac_on_LAZY_ERROR (DETERM (semi_classical_search_tac' @{thm semi_classical_search'} ctxt i))
@@ -86,6 +85,8 @@ experiment
     and stop_at :: \<open>nat cvariable\<close>
   assumes [variable]: \<open>cregister b\<close> \<open>cregister Find\<close> \<open>cregister S\<close> \<open>cregister G\<close> \<open>cregister z\<close>
     \<open>cregister count\<close> \<open>cregister in_S\<close> \<open>cregister guess\<close> \<open>cregister stop_at\<close> \<open>qregister X\<close> \<open>qregister Y\<close>
+  assumes [simp]: \<open>mutually ccompatible (b, Find, S, G, z, count, in_S, guess, stop_at)\<close>
+    \<open>mutually qcompatible (X, Y)\<close>
 begin
 
 definition test_distr :: "(sometype set * (sometype\<Rightarrow>bit) * nat list) distr" where "test_distr = undefined"
@@ -118,11 +119,16 @@ definition [program_bodies]: "right = block [assign \<lbrakk>count\<rbrakk> Expr
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk> Expr[count+1]]" for P  
   by (cheat Count)
 
-lemma fv_adv[program_fv]: "fvc_oracle_program adv = set (variable_names \<lbrakk>X,Y,b,z\<rbrakk>)" by (cheat fv_adv)
+lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>" by (cheat fv_adv)
+lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>" by (cheat fv_adv)
 
-lemma "Pr[Find:left(rho)] \<le> 4 * real q * Pr[guess\<in>S:right(rho)]"
+lemma
+  assumes \<open>Pr[count \<le> q : left(rho)] = 1\<close>
+  assumes \<open>Pr[count \<le> q : right(rho)] = 1\<close>
+  shows "Pr[Find:left(rho)] \<le> 4 * real q * Pr[guess\<in>S:right(rho)]"
   apply (tactic \<open>Semi_Classical_Search.semi_classical_search_tac \<^context> 1\<close>)
-  oops
+  using assms apply simp_all[2]
+  by -
 
 end
 

@@ -2,7 +2,6 @@ chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite"
-    Universe_Instances_Complex_Main
     Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
     "Complex_Bounded_Operators.Extra_Ordered_Fields"
     "HOL-Analysis.Infinite_Sum"
@@ -16,7 +15,7 @@ typedef 'a distr = "{f::'a\<Rightarrow>real. is_distribution f}"
   unfolding is_distribution_def
   apply (rule exI[of _ "\<lambda>x. 0"]) by auto
 setup_lifting type_definition_distr
-derive universe distr
+(* derive universe distr *)
 
 
 lemma is_distribution_def': "is_distribution f \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> (\<forall> M. finite M \<longrightarrow> sum f M \<le> 1)"

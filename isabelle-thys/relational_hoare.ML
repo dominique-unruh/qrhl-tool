@@ -5,10 +5,11 @@ fun dest_qrhl (Const(\<^const_name>\<open>qrhl\<close>,_) $ A $ p1 $ p2 $ B) = (
   | dest_qrhl _ = raise Match
 fun dest_qrhl_goal t = Logic.strip_imp_concl t |> HOLogic.dest_Trueprop |> dest_qrhl
 
-(* fun read_predicate ctx str =
-  let val preterm = Syntax.parse_term ctx str
-      val t = Syntax.check_term ctx (Type.constraint \<^typ>\<open>predicate\<close> preterm)
-  in Expressions.term_to_expression ctx t end *)
+fun read_predicate ctxt str =
+  let val preterm = Syntax.parse_term ctxt str
+      val expr = Programs.term_to_expression_untyped ctxt preterm
+      val t = Syntax.check_term ctxt (Type.constraint \<^typ>\<open>predicate expression2\<close> expr)
+  in t end
 
 datatype qrhl_judgment = QRHL_Judgment of term * Programs.statement list * Programs.statement list * term
 
