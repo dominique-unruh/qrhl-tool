@@ -8,6 +8,7 @@ fun dest_ell2T (Type(\<^type_name>\<open>ell2\<close>, [T])) = T
 fun mk_boundedT T T' = Type(\<^type_name>\<open>cblinfun\<close>, [mk_ell2T T, mk_ell2T T'])
 fun dest_boundedT (Type(\<^type_name>\<open>cblinfun\<close>, [Type(\<^type_name>\<open>ell2\<close>,[T]),Type(\<^type_name>\<open>ell2\<close>,[T'])])) = (T,T')
   | dest_boundedT T = raise TYPE("dest_boundedT",[T],[])
+fun dest_bounded2T T = case dest_boundedT T of (T,T') => if T=T' then T else raise TYPE("dest_bounded2T", [T], [])
 fun mk_bounded2T T = mk_boundedT T T
 
 (* fun mk_variablesT T = Type(\<^type_name>\<open>variables\<close>, [T]) *)
@@ -27,9 +28,9 @@ fun dest_cvariableT (Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<op
 fun dest_qvariableT (Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu\<close>])) = T
   | dest_qvariableT T = raise TYPE("dest_qvariableT", [T], [])
 
-fun strip_var_prefix x = if String.isPrefix "var_" x 
+(* fun strip_var_prefix x = if String.isPrefix "var_" x 
   then String.extract (x,4,NONE) 
-  else error ("strip_var_prefix: Expected string starting with var_, not "^x)
+  else error ("strip_var_prefix: Expected string starting with var_, not "^x) *)
 
 (* 
 local
@@ -69,21 +70,21 @@ structure WarnDeclaredQvarsData = Proof_Data
     | _ => NONE *)
 
 
-datatype vartype = Classical | Quantum
-type varinfo = {vartype : vartype, register: term(* , name_thm : thm *)}
+datatype qc = Classical | Quantum
+type varinfo = {qc : qc, typ : typ, register: term, name: string}
 structure VarInfo = Generic_Data
 (
-  type T = varinfo Symtab.table
-  val empty = Symtab.empty
-  val merge = Symtab.merge (op=)
+  type T = varinfo Symtab.table * varinfo Termtab.table
+  val empty = (Symtab.empty, Termtab.empty)
+  fun merge ((s1,t1), (s2,t2)) = (Symtab.merge (op=) (s1,s2), Termtab.merge (op=) (t1,t2))
 )
 
-fun lookup_variable ctxt = Symtab.lookup (VarInfo.get (Context.Proof ctxt))
-fun lookup_variable_type ctxt name = lookup_variable ctxt name |> Option.map #vartype
+fun lookup_variable ctxt = Symtab.lookup (VarInfo.get (Context.Proof ctxt) |> fst)
+fun lookup_variable_qc ctxt name = lookup_variable ctxt name |> Option.map #qc
 
-fun is_classical_variable ctxt name = case lookup_variable_type ctxt name of
-  SOME Classical => true
-  | _ => false
+fun find_variable ctxt = Termtab.lookup (VarInfo.get (Context.Proof ctxt) |> snd)
+
+fun is_classical_variable ctxt name = lookup_variable_qc ctxt name = SOME Classical
 
 (* fun check_variable_type ctxt T =
   if Sign.of_sort (Proof_Context.theory_of ctxt) (T, \<^sort>\<open>universe\<close>) then () else
@@ -92,24 +93,25 @@ fun is_classical_variable ctxt name = case lookup_variable_type ctxt name of
            "and use declare_variable_type instead of typedecl") *)
 
 local
-fun add_varinfo morph name vartype register context = let
-  (* val thm = Proof_Context.get_thm ctxt' (name ^ "_varname") *)
-  val varinfo = {vartype=vartype, register=Morphism.term morph register(* , name_thm=Morphism.thm morph thm *)} : varinfo
-  val context = VarInfo.map (Symtab.insert (K true) (name,varinfo)) context
+fun add_varinfo morph name T qc register context = let
+  val reg = Morphism.term morph register
+  val varinfo = {qc=qc, name=name, typ=Morphism.typ morph T, register=reg} : varinfo
+  val context = VarInfo.map (fn (s,t) => (Symtab.insert (op=) (name,varinfo) s,
+                                          Termtab.insert (op=) (reg,varinfo) t)) context
   in context end
 
-fun declare_variable_morph m name vartype typ = let
-    val register = Free(name, if vartype=Classical then mk_cvariableT typ else mk_qvariableT typ)
-    val chain = if vartype=Classical then Const(\<^const_name>\<open>cregister_chain\<close>, \<^typ>\<open>cl c2variable\<close> --> fastype_of register --> mk_c2variableT typ)
+fun declare_variable_morph m name qc typ = let
+    val register = Free(name, if qc=Classical then mk_cvariableT typ else mk_qvariableT typ)
+    val chain = if qc=Classical then Const(\<^const_name>\<open>cregister_chain\<close>, \<^typ>\<open>cl c2variable\<close> --> fastype_of register --> mk_c2variableT typ)
                                     else Const(\<^const_name>\<open>qregister_chain\<close>, \<^typ>\<open>qu q2variable\<close> --> fastype_of register --> mk_q2variableT typ)
-    val register1 = if vartype=Classical then chain $ @{const cFst(cl,cl)} $ register
+    val register1 = if qc=Classical then chain $ @{const cFst(cl,cl)} $ register
                                          else chain $ @{const qFst(qu,qu)} $ register
-    val register2 = if vartype=Classical then chain $ @{const cSnd(cl,cl)} $ register
+    val register2 = if qc=Classical then chain $ @{const cSnd(cl,cl)} $ register
                                          else chain $ @{const qSnd(qu,qu)} $ register
   in
-      add_varinfo m name vartype register #>
-      add_varinfo m (name^"1") vartype register1 #>
-      add_varinfo m (name^"2") vartype register2
+      add_varinfo m name typ qc register #>
+      add_varinfo m (name^"1") typ qc register1 #>
+      add_varinfo m (name^"2") typ qc register2
   end
 in
 fun declare_variable_lthy name vartype typ = 
@@ -233,6 +235,39 @@ fun varterm_from_list [] = VTUnit
   | varterm_from_list [nT] = VTSingle nT
   | varterm_from_list (nT::xs) = VTCons (VTSingle nT, varterm_from_list xs)
 
+fun varterm_to_VARIABLE Classical VTUnit = \<^term>\<open>CREGISTER_unit :: CVARIABLE\<close>
+  | varterm_to_VARIABLE Quantum VTUnit = \<^term>\<open>QREGISTER_unit :: QVARIABLE\<close>
+  | varterm_to_VARIABLE Classical (VTSingle (n,T)) = Const(\<^const_name>\<open>CREGISTER_of\<close>, mk_cvariableT T --> \<^typ>\<open>CVARIABLE\<close>) $ Free (n,mk_cvariableT T)
+  | varterm_to_VARIABLE Quantum (VTSingle (n,T)) = Const(\<^const_name>\<open>QREGISTER_of\<close>, mk_qvariableT T --> \<^typ>\<open>QVARIABLE\<close>) $ Free (n,mk_qvariableT T)
+  | varterm_to_VARIABLE cq (VTCons (t1, t2)) = let
+        val v1 = varterm_to_VARIABLE cq t1
+        val v2 = varterm_to_VARIABLE cq t2
+        val pair = case cq of Classical => \<^term>\<open>CREGISTER_pair :: CVARIABLE \<Rightarrow> CVARIABLE \<Rightarrow> CVARIABLE\<close>
+                            | Quantum =>  \<^term>\<open>QREGISTER_pair :: QVARIABLE \<Rightarrow> QVARIABLE \<Rightarrow> QVARIABLE\<close>
+      in pair $ v1 $ v2 end
+
+fun varterm_to_variable Classical VTUnit = \<^term>\<open>cvariable_unit :: unit cvariable\<close>
+  | varterm_to_variable Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit qvariable\<close>
+  | varterm_to_variable Classical (VTSingle (n,T)) = Free (n,mk_cvariableT T) (* TODO: rather lookup! *)
+  | varterm_to_variable Quantum (VTSingle (n,T)) = Free (n,mk_qvariableT T) (* TODO: rather lookup! *)
+  | varterm_to_variable cq (VTCons (t1, t2)) = let
+        val v1 = varterm_to_variable cq t1
+        val v2 = varterm_to_variable cq t2
+        val T1 = case cq of Classical => dest_cvariableT (fastype_of v1) | Quantum => dest_qvariableT (fastype_of v1)
+        val T2 = case cq of Classical => dest_cvariableT (fastype_of v2) | Quantum => dest_qvariableT (fastype_of v2)
+        val T = HOLogic.mk_prodT (T1, T2)
+        val pair = case cq of Classical => Const(\<^const_name>\<open>cregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_cvariableT T)
+                            | Quantum => Const(\<^const_name>\<open>qregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_qvariableT T)
+      in pair $ v1 $ v2 end
+
+fun variable_to_varterm _    (Const(\<^const_name>\<open>cvariable_unit\<close>,_)) = VTUnit
+  | variable_to_varterm _    (Const(\<^const_name>\<open>qvariable_unit\<close>,_)) = VTUnit
+  | variable_to_varterm ctxt (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ t1 $ t2) = VTCons (variable_to_varterm ctxt t1, variable_to_varterm ctxt t2)
+  | variable_to_varterm ctxt (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ t1 $ t2) = VTCons (variable_to_varterm ctxt t1, variable_to_varterm ctxt t2)
+  | variable_to_varterm ctxt v = case find_variable ctxt v of
+      NONE => raise TERM("variable_to_varterm: unknown variable", [v])
+      | SOME {name, typ, ...} => VTSingle (name, typ)
+
 fun varterm_from_list_untyped [] = VTUnit
   | varterm_from_list_untyped [n] = VTSingle (n,dummyT)
   | varterm_from_list_untyped (n::xs) = VTCons (VTSingle (n,dummyT), varterm_from_list_untyped xs)
@@ -253,8 +288,8 @@ fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
   | vars_in_varterm (VTSingle nT) = [nT]
   | vars_in_varterm VTUnit = []
 
-(* fun parse_varlist t =
-  let val vt = parse_varterm t
+fun variable_to_varlist ctxt t =
+  let val vt = variable_to_varterm ctxt t
       fun tol (VTSingle nT) = [nT]
         | tol VTUnit = []
         | tol (VTCons (VTSingle _, VTUnit)) = raise TERM("not an explicit variable list",[t])
@@ -262,7 +297,7 @@ fun vars_in_varterm (VTCons(a,b)) = vars_in_varterm a @ vars_in_varterm b
         | tol (VTCons _) = raise TERM("not an explicit variable list",[t])
   in
     tol vt
-  end *)
+  end
 
 (* Checks if term is a (not necessarily explict) variable list *)
 (* fun is_varlist (Const(\<^const_name>\<open>variable_unit\<close>,_)) = true

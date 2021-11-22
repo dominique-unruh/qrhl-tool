@@ -169,7 +169,7 @@ named_theorems program_fv
 ML_file "programs.ML"
 
 consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
-parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Programs.term_to_expression_untyped ctx e)]\<close>
+parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Programs.term_to_expression ctx dummyT e)]\<close>
 hide_const expression_syntax
 
 consts "probability_syntax" :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_:(_'(_'))]")

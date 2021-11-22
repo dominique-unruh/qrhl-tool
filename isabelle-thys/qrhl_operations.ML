@@ -128,12 +128,12 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
   val (vs,ctxt) = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctxt
   val _ = if vs<>[name] then error("variable "^name^" already declared") else ()
 
-  fun declare_prog_vars vars pfx fv_program fv_oracle_program ctxt = let
-    (* Add theorem pfx^name: "fv_program/fv_oracle_program name = variable_names \<lbrakk>vars\<rbrakk> *)
+  fun declare_prog_vars cq vars pfx fv_program fv_oracle_program ctxt = let
+    (* Add theorem pfx^name: "fv_program/fv_oracle_program name \<le> variable_names \<lbrakk>vars\<rbrakk> *)
     val fv_lhs = (if numOracles=0 then fv_program else fv_oracle_program) $ Free(name,T) 
-    val (varterm,vartermT) = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
-    val fv_rhs = @{const set(string)} $
-            (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm)
+    val fv_rhs = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.varterm_to_VARIABLE cq
+(*     val fv_rhs = @{const set(string)} $
+            (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm) *)
     val fv = HOLogic.mk_eq (fv_lhs, fv_rhs) |> HOLogic.mk_Trueprop
     val fv_thm_name = Binding.name (pfx^name)
     val ([(_,fv_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
@@ -142,11 +142,11 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
     val (_,ctxt) = Attrib.local_notes "" [((Binding.empty, @{attributes [Programs.program_fv]}), [(fv_thm,[])])] ctxt
   in ctxt end
 
-  val var_cvars = map (fn (n,T) => ("var_"^n,T)) cvars
-  val var_cwvars = map (fn (n,T) => ("var_"^n,T)) cwvars
-  val ctxt = declare_prog_vars var_cvars "fvc_" \<^const>\<open>fvc_program\<close> \<^const>\<open>fvc_oracle_program\<close> ctxt
-  val ctxt = declare_prog_vars var_cwvars "fvcw_" \<^const>\<open>fvcw_program\<close> \<^const>\<open>fvcw_oracle_program\<close> ctxt
-  val ctxt = declare_prog_vars qvars "fvq_" \<^const>\<open>fvq_program\<close> \<^const>\<open>fvq_oracle_program\<close> ctxt
+  (* val var_cvars = map (fn (n,T) => ("var_"^n,T)) cvars *)
+  (* val var_cwvars = map (fn (n,T) => ("var_"^n,T)) cwvars *)
+  val ctxt = declare_prog_vars Classical cvars "fvc_" \<^const>\<open>fvc_program\<close> \<^const>\<open>fvc_oracle_program\<close> ctxt
+  val ctxt = declare_prog_vars Classical cwvars "fvcw_" \<^const>\<open>fvcw_program\<close> \<^const>\<open>fvcw_oracle_program\<close> ctxt
+  val ctxt = declare_prog_vars Quantum qvars "fvq_" \<^const>\<open>fvq_program\<close> \<^const>\<open>fvq_oracle_program\<close> ctxt
 
   (* Add abbreviations:
         name_cvars1 == (x1,y1,z1) if cvars=x,y,z (same with 2, and w/o index)
@@ -154,7 +154,7 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
   fun add_vars_abbrev suffix ctxt = let
     val cvartuple = HOLogic.mk_tuple (map (fn (n,T) => Free(n^suffix,T)) cvars)
     val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvartuple) ctxt
-    val (qvarterm,_) = qvars |> (map (fn (n,T) => (n^suffix,T))) |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+    val qvarterm = qvars |> (map (fn (n,T) => (n^suffix,T))) |> Prog_Variables.varterm_from_list |> Prog_Variables.varterm_to_variable Quantum
     val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_qvars"^suffix), qvarterm) ctxt
   in ctxt end
 
@@ -195,7 +195,7 @@ in fact end
 (* val _ = get_thms \<^context> "refl" |> \<^print>  *)
 
 fun debug ctxt = let
-  val obj = Proof_Context.get_fact ctxt (Facts.named "Programs.program_fv")
+  val obj = Proof_Context.get_fact ctxt (Facts.named \<^named_theorems>\<open>program_fv\<close>)
   val str = \<^make_string> obj |> YXML.content_of
   in str end
 
@@ -241,7 +241,7 @@ fun simp (t, facts, ctxt) =
       | _ => simp_any t ctxt
   end
 
-fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRight, afterRight) = let
+fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, beforeRight, afterRight) = let
   (* Parse predicate as \<open>pred_lhs \<sqinter> \<lbrakk>vt_left\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>vt_right\<rbrakk>\<close> *)
   val (pred_lhs, qeq_left, qeq_right) = case predicate of
       Const(\<^const_name>\<open>inf\<close>,_) $ pred_lhs $ (Const(\<^const_name>\<open>quantum_equality_full\<close>,_) $ U $ Q $ V $ R) => let
@@ -251,8 +251,8 @@ fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRi
             raise TERM("The quantum equality must be a simple one (\<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>), not one with operators (quantum_equality_full U \<lbrakk>...\<rbrakk> V \<lbrakk>...\<rbrakk>)", [predicate])
         in (pred_lhs, Q, R) end
     | _ => raise TERM("Pre/postcondition must be of the form {... \<sqinter> \<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>}", [predicate])
-  val vt_left = Prog_Variables.parse_varlist qeq_left
-  val vt_right = Prog_Variables.parse_varlist qeq_right
+  val vt_left = Prog_Variables.variable_to_varlist ctxt qeq_left
+  val vt_right = Prog_Variables.variable_to_varlist ctxt qeq_right
 
   (* Check: no duplicate variables in qeq *)
   val _ = if has_duplicates Prog_Variables.nameq (vt_left @ vt_right)
@@ -271,8 +271,8 @@ fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRi
   (* keep_left, keep_right are the vars before beforeLeft/beforeRight (in vt_left/right) *)
   val keep_left = List.take (vt_left, (length vt_left - length beforeLeft))
   val keep_right = List.take (vt_right, (length vt_right - length beforeRight))
-  val (_,keep_leftT) = Prog_Variables.varterm_from_list keep_left |> Prog_Variables.mk_varterm
-  val (_,keep_rightT) = Prog_Variables.varterm_from_list keep_right |> Prog_Variables.mk_varterm
+  val keep_leftT = Prog_Variables.varterm_from_list keep_left |> varterm_to_variable Quantum |> fastype_of |> dest_qvariableT
+  val keep_rightT = Prog_Variables.varterm_from_list keep_right |> varterm_to_variable Quantum |> fastype_of |> dest_qvariableT
 
   (* Check: keep_left/right have the same type (as variable tuple *)
   (* (Should never fail.) *)
@@ -282,9 +282,11 @@ fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRi
   (* replaced_left_vt := left_vt with beforeLeft replace by afterLeft
      replaced_right_vt analogous *)
   val replaced_left = keep_left @ afterLeft
-  val (replaced_left_vt,replaced_leftT) = Prog_Variables.varterm_from_list replaced_left |> Prog_Variables.mk_varterm
+  val replaced_left_vt = Prog_Variables.varterm_from_list replaced_left |> varterm_to_variable Quantum
+  val replaced_leftT = replaced_left_vt |> fastype_of |> dest_qvariableT
   val replaced_right = keep_right @ afterRight
-  val (replaced_right_vt,replaced_rightT) = Prog_Variables.varterm_from_list replaced_right |> Prog_Variables.mk_varterm
+  val replaced_right_vt = Prog_Variables.varterm_from_list replaced_right |> varterm_to_variable Quantum
+  val replaced_rightT = replaced_right_vt |> fastype_of |> dest_qvariableT
   (* Should never fail: *)
   val _ = if replaced_leftT = replaced_rightT then ()
           else error "conseq_qrhl_replace_in_predicate: type error"
@@ -303,8 +305,8 @@ fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRi
 
   (* All of before/afterLeft/Right *)
   val all_vars0 = beforeLeft @ beforeRight @ afterLeft @ afterRight
-  val (all_vars, all_varsT) = all_vars0
-                 |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+  val all_vars = all_vars0
+                 |> Prog_Variables.varterm_from_list |> varterm_to_variable Quantum
 
   val keepLeft_set = Symtab.make_set (map fst keep_left)
   val keepRight_set = Symtab.make_set (map fst keep_right)
@@ -320,7 +322,7 @@ fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRi
           else error "Left quantum equality has variables that conflict with replacement variables" *)
 
   (* Condition that implies that `all_vars` do not occur in `pred_lhs` (the predictate without the qeq) *)
-  val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT all_varsT --> HOLogic.boolT)
+  val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of all_vars --> HOLogic.boolT)
                  $ pred_lhs $ all_vars
 in
   (pred', colocality)
@@ -345,8 +347,10 @@ in result = \<^prop>\<open>True\<close> end
 fun byQRHLPre (cvars, qvars) =
   let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
       val cEqs' = \<^const>\<open>classical_subspace\<close> $ QRHL.mk_conjs cEqs
-      val (qvars1',qvars1T) = QRHL.variables (map (fn (v1,_ ,T) => Free(v1,QRHL.mk_variableT T)) qvars)
-      val (qvars2',qvars2T) = QRHL.variables (map (fn (_ ,v2,T) => Free(v2,QRHL.mk_variableT T)) qvars)
+      val qvars1' = map (fn (v1,_,T) => (v1,T)) qvars |> varterm_from_list |> varterm_to_variable Quantum
+      val qvars1T = fastype_of qvars1' |> dest_qvariableT
+      val qvars2' = map (fn (_,v2,T) => (v2,T)) qvars |> varterm_from_list |> varterm_to_variable Quantum
+      val qvars2T = fastype_of qvars2' |> dest_qvariableT
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
       val qvarsEq = if qvars=[] then @{const top(predicate)} else QRHL.mk_quantum_equality qvars1' qvars2' qvars1T
   in
