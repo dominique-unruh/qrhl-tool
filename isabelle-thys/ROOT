@@ -19,7 +19,7 @@ session "QRHL-Prerequisites2" in "fake-session-dir/4" = "QRHL-Prerequisites1" +
   theories CryptHOL.Misc_CryptHOL
 
 session "QRHL-Prerequisites" in "fake-session-dir/5" = "QRHL-Prerequisites2" +
-  sessions "HOL-Library" "HOL-Analysis" "HOL-ZF" "HOL-ex"
+  sessions "HOL-Library" "HOL-Analysis" "HOL-ZF" "HOL-ex" "Registers"
   theories "HOL-Analysis.Inner_Product" "HOL-Library.Z2"
     "HOL-Analysis.Infinite_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
     "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral" "HOL-ZF.HOLZF"

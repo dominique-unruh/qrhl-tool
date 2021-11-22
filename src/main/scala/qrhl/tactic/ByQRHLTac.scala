@@ -35,8 +35,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
     def unapply(term: Term): Option[(Term,Statement,Term)] = term match {
       case App(App(App(Const(GIsabelle.probability.name,_),e),p),rho) =>
 
-        val e2 = Ops.addIndexToExpressionOp(e, left).retrieveNow
-        val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
+        val e2 = RichTerm.decodeFromExpression(state.isabelle, e).isabelleTerm
+        val e3 = Ops.addIndexToExpressionOp(e2, left).retrieveNow
 
         val pname = p match {
           case Free(n,_) => n

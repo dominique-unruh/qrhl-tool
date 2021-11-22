@@ -5,6 +5,7 @@ open Programs
 open Prog_Variables
 open QRHL
 
+(* TODO remove? *)
 structure Terms = struct
 val table = Synchronized.var ("term_table") (Inttab.empty, Termtab.empty)
 fun term_to_id ctxt t = Synchronized.change_result table (fn (tab1,tab2) =>
@@ -381,10 +382,10 @@ fun declare_classical_variable (name,typ,ctxt) =
   Prog_Variables.declare_variable ctxt (Binding.name name) typ Prog_Variables.Classical
 
 fun term_to_expression (ctxt,t) =
-  Expressions.term_to_expression ctxt t
+  Programs.term_to_expression ctxt t
 
 fun expression_to_term (ctxt,t) =
-  Expressions.expression_to_term ctxt t
+  Programs.expression_to_term ctxt t
 
 fun whatVarterm (VTCons _) = "cons"
   | whatVarterm (VTSingle _) = "single"
@@ -406,14 +407,14 @@ fun declare_variable (ctxt, name, T) = let
   in ctxt' end
 
 fun colocal_pred_qvars (predicate, qvars) = let
-     val (varterm,vartermT) = qvars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
-     val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT vartermT --> HOLogic.boolT)
+     val varterm = qvars |> Prog_Variables.varterm_from_list |> varterm_to_variable Quantum
+     val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of varterm --> HOLogic.boolT)
                $ predicate $ varterm
    in colocality end
 
-fun swap_variables_conv (ctxt, pred) =
-     QRHL.swap_variables_conv ctxt (Thm.cterm_of ctxt pred)
-           |> Thm.prop_of |> Logic.dest_equals |> snd
+fun swap_variables_conv (ctxt, pred) = pred (* TODO some cleanup of pred, probably *)
+(*      QRHL.swap_variables_conv ctxt (Thm.cterm_of ctxt pred)
+           |> Thm.prop_of |> Logic.dest_equals |> snd *)
 
 fun makeQrhlSubgoal (left,right,pre,post,assms) =
   Subgoal_QRHL (Relational_Hoare.QRHL_Judgment (pre,left,right,post), assms)
@@ -426,15 +427,15 @@ val joint_sample_equal_tac : unit * subgoal * Proof.context -> (subgoal list * t
 
 val joint_sample_tac =
   apply_tactic_on_term_concl (fn ctxt => fn witness => 
-      let val witness_expr = witness |> Expressions.term_to_expression ctxt |> Thm.cterm_of ctxt in
+      let val witness_expr = witness |> Programs.term_to_expression ctxt \<^typ>\<open>cl2\<close> |> Thm.cterm_of ctxt in
       Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)
 
 val seq_tac =
  apply_tactic_on_term_concl (fn ctxt => fn (i,j,B) => Tactics.seq_tac i j B ctxt 1)
 
 fun conseq_qrhl_cardinality_condition (ctxt,befor,after) = let
-     val (_,beforeT) = befor |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
-     val (_,afterT) = after |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
+     val beforeT = befor |> Prog_Variables.varterm_from_list |> varterm_to_variable Quantum |> fastype_of |> dest_qvariableT
+     val afterT = after |> Prog_Variables.varterm_from_list |> varterm_to_variable Quantum |> fastype_of |> dest_qvariableT
      val before_UNIV = HOLogic.mk_UNIV beforeT
      val after_UNIV = HOLogic.mk_UNIV afterT
      (* finite (UNIV::beforeT set) *)
@@ -454,7 +455,9 @@ fun conseq_qrhl_cardinality_condition (ctxt,befor,after) = let
   in term end
 
 fun add_index_to_expression (t,left) =
-  Expressions.add_index_to_expression t left
+  (* In Scala, we follow this up with expression_to_term anyway. So we can do the add_index properly on terms,
+  e \<rightarrow> \<lambda>m. liftSubspace qFst e (fst m)     (or snd) *)
+  Programs.add_index_to_expression t left
 
 val wp_tac = 
   apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Weakest_Precondition.wp_seq_tac left right ctxt 1)

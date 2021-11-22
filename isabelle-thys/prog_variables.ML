@@ -136,43 +136,37 @@ val _ = Attrib.setup \<^binding>\<open>variable\<close>
 end
 
 
-(* fun varname_assumption cq bind T = 
-  let val qT = mk_variableT T
-      val name = Binding.name_of bind           
-      val name' = if cq=Classical then "var_"^name else name
-      val lhs = Const(\<^const_name>\<open>variable_name\<close>, qT --> HOLogic.stringT) $ Free(name',qT)
-      val rhs = HOLogic.mk_string name
-  in HOLogic.mk_eq (lhs,rhs) |> HOLogic.mk_Trueprop end *)
+fun register_assumption cq bind T = 
+  let val qT = case cq of Classical => mk_cvariableT T | Quantum => mk_qvariableT T
+      val name = Binding.name_of bind
+      val register_constname = case cq of Classical => \<^const_name>\<open>cregister\<close> | Quantum => \<^const_name>\<open>qregister\<close>
+      val register_const = Const(register_constname, qT --> HOLogic.boolT)
+  in register_const $ Free(name,qT) |> HOLogic.mk_Trueprop end
 
-(* fun addQVariableNameAssumption cq bind T ctxt =
-  let val assm = varname_assumption cq bind T
+fun add_register_assumption cq bind T ctxt =
+  let val assm = register_assumption cq bind T
       val ctxt1 = Variable.declare_term assm ctxt
       val ([(_,[thm])],ctxt2) = Proof_Context.add_assms Assumption.assume_export
-                  [((Binding.suffix_name "_varname" bind,[Simplifier.simp_add]), [(assm,[])])] ctxt1
+                  [((Binding.suffix_name "_register" bind,[Simplifier.simp_add]), [(assm,[])])] ctxt1
   in
     ctxt2
-  end *)
+  end
 
-(* 
 fun declare_variable ctxt bind T cq =
-  let val _ = check_variable_type ctxt T
-      val qT = mk_variableT T
+  let val qT = case cq of Classical => mk_cvariableT T | Quantum => mk_qvariableT T
       val v = Binding.name_of bind
-      val vars = if cq=Classical then [(bind,T),(Binding.suffix_name "1" bind,T),(Binding.suffix_name "2" bind,T),
-                                       (bind |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "1" |> Binding.prefix_name "var_",qT),(bind |> Binding.suffix_name "2" |> Binding.prefix_name "var_",qT)]
-                                  else [(bind,qT),(Binding.suffix_name "1" bind,qT),(Binding.suffix_name "2" bind,qT)]
+      val vars = [(bind,qT),(Binding.suffix_name "1" bind,qT),(Binding.suffix_name "2" bind,qT)]
       val (_,ctxt) = Variable.add_fixes_binding (map fst vars) ctxt
-      val ctxt = fold (fn (v,T) => Variable.declare_term (Free(Binding.name_of v,T))) vars ctxt
-      val ctxt = addQVariableNameAssumption cq bind T ctxt
-      val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "1" bind) T ctxt
-      val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "2" bind) T ctxt
-      val ctxt = (* VarTypes.map (Symtab.insert op= (v,cq)) ctxt *)  declare_variable_ctxt v cq ctxt
+      val ctxt = fold (fn (v,T) => Variable.declare_term (Free (Binding.name_of v, T))) vars ctxt
+      val ctxt = add_register_assumption cq bind T ctxt
+      (* val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "1" bind) T ctxt *)
+      (* val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "2" bind) T ctxt *)
+      val ctxt = (* VarTypes.map (Symtab.insert op= (v,cq)) ctxt *)  declare_variable_ctxt v cq T ctxt
       (* val ctxt = (* VarTypes.map (Symtab.insert op= (v^"1",cq)) ctxt *) declare_variable_ctxt (v^"1") cq ctxt *)
       (* val ctxt = (* VarTypes.map (Symtab.insert op= (v^"2",cq)) ctxt *) declare_variable_ctxt (v^"2") cq ctxt *)
   in
     ctxt
   end
- *)
 
 (* fun variables vars gthy = 
 let val _ = app (fn (_,_,T) => check_variable_type (Proof_Context.init_global gthy) T)
@@ -388,7 +382,5 @@ fun distinct_vars_tac ctxt = let
     distinct_qvars_split1 distinct_qvars_split2 qregister_pair_iff_compatible qcompatible3 qcompatible3'
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
   in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are variables and distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
-
-
 
 end
