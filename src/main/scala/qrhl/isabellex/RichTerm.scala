@@ -196,6 +196,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 object RichTerm {
   private val logger: Logger = log4s.getLogger
 
+  /** Translates expression from longform into shortform */
   def decodeFromExpression(context:IsabelleX.ContextX, t: Term): RichTerm =
     RichTerm(Ops.decodeFromExpressionOp(MLValue((context.context,t))).retrieveNow)
 

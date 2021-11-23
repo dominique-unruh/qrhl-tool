@@ -13,8 +13,9 @@ class ExpressionTest extends AnyFunSuite {
     tl.execCmd("classical var x : int")
     val str = "Cla[ x=(1::int) ]"
     //    val state = tl.state
-    val e = RichTerm(tl.state.isabelle, str, GIsabelle.predicateT)
+    val e = RichTerm.decodeFromExpression(tl.state.isabelle, tl.state.isabelle.readExpression(str, GIsabelle.predicateT, indexed = false))
     println(e)
+    // TODO: need to convert expression to shortform before comparing
     assert(e.toString=="ℭ\uD835\uDD29\uD835\uDD1E[x = 1]")
   }
 

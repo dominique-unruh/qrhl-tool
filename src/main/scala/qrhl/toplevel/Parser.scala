@@ -84,7 +84,7 @@ object Parser extends JavaTokenParsers {
       }
   }, (0,Nil)) ^^ { case (_,chars) => chars.reverse.mkString.trim }
 
-
+  /** Parses an expression given in shortform. Returns it in shortform. */
   def expression(typ:Typ)(implicit context:ParserContext) : Parser[RichTerm] =
 //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
     scanInnerSyntax ^^ { str:String => context.isabelle match {

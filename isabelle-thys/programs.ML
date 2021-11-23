@@ -5,6 +5,7 @@ local open Prog_Variables in
 fun mk_expressionT T = \<^typ>\<open>cl\<close> --> T
 fun mk_expression2T T = \<^typ>\<open>cl2\<close> --> T
 
+(* Translates expression in longform to expression in shortform *)
 fun expression_to_term ctxt t =
   let val lookup_var = lookup_variable ctxt
       val body = case t of Abs(_,_,body) => body | _ => raise TERM("expression_to_term", [t])

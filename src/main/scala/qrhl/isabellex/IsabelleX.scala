@@ -779,7 +779,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
     val dependenciesOfTheory =
       MLValue.compileFunction[Theory, List[Path]]("map_filter QRHL_Operations.local_thy_file o Theory.ancestors_of")
-    if (Version.versionString != "Isabelle"+version)
+    if (Version.versionString != "Isabelle"+version && Version.versionString != "dev")
       throw UserException(s"Expected Isabelle $version but got ${Version.versionString}")
     val conseq_qrhl_cardinality_condition =
       MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")
@@ -920,12 +920,11 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 //    val use_thy_op =
 //      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
     lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context]("QRHL_Operations.applyToplevelCommand")
+    lazy val readExpressionOp = MLValue.compileFunction[Context, String, Typ, Boolean, Term]("fn (ctxt, str, typ, indexed) => QRHL_Operations.read_expression ctxt str typ indexed")
   }
 }
 
 object IsabelleX {
-
-
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
     val isabelle = new IsabelleX()
@@ -972,6 +971,10 @@ object IsabelleX {
     import isabelle.Ops._
 
     _theContext = this
+
+    /** Parses an expression of type typ in shortform. Returns the term in longform. */
+    def readExpression(str: String, typ: Typ, indexed: Boolean): Term =
+      readExpressionOp(context, str, typ, indexed).retrieveNow
 
     def checkType(term: Term): Typ =
       checkTypeOp(MLValue(context,term)).retrieveNow

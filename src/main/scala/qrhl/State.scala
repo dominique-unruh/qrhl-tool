@@ -316,6 +316,7 @@ class State private (val environment: Environment,
     }
   }
 
+  /** Parses an expression in shortform. Returns the parsed expression in shortform. */
   def parseExpression(typ:Typ, str:String): RichTerm = {
     implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.expression(typ),str) match {
