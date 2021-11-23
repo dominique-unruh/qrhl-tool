@@ -26,7 +26,7 @@ class ExpressionTest extends AnyFunSuite {
     val t = e.encodeAsExpression(tl.state.isabelle)
     println(e)
     println(t)
-    assert(t.typ == GIsabelle.expressionT(GIsabelle.predicateT))
+    assert(t.typ == GIsabelle.expressionT(GIsabelle.predicateT, indexed = true))
   }
 
   test("encodeAsExpression roundtrip") {

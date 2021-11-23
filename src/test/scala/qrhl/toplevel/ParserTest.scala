@@ -151,7 +151,7 @@ class ParserTest extends AnyFunSuite {
 
     println(block)
 
-    assert(new Local(List(CVariable("x", GIsabelle.intT)), Block()) == new Local(List(CVariable("x", GIsabelle.intT)), Block()))
+    assert(new Local(List(CVariable.fromName("x", GIsabelle.intT)), Block()) == new Local(List(CVariable.fromName("x", GIsabelle.intT)), Block()))
 //    assert(block.get == new Local(List(CVariable("x", HOLogic.intT)), Nil, Block()))
   }
 
