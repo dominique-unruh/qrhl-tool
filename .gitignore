@@ -23,7 +23,6 @@
 *.ilg
 *.ind
 *.out
-*.run.xml
 *.sdx
 *.syi
 /doc/manual-blx.bib
