@@ -48,6 +48,8 @@ object IsabelleTypes {
   val real = \<open>\<^type_name>\<open>real\<close>\<close>
   val program_state = \<open>\<^type_name>\<open>program_state\<close>\<close>
   val infinite = \<open>\<^type_name>\<open>infinite\<close>\<close>
+  val cregister = \<open>\<^type_name>\<open>cregister\<close>\<close>
+  val qregister = \<open>\<^type_name>\<open>qregister\<close>\<close>
 }
 
 object IsabelleConsts {
@@ -74,8 +76,6 @@ object IsabelleConsts {
   val qapply = \<open>\<^const_name>\<open>qapply\<close>\<close>
   val implies = \<open>\<^const_name>\<open>HOL.implies\<close>\<close>
   val measurement = \<open>\<^const_name>\<open>measurement\<close>\<close>
-  val variable_unit = \<open>\<^const_name>\<open>variable_unit\<close>\<close>
-  val variable_concat = \<open>\<^const_name>\<open>variable_concat\<close>\<close>
   val one = \<open>\<^const_name>\<open>one_class.one\<close>\<close>
   val True = \<open>\<^const_name>\<open>True\<close>\<close>
   val False = \<open>\<^const_name>\<open>False\<close>\<close>
@@ -100,6 +100,10 @@ object IsabelleConsts {
   val insert = \<open>\<^const_name>\<open>insert\<close>\<close>
   val conj = \<open>\<^const_name>\<open>conj\<close>\<close>
   val disj = \<open>\<^const_name>\<open>disj\<close>\<close>
+  val cvariable_unit = \<open>\<^const_name>\<open>cvariable_unit\<close>\<close>
+  val qvariable_unit = \<open>\<^const_name>\<open>qvariable_unit\<close>\<close>
+  val cregister_pair = \<open>\<^const_name>\<open>cregister_pair\<close>\<close>
+  val qregister_pair = \<open>\<^const_name>\<open>qregister_pair\<close>\<close>
 }
 \<close>
 

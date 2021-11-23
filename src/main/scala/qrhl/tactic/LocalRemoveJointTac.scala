@@ -17,15 +17,15 @@ import scala.concurrent.ExecutionContext.Implicits._
 case object LocalRemoveJointTac extends Tactic {
   /** Assumes that s1,s2 have same length and matching types */
   private def extendQeq(us1: Term, s1: Term, us2: Term, s2: Term, qvarsL: List[QVariable], qvarsR: List[QVariable]) = {
-    import GIsabelle.{variable_concat, variable_singleton, quantum_equality_full, idOp, ell2T}
+    import GIsabelle.{variable_concat, quantum_equality_full, idOp, ell2T}
     var us1_ = us1
     var us2_ = us2
     var s1_ = s1
     var s2_ = s2
 
     for ((q1,q2) <- qvarsL.zip(qvarsR).reverse) {
-      s1_ = variable_concat(variable_singleton(q1.index1.variableTerm),s1_)
-      s2_ = variable_concat(variable_singleton(q2.index2.variableTerm),s2_)
+      s1_ = variable_concat(q1.index1.variableTermShort,s1_)
+      s2_ = variable_concat(q2.index2.variableTermShort,s2_)
       us1_ = GIsabelle.tensorOp(idOp(ell2T(q1.valueTyp)), us1_)
       us2_ = GIsabelle.tensorOp(idOp(ell2T(q2.valueTyp)), us2_)
     }

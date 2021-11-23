@@ -60,10 +60,10 @@ sealed trait VarTerm[+A] {
   }
 }
 object VarTerm {
-  def isabelleTerm(vt:VarTerm[Variable]) : Term = vt match {
-    case VTUnit => GIsabelle.variable_unit
-    case VTSingle(v) => GIsabelle.variable_singleton(v.variableTerm)
-    case VTCons(a, b) => GIsabelle.variable_concat(isabelleTerm(a), isabelleTerm(b))
+  def isabelleTerm(vt:VarTerm[Variable], classical:Boolean, indexed:Boolean) : Term = vt match {
+    case VTUnit => GIsabelle.variable_unit(classical=classical, indexed=indexed)
+    case VTSingle(v) => v.variableTermShort
+    case VTCons(a, b) => GIsabelle.variable_concat(isabelleTerm(a, classical=classical, indexed=indexed), isabelleTerm(b, classical=classical, indexed=indexed))
   }
 
   def varlist[A](elems: A*) : VarTerm[A] = {

@@ -100,11 +100,11 @@ final class Environment private
 //    assert(!cVariables.contains(name))
 //    assert(!qVariables.contains(name))
     if (quantum)
-      copy(qVariables = qVariables.updated(name, QVariable(name, typ)),
+      copy(qVariables = qVariables.updated(name, QVariable.fromName(name, typ)),
         cqVariables12=cqVariables12++newIdxNames,
         hash = HashTag()(hash, Hashable.hash(name), Hashable.hash(typ)))
     else
-      copy(cVariables = cVariables.updated(name, CVariable(name,typ)),
+      copy(cVariables = cVariables.updated(name, CVariable.fromName(name,typ)),
         cqVariables12=cqVariables12++newIdxNames,
         hash = HashTag()(hash, Hashable.hash(name), Hashable.hash(typ)))
   }

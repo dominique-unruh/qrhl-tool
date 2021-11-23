@@ -23,8 +23,8 @@ object MLValueConverters {
     override def store(value: Statement)(implicit isabelle: control.Isabelle, ec: ExecutionContext): MLValue[Statement] = value match {
       case local: Local =>
         Ops.makeLocal((
-          VarTerm.varlist(local.vars.collect { case CVariable(name, typ) => (name,typ) } :_*),
-          VarTerm.varlist(local.vars.collect { case QVariable(name, typ) => (name,typ) } :_*),
+          VarTerm.varlist(local.vars.collect { case v : CVariable => (v.name, v.valueTyp) } :_*),
+          VarTerm.varlist(local.vars.collect { case v : QVariable => (v.name, v.valueTyp) } :_*),
           local.body.statements))
       case block: Block =>
         Ops.listToBlock(block.statements)
@@ -54,29 +54,29 @@ object MLValueConverters {
         case "local" =>
           for ((cvars,qvars,stmts) <- Ops.destLocal(value).retrieve)
             yield Local(
-              cvars.toList.map { case (name, typ) => CVariable(name,typ) },
-              qvars.toList.map { case (name, typ) => QVariable(name,typ) },
+              cvars.toList.map { case (name, typ) => CVariable.fromName(name,typ) },
+              qvars.toList.map { case (name, typ) => QVariable.fromName(name,typ) },
               Block(stmts :_*))
         case "assign" =>
           for ((vars, expr) <- Ops.destAssign(value).retrieve)
-            yield Assign(vars.map { case (name, typ) => CVariable(name,typ) }, RichTerm(expr))
+            yield Assign(vars.map { case (name, typ) => CVariable.fromName(name,typ) }, RichTerm(expr))
         case "sample" =>
           for ((vars, expr) <- Ops.destSample(value).retrieve)
-            yield Sample(vars.map { case (name, typ) => CVariable(name,typ) }, RichTerm(expr))
+            yield Sample(vars.map { case (name, typ) => CVariable.fromName(name,typ) }, RichTerm(expr))
         case "call" =>
           Ops.destCall(value).retrieve
         case "measurement" =>
           for ((result, location, e) <- Ops.destMeasurement(value).retrieve)
             yield Measurement(
-              result.map { case (name, typ) => CVariable(name,typ) },
-              location.map { case (name, typ) => QVariable(name,typ) },
+              result.map { case (name, typ) => CVariable.fromName(name,typ) },
+              location.map { case (name, typ) => QVariable.fromName(name,typ) },
               RichTerm(e))
         case "qinit" =>
           for ((vars, expr) <- Ops.destQInit(value).retrieve)
-            yield QInit(vars.map { case (name, typ) => QVariable(name,typ) }, RichTerm(expr))
+            yield QInit(vars.map { case (name, typ) => QVariable.fromName(name,typ) }, RichTerm(expr))
         case "qapply" =>
           for ((vars, expr) <- Ops.destQApply(value).retrieve)
-            yield QApply(vars.map { case (name, typ) => QVariable(name,typ) }, RichTerm(expr))
+            yield QApply(vars.map { case (name, typ) => QVariable.fromName(name,typ) }, RichTerm(expr))
         case "ifthenelse" =>
           for ((cond,thens,elses) <- Ops.destIfThenElse(value).retrieve)
             yield IfThenElse(RichTerm(cond), Block(thens:_*), Block(elses:_*))

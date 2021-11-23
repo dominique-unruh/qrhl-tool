@@ -244,7 +244,11 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   val intT: Type = Type(t.int)
   val bitT: Type = Type(t.bit)
   //  val linear_spaceT_name = "Complex_Inner_Product.linear_space"
-  val predicateT: Type = Type(t.ccsubspace, ell2T(Type(t.mem2)))
+  val quT: Type = Type(t.qu)
+  val clT: Type = Type(t.cl)
+  val qu2T: Type = prodT(quT, quT)
+  val cl2T: Type = prodT(clT, clT)
+  val predicateT: Type = Type(t.ccsubspace, ell2T(qu2T))
   val programT: Type = Type(t.program)
   val oracle_programT: Type = Type(t.oracle_program)
   val classical_subspace : Term= Const(c.classical_subspace, boolT -->: predicateT)
@@ -261,9 +265,11 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def undefined(typ: Typ) : Const = Const(c.undefined, typ)
 
-  def liftSpace(typ: Typ) : Const = Const(c.liftSpace, linear_spaceT(ell2T(typ)) -->: variablesT(typ) -->: predicateT)
+  def liftSpace(typ: Typ) : Const = Const(c.liftSpace, linear_spaceT(ell2T(typ)) -->: variableT(typ, classical=false, indexed=true) -->: predicateT)
   def liftSpace(space: Term, vars: Term) : Term = {
-    val typ = VariablesT.unapply(fastype_of(vars)).get
+    val OfType(VariableT(typ,classical,indexed)) = vars
+    assert(!classical)
+    assert(indexed)
     liftSpace(typ) $ space $ vars
   }
 
@@ -523,63 +529,68 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   val block: Const = Const(c.block, listT(programT) -->: programT)
 
-  def variableT(typ: Typ): Type = Type(t.variable, typ)
+  def variableT(typ: Typ, classical: Boolean, indexed: Boolean): Type =
+    Type(if (classical) t.cregister else t.qregister,
+      typ,
+      if (indexed && classical) cl2T
+      else if (indexed && !classical) qu2T
+      else if (!indexed && classical) clT
+      else quT
+    )
   object VariableT {
-    def unapply(typ: Typ): Option[Typ] = typ match {
-      case Type(t.variable, typ) => Some(typ)
+    /** case VariableT(typ, classical, indexed) => ... */
+    def unapply(typ: Typ): Option[(Typ, Boolean, Boolean)] = typ match {
+      case Type(t.cregister, typ, `cl2T`) => Some((typ, true, true))
+      case Type(t.cregister, typ, `clT`) => Some((typ, true, false))
+      case Type(t.qregister, typ, `qu2T`) => Some((typ, false, true))
+      case Type(t.qregister, typ, `quT`) => Some((typ, false, false))
       case _ => None
     }
   }
-  @deprecated("use VariableT.unapply instead","now")
+/*  @deprecated("use VariableT.unapply instead","now")
   def dest_variableT(typ: Typ): Typ = typ match {
     case Type(t.variable, typ2) => typ2
     case _ => throw new RuntimeException(s"expected type ${t.variable}, not " + typ)
-  }
-
-  def variablesT(typ: Typ): Type = Type(t.variables, typ)
-  object VariablesT {
-    def unapply(typ: Typ): Option[Typ] = typ match {
-      case Type(t.variables, typ) => Some(typ)
-      case _ => None
-    }
-  }
-
-  def variablesT(typs: List[Typ]): Type = variablesT(tupleT(typs: _*))
+  }*/
 
   //val cvariableT: Typ => Type = variableT
-  def expressionT(typ: Typ) = Type(t.expression, typ)
+  def expressionT(typ: Typ, indexed: Boolean): Type =
+    (if (indexed) cl2T else clT) -->: typ
 
-  val instantiateOracles = Const(c.instantiateOracles, oracle_programT -->: listT(programT) -->: programT)
+  val instantiateOracles: Const = Const(c.instantiateOracles, oracle_programT -->: listT(programT) -->: programT)
   //  val assignName = c.assign
 
-  def assign(typ: Typ): Const = Const(c.assign, variablesT(typ) -->: expressionT(typ) -->: programT)
+  def assign(typ: Typ): Const = Const(c.assign, variableT(typ, classical=true, indexed=false) -->: expressionT(typ, indexed=false) -->: programT)
 
   //  val sampleName = c.sample
 
-  def sample(typ: Typ): Const = Const(c.sample, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
+  def sample(typ: Typ): Const = Const(c.sample, variableT(typ, classical=true, indexed=false) -->: expressionT(distrT(typ), indexed=false) -->: programT)
 
-  val propT = Type(t.prop)
+  val propT: Type = Type(t.prop)
 
   //  val ifthenelseName = "Programs.ifthenelse"
-  val ifthenelse: Const = Const(c.ifthenelse, expressionT(boolT) -->: listT(programT) -->: listT(programT) -->: programT)
+  val ifthenelse: Const = Const(c.ifthenelse, expressionT(boolT, indexed=false) -->: listT(programT) -->: listT(programT) -->: programT)
   //  val whileName = "Programs.while"
-  val whileProg = Const(c.`while`, expressionT(boolT) -->: listT(programT) -->: programT)
-  val metaImp = Const(c.imp, propT -->: propT -->: propT)
-  val implies = Const(c.implies, boolT -->: boolT -->: boolT)
+  val whileProg: Const = Const(c.`while`, expressionT(boolT, indexed=false) -->: listT(programT) -->: programT)
+  val metaImp: Const = Const(c.imp, propT -->: propT -->: propT)
+  val implies: Const = Const(c.implies, boolT -->: boolT -->: boolT)
   def implies(a: Term, b: Term): Term = implies $ a $ b
-  val iff = Const(c.eq, boolT -->: boolT -->: boolT)
-  val qrhl = Const(c.qrhl, expressionT(predicateT) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT) -->: boolT)
+  val iff: Const = Const(c.eq, boolT -->: boolT -->: boolT)
+  val qrhl: Const = Const(c.qrhl, expressionT(predicateT, indexed=true) -->: listT(programT) -->: listT(programT) -->: expressionT(predicateT, indexed=true) -->: boolT)
   //  val qinitName = c.qinit
 
-  def qinit(typ: Typ) = Const(c.qinit, variablesT(typ) -->: expressionT(ell2T(typ)) -->: programT)
+  def qinit(typ: Typ): Const =
+    Const(c.qinit, variableT(typ, classical=false, indexed=false) -->: expressionT(ell2T(typ), indexed=false) -->: programT)
 
   //  val qapplyName = "Programs.qapply"
 
-  def qapply(typ: Typ) = Const(c.qapply, variablesT(typ) -->: expressionT(l2boundedT(typ)) -->: programT)
+  def qapply(typ: Typ): Const =
+    Const(c.qapply, variableT(typ, classical=false, indexed=false) -->: expressionT(l2boundedT(typ), indexed=false) -->: programT)
 
   //  val measurementName = c.measurement
 
-  def measurement(resultT: Typ, qT: Typ) = Const(c.measurement, variablesT(resultT) -->: variablesT(qT) -->: expressionT(measurementT(resultT, qT)) -->: programT)
+  def measurement(resultT: Typ, qT: Typ): Const =
+    Const(c.measurement, variableT(resultT, classical=true, indexed=false) -->: variableT(qT, classical=false, indexed=false) -->: expressionT(measurementT(resultT, qT), indexed=false) -->: programT)
 
   val unitT: Type = Type(t.unit)
 
@@ -590,8 +601,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     case _ => throw new RuntimeException(s"expected type ${t.prod}, not " + typ)
   }
 
-  private def qvarTuple_var0(qvs: List[QVariable]): (Term, Typ) = qvs match {
-    case Nil => (variable_unit, unitT)
+/*  private def qvarTuple_var0(qvs: List[QVariable], indexed: Boolean): (Term, Typ) = qvs match {
+    case Nil => (variable_unit(classical=false), unitT)
     case List(qv) => (variable_singleton(qv.valueTyp) $ qv.variableTerm,
       qv.valueTyp)
     case qv :: rest =>
@@ -599,19 +610,23 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       val (restTuple, restTyp) = qvarTuple_var0(rest)
       (variable_concat(qvTyp, restTyp) $ qvTuple $ restTuple,
         prodT(qvTyp, restTyp))
-  }
+  }*/
 
-  def qvarTuple_var(qvs: List[QVariable]): Term = qvarTuple_var0(qvs)._1
+//  def qvarTuple_var(qvs: List[QVariable]): Term = qvarTuple_var0(qvs)._1
 
-  val variable_unit: Const = Const(c.variable_unit, variablesT(unitT))
+  def variable_unit(classical: Boolean, indexed: Boolean): Const =
+    Const(if (classical) c.cvariable_unit else c.qvariable_unit,
+      variableT(unitT, classical=classical, indexed=indexed))
   object Variable_Unit {
-    def unapply(term: Term): Boolean = term match {
-      case Const(c.variable_unit, _) => true
-      case _ => false
+    /** case Variable_Unit(classical, indexed) => ... */
+    def unapply(term: Term): Option[(Boolean, Boolean)] = term match {
+      case Const(c.cvariable_unit, VariableT(_, _, indexed)) => Some((true, indexed))
+      case Const(c.qvariable_unit, VariableT(_, _, indexed)) => Some((false, indexed))
+      case _ => None
     }
   }
 
-  def variable_singleton(typ: Typ): Const = Const(c.variable_singleton, variableT(typ) -->: variablesT(typ))
+/*  def variable_singleton(typ: Typ): Const = Const(c.variable_singleton, variableT(typ) -->: variablesT(typ))
   def variable_singleton(t: Term): Term = t match {
     case OfType(VariableT(typ)) => variable_singleton(typ) $ t
   }
@@ -620,16 +635,20 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       case App(Const(c.variable_singleton, _), v) => Some(v)
       case _ => None
     }
-  }
+  }*/
 
-  def variable_concat(t1: Typ, t2: Typ): Const = Const(c.variable_concat, variablesT(t1) -->: variablesT(t2) -->: variablesT(prodT(t1, t2)))
+  def variable_concat(t1: Typ, t2: Typ, classical: Boolean, indexed: Boolean): Const =
+    Const(if (classical) c.cregister_pair else c.qregister_pair,
+      variableT(t1, classical=classical, indexed=indexed) -->: variableT(t2, classical=classical, indexed=indexed) -->: variableT(prodT(t1, t2), classical=classical, indexed=indexed))
   def variable_concat(t1: Term, t2: Term) : Term = (t1,t2) match {
-    case (OfType(VariablesT(typ1)), OfType(VariablesT(typ2))) =>
-      variable_concat(typ1,typ2) $ t1 $ t2
+    case (OfType(VariableT(typ1, classical1, indexed1)), OfType(VariableT(typ2, classical2, indexed2))) =>
+      assert(classical1 == classical2)
+      assert(indexed1 == indexed2)
+      variable_concat(typ1, typ2, classical = classical1, indexed = indexed1) $ t1 $ t2
   }
   object Variable_Concat {
     def unapply(term: Term): Option[(Term,Term)] = term match {
-      case App(App(Const(c.variable_concat,_), vt1), vt2) => Some((vt1,vt2))
+      case App(App(Const(c.cregister_pair | c.qregister_pair, _), vt1), vt2) => Some((vt1,vt2))
       case _ => None
     }
   }
@@ -641,7 +660,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   val realT: Type = Type(t.real)
   val stringT: Type = listT(Type(t.char))
   val program_stateT: Type = Type(t.program_state)
-  val probability: Const = Const(c.probability, expressionT(boolT) -->: programT -->: program_stateT -->: realT)
+  val probability: Const = Const(c.probability, expressionT(boolT, indexed=false) -->: programT -->: program_stateT -->: realT)
 
 
 
@@ -726,11 +745,13 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
 
   def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ): Const =
-    Const(IsabelleConsts.quantum_equality_full,  l2boundedT(typLeft,typZ) -->: variablesT(typLeft) -->: l2boundedT(typRight,typZ) -->: variablesT(typRight) -->: predicateT)
+    Const(IsabelleConsts.quantum_equality_full,  l2boundedT(typLeft,typZ) -->: variableT(typLeft, classical=false, indexed=true) -->: l2boundedT(typRight,typZ) -->: variableT(typRight, classical=false, indexed=true) -->: predicateT)
   def quantum_equality(q: Term, r: Term): Term = {
     val typQ = fastype_of(q)
     assert(typQ == fastype_of(r))
-    val typ = VariablesT.unapply(typQ).get
+    val VariableT(typ, classical, indexed) = typQ
+    assert(!classical)
+    assert(indexed)
     val id = idOp(ell2T(typ))
     quantum_equality_full(typ, typ, typ) $ id $ q $ id $ r
   }

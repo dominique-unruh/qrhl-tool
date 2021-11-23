@@ -104,7 +104,7 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
         val inv2 = inv1.isabelleTerm
         val qRenaming = renaming collect { case (x : QVariable, y : QVariable) => (x.index(side), y.index(side)) }
         val inv3 = qRenaming.foldLeft(inv2)
-          { case (inv, (x,y)) => GIsabelle.swap_variables_subspace(x.variableTerm, y.variableTerm, inv) }
+          { case (inv, (x,y)) => GIsabelle.swap_variables_subspace(x.variableTermShort, y.variableTermShort, inv) }
         RichTerm(GIsabelle.predicateT, inv3)
       }
 

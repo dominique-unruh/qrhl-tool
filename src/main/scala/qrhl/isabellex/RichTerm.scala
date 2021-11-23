@@ -48,8 +48,8 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
   def renameCVariable(from: CVariable, to: CVariable): RichTerm = {
     assert(from.valueTyp==to.valueTyp)
-    val fromTerm = from.valueTerm
-    val toTerm = to.valueTerm
+    val fromTerm = from.variableTermShort
+    val toTerm = to.variableTermShort
     def rename(t: Term): Term = t match {
       case App(t,u) => App(rename(t), rename(u))
       case Abs(name,typ,body) => Abs(name,typ,rename(body))

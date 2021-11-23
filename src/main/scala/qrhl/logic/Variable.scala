@@ -4,6 +4,7 @@ import qrhl.isabellex.{IsabelleConsts, IsabelleX}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.{App, Const, Free, Term, Typ}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
+import qrhl.logic.Variable.{Index1, Index2, NoIndex}
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.ExecutionContext
@@ -14,7 +15,9 @@ import qrhl.isabellex.Implicits._
 
 // Variables
 sealed trait Variable extends HashedValue {
-  def rename(name: String): Variable
+  def unindex: Variable
+
+  //  def rename(name: String): Variable
 
   /** Renames this variable.
    * @param renaming - the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y'). */
@@ -25,18 +28,32 @@ sealed trait Variable extends HashedValue {
     }
 
   def isClassical: Boolean
-  def isQuantum: Boolean
+  @inline final def isQuantum: Boolean = !isClassical
+  def isIndexed: Boolean = theIndex != NoIndex
 
-  val name:String
-  /** Name of the variable on Isabelle side (prefixed with var_ for classical variables) */
-  val variableName: String
+  def name: String = theIndex match {
+    case Variable.NoIndex => basename
+    case Variable.Index1 => basename + "1"
+    case Variable.Index2 => basename + "2"
+  }
+
+  // Without the 1/2 suffix for indexed variables
+  val basename:String
+  @deprecated("same as name") val variableName: String = name
   def index1: Variable
   def index2: Variable
-  def index(left:Boolean): Variable = if (left) index1 else index2
-  def variableTyp: Typ = GIsabelle.variableT(valueTyp)
+  val theIndex: Variable.Index
+  final def index(left:Boolean): Variable = {
+    assert(!isIndexed)
+    if (left) index1 else index2
+  }
+  def variableTyp: Typ = GIsabelle.variableT(valueTyp, classical=isClassical, indexed=isIndexed)
   def valueTyp : Typ
-//  @deprecated("use valueType / variableTyp","") def typ : Typ
-  def variableTerm(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(variableName,variableTyp)
+  /** term describing the variable in short form.
+   * For non-indexed variables, short form is just the variable.
+   * For indexed variables, short form would be e.g. Free(x2,typ), and long form "qregister_chain qFst (Free(x2,typ))" */
+  def variableTermShort(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(basename, variableTyp)
+
   def classicalQuantumWord : String
 }
 
@@ -111,45 +128,42 @@ object Variable {
         case _ => None
       }
     }
-    def unapply(variable: Variable): Option[(Variable, Boolean)] = variable.name match {
-      case Indexed(name, left) => Some(variable.rename(name), left)
-      case _ => None
+    def unapply(variable: Variable): Option[(Variable, Boolean)] = {
+      if (variable.isIndexed) Some(variable.unindex, variable.theIndex==Index1)
+      else None
     }
   }
 
   object IndexedC {
     def unapply(v: CVariable): Option[(CVariable, Boolean)] = {
-      if (v.name.isEmpty) return None
-      def basename = v.name.substring(0, v.name.length-1)
-
-      v.name.last match {
-        case '1' => Some((CVariable(basename, v.valueTyp), true))
-        case '2' => Some((CVariable(basename, v.valueTyp), false))
-        case _ => None
-      }
+      if (v.isIndexed) Some((v.unindex, v.theIndex==Index1))
+      else None
     }
   }
 
   def varsToString(vars: Traversable[Variable]): String =
     if (vars.isEmpty) "∅" else
       vars.map(_.name).mkString(", ")
+
+  sealed trait Index
+  final case object NoIndex extends Index
+  final case object Index1 extends Index
+  final case object Index2 extends Index
 }
 
-final case class QVariable(name:String, override val valueTyp: Typ) extends Variable {
+final class QVariable private (override val basename:String, override val valueTyp: Typ, val theIndex: Variable.Index) extends Variable {
   override val hash: Hash[QVariable.this.type] =
     HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
 
-
-  override def index1: QVariable = QVariable(Variable.index1(name),valueTyp)
-  override def index2: QVariable = QVariable(Variable.index2(name),valueTyp)
-  override def index(left:Boolean): QVariable = if (left) index1 else index2
-  override val variableName: String = name
+  override def index1: QVariable = { assert(theIndex==NoIndex); new QVariable(basename, valueTyp, Index1) }
+  override def index2: QVariable = { assert(theIndex==NoIndex); new QVariable(basename, valueTyp, Index2) }
   override def toString: String = s"quantum var $name : ${IsabelleX.pretty(valueTyp)}"
+  override def unindex: QVariable = { assert(isIndexed); new QVariable(basename, valueTyp, NoIndex) }
 
-  override def isQuantum: Boolean = true
+//  override def isQuantum: Boolean = true
   override def isClassical: Boolean = false
 
-  override def rename(name: String): Variable = copy(name=name)
+//  override def rename(name: String): Variable = copy(name=name)
 
   override def classicalQuantumWord: String = "quantum"
 
@@ -158,12 +172,27 @@ final case class QVariable(name:String, override val valueTyp: Typ) extends Vari
 }
 
 object QVariable {
+  def fromName(name: String, typ: Typ): QVariable = {
+    assert(name.nonEmpty)
+    val last = name.last
+    assert(last != '1')
+    assert(last != '2')
+    new QVariable(name, typ, NoIndex)
+  }
+
+  def fromIndexedName(name: String, typ: Typ): QVariable = {
+    assert(name.nonEmpty)
+    if (name.last == '1') new QVariable(name.dropRight(1), typ, Index1)
+    else if (name.last == '2') new QVariable(name.dropRight(1), typ, Index2)
+    else new QVariable(name, typ, NoIndex)
+  }
+
   implicit object ordering extends Ordering[QVariable] {
     override def compare(x: QVariable, y: QVariable): Int =
       Variable.ordering.compareSame(x,y)
   }
 
-  def fromTerm_var(context: IsabelleX.ContextX, x: Term): QVariable = x match {
+/*  def fromTerm_var(context: IsabelleX.ContextX, x: Term): QVariable = x match {
     case Free(name,typ) =>
       QVariable(name, GIsabelle.dest_variableT(typ))
     case _ => throw new java.lang.RuntimeException(f"Cannot transform $x into QVariable")
@@ -178,30 +207,28 @@ object QVariable {
       val vs2 = fromQVarList(context, vs)
       v2.head :: vs2
     case _ => throw new RuntimeException("Illformed variable list")
-  }
+  }*/
 
 
 
 
 }
 
-final case class CVariable(name:String, override val valueTyp: Typ) extends Variable {
+final class CVariable private (override val basename:String, override val valueTyp: Typ, override val theIndex: Variable.Index) extends Variable {
   override val hash: Hash[CVariable.this.type] =
     HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
 
-  override def index1: CVariable = CVariable(Variable.index1(name),valueTyp)
-  override def index2: CVariable = CVariable(Variable.index2(name),valueTyp)
-  override def index(left:Boolean): CVariable = if (left) index1 else index2
-//  override def valueTyp: pure.Typ = typ.isabelleTyp
-  override val variableName : String= "var_"+name
-  def valueTerm(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(name, valueTyp)
-
+  override def index1: CVariable = { assert(theIndex==NoIndex); new CVariable(basename, valueTyp, Index1) }
+  override def index2: CVariable = { assert(theIndex==NoIndex); new CVariable(basename, valueTyp, Index2) }
   override def toString: String = s"classical var $name : ${IsabelleX.pretty(valueTyp)}"
+  override def unindex: CVariable = { assert(isIndexed); new CVariable(basename, valueTyp, NoIndex) }
+  
+//  def valueTerm(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(name, valueTyp)
 
-  override def isQuantum: Boolean = false
+//  override def isQuantum: Boolean = false
   override def isClassical: Boolean = true
 
-  override def rename(name: String): Variable = copy(name=name)
+//  override def rename(name: String): Variable = copy(name=name)
 
   override def classicalQuantumWord: String = "classical"
 
@@ -210,12 +237,27 @@ final case class CVariable(name:String, override val valueTyp: Typ) extends Vari
 }
 
 object CVariable {
+  def fromName(name: String, typ: Typ): CVariable = {
+    assert(name.nonEmpty)
+    val last = name.last
+    assert(last != '1')
+    assert(last != '2')
+    new CVariable(name, typ, NoIndex)
+  }
+
+  def fromIndexedName(name: String, typ: Typ): CVariable = {
+    assert(name.nonEmpty)
+    if (name.last == '1') new CVariable(name.dropRight(1), typ, Index1)
+    else if (name.last == '2') new CVariable(name.dropRight(1), typ, Index2)
+    else new CVariable(name, typ, NoIndex)
+  }
+
   implicit object ordering extends Ordering[CVariable] {
     override def compare(x: CVariable, y: CVariable): Int =
       Variable.ordering.compareSame(x,y)
   }
 
-  def fromTerm_var(context: IsabelleX.ContextX, x: Term): CVariable = x match {
+/*  def fromTerm_var(context: IsabelleX.ContextX, x: Term): CVariable = x match {
     case Free(name,typ) =>
       assert(name.startsWith("var_"))
       CVariable(name.stripPrefix("var_"), GIsabelle.dest_variableT(typ))
@@ -231,7 +273,7 @@ object CVariable {
       val vs2 = fromCVarList(context, vs)
       v2.head :: vs2
     case _ => throw new RuntimeException("Illformed variable list")
-  }
+  }*/
 }
 
 

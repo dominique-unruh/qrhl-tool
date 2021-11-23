@@ -4,7 +4,7 @@ import java.io.PrintWriter
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
-import qrhl.logic.Variable.varsToString
+import qrhl.logic.Variable.{index, varsToString}
 import qrhl.logic._
 import qrhl.tactic.EqualTac._
 import IsabelleX.{globalIsabelle => GIsabelle}
@@ -359,15 +359,15 @@ object EqualTac {
     val qeq : Term =
       if (quantum.isEmpty) GIsabelle.predicate_top
       else {
-        val left = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index1).toSeq:_*))
-        val right = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index2).toSeq:_*))
+        val left = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index1).toSeq:_*), classical=false, indexed=true)
+        val right = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index2).toSeq:_*), classical=false, indexed=true)
         GIsabelle.quantum_equality(left, right)
       }
 
     val ceq : Term =
       if (classical.isEmpty) GIsabelle.True_const
       else {
-        val eqs = classical.map { v => GIsabelle.mk_eq(v.index1.valueTerm, v.index2.valueTerm) }
+        val eqs = classical.map { v => GIsabelle.mk_eq(v.index1.variableTermShort, v.index2.variableTermShort) }
         GIsabelle.conj(eqs.toSeq :_*)
       }
 
@@ -393,9 +393,9 @@ object EqualTac {
         val result = ListBuffer[QVariable]()
 
         def parse(vt1: Term, vt2: Term): Unit = (vt1, vt2) match {
-          case (GIsabelle.Variable_Unit(), GIsabelle.Variable_Unit()) =>
-          case (GIsabelle.Variable_Singleton(Free(Variable.Indexed(name1, left1), typ1)),
-                GIsabelle.Variable_Singleton(Free(Variable.Indexed(name2, left2), typ2))) =>
+          case (GIsabelle.Variable_Unit(_,_), GIsabelle.Variable_Unit(_,_)) =>
+          case (Free(Variable.Indexed(name1, left1), typ1),
+                Free(Variable.Indexed(name2, left2), typ2)) =>
             if (name1 != name2) throw noMatch
             val v = env.qVariables.getOrElse(name1, throw noMatch)
             if (v.variableTyp != typ1) throw noMatch
@@ -466,11 +466,11 @@ object EqualTac {
     val equalities2 = (equalities & remove).collect(Function.unlift { v =>
       val v1 = v.index1; val v2 = v.index2
       if (vars.contains(v1) && vars.contains(v2))
-        Some(GIsabelle.mk_eq(v1.valueTerm,v2.valueTerm))
+        Some(GIsabelle.mk_eq(v1.variableTermShort,v2.variableTermShort))
       else
         None
     })
-    logger.debug(s"remove $remove, vars = ${vars}, equalities = ${equalities}, equalities2 = $equalities2")
+    logger.debug(s"remove $remove, vars = ${vars}, equalities = $equalities, equalities2 = $equalities2")
     val postcondition2 =
       if (equalities2.isEmpty)
         postcondition.isabelleTerm
