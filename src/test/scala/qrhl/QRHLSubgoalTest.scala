@@ -12,8 +12,8 @@ class QRHLSubgoalTest extends AnyFunSuite {
     tl.execCmd("classical var y : int")
     tl
   }
-  def pb(str:String): RichTerm = tl.state.parseExpression(GIsabelle.boolT,str)
-  def pp(str:String): RichTerm = tl.state.parseExpression(GIsabelle.predicateT,str)
+//  def pb(str:String): RichTerm = RichTerm.decodeFromExpression(tl.state.isabelle, str, GIsabelle.boolT, indexed = true)
+//  def pp(str:String): RichTerm = RichTerm.decodeFromExpression(tl.state.isabelle, str, GIsabelle.predicateT, indexed = true)
 
 /*
   def testToExpressionWelltypedRoundtrip(context: Isabelle.Context, left:Block, right:Block, pre:RichTerm, post:RichTerm): Unit = {

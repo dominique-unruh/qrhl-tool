@@ -70,7 +70,7 @@ class ParserTest extends AnyFunSuite {
 
   test("parse undeclared variable") {
     assertThrows[UserException] {
-      Parser.parseAll(Parser.expression(GIsabelle.boolT), "hello")
+      Parser.parseAll(Parser.expression(GIsabelle.boolT, indexed = false), "hello")
     }
   }
 

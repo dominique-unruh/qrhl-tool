@@ -85,8 +85,21 @@ object Parser extends JavaTokenParsers {
   }, (0,Nil)) ^^ { case (_,chars) => chars.reverse.mkString.trim }
 
   /** Parses an expression given in shortform. Returns it in shortform. */
-  def expression(typ:Typ)(implicit context:ParserContext) : Parser[RichTerm] =
+  def expression(typ:Typ, indexed:Boolean)(implicit context:ParserContext) : Parser[RichTerm] =
 //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
+    scanInnerSyntax ^^ { str:String => context.isabelle match {
+      case None => throw UserException(noIsabelleError)
+      case Some(isa) =>
+//        val e = RichTerm(isa, str  /*str.mkString.trim*/, typ)
+        val e = RichTerm.decodeFromExpression(isa, isa.readExpression(str, typ, indexed = indexed))
+        for (v <- e.variables)
+          if (!context.environment.variableExists(v))
+            throw UserException(s"Variable $v was not declared (in expression $str")
+        e
+    } }
+
+  def isabelleTerm(typ:Typ)(implicit context:ParserContext) : Parser[RichTerm] =
+  //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
     scanInnerSyntax ^^ { str:String => context.isabelle match {
       case None => throw UserException(noIsabelleError)
       case Some(isa) =>
@@ -104,7 +117,7 @@ object Parser extends JavaTokenParsers {
          // TODO: add a cut
          lhsV = lhs.map[CVariable] { context.environment.getCVariable };
          typ = GIsabelle.tupleT(lhsV.map[Typ](_.valueTyp));
-         e <- expression(typ);
+         e <- expression(typ, indexed = false);
          _ <- statementSeparator)
      yield Assign(lhsV, e)
 
@@ -115,7 +128,7 @@ object Parser extends JavaTokenParsers {
          // TODO: add a cut
          lhsV = lhs.map[CVariable] { context.environment.getCVariable };
          typ = GIsabelle.tupleT(lhsV.map[Typ](_.valueTyp));
-         e <- expression(GIsabelle.distrT(typ));
+         e <- expression(GIsabelle.distrT(typ), indexed = false);
          _ <- statementSeparator)
       yield Sample(lhsV, e)
 
@@ -145,7 +158,7 @@ object Parser extends JavaTokenParsers {
          qvs = vs.map[QVariable] { context.environment.getQVariable };
          //         qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
          typ = GIsabelle.ell2T(GIsabelle.tupleT(qvs.map[Typ](_.valueTyp)));
-         e <- expression(typ);
+         e <- expression(typ, indexed = false);
          _ <- statementSeparator)
       yield QInit(qvs,e)
 
@@ -159,7 +172,7 @@ object Parser extends JavaTokenParsers {
            //           _ = assert(vs.distinct.length==vs.length); // checks if all vs are distinct
            //           qvs = VarTerm.varlist(vs.map { context.environment.getQVariable }:_*);
            typ = GIsabelle.l2boundedT(GIsabelle.tupleT(qvs.map[Typ](_.valueTyp)));
-           e <- expression(typ);
+           e <- expression(typ, indexed = false);
            _ <- statementSeparator)
         yield QApply(qvs,e)
 
@@ -174,14 +187,14 @@ object Parser extends JavaTokenParsers {
          qvs = vs.map[QVariable] { context.environment.getQVariable };
          _ <- literal("with");
          etyp = GIsabelle.measurementT(GIsabelle.tupleT(resv.map[Typ](_.valueTyp)), GIsabelle.tupleT(qvs.map[Typ](_.valueTyp)));
-         e <- expression(etyp);
+         e <- expression(etyp, indexed = false);
          _ <- statementSeparator)
       yield Measurement(resv,qvs,e)
 
   def ifThenElse(implicit context:ParserContext) : Parser[IfThenElse] =
     for (_ <- literal("if");
          _ <- literal("(");
-         e <- expression(GIsabelle.boolT);
+         e <- expression(GIsabelle.boolT, indexed = false);
          _ <- literal(")");
          _ <- literal("then");
          thenBranch <- statementOrParenBlock; // TODO: allow nested block
@@ -192,7 +205,7 @@ object Parser extends JavaTokenParsers {
   def whileLoop(implicit context:ParserContext) : Parser[While] =
     for (_ <- literal("while");
          _ <- literal("(");
-         e <- expression(GIsabelle.boolT);
+         e <- expression(GIsabelle.boolT, indexed = false);
          _ <- literal(")");
          body <- statementOrParenBlock)
       yield While(e,body.toBlock)
@@ -297,20 +310,20 @@ object Parser extends JavaTokenParsers {
       })
 
   def goal(implicit context:ParserContext) : Parser[GoalCommand] =
-    literal("lemma") ~> OnceParser((identifier <~ ":").? ~ expression(GIsabelle.boolT)) ^^ {
+    literal("lemma") ~> OnceParser((identifier <~ ":").? ~ isabelleTerm(GIsabelle.boolT)) ^^ {
       case name ~ e => GoalCommand(name.getOrElse(""), AmbientSubgoal(e)) }
 
   def qrhl(implicit context:ParserContext) : Parser[GoalCommand] =
   literal("qrhl") ~> OnceParser(for (
     name <- (identifier <~ ":").?;
     _ <- literal("{");
-    pre <- expression(GIsabelle.predicateT);
+    pre <- expression(GIsabelle.predicateT, indexed = true);
     _ <- literal("}");
     left <- block;
     _ <- literal("~");
     right <- block;
     _ <- literal("{");
-    post <- expression(GIsabelle.predicateT);
+    post <- expression(GIsabelle.predicateT, indexed = true);
     _ <- literal("}")
   ) yield GoalCommand(name.getOrElse(""), QRHLSubgoal(left,right,pre,post,Nil)))
 
@@ -350,7 +363,7 @@ object Parser extends JavaTokenParsers {
       left <- natural;
       right <- natural;
       _ <- literal(":");
-      inner <- expression(GIsabelle.predicateT))
+      inner <- expression(GIsabelle.predicateT, indexed = true))
       yield SeqTac(left,right,inner,swap=swap))
 
   val identifierListOrDot: Parser[List[String]] = identifierList | (literal(".") ^^^ Nil)
@@ -367,7 +380,7 @@ object Parser extends JavaTokenParsers {
   }
 
   def tactic_conseq(implicit context:ParserContext): Parser[Tactic] =
-    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(GIsabelle.predicateT) ^^ {
+    literal("conseq") ~> OnceParser("pre|post".r ~ literal(":") ~ expression(GIsabelle.predicateT, indexed = true) ^^ {
       case "pre" ~ _ ~ e => ConseqTac(pre=Some(e))
       case "post" ~ _ ~ e => ConseqTac(post=Some(e))
     } |
@@ -413,7 +426,7 @@ object Parser extends JavaTokenParsers {
       yVar = y.map[CVariable](context.environment.getCVariable);
       yTyp = GIsabelle.tupleT(yVar.map[Typ](_.valueTyp));
       _ <- sampleSymbol | assignSymbol;
-      e <- expression(GIsabelle.distrT(GIsabelle.prodT(xTyp,yTyp)))
+      e <- expression(GIsabelle.distrT(GIsabelle.prodT(xTyp,yTyp)), indexed = true)
     ) yield (xVar,yVar,e)).? ^^ {
       case None => RndEqualTac
       case Some((xVar,yVar,e)) => RndWitnessTac(xVar,yVar,e)
@@ -424,7 +437,7 @@ object Parser extends JavaTokenParsers {
       x <- identifier;
       xT = context.environment.getAmbientVariable(x);
       _ <- literal(":=");
-      e <- expression(xT)
+      e <- expression(xT, indexed = true)
     ) yield CaseTac(x,e))
 
   val tactic_simp : Parser[SimpTac] =
@@ -449,7 +462,7 @@ object Parser extends JavaTokenParsers {
     literal("clear") ~> OnceParser(natural) ^^ ClearTac.apply
 
   def tactic_split(implicit context:ParserContext) : Parser[CaseSplitTac] =
-    literal("casesplit") ~> OnceParser(expression(GIsabelle.boolT)) ^^ CaseSplitTac
+    literal("casesplit") ~> OnceParser(expression(GIsabelle.boolT, indexed = true)) ^^ CaseSplitTac
 
   def localUpVarId1(implicit context: ParserContext): toplevel.Parser.Parser[(Variable, Option[Int])] =
     identifier ~ (":" ~> natural).? ^^ { case x ~ i =>

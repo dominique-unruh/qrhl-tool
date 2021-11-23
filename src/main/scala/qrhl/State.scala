@@ -317,9 +317,9 @@ class State private (val environment: Environment,
   }
 
   /** Parses an expression in shortform. Returns the parsed expression in shortform. */
-  def parseExpression(typ:Typ, str:String): RichTerm = {
+  def parseExpression(typ:Typ, str:String, indexed:Boolean): RichTerm = {
     implicit val parserContext: ParserContext = this.parserContext
-    Parser.parseAll(Parser.expression(typ),str) match {
+    Parser.parseAll(Parser.expression(typ, indexed=indexed),str) match {
       case Parser.Success(cmd2,_) => cmd2
       case res @ Parser.NoSuccess(msg, _) =>
         throw UserException(msg)

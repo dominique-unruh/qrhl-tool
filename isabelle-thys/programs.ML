@@ -45,7 +45,7 @@ fun term_to_expression ctx memT t =
       val body = abstract_over (mem_var, subst_atomic subst t)
       (* val _ = \<^print> body *)
   in
-    Abs("mem", dummyT, body)
+    Abs("mem", memT, body)
   end
 
 datatype call = CALL of string * call list

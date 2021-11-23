@@ -14,7 +14,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Var}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
-import qrhl.isabellex.IsabelleX.globalIsabelle.Ops
+import qrhl.isabellex.IsabelleX.globalIsabelle.{Ops, cl2T, clT}
 
 // Implicits
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -63,8 +63,8 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     RichTerm(typ, rename(isabelleTerm))
   }
 
-  def encodeAsExpression(context: IsabelleX.ContextX) : RichTerm =
-    RichTerm(Ops.termToExpressionOp(MLValue((context.context, isabelleTerm))).retrieveNow)
+  def encodeAsExpression(context: IsabelleX.ContextX, indexed: Boolean) : RichTerm =
+    RichTerm(Ops.termToExpressionOp(context.context, if (indexed) cl2T else clT, isabelleTerm).retrieveNow)
 
   def stripAssumption(number: Int): RichTerm = RichTerm(typ,RichTerm.stripAssumption(isabelleTerm,number))
 
@@ -199,6 +199,9 @@ object RichTerm {
   /** Translates expression from longform into shortform */
   def decodeFromExpression(context:IsabelleX.ContextX, t: Term): RichTerm =
     RichTerm(Ops.decodeFromExpressionOp(MLValue((context.context,t))).retrieveNow)
+
+  def decodeFromExpression(context:IsabelleX.ContextX, str: String, typ: Typ, indexed: Boolean): RichTerm =
+    decodeFromExpression(context, context.readExpression(str, typ, indexed = false))
 
   def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(GIsabelle.boolT, GIsabelle.True_const)
 

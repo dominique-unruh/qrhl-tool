@@ -5,6 +5,8 @@ import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.toplevel.{Toplevel, ToplevelTest}
 import IsabelleX.{globalIsabelle => GIsabelle}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 
 
 class ExpressionTest extends AnyFunSuite {
@@ -13,9 +15,8 @@ class ExpressionTest extends AnyFunSuite {
     tl.execCmd("classical var x : int")
     val str = "Cla[ x=(1::int) ]"
     //    val state = tl.state
-    val e = RichTerm.decodeFromExpression(tl.state.isabelle, tl.state.isabelle.readExpression(str, GIsabelle.predicateT, indexed = false))
+    val e = RichTerm.decodeFromExpression(tl.state.isabelle, str, GIsabelle.predicateT, indexed = false)
     println(e)
-    // TODO: need to convert expression to shortform before comparing
     assert(e.toString=="ℭ\uD835\uDD29\uD835\uDD1E[x = 1]")
   }
 
@@ -23,20 +24,21 @@ class ExpressionTest extends AnyFunSuite {
     val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
-    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]")
-    val t = e.encodeAsExpression(tl.state.isabelle)
+    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]", indexed=false)
+    val t = e.encodeAsExpression(tl.state.isabelle, indexed=false)
     println(e)
     println(t)
-    assert(t.typ == GIsabelle.expressionT(GIsabelle.predicateT, indexed = true))
+    println(t.typ.pretty(tl.state.isabelle.context))
+    assert(t.typ == GIsabelle.expressionT(GIsabelle.predicateT, indexed = false))
   }
 
   test("encodeAsExpression roundtrip") {
     val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
-    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]")
+    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x=(1::int) ]", indexed = false)
     println(e)
-    val t = e.encodeAsExpression(tl.state.isabelle)
+    val t = e.encodeAsExpression(tl.state.isabelle, indexed=false)
     println(t)
     val e2 = RichTerm.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)
@@ -44,16 +46,15 @@ class ExpressionTest extends AnyFunSuite {
     assert(e.isabelleTerm==e2.isabelleTerm)
     assert(e.typ==e2.typ)
     assert(e==e2)
-
   }
 
   test("encodeAsExpression roundtrip 2") {
     val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val state = tl.state
-    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ]")
+    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ]", indexed = true)
     println(e)
-    val t = e.encodeAsExpression(tl.state.isabelle)
+    val t = e.encodeAsExpression(tl.state.isabelle, indexed=true)
     println(t)
     val e2 = RichTerm.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)
@@ -69,9 +70,9 @@ class ExpressionTest extends AnyFunSuite {
     tl.execCmd("classical var x : int")
     tl.execCmd("classical var c : int")
     val state = tl.state
-    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ∧ c1=c2 ]")
+    val e = state.parseExpression(GIsabelle.predicateT,"Cla[ x1=x2 ∧ c1=c2 ]", indexed = true)
     println(e)
-    val t = e.encodeAsExpression(tl.state.isabelle)
+    val t = e.encodeAsExpression(tl.state.isabelle, indexed=true)
     println(t)
     val e2 = RichTerm.decodeFromExpression(tl.state.isabelle, t.isabelleTerm)
     println(e2)

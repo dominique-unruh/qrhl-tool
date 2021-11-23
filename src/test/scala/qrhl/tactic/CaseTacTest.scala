@@ -29,7 +29,7 @@ class CaseTacTest extends AnyFunSuite {
   test("works") {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
-    val st = tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x1")))
+    val st = tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x1", indexed = true)))
 //    print(st.goal)
     assert(st.goal.length==1)
     val pre = st.goal.head.asInstanceOf[QRHLSubgoal].pre
@@ -53,7 +53,7 @@ class CaseTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
-      tl.state.applyTactic(CaseTac("z", tl.state.parseExpression(GIsabelle.boolT, "x1")))
+      tl.state.applyTactic(CaseTac("z", tl.state.parseExpression(GIsabelle.boolT, "x1", indexed = true)))
     }
 
     assert(ex.getMessage.startsWith("Variable z has type nat, but expression has type bool"))
@@ -63,7 +63,7 @@ class CaseTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {Cla[y=True]} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
-      tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x1")))
+      tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x1", indexed = true)))
     }
 
     assert(ex.getMessage.startsWith("Variable y already contained in goal"))
@@ -73,7 +73,7 @@ class CaseTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
-      tl.state.applyTactic(CaseTac("y2", tl.state.parseExpression(GIsabelle.boolT, "x1")))
+      tl.state.applyTactic(CaseTac("y2", tl.state.parseExpression(GIsabelle.boolT, "x1", indexed = true)))
     }
 
     assert(ex.getMessage.startsWith("Variable y2 already used in program P"))
@@ -83,7 +83,7 @@ class CaseTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
-      tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x")))
+      tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x", indexed = true)))
     }
 
     assert(ex.getMessage.startsWith("Undeclared (or non-indexed) variable x in precondition"))

@@ -387,8 +387,8 @@ fun declare_quantum_variable (name,typ,ctxt) =
 fun declare_classical_variable (name,typ,ctxt) =
   Prog_Variables.declare_variable ctxt (Binding.name name) typ Prog_Variables.Classical
 
-fun term_to_expression (ctxt,t) =
-  Programs.term_to_expression ctxt t
+(* fun term_to_expression (ctxt,t) =
+  Programs.term_to_expression ctxt t *)
 
 fun expression_to_term (ctxt,t) =
   Programs.expression_to_term ctxt t

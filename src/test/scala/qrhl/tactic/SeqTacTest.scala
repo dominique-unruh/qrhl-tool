@@ -14,10 +14,10 @@ class SeqTacTest extends AnyFunSuite {
     val state = tl.state
     val left2 = state.parseBlock(left)
     val right2 = state.parseBlock(right)
-    val pre2 = state.parseExpression(GIsabelle.predicateT,pre)
-    val post2 = state.parseExpression(GIsabelle.predicateT,post)
+    val pre2 = state.parseExpression(GIsabelle.predicateT,pre, indexed = true)
+    val post2 = state.parseExpression(GIsabelle.predicateT,post, indexed = true)
     val qrhl = QRHLSubgoal(left2,right2,pre2,post2,Nil)
-    val middle2 = state.parseExpression(GIsabelle.predicateT,middle)
+    val middle2 = state.parseExpression(GIsabelle.predicateT,middle, indexed = true)
     val tac = SeqTac(1,1,middle2)
     val goals = tac(state,qrhl)
     assert(goals.length == 2)
