@@ -143,30 +143,6 @@ case class VariableUse
       | Covered     ⊇ ${if (covered.isAll) "all variables" else covered.map(_.name).mkString(", ")}
       | Oracles     ⊆ ${oracles.mkString(", ")}
     """.stripMargin
-
-//  def addFreeVariable(variables: Variable*): VariableUse = copy(freeVariables +++ variables)
-//  def addAmbientVar(variables: String*): VariableUse = copy(ambient=ambient +++ variables)
-//  def addProgramVar(p: ProgramDecl*): VariableUse = copy(programs=programs +++ p)
-
-/*  def +++(other: VariableUse): VariableUse = VariableUse(
-    freeVariables=freeVariables+++other.freeVariables,
-    written=written+++other.written,
-    ambient=ambient+++other.ambient,
-    programs=programs+++other.programs,
-    overwritten = overwritten+++other.overwritten,
-    oracles = oracles+++other.oracles,
-    inner = inner+++other.inner)*/
-
-  //noinspection MutatorLikeMethodIsParameterless
-//  def removeOverwritten: VariableUse = copy(overwritten=ListSet.empty)
-//  def removeOverwrittenClassical(vars: CVariable*): VariableUse = copy(overwritten=overwritten -- vars)
-//  def removeOverwrittenQuantum(vars: QVariable*): VariableUse = copy(overwritten=overwritten -- vars)
-
-}
-
-// TODO remove
-object VariableUse {
-  private val emptySet = ListSet.empty[Nothing]
 }
 
 case object VTUnit extends VarTerm[Nothing] {
@@ -234,9 +210,6 @@ sealed trait Statement extends HashedValue {
   /** Converts this statement into a block by wrapping it in Block() if necessary */
   def toBlock: Block = Block(this)
 
-//  @deprecated("too slow, use programTerm instead","now")
-//  def programTermOLD(context: Isabelle.Context) : Term
-
   def programTerm(context: IsabelleX.ContextX): RichTerm =
     RichTerm(Ops.statement_to_term_op(
       MLValue((context.context, this))).retrieveNow)
@@ -299,36 +272,50 @@ sealed trait Statement extends HashedValue {
           inner = emptySet,
           covered = MaybeAllSet.all
         )
-      case Call(name, args@_*) =>
+      case call @ Call(name, args@_*) =>
         if (name.head != '@') {
           // Call(name, args@_*) is an application C[a1,...,an] where C is referenced by name, and args=(a1,...,an)
-          // TODO: As an alternative to the stuff below, we instantiate this call and then compute the variables
-          // that would give a tighter estimate
-          val progDecl = env.programs(name)
-          val progVars = progDecl.variablesRecursive
-          val argVars = args map ( _.variableUse(env) )
-          val oracles = argVars.foldLeft(emptySet : ListSet[String]) { _ +++ _.oracles }
-          val isProgram = oracles.isEmpty
-          new VariableUse(
-            // By Helping_Lemmas.fv_subst' (note that freeVariables is an upper bound)
-            freeVariables = progVars.freeVariables ++
-              MaybeAllSet.subtract(argVars.foldLeft[ListSet[Variable]](emptySet) { _ +++ _.freeVariables }, progVars.covered),
-            // By Helping_Lemmas.fv_written' (note that freeVariables is an upper bound)
-            written = argVars.foldLeft(progVars.written) { _ +++ _.written },
-            ambient = argVars.foldLeft(progVars.ambient) { _ +++ _.ambient },
-            programs = argVars.foldLeft(progVars.programs + progDecl) { _ +++ _.programs },
-            // By Helping_Lemmas.overwr_subst (note that overwritten is a lower bound)
-            overwritten = progVars.overwritten,
-            oracles = oracles,
-            // By Helping_Lemmas.program_inner and .inner_subst (note that inner is an upper bound)
-            inner = if (isProgram) emptySet else
-                    argVars.foldLeft(progVars.inner) { _ +++ _.inner },
-            // By Helping_Lemmas.program_covered and .covered_subst (note that covered is a lower bound)
-            covered = if (isProgram) MaybeAllSet.all[Variable]
-            else if (progVars.covered.isAll) MaybeAllSet.all // shortcut for the next line
-            else progVars.covered ++ argVars.foldLeft[MaybeAllSet[Variable]]
-              (MaybeAllSet.all) { (cov,a) => cov.intersect(a.covered) }
-          )
+          env.programs(name) match {
+            case progDecl : ConcreteProgramDecl =>
+              Block(call).inline(env, name).variableUse(env)
+            case progDecl : AbstractProgramDecl =>
+              val progVars = progDecl.variablesRecursive
+              val argVars = args map (_.variableUse(env))
+              val oracles = argVars.foldLeft(emptySet: ListSet[String]) {
+                _ +++ _.oracles
+              }
+              val isProgram = oracles.isEmpty
+              new VariableUse(
+                // By Helping_Lemmas.fv_subst' (note that freeVariables is an upper bound)
+                freeVariables = progVars.freeVariables ++
+                  MaybeAllSet.subtract(argVars.foldLeft[ListSet[Variable]](emptySet) {
+                    _ +++ _.freeVariables
+                  }, progVars.covered),
+                // By Helping_Lemmas.fv_written' (note that freeVariables is an upper bound)
+                written = argVars.foldLeft(progVars.written) {
+                  _ +++ _.written
+                },
+                ambient = argVars.foldLeft(progVars.ambient) {
+                  _ +++ _.ambient
+                },
+                programs = argVars.foldLeft(progVars.programs + progDecl) {
+                  _ +++ _.programs
+                },
+                // By Helping_Lemmas.overwr_subst (note that overwritten is a lower bound)
+                overwritten = progVars.overwritten,
+                oracles = oracles,
+                // By Helping_Lemmas.program_inner and .inner_subst (note that inner is an upper bound)
+                inner = if (isProgram) emptySet else
+                  argVars.foldLeft(progVars.inner) {
+                    _ +++ _.inner
+                  },
+                // By Helping_Lemmas.program_covered and .covered_subst (note that covered is a lower bound)
+                covered = if (isProgram) MaybeAllSet.all[Variable]
+                else if (progVars.covered.isAll) MaybeAllSet.all // shortcut for the next line
+                else progVars.covered ++ argVars.foldLeft[MaybeAllSet[Variable]]
+                  (MaybeAllSet.all) { (cov, a) => cov.intersect(a.covered) }
+              )
+          }
         } else {
           assert(args.isEmpty)
           // The current program is a hole
@@ -411,51 +398,6 @@ sealed trait Statement extends HashedValue {
     }
   }
 
-//  /** Returns all variables used in the statement.
-//    * @param recurse Recurse into programs embedded via Call
-//    * @return (cvars,wcvars,qvars,avars,pnames) Classical, quantum, ambient variables, program declarations.
-//    * Oracle names (starting with @) are not included or recursed into
-//    * wcvars = written classical vars
-//    * */
-
-
-
-
-
-  //  @deprecated
-//  def cwqapVariables(environment: Environment, recurse: Boolean) : VariableUse[List] = {
-//    val vars = VariableUse.make(PolymorphicConstant.linkedHashSet)
-//    cwqapVariables(environment,vars=vars,recurse=recurse)
-//    vars.map(PolymorphicFunction.linkedHashSetToList)
-//  }
-//
-//  @deprecated
-//  def cwqapVariables(environment : Environment, vars : VariableUse[mutable.Set], recurse:Boolean): Unit = {
-//    def collectExpr(e:RichTerm):Unit = e.caVariables(environment,vars)
-//    def collect(s:Statement) : Unit = s match {
-//      case Block(ss @ _*) => ss.foreach(collect)
-//      case Assign(v,e) => vars.cvars ++= v.iterator; vars.wcvars ++= v.iterator; collectExpr(e)
-//      case Sample(v,e) => vars.cvars ++= v.iterator; vars.wcvars ++= v.iterator; collectExpr(e)
-//      case Call(name, args @ _*) =>
-//        if (name.head!='@') {
-//          val p = environment.programs(name)
-//          vars.progs += p
-//          if (recurse) {
-//            val pvars = p.variablesRecursive
-//            vars.cvars ++= pvars.cvars; vars.wcvars ++= pvars.wcvars;
-//            vars.qvars ++= pvars.qvars; vars.avars ++= pvars.avars; vars.progs ++= pvars.progs
-//          }
-//        }
-//        args.foreach(collect)
-//      case While(e,body) => collectExpr(e); collect(body)
-//      case IfThenElse(e,p1,p2) => collectExpr(e); collect(p1); collect(p2)
-//      case QInit(vs,e) => vars.qvars ++= vs.iterator; collectExpr(e)
-//      case Measurement(v,vs,e) => vars.cvars ++= v.iterator; vars.wcvars ++= v.iterator; collectExpr(e); vars.qvars ++= vs.iterator
-//      case QApply(vs,e) => vars.qvars ++= vs.iterator; collectExpr(e)
-//    }
-//    collect(this)
-//  }
-
   def checkWelltyped(context: IsabelleX.ContextX): Unit
 
   /** All ambient and program variables.
@@ -481,28 +423,6 @@ sealed trait Statement extends HashedValue {
     collect(this)
     vars.result()
   }
-
-  /*  /** Including nested programs (via Call). (Missing ambient variables from nested calls.) */
-    def variablesAll(env:Environment) : Set[String] = {
-      val vars = new mutable.SetBuilder[String,Set[String]](Set.empty)
-      def collect(s:Statement) : Unit = s match {
-        case Block(ss @ _*) => ss.foreach(collect)
-        case Assign(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
-        case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
-        case Call(name, args @ _*) =>
-          val (cvars,_,qvars,_,_) = env.programs(name).variablesRecursive
-          vars ++= cvars.map(_.name)
-          vars ++= qvars.map(_.name)
-          args.foreach(collect)
-        case While(e,body) => vars ++= e.variables; collect(body)
-        case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
-        case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
-        case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
-        case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
-      }
-      collect(this)
-      vars.result
-    }*/
 
   def inline(name: String, oracles: List[String], program: Statement): Statement
 
@@ -659,11 +579,11 @@ class Block(val statements:List[Statement]) extends Statement {
       statements.mkString(header,blanks,"")
   }
 
-
-
-
   def length : Int = statements.size
 
+  /** Inlines the declared program `name` in this.
+   * Does not recursively inline (i.e., `name` is not substituted in the body of `name` itself).
+   * (Not sure this case can even occur...) */
   def inline(environment: Environment, name: String): Block = {
     environment.programs(name) match {
       case decl : ConcreteProgramDecl =>
@@ -671,14 +591,9 @@ class Block(val statements:List[Statement]) extends Statement {
       case _ : AbstractProgramDecl =>
         throw UserException(s"Cannot inline '$name'. It is an abstract program (declared with 'adversary').")
     }
-//    inline(name: String, environment.programs(name).asInstanceOf[ConcreteProgramDecl].program)
   }
 
   override def inline(name:String, oracles:List[String], program:Statement): Block = {
-//    val programStatements = program match {
-//      case Block(st @_*) => st
-//      case _ => List(program)
-//    }
     val newStatements = for (s <- statements;
                              s2 <- s match {
                                case Call(name2, args @ _*) if name==name2 =>
@@ -943,16 +858,11 @@ final case class Call(name:String, args:Call*) extends Statement {
   def toStringShort: String =
     if (args.isEmpty) name else s"$name(${args.map(_.toStringShort).mkString(",")})"
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
+  // TODO: Call.inline should actually inline something. Move the inlining code from Block.inline to here
+  // Doing Block(this).inline(name, oracles, program) here is not a good idea, leads to infinite recursion
 
   override def checkWelltyped(context: IsabelleX.ContextX): Unit = {}
-//  override def programTermOLD(context: Isabelle.Context): Term = {
-//    if (args.nonEmpty) {
-//      val argTerms = args.map(_.programTermOLD(context)).toList
-//      val argList = Isabelle.mk_list(Isabelle.programT, argTerms)
-//      Isabelle.instantiateOracles $ Free(name, Isabelle.oracle_programT) $ argList
-//    } else
-//      Free(name, Isabelle.programT)
-//  }
+
   override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): Call = this
 
   /** Replaces every program name x in Call-statements by @x if it x is listed in [oracles]
