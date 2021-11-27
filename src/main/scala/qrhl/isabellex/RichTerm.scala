@@ -216,7 +216,7 @@ object RichTerm {
   //    val term = context.readTerm(Isabelle.unicodeToSymbols(str),typ)
 //    Expression(typ, term)
 
-  def apply(term:Term) : RichTerm = RichTerm(typ=IsabelleX.fastype_of(term), term)
+  def apply(term:Term) : RichTerm = RichTerm(typ=term.fastType, term)
 
   def apply(typ: Typ, term:Term) : RichTerm =
     new RichTerm(typ=typ, isabelleTerm = term)
