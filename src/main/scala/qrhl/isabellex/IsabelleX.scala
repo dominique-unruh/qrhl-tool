@@ -372,12 +372,10 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     }
   }
 
-  // TODO rename to ell2
-  def dest_vectorT(typ: Typ): Typ = typ match {
+/*  def dest_vectorT(typ: Typ): Typ = typ match {
     case Type(t.ell2, t1) => t1
-    case _ => throw new RuntimeException("expected type 'vector', not " + typ)
-  }
-
+    case _ => throw new RuntimeException("expected type 'ell2', not " + typ)
+  }*/
 
   def top(typ: Typ): Const = Const(c.top, typ)
   object Top {
@@ -403,8 +401,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       case _ => false
     }
   }
-
-  //  val distrT_name = "Discrete_Distributions.distr"
 
   object Inf {
     def unapply(term: Term): Option[(Term, Term)] = term match {
@@ -530,9 +526,9 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   def variablesT(typs: List[Typ]): Type = variablesT(tupleT(typs: _*))
 
   //val cvariableT: Typ => Type = variableT
-  def expressionT(typ: Typ) = Type(t.expression, typ)
+  def expressionT(typ: Typ): Type = Type(t.expression, typ)
 
-  val instantiateOracles = Const(c.instantiateOracles, oracle_programT -->: listT(programT) -->: programT)
+  val instantiateOracles: Const = Const(c.instantiateOracles, oracle_programT -->: listT(programT) -->: programT)
   //  val assignName = c.assign
 
   def assign(typ: Typ): Const = Const(c.assign, variablesT(typ) -->: expressionT(typ) -->: programT)
@@ -541,7 +537,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def sample(typ: Typ): Const = Const(c.sample, variablesT(typ) -->: expressionT(distrT(typ)) -->: programT)
 
-  val propT = Type(t.prop)
+  val propT: Type = Type(t.prop)
 
   //  val ifthenelseName = "Programs.ifthenelse"
   val ifthenelse: Const = Const(c.ifthenelse, expressionT(boolT) -->: listT(programT) -->: listT(programT) -->: programT)
