@@ -24,7 +24,6 @@ import de.unruh.isabelle.control
 import de.unruh.isabelle.misc.{FutureValue, Symbols}
 import hashedcomputation.{Hash, HashedValue}
 //import qrhl.Utils.tryRelativize
-import qrhl.isabellex.IsabelleX.fastype_of
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 
 //import scalaz.Applicative
@@ -262,21 +261,21 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def liftSpace(typ: Typ) : Const = Const(c.liftSpace, linear_spaceT(ell2T(typ)) -->: variablesT(typ) -->: predicateT)
   def liftSpace(space: Term, vars: Term) : Term = {
-    val typ = VariablesT.unapply(fastype_of(vars)).get
+    val typ = VariablesT.unapply(vars.fastType).get
     liftSpace(typ) $ space $ vars
   }
 
   def span(typ: Typ): Const = Const(c.ccspan, setT(typ) -->: linear_spaceT(typ))
-  def span(term: Term): Term = fastype_of(term) match {
+  def span(term: Term): Term = term.fastType match {
     case SetT(typ) => span(typ) $ term
   }
 
   def span1(term: Term): Term = span(singleton_set(term))
 
-  def singleton_set(term: Term): Term = insert(term, empty_set(fastype_of(term)))
+  def singleton_set(term: Term): Term = insert(term, empty_set(term.fastType))
 
   def insert(typ: Typ): Const = Const(c.insert, typ -->: setT(typ) -->: setT(typ))
-  def insert(elem: Term, set: Term): Term = insert(fastype_of(elem)) $ elem $ set
+  def insert(elem: Term, set: Term): Term = insert(elem.fastType) $ elem $ set
 
   def empty_set(typ: Typ): Const = bot(setT(typ))
 
@@ -297,7 +296,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   def image(a: Typ, b:Typ) : Const = Const(c.image, (a -->: b) -->: setT(a) -->: setT(b))
 
   def INF(varName: String, varTyp: Typ, term: Term): Term = {
-    val typ = fastype_of(term)
+    val typ = term.fastType
     INF(typ) $ (image(varTyp,typ) $ absfree(varName, varTyp, term) $ univ(varTyp))
   }
 
@@ -309,23 +308,23 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   val not : Const = Const(c.not, boolT -->: boolT)
   def not(t: Term) : Term = not $ t
   def less_eq(typ : Typ): Const = Const(c.less_eq, typ -->: typ -->: boolT)
-  def less_eq(t: Term, u:Term) : Term = less_eq(fastype_of(t)) $ t $ u
+  def less_eq(t: Term, u:Term) : Term = less_eq(t.fastType) $ t $ u
 
   def swap_variables_subspace(v: Term, w: Term, pre: Term): Term = {
-    val typ = fastype_of(v)
+    val typ = v.fastType
     Const(c.swap_variables_subspace, typ -->: typ -->: predicateT -->: predicateT) $ v $ w $ pre
   }
 
   def default(t: Typ): Const = Const(c.default, t)
   def ket(t: Typ): Const = Const(c.ket, t -->: ell2T(t))
-  def ket(term: Term) : Term = ket(fastype_of(term)) $ term
+  def ket(term: Term) : Term = ket(term.fastType) $ term
 
   def unitary(t: Typ, u: Typ): Const = Const(c.unitary, boundedT(t,u) -->: boolT)
-  def unitary(u: Term): Term = Const(c.unitary, fastype_of(u) -->: boolT) $ u
+  def unitary(u: Term): Term = Const(c.unitary, u.fastType -->: boolT) $ u
 
   def tensorOp(a : Term, b : Term): Term = (a,b) match {
     case (OfType(L2BoundedT(ta,tb)), OfType(L2BoundedT(tc,td))) => tensorOp(ta,tb,tc,td) $ a $ b
-    case _ => throw new RuntimeException(s"Cannot apply tensorOp to types ${fastype_of(a)}, ${fastype_of(b)}")
+    case _ => throw new RuntimeException(s"Cannot apply tensorOp to types ${pretty(a.fastType)}, ${pretty(b.fastType)}")
   }
   def tensorOp(ta: Typ, tb: Typ, tc: Typ, td: Typ): Const =
     Const(c.tensorOp, l2boundedT(ta,tb) -->: l2boundedT(tc,td) -->: l2boundedT(prodT(ta,tc),prodT(tb,td)))
@@ -415,12 +414,12 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
   def inf(typ: Typ) : Const = Const(c.inf, typ -->: typ -->: typ)
   def inf(term: Term, terms: Term*): Term = {
-    val typ = fastype_of(term)
+    val typ = term.fastType
     val inf_ = inf(typ)
     terms.foldLeft(term) { (a,b) => inf_ $ a $ b }
   }
   def infOptimized(term: Term, terms: Term*): Term = {
-    val typ = fastype_of(term)
+    val typ = term.fastType
     val terms2 = (term :: terms.toList).filterNot(Top.unapply)
     if (terms2.exists(Zero.unapply))
       return zero(typ)
@@ -440,7 +439,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
   def sup(typ: Typ) : Const = Const(c.sup, typ -->: typ -->: typ)
   def sup(term: Term, terms: Term*): Term = {
-    val typ = fastype_of(term)
+    val typ = term.fastType
     val sup_ = sup(typ)
     terms.foldLeft(term) { (a,b) => sup_ $ a $ b }
   }
@@ -453,7 +452,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
   def plus(typ: Typ) : Const = Const(c.plus, typ -->: typ -->: typ)
   def plus(term: Term, terms: Term*): Term = {
-    val typ = fastype_of(term)
+    val typ = term.fastType
     val plus_ = plus(typ)
     terms.foldLeft(term) { (a,b) => plus_ $ a $ b }
   }
@@ -619,7 +618,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
 
   object OfType {
-    def unapply(t: Term): Some[Typ] = Some(fastype_of(t))
+    def unapply(t: Term): Some[Typ] = Some(t.fastType)
   }
 
   val realT: Type = Type(t.real)
@@ -631,7 +630,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
 
   def mk_eq(a: Term, b: Term): Term = {
-    val typ = fastype_of(a)
+    val typ = a.fastType
     Const(c.eq, typ -->: typ -->: boolT) $ a $ b
   }
 
@@ -712,8 +711,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ): Const =
     Const(IsabelleConsts.quantum_equality_full,  l2boundedT(typLeft,typZ) -->: variablesT(typLeft) -->: l2boundedT(typRight,typZ) -->: variablesT(typRight) -->: predicateT)
   def quantum_equality(q: Term, r: Term): Term = {
-    val typQ = fastype_of(q)
-    assert(typQ == fastype_of(r))
+    val typQ = q.fastType
+    assert(typQ == r.fastType)
     val typ = VariablesT.unapply(typQ).get
     val id = idOp(ell2T(typ))
     quantum_equality_full(typ, typ, typ) $ id $ q $ id $ r
@@ -898,26 +897,12 @@ object IsabelleX {
   def isGlobalIsabelle(isabelle: IsabelleX): Boolean =
     (globalIsabellePeek != null) && (globalIsabelle == isabelle)
 
-  @deprecated("use Expression.toString", "now")
+  @deprecated("use RichTerm.toString", "now")
   def pretty(t: Term): String = IsabelleX.theContext.prettyExpression(t)
 
   def pretty(t: Typ): String = IsabelleX.theContext.prettyTyp(t)
 
   private val logger = log4s.getLogger
-
-
-  // TODO: Remove (use Term.fasttype_of instead)
-  def fastype_of(t: Term, typs: List[Typ] = Nil): Typ = t match {
-    case App(f,u) => fastype_of(f, typs) match {
-      case Type("fun", _, typ) => typ
-    }
-    case Const(_, typ) => typ
-    case Free(_, typ) => typ
-    case Var(_, _, typ) => typ
-    case Bound(i) => typs(i.intValue)
-    case Abs(_,typ,u) => typ -->: fastype_of(u, typ::typs)
-  }
-
 
   val symbols = new Symbols(extraSymbols = List(
     // Own additions (because Emacs's TeX input method produces these chars):
