@@ -31,8 +31,12 @@
         <option value="qrhl.isabellex.MLValueConvertersTest" />
       </list>
     </option>
+    <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug" />
+    <option name="programParameters" value="-l SuperSlow" />
     <option name="searchTest" value="In single module" />
+    <option name="shortenClasspath" value="NONE" />
     <option name="showProgressMessages" value="false" />
+    <option name="testArgs" value="-l SuperSlow" />
     <option name="testPackagePath" value="qrhl" />
     <option name="workingDirectory" value="$PROJECT_DIR$" />
     <method v="2">

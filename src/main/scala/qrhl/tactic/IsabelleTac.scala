@@ -10,7 +10,7 @@ import qrhl.isabellex.IsabelleX
 import de.unruh.isabelle.mlvalue.{MLFunction3, MLValue}
 import de.unruh.isabelle.pure.{Context, Thm}
 import qrhl.tactic.IsabelleTac.tactics
-
+import IsabelleX.globalIsabelle.Ops.qrhl_ops
 import scala.collection.mutable
 
 // Implicits
@@ -33,11 +33,11 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
       val exnToValue = converter.exnToValue
       tactics.getOrElseUpdate((operationName, exnToValue),
         MLValue.compileValueRaw[In => Out](
-          s"""E_Function (DObject o (fn E_Pair (a', E_Pair (QRHL_Operations.E_Subgoal subgoal, E_Context ctxt)) =>
-                case QRHL_Operations.$operationName (($exnToValue) a', subgoal, ctxt) of
+          s"""E_Function (DObject o (fn E_Pair (a', E_Pair ($qrhl_ops.E_Subgoal subgoal, E_Context ctxt)) =>
+                case $qrhl_ops.$operationName (($exnToValue) a', subgoal, ctxt) of
                   NONE => E_Option NONE
                  | SOME (subgoals, thm) =>
-                    E_Option (SOME (E_Pair (E_List (map QRHL_Operations.E_Subgoal subgoals), E_Thm thm)))) o (fn DObject d => d))""")
+                    E_Option (SOME (E_Pair (E_List (map $qrhl_ops.E_Subgoal subgoals), E_Thm thm)))) o (fn DObject d => d))""")
           .function3[A, Subgoal, Context, Out])
         .asInstanceOf[Fun]
     }

@@ -736,152 +736,151 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     import MLValue.{compileFunction, compileValue, compileValueRaw}
     Thm.init()
 
-    // TODO use one-arg importMLStructure
-    Theory("QRHL.QRHL_Operations").importMLStructure("QRHL_Operations", "QRHL_Operations")
+    val qrhl_ops = Theory("QRHL.QRHL_Operations").importMLStructureNow("QRHL_Operations")
 
     val dependenciesOfTheory =
-      MLValue.compileFunction[Theory, List[Path]]("map_filter QRHL_Operations.local_thy_file o Theory.ancestors_of")
+      MLValue.compileFunction[Theory, List[Path]](s"map_filter $qrhl_ops.local_thy_file o Theory.ancestors_of")
     if (Version.versionString != "Isabelle"+version)
       throw UserException(s"Expected Isabelle $version but got ${Version.versionString}")
     val conseq_qrhl_cardinality_condition =
-      MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term]("QRHL_Operations.conseq_qrhl_cardinality_condition")
+      MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term](s"$qrhl_ops.conseq_qrhl_cardinality_condition")
     val conseq_qrhl_replace_in_predicate =
       MLValue.compileFunction[Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], (Term, Term)](
-        "QRHL_Operations.conseq_qrhl_replace_in_predicate")
+        s"$qrhl_ops.conseq_qrhl_replace_in_predicate")
     val declare_abstract_program_op =
       compileFunction[Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int, Context](
-        "QRHL_Operations.declare_abstract_program")
+        s"$qrhl_ops.declare_abstract_program")
     val decodeFromExpressionOp =
-      MLValue.compileFunction[Context,Term, Term]("QRHL_Operations.expression_to_term")
+      MLValue.compileFunction[Context,Term, Term](s"$qrhl_ops.expression_to_term")
     val termToExpressionOp =
-      MLValue.compileFunction[Context, Term, Term]("QRHL_Operations.term_to_expression")
+      MLValue.compileFunction[Context, Term, Term](s"$qrhl_ops.term_to_expression")
     val byQRHLPreOp =
-      MLValue.compileFunction[List[(String, String, Typ)], List[(String, String, Typ)], Term]("QRHL_Operations.byQRHLPre")
+      MLValue.compileFunction[List[(String, String, Typ)], List[(String, String, Typ)], Term](s"$qrhl_ops.byQRHLPre")
     val addIndexToExpressionOp =
-      MLValue.compileFunction[Term, Boolean, Term]("QRHL_Operations.add_index_to_expression")
+      MLValue.compileFunction[Term, Boolean, Term](s"$qrhl_ops.add_index_to_expression")
     val fixTacOp =
-      MLValue.compileFunction[Term, String, (Term, Typ)]("QRHL_Operations.fixTac")
+      MLValue.compileFunction[Term, String, (Term, Typ)](s"$qrhl_ops.fixTac")
     val debugOp =
-      MLValue.compileFunction[Context, String]("QRHL_Operations.debug")
+      MLValue.compileFunction[Context, String](s"$qrhl_ops.debug")
 
-    val makeQrhlSubgoal =
-      MLValue.compileFunction[List[Statement], List[Statement], Term, Term, List[Term], Subgoal]("QRHL_Operations.makeQrhlSubgoal")
-    val makeAmbientSubgoal =
-      MLValue.compileFunction[Term, Subgoal]("QRHL_Operations.Subgoal_Ambient")
-    val isQrhlSubgoal =
-      MLValue.compileFunction[Subgoal, Boolean]("fn QRHL_Operations.Subgoal_QRHL _ => true | _ => false")
-    val destQrhlSubgoal =
-      MLValue.compileFunction[Subgoal, (List[Statement], List[Statement], Term, Term, List[Term])]("QRHL_Operations.destQrhlSubgoal")
-    val destAmbientSubgoal =
-      compileFunction[Subgoal, Term]("fn QRHL_Operations.Subgoal_Ambient t => t")
+    lazy val makeQrhlSubgoal =
+      MLValue.compileFunction[List[Statement], List[Statement], Term, Term, List[Term], Subgoal](s"$qrhl_ops.makeQrhlSubgoal")
+    lazy val makeAmbientSubgoal =
+      MLValue.compileFunction[Term, Subgoal](s"$qrhl_ops.Subgoal_Ambient")
+    lazy val isQrhlSubgoal =
+      MLValue.compileFunction[Subgoal, Boolean](s"fn $qrhl_ops.Subgoal_QRHL _ => true | _ => false")
+    lazy val destQrhlSubgoal =
+      MLValue.compileFunction[Subgoal, (List[Statement], List[Statement], Term, Term, List[Term])](s"$qrhl_ops.destQrhlSubgoal")
+    lazy val destAmbientSubgoal =
+      compileFunction[Subgoal, Term](s"fn $qrhl_ops.Subgoal_Ambient t => t")
 
     val swapOp =
-      MLValue.compileFunction[Context, Term, Term]("QRHL_Operations.swap_variables_conv")
+      MLValue.compileFunction[Context, Term, Term](s"$qrhl_ops.swap_variables_conv")
     val colocalityOp =
-      MLValue.compileFunction[Term, List[(String, Typ)], Term]("QRHL_Operations.colocal_pred_qvars")
+      MLValue.compileFunction[Term, List[(String, Typ)], Term](s"$qrhl_ops.colocal_pred_qvars")
     val isInfinite_op =
-      MLValue.compileFunction[Context, Typ, Boolean]("QRHL_Operations.is_finite")
+      MLValue.compileFunction[Context, Typ, Boolean](s"$qrhl_ops.is_finite")
     val declare_quantum_variable =
-      MLValue.compileFunction[String, Typ, Context, Context]("QRHL_Operations.declare_quantum_variable")
+      MLValue.compileFunction[String, Typ, Context, Context](s"$qrhl_ops.declare_quantum_variable")
     val declare_classical_variable =
-      MLValue.compileFunction[String, Typ, Context, Context]("QRHL_Operations.declare_classical_variable")
+      MLValue.compileFunction[String, Typ, Context, Context](s"$qrhl_ops.declare_classical_variable")
     // left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]
-    val qrhl_subgoal_to_term_op =
-      MLValue.compileFunction[Context, List[Statement], List[Statement], Term, Term, List[Term], Term]("QRHL_Operations.qrhl_subgoal_to_term")
+    lazy val qrhl_subgoal_to_term_op =
+      MLValue.compileFunction[Context, List[Statement], List[Statement], Term, Term, List[Term], Term](s"$qrhl_ops.qrhl_subgoal_to_term")
 
-    val declare_concrete_program_op =
+    lazy val declare_concrete_program_op =
       MLValue.compileFunction[Context, String, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[String], Statement, Context](
-        "QRHL_Operations.declare_concrete_program")
+        s"$qrhl_ops.declare_concrete_program")
 
     val show_oracles_lines_op =
-      MLValue.compileFunction[Thm, List[String]]("QRHL_Operations.show_oracles_lines")
+      MLValue.compileFunction[Thm, List[String]](s"$qrhl_ops.show_oracles_lines")
 
-    val statement_to_term_op =
-      MLValue.compileFunction[Context, Statement, Term]("fn (ctxt,st) => QRHL_Operations.statement_to_term ctxt st")
-    val statements_to_term_op =
-      MLValue.compileFunction[Context, List[Statement], Term]("fn (ctxt,st) => QRHL_Operations.statements_to_term ctxt st")
-    val listToBlock =
-      MLValue.compileFunction[List[Statement], Statement]("QRHL_Operations.Block")
-    val makeLocal =
-      MLValue.compileFunction[VarTerm[(String,Typ)], VarTerm[(String,Typ)], List[Statement], Statement]("QRHL_Operations.Local")
-    val makeAssign =
-      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.Assign")
-    val makeSample =
-      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.Sample")
-    val makeIfThenElse =
-      MLValue.compileFunction[Term, List[Statement], List[Statement], Statement]("QRHL_Operations.IfThenElse")
-    val makeQApply =
-      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.QApply")
-    val makeQInit =
-      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.QInit")
-    val makeWhile =
-      MLValue.compileFunction[Term, List[Statement], Statement]("QRHL_Operations.While")
-    val makeCALL =
-      MLValue.compileFunction[String, List[Call], Call]("QRHL_Operations.CALL")
-    val destCALL =
-      MLValue.compileFunction[Call, (String, List[Call])]("fn QRHL_Operations.CALL x => x")
-    val makeCall =
-      MLValue.compileFunction[Call, Statement]("QRHL_Operations.Call")
-    val makeMeasurement =
-      MLValue.compileFunction[VarTerm[(String,Typ)], VarTerm[(String,Typ)], Term, Statement]("QRHL_Operations.Measurement")
-    val whatStatementOp =
-      MLValue.compileFunction[Statement, String]("QRHL_Operations.whatStatement")
-    val destMeasurement =
-      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)], VarTerm[(String,Typ)], Term)]("fn QRHL_Operations.Measurement x => x")
-    val destBlock =
-      MLValue.compileFunction[Statement, List[Statement]]("fn QRHL_Operations.Block x => x")
-    val destLocal =
+    lazy val statement_to_term_op =
+      MLValue.compileFunction[Context, Statement, Term](s"fn (ctxt,st) => $qrhl_ops.statement_to_term ctxt st")
+    lazy val statements_to_term_op =
+      MLValue.compileFunction[Context, List[Statement], Term](s"fn (ctxt,st) => $qrhl_ops.statements_to_term ctxt st")
+    lazy val listToBlock =
+      MLValue.compileFunction[List[Statement], Statement](s"$qrhl_ops.Block")
+    lazy val makeLocal =
+      MLValue.compileFunction[VarTerm[(String,Typ)], VarTerm[(String,Typ)], List[Statement], Statement](s"$qrhl_ops.Local")
+    lazy val makeAssign =
+      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement](s"$qrhl_ops.Assign")
+    lazy val makeSample =
+      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement](s"$qrhl_ops.Sample")
+    lazy val makeIfThenElse =
+      MLValue.compileFunction[Term, List[Statement], List[Statement], Statement](s"$qrhl_ops.IfThenElse")
+    lazy val makeQApply =
+      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement](s"$qrhl_ops.QApply")
+    lazy val makeQInit =
+      MLValue.compileFunction[VarTerm[(String,Typ)], Term, Statement](s"$qrhl_ops.QInit")
+    lazy val makeWhile =
+      MLValue.compileFunction[Term, List[Statement], Statement](s"$qrhl_ops.While")
+    lazy val makeCALL =
+      MLValue.compileFunction[String, List[Call], Call](s"$qrhl_ops.CALL")
+    lazy val destCALL =
+      MLValue.compileFunction[Call, (String, List[Call])](s"fn $qrhl_ops.CALL x => x")
+    lazy val makeCall =
+      MLValue.compileFunction[Call, Statement](s"$qrhl_ops.Call")
+    lazy val makeMeasurement =
+      MLValue.compileFunction[VarTerm[(String,Typ)], VarTerm[(String,Typ)], Term, Statement](s"$qrhl_ops.Measurement")
+    lazy val whatStatementOp =
+      MLValue.compileFunction[Statement, String](s"$qrhl_ops.whatStatement")
+    lazy val destMeasurement =
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)], VarTerm[(String,Typ)], Term)](s"fn $qrhl_ops.Measurement x => x")
+    lazy val destBlock =
+      MLValue.compileFunction[Statement, List[Statement]](s"fn $qrhl_ops.Block x => x")
+    lazy val destLocal =
       MLValue.compileFunction[Statement, (VarTerm[(String,Typ)], VarTerm[(String,Typ)],List[Statement])](
-        "fn QRHL_Operations.Local x => x")
-    val destAssign =
-      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.Assign x => x")
-    val destSample =
-      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.Sample x => x")
-    val destIfThenElse =
-      MLValue.compileFunction[Statement, (Term,List[Statement],List[Statement])]("fn QRHL_Operations.IfThenElse x => x")
-    val destQApply =
-      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.QApply x => x")
-    val destQInit =
-      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)]("fn QRHL_Operations.QInit x => x")
-    val destWhile =
-      MLValue.compileFunction[Statement, (Term,List[Statement])]("fn QRHL_Operations.While x => x")
-    val destCall =
-      MLValue.compileFunction[Statement, Call]("fn QRHL_Operations.Call x => x")
+        s"fn $qrhl_ops.Local x => x")
+    lazy val destAssign =
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)](s"fn $qrhl_ops.Assign x => x")
+    lazy val destSample =
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)](s"fn $qrhl_ops.Sample x => x")
+    lazy val destIfThenElse =
+      MLValue.compileFunction[Statement, (Term,List[Statement],List[Statement])](s"fn $qrhl_ops.IfThenElse x => x")
+    lazy val destQApply =
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)](s"fn $qrhl_ops.QApply x => x")
+    lazy val destQInit =
+      MLValue.compileFunction[Statement, (VarTerm[(String,Typ)],Term)](s"fn $qrhl_ops.QInit x => x")
+    lazy val destWhile =
+      MLValue.compileFunction[Statement, (Term,List[Statement])](s"fn $qrhl_ops.While x => x")
+    lazy val destCall =
+      MLValue.compileFunction[Statement, Call](s"fn $qrhl_ops.Call x => x")
 
-    private val whatVartermOp_ =
-      MLValue.compileFunction[VarTerm[MLValue[Nothing]], String]("QRHL_Operations.whatVarterm")
+    lazy private val whatVartermOp_ =
+      MLValue.compileFunction[VarTerm[MLValue[Nothing]], String](s"$qrhl_ops.whatVarterm")
     def whatVartermOp[A] = whatVartermOp_.asInstanceOf[MLFunction[VarTerm[MLValue[A]], String]]
-    private val destVartermCons_ =
-      MLValue.compileFunction[VarTerm[MLValue[Nothing]], (VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]])]("fn QRHL_Operations.VTCons x => x")
+    private lazy val destVartermCons_ =
+      MLValue.compileFunction[VarTerm[MLValue[Nothing]], (VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]])](s"fn $qrhl_ops.VTCons x => x")
     def destVartermCons[A] = destVartermCons_.asInstanceOf[MLFunction[VarTerm[MLValue[A]], (VarTerm[MLValue[A]], VarTerm[MLValue[A]])]]
-    private val destVartermSingle_ =
-      MLValue.compileFunction[VarTerm[MLValue[Nothing]], MLValue[Nothing]]("fn QRHL_Operations.VTSingle x => x")
+    private lazy val destVartermSingle_ =
+      MLValue.compileFunction[VarTerm[MLValue[Nothing]], MLValue[Nothing]](s"fn $qrhl_ops.VTSingle x => x")
     def destVartermSingle[A] = destVartermSingle_.asInstanceOf[MLFunction[VarTerm[MLValue[A]], MLValue[A]]]
-    private val vartermUnit_ =
-      MLValue.compileValueRaw[VarTerm[Nothing]]("QRHL_Operations.E_Varterm QRHL_Operations.VTUnit")
+    private lazy val vartermUnit_ =
+      MLValue.compileValueRaw[VarTerm[Nothing]](s"$qrhl_ops.E_Varterm $qrhl_ops.VTUnit")
     def vartermUnit[A] = vartermUnit_.asInstanceOf[MLValue[VarTerm[A]]]
-    private val vartermCons_ =
-      MLValue.compileFunction[VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTCons")
+    private lazy val vartermCons_ =
+      MLValue.compileFunction[VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]], VarTerm[MLValue[Nothing]]](s"$qrhl_ops.VTCons")
     def vartermCons[A] = vartermCons_.asInstanceOf[MLFunction2[VarTerm[MLValue[A]],VarTerm[MLValue[A]], VarTerm[MLValue[A]]]]
-    private val vartermSingle_ =
-      MLValue.compileFunction[MLValue[Nothing], VarTerm[MLValue[Nothing]]]("QRHL_Operations.VTSingle")
+    private lazy val vartermSingle_ =
+      MLValue.compileFunction[MLValue[Nothing], VarTerm[MLValue[Nothing]]](s"$qrhl_ops.VTSingle")
     def vartermSingle[A] = vartermSingle_.asInstanceOf[MLFunction[MLValue[A], VarTerm[MLValue[A]]]]
 
     val checkTypeOp =
-      MLValue.compileFunction[(Context, Term), Typ]("fn (ctxt,t) => QRHL_Operations.checkType ctxt t")
+      MLValue.compileFunction[(Context, Term), Typ](s"fn (ctxt,t) => $qrhl_ops.checkType ctxt t")
 //    val createContextOp =
 //      MLValue.compileFunction[List[String], (Context, List[String])]("QRHL_Operations.create_context")
     val addAssumptionOp =
-      MLValue.compileFunction[(String, Term, Context), Context]("QRHL_Operations.addAssumption")
+      MLValue.compileFunction[(String, Term, Context), Context](s"$qrhl_ops.addAssumption")
     val simplifyTermOp =
-      MLValue.compileFunction[(Term, List[String], Context), (Term, Thm)]("QRHL_Operations.simp")
+      MLValue.compileFunction[(Term, List[String], Context), (Term, Thm)](s"$qrhl_ops.simp")
     val declareVariableOp =
-      MLValue.compileFunction[(Context, String, Typ), Context]("QRHL_Operations.declare_variable")
-    val thms_as_subgoals =
-      MLValue.compileFunction[(Context, String), List[Subgoal]]("QRHL_Operations.thms_as_subgoals")
+      MLValue.compileFunction[(Context, String, Typ), Context](s"$qrhl_ops.declare_variable")
+    lazy val thms_as_subgoals =
+      MLValue.compileFunction[(Context, String), List[Subgoal]](s"$qrhl_ops.thms_as_subgoals")
 //    val use_thy_op =
 //      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
-    lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context]("QRHL_Operations.applyToplevelCommand")
+    lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context](s"$qrhl_ops.applyToplevelCommand")
     val absfree = MLValue.compileFunction[String, Typ, Term, Term]("fn (name,typ,term) => absfree (name, typ) term")
   }
 }
@@ -967,5 +966,4 @@ object IsabelleX {
 //    /** Must end in .isabelle if provided */
 //    userDir = Some(Configuration.isabelleUserDir)
   )
-
 }
