@@ -303,20 +303,8 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def univ(typ: Typ): Const = top(setT(typ))
 
-  // TODO: Do in Isabelle (should be faster for partially retrieved terms)
-  def abstract_over(v: Free, body: Term): Term = {
-    def abs(level: Int, term: Term): Term = term match {
-      case Abs(name, typ, body) => Abs(name, typ, abs(level+1, body))
-      case App(fun, arg) => App(abs(level, fun), abs(level, arg))
-      case v2 @ Free(_,_) if v==v2 => Bound(level)
-      case term => term
-    }
-    abs(0, body)
-  }
-
   def absfree(varName: String, varTyp: Typ, term: Term): Term =
-    Abs(varName, varTyp, abstract_over(Free(varName, varTyp), term))
-
+    Ops.absfree(varName, varTyp, term).retrieveNow
 
   val not : Const = Const(c.not, boolT -->: boolT)
   def not(t: Term) : Term = not $ t
@@ -377,9 +365,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     terms.foldRight[Term](nil)(cons $ _ $ _)
   }
 
-  // TODO rename constants
-  //  val vectorT_name = "Complex_L2.ell2"
-
   def ell2T(typ: Typ): Type = Type(t.ell2, typ)
   object Ell2T {
     def unapply(typ: Typ): Option[Typ] = typ match {
@@ -388,6 +373,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     }
   }
 
+  // TODO rename to ell2
   def dest_vectorT(typ: Typ): Typ = typ match {
     case Type(t.ell2, t1) => t1
     case _ => throw new RuntimeException("expected type 'vector', not " + typ)
@@ -402,7 +388,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     }
   }
 
-  def bot(typ: Typ) = Const(c.bot, typ)
+  def bot(typ: Typ): Const = Const(c.bot, typ)
   object Bot {
     def unapply(arg: Term): Boolean = arg match {
       case Const(c.bot, _) => true
@@ -411,7 +397,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
 
 
-  def zero(typ: Typ) = Const(c.zero, typ)
+  def zero(typ: Typ): Const = Const(c.zero, typ)
   object Zero {
     def unapply(arg: Term): Boolean = arg match {
       case Const(c.zero, _) => true
@@ -420,7 +406,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   }
 
   //  val distrT_name = "Discrete_Distributions.distr"
-
 
   object Inf {
     def unapply(term: Term): Option[(Term, Term)] = term match {
@@ -898,12 +883,11 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 //    val use_thy_op =
 //      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
     lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context]("QRHL_Operations.applyToplevelCommand")
+    val absfree = MLValue.compileFunction[String, Typ, Term, Term]("fn (name,typ,term) => absfree (name, typ) term")
   }
 }
 
 object IsabelleX {
-
-
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
     val isabelle = new IsabelleX()
@@ -922,7 +906,7 @@ object IsabelleX {
   private val logger = log4s.getLogger
 
 
-  // TODO: Reimplement in isabelle.Term
+  // TODO: Remove (use Term.fasttype_of instead)
   def fastype_of(t: Term, typs: List[Typ] = Nil): Typ = t match {
     case App(f,u) => fastype_of(f, typs) match {
       case Type("fun", _, typ) => typ

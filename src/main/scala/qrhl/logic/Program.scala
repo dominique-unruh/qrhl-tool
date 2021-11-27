@@ -163,42 +163,10 @@ case class VariableUse
 //  def removeOverwrittenQuantum(vars: QVariable*): VariableUse = copy(overwritten=overwritten -- vars)
 
 }
+
+// TODO remove
 object VariableUse {
-  // TODO get rid of most (all?) of the helper functions
-
-/*  def oracle(oracles: String*): VariableUse =
-    new VariableUse(freeVariables=emptySet, ambient=emptySet, programs=emptySet, written=emptySet,
-      overwritten = emptySet, oracles=ListSet(oracles:_*),
-      inner = emptySet)*/
-
-
   private val emptySet = ListSet.empty[Nothing]
-
-/*  def overwrittenClassicalVariables(variables: CVariable*): VariableUse = {
-    val vars = ListSet(variables: _*)
-    new VariableUse(freeVariables = vars, written = vars,
-      ambient = emptySet, programs = emptySet,
-      overwritten = vars, oracles=emptySet,
-      inner = emptySet)
-  }*/
-
-/*  def quantumVariables(vs: QVariable*): VariableUse =
-    new VariableUse(freeVariables=ListSet(vs:_*), ambient=emptySet, programs=emptySet, written=emptySet,
-      overwritten = emptySet, oracles=emptySet,
-      inner = emptySet)*/
-
-/*
-  def overwrittenQuantumVariables(vs: QVariable*): VariableUse = {
-    val vars = ListSet(vs:_*)
-    new VariableUse(freeVariables=vars, ambient=emptySet, programs=emptySet, written=emptySet,
-      overwritten = vars, oracles=emptySet,
-      inner = emptySet)
-  }
-*/
-
-//  val empty = new VariableUse(freeVariables=emptySet, written=emptySet, ambient=emptySet, programs=emptySet,
-//    overwritten = emptySet, oracles=emptySet,
-//    inner = emptySet, covered = MaybeAllSet.empty)
 }
 
 case object VTUnit extends VarTerm[Nothing] {
