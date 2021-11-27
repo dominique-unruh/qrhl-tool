@@ -167,8 +167,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     * @return the context
     */
   def getQRHLContextWithFiles(thys: Path*): (ContextX, List[Path]) = {
-    getContextWithThys(List("QRHL.QRHL", "QRHL.QRHL_Operations"), thys.toList)
-    // TODO: Do we need to include QRHL.QRHL_Operations?
+    getContextWithThys(List("QRHL.QRHL"), thys.toList)
   }
 
   /** Creates a new context that imports the given theories.
