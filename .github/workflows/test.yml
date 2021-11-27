@@ -18,13 +18,13 @@ jobs:
         - name: Running tests (Linux)
           if: matrix.os == 'linux'
           run: |
-            echo isabelle-home = /opt/Isabelle2021-1-RC3 >qrhl-tool.conf
+            echo isabelle-home = /opt/Isabelle2021-1-RC4 >qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Running tests (Windows)
           if: matrix.os == 'windows'
           run: |
-            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1-RC3'
+            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1-RC4'
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Upload test results

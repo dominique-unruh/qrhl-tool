@@ -69,7 +69,7 @@ makeGITREVISION := {
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
-val isabelleHome = file("/opt/Isabelle2021-1-RC3")
+val isabelleHome = file("/opt/Isabelle2021-1-RC4")
 
 lazy val makeQrhlToolConf = taskKey[Unit]("Create default qrhl-tool.conf")
 makeQrhlToolConf := {
