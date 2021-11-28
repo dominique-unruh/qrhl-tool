@@ -25,7 +25,8 @@ lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.9",
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
   libraryDependencies += "com.vladsch.flexmark" % "flexmark-all" % "0.62.2" % Test, // Required by scala-test for HTML output
-  libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % Test
+  libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % Test,
+  libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.12.0" % Test
 )
 
 
