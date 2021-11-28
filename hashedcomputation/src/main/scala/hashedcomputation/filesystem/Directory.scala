@@ -227,7 +227,7 @@ object Directory {
       val thread = new Thread(new PollWatchService(watchService), s"Filesystem watcher for $path")
       thread.setDaemon(true)
       thread.start()
-      logger.debug(s"Started PollWatchService for $filesystem")
+      logger.debug(s"Started PollWatchService for $path")
       watchService
     })
     val watchKey = path.register(watchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
