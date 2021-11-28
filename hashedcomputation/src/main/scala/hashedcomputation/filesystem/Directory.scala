@@ -227,6 +227,7 @@ object Directory {
       val thread = new Thread(new PollWatchService(watchService), s"Filesystem watcher for $filesystem")
       thread.setDaemon(true)
       thread.start()
+      logger.debug(s"Started PollWatchService for $filesystem")
       watchService
     })
     val watchKey = path.register(watchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
@@ -235,7 +236,6 @@ object Directory {
 
   private class PollWatchService(watchService: WatchService) extends Runnable {
     override def run(): Unit = {
-      logger.debug(s"Starting PollWatchService for $watchService")
       while (true) {
         val key = watchService.take()
         val events = key.pollEvents()
