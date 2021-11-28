@@ -224,7 +224,7 @@ object Directory {
     val watchService = watchServices.getOrElseUpdate(filesystem, {
 //      logger.debug(s"Found new filesystem: $filesystem")
       val watchService = filesystem.newWatchService()
-      val thread = new Thread(new PollWatchService(watchService), s"Filesystem watcher for $filesystem")
+      val thread = new Thread(new PollWatchService(watchService), s"Filesystem watcher for $path")
       thread.setDaemon(true)
       thread.start()
       logger.debug(s"Started PollWatchService for $filesystem")
