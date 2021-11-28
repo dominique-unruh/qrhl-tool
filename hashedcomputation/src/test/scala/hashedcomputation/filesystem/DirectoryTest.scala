@@ -7,7 +7,7 @@ import org.scalatest.funsuite.AnyFunSuite
 
 class DirectoryTest extends AnyFunSuite {
   test("DirectorySnapshot") {
-    val delay = 500
+    val delay = 5000
     val dirPath = Files.createTempDirectory("test-DirectorySnapshot")
     dirPath.toFile.deleteOnExit()
 
