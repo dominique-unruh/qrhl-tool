@@ -15,6 +15,8 @@ lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases"),
   // https://mvnrepository.com/artifact/org.log4s/log4s
   libraryDependencies += "org.log4s" %% "log4s" % "1.8.2",
+  // Needed so that logging works in "sbt test"
+  libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30" % Test,
   // https://mvnrepository.com/artifact/com.google.guava/guava
   libraryDependencies += "com.google.guava" % "guava" % "30.0-jre",
   libraryDependencies += "org.jetbrains" % "annotations" % "20.1.0",
@@ -41,7 +43,6 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 libraryDependencies += "com.vladsch.flexmark" % "flexmark-all" % "0.62.2" % Test // Required by scala-test for HTML output
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % Test
 libraryDependencies += "org.rogach" %% "scallop" % "3.5.1"
-// https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30"
 libraryDependencies += "org.jline" % "jline" % "3.16.0"
 libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.9"
@@ -119,6 +120,7 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 // To avoid that several tests simultaneously try to build Isabelle
 parallelExecution in Test := false
+Test / run / javaOptions += "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug"
 
 javaOptions in Universal += "-J-Xss10m"
 

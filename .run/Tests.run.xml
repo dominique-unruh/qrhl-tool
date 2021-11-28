@@ -7,32 +7,9 @@
       <list />
     </option>
     <option name="testKind" value="All in package" />
-    <option name="classBuf">
-      <list>
-        <option value="qrhl.QRHLSubgoalTest" />
-        <option value="qrhl.ExampleFilesTest" />
-        <option value="qrhl.logic.BlockTest" />
-        <option value="qrhl.logic.VariableTest" />
-        <option value="qrhl.toplevel.ParserTest" />
-        <option value="qrhl.toplevel.ToplevelTest" />
-        <option value="qrhl.toplevel.DeclareProgramCommandTest" />
-        <option value="qrhl.toplevel.IsabelleToplevelCommandTest" />
-        <option value="qrhl.tactic.WpTacTest" />
-        <option value="qrhl.tactic.O2HTacTest" />
-        <option value="qrhl.tactic.RndTacTest" />
-        <option value="qrhl.tactic.SeqTacTest" />
-        <option value="qrhl.tactic.CaseTacTest" />
-        <option value="qrhl.tactic.RuleTacTest" />
-        <option value="qrhl.tactic.EqualTacTest" />
-        <option value="qrhl.tactic.ByQRHLTacTest" />
-        <option value="qrhl.tactic.ExpressionTest" />
-        <option value="qrhl.isabellex.IsabelleXTest" />
-        <option value="qrhl.isabellex.ConfigurationTest" />
-        <option value="qrhl.isabellex.MLValueConvertersTest" />
-      </list>
-    </option>
-    <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />
+    <option name="javaOptions" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug" />
     <option name="searchTest" value="In single module" />
+    <option name="shortenClasspath" value="NONE" />
     <option name="workingDirectory" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
