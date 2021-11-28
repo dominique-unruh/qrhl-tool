@@ -235,10 +235,12 @@ object Directory {
 
   private class PollWatchService(watchService: WatchService) extends Runnable {
     override def run(): Unit = {
+      logger.debug(s"Starting PollWatchService for $watchService")
       while (true) {
         val key = watchService.take()
         val events = key.pollEvents()
         key.reset()
+        logger.debug(s"Got events: $events")
         listeners.getIfPresent(key) match {
           case null => logger.error(s"Did not find a listener for key $key")
           case listener =>
