@@ -1,7 +1,7 @@
 name: test-qrhl-tool
 on: [push]
 jobs:
-    test:
+    test-qrhl:
       strategy:
         matrix:
           os: [linux, windows, macos]
@@ -43,3 +43,27 @@ jobs:
           with:
             name: test-reports-html-${{matrix.os}}
             path: target/test-reports-html
+
+    qrhl-zip:
+      runs-on: [self-hosted, linux]
+      needs: test-qrhl
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v2
+          with:
+            submodules: true
+
+        - name: make qrhl.zip
+          run: |
+            set -e
+            make qrhl.zip
+            rm -rf qrhl-zip-content
+            mkdir qrhl-zip-content
+            cd qrhl-zip-content
+            unzip ../qrhl.zip
+
+        - name: Upload qrhl.zip
+          uses: actions/upload-artifact@v2
+          with:
+            name: qrhl.zip
+            path: qrhl-zip-content
