@@ -4,7 +4,7 @@ jobs:
     test:
       strategy:
         matrix:
-          os: [linux, windows]
+          os: [linux, windows, macos]
       runs-on: [self-hosted, "${{matrix.os}}"]
       steps:
         - name: Checkout repository
@@ -23,10 +23,23 @@ jobs:
           run: |
             Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1-RC4'
             sbt 'testOnly -- -h target/test-reports-html'
-            
+
+        - name: Running tests (MacOS)
+          if: matrix.os == 'macos'
+          run: |
+            ~/keepawake.sh &    # A script to keep the Mac from falling asleep. Caffeinate doesn't seem to work on my Mac
+            echo $! >keepawake.pid
+            echo isabelle-home = ~/Isabelle2021-1-RC4.app >qrhl-tool.conf
+            sbt 'testOnly -- -h target/test-reports-html'
+
+        - name: Cleanup (MacOS)
+          if: always()
+          run: |
+            kill `cat keepawake.pid` || true
+
         - name: Upload test results
           uses: actions/upload-artifact@v2
           if: always()
           with:
-            name: test-reports-html
+            name: test-reports-html-${{matrix.os}}
             path: target/test-reports-html
