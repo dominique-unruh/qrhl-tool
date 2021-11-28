@@ -9,6 +9,7 @@ class DirectoryTest extends AnyFunSuite {
   test("DirectorySnapshot") {
     val delay = 5000
     val dirPath = Files.createTempDirectory("test-DirectorySnapshot")
+    println(dirPath)
     dirPath.toFile.deleteOnExit()
 
     Files.writeString(dirPath.resolve("test1"), "test1")
