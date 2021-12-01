@@ -2,13 +2,19 @@ package hashedcomputation.filesystem
 
 import java.io.IOException
 import java.nio.file.{Files, Path}
-
 import org.scalatest.funsuite.AnyFunSuite
+import org.apache.commons.lang3.SystemUtils
 
 class DirectoryTest extends AnyFunSuite {
   test("DirectorySnapshot") {
-    val delay = 500
+    val delay =
+      if (SystemUtils.IS_OS_MAC)
+        20000 // On MacOS, the WatchService seems to use polling and large delays in noticing the change of a file can occur
+      else
+        500
     val dirPath = Files.createTempDirectory("test-DirectorySnapshot")
+    assert(dirPath.toString != "/") // Can happen on MacOS, apparently (?)
+    println(dirPath)
     dirPath.toFile.deleteOnExit()
 
     Files.writeString(dirPath.resolve("test1"), "test1")
