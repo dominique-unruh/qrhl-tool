@@ -32,10 +32,10 @@ jobs:
             echo isabelle-home = ~/Isabelle2021-1-RC4.app >qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
 
-        - name: Cleanup (MacOS)
-          if: always()
-          run: |
-            kill `cat keepawake.pid` || true
+#        - name: Cleanup (MacOS)
+#          if: matrix.os == 'macos'
+#          run: |
+#            kill `cat keepawake.pid` || true
 
         - name: Upload test results
           uses: actions/upload-artifact@v2
