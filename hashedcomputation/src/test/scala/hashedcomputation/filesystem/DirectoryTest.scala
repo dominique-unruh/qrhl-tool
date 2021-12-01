@@ -14,6 +14,7 @@ class DirectoryTest extends AnyFunSuite {
         500
     val dirPath = Files.createTempDirectory("test-DirectorySnapshot")
     println(s"dirPath = $dirPath")
+    assert(dirPath.toString != "/") // Can happen on MacOS, apparently (?)
     dirPath.toFile.deleteOnExit()
 
     Files.writeString(dirPath.resolve("test1"), "test1")
