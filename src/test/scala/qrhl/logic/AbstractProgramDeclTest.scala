@@ -16,6 +16,7 @@ class AbstractProgramDeclTest extends AnyFunSuite {
     val x = state.environment.getCVariable("x")
     val t1 = Term(state.isabelle.context, "x").fastType.concreteRecursive
     val adv = AbstractProgramDecl("A", List(x), List(x), List(x), List(x), List(x), 0)
+    // At some point, the following accidentally changed the type of the fixed variable x
     val isa2 = adv.declareInIsabelle(state.isabelle)
     val t2 = Term(isa2.context, "x").fastType.concreteRecursive
     println(t1.pretty(isa2.context))

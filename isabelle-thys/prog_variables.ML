@@ -234,8 +234,8 @@ fun varterm_from_list [] = VTUnit
 
 fun varterm_to_VARIABLE Classical VTUnit = \<^term>\<open>CREGISTER_unit :: CVARIABLE\<close>
   | varterm_to_VARIABLE Quantum VTUnit = \<^term>\<open>QREGISTER_unit :: QVARIABLE\<close>
-  | varterm_to_VARIABLE Classical (VTSingle (n,T)) = Const(\<^const_name>\<open>CREGISTER_of\<close>, mk_cvariableT T --> \<^typ>\<open>CVARIABLE\<close>) $ Free (n,mk_cvariableT T)
-  | varterm_to_VARIABLE Quantum (VTSingle (n,T)) = Const(\<^const_name>\<open>QREGISTER_of\<close>, mk_qvariableT T --> \<^typ>\<open>QVARIABLE\<close>) $ Free (n,mk_qvariableT T)
+  | varterm_to_VARIABLE Classical (VTSingle (n,T)) = Const(\<^const_name>\<open>CREGISTER_of\<close>, mk_cvariableT T --> \<^typ>\<open>CVARIABLE\<close>) $ Free (n, mk_cvariableT T)
+  | varterm_to_VARIABLE Quantum (VTSingle (n,T)) = Const(\<^const_name>\<open>QREGISTER_of\<close>, mk_qvariableT T --> \<^typ>\<open>QVARIABLE\<close>) $ Free (n, mk_qvariableT T)
   | varterm_to_VARIABLE cq (VTCons (t1, t2)) = let
         val v1 = varterm_to_VARIABLE cq t1
         val v2 = varterm_to_VARIABLE cq t2
