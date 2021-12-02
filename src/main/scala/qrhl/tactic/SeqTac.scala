@@ -33,7 +33,7 @@ case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
 
 case class SeqTac(left:Int, right:Int, inner:RichTerm, swap: Boolean = false)
   extends IsabelleTac[(Int, Int, Term)]("seq_tac", {
-    ctx => (left,right,inner.encodeAsExpression(ctx, indexed=true).isabelleTerm /* TODO: encodeAsExpression should be done on Isabelle side */) }) {
+    ctx => (left,right,inner.encodeAsExpression(ctx, indexed=true).isabelleTerm) }) {
 
   override def hash: Hash[SeqTac.this.type] =
     HashTag()(Hashable.hash(left), Hashable.hash(right), Hashable.hash(inner), Hashable.hash(swap))

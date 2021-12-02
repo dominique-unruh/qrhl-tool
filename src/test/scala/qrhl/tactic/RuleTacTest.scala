@@ -49,18 +49,4 @@ class RuleTacTest extends AnyFunSuite {
     val rule = RuleTac("trans[where s=α]")
     val state2 = tl.state.applyTactic(rule)
   }
-
-/*
-  test("temp") {
-    // TODO open issue in libisabelle
-    val tl = toplevel()
-    try {
-      tl.isabelle.invoke(Operation.Hello,"α")
-    } catch {
-      case e : ProverResult.Failure =>
-        println(Isabelle.symbolsToUnicode(e.fullMessage))
-        throw e
-    }
-  }
-*/
 }
