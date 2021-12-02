@@ -23,7 +23,7 @@ class RndTacTest extends AnyFunSuite {
 
     assert(st.goal.length==1)
     val post = st.goal.head.asInstanceOf[QRHLSubgoal].post
-    assert(post.toString == "ℭ𝔩𝔞[uniform UNIV = uniform UNIV] ⊓ (⨅z∈supp (uniform UNIV). ⊤)")
+    assert(post.toString == "ℭ𝔩𝔞[uniform UNIV = uniform UNIV] ⊓ (INF z∈supp (uniform UNIV). ⊤)")
     post.checkWelltyped(tl.state.isabelle, GIsabelle.predicateT)
   }
 

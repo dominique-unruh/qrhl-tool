@@ -99,12 +99,12 @@ fun joint_sample_equal_tac ctxt =
   THEN' Expressions.map_expression_tac ctxt *)
 
 fun joint_sample_seq_tac ctxt witness i =
-  Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i
+  Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   joint_sample_tac ctxt witness (i+1)
 
 fun joint_sample_equal_seq_tac ctxt i =
-  Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i
+  Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   joint_sample_equal_tac ctxt (i+1)
 end

@@ -115,7 +115,7 @@ fun get_wp left (prog:term) (post:term) ctxt =
 
 fun wp_seq_tac left right ctxt i = 
   Tactics.seq_tac (~1 - left) (~1 - right)
-           (Var(("precondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i
+           (Var(("precondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   wp_tac ctxt (i+1)
 
