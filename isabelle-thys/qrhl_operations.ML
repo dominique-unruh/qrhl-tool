@@ -390,8 +390,8 @@ fun declare_classical_variable (name,typ,ctxt) =
 (* fun term_to_expression (ctxt,t) =
   Programs.term_to_expression ctxt t *)
 
-fun expression_to_term (ctxt,t) =
-  Programs.expression_to_term ctxt t
+(* fun expression_to_term (ctxt,t) =
+  Programs.expression_to_term ctxt t *)
 
 fun whatVarterm (VTCons _) = "cons"
   | whatVarterm (VTSingle _) = "single"

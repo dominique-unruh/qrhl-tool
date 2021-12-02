@@ -16,6 +16,7 @@ class ParserTest extends AnyFunSuite {
     tl.execCmd("classical var y : int")
     tl.execCmd("classical var z : int")
     tl.execCmd("classical var w : int")
+    tl.execCmd("quantum var q : bit")
     tl.execCmd("adversary A0 free x")
     tl.execCmd("adversary B0 free x")
     tl.execCmd("adversary A1 free x calls ?")
@@ -80,8 +81,8 @@ class ParserTest extends AnyFunSuite {
   }
 
   test("parse expression with indexed quantum variables") {
-    val e = Parser.parseAll(Parser.expression(GIsabelle.boolT, indexed=true), "q1 = id").get
-    assert(e.toString == "q1 = id")
+    val e = Parser.parseAll(Parser.expression(GIsabelle.predicateT, indexed=true), "liftSpace top q1").get
+    assert(e.toString == "⊤»q1")
   }
 
   test("fail to parse while loop") {

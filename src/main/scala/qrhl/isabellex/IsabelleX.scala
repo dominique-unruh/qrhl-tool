@@ -768,7 +768,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       compileFunction[Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int, Context](
         s"$qrhl_ops.declare_abstract_program")
     val decodeFromExpressionOp =
-      MLValue.compileFunction[Context,Term, Term](s"$qrhl_ops.expression_to_term")
+      MLValue.compileFunction[Context,Term, Term](s"fn (ctxt, t) => $qrhl_ops.expression_to_term ctxt t")
     val termToExpressionOp =
       MLValue.compileFunction[Context, Typ, Term, Term](s"fn (ctxt, typ, term) => $qrhl_ops.term_to_expression ctxt typ term")
     val byQRHLPreOp =

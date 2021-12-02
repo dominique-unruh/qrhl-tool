@@ -10,6 +10,11 @@ fun expression_to_term ctxt t =
   let val lookup_var = lookup_variable ctxt
       val body = case t of Abs(_,_,body) => body | _ => raise TERM("expression_to_term", [t])
       val e = subst_bound (Free("_memory", dummyT), body)
+      fun check_qvariable n T = case lookup_var n of
+          SOME {qc=Classical, ...} => raise TYPE("expression_to_term: classical variable after qregister_chain", [T], [])
+        | SOME {qc=Quantum, typ, ...} => 
+            mk_qvariableT typ = T orelse raise TYPE("expression_to_term: quantum variable of wrong type", [T,typ], [])
+        | NONE => false
       fun translate (g as (Const(\<^const_name>\<open>getter\<close>,_) $ var $ Free("_memory", _))) = let
             val (n,T) = case find_variable ctxt var of
                SOME {qc=Classical, typ, name, ...} => (name,typ)
@@ -18,8 +23,12 @@ fun expression_to_term ctxt t =
                | NONE => 
                     raise TYPE("expression_to_term: not a known variable after getter", [fastype_of var], [t,g])
             val _ = mk_cvariableT T = fastype_of var orelse  mk_c2variableT T = fastype_of var orelse
-                    raise TYPE("expression_to_term: variable of wrong type", [T, fastype_of var], [t,g])
+                    raise TYPE("expression_to_term: classical variable of wrong type", [T, fastype_of var], [t,g])
           in Free(n,T) end
+        | translate (q1 as (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ Const(\<^const_name>\<open>qFst\<close>,_) $ Free(n,T))) = 
+          if check_qvariable n T then Free(n^"1", dest_qvariableT T |> mk_q2variableT) else q1
+        | translate (q2 as (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ Const(\<^const_name>\<open>qSnd\<close>,_) $ Free(n,T))) = 
+          if check_qvariable n T then Free(n^"2", dest_qvariableT T |> mk_q2variableT) else q2
         | translate (t1 $ t2) = translate t1 $ translate t2
         | translate (Abs(n,T,body)) = Abs(n, T, translate body)
         | translate (Free(n,T)) = (case lookup_var n of
