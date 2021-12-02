@@ -169,6 +169,11 @@ final class QVariable private (override val basename:String, override val valueT
 
   override def substitute(renaming: List[(Variable, Variable)]): QVariable =
     super.substitute(renaming).asInstanceOf[QVariable]
+
+  override def equals(obj: Any): Boolean = obj match {
+    case q : QVariable => basename == q.basename && valueTyp == q.valueTyp && theIndex == q.theIndex
+    case _ => false
+  }
 }
 
 object QVariable {
@@ -234,6 +239,11 @@ final class CVariable private (override val basename:String, override val valueT
 
   override def substitute(renaming: List[(Variable, Variable)]): CVariable =
     super.substitute(renaming).asInstanceOf[CVariable]
+
+  override def equals(obj: Any): Boolean = obj match {
+    case c : CVariable => basename == c.basename && valueTyp == c.valueTyp && theIndex == c.theIndex
+    case _ => false
+  }
 }
 
 object CVariable {

@@ -13,6 +13,7 @@
         <option value="qrhl.ExampleFilesTest" />
         <option value="qrhl.logic.BlockTest" />
         <option value="qrhl.logic.VariableTest" />
+        <option value="qrhl.logic.AbstractProgramDeclTest" />
         <option value="qrhl.toplevel.ParserTest" />
         <option value="qrhl.toplevel.ToplevelTest" />
         <option value="qrhl.toplevel.DeclareProgramCommandTest" />
