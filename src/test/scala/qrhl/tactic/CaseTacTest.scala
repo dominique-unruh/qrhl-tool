@@ -5,6 +5,7 @@ import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.{TacticCommand, Toplevel, ToplevelTest}
 import qrhl.{QRHLSubgoal, UserException}
 import IsabelleX.{globalIsabelle => GIsabelle}
+import de.unruh.isabelle.control.IsabelleException
 import de.unruh.isabelle.pure.Free
 import qrhl.toplevel.ToplevelTest.output
 
@@ -82,11 +83,12 @@ class CaseTacTest extends AnyFunSuite {
   test("fail if the expression contains unindexed program variables") {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
-    val ex = intercept[UserException] {
+    val ex = intercept[IsabelleException] {
       tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x", indexed = true)))
     }
 
-    assert(ex.getMessage.startsWith("Undeclared (or non-indexed) variable x in precondition"))
+    assert(ex.getMessage.startsWith("Type unification failed"))
+//    assert(ex.getMessage.startsWith("Undeclared (or non-indexed) variable x in precondition"))
   }
 
 }
