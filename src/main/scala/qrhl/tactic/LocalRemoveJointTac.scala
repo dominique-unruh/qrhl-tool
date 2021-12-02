@@ -14,6 +14,7 @@ import hashedcomputation.{Hash, HashTag}
 import GIsabelle.isabelleControl
 import scala.concurrent.ExecutionContext.Implicits._
 
+/** This is an unsound tactic! */
 case object LocalRemoveJointTac extends Tactic {
   /** Assumes that s1,s2 have same length and matching types */
   private def extendQeq(us1: Term, s1: Term, us2: Term, s2: Term, qvarsL: List[QVariable], qvarsR: List[QVariable]) = {

@@ -21,6 +21,7 @@ fun wp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
     [Const(\<^const_name>\<open>assign\<close>,_) $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms assign1_rule} @{thms assign2_rule}) n
        ORELSE error "assign-statement")
+      THEN Prog_Variables.distinct_vars_tac ctxt n
       (* THEN Expressions.index_tac ctxt n *)
       (* THEN Expressions.index_tac ctxt n *)
       (* THEN Expressions.subst_expression_tac ctxt n *)
@@ -28,6 +29,7 @@ fun wp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
   | [Const(\<^const_name>\<open>sample\<close>,_) $ _ $ _] =>
       (resolve_tac ctxt (lr @{thms sample1_rule} @{thms sample2_rule}) n
        ORELSE error "sample-statement")
+      THEN Prog_Variables.distinct_vars_tac ctxt n
       (* THEN Expressions.index_tac ctxt n *)
       (* THEN Expressions.index_tac ctxt n *)
       (* THEN Expressions.subst_expression_tac ctxt n *)
