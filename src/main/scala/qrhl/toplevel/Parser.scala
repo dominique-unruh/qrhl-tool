@@ -106,7 +106,7 @@ object Parser extends JavaTokenParsers {
         val e = RichTerm(isa, str  /*str.mkString.trim*/, typ)
         for (v <- e.variables)
           if (!context.environment.variableExists(v))
-            throw UserException(s"Variable $v was not declared (in expression $str")
+            throw UserException(s"Variable $v was not declared (in expression $str)")
         e
     } }
 

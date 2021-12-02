@@ -59,6 +59,10 @@ object QRHLSubgoal {
   private val logger = log4s.getLogger
 }
 
+/**
+ * @param pre Precondition in shortform
+ * @param post Postcondition in shortform
+ * */
 final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]) extends Subgoal {
   override def hash: Hash[QRHLSubgoal.this.type] =
     HashTag()(left.hash, right.hash, pre.hash, post.hash, Hashable.hash(assumptions))

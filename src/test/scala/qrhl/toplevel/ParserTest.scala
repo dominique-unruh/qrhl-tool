@@ -74,6 +74,16 @@ class ParserTest extends AnyFunSuite {
     }
   }
 
+  test("parse expression with indexed classical variables") {
+    val e = Parser.parseAll(Parser.expression(GIsabelle.intT, indexed=true), "x1").get
+    assert(e.toString == "x1")
+  }
+
+  test("parse expression with indexed quantum variables") {
+    val e = Parser.parseAll(Parser.expression(GIsabelle.boolT, indexed=true), "q1 = id").get
+    assert(e.toString == "q1 = id")
+  }
+
   test("fail to parse while loop") {
     assertThrows[IOException] { // TODO: Mark which exception is actually thrown
       val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; }")

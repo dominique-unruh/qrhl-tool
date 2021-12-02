@@ -4,8 +4,9 @@ import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.pure.Term
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.QRHLSubgoal
+import qrhl.isabellex.IsabelleX.globalIsabelle
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
-import qrhl.isabellex.RichTerm
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.Assign
 import qrhl.toplevel.ToplevelTest.output
 import qrhl.toplevel.{Parser, Toplevel, ToplevelTest}
@@ -29,12 +30,12 @@ class EqualTacTest extends AnyFunSuite {
     val state = tl.state
     val ctxt = state.isabelle.context
     val env = state.environment
-    val term = Term(ctxt, "Cla[x1=0]")
+    val term = RichTerm.decodeFromExpression(state.isabelle, "Cla[x1=0]", globalIsabelle.predicateT, indexed = true)
     val x = env.getCVariable("x")
-    val result = EqualTac.removeClassicals(env, RichTerm(term), ListSet(x), ListSet(x))
+    val result = EqualTac.removeClassicals(env, term, ListSet(x), ListSet(x))
     val resultStr = result.toString
     println(resultStr)
-    assert(resultStr == "⨅x1. ℭ𝔩𝔞[x1 = 0]")
+    assert(resultStr == "INF x1. ℭ𝔩𝔞[x1 = 0]")
   }
 
   test("permit postcondition to contain the quantum variable equality") {

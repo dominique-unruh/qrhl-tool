@@ -313,7 +313,7 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
   (* All of before/afterLeft/Right *)
   val all_vars0 = beforeLeft @ beforeRight @ afterLeft @ afterRight
   val all_vars = all_vars0
-                 |> Prog_Variables.varterm_from_list |> varterm_to_variable Quantum
+                 |> Prog_Variables.varterm_from_list |> varterm_to_variable2 Quantum
 
   val keepLeft_set = Symtab.make_set (map fst keep_left)
   val keepRight_set = Symtab.make_set (map fst keep_right)
@@ -413,7 +413,7 @@ fun declare_variable (ctxt, name, T) = let
   in ctxt' end
 
 fun colocal_pred_qvars (predicate, qvars) = let
-     val varterm = qvars |> Prog_Variables.varterm_from_list |> varterm_to_variable Quantum
+     val varterm = qvars |> Prog_Variables.varterm_from_list |> varterm_to_variable2 Quantum
      val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of varterm --> HOLogic.boolT)
                $ predicate $ varterm
    in colocality end

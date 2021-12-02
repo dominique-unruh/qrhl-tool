@@ -32,6 +32,12 @@ fun dest_cvariableT (Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<op
 fun dest_qvariableT (Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu\<close>])) = T
   | dest_qvariableT T = raise TYPE("dest_qvariableT", [T], [])
 
+fun dest_c2variableT (Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl2\<close>])) = T
+  | dest_c2variableT T = raise TYPE("dest_c2variableT", [T], [])
+
+fun dest_q2variableT (Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu2\<close>])) = T
+  | dest_q2variableT T = raise TYPE("dest_q2variableT", [T], [])
+
 (* fun strip_var_prefix x = if String.isPrefix "var_" x 
   then String.extract (x,4,NONE) 
   else error ("strip_var_prefix: Expected string starting with var_, not "^x) *)
@@ -245,8 +251,8 @@ fun varterm_to_VARIABLE Classical VTUnit = \<^term>\<open>CREGISTER_unit :: CVAR
 
 fun varterm_to_variable Classical VTUnit = \<^term>\<open>cvariable_unit :: unit cvariable\<close>
   | varterm_to_variable Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit qvariable\<close>
-  | varterm_to_variable Classical (VTSingle (n,T)) = Free (n,mk_cvariableT T) (* TODO: rather lookup! *)
-  | varterm_to_variable Quantum (VTSingle (n,T)) = Free (n,mk_qvariableT T) (* TODO: rather lookup! *)
+  | varterm_to_variable Classical (VTSingle (n,T)) = Free (n,mk_cvariableT T)
+  | varterm_to_variable Quantum (VTSingle (n,T)) = Free (n,mk_qvariableT T)
   | varterm_to_variable cq (VTCons (t1, t2)) = let
         val v1 = varterm_to_variable cq t1
         val v2 = varterm_to_variable cq t2
@@ -255,6 +261,20 @@ fun varterm_to_variable Classical VTUnit = \<^term>\<open>cvariable_unit :: unit
         val T = HOLogic.mk_prodT (T1, T2)
         val pair = case cq of Classical => Const(\<^const_name>\<open>cregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_cvariableT T)
                             | Quantum => Const(\<^const_name>\<open>qregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_qvariableT T)
+      in pair $ v1 $ v2 end
+
+fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>cvariable_unit :: unit c2variable\<close>
+  | varterm_to_variable2 Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit q2variable\<close>
+  | varterm_to_variable2 Classical (VTSingle (n,T)) = Free (n,mk_c2variableT T)
+  | varterm_to_variable2 Quantum (VTSingle (n,T)) = Free (n,mk_q2variableT T)
+  | varterm_to_variable2 cq (VTCons (t1, t2)) = let
+        val v1 = varterm_to_variable2 cq t1
+        val v2 = varterm_to_variable2 cq t2
+        val T1 = case cq of Classical => dest_c2variableT (fastype_of v1) | Quantum => dest_q2variableT (fastype_of v1)
+        val T2 = case cq of Classical => dest_c2variableT (fastype_of v2) | Quantum => dest_q2variableT (fastype_of v2)
+        val T = HOLogic.mk_prodT (T1, T2)
+        val pair = case cq of Classical => Const(\<^const_name>\<open>cregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_c2variableT T)
+                            | Quantum => Const(\<^const_name>\<open>qregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_q2variableT T)
       in pair $ v1 $ v2 end
 
 fun variable_to_varterm _    (Const(\<^const_name>\<open>cvariable_unit\<close>,_)) = VTUnit
