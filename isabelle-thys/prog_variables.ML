@@ -161,7 +161,7 @@ fun add_register_assumption cq bind T ctxt =
     ctxt2
   end
 
-fun declare_variable ctxt bind T cq =
+fun declare_variable ctxt bind T cq existingVars =
   let val qT = case cq of Classical => mk_cvariableT T | Quantum => mk_qvariableT T
       val v = Binding.name_of bind
       val vars = [(bind,qT),(Binding.suffix_name "1" bind,qT),(Binding.suffix_name "2" bind,qT)]
@@ -173,6 +173,18 @@ fun declare_variable ctxt bind T cq =
       val ctxt = (* VarTypes.map (Symtab.insert op= (v,cq)) ctxt *)  declare_variable_ctxt v cq T ctxt
       (* val ctxt = (* VarTypes.map (Symtab.insert op= (v^"1",cq)) ctxt *) declare_variable_ctxt (v^"1") cq ctxt *)
       (* val ctxt = (* VarTypes.map (Symtab.insert op= (v^"2",cq)) ctxt *) declare_variable_ctxt (v^"2") cq ctxt *)
+      fun declareCompatible (n2,T2) ctxt = let
+        val v1 = Free(v, mk_variableT cq T) val v2 = Free(n2, mk_variableT cq T2)
+        val compat1 = Const(case cq of Classical => \<^const_name>\<open>ccompatible\<close> | Quantum => \<^const_name>\<open>qcompatible\<close>,
+                         fastype_of v1 --> fastype_of v2 --> HOLogic.boolT) $ v1 $ v2
+            |> HOLogic.mk_Trueprop
+        val compat2 = Const(case cq of Classical => \<^const_name>\<open>ccompatible\<close> | Quantum => \<^const_name>\<open>qcompatible\<close>,
+                         fastype_of v2 --> fastype_of v1 --> HOLogic.boolT) $ v2 $ v1
+            |> HOLogic.mk_Trueprop
+        val (_,ctxt) = Proof_Context.add_assms Assumption.assume_export
+                  [((Binding.suffix_name ("_" ^ n2 ^ "_compatible") bind,[Simplifier.simp_add]), [(compat1,[]),(compat2,[])])] ctxt
+        in ctxt end
+      val ctxt = fold declareCompatible existingVars ctxt
   in
     ctxt
   end

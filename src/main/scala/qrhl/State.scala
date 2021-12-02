@@ -377,30 +377,33 @@ class State private (val environment: Environment,
 //    dependencies.filter(_.changed).map(_.file)
 //  }
 
-  private def declare_quantum_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ) : IsabelleX.ContextX = {
-    val ctxt = Ops.declare_quantum_variable(MLValue((name, typ, isabelle.context))).retrieveNow
+  private def declare_quantum_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ, existingVars: Iterable[(String,Typ)]) : IsabelleX.ContextX = {
+    val ctxt = Ops.declare_quantum_variable(name, typ, isabelle.context, existingVars.toList).retrieveNow
     new ContextX(isabelle.isabelle, ctxt)
 //    isabelle.map(id => isabelle.isabelle.invoke(State.declare_quantum_variable, (name,typ,id)))
   }
 
-  private def declare_classical_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ) : IsabelleX.ContextX = {
-    val ctxt = Ops.declare_classical_variable(MLValue((name, typ, isabelle.context))).retrieveNow
+  private def declare_classical_variable(isabelle: IsabelleX.ContextX, name: String, typ: Typ, existingVars: Iterable[(String,Typ)]) : IsabelleX.ContextX = {
+    val ctxt = Ops.declare_classical_variable(name, typ, isabelle.context, existingVars.toList).retrieveNow
     new ContextX(isabelle.isabelle, ctxt)
 //    isabelle.map(id => isabelle.isabelle.invoke(State.declare_classical_variable, (name,typ,id)))
   }
 
-  def declareVariable(name: String, typ: Typ, quantum: Boolean = false): State = {
+  def declareVariable(name: String, typ: Typ, quantum: Boolean): State = {
+    val existingVars =
+      for (c <- if (quantum) environment.qVariables.values else environment.cVariables.values)
+        yield (c.name, c.valueTyp)
     val newEnv = environment.declareVariable(name, typ, quantum = quantum)
-      .declareAmbientVariable("var_"+name, typ)
-      .declareAmbientVariable("var_"+Variable.index1(name), typ)
-      .declareAmbientVariable("var_"+Variable.index2(name), typ)
+//      .declareAmbientVariable("var_"+name, typ)
+//      .declareAmbientVariable("var_"+Variable.index1(name), typ)
+//      .declareAmbientVariable("var_"+Variable.index2(name), typ)
     if (_isabelle.isEmpty) throw UserException("Missing isabelle command.")
     val isa = _isabelle.get
     val newIsa =
       if (quantum)
-        declare_quantum_variable(isa, name, typ)
+        declare_quantum_variable(isa, name, typ, existingVars)
       else
-        declare_classical_variable(isa, name, typ)
+        declare_classical_variable(isa, name, typ, existingVars)
 
     copy(environment = newEnv, isabelle = Some(newIsa),
       hash = HashTag()(hash, RawHash.hashString(name), Hashable.hash(typ), Hashable.hash(quantum)))

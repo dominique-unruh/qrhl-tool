@@ -90,6 +90,5 @@ class CaseTacTest extends AnyFunSuite {
     assert(ex.getMessage.startsWith("Type unification failed"))
 //    assert(ex.getMessage.startsWith("Undeclared (or non-indexed) variable x in precondition"))
   }
-
 }
 

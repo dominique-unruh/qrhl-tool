@@ -1,12 +1,15 @@
 package qrhl.toplevel
 
 import java.io.IOException
-
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.UserException
 import qrhl.isabellex.IsabelleX
 import qrhl.logic.{Block, CVariable, Call, Local, VTCons, VTSingle}
 import IsabelleX.{globalIsabelle => GIsabelle}
+import de.unruh.isabelle.pure.Term
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class ParserTest extends AnyFunSuite {
   implicit lazy val parserContext: ParserContext = {
@@ -81,6 +84,7 @@ class ParserTest extends AnyFunSuite {
   }
 
   test("parse expression with indexed quantum variables") {
+    println(Term(parserContext.isabelle.get.context, "q").fastType.pretty(parserContext.isabelle.get.context))
     val e = Parser.parseAll(Parser.expression(GIsabelle.predicateT, indexed=true), "liftSpace top q1").get
     assert(e.toString == "⊤»q1")
   }

@@ -231,6 +231,34 @@ axiomatization where qregister_chain_pair_Fst: \<open>qcompatible F G \<Longrigh
 axiomatization where cregister_chain_pair_Snd: \<open>ccompatible F G \<Longrightarrow> cregister_chain (cregister_pair F G) cSnd = G\<close>
 axiomatization where qregister_chain_pair_Snd: \<open>qcompatible F G \<Longrightarrow> qregister_chain (qregister_pair F G) qSnd = G\<close>
 
+lemma ccompatible_comp_left[simp]: "ccompatible F G \<Longrightarrow> cregister H \<Longrightarrow> ccompatible (cregister_chain F H) G" sorry
+lemma qcompatible_comp_left[simp]: "qcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> qcompatible (qregister_chain F H) G" sorry
+
+lemma ccompatible_comp_right[simp]: "ccompatible F G \<Longrightarrow> cregister H \<Longrightarrow> ccompatible F (cregister_chain G H)"
+  by (meson ccompatible_comp_left ccompatible_sym)
+lemma qcompatible_comp_right[simp]: "qcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> qcompatible F (qregister_chain G H)"
+  by (meson qcompatible_comp_left qcompatible_sym)
+
+lemmas ccompatible_Snd_Fst[simp] = ccompatible_Fst_Snd[THEN ccompatible_sym]
+lemmas qcompatible_Snd_Fst[simp] = qcompatible_Fst_Snd[THEN qcompatible_sym]
+
+lemma ccompatible3I[simp]: \<open>ccompatible F G \<Longrightarrow> ccompatible G H \<Longrightarrow> ccompatible F H \<Longrightarrow> ccompatible (cregister_pair F G) H\<close>
+  by (simp add: ccompatible3)
+lemma qcompatible3I[simp]: \<open>qcompatible F G \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible F H \<Longrightarrow> qcompatible (qregister_pair F G) H\<close>
+  by (simp add: qcompatible3)
+lemma ccompatible3I'[simp]: \<open>ccompatible F G \<Longrightarrow> ccompatible F H \<Longrightarrow> ccompatible G H \<Longrightarrow> ccompatible F (cregister_pair G H)\<close>
+  by (simp add: ccompatible3')
+lemma qcompatible3I'[simp]: \<open>qcompatible F G \<Longrightarrow> qcompatible F H \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible F (qregister_pair G H)\<close>
+  by (simp add: qcompatible3')
+
+(* TODO: (and also for quantum)
+lemma ccompatible_register_tensor[simp]: \<open>ccompatible F F' \<Longrightarrow> ccompatible G G' \<Longrightarrow> ccompatible (cregister_tensor F G) (cregister_tensor F' G')\<close> *)
+
+lemma cregister_cregister_pairI[simp]: \<open>ccompatible x y \<Longrightarrow> cregister (cregister_pair x y)\<close>
+  by (simp add: cregister_pair_iff_compatible)
+lemma qregister_qregister_pairI[simp]: \<open>qcompatible x y \<Longrightarrow> qregister (qregister_pair x y)\<close>
+  by (simp add: qregister_pair_iff_compatible)
+
 definition \<open>cswap = cregister_pair cSnd cFst\<close>
 definition \<open>qswap = qregister_pair qSnd qFst\<close>
 
@@ -321,8 +349,8 @@ lemma iso_qregister_chain_inv: \<open>iso_qregister I \<Longrightarrow> qregiste
 axiomatization where cswap_iso[simp]: \<open>iso_cregister cswap\<close>
 axiomatization where qswap_iso[simp]: \<open>iso_qregister qswap\<close>
 
-axiomatization where ccompatible_chain: \<open>cregister F \<Longrightarrow> ccompatible G H \<Longrightarrow> ccompatible (cregister_chain F G) (cregister_chain F H)\<close>
-axiomatization where qcompatible_chain: \<open>qregister F \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
+axiomatization where ccompatible_chain[simp]: \<open>cregister F \<Longrightarrow> ccompatible G H \<Longrightarrow> ccompatible (cregister_chain F G) (cregister_chain F H)\<close>
+axiomatization where qcompatible_chain[simp]: \<open>qregister F \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
 
 lemma ccompatible_chain_iso: \<open>iso_cregister I \<Longrightarrow> ccompatible (cregister_chain I F) (cregister_chain I G) \<longleftrightarrow> ccompatible F G\<close>
   apply (cases \<open>cregister F\<close>; cases \<open>cregister G\<close>)

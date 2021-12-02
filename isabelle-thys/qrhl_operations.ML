@@ -381,11 +381,11 @@ fun whatStatement (Block _) = "block"
   | whatStatement (IfThenElse _) = "ifthenelse"
   | whatStatement (While _) = "while"
 
-fun declare_quantum_variable (name,typ,ctxt) =
-  Prog_Variables.declare_variable ctxt (Binding.name name) typ Prog_Variables.Quantum
+fun declare_quantum_variable (name,typ,ctxt,existingVars) =
+  Prog_Variables.declare_variable ctxt (Binding.name name) typ Prog_Variables.Quantum existingVars
 
-fun declare_classical_variable (name,typ,ctxt) =
-  Prog_Variables.declare_variable ctxt (Binding.name name) typ Prog_Variables.Classical
+fun declare_classical_variable (name,typ,ctxt,existingVars) =
+  Prog_Variables.declare_variable ctxt (Binding.name name) typ Prog_Variables.Classical existingVars
 
 (* fun term_to_expression (ctxt,t) =
   Programs.term_to_expression ctxt t *)

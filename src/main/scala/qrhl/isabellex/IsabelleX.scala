@@ -798,9 +798,9 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val isInfinite_op =
       MLValue.compileFunction[Context, Typ, Boolean](s"$qrhl_ops.is_finite")
     val declare_quantum_variable =
-      MLValue.compileFunction[String, Typ, Context, Context](s"$qrhl_ops.declare_quantum_variable")
+      MLValue.compileFunction[String, Typ, Context, List[(String,Typ)], Context](s"$qrhl_ops.declare_quantum_variable")
     val declare_classical_variable =
-      MLValue.compileFunction[String, Typ, Context, Context](s"$qrhl_ops.declare_classical_variable")
+      MLValue.compileFunction[String, Typ, Context, List[(String,Typ)], Context](s"$qrhl_ops.declare_classical_variable")
     // left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]
     lazy val qrhl_subgoal_to_term_op =
       MLValue.compileFunction[Context, List[Statement], List[Statement], Term, Term, List[Term], Term](s"$qrhl_ops.qrhl_subgoal_to_term")
@@ -962,7 +962,6 @@ object IsabelleX {
     def map(f: Context => Context): ContextX =
       new ContextX(isabelle, f(context))
 
-    @deprecated("Use Expression.read", "now")
     def readTerm(str: String, typ: Typ): Term =
       Term(context, str, typ)
 
