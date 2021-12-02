@@ -8,6 +8,10 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import qrhl.toplevel.ToplevelTest.output
 
 class SeqTacTest extends AnyFunSuite {
+  /**
+   * Applies "seq middle" to subgoal "{pre} left~right {post}".
+   * Checks whether resulting subgoals are welltyped and have the right pre/postconditions.
+   */
   def testSeqRule(pre:String,post:String,left:String,right:String,middle:String) : Unit = {
     val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
@@ -35,12 +39,12 @@ class SeqTacTest extends AnyFunSuite {
   }
 
   test("seq rule succeeds") {
-    testSeqRule("Cla[ x=(1::int) ]", "Cla[ x=(1::int) ]",
+    testSeqRule("Cla[ x1=(1::int) ]", "Cla[ x1=(1::int) ]",
       "x <- 1; x <- 2;", "x <- 1; x <- 2;", "Cla[False]")
   }
 
   test("seq rule succeeds, x1=x2") {
-    testSeqRule("Cla[ x=(1::int) ]", "Cla[ x=(1::int) ]",
+    testSeqRule("Cla[ x1=(1::int) ]", "Cla[ x1=(1::int) ]",
       "x <- 1; x <- 2;", "x <- 1; x <- 2;", "Cla[x1=x2]")
   }
 }
