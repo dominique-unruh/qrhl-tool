@@ -17,7 +17,7 @@ fun expression_to_term ctxt t =
                     raise TYPE("expression_to_term: quantum variable after getter", [fastype_of var], [t,g])
                | NONE => 
                     raise TYPE("expression_to_term: not a known variable after getter", [fastype_of var], [t,g])
-            val _ = mk_cvariableT T = fastype_of var orelse
+            val _ = mk_cvariableT T = fastype_of var orelse  mk_c2variableT T = fastype_of var orelse
                     raise TYPE("expression_to_term: variable of wrong type", [T, fastype_of var], [t,g])
           in Free(n,T) end
         | translate (t1 $ t2) = translate t1 $ translate t2

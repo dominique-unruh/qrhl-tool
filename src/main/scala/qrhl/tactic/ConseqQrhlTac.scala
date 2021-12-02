@@ -157,12 +157,14 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
               //   quantum equality has no duplicate variables after replacement (6)
               // colocalityPre: subgoal that ensures that X is disjoint with beforeLeft/RightIdxPairs, afterLeft/RightIdxPairs, (7)
               val (pre3, colocalityPre) = Ops.conseq_qrhl_replace_in_predicate(
-                pre2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs).retrieveNow
+                context, pre2.isabelleTerm,
+                beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs).retrieveNow
               easyGoals += colocalityPre
 
               // Same for postcondition
               val (post3, colocalityPost) = Ops.conseq_qrhl_replace_in_predicate(
-                post2.isabelleTerm, beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs).retrieveNow
+                context, post2.isabelleTerm,
+                beforeLeftIdxPairs, afterLeftIdxPairs, beforeRightIdxPairs, afterRightIdxPairs).retrieveNow
               easyGoals += colocalityPost
 
               goals += AmbientSubgoal(GIsabelle.conj(easyGoals.toSeq: _*), assms.map(_.isabelleTerm))
@@ -201,5 +203,4 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
 
 object ConseqQrhlTac {
   private val logger = log4s.getLogger
-
 }

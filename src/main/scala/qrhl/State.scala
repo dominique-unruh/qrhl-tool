@@ -10,7 +10,6 @@ import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext, Toplevel}
 import de.unruh.isabelle.control
 import control.IsabelleException
-
 import qrhl.State.logger
 
 import scala.collection.mutable
@@ -19,7 +18,7 @@ import org.apache.commons.codec.binary.Hex
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.Typ
+import de.unruh.isabelle.pure.{Term, Typ}
 import hashedcomputation.filesystem.FingerprintedDirectorySnapshot
 
 // Implicits

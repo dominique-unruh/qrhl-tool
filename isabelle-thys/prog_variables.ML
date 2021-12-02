@@ -1,6 +1,8 @@
 structure Prog_Variables =
 struct
 
+datatype qc = Classical | Quantum
+
 fun mk_ell2T T = Type(\<^type_name>\<open>ell2\<close>, [T])
 fun dest_ell2T (Type(\<^type_name>\<open>ell2\<close>, [T])) = T
   | dest_ell2T T = raise TYPE("dest_ell2T",[T],[])
@@ -21,6 +23,8 @@ fun mk_cvariableT T = Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<o
 fun mk_qvariableT T = Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu\<close>])
 fun mk_c2variableT T = Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl2\<close>])
 fun mk_q2variableT T = Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu2\<close>])
+fun mk_variableT Quantum = mk_qvariableT
+  | mk_variableT Classical = mk_cvariableT
 
 fun dest_cvariableT (Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl\<close>])) = T
   | dest_cvariableT T = raise TYPE("dest_cvariableT", [T], [])
@@ -70,7 +74,6 @@ structure WarnDeclaredQvarsData = Proof_Data
     | _ => NONE *)
 
 
-datatype qc = Classical | Quantum
 type varinfo = {qc : qc, typ : typ, register: term, name: string}
 structure VarInfo = Generic_Data
 (

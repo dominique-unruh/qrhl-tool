@@ -762,7 +762,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val conseq_qrhl_cardinality_condition =
       MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term](s"$qrhl_ops.conseq_qrhl_cardinality_condition")
     val conseq_qrhl_replace_in_predicate =
-      MLValue.compileFunction[Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], (Term, Term)](
+      MLValue.compileFunction[Context, Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], (Term, Term)](
         s"$qrhl_ops.conseq_qrhl_replace_in_predicate")
     val declare_abstract_program_op =
       compileFunction[Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int, Context](
@@ -774,7 +774,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val byQRHLPreOp =
       MLValue.compileFunction[List[(String, String, Typ)], List[(String, String, Typ)], Term](s"$qrhl_ops.byQRHLPre")
     val addIndexToExpressionOp =
-      MLValue.compileFunction[Term, Boolean, Term](s"$qrhl_ops.add_index_to_expression")
+      MLValue.compileFunction[Term, Boolean, Term](s"fn (t,left) => $qrhl_ops.add_index_to_expression left t")
     val fixTacOp =
       MLValue.compileFunction[Term, String, (Term, Typ)](s"$qrhl_ops.fixTac")
     val debugOp =
@@ -928,6 +928,9 @@ object IsabelleX {
   private var _theContext: ContextX = _
   def theContext: ContextX = _theContext
 
+  /** Wraps a [[Context]] and keeps track of the creating [[IsabelleX]] instance.
+   * Note really useful anymore since [[IsabelleX]] is singleton now.
+   * It's still in use for historical reasons. */
   class ContextX(val isabelle: IsabelleX, val context: Context) extends FutureValue {
     override def await: Unit = context.await
     override def someFuture: Future[Any] = context.someFuture
@@ -937,9 +940,10 @@ object IsabelleX {
 
     _theContext = this
 
-    /** Parses an expression of type typ in shortform. Returns the term in longform. */
+    /** Parses an expression of type typ in shortform. Returns the term in longform.
+     * Supports unicode input. */
     def readExpression(str: String, typ: Typ, indexed: Boolean): Term =
-      readExpressionOp(context, str, typ, indexed).retrieveNow
+      readExpressionOp(context, symbols.unicodeToSymbols(str), typ, indexed).retrieveNow
 
     def checkType(term: Term): Typ =
       checkTypeOp(MLValue(context,term)).retrieveNow

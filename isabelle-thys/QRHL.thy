@@ -13,4 +13,6 @@ unbundle no_jnf_notation
 
 declare [[quick_and_dirty]]
 
+(* declare [[show_types]] *)
+
 end

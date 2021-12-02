@@ -200,8 +200,9 @@ object RichTerm {
   def decodeFromExpression(context:IsabelleX.ContextX, t: Term): RichTerm =
     RichTerm(Ops.decodeFromExpressionOp(MLValue((context.context,t))).retrieveNow)
 
+  /** Parses an expression of type typ in shortform. Returns the term in shortform. */
   def decodeFromExpression(context:IsabelleX.ContextX, str: String, typ: Typ, indexed: Boolean): RichTerm =
-    decodeFromExpression(context, context.readExpression(str, typ, indexed = false))
+    decodeFromExpression(context, context.readExpression(str, typ, indexed = indexed))
 
   def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(GIsabelle.boolT, GIsabelle.True_const)
 

@@ -5,8 +5,8 @@ import qrhl.isabellex.IsabelleX.ContextX
 import qrhl.isabellex.IsabelleX
 
 import scala.collection.mutable
-import de.unruh.isabelle.pure.Typ
-import IsabelleX.{globalIsabelle => GIsabelle}
+import de.unruh.isabelle.pure.{Term, Typ}
+import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ

@@ -138,6 +138,7 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
   fun declare_prog_vars cq vars pfx fv_program fv_oracle_program ctxt = let
     (* Add theorem pfx^name: "fv_program/fv_oracle_program name \<le> variable_names \<lbrakk>vars\<rbrakk> *)
     val fv_lhs = (if numOracles=0 then fv_program else fv_oracle_program) $ Free(name,T) 
+    val vars = vars |> map (fn (n,T) => (n, mk_variableT cq T))
     val fv_rhs = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.varterm_to_VARIABLE cq
 (*     val fv_rhs = @{const set(string)} $
             (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm) *)
@@ -460,10 +461,10 @@ fun conseq_qrhl_cardinality_condition (ctxt,befor,after) = let
      val term = HOLogic.mk_disj (before_infinite, HOLogic.mk_conj (after_finite, before_geq_after))
   in term end
 
-fun add_index_to_expression (t,left) =
+(* fun add_index_to_expression (t,left) =
   (* In Scala, we follow this up with expression_to_term anyway. So we can do the add_index properly on terms,
   e \<rightarrow> \<lambda>m. liftSubspace qFst e (fst m)     (or snd) *)
-  Programs.add_index_to_expression t left
+  Programs.add_index_to_expression t left *)
 
 val wp_tac = 
   apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Weakest_Precondition.wp_seq_tac left right ctxt 1)
