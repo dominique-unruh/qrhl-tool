@@ -7,7 +7,7 @@ import qrhl.QRHLSubgoal
 import qrhl.isabellex.IsabelleX.globalIsabelle
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 import qrhl.isabellex.{IsabelleX, RichTerm}
-import qrhl.logic.Assign
+import qrhl.logic.{Assign, QVariable}
 import qrhl.toplevel.ToplevelTest.output
 import qrhl.toplevel.{Parser, Toplevel, ToplevelTest}
 
@@ -20,6 +20,7 @@ class EqualTacTest extends AnyFunSuite {
     tl.run(
       """classical var x : bit.
         |quantum var q : bit.
+        |quantum var r : bit.
         |program p := { x <- undefined; on q apply undefined; }.
       """.stripMargin)
     tl
@@ -67,4 +68,16 @@ class EqualTacTest extends AnyFunSuite {
     assert(left.isInstanceOf[Assign])
   }
 
+  test("SimpleQeq") {
+    val tl = toplevel()
+    val simpleQeq = new EqualTac.SimpleQeq(tl.state.environment)
+    val e = RichTerm.decodeFromExpression(tl.state.isabelle, "Qeq[q1,r1 = q2,r2]", globalIsabelle.predicateT, indexed = true)
+    println(e)
+    e.isabelleTerm match {
+      case `simpleQeq`(vars) =>
+        println(vars)
+        assert(vars == Set(QVariable.fromName("q",globalIsabelle.bitT), QVariable.fromName("r",globalIsabelle.bitT)))
+      case _ => fail("Should have matched")
+    }
+  }
 }

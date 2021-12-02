@@ -8,7 +8,7 @@ import qrhl.logic.Variable.{index, varsToString}
 import qrhl.logic._
 import qrhl.tactic.EqualTac._
 import IsabelleX.{globalIsabelle => GIsabelle}
-import GIsabelle.{Ops, QuantumEqualityFull}
+import GIsabelle.{Ops, QuantumEqualityFull, VariableT}
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Free, Term}
 import hashedcomputation.{Hash, HashTag, Hashable}
@@ -383,7 +383,11 @@ object EqualTac {
 //  }
 //  private case class UnfixableConditionException(msg: String) extends Exception
 
-
+  /** Creates a pattern matcher `simpleQeq(vars)` that matches terms of the form `q1r1... ==q q2r2...` or `q2r2... ==q q1r1...`
+   * and then assigns `Set(q,r,...)` to `vars`.
+   * @throws UserException if q,r,... contains duplicates
+   * @param env Environment to use for looking up variables
+   */
   class SimpleQeq(env: Environment) {
     private object trySwapped extends ControlThrowable
     private object noMatch extends ControlThrowable
@@ -394,12 +398,12 @@ object EqualTac {
 
         def parse(vt1: Term, vt2: Term): Unit = (vt1, vt2) match {
           case (GIsabelle.Variable_Unit(_,_), GIsabelle.Variable_Unit(_,_)) =>
-          case (Free(Variable.Indexed(name1, left1), typ1),
-                Free(Variable.Indexed(name2, left2), typ2)) =>
+          case (Free(Variable.Indexed(name1, left1), VariableT(typ1, false/*classical*/, true/*indexed*/)),
+                Free(Variable.Indexed(name2, left2), VariableT(typ2, false, true))) =>
             if (name1 != name2) throw noMatch
             val v = env.qVariables.getOrElse(name1, throw noMatch)
-            if (v.variableTyp != typ1) throw noMatch
-            if (v.variableTyp != typ2) throw noMatch
+            if (v.valueTyp != typ1) throw noMatch
+            if (v.valueTyp != typ2) throw noMatch
             if (!left1 || left2)
               throw trySwapped
             result += v
@@ -432,7 +436,7 @@ object EqualTac {
    * It is guaranteed that ''`result` ∩ (x1y1z1… ==q x2y2z2…)  ⊆   `pres`''.
    * If no such quantum equality is found, throws a [[qrhl.UserException]]
    * @param pred a quantum predicate
-   * @return (result, qeqVars) result = the predicate, qeqVars = x,y,z…
+   * @return (result, qeqVars): result = the predicate, qeqVars = x,y,z…
    */
   private def removeQeq(env: Environment, pred: RichTerm, vars: Traversable[QVariable]): (RichTerm, ListSet[QVariable]) = {
     var qeqVars : Option[ListSet[QVariable]] = None
