@@ -30,7 +30,7 @@ lemma l3: "isometry A \<Longrightarrow> A* o\<^sub>C\<^sub>L (A o\<^sub>C\<^sub>
 lemma Uora_twice: 
   \<comment> \<open>This lemma is needed in the proof for simplifying a quantum equality with two Uoracle's applied to it\<close>
 
-  assumes [simp]: "declared_qvars \<lbrakk>x1,y1,x2,y2,qglobA1,qglobA2\<rbrakk>"
+  assumes [register]: "declared_qvars \<lbrakk>x1,y1,x2,y2,qglobA1,qglobA2\<rbrakk>"
   assumes heq: "h1=h2"
   shows "(Uoracle h2\<guillemotright>\<lbrakk>x2, y2\<rbrakk> \<cdot> (Uoracle h1\<guillemotright>\<lbrakk>x1, y1\<rbrakk> \<cdot> \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>)) =
          \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>"

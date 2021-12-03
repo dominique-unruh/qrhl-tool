@@ -496,6 +496,7 @@ consts variable_unit :: \<open>'a\<close>
 adhoc_overloading variable_unit 
   qvariable_unit cvariable_unit
 
+(* LEGACY *)
 abbreviation (input) "variable_singleton x \<equiv> x"
 
 nonterminal variable_list_args
@@ -655,8 +656,11 @@ ML_file "prog_variables.ML"
 section {* Simprocs *}
 
 (* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed variables but can't *)
-syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")
-syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars [|_|]")
+(* syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")
+syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars [|_|]") *)
+(* LEGACY *)
+abbreviation (input) \<open>declared_qvars Q \<equiv> qregister Q\<close>
+
 (* parse_translation \<open>[("_declared_qvars", Prog_Variables.declared_qvars_parse_tr)]\<close> *)
 
 (* simproc_setup warn_declared_qvars ("variable_name q") = Prog_Variables.warn_declared_qvars_simproc *)

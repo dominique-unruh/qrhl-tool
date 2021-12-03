@@ -129,6 +129,51 @@ fun declare_variable_lthy name vartype typ =
 
 fun declare_variable_ctxt name vartype typ = Context.proof_map (declare_variable_morph Morphism.identity name vartype typ)
 
+fun register_thms_of thm regs = let
+  val reg = case Thm.prop_of thm of
+      Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ reg) => reg
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qregister\<close>, _) $ reg) => reg
+    | _ => raise THM ("register_thms_of: expecting a fact of the form \<open>c/qregister ...\<close>", 0, [thm])
+  val regs = case reg of
+      Free _ => thm::regs
+    | Const(\<^const_name>\<open>cregister_pair\<close>,_) $ _ $ _ =>
+        regs |> register_thms_of (@{thm distinct_cvarsR} OF [thm])
+             |> register_thms_of (@{thm distinct_cvarsL} OF [thm])
+    | Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _ =>
+        regs |> register_thms_of (@{thm distinct_qvarsR} OF [thm])
+             |> register_thms_of (@{thm distinct_qvarsL} OF [thm])
+    | t => raise TERM ("register_thms_of: expecting a fact of the form \<open>c/register ...\<close> where ... is a register tuple of free variables. Got:", [t])
+  in regs end
+
+fun register_compats_of thm compats = case Thm.prop_of thm of
+      Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ _ $ _)) =>
+        compats |> register_compats_of (@{thm cregister_pair_iff_compatible[THEN iffD1]} OF [thm])
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qregister\<close>, _) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _)) =>
+        compats |> register_compats_of (@{thm qregister_pair_iff_compatible[THEN iffD1]} OF [thm])
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ Free _) => compats
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qregister\<close>, _) $ Free _) => compats
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>ccompatible\<close>, _) $ (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ _ $ _) $ _) =>
+        compats |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
+                |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
+                |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct1]} OF [thm])
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qcompatible\<close>, _) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
+        compats |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
+                |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
+                |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct1]} OF [thm])
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>ccompatible\<close>, _) $ _ $ (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ _ $ _)) =>
+        compats |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
+                |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
+                |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct1]} OF [thm])
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qcompatible\<close>, _) $ _ $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _)) =>
+        compats |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
+                |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
+                |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct1]} OF [thm])
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>ccompatible\<close>, _) $ _ $ _) =>
+        thm :: (@{thm ccompatible_sym} OF [thm]) :: compats
+    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qcompatible\<close>, _) $ _ $ _) =>
+        thm :: (@{thm qcompatible_sym} OF [thm]) :: compats
+    | _ => raise THM ("register_compats_of: expecting a fact of the form \<open>c/qregister \<dots>\<close> or \<open>c/qcompatible \<dots>\<close>", 0, [thm])
+
 fun declare_variable_from_thm (thm:thm) = let
   val (vartype, name, T) = case Thm.prop_of thm of
       Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ Free(name, T')) =>
@@ -138,9 +183,26 @@ fun declare_variable_from_thm (thm:thm) = let
     | _ => raise THM ("declare_variable_from_thm: theorem must be of the form 'Axioms_Classical.register x' or 'Axioms_Quantum.register x' where x is a free variable", 0, [thm])
   in (declare_variable_morph Morphism.identity name vartype T) end
 
+fun declare_register_simps_from_thm thm = let
+  val vars = register_thms_of thm []
+  val compats = register_compats_of thm []
+  val simp_vars = fold (fn thm => Simplifier.map_ss (Simplifier.add_simp thm)) vars
+  val simp_compats = fold (fn thm => Simplifier.map_ss (Simplifier.add_simp thm)) compats
+  in simp_vars #> simp_compats end
+
+fun declare_variables_from_thm (thm:thm) = let
+  val vars = register_thms_of thm []
+  val declare_vars = fold declare_variable_from_thm vars
+  in declare_vars #> declare_register_simps_from_thm thm end
+
 val _ = Attrib.setup \<^binding>\<open>variable\<close>
- (Scan.succeed (Thm.declaration_attribute declare_variable_from_thm))
-  "Declare a program variable (apply to a theorem of the form \"Laws_Classical/Quantum.register x\")"
+ (Scan.succeed (Thm.declaration_attribute declare_variables_from_thm))
+  "Declare a program variable (apply to a theorem of the form \"c/qregister x/\<lbrakk>x,y,...\<rbrakk>\")"
+  |> Context.map_theory |> Context.>>
+
+val _ = Attrib.setup \<^binding>\<open>register\<close>
+ (Scan.succeed (Thm.declaration_attribute declare_register_simps_from_thm))
+  "Extract and adds simplification rules for a register (e.g., indexed variable)"
   |> Context.map_theory |> Context.>>
 end
 
