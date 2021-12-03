@@ -413,6 +413,22 @@ lemma Cccompatible_antimono_left: \<open>A \<le> B \<Longrightarrow> Cccompatibl
 lemma Qqcompatible_antimono_left: \<open>A \<le> B \<Longrightarrow> Qqcompatible B C \<Longrightarrow> Qqcompatible A C\<close>
   apply transfer by auto
 
+lemma setter_chain: 
+  assumes \<open>cregister F\<close> \<open>cregister G\<close>
+  shows \<open>setter (cregister_chain F G) a m = setter F (setter G a (getter F m)) m\<close>
+  sorry
+
+lemma setter_Fst: \<open>setter cFst = (\<lambda>x (_,y). (x,y))\<close>
+  sorry
+lemma setter_Snd: \<open>setter cSnd = (\<lambda>y (x,_). (x,y))\<close>
+  sorry
+
+lemma getter_Fst: \<open>getter cFst = fst\<close>
+  sorry
+lemma getter_Snd: \<open>getter cSnd = snd\<close>
+  sorry
+
+
 (* TODO move to misc *)
 lemma Some_map_comp[simp]: \<open>Some \<circ>\<^sub>m f = f\<close>
   apply (rule ext, case_tac \<open>f x\<close>)

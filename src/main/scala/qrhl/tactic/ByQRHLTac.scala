@@ -11,6 +11,7 @@ import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{App, Const, Free, Term}
 import hashedcomputation.Implicits.listHashable
 import hashedcomputation.{Hash, HashTag, Hashable}
+import qrhl.tactic.ByQRHLTac.logger
 
 import scala.collection.immutable.ListSet
 
@@ -37,8 +38,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
   class Probability(left : Boolean, state : State) {
     def unapply(term: Term): Option[(Term,Statement,Term)] = term match {
       case App(App(App(Const(GIsabelle.probability.name,_),e),p),rho) =>
-
-        val e2 = Ops.addIndexToExpressionOp(e, left).retrieveNow
+        val e2 = Ops.addIndexToExpressionOp(state.isabelle.context, e, left).retrieveNow
         val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
 
         val pname = p match {
@@ -83,10 +83,14 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
     goal match {
         // Subgoal must be: Pr[e1:p1(rho)] R Pr[e2:p2(rho)]
         // lhs or rhs can also be just "1"
-        // Variables `e1`, `e2` contain *indexed* expressions!
+        // Variables `e1`, `e2` contain *indexed* expressions!   // TODO why???
       case AmbientSubgoal(RichTerm(App(App(Const(rel,_),ProbLeft(e1,p1,rho1)),ProbRight(e2,p2,rho2)))) =>
+        // e1,e2 are in shortform
+
         if (rho1!=null && rho2!=null && rho1!=rho2)
           throw UserException("The initial state in lhs and rhs must be identical (syntactically same term, not just equal)")
+
+        logger.debug((rel,e1,p1,e2,p2).toString)
 
         val env = state.environment
 
@@ -98,11 +102,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
           case _ => throw UserException("There should be = or <= or >= between the lhs and the rhs")
         }
 
-        def stripIndices(vs: Traversable[CVariable]) =
-          vs.collect {
-            case Variable.IndexedC(v, _) => v
-          }
-
+        def stripIndices(vs: Iterable[CVariable]) =
+          vs.collect { case Variable.IndexedC(v, _) => v }
 
         val vars1 = p1.variableUse(env)
         val vars2 = p2.variableUse(env)

@@ -166,6 +166,15 @@ qed
 named_theorems program_bodies
 named_theorems program_fv
 
+
+lemma add_index_to_expression_aux1: \<open>getter x (fst m) \<equiv> getter (cregister_chain cFst x) m\<close>
+  apply (rule eq_reflection)
+  by (metis cFst_register cregister_chain_non_register2 getter_Fst getter_non_cregister getter_setter_same non_cregister setter_chain setter_getter_same)
+
+lemma add_index_to_expression_aux2: \<open>getter x (snd m) \<equiv> getter (cregister_chain cSnd x) m\<close>
+  apply (rule eq_reflection)
+  by (metis add_index_to_expression_aux1 fst_swap getter_Fst_chain_swap)
+
 ML_file "programs.ML"
 
 consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")

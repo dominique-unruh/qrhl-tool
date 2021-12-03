@@ -40,28 +40,6 @@ lemma index_flip_vars_index_vars: "index_flip_vars (index_vars left xs) = index_
   apply (transfer fixing: f \<sigma>)
   by auto *)
 
-(* TODO to Registers *)
-lemma setter_chain: 
-  assumes \<open>cregister F\<close> \<open>cregister G\<close>
-  shows \<open>setter (cregister_chain F G) a m = setter F (setter G a (getter F m)) m\<close>
-  sorry
-
-(* TODO to Registers *)
-lemma setter_Fst: \<open>setter cFst = (\<lambda>x (_,y). (x,y))\<close>
-  sorry
-
-(* TODO to Registers *)
-lemma setter_Snd: \<open>setter cSnd = (\<lambda>y (x,_). (x,y))\<close>
-  sorry
-
-(* TODO to Registers *)
-lemma getter_Fst: \<open>getter cFst = fst\<close>
-  sorry
-
-(* TODO to Registers *)
-lemma getter_Snd: \<open>getter cSnd = snd\<close>
-  sorry
-
 lemma assign2_rule:
   fixes A B x e
   assumes [simp]: \<open>cregister x\<close>
