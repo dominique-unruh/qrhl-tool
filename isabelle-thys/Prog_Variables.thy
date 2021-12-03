@@ -142,6 +142,11 @@ lemma qcompatible_QQcompatible: \<open>qcompatible F G \<longleftrightarrow> qre
   apply (transfer fixing: F G) apply auto
   by (transfer; simp)+
 
+lemma CCcompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow> CCcompatible (CREGISTER_of F) (CREGISTER_of G)\<close>
+  using ccompatible_CCcompatible by auto
+lemma QQcompatible_QREGISTER_ofI[simp]: \<open>qcompatible F G \<Longrightarrow> QQcompatible (QREGISTER_of F) (QREGISTER_of G)\<close>
+  using qcompatible_QQcompatible by auto
+
 lemma ccompatible_sym: \<open>ccompatible F G \<Longrightarrow> ccompatible G F\<close> for F :: \<open>('a,'c) cregister\<close> and G :: \<open>('b,'c) cregister\<close>
   by (auto intro: CCcompatible_sym simp: ccompatible_CCcompatible)
 lemma qcompatible_sym: \<open>qcompatible F G \<Longrightarrow> qcompatible G F\<close> for F :: \<open>('a,'c) qregister\<close> and G :: \<open>('b,'c) qregister\<close>
@@ -239,6 +244,9 @@ lemma ccompatible_comp_right[simp]: "ccompatible F G \<Longrightarrow> cregister
 lemma qcompatible_comp_right[simp]: "qcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> qcompatible F (qregister_chain G H)"
   by (meson qcompatible_comp_left qcompatible_sym)
 
+lemma Cccompatible_comp_right[simp]: "Cccompatible F G \<Longrightarrow> cregister H \<Longrightarrow> Cccompatible F (cregister_chain G H)" sorry
+lemma Qqcompatible_comp_right[simp]: "Qqcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> Qqcompatible F (qregister_chain G H)" sorry
+
 lemmas ccompatible_Snd_Fst[simp] = ccompatible_Fst_Snd[THEN ccompatible_sym]
 lemmas qcompatible_Snd_Fst[simp] = qcompatible_Fst_Snd[THEN qcompatible_sym]
 
@@ -251,7 +259,12 @@ lemma ccompatible3I'[simp]: \<open>ccompatible F G \<Longrightarrow> ccompatible
 lemma qcompatible3I'[simp]: \<open>qcompatible F G \<Longrightarrow> qcompatible F H \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible F (qregister_pair G H)\<close>
   by (simp add: qcompatible3')
 
-(* TODO: (and also for quantum)
+lemma Cccompatible3I[simp]: \<open>CCcompatible F G \<Longrightarrow> Cccompatible G H \<Longrightarrow> Cccompatible F H \<Longrightarrow> Cccompatible (CREGISTER_pair F G) H\<close> sorry
+lemma Qqcompatible3I[simp]: \<open>QQcompatible F G \<Longrightarrow> Qqcompatible G H \<Longrightarrow> Qqcompatible F H \<Longrightarrow> Qqcompatible (QREGISTER_pair F G) H\<close> sorry
+lemma Cccompatible3I'[simp]: \<open>Cccompatible F G \<Longrightarrow> Cccompatible F H \<Longrightarrow> ccompatible G H \<Longrightarrow> Cccompatible F (cregister_pair G H)\<close> sorry
+lemma Qqcompatible3I'[simp]: \<open>Qqcompatible F G \<Longrightarrow> Qqcompatible F H \<Longrightarrow> qcompatible G H \<Longrightarrow> Qqcompatible F (qregister_pair G H)\<close> sorry
+
+(* TODO: (and also for quantum, also for COMPATIBLE)
 lemma ccompatible_register_tensor[simp]: \<open>ccompatible F F' \<Longrightarrow> ccompatible G G' \<Longrightarrow> ccompatible (cregister_tensor F G) (cregister_tensor F' G')\<close> *)
 
 lemma cregister_cregister_pairI[simp]: \<open>ccompatible x y \<Longrightarrow> cregister (cregister_pair x y)\<close>
@@ -418,6 +431,11 @@ lemma Qqcompatible_QREGISTER_of: \<open>Qqcompatible (QREGISTER_of A) B \<longle
   unfolding QREGISTER_of.rep_eq Qqcompatible.rep_eq
   apply transfer
   by (auto simp add: non_qregister_raw empty_qregister_range_def)
+
+lemma Cccompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow> Cccompatible (CREGISTER_of F) G\<close>
+  by (simp add: Cccompatible_CREGISTER_of)
+lemma Qqcompatible_QREGISTER_ofI[simp]: \<open>qcompatible F G \<Longrightarrow> Qqcompatible (QREGISTER_of F) G\<close>
+  by (simp add: Qqcompatible_QREGISTER_of)
 
 typedecl cl
 typedecl qu
