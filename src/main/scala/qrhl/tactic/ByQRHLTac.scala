@@ -29,14 +29,17 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
    *             Call(prog) (prog must be a program)
    *             rho
    *
-   * Special case: if the term to be matches is "1", return (True, empty program, null)
+   * e inside Pr[] must be in longform.
+   * e1 is returned in shortform.
+   *
+   * Special case: if the term to be matched is "1", return (True, empty program, null)
    */
   class Probability(left : Boolean, state : State) {
     def unapply(term: Term): Option[(Term,Statement,Term)] = term match {
       case App(App(App(Const(GIsabelle.probability.name,_),e),p),rho) =>
 
-        val e2 = RichTerm.decodeFromExpression(state.isabelle, e).isabelleTerm
-        val e3 = Ops.addIndexToExpressionOp(e2, left).retrieveNow
+        val e2 = Ops.addIndexToExpressionOp(e, left).retrieveNow
+        val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
 
         val pname = p match {
           case Free(n,_) => n

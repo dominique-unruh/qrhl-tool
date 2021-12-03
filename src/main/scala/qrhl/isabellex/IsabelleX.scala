@@ -773,6 +773,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       MLValue.compileFunction[Context, Typ, Term, Term](s"fn (ctxt, typ, term) => $qrhl_ops.term_to_expression ctxt typ term")
     val byQRHLPreOp =
       MLValue.compileFunction[List[(String, String, Typ)], List[(String, String, Typ)], Term](s"$qrhl_ops.byQRHLPre")
+    /** Adds an index to all classical/quantum variables in an expression. Expression must be in longform. */
     val addIndexToExpressionOp =
       MLValue.compileFunction[Term, Boolean, Term](s"fn (t,left) => $qrhl_ops.add_index_to_expression left t")
     val fixTacOp =

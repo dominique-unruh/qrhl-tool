@@ -168,11 +168,11 @@ fun free_vars_tac ctxt = let
     distinct_vars_tac ctxt
   end
 
-(* t \<rightarrow> \<lambda>m. liftSpace qFst (t (fst m))   if left=true *)
+(* t \<rightarrow> \<lambda>m. liftSpace (t (fst m)) qFst   if left=true *)
 fun add_index_to_expression left t = let
   val qFst = if left then @{const qFst(qu,qu)} else @{const qSnd(qu,qu)} 
   val fst_t = if left then @{const fst(cl,cl)} else @{const snd(cl,cl)}
-  val res = Abs("memory", \<^typ>\<open>cl2\<close>, @{const liftSpace(qu)} $ qFst $ (t $ (fst_t $ Bound 0)))
+  val res = Abs("memory", \<^typ>\<open>cl2\<close>, @{const liftSpace(qu)} $ (t $ (fst_t $ Bound 0)) $ qFst)
   in res end
 
 end
