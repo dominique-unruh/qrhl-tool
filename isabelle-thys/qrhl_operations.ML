@@ -141,7 +141,7 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
     val fv_rhs = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.varterm_to_VARIABLE cq
 (*     val fv_rhs = @{const set(string)} $
             (Const(\<^const_name>\<open>variable_names\<close>, Prog_Variables.mk_variablesT vartermT --> \<^typ>\<open>string list\<close>) $ varterm) *)
-    val fv = HOLogic.mk_eq (fv_lhs, fv_rhs) |> HOLogic.mk_Trueprop
+    val fv = Misc.mk_less_eq fv_lhs fv_rhs |> HOLogic.mk_Trueprop
     val fv_thm_name = Binding.name (pfx^name)
     val ([(_,fv_thm)],ctxt) = Proof_Context.add_assms Assumption.assume_export
                                  [((fv_thm_name, []), [(fv,[])])] ctxt

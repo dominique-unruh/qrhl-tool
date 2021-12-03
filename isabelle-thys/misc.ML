@@ -166,4 +166,6 @@ fun match_list_tac ctxt = SUBGOAL (fn (t,i) => case t |> Logic.strip_assums_conc
   | (_,_) => raise TERM("match_list_tac: mismatch",[t])
 )
 
+fun mk_less_eq t u = let val T = fastype_of t in Const(\<^const_name>\<open>less_eq\<close>, T --> T --> HOLogic.boolT) $ t $ u end
+
 end
