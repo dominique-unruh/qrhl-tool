@@ -26,6 +26,9 @@ axiomatization qregister_raw :: \<open>('a qupdate \<Rightarrow> 'b qupdate) \<R
 definition non_cregister_raw :: \<open>'a cupdate \<Rightarrow> 'b cupdate\<close> where \<open>non_cregister_raw a = Map.empty\<close>
 definition non_qregister_raw :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close> where \<open>non_qregister_raw a = 0\<close>
 
+lemma cregister_raw_inj: \<open>cregister_raw F \<Longrightarrow> inj F\<close> sorry
+lemma qregister_raw_inj: \<open>qregister_raw F \<Longrightarrow> inj F\<close> sorry
+
 axiomatization where non_cregister_raw: \<open>\<not> cregister_raw non_cregister_raw\<close>
 axiomatization where non_qregister_raw: \<open>\<not> qregister_raw non_qregister_raw\<close>
 
@@ -79,7 +82,6 @@ lift_definition QREGISTER_of :: \<open>('a,'b) qregister \<Rightarrow> 'b QREGIS
 
 instantiation CREGISTER :: (type) order begin
 lift_definition less_eq_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> bool\<close> is \<open>(\<subseteq>)\<close>.
-print_theorems
 lift_definition less_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> bool\<close> is \<open>(\<subset>)\<close>.
 instance
   apply (intro_classes; transfer)
@@ -112,8 +114,11 @@ axiomatization cregister_pair :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) 
 axiomatization qregister_pair :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> ('a\<times>'b, 'c) qregister\<close>
   where qregister_pair_iff_compatible: \<open>qregister (qregister_pair F G) \<longleftrightarrow> qcompatible F G\<close>
 
-(* axiomatization where apply_cregister_pair: \<open>ccompatible F G \<Longrightarrow> 
-  apply_cregister (cregister_pair F G) (tensorOp a b) = apply_cregister F a \<circ>\<^sub>m apply_cregister G b\<close> *)
+definition tensor_map :: \<open>'a cupdate \<Rightarrow> 'b cupdate \<Rightarrow> ('a\<times>'b) cupdate\<close> where
+  \<open>tensor_map a b m = (case a (fst m) of None \<Rightarrow> None | Some x \<Rightarrow> (case b (snd m) of None \<Rightarrow> None | Some y \<Rightarrow> Some (x,y)))\<close>
+
+axiomatization where apply_cregister_pair: \<open>ccompatible F G \<Longrightarrow> 
+  apply_cregister (cregister_pair F G) (tensor_map a b) = apply_cregister F a \<circ>\<^sub>m apply_cregister G b\<close>
 axiomatization where apply_qregister_pair: \<open>qcompatible F G \<Longrightarrow> 
   apply_qregister (qregister_pair F G) (tensorOp a b) = apply_qregister F a o\<^sub>C\<^sub>L  apply_qregister G b\<close>
 
@@ -453,6 +458,36 @@ lemma Cccompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow>
 lemma Qqcompatible_QREGISTER_ofI[simp]: \<open>qcompatible F G \<Longrightarrow> Qqcompatible (QREGISTER_of F) G\<close>
   by (simp add: Qqcompatible_QREGISTER_of)
 
+lemma cregister_conversion_raw_register: \<open>cregister_raw F \<Longrightarrow> cregister_raw G \<Longrightarrow> range F \<subseteq> range G \<Longrightarrow> cregister_raw (inv G \<circ> F)\<close>
+  sorry
+lemma qregister_conversion_raw_register: \<open>qregister_raw F \<Longrightarrow> qregister_raw G \<Longrightarrow> range F \<subseteq> range G \<Longrightarrow> qregister_raw (inv G \<circ> F)\<close>
+  sorry
+
+lift_definition cregister_conversion :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> ('a,'b) cregister\<close> is
+  \<open>\<lambda>F G. if cregister_raw F \<and> cregister_raw G \<and> range F \<subseteq> range G then inv G o F else non_cregister_raw\<close>
+  by (auto intro: cregister_conversion_raw_register)
+
+lift_definition qregister_conversion :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> ('a,'b) qregister\<close> is
+  \<open>\<lambda>F G. if qregister_raw F \<and> qregister_raw G \<and> range F \<subseteq> range G then inv G o F else non_qregister_raw\<close>
+  by (auto intro: qregister_conversion_raw_register)
+
+definition \<open>cregister_le F G = (cregister F \<and> cregister G \<and> CREGISTER_of F \<le> CREGISTER_of G)\<close>
+definition \<open>qregister_le F G = (qregister F \<and> qregister G \<and> QREGISTER_of F \<le> QREGISTER_of G)\<close>
+
+lemma cregister_chain_conversion: \<open>cregister_le F G \<Longrightarrow> cregister_chain G (cregister_conversion F G) = F\<close>
+  unfolding cregister_le_def
+  apply (transfer fixing: F G)
+  apply transfer
+  by (auto simp: non_cregister_raw cregister_conversion_raw_register f_inv_into_f in_mono intro!: ext)
+
+lemma qregister_chain_conversion: \<open>qregister_le F G  \<Longrightarrow> qregister_chain G (qregister_conversion F G) = F\<close>
+  unfolding qregister_le_def
+  apply (transfer fixing: F G)
+  apply transfer
+  by (auto simp: non_qregister_raw qregister_conversion_raw_register f_inv_into_f in_mono intro!: ext)
+
+
+
 typedecl cl
 typedecl qu
 instance qu :: default sorry
@@ -487,6 +522,10 @@ datatype 'a vtree = VTree_Singleton 'a | VTree_Concat "'a vtree" "'a vtree" | VT
 
 consts variable_concat :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
 adhoc_overloading variable_concat qregister_pair cregister_pair
+consts register_conversion :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
+adhoc_overloading register_conversion qregister_conversion cregister_conversion
+consts register_le :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
+adhoc_overloading register_le qregister_le cregister_le
 
 (* We need those definition (not abbreviations!) with slightly more restrictive type, otherwise the overloaded variable_unit below will expand to \<open>('a,'b) empty_qregister\<close> etc *)
 definition \<open>qvariable_unit \<equiv> empty_qregister :: (unit,_) qregister\<close>
@@ -508,10 +547,16 @@ syntax
   "_variable_list_arg"  :: "'a \<Rightarrow> variable_list_args"                   ("_")
   "_variable_list_args" :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"     ("_,/ _")
 
+  "_variable_conversion"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<mapsto> _'\<rbrakk>)")
+  "_variable_le"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<le> _'\<rbrakk>)")
+
 translations
   "_variables (_variable_list_args x y)" \<rightleftharpoons> "CONST variable_concat x (_variables y)"
   "_variables (_variable_list_arg x)" \<rightharpoonup> "x"
   "_variables (_variable_list_args x y)" \<leftharpoondown> "CONST variable_concat (_variables (_variable_list_arg x)) (_variables y)"
+
+  "_variable_conversion x y" \<rightleftharpoons> "CONST register_conversion (_variables x) (_variables y)"
+  "_variable_le x y" \<rightleftharpoons> "CONST register_le (_variables x) (_variables y)"
 
 section \<open>Distinct variables\<close>
 
@@ -539,7 +584,7 @@ lemma distinct_qvars_concat_unit2[simp]: "distinct_qvars (variable_concat \<lbra
   unfolding qregister_pair_iff_compatible qvariable_unit_def
   using qcompatible_QQcompatible qcompatible_empty qcompatible_sym by blast
 lemma distinct_qvars_unit[simp]: "distinct_qvars \<lbrakk>\<rbrakk>"
-  by (simp add: empty_qregister_is_register qvariable_unit_def) 
+  by (simp add: qvariable_unit_def)
 (* lemma distinct_qvars_single[simp]: "distinct_qvars \<lbrakk>q\<rbrakk>" for q::"'a::finite qvariable"
   unfolding distinct_qvars_def apply transfer by auto *)
 

@@ -537,18 +537,20 @@ proof (unfold qvar_trafo_def, (rule conjI[rotated])+, rule allI)
   show \<open>Laws_Quantum.iso_register (A \<otimes>\<^sub>r A')\<close>
     by (metis Laws_Quantum.iso_register_tensor_is_iso_register assms(3) assms(4) qvar_trafo_def)
 qed
-
+*)
 
 (* A hint to the simplifier with the meaning:
     - A is a term of the form x>>Q
-    - R is an explicit distinct varterm containing all variables in Q
-    - Q is an explicit distinct varterm
+    - Q,R are registers
+    - Q \<le> R
     - The whole term should be rewritten into x'>>R for some x'
   Rewriting the term is done by the simproc variable_rewriting_simproc declared below.
 *)
 definition "reorder_variables_hint A R = A"
 lemma [cong]: "A=A' \<Longrightarrow> reorder_variables_hint A R = reorder_variables_hint A' R" by simp
 
+
+(*
 lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x" \<comment> \<open>Auxiliary lemma used by reorder_variables_hint_conv\<close>
   unfolding reorder_variables_hint_def by simp
 

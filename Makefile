@@ -31,7 +31,7 @@ test :
 	sbt test
 
 owncloud : qrhl.zip
-	cp -v qrhl.zip /home/unruh/ownCloud/qrhl/
+	cp -v qrhl.zip /home/unruh/ownCloud/tmp/
 
 push_docker:
 	docker login registry.gitlab.com
@@ -39,4 +39,4 @@ push_docker:
 	docker push registry.gitlab.com/unruh/qrhl-tool/build-image
 
 dropbox: qrhl.zip
-	cp qrhl.zip ~/Dropbox/tmp
+	cp qrhl.zip ~/Dropbox/tmp/
