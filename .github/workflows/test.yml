@@ -15,13 +15,13 @@ jobs:
         - name: Running tests (Linux)
           if: matrix.os == 'linux'
           run: |
-            echo isabelle-home = /opt/Isabelle2021-1-RC4 >qrhl-tool.conf
+            echo isabelle-home = /opt/Isabelle2021-1-RC5 >qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Running tests (Windows)
           if: matrix.os == 'windows'
           run: |
-            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1-RC4'
+            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1-RC5'
             sbt 'testOnly -- -h target/test-reports-html'
 
         - name: Running tests (MacOS)
@@ -29,7 +29,7 @@ jobs:
           run: |
             ~/keepawake.sh &    # A script to keep the Mac from falling asleep. Caffeinate doesn't seem to work on my Mac
             echo $! >keepawake.pid
-            echo isabelle-home = ~/Isabelle2021-1-RC4.app >qrhl-tool.conf
+            echo isabelle-home = ~/Isabelle2021-1-RC5.app >qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
 
 #        - name: Cleanup (MacOS)
