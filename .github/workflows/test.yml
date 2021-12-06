@@ -17,6 +17,7 @@ jobs:
           run: |
             git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
             echo isabelle-home = /opt/Isabelle2021-1-RC5 >qrhl-tool.conf
+            echo afp-root = /opt/afp-2021-1 >>qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Running tests (Windows)
@@ -24,6 +25,7 @@ jobs:
           run: |
             git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
             Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1-RC5'
+            Add-Content -Path qrhl-tool.conf -Value 'afp-root = c:\afp-2021-1'
             sbt 'testOnly -- -h target/test-reports-html'
 
         - name: Running tests (MacOS)
@@ -33,6 +35,7 @@ jobs:
             ~/keepawake.sh &    # A script to keep the Mac from falling asleep. Caffeinate doesn't seem to work on my Mac
             echo $! >keepawake.pid
             echo isabelle-home = ~/Isabelle2021-1-RC5.app >qrhl-tool.conf
+            echo afp-root = ~/afp-2021-1 >>qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
 
 #        - name: Cleanup (MacOS)
