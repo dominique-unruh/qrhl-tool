@@ -71,7 +71,7 @@ makeGITREVISION := {
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
-val isabelleHome = file("/opt/Isabelle2021-1-RC4")
+val isabelleHome = file("/opt/Isabelle2021-1-RC5")
 
 lazy val makeQrhlToolConf = taskKey[Unit]("Create default qrhl-tool.conf")
 makeQrhlToolConf := {
@@ -101,7 +101,7 @@ mappings in Universal ++=
 mappings in Universal ++= {
   val base = baseDirectory.value
   val dirs = base / "isabelle-thys" +++ base / "examples"
-  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl" || "root.tex" || "root.bib")
+  val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl" || "root.tex" || "root.bib" || "empty" || "WHAT_IS_THIS")
   val excluded = List("isabelle-thys/Test.thy", "examples/TestEx.thy", "examples/test.qrhl", "isabelle-thys/Scratch.thy")
   val files2 = files.filter { f => ! excluded.exists(e => f.getPath.endsWith(e)) }
   val excludedPat = List(".*examples/test.*\\.qrhl")

@@ -21,8 +21,10 @@ import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import de.unruh.isabelle.control
-import de.unruh.isabelle.misc.{FutureValue, Symbols}
+import de.unruh.isabelle.misc.{AFP, FutureValue, Symbols}
 import hashedcomputation.{Hash, HashedValue}
+
+import java.time.LocalDate
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 
@@ -87,17 +89,22 @@ object Configuration {
   if (config.getProperty("isabelle-user") != null)
     throw UserException("Configuration option isabelle-user not supported. Set the environment variable ISABELLE_USER_HOME instead.")
 
+  def afpRoot : Option[Path] = config.getProperty("afp-root") match {
+    case null => None
+    case path => Some(distributionDirectory.resolve(path))
+  }
+
+/*
   def afpThyRoot : Option[Path] = config.getProperty("afp-root") match {
     case null => None
     case path => Some(distributionDirectory.resolve(path).resolve("thys"))
   }
+*/
 }
 
 class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
   import IsabelleX._
   import Ops._
-
-  val version = "2021-1-RC4"
 
   /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
   private val localStoragePath = Configuration.distributionDirectory.resolve("isabelle-temp")
@@ -901,10 +908,16 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context](s"$qrhl_ops.applyToplevelCommand")
     lazy val readExpressionOp = MLValue.compileFunction[Context, String, Typ, Boolean, Term](s"fn (ctxt, str, typ, indexed) => $qrhl_ops.read_expression ctxt str typ indexed")
     val absfree = MLValue.compileFunction[String, Typ, Term, Term]("fn (name,typ,term) => absfree (name, typ) term")
+
+    val compareTyps = MLValue.compileFunction[Typ, Typ, Int](s"fn (t,u) => case Term_Ord.typ_ord (t,u) of LESS => ~1 | GREATER => 1 | EQUALS => 0")
   }
 }
 
 object IsabelleX {
+  val version = "2021-1-RC5"
+  val minimumAFPVersion: LocalDate = LocalDate.of(2021,11,8)
+
+
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
     val isabelle = new IsabelleX()
@@ -983,11 +996,21 @@ object IsabelleX {
     }
   }
 
+  def checkAFPVersion(): Unit = Configuration.afpRoot match {
+    case None =>
+    case Some(root) =>
+      val date = new AFP(root).newestSubmissionDate
+      if (date.isBefore(minimumAFPVersion))
+        throw UserException(s"AFP at $root seems to be from $date. We need an AFP from $minimumAFPVersion or later.")
+  }
+
+  checkAFPVersion()
+
   lazy val setup: Isabelle.Setup = de.unruh.isabelle.control.Isabelle.Setup(
     workingDirectory = Configuration.distributionDirectory,
     isabelleHome = Configuration.isabelleHome,
     logic = "QRHL",
-    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpThyRoot,
+    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys")),
     verbose = true,
 //    /** Must end in .isabelle if provided */
 //    userDir = Some(Configuration.isabelleUserDir)

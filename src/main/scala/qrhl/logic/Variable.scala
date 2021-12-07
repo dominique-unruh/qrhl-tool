@@ -12,6 +12,8 @@ import scala.concurrent.ExecutionContext
 // Implicits
 import hashedcomputation.Implicits._
 import qrhl.isabellex.Implicits._
+import de.unruh.isabelle.pure.Implicits._
+import de.unruh.isabelle.mlvalue.Implicits._
 
 // Variables
 sealed trait Variable extends HashedValue {
@@ -59,10 +61,14 @@ sealed trait Variable extends HashedValue {
 
 object Variable {
   implicit object ordering extends Ordering[Variable] {
+    // Implicits
+    import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     def compareSame(x: Variable, y:Variable): Int = {
       val nameComp = Ordering.String.compare(x.name, y.name)
       if (nameComp==0)
-        ??? // TODO compare types
+        GIsabelle.Ops.compareTyps(x.valueTyp, y.valueTyp).retrieveNow
       else
         nameComp
     }
