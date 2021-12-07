@@ -40,3 +40,9 @@ push_docker:
 
 dropbox: qrhl.zip
 	cp qrhl.zip ~/Dropbox/tmp
+
+view-test-results:
+	rm -rf target/tmp
+	mkdir target/tmp
+	cd target/tmp && gh run download
+	xdg-open target/tmp/index.html
