@@ -1,16 +1,82 @@
 theory Scratch
-  imports QRHL_Operations
+  imports QRHL.QRHL
 begin
+
+no_notation m_inv ("inv\<index> _" [81] 80)
+unbundle no_vec_syntax
+unbundle jnf_notation
+
+derive (eq) ceq bit
+derive (compare) ccompare bit
+derive (dlist) set_impl bit
 
 ML \<open>open Prog_Variables\<close>
 
+lemma apply_qregister_Fst: \<open>apply_qregister qFst x = x \<otimes> id_cblinfun\<close>
+  sorry
 
+lemma apply_qregister_Snd: \<open>apply_qregister qSnd x = id_cblinfun \<otimes> x\<close>
+  sorry
+
+lemma butterfly_tensor: \<open>butterfly (a \<otimes> b) (c \<otimes> d) = butterfly a c \<otimes> butterfly b d\<close>
+  sorry
+
+lemma clinear_tensorOp_left[simp]: \<open>clinear (\<lambda>x. x \<otimes> y)\<close> for y :: \<open>(_,_) cblinfun\<close>
+  sorry
+
+lemma clinear_tensorOp_right[simp]: \<open>clinear (\<lambda>y. x \<otimes> y)\<close> for x :: \<open>(_,_) cblinfun\<close>
+  sorry
+
+lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregister F)\<close>
+  apply transfer
+  apply (auto simp: non_qregister_raw_def[abs_def])
+  sorry
+
+lemma clinear_apply_qregister[simp]: \<open>clinear (apply_qregister F)\<close>
+  using bounded_clinear.clinear bounded_clinear_apply_qregister by blast
+
+lemma qregister_conversion_id[simp]: \<open>qregister_conversion F qregister_id = F\<close>
+  apply transfer by auto
+
+lemma qregister_chain_pair:
+  shows "qregister_pair (qregister_chain F G) (qregister_chain F H) = qregister_chain F (qregister_pair G H)"
+  sorry
+
+lemma qregister_chain_pair_Fst[simp]:
+  assumes \<open>qregister G\<close>
+  shows \<open>qregister_chain (qregister_pair F G) qFst = F\<close>
+  sorry
+
+lemma qregister_chain_pair_Fst_chain[simp]:
+  assumes \<open>qregister G\<close>
+  shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qFst H) = qregister_chain F H\<close>
+  by (metis Scratch.qregister_chain_pair_Fst assms qregister_chain_assoc)
+
+lemma qregister_chain_pair_Snd[simp]:
+  assumes \<open>qregister F\<close>
+  shows \<open>qregister_chain (qregister_pair F G) qSnd = G\<close>
+  sorry
+
+lemma qregister_chain_pair_Snd_chain[simp]:
+  assumes \<open>qregister F\<close>
+  shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qSnd H) = qregister_chain G H\<close>
+  by (metis Scratch.qregister_chain_pair_Snd assms qregister_chain_assoc)
+
+(* lift_definition qregister_all :: \<open>('a,'a) qregister\<close> is id
+  by simp
+
+lemma qregister_chain_all_left[simp]: \<open>qregister_chain qregister_all F = F\<close>
+  apply transfer by auto
+
+lemma qregister_chain_all_right[simp]: \<open>qregister_chain F qregister_all = F\<close>
+  apply transfer by auto *)
 
 lemma rew1: \<open>qregister_le F G \<Longrightarrow> apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
   apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
   by auto
 
 lemma lepairI: \<open>qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qcompatible F G \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
+  unfolding qregister_le_def
   sorry
 
 lemma lepairI1: \<open>qregister_le F G \<Longrightarrow> qcompatible G H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
@@ -18,7 +84,7 @@ lemma lepairI1: \<open>qregister_le F G \<Longrightarrow> qcompatible G H \<Long
 lemma lepairI2: \<open>qregister_le F H \<Longrightarrow> qcompatible G H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
   sorry
 lemma lerefl: \<open>qregister F \<Longrightarrow> qregister_le F F\<close>
-  sorry
+  unfolding qregister_le_def by simp
 
 lemma qregister_conversion_chain: 
   assumes \<open>qregister_le F G\<close> \<open>qregister_le G H\<close>
@@ -34,7 +100,6 @@ lemma [simp]: \<open>register_conversion non_qregister F = non_qregister\<close>
 
 lemma inv_eq_move: \<open>inv f o g = h\<close> if \<open>inj f\<close> and \<open>g = f o h\<close> for f g
   using that(1) that(2) by fastforce
-
 
 lemma qregister_conversion_rename: 
   fixes F :: \<open>('a,'c) qregister\<close> and G :: \<open>('b,'c) qregister\<close> and H :: \<open>('d, 'c) qregister\<close> and F' G'
@@ -70,6 +135,14 @@ next
     using range_le_preserve H_cancel by (auto simp: qregister_raw_chain)
 qed
 
+lemma qregister_conversion_rename': 
+  fixes F :: \<open>('a,'c) qregister\<close> and F' G'
+  assumes \<open>qregister G\<close>
+  assumes \<open>F = qregister_chain G F'\<close>
+  shows \<open>qregister_conversion F G = F'\<close>
+  apply (subst qregister_conversion_rename[where H=G and G'=qregister_id and F'=F'])
+  using assms by auto
+
 lemma tensor_ext2: 
   assumes \<open>\<And>x y. apply_qregister F (x\<otimes>y) = apply_qregister G (x\<otimes>y)\<close>
   shows \<open>F = G\<close>
@@ -80,49 +153,282 @@ lemma tensor_ext3:
   shows \<open>F = G\<close>
   sorry
 
-lemma qcompatible_Abs_qregister:
+lemma qcompatible_Abs_qregister[simp]:
   assumes \<open>qregister_raw F\<close> \<open>qregister_raw G\<close>
-  assumes \<open>(\<forall>a b. F a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L F a)\<close>
-  shows \<open>qcompatible (Abs_qregister F) (Abs_qregister G)\<close>
-  by (simp add: assms(1) assms(2) assms(3) eq_onp_same_args qcompatible.abs_eq)
+  (* assumes \<open>qcommuting_raw F G\<close> *)
+  shows \<open>qcompatible (Abs_qregister F) (Abs_qregister G) \<longleftrightarrow> qcommuting_raw F G\<close>
+  using assms by (simp add: eq_onp_same_args qcompatible.abs_eq qcompatible_raw_def qcommuting_raw_def)
 
-lemma qregister_raw_tensor_left[intro!]:
-  assumes \<open>qregister_raw F\<close>
-  shows \<open>qregister_raw (\<lambda>x. id_cblinfun \<otimes> F x)\<close>
+lemma qcompatible_Abs_qregister_id_tensor_left[simp]:
+  shows \<open>qcommuting_raw (\<lambda>x. id_cblinfun \<otimes> f x) (\<lambda>x. g x \<otimes> id_cblinfun)\<close>
+  by (auto simp: qcommuting_raw_def)
+
+lemma qcompatible_Abs_qregister_id_tensor_right[simp]:
+  shows \<open>qcommuting_raw (\<lambda>x. g x \<otimes> id_cblinfun) (\<lambda>x. id_cblinfun \<otimes> f x)\<close>
+  by (auto simp: qcommuting_raw_def)
+
+lemma qcompatible_Abs_qregister_id_tensor_idid_tensor_left[simp]:
+  shows \<open>qcommuting_raw (\<lambda>x. id_cblinfun \<otimes> f x) (\<lambda>x. id_cblinfun \<otimes> g x) \<longleftrightarrow> qcommuting_raw f g\<close>
   sorry
 
-lemma qregister_raw_tensor_right[intro!]:
-  assumes \<open>qregister_raw F\<close>
-  shows \<open>qregister_raw (\<lambda>x. F x \<otimes> id_cblinfun)\<close>
+lemma qcompatible_Abs_qregister_id_tensor_idid_tensor_right[simp]:
+  shows \<open>qcommuting_raw (\<lambda>x. f x \<otimes> id_cblinfun) (\<lambda>x. g x \<otimes> id_cblinfun) \<longleftrightarrow> qcommuting_raw f g\<close>
   sorry
 
-lemma qregister_raw_id[simp]: \<open>qregister_raw (\<lambda>x. x)\<close>
+lemma qregister_raw_tensor_left[simp]:
+  shows \<open>qregister_raw (\<lambda>x. id_cblinfun \<otimes> F x) \<longleftrightarrow> qregister_raw F\<close>
   sorry
+
+lemma qregister_raw_tensor_right[intro!, simp]:
+  shows \<open>qregister_raw (\<lambda>x. F x \<otimes> id_cblinfun) \<longleftrightarrow> qregister_raw F\<close>
+  sorry
+
+lemma qregister_raw_id'[simp]: \<open>qregister_raw (\<lambda>x. x)\<close>
+  by (metis eq_id_iff qregister_raw_id)
+
+
+definition explicit_cblinfun :: \<open>('a \<Rightarrow> 'b \<Rightarrow> complex) \<Rightarrow> ('b ell2, 'a ell2) cblinfun\<close> where
+  \<open>explicit_cblinfun m = cblinfun_extension (range ket) (\<lambda>a. Abs_ell2 (\<lambda>j. m j (inv ket a)))\<close>
+
+lemma explicit_cblinfun_ket[simp]: \<open>explicit_cblinfun m *\<^sub>V ket a = Abs_ell2 (\<lambda>b. m b a)\<close> for m :: "_ \<Rightarrow> _ :: finite \<Rightarrow> _"
+  by (auto simp: cblinfun_extension_exists_finite_dim explicit_cblinfun_def cblinfun_extension_apply)
+
+(* TODO: move to bounded operators *)
+lemma Abs_ell2_inverse_finite[simp]: \<open>Rep_ell2 (Abs_ell2 \<psi>) = \<psi>\<close> for \<psi> :: \<open>_::finite \<Rightarrow> complex\<close>
+  by (simp add: Abs_ell2_inverse)
+
+lemma explicit_cblinfun_Rep_ket: \<open>Rep_ell2 (explicit_cblinfun m *\<^sub>V ket a) b = m b a\<close> for m :: "_ :: finite \<Rightarrow> _ :: finite \<Rightarrow> _"
+  by simp
+
+lemma mat_of_cblinfun_explicit_cblinfun[code,simp]:
+  fixes m :: \<open>'a::enum \<Rightarrow> 'b::enum \<Rightarrow> complex\<close>
+  defines \<open>m' \<equiv> (\<lambda>(i,j). m (Enum.enum!i) (Enum.enum!j))\<close>
+  shows \<open>mat_of_cblinfun (explicit_cblinfun m) = mat CARD('a) CARD('b) m'\<close> 
+proof (rule eq_matI)
+  fix i j
+  assume \<open>i < dim_row (mat CARD('a) CARD('b) m')\<close> \<open>j < dim_col (mat CARD('a) CARD('b) m')\<close>
+  then have ij[simp]: \<open>i < CARD('a)\<close> \<open>j < CARD('b)\<close>
+    by auto
+  have \<open>m (enum_class.enum ! i) (enum_class.enum ! j) = m' (i, j)\<close>
+    by (auto simp: m'_def)
+  then show \<open>mat_of_cblinfun (explicit_cblinfun m) $$ (i, j) = Matrix.mat CARD('a) CARD('b) m' $$ (i, j)\<close>
+    by (simp add: mat_of_cblinfun_ell2_component)
+next
+  show \<open>dim_row (mat_of_cblinfun (explicit_cblinfun m)) = dim_row (Matrix.mat CARD('a) CARD('b) m')\<close> by simp
+  show \<open>dim_col (mat_of_cblinfun (explicit_cblinfun m)) = dim_col (Matrix.mat CARD('a) CARD('b) m')\<close> by simp
+qed
+
+definition reorder_cblinfun :: \<open>('d \<Rightarrow> 'b) \<Rightarrow> ('c \<Rightarrow> 'a) \<Rightarrow> ('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) \<Rightarrow> ('c ell2 \<Rightarrow>\<^sub>C\<^sub>L 'd ell2)\<close> where
+  \<open>reorder_cblinfun r c A = explicit_cblinfun (\<lambda>i j. Rep_ell2 (A *\<^sub>V ket (c j)) (r i))\<close>
+
+abbreviation "reorder_cblinfun2 f \<equiv> reorder_cblinfun f f"
+
+lemma reorder_cblinfun_ket[simp]: \<open>Rep_ell2 (reorder_cblinfun r c A *\<^sub>V ket a) b = Rep_ell2 (A *\<^sub>V ket (c a)) (r b)\<close> for a b :: \<open>_::finite\<close>
+  by (simp add: reorder_cblinfun_def)
+
+
+lemma clinear_reorder_cblinfun[simp]: \<open>clinear (reorder_cblinfun r c)\<close> for r c :: \<open>_::finite \<Rightarrow> _\<close>
+proof (rule clinearI)
+  show \<open>reorder_cblinfun r c (A + B) = reorder_cblinfun r c A + reorder_cblinfun r c B\<close> for A B
+    apply (rule equal_ket)
+    by (auto simp: plus_ell2.rep_eq cblinfun.add_left simp flip: Rep_ell2_inject)
+  show \<open>reorder_cblinfun r c (s *\<^sub>C A) = s *\<^sub>C reorder_cblinfun r c A\<close> for s A
+    apply (rule equal_ket)
+    by (auto simp: scaleC_ell2.rep_eq simp flip: Rep_ell2_inject)
+qed
+
+lemma reorder_cblinfun_butterfly: 
+  fixes r c :: \<open>_::finite \<Rightarrow> _::finite\<close>
+  assumes \<open>bij r\<close> \<open>bij c\<close>
+  shows \<open>reorder_cblinfun r c (butterket a b) = butterket (inv r a) (inv c b)\<close>
+proof (rule equal_ket, rule Rep_ell2_inject[THEN iffD1], rule ext)
+  fix i j
+  have \<open>Rep_ell2 (reorder_cblinfun r c (butterket a b) \<cdot> ket i) j = Rep_ell2 ((ket b \<bullet>\<^sub>C ket (c i)) *\<^sub>C ket a) (r j)\<close>
+    by auto
+  also have \<open>\<dots> = (if b=c i then 1 else 0) * (if a=r j then 1 else 0)\<close>
+    by (simp add: scaleC_ell2.rep_eq ket.rep_eq)
+  also have \<open>\<dots> = (if inv c b=i then 1 else 0) * (if inv r a=j then 1 else 0)\<close>
+    by (smt (verit, del_insts) assms(1) assms(2) bij_inv_eq_iff)
+  also have \<open>\<dots> = Rep_ell2 ((ket (inv c b) \<bullet>\<^sub>C ket i) *\<^sub>C ket (inv r a)) j\<close>
+    by (simp add: scaleC_ell2.rep_eq ket.rep_eq)
+  also have \<open>\<dots> = Rep_ell2 (butterket (inv r a) (inv c b) \<cdot> ket i) j\<close>
+    by auto
+  finally show \<open>Rep_ell2 (reorder_cblinfun r c (butterket a b) \<cdot> ket i) j = Rep_ell2 (butterket (inv r a) (inv c b) \<cdot> ket i) j\<close>
+    by -
+qed
+
+lemma reorder_cblinfun2_butterfly: 
+  fixes f :: \<open>_::finite \<Rightarrow> _::finite\<close>
+  assumes \<open>bij f\<close>
+  shows \<open>reorder_cblinfun2 f (butterket a b) = butterket (inv f a) (inv f b)\<close>
+  by (simp add: assms reorder_cblinfun_butterfly)
+
+definition reorder_mat :: \<open>nat \<Rightarrow> nat \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> complex mat \<Rightarrow> complex mat\<close> where 
+  \<open>reorder_mat n m r c A = Matrix.mat n m (\<lambda>(i, j). A $$ (r i, c j))\<close>
+
+(* TODO: to bounded operators *)
+declare enum_idx_correct[simp]
+
+lemma mat_of_cblinfun_reorder[code]: 
+  fixes r :: \<open>'a::enum \<Rightarrow> 'c::enum\<close> and c :: \<open>'b::enum \<Rightarrow> 'd::enum\<close>
+  shows \<open>mat_of_cblinfun (reorder_cblinfun r c A) = reorder_mat CARD('a) CARD('b)
+(\<lambda>i. enum_idx (r (enum_class.enum ! i))) (\<lambda>j. enum_idx (c (enum_class.enum ! j))) (mat_of_cblinfun A)\<close>
+proof -
+  have aux: \<open>Rep_ell2 \<psi> i = vec_of_basis_enum \<psi> $ (enum_idx i)\<close> if \<open>enum_idx i < CARD('z)\<close> 
+    for \<psi> :: \<open>'z::enum ell2\<close> and i
+    apply (subst vec_of_basis_enum_ell2_component)
+    using that by auto
+
+  show ?thesis
+    apply (subst reorder_cblinfun_def)
+    apply (subst mat_of_cblinfun_explicit_cblinfun)
+    apply (subst aux)
+     apply (simp add: card_UNIV_length_enum enum_idx_bound)
+    apply (subst mat_of_cblinfun_cblinfun_apply)
+    apply (subst vec_of_basis_enum_ket)
+    apply (subst mat_entry_explicit)
+    by (auto simp add: card_UNIV_length_enum enum_idx_bound reorder_mat_def)
+qed
+
+lemma enum_idx_correct': \<open>enum_idx (enum_class.enum ! i :: 'a::enum) = i\<close> if \<open>i < CARD('a)\<close>
+  sorry
+
+definition \<open>enum_idx_enum_nth_code n (_::'a::enum itself) i = (if i < n then i else 
+    Code.abort STR ''enum_idx_enum_nth_code: index out of bounds'' (\<lambda>_. enum_idx (enum_class.enum ! i :: 'a)))\<close>
+
+lemma enum_idx_enum_nth_code: \<open>enum_idx (enum_class.enum ! i :: 'a::enum) = enum_idx_enum_nth_code CARD('a) TYPE('a) i\<close>
+  unfolding enum_idx_enum_nth_code_def
+  apply (cases \<open>i < CARD('a)\<close>)
+   apply (subst enum_idx_correct', simp, simp)
+  by auto
+
+lemma enum_idx_pair: \<open>enum_idx (a,b) = enum_idx a * CARD('b) + enum_idx b\<close> for a :: \<open>'a::enum\<close> and b :: \<open>'b::enum\<close>
+proof -
+  let ?enumab = \<open>Enum.enum :: ('a \<times> 'b) list\<close>
+  let ?enuma = \<open>Enum.enum :: 'a list\<close>
+  let ?enumb = \<open>Enum.enum :: 'b list\<close>
+  have bound: \<open>i < CARD('a) \<Longrightarrow> j < CARD('b) \<Longrightarrow> i * CARD('b) + j < CARD('a) * CARD('b)\<close> for i j
+    sorry
+  have *: \<open>?enumab ! (i * CARD('b) + j) = (?enuma ! i, ?enumb ! j)\<close> 
+    if \<open>i < CARD('a)\<close> \<open>j < CARD('b)\<close> for i j
+    unfolding enum_prod_def 
+    apply (subst List.product_nth)
+    using that bound by (auto simp flip: card_UNIV_length_enum)
+  note ** = *[where i=\<open>enum_idx a\<close> and j=\<open>enum_idx b\<close>, simplified, symmetric]
+  show ?thesis
+    apply (subst **)
+    using enum_idx_bound[of a] enum_idx_bound[of b]
+    by (auto simp: bound enum_idx_correct' simp flip: card_UNIV_length_enum)
+qed
+
+lemma enum_idx_fst: \<open>enum_idx (fst ab) = enum_idx ab div CARD('b)\<close> for ab :: \<open>'a::enum \<times> 'b::enum\<close>
+  apply (cases ab, hypsubst_thin)
+  apply (subst enum_idx_pair)
+  using enum_idx_bound
+  by (auto intro!: div_less simp flip: card_UNIV_length_enum)
+
+lemma enum_idx_snd: \<open>enum_idx (snd ab) = enum_idx ab mod CARD('b)\<close> for ab :: \<open>'a::enum \<times> 'b::enum\<close>
+  apply (cases ab, hypsubst_thin)
+  apply (subst enum_idx_pair)
+  using enum_idx_bound
+  by (auto intro!: mod_less[symmetric] simp flip: card_UNIV_length_enum)
+
+term qregister_pair
+
+lemma prod_eqI': \<open>x = fst z \<Longrightarrow> y = snd z \<Longrightarrow> (x,y) = z\<close>
+  by auto
+
+ML \<open>
+local
+open Conv
+val ctxt = \<^context> (* TODO remove *)
+val reg = \<^term>\<open>(qregister_pair \<lbrakk>#1,#3.\<rbrakk> \<lbrakk>#2\<rbrakk>) :: ((bit*bit)*bit, _) qregister\<close>
+fun mk_tuple (\<^Const_>\<open>qregister_pair T1 _ T2 for t u\<close>) x = 
+      \<^Const>\<open>Pair T1 T2\<close> $ (mk_tuple t x) $ (mk_tuple u x)
+  | mk_tuple (\<^Const_>\<open>qFst T1 T2\<close>) x = \<^Const>\<open>fst T1 T2\<close> $ x
+  | mk_tuple (\<^Const_>\<open>qSnd T1 T2\<close>) x = \<^Const>\<open>snd T2 T1\<close> $ x
+  | mk_tuple (\<^Const_>\<open>qregister_chain _ _ _\<close> $ t $ u) x = 
+      mk_tuple u (mk_tuple t x)
+  | mk_tuple t x = raise TERM ("mk_fun", [t, x])
+fun mk_fun t = let
+  val \<^Type>\<open>qregister _ T\<close> = fastype_of t
+  val tuple = mk_tuple t (Bound 0)
+  in Abs("m", T, tuple) end
+val f = mk_fun reg |> Thm.cterm_of ctxt
+val domainT = Thm.ctyp_of_cterm f |> Thm.dest_ctyp0
+val rangeT = Thm.ctyp_of_cterm f |> Thm.dest_ctyp1
+val goal_fog = \<^instantiate>\<open>f and 'a=domainT and 'b=rangeT in cprop (schematic) \<open>(f::'a\<Rightarrow>'b) o g = id\<close>\<close>
+val rewr_fst_snd_conv = bottom_rewrs_conv @{thms fst_conv[THEN eq_reflection] snd_conv[THEN eq_reflection]}
+val rewr_fst_snd_tac = CONVERSION (rewr_fst_snd_conv ctxt) 1
+(* Raw_Simplifier.rewrite_goal_tac ctxt @{thms fst_conv[THEN eq_reflection] snd_conv[THEN eq_reflection]} 1 *)
+val resolve_fst_snd_tac = resolve_tac ctxt @{thms prod_eqI' fst_conv snd_conv refl} 1
+val ext_tac = resolve_tac ctxt @{thms ext} 1
+val rewr_o_id = Raw_Simplifier.rewrite_goal_tac ctxt @{thms o_def[THEN eq_reflection] id_def[THEN eq_reflection]} 1
+val tac = ext_tac THEN rewr_o_id THEN REPEAT (rewr_fst_snd_tac THEN resolve_fst_snd_tac)
+val thm_fog = Goal.prove_internal ctxt [] goal_fog (K tac)
+val thm_fog = thm_fog |> (rewr_fst_snd_conv ctxt |> arg_conv |> arg1_conv |> arg_conv |> fconv_rule)
+val g = thm_fog |> Thm.cprop_of |> Thm.dest_arg |> Thm.dest_arg1 |> Thm.dest_arg
+val goal_gof = \<^instantiate>\<open>f=f and g=g and 'a=domainT and 'b=rangeT in cprop (schematic) \<open>g o (f::'a\<Rightarrow>'b) = id\<close>\<close>
+(* val thm_bij = @{thm o_bij} OF [thm_gof, thm_fog] *)
+in
+val thm_fog = thm_fog
+val thm_gof = Goal.prove_internal ctxt [] goal_gof (K (ext_tac THEN simp_tac ctxt 1))
+end
+\<close>
+
+ML \<open>
+structure MLThmAttribData = Proof_Data (
+  type T = Proof.context -> thm -> thm
+  fun init _ _ thm = raise THM ("uninitialized MLThmAttribData", 0, [thm])
+)
+\<close>
+
+ML MLThmAttribData.put
+ML "Context.>>"
+
+text \<open>Invoked as \<open>thm[ML_thm \<open>mlcode\<close>]\<close> or \<open>[[ML_thm \<open>mlcode\<close>]]\<close> where \<open>mlcode\<close> is of type \<open>Proof.context -> thm -> thm\<close>,
+  it runs \<open>mlcode\<close> on the theorem \<open>thm\<close> (or on a dummy fact) and returns the resulting theorem.
+  Optionally, after \<open>mlcode\<close>, we can give \<open>(is \<open>pattern\<close>)\<close> to bind schematic variables by pattern 
+  matching the theorem.
+\<close>
+attribute_setup ML_thm = 
+  \<open>Args.context -- Scan.lift Args.text_input 
+      -- Scan.lift (Scan.optional (Parse.$$$ "(" |-- Parse.!!! (Scan.repeat1 (Parse.$$$ "is" |-- Parse.prop) --| Parse.$$$ ")")) []) 
+      >> (fn ((ctxt,source),is_props) =>
+  let
+    val function = 
+        ctxt |> Context.Proof
+        |> ML_Context.expression (Input.pos_of source)
+              (ML_Lex.read "Context.>> (Context.map_proof (MLThmAttribData.put ((" @
+                 ML_Lex.read_source source @ ML_Lex.read ") : Proof.context -> thm -> thm)))")
+        |> Context.the_proof
+        |> MLThmAttribData.get
+    val is_props = is_props |> map (Syntax.read_prop (Proof_Context.set_mode Proof_Context.mode_pattern ctxt))
+    val attrib = Thm.mixed_attribute (fn (context,thm) => let
+        val thm' = function (Context.proof_of context) thm
+        val context = if null is_props then context else let
+val _ = \<^print> (thm', is_props)
+                        val binds = Proof_Context.simult_matches ctxt (Thm.prop_of thm', is_props)
+                      in Context.map_proof (fold Proof_Context.bind_term binds) context end
+        in (context,thm') end)
+  in
+    attrib
+  end
+  )\<close> 
+  "Apply ML function to the given fact"
+
+
 
 experiment fixes a b c
   assumes xxx: \<open>qregister \<lbrakk>a,b,c\<rbrakk>\<close> begin
 
-thm cregister_pair_iff_compatible[THEN iffD1]
-thm ccompatible3'[THEN iffD1, THEN conjunct1]
- ccompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct1]
- ccompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct2]
-
-ML Thm.declaration_attribute
-
-ML \<open>
-;;
-register_thms_of @{thm xxx} []
-;;
-register_compats_of @{thm xxx} []
-\<close>
 lemma Test
 proof -
   fix a b c
 
-  define R1 R2 R3 :: \<open>(bit,bit*bit*bit) qregister\<close> 
-    where \<open>R1 = Abs_qregister (\<lambda>x. x\<otimes>id_cblinfun\<otimes>id_cblinfun)\<close> 
-      and \<open>R2 = Abs_qregister (\<lambda>x. id_cblinfun\<otimes>x\<otimes>id_cblinfun)\<close> 
-      and \<open>R3 = Abs_qregister (\<lambda>x. id_cblinfun\<otimes>id_cblinfun\<otimes>x)\<close> 
+  have "1=1" by auto
+
+  thm refl
 
   have t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close> sorry
 
@@ -136,162 +442,70 @@ proof -
      apply (fact le)
     by (simp add: CNOT'_def)
 
-  have rename: \<open>\<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> = \<lbrakk>R1,R3 \<mapsto> R1,R2,R3\<rbrakk>\<close>
-    term \<open>\<lbrakk>a,c\<rbrakk> :: (_,_)qregister\<close>
-    apply (rule qregister_conversion_rename[where H=\<open>\<lbrakk>a,b,c\<rbrakk>\<close>])
-      apply auto
-     apply (rule tensor_ext2)
-     apply (auto simp: R1_def R2_def R3_def)
-    apply (subst apply_qregister_pair)
-      apply simp
-    apply (subst apply_qregister_pair)
-      apply simp
-      apply (rule qcompatible_Abs_qregister)
-        apply (rule qregister_raw_tensor_right)
-        apply simp
-       apply (rule qregister_raw_tensor_left)
-       apply (rule qregister_raw_tensor_left)
-       apply simp
-      apply simp
-     apply (subst Abs_qregister_inverse)
-      apply (auto intro!: qregister_raw_tensor_left)[1]
-     apply (subst Abs_qregister_inverse)
-      apply (auto intro!: qregister_raw_tensor_left)[1]
+  have rename: \<open>\<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> = \<lbrakk>#1,#3.\<rbrakk>\<close>
+    apply (rule qregister_conversion_rename')
      apply simp
-     apply (subst apply_qregister_pair)
-      apply simp
-     apply (subst apply_qregister_pair)
-      apply simp
-     apply (subst apply_qregister_of_id)
-      apply simp
-     apply simp
+    by (simp flip: qregister_chain_pair)
 
-    apply (rule tensor_ext3)
+  have CNOT'_13: \<open>CNOT' = apply_qregister \<lbrakk>#1,#3.\<rbrakk> CNOT\<close>
+    unfolding CNOT'_def rename by simp
+
+  note [[show_types]]
+  note fog = [[ML_thm \<open>thm_fog |> K |> K\<close> (is \<open>?f o ?g = id\<close>)]]
+  note gof = [[ML_thm \<open>thm_gof |> K |> K\<close>]]
+
+  (* define f g where \<open>f = (\<lambda>(a::bit,b::bit,c::bit). ((a,c),b))\<close> and \<open>g = (\<lambda>((a::bit,c::bit),b::bit). (a,b,c))\<close> *)
+  (* Those are copy&pasted from fog. Can be automated *)
+  (* let ?f = \<open>(\<lambda>m::bit \<times> bit \<times> bit. ((fst m, snd (snd m)), fst (snd m)))\<close> *)
+  (* let ?g = \<open>(\<lambda>x::(bit \<times> bit) \<times> bit. (fst (fst x), snd x, snd (fst x)))\<close> *)
+
+(*   have \<open>f o g = id\<close> \<open>g o f = id\<close>
+    unfolding f_def g_def by auto *)
+  have [simp]: \<open>bij ?f\<close>
+    using gof fog by (rule o_bij)
+  have [simp]: \<open>inv ?f = ?g\<close>
+    using fog gof inv_unique_comp by blast
+
+  have \<open>apply_qregister \<lbrakk>#1,#3.\<rbrakk> CNOT = apply_qregister (qregister_pair \<lbrakk>#1,#3.\<rbrakk> \<lbrakk>#2\<rbrakk>) (CNOT \<otimes> id_cblinfun)\<close>
     apply (subst apply_qregister_pair)
-     apply simp
-    apply (subst apply_qregister_pair)
-     apply simp
-    apply (subst qregister_chain_apply)
-    unfolding o_def
-    apply (subst apply_qregister_pair)
-     apply simp
-     apply (rule qcompatible3I')
-       apply (rule qcompatible_Abs_qregister)
-         apply (rule qregister_raw_tensor_right)
-         apply simp
-        apply (rule qregister_raw_tensor_left)
-        apply (rule qregister_raw_tensor_right)
-        apply simp
-       apply simp
-       apply (rule qcompatible_Abs_qregister)
-        apply (rule qregister_raw_tensor_right)
-        apply simp
-       apply (rule qregister_raw_tensor_left)
-       apply (rule qregister_raw_tensor_left)
-       apply simp
-      apply simp
-     apply (rule qcompatible_Abs_qregister)
-       apply (rule qregister_raw_tensor_left)
-       apply (rule qregister_raw_tensor_right)
-       apply simp
-      apply (rule qregister_raw_tensor_left)
-      apply (rule qregister_raw_tensor_left)
+    by auto
+
+  also have \<open>\<dots> = reorder_cblinfun2 ?f (CNOT \<otimes> id_cblinfun)\<close> 
+    apply (rule fun_cong[where x=\<open>CNOT \<otimes> id_cblinfun\<close>])
+    apply (rule clinear_eq_butterfly_ketI)
       apply simp
      apply simp
-     apply (subst Abs_qregister_inverse)
-     apply (auto intro!: qregister_raw_tensor_left)[1]
-    apply (subst apply_qregister_pair)
-     apply (rule qcompatible_Abs_qregister)
-       apply (rule qregister_raw_tensor_left)
-       apply (rule qregister_raw_tensor_right)
-       apply simp
-      apply (rule qregister_raw_tensor_left)
-      apply (rule qregister_raw_tensor_left)
-      apply simp
-     apply simp
-    apply (subst Abs_qregister_inverse)
-      apply (auto intro!: qregister_raw_tensor_left)[1]
-    apply (subst Abs_qregister_inverse)
-      apply (auto intro!: qregister_raw_tensor_left)[1]
-    apply simp
-    apply (subst apply_qregister_pair)
-     apply simp
-    apply (subst apply_qregister_pair)
-     apply simp
-    apply simp
+    apply (auto simp: ket_product butterfly_tensor apply_qregister_pair apply_qregister_Fst apply_qregister_Snd)
+    apply (auto simp flip: ket_product butterfly_tensor)
+    apply (subst reorder_cblinfun2_butterfly)
+    by auto
+
+  finally have CNOT'_reorder: \<open>CNOT' = reorder_cblinfun2 ?f (CNOT \<otimes> id_cblinfun)\<close>
+    using CNOT'_13 by fastforce
+
+(*   have 1: \<open>enum_idx (f i) = xxx\<close> for i
+    unfolding f_def
+    apply (cases i, hypsubst_thin)
+    apply (auto simp: enum_idx_pair)
+
+ *)
+
+  have *: \<open>enum_idx (?f (enum_class.enum ! i)) = 4 * (enum_idx_enum_nth_code 8 TYPE(bit \<times> bit \<times> bit) i div 4) +
+    enum_idx_enum_nth_code 8 TYPE(bit \<times> bit \<times> bit) i mod 4 mod 2 * 2 +
+    enum_idx_enum_nth_code 8 TYPE(bit \<times> bit \<times> bit) i mod 4 div 2\<close> for i
+    apply (subst surjective_pairing)
+    apply (subst surjective_pairing)
+    apply (auto simp: case_prod_beta)
+    apply (subst enum_idx_pair)+
+    apply (subst enum_idx_fst enum_idx_snd)+
+    apply (auto simp: case_prod_beta enum_idx_enum_nth_code)
     by -
 
-  have \<open>CNOT' = apply_qregister \<lbrakk>R1,R2 \<mapsto> R1,R2,R3\<rbrakk> CNOT\<close>
+  value \<open>mat_of_cblinfun CNOT'\<close>
 
-  have \<open>qregister a\<close>
-    by simp
-
-  have \<open>qregister \<lbrakk>a,b\<rbrakk>\<close>
-    by simp
+  have mat_of_cblinfun_CNOT': \<open>mat_of_cblinfun CNOT' = undefined\<close>
+    unfolding CNOT'_reorder mat_of_cblinfun_reorder
+    apply (simp add: *)
+    apply normalization
 
   oops
-
-
-term \<open>declared_qvars \<lbrakk>x,y\<rbrakk>\<close>
-
-
-term \<open>mutually ccompatible (X,Y)\<close>
-
-ML \<open>
-local
-val ctxt = \<^context>
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>z\<close> \<^typ>\<open>int\<close> Classical []
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>b\<close> \<^typ>\<open>int\<close> Classical [("z", \<^typ>\<open>int\<close>)]
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>count\<close> \<^typ>\<open>int\<close> Classical [("z", \<^typ>\<open>int\<close>),("b", \<^typ>\<open>int\<close>)]
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>Find\<close> \<^typ>\<open>int\<close> Classical [("z", \<^typ>\<open>int\<close>),("b", \<^typ>\<open>int\<close>),("count", \<^typ>\<open>int\<close>)]
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>G\<close> \<^typ>\<open>int\<close> Classical [("z", \<^typ>\<open>int\<close>),("b", \<^typ>\<open>int\<close>),("count", \<^typ>\<open>int\<close>),("Find", \<^typ>\<open>int\<close>)]
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>H\<close> \<^typ>\<open>int\<close> Classical [("z", \<^typ>\<open>int\<close>),("b", \<^typ>\<open>int\<close>),("count", \<^typ>\<open>int\<close>),("Find", \<^typ>\<open>int\<close>),("G", \<^typ>\<open>int\<close>)]
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>hit\<close> \<^typ>\<open>int\<close> Classical [("z", \<^typ>\<open>int\<close>),("b", \<^typ>\<open>int\<close>),("count", \<^typ>\<open>int\<close>),("Find", \<^typ>\<open>int\<close>),("G", \<^typ>\<open>int\<close>),("H", \<^typ>\<open>int\<close>)]
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>S\<close> \<^typ>\<open>int\<close> Classical [("z", \<^typ>\<open>int\<close>),("b", \<^typ>\<open>int\<close>),("count", \<^typ>\<open>int\<close>),("Find", \<^typ>\<open>int\<close>),("G", \<^typ>\<open>int\<close>),("H", \<^typ>\<open>int\<close>),("hit", \<^typ>\<open>int\<close>)]
-
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>q\<close> \<^typ>\<open>int\<close> Quantum []
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>r\<close> \<^typ>\<open>int\<close> Quantum [("q",\<^typ>\<open>int\<close>)]
-val ctxt = Prog_Variables.declare_variable ctxt \<^binding>\<open>s\<close> \<^typ>\<open>int\<close> Quantum [("q",\<^typ>\<open>int\<close>),("r",\<^typ>\<open>int\<close>)]
-(* val t = Syntax.read_term ctxt "qregister (qregister_pair q r)" *)
-(* val t = Syntax.read_term ctxt "qcompatible r q" *)
-(* val t = Syntax.read_term ctxt "cregister (variable_concat x (variable_concat z y))" *)
-(* val t = Syntax.read_term ctxt "ccompatible z y" *)
-val str = "Cccompatible (CREGISTER_pair (CREGISTER_of z) (CREGISTER_of b)) (variable_concat count (variable_concat Find (variable_concat G (variable_concat H (variable_concat S hit))))) "
-val t = Syntax.read_term ctxt str
-in
-val ctxt = ctxt
-val t2 = Simplifier.rewrite ctxt (Thm.cterm_of ctxt t) |> Thm.cprop_of 
-end
-\<close>
-
-(* lemma xxx: \<open>getter x (fst m) == getter (cregister_chain cFst x) m\<close>
-  apply (rule eq_reflection)
-  by (metis cFst_register cregister_chain_non_register2 getter_Fst getter_non_cregister getter_setter_same non_cregister setter_chain setter_getter_same) *)
-
-ML \<open>
-local
-val t = Syntax.read_term ctxt "\<lambda>m::cl. getter x m = 1"
-val t2 = add_index_to_expression ctxt true t
-(* val t3 = Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) @{thms xxx} [] t2 *)
-in
-val ct2 = Thm.cterm_of ctxt t2
-end
-\<close>
-
-
-ML \<open>
-  expression_to_term ctxt (Syntax.read_term ctxt "\<lambda>m::cl2. qregister_chain qSnd q")
-\<close>
-
-lemma [program_fv]: True
-  by simp
-
-ML \<open>
-val l = [("x", \<^typ>\<open>int\<close>)]
-val ctxt = declare_abstract_program (ctxt, "A", l, l, [], 0)
-val t = Syntax.read_term ctxt "x"
-\<close>
-
-thm program_fv
-
-end

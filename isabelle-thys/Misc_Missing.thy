@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
+  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality" Complex_Bounded_Operators.Complex_L2
 begin
 
 section \<open>Misc\<close>
@@ -353,5 +353,8 @@ lemma Collect_UNIV: "Collect P = UNIV \<longleftrightarrow> (\<forall>x. P x)"
   by auto
 
 lemma local_defE: "(\<And>x. x=y \<Longrightarrow> P) \<Longrightarrow> P" by metis
+
+(* TODO: to bounded operators *)
+declare cindependent_ket[simp]
 
 end

@@ -301,10 +301,10 @@ in wp end
     rhs
   end *)
 
-fun dest_numeral_syntax (Const (\<^const_syntax>\<open>Num.num.One\<close>, _)) = 1
+(* fun dest_numeral_syntax (Const (\<^const_syntax>\<open>Num.num.One\<close>, _)) = 1
   | dest_numeral_syntax (Const (\<^const_syntax>\<open>Num.num.Bit0\<close>, _) $ bs) = 2 * dest_numeral_syntax bs
   | dest_numeral_syntax (Const (\<^const_syntax>\<open>Num.num.Bit1\<close>, _) $ bs) = 2 * dest_numeral_syntax bs + 1
-  | dest_numeral_syntax t = raise TERM ("dest_num_syntax", [t]);
+  | dest_numeral_syntax t = raise TERM ("dest_num_syntax", [t]); *)
 
 fun dest_bit_syntax (Const (\<^const_syntax>\<open>False\<close>,_)) = 0
   | dest_bit_syntax (Const (\<^const_syntax>\<open>True\<close>,_)) = 1

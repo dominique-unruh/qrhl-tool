@@ -168,4 +168,19 @@ fun match_list_tac ctxt = SUBGOAL (fn (t,i) => case t |> Logic.strip_assums_conc
 
 fun mk_less_eq t u = let val T = fastype_of t in Const(\<^const_name>\<open>less_eq\<close>, T --> T --> HOLogic.boolT) $ t $ u end
 
+fun dest_numeral_syntax (Const(\<^const_syntax>\<open>Num.num.One\<close>, _)) = 1
+  | dest_numeral_syntax (Const(\<^const_syntax>\<open>Num.num.Bit0\<close>, _) $ bs) = 2 * dest_numeral_syntax bs
+  | dest_numeral_syntax (Const (\<^const_syntax>\<open>Num.num.Bit1\<close>, _) $ bs) = 2 * dest_numeral_syntax bs + 1
+  | dest_numeral_syntax (Const ("_constrain", _) $ t $ _) = dest_numeral_syntax t
+  | dest_numeral_syntax t = raise TERM ("dest_numeral_syntax", [t]);
+
+fun dest_number_syntax (Const (\<^const_syntax>\<open>Groups.zero_class.zero\<close>, _)) = 0
+  | dest_number_syntax (Const (\<^const_syntax>\<open>Groups.one_class.one\<close>, _)) = 1
+  | dest_number_syntax (Const (\<^const_syntax>\<open>Num.numeral_class.numeral\<close>, _) $ t) =
+      dest_numeral_syntax t
+  | dest_number_syntax (Const (\<^const_syntax>\<open>Groups.uminus_class.uminus\<close>, _) $ t) =
+      ~ (dest_number_syntax t)
+  | dest_number_syntax (Const ("_constrain", _) $ t $ _) = dest_number_syntax t
+  | dest_number_syntax t = raise TERM ("dest_number_syntax", [t])
+
 end

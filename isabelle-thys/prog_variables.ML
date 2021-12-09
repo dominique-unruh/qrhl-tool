@@ -480,4 +480,20 @@ fun distinct_vars_tac ctxt = let
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
   in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are variables and distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
 
+(* fun register_n qc true 1 = Const(case qc of Classical => \<^const_name>\<open>cregister_id\<close> | Quantum => \<^const_name>\<open>qregister_id\<close>, dummyT)
+  | register_n qc false 1 = Const(case qc of Classical => \<^const_name>\<open>cFst\<close> | Quantum => \<^const_name>\<open>qFst\<close>, dummyT)
+  | register_n qc last n = let
+      val _ = n > 1 orelse error "register_n: n must be >= 1"
+      in Const(case qc of Classical => \<^const_name>\<open>cregister_pair\<close> | Quantum => \<^const_name>\<open>qregister_pair\<close>, dummyT) $
+          Const(case qc of Classical => \<^const_name>\<open>cSnd\<close> | Quantum => \<^const_name>\<open>qSnd\<close>, dummyT) $
+          register_n qc last (n-1) end *)
+
+fun register_n true 1 = Const(\<^const_name>\<open>register_id\<close>, dummyT)
+  | register_n false 1 = Const(\<^const_name>\<open>Fst\<close>, dummyT)
+  | register_n true 2 = Const(\<^const_name>\<open>Snd\<close>, dummyT)
+  | register_n last n = let
+      val _ = n > 1 orelse error "register_n: n must be >= 1"
+      in Const(\<^const_name>\<open>register_chain\<close>, dummyT) $ Const(\<^const_name>\<open>Snd\<close>, dummyT) $ register_n last (n-1) end
+
+
 end

@@ -104,10 +104,18 @@ lift_definition QREGISTER_unit :: \<open>'a QREGISTER\<close> is empty_qregister
 axiomatization CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
 axiomatization QREGISTER_pair :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close>
 
-lift_definition ccompatible :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is
-  \<open>\<lambda>F G. cregister_raw F \<and> cregister_raw G \<and> (\<forall>a b. F a \<circ>\<^sub>m G b = G b \<circ>\<^sub>m F a)\<close>.
-lift_definition qcompatible :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is
-  \<open>\<lambda>F G. qregister_raw F \<and> qregister_raw G \<and> (\<forall>a b. F a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L F a)\<close>.
+definition ccommuting_raw :: \<open>('a cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> ('b cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> bool\<close> where
+  \<open>ccommuting_raw F G \<longleftrightarrow> (\<forall>a b. F a \<circ>\<^sub>m G b = G b \<circ>\<^sub>m F a)\<close>
+definition qcommuting_raw :: \<open>('a qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> ('b qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> bool\<close> where
+  \<open>qcommuting_raw F G \<longleftrightarrow> (\<forall>a b. F a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L F a)\<close>
+
+definition ccompatible_raw :: \<open>('a cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> ('b cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> bool\<close> where
+  \<open>ccompatible_raw F G \<longleftrightarrow> cregister_raw F \<and> cregister_raw G \<and> (\<forall>a b. F a \<circ>\<^sub>m G b = G b \<circ>\<^sub>m F a)\<close>
+definition qcompatible_raw :: \<open>('a qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> ('b qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> bool\<close> where
+  \<open>qcompatible_raw F G \<longleftrightarrow> qregister_raw F \<and> qregister_raw G \<and> (\<forall>a b. F a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L F a)\<close>
+
+lift_definition ccompatible :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is ccompatible_raw.
+lift_definition qcompatible :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is qcompatible_raw.
 
 axiomatization cregister_pair :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> ('a\<times>'b, 'c) cregister\<close>
   where cregister_pair_iff_compatible: \<open>cregister (cregister_pair F G) \<longleftrightarrow> ccompatible F G\<close>
@@ -142,10 +150,10 @@ axiomatization where QQcompatible_sym: \<open>QQcompatible F G \<Longrightarrow>
 
 lemma ccompatible_CCcompatible: \<open>ccompatible F G \<longleftrightarrow> cregister F \<and> cregister G \<and> CCcompatible (CREGISTER_of F) (CREGISTER_of G)\<close>
   apply (transfer fixing: F G) apply auto
-  by (transfer; simp)+
+  by (transfer; simp add: ccompatible_raw_def)+
 lemma qcompatible_QQcompatible: \<open>qcompatible F G \<longleftrightarrow> qregister F \<and> qregister G \<and> QQcompatible (QREGISTER_of F) (QREGISTER_of G)\<close>
   apply (transfer fixing: F G) apply auto
-  by (transfer; simp)+
+  by (transfer; simp add: qcompatible_raw_def)+
 
 lemma CCcompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow> CCcompatible (CREGISTER_of F) (CREGISTER_of G)\<close>
   using ccompatible_CCcompatible by auto
@@ -169,22 +177,22 @@ axiomatization where ccompatible_empty: \<open>cregister Q \<Longrightarrow> cco
 axiomatization where qcompatible_empty: \<open>qregister Q \<Longrightarrow> qcompatible Q empty_qregister\<close>
 
 lemma ccompatible_register1: \<open>ccompatible F G \<Longrightarrow> cregister F\<close>
-  apply transfer by simp
+  apply transfer by (simp add: ccompatible_raw_def)
 lemma ccompatible_register2: \<open>ccompatible F G \<Longrightarrow> cregister G\<close>
-  apply transfer by simp
+  apply transfer by (simp add: ccompatible_raw_def)
 lemma qcompatible_register1: \<open>qcompatible F G \<Longrightarrow> qregister F\<close>
-  apply transfer by simp
+  apply transfer by (simp add: qcompatible_raw_def)
 lemma qcompatible_register2: \<open>qcompatible F G \<Longrightarrow> qregister G\<close>
-  apply transfer by simp
+  apply transfer by (simp add: qcompatible_raw_def)
 
 lemma ccompatible_non_cregister1[simp]: \<open>\<not> ccompatible non_cregister F\<close>
-  apply transfer by (simp add: non_cregister_raw)
+  apply transfer by (simp add: non_cregister_raw ccompatible_raw_def)
 lemma ccompatible_non_cregister2[simp]: \<open>\<not> ccompatible F non_cregister\<close>
-  apply transfer by (simp add: non_cregister_raw)
+  apply transfer by (simp add: non_cregister_raw ccompatible_raw_def)
 lemma qcompatible_non_qregister1[simp]: \<open>\<not> qcompatible non_qregister F\<close>
-  apply transfer by (simp add: non_qregister_raw)
+  apply transfer by (simp add: non_qregister_raw qcompatible_raw_def)
 lemma qcompatible_non_qregister2[simp]: \<open>\<not> qcompatible F non_qregister\<close>
-  apply transfer by (simp add: non_qregister_raw)
+  apply transfer by (simp add: non_qregister_raw qcompatible_raw_def)
 
 axiomatization cFst :: \<open>('a, 'a\<times>'b) cregister\<close> where
   cFst_register[simp]: \<open>cregister cFst\<close>
@@ -310,6 +318,10 @@ lift_definition qregister_id :: \<open>('a,'a) qregister\<close> is id by simp
 lemma cregister_id_chain[simp]: \<open>cregister_chain cregister_id F = F\<close>
   apply transfer by auto
 lemma qregister_id_chain[simp]: \<open>qregister_chain qregister_id F = F\<close>
+  apply transfer by auto
+lemma cregister_chain_id[simp]: \<open>cregister_chain F cregister_id = F\<close>
+  apply transfer by auto
+lemma qregister_chain_id[simp]: \<open>qregister_chain F qregister_id = F\<close>
   apply transfer by auto
 
 lemma apply_cregister_id[simp]: \<open>apply_cregister cregister_id = id\<close>
@@ -447,11 +459,11 @@ lemma map_comp_Some[simp]: \<open>f \<circ>\<^sub>m Some = f\<close>
 lemma Cccompatible_CREGISTER_of: \<open>Cccompatible (CREGISTER_of A) B \<longleftrightarrow> ccompatible A B \<or> (cregister B \<and> A = non_cregister)\<close>
   unfolding CREGISTER_of.rep_eq Cccompatible.rep_eq
   apply transfer
-  by (auto simp add: non_cregister_raw empty_cregister_range_def)
+  by (auto simp add: non_cregister_raw empty_cregister_range_def ccompatible_raw_def)
 lemma Qqcompatible_QREGISTER_of: \<open>Qqcompatible (QREGISTER_of A) B \<longleftrightarrow> qcompatible A B \<or> (qregister B \<and> A = non_qregister)\<close>
   unfolding QREGISTER_of.rep_eq Qqcompatible.rep_eq
   apply transfer
-  by (auto simp add: non_qregister_raw empty_qregister_range_def)
+  by (auto simp add: non_qregister_raw empty_qregister_range_def qcompatible_raw_def)
 
 lemma Cccompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow> Cccompatible (CREGISTER_of F) G\<close>
   by (simp add: Cccompatible_CREGISTER_of)
@@ -526,6 +538,15 @@ consts register_conversion :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close
 adhoc_overloading register_conversion qregister_conversion cregister_conversion
 consts register_le :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
 adhoc_overloading register_le qregister_le cregister_le
+consts register_id :: \<open>'a\<close>
+adhoc_overloading register_id qregister_id cregister_id
+consts register_chain :: \<open>'a\<close>
+adhoc_overloading register_chain qregister_chain cregister_chain
+consts Fst :: \<open>'a\<close>
+adhoc_overloading Fst qFst cFst
+consts Snd :: \<open>'a\<close>
+adhoc_overloading Snd qSnd cSnd
+
 
 (* We need those definition (not abbreviations!) with slightly more restrictive type, otherwise the overloaded variable_unit below will expand to \<open>('a,'b) empty_qregister\<close> etc *)
 definition \<open>qvariable_unit \<equiv> empty_qregister :: (unit,_) qregister\<close>
@@ -537,26 +558,6 @@ adhoc_overloading variable_unit
 
 (* LEGACY *)
 abbreviation (input) "variable_singleton x \<equiv> x"
-
-nonterminal variable_list_args
-syntax
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|'|])")
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>'\<rbrakk>)")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|_'|])")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
-  "_variable_list_arg"  :: "'a \<Rightarrow> variable_list_args"                   ("_")
-  "_variable_list_args" :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"     ("_,/ _")
-
-  "_variable_conversion"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<mapsto> _'\<rbrakk>)")
-  "_variable_le"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<le> _'\<rbrakk>)")
-
-translations
-  "_variables (_variable_list_args x y)" \<rightleftharpoons> "CONST variable_concat x (_variables y)"
-  "_variables (_variable_list_arg x)" \<rightharpoonup> "x"
-  "_variables (_variable_list_args x y)" \<leftharpoondown> "CONST variable_concat (_variables (_variable_list_arg x)) (_variables y)"
-
-  "_variable_conversion x y" \<rightleftharpoons> "CONST register_conversion (_variables x) (_variables y)"
-  "_variable_le x y" \<rightleftharpoons> "CONST register_le (_variables x) (_variables y)"
 
 section \<open>Distinct variables\<close>
 
@@ -577,13 +578,13 @@ lemma distinct_qvars_swap: "distinct_qvars (variable_concat Q R) \<Longrightarro
 lemma distinct_qvars_split2: "distinct_qvars (variable_concat S (variable_concat Q R)) = (distinct_qvars (variable_concat Q R) \<and> distinct_qvars (variable_concat Q S) \<and> distinct_qvars (variable_concat R S))"
   unfolding qregister_pair_iff_compatible
   by (metis qcompatible3 qcompatible_sym)
-lemma distinct_qvars_concat_unit1[simp]: "distinct_qvars (variable_concat Q \<lbrakk>\<rbrakk>) = distinct_qvars Q" for Q::"'a qvariable" 
+lemma distinct_qvars_concat_unit1[simp]: "distinct_qvars (variable_concat Q qvariable_unit) = distinct_qvars Q" for Q::"'a qvariable" 
   unfolding qregister_pair_iff_compatible qvariable_unit_def
   using qcompatible_QQcompatible qcompatible_empty by auto
-lemma distinct_qvars_concat_unit2[simp]: "distinct_qvars (variable_concat \<lbrakk>\<rbrakk> Q) = distinct_qvars Q" for Q::"'a::finite qvariable" 
+lemma distinct_qvars_concat_unit2[simp]: "distinct_qvars (variable_concat qvariable_unit Q) = distinct_qvars Q" for Q::"'a::finite qvariable" 
   unfolding qregister_pair_iff_compatible qvariable_unit_def
   using qcompatible_QQcompatible qcompatible_empty qcompatible_sym by blast
-lemma distinct_qvars_unit[simp]: "distinct_qvars \<lbrakk>\<rbrakk>"
+lemma distinct_qvars_unit[simp]: "distinct_qvars qvariable_unit"
   by (simp add: qvariable_unit_def)
 (* lemma distinct_qvars_single[simp]: "distinct_qvars \<lbrakk>q\<rbrakk>" for q::"'a::finite qvariable"
   unfolding distinct_qvars_def apply transfer by auto *)
@@ -604,20 +605,20 @@ lemma distinct_cvars_swap: "distinct_cvars (variable_concat Q R) \<Longrightarro
   using ccompatible_sym by blast
 lemma distinct_cvars_split2: "distinct_cvars (variable_concat S (variable_concat Q R)) = (distinct_cvars (variable_concat Q R) \<and> distinct_cvars (variable_concat Q S) \<and> distinct_cvars (variable_concat R S))"
   by (metis distinct_cvars_split1 distinct_cvars_swap)
-lemma distinct_cvars_concat_unit1[simp]: "distinct_cvars (variable_concat Q \<lbrakk>\<rbrakk>) = distinct_cvars Q" for Q::"'a::finite cvariable" 
+lemma distinct_cvars_concat_unit1[simp]: "distinct_cvars (variable_concat Q cvariable_unit) = distinct_cvars Q" for Q::"'a::finite cvariable" 
   unfolding cregister_pair_iff_compatible cvariable_unit_def
   using ccompatible_CCcompatible ccompatible_empty by blast
-lemma distinct_cvars_concat_unit2[simp]: "distinct_cvars (variable_concat \<lbrakk>\<rbrakk> Q) = distinct_cvars Q" for Q::"'a::finite cvariable"
+lemma distinct_cvars_concat_unit2[simp]: "distinct_cvars (variable_concat cvariable_unit Q) = distinct_cvars Q" for Q::"'a::finite cvariable"
   by (metis distinct_cvars_concat_unit1 distinct_cvars_swap) 
-lemma distinct_cvars_unit[simp]: "distinct_cvars \<lbrakk>\<rbrakk>" 
+lemma distinct_cvars_unit[simp]: "distinct_cvars cvariable_unit" 
   by (simp add: cvariable_unit_def)
 (* lemma distinct_cvars_single[simp]: "distinct_cvars \<lbrakk>q\<rbrakk>" for q::"'a::finite cvariable"
   unfolding distinct_cvars_def apply transfer by auto *)
 
 lemma distinct_cvarsL: "distinct_cvars (variable_concat Q R) \<Longrightarrow> distinct_cvars Q"
-  using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible by blast
+  using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible ccompatible_raw_def by blast
 lemma distinct_cvarsR: "distinct_cvars (variable_concat Q R) \<Longrightarrow> distinct_cvars R"
-  using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible by blast
+  using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible ccompatible_raw_def by blast
 
 section \<open>Indexed variables\<close>
 
@@ -698,7 +699,47 @@ lemma index_flip_var_conv_aux2: "index_flip_var (index_var False v) \<equiv> ind
 
 ML_file "prog_variables.ML"
 
-section {* Simprocs *}
+
+section \<open>Syntax\<close>
+
+
+nonterminal variable_list_args 
+nonterminal variable_nth
+nonterminal variable_nth'
+syntax
+  "_variable_nth" :: "'a \<Rightarrow> 'b"
+  "_variable_nth'" :: "'a \<Rightarrow> 'b"
+  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|'|])")
+  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>'\<rbrakk>)")
+  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|_'|])")
+  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
+  "_variable_list_arg_nth"  :: "'a \<Rightarrow> variable_list_args"                   ("#_")  (* Instead of 'a, would like to match only natural numbers *)
+  "_variable_list_arg_nth'"  :: "'a \<Rightarrow> variable_list_args"                   ("#_.")
+  "_variable_list_arg"  :: "'a \<Rightarrow> variable_list_args"                   ("_")
+  "_variable_list_args_nth"  :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"                   ("#_,/ _")
+  "_variable_list_args_nth'"  :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"                   ("#_.,/ _")
+  "_variable_list_args" :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"     ("_,/ _")
+
+  "_variable_conversion"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<mapsto> _'\<rbrakk>)")
+  "_variable_le"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<le> _'\<rbrakk>)")
+
+translations
+  "_variables (_variable_list_args x y)" \<rightleftharpoons> "CONST variable_concat x (_variables y)"
+  "_variables (_variable_list_args_nth x y)" \<rightleftharpoons> "CONST variable_concat (_variable_nth x) (_variables y)"
+  "_variables (_variable_list_args_nth' x y)" \<rightleftharpoons> "CONST variable_concat (_variable_nth' x) (_variables y)"
+  "_variables (_variable_list_arg x)" \<rightharpoonup> "x"
+  "_variables (_variable_list_arg_nth x)" \<rightharpoonup> "_variable_nth x"
+  "_variables (_variable_list_arg_nth' x)" \<rightharpoonup> "_variable_nth' x"
+  "_variables (_variable_list_args x y)" \<leftharpoondown> "CONST variable_concat (_variables (_variable_list_arg x)) (_variables y)"
+
+  "_variable_conversion x y" \<rightleftharpoons> "CONST register_conversion (_variables x) (_variables y)"
+  "_variable_le x y" \<rightleftharpoons> "CONST register_le (_variables x) (_variables y)"
+
+parse_translation
+  \<open>[(\<^syntax_const>\<open>_variable_nth\<close>, fn ctxt => fn [nt] => Prog_Variables.register_n false (Misc.dest_number_syntax nt)),
+    (\<^syntax_const>\<open>_variable_nth'\<close>, fn ctxt => fn [nt] => Prog_Variables.register_n true (Misc.dest_number_syntax nt))]\<close>
+
+section \<open>Simprocs\<close>
 
 (* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed variables but can't *)
 (* syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")
