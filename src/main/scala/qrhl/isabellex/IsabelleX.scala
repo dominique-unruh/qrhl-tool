@@ -891,7 +891,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 }
 
 object IsabelleX {
-  val version = "2021-1-RC5"
+  val version = "2021-1"
   val minimumAFPVersion: LocalDate = LocalDate.of(2021,11,8)
 
 
