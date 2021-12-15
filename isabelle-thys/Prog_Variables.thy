@@ -440,9 +440,9 @@ lemma setter_Fst: \<open>setter cFst = (\<lambda>x (_,y). (x,y))\<close>
 lemma setter_Snd: \<open>setter cSnd = (\<lambda>y (x,_). (x,y))\<close>
   sorry
 
-lemma getter_Fst: \<open>getter cFst = fst\<close>
+lemma getter_Fst[simp]: \<open>getter cFst = fst\<close>
   sorry
-lemma getter_Snd: \<open>getter cSnd = snd\<close>
+lemma getter_Snd[simp]: \<open>getter cSnd = snd\<close>
   sorry
 
 

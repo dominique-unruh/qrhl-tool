@@ -26,6 +26,12 @@ fun mk_q2variableT T = Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<
 fun mk_variableT Quantum = mk_qvariableT
   | mk_variableT Classical = mk_cvariableT
 
+fun dest_qregisterT (\<^Type>\<open>qregister T U\<close>) = (T,U)
+  | dest_qregisterT T = raise TYPE("dest_qregisterT", [T], [])
+
+fun dest_cregisterT (\<^Type>\<open>qregister T U\<close>) = (T,U)
+  | dest_cregisterT T = raise TYPE("dest_cregisterT", [T], [])
+
 fun dest_cvariableT (Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl\<close>])) = T
   | dest_cvariableT T = raise TYPE("dest_cvariableT", [T], [])
 
