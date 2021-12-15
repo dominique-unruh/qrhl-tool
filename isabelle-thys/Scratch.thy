@@ -517,8 +517,13 @@ lemma [code]: \<open>vec_of_ell2 (Abs_ell2 f) = vec CARD('a) (\<lambda>n. f (Enu
 lemma [code]: \<open>Rep_ell2 \<psi> i = vec_of_ell2 \<psi> $ (enum_idx i)\<close> for i :: \<open>'a::enum\<close>
   by (auto simp: vec_of_ell2_def vec_eq_iff vec_of_basis_enum_ell2_component card_UNIV_length_enum enum_idx_bound)
 
-experiment fixes a :: \<open>bool qvariable\<close> and b :: \<open>bit qvariable\<close> and c :: \<open>3 qvariable\<close>
-  assumes xxx[variable]: \<open>qregister \<lbrakk>a,b,c\<rbrakk>\<close> begin
+lemma qcompatible_empty_left[simp]: \<open>qcompatible (U::(_::CARD_1,_) qregister) F \<longleftrightarrow> qregister U \<and> qregister F\<close>
+  sorry
+lemma qcompatible_empty_right[simp]: \<open>qcompatible F (U::(_::CARD_1,_) qregister) \<longleftrightarrow> qregister U \<and> qregister F\<close>
+  sorry
+
+experiment fixes a :: \<open>bool qvariable\<close> and b :: \<open>bit qvariable\<close> and c :: \<open>3 qvariable\<close> and d :: \<open>3 qvariable\<close>
+  assumes xxx[variable]: \<open>qregister \<lbrakk>a,b,c,d\<rbrakk>\<close> begin
 
 lemma qregister_chain_empty_right[simp]: \<open>qregister_chain F empty_qregister = empty_qregister\<close>
   sorry
@@ -550,60 +555,107 @@ fun mk_ct_equals ct1 ct2 = let
 mk_ct_equals \<^cterm>\<open>1::nat\<close> \<^cterm>\<open>2::nat\<close>
 \<close>
 
-
+lemma empty_qregisters_same: \<open>qregister F \<Longrightarrow> qregister G \<Longrightarrow> F = G\<close> for F G :: \<open>('a::CARD_1,'b) qregister\<close>
+  sorry
+thm empty_qregisters_same[OF _ empty_qregister_is_register]
 
 (* declare [[ML_source_trace]] *)
 ML \<open>
-local
-val ctxt = \<^context>
-val ct = \<^cterm>\<open>\<lbrakk>a,c \<mapsto> a,b,c,\<lbrakk>\<rbrakk>\<rbrakk>\<close>
-val (lhs,rhs) = case Thm.term_of ct of Const(\<^const_name>\<open>qregister_conversion\<close>,_) $ lhs $ rhs => (lhs,rhs)
-                                     | _ => raise CTERM ("qregister_conversion_to_register_conv: not a register conversion", [ct])
-fun add_to_path prefix path = if Term.is_dummy_pattern path then prefix else
-  let val (prefix_inT, _) = Prog_Variables.dest_qregisterT (fastype_of prefix)
-      val (path_inT, path_outT) = Prog_Variables.dest_qregisterT (fastype_of path)
-  in \<^Const>\<open>qregister_chain path_inT path_outT prefix_inT\<close> $ path $ prefix end
-fun get_rhs_registers (\<^Const_>\<open>qregister_pair T1 _ T2\<close> $ r1 $ r2) path found = 
-    found |> get_rhs_registers r1 (add_to_path \<^Const>\<open>qFst T1 T2\<close> path)
-          |> get_rhs_registers r2 (add_to_path \<^Const>\<open>qSnd T2 T1\<close> path)
- | get_rhs_registers reg path found = 
-    if is_empty_qregister ctxt reg then found
-    else (reg,path) :: found
-val rhs_registers = get_rhs_registers rhs Term.dummy []
-fun map_lhs (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ r1 $ r2) : term = let
-  val r1' = map_lhs r1
-  val r2' = map_lhs r2
-  val (r1'in, r1'out) = dest_qregisterT (fastype_of r1')
-  val (r2'in, _) = dest_qregisterT (fastype_of r2')
-  in
-    \<^Const>\<open>qregister_pair r1'in r1'out r2'in for r1' r2'\<close>
-  end
-  | map_lhs r = 
-    (case AList.lookup (op aconv) rhs_registers r of
-      NONE => raise TERM ("qregister_conversion_to_register_conv: could not find register from lhs in rhs", [r,Thm.term_of ct])
-    | SOME path => path)
-val new_reg = map_lhs lhs |> Thm.cterm_of ctxt
-(* TODO simplify new_reg (at least with associativity) *)
+fun qregister_conversion_to_register_conv ctxt ct = let
+  val (lhs,rhs) = case Thm.term_of ct of Const(\<^const_name>\<open>qregister_conversion\<close>,_) $ lhs $ rhs => (lhs,rhs)
+                                       | _ => raise CTERM ("qregister_conversion_to_register_conv: not a register conversion", [ct])
+  val (rhs_inT, _) = dest_qregisterT (fastype_of rhs)
+  fun add_to_path prefix path = if Term.is_dummy_pattern path then prefix else
+    let val (prefix_inT, _) = Prog_Variables.dest_qregisterT (fastype_of prefix)
+        val (path_inT, path_outT) = Prog_Variables.dest_qregisterT (fastype_of path)
+    in \<^Const>\<open>qregister_chain path_inT path_outT prefix_inT\<close> $ path $ prefix end
+  fun get_rhs_registers (\<^Const_>\<open>qregister_pair T1 _ T2\<close> $ r1 $ r2) path found = 
+      found |> get_rhs_registers r1 (add_to_path \<^Const>\<open>qFst T1 T2\<close> path)
+            |> get_rhs_registers r2 (add_to_path \<^Const>\<open>qSnd T2 T1\<close> path)
+   | get_rhs_registers reg path found = 
+      if is_empty_qregister ctxt reg then found
+      else (reg,path) :: found
+  val rhs_registers = get_rhs_registers rhs Term.dummy []
+  fun map_lhs (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ r1 $ r2) : term = let
+    val r1' = map_lhs r1
+    val r2' = map_lhs r2
+    val (r1'in, r1'out) = dest_qregisterT (fastype_of r1')
+    val (r2'in, _) = dest_qregisterT (fastype_of r2')
+    in
+      \<^Const>\<open>qregister_pair r1'in r1'out r2'in for r1' r2'\<close>
+    end
+    | map_lhs r = 
+      if is_empty_qregister ctxt r
+      then \<^Const>\<open>empty_qregister \<open>fastype_of r |> dest_qregisterT |> fst\<close> rhs_inT\<close>
+      else
+        (case AList.lookup (op aconv) rhs_registers r of
+          NONE => raise TERM ("qregister_conversion_to_register_conv: could not find register from lhs in rhs", [r,Thm.term_of ct])
+        | SOME path => path)
+  val new_reg = map_lhs lhs |> Thm.cterm_of ctxt
+  val new_reg = Conv.bottom_rewrs_conv @{thms qregister_chain_assoc[THEN eq_reflection]} ctxt new_reg |> Thm.rhs_of
+  val goal = mk_ct_equals ct new_reg
+  val tac = resolve_tac ctxt @{thms qregister_conversion_rename'[THEN eq_reflection]} 1
+            THEN
+            distinct_vars_tac ctxt 1
+            THEN
+            Misc.succeed_or_error_tac' (SOLVED' 
+            (simp_tac (ctxt addsimps @{thms qregister_chain_pair[symmetric] qregister_chain_assoc[symmetric] 
+                                            qvariable_unit_def empty_qregisters_same[OF _ empty_qregister_is_register]})))
+            ctxt (fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting '" ^ 
+                Syntax.string_of_term ctxt (Thm.term_of ct) ^ "' into a register: " ^ Syntax.string_of_term ctxt t) 1
+  val thm = Goal.prove_internal ctxt [] goal (K tac)
 in
-(* val xxx = rhs_registers |> map (apply2 (Thm.cterm_of ctxt)) *)
-val goal = mk_ct_equals ct new_reg
-end
+  thm
+end;;
+
+qregister_conversion_to_register_conv \<^context>
+\<^cterm>\<open>\<lbrakk>a,\<lbrakk>\<rbrakk>,c \<mapsto> a,b,c,\<lbrakk>\<rbrakk>\<rbrakk>\<close>
 \<close>
 
-lemma qcompatible_empty_left[simp]: \<open>qcompatible (U::(_::CARD_1,_) qregister) F = qregister U \<and> qregister F\<close>
-  sorry
-lemma qcompatible_empty_right[simp]: \<open>qcompatible F (U::(_::CARD_1,_) qregister) = qregister U \<and> qregister F\<close>
+(* Experiment for previous ML code, remove *)
+lemma \<open>variable_concat a
+               (variable_concat variable_unit c) =
+              register_chain (variable_concat a (variable_concat b (variable_concat c variable_unit)))
+               (variable_concat Fst
+                 (variable_concat empty_qregister
+                   (register_chain Snd
+                     (register_chain Snd Fst))))\<close>
+  (*   
+  apply (tactic \<open>let val ctxt = \<^context> in
+resolve_tac ctxt @{thms qregister_conversion_rename'[THEN eq_reflection]} 1
+THEN
+distinct_vars_tac \<^context> 1
+THEN
+Misc.succeed_or_error_tac' 
+(SOLVED' (simp_tac (\<^context> addsimps @{thms qregister_chain_pair[symmetric] qregister_chain_assoc[symmetric]})))
+ctxt
+(fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting TODO into register: " ^ Syntax.string_of_term ctxt t)
+1
+ end\<close>) *)
   sorry
 
 
 (* Experiment for previous ML code, remove *)
 lemma \<open>register_conversion (variable_concat a c)
      (variable_concat a (variable_concat b (variable_concat c variable_unit))) \<equiv>
-    variable_concat Fst (register_chain (register_chain Snd Snd) Fst)\<close>
-  apply (rule qregister_conversion_rename'[THEN eq_reflection])
-   apply simp
-  by (simp flip: qregister_chain_pair qregister_chain_assoc)
-  
+    variable_concat Fst (register_chain Snd (register_chain Snd Fst))\<close>
+  apply (tactic \<open>let val ctxt = \<^context> in 
+resolve_tac ctxt @{thms qregister_conversion_rename'[THEN eq_reflection]} 1
+THEN
+distinct_vars_tac \<^context> 1
+THEN
+Misc.succeed_or_error_tac' 
+(SOLVED' (simp_tac (\<^context> addsimps @{thms qregister_chain_pair[symmetric] qregister_chain_assoc[symmetric]})))
+ctxt
+(fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting TODO into register: " ^ Syntax.string_of_term ctxt t)
+1
+ end\<close>)
+  by -
+
+simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\<close>) = 
+  \<open>fn m => fn ctxt => fn ct => 
+    SOME (qregister_conversion_to_register_conv ctxt ct)
+    handle _ => NONE\<close>
 
 lemma Test
 proof -
@@ -621,32 +673,29 @@ proof -
      apply (fact le)
     by (simp add: CNOT'_def)
 
-(* TODO: simproc *)
-  have rename: \<open>\<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> = \<lbrakk>#1,#3.\<rbrakk>\<close>
-    apply (rule qregister_conversion_rename')
-     apply simp
-    by (simp flip: qregister_chain_pair)
+(*   have rename: \<open>\<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> = \<lbrakk>#1,#3.\<rbrakk>\<close>
+    by simp
 
-(* TODO: simproc *)
   have renameu: \<open>\<lbrakk>a,c,\<lbrakk>\<rbrakk> \<mapsto> a,b,c\<rbrakk> = \<lbrakk>#1,#3.,\<lbrakk>\<rbrakk>\<rbrakk>\<close>
-    apply (rule qregister_conversion_rename')
-     apply simp
-    by (simp flip: qregister_chain_pair)
-
+    by (simp add: qvariable_unit_def)
 
   have CNOT'_13: \<open>CNOT' = apply_qregister \<lbrakk>#1,#3.\<rbrakk> CNOT\<close>
-    unfolding CNOT'_def rename by simp
+    unfolding CNOT'_def by simp
+ *)
 
-
-  have \<open>apply_qregister \<lbrakk>#1,#3.\<rbrakk> CNOT *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
+  (* have \<open>apply_qregister \<lbrakk>#1,#3.\<rbrakk> CNOT *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close> *)
+  have \<open>CNOT' *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
+    unfolding CNOT'_def
     using if_weak_cong[cong del] apply fail?
+(* TODO: qregister_conversion_to_register-simproc should work even if we change the simpset! *)
+    apply simp
     apply (simp 
 
         add:  apply_qregister_of_cregister getter_pair getter_chain setter_chain setter_pair setter_Fst
-    case_prod_beta setter_Snd
-
-same_outside_cregister_def
-prod_eq_iff
+              case_prod_beta setter_Snd
+          
+              same_outside_cregister_def
+              prod_eq_iff
 
         flip: qregister_of_cregister_Fst qregister_of_cregister_Snd
         qregister_of_cregister_pair qregister_of_cregister_chain
@@ -654,24 +703,7 @@ prod_eq_iff
     )
     by normalization
 
-  have \<open>apply_qregister (qregister_pair \<lbrakk>#1,#3.\<rbrakk> \<lbrakk>#2\<rbrakk>) (CNOT \<otimes> id_cblinfun) *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
-    using if_weak_cong[cong del] apply fail?
-    apply (simp 
-
-        add:  apply_qregister_of_cregister getter_pair getter_chain setter_chain setter_pair setter_Fst
-        case_prod_beta setter_Snd
-
-        same_outside_cregister_def
-        prod_eq_iff
-
-        flip: qregister_of_cregister_Fst qregister_of_cregister_Snd
-        qregister_of_cregister_pair qregister_of_cregister_chain
-
-    )
-    by normalization
-
-
-  note [[show_types]]
+(*   note [[show_types]]
   note fog = [[ML_thm \<open>thm_fog |> K |> K\<close> (is \<open>?f o ?g = id\<close>)]]
   note gof = [[ML_thm \<open>thm_gof |> K |> K\<close>]]
 
@@ -702,7 +734,7 @@ prod_eq_iff
     by auto
 
   finally have CNOT'_reorder: \<open>CNOT' = reorder_cblinfun2 ?f (CNOT \<otimes> id_cblinfun)\<close>
-    using CNOT'_13 by fastforce
+    using CNOT'_13 by fastforce *)
 
 (*   have 1: \<open>enum_idx (f i) = xxx\<close> for i
     unfolding f_def
@@ -711,7 +743,7 @@ prod_eq_iff
 
  *)
 
-  have *: \<open>enum_idx (?f (enum_class.enum ! i)) = 4 * (enum_idx_enum_nth_code 8 TYPE(bit \<times> bit \<times> bit) i div 4) +
+(*   have *: \<open>enum_idx (?f (enum_class.enum ! i)) = 4 * (enum_idx_enum_nth_code 8 TYPE(bit \<times> bit \<times> bit) i div 4) +
     enum_idx_enum_nth_code 8 TYPE(bit \<times> bit \<times> bit) i mod 4 mod 2 * 2 +
     enum_idx_enum_nth_code 8 TYPE(bit \<times> bit \<times> bit) i mod 4 div 2\<close> for i
     apply (subst surjective_pairing)
@@ -726,7 +758,8 @@ prod_eq_iff
 
   have mat_of_cblinfun_CNOT': \<open>mat_of_cblinfun CNOT' = undefined\<close>
     unfolding CNOT'_reorder mat_of_cblinfun_reorder
-    apply (simp add: *)
-    apply normalization
+    apply (simp add: * )
+    apply normalization *)
+
 
   oops
