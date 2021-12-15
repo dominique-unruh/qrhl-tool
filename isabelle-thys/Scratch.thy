@@ -559,6 +559,15 @@ lemma empty_qregisters_same: \<open>qregister F \<Longrightarrow> qregister G \<
   sorry
 thm empty_qregisters_same[OF _ empty_qregister_is_register]
 
+ML \<open>
+val qregister_conversion_to_register_conv_simpset = 
+  \<^context> addsimps @{thms qregister_chain_pair[symmetric] qregister_chain_assoc[symmetric] 
+                          qregister_of_cregister_Fst qregister_of_cregister_Snd
+                          qvariable_unit_def empty_qregisters_same[OF _ empty_qregister_is_register]}
+  |> simpset_of
+
+\<close>
+
 (* declare [[ML_source_trace]] *)
 ML \<open>
 fun qregister_conversion_to_register_conv ctxt ct = let
@@ -594,13 +603,20 @@ fun qregister_conversion_to_register_conv ctxt ct = let
   val new_reg = map_lhs lhs |> Thm.cterm_of ctxt
   val new_reg = Conv.bottom_rewrs_conv @{thms qregister_chain_assoc[THEN eq_reflection]} ctxt new_reg |> Thm.rhs_of
   val goal = mk_ct_equals ct new_reg
+  val outer_simpset = simpset_of ctxt
+  val simpset_ctxt = ctxt 
+          |> put_simpset qregister_conversion_to_register_conv_simpset
+          |> Raw_Simplifier.set_subgoaler (fn ctxt => simp_tac (put_simpset outer_simpset ctxt))
+(*   val Xsimpset_ctxt = ctxt delsimps @{thms qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric]
+                                            qregister_chain_pair qregister_chain_assoc} (* In case those are flipped in the current simpset *)
+                            addsimps @{thms qregister_chain_pair[symmetric] qregister_chain_assoc[symmetric] 
+                                            qregister_of_cregister_Fst qregister_of_cregister_Snd
+                                            qvariable_unit_def empty_qregisters_same[OF _ empty_qregister_is_register]} *)
   val tac = resolve_tac ctxt @{thms qregister_conversion_rename'[THEN eq_reflection]} 1
             THEN
             distinct_vars_tac ctxt 1
             THEN
-            Misc.succeed_or_error_tac' (SOLVED' 
-            (simp_tac (ctxt addsimps @{thms qregister_chain_pair[symmetric] qregister_chain_assoc[symmetric] 
-                                            qvariable_unit_def empty_qregisters_same[OF _ empty_qregister_is_register]})))
+            Misc.succeed_or_error_tac' (SOLVED' (simp_tac simpset_ctxt))
             ctxt (fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting '" ^ 
                 Syntax.string_of_term ctxt (Thm.term_of ct) ^ "' into a register: " ^ Syntax.string_of_term ctxt t) 1
   val thm = Goal.prove_internal ctxt [] goal (K tac)
@@ -612,50 +628,10 @@ qregister_conversion_to_register_conv \<^context>
 \<^cterm>\<open>\<lbrakk>a,\<lbrakk>\<rbrakk>,c \<mapsto> a,b,c,\<lbrakk>\<rbrakk>\<rbrakk>\<close>
 \<close>
 
-(* Experiment for previous ML code, remove *)
-lemma \<open>variable_concat a
-               (variable_concat variable_unit c) =
-              register_chain (variable_concat a (variable_concat b (variable_concat c variable_unit)))
-               (variable_concat Fst
-                 (variable_concat empty_qregister
-                   (register_chain Snd
-                     (register_chain Snd Fst))))\<close>
-  (*   
-  apply (tactic \<open>let val ctxt = \<^context> in
-resolve_tac ctxt @{thms qregister_conversion_rename'[THEN eq_reflection]} 1
-THEN
-distinct_vars_tac \<^context> 1
-THEN
-Misc.succeed_or_error_tac' 
-(SOLVED' (simp_tac (\<^context> addsimps @{thms qregister_chain_pair[symmetric] qregister_chain_assoc[symmetric]})))
-ctxt
-(fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting TODO into register: " ^ Syntax.string_of_term ctxt t)
-1
- end\<close>) *)
-  sorry
-
-
-(* Experiment for previous ML code, remove *)
-lemma \<open>register_conversion (variable_concat a c)
-     (variable_concat a (variable_concat b (variable_concat c variable_unit))) \<equiv>
-    variable_concat Fst (register_chain Snd (register_chain Snd Fst))\<close>
-  apply (tactic \<open>let val ctxt = \<^context> in 
-resolve_tac ctxt @{thms qregister_conversion_rename'[THEN eq_reflection]} 1
-THEN
-distinct_vars_tac \<^context> 1
-THEN
-Misc.succeed_or_error_tac' 
-(SOLVED' (simp_tac (\<^context> addsimps @{thms qregister_chain_pair[symmetric] qregister_chain_assoc[symmetric]})))
-ctxt
-(fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting TODO into register: " ^ Syntax.string_of_term ctxt t)
-1
- end\<close>)
-  by -
-
 simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\<close>) = 
   \<open>fn m => fn ctxt => fn ct => 
     SOME (qregister_conversion_to_register_conv ctxt ct)
-    handle _ => NONE\<close>
+    handle e => (tracing ("qregister_conversion_to_register: " ^ \<^make_string> e); NONE)\<close>
 
 lemma Test
 proof -
@@ -687,8 +663,8 @@ proof -
   have \<open>CNOT' *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
     unfolding CNOT'_def
     using if_weak_cong[cong del] apply fail?
-(* TODO: qregister_conversion_to_register-simproc should work even if we change the simpset! *)
-    apply simp
+    using [[simp_trace, simp_trace_depth_limit=10]]
+      (* apply simp   *)
     apply (simp 
 
         add:  apply_qregister_of_cregister getter_pair getter_chain setter_chain setter_pair setter_Fst
@@ -702,6 +678,7 @@ proof -
 
     )
     by normalization
+
 
 (*   note [[show_types]]
   note fog = [[ML_thm \<open>thm_fog |> K |> K\<close> (is \<open>?f o ?g = id\<close>)]]
