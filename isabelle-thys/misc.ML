@@ -183,4 +183,36 @@ fun dest_number_syntax (Const (\<^const_syntax>\<open>Groups.zero_class.zero\<cl
   | dest_number_syntax (Const ("_constrain", _) $ t $ _) = dest_number_syntax t
   | dest_number_syntax t = raise TERM ("dest_number_syntax", [t])
 
+structure MLThmAttribData = Proof_Data (
+  type T = Proof.context -> thm -> thm
+  fun init _ _ thm = raise THM ("uninitialized MLThmAttribData", 0, [thm]))
+
+(* Invoked as \<open>thm[ML_thm \<open>mlcode\<close>]\<close> or \<open>[[ML_thm \<open>mlcode\<close>]]\<close> where \<open>mlcode\<close> is of type \<open>Proof.context -> thm -> thm\<close>,
+  it runs \<open>mlcode\<close> on the theorem \<open>thm\<close> (or on a dummy fact) and returns the resulting theorem.
+  Optionally, after \<open>mlcode\<close>, we can give \<open>(is \<open>pattern\<close>)\<close> to bind schematic variables by pattern 
+  matching the theorem. *)
+val _ = Theory.setup (Attrib.setup \<^binding>\<open>ML_thm\<close>
+  (Args.context -- Scan.lift Args.text_input 
+      -- Scan.lift (Scan.optional (Parse.$$$ "(" |-- Parse.!!! (Scan.repeat1 (Parse.$$$ "is" |-- Parse.prop) --| Parse.$$$ ")")) []) 
+      >> (fn ((ctxt,source),is_props) =>
+  let
+    val function = 
+        ctxt |> Context.Proof
+        |> ML_Context.expression (Input.pos_of source)
+              (ML_Lex.read "Theory.local_setup (Misc.MLThmAttribData.put ((" @
+                 ML_Lex.read_source source @ ML_Lex.read ") : Proof.context -> thm -> thm))")
+        |> Context.the_proof
+        |> MLThmAttribData.get
+    val is_props = is_props |> map (Syntax.read_prop (Proof_Context.set_mode Proof_Context.mode_pattern ctxt))
+    val attrib = Thm.mixed_attribute (fn (context,thm) => let
+        val thm' = function (Context.proof_of context) thm
+        val context = if null is_props then context else let
+                        val binds = Proof_Context.simult_matches ctxt (Thm.prop_of thm', is_props)
+                      in Context.map_proof (fold Proof_Context.bind_term binds) context end
+        in (context,thm') end)
+  in
+    attrib
+  end))
+  "Apply ML function to the given fact")
+
 end

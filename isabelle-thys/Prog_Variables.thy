@@ -293,6 +293,7 @@ lemma cregister_cswap[simp]: \<open>cregister cswap\<close>
 lemma qregister_qswap[simp]: \<open>qregister qswap\<close>
   by (simp add: qcompatible_Fst_Snd qcompatible_sym qregister_pair_iff_compatible qswap_def)
 
+(* TODO: compatibility condition can be omitted *)
 lemma cregister_chain_pair:
   assumes \<open>ccompatible G H\<close>
   shows \<open>cregister_chain F (cregister_pair G H) = cregister_pair (cregister_chain F G) (cregister_chain F H)\<close>
