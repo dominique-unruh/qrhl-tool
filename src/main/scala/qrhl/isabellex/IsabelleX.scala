@@ -21,10 +21,9 @@ import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import de.unruh.isabelle.control
-import de.unruh.isabelle.misc.{AFP, FutureValue, Symbols}
+import de.unruh.isabelle.misc.{FutureValue, Symbols}
 import hashedcomputation.{Hash, HashedValue}
 
-import java.time.LocalDate
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
 
@@ -892,8 +891,6 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
 object IsabelleX {
   val version = "2021-1"
-  val minimumAFPVersion: LocalDate = LocalDate.of(2021,11,8)
-
 
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
@@ -965,16 +962,6 @@ object IsabelleX {
       (RichTerm(t), thm)
     }
   }
-
-  def checkAFPVersion(): Unit = Configuration.afpRoot match {
-    case None =>
-    case Some(root) =>
-      val date = new AFP(root).newestSubmissionDate
-      if (date.isBefore(minimumAFPVersion))
-        throw UserException(s"AFP at $root seems to be from $date. We need an AFP from $minimumAFPVersion or later.")
-  }
-
-  checkAFPVersion()
 
   lazy val setup: Isabelle.Setup = de.unruh.isabelle.control.Isabelle.Setup(
     workingDirectory = Configuration.distributionDirectory,
