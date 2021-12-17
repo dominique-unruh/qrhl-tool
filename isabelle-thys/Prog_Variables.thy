@@ -712,18 +712,15 @@ lemma qregister_conversion_as_register:
   apply (subst qregister_conversion_rename[where H=G and G'=qregister_id and F'=F'])
   using assms by auto
 
-
-lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow> ('a,'b) qregister\<close> is
+(* lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow> ('a,'b) qregister\<close> is
   \<open>\<lambda>F a. if cregister F then 
       explicit_cblinfun (\<lambda>i j. if same_outside_cregister F i j then Rep_ell2 (a *\<^sub>V ket (getter F j)) (getter F i) else 0)
     else 0\<close>
-  sorry
+  sorry *)
 
-lemma apply_qregister_of_cregister:
-  assumes \<open>cregister F\<close>
-  shows \<open>apply_qregister (qregister_of_cregister F) a = explicit_cblinfun
-            (\<lambda>i j. if same_outside_cregister F i j then Rep_ell2 (a \<cdot> ket (getter F j)) (getter F i) else 0)\<close>
-  unfolding qregister_of_cregister.rep_eq using assms by simp
+lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow> ('a,'b) qregister\<close> is
+  \<open>\<lambda>F a. if cregister F then permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a else 0\<close>
+  sorry
 
 lemma qregister_of_cregister_Fst: \<open>qregister_of_cregister cFst = qFst\<close>
   sorry
