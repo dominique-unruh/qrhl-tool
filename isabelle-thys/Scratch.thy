@@ -17,7 +17,7 @@ ML \<open>open Prog_Variables\<close>
 class eenum = enum +
   fixes enum_nth :: \<open>nat \<Rightarrow> 'a\<close>
   fixes enum_index :: \<open>'a \<Rightarrow> nat\<close>
-  assumes enum_nth_enum: \<open>\<And>i. i < CARD('a) \<Longrightarrow> enum_nth i = Enum.enum ! i\<close>
+  assumes enum_nth_enum[simp]: \<open>\<And>i. i < CARD('a) \<Longrightarrow> Enum.enum ! i = enum_nth i\<close>
   assumes enum_nth_invalid: \<open>\<And>i. i \<ge> CARD('a) \<Longrightarrow> enum_nth i = enum_nth 0\<close> (* To get enum_index_nth below *)
   assumes enum_nth_index[simp]: \<open>\<And>a. enum_nth (enum_index a) = a\<close>
   assumes enum_index_bound[simp]: \<open>\<And>a. enum_index a < CARD('a)\<close>
@@ -69,7 +69,7 @@ definition \<open>enum_nth_prod ij = (let i = ij div CARD('b) in if i < CARD('a)
 (* definition \<open>enum_nth_prod ij = (enum_nth (ij div CARD('b)) :: 'a, enum_nth (ij mod CARD('b)) :: 'b)\<close> *)
 instance
 proof standard
-  show \<open>i < CARD('a \<times> 'b) \<Longrightarrow> enum_nth i = (Enum.enum ! i :: 'a\<times>'b)\<close> for i
+  show \<open>i < CARD('a \<times> 'b) \<Longrightarrow> (Enum.enum ! i :: 'a\<times>'b) = enum_nth i\<close> for i
     apply (auto simp: card_UNIV_length_enum[symmetric] enum_nth_enum enum_prod_def product_nth enum_nth_prod_def Let_def)
     using less_mult_imp_div_less by blast+
   show \<open>CARD('a \<times> 'b) \<le> i \<Longrightarrow> enum_nth i = (enum_nth 0 :: 'a\<times>'b)\<close> for i
@@ -85,8 +85,7 @@ qed
 end
 
 lemma fst_enum_nth: \<open>fst (enum_nth ij :: 'a::eenum\<times>'b::eenum) = enum_nth (ij div CARD('b))\<close>
-  apply (auto simp: enum_nth_prod_def Let_def)
-  by (metis enum_nth_invalid linorder_not_less)
+  by (auto simp: enum_nth_invalid enum_nth_prod_def Let_def)
 
 lemma snd_enum_nth: \<open>snd (enum_nth ij :: 'a::eenum\<times>'b::eenum) = (if ij < CARD('a\<times>'b) then enum_nth (ij mod CARD('b)) else enum_nth 0)\<close>
   apply (auto simp: enum_nth_prod_def Let_def)
@@ -97,15 +96,17 @@ lemma enum_index_fst: \<open>enum_index (fst x) = enum_index x div CARD('b)\<clo
 lemma enum_index_snd: \<open>enum_index (snd x) = enum_index x mod CARD('b)\<close> for x :: \<open>'a::eenum\<times>'b::eenum\<close>
   by (auto simp add: enum_index_prod_def case_prod_beta)
 
-lemma enum_list_nth_enum_nth[simp]: \<open>(Enum.enum ! i :: 'a::eenum) = (if i < CARD('a) then enum_nth i else Enum.enum ! i)\<close>
-  sorry
+(* lemma enum_list_nth_enum_nth[simp]: \<open>(Enum.enum ! i :: 'a::eenum) = (if i < CARD('a) then enum_nth i else Enum.enum ! i)\<close>
+  apply auto
+  thm enum_nth_enum
+  sorry *)
 
-lemma [simp]: \<open>enum_idx = enum_index\<close>
+lemma enum_idx_enum_index[simp]: \<open>enum_idx = enum_index\<close>
 proof (rule ext)
   fix x :: 'a
   have \<open>(Enum.enum ! enum_idx x :: 'a) = Enum.enum ! enum_index x\<close>
     unfolding enum_idx_correct
-    by (simp add: enum_list_nth_enum_nth)
+    by simp
   then show \<open>enum_idx x = enum_index x\<close>
     using enum_distinct apply (rule nth_eq_iff_index_eq[THEN iffD1, rotated -1])
     by (simp_all flip: card_UNIV_length_enum)
@@ -594,8 +595,7 @@ proof -
     using [[show_consts]]
     apply (simp 
       del: prepare_for_code_remove
-      add: prepare_for_code_new
-      )
+      add: prepare_for_code_new)
 
     by normalization
 
