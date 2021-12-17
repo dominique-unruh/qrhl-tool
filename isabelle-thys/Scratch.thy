@@ -46,10 +46,6 @@ lemma inj_on_enum_nth[simp]: \<open>inj_on (enum_nth :: _ \<Rightarrow> 'a::eenu
 lemma enum_index_nth: \<open>enum_index (enum_nth i :: 'a::eenum) = (if i < CARD('a) then i else 0)\<close>
   by (metis bij_betw_enum_index enum_nth_index enum_nth_invalid f_the_inv_into_f_bij_betw lessThan_iff linorder_not_le zero_less_card_finite)
 
-(* lemma enum_nth_injective[simp]: \<open>enum_nth x = enum_nth y \<longleftrightarrow> x = y\<close>
-  sorry *)
-
-
 instantiation bool :: eenum begin
 definition \<open>enum_index_bool x = (if x then 1 else 0 :: nat)\<close>
 definition \<open>enum_nth_bool (i::nat) = (i=1)\<close>
@@ -101,11 +97,19 @@ lemma enum_index_fst: \<open>enum_index (fst x) = enum_index x div CARD('b)\<clo
 lemma enum_index_snd: \<open>enum_index (snd x) = enum_index x mod CARD('b)\<close> for x :: \<open>'a::eenum\<times>'b::eenum\<close>
   by (auto simp add: enum_index_prod_def case_prod_beta)
 
-lemma [simp]: \<open>enum_idx = enum_index\<close>
+lemma enum_list_nth_enum_nth[simp]: \<open>(Enum.enum ! i :: 'a::eenum) = (if i < CARD('a) then enum_nth i else Enum.enum ! i)\<close>
   sorry
 
-lemma [simp]: \<open>(Enum.enum ! i :: 'a::eenum) = (if i < CARD('a) then enum_nth i else Enum.enum ! i)\<close>
-  sorry
+lemma [simp]: \<open>enum_idx = enum_index\<close>
+proof (rule ext)
+  fix x :: 'a
+  have \<open>(Enum.enum ! enum_idx x :: 'a) = Enum.enum ! enum_index x\<close>
+    unfolding enum_idx_correct
+    by (simp add: enum_list_nth_enum_nth)
+  then show \<open>enum_idx x = enum_index x\<close>
+    using enum_distinct apply (rule nth_eq_iff_index_eq[THEN iffD1, rotated -1])
+    by (simp_all flip: card_UNIV_length_enum)
+qed
 
 experiment
   fixes a b c :: \<open>bit qvariable\<close>
