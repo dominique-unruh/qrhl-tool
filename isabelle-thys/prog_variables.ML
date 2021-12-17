@@ -501,5 +501,68 @@ fun register_n true 1 = Const(\<^const_name>\<open>register_id\<close>, dummyT)
       val _ = n > 1 orelse error "register_n: n must be >= 1"
       in Const(\<^const_name>\<open>register_chain\<close>, dummyT) $ Const(\<^const_name>\<open>Snd\<close>, dummyT) $ register_n last (n-1) end
 
+fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_sort (Proof_Context.theory_of ctxt) (T,\<^sort>\<open>CARD_1\<close>)
+  | is_empty_qregisterT _ T = raise TYPE("is_empty_qregisterT: not a qregister type", [T], [])
+
+fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
+  handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
+
+local
+val qregister_conversion_to_register_conv_simpset = 
+  \<^context> addsimps @{thms qregister_chain_pair qregister_chain_assoc[symmetric] 
+                          qregister_of_cregister_Fst qregister_of_cregister_Snd}
+  |> simpset_of
+in
+fun qregister_conversion_to_register_conv ctxt ct = let
+  val (lhs,rhs) = case Thm.term_of ct of Const(\<^const_name>\<open>qregister_conversion\<close>,_) $ lhs $ rhs => (lhs,rhs)
+                                       | _ => raise CTERM ("qregister_conversion_to_register_conv: not a register conversion", [ct])
+  val (rhs_inT, _) = dest_qregisterT (fastype_of rhs)
+  fun add_to_path prefix path = if Term.is_dummy_pattern path then prefix else
+    let val (prefix_inT, _) = dest_qregisterT (fastype_of prefix)
+        val (path_inT, path_outT) = dest_qregisterT (fastype_of path)
+    in \<^Const>\<open>qregister_chain path_inT path_outT prefix_inT\<close> $ path $ prefix end
+  fun get_rhs_registers (\<^Const_>\<open>qregister_pair T1 _ T2\<close> $ r1 $ r2) path found = 
+      found |> get_rhs_registers r1 (add_to_path \<^Const>\<open>qFst T1 T2\<close> path)
+            |> get_rhs_registers r2 (add_to_path \<^Const>\<open>qSnd T2 T1\<close> path)
+   | get_rhs_registers reg path found = 
+      if is_empty_qregister ctxt reg then found
+      else (reg,path) :: found
+  val rhs_registers = get_rhs_registers rhs Term.dummy []
+  fun map_lhs (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ r1 $ r2) : term = let
+    val r1' = map_lhs r1
+    val r2' = map_lhs r2
+    val (r1'in, r1'out) = dest_qregisterT (fastype_of r1')
+    val (r2'in, _) = dest_qregisterT (fastype_of r2')
+    in
+      \<^Const>\<open>qregister_pair r1'in r1'out r2'in for r1' r2'\<close>
+    end
+    | map_lhs r = 
+      if is_empty_qregister ctxt r
+      then \<^Const>\<open>empty_qregister \<open>fastype_of r |> dest_qregisterT |> fst\<close> rhs_inT\<close>
+      else
+        (case AList.lookup (op aconv) rhs_registers r of
+          NONE => raise TERM ("qregister_conversion_to_register_conv: could not find register from lhs in rhs", [r,Thm.term_of ct])
+        | SOME path => path)
+  val new_reg = map_lhs lhs |> Thm.cterm_of ctxt
+  val new_reg = Conv.bottom_rewrs_conv @{thms qregister_chain_assoc[THEN eq_reflection]} ctxt new_reg |> Thm.rhs_of
+  val goal = Misc.mk_ct_equals ct new_reg
+  val outer_simpset = simpset_of ctxt
+  val simpset_ctxt = ctxt 
+          |> put_simpset qregister_conversion_to_register_conv_simpset
+          (* |> Raw_Simplifier.set_subgoaler (fn ctxt => K (print_tac ctxt "xxx") THEN' simp_tac (put_simpset outer_simpset ctxt)) *)
+          |> Raw_Simplifier.set_subgoaler (fn ctxt => distinct_vars_tac (put_simpset outer_simpset ctxt))
+  val tac = resolve_tac ctxt @{thms qregister_conversion_as_register[THEN eq_reflection]} 1
+            THEN
+            distinct_vars_tac ctxt 1
+            THEN
+            Misc.succeed_or_error_tac' (SOLVED' (simp_tac simpset_ctxt))
+            ctxt (fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting '" ^ 
+                Syntax.string_of_term ctxt (Thm.term_of ct) ^ "' into a register:\n" ^ Syntax.string_of_term ctxt t) 1
+  val thm = Goal.prove_internal ctxt [] goal (K tac)
+in
+  thm
+end
+end
+
 
 end

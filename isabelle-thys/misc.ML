@@ -215,4 +215,10 @@ val _ = Theory.setup (Attrib.setup \<^binding>\<open>ML_thm\<close>
   end))
   "Apply ML function to the given fact")
 
+fun mk_ct_equals ct1 ct2 = let
+  val eq = \<^instantiate>\<open>'a=\<open>Thm.ctyp_of_cterm ct1\<close> in cterm Pure.eq\<close>
+  in
+    Thm.apply (Thm.apply eq ct1) ct2
+  end
+
 end

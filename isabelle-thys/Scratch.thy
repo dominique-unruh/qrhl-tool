@@ -1,247 +1,18 @@
 theory Scratch
-  imports QRHL.QRHL
+  imports QRHL.QRHL Missing_Bounded_Operators
 begin
 
 no_notation m_inv ("inv\<index> _" [81] 80)
 unbundle no_vec_syntax
 unbundle jnf_notation
+hide_const (open) Finite_Cartesian_Product.mat
+hide_const (open) Finite_Cartesian_Product.vec
 
 derive (eq) ceq bit
 derive (compare) ccompare bit
 derive (dlist) set_impl bit
 
 ML \<open>open Prog_Variables\<close>
-
-lemma qregister_chain_pair_Fst[simp]:
-  assumes \<open>qregister G\<close>
-  shows \<open>qregister_chain (qregister_pair F G) qFst = F\<close>
-  sorry
-
-lemma qregister_chain_pair_Snd[simp]:
-  assumes \<open>qregister F\<close>
-  shows \<open>qregister_chain (qregister_pair F G) qSnd = G\<close>
-  sorry
-
-lemma qregister_chain_empty_right[simp]: \<open>qregister_chain F empty_qregister = empty_qregister\<close>
-  sorry
-lemma qregister_chain_empty_left[simp]: \<open>qregister_chain empty_qregister F = empty_qregister\<close>
-  sorry
-
-lemma qregister_chain_is_qregister[simp]: \<open>qregister (qregister_chain F G) \<longleftrightarrow> qregister F \<and> qregister G\<close>
-  apply transfer
-  by (auto simp: non_qregister_raw qregister_raw_chain)
-
-
-ML \<open>
-fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_sort (Proof_Context.theory_of ctxt) (T,\<^sort>\<open>CARD_1\<close>)
-  | is_empty_qregisterT _ T = raise TYPE("is_empty_qregisterT: not a qregister type", [T], [])
-fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
-  handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
-fun mk_ct_equals ct1 ct2 = let
-  val eq = \<^instantiate>\<open>'a=\<open>Thm.ctyp_of_cterm ct1\<close> in cterm Pure.eq\<close>
-  in
-    Thm.apply (Thm.apply eq ct1) ct2
-  end
-\<close>
-
-lemma qcompatible_empty_left[simp]: \<open>qcompatible (U::(_::CARD_1,_) qregister) F \<longleftrightarrow> qregister U \<and> qregister F\<close>
-  sorry
-lemma qcompatible_empty_right[simp]: \<open>qcompatible F (U::(_::CARD_1,_) qregister) \<longleftrightarrow> qregister U \<and> qregister F\<close>
-  sorry
-
-lemma empty_qregisters_same: \<open>qregister F \<Longrightarrow> qregister G \<Longrightarrow> F = G\<close> for F G :: \<open>('a::CARD_1,'b) qregister\<close>
-  sorry
-
-definition explicit_cblinfun :: \<open>('a \<Rightarrow> 'b \<Rightarrow> complex) \<Rightarrow> ('b ell2, 'a ell2) cblinfun\<close> where
-  \<open>explicit_cblinfun m = cblinfun_extension (range ket) (\<lambda>a. Abs_ell2 (\<lambda>j. m j (inv ket a)))\<close>
-
-lemma explicit_cblinfun_ket[simp]: \<open>explicit_cblinfun m *\<^sub>V ket a = Abs_ell2 (\<lambda>b. m b a)\<close> for m :: "_ \<Rightarrow> _ :: finite \<Rightarrow> _"
-  by (auto simp: cblinfun_extension_exists_finite_dim explicit_cblinfun_def cblinfun_extension_apply)
-
-definition same_outside_cregister :: \<open>('a,'b) cregister \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool\<close> where
-  \<open>same_outside_cregister F x y \<longleftrightarrow> x = setter F (getter F x) y\<close>
-
-lemma same_outside_cregister_non_cregister[simp]: \<open>same_outside_cregister non_cregister = (=)\<close>
-  unfolding same_outside_cregister_def
-  by simp
-
-lemma equivp_same_outside_cregister[simp]: \<open>equivp (same_outside_cregister F)\<close>
-proof (cases \<open>cregister F\<close>)
-  case False
-  then have [simp]: \<open>F = non_cregister\<close>
-    using non_cregister by force
-  show ?thesis
-    using identity_equivp by simp
-next
-  case True
-  have \<open>reflp (same_outside_cregister F)\<close>
-    by (simp add: same_outside_cregister_def reflpI)
-  moreover have \<open>symp (same_outside_cregister F)\<close>
-    by (metis same_outside_cregister_def setter_getter_same setter_setter_same sympI)
-  moreover have \<open>transp (same_outside_cregister F)\<close>
-    by (smt (verit, del_insts) same_outside_cregister_def setter_setter_same transpI)
-  ultimately show ?thesis
-    by (rule equivpI)
-qed
-
-lemma qregister_conversion_id[simp]: \<open>qregister_conversion F qregister_id = F\<close>
-  apply transfer by auto
-
-
-lemma register_conversion_non_reg_right[simp]: \<open>register_conversion F non_qregister = non_qregister\<close>
-  apply transfer by (auto simp add: non_qregister_raw)
-
-lemma register_conversion_non_reg_left[simp]: \<open>register_conversion non_qregister F = non_qregister\<close>
-  apply transfer by (auto simp add: non_qregister_raw)
-
-lemma inv_eq_move: \<open>inv f o g = h\<close> if \<open>inj f\<close> and \<open>g = f o h\<close> for f g
-  using that(1) that(2) by fastforce
-
-lemma qregister_conversion_rename: 
-  fixes F :: \<open>('a,'c) qregister\<close> and G :: \<open>('b,'c) qregister\<close> and H :: \<open>('d, 'c) qregister\<close> and F' G'
-  assumes \<open>qregister H\<close>
-  assumes \<open>F = qregister_chain H F'\<close> \<open>G = qregister_chain H G'\<close>
-  shows \<open>qregister_conversion F G = qregister_conversion F' G'\<close>
-proof (cases \<open>qregister F'\<close>, cases \<open>qregister G'\<close>)
-  assume \<open>\<not> qregister G'\<close>
-  then have [simp]: \<open>G' = non_qregister\<close>
-    using non_qregister by blast
-  then show ?thesis
-    apply (simp add: \<open>G = qregister_chain H G'\<close>)
-    by -
-next
-  assume \<open>\<not> qregister F'\<close>
-  then have [simp]: \<open>F' = non_qregister\<close>
-    using non_qregister by blast
-  then show ?thesis
-    by (simp add: \<open>F = qregister_chain H F'\<close>)
-next
-  have range_le_preserve: \<open>range F' \<subseteq> range G'\<close> if \<open>range (\<lambda>x. H (F' x)) \<subseteq> range (\<lambda>x. H (G' x))\<close> and \<open>qregister_raw H\<close> 
-    for H :: \<open>'d qupdate \<Rightarrow> 'c qupdate\<close> and F' :: \<open>'a qupdate \<Rightarrow> 'd qupdate\<close> and G' :: \<open>'b qupdate \<Rightarrow> 'd qupdate\<close>
-    using qregister_raw_inj[OF \<open>qregister_raw H\<close>] using that(1)
-    by (smt (verit, best) image_subset_iff inj_def rangeE rangeI)
-  have H_cancel: \<open>inv (H \<circ> G') \<circ> (H \<circ> F') = inv G' \<circ> F'\<close> if \<open>qregister_raw H\<close> and \<open>qregister_raw G'\<close>
-    and \<open>range F' \<subseteq> range G'\<close>
-    for H :: \<open>'d qupdate \<Rightarrow> 'c qupdate\<close> and F' :: \<open>'a qupdate \<Rightarrow> 'd qupdate\<close> and G' :: \<open>'b qupdate \<Rightarrow> 'd qupdate\<close>
-    apply (rule inv_eq_move)
-    using qregister_raw_inj[OF \<open>qregister_raw H\<close>] qregister_raw_inj[OF \<open>qregister_raw G'\<close>]
-    using inj_compose that by (auto simp add: ext f_inv_into_f subset_iff)
-  assume [simp]: \<open>qregister F'\<close> \<open>qregister G'\<close>
-  then show ?thesis
-    using assms apply transfer
-    using range_le_preserve H_cancel by (auto simp: qregister_raw_chain)
-qed
-
-
-lemma qregister_conversion_as_register: 
-  fixes F :: \<open>('a,'c) qregister\<close> and F' G'
-  assumes \<open>qregister G\<close>
-  assumes \<open>F = qregister_chain G F'\<close>
-  shows \<open>qregister_conversion F G = F'\<close>
-  apply (subst qregister_conversion_rename[where H=G and G'=qregister_id and F'=F'])
-  using assms by auto
-
-
-lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow> ('a,'b) qregister\<close> is
-  \<open>\<lambda>F a. if cregister F then 
-      explicit_cblinfun (\<lambda>i j. if same_outside_cregister F i j then Rep_ell2 (a *\<^sub>V ket (getter F j)) (getter F i) else 0)
-    else 0\<close>
-  sorry
-
-lemma apply_qregister_of_cregister:
-  assumes \<open>cregister F\<close>
-  shows \<open>apply_qregister (qregister_of_cregister F) a = explicit_cblinfun
-            (\<lambda>i j. if same_outside_cregister F i j then Rep_ell2 (a \<cdot> ket (getter F j)) (getter F i) else 0)\<close>
-  unfolding qregister_of_cregister.rep_eq using assms by simp
-
-
-lemma qregister_of_cregister_Fst: \<open>qregister_of_cregister cFst = qFst\<close>
-  sorry
-lemma qregister_of_cregister_Snd: \<open>qregister_of_cregister cSnd = qSnd\<close>
-  sorry
-
-lemma qregister_qregister_of_cregister[simp]: \<open>qregister (qregister_of_cregister F) \<longleftrightarrow> cregister F\<close>
-  sorry
-
-lemma qcompatible_qregister_of_cregister[simp]: 
-  \<open>qcompatible (qregister_of_cregister F) (qregister_of_cregister G) \<longleftrightarrow> ccompatible F G\<close>
-  sorry
-
-lemmas [simp] = qcompatible_Fst_Snd[unfolded qregister_of_cregister_Fst[symmetric]]
-                          qcompatible_Fst_Snd[unfolded qregister_of_cregister_Snd[symmetric]]
-                          qcompatible_Fst_Snd[unfolded qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric]]
-                          qcompatible_Snd_Fst[unfolded qregister_of_cregister_Fst[symmetric]]
-                          qcompatible_Snd_Fst[unfolded qregister_of_cregister_Snd[symmetric]]
-                          qcompatible_Snd_Fst[unfolded qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric]]
-
-
-ML \<open>
-val qregister_conversion_to_register_conv_simpset = 
-  \<^context> addsimps @{thms qregister_chain_pair qregister_chain_assoc[symmetric] 
-                          qregister_of_cregister_Fst qregister_of_cregister_Snd
-                          qvariable_unit_def empty_qregisters_same[OF _ empty_qregister_is_register]}
-  |> simpset_of
-
-\<close>
-
-(* declare [[ML_source_trace]] *)
-ML \<open>
-fun qregister_conversion_to_register_conv ctxt ct = let
-  val (lhs,rhs) = case Thm.term_of ct of Const(\<^const_name>\<open>qregister_conversion\<close>,_) $ lhs $ rhs => (lhs,rhs)
-                                       | _ => raise CTERM ("qregister_conversion_to_register_conv: not a register conversion", [ct])
-  val (rhs_inT, _) = dest_qregisterT (fastype_of rhs)
-  fun add_to_path prefix path = if Term.is_dummy_pattern path then prefix else
-    let val (prefix_inT, _) = Prog_Variables.dest_qregisterT (fastype_of prefix)
-        val (path_inT, path_outT) = Prog_Variables.dest_qregisterT (fastype_of path)
-    in \<^Const>\<open>qregister_chain path_inT path_outT prefix_inT\<close> $ path $ prefix end
-  fun get_rhs_registers (\<^Const_>\<open>qregister_pair T1 _ T2\<close> $ r1 $ r2) path found = 
-      found |> get_rhs_registers r1 (add_to_path \<^Const>\<open>qFst T1 T2\<close> path)
-            |> get_rhs_registers r2 (add_to_path \<^Const>\<open>qSnd T2 T1\<close> path)
-   | get_rhs_registers reg path found = 
-      if is_empty_qregister ctxt reg then found
-      else (reg,path) :: found
-  val rhs_registers = get_rhs_registers rhs Term.dummy []
-  fun map_lhs (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ r1 $ r2) : term = let
-    val r1' = map_lhs r1
-    val r2' = map_lhs r2
-    val (r1'in, r1'out) = dest_qregisterT (fastype_of r1')
-    val (r2'in, _) = dest_qregisterT (fastype_of r2')
-    in
-      \<^Const>\<open>qregister_pair r1'in r1'out r2'in for r1' r2'\<close>
-    end
-    | map_lhs r = 
-      if is_empty_qregister ctxt r
-      then \<^Const>\<open>empty_qregister \<open>fastype_of r |> dest_qregisterT |> fst\<close> rhs_inT\<close>
-      else
-        (case AList.lookup (op aconv) rhs_registers r of
-          NONE => raise TERM ("qregister_conversion_to_register_conv: could not find register from lhs in rhs", [r,Thm.term_of ct])
-        | SOME path => path)
-  val new_reg = map_lhs lhs |> Thm.cterm_of ctxt
-  val new_reg = Conv.bottom_rewrs_conv @{thms qregister_chain_assoc[THEN eq_reflection]} ctxt new_reg |> Thm.rhs_of
-  val goal = mk_ct_equals ct new_reg
-  val outer_simpset = simpset_of ctxt
-  val simpset_ctxt = ctxt 
-          |> put_simpset qregister_conversion_to_register_conv_simpset
-          (* |> Raw_Simplifier.set_subgoaler (fn ctxt => K (print_tac ctxt "xxx") THEN' simp_tac (put_simpset outer_simpset ctxt)) *)
-          |> Raw_Simplifier.set_subgoaler (fn ctxt => distinct_vars_tac (put_simpset outer_simpset ctxt))
-  val tac = resolve_tac ctxt @{thms qregister_conversion_as_register[THEN eq_reflection]} 1
-            THEN
-            distinct_vars_tac ctxt 1
-            THEN
-            Misc.succeed_or_error_tac' (SOLVED' (simp_tac simpset_ctxt))
-            ctxt (fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting '" ^ 
-                Syntax.string_of_term ctxt (Thm.term_of ct) ^ "' into a register:\n" ^ Syntax.string_of_term ctxt t) 1
-  val thm = Goal.prove_internal ctxt [] goal (K tac)
-in
-  thm
-end
-\<close>
-
-simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\<close>) = 
-  \<open>fn m => fn ctxt => fn ct => 
-    SOME (qregister_conversion_to_register_conv ctxt ct)
-    handle e => (tracing ("qregister_conversion_to_register: " ^ \<^make_string> e); NONE)\<close>
-
 
 experiment
   fixes a b c :: \<open>bit qvariable\<close>
@@ -254,24 +25,32 @@ qregister_conversion_to_register_conv \<^context>
 end
 
 
+lemma apply_qregister_Fst[simp]: \<open>apply_qregister qFst x = x \<otimes> id_cblinfun\<close>
+  sorry
+lemma apply_qregister_Snd[simp]: \<open>apply_qregister qSnd x = id_cblinfun \<otimes> x\<close>
+  sorry
+
+
+
+
 lemma cregister_chain_is_cregister[simp]: \<open>cregister (cregister_chain F G) \<longleftrightarrow> cregister F \<and> cregister G\<close>
   by (metis Cccompatible_CREGISTER_of Cccompatible_comp_right ccompatible_CCcompatible cregister.rep_eq cregister_chain.rep_eq non_cregister_raw)
 
 
 lemma qregister_chain_pair_Fst_chain[simp]:
-  assumes \<open>qregister G\<close>
+  assumes \<open>qcompatible F G\<close>
   shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qFst H) = qregister_chain F H\<close>
-  by (metis Scratch.qregister_chain_pair_Fst assms qregister_chain_assoc)
+  by (metis qregister_chain_pair_Fst assms qregister_chain_assoc)
 
 lemma qregister_chain_pair_Snd_chain[simp]:
-  assumes \<open>qregister F\<close>
+  assumes \<open>qcompatible F G\<close>
   shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qSnd H) = qregister_chain G H\<close>
-  by (metis Scratch.qregister_chain_pair_Snd assms qregister_chain_assoc)
+  by (metis qregister_chain_pair_Snd assms qregister_chain_assoc)
 
 
-lemma qregister_chain_unit_right[simp]: \<open>qregister_chain F qvariable_unit = qvariable_unit\<close>
+lemma qregister_chain_unit_right[simp]: \<open>qregister F \<Longrightarrow> qregister_chain F qvariable_unit = qvariable_unit\<close>
   by (simp add: qvariable_unit_def)
-lemma qregister_chain_unit_left[simp]: \<open>qregister_chain qvariable_unit F = qvariable_unit\<close>
+lemma qregister_chain_unit_left[simp]: \<open>qregister F \<Longrightarrow> qregister_chain qvariable_unit F = qvariable_unit\<close>
   by (simp add: qvariable_unit_def)
 
 
@@ -318,11 +97,6 @@ lemma getter_chain:
   shows \<open>getter (cregister_chain F G) = getter G o getter F\<close>
   sorry
 
-lemma apply_qregister_Fst: \<open>apply_qregister qFst x = x \<otimes> id_cblinfun\<close>
-  sorry
-
-lemma apply_qregister_Snd: \<open>apply_qregister qSnd x = id_cblinfun \<otimes> x\<close>
-  sorry
 
 
 
@@ -561,21 +335,6 @@ lemma [code]: \<open>Rep_ell2 \<psi> i = vec_of_ell2 \<psi> $ (enum_idx i)\<clos
 experiment fixes a :: \<open>bool qvariable\<close> and b :: \<open>bit qvariable\<close> and c :: \<open>3 qvariable\<close> and d :: \<open>3 qvariable\<close>
   assumes xxx[variable]: \<open>qregister \<lbrakk>a,b,c,d\<rbrakk>\<close> begin
 
-ML \<open>
-is_empty_qregister \<^context> \<^term>\<open>bla :: 1 qvariable\<close>
-\<close>
-
-lemmas xxxy = [[ML_thm \<open>K (K @{thm refl})\<close>]]
-
-(* declare [[ML_source_trace]] *)
-ML \<open>
-mk_ct_equals \<^cterm>\<open>1::nat\<close> \<^cterm>\<open>2::nat\<close>
-\<close>
-
-
-thm empty_qregisters_same[OF _ empty_qregister_is_register]
-
-
 
 lemma Test
 proof -
@@ -592,15 +351,6 @@ proof -
     apply (subst rew1[where G=\<open>\<lbrakk>a,b,c\<rbrakk>\<close>])
      apply (fact le)
     by (simp add: CNOT'_def)
-
-  have \<open>variable_concat a c =
-                                   register_chain (variable_concat a (variable_concat b c))
-                                    (variable_concat Fst (register_chain Snd Snd))\<close>
-    apply (subst
-                  qregister_chain_pair qregister_chain_assoc[symmetric] 
-                  qregister_of_cregister_Fst qregister_of_cregister_Snd
-                  qvariable_unit_def empty_qregisters_same[OF _ empty_qregister_is_register], simp)+
-    by -
 
   have \<open>CNOT' *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
     unfolding CNOT'_def

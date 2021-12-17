@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality" Complex_Bounded_Operators.Complex_L2
+  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
 begin
 
 section \<open>Misc\<close>
@@ -354,7 +354,7 @@ lemma Collect_UNIV: "Collect P = UNIV \<longleftrightarrow> (\<forall>x. P x)"
 
 lemma local_defE: "(\<And>x. x=y \<Longrightarrow> P) \<Longrightarrow> P" by metis
 
-(* TODO: to bounded operators *)
-declare cindependent_ket[simp]
+lemma inv_comp_eqI: \<open>inv f o g = h\<close> if \<open>inj f\<close> and \<open>g = f o h\<close> for f g
+  using that(1) that(2) by fastforce
 
 end
