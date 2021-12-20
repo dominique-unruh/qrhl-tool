@@ -249,7 +249,7 @@ lemma tensor_ext3:
   shows \<open>F = G\<close>
   sorry
 
-lemma qcompatible_Abs_qregister[simp]:
+(* lemma qcompatible_Abs_qregister[simp]:
   assumes \<open>qregister_raw F\<close> \<open>qregister_raw G\<close>
   (* assumes \<open>qcommuting_raw F G\<close> *)
   shows \<open>qcompatible (Abs_qregister F) (Abs_qregister G) \<longleftrightarrow> qcommuting_raw F G\<close>
@@ -280,7 +280,7 @@ lemma qregister_raw_tensor_right[intro!, simp]:
   sorry
 
 lemma qregister_raw_id'[simp]: \<open>qregister_raw (\<lambda>x. x)\<close>
-  by (metis eq_id_iff qregister_raw_id)
+  by (metis eq_id_iff qregister_raw_id) *)
 
 lemma permute_and_tensor1_cblinfun_ket[simp]: \<open>Rep_ell2 (permute_and_tensor1_cblinfun f R A *\<^sub>V ket a) b = 
   (if R b a then Rep_ell2 (A *\<^sub>V ket (f a)) (f b) else 0)\<close> for a b :: \<open>_::finite\<close>
@@ -475,8 +475,8 @@ proof -
     by (auto simp add: card_UNIV_length_enum enum_idx_bound reorder_mat_def)
 qed *)
 
-lemma enum_idx_correct': \<open>enum_idx (enum_class.enum ! i :: 'a::enum) = i\<close> if \<open>i < CARD('a)\<close>
-  sorry
+(* lemma enum_idx_correct': \<open>enum_idx (enum_class.enum ! i :: 'a::enum) = i\<close> if \<open>i < CARD('a)\<close>
+  sorry *)
 
 (* definition \<open>enum_idx_enum_nth_code n (_::'a::enum itself) i = (if i < n then i else 
     Code.abort STR ''enum_idx_enum_nth_code: index out of bounds'' (\<lambda>_. enum_idx (enum_class.enum ! i :: 'a)))\<close>
@@ -532,8 +532,6 @@ lemma [code]: \<open>Rep_ell2 \<psi> i = vec_of_ell2 \<psi> $ (enum_index i)\<cl
   assumes xxx[variable]: \<open>qregister \<lbrakk>a,b,c,d\<rbrakk>\<close> begin
  *)
 
-thm if_distrib[of fst]
-
 lemma permute_and_tensor1_mat_cong[cong]: 
   assumes \<open>d = d'\<close>
   assumes \<open>\<And>i. i < d' \<Longrightarrow> f i = f' i\<close>
@@ -583,6 +581,7 @@ proof -
 
   define CNOT' where \<open>CNOT' = apply_qregister \<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> CNOT\<close>
 
+(* TODO: Automate this step. *)
   have \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = apply_qregister \<lbrakk>a,b,c\<rbrakk> CNOT'\<close>
     apply (subst rew1[where G=\<open>\<lbrakk>a,b,c\<rbrakk>\<close>])
      apply (fact le)
@@ -590,6 +589,9 @@ proof -
 
   have \<open>CNOT' *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
     unfolding CNOT'_def
+    apply simp
+
+(* TODO: add to prepare_for_code *)
     using if_weak_cong[cong del] apply fail?
 
     using [[show_consts]]
