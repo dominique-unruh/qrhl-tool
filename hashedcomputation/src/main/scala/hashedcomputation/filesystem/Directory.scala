@@ -5,14 +5,16 @@ import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY, OVERFLOW}
 import java.nio.file.{FileSystem, FileSystems, Files, Path, WatchKey, WatchService}
 import java.util.concurrent.atomic.AtomicReference
-import com.google.common.cache.{CacheBuilder, RemovalNotification}
+import de.unruh.isabelle.misc.SharedCleaner
 import hashedcomputation.Fingerprint.Entry
 import hashedcomputation.{Element, Fingerprint, Hash, HashTag, HashedOption, HashedValue, RawHash, WithByteArray}
 import hashedcomputation.filesystem.Directory.DirectoryListener
 import hashedcomputation.filesystem.DirectorySnapshot.logger
+import org.jetbrains.annotations.NotNull
 import org.log4s
 import org.log4s.Logger
 
+import java.lang.ref
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -20,14 +22,14 @@ import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala}
 import scala.ref.{ReferenceWrapper, SoftReference, WeakReference}
 
 sealed abstract class GenericDirectory protected (partial: Boolean) {
-  registerWatcher()
   private val subdirs = new TrieMap[String, Directory]
   private val interesting = if (partial) new TrieMap[String, Unit] else null
-  private var currentSnapshot = new AtomicReference(makeSnapshot)
+  private val currentSnapshot = new AtomicReference(makeSnapshot)
+  protected val watchKey: WatchKey = registerWatcher()
 
-  protected def makeSnapshot : DirectorySnapshot
+  @NotNull protected def makeSnapshot : DirectorySnapshot
 
-  protected def registerWatcher() : Unit
+  protected def registerWatcher() : WatchKey
   def registerInterest(path: List[String]): Unit = if (partial) {
     path match {
       case Nil =>
@@ -105,6 +107,8 @@ sealed abstract class GenericDirectory protected (partial: Boolean) {
     notifyParent()
   }
   protected def entryModified(path: String): Unit = {
+    assert(currentSnapshot != null)
+    assert(path != null)
     currentSnapshot.updateAndGet { updateSnapshot(path, _) }
     notifyParent()
   }
@@ -128,7 +132,7 @@ object GenericDirectory {
 class Directory private[filesystem] (val path: Path, parent: GenericDirectory, parentKey: String,
                                      partial : Boolean) extends GenericDirectory(partial) with DirectoryListener {
   //  def snapshot : DirectorySnapshot = new DirectorySnapshot(this)
-  override def registerWatcher(): Unit = Directory.watchDirectory(path, this)
+  override def registerWatcher(): WatchKey = Directory.watchDirectory(path, this)
 
   override def pathToList(path: Path) : List[String] = {
     assert(!path.isAbsolute)
@@ -142,7 +146,7 @@ class Directory private[filesystem] (val path: Path, parent: GenericDirectory, p
       updateSnapshot(this.path.relativize(file).toString, snapshot)
     }
 
-  override def dispose(): Unit = Directory.unwatchDirectory(this)
+  override def dispose(): Unit = Directory.unwatchDirectory(this, watchKey)
 
   override protected def notifyParent(): Unit = {
 //    Directory.logger.debug(s"notifyParent: $parent $parentKey")
@@ -170,7 +174,7 @@ class Directory private[filesystem] (val path: Path, parent: GenericDirectory, p
 
 class RootsDirectory private[filesystem] (fileSystem: FileSystem)
   extends GenericDirectory(partial=true) {
-  protected override def registerWatcher(): Unit = {}
+  protected override def registerWatcher(): WatchKey = null
 
   private[filesystem] override def pathToList(path: Path): List[String] = {
     assert(path.isAbsolute)
@@ -199,7 +203,8 @@ object RootsDirectory {
 }
 
 object Directory {
-  def apply(path: Path, partial: Boolean = false) = new Directory(path.normalize.toAbsolutePath, null, null, partial)
+  def apply(path: Path, partial: Boolean = false) =
+    new Directory(path.normalize.toAbsolutePath, parent=null, null, partial)
 
   trait DirectoryListener {
     def onCreate(path: Path): Unit
@@ -207,30 +212,69 @@ object Directory {
     def onDelete(path: Path): Unit
     def onOverflow(): Unit
   }
-  private val listeners = CacheBuilder
+
+  /** Access in `Directory.synchronized`. */
+  private val listeners = mutable.HashMap[WatchKey, List[WeakReference[DirectoryListener]]]()
+
+/*  private val listeners = CacheBuilder
     .newBuilder()
     .weakValues()
     .removalListener[WatchKey, DirectoryListener]((notification:RemovalNotification[WatchKey,DirectoryListener]) => notification.getKey.cancel())
-    .build[WatchKey, DirectoryListener]()
+    .build[WatchKey, DirectoryListener]()*/
 
   private val logger = log4s.getLogger
   private val watchServices = new TrieMap[java.nio.file.FileSystem, WatchService]
 
-  def unwatchDirectory(listener: DirectoryListener): Unit =
-    listeners.invalidate(listener)
+  def unwatchDirectory(listener: DirectoryListener, watchKey: WatchKey): Unit = synchronized {
+    listeners.get(watchKey) match {
+      case None => throw new IllegalArgumentException(s"Trying to remove listener $listener from unknown watchkey $watchKey")
+      case Some(ls) =>
+        val ls2 = ls filter { ref =>
+          val content = ref.underlying.get
+          (content == null) || (content == listener) }
+        if (ls2.isEmpty)
+          listeners.remove(watchKey)
+        else
+          listeners.put(watchKey, ls2)
+    }
+  }
 
-  def watchDirectory(path: Path, listener: DirectoryListener): Unit = {
+  private def unwatchDirectoryRef(listenerRef: WeakReference[DirectoryListener], watchKey: WatchKey): Unit = synchronized {
+    listeners.get(watchKey) match {
+      case None =>
+      case Some(ls) =>
+        val ls2 = ls filterNot { ref => ref eq listenerRef }
+        if (ls2.isEmpty)
+          listeners.remove(watchKey)
+        else
+          listeners.put(watchKey, ls2)
+    }
+  }
+
+  def watchDirectory(path: Path, listener: DirectoryListener): WatchKey = {
     val filesystem = path.getFileSystem
     val watchService = watchServices.getOrElseUpdate(filesystem, {
 //      logger.debug(s"Found new filesystem: $filesystem")
       val watchService = filesystem.newWatchService()
-      val thread = new Thread(new PollWatchService(watchService), s"Filesystem watcher for $path")
+      val thread = new Thread(new PollWatchService(watchService), s"Filesystem watcher for ${filesystem.getRootDirectories.asScala.mkString(";")}")
       thread.setDaemon(true)
       thread.start()
       watchService
     })
-    val watchKey = path.register(watchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
-    listeners.put(watchKey, listener)
+    /* We have to synchronize this even if `listeners` is thread-safe:
+     * The watch service can send an event right after creation and before we added the key to `listeners`, leading to an error in PollWatchService.run
+     */
+    synchronized {
+      val watchKey = path.register(watchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
+      logger.debug(s"New watch service key $watchKey for $path in ${filesystem.getRootDirectories.asScala.mkString(";")}")
+      val ref = new WeakReference(listener)
+      listeners.updateWith(watchKey) {
+        case None => Some(List(ref))
+        case Some(ls) => Some(ref :: ls)
+      }
+      SharedCleaner.register(listener, () => unwatchDirectoryRef(ref, watchKey))
+      watchKey
+    }
   }
 
   private class PollWatchService(watchService: WatchService) extends Runnable {
@@ -238,20 +282,23 @@ object Directory {
       while (true) {
         val key = watchService.take()
         val events = key.pollEvents()
+        val keyListeners = synchronized(listeners.getOrElse(key, { logger.error(s"Did not find a listener for key $key"); Nil }))
+        for (listenerRef <- keyListeners) {
+          listenerRef.get match {
+            case None =>
+            case Some(listener) =>
+              events.forEach { event => try {
+                event.kind() match {
+                  case OVERFLOW => listener.onOverflow()
+                  case ENTRY_CREATE => listener.onCreate(event.context().asInstanceOf[Path])
+                  case ENTRY_MODIFY => listener.onModify(event.context().asInstanceOf[Path])
+                  case ENTRY_DELETE => listener.onDelete(event.context().asInstanceOf[Path])
+                }}
+              catch {
+                case e : Throwable => logger.error(e)(s"Listener threw exception on event $event")
+              }}}
+          }
         key.reset()
-        listeners.getIfPresent(key) match {
-          case null => logger.error(s"Did not find a listener for key $key")
-          case listener =>
-            events.forEach { event => try {
-              event.kind() match {
-                case OVERFLOW => listener.onOverflow()
-                case ENTRY_CREATE => listener.onCreate(event.context().asInstanceOf[Path])
-                case ENTRY_MODIFY => listener.onModify(event.context().asInstanceOf[Path])
-                case ENTRY_DELETE => listener.onDelete(event.context().asInstanceOf[Path])
-              }}
-            catch {
-              case e : Throwable => logger.error(e)(s"Listener threw exception on event $event")
-            }}}
       }
     }
   }
