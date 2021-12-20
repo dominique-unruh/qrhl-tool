@@ -66,7 +66,6 @@ end
 instantiation prod :: (eenum,eenum) eenum begin
 definition \<open>enum_index_prod = (\<lambda>(i::'a,j::'b). enum_index i * CARD('b) + enum_index j)\<close>
 definition \<open>enum_nth_prod ij = (let i = ij div CARD('b) in if i < CARD('a) then (enum_nth i, enum_nth (ij mod CARD('b))) else (enum_nth 0, enum_nth 0) :: 'a\<times>'b)\<close>
-(* definition \<open>enum_nth_prod ij = (enum_nth (ij div CARD('b)) :: 'a, enum_nth (ij mod CARD('b)) :: 'b)\<close> *)
 instance
 proof standard
   show \<open>i < CARD('a \<times> 'b) \<Longrightarrow> (Enum.enum ! i :: 'a\<times>'b) = enum_nth i\<close> for i
@@ -96,11 +95,6 @@ lemma enum_index_fst: \<open>enum_index (fst x) = enum_index x div CARD('b)\<clo
 lemma enum_index_snd: \<open>enum_index (snd x) = enum_index x mod CARD('b)\<close> for x :: \<open>'a::eenum\<times>'b::eenum\<close>
   by (auto simp add: enum_index_prod_def case_prod_beta)
 
-(* lemma enum_list_nth_enum_nth[simp]: \<open>(Enum.enum ! i :: 'a::eenum) = (if i < CARD('a) then enum_nth i else Enum.enum ! i)\<close>
-  apply auto
-  thm enum_nth_enum
-  sorry *)
-
 lemma enum_idx_enum_index[simp]: \<open>enum_idx = enum_index\<close>
 proof (rule ext)
   fix x :: 'a
@@ -127,11 +121,6 @@ lemma apply_qregister_of_cregister:
   shows \<open>apply_qregister (qregister_of_cregister F) a = 
           permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a\<close>
   unfolding qregister_of_cregister.rep_eq using assms by simp
-
-lemma apply_qregister_Fst[simp]: \<open>apply_qregister qFst x = x \<otimes> id_cblinfun\<close>
-  sorry
-lemma apply_qregister_Snd[simp]: \<open>apply_qregister qSnd x = id_cblinfun \<otimes> x\<close>
-  sorry
 
 lemma cregister_chain_is_cregister[simp]: \<open>cregister (cregister_chain F G) \<longleftrightarrow> cregister F \<and> cregister G\<close>
   by (metis Cccompatible_CREGISTER_of Cccompatible_comp_right ccompatible_CCcompatible cregister.rep_eq cregister_chain.rep_eq non_cregister_raw)
@@ -183,27 +172,18 @@ lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_cha
 
 
 lemma getter_pair: 
-  assumes \<open>cregister F\<close> \<open>cregister G\<close>
+  assumes \<open>ccompatible F G\<close>
   shows \<open>getter (cregister_pair F G) = (\<lambda>m. (getter F m, getter G m))\<close>
   sorry
 
 lemma setter_pair:
-  assumes \<open>cregister F\<close> \<open>cregister G\<close>
+  assumes \<open>ccompatible F G\<close>
   shows \<open>setter (cregister_pair F G) = (\<lambda>(x,y). setter F x o setter G y)\<close>
   sorry
 
 lemma getter_chain:
   assumes \<open>cregister F\<close>
   shows \<open>getter (cregister_chain F G) = getter G o getter F\<close>
-  sorry
-
-lemma butterfly_tensor: \<open>butterfly (a \<otimes> b) (c \<otimes> d) = butterfly a c \<otimes> butterfly b d\<close>
-  sorry
-
-lemma clinear_tensorOp_left[simp]: \<open>clinear (\<lambda>x. x \<otimes> y)\<close> for y :: \<open>(_,_) cblinfun\<close>
-  sorry
-
-lemma clinear_tensorOp_right[simp]: \<open>clinear (\<lambda>y. x \<otimes> y)\<close> for x :: \<open>(_,_) cblinfun\<close>
   sorry
 
 lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregister F)\<close>
@@ -213,10 +193,6 @@ lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregi
 
 lemma clinear_apply_qregister[simp]: \<open>clinear (apply_qregister F)\<close>
   using bounded_clinear.clinear bounded_clinear_apply_qregister by blast
-
-(* lemma qregister_chain_pair:
-  shows "qregister_pair (qregister_chain F G) (qregister_chain F H) = qregister_chain F (qregister_pair G H)"
-  sorry *)
 
 lemma rew1: \<open>qregister_le F G \<Longrightarrow> apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
   apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
@@ -238,49 +214,6 @@ lemma qregister_conversion_chain:
   shows \<open>qregister_chain (qregister_conversion G H) (qregister_conversion F G) = qregister_conversion F H\<close>
   using assms unfolding qregister_le_def apply (transfer fixing: F G H) apply transfer
   by (auto intro!: ext qregister_conversion_raw_register simp: f_inv_into_f range_subsetD)
-
-lemma tensor_ext2: 
-  assumes \<open>\<And>x y. apply_qregister F (x\<otimes>y) = apply_qregister G (x\<otimes>y)\<close>
-  shows \<open>F = G\<close>
-  sorry
-
-lemma tensor_ext3: 
-  assumes \<open>\<And>x y z. apply_qregister F (x\<otimes>y\<otimes>z) = apply_qregister G (x\<otimes>y\<otimes>z)\<close>
-  shows \<open>F = G\<close>
-  sorry
-
-(* lemma qcompatible_Abs_qregister[simp]:
-  assumes \<open>qregister_raw F\<close> \<open>qregister_raw G\<close>
-  (* assumes \<open>qcommuting_raw F G\<close> *)
-  shows \<open>qcompatible (Abs_qregister F) (Abs_qregister G) \<longleftrightarrow> qcommuting_raw F G\<close>
-  using assms by (simp add: eq_onp_same_args qcompatible.abs_eq qcompatible_raw_def qcommuting_raw_def)
-
-lemma qcompatible_Abs_qregister_id_tensor_left[simp]:
-  shows \<open>qcommuting_raw (\<lambda>x. id_cblinfun \<otimes> f x) (\<lambda>x. g x \<otimes> id_cblinfun)\<close>
-  by (auto simp: qcommuting_raw_def)
-
-lemma qcompatible_Abs_qregister_id_tensor_right[simp]:
-  shows \<open>qcommuting_raw (\<lambda>x. g x \<otimes> id_cblinfun) (\<lambda>x. id_cblinfun \<otimes> f x)\<close>
-  by (auto simp: qcommuting_raw_def)
-
-lemma qcompatible_Abs_qregister_id_tensor_idid_tensor_left[simp]:
-  shows \<open>qcommuting_raw (\<lambda>x. id_cblinfun \<otimes> f x) (\<lambda>x. id_cblinfun \<otimes> g x) \<longleftrightarrow> qcommuting_raw f g\<close>
-  sorry
-
-lemma qcompatible_Abs_qregister_id_tensor_idid_tensor_right[simp]:
-  shows \<open>qcommuting_raw (\<lambda>x. f x \<otimes> id_cblinfun) (\<lambda>x. g x \<otimes> id_cblinfun) \<longleftrightarrow> qcommuting_raw f g\<close>
-  sorry
-
-lemma qregister_raw_tensor_left[simp]:
-  shows \<open>qregister_raw (\<lambda>x. id_cblinfun \<otimes> F x) \<longleftrightarrow> qregister_raw F\<close>
-  sorry
-
-lemma qregister_raw_tensor_right[intro!, simp]:
-  shows \<open>qregister_raw (\<lambda>x. F x \<otimes> id_cblinfun) \<longleftrightarrow> qregister_raw F\<close>
-  sorry
-
-lemma qregister_raw_id'[simp]: \<open>qregister_raw (\<lambda>x. x)\<close>
-  by (metis eq_id_iff qregister_raw_id) *)
 
 lemma permute_and_tensor1_cblinfun_ket[simp]: \<open>Rep_ell2 (permute_and_tensor1_cblinfun f R A *\<^sub>V ket a) b = 
   (if R b a then Rep_ell2 (A *\<^sub>V ket (f a)) (f b) else 0)\<close> for a b :: \<open>_::finite\<close>
@@ -308,7 +241,6 @@ definition permute_and_tensor1_mat where \<open>permute_and_tensor1_mat d f R m 
   mat d d (\<lambda>(i,j). if R i j then m $$ (f i, f j) else 0)\<close>
 
 definition permute_and_tensor1_mat' :: \<open>_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a::enum ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a::enum ell2)\<close> where 
- (* [code del]: \<open>permute_and_tensor1_mat' f R m = cblinfun_of_mat (mat CARD('a) CARD('a) (\<lambda>(i,j). if R i j then m $$ (f i, f j) else 0))\<close> *)
  [code del]: \<open>permute_and_tensor1_mat' d f R m = cblinfun_of_mat (permute_and_tensor1_mat d f R m)\<close>
 
 (* TODO move *)
@@ -317,15 +249,6 @@ lemma cblinfun_of_mat_invalid:
   shows \<open>(cblinfun_of_mat M :: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b) = 0\<close>
   apply (transfer fixing: M)
   using assms by simp
-
-(* lemma mat_of_cblinfun_permute_and_tensor1_mat'[code]:
-  \<open>(permute_and_tensor1_mat' d f R m :: 'a::enum ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) 
-    = (if d=CARD('a) then cblinfun_of_mat (mat d d (\<lambda>(i,j). if R i j then m $$ (f i, f j) else 0)) else 0)\<close>
-  apply (cases \<open>d = CARD('a)\<close>)
-   apply (auto simp add: permute_and_tensor1_mat'_def cblinfun_of_mat_inverse permute_and_tensor1_mat_def)
-  apply (subst cblinfun_of_mat_invalid)
-  by (auto simp: mat_of_cblinfun_zero)
- *)
 
 lemma mat_of_cblinfun_permute_and_tensor1_mat'[code]:
   \<open>mat_of_cblinfun (permute_and_tensor1_mat' d f R m :: 'a::enum ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) 
@@ -356,29 +279,6 @@ lemma permute_and_tensor1_cblinfun_code_prep[code]:
   apply (rule cong_mat, simp, simp)
   by (simp add: mat_of_cblinfun_ell2_component enum_idx_correct)
 
-(* definition \<open>cblinfun_of_mat' = cblinfun_of_mat\<close>
-lemma [code]: \<open>mat_of_cblinfun (cblinfun_of_mat' x :: 'a::{basis_enum,complex_normed_vector} \<Rightarrow>\<^sub>C\<^sub>L 'b::{basis_enum,complex_normed_vector})
-   = (if x \<in> carrier_mat (cdimension TYPE('a)) (cdimension TYPE('b)) (length (canonical_basis :: 'b list)) then x else zero_mat CARD('a) CARD('b))\<close>
-  unfolding cblinfun_of_mat'_def
-  apply (subst cblinfun_of_mat_inverse)
-  apply (auto simp flip: canonical_basis_length_ell2)
-  
-  by auto *)
-
-(* lemma permute_and_tensor1_cblinfun_prep_code:
-  fixes f :: \<open>'b::eenum \<Rightarrow> 'a::eenum\<close>
-  shows \<open>permute_and_tensor1_cblinfun f R a = 
-      cblinfun_of_mat' (permute_and_tensor1_mat CARD('b) (\<lambda>i. enum_index (f (enum_nth i)))
-      (\<lambda>i j. R (enum_nth i) (enum_nth j)) (mat_of_cblinfun a))\<close>
-  by (metis cblinfun_of_mat'_def mat_of_cblinfun_inverse mat_of_cblinfun_permute_and_tensor1_cblinfun) *)
-
-(* definition reorder_cblinfun :: \<open>('d \<Rightarrow> 'b) \<Rightarrow> ('c \<Rightarrow> 'a) \<Rightarrow> ('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) \<Rightarrow> ('c ell2 \<Rightarrow>\<^sub>C\<^sub>L 'd ell2)\<close> where
-  \<open>reorder_cblinfun r c A = explicit_cblinfun (\<lambda>i j. Rep_ell2 (A *\<^sub>V ket (c j)) (r i))\<close>
-
-abbreviation "reorder_cblinfun2 f \<equiv> reorder_cblinfun f f"
-
-lemma reorder_cblinfun_ket[simp]: \<open>Rep_ell2 (reorder_cblinfun r c A *\<^sub>V ket a) b = Rep_ell2 (A *\<^sub>V ket (c a)) (r b)\<close> for a b :: \<open>_::finite\<close>
-  by (simp add: reorder_cblinfun_def) *)
 
 lemma clinear_permute_and_tensor1_cblinfun[simp]: \<open>clinear (permute_and_tensor1_cblinfun r c)\<close> for r c :: \<open>_::finite \<Rightarrow> _\<close>
 proof (rule clinearI)
@@ -389,16 +289,6 @@ proof (rule clinearI)
     apply (rule equal_ket)
     by (auto simp: scaleC_ell2.rep_eq simp flip: Rep_ell2_inject)
 qed
-
-(* lemma clinear_reorder_cblinfun[simp]: \<open>clinear (reorder_cblinfun r c)\<close> for r c :: \<open>_::finite \<Rightarrow> _\<close>
-proof (rule clinearI)
-  show \<open>reorder_cblinfun r c (A + B) = reorder_cblinfun r c A + reorder_cblinfun r c B\<close> for A B
-    apply (rule equal_ket)
-    by (auto simp: plus_ell2.rep_eq cblinfun.add_left simp flip: Rep_ell2_inject)
-  show \<open>reorder_cblinfun r c (s *\<^sub>C A) = s *\<^sub>C reorder_cblinfun r c A\<close> for s A
-    apply (rule equal_ket)
-    by (auto simp: scaleC_ell2.rep_eq simp flip: Rep_ell2_inject)
-qed *)
 
 lemma permute_and_tensor1_cblinfun_butterfly: 
   fixes f :: \<open>_::finite \<Rightarrow> _::finite\<close>
@@ -422,115 +312,15 @@ proof (rule equal_ket, rule Rep_ell2_inject[THEN iffD1], rule ext)
     by -
 qed
 
-(* lemma reorder_cblinfun_butterfly: 
-  fixes r c :: \<open>_::finite \<Rightarrow> _::finite\<close>
-  assumes \<open>bij r\<close> \<open>bij c\<close>
-  shows \<open>reorder_cblinfun r c (butterket a b) = butterket (inv r a) (inv c b)\<close>
-proof (rule equal_ket, rule Rep_ell2_inject[THEN iffD1], rule ext)
-  fix i j
-  have \<open>Rep_ell2 (reorder_cblinfun r c (butterket a b) \<cdot> ket i) j = Rep_ell2 ((ket b \<bullet>\<^sub>C ket (c i)) *\<^sub>C ket a) (r j)\<close>
-    by auto
-  also have \<open>\<dots> = (if b=c i then 1 else 0) * (if a=r j then 1 else 0)\<close>
-    by (simp add: scaleC_ell2.rep_eq ket.rep_eq)
-  also have \<open>\<dots> = (if inv c b=i then 1 else 0) * (if inv r a=j then 1 else 0)\<close>
-    by (smt (verit, del_insts) assms(1) assms(2) bij_inv_eq_iff)
-  also have \<open>\<dots> = Rep_ell2 ((ket (inv c b) \<bullet>\<^sub>C ket i) *\<^sub>C ket (inv r a)) j\<close>
-    by (simp add: scaleC_ell2.rep_eq ket.rep_eq)
-  also have \<open>\<dots> = Rep_ell2 (butterket (inv r a) (inv c b) \<cdot> ket i) j\<close>
-    by auto
-  finally show \<open>Rep_ell2 (reorder_cblinfun r c (butterket a b) \<cdot> ket i) j = Rep_ell2 (butterket (inv r a) (inv c b) \<cdot> ket i) j\<close>
-    by -
-qed
-
-lemma reorder_cblinfun2_butterfly: 
-  fixes f :: \<open>_::finite \<Rightarrow> _::finite\<close>
-  assumes \<open>bij f\<close>
-  shows \<open>reorder_cblinfun2 f (butterket a b) = butterket (inv f a) (inv f b)\<close>
-  by (simp add: assms reorder_cblinfun_butterfly) *)
-
-(* definition reorder_mat :: \<open>nat \<Rightarrow> nat \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> complex mat \<Rightarrow> complex mat\<close> where 
-  \<open>reorder_mat n m r c A = Matrix.mat n m (\<lambda>(i, j). A $$ (r i, c j))\<close> *)
-
 (* TODO: to bounded operators *)
 declare enum_idx_correct[simp]
 
-(* lemma mat_of_cblinfun_reorder[code]: 
-  fixes r :: \<open>'a::enum \<Rightarrow> 'c::enum\<close> and c :: \<open>'b::enum \<Rightarrow> 'd::enum\<close>
-  shows \<open>mat_of_cblinfun (reorder_cblinfun r c A) = reorder_mat CARD('a) CARD('b)
-(\<lambda>i. enum_idx (r (enum_class.enum ! i))) (\<lambda>j. enum_idx (c (enum_class.enum ! j))) (mat_of_cblinfun A)\<close>
-proof -
-  have aux: \<open>Rep_ell2 \<psi> i = vec_of_basis_enum \<psi> $ (enum_idx i)\<close> if \<open>enum_idx i < CARD('z)\<close> 
-    for \<psi> :: \<open>'z::enum ell2\<close> and i
-    apply (subst vec_of_basis_enum_ell2_component)
-    using that by auto
-
-  show ?thesis
-    apply (subst reorder_cblinfun_def)
-    apply (subst mat_of_cblinfun_explicit_cblinfun)
-    apply (subst aux)
-     apply (simp add: card_UNIV_length_enum enum_idx_bound)
-    apply (subst mat_of_cblinfun_cblinfun_apply)
-    apply (subst vec_of_basis_enum_ket)
-    apply (subst mat_entry_explicit)
-    by (auto simp add: card_UNIV_length_enum enum_idx_bound reorder_mat_def)
-qed *)
-
-(* lemma enum_idx_correct': \<open>enum_idx (enum_class.enum ! i :: 'a::enum) = i\<close> if \<open>i < CARD('a)\<close>
-  sorry *)
-
-(* definition \<open>enum_idx_enum_nth_code n (_::'a::enum itself) i = (if i < n then i else 
-    Code.abort STR ''enum_idx_enum_nth_code: index out of bounds'' (\<lambda>_. enum_idx (enum_class.enum ! i :: 'a)))\<close>
-
-lemma enum_idx_enum_nth_code: \<open>enum_idx (enum_class.enum ! i :: 'a::enum) = enum_idx_enum_nth_code CARD('a) TYPE('a) i\<close>
-  unfolding enum_idx_enum_nth_code_def
-  apply (cases \<open>i < CARD('a)\<close>)
-   apply (subst enum_idx_correct', simp, simp)
-  by auto
-
-lemma enum_idx_pair: \<open>enum_idx (a,b) = enum_idx a * CARD('b) + enum_idx b\<close> for a :: \<open>'a::enum\<close> and b :: \<open>'b::enum\<close>
-proof -
-  let ?enumab = \<open>Enum.enum :: ('a \<times> 'b) list\<close>
-  let ?enuma = \<open>Enum.enum :: 'a list\<close>
-  let ?enumb = \<open>Enum.enum :: 'b list\<close>
-  have bound: \<open>i < CARD('a) \<Longrightarrow> j < CARD('b) \<Longrightarrow> i * CARD('b) + j < CARD('a) * CARD('b)\<close> for i j
-    sorry
-  have *: \<open>?enumab ! (i * CARD('b) + j) = (?enuma ! i, ?enumb ! j)\<close> 
-    if \<open>i < CARD('a)\<close> \<open>j < CARD('b)\<close> for i j
-    unfolding enum_prod_def 
-    apply (subst List.product_nth)
-    using that bound by (auto simp flip: card_UNIV_length_enum)
-  note ** = *[where i=\<open>enum_idx a\<close> and j=\<open>enum_idx b\<close>, simplified, symmetric]
-  show ?thesis
-    apply (subst ** )
-    using enum_idx_bound[of a] enum_idx_bound[of b]
-    by (auto simp: bound enum_idx_correct' simp flip: card_UNIV_length_enum)
-qed
-
-lemma enum_idx_fst: \<open>enum_idx (fst ab) = enum_idx ab div CARD('b)\<close> for ab :: \<open>'a::enum \<times> 'b::enum\<close>
-  apply (cases ab, hypsubst_thin)
-  apply (subst enum_idx_pair)
-  using enum_idx_bound
-  by (auto intro!: div_less simp flip: card_UNIV_length_enum)
-
-lemma enum_idx_snd: \<open>enum_idx (snd ab) = enum_idx ab mod CARD('b)\<close> for ab :: \<open>'a::enum \<times> 'b::enum\<close>
-  apply (cases ab, hypsubst_thin)
-  apply (subst enum_idx_pair)
-  using enum_idx_bound
-  by (auto intro!: mod_less[symmetric] simp flip: card_UNIV_length_enum)
- *)
-
-lemma prod_eqI': \<open>x = fst z \<Longrightarrow> y = snd z \<Longrightarrow> (x,y) = z\<close>
-  by auto
 
 lemma [code]: \<open>vec_of_ell2 (Abs_ell2 f) = vec CARD('a) (\<lambda>n. f (enum_nth n))\<close> for f :: \<open>'a::eenum \<Rightarrow> complex\<close>
   by (auto simp: vec_of_ell2_def vec_eq_iff vec_of_basis_enum_ell2_component)
 
 lemma [code]: \<open>Rep_ell2 \<psi> i = vec_of_ell2 \<psi> $ (enum_index i)\<close> for i :: \<open>'a::eenum\<close>
   by (auto simp: vec_of_ell2_def vec_eq_iff vec_of_basis_enum_ell2_component)
-
-(* experiment fixes a :: \<open>bool qvariable\<close> and b :: \<open>bit qvariable\<close> and c :: \<open>3 qvariable\<close> and d :: \<open>3 qvariable\<close>
-  assumes xxx[variable]: \<open>qregister \<lbrakk>a,b,c,d\<rbrakk>\<close> begin
- *)
 
 lemma permute_and_tensor1_mat_cong[cong]: 
   assumes \<open>d = d'\<close>
@@ -548,6 +338,7 @@ lemma enum_nth_injective: \<open>i < CARD('a) \<Longrightarrow> j < CARD('a) \<L
 
 lemma div_leq_simp: \<open>(i div n < m) \<longleftrightarrow> i < n*m\<close> if \<open>n \<noteq> 0\<close> for n m :: nat
   by (simp add: div_less_iff_less_mult ordered_field_class.sign_simps(5) that zero_less_iff_neq_zero)
+
 
 lemmas prepare_for_code_new =
 
