@@ -7,7 +7,10 @@ for [v0.6](https://github.com/dominique-unruh/qrhl-tool/releases/tag/v0.6).**
 # Binary installation
 
 The binaries require Linux, OS/X, or Windows to run.
+
 You can download the binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases).
+
+The binary development snapshot can be downloaded from [here](https://nightly.link/dominique-unruh/qrhl-tool/workflows/test/master/qrhl.zip).
 
 ## Prerequisites
 
