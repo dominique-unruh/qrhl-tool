@@ -17,8 +17,7 @@ lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   libraryDependencies += "org.log4s" %% "log4s" % "1.8.2",
   // Needed so that logging works in "sbt test"
   libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30" % Test,
-  // https://mvnrepository.com/artifact/com.google.guava/guava
-  libraryDependencies += "com.google.guava" % "guava" % "30.0-jre",
+//  libraryDependencies += "com.google.guava" % "guava" % "30.0-jre",
   libraryDependencies += "org.jetbrains" % "annotations" % "20.1.0",
   // https://mvnrepository.com/artifact/commons-codec/commons-codec
   libraryDependencies += "commons-codec" % "commons-codec" % "1.15",
@@ -28,6 +27,7 @@ lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % Test,
   libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.12.0" % Test
 )
+  .dependsOn(RootProject(file("scala-isabelle"))) // Only for access to SharedCleaner. Can remove this if we use a different SharedCleaner
 
 
 
