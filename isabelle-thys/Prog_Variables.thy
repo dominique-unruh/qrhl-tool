@@ -1002,6 +1002,16 @@ abbreviation (input) \<open>declared_qvars Q \<equiv> qregister Q\<close>
 simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\<close>) =
   \<open>fn m => fn ctxt => fn ct => SOME (Prog_Variables.qregister_conversion_to_register_conv ctxt ct) handle e => NONE\<close>
 
+(* A hint to the simplifier with the meaning:
+    - A is a term of the form x>>Q
+    - Q,R are registers
+    - Q \<le> R
+    - The whole term should be rewritten into x'>>R for some x'
+  Rewriting the term is done by the simproc TODO declared below.
+*)
+definition "register_conversion_hint A R = A"
+lemma register_conversion_hint_cong[cong]: "A=A' \<Longrightarrow> register_conversion_hint A R = register_conversion_hint A' R" by simp
+
 section \<open>Cleanup\<close>
 
 hide_type (open) vtree

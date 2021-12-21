@@ -539,16 +539,7 @@ proof (unfold qvar_trafo_def, (rule conjI[rotated])+, rule allI)
 qed
 *)
 
-(* A hint to the simplifier with the meaning:
-    - A is a term of the form x>>Q
-    - Q,R are registers
-    - Q \<le> R
-    - The whole term should be rewritten into x'>>R for some x'
-  Rewriting the term is done by the simproc variable_rewriting_simproc declared below.
-*)
-definition "reorder_variables_hint A R = A"
-lemma reorder_variables_hint_cong[cong]: "A=A' \<Longrightarrow> reorder_variables_hint A R = reorder_variables_hint A' R" by simp
-
+abbreviation (input) \<open>reorder_variables_hint \<equiv> register_conversion_hint\<close>
 
 (*
 lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x" \<comment> \<open>Auxiliary lemma used by reorder_variables_hint_conv\<close>

@@ -122,10 +122,6 @@ lemma apply_qregister_of_cregister:
           permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a\<close>
   unfolding qregister_of_cregister.rep_eq using assms by simp
 
-lemma cregister_chain_is_cregister[simp]: \<open>cregister (cregister_chain F G) \<longleftrightarrow> cregister F \<and> cregister G\<close>
-  by (metis Cccompatible_CREGISTER_of Cccompatible_comp_right ccompatible_CCcompatible cregister.rep_eq cregister_chain.rep_eq non_cregister_raw)
-
-
 lemma qregister_chain_pair_Fst_chain[simp]:
   assumes \<open>qcompatible F G\<close>
   shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qFst H) = qregister_chain F H\<close>
@@ -340,11 +336,6 @@ lemma div_leq_simp: \<open>(i div n < m) \<longleftrightarrow> i < n*m\<close> i
   by (simp add: div_less_iff_less_mult ordered_field_class.sign_simps(5) that zero_less_iff_neq_zero)
 
 
-experiment
-  fixes a b c
-  assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
-begin
-
 ML \<open>
 fun qregister_le_tac ctxt = let
   fun tac' ctxt i st = st |>
@@ -383,8 +374,16 @@ in
   (infer_instantiate ctxt [(("x",1), argument)] @{thm qregister_apply_conversion[THEN eq_reflection]}) OF [less_eq_thm]
 end
 ;;
-apply_qregister_conversion_conv \<^context> \<^cterm>\<open>\<lbrakk>a,b,c\<rbrakk>\<close> \<^cterm>\<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close>
+(* apply_qregister_conversion_conv \<^context> \<^cterm>\<open>\<lbrakk>a,b,c\<rbrakk>\<close> \<^cterm>\<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close> *)
 \<close>
+
+simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close>) =
+  \<open>fn m => fn ctxt => fn ct => let 
+    val _ = \<^print> ct
+    val target = ct |> Thm.dest_arg
+    val conv = (apply_qregister_conversion_conv ctxt target |> Conv.arg1_conv)
+        then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
+    in SOME (conv ct) handle e => NONE end\<close>
 
 
 lemmas prepare_for_code_new =
@@ -408,22 +407,20 @@ lemmas prepare_for_code_remove =
   qregister_of_cregister_Fst qregister_of_cregister_Snd
   qregister_of_cregister_pair qregister_of_cregister_chain
 
-
-lemma Test
+lemma
+  fixes a b c
+  assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
+  shows True
 proof -
-  fix a b c
-
-  have t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close> sorry
-
-  have le: \<open>\<lbrakk>a,c \<le> a,b,c\<rbrakk>\<close>
-    by (tactic \<open>qregister_le_tac \<^context> 1\<close>)
+(*   have le: \<open>\<lbrakk>a,c \<le> a,b,c\<rbrakk>\<close>
+    by (tactic \<open>qregister_le_tac \<^context> 1\<close>) *)
 
   define CNOT' where \<open>CNOT' = apply_qregister \<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> CNOT\<close>
 
   have \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = apply_qregister \<lbrakk>a,b,c\<rbrakk> CNOT'\<close>
-    apply (tactic \<open>CONVERSION (apply_qregister_conversion_conv \<^context> \<^cterm>\<open>\<lbrakk>a,b,c\<rbrakk>\<close> |> Conv.arg1_conv |> Conv.arg_conv) 1\<close>)
+    apply (subst register_conversion_hint_def[of \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close> \<open>\<lbrakk>a,b,c\<rbrakk>\<close>, symmetric])
     unfolding CNOT'_def
-    by (rule refl)
+    by simp
 
   have \<open>CNOT' *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
     unfolding CNOT'_def
