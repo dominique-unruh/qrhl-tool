@@ -212,6 +212,16 @@ in (str, fn _ => thm) end
 
 ML_file "weakest_precondition.ML"
 
+experiment
+  fixes x y :: \<open>nat cvariable\<close> assumes [variable]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<close>
+begin
 
+abbreviation \<open>x1 \<equiv> cregister_chain cFst x\<close>
+
+lemma \<open>qrhl (\<lambda>m. Cla[getter x1 m = 1]) [assign x (\<lambda>m. 2)] []  (\<lambda>m. Cla[getter x1 m = 2])\<close>
+  apply (tactic \<open>Weakest_Precondition.wp_seq_tac 1 0 \<^context> 1\<close>)
+  oops
+
+end
 
 end

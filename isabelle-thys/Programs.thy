@@ -187,12 +187,24 @@ translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probab
 hide_const probability_syntax
 
 experiment
-  fixes x :: \<open>nat cvariable\<close>
-  assumes [variable]: \<open>cregister x\<close>
+  fixes x y :: \<open>nat cvariable\<close>
+  assumes [variable]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<close>
 begin
 (* local_setup \<open>Prog_Variables.declare_variable_lthy (\<^term>\<open>x\<close> |> dest_Free |> fst) Prog_Variables.Classical \<^typ>\<open>nat\<close>\<close> *)
 term \<open>Expr[x1+1]\<close>
 term \<open>Pr[b=1 : left(rho)]\<close>
+
+lemma \<open>getter x (setter x 1 mm) = xxx\<close>
+  apply simp
+  oops
+
+ML \<open>
+Programs.clean_expression_conv \<^context> \<^cterm>\<open>getter x (setter x 1 mm)\<close> |> Thm.rhs_of
+;;
+Programs.clean_expression_conv \<^context> \<^cterm>\<open>getter x (setter y 1 mm)\<close> |> Thm.rhs_of
+\<close>
+
+
 end
 
 end

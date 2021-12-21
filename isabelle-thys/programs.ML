@@ -5,6 +5,16 @@ local open Prog_Variables in
 fun mk_expressionT T = \<^typ>\<open>cl\<close> --> T
 fun mk_expression2T T = \<^typ>\<open>cl2\<close> --> T
 
+val clean_expression_conv_simpset = 
+  \<^context>
+  |> Simplifier.init_simpset @{thms getter_setter_same[THEN eq_reflection] getter_setter_compat[THEN eq_reflection]}
+  |> simpset_of
+fun clean_expression_conv ctxt = let
+  val outer_simpset = simpset_of ctxt
+  val simpset_ctxt = put_simpset clean_expression_conv_simpset ctxt
+  fun prover ctxt = SINGLE (ALLGOALS (distinct_vars_tac (put_simpset outer_simpset ctxt)))
+in Raw_Simplifier.rewrite_cterm (false,true,false) prover simpset_ctxt end
+
 (* Translates expression in longform to expression in shortform *)
 fun expression_to_term ctxt t =
   let val lookup_var = lookup_variable ctxt

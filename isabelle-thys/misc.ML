@@ -221,4 +221,8 @@ fun mk_ct_equals ct1 ct2 = let
     Thm.apply (Thm.apply eq ct1) ct2
   end
 
+(* For debugging. Never call outside of experiments (has a hardcoded Linux terminal in it) *)
+val tty_handle = Lazy.lazy (fn () => TextIO.openOut "/dev/pts/2")
+fun tty s = (TextIO.output (Lazy.force tty_handle, (s |> Output.output |> YXML.content_of) ^ "\n"); TextIO.flushOut (Lazy.force tty_handle))
+
 end

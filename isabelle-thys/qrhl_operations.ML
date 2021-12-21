@@ -48,7 +48,6 @@ fun qrhl_subgoal_to_term (ctxt,left,right,pre,post,assms) =
   fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms 
     (Relational_Hoare.qrhl_judgment_to_term ctxt (Relational_Hoare.QRHL_Judgment (pre,left,right,post)))
 
-(* TODO unused? *)
 fun subgoal_to_term ctxt (Subgoal_QRHL (qrhl, assms)) = 
     fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms (Relational_Hoare.qrhl_judgment_to_term ctxt qrhl)
   | subgoal_to_term _ (Subgoal_Ambient t) = t

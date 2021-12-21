@@ -7,7 +7,9 @@ struct
    wp_tac0 solves the subgoal (if p1 is built only from supported statements) and instantiates ?A
    to be the weakest precondition.
 
-   "wp_tac0 false" operates analogously, except that it expects a goal of the form "qrhl ?A skip p2 B"
+   "wp_tac0 false" operates analogously, exept that it expects a goal of the form "qrhl ?A skip p2 B"
+
+   Note: wp_tac0 does not clean up the resulting wp, we are left with subterms such as "getter x (setter y ...)"
 *)
 fun wp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
   val (pre,p1,p2,post) = Relational_Hoare.dest_qrhl_goal goal
@@ -87,6 +89,9 @@ fun wp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
   | [s] => Misc.error_tac (fn _ => "Statement must be one of assign/sample/block/qinit/qapply/measure/if, not '"^Syntax.string_of_term ctxt s^"'") ctxt
   end)
 
+(* 
+   Note: wp_tac does not clean up the resulting wp, we are left with subterms such as "getter x (setter y ...)"
+ *)
 fun wp_tac ctxt = SUBGOAL (fn (goal,n) => let
   val (_,p1,p2,_) = Relational_Hoare.dest_qrhl_goal goal
   in
@@ -100,7 +105,7 @@ fun wp_tac ctxt = SUBGOAL (fn (goal,n) => let
       wp_tac0 false ctxt n
   end)
 
-fun get_wp left (prog:term) (post:term) ctxt =
+(* fun get_wp left (prog:term) (post:term) ctxt =
   let val progl = HOLogic.mk_list \<^typ>\<open>program\<close> [prog]
       val skip = \<^term>\<open>[]::program list\<close>
       val goal = \<^const>\<open>qrhl\<close> $ Var(("pre",0),\<^typ>\<open>predicate expression\<close>) $ 
@@ -113,13 +118,16 @@ fun get_wp left (prog:term) (post:term) ctxt =
         | _ => error "internal error"
   in
     (pre,thm)
-  end
+  end *)
 
+(* Note: This one cleans up the postcondition in order to produce a well-formed expression (convertible with expression_to_term) *)
 fun wp_seq_tac left right ctxt i = 
   Tactics.seq_tac (~1 - left) (~1 - right)
            (Var(("precondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   wp_tac ctxt (i+1)
+  THEN
+  CONVERSION (Programs.clean_expression_conv ctxt |> Conv.arg_conv |> Conv.arg_conv) i
 
 (*   SUBGOAL (fn (goal,n) =>
     let val (_,p1,p2,B) = Encoding.dest_qrhl_goal goal
