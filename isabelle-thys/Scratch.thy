@@ -194,19 +194,19 @@ lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregi
 lemma clinear_apply_qregister[simp]: \<open>clinear (apply_qregister F)\<close>
   using bounded_clinear.clinear bounded_clinear_apply_qregister by blast
 
-lemma rew1: \<open>qregister_le F G \<Longrightarrow> apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
+lemma qregister_apply_conversion: \<open>qregister_le F G \<Longrightarrow> apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
   apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
   by auto
 
-lemma lepairI: \<open>qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qcompatible F G \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
+lemma qregister_le_pair_leftI: \<open>qcompatible F G \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
   unfolding qregister_le_def
   sorry
 
-lemma lepairI1: \<open>qregister_le F G \<Longrightarrow> qcompatible G H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
+lemma qregister_le_pair_rightI1: \<open>qcompatible G H \<Longrightarrow> qregister_le F G \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
   sorry
-lemma lepairI2: \<open>qregister_le F H \<Longrightarrow> qcompatible G H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
+lemma qregister_le_pair_rightI2: \<open>qcompatible G H \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
   sorry
-lemma lerefl: \<open>qregister F \<Longrightarrow> qregister_le F F\<close>
+lemma qregister_le_refl: \<open>qregister F \<Longrightarrow> qregister_le F F\<close>
   unfolding qregister_le_def by simp
 
 lemma qregister_conversion_chain: 
@@ -340,6 +340,53 @@ lemma div_leq_simp: \<open>(i div n < m) \<longleftrightarrow> i < n*m\<close> i
   by (simp add: div_less_iff_less_mult ordered_field_class.sign_simps(5) that zero_less_iff_neq_zero)
 
 
+experiment
+  fixes a b c
+  assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
+begin
+
+ML \<open>
+fun qregister_le_tac ctxt = let
+  fun tac' ctxt i st = st |>
+          ((resolve_tac ctxt @{thms qregister_le_refl} i THEN distinct_vars_tac ctxt i)
+          ORELSE
+          (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i))
+in SUBGOAL (fn (t,i) => 
+  case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
+    resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN qregister_le_tac ctxt i THEN qregister_le_tac ctxt i
+  | _ => tac' ctxt i)
+end
+\<close>
+
+
+ML \<open>
+fun qregister_le_prove ctxt lhs rhs = let
+  val (rhs_inT, rhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm rhs)
+  val (lhs_inT, lhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm lhs)
+  val _ = \<^assert> (Thm.eq_ctyp (rhs_outT, lhs_outT))
+  val less_eq_goal = \<^instantiate>\<open>lhs and rhs and 'a=lhs_inT and 'b=rhs_inT and 'c=lhs_outT
+          in cprop \<open>qregister_le (lhs::('a,'c) qregister) (rhs::('b,'c) qregister)\<close>\<close>
+  (*     by (auto intro!: qregister_le_pair_leftI qregister_le_refl simp: qregister_le_pair_rightI1 qregister_le_pair_rightI2 qregister_le_pair_leftI qregister_le_refl) *)
+in
+  Goal.prove_internal ctxt [] less_eq_goal (K (qregister_le_tac ctxt 1))
+end
+\<close>
+
+ML \<open>
+fun apply_qregister_conversion_conv ctxt target ct = let
+  val _ = case Thm.term_of ct of \<^Const_>\<open>apply_qregister _ _\<close> $ _ $ _ => ()
+            | _ => raise CTERM ("TODO", [ct])
+  val source = Thm.dest_arg1 ct
+  val argument = Thm.dest_arg ct
+  val less_eq_thm = qregister_le_prove ctxt source target
+in
+  (infer_instantiate ctxt [(("x",1), argument)] @{thm qregister_apply_conversion[THEN eq_reflection]}) OF [less_eq_thm]
+end
+;;
+apply_qregister_conversion_conv \<^context> \<^cterm>\<open>\<lbrakk>a,b,c\<rbrakk>\<close> \<^cterm>\<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close>
+\<close>
+
+
 lemmas prepare_for_code_new =
 
   qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric]
@@ -361,6 +408,7 @@ lemmas prepare_for_code_remove =
   qregister_of_cregister_Fst qregister_of_cregister_Snd
   qregister_of_cregister_pair qregister_of_cregister_chain
 
+
 lemma Test
 proof -
   fix a b c
@@ -368,15 +416,14 @@ proof -
   have t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close> sorry
 
   have le: \<open>\<lbrakk>a,c \<le> a,b,c\<rbrakk>\<close>
-    by (auto intro!: lepairI lerefl simp: lepairI1 lepairI2 lepairI lerefl)
+    by (tactic \<open>qregister_le_tac \<^context> 1\<close>)
 
   define CNOT' where \<open>CNOT' = apply_qregister \<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> CNOT\<close>
 
-(* TODO: Automate this step. *)
   have \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = apply_qregister \<lbrakk>a,b,c\<rbrakk> CNOT'\<close>
-    apply (subst rew1[where G=\<open>\<lbrakk>a,b,c\<rbrakk>\<close>])
-     apply (fact le)
-    by (simp add: CNOT'_def)
+    apply (tactic \<open>CONVERSION (apply_qregister_conversion_conv \<^context> \<^cterm>\<open>\<lbrakk>a,b,c\<rbrakk>\<close> |> Conv.arg1_conv |> Conv.arg_conv) 1\<close>)
+    unfolding CNOT'_def
+    by (rule refl)
 
   have \<open>CNOT' *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
     unfolding CNOT'_def

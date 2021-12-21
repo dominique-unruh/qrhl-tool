@@ -547,7 +547,7 @@ qed
   Rewriting the term is done by the simproc variable_rewriting_simproc declared below.
 *)
 definition "reorder_variables_hint A R = A"
-lemma [cong]: "A=A' \<Longrightarrow> reorder_variables_hint A R = reorder_variables_hint A' R" by simp
+lemma reorder_variables_hint_cong[cong]: "A=A' \<Longrightarrow> reorder_variables_hint A R = reorder_variables_hint A' R" by simp
 
 
 (*

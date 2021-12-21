@@ -29,6 +29,12 @@ fun mk_variableT Quantum = mk_qvariableT
 fun dest_qregisterT (\<^Type>\<open>qregister T U\<close>) = (T,U)
   | dest_qregisterT T = raise TYPE("dest_qregisterT", [T], [])
 
+fun dest_qregisterT_ct ctyp = let
+  val _ = case Thm.typ_of ctyp of \<^Type>\<open>qregister _ _\<close> => ()
+             | T => raise TYPE ("dest_qregisterT_ct: not a qregister type", [T], [])
+  val [T,U] = Thm.dest_ctyp ctyp
+in (T,U) end
+
 fun dest_cregisterT (\<^Type>\<open>qregister T U\<close>) = (T,U)
   | dest_cregisterT T = raise TYPE("dest_cregisterT", [T], [])
 
