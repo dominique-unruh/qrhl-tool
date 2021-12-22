@@ -53,8 +53,13 @@ sealed trait Variable extends HashedValue {
   def valueTyp : Typ
   /** term describing the variable in short form.
    * For non-indexed variables, short form is just the variable.
-   * For indexed variables, short form would be e.g. Free(x2,typ), and long form "qregister_chain qFst (Free(x2,typ))" */
-  def variableTermShort(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(basename, variableTyp)
+   * For indexed variables, short form would be e.g. Free(x2,typ), and long form "qregister_chain qFst (Free(x2,typ))".
+   *
+   * For classical variables, the type of the shortform is the valueType, for quantum variables, it is the type of the variable.
+   *
+   * */
+  def variableTermShort(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term =
+    Free(name, if (isClassical) valueTyp else variableTyp)
 
   def classicalQuantumWord : String
 }

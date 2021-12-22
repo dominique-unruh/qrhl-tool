@@ -7,8 +7,12 @@ fun mk_expression2T T = \<^typ>\<open>cl2\<close> --> T
 
 val clean_expression_conv_simpset = 
   \<^context>
-  |> Simplifier.init_simpset @{thms getter_setter_same[THEN eq_reflection] getter_setter_compat[THEN eq_reflection]}
-  |> simpset_of
+  |> Simplifier.init_simpset @{thms
+      getter_setter_same[THEN eq_reflection]
+      getter_setter_compat[THEN eq_reflection]
+      add_index_to_expression_aux1
+      add_index_to_expression_aux2
+  } |> simpset_of
 fun clean_expression_conv ctxt = let
   val outer_simpset = simpset_of ctxt
   val simpset_ctxt = put_simpset clean_expression_conv_simpset ctxt
@@ -42,7 +46,7 @@ fun expression_to_term ctxt t =
         | translate (t1 $ t2) = translate t1 $ translate t2
         | translate (Abs(n,T,body)) = Abs(n, T, translate body)
         | translate (Free(n,T)) = (case lookup_var n of
-            SOME {qc=Classical, ...} => raise TERM("expression_to_term: classical variable occurs without getter", [t, Free(n,T)])
+            SOME {qc=Classical, ...} => raise TERM("expression_to_term: classical variable occurs without getter", [Free(n,T), t])
           | _ => Free(n,T))
         | translate t = t
   in
@@ -56,9 +60,10 @@ fun term_to_expression ctx memT t =
       (* val _ = \<^print> (Term.add_frees t [] |> map fst |> map lookup_var) *)
       val subst = Term.add_frees t [] 
         |> map_filter (fn (v,T) => case lookup_var v of
-              SOME {qc=Classical, register, ...} => 
-                SOME (Free (v,T), Const(\<^const_name>\<open>getter\<close>, fastype_of register --> memT --> T) $ register $ mem_var)
-            | SOME {qc=Quantum, register, ...} => SOME (Free (v,T), register)
+              SOME {qc=Classical, typ, register, ...} => 
+                SOME (Free (v,T), Const(\<^const_name>\<open>getter\<close>, fastype_of register --> memT --> typ) $ register $ mem_var)
+            | SOME {qc=Quantum, typ, register, ...} => 
+                SOME (Free (v,T), register)
             | _ => NONE)
       (* val _ = \<^print> subst *)
       val body = abstract_over (mem_var, subst_atomic subst t)
