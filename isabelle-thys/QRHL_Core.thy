@@ -193,6 +193,23 @@ lemma colocal_op_qvars_unit[simp]: "colocal_op_qvars A \<lbrakk>\<rbrakk>"
 lemma colocal_op_qvars_unit'[simp]: "colocal_op_qvars A empty_qregister"
   by (cheat colocal_op_qvars_unit)
 
+lemma colocal_pred_qvars_top[simp,intro]:
+  assumes \<open>qregister F\<close>
+  shows \<open>colocal_pred_qvars \<top> F\<close>
+  sorry
+
+lemma colocal_pred_qvars_bot[simp,intro]:
+  assumes \<open>qregister F\<close>
+  shows \<open>colocal_pred_qvars \<bottom> F\<close>
+  sorry
+
+lemma colocal_pred_qvars_pair[simp,intro]:
+  assumes \<open>qcompatible F G\<close>
+  assumes \<open>colocal_pred_qvars S F\<close>
+  assumes \<open>colocal_pred_qvars S G\<close>
+  shows \<open>colocal_pred_qvars S (qregister_pair F G)\<close>
+  sorry
+
 (* lemma colocal_pred_qvars[simp, intro!]:
   assumes "distinct_qvars Q"
   assumes "colocal_pred_qvars_str S (set (variable_names Q))"

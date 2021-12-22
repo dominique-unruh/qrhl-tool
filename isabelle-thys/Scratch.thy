@@ -14,97 +14,86 @@ derive (dlist) set_impl bit
 
 ML \<open>open Prog_Variables\<close>
 
-class eenum = enum +
-  fixes enum_nth :: \<open>nat \<Rightarrow> 'a\<close>
-  fixes enum_index :: \<open>'a \<Rightarrow> nat\<close>
-  assumes enum_nth_enum[simp]: \<open>\<And>i. i < CARD('a) \<Longrightarrow> Enum.enum ! i = enum_nth i\<close>
-  assumes enum_nth_invalid: \<open>\<And>i. i \<ge> CARD('a) \<Longrightarrow> enum_nth i = enum_nth 0\<close> (* To get enum_index_nth below *)
-  assumes enum_nth_index[simp]: \<open>\<And>a. enum_nth (enum_index a) = a\<close>
-  assumes enum_index_bound[simp]: \<open>\<And>a. enum_index a < CARD('a)\<close>
 
-lemma inj_enum_index[simp]: \<open>inj enum_index\<close>
-  by (metis enum_nth_index injI)
+lemma qregister_le_pair_leftI: \<open>qcompatible F G \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
+  unfolding qregister_le_def
+  sorry
 
-lemma bij_betw_enum_index: \<open>bij_betw (enum_index :: 'a::eenum \<Rightarrow> nat) UNIV {..<CARD('a)}\<close>
-proof -
-  let ?f = \<open>enum_index :: 'a::eenum \<Rightarrow> nat\<close>
-  have \<open>range ?f \<subseteq> {..<CARD('a)}\<close>
-    by (simp add: image_subsetI)
-  moreover have \<open>card (range ?f) = card {..<CARD('a)}\<close>
-    by (simp add: card_image)
-  moreover have \<open>finite {..<CARD('a)}\<close>
-    by simp
-  ultimately have \<open>range ?f = {..<CARD('a)}\<close>
-    by (meson card_subset_eq)
-  then show ?thesis
-    by (simp add: bij_betw_imageI)
-qed
+lemma qregister_le_pair_rightI1: \<open>qcompatible G H \<Longrightarrow> qregister_le F G \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
+  sorry
+lemma qregister_le_pair_rightI2: \<open>qcompatible G H \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
+  sorry
+lemma qregister_le_refl: \<open>qregister F \<Longrightarrow> qregister_le F F\<close>
+  unfolding qregister_le_def by simp
 
-lemma inj_on_enum_nth[simp]: \<open>inj_on (enum_nth :: _ \<Rightarrow> 'a::eenum) {..<CARD('a)}\<close>
-  by (metis (mono_tags, opaque_lifting) bij_betw_enum_index enum_nth_index f_the_inv_into_f_bij_betw inj_on_inverseI)
-
-lemma enum_index_nth: \<open>enum_index (enum_nth i :: 'a::eenum) = (if i < CARD('a) then i else 0)\<close>
-  by (metis bij_betw_enum_index enum_nth_index enum_nth_invalid f_the_inv_into_f_bij_betw lessThan_iff linorder_not_le zero_less_card_finite)
-
-instantiation bool :: eenum begin
-definition \<open>enum_index_bool x = (if x then 1 else 0 :: nat)\<close>
-definition \<open>enum_nth_bool (i::nat) = (i=1)\<close>
-instance 
-  apply standard
-  apply (auto simp: enum_bool_def enum_index_bool_def enum_nth_bool_def)
-  by (metis less_2_cases nth_Cons_0)
+ML \<open>
+fun qregister_le_tac ctxt = let
+  fun tac' ctxt i st = st |>
+          ((resolve_tac ctxt @{thms qregister_le_refl} i THEN distinct_vars_tac ctxt i)
+          ORELSE
+          (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i))
+in SUBGOAL (fn (t,i) => 
+  case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
+    resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN qregister_le_tac ctxt i THEN qregister_le_tac ctxt i
+  | _ => tac' ctxt i)
 end
+\<close>
 
-instantiation bit :: eenum begin
-definition \<open>enum_index_bit (x::bit) = (if x=1 then 1 else 0 :: nat)\<close>
-definition \<open>enum_nth_bit (i::nat) = (if i=1 then 1 else 0 :: bit)\<close>
-instance
-  apply standard
-  by (auto simp: nth_Cons' enum_bit_def enum_index_bit_def enum_nth_bit_def)
+
+ML \<open>
+fun qregister_le_prove ctxt lhs rhs = let
+  val (rhs_inT, rhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm rhs)
+  val (lhs_inT, lhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm lhs)
+  val _ = \<^assert> (Thm.eq_ctyp (rhs_outT, lhs_outT))
+  val less_eq_goal = \<^instantiate>\<open>lhs and rhs and 'a=lhs_inT and 'b=rhs_inT and 'c=lhs_outT
+          in cprop \<open>qregister_le (lhs::('a,'c) qregister) (rhs::('b,'c) qregister)\<close>\<close>
+in
+  Goal.prove_internal ctxt [] less_eq_goal (K (qregister_le_tac ctxt 1))
 end
+\<close>
 
-instantiation prod :: (eenum,eenum) eenum begin
-definition \<open>enum_index_prod = (\<lambda>(i::'a,j::'b). enum_index i * CARD('b) + enum_index j)\<close>
-definition \<open>enum_nth_prod ij = (let i = ij div CARD('b) in if i < CARD('a) then (enum_nth i, enum_nth (ij mod CARD('b))) else (enum_nth 0, enum_nth 0) :: 'a\<times>'b)\<close>
-instance
-proof standard
-  show \<open>i < CARD('a \<times> 'b) \<Longrightarrow> (Enum.enum ! i :: 'a\<times>'b) = enum_nth i\<close> for i
-    apply (auto simp: card_UNIV_length_enum[symmetric] enum_nth_enum enum_prod_def product_nth enum_nth_prod_def Let_def)
-    using less_mult_imp_div_less by blast+
-  show \<open>CARD('a \<times> 'b) \<le> i \<Longrightarrow> enum_nth i = (enum_nth 0 :: 'a\<times>'b)\<close> for i
-    by (auto simp: div_less_iff_less_mult enum_nth_prod_def)
-  show \<open>enum_nth (enum_index a) = a\<close> for a :: \<open>'a\<times>'b\<close>
-    apply (cases a)
-    by (auto simp: div_less_iff_less_mult enum_nth_prod_def enum_index_prod_def)
-  show \<open>enum_index a < CARD('a \<times> 'b)\<close> for a :: \<open>'a\<times>'b\<close>
-    apply (cases a)
-    apply (auto simp: enum_index_prod_def)
-    by (metis (no_types, lifting) add_cancel_right_right div_less div_mult_self3 enum_index_bound less_eq_div_iff_mult_less_eq less_not_refl2 linorder_not_less zero_less_card_finite)
-qed
+lemma qregister_apply_conversion: \<open>qregister_le F G \<Longrightarrow> apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
+  apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
+  by auto
+
+
+ML \<open>
+fun apply_qregister_conversion_conv ctxt target ct = let
+  val _ = case Thm.term_of ct of \<^Const_>\<open>apply_qregister _ _\<close> $ _ $ _ => ()
+            | _ => raise CTERM ("TODO", [ct])
+  val source = Thm.dest_arg1 ct
+  val argument = Thm.dest_arg ct
+  val less_eq_thm = qregister_le_prove ctxt source target
+in
+  (infer_instantiate ctxt [(("x",1), argument)] @{thm qregister_apply_conversion[THEN eq_reflection]}) OF [less_eq_thm]
 end
+;;
+(* apply_qregister_conversion_conv \<^context> \<^cterm>\<open>\<lbrakk>a,b,c\<rbrakk>\<close> \<^cterm>\<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close> *)
+\<close>
 
-lemma fst_enum_nth: \<open>fst (enum_nth ij :: 'a::eenum\<times>'b::eenum) = enum_nth (ij div CARD('b))\<close>
-  by (auto simp: enum_nth_invalid enum_nth_prod_def Let_def)
+simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close>) =
+  \<open>fn m => fn ctxt => fn ct => let 
+    val _ = \<^print> ct
+    val target = ct |> Thm.dest_arg
+    val conv = (apply_qregister_conversion_conv ctxt target |> Conv.arg1_conv)
+        then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
+    in SOME (conv ct) handle e => NONE end\<close>
 
-lemma snd_enum_nth: \<open>snd (enum_nth ij :: 'a::eenum\<times>'b::eenum) = (if ij < CARD('a\<times>'b) then enum_nth (ij mod CARD('b)) else enum_nth 0)\<close>
-  apply (auto simp: enum_nth_prod_def Let_def)
-  using div_less_iff_less_mult zero_less_card_finite by blast+
 
-lemma enum_index_fst: \<open>enum_index (fst x) = enum_index x div CARD('b)\<close> for x :: \<open>'a::eenum\<times>'b::eenum\<close>
-  by (auto simp add: enum_index_prod_def case_prod_beta)
-lemma enum_index_snd: \<open>enum_index (snd x) = enum_index x mod CARD('b)\<close> for x :: \<open>'a::eenum\<times>'b::eenum\<close>
-  by (auto simp add: enum_index_prod_def case_prod_beta)
 
-lemma enum_idx_enum_index[simp]: \<open>enum_idx = enum_index\<close>
-proof (rule ext)
-  fix x :: 'a
-  have \<open>(Enum.enum ! enum_idx x :: 'a) = Enum.enum ! enum_index x\<close>
-    unfolding enum_idx_correct
-    by simp
-  then show \<open>enum_idx x = enum_index x\<close>
-    using enum_distinct apply (rule nth_eq_iff_index_eq[THEN iffD1, rotated -1])
-    by (simp_all flip: card_UNIV_length_enum)
-qed
+schematic_goal
+  fixes a b c
+  assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
+  shows \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = apply_qregister \<lbrakk>a,b,c\<rbrakk> ?x\<close>
+  apply (subst register_conversion_hint_def[of \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close> \<open>\<lbrakk>a,b,c\<rbrakk>\<close>, symmetric])
+  by simp
+
+
+(* lemma
+  fixes qglobA :: \<open>_ qvariable\<close> assumes [register]: \<open>qregister qglobA\<close>
+  shows \<open>colocal_pred_qvars X (variable_concat (register_chain Fst qglobA) (register_chain Snd qglobA))\<close>
+  apply (rule colocal_pred_qvars_pair)
+  apply auto *)
 
 experiment
   fixes a b c :: \<open>bit qvariable\<close>
@@ -190,22 +179,7 @@ lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregi
 lemma clinear_apply_qregister[simp]: \<open>clinear (apply_qregister F)\<close>
   using bounded_clinear.clinear bounded_clinear_apply_qregister by blast
 
-lemma qregister_apply_conversion: \<open>qregister_le F G \<Longrightarrow> apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
-  apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
-  by auto
-
-lemma qregister_le_pair_leftI: \<open>qcompatible F G \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
-  unfolding qregister_le_def
-  sorry
-
-lemma qregister_le_pair_rightI1: \<open>qcompatible G H \<Longrightarrow> qregister_le F G \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
-  sorry
-lemma qregister_le_pair_rightI2: \<open>qcompatible G H \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
-  sorry
-lemma qregister_le_refl: \<open>qregister F \<Longrightarrow> qregister_le F F\<close>
-  unfolding qregister_le_def by simp
-
-lemma qregister_conversion_chain: 
+lemma qregister_conversion_chain:
   assumes \<open>qregister_le F G\<close> \<open>qregister_le G H\<close>
   shows \<open>qregister_chain (qregister_conversion G H) (qregister_conversion F G) = qregister_conversion F H\<close>
   using assms unfolding qregister_le_def apply (transfer fixing: F G H) apply transfer
@@ -336,54 +310,6 @@ lemma div_leq_simp: \<open>(i div n < m) \<longleftrightarrow> i < n*m\<close> i
   by (simp add: div_less_iff_less_mult ordered_field_class.sign_simps(5) that zero_less_iff_neq_zero)
 
 
-ML \<open>
-fun qregister_le_tac ctxt = let
-  fun tac' ctxt i st = st |>
-          ((resolve_tac ctxt @{thms qregister_le_refl} i THEN distinct_vars_tac ctxt i)
-          ORELSE
-          (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i))
-in SUBGOAL (fn (t,i) => 
-  case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
-    resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN qregister_le_tac ctxt i THEN qregister_le_tac ctxt i
-  | _ => tac' ctxt i)
-end
-\<close>
-
-
-ML \<open>
-fun qregister_le_prove ctxt lhs rhs = let
-  val (rhs_inT, rhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm rhs)
-  val (lhs_inT, lhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm lhs)
-  val _ = \<^assert> (Thm.eq_ctyp (rhs_outT, lhs_outT))
-  val less_eq_goal = \<^instantiate>\<open>lhs and rhs and 'a=lhs_inT and 'b=rhs_inT and 'c=lhs_outT
-          in cprop \<open>qregister_le (lhs::('a,'c) qregister) (rhs::('b,'c) qregister)\<close>\<close>
-  (*     by (auto intro!: qregister_le_pair_leftI qregister_le_refl simp: qregister_le_pair_rightI1 qregister_le_pair_rightI2 qregister_le_pair_leftI qregister_le_refl) *)
-in
-  Goal.prove_internal ctxt [] less_eq_goal (K (qregister_le_tac ctxt 1))
-end
-\<close>
-
-ML \<open>
-fun apply_qregister_conversion_conv ctxt target ct = let
-  val _ = case Thm.term_of ct of \<^Const_>\<open>apply_qregister _ _\<close> $ _ $ _ => ()
-            | _ => raise CTERM ("TODO", [ct])
-  val source = Thm.dest_arg1 ct
-  val argument = Thm.dest_arg ct
-  val less_eq_thm = qregister_le_prove ctxt source target
-in
-  (infer_instantiate ctxt [(("x",1), argument)] @{thm qregister_apply_conversion[THEN eq_reflection]}) OF [less_eq_thm]
-end
-;;
-(* apply_qregister_conversion_conv \<^context> \<^cterm>\<open>\<lbrakk>a,b,c\<rbrakk>\<close> \<^cterm>\<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close> *)
-\<close>
-
-simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close>) =
-  \<open>fn m => fn ctxt => fn ct => let 
-    val _ = \<^print> ct
-    val target = ct |> Thm.dest_arg
-    val conv = (apply_qregister_conversion_conv ctxt target |> Conv.arg1_conv)
-        then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
-    in SOME (conv ct) handle e => NONE end\<close>
 
 
 lemmas prepare_for_code_new =

@@ -351,8 +351,18 @@ fun varterm_to_variable Classical VTUnit = \<^term>\<open>cvariable_unit :: unit
 
 fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>cvariable_unit :: unit c2variable\<close>
   | varterm_to_variable2 Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit q2variable\<close>
-  | varterm_to_variable2 Classical (VTSingle (n,T)) = Free (n,mk_c2variableT T)
-  | varterm_to_variable2 Quantum (VTSingle (n,T)) = Free (n,mk_q2variableT T)
+  | varterm_to_variable2 Classical (VTSingle (n,T)) = let
+      val (name, index) = Substring.splitAt (Substring.full n, String.size n - 1) |> apply2 Substring.string 
+      in case index of
+          "1" => \<^instantiate>\<open>v=\<open>Free (name, mk_cvariableT T)\<close> and 'a=T in term \<open>cregister_chain cFst v :: 'a c2variable\<close>\<close>
+        | "2" => \<^instantiate>\<open>v=\<open>Free (name, mk_cvariableT T)\<close> and 'a=T in term \<open>cregister_chain cSnd v :: 'a c2variable\<close>\<close>
+        | _ => raise error ("varterm_to_variable2: not an indexed variable: " ^ n) end
+  | varterm_to_variable2 Quantum (VTSingle (n,T)) = let
+      val (name, index) = Substring.splitAt (Substring.full n, String.size n - 1) |> apply2 Substring.string 
+      in case index of
+          "1" => \<^instantiate>\<open>v=\<open>Free (name, mk_qvariableT T)\<close> and 'a=T in term \<open>qregister_chain qFst v :: 'a q2variable\<close>\<close>
+        | "2" => \<^instantiate>\<open>v=\<open>Free (name, mk_qvariableT T)\<close> and 'a=T in term \<open>qregister_chain qSnd v :: 'a q2variable\<close>\<close>
+        | _ => raise error ("varterm_to_variable2: not an indexed variable: " ^ n) end
   | varterm_to_variable2 cq (VTCons (t1, t2)) = let
         val v1 = varterm_to_variable2 cq t1
         val v2 = varterm_to_variable2 cq t2

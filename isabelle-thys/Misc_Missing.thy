@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
+  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality" Missing_Bounded_Operators Registers.Misc
 begin
 
 section \<open>Misc\<close>
@@ -357,5 +357,13 @@ lemma local_defE: "(\<And>x. x=y \<Longrightarrow> P) \<Longrightarrow> P" by me
 
 lemma inv_comp_eqI: \<open>inv f o g = h\<close> if \<open>inj f\<close> and \<open>g = f o h\<close> for f g
   using that(1) that(2) by fastforce
+
+instantiation bit :: eenum begin
+definition \<open>enum_index_bit (x::bit) = (if x=1 then 1 else 0 :: nat)\<close>
+definition \<open>enum_nth_bit (i::nat) = (if i=1 then 1 else 0 :: bit)\<close>
+instance
+  apply standard
+  by (auto simp: nth_Cons' enum_bit_def enum_index_bit_def enum_nth_bit_def)
+end
 
 end

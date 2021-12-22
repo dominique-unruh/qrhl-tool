@@ -801,7 +801,7 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     val swapOp =
       MLValue.compileFunction[Context, Term, Term](s"$qrhl_ops.swap_variables_conv")
     val colocalityOp =
-      MLValue.compileFunction[Term, List[(String, Typ)], Term](s"$qrhl_ops.colocal_pred_qvars")
+      MLValue.compileFunction[Context, Term, List[(String, Typ)], Term](s"$qrhl_ops.colocal_pred_qvars")
     val isInfinite_op =
       MLValue.compileFunction[Context, Typ, Boolean](s"$qrhl_ops.is_finite")
     val declare_quantum_variable =

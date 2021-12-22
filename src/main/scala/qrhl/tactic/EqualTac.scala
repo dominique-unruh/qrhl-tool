@@ -26,6 +26,7 @@ import de.unruh.isabelle.mlvalue.Implicits._
 
 import hashedcomputation.Implicits._
 
+/** Based on the Adversary rules from https://arxiv.org/pdf/2007.14155.pdf */
 case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variable], out: List[Variable], amount:Int=1) extends WpBothStyleTac(leftAmount=amount, rightAmount=amount) {
 
   override def hash: Hash[EqualTac.this.type] =
@@ -120,7 +121,8 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     var removedQeq : ListSet[QVariable] = null
     // Quantum variables that we do not want to occur in the postcondition
     // We remove them right away anyway, but there is a possibility that some occur in the postcondition that we do not "see"
-    // So we keep track here
+    // So we keep track here.
+    // (Contains unindexed variables, for x in forbiddenQuantumInPostcondition, we want both x1,x2 to not appear in the postcondition.)
     var forbiddenQuantumInPostcondition = mutable.HashSet[QVariable]()
 
     var updated = false
@@ -161,6 +163,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     val postconditionVariables: mutable.Set[Variable] =
       mutable.HashSet(post.variables(env, deindex=true).program.toSeq :_*)
 
+    // vars contains unindexed variables (means that for x in vars, we should remove x1,x2 from postcondition
     def removeFromPost(msg: String, vars: Set[Variable]): Unit = {
       // variables that actually need removing
       val vars2 = vars & postconditionVariables
@@ -175,7 +178,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 
       if (classical.nonEmpty) {
         updated = true
-        output.println(s"Removing classical variables $classical from postcondition")
+        output.println(s"Removing classical variables ${varsToString(classical)} from postcondition")
         classicalsRemovedFromPost ++= classical
         postconditionVariables --= classical
       }
@@ -327,8 +330,9 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     postcondition = removeClassicals(env, postcondition, classicalsRemovedFromPost.toSet, Variable.classical(out).toSet)
     logger.debug(s"Postcondition: ${postcondition}")
 
-    val colocality = RichTerm(Ops.colocalityOp(((postcondition.isabelleTerm,
-        forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) }))).retrieveNow)
+    val colocality = RichTerm(Ops.colocalityOp(isabelle.context, postcondition.isabelleTerm,
+        (forbiddenQuantumInPostcondition.toList map { v => (v.index1.name, v.valueTyp) }) ++
+          (forbiddenQuantumInPostcondition.toList map { v => (v.index2.name, v.valueTyp) })).retrieveNow)
 
     logger.debug(s"Colocality: $colocality")
 

@@ -121,8 +121,8 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       val colocalitySubgoal =
         if (forbiddenQInInvariant12.isEmpty) null
         else {
-          val colocalityPre = Ops.colocalityOp((pre.isabelleTerm, forbiddenQInInvariant12)).retrieveNow
-          val colocalityPost = Ops.colocalityOp((post.isabelleTerm, forbiddenQInInvariant12)).retrieveNow
+          val colocalityPre = Ops.colocalityOp(state.isabelle.context, pre.isabelleTerm, forbiddenQInInvariant12).retrieveNow
+          val colocalityPost = Ops.colocalityOp(state.isabelle.context, post.isabelleTerm, forbiddenQInInvariant12).retrieveNow
           AmbientSubgoal(GIsabelle.conj(colocalityPre, colocalityPost),
             assumptions.map(_.isabelleTerm))
         }

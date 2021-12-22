@@ -411,10 +411,17 @@ fun declare_variable (ctxt, name, T) = let
   val _ = if v<>name then error("variable "^name^" already declared") else ()
   in ctxt' end
 
-fun colocal_pred_qvars (predicate, qvars) = let
+(* predicate: in shortform *)
+fun colocal_pred_qvars (ctxt, predicate, qvars) = let
      val varterm = qvars |> Prog_Variables.varterm_from_list |> varterm_to_variable2 Quantum
-     val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of varterm --> HOLogic.boolT)
-               $ predicate $ varterm
+     val predicate' = term_to_expression ctxt \<^typ>\<open>cl2\<close> predicate
+     val colocality = \<^instantiate>\<open>predicate' and varterm and 'a=\<open>varterm |> fastype_of |> dest_q2variableT\<close> in 
+        term \<open>\<forall>mem::cl2. colocal_pred_qvars (predicate' mem) (varterm :: 'a q2variable)\<close>\<close>
+
+(* Logic.all 
+@{const Pure.all(cl2)} $ Abs("mem", \<^typ>\<open>cl2\<close>,
+      Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of varterm --> HOLogic.boolT)
+               $ (predicate' $ Bound 0) $ varterm) *)
    in colocality end
 
 fun swap_variables_conv (ctxt, pred) = pred (* TODO some cleanup of pred, probably *)

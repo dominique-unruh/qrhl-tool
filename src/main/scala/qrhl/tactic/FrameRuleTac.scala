@@ -54,7 +54,7 @@ case object FrameRuleTac extends Tactic {
 
       val qVars12 = leftVarUse.quantum.map(_.index1).union(rightVarUse.quantum.map(_.index2))
       val qVars12list = qVars12.toList.map { v => (v.variableName, v.valueTyp) }
-      val colocality = AmbientSubgoal(RichTerm(Ops.colocalityOp(((r, qVars12list))).retrieveNow))
+      val colocality = AmbientSubgoal(RichTerm(Ops.colocalityOp(state.isabelle.context, r, qVars12list).retrieveNow))
 
       val qrhlSubgoal = QRHLSubgoal(left, right, RichTerm(GIsabelle.predicateT, a), RichTerm(GIsabelle.predicateT, b), assumptions)
 

@@ -102,11 +102,16 @@ fun joint_sample_seq_tac ctxt witness i =
   Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   joint_sample_tac ctxt witness (i+1)
+  THEN
+  CONVERSION (Programs.clean_expression_conv ctxt |> Conv.arg_conv |> Conv.arg_conv) i
 
 fun joint_sample_equal_seq_tac ctxt i =
   Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   joint_sample_equal_tac ctxt (i+1)
+  THEN
+  CONVERSION (Programs.clean_expression_conv ctxt |> Conv.arg_conv |> Conv.arg_conv) i
+
 end
 \<close>
 
