@@ -185,8 +185,12 @@ adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (*
 
 lemma colocal_pred_qvars_unit[simp]: "colocal_pred_qvars A \<lbrakk>\<rbrakk>"
   by (cheat colocal_pred_qvars_unit)
+lemma colocal_pred_qvars_unit'[simp]: "colocal_pred_qvars A empty_qregister"
+  by (cheat colocal_pred_qvars_unit)
 
 lemma colocal_op_qvars_unit[simp]: "colocal_op_qvars A \<lbrakk>\<rbrakk>"
+  by (cheat colocal_op_qvars_unit)
+lemma colocal_op_qvars_unit'[simp]: "colocal_op_qvars A empty_qregister"
   by (cheat colocal_op_qvars_unit)
 
 (* lemma colocal_pred_qvars[simp, intro!]:
@@ -540,6 +544,7 @@ qed
 *)
 
 abbreviation (input) \<open>reorder_variables_hint \<equiv> register_conversion_hint\<close>
+lemmas reorder_variables_hint_def = register_conversion_hint_def
 
 (*
 lemma reorder_variables_hint_remove_aux: "reorder_variables_hint x R \<equiv> x" \<comment> \<open>Auxiliary lemma used by reorder_variables_hint_conv\<close>

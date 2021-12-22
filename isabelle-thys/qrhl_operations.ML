@@ -353,10 +353,10 @@ in result = \<^prop>\<open>True\<close> end
 fun byQRHLPre (cvars, qvars) =
   let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
       val cEqs' = \<^const>\<open>classical_subspace\<close> $ QRHL.mk_conjs cEqs
-      val qvars1' = map (fn (v1,_,T) => (v1,T)) qvars |> varterm_from_list |> varterm_to_variable Quantum
-      val qvars1T = fastype_of qvars1' |> dest_qvariableT
-      val qvars2' = map (fn (_,v2,T) => (v2,T)) qvars |> varterm_from_list |> varterm_to_variable Quantum
-      val qvars2T = fastype_of qvars2' |> dest_qvariableT
+      val qvars1' = map (fn (v1,_,T) => (v1,T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
+      val qvars1T = fastype_of qvars1' |> dest_q2variableT
+      val qvars2' = map (fn (_,v2,T) => (v2,T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
+      val qvars2T = fastype_of qvars2' |> dest_q2variableT
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
       val qvarsEq = if qvars=[] then @{const top(predicate)} else QRHL.mk_quantum_equality qvars1' qvars2' qvars1T
   in

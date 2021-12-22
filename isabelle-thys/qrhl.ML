@@ -218,7 +218,7 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
 
 fun mk_quantum_equality Q1 Q2 T =
   let val opT = Prog_Variables.mk_bounded2T T
-      val qvT = mk_qvariableT T
+      val qvT = Prog_Variables.mk_q2variableT T
   in
   Const(\<^const_name>\<open>quantum_equality_full\<close>, opT --> qvT --> opT --> qvT --> \<^typ>\<open>predicate\<close>) $
     Const(\<^const_name>\<open>id_cblinfun\<close>, opT) $ Q1 $ Const(\<^const_name>\<open>id_cblinfun\<close>, opT) $ Q2
