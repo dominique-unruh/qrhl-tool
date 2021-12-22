@@ -135,7 +135,7 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
   val _ = if vs<>[name] then error("variable "^name^" already declared") else ()
 
   fun declare_prog_vars cq vars pfx fv_program fv_oracle_program ctxt = let
-    (* Add theorem pfx^name: "fv_program/fv_oracle_program name \<le> variable_names \<lbrakk>vars\<rbrakk> *)
+    (* Add theorem pfx^name: "fv_program/fv_oracle_program name \<le> vars, with vars being a C/QVARIABLE *)
     val fv_lhs = (if numOracles=0 then fv_program else fv_oracle_program) $ Free(name,T) 
     val fv_rhs = vars |> Prog_Variables.varterm_from_list |> Prog_Variables.varterm_to_VARIABLE cq
 (*     val fv_rhs = @{const set(string)} $
@@ -158,9 +158,12 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
         name_cvars1 == (x1,y1,z1) if cvars=x,y,z (same with 2, and w/o index)
         name_qvars1 == \<lbrakk>x1,y1,z1\<rbrakk> if qvars=x,y,z (same with 2, and w/o index) *)
   fun add_vars_abbrev suffix ctxt = let
-    val cvartuple = HOLogic.mk_tuple (map (fn (n,T) => Free(n^suffix, mk_cvariableT T)) cvars)
-    val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvartuple) ctxt
-    val qvarterm = qvars |> (map (fn (n,T) => (n^suffix, mk_cvariableT T))) |> Prog_Variables.varterm_from_list |> Prog_Variables.varterm_to_variable Quantum
+    (* val cvartuple = HOLogic.mk_tuple (map (fn (n,T) => Free(n^suffix, mk_cvariableT T)) cvars) *)
+    (* val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvartuple) ctxt *)
+    val v2v = if suffix = "" then Prog_Variables.varterm_to_variable else Prog_Variables.varterm_to_variable2
+    val cvarterm = cvars |> (map (fn (n,T) => (n^suffix, T))) |> Prog_Variables.varterm_from_list |> v2v Classical
+    val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvarterm) ctxt
+    val qvarterm = qvars |> (map (fn (n,T) => (n^suffix, T))) |> Prog_Variables.varterm_from_list |> v2v Quantum
     val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_qvars"^suffix), qvarterm) ctxt
   in ctxt end
 
