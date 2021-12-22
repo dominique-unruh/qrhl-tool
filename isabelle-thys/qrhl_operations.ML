@@ -252,14 +252,15 @@ fun simp (t, facts, ctxt) =
 
 fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, beforeRight, afterRight) = let
   (* Parse predicate as \<open>pred_lhs \<sqinter> \<lbrakk>vt_left\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>vt_right\<rbrakk>\<close> *)
-  val (pred_lhs, qeq_left, qeq_right) = case predicate of
-      Const(\<^const_name>\<open>inf\<close>,_) $ pred_lhs $ (Const(\<^const_name>\<open>quantum_equality_full\<close>,_) $ U $ Q $ V $ R) => let
+  val (pred_lhs, qeq_left, qeq_right) = case term_to_expression ctxt \<^typ>\<open>cl2\<close> predicate of
+      Abs(_,_, Const(\<^const_name>\<open>inf\<close>,_) $ pred_lhs $ (Const(\<^const_name>\<open>quantum_equality_full\<close>,_) $ U $ Q $ V $ R)) => let
         val _ = case U of Const(\<^const_name>\<open>id_cblinfun\<close>,_) => () | _ => 
             raise TERM("The quantum equality must be a simple one (\<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>), not one with operators (quantum_equality_full U \<lbrakk>...\<rbrakk> V \<lbrakk>...\<rbrakk>)", [predicate])
         val _ = case V of Const(\<^const_name>\<open>id_cblinfun\<close>,_) => () | _ => 
             raise TERM("The quantum equality must be a simple one (\<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>), not one with operators (quantum_equality_full U \<lbrakk>...\<rbrakk> V \<lbrakk>...\<rbrakk>)", [predicate])
         in (pred_lhs, Q, R) end
     | _ => raise TERM("Pre/postcondition must be of the form {... \<sqinter> \<lbrakk>...\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>...\<rbrakk>}", [predicate])
+
   val vt_left = Prog_Variables.variable_to_varlist ctxt qeq_left
   val vt_right = Prog_Variables.variable_to_varlist ctxt qeq_right
 
@@ -291,11 +292,11 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
   (* replaced_left_vt := left_vt with beforeLeft replace by afterLeft
      replaced_right_vt analogous *)
   val replaced_left = keep_left @ afterLeft
-  val replaced_left_vt = Prog_Variables.varterm_from_list replaced_left |> varterm_to_variable Quantum
-  val replaced_leftT = replaced_left_vt |> fastype_of |> dest_qvariableT
+  val replaced_left_vt = Prog_Variables.varterm_from_list replaced_left |> varterm_to_variable2 Quantum
+  val replaced_leftT = replaced_left_vt |> fastype_of |> dest_q2variableT
   val replaced_right = keep_right @ afterRight
-  val replaced_right_vt = Prog_Variables.varterm_from_list replaced_right |> varterm_to_variable Quantum
-  val replaced_rightT = replaced_right_vt |> fastype_of |> dest_qvariableT
+  val replaced_right_vt = Prog_Variables.varterm_from_list replaced_right |> varterm_to_variable2 Quantum
+  val replaced_rightT = replaced_right_vt |> fastype_of |> dest_q2variableT
   (* Should never fail: *)
   val _ = if replaced_leftT = replaced_rightT then ()
           else error "conseq_qrhl_replace_in_predicate: type error"
@@ -310,7 +311,8 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
 
   (* predicate, with \<lbrakk>vt_left\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>vt_right\<rbrakk> replaced by \<lbrakk>replaced_left_vt\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>replaced_right_vt\<rbrakk> *)
   (* This is the first return value. *)
-  val pred' = @{const inf(predicate)} $ pred_lhs $ qeq_replaced
+  val pred' = @{const inf(predicate)} $ pred_lhs $ qeq_replaced |> Term.abs ("mem", \<^typ>\<open>cl2\<close>)
+  val pred' = expression_to_term ctxt pred'
 
   (* All of before/afterLeft/Right *)
   val all_vars0 = beforeLeft @ beforeRight @ afterLeft @ afterRight
@@ -331,8 +333,9 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
           else error "Left quantum equality has variables that conflict with replacement variables" *)
 
   (* Condition that implies that `all_vars` do not occur in `pred_lhs` (the predictate without the qeq) *)
-  val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of all_vars --> HOLogic.boolT)
-                 $ pred_lhs $ all_vars
+  val colocality = HOLogic.all_const \<^typ>\<open>cl2\<close> $ Abs ("mem", \<^typ>\<open>cl2\<close>, 
+        Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of all_vars --> HOLogic.boolT)
+                 $ pred_lhs $ all_vars)
 in
   (pred', colocality)
 end

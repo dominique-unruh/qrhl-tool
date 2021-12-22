@@ -54,6 +54,7 @@ fun expression_to_term ctxt t =
   end
 
 
+(* Translates expression in shortform to expression in longform *)
 fun term_to_expression ctx memT t =
   let val lookup_var = lookup_variable ctx
       val mem_var = Free("_memory_", memT)
