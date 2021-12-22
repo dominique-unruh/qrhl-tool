@@ -14,6 +14,14 @@ derive (dlist) set_impl bit
 
 ML \<open>open Prog_Variables\<close>
 
+(* lemma
+  fixes a :: \<open>int qvariable\<close>
+    and a1 :: \<open>int qvariable\<close>
+    and b1 :: \<open>int qvariable\<close>
+  assumes [variable]: \<open>qregister a\<close>
+  assumes [variable]: \<open>qregister b1\<close>
+shows Test
+ *)
 
 lemma qregister_le_pair_leftI: \<open>qcompatible F G \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
   unfolding qregister_le_def

@@ -117,6 +117,8 @@ local
 fun add_varinfo morph name T qc register context = let
   val reg = Morphism.term morph register
   val varinfo = {qc=qc, name=name, typ=Morphism.typ morph T, register=reg} : varinfo
+  val _ = Symtab.defined (VarInfo.get context |> fst) name
+            andalso error ("Program variable " ^ name ^ " already declared")
   val context = VarInfo.map (fn (s,t) => (Symtab.insert (op=) (name,varinfo) s,
                                           Termtab.insert (op=) (reg,varinfo) t)) context
   in context end

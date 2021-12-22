@@ -190,9 +190,9 @@ final class QVariable private (override val basename:String, override val valueT
 object QVariable {
   def fromName(name: String, typ: Typ): QVariable = {
     assert(name.nonEmpty)
-    val last = name.last
-    assert(last != '1')
-    assert(last != '2')
+//    val last = name.last
+//    assert(last != '1')
+//    assert(last != '2')
     new QVariable(name, typ, NoIndex)
   }
 
@@ -210,7 +210,8 @@ object QVariable {
 
 /*  def fromTerm_var(context: IsabelleX.ContextX, x: Term): QVariable = x match {
     case Free(name,typ) =>
-      QVariable(name, GIsabelle.dest_variableT(typ))
+      QVar
+      iable(name, GIsabelle.dest_variableT(typ))
     case _ => throw new java.lang.RuntimeException(f"Cannot transform $x into QVariable")
   }
 
@@ -260,9 +261,9 @@ final class CVariable private (override val basename:String, override val valueT
 object CVariable {
   def fromName(name: String, typ: Typ): CVariable = {
     assert(name.nonEmpty)
-    val last = name.last
-    assert(last != '1')
-    assert(last != '2')
+//    val last = name.last
+//    assert(last != '1')
+//    assert(last != '2')
     new CVariable(name, typ, NoIndex)
   }
 
