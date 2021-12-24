@@ -7,10 +7,17 @@ lemma skip_rule:
   by (cheat skip_rule)
 
 lemma conseq_rule:
-  assumes "A \<le> A'" and "B' \<le> B"
+  assumes "\<And>m. A m \<le> A' m" and "\<And>m. B' m \<le> B m"
   assumes "qrhl A' b c B'"
   shows "qrhl A b c B"
   by (cheat conseq_rule)
+
+lemma skip_conseq_rule:
+  assumes \<open>\<And>m. A m \<le> B m\<close>
+  shows "qrhl A [] [] B"
+  apply (rule conseq_rule[where A'=A and B'=A])
+  using assms apply auto[2]
+  by (rule skip_rule)
 
 lemma sym_rule:
   assumes "qrhl (\<lambda>m. index_flip_subspace (A (prod.swap m))) c b (\<lambda>m. index_flip_subspace (B (prod.swap m)))"
@@ -155,29 +162,23 @@ fun sym_tac ctxt =
   resolve_tac ctxt @{thms sym_rule}
   THEN'
   CONVERSION (after_sym_rule_conv ctxt)
+
+fun skip_conseq_tac ctxt = resolve_tac ctxt @{thms skip_conseq_rule}
+  THEN' Programs.generalize_getters ctxt
 end
 \<close>
 
+
+
 (* Testing *)
 experiment
-  fixes Q :: \<open>bit qvariable\<close>
-and x :: \<open>bit cvariable\<close>
-and G :: \<open>bit cvariable\<close>
-and H :: \<open>bit cvariable\<close>
-and quantA :: \<open>99 qvariable\<close>
-and Hout :: \<open>10 qvariable\<close>
-and Hin :: \<open>9 qvariable\<close>
-and Gout :: \<open>10 qvariable\<close>
-and Gin :: \<open>9 qvariable\<close>
-assumes [variable]: \<open>qregister Q\<close> \<open>cregister x\<close> \<open>cregister G\<close>
- \<open>cregister H\<close> \<open>qregister quantA\<close> \<open>qregister Hout\<close>
- \<open>qregister Hin\<close> \<open>qregister Gout\<close> \<open>qregister Gin\<close>
+  fixes q :: \<open>bit qvariable\<close>
+    and x :: \<open>bit cvariable\<close>
+assumes [variable]: \<open>qregister q\<close> \<open>cregister x\<close>
 begin
-lemma "qrhl Expr[\<CC>\<ll>\<aa>[G1 = G2 \<and> Hr1 = Hr2 \<and> H01 = H02 \<and> Hq1 = Hq2 \<and> H1 = H2 \<and> pk1 = pk2 \<and> skfo1 = skfo2 \<and> mstar1 = mstar2 \<and> cstar1 = cstar2 \<and> Kstar1 = Kstar2 \<and> in_pk1 = in_pk2 \<and> in_cstar1 = in_cstar2 \<and> classA1 = classA2 \<and> c1 = c2 \<and> K'1 = K'2 \<and> b1 = b2]
-         \<sqinter> \<lbrakk>quantA1, Hin1, Hout1, Gin1, Gout1\<rbrakk> \<equiv>\<qq> \<lbrakk>quantA2, Hin2, Hout2, Gin2, Gout2\<rbrakk>]
-  [] [] Expr[top]"
-  (* lemma "qrhl Expr[HX\<guillemotright>\<lbrakk>Q1,Q2\<rbrakk>] c d Expr[Cla[x1=x2]]" *)
-  apply (tactic \<open>Basic_Rules.sym_tac \<^context> 1\<close>)
+
+lemma \<open>qrhl Expr[Cla[x1 = x2]] [] [] Expr[Cla[x2 = 1]]\<close> if \<open>finite X\<close>
+  apply (tactic \<open>Basic_Rules.skip_conseq_tac \<^context> 1\<close>)
   oops
 end
 

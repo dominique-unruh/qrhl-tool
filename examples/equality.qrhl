@@ -13,14 +13,11 @@ program prog1 := {
     skip;
 }.
 
-
 program prog2 := {
   on q apply hadamard;
   b <$ uniform UNIV;
   on q apply (if b=1 then hadamard else idOp);
 }.
-
-
 
 qrhl {Qeq[q1=q2]} call prog1; ~ call prog2; {Qeq[q1=q2]}.
   inline prog1.

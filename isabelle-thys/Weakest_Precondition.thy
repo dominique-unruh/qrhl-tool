@@ -82,7 +82,7 @@ lemma wp2_qapply_tac:
   apply (rule sym_rule)
   apply (subst asm_rl[of \<open>(\<lambda>m. index_flip_subspace (A (prod.swap m))) = _\<close>]) defer
    apply (rule wp1_qapply_tac)
-  using assms by auto
+  using assms by (auto simp: qregister_chain_apply)
 
 lemma wp1_qinit_tac:
   fixes B e Q

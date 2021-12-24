@@ -25,6 +25,8 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
     implicit val isabelle: Isabelle = state.isabelle.isabelle.isabelleControl
     val ctxt = state.isabelle.context
 
+    precheck(state, goal)
+
     type In = (A, Subgoal, Context)
     type Out = Option[(List[Subgoal], Thm)]
     type Fun = MLFunction3[A, Subgoal, Context, Out]
@@ -52,6 +54,7 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
     postprocess(state,goal,newGoals)
   }
 
+  def precheck(state: State, goal: Subgoal): Unit = {}
   def check(state: State, goal: Subgoal, newGoals : List[Subgoal]): Unit = {}
   def postprocess(state: State, goal: Subgoal, newGoals : List[Subgoal]): List[Subgoal] = newGoals
 

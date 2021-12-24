@@ -225,4 +225,44 @@ fun mk_ct_equals ct1 ct2 = let
 val tty_handle = Lazy.lazy (fn () => TextIO.openOut "/dev/pts/2")
 fun tty s = (TextIO.output (Lazy.force tty_handle, (s |> Output.output |> YXML.content_of) ^ "\n"); TextIO.flushOut (Lazy.force tty_handle))
 
+fun make_identifier str = let
+  val symbols = Symbol_Pos.explode (str, Position.none)
+  val good_prefix = (Scan.finite Symbol_Pos.stopper Symbol_Pos.scan_ident || Scan.succeed []) symbols |> fst
+  val new_id = if null good_prefix then "x" else good_prefix |> Symbol_Pos.implode
+  val _ = \<^assert> (Symbol_Pos.is_identifier new_id)
+in
+  new_id
+end
+
+fun first_order_search thy pat term = 
+  (if Term.is_open term then raise Pattern.MATCH
+   else Pattern.first_order_match thy (pat,term) (Vartab.empty,Vartab.empty); SOME term)
+  handle Pattern.MATCH => case term of
+    t1 $ t2 => (case first_order_search thy pat t1 of SOME t => SOME t
+                      | NONE => first_order_search thy pat t2)
+  | Abs(_,_,body) => first_order_search thy pat body
+  | _ => NONE
+
+fun find_all_subterm_occurrences subterm term i =
+  if term aconv subterm then Bound i
+  else case term of
+    t1 $ t2 => find_all_subterm_occurrences subterm t1 i $ find_all_subterm_occurrences subterm t2 i
+  | Abs(v,T,body) => Abs(v,T,find_all_subterm_occurrences subterm body (i+1))
+  | t => t
+
+fun generalize_tac ctxt varname pat = SUBGOAL (fn (t,i) => case first_order_search (Proof_Context.theory_of ctxt) pat t of
+  NONE => (* raise TERM("generalize_tac: did not find pattern", [pat,t]) *) no_tac
+  | SOME subterm => let
+    val context = find_all_subterm_occurrences subterm t 0
+    val subterm_ct = Thm.cterm_of ctxt subterm
+    val subtermT = Thm.ctyp_of_cterm subterm_ct
+    val context_ct = Thm.cterm_of ctxt (Abs("", Thm.typ_of subtermT, context))
+    val var = varname subterm |> make_identifier
+    val rule = \<^instantiate>\<open>context_ct and subterm_ct and 'a=subtermT in
+                   lemma \<open>(\<And>bound. PROP context_ct bound) \<Longrightarrow> PROP context_ct subterm_ct\<close> by assumption\<close>
+    (* Rename the bound variable to var, this provides the default for the variable in the final goal *)
+    val rule = rule |> Thm.rename_boundvars (Abs("bound",dummyT,Term.dummy)) (Abs(var,dummyT,Term.dummy))
+    val tac = compose_tac ctxt (false, rule, 1) i
+  in tac end)
+
 end

@@ -513,4 +513,7 @@ fun applyToplevelCommand (ctxt, command) = let
   val ctxt = Proof_Context.background_theory map_thy ctxt
 in ctxt end
 
+val skip_tac_op =
+  apply_tactic_on_term_concl (fn ctxt => fn () => Basic_Rules.skip_conseq_tac ctxt 1)
+
 end

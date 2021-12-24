@@ -293,9 +293,14 @@ axiomatization where qregister_raw_chain: \<open>qregister_raw F \<Longrightarro
 lemma cregister_chain_apply[simp]: \<open>apply_cregister (cregister_chain F G) = apply_cregister F o apply_cregister G\<close>
   apply (rule ext) apply transfer
   by (auto simp: non_cregister_raw_def cregister_raw_empty)
-lemma qregister_chain_apply[simp]: \<open>apply_qregister (qregister_chain F G) = apply_qregister F o apply_qregister G\<close>
+lemma qregister_chain_apply: \<open>apply_qregister (qregister_chain F G) = apply_qregister F o apply_qregister G\<close>
   apply (rule ext) apply transfer
   by (auto simp: non_qregister_raw_def qregister_raw_0)
+(* We limit this simplification rule to the case where F is neither Fst nor Snd because those cases are used commonly to encode indexed variables *)
+lemma qregister_chain_apply_simp[simp]: 
+  assumes \<open>NO_MATCH qFst F\<close> \<open>NO_MATCH qSnd F\<close>
+  shows \<open>apply_qregister (qregister_chain F G) = apply_qregister F o apply_qregister G\<close>
+  by (rule qregister_chain_apply)
 
 lemma cregister_chain_non_register1[simp]: \<open>cregister_chain non_cregister F = non_cregister\<close>
   apply transfer by (auto simp add: non_cregister_raw)

@@ -273,6 +273,9 @@ lemma norm_lift[simp]:
   "distinct_qvars Q \<Longrightarrow> norm (X\<guillemotright>Q) = norm X"
   by (cheat norm_lift)
 lemma imageOp_lift[simp]: "applyOpSpace (liftOp U Q) top = liftSpace (applyOpSpace U top) Q"
+  apply (cases \<open>qregister Q\<close>) defer
+  unfolding liftSpace_def
+  apply (simp add: non_qregister non_qregister.rep_eq non_qregister_raw_def) 
   by (cheat imageOp_lift)
 lemma applyOpSpace_lift[simp]: "applyOpSpace (liftOp U Q) (liftSpace S Q) = liftSpace (applyOpSpace U S) Q"
   by (cheat applyOpSpace_lift)

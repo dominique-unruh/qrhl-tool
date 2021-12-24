@@ -200,5 +200,24 @@ fun add_index_to_predicate left t = let
   (* Should do cleanup like in add_index_to_expression. *)
   in res end *)
 
+fun generalize_getters ctxt = Subgoal.FOCUS_PARAMS (fn focus => let
+  val m = focus |> #params |> hd |> snd (* We assume the memory is the outermost parameter! *)
+  val pattern = Const ("Prog_Variables.getter", TVar(("'a",0),[])) $ 
+                    Var (("_dummy_", 1), TVar(("'b",0),[])) $ Thm.term_of m
+  fun varname (Const(\<^const_name>\<open>getter\<close>,_) $ v $ _) = varname v ^ "'"
+    | varname (Free(n,_)) = n
+    | varname (Const(\<^const_name>\<open>cregister_chain\<close>,_) $ Const(\<^const_name>\<open>cFst\<close>,_) $ v) = varname v^"1"
+    | varname (Const(\<^const_name>\<open>cregister_chain\<close>,_) $ Const(\<^const_name>\<open>cSnd\<close>,_) $ v) = varname v^"2"
+    | varname (Const(\<^const_name>\<open>cregister_chain\<close>,_) $ v1 $ v2) = varname v1 ^ varname v2
+    | varname (v1 $ v2) = varname v1 ^ varname v2
+    | varname (Var((n,_),_)) = n
+    | varname (Bound _) = "x"
+    | varname (Abs(_,_,body)) = varname body
+    | varname (Const(c,_)) = c
+  val tac = REPEAT_DETERM (Misc.generalize_tac (#context focus) varname pattern 1)
+in tac end) ctxt
+THEN'
+rewrite_goal_tac ctxt @{thms triv_forall_equality} (* Removes all unused parameters. Theoretically should be limited to the toplevel ones, not any inside the term *)
+
 end
 end

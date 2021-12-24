@@ -63,6 +63,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     RichTerm(typ, rename(isabelleTerm))
   }
 
+  /** Shortform to longform */
   def encodeAsExpression(context: IsabelleX.ContextX, indexed: Boolean) : RichTerm =
     RichTerm(Ops.termToExpressionOp(context.context, if (indexed) cl2T else clT, isabelleTerm).retrieveNow)
 
