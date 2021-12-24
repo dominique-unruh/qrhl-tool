@@ -225,6 +225,8 @@ fun mk_ct_equals ct1 ct2 = let
 val tty_handle = Lazy.lazy (fn () => TextIO.openOut "/dev/pts/2")
 fun tty s = (TextIO.output (Lazy.force tty_handle, (s |> Output.output |> YXML.content_of) ^ "\n"); TextIO.flushOut (Lazy.force tty_handle))
 
+(* Transforms str into a valid identifier (if it isn't one yet).
+   (Simply by truncating or replacing by "x".) *)
 fun make_identifier str = let
   val symbols = Symbol_Pos.explode (str, Position.none)
   val good_prefix = (Scan.finite Symbol_Pos.stopper Symbol_Pos.scan_ident || Scan.succeed []) symbols |> fst
@@ -234,6 +236,10 @@ in
   new_id
 end
 
+(* Searches for the first occurrence of pattern `pat` in `term`. 
+   Returns the matching subterm (not the position).
+   First-order matching is performed.
+ *)
 fun first_order_search thy pat term = 
   (if Term.is_open term then raise Pattern.MATCH
    else Pattern.first_order_match thy (pat,term) (Vartab.empty,Vartab.empty); SOME term)
@@ -243,6 +249,9 @@ fun first_order_search thy pat term =
   | Abs(_,_,body) => first_order_search thy pat body
   | _ => NONE
 
+(* Finds all occurrences of `subterm` in `term`.
+   Occurrences must be \<alpha>-convertible to `subterm`.
+   Returns a context (with a free bound variable indicating the hole). *)
 fun find_all_subterm_occurrences subterm term i =
   if term aconv subterm then Bound i
   else case term of
@@ -250,6 +259,10 @@ fun find_all_subterm_occurrences subterm term i =
   | Abs(v,T,body) => Abs(v,T,find_all_subterm_occurrences subterm body (i+1))
   | t => t
 
+(* Finds first occurrence `st` of `pat` in the subgoal `t`. 
+   Then replaces `t` by `\<And>x. C[x]` (where C is t with all occurrences of st removed).
+   The name `x` of the bound variable is returned by the function `varname st`.
+ *)
 fun generalize_tac ctxt varname pat = SUBGOAL (fn (t,i) => case first_order_search (Proof_Context.theory_of ctxt) pat t of
   NONE => (* raise TERM("generalize_tac: did not find pattern", [pat,t]) *) no_tac
   | SOME subterm => let

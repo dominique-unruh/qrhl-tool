@@ -77,6 +77,13 @@ fun seq_tac i j B ctxt = SUBGOAL_with_check ctxt (seq_tac_checks i j) (fn (goal,
       resolve_tac ctxt [rule] n
     end)
 
+fun atomize ctxt t =
+  let val t' = Object_Logic.atomize_term ctxt t
+      val _ = if fastype_of t' <> \<^typ>\<open>bool\<close> then
+                raise TERM("QRHL_Operations.atomize: could not convert term to a bool",[t])
+              else ()
+  in t' end
+
 (* Applies tactic tac to the goal t.
    Returns NONE if tac fails, and the list of new subgoals otherwise.
 
@@ -87,7 +94,7 @@ fun tac_on_term tac ctxt t =
   in
   case Seq.pull (tac goal) of
       NONE => NONE
-    | SOME (goal',_) => SOME (Thm.prems_of goal' |> map HOLogic.dest_Trueprop)
+    | SOME (goal',_) => SOME (Thm.prems_of goal' |> map (atomize ctxt))
   end
 
 (* Like tac_on_term, but works on terms of the form A1-->A2-->\<dots>-->B and

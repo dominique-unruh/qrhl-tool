@@ -18,7 +18,6 @@ lemma seqREMOVE:
   shows "qrhl A c d C"
   using assms using seq_rule by auto
 
-
 ML_file "tactics.ML"
 
 method_setup seq = {*
