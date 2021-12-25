@@ -56,6 +56,11 @@ lemma non_cregister: \<open>\<not> cregister F \<longleftrightarrow> F = non_cre
 lemma non_qregister: \<open>\<not> qregister F \<longleftrightarrow> F = non_qregister\<close>
   apply transfer using non_qregister_raw by blast
 
+lemma non_cregister'[simp]: \<open>\<not> cregister non_cregister\<close>
+  by (simp add: non_cregister)
+lemma non_qregister'[simp]: \<open>\<not> qregister non_qregister\<close>
+  by (simp add: non_qregister)
+
 lemma apply_qregister_bounded_clinear: \<open>bounded_clinear (apply_qregister F)\<close>
   apply transfer by (auto simp add: qregister_raw_bounded_clinear non_qregister_raw_def[abs_def])
 
@@ -509,6 +514,21 @@ axiomatization where getter_setter_compat[simp]: \<open>ccompatible x y \<Longri
 axiomatization where setter_setter_compat: \<open>ccompatible x y \<Longrightarrow> setter x a (setter y b m) = setter y b (setter x a m)\<close>
 axiomatization where setter_getter_same[simp]: \<open>setter x (getter x m) m = m\<close>
 
+lemma setter_pair:
+  assumes \<open>ccompatible F G\<close>
+  shows \<open>setter (cregister_pair F G) = (\<lambda>(x,y). setter F x o setter G y)\<close>
+  sorry
+
+lemma getter_pair: 
+  assumes \<open>ccompatible F G\<close>
+  shows \<open>getter (cregister_pair F G) = (\<lambda>m. (getter F m, getter G m))\<close>
+  sorry
+
+lemma getter_chain:
+  assumes \<open>cregister F\<close>
+  shows \<open>getter (cregister_chain F G) = getter G o getter F\<close>
+  sorry
+
 definition same_outside_cregister :: \<open>('a,'b) cregister \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool\<close> where
   \<open>same_outside_cregister F x y \<longleftrightarrow> x = setter F (getter F x) y\<close>
 
@@ -604,6 +624,15 @@ lift_definition qregister_conversion :: \<open>('a,'c) qregister \<Rightarrow> (
 definition \<open>cregister_le F G = (cregister F \<and> cregister G \<and> CREGISTER_of F \<le> CREGISTER_of G)\<close>
 definition \<open>qregister_le F G = (qregister F \<and> qregister G \<and> QREGISTER_of F \<le> QREGISTER_of G)\<close>
 
+lemma qregister_le_pair_leftI: \<open>qcompatible F G \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
+  sorry
+lemma qregister_le_pair_rightI1: \<open>qcompatible G H \<Longrightarrow> qregister_le F G \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
+  sorry
+lemma qregister_le_pair_rightI2: \<open>qcompatible G H \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
+  sorry
+lemma qregister_le_refl: \<open>qregister F \<Longrightarrow> qregister_le F F\<close>
+  unfolding qregister_le_def by simp
+
 lemma cregister_chain_conversion: \<open>cregister_le F G \<Longrightarrow> cregister_chain G (cregister_conversion F G) = F\<close>
   unfolding cregister_le_def
   apply (transfer fixing: F G)
@@ -615,6 +644,17 @@ lemma qregister_chain_conversion: \<open>qregister_le F G  \<Longrightarrow> qre
   apply (transfer fixing: F G)
   apply transfer
   by (auto simp: non_qregister_raw qregister_conversion_raw_register f_inv_into_f in_mono intro!: ext)
+
+lemma cregister_apply_conversion: 
+  assumes \<open>cregister_le F G\<close>
+  shows \<open>apply_cregister F x = apply_cregister G (apply_cregister (cregister_conversion F G) x)\<close>
+  using assms apply (subst cregister_chain_conversion[where F=F and G=G, symmetric])
+  by auto
+lemma qregister_apply_conversion: 
+  assumes \<open>qregister_le F G\<close>
+  shows \<open>apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
+  using assms apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
+  by auto
 
 lemma cregister_conversion_id[simp]: \<open>cregister_conversion F cregister_id = F\<close>
   apply transfer by auto
@@ -1004,6 +1044,8 @@ abbreviation (input) \<open>declared_qvars Q \<equiv> qregister Q\<close>
 (* simproc_setup index_var ("index_var lr v") = Prog_Variables.index_var_simproc *)
 (* simproc_setup index_flip_var ("index_flip_var v") = Prog_Variables.index_flip_var_simproc *)
 
+(* Simproc that rewrites a `qregister_conversion F G` into an index-register.
+   (Index-registers are registers build from chain, pair, Fst, Snd.) *)
 simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\<close>) =
   \<open>fn m => fn ctxt => fn ct => SOME (Prog_Variables.qregister_conversion_to_register_conv ctxt ct) handle e => NONE\<close>
 
@@ -1016,6 +1058,49 @@ simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\
 *)
 definition "register_conversion_hint A R = A"
 lemma register_conversion_hint_cong[cong]: "A=A' \<Longrightarrow> register_conversion_hint A R = register_conversion_hint A' R" by simp
+
+(* Simproc that rewrites terms of the form `register_conversion_hint (apply_qregister F a) G`
+  `apply_qregister target (apply_qregister (qregister_conversion \<dots>) A)` for suitable \<dots> *)
+simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close>) =
+  \<open>fn m => fn ctxt => fn ct => let 
+    val _ = \<^print> ct
+    val target = ct |> Thm.dest_arg
+    val conv = (Prog_Variables.apply_qregister_conversion_conv ctxt target |> Conv.arg1_conv)
+        then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
+    in SOME (conv ct) handle e => NONE end\<close>
+
+definition \<open>JOIN_REGISTERS F G H H' \<equiv> (H=id \<and> H'=id)\<close>
+
+named_theorems join_registers
+
+(* Simproc that proves a goal of the form \<open>JOIN_REGISTERS F G ?H ?L\<close> where
+  F G are qregisters and H,L will be instantiated. 
+  (Strictly speaking, they will not be instantiated because simprocs cannot do that.
+   Instead, the JOIN_REGISTERS term will be rewritten into (?H=\<dots> \<and> ?L=\<dots>).
+   Strictly speaking, H,L do not need to be schematic therefore.)
+
+  Both H, L will instantiated to \<open>(\<lambda>F. register_conversion_hint F FG)\<close> where FG is an upper bound (not proven!)
+  for F,G (w.r.t., qregister_le).
+
+  (We have two variables H,L because they may need different types.)
+  (* TODO: Do they? Do we have cases where the types are different? Let's see in the end and possibly simplify. *)
+*)
+simproc_setup JOIN_REGISTERS (\<open>JOIN_REGISTERS F G H L\<close>) = \<open>fn _ => fn ctxt => fn ct => let
+  val (((F,G),H),L) = ct |> Thm.dest_comb |> apfst Thm.dest_comb |> apfst (apfst Thm.dest_comb) |> apfst (apfst (apfst Thm.dest_arg))
+  val F' = Thm.term_of F val G' = Thm.term_of G
+  val index = Prog_Variables.is_index_qregister F' andalso Prog_Variables.is_index_qregister G'
+  val FG_option = if index then NONE else Prog_Variables.join_registers ctxt F' G' |> Option.map (Thm.cterm_of ctxt)
+  in case FG_option of
+    NONE => NONE
+    | SOME FG =>
+        SOME \<^instantiate>\<open>FG and F and G and H and L and 'f=\<open>Thm.ctyp_of_cterm F\<close> and 'g=\<open>Thm.ctyp_of_cterm G\<close> and
+              'h=\<open>Thm.ctyp_of_cterm H |> Thm.dest_funT |> fst\<close> and 'l=\<open>Thm.ctyp_of_cterm L |> Thm.dest_funT |> fst\<close> and
+              'fg=\<open>Thm.ctyp_of_cterm FG\<close> in 
+              lemma \<open>JOIN_REGISTERS (F::'f) (G::'g) (H::'h\<Rightarrow>'h) (L::'l\<Rightarrow>'l) \<equiv>
+              H = (\<lambda>F. register_conversion_hint F (FG::'fg)) \<and> L = (\<lambda>F. register_conversion_hint F FG)\<close> 
+              by (auto simp add: JOIN_REGISTERS_def register_conversion_hint_def id_def)\<close> |> \<^print>
+end\<close>
+
 
 section \<open>Cleanup\<close>
 

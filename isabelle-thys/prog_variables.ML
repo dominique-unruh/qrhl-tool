@@ -531,6 +531,8 @@ val qregister_conversion_to_register_conv_simpset =
                           qregister_of_cregister_Fst qregister_of_cregister_Snd}
   |> simpset_of
 in
+(* Tries to rewrite a `qregister_conversion F G` into an index-register.
+   (Index-registers are registers build from chain, pair, Fst, Snd.) *)
 fun qregister_conversion_to_register_conv ctxt ct = let
   val (lhs,rhs) = case Thm.term_of ct of Const(\<^const_name>\<open>qregister_conversion\<close>,_) $ lhs $ rhs => (lhs,rhs)
                                        | _ => raise CTERM ("qregister_conversion_to_register_conv: not a register conversion", [ct])
@@ -582,5 +584,77 @@ in
 end
 end
 
+(* Tactic to fully prove a goal of the form `qregister_le F G` *)
+fun qregister_le_tac ctxt = let
+  fun tac' ctxt i st = st |>
+          ((resolve_tac ctxt @{thms qregister_le_refl} i THEN distinct_vars_tac ctxt i)
+          ORELSE
+          (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i))
+in SUBGOAL (fn (t,i) => 
+  case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
+    resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN qregister_le_tac ctxt i THEN qregister_le_tac ctxt i
+  | _ => tac' ctxt i)
+end
+
+(* Returns a theorem `qregister_le ctxt lhs rhs` if possible *)
+fun qregister_le_prove ctxt lhs rhs = let
+  val (rhs_inT, rhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm rhs)
+  val (lhs_inT, lhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm lhs)
+  val _ = \<^assert> (Thm.eq_ctyp (rhs_outT, lhs_outT))
+  val less_eq_goal = \<^instantiate>\<open>lhs and rhs and 'a=lhs_inT and 'b=rhs_inT and 'c=lhs_outT
+          in cprop \<open>qregister_le (lhs::('a,'c) qregister) (rhs::('b,'c) qregister)\<close>\<close>
+in
+  Goal.prove_internal ctxt [] less_eq_goal (K (qregister_le_tac ctxt 1))
+end
+
+(* Rewrites `apply_qregister F A` into `apply_qregister target (apply_qregister (qregister_conversion \<dots>) A)`
+  for suitable \<dots> *)
+fun apply_qregister_conversion_conv ctxt target ct = let
+  val _ = case Thm.term_of ct of \<^Const_>\<open>apply_qregister _ _\<close> $ _ $ _ => ()
+            | _ => raise CTERM ("TODO", [ct])
+  val source = Thm.dest_arg1 ct
+  val argument = Thm.dest_arg ct
+  val less_eq_thm = qregister_le_prove ctxt source target
+in
+  (infer_instantiate ctxt [(("x",1), argument)] @{thm qregister_apply_conversion[THEN eq_reflection]}) OF [less_eq_thm]
+end
+
+(* Returns true if argument is a (quantum) index-register *)
+fun is_index_qregister (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ t $ u) = is_index_qregister t andalso is_index_qregister u
+  | is_index_qregister (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ t $ u) = is_index_qregister t andalso is_index_qregister u
+  | is_index_qregister (Const(\<^const_name>\<open>qFst\<close>,_)) = true
+  | is_index_qregister (Const(\<^const_name>\<open>qSnd\<close>,_)) = true
+  | is_index_qregister _ = false
+
+(* Transforms F into [F1,\<dots>,Fn] such that F is equivalent to (F1;\<dots>Fn). *)
+fun explode_variable (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ F $ G) = explode_variable F @ explode_variable G
+  | explode_variable (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ F $ G) =
+      explode_variable G |> map (fn g =>
+         \<^Const>\<open>qregister_chain \<open>fastype_of F |> dest_qregisterT |> fst\<close> \<open>fastype_of F |> dest_qregisterT |> snd\<close> \<open>fastype_of g |> dest_qregisterT |> fst\<close>\<close> 
+        $ F $ g)
+  | explode_variable F = [F]    
+
+(* Transforms [F1,\<dots>,Fn] into (F1;\<dots>Fn). *)
+fun implode_variable [a] = a
+  | implode_variable (F::Gs) = let
+      val G = implode_variable Gs
+      in
+       \<^Const>\<open>qregister_pair \<open>fastype_of F |> dest_qregisterT |> fst\<close> \<open>fastype_of F |> dest_qregisterT |> snd\<close> \<open>fastype_of G |> dest_qregisterT |> fst\<close>\<close> 
+        $ F $ G
+      end
+
+(* Given variables F,G, returns an upper bound FG.
+   (Heuristically. Is not guaranteed to be a true upper bound.
+   But in simple cases, should be a lub.) *)
+fun join_registers (_:Proof.context) F G = if F aconv G then SOME F else let
+  val Fs = explode_variable F
+  val Gs = explode_variable G
+  val FGs = Fs @ Gs |> sort_distinct Term_Ord.fast_term_ord
+  val FG = implode_variable FGs
+  in
+  SOME FG
+  end
+
+(* fun join_registers_ct ctxt F G = join_registers ctxt (Thm.term_of F) (Thm.term_of G) |> Option.map (Thm.cterm_of ctxt) *)
 
 end

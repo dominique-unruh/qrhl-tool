@@ -687,31 +687,35 @@ lemma variable_extension_hint_l2bounded[simp]:
   using assms
   using extend_l2bounded_lift_aux by blast
 
-(* Hint for the simplifier, meaning that:
-    - x is of the form x'\<guillemotright>Q
-    - colocal Q [], colocal R [] holds
-    - the whole expression should be rewritten to x'\<guillemotright>Q\<otimes>R' such that Q\<otimes>R' has the same variables as Q\<otimes>R (duplicates removed)
-  Rewriting the term is done by the simplifier rules declared below.
 *)
-definition "join_variables_hint x (R::'a q2variable) = x"
 
-lemma add_join_variables_hint: 
-  fixes Q :: "'a q2variable" and R :: "'b::universe variables" 
-    and S :: "'a subspace" and T :: "'b subspace"
-    and A :: "('a,'a) l2bounded" and B :: "('b,'b) l2bounded"
-  shows "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<sqinter> T\<guillemotright>R = join_variables_hint (S\<guillemotright>Q) R \<sqinter> join_variables_hint (T\<guillemotright>R) Q"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q + T\<guillemotright>R = join_variables_hint (S\<guillemotright>Q) R + join_variables_hint (T\<guillemotright>R) Q"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> S\<guillemotright>Q \<squnion> T\<guillemotright>R = join_variables_hint (S\<guillemotright>Q) R \<squnion> join_variables_hint (T\<guillemotright>R) Q"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> A\<guillemotright>Q \<cdot> T\<guillemotright>R = join_variables_hint (A\<guillemotright>Q) R \<cdot> join_variables_hint (T\<guillemotright>R) Q"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>R) = (join_variables_hint (S\<guillemotright>Q) R \<le> join_variables_hint (T\<guillemotright>R) Q)"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>R) = (join_variables_hint (S\<guillemotright>Q) R = join_variables_hint (T\<guillemotright>R) Q)"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (A\<guillemotright>Q = B\<guillemotright>R) = (join_variables_hint (A\<guillemotright>Q) R = join_variables_hint (B\<guillemotright>R) Q)"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (A\<guillemotright>Q + B\<guillemotright>R) = (join_variables_hint (A\<guillemotright>Q) R + join_variables_hint (B\<guillemotright>R) Q)"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (A\<guillemotright>Q - B\<guillemotright>R) = (join_variables_hint (A\<guillemotright>Q) R - join_variables_hint (B\<guillemotright>R) Q)"
-    and "NO_MATCH (a,a) (Q,R) \<Longrightarrow> (A\<guillemotright>Q \<cdot> B\<guillemotright>R) = (join_variables_hint (A\<guillemotright>Q) R \<cdot> join_variables_hint (B\<guillemotright>R) Q)"
-  unfolding join_variables_hint_def by simp_all
+lemma join_registers_template_op:
+  assumes \<open>JOIN_REGISTERS F G X Y\<close>
+  shows \<open>op (apply_qregister F A) (apply_qregister G B) = op (X (apply_qregister F A)) (Y (apply_qregister G B))\<close>
+  using assms unfolding JOIN_REGISTERS_def by simp
 
+lemma join_registers_template_space:
+  assumes \<open>JOIN_REGISTERS F G X Y\<close>
+  shows \<open>op (liftSpace F A) (liftSpace G B) = op (X (liftSpace F A)) (Y (liftSpace G B))\<close>
+  using assms unfolding JOIN_REGISTERS_def by simp
 
+lemma join_registers_template_op_space:
+  assumes \<open>JOIN_REGISTERS F G X Y\<close>
+  shows \<open>op (apply_qregister F A) (liftSpace G B) = op (X (apply_qregister F A)) (Y (liftSpace G B))\<close>
+  using assms unfolding JOIN_REGISTERS_def by simp
+
+lemmas join_registers_eq_op[join_registers] = join_registers_template_op[where op=\<open>(=)\<close>]
+lemmas join_registers_plus_op[join_registers] = join_registers_template_op[where op=\<open>plus\<close>]
+lemmas join_registers_minus_op[join_registers] = join_registers_template_op[where op=\<open>minus\<close>]
+lemmas join_registers_cblinfun_compose[join_registers] = join_registers_template_op[where op=\<open>(o\<^sub>C\<^sub>L)\<close>]
+lemmas join_registers_inf[join_registers] = join_registers_template_space[where op=\<open>inf\<close>]
+lemmas join_registers_sup[join_registers] = join_registers_template_space[where op=\<open>sup\<close>]
+lemmas join_registers_plus_space[join_registers] = join_registers_template_space[where op=\<open>plus\<close>]
+lemmas join_registers_cblinfun_image[join_registers] = join_registers_template_op_space[where op=\<open>cblinfun_image\<close>]
+lemmas join_registers_le_space[join_registers] = join_registers_template_space[where op=\<open>less_eq\<close>]
+lemmas join_registers_eq_space[join_registers] = join_registers_template_space[where op=\<open>(=)\<close>]
+
+(*
 
 (* Hint for the simplifier, meaning that:
     - x is of the form x'>>Q
@@ -1707,7 +1711,7 @@ ML_file \<open>qrhl.ML\<close>
 section "Simprocs"
 
 (* simproc_setup "variable_rewriting" 
-  ("join_variables_hint a b" | "sort_variables_hint a" | 
+  ("join_variables_hint a b" | "sort_variables_hint a" |
    "reorder_variables_hint a b" | "extend_lift_as_var_concat_hint A R") = 
   QRHL.variable_rewriting_simproc *)
 

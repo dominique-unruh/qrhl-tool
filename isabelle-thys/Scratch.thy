@@ -14,104 +14,18 @@ derive (dlist) set_impl bit
 
 ML \<open>open Prog_Variables\<close>
 
-(* lemma
-  fixes a :: \<open>int qvariable\<close>
-    and a1 :: \<open>int qvariable\<close>
-    and b1 :: \<open>int qvariable\<close>
-  assumes [variable]: \<open>qregister a\<close>
-  assumes [variable]: \<open>qregister b1\<close>
-shows Test
- *)
-
-lemma qregister_le_pair_leftI: \<open>qcompatible F G \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
-  unfolding qregister_le_def
-  sorry
-
-lemma qregister_le_pair_rightI1: \<open>qcompatible G H \<Longrightarrow> qregister_le F G \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
-  sorry
-lemma qregister_le_pair_rightI2: \<open>qcompatible G H \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
-  sorry
-lemma qregister_le_refl: \<open>qregister F \<Longrightarrow> qregister_le F F\<close>
-  unfolding qregister_le_def by simp
-
-ML \<open>
-fun qregister_le_tac ctxt = let
-  fun tac' ctxt i st = st |>
-          ((resolve_tac ctxt @{thms qregister_le_refl} i THEN distinct_vars_tac ctxt i)
-          ORELSE
-          (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i))
-in SUBGOAL (fn (t,i) => 
-  case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
-    resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN qregister_le_tac ctxt i THEN qregister_le_tac ctxt i
-  | _ => tac' ctxt i)
-end
-\<close>
-
-
-ML \<open>
-fun qregister_le_prove ctxt lhs rhs = let
-  val (rhs_inT, rhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm rhs)
-  val (lhs_inT, lhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm lhs)
-  val _ = \<^assert> (Thm.eq_ctyp (rhs_outT, lhs_outT))
-  val less_eq_goal = \<^instantiate>\<open>lhs and rhs and 'a=lhs_inT and 'b=rhs_inT and 'c=lhs_outT
-          in cprop \<open>qregister_le (lhs::('a,'c) qregister) (rhs::('b,'c) qregister)\<close>\<close>
-in
-  Goal.prove_internal ctxt [] less_eq_goal (K (qregister_le_tac ctxt 1))
-end
-\<close>
-
-lemma qregister_apply_conversion: \<open>qregister_le F G \<Longrightarrow> apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
-  apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
-  by auto
-
-
-ML \<open>
-fun apply_qregister_conversion_conv ctxt target ct = let
-  val _ = case Thm.term_of ct of \<^Const_>\<open>apply_qregister _ _\<close> $ _ $ _ => ()
-            | _ => raise CTERM ("TODO", [ct])
-  val source = Thm.dest_arg1 ct
-  val argument = Thm.dest_arg ct
-  val less_eq_thm = qregister_le_prove ctxt source target
-in
-  (infer_instantiate ctxt [(("x",1), argument)] @{thm qregister_apply_conversion[THEN eq_reflection]}) OF [less_eq_thm]
-end
-;;
-(* apply_qregister_conversion_conv \<^context> \<^cterm>\<open>\<lbrakk>a,b,c\<rbrakk>\<close> \<^cterm>\<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close> *)
-\<close>
-
-simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close>) =
-  \<open>fn m => fn ctxt => fn ct => let 
-    val _ = \<^print> ct
-    val target = ct |> Thm.dest_arg
-    val conv = (apply_qregister_conversion_conv ctxt target |> Conv.arg1_conv)
-        then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
-    in SOME (conv ct) handle e => NONE end\<close>
-
-
-
-schematic_goal
+(* TEST *)
+lemma
   fixes a b c
   assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
-  shows \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = apply_qregister \<lbrakk>a,b,c\<rbrakk> ?x\<close>
-  apply (subst register_conversion_hint_def[of \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close> \<open>\<lbrakk>a,b,c\<rbrakk>\<close>, symmetric])
-  by simp
+  shows True
+proof -
+  define CNOT' where \<open>CNOT' = apply_qregister \<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> CNOT\<close>
+  have \<open>apply_qregister \<lbrakk>a,b\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = 
+        apply_qregister \<lbrakk>a,c\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,b\<rbrakk> CNOT\<close>
+    apply (simp add: join_registers)
+    oops
 
-
-(* lemma
-  fixes qglobA :: \<open>_ qvariable\<close> assumes [register]: \<open>qregister qglobA\<close>
-  shows \<open>colocal_pred_qvars X (variable_concat (register_chain Fst qglobA) (register_chain Snd qglobA))\<close>
-  apply (rule colocal_pred_qvars_pair)
-  apply auto *)
-
-experiment
-  fixes a b c :: \<open>bit qvariable\<close>
-  assumes [variable]: \<open>qregister \<lbrakk>a,b,c\<rbrakk>\<close>
-begin
-ML \<open>
-qregister_conversion_to_register_conv \<^context>
-\<^cterm>\<open>\<lbrakk>a,\<lbrakk>\<rbrakk>,c \<mapsto> a,b,c,\<lbrakk>\<rbrakk>\<rbrakk>\<close>
-\<close>
-end
 
 lemma apply_qregister_of_cregister:
   assumes \<open>cregister F\<close>
@@ -129,12 +43,10 @@ lemma qregister_chain_pair_Snd_chain[simp]:
   shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qSnd H) = qregister_chain G H\<close>
   by (metis qregister_chain_pair_Snd assms qregister_chain_assoc)
 
-
 lemma qregister_chain_unit_right[simp]: \<open>qregister F \<Longrightarrow> qregister_chain F qvariable_unit = qvariable_unit\<close>
   by (simp add: qvariable_unit_def)
 lemma qregister_chain_unit_left[simp]: \<open>qregister F \<Longrightarrow> qregister_chain qvariable_unit F = qvariable_unit\<close>
   by (simp add: qvariable_unit_def)
-
 
 (* TODO: move to bounded operators *)
 lemma Abs_ell2_inverse_finite[simp]: \<open>Rep_ell2 (Abs_ell2 \<psi>) = \<psi>\<close> for \<psi> :: \<open>_::finite \<Rightarrow> complex\<close>
@@ -142,10 +54,6 @@ lemma Abs_ell2_inverse_finite[simp]: \<open>Rep_ell2 (Abs_ell2 \<psi>) = \<psi>\
 
 lemma explicit_cblinfun_Rep_ket: \<open>Rep_ell2 (explicit_cblinfun m *\<^sub>V ket a) b = m b a\<close> for m :: "_ :: finite \<Rightarrow> _ :: finite \<Rightarrow> _"
   by simp
-
-
-lemma non_cregister'[simp]: \<open>\<not> cregister non_cregister\<close>
-  by (simp add: non_cregister)
 
 lemma qregister_of_cregister_non_register: \<open>qregister_of_cregister non_cregister = non_qregister\<close>
 proof -
@@ -161,22 +69,6 @@ lemma qregister_of_cregister_compatible: \<open>ccompatible x y \<longleftrighta
 lemma qregister_of_cregister_pair: \<open>qregister_of_cregister (cregister_pair x y) = qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)\<close>
   sorry
 lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_chain x y) = qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)\<close>
-  sorry
-
-
-lemma getter_pair: 
-  assumes \<open>ccompatible F G\<close>
-  shows \<open>getter (cregister_pair F G) = (\<lambda>m. (getter F m, getter G m))\<close>
-  sorry
-
-lemma setter_pair:
-  assumes \<open>ccompatible F G\<close>
-  shows \<open>setter (cregister_pair F G) = (\<lambda>(x,y). setter F x o setter G y)\<close>
-  sorry
-
-lemma getter_chain:
-  assumes \<open>cregister F\<close>
-  shows \<open>getter (cregister_chain F G) = getter G o getter F\<close>
   sorry
 
 lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregister F)\<close>
@@ -293,7 +185,6 @@ qed
 (* TODO: to bounded operators *)
 declare enum_idx_correct[simp]
 
-
 lemma [code]: \<open>vec_of_ell2 (Abs_ell2 f) = vec CARD('a) (\<lambda>n. f (enum_nth n))\<close> for f :: \<open>'a::eenum \<Rightarrow> complex\<close>
   by (auto simp: vec_of_ell2_def vec_eq_iff vec_of_basis_enum_ell2_component)
 
@@ -317,9 +208,6 @@ lemma enum_nth_injective: \<open>i < CARD('a) \<Longrightarrow> j < CARD('a) \<L
 lemma div_leq_simp: \<open>(i div n < m) \<longleftrightarrow> i < n*m\<close> if \<open>n \<noteq> 0\<close> for n m :: nat
   by (simp add: div_less_iff_less_mult ordered_field_class.sign_simps(5) that zero_less_iff_neq_zero)
 
-
-
-
 lemmas prepare_for_code_new =
 
   qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric]
@@ -336,127 +224,15 @@ lemmas prepare_for_code_new =
   enum_index_prod_def fst_enum_nth snd_enum_nth enum_index_nth if_distrib[of enum_index]
   enum_nth_injective
 
-
 lemmas prepare_for_code_remove =
   qregister_of_cregister_Fst qregister_of_cregister_Snd
   qregister_of_cregister_pair qregister_of_cregister_chain
 
-(* definition "join_variables_hint x (R::(_,_) qregister) = x"
-
-definition \<open>NOT_SIMPLIFIABLE (X::bool) \<equiv> True\<close>
-lemma NOT_SIMPLIFIABLE_cong[cong]: \<open>NOT_SIMPLIFIABLE X = NOT_SIMPLIFIABLE X\<close>..
-
-simproc_setup NOT_SIMPLIFIABLE ("NOT_SIMPLIFIABLE X") = \<open>fn _ => fn ctxt => fn ct => 
-  case ct |> Thm.dest_arg |> \<^print> |> Simplifier.rewrite ctxt |> \<^print> |> Thm.rhs_of |> Thm.term_of of
-    Const(\<^const_name>\<open>True\<close>,_) => NONE
-  | _ => SOME @{thm NOT_SIMPLIFIABLE_def}\<close>
-
-definition \<open>IS_INDEX_REGISTER X \<equiv> True\<close>
-lemma IS_INDEX_REGISTER_simps[simp]:
-  \<open>IS_INDEX_REGISTER qFst\<close>
-  \<open>IS_INDEX_REGISTER qSnd\<close>
-  \<open>IS_INDEX_REGISTER X \<Longrightarrow> IS_INDEX_REGISTER Y \<Longrightarrow> IS_INDEX_REGISTER (qregister_pair X Y)\<close>
-  \<open>IS_INDEX_REGISTER F \<Longrightarrow> IS_INDEX_REGISTER G \<Longrightarrow> IS_INDEX_REGISTER (qregister_chain F G)\<close>
-  by (auto simp: IS_INDEX_REGISTER_def)
-
-lemma eq_joinI:
-  assumes \<open>NO_MATCH (p, undefined p :: unit) (X, undefined Y :: unit)\<close>
-  assumes \<open>NOT_SIMPLIFIABLE (IS_INDEX_REGISTER X)\<close>
-  shows \<open>apply_qregister X A = apply_qregister Y B \<longleftrightarrow> join_variables_hint (apply_qregister X A) Y = join_variables_hint (apply_qregister Y B) X\<close>
-  by (metis join_variables_hint_def)
-
-lemma ocl_joinI:
-  assumes \<open>NO_MATCH (p, undefined p :: unit) (X, undefined Y :: unit)\<close>
-  assumes \<open>NOT_SIMPLIFIABLE (IS_INDEX_REGISTER X)\<close>
-  shows \<open>apply_qregister X A o\<^sub>C\<^sub>L apply_qregister Y B = join_variables_hint (apply_qregister X A) Y o\<^sub>C\<^sub>L join_variables_hint (apply_qregister Y B) X\<close>
-  by (metis join_variables_hint_def) *)
-
-definition \<open>JOIN_VARIABLES F G H H' \<equiv> (H=id \<and> H'=id)\<close>
-definition \<open>JOIN_VARIABLES' F G H Z \<equiv> True\<close> for H Z :: 'a
-
-lemma eq_joinI:
-  assumes \<open>JOIN_VARIABLES F G X Y\<close>
-  shows \<open>apply_qregister F A = apply_qregister G B \<longleftrightarrow> 
-        X (apply_qregister F A) = Y (apply_qregister G B)\<close>
-  using assms unfolding JOIN_VARIABLES_def by simp
-
-lemma ocl_joinI:
-  assumes \<open>JOIN_VARIABLES F G X Y\<close>
-  shows \<open>apply_qregister F A o\<^sub>C\<^sub>L apply_qregister G B =
-        X (apply_qregister F A) o\<^sub>C\<^sub>L Y (apply_qregister G B)\<close>
-  using assms unfolding JOIN_VARIABLES_def by simp
 
 lemma apply_qregister_eqI[intro!]:
   assumes \<open>A = B\<close>
   shows \<open>apply_qregister X A = apply_qregister X B\<close>
   using assms by simp
-
-ML \<open>(* DUMMY *)
-fun join_variables ctxt F G = SOME \<^instantiate>\<open>F and G and 'a=\<open>Thm.ctyp_of_cterm F |> dest_qregisterT_ct |> fst\<close> 
-      and 'b=\<open>Thm.ctyp_of_cterm G |> dest_qregisterT_ct |> fst\<close> and 'c=\<open>Thm.ctyp_of_cterm F |> dest_qregisterT_ct |> snd\<close>
-      in cterm \<open>qregister_pair (F::('a,'c) qregister) (G::('b,'c) qregister)\<close>\<close>
-\<close>
-
-term qregister_pair
-ML \<open>
-fun explode_variable (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ F $ G) = explode_variable F @ explode_variable G
-  | explode_variable (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ F $ G) =
-      explode_variable G |> map (fn g =>
-         \<^Const>\<open>qregister_chain \<open>fastype_of F |> dest_qregisterT |> fst\<close> \<open>fastype_of F |> dest_qregisterT |> snd\<close> \<open>fastype_of g |> dest_qregisterT |> fst\<close>\<close> 
-        $ F $ g)
-  | explode_variable F = [F]    
-;;
-fun implode_variable [a] = a
-  | implode_variable (F::Gs) = let
-      val G = implode_variable Gs
-      in
-       \<^Const>\<open>qregister_pair \<open>fastype_of F |> dest_qregisterT |> fst\<close> \<open>fastype_of F |> dest_qregisterT |> snd\<close> \<open>fastype_of G |> dest_qregisterT |> fst\<close>\<close> 
-        $ F $ G
-      end
-;;
-explode_variable \<^term>\<open>\<lbrakk>a,b,qregister_chain c (qregister_pair d e)\<rbrakk> :: _ qvariable\<close>
-|> implode_variable
-\<close>
-
-ML \<open>
-fun is_numeric_qregister (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ t $ u) = is_numeric_qregister t andalso is_numeric_qregister u
-  | is_numeric_qregister (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ t $ u) = is_numeric_qregister t andalso is_numeric_qregister u
-  | is_numeric_qregister (Const(\<^const_name>\<open>qFst\<close>,_)) = true
-  | is_numeric_qregister (Const(\<^const_name>\<open>qSnd\<close>,_)) = true
-  | is_numeric_qregister _ = false
-\<close>
-
-
-ML \<open>
-fun join_variables ctxt F G = let
-  val Fs = explode_variable F
-  val Gs = explode_variable G
-  val FGs = Fs @ Gs |> sort_distinct Term_Ord.fast_term_ord
-  val FG = implode_variable FGs
-in
-SOME FG
-end
-fun join_variables_ct ctxt F G = join_variables ctxt (Thm.term_of F) (Thm.term_of G) |> Option.map (Thm.cterm_of ctxt)
-;;
-join_variables \<^context> \<^term>\<open>\<lbrakk>a,b\<rbrakk> :: _ qvariable\<close> \<^term>\<open>\<lbrakk>a,c\<rbrakk> :: _ qvariable\<close>
-\<close>
-
-
-term \<open>JOIN_VARIABLES F G H H'\<close>
-simproc_setup JOIN_VARIABLES (\<open>JOIN_VARIABLES F G H L\<close>) = \<open>fn _ => fn ctxt => fn ct => let
-val (((F,G),H),L) = ct |> Thm.dest_comb |> apfst Thm.dest_comb |> apfst (apfst Thm.dest_comb) |> apfst (apfst (apfst Thm.dest_arg))
-val numeric = is_numeric_qregister (Thm.term_of F) andalso is_numeric_qregister (Thm.term_of G)
-val FG_option = if numeric then NONE else join_variables_ct ctxt F G
-in case FG_option of
-  NONE => NONE
-  | SOME FG =>
-      SOME \<^instantiate>\<open>FG and F and G and H and L and 'f=\<open>Thm.ctyp_of_cterm F\<close> and 'g=\<open>Thm.ctyp_of_cterm G\<close> and
-            'h=\<open>Thm.ctyp_of_cterm H |> Thm.dest_funT |> fst\<close> and 'l=\<open>Thm.ctyp_of_cterm L |> Thm.dest_funT |> fst\<close> and
-            'fg=\<open>Thm.ctyp_of_cterm FG\<close> in 
-            lemma \<open>JOIN_VARIABLES (F::'f) (G::'g) (H::'h\<Rightarrow>'h) (L::'l\<Rightarrow>'l) \<equiv>
-            H = (\<lambda>F. register_conversion_hint F (FG::'fg)) \<and> L = (\<lambda>F. register_conversion_hint F FG)\<close> 
-            by (auto simp add: JOIN_VARIABLES_def register_conversion_hint_def id_def)\<close> |> \<^print>
-end\<close>
 
 
 
@@ -465,37 +241,11 @@ lemma
   assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
   shows True
 proof -
-(*   have le: \<open>\<lbrakk>a,c \<le> a,b,c\<rbrakk>\<close>
-    by (tactic \<open>qregister_le_tac \<^context> 1\<close>) *)
-
-(*   have joins:
-    \<open>\<And>A. join_variables_hint (apply_qregister (variable_concat a b) A) (variable_concat a c)
-    = register_conversion_hint (apply_qregister (variable_concat a b) A) \<lbrakk>a,b,c\<rbrakk>\<close>
-    \<open>\<And>A. join_variables_hint (apply_qregister (variable_concat a c) A) (variable_concat a b)
-    = register_conversion_hint (apply_qregister (variable_concat a c) A) \<lbrakk>a,b,c\<rbrakk>\<close>
-    by (auto simp add: join_variables_hint_def register_conversion_hint_def)
- *)
-
-  (* have j1[simp]: \<open>X \<equiv> \<lbrakk>a,b,c\<rbrakk> \<Longrightarrow> JOIN_VARIABLES \<lbrakk>a,b\<rbrakk> \<lbrakk>a,c\<rbrakk> X\<close> for X by (simp add: JOIN_VARIABLES_def) *)
-  (* have j1[simp]: \<open>JOIN_VARIABLES \<lbrakk>a,b\<rbrakk> \<lbrakk>a,c\<rbrakk> X = JOIN_VARIABLES' \<lbrakk>a,b\<rbrakk> \<lbrakk>a,c\<rbrakk> X \<lbrakk>a,b,c\<rbrakk>\<close> for X by (simp add: JOIN_VARIABLES_def JOIN_VARIABLES'_def) *)
-  (* have j2[simp]: \<open>X \<equiv> \<lbrakk>a,b,c\<rbrakk> \<Longrightarrow> JOIN_VARIABLES \<lbrakk>a,c\<rbrakk> \<lbrakk>a,b\<rbrakk> X\<close> for X by (simp add: JOIN_VARIABLES_def) *)
-
   define CNOT' where \<open>CNOT' = apply_qregister \<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> CNOT\<close>
-
-(*   have j1: \<open>JOIN_VARIABLES (variable_concat a b) (variable_concat a c) X Y \<longleftrightarrow>
-    X=(\<lambda>F. register_conversion_hint F \<lbrakk>a,b,c\<rbrakk>) \<and> Y=(\<lambda>F. register_conversion_hint F \<lbrakk>a,b,c\<rbrakk>)\<close> 
-    for X Y :: \<open>(qu,qu) l2bounded \<Rightarrow> _\<close>
-    unfolding JOIN_VARIABLES_def register_conversion_hint_def by auto
-
-  have j2: \<open>JOIN_VARIABLES (variable_concat a c) (variable_concat a b) X Y \<longleftrightarrow>
-    X=(\<lambda>F. register_conversion_hint F \<lbrakk>a,b,c\<rbrakk>) \<and> Y=(\<lambda>F. register_conversion_hint F \<lbrakk>a,b,c\<rbrakk>)\<close> 
-    for X Y :: \<open>(qu,qu) l2bounded \<Rightarrow> _\<close>
-    unfolding JOIN_VARIABLES_def register_conversion_hint_def by auto *)
-
 
   have \<open>apply_qregister \<lbrakk>a,b\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = 
         apply_qregister \<lbrakk>a,c\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,b\<rbrakk> CNOT\<close>
-    apply (simp add: ocl_joinI)
+    apply (simp add: join_registers)
 
     using if_weak_cong[cong del] apply fail?
     apply (simp 
