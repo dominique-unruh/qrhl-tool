@@ -1,5 +1,5 @@
 theory Scratch
-  imports QRHL.QRHL Missing_Bounded_Operators
+  imports QRHL.QRHL Missing_Bounded_Operators "HOL-Eisbach.Eisbach"
 begin
 
 no_notation m_inv ("inv\<index> _" [81] 80)
@@ -27,11 +27,6 @@ proof -
     oops
 
 
-lemma apply_qregister_of_cregister:
-  assumes \<open>cregister F\<close>
-  shows \<open>apply_qregister (qregister_of_cregister F) a = 
-          permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a\<close>
-  unfolding qregister_of_cregister.rep_eq using assms by simp
 
 lemma qregister_chain_pair_Fst_chain[simp]:
   assumes \<open>qcompatible F G\<close>
@@ -49,8 +44,6 @@ lemma qregister_chain_unit_left[simp]: \<open>qregister F \<Longrightarrow> qreg
   by (simp add: qvariable_unit_def)
 
 (* TODO: move to bounded operators *)
-lemma Abs_ell2_inverse_finite[simp]: \<open>Rep_ell2 (Abs_ell2 \<psi>) = \<psi>\<close> for \<psi> :: \<open>_::finite \<Rightarrow> complex\<close>
-  by (simp add: Abs_ell2_inverse)
 
 lemma explicit_cblinfun_Rep_ket: \<open>Rep_ell2 (explicit_cblinfun m *\<^sub>V ket a) b = m b a\<close> for m :: "_ :: finite \<Rightarrow> _ :: finite \<Rightarrow> _"
   by simp
@@ -64,12 +57,6 @@ proof -
     using non_qregister_raw_def by fastforce
 qed
 
-lemma qregister_of_cregister_compatible: \<open>ccompatible x y \<longleftrightarrow> qcompatible (qregister_of_cregister x) (qregister_of_cregister y)\<close>
-  sorry
-lemma qregister_of_cregister_pair: \<open>qregister_of_cregister (cregister_pair x y) = qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)\<close>
-  sorry
-lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_chain x y) = qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)\<close>
-  sorry
 
 lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregister F)\<close>
   apply transfer
@@ -89,29 +76,6 @@ lemma permute_and_tensor1_cblinfun_ket[simp]: \<open>Rep_ell2 (permute_and_tenso
   (if R b a then Rep_ell2 (A *\<^sub>V ket (f a)) (f b) else 0)\<close> for a b :: \<open>_::finite\<close>
   by (simp add: permute_and_tensor1_cblinfun_def)
 
-lemma mat_of_cblinfun_explicit_cblinfun[code,simp]:
-  fixes m :: \<open>'a::eenum \<Rightarrow> 'b::eenum \<Rightarrow> complex\<close>
-  defines \<open>m' \<equiv> (\<lambda>(i,j). m (enum_nth i) (enum_nth j))\<close>
-  shows \<open>mat_of_cblinfun (explicit_cblinfun m) = mat CARD('a) CARD('b) m'\<close> 
-proof (rule eq_matI)
-  fix i j
-  assume \<open>i < dim_row (mat CARD('a) CARD('b) m')\<close> \<open>j < dim_col (mat CARD('a) CARD('b) m')\<close>
-  then have ij[simp]: \<open>i < CARD('a)\<close> \<open>j < CARD('b)\<close>
-    by auto
-  have \<open>m (enum_class.enum ! i) (enum_class.enum ! j) = m' (i, j)\<close>
-    by (auto simp: m'_def)
-  then show \<open>mat_of_cblinfun (explicit_cblinfun m) $$ (i, j) = Matrix.mat CARD('a) CARD('b) m' $$ (i, j)\<close>
-    by (simp add: mat_of_cblinfun_ell2_component)
-next
-  show \<open>dim_row (mat_of_cblinfun (explicit_cblinfun m)) = dim_row (Matrix.mat CARD('a) CARD('b) m')\<close> by simp
-  show \<open>dim_col (mat_of_cblinfun (explicit_cblinfun m)) = dim_col (Matrix.mat CARD('a) CARD('b) m')\<close> by simp
-qed
-
-definition permute_and_tensor1_mat where \<open>permute_and_tensor1_mat d f R m =
-  mat d d (\<lambda>(i,j). if R i j then m $$ (f i, f j) else 0)\<close>
-
-definition permute_and_tensor1_mat' :: \<open>_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a::enum ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a::enum ell2)\<close> where 
- [code del]: \<open>permute_and_tensor1_mat' d f R m = cblinfun_of_mat (permute_and_tensor1_mat d f R m)\<close>
 
 (* TODO move *)
 lemma cblinfun_of_mat_invalid: 
@@ -137,18 +101,6 @@ lemma mat_of_cblinfun_permute_and_tensor1_cblinfun[code]:
       permute_and_tensor1_mat_def cblinfun_of_mat_inverse)
   apply (rule cong_mat, simp, simp)
   by (simp add: mat_of_cblinfun_ell2_component enum_idx_correct)
-
-lemma permute_and_tensor1_cblinfun_code_prep[code]:
-  fixes f :: \<open>'b::eenum \<Rightarrow> 'a::eenum\<close>
-  shows \<open>permute_and_tensor1_cblinfun f R a = 
-      permute_and_tensor1_mat' CARD('b) (\<lambda>i. enum_index (f (enum_nth i)))
-      (\<lambda>i j. R (enum_nth i) (enum_nth j)) (mat_of_cblinfun a)\<close>
-  apply (rule cblinfun_eq_mat_of_cblinfunI)
-  apply (simp add: mat_of_cblinfun_explicit_cblinfun permute_and_tensor1_cblinfun_def
-      permute_and_tensor1_mat_def permute_and_tensor1_mat'_def cblinfun_of_mat_inverse)
-  apply (rule cong_mat, simp, simp)
-  by (simp add: mat_of_cblinfun_ell2_component enum_idx_correct)
-
 
 lemma clinear_permute_and_tensor1_cblinfun[simp]: \<open>clinear (permute_and_tensor1_cblinfun r c)\<close> for r c :: \<open>_::finite \<Rightarrow> _\<close>
 proof (rule clinearI)
@@ -202,39 +154,14 @@ lemma permute_and_tensor1_mat_cong[cong]:
   apply (rule cong_mat)
   using assms by auto
 
-lemma enum_nth_injective: \<open>i < CARD('a) \<Longrightarrow> j < CARD('a) \<Longrightarrow> (enum_nth i :: 'a::eenum) = enum_nth j \<longleftrightarrow> i = j\<close>
-  by (metis enum_index_nth)
-
-lemma div_leq_simp: \<open>(i div n < m) \<longleftrightarrow> i < n*m\<close> if \<open>n \<noteq> 0\<close> for n m :: nat
-  by (simp add: div_less_iff_less_mult ordered_field_class.sign_simps(5) that zero_less_iff_neq_zero)
-
-lemmas prepare_for_code_new =
-
-  qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric]
-  qregister_of_cregister_pair[symmetric] qregister_of_cregister_chain[symmetric]
-  apply_qregister_of_cregister permute_and_tensor1_cblinfun_code_prep
-  same_outside_cregister_def
-  
-  case_prod_beta if_distrib[of fst] if_distrib[of snd] prod_eq_iff
-
-  div_leq_simp mod_mod_cancel
-
-  getter_pair getter_chain setter_chain setter_pair setter_Fst setter_Snd
-
-  enum_index_prod_def fst_enum_nth snd_enum_nth enum_index_nth if_distrib[of enum_index]
-  enum_nth_injective
-
-lemmas prepare_for_code_remove =
-  qregister_of_cregister_Fst qregister_of_cregister_Snd
-  qregister_of_cregister_pair qregister_of_cregister_chain
 
 
+(* 
 lemma apply_qregister_eqI[intro!]:
   assumes \<open>A = B\<close>
   shows \<open>apply_qregister X A = apply_qregister X B\<close>
   using assms by simp
-
-
+ *)
 
 lemma
   fixes a b c
@@ -245,33 +172,24 @@ proof -
 
   have \<open>apply_qregister \<lbrakk>a,b\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = 
         apply_qregister \<lbrakk>a,c\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,b\<rbrakk> CNOT\<close>
-    apply (simp add: join_registers)
-
-    using if_weak_cong[cong del] apply fail?
-    apply (simp 
-      del: prepare_for_code_remove
-      add: prepare_for_code_new)
+    apply prepare_for_code
     by normalization
 
-  have \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = apply_qregister \<lbrakk>a,b,c\<rbrakk> CNOT'\<close>
+(*   have \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = apply_qregister \<lbrakk>a,b,c\<rbrakk> CNOT'\<close>
     apply (subst register_conversion_hint_def[of \<open>apply_qregister \<lbrakk>a,c\<rbrakk> CNOT\<close> \<open>\<lbrakk>a,b,c\<rbrakk>\<close>, symmetric])
     apply simp
     unfolding CNOT'_def
     by simp
+ *)
 
   have \<open>CNOT' *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
     unfolding CNOT'_def
-    apply simp
-
-(* TODO: add to prepare_for_code *)
-    using if_weak_cong[cong del] apply fail?
-
-    using [[show_consts]]
-    apply (simp 
-      del: prepare_for_code_remove
-      add: prepare_for_code_new)
-
+    apply prepare_for_code
     by normalization
 
 
   oops
+
+
+
+

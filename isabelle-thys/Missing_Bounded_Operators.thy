@@ -1,8 +1,10 @@
 theory Missing_Bounded_Operators
-  imports Complex_Bounded_Operators.Complex_L2
+  imports Complex_Bounded_Operators.Complex_L2 Complex_Bounded_Operators.Cblinfun_Code
 begin
 
 unbundle cblinfun_notation
+no_notation m_inv ("inv\<index> _" [81] 80)
+unbundle jnf_notation
 
 declare cindependent_ket[simp]
 
@@ -11,9 +13,6 @@ definition explicit_cblinfun :: \<open>('a \<Rightarrow> 'b \<Rightarrow> comple
 
 lemma explicit_cblinfun_ket[simp]: \<open>explicit_cblinfun m *\<^sub>V ket a = Abs_ell2 (\<lambda>b. m b a)\<close> for m :: "_ \<Rightarrow> _ :: finite \<Rightarrow> _"
   by (auto simp: cblinfun_extension_exists_finite_dim explicit_cblinfun_def cblinfun_extension_apply)
-
-definition permute_and_tensor1_cblinfun where [code del]: \<open>permute_and_tensor1_cblinfun f R a =
-  explicit_cblinfun (\<lambda>i j. if R i j then Rep_ell2 (a *\<^sub>V ket (f j)) (f i) else 0)\<close>
 
 (* Original enum_idx_bound should say this, and be [simp] *)
 lemma enum_idx_bound'[simp]: "enum_idx x < CARD('a)" for x :: "'a::enum"
@@ -109,6 +108,50 @@ proof (rule ext)
     using enum_distinct apply (rule nth_eq_iff_index_eq[THEN iffD1, rotated -1])
     by (simp_all flip: card_UNIV_length_enum)
 qed
+
+lemma enum_nth_injective: \<open>i < CARD('a) \<Longrightarrow> j < CARD('a) \<Longrightarrow> (enum_nth i :: 'a::eenum) = enum_nth j \<longleftrightarrow> i = j\<close>
+  by (metis enum_index_nth)
+
+lemma Abs_ell2_inverse_finite[simp]: \<open>Rep_ell2 (Abs_ell2 \<psi>) = \<psi>\<close> for \<psi> :: \<open>_::finite \<Rightarrow> complex\<close>
+  by (simp add: Abs_ell2_inverse)
+
+lemma mat_of_cblinfun_explicit_cblinfun[code,simp]:
+  fixes m :: \<open>'a::eenum \<Rightarrow> 'b::eenum \<Rightarrow> complex\<close>
+  defines \<open>m' \<equiv> (\<lambda>(i,j). m (enum_nth i) (enum_nth j))\<close>
+  shows \<open>mat_of_cblinfun (explicit_cblinfun m) = mat CARD('a) CARD('b) m'\<close> 
+proof (rule eq_matI)
+  fix i j
+  assume \<open>i < dim_row (mat CARD('a) CARD('b) m')\<close> \<open>j < dim_col (mat CARD('a) CARD('b) m')\<close>
+  then have ij[simp]: \<open>i < CARD('a)\<close> \<open>j < CARD('b)\<close>
+    by auto
+  have \<open>m (enum_class.enum ! i) (enum_class.enum ! j) = m' (i, j)\<close>
+    by (auto simp: m'_def)
+  then show \<open>mat_of_cblinfun (explicit_cblinfun m) $$ (i, j) = Matrix.mat CARD('a) CARD('b) m' $$ (i, j)\<close>
+    by (simp add: mat_of_cblinfun_ell2_component)
+next
+  show \<open>dim_row (mat_of_cblinfun (explicit_cblinfun m)) = dim_row (Matrix.mat CARD('a) CARD('b) m')\<close> by simp
+  show \<open>dim_col (mat_of_cblinfun (explicit_cblinfun m)) = dim_col (Matrix.mat CARD('a) CARD('b) m')\<close> by simp
+qed
+
+definition permute_and_tensor1_cblinfun where [code del]: \<open>permute_and_tensor1_cblinfun f R a =
+  explicit_cblinfun (\<lambda>i j. if R i j then Rep_ell2 (a *\<^sub>V ket (f j)) (f i) else 0)\<close>
+
+definition permute_and_tensor1_mat where \<open>permute_and_tensor1_mat d f R m =
+  mat d d (\<lambda>(i,j). if R i j then m $$ (f i, f j) else 0)\<close>
+
+definition permute_and_tensor1_mat' :: \<open>_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a::enum ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a::enum ell2)\<close> where 
+ [code del]: \<open>permute_and_tensor1_mat' d f R m = cblinfun_of_mat (permute_and_tensor1_mat d f R m)\<close>
+
+lemma permute_and_tensor1_cblinfun_code_prep[code]:
+  fixes f :: \<open>'b::eenum \<Rightarrow> 'a::eenum\<close>
+  shows \<open>permute_and_tensor1_cblinfun f R a = 
+      permute_and_tensor1_mat' CARD('b) (\<lambda>i. enum_index (f (enum_nth i)))
+      (\<lambda>i j. R (enum_nth i) (enum_nth j)) (mat_of_cblinfun a)\<close>
+  apply (rule cblinfun_eq_mat_of_cblinfunI)
+  apply (simp add: mat_of_cblinfun_explicit_cblinfun permute_and_tensor1_cblinfun_def
+      permute_and_tensor1_mat_def permute_and_tensor1_mat'_def cblinfun_of_mat_inverse)
+  apply (rule cong_mat, simp, simp)
+  by (simp add: mat_of_cblinfun_ell2_component enum_idx_correct)
 
 
 

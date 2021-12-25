@@ -366,4 +366,7 @@ instance
   by (auto simp: nth_Cons' enum_bit_def enum_index_bit_def enum_nth_bit_def)
 end
 
+lemma div_leq_simp: \<open>(i div n < m) \<longleftrightarrow> i < n*m\<close> if \<open>n \<noteq> 0\<close> for n m :: nat
+  by (simp add: div_less_iff_less_mult ordered_field_class.sign_simps(5) that zero_less_iff_neq_zero)
+
 end

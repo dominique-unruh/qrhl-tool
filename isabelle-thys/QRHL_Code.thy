@@ -4,6 +4,7 @@ theory QRHL_Code
     "Jordan_Normal_Form.Matrix_Impl"
     "HOL-Library.Code_Target_Numeral"
     (* Tensor_Product.Tensor_Product_Code *)
+    "HOL-Eisbach.Eisbach"
 begin
 
 unbundle jnf_notation
@@ -115,9 +116,40 @@ derive (compare) ccompare real
 derive (eq) ceq complex
 derive (no) ccompare complex
 
+(* (* TODO: remove *)
 lemmas prepare_for_code = quantum_equality_full_def_let (* add_join_variables_hint *) space_div_space_div_unlifted
   (* space_div_add_extend_lift_as_var_concat_hint *) INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
+  top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2 *)
+
+
+subsection \<open>\<open>prepare_for_code\<close> method\<close>
+
+lemmas prepare_for_code_add =
+  (* qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric] *)
+  (* qregister_of_cregister_pair[symmetric] qregister_of_cregister_chain[symmetric] *)
+  apply_qregister_of_cregister permute_and_tensor1_cblinfun_code_prep
+  same_outside_cregister_def
+  
+  case_prod_beta if_distrib[of fst] if_distrib[of snd] prod_eq_iff
+
+  div_leq_simp mod_mod_cancel
+
+  getter_pair getter_chain setter_chain setter_pair setter_Fst setter_Snd
+
+  enum_index_prod_def fst_enum_nth snd_enum_nth enum_index_nth if_distrib[of enum_index]
+  enum_nth_injective
+
+  quantum_equality_full_def_let space_div_space_div_unlifted INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
   top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2
+
+lemmas prepare_for_code_flip =
+  qregister_of_cregister_Fst qregister_of_cregister_Snd
+  qregister_of_cregister_pair qregister_of_cregister_chain
+
+
+method prepare_for_code = simp add: join_registers cong del: if_weak_cong
+  add: prepare_for_code_add flip: prepare_for_code_flip
+
 
 unbundle no_jnf_notation
 

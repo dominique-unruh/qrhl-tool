@@ -787,7 +787,18 @@ lemmas qcompatible_FS_qregister_of_cregister[simp] =
   qcompatible_Snd_Fst[unfolded qregister_of_cregister_Snd[symmetric]]
   qcompatible_Snd_Fst[unfolded qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric]]
 
+lemma apply_qregister_of_cregister:
+  assumes \<open>cregister F\<close>
+  shows \<open>apply_qregister (qregister_of_cregister F) a = 
+          permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a\<close>
+  unfolding qregister_of_cregister.rep_eq using assms by simp
 
+lemma qregister_of_cregister_compatible: \<open>ccompatible x y \<longleftrightarrow> qcompatible (qregister_of_cregister x) (qregister_of_cregister y)\<close>
+  sorry
+lemma qregister_of_cregister_pair: \<open>qregister_of_cregister (cregister_pair x y) = qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)\<close>
+  sorry
+lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_chain x y) = qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)\<close>
+  sorry
 
 
 typedecl cl
