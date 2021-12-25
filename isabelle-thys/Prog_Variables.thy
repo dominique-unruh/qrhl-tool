@@ -43,6 +43,14 @@ typedef ('a,'b) qregister = \<open>{f :: 'a qupdate \<Rightarrow> 'b qupdate. qr
 setup_lifting type_definition_cregister
 setup_lifting type_definition_qregister
 
+lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregister F)\<close>
+  apply transfer
+  apply (auto simp: non_qregister_raw_def[abs_def])
+  sorry
+
+lemma clinear_apply_qregister[simp]: \<open>clinear (apply_qregister F)\<close>
+  using bounded_clinear.clinear bounded_clinear_apply_qregister by blast
+
 axiomatization apply_cregister_total :: \<open>('a,'b) cregister \<Rightarrow> ('a\<Rightarrow>'a) \<Rightarrow> ('b\<Rightarrow>'b)\<close>
 
 lift_definition non_cregister :: \<open>('a,'b) cregister\<close> is non_cregister_raw by auto
@@ -337,8 +345,27 @@ lemma qregister_chain_is_qregister[simp]: \<open>qregister (qregister_chain F G)
 axiomatization where cregister_chain_pair_Fst[simp]: \<open>ccompatible F G \<Longrightarrow> cregister_chain (cregister_pair F G) cFst = F\<close>
 axiomatization where qregister_chain_pair_Fst[simp]: \<open>qcompatible F G \<Longrightarrow> qregister_chain (qregister_pair F G) qFst = F\<close>
 
+lemma cregister_chain_pair_Fst_chain[simp]:
+  assumes \<open>ccompatible F G\<close>
+  shows \<open>cregister_chain (cregister_pair F G) (cregister_chain cFst H) = cregister_chain F H\<close>
+  by (metis cregister_chain_pair_Fst assms cregister_chain_assoc)
+lemma qregister_chain_pair_Fst_chain[simp]:
+  assumes \<open>qcompatible F G\<close>
+  shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qFst H) = qregister_chain F H\<close>
+  by (metis qregister_chain_pair_Fst assms qregister_chain_assoc)
+
 axiomatization where cregister_chain_pair_Snd[simp]: \<open>ccompatible F G \<Longrightarrow> cregister_chain (cregister_pair F G) cSnd = G\<close>
 axiomatization where qregister_chain_pair_Snd[simp]: \<open>qcompatible F G \<Longrightarrow> qregister_chain (qregister_pair F G) qSnd = G\<close>
+
+lemma cregister_chain_pair_Snd_chain[simp]:
+  assumes \<open>ccompatible F G\<close>
+  shows \<open>cregister_chain (cregister_pair F G) (cregister_chain cSnd H) = cregister_chain G H\<close>
+  by (metis cregister_chain_pair_Snd assms cregister_chain_assoc)
+lemma qregister_chain_pair_Snd_chain[simp]:
+  assumes \<open>qcompatible F G\<close>
+  shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qSnd H) = qregister_chain G H\<close>
+  by (metis qregister_chain_pair_Snd assms qregister_chain_assoc)
+
 
 lemma qregister_chain_empty_right[simp]: \<open>qregister F \<Longrightarrow> qregister_chain F empty_qregister = empty_qregister\<close>
   apply (rule empty_qregisters_same) by auto
@@ -767,6 +794,15 @@ lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow>
   \<open>\<lambda>F a. if cregister F then permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a else 0\<close>
   sorry
 
+lemma qregister_of_cregister_non_register[simp]: \<open>qregister_of_cregister non_cregister = non_qregister\<close>
+proof -
+  define t where \<open>t = non_cregister\<close>
+  show \<open>qregister_of_cregister t = non_qregister\<close>
+    apply (transfer fixing: t)
+    apply (simp add: t_def)
+    using non_qregister_raw_def by fastforce
+qed
+
 lemma qregister_of_cregister_Fst: \<open>qregister_of_cregister cFst = qFst\<close>
   sorry
 lemma qregister_of_cregister_Snd: \<open>qregister_of_cregister cSnd = qSnd\<close>
@@ -799,7 +835,6 @@ lemma qregister_of_cregister_pair: \<open>qregister_of_cregister (cregister_pair
   sorry
 lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_chain x y) = qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)\<close>
   sorry
-
 
 typedecl cl
 typedecl qu

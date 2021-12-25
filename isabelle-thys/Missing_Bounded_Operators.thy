@@ -133,6 +133,9 @@ next
   show \<open>dim_col (mat_of_cblinfun (explicit_cblinfun m)) = dim_col (Matrix.mat CARD('a) CARD('b) m')\<close> by simp
 qed
 
+lemma explicit_cblinfun_Rep_ket: \<open>Rep_ell2 (explicit_cblinfun m *\<^sub>V ket a) b = m b a\<close> for m :: "_ :: finite \<Rightarrow> _ :: finite \<Rightarrow> _"
+  by simp
+
 definition permute_and_tensor1_cblinfun where [code del]: \<open>permute_and_tensor1_cblinfun f R a =
   explicit_cblinfun (\<lambda>i j. if R i j then Rep_ell2 (a *\<^sub>V ket (f j)) (f i) else 0)\<close>
 
@@ -152,6 +155,60 @@ lemma permute_and_tensor1_cblinfun_code_prep[code]:
       permute_and_tensor1_mat_def permute_and_tensor1_mat'_def cblinfun_of_mat_inverse)
   apply (rule cong_mat, simp, simp)
   by (simp add: mat_of_cblinfun_ell2_component enum_idx_correct)
+
+lemma cblinfun_of_mat_invalid: 
+  assumes \<open>M \<notin> carrier_mat (cdimension TYPE('b::{basis_enum,complex_normed_vector})) (cdimension TYPE('a::{basis_enum,complex_normed_vector}))\<close>
+  shows \<open>(cblinfun_of_mat M :: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b) = 0\<close>
+  apply (transfer fixing: M)
+  using assms by simp
+
+lemma mat_of_cblinfun_permute_and_tensor1_mat'[code]:
+  \<open>mat_of_cblinfun (permute_and_tensor1_mat' d f R m :: 'a::enum ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) 
+    = (if d=CARD('a) then mat d d (\<lambda>(i,j). if R i j then m $$ (f i, f j) else 0) else zero_mat CARD('a) CARD('a))\<close>
+  apply (cases \<open>d = CARD('a)\<close>)
+   apply (auto simp add: permute_and_tensor1_mat'_def cblinfun_of_mat_inverse permute_and_tensor1_mat_def)
+  apply (subst cblinfun_of_mat_invalid)
+  by (auto simp: mat_of_cblinfun_zero)
+
+lemma mat_of_cblinfun_permute_and_tensor1_cblinfun[code]:
+  fixes f :: \<open>'b::eenum \<Rightarrow> 'a::eenum\<close>
+  shows \<open>mat_of_cblinfun (permute_and_tensor1_cblinfun f R a) = 
+      permute_and_tensor1_mat CARD('b) (\<lambda>i. enum_index (f (enum_nth i)))
+      (\<lambda>i j. R (enum_nth i) (enum_nth j)) (mat_of_cblinfun a)\<close>
+  apply (simp add: mat_of_cblinfun_explicit_cblinfun permute_and_tensor1_cblinfun_def
+      permute_and_tensor1_mat_def cblinfun_of_mat_inverse)
+  apply (rule cong_mat, simp, simp)
+  by (simp add: mat_of_cblinfun_ell2_component enum_idx_correct)
+
+lemma permute_and_tensor1_cblinfun_ket[simp]: \<open>Rep_ell2 (permute_and_tensor1_cblinfun f R A *\<^sub>V ket a) b =
+  (if R b a then Rep_ell2 (A *\<^sub>V ket (f a)) (f b) else 0)\<close> for a b :: \<open>_::finite\<close>
+  by (simp add: permute_and_tensor1_cblinfun_def)
+
+lemma clinear_permute_and_tensor1_cblinfun[simp]: \<open>clinear (permute_and_tensor1_cblinfun r c)\<close> for r c :: \<open>_::finite \<Rightarrow> _\<close>
+proof (rule clinearI)
+  show \<open>permute_and_tensor1_cblinfun r c (A + B) = permute_and_tensor1_cblinfun r c A + permute_and_tensor1_cblinfun r c B\<close> for A B
+    apply (rule equal_ket)
+    by (auto simp: plus_ell2.rep_eq cblinfun.add_left simp flip: Rep_ell2_inject)
+  show \<open>permute_and_tensor1_cblinfun r c (s *\<^sub>C A) = s *\<^sub>C permute_and_tensor1_cblinfun r c A\<close> for s A
+    apply (rule equal_ket)
+    by (auto simp: scaleC_ell2.rep_eq simp flip: Rep_ell2_inject)
+qed
+
+lemma [code]: \<open>vec_of_ell2 (Abs_ell2 f) = vec CARD('a) (\<lambda>n. f (enum_nth n))\<close> for f :: \<open>'a::eenum \<Rightarrow> complex\<close>
+  by (auto simp: vec_of_ell2_def vec_eq_iff vec_of_basis_enum_ell2_component)
+lemma [code]: \<open>Rep_ell2 \<psi> i = vec_of_ell2 \<psi> $ (enum_index i)\<close> for i :: \<open>'a::eenum\<close>
+  by (auto simp: vec_of_ell2_def vec_eq_iff vec_of_basis_enum_ell2_component)
+
+lemma permute_and_tensor1_mat_cong[cong]: 
+  assumes \<open>d = d'\<close>
+  assumes \<open>\<And>i. i < d' \<Longrightarrow> f i = f' i\<close>
+  assumes \<open>\<And>i j. i < d' \<Longrightarrow> j < d' \<Longrightarrow> R i j = R' i j\<close>
+  assumes \<open>m = m'\<close>
+  shows \<open>(permute_and_tensor1_mat' d f R m :: 'a::enum ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) = permute_and_tensor1_mat' d' f' R' m'\<close>
+  unfolding permute_and_tensor1_mat_def permute_and_tensor1_mat'_def 
+  apply (rule arg_cong[of _ _ cblinfun_of_mat])
+  apply (rule cong_mat)
+  using assms by auto
 
 
 
