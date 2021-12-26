@@ -1096,17 +1096,35 @@ translations
   "_cvariables (_variable_list_args_nth' x y)" \<rightleftharpoons> "CONST cregister_pair (_cvariable_nth' x) (_cvariables y)"
   "_qvariables (_variable_list_arg x)" \<rightharpoonup> "x"
   "_cvariables (_variable_list_arg x)" \<rightharpoonup> "x"
-  "_qvariables (_variable_list_arg_nth x)" \<rightharpoonup> "_qvariable_nth x"
-  "_cvariables (_variable_list_arg_nth x)" \<rightharpoonup> "_cvariable_nth x"
-  "_qvariables (_variable_list_arg_nth' x)" \<rightharpoonup> "_qvariable_nth' x"
-  "_cvariables (_variable_list_arg_nth' x)" \<rightharpoonup> "_cvariable_nth' x"
-  "_qvariables (_variable_list_args x y)" \<leftharpoondown> "CONST qregister_pair (_qvariables (_variable_list_arg x)) (_qvariables y)"
-  "_cvariables (_variable_list_args x y)" \<leftharpoondown> "CONST cregister_pair (_cvariables (_variable_list_arg x)) (_cvariables y)"
+  "_qvariables (_variable_list_arg_nth x)" \<rightleftharpoons> "_qvariable_nth x"
+  "_cvariables (_variable_list_arg_nth x)" \<rightleftharpoons> "_cvariable_nth x"
+  "_qvariables (_variable_list_arg_nth' x)" \<rightleftharpoons> "_qvariable_nth' x"
+  "_cvariables (_variable_list_arg_nth' x)" \<rightleftharpoons> "_cvariable_nth' x"
 
-  "_qvariable_conversion x y" \<rightleftharpoons> "CONST qregister_conversion (_qvariables x) (_qvariables y)"
-  "_cvariable_conversion x y" \<rightleftharpoons> "CONST cregister_conversion (_cvariables x) (_cvariables y)"
-  "_qvariable_le x y" \<rightleftharpoons> "CONST qregister_le (_qvariables x) (_qvariables y)"
-  "_cvariable_le x y" \<rightleftharpoons> "CONST cregister_le (_cvariables x) (_cvariables y)"
+  "_qvariables (_variable_list_args x y)" \<leftharpoondown> "CONST qregister_pair x y"
+  "_cvariables (_variable_list_args x y)" \<leftharpoondown> "CONST cregister_pair x y"
+  "_qvariables (_variable_list_args x (_variable_list_args y z))" \<leftharpoondown> "_qvariables (_variable_list_args x (_qvariables (_variable_list_args y z)))"
+  "_cvariables (_variable_list_args x (_variable_list_args y z))" \<leftharpoondown> "_cvariables (_variable_list_args x (_cvariables (_variable_list_args y z)))"
+
+  "_qvariable_conversion x y" \<rightharpoonup> "CONST qregister_conversion (_qvariables x) (_qvariables y)"
+  "_qvariable_conversion x y" \<leftharpoondown> "CONST qregister_conversion x y"
+  "_qvariable_conversion x y" \<leftharpoondown> "_qvariable_conversion (_qvariables x) y"
+  "_qvariable_conversion x y" \<leftharpoondown> "_qvariable_conversion x (_qvariables y)"
+
+  "_cvariable_conversion x y" \<rightharpoonup> "CONST cregister_conversion (_cvariables x) (_cvariables y)"
+  "_cvariable_conversion x y" \<leftharpoondown> "CONST cregister_conversion x y"
+  "_cvariable_conversion x y" \<leftharpoondown> "_cvariable_conversion (_cvariables x) y"
+  "_cvariable_conversion x y" \<leftharpoondown> "_cvariable_conversion x (_cvariables y)"
+
+  "_qvariable_le x y" \<rightharpoonup> "CONST qregister_le (_qvariables x) (_qvariables y)"
+  "_qvariable_le x y" \<leftharpoondown> "CONST qregister_le x y"
+  "_qvariable_le x y" \<leftharpoondown> "_qvariable_le (_qvariables x) y"
+  "_qvariable_le x y" \<leftharpoondown> "_qvariable_le x (_qvariables y)"
+
+  "_cvariable_le x y" \<rightharpoonup> "CONST cregister_le (_cvariables x) (_cvariables y)"
+  "_cvariable_le x y" \<leftharpoondown> "CONST cregister_le x y"
+  "_cvariable_le x y" \<leftharpoondown> "_cvariable_le (_cvariables x) y"
+  "_cvariable_le x y" \<leftharpoondown> "_cvariable_le x (_cvariables y)"
 
 parse_translation
   \<open>let open Prog_Variables in 
@@ -1114,6 +1132,27 @@ parse_translation
     (\<^syntax_const>\<open>_qvariable_nth'\<close>, fn ctxt => fn [nt] => register_n Quantum   true  (Misc.dest_number_syntax nt)),
     (\<^syntax_const>\<open>_cvariable_nth\<close>,  fn ctxt => fn [nt] => register_n Classical false (Misc.dest_number_syntax nt)),
     (\<^syntax_const>\<open>_cvariable_nth'\<close>, fn ctxt => fn [nt] => register_n Classical true  (Misc.dest_number_syntax nt))] end\<close>
+
+translations
+  "_qvariable_nth (CONST Suc CONST zero)" \<leftharpoondown> "CONST qFst"
+  "_qvariable_nth' (CONST Suc (CONST Suc CONST zero))" \<leftharpoondown> "CONST qSnd"
+  "_qvariable_nth (CONST Suc n)" \<leftharpoondown> "CONST qregister_chain (_qvariables (_variable_list_arg_nth' (CONST Suc (CONST Suc CONST zero)))) (_qvariables (_variable_list_arg_nth n))"
+  "_qvariable_nth' (CONST Suc n)" \<leftharpoondown> "CONST qregister_chain (_qvariables (_variable_list_arg_nth' (CONST Suc (CONST Suc CONST zero)))) (_qvariables (_variable_list_arg_nth' n))"
+
+  "_cvariable_nth (CONST Suc CONST zero)" \<leftharpoondown> "CONST cFst"
+  "_cvariable_nth' (CONST Suc (CONST Suc CONST zero))" \<leftharpoondown> "CONST cSnd"
+  "_cvariable_nth (CONST Suc n)" \<leftharpoondown> "CONST cregister_chain (_cvariables (_variable_list_arg_nth' (CONST Suc (CONST Suc CONST zero)))) (_cvariables (_variable_list_arg_nth n))"
+  "_cvariable_nth' (CONST Suc n)" \<leftharpoondown> "CONST cregister_chain (_cvariables (_variable_list_arg_nth' (CONST Suc (CONST Suc CONST zero)))) (_cvariables (_variable_list_arg_nth' n))"
+
+(* Does not work: *)
+print_translation
+  \<open>let
+    fun count (Const(\<^const_name>\<open>zero\<close>,_)) = 0
+      | count (Const(\<^const_name>\<open>Suc\<close>,_) $ t) = count t + 1
+  in
+  [(\<^syntax_const>\<open>_variable_list_arg_nth'\<close>, fn ctxt => fn [t] => HOLogic.mk_number dummyT (count t))]
+  end\<close>
+term \<open>\<lbrakk>#4.\<rbrakk>\<^sub>q\<close>
 
 section \<open>Simprocs\<close>
 
