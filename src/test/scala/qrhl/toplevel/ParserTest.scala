@@ -86,7 +86,7 @@ class ParserTest extends AnyFunSuite {
   test("parse expression with indexed quantum variables") {
     println(Term(parserContext.isabelle.get.context, "q").fastType.pretty(parserContext.isabelle.get.context))
     val e = Parser.parseAll(Parser.expression(GIsabelle.predicateT, indexed=true), "liftSpace top q1").get
-    assert(e.toString == "⊤»q1")
+    assert(e.toString == "apply_qregister_space q1 ⊤")
   }
 
   test("fail to parse while loop") {

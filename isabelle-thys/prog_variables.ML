@@ -608,15 +608,18 @@ in
 end
 
 (* Rewrites `apply_qregister F A` into `apply_qregister target (apply_qregister (qregister_conversion \<dots>) A)`
-  for suitable \<dots> *)
+  for suitable \<dots>
+  Analogously for apply_qregister_space. *)
 fun apply_qregister_conversion_conv ctxt target ct = let
-  val _ = case Thm.term_of ct of \<^Const_>\<open>apply_qregister _ _\<close> $ _ $ _ => ()
-            | _ => raise CTERM ("TODO", [ct])
+  val thm = case Thm.term_of ct of 
+              \<^Const_>\<open>apply_qregister _ _\<close> $ _ $ _ => @{thm qregister_apply_conversion[THEN eq_reflection]}
+            | \<^Const_>\<open>apply_qregister_space _ _\<close> $ _ $ _ => @{thm apply_qregister_space_conversion[THEN eq_reflection]}
+            | _ => raise CTERM ("apply_qregister_conversion_conv: term should be of the form `apply_qregister F A`", [ct])
   val source = Thm.dest_arg1 ct
   val argument = Thm.dest_arg ct
   val less_eq_thm = qregister_le_prove ctxt source target
 in
-  (infer_instantiate ctxt [(("x",1), argument)] @{thm qregister_apply_conversion[THEN eq_reflection]}) OF [less_eq_thm]
+  (infer_instantiate ctxt [(("x",1), argument)] thm) OF [less_eq_thm]
 end
 
 (* Returns true if argument is a (quantum) index-register *)

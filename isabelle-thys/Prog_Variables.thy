@@ -582,6 +582,8 @@ next
     by (rule equivpI)
 qed
 
+definition \<open>apply_qregister_space F S = apply_qregister F (Proj S) *\<^sub>S top\<close>
+
 axiomatization CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
 axiomatization QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close>
 
@@ -682,6 +684,16 @@ lemma qregister_apply_conversion:
   shows \<open>apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
   using assms apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
   by auto
+
+lemma apply_qregister_space_conversion: 
+  assumes \<open>qregister_le F G\<close>
+  shows \<open>apply_qregister_space F S = apply_qregister_space G (apply_qregister_space (qregister_conversion F G) S)\<close>
+  unfolding apply_qregister_space_def
+  apply (subst qregister_apply_conversion[OF assms])
+  apply (subst Proj_on_own_range)
+   apply auto
+  sorry
+
 
 lemma cregister_conversion_id[simp]: \<open>cregister_conversion F cregister_id = F\<close>
   apply transfer by auto
@@ -1107,7 +1119,7 @@ lemma register_conversion_hint_cong[cong]: "A=A' \<Longrightarrow> register_conv
 
 (* Simproc that rewrites terms of the form `register_conversion_hint (apply_qregister F a) G`
   `apply_qregister target (apply_qregister (qregister_conversion \<dots>) A)` for suitable \<dots> *)
-simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close>) =
+simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close> | \<open>register_conversion_hint (apply_qregister_space F S) G\<close>) =
   \<open>fn m => fn ctxt => fn ct => let 
     (* val _ = \<^print> ct *)
     val target = ct |> Thm.dest_arg

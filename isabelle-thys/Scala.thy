@@ -96,7 +96,7 @@ object IsabelleConsts {
   val not = \<open>\<^const_name>\<open>Not\<close>\<close>
   val undefined = \<open>\<^const_name>\<open>undefined\<close>\<close>
   val ccspan = \<open>\<^const_name>\<open>ccspan\<close>\<close>
-  val liftSpace = \<open>\<^const_name>\<open>liftSpace\<close>\<close>
+  val apply_qregister_space = \<open>\<^const_name>\<open>apply_qregister_space\<close>\<close>
   val insert = \<open>\<^const_name>\<open>insert\<close>\<close>
   val conj = \<open>\<^const_name>\<open>conj\<close>\<close>
   val disj = \<open>\<^const_name>\<open>disj\<close>\<close>

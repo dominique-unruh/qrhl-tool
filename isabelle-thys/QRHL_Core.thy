@@ -233,13 +233,15 @@ lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> oper
 subsection \<open>Lifting\<close>
 
 abbreviation (input) \<open>liftOp == (\<lambda>A F. apply_qregister F A)\<close>
+abbreviation (input) \<open>liftSpace == (\<lambda>A F. apply_qregister_space F A)\<close>
+
 (* definition liftOp :: "('a,'a) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> (qu2,qu2) l2bounded" 
   (* Convention: If not distinct_qvars Q, then liftOp A Q := 0 *)
   where "liftOp A x = (if register x then x A else 0)" *)
-definition
+(* definition
   (* Convention: If not distinct_qvars Q, then liftOp A Q := bot *)
   liftSpace :: "'a subspace \<Rightarrow> ('a,'b) qregister \<Rightarrow> 'b subspace"
-  where \<open>liftSpace S x = apply_qregister x (Proj S) *\<^sub>S \<top>\<close>
+  where \<open>liftSpace S x = apply_qregister x (Proj S) *\<^sub>S \<top>\<close> *)
 (* definition
   (* lift_vector \<psi> Q \<psi>' = \<psi> \<otimes> \<psi>' where \<psi> is interpreted as a vector over Q, and \<psi>' as a vector over the complement of Q *)
   lift_vector :: "'a::default ell2 \<Rightarrow> 'a q2variable \<Rightarrow> ('a, qu \<times> qu) complement_domain ell2 \<Rightarrow> qu2 ell2" 
@@ -274,7 +276,7 @@ lemma norm_lift[simp]:
   by (cheat norm_lift)
 lemma imageOp_lift[simp]: "applyOpSpace (liftOp U Q) top = liftSpace (applyOpSpace U top) Q"
   apply (cases \<open>qregister Q\<close>) defer
-  unfolding liftSpace_def
+  unfolding apply_qregister_space_def
   apply (simp add: non_qregister non_qregister.rep_eq non_qregister_raw_def) 
   by (cheat imageOp_lift)
 lemma applyOpSpace_lift[simp]: "applyOpSpace (liftOp U Q) (liftSpace S Q) = liftSpace (applyOpSpace U S) Q"
@@ -696,12 +698,12 @@ lemma join_registers_template_op:
 
 lemma join_registers_template_space:
   assumes \<open>JOIN_REGISTERS F G X Y\<close>
-  shows \<open>op (liftSpace F A) (liftSpace G B) = op (X (liftSpace F A)) (Y (liftSpace G B))\<close>
+  shows \<open>op (apply_qregister_space F A) (apply_qregister_space G B) = op (X (apply_qregister_space F A)) (Y (apply_qregister_space G B))\<close>
   using assms unfolding JOIN_REGISTERS_def by simp
 
 lemma join_registers_template_op_space:
   assumes \<open>JOIN_REGISTERS F G X Y\<close>
-  shows \<open>op (apply_qregister F A) (liftSpace G B) = op (X (apply_qregister F A)) (Y (liftSpace G B))\<close>
+  shows \<open>op (apply_qregister F A) (apply_qregister_space G B) = op (X (apply_qregister F A)) (Y (apply_qregister_space G B))\<close>
   using assms unfolding JOIN_REGISTERS_def by simp
 
 lemmas join_registers_eq_op[join_registers] = join_registers_template_op[where op=\<open>(=)\<close>]

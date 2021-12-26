@@ -269,13 +269,22 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 
   def undefined(typ: Typ) : Const = Const(c.undefined, typ)
 
-  def liftSpace(typ: Typ) : Const = Const(c.liftSpace, linear_spaceT(ell2T(typ)) -->: variableT(typ, classical=false, indexed=true) -->: predicateT)
+  /*def liftSpace(typ: Typ) : Const = Const(c.liftSpace, linear_spaceT(ell2T(typ)) -->: variableT(typ, classical=false, indexed=true) -->: predicateT)
   def liftSpace(space: Term, vars: Term) : Term = {
     val OfType(VariableT(typ,classical,indexed)) = vars
     assert(!classical)
     assert(indexed)
     liftSpace(typ) $ space $ vars
+  }*/
+  def liftSpace(space: Term, vars: Term) : Term = apply_qregister_space(vars, space)
+  def apply_qregister_space(inT: Typ, outT: Typ) : Term =
+    Const(c.apply_qregister_space, registerT(inT, outT, classical=false) -->: linear_spaceT(inT) -->: linear_spaceT(outT))
+  def apply_qregister_space(vars: Term, space: Term) : Term = {
+    val OfType(RegisterT(inT, outT, classical)) = vars
+    assert(!classical)
+    apply_qregister_space(inT, outT) $ vars $ space
   }
+
 
   def span(typ: Typ): Const = Const(c.ccspan, setT(typ) -->: linear_spaceT(typ))
   def span(term: Term): Term = term.fastType match {
@@ -532,11 +541,22 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
       case _ => None
     }
   }
-/*  @deprecated("use VariableT.unapply instead","now")
-  def dest_variableT(typ: Typ): Typ = typ match {
-    case Type(t.variable, typ2) => typ2
-    case _ => throw new RuntimeException(s"expected type ${t.variable}, not " + typ)
-  }*/
+  def registerT(inT: Typ, outT: Typ, classical: Boolean): Type =
+    Type(if (classical) t.cregister else t.qregister, inT, outT)
+  object RegisterT {
+    /** case RegisterT(inT, outT, classical) => ... */
+    def unapply(typ: Typ): Option[(Typ, Typ, Boolean)] = typ match {
+      case Type(t.cregister, typ, outT) => Some((typ, outT, true))
+      case Type(t.qregister, typ, outT) => Some((typ, outT, false))
+      case _ => None
+    }
+  }
+
+  /*  @deprecated("use VariableT.unapply instead","now")
+    def dest_variableT(typ: Typ): Typ = typ match {
+      case Type(t.variable, typ2) => typ2
+      case _ => throw new RuntimeException(s"expected type ${t.variable}, not " + typ)
+    }*/
 
   //val cvariableT: Typ => Type = variableT
   def expressionT(typ: Typ, indexed: Boolean): Type =
