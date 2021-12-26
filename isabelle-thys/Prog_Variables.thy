@@ -1109,7 +1109,7 @@ lemma register_conversion_hint_cong[cong]: "A=A' \<Longrightarrow> register_conv
   `apply_qregister target (apply_qregister (qregister_conversion \<dots>) A)` for suitable \<dots> *)
 simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close>) =
   \<open>fn m => fn ctxt => fn ct => let 
-    val _ = \<^print> ct
+    (* val _ = \<^print> ct *)
     val target = ct |> Thm.dest_arg
     val conv = (Prog_Variables.apply_qregister_conversion_conv ctxt target |> Conv.arg1_conv)
         then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
@@ -1144,7 +1144,7 @@ simproc_setup JOIN_REGISTERS (\<open>JOIN_REGISTERS F G H L\<close>) = \<open>fn
               'fg=\<open>Thm.ctyp_of_cterm FG\<close> in 
               lemma \<open>JOIN_REGISTERS (F::'f) (G::'g) (H::'h\<Rightarrow>'h) (L::'l\<Rightarrow>'l) \<equiv>
               H = (\<lambda>F. register_conversion_hint F (FG::'fg)) \<and> L = (\<lambda>F. register_conversion_hint F FG)\<close> 
-              by (auto simp add: JOIN_REGISTERS_def register_conversion_hint_def id_def)\<close> |> \<^print>
+              by (auto simp add: JOIN_REGISTERS_def register_conversion_hint_def id_def)\<close> (* |> \<^print> *)
 end\<close>
 
 

@@ -34,8 +34,11 @@ lemma Uora_twice:
   assumes heq: "h1=h2"
   shows "(Uoracle h2\<guillemotright>\<lbrakk>x2, y2\<rbrakk> \<cdot> (Uoracle h1\<guillemotright>\<lbrakk>x1, y1\<rbrakk> \<cdot> \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>)) =
          \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>"
-  apply (rewrite at "Uoracle _ \<guillemotright> \<lbrakk>x1,y1\<rbrakk>" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA1,x1,y1\<rbrakk>"])
-  apply (rewrite at "Uoracle _ \<guillemotright> \<lbrakk>x2,y2\<rbrakk>" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA2,x2,y2\<rbrakk>"])
+  apply (rewrite at "apply_qregister \<lbrakk>x1,y1\<rbrakk> (Uoracle _)" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA1,x1,y1\<rbrakk>"])
+  apply (rewrite at "apply_qregister \<lbrakk>x2,y2\<rbrakk> (Uoracle _)" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA2,x2,y2\<rbrakk>"])
+(* TODO: Bug report why Isabelle's rewrite does not allow this: *)
+(*   apply (rewrite at "Uoracle _ \<guillemotright> \<lbrakk>x1,y1\<rbrakk>" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA1,x1,y1\<rbrakk>"])
+  apply (rewrite at "Uoracle _ \<guillemotright> \<lbrakk>x2,y2\<rbrakk>" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA2,x2,y2\<rbrakk>"]) *)
   by (simp add: l1 l2 l3 heq cblinfun_compose_assoc)
 
 end

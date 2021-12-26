@@ -232,13 +232,13 @@ lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> oper
 
 subsection \<open>Lifting\<close>
 
-abbreviation (input) \<open>liftOp == (\<lambda>A (F::'a q2variable). apply_qregister F A)\<close>
+abbreviation (input) \<open>liftOp == (\<lambda>A F. apply_qregister F A)\<close>
 (* definition liftOp :: "('a,'a) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> (qu2,qu2) l2bounded" 
   (* Convention: If not distinct_qvars Q, then liftOp A Q := 0 *)
   where "liftOp A x = (if register x then x A else 0)" *)
 definition
   (* Convention: If not distinct_qvars Q, then liftOp A Q := bot *)
-  liftSpace :: "'a subspace \<Rightarrow> 'a q2variable \<Rightarrow> predicate"
+  liftSpace :: "'a subspace \<Rightarrow> ('a,'b) qregister \<Rightarrow> 'b subspace"
   where \<open>liftSpace S x = apply_qregister x (Proj S) *\<^sub>S \<top>\<close>
 (* definition
   (* lift_vector \<psi> Q \<psi>' = \<psi> \<otimes> \<psi>' where \<psi> is interpreted as a vector over Q, and \<psi>' as a vector over the complement of Q *)
