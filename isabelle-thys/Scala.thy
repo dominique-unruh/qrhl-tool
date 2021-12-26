@@ -100,8 +100,8 @@ object IsabelleConsts {
   val insert = \<open>\<^const_name>\<open>insert\<close>\<close>
   val conj = \<open>\<^const_name>\<open>conj\<close>\<close>
   val disj = \<open>\<^const_name>\<open>disj\<close>\<close>
-  val cvariable_unit = \<open>\<^const_name>\<open>cvariable_unit\<close>\<close>
-  val qvariable_unit = \<open>\<^const_name>\<open>qvariable_unit\<close>\<close>
+  val empty_cregister = \<open>\<^const_name>\<open>empty_cregister\<close>\<close>
+  val empty_qregister = \<open>\<^const_name>\<open>empty_qregister\<close>\<close>
   val cregister_pair = \<open>\<^const_name>\<open>cregister_pair\<close>\<close>
   val qregister_pair = \<open>\<^const_name>\<open>qregister_pair\<close>\<close>
 }

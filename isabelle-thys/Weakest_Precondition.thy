@@ -213,7 +213,7 @@ in (str, fn _ => thm) end
 ML_file "weakest_precondition.ML"
 
 experiment
-  fixes x y :: \<open>nat cvariable\<close> assumes [variable]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<close>
+  fixes x y :: \<open>nat cvariable\<close> assumes [variable]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<^sub>c\<close>
 begin
 
 abbreviation \<open>x1 \<equiv> cregister_chain cFst x\<close>

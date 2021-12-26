@@ -90,8 +90,8 @@ object IsabelleConsts {
   val insert = "Set.insert"
   val conj = "HOL.conj"
   val disj = "HOL.disj"
-  val cvariable_unit = "Prog_Variables.cvariable_unit"
-  val qvariable_unit = "Prog_Variables.qvariable_unit"
+  val empty_cregister = "Prog_Variables.empty_cregister"
+  val empty_qregister = "Prog_Variables.empty_qregister"
   val cregister_pair = "Prog_Variables.cregister_pair"
   val qregister_pair = "Prog_Variables.qregister_pair"
 }

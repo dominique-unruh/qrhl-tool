@@ -188,7 +188,7 @@ hide_const probability_syntax
 
 experiment
   fixes x y :: \<open>nat cvariable\<close>
-  assumes [variable]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<close>
+  assumes [variable]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<^sub>c\<close>
 begin
 (* local_setup \<open>Prog_Variables.declare_variable_lthy (\<^term>\<open>x\<close> |> dest_Free |> fst) Prog_Variables.Classical \<^typ>\<open>nat\<close>\<close> *)
 term \<open>Expr[x1+1]\<close>

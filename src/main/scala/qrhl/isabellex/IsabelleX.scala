@@ -620,13 +620,13 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
 //  def qvarTuple_var(qvs: List[QVariable]): Term = qvarTuple_var0(qvs)._1
 
   def variable_unit(classical: Boolean, indexed: Boolean): Const =
-    Const(if (classical) c.cvariable_unit else c.qvariable_unit,
+    Const(if (classical) c.empty_cregister else c.empty_qregister,
       variableT(unitT, classical=classical, indexed=indexed))
   object Variable_Unit {
     /** case Variable_Unit(classical, indexed) => ... */
     def unapply(term: Term): Option[(Boolean, Boolean)] = term match {
-      case Const(c.cvariable_unit, VariableT(_, _, indexed)) => Some((true, indexed))
-      case Const(c.qvariable_unit, VariableT(_, _, indexed)) => Some((false, indexed))
+      case Const(c.empty_cregister, VariableT(_, _, indexed)) => Some((true, indexed))
+      case Const(c.empty_qregister, VariableT(_, _, indexed)) => Some((false, indexed))
       case _ => None
     }
   }

@@ -96,7 +96,7 @@ lemma [code_post]:
 
 lemma quantum_equality_full_def_let:
   "quantum_equality_full U Q V R = (let U=U; V=V in
-                 (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> variable_concat Q R)"
+                 (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> \<lbrakk>Q,R\<rbrakk>)"
   unfolding quantum_equality_full_def by auto
 
 lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"

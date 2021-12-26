@@ -10,9 +10,9 @@ lemma o2h:
     and in_S :: "bit cvariable" and Count :: "oracle_program"
     and localsC :: "'c cvariable" and localsQ :: "'d qvariable"
 
-  assumes "game_left = (block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryG]]]])"
-  assumes "game_right = (block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryH]]]])"
-  assumes "game_find = (block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk> Expr[distr], assign \<lbrakk>Find\<rbrakk> (\<lambda>_. False), localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
+  assumes "game_left = (block [assign count (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk>\<^sub>c Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryG]]]])"
+  assumes "game_right = (block [assign count (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk>\<^sub>c Expr[distr], localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryH]]]])"
+  assumes "game_find = (block [assign count (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk>\<^sub>c Expr[distr], assign Find (\<lambda>_. False), localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
   assumes "\<And>P. (instantiateOracles Count [P]) = (block [P, assign \<lbrakk>count\<rbrakk> (\<lambda>mem. getter count mem + 1)])"
 
@@ -22,10 +22,10 @@ lemma o2h:
                             queryG])"
   assumes "queryH = (block [qapply \<lbrakk>X,Y\<rbrakk> (\<lambda>m. Uoracle (getter H m))])"
 
-  assumes "distinct_cvars \<lbrakk>b,count,Find,z,G,H,S,in_S\<rbrakk>"
+  assumes "distinct_cvars \<lbrakk>b,count,Find,z,G,H,S,in_S\<rbrakk>\<^sub>c"
   assumes "distinct_qvars \<lbrakk>X,Y\<rbrakk>"
 
-  assumes "Cccompatible (fvc_oracle_program adv) \<lbrakk>count,Find,G,H,S,in_S\<rbrakk>" (* adv can access b,z,X,Y *)
+  assumes "Cccompatible (fvc_oracle_program adv) \<lbrakk>count,Find,G,H,S,in_S\<rbrakk>\<^sub>c" (* adv can access b,z,X,Y *)
 
   assumes "probability (\<lambda>m. getter count m \<le> q) game_left rho = 1"
   assumes "probability (\<lambda>m. getter count m \<le> q) game_right rho = 1"
@@ -142,18 +142,18 @@ definition [program_bodies]: "findG = (block [assign \<lbrakk>count\<rbrakk> (\<
         instantiateOracles adv [instantiateOracles Count [queryGS]]])"
 *)
 
-definition [program_bodies]: "left = block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S, G, H, z\<rbrakk> (\<lambda>_. test_distr),
-        localvars \<lbrakk>\<rbrakk> \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryG]]]]"
-definition [program_bodies]: "right = block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S, G, H, z\<rbrakk> (\<lambda>_. test_distr),
-        localvars \<lbrakk>\<rbrakk> \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryH]]]]"
-definition [program_bodies]: "findG = (block [assign \<lbrakk>count\<rbrakk> (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk> (\<lambda>_. test_distr), assign \<lbrakk>Find\<rbrakk> (\<lambda>_. False), 
-        localvars \<lbrakk>\<rbrakk> \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
+definition [program_bodies]: "left = block [assign \<lbrakk>count\<rbrakk>\<^sub>c (\<lambda>_.0), sample \<lbrakk>S, G, H, z\<rbrakk>\<^sub>c (\<lambda>_. test_distr),
+        localvars \<lbrakk>\<rbrakk>\<^sub>c \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryG]]]]"
+definition [program_bodies]: "right = block [assign \<lbrakk>count\<rbrakk>\<^sub>c (\<lambda>_.0), sample \<lbrakk>S, G, H, z\<rbrakk>\<^sub>c (\<lambda>_. test_distr),
+        localvars \<lbrakk>\<rbrakk>\<^sub>c \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryH]]]]"
+definition [program_bodies]: "findG = (block [assign \<lbrakk>count\<rbrakk>\<^sub>c (\<lambda>_.0), sample \<lbrakk>S,G,H,z\<rbrakk>\<^sub>c (\<lambda>_. test_distr), assign \<lbrakk>Find\<rbrakk>\<^sub>c (\<lambda>_. False), 
+        localvars \<lbrakk>\<rbrakk>\<^sub>c \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
-lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk> (\<lambda>m. getter count m + 1)]" for P  
+lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk>\<^sub>c (\<lambda>m. getter count m + 1)]" for P  
   by (cheat Count)
 
-lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>" by (cheat fv_adv)
-lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>" by (cheat fv_adv)
+lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>\<^sub>c" by (cheat fv_adv)
+lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>\<^sub>q" by (cheat fv_adv)
 
 lemma 
   assumes \<open>Pr[count \<le> q : left(rho)] = 1\<close>

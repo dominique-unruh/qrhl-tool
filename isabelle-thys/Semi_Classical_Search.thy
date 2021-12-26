@@ -11,27 +11,27 @@ lemma semi_classical_search:
     and stop_at :: "nat cvariable" and "guess" :: "'a cvariable"
     and localsC :: "'c cvariable" and localsQ :: "'d qvariable"
 
-  assumes "game_left  = block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>S,G,z\<rbrakk> Expr[distr], 
-                        assign \<lbrakk>Find\<rbrakk> Expr[False],
+  assumes "game_left  = block [assign \<lbrakk>count\<rbrakk>\<^sub>c Expr[0], sample \<lbrakk>S,G,z\<rbrakk>\<^sub>c Expr[distr], 
+                        assign \<lbrakk>Find\<rbrakk>\<^sub>c Expr[False],
                         localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGS]]]]"
-  assumes "game_right = (block [assign \<lbrakk>count\<rbrakk> Expr[0], sample \<lbrakk>stop_at\<rbrakk> Expr[uniform {..<q}],
-                         sample \<lbrakk>S,G,z\<rbrakk> Expr[distr], 
+  assumes "game_right = (block [assign \<lbrakk>count\<rbrakk>\<^sub>c Expr[0], sample \<lbrakk>stop_at\<rbrakk>\<^sub>c Expr[uniform {..<q}],
+                         sample \<lbrakk>S,G,z\<rbrakk>\<^sub>c Expr[distr], 
                          localvars localsC localsQ [instantiateOracles adv [instantiateOracles Count [queryGM]]]])"
 
-  assumes "\<And>P. (instantiateOracles Count [P]) = (block [P, assign \<lbrakk>count\<rbrakk> (\<lambda>m. getter count m + 1)])"
+  assumes "\<And>P. (instantiateOracles Count [P]) = (block [P, assign \<lbrakk>count\<rbrakk>\<^sub>c (\<lambda>m. getter count m + 1)])"
 
-  assumes "queryGS = (block [measurement \<lbrakk>in_S\<rbrakk> \<lbrakk>X\<rbrakk> (\<lambda>m. binary_measurement (proj_classical_set (getter S m))),
-                            ifthenelse (\<lambda>m. getter in_S m = 1) [assign \<lbrakk>Find\<rbrakk> Expr[True]] [],
+  assumes "queryGS = (block [measurement \<lbrakk>in_S\<rbrakk>\<^sub>c \<lbrakk>X\<rbrakk> (\<lambda>m. binary_measurement (proj_classical_set (getter S m))),
+                            ifthenelse (\<lambda>m. getter in_S m = 1) [assign \<lbrakk>Find\<rbrakk>\<^sub>c Expr[True]] [],
                             queryG])"
   assumes "queryGM = block [ifthenelse (\<lambda>m. getter count m = getter stop_at m) 
-                             [measurement \<lbrakk>guess\<rbrakk> \<lbrakk>X\<rbrakk> Expr[computational_basis]] [], 
+                             [measurement \<lbrakk>guess\<rbrakk>\<^sub>c \<lbrakk>X\<rbrakk> Expr[computational_basis]] [], 
                             queryG]"
-  assumes "queryG = (block [qapply \<lbrakk>X,Y\<rbrakk> (\<lambda>m. Uoracle (getter G m))])"
+  assumes "queryG = (block [qapply \<lbrakk>X,Y\<rbrakk>\<^sub>q (\<lambda>m. Uoracle (getter G m))])"
 
-  assumes "distinct_cvars \<lbrakk>count,Find,z,G,S,in_S,stop_at,guess\<rbrakk>"
+  assumes "distinct_cvars \<lbrakk>count,Find,z,G,S,in_S,stop_at,guess\<rbrakk>\<^sub>c"
   assumes "distinct_qvars \<lbrakk>X,Y\<rbrakk>"
 
-  assumes "Cccompatible (fvc_oracle_program adv) \<lbrakk>count,stop_at,guess,Find,G,S,in_S\<rbrakk>" (* adv can access b,z,X,Y *)
+  assumes "Cccompatible (fvc_oracle_program adv) \<lbrakk>count,stop_at,guess,Find,G,S,in_S\<rbrakk>\<^sub>c" (* adv can access b,z,X,Y *)
 
   assumes "probability (\<lambda>m. getter count m \<le> q) game_left rho = 1"
   assumes "probability (\<lambda>m. getter count m \<le> q) game_right rho = 1"
@@ -107,19 +107,19 @@ definition [program_bodies]: "queryGM = block [
 
 definition "q = (123::nat)"
 
-definition [program_bodies]: "left = block [assign \<lbrakk>count\<rbrakk> Expr[0], 
-        sample \<lbrakk>S, G, z\<rbrakk> Expr[test_distr],
-        assign \<lbrakk>Find\<rbrakk> Expr[False],
-        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]]"
-definition [program_bodies]: "right = block [assign \<lbrakk>count\<rbrakk> Expr[0], 
-        sample \<lbrakk>stop_at\<rbrakk> Expr[uniform {..<q}],
-        sample \<lbrakk>S, G, z\<rbrakk> Expr[test_distr],
-        localvars \<lbrakk>\<rbrakk> \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGM]]]]"
+definition [program_bodies]: "left = block [assign \<lbrakk>count\<rbrakk>\<^sub>c Expr[0], 
+        sample \<lbrakk>S, G, z\<rbrakk>\<^sub>c Expr[test_distr],
+        assign \<lbrakk>Find\<rbrakk>\<^sub>c Expr[False],
+        localvars \<lbrakk>\<rbrakk>\<^sub>c \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]]"
+definition [program_bodies]: "right = block [assign \<lbrakk>count\<rbrakk>\<^sub>c Expr[0], 
+        sample \<lbrakk>stop_at\<rbrakk>\<^sub>c Expr[uniform {..<q}],
+        sample \<lbrakk>S, G, z\<rbrakk>\<^sub>c Expr[test_distr],
+        localvars \<lbrakk>\<rbrakk>\<^sub>c \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGM]]]]"
 
-lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk> Expr[count+1]]" for P  
+lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk>\<^sub>c Expr[count+1]]" for P  
   by (cheat Count)
 
-lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>" by (cheat fv_adv)
+lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>\<^sub>c" by (cheat fv_adv)
 lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>" by (cheat fv_adv)
 
 lemma

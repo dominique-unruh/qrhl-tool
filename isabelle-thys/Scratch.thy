@@ -13,6 +13,8 @@ derive (compare) ccompare bit
 derive (dlist) set_impl bit
 
 
+ML Sign.parse_translation
+
 lemma
   fixes a b c
   assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
@@ -50,11 +52,11 @@ proof -
     oops
 
 
-(* TODO keep? *)
+(* (* TODO keep? *)
 lemma qregister_chain_unit_right[simp]: \<open>qregister F \<Longrightarrow> qregister_chain F qvariable_unit = qvariable_unit\<close>
   by (simp add: qvariable_unit_def)
 lemma qregister_chain_unit_left[simp]: \<open>qregister F \<Longrightarrow> qregister_chain qvariable_unit F = qvariable_unit\<close>
-  by (simp add: qvariable_unit_def)
+  by (simp add: qvariable_unit_def) *)
 
 
 (* TODO keep? *)

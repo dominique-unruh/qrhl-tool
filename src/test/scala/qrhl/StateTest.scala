@@ -14,7 +14,7 @@ class StateTest extends AnyFunSuite {
       .declareVariable("x", globalIsabelle.intT, quantum = false)
       .declareVariable("y", globalIsabelle.intT, quantum = false)
       .declareVariable("z", globalIsabelle.intT, quantum = false)
-    val goal = state.isabelle.readTerm("cregister (variable_concat x (variable_concat z y))", globalIsabelle.boolT)
+    val goal = state.isabelle.readTerm("cregister (cregister_pair x (cregister_pair z y))", globalIsabelle.boolT)
     val (result,_) = state.isabelle.simplify(goal, Nil)
     assert(result.isabelleTerm.concreteRecursive == globalIsabelle.True_const)
   }
@@ -24,7 +24,7 @@ class StateTest extends AnyFunSuite {
       .declareVariable("q", globalIsabelle.intT, quantum = true)
       .declareVariable("r", globalIsabelle.intT, quantum = true)
       .declareVariable("s", globalIsabelle.intT, quantum = true)
-    val goal = state.isabelle.readTerm("qregister (variable_concat r (variable_concat q s))", globalIsabelle.boolT)
+    val goal = state.isabelle.readTerm("qregister (qregister_pair r (qregister_pair q s))", globalIsabelle.boolT)
     val (result,_) = state.isabelle.simplify(goal, Nil)
     assert(result.isabelleTerm.concreteRecursive == globalIsabelle.True_const)
   }

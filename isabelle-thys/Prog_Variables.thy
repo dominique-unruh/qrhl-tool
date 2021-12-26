@@ -880,7 +880,7 @@ axiomatization compatible_Cc :: \<open>CVARIABLE \<Rightarrow> 'a cvariable \<Ri
 
 datatype 'a vtree = VTree_Singleton 'a | VTree_Concat "'a vtree" "'a vtree" | VTree_Unit
 
-consts variable_concat :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
+(* consts variable_concat :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
 adhoc_overloading variable_concat qregister_pair cregister_pair
 consts register_conversion :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
 adhoc_overloading register_conversion qregister_conversion cregister_conversion
@@ -893,19 +893,19 @@ adhoc_overloading register_chain qregister_chain cregister_chain
 consts Fst :: \<open>'a\<close>
 adhoc_overloading Fst qFst cFst
 consts Snd :: \<open>'a\<close>
-adhoc_overloading Snd qSnd cSnd
+adhoc_overloading Snd qSnd cSnd *)
 
 
 (* We need those definition (not abbreviations!) with slightly more restrictive type, otherwise the overloaded variable_unit below will expand to \<open>('a,'b) empty_qregister\<close> etc *)
-definition [simp]: \<open>qvariable_unit \<equiv> empty_qregister :: (unit,_) qregister\<close>
-definition [simp]: \<open>cvariable_unit \<equiv> empty_cregister :: (unit,_) cregister\<close>
+(* definition [simp]: \<open>qvariable_unit \<equiv> empty_qregister :: (unit,_) qregister\<close> *)
+(* definition [simp]: \<open>cvariable_unit \<equiv> empty_cregister :: (unit,_) cregister\<close> *)
 
-consts variable_unit :: \<open>'a\<close>
+(* consts variable_unit :: \<open>'a\<close>
 adhoc_overloading variable_unit 
-  qvariable_unit cvariable_unit
+  qvariable_unit cvariable_unit *)
 
 (* LEGACY *)
-abbreviation (input) "variable_singleton x \<equiv> x"
+(* abbreviation (input) "variable_singleton x \<equiv> x" *)
 
 section \<open>Distinct variables\<close>
 
@@ -917,55 +917,55 @@ abbreviation (input) "distinct_cvars Q == cregister Q"
   by (smt (verit, best) Axioms_Quantum.register_pair_def Laws_Quantum.compatibleI zero_not_register) *)
 
 lemma distinct_qvars_split1: 
-  "distinct_qvars (variable_concat (variable_concat Q R) S) = (distinct_qvars (variable_concat Q R) \<and> distinct_qvars (variable_concat Q S) \<and> distinct_qvars (variable_concat R S))"
+  "distinct_qvars (qregister_pair (qregister_pair Q R) S) = (distinct_qvars (qregister_pair Q R) \<and> distinct_qvars (qregister_pair Q S) \<and> distinct_qvars (qregister_pair R S))"
   unfolding qregister_pair_iff_compatible
   using qcompatible3 by blast
-lemma distinct_qvars_swap: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars (variable_concat R Q)" 
+lemma distinct_qvars_swap: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> distinct_qvars (qregister_pair R Q)" 
   unfolding qregister_pair_iff_compatible
   using qcompatible_sym by auto
-lemma distinct_qvars_split2: "distinct_qvars (variable_concat S (variable_concat Q R)) = (distinct_qvars (variable_concat Q R) \<and> distinct_qvars (variable_concat Q S) \<and> distinct_qvars (variable_concat R S))"
+lemma distinct_qvars_split2: "distinct_qvars (qregister_pair S (qregister_pair Q R)) = (distinct_qvars (qregister_pair Q R) \<and> distinct_qvars (qregister_pair Q S) \<and> distinct_qvars (qregister_pair R S))"
   unfolding qregister_pair_iff_compatible
   by (metis qcompatible3 qcompatible_sym)
-lemma distinct_qvars_concat_unit1[simp]: "distinct_qvars (variable_concat Q qvariable_unit) = distinct_qvars Q" for Q::"'a qvariable" 
-  unfolding qregister_pair_iff_compatible qvariable_unit_def
+lemma distinct_qvars_concat_unit1[simp]: "distinct_qvars (qregister_pair Q empty_qregister) = distinct_qvars Q" for Q::"'a qvariable" 
+  unfolding qregister_pair_iff_compatible
   using qcompatible_QQcompatible qcompatible_empty by auto
-lemma distinct_qvars_concat_unit2[simp]: "distinct_qvars (variable_concat qvariable_unit Q) = distinct_qvars Q" for Q::"'a::finite qvariable" 
-  unfolding qregister_pair_iff_compatible qvariable_unit_def
+lemma distinct_qvars_concat_unit2[simp]: "distinct_qvars (qregister_pair empty_qregister Q) = distinct_qvars Q" for Q::"'a::finite qvariable" 
+  unfolding qregister_pair_iff_compatible
   using qcompatible_QQcompatible qcompatible_empty qcompatible_sym by blast
-lemma distinct_qvars_unit[simp]: "distinct_qvars qvariable_unit"
-  by (simp add: qvariable_unit_def)
+lemma distinct_qvars_unit[simp]: "distinct_qvars empty_qregister"
+  by (simp add: )
 (* lemma distinct_qvars_single[simp]: "distinct_qvars \<lbrakk>q\<rbrakk>" for q::"'a::finite qvariable"
   unfolding distinct_qvars_def apply transfer by auto *)
 
-lemma distinct_qvarsL: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars Q"
+lemma distinct_qvarsL: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> distinct_qvars Q"
   unfolding qregister_pair_iff_compatible
   by (simp add: qcompatible_QQcompatible)
-lemma distinct_qvarsR: "distinct_qvars (variable_concat Q R) \<Longrightarrow> distinct_qvars R"
+lemma distinct_qvarsR: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> distinct_qvars R"
   unfolding qregister_pair_iff_compatible
   by (simp add: qcompatible_register2)
 
 lemma distinct_cvars_split1: 
-  "distinct_cvars (variable_concat (variable_concat Q R) S) = (distinct_cvars (variable_concat Q R) \<and> distinct_cvars (variable_concat Q S) \<and> distinct_cvars (variable_concat R S))"
+  "distinct_cvars (cregister_pair (cregister_pair Q R) S) = (distinct_cvars (cregister_pair Q R) \<and> distinct_cvars (cregister_pair Q S) \<and> distinct_cvars (cregister_pair R S))"
   unfolding cregister_pair_iff_compatible
   by (simp add: ccompatible3)
-lemma distinct_cvars_swap: "distinct_cvars (variable_concat Q R) \<Longrightarrow> distinct_cvars (variable_concat R Q)" 
+lemma distinct_cvars_swap: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars (cregister_pair R Q)" 
   unfolding cregister_pair_iff_compatible
   using ccompatible_sym by blast
-lemma distinct_cvars_split2: "distinct_cvars (variable_concat S (variable_concat Q R)) = (distinct_cvars (variable_concat Q R) \<and> distinct_cvars (variable_concat Q S) \<and> distinct_cvars (variable_concat R S))"
+lemma distinct_cvars_split2: "distinct_cvars (cregister_pair S (cregister_pair Q R)) = (distinct_cvars (cregister_pair Q R) \<and> distinct_cvars (cregister_pair Q S) \<and> distinct_cvars (cregister_pair R S))"
   by (metis distinct_cvars_split1 distinct_cvars_swap)
-lemma distinct_cvars_concat_unit1[simp]: "distinct_cvars (variable_concat Q cvariable_unit) = distinct_cvars Q" for Q::"'a::finite cvariable" 
-  unfolding cregister_pair_iff_compatible cvariable_unit_def
+lemma distinct_cvars_concat_unit1[simp]: "distinct_cvars (cregister_pair Q empty_cregister) = distinct_cvars Q" for Q::"'a::finite cvariable" 
+  unfolding cregister_pair_iff_compatible
   using ccompatible_CCcompatible ccompatible_empty by blast
-lemma distinct_cvars_concat_unit2[simp]: "distinct_cvars (variable_concat cvariable_unit Q) = distinct_cvars Q" for Q::"'a::finite cvariable"
+lemma distinct_cvars_concat_unit2[simp]: "distinct_cvars (cregister_pair empty_cregister Q) = distinct_cvars Q" for Q::"'a::finite cvariable"
   by (metis distinct_cvars_concat_unit1 distinct_cvars_swap) 
-lemma distinct_cvars_unit[simp]: "distinct_cvars cvariable_unit" 
-  by (simp add: cvariable_unit_def)
+lemma distinct_cvars_unit[simp]: "distinct_cvars empty_cregister" 
+  by (simp add: )
 (* lemma distinct_cvars_single[simp]: "distinct_cvars \<lbrakk>q\<rbrakk>" for q::"'a::finite cvariable"
   unfolding distinct_cvars_def apply transfer by auto *)
 
-lemma distinct_cvarsL: "distinct_cvars (variable_concat Q R) \<Longrightarrow> distinct_cvars Q"
+lemma distinct_cvarsL: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars Q"
   using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible ccompatible_raw_def by blast
-lemma distinct_cvarsR: "distinct_cvars (variable_concat Q R) \<Longrightarrow> distinct_cvars R"
+lemma distinct_cvarsR: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars R"
   using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible ccompatible_raw_def by blast
 
 section \<open>Indexed variables\<close>
@@ -1055,12 +1055,22 @@ nonterminal variable_list_args
 nonterminal variable_nth
 nonterminal variable_nth'
 syntax
-  "_variable_nth" :: "'a \<Rightarrow> 'b"
-  "_variable_nth'" :: "'a \<Rightarrow> 'b"
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|'|])")
-  "variable_unit"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>'\<rbrakk>)")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|_'|])")
-  "_variables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
+  "_qvariable_nth" :: "'a \<Rightarrow> 'b"
+  "_cvariable_nth" :: "'a \<Rightarrow> 'b"
+  "_qvariable_nth'" :: "'a \<Rightarrow> 'b"
+  "_cvariable_nth'" :: "'a \<Rightarrow> 'b"
+  "_empty_qregister"      :: "'a"        ("(1'[|'|])")
+  "_empty_qregister"      :: "'a"        ("(1'\<lbrakk>'\<rbrakk>)")
+  "_empty_qregister"      :: "'a"        ("(1'[|'|]\<^sub>q)")
+  "_empty_qregister"      :: "'a"        ("(1'\<lbrakk>'\<rbrakk>\<^sub>q)")
+  "_empty_cregister"      :: "'a"        ("(1'[|'|]\<^sub>c)")
+  "_empty_cregister"      :: "'a"        ("(1'\<lbrakk>'\<rbrakk>\<^sub>c)")
+  "_qvariables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|_'|])")
+  "_qvariables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|_'|]\<^sub>q)")
+  "_cvariables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'[|_'|]\<^sub>c)")
+  "_qvariables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>)")
+  "_qvariables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>\<^sub>q)")
+  "_cvariables"      :: "variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_'\<rbrakk>\<^sub>c)")
   "_variable_list_arg_nth"  :: "'a \<Rightarrow> variable_list_args"                   ("#_")  (* Instead of 'a, would like to match only natural numbers *)
   "_variable_list_arg_nth'"  :: "'a \<Rightarrow> variable_list_args"                   ("#_.")
   "_variable_list_arg"  :: "'a \<Rightarrow> variable_list_args"                   ("_")
@@ -1068,24 +1078,42 @@ syntax
   "_variable_list_args_nth'"  :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"                   ("#_.,/ _")
   "_variable_list_args" :: "'a \<Rightarrow> variable_list_args \<Rightarrow> variable_list_args"     ("_,/ _")
 
-  "_variable_conversion"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<mapsto> _'\<rbrakk>)")
-  "_variable_le"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<le> _'\<rbrakk>)")
+  "_qvariable_conversion"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<mapsto> _'\<rbrakk>)")
+  "_qvariable_conversion"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<mapsto> _'\<rbrakk>\<^sub>q)")
+  "_cvariable_conversion"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<mapsto> _'\<rbrakk>\<^sub>c)")
+  "_qvariable_le"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<le> _'\<rbrakk>)")
+  "_qvariable_le"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<le> _'\<rbrakk>\<^sub>q)")
+  "_cvariable_le"      :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> 'a"        ("(1'\<lbrakk>_ \<le> _'\<rbrakk>\<^sub>c)")
 
 translations
-  "_variables (_variable_list_args x y)" \<rightleftharpoons> "CONST variable_concat x (_variables y)"
-  "_variables (_variable_list_args_nth x y)" \<rightleftharpoons> "CONST variable_concat (_variable_nth x) (_variables y)"
-  "_variables (_variable_list_args_nth' x y)" \<rightleftharpoons> "CONST variable_concat (_variable_nth' x) (_variables y)"
-  "_variables (_variable_list_arg x)" \<rightharpoonup> "x"
-  "_variables (_variable_list_arg_nth x)" \<rightharpoonup> "_variable_nth x"
-  "_variables (_variable_list_arg_nth' x)" \<rightharpoonup> "_variable_nth' x"
-  "_variables (_variable_list_args x y)" \<leftharpoondown> "CONST variable_concat (_variables (_variable_list_arg x)) (_variables y)"
+  "_empty_qregister" \<rightleftharpoons> "CONST empty_qregister :: (unit, _) qregister"
+  "_empty_cregister" \<rightleftharpoons> "CONST empty_cregister :: (unit, _) cregister"
+  "_qvariables (_variable_list_args x y)" \<rightleftharpoons> "CONST qregister_pair x (_qvariables y)"
+  "_cvariables (_variable_list_args x y)" \<rightleftharpoons> "CONST cregister_pair x (_cvariables y)"
+  "_qvariables (_variable_list_args_nth x y)" \<rightleftharpoons> "CONST qregister_pair (_qvariable_nth x) (_qvariables y)"
+  "_cvariables (_variable_list_args_nth x y)" \<rightleftharpoons> "CONST cregister_pair (_cvariable_nth x) (_cvariables y)"
+  "_qvariables (_variable_list_args_nth' x y)" \<rightleftharpoons> "CONST qregister_pair (_qvariable_nth' x) (_qvariables y)"
+  "_cvariables (_variable_list_args_nth' x y)" \<rightleftharpoons> "CONST cregister_pair (_cvariable_nth' x) (_cvariables y)"
+  "_qvariables (_variable_list_arg x)" \<rightharpoonup> "x"
+  "_cvariables (_variable_list_arg x)" \<rightharpoonup> "x"
+  "_qvariables (_variable_list_arg_nth x)" \<rightharpoonup> "_qvariable_nth x"
+  "_cvariables (_variable_list_arg_nth x)" \<rightharpoonup> "_cvariable_nth x"
+  "_qvariables (_variable_list_arg_nth' x)" \<rightharpoonup> "_qvariable_nth' x"
+  "_cvariables (_variable_list_arg_nth' x)" \<rightharpoonup> "_cvariable_nth' x"
+  "_qvariables (_variable_list_args x y)" \<leftharpoondown> "CONST qregister_pair (_qvariables (_variable_list_arg x)) (_qvariables y)"
+  "_cvariables (_variable_list_args x y)" \<leftharpoondown> "CONST cregister_pair (_cvariables (_variable_list_arg x)) (_cvariables y)"
 
-  "_variable_conversion x y" \<rightleftharpoons> "CONST register_conversion (_variables x) (_variables y)"
-  "_variable_le x y" \<rightleftharpoons> "CONST register_le (_variables x) (_variables y)"
+  "_qvariable_conversion x y" \<rightleftharpoons> "CONST qregister_conversion (_qvariables x) (_qvariables y)"
+  "_cvariable_conversion x y" \<rightleftharpoons> "CONST cregister_conversion (_cvariables x) (_cvariables y)"
+  "_qvariable_le x y" \<rightleftharpoons> "CONST qregister_le (_qvariables x) (_qvariables y)"
+  "_cvariable_le x y" \<rightleftharpoons> "CONST cregister_le (_cvariables x) (_cvariables y)"
 
 parse_translation
-  \<open>[(\<^syntax_const>\<open>_variable_nth\<close>, fn ctxt => fn [nt] => Prog_Variables.register_n false (Misc.dest_number_syntax nt)),
-    (\<^syntax_const>\<open>_variable_nth'\<close>, fn ctxt => fn [nt] => Prog_Variables.register_n true (Misc.dest_number_syntax nt))]\<close>
+  \<open>let open Prog_Variables in 
+   [(\<^syntax_const>\<open>_qvariable_nth\<close>,  fn ctxt => fn [nt] => register_n Quantum   false (Misc.dest_number_syntax nt)),
+    (\<^syntax_const>\<open>_qvariable_nth'\<close>, fn ctxt => fn [nt] => register_n Quantum   true  (Misc.dest_number_syntax nt)),
+    (\<^syntax_const>\<open>_cvariable_nth\<close>,  fn ctxt => fn [nt] => register_n Classical false (Misc.dest_number_syntax nt)),
+    (\<^syntax_const>\<open>_cvariable_nth'\<close>, fn ctxt => fn [nt] => register_n Classical true  (Misc.dest_number_syntax nt))] end\<close>
 
 section \<open>Simprocs\<close>
 

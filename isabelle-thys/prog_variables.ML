@@ -375,8 +375,8 @@ fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>cvariable_unit :: uni
                             | Quantum => Const(\<^const_name>\<open>qregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_q2variableT T)
       in pair $ v1 $ v2 end
 
-fun variable_to_varterm _    (Const(\<^const_name>\<open>cvariable_unit\<close>,_)) = VTUnit
-  | variable_to_varterm _    (Const(\<^const_name>\<open>qvariable_unit\<close>,_)) = VTUnit
+fun variable_to_varterm _    (Const(\<^const_name>\<open>empty_cregister\<close>,_)) = VTUnit
+  | variable_to_varterm _    (Const(\<^const_name>\<open>empty_qregister\<close>,_)) = VTUnit
   | variable_to_varterm ctxt (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ t1 $ t2) = VTCons (variable_to_varterm ctxt t1, variable_to_varterm ctxt t2)
   | variable_to_varterm ctxt (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ t1 $ t2) = VTCons (variable_to_varterm ctxt t1, variable_to_varterm ctxt t2)
   | variable_to_varterm ctxt v = case find_variable ctxt v of
@@ -512,12 +512,18 @@ fun distinct_vars_tac ctxt = let
           Const(case qc of Classical => \<^const_name>\<open>cSnd\<close> | Quantum => \<^const_name>\<open>qSnd\<close>, dummyT) $
           register_n qc last (n-1) end *)
 
-fun register_n true 1 = Const(\<^const_name>\<open>register_id\<close>, dummyT)
-  | register_n false 1 = Const(\<^const_name>\<open>Fst\<close>, dummyT)
-  | register_n true 2 = Const(\<^const_name>\<open>Snd\<close>, dummyT)
-  | register_n last n = let
+fun register_n Quantum true 1 = Const(\<^const_name>\<open>qregister_id\<close>, dummyT)
+  | register_n Classical true 1 = Const(\<^const_name>\<open>cregister_id\<close>, dummyT)
+  | register_n Quantum false 1 = Const(\<^const_name>\<open>qFst\<close>, dummyT)
+  | register_n Classical false 1 = Const(\<^const_name>\<open>cFst\<close>, dummyT)
+  | register_n Quantum true 2 = Const(\<^const_name>\<open>qSnd\<close>, dummyT)
+  | register_n Classical true 2 = Const(\<^const_name>\<open>cSnd\<close>, dummyT)
+  | register_n Quantum last n = let
       val _ = n > 1 orelse error "register_n: n must be >= 1"
-      in Const(\<^const_name>\<open>register_chain\<close>, dummyT) $ Const(\<^const_name>\<open>Snd\<close>, dummyT) $ register_n last (n-1) end
+      in Const(\<^const_name>\<open>qregister_chain\<close>, dummyT) $ Const(\<^const_name>\<open>qSnd\<close>, dummyT) $ register_n Quantum last (n-1) end
+  | register_n Classical last n = let
+      val _ = n > 1 orelse error "register_n: n must be >= 1"
+      in Const(\<^const_name>\<open>cregister_chain\<close>, dummyT) $ Const(\<^const_name>\<open>cSnd\<close>, dummyT) $ register_n Classical last (n-1) end
 
 fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_sort (Proof_Context.theory_of ctxt) (T,\<^sort>\<open>CARD_1\<close>)
   | is_empty_qregisterT _ T = raise TYPE("is_empty_qregisterT: not a qregister type", [T], [])
