@@ -9,7 +9,7 @@ lemma joint_measure_aux:
   by eval
 
 lemma final_goal:
-  assumes [simp]: "declared_qvars \<lbrakk>q1,r1,q2,r2\<rbrakk>"
+  assumes [simp,register]: "declared_qvars \<lbrakk>q1,r1,q2,r2\<rbrakk>"
     shows "ccspan {EPR}\<guillemotright>\<lbrakk>q2, r2\<rbrakk> \<sqinter> ccspan {EPR}\<guillemotright>\<lbrakk>q1, r1\<rbrakk> \<le> hadamard\<guillemotright>\<lbrakk>r2\<rbrakk> \<cdot> (hadamard\<guillemotright>\<lbrakk>q1\<rbrakk> \<cdot> \<lbrakk>q1, r1\<rbrakk> \<equiv>\<qq> \<lbrakk>q2, r2\<rbrakk>)"
   apply prepare_for_code
   by eval
