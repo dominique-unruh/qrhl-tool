@@ -564,7 +564,7 @@ proof (unfold qvar_trafo_def, (rule conjI[rotated])+, rule allI)
 qed
 *)
 
-abbreviation (input) \<open>reorder_variables_hint \<equiv> register_conversion_hint\<close>
+abbreviation (input) \<open>reorder_variables_hint \<equiv> (\<lambda>A F. register_conversion_hint F A)\<close>
 lemmas reorder_variables_hint_def = register_conversion_hint_def
 
 (*

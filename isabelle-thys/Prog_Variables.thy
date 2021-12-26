@@ -1181,16 +1181,16 @@ simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\
     - The whole term should be rewritten into x'>>R for some x'
   Rewriting the term is done by the simproc TODO declared below.
 *)
-definition "register_conversion_hint A R = A"
-lemma register_conversion_hint_cong[cong]: "A=A' \<Longrightarrow> register_conversion_hint A R = register_conversion_hint A' R" by simp
+definition "register_conversion_hint R A = A"
+lemma register_conversion_hint_cong[cong]: "A=A' \<Longrightarrow> register_conversion_hint R A = register_conversion_hint R A'" by simp
 
-(* Simproc that rewrites terms of the form `register_conversion_hint (apply_qregister F a) G`
+(* Simproc that rewrites terms of the form `register_conversion_hint G (apply_qregister F a)` into
   `apply_qregister target (apply_qregister (qregister_conversion \<dots>) A)` for suitable \<dots> *)
-simproc_setup register_conversion_hint (\<open>register_conversion_hint (apply_qregister F a) G\<close> | \<open>register_conversion_hint (apply_qregister_space F S) G\<close>) =
+simproc_setup register_conversion_hint (\<open>register_conversion_hint G (apply_qregister F a)\<close> | \<open>register_conversion_hint G (apply_qregister_space F S)\<close>) =
   \<open>fn m => fn ctxt => fn ct => let 
     (* val _ = \<^print> ct *)
-    val target = ct |> Thm.dest_arg
-    val conv = (Prog_Variables.apply_qregister_conversion_conv ctxt target |> Conv.arg1_conv)
+    val target = ct |> Thm.dest_arg1
+    val conv = (Prog_Variables.apply_qregister_conversion_conv ctxt target |> Conv.arg_conv)
         then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
     in SOME (conv ct) handle e => NONE end\<close>
 
@@ -1204,7 +1204,7 @@ named_theorems join_registers
    Instead, the JOIN_REGISTERS term will be rewritten into (?H=\<dots> \<and> ?L=\<dots>).
    Strictly speaking, H,L do not need to be schematic therefore.)
 
-  Both H, L will instantiated to \<open>(\<lambda>F. register_conversion_hint F FG)\<close> where FG is an upper bound (not proven!)
+  Both H, L will instantiated to \<open>(\<lambda>F. register_conversion_hint FG F)\<close> where FG is an upper bound (not proven!)
   for F,G (w.r.t., qregister_le).
 
   (We have two variables H,L because they may need different types.)
@@ -1222,7 +1222,7 @@ simproc_setup JOIN_REGISTERS (\<open>JOIN_REGISTERS F G H L\<close>) = \<open>fn
               'h=\<open>Thm.ctyp_of_cterm H |> Thm.dest_funT |> fst\<close> and 'l=\<open>Thm.ctyp_of_cterm L |> Thm.dest_funT |> fst\<close> and
               'fg=\<open>Thm.ctyp_of_cterm FG\<close> in 
               lemma \<open>JOIN_REGISTERS (F::'f) (G::'g) (H::'h\<Rightarrow>'h) (L::'l\<Rightarrow>'l) \<equiv>
-              H = (\<lambda>F. register_conversion_hint F (FG::'fg)) \<and> L = (\<lambda>F. register_conversion_hint F FG)\<close> 
+              H = (\<lambda>F. register_conversion_hint (FG::'fg) F) \<and> L = (\<lambda>F. register_conversion_hint FG F)\<close> 
               by (auto simp add: JOIN_REGISTERS_def register_conversion_hint_def id_def)\<close> (* |> \<^print> *)
 end\<close>
 
