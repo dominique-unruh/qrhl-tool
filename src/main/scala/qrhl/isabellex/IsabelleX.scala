@@ -964,12 +964,17 @@ object IsabelleX {
    * It's still in use for historical reasons. */
   class ContextX(val isabelle: IsabelleX, val context: Context) extends FutureValue {
     override def await: Unit = context.await
-    override def someFuture: Future[Any] = context.someFuture
+    // We initialize the global _theContext with this context inside this future.
+    // This guarantees that the present context will only be used if it succeeds.
+    // (Meaning, if the future inside `context` succeeds.
+    override def someFuture: Future[Any] = context.someFuture.map { _ => _theContext = this }
 
     private implicit val isabelleControl: Isabelle = isabelle.isabelleControl
     import isabelle.Ops._
 
-    _theContext = this
+    // Make sure not to return the constructor unless _theContext is initialized (or until this context is known to have failed)
+    if (_theContext == null)
+      Await.ready(someFuture, Duration.Inf)
 
     /** Parses an expression of type typ in shortform. Returns the term in longform.
      * Supports unicode input. */
