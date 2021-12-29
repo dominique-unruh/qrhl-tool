@@ -15,7 +15,15 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import GIsabelle.isabelleControl
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
+/**
+ * Expects subgoal: {A ⊓ R} c ~ d {B ⊓ R}
+ * New subgaol:
+ * - colocal_pred_qvars R fv(c1,d2)
+ * - {A} c ~ d {B}
+ *
+ * Conditions:
+ * - written classical variables of c,d (with index 1,2) do not occur in R
+ */
 case object FrameRuleTac extends Tactic {
   override val hash: Hash[FrameRuleTac.this.type] = HashTag()()
 
@@ -40,9 +48,12 @@ case object FrameRuleTac extends Tactic {
       val leftVarUse = left.variableUse(env)
       val rightVarUse = right.variableUse(env)
 
+      /** Classical vars in R */
       val rCVars = rRich.variables(env).classical
 
+      /** Written classical vars in c (indexed) */
       val leftCW1 = leftVarUse.writtenClassical.map(_.index1)
+      /** Written classical vars in c occurring in R  */
       val leftCWinter = rCVars.intersect(leftCW1)
       if (leftCWinter.nonEmpty)
         throw UserException(s"Rhs of postcondition ($rRich) and left program share written classical variable(s) ${leftCWinter.mkString(", ")}")
@@ -52,8 +63,10 @@ case object FrameRuleTac extends Tactic {
       if (rightCWinter.nonEmpty)
         throw UserException(s"Rhs of postcondition ($rRich) and right program share written classical variable(s) ${rightCWinter.mkString(", ")}")
 
+      /** quantum variables in c,d (with index) */
       val qVars12 = leftVarUse.quantum.map(_.index1).union(rightVarUse.quantum.map(_.index2))
       val qVars12list = qVars12.toList.map { v => (v.variableName, v.valueTyp) }
+      /** "colocal_pred_qvars R qVars12" */
       val colocality = AmbientSubgoal(RichTerm(Ops.colocalityOp(((r, qVars12list))).retrieveNow))
 
       val qrhlSubgoal = QRHLSubgoal(left, right, RichTerm(GIsabelle.predicateT, a), RichTerm(GIsabelle.predicateT, b), assumptions)

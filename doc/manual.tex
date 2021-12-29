@@ -546,7 +546,7 @@ happens. This is precisely described by the inner variables $I$.
 Note that besides declaring the different variable sets, the user does
 not have to care about them. When defining programs explicitly (using
 the \texttt{program} command), all variable sets will be automatically
-derived. Some tactics such as the \texttt{frame} and the
+derived. Some tactics such as the \hyperref[tactic:frame]{\texttt{frame}} and the
 \hyperref[tactic:equal]{\texttt{equal}} tactic heavily rely on the various variable sets to
 decide whether they can be applied.
 
@@ -2063,11 +2063,11 @@ tactics. (E.g., the \ruleref{Sample1} can be implemented as the tactic
 sequence \texttt{wp left. skip. simp.}) Some rules are not
 implemented in their full generality (e.g., \rulerefx{Frame} is
 implemented by \texttt{equal} which does not take into account readonly
-variables). Rules that are not yet implemented in the tool are:
+variables\TODOQ{better example becase \texttt{frame} implements Frame}). Rules that are not yet implemented in the tool are:
 \rulerefx{Sym}, \rulerefx{QrhlElim} (but we have
 \rulerefx{QrhlElimEq}), \rulerefx{JointSample}, \rulerefx{JointIf},
 \rulerefx{While1}, \rulerefx{JointWhile}, \rulerefx{JointMeasure},
-\rulerefx{JointMeasureSimple}.
+\rulerefx{JointMeasureSimple}. \TODOQ{check whether some need to be removed from this list}
 
 In the description of the rules, we use Isabelle/HOL syntax for
 expressions (in particular, for pre- and postconditions) because that
@@ -2518,6 +2518,25 @@ command.
 %
 This rule is justified by the fact that free ambient variables are
 implicitly all-quantified.
+
+\tactic{frame}
+
+When invoked as ``\texttt{frame}.'', the tactic applies the following rule:
+\[
+  \inferrule{
+    \fv(R) \cap \qu{V_{\bc\bd}} = \varnothing
+    \\
+    \rhl{A\cap R}\bc\bd{B\cap R}
+  }{
+    \rhl{A}\bc\bd B
+  }
+\]
+where $\qu{V_{\bc\bd}}$ are the quantum variables occurring in $\bc,\bd$ (indexed with $1$ or $2$, respectively).
+
+The tactic requires (and checks) that the written classical variables of $\bc,\bd$ (indexed with $1$ or $2$, respectively) are disjoint from $\fv(R)$.
+
+This tactic is a direct implementation of the rule \rulerefx{Frame}.
+
 
 \tactic{if}
 
