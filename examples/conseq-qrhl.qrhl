@@ -1,6 +1,12 @@
+# Simple example of how to use the "conseq qrhl" tactic.
+
+# This example does not show anything cryptographically meaningful,
+# it is a minimalistic example to show how the tactic is applied.
+
 isabelle.
 
-# TODO: document this
+# We declare quantum variables q,r,s,t,Z,u.
+# Note that Z has type int which is infinite.
 
 quantum var q : int.
 quantum var r : int.
@@ -9,29 +15,52 @@ quantum var t : int.
 quantum var Z : int.
 quantum var u : unit.
 
+# We declare the classical variable x.
 classical var x : int.
 
-adversary A free q.
+# The adversary A has access to variables x and q.
+# In this example, A stands for some program that we already have derived some information about.
+adversary A free x, q.
+
+
+# Let us assume that we have derived the following judgment q1.
+# It claims that if x is 1 before execution of A, then x will be 2 afterwards.
+# And it claims that if q,Z together is the same on both sides before execution, it will be the same on both sides after execution, too.
+# Note that Z is not one of the variables of A, and that Z has an infinite type.
+# Intuitively, this means that if q, together with an arbitrary (infinite) environment Z, is the same on both sides before execution it will be so afterwards.
+# (Instead of Z, we could also use the predefined infinite variable aux.)
 
 qrhl q1: {Cla[x1=1] ⊓ Qeq[q1,Z1 = q2,Z2]} call A; ~ call A; {Cla[x1=2] ⊓ Qeq[r1,Z1 = q2,Z2]}.
  admit.
 qed.
 
+# Now we derive the following judgment q2.
+# It makes almost the same claim, except:
+# * The postcondition only claims x1>1 (not x1=2) which is a simple weakening.
+# * The quantum equality now claims equality of q,s,t on both sides (i.e., s,t instead of Z).
+# Replacing Z by s,t cannot be done via the normal "conseq" tactic because Qeq[q1,Z1 = q2,Z2] and Qeq[q1,s1,t1 = q2,s2,t2] are incomparable predicates.
+# On the other hand, we expect q2 to hold if q1 holds, because the use of Z in q1 was arbitrary.
+
 qrhl q2: {Cla[x1=1] ⊓ Qeq[q1,s1,t1 = q2,s2,t2]} call A; ~ call A; {Cla[x1>1] ⊓ Qeq[r1,s1,t1 = q2,s2,t2]}.
+ # The following tactic replaces Z by s,t in q1 to prove q2.
  conseq qrhl (Z -> s,t): q1.
 
+ # We get three subgoals, one about justifying that we can replace Z by s,t
+ # (certain variable disjointness conditions and cardinality conditions)
+ # And subgoals comparing the pre-/postconditions (like in the regular "conseq" tactic)
  simp!.
  simp!.
  simp!.
 qed.
 
+# The following example is similar to q2, except that here we do not want to replace Z by other quantum variables but just remove Z from the pre/postconditions.
+
 qrhl q3: {Cla[x1=1] ⊓ Qeq[q1 = q2]} call A; ~ call A; {Cla[x1>1] ⊓ Qeq[r1 = q2]}.
+ # The syntax for replacing Z by nothing is "."
  conseq qrhl (Z -> .): q1.
 
  simp!.
  simp!.
  simp!.
 qed.
-
-
 
