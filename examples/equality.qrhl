@@ -1,3 +1,6 @@
+# Examples involving quantum equality.
+# See the qrhl-tool manual for an explanation of this example. (Section 7.3 "Quantum equality".)
+
 isabelle.
 
 quantum var q : bit.
@@ -26,13 +29,13 @@ qrhl {Qeq[q1=q2]} call prog1; ~ call prog2; {Qeq[q1=q2]}.
   inline prog1.
   inline prog2.
 
-  seq 0 1: quantum_equality_full idOp [|q1|] hadamard [|q2|].
+  seq 0 1: quantum_equality_full idOp ⟦q1⟧ hadamard ⟦q2⟧.
   { wp right.
     skip.
     simp!.
   }
 
-  seq 1 1: quantum_equality_full idOp [|q1|] hadamard [|q2|] ⊓ Cla[b1≠b2].
+  seq 1 1: quantum_equality_full idOp ⟦q1⟧ hadamard ⟦q2⟧ ⊓ Cla[b1≠b2].
   { rnd b,b <- map_distr (λb. (b,b+1)) (uniform UNIV). 
     skip.
     simp!.

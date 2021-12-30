@@ -1,3 +1,6 @@
+# Analysis of quantum teleportation.
+# See the qrhl-tool manual for an explanation of this example. (Section 7.4 "Quantum teleportation", the "instructive" proof.)
+
 isabelle Teleport.
 
 classical var a : bit.
