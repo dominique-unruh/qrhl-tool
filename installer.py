@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+import getpass
 import readline, sys, atexit, pathlib, os, urllib.request, tempfile, subprocess, tarfile, shutil
 from typing import List
 
@@ -232,11 +232,13 @@ But in that case, the long process will start the
 first time you run the qrhl-tool.
 *************************************************
 """)
-    build_qrhl = tempdir.joinpath("build.qrhl")
     bin_qrhl = qrhl_dir.joinpath("bin").joinpath("qrhl")
-    with open(build_qrhl, "wt") as f:
-        f.write("isabelle.\n")
-    subprocess.check_call([bin_qrhl.as_posix(), build_qrhl.as_posix()], stdout=subprocess.DEVNULL)
+
+    # In case this script is executed as root (most likely via sudo), try to find the original invoking user and sudo back to them.
+    if getpass.getuser()=="root": sudo = ["sudo", "-u", os.getlogin()]
+    else: sudo = []
+
+    subprocess.run(sudo + [bin_qrhl.as_posix()], input = b"isabelle.\n", stdout=subprocess.DEVNULL)
     print("Build completed successfully.")
 
 def install():
