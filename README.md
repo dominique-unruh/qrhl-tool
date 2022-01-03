@@ -12,6 +12,13 @@ You can download the binaries [here](https://github.com/dominique-unruh/qrhl-too
 
 The binary development snapshot can be downloaded from [here](https://nightly.link/dominique-unruh/qrhl-tool/workflows/test/master/qrhl.zip).
 
+On Linux, you can also use the interactive installer to install release or development snapshot. Using the following command line:
+```shell
+wget -nv https://github.com/dominique-unruh/qrhl-tool/raw/master/installer.py -O /tmp/installer.py && sudo python3 /tmp/installer.py
+```
+(This will install the dependencies as well, except Java and Emacs.
+`sudo` can be omitted if you install everything in your home directory.)
+
 ## Prerequisites
 
 * Java must be installed (at least Java 11), and the `java` executable must be in the path.
