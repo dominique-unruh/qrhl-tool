@@ -62,13 +62,14 @@ jobs:
         - name: make qrhl.zip
           run: |
             set -e
-            git clean -fd   # Otherwise GITREVISION in qrhl.zip may say "(modified working copy)" 
+            git clean -fdx   # Otherwise GITREVISION in qrhl.zip may say "(modified working copy)" 
             make qrhl.zip
             # We unzip qrhl.zip because actions/upload-artifact below insists on zipping the artifact
             rm -rf qrhl-zip-content
             mkdir qrhl-zip-content
             cd qrhl-zip-content
             unzip ../qrhl.zip
+            ls -lh
 
         - name: Upload qrhl.zip
           uses: actions/upload-artifact@v2
