@@ -256,7 +256,7 @@ object Toplevel {
       override def position: String = "<string>"
     }
     class Terminal extends ReadLine {
-      private val terminal = TerminalBuilder.terminal()
+      private val terminal = TerminalBuilder.builder().dumb(true).build()
       private val readlineFunction: String => String = {
         if (terminal.isInstanceOf[DumbTerminal]) {
           println("Using dumb readline instead of JLine.");
