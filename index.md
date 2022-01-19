@@ -1,7 +1,5 @@
 # qrhl-tool – Interactive theorem prover for qRHL
 
-## Intro
-
 Qrhl-tool is an interactive theorem prover for qRHL (quantum relational Hoare logic),
 specifically for quantum and post-quantum security proofs.
 
@@ -13,10 +11,11 @@ See the literature section for pointers for more in-depth explanations
 
 See [here](install.md) for installation instructions.
 
-## Documentation
+## Documentation and help
 
 * The [user manual](manual-0.6.pdf), included in the binary installation as `manual.pdf`
 * Example files, included in the binary installation in `examples/`
+* [Gitter chat](https://gitter.im/dominique-unruh/qrhl-tool)
 
 ## Papers
 
