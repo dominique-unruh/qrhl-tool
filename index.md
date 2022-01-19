@@ -1,37 +1,34 @@
-## Welcome to GitHub Pages
+# qrhl-tool – Interactive theorem prover for qRHL
 
-You can use the [editor on GitHub](https://github.com/dominique-unruh/qrhl-tool/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+## Intro
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+Qrhl-tool is an interactive theorem prover for qRHL (quantum relational Hoare logic),
+specifically for quantum and post-quantum security proofs.
 
-### Markdown
+See the literature section for pointers for more in-depth explanations
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+![Screenshot of qrhl-tool](screenshot.png)
 
-```markdown
-Syntax highlighted code block
+## Installation
 
-# Header 1
-## Header 2
-### Header 3
+See [here](install.md) for installation instructions.
 
-- Bulleted
-- List
+## Documentation
 
-1. Numbered
-2. List
+* The [user manual](manual-0.6.pdf), included in the binary installation as `manual.pdf`
+* Example files, included in the binary installation in `examples/`
 
-**Bold** and _Italic_ and `Code` text
+## Papers
 
-[Link](url) and ![Image](src)
-```
+* [Quantum Relational Hoare Logic](https://arxiv.org/abs/1802.03188), POPL 2013 – introduces the logic underlying the tool (recommended background!)
+* [Local Variables and Quantum Relational Hoare Logic](https://arxiv.org/pdf/2007.14155.pdf) – describes extensions of qRHL to handle local variables, used in qrhl-tool
+* [Post-Quantum Verification of Fujisaki-Okamoto](https://eprint.iacr.org/2020/962.pdf), Asiacrypt 2020 – describes the formalization of a Fujisaki-Okamoto variant in qrhl-tool.
 
-For more details see [Basic writing and formatting syntax](https://docs.github.com/en/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
+## Under the hood
 
-### Jekyll Themes
+The qrhl-tool uses a number of open-source libraries and tools, the most notable dependencies are:
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/dominique-unruh/qrhl-tool/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+* The [Isabelle](https://isabelle.in.tum.de/) theorem prover: for all non-qRHL specific reasoning.
+* [scala-isabelle](https://github.com/dominique-unruh/scala-isabelle): a library for controlling Isabelle within Scala.
+* [Complex_Bounded_Operators](https://www.isa-afp.org/entries/Complex_Bounded_Operators.html): An Isabelle formalization of complex bounded operators, building the foundation for the modeling of quantum mechanics in qrhl-tool.
+* Many more library dependencies, see the [build script](https://github.com/dominique-unruh/qrhl-tool/blob/master/build.sbt).
