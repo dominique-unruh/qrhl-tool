@@ -1,6 +1,6 @@
 \newif\ifdraft
 
-%\drafttrue
+\drafttrue
 
 \documentclass{article}
 \usepackage[utf8]{inputenc}
@@ -1382,18 +1382,18 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \hline
   \constdef{$A^*$\par$\mathtt{adjoint}\ A$}{(\beta,\alpha)\ \mathtt{cblinfun}}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$}
-  \toolconst{adjoint}
+  \toolconst{adj}
   &
   %
   The adjoint $A^*$ of $A$.
   \\
   \hline
-  \constdef{$A\cdot B$\par$\mathtt{timesOp}\ A\ B$}
+  \constdef{$A\cdot B$\par$A \mathbin{\circ_\mathit{CL}} B$\par$\mathtt{cblinfun\_compose}\ A\ B$}
   {(\alpha,\gamma)\ \mathtt{cblinfun}}
   {$A::(\beta,\gamma)\ \mathtt{cblinfun}$
     \par and
     $B::(\alpha,\beta)\ \mathtt{cblinfun}$}
-  \toolconst{timesOp}
+  \toolconst{cblinfun\_compose}
   \symbolindexmark\TOOLcdot
   &
   The product $AB$ of operators $A$ and $B$.
@@ -1401,12 +1401,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   The syntax $A\cdot B$
   is overloaded. If Isabelle/HOL has trouble recognizing which meaning
   of $\cdot$
-  is intended, use \texttt{timesOp}, or provide additional type
+  is intended, use \texttt{cblinfun\_compose}, or provide additional type
   information for $A$ and $B$.
 
   \texinput{\\cdot}
   \\
-  \hline \constdef{$A\cdot \psi$\par$\mathtt{cblinfun\_apply}\
+  \hline \constdef{$A\cdot \psi$\par$A \mathbin{*_V} \psi$\par$\mathtt{cblinfun\_apply}\
     A\ \psi$} {\beta}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$
     \par and
@@ -1425,12 +1425,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \texinput{\\cdot}
   \\
   \hline
-  \constdef{$A\cdot S$\par$\mathtt{applyOpSpace}\ A\ S$}
-  {\beta\ \mathtt{clinear\_space}}
+  \constdef{$A\cdot S$\par$A \mathbin{*_S} S$\par$\mathtt{cblinfun\_image}\ A\ S$}
+  {\beta\ \mathtt{ccsubspace}}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$
     \par and
-    $S::\alpha\ \mathtt{clinear\_space}$}
-  \toolconst{applyOpSpace}
+    $S::\alpha\ \mathtt{ccsubspace}$}
+  \toolconst{cblinfun\_image}
   \symbolindexmark\TOOLcdot
   &
   The result $AS=\{A\psi:\psi\in S\}$ of applying the operator $A$ to the subspace $\psi$.
@@ -1438,16 +1438,16 @@ for getting the special characters (marked ``How to input:'' in the table below)
   The syntax $A\cdot S$
   is overloaded. If Isabelle/HOL has trouble recognizing which meaning
   of $\cdot$
-  is intended, use \texttt{applyOpSpace}, or provide additional type
+  is intended, use \texttt{cblinfun\_image}, or provide additional type
   information for the $A$ and $S$.
 
   \texinput{\\cdot}
   \\
   \hline
-  \constdef{$\mathtt{idOp}$}
+  \constdef{$\mathtt{id\_cblinfun}$}
   {(\alpha,\alpha)\ \mathtt{cblinfun}}
   {}
-  \toolconst{idOp}
+  \toolconst{id\_cblinfun}
   &
   The identity operator $\id$ on $\elltwo\alpha$.
   \\
@@ -1490,7 +1490,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \hline
   \constdef{$\mathtt{Proj}\ S$}
   {(\alpha,\alpha)\ \mathtt{cblinfun}}
-  {$S :: \alpha\ \mathtt{clinear\_space}$}
+  {$S :: \alpha\ \mathtt{ccsubspace}$}
   \toolconst{Proj}
   &
   The projector onto subspace $S$.
@@ -1591,7 +1591,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   available.
 
   Examples of types that have these sorts are \texttt{bit},
-  \texttt{int}, $(\dots,\dots)\ \mathtt{nlist}$.
+  \texttt{int}, $\mathtt{nlist}$.
   (The latter is defined in CryptHOL \cite{crypthol}, but you
   additionally need to import the theory
   \texttt{QRHL.CryptHOL\_Missing}.)
@@ -1704,7 +1704,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
     $\mathtt{lift}\ S\ Q$\par
     $\mathtt{liftSpace}\ S\ Q$}
   {\mathtt{predicate}}
-  {$A::\alpha\ \mathtt{clinear\_space}$
+  {$A::\alpha\ \mathtt{ccsubspace}$
     \par and
   $Q::\alpha\ \mathtt{variables}$}
   \symbolindexmark\TOOLfrqq
@@ -1872,7 +1872,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   % \hline
   % \constdef{$\mathtt{span}\ M$\par
   %   $\mathtt{spanState}\ M$}
-  % {\alpha\ \mathtt{clinear\_space}}
+  % {\alpha\ \mathtt{ccsubspace}}
   % {$M::\alpha\ \mathtt{state}\ \mathtt{set}$}
   % \toolconst{span}
   % \toolconst{spanState}
@@ -1890,7 +1890,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   % 
   \hline
   \constdef{$\mathtt{span}\ M$}
-  {\alpha\ \mathtt{clinear\_space}}
+  {\alpha\ \mathtt{ccsubspace}}
   {$M::\alpha\ \mathtt{ell2}\ \mathtt{set}$}
   \toolconst{span}
   \toolconst{spanVector}
@@ -1946,8 +1946,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
 
   This is an abbreviation for
   \[
-    \mathtt{quantum\_equality\_full}\ \mathtt{idOp}\ Q_1\
-    \mathtt{idOp}\ Q_2.
+    \mathtt{quantum\_equality\_full}\ \mathtt{id\_cblinfun}\ Q_1\
+    \mathtt{id\_cblinfun}\ Q_2.
   \]
   (That is, Isabelle/HOL internally expands this
   abbreviation whenever it encounters it.)
@@ -1995,8 +1995,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
   %
   \hline
   \constdef{$\mathtt{ortho}\ S$}
-  {\alpha\ \mathtt{clinear\_space}}
-  {$S::\alpha\ \mathtt{clinear\_space}$}
+  {\alpha\ \mathtt{ccsubspace}}
+  {$S::\alpha\ \mathtt{ccsubspace}$}
   \toolconst{ortho}
   &
   Orthogonal complement $\orth S$ of $S$.
@@ -2005,8 +2005,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$S\tensor T$\par
     $\mathtt{tensor}\ S\  T$\par
     $\mathtt{tensorSpace}\ S\  T$}
-  {(\alpha,\beta)\ \mathtt{clinear\_space}}
-  {$S::\alpha\ \mathtt{clinear\_space}$ and $ T::\beta\ \mathtt{clinear\_space}$}
+  {(\alpha,\beta)\ \mathtt{ccsubspace}}
+  {$S::\alpha\ \mathtt{ccsubspace}$ and $ T::\beta\ \mathtt{ccsubspace}$}
   \toolconst{tensor}
   \toolconst{tensorSpace}
   \symbolindexmark\TOOLotimes
@@ -4259,7 +4259,7 @@ program prog2 := {
   on q apply hadamard;
   b <$ uniform UNIV;
   on q apply (if b=1
-     then hadamard else idOp); }.
+     then hadamard else id\_cblinfun); }.
   \end{lstlisting}%
 \end{tabular}
 }
@@ -4291,7 +4291,7 @@ $H$
 is applied, otherwise nothing is done.  In contrast, in
 \texttt{prog2}, there is always an application on $\qq$,
 but the operator that is applied is computed using the expression
-\texttt{if b=1 then hadamard else idOp} which evaluates to $H$
+\texttt{if b=1 then hadamard else id\_cblinfun} which evaluates to $H$
 or to the identity. In other words, in \texttt{prog1}, we use a
 language-level conditional and perform an actual branching. While in
 \texttt{prog2}, no branching occurs, and the conditional is encoded in
@@ -4313,7 +4313,7 @@ the final, lengthy, verification condition.
 and use the tactic \texttt{inline} to inline the code of both
 programs. Then we use \texttt{seq 0 1: $I_1$}
 with
-$I_1:=\texttt{quantum\_equality\_full idOp
+$I_1:=\texttt{quantum\_equality\_full id\_cblinfun
   $\llbracket$q1$\rrbracket$
   hadamard $\llbracket$q2$\rrbracket$}$
 to split off the first statement of the right program. That is, we
@@ -4340,7 +4340,7 @@ We are left with the new goal
       if (b=1) then on q apply hadamard; else skip;}} \\
   \pmb\sim
   {\texttt{b <\$ uniform UNIV;
-      on q apply (if b=1 then hadamard else idOp);}}
+      on q apply (if b=1 then hadamard else id\_cblinfun);}}
   \
   \{\qq_1\quanteq\qq_2\}
 \end{multline*}
@@ -4348,7 +4348,7 @@ We then claim that the sampling of $b$
 on both sides leads to $b_1\neq b_2$.
 That is, we use the tactic \texttt{seq 1 1: $I_2$}
 with
-$I_2:=\texttt{quantum\_equality\_full idOp
+$I_2:=\texttt{quantum\_equality\_full id\_cblinfun
   $\llbracket$q1$\rrbracket$
   hadamard $\llbracket$q2$\rrbracket$
   $\sqcap$ Cla[b1≠b2].}$ to split off the two samplings into a separate qRHL
@@ -4369,7 +4369,7 @@ Now, we are left with the subgoal
   \{I_2\}\
   {\texttt{if (b=1) then on q apply hadamard; else skip;}} \\
   \pmb\sim
-  {\texttt{on q apply (if b=1 then hadamard else idOp);}}
+  {\texttt{on q apply (if b=1 then hadamard else id\_cblinfun);}}
   \
   \{\qq_1\quanteq\qq_2\}
   \label{eq:I2.rhl}
@@ -4539,7 +4539,7 @@ and the resulting subgoal can be proven directly using
 Then we rewrite the precondition $I_1$
 into
 \[
-  I_2:=(\mathtt{quantum\_equality\_full}\ \mathtt{idOp}\ ⟦C_1,A_1,B_1⟧\
+  I_2:=(\mathtt{quantum\_equality\_full}\ \mathtt{id\_cblinfun}\ ⟦C_1,A_1,B_1⟧\
   (\texttt{addState EPR})\ ⟦A_2⟧)
 \] using tactic \texttt{\frenchspacing conseq pre: $I_2$.}
 We get a new subgoal $I_1\leq I_2$
@@ -4560,10 +4560,10 @@ where $\bc_1$ is \texttt{teleport} without the first line.
 We now show that the next two lines (applying CNOT and Hadamard)
 lead to the following invariant:
 \begin{multline*}
-  I_3 := \Bigl(\texttt{quantum\_equality\_full idOp }⟦C_1,A_1,B_1⟧
+  I_3 := \Bigl(\texttt{quantum\_equality\_full id\_cblinfun }⟦C_1,A_1,B_1⟧
     \\
-  \pb\paren{(\mathtt{hadamard} ⊗ \mathtt{idOp}) ⋅ \mathtt{assoc\_op}^* ⋅
-    (\mathtt{CNOT} ⊗ \mathtt{idOp}) ⋅ \mathtt{assoc\_op} ⋅ \mathtt{addState}\ \mathtt{EPR}}\ ⟦A_2⟧
+  \pb\paren{(\mathtt{hadamard} ⊗ \mathtt{id\_cblinfun}) ⋅ \mathtt{assoc\_op}^* ⋅
+    (\mathtt{CNOT} ⊗ \mathtt{id\_cblinfun}) ⋅ \mathtt{assoc\_op} ⋅ \mathtt{addState}\ \mathtt{EPR}}\ ⟦A_2⟧
   \Bigr)
 \end{multline*}
 In other words, we claim that after those two lines, the quantum
@@ -4581,7 +4581,7 @@ usually identifies those types. For example
 $\mathtt{addState}\ \mathtt{EPR}$
 is an operator from $\elltwo{\mathtt{bit}}$
 to $\elltwo{\mathtt{bit}\times(\mathtt{bit}\times\mathtt{bit})}$.
-And $\mathtt{CNOT}\otimes\mathtt{idOp}$
+And $\mathtt{CNOT}\otimes\mathtt{id\_cblinfun}$
 is an operator on
 $\elltwo{(\mathtt{bit}\times\mathtt{bit})\times\mathtt{bit}}$.
 So we cannot multiply those operators (a type error would be raised by

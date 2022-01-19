@@ -7,7 +7,7 @@ DIR="$(dirname "$DIR")"
 
 if ! [ -e "$DIR/isabelle-thys" ]; then
     echo >/dev/stderr "Cannot determine the installation directory that contains the qrhl tool."
-    echo >/dev/stderr "Please edit the line 'DIR=...' in proofgeneral.sh, it should set DIR to the installation directory."
+    echo >/dev/stderr "Please edit the line 'DIR=...' in bin/qrhl, it should set DIR to the installation directory."
     exit 1
 fi
 

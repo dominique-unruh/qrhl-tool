@@ -82,4 +82,8 @@ declare cblinfun.scaleC_right[simp]
 (* Giving it a name to make adding/removing [simp] easier *)
 lemmas le_Inf_iff_subspace[simp] = le_Inf_iff[where 'a=\<open>_::chilbert_space ccsubspace\<close>]
 
+type_synonym 'a clinear_space = \<open>'a ccsubspace\<close>
+
+abbreviation (input) \<open>isProjector \<equiv> is_Proj\<close>
+
 end
