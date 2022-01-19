@@ -11,7 +11,7 @@ On Linux, you can also use the interactive installer to install release or devel
 ```shell
 wget -nv https://github.com/dominique-unruh/qrhl-tool/raw/master/installer.py -O /tmp/installer.py && sudo python3 /tmp/installer.py
 ```
-(This will install the dependencies as well, except Java and Emacs.
+(This will install the prerequisites as well, except Java and Emacs.
 `sudo` can be omitted if you install everything in your home directory.)
 
 ## Prerequisites

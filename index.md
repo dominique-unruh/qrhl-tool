@@ -20,7 +20,7 @@ See [here](install.md) for installation instructions.
 
 ## Papers
 
-* [Quantum Relational Hoare Logic](https://arxiv.org/abs/1802.03188), POPL 2013 – introduces the logic underlying the tool (recommended background!)
+* [Quantum Relational Hoare Logic](https://arxiv.org/abs/1802.03188), POPL 2019 – introduces the logic underlying the tool (recommended background!)
 * [Local Variables and Quantum Relational Hoare Logic](https://arxiv.org/pdf/2007.14155.pdf) – describes extensions of qRHL to handle local variables, used in qrhl-tool
 * [Post-Quantum Verification of Fujisaki-Okamoto](https://eprint.iacr.org/2020/962.pdf), Asiacrypt 2020 – describes the formalization of a Fujisaki-Okamoto variant in qrhl-tool.
 
