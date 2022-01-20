@@ -1492,74 +1492,28 @@ qed *)
 
 section \<open>Common quantum objects\<close>
 
-definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))" for CNOT
+(* definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))" for CNOT *)
 lemma unitaryCNOT[simp]: "unitary CNOT"
-  unfolding CNOT_def apply (rule unitary_classical_operator)
-  apply (rule o_bij[where g="\<lambda>(x,y). (x,y+x)"]; rule ext; rename_tac xy; case_tac xy)
-  by (auto simp add: bit_neq)
+  sorry
 
 lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
-proof -
-  define f where "f = (\<lambda>(x::bit,y). (x,y+x))"
-  have[simp]: "f o f = id"
-    unfolding f_def o_def id_def by fastforce
-  have[simp]: "bij f"
-    apply (rule o_bij[where g="f"]; rule ext) by auto
-  then have[simp]: "inj f"
-    by (rule bij_is_inj)
-  have[simp]: "surj f"
-    apply (rule bij_is_surj) by simp
-  have inv_f[simp]: "Hilbert_Choice.inv f = f"
-    apply (rule inv_unique_comp) by auto
-  have [simp]: "inv_map (Some \<circ> f) = Some \<circ> f"
-    apply (subst inv_map_total) by simp_all
-  show ?thesis
-    unfolding CNOT_def
-    apply (subst classical_operator_adjoint)
-    unfolding f_def[symmetric]
-    by auto
-qed
+  by simp
 
 lemma CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = id_cblinfun"
   using unitaryCNOT unfolding unitary_def adjoint_CNOT by simp
 
-definition [code del]: "pauliX = classical_operator (Some o (\<lambda>x::bit. x+1))"
+(* definition [code del]: "pauliX = classical_operator (Some o (\<lambda>x::bit. x+1))" *)
 lemma unitaryX[simp]: "unitary pauliX"
-  unfolding pauliX_def apply (rule unitary_classical_operator)
-  apply (rule o_bij[where g="\<lambda>x. x+1"]; rule ext)
-  unfolding o_def id_def by auto
+  by (simp add: unitary_def)
 
-lemma adjoint_X[simp]: "pauliX* = pauliX"
-proof -
-  define f where "f = (\<lambda>x::bit. x+1)"
-  have[simp]: "f o f = id"
-    unfolding f_def o_def id_def by auto
-  have[simp]: "bij f"
-    apply (rule o_bij[where g="f"]; rule ext) by auto
-  have[simp]: "inj f"
-    apply (rule bij_is_inj) by simp
-  have[simp]: "surj f"
-    apply (rule bij_is_surj) by simp
-  have inv_f[simp]: "Hilbert_Choice.inv f = f"
-    apply (rule inv_unique_comp) by auto
-  have [simp]: "inv_map (Some \<circ> f) = Some \<circ> f"
-    apply (subst inv_map_total) by simp_all
-  show ?thesis
-    unfolding pauliX_def
-    apply (subst classical_operator_adjoint)
-    unfolding f_def[symmetric]
-    by auto
-qed
+lemmas adjoint_X[simp] = pauliX_adjoint
 
+lemmas X_X[simp] = pauliXX
 
-lemma X_X[simp]: "pauliX \<cdot> pauliX = id_cblinfun"
-  using unitaryX unfolding unitary_def adjoint_CNOT by simp
-
-consts hadamard :: "(bit,bit) l2bounded"
+(* consts hadamard :: "(bit,bit) l2bounded" *)
 lemma unitaryH[simp]: "unitary hadamard"
   by (cheat TODO14)
-lemma adjoint_H[simp]: "hadamard* = hadamard"
-  by (cheat TODO15)
+lemmas adjoint_H[simp] = hada_adj
 
 lemma H_H[simp]: "hadamard \<cdot> hadamard = id_cblinfun"
   using unitaryH unfolding unitary_def by simp
@@ -1570,16 +1524,13 @@ lemma [simp]: "isometry (1 / sqrt2 \<cdot> hadamard')"
   unfolding hadamard'_def by simp *)
 
 
-definition [code del]: "pauliZ = hadamard \<cdot> pauliX \<cdot> hadamard"
+(* definition [code del]: "pauliZ = hadamard \<cdot> pauliX \<cdot> hadamard" *)
 lemma unitaryZ[simp]: "unitary pauliZ"
-  unfolding pauliZ_def by simp 
+  by (simp add: unitary_def)
 
-lemma adjoint_Z[simp]: "pauliZ* = pauliZ"
-  unfolding pauliZ_def apply simp
-  by (simp add: cblinfun_compose_assoc)
+lemmas adjoint_Z[simp] = pauliZ_adjoint
 
-lemma Z_Z[simp]: "pauliZ \<cdot> pauliZ = id_cblinfun"
-  using unitaryZ unfolding unitary_def by simp
+lemmas Z_Z[simp] = pauliZZ
 
 consts pauliY :: "(bit,bit) l2bounded"
 lemma unitaryY[simp]: "unitary pauliY"

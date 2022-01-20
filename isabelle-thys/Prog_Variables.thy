@@ -8,21 +8,57 @@ theory Prog_Variables
     Misc_Missing
   (* keywords "variables" :: thy_decl_block *)
     Missing_Bounded_Operators
+    Registers.Classical_Extra
+    Registers.Quantum_Extra
 begin
 
 unbundle cblinfun_notation
+no_notation m_inv ("inv\<index> _" [81] 80)
+hide_const (open) Order.top
 
 (* hide_const (open) Classical_Extra.X Classical_Extra.Y Classical_Extra.x Classical_Extra.y *)
 
 type_synonym 'a cupdate = \<open>'a \<Rightarrow> 'a option\<close>
 type_synonym 'a qupdate = \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
 
-axiomatization cregister_raw :: \<open>('a cupdate \<Rightarrow> 'b cupdate) \<Rightarrow> bool\<close>
+subsection \<open>Generalizing quantum registers to infinite dimensional case\<close>
+
+text \<open>The \<^session>\<open>Registers\<close> session does not support infinite dimensional registers (yet).
+In order to keep the development compatible, instead of restating all of the definitions and facts from \<^session>\<open>Registers\<close>,
+we (axiomatically) "clone" the relevant definitions/facts without the \<^class>\<open>finite\<close>-constraint\<close>
+
+setup \<open>Sign.add_const_constraint (\<^const_name>\<open>Axioms_Quantum.register_pair\<close>, SOME \<^typ>\<open>('a update \<Rightarrow> 'c update) \<Rightarrow> ('b update \<Rightarrow> 'c update) \<Rightarrow> (('a\<times>'b) update \<Rightarrow> 'c update)\<close>)\<close>
+setup \<open>Sign.add_const_constraint (\<^const_name>\<open>Axioms_Quantum.register\<close>, SOME \<^typ>\<open>('a update \<Rightarrow> 'b update) \<Rightarrow> bool\<close>)\<close>
+setup \<open>Sign.add_const_constraint (\<^const_name>\<open>Laws_Quantum.compatible\<close>, SOME \<^typ>\<open>('a update \<Rightarrow> 'c update) \<Rightarrow> ('b update \<Rightarrow> 'c update) \<Rightarrow> bool\<close>)\<close>
+setup \<open>Sign.add_const_constraint (\<^const_name>\<open>Finite_Tensor_Product.tensor_op\<close>, SOME \<^typ>\<open>('a ell2, 'b ell2) cblinfun \<Rightarrow> ('c ell2, 'd ell2) cblinfun \<Rightarrow> (('a\<times>'c) ell2, ('b\<times>'d) ell2) cblinfun\<close>)\<close>
+
+axiomatization where UNSOUND_everything_finite[no_atp]: \<open>class.finite t\<close> for t :: \<open>'a itself\<close>
+
+declare [[show_sorts]]
+declare Laws_Quantum.pair_is_register[simp del]
+lemmas pair_is_register[simp] = Laws_Quantum.pair_is_register[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
+lemmas register_pair_apply = Laws_Quantum.register_pair_apply[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
+lemmas compatible_register1 = Laws_Quantum.compatible_register1[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
+lemmas compatible_register2 = Laws_Quantum.compatible_register2[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
+lemmas compatible_def = Laws_Quantum.compatible_def[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
+lemmas register_comp = Axioms_Quantum.register_comp[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
+declare [[show_sorts=false]]
+
+subsubsection \<open>Wrapper types around registers\<close>
+
+abbreviation \<open>cregister_raw \<equiv> Axioms_Classical.register\<close>
+abbreviation \<open>qregister_raw \<equiv> Axioms_Quantum.register\<close>
+
+axiomatization where tensor_op_compat: \<open>tensorOp = tensor_op\<close>
+
+axiomatization 
   where cregister_raw_empty: \<open>cregister_raw F \<Longrightarrow> F Map.empty = Map.empty\<close>
     and cregister_raw_1: \<open>cregister_raw F \<Longrightarrow> F Some = Some\<close>
-axiomatization qregister_raw :: \<open>('a qupdate \<Rightarrow> 'b qupdate) \<Rightarrow> bool\<close>
+  for F :: \<open>'a cupdate \<Rightarrow> 'b cupdate\<close>
+axiomatization
   where qregister_raw_1: \<open>qregister_raw F \<Longrightarrow> F id_cblinfun = id_cblinfun\<close>
     and qregister_raw_bounded_clinear: \<open>qregister_raw F \<Longrightarrow> bounded_clinear F\<close>
+  for F :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
 
 lemma qregister_raw_0: \<open>qregister_raw F \<Longrightarrow> F 0 = 0\<close>
   by (intro complex_vector.linear_0 bounded_clinear.clinear qregister_raw_bounded_clinear)
@@ -135,26 +171,44 @@ definition ccommuting_raw :: \<open>('a cupdate \<Rightarrow> 'c cupdate) \<Righ
 definition qcommuting_raw :: \<open>('a qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> ('b qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> bool\<close> where
   \<open>qcommuting_raw F G \<longleftrightarrow> (\<forall>a b. F a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L F a)\<close>
 
-definition ccompatible_raw :: \<open>('a cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> ('b cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> bool\<close> where
+abbreviation \<open>ccompatible_raw \<equiv> Laws_Classical.compatible\<close>
+lemmas ccompatible_raw_def = Laws_Classical.compatible_def
+abbreviation \<open>qcompatible_raw \<equiv> Laws_Quantum.compatible\<close>
+lemmas qcompatible_raw_def = compatible_def
+
+(* definition ccompatible_raw :: \<open>('a cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> ('b cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> bool\<close> where
   \<open>ccompatible_raw F G \<longleftrightarrow> cregister_raw F \<and> cregister_raw G \<and> (\<forall>a b. F a \<circ>\<^sub>m G b = G b \<circ>\<^sub>m F a)\<close>
 definition qcompatible_raw :: \<open>('a qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> ('b qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> bool\<close> where
-  \<open>qcompatible_raw F G \<longleftrightarrow> qregister_raw F \<and> qregister_raw G \<and> (\<forall>a b. F a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L F a)\<close>
+  \<open>qcompatible_raw F G \<longleftrightarrow> qregister_raw F \<and> qregister_raw G \<and> (\<forall>a b. F a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L F a)\<close> *)
 
 lift_definition ccompatible :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is ccompatible_raw.
 lift_definition qcompatible :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is qcompatible_raw.
 
-axiomatization cregister_pair :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> ('a\<times>'b, 'c) cregister\<close>
-  where cregister_pair_iff_compatible: \<open>cregister (cregister_pair F G) \<longleftrightarrow> ccompatible F G\<close>
-axiomatization qregister_pair :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> ('a\<times>'b, 'c) qregister\<close>
-  where qregister_pair_iff_compatible: \<open>qregister (qregister_pair F G) \<longleftrightarrow> qcompatible F G\<close>
+lift_definition cregister_pair :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> ('a\<times>'b, 'c) cregister\<close> 
+  is \<open>\<lambda>F G. if ccompatible_raw F G then Axioms_Classical.register_pair F G else non_cregister_raw\<close>
+  by simp
+lift_definition qregister_pair :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> ('a\<times>'b, 'c) qregister\<close> 
+  is \<open>\<lambda>F G. if qcompatible_raw F G then Axioms_Quantum.register_pair F G else non_qregister_raw\<close>
+  by simp
 
-definition tensor_map :: \<open>'a cupdate \<Rightarrow> 'b cupdate \<Rightarrow> ('a\<times>'b) cupdate\<close> where
-  \<open>tensor_map a b m = (case a (fst m) of None \<Rightarrow> None | Some x \<Rightarrow> (case b (snd m) of None \<Rightarrow> None | Some y \<Rightarrow> Some (x,y)))\<close>
+lemma cregister_pair_iff_compatible: \<open>cregister (cregister_pair F G) \<longleftrightarrow> ccompatible F G\<close>
+  apply transfer
+  by (auto simp: non_cregister_raw)
+lemma qregister_pair_iff_compatible: \<open>qregister (qregister_pair F G) \<longleftrightarrow> qcompatible F G\<close>
+  apply transfer
+  by (auto simp: non_qregister_raw)
 
-axiomatization where apply_cregister_pair: \<open>ccompatible F G \<Longrightarrow> 
+abbreviation \<open>tensor_map \<equiv> Axioms_Classical.tensor_update\<close>
+
+lemma apply_cregister_pair: \<open>ccompatible F G \<Longrightarrow> 
   apply_cregister (cregister_pair F G) (tensor_map a b) = apply_cregister F a \<circ>\<^sub>m apply_cregister G b\<close>
-axiomatization where apply_qregister_pair: \<open>qcompatible F G \<Longrightarrow> 
+  apply transfer
+  using Laws_Classical.register_pair_apply Laws_Classical.compatible_register1 Laws_Classical.compatible_register2 non_cregister_raw by auto
+
+lemma apply_qregister_pair: \<open>qcompatible F G \<Longrightarrow>
   apply_qregister (qregister_pair F G) (tensorOp a b) = apply_qregister F a o\<^sub>C\<^sub>L  apply_qregister G b\<close>
+  apply transfer
+  by (auto simp: tensor_op_compat compatible_register1 compatible_register2 non_qregister_raw register_pair_apply)
 
 lift_definition CCcompatible :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> bool\<close> is
   \<open>\<lambda>F G. \<forall>a\<in>F. \<forall>b\<in>G. a \<circ>\<^sub>m b = b \<circ>\<^sub>m a\<close>.
@@ -230,10 +284,11 @@ axiomatization where CCcompatible_sym: \<open>CCcompatible F G \<Longrightarrow>
 axiomatization where QQcompatible_sym: \<open>QQcompatible F G \<Longrightarrow> QQcompatible G F\<close> for F G :: \<open>'a QREGISTER\<close>
 
 lemma ccompatible_CCcompatible: \<open>ccompatible F G \<longleftrightarrow> cregister F \<and> cregister G \<and> CCcompatible (CREGISTER_of F) (CREGISTER_of G)\<close>
-  apply (transfer fixing: F G) apply auto
-  by (transfer; simp add: ccompatible_raw_def)+
+  apply (transfer fixing: F G)
+  apply transfer by (auto simp: Laws_Classical.compatible_def)
 lemma qcompatible_QQcompatible: \<open>qcompatible F G \<longleftrightarrow> qregister F \<and> qregister G \<and> QQcompatible (QREGISTER_of F) (QREGISTER_of G)\<close>
-  apply (transfer fixing: F G) apply auto
+  apply (transfer fixing: F G)
+  apply auto
   by (transfer; simp add: qcompatible_raw_def)+
 
 lemma CCcompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow> CCcompatible (CREGISTER_of F) (CREGISTER_of G)\<close>
@@ -295,13 +350,13 @@ axiomatization where qcompatible_Fst_Snd[simp]: \<open>qcompatible qFst qSnd\<cl
 
 lift_definition cregister_chain :: \<open>('b,'c) cregister \<Rightarrow> ('a,'b) cregister \<Rightarrow> ('a,'c) cregister\<close>
   is \<open>\<lambda>F G. if cregister_raw F \<and> cregister_raw G then F o G else non_cregister_raw\<close>
-  sorry
+  by auto
 lift_definition qregister_chain :: \<open>('b,'c) qregister \<Rightarrow> ('a,'b) qregister \<Rightarrow> ('a,'c) qregister\<close>
   is \<open>\<lambda>F G. if qregister_raw F \<and> qregister_raw G then F o G else non_qregister_raw\<close>
-  sorry
+  by (metis (no_types, lifting) register_comp UnCI mem_Collect_eq singletonI)
 
-axiomatization where cregister_raw_chain: \<open>cregister_raw F \<Longrightarrow> cregister_raw G \<Longrightarrow> cregister_raw (F o G)\<close>
-axiomatization where qregister_raw_chain: \<open>qregister_raw F \<Longrightarrow> qregister_raw G \<Longrightarrow> qregister_raw (F o G)\<close>
+lemmas cregister_raw_chain = Axioms_Classical.register_comp
+lemmas qregister_raw_chain = register_comp
 
 lemma cregister_chain_apply[simp]: \<open>apply_cregister (cregister_chain F G) = apply_cregister F o apply_cregister G\<close>
   apply (rule ext) apply transfer

@@ -40,13 +40,13 @@ lemma bounded_of_mat_Z[code]: "mat_of_cblinfun pauliZ = matrix_Z"
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
 lemma bounded_of_mat_Y[code]: "mat_of_cblinfun pauliY = matrix_Y"
   by (cheat 16)
-definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
+(* definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]" *)
 lemma bounded_of_mat_hadamard[code]: "mat_of_cblinfun hadamard = matrix_hadamard"
   sorry
 (*   unfolding hadamard_def
   apply (rule cblinfun_of_mat_inverse)
   by (auto simp add: matrix_hadamard_def) *)
-definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]"
+(* definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]" *)
 lemma bounded_of_mat_CNOT[code]: "mat_of_cblinfun CNOT = matrix_CNOT"
   sorry
   (* unfolding CNOT_def
