@@ -1,9 +1,18 @@
+# An example for showing an equivalence of samplings that can (probably) not be shown with the "rnd" tactic in EasyCrypt (which requires a bijection between the random choices in the two programs.
+# See also the documentation of the "rnd" tactic in the manual of the qrhl-tool.
+
 isabelle.
 
 classical var x : int.
 ambient var d : int distr.
 
+# We show: if we pick a number according to some distribution on the left,
+# and a square of a number of that distribution on the right,
+# then the square of the left number is the right one.
+
 qrhl {top} x <$ d; ~ x <$ map_distr (λz. z*z) d; { Cla[x1*x1 = x2] }.
+  # The relationship between the two distributions is elementary:
+  # We can describe it by a joint distribution that returns a pair of a d-distributed number and its square.
   rnd x,x <- map_distr (λz. (z, z*z)) d.
   simp.
   skip.

@@ -232,9 +232,11 @@ object Directory {
         val ls2 = ls filter { ref =>
           val content = ref.underlying.get
           (content == null) || (content == listener) }
-        if (ls2.isEmpty)
+        if (ls2.isEmpty) {
+          watchKey.cancel()
+          watchKey.pollEvents()
           listeners.remove(watchKey)
-        else
+        } else
           listeners.put(watchKey, ls2)
     }
   }
@@ -244,9 +246,11 @@ object Directory {
       case None =>
       case Some(ls) =>
         val ls2 = ls filterNot { ref => ref eq listenerRef }
-        if (ls2.isEmpty)
+        if (ls2.isEmpty) {
+          watchKey.cancel()
+          watchKey.pollEvents()
           listeners.remove(watchKey)
-        else
+        } else
           listeners.put(watchKey, ls2)
     }
   }
@@ -281,24 +285,26 @@ object Directory {
     override def run(): Unit = {
       while (true) {
         val key = watchService.take()
-        val events = key.pollEvents()
-        val keyListeners = synchronized(listeners.getOrElse(key, { logger.error(s"Did not find a listener for key $key"); Nil }))
-        for (listenerRef <- keyListeners) {
-          listenerRef.get match {
-            case None =>
-            case Some(listener) =>
-              events.forEach { event => try {
-                event.kind() match {
-                  case OVERFLOW => listener.onOverflow()
-                  case ENTRY_CREATE => listener.onCreate(event.context().asInstanceOf[Path])
-                  case ENTRY_MODIFY => listener.onModify(event.context().asInstanceOf[Path])
-                  case ENTRY_DELETE => listener.onDelete(event.context().asInstanceOf[Path])
-                }}
-              catch {
-                case e : Throwable => logger.error(e)(s"Listener threw exception on event $event")
-              }}}
+        try {
+          val events = key.pollEvents()
+          val keyListeners = synchronized(listeners.getOrElse(key, { logger.error(s"Did not find a listener for key $key"); Nil }))
+          for (listenerRef <- keyListeners) {
+            listenerRef.get match {
+              case None =>
+              case Some(listener) =>
+                events.forEach { event => try {
+                  event.kind() match {
+                    case OVERFLOW => listener.onOverflow()
+                    case ENTRY_CREATE => listener.onCreate(event.context().asInstanceOf[Path])
+                    case ENTRY_MODIFY => listener.onModify(event.context().asInstanceOf[Path])
+                    case ENTRY_DELETE => listener.onDelete(event.context().asInstanceOf[Path])
+                  }}
+                catch {
+                  case e : Throwable => logger.error(e)(s"Listener threw exception on event $event")
+                }}}
           }
-        key.reset()
+        } finally
+          key.reset()
       }
     }
   }

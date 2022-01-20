@@ -8,7 +8,6 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 lazy val root = (project in file("."))
   .dependsOn(RootProject(file("scala-isabelle")))
   .dependsOn(hashedcomputation)
-  .aggregate(hashedcomputation)
 
 lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   scalaVersion := "2.13.3",
@@ -122,6 +121,8 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 // To avoid that several tests simultaneously try to build Isabelle
 parallelExecution in Test := false
 Test / run / javaOptions += "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug"
+
+test := (Test / test).dependsOn(hashedcomputation / Test / test).value
 
 javaOptions in Universal += "-J-Xss10m"
 
