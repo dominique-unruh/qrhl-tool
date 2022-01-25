@@ -1,6 +1,6 @@
 \newif\ifdraft
 
-\drafttrue
+%\drafttrue
 
 \documentclass{article}
 \usepackage[utf8]{inputenc}
@@ -1380,7 +1380,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \hline
   \subhead{Operators}
   \hline
-  \constdef{$A^*$\par$\mathtt{adjoint}\ A$}{(\beta,\alpha)\ \mathtt{cblinfun}}
+  \constdef{$A^*$\par$\mathtt{adj}\ A$}{(\beta,\alpha)\ \mathtt{cblinfun}}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$}
   \toolconst{adj}
   &
@@ -1388,7 +1388,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   The adjoint $A^*$ of $A$.
   \\
   \hline
-  \constdef{$A\cdot B$\par$A \mathbin{\circ_\mathit{CL}} B$\par$\mathtt{cblinfun\_compose}\ A\ B$}
+  \constdef{$A\cdot B$\par$A \mathbin{\circ_\textsc{cl}} B$\par$\mathtt{cblinfun\_compose}\ A\ B$}
   {(\alpha,\gamma)\ \mathtt{cblinfun}}
   {$A::(\beta,\gamma)\ \mathtt{cblinfun}$
     \par and
@@ -1481,10 +1481,10 @@ for getting the special characters (marked ``How to input:'' in the table below)
   & True iff $A$ is an isometry.
   \\
   \hline
-  \constdef{$\mathtt{isProjector}\ A$}
+  \constdef{$\mathtt{is\_Proj}\ A$}
   {\mathtt{bool}}
   {$A :: (\alpha,\alpha)\ \mathtt{cblinfun}$}
-  \toolconst{isProjector}
+  \toolconst{is\_Proj}
   & True iff $A$ is a projector.
   \\
   \hline
@@ -1523,8 +1523,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$A\tensor B$\par
     $\mathtt{tensor}\ A\ B$\par
     $\mathtt{tensorOp}\ A\ B$}
-  {(\alpha,\beta)\ \mathtt{l2bounded}}
-  {$A::\alpha\ \mathtt{l2bounded}$ \par and $B::\beta\ \mathtt{cblinfun}$}
+  {(\alpha\times\beta)\ \mathtt{l2bounded}}
+  {$A::\alpha\ \mathtt{l2bounded}$ \par and $B::\beta\ \mathtt{l2bounded}$}
   \toolconst{tensor}
   \toolconst{tensorOp}
   \symbolindexmark\TOOLotimes
@@ -1607,7 +1607,9 @@ for getting the special characters (marked ``How to input:'' in the table below)
     $\mathtt{ket}\ x$}
   {\alpha\ \mathtt{ell2}} {$x :: \alpha$}
   \toolconst{ket} & The basis state $\basis{}{x}$ of $\elltwo\alpha$.
-
+  
+  That is, the states $\basis{}{x}$ form an orthonormal basis of the Hilbert space $\elltwo\alpha$ when $x$ ranges over all values of type $\alpha$.
+  
   \texinput{\\ket}
   \\
   \hline
@@ -1622,7 +1624,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$\psi\tensor\phi$\par
     $\mathtt{tensor}\ \psi\ \phi$\par
     $\mathtt{tensorVec}\ \psi\ \phi$}
-  {(\alpha,\beta)\ \mathtt{ell2}}
+  {(\alpha\times\beta)\ \mathtt{ell2}}
   {$\psi::\alpha\ \mathtt{ell2}$ and $\phi::\beta\ \mathtt{ell2}$}
   \toolconst{tensor}
   \toolconst{tensorVec}
