@@ -267,7 +267,7 @@ proof -
       apply (rule left_total_fun)
       using \<open>left_unique R\<close> by (auto simp: left_total_eq)
     then obtain m2 where m2: "rel_fun R (=) m1 m2" 
-      using left_totalE by auto
+      using left_totalE by metis
     have m2v: "m2 v \<in> variable_raw_domain v" for v
     proof -
       obtain w where "R w v"

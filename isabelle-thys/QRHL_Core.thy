@@ -1,6 +1,6 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" BOLegacy Discrete_Distributions 
-    Universe Misc_Missing Prog_Variables
+    Universe Misc_Missing Prog_Variables Tensor_Product.Hilbert_Space_Tensor_Product
   keywords "declare_variable_type" :: thy_decl
 begin
 
@@ -451,7 +451,7 @@ lemma colocal_op_commute:
   by (cheat colocal_op_commute)
 
 lemma remove_qvar_unit_op:
-  "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op*)\<guillemotright>Q = A\<guillemotright>(variable_concat Q \<lbrakk>\<rbrakk>)"
+  "(tensor_ell2_right 1* \<cdot> A \<cdot> tensor_ell2_right 1)\<guillemotright>Q = A\<guillemotright>(variable_concat Q \<lbrakk>\<rbrakk>)"
 for A::"(_,_)l2bounded" and Q::"'a::universe variables"
   by (cheat TODO12)
 
@@ -898,6 +898,7 @@ lemma sort_variables_hint_remove_aux: "sort_variables_hint x \<equiv> x"
 definition [simp]: "comm_op_pfx = assoc_op* \<cdot> (comm_op\<otimes>id_cblinfun) \<cdot> assoc_op"
 definition [simp]: "id_tensor A = id_cblinfun\<otimes>A"
 definition [simp]: "assoc_op_adj = assoc_op*"
+definition [simp]: "remove_qvar_unit_op1 = remove_qvar_unit_op"
 definition [simp]: "remove_qvar_unit_op2 = remove_qvar_unit_op \<cdot> comm_op"
 definition [simp]: "qvar_trafo_mult (Q::'b::universe variables) (B::('b,'c)l2bounded) (A::('a,'b)l2bounded) = timesOp B A"
 
@@ -1144,11 +1145,14 @@ proof -
   then have f1_f2_tensors: "f1 C = f2 C" if "C \<in> tensors" for C
     using that unfolding tensors_def by auto
   have "f1 = f2"
-    apply (rule ext)
+    (* Cannot derived from bounded linearity of f1,f2 because C is not norm-dense but SOT-dense.
+       Fortunately, lifting is weak*-continuous *)
+    (* apply (rule ext)
     using \<open>bounded_clinear f1\<close> \<open>bounded_clinear f2\<close> f1_f2_tensors
     apply (rule equal_span'[where f=f1 and G=tensors])
     using span_tensors tensors_def
-    by auto
+    by auto *)
+    sorry
   then show ?thesis
     unfolding f1_def f2_def qvar_trafo'_def using assms(5-6) \<open>isometry A\<close> apply auto by metis
 qed
@@ -1491,6 +1495,7 @@ proof -
   also have "\<dots> = comm_op \<cdot> (VB* \<cdot> UA) \<otimes> (UA* \<cdot> VB)"
     unfolding VB_def UA_def
     by (simp add: cblinfun_compose_assoc)
+
   finally show "quantum_equality_full U Q V R = quantum_equality_full UA Q' VB R'"
     unfolding quantum_equality_full_def QR_def QR'_def
     apply (subst eigenspace_lift[symmetric], simp)+
@@ -1614,7 +1619,7 @@ proof (rule ccsubspace_leI, rule subsetI)
     apply (subst qvar_trafo_l2bounded[OF qvar_trafo_T])
     apply (subst lift_eqOp, simp)
     apply (rule equal_ket)
-    by (auto simp: ket_product tensorOp_applyOp_distr)
+    by (auto simp: ket_product tensorOp_applyOp_distr simp del: tensor_ell2_ket)
 
   have "(comm_op \<cdot> (((V1 \<otimes> V2)* o\<^sub>C\<^sub>L (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* o\<^sub>C\<^sub>L (V1 \<otimes> V2))))\<guillemotright>QR12 *\<^sub>V x = x"
     apply (subst same_op) by (rule x12)

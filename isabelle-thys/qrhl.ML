@@ -384,7 +384,7 @@ end
 fun sort_variables_step (VTSingle _) = NONE
   | sort_variables_step (VTCons (v1 as VTSingle(n1,T1), v2 as VTSingle(n2,T2))) =
       if n1<=n2 then NONE
-      else SOME(Const(\<^const_name>\<open>comm_op\<close>, 
+      else SOME(Const(\<^const_name>\<open>swap_ell2\<close>, 
             mk_boundedT (HOLogic.mk_prodT(T1,T2)) (HOLogic.mk_prodT(T2,T1))), 
           VTCons (v2,v1))
   | sort_variables_step (vt as (VTCons (v1 as VTSingle(n1,T1), VTCons (v2 as VTSingle(n2,T2), rest)))) =
@@ -405,7 +405,7 @@ fun sort_variables_step (VTSingle _) = NONE
       end
   | sort_variables_step (VTCons (vt, VTUnit)) =
       let val T = type_of_varterm vt in
-        SOME(Const(\<^const_name>\<open>remove_qvar_unit_op\<close>,
+        SOME(Const(\<^const_name>\<open>remove_qvar_unit_op1\<close>,
           mk_boundedT (HOLogic.mk_prodT(T,HOLogic.unitT)) T),
           vt) end
   | sort_variables_step (vt as VTCons (VTSingle _, _)) = sort_variables_step_in vt
