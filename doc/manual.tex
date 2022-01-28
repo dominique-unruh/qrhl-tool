@@ -368,7 +368,7 @@ Several theories can be specified in one \texttt{isabelle} command (comma separa
 Repeated \emph{identical} \texttt{isabelle} commands are allowed.
 See \autoref{sec:isabelle} for more information on accompanying theories.
 
-It is also possible to include individual Isabelle commands directly inside the \texttt{.qrhl} file using the ``\texttt{isabelle\_cmd}''\toolidx{isabelle\_cmd} command.
+It is also possible to include individual Isabelle commands directly inside the \texttt{.qrhl} file using the ``\texttt{isabelle\_cmd}''\toolidx{isabelle\_cmd}\phantomlabel{command:isabelle_cmd} command.
 For example:
 \begin{center}
   \begin{lstlisting}
@@ -1891,13 +1891,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   % \\
   % 
   \hline
-  \constdef{$\mathtt{span}\ M$}
+  \constdef{$\mathtt{ccspan}\ M$}
   {\alpha\ \mathtt{ccsubspace}}
-  {$M::\alpha\ \mathtt{ell2}\ \mathtt{set}$}
-  \toolconst{span}
-  \toolconst{spanVector}
+  {$M::\alpha\ \mathtt{set}$}
+  \toolconst{ccspan}
   &
-  The span ``$\SPAN M$'' of the states in $M$.
+  The topologically-closed span of the states (vectors) in $M$.
   \\
   %
   \hline
@@ -2007,7 +2006,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$S\tensor T$\par
     $\mathtt{tensor}\ S\  T$\par
     $\mathtt{tensorSpace}\ S\  T$}
-  {(\alpha,\beta)\ \mathtt{ccsubspace}}
+  {(\alpha\times\beta)\ \mathtt{ccsubspace}}
   {$S::\alpha\ \mathtt{ccsubspace}$ and $ T::\beta\ \mathtt{ccsubspace}$}
   \toolconst{tensor}
   \toolconst{tensorSpace}
@@ -2078,7 +2077,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
 
 In this section, we document all tactics supported by our 
 tool. The tactics are not in one-to-one correspondence with the rules
-from \autoref{sec:tactics} (for example, many tactics implement a
+from \qrhlautoref{sec:qrhl} (for example, many tactics implement a
 combination of some rule with the \rulerefx{Seq} or \rulerefx{Conseq}
 rule). Yet, most rules can be recovered as special cases of the
 tactics. (E.g., the \ruleref{Sample1} can be implemented as the tactic
@@ -2087,9 +2086,9 @@ implemented in their full generality (e.g., \rulerefx{Frame} is
 implemented by \texttt{equal} which does not take into account readonly
 variables\TODOQ{better example becase \texttt{frame} implements Frame}). Rules that are not yet implemented in the tool are:
 \rulerefx{Sym}, \rulerefx{QrhlElim} (but we have
-\rulerefx{QrhlElimEq}), \rulerefx{JointSample}, \rulerefx{JointIf},
+\rulerefx{QrhlElimEq}), 
 \rulerefx{While1}, \rulerefx{JointWhile}, \rulerefx{JointMeasure},
-\rulerefx{JointMeasureSimple}. \TODOQ{check whether some need to be removed from this list}
+\rulerefx{JointMeasureSimple}.
 
 In the description of the rules, we use Isabelle/HOL syntax for
 expressions (in particular, for pre- and postconditions) because that
@@ -3507,10 +3506,9 @@ reference manual \cite{isar-ref} for more information. The theory
 \autoref{sec:tool.pred}) and axioms/lemmas. Many of the lemmas are
 declared as simplification rules, but some of them are for direct use
 only. We do not provide a comprehensive list here. To find useful
-facts, use the \texttt{find\_theorems} command in Isabelle
-\cite{isar-ref}. Or try the \texttt{sledgehammer} command
-\cite{isar-ref} for proving simple lemmas.  The following
-axioms/lemmas correspond to facts proven in this paper (all other axioms/lemmas are
+facts, use the \texttt{find\_theorems} command \cite{isar-ref} / query panel \cite{isabelle-jedit} in Isabelle. Or try the \texttt{sledgehammer} command
+\cite{isar-ref} / sledgehammer panel \cite{isabelle-jedit} for proving simple lemmas.  The following
+axioms/lemmas correspond to facts proven in \cite{qrhl-paper-from-manual} (all other axioms/lemmas are
 well-known or obvious facts):
 \begin{center}
 \begin{tabular}{|ll|}
@@ -3548,11 +3546,12 @@ well-known or obvious facts):
 The accompanying theory can also be used to set Isabelle configuration
 options that then affect our tool's behavior. For example, use
 \begin{lstlisting}
-  declare[[show_types,show_sorts]]
+  declare [[show_types,show_sorts]]
 \end{lstlisting}
 in the accompanying theory to
 add type information to the output of our tool (this affects all
 Isabelle/HOL formulas printed as part of the subgoals).
+Alternatively, this can be done using the \hyperref[command:isabelle_cmd]{\texttt{isabelle\_cmd}} command directly in the \texttt{.qrhl} file.
 
 \subsubsection{Declaring types}
 \label{sec:deftypes}
