@@ -1,18 +1,18 @@
 
 # Binary installation
 
-The binaries require Linux, OS/X, or Windows to run.
+Qrhl-tool requires Linux, OS/X, or Windows to run.
 
-You can download the binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases).
+You can download the qrhl-tool binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases).
 
 The binary development snapshot can be downloaded from [here](https://nightly.link/dominique-unruh/qrhl-tool/workflows/test/master/qrhl.zip).
 
 On Linux, you can also use the interactive installer to install release or development snapshot. Using the following command line:
 ```shell
-wget -nv https://github.com/dominique-unruh/qrhl-tool/raw/master/installer.py -O /tmp/installer.py && sudo python3 /tmp/installer.py
+wget -nv https://github.com/dominique-unruh/qrhl-tool/raw/master/installer.py -O /tmp/installer.py && python3 /tmp/installer.py
 ```
-(This will install the prerequisites as well, except Java and Emacs.
-`sudo` can be omitted if you install everything in your home directory.)
+This will download qrhl-tool and install the prerequisites as well, except Java and Emacs.
+Use `sudo python3` instead of `python3` if you want to install files outside your home directory.
 
 ## Prerequisites
 

@@ -3,7 +3,7 @@
 Qrhl-tool is an interactive theorem prover for qRHL (quantum relational Hoare logic),
 specifically for quantum and post-quantum security proofs.
 
-See the literature section for pointers for more in-depth explanations
+See the literature and documentation listed below for in-depth explanations.
 
 ![Screenshot of qrhl-tool](screenshot.png)
 
@@ -14,7 +14,7 @@ See [here](install.md) for installation instructions.
 ## Documentation and help
 
 * The [user manual](manual-0.6.pdf), included in the binary installation as `manual.pdf`
-* Example files, included in the binary installation in `examples/`
+* [Example files](https://github.com/dominique-unruh/qrhl-tool/tree/v0.6/examples), included in the binary installation in `examples/`
 * [Gitter chat](https://gitter.im/dominique-unruh/qrhl-tool)
 
 ## Papers
@@ -31,3 +31,8 @@ The qrhl-tool uses a number of open-source libraries and tools, the most notable
 * [scala-isabelle](https://github.com/dominique-unruh/scala-isabelle): a library for controlling Isabelle within Scala.
 * [Complex_Bounded_Operators](https://www.isa-afp.org/entries/Complex_Bounded_Operators.html): An Isabelle formalization of complex bounded operators, building the foundation for the modeling of quantum mechanics in qrhl-tool.
 * Many more library dependencies, see the [build script](https://github.com/dominique-unruh/qrhl-tool/blob/master/build.sbt).
+
+## Acknowledgments
+
+Development was supported by the Air Force Office of Scientific Research (AOARD Grant FA2386-17-1-4022),
+by the ERC consolidator grant CerQuS (819317), and by the PRG946 grant from the Estonian Research Council.
