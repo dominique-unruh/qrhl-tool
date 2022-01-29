@@ -22,7 +22,7 @@
 \usepackage{version}
 \usepackage{xr}
 \usepackage[framemethod=tikz]{mdframed}
-% don't load geometry if preview is to be loaeded
+% don't load geometry if preview is to be loaded
 % (the ifx-statement detects \PassOptionsToPackage{preview}{...})
 \expandafter\ifx\csname opt@preview.sty\endcsname\relax
 \usepackage[a4paper,margin=1in]{geometry}
@@ -1077,6 +1077,15 @@ types. Some of those types are defined in Isabelle/HOL using
 See \texttt{QRHL.thy} and the theories imported therein.
 Others are imported from other Isabelle libraries, most importantly \texttt{Complex\_Bounded\_Operators} \cite{bounded-operators}.
 
+In some cases, there
+are several possible syntaxes for entering the same type. We list
+all of them, the first being the one Isabelle/HOL will use for
+printing the constant. In many cases, the syntax contains special
+characters. These can be entered with an adapted TeX input method in Emacs
+(which is automatically active in our ProofGeneral customization). In
+those cases we additionally mention the character sequences to be entered in ProofGeneral
+for getting the special characters (marked ``How to input:'' in the table below).
+
 When defining your own types in an accompanying theory, please consult \autoref{sec:deftypes}.
 
 \begin{longtable}{|p{.19\hsize}|>{\parskip=\medskipamount}p{.75\hsize}|}
@@ -1255,7 +1264,6 @@ Some of those constants are defined in Isabelle/HOL, others are only axiomatized
 See \texttt{QRHL.thy} and the theories imported therein.
 Others are imported from other Isabelle libraries, most importantly \texttt{Complex\_Bounded\_Operators} \cite{bounded-operators}.
 
-\TODOQ{The following applies not only to constants:}
 In many cases, there
 are several possible syntaxes for entering the same constant. We list
 all of them, the first being the one Isabelle/HOL will use for
@@ -2081,10 +2089,12 @@ from \qrhlautoref{sec:qrhl} (for example, many tactics implement a
 combination of some rule with the \rulerefx{Seq} or \rulerefx{Conseq}
 rule). Yet, most rules can be recovered as special cases of the
 tactics. (E.g., the \ruleref{Sample1} can be implemented as the tactic
-sequence \texttt{wp left. skip. simp.}) Some rules are not
-implemented in their full generality (e.g., \rulerefx{Frame} is
-implemented by \texttt{equal} which does not take into account readonly
-variables\TODOQ{better example becase \texttt{frame} implements Frame}). Rules that are not yet implemented in the tool are:
+sequence \texttt{wp left. skip. simp.}) Some rules may not be
+implemented in their full generality.
+%(e.g., \rulerefx{Frame} is
+%implemented by \texttt{equal} which does not take into account readonly
+%variables\TODOQ{better example becase \texttt{frame} implements Frame}).
+Rules that are not yet implemented in the tool are:
 \rulerefx{Sym}, \rulerefx{QrhlElim} (but we have
 \rulerefx{QrhlElimEq}), 
 \rulerefx{While1}, \rulerefx{JointWhile}, \rulerefx{JointMeasure},
@@ -3713,18 +3723,16 @@ $A\leq B\implies A\text\guillemotright Q\leq B\text\guillemotright Q$ and get
 
 We have automated this process (using a number of simplification rules
 and custom ML simplification procedures). To perform this conversion,
-we use the following method:
+we use the following method in Isabelle:
 \begin{lstlisting}
   apply (simp add: prepare_for_code)
 \end{lstlisting}
 
-Another problem is that the Isabelle/HOL code generation implements
-real numbers as fractions. Thus, the code generation fails (aborts) when the
-expression involves, e.g., square roots. Unfortunately, operators and
-states such as \texttt{hadamard} and \texttt{EPR} involve $\sqrt2$.
-We reimplemented the real number code generation in Isabelle/HOL to support real numbers
-of the form $a+b\sqrt 2$ for rational $a,b$, thus these operators and states can
-be used. However, there is no support so far for other irrational numbers (e.g., $\sqrt 3$).
+By default, the Isabelle/HOL code generation implements real numbers as fractions.
+Then the code generation would fail (abort) when the expression involves, e.g., square roots.
+Since operators and states such as \texttt{hadamard} and \texttt{EPR} involve $\sqrt2$, we have activated instead code generation setup from \cite{Real_Impl-AFP}.
+This setup allows us to compute with real numbers of the form $a+b\sqrt c$ for rational $a,b,c$.
+If even larger sets of real numbers are involved in the computations, it is necessary to include a different code generation setup, e.g., algebraic numbers \cite{Algebraic_Numbers-AFP}.
 
 To give a complete example, \eqref{eq:code2} can be shown as follows:
 \begin{lstlisting}
