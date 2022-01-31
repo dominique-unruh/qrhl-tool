@@ -192,8 +192,12 @@ class Toplevel private(initialState : State) {
         if (cmdStr==null) { println("EOF"); return true; }
         execCmd(CommandOrString.Str(cmdStr, readLine.position))
       } catch {
-        case e:UserException =>
+        case e : UserException =>
           println(s"[ERROR] ${e.positionMessage}")
+          if (e.log != null && !e.log.isBlank) {
+            println("\nThe full output of the command follows:\n")
+            println(e.log)
+          }
           if (abortOnError) return false
         case e : Throwable =>
           println("[ERROR] [INTERNAL ERROR!!!]")
