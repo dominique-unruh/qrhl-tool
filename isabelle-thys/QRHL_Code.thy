@@ -4,6 +4,7 @@ theory QRHL_Code
     "Jordan_Normal_Form.Matrix_Impl"
     "HOL-Library.Code_Target_Numeral"
     (* Tensor_Product.Tensor_Product_Code *)
+    Registers.Quantum (* Imported because otherwise below instantiations for bit will happen that make it impossible to merge Registers.Quantum with this theory *)
 begin
 
 unbundle jnf_notation
@@ -39,10 +40,10 @@ lemma bounded_of_mat_Z[code]: "mat_of_cblinfun pauliZ = matrix_Z"
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
 lemma bounded_of_mat_Y[code]: "mat_of_cblinfun pauliY = matrix_Y"
   by (cheat 16)
-definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
+definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]" for matrix_hadamard
 lemma bounded_of_mat_hadamard[code]: "mat_of_cblinfun hadamard = matrix_hadamard"
   by (cheat 16)
-definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]"
+definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]" for matrix_CNOT
 lemma bounded_of_mat_CNOT[code]: "mat_of_cblinfun CNOT = matrix_CNOT"
   by (cheat 17)
 
@@ -54,13 +55,13 @@ definition "less_eq_bit (a::bit) b = (a=b \<or> a<b)"
 instance apply intro_classes unfolding less_bit_def less_eq_bit_def by auto
 end
 
-(* TODO move *)
-instantiation bit :: card_UNIV begin
+(* Defined in Registers.Misc *)
+(* instantiation bit :: card_UNIV begin
 definition "finite_UNIV_bit = Phantom(bit) True"
 definition "card_UNIV_bit = Phantom(bit) (2::nat)"
 instance apply intro_classes unfolding finite_UNIV_bit_def card_UNIV_bit_def 
   apply auto unfolding UNIV_bit by simp 
-end
+end *)
 
 
 
@@ -99,10 +100,10 @@ lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = ad
 (* declare ord_clinear_space_inst.less_eq_clinear_space[code del]
 declare ord_clinear_space_inst.less_clinear_space[code del] *)
 
-derive (eq) ceq bit
+(* derive (eq) ceq bit *) (* In Registers.Quantum *)
 derive (linorder) compare_order bit
-derive (compare) ccompare bit
-derive (dlist) set_impl bit
+(* derive (compare) ccompare bit *) (* In Registers.Quantum *)
+(* derive (dlist) set_impl bit *) (* In Registers.Quantum *)
 derive (eq) ceq real
 derive (linorder) compare real
 derive (compare) ccompare real

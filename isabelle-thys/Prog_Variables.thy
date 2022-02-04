@@ -11,6 +11,9 @@ lift_definition variable_raw_domain :: "variable_raw \<Rightarrow> universe set"
 lift_definition variable_raw_name :: "variable_raw \<Rightarrow> string" is "fst" .
 declare [[lifting_restore Quotient_universe]]
 
+(* TODO: remove in Isabelle2022 *)
+declare More_List.no_leading_Cons[rule del]
+
 (*setup {* Sign.add_const_constraint (\<^const_name>\<open>embedding\<close>,SOME \<^typ>\<open>'a=>universe\<close>) *}*)
 
 (* a variable, refers to a location in a memory *)

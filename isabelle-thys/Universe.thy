@@ -1,6 +1,7 @@
 theory Universe
   imports Main "HOL.BNF_Cardinal_Order_Relation" (* Misc Tools *) "HOL-Library.Nat_Bijection" "HOL-Library.Rewrite" "HOL-ZF.HOLZF" ML_Term_Antiquot
     Deriving.Derive_Manager
+    Registers.Misc (* Importing this so that "prod :: default" is not redefined here. *)
 begin
 
 hide_const (open) HOLZF.Inf

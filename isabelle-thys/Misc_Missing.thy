@@ -1,5 +1,5 @@
 theory Misc_Missing
-  imports Main Universe "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality"
+  imports Main Universe "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality" Registers.Misc
 begin
 
 section \<open>Misc\<close>
@@ -130,7 +130,8 @@ definition (in zero_neq_one) of_bit :: "bit \<Rightarrow> 'a"
 
 lemma UNIV_bit: "(UNIV::bit set) = {0,1}" by auto
 
-instantiation bit :: enum begin
+(* Already defined in Registers.Misc *)
+(* instantiation bit :: enum begin
 definition "enum_bit = [0::bit,1]"
 definition "enum_all_bit P \<longleftrightarrow> P (0::bit) \<and> P 1"
 definition "enum_ex_bit P \<longleftrightarrow> P (0::bit) \<or> P 1"
@@ -139,7 +140,7 @@ instance apply intro_classes
      apply auto
   using bit.exhaust apply metis
   using bit.exhaust by metis
-end
+end *)
 
 (* instantiation bit :: equal begin
 lift_definition equal_bit :: "bit \<Rightarrow> bit \<Rightarrow> bool" is "HOL.equal :: bool \<Rightarrow> bool \<Rightarrow> bool" .
