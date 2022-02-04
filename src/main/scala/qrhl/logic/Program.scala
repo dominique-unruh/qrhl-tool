@@ -141,7 +141,7 @@ case class VariableUse
       | Written     ⊆ ${varsToString(written)}
       | Overwritten ⊇ ${varsToString(overwritten)}
       | Inner       ⊆ ${varsToString(inner)}
-      | Covered     ⊇ ${if (covered.isAll) "all variables" else varsToString(covered)}
+      | Covered     ⊇ ${varsToString(covered)}
       | Oracles     ⊆ ${varsNamesToString(oracles)}
     """.stripMargin
 }

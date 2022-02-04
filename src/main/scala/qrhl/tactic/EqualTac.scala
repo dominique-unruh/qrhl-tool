@@ -210,13 +210,19 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       if (extraOut2.nonEmpty) {
         if (removedQeq != null) {
           val quantum = Variable.quantum(extraOut2)
+          println(s"So we add to Vout: ${varsToString(extraOut2)}")
           if (!quantum.toSet.subsetOf(removedQeq)) {
-            println("TODO explain error...")
+            println(
+              s"""
+                 |PROBLEM:
+                 |We have already removed a quantum equality involving the variables ${varsToString(removedQeq)} from R at some earlier point.
+                 |This was justified by the fact that the "R ⊓ ≡Vout" with or without this quantum equality is the same.
+                 |This would not be true if we now added more variables to Vout.
+                 |So we are stuck and give up.  😞""".stripMargin)
             throw UserException(s"Trying to add ${varsToString(quantum)} to Vout, but we already committed on removing " +
               s"quantum equality for ${varsToString(removedQeq)} from the postcondition")
           }
         }
-        println(s"So we add to Vout: ${varsToString(extraOut2)}")
         updated = true
         out ++= extraOut2
         println(s"  Vout = ${varsToString(out)}")
@@ -225,10 +231,14 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 
     var postcondition = post
 
+    def postconditionString(postcondition : RichTerm = postcondition) : String =
+      if (classicalsRemovedFromPost.isEmpty) postcondition.toString
+      else s"$postcondition (with variables ${varsToString(classicalsRemovedFromPost)} removed)"
+
     println("We also need to choose the predicate R so that (R ⊓ ≡Vout) implies the current postcondition.")
     println("We tentatively choose R to be the whole postcondition (we may change this later to avoid variable conflicts).")
     println()
-    println(s"  R := $postcondition")
+    println(s"  R := ${postconditionString()}")
     println()
 
     // Free variables of postcondition, with variables in
@@ -251,35 +261,59 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 
       if (classical.nonEmpty) {
         updated = true
-        output.println(s"Removing classical variables $classical from postcondition")
         classicalsRemovedFromPost ++= classical
         postconditionVariables --= classical
+        println(
+          s"""We have to remove the classical variables ${varsToString(classical)} from R.
+             |We will do this later (in a way that ensures that the new R implies the old R).
+             |For now, we just remember that we want to remove those variables.
+             |  R = ${postconditionString()}""".stripMargin)
       }
 
       if (quantum.nonEmpty) {
         updated = true
+
+        println(
+          s"""To remove ${varsToString(quantum)}, we try to do so by finding a quantum equality involving those variables and removing it from R.
+             |(In such a way that "R ⊓ ≡Vout" implies the original postcondition.)""".stripMargin)
+
+
         if (removedQeq != null) {
-          println("TODO explain error")
+          println(s"""
+             |PROBLEM:
+             |However, we have already removed a quantum equality involving the variables ${varsToString(removedQeq)} from R at some earlier point.
+             |We cannot do this twice because it would mean two different
+             |This would not be true if we now added more variables to Vout.
+             |So we are stuck and give up. 😞""".stripMargin)
           throw UserException(s"Cannot remove quantum variables because we already removed one quantum equality from postcondition")
         }
 
-        val (newPostcondition, newRemovedQeq) = EqualTac.removeQeq(env, postcondition, quantum)
+        val (newPostcondition, newRemovedQeq, newRemovedQeqTerm) = EqualTac.removeQeq(env, postcondition, quantum).getOrElse {
+            println(s"""
+               |PROBLEM:
+               |No such quantum equality was found.
+               |We have no way to remove the quantum variables from the postcondition.
+               |We give up. 😞""".stripMargin)
+            throw UserException(s"Could not find a quantum equality involving ${varsToString(quantum)}")
+        }
 
-        println(s"We remove the quantum equality of variables ${varsToString(newRemovedQeq)} from the predicate R, and we update the set Vout to contain the variables in that quantum equality:")
-        println(s"  R := $newPostcondition")
-        println(s"  quantum(Vout) := ${varsToString(newRemovedQeq)}")
-        println(s"Note that (R ⊓ ≡Vout) then implies the original postcondition.")
+        println(
+          s"""To remove ${varsToString(quantum)}, we remove "$newRemovedQeqTerm" from the predicate R,
+             |and we update the set Vout to contain the variables in that quantum equality (and no other quantum variables):
+             |  R := ${postconditionString(newPostcondition)}
+             |  quantum(Vout) := ${varsToString(newRemovedQeq)}
+             |Note that (R ⊓ ≡Vout) then implies the original postcondition.
+             |""".stripMargin)
 
         if (!Variable.quantum(out).toSet.subsetOf(newRemovedQeq)) {
-          println()
           println(
             s"""
                |PROBLEM:
                |We notice that we had "quantum(Vout) = ${varsToString(out.filter(_.isQuantum))}" before this step.
-               |This means that we are removing variables from Vout. (Namely ${newRemovedQeq.removedAll(Variable.quantum(out))}
+               |This means that we are removing variables from Vout. (Namely ${varsToString(newRemovedQeq.removedAll(Variable.quantum(out)))})
                |This would lead to an infinite loop of removing/readding, or violate the constraints you gave as a parameter to the equal-tactic.
                |Therefore we give up at this point. 😞""".stripMargin)
-          throw UserException(s"Should remove quantum equality for variables ${varsToString(newRemovedQeq)}, but Vout already contains ${varsToString(Variable.quantum(out))}") // TODO error message
+          throw UserException(s"Couldn't remove variables ${varsToString(quantum)} from postcondition because this means removing the $newRemovedQeqTerm, but that would be incompatible with the choice of Vout")
         }
         postcondition = newPostcondition
         removedQeq = newRemovedQeq
@@ -417,23 +451,42 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
             extraOut = (mid.toSet.filter(_.isClassical) & (l.freeVariables & r.freeVariables)) -- varUse.covered)
       }
 
-
-      println("\n\n\n\n== FROM HERE ON WE DON'T HAVE NICE COMMENTS YET. WORKING ON IT. ==\n\n\n\n")
-
       //    assumes Vout_Vin_R: "(Vout - Vin) ∩ Rv = {}"
-      removeFromPost(s"""(Vout - Vin) ∩ Rv = {}""",
+      removeFromPost(
+        s"""We need "(Vout - Vin) ∩ fv(R) = ∅" to hold. Currently:
+           |  R = ${postconditionString()}
+           |  Vout = ${varsToString(out)}
+           |  Vin = ${varsToString(in)}
+           |  fv(R) = ${varsToString(postconditionVariables)}
+           |So we remove the superfluous variables from R.""".stripMargin,
         (out -- in).toSet)
 
       //    assumes Vin_Vout_R: "quantum' (Vin - Vout) ∩ Rv = {}"
-      removeFromPost(s"""quantum' (Vin - Vout) ∩ Rv = {}""",
+      removeFromPost(
+        s"""We need "quantum(Vin - Vout) ∩ fv(R) = ∅" to hold. Currently:
+           |  R = ${postconditionString()}
+           |  quantum(Vin) = ${varsToString(in)}
+           |  quantum(Vout) = ${varsToString(out)}
+           |  fv(R) = ${varsToString(postconditionVariables)}
+           |So we remove the superfluous variables from R.""".stripMargin,
         (in.filter(_.isQuantum) -- out).toSet)
 
       //    assumes R_inner: "Rv ∩ inner C = {}"
-      removeFromPost("""Rv ∩ inner C = {}""",
+      removeFromPost(
+        s"""We need "fv(R) ∩ inner(context) = ∅" to hold. Currently:
+           |  R = ${postconditionString()}
+           |  fv(R) = ${varsToString(postconditionVariables)}
+           |  inner(context) = ${varsToString(varUse.inner)}
+           |So we remove the superfluous variables from R.""".stripMargin,
         varUse.inner)
 
-      //    assumes R_written: "Rv ∩ written C = {}"
-      removeFromPost("""Rv ∩ written C = {}""",
+      //    assumes R_written: "Rv ∩ written C = ∅"
+      removeFromPost(
+        s"""We need "fv(R) ∩ written(context) = ∅" to hold. Currently:
+           |  R = ${postconditionString()}
+           |  fv(R) = ${varsToString(postconditionVariables)}
+           |  written(context) = ${varsToString(varUse.written)}
+           |So we remove the superfluous variables from R.""".stripMargin,
         varUse.written)
 
       //    assumes aux_Vmid: "aux ∈ Vmid"
@@ -443,16 +496,25 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       // We construct the set of all variables in mid that satisfy the conditions for aux
       // We filter "isInfinite" last because this is the slowest part
       if (!mid.exists( v => v.isQuantum && !mismatchesFree.contains(v) && isInfinite(v))) {
+        println(
+          s"""---
+             |We need Vmid to contain some quantum variable of infinite type (e.g., type nat, string, infinite, bit list, …) that is not contained in any of the mismatches.
+             |  fv(all mismatches) = ${varsToString(mismatchesFree)}""".stripMargin)
         Breaks.breakable {
           for (v <- env.qVariables.values)
             if (!mismatchesFree.contains(v) && isInfinite(v)) {
-              output.println("Adding an infinite quantum variable (that does not occur in any of the mismatches) in Vmid")
+              println(
+                s"""We arbitrarily choose ${v.name} for that purpose. If you wish to use another one, add it to Vmid via the mid-parameter of the equal-tactic.
+                   |Also make sure the Isabelle simplifier can prove "infinite (UNIV::typ)" where typ is the type of that variable, otherwise I will not recognize it as infinite.""".stripMargin)
               add(msg = null, extraMid = Set(v))
               Breaks.break()
             }
+          println(
+            """We could not find any quantum variable to use for this purpose.
+              |Fix: declare an arbitrary additional variable using "quantum var : variable_name : infinite.
+              |If a suitable variable already exists and I don't find it, make sure the Isabelle simplifier can prove "infinite (UNIV::typ)" where typ is the type of that variable."""".stripMargin)
           throw UserException(
-            s"""Need an infinite quantum variable in Vmid that does not occur in any of the mismatches.
-               |I.e., not one of ${varsToString(mismatchesFree.filter(_.isQuantum))}. If there is such a variable already, make sure the Isabelle simplifier can prove "infinite (UNIV::typ)" where typ is the type of that variable.""".stripMargin)
+            s"""Need an infinite quantum variable in Vmid that does not occur in any of the mismatches.""".stripMargin)
         }
       }
 
@@ -461,46 +523,130 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       // (They could still become less) So we hold off adding quantum variables to `in` until things have stabilized (!updated)
       if (removedQeq!=null || !updated) {
         //    assumes C_Vin_R: "fv C ∩ Rv ⊆ Vin"
-        add("fv(C) ∩ Rv ⊆ Vin", extraIn = varUse.freeVariables & postconditionVariables)
+        add(
+          s"""We need "fv(context) ∩ fv(R) ⊆ Vin" to hold. Currently:
+             |  R = ${postconditionString()}
+             |  fv(context) = ${varsToString(varUse.freeVariables)}
+             |  fv(R) = ${varsToString(postconditionVariables)}
+             |  Vin = ${varsToString(in)}
+             |So we add the missing variables to Vin.""".stripMargin,
+          extraIn = varUse.freeVariables & postconditionVariables)
+
         //    assumes Vmid_R_Vin_covered: "Vmid ∩ Rv ⊆ Vin ∪ covered C"
-        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = MaybeAllSet.subtract(mid.toSet & postconditionVariables, varUse.covered))
+        add(
+          s"""We need "Vmid ∩ fv(R) ⊆ Vin ∪ covered(context)" to hold. Currently:
+             |  R = ${postconditionString()}
+             |  Vmid = ${varsToString(mid)}
+             |  fv(R) = ${varsToString(postconditionVariables)}
+             |  Vin = ${varsToString(in)}
+             |  covered(context) = ${varsToString(varUse.covered)}
+             |So we add the missing variables to Vin.""".stripMargin,
+          extraIn = MaybeAllSet.subtract(mid.toSet & postconditionVariables, varUse.covered))
+
         //    assumes Vmid_R_Vout_covered: "quantum' (Vmid ∩ Rv) ⊆ Vout ∪ covered C"
-        add("quantum' (Vmid ∩ Rv) ⊆ Vout ∪ covered(C)", extraOut = MaybeAllSet.subtract(mid.toSet.filter(_.isQuantum) & postconditionVariables, varUse.covered))
+        add(
+          s"""We need "quantum(Vmid ∩ fv(R)) ⊆ Vout ∪ covered(context)" to hold. Currently:
+             |  R = ${postconditionString()}
+             |  quantum(Vmid) = ${varsToString(mid.filter(_.isQuantum))}
+             |  quantum(fv(R)) = ${varsToString(postconditionVariables.filter(_.isQuantum))}
+             |  Vout = ${varsToString(out)}
+             |  covered(context) = ${varsToString(varUse.covered)}
+             |So we add the missing variables to Vout.""".stripMargin,
+          extraOut = MaybeAllSet.subtract(mid.toSet.filter(_.isQuantum) & postconditionVariables, varUse.covered))
       } else {
         //    assumes C_Vin_R: "fv C ∩ Rv ⊆ Vin"
-        add("fv(C) ∩ Rv ⊆ Vin", extraIn = varUse.freeVariables.filter(_.isClassical) & postconditionVariables)
+        add(
+          s"""We need "fv(context) ∩ fv(R) ⊆ Vin" to hold. Currently:
+             |  R = ${postconditionString()}
+             |  fv(context) = ${varsToString(varUse.freeVariables)}
+             |  fv(R) = ${varsToString(postconditionVariables)}
+             |  Vin = ${varsToString(in)}
+             |So we add the missing variables to Vout. (For now, only the classical ones. We do the quantum ones later.)""".stripMargin,
+          extraIn = varUse.freeVariables.filter(_.isClassical) & postconditionVariables)
+
         //    assumes Vmid_R_Vin_covered: "Vmid ∩ Rv ⊆ Vin ∪ covered C"
-        add("Vmid ∩ Rv ⊆ Vin ∪ covered(C)", extraIn = MaybeAllSet.subtract(mid.toSet.filter(_.isClassical) & postconditionVariables, varUse.covered))
+        add(
+          s"""We need "Vmid ∩ fv(R) ⊆ Vin ∪ covered(C)" to hold. Currently:
+             |  R = ${postconditionString()}
+             |  quantum(Vmid) = ${varsToString(mid.filter(_.isQuantum))}
+             |  quantum(fv(R)) = ${varsToString(postconditionVariables.filter(_.isQuantum))}
+             |  Vin = ${varsToString(in)}
+             |  covered(context) = ${varsToString(varUse.covered)}
+             |So we add the missing variables to Vin. (For now, only the classical ones. We do the quantum ones later.)""".stripMargin,
+          extraIn = MaybeAllSet.subtract(mid.toSet.filter(_.isClassical) & postconditionVariables, varUse.covered))
       }
 
     } while (updated)
+
+
 
     // Adding some additional classical variables to out. This will make the call to removeClassicals produce a better postcondition
     // We need to make sure that these conditions stay satisfied:
     //    assumes Vout_overwr_Vin: "Vout - overwr C ⊆ Vin"
     //    assumes Vout_Vmid: "Vout ⊆ Vmid"
-    //    assumes Vout_Vin_R: "(Vout - Vin) ∩ Rv = {}"
-    //    assumes Vin_Vout_R: "quantum' (Vin - Vout) ∩ Rv = {}"
-    add("as many classical variables in Vout as possible",
+    //    assumes Vout_Vin_R: "(Vout - Vin) ∩ Rv = ∅"
+    //    assumes Vin_Vout_R: "quantum' (Vin - Vout) ∩ Rv = ∅"
+    add(
+      """We try to add as many additional classical variables to Vout as we can without breaking any assumptions of the Adversary rule.
+        |This is not required for applying the Adversary rule, but it will lead to a stronger postcondition in the step "Recall had to remove the classical variables…" below.
+        |(We do not do the same with quantum variables because adding quantum variables to a quantum equality leads does not make the equality stronger but incomparable.)""".stripMargin,
       extraOut = mid.toSet & (in ++ varUse.overwritten) & classicalsRemovedFromPost.toSet)
+
 
     // It is possible that we did not remove any quantum equality yet.
     // So we try to remove the quantum equality containing the quantum variables in out
     // This may fail if there is only a quantum equality with the wrong variables, then we just skip this.
-    try
-      removeFromPost("trying to get rid of quantum equality in postcondition", out.filter(_.isQuantum).toSet)
-    catch {
+    try {
+      // TODO don't use removeFromPost for this (confusing explanations result)
+      removeFromPost(
+        """TODO: explanation here not clear!
+          |trying to get rid of quantum equality in postcondition""".stripMargin,
+        out.filter(_.isQuantum).toSet)
+    } catch {
       case _ : UserException =>
     }
 
     printVars()
     logger.debug(s"Postcondition: ${postcondition}; without ${varsToString(classicalsRemovedFromPost)}")
 
-    postcondition = removeClassicals(env, postcondition, classicalsRemovedFromPost.toSet, Variable.classical(out).toSet)
-    logger.debug(s"Postcondition: ${postcondition}")
+    if (classicalsRemovedFromPost.nonEmpty) {
+      val newPostcondition = removeClassicals(env, postcondition, classicalsRemovedFromPost.toSet, Variable.classical(out).toSet)
+      println(
+        s"""Recall had to remove the classical variables ${varsToString(classicalsRemovedFromPost)} from the postcondition. I.e., we want:
+           |  R = ${postconditionString()}
+           |We need to do so in a way such that "R_new ⊓ ≡Vout" implies "R_old ⊓ ≡Vout". (Note: Vout = ${varsToString(out)}.)
+           |There are many ways to do this, e.g., simply "all-quantifying" over the values of ${varsToString(classicalsRemovedFromPost)}.
+           |(We put "all-quantifying" in quotes because technically speaking, we use the intersection of subspaces instead of an all-quantifies, but for the intuition we shall think of "all-quantifying".)
+           |One way that works particularly well is to "all-quantify" R over the those values of the variables so that the variables in Vout are equal on the left and right side.
+           |Concretely, this leads to the following new postcondition:
+           |  R = $newPostcondition
+           |Then "R_new ⊓ ≡Vout" implies "R_old ⊓ ≡Vout".""".stripMargin)
+      postcondition = newPostcondition
+    }
 
-    val colocality = RichTerm(Ops.colocalityOp(((postcondition.isabelleTerm,
-        forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) }))).retrieveNow)
+    println(
+      s"""
+        |---
+        |We have now instantiated the sets Vin, Vout, Vmid as well as the predicate R in a way that satisfies the conditions of the Adversary rule:
+        |  Vin = ${varsToString(in)}
+        |  Vout = ${varsToString(out)}
+        |  Vmid = ${varsToString(mid)}
+        |  R = $postcondition
+        |(Note: logically, the order of the variables in those sets does not matter.
+        |However, in the quantum equalities produced in the final subgoals, the variables in the quantum equalities will be in that order.
+        |If you prefer a different order, add the variables in the desired order an in-/out-/mid-parameters to the equal-tactic.)
+        |
+        |The subgoals created by the equal tactic will be:
+        |* One subgoal that shows that R does not contain any of the variables ${varsToString(forbiddenQuantumInPostcondition)}.
+        |  (This should already hold and can usually be proven by simp!. We have it as an explicit subgoal because it is possible that the equal tactic incorrectly analyzed the free quantum variables of R.)
+        |* One subgoal "{R ⊓ ≡Vmid} left ~ right {R ⊓ ≡Vmid}" for each mismatch left/right (there are ${mismatches.length} of them).
+        |* One subgoal "{original_pre} before_left ~ before_right {R ⊓ ≡Vin}"
+        |  where "original_pre" is the precondition of the goal we are operating on,
+        |  and "before_left"/"before_right" are programs without the last $amount lines.
+        |""".stripMargin)
+
+    val colocality = RichTerm(Ops.colocalityOp((postcondition.isabelleTerm,
+        forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) })).retrieveNow)
 
     logger.debug(s"Colocality: $colocality")
 
@@ -606,8 +752,9 @@ object EqualTac {
    * @param pred a quantum predicate
    * @return (result, qeqVars) result = the predicate, qeqVars = x,y,z…
    */
-  private def removeQeq(env: Environment, pred: RichTerm, vars: Traversable[QVariable]): (RichTerm, ListSet[QVariable]) = {
+  private def removeQeq(env: Environment, pred: RichTerm, vars: Traversable[QVariable]): Option[(RichTerm, ListSet[QVariable], RichTerm)] = {
     var qeqVars : Option[ListSet[QVariable]] = None
+    var replacedQeq : Term = null
     val simpleQeq = new SimpleQeq(env)
     def replace(term: Term) : Term = term match {
       case GIsabelle.Inf(t1,t2) => GIsabelle.infOptimized(replace(t1), replace(t2))
@@ -615,6 +762,7 @@ object EqualTac {
         logger.debug(s"qeqVars = ${qeqVars.map(varsToString)}")
         if (qeqVars.isEmpty) {
           qeqVars = Some(qeqVars2)
+          replacedQeq = term
           GIsabelle.predicate_top
         } else if (qeqVars.get == qeqVars2)
           GIsabelle.predicate_top
@@ -623,10 +771,10 @@ object EqualTac {
     }
 
     val result = replace(pred.isabelleTerm)
-    val resultVars = qeqVars.getOrElse {
-      throw UserException(s"Could not find a quantum equality involving ${varsToString(vars)}")
+    qeqVars match {
+      case None => None
+      case Some(resultVars) => Some((RichTerm(GIsabelle.predicateT, result), resultVars, RichTerm(replacedQeq)))
     }
-    (RichTerm(GIsabelle.predicateT, result), resultVars)
   }
 
   private[tactic] /* Should be private but need access in test case */
