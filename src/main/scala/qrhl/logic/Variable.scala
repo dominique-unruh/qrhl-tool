@@ -136,9 +136,11 @@ object Variable {
     }
   }
 
-  def varsToString(vars: Traversable[Variable]): String =
+  def varsNamesToString(vars: Iterable[String]): String =
     if (vars.isEmpty) "∅" else
-      vars.map(_.name).mkString(", ")
+      vars.mkString(", ")
+
+  def varsToString(vars: Iterable[Variable]): String = varsNamesToString(vars.map(_.name))
 }
 
 final case class QVariable(name:String, override val valueTyp: Typ) extends Variable {
