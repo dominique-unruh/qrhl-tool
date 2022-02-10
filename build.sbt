@@ -72,21 +72,6 @@ managedResources in Compile := (managedResources in Compile).dependsOn(makeGITRE
 
 val isabelleHome = file("/opt/Isabelle2021-1")
 
-/*lazy val makeQrhlToolConf = taskKey[Unit]("Create default qrhl-tool.conf")
-makeQrhlToolConf := {
-  val file = baseDirectory.value / "qrhl-tool.conf"
-//  println(s"qrhl-conf path: $file")
-  if (!file.exists()) {
-    println("Creating qrhl-tool.conf")
-    val pr = new PrintWriter(file)
-    pr.println("# This file is for local development. The distribution will get a copy of qrhl-tool.conf.dist instead.")
-    pr.println()
-    pr.println(s"isabelle-home = $isabelleHome")
-    pr.close()
-  }
-}
-managedResources in Compile := (managedResources in Compile).dependsOn(makeQrhlToolConf).value*/
-
 mainClass in assembly := Some("qrhl.Main")
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
 test in assembly := {}
@@ -94,7 +79,7 @@ test in assembly := {}
 enablePlugins(JavaAppPackaging)
 
 mappings in Universal ++=
-  List("proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat", "README.md", "LICENSE").
+  List("proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat", "README.md", "LICENSE", "qrhl-tool.conf.sample").
     map { f => baseDirectory.value / f -> f }
 
 mappings in Universal ++= {
@@ -110,7 +95,6 @@ mappings in Universal ++= {
 
 mappings in Universal += (baseDirectory.value / "doc" / "manual.pdf" -> "manual.pdf")
 mappings in Universal += (baseDirectory.value / "target" / "GITREVISION" -> "GITREVISION")
-mappings in Universal += (baseDirectory.value / "qrhl-tool.conf.dist" -> "qrhl-tool.conf")
 
 mappings in Universal ++= directory("proofgeneral")
 
