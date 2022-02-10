@@ -72,7 +72,7 @@ managedResources in Compile := (managedResources in Compile).dependsOn(makeGITRE
 
 val isabelleHome = file("/opt/Isabelle2021-1")
 
-lazy val makeQrhlToolConf = taskKey[Unit]("Create default qrhl-tool.conf")
+/*lazy val makeQrhlToolConf = taskKey[Unit]("Create default qrhl-tool.conf")
 makeQrhlToolConf := {
   val file = baseDirectory.value / "qrhl-tool.conf"
 //  println(s"qrhl-conf path: $file")
@@ -85,7 +85,7 @@ makeQrhlToolConf := {
     pr.close()
   }
 }
-managedResources in Compile := (managedResources in Compile).dependsOn(makeQrhlToolConf).value
+managedResources in Compile := (managedResources in Compile).dependsOn(makeQrhlToolConf).value*/
 
 mainClass in assembly := Some("qrhl.Main")
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
