@@ -940,7 +940,8 @@ object IsabelleX {
 
   val symbols = new Symbols(extraSymbolsLowPri = List(
     // Own additions (because Emacs's TeX input method produces these chars):
-    ("lbrakk", 0x00301A), ("rbrakk", 0x00301B), ("cdot", 0x0000B7)))
+    "lbrakk" -> 0x301A, "rbrakk" -> 0x301B))
+  // We do not include "cdot" -> 0xB7, but Isabelle maps 0xB7 to sqdot, and we do not want to conflict with that
 
   private var _theContext: ContextX = _
   def theContext: ContextX = _theContext

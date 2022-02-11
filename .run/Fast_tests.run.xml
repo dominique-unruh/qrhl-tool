@@ -9,6 +9,7 @@
     <option name="testKind" value="All in package" />
     <option name="classBuf">
       <list>
+        <option value="Test0" />
         <option value="qrhl.ExampleFilesTest" />
         <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.logic.BlockTest" />
