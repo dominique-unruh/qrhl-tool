@@ -98,6 +98,17 @@ object Configuration {
     case path => distributionDirectory.resolve(path)
   }
 
+  def session : String = config.getProperty("session") match {
+    case null => "QRHL"
+    case session => session
+  }
+
+  def sessionDirs : List[Path] = config.getProperty("session-dirs") match {
+    case null => Nil
+    case dirs => for (str <- dirs.split(raw",\s").toList)
+      yield Paths.get(str.trim).normalize.toAbsolutePath
+  }
+
 /*  def isabelleUserDir : Path = config.getProperty("isabelle-user") match {
     case null => Path.of(lang.System.getProperty("user.home")).resolve(".isabelle")
     case path => distributionDirectory.resolve(path)
@@ -989,8 +1000,9 @@ object IsabelleX {
   lazy val setup: Isabelle.Setup = de.unruh.isabelle.control.Isabelle.Setup(
     workingDirectory = Configuration.distributionDirectory,
     isabelleHome = Configuration.isabelleHome,
-    logic = "QRHL",
-    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys")),
+    logic = Configuration.session,
+    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys"))
+      ++ Configuration.sessionDirs,
     verbose = true,
 //    /** Must end in .isabelle if provided */
 //    userDir = Some(Configuration.isabelleUserDir)
