@@ -65,11 +65,11 @@ sealed abstract class GenericDirectory protected (partial: Boolean) {
     else {
       val fullPath = resolve(path)
       val entry = try {
-        if (Files.isDirectory(fullPath, NOFOLLOW_LINKS)) {
+        if (Files.isDirectory(fullPath)) {
           val dir = subdirs.getOrElseUpdate(path, {
             new Directory(fullPath, this, path, partial) })
           dir.snapshot()
-        } else if (Files.isRegularFile(fullPath, NOFOLLOW_LINKS)) {
+        } else if (Files.isRegularFile(fullPath)) {
           new FileSnapshot(fullPath)
         } else
           UnknownDirectoryEntry
