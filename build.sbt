@@ -81,7 +81,7 @@ javaOptions in Universal += "-Dfile.encoding=UTF-8" // This is important when ru
 enablePlugins(JavaAppPackaging)
 
 mappings in Universal ++=
-  List("proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat", "README.md", "LICENSE", "qrhl-tool.conf.sample").
+  List("proofgeneral.sh", /*"proofgeneral.bat",*/ "run-isabelle.sh", "run-isabelle.bat", "README.md", "LICENSE", "qrhl-tool.conf.sample").
     map { f => baseDirectory.value / f -> f }
 
 mappings in Universal ++= {
