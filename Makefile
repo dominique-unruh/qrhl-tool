@@ -46,3 +46,6 @@ view-test-results:
 	mkdir target/tmp
 	cd target/tmp && gh run download
 	xdg-open target/tmp/index.html
+
+issue :
+	gh issue create --assignee @me --milestone 0.7
