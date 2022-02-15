@@ -1,0 +1,287 @@
+# Please read the accompanying quickstart guide to understand 
+# the high-level proof sketch, then return to this file to step through
+# and get an understanding of the tactics
+
+# The quickstart guide is available on the webpage.
+# https://dominique-unruh.github.io/qrhl-tool/quickstart_guide-qRHL-tool.pdf
+# Documentation: Tejas Anil Shah
+# Supervision: Dominique Unruh
+
+# Once you open this file with Proof General
+# You should be in an Emacs environment
+# There are three panes in the window.
+# 1. Script
+# 2. Goals
+# 3. Response
+# You can execute the code line by line inorder to interactively 
+# prove a mathematical statement.
+# Code execution is as follows:
+# Process one step: C-c C-n (CTRL-c CTRL-n)
+# Backtrack one step: C-c C-u
+# Process upto the cursor position: C-c C-RET (RET is generally the ENTER key)
+# Use the above command to skip through the comments and jump to the executable code.
+
+# The qrhl-tool uses Isabelle/HOL as a backend, so the first step is
+# to initialize Isabelle as follows:
+
+isabelle OTP.
+# This line initializes isabelle, and
+# uses the OTP.thy file.
+# The OTP.thy only contains a few type definitions
+# and the definition of the encryption (XOR operation)
+# You can take a quick glance at it and return to this file
+# You can do so by using the Isabelle editor 
+# Use "run-isabelle{.sh/.bat}" script
+# and then opening the OTP.thy file with it
+
+# We first declare variables that we will use
+# An ambient variable is an arbitrary but fixed value
+# Meaning once an ambient variable is picked to be a certain value
+# it can't be changed
+
+ambient var m0 : msg.
+ambient var rho : program_state.
+
+# Similarly we define standalone variables as well
+# The classical variables are declared using the syntax
+# classical var variable_name : variable_type
+
+classical var c : ciph.
+classical var k : key.
+
+# In the OTP.thy file, we have defined the types ciph, key to be type_synonyms of the "msg" variable_type
+# This makes our intent to use these variables clear. Although under the hood they resolve to the
+# the same variable type.
+
+classical var b : bit.
+
+# The bit variable_type is isomorphic to a boolean variable type
+
+# In order to account for the internal state of the adversary
+# we define two variables (One for the classical state and one for the quantum state of the adversary)
+classical var cglobA : infinite.
+quantum var qglobA : infinite.
+
+# Now we define the adversary as follows
+adversary A free c, b, cglobA, qglobA.
+
+# This allows the adversary A to access the listed free variables
+# c - intended for input
+# b - intended for output
+# cglobA, qgbloA - internal state of adversary
+# This implies that the adversary A can read the ciphertext c, and output a b according the
+# it's internal state
+
+# With all the variables and states defined
+# We define the enc_fixed, in which the adversary gets
+# the encryption of m0.
+# Since there are no restrictions on m0, this covers the case where m0 is a completely arbitrary message. 
+# Intuitively, we can think of it as chosen by the adversary.
+
+# After encryption we call the adversary.
+program enc_fixed := {
+  k <$ uniform UNIV;
+  c <- otp k m0;
+  call A;
+}.
+
+# In our definition of the adversary A, we made sure that it has access to
+# the ciphertext, c, and the bit, b. So "call A" intuitively means: b <- A(c)
+
+# Similarly we define the program where the adversary is given
+# something random
+program random := {
+  c <$ uniform UNIV;
+  call A;
+}.
+
+# So far we have defined the programs enc_fixed and random.
+# "enc_fixed" picks a uniformly random key, k
+# Encrypts m0 with k and stores the ciphertext to c
+# Where as, "random" simply picks something random and passes it off as the ciphertext
+# In both cases the adversary has access to c
+
+# We knoe that OTP has perfect secrecy. 
+# This means that an adversary cannot distinguish between a real encryption
+# of a message and a completely random message.
+# We will shortly make a claim that supports this idea.
+
+# We're through with the setup
+# Tools like Isabelle and qrhl-tool allow us to:
+# 1. State a claim
+# 2. Use tactics which could be axioms or other provable results to prove what we stated
+
+# In this lemma, we claim that
+# The probability that the adversary outputs 1 when given an actual encryption
+# is equal to the probability that it outputs 1 when given some random input
+
+lemma secure: Pr[b=1 : enc_fixed(rho)] = Pr[b=1: random(rho)].
+
+# Up until this point the Goals pane was empty.
+# Once we say that we have a lemma to prove. The Goals pane is populated with
+# what needs to be proven, in this case a lemma called "secure".
+
+# To instruct the qrhl-tool to use qRHL, we use the tactic "byqrhl"
+# byqrhl transforms a goal of the form:
+# Pr [e: P(rho)] = Pr[e': P'(rho)]; P and P' are the programs
+# to something that we can attack with qRHL tactics
+byqrhl.
+
+# At this point the goal is stated long form
+# The long form is equivalent to {pre} left ~ right {post}
+# The long form is simply more readable when there are more variables and conditions
+
+# The way to read the Goal here is to think that
+# If the "Pre" conditions hold, and we run the programs ("Left", and "Right")
+# our goal is to prove that the "Post" condition holds as well
+# There is a caveat here about what running both the programs together means.
+# At this point it doesn't matter too much, but if you would like to delve further into it
+# please refer to the qRHL paper
+
+# The variables with the "1" appended to the end are accessed by the "Left" program
+# Similarly, the variable appended by "2" are accessed by the "Right" program
+# ℭ𝔩𝔞 refers to the classical variables that we have
+# The symbol ≡𝔮 is used to talk about quantum equality
+# which refers to the notion of equality in the quantum setting
+# The symbol ⊓ is to be interpretted as an "and" for quantum predicates. 
+# Formally this implies the intersection of the subspaces
+
+# In essence "Pre" states that we start with the fact that the initial states of the memories
+# (both classical and quantum) that the left and right programs work on are equal.
+# Where as the "Post" condition states that "b1 = b2" since they are both boolean variables and equal to 1
+# Our objective is to work towards showing that this predicate holds.
+
+
+# Those familiar with EasyCrypt might find this intuitive and familiar.
+# Again a quick summary is that
+# 1. If we start with same values in both the program (Pre)
+# 2. Run programs "enc_fixed" and "random" (Left and Right)
+# 3. They both return the value same value b (Post)
+
+# To get started here, we need to be able
+# to open up the programs: enc_fixed and random
+# To do so we use the tactic "inline"
+# It simply replaces the programs with their definitions 
+inline enc_fixed.
+inline random.
+
+# When working with formal verification a general strategy is to work towards the goal
+# starting from the end of the programs and working our way backwards.
+
+# Now if we observe our goal state, in both the left program, and the right program
+# we have an equal instruction, in situations like these we can use
+# the tactic "equal" to remove same statements from the end subject to some conditions.
+# Since we have the same instruction of "call A" on both sides, we can use the tactic here.
+equal.
+
+# Notice that now we have 2 sub-goals
+# Many a times after using the equal tactic some of these sub-goals can be
+# dispensed off by using the tactic "simp"
+# This invokes the Isabelle/HOL simplifier on the current goal
+# In our case we can observe that the sub-goal is true
+# since two classical variables can either be equal or not equal
+# So applying the tactic "simp" dispenses the subgoal.
+
+# qRHL-tool also supports braced sub-goal proving
+# Opening a brace will clear out the other goals when the scope is in the brace.
+# Decluttering the workspace.
+{ 
+  simp. 
+}
+
+# The post-condition consists of a term c1 = c2
+# c1 in our case is equal to the OTP encryption of
+# a  k (random key) and some m0
+# In order for us to make progress we need to be able to replace c1
+# and then we can try to reason about the distributions of k and c
+# So we use the tactic wp side (where side = left,right)
+# It removes the last statement from the target side
+# In our case we use wp left to get rid of the last line 
+# from the left program
+wp left.
+
+# Observe that the tactic replaced c1 in the post-condition with otp k1 m0
+# wp can also be used as follows:
+# wp side x (Simply applying wp side x times)
+# Ex: wp left 2 (wp left. wp left.)
+#     wp n m (wp left n. wp right m.)
+
+
+# If we look at the goal now, we see that otp k1 m0 = c2 occurs in the postcondition
+# This is what we need to work towards
+# This implies that we need to draw k1, and c in a way which
+# allows us to link them, but when we look at them independently they
+# still come from uniform distributions
+# The tactic that allows us to do so is the rnd tactic
+rnd k,c <- map_distr (%k. (k, otp k m0)) (uniform UNIV :: key distr).
+simp. 
+
+# Here rnd k,c tactic picks the values in a specific way.
+# 1. The type is unifrom UNIV :: key distr
+#    They drawn from a unifrom distribution from all values (UNIV) since they are keys
+# 2. map_distr (%k. (k, otp k m0)) maps k to (k, otp k m0)
+#    When applied to uniform UNIV, we get a distribution of pairs of k,c
+#    where the first component is uniformly chosen k,
+#    and the second is the otp k m0 using that value k
+# This results in a distribution which always gives pairs (k,c) that hold the relationship c = otp k m0
+
+# So the tactic rnd k,c <- ... essentially picks k,c together according to the chosen distribution
+# The requirement that will be imposed in the new post-condition is that these distributions of k and c
+# should seperately be like the sampling in the left/right programs.
+
+#  - tactic rnd k,c <- some-distr then picks k,c "together" according to the distribution some-distr
+#  - only requirement (will be checked in the new postcondition): the distributions of k and c (separately) are like the sampling in the left/right program
+
+
+# Is is encouraged to comment out the tactics "rnd k,c ..." and "simp" and
+# run the bad approach described below to understand why it is a bad approach
+# Bad approach 1: (treats k,c as arbitrary unrelated values)
+# wp 1 1.
+# simp.
+# Taking this bad approach brings us to the state in the post-condition
+# which says that ⨅x xa | otp xa m0 = x which reads that 
+# For all x and xa, otp xa m0 = x, this clearly can't happen for all x and xa.
+
+# Another bad approach is to simply run the rnd without specifying how the values are drawn
+# Bad approach 2: (samples k,c jointly, but with k=c)
+# rnd.
+# simp.
+
+# This approach brings us to a post-condition part of which reads ⨅x | otp x m0 = x
+# Which again can't happen for all x.
+
+# At this point please make sure both the bad approaches are commented out
+# And the correct approach with "rnd k,c ..." and "simp" are not commented
+
+# Now the goal state has only skip as programs in both
+# the left side and the right side.
+# Inorder to move away from this we apply the tactic skip
+# It converts a qRHL subgoal of the form {A} skip ~ skip {B} into
+# an ambient logic subgoal
+skip.
+
+simp.
+
+# Now note the goal
+# It says "map_distr (λx. otp x m0) (uniform UNIV) ≠ uniform UNIV implies something".
+# "simp" did not realize that infact "map_distr (λx. otp x m0) (uniform UNIV) = uniform UNIV" holds
+# and that would imply that the goal would be trivial.
+# Since we would have a goal state in which "uniform UNIV ≠ uniform UNIV" (which is clearly false) holds
+# If a false condition holds any implication can be derived from it
+# So the fix (in this case) is tell "simp" the definition of otp. Like so:
+
+simp otp_def.
+
+# We could've already given the definition of otp_def to simp right from the beginning
+# basically combining the previous two simp tactics into just one.
+# You can comment out the previous simp and run only simp otp_def and that would also be enough.
+# We have them split into two to show the intermediate steps.
+
+# In complex cases, we may need to prove helper lemmas
+# For instance we could have created a separate lemma like so
+# lemma map_univ: map_distr (λx. otp x m0) (uniform UNIV) = uniform UNIV.
+# Proved the lemma, and used simp with the lemma to make progress.
+# But in this case we were lucky and simp was strong enough to prove the goal.
+
+# Once there are no goals to be proved we can end the proof with qed.
+qed.
