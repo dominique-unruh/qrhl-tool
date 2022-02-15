@@ -1,9 +1,9 @@
-# Please read the accompanying Quick-Start Guide to understand 
+# Please read the accompanying quickstart guide to understand 
 # the high-level proof sketch, then return to this file to step through
 # and get an understanding of the tactics
 
-# The Quick-Start Guide is available in the examples bundled with the tool.
-# https://github.com/dominique-unruh/qrhl-tool/tree/master/examples/
+# The quickstart guide is available in the examples bundled with the tool.
+# https://dominique-unruh.github.io/qrhl-tool/quickstart_guide-qRHL-tool.pdf
 # Documentation: Tejas Anil Shah
 # Supervision: Dominique Unruh
 
