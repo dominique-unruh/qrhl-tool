@@ -15,6 +15,7 @@ See [here](install.md) for installation instructions.
 
 * The [user manual](manual-0.6.pdf), included in the binary installation as `manual.pdf`
 * Example files, included in the binary installation in `examples/`
+* The quickstart guide and accompanying `otp.qrhl` and `OTP.thy` files, included in the binary installation in `examples/`
 * [Gitter chat](https://gitter.im/dominique-unruh/qrhl-tool)
 
 ## Papers
