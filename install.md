@@ -31,11 +31,13 @@ and enter `java -version` or `emacs -version`, respectively, and see whether the
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.6` or `qrhl-snapshot`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.6`.
+(Or `qrhl-snapshot` in case of the development snapshot.)
 
 In the `qrhl-0.6` directory, edit the file `qrhl-tool.conf`: 
 Add the configuration keys `isabelle-home = <where you unpackaged Isabelle>`
 and `afp-home = <where you unpackaged AFP>`.
+(In the development snapshot, edit `.qrhl-tool.conf` in your home directory instead.)
 
 To update, simply extract the new version.
 (But make sure to save your `qrhl-tool.conf`.)
