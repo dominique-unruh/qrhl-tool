@@ -342,6 +342,34 @@ the file step by step. (If emacs is not available, you can also run
 \texttt{bin/qrhl example.qrhl} noninteractively.) To edit
 \texttt{Example.thy}, execute \texttt{run-isabelle.sh Example.thy}.
 
+\paragraph{Configutation file.}%
+\index{configuration file}\index{qrhl-tool.conf@\texttt{qrhl-tool.conf}}
+General configuration of the tool is done via the file \texttt{qrhl-tool.conf}.
+More specifically, \texttt{qrhl-tool} looks for \texttt{\textnormal{\textit{installation\_dir}}/qrhl-tool.conf},
+\texttt{\textnormal{\textit{home\_directory}}/.qrhl-tool.conf}, and \texttt{\textnormal{\textit{current\_dir}}/qrhl-tool.conf}, in that order.
+All found configuration files are loaded, with entries in the later ones overriding earlier ones.
+The following entries are supported (one per line):
+\begin{itemize}
+\item \texttt{isabelle-home = \textnormal{\textit{dir}}} \\
+  This specifies the location of the Isabelle distribution.
+  (I.e., the directory that contains files such as \texttt{Isabelle2021-1}, \texttt{ROOTS}, etc.)
+\item \texttt{afp-root = \textnormal{\texttt{dir}}} \\
+  This specifies the location of the AFP (Archive of Formal Proofs).
+  (I.e., the directory that contains subdirectories such as \texttt{thys}, \texttt{etc}, \texttt{tools}.)
+  If your Isabelle installation is already configured to find the AFP (e.g., via the steps from \cite{using-afp}), this key is optional.
+\item \texttt{session = \textnormal{\textit{session}}} \\
+  This specifies a different base session for Isabelle to load inside \texttt{qrhl-tool}.
+  The default is the session \texttt{QRHL} which is predefined by the \texttt{qrhl-tool} distribution.
+  Specifying a different session can be used to speed up starting \texttt{qrhl-tool} since the theories contained in that session do not have to be loaded upon each activation.
+  If you configure a session here, it is highly recommended that this session includes the theories \texttt{QRHL.QRHL} and \texttt{QRHL.QRHL\_Operations}.
+  See \cite[Section 2.1 ``Session ROOT specifications'']{isabelle-system} for information how to specify Isabelle sessions.
+\item \texttt{session-dirs = \textnormal{\textit{dir1}}, \textnormal{\textit{dir2}}, ..., \textnormal{\textit{dirn}}} \\
+  Additional directories where Isabelle should look for sessions.
+  (E.g., the directory where you defined the session specified with \texttt{session}.)
+  Several directories are separated by commands.
+  Spaces after the commas are mandatory.
+\end{itemize}
+
 \subsection{Proof scripts}
 \label{sec:tool.proofscripts}
 
