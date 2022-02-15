@@ -244,6 +244,7 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
     foci.isEmpty || (foci.tail.isEmpty && foci.head.isEmpty && !foci.head.isBraceFocus)
 
   def focusBrace(selector: SubgoalSelector): Goal = {
+    if (isProved) throw UserException("Proof is finished, cannot focus")
     val firstFocus = foci.head
     if (firstFocus.isEmpty) throw UserException("No subgoal to focus on")
     val (focused, remaining) = selector.select(firstFocus.subgoals)
@@ -256,6 +257,7 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
   }
 
   def unfocusBrace(): Goal = {
+    if (isProved) throw UserException("Proof is finished, cannot unfocus")
     var foci = this.foci
     if (foci.head.nonEmpty) throw UserException("Cannot unfocus, there are focused subgoals remaining")
     while (foci.nonEmpty && foci.head.isEmpty && !foci.head.isBraceFocus) foci = foci.tail
@@ -275,7 +277,8 @@ class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
   }
 
   def unfocus(label: String): Goal = {
-    if (foci.isEmpty) throw UserException("Nothing to unfocus")
+    if (isProved) throw UserException("Proof is finished, cannot unfocus")
+    else if (foci.isEmpty) throw UserException("Nothing to unfocus")
     else if (foci.head.nonEmpty) throw UserException("Cannot unfocus, there are focused subgoals remaining")
     else if (foci.head.isBraceFocus) throw UserException(s"Cannot unfocus using $label, use } to unfocus")
     else if (foci.tail.isEmpty) throw UserException("Nothing to unfocus")
