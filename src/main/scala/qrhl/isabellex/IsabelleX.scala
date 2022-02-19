@@ -22,6 +22,7 @@ import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import de.unruh.isabelle.control
 import de.unruh.isabelle.misc.{FutureValue, Symbols}
+import de.unruh.isabelle.pure.exceptions.Exn
 import hashedcomputation.{Hash, HashedValue}
 import org.apache.commons.io.FileUtils
 
@@ -941,7 +942,7 @@ object IsabelleX {
   val symbols = new Symbols(extraSymbolsLowPri = List(
     // Own additions (because Emacs's TeX input method produces these chars):
     "lbrakk" -> 0x301A, "rbrakk" -> 0x301B))
-  // We do not include "cdot" -> 0xB7, but Isabelle maps 0xB7 to sqdot, and we do not want to conflict with that
+    // We do not include "cdot" -> 0xB7, because Isabelle maps 0xB7 to sqdot, and we do not want to conflict with that
 
   private var _theContext: ContextX = _
   def theContext: ContextX = _theContext
@@ -951,12 +952,15 @@ object IsabelleX {
     // We initialize the global _theContext with this context inside this future.
     // This guarantees that the present context will only be used if it succeeds.
     // (Meaning, if the future inside `context` succeeds.
-    override def someFuture: Future[Any] = context.someFuture.map { _ => _theContext = this }
+    override def someFuture: Future[Any] = context.someFuture.map { _ =>
+      _theContext = this;
+      isabelleControl.exceptionManager.asInstanceOf[Exn.ExceptionManager].setContext(context)
+    }
 
     private implicit val isabelleControl: Isabelle = isabelle.isabelleControl
     import isabelle.Ops._
 
-    // Make sure not to return the constructor unless _theContext is initialized (or until this context is known to have failed)
+    // Make sure not to return from the constructor unless _theContext is initialized (or until this context is known to have failed)
     if (_theContext == null)
       Await.ready(someFuture, Duration.Inf)
 
@@ -1005,6 +1009,7 @@ object IsabelleX {
     sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys"))
       ++ Configuration.sessionDirs,
     verbose = true,
+    exceptionManager = new Exn.ExceptionManager(_)
 //    /** Must end in .isabelle if provided */
 //    userDir = Some(Configuration.isabelleUserDir)
   )

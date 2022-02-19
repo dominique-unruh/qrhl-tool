@@ -211,7 +211,7 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
         case e : UserException =>
           println(s"[ERROR] ${e.positionMessage}")
           if (e.log != null && !e.log.isBlank) {
-            println("\nThe full output of the command follows:\n")
+            println("\nThe full output of the command follows (if any):\n")
             println(e.log)
           }
           if (abortOnError) return false
