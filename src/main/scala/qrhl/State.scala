@@ -9,7 +9,7 @@ import isabellex.{IsabelleX, RichTerm}
 import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext, Toplevel}
 import de.unruh.isabelle.control
-import control.IsabelleException
+import control.IsabelleMLException
 
 import qrhl.State.logger
 
@@ -59,7 +59,7 @@ object UserException {
   private val logger = log4s.getLogger
 
   def apply(msg: String) = new UserException(msg)
-  def apply(e: IsabelleException, position: String = null, log: String = null): UserException = {
+  def apply(e: IsabelleMLException, position: String = null, log: String = null): UserException = {
 //    logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
     val e2 = UserException("(in Isabelle) "+IsabelleX.symbols.symbolsToUnicode(e.getMessage))
     e2.setPosition(position)

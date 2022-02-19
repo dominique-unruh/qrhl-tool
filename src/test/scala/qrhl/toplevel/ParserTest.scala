@@ -1,12 +1,12 @@
 package qrhl.toplevel
 
 import java.io.IOException
-
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.UserException
 import qrhl.isabellex.IsabelleX
 import qrhl.logic.{Block, CVariable, Call, Local, VTCons, VTSingle}
 import IsabelleX.{globalIsabelle => GIsabelle}
+import de.unruh.isabelle.control.IsabelleMLException
 
 class ParserTest extends AnyFunSuite {
   implicit lazy val parserContext: ParserContext = {
@@ -75,7 +75,7 @@ class ParserTest extends AnyFunSuite {
   }
 
   test("fail to parse while loop") {
-    assertThrows[IOException] { // TODO: Mark which exception is actually thrown
+    assertThrows[IsabelleMLException] {
       val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; }")
     }
   }

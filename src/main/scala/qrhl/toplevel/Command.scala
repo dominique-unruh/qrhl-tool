@@ -7,7 +7,7 @@ import qrhl.logic.{Block, CVariable, QVariable, Variable}
 import qrhl.{State, Subgoal, Tactic, UserException, toplevel}
 
 import scala.collection.immutable.ListSet
-import de.unruh.isabelle.control.{Isabelle, IsabelleException, OperationCollection}
+import de.unruh.isabelle.control.{Isabelle, IsabelleMLException, OperationCollection}
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, ListHashable, PathHashable}
@@ -36,7 +36,7 @@ trait Command extends HashedValue {
       act(state, writer)
     } catch {
       case e : UserException => e.setLog(output); throw e
-      case e : IsabelleException => throw UserException(e, log=output)
+      case e : IsabelleMLException => throw UserException(e, log=output)
     }
     newState.setLastOutput(output)
   }

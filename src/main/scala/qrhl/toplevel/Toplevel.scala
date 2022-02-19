@@ -4,7 +4,7 @@ import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import hashedcomputation.{Element, Fingerprint, Hash, HashTag, Hashable, HashedFunction, HashedPromise, HashedValue, NestedElement, Tuple3Element1, Tuple3Element2, Tuple3Element3, filesystem}
-import de.unruh.isabelle.control.IsabelleException
+import de.unruh.isabelle.control.IsabelleMLException
 import hashedcomputation.Fingerprint.Entry
 import hashedcomputation.filesystem.{Directory, DirectorySnapshot, FileSnapshot, FingerprintedDirectorySnapshot, OutdatedSnapshotException, RootsDirectory}
 import qrhl.toplevel.Toplevel.CommandOrString
@@ -418,7 +418,7 @@ object Toplevel {
         state = applyCommandToState(command, state, fs)
       } catch {
         case e: UserException => e.setPosition(command.position); throw e
-        case e: IsabelleException => throw UserException(e, command.position)
+        case e: IsabelleMLException => throw UserException(e, command.position)
       }
     state
   }
