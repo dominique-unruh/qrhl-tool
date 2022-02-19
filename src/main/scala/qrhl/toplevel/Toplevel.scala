@@ -168,6 +168,19 @@ class Toplevel private(initialState : State) {
     runWithErrorHandler(readLine, abortOnError=abortOnError)
   }
 
+  /** Checks that there is no pending proof.
+   * If there is none, a success message is printed.
+   * @throws UserException if there is a pending proof */
+  private def checkFinished() : Unit = {
+    if (state.currentLemma.isDefined) {
+      if (state.goal.isProved)
+        throw UserException("Unfinished proof at end of file. (You forgot the qed command.)")
+      else
+        throw UserException("Unfinished proof at end of file. (Pending subgoals.)")
+    }
+    println("\n\nAll proofs processed successfully.")
+  }
+
   /** Runs a sequence of commands. Each command must be delimited by "." at the end of a line.
     * A line starting with # (and possibly whitespace before that) is ignored (comment).
     * @param readLine command for reading lines from the input, invoked with the prompt to show
@@ -175,7 +188,7 @@ class Toplevel private(initialState : State) {
   def run(readLine : ReadLine): Unit = {
     while (true) {
         val cmdStr = Toplevel.readCommand(readLine)
-        if (cmdStr==null) { println("EOF"); return; }
+        if (cmdStr==null) { checkFinished(); return }
         execCmd(CommandOrString.Str(cmdStr, readLine.position))
     }
   }
@@ -189,7 +202,7 @@ class Toplevel private(initialState : State) {
     while (true) {
       try {
         val cmdStr = Toplevel.readCommand(readLine)
-        if (cmdStr==null) { println("EOF"); return true; }
+        if (cmdStr==null) { checkFinished(); return true }
         execCmd(CommandOrString.Str(cmdStr, readLine.position))
       } catch {
         case e : UserException =>
