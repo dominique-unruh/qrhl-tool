@@ -609,9 +609,33 @@
   placeholder=\powerset M,
   description={Powerset of $M$}}
 
-\declare{macro=\TOOLotimes,
-  placeholder={\otimes},
-  description={Tensor product (Isabelle/HOL constant)}}
+%\declare{macro=\TOOLotimes,
+%  placeholder={\otimes},
+%  description={Tensor product (Isabelle/HOL constant)}}
+
+\declare{macro=\TOOLtensoro, code={\otimes_o},
+  placeholder={A \TOOLtensoro B},
+  description={Tensor product of two operators/matrices}}
+
+\declare{macro=\TOOLtensorl, code={\otimes_l},
+  placeholder={A \TOOLtensorl B},
+  description={Tensor product of two vectors/quantum states}}
+
+\declare{macro=\TOOLtensorS, code={\otimes_S},
+  placeholder={A \TOOLtensorS B},
+  description={Tensor product of two subspaces}}
+
+\declare{macro=\TOOLoCL, code={\circ_{CL}}
+  placeholder={A \TOOLoCL B},
+  description={Composition (product) of operators/matrices}}
+
+\declare{macro=\TOOLstarV, code={*_V}
+  placeholder={A \TOOLstarV \psi},
+  description={Applying operator/matrix to vector}}
+
+\declare{macro=\TOOLstarS, code={*_S}
+  placeholder={A \TOOLstarS S},
+  description={Applying operator/matrix to subspace $S$}}
 
 \declare{macro=\TOOLassign, code=\texttt{<-},
   placeholder={\texttt{$x$ <- $e$;}},
@@ -630,9 +654,9 @@
   placeholder={\texttt{Pr}[v:P(\rho)]},
   description={Isabelle/HOL constant for probability of $v=1$ after running $P$}}
 
-\declare{macro=\TOOLcdot, 
-  placeholder={A\cdot B},
-  description={Overloaded Isabelle/HOL constant for \texttt{timesOp}, \texttt{cblinfun\_apply}, \texttt{applyOpSpace}}}
+%\declare{macro=\TOOLcdot, 
+%  placeholder={A\cdot B},
+%  description={Overloaded Isabelle/HOL constant for \texttt{timesOp}, \texttt{cblinfun\_apply}, \texttt{applyOpSpace}}}
 
 % \declare{macro=\TOOLH, code=\texttt{H},
 %   description={Hadamard (Isabelle/HOL constant)}}
@@ -650,7 +674,15 @@
 
 \declare{macro=\TOOLfrqq, 
   placeholder={A\text\guillemotright Q},
-  description={Overloaded Isabelle/HOL constant for \texttt{liftOp}, \texttt{liftSpace}}}
+  description={Applying operator $A$ to variables $Q$ (i.e., lifting $A$ to the whole memory via $Q$)}}
+
+\declare{macro=\TOOLinq,  code={\in_\mathfrak q},
+  placeholder={Q \TOOLinq S},
+  description={Lifting subspace $S$ to the whole memory via $Q$}}
+
+\declare{macro=\TOOLeqq,  code={=_\mathfrak q},
+  placeholder={Q \TOOLeqq \psi},
+  description={Lifting state $\psi$ to the whole memory via $Q$}}
 
 \declare{macro=\TOOLqeq,
   placeholder={Q_1 \mathrel{\mathord\equiv\mathfrak q} Q_2,\
