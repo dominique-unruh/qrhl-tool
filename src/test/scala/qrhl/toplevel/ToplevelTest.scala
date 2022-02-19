@@ -28,8 +28,9 @@ class ToplevelTest extends AnyFunSuite {
 }
 
 object ToplevelTest {
+  /** Toplevel with a theory preloaded. Also suppresses errors at EOF. */
   def makeToplevelWithTheory(theory:Seq[String]=Nil) : Toplevel = {
-    val tl = Toplevel.makeToplevelFromState(State.empty(cheating = false))
+    val tl = Toplevel.makeToplevelFromState(State.empty(cheating = false), errorWhenUnfinished = false)
     tl.execCmd(IsabelleCommand(theory))
     tl
   }

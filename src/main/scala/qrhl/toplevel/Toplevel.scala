@@ -30,7 +30,7 @@ import org.apache.commons.codec.binary.Hex
 import hashedcomputation.Implicits._
 
 /** Not thread safe */
-class Toplevel private(initialState : State) {
+class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = true) {
   private var currentState : State = initialState
   /** Reversed list of commands */
   private var commands : List[CommandOrString] = Nil
@@ -170,13 +170,16 @@ class Toplevel private(initialState : State) {
 
   /** Checks that there is no pending proof.
    * If there is none, a success message is printed.
-   * @throws UserException if there is a pending proof */
+   * @throws UserException if there is a pending proof.
+   *                       Not thrown if [[errorWhenUnfinished]]`==false` */
   private def checkFinished() : Unit = {
     if (state.currentLemma.isDefined) {
-      if (state.goal.isProved)
-        throw UserException("Unfinished proof at end of file. (You forgot the qed command.)")
-      else
-        throw UserException("Unfinished proof at end of file. (Pending subgoals.)")
+      if (errorWhenUnfinished) {
+        if (state.goal.isProved)
+          throw UserException("Unfinished proof at end of file. (You forgot the qed command.)")
+        else
+          throw UserException("Unfinished proof at end of file. (Pending subgoals.)")
+      }
     }
     println("\n\nAll proofs processed successfully.")
   }
@@ -242,8 +245,8 @@ object Toplevel {
     toplevel
   }
 
-  def makeToplevelFromState(state: State) : Toplevel =
-    new Toplevel(state)
+  def makeToplevelFromState(state: State, errorWhenUnfinished: Boolean = true) : Toplevel =
+    new Toplevel(state, errorWhenUnfinished = errorWhenUnfinished)
 
   def makeToplevel(cheating: Boolean) : Toplevel = {
     val state = State.empty(cheating = cheating)
