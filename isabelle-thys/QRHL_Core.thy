@@ -341,8 +341,10 @@ axiomatization
   (* lift_rest Q is the set of valid \<psi>' in lift_vector *)
   lift_rest :: "'a variables \<Rightarrow> mem2 ell2 set"
 
-abbreviation variable_in (infix "\<in>\<^sub>q" 80) where "variable_in R S \<equiv> liftSpace S R" 
-abbreviation variable_is (infix "=\<^sub>q" 80) where "variable_is R \<psi> \<equiv> R \<in>\<^sub>q ccspan {\<psi>}" 
+abbreviation variable_in (infix "\<in>\<^sub>\<qq>" 80) where "variable_in R S \<equiv> liftSpace S R" 
+notation (input) variable_in (infix "\<in>\<^sub>q" 80)
+abbreviation variable_is (infix "=\<^sub>\<qq>" 80) where "variable_is R \<psi> \<equiv> R \<in>\<^sub>q ccspan {\<psi>}" 
+notation (input) variable_is (infix "=\<^sub>q" 80)
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<guillemotright>_"  [91,91] 90)
 syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_>>_"  [91,91] 90)
