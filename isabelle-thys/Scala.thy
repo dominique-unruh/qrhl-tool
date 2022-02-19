@@ -91,7 +91,7 @@ object IsabelleConsts {
   val quantum_equality_full = \<open>\<^const_name>\<open>quantum_equality_full\<close>\<close>
   val idOp = \<open>\<^const_name>\<open>id_cblinfun\<close>\<close>
   val less_eq = \<open>\<^const_name>\<open>less_eq\<close>\<close>
-  val tensorOp = \<open>\<^const_name>\<open>tensorOp\<close>\<close>
+  val tensorOp = \<open>\<^const_name>\<open>tensor_op\<close>\<close>
   val unitary = \<open>\<^const_name>\<open>unitary\<close>\<close>
   val swap_variables_subspace = \<open>\<^const_name>\<open>swap_variables_subspace\<close>\<close>
   val default = \<open>\<^const_name>\<open>default\<close>\<close>
