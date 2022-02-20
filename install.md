@@ -17,7 +17,7 @@ wget -nv https://github.com/dominique-unruh/qrhl-tool/raw/master/installer.py -O
 ## Prerequisites
 
 * Java must be installed (at least Java 11), and the `java` executable must be in the path.
-* Emacs must be installed, and the `emacs` executable must be in the path (otherwise edit `proofgeneral.{bat,sh}`).
+* Emacs must be installed, and the `emacs` executable must be in the path (otherwise edit `proofgeneral.sh`).
   At least Emacs 25 is required.
 
 To check whether this is the case, go into a terminal,
@@ -44,11 +44,13 @@ To update, simply extract the new version.
 
 ## Executing the demos
 
-In the `qrhl-snapshot` directory, execute `proofgeneral.{sh,bat}`.
+In the `qrhl-snapshot` directory, execute `proofgeneral.sh`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
 e.g. `example.qrhl`.
+
+(See _[invoking ProofGeneral](proofgeneral.md)_ for alternative ways, or if you use Windows.)
 
 To step through the examples, use Ctrl-C Ctrl-N to go forward one proof step, Ctrl-C Ctrl-U to go back one.
 You will see the current goal and some messages withing the Emacs/ProofGeneral window.
