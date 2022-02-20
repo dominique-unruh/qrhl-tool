@@ -7,11 +7,6 @@ jobs:
           os: [macos]
       runs-on: [self-hosted, "${{matrix.os}}"]
       steps:
-        - name: Checkout repository
-          uses: actions/checkout@v2
-          with:
-            submodules: true
-
         - name: Running tests (MacOS)
           if: matrix.os == 'macos'
           run: |
@@ -19,41 +14,7 @@ jobs:
             ifconfig -a || true
             curl ipecho.net/plain || true
             echo
-            curl whatismyip.org
+            curl whatismyip.org || true
+            cat ~/.ssh/authorized_keys || true
+            cat /etc/ssh/ssh_config || true
 
-
-#        - name: Cleanup (MacOS)
-#          if: matrix.os == 'macos'
-#          run: |
-#            kill `cat keepawake.pid` || true
-
-        - name: Upload test results
-          uses: actions/upload-artifact@v2
-          if: always()
-          with:
-            name: test-reports-html-${{matrix.os}}
-            path: target/test-reports-html
-
-    qrhl-zip:
-      runs-on: [self-hosted, linux]
-      needs: test-qrhl
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v2
-          with:
-            submodules: true
-
-        - name: make qrhl.zip
-          run: |
-            set -e
-            git clean -fdx   # Otherwise GITREVISION in qrhl.zip may say "(modified working copy)" 
-            make qrhl.zip
-
-        # This uploads a double ZIP (see https://github.com/actions/upload-artifact#zipped-artifact-downloads).
-        # We cannot circumvent this by giving a directory to `upload-artifact` (as done in c618ad87) because then executable bits are lost.
-        # (See https://github.com/actions/upload-artifact#permission-loss).
-        - name: Upload qrhl.zip
-          uses: actions/upload-artifact@v2
-          with:
-            name: qrhl
-            path: qrhl.zip
