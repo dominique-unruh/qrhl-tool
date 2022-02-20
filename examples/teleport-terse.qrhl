@@ -1,7 +1,7 @@
 # Analysis of quantum teleportation.
 # See the qrhl-tool manual for an explanation of this example. (Section 7.4 "Quantum teleportation", the "terse" proof.)
 
-isabelle Teleport_Terse.
+isabelle.
 
 classical var a : bit.
 classical var c : bit.
@@ -33,9 +33,8 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
   wp left.
   wp left.
   skip.
-
-  rule teleport_terse.
-  simp!.
+  simp prepare_for_code.
+  isa eval.
 
 qed.
 
