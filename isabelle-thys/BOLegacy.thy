@@ -88,4 +88,6 @@ type_synonym 'a clinear_space = \<open>'a ccsubspace\<close>
 
 abbreviation (input) \<open>isProjector \<equiv> is_Proj\<close>
 
+notation ket ("|_\<rangle>")
+
 end
