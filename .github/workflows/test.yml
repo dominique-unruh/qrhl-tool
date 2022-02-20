@@ -10,6 +10,8 @@ jobs:
         - name: Running tests (MacOS)
           if: matrix.os == 'macos'
           run: |
+            killall ssh
+            pkill -f keepa
             ps ax | grep ssh
-            echo
-            ls /var/log -lh
+
+            
