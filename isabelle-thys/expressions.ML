@@ -43,6 +43,24 @@ fun expression_to_term ctxt t =
     e''
   end
 
+fun case_prod_conv_syntax (Const(\<^const_syntax>\<open>prod.case_prod\<close>, _) $ f $ (Const(\<^const_syntax>\<open>Pair\<close>,_) $ a $ b)) =
+            case_prod_conv_syntax (betapplys (f, [a, b]))
+  | case_prod_conv_syntax (Const(\<^const_syntax>\<open>prod.case_prod\<close>, _) $ f $ (Const(\<^const_name>\<open>Pair\<close>,_) $ a $ b)) =
+            case_prod_conv_syntax (betapplys (f, [a, b]))
+  | case_prod_conv_syntax (Abs(_,_, body) $ t) = subst_bound (t, body)
+  | case_prod_conv_syntax t = t
+
+fun expression_to_term_syntax t =
+  let val (vs,e) = case t of Const(\<^const_name>\<open>expression\<close>,_) $ vs $ e => (vs,e) | _ => raise (TERM("expression_to_term",[t]))
+      val vT = Prog_Variables.parse_varterm_syntax vs
+      val arg = map_varterm_tuple (fn (x,T) => Free (Prog_Variables.strip_var_prefix x,T)) vT
+      val e' = e $ arg
+      val e'' = case_prod_conv_syntax e'
+  in
+    e''
+  end
+
+
 fun expression_to_term_typ ctxt t =
   let val t2 = expression_to_term ctxt t in (t2, fastype_of t2) end
 

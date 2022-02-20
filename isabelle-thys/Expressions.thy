@@ -125,7 +125,7 @@ lemma fv_expression: "fv_expression (expression v e) = set (variable_names v)"
 
 section \<open>Constructing expressions\<close>
 
-abbreviation "const_expression z \<equiv> expression \<lbrakk>\<rbrakk> (\<lambda>_. z)"
+abbreviation (input) "const_expression z \<equiv> expression \<lbrakk>\<rbrakk> (\<lambda>_. z)"
 
 lift_definition map_expression' :: "(('z \<Rightarrow> 'e) \<Rightarrow> 'f) \<Rightarrow> ('z \<Rightarrow> 'e expression) \<Rightarrow> 'f expression" is
   "\<lambda>F ez. if (\<forall>z. fst (ez z) = fst (ez undefined)) 
@@ -1481,7 +1481,15 @@ ML_file "expressions.ML"
 simproc_setup clean_expression ("expression Q e") = Expressions.clean_expression_simproc
 
 consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
+
 parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Expressions.term_to_expression_untyped ctx e)]\<close>
+
+print_translation \<open>[(\<^const_syntax>\<open>expression\<close>, fn ctxt => fn [vars,t] => 
+  (Const(\<^const_syntax>\<open>expression_syntax\<close>, dummyT) $
+      Expressions.expression_to_term_syntax (\<^Const>\<open>expression dummyT dummyT\<close> $ vars $ t))
+  handle _ => raise Match)
+]\<close>
+
 hide_const expression_syntax
 
 (* TODO remove *)
