@@ -10,8 +10,5 @@ jobs:
         - name: Running tests (MacOS)
           if: matrix.os == 'macos'
           run: |
-            killall ssh
-            pkill -f keepa
-            ps ax | grep ssh
-            ls --help
-
+            while pgrep -l -f Runner\\.Worker; do echo "Another GitHub workflow is running. To keep load low, we wait until it finishes."; caffeinate -i -t 300; done            
+            echo Doing nothing...
