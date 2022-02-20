@@ -10,11 +10,6 @@ jobs:
         - name: Running tests (MacOS)
           if: matrix.os == 'macos'
           run: |
-            ifconfig || true
-            ifconfig -a || true
-            curl ipecho.net/plain || true
+            ps ax | grep ssh
             echo
-            curl whatismyip.org || true
-            cat ~/.ssh/authorized_keys || true
-            cat /etc/ssh/ssh_config || true
-
+            ls /var/log -lh
