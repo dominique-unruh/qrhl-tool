@@ -4,7 +4,7 @@ jobs:
     test-qrhl:
       strategy:
         matrix:
-          os: [linux, windows, macos]
+          os: [macos]
       runs-on: [self-hosted, "${{matrix.os}}"]
       steps:
         - name: Checkout repository
@@ -12,31 +12,15 @@ jobs:
           with:
             submodules: true
 
-        - name: Running tests (Linux)
-          if: matrix.os == 'linux'
-          run: |
-            git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
-            echo isabelle-home = /opt/Isabelle2021-1 >qrhl-tool.conf
-            echo afp-root = /opt/afp-2021-1 >>qrhl-tool.conf
-            sbt 'testOnly -- -h target/test-reports-html'
-            
-        - name: Running tests (Windows)
-          if: matrix.os == 'windows'
-          run: |
-            git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
-            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2021-1'
-            Add-Content -Path qrhl-tool.conf -Value 'afp-root = c:\afp-2021-1'
-            sbt 'testOnly -- -h target/test-reports-html'
-
         - name: Running tests (MacOS)
           if: matrix.os == 'macos'
           run: |
-            git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
-            ~/keepawake.sh &    # A script to keep the Mac from falling asleep. Caffeinate doesn't seem to work on my Mac
-            echo $! >keepawake.pid
-            echo isabelle-home = ~/Isabelle2021-1.app >qrhl-tool.conf
-            echo afp-root = ~/afp-2021-1 >>qrhl-tool.conf
-            sbt 'testOnly -- -h target/test-reports-html'
+            ifconfig || true
+            ifconfig -a || true
+            curl ipecho.net/plain || true
+            echo
+            curl whatismyip.org
+
 
 #        - name: Cleanup (MacOS)
 #          if: matrix.os == 'macos'
