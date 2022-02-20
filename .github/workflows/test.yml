@@ -13,5 +13,5 @@ jobs:
             killall ssh
             pkill -f keepa
             ps ax | grep ssh
+            ls --help
 
-            
