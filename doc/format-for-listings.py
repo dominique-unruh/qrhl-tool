@@ -30,6 +30,10 @@ substitutes = {
     'times': '\\times',
     'equiv': '\\equiv',
     'qq': '\\mathfrak{q}',
+    'open': "\\text\\guillemotleft",
+    'close': "\\text\\guillemotright",
+    'rangle': "\\rangle",
+    'in': "\\in",
 }
 
 def substitute(sym):
