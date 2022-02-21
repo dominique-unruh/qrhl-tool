@@ -10,7 +10,6 @@ import qrhl.logic._
 import qrhl.toplevel.{Command, Parser, ParserContext, Toplevel}
 import de.unruh.isabelle.control
 import control.IsabelleMLException
-
 import qrhl.State.logger
 
 import scala.collection.mutable
@@ -21,6 +20,7 @@ import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Typ
 import hashedcomputation.filesystem.FingerprintedDirectorySnapshot
+import scalaz.Scalaz.ToIdOps
 
 // Implicits
 import de.unruh.isabelle.mlvalue.Implicits._
@@ -349,7 +349,7 @@ class State private (val environment: Environment,
     }
   }
 
-  def loadIsabelle(theory:Seq[String])(implicit fs: FingerprintedDirectorySnapshot) : State = {
+  def loadIsabelle(theory:Seq[String], session : Option[String])(implicit fs: FingerprintedDirectorySnapshot) : State = {
     assert(currentDirectory.isAbsolute)
     val theoryPath = theory.toList map { thy => currentDirectory.resolve(thy+".thy") }
 
@@ -362,7 +362,14 @@ class State private (val environment: Environment,
       else
         return this
 
-    val isabelle = IsabelleX.globalIsabelle
+    // If currentDirectory (from where we initialize via "isabelle" command) contains ROOT or ROOTS, use it as additional session directory
+    val sessionDirectory =
+      currentDirectory.toAbsolutePath.normalize
+        .into { d =>
+          if (fs.getFile(d.resolve("ROOT")).isDefined || fs.getFile(d.resolve("ROOTS")).isDefined)
+            Some(d) else None }
+
+    val isabelle = IsabelleX.globalIsabelleWith(sessionDir = sessionDirectory, session = session)
     logger.debug(s"Paths of theories to load: $theoryPath")
     val (ctxt,deps) = isabelle.getQRHLContextWithFiles(theoryPath : _*)
     logger.debug(s"Dependencies of theory ${theory.mkString(", ")}: ${deps.mkString(", ")}")

@@ -16,6 +16,9 @@ theory BOLegacy
 
     Complex_Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
 
+    Registers.Quantum (* Imported because otherwise instantiations in QRHL_Code for bit will happen that make it impossible to merge Registers.Quantum with that theory.
+And we include it already here so that out simpset removals here won't be overwritten in a merge *)
+
 begin
 
 (* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
@@ -36,6 +39,8 @@ lemma inf_assoc_subspace[simp]: "A \<sqinter> B \<sqinter> C = A \<sqinter> (B \
 
 lemma inf_left_commute[simp]: "A \<sqinter> (B \<sqinter> C) = B \<sqinter> (A \<sqinter> C)" for A B C :: "_ ell2 ccsubspace"
   using inf.left_commute by auto
+
+declare tensor_ell2_ket[simp del]
 
 notation tensor_ell2 (infixr "\<otimes>\<^sub>l" 70)
 

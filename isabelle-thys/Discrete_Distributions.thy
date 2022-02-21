@@ -8,6 +8,8 @@ theory Discrete_Distributions
     "HOL-Analysis.Infinite_Sum"
 begin
 
+declare More_List.no_leading_Cons[rule del, simp del]
+
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f summable_on UNIV \<and> infsum f UNIV \<le> 1"
 
 typedef 'a distr = "{f::'a\<Rightarrow>real. is_distribution f}"

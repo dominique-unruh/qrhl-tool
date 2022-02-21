@@ -1,10 +1,11 @@
 theory Universe
   imports Main "HOL.BNF_Cardinal_Order_Relation" (* Misc Tools *) "HOL-Library.Nat_Bijection" "HOL-Library.Rewrite" "HOL-ZF.HOLZF" ML_Term_Antiquot
-    Deriving.Derive_Manager
-    Registers.Misc (* Importing this so that "prod :: default" is not redefined here. *)
+    Deriving.Derive_Manager 
+    BOLegacy (* Importing this to get Registers.Misc, so that "prod :: default" is not redefined here. *)
 begin
 
 hide_const (open) HOLZF.Inf
+no_notation m_inv ("inv\<index> _" [81] 80)
 
 (* For proving instances of types declared with 
   "datatype" (not "datatype_new"), see, e.g., "char"
