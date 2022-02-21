@@ -3647,7 +3647,7 @@ and has no upper bound, and thus lead to a contradiction.
 
 
 
-\subsubsection{Code generation}
+\subsubsection{Code generation}\label{sec:codegen}
 If all quantum variables involved in a
 claim about predicates have finite types, the claim will often
 essentially be a claim about concrete operators and subspaces of fixed
@@ -3669,18 +3669,17 @@ finite.\footnote{Strictly speaking, besides being finite, the types need to impl
 
 Unfortunately, most expressions involving predicates that occur as
 subgoals in our tool cannot be directly evaluated using this
-mechanism. This is due to the \texttt{lift} (\guillemotright) operation. For example, we
-might have the claim
+mechanism.
+This is due to operations that map operators/subspaces on individual variables to the whole (infinite-dimensional) space (i.e., \guillemotright, $\TOOLinq$, $\TOOLeqq$).
+For example, we might have the claim
 \begin{equation}
   \label{eq:code1}
-  \mathtt{span}\ \{\mathtt{EPR}\} \text\guillemotright \llbracket \qq_1,\qq_2\rrbracket
+  \pB\paren{\llbracket{\qq_1,\qq_2}\rrbracket \TOOLinq \mathtt{ccspan}\ \{\mathtt{EPR}\}}
   \leq
-  \mathtt{span}\ \{\basis{}{00},\basis{}{11}\} \text\guillemotright \llbracket{\qq_1,\qq_2}\rrbracket
+  \pB\paren{\llbracket{\qq_1,\qq_2}\rrbracket \TOOLinq \mathtt{ccspan}\ \{\basis{}{00},\basis{}{11}\}}
 \end{equation}
-Here the lhs and rhs are infinite dimensional subspaces (because
-$\text\guillemotright \llbracket \qq_1,\qq_2\rrbracket$
-maps a subspace of $\elltwov{\qq_1\qq_2}$
-to a subspace of $\elltwov{\qu{V_1}\qu{V_2}}$).
+Recall that $Q \TOOLinq A$ is an operation that maps a subspace $A$ of the Hilbert space corresponding to the type of variable $Q$ to the corresponding subspace on the Hilbert space of all memories states.
+Thus the lhs and rhs are infinite dimensional subspaces.
 Therefore, the lhs and rhs cannot be explicitly computed (at least not
 using a straighforward representation). Thus, we first need to convert
 the above expression into the following equivalent finite dimensional
@@ -3689,32 +3688,32 @@ $ \mathtt{span}\ \{\mathtt{EPR}\} \leq \mathtt{span}\
 \{\basis{}{00},\basis{}{11}\}.  $
 
 In this specific case, this is a special case of the simple rule
-$A\leq B\implies A\text\guillemotright Q\leq B\text\guillemotright
-Q$. In general, however, removing the \texttt{lift} operations can be
-nontrivial. The \texttt{lift}s can be interspersed with different
+$A\leq B\implies (Q \TOOLinq A) \leq (Q\TOOLinq B)$.
+In general, however, removing the lifting operations (\guillemotright, $\TOOLinq$, $\TOOLeqq$) can be
+nontrivial. These lifting operations can be interspersed with different
 operations, and they may use different sets of quantum variables,
 or differently ordered ones. For example, consider
 \begin{equation}
   \label{eq:code2}
-  \mathtt{span}\ \{\mathtt{EPR}\} \text\guillemotright \llbracket \qq_1,\qq_2\rrbracket
+  \pB\paren{\llbracket{\qq_1,\qq_2}\rrbracket \TOOLinq \mathtt{ccspan}\ \{\mathtt{EPR}\}}
   \leq
-  \mathtt{span}\ \{\basis{}{00},\basis{}{11}\} \text\guillemotright \llbracket{\qq_2,\qq_1}\rrbracket
+  \pB\paren{\llbracket{\qq_2,\qq_1}\rrbracket \TOOLinq \mathtt{ccspan}\ \{\basis{}{00},\basis{}{11}\}}
 \end{equation}
-(Note the different order $\qq_2,\qq_1$
-on the rhs.) To make this into a finite dimensional expression, we
+(Note the different order $\qq_2,\qq_1$ on the rhs.)
+To make this into a finite dimensional expression, we
 first have to rewrite
-$\mathtt{span}\ \{\basis{}{00},\basis{}{11}\} \text\guillemotright
-\llbracket{\qq_2,\qq_1}\rrbracket$ into
-$\pb\paren{\mathtt{comm\_op} \cdot \mathtt{span}\ \{\basis{}{00},\basis{}{11}\}}
-\text\guillemotright \llbracket{\qq_1,\qq_2}\rrbracket$ (where $\mathtt{comm\_op}$
+${\llbracket{\qq_2,\qq_1}\rrbracket \TOOLinq \mathtt{ccspan}\ \{\basis{}{00},\basis{}{11}\}}$ into
+${\llbracket{\qq_1,\qq_2}\rrbracket \TOOLinq \pb\paren{
+    \mathtt{comm\_op} \cdot\mathtt{ccspan}\ \{\basis{}{00},\basis{}{11}\}}
+}$ (where $\mathtt{comm\_op}$
 is an operator mapping $\basis{}{x,y}$ to $\basis{}{y,x}$), and only then
 can we apply the rule
-$A\leq B\implies A\text\guillemotright Q\leq B\text\guillemotright Q$ and get
+$A\leq B\implies (Q \TOOLinq A) \leq (Q\TOOLinq B)$ and get
 \begin{equation}
   \label{eq:code2-rewrite}
-  \mathtt{span}\ \{\mathtt{EPR}\}
+  \mathtt{ccspan}\ \{\mathtt{EPR}\}
   \leq
-  \mathtt{comm\_op} \cdot \mathtt{span}\ \{\basis{}{00},\basis{}{11}\}.
+  \mathtt{comm\_op} \cdot \mathtt{ccspan}\ \{\basis{}{00},\basis{}{11}\}.
 \end{equation}
 
 We have automated this process (using a number of simplification rules
@@ -3734,17 +3733,18 @@ To give a complete example, \eqref{eq:code2} can be shown as follows:
 \begin{lstlisting}
   lemma
     assumes[simp]: "declared_qvars \ensuremath{\llbracket}q1,q2\ensuremath{\rrbracket}"
-    shows "span {EPR} \ensuremath{\text\guillemotright} \ensuremath{\llbracket}q1,q2\ensuremath{\rrbracket} \ensuremath{\leq} span {ket (0,0), ket (1,1)} \ensuremath{\text\guillemotright} \ensuremath{\llbracket}q2,q1\ensuremath{\rrbracket}"
+    shows "\ensuremath{\llbracket}q1,q2\ensuremath{\rrbracket} \ensuremath\TOOLeqq EPR \ensuremath{\leq} \ensuremath{\llbracket}q2,q1\ensuremath{\rrbracket} \ensuremath\TOOLinq ccspan {\ensuremath{\basis{}{(0,0)}}, \ensuremath{\basis{}{(1,1)}}}
   apply (simp add: prepare_for_code)
   by eval (* Invokes proof by code evaluation *)
 \end{lstlisting}
+(Here we have additionally used the shorthand notation $\TOOLeqq$ so write the lhs of \eqref{eq:code2} more compactly.)
 This example, the proof of \eqref{eq:code1}, and a few other examples
 can be found in \texttt{Code\_Example.thy}.\footnote{Bundled with the
   tool, and also directly available at \giturl{Code\_Example.thy}.}  (A
 remark: the subgoal produced after \texttt{apply (simp ...)} in this
 example is not the same as in \eqref{eq:code2-rewrite} but a somewhat
 more complex one. This is because the simplification procedures do
-not necessarily find the simplest way of removing the \texttt{lift}s.)
+not necessarily find the simplest way of removing the lifting operations.)
 
 \subsection{Examples}
 
@@ -4571,6 +4571,8 @@ lead to the following invariant:
     (\mathtt{CNOT} ⊗ \mathtt{id\_cblinfun}) ⋅ \mathtt{assoc\_op} ⋅ \mathtt{addState}\ \mathtt{EPR}}\ ⟦A_2⟧
   \Bigr)
 \end{multline*}
+(We use the usual mathematical symbols $\otimes$ and $\cdot$ here for readability.
+In the tool, we would use $\TOOLtensoro$ and $\TOOLoCL$.)
 In other words, we claim that after those two lines, the quantum
 registers $C_1A_1B_1$
 will contain the state that $A_2$
@@ -4645,10 +4647,8 @@ Next we analyze the effect of the first measurement.  If the outcome
 of the measurement is $a_1$,
 then this means that the state of $A_1$
 is projected onto $\basis{A_1}{a_1}$.
-So, after the measurement, the predicate $I_4:={}$\texttt{Proj
-  (span \{ket $a_1$\})»⟦$A_1$⟧
-  $\cdot$
-  $I_3$}
+So, after the measurement, the predicate $I_4:=\texttt{proj $\basis{}{a_1}$»⟦$A_1$⟧}
+  \cdot I_3$
 should be satisfied. We express this using the tactic
 \texttt{\frenchspacing seq 1 0: $I_4$.}
 To prove the resulting subgoal, we apply the tactics \texttt{\frenchspacing
@@ -4656,13 +4656,12 @@ To prove the resulting subgoal, we apply the tactics \texttt{\frenchspacing
 subgoal of roughly the following form:
 \[
   \forall x.\ I_3 \leq
-\texttt{Proj
-  (span \{ket $x$\})»⟦$A_1$⟧}
-\cdot I_3
+\pb\paren{\texttt{proj $\basis{} x$»⟦$A_1$⟧}
+\cdot I_3}
 \sqcap 
-\texttt{span \{ket $x$\}»⟦$A_1$⟧}
+\pb\paren{\texttt{⟦$A_1$⟧  $\TOOLeqq$  $\ket x$}}
 +
-\mathtt{ortho}\ (\texttt{span \{ket $x$\}»⟦$A_1$⟧})
+\mathtt{ortho}\ (\texttt{⟦$A_1$⟧} \TOOLeqq \basis{}{x})
 \]
 We remove the all-quantifier using tactic \texttt{fix a'}.
 Then the fact can be shown using tactic \texttt{rule move\_plus\_meas\_rule},\footnote{The lemma \texttt{move\_plus\_meas\_rule} says
@@ -4705,13 +4704,14 @@ where $\bc_5$ is \texttt{teleport} without the first five lines.
 Now we will do a case distinction over the four different
 possibilities for $a',c'$.
 We get the first case using the tactics \texttt{\frenchspacing
-  casesplit a'=0.  casesplit c'=0.} The current subgoal now has the
-assumptions $a'=0$ and $c'=0$. Using these assumptions, we can rewrite the precondition into
+  casesplit a'=0.  casesplit c'=0.}
+The current subgoal now has the assumptions $a'=0$ and $c'=0$.
+Using these assumptions, we can rewrite the precondition into update from here
 \[
   I_6 := \CL{a_1=0 \land c_1=0} \sqcap
-  \underbrace{\texttt{Proj (span \{ket $0$\})»⟦$C_1$⟧}
+  \underbrace{\texttt{proj $\basis{}0$»⟦$C_1$⟧}
   \cdot
-  \texttt{Proj (span \{ket $0$\})»⟦$A_1$⟧}
+  \texttt{proj $\basis{}0$»⟦$A_1$⟧}
   \cdot I_3}_{{}=:I_7}
 \]
 using \texttt{conseq pre: $I_6$.}
@@ -4781,13 +4781,9 @@ we unfolding the definition of \texttt{teleport} using \texttt{inline
 a goal of the form $\rhl{\dots}\Skip\Skip\dots$,
 and the apply \texttt{skip}. We now get a lengthy inequality between
 predicates as the remaining goal. While this inequality is hardly
-readable (it is an 814 character string), we can just copy-and-paste
-it into the accompanying theory
-\texttt{Teleport\_Terse.thy}\footnote{Bundled with the tool, and also
-  directly available at \giturl{Teleport\_Terse.thy}.} as a lemma
-\texttt{teleport\_terse} and prove it using Isabelle's code generation
-(see \autoref{sec:isabelle}). With that lemma, the goal is proven
-with the tactics \texttt{\frenchspacing rule teleport\_terse. simp!.}
+readable (it is an 734 character string), it is amenable to fully automated computation:
+the tactic \texttt{simp prepare\_for\_code} rewrites the goal into a form involving only finite-dimensional operationrs, and \texttt{isa eval} solves it by computation.
+(See \autoref{sec:codegen}.)
 
 
 \printbibliography
