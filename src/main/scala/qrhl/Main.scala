@@ -1,7 +1,6 @@
 package qrhl
 
-import java.nio.file.{Path, Paths}
-
+import java.nio.file.{Files, Path, Paths}
 import de.unruh.isabelle.control.Isabelle
 import org.rogach.scallop.{ScallopConf, ScallopOption, Subcommand}
 import qrhl.isabellex.IsabelleX
@@ -14,8 +13,10 @@ object Main {
     // if cheating is false, cheating cannot be activated
     val cheating : ScallopOption[Boolean] = toggle() // Default: interactive mode: true, from file: false
     val emacs : ScallopOption[Boolean] = toggle() // Ignored but ProofGeneral needs to give some option to support spaces in paths
-    val isabelle : ScallopOption[Boolean] = toggle() // Ignored but ProofGeneral needs to give some option to support spaces in paths
+    val isabelle : ScallopOption[Boolean] = toggle()
+    val session : ScallopOption[String] = opt[String]()
     val file: ScallopOption[String] = trailArg[String](required=false)
+    verify()
   }
 
   def checkJavaVersion() : Unit = {
@@ -33,12 +34,25 @@ object Main {
     checkJavaVersion()
 
     val conf = new CLIConf(args)
-    conf.verify()
+
+    if (conf.session.isSupplied && !conf.isabelle.isSupplied) {
+      System.err.println("Option --session only supported in combination with --isabelle")
+      sys.exit(1)
+    }
+
+
     if (conf.build.getOrElse(false)) {
-      val isabelle = new IsabelleX(build = true)
+      val isabelle = new IsabelleX(IsabelleX.defaultSetup)
       isabelle.dispose()
     } else if (conf.isabelle.getOrElse(false)) {
-      Isabelle.jedit(IsabelleX.setup, conf.file.toOption.toList.map(Path.of(_:String)))
+      var setup = IsabelleX.defaultSetup
+      val files = conf.file.toOption.toList.map(Path.of(_:String))
+      val dir = files.headOption.map(_.getParent).getOrElse(Paths.get("")).toAbsolutePath
+      if (Files.exists(dir.resolve("ROOT")) || Files.exists(dir.resolve("ROOTS")))
+        setup = setup.copy(sessionRoots = setup.sessionRoots.appended(dir))
+      if (conf.session.isSupplied)
+        setup = setup.copy(logic = conf.session())
+      Isabelle.jedit(setup, files)
     } else if (conf.file.isDefined) {
       val tl = Toplevel.makeToplevel(cheating=conf.cheating.getOrElse(false))
       try
