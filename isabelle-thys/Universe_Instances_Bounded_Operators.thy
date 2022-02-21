@@ -1,9 +1,0 @@
-theory Universe_Instances_Bounded_Operators
-  imports Complex_Bounded_Operators.Complex_L2 Universe_Instances_Complex_Main
-begin
-
-derive universe ell2
-derive universe ccsubspace
-derive universe cblinfun
-
-end

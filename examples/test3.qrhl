@@ -1,4 +1,0 @@
-isabelle TestEx.
-
-include "test2.qrhl".
-include "test.qrhl".
