@@ -8,6 +8,8 @@ theory Discrete_Distributions
     "HOL-Analysis.Infinite_Sum"
 begin
 
+declare More_List.no_leading_Cons[rule del, simp del]
+
 definition "is_distribution (f::'a\<Rightarrow>real) \<longleftrightarrow> (\<forall>x. f x \<ge> 0) \<and> f summable_on UNIV \<and> infsum f UNIV \<le> 1"
 
 typedef 'a distr = "{f::'a\<Rightarrow>real. is_distribution f}"
@@ -109,7 +111,8 @@ proof (transfer, auto simp: is_distribution_def)
   then have "countable {x\<in>UNIV. \<mu> x \<noteq> 0}" (is "countable ?X")
     by (rule abs_summable_countable)
   also have "?X = {x. 0 < \<mu> x}"
-    using less_eq_real_def \<mu>pos by auto
+    using less_eq_real_def \<mu>pos
+    by (simp add: dual_order.strict_iff_order)
   finally show "countable {x. 0 < \<mu> x}"
     by simp 
 qed
@@ -1428,8 +1431,7 @@ lemma below_bernoulli_supp:
   shows "fst x : E \<Longrightarrow> snd x = 1"
   using assms apply (simp add: below_bernoulli_def Let_def)
   apply (transfer fixing: x E D p)
-  using divide_less_cancel by fastforce 
-
+  using divide_less_cancel by force
 
 lemma map_distr_uniform_regular[simp]: 
   fixes f::"'a\<Rightarrow>'b" 

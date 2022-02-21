@@ -5,7 +5,11 @@ theory QRHL_Core
 begin
 
 hide_const (open) Real_Vector_Spaces.span
+hide_const (open) Coset.kernel
 no_notation Group.monoid.mult (infixl "\<otimes>\<index>" 70)
+hide_const (open) Quantum.CNOT
+hide_const (open) Quantum.pauliX
+hide_const (open) Quantum.pauliZ
 
 section \<open>Miscellaneous\<close>
 

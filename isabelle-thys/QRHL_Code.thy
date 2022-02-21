@@ -4,7 +4,6 @@ theory QRHL_Code
     "Jordan_Normal_Form.Matrix_Impl"
     "HOL-Library.Code_Target_Numeral"
     (* Tensor_Product.Tensor_Product_Code *)
-    Registers.Quantum (* Imported because otherwise below instantiations for bit will happen that make it impossible to merge Registers.Quantum with this theory *)
 begin
 
 unbundle jnf_notation
