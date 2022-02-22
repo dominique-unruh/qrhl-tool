@@ -56,7 +56,7 @@ object ChangeDirectoryCommand {
   def apply(dir:String) : ChangeDirectoryCommand = apply(Paths.get(dir))
 }
 
-case class IsabelleCommand(thy:Seq[String]) extends Command {
+case class IsabelleCommand(thy:Seq[String], session: Option[String] = None) extends Command {
   override def act(state: State, output: PrintWriter): State =
     throw new RuntimeException("IsabelleCommand.act must not be called.")
 

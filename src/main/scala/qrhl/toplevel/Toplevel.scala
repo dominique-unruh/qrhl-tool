@@ -364,7 +364,7 @@ object Toplevel {
           writer.close()
           newState.setLastOutput(stringWriter.toString)
         case cmd : IsabelleCommand =>
-          val newState = state.loadIsabelle(theory = cmd.thy, session = None)
+          val newState = state.loadIsabelle(theory = cmd.thy, session = cmd.session)
           newState.setLastOutput("Isabelle loaded.")
         case _ =>
           val newState = command.actString(state)
