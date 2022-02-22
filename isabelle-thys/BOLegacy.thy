@@ -32,6 +32,10 @@ no_notation "Order.top" ("\<top>\<index>")
 no_notation "Lattice.meet" (infixl "\<sqinter>\<index>" 70)
 no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
 hide_const (open) Order.bottom Order.top
+hide_const (open) Quantum.hadamard
+hide_const (open) Quantum.CNOT
+hide_const (open) Quantum.pauliX
+hide_const (open) Quantum.pauliZ
 
 lemma inf_assoc_subspace[simp]: "A \<sqinter> B \<sqinter> C = A \<sqinter> (B \<sqinter> C)" 
   for A B C :: "_ ell2 ccsubspace"

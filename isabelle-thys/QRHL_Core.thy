@@ -10,6 +10,7 @@ no_notation Group.monoid.mult (infixl "\<otimes>\<index>" 70)
 hide_const (open) Quantum.CNOT
 hide_const (open) Quantum.pauliX
 hide_const (open) Quantum.pauliZ
+hide_const (open) Quantum.hadamard
 
 section \<open>Miscellaneous\<close>
 
