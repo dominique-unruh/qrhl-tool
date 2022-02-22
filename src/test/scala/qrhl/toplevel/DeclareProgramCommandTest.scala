@@ -1,5 +1,6 @@
 package qrhl.toplevel
 
+import hashedcomputation.filesystem.OutdatedSnapshotException
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.State
 import qrhl.logic.{Block, Call, ConcreteProgramDecl}
@@ -10,7 +11,7 @@ class DeclareProgramCommandTest extends AnyFunSuite {
     val cmd0 = DeclareProgramCommand("b", Nil, Block.empty)
     val cmd = DeclareProgramCommand("test",List("a"), Block(Call("a"), Call("b")))
     println(cmd)
-    val state = State.empty(false).loadIsabelle(Nil)
+    val state = ToplevelTest.emptyState.loadIsabelle(Nil, session = None)
     val state2 = cmd0.actPrint(state)
     val state3 = cmd.actPrint(state2)
     println(state3.environment.programs)

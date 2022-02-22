@@ -28,9 +28,14 @@ class ToplevelTest extends AnyFunSuite {
 }
 
 object ToplevelTest {
+  // We create the state relative to the examples directory because otherwise some tests will try to initialize Isabelle
+  // relative to session dir `<project>/examples/`, and others relative to `<project>/`.
+  // This would be rejected by IsabelleX.globalIsabelleWith
+  lazy val emptyState: State = State.empty(cheating = false).changeDirectory(Paths.get("examples").toAbsolutePath)
+
   /** Toplevel with a theory preloaded. Also suppresses errors at EOF. */
   def makeToplevelWithTheory(theory:Seq[String]=Nil) : Toplevel = {
-    val tl = Toplevel.makeToplevelFromState(State.empty(cheating = false), errorWhenUnfinished = false)
+    val tl = Toplevel.makeToplevelFromState(emptyState, errorWhenUnfinished = false)
     tl.execCmd(IsabelleCommand(theory))
     tl
   }
@@ -46,5 +51,12 @@ object ToplevelTest {
 //    override def position: String = "<test case>"
 //  }
 
-  implicit val rootsDirectory: FingerprintedDirectorySnapshot = FingerprintedDirectorySnapshot(RootsDirectory())
+  implicit val rootsDirectory: FingerprintedDirectorySnapshot = {
+    val root = RootsDirectory()
+    root.registerInterest(Paths.get("ROOT").toAbsolutePath)
+    root.registerInterest(Paths.get("ROOTS").toAbsolutePath)
+    root.registerInterest(Paths.get("examples/ROOT").toAbsolutePath)
+    root.registerInterest(Paths.get("examples/ROOTS").toAbsolutePath)
+    FingerprintedDirectorySnapshot(root)
+  }
 }

@@ -177,7 +177,7 @@ class RootsDirectory private[filesystem] (fileSystem: FileSystem)
   protected override def registerWatcher(): WatchKey = null
 
   private[filesystem] override def pathToList(path: Path): List[String] = {
-    assert(path.isAbsolute)
+    assert(path.isAbsolute, s"$path not absolute")
     assert(path.getFileSystem==fileSystem)
     path.getRoot.toString :: path.iterator().asScala.map(_.toString).toList
   }
