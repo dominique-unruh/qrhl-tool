@@ -102,7 +102,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 
     println()
     println(s"You have requested to prove the equivalence of the last $amount lines of the left/right program.")
-    println(s"I have identified that the following is the common part of those lines (called the context in the following):")
+    println(s"""I have identified that the following is the common part of those lines (called the "context" in the following):""")
     println(s"  $context")
 
     println()
@@ -245,6 +245,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     val postconditionVariables: mutable.Set[Variable] =
       mutable.HashSet(post.variables(env, deindex=true).program.toSeq :_*)
 
+    /** vars: non-indexed vars */
     def removeFromPost(msg: => String, vars: Set[Variable]): Unit = {
       // variables that actually need removing
       val vars2 = vars & postconditionVariables
@@ -645,8 +646,10 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
         |  and "before_left"/"before_right" are programs without the last $amount lines.
         |""".stripMargin)
 
-    val colocality = RichTerm(Ops.colocalityOp((postcondition.isabelleTerm,
-        forbiddenQuantumInPostcondition.toList map { v => (v.variableName, v.valueTyp) })).retrieveNow)
+    val colocality = RichTerm(Ops.colocalityOp(postcondition.isabelleTerm,
+      for (v <- forbiddenQuantumInPostcondition.toList;
+           v12 <- Seq(v.index1, v.index2))
+        yield (v12.variableName, v12.valueTyp)).retrieveNow)
 
     logger.debug(s"Colocality: $colocality")
 
