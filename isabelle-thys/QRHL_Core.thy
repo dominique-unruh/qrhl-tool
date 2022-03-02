@@ -169,6 +169,21 @@ lemma swap_variables_vars_singleton3[simp]:
 
 subsection "Distinct quantum variables"
 
+
+text \<open>The following constant \<open>COLOCAL_GUARD\<close> is a marker that indicates that the simplifier
+  should not attempt to solve the subgoal \<open>C\<close> (which is supposed to be of the form \<open>colocal_...\<close>)
+  unless a quick check whether it can be solved succeeds. (The quick check simply checks whether
+  no variable occurs in both arguments of the \<open>colocal_...\<close>.) This is to avoid spending potentially
+  a lot of time on repeated failed colocality-proofs.
+
+  To avoid this check (i.e., attempt simplification always), simply add \<open>COLOCAL_GUARD_def\<close> to the simplifier.
+
+  See also the simproc \<open>colocal_guard_simproc\<close> below.
+  \<close>
+definition [code del]: \<open>COLOCAL_GUARD (C::bool) = C\<close>
+lemma COLOCAL_GUARD_cong[cong]: \<open>COLOCAL_GUARD x = COLOCAL_GUARD x\<close>
+  by simp
+
 consts predicate_local_raw :: "predicate \<Rightarrow> variable_raw set \<Rightarrow> bool"
 lemma predicate_local_raw_top: "predicate_local_raw top {}" 
   by (cheat predicate_local_raw_top)
@@ -267,10 +282,15 @@ proof -
     unfolding colocal_pred_qvars_str.rep_eq by simp
 qed
 
-lemma colocal_Inf[simp, intro!]: 
+lemma colocal_Inf[intro!]: 
   assumes "\<And>A. A\<in>AA \<Longrightarrow> colocal_pred_qvars_str A Q" 
   shows "colocal_pred_qvars_str (Inf AA) Q"
   by (cheat colocal_Inf)
+
+lemma colocal_INF[simp, intro!]:
+  assumes "\<And>x. x \<in> X \<Longrightarrow> colocal_pred_qvars_str (A x) Q"
+  shows "colocal_pred_qvars_str (INF x\<in>X. A x) Q"
+  using assms by blast
 
 lemma colocal_plus[simp, intro!]: 
   fixes A :: "_ subspace"
@@ -1405,9 +1425,13 @@ lemma colocal_quantum_eq[simp,intro!]:
   for Q1 Q2 :: "'c::universe variables" and R :: "string set"
   by (cheat TODO14)
 
-lemma applyOpSpace_colocal[simp]:
+lemma applyOpSpace_colocal:
   "colocal U S \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) l2bounded" and S :: predicate
   by (cheat TODO14)
+
+lemma applyOpSpace_colocal_simp[simp]:
+  "COLOCAL_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) l2bounded" and S :: predicate
+  by (simp add: applyOpSpace_colocal COLOCAL_GUARD_def)
 
 lemma qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
@@ -1862,5 +1886,6 @@ simproc_setup "variable_rewriting"
    "reorder_variables_hint a b" | "extend_lift_as_var_concat_hint A R") = 
   QRHL.variable_rewriting_simproc
 
+simproc_setup colocal_guard_simproc (\<open>COLOCAL_GUARD t\<close>) = QRHL.colocal_guard_simproc
 
 end
