@@ -64,6 +64,12 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
 //    }
 
     try {
+      if (commands.nonEmpty)
+        try Toplevel.computeStateFromCommands(initialState, commands.dropRight(1), fs)
+        catch {
+          case e : Exception => throw DelayedError(e)
+        }
+
       val state = Toplevel.computeStateFromCommands(initialState, commands.toSeq, fs)
       println(state.lastOutput)
       state
@@ -122,7 +128,6 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
 
   /** Executes a single command. The command must be given without a final ".". */
   def execCmd(cmd:CommandOrString) : Unit = {
-    logger.debug(s"Command list before: $commands")
     cmd.undo match {
       case Some(undo) =>
         if (undo > commands.length)
@@ -146,7 +151,7 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
         commands = newCommands
         println(currentState)
     }
-    logger.debug(s"Command list after: $commands")
+    //    logger.debug(s"Current command list: $commands")
   }
 
   def run(script: String): Unit = {
@@ -221,6 +226,14 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
             println(e.log)
           }
           if (abortOnError) return false
+        case DelayedError(e) =>
+          println(
+            s"""[ERROR] An error occurred in an earlier command.
+              |This error appears only now because it was caused by a file that just changed.
+              |Use C-c C-u to go back step-by-step to that place, or C-c C-r to go to the beginning of the proof script.
+              |
+              |The error itself was: ${e.getMessage.replace("[ERROR]", "").replaceAll("""\*\*+""", "**")}
+              |""".stripMargin)
         case e : Throwable =>
           println("[ERROR] [INTERNAL ERROR!!!]")
           val stringWriter = new StringWriter()
@@ -496,3 +509,5 @@ object Toplevel {
     throw new AssertionError("unreachable code")
   }
 }
+
+case class DelayedError(exception: Exception) extends Exception(exception.getMessage)
