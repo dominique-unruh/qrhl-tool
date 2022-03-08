@@ -17,8 +17,8 @@ Use `sudo python3` instead of `python3` if you want to install files outside you
 ## Prerequisites
 
 * Java must be installed (at least Java 11), and the `java` executable must be in the path.
-* Emacs must be installed, and the `emacs` executable must be in the path (otherwise edit `proofgeneral.{bat,sh}`).
-  At least Emacs 26 is required.
+* Emacs must be installed, and the `emacs` executable must be in the path (otherwise edit `proofgeneral.sh`).
+  At least Emacs 25 is required.
 
 To check whether this is the case, go into a terminal,
 and enter `java -version` or `emacs -version`, respectively, and see whether the commands are found.
@@ -31,22 +31,26 @@ and enter `java -version` or `emacs -version`, respectively, and see whether the
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.6` or `qrhl-snapshot`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.6`.
+(Or `qrhl-snapshot` in case of the development snapshot.)
 
 In the `qrhl-0.6` directory, edit the file `qrhl-tool.conf`: 
 Add the configuration keys `isabelle-home = <where you unpackaged Isabelle>`
 and `afp-home = <where you unpackaged AFP>`.
+(In the development snapshot, edit `.qrhl-tool.conf` in your home directory instead.)
 
 To update, simply extract the new version.
 (But make sure to save your `qrhl-tool.conf`.)
 
 ## Executing the demos
 
-In the `qrhl-snapshot` directory, execute `proofgeneral.{sh,bat}`.
+In the `qrhl-snapshot` directory, execute `proofgeneral.sh`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
 e.g. `example.qrhl`.
+
+(See _[invoking ProofGeneral](proofgeneral.md)_ for alternative ways, or if you use Windows.)
 
 To step through the examples, use Ctrl-C Ctrl-N to go forward one proof step, Ctrl-C Ctrl-U to go back one.
 You will see the current goal and some messages withing the Emacs/ProofGeneral window.
