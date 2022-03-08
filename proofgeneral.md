@@ -25,7 +25,7 @@ You can configure Emacs to use the ProofGeneral version that comes with qrhl-too
 
 Steps:
 * Edit your Emacs configuration file (`~/.emacs` on Linux/Mac, for Windows see [here](https://www.gnu.org/software/emacs/manual/html_mono/efaq-w32.html#Location-of-init-file)).
-* Add the line `(require 'proof-site "QRHL_TOOL/proofgeneral/generic/proof-site")` to that file.
+* Add the line `(require 'proof-site "QRHL_TOOL/proofgeneral/proof-general")` to that file.
   Here `QRHL_TOOL` should be replaced by the path to the qrhl-tool installation directory.
 * Run `emacs` normally.
 * Open files with extension `.qrhl` to edit proofs.
@@ -36,6 +36,11 @@ Pros:
 Cons:
 * Manual configuration.
 * If your system already has ProofGeneral installed, it is not obvious which version Emacs will use.
+
+Optional extra step:
+* In Emacs, do `C-0 M-x byte-recompile-directory` and pass the directory `QRHL_TOOL/proofgeneral` when asked. 
+  This speeds up loading. Needed only once. Repeat when updating `qrhl-tool`.
+
 
 ## Repository version of the qRHL-supporting ProofGeneral
 
@@ -57,6 +62,10 @@ Pros:
 Cons:
 * Manual configuration.
 * If your system already has ProofGeneral installed, it is not obvious which version Emacs will use.
+
+Optional extra step:
+* In Emacs, do `C-0 M-x byte-recompile-directory` and pass the directory `PROOFGENERAL` when asked.
+  This speeds up loading. Needed only once. Repeat when updating `qrhl-tool`.
 
 ## Use the MELPA version of ProofGeneral
 
