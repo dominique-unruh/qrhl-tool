@@ -344,7 +344,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
                |  quantum(Vout) := ${varsToString(newRemovedQeq)}
                |Note that (R ⊓ ≡Vout) then implies the original postcondition.
                |""".stripMargin)
-          assert(qvars.subsetOf(newRemovedQeq)) // Should be guaranteed by EqualTac.removeQeq
+          assert(qvars.subsetOf(newRemovedQeq), (qvars, newRemovedQeq)) // Should be guaranteed by EqualTac.removeQeq
           postcondition = newPostcondition
           removedQeq = newRemovedQeq
           postconditionVariables.clear()
@@ -787,9 +787,10 @@ object EqualTac {
    * It is guaranteed that ''`result` ∩ (x1y1z1… ==q x2y2z2…)  ⊆   `pres`''.
    * If no such quantum equality is found, throws a [[qrhl.UserException]]
    * @param pred a quantum predicate
-   * @return (result, qeqVars) result = the predicate, qeqVars = x,y,z…
+   * @return (result, qeqVars, qeqTerm) result = the predicate, qeqVars = x,y,z…, qeqTerm = the removed quantum equality (if several equivalent occurrences are removed, one of them)
    */
-  private def removeQeq(env: Environment, pred: RichTerm, vars: Traversable[QVariable]): Option[(RichTerm, ListSet[QVariable], RichTerm)] = {
+  private def removeQeq(env: Environment, pred: RichTerm, vars: Iterable[QVariable]): Option[(RichTerm, ListSet[QVariable], RichTerm)] = {
+    val varsSet = vars.toSet
     var qeqVars : Option[ListSet[QVariable]] = None
     var replacedQeq : Term = null
     val simpleQeq = new SimpleQeq(env)
@@ -797,11 +798,13 @@ object EqualTac {
       case GIsabelle.Inf(t1,t2) => GIsabelle.infOptimized(replace(t1), replace(t2))
       case `simpleQeq`(qeqVars2) =>
         logger.debug(s"qeqVars = ${qeqVars.map(varsToString)}")
-        if (qeqVars.isEmpty) {
+        if (qeqVars.isEmpty && varsSet.subsetOf(qeqVars2)) {
           qeqVars = Some(qeqVars2)
           replacedQeq = term
           GIsabelle.predicate_top
-        } else if (qeqVars.get == qeqVars2)
+        } else if (qeqVars.isEmpty)
+          term
+        else if (qeqVars.get == qeqVars2)
           GIsabelle.predicate_top
         else term
       case term => term
