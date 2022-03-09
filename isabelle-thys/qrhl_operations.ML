@@ -320,7 +320,7 @@ fun conseq_qrhl_replace_in_predicate (predicate, beforeLeft, afterLeft, beforeRi
           else error "Left quantum equality has variables that conflict with replacement variables" *)
 
   (* Condition that implies that `all_vars` do not occur in `pred_lhs` (the predictate without the qeq) *)
-  val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT all_varsT --> HOLogic.boolT)
+  val colocality = Const(\<^const_name>\<open>distinct_qvars_pred_vars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT all_varsT --> HOLogic.boolT)
                  $ pred_lhs $ all_vars
 in
   (pred', colocality)
@@ -403,7 +403,7 @@ fun declare_variable (ctxt, name, T) = let
 
 fun colocal_pred_qvars (predicate, qvars) = let
      val (varterm,vartermT) = qvars |> Prog_Variables.varterm_from_list |> Prog_Variables.mk_varterm
-     val colocality = Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT vartermT --> HOLogic.boolT)
+     val colocality = Const(\<^const_name>\<open>distinct_qvars_pred_vars\<close>, \<^typ>\<open>predicate\<close> --> QRHL.mk_variablesT vartermT --> HOLogic.boolT)
                $ predicate $ varterm
    in colocality end
 
