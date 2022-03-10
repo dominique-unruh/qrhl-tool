@@ -1,0 +1,225 @@
+
+isabelle.
+
+# We define types for random oracle input/output.
+# They are finite (otherwise randomly sampling the oracle is not possible).
+# The output has a XOR operation (otherwise oracle will not be well-defined).
+isabelle_cmd declare_variable_type x :: "finite".  
+isabelle_cmd declare_variable_type y :: "{xor_group,finite}".
+
+# N is the cardinality of the random oracle output
+isabelle_cmd definition "N = CARD(x)".
+
+# Query registers for querying the random oracle (x=input, y=output)
+quantum var x : x.
+quantum var y : y.
+# The random oracle itself (as a classical function h:x⇒y)
+classical var h : x ⇒ y.
+# Flag whether the adversary wins
+classical var win : bit.
+
+# Initializes the random oracle
+program hInit := {
+  h <$ uniform UNIV;
+}.
+
+# hQuery models a query to the random oracle (superposition query)
+program hQuery := {
+  on x,y apply Uoracle h;
+}.
+
+# Defining an adversary with access to x,y.
+# (I.e., the adversary may access the query registers of the random oracle.)
+# The adversary takes one oracle (name hQuery), represented by "calls ?"
+# The adversary's output is x'.
+quantum var qglobA : infinite.
+classical var cglobA : infinite.
+classical var x' : x.
+adversary A free cglobA, qglobA, x, y, x' calls ?.
+
+# We want to show that the adversary finds a 0-preimage with small probability.
+# The following is the game in which the adversary attempts to do so.
+program find_zero := {
+  call hInit;
+  call A(hQuery);
+  win <- of_bool (h(x') = 0);
+}.
+
+
+# For applying the O2H tactic, the game "find_zero" needs to be rewritten into a very specific form (the game "o2h_left") below.
+# To bring it into this shape, we define an auxiliary adversary.
+classical var y' : y.
+program B(query) := {
+  call A(query);
+  x <q |x'⟩;
+  y <q |0⟩;
+  call query;
+  y' <- measure y with computational_basis;
+  win <- of_bool (y' = 0);
+}.
+
+# We also need to define an wrapper around the random oracle queries that counts queries.
+# The form needs to be exactly as described here for the o2h tactic to be applicable.
+# (Except for the variable names.)
+classical var count : nat.
+program Count(query) := {
+  call query;
+  count <- count + 1;
+}.
+
+# Finally, we need to define a joint distribution of (S,G,H,z) where
+# - g is the random oracle used in the left game
+# - h is the random oracle to use after applying the O2H theorem
+# - z is any auxiliary information (in our case, we leave it empty, i.e., ())
+# - S: the set (or a superset) of positions in which g≠h.
+
+# TODO explain the choices more
+
+isabelle_cmd definition "o2h_distr = map_distr (%g. ({x. g x = 0}, g, g, ())) (uniform UNIV)".
+# TODO: why can't we use λ here? Encoding problem
+
+# TODO needed already?
+# Before we can write down the game o2h_left, we need to declare the variable g
+# (a random oracle) and the query oracle for it, analogous to hQuery above.
+classical var g : x ⇒ y.
+program gQuery := {
+  on x,y apply Uoracle g;
+}.
+
+# We can now write down o2h_left:
+classical var S : x set.
+classical var z : unit.
+classical var tmp : unit.
+program o2h_left := {
+  count <- 0;
+  (S,h,g,z) <$ o2h_distr;
+  { local tmp; call B(Count(hQuery)); }
+}.
+# (We make tmp a local variable because syntactically, we have to put a "local" statement in that place to make the o2h-tactic happy.)
+
+# The first claim we make is: o2h_left is indistinguishable from the original game find_zero:
+ambient var rho : program_state.
+lemma Pr[win=1 : find_zero(rho)] = Pr[win=1 : o2h_left(rho)].
+  byqrhl.
+  inline find_zero.
+  inline o2h_left.
+  inline B.
+  inline hInit.
+
+  # Remove the "local tmp" on the right side.
+  local up.
+
+  seq <-> 2 3: ℭ𝔩𝔞[x'1 = x'2 ∧ h1 = h2].
+  {
+    # On the lhs, the last command sets win to "h x' = 0"
+    wp 1 1.
+    conseq post: ℭ𝔩𝔞[h1 x'1 = y'2].
+      simp!.
+
+    # TODO comments.
+    wp right.
+    conseq post: ⟦y2⟧ =⇩𝔮 |h1 x'1⟩.
+    { simp. admit. }
+
+    inline Count.
+    inline hQuery.
+    wp right.
+    wp right.
+    #conseq post: ℭ𝔩𝔞[x'1 = x'2 ∧ h1 = h2] ⊓ ⟦x2,y2⟧ =⇩𝔮 |(x'1,0)⟩.
+    conseq post: ℭ𝔩𝔞[x'1 = x'2 ∧ h1 = h2] ⊓ ⟦x2⟧ =⇩𝔮 |x'1⟩ ⊓ ⟦y2⟧ =⇩𝔮 |0⟩.
+    { isa auto. admit. }
+    wp right.
+    conseq post: ℭ𝔩𝔞[x'1 = x'2 ∧ h1 = h2] ⊓ ⟦x2⟧ =⇩𝔮 |x'1⟩.
+      simp!.
+    wp right.
+    conseq post: ℭ𝔩𝔞[x'1 = x'2 ∧ h1 = h2].
+    { isa auto. admit. }
+    skip.
+    simp!.
+  }
+
+  
+  # The adversary call preserves the invariant h1=h2 ∧ x'1=x'2:
+  equal.
+  { simp!. }
+  # As a subgoal we need that the oracle call made by A also preserves the invariant.
+  # This is not shown automatically because the oracle is different on the two sides.
+  { inline Count.
+    inline hQuery.
+    inline gQuery.
+    wp right.
+    simp.
+    equal.
+      simp!.
+    skip.
+    simp!. }
+  
+  # Sampling h uniformly or as the second output of o2h_distr gives the same distribution:
+  rnd h, (S,h,g,z) <- map_distr (λ(S,h,g,z). (h, (S,h,g,z))) o2h_distr.
+  # Cleaning up the postcondition:
+  conseq post: ℭ𝔩𝔞[cglobA1 = cglobA2 ∧ x'1 = x'2] ⊓ ⟦qglobA1, x1, y1⟧ ≡𝔮 ⟦qglobA2, x2, y2⟧.
+    simp! o2h_distr_def.
+
+  wp right.
+  skip.
+  simp!.
+qed.
+
+
+
+
+
+
+
+
+program o2h_right := {
+  count <- 0;
+  (S,h,g,z) <$ o2h_distr;
+  { local tmp; call B(Count(gQuery)); }
+}.
+
+classical var in_S : bit.
+classical var found : bool.
+program hQueryPunctured := {
+  in_S <- measure x with binary_measurement (proj_classical_set S);
+  if (in_S=1) then found <- True; else skip;
+  call hQuery;
+}.
+
+program o2h_find := {
+  count <- 0;
+  (S,h,g,z) <$ o2h_distr;
+  found <- False;
+  { local tmp; call B(Count(hQueryPunctured)); }
+}.
+
+lemma left_right: abs ( Pr[win=1 : o2h_left(rho)] - Pr[win=1 : o2h_right(rho)] )
+             <= 2 * sqrt( (1+real N) * Pr[found : o2h_find(rho)] ).
+  o2h.
+  admit.
+  admit.
+  admit.
+  isa! auto simp: o2h_distr_def.
+qed.
+
+
+
+program o2h_right_unwrapped := {
+  g <$ uniform {g. 0 ∉ range g};
+  call A(gQuery);
+  win <- of_bool (h(x') = 0);
+
+  g <$ uniform {g. 0 ∉ range g};
+  call B(Count(gQuery));
+  S <$ map_distr (λf. {x. f x = 1}) (product_distr' (λ_. bernoulli (1/ real N)));
+}.
+
+
+program right_lazy_S := {
+  count <- 0;
+  g <$ uniform {g. 0 ∉ range g};
+  call B(Count(gQuery));
+  S <$ map_distr (λf. {x. f x = 1}) (product_distr' (λ_. bernoulli (1/ real N)));
+}.
+
+
