@@ -1,6 +1,6 @@
-# Invoking proofgeneral
+# Invoking Proof General
 
-Interactively developing proofs using qrhl-tool is done using [ProofGeneral](https://proofgeneral.github.io/).
+Interactively developing proofs using qrhl-tool is done using [Proof General](https://proofgeneral.github.io/).
 There are several ways to invoke ProofGeneral with qRHL-support.
 
 ## Invocation script
@@ -19,9 +19,26 @@ Cons:
 * A bare-bones Emacs is used without any of your personal configuration.
   (If you don't usually use Emacs, this should not matter.)
 
-## Configure Emacs to use the contributed ProofGeneral
+## Install Proof General via MELPA
 
-You can configure Emacs to use the ProofGeneral version that comes with qrhl-tool.
+The official distribution of Proof General contains support for qrhl-tool.
+You can simply install the most current version via [MELPA](https://melpa.org/).
+See the [Proof General installation instructions](https://proofgeneral.github.io/#quick-installation-instructions).
+(Other distributions of Proof General may not be up-to-date enough.)
+
+Pros:
+* Automatic installation
+* Your usual Emacs configuration is used.
+* Quite up-to-date. 
+  (Only beaten by the [repository version](#repository-version-of-the-qrhl-supporting-proof-general) 
+  or the Proof General included in the development snapshot of qrhl-tool.)
+
+Cons:
+* Needs to be separately installed (as compared to the [invocation script](#invocation-script)).
+
+## Configure Emacs to use the contributed Proof General
+
+You can configure Emacs to use the Proof General version that comes with qrhl-tool.
 
 Steps:
 * Edit your Emacs configuration file (`~/.emacs` on Linux/Mac, for Windows see [here](https://www.gnu.org/software/emacs/manual/html_mono/efaq-w32.html#Location-of-init-file)).
@@ -35,14 +52,14 @@ Pros:
 
 Cons:
 * Manual configuration.
-* If your system already has ProofGeneral installed, it is not obvious which version Emacs will use.
+* If your system already has Proof General installed, it is not obvious which version Emacs will use.
 
 Optional extra step:
 * In Emacs, do `C-0 M-x byte-recompile-directory` and pass the directory `QRHL_TOOL/proofgeneral` when asked. 
   This speeds up loading. Needed only once. Repeat when updating `qrhl-tool`.
 
 
-## Repository version of the qRHL-supporting ProofGeneral
+## Repository version of the qRHL-supporting Proof General
 
 Similar to the previous solution, only with the most up-to-date version of the qRHL-support.
 
@@ -57,16 +74,12 @@ Steps:
 
 Pros:
 * Your usual Emacs configuration is used.
-* Newest possible version of the qRHL-support in ProofGeneral.
+* Newest possible version of the qRHL-support in Proof General.
 
 Cons:
 * Manual configuration.
-* If your system already has ProofGeneral installed, it is not obvious which version Emacs will use.
+* If your system already has Proof General installed, it is not obvious which version Emacs will use.
 
 Optional extra step:
 * In Emacs, do `C-0 M-x byte-recompile-directory` and pass the directory `PROOFGENERAL` when asked.
   This speeds up loading. Needed only once. Repeat when updating `qrhl-tool`.
-
-## Use the MELPA version of ProofGeneral
-
-Not supported yet. Support is [upcoming](https://github.com/ProofGeneral/PG/pull/636).
