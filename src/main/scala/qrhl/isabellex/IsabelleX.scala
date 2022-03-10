@@ -26,6 +26,7 @@ import de.unruh.isabelle.misc.{FutureValue, Symbols}
 import de.unruh.isabelle.pure.exceptions.Exn
 import hashedcomputation.{Hash, HashedValue}
 import org.apache.commons.io.FileUtils
+import qrhl.Utils.NestedException
 
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
@@ -1010,11 +1011,19 @@ object IsabelleX {
     def prettyExpression(term: Term): String =
       symbols.symbolsToUnicode(term.prettyRaw(context))
 
-    def readTyp(str: String): Typ = Typ(context, str)
+    def readTyp(str: String): Typ = Typ(context, str).force
 
-    def readTypUnicode(str: String): Typ = readTyp(symbols.unicodeToSymbols(str))
+    def readTypUnicode(str: String): Typ =
+      try readTyp(symbols.unicodeToSymbols(str))
+      catch {
+        case NestedException(e : Exn)
+          if (e.message.startsWith("Undefined type name:")
+            || e.message.startsWith("Inner syntax error")) =>
+          throw UserException(s"""While parsing type "$str": ${e.message}""")
+      }
 
-    def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(typ.prettyRaw(context))
+
+  def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(typ.prettyRaw(context))
 
     def simplify(term: Term, facts: List[String])(implicit executionContext: ExecutionContext): (RichTerm, Thm) = {
       val global = null
