@@ -1769,24 +1769,17 @@ Use \verb|\sub|, \verb|\sup| for sub-/superscript letters.
   \\
   %
   \hline
-  \constdef{$\mathtt{colocal}\ P\ Q$\par
-    $\mathtt{colocal\_pred\_qvars}\ P\ Q$}
+  \constdef{$\mathtt{distinct\_qvars\_pred\_var}\ P\ Q$}
   {\mathtt{bool}}
   {$P::\mathtt{predicate}$
     \par and
     $Q::\alpha\ \mathtt{variables}$}
-  \toolconst{colocal}
-  \toolconst{colocal\_pred\_qvars}
+  \toolconst{distinct\_qvars\_pred\_var}
   &
-  True iff the predicate $P$ is $X$-local for some set of variables with $X\cap Q=\varnothing$,
-  and no variable occurs twice in $Q$.
+  True iff the predicate $P$ does not contain any of the (quantum) variables in $Q$ and all variables in $Q$ are distinct.
 
-  The syntax $\mathtt{colocal}\ P\ Q$
-  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
-  of \texttt{colocal}
-  is intended, use \texttt{colocal\_pred\_qvars}, or provide additional type
-  information for $P$ and $Q$.
-
+  (Formally, ``$P$ does not contain any of the variables in $Q$'' means that $P$ is $X$-local \cite{qrhl-paper-from-manual} for some set of variables with $X\cap Q=\varnothing$.)
+  
   To automatically simplify statements of this form in an accompanying
   Isabelle theory, it is recommended to add a fact of the form
   $\mathtt{declared\_qvars}\ \llbracket\dots\rrbracket$
@@ -1795,24 +1788,17 @@ Use \verb|\sub|, \verb|\sup| for sub-/superscript letters.
   \\
   %
   \hline
-  \constdef{$\mathtt{colocal}\ A\ Q$\par
-    $\mathtt{colocal\_op\_qvars}\ A\ Q$}
+  \constdef{$\mathtt{distinct\_qvars\_op\_vars}\ A\ Q$}
   {\mathtt{bool}}
   {$A::(\mathtt{mem2},\mathtt{mem2})\ \mathtt{l2bounded}$
     \par and
     $Q::\alpha\ \mathtt{variables}$}
-  \toolconst{colocal}
-  \toolconst{colocal\_op\_qvars}
+  \toolconst{distinct\_qvars\_op\_vars}
   &
-  True iff the operator $A$ is $X$-local for some set of variables with $X\cap Q=\varnothing$,
-  and no variable occurs twice in $Q$.
+  True iff the operator $A$ does not operate on any of the (quantum) variables in $Q$ and all variables in $Q$ are distinct.
 
-  The syntax $\mathtt{colocal}\ A\ Q$
-  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
-  of \texttt{colocal}
-  is intended, use \texttt{colocal\_op\_qvars}, or provide additional type
-  information for $A$ and $Q$.
-
+  (Formally, ``$A$ does not operate on any of the variables in $Q$'' means that $A$ is $X$-local \cite{qrhl-paper-from-manual} for some set of variables with $X\cap Q=\varnothing$.)
+  
   To automatically simplify statements of this form in an accompanying
   Isabelle theory, it is recommended to add a fact of the form
   $\mathtt{declared\_qvars}\ \llbracket\dots\rrbracket$
@@ -1821,26 +1807,18 @@ Use \verb|\sub|, \verb|\sup| for sub-/superscript letters.
   \\
   % 
   \hline
-  \constdef{$\mathtt{colocal}\ A\ P$\par
-    $\mathtt{colocal\_op\_pred}\ A\ P$}
+  \constdef{$\mathtt{distinct\_qvars\_op\_pred}\ A\ P$}
   {\mathtt{bool}}
   {$A::(\mathtt{mem2},\mathtt{mem2})\ \mathtt{l2bounded}$
     \par and
     $P::\mathtt{predicate}$}
-  \toolconst{colocal}
-  \toolconst{colocal\_op\_pred}
+  \toolconst{distinct\_qvars\_op\_pred}
   &
-  True if the operator $A$
-  is $X$-local
-  and the predicate $P$
-  is $Y$-local
-  for some sets $X,Y$ of quantum variables with $X\cap Y=\varnothing$.
+  True if the operator $A$ does not operate on any of the quantum variables occurring in the predicate $P$.
 
-  The syntax $\mathtt{colocal}\ A\ P$
-  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
-  of \texttt{colocal}
-  is intended, use \texttt{colocal\_op\_pred}, or provide additional type
-  information for $A$ and $P$.
+  (Formally, this mean that if the operator $A$ is $X$-local \cite{qrhl-paper-from-manual}
+  and the predicate $P$ is $Y$-local \cite{qrhl-paper-from-manual}
+  for some sets $X,Y$ of quantum variables with $X\cap Y=\varnothing$.)
 
   To automatically simplify statements of this form in an accompanying
   Isabelle theory, it is recommended to add a fact of the form
@@ -1869,8 +1847,9 @@ Use \verb|\sub|, \verb|\sup| for sub-/superscript letters.
   is a string literal containing the name of the variable $\qq_i$.
   The simplifier can use these statements to automatically prove
   $\mathtt{distinct\_qvars}\ \llbracket\qq_1,\dots,\qq_n\rrbracket$
-  and various statements of the form $\mathtt{colocal} \dots$.
+  and various statements of the form $\mathtt{distinct\_qvars\_}\dots$.
 
+  
   When reasoning in Isabelle directly (in an accompanying theory), it
   is advisable to add the assumption
   $\mathtt{declared\_qvars}\ \llbracket\qq_1,\dots,\qq_n\rrbracket$

@@ -170,18 +170,18 @@ lemma swap_variables_vars_singleton3[simp]:
 subsection "Distinct quantum variables"
 
 
-text \<open>The following constant \<open>COLOCAL_GUARD\<close> is a marker that indicates that the simplifier
+text \<open>The following constant \<open>DISTINCT_QVARS_GUARD\<close> is a marker that indicates that the simplifier
   should not attempt to solve the subgoal \<open>C\<close> (which is supposed to be of the form \<open>colocal_...\<close>)
   unless a quick check whether it can be solved succeeds. (The quick check simply checks whether
-  no variable occurs in both arguments of the \<open>colocal_...\<close>.) This is to avoid spending potentially
+  no variable occurs in both arguments of the \<open>distinct_qvars_...\<close>.) This is to avoid spending potentially
   a lot of time on repeated failed colocality-proofs.
 
-  To avoid this check (i.e., attempt simplification always), simply add \<open>COLOCAL_GUARD_def\<close> to the simplifier.
+  To avoid this check (i.e., attempt simplification always), simply add \<open>DISTINCT_QVARS_GUARD_def\<close> to the simplifier.
 
-  See also the simproc \<open>colocal_guard_simproc\<close> below.
+  See also the simproc \<open>distinct_qvars_guard_simproc\<close> below.
   \<close>
-definition [code del]: \<open>COLOCAL_GUARD (C::bool) = C\<close>
-lemma COLOCAL_GUARD_cong[cong]: \<open>COLOCAL_GUARD x = COLOCAL_GUARD x\<close>
+definition [code del]: \<open>DISTINCT_QVARS_GUARD (C::bool) = C\<close>
+lemma DISTINCT_QVARS_GUARD_cong[cong]: \<open>DISTINCT_QVARS_GUARD x = DISTINCT_QVARS_GUARD x\<close>
   by simp
 
 consts predicate_local_raw :: "predicate \<Rightarrow> variable_raw set \<Rightarrow> bool"
@@ -213,26 +213,34 @@ lift_definition predicate_local :: "predicate \<Rightarrow> 'a::universe variabl
 lift_definition operator_local :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool" 
   is  "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> operator_local_raw A (set (flatten_tree vs))" .
 
-lift_definition colocal_pred_qvars :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
+lift_definition distinct_qvars_pred_vars :: "predicate \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
   is "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> (\<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> predicate_local_raw A vs')" .
+abbreviation (input) \<open>colocal_pred_qvars \<equiv> distinct_qvars_pred_vars\<close> (* Legacy *)
 
-lift_definition colocal_pred_qvars_str :: "predicate \<Rightarrow> string set \<Rightarrow> bool"
+lift_definition distinct_qvars_pred_str :: "predicate \<Rightarrow> string set \<Rightarrow> bool"
   is "\<lambda>A vs. (\<exists>vs'. vs \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw A vs')" .
+abbreviation (input) \<open>colocal_pred_qvars_str \<equiv> distinct_qvars_pred_str\<close> (* Legacy *)
 
-lift_definition colocal_op_qvars :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
+lift_definition distinct_qvars_op_vars :: "(mem2,mem2) l2bounded \<Rightarrow> 'a::universe variables \<Rightarrow> bool"
   is "\<lambda>A (vs,_). distinct (flatten_tree vs) \<and> (\<exists>vs'. set (flatten_tree vs) \<inter> vs' = {} \<and> operator_local_raw A vs')" .
+abbreviation (input) \<open>colocal_op_qvars \<equiv> distinct_qvars_op_vars\<close> (* Legacy *)
 
-lift_definition colocal_op_qvars_str :: "(mem2,mem2) l2bounded \<Rightarrow> string set \<Rightarrow> bool"
+lift_definition distinct_qvars_op_str :: "(mem2,mem2) l2bounded \<Rightarrow> string set \<Rightarrow> bool"
   is "\<lambda>A vs. (\<exists>vs'. vs \<inter> variable_raw_name ` vs' = {} \<and> operator_local_raw A vs')" .
+abbreviation (input) \<open>colocal_op_qvars_str \<equiv> distinct_qvars_op_str\<close> (* Legacy *)
 
-lift_definition colocal_op_pred :: "(mem2,mem2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
+lift_definition distinct_qvars_op_pred :: "(mem2,mem2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
   is "\<lambda>A B. \<exists>vs1 vs2. vs1 \<inter> vs2 = {} \<and> operator_local_raw A vs1 \<and> predicate_local_raw B vs2" .
+abbreviation (input) \<open>colocal_op_pred \<equiv> distinct_qvars_op_pred\<close> (* Legacy *)
 
-lift_definition colocal_qvars_qvars_str :: "'a::universe variables \<Rightarrow> string set \<Rightarrow> bool"
+lift_definition distinct_qvars_str :: "'a::universe variables \<Rightarrow> string set \<Rightarrow> bool"
   is "\<lambda>(vs,_) vs'. distinct (flatten_tree vs) \<and> variable_raw_name ` set (flatten_tree vs) \<inter> vs' = {}" .
+abbreviation (input) \<open>colocal_qvars_qvars_str \<equiv> distinct_qvars_str\<close>
 
-consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
-adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (* colocal_qvars_qvars *)
+consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool" (* Legacy *)
+adhoc_overloading colocal \<open>\<lambda>x y. colocal_pred_qvars x y\<close> \<open>\<lambda>x y. colocal_op_pred x y\<close> \<open>\<lambda>x y. colocal_op_qvars x y\<close>
+(* Having non-eta reduced terms in the adhoc_overloading effectively makes the overloading input-only,
+   as appropropriate for a legacy name *)
 
 lemma colocal_pred_qvars_unit[simp]: "colocal_pred_qvars A \<lbrakk>\<rbrakk>"
   by (cheat colocal_pred_qvars_unit)
@@ -274,12 +282,12 @@ proof -
   from assms
   obtain vsA vsB where "Q \<inter> variable_raw_name ` vsA = {}" and "predicate_local_raw A vsA"
     and "Q \<inter> variable_raw_name ` vsB = {}" and "predicate_local_raw B vsB"
-    apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq by auto
+    apply atomize_elim unfolding distinct_qvars_pred_str.rep_eq by auto
   then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (A \<sqinter> B) vs'"
     apply (rule_tac exI[of _ "vsA \<union> vsB"])
     by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_inter)
   then show ?thesis
-    unfolding colocal_pred_qvars_str.rep_eq by simp
+    unfolding distinct_qvars_pred_str.rep_eq by simp
 qed
 
 lemma colocal_Inf[intro!]: 
@@ -299,12 +307,12 @@ proof -
   from assms
   obtain vsA vsB where "Q \<inter> variable_raw_name ` vsA = {}" and "predicate_local_raw A vsA"
     and "Q \<inter> variable_raw_name ` vsB = {}" and "predicate_local_raw B vsB"
-    apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq by auto
+    apply atomize_elim unfolding distinct_qvars_pred_str.rep_eq by auto
   then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (A + B) vs'"
     apply (rule_tac exI[of _ "vsA \<union> vsB"])
     by (auto intro: predicate_local_raw_mono intro!: predicate_local_raw_sup)
   then show ?thesis
-    unfolding colocal_pred_qvars_str.rep_eq by simp
+    unfolding distinct_qvars_pred_str.rep_eq by simp
 qed
 
 lemma colocal_sup[simp,intro!]: "colocal_pred_qvars_str A Q \<Longrightarrow> colocal_pred_qvars_str B Q \<Longrightarrow> colocal_pred_qvars_str (A \<squnion> B) Q"
@@ -318,12 +326,12 @@ proof -
   from assms
   obtain vsU vsS where "Q \<inter> variable_raw_name ` vsU = {}" and "operator_local_raw U vsU"
     and "Q \<inter> variable_raw_name ` vsS = {}" and "predicate_local_raw S vsS"
-    apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq colocal_op_qvars_str.rep_eq by auto
+    apply atomize_elim unfolding distinct_qvars_pred_str.rep_eq distinct_qvars_op_str.rep_eq by auto
   then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (U \<cdot> S) vs'"
     apply (rule_tac exI[of _ "vsU \<union> vsS"])
     by (auto intro: predicate_local_raw_mono operator_local_raw_mono intro!: predicate_local_raw_apply_op)
   then show ?thesis
-    unfolding colocal_pred_qvars_str.rep_eq by simp
+    unfolding distinct_qvars_pred_str.rep_eq by simp
 qed
 
 lemma colocal_ortho[simp]: "colocal_pred_qvars_str (- S) Q = colocal_pred_qvars_str S Q"
@@ -332,12 +340,12 @@ proof -
   proof -
     from that
     obtain vsS where "Q \<inter> variable_raw_name ` vsS = {}" and "predicate_local_raw S vsS"
-      apply atomize_elim unfolding colocal_pred_qvars_str.rep_eq by auto
+      apply atomize_elim unfolding distinct_qvars_pred_str.rep_eq by auto
     then have "\<exists>vs'. Q \<inter> variable_raw_name ` vs' = {} \<and> predicate_local_raw (- S) vs'"
       apply (rule_tac exI[of _ vsS])
       by (auto intro: intro!: predicate_local_raw_ortho)
     then show ?thesis
-      unfolding colocal_pred_qvars_str.rep_eq by simp
+      unfolding distinct_qvars_pred_str.rep_eq by simp
   qed
   from this[where S=S] this[where S="- S"]
   show ?thesis 
@@ -1430,8 +1438,8 @@ lemma applyOpSpace_colocal:
   by (cheat TODO14)
 
 lemma applyOpSpace_colocal_simp[simp]:
-  "COLOCAL_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) l2bounded" and S :: predicate
-  by (simp add: applyOpSpace_colocal COLOCAL_GUARD_def)
+  "DISTINCT_QVARS_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(mem2,mem2) l2bounded" and S :: predicate
+  by (simp add: applyOpSpace_colocal DISTINCT_QVARS_GUARD_def)
 
 lemma qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
@@ -1886,6 +1894,6 @@ simproc_setup "variable_rewriting"
    "reorder_variables_hint a b" | "extend_lift_as_var_concat_hint A R") = 
   QRHL.variable_rewriting_simproc
 
-simproc_setup colocal_guard_simproc (\<open>COLOCAL_GUARD t\<close>) = QRHL.colocal_guard_simproc
+simproc_setup distinct_qvars_guard_simproc (\<open>DISTINCT_QVARS_GUARD t\<close>) = QRHL.distinct_qvars_guard_simproc
 
 end

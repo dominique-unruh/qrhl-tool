@@ -1,13 +1,15 @@
 package qrhl
 
+import org.log4s
+
 import java.io.FileInputStream
 import java.lang.AbstractMethodError
 import java.nio.file.Path
 import java.security.MessageDigest
-
 import qrhl.logic.{CVariable, Variable}
 import scalaz.Memo
 
+import scala.annotation.tailrec
 import scala.collection.immutable.ListSet
 import scala.collection.{AbstractSet, GenSet, GenTraversableOnce, IterableFactory, IterableFactoryDefaults, SeqOps, SetOps, mutable}
 import scala.language.implicitConversions
@@ -103,6 +105,21 @@ object Utils {
   def tryRelativize(path: Path, other: Path): Path =
     try path.relativize(other)
     catch { case _ : IllegalArgumentException => path }*/
+
+
+  /** Pattern `case NestedException(...)` matches [[Throwable]]s and then matches the exception inside (via `.getCause`),
+   * unwrapping possibly several levels of nesting. */
+  object NestedException {
+    @tailrec def unapply(exception: Throwable): Option[Throwable] = {
+      logger.debug(exception.toString)
+      exception.getCause match {
+        case null => Some(exception)
+        case e => unapply(e)
+      }
+    }
+  }
+
+  private val logger = log4s.getLogger
 }
 
 /** A set that can either be finite, or the set of all elements.
