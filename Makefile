@@ -33,10 +33,12 @@ test :
 owncloud : qrhl.zip
 	cp -v qrhl.zip /home/unruh/ownCloud/qrhl/
 
-push_docker:
-	docker login registry.gitlab.com
-	docker build -t registry.gitlab.com/unruh/qrhl-tool/build-image src/docker
-	docker push registry.gitlab.com/unruh/qrhl-tool/build-image
+docker: # qrhl.zip
+	docker build . -f src/docker/Dockerfile -t ghcr.io/dominique-unruh/qrhl-tool:latest
+	docker push ghcr.io/dominique-unruh/qrhl-tool:latest
+
+docker-login:
+	docker login ghcr.io -u dominique-unruh
 
 dropbox: qrhl.zip
 	cp qrhl.zip ~/Dropbox/tmp
