@@ -252,8 +252,7 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
 }
 
 object Toplevel {
-  private val commandEnd: Regex = """\.(\s*$|\s+)""".r
-  private val commentRegex = """^\s*#.*$""".r
+  private val commentRegex = """(^|.*?\s)\s*#.*$""".r
 
   private val logger = log4s.getLogger
 
@@ -442,8 +441,9 @@ object Toplevel {
     state
   }
 
-  private def stripComment(line: String): String = line match {
-    case Toplevel.commentRegex(_*) => ""
+  // Only package-visible for test case
+  private [toplevel] def stripComment(line: String): String = line match {
+    case Toplevel.commentRegex(beforeComment) => beforeComment.stripTrailing
     case _ => line
   }
 
@@ -466,7 +466,7 @@ object Toplevel {
   }
 
   /** Reads one command from the input. The last line of the command must end with ".".
-   * Comment lines (starting with whitespace + #) are skipped.
+   * Comments are skipped (lines starting with #, or parts of lines that have # after whitespace)
    *
    * @param readLine command for reading lines from the input, invoked with the prompt to show
    * @return the command (without the "."), null on EOF
@@ -503,6 +503,7 @@ object Toplevel {
         }
       }
 
+      logger.debug(s"LINE: $line, STRIPPED: ${stripComment(line)}")
       str.append(stripComment(line))
     }
 
