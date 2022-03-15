@@ -33,7 +33,7 @@ test :
 owncloud : qrhl.zip
 	cp -v qrhl.zip /home/unruh/ownCloud/qrhl/
 
-docker: # qrhl.zip
+docker: qrhl.zip
 	docker build . -f src/docker/Dockerfile -t ghcr.io/dominique-unruh/qrhl-tool:latest
 	docker push ghcr.io/dominique-unruh/qrhl-tool:latest
 
