@@ -36,4 +36,4 @@ The qrhl-tool uses a number of open-source libraries and tools, the most notable
 ## Acknowledgments
 
 Development was supported by the Air Force Office of Scientific Research (AOARD Grant FA2386-17-1-4022),
-by the ERC consolidator grant CerQuS (819317), and by the PRG946 grant from the Estonian Research Council.
+by the [ERC consolidator grant CerQuS (819317)](https://www.ut.ee/~unruh/cerqus/), and by the PRG946 grant from the Estonian Research Council.
