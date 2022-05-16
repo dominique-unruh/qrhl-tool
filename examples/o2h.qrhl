@@ -1,4 +1,5 @@
-# TODO make proper example file
+# Example for the o2h and semiclassical tactic.
+# This example only shows the syntax of those tactics, it has no meaningful cryptographic content.
 
 isabelle O2H_Example.
 
