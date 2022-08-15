@@ -15,3 +15,6 @@ end
 
 # Performance-booster for watching directories on Windows
 gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
+
+# Workaround following https://github.com/jekyll/jekyll/issues/8523. Can probably be removed at some point.
+gem "webrick", "~> 1.7"

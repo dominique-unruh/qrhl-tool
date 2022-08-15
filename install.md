@@ -23,28 +23,27 @@ Use `sudo python3` instead of `python3` if you want to install files outside you
 To check whether this is the case, go into a terminal,
 and enter `java -version` or `emacs -version`, respectively, and see whether the commands are found.
 
-* [Isabelle2019](https://isabelle.in.tum.de/website-Isabelle2019/) ([Isabelle2021](https://isabelle.in.tum.de/website-Isabelle2021/) for the developement snapshot) must be installed.
+* [Isabelle2021-1](https://isabelle.in.tum.de/website-Isabelle2021-1/) must be installed.
   Simply download it and unpack it somewhere.
-* The AFP must be installed. Download it at
-  https://sourceforge.net/projects/afp/files/afp-Isabelle2019/ or https://www.isa-afp.org/download.html, respectively, and unpack it 
+* The AFP (version 2021-1) must be installed. Download it at https://www.isa-afp.org/download.html, respectively, and unpack it 
   somewhere.
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.6`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.7`.
 (Or `qrhl-snapshot` in case of the development snapshot.)
 
-In the `qrhl-0.6` directory, edit the file `qrhl-tool.conf`: 
+Edit `.qrhl-tool.conf` in your home directory.
 Add the configuration keys `isabelle-home = <where you unpackaged Isabelle>`
 and `afp-home = <where you unpackaged AFP>`.
-(In the development snapshot, edit `.qrhl-tool.conf` in your home directory instead.)
+(See `qrhl-tool.conf.sample` in the distribution directory.)
 
 To update, simply extract the new version.
-(But make sure to save your `qrhl-tool.conf`.)
+(Possibly updating `.qrhl-tool.conf` if the Isabelle version has changed.)
 
 ## Executing the demos
 
-In the `qrhl-snapshot` directory, execute `proofgeneral.sh`.
+In the `qrhl-0.7` directory, execute `proofgeneral.sh`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
@@ -59,6 +58,7 @@ See the [ProofGeneral manual](https://proofgeneral.github.io/doc/userman/) for m
 
 Note: The first step of the proof script (`isabelle.`) will take **very long** upon first activation,
 because it will build all required Isabelle theories. 
+Do not start other instances of Isabelle or the tool while this is in progress.
 
 ## Editing the Isabelle theory files
 
@@ -71,7 +71,7 @@ Then open and edit the file normally.
 
 * Make sure that [sbt](https://www.scala-sbt.org/) (Scala Build Tool) is on the path.
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
-* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.6`). 
+* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.7`). 
 * Create a `qrhl-tool.conf` file as described in the binary installation section above.
 * Run `./proofgeneral.sh` or `./run-isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
