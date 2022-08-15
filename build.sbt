@@ -127,18 +127,20 @@ Steps when releasing a release/release candidate:
 
  - git checkout release-candidate
  - If this is the first RC for a new release, reset release-candidate to master
- - Edit version in README.md, Makefile, build.sbt
+ - Edit version in Makefile, build.sbt
  - git commit
  - git tag vXXX (XXX is the version)
  - sbt clean
  - sbt test
  - ./test.sh in pq-fo-verify
  - make qrhl.zip
- - git push origin vXXX
  - git push
+ - wait for github runner tests to succeed
+ - git push origin vXXX
  - Create a new release here: https://github.com/dominique-unruh/qrhl-tool/releases/new
  - git checkout master
- - Edit README.md to refer to newest version
+ - cherry pick changes from release-candidate branch
+ - Edit gh-pages branch
  - Update hksu-verification, edit README, test it, tag it
 
  */
