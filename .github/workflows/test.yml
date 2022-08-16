@@ -31,6 +31,7 @@ jobs:
         - name: Running tests (MacOS)
           if: matrix.os == 'macos'
           run: |
+            ifconfig # To find out address for SSHing
             git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
             ~/keepawake.sh &    # A script to keep the Mac from falling asleep. Caffeinate doesn't seem to work on my Mac
             echo isabelle-home = ~/Isabelle2021-1.app >qrhl-tool.conf
