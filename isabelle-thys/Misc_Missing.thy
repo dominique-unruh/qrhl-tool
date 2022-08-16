@@ -89,6 +89,7 @@ derive universe bit
 (* lemma bit_two[simp]: "(2::bit) = 0" (* bit_numeral_even *)
   by (metis add_cancel_left_right bit.exhaust one_add_one)  *)
 
+(* TODO check this in 2022 *)
 (* This rule makes the simplifier loop in Isabelle2021-1. Check if that's still the case. If not, add [simp] and remove the special cases below. *)
 lemma bit_eq_x: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
   apply transfer by auto

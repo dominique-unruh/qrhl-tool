@@ -2,15 +2,14 @@
 # and edit the paths below.
 
 
-# isabelle-home indicates the directory where the Isabelle2021-1 distribution is located.
+# isabelle-home indicates the directory where the Isabelle2022 distribution is located.
 # This option is required.
-# (On OS/X, the Isabelle home is of the form .../Isabelle2021-1.app.)
+# (On OS/X, the Isabelle home is of the form .../Isabelle2022.app.)
 
-# isabelle-home = /opt/Isabelle2021-1
+# isabelle-home = /opt/Isabelle2022
 
 
 # AFP (Archive of Formal Proofs) theory directory.
-# This option is optional. If it is not included, it is required that Isabelle is already configured to include the AFP.
-# It is recommended to provide this option anyway because it allows qrhl-tool to check if the version of the AFP is sufficiently recent.
+# This option is optional. If it is not provided, it is required that Isabelle is already configured to include the AFP.
 
-# afp-root = /opt/afp-2021-1
+# afp-root = /opt/afp-2022
