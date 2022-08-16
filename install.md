@@ -35,7 +35,7 @@ Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.7`.
 
 Edit `.qrhl-tool.conf` in your home directory.
 Add the configuration keys `isabelle-home = <where you unpackaged Isabelle>`
-and `afp-home = <where you unpackaged AFP>`.
+and `afp-root = <where you unpackaged AFP>`.
 (See `qrhl-tool.conf.sample` in the distribution directory.)
 
 To update, simply extract the new version.
