@@ -538,8 +538,7 @@ proof -
     have "(\<Sum>\<^sub>\<infinity>x. (\<Sum>\<^sub>\<infinity>y\<in>f -` {x}. \<mu> y) *\<^sub>R x) = (\<Sum>\<^sub>\<infinity>x. (\<Sum>\<^sub>\<infinity>y\<in>f -` {x}. \<mu> y *\<^sub>R x))"
       (is "_ = ?rhs")
       apply (rule infsum_cong, simp_all)
-      apply (rule infsum_scaleR_left[symmetric])
-      by simp
+      by (rule infsum_scaleR_left[symmetric])
     also 
     have bij: "bij_betw (\<lambda>x. (f x, x)) UNIV (SIGMA x:UNIV. f -` {x})"
       by (rule bij_betwI', auto)
