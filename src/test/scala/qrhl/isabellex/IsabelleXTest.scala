@@ -3,7 +3,7 @@ package qrhl.isabellex
 import java.nio.file.{Files, Paths}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.tags.Slow
-import qrhl.UserException
+import qrhl.{State, UserException}
 import qrhl.toplevel.ToplevelTest
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.{Const, Context, Thm}
@@ -69,4 +69,9 @@ class IsabelleXTest extends AnyFunSuite {
       assert(getAB(ctxt) == ("3", "4"))
     }
   }
+}
+
+object IsabelleXTest {
+  /** Makes sure that [[IsabelleX.globalIsabelle]] is initialized. */
+  def ensureLoaded(): Unit = ToplevelTest.emptyState.loadIsabelle(Nil, session = None)(qrhl.toplevel.ToplevelTest.rootsDirectory)
 }
