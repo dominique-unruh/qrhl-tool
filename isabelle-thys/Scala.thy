@@ -2,13 +2,6 @@ theory Scala
   imports QRHL.QRHL
 begin
 
-setup \<open>
-  (Generated_Files.file_type \<^binding>\<open>Scala\<close>
-    {ext = "scala",
-     make_comment = enclose "/*" "*/",
-     make_string = GHC.print_string})
-\<close>
-
 generate_file "IsabelleNames.scala" = \<open>
 /*
 

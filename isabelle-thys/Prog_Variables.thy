@@ -603,7 +603,7 @@ lemma index_flip_var_conv_aux2: "index_flip_var (index_var False v) \<equiv> ind
 
 ML_file "prog_variables.ML"
 
-section {* Simprocs *}
+section \<open>Simprocs\<close>
 
 (* A simproc that utters warnings whenever the simplifier tries to prove a distinct_qvars statement with distinct, explicitly listed variables but can't *)
 syntax "_declared_qvars" :: "variable_list_args \<Rightarrow> bool" ("declared'_qvars \<lbrakk>_\<rbrakk>")

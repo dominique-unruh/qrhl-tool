@@ -39,6 +39,8 @@ hide_const (open) Quantum.pauliZ
 
 syntax (output) "_forced_parentheses" :: \<open>'a \<Rightarrow> 'a\<close> ("'(_')")
 
+unbundle lattice_syntax
+
 (* Needed to make the terms below print with parentheses. If not, the result of printing cannot be parsed back. *)
 translations "A *\<^sub>S _forced_parentheses (B \<sqinter> C)" \<leftharpoondown> "A *\<^sub>S (B \<sqinter> C)"
 translations "_forced_parentheses (A *\<^sub>S B) \<sqinter> C" \<leftharpoondown> "(A *\<^sub>S B) \<sqinter> C"
@@ -85,8 +87,7 @@ lemma equal_span':
   assumes "\<And>x. x\<in>G \<Longrightarrow> f x = g x"
   assumes "x\<in>closure (cspan G)"
   shows "f x = g x"
-  using assms bounded_clinear_eq_on
-  by metis 
+  using assms by (rule bounded_clinear_eq_on)
 
 (* TODO remove (seems to be a [simp] rule already) *)
 lemma bot_plus[simp]: "sup bot x = x" 
@@ -95,8 +96,8 @@ lemma bot_plus[simp]: "sup bot x = x"
 
 abbreviation (input) \<open>idOp \<equiv> id_cblinfun\<close>
 
-declare cblinfun.scaleC_left[simp]
-declare cblinfun.scaleC_right[simp]
+(* declare cblinfun.scaleC_left[simp] *)
+(* declare cblinfun.scaleC_right[simp] *)
 
 (* Giving it a name to make adding/removing [simp] easier *)
 lemmas le_Inf_iff_subspace[simp] = le_Inf_iff[where 'a=\<open>_::chilbert_space ccsubspace\<close>]
