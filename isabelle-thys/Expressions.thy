@@ -215,6 +215,22 @@ lemma map_expression3'[simp]:
   unfolding map_expression3'_def pair_expression map_expression'
   apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
 
+
+definition map_expression3'' ::
+ "('e1 \<Rightarrow> ('z \<Rightarrow> 'e2) \<Rightarrow> ('z \<Rightarrow> 'e3) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('z \<Rightarrow> 'e2 expression) \<Rightarrow> ('z \<Rightarrow> 'e3 expression) \<Rightarrow> 'f expression" where
+  "map_expression3'' f e1 e2 e3 = map_expression'
+           (\<lambda>x123. let x1 = fst (x123 undefined) in
+              let x2 = \<lambda>z. fst (snd (x123 z)) in
+              let x3 = \<lambda>z. snd (snd (x123 z)) in
+              f x1 x2 x3)
+         (\<lambda>z. (pair_expression e1 (pair_expression (e2 z) (e3 z))))"
+
+lemma map_expression3''[simp]:
+  "map_expression3'' f (expression Q1 e1) (\<lambda>z. expression Q2 (e2 z)) (\<lambda>z. expression Q3 (e3 z))
+     = expression (variable_concat Q1 (variable_concat Q2 Q3)) (\<lambda>(x1,x2,x3). f (e1 x1) (\<lambda>z. e2 z x2) (\<lambda>z. e3 z x3))"
+  unfolding map_expression3''_def pair_expression map_expression'
+  apply (tactic \<open>cong_tac \<^context> 1\<close>) by auto
+
 definition map_expression4' ::
  "('e1 \<Rightarrow> 'e2 \<Rightarrow> 'e3 \<Rightarrow> ('z \<Rightarrow> 'e4) \<Rightarrow> 'f) \<Rightarrow> ('e1 expression) \<Rightarrow> ('e2 expression) \<Rightarrow> ('e3 expression) \<Rightarrow> ('z \<Rightarrow> 'e4 expression) \<Rightarrow> 'f expression" where
   "map_expression4' f e1 e2 e3 e4 = map_expression'
@@ -368,6 +384,10 @@ lemma index_flip_expression_map_expression: "index_flip_expression (map_expressi
 lemma index_flip_map_expression2': "index_flip_expression (map_expression2' f e1 e2) = 
   map_expression2' f (index_flip_expression e1) (index_flip_expression o e2)"
   unfolding map_expression2'_def by (simp add: index_flip_expression_pair_expression index_flip_expression_map_expression' o_def)
+
+lemma index_flip_map_expression3'': "index_flip_expression (map_expression3'' f e1 e2 e3) = 
+  map_expression3'' f (index_flip_expression e1) (index_flip_expression o e2) (index_flip_expression o e3)"
+  unfolding map_expression3''_def by (simp add: index_flip_expression_pair_expression index_flip_expression_map_expression' o_def)
 
 section \<open>Substitutions\<close>
 

@@ -1,49 +1,22 @@
 isabelle.
 
-quantum   var x : int.
-quantum var y : int.
+classical var x : int.
+classical var y : int.
 
+program p1 := {
+  x <- x+y;
+  y <- x+1;
+}.
 
-lemma (0 :: int ell2 ⇒⇩C⇩L int ell2) = undefined.
-rule refl[OF xxx].
-admit.
+qrhl {Cla[x1 = 3 ∧ y1 = 4]} call p1; ~ call p1; {Cla[x1 = 7]}.
+  inline p1.
+  sp left.
+  simp!.
+  simp.
+  conseq pre: Cla[x1 = 7].
+   simp!.
+  
+  wp 1 2.
+  skip.
+  simp.
 qed.
-
-lemma id_cblinfun >> ⟦x⟧ = id_cblinfun.
-
-⊗⇩S⊗⇩S
-
-lemma ket (0::bit) ⊗⇩s ket (0::bit) = ket (0,0).
-simp.
-qed.
-
-lemma id_cblinfun ⊗⇩o id_cblinfun = id_cblinfun.
-simp.
-qed.
-
-lemma ⟦x⟧ ∈⇩q top = top.
-simp.
-qed.
-
-lemma ⟦x⟧ =⇩q ket 0 = top.
-admit.
-qed.
-
-
-
-
-program a := { x <q undefined; y <q undefined; }.
-
-ambient var lemma : complex.
-
-
-qrhl {top} call a; ~ call a; {top}.
-equal.
- simp!.
-skip.
-simp!.
-qed.
-
-qrhl {top} call a; ~ call a; {Qeq[x1=x2]}.
-admit.
-

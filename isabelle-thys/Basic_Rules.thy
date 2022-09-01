@@ -35,12 +35,13 @@ lemma index_flip_substitute_vars:
 lemma index_flip_vars_index_vars: "index_flip_vars (index_vars left xs) = index_vars (\<not> left) xs"
   by (cheat index_flip_vars_index_vars)
 
+(* TODO move *)
 lemma map_expression_subst_expression:
   "map_expression f (subst_expression \<sigma> e) = subst_expression \<sigma> (map_expression f e)"
   unfolding map_expression_def 
   apply (transfer fixing: f \<sigma>)
   by auto
-  
+
 lemma assign2_rule:
   fixes A B x e
   defines "x1 == index_vars False x"
@@ -87,6 +88,15 @@ lemma map_expression_map_expression2':
   assumes [simp]: "uniform_expression_family f"
   shows "map_expression f1 (map_expression2' f2 e f) = map_expression2' (\<lambda>z1 z2. f1 (f2 z1 z2)) e f"
   unfolding map_expression2'_def 
+  apply (subst map_expression_map_expression')
+  by (simp_all add: o_def)
+
+lemma map_expression_map_expression3'':
+  assumes [simp]: "uniform_expression_family f"
+  assumes [simp]: "uniform_expression_family g"
+  shows "map_expression f1 (map_expression3'' f2 e f g) = 
+      map_expression3'' (\<lambda>z1 z2 z3. f1 (f2 z1 z2 z3)) e f g"
+  unfolding map_expression3''_def 
   apply (subst map_expression_map_expression')
   by (simp_all add: o_def)
 
