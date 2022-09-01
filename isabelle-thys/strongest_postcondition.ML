@@ -47,14 +47,18 @@ fun sp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
+*)
 
   | [Const(\<^const_name>\<open>qinit\<close>,_) $ _ $ _] => 
-      (resolve_tac ctxt (lr @{thms wp1_qinit_tac} @{thms wp2_qinit_tac}) n
+      (resolve_tac ctxt (lr @{thms sp1_qinit_tac} @{thms sp2_qinit_tac}) n
        ORELSE error "quantum initialization")
       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
+      THEN Expressions.map_expression_tac ctxt n
+      THEN Expressions.map_expression_tac ctxt n
 
+(*
   | [Const(\<^const_name>\<open>ifthenelse\<close>,_) $ _ $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms wp1_if_tac} @{thms wp2_if_tac}) n
        ORELSE error "if-statement")
