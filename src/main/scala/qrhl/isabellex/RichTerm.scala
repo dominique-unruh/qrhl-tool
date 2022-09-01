@@ -190,6 +190,12 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     RichTerm(typ,GIsabelle.not(isabelleTerm))
   }
 
+  /** If the term is of the form "true_expression Expr[...]", replace it by "...". */
+  def unwrapTrueExpression(implicit context: IsabelleX.ContextX): RichTerm = isabelleTerm match {
+    case GIsabelle.True_Expression(expr) =>
+      RichTerm.decodeFromExpression(context, expr)
+    case _ => this
+  }
 }
 
 

@@ -16,19 +16,19 @@ program p1 := {
 qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
   inline p1.
   sp left.
-admit.
-simp.
+    simp!.
+    simp!.
 
+  sp right.
+    simp!.
+    simp!.
 
+  sp left.
+    simp!.
 
+  sp right.
+    simp!.
 
-  
-  simp!.
-  simp.
-  conseq pre: Cla[x1 = 7].
-   simp!.
-  
-  wp 1 2.
   skip.
-  simp.
+  simp!.
 qed.
