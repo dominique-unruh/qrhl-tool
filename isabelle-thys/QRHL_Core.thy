@@ -304,6 +304,16 @@ lemma colocal_INF[simp, intro!]:
   shows "colocal_pred_qvars_str (INF x\<in>X. A x) Q"
   using assms by blast
 
+lemma colocal_Sup[intro!]: 
+  assumes "\<And>A. A\<in>AA \<Longrightarrow> colocal_pred_qvars_str A Q" 
+  shows "colocal_pred_qvars_str (Sup AA) Q"
+  by (cheat colocal_Inf)
+
+lemma colocal_SUP[simp, intro!]:
+  assumes "\<And>x. x \<in> X \<Longrightarrow> colocal_pred_qvars_str (A x) Q"
+  shows "colocal_pred_qvars_str (SUP x\<in>X. A x) Q"
+  using assms by blast
+
 lemma colocal_plus[simp, intro!]: 
   fixes A :: "_ subspace"
   assumes "colocal_pred_qvars_str A Q" and "colocal_pred_qvars_str B Q" shows "colocal_pred_qvars_str (A + B) Q" 
