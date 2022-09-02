@@ -43,4 +43,15 @@ test_get_sp \<^context> false
 \<close>
 end
 
+(* TEST CASE: get_wp of "measure a A computational_basis" *)
+variables classical a :: bit and quantum A :: bit begin
+ML \<open>
+test_get_sp \<^context> false 
+            \<^term>\<open>measurement \<lbrakk>var_a\<rbrakk> \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
+            \<^term>\<open>const_expression (top::predicate)\<close> (* pre *)
+            \<^term>\<open>Expr[SUP (z::bit) r::bit. \<CC>\<ll>\<aa>[a2 = r] \<sqinter> (mproj computational_basis r\<guillemotright>\<lbrakk>A2::bit variable\<rbrakk> *\<^sub>S \<top>)]\<close> (* expected *)
+\<close>
+end
+
+
 end

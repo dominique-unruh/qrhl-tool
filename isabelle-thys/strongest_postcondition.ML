@@ -66,15 +66,18 @@ fun sp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
       THEN wp_tac0 left ctxt n
       THEN wp_tac0 left ctxt n
       THEN Expressions.map_expression_tac ctxt n
-      
+*)
+
   | [Const(\<^const_name>\<open>measurement\<close>,_) $ _ $ _ $ _] => 
-      (resolve_tac ctxt (lr @{thms wp1_measure_tac} @{thms wp2_measure_tac}) n
+      (resolve_tac ctxt (lr @{thms sp1_measure_tac} @{thms sp2_measure_tac}) n
        ORELSE error "measurement-statement")
       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.subst_expression_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n *)
+      THEN Expressions.subst_expression_tac ctxt n
+      THEN Expressions.map_expression_tac ctxt n
+      THEN Expressions.map_expression_tac ctxt n
 
   | [] => 
       resolve_tac ctxt @{thms skip_rule} n

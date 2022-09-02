@@ -34,6 +34,7 @@ lemma wp2_sample_tac:
   assumes "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
   assumes "A = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z\<in>supp e1. B' z)) e1 B'"
   shows "qrhl A [] [sample x e] B"
+  thm assms
   unfolding assms by (fact sample2_rule)
 
 lemma wp1_qapply_tac:
