@@ -264,11 +264,33 @@ lemma sp2_measure_tac:
   shows "qrhl A [] [measurement x Q e] B"
   by (cheat sp2_measure_tac)
 
+lemma sp1_cons_tac:
+  assumes "qrhl A' ps [] B"
+  assumes "qrhl A [p] [] A'"
+  shows "qrhl A (p#ps) [] B"
+  using assms seqREMOVE by fastforce
+
+lemma sp2_cons_tac:
+  assumes "qrhl A' [] ps B"
+  assumes "qrhl A [] [p] A'"
+  shows "qrhl A [] (p#ps) B"
+  using assms seqREMOVE by fastforce
+
 lemma sp_split_left_right_tac:
   assumes "qrhl B c [] C"
     and "qrhl A [] d B"
   shows "qrhl A c d C"
   by (rule seqREMOVE[OF _ _ assms(2) assms(1)], simp_all)
+
+lemma sp1_block_tac:
+  assumes "qrhl A p [] B"
+  shows "qrhl A [block p] [] B"
+  by (simp add: assms wp1_block_tac)
+
+lemma sp2_block_tac:
+  assumes "qrhl A [] p B"
+  shows "qrhl A [] [block p] B"
+  by (simp add: assms wp2_block_tac)
 
 ML_file "strongest_postcondition.ML"
 
