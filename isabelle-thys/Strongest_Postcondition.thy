@@ -218,8 +218,7 @@ lemma sp1_measure_tac:
   assumes B: \<open>B = map_expression3'' (\<lambda>x1 e1' A'. SUP z r. Cla[x1 = r] \<sqinter> ((mproj (e1' z) r \<guillemotright> Q1) *\<^sub>S A' z))
             (expression x1 (\<lambda>x. x)) e1' A'\<close>
   assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[mtotal e1]) A e1\<close>
-  assumes distinct_x: \<open>distinct_qvars x\<close>
-  assumes distinct_Q: \<open>distinct_qvars Q\<close>
+  assumes distinct: \<open>distinct_qvars x \<and> distinct_qvars Q\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows "qrhl A [measurement x Q e] [] B"
 (* Handwritten proof: Quicksheets 2022, pages 150-151. *)
@@ -258,8 +257,7 @@ lemma sp2_measure_tac:
   assumes B: \<open>B = map_expression3'' (\<lambda>x2 e2' A'. SUP z r. Cla[x2 = r] \<sqinter> ((mproj (e2' z) r \<guillemotright> Q2) *\<^sub>S A' z))
             (expression x2 (\<lambda>x. x)) e2' A'\<close>
   assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[mtotal e2]) A e2\<close>
-  assumes distinct_x: \<open>distinct_qvars x\<close>
-  assumes distinct_Q: \<open>distinct_qvars Q\<close>
+  assumes distinct: \<open>distinct_qvars x \<and> distinct_qvars Q\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows "qrhl A [] [measurement x Q e] B"
   by (cheat sp2_measure_tac)
