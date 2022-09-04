@@ -29,14 +29,16 @@ fun sp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
        THEN Expressions.subst_expression_tac ctxt n
        THEN Expressions.map_expression_tac ctxt n
 
-(*   | [Const(\<^const_name>\<open>sample\<close>,_) $ _ $ _] =>
-      (resolve_tac ctxt (lr @{thms wp1_sample_tac} @{thms wp2_sample_tac}) n
+   | [Const(\<^const_name>\<open>sample\<close>,_) $ _ $ _] =>
+      (resolve_tac ctxt (lr @{thms sp1_sample_tac} @{thms sp2_sample_tac}) n
        ORELSE error "sample-statement")
       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.subst_expression_tac ctxt n
+      THEN Expressions.subst_expression_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
-  *)    
+      THEN Expressions.map_expression_tac ctxt n
+
   | [Const(\<^const_name>\<open>block\<close>,_) $ _] => 
       resolve_tac ctxt (lr @{thms sp1_block_tac} @{thms sp2_block_tac}) n THEN sp_tac0 left ctxt n
       ORELSE error "block"
