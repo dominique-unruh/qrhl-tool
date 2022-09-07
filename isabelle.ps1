@@ -5,4 +5,4 @@ if ($args.Count -eq 0) {
     $args = ("$PSScriptRoot\isabelle-thys\All.thy")
 }
 Set-Location $PSScriptRoot
-bin\qrhl.ps1 --isabelle --session $session $args
+bin\qrhl.bat "--isabelle" "--session" $session $args
