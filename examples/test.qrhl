@@ -12,6 +12,7 @@ program p1 := {
   b <- measure R with computational_basis;
   Q <q ket 1;
   y <- x+1;
+  if (b=0) then { b <- 1; } else { b <- 0; }
 }.
 
 qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
@@ -24,7 +25,7 @@ qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
     simp!.
 
   simp.
-    
+
   sp left.
     simp!.
     simp!.
@@ -47,6 +48,12 @@ qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
     simp!.
 
   sp right.
+    simp!.
+
+  sp 1 1.
+    simp!.
+    simp!.
+    simp!.
     simp!.
 
   skip.

@@ -29,7 +29,7 @@ test_get_sp \<^context> true
             \<^term>\<open>Expr[Cla[x+x = y]]\<close> (* pre *)
             \<^term>\<open>expression \<lbrakk>var_x1::nat variable, var_x::nat variable, var_y::nat variable\<rbrakk>
                    (\<lambda>(var_x1::nat, var_x::nat, var_y::nat).
-                   SUP z::nat. \<CC>\<ll>\<aa>[var_x + var_x = var_y] \<sqinter> \<CC>\<ll>\<aa>[var_x1 = (5::nat)])\<close> (* expected *)
+                   SUP z::nat. \<CC>\<ll>\<aa>[var_x1 = (5::nat)] \<sqinter> \<CC>\<ll>\<aa>[var_x + var_x = var_y])\<close> (* expected *)
 \<close>
 end
 
@@ -60,7 +60,7 @@ ML \<open>
 test_get_sp \<^context> true
             \<^term>\<open>block [assign \<lbrakk>var_x\<rbrakk> Expr[x+1], assign \<lbrakk>var_x\<rbrakk> Expr[x+1]]\<close> (* program *)
             \<^term>\<open>Expr[Cla[x1 = 0]]\<close> (* pre *)
-            \<^term>\<open>Expr[SUP z::nat. (SUP za::nat. \<CC>\<ll>\<aa>[za = (0::nat)] \<sqinter> \<CC>\<ll>\<aa>[z = za + (1::nat)]) \<sqinter> \<CC>\<ll>\<aa>[x1 = z + (1::nat)]]\<close> (* expected *)
+            \<^term>\<open>Expr[SUP z::nat. \<CC>\<ll>\<aa>[x1 = z + (1::nat)] \<sqinter> (SUP za::nat. \<CC>\<ll>\<aa>[z = za + (1::nat)] \<sqinter> \<CC>\<ll>\<aa>[za = (0::nat)])]\<close> (* expected *)
 \<close>
 end
 
@@ -70,9 +70,23 @@ ML \<open>
 test_get_sp \<^context> true
             \<^term>\<open>sample \<lbrakk>var_x\<rbrakk> Expr[uniform UNIV]\<close> (* program *)
             \<^term>\<open>Expr[Cla[x1=0]]\<close> (* pre *)
-            \<^term>\<open>Expr[SUP z::bit. \<CC>\<ll>\<aa>[z = (0::bit)] \<sqinter> \<CC>\<ll>\<aa>[x1 \<in> supp (uniform UNIV)]]\<close> (* expected *)
+            \<^term>\<open>Expr[SUP z::bit. \<CC>\<ll>\<aa>[x1 \<in> supp (uniform UNIV)] \<sqinter> \<CC>\<ll>\<aa>[z = (0::bit)]]\<close> (* expected *)
 \<close>
 end
 
+
+
+(* TEST CASE: if *)
+variables classical x :: bit begin
+ML \<open>
+test_get_sp \<^context> true
+            \<^term>\<open>ifthenelse Expr[x=0] [assign \<lbrakk>var_x\<rbrakk> Expr[1]] [assign \<lbrakk>var_x\<rbrakk> Expr[0]]\<close> (* program *)
+            \<^term>\<open>Expr[top :: predicate]\<close> (* pre *)
+            \<^term>\<open>expression \<lbrakk>var_x1::bit variable, var_x1\<rbrakk>
+                     (\<lambda>(var_x1::bit, var_x1a::bit).
+                         (SUP z::bit. \<CC>\<ll>\<aa>[var_x1 = (1::bit)] \<sqinter> (\<CC>\<ll>\<aa>[z = (0::bit)] \<sqinter> \<top>)) \<squnion>
+                         (SUP z::bit. \<CC>\<ll>\<aa>[var_x1a = (0::bit)] \<sqinter> (\<CC>\<ll>\<aa>[z \<noteq> (0::bit)] \<sqinter> \<top>)))\<close> (* expected *)
+\<close>
+end
 
 end

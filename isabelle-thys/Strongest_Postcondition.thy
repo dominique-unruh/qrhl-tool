@@ -16,6 +16,12 @@ lemma expression_eval_map_expression3'':
   apply (auto simp: pair_expression_footprint)
   using assms by blast+
 
+lemma expression_eval_map_expression3:
+  shows "expression_eval (map_expression3 f e1 e2 e3) x = f (expression_eval e1 x) (expression_eval e2 x) (expression_eval e3 x)"
+  unfolding map_expression3_def
+  apply (subst expression_eval_map_expression)
+  by (auto simp: pair_expression_footprint)
+
 lemma expression_eval_map_expression2':
   assumes "\<And>z. expression_vars (e2 z) = expression_vars (e2 undefined)"
   shows "expression_eval (map_expression2' f e1 e2) x = f (expression_eval e1 x) (\<lambda>z. expression_eval (e2 z) x)"
@@ -51,7 +57,7 @@ lemma sp1_assign_tac:
   assumes e1: \<open>e1 = index_expression True e\<close>
   assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x1 (const_expression z)) A\<close>
   assumes e1': \<open>\<And>z. e1' z = subst_expression (substitute_vars x1 (const_expression z)) e1\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x1' A' e1'. SUP z. A' z \<sqinter> Cla[x1' = e1' z]) (expression x1 (\<lambda>x. x)) A' e1'\<close>
+  assumes B: \<open>B = map_expression3'' (\<lambda>x1' A' e1'. SUP z. Cla[x1' = e1' z] \<sqinter> A' z) (expression x1 (\<lambda>x. x)) A' e1'\<close>
   assumes dist_x: \<open>distinct_qvars x\<close>
   shows \<open>qrhl A [assign x e] [] B\<close>
 proof -
@@ -97,7 +103,7 @@ lemma sp2_assign_tac:
   assumes e2: \<open>e2 = index_expression False e\<close>
   assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x2 (const_expression z)) A\<close>
   assumes e2': \<open>\<And>z. e2' z = subst_expression (substitute_vars x2 (const_expression z)) e2\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x2' A' e2'. SUP z. A' z \<sqinter> Cla[x2' = e2' z]) (expression x2 (\<lambda>x. x)) A' e2'\<close>
+  assumes B: \<open>B = map_expression3'' (\<lambda>x2' A' e2'. SUP z. Cla[x2' = e2' z] \<sqinter> A' z) (expression x2 (\<lambda>x. x)) A' e2'\<close>
   assumes dist_x: \<open>distinct_qvars x\<close>
   shows \<open>qrhl A [] [assign x e] B\<close>
 proof -
@@ -146,7 +152,7 @@ lemma sp1_sample_tac:
   assumes e1: \<open>e1 = index_expression True e\<close>
   assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x1 (const_expression z)) A\<close>
   assumes e1': \<open>\<And>z. e1' z = subst_expression (substitute_vars x1 (const_expression z)) e1\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x1' A' e1'. SUP z. A' z \<sqinter> Cla[x1' \<in> supp (e1' z)]) (expression x1 (\<lambda>x. x)) A' e1'\<close>
+  assumes B: \<open>B = map_expression3'' (\<lambda>x1' A' e1'. SUP z. Cla[x1' \<in> supp (e1' z)] \<sqinter> A' z) (expression x1 (\<lambda>x. x)) A' e1'\<close>
   assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[weight e1 = 1]) A e1\<close>
   assumes dist_x: \<open>distinct_qvars x\<close>
   assumes lossless: \<open>true_expression L\<close>
@@ -201,7 +207,7 @@ lemma sp2_sample_tac:
   assumes e2: \<open>e2 = index_expression False e\<close>
   assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x2 (const_expression z)) A\<close>
   assumes e2': \<open>\<And>z. e2' z = subst_expression (substitute_vars x2 (const_expression z)) e2\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x2' A' e2'. SUP z. A' z \<sqinter> Cla[x2' \<in> supp (e2' z)]) (expression x2 (\<lambda>x. x)) A' e2'\<close>
+  assumes B: \<open>B = map_expression3'' (\<lambda>x2' A' e2'. SUP z. Cla[x2' \<in> supp (e2' z)] \<sqinter> A' z) (expression x2 (\<lambda>x. x)) A' e2'\<close>
   assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[weight e2 = 1]) A e2\<close>
   assumes dist_x: \<open>distinct_qvars x\<close>
   assumes lossless: \<open>true_expression L\<close>
@@ -399,6 +405,60 @@ lemma sp2_block_tac:
   assumes "qrhl A [] p B"
   shows "qrhl A [] [block p] B"
   by (simp add: assms wp2_block_tac)
+
+lemma sp1_if_tac:
+  assumes B: \<open>B = map_expression2 (\<lambda>B_true B_false. B_true \<squnion> B_false) B_true B_false\<close>
+  assumes wp_false: \<open>qrhl A_false p2 [] B_false\<close>
+  assumes wp_true: \<open>qrhl A_true p1 [] B_true\<close>
+  assumes A_false: \<open>A_false = map_expression2 (\<lambda>e1 A. Cla[\<not> e1] \<sqinter> A) e1 A\<close>
+  assumes A_true: \<open>A_true = map_expression2 (\<lambda>e1 A. Cla[e1] \<sqinter> A) e1 A\<close>
+  assumes e1: \<open>e1 = index_expression True e\<close>
+  shows \<open>qrhl A [ifthenelse e p1 p2] [] B\<close>
+proof -
+  have \<open>B \<ge> B_true\<close>
+    by (auto simp: less_eq_expression_def le_fun_def B)
+  with wp_true have wp_true': \<open>qrhl A_true p1 [] B\<close>
+    using conseq_rule by blast
+  have \<open>B \<ge> B_false\<close>
+    by (auto simp: less_eq_expression_def le_fun_def B)
+  with wp_false have wp_false': \<open>qrhl A_false p2 [] B\<close>
+    using conseq_rule by blast
+  define A' where \<open>A' = map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (\<CC>\<ll>\<aa>[\<not> e\<^sub>1] + wp_true) \<sqinter> (\<CC>\<ll>\<aa>[e\<^sub>1] + wp_false)) e1 A_true A_false\<close>
+  have \<open>qrhl A' [ifthenelse e p1 p2] [] B\<close>
+    using e1 wp_true' wp_false' A'_def 
+    by (rule wp1_if_tac)
+  moreover have \<open>A' \<ge> A\<close>
+    by (auto simp add: less_eq_expression_def le_fun_def A'_def expression_eval_map_expression3 A_true A_false)
+  ultimately show ?thesis
+    using conseq_rule by blast
+qed
+
+lemma sp2_if_tac:
+  assumes B: \<open>B = map_expression2 (\<lambda>B_true B_false. B_true \<squnion> B_false) B_true B_false\<close>
+  assumes wp_false: \<open>qrhl A_false [] p2 B_false\<close>
+  assumes wp_true: \<open>qrhl A_true [] p1 B_true\<close>
+  assumes A_false: \<open>A_false = map_expression2 (\<lambda>e2 A. Cla[\<not> e2] \<sqinter> A) e2 A\<close>
+  assumes A_true: \<open>A_true = map_expression2 (\<lambda>e2 A. Cla[e2] \<sqinter> A) e2 A\<close>
+  assumes e2: \<open>e2 = index_expression False e\<close>
+  shows \<open>qrhl A [] [ifthenelse e p1 p2] B\<close>
+proof -
+  have \<open>B \<ge> B_true\<close>
+    by (auto simp: less_eq_expression_def le_fun_def B)
+  with wp_true have wp_true': \<open>qrhl A_true [] p1 B\<close>
+    using conseq_rule by blast
+  have \<open>B \<ge> B_false\<close>
+    by (auto simp: less_eq_expression_def le_fun_def B)
+  with wp_false have wp_false': \<open>qrhl A_false [] p2 B\<close>
+    using conseq_rule by blast
+  define A' where \<open>A' = map_expression3 (\<lambda>e\<^sub>1 wp_true wp_false. (\<CC>\<ll>\<aa>[\<not> e\<^sub>1] + wp_true) \<sqinter> (\<CC>\<ll>\<aa>[e\<^sub>1] + wp_false)) e2 A_true A_false\<close>
+  have \<open>qrhl A' [] [ifthenelse e p1 p2] B\<close>
+    using e2 wp_true' wp_false' A'_def 
+    by (rule wp2_if_tac)
+  moreover have \<open>A' \<ge> A\<close>
+    by (auto simp add: less_eq_expression_def le_fun_def A'_def expression_eval_map_expression3 A_true A_false)
+  ultimately show ?thesis
+    using conseq_rule by blast
+qed
 
 ML_file "strongest_postcondition.ML"
 
