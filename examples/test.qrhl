@@ -13,6 +13,7 @@ program p1 := {
   Q <q ket 1;
   y <- x+1;
   if (b=0) then { b <- 1; } else { b <- 0; }
+  on Q apply hadamard;
 }.
 
 qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
@@ -56,6 +57,14 @@ qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
     simp!.
     simp!.
 
+    sp 1 1.
+    simp!.
+    simp!.
+    simp!.
+    simp!.
+
+  simp.
+    
   skip.
   simp!.
 qed.
