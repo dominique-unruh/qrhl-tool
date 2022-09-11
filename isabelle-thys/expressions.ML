@@ -187,6 +187,7 @@ val map_expression_conv =
     map_expression2[THEN eq_reflection]
     map_expression3[THEN eq_reflection]
     map_expression3'[THEN eq_reflection]
+    map_expression3''[THEN eq_reflection]
     map_expression4'[THEN eq_reflection]}
 
 val map_expression_tac = Misc.schematic_conv_tac "map_expression term" (K map_expression_conv)

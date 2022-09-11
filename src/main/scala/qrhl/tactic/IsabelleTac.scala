@@ -23,6 +23,7 @@ import qrhl.isabellex.MLValueConverters.Implicits._
 abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX => A)(implicit converter: Converter[A]) extends Tactic {
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = {
     implicit val isabelle: Isabelle = state.isabelle.isabelle.isabelleControl
+    implicit val contextx: IsabelleX.ContextX = state.isabelle
     val ctxt = state.isabelle.context
 
     type In = (A, Subgoal, Context)
@@ -45,11 +46,13 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
     val (newGoals, thm) = tacMlValue(arg(state.isabelle), goal, ctxt).retrieveNow.getOrElse {
       throw UserException("tactic failed") }
 
-    check(state, goal, newGoals)
+    val newGoals2 = newGoals.map(_.unwrapTrueExpression)
+
+    check(state, goal, newGoals2)
 
     Subgoal.printOracles(thm)
 
-    postprocess(state,goal,newGoals)
+    postprocess(state,goal,newGoals2)
   }
 
   def check(state: State, goal: Subgoal, newGoals : List[Subgoal]): Unit = {}

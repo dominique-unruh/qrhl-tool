@@ -19,6 +19,7 @@ theory BOLegacy
     Registers.Quantum (* Imported because otherwise instantiations in QRHL_Code for bit will happen that make it impossible to merge Registers.Quantum with that theory.
 And we include it already here so that out simpset removals here won't be overwritten in a merge *)
 
+    Extended_Sorry
 begin
 
 (* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
@@ -107,5 +108,11 @@ type_synonym 'a clinear_space = \<open>'a ccsubspace\<close>
 abbreviation (input) \<open>isProjector \<equiv> is_Proj\<close>
 
 notation ket ("|_\<rangle>")
+
+lemma Proj_on_image [simp]: \<open>Proj S *\<^sub>S S = S\<close>
+  by (metis Proj_idempotent Proj_range cblinfun_compose_image)
+
+lemma proj_ket_is_0[simp]: \<open>proj (ket x) *\<^sub>S ccspan {ket y} = 0\<close> if \<open>x \<noteq> y\<close>
+  by (cheat proj_ket_is_0)
 
 end

@@ -1,49 +1,70 @@
 isabelle.
 
-quantum   var x : int.
-quantum var y : int.
+classical var x : int.
+classical var y : int.
+classical var b : bit.
 
+quantum var Q : bit.
+quantum var R : bit.
 
-lemma (0 :: int ell2 ⇒⇩C⇩L int ell2) = undefined.
-rule refl[OF xxx].
-admit.
+program p1 := {
+  b <$ uniform UNIV;
+  b <- measure R with computational_basis;
+  Q <q ket 1;
+  y <- x+1;
+  if (b=0) then { b <- 1; } else { b <- 0; }
+  on Q apply hadamard;
+}.
+
+qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
+  inline p1.
+
+  sp 1 1.
+    simp!.
+    simp!.
+    simp!.
+    simp!.
+
+  simp.
+
+  sp left.
+    simp!.
+    simp!.
+
+  simp SUP_UNIV_bit_expand.
+  
+  sp right.
+    simp!.
+    simp!.
+  
+  sp left.
+    simp!.
+    simp!.
+
+  sp right.
+    simp!.
+    simp!.
+
+  sp left.
+    simp!.
+
+  sp right.
+    simp!.
+
+  sp 1 1.
+    simp!.
+    simp!.
+    simp!.
+    simp!.
+
+    sp 1 1.
+    simp!.
+    simp!.
+    simp!.
+    simp!.
+
+  simp.
+    
+  skip.
+  simp!.
 qed.
-
-lemma id_cblinfun >> ⟦x⟧ = id_cblinfun.
-
-⊗⇩S⊗⇩S
-
-lemma ket (0::bit) ⊗⇩s ket (0::bit) = ket (0,0).
-simp.
-qed.
-
-lemma id_cblinfun ⊗⇩o id_cblinfun = id_cblinfun.
-simp.
-qed.
-
-lemma ⟦x⟧ ∈⇩q top = top.
-simp.
-qed.
-
-lemma ⟦x⟧ =⇩q ket 0 = top.
-admit.
-qed.
-
-
-
-
-program a := { x <q undefined; y <q undefined; }.
-
-ambient var lemma : complex.
-
-
-qrhl {top} call a; ~ call a; {top}.
-equal.
- simp!.
-skip.
-simp!.
-qed.
-
-qrhl {top} call a; ~ call a; {Qeq[x1=x2]}.
-admit.
-

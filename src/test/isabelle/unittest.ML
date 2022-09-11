@@ -5,11 +5,15 @@ fun assert_equal mk_string y x =
 
 fun string_of_term_gl t = Syntax.string_of_term_global (Context.the_global_context ()) t
 
-fun assert_aconv expected y =
+fun assert_aconv expected y = let
+  (* val _ = \<^print> expected *)
+  (* val _ = \<^print> y *)
+  in
   if expected aconv y then () else
   if Envir.beta_norm expected aconv Envir.beta_norm y then
     error ("Expected: "^ string_of_term_gl expected^"\nGot:      the same up to beta equivalence")
   else error ("Expected: "^ string_of_term_gl expected^"\nGot:      "^ string_of_term_gl y)
+  end
 
 fun assert_aconv_cterm x y = assert_aconv (Thm.term_of x) (Thm.term_of y)
 

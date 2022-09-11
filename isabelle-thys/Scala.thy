@@ -96,6 +96,7 @@ object IsabelleConsts {
   val insert = \<open>\<^const_name>\<open>insert\<close>\<close>
   val conj = \<open>\<^const_name>\<open>conj\<close>\<close>
   val disj = \<open>\<^const_name>\<open>disj\<close>\<close>
+  val true_expression = \<open>\<^const_name>\<open>true_expression\<close>\<close>
 }
 \<close>
 

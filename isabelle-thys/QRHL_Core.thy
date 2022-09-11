@@ -63,7 +63,8 @@ lemma Cla_plus[simp]: "Cla[x] + Cla[y] = Cla[x\<or>y]"
   unfolding sup_ccsubspace_def[symmetric] by auto
 lemma Cla_sup[simp]: "Cla[x] \<squnion> Cla[y] = Cla[x\<or>y]" 
   unfolding sup_ccsubspace_def[symmetric] by auto
-lemma BINF_Cla[simp]: "(INF z\<in>Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]" 
+
+lemma BINF_Cla[simp]: "(INF z\<in>Z. Cla[x z]) = Cla[\<forall>z\<in>Z. x z]"
 proof (rule Inf_eqI)
   show "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> \<CC>\<ll>\<aa>[\<forall>z\<in>Z. x z] \<le> i" by auto
   fix y assume assm: "\<And>i. i \<in> (\<lambda>z. \<CC>\<ll>\<aa>[x z]) ` Z \<Longrightarrow> y \<le> i"
@@ -80,6 +81,9 @@ proof (rule Inf_eqI)
       by (simp add: False)
   qed
 qed
+
+lemma BSUP_Cla[simp]: "(SUP z\<in>Z. Cla[x z]) = Cla[\<exists>z\<in>Z. x z]"
+  by (smt (verit, ccfv_SIG) SUP_bot_conv(1) Sup_bot_conv(2) Sup_upper classical_subspace_def imageE order_antisym top_greatest)
 
 lemma free_INF[simp]: "(INF x\<in>X. A) = Cla[X={}] + A"
   apply (cases "X={}") by auto
@@ -298,6 +302,16 @@ lemma colocal_Inf[intro!]:
 lemma colocal_INF[simp, intro!]:
   assumes "\<And>x. x \<in> X \<Longrightarrow> colocal_pred_qvars_str (A x) Q"
   shows "colocal_pred_qvars_str (INF x\<in>X. A x) Q"
+  using assms by blast
+
+lemma colocal_Sup[intro!]: 
+  assumes "\<And>A. A\<in>AA \<Longrightarrow> colocal_pred_qvars_str A Q" 
+  shows "colocal_pred_qvars_str (Sup AA) Q"
+  by (cheat colocal_Inf)
+
+lemma colocal_SUP[simp, intro!]:
+  assumes "\<And>x. x \<in> X \<Longrightarrow> colocal_pred_qvars_str (A x) Q"
+  shows "colocal_pred_qvars_str (SUP x\<in>X. A x) Q"
   using assms by blast
 
 lemma colocal_plus[simp, intro!]: 

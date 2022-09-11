@@ -152,6 +152,9 @@ end *)
 instance bit :: xor_group
   apply intro_classes by auto
 
+lemma SUP_UNIV_bit_expand: "(SUP b\<in>UNIV. A b) = A 0 \<squnion> A 1" for A :: \<open>bit \<Rightarrow> _ :: complete_lattice\<close>
+  by (simp add: UNIV_bit sup_commute)
+
 section \<open>Code\<close>
 
 lemma pat_lambda_conv_aux: \<comment> \<open>Helper for ML function pat_lambda_conv\<close>

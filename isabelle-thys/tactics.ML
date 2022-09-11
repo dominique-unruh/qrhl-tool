@@ -65,6 +65,10 @@ fun seq_tac_checks i j goal : unit =
   | _ => raise TAC_CHECK (K "Subgoal is not a qRHL judgement")
   end
 
+(* Splits goal after the first i/j statements on left/right with intermediate pre/postcondition B.
+
+If i/j is negative, count from the end (where i = -1 means splitting after the last statement, i = -2 means splitting off one statement, etc.)
+ *)
 fun seq_tac i j B ctxt = SUBGOAL_with_check ctxt (seq_tac_checks i j) (fn (goal,n) => 
     let val (p1,p2) = case Logic.strip_imp_concl goal |> HOLogic.dest_Trueprop of 
             Const(\<^const_name>\<open>qrhl\<close>,_) $ _ $ p1 $ p2 $ _ => (p1,p2)

@@ -455,6 +455,9 @@ fun add_index_to_expression (t,left) =
 val wp_tac = 
   apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Weakest_Precondition.wp_seq_tac left right ctxt 1)
 
+val sp_tac = 
+  apply_tactic_on_term_concl (fn ctxt => fn (left,right) => Strongest_Postcondition.sp_seq_tac left right ctxt 1)
+
 val apply_rule = let
   fun tac ctxt name = resolve_tac ctxt (get_thms ctxt name) 1
   in apply_tactic_on_term tac (fn rule => "rule "^rule) end

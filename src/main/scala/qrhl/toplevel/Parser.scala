@@ -322,6 +322,13 @@ object Parser extends JavaTokenParsers {
         (natural ~ natural ^^ { case l ~ r => WpTac(left = l, right = r) })
     }
 
+  val tactic_sp: Parser[SpTac] =
+    literal("sp") ~> {
+      (literal("left") ~> natural.? ^^ { n => SpTac(left = n.getOrElse(1), right = 0) }) |
+        (literal("right") ~> natural.? ^^ { n => SpTac(right = n.getOrElse(1), left = 0) }) |
+        (natural ~ natural ^^ { case l ~ r => SpTac(left = l, right = r) })
+    }
+
   val tactic_squash: Parser[SquashTac] =
     literal("squash") ~> OnceParser("left|right".r) ^^ {
       case "left" => SquashTac(left=true)
@@ -533,6 +540,7 @@ object Parser extends JavaTokenParsers {
   def tactic(implicit context:ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
       tactic_wp |
+      tactic_sp |
       tactic_swap |
       tactic_simp |
       tactic_rule |
