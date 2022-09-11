@@ -14,6 +14,7 @@ to recreate/update
 
 package qrhl.isabellex
 
+//noinspection ScalaFileName // bla
 object IsabelleTypes {
   val dummy = "dummy" 
   val nat = "Nat.nat"
@@ -42,6 +43,7 @@ object IsabelleTypes {
   val infinite = "QRHL_Core.infinite"
 }
 
+//noinspection ScalaFileName
 object IsabelleConsts {
   val Cons = "List.list.Cons"
   val Nil = "List.list.Nil"
