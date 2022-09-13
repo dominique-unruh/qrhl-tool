@@ -89,34 +89,16 @@ derive universe bit
 (* lemma bit_two[simp]: "(2::bit) = 0" (* bit_numeral_even *)
   by (metis add_cancel_left_right bit.exhaust one_add_one)  *)
 
-(* TODO check this in 2022 *)
-(* This rule makes the simplifier loop in Isabelle2021-1. Check if that's still the case. If not, add [simp] and remove the special cases below. *)
-lemma bit_eq_x: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
-  apply transfer by auto
-(* These rules are a replacement for bit_eq_x[simp] in several important cases *)
-lemma bit_eq_x_conj1[simp]: \<open>((a=x) = (b=x)) \<and> P \<longleftrightarrow> (a=b) \<and> P\<close> for a b x :: bit
-  apply transfer by auto
-lemma bit_eq_x_conj2[simp]: \<open>P \<and> ((a=x) = (b=x)) \<longleftrightarrow> P \<and> (a=b)\<close> for a b x :: bit
-  apply transfer by auto
-lemma bit_eq_x_not[simp]: \<open>\<not> ((a=x) = (b=x)) \<longleftrightarrow> \<not> (a=b)\<close> for a b x :: bit
-  apply transfer by auto
-lemma bit_eq_x_imp1[simp]: \<open>(((a=x) = (b=x)) \<longrightarrow> P) \<longleftrightarrow> ((a=b) \<longrightarrow> P)\<close> for a b x :: bit
-  apply transfer by auto
-lemma bit_eq_x_imp2[simp]: \<open>(P \<longrightarrow> ((a=x) = (b=x))) \<longleftrightarrow> (P \<longrightarrow> (a=b))\<close> for a b x :: bit
-  apply transfer by auto
-lemma bit_eq_x_iff1[simp]: \<open>(((a=x) = (b=x)) \<longleftrightarrow> P) \<longleftrightarrow> ((a=b) \<longleftrightarrow> P)\<close> for a b x :: bit
-  apply transfer by auto
-lemma bit_eq_x_iff2[simp]: \<open>(P \<longleftrightarrow> ((a=x) = (b=x))) \<longleftrightarrow> (P \<longleftrightarrow> (a=b))\<close> for a b x :: bit
+lemma bit_eq_x[simp]: "((a=x) = (b=x)) = (a=b)" for a b x :: bit
   apply transfer by auto
 
-(* To check whether we loop if we add [simp] to bit_eq_x *)
+(* Check whether the simplifier loops if we add [simp] to bit_eq_x (was a problem in Isabelle2021-1). *)
 lemma \<open>a + b + b = a\<close> for a b :: bit
   apply simp?
   oops
 
-
 lemma bit_neq: "(a \<noteq> b) = (a = b+1)" for a b :: bit
-  apply (cases a rule:bit.exhaust; cases b rule:bit.exhaust) by auto
+  by simp
 
 (* declare [[coercion "\<lambda>b::bit. if b=0 then (0::nat) else 1"]] *)
 
