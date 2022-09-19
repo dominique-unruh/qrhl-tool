@@ -14,7 +14,7 @@ to recreate/update
 
 package qrhl.isabellex
 
-//noinspection ScalaFileName // bla
+//noinspection ScalaFileName
 object IsabelleTypes {
   val dummy = "dummy" 
   val nat = "Nat.nat"
