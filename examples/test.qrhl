@@ -8,63 +8,17 @@ quantum var Q : bit.
 quantum var R : bit.
 
 program p1 := {
-  b <$ uniform UNIV;
-  b <- measure R with computational_basis;
-  Q <q ket 1;
-  y <- x+1;
-  if (b=0) then { b <- 1; } else { b <- 0; }
+  b <- measure Q with computational_basis;
+  x <- y+1;
+}.
+
+
+program p2 := {
   on Q apply hadamard;
 }.
 
-qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
+qrhl {undefined} call p1; call p2; ~ skip; {undefined}.
   inline p1.
-
-  sp 1 1.
-    simp!.
-    simp!.
-    simp!.
-    simp!.
-
-  simp.
-
-  sp left.
-    simp!.
-    simp!.
-
-  simp SUP_UNIV_bit_expand.
-  
-  sp right.
-    simp!.
-    simp!.
-  
-  sp left.
-    simp!.
-    simp!.
-
-  sp right.
-    simp!.
-    simp!.
-
-  sp left.
-    simp!.
-
-  sp right.
-    simp!.
-
-  sp 1 1.
-    simp!.
-    simp!.
-    simp!.
-    simp!.
-
-    sp 1 1.
-    simp!.
-    simp!.
-    simp!.
-    simp!.
-
-  simp.
-    
-  skip.
-  simp!.
-qed.
+  inline p2.
+  swap left 1 2
+    subprograms first: { b <- measure Q with computational_basis; } -> { b <- measure Q with undefined; }.

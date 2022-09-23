@@ -773,6 +773,10 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
   def funT(domain: Typ, range: Typ): Type = Type("fun", domain, range)
 
+  val denotation: Const = Const(IsabelleConsts.denotation, programT -->: program_stateT -->: program_stateT)
+  def denotationalEquivalence(program1: Term, program2: Term): Term =
+    mk_eq(denotation $ program1, denotation $ program2)
+
   //noinspection TypeAnnotation
   object Ops {
     import MLValue.{compileFunction, compileValue, compileValueRaw}

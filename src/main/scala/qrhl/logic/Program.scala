@@ -126,13 +126,13 @@ case class VariableUse
 
   def isProgram: Boolean = oracles.isEmpty
 
-  @deprecated("","") def classical: ListSet[CVariable] = freeVariables collect { case v : CVariable => v }
-  @deprecated("","") def quantum: ListSet[QVariable] = freeVariables collect { case v : QVariable => v }
-  @deprecated("","") def overwrittenClassical : ListSet[CVariable] = overwritten collect { case v : CVariable => v }
-  @deprecated("","") def overwrittenQuantum : ListSet[QVariable] = overwritten collect { case v : QVariable => v }
-  @deprecated("","") def innerClassical : ListSet[CVariable] = inner collect { case v : CVariable => v }
-  @deprecated("","") def innerQuantum : ListSet[QVariable] = inner collect { case v : QVariable => v }
-  @deprecated("","") def writtenClassical : ListSet[CVariable] = written collect { case v : CVariable => v }
+  def classical: ListSet[CVariable] = freeVariables collect { case v : CVariable => v }
+  def quantum: ListSet[QVariable] = freeVariables collect { case v : QVariable => v }
+  def overwrittenClassical : ListSet[CVariable] = overwritten collect { case v : CVariable => v }
+  def overwrittenQuantum : ListSet[QVariable] = overwritten collect { case v : QVariable => v }
+  def innerClassical : ListSet[CVariable] = inner collect { case v : CVariable => v }
+  def innerQuantum : ListSet[QVariable] = inner collect { case v : QVariable => v }
+  def writtenClassical : ListSet[CVariable] = written collect { case v : CVariable => v }
 
   override def toString: String = s"""
       | Free        ⊆ ${varsToString(freeVariables)}
@@ -199,7 +199,10 @@ sealed trait Statement extends HashedValue {
    * @param renaming the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y'). */
   def renameVariables(env: Environment, renaming: List[(Variable, Variable)]) : Statement
 
-  def substituteOracles(subst: Map[String, Call]) : Statement
+  /** Substitutes oracles by statements.
+   * May fail if one of the replacements would require to replace an oracle by a statement inside a [[Call]] argument
+   * and that statement is not a [[Call]] itself. */
+  def substituteOracles(subst: Map[String, Statement]) : Statement
 
   def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms:ListBuffer[Thm]): Statement
 
@@ -432,6 +435,12 @@ sealed trait Statement extends HashedValue {
     case _ => List(this)
   }
 
+  def unwrapSingletonBlock: Statement = this match {
+    case Block(st) => st
+    case _ => this
+  }
+/*  /** Structural equality of programs */
+  override def equals(obj: Any): Boolean = throw new RuntimeException(s"Internal error: $getClass does not implement an equals method.")*/
 }
 
 
@@ -447,7 +456,7 @@ class Local(val vars: List[Variable], val body : Block) extends Statement {
     case _ => false
   }
 
-  override def substituteOracles(subst: Map[String, Call]): Statement =
+  override def substituteOracles(subst: Map[String, Statement]): Statement =
     new Local(vars=vars, body=body.substituteOracles(subst))
 
   override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], thms: ListBuffer[Thm]): Statement =
@@ -496,7 +505,6 @@ class Local(val vars: List[Variable], val body : Block) extends Statement {
 
   override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Local =
     Local(this.vars, body.renameVariables(env, renaming.filterNot { case (x,y) => vars.contains(x) }))
-
 }
 
 object Local {
@@ -612,7 +620,7 @@ class Block(val statements:List[Statement]) extends Statement {
 
   override def markOracles(oracles: List[String]): Block = new Block(statements.map(_.markOracles(oracles)))
 
-  override def substituteOracles(subst: Map[String, Call]): Block = Block(statements.map(_.substituteOracles(subst)):_*)
+  override def substituteOracles(subst: Map[String, Statement]): Block = Block(statements.map(_.substituteOracles(subst)):_*)
 
   // nc_Seq: "no_conflict σ c1 ⟹ no_conflict σ c2 ⟹ no_conflict σ (c1; c2)"
   override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
@@ -654,7 +662,7 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
     */
   override def markOracles(oracles: List[String]): Assign = this
 
-  override def substituteOracles(subst: Map[String, Call]): Statement = this
+  override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
   override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
 
@@ -681,7 +689,7 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
     */
   override def markOracles(oracles: List[String]): Sample = this
 
-  override def substituteOracles(subst: Map[String, Call]): Statement = this
+  override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
   override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
 
@@ -714,7 +722,7 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
     */
   override def markOracles(oracles: List[String]): IfThenElse = IfThenElse(condition,thenBranch.markOracles(oracles),elseBranch.markOracles(oracles))
 
-  override def substituteOracles(subst: Map[String, Call]): Statement = IfThenElse(condition,thenBranch.substituteOracles(subst),elseBranch.substituteOracles(subst))
+  override def substituteOracles(subst: Map[String, Statement]): Statement = IfThenElse(condition,thenBranch.substituteOracles(subst),elseBranch.substituteOracles(subst))
 
   // nc_IfTE: "no_conflict σ c1 ⟹ no_conflict σ c2 ⟹ no_conflict σ (IfTE e c1 c2)"
   override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
@@ -747,7 +755,7 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
     */
   override def markOracles(oracles: List[String]): While = While(condition, body.markOracles(oracles))
 
-  override def substituteOracles(subst: Map[String, Call]): Statement = While(condition,body.substituteOracles(subst))
+  override def substituteOracles(subst: Map[String, Statement]): Statement = While(condition,body.substituteOracles(subst))
 
   // nc_While: "no_conflict σ c ⟹ no_conflict σ (While e c)"
   override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
@@ -778,7 +786,7 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
     */
   override def markOracles(oracles: List[String]): QInit = this
 
-  override def substituteOracles(subst: Map[String, Call]): Statement = this
+  override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
   override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
 
@@ -808,7 +816,7 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
     */
   override def markOracles(oracles: List[String]): QApply = this
 
-  override def substituteOracles(subst: Map[String, Call]): Statement = this
+  override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
   override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
 
@@ -839,7 +847,7 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
     */
   override def markOracles(oracles: List[String]): Measurement = this
 
-  override def substituteOracles(subst: Map[String, Call]): Statement = this
+  override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
   override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
 
@@ -876,15 +884,20 @@ final case class Call(name:String, args:Call*) extends Statement {
     Call(name2, args.map(_.markOracles(oracles)):_*)
   }
 
-  override def substituteOracles(subst: Map[String, Call]): Call = {
+  override def substituteOracles(subst: Map[String, Statement]): Statement = {
     val args2 = args.map(_.substituteOracles(subst))
 
     if (name.head=='@') {
       if (args.nonEmpty)
         throw UserException(s"Call to oracle $name must not have oracles itself")
       subst(name.substring(1))
-    } else
-      Call(name,args2:_*)
+    } else {
+      val args3 = args2 map {
+        case a: Call => a
+        case arg => throw qrhl.UserException(s"""When substituting oracles, one argument of $this became an explicit program "$arg" (not an oracle call).""")
+      }
+      Call(name,args3 :_*)
+    }
   }
 
   // lemma no_conflict_fv:

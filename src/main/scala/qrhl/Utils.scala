@@ -16,6 +16,8 @@ import scala.language.implicitConversions
 import scala.ref.SoftReference
 
 object Utils {
+  def pluralS(num: Int): String = if (num==1) "" else "s"
+
   def symmetricDifferrence[A](a: Set[A], b: Set[A]) : Set[A] =
     (a -- b) ++ (b -- a)
 
