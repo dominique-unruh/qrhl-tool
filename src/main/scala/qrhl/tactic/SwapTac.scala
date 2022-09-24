@@ -77,6 +77,10 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
   def swap(env:Environment, prog: Block)(implicit output: PrintWriter, ctxt : ContextX) : (Block, List[AmbientSubgoal]) = {
     SwapTac.logger.debug(this.toString)
 
+    if (subprograms.nonEmpty)
+      output.println(s"\nHINT: The ${Utils.plural("first", subprograms.length, "subgoal")} " +
+        s"(denotational equivalence${pluralS(subprograms.length)}) can usually be best handled by invoking the byqrhl tactic.\n")
+
     /** - [[beforeSecond]]: everything before the second block of the swap
      * - [[secondBlock]]: the second block of the swap
      * - [[after]]: everything after the second block of the swap */
