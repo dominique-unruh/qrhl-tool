@@ -6,9 +6,8 @@ import qrhl._
 import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.logic._
 import IsabelleX.{globalIsabelle => GIsabelle}
-import GIsabelle.Ops
-import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{App, Const, Free, Term}
+import GIsabelle.{DenotationalEquivalence, Ops}
+import de.unruh.isabelle.pure.{App, Const, Context, Free, Term}
 import hashedcomputation.Implicits.listHashable
 import hashedcomputation.{Hash, HashTag, Hashable}
 
@@ -59,26 +58,37 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
   private def bitToBool(b:Term) =
     GIsabelle.mk_eq(b, Const("Groups.one_class.one", GIsabelle.bitT))
 
-
   /**
    * Implements the rule
    *
    * {q...r} ⊇ quantum( fv(p)-overwr(p), fv(q)-overwr(q) )
-   * {Cla[x1=x2 /\ ... /\ z1=z2] ⊓ [q1...r1] ==q [q2...r2]
-   * ------------------------------
+   * {Cla[x1=x2 /\ ... /\ z1=z2] ⊓ [q1...r1] ==q [q2...r2]} p ~ q { e <->/--> f }
+   * ----------------------------------------------------------------------------
    * Pr[e:p(rho)] =/<= Pr[f:q(rho)]
    *
    * Here {x...z} := classical( fv(p), fv(q), fv(e), fv(f) )
-   * And {q...r] := user chosen quantum variables, or minimal set satisfying the rule
+   * And {q...r} := user chosen quantum variables, or minimal set satisfying the rule
    *
    * Rule is proven in local variables paper, QrhlElimEqNew.
+   *
+   * |===== OR =====|
+   *
+   * {q...r} ⊇ quantum( fv(p), fv(q) )
+   * {Cla[x1=x2 /\ ... /\ z1=z2] ⊓ [q1...r1] ==q [q2...r2]} p ~ q { same as precondition }
+   * -------------------------------------------------------------------------------------
+   * p denotationally-equal q
+   *
+   * Here {x...z} := classical( fv(p), fv(q) )
+   * And {q...r} := user chosen quantum variables, or minimal set satisfying the rule
+   *
+   * TODO: Reference proof
    */
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = {
     val ProbLeft = new Probability(true, state)
     val ProbRight = new Probability(false, state)
 
     goal match {
-        // Subgoal must be: Pr[e1:p1(rho)] R Pr[e2:p2(rho)]
+        // Subgoal: Pr[e1:p1(rho)] R Pr[e2:p2(rho)]
         // lhs or rhs can also be just "1"
         // Variables `e1`, `e2` contain *indexed* expressions!
       case AmbientSubgoal(RichTerm(App(App(Const(rel,_),ProbLeft(e1,p1,rho1)),ProbRight(e2,p2,rho2)))) =>
@@ -95,11 +105,10 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
           case _ => throw UserException("There should be = or <= or >= between the lhs and the rhs")
         }
 
-        def stripIndices(vs: Traversable[CVariable]) =
+        def stripIndices(vs: Iterable[CVariable]) =
           vs.collect {
             case Variable.IndexedC(v, _) => v
           }
-
 
         val vars1 = p1.variableUse(env)
         val vars2 = p2.variableUse(env)
@@ -108,7 +117,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         // fv(p1), fv(p2), fv(e1), fv(e2) (not indexed, only classical)
         val cvars = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
-        // fv(p1)-overwr(p1)  union   fv(p2)-overwr(p2)   (only classical)
+        // fv(p1)-overwr(p1)  union   fv(p2)-overwr(p2)   (only quantum)
         // The minimum set that have to be included in the quantum equality
         val requiredQvars = (vars1.quantum -- vars1.overwrittenQuantum) ++ (vars2.quantum -- vars2.overwrittenQuantum)
 
@@ -123,8 +132,6 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
             qvariables2
           }
 
-        val isa = state.isabelle
-
         // Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
         // if cvars =: x...z and qvars =: q...r
         val pre = Ops.byQRHLPreOp(
@@ -138,8 +145,54 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         val post = RichTerm(GIsabelle.predicateT, GIsabelle.classical_subspace(connective $ e1 $ e2))
 
         List(QRHLSubgoal(left,right,RichTerm(pre),post,Nil))
+      // Subgoal: p1 denotationally-equivalent p2
+      case AmbientSubgoal(RichTerm(DenotationalEquivalence(term1, term2))) =>
+        val env = state.environment
+        implicit val ctxt: Context = state.isabelle.context
+
+        /** Left program */
+        val p1: Statement = Statement.fromTerm(term1)
+        /** Right program */
+        val p2: Statement = Statement.fromTerm(term2)
+
+        val vars1 = p1.variableUse(env)
+        val vars2 = p2.variableUse(env)
+
+        /** fv(p1), fv(p2) (not indexed, only classical) */
+        val cvars = vars1.classical ++ vars2.classical
+        /** fv(p1)  union   fv(p2)   (only quantum)
+         * The minimum set that have to be included in the quantum equality */
+        val requiredQvars = vars1.quantum ++ vars2.quantum
+
+        /** variables to include in the quantum equality */
+        val qvars =
+          if (qvariables.isEmpty)
+            requiredQvars
+          else {
+            val qvariables2 = ListSet(qvariables: _*)
+            if (!requiredQvars.subsetOf(qvariables2))
+              throw UserException(s"You must specify at least the following qvars: $requiredQvars")
+            qvariables2
+          }
+
+        /** Precondition.
+         * Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
+         * if cvars =: x...z and qvars =: q...r
+         */
+        val pre = Ops.byQRHLPreOp(
+          cvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
+          qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))).retrieveNow
+
+        val left = p1.toBlock
+        val right = p2.toBlock
+
+        /** postcondition */
+        val post = pre
+
+        List(QRHLSubgoal(left, right, RichTerm(pre), RichTerm(post), Nil))
       case _ =>
-        throw UserException("""Expected subgoal of the form "Pr[e:p(rho)] = Pr[f:q(rho2)]" (or with <= or >=) where p,q are program names""")
+        // TODO: write something clearer for the denotational equivalence
+        throw UserException("""Expected subgoal of the form "Pr[e:p(rho)] = Pr[f:q(rho2)]" (or with <= or >=) where p,q are program names or a denotational equivalence.""")
     }
   }
 }

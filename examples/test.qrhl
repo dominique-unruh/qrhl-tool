@@ -22,3 +22,5 @@ qrhl {undefined} call p1; call p2; ~ skip; {undefined}.
   inline p2.
   swap left 1 2
     subprograms first: { b <- measure Q with computational_basis; } -> { b <- measure Q with undefined; }.
+  byqrhl.
+  
