@@ -146,14 +146,9 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
 
         List(QRHLSubgoal(left,right,RichTerm(pre),post,Nil))
       // Subgoal: p1 denotationally-equivalent p2
-      case AmbientSubgoal(RichTerm(DenotationalEquivalence(term1, term2))) =>
+      case DenotationalEqSubgoal(p1, p2, assms) =>
         val env = state.environment
         implicit val ctxt: Context = state.isabelle.context
-
-        /** Left program */
-        val p1: Statement = Statement.fromTerm(term1)
-        /** Right program */
-        val p2: Statement = Statement.fromTerm(term2)
 
         val vars1 = p1.variableUse(env)
         val vars2 = p2.variableUse(env)
@@ -189,10 +184,11 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         /** postcondition */
         val post = pre
 
-        List(QRHLSubgoal(left, right, RichTerm(pre), RichTerm(post), Nil))
+        List(QRHLSubgoal(left, right, RichTerm(pre), RichTerm(post), assms))
       case _ =>
-        // TODO: write something clearer for the denotational equivalence
-        throw UserException("""Expected subgoal of the form "Pr[e:p(rho)] = Pr[f:q(rho2)]" (or with <= or >=) where p,q are program names or a denotational equivalence.""")
+        throw UserException(
+          """Expected subgoal of the form "Pr[e:p(rho)] = Pr[f:q(rho2)]" (or with <= or >=) where p,q are program names\n
+            |Or a denotational equivalence.""".stripMargin)
     }
   }
 }

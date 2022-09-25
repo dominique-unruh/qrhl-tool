@@ -7,7 +7,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
 import de.unruh.isabelle.control.Isabelle
-import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue, Version}
+import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLRetrieveFunction, MLValue, Version}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -830,12 +830,16 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
     lazy val makeQrhlSubgoal =
       MLValue.compileFunction[List[Statement], List[Statement], Term, Term, List[Term], Subgoal](s"$qrhl_ops.makeQrhlSubgoal")
+    lazy val makeDenotationalEqSubgoal =
+      MLValue.compileFunction[Statement, Statement, List[Term], Subgoal](s"$qrhl_ops.Subgoal_Denotational_Eq")
     lazy val makeAmbientSubgoal =
       MLValue.compileFunction[Term, Subgoal](s"$qrhl_ops.Subgoal_Ambient")
-    lazy val isQrhlSubgoal =
-      MLValue.compileFunction[Subgoal, Boolean](s"fn $qrhl_ops.Subgoal_QRHL _ => true | _ => false")
+    lazy val subgoalType =
+      MLValue.compileFunction[Subgoal, Int](s"fn $qrhl_ops.Subgoal_QRHL _ => 1 | $qrhl_ops.Subgoal_Denotational_Eq _ => 2 | $qrhl_ops.Subgoal_Ambient _ => 3")
     lazy val destQrhlSubgoal =
       MLValue.compileFunction[Subgoal, (List[Statement], List[Statement], Term, Term, List[Term])](s"$qrhl_ops.destQrhlSubgoal")
+    lazy val destDenEqSubgoal =
+      MLValue.compileFunction[Subgoal, (Statement, Statement, List[Term])](s"fn $qrhl_ops.Subgoal_Denotational_Eq x => x")
     lazy val destAmbientSubgoal =
       compileFunction[Subgoal, Term](s"fn $qrhl_ops.Subgoal_Ambient t => t")
 
@@ -852,6 +856,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
     // left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]
     lazy val qrhl_subgoal_to_term_op =
       MLValue.compileFunction[Context, List[Statement], List[Statement], Term, Term, List[Term], Term](s"$qrhl_ops.qrhl_subgoal_to_term")
+    lazy val denotational_eq_subgoal_to_term_op =
+      MLValue.compileFunction[Context, Statement, Statement, List[Term], Term](s"$qrhl_ops.denotational_eq_subgoal_to_term")
 
     lazy val declare_concrete_program_op =
       MLValue.compileFunction[Context, String, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[String], Statement, Context](

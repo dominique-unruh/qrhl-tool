@@ -20,7 +20,8 @@ program p2 := {
 qrhl {undefined} call p1; call p2; ~ skip; {undefined}.
   inline p1.
   inline p2.
+  # Imagine "undefined" means "diagonal_basis" below.
   swap left 1 2
     subprograms first: { b <- measure Q with computational_basis; } -> { b <- measure Q with undefined; }.
-  byqrhl.
+  byqrhl qvars Q,R.
   

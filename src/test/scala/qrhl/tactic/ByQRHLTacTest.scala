@@ -1,9 +1,11 @@
 package qrhl.tactic
 
 import org.scalatest.funsuite.AnyFunSuite
-import qrhl.QRHLSubgoal
+import qrhl.{DenotationalEqSubgoal, QRHLSubgoal}
 import qrhl.logic.{Block, Call}
 import qrhl.toplevel.{GoalCommand, Toplevel, ToplevelTest}
+
+import java.io.PrintWriter
 
 class ByQRHLTacTest extends AnyFunSuite {
   test("works with Pr") {
@@ -38,16 +40,20 @@ class ByQRHLTacTest extends AnyFunSuite {
 
   test("denotational equivalence") {
     val tl = ToplevelTest.makeToplevelWithTheory()
+    implicit val output: PrintWriter = new PrintWriter(Console.out)
     tl.execCmd("classical var x : bit")
     tl.execCmd("quantum var q : bit")
     tl.execCmd("program p1 := { x <- x+1; }")
     tl.execCmd("program p2 := { on q apply hadamard; }")
-    tl.execCmd("lemma xxx: denotation p1 = denotation p2")
-    tl.execCmd("byqrhl")
 
-    tl.state.goal.head.checkWelltyped(tl.state.isabelle)
-    assert(tl.state.goal.length == 1)
-    val subgoal = tl.state.goal.head.asInstanceOf[QRHLSubgoal]
+    val goal = DenotationalEqSubgoal(Call("p1").toBlock, Call("p2").toBlock, Nil) // No syntax for adding this via a command
+    val state = tl.state.openGoal("xxx", goal)
+
+    val state2 = state.applyTactic(ByQRHLTac(Nil))
+
+    state2.goal.head.checkWelltyped(tl.state.isabelle)
+    assert(state2.goal.length == 1)
+    val subgoal = state2.goal.head.asInstanceOf[QRHLSubgoal]
 
     println(subgoal.right.getClass)
     println(subgoal.right.statements)

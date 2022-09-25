@@ -74,7 +74,7 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
     (Block(first:_*), Block(second:_*))
   }
 
-  def swap(env:Environment, prog: Block)(implicit output: PrintWriter, ctxt : ContextX) : (Block, List[AmbientSubgoal]) = {
+  def swap(env:Environment, prog: Block)(implicit output: PrintWriter, ctxt : ContextX) : (Block, List[DenotationalEqSubgoal]) = {
     SwapTac.logger.debug(this.toString)
 
     if (subprograms.nonEmpty)
@@ -131,9 +131,7 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
                                    else { firstBlock ++ original.toBlock }
       val rhs = if (subprogramsInFirst) { secondBlock ++ changed2 }
                                    else { changed2 ++ firstBlock }
-      AmbientSubgoal(
-        globalIsabelle.denotationalEquivalence(lhs.programTerm(ctxt).isabelleTerm, rhs.programTerm(ctxt).isabelleTerm), Nil
-      )
+      DenotationalEqSubgoal(lhs, rhs, Nil)
     }
 
     (before ++ secondBlockSubstituted ++ firstBlockSubstituted ++ after,
