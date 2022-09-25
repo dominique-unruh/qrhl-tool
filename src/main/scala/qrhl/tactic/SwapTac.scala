@@ -98,24 +98,24 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
     if (subprograms.nonEmpty)
       output.println(s"\nLooking for ${subprograms.length} specified subprogram${pluralS(subprograms.length)} in ${if (subprogramsInFirst) "FIRST" else "SECOND"}.")
 
+    /** [[firstBlock]]/[[secondBlock]], depending on which one has the subprograms */
+    val blockWithSubs = if (subprogramsInFirst) firstBlock else secondBlock
+
     /** [[firstBlock]]/[[secondBlock]] with subprograms replaced by oracles (depending on [[subprogramsInFirst]]) */
-    val context = if (subprogramsInFirst) {
-      if (subprograms.nonEmpty) findOracles(firstBlock).toBlock else firstBlock
-    } else {
-      if (subprograms.nonEmpty) findOracles(secondBlock).toBlock else secondBlock
-    }
+    val context =
+      if (subprograms.nonEmpty) findOracles(blockWithSubs).toBlock else blockWithSubs
     logger.debug(s"Context: $context")
 
     /** The one of [[firstBlock]]/[[secondBlock]] that does not have the subprograms (i.e., not [[context]]) */
-    val nonContext = if (subprogramsInFirst) secondBlock else firstBlock
+    val blockWithoutSubs = if (subprogramsInFirst) secondBlock else firstBlock
 
     if (subprograms.nonEmpty)
       checkOraclesUsed(env, context)
 
-    checkSwappable(env, context, nonContext)
+    checkSwappable(env, context, blockWithoutSubs)
 
     /** [[context]] but with subprograms replaced by changed subprograms */
-    val contextSubstituted = if (subprograms.forall(_._2.isEmpty)) secondBlock else
+    val contextSubstituted = if (subprograms.forall(_._2.isEmpty)) blockWithSubs else
       context.substituteOracles(Map.from(subprograms.zipWithIndex.map({
         case ((original,changed),index) => (index.toString, changed.getOrElse(original))})))
         .toBlock
