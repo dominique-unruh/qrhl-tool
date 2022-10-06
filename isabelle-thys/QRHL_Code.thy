@@ -3,7 +3,7 @@ theory QRHL_Code
     QRHL_Core
     "Jordan_Normal_Form.Matrix_Impl"
     "HOL-Library.Code_Target_Numeral"
-    (* Tensor_Product.Tensor_Product_Code *)
+    (* Tensor_Product2.Tensor_Product_Code *)
 begin
 
 unbundle jnf_notation

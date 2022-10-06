@@ -70,7 +70,7 @@ makeGITREVISION := {
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
-val isabelleHome = file("/opt/Isabelle2022-RC2")
+val isabelleHome = file("/opt/Isabelle2022-RC3")
 
 mainClass in assembly := Some("qrhl.Main")
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
