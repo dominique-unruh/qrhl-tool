@@ -7,11 +7,13 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.control
 import de.unruh.isabelle.mlvalue.MLValue
-import qrhl.{AmbientSubgoal, QRHLSubgoal, Subgoal}
+import qrhl.{AmbientSubgoal, DenotationalEqSubgoal, QRHLSubgoal, Subgoal}
 import scalaz.Id.Id
 
 import scala.concurrent.{ExecutionContext, Future}
 import GIsabelle.Ops.qrhl_ops
+import de.unruh.isabelle.control.Isabelle.{DInt, DList, DObject}
+import de.unruh.isabelle.pure.{MLValueTerm, Term}
 
 // Implicits
 import de.unruh.isabelle.mlvalue.Implicits._
@@ -151,20 +153,36 @@ object MLValueConverters {
   }
 
   object SubgoalConverter extends Converter[Subgoal] {
-    override def retrieve(value: MLValue[Subgoal])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Subgoal] =
-      Ops.isQrhlSubgoal(value).retrieve.flatMap { isQrhl =>
+    override def retrieve(value: MLValue[Subgoal])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Subgoal] = {
+      for (subgoalType <- Ops.subgoalType(value).retrieve;
+           subgoal <- subgoalType match {
+             case 1 =>
+               for ((left, right, pre, post, assms) <- Ops.destQrhlSubgoal(value).retrieve)
+                 yield QRHLSubgoal(Block(left: _*), Block(right: _*), RichTerm(pre), RichTerm(post), assms.map(RichTerm.apply))
+             case 2 =>
+               for ((left, right, assms) <- Ops.destDenEqSubgoal(value).retrieve)
+                 yield DenotationalEqSubgoal(left.toBlock, right.toBlock, assms.map(RichTerm.apply))
+             case 3 =>
+               for (t <- Ops.destAmbientSubgoal(value).retrieve)
+                 yield new AmbientSubgoal(RichTerm(t)) })
+        yield subgoal
+/*      Ops.isQrhlSubgoal(value).retrieve.flatMap { isQrhl =>
         if (isQrhl)
           for ((left,right,pre,post,assms) <- Ops.destQrhlSubgoal(value).retrieve)
             yield QRHLSubgoal(Block(left:_*), Block(right:_*), RichTerm(pre), RichTerm(post), assms.map(RichTerm.apply))
         else
           for (t <- Ops.destAmbientSubgoal(value).retrieve)
             yield new AmbientSubgoal(RichTerm(t))
-      }
+      }*/
+    }
 
     override def store(value: Subgoal)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Subgoal] = value match {
       case QRHLSubgoal(left, right, pre, post, assumptions) =>
         Ops.makeQrhlSubgoal(left.statements, right.statements, pre.isabelleTerm, post.isabelleTerm, assumptions.map(_.isabelleTerm))
-      case AmbientSubgoal(goal) => Ops.makeAmbientSubgoal(goal.isabelleTerm)
+      case AmbientSubgoal(goal) =>
+        Ops.makeAmbientSubgoal(goal.isabelleTerm)
+      case DenotationalEqSubgoal(left, right, assms) =>
+        Ops.makeDenotationalEqSubgoal(left, right, assms.map(_.isabelleTerm))
     }
     override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"fn $qrhl_ops.E_Subgoal s => s"
     override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"$qrhl_ops.E_Subgoal"

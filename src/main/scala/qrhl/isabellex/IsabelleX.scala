@@ -7,7 +7,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
 import de.unruh.isabelle.control.{Isabelle, IsabelleMiscException}
-import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue, Version}
+import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLRetrieveFunction, MLValue, Version}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -675,6 +675,12 @@ class IsabelleX(val setup : Isabelle.Setup) {
     val typ = a.fastType
     Const(c.eq, typ -->: typ -->: boolT) $ a $ b
   }
+  object Eq {
+    def unapply(term: Term): Option[(Term, Term)] = term match {
+      case App(App(Const(c.eq, _), lhs), rhs) => Some((lhs,rhs))
+      case _ => None
+    }
+  }
 
   /** Analogous to Isabelle's HOLogic.dest_list. Throws [[scala.MatchError]] if it's not a list */
   def dest_list(term: Term): List[Term] = term match {
@@ -774,8 +780,21 @@ class IsabelleX(val setup : Isabelle.Setup) {
   def funT(domain: Typ, range: Typ): Type = Type("fun", domain, range)
 
   val denotation: Const = Const(IsabelleConsts.denotation, programT -->: program_stateT -->: program_stateT)
+  def denotation(program: Term): Term = denotation $ program
+  object Denotation {
+    def unapply(term: Term): Option[Term] = term match {
+      case App(Const(denotation.name, _), program) => Some(program)
+      case _ => None
+    }
+  }
   def denotationalEquivalence(program1: Term, program2: Term): Term =
-    mk_eq(denotation $ program1, denotation $ program2)
+    mk_eq(denotation(program1), denotation(program2))
+  object DenotationalEquivalence {
+    def unapply(term: Term): Option[(Term, Term)] = term match {
+      case Eq(Denotation(p1), Denotation(p2)) => Some((p1,p2))
+      case _ => None
+    }
+  }
 
   //noinspection TypeAnnotation
   object Ops {
@@ -811,12 +830,16 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
     lazy val makeQrhlSubgoal =
       MLValue.compileFunction[List[Statement], List[Statement], Term, Term, List[Term], Subgoal](s"$qrhl_ops.makeQrhlSubgoal")
+    lazy val makeDenotationalEqSubgoal =
+      MLValue.compileFunction[Statement, Statement, List[Term], Subgoal](s"$qrhl_ops.Subgoal_Denotational_Eq")
     lazy val makeAmbientSubgoal =
       MLValue.compileFunction[Term, Subgoal](s"$qrhl_ops.Subgoal_Ambient")
-    lazy val isQrhlSubgoal =
-      MLValue.compileFunction[Subgoal, Boolean](s"fn $qrhl_ops.Subgoal_QRHL _ => true | _ => false")
+    lazy val subgoalType =
+      MLValue.compileFunction[Subgoal, Int](s"fn $qrhl_ops.Subgoal_QRHL _ => 1 | $qrhl_ops.Subgoal_Denotational_Eq _ => 2 | $qrhl_ops.Subgoal_Ambient _ => 3")
     lazy val destQrhlSubgoal =
       MLValue.compileFunction[Subgoal, (List[Statement], List[Statement], Term, Term, List[Term])](s"$qrhl_ops.destQrhlSubgoal")
+    lazy val destDenEqSubgoal =
+      MLValue.compileFunction[Subgoal, (Statement, Statement, List[Term])](s"fn $qrhl_ops.Subgoal_Denotational_Eq x => x")
     lazy val destAmbientSubgoal =
       compileFunction[Subgoal, Term](s"fn $qrhl_ops.Subgoal_Ambient t => t")
 
@@ -833,6 +856,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
     // left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]
     lazy val qrhl_subgoal_to_term_op =
       MLValue.compileFunction[Context, List[Statement], List[Statement], Term, Term, List[Term], Term](s"$qrhl_ops.qrhl_subgoal_to_term")
+    lazy val denotational_eq_subgoal_to_term_op =
+      MLValue.compileFunction[Context, Statement, Statement, List[Term], Term](s"$qrhl_ops.denotational_eq_subgoal_to_term")
 
     lazy val declare_concrete_program_op =
       MLValue.compileFunction[Context, String, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[String], Statement, Context](
@@ -845,6 +870,10 @@ class IsabelleX(val setup : Isabelle.Setup) {
       MLValue.compileFunction[Context, Statement, Term](s"fn (ctxt,st) => $qrhl_ops.statement_to_term ctxt st")
     lazy val statements_to_term_op =
       MLValue.compileFunction[Context, List[Statement], Term](s"fn (ctxt,st) => $qrhl_ops.statements_to_term ctxt st")
+    lazy val term_to_statement_op =
+      MLValue.compileFunction[Context, Term, Statement](s"fn (ctxt,t) => $qrhl_ops.term_to_statement ctxt t")
+    lazy val term_to_statements_op =
+      MLValue.compileFunction[Context, Term, List[Statement]](s"fn (ctxt,t) => $qrhl_ops.term_to_statements ctxt t")
     lazy val listToBlock =
       MLValue.compileFunction[List[Statement], Statement](s"$qrhl_ops.Block")
     lazy val makeLocal =

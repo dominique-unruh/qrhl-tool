@@ -6,7 +6,7 @@ import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.mlvalue.MLValue.Converter
 import de.unruh.isabelle.control
-import de.unruh.isabelle.pure.{Term, Thm, Typ, Type}
+import de.unruh.isabelle.pure.{Context, Term, Thm, Typ, Type}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.Variable.{varsNamesToString, varsToString}
@@ -97,8 +97,8 @@ case class ExprVariableUse
   program : ListSet[Variable],
   ambient : ListSet[String]
 ) {
-  @deprecated("","") def classical : ListSet[CVariable] = Variable.classical(program)
-  @deprecated("","") def quantum : ListSet[QVariable] = Variable.quantum(program)
+  def classical : ListSet[CVariable] = Variable.classical(program)
+  def quantum : ListSet[QVariable] = Variable.quantum(program)
 }
 
 case class VariableUse
@@ -443,6 +443,10 @@ sealed trait Statement extends HashedValue {
   override def equals(obj: Any): Boolean = throw new RuntimeException(s"Internal error: $getClass does not implement an equals method.")*/
 }
 
+object Statement {
+  def fromTerm(term: Term)(implicit ctxt: Context): Statement =
+    GIsabelle.Ops.term_to_statement_op(ctxt, term).retrieveNow
+}
 
 class Local(val vars: List[Variable], val body : Block) extends Statement {
   assert(vars.nonEmpty)

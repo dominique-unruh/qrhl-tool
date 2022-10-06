@@ -74,8 +74,12 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
     (Block(first:_*), Block(second:_*))
   }
 
-  def swap(env:Environment, prog: Block)(implicit output: PrintWriter, ctxt : ContextX) : (Block, List[AmbientSubgoal]) = {
+  def swap(env:Environment, prog: Block)(implicit output: PrintWriter, ctxt : ContextX) : (Block, List[DenotationalEqSubgoal]) = {
     SwapTac.logger.debug(this.toString)
+
+    if (subprograms.nonEmpty)
+      output.println(s"\nHINT: The ${Utils.plural("first", subprograms.length, "subgoal")} " +
+        s"(denotational equivalence${pluralS(subprograms.length)}) can usually be best handled by invoking the byqrhl tactic.\n")
 
     /** - [[beforeSecond]]: everything before the second block of the swap
      * - [[secondBlock]]: the second block of the swap
@@ -94,24 +98,24 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
     if (subprograms.nonEmpty)
       output.println(s"\nLooking for ${subprograms.length} specified subprogram${pluralS(subprograms.length)} in ${if (subprogramsInFirst) "FIRST" else "SECOND"}.")
 
+    /** [[firstBlock]]/[[secondBlock]], depending on which one has the subprograms */
+    val blockWithSubs = if (subprogramsInFirst) firstBlock else secondBlock
+
     /** [[firstBlock]]/[[secondBlock]] with subprograms replaced by oracles (depending on [[subprogramsInFirst]]) */
-    val context = if (subprogramsInFirst) {
-      if (subprograms.nonEmpty) findOracles(firstBlock).toBlock else firstBlock
-    } else {
-      if (subprograms.nonEmpty) findOracles(secondBlock).toBlock else secondBlock
-    }
+    val context =
+      if (subprograms.nonEmpty) findOracles(blockWithSubs).toBlock else blockWithSubs
     logger.debug(s"Context: $context")
 
     /** The one of [[firstBlock]]/[[secondBlock]] that does not have the subprograms (i.e., not [[context]]) */
-    val nonContext = if (subprogramsInFirst) secondBlock else firstBlock
+    val blockWithoutSubs = if (subprogramsInFirst) secondBlock else firstBlock
 
     if (subprograms.nonEmpty)
       checkOraclesUsed(env, context)
 
-    checkSwappable(env, context, nonContext)
+    checkSwappable(env, context, blockWithoutSubs)
 
     /** [[context]] but with subprograms replaced by changed subprograms */
-    val contextSubstituted = if (subprograms.forall(_._2.isEmpty)) secondBlock else
+    val contextSubstituted = if (subprograms.forall(_._2.isEmpty)) blockWithSubs else
       context.substituteOracles(Map.from(subprograms.zipWithIndex.map({
         case ((original,changed),index) => (index.toString, changed.getOrElse(original))})))
         .toBlock
@@ -127,9 +131,7 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
                                    else { firstBlock ++ original.toBlock }
       val rhs = if (subprogramsInFirst) { secondBlock ++ changed2 }
                                    else { changed2 ++ firstBlock }
-      AmbientSubgoal(
-        globalIsabelle.denotationalEquivalence(lhs.programTerm(ctxt).isabelleTerm, rhs.programTerm(ctxt).isabelleTerm), Nil
-      )
+      DenotationalEqSubgoal(lhs, rhs, Nil)
     }
 
     (before ++ secondBlockSubstituted ++ firstBlockSubstituted ++ after,
