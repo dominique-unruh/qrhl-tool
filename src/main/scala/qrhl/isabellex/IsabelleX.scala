@@ -6,7 +6,7 @@ import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
-import de.unruh.isabelle.control.Isabelle
+import de.unruh.isabelle.control.{Isabelle, IsabelleMiscException}
 import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLValue, Version}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
@@ -935,6 +935,25 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
 object IsabelleX {
   val version = "2021-1"
+
+  /** Checks whether [[Configuration.isabelleHome]] contains Isabelle with correct version.
+   * Otherwise exists the program with an error message. */
+  def checkIsabelleHome(): Unit = {
+    val detectedVersion =
+      try Version.versionFromIsabelleDirectory(Configuration.isabelleHome)
+      catch {
+        case e : Throwable =>
+          logger.error(e)("Cannot determine the version of the Isabelle distribution in ${Configuration.isabelleHome}.")
+          System.err.println(s"\n\nCannot determine the version of the Isabelle distribution in ${Configuration.isabelleHome}.")
+          System.err.println(s"Edit your config file (e.g., ~/.qrhl-tool.conf) to provide a different Isabelle distribution directory.")
+          System.exit(1)
+      }
+    if (detectedVersion != version) {
+      System.err.println(s"\n\nThe Isabelle distribution in ${Configuration.isabelleHome} has version $detectedVersion, but version $version is needed.")
+      System.err.println(s"Edit your config file (e.g., ~/.qrhl-tool.conf) to provide a different Isabelle distribution directory.")
+      System.exit(1)
+    }
+  }
 
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
