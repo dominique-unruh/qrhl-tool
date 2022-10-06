@@ -32,7 +32,7 @@ object Main {
     val major = version.split("\\.")(0).toInt
 //    println(major)
     if (major < 11) {
-      System.err.println(s"Requiring at least Java version 11, got $version")
+      System.err.println(s"\n\nRequiring at least Java version 11, got $version")
       System.exit(1)
     }
   }
@@ -47,6 +47,7 @@ object Main {
       sys.exit(1)
     }
 
+    IsabelleX.checkIsabelleHome()
 
     if (conf.build.getOrElse(false)) {
       val isabelle = new IsabelleX(IsabelleX.defaultSetup)
