@@ -509,7 +509,7 @@ where \texttt{type} is again an arbitrary Isabelle/HOL type.
 \paragraph{Program declarations.} There are two kinds of declarations
 for programs. The first is
 \begin{center}
-  \toolidx{program}
+  \toolidx{program}\pagelabel{command:program}
   \begin{lstlisting}
     program name := { code }.
   \end{lstlisting}
@@ -2174,6 +2174,8 @@ expression $\mathtt{Pr}[e:P(\rho)]$. This is then interpreted as if
 the lhs/rhs was $\mathtt{Pr}[\mathtt{True}:\mathtt{skip}(\rho)]$.
 
 
+\TODOQ{document byqrhl applied to a denotational equivalence}
+
 \tactic{case}
 
 When invoked as ``$\mathtt{case}\ z := e\mathtt{.}$'',
@@ -3347,23 +3349,62 @@ variables.\footnote{This works because if $X$ and $Y$ share a variable $\xx$,
 
 \tactic{swap}
 
-When invoked as \texttt{swap left \textit{range} $n$} (or \texttt{swap
-  left \textit{range} $n$}) on a qRHL subgoal, it moves the block of
+When invoked as \texttt{swap left $\mathit{range}$ $n$} (or \texttt{swap
+  right $\mathit{range}$ $n$}) on a qRHL subgoal, it moves the block of
 lines identified by the range $r$ in the left (or right) program
-forward by $n$ lines. Here $r$ is either for the form ``$a$--$b$''
+towards the beginning of the program by $n$ lines. Here $r$ is either for the form ``$a$--$b$''
 (meaning lines $a$ till $b$) or ``$a$'' (meaning the last $a$ lines).
 
 The tactic can only be applied if the following condition is
-satisfied: Let $\bc$ denote the program fragment to be moved, and
-$\bd$ the $n$ lines before $\bc$.
-\begin{compactitem}
-\item The quantum variables of $\bc$ and $\bd$ must be disjoint.
+satisfied: Let $\bd$ denote the program fragment to be moved (the ``second block''), and
+$\bc$ the $n$ lines before $\bd$ (the ``first block'').
+\begin{itemize}
+\item The (free) quantum variables of $\bc$ and $\bd$ must be disjoint.
 \item The written classical variables\footnote{Written classical variables
     are those on the lhs of an assign/sample/measurement statement
     that are not hidden under a \texttt{local} statement.}
   of $\bc$ must be disjoint from the classical variables of $\bd$.
 \item The written classical variables of $\bd$ must be disjoint from the classical variables of $\bc$.
-\end{compactitem}
+\end{itemize}
+These conditions are checked automatically and produce no further subgoals.
+
+\bigskip
+
+When invoked as \texttt{swap left/right $\mathit{range}$ $n$ subprograms first: $\be_1$ -> $\be'_1$, ..., $\be_m$, ..., $\be'_m$}, an extended swapping tactic will be activated.
+(Here $\be_i,\be_i'$ are programs in the syntax from \autoref{sec:tool.programs}.
+In particular, to refer to an invoked program or a argument to an oracle program, write \texttt{call P;} instead of \texttt{P}. The programs can be placed in \texttt{\{...\}} if needed for syntactic clarity.)
+
+While the basic form of the swap tactic requires variables of $\bc$ and $\bd$ to be disjoint (see the previous paragraph for the precise conditions), this requirement is relaxed here.
+The subprograms $\be_i$ (that are supposed to occur inside $\bc$) are excluded from this requirement.
+Furthermore, the subprograms $\be_i$ can change to become different programs $\be_i'$ during swapping.
+(The latter is optional: If \texttt{-> $\be_i'$} is ommitted, $\be_i':=\be_i$ is used.)
+
+More precisely, the tactic parses $\bc$ as $\bc=:C[\be_1,\dots,\be_m]$ where $C$ is a multi-hole context. Then the requirements are:
+\begin{itemize}
+\item The free quantum variables of $C$ and $\bd$ must be disjoint.
+\item The written classical variables of $C$ must be disjoint from the classical variables of $\bd$.
+\item The written classical variables of $\bd$ must be disjoint from the classical variables of $C$.
+\item The inner variables of $C$ must be disjoint from the free variables of $\bd$.
+\end{itemize}
+
+The resulting subgoals are then:
+\begin{itemize}
+\item For $i=1,\dots,m$, one denotational-equivalence subgoal stating that
+  $\denotc{\bd;\be_i} = \denotc{\be'_i;\bd}$.
+\item The original subgoal with $\bc;\bd$ replaced by $\bd;C[\be_1',\dots,\be_m]$.
+\end{itemize}
+
+Note that the \tacticref{byqrhl} tactic can be used to prove denotational-equivalence subgoals.
+
+\bigskip
+
+When invoked as \texttt{swap left/right $\mathit{range}$ $n$ subprograms second: $\be_1$ -> $\be'_1$, ..., $\be_m$, ..., $\be'_m$} (i.e., with \texttt{second} instead of \texttt{first}), then the tactic behaves analogously, except that the subprograms $\be_1,\dots,\be_m$ are to be found in the second block $\bd$, not the first block $\bc$. That is, $\bd$ is parsed as $\bc=:C[\be_1,\dots,\be_m]$ and the roles of $\bc$ and $\bd$ are exchanged.
+
+\bigskip
+
+An example of this tactic in use is given in the example file \texttt{examples/focus.qrhl}.
+
+\TODOQ{Reference literature with proof of extended swap tactic}
 
 \tactic{wp} 
 
@@ -4788,6 +4829,7 @@ the tactic \texttt{simp prepare\_for\_code} rewrites the goal into a form involv
 \end{document}
 
 % Local Variables:
+% mode: latex
 % TeX-PDF-mode: t
 % TeX-master: t
 % End:
