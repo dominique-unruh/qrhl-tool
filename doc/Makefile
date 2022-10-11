@@ -24,6 +24,10 @@ manual.pdf : manual.tex qrhl.bib declmath.sty macros.tex example.qrhl.lst Exampl
 	python2 makesymind.py manual
 	makeindex manual
 	pdflatex --synctex=1 -interaction batchmode manual
+	bibtex manual
+	python2 makesymind.py manual
+	makeindex manual
+	pdflatex --synctex=1 -interaction batchmode manual
 	if grep 'LaTeX Warning: There were undefined references' manual.log; then false; fi
 	if pdftotext manual.pdf - | grep 'THIS IS A DRAFT'; then false; fi
 

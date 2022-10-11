@@ -1,0 +1,89 @@
+isabelle.
+
+# Output bit of the adversary
+classical var b : bit.
+
+# Internal state of the oracle
+quantum var Q : bit.
+# Input/output register of the oracle
+quantum var R : bit.
+
+# Adversary's internal state
+classical var cglobA : infinite.
+quantum var qglobA : infinite.
+
+# For stating lemmas involving Pr[...] 
+ambient var rho : program_state.
+
+# Adversary that accesses an oracle
+adversary A
+  free cglobA, qglobA, b, R
+  calls ?.
+
+# The oracle (CNOT's its internal state onto the output register)
+program oracle := {
+  on Q,R apply CNOT;
+}.
+
+# Variation of oracle that applies a basis transform on its state before/after activation
+program oracle' := {
+  on Q apply hadamard;
+  on Q,R apply CNOT;
+  on Q apply hadamard;
+}.
+
+# First game: Adversary A has access to "oracle"
+program game1 := {
+  call A(oracle);
+}.
+
+# Second game: The state of "oracle" is basis-transformed during initialization initialization,
+# and the adversary has access to oracle' (which temporaritly undoes the basis-transform in each query)
+program game2 := {
+  on Q apply hadamard;
+  call A(oracle');
+}.
+
+# Claim: the adversary cannot distinguish game1 and game2 (as evidenced by its output bit b)
+lemma Pr[b = 1: game1(rho)] = Pr[b = 1: game2(rho)].
+  # Transform the Pr[...] = Pr[...] goal into a qrhl-goal
+  # The "qvars qglobA, Q, R" part is simply to ensure a consistent order of the quantum variables.
+  byqrhl qvars qglobA, Q, R.
+  # Inline the definition of the games
+  inline game1.
+  inline game2.
+  # In the right game (game2), swap the lines "on Q apply hadamard;" and "call A(oracle');".
+  # While swapping, replace oracle' by oracle (because oracle' with prior base transform of Q
+  # is the same as oracle with the base transform afterwards (1))
+  swap right 1 1
+    subprograms second: call oracle'; -> call oracle;.
+
+  # First subgoal: Show the denotational equivalence (1)
+  + byqrhl. # Transform denotational equivalence into a qrhl goal
+    inline oracle.
+    inline oracle'.
+
+    # The last two steps are identical on both sides, we can use equal.
+    equal 2.
+      simp!.
+
+    # The left side applies hadamard to Q twice, this cancels out
+    wp left 2.
+    skip.
+    simp! cblinfun_compose_image[symmetric].
+
+  # Second subgoal of swap: "A(oracle)" and "A(oracle)" followed by an operation on the oracle state Q are
+  # indistinguishable in terms of the output bit b
+  # (the rhs being the result of swapping, the lhs from the statement of the current lemma).
+  # Intuitively, this is obvious because the operation cannot influence b anymore at that point.
+  + wp right.
+    conseq post: ℭ𝔩𝔞[b1 = b2].
+      simp!.
+    equal in qglobA, Q, R.
+      simp!.
+    skip.
+    simp!.
+qed.
+
+
+    
