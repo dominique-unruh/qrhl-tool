@@ -499,4 +499,20 @@ fun applyToplevelCommand (ctxt, command) = let
   val ctxt = Proof_Context.background_theory map_thy ctxt
 in ctxt end
 
+fun print_as_statement ctxt name fixes extra_lines assms concl : string =
+  let
+    (* val ((fixes, assms, concl), ctxt) = eigen_context_for_statement (fixes, assms, concl) ctxt *)
+    val ctxt = fold (fn opt => Config.put opt false)
+      [show_markup, Printer.show_type_emphasis, show_types, show_sorts, show_consts] ctxt
+    val lemma_s = "lemma " ^ name ^ ":"
+    val fixes_s = if null fixes then []
+                  else ["  fixes " ^ space_implode " and "
+                        (map (fn (v, T) => v ^ " :: " ^ print_typ ctxt T) fixes)]
+    val assms_s = map (fn t => "  assumes " ^ print_term ctxt t) assms
+    val conclusion_s = "  shows " ^ print_term ctxt concl
+    val result_string = cat_lines ([lemma_s] @ fixes_s @ extra_lines @ assms_s @ [conclusion_s])
+  in
+    YXML.content_of result_string
+  end
+
 end
