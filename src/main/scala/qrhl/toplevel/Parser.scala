@@ -594,8 +594,8 @@ object Parser extends JavaTokenParsers {
 
   val changeDirectory : Parser[ChangeDirectoryCommand] = literal("changeDirectory") ~> quotedString ^^ ChangeDirectoryCommand.apply
 
-  val print_cmd : Parser[PrintCommand] =
-    literal("print") ~> fact ^^ PrintCommand
+  val print_cmd : Parser[Command] =
+    literal("print") ~> ((literal("goal") ^^^ PrintGoalCommand) | (fact ^^ PrintCommand))
 
   val cheat : Parser[CheatCommand] =
     ("cheat:file" ^^ {_ => CheatCommand(file=true)}) |

@@ -755,6 +755,21 @@ class IsabelleX(val setup : Isabelle.Setup) {
     fv.result()
   }
 
+  // TODO: Should be provided by scala-isabelle, and avoid making terms concrete (use ML add_frees for MLTerms)
+  def freeVarsWithType(term: Term): Set[(String,Typ)] = {
+    val fv = Set.newBuilder[(String,Typ)]
+
+    def collect(t: Term): Unit = t match {
+      case Free(v, typ) => fv += ((v,typ))
+      case Const(_, _) | Bound(_) | Var(_, _, _) =>
+      case App(t1, t2) => collect(t1); collect(t2)
+      case Abs(_, _, body) => collect(body)
+    }
+
+    collect(term)
+    fv.result()
+  }
+
 
   def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ): Const =
     Const(IsabelleConsts.quantum_equality_full,  l2boundedT(typLeft,typZ) -->: variablesT(typLeft) -->: l2boundedT(typRight,typZ) -->: variablesT(typRight) -->: predicateT)
@@ -959,6 +974,9 @@ class IsabelleX(val setup : Isabelle.Setup) {
     val absfree = MLValue.compileFunction[String, Typ, Term, Term]("fn (name,typ,term) => absfree (name, typ) term")
 
     val compareTyps = MLValue.compileFunction[Typ, Typ, Int](s"fn (t,u) => case Term_Ord.typ_ord (t,u) of LESS => ~1 | GREATER => 1 | EQUALS => 0")
+
+    val print_as_statement = MLValue.compileFunction[Context, String, List[(String, Typ)], List[String], List[Term], Term, String](
+      s"fn (ctxt,name,fixes,extra,assms,concl) => $qrhl_ops.print_as_statement ctxt name fixes extra assms concl")
   }
 }
 
