@@ -3,14 +3,22 @@
 Interactively developing proofs using qrhl-tool is done using [Proof General](https://proofgeneral.github.io/).
 There are several ways to invoke ProofGeneral with qRHL-support.
 
+Brown text (<font color="brown">like this</font>) applies to the development snapshot only.
+
 ## Invocation script
 
-If you are using Linux or Mac, you can use the invocation script in the qrhl-tool installation directory. 
+If you are using Linux or Mac <font color="brown">or Windows</font>, you can use the invocation script in the qrhl-tool installation directory. 
 
 Steps:
 * Make sure `emacs` is in the path. (Running `emacs` in the shell should start emacs.)
 * Run `proofgeneral.sh` or `proofgeneral.sh filename.qrhl` in the qrhl-tool installation directory.
+  <font color="brown">(On Windows: `proofgeneral.ps1`)</font>
 * Open files with extension `.qrhl` to edit proofs.
+
+Note: 
+* <font color="brown">You can add the command-line parameter `-q` to disable loading of your `.emacs` file 
+  (Emacs configuration file) if needed.
+  (E.g., if your Emacs configuration loads a conflicting version of ProofGeneral.)</font>
 
 Pros:
 * No additional installation necessary.
@@ -18,6 +26,11 @@ Pros:
 Cons:
 * A bare-bones Emacs is used without any of your personal configuration.
   (If you don't usually use Emacs, this should not matter.)
+  <font color="brown">(The development snapshot avoids this.)</font>
+* A fresh Emacs instance will be used, you might not like this depending on your preferences. 
+* <font color="brown">Potential conflicts between your existing Emacs configuration (in the `.emacs` file).
+  Use the `-q` option to deactivate loading your `.emacs` file (and thus any preexisting configuration).</font>
+
 
 ## Install Proof General via MELPA
 
