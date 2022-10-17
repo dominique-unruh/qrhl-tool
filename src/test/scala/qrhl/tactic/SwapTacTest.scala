@@ -25,9 +25,9 @@ class SwapTacTest extends AnyFunSuite {
     val List(deneq : DenotationalEqSubgoal, qrhl : QRHLSubgoal) = subgoals
     deneq.checkWelltyped(tl.state.isabelle)
     qrhl.checkWelltyped(tl.state.isabelle)
-    assert(deneq.left.toString == "{ b <- measure Q in computational_basis; b <- measure Q in computational_basis; }")
-    assert(deneq.right.toString == "{ b <- measure Q in computational_basis; b <- measure Q in computational_basis; }")
-    assert(qrhl.left.toString == "{ b <- measure Q in computational_basis; x <- y + 1; b <- measure Q in computational_basis; }")
+    assert(deneq.left.toString == "{ b <- measure Q with computational_basis; b <- measure Q with computational_basis; }")
+    assert(deneq.right.toString == "{ b <- measure Q with computational_basis; b <- measure Q with computational_basis; }")
+    assert(qrhl.left.toString == "{ b <- measure Q with computational_basis; x <- y + 1; b <- measure Q with computational_basis; }")
     assert(qrhl.right.toString == "{}")
   }
 }
