@@ -10,11 +10,13 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.Typ
 
 import scala.collection.mutable
+import scala.language.implicitConversions
 
 case class ParserContext(environment: Environment,
                          isabelle: Option[IsabelleX.ContextX])
 
 object Parser extends JavaTokenParsers {
+  implicit def tildeToPair[T,U](x: T ~ U) : (T,U) = (x._1, x._2)
 
   val identifier : Parser[String] = """[a-zA-Z][a-zA-Z0-9_']*""".r
   val identifierListSep : Parser[String] = ","
@@ -554,7 +556,17 @@ object Parser extends JavaTokenParsers {
       case "joint" => tactic_if_joint
     })
 
-  def tactic(implicit context:ParserContext): Parser[Tactic] =
+  def rewrite_range: Parser[RewriteTac.Range] =
+    (("left" ^^^ true) | ("right" ^^^ false)) ~ ((natural <~ "-") ~ natural).? ^^
+      { case side ~ Some(start ~ end) => RewriteTac.Subseq(side, start, end)
+        case side ~ None => RewriteTac.All(side) }
+
+  def tactic_rewrite(implicit context: ParserContext): Parser[RewriteTac] =
+    literal("rewrite") ~> commit(
+      (rewrite_range <~ "->") ~ (rewrite_range | block ^^ RewriteTac.Code)) ^^
+      { case input ~ output => RewriteTac(input, output) }
+
+  def tactic(implicit context: ParserContext): Parser[Tactic] =
     literal("admit") ^^ { _ => Admit } |
       tactic_wp |
       tactic_sp |
@@ -582,7 +594,8 @@ object Parser extends JavaTokenParsers {
       tactic_local |
       tactic_rename |
       tactic_if |
-      tactic_isa
+      tactic_isa |
+      tactic_rewrite
 
   val undo: Parser[Int] = literal("undo") ~> natural
 
