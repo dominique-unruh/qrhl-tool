@@ -1,8 +1,8 @@
 #!/bin/bash
 
-set -e
+set -ex
 
-DIR="$(dirname "$BASH_SOURCE[0]")"
+DIR="$(dirname "${BASH_SOURCE[0]}")"
 
 if ! [ -e "$DIR/proofgeneral" ]; then
     echo >/dev/stderr "Cannot determine the installation directory that contains the qrhl tool."

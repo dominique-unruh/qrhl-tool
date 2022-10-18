@@ -570,7 +570,7 @@ class Block(val statements:List[Statement]) extends Statement {
   override def toBlock: Block = this
 
   override def equals(o: Any): Boolean = o match {
-    case Block(st @ _*) => statements==st
+    case Block(st @ _*) => statements == st
     case _ => false
   }
 
@@ -585,11 +585,19 @@ class Block(val statements:List[Statement]) extends Statement {
     case _ => statements.map{ _.toString }.mkString(" ")
   }
 
-  def toStringMultiline(header: String): String = statements match {
+  def toStringMultiline(header: String, lineNumbers: Boolean = true): String = statements match {
     case Nil => header+"skip;"
     case _ =>
       val blanks = "\n" + " " * header.length
-      statements.mkString(header,blanks,"")
+      val maxIdxLen = statements.length.toString.length
+      statements
+        .zipWithIndex
+        .map { case (stmt, idx) =>
+          val idxStr = (idx + 1).toString
+          val idxPad = " " * (maxIdxLen - idxStr.length)
+          s"($idxStr)$idxPad $stmt"
+        }
+        .mkString(header,blanks,"")
   }
 
   def length : Int = statements.size
@@ -832,7 +840,7 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
     HashTag()(Hashable.hash(result), Hashable.hash(location), Hashable.hash(e))
 
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
-  override def toString: String = s"${Variable.vartermToString(result)} <- measure ${Variable.vartermToString(location)} in $e;"
+  override def toString: String = s"${Variable.vartermToString(result)} <- measure ${Variable.vartermToString(location)} with $e;"
 
   override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
     val expected = Type("QRHL_Core.measurement",
