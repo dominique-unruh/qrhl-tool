@@ -31,6 +31,7 @@
         <option value="qrhl.tactic.EqualTacTest" />
         <option value="qrhl.tactic.ByQRHLTacTest" />
         <option value="qrhl.tactic.ExpressionTest" />
+        <option value="qrhl.tactic.RewriteTacTest" />
         <option value="qrhl.isabellex.IsabelleXTest" />
         <option value="qrhl.isabellex.ConfigurationTest" />
         <option value="qrhl.isabellex.MLValueConvertersTest" />
