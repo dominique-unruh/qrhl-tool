@@ -72,19 +72,6 @@ class RewriteTacTest extends AnyFunSuite {
     val tl = ToplevelTest.makeToplevelWithTheory()
     assert(tl.state.parseCommand("rewrite left -> right") ==
       TacticCommand(RewriteTac(All(true), All(false))))
-
-    val t1 = TacticCommand(RewriteTac(Subseq(left = true, 2, 3), Code(Block.empty)))
-//    val t2 = TacticCommand(RewriteTac(Subseq(left = true, 2, 3), Code(Block.empty)))
-    val t0 = tl.state.parseCommand("rewrite left 2-3 -> { }")
-    println(t0 == t1)
-    println(t1.tactic.asInstanceOf[RewriteTac].input == t0.asInstanceOf[TacticCommand].tactic.asInstanceOf[RewriteTac].input)
-    val rep1 = t1.tactic.asInstanceOf[RewriteTac].replacement.asInstanceOf[Code]
-    val rep0 = t0.asInstanceOf[TacticCommand].tactic.asInstanceOf[RewriteTac].replacement.asInstanceOf[Code]
-    println(rep0 == rep1)
-    println(rep0 == rep1)
-    println(rep0.block == rep0.block)
-    rep0 == rep1 // Returns false???
-
     assert(tl.state.parseCommand("rewrite left 2-3 -> { }") ==
       TacticCommand(RewriteTac(Subseq(left = true, 2, 3), Code(Block.empty))))
     assert(tl.state.parseCommand("rewrite left 2-3 -> right 2-3") ==

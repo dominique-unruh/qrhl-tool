@@ -75,14 +75,14 @@ object RewriteTac {
     }
   }
 
-  case class All(left: Boolean) extends Range {
+  final case class All(left: Boolean) extends Range {
     override def hash: Hash[All.this.type] = HashTag()(Hashable.hash(left))
     override def toString: String = if (left) "left" else "right"
     override def split(left: Block, right: Block): (Block, Block, Block) =
       (Block.empty, if (this.left) left else right, Block.empty)
   }
 
-  case class Code(block: Block) extends Replacement {
+  final case class Code(block: Block) extends Replacement {
     override def hash: Hash[Code.this.type] = HashTag()(block.hash)
     override def toString: String = block.toString
     override def extract(left: Block, right: Block): Block = block
