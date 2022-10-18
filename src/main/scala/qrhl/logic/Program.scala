@@ -570,7 +570,7 @@ class Block(val statements:List[Statement]) extends Statement {
   override def toBlock: Block = this
 
   override def equals(o: Any): Boolean = o match {
-    case Block(st @ _*) => statements==st
+    case Block(st @ _*) => statements == st
     case _ => false
   }
 
