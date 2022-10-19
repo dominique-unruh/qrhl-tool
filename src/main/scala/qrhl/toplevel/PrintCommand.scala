@@ -28,6 +28,7 @@ case class PrintCommand(symbol : String) extends Command {
   override def act(state: State, output: PrintWriter): State = {
     var found = false
     val env = state.environment
+    val ctxt = state.isabelle.context
     val prettyTyp = state.isabelle.prettyTyp _
 
     if (symbol == "goal") {
@@ -59,7 +60,7 @@ case class PrintCommand(symbol : String) extends Command {
     }
 
     try {
-      val fact = Ops.thms_as_subgoals(state.isabelle.context, symbol).retrieveNow
+      val fact = Ops.thms_as_subgoals(ctxt, symbol).retrieveNow
       found = true
       output.println(s"\nThe name $symbol refers to ${fact.length} lemmas:\n")
       for (lemma <- fact)
@@ -69,11 +70,11 @@ case class PrintCommand(symbol : String) extends Command {
     }
 
     try {
-      Ops.check_const(state.isabelle.context, symbol).retrieveNow match {
+      Ops.check_const(ctxt, symbol).retrieveNow match {
         case Const(name, typ) =>
-          output.println(s"\nThe name $symbol refers to the Isabelle constant $name :: $typ")
+          output.println(s"\nThe name $symbol refers to the Isabelle constant $name :: ${typ.pretty(ctxt)}")
         case term =>
-          output.println(s"\nThe name $symbol refers to the Isabelle constant $term :: ${term.fastType}")
+          output.println(s"\nThe name $symbol refers to the Isabelle constant ${term.pretty(ctxt)} :: ${term.fastType.pretty(ctxt)}")
       }
       found = true
     } catch {
