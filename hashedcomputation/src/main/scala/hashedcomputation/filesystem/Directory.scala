@@ -3,7 +3,7 @@ package hashedcomputation.filesystem
 import java.io.{ByteArrayInputStream, IOException, InputStream}
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY, OVERFLOW}
-import java.nio.file.{FileSystem, FileSystems, Files, Path, WatchKey, WatchService}
+import java.nio.file.{FileSystem, FileSystems, Files, LinkOption, Path, WatchKey, WatchService}
 import java.util.concurrent.atomic.AtomicReference
 import de.unruh.isabelle.misc.SharedCleaner
 import hashedcomputation.Fingerprint.Entry
@@ -21,23 +21,35 @@ import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala}
 import scala.ref.{ReferenceWrapper, SoftReference, WeakReference}
 
-sealed abstract class GenericDirectory protected (partial: Boolean) {
+sealed abstract class GenericDirectory protected (/** Directory entries are not automatically loaded (recursively).
+                                                   Use `partial=false` to force the directory to load recursively right away. */
+                                                   partial: Boolean
+                                                 ) {
   private val subdirs = new TrieMap[String, Directory]
   private val interesting = if (partial) new TrieMap[String, Unit] else null
   private val currentSnapshot = new AtomicReference(makeSnapshot)
   protected val watchKey: WatchKey = registerWatcher()
 
+  /** Must create a snapshot containing the files in the physical filesystem in this directory. */
   @NotNull protected def makeSnapshot : DirectorySnapshot
 
   protected def registerWatcher() : WatchKey
+
+  /** Notify the directory that the indicated path is of interest, i.e., that it should be included in the next snapshot.
+   * (Paths that have not been included yield an [[OutdatedSnapshotException]] when trying to retrieve them using
+   * [[DirectorySnapshot.get]]) */
   def registerInterest(path: List[String]): Unit = if (partial) {
     path match {
       case Nil =>
       case file :: rest =>
         var notify = false
         interesting += file -> ()
-        currentSnapshot.get.content.get(file) match {
+        val currentSnapshotVal = currentSnapshot.get
+        currentSnapshotVal.content.get(file) match {
           case Some(_: UnresolvedDirectoryEntry) =>
+            currentSnapshot.updateAndGet { updateSnapshot(file, _) }
+            notify = true
+          case None if currentSnapshotVal.incompleteListing =>
             currentSnapshot.updateAndGet { updateSnapshot(file, _) }
             notify = true
           case _ =>
@@ -51,6 +63,7 @@ sealed abstract class GenericDirectory protected (partial: Boolean) {
 
   private[filesystem] def pathToList(path: Path) : List[String]
 
+  /** See [[registerInterest]] */
   def registerInterest(path: Path): Unit =
     if (partial)
       registerInterest(pathToList(path))
@@ -58,6 +71,9 @@ sealed abstract class GenericDirectory protected (partial: Boolean) {
   protected def notifyParent(): Unit
   protected def resolve(path: String): Path
 
+  /** Updates the [[currentSnapshot]] on path `path` to make sure it matches the filesystem (or marks it as [[UnresolvedDirectoryEntry]]).
+   * If [[partial]] is false or [[interesting]] contains `path`, the entry is guaranted not to be [[UnresolvedDirectoryEntry]].
+   * @param path A single path element */
   protected def updateSnapshot(path: String, snapshot: DirectorySnapshot): DirectorySnapshot = {
 //    GenericDirectory.logger.debug(s"updateSnapshot: $path $snapshot")
     if (partial && !interesting.contains(path))
@@ -65,7 +81,9 @@ sealed abstract class GenericDirectory protected (partial: Boolean) {
     else {
       val fullPath = resolve(path)
       val entry = try {
-        if (Files.isDirectory(fullPath)) {
+        if (Files.notExists(fullPath, LinkOption.NOFOLLOW_LINKS))
+          NonExistingDirectoryEntry
+        else if (Files.isDirectory(fullPath)) {
           val dir = subdirs.getOrElseUpdate(path, {
             new Directory(fullPath, this, path, partial) })
           dir.snapshot()
@@ -91,7 +109,6 @@ sealed abstract class GenericDirectory protected (partial: Boolean) {
     }
 
   def snapshot(): DirectorySnapshot = currentSnapshot.get
-
 
   protected[filesystem] def notifySubdirectoryChange(subdir: String): Unit = {
 //    GenericDirectory.logger.debug(s"Notification from child $subdir")
@@ -142,7 +159,7 @@ class Directory private[filesystem] (val path: Path, parent: GenericDirectory, p
   override protected def resolve(path: String): Path = this.path.resolve(path)
 
   override protected def makeSnapshot : DirectorySnapshot =
-    Files.list(path).iterator().asScala.foldLeft(new DirectorySnapshot(this, Map.empty)) { (snapshot, file) =>
+    Files.list(path).iterator().asScala.foldLeft(new DirectorySnapshot(this, Map.empty, incompleteListing = false)) { (snapshot, file) =>
       updateSnapshot(this.path.relativize(file).toString, snapshot)
     }
 
@@ -186,9 +203,10 @@ class RootsDirectory private[filesystem] (fileSystem: FileSystem)
 
   // TODO: This finds only the file-systems in one spelling (e.g., `C:\`, not `c:\` on Windows), and additionally misses some (e.g., \\servername\share)
   override protected def makeSnapshot : DirectorySnapshot = {
-    fileSystem.getRootDirectories.asScala.foldLeft(new DirectorySnapshot(this, Map.empty)) { (snapshot, root) =>
-      updateSnapshot(root.toString, snapshot)
-    }
+    new DirectorySnapshot(this, Map.empty, incompleteListing=true)
+/*    fileSystem.getRootDirectories.asScala.foldLeft(new DirectorySnapshot(this, Map.empty, incompleteListing=true)) {
+      (snapshot, root) => updateSnapshot(root.toString, snapshot)
+    }*/
   }
 
   protected override def dispose(): Unit = {}
@@ -318,6 +336,10 @@ object UnknownDirectoryEntry extends DirectoryEntry {
   override def hash: Hash[UnknownDirectoryEntry.this.type] = Hash.randomHash()
 }
 
+case object NonExistingDirectoryEntry extends MaybeDirectoryEntry {
+  override def hash: Hash[NonExistingDirectoryEntry.this.type] = HashTag()()
+}
+
 object AccessDeniedEntry extends DirectoryEntry {
   override def hash: Hash[this.type] = Hash.randomHash()
 }
@@ -356,7 +378,10 @@ object FileSnapshot {
 }
 
 class DirectorySnapshot private[filesystem] (directory: GenericDirectory,
-                                             private[filesystem] val content: Map[String, MaybeDirectoryEntry])
+                                             private[filesystem] val content: Map[String, MaybeDirectoryEntry],
+                                             /** Indicates that this snapshot is not guaranteed to contain all files in the current directory.
+                                              * (Will be looked up on demand.) */
+                                             private[filesystem] val incompleteListing: Boolean)
   extends DirectoryEntry with Map[String, DirectoryEntry] with HashedValue {
 
   def dump(hideUnresolved: Boolean = true, indent: String = ""): Unit = {
@@ -372,9 +397,13 @@ class DirectorySnapshot private[filesystem] (directory: GenericDirectory,
 
   override def toString(): String = s"DirectorySnapshot#$hash"
 
+  /** Returns a snapshot of the file `path`.
+   * `None` if file doesn't exist or isn't a regular file.
+   * @param path relative path
+   * */
   def getFile(path: Path): Option[FileSnapshot] = get(path) match {
     case Some(file : FileSnapshot) => Some(file)
-    case None => None
+    case _ => None
   }
 
 
@@ -388,9 +417,9 @@ class DirectorySnapshot private[filesystem] (directory: GenericDirectory,
       .asInstanceOf[Hash[this.type]]
   }
 
-  override def get(key: String): Option[DirectoryEntry] = content.get(key) map {
-    case entry: DirectoryEntry => entry
-    case entry: UnresolvedDirectoryEntry => entry.failWithInterest()
+  override def get(key: String): Option[DirectoryEntry] = content.get(key) match {
+    case Some(entry: DirectoryEntry) => Some(entry)
+    case Some(entry: UnresolvedDirectoryEntry) => Some(entry.failWithInterest())
   }
 
 
@@ -406,7 +435,13 @@ class DirectorySnapshot private[filesystem] (directory: GenericDirectory,
           entry.failWithInterest(rest)
         case Some(entry : DirectoryEntry) =>
           if (rest.isEmpty) Some(entry) else None
-        case None => None
+        case Some(NonExistingDirectoryEntry) => None
+        case None =>
+          if (incompleteListing) {
+            directory.registerInterest(path)
+            throw new OutdatedSnapshotException(s"$file in ${directory.pathAsString} was not read yet. Try again with a fresh directory snapshot.")
+          } else
+            None
       }
     }
 
@@ -415,13 +450,13 @@ class DirectorySnapshot private[filesystem] (directory: GenericDirectory,
     case (_, entry: UnresolvedDirectoryEntry) => entry.failWithInterest(everything = true)
   }
   override def removed(key: String): DirectorySnapshot =
-    new DirectorySnapshot(directory, content.removed(key))
+    new DirectorySnapshot(directory, content.removed(key), incompleteListing = false)
 
   override def updated[V1 >: DirectoryEntry](key: String, value: V1): Map[String, V1] =
     ???
 
   private[hashedcomputation] def updated(key: String, value: MaybeDirectoryEntry) : DirectorySnapshot =
-    new DirectorySnapshot(directory, content.updated(key, value))
+    new DirectorySnapshot(directory, content.updated(key, value), incompleteListing = false)
 
   def updated(key: String, value: DirectoryEntry) : DirectorySnapshot =
     updated(key, value : MaybeDirectoryEntry)
@@ -466,6 +501,9 @@ object FingerprintedDirectorySnapshot {
 }
 */
 
+/** A placeholder for directory entries that are not included in the present directory snapshot.
+ * Trying to retrieve these entries (via [[DirectorySnapshot.get]]) will throw an [[OutdatedSnapshotException]]
+ * and mark this entry as interested (will be included in the updated snapshot). */
 private case class UnresolvedDirectoryEntry(directory: GenericDirectory, path: String) extends MaybeDirectoryEntry {
   def failWithInterest(subdir: List[String] = Nil, everything: Boolean = false): Nothing = {
     if (everything)

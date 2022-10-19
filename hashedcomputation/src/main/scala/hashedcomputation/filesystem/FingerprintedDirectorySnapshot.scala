@@ -27,7 +27,6 @@ class FingerprintedDirectorySnapshot private (val fingerprintBuilder: Fingerprin
 
   def getFile(path: Path): Option[FileSnapshot] = {
     val file = directory.getFile(path)
-//    println(s"XXX $path $file $this $directory")
     fingerprintBuilder.access(DirectoryElement(path), file)
     file
   }
