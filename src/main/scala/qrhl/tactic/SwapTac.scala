@@ -11,17 +11,14 @@ import scala.collection.immutable.ListSet
 import hashedcomputation.Implicits._
 import qrhl.Utils.pluralS
 import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle}
-import qrhl.tactic.SwapTac.logger
+import qrhl.tactic.SwapTac.{MiddleRange, logger}
 
 // TODO: reference literature for this tactic
-case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
-                   subprograms: List[(Statement, Option[Statement])],
-                   subprogramsInFirst: Boolean) extends Tactic {
-  if (steps < 1)
-    throw UserException(s"swap tactic must get numeric argument >=1, not $steps")
+case class SwapTac(left:Boolean, range1: SwapTac.Range, range2: SwapTac.Range,
+                   subprograms: List[(Statement, Option[Statement])]) extends Tactic {
 
-  override def hash: Hash[SwapTac.this.type] = HashTag()(Hashable.hash(left), range.hash, Hashable.hash(steps),
-    Hashable.hash(subprograms), Hashable.hash(subprogramsInFirst))
+  override def hash: Hash[SwapTac.this.type] = HashTag()(Hashable.hash(left), range1.hash, range2.hash,
+    Hashable.hash(subprograms))
 
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(l,r,pre,post,assms) =>
@@ -74,6 +71,30 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
     (Block(first:_*), Block(second:_*))
   }
 
+  /** @return (before,block1,block2,after,block1first) */
+  def split(prog: Block): (Block, Block, Block, Block, Boolean) = {
+    (range1, range2) match {
+      case (MiddleRange(start1, end1), MiddleRange(start2, end2)) if start2 == end1 + 1 =>
+        //noinspection DuplicatedCode
+        if (end2 > prog.length)
+          throw UserException(s"Range $range2 goes beyond the length of the program (${prog.length})")
+        val (before, prog2) = blockSplitAt(prog, start1 - 1)
+        val (block1, prog3) = blockSplitAt(prog2, end1 - start1 + 1)
+        val (block2, after) = blockSplitAt(prog3, end2 - start2 + 1)
+        (before, block1, block2, after, true)
+      case (MiddleRange(start1, end1), MiddleRange(start2, end2)) if start1 == end2 + 1 =>
+        //noinspection DuplicatedCode
+        if (end1 > prog.length)
+          throw UserException(s"Range $range1 goes beyond the length of the program (${prog.length})")
+        val (before, prog2) = blockSplitAt(prog, start2 - 1)
+        val (block2, prog3) = blockSplitAt(prog2, end2 - start2 + 1)
+        val (block1, after) = blockSplitAt(prog3, end1 - start1 + 1)
+        (before, block1, block2, after, false)
+      case (MiddleRange(start1, end1), MiddleRange(start2, end2)) =>
+        throw UserException(s"Ranges $range1 and $range2 must be consecutive in program (either can be first, though)")
+    }
+  }
+
   def swap(env:Environment, prog: Block)(implicit output: PrintWriter, ctxt : ContextX) : (Block, List[DenotationalEqSubgoal]) = {
     SwapTac.logger.debug(this.toString)
 
@@ -81,68 +102,57 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
       output.println(s"\nHINT: The ${Utils.plural("first", subprograms.length, "subgoal")} " +
         s"(denotational equivalence${pluralS(subprograms.length)}) can usually be best handled by invoking the byqrhl tactic.\n")
 
-    /** - [[beforeSecond]]: everything before the second block of the swap
-     * - [[secondBlock]]: the second block of the swap
-     * - [[after]]: everything after the second block of the swap */
-    val (beforeSecond,secondBlock,after) = range.split(prog)
+    output.println(s"In ${if (left) "left" else "right"} program: swapping range $range1 with $range2.")
 
-    output.println(s"In ${if (left) "left" else "right"} program: swapping $range with $steps statement${pluralS(steps)} before that.")
+    /** - [[block1]]: the second block of the swap
+     * - [[after]]: everything after the second block of the swap
+     * - [[before]]: everything before the first block of the swap
+     * - [[block2]]: the first block of the swap
+     * - [[block1First]]: Whether block1 is first or second inside the program */
+    val (before, block1, block2, after, block1First) = split(prog)
 
-    if (beforeSecond.length<steps)
-      throw UserException(s"Program must have at least ${steps+1} statements before the specified range (not ${beforeSecond.length})")
-
-    /** - [[before]]: everything before the first block of the swap
-     * - [[firstBlock]]: the first block of the swap */
-    val (before, firstBlock) = blockSplitAt(beforeSecond, beforeSecond.length-steps)
-    output.println(s"That is,\n  SECOND: $secondBlock\nwith\n  FIRST:  $firstBlock")
+    output.println(s"That is,\n  range $range1: $block1\nwith\n  range $range2:  $block2")
     if (subprograms.nonEmpty)
-      output.println(s"\nLooking for ${subprograms.length} specified subprogram${pluralS(subprograms.length)} in ${if (subprogramsInFirst) "FIRST" else "SECOND"}.")
+      output.println(s"\nLooking for ${subprograms.length} specified subprogram${pluralS(subprograms.length)} in range $range1.")
 
-    /** [[firstBlock]]/[[secondBlock]], depending on which one has the subprograms */
-    val blockWithSubs = if (subprogramsInFirst) firstBlock else secondBlock
-
-    /** [[firstBlock]]/[[secondBlock]] with subprograms replaced by oracles (depending on [[subprogramsInFirst]]) */
+    /** [[block1]] with subprograms replaced by oracles */
     val context =
-      if (subprograms.nonEmpty) findOracles(blockWithSubs).toBlock else blockWithSubs
+      if (subprograms.nonEmpty) findOracles(block1).toBlock else block1
     logger.debug(s"Context: $context")
-
-    /** The one of [[firstBlock]]/[[secondBlock]] that does not have the subprograms (i.e., not [[context]]) */
-    val blockWithoutSubs = if (subprogramsInFirst) secondBlock else firstBlock
 
     if (subprograms.nonEmpty)
       checkOraclesUsed(env, context)
 
-    checkSwappable(env, context, blockWithoutSubs)
+    checkSwappable(env, context, block2)
 
     /** [[context]] but with subprograms replaced by changed subprograms */
-    val contextSubstituted = if (subprograms.forall(_._2.isEmpty)) blockWithSubs else
+    val contextSubstituted = if (subprograms.forall(_._2.isEmpty)) block1 else
       context.substituteOracles(Map.from(subprograms.zipWithIndex.map({
         case ((original,changed),index) => (index.toString, changed.getOrElse(original))})))
         .toBlock
 
-    /** [[firstBlock]] with substitutions done (if necessary). */
-    val firstBlockSubstituted = if (subprogramsInFirst) contextSubstituted else firstBlock
-    /** [[secondBlock]] with substitutions done (if necessary). */
-    val secondBlockSubstituted = if (subprogramsInFirst) secondBlock else contextSubstituted
-
     val subgoals = subprograms map { case (original, changed) =>
       val changed2 = changed.getOrElse(original).toBlock
-      val lhs = if (subprogramsInFirst) { original.toBlock ++ secondBlock}
-                                   else { firstBlock ++ original.toBlock }
-      val rhs = if (subprogramsInFirst) { secondBlock ++ changed2 }
-                                   else { changed2 ++ firstBlock }
+      val lhs = if (block1First) { original.toBlock ++ block2}
+                            else { block2 ++ original.toBlock }
+      val rhs = if (block1First) { block2 ++ changed2 }
+                            else { changed2 ++ block2 }
       DenotationalEqSubgoal(lhs, rhs, Nil)
     }
 
-    (before ++ secondBlockSubstituted ++ firstBlockSubstituted ++ after,
-      subgoals)
+    val swappedProgram =
+      if (block1First) before ++ block2 ++ contextSubstituted ++ after
+      else before ++ contextSubstituted ++ block2 ++ after
+
+    (swappedProgram, subgoals)
   }
 
   private def checkOraclesUsed(env: Environment, block: Block)(implicit output: PrintWriter): Unit = {
     val oracles = block.variableUse(env).oracles
     for (i <- subprograms.indices)
       if (!oracles.contains(i.toString))
-        output.println(s"\nWARNING: Did not find any occurrences of the subprogram ${subprograms(i)._1}.")
+        output.println(s"\nWARNING: Did not find any occurrences of the subprogram ${subprograms(i)._1}.\n" +
+          s"Note: subprograms are only searched for in the first range ($range1), but you are allowed to specify the ranges in opposite order ($range2 $range1).")
   }
 
   private def findOracles(statement: Statement): Statement =
@@ -170,38 +180,23 @@ case class SwapTac(left:Boolean, range:SwapTac.Range, steps:Int,
 object SwapTac {
   private val logger = log4s.getLogger
 
-  sealed trait Range extends HashedValue {
-    def split(prog:Block) : (Block, Block, Block)
-  }
-  final case class FinalRange(numStatements:Int) extends Range {
-    override def toString: String = s"last $numStatements statement${pluralS(numStatements)}"
-    assert(numStatements>0)
-
-    override def split(prog: Block): (Block, Block, Block) = {
-      if (prog.length < numStatements)
-        throw UserException(s"You are trying to move the last $numStatements but program has only ${prog.length} statements")
-      val (before,range) = prog.statements.splitAt(prog.length-numStatements)
-      (Block(before:_*), Block(range:_*), Block.empty)
-    }
-
-    override def hash: Hash[FinalRange.this.type] = HashTag()(Hashable.hash(numStatements))
-  }
+  sealed trait Range extends HashedValue
 
   final case class MiddleRange(start:Int, end:Int) extends Range {
-    if (start<=0)
+    if (start <= 0)
       throw UserException(s"Start of range must be >=1 (not $start)")
-    if (end<start)
-      throw UserException(s"Start of range ($start) < end of range ($end)")
+    if (start > end)
+      throw UserException(s"Start of range ($start) > end of range ($end)")
 
-    override def toString: String = s"statements $start–$end"
+    override def toString: String = s"$start–$end"
 
-    override def split(prog: Block): (Block, Block, Block) = {
+/*    override def split(prog: Block): (Block, Block, Block) = {
       if (end>prog.length)
         throw UserException(s"End of range is $end, but program has only ${prog.length} statements")
       val (before,rangeEnd) = prog.statements.splitAt(start-1)
       val (range,endBlock) = rangeEnd.splitAt(end-start+1)
       (Block(before:_*), Block(range:_*), Block(endBlock:_*))
-    }
+    }*/
 
     override def hash: Hash[MiddleRange.this.type] = HashTag()(Hashable.hash(start,end))
   }

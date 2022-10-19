@@ -88,7 +88,7 @@ lemma rorcpa1_prg1: Pr[b=1:rorcpa1(rho)] = Pr[b=1:prg1(rho)].
  wp left.
  wp right.
  simp.
- swap right 1 1.
+ swap right 1-1 2-2.
  rnd r,r <- map_distr (λr. (r,r + G k1 + m2)) (uniform UNIV).
  simp.
  equal.
