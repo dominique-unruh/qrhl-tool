@@ -972,6 +972,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
 //      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
     lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context](s"$qrhl_ops.applyToplevelCommand")
     val absfree = MLValue.compileFunction[String, Typ, Term, Term]("fn (name,typ,term) => absfree (name, typ) term")
+    val check_const = compileFunction[Context, String, Term]("fn (ctxt,name) => Proof_Context.check_const {proper=false,strict=false} ctxt (name,[]) |> fst")
 
     val compareTyps = MLValue.compileFunction[Typ, Typ, Int](s"fn (t,u) => case Term_Ord.typ_ord (t,u) of LESS => ~1 | GREATER => 1 | EQUALS => 0")
 
