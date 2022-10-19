@@ -3,19 +3,23 @@ package qrhl.toplevel
 import java.io.PrintWriter
 import qrhl.{State, Subgoal}
 import qrhl.isabellex.IsabelleX
-import IsabelleX.{symbols, globalIsabelle => GIsabelle}
-import de.unruh.isabelle.control.IsabelleMLException
-import GIsabelle.Ops
+import IsabelleX.{globalIsabelle, symbols}
+import de.unruh.isabelle.control.{Isabelle, IsabelleMLException}
+import globalIsabelle.Ops
+import de.unruh.isabelle.misc.Symbols.{symbolsToUnicode, unicodeToSymbols}
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Const, Context}
 import hashedcomputation.{Hash, HashTag, Hashable}
+import qrhl.Utils.pluralS
+
+import scala.util.Random
 
 // Implicits
 import de.unruh.isabelle.mlvalue.Implicits._
 import de.unruh.isabelle.pure.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
-import GIsabelle.isabelleControl
+import globalIsabelle.isabelleControl
 import hashedcomputation.Implicits._
 
 case class PrintCommand(symbol : String) extends Command {
@@ -25,6 +29,11 @@ case class PrintCommand(symbol : String) extends Command {
     var found = false
     val env = state.environment
     val prettyTyp = state.isabelle.prettyTyp _
+
+    if (symbol == "goal") {
+      found = true
+      printGoal(state, output)
+    }
 
     for (prog <- env.programs.get(symbol)) {
       found = true
@@ -56,7 +65,7 @@ case class PrintCommand(symbol : String) extends Command {
       for (lemma <- fact)
         output.println(lemma+"\n\n")
     } catch {
-      case e : IsabelleMLException => // Means there is no such lemma
+      case _ : IsabelleMLException => // Means there is no such lemma
     }
 
     try {
@@ -75,5 +84,44 @@ case class PrintCommand(symbol : String) extends Command {
       output.println(s"No variable/program/lemma with name $symbol found.")
 
     state
+  }
+
+  def printGoal(state: State, output: PrintWriter): Unit = {
+    val subgoals = state.goal.focusedSubgoals
+    if (subgoals.isEmpty)
+      output.println("No goals to print.")
+    else
+      output.println(s"Current goal${pluralS(subgoals.length)} in Isabelle syntax:")
+
+    // Context without variable declarations etc. This approximates what is available in the Isabelle theories
+    val initialContext = state.isabelle.context.theoryOf.context
+
+    for (subgoal <- subgoals) {
+      val currentLemmaName = state.currentLemma match {
+        case Some(("", _)) => "lemma"
+        case Some((name, _)) => name
+        case None => "lemma"
+      }
+      val lemmaname = unicodeToSymbols(currentLemmaName + "_" + Random.between(100000, 999999))
+
+      val term = subgoal.toTerm(state.isabelle)
+
+      val fixes = globalIsabelle.freeVarsWithType(term.isabelleTerm).toList
+
+      val qvars = term.variables(state.environment).quantum
+      val declaredQvars =
+        if (qvars.isEmpty)
+          Nil
+        else
+          List(unicodeToSymbols(
+            s"  assumes [simp]: ‹declared_qvars ⟦${qvars.map(_.name).mkString(", ")}⟧›"))
+
+      val string = globalIsabelle.Ops.print_as_statement(
+        initialContext, lemmaname, fixes, declaredQvars, Nil, term.isabelleTerm).retrieveNow
+      val unicode = symbolsToUnicode(string)
+
+      output.println()
+      output.println(unicode)
+    }
   }
 }

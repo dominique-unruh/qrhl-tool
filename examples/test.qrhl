@@ -22,6 +22,8 @@ print xx.
 
 quantum var Q : bit.
 quantum var R : bit.
+classical var b : bit.
+classical var y : int.
 
 program p1 := {
   b <- measure Q with computational_basis;
