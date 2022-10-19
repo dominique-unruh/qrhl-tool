@@ -184,6 +184,7 @@ class RootsDirectory private[filesystem] (fileSystem: FileSystem)
 
   override protected def resolve(path: String): Path = Path.of(path)
 
+  // TODO: This finds only the file-systems in one spelling (e.g., `C:\`, not `c:\` on Windows), and additionally misses some (e.g., \\servername\share)
   override protected def makeSnapshot : DirectorySnapshot = {
     fileSystem.getRootDirectories.asScala.foldLeft(new DirectorySnapshot(this, Map.empty)) { (snapshot, root) =>
       updateSnapshot(root.toString, snapshot)
