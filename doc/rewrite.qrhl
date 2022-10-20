@@ -1,0 +1,57 @@
+# Simple example how to use the rewrite-tactic
+
+isabelle.
+
+quantum var qglobA : infinite.
+classical var cglobA : infinite.
+classical var x : int.
+
+# Declare two unspecified programs A, B.
+adversary A free qglobA, cglobA, x.
+adversary B free qglobA, cglobA, x.
+
+# Program p1 contains two subsequent assignments to x.
+program p1 := {
+  call A;
+  x <- 2;
+  x <- 1;
+  call B;  
+}.
+
+# Program p2 has those two assignments simplified to a single one.
+program p2 := {
+  call A;
+  x <- 1;
+  call B;
+}.
+
+# We want to prove that those two programs have the same output x:
+qrhl {ℭ𝔩𝔞[cglobA1 = cglobA2 ∧ x1 = x2] ⊓ ⟦qglobA1⟧ ≡𝔮 ⟦qglobA2⟧} call p1; ~ call p2; {Cla[x1 = x2]}.
+  inline p1.
+  inline p2.
+
+  # We replace lines 2,3 in the left program (x <- 2; x <- 1) by line 2 on the right (x <- 1)
+  rewrite left 2-3 -> right 2-2.
+
+  # Alternatively, we could have used the completely equivalent following statement where we say explicitly
+  # what the left lines should be replaced by:
+  # rewrite left 2-3 -> { x <- 1; }.
+
+  + # First subgoal of the rewrite:
+    # A denotational equivalence between the original lines 2,3 and their replacement
+
+    # We can solve denotational equivalence goals using byqrhl. This gives us a qRHL subgoal.
+    byqrhl.
+    # The rest is standard qRHL reasoning.
+    wp 2 1.
+    skip.
+    simp!.
+  + # Second subgoal of the rewrite: Now left and right program of the qRHL goal are the same
+    # (the left one has been rewritten)
+
+    # The equal tactic handles such subgoals
+    equal all.
+    - simp!.
+    - skip.
+      simp!.
+qed.
