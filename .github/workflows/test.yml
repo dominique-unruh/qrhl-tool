@@ -8,7 +8,7 @@ jobs:
       runs-on: [self-hosted, "${{matrix.os}}"]
       steps:
         - name: Checkout repository
-          uses: actions/checkout@v2
+          uses: actions/checkout@v3
           with:
             submodules: true
 
@@ -46,7 +46,7 @@ jobs:
 #            kill `cat keepawake.pid` || true
 
         - name: Upload test results
-          uses: actions/upload-artifact@v2
+          uses: actions/upload-artifact@v3
           if: always()
           with:
             name: test-reports-html-${{matrix.os}}
@@ -57,7 +57,7 @@ jobs:
       needs: test-qrhl
       steps:
         - name: Checkout repository
-          uses: actions/checkout@v2
+          uses: actions/checkout@v3
           with:
             submodules: true
 
@@ -71,7 +71,7 @@ jobs:
         # We cannot circumvent this by giving a directory to `upload-artifact` (as done in c618ad87) because then executable bits are lost.
         # (See https://github.com/actions/upload-artifact#permission-loss).
         - name: Upload qrhl.zip
-          uses: actions/upload-artifact@v2
+          uses: actions/upload-artifact@v3
           with:
             name: qrhl
             path: qrhl.zip
