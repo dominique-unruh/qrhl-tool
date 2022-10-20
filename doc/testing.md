@@ -24,6 +24,7 @@ This file is more of a personal collection of notes but can be fleshed out on de
   * Isabelle -> `~`
   * AFP -> `~` (named `afp-VERSION`)
   * Add `ML_OPTIONS="--maxheap 2G"` in `~/.isabelle/Isabelle2022-RC2/etc/settings`
+  * In `.../IsabelleXXX.app/etc/options`, set `timeout_scale` to `10`.
 * Login to Windows test server (GUI)
     * Isabelle -> `c:\`
     * AFP -> `c:\` (named `afp-VERSION`)
