@@ -2145,7 +2145,11 @@ subgoal out of the way temporarily and focus on other subgoals first).
 
 \tactic{byqrhl}
 
+This tactic transforms a goal comparing to programs into a qRHL goal comparing the same programs.
 
+It works both on goals comparing probabilities (e.g., \texttt{Pr[...] <= Pr[...]}) as well as denotational-equivalence goals.
+
+\paragraph{Comparing probabilities.}
 When invoked as ``\texttt{byqrhl qvars $\qq^{(1)},\dots,\qq^{(m)}$.}'', transforms a goal of the form
 $\mathtt{Pr}[e:P(\rho)] =\mathtt{Pr}[e':P'(\rho)]$
 into a qRHL subgoal. (Also works for $\leq$ or $\geq$ instead of $=$.)
@@ -2201,15 +2205,46 @@ $\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
 The rule is a special case of \ruleref{QrhlElimEqNew} in
 \cite{local-variables}.
 
+\paragraph{Denotational equivalence.}
+When applied as
+\begin{lstlisting}
+  byqrhl qvars $\qq^{(1)}$, ..., $\qq^{(m)}$.
+\end{lstlisting}
+it transforms a denotational equivalence of two programs $\bc$ and $\bd$ into a qRHL goal.
 
-\bigskip
-
-As a special case, the lhs or rhs can also be ``$1$'' instead of an
-expression $\mathtt{Pr}[e:P(\rho)]$. This is then interpreted as if
-the lhs/rhs was $\mathtt{Pr}[\mathtt{True}:\mathtt{skip}(\rho)]$.
 
 
-\TODOQ{document byqrhl applied to a denotational equivalence}
+The tactic implements the following rule:
+\begin{multline*}
+\inferrule{
+  \pb\rhl A
+  \bc\bd
+  A
+}
+{
+  \denotc\bc = \denotc\bd
+}
+\\
+\text{with}\quad e_1 := \idx1e,\ e'_2 := \idx2e'
+\\
+\text{and}\quad  A := {\CL{\yy^{(1)}_1=\yy^{(1)}_2\land\dots\land\yy^{(n)}_1=\yy^{(n)}_2}\sqcap
+    \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
+    \mathrel{\mathord\equiv\mathfrak q}
+    \llbracket \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket}
+\end{multline*}
+Here $\yy^{(1)},\dots,\yy^{(n)}$
+are the free classical variables of $\bc$ and $\bd$.
+And $\qq^{(1)},\dots,\qq^{(m)}$, specified in the tactic-invocation,
+are required to be a superset of the free quantum variables in $\bc$ and $\bd$.
+
+
+If the tactic is invoked simply as \texttt{byqrhl}, then $\qq^{(1)},\dots,\qq^{(m)}$ will be the free quantum variables in $\bc$ and $\bd$, i.e., the minimum allowed set of quantum variables.
+
+If $m=0$, then $\llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
+\mathrel{\mathord\equiv\mathfrak q} \llbracket
+\qq_n^{(1)},\dots,\qq_n^{(m)} \rrbracket$ is replaced by \texttt{top}.
+
+\TODOQ{Cite proof}
 
 \tactic{case}
 
