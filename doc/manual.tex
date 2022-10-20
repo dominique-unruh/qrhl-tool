@@ -3053,6 +3053,41 @@ The tactic is justified by \ruleref{RenameQrhl1/2} in
 \cite{local-variables}.
 
 
+\tactic{rewrite}
+
+This tactic allows to replace a sequence of lines in the left or right program by different lines.
+A new subgoal stating the denotational equivalence between those lines and the replacement is produced.
+
+The tactic is invoked on a qRHL goal or a denotational-equivalence goal as:
+\begin{lstlisting}
+  rewrite left/right $n$--$m$ -> $\mathit{replacement}$.
+\end{lstlisting}
+Here we use \texttt{left} or \texttt{right} to indicate whether we want to rewrite the left or the right program.
+This tactic will replace lines $n$--$m$ in the that program by the code specified by \textit{replacement}.
+And \textit{replacement} can be any of:
+\begin{itemize}
+\item \texttt{left/right $i$--$j$}: The content of lines $i$--$j$ from the left/right program, respectively.
+\item \texttt{\{ }\textit{code}\texttt{ \}}: Replace by the explicitly specified code \textit{code} (given in the syntax from \autoref{sec:tool.programs}).
+\end{itemize}
+
+For example:
+\begin{lstlisting}
+  rewrite left 2-3 -> right 2-2
+\end{lstlisting}
+will replace lines 2,3 in the left program by whatever line 2 in the right program is.
+\begin{lstlisting}
+  rewrite right 2-3 -> { call P; }
+\end{lstlisting}
+will replace lines 2,3 in the right program by a call to \texttt{P}.
+
+The tactic produces two subgoals:
+\begin{itemize}
+\item A denotational equivalence between the content of the selected lines and the replacement.
+\item The original subgoal with the lines replaced.
+\end{itemize}
+
+Note: Currently it is only possible to replace lines on the toplevel of the program.
+E.g., it is not possible to replace, say, lines inside a branch of an \texttt{if}-statement.
 
 
 \tactic{rnd}
