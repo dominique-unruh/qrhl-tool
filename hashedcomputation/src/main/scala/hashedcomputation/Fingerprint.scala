@@ -9,6 +9,7 @@ import scala.util.control.Breaks
 import scala.util.control.Breaks.{break, tryBreakable}
 
 object Fingerprint {
+  /** An entry inside a fingerprint. It consists of an [[Element]] that was accessed, and a [[Fingerprint]] of the value of the element. */
   final case class Entry[A, B](element: Element[A, B], fingerprint: Fingerprint[B]) {
     type OutT = B
     type InT = A
@@ -31,6 +32,13 @@ object Fingerprint {
 
 /** fingerprints==None means no fingerprinting, can only rely on the overall hash */
 case class Fingerprint[A: Hashable](@NotNull hash: Hash[A], @NotNull fingerprints: Option[Seq[Entry[A, _]]]) {
+  /** Transform this fingerprint of some value `a` into a fingerprint of a subvalue `b` of `a`.
+   * @param targetHash The hash of the subvalue
+   * @param projectEntry function that maps an [[Entry]] `e` relative to `a` into a sequence of entries `e'` relative to `b`.
+   *                     The meaning: Access `e` on `a` implicitly made the accesses `e'` on `b`.
+   *                     (If in doubt, return *more* accesses, not less.)
+   *                     Returning `None` means: The whole of `b` has been accessed.
+   * @tparam B the type of the subvalue `b` */
   def project[B: Hashable](targetHash: Hash[B], projectEntry: Entry[A,_] => Option[Seq[Entry[B, _]]]): Fingerprint[B] =
     fingerprints match {
       case None => new Fingerprint[B](targetHash, None)
@@ -49,7 +57,7 @@ case class Fingerprint[A: Hashable](@NotNull hash: Hash[A], @NotNull fingerprint
   /** Must be fingerprints for the same value */
   def join(other: Fingerprint[A]): Fingerprint[A] = {
     type SE = Seq[Entry[A, _]]
-    assert(hash==other.hash)
+    assert(hash == other.hash)
     val fp : Option[SE] = (fingerprints, other.fingerprints) match {
       case (None, None) => None
       case (f : Some[SE], None) => None
@@ -104,8 +112,11 @@ object DummyMap extends mutable.Map[Any, Any] {
     throw new UnsupportedOperationException
 }
 
+/** A class that tracks accesses to [[Element]]s of value and creates a fingerprint in the end that logs the hashes of those elements.
+ * @tparam The type of the value. */
 trait FingerprintBuilder[A] {
   def access[B](element: Element[A,B], fingerprint: Fingerprint[B]): Unit
+  /** Mark the whole value as accessed. */
   def accessAll(): Unit
 
   def access[B : Hashable](element: Element[A,B], value: B): Unit =
@@ -141,6 +152,7 @@ final class FingerprintBuilderImpl[A : Hashable](value: A) extends FingerprintBu
       entries.updateWith(element) {
         case None => Some(fingerprint)
         case Some(fingerprint1) =>
+          assert(fingerprint.hash == fingerprint1.hash)
           Some(fingerprint1.asInstanceOf[Fingerprint[B]].join(fingerprint))
       }
 

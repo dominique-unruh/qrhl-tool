@@ -760,6 +760,39 @@ A goal selector can prefix the \texttt{+} command but it needs to select all goa
 
 See \texttt{examples/focus.qrhl} for simple examples of the focusing syntax.
 
+\paragraph{Getting information.}
+The \toolidx{print}\texttt{print} can be used to show the definition of declared mathematic objects.
+Specifically, if \texttt{name} is the name of a variable (declared in qrhl-tool), a program (declared in qrhl-tool), a lemma (declared in qrhl-tool or in Isabelle), or a constant (declared in Isabelle), then
+\begin{center}
+  \begin{lstlisting}
+    print name.
+  \end{lstlisting}
+\end{center}
+outputs the declaration of that object.
+(If \texttt{name} is simultaneously the name of several of the above, several declarations are printed.)
+
+For programs, qrhl-tool also prints the various sets of variables
+(e.g., free classical variables, quantum variables, written variables,
+etc.)
+
+For constants, it provides the full Isabelle name (incl. the name of the theory) and the type.
+
+For lemmas, it provides the statement of the lemma.
+
+\medskip
+
+When invoked as\phantomlabel{command:print-goal}
+\begin{center}
+  \begin{lstlisting}
+    print goal.
+  \end{lstlisting}
+\end{center}
+it prints the current subgoals in notation understandable to Isabelle.
+This is useful for copy-and-pasting the subgoal to an Isabelle-theory (see \autoref{sec:isabelle}) and proving the lemma there.
+(After that, the tactic \texttt{rule lemmaname} can be used to prove the subgoal in qrhl-tool, where \texttt{lemmaname} is the name chosen for the copy-and-pasted lemma.)
+The qrhl-tool makes an effort to make the printed subgoal suitable for including in Isabelle without further editing.
+In particular, it attempts to include all necessary type annotations to disambiguate the lemma.
+(However, no guarantee can be made that this always works, especially in the presence of complicated user-defined syntax.)
 
 
 %\TODOQ{remove this newpage if the table in programs doesn't break badly then}
@@ -3537,7 +3570,10 @@ arbitrary Isabelle/HOL developments are possible.  In particular, one
 can define new types and constants for use in programs (e.g., the
 encryption scheme in \autoref{sec:ex.ror}), and one can prove
 arbitrary helper lemmas as long as they do not involve qRHL
-judgments. (Typically, one will prove lemmas about predicates.)  It is
+judgments.
+(Typically, one will prove lemmas about predicates. See also the \texttt{print goal} command, \autopageref{command:print-goal} for a simple way to generate the statements of lemmas for solving subgoals.)
+
+It is
 beyond the scope of this paper to introduce proofs in Isabelle/HOL,
 see the tutorial \cite{isabelle-tutorial} and the
 reference manual \cite{isar-ref} for more information. The theory

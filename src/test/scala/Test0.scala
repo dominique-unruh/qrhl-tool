@@ -17,12 +17,15 @@ object Test0 {
     val root = RootsDirectory()
     var fs = FingerprintedDirectorySnapshot(root)
 
+    val desired = "c:/Users/unruh/r/qrhl-tool/examples/Example.thy"
+
     var ok = false
 
     while (!ok) {
       try {
         fs = FingerprintedDirectorySnapshot(root)
-        fs.getFile(Paths.get("/tmp/proofs/games.qrhl"))
+        fs.everything.dump()
+        fs.getFile(Paths.get(desired))
         ok = true
       } catch {
         case e: OutdatedSnapshotException =>
@@ -30,7 +33,8 @@ object Test0 {
       }
     }
 
-    val path = Paths.get("/tmp/proofs/games.qrhl")
+    fs.everything.dump()
+    val path = Paths.get(desired)
     print(fs.getFile(path))
   }
 }

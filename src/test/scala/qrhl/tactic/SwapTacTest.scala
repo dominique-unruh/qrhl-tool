@@ -15,7 +15,7 @@ class SwapTacTest extends AnyFunSuite {
         |quantum var Q : bit.
         |qrhl {undefined} b <- measure Q with computational_basis; b <- measure Q with computational_basis; x <- y+1; ~ skip; {undefined}.
         |""".stripMargin)
-    val cmd = tl.state.parseCommand("swap left 2 1 subprograms second: { b <- measure Q with computational_basis; }")
+    val cmd = tl.state.parseCommand("swap left 2-3 1-1 subprograms: { b <- measure Q with computational_basis; }")
     println(cmd)
     val TacticCommand(tactic : SwapTac) = cmd
     println(tactic)

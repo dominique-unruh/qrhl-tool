@@ -55,8 +55,8 @@ lemma Pr[b = 1: game1(rho)] = Pr[b = 1: game2(rho)].
   # In the right game (game2), swap the lines "on Q apply hadamard;" and "call A(oracle');".
   # While swapping, replace oracle' by oracle (because oracle' with prior base transform of Q
   # is the same as oracle with the base transform afterwards (1))
-  swap right 1 1
-    subprograms second: call oracle'; -> call oracle;.
+  swap right 2-2 1-1
+    subprograms: call oracle'; -> call oracle;.
 
   # First subgoal: Show the denotational equivalence (1)
   + byqrhl. # Transform denotational equivalence into a qrhl goal
