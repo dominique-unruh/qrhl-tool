@@ -342,7 +342,8 @@ To execute the example, execute \texttt{proofgeneral.sh
   and then use, e.g., \texttt{Ctrl-C Ctrl-N} to evaluate
 the file step by step. (If emacs is not available, you can also run
 \texttt{bin/qrhl example.qrhl} noninteractively.) To edit
-\texttt{Example.thy}, execute \texttt{run-isabelle.sh Example.thy}.
+\texttt{Example.thy}, execute \texttt{isabelle.sh Example.thy}.
+(On Windows: \texttt{isabelle.ps1}.)
 
 \paragraph{Configutation file.}%
 \index{configuration file}\index{qrhl-tool.conf@\texttt{qrhl-tool.conf}}
@@ -1110,7 +1111,7 @@ Isabelle/HOL. Readers unfamiliar with Isabelle/HOL may study the
 tutorial \cite{isabelle-tutorial}.
 
 For experiments, it can be useful to directly invoke Isabelle/HOL
-(using the \texttt{./run-isabelle.sh} script) and edit a theory that
+(using the \texttt{isabelle.sh} (Linux/Mac) or \texttt{isabelle.ps1} (Windows) script) and edit a theory that
 imports \texttt{QRHL.QRHL}.
 
 Expressions used in assign-statements will probably only rarely use
