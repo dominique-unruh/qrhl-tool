@@ -74,6 +74,6 @@ object Main {
       sys.exit()
 //      tl.dispose()
     } else
-      Toplevel.main(cheating = conf.cheating.getOrElse(true))
+      Toplevel.main(cheating = conf.cheating.getOrElse(true), allowMultilineCommands = !conf.emacs.getOrElse(false))
   }
 }

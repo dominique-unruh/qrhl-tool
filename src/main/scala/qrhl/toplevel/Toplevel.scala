@@ -30,7 +30,9 @@ import org.apache.commons.codec.binary.Hex
 import hashedcomputation.Implicits._
 
 /** Not thread safe */
-class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = true) {
+class Toplevel private(initialState : State,
+                       errorWhenUnfinished : Boolean = true,
+                       allowMultilineCommands : Boolean = true) {
   private var currentState : State = initialState
   /** Reversed list of commands */
   private var commands : List[CommandOrString] = Nil
@@ -201,7 +203,7 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
     */
   def run(readLine : ReadLine): Unit = {
     while (true) {
-        val cmdStr = Toplevel.readCommand(readLine)
+        val cmdStr = Toplevel.readCommand(readLine, allowMultilineCommands)
         if (cmdStr==null) { checkFinished(); return }
         execCmd(CommandOrString.Str(cmdStr, readLine.position))
     }
@@ -215,7 +217,7 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
   def runWithErrorHandler(readLine : ReadLine, abortOnError:Boolean=false): Boolean = {
     while (true) {
       try {
-        val cmdStr = Toplevel.readCommand(readLine)
+        val cmdStr = Toplevel.readCommand(readLine, allowMultilineCommands)
         if (cmdStr==null) { checkFinished(); return true }
         execCmd(CommandOrString.Str(cmdStr, readLine.position))
       } catch {
@@ -257,8 +259,8 @@ object Toplevel {
   private val logger = log4s.getLogger
 
   /** Runs the interactive toplevel from the terminal (with interactive readline). */
-  def runFromTerminal(cheating:Boolean) : Toplevel = {
-    val toplevel = Toplevel.makeToplevel(cheating=cheating)
+  def runFromTerminal(cheating:Boolean, allowMultilineCommands: Boolean) : Toplevel = {
+    val toplevel = Toplevel.makeToplevel(cheating = cheating, allowMultilineCommands = allowMultilineCommands)
     toplevel.runWithErrorHandler(new ReadLine.Terminal)
     toplevel
   }
@@ -266,15 +268,15 @@ object Toplevel {
   def makeToplevelFromState(state: State, errorWhenUnfinished: Boolean = true) : Toplevel =
     new Toplevel(state, errorWhenUnfinished = errorWhenUnfinished)
 
-  def makeToplevel(cheating: Boolean) : Toplevel = {
+  def makeToplevel(cheating: Boolean, allowMultilineCommands: Boolean = true) : Toplevel = {
     val state = State.empty(cheating = cheating)
-    new Toplevel(state)
+    new Toplevel(state, allowMultilineCommands = allowMultilineCommands)
   }
 
   abstract class ReadLine {
     def readline(prompt: String) : String
     def position : String
-    val unprocessed: StringBuilder = new StringBuilder()
+    val unprocessed: mutable.StringBuilder = new mutable.StringBuilder()
   }
   object ReadLine {
     class FileSnapshot(file: filesystem.FileSnapshot, path: Path) extends ReadLine {
@@ -309,9 +311,9 @@ object Toplevel {
     }
   }
 
-  def main(cheating:Boolean): Unit = {
+  def main(cheating:Boolean, allowMultilineCommands: Boolean): Unit = {
     try
-      runFromTerminal(cheating)
+      runFromTerminal(cheating = cheating, allowMultilineCommands = allowMultilineCommands)
     catch {
       case e:Throwable => // we need to catch and print, otherwise the sys.exit below gobbles up the exception
         e.printStackTrace()
@@ -352,11 +354,12 @@ object Toplevel {
     }
   }
 
-  def computeStateFromReadline(initialState: State, readLine: ReadLine, fs: FingerprintedDirectorySnapshot): State = {
+  def computeStateFromReadline(initialState: State, readLine: ReadLine, fs: FingerprintedDirectorySnapshot,
+                               allowMultilineCommands: Boolean): State = {
     val commands = mutable.ArrayDeque[CommandOrString]()
     breakable {
       while (true) {
-        val cmdStr = readCommand(readLine)
+        val cmdStr = readCommand(readLine, allowMultilineCommands)
         if (cmdStr == null) break()
         commands.append(CommandOrString.Str(cmdStr, readLine.position))
       }
@@ -365,9 +368,10 @@ object Toplevel {
   }
 
   /** path must be absolute */
-  def computeStateFromFileContent(initialState: State, path: Path, fileContent: FileSnapshot, fs: FingerprintedDirectorySnapshot): State =
+  def computeStateFromFileContent(initialState: State, path: Path, fileContent: FileSnapshot, fs: FingerprintedDirectorySnapshot,
+                                  allowMultilineCommands: Boolean): State =
     computeStateFromReadline(initialState.changeDirectory(path.getParent),
-      new ReadLine.FileSnapshot(fileContent, path), fs)
+      new ReadLine.FileSnapshot(fileContent, path), fs, allowMultilineCommands = allowMultilineCommands)
 
   private val cachedApplyCommandToState = HashedFunction.fingerprintedComputation[(Command, State, DirectorySnapshot), State] {
     case (command, state, directory) =>
@@ -471,7 +475,7 @@ object Toplevel {
    * @param readLine command for reading lines from the input, invoked with the prompt to show
    * @return the command (without the "."), null on EOF
    * */
-  private def readCommand(readLine : ReadLine): String = {
+  private def readCommand(readLine: ReadLine, allowMultilineCommands: Boolean): String = {
     val str = readLine.unprocessed
     while (true) {
       clearBuilderIfWhite(str)
@@ -482,6 +486,13 @@ object Toplevel {
           str.delete(0, len)
           return command
         case None =>
+      }
+
+      if ((!allowMultilineCommands) && (!str.isEmpty)) {
+        val command = str.toString
+        str.clear()
+        throw UserException(s"Incomplete command received: $command\n" +
+          "(Possibly ProofGeneral got the end of command wrong due to a bug. But just in case, check your nesting of parentheses.)")
       }
 
       val line =
