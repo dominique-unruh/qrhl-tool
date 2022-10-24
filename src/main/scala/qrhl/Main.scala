@@ -19,7 +19,9 @@ object Main {
     val build : ScallopOption[Boolean] = toggle()
     // if cheating is false, cheating cannot be activated
     val cheating : ScallopOption[Boolean] = toggle() // Default: interactive mode: true, from file: false
-    val emacs : ScallopOption[Boolean] = toggle() // Ignored but ProofGeneral needs to give some option to support spaces in paths
+    // Tells qrhl-tool that it's running in ProofGeneral.
+    // Also: ProofGeneral needs to give some option to support spaces in paths
+    val emacs : ScallopOption[Boolean] = toggle()
     val isabelle : ScallopOption[Boolean] = toggle()
     val session : ScallopOption[String] = opt[String]()
     val file: ScallopOption[String] = trailArg[String](required=false)
@@ -49,6 +51,8 @@ object Main {
 
     IsabelleX.checkIsabelleHome()
 
+    IsabelleX.checkAFPVersion()
+
     if (conf.build.getOrElse(false)) {
       val isabelle = new IsabelleX(IsabelleX.defaultSetup)
       isabelle.dispose()
@@ -74,6 +78,7 @@ object Main {
       sys.exit()
 //      tl.dispose()
     } else
-      Toplevel.main(cheating = conf.cheating.getOrElse(true), allowMultilineCommands = !conf.emacs.getOrElse(false))
+      Toplevel.main(cheating = conf.cheating.getOrElse(true),
+        allowMultilineCommands = !conf.emacs.getOrElse(false))
   }
 }
