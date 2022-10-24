@@ -18,6 +18,7 @@
         <option value="qrhl.logic.StatementTest" />
         <option value="qrhl.toplevel.ParserTest" />
         <option value="qrhl.toplevel.ToplevelTest" />
+        <option value="qrhl.toplevel.PrintCommandTest" />
         <option value="qrhl.toplevel.DeclareProgramCommandTest" />
         <option value="qrhl.toplevel.IsabelleToplevelCommandTest" />
         <option value="qrhl.tactic.SpTacTest" />
@@ -31,6 +32,7 @@
         <option value="qrhl.tactic.EqualTacTest" />
         <option value="qrhl.tactic.ByQRHLTacTest" />
         <option value="qrhl.tactic.ExpressionTest" />
+        <option value="qrhl.tactic.RewriteTacTest" />
         <option value="qrhl.isabellex.IsabelleXTest" />
         <option value="qrhl.isabellex.ConfigurationTest" />
         <option value="qrhl.isabellex.MLValueConvertersTest" />

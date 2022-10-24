@@ -25,8 +25,12 @@ import de.unruh.isabelle.misc.Symbols.ProcessSubSuperMode
 import de.unruh.isabelle.misc.{FutureValue, Symbols}
 import de.unruh.isabelle.pure.exceptions.Exn
 import hashedcomputation.{Hash, HashedValue}
+import org.apache.commons.codec.binary.Hex
+import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.FileUtils
 import qrhl.Utils.NestedException
+
+import java.security.MessageDigest
 
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
@@ -1002,6 +1006,33 @@ object IsabelleX {
       System.exit(1)
     }
   }
+
+  def checkAFPVersion(): Unit = Configuration.afpRoot match {
+    case None =>
+    case Some(path) =>
+      val digest = DigestUtils.getSha256Digest
+      val hashes = Seq(
+        "thys/Complex_Bounded_Operators/Complex_Bounded_Linear_Function.thy" -> "39b0420e9871bd26b99944491efb1439da333bc2c366f63aaf0d517ebdff638a",
+      )
+
+      def fail(reason: String): Unit = {
+        System.err.println(s"\n\nERROR: The AFP in ${Configuration.afpRoot} does not seem to be the AFP for Isabelle $version.\n")
+        System.err.println(s"($reason)\n")
+        System.err.println("Edit your config file (e.g., ~/.qrhl-tool.conf), option afp-root, to provide a different AFP directory.\n")
+        System.err.println("(Or remove this option altogether and configure the AFP directly in your .isabelle folder to deactivate this check.)")
+        System.exit(1)
+      }
+
+      for ((file, expectedHash) <- hashes) {
+        val thyFile = path.resolve(file)
+        if (Files.notExists(thyFile))
+          fail(s"Could not find file $file in that directory.")
+        val hash = Hex.encodeHexString(DigestUtils.digest(digest, thyFile))
+        if (hash != expectedHash)
+          fail(s"$file has a ${digest.getAlgorithm}-hash $hash but the correct AFP version has $expectedHash.")
+      }
+  }
+
 
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
