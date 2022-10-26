@@ -2,6 +2,8 @@ import java.io.PrintWriter
 import NativePackagerHelper._
 
 import scala.sys.process.Process
+import org.apache.commons.lang3.SystemUtils
+import java.nio.file.Files
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
@@ -70,7 +72,8 @@ makeGITREVISION := {
 }
 managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
 
-val isabelleHome = file("/opt/Isabelle2022-RC4")
+val isabelleVersion = Files.readString(file("src/main/resources/qrhl/isabellex/isabelleVersion").toPath)
+val isabelleHome = file(s"/opt/Isabelle2022$isabelleVersion")
 
 mainClass in assembly := Some("qrhl.Main")
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"

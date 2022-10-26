@@ -15,17 +15,19 @@ jobs:
         - name: Running tests (Linux)
           if: matrix.os == 'linux'
           run: |
-            git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
-            echo isabelle-home = /opt/Isabelle2022-RC4 >qrhl-tool.conf
-            echo afp-root = /opt/afp-2022 >>qrhl-tool.conf
+            git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358
+            ISABELLE_VERSION="`cat src/main/resources/qrhl/isabellex/isabelleVersion`"
+            echo "isabelle-home = /opt/Isabelle$ISABELLE_VERSION" >qrhl-tool.conf
+            echo "afp-root = /opt/afp-$ISABELLE_VERSION" >>qrhl-tool.conf
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Running tests (Windows)
           if: matrix.os == 'windows'
           run: |
-            git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
-            Set-Content -Path qrhl-tool.conf -Value 'isabelle-home = c:\Isabelle2022-RC4'
-            Add-Content -Path qrhl-tool.conf -Value 'afp-root = c:\afp-2022'
+            git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358
+            $ISABELLE_VERSION = Get-Content -Path src\main\resources\qrhl\isabellex\isabelleVersion
+            Set-Content -Path qrhl-tool.conf -Value "isabelle-home = c:\Isabelle$ISABELLE_VERSION"
+            Add-Content -Path qrhl-tool.conf -Value "afp-root = c:\afp-$ISABELLE_VERSION"
             sbt 'testOnly -- -h target/test-reports-html'
 
         - name: Running tests (MacOS)
@@ -34,8 +36,9 @@ jobs:
             ifconfig # To find out address for SSHing
             git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358 
             ~/keepawake.sh &    # A script to keep the Mac from falling asleep. Caffeinate doesn't seem to work on my Mac
-            echo isabelle-home = ~/Isabelle2022-RC4.app >qrhl-tool.conf
-            echo afp-root = ~/afp-2022 >>qrhl-tool.conf
+            ISABELLE_VERSION="`cat src/main/resources/qrhl/isabellex/isabelleVersion`"
+            echo "isabelle-home = ~/Isabelle$ISABELLE_VERSION.app" >qrhl-tool.conf
+            echo "afp-root = ~/afp-$ISABELLE_VERSION" >>qrhl-tool.conf
             # My Mac is very small. So we make sure there is no other parallel GitHub action running before continuing.
             while pgrep -l -f sbt-launch.jar; do echo "Another sbt is running. To keep load low, we wait until it finishes."; caffeinate -i -t 300; done
             ~/keepawake.sh &    # Another invocation in case we waited very long
