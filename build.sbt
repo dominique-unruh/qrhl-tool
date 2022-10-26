@@ -67,10 +67,10 @@ makeGITREVISION := {
   pr.print(text)
   pr.close()
 }
-compile / managedResources := (Compile / managedResources).dependsOn(makeGITREVISION).value
+Compile / managedResources := (Compile / managedResources).dependsOn(makeGITREVISION).value
 
 val isabelleVersion = Files.readString(file("src/main/resources/qrhl/isabellex/isabelleVersion").toPath)
-val isabelleHome = file(s"/opt/Isabelle2022$isabelleVersion")
+val isabelleHome = file(s"/opt/Isabelle$isabelleVersion")
 
 assembly / mainClass := Some("qrhl.Main")
 assembly / assemblyOutputPath := baseDirectory.value / "qrhl.jar"
