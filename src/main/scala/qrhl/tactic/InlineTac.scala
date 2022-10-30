@@ -12,7 +12,11 @@ case class InlineTac(name:String) extends Tactic {
       if (!state.environment.programs.contains(name))
         throw UserException(s"Undefined program $name")
       List(QRHLSubgoal(left.inline(state.environment,name), right.inline(state.environment,name), pre, post, assms))
-    case _ => throw UserException("inline supported only for qRHL subgoals")
+    case DenotationalEqSubgoal(left, right, assms) =>
+      if (!state.environment.programs.contains(name))
+        throw UserException(s"Undefined program $name")
+      List(DenotationalEqSubgoal(left.inline(state.environment, name), right.inline(state.environment, name), assms))
+    case _ => throw UserException("inline supported only for qRHL subgoals and denotational equivalence subgoals")
   }
 
   override def hash: Hash[InlineTac.this.type] = HashTag()(Hashable.hash(name))
