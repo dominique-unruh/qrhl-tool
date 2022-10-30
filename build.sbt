@@ -31,7 +31,7 @@ lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
 
 name := "qrhl"
 
-version := "snapshot"
+version := "0.7.1"
 
 scalaVersion := "2.13.3"
 
