@@ -109,137 +109,6 @@ proof -
      by simp
 qed
 
-(* lemma squash_sampling_left_ss_tac:
-  assumes left0: "left0 @ [sample Q d, sample R e] = left"
-  assumes e': "\<And>z. e' z = subst_expression (substitute_vars Q (const_expression z)) e"
-  assumes de: "de = map_expression2' (\<lambda>d e. bind_distr d (\<lambda>z. map_distr (\<lambda>y. (z,y)) (e z))) d e'"
-  assumes left': "left' = left0 @ [sample (variable_concat Q R) de]"
-  assumes qrhl: "qrhl A left' right B"
-  shows "qrhl A left right B"
-proof -
-  have "denotation (block [sample Q d, sample R e]) = denotation (sample (variable_concat Q R) de)"
-    unfolding de e' by (rule squash_sampling)
-  then have "denotation (block left) = denotation (block left')"
-    unfolding left' left0[symmetric] denotation_block by auto
-  with qrhl show ?thesis
-    using qrhl_denotation_replace by blast 
-qed
-
-
-lemma squash_sampling_left_as_tac:
-  assumes left0: "left0 @ [assign Q d, sample R e] = left"
-  assumes e': "\<And>z. e' z = subst_expression (substitute_vars Q (const_expression z)) e"
-  assumes de: "de = map_expression2' (\<lambda>d e. bind_distr (point_distr d) (\<lambda>z. map_distr (\<lambda>y. (z,y)) (e z))) d e'"
-  assumes left': "left' = left0 @ [sample (variable_concat Q R) de]"
-  assumes qrhl: "qrhl A left' right B"
-  shows "qrhl A left right B"
-proof -
-  have "denotation (block [assign Q d, sample R e]) = denotation (sample (variable_concat Q R) de)"
-    unfolding de e' by (rule squash_assign_sampling)
-  then have "denotation (block left) = denotation (block left')"
-    unfolding left' left0[symmetric] denotation_block by auto
-  with qrhl show ?thesis
-    using qrhl_denotation_replace by blast 
-qed
-
-lemma squash_sampling_left_sa_tac:
-  assumes left0: "left0 @ [sample Q d, assign R e] = left"
-  assumes e': "\<And>z. e' z = subst_expression (substitute_vars Q (const_expression z)) e"
-  assumes de: "de = map_expression2' (\<lambda>d e. map_distr (\<lambda>d. (d,e d)) d) d e'"
-  assumes left': "left' = left0 @ [sample (variable_concat Q R) de]"
-  assumes qrhl: "qrhl A left' right B"
-  shows "qrhl A left right B"
-proof -
-  have "denotation (block [sample Q d, assign R e]) = denotation (sample (variable_concat Q R) de)"
-    unfolding de e' by (rule squash_sampling_assign)
-  then have "denotation (block left) = denotation (block left')"
-    unfolding left' left0[symmetric] denotation_block by auto
-  with qrhl show ?thesis
-    using qrhl_denotation_replace by blast 
-qed
-  
-lemma squash_sampling_left_aa_tac:
-  assumes left0: "left0 @ [assign Q d, assign R e] = left"
-  assumes e': "\<And>z. e' z = subst_expression (substitute_vars Q (const_expression z)) e"
-  assumes de: "de = map_expression2' (\<lambda>d e. (d,e d)) d e'"
-  assumes left': "left' = left0 @ [assign (variable_concat Q R) de]"
-  assumes qrhl: "qrhl A left' right B"
-  shows "qrhl A left right B"
-proof -
-  have "denotation (block [assign Q d, assign R e]) = denotation (assign (variable_concat Q R) de)"
-    unfolding de e' by (rule squash_assign)
-  then have "denotation (block left) = denotation (block left')"
-    unfolding left' left0[symmetric] denotation_block by auto
-  with qrhl show ?thesis
-    using qrhl_denotation_replace by blast 
-qed
-
-lemma squash_sampling_right_ss_tac:
-  assumes right0: "right0 @ [sample Q d, sample R e] = right"
-  assumes e': "\<And>z. e' z = subst_expression (substitute_vars Q (const_expression z)) e"
-  assumes de: "de = map_expression2' (\<lambda>d e. bind_distr d (\<lambda>z. map_distr (\<lambda>y. (z,y)) (e z))) d e'"
-  assumes right': "right' = right0 @ [sample (variable_concat Q R) de]"
-  assumes qrhl: "qrhl A left right' B"
-  shows "qrhl A left right B"
-proof -
-  have "denotation (block [sample Q d, sample R e]) = denotation (sample (variable_concat Q R) de)"
-    unfolding de e' by (rule squash_sampling)
-  then have "denotation (block right) = denotation (block right')"
-    unfolding right' right0[symmetric] denotation_block by auto
-  with qrhl show ?thesis
-    using qrhl_denotation_replace by blast 
-qed
-
-lemma squash_sampling_right_as_tac:
-  assumes right0: "right0 @ [assign Q d, sample R e] = right"
-  assumes e': "\<And>z. e' z = subst_expression (substitute_vars Q (const_expression z)) e"
-  assumes de: "de = map_expression2' (\<lambda>d e. bind_distr (point_distr d) (\<lambda>z. map_distr (\<lambda>y. (z,y)) (e z))) d e'"
-  assumes right': "right' = right0 @ [sample (variable_concat Q R) de]"
-  assumes qrhl: "qrhl A left right' B"
-  shows "qrhl A left right B"
-proof -
-  have "denotation (block [assign Q d, sample R e]) = denotation (sample (variable_concat Q R) de)"
-    unfolding de e' by (rule squash_assign_sampling)
-  then have "denotation (block right) = denotation (block right')"
-    unfolding right' right0[symmetric] denotation_block by auto
-  with qrhl show ?thesis
-    using qrhl_denotation_replace by blast 
-qed
-
-lemma squash_sampling_right_sa_tac:
-  assumes right0: "right0 @ [sample Q d, assign R e] = right"
-  assumes e': "\<And>z. e' z = subst_expression (substitute_vars Q (const_expression z)) e"
-  assumes de: "de = map_expression2' (\<lambda>d e. map_distr (\<lambda>d. (d,e d)) d) d e'"
-  assumes right': "right' = right0 @ [sample (variable_concat Q R) de]"
-  assumes qrhl: "qrhl A left right' B"
-  shows "qrhl A left right B"
-proof -
-  have "denotation (block [sample Q d, assign R e]) = denotation (sample (variable_concat Q R) de)"
-    unfolding de e' by (rule squash_sampling_assign)
-  then have "denotation (block right) = denotation (block right')"
-    unfolding right' right0[symmetric] denotation_block by auto
-  with qrhl show ?thesis
-    using qrhl_denotation_replace by blast 
-qed
-
-lemma squash_sampling_right_aa_tac:
-  assumes right0: "right0 @ [assign Q d, assign R e] = right"
-  assumes e': "\<And>z. e' z = subst_expression (substitute_vars Q (const_expression z)) e"
-  assumes de: "de = map_expression2' (\<lambda>d e. (d,e d)) d e'"
-  assumes right': "right' = right0 @ [assign (variable_concat Q R) de]"
-  assumes qrhl: "qrhl A left right' B"
-  shows "qrhl A left right B"
-proof -
-  have "denotation (block [assign Q d, assign R e]) = denotation (assign (variable_concat Q R) de)"
-    unfolding de e' by (rule squash_assign)
-  then have "denotation (block right) = denotation (block right')"
-    unfolding right' right0[symmetric] denotation_block by auto
-  with qrhl show ?thesis
-    using qrhl_denotation_replace by blast 
-qed *)
-
-thm squash_sampling squash_sampling_assign squash_assign_sampling squash_assign
-
 ML \<open>
 structure Squash_Sampling = struct
 
@@ -252,6 +121,12 @@ fun squash_sampling_focused_tac ctxt =
      THEN' QRHL.distinct_qvars_tac ctxt
      THEN' QRHL.distinct_qvars_tac ctxt
      THEN' QRHL.extend_op_vars_tac ctxt
+     THEN' Expressions.map_expression_tac ctxt)
+  ORELSE'
+    (resolve_tac ctxt @{thms squash_qapply_qapply}
+     THEN' QRHL.distinct_qvars_tac ctxt
+     THEN' QRHL.distinct_qvars_tac ctxt
+     THEN' QRHL.extend_2op_vars_tac ctxt
      THEN' Expressions.map_expression_tac ctxt)
 
 fun squash_sampling_tac left ctxt =
