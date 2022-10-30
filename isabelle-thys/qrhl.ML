@@ -633,15 +633,28 @@ fun distinct_qvars_tac ctxt : int -> tactic =
                       by (simp add: DISTINCT_QVARS_GUARD_def)}]
   THEN' simp_tac ctxt
 
-(* Given a subgoal of the form "liftOp (?trafo U) ?Q = liftOp U R", solves it by instantiating
-   ?trafo and ?Q suitably. *)
-fun extend_op_vars_tac ctxt =
-  resolve_tac ctxt [@{lemma \<open>(\<And>U. reorder_variables_hint (liftOp U R) Q = liftOp (trafo U) Q)
-                                \<Longrightarrow> liftOp (trafo U) Q = liftOp U R\<close> 
-                            by (simp add: reorder_variables_hint_def)}]
-  THEN' CONVERSION ((Simplifier.rewrite |> Misc.mk_ctxt_conv Conv.arg1_conv 
+(* Given a subgoal of the form "liftOp (?trafo U) Q = liftOp U R", solves it by instantiating
+   ?trafo suitably. *)
+fun extend_op_vars_tac ctxt = let
+  val subtac = CONVERSION ((Simplifier.rewrite |> Misc.mk_ctxt_conv Conv.arg1_conv 
                     |> Misc.mk_ctxt_conv HOLogic.Trueprop_conv |> Conv.params_conv ~1) ctxt)
-  THEN' resolve_tac ctxt @{thms refl}
+                THEN' resolve_tac ctxt @{thms refl}
+  val maintac = 
+    resolve_tac ctxt [@{lemma \<open>(\<And>U. reorder_variables_hint (liftOp U R) Q = liftOp (trafo U) Q)
+                                  \<Longrightarrow> liftOp (trafo U) Q = liftOp U R\<close> 
+                              by (simp add: reorder_variables_hint_def)}]
+    THEN' subtac
+  val special_case_tac1 = resolve_tac ctxt [@{lemma \<open>liftOp U Q = liftOp U Q\<close> by auto}]
+  fun special_case_tac2 i st =
+    (resolve_tac ctxt [@{lemma \<open>liftOp (trafo U) R = liftOp U S
+               \<Longrightarrow> distinct_qvars (variable_concat Q R)
+               \<Longrightarrow> liftOp (id_cblinfun \<otimes>\<^sub>o trafo U) (variable_concat Q R) = liftOp U S\<close>
+        by (metis distinct_qvars_swap lift_extendL)}]
+    THEN' FIRST' [special_case_tac1, special_case_tac2]
+    THEN' distinct_qvars_tac ctxt) i st
+  in
+    FIRST' [special_case_tac1, special_case_tac2, maintac]
+  end
 
 (* Given a subgoal of the form "liftOp (?trafoU U) ?QR = liftOp U Q \<and> liftOp (?trafoV V) ?QR = liftOp V R",
    solves it by instantiating ?trafoU, ?trafoV, and ?QR suitably. *)

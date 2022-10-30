@@ -31,7 +31,13 @@ lemma
 
 lemma 
   assumes \<open>qrhl A [qapply \<lbrakk>q, s\<rbrakk> Expr[U \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V]] [] B\<close>
-  shows \<open>qrhl A [qapply \<lbrakk>q,s\<rbrakk> Expr[V], qapply \<lbrakk>q\<rbrakk> Expr[U]] [] B\<close>
+  shows \<open>qrhl A [qapply \<lbrakk>q, s\<rbrakk> Expr[V], qapply \<lbrakk>q\<rbrakk> Expr[U]] [] B\<close>
+  apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
+  using assms by simp
+
+lemma 
+  assumes \<open>qrhl A [qapply \<lbrakk>r, s, q\<rbrakk> Expr[id_cblinfun \<otimes>\<^sub>o id_cblinfun \<otimes>\<^sub>o U o\<^sub>C\<^sub>L V]] [] B\<close>
+  shows \<open>qrhl A [qapply \<lbrakk>r, s, q\<rbrakk> Expr[V], qapply \<lbrakk>q\<rbrakk> Expr[U]] [] B\<close>
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
   using assms by simp
 
@@ -47,7 +53,5 @@ lemma
   oops
 
 end
-
-
 
 end
