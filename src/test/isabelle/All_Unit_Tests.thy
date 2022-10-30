@@ -1,8 +1,7 @@
 theory All_Unit_Tests
   imports 
-    (* Tests *)
     Test_Misc Test_Tactics Test_Expressions Test_QRHL_Core Test_Weakest_Precondition
-    Test_QRHL_Operations Test_Strongest_Postcondition
+    Test_QRHL_Operations Test_Strongest_Postcondition Test_Squash_Sampling
 begin
 
 ML \<open>
