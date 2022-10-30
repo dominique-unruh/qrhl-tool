@@ -34,6 +34,24 @@ lemma squash_assign:
          denotation (assign (variable_concat Q R) de)"
   by (cheat squash_assign)
 
+lemma squash_qinit_qapply:
+  assumes \<open>distinct_qvars Q\<close>
+  assumes \<open>distinct_qvars R\<close>
+  assumes \<open>\<And>U::_ \<Rightarrow>\<^sub>C\<^sub>L _. liftOp (trafo U) Q = liftOp U R\<close>
+  assumes \<open>U'\<psi> = map_expression2 (\<lambda>U \<psi>. trafo U *\<^sub>V \<psi>) U \<psi>\<close>
+  shows \<open>denotation (block [qinit Q \<psi>, qapply R U])
+       = denotation (qinit Q U'\<psi>)\<close>
+  by (cheat squash_qinit_qapply)
+
+lemma squash_qapply_qapply:
+  assumes \<open>distinct_qvars Q\<close>
+  assumes \<open>distinct_qvars R\<close>
+  assumes \<open>\<And>U V::_ \<Rightarrow>\<^sub>C\<^sub>L _. liftOp (trafoU U) QR = liftOp U Q \<and> liftOp (trafoV V) QR = liftOp V R\<close>
+  assumes \<open>UV = map_expression2 (\<lambda>U V. trafoV V o\<^sub>C\<^sub>L trafoU U) U V\<close>
+  shows \<open>denotation (block [qapply Q U, qapply R V])
+       = denotation (qapply QR UV)\<close>
+  by (cheat squash_qapply_qapply)
+
 (* lemma assign_sample:
   shows "denotation (assign Q e) = denotation (sample Q (map_expression (\<lambda>x. uniform {x}) e))"
   by (cheat assign_sample) *)
@@ -226,13 +244,15 @@ ML \<open>
 structure Squash_Sampling = struct
 
 fun squash_sampling_focused_tac ctxt = 
-K all_tac
-  THEN' resolve_tac ctxt @{thms squash_sampling squash_sampling_assign squash_assign_sampling squash_assign}
-  THEN' (K (print_tac ctxt "foc1"))
-  THEN' Expressions.subst_expression_tac ctxt
-  THEN' (K (print_tac ctxt "foc2"))
-  THEN' Expressions.map_expression_tac ctxt
-  THEN' (K (print_tac ctxt "foc3"))
+    (resolve_tac ctxt @{thms squash_sampling squash_sampling_assign squash_assign_sampling squash_assign}
+     THEN' Expressions.subst_expression_tac ctxt
+     THEN' Expressions.map_expression_tac ctxt)
+  ORELSE'
+    (resolve_tac ctxt @{thms squash_qinit_qapply}
+     THEN' QRHL.distinct_qvars_tac ctxt
+     THEN' QRHL.distinct_qvars_tac ctxt
+     THEN' QRHL.extend_op_vars_tac ctxt
+     THEN' Expressions.map_expression_tac ctxt)
 
 fun squash_sampling_tac left ctxt =
   resolve_tac ctxt (if left then @{thms squash_left_qrhl squash_left_deneq}
@@ -251,39 +271,5 @@ fun squash_sampling_tac left ctxt =
   THEN' Misc.append_list_tac ctxt *)
 end\<close>
 
-(* TODO remove *)
-variables classical x :: bit and classical y :: bit and classical z ::bit begin
-schematic_goal xxx: "qrhl A
- [sample \<lbrakk>var_z\<rbrakk> Expr[uniform UNIV], sample \<lbrakk>var_x\<rbrakk> Expr[uniform {1,z}], sample \<lbrakk>var_y\<rbrakk> Expr[uniform {x,z}]]
- [assign \<lbrakk>\<rbrakk> Expr[()]] Expr[Cla[x1=y2]]"
-  apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  apply simp
-  oops
-
-schematic_goal xxx: "
- denotation (block [assign \<lbrakk>var_z\<rbrakk> Expr[3], sample \<lbrakk>var_z\<rbrakk> Expr[uniform UNIV], assign \<lbrakk>var_x\<rbrakk> Expr[1], assign \<lbrakk>var_y\<rbrakk> Expr[x]])
- = denotation (block [assign \<lbrakk>\<rbrakk> Expr[()]])"
-  apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  apply simp
-  apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  apply simp
-  apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  apply simp
-  oops
-
-schematic_goal xxx: "qrhl A
- [assign \<lbrakk>\<rbrakk> Expr[()]] 
- [assign \<lbrakk>var_z\<rbrakk> Expr[3], sample \<lbrakk>var_z\<rbrakk> Expr[uniform UNIV], assign \<lbrakk>var_x\<rbrakk> Expr[1], assign \<lbrakk>var_y\<rbrakk> Expr[x]]
-Expr[Cla[x1=y2]]"
-  apply (tactic \<open>Squash_Sampling.squash_sampling_tac false \<^context> 1\<close>)
-  apply simp
-  apply (tactic \<open>Squash_Sampling.squash_sampling_tac false \<^context> 1\<close>)
-  apply simp
-  apply (tactic \<open>Squash_Sampling.squash_sampling_tac false \<^context> 1\<close>)
-  apply simp
-  oops
-
-end
 
 end

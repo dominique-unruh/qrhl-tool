@@ -628,4 +628,18 @@ fun distinct_qvars_guard_simproc _ _ ct = let
   val disjoint = null inter
   in if disjoint then SOME @{lemma \<open>DISTINCT_QVARS_GUARD x \<equiv> x\<close> by (simp add: DISTINCT_QVARS_GUARD_def)} else NONE end
 
+fun distinct_qvars_tac ctxt : int -> tactic =
+  resolve_tac ctxt [@{lemma \<open>DISTINCT_QVARS_GUARD (distinct_qvars Q) \<Longrightarrow> distinct_qvars Q\<close> 
+                      by (simp add: DISTINCT_QVARS_GUARD_def)}]
+  THEN' simp_tac ctxt
+
+fun extend_op_vars_tac ctxt =
+  resolve_tac ctxt [@{lemma \<open>(\<And>U. reorder_variables_hint (liftOp U R) Q = liftOp (trafo U) Q)
+                                \<Longrightarrow> liftOp (trafo U) Q = liftOp U R\<close> 
+                            by (simp add: reorder_variables_hint_def)}]
+  THEN' CONVERSION ((Simplifier.rewrite |> Misc.mk_ctxt_conv Conv.arg1_conv 
+                    |> Misc.mk_ctxt_conv HOLogic.Trueprop_conv |> Conv.params_conv ~1) ctxt)
+  THEN' resolve_tac ctxt @{thms refl}
+
+
 end
