@@ -5,7 +5,7 @@ import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.toplevel.Parser
 import de.unruh.isabelle.mlvalue.Implicits._
-import de.unruh.isabelle.pure.exceptions.{ErrorMLExn, TermMLExn}
+import de.unruh.isabelle.pure.exceptions.{ErrorMLException, TermMLException}
 import hashedcomputation.{Hash, HashTag, Hashable}
 import hashedcomputation.Implicits._
 
@@ -18,7 +18,7 @@ case class RuleTac(rule:String) extends IsabelleTac[String]("apply_rule",
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] =
     try super.apply(state, goal)
     catch {
-      case e : ErrorMLExn => throw UserException(e.message) // Usually a more-or-less informative message, can forward it to the user as a non-internal error
+      case e : ErrorMLException => throw UserException(e.message) // Usually a more-or-less informative message, can forward it to the user as a non-internal error
     }
 
   override def hash: Hash[RuleTac.this.type] = HashTag()(Hashable.hash(rule))

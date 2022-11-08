@@ -79,6 +79,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
   }
 
   /** Free variables */
+    // TODO use IsabelleX.freeVars instead
   private def freeVars(term: Term): Set[String] = {
     val fv = Set.newBuilder[String]
     def collect(t:Term) : Unit = t match {

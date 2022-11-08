@@ -16,6 +16,7 @@ import de.unruh.isabelle.control.Isabelle.{DInt, DList, DObject}
 import de.unruh.isabelle.pure.{MLValueTerm, Term}
 
 // Implicits
+import de.unruh.isabelle.control.Isabelle.executionContext
 import de.unruh.isabelle.mlvalue.Implicits._
 import de.unruh.isabelle.pure.Implicits._
 import MLValueConverters.Implicits._
@@ -23,7 +24,7 @@ import MLValueConverters.Implicits._
 
 object MLValueConverters {
   object StatementConverter extends Converter[Statement] {
-    override def store(value: Statement)(implicit isabelle: control.Isabelle, ec: ExecutionContext): MLValue[Statement] = value match {
+    override def store(value: Statement)(implicit isabelle: control.Isabelle): MLValue[Statement] = value match {
       case local: Local =>
         Ops.makeLocal((
           VarTerm.varlist(local.vars.collect { case CVariable(name, typ) => (name,typ) } :_*),
@@ -48,7 +49,7 @@ object MLValueConverters {
       case call : Call =>
         Ops.makeCall(call)
     }
-    override def retrieve(value: MLValue[Statement])(implicit isabelle: control.Isabelle, ec: ExecutionContext): Future[Statement] = {
+    override def retrieve(value: MLValue[Statement])(implicit isabelle: control.Isabelle): Future[Statement] = {
       Ops.whatStatementOp(value).retrieve.flatMap {
             // Operations are already defined, Ops.destBlock etc.
         case "block" =>
@@ -89,28 +90,28 @@ object MLValueConverters {
       }
     }
 
-    override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"fn ${qrhl_ops}.E_Statement s => s"
-    override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"$qrhl_ops.E_Statement"
+    override def exnToValue(implicit isabelle: Isabelle): String = s"fn ${qrhl_ops}.E_Statement s => s"
+    override def valueToExn(implicit isabelle: Isabelle): String = s"$qrhl_ops.E_Statement"
 
-    override def mlType(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"$qrhl_ops.statement"
+    override def mlType(implicit isabelle: Isabelle): String = s"$qrhl_ops.statement"
   }
 
   object CallConverter extends Converter[Call] {
-    override def retrieve(value: MLValue[Call])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Call] =
+    override def retrieve(value: MLValue[Call])(implicit isabelle: Isabelle): Future[Call] =
       for ((str,args) <- Ops.destCALL(value).retrieve)
         yield Call(str, args :_*)
 
-    override def store(value: Call)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Call] =
+    override def store(value: Call)(implicit isabelle: Isabelle): MLValue[Call] =
       Ops.makeCALL((value.name, value.args.toList))
 
-    override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"fn $qrhl_ops.E_Call x => x"
-    override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"$qrhl_ops.E_Call"
+    override def exnToValue(implicit isabelle: Isabelle): String = s"fn $qrhl_ops.E_Call x => x"
+    override def valueToExn(implicit isabelle: Isabelle): String = s"$qrhl_ops.E_Call"
 
-    override def mlType(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"$qrhl_ops.call"
+    override def mlType(implicit isabelle: Isabelle): String = s"$qrhl_ops.call"
   }
 
   class VarTermConverter[A](implicit conv: Converter[A]) extends Converter[VarTerm[A]] {
-    override def retrieve(value: MLValue[VarTerm[A]])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[VarTerm[A]] = {
+    override def retrieve(value: MLValue[VarTerm[A]])(implicit isabelle: Isabelle): Future[VarTerm[A]] = {
       val valueM = value.insertMLValue[VarTerm,A]
 //        .asInstanceOf[MLValue[VarTerm[MLValue[A]]]]
       Ops.whatVartermOp[A](valueM).retrieve.flatMap {
@@ -135,7 +136,7 @@ object MLValueConverters {
       }
     }
 
-    override def store(value: VarTerm[A])(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[VarTerm[A]] = value match {
+    override def store(value: VarTerm[A])(implicit isabelle: Isabelle): MLValue[VarTerm[A]] = value match {
       case VTUnit =>
         Ops.vartermUnit[A]
       case VTSingle(v) =>
@@ -147,13 +148,13 @@ object MLValueConverters {
           .apply(MLValue(a).insertMLValue[VarTerm,A], MLValue(b).insertMLValue[VarTerm,A])
           .removeMLValue[VarTerm,A]
     }
-    override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"fn $qrhl_ops.E_Varterm vt => $qrhl_ops.map_tree (${conv.exnToValue}) vt"
-    override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"$qrhl_ops.E_Varterm o $qrhl_ops.map_tree (${conv.valueToExn})"
-    override def mlType(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"(${conv.mlType}) $qrhl_ops.tree"
+    override def exnToValue(implicit isabelle: Isabelle): String = s"fn $qrhl_ops.E_Varterm vt => $qrhl_ops.map_tree (${conv.exnToValue}) vt"
+    override def valueToExn(implicit isabelle: Isabelle): String = s"$qrhl_ops.E_Varterm o $qrhl_ops.map_tree (${conv.valueToExn})"
+    override def mlType(implicit isabelle: Isabelle): String = s"(${conv.mlType}) $qrhl_ops.tree"
   }
 
   object SubgoalConverter extends Converter[Subgoal] {
-    override def retrieve(value: MLValue[Subgoal])(implicit isabelle: Isabelle, ec: ExecutionContext): Future[Subgoal] = {
+    override def retrieve(value: MLValue[Subgoal])(implicit isabelle: Isabelle): Future[Subgoal] = {
       for (subgoalType <- Ops.subgoalType(value).retrieve;
            subgoal <- subgoalType match {
              case 1 =>
@@ -176,7 +177,7 @@ object MLValueConverters {
       }*/
     }
 
-    override def store(value: Subgoal)(implicit isabelle: Isabelle, ec: ExecutionContext): MLValue[Subgoal] = value match {
+    override def store(value: Subgoal)(implicit isabelle: Isabelle): MLValue[Subgoal] = value match {
       case QRHLSubgoal(left, right, pre, post, assumptions) =>
         Ops.makeQrhlSubgoal(left.statements, right.statements, pre.isabelleTerm, post.isabelleTerm, assumptions.map(_.isabelleTerm))
       case AmbientSubgoal(goal) =>
@@ -184,9 +185,9 @@ object MLValueConverters {
       case DenotationalEqSubgoal(left, right, assms) =>
         Ops.makeDenotationalEqSubgoal(left, right, assms.map(_.isabelleTerm))
     }
-    override def exnToValue(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"fn $qrhl_ops.E_Subgoal s => s"
-    override def valueToExn(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"$qrhl_ops.E_Subgoal"
-    override def mlType(implicit isabelle: Isabelle, ec: ExecutionContext): String = s"$qrhl_ops.subgoal"
+    override def exnToValue(implicit isabelle: Isabelle): String = s"fn $qrhl_ops.E_Subgoal s => s"
+    override def valueToExn(implicit isabelle: Isabelle): String = s"$qrhl_ops.E_Subgoal"
+    override def mlType(implicit isabelle: Isabelle): String = s"$qrhl_ops.subgoal"
   }
 
   object Implicits {
