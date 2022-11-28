@@ -121,6 +121,16 @@ createIsabelleNames := {
   Process(List(isabelleCommand, "export", "-d", ".", "-O", isabellexDir, "-x", "QRHL.Scala:IsabelleNames.scala", "-p", "1", "QRHL-Scala")).!!
 }
 
+// adapted from https://stackoverflow.com/a/67937807/2646248
+assembly / assemblyMergeStrategy := {
+  case PathList("module-info.class") => MergeStrategy.discard
+  case path if path.endsWith("/module-info.class") => MergeStrategy.discard
+  case other =>
+    val oldStrategy = (assembly / assemblyMergeStrategy).value
+    oldStrategy(other)
+}
+
+
 /*
 
 Steps when releasing a release/release candidate:
