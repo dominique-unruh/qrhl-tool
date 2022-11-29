@@ -6,7 +6,6 @@ import qrhl.isabellex.IsabelleX
 import IsabelleX.{globalIsabelle, symbols}
 import de.unruh.isabelle.control.{Isabelle, IsabelleMLException}
 import globalIsabelle.Ops
-import de.unruh.isabelle.misc.Symbols.{symbolsToUnicode, unicodeToSymbols}
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Const, Context}
 import hashedcomputation.{Hash, HashTag, Hashable}
@@ -103,7 +102,7 @@ case class PrintCommand(symbol : String) extends Command {
         case Some((name, _)) => name
         case None => "lemma"
       }
-      val lemmaname = unicodeToSymbols(currentLemmaName + "_" + Random.between(100000, 999999))
+      val lemmaname = symbols.unicodeToSymbols(currentLemmaName + "_" + Random.between(100000, 999999))
 
       val term = subgoal.toTerm(state.isabelle)
 
@@ -114,12 +113,12 @@ case class PrintCommand(symbol : String) extends Command {
         if (qvars.isEmpty)
           Nil
         else
-          List(unicodeToSymbols(
+          List(symbols.unicodeToSymbols(
             s"  assumes [simp]: ‹declared_qvars ⟦${qvars.map(_.name).mkString(", ")}⟧›"))
 
       val string = globalIsabelle.Ops.print_as_statement(
         initialContext, lemmaname, fixes, declaredQvars, Nil, term.isabelleTerm).retrieveNow
-      val unicode = symbolsToUnicode(string)
+      val unicode = symbols.symbolsToUnicode(string)
 
       output.println()
       output.println(unicode)
