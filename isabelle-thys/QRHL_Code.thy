@@ -4,6 +4,7 @@ theory QRHL_Code
     "Jordan_Normal_Form.Matrix_Impl"
     "HOL-Library.Code_Target_Numeral"
     "HOL-Eisbach.Eisbach"
+    (* Tensor_Product2.Tensor_Product_Code *)
 begin
 
 unbundle jnf_notation

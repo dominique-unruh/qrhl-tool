@@ -12,9 +12,9 @@ theory BOLegacy
     (* This should not be imported here, but in QRHL_Code. But if we import it there, 
        we run into this bug: 
        https://lists.cam.ac.uk/pipermail/cl-isabelle-users/2019-June/msg00063.html *)
-    Tensor_Product.Tensor_Product_Code
+    Tensor_Product2.Tensor_Product_Code
 
-    Complex_Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product.Tensor_Product Tensor_Product.ToDo_Tensor
+    Complex_Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product2.Tensor_Product Tensor_Product2.ToDo_Tensor
 
     Registers.Quantum (* Imported because otherwise instantiations in QRHL_Code for bit will happen that make it impossible to merge Registers.Quantum with that theory.
 And we include it already here so that out simpset removals here won't be overwritten in a merge *)
