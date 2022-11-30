@@ -89,4 +89,14 @@ test_get_sp \<^context> true
 \<close>
 end
 
+(* TEST CASE: qapply *)
+variables quantum q :: bit begin
+ML \<open>
+test_get_sp \<^context> true
+            \<^term>\<open>qapply \<lbrakk>q\<rbrakk> Expr[hadamard]\<close> (* program *)
+            \<^term>\<open>Expr[\<lbrakk>q1\<rbrakk> =\<^sub>q ket 0]\<close> (* pre *)
+            \<^term>\<open>Expr[hadamard\<guillemotright>\<lbrakk>q1::bit variable\<rbrakk> *\<^sub>S \<lbrakk>q1\<rbrakk> =\<^sub>\<qq> |0::bit\<rangle>]\<close> (* expected *)
+\<close>
+end
+
 end

@@ -42,14 +42,14 @@ fun sp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
   | [Const(\<^const_name>\<open>block\<close>,_) $ _] => 
       resolve_tac ctxt (lr @{thms sp1_block_tac} @{thms sp2_block_tac}) n THEN sp_tac0 left ctxt n
       ORELSE error "block"
-(*
+
   | [Const(\<^const_name>\<open>qapply\<close>,_) $ _ $ _] => 
-      (resolve_tac ctxt (lr @{thms wp1_qapply_tac} @{thms wp2_qapply_tac}) n
+      (resolve_tac ctxt (lr @{thms sp1_qapply_tac} @{thms sp2_qapply_tac}) n
        ORELSE error "quantum application")
       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
-*)
+      THEN Expressions.map_expression_tac ctxt n
 
   | [Const(\<^const_name>\<open>qinit\<close>,_) $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms sp1_qinit_tac} @{thms sp2_qinit_tac}) n

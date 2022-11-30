@@ -460,6 +460,79 @@ proof -
     using conseq_rule by blast
 qed
 
+
+lemma sp1_qapply_tac:
+  assumes Q1: "Q1 = index_vars True Q"
+  assumes e1: \<open>e1 = index_expression True e\<close>
+  assumes B: \<open>B = map_expression2 (\<lambda>e1 A. (e1 \<guillemotright> Q1) *\<^sub>S A) e1 A\<close>
+  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[unitary e1]) A e1\<close> (* unitary can probably be weakened to isometry using a different proof *)
+  assumes distinct: \<open>distinct_qvars Q\<close>
+  assumes lossless: \<open>true_expression L\<close>
+  shows "qrhl A [qapply Q e] [] B"
+proof -
+  from distinct have dist_Q1[simp]: \<open>distinct_qvars Q1\<close>
+    by (simp add: Q1 distinct_qvars_index)
+  define A' where \<open>A' = map_expression2 (\<lambda>e\<^sub>1 B. \<CC>\<ll>\<aa>[isometry e\<^sub>1] \<sqinter> ((e\<^sub>1\<guillemotright>Q1)* *\<^sub>S (B \<sqinter> (e\<^sub>1\<guillemotright>Q1 *\<^sub>S \<top>)))) e1 B\<close>
+
+  have \<open>qrhl A' [qapply Q e] [] B\<close>
+    using Q1 e1 A'_def apply (rule wp1_qapply_tac)
+    by -
+  moreover 
+  have \<open>A \<le> A'\<close>
+  proof (unfold less_eq_expression_def le_fun_def, rule allI)
+    fix m
+    let ?A = \<open>expression_eval A m\<close>
+    let ?e1 = \<open>expression_eval e1 m\<close>
+    let ?A' = \<open>expression_eval A' m\<close>
+    from lossless
+    have \<open>?A \<le> ?A \<sqinter> Cla[unitary ?e1]\<close>
+      by (simp add: lossless_exp true_expression_def)
+    also have \<open>?A \<sqinter> Cla[unitary ?e1] \<le> ?A'\<close>
+      by (auto simp add: A'_def B expression_eval_map_expression3
+          simp flip: cblinfun_compose_image adjoint_lift)
+    finally show \<open>?A \<le> ?A'\<close>
+      by -
+  qed
+  ultimately show ?thesis
+    using conseq_rule by blast
+qed
+
+lemma sp2_qapply_tac:
+  assumes Q2: "Q2 = index_vars False Q"
+  assumes e2: \<open>e2 = index_expression False e\<close>
+  assumes B: \<open>B = map_expression2 (\<lambda>e2 A. (e2 \<guillemotright> Q2) *\<^sub>S A) e2 A\<close>
+  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[unitary e2]) A e2\<close> (* unitary can probably be weakened to isometry using a different proof *)
+  assumes distinct: \<open>distinct_qvars Q\<close>
+  assumes lossless: \<open>true_expression L\<close>
+  shows "qrhl A [] [qapply Q e] B"
+proof -
+  from distinct have dist_Q2[simp]: \<open>distinct_qvars Q2\<close>
+    by (simp add: Q2 distinct_qvars_index)
+  define A' where \<open>A' = map_expression2 (\<lambda>e\<^sub>2 B. \<CC>\<ll>\<aa>[isometry e\<^sub>2] \<sqinter> ((e\<^sub>2\<guillemotright>Q2)* *\<^sub>S (B \<sqinter> (e\<^sub>2\<guillemotright>Q2 *\<^sub>S \<top>)))) e2 B\<close>
+
+  have \<open>qrhl A' [] [qapply Q e] B\<close>
+    using Q2 e2 A'_def apply (rule wp2_qapply_tac)
+    by -
+  moreover 
+  have \<open>A \<le> A'\<close>
+  proof (unfold less_eq_expression_def le_fun_def, rule allI)
+    fix m
+    let ?A = \<open>expression_eval A m\<close>
+    let ?e2 = \<open>expression_eval e2 m\<close>
+    let ?A' = \<open>expression_eval A' m\<close>
+    from lossless
+    have \<open>?A \<le> ?A \<sqinter> Cla[unitary ?e2]\<close>
+      by (simp add: lossless_exp true_expression_def)
+    also have \<open>?A \<sqinter> Cla[unitary ?e2] \<le> ?A'\<close>
+      by (auto simp add: A'_def B expression_eval_map_expression3
+          simp flip: cblinfun_compose_image adjoint_lift)
+    finally show \<open>?A \<le> ?A'\<close>
+      by -
+  qed
+  ultimately show ?thesis
+    using conseq_rule by blast
+qed
+
 ML_file "strongest_postcondition.ML"
 
 end
