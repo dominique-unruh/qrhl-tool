@@ -337,7 +337,7 @@ object UnknownDirectoryEntry extends DirectoryEntry {
 }
 
 case object NonExistingDirectoryEntry extends MaybeDirectoryEntry {
-  override def hash: Hash[NonExistingDirectoryEntry.this.type] = HashTag()()
+  override def hash: Hash[NonExistingDirectoryEntry.this.type] = Hash.randomHash()
 }
 
 object AccessDeniedEntry extends DirectoryEntry {
