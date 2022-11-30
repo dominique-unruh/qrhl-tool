@@ -2146,9 +2146,9 @@ subgoal out of the way temporarily and focus on other subgoals first).
 
 \tactic{byqrhl}
 
-This tactic transforms a goal comparing to programs into a qRHL goal comparing the same programs.
+This tactic transforms a goal comparing two programs into a qRHL goal comparing the same programs.
 
-It works both on goals comparing probabilities (e.g., \texttt{Pr[...] <= Pr[...]}) as well as denotational-equivalence goals.
+It can be applied to goals comparing probabilities (e.g., \texttt{Pr[...] <= Pr[...]}) as well as to denotational-equivalence goals.
 
 \paragraph{Comparing probabilities.}
 When invoked as ``\texttt{byqrhl qvars $\qq^{(1)},\dots,\qq^{(m)}$.}'', transforms a goal of the form
@@ -2216,7 +2216,7 @@ it transforms a denotational equivalence of two programs $\bc$ and $\bd$ into a 
 
 
 The tactic implements the following rule:
-\begin{multline*}
+\begin{align*}
 \inferrule{
   \pb\rhl A
   \bc\bd
@@ -2225,14 +2225,19 @@ The tactic implements the following rule:
 {
   \denotc\bc = \denotc\bd
 }
+&
+  \qquad\qquad
+  \begin{aligned}
+    &\text{with} && e_1 := \idx1e,\ e'_2 := \idx2e'
 \\
-\text{with}\quad e_1 := \idx1e,\ e'_2 := \idx2e'
+&\text{and} &&  A := \CL{\yy^{(1)}_1=\yy^{(1)}_2\land\dots\land\yy^{(n)}_1=\yy^{(n)}_2}
 \\
-\text{and}\quad  A := {\CL{\yy^{(1)}_1=\yy^{(1)}_2\land\dots\land\yy^{(n)}_1=\yy^{(n)}_2}\sqcap
+&&&\qquad\quad{}\sqcap
     \llbracket \qq_1^{(1)},\dots,\qq_1^{(m)} \rrbracket
     \mathrel{\mathord\equiv\mathfrak q}
-    \llbracket \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket}
-\end{multline*}
+    \llbracket \qq_2^{(1)},\dots,\qq_2^{(m)} \rrbracket
+  \end{aligned}
+\end{align*}
 Here $\yy^{(1)},\dots,\yy^{(n)}$
 are the free classical variables of $\bc$ and $\bd$.
 And $\qq^{(1)},\dots,\qq^{(m)}$, specified in the tactic-invocation,
@@ -3056,28 +3061,28 @@ The tactic is justified by \ruleref{RenameQrhl1/2} in
 
 \tactic{rewrite}
 
-This tactic allows to replace a sequence of lines in the left or right program by different lines.
-A new subgoal stating the denotational equivalence between those lines and the replacement is produced.
+This tactic allows to replace a sequence of lines in the left or right program by different code.
+A new subgoal stating the denotational equivalence between those lines and the replacement code is produced.
 
 The tactic is invoked on a qRHL goal or a denotational-equivalence goal as:
 \begin{lstlisting}
   rewrite left/right $n$--$m$ -> $\mathit{replacement}$.
 \end{lstlisting}
 Here we use \texttt{left} or \texttt{right} to indicate whether we want to rewrite the left or the right program.
-This tactic will replace lines $n$--$m$ in the that program by the code specified by \textit{replacement}.
+This tactic will replace lines $n$--$m$ in that program by the code specified by \textit{replacement}.
 And \textit{replacement} can be any of:
 \begin{itemize}
 \item \texttt{left/right $i$--$j$}: The content of lines $i$--$j$ from the left/right program, respectively.
 \item \texttt{\{ }\textit{code}\texttt{ \}}: Replace by the explicitly specified code \textit{code} (given in the syntax from \autoref{sec:tool.programs}).
 \end{itemize}
 
-For example:
+\noindent For example:
 \begin{lstlisting}
-  rewrite left 2-3 -> right 2-2
+  rewrite left 2-3 -> right 2-2.
 \end{lstlisting}
-will replace lines 2,3 in the left program by whatever line 2 in the right program is.
+will replace lines 2,3 in the left program by whatever line 2 in the right program is. And
 \begin{lstlisting}
-  rewrite right 2-3 -> { call P; }
+  rewrite right 2-3 -> { call P; }.
 \end{lstlisting}
 will replace lines 2,3 in the right program by a call to \texttt{P}.
 
@@ -3089,6 +3094,8 @@ The tactic produces two subgoals:
 
 Note: Currently it is only possible to replace lines on the toplevel of the program.
 E.g., it is not possible to replace, say, lines inside a branch of an \texttt{if}-statement.
+
+\paragraph{Example file.} An example of this tactic in use is given in the example file \texttt{examples/rewrite.qrhl}.
 
 
 \tactic{rnd}
@@ -3591,21 +3598,21 @@ These conditions are checked automatically and produce no further subgoals.
 \medskip
 
 \paragraph{Excluding subprograms.} Sometimes, the variable disjointness conditions are too stringent.
-For example, the block $\bc$ could have a single line $\be_1$ of code that does have a shared quantum variable with the block $\bd$.
+For example, the block $\bc$ (specified by $\mathit{range_1}$) could have a single line $\be_1$ of code that does have a shared quantum variable with the block $\bd$ (specified by $\mathit{range_2}$).
 In that case, we cannot swap $\bc$ and $\bd$ using the syntax above, but we might be able to do so if we prove by hand that $\be_1$ and $\bd$ commute.
-(E.g., if $\be_1$ and $\bd$ are both very simple then this might be doable with elementary tactics.)
+(E.g., if $\be_1$ and $\bd$ are both very simple, then this might be doable with elementary tactics.)
 
 This use case is facilitated by the following syntax:
 \begin{lstlisting}
   swap left/right $\mathit{range_1}$ $\mathit{range_2}$ subprograms: { $\be_1$ }, ..., { $\be_m$ }.
 \end{lstlisting}
-Here $\be_1$ to $\be_m$ are program fragments (in the syntax from \autoref{sec:tool.programs}) of the first block (selected by $\mathit{range_1}$) that should be excluded from the variable disjointness conditions.\footnote{%
+Here $\be_1$ to $\be_m$ are program fragments (in the syntax from \autoref{sec:tool.programs}) of the block $\bc$ (selected by $\mathit{range_1}$) that should be excluded from the variable disjointness conditions.\footnote{%
   A current limitation: $\be_i$ will be found only if it is a single statement or a complete block in the first block.
   I.e., if $\be_i=\texttt{x;y}$, it is found if the left program is \texttt{x;y}, or if the left program is \texttt{if (...) { x;y } else ...}, but not if the left program is \texttt{x;y;z}.}
 An additional subgoal will be generated for each $\be_i$, stating the denotational equivalence of $\be_i;\bd$ and $\bd;\be_i$.
 These subgoals will come before the rewritten original subgoal.
 
-Note: The \tacticref{byqrhl} tactic can be used to prove denotational-equivalence subgoals.
+Note: The \tacticref{byqrhl} tactic can be used to prove the resulting denotational-equivalence subgoals.
 
 \medskip
 
@@ -3613,14 +3620,14 @@ For example: Say the right program of the current qRHL subgoal is \texttt{x <- x
 \begin{lstlisting}
   swap right 2-2 1-1 subprograms: { call P; }.
 \end{lstlisting}
-This will swap the two lines, and exclude the program call to \texttt{P} by \texttt{A} from the requirement to not contain the variable \texttt{x}.
+This will swap the two statements, and exclude the program call to \texttt{P} in \texttt{call A(P)} from the requirement to not contain the variable \texttt{x}.
 We then get a subgoal claiming that \texttt{x <- x + 1; call P;} and \texttt{call P; x <- x + 1;} are denotationally equivalent.
 This may be much easier to prove than the original goal, depending on the definition of \texttt{P}.
 
 Note: We gave the range \texttt{2-2} before the range \texttt{1-1} in the command.
 (I.e., \texttt{swap right 2-2 1-1 ...}, not \texttt{swap right 1-1 2-2 ...}.)
 For the basic form of the swap tactic, the order does not matter, but in the present case it does:
-The subprograms $\be_i$ are only searched in the \texttt{first} range given (i.e., the block $\bc$).
+The subprograms $\be_i$ are only searched for in $\mathit{range_1}$ (i.e., in block $\bc$), not in $\mathit{range_2}$.
 
 \medskip
 
@@ -3631,15 +3638,23 @@ Then the tactic parses $\bc$ as $\bc=:C[\be_1,\dots,\be_m]$ where $C$ is a multi
 \item The free quantum variables of $C$ and $\bd$ must be disjoint.
 \item The written classical variables of $C$ must be disjoint from the classical variables of $\bd$.
 \item The written classical variables of $\bd$ must be disjoint from the classical variables of $C$.
-\item The inner variables\footnote{Local variables of $C$ that have a hole of $C$ in their scope.} of $C$ must be disjoint from the free variables of $\bd$.
+\item The inner variables\footnote{That is, local variables of $C$ that have a hole of $C$ in their scope.} of $C$ must be disjoint from the free variables of $\bd$.
 \end{itemize}
 (If these are not satisfied, the tactic will give an error explaining which condition was violated.)
 
 The resulting subgoals are then:
 \begin{itemize}
-\item If $\mathtt{range_1}$ comes before $\mathit{range_2}$ in the program, for each $i=1,\dots,n$, the denotational equivalence of  ${\be_i;\bd}$ and $\bd;\be_i$.
-\item If $\mathit{range_2}$ comes before $\mathit{range_1}$ in the program, for each $i=1,\dots,n$, the denotational equivalence of   $\bd;\be_i$ and ${\be_i;\bd}$.
-\item The original subgoal with $\bc;\bd$ replaced by $\bd;C[\be_1',\dots,\be_m]$.
+\item If $\mathit{range_1}$ comes before $\mathit{range_2}$ in the program:
+  \TODOQ{check: is d;c before or after?}
+  \begin{itemize}
+  \item For each $i=1,\dots,n$: Denotational equivalence of  ${\be_i;\bd}$ and $\bd;\be_i$.
+  \item The original subgoal with $\bc;\bd$ replaced by $\bd;\bc$.
+  \end{itemize}
+\item If $\mathit{range_2}$ comes before $\mathit{range_1}$ in the program:
+  \begin{itemize}
+  \item For each $i=1,\dots,n$: Denotational equivalence of   $\bd;\be_i$ and ${\be_i;\bd}$.
+  \item The original subgoal with $\bd;\bc$ replaced by $\bc;\bd$.
+  \end{itemize}
 \end{itemize}
 
 \paragraph{Changing subprograms.}
@@ -3649,14 +3664,14 @@ It might be that $\be_i$ and $\bd$ do not actually commute, but moving $\bd$ pas
 For example, consider the following program:
 \begin{equation*}
   \texttt{x <- x + 1; call A(P);}
-  \tag{*}
+  \tag{\ensuremath*}
 \end{equation*}
 Here \emph{A} does not use \texttt{x}, and \texttt{P := \{ y <- 2 * x; \}}.
-We cannot just swap \texttt{x <- x + 1} and \texttt{call A(P)} because \texttt{x <- x + 1} and \texttt{call P} do not even commute.
-However, we can swap \texttt{x <- x + 1} and \texttt{call A(P)} if we replace \texttt{P} by \texttt{P' := \{ y <- 2 * (x + 1) \}}.
-That is, we can rewrite program $(*)$ into \texttt{call A(P'); x <- x + 1;}, and all we need to prove is that \texttt{x <- x + 1; call P;} and \texttt{call P'; x <- x + 1;} are denotationally equivalent (which is easy gives the definitions of \texttt{P} and \texttt{P'}).
+We cannot just swap \texttt{x <- x + 1} and \texttt{call A(P)} because \texttt{x <- x + 1} and \texttt{call P} do not commute.
+However, we can swap \texttt{x <- x + 1} and \texttt{call A(P)} if we replace \texttt{P} by \texttt{P' := \{ y <- 2 * (x + 1) \}} after swapping.
+That is, we can rewrite program $(*)$ into \texttt{call A(P'); x <- x + 1;}, and all we need to prove is that \texttt{x <- x + 1; call P;} and \texttt{call P'; x <- x + 1;} are denotationally equivalent (which is easy given the definitions of \texttt{P} and \texttt{P'}).
 
-This can be achieved by using an even more general form of the swap tactic.
+This can be achieved by using an even more general form of the \texttt{swap} tactic.
 In this specific example (assuming that $(*)$ is the left hand side of a qRHL judgment), we can write:
 \begin{lstlisting}
   swap left 2-2 1-1 subprograms: { call P; } -> { call P'; }.
@@ -3668,7 +3683,7 @@ Then we get two subgoals: the denotational equivalence of \texttt{x <- x + 1; ca
 This form is particularly useful in the quantum setting if, e.g., $\bd$ is a basis transform on a quantum variable $\qq$, and some subprogram $\be_i$ of $\bc$ accesses $\qq$.
 Then we have to replace $\be_i$ by $\be_i'$ which accesses $\qq$ in a basis-transformed way.
 
-Note that the \tacticref{byqrhl} tactic can be used to prove denotational-equivalence subgoals.
+Note: The \tacticref{byqrhl} tactic can be used to prove denotational-equivalence subgoals.
 
 \medskip
 
@@ -3677,7 +3692,7 @@ More precisely, in its most general form, the \texttt{swap} tactic is invoked as
   swap left/right $\mathit{range_1}$ $\mathit{range_2}$
            subprograms: { $\be_1$ } -> { $\be_1'$ }, ..., { $\be_m$ } -> { $\be_m'$ }.
 \end{lstlisting}
-Each of the ``\texttt{-> $\be_i'$}'' is optional. If it is ommitted, $\be_i':=\be_i$ is used.
+Each of the ``\texttt{-> \{\,$\be_i'$\,\}}'' is optional. If it is ommitted, $\be_i':=\be_i$ is used.
 
 Let $\bc$ and $\bd$ denote the code fragments selected by $\mathit{range_1}$ and $\mathit{range_2}$, respectively.
 The tactic parses $\bc$ as $\bc=:C[\be_1,\dots,\be_m]$ where $C$ is a multi-hole context. Then the requirements are:
@@ -3685,15 +3700,22 @@ The tactic parses $\bc$ as $\bc=:C[\be_1,\dots,\be_m]$ where $C$ is a multi-hole
 \item The free quantum variables of $C$ and $\bd$ must be disjoint.
 \item The written classical variables of $C$ must be disjoint from the classical variables of $\bd$.
 \item The written classical variables of $\bd$ must be disjoint from the classical variables of $C$.
-\item The inner variables\footnote{Local variables of $C$ that have a hole of $C$ in their scope.} of $C$ must be disjoint from the free variables of $\bd$.
+\item The inner variables\footnote{That is, local variables of $C$ that have a hole of $C$ in their scope.} of $C$ must be disjoint from the free variables of $\bd$.
 \end{itemize}
 (If these are not satisfied, the tactic will give an error explaining which condition was violated.)
 
 The resulting subgoals are then:
 \begin{itemize}
-\item If $\mathtt{range_1}$ comes before $\mathit{range_2}$ in the program, for each $i=1,\dots,n$, the denotational equivalence of  ${\be_i;\bd}$ and $\bd;\be_i'$.
-\item If $\mathit{range_2}$ comes before $\mathit{range_1}$ in the program, for each $i=1,\dots,n$, the denotational equivalence of   $\bd;\be_i$ and ${\be_i';\bd}$.
-\item The original subgoal with $\bc;\bd$ replaced by $\bd;C[\be_1',\dots,\be_m]$.
+\item If $\mathit{range_1}$ comes before $\mathit{range_2}$ in the program:
+  \begin{itemize}
+  \item For each $i=1,\dots,n$: Denotational equivalence of  ${\be_i;\bd}$ and $\bd;\be_i'$.
+  \item The original subgoal with $\bc;\bd$ replaced by $\bd;C[\be_1',\dots,\be_m]$.
+  \end{itemize}
+\item If $\mathit{range_2}$ comes before $\mathit{range_1}$ in the program:
+  \begin{itemize}
+  \item For each $i=1,\dots,n$: Denotational equivalence of $\bd;\be_i$ and ${\be_i';\bd}$.
+  \item The original subgoal with $\bd;\bc$ replaced by $C[\be_1',\dots,\be_m];\bd$.
+  \end{itemize}
 \end{itemize}
 
 
