@@ -1,6 +1,6 @@
 session QRHL = "QRHL-Tensor_Product" +
   options [record_proofs=1, quick_and_dirty=true]
-  sessions CryptHOL Complex_Bounded_Operators
+  sessions CryptHOL Complex_Bounded_Operators Registers
   theories QRHL QRHL_Operations
 
 session "QRHL-Tensor_Product" in "fake-session-dir/1" = "QRHL-Prerequisites" +

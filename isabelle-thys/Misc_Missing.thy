@@ -81,7 +81,7 @@ definition[simp]: "divide_bit = (( * ) :: bit\<Rightarrow>_\<Rightarrow>_)"
 instance by intro_classes (transfer; auto)+
 end *)
 
-(* derive universe bit *)
+derive universe bit
 
 
 (* lemma bit_cases[cases type:bit]: "(x=0 \<Longrightarrow> P) \<Longrightarrow> (x=1 \<Longrightarrow> P) \<Longrightarrow> P" for x :: bit (* bit.exhaust *)
@@ -130,6 +130,7 @@ definition (in zero_neq_one) of_bit :: "bit \<Rightarrow> 'a"
 
 lemma UNIV_bit: "(UNIV::bit set) = {0,1}" by auto
 
+(* Already defined in Registers.Misc *)
 (* instantiation bit :: enum begin
 definition "enum_bit = [0::bit,1]"
 definition "enum_all_bit P \<longleftrightarrow> P (0::bit) \<and> P 1"

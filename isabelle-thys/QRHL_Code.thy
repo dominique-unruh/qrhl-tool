@@ -4,7 +4,6 @@ theory QRHL_Code
     "Jordan_Normal_Form.Matrix_Impl"
     "HOL-Library.Code_Target_Numeral"
     (* Tensor_Product.Tensor_Product_Code *)
-    "HOL-Eisbach.Eisbach"
 begin
 
 unbundle jnf_notation
@@ -61,7 +60,7 @@ definition "less_eq_bit (a::bit) b = (a=b \<or> a<b)"
 instance apply intro_classes unfolding less_bit_def less_eq_bit_def by auto
 end
 
-(* TODO move *)
+(* Defined in Registers.Misc *)
 (* instantiation bit :: card_UNIV begin
 definition "finite_UNIV_bit = Phantom(bit) True"
 definition "card_UNIV_bit = Phantom(bit) (2::nat)"
@@ -106,10 +105,10 @@ lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = ad
 (* declare ord_clinear_space_inst.less_eq_clinear_space[code del]
 declare ord_clinear_space_inst.less_clinear_space[code del] *)
 
-(* derive (eq) ceq bit *)
+(* derive (eq) ceq bit *) (* In Registers.Quantum *)
 derive (linorder) compare_order bit
-(* derive (compare) ccompare bit *)
-(* derive (dlist) set_impl bit *)
+(* derive (compare) ccompare bit *) (* In Registers.Quantum *)
+(* derive (dlist) set_impl bit *) (* In Registers.Quantum *)
 derive (eq) ceq real
 derive (linorder) compare real
 derive (compare) ccompare real
@@ -129,7 +128,7 @@ lemmas prepare_for_code_add =
   (* qregister_of_cregister_pair[symmetric] qregister_of_cregister_chain[symmetric] *)
   apply_qregister_of_cregister permute_and_tensor1_cblinfun_code_prep
   same_outside_cregister_def
-  
+
   case_prod_beta if_distrib[of fst] if_distrib[of snd] prod_eq_iff
 
   div_leq_simp mod_mod_cancel
