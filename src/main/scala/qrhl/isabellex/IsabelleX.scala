@@ -27,9 +27,10 @@ import de.unruh.isabelle.pure.exceptions.Exn
 import hashedcomputation.{Hash, HashedValue}
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.codec.digest.DigestUtils
-import org.apache.commons.io.FileUtils
+import org.apache.commons.io.{FileUtils, IOUtils}
 import qrhl.Utils.NestedException
 
+import java.nio.charset.Charset
 import java.security.MessageDigest
 
 //import qrhl.Utils.tryRelativize
@@ -1029,7 +1030,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
 }
 
 object IsabelleX {
-  val version = "2022-RC4"
+  val version: String = IOUtils.toString(getClass.getResource("isabelleVersion"), "ASCII")
 
   /** Checks whether [[Configuration.isabelleHome]] contains Isabelle with correct version.
    * Otherwise exists the program with an error message. */
