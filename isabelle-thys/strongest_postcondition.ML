@@ -36,11 +36,11 @@ fun sp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
       THEN Expressions.index_tac ctxt n
       THEN Expressions.subst_expression_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
-      
+  *)    
   | [Const(\<^const_name>\<open>block\<close>,_) $ _] => 
-      resolve_tac ctxt (lr @{thms wp1_block_tac} @{thms wp2_block_tac}) n THEN wp_tac0 left ctxt n
+      resolve_tac ctxt (lr @{thms sp1_block_tac} @{thms sp2_block_tac}) n THEN sp_tac0 left ctxt n
       ORELSE error "block"
-
+(*
   | [Const(\<^const_name>\<open>qapply\<close>,_) $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms wp1_qapply_tac} @{thms wp2_qapply_tac}) n
        ORELSE error "quantum application")
@@ -83,11 +83,11 @@ fun sp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
       resolve_tac ctxt @{thms skip_rule} n
       ORELSE error "empty program"
 
-(*   | _::_::_ => 
-      (resolve_tac ctxt (lr @{thms wp1_cons_tac} @{thms wp2_cons_tac}) n
+   | _::_::_ => 
+      (resolve_tac ctxt (lr @{thms sp1_cons_tac} @{thms sp2_cons_tac}) n
        ORELSE error "list of statements")
-      THEN wp_tac0 left ctxt (n+1) (* Must happen first to instantiate B' *)
-      THEN wp_tac0 left ctxt n *)
+      THEN sp_tac0 left ctxt (n+1) (* Must happen first to instantiate A'; also to avoid subgoal indexing confusion from new subgoals *)
+      THEN sp_tac0 left ctxt n
 
   | [s] => Misc.error_tac (fn _ => "Statement must be one of assign/sample/block/qinit/qapply/measure/if, not '"^Syntax.string_of_term ctxt s^"'") ctxt
   end)
@@ -100,9 +100,9 @@ fun sp_tac ctxt = SUBGOAL (fn (goal,n) => let
     else 
       resolve_tac ctxt @{thms sp_split_left_right_tac} n
       THEN
-      sp_tac0 true ctxt n
+      sp_tac0 false ctxt (n+1)
       THEN
-      sp_tac0 false ctxt n
+      sp_tac0 true ctxt n
   end)
 
 
@@ -130,18 +130,5 @@ fun sp_seq_tac left right ctxt i =
            (Var(("postcondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i
   THEN
   sp_tac ctxt i
-
-(*   SUBGOAL (fn (goal,n) =>
-    let val (_,p1,p2,B) = Encoding.dest_qrhl_goal goal
-        val stmt = HOLogic.dest_list (if left then p1 else p2) |> the_single
-        val (_,thm) = get_wp left stmt B ctxt (* TODO: this looks silly, why not use wp_tac? *)
-    in
-      resolve_tac ctxt [thm] n
-    end
-  ) (i+1)
- *)
-
-(* fun wp_tac_on_term left ctxt = 
-  Tactics.tac_on_term_concl (wp_seq_tac left ctxt 1) ctxt *)
 
 end
