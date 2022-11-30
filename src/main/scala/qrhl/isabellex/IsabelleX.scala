@@ -12,7 +12,7 @@ import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theo
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import org.log4s
-import qrhl.{Subgoal, UserException}
+import qrhl.{Subgoal, UserException, Utils}
 import qrhl.logic._
 
 import scala.collection.mutable
@@ -23,6 +23,7 @@ import scala.util.{Left, Right}
 import de.unruh.isabelle.control
 import de.unruh.isabelle.misc.{FutureValue, Symbols}
 import hashedcomputation.{Hash, HashedValue}
+import org.apache.commons.io.FileUtils
 
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
@@ -62,22 +63,50 @@ object Configuration {
 
   private lazy val config = {
     val config = new Properties()
-    val filename = distributionDirectory.resolve("qrhl-tool.conf")
-    val stream = try {
-      new FileInputStream(filename.toFile)
-    } catch {
-      case e : IOException =>
-        throw UserException(s"Could not open $filename. (Reason: ${e.getMessage}) Make sure it exists and is readable.")
+    val filenames = List(
+      distributionDirectory.resolve("qrhl-tool.conf"),
+      FileUtils.getUserDirectory.toPath.resolve(".qrhl-tool.conf"),
+      Paths.get("qrhl-tool.conf"))
+      .map (_.normalize.toAbsolutePath)
+      .distinct
+    val filenamesFound = ListBuffer[Path]()
+
+    for (filename <- filenames;
+         if Files.exists(filename)) {
+      val stream = try {
+        new FileInputStream(filename.toFile)
+      } catch {
+        case e: IOException =>
+          throw UserException(s"Could not open $filename. (Reason: ${e.getMessage}) Make sure it is readable.")
+      }
+      val escaped = new String(stream.readAllBytes()).replace("\\", "\\\\")
+      stream.close()
+      config.load(new StringReader(escaped))
+      filenamesFound += filename
     }
-    val escaped = new String(stream.readAllBytes()).replace("\\","\\\\")
-    stream.close()
-    config.load(new StringReader(escaped))
+
+    if (filenamesFound.isEmpty)
+      throw UserException(s"No config files found for qrhl-tool. I looked in the following places: ${filenames.mkString(", ")}")
+
+    println(s"Loaded config file${if (filenamesFound.lengthIs == 1) "" else "s"}: ${filenamesFound.mkString(", ")}")
+
     config
   }
 
   def isabelleHome : Path = config.getProperty("isabelle-home") match {
     case null => throw UserException("Please set isabelle-home in qrhl-tool.conf")
     case path => distributionDirectory.resolve(path)
+  }
+
+  def session : String = config.getProperty("session") match {
+    case null => "QRHL"
+    case session => session
+  }
+
+  def sessionDirs : List[Path] = config.getProperty("session-dirs") match {
+    case null => Nil
+    case dirs => for (str <- dirs.split(raw",\s").toList)
+      yield Paths.get(str.trim).normalize.toAbsolutePath
   }
 
 /*  def isabelleUserDir : Path = config.getProperty("isabelle-user") match {
@@ -952,7 +981,7 @@ object IsabelleX {
 
   private val logger = log4s.getLogger
 
-  val symbols = new Symbols(extraSymbols = List(
+  val symbols = new Symbols(extraSymbolsLowPri = List(
     // Own additions (because Emacs's TeX input method produces these chars):
     ("lbrakk", 0x00301A), ("rbrakk", 0x00301B), ("cdot", 0x0000B7)))
 
@@ -1021,8 +1050,9 @@ object IsabelleX {
   lazy val setup: Isabelle.Setup = de.unruh.isabelle.control.Isabelle.Setup(
     workingDirectory = Configuration.distributionDirectory,
     isabelleHome = Configuration.isabelleHome,
-    logic = "QRHL",
-    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys")),
+    logic = Configuration.session,
+    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys"))
+      ++ Configuration.sessionDirs,
     verbose = true,
 //    /** Must end in .isabelle if provided */
 //    userDir = Some(Configuration.isabelleUserDir)

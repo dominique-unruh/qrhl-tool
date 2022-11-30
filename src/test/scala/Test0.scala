@@ -1,3 +1,4 @@
+import hashedcomputation.filesystem.{FingerprintedDirectorySnapshot, OutdatedSnapshotException, RootsDirectory}
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.isabellex.IsabelleX
 
@@ -7,14 +8,28 @@ import qrhl.Utils.ListSetUtils
 import qrhl.isabellex.IsabelleX.globalIsabelle.intT
 import qrhl.toplevel.{DeclareVariableCommand, ToplevelTest}
 
+import java.nio.file.Paths
+
 object Test0 {
   def main(args: Array[String]): Unit = {
-    val l1 = ListSet(1,2,3)
-    val l2 = ListSet(4,5,6)
-    for (x <- l2) println(x)
-    val l = l1 +++ l2
-    println(l)
-    println(ListSet.empty +++ l2)
+    val root = RootsDirectory()
+    var fs = FingerprintedDirectorySnapshot(root)
+
+    var ok = false
+
+    while (!ok) {
+      try {
+        fs = FingerprintedDirectorySnapshot(root)
+        fs.getFile(Paths.get("/tmp/proofs/games.qrhl"))
+        ok = true
+      } catch {
+        case e: OutdatedSnapshotException =>
+          println(e)
+      }
+    }
+
+    val path = Paths.get("/tmp/proofs/games.qrhl")
+    print(fs.getFile(path))
   }
 }
 
