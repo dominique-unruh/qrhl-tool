@@ -1190,7 +1190,6 @@ object IsabelleX {
   def prettyTyp(typ: Typ): String = symbols.symbolsToUnicode(typ.prettyRaw(context))
 
     def simplify(term: Term, facts: List[String])(implicit executionContext: ExecutionContext): (RichTerm, Thm) = {
-      val global = null
       val (t,thm) = simplifyTermOp(MLValue((term, facts.map(symbols.unicodeToSymbols(_)), context))).retrieveNow
       (RichTerm(t), thm)
     }
@@ -1203,7 +1202,5 @@ object IsabelleX {
     sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys")),
     verbose = true,
     exceptionManager = new MLException.ExceptionManager(_)
-//    /** Must end in .isabelle if provided */
-//    userDir = Some(Configuration.isabelleUserDir)
   )
 }

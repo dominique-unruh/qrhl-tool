@@ -2,10 +2,9 @@ package qrhl.tactic
 
 import org.log4s
 import qrhl._
-import qrhl.isabellex.{IsabelleX, RichTerm}
-import qrhl.toplevel.Parser
+import qrhl.isabellex.IsabelleX
 import de.unruh.isabelle.mlvalue.Implicits._
-import de.unruh.isabelle.pure.exceptions.{ErrorMLException, TermMLException}
+import de.unruh.isabelle.pure.exceptions.ErrorMLException
 import hashedcomputation.{Hash, HashTag, Hashable}
 import hashedcomputation.Implicits._
 
@@ -25,5 +24,5 @@ case class RuleTac(rule:String) extends IsabelleTac[String]("apply_rule",
 }
 
 object RuleTac {
-  private val logger = log4s.getLogger
+//  private val logger = log4s.getLogger
 }

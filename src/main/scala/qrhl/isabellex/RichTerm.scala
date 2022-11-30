@@ -2,11 +2,9 @@ package qrhl.isabellex
 
 import org.log4s
 import org.log4s.Logger
-import qrhl.logic.{CVariable, Environment, ExprVariableUse, QVariable, Variable, VariableUse}
+import qrhl.logic.{CVariable, Environment, ExprVariableUse, Variable}
 
-import scala.collection.mutable
-import de.unruh.isabelle.control
-import qrhl.{UserException, Utils, logic}
+import qrhl.{UserException, Utils}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
@@ -29,17 +27,17 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
   def renameCVariables(renaming: List[(Variable, Variable)]): RichTerm = {
     def s(t: Term) : Term = t match {
-      case Const(name, typ) => t
+      case Const(_, _) => t
       case Free(name, typ) =>
-        renaming.find { case (x,y) => x.isClassical && x.name == name } match {
+        renaming.find { case (x,_) => x.isClassical && x.name == name } match {
           case None => t
           case Some((x,y)) =>
             assert(y.isClassical)
             assert(x.valueTyp == y.valueTyp)
             Free(y.name, typ)
         }
-      case Var(name, index, typ) => t
-      case Bound(index) => t
+      case Var(_, _, _) => t
+      case Bound(_) => t
       case Abs(name, typ, body) => Abs(name, typ, s(body))
       case App(fun, arg) => App(s(fun), s(arg))
     }
@@ -82,6 +80,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
   /** Free variables */
     // TODO use IsabelleX.freeVars instead
   private def freeVars(term: Term): Set[String] = {
+    //noinspection DuplicatedCode
     val fv = Set.newBuilder[String]
     def collect(t:Term) : Unit = t match {
       case Free(v,_) => fv += v
@@ -110,10 +109,10 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     val Q = new Utils.MapMatch(environment.qVariables)
     val A = new Utils.MapMatch(environment.ambientVariables)
 
-    for (v<-variables) v match {
+    for (v <- variables) v match {
       case C(cv) => pvars += cv
       case Q(qv) => pvars += qv
-      case A(_) => v
+      case A(_) => avars += v
       case Variable.Indexed(C(cv), left) =>
         pvars += (if (deindex) cv else cv.index(left))
       case Variable.Indexed(Q(qv), left) =>
@@ -136,7 +135,8 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
   override lazy val toString: String = _pretty match {
     case Some(s) => s
-    case _ => IsabelleX.theContext.prettyExpression (isabelleTerm)
+    case _ => //noinspection ScalaDeprecation
+      IsabelleX.theContext.prettyExpression (isabelleTerm)
   }
 
 //  val isabelleTerm : Term = isabelleTerm
@@ -202,7 +202,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
 
 object RichTerm {
-  private val logger: Logger = log4s.getLogger
+//  private val logger: Logger = log4s.getLogger
 
   /** Translates expression from longform into shortform */
   def decodeFromExpression(context:IsabelleX.ContextX, t: Term): RichTerm =

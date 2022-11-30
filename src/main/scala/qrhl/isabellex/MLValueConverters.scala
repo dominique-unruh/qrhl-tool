@@ -10,10 +10,8 @@ import de.unruh.isabelle.mlvalue.MLValue
 import qrhl.{AmbientSubgoal, DenotationalEqSubgoal, QRHLSubgoal, Subgoal}
 import scalaz.Id.Id
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import GIsabelle.Ops.qrhl_ops
-import de.unruh.isabelle.control.Isabelle.{DInt, DList, DObject}
-import de.unruh.isabelle.pure.{MLValueTerm, Term}
 
 // Implicits
 import de.unruh.isabelle.control.Isabelle.executionContext
@@ -90,7 +88,7 @@ object MLValueConverters {
       }
     }
 
-    override def exnToValue(implicit isabelle: Isabelle): String = s"fn ${qrhl_ops}.E_Statement s => s"
+    override def exnToValue(implicit isabelle: Isabelle): String = s"fn $qrhl_ops.E_Statement s => s"
     override def valueToExn(implicit isabelle: Isabelle): String = s"$qrhl_ops.E_Statement"
 
     override def mlType(implicit isabelle: Isabelle): String = s"$qrhl_ops.statement"

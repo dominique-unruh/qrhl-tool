@@ -2,6 +2,7 @@ package qrhl
 
 import java.nio.file.{Files, Path, Paths}
 import de.unruh.isabelle.control.Isabelle
+import org.log4s
 import org.rogach.scallop.{ScallopConf, ScallopOption, Subcommand}
 import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
@@ -59,7 +60,7 @@ object Main {
     } else if (conf.isabelle.getOrElse(false)) {
       var setup = IsabelleX.defaultSetup
       val files = conf.file.toOption.toList.map(Path.of(_:String))
-      val dir = files.headOption.map(_.getParent).getOrElse(Paths.get("")).toAbsolutePath
+      val dir = files.headOption.map(_.toAbsolutePath.getParent).getOrElse(Paths.get("").toAbsolutePath)
       if (Files.exists(dir.resolve("ROOT")) || Files.exists(dir.resolve("ROOTS")))
         setup = setup.copy(sessionRoots = setup.sessionRoots.appended(dir))
       if (conf.session.isSupplied)
@@ -81,4 +82,6 @@ object Main {
       Toplevel.main(cheating = conf.cheating.getOrElse(true),
         allowMultilineCommands = !conf.emacs.getOrElse(false))
   }
+
+//  private val logger = log4s.getLogger
 }
