@@ -383,9 +383,11 @@ A command is a single or multiline string, terminated with a
 ``\texttt{.}''.
 Inside a command, line breaks are treated like spaces.
 
-Between commands, there can be comments that start with ``\texttt{\#}'' (on
-their own lines). These are ignored. (Comments may not occur within a
-command, not even inside a multiline command.)
+Comments start with ``\texttt{\#}'' and continue till the end of the line.
+Comments need to be on their own line or separated by whitespace from preceding code.\footnote{%
+  I.e., ``\texttt{\# comment}'' is a comment, ``\texttt{isabelle. \# comment}'' is a command followed by a comment,
+  but ``\texttt{isabelle.\# comment}'' does not contain a comment (and leads to an error).
+  This allows us to use the \texttt{\#} character (used by Isabelle for list cons) inside formulas as long as it is not prefixed by space.}
 
 \paragraph{Isabelle initialization.} The first command in a proof
 script must be ``\texttt{isabelle.}''\pagelabel{command:isabelle}\toolidx{isabelle} This
