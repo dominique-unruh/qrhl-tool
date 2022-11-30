@@ -6,7 +6,7 @@ import hashedcomputation.filesystem.{DirectorySnapshot, FingerprintedDirectorySn
 import org.scalatest.funsuite.AnyFunSuite
 import qrhl.{State, UserException}
 import qrhl.isabellex.IsabelleX
-import qrhl.toplevel.Toplevel.ReadLine
+import qrhl.toplevel.Toplevel.{ReadLine, stripComment}
 
 import scala.util.Random
 
@@ -25,6 +25,16 @@ class ToplevelTest extends AnyFunSuite {
       toplevel.execCmd("program x := { skip; }") }
     assert(exn.getMessage.startsWith("Name x already used for a variable or program"))
   }
+
+
+  test("stripComment") {
+    assert(stripComment("# Test") == "")
+    assert(stripComment(" # Test") == "")
+    assert(stripComment("  start of line # Test") == "  start of line")
+    assert(stripComment("  start of line# Test") == "  start of line# Test")
+    assert(stripComment("  start of line # Test1 # Test2") == "  start of line")
+  }
+
 }
 
 object ToplevelTest {
