@@ -6,10 +6,11 @@ import qrhl.UserException
 import qrhl.isabellex.IsabelleX
 import qrhl.logic.{Block, CVariable, Call, Local, VTCons, VTSingle}
 import IsabelleX.{globalIsabelle => GIsabelle}
+import de.unruh.isabelle.control.IsabelleMLException
 import de.unruh.isabelle.pure.Term
-import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import GIsabelle.isabelleControl
 
 class ParserTest extends AnyFunSuite {
   implicit lazy val parserContext: ParserContext = {
@@ -90,7 +91,7 @@ class ParserTest extends AnyFunSuite {
   }
 
   test("fail to parse while loop") {
-    assertThrows[IOException] { // TODO: Mark which exception is actually thrown
+    assertThrows[IsabelleMLException] {
       val whileLoop = Parser.parseAll(Parser.whileLoop, "while (1) { skip; }")
     }
   }

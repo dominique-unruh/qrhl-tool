@@ -4,7 +4,7 @@ import java.io.PrintWriter
 import qrhl.{State, Subgoal}
 import qrhl.isabellex.IsabelleX
 import IsabelleX.{globalIsabelle => GIsabelle}
-import de.unruh.isabelle.control.IsabelleException
+import de.unruh.isabelle.control.IsabelleMLException
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Context
@@ -54,7 +54,7 @@ case class PrintCommand(symbol : String) extends Command {
       for (lemma <- fact)
         output.println(lemma+"\n\n")
     } catch {
-      case e : IsabelleException => // Means there is no such lemma
+      case e : IsabelleMLException => // Means there is no such lemma
     }
 
     if (!found)
