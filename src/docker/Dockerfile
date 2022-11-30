@@ -1,7 +1,24 @@
-FROM aergus/latex
-RUN apt-get update -y
-RUN apt-get install -y gnupg ca-certificates make python3 git texlive-full default-jre && apt clean
-RUN echo "deb https://dl.bintray.com/sbt/debian /" >> /etc/apt/sources.list.d/sbt.list
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-RUN apt-get update -y
-RUN apt-get install -y sbt poppler-utils && apt clean
+FROM makarius/isabelle:Isabelle2021-1
+
+# Install dependencies
+USER root
+RUN apt-get -y update && apt-get install -y default-jre && apt-get clean
+USER isabelle
+
+# Build session HOL-Analysis
+RUN Isabelle/bin/isabelle build -b HOL-Analysis
+
+# Install and configure AFP
+RUN mkdir afp && (cd afp && curl https://www.isa-afp.org/release/afp-current.tar.gz | tar -x -z --strip-components 1) && echo "$PWD/afp/thys" >> Isabelle/ROOTS
+
+# Build session Complex_Bounded_Operators
+RUN Isabelle/bin/isabelle build -b Complex_Bounded_Operators
+
+# Install and configure qrhl-tool
+COPY --chown=isabelle qrhl.zip /tmp/qrhl.zip
+RUN unzip /tmp/qrhl.zip && rm /tmp/qrhl.zip && mv qrhl-snapshot qrhl && echo "isabelle-home = $PWD/Isabelle" > ~/.qrhl-tool.conf
+
+# Build sessions of qrhl-tool
+RUN qrhl/bin/qrhl --build
+
+ENTRYPOINT ["qrhl/bin/qrhl"]
