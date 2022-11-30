@@ -140,6 +140,71 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
   override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): QRHLSubgoal = this
 }
 
+
+final case class DenotationalEqSubgoal(left:Block, right:Block, assumptions:List[RichTerm]) extends Subgoal {
+  override def hash: Hash[DenotationalEqSubgoal.this.type] =
+    HashTag()(left.hash, right.hash, Hashable.hash(assumptions))
+
+  override def toString: String = {
+    val assms = if (assumptions.isEmpty) "" else
+      s"Assumptions:\n${assumptions.map(a => s"* $a\n").mkString}\n"
+    s"${assms}Denotational equivalence:\n\n${left.toStringMultiline("Left:  ")}\n\n${right.toStringMultiline("Right: ")}"
+  }
+
+  override def checkVariablesDeclared(environment: Environment): Unit = {
+    for (x <- left.variablesDirect)
+      if (!environment.variableExistsForProg(x))
+        throw UserException(s"Undeclared variable $x in left program")
+    for (x <- right.variablesDirect)
+      if (!environment.variableExistsForProg(x))
+        throw UserException(s"Undeclared variable $x in left program")
+    for (a <- assumptions; x <- a.variables)
+      if (!environment.variableExists(x))
+        throw UserException(s"Undeclared variable $x in assumptions")
+  }
+
+  override def toTerm(context: IsabelleX.ContextX): RichTerm = {
+    val term = Ops.denotational_eq_subgoal_to_term_op(
+      context.context, Block.makeBlockIfNeeded(left.statements), Block.makeBlockIfNeeded(right.statements), assumptions.map(_.isabelleTerm))
+      .retrieveNow
+    RichTerm(term)
+  }
+
+  /** Not including ambient vars in nested programs (via Call) */
+  override def containsAmbientVar(x: String): Boolean = {
+    left.variablesDirect.contains(x) || right.variablesDirect.contains(x) ||
+      assumptions.exists(_.variables.contains(x))
+  }
+
+  override def addAssumption(assm: RichTerm): DenotationalEqSubgoal = {
+    assert(assm.typ == GIsabelle.boolT)
+    DenotationalEqSubgoal(left, right, assm :: assumptions)
+  }
+
+  /** Checks whether all isabelle terms in this goal are well-typed.
+   * Should always succeed, unless there are bugs somewhere. */
+  override def checkWelltyped(context:IsabelleX.ContextX): Unit = {
+    for (a <- assumptions) a.checkWelltyped(context, GIsabelle.boolT)
+    left.checkWelltyped(context)
+    right.checkWelltyped(context)
+  }
+
+  override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): DenotationalEqSubgoal = {
+    //    if (assumptions.nonEmpty) QRHLSubgoal.logger.warn("Not using assumptions for simplification")
+    val thms = new ListBuffer[Thm]()
+    val assms2 = assumptions.map(_.simplify(isabelle,facts,thms))
+//    val assms3: List[RichTerm] = assms2.filter(_.isabelleTerm!=GIsabelle.True_const)
+    val left2 = if (everywhere) left.simplify(isabelle,facts,thms) else left
+    val right2 = if (everywhere) right.simplify(isabelle,facts,thms) else right
+
+//    Subgoal.printOracles(thms.toSeq : _*)
+    DenotationalEqSubgoal(left2, right2, assms2)
+  }
+
+  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
+  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): DenotationalEqSubgoal = this
+}
+
 final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
   override def hash: Hash[AmbientSubgoal.this.type] =
     HashTag()(goal.hash)

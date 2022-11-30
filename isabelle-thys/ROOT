@@ -23,7 +23,7 @@ session "QRHL-Prerequisites" in "fake-session-dir/5" = "QRHL-Prerequisites2" +
   theories "HOL-Analysis.Inner_Product" "HOL-Library.Z2"
     "HOL-Analysis.Infinite_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
     "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral" "HOL-ZF.HOLZF"
-    "HOL-Eisbach.Eisbach_Tools" "HOL-ex.Sketch_and_Explore"
+    "HOL-Eisbach.Eisbach_Tools" "HOL-ex.Sketch_and_Explore" "Registers.Quantum"
 
 session "QRHL-Scala" in "fake-session-dir/6" = QRHL +
   sessions QRHL

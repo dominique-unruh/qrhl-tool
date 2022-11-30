@@ -12,6 +12,6 @@ fi
 
 QRHL_ABS_PATH="$(realpath -L -m "$DIR/bin/qrhl")"
 
-chmod +x "$DIR/bin/qrhl" || true
+chmod +x "$DIR/bin/qrhl" || true  # Sometimes bin/qrhl does not have the executable bit set after unpacking
 export JAVA_OPTS="-Dfile.encoding=UTF-8"
-emacs --no-site-file -q --eval "(set-variable 'qrhl-prog-name \"$QRHL_ABS_PATH\")" -l "$DIR/proofgeneral/generic/proof-site.el" "$@"
+emacs -l "$DIR/proofgeneral/generic/proof-site.el" --eval "(set-variable 'qrhl-prog-name \"$QRHL_ABS_PATH\")" "$@"

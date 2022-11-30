@@ -100,6 +100,7 @@ object IsabelleConsts {
   val cregister_pair = \<open>\<^const_name>\<open>cregister_pair\<close>\<close>
   val qregister_pair = \<open>\<^const_name>\<open>qregister_pair\<close>\<close>
   val true_expression = \<open>\<^const_name>\<open>true_expression\<close>\<close>
+  val denotation = \<open>\<^const_name>\<open>denotation\<close>\<close>
 }
 \<close>
 

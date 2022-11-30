@@ -42,14 +42,21 @@ in term end
 
 local in
 
-datatype subgoal = Subgoal_QRHL of Relational_Hoare.qrhl_judgment * term list | Subgoal_Ambient of term
+datatype subgoal = Subgoal_QRHL of Relational_Hoare.qrhl_judgment * term list
+  | Subgoal_Ambient of term | Subgoal_Denotational_Eq of Programs.statement * Programs.statement * term list
 
 fun qrhl_subgoal_to_term (ctxt,left,right,pre,post,assms) =
   fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms 
     (Relational_Hoare.qrhl_judgment_to_term ctxt (Relational_Hoare.QRHL_Judgment (pre,left,right,post)))
 
+fun denotational_eq_subgoal_to_term (ctxt, left, right, assms) =
+    fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms 
+      (HOLogic.mk_eq (\<^Const>\<open>denotation\<close> $ statement_to_term ctxt left, \<^Const>\<open>denotation\<close> $ statement_to_term ctxt right))
+
 fun subgoal_to_term ctxt (Subgoal_QRHL (qrhl, assms)) = 
     fold_rev (fn a => fn g => HOLogic.mk_imp (a, g)) assms (Relational_Hoare.qrhl_judgment_to_term ctxt qrhl)
+  | subgoal_to_term ctxt (Subgoal_Denotational_Eq (left, right, assms)) =
+    denotational_eq_subgoal_to_term (ctxt, left, right, assms)
   | subgoal_to_term _ (Subgoal_Ambient t) = t
 
 fun contains_var (t $ u) = contains_var t orelse contains_var u
@@ -68,6 +75,8 @@ fun term_to_subgoal ctxt t = let
   in
     case t' of (Const(\<^const_name>\<open>qrhl\<close>,_) $ _ $ _ $ _ $ _) => 
       Subgoal_QRHL (Relational_Hoare.term_to_qrhl_judgment ctxt t', assms)
+   | (\<^Const_>\<open>HOL.equal _\<close> $ (\<^Const_>\<open>denotation\<close> $ p1) $ (\<^Const_>\<open>denotation\<close> $ p2)) => 
+      Subgoal_Denotational_Eq (term_to_statement ctxt p1, term_to_statement ctxt p2, assms)
    | _ => Subgoal_Ambient t
   end
 

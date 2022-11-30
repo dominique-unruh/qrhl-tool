@@ -9,6 +9,8 @@ import scala.util.parsing.combinator._
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.Typ
 
+import scala.collection.mutable
+
 case class ParserContext(environment: Environment,
                          isabelle: Option[IsabelleX.ContextX])
 
@@ -236,7 +238,7 @@ object Parser extends JavaTokenParsers {
 
   // TODO does not match strings like "xxx\"xxx" or "xxx\\xxx" properly
   val quotedString : Parser[String] = stringLiteral ^^ { s:String =>
-    val result = new StringBuilder()
+    val result = new mutable.StringBuilder()
     val iterator = s.substring(1,s.length-1).iterator
     for (c <- iterator)
       if (c=='\\') result.append(iterator.next())
@@ -353,14 +355,29 @@ object Parser extends JavaTokenParsers {
       natural ^^ SwapTac.FinalRange |
       success(SwapTac.FinalRange(1))
 
-  val tactic_swap: Parser[SwapTac] =
-    literal("swap") ~> OnceParser(for (
-      lr <- "left|right".r;
-      left = lr match { case "left" => true; case "right" => false; case _ => throw new InternalError("Should not occur") };
+  def swap_subprograms(implicit context:ParserContext): Parser[List[(Statement, Option[Statement])]] = rep1sep(
+    (statement ~ ("->" ~> statement).?) ^^ { case x ~ y => (x.unwrapSingletonBlock, y.map(_.unwrapSingletonBlock)) },
+    literal(",")
+  )
+
+  val subprograms_selector: Parser[Boolean] =
+    literal("subprograms") ~>
+      commit(((literal("first") ^^^ true | literal("second") ^^^ false)
+        withFailureMessage "'first'/'second' expected after 'subprograms'") <~
+        literal(":"))
+//    literal("subprograms") ~> OnceParser("first|second".r <~ literal(":") ^^
+//      { case "first" => true; case "second" => false; case _ => throw new InternalError("Should not occur") })
+
+
+  def tactic_swap(implicit context:ParserContext): Parser[SwapTac] =
+    literal("swap") ~> (for (
+      left <- ("left" ^^^ true | "right" ^^^ false) withFailureMessage "left/right expected after swap";
       range <- swap_range;
-      steps <- natural)
-//      (numStatements,steps) <- natural~natural ^^ { case x~y => (x,y) } | (natural ^^ { (1,_) }) | success((1,1)))
-      yield SwapTac(left=left, range=range, steps=steps))
+      steps <- natural;
+      (subprogramsInFirst,subprograms) <- (subprograms_selector ~ swap_subprograms ^^
+            { case subprogramsInFirst ~ subprograms => (subprogramsInFirst,subprograms)})
+              | success((false, Nil)))
+      yield SwapTac(left=left, range=range, steps=steps, subprograms, subprogramsInFirst))
 
   val tactic_inline: Parser[InlineTac] =
     literal("inline") ~> identifier ^^ InlineTac
