@@ -998,7 +998,7 @@ object IsabelleX {
     // We initialize the global _theContext with this context inside this future.
     // This guarantees that the present context will only be used if it succeeds.
     // (Meaning, if the future inside `context` succeeds.
-    override def someFuture: Future[Any] = context.someFuture.map { _ =>
+    override val someFuture: Future[Any] = context.someFuture.map { _ =>
       _theContext = this;
       isabelleControl.exceptionManager.asInstanceOf[Exn.ExceptionManager].setContext(context)
     }
