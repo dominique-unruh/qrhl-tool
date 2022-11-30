@@ -329,28 +329,11 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       }
     }
 
-    val isInfiniteHashtable = mutable.HashMap[Variable, Boolean]()
-    def isInfinite(v: Variable): Boolean =
-      isInfiniteHashtable.getOrElseUpdate(v, {
-        val result =
-          Ops.isInfinite_op(MLValue((isabelle.context, v.valueTyp))).retrieveNow
-        logger.debug(s"Checking infiniteness of $v: $result")
-        result
-      })
-
-    // Ensuring all conditions except those referring to qRHL subgoals
-
-    // Removing quantum equality involving variables in out.
-    // Not an explicit condition for applying the adversary rule, but since we will later add a quantum equality with
-    // the variables in out anyway, this won't hurt
-    if (out.exists(_.isQuantum)) {
+    def removeQeqIfPossible(msg: => String): Unit = {
       val qvars = Variable.quantum(out).toSet
-      assert(removedQeq == null) // Should not fail because this is the first place where we try and remove the qeq
-      println(
-        s"""
-           |You have explicitly specified the quantum variables ${varsToString(qvars)} to be part of Vout.
-           |This means the postcondition should be split into some predicate R, and some quantum equality containing those quantum variables.
-           |""".stripMargin)
+      if (qvars.isEmpty) return
+      if (removedQeq != null) return
+      println(msg)
       EqualTac.removeQeq(env, postcondition, qvars) match {
         case None =>
           println(
@@ -370,11 +353,30 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
           postconditionVariables ++= postcondition.variables(env, deindex = true).program
           postconditionVariables --= classicalsRemovedFromPost
           out ++= removedQeq
+          updated = true
           println(
             s"""We now have: Vout = ${varsToString(out)}.
                |---""".stripMargin)
       }
     }
+
+    val isInfiniteHashtable = mutable.HashMap[Variable, Boolean]()
+    def isInfinite(v: Variable): Boolean =
+      isInfiniteHashtable.getOrElseUpdate(v, {
+        val result =
+          Ops.isInfinite_op(MLValue((isabelle.context, v.valueTyp))).retrieveNow
+        logger.debug(s"Checking infiniteness of $v: $result")
+        result
+      })
+
+    // Removing quantum equality involving variables in out.
+    // Not an explicit condition for applying the adversary rule, but since we will later add a quantum equality with
+    // the variables in out anyway, this won't hurt
+    removeQeqIfPossible(
+        s"""
+           |You have explicitly specified the quantum variables ${varsToString(Variable.quantum(out))} to be part of Vout.
+           |This means the postcondition should be split into some predicate R, and some quantum equality containing those quantum variables.
+           |""".stripMargin)
     // It is conceivable that there is more than one quantum equality with those variables.
     // In that case we might remove the wrong one. However, this rare (or impossible?) case
     // can be remedied by explicitly specifying the quantum variables in out
@@ -602,6 +604,15 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
              |So we add the missing variables to Vin. (For now, only the classical ones. We do the quantum ones later.)""".stripMargin,
           extraIn = MaybeAllSet.subtract(mid.toSet.filter(_.isClassical) & postconditionVariables, varUse.covered))
       }
+
+      // If we are done (nothing more would be done now) but we still haven't removed a quantum equality from the postcondition,
+      // remove one if we find one
+      if (!updated && out.nonEmpty)
+        removeQeqIfPossible(
+          s"""We notice that we did not remove any quantum equality from R (in the postcondition).
+            |This is allowed but most likely not what you want.
+            |So we try to remove one that contains the variables quantum(Vout) = ${varsToString(Variable.quantum(out))}.
+            |(We are allowed to do so because we later add "⊓ ≡Vout" to the postcondition anyway.)""".stripMargin)
 
     } while (updated)
 
