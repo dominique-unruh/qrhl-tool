@@ -23,21 +23,23 @@ fun sp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
     [Const(\<^const_name>\<open>assign\<close>,_) $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms sp1_assign_tac} @{thms sp2_assign_tac}) n
        ORELSE error "assign-statement")
-       THEN Expressions.index_tac ctxt n
+       THEN Prog_Variables.distinct_vars_tac ctxt n
+(*        THEN Expressions.index_tac ctxt n
        THEN Expressions.index_tac ctxt n
        THEN Expressions.subst_expression_tac ctxt n
        THEN Expressions.subst_expression_tac ctxt n
-       THEN Expressions.map_expression_tac ctxt n
+       THEN Expressions.map_expression_tac ctxt n *)
 
    | [Const(\<^const_name>\<open>sample\<close>,_) $ _ $ _] =>
       (resolve_tac ctxt (lr @{thms sp1_sample_tac} @{thms sp2_sample_tac}) n
        ORELSE error "sample-statement")
-      THEN Expressions.index_tac ctxt n
+      THEN Prog_Variables.distinct_vars_tac ctxt n
+(*       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.subst_expression_tac ctxt n
       THEN Expressions.subst_expression_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      THEN Expressions.map_expression_tac ctxt n *)
 
   | [Const(\<^const_name>\<open>block\<close>,_) $ _] => 
       resolve_tac ctxt (lr @{thms sp1_block_tac} @{thms sp2_block_tac}) n THEN sp_tac0 left ctxt n
@@ -46,40 +48,44 @@ fun sp_tac0 left ctxt = SUBGOAL (fn (goal,n) => let
   | [Const(\<^const_name>\<open>qapply\<close>,_) $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms sp1_qapply_tac} @{thms sp2_qapply_tac}) n
        ORELSE error "quantum application")
-      THEN Expressions.index_tac ctxt n
+      THEN Prog_Variables.distinct_vars_tac ctxt n
+(*       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      THEN Expressions.map_expression_tac ctxt n *)
 
   | [Const(\<^const_name>\<open>qinit\<close>,_) $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms sp1_qinit_tac} @{thms sp2_qinit_tac}) n
        ORELSE error "quantum initialization")
+       THEN Prog_Variables.distinct_vars_tac ctxt n
+(*       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
-      THEN Expressions.index_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      THEN Expressions.map_expression_tac ctxt n *)
 
   | [Const(\<^const_name>\<open>ifthenelse\<close>,_) $ _ $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms sp1_if_tac} @{thms sp2_if_tac}) n
        ORELSE error "if-statement")
-      THEN Expressions.index_tac ctxt (n+5) (* Doing it backwards because sp_tac0 can produce extra subgoals *)
+(*       THEN Expressions.index_tac ctxt (n+5) (* Doing it backwards because sp_tac0 can produce extra subgoals *)
       THEN Expressions.map_expression_tac ctxt (n+4)
-      THEN Expressions.map_expression_tac ctxt (n+3)
-      THEN sp_tac0 left ctxt (n+2)
+      THEN Expressions.map_expression_tac ctxt (n+3) *)
       THEN sp_tac0 left ctxt (n+1)
-      THEN Expressions.map_expression_tac ctxt n
+      THEN sp_tac0 left ctxt n
+      (* THEN Expressions.map_expression_tac ctxt n *)
 
   | [Const(\<^const_name>\<open>measurement\<close>,_) $ _ $ _ $ _] => 
       (resolve_tac ctxt (lr @{thms sp1_measure_tac} @{thms sp2_measure_tac}) n
        ORELSE error "measurement-statement")
-      THEN Expressions.index_tac ctxt n
+      THEN Prog_Variables.distinct_vars_tac ctxt n
+      THEN Prog_Variables.distinct_vars_tac ctxt n
+(*       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.index_tac ctxt n
       THEN Expressions.subst_expression_tac ctxt n
       THEN Expressions.subst_expression_tac ctxt n
       THEN Expressions.map_expression_tac ctxt n
-      THEN Expressions.map_expression_tac ctxt n
+      THEN Expressions.map_expression_tac ctxt n *)
 
   | [] => 
       resolve_tac ctxt @{thms skip_rule} n
@@ -113,7 +119,7 @@ fun get_sp left (prog:term) (pre:term) ctxt =
       val skip = \<^term>\<open>[]::program list\<close>
       val goal = \<^const>\<open>qrhl\<close> $ pre $ 
                       (if left then progl else skip) $ (if left then skip else progl) $ 
-                      Var(("post",0),\<^typ>\<open>predicate expression\<close>) |> HOLogic.mk_Trueprop                    
+                      Var(("post",0),\<^typ>\<open>predicate expression2\<close>) |> HOLogic.mk_Trueprop                    
       val side_conditions = Unsynchronized.ref []
       fun tac ctxt = sp_tac0 left ctxt 1
                      THEN (fn st => (side_conditions := Thm.prems_of st; all_tac st))

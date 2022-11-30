@@ -7,7 +7,7 @@ ML \<open>
 fun test_get_sp ctxt left prog pre expected =
 let val (sp,thm,side) = Strongest_Postcondition.get_sp left prog pre ctxt
     val _ = tracing ("Side conditions:\n" ^ String.concatWith "\n" (map (Syntax.string_of_term ctxt) side))
-    val sp' = sp |> Thm.cterm_of ctxt |> Conv.try_conv (Expressions.clean_expression_conv ctxt)
+    val sp' = sp |> Thm.cterm_of ctxt |> Conv.try_conv (Programs.clean_expression_conv ctxt)
                  |> Thm.rhs_of |> Thm.term_of |> Envir.beta_norm
     val _ = assert_aconv expected sp'
     val (A,_,_,B) = Relational_Hoare.dest_qrhl_goal (Thm.prop_of thm)
@@ -22,19 +22,24 @@ declare [[show_consts, show_types]]
       Const(\<^const_syntax>\<open>undefined\<close>, dummyT) $ vars $ t)]\<close> *)
 
 (* TEST CASE: assign *)
-variables classical x :: nat and classical y :: nat begin
+experiment
+  fixes x :: \<open>nat cvariable\<close> and y :: \<open>nat cvariable\<close>
+  assumes [register]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<^sub>c\<close>
+begin
 ML \<open>
 test_get_sp \<^context> true
-            \<^term>\<open>assign \<lbrakk>var_x\<rbrakk> Expr[5]\<close> (* program *)
-            \<^term>\<open>Expr[Cla[x+x = y]]\<close> (* pre *)
-            \<^term>\<open>expression \<lbrakk>var_x1::nat variable, var_x::nat variable, var_y::nat variable\<rbrakk>
-                   (\<lambda>(var_x1::nat, var_x::nat, var_y::nat).
-                   SUP z::nat. \<CC>\<ll>\<aa>[var_x1 = (5::nat)] \<sqinter> \<CC>\<ll>\<aa>[var_x + var_x = var_y])\<close> (* expected *)
+            \<^term>\<open>assign x (\<lambda>_. 5)\<close> (* program *)
+            \<^term>\<open>\<lambda>m::cl2. Cla[getter (cregister_chain cFst x) m + getter (cregister_chain cFst x) m = getter (cregister_chain cFst y) m]\<close> (* pre *)
+            \<^term>\<open>\<lambda>m::cl2. \<Squnion>z::nat.
+                \<CC>\<ll>\<aa>[getter (cregister_chain \<lbrakk>#1\<rbrakk>\<^sub>c x) m = (5::nat)] \<sqinter> \<CC>\<ll>\<aa>[z + z = getter (cregister_chain \<lbrakk>#1\<rbrakk>\<^sub>c y) m]\<close>
 \<close>
 end
 
 (* TEST CASE: qinit *)
-variables quantum Q :: nat begin
+experiment
+  fixes Q :: \<open>nat qvariable\<close>
+  assumes [register]: \<open>qregister Q\<close>
+begin
 ML \<open>
 test_get_sp \<^context> false
             \<^term>\<open>qinit \<lbrakk>Q\<rbrakk> Expr[ket 0]\<close> (* program *)
@@ -44,7 +49,10 @@ test_get_sp \<^context> false
 end
 
 (* TEST CASE: get_sp of "measure a A computational_basis" *)
-variables classical a :: bit and quantum A :: bit begin
+experiment
+  fixes a :: \<open>bit cvariable\<close> and A :: \<open>bit qvariable\<close>
+  assumes [register]: \<open>cregister a\<close> \<open>qregister A\<close>
+begin
 ML \<open>
 test_get_sp \<^context> false 
             \<^term>\<open>measurement \<lbrakk>var_a\<rbrakk> \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
@@ -55,7 +63,10 @@ end
 
 
 (* TEST CASE: get_sp of a block *)
-variables classical x :: nat begin
+experiment
+  fixes x :: \<open>nat cvariable\<close>
+  assumes [register]: \<open>cregister x\<close>
+begin
 ML \<open>
 test_get_sp \<^context> true
             \<^term>\<open>block [assign \<lbrakk>var_x\<rbrakk> Expr[x+1], assign \<lbrakk>var_x\<rbrakk> Expr[x+1]]\<close> (* program *)
@@ -65,7 +76,10 @@ test_get_sp \<^context> true
 end
 
 (* TEST CASE: sample *)
-variables classical x :: bit begin
+experiment
+  fixes x :: \<open>nat cvariable\<close>
+  assumes [register]: \<open>cregister x\<close>
+begin
 ML \<open>
 test_get_sp \<^context> true
             \<^term>\<open>sample \<lbrakk>var_x\<rbrakk> Expr[uniform UNIV]\<close> (* program *)
@@ -77,7 +91,9 @@ end
 
 
 (* TEST CASE: if *)
-variables classical x :: bit begin
+experiment
+  fixes x :: \<open>nat cvariable\<close>
+begin
 ML \<open>
 test_get_sp \<^context> true
             \<^term>\<open>ifthenelse Expr[x=0] [assign \<lbrakk>var_x\<rbrakk> Expr[1]] [assign \<lbrakk>var_x\<rbrakk> Expr[0]]\<close> (* program *)
@@ -90,7 +106,10 @@ test_get_sp \<^context> true
 end
 
 (* TEST CASE: qapply *)
-variables quantum q :: bit begin
+experiment
+  fixes q :: \<open>bit qvariable\<close>
+  assumes [register]: \<open>qregister q\<close>
+begin
 ML \<open>
 test_get_sp \<^context> true
             \<^term>\<open>qapply \<lbrakk>q\<rbrakk> Expr[hadamard]\<close> (* program *)

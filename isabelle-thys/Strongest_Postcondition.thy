@@ -54,15 +54,16 @@ lemma distinct_qvars_index: \<open>distinct_qvars (index_vars side x) \<longleft
 *)
 
 lemma sp1_assign_tac:
-  fixes A B x v
-  assumes x1: "x1 = index_vars True x"
-  assumes e1: \<open>e1 = index_expression True e\<close>
-  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x1 (const_expression z)) A\<close>
-  assumes e1': \<open>\<And>z. e1' z = subst_expression (substitute_vars x1 (const_expression z)) e1\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x1' A' e1'. SUP z. Cla[x1' = e1' z] \<sqinter> A' z) (expression x1 (\<lambda>x. x)) A' e1'\<close>
-  assumes dist_x: \<open>distinct_qvars x\<close>
+  fixes A B x v e
+  assumes \<open>cregister x\<close>
+  defines x1: "x1 \<equiv> cregister_chain cFst x"
+  defines e1: \<open>e1 \<equiv> (\<lambda>m. e (fst m))\<close>
+  defines A': \<open>\<And>z. A' z \<equiv> (\<lambda>m. A (setter x1 z m))\<close>
+  defines e1': \<open>\<And>z. e1' z \<equiv> (\<lambda>m. e1 (setter x1 z m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. SUP z. Cla[getter x1 m = e1' z m] \<sqinter> A' z m)\<close>
   shows \<open>qrhl A [assign x e] [] B\<close>
-proof -
+  sorry
+(* proof -
   from dist_x have dist_x1: \<open>distinct_qvars x1\<close>
     by (simp add: x1 distinct_qvars_index)
   define A'' where \<open>A'' = subst_expression (substitute_vars x1 e1) B\<close>
@@ -97,18 +98,19 @@ proof -
   ultimately show ?thesis
     apply (rule_tac conseq_rule[where A'=A'' and B'=B])
     by auto
-qed
+qed *)
 
 lemma sp2_assign_tac:
-  fixes A B x v
-  assumes x2: "x2 = index_vars False x"
-  assumes e2: \<open>e2 = index_expression False e\<close>
-  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x2 (const_expression z)) A\<close>
-  assumes e2': \<open>\<And>z. e2' z = subst_expression (substitute_vars x2 (const_expression z)) e2\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x2' A' e2'. SUP z. Cla[x2' = e2' z] \<sqinter> A' z) (expression x2 (\<lambda>x. x)) A' e2'\<close>
-  assumes dist_x: \<open>distinct_qvars x\<close>
+  fixes A B x v e
+  assumes \<open>cregister x\<close>
+  defines x2: "x2 \<equiv> cregister_chain cSnd x"
+  defines e2: \<open>e2 \<equiv> (\<lambda>m. e (snd m))\<close>
+  defines A': \<open>\<And>z. A' z \<equiv> (\<lambda>m. A (setter x2 z m))\<close>
+  defines e2': \<open>\<And>z. e2' z \<equiv> (\<lambda>m. e2 (setter x2 z m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. SUP z. Cla[getter x2 m = e2' z m] \<sqinter> A' z m)\<close>
   shows \<open>qrhl A [] [assign x e] B\<close>
-proof -
+  sorry
+(* proof -
   from dist_x have dist_x2: \<open>distinct_qvars x2\<close>
     by (simp add: x2 distinct_qvars_index)
   define A'' where \<open>A'' = subst_expression (substitute_vars x2 e2) B\<close>
@@ -143,23 +145,24 @@ proof -
   ultimately show ?thesis
     apply (rule_tac conseq_rule[where A'=A'' and B'=B])
     by auto
-qed
+qed *)
 
 
 definition true_expression where \<open>true_expression A \<longleftrightarrow> (\<forall>m. expression_eval A m)\<close>
 
 lemma sp1_sample_tac:
-  fixes A B x v
-  assumes x1: "x1 = index_vars True x"
-  assumes e1: \<open>e1 = index_expression True e\<close>
-  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x1 (const_expression z)) A\<close>
-  assumes e1': \<open>\<And>z. e1' z = subst_expression (substitute_vars x1 (const_expression z)) e1\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x1' A' e1'. SUP z. Cla[x1' \<in> supp (e1' z)] \<sqinter> A' z) (expression x1 (\<lambda>x. x)) A' e1'\<close>
-  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[weight e1 = 1]) A e1\<close>
-  assumes dist_x: \<open>distinct_qvars x\<close>
+  fixes A B x v e
+  assumes \<open>cregister x\<close>
+  defines x1: "x1 \<equiv> cregister_chain cFst x"
+  defines e1: \<open>e1 \<equiv> (\<lambda>m. e (fst m))\<close>
+  defines A': \<open>\<And>z. A' z \<equiv> (\<lambda>m. A (setter x1 z m))\<close>
+  defines e1': \<open>\<And>z. e1' z \<equiv> (\<lambda>m. e1 (setter x1 z m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. SUP z. Cla[getter x1 m \<in> supp (e1' z m)] \<sqinter> A' z m)\<close>
+  defines lossless_exp: \<open>L \<equiv> (\<lambda>m. A m \<le> Cla[weight (e1 m) = 1])\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows \<open>qrhl A [sample x e] [] B\<close>
-proof -
+  sorry
+(* proof -
   from dist_x have dist_x1: \<open>distinct_qvars x1\<close>
     by (simp add: x1 distinct_qvars_index)
   define B' where "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
@@ -200,21 +203,22 @@ proof -
   ultimately show ?thesis
     apply (rule_tac conseq_rule[where A'=A'' and B'=B])
     by auto
-qed
+qed *)
 
 
 lemma sp2_sample_tac:
-  fixes A B x v
-  assumes x2: "x2 = index_vars False x"
-  assumes e2: \<open>e2 = index_expression False e\<close>
-  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x2 (const_expression z)) A\<close>
-  assumes e2': \<open>\<And>z. e2' z = subst_expression (substitute_vars x2 (const_expression z)) e2\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x2' A' e2'. SUP z. Cla[x2' \<in> supp (e2' z)] \<sqinter> A' z) (expression x2 (\<lambda>x. x)) A' e2'\<close>
-  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[weight e2 = 1]) A e2\<close>
-  assumes dist_x: \<open>distinct_qvars x\<close>
+  fixes A B x v e
+  assumes \<open>cregister x\<close>
+  defines x2: "x2 \<equiv> cregister_chain cSnd x"
+  defines e2: \<open>e2 \<equiv> (\<lambda>m. e (snd m))\<close>
+  defines A': \<open>\<And>z. A' z \<equiv> (\<lambda>m. A (setter x2 z m))\<close>
+  defines e2': \<open>\<And>z. e2' z \<equiv> (\<lambda>m. e2 (setter x2 z m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. SUP z. Cla[getter x2 m \<in> supp (e2' z m)] \<sqinter> A' z m)\<close>
+  defines lossless_exp: \<open>L \<equiv> (\<lambda>m. A m \<le> Cla[weight (e2 m) = 2])\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows \<open>qrhl A [] [sample x e] B\<close>
-proof -
+  sorry
+(* proof -
   from dist_x have dist_x2: \<open>distinct_qvars x2\<close>
     by (simp add: x2 distinct_qvars_index)
   define B' where "\<And>z. B' z = subst_expression (substitute_vars x2 (const_expression z)) B"
@@ -255,19 +259,21 @@ proof -
   ultimately show ?thesis
     apply (rule_tac conseq_rule[where A'=A'' and B'=B])
     by auto
-qed
+qed *)
 
 lemma sp1_qinit_tac:
-  fixes A B x v
-  assumes Q1: "Q1 = index_vars True Q"
-  assumes e1: \<open>e1 = index_expression True e\<close>
-  assumes B: \<open>B = map_expression2 (\<lambda>A e. A \<sqinter> Q1 =\<^sub>q e) A e1\<close>
-  assumes distinct_exp: \<open>D = map_expression (\<lambda>A. distinct_qvars_pred_vars A Q1) A\<close>
-  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[norm e1 = 1]) A e1\<close>
+  fixes A B x v e
+  assumes \<open>qregister Q\<close>
+  defines Q1: "Q1 \<equiv> qregister_chain qFst Q"
+  defines e1: \<open>e1 \<equiv> (\<lambda>m. e (fst m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. A m \<sqinter> Q1 =\<^sub>q e1 m)\<close>
+  defines distinct_exp: \<open>D \<equiv> (\<lambda>m. distinct_qvars_pred_vars (A m) Q1)\<close>
+  defines lossless_exp: \<open>L \<equiv> (\<lambda>m. A m \<le> Cla[norm (e1 m) = 1])\<close>
   assumes distinct: \<open>true_expression D\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows \<open>qrhl A [qinit Q e] [] B\<close>
-proof -
+  sorry
+(* proof -
   from distinct
   have [simp]: \<open>distinct_qvars_pred_vars (expression_eval A m) Q1\<close> for m
     by (simp add: distinct_exp true_expression_def)
@@ -282,7 +288,7 @@ proof -
     using lossless[unfolded less_eq_expression_def le_fun_def, rule_format, of m]
     by simp
   have \<open>expression_eval A m \<le> expression_eval (map_expression2 (\<lambda>e\<^sub>1 B. \<CC>\<ll>\<aa>[norm e\<^sub>1 = 1] \<sqinter> B \<div> e\<^sub>1\<guillemotright>Q1) e1 B) m\<close> for m
-    by (auto simp: B intro: inf.cobounded1 inf.cobounded2 *)
+    by (auto simp: B intro: inf.cobounded1 inf.cobounded2 * )
   then have *: \<open>A \<le> map_expression2 (\<lambda>e\<^sub>1 B. \<CC>\<ll>\<aa>[norm e\<^sub>1 = 1] \<sqinter> B \<div> e\<^sub>1\<guillemotright>Q1) e1 B\<close>
     by (simp add: less_eq_expression_def le_fun_def)
   show ?thesis
@@ -290,19 +296,21 @@ proof -
      apply rule
     apply (rule wp1_qinit_tac)
     using assms by auto
-qed
+qed *)
 
 lemma sp2_qinit_tac:
-  fixes A B x v
-  assumes Q2: "Q2 = index_vars False Q"
-  assumes e2: \<open>e2 = index_expression False e\<close>
-  assumes B: \<open>B = map_expression2 (\<lambda>A e. A \<sqinter> Q2 =\<^sub>q e) A e2\<close>
-  assumes distinct_exp: \<open>D = map_expression (\<lambda>A. distinct_qvars_pred_vars A Q2) A\<close>
-  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[norm e2 = 1]) A e2\<close>
+  fixes A B x v e
+  assumes \<open>qregister Q\<close>
+  defines Q2: "Q2 \<equiv> qregister_chain qSnd Q"
+  defines e2: \<open>e2 \<equiv> (\<lambda>m. e (snd m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. A m \<sqinter> Q2 =\<^sub>q e2 m)\<close>
+  defines distinct_exp: \<open>D \<equiv> (\<lambda>m. distinct_qvars_pred_vars (A m) Q2)\<close>
+  defines lossless_exp: \<open>L \<equiv> (\<lambda>m. A m \<le> Cla[norm (e2 m) = 2])\<close>
   assumes distinct: \<open>true_expression D\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows \<open>qrhl A [] [qinit Q e] B\<close>
-proof -
+    sorry
+(* proof -
   from distinct
   have [simp]: \<open>distinct_qvars_pred_vars (expression_eval A m) Q2\<close> for m
     by (simp add: distinct_exp true_expression_def)
@@ -317,7 +325,7 @@ proof -
     using lossless[unfolded less_eq_expression_def le_fun_def, rule_format, of m]
     by simp
   have \<open>expression_eval A m \<le> expression_eval (map_expression2 (\<lambda>e\<^sub>2 B. \<CC>\<ll>\<aa>[norm e\<^sub>2 = 1] \<sqinter> B \<div> e\<^sub>2\<guillemotright>Q2) e2 B) m\<close> for m
-    by (auto simp: B intro: inf.cobounded2 inf.cobounded2 *)
+    by (auto simp: B intro: inf.cobounded2 inf.cobounded2 * )
   then have *: \<open>A \<le> map_expression2 (\<lambda>e\<^sub>2 B. \<CC>\<ll>\<aa>[norm e\<^sub>2 = 1] \<sqinter> B \<div> e\<^sub>2\<guillemotright>Q2) e2 B\<close>
     by (simp add: less_eq_expression_def le_fun_def)
   show ?thesis
@@ -325,18 +333,18 @@ proof -
      apply rule
     apply (rule wp2_qinit_tac)
     using assms by auto
-qed
+qed *)
 
 lemma sp1_measure_tac:
-  assumes x1: "x1 = index_vars True x"
-  assumes Q1: "Q1 = index_vars True Q"
-  assumes e1: \<open>e1 = index_expression True e\<close>
-  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x1 (const_expression z)) A\<close>
-  assumes e1': \<open>\<And>z. e1' z = subst_expression (substitute_vars x1 (const_expression z)) e1\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x1 e1' A'. SUP z r. Cla[x1 = r] \<sqinter> ((mproj (e1' z) r \<guillemotright> Q1) *\<^sub>S A' z))
-            (expression x1 (\<lambda>x. x)) e1' A'\<close>
-  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[mtotal e1]) A e1\<close>
-  assumes distinct: \<open>distinct_qvars x \<and> distinct_qvars Q\<close>
+  fixes x Q e A
+  assumes \<open>cregister x\<close> \<open>qregister Q\<close>
+  defines x1: "x1 \<equiv> cregister_chain cFst x"
+  defines Q1: "Q1 \<equiv> qregister_chain qFst Q"
+  defines e1: \<open>e1 \<equiv> (\<lambda>m. e (fst m))\<close>
+  defines A': \<open>\<And>z. A' z \<equiv> (\<lambda>m. A (setter x1 z m))\<close>
+  defines e1': \<open>\<And>z. e1' z \<equiv> (\<lambda>m. e1 (setter x1 z m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. SUP z r. Cla[getter x1 m = r] \<sqinter> ((mproj (e1' z m) r \<guillemotright> Q1) *\<^sub>S A' z m))\<close>
+  defines lossless_exp: \<open>L \<equiv> (\<lambda>m. A m \<le> Cla[mtotal (e1 m)])\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows "qrhl A [measurement x Q e] [] B"
 (* Handwritten proof: Quicksheets 2022, pages 150-151. *)
@@ -367,15 +375,15 @@ lemma sp1_measure_tac:
 qed *)
 
 lemma sp2_measure_tac:
-  assumes x2: "x2 = index_vars False x"
-  assumes Q2: "Q2 = index_vars False Q"
-  assumes e2: \<open>e2 = index_expression False e\<close>
-  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x2 (const_expression z)) A\<close>
-  assumes e2': \<open>\<And>z. e2' z = subst_expression (substitute_vars x2 (const_expression z)) e2\<close>
-  assumes B: \<open>B = map_expression3'' (\<lambda>x2 e2' A'. SUP z r. Cla[x2 = r] \<sqinter> ((mproj (e2' z) r \<guillemotright> Q2) *\<^sub>S A' z))
-            (expression x2 (\<lambda>x. x)) e2' A'\<close>
-  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[mtotal e2]) A e2\<close>
-  assumes distinct: \<open>distinct_qvars x \<and> distinct_qvars Q\<close>
+  fixes x Q e A
+  assumes \<open>cregister x\<close> \<open>qregister Q\<close>
+  defines x2: "x2 \<equiv> cregister_chain cSnd x"
+  defines Q2: "Q2 \<equiv> qregister_chain qSnd Q"
+  defines e2: \<open>e2 \<equiv> (\<lambda>m. e (snd m))\<close>
+  defines A': \<open>\<And>z. A' z \<equiv> (\<lambda>m. A (setter x2 z m))\<close>
+  defines e2': \<open>\<And>z. e2' z \<equiv> (\<lambda>m. e2 (setter x2 z m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. SUP z r. Cla[getter x2 m = r] \<sqinter> ((mproj (e2' z m) r \<guillemotright> Q2) *\<^sub>S A' z m))\<close>
+  defines lossless_exp: \<open>L \<equiv> (\<lambda>m. A m \<le> Cla[mtotal (e2 m)])\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows "qrhl A [] [measurement x Q e] B"
   by (cheat sp2_measure_tac)
@@ -409,14 +417,16 @@ lemma sp2_block_tac:
   by (simp add: assms wp2_block_tac)
 
 lemma sp1_if_tac:
-  assumes B: \<open>B = map_expression2 (\<lambda>B_true B_false. B_true \<squnion> B_false) B_true B_false\<close>
+  fixes B_true B_false e A
+  defines B: \<open>B \<equiv> (\<lambda>m. B_true m \<squnion> B_false m)\<close>
+  defines e1: \<open>e1 \<equiv> (\<lambda>m. e (fst m))\<close>
+  defines A_false: \<open>A_false \<equiv> (\<lambda>m. Cla[\<not> e1 m] \<sqinter> A m)\<close>
+  defines A_true: \<open>A_true \<equiv> (\<lambda>m. Cla[e1 m] \<sqinter> A m)\<close>
   assumes wp_false: \<open>qrhl A_false p2 [] B_false\<close>
   assumes wp_true: \<open>qrhl A_true p1 [] B_true\<close>
-  assumes A_false: \<open>A_false = map_expression2 (\<lambda>e1 A. Cla[\<not> e1] \<sqinter> A) e1 A\<close>
-  assumes A_true: \<open>A_true = map_expression2 (\<lambda>e1 A. Cla[e1] \<sqinter> A) e1 A\<close>
-  assumes e1: \<open>e1 = index_expression True e\<close>
   shows \<open>qrhl A [ifthenelse e p1 p2] [] B\<close>
-proof -
+  sorry
+(* proof -
   have \<open>B \<ge> B_true\<close>
     by (auto simp: less_eq_expression_def le_fun_def B)
   with wp_true have wp_true': \<open>qrhl A_true p1 [] B\<close>
@@ -433,17 +443,19 @@ proof -
     by (auto simp add: less_eq_expression_def le_fun_def A'_def expression_eval_map_expression3 A_true A_false)
   ultimately show ?thesis
     using conseq_rule by blast
-qed
+qed *)
 
 lemma sp2_if_tac:
-  assumes B: \<open>B = map_expression2 (\<lambda>B_true B_false. B_true \<squnion> B_false) B_true B_false\<close>
+  fixes B_true B_false e A
+  defines B: \<open>B \<equiv> (\<lambda>m. B_true m \<squnion> B_false m)\<close>
+  defines e2: \<open>e2 \<equiv> (\<lambda>m. e (snd m))\<close>
+  defines A_false: \<open>A_false \<equiv> (\<lambda>m. Cla[\<not> e2 m] \<sqinter> A m)\<close>
+  defines A_true: \<open>A_true \<equiv> (\<lambda>m. Cla[e2 m] \<sqinter> A m)\<close>
   assumes wp_false: \<open>qrhl A_false [] p2 B_false\<close>
-  assumes wp_true: \<open>qrhl A_true [] p1 B_true\<close>
-  assumes A_false: \<open>A_false = map_expression2 (\<lambda>e2 A. Cla[\<not> e2] \<sqinter> A) e2 A\<close>
-  assumes A_true: \<open>A_true = map_expression2 (\<lambda>e2 A. Cla[e2] \<sqinter> A) e2 A\<close>
-  assumes e2: \<open>e2 = index_expression False e\<close>
-  shows \<open>qrhl A [] [ifthenelse e p1 p2] B\<close>
-proof -
+  assumes wp_true: \<open>qrhl A_true [] p2 B_true\<close>
+  shows \<open>qrhl A [] [ifthenelse e p2 p2] B\<close>
+    sorry
+(* proof -
   have \<open>B \<ge> B_true\<close>
     by (auto simp: less_eq_expression_def le_fun_def B)
   with wp_true have wp_true': \<open>qrhl A_true [] p1 B\<close>
@@ -460,18 +472,20 @@ proof -
     by (auto simp add: less_eq_expression_def le_fun_def A'_def expression_eval_map_expression3 A_true A_false)
   ultimately show ?thesis
     using conseq_rule by blast
-qed
+qed *)
 
 
 lemma sp1_qapply_tac:
-  assumes Q1: "Q1 = index_vars True Q"
-  assumes e1: \<open>e1 = index_expression True e\<close>
-  assumes B: \<open>B = map_expression2 (\<lambda>e1 A. (e1 \<guillemotright> Q1) *\<^sub>S A) e1 A\<close>
-  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[unitary e1]) A e1\<close> (* unitary can probably be weakened to isometry using a different proof *)
-  assumes distinct: \<open>distinct_qvars Q\<close>
+  fixes A e Q
+  assumes \<open>qregister Q\<close>
+  defines Q1: "Q1 \<equiv> qregister_chain qFst Q"
+  defines e1: \<open>e1 \<equiv> (\<lambda>m. e (fst m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. (e1 m \<guillemotright> Q1) *\<^sub>S A m)\<close>
+  defines lossless_exp: \<open>L \<equiv> (\<lambda>m. A m \<le> Cla[unitary (e1 m)])\<close> (* unitary can probably be weakened to isometry using a different proof *)
   assumes lossless: \<open>true_expression L\<close>
   shows "qrhl A [qapply Q e] [] B"
-proof -
+  sorry
+(* proof -
   from distinct have dist_Q1[simp]: \<open>distinct_qvars Q1\<close>
     by (simp add: Q1 distinct_qvars_index)
   define A' where \<open>A' = map_expression2 (\<lambda>e\<^sub>1 B. \<CC>\<ll>\<aa>[isometry e\<^sub>1] \<sqinter> ((e\<^sub>1\<guillemotright>Q1)* *\<^sub>S (B \<sqinter> (e\<^sub>1\<guillemotright>Q1 *\<^sub>S \<top>)))) e1 B\<close>
@@ -497,17 +511,19 @@ proof -
   qed
   ultimately show ?thesis
     using conseq_rule by blast
-qed
+qed *)
 
 lemma sp2_qapply_tac:
-  assumes Q2: "Q2 = index_vars False Q"
-  assumes e2: \<open>e2 = index_expression False e\<close>
-  assumes B: \<open>B = map_expression2 (\<lambda>e2 A. (e2 \<guillemotright> Q2) *\<^sub>S A) e2 A\<close>
-  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[unitary e2]) A e2\<close> (* unitary can probably be weakened to isometry using a different proof *)
-  assumes distinct: \<open>distinct_qvars Q\<close>
+  fixes A e Q
+  assumes \<open>qregister Q\<close>
+  defines Q2: "Q2 \<equiv> qregister_chain qSnd Q"
+  defines e2: \<open>e2 \<equiv> (\<lambda>m. e (snd m))\<close>
+  defines B: \<open>B \<equiv> (\<lambda>m. (e2 m \<guillemotright> Q2) *\<^sub>S A m)\<close>
+  assumes lossless_exp: \<open>L = (\<lambda>m. A m \<le> Cla[unitary (e2 m)])\<close> (* unitary can probably be weakened to isometry using a different proof *)
   assumes lossless: \<open>true_expression L\<close>
   shows "qrhl A [] [qapply Q e] B"
-proof -
+    sorry
+(* proof -
   from distinct have dist_Q2[simp]: \<open>distinct_qvars Q2\<close>
     by (simp add: Q2 distinct_qvars_index)
   define A' where \<open>A' = map_expression2 (\<lambda>e\<^sub>2 B. \<CC>\<ll>\<aa>[isometry e\<^sub>2] \<sqinter> ((e\<^sub>2\<guillemotright>Q2)* *\<^sub>S (B \<sqinter> (e\<^sub>2\<guillemotright>Q2 *\<^sub>S \<top>)))) e2 B\<close>
@@ -533,7 +549,7 @@ proof -
   qed
   ultimately show ?thesis
     using conseq_rule by blast
-qed
+qed *)
 
 ML_file "strongest_postcondition.ML"
 
