@@ -47,7 +47,7 @@ view-test-results:
 	rm -rf target/tmp
 	mkdir target/tmp
 	cd target/tmp && gh run download
-	xdg-open target/tmp/index.html
+	if [ -e target/tmp/index.html ]; then xdg-open target/tmp/index.html; else xdg-open target/tmp; fi
 
 issue :
-	gh issue create --assignee @me --milestone 0.7
+	gh issue create --assignee @me --milestone 0.8
