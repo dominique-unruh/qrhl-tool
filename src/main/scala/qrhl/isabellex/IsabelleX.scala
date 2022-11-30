@@ -67,8 +67,8 @@ object Configuration {
     val config = new Properties()
     val filenames = List(
       distributionDirectory.resolve("qrhl-tool.conf"),
-      FileUtils.getUserDirectory.toPath.resolve(".qrhl-tool.conf"),
-      Paths.get("qrhl-tool.conf"))
+      FileUtils.getUserDirectory.toPath.resolve(".qrhl-tool.conf")/*,
+      Paths.get("qrhl-tool.conf")*/)
       .map (_.normalize.toAbsolutePath)
       .distinct
     val filenamesFound = ListBuffer[Path]()
