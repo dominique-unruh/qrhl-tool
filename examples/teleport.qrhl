@@ -93,7 +93,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      clear 2.
 clear 1.
 
-     seq 2 0: Proj (ccspan {ket 0})»⟦C1⟧ · Proj (ccspan {ket 0})»⟦A1⟧ ⋅ 
+     seq 2 0: Proj (ccspan {ket 0})»⟦C1⟧ ⋅ Proj (ccspan {ket 0})»⟦A1⟧ ⋅
                    quantum_equality_full
                       idOp ⟦C1,A1,B1⟧
                       ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
@@ -117,7 +117,7 @@ clear 1.
      clear 2.
      clear 1.
 
-     seq 2 0: pauliZ»〚B1〛 · Proj (ccspan {ket 1})»⟦C1⟧ · Proj (ccspan {ket 0})»⟦A1⟧ ⋅ 
+     seq 2 0: pauliZ»⟦B1⟧ ⋅ Proj (ccspan {ket 1})»⟦C1⟧ ⋅ Proj (ccspan {ket 0})»⟦A1⟧ ⋅
                    quantum_equality_full
                       idOp ⟦C1,A1,B1⟧
                       ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
@@ -141,7 +141,7 @@ clear 1.
      clear 2.
      clear 1.
 
-     seq 2 0: pauliX»〚B1〛 · Proj (ccspan {ket 0})»⟦C1⟧ · Proj (ccspan {ket 1})»⟦A1⟧ ⋅ 
+     seq 2 0: pauliX»⟦B1⟧ ⋅ Proj (ccspan {ket 0})»⟦C1⟧ ⋅ Proj (ccspan {ket 1})»⟦A1⟧ ⋅
                    quantum_equality_full
                       idOp ⟦C1,A1,B1⟧
                       ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
@@ -164,7 +164,7 @@ clear 1.
      clear 2.
      clear 1.
 
-     seq 2 0: pauliZ»⟦B1⟧ ⋅ pauliX»⟦B1⟧ ⋅ Proj (ccspan {ket 1})»⟦C1⟧ · Proj (ccspan {ket 1})»⟦A1⟧ ⋅ 
+     seq 2 0: pauliZ»⟦B1⟧ ⋅ pauliX»⟦B1⟧ ⋅ Proj (ccspan {ket 1})»⟦C1⟧ ⋅ Proj (ccspan {ket 1})»⟦A1⟧ ⋅
                    quantum_equality_full
                       idOp ⟦C1,A1,B1⟧
                       ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
