@@ -19,12 +19,10 @@ qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
   sp left.
     simp!.
     simp!.
-    simp!.
 
   simp SUP_UNIV_bit_expand.
   
   sp right.
-    simp!.
     simp!.
     simp!.
   
