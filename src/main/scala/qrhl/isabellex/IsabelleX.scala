@@ -969,8 +969,11 @@ object IsabelleX {
 
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
-    if (globalIsabellePeek==null)
+    if (globalIsabellePeek==null) {
+      // To avoid this error, make sure globalIsabelleWith is invoked first. This, in turn is invoked by
+      // State.loadIsabelle, this when Toplevel processes an IsabelleCommand ("isabelle.")
       throw new IllegalStateException("Internal error: Accessed the Isabelle instance before it was initialized.")
+    }
     globalIsabellePeek
   }
   def globalIsabelleWith(sessionDir : Option[Path], session: Option[String]): IsabelleX = synchronized {
