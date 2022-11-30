@@ -614,9 +614,8 @@ fun colocal_guard_simproc _ _ ct = let
      \<^Const_>\<open>colocal_pred_qvars _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
    | \<^Const_>\<open>colocal_op_pred\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
    | \<^Const_>\<open>colocal_op_qvars _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
-(* val _ = \<^print> (ct,vars1,vars2) *)
+   | _ => ([],[])
   val inter = Ord_List.inter string_ord (Ord_List.make string_ord vars1) (Ord_List.make string_ord vars2)
-          |> \<^print>
   val disjoint = null inter
   in if disjoint then SOME @{lemma \<open>COLOCAL_GUARD x \<equiv> x\<close> by (simp add: COLOCAL_GUARD_def)} else NONE end
 
