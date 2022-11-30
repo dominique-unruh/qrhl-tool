@@ -9,6 +9,10 @@ hide_const (open) Order.top
 hide_const (open) Coset.kernel
 no_notation Group.monoid.mult (infixl "\<otimes>\<index>" 70)
 no_notation m_inv ("inv\<index> _" [81] 80)
+hide_const (open) Coset.kernel
+(* hide_const (open) Quantum.CNOT
+hide_const (open) Quantum.pauliX
+hide_const (open) Quantum.pauliZ *)
 
 section \<open>Miscellaneous\<close>
 
