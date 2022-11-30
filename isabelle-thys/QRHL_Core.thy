@@ -176,6 +176,20 @@ subsection "Distinct quantum variables"
 abbreviation (input) qvariables_local :: \<open>'a q2variable \<Rightarrow> 'b q2variable \<Rightarrow> bool\<close> where
   \<open>qvariables_local Q R \<equiv> Qqcompatible (QCOMPLEMENT (QREGISTER_of R)) Q\<close>
 
+text \<open>The following constant \<open>COLOCAL_GUARD\<close> is a marker that indicates that the simplifier
+  should not attempt to solve the subgoal \<open>C\<close> (which is supposed to be of the form \<open>colocal_...\<close>)
+  unless a quick check whether it can be solved succeeds. (The quick check simply checks whether
+  no variable occurs in both arguments of the \<open>colocal_...\<close>.) This is to avoid spending potentially
+  a lot of time on repeated failed colocality-proofs.
+
+  To avoid this check (i.e., attempt simplification always), simply add \<open>COLOCAL_GUARD_def\<close> to the simplifier.
+
+  See also the simproc \<open>colocal_guard_simproc\<close> below.
+  \<close>
+definition [code del]: \<open>COLOCAL_GUARD (C::bool) = C\<close>
+lemma COLOCAL_GUARD_cong[cong]: \<open>COLOCAL_GUARD x = COLOCAL_GUARD x\<close>
+  by simp
+
 axiomatization operator_local :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool" 
 
 axiomatization predicate_local :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool"
@@ -1268,9 +1282,13 @@ lemma colocal_quantum_eq[simp,intro!]:
   for Q1 Q2 :: "'c q2variable" and R :: "string set"
   by (cheat TODO14) *)
 
-lemma applyOpSpace_colocal[simp]:
+lemma applyOpSpace_colocal:
   "colocal U S \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
   by (cheat TODO14)
+
+lemma applyOpSpace_colocal_simp[simp]:
+  "COLOCAL_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
+  by (simp add: applyOpSpace_colocal COLOCAL_GUARD_def)
 
 lemma qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
@@ -1678,5 +1696,7 @@ section "Simprocs"
   ("join_variables_hint a b" | "sort_variables_hint a" |
    "reorder_variables_hint a b" | "extend_lift_as_var_concat_hint A R") = 
   QRHL.variable_rewriting_simproc *)
+
+simproc_setup colocal_guard_simproc (\<open>COLOCAL_GUARD t\<close>) = QRHL.colocal_guard_simproc
 
 end
