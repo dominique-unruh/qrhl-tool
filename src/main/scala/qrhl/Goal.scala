@@ -176,8 +176,11 @@ object AmbientSubgoal {
 case class GoalFocus(label: String, subgoals: List[Subgoal]) extends IterableOnce[Subgoal] with HashedValue {
   def isBraceFocus: Boolean = label == "{"
 
-  def applyTactic(state: State, tactic: Tactic)(implicit output: PrintWriter): GoalFocus = new GoalFocus(label,
-    tactic.apply(state, subgoals.head) ++ subgoals.tail)
+  def applyTactic(state: State, tactic: Tactic)(implicit output: PrintWriter): GoalFocus = {
+    if (subgoals.isEmpty)
+      throw UserException("Cannot apply the tactic because there is no current goal.")
+    GoalFocus(label, tactic.apply(state, subgoals.head) ++ subgoals.tail)
+  }
 
   def longDescription: String = {
     subgoals match {
