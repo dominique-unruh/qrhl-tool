@@ -1,8 +1,24 @@
 isabelle.
 
+
+print xxx.  # Where does this come from?
+
+print refl.  # Should be found
+
+print HOL.refl.  # Should be found
+
+print undefined.  # Should be found?
+
 classical var x : int.
-classical var y : int.
-classical var b : bit.
+
+print x.
+
+lemma xx: 1=1.
+admit.
+qed.
+
+print xx.
+
 
 quantum var Q : bit.
 quantum var R : bit.
@@ -12,16 +28,57 @@ program p1 := {
   x <- y+1;
 }.
 
+print p1.
 
 program p2 := {
   on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
+  on Q apply hadamard;
 }.
 
-qrhl {undefined} call p1; call p2; ~ skip; {undefined}.
+qrhl {undefined} call p1; ~  call p2; {undefined}.
   inline p1.
   inline p2.
+
+print goal.
+
+conseq post: undefined.
+
+print goal.
+
+simp!.
+
+
+
   # Imagine "undefined" means "diagonal_basis" below.
   swap left 1 2
     subprograms first: { b <- measure Q with computational_basis; } -> { b <- measure Q with undefined; }.
+
+
+print goal.
+
++ 
+print goal.
+
+
   byqrhl qvars Q,R.
+
+admit.
+
+print goal.
   

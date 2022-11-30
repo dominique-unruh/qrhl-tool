@@ -416,10 +416,22 @@ fun show_oracles_lines thm : string list = let
   val text = Extended_Sorry.show_oracles_lines ctxt [thm] |> map YXML.content_of
   in text end
 
+local
+fun freeze_typ (Type(n,Ts)) = Type (n, map freeze_typ Ts)
+  | freeze_typ (T as TFree _) = T
+  | freeze_typ (TVar((n,i),s)) = TFree("?"^n^string_of_int i, s)
+fun freeze_term (Const(n,T)) = Const (n, freeze_typ T)
+  | freeze_term (t $ u) = freeze_term t $ freeze_term u
+  | freeze_term (Abs(n,T,body)) = Abs (n, freeze_typ T, freeze_term body)
+  | freeze_term (t as Bound _) = t
+  | freeze_term (Free(n,T)) = Free(n, freeze_typ T)
+  | freeze_term (Var((n,i),T)) = Free("?"^n^string_of_int i, freeze_typ T)
+in
 fun thms_as_subgoals (ctxt, rule) = let
   val thms = get_thms ctxt rule
-  val subgoals = thms |> map Thm.prop_of |> map (term_to_subgoal ctxt)
-  in subgoals end 
+  val subgoals = thms |> map Thm.prop_of |> map freeze_term |> map (term_to_subgoal ctxt)
+  in subgoals end
+end
 
 fun declare_variable (ctxt, name, T) = let
   val ([v],ctxt') = Proof_Context.add_fixes [(Binding.name name, SOME T, NoSyn)] ctxt

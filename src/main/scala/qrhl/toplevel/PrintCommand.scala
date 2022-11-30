@@ -48,7 +48,7 @@ case class PrintCommand(symbol : String) extends Command {
     }
 
     try {
-      val fact = Ops.thms_as_subgoals(MLValue((state.isabelle.context, symbol))).retrieveNow
+      val fact = Ops.thms_as_subgoals(state.isabelle.context, symbol).retrieveNow
       found = true
       output.println(s"The name $symbol refers to ${fact.length} lemmas:\n")
       for (lemma <- fact)
