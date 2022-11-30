@@ -5,6 +5,7 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.{App, Const, Free, Term, Typ}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
 import qrhl.logic.Variable.{Index1, Index2, NoIndex}
+import qrhl.AllSet
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.ExecutionContext
@@ -156,7 +157,10 @@ object Variable {
     if (vars.isEmpty) "∅" else
       vars.mkString(", ")
 
-  def varsToString(vars: Iterable[Variable]): String = varsNamesToString(vars.map(_.name))
+  def varsToString(vars: Iterable[Variable]): String = vars match {
+    case _ : AllSet[_] => "all variables"
+    case _ => varsNamesToString(vars.map(_.name))
+  }
 
   sealed trait Index
   final case object NoIndex extends Index
