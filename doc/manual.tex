@@ -1215,7 +1215,7 @@ When defining your own types in an accompanying theory, please consult \autoref{
   $\alpha'\ \mathtt{ell2} \Rightarrow_\mathsf{CL} \beta'\ \mathtt{ell2}$. (I.e., elements of $\boundedv{\alpha,\beta}$.)
   This can be abbreviated as $(\alpha',\beta')\ \mathtt{l2bounded}$.
 
-  \texinput{Use the \texttt{cblinfun} syntax for input.}
+  \texinput{\\fun\_CL}
   \\
   \hline $(\alpha,\beta)$ \texttt{l2bounded}\tooltype{l2bounded} &
   Abbreviation for
@@ -1300,6 +1300,9 @@ characters. These can be entered with an adapted TeX input method in Emacs
 (which is automatically active in our ProofGeneral customization). In
 those cases we additionally mention the character sequences to be entered in ProofGeneral
 for getting the special characters (marked ``How to input:'' in the table below).
+
+For inputting other non-ASCII symbols that are defined in Isabelle, try common LaTeX macro names (e.g., \verb|\psi| for $\psi$).
+Use \verb|\sub|, \verb|\sup| for sub-/superscript letters.
 
 \newcommand\constdef[3]{#1\par
   \hskip1em\begin{minipage}{\hsize-1em}\raggedright $::#2$\end{minipage}%
@@ -1424,60 +1427,42 @@ for getting the special characters (marked ``How to input:'' in the table below)
   The adjoint $A^*$ of $A$.
   \\
   \hline
-  \constdef{$A\cdot B$\par$A \mathbin{\circ_\textsc{cl}} B$\par$\mathtt{cblinfun\_compose}\ A\ B$}
+  \constdef{$A \mathbin{\circ_\textsc{cl}} B$\par$\mathtt{cblinfun\_compose}\ A\ B$}
   {(\alpha,\gamma)\ \mathtt{cblinfun}}
   {$A::(\beta,\gamma)\ \mathtt{cblinfun}$
     \par and
     $B::(\alpha,\beta)\ \mathtt{cblinfun}$}
   \toolconst{cblinfun\_compose}
-  \symbolindexmark\TOOLcdot
+  \symbolindexmark\TOOLoCL
   &
   The product $AB$ of operators $A$ and $B$.
 
-  The syntax $A\cdot B$
-  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
-  of $\cdot$
-  is intended, use \texttt{cblinfun\_compose}, or provide additional type
-  information for $A$ and $B$.
-
-  \texinput{\\cdot}
+  \texinput{o\_CL}
   \\
-  \hline \constdef{$A\cdot \psi$\par$A \mathbin{*_V} \psi$\par$\mathtt{cblinfun\_apply}\
+  \hline \constdef{$A \mathbin{*_V} \psi$\par$\mathtt{cblinfun\_apply}\
     A\ \psi$} {\beta}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$
     \par and
     $\psi::\alpha$}
   \toolconst{cblinfun\_apply}
-  \symbolindexmark\TOOLcdot
+  \symbolindexmark\TOOLstarV
   &
-  The result $A\psi$ of applying the operator $A$ to the ell2 $\psi$.
+  The result $A\psi$ of applying the operator $A$ to the vector $\psi$.
 
-  The syntax $A\cdot \psi$
-  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
-  of $\cdot$
-  is intended, use \texttt{cblinfun\_apply}, or provide additional type
-  information for the $A$ and $\psi$.
-
-  \texinput{\\cdot}
+  \texinput{*\_V}
   \\
   \hline
-  \constdef{$A\cdot S$\par$A \mathbin{*_S} S$\par$\mathtt{cblinfun\_image}\ A\ S$}
+  \constdef{$A \mathbin{*_S} S$\par$\mathtt{cblinfun\_image}\ A\ S$}
   {\beta\ \mathtt{ccsubspace}}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$
     \par and
     $S::\alpha\ \mathtt{ccsubspace}$}
   \toolconst{cblinfun\_image}
-  \symbolindexmark\TOOLcdot
+  \symbolindexmark\TOOLstarS
   &
   The result $AS=\{A\psi:\psi\in S\}$ of applying the operator $A$ to the subspace $\psi$.
 
-  The syntax $A\cdot S$
-  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
-  of $\cdot$
-  is intended, use \texttt{cblinfun\_image}, or provide additional type
-  information for the $A$ and $S$.
-
-  \texinput{\\cdot}
+  \texinput{*\_S}
   \\
   \hline
   \constdef{$\mathtt{id\_cblinfun}$}
@@ -1556,14 +1541,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   & Controlled-not on two qubits (first qubit is the control)
   \\
   \hline
-  \constdef{$A\tensor B$\par
-    $\mathtt{tensor}\ A\ B$\par
-    $\mathtt{tensorOp}\ A\ B$}
+  \constdef{$A\tensor_o B$\par
+    $\mathtt{tensor\_op}\ A\ B$}
   {(\alpha\times\beta)\ \mathtt{l2bounded}}
   {$A::\alpha\ \mathtt{l2bounded}$ \par and $B::\beta\ \mathtt{l2bounded}$}
-  \toolconst{tensor}
-  \toolconst{tensorOp}
-  \symbolindexmark\TOOLotimes
+  \toolconst{tensor\_op}
+  \symbolindexmark\TOOLtensoro
   &
   The (positional) tensor product $A\otimes B$ of operators.
 
@@ -1571,14 +1554,9 @@ for getting the special characters (marked ``How to input:'' in the table below)
   and $\boundedv W$
   described in the preliminaries of
   \cite{qrhl-paper-from-manual}. That is,
-  $A\otimes B\neq B\otimes A$.)
+  $A\otimes_o B\neq B\otimes_o A$.)
 
-  The notations $A\tensor B$ and $\mathtt{tensor}\ A\ B$ are overloaded.
-  If Isabelle/HOL has trouble recognizing which meaning
-  is intended, use \texttt{tensorOp}, or provide additional type
-  information for~$A$ or~$B$.
-
-  \texinput{\\otimes, \\ox}
+  \texinput{\\ox\_o, \\otimes\\subo}
   \\
   \hline
   \constdef{$\mathtt{comm\_op}$}
@@ -1657,14 +1635,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   The state $\frac1{\sqrt2}\basis{}{00}+\frac1{\sqrt2}\basis{}{11}$.
   \\
   \hline
-  \constdef{$\psi\tensor\phi$\par
-    $\mathtt{tensor}\ \psi\ \phi$\par
-    $\mathtt{tensorVec}\ \psi\ \phi$}
+  \constdef{$\psi\tensor_l\phi$\par
+    $\mathtt{tensor\_ell2}\ \psi\ \phi$}
   {(\alpha\times\beta)\ \mathtt{ell2}}
   {$\psi::\alpha\ \mathtt{ell2}$ and $\phi::\beta\ \mathtt{ell2}$}
-  \toolconst{tensor}
-  \toolconst{tensorVec}
-  \symbolindexmark\TOOLotimes
+  \toolconst{tensor\_ell2}
+  \symbolindexmark\TOOLtensorl
   &
   The (positional) tensor product $\psi\otimes\phi$ of vectors.
 
@@ -1672,14 +1648,9 @@ for getting the special characters (marked ``How to input:'' in the table below)
   and $\elltwov W$
   described in the preliminaries of
   \cite{qrhl-paper-from-manual}. That is,
-  $\psi\otimes\phi\neq\phi\otimes\psi$.)
+  $\psi\otimes_l\phi\neq\phi\otimes_l\psi$.)
 
-  The notations $\psi\tensor\phi$ and $\mathtt{tensor}\ \psi\ \phi$ are overloaded.
-  If Isabelle/HOL has trouble recognizing which meaning
-  is intended, use \texttt{tensorVec}, or provide additional type
-  information for~$\psi$ or~$\phi$.
-
-  \texinput{\\otimes, \\ox}
+  \texinput{\\ox\_l, \\otimes\\subl}
   \\
   \hline
   \subhead{Quantum variables}
@@ -1728,28 +1699,21 @@ for getting the special characters (marked ``How to input:'' in the table below)
   that corresponds to applying $A$
   on the quantum variables $Q\subseteq V_1V_2$.
 
-  The syntax $A\text\guillemotright Q$ and \texttt{lift}
-  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
-  of $\text\guillemotright$ or \texttt{lift}
-  is intended, use \texttt{liftOp}, or provide additional type
-  information for the lhs $A$.
-
   \texinput{\\frqq, >{}>}
+  %
   \\
   \hline
-  \constdef{$S\text\guillemotright Q$\par
-    $S>>Q$\par
-    $\mathtt{lift}\ S\ Q$\par
+  \constdef{$Q \in_\mathfrak q S$\par
     $\mathtt{liftSpace}\ S\ Q$}
   {\mathtt{predicate}}
   {$A::\alpha\ \mathtt{ccsubspace}$
     \par and
   $Q::\alpha\ \mathtt{variables}$}
-  \symbolindexmark\TOOLfrqq
-  \toolconst{liftOp}
+  \symbolindexmark\TOOLinq
+  \toolconst{liftSpace}
   &
-  The subspace $\lift SQ:=\Uvarnames{Q}S\otimes\elltwov{V_1V_2\setminus Q}$.
-  (See \qrhlautoref{def:lift}.)
+  The subspace $\Uvarnames{Q}S\otimes\elltwov{V_1V_2\setminus Q}$.
+  (See \qrhlautoref{def:lift}, denoted $\lift SQ$ there.)
 
   Intuitively, $\text\guillemotright$
   takes a subspace $S$
@@ -1759,13 +1723,24 @@ for getting the special characters (marked ``How to input:'' in the table below)
   that corresponds
   to the state of variables $Q$ being in subspace $S$.
 
-  The syntax $S\text\guillemotright Q$ and \texttt{lift}
-  is overloaded. If Isabelle/HOL has trouble recognizing which meaning
-  of $\text\guillemotright$ or \texttt{lift}
-  is intended, use \texttt{liftSpace}, or provide additional type
-  information for the lhs~$S$.
+  The syntax $Q \in_\mathfrak q S$ is inspired by the fact that intuitively, this means the state of $Q$ is in the space $S$.
   
-  \texinput{\\frqq}
+  \texinput{\\in\_q}
+  %
+  \\
+  \hline
+  \constdef{$Q =_\mathfrak q \psi$}
+  {\mathtt{predicate}}
+  {$A::\alpha$
+    \par and
+  $Q::\alpha\ \mathtt{variables}$}
+  \symbolindexmark\TOOLeqq
+  &
+  Abbreviation for $Q \in_\mathfrak q \mathtt{ccspan} \braces\psi$.
+
+  Intuitively, this means that the state of $Q$ is in the subspace spanned by the single quantum state $\psi$. Or, in other words, the state of $Q$ is $\psi$, hence the notation.
+    
+  \texinput{=\_q}
   \\
   %
   \hline
@@ -2039,14 +2014,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   Orthogonal complement $\orth S$ of $S$.
   \\
   \hline
-  \constdef{$S\tensor T$\par
-    $\mathtt{tensor}\ S\  T$\par
+  \constdef{$S\tensor_S T$\par
     $\mathtt{tensorSpace}\ S\  T$}
-  {(\alpha\times\beta)\ \mathtt{ccsubspace}}
-  {$S::\alpha\ \mathtt{ccsubspace}$ and $ T::\beta\ \mathtt{ccsubspace}$}
-  \toolconst{tensor}
+  {(\alpha\times\beta)\ \mathtt{ell2}\ \mathtt{ccsubspace}}
+  {$S::\alpha\ \mathtt{ell2}\ \mathtt{ccsubspace}$ and $ T::\beta\ \mathtt{ell2}\ \mathtt{ccsubspace}$}
   \toolconst{tensorSpace}
-  \symbolindexmark\TOOLotimes
+  \symbolindexmark\TOOLtensorS
   &
   The (positional) tensor product $S\otimes T$ of subspaces.
 
@@ -2055,13 +2028,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
   described in the preliminaries of
   \cite{qrhl-paper-from-manual}. That is,
   $S\otimes T\neq T\otimes S$.)
-
-  The notations $S\tensor T$ and $\mathtt{tensor}\ S\  T$ are overloaded.
-  If Isabelle/HOL has trouble recognizing which meaning
-  is intended, use \texttt{tensorSpace}, or provide additional type
-  information for~$S$ or~$ T$.
-
-  \texinput{\\otimes, \\ox}
+  
+  \texinput{\\ox\_S, \\otimes\\subS}
   \\
   \hline
   \subhead{Measurements}

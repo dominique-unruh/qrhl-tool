@@ -3,6 +3,15 @@ isabelle.
 quantum   var x : int.
 quantum var y : int.
 
+
+lemma (0 :: int ell2 ⇒⇩C⇩L int ell2) = undefined.
+admit.
+qed.
+
+lemma id_cblinfun >> ⟦x⟧ = id_cblinfun.
+
+⊗⇩S⊗⇩S
+
 lemma ket (0::bit) ⊗⇩s ket (0::bit) = ket (0,0).
 simp.
 qed.
