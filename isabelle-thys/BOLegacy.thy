@@ -39,6 +39,14 @@ hide_const (open) Quantum.CNOT
 hide_const (open) Quantum.pauliX
 hide_const (open) Quantum.pauliZ *)
 
+syntax (output) "_forced_parentheses" :: \<open>'a \<Rightarrow> 'a\<close> ("'(_')")
+
+(* Needed to make the terms below print with parentheses. If not, the result of printing cannot be parsed back. *)
+translations "A *\<^sub>S _forced_parentheses (B \<sqinter> C)" \<leftharpoondown> "A *\<^sub>S (B \<sqinter> C)"
+translations "_forced_parentheses (A *\<^sub>S B) \<sqinter> C" \<leftharpoondown> "(A *\<^sub>S B) \<sqinter> C"
+term \<open>A *\<^sub>S (B \<sqinter> C)\<close>
+term \<open>(A *\<^sub>S B) \<sqinter> C\<close>
+
 lemma inf_assoc_subspace[simp]: "A \<sqinter> B \<sqinter> C = A \<sqinter> (B \<sqinter> C)" 
   for A B C :: "_ ell2 ccsubspace"
   by (fact inf.assoc)
