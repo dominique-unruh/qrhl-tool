@@ -278,9 +278,10 @@ case class GoalFocus(label: String, subgoals: List[Subgoal]) extends IterableOnc
  * Invariant:
  * - every GoalFocus is nonempty except brace foci, and the head
  * - only the last (i.e., outer) GoalFocus can have label ""
- * @param foci
  */
-class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
+class Goal(
+            /** Goal focus stack. `foci.head` contains the currently focused subgoals. */
+            foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
   checkInvariant()
 
   def focusedSubgoals: List[Subgoal] = foci.headOption.map(_.subgoals).getOrElse(Nil)
