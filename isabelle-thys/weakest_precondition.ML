@@ -105,10 +105,10 @@ fun wp_tac ctxt = SUBGOAL (fn (goal,n) => let
       wp_tac0 false ctxt n
   end)
 
-(* fun get_wp left (prog:term) (post:term) ctxt =
+fun get_wp left (prog:term) (post:term) ctxt =
   let val progl = HOLogic.mk_list \<^typ>\<open>program\<close> [prog]
       val skip = \<^term>\<open>[]::program list\<close>
-      val goal = \<^const>\<open>qrhl\<close> $ Var(("pre",0),\<^typ>\<open>predicate expression\<close>) $ 
+      val goal = \<^const>\<open>qrhl\<close> $ Var(("pre",0),\<^typ>\<open>predicate expression2\<close>) $ 
                       (if left then progl else skip) $ (if left then skip else progl) $ post |> HOLogic.mk_Trueprop                    
       val thm = Goal.prove ctxt [] [] goal (fn {context=ctxt,...} => Misc.fail_on_LAZY_ERROR (wp_tac0 left ctxt) 1)
       (* val thm = Conv.fconv_rule (wp_cleanup_conv ctxt) thm *)
@@ -118,7 +118,7 @@ fun wp_tac ctxt = SUBGOAL (fn (goal,n) => let
         | _ => error "internal error"
   in
     (pre,thm)
-  end *)
+  end
 
 (* Note: This one cleans up the postcondition in order to produce a well-formed expression (convertible with expression_to_term) *)
 fun wp_seq_tac left right ctxt i = 

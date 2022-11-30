@@ -2,11 +2,12 @@ theory Test_Weakest_Precondition
   imports QRHL.Weakest_Precondition UnitTest
 begin
 
+declare[[show_types,show_sorts,show_consts,eta_contract=false]]
 
 ML \<open>
 fun test_get_wp ctxt left prog post expected =
 let val (wp,thm) = Weakest_Precondition.get_wp left prog post ctxt
-    val wp' = wp |> Thm.cterm_of ctxt |> Conv.try_conv (Expressions.clean_expression_conv ctxt)
+    val wp' = wp |> Thm.cterm_of ctxt |> Conv.try_conv (Programs.clean_expression_conv ctxt)
                  |> Thm.rhs_of |> Thm.term_of |> Envir.beta_norm
     val _ = assert_aconv expected wp'
     val (A,_,_,B) = Relational_Hoare.dest_qrhl_goal (Thm.prop_of thm)
@@ -20,51 +21,59 @@ in () end
 ML \<open>
 test_get_wp \<^context> true 
             \<^term>\<open>ifthenelse Expr[True] [] []\<close> (* program *)
-            \<^term>\<open>Expr[top::predicate]\<close> (* post *)
-            \<^term>\<open>const_expression ((\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> (\<CC>\<ll>\<aa>[True] + top))\<close> (* expected *)
+            \<^term>\<open>Expr[top] :: predicate expression2\<close> (* post *)
+            \<^term>\<open>Expr[ ((\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> (\<CC>\<ll>\<aa>[True] + top)) ] :: _ expression2\<close> (* expected *)
 \<close>
 
-declare[[show_types,show_sorts,show_consts,eta_contract=false]]
-
 (* TEST CASE: get_wp of "measure a A computational_basis" *)
-variables classical a :: bit and quantum A :: bit begin
+experiment
+  fixes a :: \<open>bit cvariable\<close> and A :: \<open>bit qvariable\<close>
+  assumes [variable]: \<open>cregister a\<close> \<open>qregister A\<close>
+begin
 ML \<open>
 test_get_wp \<^context> true 
-            \<^term>\<open>measurement \<lbrakk>var_a\<rbrakk> \<lbrakk>A\<rbrakk> (const_expression computational_basis)\<close> (* program *)
-            \<^term>\<open>const_expression (top::predicate)\<close> (* post *)
-            \<^term>\<open>const_expression
-                 (let M::(bit, bit) measurement = computational_basis
-                  in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (INF z::bit. let P::mem2 subspace = mproj M z\<guillemotright>\<lbrakk>A1::bit variable\<rbrakk> \<cdot> top in top \<sqinter> P + - P))\<close> (* expected *)
+            \<^term>\<open>measurement \<lbrakk>a\<rbrakk> \<lbrakk>A\<rbrakk> Expr[computational_basis]\<close> (* program *)
+            \<^term>\<open>Expr[top] :: predicate expression2\<close> (* post *)
+            \<^term>\<open>Expr[ (let M = computational_basis
+                  in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (INF z. let P = mproj M z\<guillemotright>\<lbrakk>A1\<rbrakk> \<cdot> top in top \<sqinter> P + - P))] :: _ expression2\<close> (* expected *)
 \<close>
 end
 
 (* TEST CASE: get_wp (right) of "if (true) b:=1" *)
-variables classical b :: bit begin
+experiment
+  fixes b :: \<open>bit cvariable\<close>
+  assumes [variable]: \<open>cregister b\<close>
+begin
 ML \<open>
 test_get_wp \<^context> false
-            \<^term>\<open>ifthenelse Expr[True] [assign \<lbrakk>var_b\<rbrakk> Expr[1] ] []\<close> (* program *)
-            \<^term>\<open>Expr[top::predicate]\<close> (* post *)
-            \<^term>\<open>const_expression ((\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> (\<CC>\<ll>\<aa>[True] + top))\<close> (* expected *)
+            \<^term>\<open>ifthenelse Expr[True] [assign \<lbrakk>b\<rbrakk> Expr[1] ] []\<close> (* program *)
+            \<^term>\<open>Expr[top] :: predicate expression2\<close> (* post *)
+            \<^term>\<open>Expr[(\<CC>\<ll>\<aa>[\<not> True] + top) \<sqinter> (\<CC>\<ll>\<aa>[True] + top)] :: _ expression2\<close> (* expected *)
 \<close>
 end
 
-variables quantum x :: bit and quantum y :: bit and classical h :: "bit \<Rightarrow> bit" begin
+experiment
+  fixes x y :: \<open>bit qvariable\<close> and h :: \<open>(bit \<Rightarrow> bit) cvariable\<close>
+  assumes [variable]: \<open>qregister \<lbrakk>x,y\<rbrakk>\<close> \<open>cregister \<lbrakk>h\<rbrakk>\<close>
+begin
 ML \<open>
 test_get_wp \<^context> true
-            \<^term>\<open>qapply \<lbrakk>x\<rbrakk> Expr[hadamard]\<close>
-            \<^term>\<open>Expr[top::predicate]\<close>
-            \<^term>\<open>Expr[\<CC>\<ll>\<aa>[isometry hadamard] \<sqinter> ((hadamard\<guillemotright>\<lbrakk>x1::bit variable\<rbrakk>)* \<cdot> (top \<sqinter> (hadamard\<guillemotright>\<lbrakk>x1\<rbrakk> \<cdot> top)))]\<close>
+            \<^term>\<open>qapply x Expr[hadamard]\<close>
+            \<^term>\<open>Expr[top] :: predicate expression2\<close>
+            \<^term>\<open>Expr[\<CC>\<ll>\<aa>[isometry hadamard] \<sqinter> ((hadamard\<guillemotright>\<lbrakk>x1\<rbrakk>)* \<cdot> (top \<sqinter> (hadamard\<guillemotright>\<lbrakk>x1\<rbrakk> \<cdot> top)))] :: _ expression2\<close>
 \<close>
 end
 
-
-variables classical x :: bit begin
-declare [[show_types,show_consts]]
+experiment
+  fixes x :: \<open>bit cvariable\<close>
+  assumes [variable]: \<open>cregister x\<close>
+begin
 ML \<open>
 test_get_wp \<^context> false
-            \<^term>\<open>sample \<lbrakk>var_x\<rbrakk> Expr[undefined]\<close>
-            \<^term>\<open>Expr[top::predicate]\<close>
-            \<^term>\<open>Expr[\<CC>\<ll>\<aa>[weight (undefined::bit distr) = (1::real)] \<sqinter> (INF z::bit\<in>supp undefined. (top::predicate))]\<close>
+            \<^term>\<open>sample \<lbrakk>x\<rbrakk> Expr[undefined]\<close>
+            \<^term>\<open>Expr[top] :: predicate expression2\<close>
+            \<^term>\<open>Expr[\<CC>\<ll>\<aa>[weight (undefined::bit distr) = (1::real)] 
+                 \<sqinter> (INF z::bit\<in>supp undefined. (top::predicate))] :: _ expression2\<close>
 \<close>
 end
 
