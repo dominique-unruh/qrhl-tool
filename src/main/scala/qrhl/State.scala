@@ -182,8 +182,8 @@ class State private (val environment: Environment,
       this
     } else {
       val fileContent = fs.getFile(fullpath).getOrElse { throw UserException(s"File $file not found (relative to $currentDirectory)") }
-      val state1 = copy(includedFiles = includedFiles + fullpath, cheatMode=cheatMode.startInclude,
-        hash = HashTag()(hash, fileContent.hash))
+      val state1 = this.copy(includedFiles = includedFiles + fullpath, cheatMode=cheatMode.startInclude,
+        hash = HashTag()(this.hash, fileContent.hash))
       val state2 = Toplevel.computeStateFromFileContent(state1, fullpath, fileContent, fs)
 //      val toplevel = Toplevel.makeToplevelFromState(state1, fs)
 //      toplevel.run(fileContent, fullpath)
@@ -191,7 +191,7 @@ class State private (val environment: Environment,
       val state3 = state2.copy(
         cheatMode = cheatMode, // restore original cheatMode
         currentDirectory = currentDirectory,  // restore original currentDirectory
-        hash = HashTag()(hash))
+        hash = HashTag()(state2.hash))
       state3
     }
   }
