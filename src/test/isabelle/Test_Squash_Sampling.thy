@@ -2,14 +2,19 @@ theory Test_Squash_Sampling
   imports QRHL.Squash_Sampling UnitTest
 begin
 
-variables
-quantum q :: int and
-quantum r :: int and
-quantum s :: int and
-classical x :: int and
-classical y :: int and
-classical z :: int
+experiment
+  fixes q r s t :: \<open>int qvariable\<close>
+    and x y z :: \<open>int cvariable\<close>
+  assumes [variable]: \<open>qregister \<lbrakk>q,r,s,t\<rbrakk>\<close>
+  assumes [variable]: \<open>cregister \<lbrakk>x,y,z\<rbrakk>\<^sub>c\<close>
 begin
+
+(* TODO remove/move *)
+lemma [simp]: \<open>qregister_conversion Q Q = qregister_id\<close> if \<open>qregister Q\<close>
+  using that apply transfer
+  apply auto
+  sorry
+
 
 lemma 
   assumes  \<open>qrhl A [qinit \<lbrakk>q\<rbrakk> Expr[U *\<^sub>V \<psi>]] [] B\<close>
@@ -29,27 +34,33 @@ lemma
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
   using assms by simp
 
+(* TODO move *)
+lemma apply_qFst: \<open>apply_qregister qFst U = U \<otimes>\<^sub>o id_cblinfun\<close>
+  sorry
+
 lemma 
   assumes \<open>qrhl A [qapply \<lbrakk>q, s\<rbrakk> Expr[U \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V]] [] B\<close>
   shows \<open>qrhl A [qapply \<lbrakk>q, s\<rbrakk> Expr[V], qapply \<lbrakk>q\<rbrakk> Expr[U]] [] B\<close>
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  using assms by simp
+  using assms by (simp add: apply_qFst)
 
 lemma 
   assumes \<open>qrhl A [qapply \<lbrakk>r, s, q\<rbrakk> Expr[id_cblinfun \<otimes>\<^sub>o id_cblinfun \<otimes>\<^sub>o U o\<^sub>C\<^sub>L V]] [] B\<close>
   shows \<open>qrhl A [qapply \<lbrakk>r, s, q\<rbrakk> Expr[V], qapply \<lbrakk>q\<rbrakk> Expr[U]] [] B\<close>
+  (* TODO: Improve Prog_Variables.join_registers for this: should return the bigger of the two if possible *)
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  using assms by simp
+  using assms by (simp add: apply_qFst)
 
 lemma 
   assumes \<open>qrhl A [qapply \<lbrakk>r, q\<rbrakk> Expr[U o\<^sub>C\<^sub>L id_cblinfun \<otimes>\<^sub>o V]] [] B\<close>
   shows \<open>qrhl A [qapply \<lbrakk>q\<rbrakk> Expr[V], qapply \<lbrakk>r,q\<rbrakk> Expr[U]] [] B\<close>
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  using assms by simp
+  using assms by (simp add: apply_qFst)
 
 lemma 
   shows \<open>qrhl A [qapply \<lbrakk>q,s\<rbrakk> Expr[V], qapply \<lbrakk>q,r\<rbrakk> Expr[U]] [] B\<close>
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
+  apply simp
   oops
 
 end

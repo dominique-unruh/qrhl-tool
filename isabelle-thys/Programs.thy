@@ -14,8 +14,8 @@ definition \<open>const_expression x = expression (Classical_Extra.empty_var :: 
 
 type_synonym 'a expression = \<open>cl \<Rightarrow> 'a\<close>
 type_synonym 'a expression2 = \<open>cl2 \<Rightarrow> 'a\<close>
-abbreviation (input) \<open>expression_eval e \<equiv> e\<close>
-abbreviation (input) \<open>map_expression2 f e1 e2 \<equiv> (\<lambda>m. f (e1 m) (e2 m))\<close>
+abbreviation (input) \<open>expression_eval e \<equiv> e\<close> (* LEGACY *)
+abbreviation (input) \<open>map_expression2 f e1 e2 \<equiv> (\<lambda>m. f (e1 m) (e2 m))\<close> (* LEGACY *)
 
 typedecl program
 typedecl oracle_program

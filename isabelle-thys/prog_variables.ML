@@ -672,4 +672,26 @@ fun join_registers (_:Proof.context) F G = if F aconv G then SOME F else let
 
 (* fun join_registers_ct ctxt F G = join_registers ctxt (Thm.term_of F) (Thm.term_of G) |> Option.map (Thm.cterm_of ctxt) *)
 
+(* Solves a goal of the form \<open>qregister_le Q ?QR \<and> qregister_le R ?QR\<close> by instantiating ?QR
+   as small as possible.
+*)
+fun qregister_lub_tac ctxt = SUBGOAL (fn (t,i) => let
+  val _ = \<^print>("qregister_lub_tac", Thm.cterm_of ctxt t)
+  val (Q,R) = case Logic.strip_imp_concl t of
+            \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>conj\<close> $ (\<^Const_>\<open>qregister_le _ _ _\<close> $ Q $ _)
+                                              $ (\<^Const_>\<open>qregister_le _ _ _\<close> $ R $ _))
+                => (Q,R)
+          | _ => error "qregister_lub_tac"
+  val _ = \<^print> (Q,R)
+  val QR = case join_registers ctxt Q R of
+             SOME QR => QR | NONE => error ("could not find upper bound of " ^ Syntax.string_of_term ctxt Q ^ " and " ^ Syntax.string_of_term ctxt R)
+  val _ = \<^print> QR
+  val lemma = @{lemma \<open>qregister_le Q QR \<Longrightarrow> qregister_le R QR \<Longrightarrow> qregister_le Q QR \<and> qregister_le R QR\<close> by simp}
+  in
+    resolve_tac ctxt [infer_instantiate ctxt [(("QR",0), Thm.cterm_of ctxt QR)] lemma] i
+    THEN qregister_le_tac ctxt i
+    THEN qregister_le_tac ctxt i
+  end
+)
+
 end

@@ -15,6 +15,7 @@ begin
 unbundle cblinfun_notation
 no_notation m_inv ("inv\<index> _" [81] 80)
 hide_const (open) Order.top
+hide_const (open) Axioms_Classical.getter
 
 (* hide_const (open) Classical_Extra.X Classical_Extra.Y Classical_Extra.x Classical_Extra.y *)
 
@@ -1078,6 +1079,9 @@ lemma getter_Snd_chain_swap[simp]: \<open>getter (cregister_chain cSnd G) (prod.
 
 lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.swap m) = getter (cregister_chain cSnd G) m\<close>
   sorry
+
+
+axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close>
 
 section \<open>ML code\<close>
 
