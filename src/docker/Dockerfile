@@ -21,4 +21,7 @@ RUN unzip /tmp/qrhl.zip && rm /tmp/qrhl.zip && mv qrhl-snapshot qrhl && echo "is
 # Build sessions of qrhl-tool
 RUN qrhl/bin/qrhl --build
 
+# Connect image to github repository
+LABEL org.opencontainers.image.source https://github.com/dominique-unruh/qrhl-tool
+
 ENTRYPOINT ["qrhl/bin/qrhl"]
