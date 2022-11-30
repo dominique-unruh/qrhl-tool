@@ -8,6 +8,7 @@ quantum var Q : bit.
 quantum var R : bit.
 
 program p1 := {
+  b <$ uniform UNIV;
   b <- measure R with computational_basis;
   Q <q ket 1;
   y <- x+1;
@@ -15,7 +16,15 @@ program p1 := {
 
 qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
   inline p1.
-  
+
+  sp 1 1.
+    simp!.
+    simp!.
+    simp!.
+    simp!.
+
+  simp.
+    
   sp left.
     simp!.
     simp!.

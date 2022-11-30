@@ -64,5 +64,15 @@ test_get_sp \<^context> true
 \<close>
 end
 
+(* TEST CASE: sample *)
+variables classical x :: bit begin
+ML \<open>
+test_get_sp \<^context> true
+            \<^term>\<open>sample \<lbrakk>var_x\<rbrakk> Expr[uniform UNIV]\<close> (* program *)
+            \<^term>\<open>Expr[Cla[x1=0]]\<close> (* pre *)
+            \<^term>\<open>Expr[SUP z::bit. \<CC>\<ll>\<aa>[z = (0::bit)] \<sqinter> \<CC>\<ll>\<aa>[x1 \<in> supp (uniform UNIV)]]\<close> (* expected *)
+\<close>
+end
+
 
 end

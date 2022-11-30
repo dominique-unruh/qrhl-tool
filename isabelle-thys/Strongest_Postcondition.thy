@@ -137,7 +137,117 @@ proof -
     by auto
 qed
 
+
 definition true_expression where \<open>true_expression A \<longleftrightarrow> (\<forall>m. expression_eval A m)\<close>
+
+lemma sp1_sample_tac:
+  fixes A B x v
+  assumes x1: "x1 = index_vars True x"
+  assumes e1: \<open>e1 = index_expression True e\<close>
+  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x1 (const_expression z)) A\<close>
+  assumes e1': \<open>\<And>z. e1' z = subst_expression (substitute_vars x1 (const_expression z)) e1\<close>
+  assumes B: \<open>B = map_expression3'' (\<lambda>x1' A' e1'. SUP z. A' z \<sqinter> Cla[x1' \<in> supp (e1' z)]) (expression x1 (\<lambda>x. x)) A' e1'\<close>
+  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[weight e1 = 1]) A e1\<close>
+  assumes dist_x: \<open>distinct_qvars x\<close>
+  assumes lossless: \<open>true_expression L\<close>
+  shows \<open>qrhl A [sample x e] [] B\<close>
+proof -
+  from dist_x have dist_x1: \<open>distinct_qvars x1\<close>
+    by (simp add: x1 distinct_qvars_index)
+  define B' where "\<And>z. B' z = subst_expression (substitute_vars x1 (const_expression z)) B"
+  define A'' where "A'' = map_expression2' (\<lambda>e1 B'. Cla[weight e1 = 1] \<sqinter> (INF z\<in>supp e1. B' z)) e1 B'"
+  have B'_foot: \<open>expression_vars (B' z) = expression_vars (B' undefined)\<close> for z
+  by (simp add: B'_def subst_expression_footprint subst_expression_footprint_substitute_vars_const)
+  have A'_foot: \<open>expression_vars (A' z) = expression_vars (A' undefined)\<close> for z
+    unfolding A' subst_expression_footprint subst_expression_footprint_substitute_vars_const by simp
+  have e1'_foot: \<open>expression_vars (e1' z) = expression_vars (e1' undefined)\<close> for z
+    unfolding e1' subst_expression_footprint subst_expression_footprint_substitute_vars_const by simp
+  from lossless
+  have lossless: \<open>expression_eval A m \<le> Cla[weight (expression_eval e1 m) = 1]\<close> for m
+    by (simp add: lossless_exp true_expression_def)
+  have *: \<open>expression_eval A m
+       \<le> (SUP z'.
+              \<CC>\<ll>\<aa>[z \<in> supp (expression_eval e1 (subst_mem2 (substitute_vars x1 Expr[z']) m))] \<sqinter>
+              expression_eval A (subst_mem2 (substitute_vars x1 Expr[z']) m))\<close> 
+    if \<open>z\<in>supp (expression_eval e1 m)\<close> for z m
+    apply (rule SUP_upper2[where i=\<open>eval_variables x1 m\<close>])
+     apply simp
+    by (simp add: that subst_mem2_eval_vars)
+  have \<open>expression_eval A m \<le> expression_eval A'' m\<close> if \<open>weight (expression_eval e1 m) = 1\<close> for m
+    using B'_foot apply (simp add: A''_def expression_eval_map_expression2' that B'_def
+        subst_expression_eval)
+    apply (thin_tac \<open>PROP _\<close>)
+    using e1'_foot A'_foot apply (simp add: B expression_eval_map_expression3'')
+    apply (thin_tac \<open>PROP _\<close>)
+    apply (thin_tac \<open>PROP _\<close>)
+    by (simp add: A' expression_eval subst_expression_eval subst_mem2_twice
+        * dist_x1 eval_var_subst_that_var e1')
+  moreover have \<open>expression_eval A m \<le> expression_eval A'' m\<close> if \<open>weight (expression_eval e1 m) \<noteq> 1\<close> for m
+    using lossless[of m] by (simp add: that bot.extremum_unique)
+  ultimately have \<open>A \<le> A''\<close>
+    unfolding less_eq_expression_def le_fun_def by auto
+  moreover have \<open>qrhl A'' [sample x e] [] B\<close>
+    apply (rule wp1_sample_tac)
+    by (auto simp: B'_def A''_def x1 e1)
+  ultimately show ?thesis
+    apply (rule_tac conseq_rule[where A'=A'' and B'=B])
+    by auto
+qed
+
+
+lemma sp2_sample_tac:
+  fixes A B x v
+  assumes x2: "x2 = index_vars False x"
+  assumes e2: \<open>e2 = index_expression False e\<close>
+  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x2 (const_expression z)) A\<close>
+  assumes e2': \<open>\<And>z. e2' z = subst_expression (substitute_vars x2 (const_expression z)) e2\<close>
+  assumes B: \<open>B = map_expression3'' (\<lambda>x2' A' e2'. SUP z. A' z \<sqinter> Cla[x2' \<in> supp (e2' z)]) (expression x2 (\<lambda>x. x)) A' e2'\<close>
+  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[weight e2 = 1]) A e2\<close>
+  assumes dist_x: \<open>distinct_qvars x\<close>
+  assumes lossless: \<open>true_expression L\<close>
+  shows \<open>qrhl A [] [sample x e] B\<close>
+proof -
+  from dist_x have dist_x2: \<open>distinct_qvars x2\<close>
+    by (simp add: x2 distinct_qvars_index)
+  define B' where "\<And>z. B' z = subst_expression (substitute_vars x2 (const_expression z)) B"
+  define A'' where "A'' = map_expression2' (\<lambda>e2 B'. Cla[weight e2 = 1] \<sqinter> (INF z\<in>supp e2. B' z)) e2 B'"
+  have B'_foot: \<open>expression_vars (B' z) = expression_vars (B' undefined)\<close> for z
+  by (simp add: B'_def subst_expression_footprint subst_expression_footprint_substitute_vars_const)
+  have A'_foot: \<open>expression_vars (A' z) = expression_vars (A' undefined)\<close> for z
+    unfolding A' subst_expression_footprint subst_expression_footprint_substitute_vars_const by simp
+  have e2'_foot: \<open>expression_vars (e2' z) = expression_vars (e2' undefined)\<close> for z
+    unfolding e2' subst_expression_footprint subst_expression_footprint_substitute_vars_const by simp
+  from lossless
+  have lossless: \<open>expression_eval A m \<le> Cla[weight (expression_eval e2 m) = 1]\<close> for m
+    by (simp add: lossless_exp true_expression_def)
+  have *: \<open>expression_eval A m
+       \<le> (SUP z'.
+              \<CC>\<ll>\<aa>[z \<in> supp (expression_eval e2 (subst_mem2 (substitute_vars x2 Expr[z']) m))] \<sqinter>
+              expression_eval A (subst_mem2 (substitute_vars x2 Expr[z']) m))\<close> 
+    if \<open>z\<in>supp (expression_eval e2 m)\<close> for z m
+    apply (rule SUP_upper2[where i=\<open>eval_variables x2 m\<close>])
+     apply simp
+    by (simp add: that subst_mem2_eval_vars)
+  have \<open>expression_eval A m \<le> expression_eval A'' m\<close> if \<open>weight (expression_eval e2 m) = 1\<close> for m
+    using B'_foot apply (simp add: A''_def expression_eval_map_expression2' that B'_def
+        subst_expression_eval)
+    apply (thin_tac \<open>PROP _\<close>)
+    using e2'_foot A'_foot apply (simp add: B expression_eval_map_expression3'')
+    apply (thin_tac \<open>PROP _\<close>)
+    apply (thin_tac \<open>PROP _\<close>)
+    by (simp add: A' expression_eval subst_expression_eval subst_mem2_twice
+        * dist_x2 eval_var_subst_that_var e2')
+  moreover have \<open>expression_eval A m \<le> expression_eval A'' m\<close> if \<open>weight (expression_eval e2 m) \<noteq> 1\<close> for m
+    using lossless[of m] by (simp add: that bot.extremum_unique)
+  ultimately have \<open>A \<le> A''\<close>
+    unfolding less_eq_expression_def le_fun_def by auto
+  moreover have \<open>qrhl A'' [] [sample x e] B\<close>
+    apply (rule wp2_sample_tac)
+    by (auto simp: B'_def A''_def x2 e2)
+  ultimately show ?thesis
+    apply (rule_tac conseq_rule[where A'=A'' and B'=B])
+    by auto
+qed
 
 lemma sp1_qinit_tac:
   fixes A B x v
