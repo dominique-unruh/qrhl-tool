@@ -342,7 +342,8 @@ To execute the example, execute \texttt{proofgeneral.sh
   and then use, e.g., \texttt{Ctrl-C Ctrl-N} to evaluate
 the file step by step. (If emacs is not available, you can also run
 \texttt{bin/qrhl example.qrhl} noninteractively.) To edit
-\texttt{Example.thy}, execute \texttt{run-isabelle.sh Example.thy}.
+\texttt{Example.thy}, execute \texttt{isabelle.sh Example.thy}.
+(On Windows: \texttt{isabelle.ps1}.)
 
 \paragraph{Configutation file.}%
 \index{configuration file}\index{qrhl-tool.conf@\texttt{qrhl-tool.conf}}
@@ -1110,7 +1111,7 @@ Isabelle/HOL. Readers unfamiliar with Isabelle/HOL may study the
 tutorial \cite{isabelle-tutorial}.
 
 For experiments, it can be useful to directly invoke Isabelle/HOL
-(using the \texttt{./run-isabelle.sh} script) and edit a theory that
+(using the \texttt{isabelle.sh} (Linux/Mac) or \texttt{isabelle.ps1} (Windows) script) and edit a theory that
 imports \texttt{QRHL.QRHL}.
 
 Expressions used in assign-statements will probably only rarely use
@@ -3418,6 +3419,111 @@ into an ambient logic subgoal.
 }
 \]
 This rule is an immediate consequence of rules \rulerefx{Skip} and \rulerefx{Conseq}.
+
+\tactic{sp} 
+
+Removes the first statement(s) from the left or right program of a qRHL
+subgoal and adapts the precondition accordingly.
+
+Compared with the \tacticref{wp} tactic, there are four important differences:
+\begin{itemize}
+\item \texttt{sp} processes the first line(s) of code, not the last line(s).
+\item \texttt{sp} is less complete than \texttt{wp}, there are program fragments for which not precondition does not exist.\footnote{%
+    E.g., there exists no predicate $B$ (not even $A:=\CL{\true}$) such that $\rhl {\CL\true}{\mathbf{halt}}{\mathbf{skip}}{A}$ holds where $\mathbf{halt}$ is a nonterminating program.}
+\item \texttt{sp} can produce simpler predicates (especially when measurements or quantum initializations are involved).
+\item \texttt{sp} may produce additional verification conditions are separate subgoals while \texttt{wp} always returns exactly one subgoal.
+\end{itemize}
+
+\bigskip
+
+\newcommand\SP{\operatorname{sp}}%
+
+More precisely, when invoked as ``\texttt{sp left.}'' or ``\texttt{sp right.}'', it applies the rule
+\begin{equation}
+  \inferrule
+  {\textit{sp-conds} \\ \rhl{\SP_1(A,s_1)}{s_2;\dots;s_n}\bc{B}}
+  {\rhl{A}{s_1;\dots;s_{n-1};s_n}\bc{B}}
+  \qquad\text{or}\qquad
+  \inferrule
+  {\textit{sp-conds} \\ \rhl{\SP_2(A,s_1)}\bc{s_2;\dots;s_n}{B}}
+  {\rhl{A}\bc{s_1;\dots;s_{n-1};s_n}{B}}
+  \label{eq:sp}
+\end{equation}
+respectively. (If-statements count as single statements, even if their bodies contain
+multiple statements.) Here the $\SP_1$ is the recursively defined partial function defined below, and \textit{sp-conds} is a list of new subgoals, one for each of the conditions specified in the definition of $\SP_1$ or $\SP_2$ below.
+%
+%
+\begin{align*}
+  \SP_1(A,\ \texttt{$\xx$ <- $e$}) & := \mathtt{SUP}\ z.\ \CL{\xx_1 = e_1\{z/\xx_1\}} \sqcap A\{z/\xx_1\} \\
+                                   & \qquad \begin{array}{ll} \textbf{Condition:} & \xx\text{ are distinct variables}
+                                            \end{array} \\
+  %
+  \SP_1(A,\ \texttt{$\xx$ <\$ $e$}) & := \mathtt{SUP}\ z.\ \CL{\xx_1 \in \mathtt{supp}\ e_1\{z/\xx_1\}} \sqcap A\{z/\xx_1\} \\
+                                   & \qquad \begin{array}{ll} \textbf{Conditions:} & \xx\text{ are distinct variables} \\
+                                              & A \leq \CL{\texttt{weight}\ e_1 = 1}
+                                            \end{array} \\
+                                            %
+  \SP_1(A,\  \texttt{on $\qq$ apply $e$})
+                                   & := (e_1\text\guillemotright \llbracket\qq\rrbracket) \cdot A \\
+                                   & \qquad \begin{array}{ll} \textbf{Conditions:} & \qq\text{ are distinct variables} \\
+                                              & A \leq \CL{\texttt{unitary}\ e_1}
+                                            \end{array} \\
+                                            %
+  \SP_1(A,\  \texttt{$\xx$ <- measure  $\qq$ with $e$})
+                                   & := \mathtt{SUP}\ z\ r.\ \CL{\xx_1 = r} \sqcap \pb\paren{(\mathtt{mproj}\ e_1\{z/\xx_1\}) \text\guillemotright \qq_1 \cdot A\{z/\xx_1\}} \\
+                                   & \qquad \begin{array}{ll} \textbf{Conditions:} & \xx,\qq\text{ are distinct variables} \\
+                                              & A \leq \CL{\texttt{mtotal}\ e_1}
+                                            \end{array} \\
+                                            %
+  \SP_1(A,\ \qq\texttt{ <q }e) & := A \sqcap (\qq_1 \TOOLeqq e) \\
+                                   & \qquad \begin{array}{ll} \textbf{Conditions:} & \qq\text{ are distinct from quantum vars in $A$} \\
+                                              & A \leq \CL{\norm{e_1} = 1}
+                                            \end{array} \\
+                                            %
+ \SP_1(A,\  \texttt{if ($e$) then $\bc$ else $\bd$})
+                                  & := \SP_1\pb\paren{\CL{e_1} \sqcap A, \bc} \sqcup \SP_1\pb\paren{\CL{\lnot e_1} \sqcap A, \bd} \\
+                                  & \qquad \begin{array}{ll} \textbf{Conditions:} & \text{from the recursive $\SP_1$ calls}
+                                           \end{array} \\
+                                   % 
+  \SP_1(A,\  s_1;\dots;s_n) & := \SP_1(\SP_1(\dots \SP_1(\SP_1(B, s_1), s_2) \dots, s_{n-1}), s_n) \\
+                                  & \qquad \begin{array}{ll} \textbf{Conditions:} & \text{from the recursive $\SP_1$ calls}
+                                           \end{array}
+\end{align*}
+Here we write $e_1$
+for $\idx1e$
+everywhere.  Note that the function $\SP_1$
+is undefined if the argument contains a \texttt{call}-statement. In
+those cases, the tactic will fail.
+
+The function $\SP_2$
+is defined analogously, except that all variables and expressions get
+index $2$ instead of index $1$.
+
+\medskip
+
+The functions $\SP_1$
+and $\SP_2$
+satisfy $\rhl{A}\bc\Skip{\SP_1(A,\bc)}$
+and $\rhl A\Skip\bc{\SP_2(A,\bc)}$,
+respectively.
+\TODOQ{reference proofs}
+
+
+Note that we call this tactic \texttt{sp} like ``strongest
+postcondition''. However, we stress that we have not actually proven that
+the postconditions returned by $\SP_1$
+or $\SP_2$ are indeed the \emph{strongest} postconditions.
+(We have merely tried to make them as strong as possible.)
+
+\medskip
+
+\texttt{sp left} and \texttt{sp right} apply only to the very last statement.
+The following variants can be used to handle several statements in one go:
+\texttt{sp left $n$} with $n\geq0$ is equivalent to $n$
+invocations of \texttt{sp left}.
+Analogously \texttt{sp right $n$}.
+And \texttt{sp $n$ $m$} is equivalent to \texttt{sp left $n$. sp right $n$.}
+
 
 \tactic{squash}
 
