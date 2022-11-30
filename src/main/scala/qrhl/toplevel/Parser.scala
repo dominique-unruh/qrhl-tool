@@ -576,7 +576,7 @@ object Parser extends JavaTokenParsers {
 
   def tactic_rewrite(implicit context: ParserContext): Parser[RewriteTac] =
     literal("rewrite") ~> commit(
-      (rewrite_range <~ "->") ~ (rewrite_range | block ^^ RewriteTac.Code)) ^^
+      (rewrite_range <~ "->") ~ (rewrite_range | parenBlock ^^ (s => RewriteTac.Code(s.toBlock)))) ^^
       { case input ~ output => RewriteTac(input, output) }
 
   def tactic(implicit context: ParserContext): Parser[Tactic] =
