@@ -144,7 +144,7 @@ class State private (val environment: Environment,
   def applyIsabelleToplevelCommand(command: String): State = {
     if (currentLemma.isDefined)
       throw UserException(s"""Isabelle commands are only possible outside a proof. Maybe you intended to use "isa ${command}."?""")
-    val newContext = Ops.applyToplevelCommand(isabelle.context, command).retrieveNow
+    val newContext = Ops.applyToplevelCommand(isabelle.context, IsabelleX.symbols.unicodeToSymbols(command)).retrieveNow
     copy(isabelle = Some(new ContextX(isabelle.isabelle, newContext)),
       hash = HashTag()(hash, Hashable.hash(command)))
   }
