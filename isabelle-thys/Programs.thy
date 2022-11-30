@@ -115,6 +115,10 @@ lemma denotation_block: "denotation (block ps) = fold denotation ps"
 definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" where
   "probability e p \<rho> = Prob (program_state_distrib (denotation p \<rho>)) (Collect e)"
 
+(* consts "probability_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_ : (_'(_'))]")
+translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c"
+hide_const probability_syntax *)
+
 lemma probability_sample: 
   "probability (expression m f) (block [sample m (const_expression D)]) rho
   = Prob D (Collect f)"

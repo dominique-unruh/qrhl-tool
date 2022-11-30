@@ -305,6 +305,12 @@ type varterm = (string*typ) tree
   | parse_varterm (Const(\<^const_name>\<open>variable_unit\<close>,_)) = VTUnit
   | parse_varterm t = raise TERM("not a variables expression",[t]) *)
 
+(* fun parse_varterm_syntax (Const(\<^const_syntax>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm_syntax a, parse_varterm_syntax b)
+  | parse_varterm_syntax (Const(\<^const_syntax>\<open>variable_singleton\<close>,_) $ Free(n,Type(\<^type_name>\<open>variable\<close>,[T]))) = VTSingle (n,T)
+  | parse_varterm_syntax (Const(\<^const_syntax>\<open>variable_singleton\<close>,_) $ (Const("_free",_) $ Free(n,Type(\<^type_name>\<open>variable\<close>,[T])))) = VTSingle (n,T)
+  | parse_varterm_syntax (Const(\<^const_syntax>\<open>variable_unit\<close>,_)) = VTUnit
+  | parse_varterm_syntax t = raise TERM("not a variables expression",[t]) *)
+
 (* fun mk_varterm (VTUnit) = (\<^const>\<open>variable_unit\<close>, \<^typ>\<open>unit\<close>)
   | mk_varterm (VTCons(a,b)) = let
       val (vta,Ta) = mk_varterm a
