@@ -152,9 +152,11 @@ object Variable {
     }
   }
 
-  def varsToString(vars: Traversable[Variable]): String =
+  def varsNamesToString(vars: Iterable[String]): String =
     if (vars.isEmpty) "∅" else
-      vars.map(_.name).mkString(", ")
+      vars.mkString(", ")
+
+  def varsToString(vars: Iterable[Variable]): String = varsNamesToString(vars.map(_.name))
 
   sealed trait Index
   final case object NoIndex extends Index
@@ -239,7 +241,7 @@ final class CVariable private (override val basename:String, override val valueT
   override def index2: CVariable = { assert(theIndex==NoIndex); new CVariable(basename, valueTyp, Index2) }
   override def toString: String = s"classical var $name : ${IsabelleX.pretty(valueTyp)}"
   override def unindex: CVariable = { assert(isIndexed); new CVariable(basename, valueTyp, NoIndex) }
-  
+
 //  def valueTerm(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(name, valueTyp)
 
 //  override def isQuantum: Boolean = false

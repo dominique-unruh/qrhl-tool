@@ -9,6 +9,7 @@ import de.unruh.isabelle.control
 import de.unruh.isabelle.pure.{Term, Thm, Typ, Type}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 import qrhl.isabellex.{IsabelleX, RichTerm}
+import qrhl.logic.Variable.{varsNamesToString, varsToString}
 import qrhl.{AllSet, MaybeAllSet, UserException, Utils}
 
 import scala.annotation.tailrec
@@ -134,14 +135,14 @@ case class VariableUse
   @deprecated("","") def writtenClassical : ListSet[CVariable] = written collect { case v : CVariable => v }
 
   override def toString: String = s"""
-      | Free        ⊆ ${freeVariables.map(_.name).mkString(", ")}
-      | Ambient     ⊆ ${ambient.mkString(", ")}
-      | Programs    = ${programs.map(_.name).mkString(", ")}
-      | Written     ⊆ ${written.map(_.name).mkString(", ")}
-      | Overwritten ⊇ ${overwritten.map(_.name).mkString(", ")}
-      | Inner       ⊆ ${inner.map(_.name).mkString(", ")}
-      | Covered     ⊇ ${if (covered.isAll) "all variables" else covered.map(_.name).mkString(", ")}
-      | Oracles     ⊆ ${oracles.mkString(", ")}
+      | Free        ⊆ ${varsToString(freeVariables)}
+      | Ambient     ⊆ ${varsNamesToString(ambient)}
+      | Programs    = ${varsNamesToString(programs.map(_.name))}
+      | Written     ⊆ ${varsToString(written)}
+      | Overwritten ⊇ ${varsToString(overwritten)}
+      | Inner       ⊆ ${varsToString(inner)}
+      | Covered     ⊇ ${if (covered.isAll) "all variables" else varsToString(covered)}
+      | Oracles     ⊆ ${varsNamesToString(oracles)}
     """.stripMargin
 }
 
