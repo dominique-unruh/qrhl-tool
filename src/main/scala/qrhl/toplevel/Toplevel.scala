@@ -122,6 +122,7 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
 
   /** Executes a single command. The command must be given without a final ".". */
   def execCmd(cmd:CommandOrString) : Unit = {
+    logger.debug(s"Command list before: $commands")
     cmd.undo match {
       case Some(undo) =>
         if (undo > commands.length)
@@ -130,9 +131,13 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
         // Don't store the new command list unless the "computeState()" below succeeds
         // Otherwise ProofGeneral would get out of sync
         val newCommands = commands.drop(undo)
-        currentState = computeState(newCommands.reverse)
         commands = newCommands
-        println(currentState)
+        try {
+          currentState = computeState(commands.reverse)
+          println(currentState)
+        } catch {
+          case _ : Exception => println("*** There is an error somewhere farther up in the proof. Undo more steps. (Using C-c C-u in ProofGeneral.)")
+        }
       case _ => // Not an undo command
         // Don't store the new command list unless the "computeState()" below succeeds
         // Otherwise ProofGeneral would get out of sync
@@ -141,6 +146,7 @@ class Toplevel private(initialState : State, errorWhenUnfinished : Boolean = tru
         commands = newCommands
         println(currentState)
     }
+    logger.debug(s"Command list after: $commands")
   }
 
   def run(script: String): Unit = {
