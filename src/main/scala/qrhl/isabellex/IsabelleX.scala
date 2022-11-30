@@ -21,6 +21,7 @@ import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 import scala.util.{Left, Right}
 import de.unruh.isabelle.control
+import de.unruh.isabelle.misc.Symbols.ProcessSubSuperMode
 import de.unruh.isabelle.misc.{FutureValue, Symbols}
 import de.unruh.isabelle.pure.exceptions.Exn
 import hashedcomputation.{Hash, HashedValue}
@@ -982,10 +983,13 @@ object IsabelleX {
 
   private val logger = log4s.getLogger
 
-  val symbols = new Symbols(extraSymbolsLowPri = List(
-    // Own additions (because Emacs's TeX input method produces these chars):
-    "lbrakk" -> 0x301A, "rbrakk" -> 0x301B))
-    // We do not include "cdot" -> 0xB7, because Isabelle maps 0xB7 to sqdot, and we do not want to conflict with that
+  val symbols = new Symbols(
+    processSubSuper = ProcessSubSuperMode.ToIsabelle,
+    extraSymbolsLowPri = List(
+      // Own additions (because Emacs's TeX input method produces these chars):
+      "lbrakk" -> 0x301A, "rbrakk" -> 0x301B)
+      // We do not include "cdot" -> 0xB7, because Isabelle maps 0xB7 to sqdot, and we do not want to conflict with that
+  )
 
   private var _theContext: ContextX = _
   def theContext: ContextX = _theContext
