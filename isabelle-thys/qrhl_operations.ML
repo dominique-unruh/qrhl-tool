@@ -334,7 +334,7 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
 
   (* Condition that implies that `all_vars` do not occur in `pred_lhs` (the predictate without the qeq) *)
   val colocality = HOLogic.all_const \<^typ>\<open>cl2\<close> $ Abs ("mem", \<^typ>\<open>cl2\<close>, 
-        Const(\<^const_name>\<open>colocal_pred_qvars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of all_vars --> HOLogic.boolT)
+        Const(\<^const_name>\<open>distinct_qvars_pred_vars\<close>, \<^typ>\<open>predicate\<close> --> fastype_of all_vars --> HOLogic.boolT)
                  $ pred_lhs $ all_vars)
 in
   (pred', colocality)

@@ -176,32 +176,38 @@ subsection "Distinct quantum variables"
 abbreviation (input) qvariables_local :: \<open>'a q2variable \<Rightarrow> 'b q2variable \<Rightarrow> bool\<close> where
   \<open>qvariables_local Q R \<equiv> Qqcompatible (QCOMPLEMENT (QREGISTER_of R)) Q\<close>
 
-text \<open>The following constant \<open>COLOCAL_GUARD\<close> is a marker that indicates that the simplifier
+text \<open>The following constant \<open>DISTINCT_QVARS_GUARD\<close> is a marker that indicates that the simplifier
   should not attempt to solve the subgoal \<open>C\<close> (which is supposed to be of the form \<open>colocal_...\<close>)
   unless a quick check whether it can be solved succeeds. (The quick check simply checks whether
-  no variable occurs in both arguments of the \<open>colocal_...\<close>.) This is to avoid spending potentially
+  no variable occurs in both arguments of the \<open>distinct_qvars_...\<close>.) This is to avoid spending potentially
   a lot of time on repeated failed colocality-proofs.
 
-  To avoid this check (i.e., attempt simplification always), simply add \<open>COLOCAL_GUARD_def\<close> to the simplifier.
+  To avoid this check (i.e., attempt simplification always), simply add \<open>DISTINCT_QVARS_GUARD_def\<close> to the simplifier.
 
-  See also the simproc \<open>colocal_guard_simproc\<close> below.
+  See also the simproc \<open>distinct_qvars_guard_simproc\<close> below.
   \<close>
-definition [code del]: \<open>COLOCAL_GUARD (C::bool) = C\<close>
-lemma COLOCAL_GUARD_cong[cong]: \<open>COLOCAL_GUARD x = COLOCAL_GUARD x\<close>
+definition [code del]: \<open>DISTINCT_QVARS_GUARD (C::bool) = C\<close>
+lemma DISTINCT_QVARS_GUARD_cong[cong]: \<open>DISTINCT_QVARS_GUARD x = DISTINCT_QVARS_GUARD x\<close>
   by simp
 
 axiomatization operator_local :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool" 
 
 axiomatization predicate_local :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool"
 
-axiomatization colocal_pred_qvars :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool"
+axiomatization distinct_qvars_pred_vars :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool"
 
-axiomatization colocal_op_qvars :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool"
+axiomatization distinct_qvars_op_vars :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool"
 
-axiomatization colocal_op_pred :: "(qu2,qu2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
+axiomatization distinct_qvars_op_pred :: "(qu2,qu2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
 
-consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
-adhoc_overloading colocal colocal_pred_qvars colocal_op_pred colocal_op_qvars (* colocal_qvars_qvars *)
+abbreviation \<open>colocal_op_pred == distinct_qvars_op_pred\<close> (* Legacy *)
+abbreviation \<open>colocal_op_qvars == distinct_qvars_op_vars\<close> (* Legacy *)
+abbreviation \<open>colocal_pred_qvars == distinct_qvars_pred_vars\<close> (* Legacy *)
+
+consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool" (* Legacy *)
+adhoc_overloading colocal \<open>\<lambda>x y. distinct_qvars_pred_vars x y\<close> \<open>\<lambda>x y. distinct_qvars_op_vars x y\<close> \<open>\<lambda>x y. distinct_qvars_op_pred x y\<close>
+(* Having non-eta reduced terms in the adhoc_overloading effectively makes the overloading input-only,
+   as appropropriate for a legacy name *)
 
 lemma colocal_pred_qvars_unit[simp]: "colocal_pred_qvars A \<lbrakk>\<rbrakk>"
   by (cheat colocal_pred_qvars_unit)
@@ -241,7 +247,6 @@ lemma colocal_pred_qvars_pair[simp,intro]:
   assumes "colocal_op_qvars_str U (set (variable_names Q))"
   shows "colocal_op_qvars U Q"
   by (cheat colocal_op_qvars) *)
-
 
 lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
   by (cheat predicate_local_inf)
@@ -1134,7 +1139,8 @@ section \<open>Measurements\<close>
 definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
        \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<langle>\<phi>, M i *\<^sub>V \<psi>\<rangle>) = \<langle>\<phi>, P *\<^sub>V \<psi>\<rangle>) \<and> P \<le> id_cblinfun))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
-  unfolding is_measurement_def by (auto intro: exI[of _ 0])
+  unfolding is_measurement_def
+  by (auto intro: exI[of _ 0])
 
 
 typedef ('a,'b) measurement = "{M::'a\<Rightarrow>('b,'b) l2bounded. is_measurement M}"
@@ -1287,8 +1293,8 @@ lemma applyOpSpace_colocal:
   by (cheat TODO14)
 
 lemma applyOpSpace_colocal_simp[simp]:
-  "COLOCAL_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
-  by (simp add: applyOpSpace_colocal COLOCAL_GUARD_def)
+  "DISTINCT_QVARS_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
+  by (simp add: applyOpSpace_colocal DISTINCT_QVARS_GUARD_def)
 
 lemma qeq_collect:
  "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
@@ -1697,6 +1703,6 @@ section "Simprocs"
    "reorder_variables_hint a b" | "extend_lift_as_var_concat_hint A R") = 
   QRHL.variable_rewriting_simproc *)
 
-simproc_setup colocal_guard_simproc (\<open>COLOCAL_GUARD t\<close>) = QRHL.colocal_guard_simproc
+simproc_setup distinct_qvars_guard_simproc (\<open>DISTINCT_QVARS_GUARD t\<close>) = QRHL.distinct_qvars_guard_simproc
 
 end

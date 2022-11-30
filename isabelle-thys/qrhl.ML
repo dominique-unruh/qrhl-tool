@@ -604,19 +604,19 @@ val _ =
         swap_variables_vars_singleton3[THEN eq_reflection]
   } ctxt) *)
 
-fun colocal_guard_simproc _ _ ct = let
+fun distinct_qvars_guard_simproc _ _ ct = let
   fun qvariables_in_term (t$u) found = qvariables_in_term t (qvariables_in_term u found)
     | qvariables_in_term (Abs(_,_,t)) found = qvariables_in_term t found
     | qvariables_in_term (Free(v,Type(\<^type_name>\<open>qregister\<close>,_))) found = v :: found
     | qvariables_in_term _ found = found
-  val t = case Thm.term_of ct of \<^Const_>\<open>COLOCAL_GUARD\<close> $ t => t
+  val t = case Thm.term_of ct of \<^Const_>\<open>DISTINCT_QVARS_GUARD\<close> $ t => t
   val (vars1, vars2) = case t of
-     \<^Const_>\<open>colocal_pred_qvars _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
-   | \<^Const_>\<open>colocal_op_pred\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
-   | \<^Const_>\<open>colocal_op_qvars _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
+     \<^Const_>\<open>distinct_qvars_pred_vars _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
+   | \<^Const_>\<open>distinct_qvars_op_pred\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
+   | \<^Const_>\<open>distinct_qvars_op_vars _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
    | _ => ([],[])
   val inter = Ord_List.inter string_ord (Ord_List.make string_ord vars1) (Ord_List.make string_ord vars2)
   val disjoint = null inter
-  in if disjoint then SOME @{lemma \<open>COLOCAL_GUARD x \<equiv> x\<close> by (simp add: COLOCAL_GUARD_def)} else NONE end
+  in if disjoint then SOME @{lemma \<open>DISTINCT_QVARS_GUARD x \<equiv> x\<close> by (simp add: DISTINCT_QVARS_GUARD_def)} else NONE end
 
 end
