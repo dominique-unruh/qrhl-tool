@@ -1103,7 +1103,6 @@ lemma index_flip_var_conv_aux2: "index_flip_var (index_var False v) \<equiv> ind
 
 ML_file "prog_variables.ML"
 
-
 section \<open>Syntax\<close>
 
 

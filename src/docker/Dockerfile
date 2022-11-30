@@ -1,4 +1,4 @@
-FROM makarius/isabelle:Isabelle2021-1
+FROM makarius/isabelle:Isabelle2022
 
 # Install dependencies
 USER root
