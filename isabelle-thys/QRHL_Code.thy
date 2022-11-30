@@ -22,6 +22,18 @@ no_notation "Lattice.meet" (infixl "\<sqinter>\<index>" 70)
 no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
 hide_const (open) Order.bottom Order.top
 
+hide_const (open) Quantum.hadamard
+hide_const (open) Quantum.matrix_hadamard
+hide_const (open) Quantum.CNOT
+hide_const (open) Quantum.matrix_CNOT
+hide_const (open) Quantum.pauliX
+hide_const (open) Quantum.matrix_pauliX
+(* hide_const (open) Quantum.pauliY *)
+(* hide_const (open) Quantum.matrix_pauliY *)
+hide_const (open) Quantum.pauliZ
+hide_const (open) Quantum.matrix_pauliZ
+
+
 no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
 no_syntax "\<^const>Lattice.meet" :: "[_, 'a, 'a] => 'a" (infixl "\<sqinter>\<index>" 70)
 
@@ -40,6 +52,7 @@ lemma bounded_of_mat_Z[code]: "mat_of_cblinfun pauliZ = matrix_Z"
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
 lemma bounded_of_mat_Y[code]: "mat_of_cblinfun pauliY = matrix_Y"
   by (cheat 16)
+
 (* definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]" *)
 lemma bounded_of_mat_hadamard[code]: "mat_of_cblinfun hadamard = matrix_hadamard"
   sorry
