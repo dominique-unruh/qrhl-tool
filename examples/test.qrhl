@@ -57,6 +57,10 @@ qrhl {undefined} call p1; ~  call p2; {undefined}.
   inline p1.
   inline p2.
 
+# swap left 2-3 1-1 subprograms: { b <- measure Q with computational_basis; }.
+
+swap left 1-1 2-2 subprograms: {}.
+
 print goal.
 
 conseq post: undefined.

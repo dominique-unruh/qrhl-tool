@@ -353,33 +353,32 @@ object Parser extends JavaTokenParsers {
     }
 
   val swap_range: Parser[SwapTac.Range] =
-    (natural ~ "-" ~ natural) ^^ { case i~_~j => SwapTac.MiddleRange(i,j) } |
+    (natural ~ "-" ~ natural) ^^ { case i ~ _ ~ j => SwapTac.MiddleRange(i,j) } /*|
       natural ^^ SwapTac.FinalRange |
-      success(SwapTac.FinalRange(1))
+      success(SwapTac.FinalRange(1))*/
 
   def swap_subprograms(implicit context:ParserContext): Parser[List[(Statement, Option[Statement])]] = rep1sep(
     (statement ~ ("->" ~> statement).?) ^^ { case x ~ y => (x.unwrapSingletonBlock, y.map(_.unwrapSingletonBlock)) },
     literal(",")
   )
 
-  val subprograms_selector: Parser[Boolean] =
+/*  val subprograms_selector: Parser[Boolean] =
     literal("subprograms") ~>
       commit(((literal("first") ^^^ true | literal("second") ^^^ false)
         withFailureMessage "'first'/'second' expected after 'subprograms'") <~
-        literal(":"))
+        literal(":"))*/
 //    literal("subprograms") ~> OnceParser("first|second".r <~ literal(":") ^^
 //      { case "first" => true; case "second" => false; case _ => throw new InternalError("Should not occur") })
 
 
   def tactic_swap(implicit context:ParserContext): Parser[SwapTac] =
-    literal("swap") ~> (for (
+    literal("swap") ~> commit(for (
       left <- ("left" ^^^ true | "right" ^^^ false) withFailureMessage "left/right expected after swap";
-      range <- swap_range;
-      steps <- natural;
-      (subprogramsInFirst,subprograms) <- (subprograms_selector ~ swap_subprograms ^^
-            { case subprogramsInFirst ~ subprograms => (subprogramsInFirst,subprograms)})
-              | success((false, Nil)))
-      yield SwapTac(left=left, range=range, steps=steps, subprograms, subprogramsInFirst))
+      range1 <- swap_range;
+      range2 <- swap_range;
+      subprograms <- (literal("subprograms") ~> commit(literal(":") ~> swap_subprograms))
+                        | success(Nil))
+      yield SwapTac(left=left, range1=range1, range2=range2, subprograms=subprograms))
 
   val tactic_inline: Parser[InlineTac] =
     literal("inline") ~> identifier ^^ InlineTac
