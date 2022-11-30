@@ -627,7 +627,7 @@ fun distinct_qvars_tac ctxt : int -> tactic =
 (* Given a subgoal of the form "liftOp (?trafo U) Q = liftOp U R", solves it by instantiating
    ?trafo suitably. *)
 fun extend_op_vars_tac ctxt = let
-  val subtac = CONVERSION ((Simplifier.rewrite |> Misc.mk_ctxt_conv Conv.arg1_conv 
+(*   val subtac = CONVERSION ((Simplifier.rewrite |> Misc.mk_ctxt_conv Conv.arg1_conv 
                     |> Misc.mk_ctxt_conv HOLogic.Trueprop_conv |> Conv.params_conv ~1) ctxt)
                 THEN' resolve_tac ctxt @{thms refl}
   val maintac = 
@@ -642,15 +642,16 @@ fun extend_op_vars_tac ctxt = let
                \<Longrightarrow> liftOp (id_cblinfun \<otimes>\<^sub>o trafo U) (variable_concat Q R) = liftOp U S\<close>
         by (metis distinct_qvars_swap lift_extendL)}]
     THEN' FIRST' [special_case_tac1, special_case_tac2]
-    THEN' distinct_qvars_tac ctxt) i st
+    THEN' distinct_qvars_tac ctxt) i st *)
   in
-    FIRST' [special_case_tac1, special_case_tac2, maintac]
+    (* FIRST' [special_case_tac1, special_case_tac2, maintac] *)
+    error "fix me! (extend_op_vars_tac)"
   end
 
 (* Given a subgoal of the form "liftOp (?trafoU U) ?QR = liftOp U Q \<and> liftOp (?trafoV V) ?QR = liftOp V R",
    solves it by instantiating ?trafoU, ?trafoV, and ?QR suitably. *)
 fun extend_2op_vars_tac ctxt = let
-  val subtac = CONVERSION ((Simplifier.rewrite |> Misc.mk_ctxt_conv Conv.arg1_conv 
+(*   val subtac = CONVERSION ((Simplifier.rewrite |> Misc.mk_ctxt_conv Conv.arg1_conv 
                     |> Misc.mk_ctxt_conv HOLogic.Trueprop_conv |> Conv.params_conv ~1) ctxt)
                THEN' resolve_tac ctxt @{thms refl}
   val maintac = 
@@ -672,8 +673,9 @@ fun extend_2op_vars_tac ctxt = let
       \<open>liftOp (trafoU U) R = liftOp U Q
        \<Longrightarrow> liftOp (trafoU U) R = liftOp U Q \<and> liftOp V R = liftOp V R\<close>
       by auto}]
-    THEN' extend_op_vars_tac ctxt
+    THEN' extend_op_vars_tac ctxt *)
   in
-    FIRST' [special_case_tac1, special_case_tac2, special_case_tac3, maintac]
+    (* FIRST' [special_case_tac1, special_case_tac2, special_case_tac3, maintac] *)
+    error "fix me! (extend_2op_vars_tac)"
   end
 end

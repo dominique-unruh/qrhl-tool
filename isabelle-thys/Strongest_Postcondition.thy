@@ -2,6 +2,7 @@ theory Strongest_Postcondition
   imports Tactics Basic_Rules Weakest_Precondition
 begin
 
+(*
 lemma pair_expression_footprint:
   \<open>expression_vars (pair_expression e f) = expression_vars e \<union> expression_vars f\<close>
   apply transfer
@@ -50,6 +51,7 @@ lemma distinct_qvars_index: \<open>distinct_qvars (index_vars side x) \<longleft
   unfolding distinct_qvars_def
   apply (transfer fixing: side)
   by (auto simp: flatten_tree_index distinct_map index_var_raw_inject intro!: inj_onI)
+*)
 
 lemma sp1_assign_tac:
   fixes A B x v

@@ -202,7 +202,7 @@ structure MLThmAttribData = Proof_Data (
   Optionally, after \<open>mlcode\<close>, we can give \<open>(is \<open>pattern\<close>)\<close> to bind schematic variables by pattern 
   matching the theorem. *)
 val _ = Theory.setup (Attrib.setup \<^binding>\<open>ML_thm\<close>
-  (Args.context -- Scan.lift Args.text_input 
+  (Args.context -- Scan.lift Parse.ML_source 
       -- Scan.lift (Scan.optional (Parse.$$$ "(" |-- Parse.!!! (Scan.repeat1 (Parse.$$$ "is" |-- Parse.prop) --| Parse.$$$ ")")) []) 
       >> (fn ((ctxt,source),is_props) =>
   let

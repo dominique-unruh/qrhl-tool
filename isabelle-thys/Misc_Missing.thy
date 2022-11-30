@@ -4,6 +4,8 @@ begin
 
 section \<open>Misc\<close>
 
+unbundle lattice_syntax
+
 lemma inj_comp[simp]: "inj ((\<circ>) f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c)) = inj f"
 proof (rule; rule injI)
   assume inj: "inj ((\<circ>) f :: ('a\<Rightarrow>'b) \<Rightarrow> ('a\<Rightarrow>'c))"
