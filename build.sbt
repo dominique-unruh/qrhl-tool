@@ -2,7 +2,6 @@ import java.io.PrintWriter
 import NativePackagerHelper._
 
 import scala.sys.process.Process
-import org.apache.commons.lang3.SystemUtils
 import java.nio.file.Files
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -14,13 +13,11 @@ lazy val root = (project in file("."))
 lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   scalaVersion := "2.13.3",
   resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases"),
-  // https://mvnrepository.com/artifact/org.log4s/log4s
   libraryDependencies += "org.log4s" %% "log4s" % "1.8.2",
   // Needed so that logging works in "sbt test"
   libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30" % Test,
 //  libraryDependencies += "com.google.guava" % "guava" % "30.0-jre",
   libraryDependencies += "org.jetbrains" % "annotations" % "20.1.0",
-  // https://mvnrepository.com/artifact/commons-codec/commons-codec
   libraryDependencies += "commons-codec" % "commons-codec" % "1.15",
   libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.9",
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
@@ -70,24 +67,24 @@ makeGITREVISION := {
   pr.print(text)
   pr.close()
 }
-managedResources in Compile := (managedResources in Compile).dependsOn(makeGITREVISION).value
+Compile / managedResources := (Compile / managedResources).dependsOn(makeGITREVISION).value
 
 val isabelleVersion = Files.readString(file("src/main/resources/qrhl/isabellex/isabelleVersion").toPath)
-val isabelleHome = file(s"/opt/Isabelle2022$isabelleVersion")
+val isabelleHome = file(s"/opt/Isabelle$isabelleVersion")
 
-mainClass in assembly := Some("qrhl.Main")
-assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
-test in assembly := {}
+assembly / mainClass := Some("qrhl.Main")
+assembly / assemblyOutputPath := baseDirectory.value / "qrhl.jar"
+assembly / test := {}
 
-javaOptions in Universal += "-Dfile.encoding=UTF-8" // This is important when running in ProofGeneral: Communication via stdin/out is done in UTF-8, but by default Java encodes stdin/out according to locale settings
+Universal / javaOptions += "-Dfile.encoding=UTF-8" // This is important when running in ProofGeneral: Communication via stdin/out is done in UTF-8, but by default Java encodes stdin/out according to locale settings
 
 enablePlugins(JavaAppPackaging)
 
-mappings in Universal ++=
+Universal / mappings ++=
   List("proofgeneral.sh", "proofgeneral.ps1", "isabelle.sh", "isabelle.ps1", "README.md", "LICENSE", "qrhl-tool.conf.sample").
     map { f => baseDirectory.value / f -> f }
 
-mappings in Universal ++= {
+Universal / mappings ++= {
   val base = baseDirectory.value
   val dirs = base / "isabelle-thys" +++ base / "examples"
   val files = dirs ** ("*.thy" || "*.ML" || "ROOT" || "ROOTS" || "*.qrhl" || "root.tex" || "root.bib" || "empty" || "WHAT_IS_THIS")
@@ -98,28 +95,28 @@ mappings in Universal ++= {
   files3 pair relativeTo(base)
 }
 
-mappings in Universal += (baseDirectory.value / "doc" / "manual.pdf" -> "manual.pdf")
-mappings in Universal += (baseDirectory.value / "target" / "GITREVISION" -> "GITREVISION")
+Universal / mappings += (baseDirectory.value / "doc" / "manual.pdf" -> "manual.pdf")
+Universal / mappings += (baseDirectory.value / "target" / "GITREVISION" -> "GITREVISION")
 
-mappings in Universal ++= directory("proofgeneral")
+Universal / mappings ++= directory("proofgeneral")
 
 // Without this, updateSbtClassifiers fails (and that breaks Intelli/J support)
 resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
-resolvers += Resolver.sonatypeRepo("snapshots")
+resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 
 // To avoid that several tests simultaneously try to build Isabelle
-parallelExecution in Test := false
+Test / parallelExecution := false
 Test / run / javaOptions += "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug"
 
 test := (Test / test).dependsOn(hashedcomputation / Test / test).value
 
-javaOptions in Universal += "-J-Xss10m"
+Universal / javaOptions += "-J-Xss10m"
 
 // This needs to be run manually (because it is slow and rarely needed)
 lazy val createIsabelleNames = taskKey[Unit]("(Re)create isabellex/IsabelleNames.scala")
 createIsabelleNames := {
   val isabelleCommand = (isabelleHome / "bin/isabelle").toString
-  val isabellexDir = (scalaSource.in(Compile).value / "qrhl" / "isabellex").toString
+  val isabellexDir = ((Compile / scalaSource).value / "qrhl" / "isabellex").toString
   // /opt/Isabelle2021/bin/isabelle export -d . -O src/main/scala/qrhl/isabellex/ -x QRHL.Scala:IsabelleNames.scala -p 1 QRHL-Scala
   Process(List(isabelleCommand, "export", "-d", ".", "-O", isabellexDir, "-x", "QRHL.Scala:IsabelleNames.scala", "-p", "1", "QRHL-Scala")).!!
 }
