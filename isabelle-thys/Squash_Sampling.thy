@@ -294,6 +294,12 @@ fun squash_sampling_focused_tac ctxt =
      THEN' QRHL.distinct_qvars_tac ctxt
      THEN' QRHL.extend_op_vars_tac ctxt
      THEN' Expressions.map_expression_tac ctxt)
+  ORELSE'
+    (resolve_tac ctxt @{thms squash_qapply_qapply}
+     THEN' QRHL.distinct_qvars_tac ctxt
+     THEN' QRHL.distinct_qvars_tac ctxt
+     THEN' QRHL.extend_2op_vars_tac ctxt
+     THEN' Expressions.map_expression_tac ctxt)
 
 fun squash_sampling_tac left ctxt =
   resolve_tac ctxt (if left then @{thms squash_left_qrhl squash_left_deneq}
