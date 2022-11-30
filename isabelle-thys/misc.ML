@@ -58,6 +58,14 @@ fun repeat_until_conv' test conv ct =
 fun repeat_until_conv test conv ct =
   if test NONE ct then Conv.all_conv ct else repeat_until_conv' test conv ct
   
+(* Like Thm.is_dummy but also says true on "prop TERM _" and not just "TERM _".
+(Seems to occur sometimes as a dummy goal.)  *)
+fun is_dummy2 thm =
+  let fun unprotect_maybe t = (Logic.unprotect t handle TERM _ => t)
+  in case try Logic.dest_term (unprotect_maybe (Thm.concl_of thm)) of
+    NONE => false
+  | SOME t => Term.is_dummy_pattern (Term.head_of t) end
+
 
 structure MethodErrorStack = Proof_Data (
   type T = (unit -> string) list
@@ -71,8 +79,10 @@ fun method_error_push msg = MethodErrorStack.map (fn st => msg::st)
 (* val method_error = Attrib.setup_config_bool \<^binding>\<open>method_error\<close> (K false) *)
 fun msg_to_string ctxt msg () = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt))
 fun error_ctac msg (ctx,_) = Seq.single (Seq.Error (msg_to_string ctx msg))
-fun error_tac msg ctx _ = raise lazy_error (msg_to_string ctx msg)
-fun error_tac' msg ctxt i st = error_tac (fn _ => msg (nth (Thm.prems_of st) (i-1))) ctxt i st
+fun error_tac msg ctx : tactic = fn st => if is_dummy2 st then no_tac st else raise lazy_error (msg_to_string ctx msg)
+fun error_tac' msg ctxt i : tactic = fn st => error_tac (fn () => 
+  let val goal = nth (Thm.prems_of st) (i-1) handle Subscript => \<^prop>\<open>not_enough_subgoals\<close>
+  in msg goal end) ctxt st
 fun error_method msg = CONTEXT_METHOD (K (error_ctac msg))
 fun fail_on_LAZY_ERROR f x = f x handle LAZY_ERROR (Lazy_Error msg) => raise ERROR (msg())
 fun remove_LAZY_ERROR_in_seq xq =
@@ -277,5 +287,8 @@ fun generalize_tac ctxt varname pat = SUBGOAL (fn (t,i) => case first_order_sear
     val rule = rule |> Thm.rename_boundvars (Abs("bound",dummyT,Term.dummy)) (Abs(var,dummyT,Term.dummy))
     val tac = compose_tac ctxt (false, rule, 1) i
   in tac end)
+
+fun mk_ctxt_conv (f: conv -> conv) (conv: Proof.context -> conv) (ctxt: Proof.context) : conv = 
+  f (conv ctxt)
 
 end
