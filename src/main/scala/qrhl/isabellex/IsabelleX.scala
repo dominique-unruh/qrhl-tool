@@ -1006,7 +1006,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
 }
 
 object IsabelleX {
-  val version = "2022-RC2"
+  val version = "2022-RC3"
 
   /** Checks whether [[Configuration.isabelleHome]] contains Isabelle with correct version.
    * Otherwise exists the program with an error message. */
