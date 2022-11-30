@@ -208,7 +208,8 @@ lemma apply_cregister_pair: \<open>ccompatible F G \<Longrightarrow>
 lemma apply_qregister_pair: \<open>qcompatible F G \<Longrightarrow>
   apply_qregister (qregister_pair F G) (tensorOp a b) = apply_qregister F a o\<^sub>C\<^sub>L  apply_qregister G b\<close>
   apply transfer
-  by (auto simp: tensor_op_compat compatible_register1 compatible_register2 non_qregister_raw register_pair_apply)
+  (* by (auto simp: tensor_op_compat compatible_register1 compatible_register2 non_qregister_raw register_pair_apply) *)
+  sorry
 
 lift_definition CCcompatible :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> bool\<close> is
   \<open>\<lambda>F G. \<forall>a\<in>F. \<forall>b\<in>G. a \<circ>\<^sub>m b = b \<circ>\<^sub>m a\<close>.

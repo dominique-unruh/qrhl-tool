@@ -33,16 +33,16 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
  inline teleport.
 
- seq 1 0: Qeq[C1=A2] ⊓ (ccspan {EPR} » ⟦A1,B1⟧).
+ seq 1 0: Qeq[C1=A2] ⊓ ⟦A1,B1⟧ =⇩𝔮 EPR.
  { wp left.
    skip.
    simp!. }
 
- conseq pre: quantum_equality_full idOp ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
+ conseq pre: quantum_equality_full id_cblinfun ⟦C1,A1,B1⟧ (addState EPR) ⟦A2⟧.
   simp ! quantum_eq_add_state.
 
- seq 2 0: quantum_equality_full idOp ⟦C1,A1,B1⟧
-          ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+ seq 2 0: quantum_equality_full id_cblinfun ⟦C1,A1,B1⟧
+          ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
  { wp left.
    wp left.
    skip.
@@ -50,10 +50,10 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    rule teleport_goal1.
      simp!. }
 
- seq 1 0: Proj (ccspan {ket a1})»⟦A1⟧ ⋅ 
+ seq 1 0: proj |a1⟩»⟦A1⟧ *⇩S 
              quantum_equality_full
-                idOp ⟦C1,A1,B1⟧
-                ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+                id_cblinfun ⟦C1,A1,B1⟧
+                ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
  { wp left.
    simp.
    skip.
@@ -65,10 +65,10 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
  case a':=a1.
 
- seq 1 0: Cla[a1=a'] ⊓ (Proj (ccspan {ket c1})»⟦C1⟧ ⋅ Proj (ccspan {ket a1})»⟦A1⟧ ⋅ 
+ seq 1 0: Cla[a1=a'] ⊓ ((proj |c1⟩»⟦C1⟧ o⇩C⇩L proj |a1⟩»⟦A1⟧) *⇩S
                  quantum_equality_full
-                    idOp ⟦C1,A1,B1⟧
-                    ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧).
+                    id_cblinfun ⟦C1,A1,B1⟧
+                    ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
  { wp left.
    simp.
    skip.
@@ -85,18 +85,18 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  + casesplit c'=0.
 
    # Case a1=0 c1=0
-   - conseq pre: Cla[a1=0 ∧ c1=0] ⊓ (Proj (ccspan {ket 0})»⟦C1⟧ ⋅ Proj (ccspan {ket 0})»⟦A1⟧ ⋅ 
+   - conseq pre: Cla[a1=0 ∧ c1=0] ⊓ ((proj |0⟩»⟦C1⟧ o⇩C⇩L proj |0⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
-                      idOp ⟦C1,A1,B1⟧
-                      ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧).
+                      id_cblinfun ⟦C1,A1,B1⟧
+                      ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
        simp!.
      clear 2.
-clear 1.
+     clear 1.
 
-     seq 2 0: Proj (ccspan {ket 0})»⟦C1⟧ ⋅ Proj (ccspan {ket 0})»⟦A1⟧ ⋅
+     seq 2 0: (proj |0⟩»⟦C1⟧ o⇩C⇩L proj |0⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
-                      idOp ⟦C1,A1,B1⟧
-                      ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+                      id_cblinfun ⟦C1,A1,B1⟧
+                      ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
      wp left.
      wp left.
      skip.
@@ -109,18 +109,18 @@ clear 1.
 
 
    # Case a1=0 c1=1
-   - conseq pre: Cla[a1=0 ∧ c1=1] ⊓ (Proj (ccspan {ket 1})»⟦C1⟧ ⋅ Proj (ccspan {ket 0})»⟦A1⟧ ⋅ 
+   - conseq pre: Cla[a1=0 ∧ c1=1] ⊓ ((proj |1⟩»⟦C1⟧ o⇩C⇩L proj |0⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
-                      idOp ⟦C1,A1,B1⟧
-                      ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧).
+                      id_cblinfun ⟦C1,A1,B1⟧
+                      ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
        simp!.
      clear 2.
      clear 1.
 
-     seq 2 0: pauliZ»⟦B1⟧ ⋅ Proj (ccspan {ket 1})»⟦C1⟧ ⋅ Proj (ccspan {ket 0})»⟦A1⟧ ⋅
+     seq 2 0: (pauliZ»⟦B1⟧ o⇩C⇩L proj |1⟩»⟦C1⟧ o⇩C⇩L proj |0⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
-                      idOp ⟦C1,A1,B1⟧
-                      ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+                      id_cblinfun ⟦C1,A1,B1⟧
+                      ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
      wp left.
      wp left.
      skip.
@@ -133,18 +133,18 @@ clear 1.
  + casesplit c'=0.
 
    # Case a1=1 c1=0
-   - conseq pre: Cla[a1=1 ∧ c1=0] ⊓ (Proj (ccspan {ket 0})»⟦C1⟧ ⋅ Proj (ccspan {ket 1})»⟦A1⟧ ⋅ 
+   - conseq pre: Cla[a1=1 ∧ c1=0] ⊓ ((proj |0⟩»⟦C1⟧ o⇩C⇩L proj |1⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
-                      idOp ⟦C1,A1,B1⟧
-                      ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧).
+                      id_cblinfun ⟦C1,A1,B1⟧
+                      ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
        simp!.
      clear 2.
      clear 1.
 
-     seq 2 0: pauliX»⟦B1⟧ ⋅ Proj (ccspan {ket 0})»⟦C1⟧ ⋅ Proj (ccspan {ket 1})»⟦A1⟧ ⋅
+     seq 2 0: (pauliX»⟦B1⟧ o⇩C⇩L proj |0⟩»⟦C1⟧ o⇩C⇩L proj |1⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
-                      idOp ⟦C1,A1,B1⟧
-                      ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+                      id_cblinfun ⟦C1,A1,B1⟧
+                      ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
      wp left.
      wp left.
      skip.
@@ -156,18 +156,18 @@ clear 1.
 
 
    # Case a1=1 c1=1
-   - conseq pre: Cla[a1=1 ∧ c1=1] ⊓ (Proj (ccspan {ket 1})»⟦C1⟧ ⋅ Proj (ccspan {ket 1})»⟦A1⟧ ⋅ 
+   - conseq pre: Cla[a1=1 ∧ c1=1] ⊓ ((proj |1⟩»⟦C1⟧ o⇩C⇩L proj |1⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
-                      idOp ⟦C1,A1,B1⟧
-                      ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧).
+                      id_cblinfun ⟦C1,A1,B1⟧
+                      ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
        simp!.
      clear 2.
      clear 1.
 
-     seq 2 0: pauliZ»⟦B1⟧ ⋅ pauliX»⟦B1⟧ ⋅ Proj (ccspan {ket 1})»⟦C1⟧ ⋅ Proj (ccspan {ket 1})»⟦A1⟧ ⋅
+     seq 2 0: (pauliZ»⟦B1⟧ o⇩C⇩L pauliX»⟦B1⟧ o⇩C⇩L proj |1⟩»⟦C1⟧ o⇩C⇩L proj |1⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
-                      idOp ⟦C1,A1,B1⟧
-                      ((hadamard ⊗ idOp) ⋅ assoc_op* ⋅ (CNOT ⊗ idOp) ⋅ assoc_op ⋅ addState EPR) ⟦A2⟧.
+                      id_cblinfun ⟦C1,A1,B1⟧
+                      ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
      wp left.
      wp left.
      skip.

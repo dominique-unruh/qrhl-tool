@@ -4,25 +4,25 @@ begin
 
 lemma 
   assumes[simp]: "declared_qvars \<lbrakk>q1,q2\<rbrakk>"
-  shows "ccspan {EPR} \<guillemotright> \<lbrakk>q1,q2\<rbrakk> \<le> ccspan {ket (0,0), ket (1,1)} \<guillemotright> \<lbrakk>q1,q2\<rbrakk>"
+  shows \<open>\<lbrakk>q1, q2\<rbrakk> =\<^sub>\<qq> EPR  \<le>  \<lbrakk>q1, q2\<rbrakk> \<in>\<^sub>\<qq> ccspan { |(0, 0)\<rangle>, |(1, 1)\<rangle> }\<close>
   apply (simp add: prepare_for_code)
   by eval
 
 lemma 
   assumes[simp]: "declared_qvars \<lbrakk>q1,q2\<rbrakk>"
-  shows "ccspan {EPR} \<guillemotright> \<lbrakk>q1,q2\<rbrakk> \<le> ccspan {ket (0,0), ket (1,1)} \<guillemotright> \<lbrakk>q2,q1\<rbrakk>"
+  shows \<open>\<lbrakk>q1, q2\<rbrakk> =\<^sub>\<qq> EPR  \<le>  \<lbrakk>q2, q1\<rbrakk> \<in>\<^sub>\<qq> ccspan { |(0, 0)\<rangle>, |(1, 1)\<rangle> }\<close>
   apply (simp add: prepare_for_code)
   by eval
 
 lemma 
   assumes[simp]: "declared_qvars \<lbrakk>q1,q2\<rbrakk>"
-  shows "ccspan {ket (0::bit,0::bit)} \<guillemotright> \<lbrakk>q1,q2\<rbrakk> \<le> ccspan {ket (0)} \<guillemotright> \<lbrakk>q1\<rbrakk>"
+  shows \<open>\<lbrakk>q1, q2\<rbrakk> =\<^sub>\<qq> |(0::bit, 0::bit)\<rangle>  \<le>  \<lbrakk>q1\<rbrakk> =\<^sub>\<qq> |0\<rangle>\<close>
   apply (simp add: prepare_for_code)
   by eval
 
 lemma
   assumes[simp]: "declared_qvars \<lbrakk>q1,q2\<rbrakk>"
-  shows "CNOT\<guillemotright>\<lbrakk>q1,q2\<rbrakk> \<cdot> hadamard\<guillemotright>\<lbrakk>q1\<rbrakk> \<cdot> ccspan {ket (0,0)}\<guillemotright>\<lbrakk>q1,q2\<rbrakk> \<le> ccspan {EPR}\<guillemotright>\<lbrakk>q1,q2\<rbrakk>"
+  shows \<open>(CNOT\<guillemotright>\<lbrakk>q1, q2\<rbrakk> o\<^sub>C\<^sub>L hadamard\<guillemotright>\<lbrakk>q1\<rbrakk>)  *\<^sub>S  \<lbrakk>q1, q2\<rbrakk> =\<^sub>\<qq> |(0, 0)\<rangle>  \<le>  \<lbrakk>q1, q2\<rbrakk> =\<^sub>\<qq> EPR\<close>
   apply (simp add: prepare_for_code)
   by eval
 

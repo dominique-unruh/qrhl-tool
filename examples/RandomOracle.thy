@@ -22,9 +22,9 @@ text \<open>Three auxiliary lemmas\<close>
 
 lemma l1: "isometry (A*) \<Longrightarrow> A o\<^sub>C\<^sub>L (A* o\<^sub>C\<^sub>L B) = B" for B :: "(_,_) l2bounded"
   by (metis isometryD double_adj cblinfun_compose_assoc cblinfun_compose_id_left)
-lemma l2: "(A \<otimes> B) \<cdot> ((A' \<otimes> B') \<cdot> C) = ((A\<cdot>A') \<otimes> (B\<cdot>B')) \<cdot> C" for A A' B B' C :: "(_,_) l2bounded"
+lemma l2: "(A \<otimes>\<^sub>o B) o\<^sub>C\<^sub>L ((A' \<otimes>\<^sub>o B') o\<^sub>C\<^sub>L C) = ((A o\<^sub>C\<^sub>L A') \<otimes>\<^sub>o (B o\<^sub>C\<^sub>L B')) o\<^sub>C\<^sub>L C"
   by (subst cblinfun_compose_assoc[symmetric], auto)
-lemma l3: "isometry A \<Longrightarrow> A* o\<^sub>C\<^sub>L (A o\<^sub>C\<^sub>L B) = B" for B :: "(_,_) l2bounded"
+lemma l3: "isometry A \<Longrightarrow> A* o\<^sub>C\<^sub>L (A o\<^sub>C\<^sub>L B) = B"
   by (metis isometryD cblinfun_compose_assoc cblinfun_compose_id_left)
 
 lemma Uora_twice: 
@@ -32,8 +32,8 @@ lemma Uora_twice:
 
   assumes [register]: "declared_qvars \<lbrakk>x1,y1,x2,y2,qglobA1,qglobA2\<rbrakk>"
   assumes heq: "h1=h2"
-  shows "(Uoracle h2\<guillemotright>\<lbrakk>x2, y2\<rbrakk> \<cdot> (Uoracle h1\<guillemotright>\<lbrakk>x1, y1\<rbrakk> \<cdot> \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>)) =
-         \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>"
+  shows "Uoracle h2\<guillemotright>\<lbrakk>x2, y2\<rbrakk> *\<^sub>S Uoracle h1\<guillemotright>\<lbrakk>x1, y1\<rbrakk> *\<^sub>S \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>
+      =  \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>"
   apply (rewrite at "apply_qregister \<lbrakk>x1,y1\<rbrakk> (Uoracle _)" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA1,x1,y1\<rbrakk>"])
   apply (rewrite at "apply_qregister \<lbrakk>x2,y2\<rbrakk> (Uoracle _)" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA2,x2,y2\<rbrakk>"])
 (* TODO: Bug report why Isabelle's rewrite does not allow this: *)

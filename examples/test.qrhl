@@ -5,6 +5,7 @@ quantum var y : int.
 
 
 lemma (0 :: int ell2 ⇒⇩C⇩L int ell2) = undefined.
+rule refl[OF xxx].
 admit.
 qed.
 
