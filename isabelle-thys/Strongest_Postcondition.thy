@@ -16,6 +16,14 @@ lemma expression_eval_map_expression3'':
   apply (auto simp: pair_expression_footprint)
   using assms by blast+
 
+lemma expression_eval_map_expression2':
+  assumes "\<And>z. expression_vars (e2 z) = expression_vars (e2 undefined)"
+  shows "expression_eval (map_expression2' f e1 e2) x = f (expression_eval e1 x) (\<lambda>z. expression_eval (e2 z) x)"
+  unfolding map_expression2'_def
+  apply (subst expression_eval_map_expression')
+  apply (auto simp: pair_expression_footprint)
+  using assms by blast+
+
 lemma subst_mem2_twice: \<open>subst_mem2 (substitute_vars x e) (subst_mem2 (substitute_vars x f) m) = subst_mem2 (substitute_vars x e) m\<close>
   by (cheat subst_mem2_twice)
 
@@ -200,6 +208,61 @@ proof -
     apply (rule wp2_qinit_tac)
     using assms by auto
 qed
+
+lemma sp1_measure_tac:
+  assumes x1: "x1 = index_vars True x"
+  assumes Q1: "Q1 = index_vars True Q"
+  assumes e1: \<open>e1 = index_expression True e\<close>
+  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x1 (const_expression z)) A\<close>
+  assumes e1': \<open>\<And>z. e1' z = subst_expression (substitute_vars x1 (const_expression z)) e1\<close>
+  assumes B: \<open>B = map_expression3'' (\<lambda>x1 e1' A'. SUP z r. Cla[x1 = r] \<sqinter> ((mproj (e1' z) r \<guillemotright> Q1) *\<^sub>S A' z))
+            (expression x1 (\<lambda>x. x)) e1' A'\<close>
+  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[mtotal e1]) A e1\<close>
+  assumes distinct_x: \<open>distinct_qvars x\<close>
+  assumes distinct_Q: \<open>distinct_qvars Q\<close>
+  assumes lossless: \<open>true_expression L\<close>
+  shows "qrhl A [measurement x Q e] [] B"
+(* Handwritten proof: Quicksheets 2022, pages 150-151. *)
+  by (cheat sp1_measure_tac)
+(* proof -
+  define B' where \<open>B' z = subst_expression (substitute_vars x1 Expr[z]) B\<close> for z
+  define A'' where \<open>A'' = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (INF z. let P = mproj M z\<guillemotright>Q1 *\<^sub>S \<top> in B' z \<sqinter> P + - P)) e1 B'\<close>
+  have foot_B': \<open>expression_vars (B' z) = expression_vars (B' undefined)\<close> for z
+    by -
+  have foot_e1: \<open>expression_vars (e1' z) = expression_vars (e1' undefined)\<close> for z
+    by -
+  have foot_A': \<open>expression_vars (A' z) = expression_vars (A' undefined)\<close> for z
+    by -
+  have \<open>expression_eval A'' m = xxx\<close> for m
+    using foot_B' apply (simp add: A''_def expression_eval_map_expression2')
+    apply (thin_tac \<open>PROP _\<close>)
+    using foot_e1 foot_A' apply (simp add: B'_def B subst_expression_eval expression_eval_map_expression3'')
+    apply (thin_tac \<open>PROP _\<close>)
+    apply (thin_tac \<open>PROP _\<close>)
+    apply (subst expression_eval_map_expression3'')
+  have \<open>A \<le> A''\<close>
+    by -
+  then show ?thesis
+    apply (rule conseq_rule[where B'=B])
+     apply rule
+    apply (rule wp1_measure_tac)
+    using assms B'_def A''_def by auto
+qed *)
+
+lemma sp2_measure_tac:
+  assumes x2: "x2 = index_vars False x"
+  assumes Q2: "Q2 = index_vars False Q"
+  assumes e2: \<open>e2 = index_expression False e\<close>
+  assumes A': \<open>\<And>z. A' z = subst_expression (substitute_vars x2 (const_expression z)) A\<close>
+  assumes e2': \<open>\<And>z. e2' z = subst_expression (substitute_vars x2 (const_expression z)) e2\<close>
+  assumes B: \<open>B = map_expression3'' (\<lambda>x2 e2' A'. SUP z r. Cla[x2 = r] \<sqinter> ((mproj (e2' z) r \<guillemotright> Q2) *\<^sub>S A' z))
+            (expression x2 (\<lambda>x. x)) e2' A'\<close>
+  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[mtotal e2]) A e2\<close>
+  assumes distinct_x: \<open>distinct_qvars x\<close>
+  assumes distinct_Q: \<open>distinct_qvars Q\<close>
+  assumes lossless: \<open>true_expression L\<close>
+  shows "qrhl A [] [measurement x Q e] B"
+  by (cheat sp2_measure_tac)
 
 lemma sp_split_left_right_tac:
   assumes "qrhl B c [] C"

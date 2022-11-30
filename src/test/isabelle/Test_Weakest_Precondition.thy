@@ -64,7 +64,7 @@ ML \<open>
 test_get_wp \<^context> false
             \<^term>\<open>sample \<lbrakk>var_x\<rbrakk> Expr[undefined]\<close>
             \<^term>\<open>Expr[top::predicate]\<close>
-            \<^term>\<open>Expr[\<CC>\<ll>\<aa>[weight (undefined::bit distr) = (1::real)] \<sqinter> (INF z::bit:supp undefined. (top::predicate))]\<close>
+            \<^term>\<open>Expr[\<CC>\<ll>\<aa>[weight (undefined::bit distr) = (1::real)] \<sqinter> (INF z::bit\<in>supp undefined. (top::predicate))]\<close>
 \<close>
 end
 
