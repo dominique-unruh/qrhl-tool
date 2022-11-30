@@ -12,7 +12,9 @@ no_notation m_inv ("inv\<index> _" [81] 80)
 hide_const (open) Coset.kernel
 (* hide_const (open) Quantum.CNOT
 hide_const (open) Quantum.pauliX
-hide_const (open) Quantum.pauliZ *)
+hide_const (open) Quantum.pauliZ
+hide_const (open) Quantum.pauliZ
+hide_const (open) Quantum.hadamard *)
 
 section \<open>Miscellaneous\<close>
 
