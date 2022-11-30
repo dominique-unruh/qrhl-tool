@@ -973,7 +973,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
 }
 
 object IsabelleX {
-  val version = "2022-RC0"
+  val version = "2022-RC1"
 
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
