@@ -7,7 +7,14 @@ import qrhl.isabellex.IsabelleX
 import qrhl.toplevel.Toplevel
 import qrhl.toplevel.Toplevel.runFromTerminal
 
+import java.io.PrintStream
+
 object Main {
+  // On Windows, the output charset may not be UTF-8 even with VM option -Dfile.encoding=UTF-8. So we force it here.
+  // We set it here (i.e., upon object initialization) to make sure that it is executed before scala.Console is
+  // initialized because scala.Console uses a copy the System.out and we cannot change that copy globally later.
+  System.setOut(new PrintStream(System.out, true, "UTF-8"))
+
   class CLIConf(args: Seq[String]) extends ScallopConf(args) {
     val build : ScallopOption[Boolean] = toggle()
     // if cheating is false, cheating cannot be activated
