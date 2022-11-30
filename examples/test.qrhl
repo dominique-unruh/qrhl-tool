@@ -3,20 +3,32 @@ isabelle.
 classical var x : int.
 classical var y : int.
 
+quantum var Q : bit.
+quantum var R : bit.
+
+
+
 program p1 := {
-  x <- x+y;
+  Q <q ket 1;
   y <- x+1;
 }.
 
-qrhl {Cla[x1 = 3 ∧ y1 = 4]} call p1; ~ call p1; {Cla[x1 = 7]}.
+qrhl {⟦R1⟧ =⇩q ket 0} call p1; ~ call p1; {top}.
   inline p1.
   sp left.
-  simp!.
-  simp.
-  conseq pre: Cla[x1 = 7].
-   simp!.
-  
-  wp 1 2.
+    simp!.
+    simp!.
+
+  sp right.
+    simp!.
+    simp!.
+
+  sp left.
+    simp!.
+
+  sp right.
+    simp!.
+
   skip.
-  simp.
+  simp!.
 qed.

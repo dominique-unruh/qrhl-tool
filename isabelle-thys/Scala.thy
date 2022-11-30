@@ -97,6 +97,7 @@ object IsabelleConsts {
   val empty_qregister = \<open>\<^const_name>\<open>empty_qregister\<close>\<close>
   val cregister_pair = \<open>\<^const_name>\<open>cregister_pair\<close>\<close>
   val qregister_pair = \<open>\<^const_name>\<open>qregister_pair\<close>\<close>
+  val true_expression = \<open>\<^const_name>\<open>true_expression\<close>\<close>
 }
 \<close>
 

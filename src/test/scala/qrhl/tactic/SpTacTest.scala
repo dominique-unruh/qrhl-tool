@@ -8,14 +8,29 @@ class SpTacTest extends AnyFunSuite {
     val toplevel = ToplevelTest.makeToplevelWithTheory()
     toplevel.run(
       """
-        |classical var q : bit.
-        |qrhl {top} q <- 0; ~ q <- 0; {top}.
+      |classical var q : bit.
+      |qrhl {top} q <- 0; ~ q <- 0; {top}.
       """.stripMargin)
-    toplevel.execCmd(TacticCommand(WpTac(left=1,right=0)))
-    toplevel.execCmd(TacticCommand(WpTac(left=0,right=1)))
+    toplevel.execCmd(TacticCommand(SpTac(left = 1, right = 0)))
     val goals = toplevel.state.goal
     println(goals)
-    assert(goals.length==1)
-    goals.head.checkWelltyped(toplevel.state.isabelle)
+    assert(goals.length == 2)
+    for (goal <- goals)
+      goal.checkWelltyped(toplevel.state.isabelle)
+  }
+
+  test("SpTac well-typed (qinit)") {
+    val toplevel = ToplevelTest.makeToplevelWithTheory()
+    toplevel.run(
+      """
+      |quantum var q : bit.
+      |qrhl {top} q <q ket 0; ~ q <q ket 1; {top}.
+      """.stripMargin)
+    toplevel.execCmd(TacticCommand(SpTac(left = 1, right = 0)))
+    val goals = toplevel.state.goal
+    println(goals)
+    assert(goals.length == 3)
+    for (goal <- goals)
+      goal.checkWelltyped(toplevel.state.isabelle)
   }
 }

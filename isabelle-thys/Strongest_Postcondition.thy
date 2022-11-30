@@ -17,9 +17,7 @@ lemma expression_eval_map_expression3'':
   using assms by blast+
 
 lemma subst_mem2_twice: \<open>subst_mem2 (substitute_vars x e) (subst_mem2 (substitute_vars x f) m) = subst_mem2 (substitute_vars x e) m\<close>
-  by (cheat subst_mem2_twice
-
-)
+  by (cheat subst_mem2_twice)
 
 lemma subst_mem2_eval_vars: \<open>subst_mem2 (substitute_vars x1 Expr[eval_variables x1 m]) m = m\<close>
   by (cheat subst_mem2_eval_vars)
@@ -129,6 +127,78 @@ proof -
   ultimately show ?thesis
     apply (rule_tac conseq_rule[where A'=A'' and B'=B])
     by auto
+qed
+
+definition true_expression where \<open>true_expression A \<longleftrightarrow> (\<forall>m. expression_eval A m)\<close>
+
+lemma sp1_qinit_tac:
+  fixes A B x v
+  assumes Q1: "Q1 = index_vars True Q"
+  assumes e1: \<open>e1 = index_expression True e\<close>
+  assumes B: \<open>B = map_expression2 (\<lambda>A e. A \<sqinter> Q1 =\<^sub>q e) A e1\<close>
+  assumes distinct_exp: \<open>D = map_expression (\<lambda>A. distinct_qvars_pred_vars A Q1) A\<close>
+  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e1. A \<le> Cla[norm e1 = 1]) A e1\<close>
+  assumes distinct: \<open>true_expression D\<close>
+  assumes lossless: \<open>true_expression L\<close>
+  shows \<open>qrhl A [qinit Q e] [] B\<close>
+proof -
+  from distinct
+  have [simp]: \<open>distinct_qvars_pred_vars (expression_eval A m) Q1\<close> for m
+    by (simp add: distinct_exp true_expression_def)
+  then have [simp]: \<open>distinct_qvars Q1\<close>
+    using distinct unfolding distinct_qvars_pred_vars_def distinct_qvars_def
+    apply transfer
+    by auto
+  from lossless
+  have lossless: \<open>expression_eval A m \<le> Cla[norm (expression_eval e1 m) = 1]\<close> for m
+    by (simp add: lossless_exp true_expression_def)
+  have *: \<open>norm (expression_eval e1 m) \<noteq> 1 \<Longrightarrow> expression_eval A m \<le> \<bottom>\<close> for m
+    using lossless[unfolded less_eq_expression_def le_fun_def, rule_format, of m]
+    by simp
+  have \<open>expression_eval A m \<le> expression_eval (map_expression2 (\<lambda>e\<^sub>1 B. \<CC>\<ll>\<aa>[norm e\<^sub>1 = 1] \<sqinter> B \<div> e\<^sub>1\<guillemotright>Q1) e1 B) m\<close> for m
+    by (auto simp: B intro: inf.cobounded1 inf.cobounded2 *)
+  then have *: \<open>A \<le> map_expression2 (\<lambda>e\<^sub>1 B. \<CC>\<ll>\<aa>[norm e\<^sub>1 = 1] \<sqinter> B \<div> e\<^sub>1\<guillemotright>Q1) e1 B\<close>
+    by (simp add: less_eq_expression_def le_fun_def)
+  show ?thesis
+    using * apply (rule conseq_rule[where B'=B])
+     apply rule
+    apply (rule wp1_qinit_tac)
+    using assms by auto
+qed
+
+lemma sp2_qinit_tac:
+  fixes A B x v
+  assumes Q2: "Q2 = index_vars False Q"
+  assumes e2: \<open>e2 = index_expression False e\<close>
+  assumes B: \<open>B = map_expression2 (\<lambda>A e. A \<sqinter> Q2 =\<^sub>q e) A e2\<close>
+  assumes distinct_exp: \<open>D = map_expression (\<lambda>A. distinct_qvars_pred_vars A Q2) A\<close>
+  assumes lossless_exp: \<open>L = map_expression2 (\<lambda>A e2. A \<le> Cla[norm e2 = 1]) A e2\<close>
+  assumes distinct: \<open>true_expression D\<close>
+  assumes lossless: \<open>true_expression L\<close>
+  shows \<open>qrhl A [] [qinit Q e] B\<close>
+proof -
+  from distinct
+  have [simp]: \<open>distinct_qvars_pred_vars (expression_eval A m) Q2\<close> for m
+    by (simp add: distinct_exp true_expression_def)
+  then have [simp]: \<open>distinct_qvars Q2\<close>
+    using distinct unfolding distinct_qvars_pred_vars_def distinct_qvars_def
+    apply transfer
+    by auto
+  from lossless
+  have lossless: \<open>expression_eval A m \<le> Cla[norm (expression_eval e2 m) = 1]\<close> for m
+    by (simp add: lossless_exp true_expression_def)
+  have *: \<open>norm (expression_eval e2 m) \<noteq> 1 \<Longrightarrow> expression_eval A m \<le> \<bottom>\<close> for m
+    using lossless[unfolded less_eq_expression_def le_fun_def, rule_format, of m]
+    by simp
+  have \<open>expression_eval A m \<le> expression_eval (map_expression2 (\<lambda>e\<^sub>2 B. \<CC>\<ll>\<aa>[norm e\<^sub>2 = 1] \<sqinter> B \<div> e\<^sub>2\<guillemotright>Q2) e2 B) m\<close> for m
+    by (auto simp: B intro: inf.cobounded2 inf.cobounded2 *)
+  then have *: \<open>A \<le> map_expression2 (\<lambda>e\<^sub>2 B. \<CC>\<ll>\<aa>[norm e\<^sub>2 = 1] \<sqinter> B \<div> e\<^sub>2\<guillemotright>Q2) e2 B\<close>
+    by (simp add: less_eq_expression_def le_fun_def)
+  show ?thesis
+    using * apply (rule conseq_rule[where B'=B])
+     apply rule
+    apply (rule wp2_qinit_tac)
+    using assms by auto
 qed
 
 lemma sp_split_left_right_tac:

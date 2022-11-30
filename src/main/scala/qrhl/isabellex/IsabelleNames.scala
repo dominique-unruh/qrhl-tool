@@ -94,4 +94,5 @@ object IsabelleConsts {
   val empty_qregister = "Prog_Variables.empty_qregister"
   val cregister_pair = "Prog_Variables.cregister_pair"
   val qregister_pair = "Prog_Variables.qregister_pair"
+  val true_expression = "Strongest_Postcondition.true_expression"
 }

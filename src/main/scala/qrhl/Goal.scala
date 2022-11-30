@@ -1,7 +1,7 @@
 package qrhl
 
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{Term, Thm}
+import de.unruh.isabelle.pure.{ConcreteTerm, Cterm, MLValueTerm, Term, Thm}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, WithByteArray}
 import org.log4s
 import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle => GIsabelle}
@@ -24,6 +24,9 @@ import hashedcomputation.Implicits._
 import qrhl.isabellex.Implicits._
 
 sealed trait Subgoal extends HashedValue {
+  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
+  def unwrapTrueExpression(implicit context: IsabelleX.ContextX): Subgoal
+
   def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): Subgoal
 
   /** Checks whether all isabelle terms in this goal are well-typed.
@@ -132,6 +135,9 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     Subgoal.printOracles(thms.toSeq : _*)
     QRHLSubgoal(left2, right2, pre2, post2, assms2)
   }
+
+  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
+  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): QRHLSubgoal = this
 }
 
 final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
@@ -164,6 +170,9 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
     Subgoal.printOracles(thm)
     AmbientSubgoal(term)
   }
+
+  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
+  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): AmbientSubgoal = new AmbientSubgoal(goal.unwrapTrueExpression)
 }
 
 object AmbientSubgoal {

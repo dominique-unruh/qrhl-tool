@@ -690,6 +690,14 @@ class IsabelleX(val setup : Isabelle.Setup) {
     }
   }
 
+  def true_expression(indexed: Boolean): Const = Const(c.true_expression, expressionT(boolT, indexed = indexed) -->: boolT)
+  object True_Expression {
+    def unapply(term: Term): Option[Term] = term match {
+      case App(Const(c.true_expression,_), t) => Some(t)
+      case _ => None
+    }
+  }
+
   object OfType {
     def unapply(t: Term): Some[Typ] = Some(t.fastType)
   }
