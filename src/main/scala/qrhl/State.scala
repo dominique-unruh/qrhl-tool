@@ -35,22 +35,34 @@ trait Tactic extends HashedValue {
   def apply(state: State, goal : Subgoal)(implicit output: PrintWriter) : List[Subgoal]
 }
 
-class UserException private (private val msg:String, private var _position:String=null) extends RuntimeException(msg) {
-  def setPosition(position:String): Unit = {
+class UserException private (private val msg:String, private var _position:String=null, private var _log:String=null) extends RuntimeException(msg) {
+  /** Sets the position if no position set yet. Does nothing if `position == null`. */
+  def setPosition(position:String): Unit =
     if (_position==null)
       _position = position
-  }
+
+  /** Sets the log if no log set yet. Does nothing if `log == null`. */
+  def setLog(log:String): Unit =
+    if (_log==null)
+      _log = log
+
   def position : String = _position
-  def positionMessage : String = s"$position: $msg"
+  def log : String = _log
+  def positionMessage : String =
+    if (position != null && position != "<terminal>")
+      s"$position: $msg"
+    else
+      msg
 }
 object UserException {
   private val logger = log4s.getLogger
 
   def apply(msg: String) = new UserException(msg)
-  def apply(e: IsabelleException, position: String): UserException = {
+  def apply(e: IsabelleException, position: String = null, log: String = null): UserException = {
 //    logger.debug(s"Failing operation: operation ${e.operation} with input ${e.input}")
     val e2 = UserException("(in Isabelle) "+IsabelleX.symbols.symbolsToUnicode(e.getMessage))
     e2.setPosition(position)
+    e2.setLog(log)
     e2
   }
 }

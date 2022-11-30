@@ -1,7 +1,17 @@
 isabelle.
 
-isabelle_cmd axiomatization blubb where blubbax: "blubb".
+quantum var x : int.
+quantum var y : int.
 
-lemma blubb.
-simp blubbax.
+program a := { x <q undefined; y <q undefined; }.
+
+qrhl {top} call a; ~ call a; {top}.
+equal.
+ simp!.
+skip.
+simp!.
 qed.
+
+qrhl {top} call a; ~ call a; {Qeq[x1=x2]}.
+equal.
+

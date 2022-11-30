@@ -22,7 +22,7 @@
 \usepackage{version}
 \usepackage{xr}
 \usepackage[framemethod=tikz]{mdframed}
-% don't load geometry if preview is to be loaeded
+% don't load geometry if preview is to be loaded
 % (the ifx-statement detects \PassOptionsToPackage{preview}{...})
 \expandafter\ifx\csname opt@preview.sty\endcsname\relax
 \usepackage[a4paper,margin=1in]{geometry}
@@ -240,6 +240,13 @@
 
 \tableofcontents
 
+
+\bigskip
+\bigskip
+\bigskip
+
+{\centering\framebox{
+  \parbox{.9\hsize}{
 This is a user manual for our proof assistant for
 performing qRHL-based security proofs.  The tool is a prototype to
 demonstrate the logic and to experiment with security proofs. At this
@@ -251,15 +258,22 @@ This manual assumes knowledge of the underlying qRHL formalism, see
 The source code is published on GitHub \cite{github-source}.
 
 For installation instructions see the included \texttt{README.md}.
+}}\par}
+
+
+\bigskip
+
+
+
 
 
 \subsection{Architecture}
 
 The tool consists of three main components: a ProofGeneral
-\cite{proofgeneral} frontend, the core tool written in Scala, and a
+\cite{proofgeneral} frontend, the core tool written in Scala, and an
 Isabelle/HOL \cite{isabelle} backend with custom theories. The
 ProofGeneral frontend merely eases the interactive development of
-proofs, once a proof script is finished, it can also be checked by the
+proofs; once a proof script is finished, it can also be checked by the
 core tool directly. The core tool implements a theorem prover for qRHL
 (with tactics-based backward reasoning). Only tactics for manipulating
 qRHL judgements are built-in into the core tool. Many tactics produce
@@ -271,11 +285,7 @@ the Isabelle/HOL backend for simplification or solving. This way, the
 overall tool supports arbitrarily complex pre- and post-conditions in
 qRHL statements, and arbitrarily complex expressions within programs
 (only limited by what can be expressed in Isabelle/HOL). The
-Isabelle/HOL backend is automatically downloaded, compiled, and
-executed by the core tool (via libisabelle \cite{libisabelle}).\footnote{This
-  uses about 2GB of additional disk space.
-  The downloaded Isabelle is stored in a subdirectory of the tools installation,
-  so deleting the tools directory will also recover that space.}
+Isabelle/HOL backend is automatically executed by the core tool (via scala-isabelle \cite{scala-isabelle}).
   
 
 More precisely, when parsing a program, all expressions (e.g.,
@@ -307,8 +317,7 @@ A proof script for our tool consists of a UTF-8 encoded qRHL file
 theory \texttt{Example.thy}. See \autoref{fig:example}. The
 accompanying Isabelle/HOL theory can define additional constants
 (e.g., \texttt{square}) and simplification rules (e.g.,
-\texttt{square\_simp}), etc.  All files (including user-created ones)
-are expected to be found in top-level directory of the tool's installation directory.
+\texttt{square\_simp}), etc.  
 
 \begin{figure}[t]\centering
   \lstset{aboveskip=0pt,belowskip=0pt,frame=single}
@@ -327,11 +336,11 @@ are expected to be found in top-level directory of the tool's installation direc
   \label{fig:example}
 \end{figure}
 
-To execute the example, execute \texttt{./proofgeneral.sh
+To execute the example, execute \texttt{proofgeneral.sh
   example.qrhl} and then use, e.g., \texttt{Ctrl-C Ctrl-N} to evaluate
 the file step by step. (If emacs is not available, you can also run
 \texttt{bin/qrhl example.qrhl} noninteractively.) To edit
-\texttt{Example.thy}, execute \texttt{./run-isabelle.sh Example.thy}.
+\texttt{Example.thy}, execute \texttt{run-isabelle.sh Example.thy}.
 
 \subsection{Proof scripts}
 \label{sec:tool.proofscripts}
@@ -341,9 +350,8 @@ variable or a program), claims (e.g., qRHL judgements), and proofs.
 Syntactically, the script is a sequence of commands.
 
 A command is a single or multiline string, terminated with a
-``\texttt{.}''. (The ``\texttt{.}'' must be the last non-whitespace character in the
-line. That is, no further commands or comments can be in the same
-line.) Inside a command, line breaks are treated like spaces.
+``\texttt{.}''.
+Inside a command, line breaks are treated like spaces.
 
 Between commands, there can be comments that start with ``\texttt{\#}'' (on
 their own lines). These are ignored. (Comments may not occur within a
@@ -351,7 +359,7 @@ command, not even inside a multiline command.)
 
 \paragraph{Isabelle initialization.} The first command in a proof
 script must be ``\texttt{isabelle.}''\toolidx{isabelle} This
-initializes (and possibly downloads, if needed) Isabelle/HOL. If a
+initializes Isabelle/HOL. If a
 custom Isabelle/HOL theory ``\texttt{Example.thy}'' is to be used, use
 the command ``\texttt{isabelle Example.}'' instead. Custom
 Isabelle/HOL theories should import the theory \texttt{QRHL} to get
@@ -360,14 +368,14 @@ Several theories can be specified in one \texttt{isabelle} command (comma separa
 Repeated \emph{identical} \texttt{isabelle} commands are allowed.
 See \autoref{sec:isabelle} for more information on accompanying theories.
 
-It is also possible to include individual Isabelle commands directly inside the \texttt{.qrhl} file using the ``\texttt{isabelle\_cmd}''\toolidx{isabelle\_cmd} command.
+It is also possible to include individual Isabelle commands directly inside the \texttt{.qrhl} file using the ``\texttt{isabelle\_cmd}''\toolidx{isabelle\_cmd}\phantomlabel{command:isabelle_cmd} command.
 For example:
 \begin{center}
   \begin{lstlisting}
     isabelle_cmd typedef my_type = "UNIV :: nat set" by auto.
   \end{lstlisting}
 \end{center}
-Note that \texttt{isabelle\_cmd} must not be used inside a proof (but see the \hyperref[tactic:isa]{\texttt{isa}} tactic for using Isabelle methods).
+Note that \texttt{isabelle\_cmd} must not be used inside a proof (but see the \hyperref[tactic:isa]{\texttt{isa}} tactic for using Isabelle methods in a proof).
 And if the command starts a proof on the Isabelle level (as \texttt{typedef} does in the above example), then the same command must finish the proof (as \texttt{by auto} does in the above example).
 It is not possible to split this into two \texttt{isabelle\_cmd} commands.
 (For complex situations, it is therefore recommended to edit Isabelle commands directly using Isabelle in a \texttt{.thy} file.)
@@ -407,7 +415,7 @@ defined in \cite{qrhl-paper-from-manual}. These can be declared using the follow
 \end{center}
 respectively. Here \texttt{x},\texttt{q} are the variable names, and \texttt{type}
 is the type of the variable.
-That is, $\typev{\mathtt{x}}=\mathrm{UNIV}_{\mathtt{type}}$ where
+That is, in the notation of \cite{qrhl-paper-from-manual}, $\typev{\mathtt{x}}=\mathrm{UNIV}_{\mathtt{type}}$ where
 $\mathrm{UNIV}_{\mathtt{type}}$ is the universe of all values of type \texttt{type}.
 \texttt{type} can be an arbitrary type
 that is understood by Isabelle/HOL.
@@ -526,7 +534,7 @@ All variable specifications except \texttt{free $F$} are optional but
 they have to occur in this order.  $F$ are (an upper bound on) the
 free variables of \texttt{name}.  $A$. $R$ are a lower bound on the
 readonly variables.\footnote{That is, $F\setminus R$ is an upper bound
-  for the written variables of $A$ are at most.} $O$ is a lower bound
+  for the written variables of $A$.} $O$ is a lower bound
 on the overwritten variables, that is, variables in $O$ are guaranteed
 to be overwritten before they are read by $A$ (or any of the oracles
 invoked by $A$). $I$ is an upper bound on the inner variables of $A$,
@@ -574,8 +582,8 @@ a bit \texttt{b}. The declaration is:
     adversary A2 free c,b,cglobA,qglobA.
   \end{lstlisting}
 \end{center}
-(Here the adversary state is in \texttt{cglobA} and \texttt{qglobA},
-those variables are also shared with other program fragments
+(Here the adversary state is in \texttt{cglobA} and \texttt{qglobA}.
+Those variables are also shared with other program fragments
 representing different invocations of the same adversary. We use the
 type \texttt{string} for the state to ensure that the type is big enough to allow to represent any computation.)
 
@@ -584,7 +592,7 @@ cannot communicate by simply giving them no shared global variables.
 
 Furthermore, in a reduction-based security proof, we need to construct
 a new adversary \texttt{B} from an existing adversary \texttt{A}. This
-can be done by using the \texttt{program} to define a new adversary
+can be done by using the \texttt{program}-command to define a new adversary
 \texttt{B} that invokes the existing (unspecified) adversary program
 \texttt{A}. For example, 
 \texttt{prg-enc-rorcpa.qrhl} defines:
@@ -636,8 +644,8 @@ Once a lemma is proven, the new fact can be referred to like any other
 fact known to Isabelle/HOL, for example when using the tactic
 \texttt{simp}.
 
-Note that \texttt{formula} cannot contain qRHL judgments. (These have
-no encoding in Isabelle/HOL.) It is, however, possible to refer to
+Note that \texttt{formula} cannot contain qRHL judgments.\footnote{Strictly speaking, they can. But there is currently no convenient input syntax for this, and reasoning support is limited.}
+It is, however, possible to refer to
 named programs (declared using the \texttt{program}-command or the
 \texttt{adversary}-command) in Isabelle/HOL expressions of the
 following form:
@@ -660,7 +668,7 @@ after executing \texttt{prog} with initial state $\rho$
   \end{lstlisting}
 \end{center}
 would start a goal stating that the programs \texttt{game1} and
-\texttt{game2} have the same probability of outputting $1$
+\texttt{game2} have the same probability of outputting~$1$
 in variable \texttt{b}, for any initial state. Such goals can be
 transformed into qRHL goals using the tactic \texttt{byqrhl}, but they
 can also be reasoned about in Isabelle/HOL (via the \texttt{simp}
@@ -702,7 +710,7 @@ When \texttt{\{} is prefixed with a subgoal selector, e.g., \texttt{1,3,4:} or \
 
 Alternatively, it is possible to focus on all current subgoals one after the other with \texttt{+}.
 Each \texttt{+} symbol focuses on the next one of the subgoals that were present when the first \texttt{+} was encountered.
-When a single \texttt{+} is encountered, all current subgoals must be focused upon with \texttt{+} commands one-by-one.
+When one \texttt{+} is encountered, all current subgoals must be focused upon with \texttt{+} commands one-by-one.
 Before the next subgoal can be focused upon with \texttt{+}, the current one needs to be solved.
 Instead of \texttt{+}, any combination of \texttt{+-*} can be used as a marker for focusing.
 The same symbol needs to be used for all subgoals on one level, using different symbols allows nesting of focused subproofs.
@@ -1022,7 +1030,7 @@ A program is represented as a list of statements.\footnote{This
 
 \paragraph{Expressions.}
 Expressions within programs, and predicates in qRHL judgments are
-interpreted by Isabelle/HOL (the Isabelle/HOL 2017 version), in the
+interpreted by Isabelle/HOL (currently the Isabelle/HOL 2021-1 version), in the
 context of a builtin theory QRHL. We assume some familiarity with
 Isabelle/HOL. Readers unfamiliar with Isabelle/HOL may study the
 tutorial \cite{isabelle-tutorial}.
@@ -1032,8 +1040,8 @@ For experiments, it can be useful to directly invoke Isabelle/HOL
 imports \texttt{QRHL.QRHL}.
 
 Expressions used in assign-statements will probably only rarely use
-any of the custom types and constants from \texttt{QRHL.thy} (except the type
-\texttt{bit}). However, in sampling-statements we need to construct
+any of the custom types and constants from \texttt{QRHL.thy}.
+However, in sampling-statements we need to construct
 expressions of type $\alpha$
 \texttt{distr} (distributions), and the various quantum operations
 need expressions of types $(\alpha,\alpha)$
@@ -1045,28 +1053,38 @@ expressions of those types are described in the table below.
 
 \paragraph{Predicates.} Predicates (the post- and preconditions in
 qRHL judgments) are also interpreted by Isabelle/HOL. They have to be
-expressions of the type \texttt{mem2 clinear\_space} (abbreviated \texttt{predicate}),
+expressions of the type \texttt{mem2 ccsubspace} (abbreviated \texttt{predicate}),
 with free classical
 program variables (indexed with \texttt{1} or \texttt{2}, i.e., if the
 program variable is \texttt{x}, then the expression may contain
 \texttt{x1} and \texttt{x2}). Here \texttt{mem2} is the type of pairs
-of memories, and thus \texttt{mem2 clinear\_space} is the type of closed subspaces of
+of memories, and thus \texttt{mem2 ccsubspace} is the type of closed subspaces of
 $\elltwov{V_1V_2}$
 where $V_1,V_2$ represent the indexed program variables.
 
 Predicates can additionally contain quantum variables as arguments to
 specific constructions, e.g., \texttt{pauliX\guillemotright$\llbracket\qq\rrbracket$}
-would refer to an Pauli-$X$ operator on quantum variable $\qq$.
+would refer to a Pauli-$X$ operator on quantum variable $\qq$.
 
 Predicates can be constructed using the constants described in the
 tables below.
 
 
 
-\paragraph{Types.} The theory \texttt{QRHL} defines the following
+\paragraph{Types.} The theory \texttt{QRHL} provides the following
 types. Some of those types are defined in Isabelle/HOL using
-\texttt{typedef}, others are only axiomatized, see
-\texttt{QRHL.thy} and the theories imported therein.
+\texttt{typedef}, others are only axiomatized.
+See \texttt{QRHL.thy} and the theories imported therein.
+Others are imported from other Isabelle libraries, most importantly \texttt{Complex\_Bounded\_Operators} \cite{bounded-operators}.
+
+In some cases, there
+are several possible syntaxes for entering the same type. We list
+all of them, the first being the one Isabelle/HOL will use for
+printing the constant. In many cases, the syntax contains special
+characters. These can be entered with an adapted TeX input method in Emacs
+(which is automatically active in our ProofGeneral customization). In
+those cases we additionally mention the character sequences to be entered in ProofGeneral
+for getting the special characters (marked ``How to input:'' in the table below).
 
 When defining your own types in an accompanying theory, please consult \autoref{sec:deftypes}.
 
@@ -1094,7 +1112,7 @@ When defining your own types in an accompanying theory, please consult \autoref{
   \hline
   $\alpha$ \texttt{distr}\tooltype{distr} & The set of distributions over $\alpha$.
 
-  Recall from the preliminaries that in our context, distributions are
+  In our context, distributions are
   functions $\mu:\alpha\to\setRpos$
   with $\sum_x\mu(x)\leq1$.
 
@@ -1105,7 +1123,7 @@ When defining your own types in an accompanying theory, please consult \autoref{
   $\alpha$ \texttt{ell2}\tooltype{ell2} & Vectors in $\elltwo \alpha$.
   
   The type is endowed with the type class
-  \texttt{normed\_real\_vector}, so operations such as $+$
+  \texttt{complex\_normed\_vector}, so operations such as $+$
   or \texttt{norm} work as expected.
 
   Expressions of this type occur on the rhs of quantum initialization
@@ -1113,10 +1131,10 @@ When defining your own types in an accompanying theory, please consult \autoref{
 
   \\
   \hline
-  $\alpha$ \texttt{clinear\_space}\tooltype{clinear\_space} &
-  Closed subspaces of $\elltwo\alpha$.
+  $\alpha$ \texttt{ccsubspace}\tooltype{ccsubspace} &
+  Closed subspaces of the Hilbert space $\alpha$.
 
-  This type is used mostly for constructing quantum predicates.
+  This type is used mostly for constructing quantum predicates, see also the type \hyperref[type:predicate] {\texttt{predicate}}.
   
   It is endowed with the type class \texttt{complete\_lattice}, thus
   it has operations such as \symbolindexmark\SQCAP$\sqcap$
@@ -1125,8 +1143,13 @@ When defining your own types in an accompanying theory, please consult \autoref{
   for the sum of two spaces, \symbolindexmark\TOOLINF\texttt{INF x:Z. f x} for the
   intersection of all spaces $f(x)$
   for $x\in Z$, and $\leq$ for inclusion of subspaces.
-  And \symbolindexmark\TOOLtop\texttt{top} is the whole space $\elltwo\alpha$,
+  And \symbolindexmark\TOOLtop\texttt{top} is the whole space $\alpha$,
   and \texttt{0} and \symbolindexmark\TOOLbot\texttt{bot} both refer to the zero-space~$0$.
+
+
+  In most cases, one will use the type $\beta\ \mathtt{ell2}\ \mathtt{ccsubspace}$, i.e., subspaces of the Hilbert space $\elltwo\beta$.
+  For finite dimensional $\beta$, this is the same as the space $\setC^\beta$, i.e., complex vectors of size $\abs\beta$.
+
   \\
   %
   \hline \texttt{mem2}\tooltype{mem2} & The quantum part of pairs of memories.  That
@@ -1137,8 +1160,8 @@ When defining your own types in an accompanying theory, please consult \autoref{
 
   This type is mainly used for defining the type \texttt{predicate}.
   \\
-  \hline \texttt{predicate}\tooltype{predicate} & An abbreviation for \texttt{mem2
-    clinear\_space}, that is, subspaces of
+  \hline \texttt{predicate}\tooltype{predicate}\phantomlabel{type:predicate}
+  & An abbreviation for \texttt{mem2 ell2 ccsubspace}, that is, subspaces of
   $ \elltwo{\types{\qu{V_1}\qu{V_2}}}= \elltwov{\qu{V_1}\qu{V_2}}$.
 
   This is the type of quantum predicates.
@@ -1146,7 +1169,9 @@ When defining your own types in an accompanying theory, please consult \autoref{
   Expressions of this type occur in the pre- and postcondition of qRHL
   judgments, as well as in many subgoals generated by tactics.
   \\
-  \hline $(\alpha,\beta)$ \texttt{cblinfun}\tooltype{cblinfun} &
+  \hline
+  $\alpha \Rightarrow_\mathsf{CL} \beta$ \par
+  $(\alpha,\beta)$ \texttt{cblinfun}\tooltype{cblinfun} &
   Bounded operators $\bounded{\alpha,\beta}$.
 
   Expressions of this type occur in quantum operation statements,
@@ -1159,10 +1184,10 @@ When defining your own types in an accompanying theory, please consult \autoref{
   of the \texttt{wp} tactic (implementing \ruleref{QApply1}).
 
   This type will almost always be used as
-  $(\alpha'\ \mathtt{ell2}, \beta'\ \mathtt{ell2})\
-  \mathtt{cblinfun})$. (I.e., elements of $\boundedv{\alpha,\beta}$.)
+  $\alpha'\ \mathtt{ell2} \Rightarrow_\mathsf{CL} \beta'\ \mathtt{ell2}$. (I.e., elements of $\boundedv{\alpha,\beta}$.)
   This can be abbreviated as $(\alpha',\beta')\ \mathtt{l2bounded}$.
-  
+
+  \texinput{Use the \texttt{cblinfun} syntax for input.}
   \\
   \hline $(\alpha,\beta)$ \texttt{l2bounded}\tooltype{l2bounded} &
   Abbreviation for
@@ -1204,7 +1229,7 @@ When defining your own types in an accompanying theory, please consult \autoref{
   $(\alpha_1\times\dots\times\alpha_n)\ \mathtt{variables}$.
 
   Having such a type is necessary for specifying certain constants
-  that operate on list of quantum variables (e.g., \texttt{lift}) in a type-safe way.
+  that operate on lists of quantum variables (e.g., \texttt{lift}) in a type-safe way.
   \\
   \hline
   \texttt{program}\tooltype{program}  &
@@ -1224,21 +1249,26 @@ When defining your own types in an accompanying theory, please consult \autoref{
   denote the set of all variables with indices $1$
   and $2$, respectively.
 
-  This type is not interpreted in any way, there is are no constants
+  This type is not interpreted in any way, there are no constants
   for constructing program states. The only use is as an argument to
   the \texttt{Pr[...]} constant (see the table below), to refer to
   an unspecified but fixed quantum state (typically declared by \texttt{\frenchspacing ambient
     var rho :
-    program\_state;}). \\
+    program\_state}). \\
   \hline
 \end{longtable}
 
 \paragraph{Constants.} The theory \texttt{QRHL} defines the following
-constants for use in expressions and predicates. In many cases, there
+constants for use in expressions and predicates.
+Some of those constants are defined in Isabelle/HOL, others are only axiomatized.
+See \texttt{QRHL.thy} and the theories imported therein.
+Others are imported from other Isabelle libraries, most importantly \texttt{Complex\_Bounded\_Operators} \cite{bounded-operators}.
+
+In many cases, there
 are several possible syntaxes for entering the same constant. We list
 all of them, the first being the one Isabelle/HOL will use for
 printing the constant. In many cases, the syntax contains special
-characters. These can be entered with the TeX input method of Emacs
+characters. These can be entered with an adapted TeX input method in Emacs
 (which is automatically active in our ProofGeneral customization). In
 those cases we additionally mention the character sequences to be entered in ProofGeneral
 for getting the special characters (marked ``How to input:'' in the table below).
@@ -1248,8 +1278,6 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \ifx!#3!\hskip-1em\noindent\else\par\medskip\small(for #3)\fi}
 
 \newcommand\subhead[1]{\multicolumn{2}{r@{}}{\footnotesize\bfseries #1}\\}
-
-\DeclareRobustCommand\texinput[1]{\textbf{How to input:} \texttt{\def\\{\textbackslash}#1}}
 
 \newcommand\toolconst[1]{\index{#1@\textttOLD{#1} (Isabelle/HOL constant)}}
 
@@ -1360,20 +1388,20 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \hline
   \subhead{Operators}
   \hline
-  \constdef{$A^*$\par$\mathtt{adjoint}\ A$}{(\beta,\alpha)\ \mathtt{cblinfun}}
+  \constdef{$A^*$\par$\mathtt{adj}\ A$}{(\beta,\alpha)\ \mathtt{cblinfun}}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$}
-  \toolconst{adjoint}
+  \toolconst{adj}
   &
   %
   The adjoint $A^*$ of $A$.
   \\
   \hline
-  \constdef{$A\cdot B$\par$\mathtt{timesOp}\ A\ B$}
+  \constdef{$A\cdot B$\par$A \mathbin{\circ_\textsc{cl}} B$\par$\mathtt{cblinfun\_compose}\ A\ B$}
   {(\alpha,\gamma)\ \mathtt{cblinfun}}
   {$A::(\beta,\gamma)\ \mathtt{cblinfun}$
     \par and
     $B::(\alpha,\beta)\ \mathtt{cblinfun}$}
-  \toolconst{timesOp}
+  \toolconst{cblinfun\_compose}
   \symbolindexmark\TOOLcdot
   &
   The product $AB$ of operators $A$ and $B$.
@@ -1381,12 +1409,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   The syntax $A\cdot B$
   is overloaded. If Isabelle/HOL has trouble recognizing which meaning
   of $\cdot$
-  is intended, use \texttt{timesOp}, or provide additional type
+  is intended, use \texttt{cblinfun\_compose}, or provide additional type
   information for $A$ and $B$.
 
   \texinput{\\cdot}
   \\
-  \hline \constdef{$A\cdot \psi$\par$\mathtt{cblinfun\_apply}\
+  \hline \constdef{$A\cdot \psi$\par$A \mathbin{*_V} \psi$\par$\mathtt{cblinfun\_apply}\
     A\ \psi$} {\beta}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$
     \par and
@@ -1405,12 +1433,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \texinput{\\cdot}
   \\
   \hline
-  \constdef{$A\cdot S$\par$\mathtt{applyOpSpace}\ A\ S$}
-  {\beta\ \mathtt{clinear\_space}}
+  \constdef{$A\cdot S$\par$A \mathbin{*_S} S$\par$\mathtt{cblinfun\_image}\ A\ S$}
+  {\beta\ \mathtt{ccsubspace}}
   {$A::(\alpha,\beta)\ \mathtt{cblinfun}$
     \par and
-    $S::\alpha\ \mathtt{clinear\_space}$}
-  \toolconst{applyOpSpace}
+    $S::\alpha\ \mathtt{ccsubspace}$}
+  \toolconst{cblinfun\_image}
   \symbolindexmark\TOOLcdot
   &
   The result $AS=\{A\psi:\psi\in S\}$ of applying the operator $A$ to the subspace $\psi$.
@@ -1418,16 +1446,16 @@ for getting the special characters (marked ``How to input:'' in the table below)
   The syntax $A\cdot S$
   is overloaded. If Isabelle/HOL has trouble recognizing which meaning
   of $\cdot$
-  is intended, use \texttt{applyOpSpace}, or provide additional type
+  is intended, use \texttt{cblinfun\_image}, or provide additional type
   information for the $A$ and $S$.
 
   \texinput{\\cdot}
   \\
   \hline
-  \constdef{$\mathtt{idOp}$}
+  \constdef{$\mathtt{id\_cblinfun}$}
   {(\alpha,\alpha)\ \mathtt{cblinfun}}
   {}
-  \toolconst{idOp}
+  \toolconst{id\_cblinfun}
   &
   The identity operator $\id$ on $\elltwo\alpha$.
   \\
@@ -1461,16 +1489,16 @@ for getting the special characters (marked ``How to input:'' in the table below)
   & True iff $A$ is an isometry.
   \\
   \hline
-  \constdef{$\mathtt{isProjector}\ A$}
+  \constdef{$\mathtt{is\_Proj}\ A$}
   {\mathtt{bool}}
   {$A :: (\alpha,\alpha)\ \mathtt{cblinfun}$}
-  \toolconst{isProjector}
+  \toolconst{is\_Proj}
   & True iff $A$ is a projector.
   \\
   \hline
   \constdef{$\mathtt{Proj}\ S$}
   {(\alpha,\alpha)\ \mathtt{cblinfun}}
-  {$S :: \alpha\ \mathtt{clinear\_space}$}
+  {$S :: \alpha\ \mathtt{ccsubspace}$}
   \toolconst{Proj}
   &
   The projector onto subspace $S$.
@@ -1503,8 +1531,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$A\tensor B$\par
     $\mathtt{tensor}\ A\ B$\par
     $\mathtt{tensorOp}\ A\ B$}
-  {(\alpha,\beta)\ \mathtt{l2bounded}}
-  {$A::\alpha\ \mathtt{l2bounded}$ \par and $B::\beta\ \mathtt{cblinfun}$}
+  {(\alpha\times\beta)\ \mathtt{l2bounded}}
+  {$A::\alpha\ \mathtt{l2bounded}$ \par and $B::\beta\ \mathtt{l2bounded}$}
   \toolconst{tensor}
   \toolconst{tensorOp}
   \symbolindexmark\TOOLotimes
@@ -1571,7 +1599,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   available.
 
   Examples of types that have these sorts are \texttt{bit},
-  \texttt{int}, $(\dots,\dots)\ \mathtt{nlist}$.
+  \texttt{int}, $\mathtt{nlist}$.
   (The latter is defined in CryptHOL \cite{crypthol}, but you
   additionally need to import the theory
   \texttt{QRHL.CryptHOL\_Missing}.)
@@ -1587,7 +1615,9 @@ for getting the special characters (marked ``How to input:'' in the table below)
     $\mathtt{ket}\ x$}
   {\alpha\ \mathtt{ell2}} {$x :: \alpha$}
   \toolconst{ket} & The basis state $\basis{}{x}$ of $\elltwo\alpha$.
-
+  
+  That is, the states $\basis{}{x}$ form an orthonormal basis of the Hilbert space $\elltwo\alpha$ when $x$ ranges over all values of type $\alpha$.
+  
   \texinput{\\ket}
   \\
   \hline
@@ -1602,7 +1632,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$\psi\tensor\phi$\par
     $\mathtt{tensor}\ \psi\ \phi$\par
     $\mathtt{tensorVec}\ \psi\ \phi$}
-  {(\alpha,\beta)\ \mathtt{ell2}}
+  {(\alpha\times\beta)\ \mathtt{ell2}}
   {$\psi::\alpha\ \mathtt{ell2}$ and $\phi::\beta\ \mathtt{ell2}$}
   \toolconst{tensor}
   \toolconst{tensorVec}
@@ -1684,7 +1714,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
     $\mathtt{lift}\ S\ Q$\par
     $\mathtt{liftSpace}\ S\ Q$}
   {\mathtt{predicate}}
-  {$A::\alpha\ \mathtt{clinear\_space}$
+  {$A::\alpha\ \mathtt{ccsubspace}$
     \par and
   $Q::\alpha\ \mathtt{variables}$}
   \symbolindexmark\TOOLfrqq
@@ -1852,7 +1882,7 @@ for getting the special characters (marked ``How to input:'' in the table below)
   % \hline
   % \constdef{$\mathtt{span}\ M$\par
   %   $\mathtt{spanState}\ M$}
-  % {\alpha\ \mathtt{clinear\_space}}
+  % {\alpha\ \mathtt{ccsubspace}}
   % {$M::\alpha\ \mathtt{state}\ \mathtt{set}$}
   % \toolconst{span}
   % \toolconst{spanState}
@@ -1869,13 +1899,12 @@ for getting the special characters (marked ``How to input:'' in the table below)
   % \\
   % 
   \hline
-  \constdef{$\mathtt{span}\ M$}
-  {\alpha\ \mathtt{clinear\_space}}
-  {$M::\alpha\ \mathtt{ell2}\ \mathtt{set}$}
-  \toolconst{span}
-  \toolconst{spanVector}
+  \constdef{$\mathtt{ccspan}\ M$}
+  {\alpha\ \mathtt{ccsubspace}}
+  {$M::\alpha\ \mathtt{set}$}
+  \toolconst{ccspan}
   &
-  The span ``$\SPAN M$'' of the states in $M$.
+  The topologically-closed span of the states (vectors) in $M$.
   \\
   %
   \hline
@@ -1926,8 +1955,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
 
   This is an abbreviation for
   \[
-    \mathtt{quantum\_equality\_full}\ \mathtt{idOp}\ Q_1\
-    \mathtt{idOp}\ Q_2.
+    \mathtt{quantum\_equality\_full}\ \mathtt{id\_cblinfun}\ Q_1\
+    \mathtt{id\_cblinfun}\ Q_2.
   \]
   (That is, Isabelle/HOL internally expands this
   abbreviation whenever it encounters it.)
@@ -1975,8 +2004,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
   %
   \hline
   \constdef{$\mathtt{ortho}\ S$}
-  {\alpha\ \mathtt{clinear\_space}}
-  {$S::\alpha\ \mathtt{clinear\_space}$}
+  {\alpha\ \mathtt{ccsubspace}}
+  {$S::\alpha\ \mathtt{ccsubspace}$}
   \toolconst{ortho}
   &
   Orthogonal complement $\orth S$ of $S$.
@@ -1985,8 +2014,8 @@ for getting the special characters (marked ``How to input:'' in the table below)
   \constdef{$S\tensor T$\par
     $\mathtt{tensor}\ S\  T$\par
     $\mathtt{tensorSpace}\ S\  T$}
-  {(\alpha,\beta)\ \mathtt{clinear\_space}}
-  {$S::\alpha\ \mathtt{clinear\_space}$ and $ T::\beta\ \mathtt{clinear\_space}$}
+  {(\alpha\times\beta)\ \mathtt{ccsubspace}}
+  {$S::\alpha\ \mathtt{ccsubspace}$ and $ T::\beta\ \mathtt{ccsubspace}$}
   \toolconst{tensor}
   \toolconst{tensorSpace}
   \symbolindexmark\TOOLotimes
@@ -2056,18 +2085,20 @@ for getting the special characters (marked ``How to input:'' in the table below)
 
 In this section, we document all tactics supported by our 
 tool. The tactics are not in one-to-one correspondence with the rules
-from \autoref{sec:tactics} (for example, many tactics implement a
+from \qrhlautoref{sec:qrhl} (for example, many tactics implement a
 combination of some rule with the \rulerefx{Seq} or \rulerefx{Conseq}
 rule). Yet, most rules can be recovered as special cases of the
 tactics. (E.g., the \ruleref{Sample1} can be implemented as the tactic
-sequence \texttt{wp left. skip. simp.}) Some rules are not
-implemented in their full generality (e.g., \rulerefx{Frame} is
-implemented by \texttt{equal} which does not take into account readonly
-variables\TODOQ{better example becase \texttt{frame} implements Frame}). Rules that are not yet implemented in the tool are:
+sequence \texttt{wp left. skip. simp.}) Some rules may not be
+implemented in their full generality.
+%(e.g., \rulerefx{Frame} is
+%implemented by \texttt{equal} which does not take into account readonly
+%variables\TODOQ{better example becase \texttt{frame} implements Frame}).
+Rules that are not yet implemented in the tool are:
 \rulerefx{Sym}, \rulerefx{QrhlElim} (but we have
-\rulerefx{QrhlElimEq}), \rulerefx{JointSample}, \rulerefx{JointIf},
+\rulerefx{QrhlElimEq}), 
 \rulerefx{While1}, \rulerefx{JointWhile}, \rulerefx{JointMeasure},
-\rulerefx{JointMeasureSimple}. \TODOQ{check whether some need to be removed from this list}
+\rulerefx{JointMeasureSimple}.
 
 In the description of the rules, we use Isabelle/HOL syntax for
 expressions (in particular, for pre- and postconditions) because that
@@ -3485,10 +3516,9 @@ reference manual \cite{isar-ref} for more information. The theory
 \autoref{sec:tool.pred}) and axioms/lemmas. Many of the lemmas are
 declared as simplification rules, but some of them are for direct use
 only. We do not provide a comprehensive list here. To find useful
-facts, use the \texttt{find\_theorems} command in Isabelle
-\cite{isar-ref}. Or try the \texttt{sledgehammer} command
-\cite{isar-ref} for proving simple lemmas.  The following
-axioms/lemmas correspond to facts proven in this paper (all other axioms/lemmas are
+facts, use the \texttt{find\_theorems} command \cite{isar-ref} / query panel \cite{isabelle-jedit} in Isabelle. Or try the \texttt{sledgehammer} command
+\cite{isar-ref} / sledgehammer panel \cite{isabelle-jedit} for proving simple lemmas.  The following
+axioms/lemmas correspond to facts proven in \cite{qrhl-paper-from-manual} (all other axioms/lemmas are
 well-known or obvious facts):
 \begin{center}
 \begin{tabular}{|ll|}
@@ -3526,11 +3556,12 @@ well-known or obvious facts):
 The accompanying theory can also be used to set Isabelle configuration
 options that then affect our tool's behavior. For example, use
 \begin{lstlisting}
-  declare[[show_types,show_sorts]]
+  declare [[show_types,show_sorts]]
 \end{lstlisting}
 in the accompanying theory to
 add type information to the output of our tool (this affects all
 Isabelle/HOL formulas printed as part of the subgoals).
+Alternatively, this can be done using the \hyperref[command:isabelle_cmd]{\texttt{isabelle\_cmd}} command directly in the \texttt{.qrhl} file.
 
 \subsubsection{Declaring types}
 \label{sec:deftypes}
@@ -3692,18 +3723,16 @@ $A\leq B\implies A\text\guillemotright Q\leq B\text\guillemotright Q$ and get
 
 We have automated this process (using a number of simplification rules
 and custom ML simplification procedures). To perform this conversion,
-we use the following method:
+we use the following method in Isabelle:
 \begin{lstlisting}
   apply (simp add: prepare_for_code)
 \end{lstlisting}
 
-Another problem is that the Isabelle/HOL code generation implements
-real numbers as fractions. Thus, the code generation fails (aborts) when the
-expression involves, e.g., square roots. Unfortunately, operators and
-states such as \texttt{hadamard} and \texttt{EPR} involve $\sqrt2$.
-We reimplemented the real number code generation in Isabelle/HOL to support real numbers
-of the form $a+b\sqrt 2$ for rational $a,b$, thus these operators and states can
-be used. However, there is no support so far for other irrational numbers (e.g., $\sqrt 3$).
+By default, the Isabelle/HOL code generation implements real numbers as fractions.
+Then the code generation would fail (abort) when the expression involves, e.g., square roots.
+Since operators and states such as \texttt{hadamard} and \texttt{EPR} involve $\sqrt2$, we have activated instead code generation setup from \cite{Real_Impl-AFP}.
+This setup allows us to compute with real numbers of the form $a+b\sqrt c$ for rational $a,b,c$.
+If even larger sets of real numbers are involved in the computations, it is necessary to include a different code generation setup, e.g., algebraic numbers \cite{Algebraic_Numbers-AFP}.
 
 To give a complete example, \eqref{eq:code2} can be shown as follows:
 \begin{lstlisting}
@@ -4239,7 +4268,7 @@ program prog2 := {
   on q apply hadamard;
   b <$ uniform UNIV;
   on q apply (if b=1
-     then hadamard else idOp); }.
+     then hadamard else id\_cblinfun); }.
   \end{lstlisting}%
 \end{tabular}
 }
@@ -4271,7 +4300,7 @@ $H$
 is applied, otherwise nothing is done.  In contrast, in
 \texttt{prog2}, there is always an application on $\qq$,
 but the operator that is applied is computed using the expression
-\texttt{if b=1 then hadamard else idOp} which evaluates to $H$
+\texttt{if b=1 then hadamard else id\_cblinfun} which evaluates to $H$
 or to the identity. In other words, in \texttt{prog1}, we use a
 language-level conditional and perform an actual branching. While in
 \texttt{prog2}, no branching occurs, and the conditional is encoded in
@@ -4293,7 +4322,7 @@ the final, lengthy, verification condition.
 and use the tactic \texttt{inline} to inline the code of both
 programs. Then we use \texttt{seq 0 1: $I_1$}
 with
-$I_1:=\texttt{quantum\_equality\_full idOp
+$I_1:=\texttt{quantum\_equality\_full id\_cblinfun
   $\llbracket$q1$\rrbracket$
   hadamard $\llbracket$q2$\rrbracket$}$
 to split off the first statement of the right program. That is, we
@@ -4320,7 +4349,7 @@ We are left with the new goal
       if (b=1) then on q apply hadamard; else skip;}} \\
   \pmb\sim
   {\texttt{b <\$ uniform UNIV;
-      on q apply (if b=1 then hadamard else idOp);}}
+      on q apply (if b=1 then hadamard else id\_cblinfun);}}
   \
   \{\qq_1\quanteq\qq_2\}
 \end{multline*}
@@ -4328,7 +4357,7 @@ We then claim that the sampling of $b$
 on both sides leads to $b_1\neq b_2$.
 That is, we use the tactic \texttt{seq 1 1: $I_2$}
 with
-$I_2:=\texttt{quantum\_equality\_full idOp
+$I_2:=\texttt{quantum\_equality\_full id\_cblinfun
   $\llbracket$q1$\rrbracket$
   hadamard $\llbracket$q2$\rrbracket$
   $\sqcap$ Cla[b1≠b2].}$ to split off the two samplings into a separate qRHL
@@ -4349,7 +4378,7 @@ Now, we are left with the subgoal
   \{I_2\}\
   {\texttt{if (b=1) then on q apply hadamard; else skip;}} \\
   \pmb\sim
-  {\texttt{on q apply (if b=1 then hadamard else idOp);}}
+  {\texttt{on q apply (if b=1 then hadamard else id\_cblinfun);}}
   \
   \{\qq_1\quanteq\qq_2\}
   \label{eq:I2.rhl}
@@ -4519,7 +4548,7 @@ and the resulting subgoal can be proven directly using
 Then we rewrite the precondition $I_1$
 into
 \[
-  I_2:=(\mathtt{quantum\_equality\_full}\ \mathtt{idOp}\ ⟦C_1,A_1,B_1⟧\
+  I_2:=(\mathtt{quantum\_equality\_full}\ \mathtt{id\_cblinfun}\ ⟦C_1,A_1,B_1⟧\
   (\texttt{addState EPR})\ ⟦A_2⟧)
 \] using tactic \texttt{\frenchspacing conseq pre: $I_2$.}
 We get a new subgoal $I_1\leq I_2$
@@ -4540,10 +4569,10 @@ where $\bc_1$ is \texttt{teleport} without the first line.
 We now show that the next two lines (applying CNOT and Hadamard)
 lead to the following invariant:
 \begin{multline*}
-  I_3 := \Bigl(\texttt{quantum\_equality\_full idOp }⟦C_1,A_1,B_1⟧
+  I_3 := \Bigl(\texttt{quantum\_equality\_full id\_cblinfun }⟦C_1,A_1,B_1⟧
     \\
-  \pb\paren{(\mathtt{hadamard} ⊗ \mathtt{idOp}) ⋅ \mathtt{assoc\_op}^* ⋅
-    (\mathtt{CNOT} ⊗ \mathtt{idOp}) ⋅ \mathtt{assoc\_op} ⋅ \mathtt{addState}\ \mathtt{EPR}}\ ⟦A_2⟧
+  \pb\paren{(\mathtt{hadamard} ⊗ \mathtt{id\_cblinfun}) ⋅ \mathtt{assoc\_op}^* ⋅
+    (\mathtt{CNOT} ⊗ \mathtt{id\_cblinfun}) ⋅ \mathtt{assoc\_op} ⋅ \mathtt{addState}\ \mathtt{EPR}}\ ⟦A_2⟧
   \Bigr)
 \end{multline*}
 In other words, we claim that after those two lines, the quantum
@@ -4561,7 +4590,7 @@ usually identifies those types. For example
 $\mathtt{addState}\ \mathtt{EPR}$
 is an operator from $\elltwo{\mathtt{bit}}$
 to $\elltwo{\mathtt{bit}\times(\mathtt{bit}\times\mathtt{bit})}$.
-And $\mathtt{CNOT}\otimes\mathtt{idOp}$
+And $\mathtt{CNOT}\otimes\mathtt{id\_cblinfun}$
 is an operator on
 $\elltwo{(\mathtt{bit}\times\mathtt{bit})\times\mathtt{bit}}$.
 So we cannot multiply those operators (a type error would be raised by

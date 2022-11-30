@@ -1,6 +1,9 @@
 \makeatletter
 
 \newcommand\pagelabel[1]{\phantomsection\label{#1}}
+\newcommand\phantomlabel[1]{\phantomsection\label{#1}}
+
+\DeclareRobustCommand\texinput[1]{\textbf{How to input:} \texttt{\def\\{\textbackslash}#1}}
 
 \DeclareRobustCommand\sagelink[1]{%
   \let\SAGECELLLINK\undefined

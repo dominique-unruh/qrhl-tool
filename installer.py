@@ -197,7 +197,7 @@ def do_install_qrhl_tool():
 
     subdir = content[0]
     for f in subdir.iterdir():
-        shutil.move(f, qrhl_dir)
+        shutil.move(str(f), qrhl_dir)
     os.rmdir(subdir)
 
     if qrhl_dir.joinpath("bin").joinpath("qrhl").is_file():
