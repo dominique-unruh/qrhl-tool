@@ -247,8 +247,10 @@ abbreviation (input) \<open>liftSpace == (\<lambda>A F. apply_qregister_space F 
   lift_vector :: "'a::default ell2 \<Rightarrow> 'a q2variable \<Rightarrow> ('a, qu \<times> qu) complement_domain ell2 \<Rightarrow> qu2 ell2" 
   where \<open>lift_vector \<psi> Q \<psi>' = (Q(\<psi>) \<otimes>\<^sub>p (complement Q)(\<psi>'))\<close> *)
 
-abbreviation variable_in (infix "\<in>\<^sub>q" 80) where "variable_in R S \<equiv> liftSpace S R" 
-abbreviation variable_is (infix "=\<^sub>q" 80) where "variable_is R \<psi> \<equiv> R \<in>\<^sub>q ccspan {\<psi>}" 
+abbreviation variable_in (infix "\<in>\<^sub>\<qq>" 80) where "variable_in R S \<equiv> liftSpace S R" 
+notation (input) variable_in (infix "\<in>\<^sub>q" 80)
+abbreviation variable_is (infix "=\<^sub>\<qq>" 80) where "variable_is R \<psi> \<equiv> R \<in>\<^sub>q ccspan {\<psi>}" 
+notation (input) variable_is (infix "=\<^sub>q" 80)
 
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<guillemotright>_"  [91,91] 90)
 syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_>>_"  [91,91] 90)

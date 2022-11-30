@@ -3,6 +3,25 @@ isabelle.
 quantum   var x : int.
 quantum var y : int.
 
+lemma ket (0::bit) ⊗⇩s ket (0::bit) = ket (0,0).
+simp.
+qed.
+
+lemma id_cblinfun ⊗⇩o id_cblinfun = id_cblinfun.
+simp.
+qed.
+
+lemma ⟦x⟧ ∈⇩q top = top.
+simp.
+qed.
+
+lemma ⟦x⟧ =⇩q ket 0 = top.
+admit.
+qed.
+
+
+
+
 program a := { x <q undefined; y <q undefined; }.
 
 ambient var lemma : complex.
