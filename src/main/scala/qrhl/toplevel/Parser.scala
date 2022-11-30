@@ -248,7 +248,8 @@ object Parser extends JavaTokenParsers {
 
 //  val commandEndSymbol : Parser[_] = literal(".")
   val isabelle : Parser[IsabelleCommand] =
-    literal("isabelle") ~> identifierList0 ^^ IsabelleCommand
+    literal("isabelle") ~> ("[" ~> identifier <~ "]").? ~ identifierList0 ^^
+      { case session ~ theories => IsabelleCommand(theories, session) }
 
   def typ(implicit context:ParserContext) : Parser[Typ] =
   //    rep1 (elem("expression",{c => c!=';'})) ^^ { str:List[_] => context.isabelle match {
