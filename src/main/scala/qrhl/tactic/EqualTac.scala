@@ -103,7 +103,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 
     println()
     println(s"You have requested to prove the equivalence of the last $amount lines of the left/right program.")
-    println(s"I have identified that the following is the common part of those lines (called the context in the following):")
+    println(s"""I have identified that the following is the common part of those lines (called the "context" in the following):""")
     println(s"  $context")
 
     println()
