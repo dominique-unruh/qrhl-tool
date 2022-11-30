@@ -27,6 +27,7 @@ class FingerprintedDirectorySnapshot private (val fingerprintBuilder: Fingerprin
 
   def getFile(path: Path): Option[FileSnapshot] = {
     val file = directory.getFile(path)
+//    println(s"XXX $path $file $this $directory")
     fingerprintBuilder.access(DirectoryElement(path), file)
     file
   }
@@ -45,9 +46,27 @@ object FingerprintedDirectorySnapshot {
   def apply(directory: GenericDirectory): FingerprintedDirectorySnapshot = apply(directory.snapshot())
 }
 
-case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, Option[FileSnapshot]] {
+final case class DirectoryElement(path: Path) extends Element[DirectorySnapshot, Option[FileSnapshot]] {
   override def extract(directorySnapshot: DirectorySnapshot): Option[FileSnapshot] =
     directorySnapshot.getFile(path)
+
+  private val pathString = path.toString
+
+  /** We override the automatic definition of `.equals` (from case class) because this invokes [[Path#equals]] which
+   * does not behave well:
+   *
+   * On Windows, [[Path.equals]] does case-insensitive comparisons. This is invalid (1) because even on Windows, it is
+   * possible to have case-sensitive directories (see https://www.windowscentral.com/how-enable-ntfs-treat-folders-case-sensitive-windows-10#enable_case_sensitivity_ntfs_windows10).
+   * (2) it means that equal [[Path]]s return different sequences of names (e.g., via the iterator) and that means
+   * that [[Directory#pathToList]] gives different results for equal [[DirectoryElement]]s, and that ultimately violates
+   * the contract for [[Element]].
+   * */
+  override def equals(obj: Any): Boolean = obj match {
+    case d: DirectoryElement => pathString == d.pathString
+    case _ => false
+  }
+
+  override def hashCode(): Int = pathString.hashCode
 
   override def hash: Hash[DirectoryElement.this.type] = ???
 

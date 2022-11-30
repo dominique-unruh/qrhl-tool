@@ -116,8 +116,16 @@ object Hash {
 //  val nullHash = new Hash[Nothing](null)
 }
 
+/** Represents a part of a whole value (similar to a read-only lens).
+ *
+ * Equal elements (in terms of `.equals`) must return equal extracted values.
+ *
+ * @tparam A the type of the whole
+ * @tparam B the type of the part */
 trait Element[-A, +B] extends HashedValue {
+  /** Extract the part */
   def extract(value: A): B
+  /** Extract the hash of the part */
   def extractHash(value: A) : Hash[B]
 }
 
