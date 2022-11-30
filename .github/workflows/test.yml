@@ -39,8 +39,7 @@ jobs:
             echo isabelle-home = ~/Isabelle2021-1.app >qrhl-tool.conf
             echo afp-root = ~/afp-2021-1 >>qrhl-tool.conf
             # My Mac is very small. So we make sure there is no other parallel GitHub action running before continuing.
-            # Note that pgrep by default only searches for non-ancesters. So pgrep will not find this job, as required. 
-            while pgrep -l -f Runner\\.Worker; do echo "Another GitHub workflow is running. To keep load low, we wait until it finishes."; caffeinate -i -t 300; done
+            while pgrep -l -f sbt-launch.jar; do echo "Another sbt is running. To keep load low, we wait until it finishes."; caffeinate -i -t 300; done
             ~/keepawake.sh &    # Another invocation in case we waited very long
             sbt 'testOnly -- -h target/test-reports-html'
 
