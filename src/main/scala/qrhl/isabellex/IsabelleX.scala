@@ -100,7 +100,7 @@ object Configuration {
     case path => distributionDirectory.resolve(path)
   }
 
-  def session : String = config.getProperty("session") match {
+/*  def session : String = config.getProperty("session") match {
     case null => "QRHL"
     case session => session
   }
@@ -109,7 +109,7 @@ object Configuration {
     case null => Nil
     case dirs => for (str <- dirs.split(raw",\s").toList)
       yield Paths.get(str.trim).normalize.toAbsolutePath
-  }
+  }*/
 
 /*  def isabelleUserDir : Path = config.getProperty("isabelle-user") match {
     case null => Path.of(lang.System.getProperty("user.home")).resolve(".isabelle")
@@ -132,14 +132,14 @@ object Configuration {
 */
 }
 
-class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
+class IsabelleX(val setup : Isabelle.Setup) {
   import IsabelleX._
   import Ops._
 
   /** In the directory that contains the jar, or, if not loaded from a jar, the current directory. */
   private val localStoragePath = Configuration.distributionDirectory.resolve("isabelle-temp")
 
-  private def checkBuilt(): Boolean = {
+/*  private def checkBuilt(): Boolean = {
     //    val location = this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI
     //    assert(location.getScheme=="file")
     //    println("LOC "+Paths.get(location))
@@ -187,13 +187,13 @@ class IsabelleX(build: Boolean = sys.env.contains("QRHL_FORCE_BUILD")) {
     }
 
     false
-  }
+  }*/
 
   implicit val isabelleControl: control.Isabelle = {
-    val shouldBuild = build || !checkBuilt()
-    if (shouldBuild)
-      println("*** Building Isabelle (may take a while, especially the first time, e.g., 20-60min)...")
-    new control.Isabelle(setup = setup.copy(build = shouldBuild)).force
+//    val shouldBuild = build || !checkBuilt()
+//    if (shouldBuild)
+    println("*** Starting Isabelle process. The first time, this also builds Isabelle which can take a very long time (e.g., 20-60min)...")
+    new control.Isabelle(setup).force
   }
 
   /** Creates a new context that imports QRHL.QRHL, QRHL.QRHL_Operations
@@ -968,9 +968,26 @@ object IsabelleX {
 
   private var globalIsabellePeek: IsabelleX = _
   lazy val globalIsabelle: IsabelleX = {
-    val isabelle = new IsabelleX()
-    globalIsabellePeek = isabelle
-    isabelle
+    if (globalIsabellePeek==null)
+      throw new IllegalStateException("Internal error: Accessed the Isabelle instance before it was initialized.")
+    globalIsabellePeek
+  }
+  def globalIsabelleWith(sessionDir : Option[Path], session: Option[String]): IsabelleX = synchronized {
+    var setup = defaultSetup
+    logger.debug(s"Initializing IsabelleX with sessionDir=$sessionDir, session=$session")
+    sessionDir.foreach { dir => setup = setup.copy(sessionRoots = setup.sessionRoots.appended(dir)) }
+    session.foreach { l => setup = setup.copy(logic = l) }
+    if (globalIsabellePeek != null) {
+      if (globalIsabellePeek.setup != setup)
+        throw UserException(
+          """Cannot reinitialize the Isabelle process.
+            |(This happens when the 'isabelle` command is is invoked with a different session name or in a different directory without restarting the qrhl-tool.
+            |Restart the qrhl-tool to get rid of this (C-c C-x in ProofGeneral.)""".stripMargin)
+      globalIsabellePeek
+    } else {
+      globalIsabellePeek = new IsabelleX(setup)
+      globalIsabellePeek
+    }
   }
 
   def isGlobalIsabelle(isabelle: IsabelleX): Boolean =
@@ -1056,12 +1073,11 @@ object IsabelleX {
     }
   }
 
-  lazy val setup: Isabelle.Setup = de.unruh.isabelle.control.Isabelle.Setup(
+  lazy val defaultSetup: Isabelle.Setup = Isabelle.Setup(
     workingDirectory = Configuration.distributionDirectory,
     isabelleHome = Configuration.isabelleHome,
-    logic = Configuration.session,
-    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys"))
-      ++ Configuration.sessionDirs,
+    logic = "QRHL",
+    sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys")),
     verbose = true,
     exceptionManager = new Exn.ExceptionManager(_)
 //    /** Must end in .isabelle if provided */

@@ -6,7 +6,7 @@ import qrhl.toplevel.ToplevelTest.output
 
 class O2HTacTest extends AnyFunSuite {
   test("o2h tac") {
-    val tl = ToplevelTest.makeToplevelWithTheory(List("Empty"))
+    val tl = ToplevelTest.makeToplevelWithTheory()
     tl.run(
       """
         | ambient var q : nat.
