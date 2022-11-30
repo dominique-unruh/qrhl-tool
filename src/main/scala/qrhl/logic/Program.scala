@@ -832,7 +832,7 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
     HashTag()(Hashable.hash(result), Hashable.hash(location), Hashable.hash(e))
 
   override def inline(name: String, oracles: List[String], program: Statement): Statement = this
-  override def toString: String = s"${Variable.vartermToString(result)} <- measure ${Variable.vartermToString(location)} in $e;"
+  override def toString: String = s"${Variable.vartermToString(result)} <- measure ${Variable.vartermToString(location)} with $e;"
 
   override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
     val expected = Type("QRHL_Core.measurement",
