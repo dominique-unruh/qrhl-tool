@@ -6,7 +6,7 @@ import java.lang.ref.Cleaner
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
-import de.unruh.isabelle.control.{Isabelle, IsabelleMiscException}
+import de.unruh.isabelle.control.{Isabelle, IsabelleMLException, IsabelleMiscException}
 import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLRetrieveFunction, MLValue, Version}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
@@ -23,7 +23,7 @@ import scala.util.{Left, Right}
 import de.unruh.isabelle.control
 import de.unruh.isabelle.misc.Symbols.ProcessSubSuperMode
 import de.unruh.isabelle.misc.{FutureValue, Symbols}
-import de.unruh.isabelle.pure.exceptions.Exn
+import de.unruh.isabelle.pure.exceptions.MLException
 import hashedcomputation.{Hash, HashedValue}
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.codec.digest.DigestUtils
@@ -1136,7 +1136,7 @@ object IsabelleX {
     // (Meaning, if the future inside `context` succeeds.
     override val someFuture: Future[Any] = context.someFuture.map { _ =>
       _theContext = this;
-      isabelleControl.exceptionManager.asInstanceOf[Exn.ExceptionManager].setContext(context)
+      isabelleControl.exceptionManager.asInstanceOf[MLException.ExceptionManager].setContext(context)
     }
 
     private implicit val isabelleControl: Isabelle = isabelle.isabelleControl
@@ -1180,7 +1180,7 @@ object IsabelleX {
     def readTypUnicode(str: String): Typ =
       try readTyp(symbols.unicodeToSymbols(str))
       catch {
-        case NestedException(e : Exn)
+        case NestedException(e : IsabelleMLException)
           if (e.message.startsWith("Undefined type name:")
             || e.message.startsWith("Inner syntax error")) =>
           throw UserException(s"""While parsing type "$str": ${e.message}""")
@@ -1202,7 +1202,7 @@ object IsabelleX {
     logic = "QRHL",
     sessionRoots = List(Paths.get("isabelle-thys")) ++ Configuration.afpRoot.map(_.resolve("thys")),
     verbose = true,
-    exceptionManager = new Exn.ExceptionManager(_)
+    exceptionManager = new MLException.ExceptionManager(_)
 //    /** Must end in .isabelle if provided */
 //    userDir = Some(Configuration.isabelleUserDir)
   )

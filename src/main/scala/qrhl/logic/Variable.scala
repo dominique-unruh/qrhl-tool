@@ -52,6 +52,7 @@ sealed trait Variable extends HashedValue {
   }
   def variableTyp: Typ = GIsabelle.variableT(valueTyp, classical=isClassical, indexed=isIndexed)
   def valueTyp : Typ
+
   /** term describing the variable in short form.
    * For non-indexed variables, short form is just the variable.
    * For indexed variables, short form would be e.g. Free(x2,typ), and long form "qregister_chain qFst (Free(x2,typ))".
@@ -243,6 +244,7 @@ final class CVariable private (override val basename:String, override val valueT
 
   override def index1: CVariable = { assert(theIndex==NoIndex); new CVariable(basename, valueTyp, Index1) }
   override def index2: CVariable = { assert(theIndex==NoIndex); new CVariable(basename, valueTyp, Index2) }
+
   override def toString: String = s"classical var $name : ${IsabelleX.pretty(valueTyp)}"
   override def unindex: CVariable = { assert(isIndexed); new CVariable(basename, valueTyp, NoIndex) }
 
