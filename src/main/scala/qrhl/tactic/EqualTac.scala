@@ -247,7 +247,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     val postconditionVariables: mutable.Set[Variable] =
       mutable.HashSet(post.variables(env, deindex=true).program.toSeq :_*)
 
-    // vars contains unindexed variables (means that for x in vars, we should remove x1,x2 from postcondition
+    /** @param vars contains unindexed variables (means that for x in vars, we should remove x1,x2 from postcondition */
     def removeFromPost(msg: => String, vars: Set[Variable]): Unit = {
       // variables that actually need removing
       val vars2 = vars & postconditionVariables
@@ -255,7 +255,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       val classical = Variable.classical(vars2)
       forbiddenQuantumInPostcondition ++= quantum
 
-      logger.debug(s"removeFromPost ${msg}, ${varsToString(vars)}")
+      logger.debug(s"removeFromPost ${varsToString(vars)}")
 
       if (msg != null && vars2.nonEmpty) {
         println("---")
@@ -344,12 +344,36 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
     // Not an explicit condition for applying the adversary rule, but since we will later add a quantum equality with
     // the variables in out anyway, this won't hurt
     if (out.exists(_.isQuantum)) {
-      val qvars = out.filter(_.isQuantum).toSet
-      removeFromPost(
-        s"""You have explicitly specified Vout = ${varsToString(out)} which contains the quantum variables ${varsToString(qvars)}.
+      val qvars = Variable.quantum(out).toSet
+      assert(removedQeq == null) // Should not fail because this is the first place where we try and remove the qeq
+      println(
+        s"""
+           |You have explicitly specified the quantum variables ${varsToString(qvars)} to be part of Vout.
            |This means the postcondition should be split into some predicate R, and some quantum equality containing those quantum variables.
-           |""".stripMargin,
-        qvars)
+           |""".stripMargin)
+      EqualTac.removeQeq(env, postcondition, qvars) match {
+        case None =>
+          println(
+            """However, we did not find any such quantum equality to remove, so not removing anything now.""")
+        case Some((newPostcondition, newRemovedQeq, newRemovedQeqTerm)) =>
+          println(
+            s"""We will remove "$newRemovedQeqTerm" from the predicate R,
+               |and we update the set Vout to contain the variables in that quantum equality (and no other quantum variables):
+               |  R := ${postconditionString(newPostcondition)}
+               |  quantum(Vout) := ${varsToString(newRemovedQeq)}
+               |Note that (R ⊓ ≡Vout) then implies the original postcondition.
+               |""".stripMargin)
+          assert(qvars.subsetOf(newRemovedQeq)) // Should be guaranteed by EqualTac.removeQeq
+          postcondition = newPostcondition
+          removedQeq = newRemovedQeq
+          postconditionVariables.clear()
+          postconditionVariables ++= postcondition.variables(env, deindex = true).program
+          postconditionVariables --= classicalsRemovedFromPost
+          out ++= removedQeq
+          println(
+            s"""We now have: Vout = ${varsToString(out)}.
+               |---""".stripMargin)
+      }
     }
     // It is conceivable that there is more than one quantum equality with those variables.
     // In that case we might remove the wrong one. However, this rare (or impossible?) case
@@ -596,18 +620,17 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       extraOut = mid.toSet & (in ++ varUse.overwritten) & classicalsRemovedFromPost.toSet)
 
 
-    // It is possible that we did not remove any quantum equality yet.
-    // So we try to remove the quantum equality containing the quantum variables in out
-    // This may fail if there is only a quantum equality with the wrong variables, then we just skip this.
-    try {
-      // TODO don't use removeFromPost for this (confusing explanations result)
-      removeFromPost(
-        """TODO: explanation here not clear!
-          |trying to get rid of quantum equality in postcondition""".stripMargin,
-        out.filter(_.isQuantum).toSet)
-    } catch {
-      case _ : UserException =>
-    }
+    if (removedQeq == null)
+      println(
+        """********************************************************************************************
+          |We notice that we did not remove any quantum equality from R (in the postcondition).
+          |This is allowed but might not be what you want.
+          |To force removal of a quantum equality from the postcondition
+          |(e.g., if the new postcondition has a duplicate quantum equality after applying this tactic)
+          |manually add quantum variables to Vout (using the out-parameter to the tactic).
+          |This will trigger removal of a quantum equality containing those variables.
+          |********************************************************************************************
+          |""".stripMargin)
 
     printVars()
     logger.debug(s"Postcondition: ${postcondition}; without ${varsToString(classicalsRemovedFromPost)}")
