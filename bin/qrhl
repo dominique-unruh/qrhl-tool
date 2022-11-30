@@ -13,4 +13,4 @@ fi
 
 ( cd  "$DIR" && setsid sbt assembly )
 #export QRHL_FORCE_BUILD=1
-java -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Xss100M -jar "$DIR/qrhl.jar" "$@"
+java -Dfile.encoding=UTF-8 -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Xss100M -jar "$DIR/qrhl.jar" "$@"

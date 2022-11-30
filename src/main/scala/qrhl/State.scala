@@ -149,10 +149,13 @@ class State private (val environment: Environment,
   }
 
   def focusOrUnfocus(selector: Option[SubgoalSelector], focusVariant: String): State = {
-    if (currentLemma.isEmpty)
+    if (cheatMode.cheating)
+      copy(goal=Goal.empty, hash=HashTag()(hash))
+    else if (currentLemma.isEmpty)
       throw UserException("No pending proof")
-    copy(goal = goal.focusOrUnfocus(selector, focusVariant),
-      hash = HashTag()(hash, Hashable.hash(focusVariant)))
+    else
+      copy(goal = goal.focusOrUnfocus(selector, focusVariant),
+        hash = HashTag()(hash, Hashable.hash(focusVariant)))
   }
 
 

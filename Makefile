@@ -31,7 +31,7 @@ test :
 	sbt test
 
 owncloud : qrhl.zip
-	cp -v qrhl.zip /home/unruh/ownCloud/tmp/
+	cp -v qrhl.zip /home/unruh/ownCloud/qrhl/
 
 push_docker:
 	docker login registry.gitlab.com
@@ -39,7 +39,7 @@ push_docker:
 	docker push registry.gitlab.com/unruh/qrhl-tool/build-image
 
 dropbox: qrhl.zip
-	cp qrhl.zip ~/Dropbox/tmp/
+	cp qrhl.zip ~/Dropbox/tmp
 
 view-test-results:
 	rm -rf target/tmp
@@ -47,3 +47,5 @@ view-test-results:
 	cd target/tmp && gh run download
 	xdg-open target/tmp/index.html
 
+issue :
+	gh issue create --assignee @me --milestone 0.7

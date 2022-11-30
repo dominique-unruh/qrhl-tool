@@ -1,9 +1,12 @@
 isabelle.
 
-quantum var x : int.
+quantum   var x : int.
 quantum var y : int.
 
 program a := { x <q undefined; y <q undefined; }.
+
+ambient var lemma : complex.
+
 
 qrhl {top} call a; ~ call a; {top}.
 equal.
@@ -13,5 +16,5 @@ simp!.
 qed.
 
 qrhl {top} call a; ~ call a; {Qeq[x1=x2]}.
-equal.
+admit.
 

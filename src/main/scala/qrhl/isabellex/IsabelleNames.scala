@@ -78,7 +78,7 @@ object IsabelleConsts {
   val quantum_equality_full = "QRHL_Core.quantum_equality_full"
   val idOp = "Complex_Bounded_Linear_Function0.id_cblinfun"
   val less_eq = "Orderings.ord_class.less_eq"
-  val tensorOp = "Tensor_Product.tensorOp"
+  val tensorOp = "Finite_Tensor_Product.tensor_op"
   val unitary = "Complex_Bounded_Linear_Function.unitary"
   val swap_variables_subspace = "QRHL_Core.swap_variables_subspace"
   val default = "HOL.default_class.default"

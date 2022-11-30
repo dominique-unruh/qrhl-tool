@@ -76,10 +76,12 @@ mainClass in assembly := Some("qrhl.Main")
 assemblyOutputPath in assembly := baseDirectory.value / "qrhl.jar"
 test in assembly := {}
 
+javaOptions in Universal += "-Dfile.encoding=UTF-8" // This is important when running in ProofGeneral: Communication via stdin/out is done in UTF-8, but by default Java encodes stdin/out according to locale settings
+
 enablePlugins(JavaAppPackaging)
 
 mappings in Universal ++=
-  List("proofgeneral.sh", "proofgeneral.bat", "run-isabelle.sh", "run-isabelle.bat", "README.md", "LICENSE", "qrhl-tool.conf.sample").
+  List("proofgeneral.sh", /*"proofgeneral.bat",*/ "run-isabelle.sh", "run-isabelle.bat", "README.md", "LICENSE", "qrhl-tool.conf.sample").
     map { f => baseDirectory.value / f -> f }
 
 mappings in Universal ++= {

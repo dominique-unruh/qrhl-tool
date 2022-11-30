@@ -10,6 +10,8 @@ if ! [ -e "$DIR/proofgeneral" ]; then
     exit 1
 fi
 
+QRHL_ABS_PATH="$(realpath -L -m "$DIR/bin/qrhl")"
+
 chmod +x "$DIR/bin/qrhl" || true
 export JAVA_OPTS="-Dfile.encoding=UTF-8"
-emacs --no-site-file -q --eval '(set-language-environment "UTF-8")' -l "$DIR/proofgeneral/generic/proof-site.el" "$@"
+emacs --no-site-file -q --eval "(set-variable 'qrhl-prog-name \"$QRHL_ABS_PATH\")" -l "$DIR/proofgeneral/generic/proof-site.el" "$@"

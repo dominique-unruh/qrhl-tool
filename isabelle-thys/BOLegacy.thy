@@ -59,7 +59,7 @@ unbundle cblinfun_notation
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 
 adhoc_overloading
-  cdot timesOp cblinfun_apply applyOpSpace
+  cdot "\<lambda>x. timesOp x" "\<lambda>x. cblinfun_apply x" "\<lambda>x. applyOpSpace x"
 
 lemma equal_span':
   fixes f g :: "'a::cbanach \<Rightarrow> 'b::cbanach"
