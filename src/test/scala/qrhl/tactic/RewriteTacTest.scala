@@ -57,12 +57,14 @@ class RewriteTacTest extends AnyFunSuite {
     assert(subgoals.length == 2)
     val Seq(subgoal1: DenotationalEqSubgoal, subgoal2: QRHLSubgoal) = subgoals
 
+    // The denotational equivalence
     assert(subgoal1.left.toString == "x <- 99;")
     assert(subgoal1.right.toString == "{ x <- 1; y <- 2; }")
     assert(subgoal1.assumptions.isEmpty)
 
+    // The rewritten goal
     assert(subgoal2.left.toString == "{ x <- 1; y <- 2; x <- 3; }")
-    assert(subgoal2.right.toString == "{ x <- 1; x <- 2;}")
+    assert(subgoal2.right.toString == "{ x <- 1; y <- 2; }")
     assert(subgoal2.pre.toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 0]")
     assert(subgoal2.post.toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 1]")
     assert(subgoal2.assumptions.isEmpty)
