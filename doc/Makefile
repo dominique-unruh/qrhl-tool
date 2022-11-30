@@ -15,15 +15,15 @@ declmath.sty :
 
 manual.pdf : manual.tex qrhl.bib declmath.sty macros.tex example.qrhl.lst Example.thy.lst PrgEnc.thy.lst prg-enc-rorcpa.qrhl.lst prg-enc-indcpa.qrhl.lst PrgEnc.thy.lst equality.qrhl.lst Teleport.thy.lst Code_Example.thy.lst qrhl.aux
 	rm -f manual.aux manual.bbl manual-blx.bib manual.out
-	-pdflatex -interaction batchmode manual
+	-pdflatex --synctex=1 -interaction batchmode manual
 	bibtex manual
 	python2 makesymind.py manual
 	makeindex manual
-	pdflatex -interaction batchmode manual
+	pdflatex --synctex=1 -interaction batchmode manual
 	bibtex manual
 	python2 makesymind.py manual
 	makeindex manual
-	pdflatex -interaction batchmode manual
+	pdflatex --synctex=1 -interaction batchmode manual
 	if grep 'LaTeX Warning: There were undefined references' manual.log; then false; fi
 	if pdftotext manual.pdf - | grep 'THIS IS A DRAFT'; then false; fi
 
