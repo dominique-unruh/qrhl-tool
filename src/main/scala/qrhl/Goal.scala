@@ -283,6 +283,8 @@ case class GoalFocus(label: String, subgoals: List[Subgoal]) extends IterableOnc
 class Goal(foci: List[GoalFocus]) extends HashedValue with Iterable[Subgoal] {
   checkInvariant()
 
+  def focusedSubgoals: List[Subgoal] = foci.headOption.map(_.subgoals).getOrElse(Nil)
+
   def checkInvariant(): Unit = {
     if (foci.nonEmpty) {
       assert(!foci.tail.exists(f => f.isEmpty && !f.isBraceFocus))
