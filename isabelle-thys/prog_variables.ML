@@ -664,10 +664,14 @@ fun implode_variable [a] = a
 fun join_registers (_:Proof.context) F G = if F aconv G then SOME F else let
   val Fs = explode_variable F
   val Gs = explode_variable G
-  val FGs = Fs @ Gs |> sort_distinct Term_Ord.fast_term_ord
-  val FG = implode_variable FGs
-  in
-  SOME FG
+  in if subset (op aconv) (Gs, Fs) then SOME F
+     else if subset (op aconv) (Fs, Gs) then SOME G
+     else let
+      val FGs = Fs @ Gs |> sort_distinct Term_Ord.fast_term_ord
+      val FG = implode_variable FGs
+      in
+      SOME FG
+      end
   end
 
 (* fun join_registers_ct ctxt F G = join_registers ctxt (Thm.term_of F) (Thm.term_of G) |> Option.map (Thm.cterm_of ctxt) *)

@@ -37,6 +37,9 @@ lemma
 (* TODO move *)
 lemma apply_qFst: \<open>apply_qregister qFst U = U \<otimes>\<^sub>o id_cblinfun\<close>
   sorry
+(* TODO move *)
+lemma apply_qSnd: \<open>apply_qregister qSnd U = id_cblinfun \<otimes>\<^sub>o U\<close>
+  sorry
 
 lemma 
   assumes \<open>qrhl A [qapply \<lbrakk>q, s\<rbrakk> Expr[U \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V]] [] B\<close>
@@ -44,20 +47,19 @@ lemma
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
   using assms by (simp add: apply_qFst)
 
-lemma 
+lemma
   assumes \<open>qrhl A [qapply \<lbrakk>r, s, q\<rbrakk> Expr[id_cblinfun \<otimes>\<^sub>o id_cblinfun \<otimes>\<^sub>o U o\<^sub>C\<^sub>L V]] [] B\<close>
   shows \<open>qrhl A [qapply \<lbrakk>r, s, q\<rbrakk> Expr[V], qapply \<lbrakk>q\<rbrakk> Expr[U]] [] B\<close>
-  (* TODO: Improve Prog_Variables.join_registers for this: should return the bigger of the two if possible *)
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  using assms by (simp add: apply_qFst)
+  using assms by (simp add: apply_qFst apply_qSnd qregister_chain_apply)
 
-lemma 
+lemma
   assumes \<open>qrhl A [qapply \<lbrakk>r, q\<rbrakk> Expr[U o\<^sub>C\<^sub>L id_cblinfun \<otimes>\<^sub>o V]] [] B\<close>
   shows \<open>qrhl A [qapply \<lbrakk>q\<rbrakk> Expr[V], qapply \<lbrakk>r,q\<rbrakk> Expr[U]] [] B\<close>
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
-  using assms by (simp add: apply_qFst)
+  using assms by (simp add: apply_qSnd)
 
-lemma 
+lemma
   shows \<open>qrhl A [qapply \<lbrakk>q,s\<rbrakk> Expr[V], qapply \<lbrakk>q,r\<rbrakk> Expr[U]] [] B\<close>
   apply (tactic \<open>Squash_Sampling.squash_sampling_tac true \<^context> 1\<close>)
   apply simp
