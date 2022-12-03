@@ -919,64 +919,14 @@ type_synonym 'a qvariable = \<open>('a,qu) qregister\<close>
 
 type_synonym QVARIABLE = \<open>qu QREGISTER\<close>
 type_synonym CVARIABLE = \<open>cl CREGISTER\<close>
-(* typedecl QVARIABLE
-typedef QVARIABLE = \<open>UNIV :: qu Axioms_Quantum.update set set\<close>..
-setup_lifting type_definition_QVARIABLE
-(* TODO: Is this truely an equivalence class of classical variables? *)
-typedef CVARIABLE = \<open>UNIV :: cl Axioms_Classical.update set set\<close>..
-setup_lifting type_definition_CVARIABLE *)
-
-(* lift_definition QVARIABLE_of :: \<open>'a::finite qvariable \<Rightarrow> QVARIABLE\<close> is
-  \<open>\<lambda>x::'a::finite qvariable. range x\<close>.
-axiomatization CVARIABLE_of :: \<open>'a cvariable \<Rightarrow> CVARIABLE\<close> *)
-
-(* lift_definition QVARIABLE_unit :: \<open>QVARIABLE\<close> is
-  \<open>{c *\<^sub>C (id_cblinfun) | c. True} :: 'qu Axioms_Quantum.update set\<close>.
-axiomatization CVARIABLE_unit :: \<open>CVARIABLE\<close> *)
-
-(* axiomatization QVARIABLE_pair :: \<open>QVARIABLE \<Rightarrow> QVARIABLE \<Rightarrow> QVARIABLE\<close>
-axiomatization CVARIABLE_pair :: \<open>CVARIABLE \<Rightarrow> CVARIABLE \<Rightarrow> CVARIABLE\<close> *)
-
-(* axiomatization compatible_CC :: \<open>CVARIABLE \<Rightarrow> CVARIABLE \<Rightarrow> bool\<close>
-axiomatization compatible_Cc :: \<open>CVARIABLE \<Rightarrow> 'a cvariable \<Rightarrow> bool\<close> *)
-
-datatype 'a vtree = VTree_Singleton 'a | VTree_Concat "'a vtree" "'a vtree" | VTree_Unit
-
-(* consts variable_concat :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
-adhoc_overloading variable_concat qregister_pair cregister_pair
-consts register_conversion :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
-adhoc_overloading register_conversion qregister_conversion cregister_conversion
-consts register_le :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c\<close>
-adhoc_overloading register_le qregister_le cregister_le
-consts register_id :: \<open>'a\<close>
-adhoc_overloading register_id qregister_id cregister_id
-consts register_chain :: \<open>'a\<close>
-adhoc_overloading register_chain qregister_chain cregister_chain
-consts Fst :: \<open>'a\<close>
-adhoc_overloading Fst qFst cFst
-consts Snd :: \<open>'a\<close>
-adhoc_overloading Snd qSnd cSnd *)
 
 
-(* We need those definition (not abbreviations!) with slightly more restrictive type, otherwise the overloaded variable_unit below will expand to \<open>('a,'b) empty_qregister\<close> etc *)
-(* definition [simp]: \<open>qvariable_unit \<equiv> empty_qregister :: (unit,_) qregister\<close> *)
-(* definition [simp]: \<open>cvariable_unit \<equiv> empty_cregister :: (unit,_) cregister\<close> *)
-
-(* consts variable_unit :: \<open>'a\<close>
-adhoc_overloading variable_unit
-  qvariable_unit cvariable_unit *)
-
-(* LEGACY *)
-(* abbreviation (input) "variable_singleton x \<equiv> x" *)
+(* datatype 'a vtree = VTree_Singleton 'a | VTree_Concat "'a vtree" "'a vtree" | VTree_Unit *)
 
 section \<open>Distinct variables\<close>
 
-abbreviation (input) "distinct_qvars Q == qregister Q"
-abbreviation (input) "distinct_cvars Q == cregister Q"
-
-(* lemma register_pair_is_register_iff: \<open>qregister (Q;R) \<longleftrightarrow> compatible Q R\<close>
-  apply auto
-  by (smt (verit, best) Axioms_Quantum.register_pair_def Laws_Quantum.compatibleI zero_not_register) *)
+abbreviation (input) "distinct_qvars Q == qregister Q" (* LEGACY *)
+abbreviation (input) "distinct_cvars Q == cregister Q" (* LEGACY *)
 
 lemma distinct_qvars_split1:
   "distinct_qvars (qregister_pair (qregister_pair Q R) S) = (distinct_qvars (qregister_pair Q R) \<and> distinct_qvars (qregister_pair Q S) \<and> distinct_qvars (qregister_pair R S))"
@@ -996,8 +946,6 @@ lemma distinct_qvars_concat_unit2[simp]: "distinct_qvars (qregister_pair empty_q
   using qcompatible_QQcompatible qcompatible_empty qcompatible_sym by blast
 lemma distinct_qvars_unit[simp]: "distinct_qvars empty_qregister"
   by (simp add: )
-(* lemma distinct_qvars_single[simp]: "distinct_qvars \<lbrakk>q\<rbrakk>" for q::"'a::finite qvariable"
-  unfolding distinct_qvars_def apply transfer by auto *)
 
 lemma distinct_qvarsL: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> distinct_qvars Q"
   unfolding qregister_pair_iff_compatible
@@ -1022,8 +970,6 @@ lemma distinct_cvars_concat_unit2[simp]: "distinct_cvars (cregister_pair empty_c
   by (metis distinct_cvars_concat_unit1 distinct_cvars_swap)
 lemma distinct_cvars_unit[simp]: "distinct_cvars empty_cregister"
   by (simp add: )
-(* lemma distinct_cvars_single[simp]: "distinct_cvars \<lbrakk>q\<rbrakk>" for q::"'a::finite cvariable"
-  unfolding distinct_cvars_def apply transfer by auto *)
 
 lemma distinct_cvarsL: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars Q"
   using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible ccompatible_raw_def by blast
@@ -1069,8 +1015,6 @@ lemma index_flip_qvar_Snd[simp]: \<open>index_flip_qvar qSnd = qFst\<close>
   by (simp add: index_flip_qvar_def qcompatible_Fst_Snd qcompatible_sym qregister_chain_pair_Snd qswap_def)
 
 definition index_flip_mem2 :: "qu2 \<Rightarrow> qu2" where \<open>index_flip_mem2 = (\<lambda>(x,y). (y,x))\<close>
-(*  "\<lambda>(f::_\<Rightarrow>universe) v. f (index_flip_var_raw v)"
-  using variable_raw_domain_index_flip_var_raw by blast *)
 
 definition swap_cvariables_mem2 :: "'a c2variable \<Rightarrow> 'a c2variable \<Rightarrow> (cl2 \<Rightarrow> cl2)" where
   \<open>swap_cvariables_mem2 x y m = apply_cregister_total (cregister_pair x y) (\<lambda>(a,b). (b,a)) m\<close>
@@ -1092,26 +1036,6 @@ named_theorems translate_to_index_registers
 
 
 section \<open>ML code\<close>
-
-(*
-lemma index_var_conv1_aux: \<comment> \<open>Helper for ML function index_var_conv\<close>
-  assumes "variable_name v \<equiv> vname"
-  assumes "variable_name v1 \<equiv> v1name"
-  assumes "vname @ ''1'' \<equiv> v1name"
-  shows "index_var True v \<equiv> v1"
-  using assms index_var1I by smt
-
-lemma index_var_conv2_aux: \<comment> \<open>Helper for ML function index_var_conv\<close>
-  assumes "variable_name v \<equiv> vname"
-  assumes "variable_name v2 \<equiv> v2name"
-  assumes "vname @ ''2'' \<equiv> v2name"
-  shows "index_var False v \<equiv> v2"
-  using assms index_var2I by smt
-
-lemma index_flip_var_conv_aux1: "index_flip_var (index_var True v) \<equiv> index_var False v"
-  by simp
-lemma index_flip_var_conv_aux2: "index_flip_var (index_var False v) \<equiv> index_var True v"
-  by simp *)
 
 ML_file "prog_variables.ML"
 
@@ -1414,7 +1338,5 @@ simproc_setup NOT_INDEX_REGISTER (\<open>NOT_INDEX_REGISTER R\<close>) = \<open>
 \<close>
 
 section \<open>Cleanup\<close>
-
-hide_type (open) vtree
 
 end
