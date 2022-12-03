@@ -1,6 +1,7 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" BOLegacy Discrete_Distributions 
     Misc_Missing Prog_Variables (* Registers.Pure_States *)
+"HOL-Eisbach.Eisbach"
   keywords "declare_variable_type" :: thy_decl
 begin
 
@@ -725,9 +726,13 @@ lemma variable_extension_hint_l2bounded[simp]:
 
 *)
 
-lemma join_registers_template_op:
-  assumes \<open>JOIN_REGISTERS F G X Y\<close>
-  shows \<open>op (apply_qregister F A) (apply_qregister G B) = op (X (apply_qregister F A)) (Y (apply_qregister G B))\<close>
+(* lemma join_registers_template_op:
+  assumes \<open>NO_MATCH (qregister_conversion x1 x2) F\<close>
+  assumes \<open>NO_MATCH (qregister_conversion x3 x4) G\<close>
+  assumes \<open>JOIN_REGISTERS F G FG\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le F FG)\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le G FG)\<close>
+  shows \<open>op (apply_qregister F A) (apply_qregister G B) = op (apply_qregister \<lbrakk>F \<mapsto> FG\<rbrakk> (apply_qregister F A)) (Y (apply_qregister G B))\<close>
   using assms unfolding JOIN_REGISTERS_def by simp
 
 lemma join_registers_template_space:
@@ -740,16 +745,251 @@ lemma join_registers_template_op_space:
   shows \<open>op (apply_qregister F A) (apply_qregister_space G B) = op (X (apply_qregister F A)) (Y (apply_qregister_space G B))\<close>
   using assms unfolding JOIN_REGISTERS_def by simp
 
-lemmas join_registers_eq_op[join_registers] = join_registers_template_op[where op=\<open>(=)\<close>]
-lemmas join_registers_plus_op[join_registers] = join_registers_template_op[where op=\<open>plus\<close>]
-lemmas join_registers_minus_op[join_registers] = join_registers_template_op[where op=\<open>minus\<close>]
-lemmas join_registers_cblinfun_compose[join_registers] = join_registers_template_op[where op=\<open>(o\<^sub>C\<^sub>L)\<close>]
-lemmas join_registers_inf[join_registers] = join_registers_template_space[where op=\<open>inf\<close>]
-lemmas join_registers_sup[join_registers] = join_registers_template_space[where op=\<open>sup\<close>]
-lemmas join_registers_plus_space[join_registers] = join_registers_template_space[where op=\<open>plus\<close>]
-lemmas join_registers_cblinfun_image[join_registers] = join_registers_template_op_space[where op=\<open>cblinfun_image\<close>]
-lemmas join_registers_le_space[join_registers] = join_registers_template_space[where op=\<open>less_eq\<close>]
-lemmas join_registers_eq_space[join_registers] = join_registers_template_space[where op=\<open>(=)\<close>]
+(* TODO move *)
+lemma apply_qregister_inj: \<open>apply_qregister F A = apply_qregister F B \<longleftrightarrow> A = B\<close> if \<open>qregister F\<close>
+  by (simp add: that)
+
+(* TODO: Instead of trying to use the simplifier with these rules, make a special conv that does it all in one descent.
+Then add a simproc for "JOIN_REGISTERS ... = ..." that applies this conv to ... *)
+lemma join_registers_eq_op[join_registers]:
+  assumes \<open>NO_MATCH (qregister_conversion x1 x2) F\<close>
+  assumes \<open>NO_MATCH (qregister_conversion x3 x4) G\<close>
+  assumes \<open>NOT_INDEX_REGISTER F\<close>
+  assumes \<open>NOT_INDEX_REGISTER G\<close>
+  assumes \<open>JOIN_REGISTERS F G FG\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le F FG)\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le G FG)\<close>
+  shows \<open>(apply_qregister F A = apply_qregister G B) \<longleftrightarrow> (apply_qregister \<lbrakk>F \<mapsto> FG\<rbrakk> A = apply_qregister \<lbrakk>G \<mapsto> FG\<rbrakk> B)\<close>
+  apply (subst apply_qregister_inj[of FG, symmetric])
+   apply (metis REGISTER_SOLVE_def assms qregister_le_def)
+  apply (subst qregister_apply_conversion[symmetric])
+   apply (metis REGISTER_SOLVE_def assms)
+  apply (subst qregister_apply_conversion[symmetric])
+   apply (metis REGISTER_SOLVE_def assms)
+  by simp
+
+lemma join_registers_le_space[join_registers]:
+  assumes \<open>NO_MATCH (qregister_conversion x1 x2) F\<close>
+  assumes \<open>NO_MATCH (qregister_conversion x3 x4) G\<close>
+  assumes \<open>NOT_INDEX_REGISTER F\<close>
+  assumes \<open>NOT_INDEX_REGISTER G\<close>
+  assumes \<open>JOIN_REGISTERS F G FG\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le F FG)\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le G FG)\<close>
+  shows \<open>(apply_qregister_space F A \<le> apply_qregister_space G B) \<longleftrightarrow> (apply_qregister_space \<lbrakk>F \<mapsto> FG\<rbrakk> A \<le> apply_qregister_space \<lbrakk>G \<mapsto> FG\<rbrakk> B)\<close>
+  apply (subst lift_leq[of FG, symmetric])
+   apply (metis REGISTER_SOLVE_def assms qregister_le_def)
+  apply (subst apply_qregister_space_conversion[symmetric])
+   apply (metis REGISTER_SOLVE_def assms)
+  apply (subst apply_qregister_space_conversion[symmetric])
+   apply (metis REGISTER_SOLVE_def assms)
+  by simp
+
+lemma join_registers_inf[join_registers]:
+  assumes \<open>NO_MATCH (qregister_conversion x1 x2) F\<close>
+  assumes \<open>NO_MATCH (qregister_conversion x3 x4) G\<close>
+  assumes \<open>NOT_INDEX_REGISTER F\<close>
+  assumes \<open>NOT_INDEX_REGISTER G\<close>
+  assumes \<open>JOIN_REGISTERS F G FG\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le F FG)\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le G FG)\<close>
+  shows \<open>apply_qregister_space F A \<sqinter> apply_qregister_space G B = apply_qregister_space FG (apply_qregister_space \<lbrakk>F \<mapsto> FG\<rbrakk> A \<sqinter> apply_qregister_space \<lbrakk>G \<mapsto> FG\<rbrakk> B)\<close>
+  apply (subst lift_inf[symmetric])
+  apply (subst apply_qregister_space_conversion[symmetric])
+   apply (metis REGISTER_SOLVE_def assms)
+  apply (subst apply_qregister_space_conversion[symmetric])
+   apply (metis REGISTER_SOLVE_def assms)
+  by simp
+
+lemma join_registers_sup[join_registers]:
+  assumes \<open>NO_MATCH (qregister_conversion x1 x2) F\<close>
+  assumes \<open>NO_MATCH (qregister_conversion x3 x4) G\<close>
+  assumes \<open>NOT_INDEX_REGISTER F\<close>
+  assumes \<open>NOT_INDEX_REGISTER G\<close>
+  assumes \<open>JOIN_REGISTERS F G FG\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le F FG)\<close>
+  assumes \<open>REGISTER_SOLVE (qregister_le G FG)\<close>
+  shows \<open>apply_qregister_space F A \<squnion> apply_qregister_space G B = apply_qregister_space FG (apply_qregister_space \<lbrakk>F \<mapsto> FG\<rbrakk> A \<squnion> apply_qregister_space \<lbrakk>G \<mapsto> FG\<rbrakk> B)\<close>
+  apply (subst lift_sup[symmetric])
+  apply (subst apply_qregister_space_conversion[symmetric])
+   apply (metis REGISTER_SOLVE_def assms)
+  apply (subst apply_qregister_space_conversion[symmetric])
+   apply (metis REGISTER_SOLVE_def assms)
+  by simp *)
+
+lemma translate_to_index_registers_compose[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>cblinfun_compose (apply_qregister F A') (apply_qregister G B') \<equiv>
+          apply_qregister FG (cblinfun_compose (apply_qregister F' A') 
+                                               (apply_qregister G' B'))\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_plus_op[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>plus (apply_qregister F A') (apply_qregister G B') \<equiv>
+          apply_qregister FG (plus (apply_qregister F' A') 
+                                               (apply_qregister G' B'))\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_minus_op[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>minus (apply_qregister F A') (apply_qregister G B') \<equiv>
+          apply_qregister FG (minus (apply_qregister F' A') 
+                                   (apply_qregister G' B'))\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_cblinfun_image[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>cblinfun_image (apply_qregister F A') (apply_qregister_space G B') \<equiv>
+          apply_qregister_space FG (cblinfun_image (apply_qregister F' A') 
+                                   (apply_qregister_space G' B'))\<close>
+  using assms apply (simp flip: applyOpSpace_lift)
+  sorry
+
+
+lemma translate_to_index_registers_eq_op[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>(apply_qregister F A') = (apply_qregister G B') \<equiv>
+         (apply_qregister F' A') = (apply_qregister G' B')\<close>
+  using assms by simp
+
+
+(* TODO move *)
+lemma apply_qregister_space_chain: \<open>apply_qregister_space (qregister_chain F G) S = apply_qregister_space F (apply_qregister_space G S)\<close>
+  sorry
+
+lemma translate_to_index_registers_inf[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>inf (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
+          apply_qregister_space FG (inf (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
+  using assms by (auto simp add: apply_qregister_space_chain)
+
+lemma translate_to_index_registers_sup[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>sup (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
+          apply_qregister_space FG (sup (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
+  using assms by (auto simp add: apply_qregister_space_chain)
+
+lemma translate_to_index_registers_plus_space[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>plus (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
+          apply_qregister_space FG (plus (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
+  using assms by (auto simp add: apply_qregister_space_chain)
+
+lemma translate_to_index_registers_leq[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>(apply_qregister_space F A') \<le> (apply_qregister_space G B') \<equiv>
+          (apply_qregister_space F' A') \<le> (apply_qregister_space G' B')\<close>
+  using assms by (auto simp add: apply_qregister_space_chain)
+
+lemma translate_to_index_registers_eq_space[translate_to_index_registers]:
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>(apply_qregister_space F A') = (apply_qregister_space G B') \<equiv>
+          (apply_qregister_space F' A') = (apply_qregister_space G' B')\<close>
+  using assms by (auto simp add: apply_qregister_space_chain)
+
+lemma translate_to_index_registers_apply_space[translate_to_index_registers]:
+  shows \<open>apply_qregister_space F (apply_qregister_space F' A') \<equiv> apply_qregister_space (qregister_chain F F') A'\<close>
+  by (simp add: apply_qregister_space_chain)
+
+lemma tmp1: 
+  assumes \<open>qregister_le F FG \<and> qregister_le G FG\<close>
+  assumes \<open>qregister_conversion F FG = F'\<close>
+  assumes \<open>qregister_conversion G FG = G'\<close>
+  shows \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  by (metis assms(1) assms(2) assms(3) qregister_chain_conversion qregister_le_def)
+
+ML \<open>
+fun TODO_NAME_tac ctxt =
+  resolve_tac ctxt @{thms tmp1}
+  THEN' Prog_Variables.qregister_lub_tac ctxt
+  THEN' CONVERSION (Prog_Variables.qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv)
+  THEN' resolve_tac ctxt @{thms refl}
+  THEN' CONVERSION (Prog_Variables.qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv)
+  THEN' resolve_tac ctxt @{thms refl}
+\<close>
+
+
+(* TODO move *)
+(* TODO: this should be applied in normalize_register_conv *)
+lemma pair_fst_snd[simp]:
+  shows \<open>\<lbrakk>qFst, qSnd\<rbrakk>\<^sub>q = qregister_id\<close>
+  sorry
+
+(* TODO move *)
+(* TODO: this should be applied in normalize_register_conv *)
+lemma pair_chain_fst_snd:
+  shows \<open>\<lbrakk>qregister_chain F A, qregister_chain F B\<rbrakk>\<^sub>q = qregister_chain F \<lbrakk>A, B\<rbrakk>\<^sub>q\<close>
+  sorry
+
+(* TODO move *)
+lemma apply_qregister_space_id[simp]: \<open>apply_qregister_space qregister_id S = S\<close>
+  sorry
+
+
+ML \<open>
+fun resolve_inst_tac ctxt inst rules = FIRST' (map (fn rule => let
+  val inst_rule = [infer_instantiate ctxt inst rule]
+                  handle THM _ => []
+  in resolve_tac ctxt inst_rule end
+) rules)
+\<close>
+
+
+thm eq_reflection
+
+ML \<open>
+(* Works on first subgoal *)
+fun translate_to_index_registers_tac1 ctxt =
+  FIRST' [
+    resolve_tac ctxt @{thms translate_to_index_registers},
+    TODO_NAME_tac ctxt,
+    resolve_tac ctxt [
+      @{lemma \<open>apply_qregister F A \<equiv> apply_qregister F A\<close> by simp},
+      @{lemma \<open>apply_qregister_space F A \<equiv> apply_qregister_space F A\<close> by simp},
+      @{lemma \<open>A \<equiv> apply_qregister_space qregister_id A\<close> by simp},
+      @{lemma \<open>A \<equiv> apply_qregister qregister_id A\<close> by simp},
+      @{lemma \<open>A \<equiv> A\<close> by simp}
+    ]
+  ]
+
+(* Works on all goals *)
+fun translate_to_index_registers_tac ctxt = REPEAT (translate_to_index_registers_tac1 ctxt 1)
+\<close>
+
+
+ML \<open>
+(* Expects goal X.
+   Translates it into X' which has the toplevel constructor rewritten to have only index registers directly below it.
+   E.g.: apply_register F A + apply_register G B \<equiv> apply_register FG (apply_register F' A + apply_register G' B)
+         where F', G' are index-registers
+   Or: apply_register F A = apply_register G B \<equiv> apply_register F' A \<equiv> apply_register G' B
+
+   Only operates on the topleve constructor!
+
+   May fail it is does not know how to get rid of non-index-registers. (Not implemented!)
+*)
+fun translate_to_index_registers_conv_top ctxt ct = let
+  val T = Thm.ctyp_of_cterm ct |> Thm.typ_of
+  (* val T = Thm.typ_of cT *)
+  val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq T\<close>) ct)
+                       (Thm.cterm_of ctxt (Var(("rhs",Thm.maxidx_of_cterm ct + 1), T)))
+  val tac = translate_to_index_registers_tac ctxt
+  val thm = Goal.prove_internal ctxt [] goal (K tac)
+  in thm end
+
+fun translate_to_index_registers_conv ctxt ct = 
+  if Term.is_schematic (Thm.term_of ct) then error "schematic vars in translate_to_index_registers_conv not yet supported"
+  else Conv.bottom_conv (Conv.try_conv o translate_to_index_registers_conv_top) ctxt ct
+\<close>
+
+
+
+(* TODO move to Prog_Variables *)
+method_setup translate_to_index_registers = \<open>
+  Scan.succeed (fn ctxt => SIMPLE_METHOD (CONVERSION (translate_to_index_registers_conv ctxt) 1))
+\<close>
+
 
 (*
 

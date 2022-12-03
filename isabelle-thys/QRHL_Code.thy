@@ -160,8 +160,10 @@ lemmas prepare_for_code_flip =
   qregister_of_cregister_pair qregister_of_cregister_chain
 
 
-method prepare_for_code = simp add: join_registers cong del: if_weak_cong
-  add: prepare_for_code_add flip: prepare_for_code_flip
+method prepare_for_code = (
+    translate_to_index_registers,
+    simp add: join_registers cong del: if_weak_cong add: prepare_for_code_add flip: prepare_for_code_flip
+    )
 
 
 unbundle no_jnf_notation

@@ -505,8 +505,8 @@ end *)
 
 fun distinct_vars_tac ctxt = let
   val ctxt = ctxt addsimps @{thms 
-    distinct_cvars_split1 distinct_cvars_split2 cregister_pair_iff_compatible ccompatible3 ccompatible3'
-    distinct_qvars_split1 distinct_qvars_split2 qregister_pair_iff_compatible qcompatible3 qcompatible3'
+    distinct_cvars_split1 distinct_cvars_split2 cregister_pair_iff_compatible ccompatible3 ccompatible3' cregister_chain_id
+    distinct_qvars_split1 distinct_qvars_split2 qregister_pair_iff_compatible qcompatible3 qcompatible3' qregister_chain_id
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
   in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are variables and distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
 
@@ -537,29 +537,36 @@ fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_so
 fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
   handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
 
+
+(* TODO use bottom_rewrs_conv *)
+fun normalize_register_conv ctxt = Conv.bottom_conv (
+  Conv.rewrs_conv @{thms qregister_chain_id[THEN eq_reflection] qregister_id_chain[THEN eq_reflection]} |> Conv.try_conv |> K
+) ctxt
+
 local
 val qregister_conversion_to_register_conv_simpset = 
   \<^context> addsimps @{thms qregister_chain_pair qregister_chain_assoc[symmetric] 
                           qregister_of_cregister_Fst qregister_of_cregister_Snd}
   |> simpset_of
-in
-(* Tries to rewrite a `qregister_conversion F G` into an index-register.
-   (Index-registers are registers build from chain, pair, Fst, Snd.) *)
-fun qregister_conversion_to_register_conv ctxt ct = let
+(* Specifically for \<lbrakk>F \<mapsto> qregister_id\<rbrakk> *)
+val qregister_conversion_to_register_conv_id = Conv.rewr_conv @{thm qregister_conversion_id[THEN eq_reflection]}
+fun qregister_conversion_to_register_conv0 ctxt ct = let
   val (lhs,rhs) = case Thm.term_of ct of Const(\<^const_name>\<open>qregister_conversion\<close>,_) $ lhs $ rhs => (lhs,rhs)
                                        | _ => raise CTERM ("qregister_conversion_to_register_conv: not a register conversion", [ct])
   val (rhs_inT, _) = dest_qregisterT (fastype_of rhs)
-  fun add_to_path prefix path = if Term.is_dummy_pattern path then prefix else
+  fun add_to_path prefix path = case path of \<^Const_>\<open>qregister_id _\<close> => prefix | _ =>
     let val (prefix_inT, _) = dest_qregisterT (fastype_of prefix)
         val (path_inT, path_outT) = dest_qregisterT (fastype_of path)
     in \<^Const>\<open>qregister_chain path_inT path_outT prefix_inT\<close> $ path $ prefix end
+val _ = \<^print> "HELLO"
   fun get_rhs_registers (\<^Const_>\<open>qregister_pair T1 _ T2\<close> $ r1 $ r2) path found = 
       found |> get_rhs_registers r1 (add_to_path \<^Const>\<open>qFst T1 T2\<close> path)
             |> get_rhs_registers r2 (add_to_path \<^Const>\<open>qSnd T2 T1\<close> path)
    | get_rhs_registers reg path found = 
       if is_empty_qregister ctxt reg then found
       else (reg,path) :: found
-  val rhs_registers = get_rhs_registers rhs Term.dummy []
+  val rhs_registers = get_rhs_registers rhs \<^Const>\<open>qregister_id rhs_inT\<close> []
+val _ = \<^print> "HELLO 2"
   fun map_lhs (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ r1 $ r2) : term = let
     val r1' = map_lhs r1
     val r2' = map_lhs r2
@@ -575,10 +582,15 @@ fun qregister_conversion_to_register_conv ctxt ct = let
         (case AList.lookup (op aconv) rhs_registers r of
           NONE => raise TERM ("qregister_conversion_to_register_conv: could not find register from lhs in rhs", [r,Thm.term_of ct])
         | SOME path => path)
+val _ = \<^print> ("HELLO 2.1", lhs, rhs_registers)
   val new_reg = map_lhs lhs |> Thm.cterm_of ctxt
+val _ = \<^print> ("HELLO 2.2", Thm.term_of new_reg)
   val new_reg = Conv.bottom_rewrs_conv @{thms qregister_chain_assoc[THEN eq_reflection]} ctxt new_reg |> Thm.rhs_of
+val _ = \<^print> ("HELLO 2.3", ct, new_reg)
   val goal = Misc.mk_ct_equals ct new_reg
+val _ = \<^print> "HELLO 2.4"
   val outer_simpset = simpset_of ctxt
+val _ = \<^print> "HELLO 3"
   val simpset_ctxt = ctxt 
           |> put_simpset qregister_conversion_to_register_conv_simpset
           (* |> Raw_Simplifier.set_subgoaler (fn ctxt => K (print_tac ctxt "xxx") THEN' simp_tac (put_simpset outer_simpset ctxt)) *)
@@ -590,25 +602,43 @@ fun qregister_conversion_to_register_conv ctxt ct = let
             Misc.succeed_or_error_tac' (SOLVED' (simp_tac simpset_ctxt))
             ctxt (fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting '" ^ 
                 Syntax.string_of_term ctxt (Thm.term_of ct) ^ "' into a register:\n" ^ Syntax.string_of_term ctxt t) 1
+val _ = \<^print> "HELLO 4"
   val thm = Goal.prove_internal ctxt [] goal (K tac)
+val _ = \<^print> "HELLO 5"
 in
   thm
 end
+in
+(* Tries to rewrite a `qregister_conversion F G` into an index-register.
+   (Index-registers are registers build from chain, pair, Fst, Snd, id.) *)
+fun qregister_conversion_to_register_conv ctxt = 
+  normalize_register_conv ctxt then_conv 
+  (qregister_conversion_to_register_conv_id else_conv qregister_conversion_to_register_conv0 ctxt)
 end
 
 (* Tactic to fully prove a goal of the form `qregister_le F G` *)
+(* TODO: support cregisters as well *)
+(* TODO: normalize registers first *)
 fun qregister_le_tac ctxt = let
   fun tac' ctxt i st = st |>
-          ((resolve_tac ctxt @{thms qregister_le_refl} i THEN distinct_vars_tac ctxt i)
+          ((resolve_tac ctxt @{thms qregister_le_refl qregister_le_id} i THEN distinct_vars_tac ctxt i)
           ORELSE
-          (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i))
+          (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i)
+          ORELSE
+          (resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i THEN tac' ctxt i)
+          )
 in SUBGOAL (fn (t,i) => 
-  case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
+  CONVERSION (normalize_register_conv ctxt) i 
+  (* THEN print_tac ctxt "qregister_le_tac" *)
+  THEN 
+  (case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
+    (* Why to we have this special case? *)
     resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN qregister_le_tac ctxt i THEN qregister_le_tac ctxt i
-  | _ => tac' ctxt i)
+  | _ =>  tac' ctxt i))
 end
 
 (* Returns a theorem `qregister_le ctxt lhs rhs` if possible *)
+(* TODO: support cregisters as well *)
 fun qregister_le_prove ctxt lhs rhs = let
   val (rhs_inT, rhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm rhs)
   val (lhs_inT, lhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm lhs)
@@ -635,24 +665,34 @@ in
 end
 
 (* Returns true if argument is a (quantum) index-register *)
+(* TODO: support cregisters as well *)
 fun is_index_qregister (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ t $ u) = is_index_qregister t andalso is_index_qregister u
   | is_index_qregister (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ t $ u) = is_index_qregister t andalso is_index_qregister u
   | is_index_qregister (Const(\<^const_name>\<open>qFst\<close>,_)) = true
   | is_index_qregister (Const(\<^const_name>\<open>qSnd\<close>,_)) = true
+  | is_index_qregister \<^Const_>\<open>qregister_id _\<close> = true
   | is_index_qregister _ = false
 
 (* Transforms F into [F1,\<dots>,Fn] such that F is equivalent to (F1;\<dots>Fn). *)
+(* TODO: support cregisters as well *)
 fun explode_variable (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ F $ G) = explode_variable F @ explode_variable G
+  | explode_variable (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ \<^Const_>\<open>qregister_id _\<close> $ G) = explode_variable G
+  | explode_variable (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ F $ \<^Const_>\<open>qregister_id _\<close>) = explode_variable F
   | explode_variable (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ F $ G) =
       explode_variable G |> map (fn g =>
          \<^Const>\<open>qregister_chain \<open>fastype_of F |> dest_qregisterT |> fst\<close> \<open>fastype_of F |> dest_qregisterT |> snd\<close> \<open>fastype_of g |> dest_qregisterT |> fst\<close>\<close> 
         $ F $ g)
+  | explode_variable \<^Const_>\<open>empty_qregister _ _\<close> = []
   | explode_variable F = [F]    
 
 (* Transforms [F1,\<dots>,Fn] into (F1;\<dots>Fn). *)
-fun implode_variable [a] = a
-  | implode_variable (F::Gs) = let
-      val G = implode_variable Gs
+(* Note: not an exact inverse of explode_variable: it's only guaranteed that 
+   "implode_variable (explode_variable X)" is equivalent to X *)
+(* TODO: support cregisters as well *)
+fun implode_variable T [a] = a
+  | implode_variable T [] = \<^Const>\<open>empty_qregister HOLogic.unitT T\<close>
+  | implode_variable T (F::Gs) = let
+      val G = implode_variable T Gs
       in
        \<^Const>\<open>qregister_pair \<open>fastype_of F |> dest_qregisterT |> fst\<close> \<open>fastype_of F |> dest_qregisterT |> snd\<close> \<open>fastype_of G |> dest_qregisterT |> fst\<close>\<close> 
         $ F $ G
@@ -661,14 +701,20 @@ fun implode_variable [a] = a
 (* Given variables F,G, returns an upper bound FG.
    (Heuristically. Is not guaranteed to be a true upper bound.
    But in simple cases, should be a lub.) *)
+(* TODO: support cregisters as well *)
 fun join_registers (_:Proof.context) F G = if F aconv G then SOME F else let
   val Fs = explode_variable F
   val Gs = explode_variable G
-  in if subset (op aconv) (Gs, Fs) then SOME F
+  fun is_id \<^Const_>\<open>qregister_id _\<close> = true
+    | is_id _ = false
+  val (_, memoryT) = dest_qregisterT (fastype_of F)
+  in if exists is_id Fs orelse exists is_id Fs then
+        SOME \<^Const>\<open>qregister_id memoryT\<close>
+     else if subset (op aconv) (Gs, Fs) then SOME F
      else if subset (op aconv) (Fs, Gs) then SOME G
      else let
       val FGs = Fs @ Gs |> sort_distinct Term_Ord.fast_term_ord
-      val FG = implode_variable FGs
+      val FG = implode_variable memoryT FGs
       in
       SOME FG
       end
@@ -680,21 +726,27 @@ fun join_registers (_:Proof.context) F G = if F aconv G then SOME F else let
    as small as possible.
 *)
 fun qregister_lub_tac ctxt = SUBGOAL (fn (t,i) => let
-  val _ = \<^print>("qregister_lub_tac", Thm.cterm_of ctxt t)
+  (* val _ = \<^print>("qregister_lub_tac", Thm.cterm_of ctxt t) *)
   val (Q,R) = case Logic.strip_imp_concl t of
             \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>conj\<close> $ (\<^Const_>\<open>qregister_le _ _ _\<close> $ Q $ _)
                                               $ (\<^Const_>\<open>qregister_le _ _ _\<close> $ R $ _))
                 => (Q,R)
           | _ => error "qregister_lub_tac"
-  val _ = \<^print> (Q,R)
+  (* val _ = \<^print> (Q,R) *)
+val _ = \<^print> "HUHU"
   val QR = case join_registers ctxt Q R of
              SOME QR => QR | NONE => error ("could not find upper bound of " ^ Syntax.string_of_term ctxt Q ^ " and " ^ Syntax.string_of_term ctxt R)
-  val _ = \<^print> QR
+  (* val _ = \<^print> QR *)
   val lemma = @{lemma \<open>qregister_le Q QR \<Longrightarrow> qregister_le R QR \<Longrightarrow> qregister_le Q QR \<and> qregister_le R QR\<close> by simp}
+  val lemma = infer_instantiate ctxt [(("QR",0), Thm.cterm_of ctxt QR)] lemma |> \<^print>
   in
-    resolve_tac ctxt [infer_instantiate ctxt [(("QR",0), Thm.cterm_of ctxt QR)] lemma] i
+(* print_tac ctxt "qregister_lub_tac, 0" THEN *)
+    resolve_tac ctxt [lemma] i
+(* THEN print_tac ctxt "qregister_lub_tac, 1" *)
     THEN qregister_le_tac ctxt i
+(* THEN print_tac ctxt "qregister_lub_tac, 2" *)
     THEN qregister_le_tac ctxt i
+(* THEN print_tac ctxt "qregister_lub_tac, 3" *)
   end
 )
 

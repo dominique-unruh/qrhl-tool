@@ -1,7 +1,7 @@
 theory All_Example_Thys
   imports 
     (* Examples *)
-    "QRHL-Examples.Example" "QRHL-Examples.Teleport_Terse" "QRHL-Examples.Teleport"
+    "QRHL-Examples.Example" "QRHL-Examples.Teleport"
     "QRHL-Examples.Chsh" "QRHL-Examples.PrgEnc" "QRHL-Examples.Code_Example"
     "QRHL-Examples.EPR" "QRHL-Examples.RandomOracle"
 begin

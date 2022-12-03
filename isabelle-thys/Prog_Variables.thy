@@ -718,6 +718,11 @@ lemma qregister_le_pair_rightI2: \<open>qcompatible G H \<Longrightarrow> qregis
   sorry
 lemma qregister_le_refl: \<open>qregister F \<Longrightarrow> qregister_le F F\<close>
   unfolding qregister_le_def by simp
+lemma qregister_le_iso: \<open>qregister F \<Longrightarrow> iso_qregister G \<Longrightarrow> qregister_le F G\<close>
+  sorry
+lemma qregister_le_id: \<open>qregister F \<Longrightarrow> qregister_le F qregister_id\<close>
+  by (simp add: iso_qregister_def qregister_le_iso)
+
 
 lemma cregister_chain_conversion: \<open>cregister_le F G \<Longrightarrow> cregister_chain G (cregister_conversion F G) = F\<close>
   unfolding cregister_le_def
@@ -1083,6 +1088,9 @@ lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.
 
 axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close>
 
+named_theorems translate_to_index_registers
+
+
 section \<open>ML code\<close>
 
 (*
@@ -1283,7 +1291,7 @@ simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\
     - The whole term should be rewritten into x'>>R for some x'
   Rewriting the term is done by the simproc TODO declared below.
 *)
-definition "register_conversion_hint R A = A"
+definition "register_conversion_hint R A = A" (* LEGACY *)
 lemma register_conversion_hint_cong[cong]: "A=A' \<Longrightarrow> register_conversion_hint R A = register_conversion_hint R A'" by simp
 
 (* Simproc that rewrites terms of the form `register_conversion_hint G (apply_qregister F a)` into
@@ -1296,11 +1304,33 @@ simproc_setup register_conversion_hint (\<open>register_conversion_hint G (apply
         then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
     in SOME (conv ct) handle e => NONE end\<close>
 
-definition \<open>JOIN_REGISTERS F G H H' \<equiv> (H=id \<and> H'=id)\<close>
+(* TODO: check if we keep this mechanism. *)
+definition \<open>JOIN_REGISTERS F G FG \<equiv> True\<close>
+
+(* TODO: check if we keep this mechanism. *)
+definition \<open>REGISTER_SOLVE x \<equiv> x\<close>
+lemma REGISTER_SOLVER_cong[cong]: \<open>REGISTER_SOLVE x = REGISTER_SOLVE x\<close>
+  by (rule refl)
 
 named_theorems join_registers
 
-(* Simproc that proves a goal of the form \<open>JOIN_REGISTERS F G ?H ?L\<close> where
+(* TODO: remove or move *)
+(* Indicates to the simplifier that the (schematic) variable x should be instantiated as y *)
+definition \<open>INSTANTIATE_VARIABLE x y = True\<close>
+lemma INSTANTIATE_VARIABLE_cong[cong]: \<open>INSTANTIATE_VARIABLE x y = INSTANTIATE_VARIABLE x y\<close>
+  by simp
+lemma INSTANTIATE_VARIABLE_instantiate: \<open>INSTANTIATE_VARIABLE x x\<close>
+  by (simp add: INSTANTIATE_VARIABLE_def)
+setup \<open>
+map_theory_simpset (fn ctxt => ctxt
+    addSolver 
+      Simplifier.mk_solver "INSTANTIATE_VARIABLE" (fn ctxt => 
+        resolve_tac ctxt @{thms INSTANTIATE_VARIABLE_instantiate}))\<close>
+
+(* 
+(* TODO outdated doc comment *)
+
+Simproc that proves a goal of the form \<open>JOIN_REGISTERS F G ?H ?L\<close> where
   F G are qregisters and H,L will be instantiated.
   (Strictly speaking, they will not be instantiated because simprocs cannot do that.
    Instead, the JOIN_REGISTERS term will be rewritten into (?H=\<dots> \<and> ?L=\<dots>).
@@ -1312,7 +1342,7 @@ named_theorems join_registers
   (We have two variables H,L because they may need different types.)
   (* TODO: Do they? Do we have cases where the types are different? Let's see in the end and possibly simplify. *)
 *)
-simproc_setup JOIN_REGISTERS (\<open>JOIN_REGISTERS F G H L\<close>) = \<open>fn _ => fn ctxt => fn ct => let
+(* simproc_setup JOIN_REGISTERS (\<open>JOIN_REGISTERS F G H L\<close>) = \<open>fn _ => fn ctxt => fn ct => let
   val (((F,G),H),L) = ct |> Thm.dest_comb |> apfst Thm.dest_comb |> apfst (apfst Thm.dest_comb) |> apfst (apfst (apfst Thm.dest_arg))
   val F' = Thm.term_of F val G' = Thm.term_of G
   val index = Prog_Variables.is_index_qregister F' andalso Prog_Variables.is_index_qregister G'
@@ -1326,8 +1356,62 @@ simproc_setup JOIN_REGISTERS (\<open>JOIN_REGISTERS F G H L\<close>) = \<open>fn
               lemma \<open>JOIN_REGISTERS (F::'f) (G::'g) (H::'h\<Rightarrow>'h) (L::'l\<Rightarrow>'l) \<equiv>
               H = (\<lambda>F. register_conversion_hint (FG::'fg) F) \<and> L = (\<lambda>F. register_conversion_hint FG F)\<close>
               by (auto simp add: JOIN_REGISTERS_def register_conversion_hint_def id_def)\<close> (* |> \<^print> *)
+end\<close> *)
+simproc_setup JOIN_REGISTERS (\<open>JOIN_REGISTERS F G FG\<close>) = \<open>fn _ => fn ctxt => fn ct => let
+  val ((F,G),FG) = ct |> Thm.dest_comb |> apfst Thm.dest_comb |> apfst (apfst Thm.dest_arg)
+  val F' = Thm.term_of F val G' = Thm.term_of G
+  val FG_option = Prog_Variables.join_registers ctxt F' G' |> Option.map (Thm.cterm_of ctxt)
+  (* val _ = \<^print> ("JOIN_REGISTERS", Option.map Thm.typ_of_cterm FG_option, Thm.typ_of_cterm FG) *)
+  in case FG_option of
+    NONE => NONE
+    | SOME FG' =>
+        SOME \<^instantiate>\<open>FG and FG' and F and G and 'f=\<open>Thm.ctyp_of_cterm F\<close> and 'g=\<open>Thm.ctyp_of_cterm G\<close> and
+              'fg=\<open>Thm.ctyp_of_cterm FG\<close> and 'fg'=\<open>Thm.ctyp_of_cterm FG'\<close> in
+              lemma \<open>JOIN_REGISTERS (F::'f) (G::'g) (FG::'fg) \<equiv> INSTANTIATE_VARIABLE FG (FG'::'fg')\<close>
+              by (auto simp add: JOIN_REGISTERS_def INSTANTIATE_VARIABLE_def)\<close> (* |> \<^print> *)
 end\<close>
 
+(* TODO move to .ML *)
+ML \<open>
+(* ct is of the form REGISTER_SOLVE (X :: bool) *)
+fun register_solve_simproc_of_tac ctxt tac ct = let
+    val goal = ct |> Thm.dest_arg |> Thm.apply \<^cterm>\<open>Trueprop\<close>
+(* val _ = goal |> Thm.term_of |> \<^print> *)
+    val thm = SOME (Goal.prove_internal ctxt [] goal (fn _ => tac))
+           (* handle _ => NONE *)
+(* val _ = \<^print> thm *)
+    val lemma = @{lemma \<open>X \<Longrightarrow> REGISTER_SOLVE X \<equiv> True\<close> by (simp add: REGISTER_SOLVE_def)}
+    val eq = Option.map (fn thm => lemma OF [thm]) thm
+(* val _ = \<^print> eq *)
+  in eq end
+
+(* TODO: support cregisters as well *)
+fun register_solve_le_simproc (_:morphism) ctxt ct =
+  case Thm.term_of ct of
+    \<^Const_>\<open>REGISTER_SOLVE _\<close> $ (\<^Const_>\<open>qregister_le _ _ _\<close> $ _ $ _) =>
+      register_solve_simproc_of_tac ctxt (Prog_Variables.qregister_le_tac ctxt 1) ct
+\<close>
+
+(* TODO: support cregisters as well *)
+simproc_setup register_solve_le (\<open>REGISTER_SOLVE (qregister_le Q R)\<close>) = register_solve_le_simproc
+
+(* lemma register_conversion_hint_solve[simp]: 
+  \<open>register_conversion_hint R (apply_qregister Q x) = apply_qregister R (apply_qregister (qregister_conversion Q R) x)\<close>
+  if \<open>REGISTER_SOLVE (qregister_le Q R)\<close>
+  sorry *)
+
+definition \<open>NOT_INDEX_REGISTER x = True\<close>
+lemma NOT_INDEX_REGISTER_cong[cong]: \<open>NOT_INDEX_REGISTER x = NOT_INDEX_REGISTER x\<close>
+  by simp
+
+simproc_setup NOT_INDEX_REGISTER (\<open>NOT_INDEX_REGISTER R\<close>) = \<open>fn _ => fn ctxt => fn ct => let
+  val R = Thm.dest_arg ct
+  in
+      if Prog_Variables.is_index_qregister (Thm.term_of R) |> \<^print>
+      then NONE
+      else SOME \<^instantiate>\<open>R and 'r=\<open>Thm.ctyp_of_cterm R\<close> in lemma \<open>NOT_INDEX_REGISTER (R::'r) \<equiv> True\<close> by (simp add: NOT_INDEX_REGISTER_def)\<close> |> \<^print>
+  end
+\<close>
 
 section \<open>Cleanup\<close>
 
