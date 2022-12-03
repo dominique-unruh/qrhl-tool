@@ -235,8 +235,8 @@ notation (input) variable_in (infix "\<in>\<^sub>q" 80)
 abbreviation variable_is (infix "=\<^sub>\<qq>" 80) where "variable_is R \<psi> \<equiv> R \<in>\<^sub>q ccspan {\<psi>}" 
 notation (input) variable_is (infix "=\<^sub>q" 80)
 
-consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_\<guillemotright>_"  [91,91] 90)
-syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" ("_>>_"  [91,91] 90)
+consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<guillemotright>" 90)
+syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl ">>" 90)
 adhoc_overloading
   lift liftOp \<open>(\<lambda>x. liftSpace x)\<close>
 

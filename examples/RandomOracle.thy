@@ -34,11 +34,16 @@ lemma Uora_twice:
   assumes heq: "h1=h2"
   shows "Uoracle h2\<guillemotright>\<lbrakk>x2, y2\<rbrakk> *\<^sub>S Uoracle h1\<guillemotright>\<lbrakk>x1, y1\<rbrakk> *\<^sub>S \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>
       =  \<lbrakk>qglobA1, x1, y1\<rbrakk> \<equiv>\<qq> \<lbrakk>qglobA2, x2, y2\<rbrakk>"
-  apply (rewrite at "apply_qregister \<lbrakk>x1,y1\<rbrakk> (Uoracle _)" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA1,x1,y1\<rbrakk>"])
-  apply (rewrite at "apply_qregister \<lbrakk>x2,y2\<rbrakk> (Uoracle _)" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA2,x2,y2\<rbrakk>"])
-(* TODO: Bug report why Isabelle's rewrite does not allow this: *)
-(*   apply (rewrite at "Uoracle _ \<guillemotright> \<lbrakk>x1,y1\<rbrakk>" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA1,x1,y1\<rbrakk>"])
-  apply (rewrite at "Uoracle _ \<guillemotright> \<lbrakk>x2,y2\<rbrakk>" reorder_variables_hint_def[symmetric, where R="\<lbrakk>qglobA2,x2,y2\<rbrakk>"]) *)
-  by (simp add: l1 l2 l3 heq cblinfun_compose_assoc)
+proof -
+  have 1: \<open>Uoracle h1\<guillemotright>\<lbrakk>x1, y1\<rbrakk> = Uoracle h1 \<guillemotright> (qregister_chain \<lbrakk>qglobA1, x1, y1\<rbrakk> \<lbrakk>x1, y1 \<mapsto> qglobA1, x1, y1\<rbrakk>)\<close>
+    apply (subst qregister_chain_conversion)
+    by (auto intro!: qregister_le_pair_rightI1 qregister_le_pair_rightI2 intro!: qregister_le_refl qregister_le_pair_leftI)
+  have 2: \<open>Uoracle h2\<guillemotright>\<lbrakk>x2, y2\<rbrakk> = Uoracle h2 \<guillemotright> (qregister_chain \<lbrakk>qglobA2, x2, y2\<rbrakk> \<lbrakk>x2, y2 \<mapsto> qglobA2, x2, y2\<rbrakk>)\<close>
+    apply (subst qregister_chain_conversion)
+    by (auto intro!: qregister_le_pair_rightI1 qregister_le_pair_rightI2 intro!: qregister_le_refl qregister_le_pair_leftI)
+  show ?thesis
+    unfolding 1 2
+    by (simp add: heq)
+qed
 
 end
