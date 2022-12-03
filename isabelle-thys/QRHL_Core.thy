@@ -309,7 +309,7 @@ lemma lift_tensorOp: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<
   by (cheat TODO11)
 lemma lift_tensorSpace: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S :: "_ subspace" 
   by (cheat TODO11)
-lemma lift_id_cblinfun[simp]: "distinct_qvars Q \<Longrightarrow> id_cblinfun\<guillemotright>Q = id_cblinfun" for Q :: "'a q2variable"
+lemma lift_id_cblinfun[simp]: "distinct_qvars Q \<Longrightarrow> id_cblinfun\<guillemotright>Q = id_cblinfun" for Q
   by (cheat TODO11)
 lemma INF_lift: "(INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" for Q::"'a q2variable" and S::"'b \<Rightarrow> 'a subspace"
   by (cheat TODO11)
@@ -319,9 +319,9 @@ lemma Cla_sup_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<squnion> (S\<gu
 lemma Proj_lift[simp]: "Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
   for Q::"'a q2variable"
   by (cheat Proj_lift)
-lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q::"'a q2variable"
+lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q
   by (cheat TODO11)
-lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q::"'a q2variable"
+lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q
   unfolding eigenspace_def apply (subst lift_id_cblinfun[symmetric, of Q], assumption)
   apply (simp del: lift_id_cblinfun)
   by (metis (no_types, lifting) apply_qregister_of_id kernel_lift lift_minusOp scaleC_lift)
@@ -515,9 +515,12 @@ lemma pair_fst_snd[simp]:
 
 (* TODO move *)
 (* TODO: this should be applied in normalize_register_conv *)
+(* TODO: keep qregister_chain_pair or this  *)
+(* TODO: better name *)
 lemma pair_chain_fst_snd:
   shows \<open>\<lbrakk>qregister_chain F A, qregister_chain F B\<rbrakk>\<^sub>q = qregister_chain F \<lbrakk>A, B\<rbrakk>\<^sub>q\<close>
-  sorry
+  apply (rule sym)
+  by (rule qregister_chain_pair)
 
 (* TODO move *)
 lemma apply_qregister_space_id[simp]: \<open>apply_qregister_space qregister_id S = S\<close>
@@ -537,18 +540,21 @@ thm eq_reflection
 
 ML \<open>
 (* Works on first subgoal *)
-fun translate_to_index_registers_tac1 ctxt =
-  FIRST' [
-    resolve_tac ctxt @{thms translate_to_index_registers},
-    TODO_NAME_tac ctxt,
-    resolve_tac ctxt [
-      @{lemma \<open>apply_qregister F A \<equiv> apply_qregister F A\<close> by simp},
-      @{lemma \<open>apply_qregister_space F A \<equiv> apply_qregister_space F A\<close> by simp},
-      @{lemma \<open>A \<equiv> apply_qregister_space qregister_id A\<close> by simp},
-      @{lemma \<open>A \<equiv> apply_qregister qregister_id A\<close> by simp},
-      @{lemma \<open>A \<equiv> A\<close> by simp}
+fun translate_to_index_registers_tac1 ctxt = let
+  val rules = \<^named_theorems>\<open>translate_to_index_registers\<close> |> Proof_Context.get_thms ctxt
+  in
+    FIRST' [
+      resolve_tac ctxt rules,
+      TODO_NAME_tac ctxt,
+      resolve_tac ctxt [
+        @{lemma \<open>apply_qregister F A \<equiv> apply_qregister F A\<close> by simp},
+        @{lemma \<open>apply_qregister_space F A \<equiv> apply_qregister_space F A\<close> by simp},
+        @{lemma \<open>A \<equiv> apply_qregister_space qregister_id A\<close> by simp},
+        @{lemma \<open>A \<equiv> apply_qregister qregister_id A\<close> by simp},
+        @{lemma \<open>A \<equiv> A\<close> by simp}
+      ]
     ]
-  ]
+  end
 
 (* Works on all goals *)
 fun translate_to_index_registers_tac ctxt = REPEAT (translate_to_index_registers_tac1 ctxt 1)
@@ -676,10 +682,10 @@ lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
 subsection \<open>Quantum equality\<close>
 
 (* TODO: 'c doesn't have to be ell2 *)
-definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> ('b,'c) l2bounded \<Rightarrow> 'b q2variable \<Rightarrow> predicate" where
+definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> ('a,'d) qregister \<Rightarrow> ('b,'c) l2bounded \<Rightarrow> ('b,'d) qregister \<Rightarrow> 'd subspace" where
   [code del]: "quantum_equality_full U Q V R = 
-                 (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> qregister_pair Q R"
-  for Q :: "'a q2variable" and R :: "'b q2variable"
+                 (eigenspace 1 (comm_op o\<^sub>C\<^sub>L (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> qregister_pair Q R"
+  for Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
   and U V :: "(_,'c) l2bounded"
 
 abbreviation "quantum_equality" :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
@@ -914,6 +920,20 @@ lemma quantum_equality_merge:
     apply (rule eigenspace_memberI)
     by simp
 qed *)
+
+lemma translate_to_index_registers_qeq[translate_to_index_registers]:
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>quantum_equality_full U F V G \<equiv>
+          apply_qregister_space FG (quantum_equality_full U F' V G')\<close>
+  using assms 
+  by (simp add: quantum_equality_full_def flip: apply_qregister_space_chain qregister_chain_pair)
+
+schematic_goal TODO_REMOVE:
+  assumes [simp,register]: "declared_qvars \<lbrakk>q1,r1,q2,r2\<rbrakk>"
+  shows \<open>quantum_equality_full (id_cblinfun) \<lbrakk>q1, r1\<rbrakk>\<^sub>q id_cblinfun \<lbrakk>q2, r2\<rbrakk>\<^sub>q \<equiv> x\<close>
+  apply translate_to_index_registers
+  oops
 
 section \<open>Common quantum objects\<close>
 

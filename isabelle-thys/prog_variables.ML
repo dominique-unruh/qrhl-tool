@@ -740,9 +740,9 @@ val _ = \<^print> "HUHU"
   val lemma = @{lemma \<open>qregister_le Q QR \<Longrightarrow> qregister_le R QR \<Longrightarrow> qregister_le Q QR \<and> qregister_le R QR\<close> by simp}
   val lemma = infer_instantiate ctxt [(("QR",0), Thm.cterm_of ctxt QR)] lemma |> \<^print>
   in
-(* print_tac ctxt "qregister_lub_tac, 0" THEN *)
+ print_tac ctxt "qregister_lub_tac, 0" THEN 
     resolve_tac ctxt [lemma] i
-(* THEN print_tac ctxt "qregister_lub_tac, 1" *)
+ THEN print_tac ctxt "qregister_lub_tac, 1"  
     THEN qregister_le_tac ctxt i
 (* THEN print_tac ctxt "qregister_lub_tac, 2" *)
     THEN qregister_le_tac ctxt i

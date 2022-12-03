@@ -161,7 +161,7 @@ lemmas prepare_for_code_flip =
 
 
 method prepare_for_code = (
-    translate_to_index_registers,
+    translate_to_index_registers?,
     simp add: join_registers cong del: if_weak_cong add: prepare_for_code_add flip: prepare_for_code_flip
     )
 

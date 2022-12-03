@@ -185,6 +185,16 @@ definition qcompatible_raw :: \<open>('a qupdate \<Rightarrow> 'c qupdate) \<Rig
 lift_definition ccompatible :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is ccompatible_raw.
 lift_definition qcompatible :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is qcompatible_raw.
 
+lemma qcompatibleI: \<open>qregister F \<Longrightarrow> qregister G \<Longrightarrow> (\<And>a b. apply_qregister F a o\<^sub>C\<^sub>L apply_qregister G b = apply_qregister G b o\<^sub>C\<^sub>L apply_qregister F a) \<Longrightarrow> qcompatible F G\<close>
+  apply transfer
+  apply (simp add: Laws_Quantum.compatible_def[abs_def])
+  sorry
+
+lemma qcompatible_commute: 
+  assumes \<open>qcompatible F G\<close>
+  shows \<open>apply_qregister F a o\<^sub>C\<^sub>L apply_qregister G b = apply_qregister G b o\<^sub>C\<^sub>L apply_qregister F a\<close>
+  sorry
+
 lift_definition cregister_pair :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> ('a\<times>'b, 'c) cregister\<close>
   is \<open>\<lambda>F G. if ccompatible_raw F G then Axioms_Classical.register_pair F G else non_cregister_raw\<close>
   by simp
@@ -473,15 +483,80 @@ lemma cregister_cswap[simp]: \<open>cregister cswap\<close>
 lemma qregister_qswap[simp]: \<open>qregister qswap\<close>
   by (simp add: qcompatible_Fst_Snd qcompatible_sym qregister_pair_iff_compatible qswap_def)
 
+lemma qregister_pair_qnonregister1[simp]: \<open>qregister_pair non_qregister F = non_qregister\<close>
+  using non_qregister qcompatible_non_qregister1 qregister_pair_iff_compatible by blast
+
+lemma qregister_pair_qnonregister2[simp]: \<open>qregister_pair F non_qregister = non_qregister\<close>
+  using non_qregister qcompatible_non_qregister2 qregister_pair_iff_compatible by blast
+
+lemma inj_qregister: \<open>inj (apply_qregister F)\<close> if \<open>qregister F\<close>
+  using that apply transfer apply simp
+  sorry
+
+lemma apply_non_qregister[simp]: \<open>apply_qregister non_qregister x = 0\<close>
+  by (simp add: non_qregister.rep_eq non_qregister_raw_def)
+
+lemma qregister_compose: \<open>apply_qregister F (a o\<^sub>C\<^sub>L b) = apply_qregister F a o\<^sub>C\<^sub>L apply_qregister F b\<close>
+  apply (cases \<open>F = non_qregister\<close>)
+  apply (simp add: )
+  sorry
+
 (* TODO: compatibility condition can be omitted *)
 lemma cregister_chain_pair:
   assumes \<open>ccompatible G H\<close>
   shows \<open>cregister_chain F (cregister_pair G H) = cregister_pair (cregister_chain F G) (cregister_chain F H)\<close>
   sorry
 lemma qregister_chain_pair:
-  assumes \<open>qcompatible G H\<close>
   shows \<open>qregister_chain F (qregister_pair G H) = qregister_pair (qregister_chain F G) (qregister_chain F H)\<close>
-  sorry
+proof -
+  consider (GH_F) \<open>qcompatible G H\<close> \<open>qregister F\<close> | (nF) \<open>F = non_qregister\<close> | (nG) \<open>G = non_qregister\<close>
+    | (nH) \<open>H = non_qregister\<close> | (nGH) \<open>qregister F\<close> \<open>qregister G\<close> \<open>qregister H\<close> \<open>\<not> qcompatible G H\<close>
+    by (auto simp flip: non_qregister)
+  then show ?thesis
+  proof cases
+    case GH_F
+    then show ?thesis
+      sorry
+  next
+    case nF
+    then show ?thesis
+      by simp
+  next
+    case nG
+    then show ?thesis
+      by simp
+  next
+    case nH
+    then show ?thesis
+      by simp
+  next
+    case nGH
+    then have [simp]: \<open>qregister G\<close> \<open>qregister H\<close> \<open>qregister F\<close>
+      by simp_all
+    have \<open>\<not> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
+    proof (rule notI)
+      assume asm: \<open>qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
+      have \<open>apply_qregister F (apply_qregister G a o\<^sub>C\<^sub>L apply_qregister H b) = apply_qregister F (apply_qregister H b o\<^sub>C\<^sub>L apply_qregister G a)\<close> for a b
+        using qcompatible_commute[OF asm]
+        by (simp add: qregister_compose)
+      moreover from nGH have \<open>inj (apply_qregister F)\<close>
+        by (simp add: inj_qregister)
+      ultimately have \<open>apply_qregister G a o\<^sub>C\<^sub>L apply_qregister H b = apply_qregister H b o\<^sub>C\<^sub>L apply_qregister G a\<close> for a b
+        by (simp add: injD)
+      then have \<open>qcompatible G H\<close>
+        apply (rule_tac qcompatibleI)
+        using nGH by auto
+      with nGH show False
+        by simp
+    qed
+    then have [simp]: \<open>qregister_pair (qregister_chain F G) (qregister_chain F H) = non_qregister\<close>
+      using non_qregister qregister_pair_iff_compatible by auto
+    from nGH have [simp]: \<open>qregister_pair G H = non_qregister\<close>
+      using non_qregister qregister_pair_iff_compatible by blast
+    with nGH show ?thesis 
+      by simp
+  qed
+qed
 
 lemma not_ccompatible_pair: \<open>\<not> ccompatible F G \<Longrightarrow> cregister_pair F G = non_cregister\<close>
   apply (subst (asm) cregister_pair_iff_compatible[symmetric])
