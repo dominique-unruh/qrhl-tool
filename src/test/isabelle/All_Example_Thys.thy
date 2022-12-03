@@ -1,9 +1,8 @@
 theory All_Example_Thys
   imports 
-    (* Examples *)
-    "QRHL-Examples.Example" "QRHL-Examples.Teleport"
+    "QRHL-Examples.Example" "QRHL-Examples.Teleport" "QRHL-Examples.OTP"
     "QRHL-Examples.Chsh" "QRHL-Examples.PrgEnc" "QRHL-Examples.Code_Example"
-    "QRHL-Examples.EPR" "QRHL-Examples.RandomOracle"
+    "QRHL-Examples.EPR" "QRHL-Examples.RandomOracle" "QRHL-Examples.O2H_Example"
 begin
 
 ML \<open>
