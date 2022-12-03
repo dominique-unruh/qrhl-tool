@@ -115,6 +115,37 @@ lemma quantum_equality_full_def_let:
 lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"
   by (cheat space_div_unlifted_code)
 
+(* TODO needed? We can't give a code equation for cregister_pair anyway *)
+definition cregister_to_coderep :: \<open>('a,'b) cregister \<Rightarrow> (('b \<Rightarrow> 'a) \<times> ('a => 'b => 'b)) option\<close> where
+  \<open>cregister_to_coderep R = (if cregister R then Some (getter R, setter R) else None)\<close>
+
+fun cregister_from_coderep :: \<open>(('b \<Rightarrow> 'a) \<times> ('a => 'b => 'b)) option \<Rightarrow> ('a,'b) cregister\<close> where
+  \<open>cregister_from_coderep None = non_cregister\<close>
+| \<open>cregister_from_coderep (Some (g, s)) = cregister_from_getter_setter g s\<close>
+
+lemma cregister_to_coderep_inverse[code abstype]: \<open>cregister_from_coderep (cregister_to_coderep R) = R\<close>
+  apply (cases \<open>cregister R\<close>)
+   apply (auto simp: cregister_to_coderep_def)
+  sorry
+lemma [code]: \<open>cregister_to_coderep cFst = Some (fst, \<lambda>a (_,b). (a,b))\<close>
+  sorry
+lemma [code]: \<open>cregister_to_coderep cSnd = Some (snd, \<lambda>b (a,_). (a,b))\<close>
+   sorry
+lemma [code]: \<open>getter R = (case cregister_to_coderep R of 
+  None \<Rightarrow> Code.abort STR ''getter of non_cregister executed'' (\<lambda>_. getter R)
+  | Some (g, s) \<Rightarrow> g)\<close>
+   sorry
+lemma [code]: \<open>setter R = (case cregister_to_coderep R of 
+  None \<Rightarrow> Code.abort STR ''setter of non_cregister executed'' (\<lambda>_. setter R)
+  | Some (g, s) \<Rightarrow> s)\<close>
+  sorry
+lemma [code]: \<open>cregister_to_coderep cregister_id = Some (id, \<lambda>x _. x)\<close>
+  sorry
+
+(* TODO think of something more efficient... *)
+lemma apply_qregister_space_code_hack: \<open>apply_qregister_space (qregister_of_cregister F) S = apply_qregister (qregister_of_cregister F) (Proj S) *\<^sub>S \<top>\<close>
+  by (rule apply_qregister_space_def)
+
 (* TODO: remove once "code del" is added at the definitions themselves \<longrightarrow> is already done! *)
 (* declare ord_clinear_space_inst.less_eq_clinear_space[code del]
 declare ord_clinear_space_inst.less_clinear_space[code del] *)
@@ -142,6 +173,8 @@ lemmas prepare_for_code_add =
   (* qregister_of_cregister_pair[symmetric] qregister_of_cregister_chain[symmetric] *)
   apply_qregister_of_cregister permute_and_tensor1_cblinfun_code_prep
   same_outside_cregister_def
+
+  apply_qregister_space_code_hack (* TODO think of something more efficient *)
 
   case_prod_beta if_distrib[of fst] if_distrib[of snd] prod_eq_iff
 

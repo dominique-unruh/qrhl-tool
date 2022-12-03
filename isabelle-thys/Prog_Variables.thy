@@ -673,6 +673,12 @@ axiomatization where getter_setter_compat[simp]: \<open>ccompatible x y \<Longri
 axiomatization where setter_setter_compat: \<open>ccompatible x y \<Longrightarrow> setter x a (setter y b m) = setter y b (setter x a m)\<close>
 axiomatization where setter_getter_same[simp]: \<open>setter x (getter x m) m = m\<close>
 
+axiomatization cregister_from_getter_setter where
+  setter_of_cregister_from_getter_is_cregister: \<open>valid_getter_setter g s \<Longrightarrow> cregister (cregister_from_getter_setter g s)\<close> and
+  setter_of_cregister_from_getter_setter: \<open>valid_getter_setter g s \<Longrightarrow> setter (cregister_from_getter_setter g s) = s\<close> and
+  getter_of_cregister_from_getter_setter: \<open>valid_getter_setter g s \<Longrightarrow> getter (cregister_from_getter_setter g s) = g\<close>
+  for g :: \<open>'b \<Rightarrow> 'a\<close> and s
+
 lemma setter_pair:
   assumes \<open>ccompatible F G\<close>
   shows \<open>setter (cregister_pair F G) = (\<lambda>(x,y). setter F x o setter G y)\<close>
