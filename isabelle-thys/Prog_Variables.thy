@@ -22,35 +22,12 @@ hide_const (open) Axioms_Classical.getter
 type_synonym 'a cupdate = \<open>'a \<Rightarrow> 'a option\<close>
 type_synonym 'a qupdate = \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
 
-subsection \<open>Generalizing quantum registers to infinite dimensional case\<close>
-
-text \<open>The \<^session>\<open>Registers\<close> session does not support infinite dimensional registers (yet).
-In order to keep the development compatible, instead of restating all of the definitions and facts from \<^session>\<open>Registers\<close>,
-we (axiomatically) "clone" the relevant definitions/facts without the \<^class>\<open>finite\<close>-constraint\<close>
-
-setup \<open>Sign.add_const_constraint (\<^const_name>\<open>Axioms_Quantum.register_pair\<close>, SOME \<^typ>\<open>('a update \<Rightarrow> 'c update) \<Rightarrow> ('b update \<Rightarrow> 'c update) \<Rightarrow> (('a\<times>'b) update \<Rightarrow> 'c update)\<close>)\<close>
-setup \<open>Sign.add_const_constraint (\<^const_name>\<open>Axioms_Quantum.register\<close>, SOME \<^typ>\<open>('a update \<Rightarrow> 'b update) \<Rightarrow> bool\<close>)\<close>
-setup \<open>Sign.add_const_constraint (\<^const_name>\<open>Laws_Quantum.compatible\<close>, SOME \<^typ>\<open>('a update \<Rightarrow> 'c update) \<Rightarrow> ('b update \<Rightarrow> 'c update) \<Rightarrow> bool\<close>)\<close>
-setup \<open>Sign.add_const_constraint (\<^const_name>\<open>Finite_Tensor_Product.tensor_op\<close>, SOME \<^typ>\<open>('a ell2, 'b ell2) cblinfun \<Rightarrow> ('c ell2, 'd ell2) cblinfun \<Rightarrow> (('a\<times>'c) ell2, ('b\<times>'d) ell2) cblinfun\<close>)\<close>
-
-axiomatization where UNSOUND_everything_finite[no_atp]: \<open>class.finite t\<close> for t :: \<open>'a itself\<close>
-
-declare [[show_sorts]]
-declare Laws_Quantum.pair_is_register[simp del]
-lemmas pair_is_register[simp] = Laws_Quantum.pair_is_register[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
-lemmas register_pair_apply = Laws_Quantum.register_pair_apply[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
-lemmas compatible_register1 = Laws_Quantum.compatible_register1[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
-lemmas compatible_register2 = Laws_Quantum.compatible_register2[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
-lemmas compatible_def = Laws_Quantum.compatible_def[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
-lemmas register_comp = Axioms_Quantum.register_comp[internalize_sort \<open>'a::finite\<close>, internalize_sort \<open>'b::finite\<close>, internalize_sort \<open>'c::finite\<close>, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite, OF UNSOUND_everything_finite]
-declare [[show_sorts=false]]
-
 subsubsection \<open>Wrapper types around registers\<close>
 
 abbreviation \<open>cregister_raw \<equiv> Axioms_Classical.register\<close>
 abbreviation \<open>qregister_raw \<equiv> Axioms_Quantum.register\<close>
 
-axiomatization where tensor_op_compat: \<open>tensorOp = tensor_op\<close>
+abbreviation (input) \<open>tensorOp \<equiv> tensor_op\<close>
 
 axiomatization
   where cregister_raw_empty: \<open>cregister_raw F \<Longrightarrow> F Map.empty = Map.empty\<close>
@@ -348,14 +325,22 @@ lemma qcompatible_non_qregister1[simp]: \<open>\<not> qcompatible non_qregister 
 lemma qcompatible_non_qregister2[simp]: \<open>\<not> qcompatible F non_qregister\<close>
   apply transfer by (simp add: non_qregister_raw qcompatible_raw_def)
 
-axiomatization cFst :: \<open>('a, 'a\<times>'b) cregister\<close> where
-  cFst_register[simp]: \<open>cregister cFst\<close>
-axiomatization qFst :: \<open>('a, 'a\<times>'b) qregister\<close> where
-  qFst_register[simp]: \<open>qregister qFst\<close>
-axiomatization cSnd :: \<open>('b, 'a\<times>'b) cregister\<close> where
-  cSnd_register[simp]: \<open>cregister cSnd\<close>
-axiomatization qSnd :: \<open>('b, 'a\<times>'b) qregister\<close> where
-  qSnd_register[simp]: \<open>qregister qSnd\<close>
+lift_definition cFst :: \<open>('a, 'a\<times>'b) cregister\<close> is \<open>Laws_Classical.Fst\<close>
+  by simp
+lemma cFst_register[simp]: \<open>cregister cFst\<close>
+  apply transfer by simp
+lift_definition qFst :: \<open>('a, 'a\<times>'b) qregister\<close> is \<open>Laws_Quantum.Fst\<close>
+  by simp
+lemma qFst_register[simp]: \<open>qregister qFst\<close>
+  apply transfer by simp
+lift_definition cSnd :: \<open>('b, 'a\<times>'b) cregister\<close> is \<open>Laws_Classical.Snd\<close>
+  by simp
+lemma cSnd_register[simp]: \<open>cregister cSnd\<close>
+  apply transfer by simp
+lift_definition qSnd :: \<open>('b, 'a\<times>'b) qregister\<close> is \<open>Laws_Quantum.Snd\<close>
+  by simp
+lemma qSnd_register[simp]: \<open>qregister qSnd\<close>
+  apply transfer by simp
 
 axiomatization where ccompatible_Fst_Snd[simp]: \<open>ccompatible cFst cSnd\<close>
 axiomatization where qcompatible_Fst_Snd[simp]: \<open>qcompatible qFst qSnd\<close>

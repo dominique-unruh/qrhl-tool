@@ -305,7 +305,7 @@ lemma lift_timesOp[simp]: "S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S 
   by (cheat TODO11)
 lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> - (S\<guillemotright>Q) = (- S)\<guillemotright>Q" for Q :: "'a q2variable" and S :: "'a ell2 ccsubspace"
   by (cheat TODO11)
-lemma lift_tensorOp: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes> T)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S T :: "(_,_) l2bounded" 
+lemma lift_tensorOp: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes>\<^sub>o T)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S T :: "(_,_) l2bounded" 
   by (cheat TODO11)
 lemma lift_tensorSpace: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S :: "_ subspace" 
   by (cheat TODO11)
@@ -363,14 +363,14 @@ for Q :: "'a q2variable" and U :: "('a,'a) l2bounded" and S :: predicate
 
 lemma lift_extendR:
   assumes "distinct_qvars \<lbrakk>Q,R\<rbrakk>"
-  shows "U\<guillemotright>Q = (U\<otimes>id_cblinfun)\<guillemotright>\<lbrakk>Q,R\<rbrakk>"
+  shows "U\<guillemotright>Q = (U \<otimes>\<^sub>o id_cblinfun)\<guillemotright>\<lbrakk>Q,R\<rbrakk>"
   apply (subst apply_qregister_pair)
   using assms qregister_pair_iff_compatible apply blast
   by (metis apply_qregister_of_id assms cblinfun_compose_id_right distinct_qvarsR)
 
 lemma lift_extendL:
   assumes "distinct_qvars (qregister_pair Q R)"
-  shows "U\<guillemotright>Q = (id_cblinfun\<otimes>U)\<guillemotright>(qregister_pair R Q)"
+  shows "U\<guillemotright>Q = (id_cblinfun \<otimes>\<^sub>o U)\<guillemotright>(qregister_pair R Q)"
   apply (subst apply_qregister_pair)
   using assms distinct_qvars_swap qregister_pair_iff_compatible apply blast
   by (metis apply_qregister_of_id assms cblinfun_compose_id_left distinct_qvarsR)
@@ -392,27 +392,45 @@ lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q)
 lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q"
   by (cheat index_flip_subspace_lift)
 
+lemma apply_qregister_qFst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
+  by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
+
+lemma apply_qregister_qSnd: \<open>apply_qregister qSnd b = id_cblinfun \<otimes>\<^sub>o b\<close>
+  by (simp add: Laws_Quantum.Snd_def qSnd.rep_eq)
+
+(* TODO move *)
+lemma apply_qregister_space_qFst: \<open>apply_qregister_space qFst S = S \<otimes>\<^sub>S \<top>\<close>
+  by (simp add: apply_qregister_space_def tensor_ccsubspace_via_Proj apply_qregister_qFst flip: imageOp_lift)
+
+(* TODO move *)
+lemma apply_qregister_space_qSnd: \<open>apply_qregister_space qSnd S = \<top> \<otimes>\<^sub>S S\<close>
+  by (simp add: apply_qregister_space_def tensor_ccsubspace_via_Proj apply_qregister_qSnd flip: imageOp_lift)
+
+(* TODO move *)
+lemma tensor_ccsubspace_ccspan: \<open>ccspan X \<otimes>\<^sub>S ccspan Y = ccspan {x \<otimes>\<^sub>s y | x y. x \<in> X \<and> y \<in> Y}\<close>
+  apply (simp add: tensor_ccsubspace_def)
+  sorry
 
 lemma ket_less_specific:
-  assumes "distinct_qvars (qregister_pair X Y)"
+  assumes "qregister \<lbrakk>X,Y\<rbrakk>"
   shows "ccspan {ket (x,y)}\<guillemotright>qregister_pair X Y \<le> ccspan {ket y}\<guillemotright>Y"
 proof -
-  have "ccspan {ket (x,y)}\<guillemotright>qregister_pair X Y = ccspan {x' \<otimes> y' | x' y'. x'\<in>{ket x} \<and> y'\<in>{ket y}}\<guillemotright>qregister_pair X Y"
-    unfolding ket_product by simp
-  also have "\<dots> = ccspan {ket x}\<guillemotright>X \<sqinter> ccspan {ket y}\<guillemotright>Y"
-    apply (subst span_tensor[symmetric])
-    apply (subst tensor_lift)
-    using assms by auto
-  also have "\<dots> \<le> ccspan {ket y}\<guillemotright>Y"
-    by simp
+  have \<open>apply_qregister_space \<lbrakk>X, Y\<rbrakk>\<^sub>q (ccspan {|(x, y)\<rangle>}) = apply_qregister_space \<lbrakk>X, Y\<rbrakk>\<^sub>q (ccspan {|x\<rangle>} \<otimes>\<^sub>S ccspan {|y\<rangle>})\<close>
+    by (simp add: tensor_ccsubspace_ccspan tensor_ell2_ket)
+  also have \<open>\<dots> \<le> apply_qregister_space \<lbrakk>X, Y\<rbrakk>\<^sub>q (\<top> \<otimes>\<^sub>S ccspan {|y\<rangle>})\<close>
+    by (smt (verit) assms distinct_qvarsL dual_order.trans inf.bounded_iff inf.cobounded2 tensor_lift top_greatest top_leq_lift)
+  also have \<open>\<dots> = ccspan {|y\<rangle>} \<guillemotright> (qregister_chain \<lbrakk>X, Y\<rbrakk>\<^sub>q qSnd)\<close>
+    by (metis assms distinct_qvarsL inf.absorb_iff2 qregister_chain_pair_Snd qregister_pair_iff_compatible tensor_lift top.extremum top_lift)
+  also have \<open>\<dots> = ccspan {ket y}\<guillemotright>Y\<close>
+    by (metis assms qregister_chain_pair_Snd qregister_pair_iff_compatible)
   finally show ?thesis
     by -
 qed
 
 
 lemma comm_op_twice[simp]: "distinct_qvars Q \<Longrightarrow> comm_op\<guillemotright>Q \<cdot> (comm_op\<guillemotright>Q \<cdot> S) = (S::_ ccsubspace)"
-  apply (subst adj_comm_op[symmetric])
-  by (simp del: adj_comm_op flip: adjoint_lift cblinfun_compose_assoc add: cblinfun_assoc_left)
+  apply (subst adjoint_swap_ell2[symmetric])
+  by (simp del: adjoint_swap_ell2 flip: adjoint_lift cblinfun_compose_assoc add: cblinfun_assoc_left)
 
 lemma translate_to_index_registers_compose[translate_to_index_registers]:
   assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
@@ -663,7 +681,7 @@ lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<ps
   by (cheat TODO14)
 
 definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" where
-  [code del]: "space_div_unlifted S \<psi> = Abs_clinear_space {\<phi>. \<phi>\<otimes>\<psi> \<in> space_as_set S}"
+  [code del]: "space_div_unlifted S \<psi> = Abs_clinear_space {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}"
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(qregister_pair Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
   by (cheat space_div_space_div_unlifted)
@@ -684,7 +702,7 @@ subsection \<open>Quantum equality\<close>
 (* TODO: 'c doesn't have to be ell2 *)
 definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> ('a,'d) qregister \<Rightarrow> ('b,'c) l2bounded \<Rightarrow> ('b,'d) qregister \<Rightarrow> 'd subspace" where
   [code del]: "quantum_equality_full U Q V R = 
-                 (eigenspace 1 (comm_op o\<^sub>C\<^sub>L (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> qregister_pair Q R"
+                 (eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))) \<guillemotright> qregister_pair Q R"
   for Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
   and U V :: "(_,'c) l2bounded"
 
@@ -707,9 +725,9 @@ proof -
     by (simp add: dist)
   have [simp]: \<open>qcompatible Q R\<close>
     using assms qregister_pair_iff_compatible by blast
-  have a: "comm_op \<cdot> ((V* \<cdot> U) \<otimes> (U* \<cdot> V)) \<cdot> comm_op* = (U* \<cdot> V) \<otimes> (V* \<cdot> U)" by simp
-  have op_eq: "((comm_op \<cdot> (V* \<cdot> U) \<otimes> (U* \<cdot> V))\<guillemotright>qregister_pair Q R) =
-               ((comm_op \<cdot> (U* \<cdot> V) \<otimes> (V* \<cdot> U))\<guillemotright>qregister_pair R Q)"
+  have a: "comm_op \<cdot> ((V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V)) \<cdot> comm_op* = (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U)" by simp
+  have op_eq: "((comm_op o\<^sub>C\<^sub>L (V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V))\<guillemotright>qregister_pair Q R) =
+               ((comm_op o\<^sub>C\<^sub>L (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U))\<guillemotright>qregister_pair R Q)"
     using qregister_pair_chain_swap[of Q R, symmetric]
     sorry
   show ?thesis
@@ -771,7 +789,7 @@ lemma
   quantum_eq_add_state: 
     "distinct_qvars (qregister_pair Q (qregister_pair R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
     quantum_equality_full U Q V R \<sqinter> ccspan {\<psi>}\<guillemotright>T
-             = quantum_equality_full (U \<otimes> id_cblinfun) (qregister_pair Q T) (addState \<psi> \<cdot> V) R"
+             = quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) (qregister_pair Q T) (addState \<psi> \<cdot> V) R"
     for U :: "('a,'c) l2bounded" and V :: "('b,'c) l2bounded" and \<psi> :: "'d ell2"
     and Q :: "'a q2variable"    and R :: "'b q2variable"    and T :: "'d q2variable"
   by (cheat TODO14)
@@ -825,7 +843,7 @@ qed *)
 lemma quantum_equality_merge:
   assumes "distinct_qvars (qregister_pair (qregister_pair Q1 R1) (qregister_pair Q2 R2))"
   shows "quantum_equality_full U1 Q1 V1 R1 \<sqinter> quantum_equality_full U2 Q2 V2 R2 
-    \<le> quantum_equality_full (U1\<otimes>U2) (qregister_pair Q1 Q2) (V1\<otimes>V2) (qregister_pair R1 R2)"
+    \<le> quantum_equality_full (U1 \<otimes>\<^sub>o U2) (qregister_pair Q1 Q2) (V1 \<otimes>\<^sub>o V2) (qregister_pair R1 R2)"
   sorry
 (* proof (rule ccsubspace_leI, rule subsetI)
   fix x :: "mem2 ell2"
@@ -1036,14 +1054,14 @@ lemma applyOp_Uoracle[simp]:
   by (auto simp: inj_on_def intro: classical_operator_exists_inj)
 
 lemma applyOp_Uoracle'[simp]:
-  shows "Uoracle f \<cdot> (ket x \<otimes> ket y) = ket x \<otimes> ket (y + f x)"
+  shows "Uoracle f \<cdot> (ket x \<otimes>\<^sub>s ket y) = ket x \<otimes>\<^sub>s ket (y + f x)"
   by (simp flip: ket_product)
 
 
 lemma Uoracle_twice[simp]: 
   fixes f :: "_ \<Rightarrow> _::xor_group"
   assumes "distinct_qvars Q"
-  shows "Uoracle f\<guillemotright>Q \<cdot> (Uoracle f\<guillemotright>Q \<cdot> S) = (S::_ ccsubspace)"
+  shows "Uoracle f\<guillemotright>Q \<cdot> (Uoracle f\<guillemotright>Q *\<^sub>S S) = (S::_ ccsubspace)"
   apply (subst Uoracle_selfadjoint[symmetric])
   using assms by (simp del: Uoracle_selfadjoint flip: adjoint_lift cblinfun_compose_assoc add: cblinfun_assoc_left)
 

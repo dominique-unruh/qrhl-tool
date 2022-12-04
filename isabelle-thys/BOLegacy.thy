@@ -8,14 +8,9 @@ be removed eventually.
 
 theory BOLegacy
   imports 
+    Complex_Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" 
 
-    (* This should not be imported here, but in QRHL_Code. But if we import it there, 
-       we run into this bug: 
-       https://lists.cam.ac.uk/pipermail/cl-isabelle-users/2019-June/msg00063.html *)
-    Tensor_Product2.Tensor_Product_Code
-
-    Complex_Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product2.Tensor_Product Tensor_Product2.ToDo_Tensor
-
+    (* TODO: Still needed here? *)
     Registers.Quantum (* Imported because otherwise instantiations in QRHL_Code for bit will happen that make it impossible to merge Registers.Quantum with that theory.
 And we include it already here so that out simpset removals here won't be overwritten in a merge *)
 
@@ -74,6 +69,12 @@ abbreviation (input) "applyOp == cblinfun_apply"
 abbreviation (input) "applyOpSpace == cblinfun_image"
 abbreviation (input) "timesOp == cblinfun_compose"
 
+abbreviation (input) "addState == tensor_ell2_right"
+abbreviation (input) \<open>comm_op == swap_ell2\<close>
+abbreviation (input) \<open>assoc_op == assoc_ell2*\<close>
+
+lemmas ket_product = tensor_ell2_ket[symmetric]
+
 unbundle no_notation_blinfun_apply
 unbundle no_blinfun_notation
 unbundle cblinfun_notation
@@ -82,6 +83,11 @@ consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 
 adhoc_overloading
   cdot "\<lambda>x. timesOp x" "\<lambda>x. cblinfun_apply x" "\<lambda>x. applyOpSpace x"
+
+consts tensor :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<otimes>" 70)
+
+adhoc_overloading
+  tensor \<open>\<lambda>x. tensor_ell2 x\<close> \<open>\<lambda>x. tensor_op x\<close> \<open>\<lambda>x. tensor_ccsubspace x\<close>
 
 lemma equal_span':
   fixes f g :: "'a::cbanach \<Rightarrow> 'b::cbanach"

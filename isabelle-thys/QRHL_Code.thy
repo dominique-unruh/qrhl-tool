@@ -4,7 +4,7 @@ theory QRHL_Code
     "Jordan_Normal_Form.Matrix_Impl"
     "HOL-Library.Code_Target_Numeral"
     "HOL-Eisbach.Eisbach"
-    (* Tensor_Product2.Tensor_Product_Code *)
+    Registers.Tensor_Product_Matrices
 begin
 
 unbundle jnf_notation
@@ -22,7 +22,7 @@ no_notation "Lattice.meet" (infixl "\<sqinter>\<index>" 70)
 no_notation "Lattice.join" (infixl "\<squnion>\<index>" 65)
 hide_const (open) Order.bottom Order.top
 
-hide_const (open) Quantum.hadamard
+(* hide_const (open) Quantum.hadamard
 hide_const (open) Quantum.matrix_hadamard
 hide_const (open) Quantum.CNOT
 hide_const (open) Quantum.matrix_CNOT
@@ -31,7 +31,7 @@ hide_const (open) Quantum.matrix_pauliX
 (* hide_const (open) Quantum.pauliY *)
 (* hide_const (open) Quantum.matrix_pauliY *)
 hide_const (open) Quantum.pauliZ
-hide_const (open) Quantum.matrix_pauliZ
+hide_const (open) Quantum.matrix_pauliZ *)
 
 
 no_syntax "\<^const>Group.monoid.mult"    :: "['a, 'a, 'a] \<Rightarrow> 'a" (infixl "\<otimes>\<index>" 70)
@@ -109,8 +109,9 @@ lemma [code_post]:
 
 lemma quantum_equality_full_def_let:
   "quantum_equality_full U Q V R = (let U=U; V=V in
-                 (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> \<lbrakk>Q,R\<rbrakk>)"
-  unfolding quantum_equality_full_def by auto
+                 (eigenspace 1 (comm_op o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))) \<guillemotright> \<lbrakk>Q,R\<rbrakk>)"
+  unfolding quantum_equality_full_def 
+  by auto
 
 lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"
   by (cheat space_div_unlifted_code)
@@ -165,6 +166,7 @@ lemmas prepare_for_code = quantum_equality_full_def_let (* add_join_variables_hi
   (* space_div_add_extend_lift_as_var_concat_hint *) INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
   top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2 *)
 
+declare mat_of_cblinfun_tensor_op[code]
 
 subsection \<open>\<open>prepare_for_code\<close> method\<close>
 

@@ -1035,7 +1035,7 @@ lemma product_distr'_onepoint:
 proof transfer
   fix x :: 'a
     and D :: "'a \<Rightarrow> 'b \<Rightarrow> real"
-  assume "pred_fun top is_distribution D"
+  assume "pred_fun (\<lambda>x. x\<in>UNIV) is_distribution D"
   then have distr: "is_distribution (D i)" for i
     by simp
   assume sum1: "infsum (D i) UNIV = 1" if "i \<noteq> x" for i
@@ -1101,7 +1101,7 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer, ru
     and x :: 'a
     and \<mu>f :: "'c \<Rightarrow> real"
   assume \<mu>: "is_distribution \<mu>"
-  assume f: "pred_fun top is_distribution f"
+  assume f: "pred_fun (\<lambda>x. x\<in>UNIV) is_distribution f"
   then have fpos: "(0 \<le> f y x)" and fy_sum: "f y abs_summable_on UNIV" and fy_sum1: "infsum (f y) UNIV \<le> 1" for y x
     by (auto simp: is_distribution_def)
   from f have fyx1: "f y x \<le> 1" for y x
@@ -1120,7 +1120,8 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer, ru
     by (smt (verit, ccfv_SIG) \<mu> \<mu>f \<mu>f_def fpos infsum_cong is_distribution_def mult_nonneg_nonneg summable_on_cong)
   have "(\<Sum>\<^sub>\<infinity>y. \<mu> y * (\<Sum>\<^sub>\<infinity>x\<in>g -` {x}. f y x)) = (\<Sum>\<^sub>\<infinity>y. \<Sum>\<^sub>\<infinity>x\<in>g -` {x}. \<mu> y * f y x)"
     apply (subst infsum_cmult_right)
-    apply (metis distr_summable_on f is_distribution_def' pred_fun_def top_apply top_bool_def)
+     apply (rule abs_summable_summable)
+     apply (metis fy_sum subset_UNIV summable_on_subset_banach)
     by blast
   also have "\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>g -` {x}. \<Sum>\<^sub>\<infinity>y. \<mu> y * f y x)"
     apply (rule infsum_swap_banach[symmetric])
@@ -1220,7 +1221,7 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer)
     and f :: "'b \<Rightarrow> 'a \<Rightarrow> real"
   assume \<mu>: "is_distribution \<mu>"
   then have \<mu>pos: "\<mu> x \<ge> 0" for x by (simp add: is_distribution_def)
-  assume f: "pred_fun top is_distribution f"
+  assume f: "pred_fun (\<lambda>x. x\<in>UNIV) is_distribution f"
   then have fpos[simp]: "0 \<le> f y x" and fy_sum: "f y abs_summable_on UNIV"
     and fy_sum1: "infsum (f y) UNIV \<le> 1" 
     for y x

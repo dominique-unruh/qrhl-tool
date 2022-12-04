@@ -1,16 +1,11 @@
-session QRHL = "QRHL-Tensor_Product" +
+session QRHL = "QRHL-Prerequisites" +
   options [record_proofs=1, quick_and_dirty=true]
   sessions CryptHOL Complex_Bounded_Operators Registers
   theories QRHL QRHL_Operations
 
-session "QRHL-Tensor_Product" in "fake-session-dir/1" = "QRHL-Prerequisites" +
-  options [record_proofs=1, quick_and_dirty=true]
-  sessions Tensor_Product2
-  theories Tensor_Product2.All
-
 (* Breaking down the prerequisites into several sessions to avoid
    overloading computers with restricted memory *)
-session "QRHL-Prerequisites1" in "fake-session-dir/3" = "Complex_Bounded_Operators" +
+session "QRHL-Prerequisites1" in "fake-session-dir/3" = "Registers" +
   sessions "Jordan_Normal_Form"
   theories "Jordan_Normal_Form.Matrix_Impl"
 
@@ -19,11 +14,11 @@ session "QRHL-Prerequisites2" in "fake-session-dir/4" = "QRHL-Prerequisites1" +
   theories CryptHOL.Misc_CryptHOL
 
 session "QRHL-Prerequisites" in "fake-session-dir/5" = "QRHL-Prerequisites2" +
-  sessions "HOL-Library" "HOL-Analysis" "HOL-ZF" "HOL-ex" "Registers"
+  sessions "HOL-Library" "HOL-Analysis" "HOL-ZF" "HOL-ex"
   theories "HOL-Analysis.Inner_Product" "HOL-Library.Z2"
     "HOL-Analysis.Infinite_Sum" "HOL-Analysis.L2_Norm" "HOL-Library.Rewrite"
     "HOL-Library.Adhoc_Overloading" "HOL-Library.Code_Target_Numeral" "HOL-ZF.HOLZF"
-    "HOL-Eisbach.Eisbach_Tools" "HOL-ex.Sketch_and_Explore" "Registers.Quantum"
+    "HOL-Eisbach.Eisbach_Tools" "HOL-ex.Sketch_and_Explore"
 
 session "QRHL-Scala" in "fake-session-dir/6" = QRHL +
   sessions QRHL
