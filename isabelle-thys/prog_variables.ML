@@ -2,6 +2,7 @@ structure Prog_Variables =
 struct
 
 datatype qc = Classical | Quantum
+datatype index = NoIndex | Index1 | Index2
 
 fun mk_ell2T T = Type(\<^type_name>\<open>ell2\<close>, [T])
 fun dest_ell2T (Type(\<^type_name>\<open>ell2\<close>, [T])) = T
@@ -92,20 +93,14 @@ structure WarnDeclaredQvarsData = Proof_Data
     | _ => NONE *)
 
 
-type varinfo = {qc : qc, typ : typ, register: term, name: string}
-structure VarInfo = Generic_Data
-(
-  type T = varinfo Symtab.table * varinfo Termtab.table
-  val empty = (Symtab.empty, Termtab.empty)
-  fun merge ((s1,t1), (s2,t2)) = (Symtab.merge (op=) (s1,s2), Termtab.merge (op=) (t1,t2))
-)
+type varinfo = {qc : qc, in_typ : typ, out_typ : typ, name: string}
 
-fun lookup_variable ctxt = Symtab.lookup (VarInfo.get (Context.Proof ctxt) |> fst)
-fun lookup_variable_qc ctxt name = lookup_variable ctxt name |> Option.map #qc
+fun lookup_variable ctxt name : varinfo option = case Variable.default_type ctxt name of
+    SOME \<^Type>\<open>qregister in_typ out_typ\<close> => SOME {qc=Quantum, in_typ=in_typ, out_typ=out_typ, name=name}
+  | SOME \<^Type>\<open>cregister in_typ out_typ\<close> => SOME {qc=Classical, in_typ=in_typ, out_typ=out_typ, name=name}
+  | _ => NONE
 
-fun find_variable ctxt = Termtab.lookup (VarInfo.get (Context.Proof ctxt) |> snd)
-
-fun is_classical_variable ctxt name = lookup_variable_qc ctxt name = SOME Classical
+fun is_classical_variable ctxt name = (lookup_variable ctxt name |> Option.map #qc) = SOME Classical
 
 (* fun check_variable_type ctxt T =
   if Sign.of_sort (Proof_Context.theory_of ctxt) (T, \<^sort>\<open>universe\<close>) then () else
@@ -114,7 +109,7 @@ fun is_classical_variable ctxt name = lookup_variable_qc ctxt name = SOME Classi
            "and use declare_variable_type instead of typedecl") *)
 
 local
-fun add_varinfo morph name T qc register context = let
+(* fun add_varinfo morph name T qc register context = let
   val reg = Morphism.term morph register
   val varinfo = {qc=qc, name=name, typ=Morphism.typ morph T, register=reg} : varinfo
   val _ = Symtab.defined (VarInfo.get context |> fst) name
@@ -135,13 +130,13 @@ fun declare_variable_morph m name qc typ = let
       add_varinfo m name typ qc register #>
       add_varinfo m (name^"1") typ qc register1 #>
       add_varinfo m (name^"2") typ qc register2
-  end
+  end *)
 in
-fun declare_variable_lthy name vartype typ = 
+(* fun declare_variable_lthy name vartype typ = 
   Local_Theory.declaration {pervasive=true, syntax=false} (fn m => 
     declare_variable_morph m name vartype typ)
 
-fun declare_variable_ctxt name vartype typ = Context.proof_map (declare_variable_morph Morphism.identity name vartype typ)
+fun declare_variable_ctxt name vartype typ = Context.proof_map (declare_variable_morph Morphism.identity name vartype typ) *)
 
 fun register_thms_of thm regs = let
   val reg = case Thm.prop_of thm of
@@ -188,14 +183,14 @@ fun register_compats_of thm compats = case Thm.prop_of thm of
         thm :: (@{thm qcompatible_sym} OF [thm]) :: compats
     | _ => raise THM ("register_compats_of: expecting a fact of the form \<open>c/qregister \<dots>\<close> or \<open>c/qcompatible \<dots>\<close>", 0, [thm])
 
-fun declare_variable_from_thm (thm:thm) = let
+(* fun declare_variable_from_thm (thm:thm) = let
   val (vartype, name, T) = case Thm.prop_of thm of
       Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ Free(name, T')) =>
             (Classical, name, dest_cvariableT T')
     | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qregister\<close>, _) $ Free(name, T')) =>
             (Quantum, name, dest_qvariableT T')
     | _ => raise THM ("declare_variable_from_thm: theorem must be of the form 'Axioms_Classical.register x' or 'Axioms_Quantum.register x' where x is a free variable", 0, [thm])
-  in (declare_variable_morph Morphism.identity name vartype T) end
+  in (declare_variable_morph Morphism.identity name vartype T) end *)
 
 fun declare_register_simps_from_thm thm = let
   val vars = register_thms_of thm []
@@ -204,15 +199,15 @@ fun declare_register_simps_from_thm thm = let
   val simp_compats = fold (fn thm => Simplifier.map_ss (Simplifier.add_simp thm)) compats
   in simp_vars #> simp_compats end
 
-fun declare_variables_from_thm (thm:thm) = let
+(* fun declare_variables_from_thm (thm:thm) = let
   val vars = register_thms_of thm []
   val declare_vars = fold declare_variable_from_thm vars
-  in declare_vars #> declare_register_simps_from_thm thm end
+  in declare_vars #> declare_register_simps_from_thm thm end *)
 
-val _ = Attrib.setup \<^binding>\<open>variable\<close>
+(* val _ = Attrib.setup \<^binding>\<open>variable\<close>
  (Scan.succeed (Thm.declaration_attribute declare_variables_from_thm))
   "Declare a program variable (apply to a theorem of the form \"c/qregister x/\<lbrakk>x,y,...\<rbrakk>\")"
-  |> Context.map_theory |> Context.>>
+  |> Context.map_theory |> Context.>> *)
 
 val _ = Attrib.setup \<^binding>\<open>register\<close>
  (Scan.succeed (Thm.declaration_attribute declare_register_simps_from_thm))
@@ -240,15 +235,8 @@ fun add_register_assumption cq bind T ctxt =
 fun declare_variable ctxt bind T cq existingVars =
   let val qT = case cq of Classical => mk_cvariableT T | Quantum => mk_qvariableT T
       val v = Binding.name_of bind
-      val vars = [(bind,qT),(Binding.suffix_name "1" bind,qT),(Binding.suffix_name "2" bind,qT)]
-      val (_,ctxt) = Variable.add_fixes_binding (map fst vars) ctxt
-      val ctxt = fold (fn (v,T) => Variable.declare_term (Free (Binding.name_of v, T))) vars ctxt
+      val (_,ctxt) = Variable.add_fixes_binding [bind] ctxt
       val ctxt = add_register_assumption cq bind T ctxt
-      (* val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "1" bind) T ctxt *)
-      (* val ctxt = addQVariableNameAssumption cq (Binding.suffix_name "2" bind) T ctxt *)
-      val ctxt = (* VarTypes.map (Symtab.insert op= (v,cq)) ctxt *)  declare_variable_ctxt v cq T ctxt
-      (* val ctxt = (* VarTypes.map (Symtab.insert op= (v^"1",cq)) ctxt *) declare_variable_ctxt (v^"1") cq ctxt *)
-      (* val ctxt = (* VarTypes.map (Symtab.insert op= (v^"2",cq)) ctxt *) declare_variable_ctxt (v^"2") cq ctxt *)
       fun declareCompatible (n2,T2) ctxt = let
         val v1 = Free(v, mk_variableT cq T) val v2 = Free(n2, mk_variableT cq T2)
         val compat1 = Const(case cq of Classical => \<^const_name>\<open>ccompatible\<close> | Quantum => \<^const_name>\<open>qcompatible\<close>,
@@ -265,30 +253,7 @@ fun declare_variable ctxt bind T cq existingVars =
     ctxt
   end
 
-(* fun variables vars gthy = 
-let val _ = app (fn (_,_,T) => check_variable_type (Proof_Context.init_global gthy) T)
-    fun elems0 idx : Element.context_i list = [
-      Element.Fixes (map_filter (fn (cq,bind,T) => 
-           case cq of Classical => SOME (bind |> Binding.suffix_name idx, SOME T, Mixfix.NoSyn) | Quantum => NONE) vars),
-      Element.Fixes (map (fn (cq,bind,T) => (bind |> (case cq of Classical => Binding.prefix_name "var_" | Quantum => I)
-                                                  |> Binding.suffix_name idx, SOME (mk_variableT T), Mixfix.NoSyn)) vars),
-      Element.Assumes (map (fn (cq,bind,T) => ((Binding.suffix_name (idx^"_varname") bind, @{attributes [simp]}),
-                             [(varname_assumption cq (Binding.suffix_name idx bind) T, [])])) vars)]
-    val elems = map elems0 ["", "1", "2"] |> List.concat
-    (* val (_,lthy) = Bundle.context [] elems gthy *)
-    val (_,lthy) = Expression.add_locale (Binding.name ("variables_"^string_of_int(serial()))) 
-                      Binding.empty [] ([],[]) elems gthy
-    val lthy2 = fold (fn (cq,bind,_) => fn lthy' => declare_variable_lthy (Binding.name_of bind) cq lthy') vars lthy
-in lthy2 end *)
-
-(* fun variables_cmd vars thy = 
-  let (* val ctxt = Context.proof_of gthy *)
-      val vars' = map (fn (a,b,c) => (a,b,Syntax.read_typ_global thy c)) vars
-  in
-    variables vars' thy
-  end *)
-
-val parse_classical_quantum = (Parse.reserved "classical" >> K Classical) || (Parse.reserved "quantum" >> K Quantum)
+(* val parse_classical_quantum = (Parse.reserved "classical" >> K Classical) || (Parse.reserved "quantum" >> K Quantum) *)
 
 (* val _ =
   Outer_Syntax.command \<^command_keyword>\<open>variables\<close> "declare quantum/classical variables"
@@ -298,7 +263,7 @@ val parse_classical_quantum = (Parse.reserved "classical" >> K Classical) || (Pa
  *)
 
 datatype 'a tree = VTCons of 'a tree * 'a tree | VTSingle of 'a | VTUnit
-type varterm = (string*typ) tree
+type varterm = (string*index*typ) tree
 
 (* fun parse_varterm (Const(\<^const_name>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
   | parse_varterm (Const(\<^const_name>\<open>variable_singleton\<close>,_) $ Free(n,Type(\<^type_name>\<open>variable\<close>,[T]))) = VTSingle (n,T)
@@ -345,8 +310,8 @@ fun varterm_to_VARIABLE Classical VTUnit = \<^term>\<open>CREGISTER_unit :: CVAR
 
 fun varterm_to_variable Classical VTUnit = \<^term>\<open>cvariable_unit :: unit cvariable\<close>
   | varterm_to_variable Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit qvariable\<close>
-  | varterm_to_variable Classical (VTSingle (n,T)) = Free (n,mk_cvariableT T)
-  | varterm_to_variable Quantum (VTSingle (n,T)) = Free (n,mk_qvariableT T)
+  | varterm_to_variable Classical (VTSingle (n,NoIndex,T)) = Free (n,mk_cvariableT T)
+  | varterm_to_variable Quantum (VTSingle (n,NoIndex,T)) = Free (n,mk_qvariableT T)
   | varterm_to_variable cq (VTCons (t1, t2)) = let
         val v1 = varterm_to_variable cq t1
         val v2 = varterm_to_variable cq t2
@@ -359,18 +324,16 @@ fun varterm_to_variable Classical VTUnit = \<^term>\<open>cvariable_unit :: unit
 
 fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>cvariable_unit :: unit c2variable\<close>
   | varterm_to_variable2 Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit q2variable\<close>
-  | varterm_to_variable2 Classical (VTSingle (n,T)) = let
-      val (name, index) = Substring.splitAt (Substring.full n, String.size n - 1) |> apply2 Substring.string 
-      in case index of
-          "1" => \<^instantiate>\<open>v=\<open>Free (name, mk_cvariableT T)\<close> and 'a=T in term \<open>cregister_chain cFst v :: 'a c2variable\<close>\<close>
-        | "2" => \<^instantiate>\<open>v=\<open>Free (name, mk_cvariableT T)\<close> and 'a=T in term \<open>cregister_chain cSnd v :: 'a c2variable\<close>\<close>
-        | _ => raise error ("varterm_to_variable2: not an indexed variable: " ^ n) end
-  | varterm_to_variable2 Quantum (VTSingle (n,T)) = let
-      val (name, index) = Substring.splitAt (Substring.full n, String.size n - 1) |> apply2 Substring.string 
-      in case index of
-          "1" => \<^instantiate>\<open>v=\<open>Free (name, mk_qvariableT T)\<close> and 'a=T in term \<open>qregister_chain qFst v :: 'a q2variable\<close>\<close>
-        | "2" => \<^instantiate>\<open>v=\<open>Free (name, mk_qvariableT T)\<close> and 'a=T in term \<open>qregister_chain qSnd v :: 'a q2variable\<close>\<close>
-        | _ => raise error ("varterm_to_variable2: not an indexed variable: " ^ n) end
+  | varterm_to_variable2 Classical (VTSingle (name,Index1,T)) =
+          \<^instantiate>\<open>v=\<open>Free (name, mk_cvariableT T)\<close> and 'a=T in term \<open>cregister_chain cFst v :: 'a c2variable\<close>\<close>
+  | varterm_to_variable2 Classical (VTSingle (name,Index2,T)) =
+          \<^instantiate>\<open>v=\<open>Free (name, mk_cvariableT T)\<close> and 'a=T in term \<open>cregister_chain cSnd v :: 'a c2variable\<close>\<close>
+  | varterm_to_variable2 Quantum (VTSingle (name,Index1,T)) =
+          \<^instantiate>\<open>v=\<open>Free (name, mk_qvariableT T)\<close> and 'a=T in term \<open>qregister_chain qFst v :: 'a q2variable\<close>\<close>
+  | varterm_to_variable2 Quantum (VTSingle (name,Index2,T)) =
+          \<^instantiate>\<open>v=\<open>Free (name, mk_qvariableT T)\<close> and 'a=T in term \<open>qregister_chain qSnd v :: 'a q2variable\<close>\<close>
+  | varterm_to_variable2 _ (VTSingle (name,NoIndex,T)) =
+          raise error ("varterm_to_variable2: not an indexed variable: " ^ name)
   | varterm_to_variable2 cq (VTCons (t1, t2)) = let
         val v1 = varterm_to_variable2 cq t1
         val v2 = varterm_to_variable2 cq t2
@@ -381,13 +344,31 @@ fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>cvariable_unit :: uni
                             | Quantum => Const(\<^const_name>\<open>qregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_q2variableT T)
       in pair $ v1 $ v2 end
 
+fun decompose_singleton_variable ctxt (v as Free (n,T)) = (case lookup_variable ctxt n of
+      NONE => NONE
+      | SOME {name, in_typ, ...} => SOME (name, NoIndex, in_typ))
+  | decompose_singleton_variable ctxt (\<^Const_>\<open>qregister_chain _ _ _\<close> $ \<^Const_>\<open>qFst _ _\<close> $ (v as Free (n,T))) = (case lookup_variable ctxt n of
+      NONE => NONE
+      | SOME {name, in_typ, ...} => SOME (name, Index1, in_typ))
+  | decompose_singleton_variable ctxt (\<^Const_>\<open>qregister_chain _ _ _\<close> $ \<^Const_>\<open>qSnd _ _\<close> $ (v as Free (n,T))) = (case lookup_variable ctxt n of
+      NONE => NONE
+      | SOME {name, in_typ, ...} => SOME (name, Index2, in_typ))
+  | decompose_singleton_variable ctxt (\<^Const_>\<open>cregister_chain _ _ _\<close> $ \<^Const_>\<open>cFst _ _\<close> $ (v as Free (n,T))) = (case lookup_variable ctxt n of
+      NONE => NONE
+      | SOME {name, in_typ, ...} => SOME (name, Index1, in_typ))
+  | decompose_singleton_variable ctxt (\<^Const_>\<open>cregister_chain _ _ _\<close> $ \<^Const_>\<open>cSnd _ _\<close> $ (v as Free (n,T))) = (case lookup_variable ctxt n of
+      NONE => NONE
+      | SOME {name, in_typ, ...} => SOME (name, Index2, in_typ))
+  | decompose_singleton_variable _ _ = NONE
+
 fun variable_to_varterm _    (Const(\<^const_name>\<open>empty_cregister\<close>,_)) = VTUnit
   | variable_to_varterm _    (Const(\<^const_name>\<open>empty_qregister\<close>,_)) = VTUnit
   | variable_to_varterm ctxt (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ t1 $ t2) = VTCons (variable_to_varterm ctxt t1, variable_to_varterm ctxt t2)
   | variable_to_varterm ctxt (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ t1 $ t2) = VTCons (variable_to_varterm ctxt t1, variable_to_varterm ctxt t2)
-  | variable_to_varterm ctxt v = case find_variable ctxt v of
-      NONE => raise TERM("variable_to_varterm: unknown variable", [v])
-      | SOME {name, typ, ...} => VTSingle (name, typ)
+  | variable_to_varterm ctxt v = case decompose_singleton_variable ctxt v of
+      NONE => raise TERM("variable_to_varterm: unknown/unparseable variable", [v])
+      | SOME (name, index, typ) => VTSingle (name, index, typ)
+
 
 fun varterm_from_list_untyped [] = VTUnit
   | varterm_from_list_untyped [n] = VTSingle (n,dummyT)
@@ -427,7 +408,7 @@ fun variable_to_varlist ctxt t =
   | is_varlist (Const(\<^const_name>\<open>variable_concat\<close>,_) $ Const(\<^const_name>\<open>variable_singleton\<close>,_) $ rest) = is_varlist rest
   | is_varlist _ = false *)
 
-fun nameq ((x:string,_:typ), (y,_:typ)) = x=y
+fun nameq ((x:string,i1:index,_:typ), (y,i2:index,_:typ)) = i1=i2 andalso x=y
 
 (* Returns a varterm containing all variables from vt2 that are not in vt1 *)
 fun missing_in_varterm vt1 vt2 = let
@@ -503,10 +484,11 @@ end *)
 (* TODO: something more specific than just simplifier? *)
 (* fun different_variable_names_tac ctxt = SOLVED' (simp_tac ctxt) *)
 
+(* TODO something more reliable than just simp'ing *)
 fun distinct_vars_tac ctxt = let
-  val ctxt = ctxt addsimps @{thms 
-    distinct_cvars_split1 distinct_cvars_split2 cregister_pair_iff_compatible ccompatible3 ccompatible3' cregister_chain_id
-    distinct_qvars_split1 distinct_qvars_split2 qregister_pair_iff_compatible qcompatible3 qcompatible3' qregister_chain_id
+  val ctxt = (Config.put Simplifier.simp_trace false ctxt) addsimps @{thms 
+    distinct_cvars_split1 distinct_cvars_split2 cregister_pair_iff_compatible ccompatible3 ccompatible3' (* cregister_chain_id *)
+    distinct_qvars_split1 distinct_qvars_split2 qregister_pair_iff_compatible qcompatible3 qcompatible3' (* qregister_chain_id *)
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
   in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are variables and distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
 
@@ -537,7 +519,6 @@ fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_so
 fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
   handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
 
-
 (* TODO use bottom_rewrs_conv *)
 fun normalize_register_conv ctxt = Conv.bottom_conv (
   Conv.rewrs_conv @{thms qregister_chain_id[THEN eq_reflection] qregister_id_chain[THEN eq_reflection]} |> Conv.try_conv |> K
@@ -558,7 +539,6 @@ fun qregister_conversion_to_register_conv0 ctxt ct = let
     let val (prefix_inT, _) = dest_qregisterT (fastype_of prefix)
         val (path_inT, path_outT) = dest_qregisterT (fastype_of path)
     in \<^Const>\<open>qregister_chain path_inT path_outT prefix_inT\<close> $ path $ prefix end
-val _ = \<^print> "HELLO"
   fun get_rhs_registers (\<^Const_>\<open>qregister_pair T1 _ T2\<close> $ r1 $ r2) path found = 
       found |> get_rhs_registers r1 (add_to_path \<^Const>\<open>qFst T1 T2\<close> path)
             |> get_rhs_registers r2 (add_to_path \<^Const>\<open>qSnd T2 T1\<close> path)
@@ -566,7 +546,6 @@ val _ = \<^print> "HELLO"
       if is_empty_qregister ctxt reg then found
       else (reg,path) :: found
   val rhs_registers = get_rhs_registers rhs \<^Const>\<open>qregister_id rhs_inT\<close> []
-val _ = \<^print> "HELLO 2"
   fun map_lhs (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ r1 $ r2) : term = let
     val r1' = map_lhs r1
     val r2' = map_lhs r2
@@ -582,15 +561,10 @@ val _ = \<^print> "HELLO 2"
         (case AList.lookup (op aconv) rhs_registers r of
           NONE => raise TERM ("qregister_conversion_to_register_conv: could not find register from lhs in rhs", [r,Thm.term_of ct])
         | SOME path => path)
-val _ = \<^print> ("HELLO 2.1", lhs, rhs_registers)
   val new_reg = map_lhs lhs |> Thm.cterm_of ctxt
-val _ = \<^print> ("HELLO 2.2", Thm.term_of new_reg)
   val new_reg = Conv.bottom_rewrs_conv @{thms qregister_chain_assoc[THEN eq_reflection]} ctxt new_reg |> Thm.rhs_of
-val _ = \<^print> ("HELLO 2.3", ct, new_reg)
   val goal = Misc.mk_ct_equals ct new_reg
-val _ = \<^print> "HELLO 2.4"
   val outer_simpset = simpset_of ctxt
-val _ = \<^print> "HELLO 3"
   val simpset_ctxt = ctxt 
           |> put_simpset qregister_conversion_to_register_conv_simpset
           (* |> Raw_Simplifier.set_subgoaler (fn ctxt => K (print_tac ctxt "xxx") THEN' simp_tac (put_simpset outer_simpset ctxt)) *)
@@ -602,9 +576,7 @@ val _ = \<^print> "HELLO 3"
             Misc.succeed_or_error_tac' (SOLVED' (simp_tac simpset_ctxt))
             ctxt (fn t => "qregister_conversion_to_register_conv: cannot prove precondition for rewriting '" ^ 
                 Syntax.string_of_term ctxt (Thm.term_of ct) ^ "' into a register:\n" ^ Syntax.string_of_term ctxt t) 1
-val _ = \<^print> "HELLO 4"
   val thm = Goal.prove_internal ctxt [] goal (K tac)
-val _ = \<^print> "HELLO 5"
 in
   thm
 end
@@ -733,16 +705,15 @@ fun qregister_lub_tac ctxt = SUBGOAL (fn (t,i) => let
                 => (Q,R)
           | _ => error "qregister_lub_tac"
   (* val _ = \<^print> (Q,R) *)
-val _ = \<^print> "HUHU"
   val QR = case join_registers ctxt Q R of
              SOME QR => QR | NONE => error ("could not find upper bound of " ^ Syntax.string_of_term ctxt Q ^ " and " ^ Syntax.string_of_term ctxt R)
   (* val _ = \<^print> QR *)
   val lemma = @{lemma \<open>qregister_le Q QR \<Longrightarrow> qregister_le R QR \<Longrightarrow> qregister_le Q QR \<and> qregister_le R QR\<close> by simp}
-  val lemma = infer_instantiate ctxt [(("QR",0), Thm.cterm_of ctxt QR)] lemma |> \<^print>
+  val lemma = infer_instantiate ctxt [(("QR",0), Thm.cterm_of ctxt QR)] lemma
   in
- print_tac ctxt "qregister_lub_tac, 0" THEN 
+ (* print_tac ctxt "qregister_lub_tac, 0" THEN  *)
     resolve_tac ctxt [lemma] i
- THEN print_tac ctxt "qregister_lub_tac, 1"  
+ (* THEN print_tac ctxt "qregister_lub_tac, 1"   *)
     THEN qregister_le_tac ctxt i
 (* THEN print_tac ctxt "qregister_lub_tac, 2" *)
     THEN qregister_le_tac ctxt i

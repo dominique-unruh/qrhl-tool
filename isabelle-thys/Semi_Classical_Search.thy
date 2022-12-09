@@ -83,7 +83,7 @@ experiment
     and in_S :: \<open>bit cvariable\<close>
     and guess :: \<open>sometype cvariable\<close>
     and stop_at :: \<open>nat cvariable\<close>
-  assumes [variable]: \<open>cregister b\<close> \<open>cregister Find\<close> \<open>cregister S\<close> \<open>cregister G\<close> \<open>cregister z\<close>
+  assumes [register]: \<open>cregister b\<close> \<open>cregister Find\<close> \<open>cregister S\<close> \<open>cregister G\<close> \<open>cregister z\<close>
     \<open>cregister count\<close> \<open>cregister in_S\<close> \<open>cregister guess\<close> \<open>cregister stop_at\<close> \<open>qregister X\<close> \<open>qregister Y\<close>
   assumes [simp]: \<open>mutually ccompatible (b, Find, S, G, z, count, in_S, guess, stop_at)\<close>
     \<open>mutually qcompatible (X, Y)\<close>

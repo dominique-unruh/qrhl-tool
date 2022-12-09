@@ -184,7 +184,7 @@ end
 experiment
   fixes q :: \<open>bit qvariable\<close>
     and x :: \<open>bit cvariable\<close>
-assumes [variable]: \<open>qregister q\<close> \<open>cregister x\<close>
+assumes [register]: \<open>qregister q\<close> \<open>cregister x\<close>
 begin
 
 lemma \<open>qrhl Expr[Cla[x1 = x2]] [] [] Expr[Cla[x2 = 1]]\<close> if \<open>finite X\<close>

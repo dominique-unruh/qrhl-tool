@@ -117,7 +117,7 @@ end
 
 experiment
   fixes x :: \<open>bit cvariable\<close> and y :: \<open>bit cvariable\<close>
-  assumes [variable, simp]: \<open>cregister x\<close> \<open>cregister y\<close>
+  assumes [register]: \<open>cregister x\<close> \<open>cregister y\<close>
 begin
 schematic_goal xxx: "qrhl ?e [sample \<lbrakk>x\<rbrakk> Expr[uniform UNIV]] [sample \<lbrakk>y\<rbrakk> Expr[uniform UNIV]] Expr[Cla[x1=y2]]"
   thm joint_sample_equal[where x=x and y=y]

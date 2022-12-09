@@ -323,7 +323,7 @@ end\<close>
 
 experiment
   fixes x :: \<open>bit cvariable\<close> and y :: \<open>bit cvariable\<close> and z :: \<open>bit cvariable\<close> and w :: \<open>bit cvariable\<close>
-  assumes [variable,simp]: \<open>cregister x\<close> \<open>cregister y\<close> \<open>cregister z\<close> \<open>cregister w\<close>
+  assumes [register]: \<open>cregister x\<close> \<open>cregister y\<close> \<open>cregister z\<close> \<open>cregister w\<close>
   assumes [simp]: \<open>mutually ccompatible (x,y,z,w)\<close>
 begin
 

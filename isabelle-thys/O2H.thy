@@ -120,7 +120,7 @@ experiment
     and in_S :: \<open>bit cvariable\<close>
   assumes [simp]: \<open>qcompatible X Y\<close>
     and [simp]: \<open>mutually ccompatible (b,count,Find,z,G,H,S,in_S)\<close>
-    and [variable]: \<open>cregister b\<close> \<open>cregister Find\<close>
+    and [register]: \<open>cregister b\<close> \<open>cregister Find\<close>
     \<open>cregister count\<close>
 begin
 

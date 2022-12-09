@@ -71,7 +71,7 @@ end
 
 experiment
   fixes x :: \<open>bit cvariable\<close> and y :: \<open>bit cvariable\<close> and Q :: \<open>bit qvariable\<close> and R :: \<open>bit qvariable\<close>
-  assumes [variable, simp]: \<open>cregister x\<close> \<open>cregister y\<close> \<open>qregister Q\<close> \<open>qregister R\<close>
+  assumes [register]: \<open>cregister x\<close> \<open>cregister y\<close> \<open>qregister Q\<close> \<open>qregister R\<close>
 begin
 
 lemma

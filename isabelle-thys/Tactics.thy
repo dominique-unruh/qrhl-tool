@@ -27,7 +27,7 @@ method_setup seq = \<open>
 
 experiment
   fixes x :: \<open>int cvariable\<close>
-  assumes [variable,simp]: \<open>cregister x\<close>
+  assumes [register]: \<open>cregister x\<close>
 begin
   lemma
     assumes \<open>qrhl A [hello] [bye] C\<close> and \<open>qrhl C [test] [test2] B\<close>

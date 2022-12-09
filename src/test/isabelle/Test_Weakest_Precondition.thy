@@ -28,7 +28,7 @@ test_get_wp \<^context> true
 (* TEST CASE: get_wp of "measure a A computational_basis" *)
 experiment
   fixes a :: \<open>bit cvariable\<close> and A :: \<open>bit qvariable\<close>
-  assumes [variable]: \<open>cregister a\<close> \<open>qregister A\<close>
+  assumes [register]: \<open>cregister a\<close> \<open>qregister A\<close>
 begin
 ML \<open>
 test_get_wp \<^context> true 
@@ -42,7 +42,7 @@ end
 (* TEST CASE: get_wp (right) of "if (true) b:=1" *)
 experiment
   fixes b :: \<open>bit cvariable\<close>
-  assumes [variable]: \<open>cregister b\<close>
+  assumes [register]: \<open>cregister b\<close>
 begin
 ML \<open>
 test_get_wp \<^context> false
@@ -54,7 +54,7 @@ end
 
 experiment
   fixes x y :: \<open>bit qvariable\<close> and h :: \<open>(bit \<Rightarrow> bit) cvariable\<close>
-  assumes [variable]: \<open>qregister \<lbrakk>x,y\<rbrakk>\<close> \<open>cregister \<lbrakk>h\<rbrakk>\<close>
+  assumes [register]: \<open>qregister \<lbrakk>x,y\<rbrakk>\<close> \<open>cregister \<lbrakk>h\<rbrakk>\<close>
 begin
 ML \<open>
 test_get_wp \<^context> true
@@ -66,7 +66,7 @@ end
 
 experiment
   fixes x :: \<open>bit cvariable\<close>
-  assumes [variable]: \<open>cregister x\<close>
+  assumes [register]: \<open>cregister x\<close>
 begin
 ML \<open>
 test_get_wp \<^context> false

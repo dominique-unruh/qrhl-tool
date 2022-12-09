@@ -5,8 +5,8 @@ begin
 experiment
   fixes q r s t :: \<open>int qvariable\<close>
     and x y z :: \<open>int cvariable\<close>
-  assumes [variable]: \<open>qregister \<lbrakk>q,r,s,t\<rbrakk>\<close>
-  assumes [variable]: \<open>cregister \<lbrakk>x,y,z\<rbrakk>\<^sub>c\<close>
+  assumes [register]: \<open>qregister \<lbrakk>q,r,s,t\<rbrakk>\<close>
+  assumes [register]: \<open>cregister \<lbrakk>x,y,z\<rbrakk>\<^sub>c\<close>
 begin
 
 (* TODO remove/move *)

@@ -19,6 +19,10 @@ fun clean_expression_conv ctxt = let
   fun prover ctxt = SINGLE (ALLGOALS (distinct_vars_tac (put_simpset outer_simpset ctxt)))
 in Raw_Simplifier.rewrite_cterm (false,true,false) prover simpset_ctxt end
 
+fun variable_shortname n NoIndex = n
+  | variable_shortname n Index1 = n ^ "1"
+  | variable_shortname n Index2 = n ^ "2"
+
 (* Translates expression in longform to expression in shortform *)
 fun expression_to_term ctxt t =
   let val lookup_var = lookup_variable ctxt
@@ -26,45 +30,56 @@ fun expression_to_term ctxt t =
       val e = subst_bound (Free("_memory", dummyT), body)
       fun check_qvariable n T = case lookup_var n of
           SOME {qc=Classical, ...} => raise TYPE("expression_to_term: classical variable after qregister_chain", [T], [])
-        | SOME {qc=Quantum, typ, ...} => 
-            mk_qvariableT typ = T orelse raise TYPE("expression_to_term: quantum variable of wrong type", [T,typ], [])
+        | SOME {qc=Quantum, in_typ, ...} => 
+            mk_qvariableT in_typ = T orelse raise TYPE("expression_to_term: quantum variable of wrong type", [T, in_typ], [])
         | NONE => false
       fun translate (g as (Const(\<^const_name>\<open>getter\<close>,_) $ var $ Free("_memory", _))) = let
-            val (n,T) = case find_variable ctxt var of
-               SOME {qc=Classical, typ, name, ...} => (name,typ)
-               | SOME {qc=Quantum, ...} => 
-                    raise TYPE("expression_to_term: quantum variable after getter", [fastype_of var], [t,g])
+            val (n,i,T) = case decompose_singleton_variable ctxt var of
+               SOME v => v
                | NONE => 
                     raise TYPE("expression_to_term: not a known variable after getter", [fastype_of var], [t,g])
             val _ = mk_cvariableT T = fastype_of var orelse  mk_c2variableT T = fastype_of var orelse
                     raise TYPE("expression_to_term: classical variable of wrong type", [T, fastype_of var], [t,g])
-          in Free(n,T) end
-        | translate (q1 as (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ Const(\<^const_name>\<open>qFst\<close>,_) $ Free(n,T))) = 
-          if check_qvariable n T then Free(n^"1", dest_qvariableT T |> mk_q2variableT) else q1
-        | translate (q2 as (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ Const(\<^const_name>\<open>qSnd\<close>,_) $ Free(n,T))) = 
-          if check_qvariable n T then Free(n^"2", dest_qvariableT T |> mk_q2variableT) else q2
-        | translate (t1 $ t2) = translate t1 $ translate t2
-        | translate (Abs(n,T,body)) = Abs(n, T, translate body)
-        | translate (Free(n,T)) = (case lookup_var n of
-            SOME {qc=Classical, ...} => raise TERM("expression_to_term: classical variable occurs without getter", [Free(n,T), t])
-          | _ => Free(n,T))
-        | translate t = t
+          in Free(variable_shortname n i,T) end
+        | translate t = case decompose_singleton_variable ctxt t of
+            NONE => (case t of (t1 $ t2) => translate t1 $ translate t2 | (Abs(n,T,body)) => Abs(n, T, translate body) | t => t)
+            | SOME (n,i,T) => Free(variable_shortname n i, fastype_of t)
   in
     translate e
   end
 
+fun register_of_varinfo {qc=Classical, in_typ, out_typ, name} = Free(name, \<^Type>\<open>cregister in_typ out_typ\<close>)
+  | register_of_varinfo {qc=Quantum, in_typ, out_typ, name} = Free(name, \<^Type>\<open>qregister in_typ out_typ\<close>)
+
+fun shortname_to_register ctxt (name,T) = case lookup_variable ctxt name of
+  SOME v => SOME (register_of_varinfo v, #qc v)
+  | NONE => 
+    let val len = String.size name
+        val idx = case String.substring (name, len-1, 1) of "1" => Index1 | "2" => Index2 | _ => NoIndex
+    in case idx of
+      NoIndex => NONE
+      | _ => case lookup_variable ctxt (String.substring (name, 0, len-1)) of
+               NONE => NONE
+               | SOME v => case (#qc v, idx) of
+                               (Classical, Index1) => SOME (\<^Const>\<open>cregister_chain \<open>\<^typ>\<open>cl\<close>\<close> \<open>\<^typ>\<open>cl2\<close>\<close> \<open>#in_typ v\<close>\<close> $ \<^Const>\<open>cFst \<open>\<^typ>\<open>cl\<close>\<close> \<open>\<^typ>\<open>cl\<close>\<close>\<close> $ register_of_varinfo v, Classical)
+                             | (Classical, Index2) => SOME (\<^Const>\<open>cregister_chain \<open>\<^typ>\<open>cl\<close>\<close> \<open>\<^typ>\<open>cl2\<close>\<close> \<open>#in_typ v\<close>\<close> $ \<^Const>\<open>cSnd \<open>\<^typ>\<open>cl\<close>\<close> \<open>\<^typ>\<open>cl\<close>\<close>\<close> $ register_of_varinfo v, Classical)
+                             | (Quantum, Index1) => SOME (\<^Const>\<open>qregister_chain \<open>\<^typ>\<open>qu\<close>\<close> \<open>\<^typ>\<open>qu2\<close>\<close> \<open>#in_typ v\<close>\<close> $ \<^Const>\<open>qFst \<open>\<^typ>\<open>qu\<close>\<close> \<open>\<^typ>\<open>qu\<close>\<close>\<close> $ register_of_varinfo v, Quantum)
+                             | (Quantum, Index2) => SOME (\<^Const>\<open>qregister_chain \<open>\<^typ>\<open>qu\<close>\<close> \<open>\<^typ>\<open>qu2\<close>\<close> \<open>#in_typ v\<close>\<close> $ \<^Const>\<open>qSnd \<open>\<^typ>\<open>qu\<close>\<close> \<open>\<^typ>\<open>qu\<close>\<close>\<close> $ register_of_varinfo v, Quantum)
+                             | (_, NoIndex) => error "shortname_to_register: unreachable code"
+    end
+
 
 (* Translates expression in shortform to expression in longform *)
-fun term_to_expression ctx memT t =
-  let val lookup_var = lookup_variable ctx
+fun term_to_expression ctxt memT t =
+  let (* val lookup_var = lookup_variable ctxt *)
       val mem_var = Free("_memory_", memT)
       (* val _ = \<^print> (Term.add_frees t [] |> map fst |> map lookup_var) *)
       val subst = Term.add_frees t [] 
-        |> map_filter (fn (v,T) => case lookup_var v of
-              SOME {qc=Classical, typ, register, ...} => 
-                SOME (Free (v,T), Const(\<^const_name>\<open>getter\<close>, fastype_of register --> memT --> typ) $ register $ mem_var)
-            | SOME {qc=Quantum, typ, register, ...} => 
-                SOME (Free (v,T), register)
+        |> map_filter (fn (n,T) => case shortname_to_register ctxt (n,T) of
+              SOME (reg, Classical) => 
+                SOME (Free (n,T), Const(\<^const_name>\<open>getter\<close>, fastype_of reg --> memT --> T) $ reg $ mem_var)
+            | SOME (reg, Quantum) => 
+                SOME (Free (n,T), reg)
             | _ => NONE)
       (* val _ = \<^print> subst *)
       val body = abstract_over (mem_var, subst_atomic subst t)

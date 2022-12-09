@@ -24,7 +24,7 @@ declare [[show_consts, show_types]]
 (* TEST CASE: assign *)
 experiment
   fixes x :: \<open>nat cvariable\<close> and y :: \<open>nat cvariable\<close>
-  assumes [variable]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<^sub>c\<close>
+  assumes [register]: \<open>cregister \<lbrakk>x,y\<rbrakk>\<^sub>c\<close>
 begin
 
 ML \<open>
@@ -38,7 +38,7 @@ end
 (* TEST CASE: qinit *)
 experiment
   fixes Q :: \<open>nat qvariable\<close>
-  assumes [variable]: \<open>qregister Q\<close>
+  assumes [register]: \<open>qregister Q\<close>
 begin
 ML \<open>
 test_get_sp \<^context> false
@@ -51,7 +51,7 @@ end
 (* TEST CASE: get_sp of "measure a A computational_basis" *)
 experiment
   fixes a :: \<open>bit cvariable\<close> and A :: \<open>bit qvariable\<close>
-  assumes [variable]: \<open>cregister a\<close> \<open>qregister A\<close>
+  assumes [register]: \<open>cregister a\<close> \<open>qregister A\<close>
 begin
 ML \<open>
 test_get_sp \<^context> false 
@@ -65,7 +65,7 @@ end
 (* TEST CASE: get_sp of a block *)
 experiment
   fixes x :: \<open>nat cvariable\<close>
-  assumes [variable]: \<open>cregister x\<close>
+  assumes [register]: \<open>cregister x\<close>
 begin
 ML \<open>
 test_get_sp \<^context> true
@@ -78,7 +78,7 @@ end
 (* TEST CASE: sample *)
 experiment
   fixes x :: \<open>bit cvariable\<close>
-  assumes [variable]: \<open>cregister x\<close>
+  assumes [register]: \<open>cregister x\<close>
 begin
 ML \<open>
 test_get_sp \<^context> true
@@ -93,7 +93,7 @@ end
 (* TEST CASE: if *)
 experiment
   fixes x :: \<open>bit cvariable\<close>
-  assumes [variable]: \<open>cregister x\<close>
+  assumes [register]: \<open>cregister x\<close>
 begin
 ML \<open>
 test_get_sp \<^context> true
@@ -107,7 +107,7 @@ end
 (* TEST CASE: qapply *)
 experiment
   fixes q :: \<open>bit qvariable\<close>
-  assumes [variable]: \<open>qregister q\<close>
+  assumes [register]: \<open>qregister q\<close>
 begin
 ML \<open>
 test_get_sp \<^context> true

@@ -166,19 +166,19 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
   (* Add abbreviations:
         name_cvars1 == (x1,y1,z1) if cvars=x,y,z (same with 2, and w/o index)
         name_qvars1 == \<lbrakk>x1,y1,z1\<rbrakk> if qvars=x,y,z (same with 2, and w/o index) *)
-  fun add_vars_abbrev suffix ctxt = let
+  fun add_vars_abbrev index suffix ctxt = let
     (* val cvartuple = HOLogic.mk_tuple (map (fn (n,T) => Free(n^suffix, mk_cvariableT T)) cvars) *)
     (* val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvartuple) ctxt *)
     val v2v = if suffix = "" then Prog_Variables.varterm_to_variable else Prog_Variables.varterm_to_variable2
-    val cvarterm = cvars |> (map (fn (n,T) => (n^suffix, T))) |> Prog_Variables.varterm_from_list |> v2v Classical
+    val cvarterm = cvars |> (map (fn (n,T) => (n, index, T))) |> Prog_Variables.varterm_from_list |> v2v Classical
     val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvarterm) ctxt
-    val qvarterm = qvars |> (map (fn (n,T) => (n^suffix, T))) |> Prog_Variables.varterm_from_list |> v2v Quantum
+    val qvarterm = qvars |> (map (fn (n,T) => (n, index, T))) |> Prog_Variables.varterm_from_list |> v2v Quantum
     val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_qvars"^suffix), qvarterm) ctxt
   in ctxt end
 
-  val ctxt = add_vars_abbrev "" ctxt
-  val ctxt = add_vars_abbrev "1" ctxt
-  val ctxt = add_vars_abbrev "2" ctxt
+  val ctxt = add_vars_abbrev NoIndex "" ctxt
+  val ctxt = add_vars_abbrev Index1 "1" ctxt
+  val ctxt = add_vars_abbrev Index2 "2" ctxt
 in ctxt end
 
 fun declare_concrete_program (ctxt, name:string, cvars:(string*typ)list, cwvars:(string*typ) list, qvars:(string*typ)list, oracles:string list, body:Programs.statement) = let
@@ -328,8 +328,8 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
   val all_vars = all_vars0
                  |> Prog_Variables.varterm_from_list |> varterm_to_variable2 Quantum
 
-  val keepLeft_set = Symtab.make_set (map fst keep_left)
-  val keepRight_set = Symtab.make_set (map fst keep_right)
+  (* val keepLeft_set = Symtab.make_set (map fst keep_left) *)
+  (* val keepRight_set = Symtab.make_set (map fst keep_right) *)
 (*   (* Check: beforeLeft disjoint from keep_left (the vars in the lhs of the qeq that are not replaced) *)
   val _ = if not (List.exists (fn (n,_) => Symtab.defined keepLeft_set n) beforeLeft) then ()
           else error "Left quantum equality has duplicate variables"
@@ -366,11 +366,11 @@ in result = \<^prop>\<open>True\<close> end
 
 
 fun byQRHLPre (cvars, qvars) =
-  let val cEqs = map (fn (v1,v2,T) => HOLogic.mk_eq (Free(v1,T), Free(v2,T))) cvars
+  let val cEqs = map (fn (v,T) => HOLogic.mk_eq (Free(variable_shortname v Index1,T), Free(variable_shortname v Index2,T))) cvars
       val cEqs' = \<^const>\<open>classical_subspace\<close> $ QRHL.mk_conjs cEqs
-      val qvars1' = map (fn (v1,_,T) => (v1,T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
+      val qvars1' = map (fn (v,T) => (v, Index1,T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
       val qvars1T = fastype_of qvars1' |> dest_q2variableT
-      val qvars2' = map (fn (_,v2,T) => (v2,T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
+      val qvars2' = map (fn (v,T) => (v, Index2, T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
       val qvars2T = fastype_of qvars2' |> dest_q2variableT
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
       val qvarsEq = if qvars=[] then @{const top(predicate)} else QRHL.mk_quantum_equality qvars1' qvars2' qvars1T
