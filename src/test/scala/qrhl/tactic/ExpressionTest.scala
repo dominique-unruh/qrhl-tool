@@ -83,8 +83,8 @@ class ExpressionTest extends AnyFunSuite {
     assert(e==e2)
   }
 
-  val intExprT: Type = clT -->: intT
-  val intExpr2T: Type = cl2T -->: intT
+  lazy val intExprT: Type = clT -->: intT
+  lazy val intExpr2T: Type = cl2T -->: intT
 
   test ("getter x mem") {
     val tl = ToplevelTest.makeToplevelWithTheory()

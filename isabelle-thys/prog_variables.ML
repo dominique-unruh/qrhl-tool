@@ -263,6 +263,7 @@ fun declare_variable ctxt bind T cq existingVars =
  *)
 
 datatype 'a tree = VTCons of 'a tree * 'a tree | VTSingle of 'a | VTUnit
+type varterm1 = (string*typ) tree
 type varterm = (string*index*typ) tree
 
 (* fun parse_varterm (Const(\<^const_name>\<open>variable_concat\<close>,_) $ a $ b) = VTCons (parse_varterm a, parse_varterm b)
@@ -308,19 +309,30 @@ fun varterm_to_VARIABLE Classical VTUnit = \<^term>\<open>CREGISTER_unit :: CVAR
                             | Quantum =>  \<^term>\<open>QREGISTER_pair :: QVARIABLE \<Rightarrow> QVARIABLE \<Rightarrow> QVARIABLE\<close>
       in pair $ v1 $ v2 end
 
-fun varterm_to_variable Classical VTUnit = \<^term>\<open>cvariable_unit :: unit cvariable\<close>
-  | varterm_to_variable Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit qvariable\<close>
-  | varterm_to_variable Classical (VTSingle (n,NoIndex,T)) = Free (n,mk_cvariableT T)
-  | varterm_to_variable Quantum (VTSingle (n,NoIndex,T)) = Free (n,mk_qvariableT T)
-  | varterm_to_variable cq (VTCons (t1, t2)) = let
-        val v1 = varterm_to_variable cq t1
-        val v2 = varterm_to_variable cq t2
+fun varterm1_to_variable1 Classical VTUnit = \<^term>\<open>cvariable_unit :: unit cvariable\<close>
+  | varterm1_to_variable1 Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit qvariable\<close>
+  | varterm1_to_variable1 Classical (VTSingle (n,T)) = Free (n,mk_cvariableT T)
+  | varterm1_to_variable1 Quantum (VTSingle (n,T)) = Free (n,mk_qvariableT T)
+  | varterm1_to_variable1 cq (VTCons (t1, t2)) = let
+        val v1 = varterm1_to_variable1 cq t1
+        val v2 = varterm1_to_variable1 cq t2
         val T1 = case cq of Classical => dest_cvariableT (fastype_of v1) | Quantum => dest_qvariableT (fastype_of v1)
         val T2 = case cq of Classical => dest_cvariableT (fastype_of v2) | Quantum => dest_qvariableT (fastype_of v2)
         val T = HOLogic.mk_prodT (T1, T2)
         val pair = case cq of Classical => Const(\<^const_name>\<open>cregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_cvariableT T)
                             | Quantum => Const(\<^const_name>\<open>qregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_qvariableT T)
       in pair $ v1 $ v2 end
+
+fun varterm_to_varterm1 VTUnit : varterm1 = VTUnit
+  | varterm_to_varterm1 (VTSingle (n,NoIndex,T)) = VTSingle (n,T)
+  | varterm_to_varterm1 (VTSingle _) = error "varterm_to_varterm1: encountered index"
+  | varterm_to_varterm1 (VTCons (t1,t2)) = VTCons (varterm_to_varterm1 t1, varterm_to_varterm1 t2)
+
+fun varterm1_to_varterm VTUnit : varterm = VTUnit
+  | varterm1_to_varterm (VTSingle (n,T)) = VTSingle (n, NoIndex, T)
+  | varterm1_to_varterm (VTCons (t1,t2)) = VTCons (varterm1_to_varterm t1, varterm1_to_varterm t2)
+
+fun varterm_to_variable1 cq = varterm_to_varterm1 #> varterm1_to_variable1 cq
 
 fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>cvariable_unit :: unit c2variable\<close>
   | varterm_to_variable2 Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit q2variable\<close>
@@ -369,6 +381,7 @@ fun variable_to_varterm _    (Const(\<^const_name>\<open>empty_cregister\<close>
       NONE => raise TERM("variable_to_varterm: unknown/unparseable variable", [v])
       | SOME (name, index, typ) => VTSingle (name, index, typ)
 
+fun variable_to_varterm1 ctxt = variable_to_varterm ctxt #> varterm_to_varterm1
 
 fun varterm_from_list_untyped [] = VTUnit
   | varterm_from_list_untyped [n] = VTSingle (n,dummyT)

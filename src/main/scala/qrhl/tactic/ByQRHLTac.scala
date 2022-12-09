@@ -140,8 +140,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         // Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
         // if cvars =: x...z and qvars =: q...r
         val pre = Ops.byQRHLPreOp(
-            cvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
-            qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))).retrieveNow
+            cvars.toList.map(v => (v.name, v.valueTyp)),
+            qvars.toList.map(v => (v.name, v.valueTyp))).retrieveNow
 
         val left = p1.toBlock
         val right = p2.toBlock
@@ -180,8 +180,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
          * if cvars =: x...z and qvars =: q...r
          */
         val pre = Ops.byQRHLPreOp(
-          cvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp)),
-          qvars.toList.map(v => (v.index1.name, v.index2.name, v.valueTyp))).retrieveNow
+          cvars.toList.map(v => (v.name, v.valueTyp)),
+          qvars.toList.map(v => (v.name, v.valueTyp))).retrieveNow
 
         val left = p1.toBlock
         val right = p2.toBlock

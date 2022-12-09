@@ -11,6 +11,7 @@ import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.Term
 import hashedcomputation.Implicits.optionHashable
 import hashedcomputation.{Hash, HashTag, Hashable}
+import qrhl.logic.Variable.{Index1, Index2}
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListSet
@@ -143,11 +144,11 @@ case class ConseqQrhlTac(rule: String, qvariableSubst: Option[((List[QVariable],
               easyGoals += cardinalityCondition1
 
               // Like before/afterLeftPairs, but with index 1
-              val beforeLeftIdxPairs = beforeLeft.map(_.index1) map { v => (v.variableName, v.valueTyp) }
-              val afterLeftIdxPairs = afterLeft.map(_.index1) map { v => (v.variableName, v.valueTyp) }
+              val beforeLeftIdxPairs = beforeLeft  map { v => (v.name, Index1, v.valueTyp) }
+              val afterLeftIdxPairs = afterLeft map { v => (v.name, Index1, v.valueTyp) }
               // Like before/afterRightPairs, but with index 2
-              val beforeRightIdxPairs = beforeRight.map(_.index2) map { v => (v.variableName, v.valueTyp) }
-              val afterRightIdxPairs = afterRight.map(_.index2) map { v => (v.variableName, v.valueTyp) }
+              val beforeRightIdxPairs = beforeRight map { v => (v.name, Index2, v.valueTyp) }
+              val afterRightIdxPairs = afterRight map { v => (v.name, Index2, v.valueTyp) }
 
               // Parses pre2 as X ⊓ ⟦L⟧ ≡⇩𝔮 ⟦R⟧.
               // Checks that L/R ends with beforeLeftIdxPairs, beforeRightIdxPairs

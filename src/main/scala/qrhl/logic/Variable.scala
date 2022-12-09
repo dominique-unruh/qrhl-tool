@@ -2,13 +2,17 @@ package qrhl.logic
 
 import qrhl.isabellex.{IsabelleConsts, IsabelleX}
 import IsabelleX.{globalIsabelle => GIsabelle}
+import de.unruh.isabelle.control.Isabelle
+import de.unruh.isabelle.mlvalue.MLValue.Converter
+import de.unruh.isabelle.mlvalue.{MLValue, MLValueConverter}
 import de.unruh.isabelle.pure.{App, Const, Free, Term, Typ}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
 import qrhl.logic.Variable.{Index1, Index2, NoIndex}
 import qrhl.AllSet
+import GIsabelle.Ops.qrhl_ops
 
 import scala.collection.immutable.ListSet
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 // Implicits
 import hashedcomputation.Implicits._
@@ -167,6 +171,33 @@ object Variable {
   final case object NoIndex extends Index
   final case object Index1 extends Index
   final case object Index2 extends Index
+
+  implicit object IndexConverter extends Converter[Index] {
+    override def mlType(implicit isabelle: Isabelle): String = s"$qrhl_ops.index"
+
+    override def retrieve(value: MLValue[Index])(implicit isabelle: Isabelle): Future[Index] = {
+      implicit val ec: ExecutionContext = isabelle.executionContext
+      GIsabelle.Ops.retrieveIndex(value).retrieve.map {
+        case 0 => NoIndex
+        case 1 => Index1
+        case 2 => Index2
+      }
+    }
+
+    override def store(value: Index)(implicit isabelle: Isabelle): MLValue[Index] = {
+      implicit val ec: ExecutionContext = isabelle.executionContext
+      val int = value match {
+        case NoIndex => 0
+        case Index1 => 1
+        case Index2 => 2
+      }
+      GIsabelle.Ops.storeIndex(int)
+    }
+
+    override def exnToValue(implicit isabelle: Isabelle): String = s"fn E_Int 0 => $qrhl_ops.NoIndex | E_Int 1 => $qrhl_ops.Index1 | E_Int 2 => $qrhl_ops.Index2"
+
+    override def valueToExn(implicit isabelle: Isabelle): String = s"fn $qrhl_ops.NoIndex => E_Int 0 | $qrhl_ops.Index1 => E_Int 1 | $qrhl_ops.Index2 => E_Int 2"
+  }
 }
 
 final class QVariable private (override val basename:String, override val valueTyp: Typ, val theIndex: Variable.Index) extends Variable {

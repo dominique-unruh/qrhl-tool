@@ -4,7 +4,7 @@ import java.io.PrintWriter
 import org.log4s
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
-import qrhl.logic.Variable.{index, varsToString}
+import qrhl.logic.Variable.{Index1, Index2, index, varsToString}
 import qrhl.logic._
 import qrhl.tactic.EqualTac._
 import IsabelleX.{globalIsabelle => GIsabelle}
@@ -683,8 +683,8 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
         |""".stripMargin)
 
     val colocality = RichTerm(Ops.colocalityOp(isabelle.context, postcondition.isabelleTerm,
-        (forbiddenQuantumInPostcondition.toList map { v => (v.index1.name, v.valueTyp) }) ++
-          (forbiddenQuantumInPostcondition.toList map { v => (v.index2.name, v.valueTyp) })).retrieveNow)
+        (forbiddenQuantumInPostcondition.toList map { v => (v.name, Index1, v.valueTyp) }) ++
+          (forbiddenQuantumInPostcondition.toList map { v => (v.name, Index2, v.valueTyp) })).retrieveNow)
 
     logger.debug(s"Colocality: $colocality")
 

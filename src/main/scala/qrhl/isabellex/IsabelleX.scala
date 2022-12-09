@@ -29,6 +29,7 @@ import org.apache.commons.codec.binary.Hex
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.{FileUtils, IOUtils}
 import qrhl.Utils.NestedException
+import qrhl.logic.Variable.Index
 
 import java.nio.charset.Charset
 import java.security.MessageDigest
@@ -870,8 +871,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
       throw UserException(s"Expected Isabelle $version but got ${Version.versionString}")
     val conseq_qrhl_cardinality_condition =
       MLValue.compileFunction[Context, List[(String,Typ)], List[(String,Typ)], Term](s"$qrhl_ops.conseq_qrhl_cardinality_condition")
-    val conseq_qrhl_replace_in_predicate =
-      MLValue.compileFunction[Context, Term, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], (Term, Term)](
+    lazy val conseq_qrhl_replace_in_predicate =
+      MLValue.compileFunction[Context, Term, List[(String,Index,Typ)], List[(String,Index,Typ)], List[(String,Index,Typ)], List[(String,Index,Typ)], (Term, Term)](
         s"$qrhl_ops.conseq_qrhl_replace_in_predicate")
     val declare_abstract_program_op =
       compileFunction[Context,String,List[(String,Typ)],List[(String,Typ)],List[(String,Typ)],Int, Context](
@@ -881,7 +882,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
     val termToExpressionOp =
       MLValue.compileFunction[Context, Typ, Term, Term](s"fn (ctxt, typ, term) => $qrhl_ops.term_to_expression ctxt typ term")
     val byQRHLPreOp =
-      MLValue.compileFunction[List[(String, String, Typ)], List[(String, String, Typ)], Term](s"$qrhl_ops.byQRHLPre")
+      MLValue.compileFunction[List[(String, Typ)], List[(String, Typ)], Term](s"$qrhl_ops.byQRHLPre")
     /** Adds an index to all classical variables in an expression. Expression must be in longform. */
     val addIndexToExpressionOp =
       MLValue.compileFunction[Context, Term, Boolean, Term](s"fn (ctxt,t,left) => $qrhl_ops.add_index_to_expression ctxt left t")
@@ -907,8 +908,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
     val swapOp =
       MLValue.compileFunction[Context, Term, Term](s"$qrhl_ops.swap_variables_conv")
-    val colocalityOp =
-      MLValue.compileFunction[Context, Term, List[(String, Typ)], Term](s"$qrhl_ops.colocal_pred_qvars")
+    lazy val colocalityOp =
+      MLValue.compileFunction[Context, Term, List[(String, Variable.Index, Typ)], Term](s"$qrhl_ops.colocal_pred_qvars")
     val isInfinite_op =
       MLValue.compileFunction[Context, Typ, Boolean](s"$qrhl_ops.is_finite")
     val declare_quantum_variable =
@@ -1026,6 +1027,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
     val print_as_statement = MLValue.compileFunction[Context, String, List[(String, Typ)], List[String], List[Term], Term, String](
       s"fn (ctxt,name,fixes,extra,assms,concl) => $qrhl_ops.print_as_statement ctxt name fixes extra assms concl")
+    lazy val retrieveIndex = compileFunction[Index, Int](s"fn $qrhl_ops.NoIndex => 0 | $qrhl_ops.Index1 => 1 | $qrhl_ops.Index2 => 2")
+    lazy val storeIndex = compileFunction[Int, Index](s"fn 0 => $qrhl_ops.NoIndex | 1 => $qrhl_ops.Index1 | 2 => $qrhl_ops.Index2")
   }
 }
 

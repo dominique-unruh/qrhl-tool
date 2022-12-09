@@ -70,7 +70,7 @@ case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove :
       // Subgoals for checking that pre/postcondition do not contain local quantum variables
       // (we checked that above already, but detection of quantum variables is not 100% sound)
       val qvarsIdx = variablesToRemoveViaRule map { _.index(left) }
-      val qVarsIdxPairs = qvarsIdx.map { v => (v.variableName, v.valueTyp) }
+      val qVarsIdxPairs = qvarsIdx.map { v => (v.name, v.theIndex, v.valueTyp) }
       val colocalityPre = Ops.colocalityOp(state.isabelle.context, pre.isabelleTerm, qVarsIdxPairs.toList).retrieveNow
       val colocalityPost = Ops.colocalityOp(state.isabelle.context, post.isabelleTerm, qVarsIdxPairs.toList).retrieveNow
       val colocality = AmbientSubgoal(GIsabelle.conj(colocalityPre, colocalityPost), assumptions.map(_.isabelleTerm))

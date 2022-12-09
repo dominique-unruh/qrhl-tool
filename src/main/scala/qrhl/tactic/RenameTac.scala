@@ -117,7 +117,7 @@ case class RenameTac(left: Boolean, right: Boolean, renaming: List[(Variable,Var
       val renamedPre = renameInvariant(pre)
       val renamedPost = renameInvariant(post)
 
-      val forbiddenQInInvariant12 = forbiddenInInvariant collect { case v: QVariable => (v.variableName, v.valueTyp) } toList
+      val forbiddenQInInvariant12 = forbiddenInInvariant collect { case v: QVariable => (v.name, v.theIndex, v.valueTyp) } toList
       val colocalitySubgoal =
         if (forbiddenQInInvariant12.isEmpty) null
         else {

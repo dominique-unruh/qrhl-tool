@@ -169,7 +169,7 @@ fun declare_abstract_program (ctxt, name:string, cvars:(string*typ)list, cwvars:
   fun add_vars_abbrev index suffix ctxt = let
     (* val cvartuple = HOLogic.mk_tuple (map (fn (n,T) => Free(n^suffix, mk_cvariableT T)) cvars) *)
     (* val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvartuple) ctxt *)
-    val v2v = if suffix = "" then Prog_Variables.varterm_to_variable else Prog_Variables.varterm_to_variable2
+    val v2v = if suffix = "" then Prog_Variables.varterm_to_variable1 else Prog_Variables.varterm_to_variable2
     val cvarterm = cvars |> (map (fn (n,T) => (n, index, T))) |> Prog_Variables.varterm_from_list |> v2v Classical
     val (_,ctxt) = Proof_Context.add_abbrev Print_Mode.input (Binding.name (name^"_cvars"^suffix), cvarterm) ctxt
     val qvarterm = qvars |> (map (fn (n,T) => (n, index, T))) |> Prog_Variables.varterm_from_list |> v2v Quantum
@@ -290,8 +290,8 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
   (* keep_left, keep_right are the vars before beforeLeft/beforeRight (in vt_left/right) *)
   val keep_left = List.take (vt_left, (length vt_left - length beforeLeft))
   val keep_right = List.take (vt_right, (length vt_right - length beforeRight))
-  val keep_leftT = Prog_Variables.varterm_from_list keep_left |> varterm_to_variable Quantum |> fastype_of |> dest_qvariableT
-  val keep_rightT = Prog_Variables.varterm_from_list keep_right |> varterm_to_variable Quantum |> fastype_of |> dest_qvariableT
+  val keep_leftT = Prog_Variables.varterm_from_list keep_left |> varterm_to_variable2 Quantum |> fastype_of |> dest_qvariableT
+  val keep_rightT = Prog_Variables.varterm_from_list keep_right |> varterm_to_variable2 Quantum |> fastype_of |> dest_qvariableT
 
   (* Check: keep_left/right have the same type (as variable tuple *)
   (* (Should never fail.) *)
@@ -473,8 +473,8 @@ val seq_tac =
  apply_tactic_on_term_concl (fn ctxt => fn (i,j,B) => Tactics.seq_tac i j B ctxt 1)
 
 fun conseq_qrhl_cardinality_condition (ctxt,befor,after) = let
-     val beforeT = befor |> Prog_Variables.varterm_from_list |> varterm_to_variable Quantum |> fastype_of |> dest_qvariableT
-     val afterT = after |> Prog_Variables.varterm_from_list |> varterm_to_variable Quantum |> fastype_of |> dest_qvariableT
+     val beforeT = befor |> Prog_Variables.varterm_from_list |> varterm1_to_variable1 Quantum |> fastype_of |> dest_qvariableT
+     val afterT = after |> Prog_Variables.varterm_from_list |> varterm1_to_variable1 Quantum |> fastype_of |> dest_qvariableT
      val before_UNIV = HOLogic.mk_UNIV beforeT
      val after_UNIV = HOLogic.mk_UNIV afterT
      (* finite (UNIV::beforeT set) *)

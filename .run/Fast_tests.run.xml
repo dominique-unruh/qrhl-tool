@@ -10,12 +10,14 @@
     <option name="classBuf">
       <list>
         <option value="Test0" />
+        <option value="qrhl.StateTest" />
         <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.ExampleFilesTest" />
         <option value="qrhl.IsabelleUnitTest" />
         <option value="qrhl.logic.BlockTest" />
         <option value="qrhl.logic.VariableTest" />
         <option value="qrhl.logic.StatementTest" />
+        <option value="qrhl.logic.AbstractProgramDeclTest" />
         <option value="qrhl.toplevel.ParserTest" />
         <option value="qrhl.toplevel.ToplevelTest" />
         <option value="qrhl.toplevel.PrintCommandTest" />
