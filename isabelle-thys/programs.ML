@@ -60,6 +60,7 @@ fun expression_to_term ctxt t =
             val _ = mk_cvariableT T = fastype_of var orelse  mk_c2variableT T = fastype_of var orelse
                     raise TYPE("expression_to_term: classical variable of wrong type", [T, fastype_of var], [t,g])
           in Free(variable_shortname n i,T) end
+        | translate (Free("_memory", _)) = raise TERM("expression_to_term: encountered memory access without getter", [t])
         | translate t = case decompose_singleton_variable ctxt t of
             NONE => (case t of (t1 $ t2) => translate t1 $ translate t2 | (Abs(n,T,body)) => Abs(n, T, translate body) | t => t)
             | SOME (n,i,T) => Free(variable_shortname n i, fastype_of t)
