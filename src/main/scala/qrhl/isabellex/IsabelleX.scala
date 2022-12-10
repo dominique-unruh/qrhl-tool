@@ -1060,6 +1060,7 @@ object IsabelleX {
       val digest = DigestUtils.getSha256Digest
       val hashes = Seq(
         "thys/Complex_Bounded_Operators/Complex_Bounded_Linear_Function.thy" -> "1ee29eb28482115a64db43fe72abaf1bdf3b9d306df25a89cb20e4fe915511a9",
+        "thys/Hilbert_Space_Tensor_Product/Hilbert_Space_Tensor_Product.thy" -> "a9aeeb5aade3c6d0302340c21540db55a9b20cd83fcee7cb70457f5ce3d5b8ac",
       )
 
       def fail(reason: String): Unit = {
