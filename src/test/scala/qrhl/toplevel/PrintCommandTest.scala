@@ -13,9 +13,10 @@ class PrintCommandTest extends AnyFunSuite {
     val output = PrintCommand("goal").actString(tl.state).lastOutput
     println(output)
     assert(output.contains("lemma bla_"))
-    assert(output.contains("""fixes var_x1 :: "int variable" and z :: int and q1 :: "int variable" and q2 :: "int variable""""))
-    assert(output.contains("""assumes [simp]: ‹declared_qvars ⟦q1, q2⟧›"""))
-    assert(output.contains("""shows "QRHL {ℭ𝔩𝔞[(x1::int) = 1 ∧ (z::int) = 2]} [] [] {⟦q1::int variable⟧ ≡𝔮 ⟦q2⟧}""""))
+    assert(output.contains("""fixes x :: "(int, cl) cregister" and z :: int and q :: "(int, qu) qregister""""))
+    assert(output.contains("""assumes [simp]: ‹declared_qvars ⟦q⟧›"""))
+    assert(output.contains("""shows "qrhl (λmem. ℭ𝔩𝔞[getter (cregister_chain ⟦#1⟧⇩c x) mem = (1::int) ∧ (z::int) = 2]) [] [] (λmem. qregister_chain ⟦#1⟧⇩q (q::(int, qu) qregister) ≡𝔮 qregister_chain ⟦#2.⟧⇩q q)""""))
+//    assert(output.contains("""shows "QRHL {ℭ𝔩𝔞[(x1::int) = 1 ∧ (z::int) = 2]} [] [] {⟦q1::int variable⟧ ≡𝔮 ⟦q2⟧}""""))
   }
 
   test("print goal parser") {
