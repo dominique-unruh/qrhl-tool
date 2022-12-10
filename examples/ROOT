@@ -1,7 +1,5 @@
 session "QRHL-Examples" = "QRHL" +
   sessions "CryptHOL"
-  theories PrgEnc Chsh Code_Example Example Teleport EPR RandomOracle O2H_Example OTP 
+  theories PrgEnc Code_Example Example Teleport EPR RandomOracle O2H_Example OTP 
 
 session "QRHL-Examples-Prerequisites" in "fake-session-dir/1" = "QRHL-Prerequisites" +
-  sessions "CryptHOL"
-  theories CryptHOL.CryptHOL
