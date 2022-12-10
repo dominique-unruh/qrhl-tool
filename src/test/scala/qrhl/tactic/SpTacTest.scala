@@ -14,7 +14,7 @@ class SpTacTest extends AnyFunSuite {
     toplevel.execCmd(TacticCommand(SpTac(left = 1, right = 0)))
     val goals = toplevel.state.goal
     println(goals)
-    assert(goals.length == 2)
+    assert(goals.length == 1)
     for (goal <- goals)
       goal.checkWelltyped(toplevel.state.isabelle)
   }
