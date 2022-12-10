@@ -46,8 +46,7 @@ fun varterm_to_variable2_shortform Classical VTUnit = \<^term>\<open>cvariable_u
 (* Translates expression in longform to expression in shortform *)
 fun expression_to_term ctxt t =
   let val lookup_var = lookup_variable ctxt
-      val body = case t of Abs(_,_,body) => body | _ => raise TERM("expression_to_term", [t])
-      val e = subst_bound (Free("_memory", dummyT), body)
+      val e = betapply (t, Free("_memory", fastype_of t |> domain_type))
       fun check_qvariable n T = case lookup_var n of
           SOME {qc=Classical, ...} => raise TYPE("expression_to_term: classical variable after qregister_chain", [T], [])
         | SOME {qc=Quantum, in_typ, ...} => 
