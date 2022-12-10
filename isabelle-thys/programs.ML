@@ -48,9 +48,9 @@ fun expression_to_term ctxt t =
   let val lookup_var = lookup_variable ctxt
       val e = betapply (t, Free("_memory", fastype_of t |> domain_type))
       fun check_qvariable n T = case lookup_var n of
-          SOME {qc=Classical, ...} => raise TYPE("expression_to_term: classical variable after qregister_chain", [T], [])
+          SOME {qc=Classical, ...} => raise TYPE("expression_to_term: classical variable after qregister_chain", [T], [t])
         | SOME {qc=Quantum, in_typ, ...} => 
-            mk_qvariableT in_typ = T orelse raise TYPE("expression_to_term: quantum variable of wrong type", [T, in_typ], [])
+            mk_qvariableT in_typ = T orelse raise TYPE("expression_to_term: quantum variable of wrong type", [T, in_typ], [t])
         | NONE => false
       fun translate (g as (Const(\<^const_name>\<open>getter\<close>,_) $ var $ Free("_memory", _))) = let
             val (n,i,T) = case decompose_singleton_variable ctxt var of
@@ -96,7 +96,7 @@ fun term_to_expression ctxt memT t =
       val subst = Term.add_frees t [] 
         |> map_filter (fn (n,T) => case shortname_to_register ctxt (n,T) of
               SOME (reg, Classical) => 
-                SOME (Free (n,T), Const(\<^const_name>\<open>getter\<close>, fastype_of reg --> memT --> T) $ reg $ mem_var)
+                SOME (Free (n,T), Const(\<^const_name>\<open>getter\<close>, fastype_of reg --> memT --> (fastype_of reg |> dest_cregisterT |> fst)) $ reg $ mem_var)
             | SOME (reg, Quantum) => 
                 SOME (Free (n,T), reg)
             | _ => NONE)

@@ -28,6 +28,7 @@ fun mk_variableT Quantum = mk_qvariableT
   | mk_variableT Classical = mk_cvariableT
 
 fun dest_qregisterT (\<^Type>\<open>qregister T U\<close>) = (T,U)
+  | dest_qregisterT (\<^Type>\<open>dummy\<close>) = (dummyT, dummyT) (* So that it also works in not yet type-inferred terms *)
   | dest_qregisterT T = raise TYPE("dest_qregisterT", [T], [])
 
 fun dest_qregisterT_ct ctyp = let
@@ -36,19 +37,24 @@ fun dest_qregisterT_ct ctyp = let
   val [T,U] = Thm.dest_ctyp ctyp
 in (T,U) end
 
-fun dest_cregisterT (\<^Type>\<open>qregister T U\<close>) = (T,U)
+fun dest_cregisterT (\<^Type>\<open>cregister T U\<close>) = (T,U)
+  | dest_cregisterT (\<^Type>\<open>dummy\<close>) = (dummyT, dummyT) (* So that it also works in not yet type-inferred terms *)
   | dest_cregisterT T = raise TYPE("dest_cregisterT", [T], [])
 
 fun dest_cvariableT (Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl\<close>])) = T
+  | dest_cvariableT (\<^Type>\<open>dummy\<close>) = dummyT (* So that it also works in not yet type-inferred terms *)
   | dest_cvariableT T = raise TYPE("dest_cvariableT", [T], [])
 
 fun dest_qvariableT (Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu\<close>])) = T
+  | dest_qvariableT (\<^Type>\<open>dummy\<close>) = dummyT (* So that it also works in not yet type-inferred terms *)
   | dest_qvariableT T = raise TYPE("dest_qvariableT", [T], [])
 
 fun dest_c2variableT (Type(\<^type_name>\<open>cregister\<close>, [T, \<^typ>\<open>cl2\<close>])) = T
+  | dest_c2variableT (\<^Type>\<open>dummy\<close>) = dummyT (* So that it also works in not yet type-inferred terms *)
   | dest_c2variableT T = raise TYPE("dest_c2variableT", [T], [])
 
 fun dest_q2variableT (Type(\<^type_name>\<open>qregister\<close>, [T, \<^typ>\<open>qu2\<close>])) = T
+  | dest_q2variableT (\<^Type>\<open>dummy\<close>) = dummyT (* So that it also works in not yet type-inferred terms *)
   | dest_q2variableT T = raise TYPE("dest_q2variableT", [T], [])
 
 (* fun strip_var_prefix x = if String.isPrefix "var_" x 
