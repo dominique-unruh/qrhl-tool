@@ -206,20 +206,27 @@ final case class DenotationalEqSubgoal(left:Block, right:Block, assumptions:List
 }
 
 final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
+  private val variables: Set[String] = goal.variables
+  checkMemoryVariable()
+
+  private def checkMemoryVariable(): Unit =
+    if (variables.contains("_memory"))
+      throw UserException("Variable _memory occurs in the goal. This should not happen and is a bug.")
+
   override def hash: Hash[AmbientSubgoal.this.type] =
     HashTag()(goal.hash)
 
   override def toString: String = goal.toString
 
   override def checkVariablesDeclared(environment: Environment): Unit =
-    for (x <- goal.variables)
+    for (x <- variables)
       if (!environment.variableExists(x))
         throw UserException(s"Undeclared variable $x")
 
   /** This goal as a boolean expression. */
   override def toTerm(context: IsabelleX.ContextX): RichTerm = goal
 
-  override def containsAmbientVar(x: String): Boolean = goal.variables.contains(x)
+  override def containsAmbientVar(x: String): Boolean = variables.contains(x)
 
   override def addAssumption(assm: RichTerm): AmbientSubgoal = {
     assert(assm.typ == GIsabelle.boolT)
