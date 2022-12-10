@@ -50,6 +50,7 @@ fun joint_measure_simple_tac ctxt =
   THEN' Prog_Variables.distinct_vars_tac ctxt
   THEN' Prog_Variables.distinct_vars_tac ctxt
   THEN' Prog_Variables.distinct_vars_tac ctxt
+
 (*   THEN' Expressions.index_tac ctxt
   THEN' Expressions.index_tac ctxt
   THEN' Expressions.index_tac ctxt
@@ -66,6 +67,8 @@ fun joint_measure_simple_seq_tac ctxt i =
   Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   joint_measure_simple_tac ctxt (i+1)
+  THEN
+  CONVERSION ((Programs.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt) i
 end
 \<close>
 

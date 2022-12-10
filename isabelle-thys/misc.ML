@@ -291,4 +291,11 @@ fun generalize_tac ctxt varname pat = SUBGOAL (fn (t,i) => case first_order_sear
 fun mk_ctxt_conv (f: conv -> conv) (conv: Proof.context -> conv) (ctxt: Proof.context) : conv = 
   f (conv ctxt)
 
+fun concl_conv2 conv ctxt ct = case Thm.term_of ct of
+  \<^Const_>\<open>Pure.all _\<close> $ Abs _ => Conv.arg_conv (Conv.abs_conv (fn (_,ctxt) => concl_conv2 conv ctxt) ctxt) ct
+  | \<^Const>\<open>Pure.imp\<close> $ _ $ _ => Conv.arg_conv (concl_conv2 conv ctxt) ct
+  | _ => conv ctxt ct
+
+fun concl_conv_Trueprop conv = conv |> mk_ctxt_conv HOLogic.Trueprop_conv |> concl_conv2
+
 end

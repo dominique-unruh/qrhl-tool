@@ -307,8 +307,7 @@ fun squash_sampling_tac left ctxt =
   THEN' Misc.match_list_tac ctxt
   THEN' squash_sampling_focused_tac ctxt
   THEN' Misc.append_list_tac ctxt
-  (* THEN' CONVERSION (Programs.clean_expression_conv ctxt |> Conv.arg_conv |> Conv.arg_conv) *)
-
+  THEN' CONVERSION ((Programs.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt)
 
 (*   resolve_tac ctxt (if left then 
       @{thms squash_sampling_left_ss_tac squash_sampling_left_sa_tac squash_sampling_left_as_tac squash_sampling_left_aa_tac} 

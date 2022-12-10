@@ -127,7 +127,7 @@ fun wp_seq_tac left right ctxt i =
   THEN
   wp_tac ctxt (i+1)
   THEN
-  CONVERSION (Programs.clean_expression_conv ctxt |> Conv.arg_conv |> Conv.arg_conv) i
+  CONVERSION ((Programs.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt) i
 
 (*   SUBGOAL (fn (goal,n) =>
     let val (_,p1,p2,B) = Encoding.dest_qrhl_goal goal

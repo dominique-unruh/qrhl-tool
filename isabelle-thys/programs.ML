@@ -13,6 +13,7 @@ val clean_expression_conv_simpset =
       add_index_to_expression_aux1
       add_index_to_expression_aux2
   } |> simpset_of
+(* TODO: Implement this without using simplifier *)
 fun clean_expression_conv ctxt = let
   val outer_simpset = simpset_of ctxt
   val simpset_ctxt = put_simpset clean_expression_conv_simpset ctxt
