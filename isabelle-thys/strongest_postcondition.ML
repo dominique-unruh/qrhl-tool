@@ -135,7 +135,7 @@ fun get_sp left (prog:term) (pre:term) ctxt =
 
 fun sp_seq_tac left right ctxt i = 
   Tactics.seq_tac left right
-           (Var(("postcondition",0),\<^typ>\<open>predicate expression\<close>)) ctxt i
+           (Var(("postcondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   sp_tac ctxt i
 
