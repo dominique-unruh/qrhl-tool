@@ -40,6 +40,16 @@ val _ = assert_aconv_conv (Prog_Variables.qregister_conversion_to_register_conv 
     \<^term>\<open>q\<close>
 \<close>
 
+(* Check whether Prog_Variables.declare_variable properly declares quantum variables *)
+ML \<open>
+local
+val ctxt = Prog_Variables.declare_variable \<^context> \<^binding>\<open>qvar\<close> \<^typ>\<open>int\<close> Prog_Variables.Quantum [("q",\<^typ>\<open>int\<close>)]
+in
+val _ = assert_aconv (Syntax.read_term ctxt "qvar") \<^term>\<open>qvar :: int qvariable\<close>
+val _ = assert_aconv_conv (Simplifier.rewrite ctxt) \<^cterm>\<open>qregister \<lbrakk>qvar::int qvariable, q\<rbrakk>\<^sub>q\<close> \<^term>\<open>True\<close>
+end
+\<close>
+
 end
 
 

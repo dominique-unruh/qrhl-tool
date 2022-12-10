@@ -23,6 +23,26 @@ fun variable_shortname n NoIndex = n
   | variable_shortname n Index1 = n ^ "1"
   | variable_shortname n Index2 = n ^ "2"
 
+fun varterm_to_variable2_shortform Classical VTUnit = \<^term>\<open>cvariable_unit :: unit c2variable\<close>
+  | varterm_to_variable2_shortform Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit q2variable\<close>
+  | varterm_to_variable2_shortform _ (VTSingle (name,NoIndex,T)) =
+          raise error ("varterm_to_variable2_shortform: not an indexed variable: " ^ name)
+  | varterm_to_variable2_shortform Classical (VTSingle (name,idx,T)) =
+          Free (variable_shortname name idx, mk_c2variableT T)
+  | varterm_to_variable2_shortform Quantum (VTSingle (name,idx,T)) =
+          Free (variable_shortname name idx, mk_q2variableT T)
+  | varterm_to_variable2_shortform cq (VTCons (t1, t2)) = let
+        val v1 = varterm_to_variable2_shortform cq t1
+        val v2 = varterm_to_variable2_shortform cq t2
+        val T1 = case cq of Classical => dest_c2variableT (fastype_of v1) | Quantum => dest_q2variableT (fastype_of v1)
+        val T2 = case cq of Classical => dest_c2variableT (fastype_of v2) | Quantum => dest_q2variableT (fastype_of v2)
+        val T = HOLogic.mk_prodT (T1, T2)
+        val pair = case cq of Classical => Const(\<^const_name>\<open>cregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_c2variableT T)
+                            | Quantum => Const(\<^const_name>\<open>qregister_pair\<close>, fastype_of v1 --> fastype_of v2 --> mk_q2variableT T)
+      in pair $ v1 $ v2 end
+
+
+
 (* Translates expression in longform to expression in shortform *)
 fun expression_to_term ctxt t =
   let val lookup_var = lookup_variable ctxt

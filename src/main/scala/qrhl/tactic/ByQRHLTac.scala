@@ -178,6 +178,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         /** Precondition.
          * Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
          * if cvars =: x...z and qvars =: q...r
+         *
+         * In shortform.
          */
         val pre = Ops.byQRHLPreOp(
           cvars.toList.map(v => (v.name, v.valueTyp)),

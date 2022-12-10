@@ -58,7 +58,7 @@ class ByQRHLTacTest extends AnyFunSuite {
     println(subgoal.right.getClass)
     println(subgoal.right.statements)
 
-    assert(subgoal.pre.toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = x2] ⊓ ⟦q1⟧ ≡\uD835\uDD2E ⟦q2⟧")
+    assert(subgoal.pre.toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = x2] ⊓ q1 ≡\uD835\uDD2E q2")
     assert(subgoal.post == subgoal.pre)
     assert(subgoal.left == Block(Call("p1")))
     assert(subgoal.right == Block(Call("p2")))

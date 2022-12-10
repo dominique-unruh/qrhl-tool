@@ -32,6 +32,21 @@ assert_aconv_conv (Programs.clean_expression_conv \<^context>)
                   \<^term>\<open>getter x mm\<close>
 \<close>
 
+ML \<open>
+assert_aconv (Programs.expression_to_term \<^context> \<^term>\<open>\<lambda>mem::cl2. getter (cregister_chain cFst x) mem + 1\<close>)
+             \<^term>\<open>(x1::int)+1\<close> 
+\<close>
+
+ML \<open>
+assert_aconv (Programs.expression_to_term \<^context> \<^term>\<open>\<lambda>mem::cl. getter x mem + 1\<close>)
+             (Syntax.read_term_global \<^theory> "(x::int)+1") 
+\<close>
+
+ML \<open>
+assert_aconv (Programs.expression_to_term \<^context> \<^term>\<open>\<lambda>mem::cl2. qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q q \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q q\<close>)
+             \<^term>\<open>(q1::(int,qu2) qregister) \<equiv>\<qq> q2\<close> 
+\<close>
+
 end
 
 

@@ -364,13 +364,13 @@ fun is_finite (ctxt, T) = let
   (* val _ = \<^print> result *)
 in result = \<^prop>\<open>True\<close> end
 
-
+(* Returns an expression in shortform *)
 fun byQRHLPre (cvars, qvars) =
   let val cEqs = map (fn (v,T) => HOLogic.mk_eq (Free(variable_shortname v Index1,T), Free(variable_shortname v Index2,T))) cvars
       val cEqs' = \<^const>\<open>classical_subspace\<close> $ QRHL.mk_conjs cEqs
-      val qvars1' = map (fn (v,T) => (v, Index1,T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
+      val qvars1' = map (fn (v,T) => (v, Index1,T)) qvars |> varterm_from_list |> varterm_to_variable2_shortform Quantum
       val qvars1T = fastype_of qvars1' |> dest_q2variableT
-      val qvars2' = map (fn (v,T) => (v, Index2, T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
+      val qvars2' = map (fn (v,T) => (v, Index2, T)) qvars |> varterm_from_list |> varterm_to_variable2_shortform Quantum
       val qvars2T = fastype_of qvars2' |> dest_q2variableT
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
       val qvarsEq = if qvars=[] then @{const top(predicate)} else QRHL.mk_quantum_equality qvars1' qvars2' qvars1T

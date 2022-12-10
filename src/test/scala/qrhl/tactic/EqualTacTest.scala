@@ -36,7 +36,7 @@ class EqualTacTest extends AnyFunSuite {
     val result = EqualTac.removeClassicals(env, term, ListSet(x), ListSet(x))
     val resultStr = result.toString
     println(resultStr)
-    assert(resultStr == "INF x1. ℭ𝔩𝔞[x1 = 0]")
+    assert(resultStr == "⨅x1. ℭ𝔩𝔞[x1 = 0]")
   }
 
   test("permit postcondition to contain the quantum variable equality") {
