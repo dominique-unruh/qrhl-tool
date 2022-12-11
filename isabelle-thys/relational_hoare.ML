@@ -15,15 +15,15 @@ datatype qrhl_judgment = QRHL_Judgment of term * Programs.statement list * Progr
 
 fun qrhl_judgment_to_term ctxt (QRHL_Judgment (pre, p1, p2, post)) =
   \<^const>\<open>qrhl\<close>
-    $ Programs.term_to_expression ctxt \<^typ>\<open>cl2\<close> pre
+    $ pre
     $ Programs.statements_to_term ctxt p1 $ Programs.statements_to_term ctxt p2
-    $ Programs.term_to_expression ctxt \<^typ>\<open>cl2\<close> post
+    $ post
 
 fun term_to_qrhl_judgment ctxt (Const(\<^const_name>\<open>qrhl\<close>,_) $ pre $ p1 $ p2 $ post) =
-  QRHL_Judgment (Programs.expression_to_term ctxt pre,
+  QRHL_Judgment (pre,
                  Programs.term_to_statements ctxt p1,
                  Programs.term_to_statements ctxt p2,
-                 Programs.expression_to_term ctxt post)
+                 post)
   | term_to_qrhl_judgment _ t = raise TERM("term_to_qrhl_judgment: not a qRHL judgment", [t])
 
 end

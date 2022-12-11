@@ -3,14 +3,13 @@ package qrhl.isabellex
 import org.log4s
 import org.log4s.Logger
 import qrhl.logic.{CVariable, Environment, ExprVariableUse, Variable}
-
 import qrhl.{UserException, Utils}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
-import IsabelleX.{globalIsabelle => GIsabelle}
+import IsabelleX.globalIsabelle
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Var}
+import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Type, Var}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 import qrhl.isabellex.IsabelleX.globalIsabelle.{Ops, cl2T, clT}
 
@@ -22,6 +21,13 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.Implicits._
 
 final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option[String]=None) extends HashedValue {
+  /** For expression in longform */
+  def expression2Typ: Typ = typ match {
+    case Type("fun", globalIsabelle.cl2T, typ) => typ
+    case typ => throw UserException(s"Internal error: encountered expression of invalid type ${IsabelleX.theContext.prettyTyp(typ)}")
+  }
+
+
   override def hash: Hash[RichTerm.this.type] =
     HashTag()(Hashable.hash(typ), Hashable.hash(isabelleTerm))
 
@@ -72,8 +78,8 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     case _ => false
   }
 
-  def checkWelltyped(context:IsabelleX.ContextX, Typ:Typ): Unit = {
-    assert(Typ==this.typ,s"$Typ != ${this.typ}")
+  def checkWelltyped(context:IsabelleX.ContextX, typ:Typ): Unit = {
+    assert(typ == this.typ, s"$typ != ${this.typ}")
     assert(context.checkType(isabelleTerm) == typ)
   }
 
@@ -175,29 +181,33 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
   def leq(e: RichTerm): RichTerm = {
       val t = e.isabelleTerm
-      val predicateT = GIsabelle.predicateT // Should be the type of t
-      val newT =  Const ("Orderings.ord_class.less_eq", predicateT -->: predicateT -->: GIsabelle.boolT) $ isabelleTerm $ t
-      RichTerm(GIsabelle.boolT,newT)
+      val predicateT = globalIsabelle.predicateT // Should be the type of t
+      val newT =  Const ("Orderings.ord_class.less_eq", predicateT -->: predicateT -->: globalIsabelle.boolT) $ isabelleTerm $ t
+      RichTerm(globalIsabelle.boolT,newT)
   }
 
   def implies(e: RichTerm): RichTerm = {
     val t = e.isabelleTerm
-    val newT = GIsabelle.implies(isabelleTerm, t)
+    val newT = globalIsabelle.implies(isabelleTerm, t)
 //    val typ = Typ.bool(null)
-    RichTerm(GIsabelle.boolT,newT)
+    RichTerm(globalIsabelle.boolT,newT)
   }
 
   def not: RichTerm = {
-    assert(typ==GIsabelle.boolT)
-    RichTerm(typ,GIsabelle.not(isabelleTerm))
+    assert(typ == globalIsabelle.boolT)
+    RichTerm(typ, globalIsabelle.not(isabelleTerm))
   }
 
   /** If the term is of the form "true_expression Expr[...]", replace it by "...". */
   def unwrapTrueExpression(implicit context: IsabelleX.ContextX): RichTerm = isabelleTerm match {
-    case GIsabelle.True_Expression(expr) =>
+    case globalIsabelle.True_Expression(expr) =>
       RichTerm.decodeFromExpression(context, expr)
     case _ => this
   }
+
+  /** Translates expression from longform into shortform */
+  def decodeFromExpression(context: IsabelleX.ContextX): RichTerm =
+    RichTerm.decodeFromExpression(context, isabelleTerm)
 }
 
 
@@ -212,7 +222,7 @@ object RichTerm {
   def decodeFromExpression(context:IsabelleX.ContextX, str: String, typ: Typ, indexed: Boolean): RichTerm =
     decodeFromExpression(context, context.readExpression(str, typ, indexed = indexed))
 
-  def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(GIsabelle.boolT, GIsabelle.True_const)
+  def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(globalIsabelle.boolT, globalIsabelle.True_const)
 
 //  private val readExpressionOp =
 //    MLValue.compileFunction[(Context, String, Typ), Term]("QRHL_Operations.read_expression")
@@ -248,7 +258,7 @@ object RichTerm {
       assert(number>=0)
       if (number==0) rest
       else
-        GIsabelle.implies(assm0, stripAssumption(rest,number-1))
+        globalIsabelle.implies(assm0, stripAssumption(rest,number-1))
     case _ => throw qrhl.UserException("Not enough assumptions")
   }
 }

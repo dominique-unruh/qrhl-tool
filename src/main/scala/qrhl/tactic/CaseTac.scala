@@ -3,8 +3,8 @@ package qrhl.tactic
 import java.io.PrintWriter
 import qrhl._
 import qrhl.isabellex.{IsabelleX, RichTerm}
-import IsabelleX.{globalIsabelle => GIsabelle}
-import de.unruh.isabelle.pure.{Free, Term}
+import IsabelleX.globalIsabelle
+import de.unruh.isabelle.pure.{Abs, Bound, Free, Term, Type}
 import hashedcomputation.{Hash, HashTag, Hashable}
 
 // Implicits
@@ -18,6 +18,7 @@ case class CaseTac(variable:String, expr:RichTerm) extends Tactic {
 
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(left,right,pre,post,assms) =>
+      val exprT = expr.expression2Typ
 
       if (goal.containsAmbientVar(variable))
         throw UserException(s"Variable $variable already contained in goal")
@@ -31,19 +32,17 @@ case class CaseTac(variable:String, expr:RichTerm) extends Tactic {
       }
 
       val varTyp = state.environment.ambientVariables(variable)
-      if (varTyp != expr.typ)
-        throw UserException(s"Variable $variable has type ${state.isabelle.prettyTyp(varTyp)}, but expression has type ${state.isabelle.prettyTyp(expr.typ)}")
+      if (varTyp != exprT)
+        throw UserException(s"Variable $variable has type ${state.isabelle.prettyTyp(varTyp)}, but expression has type ${state.isabelle.prettyTyp(exprT)}")
 
       for (x <- expr.variables)
-        if (!state.environment.variableExistsForPredicate(x))
+        if (!state.environment.variableExistsForPredicateLongform(x))
           throw UserException(s"Undeclared (or non-indexed) variable $x in precondition")
 
-
-      val caseExpr : Term = GIsabelle.classical_subspace(
-        GIsabelle.mk_eq(expr.isabelleTerm, Free(variable,varTyp)))
-      val pre2 = GIsabelle.predicate_inf $ caseExpr $ pre.isabelleTerm
-      val pre3 = RichTerm(GIsabelle.predicateT, pre2)
-
+      val caseExpr : Term = globalIsabelle.classical_subspace(
+        globalIsabelle.mk_eq(expr.isabelleTerm, Free(variable,varTyp)))
+      val pre2 = Abs("mem", globalIsabelle.cl2T, globalIsabelle.predicate_inf $ caseExpr $ (pre.isabelleTerm $ Bound(0)))
+      val pre3 = RichTerm(globalIsabelle.predExpressionT, pre2)
 
       List(QRHLSubgoal(left,right,pre3,post,assms))
     case _ : AmbientSubgoal => throw UserException("Expected a QRHL subgoal")

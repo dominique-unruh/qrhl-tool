@@ -67,6 +67,17 @@ object QRHLSubgoal {
  * @param post Postcondition in shortform
  * */
 final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]) extends Subgoal {
+  checkQRHLSubgoalType()
+
+  private def checkQRHLSubgoalType(): Unit = {
+    if (pre.typ != GIsabelle.predExpressionT)
+      throw UserException(s"Internal error: precondition has type ${IsabelleX.theContext.prettyTyp(pre.typ)}")
+    if (post.typ != GIsabelle.predExpressionT)
+      throw UserException(s"Internal error: postcondition has type ${IsabelleX.theContext.prettyTyp(post.typ)}")
+    for (assm <- assumptions)
+      assert(assm.typ == GIsabelle.boolT)
+  }
+
   override def hash: Hash[QRHLSubgoal.this.type] =
     HashTag()(left.hash, right.hash, pre.hash, post.hash, Hashable.hash(assumptions))
 
@@ -78,10 +89,10 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
 
   override def checkVariablesDeclared(environment: Environment): Unit = {
     for (x <- pre.variables)
-      if (!environment.variableExistsForPredicate(x))
+      if (!environment.variableExistsForPredicateLongform(x))
         throw UserException(s"Undeclared variable $x in precondition")
     for (x <- post.variables)
-      if (!environment.variableExistsForPredicate(x))
+      if (!environment.variableExistsForPredicateLongform(x))
         throw UserException(s"Undeclared variable $x in postcondition")
     for (x <- left.variablesDirect)
       if (!environment.variableExistsForProg(x))
@@ -118,8 +129,8 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     for (a <- assumptions) a.checkWelltyped(context, GIsabelle.boolT)
     left.checkWelltyped(context)
     right.checkWelltyped(context)
-    pre.checkWelltyped(context, GIsabelle.predicateT)
-    post.checkWelltyped(context, GIsabelle.predicateT)
+    pre.checkWelltyped(context, GIsabelle.predExpressionT)
+    post.checkWelltyped(context, GIsabelle.predExpressionT)
   }
 
   override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): QRHLSubgoal = {
@@ -133,7 +144,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     val right2 = if (everywhere) right.simplify(isabelle,facts,thms) else right
 
     Subgoal.printOracles(thms.toSeq : _*)
-    QRHLSubgoal(left2, right2, pre2, post2, assms2)
+    QRHLSubgoal(left2, right2, pre2, post2, assms3)
   }
 
   /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */

@@ -21,9 +21,12 @@ class RndTacTest extends AnyFunSuite {
     tl.execCmd("qrhl {top} x <$ uniform UNIV; ~ x <$ uniform UNIV; {top}")
     val st = tl.state.applyTactic(RndEqualTac)
 
+    val context = tl.state.isabelle
+
     assert(st.goal.length==1)
     val post = st.goal.head.asInstanceOf[QRHLSubgoal].post
-    assert(post.toString == "ℭ𝔩𝔞[uniform UNIV = uniform UNIV] ⊓ (⨅z∈supp (uniform UNIV). ⊤)")
+    print(s"Post: $post")
+    assert(post.decodeFromExpression(context).toString == "ℭ𝔩𝔞[uniform UNIV = uniform UNIV] ⊓ (⨅z∈supp (uniform UNIV). ⊤)")
     post.checkWelltyped(tl.state.isabelle, GIsabelle.predicateT)
   }
 

@@ -7,7 +7,7 @@ import qrhl.isabellex.{IsabelleConsts, IsabelleX, RichTerm}
 import qrhl.logic._
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.{DenotationalEquivalence, Ops}
-import de.unruh.isabelle.pure.{App, Const, Context, Free, Term}
+import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term}
 import hashedcomputation.Implicits.listHashable
 import hashedcomputation.{Hash, HashTag, Hashable}
 import qrhl.tactic.ByQRHLTac.logger
@@ -38,7 +38,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
     def unapply(term: Term): Option[(Term,Statement,Term)] = term match {
       case App(App(App(Const(GIsabelle.probability.name,_),e),p),rho) =>
         val e2 = Ops.addIndexToExpressionOp(state.isabelle.context, e, left).retrieveNow
-        val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
+//        val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
 
         val pname = p match {
           case Free(n,_) => n
@@ -48,9 +48,9 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         if (prog.numOracles != 0)
           throw UserException(s"Program $p expects arguments, that is not supported in a Pr[...] statement")
 
-        Some((e3,Call(prog.name),rho))
+        Some((e2,Call(prog.name),rho))
       case Const(IsabelleConsts.one,_) =>
-        Some((GIsabelle.True_const, Block.empty, null))
+        Some((GIsabelle.True_expression2, Block.empty, null))
       case _ =>
         ByQRHLTac.logger.debug(s"Term: $term")
         None
@@ -147,7 +147,8 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         val right = p2.toBlock
 
         // Cla[e1 -->/= e2]
-        val post = RichTerm(GIsabelle.predicateT, GIsabelle.classical_subspace(connective $ e1 $ e2))
+        val post = RichTerm(GIsabelle.predExpressionT,
+          Abs("mem", GIsabelle.cl2T, GIsabelle.classical_subspace(connective $ (e1 $ Bound(0)) $ (e2 $ Bound(0)))))
 
         List(QRHLSubgoal(left,right,RichTerm(pre),post,Nil))
       // Subgoal: p1 denotationally-equivalent p2

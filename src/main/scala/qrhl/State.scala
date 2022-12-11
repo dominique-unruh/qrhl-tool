@@ -341,6 +341,11 @@ class State private (val environment: Environment,
     }
   }
 
+  def parseExpressionLongform(typ: Typ, str: String, indexed:Boolean): RichTerm = {
+    val shortform = parseExpression(typ, str, indexed = indexed)
+    shortform.encodeAsExpression(isabelle, indexed = indexed)
+  }
+
   def parseBlock(str:String): Block = {
     implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.block,str) match {

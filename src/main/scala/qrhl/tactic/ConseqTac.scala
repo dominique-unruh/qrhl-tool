@@ -7,7 +7,7 @@ import qrhl._
 import qrhl.isabellex.RichTerm
 import hashedcomputation.Implicits._
 
-case class ConseqTac(pre: Option[RichTerm]=None, post:Option[RichTerm]=None) extends Tactic {
+case class ConseqTac(/** In longform */ pre: Option[RichTerm]=None, /** In longform */ post:Option[RichTerm]=None) extends Tactic {
   override def hash: Hash[ConseqTac.this.type] =
     HashTag()(Hashable.hash(pre), Hashable.hash(post))
 

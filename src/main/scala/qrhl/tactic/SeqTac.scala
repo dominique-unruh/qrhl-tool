@@ -1,13 +1,14 @@
 package qrhl.tactic
 
 import qrhl._
-import qrhl.isabellex.RichTerm
+import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.Block
 import de.unruh.isabelle.mlvalue.Implicits._
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.pure.Term
 import hashedcomputation.{Hash, HashTag, Hashable}
 import hashedcomputation.Implicits._
+import qrhl.isabellex.IsabelleX.globalIsabelle
 
 /*@deprecated("Use SeqTac","now")
 case class SeqTacOLD(left:Int, right:Int, inner:RichTerm) extends Tactic {
@@ -47,6 +48,9 @@ case class SeqTac(left:Int, right:Int, inner:RichTerm, swap: Boolean = false)
     if (newGoals.length!=2) throw UserException(s"Internal error: seq tactic returned ${newGoals.length} subgoals")
     if (newGoals.exists(!_.isInstanceOf[QRHLSubgoal])) throw UserException(s"Internal error: seq tactic returned subgoals that are not QRHL judgments")
   }
+
+  override def precheck(state: State, goal: Subgoal): Unit =
+    if (inner.typ != globalIsabelle.predExpressionT) throw UserException(s"Internal error: seq tactic got expression of invalid type ${IsabelleX.theContext.prettyTyp(inner.typ)}")
 }
 
 object SeqTac {

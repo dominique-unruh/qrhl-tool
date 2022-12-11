@@ -290,6 +290,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
   val clT: Type = Type(t.cl)
   val qu2T: Type = prodT(quT, quT)
   val cl2T: Type = prodT(clT, clT)
+  val True_expression2: Abs = Abs("mem", cl2T, True_const)
   val predicateT: Type = Type(t.ccsubspace, ell2T(qu2T))
   val programT: Type = Type(t.program)
   val oracle_programT: Type = Type(t.oracle_program)
@@ -1030,6 +1031,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
     lazy val retrieveIndex = compileFunction[Index, Int](s"fn $qrhl_ops.NoIndex => 0 | $qrhl_ops.Index1 => 1 | $qrhl_ops.Index2 => 2")
     lazy val storeIndex = compileFunction[Int, Index](s"fn 0 => $qrhl_ops.NoIndex | 1 => $qrhl_ops.Index1 | 2 => $qrhl_ops.Index2")
   }
+
+  lazy val predExpressionT = expressionT(predicateT, indexed = true)
 }
 
 object IsabelleX {

@@ -330,7 +330,9 @@ object Parser extends JavaTokenParsers {
     _ <- literal("{");
     post <- expression(GIsabelle.predicateT, indexed = true);
     _ <- literal("}")
-  ) yield GoalCommand(name.getOrElse(""), QRHLSubgoal(left,right,pre,post,Nil)))
+  ) yield GoalCommand(name.getOrElse(""), QRHLSubgoal(left, right,
+    pre.encodeAsExpression(context.isabelle.get, indexed = true),
+    post.encodeAsExpression(context.isabelle.get, indexed = true), Nil)))
 
   val tactic_wp: Parser[WpTac] =
     literal("wp") ~> {
@@ -390,7 +392,7 @@ object Parser extends JavaTokenParsers {
       right <- natural;
       _ <- literal(":");
       inner <- expression(GIsabelle.predicateT, indexed = true))
-      yield SeqTac(left,right,inner,swap=swap))
+      yield SeqTac(left,right,inner.encodeAsExpression(context.isabelle.get, indexed=true),swap=swap))
 
   val identifierListOrDot: Parser[List[String]] = identifierList | (literal(".") ^^^ Nil)
 
@@ -464,7 +466,7 @@ object Parser extends JavaTokenParsers {
       xT = context.environment.getAmbientVariable(x);
       _ <- literal(":=");
       e <- expression(xT, indexed = true)
-    ) yield CaseTac(x,e))
+    ) yield CaseTac(x,e.encodeAsExpression(context.isabelle.get, indexed = true)))
 
   val tactic_simp : Parser[SimpTac] =
     literal("simp") ~> OnceParser("[!*]".r.? ~ rep(fact)) ^^ {
