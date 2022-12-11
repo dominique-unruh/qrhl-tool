@@ -40,7 +40,7 @@ case class CaseTac(variable:String, expr:RichTerm) extends Tactic {
           throw UserException(s"Undeclared (or non-indexed) variable $x in precondition")
 
       val caseExpr : Term = globalIsabelle.classical_subspace(
-        globalIsabelle.mk_eq(expr.isabelleTerm, Free(variable,varTyp)))
+        globalIsabelle.mk_eq(expr.isabelleTerm $ Bound(0), Free(variable,varTyp)))
       val pre2 = Abs("mem", globalIsabelle.cl2T, globalIsabelle.predicate_inf $ caseExpr $ (pre.isabelleTerm $ Bound(0)))
       val pre3 = RichTerm(globalIsabelle.predExpressionT, pre2)
 
