@@ -539,9 +539,11 @@ fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
   handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
 
 (* TODO use bottom_rewrs_conv *)
-fun normalize_register_conv ctxt = Conv.bottom_conv (
-  Conv.rewrs_conv @{thms qregister_chain_id[THEN eq_reflection] qregister_id_chain[THEN eq_reflection]} |> Conv.try_conv |> K
-) ctxt
+val normalize_register_conv = Conv.bottom_rewrs_conv 
+  @{thms qregister_chain_id[THEN eq_reflection] qregister_id_chain[THEN eq_reflection] qregister_chain_pair[symmetric, THEN eq_reflection]}
+
+fun normalize_register_conv2 ctxt = 
+  normalize_register_conv ctxt then_conv Conv.bottom_rewrs_conv @{thms qregister_chain_pair[THEN eq_reflection]} ctxt
 
 local
 val qregister_conversion_to_register_conv_simpset = 
@@ -609,7 +611,6 @@ end
 
 (* Tactic to fully prove a goal of the form `qregister_le F G` *)
 (* TODO: support cregisters as well *)
-(* TODO: normalize registers first *)
 fun qregister_le_tac ctxt = let
   fun tac' ctxt i st = st |>
           ((resolve_tac ctxt @{thms qregister_le_refl qregister_le_id} i THEN distinct_vars_tac ctxt i)

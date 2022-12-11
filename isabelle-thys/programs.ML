@@ -18,7 +18,10 @@ fun clean_expression_conv ctxt = let
   val outer_simpset = simpset_of ctxt
   val simpset_ctxt = put_simpset clean_expression_conv_simpset ctxt
   fun prover ctxt = SINGLE (ALLGOALS (distinct_vars_tac (put_simpset outer_simpset ctxt)))
-in Raw_Simplifier.rewrite_cterm (false,true,false) prover simpset_ctxt end
+in
+   Raw_Simplifier.rewrite_cterm (false,true,false) prover simpset_ctxt
+   then_conv normalize_register_conv2 ctxt
+end
 
 fun variable_shortname n NoIndex = n
   | variable_shortname n Index1 = n ^ "1"
