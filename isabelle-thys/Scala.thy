@@ -92,15 +92,23 @@ object IsabelleConsts {
   val undefined = \<open>\<^const_name>\<open>undefined\<close>\<close>
   val ccspan = \<open>\<^const_name>\<open>ccspan\<close>\<close>
   val apply_qregister_space = \<open>\<^const_name>\<open>apply_qregister_space\<close>\<close>
+  val apply_qregister = \<open>\<^const_name>\<open>apply_qregister\<close>\<close>
   val insert = \<open>\<^const_name>\<open>insert\<close>\<close>
   val conj = \<open>\<^const_name>\<open>conj\<close>\<close>
   val disj = \<open>\<^const_name>\<open>disj\<close>\<close>
   val empty_cregister = \<open>\<^const_name>\<open>empty_cregister\<close>\<close>
   val empty_qregister = \<open>\<^const_name>\<open>empty_qregister\<close>\<close>
   val cregister_pair = \<open>\<^const_name>\<open>cregister_pair\<close>\<close>
+  val cregister_chain = \<open>\<^const_name>\<open>cregister_chain\<close>\<close>
   val qregister_pair = \<open>\<^const_name>\<open>qregister_pair\<close>\<close>
+  val qregister_chain = \<open>\<^const_name>\<open>qregister_chain\<close>\<close>
+  val qFst = \<open>\<^const_name>\<open>qFst\<close>\<close>
+  val qSnd = \<open>\<^const_name>\<open>qSnd\<close>\<close>
+  val cFst = \<open>\<^const_name>\<open>cFst\<close>\<close>
+  val cSnd = \<open>\<^const_name>\<open>cSnd\<close>\<close>
   val true_expression = \<open>\<^const_name>\<open>true_expression\<close>\<close>
   val denotation = \<open>\<^const_name>\<open>denotation\<close>\<close>
+  val getter = \<open>\<^const_name>\<open>getter\<close>\<close>
 }
 \<close>
 
