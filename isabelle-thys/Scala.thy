@@ -109,6 +109,7 @@ object IsabelleConsts {
   val true_expression = \<open>\<^const_name>\<open>true_expression\<close>\<close>
   val denotation = \<open>\<^const_name>\<open>denotation\<close>\<close>
   val getter = \<open>\<^const_name>\<open>getter\<close>\<close>
+  val setter = \<open>\<^const_name>\<open>setter\<close>\<close>
   val all = \<open>\<^const_name>\<open>HOL.All\<close>\<close>
   val pure_all = \<open>\<^const_name>\<open>Pure.all\<close>\<close>
   val fst = \<open>\<^const_name>\<open>fst\<close>\<close>
