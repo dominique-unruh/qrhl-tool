@@ -111,6 +111,8 @@ object IsabelleConsts {
   val getter = \<open>\<^const_name>\<open>getter\<close>\<close>
   val all = \<open>\<^const_name>\<open>HOL.All\<close>\<close>
   val pure_all = \<open>\<^const_name>\<open>Pure.all\<close>\<close>
+  val fst = \<open>\<^const_name>\<open>fst\<close>\<close>
+  val snd = \<open>\<^const_name>\<open>snd\<close>\<close>
 }
 \<close>
 

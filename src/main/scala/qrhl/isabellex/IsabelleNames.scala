@@ -108,4 +108,6 @@ object IsabelleConsts {
   val getter = "Prog_Variables.getter"
   val all = "HOL.All"
   val pure_all = "Pure.all"
+  val fst = "Product_Type.prod.fst"
+  val snd = "Product_Type.prod.snd"
 }
