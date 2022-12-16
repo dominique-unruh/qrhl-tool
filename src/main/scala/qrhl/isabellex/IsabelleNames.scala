@@ -106,6 +106,7 @@ object IsabelleConsts {
   val true_expression = "Strongest_Postcondition.true_expression"
   val denotation = "Programs.denotation"
   val getter = "Prog_Variables.getter"
+  val setter = "Prog_Variables.setter"
   val all = "HOL.All"
   val pure_all = "Pure.all"
   val fst = "Product_Type.prod.fst"
