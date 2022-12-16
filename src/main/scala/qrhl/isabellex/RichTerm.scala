@@ -2,16 +2,18 @@ package qrhl.isabellex
 
 import org.log4s
 import org.log4s.Logger
-import qrhl.logic.{CVariable, Environment, ExprVariableUse, Variable}
+import qrhl.logic.{CVariable, Environment, ExprVariableUse, QVariable, Variable}
 import qrhl.{UserException, Utils}
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable.ListBuffer
 import IsabelleX.globalIsabelle
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Free, Term, Thm, Typ, Type, Var}
+import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Thm, Typ, Type, Var}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 import qrhl.isabellex.IsabelleX.globalIsabelle.{Ops, cl2T, clT}
+import qrhl.isabellex.RichTerm.memory2Variable
+import qrhl.logic.Variable.{Index, Index1, Index2, NoIndex}
 
 // Implicits
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -27,6 +29,18 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     case typ => throw UserException(s"Internal error: encountered expression of invalid type ${IsabelleX.theContext.prettyTyp(typ)}")
   }
 
+  /** Transforms a longform expression into an instantiated longform expression.
+   * Instantiated longform expression means that instead of `%mem. X mem`, we have `X _memory`
+   * where _memory can be found in [[memory2Variable]]. */
+  def longformInstantiate(indexed: Boolean): RichTerm = {
+    assert(indexed) // nonindexed unsupported so far. Would need a different type than memory2Variable
+    assert(!globalIsabelle.freeVars(isabelleTerm).contains(memory2Variable.name))
+    RichTerm(globalIsabelle.betapply(isabelleTerm, memory2Variable))
+  }
+  def longformAbstract(indexed: Boolean): RichTerm = {
+    assert(indexed)
+    RichTerm(Abs("mem", cl2T, globalIsabelle.abstract_over(memory2Variable, isabelleTerm)))
+  }
 
   override def hash: Hash[RichTerm.this.type] =
     HashTag()(Hashable.hash(typ), Hashable.hash(isabelleTerm))
@@ -107,7 +121,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
    * The quantum variables are an estimate, it is possible to have terms that contain quantum variables that are not detected by this function.
    * @param deindex If true, indexed program variables are replaced by their unindexed counterparts
    * */
-  def variables(environment: Environment, deindex: Boolean=false): ExprVariableUse = {
+  def variablesShortform(environment: Environment, deindex: Boolean=false): ExprVariableUse = {
     val avars = new ListBuffer[String]
     val pvars = new ListBuffer[Variable]
 
@@ -128,6 +142,30 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
     ExprVariableUse(program = ListSet(pvars.toSeq:_*), ambient = ListSet(avars.toSeq:_*))
   }
+
+  def variablesLongform(ctxt: Context, environment: Environment, indexed: Boolean): ExprVariableUse =
+    longformInstantiate(indexed).variablesLongformInstantiated(ctxt, environment, indexed)
+
+  def variablesLongformInstantiated(ctxt: Context, environment: Environment, indexed: Boolean): ExprVariableUse = {
+    val (pvars,others) = Ops.variables_in_expression(ctxt, isabelleTerm).retrieveNow
+    val pvars2 = pvars map { case (cq, name, index, typ) =>
+      if (indexed && index == NoIndex)
+        throw UserException(s"Encountered non-indexed variable $name in expression $this")
+      if (!indexed && index != NoIndex)
+        throw UserException(s"Encountered indexed variable ${name}1/2 in expression $this")
+      if (cq)
+        CVariable.fromName(name, typ, index=index)
+      else
+        QVariable.fromName(name, typ, index=index)
+    }
+
+    for (v <- others)
+      if (!environment.ambientVariables.contains(v))
+        throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
+
+      ExprVariableUse(program = ListSet(pvars2:_*), ambient = ListSet(others:_*))
+  }
+
 
 //    /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */
 //  def caVariables(environment: Environment, vars : VariableUse[mutable.Set]): Unit = {
@@ -213,6 +251,9 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
 object RichTerm {
 //  private val logger: Logger = log4s.getLogger
+  /** Default placeholder for the memory in longform expressions.
+   * Used by [[RichTerm.longformInstantiate]] */
+  val memory2Variable: Free = Free("_memory", cl2T)
 
   /** Translates expression from longform into shortform */
   def decodeFromExpression(context:IsabelleX.ContextX, t: Term): RichTerm =

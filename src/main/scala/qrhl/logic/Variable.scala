@@ -5,11 +5,13 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.mlvalue.MLValue.Converter
 import de.unruh.isabelle.mlvalue.{MLValue, MLValueConverter}
-import de.unruh.isabelle.pure.{App, Const, Free, Term, Typ}
+import de.unruh.isabelle.pure.{App, Bound, Const, Free, Term, Typ}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
 import qrhl.logic.Variable.{Index1, Index2, NoIndex}
 import qrhl.AllSet
 import GIsabelle.Ops.qrhl_ops
+import GIsabelle.Ops
+import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, isabelleControl}
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.{ExecutionContext, Future}
@@ -19,6 +21,7 @@ import hashedcomputation.Implicits._
 import qrhl.isabellex.Implicits._
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
+import qrhl.isabellex.MLValueConverters.Implicits._
 
 // Variables
 sealed trait Variable extends HashedValue {
@@ -64,8 +67,14 @@ sealed trait Variable extends HashedValue {
    * For classical variables, the type of the shortform is the valueType, for quantum variables, it is the type of the variable.
    *
    * */
-  def variableTermShort(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term =
+  def variableTermShort: Term =
     Free(name, if (isClassical) valueTyp else variableTyp)
+
+  def variableTermLong: Term =
+    if (isIndexed)
+      Ops.varterm_to_variable2(isClassical, VTSingle(name, theIndex, valueTyp)).retrieveNow
+    else
+      Ops.varterm_to_variable1(isClassical, VTSingle(name, theIndex, valueTyp)).retrieveNow
 
   def classicalQuantumWord : String
 }
@@ -173,6 +182,7 @@ object Variable {
   final case object Index2 extends Index
 
   implicit object IndexConverter extends Converter[Index] {
+    private val isabelleControl = null // Hide global implicit
     override def mlType(implicit isabelle: Isabelle): String = s"$qrhl_ops.index"
 
     override def retrieve(value: MLValue[Index])(implicit isabelle: Isabelle): Future[Index] = {
@@ -226,12 +236,9 @@ final class QVariable private (override val basename:String, override val valueT
 }
 
 object QVariable {
-  def fromName(name: String, typ: Typ): QVariable = {
+  def fromName(name: String, typ: Typ, index: Variable.Index = NoIndex): QVariable = {
     assert(name.nonEmpty)
-//    val last = name.last
-//    assert(last != '1')
-//    assert(last != '2')
-    new QVariable(name, typ, NoIndex)
+    new QVariable(name, typ, index)
   }
 
   def fromIndexedName(name: String, typ: Typ): QVariable = {
@@ -270,6 +277,13 @@ object QVariable {
 }
 
 final class CVariable private (override val basename:String, override val valueTyp: Typ, override val theIndex: Variable.Index) extends Variable {
+  def getter(memory: Typ => Term): Term = {
+    val memT = if (isIndexed) cl2T else clT
+    GIsabelle.getter(valueTyp, indexed=isIndexed) $ variableTermLong $ memory(memT)
+  }
+  def getter(memory: Term): Term = getter({_ => memory})
+  def getter: Term = getter(Bound(0))
+
   override val hash: Hash[CVariable.this.type] =
     HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
 
@@ -298,12 +312,12 @@ final class CVariable private (override val basename:String, override val valueT
 }
 
 object CVariable {
-  def fromName(name: String, typ: Typ): CVariable = {
+  def fromName(name: String, typ: Typ, index: Variable.Index = NoIndex): CVariable = {
     assert(name.nonEmpty)
 //    val last = name.last
 //    assert(last != '1')
 //    assert(last != '2')
-    new CVariable(name, typ, NoIndex)
+    new CVariable(name, typ, index)
   }
 
   def fromIndexedName(name: String, typ: Typ): CVariable = {

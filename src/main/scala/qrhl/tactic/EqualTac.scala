@@ -10,12 +10,16 @@ import qrhl.tactic.EqualTac._
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.{Ops, QuantumEqualityFull, VariableT}
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{Free, Term}
+import de.unruh.isabelle.pure.{Abs, Bound, Context, Free, Term}
 import hashedcomputation.{Hash, HashTag, Hashable}
+import org.apache.commons.lang3.{RandomStringUtils, RandomUtils}
+import qrhl.isabellex.IsabelleX.globalIsabelle.cl2T
+import qrhl.isabellex.RichTerm.memory2Variable
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.Random
 import scala.util.control.{Breaks, ControlThrowable}
 
 // Implicits
@@ -28,7 +32,6 @@ import hashedcomputation.Implicits._
 
 /** Based on the Adversary rules from https://arxiv.org/pdf/2007.14155.pdf */
 case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variable], out: List[Variable], amount:Int=1) extends WpBothStyleTac(leftAmount=amount, rightAmount=amount) {
-
   override def toString: String = {
     def stringIfNonEmpty(keyword: String, list: List[Any]) : String = list match {
       case Nil => ""
@@ -91,6 +94,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
   override def getWP(state: State, left: Statement, right: Statement, post: RichTerm)(implicit output: PrintWriter): (RichTerm, List[Subgoal]) = {
     val env = state.environment
     val isabelle = state.isabelle
+    val ctxt = isabelle.context
 
     import output.println
 
@@ -231,11 +235,11 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
       }
     }
 
-    var postcondition = post
+    var postcondition = post.longformInstantiate(indexed = true)
 
     def postconditionString(postcondition : RichTerm = postcondition) : String =
-      if (classicalsRemovedFromPost.isEmpty) postcondition.toString
-      else s"$postcondition (with variables ${varsToString(classicalsRemovedFromPost)} removed)"
+      if (classicalsRemovedFromPost.isEmpty) postcondition.encodeAsExpression(isabelle, indexed = true).toString
+      else s"${postcondition.encodeAsExpression(isabelle, indexed = true)} (with variables ${varsToString(classicalsRemovedFromPost)} removed)"
 
     println("We also need to choose the predicate R so that (R ⊓ ≡Vout) implies the current postcondition.")
     println("We tentatively choose R to be the whole postcondition (we may change this later to avoid variable conflicts).")
@@ -245,7 +249,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 
     // Free variables of postcondition, with variables in
     val postconditionVariables: mutable.Set[Variable] =
-      mutable.HashSet(post.variables(env, deindex=true).program.toSeq :_*)
+      mutable.HashSet(post.variablesLongformInstantiated(ctxt, env, indexed=true).unindex.program.toSeq :_*)
 
     /** @param vars contains unindexed variables (means that for x in vars, we should remove x1,x2 from postcondition */
     def removeFromPost(msg: => String, vars: Set[Variable]): Unit = {
@@ -321,7 +325,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
         postcondition = newPostcondition
         removedQeq = newRemovedQeq
         postconditionVariables.clear()
-        postconditionVariables ++= postcondition.variables(env, deindex = true).program
+        postconditionVariables ++= postcondition.variablesLongformInstantiated(ctxt, env, indexed = true).unindex.program
         postconditionVariables --= classicalsRemovedFromPost
 
         out ++= removedQeq
@@ -350,7 +354,7 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
           postcondition = newPostcondition
           removedQeq = newRemovedQeq
           postconditionVariables.clear()
-          postconditionVariables ++= postcondition.variables(env, deindex = true).program
+          postconditionVariables ++= postcondition.variablesLongformInstantiated(ctxt, env).unindex.program
           postconditionVariables --= classicalsRemovedFromPost
           out ++= removedQeq
           updated = true
@@ -708,27 +712,27 @@ case class EqualTac(exclude: List[String], in: List[Variable], mid: List[Variabl
 }
 
 object EqualTac {
-  private def makePredicate(vars: Traversable[Variable], predicate: RichTerm) : RichTerm = {
+  private def makePredicate(vars: Iterable[Variable], predicate: RichTerm) : RichTerm = {
     val classical = Variable.classical(vars)
     val quantum = Variable.quantum(vars)
 
     val qeq : Term =
       if (quantum.isEmpty) GIsabelle.predicate_top
       else {
-        val left = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index1).toSeq:_*), classical=false, indexed=true)
-        val right = VarTerm.isabelleTerm(VarTerm.varlist(quantum.map(_.index2).toSeq:_*), classical=false, indexed=true)
+        val left = VarTerm.isabelleTermLongform(VarTerm.varlist(quantum.map(_.index1).toSeq:_*), classical=false, indexed=true)
+        val right = VarTerm.isabelleTermLongform(VarTerm.varlist(quantum.map(_.index2).toSeq:_*), classical=false, indexed=true)
         GIsabelle.quantum_equality(left, right)
       }
 
     val ceq : Term =
       if (classical.isEmpty) GIsabelle.True_const
       else {
-        val eqs = classical.map { v => GIsabelle.mk_eq(v.index1.variableTermShort, v.index2.variableTermShort) }
+        val eqs = classical.map { v => GIsabelle.mk_eq(v.index1.getter, v.index2.getter) }
         GIsabelle.conj(eqs.toSeq :_*)
       }
 
     val newPred = GIsabelle.infOptimized(predicate.isabelleTerm, GIsabelle.classical_subspace_optimized(ceq), qeq)
-    RichTerm(GIsabelle.predicateT, newPred)
+    RichTerm(newPred).longformAbstract(indexed = true)
   }
 
   private val logger = log4s.getLogger
@@ -795,6 +799,7 @@ object EqualTac {
    * @return (result, qeqVars, qeqTerm) result = the predicate, qeqVars = x,y,z…, qeqTerm = the removed quantum equality (if several equivalent occurrences are removed, one of them)
    */
   private def removeQeq(env: Environment, pred: RichTerm, vars: Iterable[QVariable]): Option[(RichTerm, ListSet[QVariable], RichTerm)] = {
+    // TODO make work with longform pred
     val varsSet = vars.toSet
     var qeqVars : Option[ListSet[QVariable]] = None
     var replacedQeq : Term = null
@@ -823,18 +828,18 @@ object EqualTac {
   }
 
   private[tactic] /* Should be private but need access in test case */
-  def removeClassicals(env: Environment, postcondition: RichTerm, remove: Set[CVariable],
-                               equalities: Set[CVariable]): RichTerm = {
+  def removeClassicals(ctxt: Context, env: Environment, postcondition: RichTerm, remove: Set[CVariable],
+                       equalities: Set[CVariable]): RichTerm = {
+    val suffix = RandomStringUtils.randomAlphanumeric(10)
     // Classical variables in postcondition (indexed)
-    val vars = Variable.classical(postcondition.variables(env).program)
+    val vars = Variable.classical(postcondition.variablesLongformInstantiated(ctxt, env, indexed=true).program)
     // x1=x2 for every x in equalities&remove that also appeard in postcondition
-    val equalities2 = (equalities & remove).collect(Function.unlift { v =>
-      val v1 = v.index1; val v2 = v.index2
-      if (vars.contains(v1) && vars.contains(v2))
-        Some(GIsabelle.mk_eq(v1.variableTermShort,v2.variableTermShort))
+    val equalities2 = (equalities & remove).flatMap { v =>
+      if (vars.contains(v.index1) && vars.contains(v.index2))
+        Some(GIsabelle.mk_eq(v.index1.getter(memory2Variable), v.index2.getter(memory2Variable)))
       else
         None
-    })
+    }
     logger.debug(s"remove $remove, vars = ${vars}, equalities = $equalities, equalities2 = $equalities2")
     val postcondition2 =
       if (equalities2.isEmpty)
@@ -849,9 +854,8 @@ object EqualTac {
     val postcondition3 : Term = remove12.foldLeft(postcondition2) {
       (pc:Term, v:CVariable) =>
         logger.debug(s"${v.name}, ${v.valueTyp}")
-        GIsabelle.INF(v.name, v.valueTyp, pc)
+        GIsabelle.INF(v.name, v.getter(memory2Variable), pc)
     }
     RichTerm(GIsabelle.predicateT, postcondition3)
   }
-
 }

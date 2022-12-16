@@ -83,7 +83,7 @@ case class LocalRemoveTac(left : Boolean, withInit: Boolean, variablesToRemove :
         else {
           def addQInitToPre(pre: Term, v: QVariable) = {
             import GIsabelle._
-            inf(pre, liftSpace(span1(ket(undefined(v.valueTyp))), VarTerm.isabelleTerm(VTSingle(v), classical=false, indexed=false)))
+            inf(pre, liftSpace(span1(ket(undefined(v.valueTyp))), VarTerm.isabelleTermShortform(VTSingle(v), classical=false, indexed=false)))
           }
 
           def addCInitToPre(pre: Term, vs: Seq[CVariable]): Term = {

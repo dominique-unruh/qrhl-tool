@@ -1,5 +1,7 @@
 package qrhl.isabellex
 
+import com.sun.org.apache.xpath.internal.operations.Bool
+
 import java.io.{FileInputStream, FileReader, IOException, StringReader}
 import java.lang
 import java.lang.ref.Cleaner
@@ -360,10 +362,25 @@ class IsabelleX(val setup : Isabelle.Setup) {
     INF(typ) $ (image(varTyp,typ) $ absfree(varName, varTyp, term) $ univ(varTyp))
   }
 
+  /** Abstract over subterm and take infimum */
+  def INF(varName: String, subterm: Term, term: Term): Term = {
+    val typ = term.fastType
+    val varTyp = subterm.fastType
+    INF(typ) $ (image(varTyp, typ) $ Abs(varName, varTyp, abstract_over(subterm, term)) $ univ(varTyp))
+  }
+
   def univ(typ: Typ): Const = top(setT(typ))
 
+  // TODO: To scala-isabelle
   def absfree(varName: String, varTyp: Typ, term: Term): Term =
     Ops.absfree(varName, varTyp, term).retrieveNow
+
+  // TODO: To scala-isabelle
+  def abstract_over(v: Term, body: Term): Term =
+    Ops.abstract_over(v, body).retrieveNow
+
+  // TODO: To scala-isabelle
+  def betapply(t1: Term, t2: Term): Term = Ops.betapply(t1, t2).retrieveNow
 
   val not : Const = Const(c.not, boolT -->: boolT)
   def not(t: Term) : Term = not $ t
@@ -816,6 +833,9 @@ class IsabelleX(val setup : Isabelle.Setup) {
     fv.result()
   }
 
+  def getter(varType: Typ, indexed: Boolean): Const =
+    Const(IsabelleConsts.getter, variableT(varType, classical=true, indexed=indexed) -->: (if (indexed) cl2T else clT) -->: varType)
+
 
   def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ): Const =
     Const(IsabelleConsts.quantum_equality_full,  l2boundedT(typLeft,typZ) -->: variableT(typLeft, classical=false, indexed=true) -->: l2boundedT(typRight,typZ) -->: variableT(typRight, classical=false, indexed=true) -->: predicateT)
@@ -858,6 +878,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
       case _ => None
     }
   }
+
+  lazy val predExpressionT: Type = expressionT(predicateT, indexed = true)
 
   //noinspection TypeAnnotation
   object Ops {
@@ -1022,7 +1044,9 @@ class IsabelleX(val setup : Isabelle.Setup) {
     lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context](s"$qrhl_ops.applyToplevelCommand")
     lazy val readExpressionOp = MLValue.compileFunction[Context, String, Typ, Boolean, Term](s"fn (ctxt, str, typ, indexed) => $qrhl_ops.read_expression ctxt str typ indexed")
     val absfree = MLValue.compileFunction[String, Typ, Term, Term]("fn (name,typ,term) => absfree (name, typ) term")
+    val abstract_over = MLValue.compileFunction[Term, Term, Term]("abstract_over")
     val check_const = compileFunction[Context, String, Term]("fn (ctxt,name) => Proof_Context.check_const {proper=true,strict=false} ctxt (name,[]) |> fst")
+    val betapply = compileFunction[Term, Term, Term]("betapply")
 
     val compareTyps = MLValue.compileFunction[Typ, Typ, Int](s"fn (t,u) => case Term_Ord.typ_ord (t,u) of LESS => ~1 | GREATER => 1 | EQUALS => 0")
 
@@ -1030,9 +1054,11 @@ class IsabelleX(val setup : Isabelle.Setup) {
       s"fn (ctxt,name,fixes,extra,assms,concl) => $qrhl_ops.print_as_statement ctxt name fixes extra assms concl")
     lazy val retrieveIndex = compileFunction[Index, Int](s"fn $qrhl_ops.NoIndex => 0 | $qrhl_ops.Index1 => 1 | $qrhl_ops.Index2 => 2")
     lazy val storeIndex = compileFunction[Int, Index](s"fn 0 => $qrhl_ops.NoIndex | 1 => $qrhl_ops.Index1 | 2 => $qrhl_ops.Index2")
+    lazy val varterm_to_variable1 = compileFunction[Boolean, VarTerm[(String, Index, Typ)], Term](s"fn (classical,vt) => $qrhl_ops.varterm_to_variable1 (if classical then $qrhl_ops.Classical else $qrhl_ops.Quantum) vt")
+    lazy val varterm_to_variable2 = compileFunction[Boolean, VarTerm[(String, Index, Typ)], Term](s"fn (classical,vt) => $qrhl_ops.varterm_to_variable2 (if classical then $qrhl_ops.Classical else $qrhl_ops.Quantum) vt")
+    lazy val variables_in_expression = compileFunction[Context, Term, (List[(Boolean, String, Index, Typ)],List[String])](
+      s"fn (ctxt, t) => $qrhl_ops.variables_in_expression ctxt t |> map (cq,a,b,c) => (cq=$qrhl_ops.Classical,a,b,c)")
   }
-
-  lazy val predExpressionT = expressionT(predicateT, indexed = true)
 }
 
 object IsabelleX {

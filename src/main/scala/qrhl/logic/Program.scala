@@ -61,11 +61,14 @@ sealed trait VarTerm[+A] {
   }
 }
 object VarTerm {
-  def isabelleTerm(vt:VarTerm[Variable], classical:Boolean, indexed:Boolean) : Term = vt match {
+  def isabelleTermShortform(vt:VarTerm[Variable], classical:Boolean, indexed:Boolean) : Term = vt match {
     case VTUnit => GIsabelle.variable_unit(classical=classical, indexed=indexed)
     case VTSingle(v) => v.variableTermShort
-    case VTCons(a, b) => GIsabelle.variable_concat(isabelleTerm(a, classical=classical, indexed=indexed), isabelleTerm(b, classical=classical, indexed=indexed))
+    case VTCons(a, b) => GIsabelle.variable_concat(isabelleTermShortform(a, classical=classical, indexed=indexed), isabelleTermShortform(b, classical=classical, indexed=indexed))
   }
+
+  def isabelleTermLongform(vt:VarTerm[Variable], classical:Boolean, indexed:Boolean) : Term =
+    (if (indexed) Ops.varterm_to_variable2 else Ops.varterm_to_variable1)(classical, vt map { v => (v.name, v.theIndex, v.valueTyp) }).retrieveNow
 
   def varlist[A](elems: A*) : VarTerm[A] = {
     var result : VarTerm[A] = VTUnit
@@ -97,6 +100,8 @@ case class ExprVariableUse
   program : ListSet[Variable],
   ambient : ListSet[String]
 ) {
+  def unindex: ExprVariableUse = ExprVariableUse(program.map(_.unindex), ambient)
+
   def classical : ListSet[CVariable] = Variable.classical(program)
   def quantum : ListSet[QVariable] = Variable.quantum(program)
 }
@@ -219,10 +224,10 @@ sealed trait Statement extends HashedValue {
       MLValue((context.context, this))).retrieveNow)
 
   private val emptySet = ListSet.empty
-  val variableUse : Environment => VariableUse = Utils.singleMemo { env =>
+  val variableUse : (Context, Environment) => VariableUse = Utils.singleMemo[(Context, Environment), VariableUse] { case (ctxt, env) =>
     this match {
       case Local(vars, body) =>
-        val bodyVars = body.variableUse(env)
+        val bodyVars = body.variableUse(ctxt, env)
         val isProgram = bodyVars.oracles.isEmpty
         new VariableUse(
           freeVariables = bodyVars.freeVariables -- vars,
@@ -247,8 +252,8 @@ sealed trait Statement extends HashedValue {
           covered = MaybeAllSet.all
         )
       case Block(s, ss@_*) =>
-        val sVars = s.variableUse(env)
-        val ssVars = Block(ss:_*).variableUse(env)
+        val sVars = s.variableUse(ctxt, env)
+        val ssVars = Block(ss:_*).variableUse(ctxt, env)
         new VariableUse(
           freeVariables = sVars.freeVariables +++ ssVars.freeVariables,
           written = sVars.written +++ ssVars.written,
@@ -261,11 +266,11 @@ sealed trait Statement extends HashedValue {
         )
       case Sample(v, e) =>
         // Hack for simply doing the same as in Assign case
-        Assign(v, e).variableUse(env)
+        Assign(v, e).variableUse(ctxt, env)
       case Assign(v, e) =>
         // Also handling Sample(v,e)
         val vSet = ListSet(v.toSeq :_*)
-        val fvE = e.variables(env)
+        val fvE = e.variablesLongform(ctxt, env, indexed = false)
         new VariableUse(
           freeVariables = vSet +++ fvE.classical,
           written = vSet,
@@ -281,10 +286,10 @@ sealed trait Statement extends HashedValue {
           // Call(name, args@_*) is an application C[a1,...,an] where C is referenced by name, and args=(a1,...,an)
           env.programs(name) match {
             case progDecl : ConcreteProgramDecl =>
-              Block(call).inline(env, name).variableUse(env)
+              Block(call).inline(env, name).variableUse(ctxt, env)
             case progDecl : AbstractProgramDecl =>
               val progVars = progDecl.variablesRecursive
-              val argVars = args map (_.variableUse(env))
+              val argVars = args map (_.variableUse(ctxt, env))
               val oracles = argVars.foldLeft(emptySet: ListSet[String]) {
                 _ +++ _.oracles
               }
@@ -335,7 +340,7 @@ sealed trait Statement extends HashedValue {
           )
         }
       case While(e, body) =>
-        val fvE = e.variables(env)
+        val fvE = e.variables(ctxt, env)
         val bodyVars = body.variableUse(env)
         new VariableUse(
           freeVariables = fvE.classical +++ bodyVars.freeVariables,

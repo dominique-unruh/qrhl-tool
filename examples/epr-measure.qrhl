@@ -23,10 +23,16 @@ qrhl {Cla[True]} call left; ~ call right; {Cla[x1=x2]}.
 inline left.
 inline right.
 
+
 measure.
 conseq post: Qeq[q1,r1=q2,r2].
- simp.
+print goal.
+simp.
+print goal.
+print joint_measure_aux.
+
  rule joint_measure_aux.
+simp.
  simp!.
 
 wp left.

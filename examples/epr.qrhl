@@ -29,7 +29,7 @@ wp left.
 wp right.
  simp.
 skip.
-simp final_goal.
+simp! final_goal.
 
 qed.
 

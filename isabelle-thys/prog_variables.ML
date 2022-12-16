@@ -364,19 +364,19 @@ fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>cvariable_unit :: uni
 
 fun decompose_singleton_variable ctxt (v as Free (n,T)) = (case lookup_variable ctxt n of
       NONE => NONE
-      | SOME {name, in_typ, ...} => SOME (name, NoIndex, in_typ))
+      | SOME {name, in_typ, out_typ=_, qc} => SOME (qc, name, NoIndex, in_typ))
   | decompose_singleton_variable ctxt (\<^Const_>\<open>qregister_chain _ _ _\<close> $ \<^Const_>\<open>qFst _ _\<close> $ (v as Free (n,T))) = (case lookup_variable ctxt n of
       NONE => NONE
-      | SOME {name, in_typ, ...} => SOME (name, Index1, in_typ))
+      | SOME {name, in_typ, out_typ=_, qc} => SOME (qc, name, Index1, in_typ))
   | decompose_singleton_variable ctxt (\<^Const_>\<open>qregister_chain _ _ _\<close> $ \<^Const_>\<open>qSnd _ _\<close> $ (v as Free (n,T))) = (case lookup_variable ctxt n of
       NONE => NONE
-      | SOME {name, in_typ, ...} => SOME (name, Index2, in_typ))
+      | SOME {name, in_typ, out_typ=_, qc} => SOME (qc, name, Index2, in_typ))
   | decompose_singleton_variable ctxt (\<^Const_>\<open>cregister_chain _ _ _\<close> $ \<^Const_>\<open>cFst _ _\<close> $ (v as Free (n,T))) = (case lookup_variable ctxt n of
       NONE => NONE
-      | SOME {name, in_typ, ...} => SOME (name, Index1, in_typ))
+      | SOME {name, in_typ, out_typ=_, qc} => SOME (qc, name, Index1, in_typ))
   | decompose_singleton_variable ctxt (\<^Const_>\<open>cregister_chain _ _ _\<close> $ \<^Const_>\<open>cSnd _ _\<close> $ (v as Free (n,T))) = (case lookup_variable ctxt n of
       NONE => NONE
-      | SOME {name, in_typ, ...} => SOME (name, Index2, in_typ))
+      | SOME {name, in_typ, out_typ=_, qc} => SOME (qc, name, Index2, in_typ))
   | decompose_singleton_variable _ _ = NONE
 
 fun variable_to_varterm _    (Const(\<^const_name>\<open>empty_cregister\<close>,_)) = VTUnit
@@ -385,7 +385,7 @@ fun variable_to_varterm _    (Const(\<^const_name>\<open>empty_cregister\<close>
   | variable_to_varterm ctxt (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ t1 $ t2) = VTCons (variable_to_varterm ctxt t1, variable_to_varterm ctxt t2)
   | variable_to_varterm ctxt v = case decompose_singleton_variable ctxt v of
       NONE => raise TERM("variable_to_varterm: unknown/unparseable variable", [v])
-      | SOME (name, index, typ) => VTSingle (name, index, typ)
+      | SOME (_, name, index, typ) => VTSingle (name, index, typ)
 
 fun variable_to_varterm1 ctxt = variable_to_varterm ctxt #> varterm_to_varterm1
 

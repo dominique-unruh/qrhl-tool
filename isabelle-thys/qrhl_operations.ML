@@ -443,9 +443,8 @@ fun declare_variable (ctxt, name, T) = let
 (* predicate: in shortform *)
 fun colocal_pred_qvars (ctxt, predicate, qvars) = let
      val varterm = qvars |> Prog_Variables.varterm_from_list |> varterm_to_variable2 Quantum
-     val predicate' = term_to_expression ctxt \<^typ>\<open>cl2\<close> predicate
-     val colocality = \<^instantiate>\<open>predicate' and varterm and 'a=\<open>varterm |> fastype_of |> dest_q2variableT\<close> in 
-        term \<open>\<forall>mem::cl2. colocal_pred_qvars (predicate' mem) (varterm :: 'a q2variable)\<close>\<close>
+     val colocality = \<^instantiate>\<open>predicate and varterm and 'a=\<open>varterm |> fastype_of |> dest_q2variableT\<close> in 
+        term \<open>\<forall>mem::cl2. colocal_pred_qvars (predicate mem) (varterm :: 'a q2variable)\<close>\<close>
 
 (* Logic.all 
 @{const Pure.all(cl2)} $ Abs("mem", \<^typ>\<open>cl2\<close>,
