@@ -6,7 +6,7 @@ import qrhl.toplevel.{Parser, ParserContext, Toplevel, ToplevelTest}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.{Term, Type}
 import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, intT, isabelleControl}
-import qrhl.logic.Expression
+import qrhl.logic.{Expression, ExpressionNonindexed}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -18,7 +18,7 @@ class ExpressionTest extends AnyFunSuite {
     tl.execCmd("classical var x : int")
     val str = "Cla[ x=1 ]"
     //    val state = tl.state
-    val e = RichTerm.decodeFromExpression(tl.state.isabelle, str, GIsabelle.predicateT, indexed = false)
+    val e = ExpressionNonindexed.fromString(tl.state.isabelle.context, str, GIsabelle.predicateT)
     println(e)
     assert(e.toString=="ℭ\uD835\uDD29\uD835\uDD1E[x = 1]")
   }
@@ -109,9 +109,9 @@ class ExpressionTest extends AnyFunSuite {
     val tl = ToplevelTest.makeToplevelWithTheory()
     tl.execCmd("classical var x : int")
     val t = tl.state.isabelle.readTerm("%m. getter (cregister_chain cFst x) m", intExpr2T)
-    val e = RichTerm.decodeFromExpression(tl.state.isabelle, t)
+    val e = Expression.fromTerm(t)
     assert(e.toString == "x1")
-    assert(e.typ == intT)
+    assert(e.rangeTyp == intT)
   }
 
 /*  test ("getter x (fst mem)") {

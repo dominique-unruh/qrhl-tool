@@ -96,11 +96,11 @@ object Parser extends JavaTokenParsers {
       case None => throw UserException(noIsabelleError)
       case Some(isa) =>
 //        val e = RichTerm(isa, str  /*str.mkString.trim*/, typ)
-        val e = RichTerm.decodeFromExpression(isa, str, typ, indexed = indexed)
-        for (v <- e.variables)
+        val e = Expression.fromString(isa.context, str, typ, indexed = indexed)
+        for (v <- e.term.variables)
           if (!context.environment.variableExists(v))
             throw UserException(s"Variable $v was not declared (in expression $str)")
-        Expression.fromTerm(e)
+        e
     } }
 
   def isabelleTerm(typ:Typ)(implicit context:ParserContext) : Parser[RichTerm] =

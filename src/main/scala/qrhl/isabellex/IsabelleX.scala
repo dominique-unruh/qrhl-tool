@@ -295,6 +295,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
   val clT: Type = Type(t.cl)
   val qu2T: Type = prodT(quT, quT)
   val cl2T: Type = prodT(clT, clT)
+  def clT(indexed: Boolean): Type = if (indexed) cl2T else clT
+  def quT(indexed: Boolean): Type = if (indexed) qu2T else quT
   val True_expression2: Abs = Abs("mem", cl2T, True_const)
   val predicateT: Type = Type(t.ccsubspace, ell2T(qu2T))
   val programT: Type = Type(t.program)
@@ -1057,7 +1059,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
 //    val use_thy_op =
 //      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
     lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context](s"$qrhl_ops.applyToplevelCommand")
-    lazy val readExpressionOp = MLValue.compileFunction[Context, String, Typ, Boolean, Term](s"fn (ctxt, str, typ, indexed) => $qrhl_ops.read_expression ctxt str typ indexed")
+    lazy val readExpressionOp = MLValue.compileFunction[Context, String, Typ, Typ, Term](s"$qrhl_ops.read_expression")
     val absfree = MLValue.compileFunction[String, Typ, Term, Term]("fn (name,typ,term) => absfree (name, typ) term")
     val abstract_over = MLValue.compileFunction[Term, Term, Term]("abstract_over")
     val check_const = compileFunction[Context, String, Term]("fn (ctxt,name) => Proof_Context.check_const {proper=true,strict=false} ctxt (name,[]) |> fst")
@@ -1196,10 +1198,10 @@ object IsabelleX {
     if (_theContext == null)
       Await.ready(someFuture, Duration.Inf)
 
-    /** Parses an expression of type typ in shortform. Returns the term in longform.
+/*    /** Parses an expression of type typ in shortform. Returns the term in longform.
      * Supports unicode input. */
     def readExpression(str: String, typ: Typ, indexed: Boolean): Term =
-      readExpressionOp(context, symbols.unicodeToSymbols(str), typ, indexed).retrieveNow
+      readExpressionOp(context, symbols.unicodeToSymbols(str), typ, indexed).retrieveNow*/
 
     def checkType(term: Term): Typ =
       checkTypeOp(MLValue(context,term)).retrieveNow

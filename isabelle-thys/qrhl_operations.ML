@@ -32,9 +32,10 @@ fun parse_term ctx str T = let
   val term = Syntax.check_term ctx constrained
 in term end
 
-fun read_expression ctxt str T indexed = let
+(* Returns expression in longform *)
+fun read_expression (ctxt, str, rangeT, memT) = let
   val parsed = Syntax.parse_term ctxt ("Expr[ ( "^ str ^ " ) ]")
-  val exprT = (if indexed then mk_expression2T else mk_expressionT) T
+  val exprT = memT --> rangeT
   val constrained = Const("_type_constraint_", exprT --> exprT) $ parsed
   val term = Syntax.check_term ctxt constrained
 in term end

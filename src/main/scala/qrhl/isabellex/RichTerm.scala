@@ -173,17 +173,17 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     RichTerm(typ, globalIsabelle.not(isabelleTerm))
   }
 
-  /** If the term is of the form "true_expression Expr[...]", replace it by "...". */
+/*  /** If the term is of the form "true_expression Expr[...]", replace it by "...". */
   def unwrapTrueExpression(implicit context: IsabelleX.ContextX): RichTerm = isabelleTerm match {
     case globalIsabelle.True_Expression(expr) =>
       RichTerm.decodeFromExpression(context, expr)
     case _ => this
-  }
+  }*/
 
-  // TODO remove (have it only in Expression.shortform)
+/*  // TODO remove (have it only in Expression.shortform)
   /** Translates expression from longform into shortform */
   def decodeFromExpression(context: IsabelleX.ContextX): RichTerm =
-    RichTerm.decodeFromExpression(context, isabelleTerm)
+    RichTerm.decodeFromExpression(context, isabelleTerm)*/
 }
 
 
@@ -194,15 +194,15 @@ object RichTerm {
   // TODO remove
   val memory2Variable: Free = Free("_memory", cl2T)
 
-  // TODO remove (have it only in Expression.shortform)
+/*  // TODO remove (have it only in Expression.shortform)
   /** Translates expression from longform into shortform */
   def decodeFromExpression(context:IsabelleX.ContextX, t: Term): RichTerm =
-    RichTerm(Ops.decodeFromExpressionOp(MLValue((context.context,t))).retrieveNow)
+    RichTerm(Ops.decodeFromExpressionOp(MLValue((context.context,t))).retrieveNow)*/
 
-  // TODO remove (have it only in Expression.shortform)
+/*  // TODO remove (have it only in Expression.shortform)
   /** Parses an expression of type typ in shortform. Returns the term in shortform. */
   def decodeFromExpression(context:IsabelleX.ContextX, str: String, typ: Typ, indexed: Boolean): RichTerm =
-    decodeFromExpression(context, context.readExpression(str, typ, indexed = indexed))
+    decodeFromExpression(context, context.readExpression(str, typ, indexed = indexed))*/
 
   def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(globalIsabelle.boolT, globalIsabelle.True_const)
 

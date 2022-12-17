@@ -24,8 +24,8 @@ import hashedcomputation.Implicits._
 import qrhl.isabellex.Implicits._
 
 sealed trait Subgoal extends HashedValue {
-  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
-  def unwrapTrueExpression(implicit context: IsabelleX.ContextX): Subgoal
+/*  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
+  def unwrapTrueExpression(implicit context: IsabelleX.ContextX): Subgoal*/
 
   def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): Subgoal
 
@@ -145,8 +145,8 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:ExpressionIndexed, pos
     QRHLSubgoal(left2, right2, pre2, post2, assms3)
   }
 
-  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
-  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): QRHLSubgoal = this
+/*  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
+  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): QRHLSubgoal = this*/
 }
 
 
@@ -210,8 +210,8 @@ final case class DenotationalEqSubgoal(left:Block, right:Block, assumptions:List
     DenotationalEqSubgoal(left2, right2, assms2)
   }
 
-  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
-  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): DenotationalEqSubgoal = this
+/*  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
+  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): DenotationalEqSubgoal = this*/
 }
 
 final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
@@ -252,8 +252,8 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
     AmbientSubgoal(term)
   }
 
-  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
-  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): AmbientSubgoal = new AmbientSubgoal(goal.unwrapTrueExpression)
+/*  /** If the subgoal is of the form "true_expression Expr[...]", replace it by "...". */
+  override def unwrapTrueExpression(implicit context: IsabelleX.ContextX): AmbientSubgoal = new AmbientSubgoal(goal.unwrapTrueExpression)*/
 }
 
 object AmbientSubgoal {

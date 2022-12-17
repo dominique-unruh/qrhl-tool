@@ -1,5 +1,6 @@
 package qrhl.logic
 
+import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Thm, Typ, Type, Var}
 import hashedcomputation.{Hash, HashTag, HashedValue}
 import qrhl.UserException
@@ -18,6 +19,12 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.Implicits._
 
 class Expression(val term: RichTerm) extends HashedValue {
+  override def equals(obj: Any): Boolean = obj match {
+    case e: Expression => term == e.term
+    case e: ExpressionInstantiated => this == e.abstractMemory
+    case _ => false
+  }
+
   def renameCVariables(renaming: List[(CVariable, CVariable)]): Expression = {
     val mem2: Term = renaming.foldRight[Term](Bound(0)) { case ((x,y),mem) =>
       val varTyp = x.valueTyp
@@ -93,7 +100,9 @@ class Expression(val term: RichTerm) extends HashedValue {
   override def hash: Hash[Expression.this.type] =
     HashTag()(term.hash)
 
-  def shortform(context: ContextX): RichTerm = term.decodeFromExpression(context)
+  def shortform(context: ContextX): RichTerm = {
+    RichTerm(Ops.decodeFromExpressionOp(context.context,term.isabelleTerm).retrieveNow)
+  }
 
   def leq(other: Expression): RichTerm = {
     assert(other.memTyp == memTyp)
@@ -108,6 +117,13 @@ class Expression(val term: RichTerm) extends HashedValue {
 }
 
 object Expression {
+  def fromString(context: Context, string: String, rangeTyp: Typ, indexed: Boolean): Expression =
+    fromString(context, string, rangeTyp, globalIsabelle.clT(indexed = indexed))
+
+  def fromString(context: Context, string: String, rangeTyp: Typ, memTyp: Typ): Expression =
+    Expression.fromTerm(
+      Ops.readExpressionOp(context, IsabelleX.symbols.unicodeToSymbols(string), rangeTyp, memTyp).retrieveNow)
+
   def fromTerm(term: Term) = new Expression(RichTerm(term))
   def fromTerm(term: RichTerm) = new Expression(term)
   def constant(term: Term, typ: Typ): Expression = fromTerm(Abs("mem", typ, term))
@@ -115,6 +131,11 @@ object Expression {
 
 
 class ExpressionInstantiated(val termInst: RichTerm, val memTyp: Typ) extends HashedValue {
+  override def equals(obj: Any): Boolean = obj match {
+    case e : ExpressionInstantiated => termInst == e.termInst && memTyp == e.memTyp
+    case e : Expression => abstractMemory == e
+    case _ => false
+  }
   override def hash: Hash[ExpressionInstantiated.this.type] =
     HashTag()(termInst.hash)
   def rangeTyp: Typ = termInst.typ
@@ -122,7 +143,7 @@ class ExpressionInstantiated(val termInst: RichTerm, val memTyp: Typ) extends Ha
   def abstractMemory =
     new Expression(RichTerm(Abs("mem", cl2T, globalIsabelle.abstract_over(memoryVariable, termInst.isabelleTerm))))
   // TODO: inefficient: The ML code for decodeFromExpression converts back to instantiated form
-  def shortform(context: ContextX): RichTerm = abstractMemory.term.decodeFromExpression(context)
+  def shortform(context: ContextX): RichTerm = abstractMemory.shortform(context)
   def prettyShortform: String = shortform(IsabelleX.theContext).toString
   def renameCVariables(renaming: List[(CVariable, CVariable)]): Expression =
     abstractMemory.renameCVariables(renaming)
@@ -224,6 +245,9 @@ class ExpressionIndexed(term: RichTerm) extends Expression(term) with HashedValu
 }
 
 object ExpressionIndexed {
+  /** Parses an indexed expression in shortform. */
+  def fromString(context: Context, string: String, rangeTyp: Typ): ExpressionIndexed =
+    Expression.fromString(context, string, rangeTyp, indexed = true).castIndexed
   def fromTerm(term: Term) = new ExpressionIndexed(RichTerm(term))
   def fromTerm(term: RichTerm) = new ExpressionIndexed(term)
   def constant(term: Term): ExpressionIndexed =
@@ -271,4 +295,8 @@ object ExpressionNonindexed {
 
   def fromTerm(term: Term) = new ExpressionNonindexed(RichTerm(term))
   def fromTerm(term: RichTerm) = new ExpressionNonindexed(term)
+
+  /** Parses an indexed expression in longform */
+  def fromString(context: Context, string: String, rangeTyp: Typ): ExpressionNonindexed =
+    Expression.fromString(context, string, rangeTyp, indexed = false).castNonindexed
 }

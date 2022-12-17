@@ -48,7 +48,7 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
     val (newGoals, thm) = tacMlValue(arg(state.isabelle), goal, ctxt).retrieveNow.getOrElse {
       throw UserException("tactic failed") }
 
-    val newGoals2 = newGoals.map(_.unwrapTrueExpression)
+    val newGoals2 = newGoals // .map(_.unwrapTrueExpression)
 
     check(state, goal, newGoals2)
 
