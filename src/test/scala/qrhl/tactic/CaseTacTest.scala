@@ -36,7 +36,7 @@ class CaseTacTest extends AnyFunSuite {
     assert(st.goal.length==1)
     val pre = st.goal.head.asInstanceOf[QRHLSubgoal].pre
     pre.checkWelltyped(tl.state.isabelle)
-    assert(pre.rangeTyp == GIsabelle.predExpressionT)
+    assert(pre.rangeTyp == GIsabelle.predicateT)
     assert(pre.shortform(context).toString == "ℭ𝔩𝔞[x1 = y] ⊓ ⊤")
   }
 
