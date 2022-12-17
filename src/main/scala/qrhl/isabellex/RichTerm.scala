@@ -12,7 +12,6 @@ import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Thm, Typ, Type, Var}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 import qrhl.isabellex.IsabelleX.globalIsabelle.{Ops, cl2T, clT}
-import qrhl.isabellex.RichTerm.memory2Variable
 import qrhl.logic.Variable.{Index, Index1, Index2, NoIndex}
 
 // Implicits
@@ -23,7 +22,7 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.Implicits._
 
 final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option[String]=None) extends HashedValue {
-  /** Transforms a longform expression into an instantiated longform expression.
+  /*/** Transforms a longform expression into an instantiated longform expression.
    * Instantiated longform expression means that instead of `%mem. X mem`, we have `X _memory`
    * where _memory can be found in [[memory2Variable]]. */
     // TODO: remove (use Expression.instantiateMemory instead)
@@ -31,7 +30,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     assert(indexed) // nonindexed unsupported so far. Would need a different type than memory2Variable
     assert(!globalIsabelle.freeVars(isabelleTerm).contains(memory2Variable.name))
     RichTerm(globalIsabelle.betapply(isabelleTerm, memory2Variable))
-  }
+  }*/
 /*  def longformAbstract(indexed: Boolean): RichTerm = {
     assert(indexed)
     RichTerm(Abs("mem", cl2T, globalIsabelle.abstract_over(memory2Variable, isabelleTerm)))
@@ -192,10 +191,10 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
 object RichTerm {
 //  private val logger: Logger = log4s.getLogger
-  /** Default placeholder for the memory in longform expressions.
+/*  /** Default placeholder for the memory in longform expressions.
    * Used by [[RichTerm.longformInstantiate]] */
   // TODO remove
-  val memory2Variable: Free = Free("_memory", cl2T)
+  val memory2Variable: Free = Free("_memory", cl2T)*/
 
 /*  // TODO remove (have it only in Expression.shortform)
   /** Translates expression from longform into shortform */
@@ -207,7 +206,7 @@ object RichTerm {
   def decodeFromExpression(context:IsabelleX.ContextX, str: String, typ: Typ, indexed: Boolean): RichTerm =
     decodeFromExpression(context, context.readExpression(str, typ, indexed = indexed))*/
 
-  def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(globalIsabelle.boolT, globalIsabelle.True_const)
+/*  def trueExp(isabelle: IsabelleX.ContextX): RichTerm = RichTerm(globalIsabelle.boolT, globalIsabelle.True_const)*/
 
 //  private val readExpressionOp =
 //    MLValue.compileFunction[(Context, String, Typ), Term]("QRHL_Operations.read_expression")

@@ -14,7 +14,6 @@ import de.unruh.isabelle.pure.{Abs, Bound, Context, Free, Term}
 import hashedcomputation.{Hash, HashTag, Hashable}
 import org.apache.commons.lang3.{RandomStringUtils, RandomUtils}
 import qrhl.isabellex.IsabelleX.globalIsabelle.cl2T
-import qrhl.isabellex.RichTerm.memory2Variable
 
 import scala.collection.immutable.ListSet
 import scala.collection.mutable
@@ -839,7 +838,7 @@ object EqualTac {
     // x1=x2 for every x in equalities&remove that also appeard in postcondition
     val equalities2 = (equalities & remove).flatMap { v =>
       if (vars.contains(v.index1) && vars.contains(v.index2))
-        Some(GIsabelle.mk_eq(v.index1.getter(memory2Variable), v.index2.getter(memory2Variable)))
+        Some(GIsabelle.mk_eq(v.index1.getter(ExpressionInstantiatedIndexed.memoryVariable), v.index2.getter(ExpressionInstantiatedIndexed.memoryVariable)))
       else
         None
     }
@@ -859,7 +858,7 @@ object EqualTac {
       remove12.foldLeft(postcondition2.termInst.isabelleTerm) {
       (pc:Term, v:CVariable) =>
         logger.debug(s"${v.name}, ${v.valueTyp}")
-        GIsabelle.INF(v.name, v.getter(memory2Variable), pc)
+        GIsabelle.INF(v.name, v.getter(ExpressionInstantiatedIndexed.memoryVariable), pc)
     })
   }
 }

@@ -220,8 +220,14 @@ class ExpressionInstantiatedIndexed(term: RichTerm)
 }
 
 object ExpressionInstantiatedIndexed {
+  val memoryVariable: Free = ExpressionInstantiated.memoryVariable(cl2T)
+
   def fromTerm(term: Term) = new ExpressionInstantiatedIndexed(RichTerm(term))
   def fromTerm(term: RichTerm) = new ExpressionInstantiatedIndexed(term)
+}
+
+object ExpressionInstantiatedNonindexed {
+  val memoryVariable: Free = ExpressionInstantiated.memoryVariable(clT)
 }
 
 class ExpressionIndexed(term: RichTerm) extends Expression(term) with HashedValue {
