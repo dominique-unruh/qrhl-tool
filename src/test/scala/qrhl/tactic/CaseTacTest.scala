@@ -30,13 +30,14 @@ class CaseTacTest extends AnyFunSuite {
   test("works") {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
-    val st = tl.state.applyTactic(CaseTac("y", tl.state.parseExpressionLongform(GIsabelle.boolT, "x1", indexed = true)))
+    val st = tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x1", indexed = true).castIndexed))
     val context = tl.state.isabelle
 //    print(st.goal)
     assert(st.goal.length==1)
     val pre = st.goal.head.asInstanceOf[QRHLSubgoal].pre
-    pre.checkWelltyped(tl.state.isabelle, GIsabelle.predExpressionT)
-    assert(pre.decodeFromExpression(context).toString == "ℭ𝔩𝔞[x1 = y] ⊓ ⊤")
+    pre.checkWelltyped(tl.state.isabelle)
+    assert(pre.rangeTyp == GIsabelle.predExpressionT)
+    assert(pre.shortform(context).toString == "ℭ𝔩𝔞[x1 = y] ⊓ ⊤")
   }
 
 
@@ -47,7 +48,7 @@ class CaseTacTest extends AnyFunSuite {
 
     val tac = cmd.asInstanceOf[TacticCommand].tactic.asInstanceOf[CaseTac]
     assert(tac.variable == "y")
-    assert(tac.expr.decodeFromExpression(tl.state.isabelle).isabelleTerm == Free("x1",GIsabelle.boolT))
+    assert(tac.expr.shortform(tl.state.isabelle).isabelleTerm == Free("x1",GIsabelle.boolT))
   }
 
 
@@ -55,7 +56,7 @@ class CaseTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
-      tl.state.applyTactic(CaseTac("z", tl.state.parseExpressionLongform(GIsabelle.boolT, "x1", indexed = true)))
+      tl.state.applyTactic(CaseTac("z", tl.state.parseExpression(GIsabelle.boolT, "x1", indexed = true).castIndexed))
     }
 
     assert(ex.getMessage.startsWith("Variable z has type nat, but expression has type bool"))
@@ -65,7 +66,7 @@ class CaseTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {Cla[y=True]} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
-      tl.state.applyTactic(CaseTac("y", tl.state.parseExpressionLongform(GIsabelle.boolT, "x1", indexed = true)))
+      tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x1", indexed = true).castIndexed))
     }
 
     assert(ex.getMessage.startsWith("Variable y already contained in goal"))
@@ -75,7 +76,7 @@ class CaseTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[UserException] {
-      tl.state.applyTactic(CaseTac("y2", tl.state.parseExpressionLongform(GIsabelle.boolT, "x1", indexed = true)))
+      tl.state.applyTactic(CaseTac("y2", tl.state.parseExpression(GIsabelle.boolT, "x1", indexed = true).castIndexed))
     }
 
     assert(ex.getMessage.startsWith("Variable y2 already used in program P"))
@@ -85,7 +86,7 @@ class CaseTacTest extends AnyFunSuite {
     val tl = toplevel()
     tl.execCmd("qrhl {top} skip; ~ skip; {top}")
     val ex = intercept[IsabelleMLException] {
-      tl.state.applyTactic(CaseTac("y", tl.state.parseExpressionLongform(GIsabelle.boolT, "x", indexed = true)))
+      tl.state.applyTactic(CaseTac("y", tl.state.parseExpression(GIsabelle.boolT, "x", indexed = true).castIndexed))
     }
 
     assert(ex.getMessage.startsWith("Type unification failed"))

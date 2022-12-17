@@ -36,8 +36,8 @@ class RewriteTacTest extends AnyFunSuite {
 
     assert(subgoal2.left.toString == "{ x <- 1; call P; }")
     assert(subgoal2.right.toString == "{}")
-    assert(subgoal2.pre.decodeFromExpression(context).toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 0]")
-    assert(subgoal2.post.decodeFromExpression(context).toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 1]")
+    assert(subgoal2.pre.shortform(context).toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 0]")
+    assert(subgoal2.post.shortform(context).toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 1]")
     assert(subgoal2.assumptions.isEmpty)
   }
 
@@ -69,8 +69,8 @@ class RewriteTacTest extends AnyFunSuite {
     // The rewritten goal
     assert(subgoal2.left.toString == "{ x <- 1; y <- 2; x <- 3; }")
     assert(subgoal2.right.toString == "{ x <- 1; y <- 2; }")
-    assert(subgoal2.pre.decodeFromExpression(context).toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 0]")
-    assert(subgoal2.post.decodeFromExpression(context).toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 1]")
+    assert(subgoal2.pre.shortform(context).toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 0]")
+    assert(subgoal2.post.shortform(context).toString == "ℭ\uD835\uDD29\uD835\uDD1E[x1 = 1]")
     assert(subgoal2.assumptions.isEmpty)
   }
 

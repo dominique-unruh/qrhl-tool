@@ -26,8 +26,9 @@ class RndTacTest extends AnyFunSuite {
     assert(st.goal.length==1)
     val post = st.goal.head.asInstanceOf[QRHLSubgoal].post
     print(s"Post: $post")
-    assert(post.decodeFromExpression(context).toString == "ℭ𝔩𝔞[uniform UNIV = uniform UNIV] ⊓ (⨅z∈supp (uniform UNIV). ⊤)")
-    post.checkWelltyped(tl.state.isabelle, GIsabelle.predExpressionT)
+    assert(post.shortform(context).toString == "ℭ𝔩𝔞[uniform UNIV = uniform UNIV] ⊓ (⨅z∈supp (uniform UNIV). ⊤)")
+    post.checkWelltyped(tl.state.isabelle)
+    assert(post.rangeTyp == GIsabelle.predExpressionT)
   }
 
   test("rnd witness") {
@@ -39,6 +40,7 @@ class RndTacTest extends AnyFunSuite {
     assert(st.goal.length==1)
     val post = st.goal.head.asInstanceOf[QRHLSubgoal].post
 //    assert(post.toString == "???")
-    post.checkWelltyped(tl.state.isabelle, GIsabelle.predExpressionT)
+    post.checkWelltyped(tl.state.isabelle)
+    assert(post.rangeTyp == GIsabelle.predExpressionT)
   }
 }

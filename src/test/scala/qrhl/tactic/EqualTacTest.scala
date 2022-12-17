@@ -31,9 +31,9 @@ class EqualTacTest extends AnyFunSuite {
     val state = tl.state
     val ctxt = state.isabelle.context
     val env = state.environment
-    val term = RichTerm.decodeFromExpression(state.isabelle, "Cla[x1=0]", globalIsabelle.predicateT, indexed = true)
+    val term = state.parseExpression(globalIsabelle.predicateT, "Cla[x1=0]", indexed = true).castIndexed.instantiateMemory
     val x = env.getCVariable("x")
-    val result = EqualTac.removeClassicals(env, term, ListSet(x), ListSet(x))
+    val result = EqualTac.removeClassicals(ctxt, env, term, ListSet(x), ListSet(x))
     val resultStr = result.toString
     println(resultStr)
     assert(resultStr == "⨅x1. ℭ𝔩𝔞[x1 = 0]")
