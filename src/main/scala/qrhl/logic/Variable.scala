@@ -1,18 +1,18 @@
 package qrhl.logic
 
-import qrhl.isabellex.{IsabelleConsts, IsabelleX}
+import qrhl.isabellex.IsabelleX
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.mlvalue.MLValue.Converter
-import de.unruh.isabelle.mlvalue.{MLValue, MLValueConverter}
-import de.unruh.isabelle.pure.{App, Bound, Const, Free, Term, Typ, Type}
+import de.unruh.isabelle.mlvalue.MLValue
+import de.unruh.isabelle.pure.{Bound, Free, Term, Typ}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
 import qrhl.logic.Variable.{Index1, Index12, Index2, NoIndex}
 import qrhl.AllSet
 import GIsabelle.Ops.qrhl_ops
 import GIsabelle.Ops
 import de.unruh.isabelle.control.Isabelle.DInt
-import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, isabelleControl, qu2T, quT}
+import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, qu2T, quT}
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,6 +23,7 @@ import qrhl.isabellex.Implicits._
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
+import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 
 trait Indexed
 trait Nonindexed
@@ -130,12 +131,6 @@ object Variable {
   def classicalNI(vars: List[Variable with Nonindexed]): Iterable[CVariableNI] = vars collect { case v : CVariable => v.castNonindexedSafe }
   def classical(vars: Set[Variable]): Set[CVariable] = vars collect { case v : CVariable => v }
 
-  //  def varlistToString(vars: List[Variable]) = vars match {
-//    case Nil => "()"
-//    case List(x) => x.name;
-//    case _ => s"(${vars.mkString(",")})"
-//  }
-
   def vartermToString[A](toStr:A=>String, vars: VarTerm[A]): String = vars match {
     case VTUnit => "()"
     case VTSingle(x) => toStr(x)
@@ -145,13 +140,6 @@ object Variable {
   }
 
   def vartermToString(vars: VarTerm[Variable]): String = vartermToString[Variable](_.name, vars)
-  /*def vartermToString(vars: VarTerm[Variable]): String = vars match {
-    case VTUnit => "()"
-    case VTSingle(x) => x.name
-    case VTCons(VTSingle(x),xs) => x.name + "," + vartermToString(xs)
-    case VTCons(VTUnit,xs) => "()," + vartermToString(xs)
-    case VTCons(a,b) => s"(${vartermToString(a)},${vartermToString(b)})"
-  }*/
 
   def index1(name:String) : String = name+"1"
   def index2(name:String) : String = name+"2"

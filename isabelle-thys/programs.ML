@@ -31,16 +31,18 @@ fun term_to_call (Free(name,_)) = CALL (name,[])
   | term_to_call t = raise TERM ("term_to_call",[t])
 
 fun statement_to_term ctxt (Assign(lhs,rhs)) = let 
-      val T = fastype_of rhs
+      val rhsT = fastype_of rhs
+      val T = range_type rhsT
       val lhs' : term = lhs |> varterm1_to_variable1 Classical
-      in Const(\<^const_name>\<open>assign\<close>, mk_cvariableT T --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
-         lhs' $ term_to_expression ctxt \<^typ>\<open>cl\<close> rhs end
+      in Const(\<^const_name>\<open>assign\<close>, mk_cvariableT T --> rhsT --> \<^typ>\<open>program\<close>) $ 
+         lhs' $ rhs end
   | statement_to_term ctxt (Sample(lhs,rhs)) = let 
-      val T = fastype_of rhs
+      val rhsT = fastype_of rhs
+      val T = range_type rhsT
       val lhsT = Discrete_Distributions.dest_distrT T
       val lhs' : term = lhs |> varterm1_to_variable1 Classical
-      in Const(\<^const_name>\<open>sample\<close>, mk_cvariableT lhsT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $ 
-         lhs' $ term_to_expression ctxt \<^typ>\<open>cl\<close> rhs end
+      in Const(\<^const_name>\<open>sample\<close>, mk_cvariableT lhsT --> rhsT --> \<^typ>\<open>program\<close>) $ 
+         lhs' $ rhs end
   | statement_to_term ctxt (Block stmts) = \<^const>\<open>block\<close> $ statements_to_term ctxt stmts
   | statement_to_term ctxt (Local (cvars,qvars,stmts)) = let
       val cvars' = varterm1_to_variable1 Classical cvars
@@ -50,29 +52,32 @@ fun statement_to_term ctxt (Assign(lhs,rhs)) = let
       end
   | statement_to_term _ (Call call) = call_to_term call
   | statement_to_term ctxt (IfThenElse (e, p1, p2)) =
-    \<^const>\<open>ifthenelse\<close> $ term_to_expression ctxt \<^typ>\<open>cl\<close> e $ statements_to_term ctxt p1 $ statements_to_term ctxt p2
+    \<^const>\<open>ifthenelse\<close> $ e $ statements_to_term ctxt p1 $ statements_to_term ctxt p2
   | statement_to_term ctxt (While (e, p)) =
-    \<^const>\<open>while\<close> $ term_to_expression ctxt \<^typ>\<open>cl\<close> e $ statements_to_term ctxt p
+    \<^const>\<open>while\<close> $ e $ statements_to_term ctxt p
   | statement_to_term ctxt (Measurement (lhs,loc,e)) = let
-    val T = fastype_of e
+    val eT = fastype_of e
+    val T = range_type eT
     val (vT,locT) = QRHL.dest_measurementT T
     val lhs' : term = varterm1_to_variable1 Classical lhs
     val loc' : term = varterm1_to_variable1 Quantum loc
-    in Const(\<^const_name>\<open>measurement\<close>, mk_cvariableT vT --> mk_qvariableT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
-         lhs' $ loc' $ term_to_expression ctxt \<^typ>\<open>cl\<close> e end
+    in Const(\<^const_name>\<open>measurement\<close>, mk_cvariableT vT --> mk_qvariableT locT --> eT --> \<^typ>\<open>program\<close>) $
+         lhs' $ loc' $ e end
   | statement_to_term ctxt (QApply (loc,e)) = let
-    val T = fastype_of e
+    val eT = fastype_of e
+    val T = range_type eT
     val locT = dest_bounded2T T
     (* val _ = if locT = locT' then () else raise TYPE("statement_to_term QApply locT<>locT'",[T],[e]) *)
     val loc' : term = varterm1_to_variable1 Quantum loc
-    in Const(\<^const_name>\<open>qapply\<close>, mk_qvariableT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
-         loc' $ term_to_expression ctxt \<^typ>\<open>cl\<close> e end
+    in Const(\<^const_name>\<open>qapply\<close>, mk_qvariableT locT --> eT --> \<^typ>\<open>program\<close>) $
+         loc' $ e end
   | statement_to_term ctxt (QInit (loc,e)) = let
-    val T = fastype_of e
+    val eT = fastype_of e
+    val T = range_type eT
     val locT = dest_ell2T T
     val loc' : term = varterm1_to_variable1 Quantum loc
-    in Const(\<^const_name>\<open>qinit\<close>, mk_qvariableT locT --> mk_expressionT T --> \<^typ>\<open>program\<close>) $
-         loc' $ term_to_expression ctxt \<^typ>\<open>cl\<close> e end
+    in Const(\<^const_name>\<open>qinit\<close>, mk_qvariableT locT --> eT --> \<^typ>\<open>program\<close>) $
+         loc' $ e end
 
 and statements_to_term ctxt statements = map (statement_to_term ctxt) statements |> HOLogic.mk_list \<^typ>\<open>program\<close>
 
@@ -80,20 +85,20 @@ fun term_to_statement ctxt (Const(\<^const_name>\<open>block\<close>,_) $ statem
   | term_to_statement ctxt (Const(\<^const_name>\<open>localvars\<close>, _) $ cvars $ qvars $ body) =
       Local (variable_to_varterm1 ctxt cvars, variable_to_varterm1 ctxt qvars, term_to_statements ctxt body)
   | term_to_statement ctxt (Const(\<^const_name>\<open>assign\<close>,_) $ x $ e) = 
-      Assign (variable_to_varterm1 ctxt x, expression_to_term ctxt e)
+      Assign (variable_to_varterm1 ctxt x, e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>sample\<close>,_) $ x $ e) = 
-      Sample (variable_to_varterm1 ctxt x, expression_to_term ctxt e)
+      Sample (variable_to_varterm1 ctxt x, e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>while\<close>,_) $ e $ body) =
-      While (expression_to_term ctxt e, term_to_statements ctxt body)
+      While (e, term_to_statements ctxt body)
   | term_to_statement ctxt (Const(\<^const_name>\<open>ifthenelse\<close>,_) $ e $ p1 $ p2) =
-      IfThenElse (expression_to_term ctxt e, term_to_statements ctxt p1, term_to_statements ctxt p2)
+      IfThenElse (e, term_to_statements ctxt p1, term_to_statements ctxt p2)
   | term_to_statement ctxt (Const(\<^const_name>\<open>qinit\<close>,_) $ vs $ e) =
-      QInit (variable_to_varterm1 ctxt vs, expression_to_term ctxt e)
+      QInit (variable_to_varterm1 ctxt vs, e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>qapply\<close>,_) $ vs $ e) =
-      QApply (variable_to_varterm1 ctxt vs, expression_to_term ctxt e)
+      QApply (variable_to_varterm1 ctxt vs, e)
   | term_to_statement ctxt (Const(\<^const_name>\<open>measurement\<close>,_) $ x $ vs $ e) =
       Measurement (variable_to_varterm1 ctxt x, 
-                   variable_to_varterm1 ctxt vs, expression_to_term ctxt e)
+                   variable_to_varterm1 ctxt vs, e)
   | term_to_statement _ (t as Free _) = Call (term_to_call t)
   | term_to_statement _ (t as Const(\<^const_name>\<open>instantiateOracles\<close>,_) $ _ $ _) = Call (term_to_call t)
   | term_to_statement _ t = raise TERM("term_to_statement",[t])
