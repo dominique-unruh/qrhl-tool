@@ -19,6 +19,7 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.Implicits._
 
 class Expression(val term: RichTerm) extends HashedValue {
+  override def toString: String = shortform(IsabelleX.theContext).toString
   override def equals(obj: Any): Boolean = obj match {
     case e: Expression => term == e.term
     case e: ExpressionInstantiated => this == e.abstractMemory
@@ -131,6 +132,7 @@ object Expression {
 
 
 class ExpressionInstantiated(val termInst: RichTerm, val memTyp: Typ) extends HashedValue {
+  override def toString: String = shortform(IsabelleX.theContext).toString
   override def equals(obj: Any): Boolean = obj match {
     case e : ExpressionInstantiated => termInst == e.termInst && memTyp == e.memTyp
     case e : Expression => abstractMemory == e
