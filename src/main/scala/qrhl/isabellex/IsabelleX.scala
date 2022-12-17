@@ -9,7 +9,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Properties, Timer, TimerTask}
 import de.unruh.isabelle.control.{Isabelle, IsabelleMLException, IsabelleMiscException}
-import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLRetrieveFunction, MLValue, Version}
+import de.unruh.isabelle.mlvalue.{MLFunction, MLFunction2, MLRetrieveFunction, MLStoreFunction, MLValue, Version}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Theory, Thm, Typ, Type, Var}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -31,7 +31,7 @@ import org.apache.commons.codec.binary.Hex
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.{FileUtils, IOUtils}
 import qrhl.Utils.NestedException
-import qrhl.logic.Variable.Index
+import qrhl.logic.Variable.{QC, Index}
 
 import java.nio.charset.Charset
 import java.security.MessageDigest
@@ -1069,14 +1069,16 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
     val print_as_statement = MLValue.compileFunction[Context, String, List[(String, Typ)], List[String], List[Term], Term, String](
       s"fn (ctxt,name,fixes,extra,assms,concl) => $qrhl_ops.print_as_statement ctxt name fixes extra assms concl")
-    lazy val retrieveIndex = compileFunction[Index, Int](s"fn $qrhl_ops.NoIndex => 0 | $qrhl_ops.Index1 => 1 | $qrhl_ops.Index2 => 2")
-    lazy val storeIndex = compileFunction[Int, Index](s"fn 0 => $qrhl_ops.NoIndex | 1 => $qrhl_ops.Index1 | 2 => $qrhl_ops.Index2")
+    lazy val retrieveIndex = MLRetrieveFunction[Index](s"fn $qrhl_ops.NoIndex => DInt 0 | $qrhl_ops.Index1 => DInt 1 | $qrhl_ops.Index2 => DInt 2")
+    lazy val storeIndex = MLStoreFunction[Index](s"fn DInt 0 => $qrhl_ops.NoIndex | DInt 1 => $qrhl_ops.Index1 | DInt 2 => $qrhl_ops.Index2")
+    lazy val retrieveQC = MLRetrieveFunction[QC](s"fn $qrhl_ops.Classical => DInt 0 | $qrhl_ops.Quantum => DInt 1")
+    lazy val storeQC = MLStoreFunction[QC](s"fn DInt 0 => $qrhl_ops.Classical | DInt 1 => $qrhl_ops.Quantum")
     lazy val varterm_to_variable1 = compileFunction[Boolean, VarTerm[(String, Index, Typ)], Term](s"fn (classical,vt) => $qrhl_ops.varterm_to_variable1 (if classical then $qrhl_ops.Classical else $qrhl_ops.Quantum) vt")
     lazy val varterm_to_variable2 = compileFunction[Boolean, VarTerm[(String, Index, Typ)], Term](s"fn (classical,vt) => $qrhl_ops.varterm_to_variable2 (if classical then $qrhl_ops.Classical else $qrhl_ops.Quantum) vt")
-    lazy val variables_in_expression = compileFunction[Context, Term, (List[(Boolean, String, Index, Typ)],List[String])](
-      s"fn (ctxt, t) => $qrhl_ops.variables_in_expression ctxt t |> map (cq,a,b,c) => (cq=$qrhl_ops.Classical,a,b,c)")
+    lazy val variables_in_expression = compileFunction[Context, Term, (List[(QC, String, Index, Typ)], List[String])](
+      s"fn (ctxt, t) => $qrhl_ops.variables_in_expression ctxt t")
     val clean_expression = compileFunction[Context, Term, Term](
-      s"fn (ctxt, t) => $qrhl_ops.clean_expression_conv ctxt (Thm.cterm_of ctxt t) |> Thm.rhs_of")
+      s"fn (ctxt, t) => $qrhl_ops.clean_expression_conv ctxt (Thm.cterm_of ctxt t) |> Thm.rhs_of |> Thm.term_of")
   }
 }
 

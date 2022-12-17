@@ -89,11 +89,11 @@ fun variables_in_expression ctxt t =
                     raise TYPE("expression_to_term: not a known variable after getter", [fastype_of var], [t,g])
             val _ = mk_cvariableT T = fastype_of var orelse  mk_c2variableT T = fastype_of var orelse
                     raise TYPE("expression_to_term: classical variable of wrong type", [T, fastype_of var], [t,g])
-          in add (true, n, i, T) end
+          in add (Classical, n, i, T) end
         | collect (Free("_memory", _)) = raise TERM("expression_to_term: encountered memory access without getter", [t,e])
         | collect t = case decompose_singleton_variable ctxt t of
             NONE => (case t of (t1 $ t2) => (collect t1; collect t2) | (Abs(_,_,body)) => collect body | Free(n,_) => add_other n | _ => ())
-            | SOME (cq,n,i,_) => add (cq=Classical, n, i, fastype_of t)
+            | SOME (cq,n,i,_) => add (cq, n, i, fastype_of t)
      val _ = collect e
   in
     (!variables, !others)

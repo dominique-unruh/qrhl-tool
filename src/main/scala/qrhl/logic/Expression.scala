@@ -168,10 +168,10 @@ class ExpressionInstantiatedNonindexed(term: RichTerm)
     val pvars2 = pvars map { case (cq, name, index, typ) =>
       if (index != NoIndex)
         throw UserException(s"Encountered indexed variable ${name}1/2 in expression $this")
-      if (cq)
-        CVariable.fromName(name, typ)
-      else
-        QVariable.fromName(name, typ)
+      cq match {
+        case Variable.Classical => CVariable.fromName(name, typ)
+        case Variable.Quantum => QVariable.fromName(name, typ)
+      }
     }
 
     for (v <- others)
@@ -193,10 +193,10 @@ class ExpressionInstantiatedIndexed(term: RichTerm)
     val pvars2 = pvars map { case (cq, name, index, typ) =>
       if (index == NoIndex)
         throw UserException(s"Encountered non-indexed variable $name in expression $this")
-      if (cq)
-        CVariable.fromName(name, typ, index = index.asInstanceOf[Index12])
-      else
-        QVariable.fromName(name, typ, index = index.asInstanceOf[Index12])
+      cq match {
+        case Variable.Classical => CVariable.fromName(name, typ, index = index.asInstanceOf[Index12])
+        case Variable.Quantum => QVariable.fromName(name, typ, index = index.asInstanceOf[Index12])
+      }
     }
 
     for (v <- others)

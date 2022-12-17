@@ -11,6 +11,7 @@ import qrhl.logic.Variable.{Index1, Index12, Index2, NoIndex}
 import qrhl.AllSet
 import GIsabelle.Ops.qrhl_ops
 import GIsabelle.Ops
+import de.unruh.isabelle.control.Isabelle.DInt
 import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, isabelleControl, qu2T, quT}
 
 import scala.collection.immutable.ListSet
@@ -205,6 +206,37 @@ object Variable {
     val leftright: String
   }
 
+  sealed trait QC
+  case object Classical extends QC
+  case object Quantum extends QC
+
+  implicit object CQConverter extends Converter[QC] {
+    private val isabelleControl: Null = null // Hide global implicit
+
+    override def mlType(implicit isabelle: Isabelle): String = s"$qrhl_ops.qc"
+
+    override def retrieve(value: MLValue[QC])(implicit isabelle: Isabelle): Future[QC] = {
+      implicit val ec: ExecutionContext = isabelle.executionContext
+      GIsabelle.Ops.retrieveQC(value).map {
+        case DInt(0) => Classical
+        case DInt(1) => Quantum
+      }
+    }
+
+    override def store(value: QC)(implicit isabelle: Isabelle): MLValue[QC] = {
+      implicit val ec: ExecutionContext = isabelle.executionContext
+      val int = value match {
+        case Classical => 0
+        case Quantum => 1
+      }
+      GIsabelle.Ops.storeQC(DInt(int))
+    }
+
+    override def exnToValue(implicit isabelle: Isabelle): String = s"fn $qrhl_ops.E_QC qc => qc"
+
+    override def valueToExn(implicit isabelle: Isabelle): String = s"$qrhl_ops.E_QC"
+  }
+
   final case object NoIndex extends Index {
     override val hash: Hash[NoIndex.this.type] = HashTag()()
   }
@@ -225,26 +257,28 @@ object Variable {
 
     override def retrieve(value: MLValue[Index])(implicit isabelle: Isabelle): Future[Index] = {
       implicit val ec: ExecutionContext = isabelle.executionContext
-      GIsabelle.Ops.retrieveIndex(value).retrieve.map {
-        case 0 => NoIndex
-        case 1 => Index1
-        case 2 => Index2
+      val isabelleControl: Null = null // hide conflicting implicit
+      GIsabelle.Ops.retrieveIndex(value).map {
+        case DInt(0) => NoIndex
+        case DInt(1) => Index1
+        case DInt(2) => Index2
       }
     }
 
     override def store(value: Index)(implicit isabelle: Isabelle): MLValue[Index] = {
       implicit val ec: ExecutionContext = isabelle.executionContext
+      val isabelleControl: Null = null // hide conflicting implicit
       val int = value match {
         case NoIndex => 0
         case Index1 => 1
         case Index2 => 2
       }
-      GIsabelle.Ops.storeIndex(int)
+      GIsabelle.Ops.storeIndex(DInt(int))
     }
 
-    override def exnToValue(implicit isabelle: Isabelle): String = s"fn E_Int 0 => $qrhl_ops.NoIndex | E_Int 1 => $qrhl_ops.Index1 | E_Int 2 => $qrhl_ops.Index2"
+    override def exnToValue(implicit isabelle: Isabelle): String = s"fn $qrhl_ops.E_Index idx => idx"
 
-    override def valueToExn(implicit isabelle: Isabelle): String = s"fn $qrhl_ops.NoIndex => E_Int 0 | $qrhl_ops.Index1 => E_Int 1 | $qrhl_ops.Index2 => E_Int 2"
+    override def valueToExn(implicit isabelle: Isabelle): String = s"$qrhl_ops.E_Index"
   }
 }
 

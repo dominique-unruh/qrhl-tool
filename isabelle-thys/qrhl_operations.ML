@@ -387,6 +387,8 @@ exception E_Subgoal of subgoal
 exception E_Statement of statement
 exception E_Varterm of exn Prog_Variables.tree
 exception E_Call of call
+exception E_QC of qc
+exception E_Index of index
 
 fun whatStatement (Block _) = "block"
   | whatStatement (Local _) = "local"
