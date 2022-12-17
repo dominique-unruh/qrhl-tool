@@ -10,6 +10,7 @@ import GIsabelle.{DenotationalEquivalence, Ops}
 import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term}
 import hashedcomputation.Implicits.listHashable
 import hashedcomputation.{Hash, HashTag, Hashable}
+import qrhl.isabellex.IsabelleX.globalIsabelle.clT
 import qrhl.tactic.ByQRHLTac.logger
 
 import scala.collection.immutable.ListSet
@@ -25,19 +26,19 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
     HashTag()(Hashable.hash(qvariables))
 
   /** Pattern-matcher that matches Pr[e : prog (rho)]
-   * and returns e1 (e indexed with 1/2 depending on `left`
+   * and returns e
    *             Call(prog) (prog must be a program)
    *             rho
    *
    * e inside Pr[] must be in longform.
-   * e1 is returned in shortform.
    *
    * Special case: if the term to be matched is "1", return (True, empty program, null)
    */
   class Probability(left : Boolean, state : State) {
-    def unapply(term: Term): Option[(Term,Statement,Term)] = term match {
+    def unapply(term: Term): Option[(ExpressionNonindexed,Statement,Term)] = term match {
       case App(App(App(Const(GIsabelle.probability.name,_),e),p),rho) =>
-        val e2 = Ops.addIndexToExpressionOp(state.isabelle.context, e, left).retrieveNow
+        val e2 = ExpressionNonindexed.fromTerm(e)
+//        val e2 = Ops.addIndexToExpressionOp(state.isabelle.context, e, left).retrieveNow
 //        val e3 = RichTerm.decodeFromExpression(state.isabelle, e2).isabelleTerm
 
         val pname = p match {
@@ -50,7 +51,7 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
 
         Some((e2,Call(prog.name),rho))
       case Const(IsabelleConsts.one,_) =>
-        Some((GIsabelle.True_expression2, Block.empty, null))
+        Some((ExpressionNonindexed.constant(GIsabelle.True_const), Block.empty, null))
       case _ =>
         ByQRHLTac.logger.debug(s"Term: $term")
         None
@@ -118,10 +119,8 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
 
         val vars1 = p1.variableUse(ctxt, env)
         val vars2 = p2.variableUse(ctxt, env)
-        val e1_ = ExpressionNonindexed.fromTerm(e1)
-        val e2_ = ExpressionNonindexed.fromTerm(e2)
-        val vars1expr = e1_.variables(ctxt, env).classical 
-        val vars2expr = e2_.variables(ctxt, env).classical 
+        val vars1expr = e1.variables(ctxt, env).classical
+        val vars2expr = e2.variables(ctxt, env).classical
 
         // fv(p1), fv(p2), fv(e1), fv(e2) (not indexed, only classical)
         val cvars = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
@@ -151,7 +150,10 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
 
         // Cla[e1 -->/= e2]
         val post = RichTerm(GIsabelle.predExpressionT,
-          Abs("mem", GIsabelle.cl2T, GIsabelle.classical_subspace(connective $ (e1 $ Bound(0)) $ (e2 $ Bound(0)))))
+          Abs("mem", GIsabelle.cl2T,
+            GIsabelle.classical_subspace(connective $
+              (e1.term.isabelleTerm $ (GIsabelle.fst(clT, clT) $ Bound(0))) $
+              (e2.term.isabelleTerm $ (GIsabelle.snd(clT, clT) $ Bound(0))))))
 
         List(QRHLSubgoal(left,right,ExpressionIndexed.fromTerm(pre),ExpressionIndexed.fromTerm(post),Nil))
       // Subgoal: p1 denotationally-equivalent p2

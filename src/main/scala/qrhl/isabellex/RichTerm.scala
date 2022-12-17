@@ -26,22 +26,25 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
   /** Transforms a longform expression into an instantiated longform expression.
    * Instantiated longform expression means that instead of `%mem. X mem`, we have `X _memory`
    * where _memory can be found in [[memory2Variable]]. */
+    // TODO: remove (use Expression.instantiateMemory instead)
   def longformInstantiate(indexed: Boolean): RichTerm = {
     assert(indexed) // nonindexed unsupported so far. Would need a different type than memory2Variable
     assert(!globalIsabelle.freeVars(isabelleTerm).contains(memory2Variable.name))
     RichTerm(globalIsabelle.betapply(isabelleTerm, memory2Variable))
   }
-  def longformAbstract(indexed: Boolean): RichTerm = {
+/*  def longformAbstract(indexed: Boolean): RichTerm = {
     assert(indexed)
     RichTerm(Abs("mem", cl2T, globalIsabelle.abstract_over(memory2Variable, isabelleTerm)))
-  }
+  }*/
 
   override def hash: Hash[RichTerm.this.type] =
     HashTag()(Hashable.hash(typ), Hashable.hash(isabelleTerm))
 
+/*
   /** Shortform to longform */
   def encodeAsExpression(context: IsabelleX.ContextX, indexed: Boolean) : RichTerm =
     RichTerm(Ops.termToExpressionOp(context.context, if (indexed) cl2T else clT, isabelleTerm).retrieveNow)
+*/
 
   def stripAssumption(number: Int): RichTerm = RichTerm(typ,RichTerm.stripAssumption(isabelleTerm,number))
 
@@ -75,31 +78,31 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
   def variables : Set[String] = freeVars(isabelleTerm)
 
-  /** Finds all classical and ambient variables in an expression.
-   * The quantum variables are an estimate, it is possible to have terms that contain quantum variables that are not detected by this function.
-   * @param deindex If true, indexed program variables are replaced by their unindexed counterparts
-   * */
-  def variablesShortform(environment: Environment, deindex: Boolean=false): ExprVariableUse = {
-    val avars = new ListBuffer[String]
-    val pvars = new ListBuffer[Variable]
+  /*  /** Finds all classical and ambient variables in an expression.
+     * The quantum variables are an estimate, it is possible to have terms that contain quantum variables that are not detected by this function.
+     * @param deindex If true, indexed program variables are replaced by their unindexed counterparts
+     * */
+    def variablesShortform(environment: Environment, deindex: Boolean=false): ExprVariableUse = {
+      val avars = new ListBuffer[String]
+      val pvars = new ListBuffer[Variable]
 
-    val C = new Utils.MapMatch(environment.cVariables)
-    val Q = new Utils.MapMatch(environment.qVariables)
-    val A = new Utils.MapMatch(environment.ambientVariables)
+      val C = new Utils.MapMatch(environment.cVariables)
+      val Q = new Utils.MapMatch(environment.qVariables)
+      val A = new Utils.MapMatch(environment.ambientVariables)
 
-    for (v <- variables) v match {
-      case C(cv) => pvars += cv
-      case Q(qv) => pvars += qv
-      case A(_) => avars += v
-      case Variable.Indexed(C(cv), side) =>
-        pvars += (if (deindex) cv else cv.index(side))
-      case Variable.Indexed(Q(qv), side) =>
-        pvars += (if (deindex) qv else qv.index(side))
-      case _ => throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
-    }
+      for (v <- variables) v match {
+        case C(cv) => pvars += cv
+        case Q(qv) => pvars += qv
+        case A(_) => avars += v
+        case Variable.Indexed(C(cv), side) =>
+          pvars += (if (deindex) cv else cv.index(side))
+        case Variable.Indexed(Q(qv), side) =>
+          pvars += (if (deindex) qv else qv.index(side))
+        case _ => throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
+      }
 
-    ExprVariableUse(program = ListSet(pvars.toSeq:_*), ambient = ListSet(avars.toSeq:_*))
-  }
+      ExprVariableUse(program = ListSet(pvars.toSeq:_*), ambient = ListSet(avars.toSeq:_*))
+    }*/
 
 
 

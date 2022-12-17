@@ -7,6 +7,7 @@ import org.log4s
 import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.{Ops, show_oracles}
 import qrhl.isabellex.{IsabelleX, RichTerm}
+import qrhl.logic.ExpressionInstantiated.memoryVarName
 import qrhl.logic.{Block, Environment, ExpressionIndexed}
 import scalaz.Heap.Empty
 
@@ -219,7 +220,7 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
   checkMemoryVariable()
 
   private def checkMemoryVariable(): Unit =
-    if (variables.contains("_memory"))
+    if (variables.contains(memoryVarName))
       throw UserException("Variable _memory occurs in the goal. This should not happen and is a bug.")
 
   override def hash: Hash[AmbientSubgoal.this.type] =

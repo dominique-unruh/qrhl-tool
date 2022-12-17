@@ -7,6 +7,7 @@ import qrhl.UserException
 import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle}
 import qrhl.isabellex.IsabelleX.globalIsabelle.{Ops, cl2T, clT}
 import qrhl.isabellex.{IsabelleX, RichTerm}
+import qrhl.logic.ExpressionInstantiated.memoryVariable
 import qrhl.logic.Variable.{Index12, NoIndex}
 
 import scala.collection.immutable.ListSet
@@ -24,6 +25,12 @@ class Expression(val term: RichTerm) extends HashedValue {
     case e: Expression => term == e.term
     case e: ExpressionInstantiated => this == e.abstractMemory
     case _ => false
+  }
+
+  def instantiateMemory: ExpressionInstantiated = {
+    val memVar = memoryVariable(memTyp)
+    assert(!globalIsabelle.freeVars(term.isabelleTerm).contains(memVar.name))
+    ExpressionInstantiated.fromTerm(globalIsabelle.betapply(term.isabelleTerm, memVar), memTyp)
   }
 
   def renameCVariables(renaming: List[(CVariable, CVariable)]): Expression = {
@@ -141,7 +148,7 @@ class ExpressionInstantiated(val termInst: RichTerm, val memTyp: Typ) extends Ha
   override def hash: Hash[ExpressionInstantiated.this.type] =
     HashTag()(termInst.hash)
   def rangeTyp: Typ = termInst.typ
-  def memoryVariable: Free = Free("_memory", memTyp)
+  def memoryVariable: Free = ExpressionInstantiated.memoryVariable(memTyp)
   def abstractMemory =
     new Expression(RichTerm(Abs("mem", cl2T, globalIsabelle.abstract_over(memoryVariable, termInst.isabelleTerm))))
   // TODO: inefficient: The ML code for decodeFromExpression converts back to instantiated form
@@ -156,7 +163,7 @@ class ExpressionInstantiated(val termInst: RichTerm, val memTyp: Typ) extends Ha
   }
 
   def castNonindexed: ExpressionInstantiatedNonindexed = {
-    assert(memTyp == clT)
+    assert(memTyp == clT, IsabelleX.pretty(memTyp))
     new ExpressionInstantiatedNonindexed(termInst)
   }
 }
@@ -228,7 +235,7 @@ class ExpressionIndexed(term: RichTerm) extends Expression(term) with HashedValu
 
   override def castIndexed: this.type = this
 
-  def instantiateMemory = new ExpressionInstantiatedIndexed(term.longformInstantiate(indexed=true))
+  override def instantiateMemory: ExpressionInstantiatedIndexed = super.instantiateMemory.castIndexed
 
   def variables(ctxt: Context, environment: Environment): ExprVariableUse =
     instantiateMemory.variables(ctxt, environment)
@@ -273,7 +280,7 @@ class ExpressionNonindexed(term: RichTerm) extends Expression(term) {
     assert(memTyp == clT)
   }
 
-  def instantiateMemory = new ExpressionInstantiatedNonindexed(term.longformInstantiate(indexed = false))
+  override def instantiateMemory: ExpressionInstantiatedNonindexed = super.instantiateMemory.castNonindexed
 
   def variables(ctxt: Context, environment: Environment): ExprVariableUse =
     instantiateMemory.variables(ctxt, environment)
@@ -301,4 +308,12 @@ object ExpressionNonindexed {
   /** Parses an indexed expression in longform */
   def fromString(context: Context, string: String, rangeTyp: Typ): ExpressionNonindexed =
     Expression.fromString(context, string, rangeTyp, indexed = false).castNonindexed
+}
+
+object ExpressionInstantiated {
+  def fromTerm(term: RichTerm, memTyp: Typ) = new ExpressionInstantiated(term, memTyp)
+  def fromTerm(term: Term, memTyp: Typ): ExpressionInstantiated = ExpressionInstantiated.fromTerm(RichTerm(term), memTyp)
+
+  def memoryVarName = "_memory"
+  def memoryVariable(memTyp: Typ): Free = Free(memoryVarName, memTyp)
 }
