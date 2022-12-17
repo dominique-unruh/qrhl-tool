@@ -471,7 +471,7 @@ val joint_sample_equal_tac : unit * subgoal * Proof.context -> (subgoal list * t
 
 val joint_sample_tac =
   apply_tactic_on_term_concl (fn ctxt => fn witness => 
-      let val witness_expr = witness |> term_to_expression ctxt \<^typ>\<open>cl2\<close> |> Thm.cterm_of ctxt in
+      let val witness_expr = witness |> Thm.cterm_of ctxt in
       Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)
 
 val seq_tac =
