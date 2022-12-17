@@ -103,14 +103,14 @@ fun joint_sample_seq_tac ctxt witness i =
   THEN
   joint_sample_tac ctxt witness (i+1)
   THEN
-  CONVERSION ((Programs.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt) i
+  CONVERSION ((Expressions.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt) i
 
 fun joint_sample_equal_seq_tac ctxt i =
   Tactics.seq_tac ~2 ~2 (Var(("precondition",0),\<^typ>\<open>predicate expression2\<close>)) ctxt i
   THEN
   joint_sample_equal_tac ctxt (i+1)
   THEN
-  CONVERSION ((Programs.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt) i
+  CONVERSION ((Expressions.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt) i
 
 end
 \<close>

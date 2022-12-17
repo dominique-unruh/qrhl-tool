@@ -1,5 +1,6 @@
 package qrhl.tactic
 
+import de.unruh.isabelle.pure.Context
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 
 import java.io.PrintWriter
@@ -23,7 +24,7 @@ case class SwapTac(left:Boolean, range1: SwapTac.Range, range2: SwapTac.Range,
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case QRHLSubgoal(l,r,pre,post,assms) =>
       val env = state.environment
-      implicit val ctxt: ContextX = state.isabelle
+      implicit val ctxt: Context = state.isabelle.context
       val (swapped, subgoals) = swap(env, if (left) l else r)
       val subgoals2 = subgoals map { _.addAssumptions(assms) }
       subgoals2.appended(
@@ -35,9 +36,9 @@ case class SwapTac(left:Boolean, range1: SwapTac.Range, range2: SwapTac.Range,
       throw UserException("Expected qRHL goal")
   }
 
-  private def checkSwappable(env: Environment, context : Block, nonContext: Block): Unit = {
-    val vars1 = context.variableUse(env)
-    val vars2 = nonContext.variableUse(env)
+  private def checkSwappable(ctxt: Context, env: Environment, context : Block, nonContext: Block): Unit = {
+    val vars1 = context.variableUse(ctxt, env)
+    val vars2 = nonContext.variableUse(ctxt, env)
 
     def error(msg: String) =
       throw UserException(s"Cannot swap\n    $context\nand\n    $nonContext,\n$msg")
@@ -95,7 +96,7 @@ case class SwapTac(left:Boolean, range1: SwapTac.Range, range2: SwapTac.Range,
     }
   }
 
-  def swap(env:Environment, prog: Block)(implicit output: PrintWriter, ctxt : ContextX) : (Block, List[DenotationalEqSubgoal]) = {
+  def swap(env:Environment, prog: Block)(implicit output: PrintWriter, ctxt : Context) : (Block, List[DenotationalEqSubgoal]) = {
     SwapTac.logger.debug(this.toString)
 
     if (subprograms.nonEmpty)
@@ -121,9 +122,9 @@ case class SwapTac(left:Boolean, range1: SwapTac.Range, range2: SwapTac.Range,
     logger.debug(s"Context: $context")
 
     if (subprograms.nonEmpty)
-      checkOraclesUsed(env, context)
+      checkOraclesUsed(ctxt, env, context)
 
-    checkSwappable(env, context, block2)
+    checkSwappable(ctxt, env, context, block2)
 
     /** [[context]] but with subprograms replaced by changed subprograms */
     val contextSubstituted = if (subprograms.forall(_._2.isEmpty)) block1 else
@@ -147,8 +148,8 @@ case class SwapTac(left:Boolean, range1: SwapTac.Range, range2: SwapTac.Range,
     (swappedProgram, subgoals)
   }
 
-  private def checkOraclesUsed(env: Environment, block: Block)(implicit output: PrintWriter): Unit = {
-    val oracles = block.variableUse(env).oracles
+  private def checkOraclesUsed(ctxt: Context, env: Environment, block: Block)(implicit output: PrintWriter): Unit = {
+    val oracles = block.variableUse(ctxt, env).oracles
     for (i <- subprograms.indices)
       if (!oracles.contains(i.toString))
         output.println(s"\nWARNING: Did not find any occurrences of the subprogram ${subprograms(i)._1}.\n" +

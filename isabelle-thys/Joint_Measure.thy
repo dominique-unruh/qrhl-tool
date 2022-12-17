@@ -68,7 +68,7 @@ fun joint_measure_simple_seq_tac ctxt i =
   THEN
   joint_measure_simple_tac ctxt (i+1)
   THEN
-  CONVERSION ((Programs.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt) i
+  CONVERSION ((Expressions.clean_expression_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.concl_conv_Trueprop) ctxt) i
 end
 \<close>
 

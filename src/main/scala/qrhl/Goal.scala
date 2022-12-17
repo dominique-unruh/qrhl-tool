@@ -7,7 +7,7 @@ import org.log4s
 import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.{Ops, show_oracles}
 import qrhl.isabellex.{IsabelleX, RichTerm}
-import qrhl.logic.{Block, Environment}
+import qrhl.logic.{Block, Environment, ExpressionIndexed}
 import scalaz.Heap.Empty
 
 import java.io.PrintWriter
@@ -66,14 +66,16 @@ object QRHLSubgoal {
  * @param pre Precondition in shortform
  * @param post Postcondition in shortform
  * */
-final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTerm, assumptions:List[RichTerm]) extends Subgoal {
-  checkQRHLSubgoalType()
+final case class QRHLSubgoal(left:Block, right:Block, pre:ExpressionIndexed, post:ExpressionIndexed, assumptions:List[RichTerm]) extends Subgoal {
+  checkQRHLSubgoalType(IsabelleX.theContext)
 
-  private def checkQRHLSubgoalType(): Unit = {
-    if (pre.typ != GIsabelle.predExpressionT)
-      throw UserException(s"Internal error: precondition has type ${IsabelleX.theContext.prettyTyp(pre.typ)}")
-    if (post.typ != GIsabelle.predExpressionT)
-      throw UserException(s"Internal error: postcondition has type ${IsabelleX.theContext.prettyTyp(post.typ)}")
+  private def checkQRHLSubgoalType(context: ContextX): Unit = {
+    pre.checkWelltyped(context)
+    post.checkWelltyped(context)
+    if (pre.rangeTyp != GIsabelle.predicateT)
+      throw UserException(s"Internal error: precondition has type ${IsabelleX.theContext.prettyTyp(pre.rangeTyp)}")
+    if (post.rangeTyp != GIsabelle.predicateT)
+      throw UserException(s"Internal error: postcondition has type ${IsabelleX.theContext.prettyTyp(post.rangeTyp)}")
     for (assm <- assumptions)
       assert(assm.typ == GIsabelle.boolT)
   }
@@ -88,12 +90,8 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
   }
 
   override def checkVariablesDeclared(environment: Environment): Unit = {
-    for (x <- pre.variables)
-      if (!environment.variableExistsForPredicateLongform(x))
-        throw UserException(s"Undeclared variable $x in precondition")
-    for (x <- post.variables)
-      if (!environment.variableExistsForPredicateLongform(x))
-        throw UserException(s"Undeclared variable $x in postcondition")
+    pre.variables(IsabelleX.theContext.context, environment)
+    post.variables(IsabelleX.theContext.context, environment)
     for (x <- left.variablesDirect)
       if (!environment.variableExistsForProg(x))
         throw UserException(s"Undeclared variable $x in left program")
@@ -106,14 +104,14 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
   }
 
   override def toTerm(context: IsabelleX.ContextX): RichTerm = {
-    val mlVal = MLValue((context.context,left.statements,right.statements,pre.isabelleTerm,post.isabelleTerm,assumptions.map(_.isabelleTerm)))
-    val term = Ops.qrhl_subgoal_to_term_op(mlVal).retrieveNow
+    val term = Ops.qrhl_subgoal_to_term_op(context.context, left.statements, right.statements, pre.term.isabelleTerm, post.term.isabelleTerm, assumptions.map(_.isabelleTerm))
+      .retrieveNow
     RichTerm(term)
   }
 
   /** Not including ambient vars in nested programs (via Call) */
   override def containsAmbientVar(x: String): Boolean = {
-    pre.variables.contains(x) || post.variables.contains(x) ||
+    pre.term.variables.contains(x) || post.term.variables.contains(x) ||
       left.variablesDirect.contains(x) || right.variablesDirect.contains(x) ||
       assumptions.exists(_.variables.contains(x))
   }
@@ -129,8 +127,8 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:RichTerm, post:RichTer
     for (a <- assumptions) a.checkWelltyped(context, GIsabelle.boolT)
     left.checkWelltyped(context)
     right.checkWelltyped(context)
-    pre.checkWelltyped(context, GIsabelle.predExpressionT)
-    post.checkWelltyped(context, GIsabelle.predExpressionT)
+    pre.checkWelltyped(context)
+    post.checkWelltyped(context)
   }
 
   override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): QRHLSubgoal = {

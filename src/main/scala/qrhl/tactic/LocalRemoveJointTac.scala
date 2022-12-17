@@ -4,7 +4,7 @@ import java.io.PrintWriter
 import org.log4s
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException}
 import qrhl.isabellex.{IsabelleX, RichTerm}
-import qrhl.logic.{Block, CVariable, Local, QVariable}
+import qrhl.logic.{Block, CVariable, ExpressionInstantiatedIndexed, Local, QVariable}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.{Inf, QuantumEqualityFull, predicateT, predicate_inf, predicate_top}
 import de.unruh.isabelle.pure.Term
@@ -40,6 +40,8 @@ case object LocalRemoveJointTac extends Tactic {
     case QRHLSubgoal(leftProg, rightProg, pre, post, assumptions) =>
       val env = state.environment
       val context = state.isabelle
+      val preI = pre.instantiateMemory
+      val postI = post.instantiateMemory
 
       output.println("*** WARNING: Tactic 'local remove joint' is not sound (incomplete implementation)")
 
@@ -61,16 +63,16 @@ case object LocalRemoveJointTac extends Tactic {
       }
 
 
-      def decomposePredicate(which: String, pred: RichTerm) = {
-        pred.isabelleTerm match {
+      def decomposePredicate(which: String, pred: ExpressionInstantiatedIndexed) = {
+        pred.termInst.isabelleTerm match {
           case Inf(main,QuantumEqualityFull(u1,v1,u2,v2)) => (main,u1,v1,u2,v2)
           case QuantumEqualityFull(u1,v1,u2,v2) => (predicate_top,u1,v1,u2,v2)
           case _ => throw UserException(s"""Expected $which to be of the form "A ⊓ Q" where Q is a quantum equality""")
         }
       }
 
-      val (a, us1, s1, us2, s2) = decomposePredicate("precondition", pre)
-      val (b, ur1, r1, ur2, r2) = decomposePredicate("postcondition", post)
+      val (a, us1, s1, us2, s2) = decomposePredicate("precondition", preI)
+      val (b, ur1, r1, ur2, r2) = decomposePredicate("postcondition", postI)
 
       // TODO remove
       def p(t:Term) = IsabelleX.pretty(t)
@@ -90,15 +92,15 @@ case object LocalRemoveJointTac extends Tactic {
 
       // TODO check qvars1, qvars2 has same length and same types
 
-      val newPre = predicate_inf $ a $ extendQeq(us1,s1,us2,s2,qvarsL,qvarsR)
+      val newPre = ExpressionInstantiatedIndexed.fromTerm(predicate_inf $ a $ extendQeq(us1,s1,us2,s2,qvarsL,qvarsR))
       // TODO: unitarity condition
       val unitarity = GIsabelle.classical_subspace $ GIsabelle.conj(GIsabelle.unitary(ur1), GIsabelle.unitary(ur2))
-      val newPost = GIsabelle.inf(b, unitarity, extendQeq(ur1,r1,ur2,r2,qvarsL,qvarsR))
+      val newPost = ExpressionInstantiatedIndexed.fromTerm(GIsabelle.inf(b, unitarity, extendQeq(ur1,r1,ur2,r2,qvarsL,qvarsR)))
 
-      logger.debug(s"Pre: ${p(newPre)}")
-      logger.debug(s"Post: ${p(newPost)}")
+      logger.debug(s"Pre: ${newPre.prettyShortform}")
+      logger.debug(s"Post: ${newPost.prettyShortform}")
 
-      val newQrhl = QRHLSubgoal(bodyL, bodyR, RichTerm(predicateT, newPre), RichTerm(predicateT, newPost), assumptions)
+      val newQrhl = QRHLSubgoal(bodyL, bodyR, newPre.abstractMemory, newPost.abstractMemory, assumptions)
 
       // TODO check premises of rule
 

@@ -5,13 +5,13 @@ import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.mlvalue.MLValue.Converter
 import de.unruh.isabelle.mlvalue.{MLValue, MLValueConverter}
-import de.unruh.isabelle.pure.{App, Bound, Const, Free, Term, Typ}
+import de.unruh.isabelle.pure.{App, Bound, Const, Free, Term, Typ, Type}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
-import qrhl.logic.Variable.{Index1, Index2, NoIndex}
+import qrhl.logic.Variable.{Index1, Index12, Index2, NoIndex}
 import qrhl.AllSet
 import GIsabelle.Ops.qrhl_ops
 import GIsabelle.Ops
-import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, isabelleControl}
+import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, isabelleControl, qu2T, quT}
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,9 +23,21 @@ import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.MLValueConverters.Implicits._
 
+trait Indexed
+trait Nonindexed
+
 // Variables
 sealed trait Variable extends HashedValue {
-  def unindex: Variable
+  def castNonindexed: Variable with Nonindexed
+  def castIndexed: Variable with Indexed
+  /** Typesafe cast */
+  def castNonindexedSafe(implicit ev: this.type <:< Nonindexed): Variable with Nonindexed
+  /** Typesafe cast */
+  def castIndexedSafe(implicit ev: this.type <:< Indexed): Variable with Indexed
+
+  def unindex: Variable with Nonindexed
+
+  def memTyp: Typ
 
   //  def rename(name: String): Variable
 
@@ -50,12 +62,15 @@ sealed trait Variable extends HashedValue {
   // Without the 1/2 suffix for indexed variables
   val basename:String
   @deprecated("same as name") val variableName: String = name
-  def index1: Variable
-  def index2: Variable
+  def index1: Variable with Indexed
+  def index2: Variable with Indexed
   val theIndex: Variable.Index
-  final def index(left:Boolean): Variable = {
+  def index(side:Index12): Variable with Indexed = {
     assert(!isIndexed)
-    if (left) index1 else index2
+    side match {
+      case Variable.Index1 => index1
+      case Variable.Index2 => index2
+    }
   }
   def variableTyp: Typ = GIsabelle.variableT(valueTyp, classical=isClassical, indexed=isIndexed)
   def valueTyp : Typ
@@ -100,10 +115,18 @@ object Variable {
   }
 
   def quantum(vars: ListSet[Variable]): ListSet[QVariable] = vars collect { case v : QVariable => v }
-  def quantum(vars: Traversable[Variable]): Traversable[QVariable] = vars collect { case v : QVariable => v }
+  def quantumNI(vars: ListSet[Variable with Nonindexed]): ListSet[QVariableNI] = vars collect { case v : QVariable => v.castNonindexedSafe }
+  def quantumI(vars: ListSet[Variable with Indexed]): ListSet[QVariableI] = vars collect { case v : QVariable => v.castIndexedSafe }
+  def quantum(vars: Iterable[Variable]): Iterable[QVariable] = vars collect { case v : QVariable => v }
+  def quantumNI(vars: Iterable[Variable with Nonindexed]): Iterable[QVariableNI] = vars collect { case v : QVariable => v.castNonindexedSafe }
+  def quantumNI(vars: List[Variable with Nonindexed]): List[QVariableNI] = vars collect { case v : QVariable => v.castNonindexedSafe }
   def quantum(vars: Set[Variable]): Set[QVariable] = vars collect { case v : QVariable => v }
   def classical(vars: ListSet[Variable]): ListSet[CVariable] = vars collect { case v : CVariable => v }
-  def classical(vars: Traversable[Variable]): Traversable[CVariable] = vars collect { case v : CVariable => v }
+  def classicalNI(vars: ListSet[Variable with Nonindexed]): ListSet[CVariableNI] = vars collect { case v : CVariable => v.castNonindexedSafe }
+  def classicalI(vars: ListSet[Variable with Indexed]): ListSet[CVariableI] = vars collect { case v : CVariable => v.castIndexedSafe }
+  def classical(vars: Iterable[Variable]): Iterable[CVariable] = vars collect { case v : CVariable => v }
+  def classicalNI(vars: Iterable[Variable with Nonindexed]): Iterable[CVariableNI] = vars collect { case v : CVariable => v.castNonindexedSafe }
+  def classicalNI(vars: List[Variable with Nonindexed]): Iterable[CVariableNI] = vars collect { case v : CVariable => v.castNonindexedSafe }
   def classical(vars: Set[Variable]): Set[CVariable] = vars collect { case v : CVariable => v }
 
   //  def varlistToString(vars: List[Variable]) = vars match {
@@ -144,25 +167,25 @@ object Variable {
 */
 
   object Indexed {
-    def unapply(name: String): Option[(String, Boolean)] = {
+    def unapply(name: String): Option[(String, Index12)] = {
       if (name.isEmpty) return None
       def basename = name.substring(0, name.length-1)
 
       name.last match {
-        case '1' => Some((basename, true))
-        case '2' => Some((basename, false))
+        case '1' => Some((basename, Index1))
+        case '2' => Some((basename, Index2))
         case _ => None
       }
     }
-    def unapply(variable: Variable): Option[(Variable, Boolean)] = {
-      if (variable.isIndexed) Some(variable.unindex, variable.theIndex==Index1)
+    def unapply(variable: Variable): Option[(Variable, Index12)] = {
+      if (variable.isIndexed) Some(variable.unindex, variable.theIndex.asInstanceOf[Index12])
       else None
     }
   }
 
   object IndexedC {
-    def unapply(v: CVariable): Option[(CVariable, Boolean)] = {
-      if (v.isIndexed) Some((v.unindex, v.theIndex==Index1))
+    def unapply(v: CVariable): Option[(CVariable, Index12)] = {
+      if (v.isIndexed) Some((v.unindex, v.theIndex.asInstanceOf[Index12]))
       else None
     }
   }
@@ -176,13 +199,28 @@ object Variable {
     case _ => varsNamesToString(vars.map(_.name))
   }
 
-  sealed trait Index
-  final case object NoIndex extends Index
-  final case object Index1 extends Index
-  final case object Index2 extends Index
+  sealed trait Index extends HashedValue
+  sealed trait Index12 extends Index {
+    def choose[A](left: A, right: A): A
+    val leftright: String
+  }
+
+  final case object NoIndex extends Index {
+    override val hash: Hash[NoIndex.this.type] = HashTag()()
+  }
+  final case object Index1 extends Index12 {
+    override val hash: Hash[Index1.this.type] = HashTag()()
+    override val leftright: String = "left"
+    override def choose[A](left: A, right: A): A = left
+  }
+  final case object Index2 extends Index12 {
+    override def hash: Hash[Index2.this.type] = HashTag()()
+    override val leftright: String = "right"
+    override def choose[A](left: A, right: A): A = right
+  }
 
   implicit object IndexConverter extends Converter[Index] {
-    private val isabelleControl = null // Hide global implicit
+    private val isabelleControl: Null = null // Hide global implicit
     override def mlType(implicit isabelle: Isabelle): String = s"$qrhl_ops.index"
 
     override def retrieve(value: MLValue[Index])(implicit isabelle: Isabelle): Future[Index] = {
@@ -210,14 +248,31 @@ object Variable {
   }
 }
 
-final class QVariable private (override val basename:String, override val valueTyp: Typ, val theIndex: Variable.Index) extends Variable {
+sealed class QVariable protected (override val basename:String, override val valueTyp: Typ, val theIndex: Variable.Index) extends Variable {
   override val hash: Hash[QVariable.this.type] =
     HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
 
-  override def index1: QVariable = { assert(theIndex==NoIndex); new QVariable(basename, valueTyp, Index1) }
-  override def index2: QVariable = { assert(theIndex==NoIndex); new QVariable(basename, valueTyp, Index2) }
+  override def memTyp: Typ = if (isIndexed) qu2T else quT
+
+  def castNonindexed: QVariableNI = {
+    assert(theIndex == NoIndex)
+    QVariableNI.fromName(name, valueTyp)
+  }
+
+  def castIndexed: QVariableI = {
+    assert(theIndex != NoIndex)
+    QVariableI.fromName(name, valueTyp, theIndex.asInstanceOf[Index12])
+  }
+
+  @inline
+  override def castNonindexedSafe(implicit ev: this.type <:< Nonindexed): QVariableNI = asInstanceOf[QVariableNI]
+  @inline
+  override def castIndexedSafe(implicit ev: this.type <:< Indexed): QVariableI = asInstanceOf[QVariableI]
+
+  override def index1: QVariableI = { assert(theIndex==NoIndex); QVariableI.fromName(basename, valueTyp, Index1) }
+  override def index2: QVariableI = { assert(theIndex==NoIndex); QVariableI.fromName(basename, valueTyp, Index2) }
   override def toString: String = s"quantum var $name : ${IsabelleX.pretty(valueTyp)}"
-  override def unindex: QVariable = { assert(isIndexed); new QVariable(basename, valueTyp, NoIndex) }
+  override def unindex: QVariableNI = { assert(isIndexed); QVariableNI.fromName(basename, valueTyp) }
 
 //  override def isQuantum: Boolean = true
   override def isClassical: Boolean = false
@@ -236,9 +291,12 @@ final class QVariable private (override val basename:String, override val valueT
 }
 
 object QVariable {
-  def fromName(name: String, typ: Typ, index: Variable.Index = NoIndex): QVariable = {
-    assert(name.nonEmpty)
-    new QVariable(name, typ, index)
+  def fromName(name: String, typ: Typ): QVariableNI = {
+    QVariableNI.fromName(name, typ)
+  }
+
+  def fromName(name: String, typ: Typ, index: Index12): QVariableI = {
+    QVariableI.fromName(name, typ, index)
   }
 
   def fromIndexedName(name: String, typ: Typ): QVariable = {
@@ -276,22 +334,32 @@ object QVariable {
 
 }
 
-final class CVariable private (override val basename:String, override val valueTyp: Typ, override val theIndex: Variable.Index) extends Variable {
+sealed class CVariable protected (override val basename:String, override val valueTyp: Typ, override val theIndex: Variable.Index) extends Variable {
   def getter(memory: Typ => Term): Term = {
     val memT = if (isIndexed) cl2T else clT
     GIsabelle.getter(valueTyp, indexed=isIndexed) $ variableTermLong $ memory(memT)
   }
   def getter(memory: Term): Term = getter({_ => memory})
   def getter: Term = getter(Bound(0))
+  def setter(value: Term, mem: Term): Term =
+    GIsabelle.setter(valueTyp, indexed=isIndexed) $ variableTermLong $ value $ mem
+
+  override def memTyp: Typ = if (isIndexed) cl2T else clT
 
   override val hash: Hash[CVariable.this.type] =
     HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
 
-  override def index1: CVariable = { assert(theIndex==NoIndex); new CVariable(basename, valueTyp, Index1) }
-  override def index2: CVariable = { assert(theIndex==NoIndex); new CVariable(basename, valueTyp, Index2) }
+  override def index1: CVariableI = { assert(theIndex==NoIndex); CVariableI.fromName(basename, valueTyp, Index1) }
+  override def index2: CVariableI = { assert(theIndex==NoIndex); CVariableI.fromName(basename, valueTyp, Index2) }
+  override def index(side: Index12): CVariableI = {
+    side match {
+      case Variable.Index1 => index1
+      case Variable.Index2 => index2
+    }
+  }
 
   override def toString: String = s"classical var $name : ${IsabelleX.pretty(valueTyp)}"
-  override def unindex: CVariable = { assert(isIndexed); new CVariable(basename, valueTyp, NoIndex) }
+  override def unindex: CVariableNI = { assert(isIndexed); CVariableNI.fromName(basename, valueTyp) }
 
 //  def valueTerm(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(name, valueTyp)
 
@@ -305,19 +373,39 @@ final class CVariable private (override val basename:String, override val valueT
   override def substitute(renaming: List[(Variable, Variable)]): CVariable =
     super.substitute(renaming).asInstanceOf[CVariable]
 
+  /** Checked at runtime */
+  override def castNonindexed: CVariableNI = {
+    assert(theIndex == NoIndex)
+    CVariableNI.fromName(name, valueTyp)
+  }
+
+  /** Checked at runtime */
+  override def castIndexed: CVariableI = {
+    assert(theIndex != NoIndex)
+    CVariableI.fromName(name, valueTyp, theIndex.asInstanceOf[Index12])
+  }
+
+  @inline
+  /** Typesafe cast */
+  override def castNonindexedSafe(implicit ev: this.type <:< Nonindexed): CVariableNI = asInstanceOf[CVariableNI]
+  /** Typesafe cast */
+  @inline
+  override def castIndexedSafe(implicit ev: this.type <:< Indexed): CVariableI = asInstanceOf[CVariableI]
+
   override def equals(obj: Any): Boolean = obj match {
     case c : CVariable => basename == c.basename && valueTyp == c.valueTyp && theIndex == c.theIndex
     case _ => false
   }
 }
 
+
 object CVariable {
-  def fromName(name: String, typ: Typ, index: Variable.Index = NoIndex): CVariable = {
-    assert(name.nonEmpty)
-//    val last = name.last
-//    assert(last != '1')
-//    assert(last != '2')
-    new CVariable(name, typ, index)
+  def fromName(name: String, typ: Typ): CVariableNI = {
+    CVariableNI.fromName(name, typ)
+  }
+
+  def fromName(name: String, typ: Typ, index: Variable.Index12): CVariableI = {
+    CVariableI.fromName(name, typ, index)
   }
 
   def fromIndexedName(name: String, typ: Typ): CVariable = {
@@ -351,4 +439,42 @@ object CVariable {
   }*/
 }
 
+
+final class CVariableNI private (basename:String, valueTyp: Typ) extends CVariable(basename, valueTyp, NoIndex) with Nonindexed {
+  override val hash: Hash[this.type] = HashTag()(Hashable.hash(basename), Hashable.hash(valueTyp))
+  override def castNonindexed: this.type = this
+}
+object CVariableNI {
+  def fromName(name: String, typ: Typ): CVariableNI = {
+    assert(name.nonEmpty)
+    new CVariableNI(name, typ)
+  }
+}
+final class CVariableI private (basename:String, valueTyp: Typ, theIndex: Variable.Index12) extends CVariable(basename, valueTyp, theIndex) with Indexed {
+  override val hash: Hash[this.type] = HashTag()(Hashable.hash(basename), Hashable.hash(valueTyp))
+}
+object CVariableI {
+  def fromName(name: String, typ: Typ, index: Index12): CVariableI = {
+    assert(name.nonEmpty)
+    new CVariableI(name, typ, index)
+  }
+}
+final class QVariableNI private (basename:String, valueTyp: Typ) extends QVariable(basename, valueTyp, NoIndex) with Nonindexed {
+  override val hash: Hash[this.type] = HashTag()(Hashable.hash(basename), Hashable.hash(valueTyp))
+}
+object QVariableNI {
+  def fromName(name: String, typ: Typ): QVariableNI = {
+    assert(name.nonEmpty)
+    new QVariableNI(name, typ)
+  }
+}
+final class QVariableI private (basename:String, valueTyp: Typ, theIndex: Variable.Index12) extends QVariable(basename, valueTyp, theIndex) with Indexed {
+  override val hash: Hash[this.type] = HashTag()(Hashable.hash(basename), Hashable.hash(valueTyp))
+}
+object QVariableI {
+  def fromName(name: String, typ: Typ, index: Index12): QVariableI = {
+    assert(name.nonEmpty)
+    new QVariableI(name, typ, index)
+  }
+}
 

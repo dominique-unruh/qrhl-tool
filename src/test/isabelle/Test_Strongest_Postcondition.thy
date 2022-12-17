@@ -7,7 +7,7 @@ ML \<open>
 fun test_get_sp ctxt left prog pre expected =
 let val (sp,thm,side) = Strongest_Postcondition.get_sp left prog pre ctxt
     val _ = tracing ("Side conditions:\n" ^ String.concatWith "\n" (map (Syntax.string_of_term ctxt) side))
-    val sp' = sp |> Thm.cterm_of ctxt |> Conv.try_conv (Programs.clean_expression_conv ctxt)
+    val sp' = sp |> Thm.cterm_of ctxt |> Conv.try_conv (Expressions.clean_expression_conv ctxt)
                  |> Thm.rhs_of |> Thm.term_of |> Envir.beta_norm
     val _ = assert_aconv expected sp'
     val (A,_,_,B) = Relational_Hoare.dest_qrhl_goal (Thm.prop_of thm)

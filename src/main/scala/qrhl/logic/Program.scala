@@ -1,6 +1,6 @@
 package qrhl.logic
 
-import qrhl.isabellex.IsabelleX.{globalIsabelle => GIsabelle}
+import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.mlvalue.MLValue
@@ -104,14 +104,30 @@ case class ExprVariableUse
 
   def classical : ListSet[CVariable] = Variable.classical(program)
   def quantum : ListSet[QVariable] = Variable.quantum(program)
+
+  /** Unchecked cast */
+  def castNonindexed: ExprVariableUseNI = new ExprVariableUseNI(program.asInstanceOf[ListSet[Variable with Nonindexed]], ambient)
+  /** Unchecked cast */
+  def castIndexed: ExprVariableUseI = new ExprVariableUseI(program.asInstanceOf[ListSet[Variable with Indexed]], ambient)
+}
+class ExprVariableUseNI(program : ListSet[Variable with Nonindexed], ambient : ListSet[String]) extends ExprVariableUse(program, ambient) with Nonindexed {
+  def programNI: ListSet[Variable with Nonindexed] = program
+  def classicalNI: ListSet[CVariableNI] = Variable.classicalNI(program)
+  def quantumNI: ListSet[QVariableNI] = Variable.quantumNI(program)
+}
+class ExprVariableUseI(program : ListSet[Variable with Indexed], ambient : ListSet[String])
+  extends ExprVariableUse(program, ambient) with Indexed {
+  def programI: ListSet[Variable with Indexed] = program
+  def classicalI: ListSet[CVariableI] = Variable.classicalI(program)
+  def quantumI: ListSet[QVariableI] = Variable.quantumI(program)
 }
 
 case class VariableUse
 (
   /** Free variables (upper bound) */
-  freeVariables : ListSet[Variable],
+  freeVariables : ListSet[Variable with Nonindexed],
   /** All written variables (upper bound) */
-  written : ListSet[Variable],
+  written : ListSet[Variable with Nonindexed],
   /** All ambient variables (upper bound) */
   ambient : ListSet[String],
   /** All included programs */
@@ -119,25 +135,25 @@ case class VariableUse
   /** All variables that are overwritten (lower bound).
     * That is, their initial value is never used, and they will be overwritten with a value
     * independent of their initial value. */
-  overwritten : ListSet[Variable],
+  overwritten : ListSet[Variable with Nonindexed],
   /** All oracles used by this program (upper bound) */
   oracles : ListSet[String],
   /** Local variables that have an oracle call in their scope (upper bound). */
-  inner: ListSet[Variable],
+  inner: ListSet[Variable with Nonindexed],
   /** Covered variables: A variable is covered if it is declared local above every hole (lower bound) */
-  covered: MaybeAllSet[Variable]
+  covered: MaybeAllSet[Variable with Nonindexed]
 ) {
   assert(oracles.isEmpty == covered.isAll, (oracles, covered))
 
   def isProgram: Boolean = oracles.isEmpty
 
-  def classical: ListSet[CVariable] = freeVariables collect { case v : CVariable => v }
-  def quantum: ListSet[QVariable] = freeVariables collect { case v : QVariable => v }
-  def overwrittenClassical : ListSet[CVariable] = overwritten collect { case v : CVariable => v }
-  def overwrittenQuantum : ListSet[QVariable] = overwritten collect { case v : QVariable => v }
-  def innerClassical : ListSet[CVariable] = inner collect { case v : CVariable => v }
-  def innerQuantum : ListSet[QVariable] = inner collect { case v : QVariable => v }
-  def writtenClassical : ListSet[CVariable] = written collect { case v : CVariable => v }
+  def classical: ListSet[CVariableNI] = freeVariables collect { case v : CVariable => v.castNonindexedSafe }
+  def quantum: ListSet[QVariableNI] = freeVariables collect { case v : QVariable => v.castNonindexedSafe }
+  def overwrittenClassical : ListSet[CVariableNI] = overwritten collect { case v : CVariable => v.castNonindexedSafe }
+  def overwrittenQuantum : ListSet[QVariableNI] = overwritten collect { case v : QVariable => v.castNonindexedSafe }
+  def innerClassical : ListSet[CVariableNI] = inner collect { case v : CVariable => v.castNonindexedSafe }
+  def innerQuantum : ListSet[QVariableNI] = inner collect { case v : QVariable => v.castNonindexedSafe }
+  def writtenClassical : ListSet[CVariableNI] = written collect { case v : CVariable => v.castNonindexedSafe }
 
   override def toString: String = s"""
       | Free        ⊆ ${varsToString(freeVariables)}
@@ -198,11 +214,11 @@ sealed trait Statement extends HashedValue {
   /** Checks whether "no_conflict renaming this" holds.
    * @param renaming the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y').
    * @return false if no_conflict does not hold. May returns false negatives. */
-  def noConflict(env: Environment, renaming: List[(Variable, Variable)]) : Boolean
+  def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]) : Boolean
 
   /** Renames all program variables. (subst_vars in Isabelle)
    * @param renaming the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y'). */
-  def renameVariables(env: Environment, renaming: List[(Variable, Variable)]) : Statement
+  def renameVariables(ctx: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]) : Statement
 
   /** Substitutes oracles by statements.
    * May fail if one of the replacements would require to replace an oracle by a statement inside a [[Call]] argument
@@ -224,7 +240,8 @@ sealed trait Statement extends HashedValue {
       MLValue((context.context, this))).retrieveNow)
 
   private val emptySet = ListSet.empty
-  val variableUse : (Context, Environment) => VariableUse = Utils.singleMemo[(Context, Environment), VariableUse] { case (ctxt, env) =>
+  def variableUse(context: Context, environment: Environment): VariableUse = variableUse0((context, environment))
+  val variableUse0 : ((Context, Environment)) => VariableUse = Utils.singleMemo[(Context, Environment), VariableUse] { case (ctxt, env) =>
     this match {
       case Local(vars, body) =>
         val bodyVars = body.variableUse(ctxt, env)
@@ -270,13 +287,13 @@ sealed trait Statement extends HashedValue {
       case Assign(v, e) =>
         // Also handling Sample(v,e)
         val vSet = ListSet(v.toSeq :_*)
-        val fvE = e.variablesLongform(ctxt, env, indexed = false)
+        val fvE = e.variables(ctxt, env)
         new VariableUse(
-          freeVariables = vSet +++ fvE.classical,
+          freeVariables = vSet +++ fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]],
           written = vSet,
           ambient = fvE.ambient,
           programs = emptySet,
-          overwritten = vSet -- fvE.classical,
+          overwritten = vSet -- fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]],
           oracles = emptySet,
           inner = emptySet,
           covered = MaybeAllSet.all
@@ -297,7 +314,7 @@ sealed trait Statement extends HashedValue {
               new VariableUse(
                 // By Helping_Lemmas.fv_subst' (note that freeVariables is an upper bound)
                 freeVariables = progVars.freeVariables ++
-                  MaybeAllSet.subtract(argVars.foldLeft[ListSet[Variable]](emptySet) {
+                  MaybeAllSet.subtract(argVars.foldLeft[ListSet[Variable with Nonindexed]](emptySet) {
                     _ +++ _.freeVariables
                   }, progVars.covered),
                 // By Helping_Lemmas.fv_written' (note that freeVariables is an upper bound)
@@ -319,9 +336,9 @@ sealed trait Statement extends HashedValue {
                     _ +++ _.inner
                   },
                 // By Helping_Lemmas.program_covered and .covered_subst (note that covered is a lower bound)
-                covered = if (isProgram) MaybeAllSet.all[Variable]
+                covered = if (isProgram) MaybeAllSet.all[Variable with Nonindexed]
                 else if (progVars.covered.isAll) MaybeAllSet.all // shortcut for the next line
-                else progVars.covered ++ argVars.foldLeft[MaybeAllSet[Variable]]
+                else progVars.covered ++ argVars.foldLeft[MaybeAllSet[Variable with Nonindexed]]
                   (MaybeAllSet.all) { (cov, a) => cov.intersect(a.covered) }
               )
           }
@@ -341,9 +358,9 @@ sealed trait Statement extends HashedValue {
         }
       case While(e, body) =>
         val fvE = e.variables(ctxt, env)
-        val bodyVars = body.variableUse(env)
+        val bodyVars = body.variableUse(ctxt, env)
         new VariableUse(
-          freeVariables = fvE.classical +++ bodyVars.freeVariables,
+          freeVariables = fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]] +++ bodyVars.freeVariables,
           written = bodyVars.written,
           ambient = fvE.ambient +++ bodyVars.ambient,
           programs = bodyVars.programs,
@@ -353,24 +370,24 @@ sealed trait Statement extends HashedValue {
           covered = bodyVars.covered
         )
       case IfThenElse(e, p1, p2) =>
-        val fvE = e.variables(env)
-        val p1Vars = p1.variableUse(env)
-        val p2Vars = p2.variableUse(env)
+        val fvE = e.variables(ctxt, env)
+        val p1Vars = p1.variableUse(ctxt, env)
+        val p2Vars = p2.variableUse(ctxt, env)
         new VariableUse(
-          freeVariables = fvE.classical +++ p1Vars.freeVariables +++ p2Vars.freeVariables,
+          freeVariables = fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]] +++ p1Vars.freeVariables +++ p2Vars.freeVariables,
           written = p1Vars.written +++ p2Vars.written,
           ambient = fvE.ambient +++ p1Vars.ambient +++ p2Vars.ambient,
           programs = p1Vars.programs +++ p2Vars.programs,
-          overwritten = p1Vars.overwritten.intersect(p2Vars.overwritten) -- fvE.classical,
+          overwritten = p1Vars.overwritten.intersect(p2Vars.overwritten) -- fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]],
           oracles = p1Vars.oracles +++ p2Vars.oracles,
           inner = p1Vars.inner +++ p2Vars.inner,
           covered = p1Vars.covered.intersect(p2Vars.covered)
         )
       case QInit(q, e) =>
         val qSet = ListSet(q.toSeq :_*)
-        val fvE = e.variables(env)
+        val fvE = e.variables(ctxt, env)
         new VariableUse(
-          freeVariables = qSet +++ fvE.classical,
+          freeVariables = qSet +++ fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]],
           written = qSet,
           ambient = fvE.ambient,
           programs = emptySet,
@@ -381,9 +398,9 @@ sealed trait Statement extends HashedValue {
         )
       case QApply(q, e) =>
         val qSet = ListSet(q.toSeq :_*)
-        val fvE = e.variables(env)
+        val fvE = e.variables(ctxt, env)
         new VariableUse(
-          freeVariables = qSet +++ fvE.classical,
+          freeVariables = qSet +++ fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]],
           written = qSet,
           ambient = fvE.ambient,
           programs = emptySet,
@@ -392,15 +409,15 @@ sealed trait Statement extends HashedValue {
           inner = emptySet,
           covered = MaybeAllSet.all)
       case Measurement(x, q, e) =>
-        val xSet = ListSet[Variable](x.toSeq :_*)
-        val qSet = ListSet[Variable](q.toSeq :_*)
-        val fvE = e.variables(env)
+        val xSet = ListSet[Variable with Nonindexed](x.toSeq :_*)
+        val qSet = ListSet[Variable with Nonindexed](q.toSeq :_*)
+        val fvE = e.variables(ctxt, env)
         new VariableUse(
-          freeVariables = xSet +++ qSet +++ fvE.classical,
+          freeVariables = xSet +++ qSet +++ fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]],
           written = xSet +++ qSet,
           ambient = fvE.ambient,
           programs = emptySet,
-          overwritten = xSet -- fvE.classical,
+          overwritten = xSet -- fvE.classical.asInstanceOf[ListSet[CVariable with Nonindexed]],
           oracles = emptySet,
           inner = emptySet,
           covered = MaybeAllSet.all)
@@ -420,14 +437,14 @@ sealed trait Statement extends HashedValue {
         vars ++= vars2 map { _.name }
         collect(body)
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars ++= v.iterator.map(_.name); vars ++= e.variables
-      case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.variables
+      case Assign(v,e) => vars ++= v.iterator.map(_.name); vars ++= e.term.variables
+      case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.term.variables
       case Call(_, _*) =>
-      case While(e,body) => vars ++= e.variables; collect(body)
-      case IfThenElse(e,p1,p2) => vars ++= e.variables; collect(p1); collect(p2)
-      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
-      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
-      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.variables
+      case While(e,body) => vars ++= e.term.variables; collect(body)
+      case IfThenElse(e,p1,p2) => vars ++= e.term.variables; collect(p1); collect(p2)
+      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.term.variables
+      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.term.variables
+      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.term.variables
     }
     collect(this)
     vars.result()
@@ -453,7 +470,7 @@ object Statement {
     GIsabelle.Ops.term_to_statement_op(ctxt, term).retrieveNow
 }
 
-class Local(val vars: List[Variable], val body : Block) extends Statement {
+class Local(val vars: List[Variable with Nonindexed], val body : Block) extends Statement {
   assert(vars.nonEmpty)
 
   lazy val hash : Hash[this.type] =
@@ -498,9 +515,9 @@ class Local(val vars: List[Variable], val body : Block) extends Statement {
   //  assumes "no_conflict (λx. if x ∈ X then x else σ x) c"
   //  assumes "X ∩ σ ` (fv c ∩ var_subst_dom σ) = {}"
   //  shows "no_conflict σ (locals X c)"
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = {
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean = {
     val dom = renaming map { _._1 }
-    val fv = variableUse(env).freeVariables
+    val fv = variableUse(ctxt, env).freeVariables
     val fvDom = fv & dom.toSet
     // σ ` (fv c ∩ var_subst_dom σ)
     val renaming_fv_dom = renaming.collect { case (x,y) if fvDom.contains(x) => y }.toSet
@@ -509,26 +526,26 @@ class Local(val vars: List[Variable], val body : Block) extends Statement {
       return false
     val renamingFiltered = renaming filterNot { case (x,y) => vars.contains(x) }
     //  assumes "no_conflict (λx. if x ∈ X then x else σ x) c"
-    this.body.noConflict(env, renamingFiltered)
+    this.body.noConflict(ctxt, env, renamingFiltered)
   }
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Local =
-    Local(this.vars, body.renameVariables(env, renaming.filterNot { case (x,y) => vars.contains(x) }))
+  override def renameVariables(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Local =
+    Local(this.vars, body.renameVariables(ctxt, env, renaming.filterNot { case (x,y) => vars.contains(x) }))
 }
 
 object Local {
-  def apply(cvars: Seq[CVariable], qvars: Seq[QVariable], body : Block): Local = {
+  def apply(cvars: Seq[CVariable with Nonindexed], qvars: Seq[QVariable with Nonindexed], body : Block): Local = {
     new Local(cvars.toList ++ qvars.toList, body)
   }
 
-  def apply(vars: Seq[Variable], body : Block): Local = {
+  def apply(vars: Seq[Variable with Nonindexed], body : Block): Local = {
     new Local(vars.toList, body)
   }
 
-  def makeIfNeeded(cvars: Seq[CVariable], qvars: Seq[QVariable], body : Statement): Statement =
+  def makeIfNeeded(cvars: Seq[CVariable with Nonindexed], qvars: Seq[QVariable with Nonindexed], body : Statement): Statement =
     makeIfNeeded(cvars ++ qvars, body)
 
-  def makeIfNeeded(vars: Seq[Variable], body : Statement): Statement =
+  def makeIfNeeded(vars: Seq[Variable with Nonindexed], body : Statement): Statement =
     if (vars.nonEmpty)
       body match {
         case Local(vars0, body0) =>
@@ -543,7 +560,7 @@ object Local {
     val vars2 = vars map env.getProgVariable
     new Local(vars2.toList, body)
   }
-  def unapply(x : Local): Some[(List[Variable], Block)] = Some((x.vars, x.body))
+  def unapply(x : Local): Some[(List[Variable with Nonindexed], Block)] = Some((x.vars, x.body))
 }
 
 class Block(val statements:List[Statement]) extends Statement {
@@ -640,11 +657,11 @@ class Block(val statements:List[Statement]) extends Statement {
   override def substituteOracles(subst: Map[String, Statement]): Block = Block(statements.map(_.substituteOracles(subst)):_*)
 
   // nc_Seq: "no_conflict σ c1 ⟹ no_conflict σ c2 ⟹ no_conflict σ (c1; c2)"
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
-    this.statements.forall(_.noConflict(env, renaming))
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean =
+    this.statements.forall(_.noConflict(ctxt, env, renaming))
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Block =
-    Block(statements.map(_.renameVariables(env, renaming)) :_*)
+  override def renameVariables(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Block =
+    Block(statements.map(_.renameVariables(ctxt, env, renaming)) :_*)
 }
 
 object Block {
@@ -659,15 +676,17 @@ object Block {
 }
 
 
-final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
+final case class Assign(variable:VarTerm[CVariableNI], expression:ExpressionNonindexed) extends Statement {
   lazy val hash : Hash[this.type] =
     HashTag()(Hashable.hash(variable), Hashable.hash(expression))
 
   override def toString: String = s"""${Variable.vartermToString(variable)} <- $expression;"""
   override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
-  override def checkWelltyped(context: IsabelleX.ContextX): Unit =
-    expression.checkWelltyped(context, GIsabelle.tupleT(variable.map[Typ](_.valueTyp)))
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
+    expression.checkWelltyped(context)
+    assert(expression.rangeTyp == GIsabelle.tupleT(variable.map[Typ](_.valueTyp)))
+  }
 
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.assign(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
@@ -681,20 +700,23 @@ final case class Assign(variable:VarTerm[CVariable], expression:RichTerm) extend
 
   override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean = true
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Assign =
-    Assign(variable.map(_.substitute(renaming)), expression.renameCVariables(renaming))
+  override def renameVariables(ctx: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Assign =
+    Assign(variable.map(_.substitute(renaming).castNonindexed), expression.renameCVariablesCQ(renaming))
 }
-final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extends Statement {
+
+final case class Sample(variable:VarTerm[CVariableNI], expression:ExpressionNonindexed) extends Statement {
   lazy val hash : Hash[this.type] =
     HashTag()(Hashable.hash(variable), Hashable.hash(expression))
 
   override def toString: String = s"""${Variable.vartermToString(variable)} <$$ $expression;"""
   override def inline(name: String, oracles: List[String], statement: Statement): Statement = this
 
-  override def checkWelltyped(context: IsabelleX.ContextX): Unit =
-    expression.checkWelltyped(context, GIsabelle.distrT(GIsabelle.tupleT(variable.map[Typ](_.valueTyp))))
+  override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
+    expression.checkWelltyped(context)
+    assert(expression.rangeTyp == GIsabelle.distrT(GIsabelle.tupleT(variable.map[Typ](_.valueTyp))))
+  }
 
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.sample(variable.valueTyp) $ variable.variableTerm $ expression.encodeAsExpression(context).isabelleTerm
@@ -708,13 +730,13 @@ final case class Sample(variable:VarTerm[CVariable], expression:RichTerm) extend
 
   override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean = true
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Sample =
-    Sample(variable.map(_.substitute(renaming)), expression.renameCVariables(renaming))
+  override def renameVariables(ctx: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Sample =
+    Sample(variable.map(_.substitute(renaming).castNonindexed), expression.renameCVariablesCQ(renaming))
 }
 
-final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: Block) extends Statement {
+final case class IfThenElse(condition:ExpressionNonindexed, thenBranch: Block, elseBranch: Block) extends Statement {
   lazy val hash : Hash[this.type] =
     HashTag()(Hashable.hash(condition), Hashable.hash(thenBranch), Hashable.hash(elseBranch))
 
@@ -723,7 +745,8 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
   override def toString: String = s"if ($condition) $thenBranch else $elseBranch;"
 
   override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
-    condition.checkWelltyped(context, GIsabelle.boolT)
+    condition.checkWelltyped(context)
+    assert(condition.rangeTyp == GIsabelle.boolT)
     thenBranch.checkWelltyped(context)
     elseBranch.checkWelltyped(context)
   }
@@ -742,14 +765,14 @@ final case class IfThenElse(condition:RichTerm, thenBranch: Block, elseBranch: B
   override def substituteOracles(subst: Map[String, Statement]): Statement = IfThenElse(condition,thenBranch.substituteOracles(subst),elseBranch.substituteOracles(subst))
 
   // nc_IfTE: "no_conflict σ c1 ⟹ no_conflict σ c2 ⟹ no_conflict σ (IfTE e c1 c2)"
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
-    thenBranch.noConflict(env,renaming) && elseBranch.noConflict(env,renaming)
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean =
+    thenBranch.noConflict(ctxt, env, renaming) && elseBranch.noConflict(ctxt, env, renaming)
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Statement =
-    IfThenElse(condition.renameCVariables(renaming), thenBranch.renameVariables(env, renaming), elseBranch.renameVariables(env, renaming))
+  override def renameVariables(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Statement =
+    IfThenElse(condition.renameCVariablesCQ(renaming), thenBranch.renameVariables(ctxt, env, renaming), elseBranch.renameVariables(ctxt, env, renaming))
 }
 
-final case class While(condition:RichTerm, body: Block) extends Statement {
+final case class While(condition:ExpressionNonindexed, body: Block) extends Statement {
   lazy val hash : Hash[this.type] =
     HashTag()(Hashable.hash(condition), Hashable.hash(body))
 
@@ -758,7 +781,8 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
   override def toString: String = s"while ($condition) $body"
 
   override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
-    condition.checkWelltyped(context, GIsabelle.boolT)
+    condition.checkWelltyped(context)
+    assert(condition.rangeTyp == GIsabelle.boolT)
     body.checkWelltyped(context)
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
@@ -775,14 +799,14 @@ final case class While(condition:RichTerm, body: Block) extends Statement {
   override def substituteOracles(subst: Map[String, Statement]): Statement = While(condition,body.substituteOracles(subst))
 
   // nc_While: "no_conflict σ c ⟹ no_conflict σ (While e c)"
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
-    body.noConflict(env, renaming)
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean =
+    body.noConflict(ctxt, env, renaming)
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): While =
-    While(condition.renameCVariables(renaming), body.renameVariables(env, renaming))
+  override def renameVariables(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): While =
+    While(condition.renameCVariablesCQ(renaming), body.renameVariables(ctxt, env, renaming))
 }
 
-final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
+final case class QInit(location:VarTerm[QVariableNI], expression:ExpressionNonindexed) extends Statement {
   lazy val hash : Hash[this.type] =
     HashTag()(Hashable.hash(location), Hashable.hash(expression))
 
@@ -790,8 +814,8 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
   override def toString: String = s"${Variable.vartermToString(location)} <q $expression;"
 
   override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
-    val expected = GIsabelle.ell2T(GIsabelle.tupleT(location.map[Typ](_.valueTyp)))
-    expression.checkWelltyped(context, expected)
+    expression.checkWelltyped(context)
+    assert(expression.rangeTyp == GIsabelle.ell2T(GIsabelle.tupleT(location.map[Typ](_.valueTyp))))
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.qinit(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
@@ -805,13 +829,13 @@ final case class QInit(location:VarTerm[QVariable], expression:RichTerm) extends
 
   override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean = true
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): QInit =
-    QInit(location.map(_.substitute(renaming)), expression.renameCVariables(renaming))
+  override def renameVariables(ctx: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): QInit =
+    QInit(location.map(_.substitute(renaming).castNonindexed), expression.renameCVariablesCQ(renaming))
 }
 
-final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extends Statement {
+final case class QApply(location:VarTerm[QVariableNI], expression:ExpressionNonindexed) extends Statement {
   lazy val hash : Hash[this.type] =
     HashTag()(Hashable.hash(location), Hashable.hash(expression))
 
@@ -820,8 +844,8 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
 
   override def checkWelltyped(context: IsabelleX.ContextX): Unit = {
     val varType = GIsabelle.tupleT(location.map[Typ](_.valueTyp))
-    val expected = Type("Bounded_Operators.bounded", varType, varType)
-    expression.checkWelltyped(context, expected)
+    expression.checkWelltyped(context)
+    assert(expression.rangeTyp == Type("Bounded_Operators.bounded", varType, varType))
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.qapply(Isabelle.tupleT(location.map(_.valueTyp):_*)) $ Isabelle.qvarTuple_var(location) $ expression.encodeAsExpression(context).isabelleTerm
@@ -835,12 +859,12 @@ final case class QApply(location:VarTerm[QVariable], expression:RichTerm) extend
 
   override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean = true
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): QApply =
-    QApply(location.map(_.substitute(renaming)), expression.renameCVariables(renaming))
+  override def renameVariables(ctx: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): QApply =
+    QApply(location.map(_.substitute(renaming).castNonindexed), expression.renameCVariablesCQ(renaming))
 }
-final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariable], e:RichTerm) extends Statement {
+final case class Measurement(result:VarTerm[CVariableNI], location:VarTerm[QVariableNI], e:ExpressionNonindexed) extends Statement {
   lazy val hash : Hash[this.type] =
     HashTag()(Hashable.hash(result), Hashable.hash(location), Hashable.hash(e))
 
@@ -851,7 +875,8 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
     val expected = Type("QRHL_Core.measurement",
       GIsabelle.tupleT(result.map[Typ](_.valueTyp)),
       GIsabelle.tupleT(location.map[Typ](_.valueTyp)))
-    e.checkWelltyped(context, expected)
+    e.checkWelltyped(context)
+    assert(e.rangeTyp == expected)
   }
   //  override def programTermOLD(context: Isabelle.Context): Term =
   //    Isabelle.measurement(Isabelle.tupleT(location.map(_.valueTyp):_*), result.valueTyp) $
@@ -866,13 +891,14 @@ final case class Measurement(result:VarTerm[CVariable], location:VarTerm[QVariab
 
   override def substituteOracles(subst: Map[String, Statement]): Statement = this
 
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean = true
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean = true
 
   /** Renames all program variables. (subst_vars in Isabelle)
    *
    * @param renaming the substitution as an association list. Must not contain pairs (x,x), nor two pairs (x,y), (x,y'). */
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Measurement =
-    Measurement(result.map(_.substitute(renaming)), location.map(_.substitute(renaming)), e.renameCVariables(renaming))
+  override def renameVariables(ctx: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Measurement =
+    Measurement(result.map(_.substitute(renaming).castNonindexed), location.map(_.substitute(renaming).castNonindexed),
+      e.renameCVariablesCQ(renaming))
 
 }
 
@@ -922,11 +948,11 @@ final case class Call(name:String, args:Call*) extends Statement {
   //  shows "no_conflict σ c"
   // This lemma does not give the tightest bound (localvars_dom_no_conflict is tighter, for example, or we could traverse known programs).
   // But since replacing fails anyways if the domain of sigma contains free variables of a Call-statement, we use this simple overapproximation
-  override def noConflict(env: Environment, renaming: List[(Variable, Variable)]): Boolean =
-    (variableUse(env).freeVariables & (renaming map { _._1 }).toSet).isEmpty
+  override def noConflict(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Boolean =
+    (variableUse(ctxt, env).freeVariables & (renaming map { _._1 }).toSet).isEmpty
 
-  override def renameVariables(env: Environment, renaming: List[(Variable, Variable)]): Call = {
-    val fv = variableUse(env).freeVariables
+  override def renameVariables(ctxt: Context, env: Environment, renaming: List[(Variable with Nonindexed, Variable with Nonindexed)]): Call = {
+    val fv = variableUse(ctxt, env).freeVariables
     for ((x,y) <- renaming)
       if (fv.contains(x))
         throw UserException(s"Cannot rename ${x.name} -> ${y.name} in $this because ${x.name} is in the free variables. Consider inlining ${this.name}")

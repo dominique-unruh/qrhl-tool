@@ -174,7 +174,7 @@ fun sym_tac ctxt =
   CONVERSION (after_sym_rule_conv ctxt)
 
 fun skip_conseq_tac ctxt = resolve_tac ctxt @{thms skip_conseq_rule}
-  THEN' Programs.generalize_getters ctxt
+  THEN' Expressions.generalize_getters ctxt
 end
 \<close>
 

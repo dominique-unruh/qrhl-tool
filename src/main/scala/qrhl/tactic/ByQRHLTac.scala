@@ -20,7 +20,7 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import scala.concurrent.ExecutionContext.Implicits._
 import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 
-case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
+case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
   override def hash: Hash[ByQRHLTac.this.type] =
     HashTag()(Hashable.hash(qvariables))
 
@@ -103,6 +103,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         logger.debug((rel,e1,p1,e2,p2).toString)
 
         val env = state.environment
+        val ctxt = state.isabelle.context
 
         // R must be one of <= or =
         // connective := --> or = then.
@@ -115,10 +116,12 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         def stripIndices(vs: Iterable[CVariable]) =
           vs.collect { case Variable.IndexedC(v, _) => v }
 
-        val vars1 = p1.variableUse(env)
-        val vars2 = p2.variableUse(env)
-        val vars1expr = stripIndices(RichTerm(GIsabelle.boolT, e1).variables(env).classical)
-        val vars2expr = stripIndices(RichTerm(GIsabelle.boolT, e2).variables(env).classical)
+        val vars1 = p1.variableUse(ctxt, env)
+        val vars2 = p2.variableUse(ctxt, env)
+        val e1_ = ExpressionNonindexed.fromTerm(e1)
+        val e2_ = ExpressionNonindexed.fromTerm(e2)
+        val vars1expr = e1_.variables(ctxt, env).classical 
+        val vars2expr = e2_.variables(ctxt, env).classical 
 
         // fv(p1), fv(p2), fv(e1), fv(e2) (not indexed, only classical)
         val cvars = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
@@ -150,14 +153,14 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         val post = RichTerm(GIsabelle.predExpressionT,
           Abs("mem", GIsabelle.cl2T, GIsabelle.classical_subspace(connective $ (e1 $ Bound(0)) $ (e2 $ Bound(0)))))
 
-        List(QRHLSubgoal(left,right,RichTerm(pre),post,Nil))
+        List(QRHLSubgoal(left,right,ExpressionIndexed.fromTerm(pre),ExpressionIndexed.fromTerm(post),Nil))
       // Subgoal: p1 denotationally-equivalent p2
       case DenotationalEqSubgoal(p1, p2, assms) =>
         val env = state.environment
         implicit val ctxt: Context = state.isabelle.context
 
-        val vars1 = p1.variableUse(env)
-        val vars2 = p2.variableUse(env)
+        val vars1 = p1.variableUse(ctxt, env)
+        val vars2 = p2.variableUse(ctxt, env)
 
         /** fv(p1), fv(p2) (not indexed, only classical) */
         val cvars = vars1.classical ++ vars2.classical
@@ -192,7 +195,7 @@ case class ByQRHLTac(qvariables: List[QVariable]) extends Tactic {
         /** postcondition */
         val post = pre
 
-        List(QRHLSubgoal(left, right, RichTerm(pre), RichTerm(post), assms))
+        List(QRHLSubgoal(left, right, ExpressionIndexed.fromTerm(pre), ExpressionIndexed.fromTerm(post), assms))
       case _ =>
         throw UserException(
           """Expected subgoal of the form "Pr[e:p(rho)] = Pr[f:q(rho2)]" (or with <= or >=) where p,q are program names\n

@@ -7,7 +7,7 @@ fun dest_qrhl_goal t = Logic.strip_imp_concl t |> HOLogic.dest_Trueprop |> dest_
 
 fun read_predicate ctxt str =
   let val preterm = Syntax.parse_term ctxt str
-      val expr = Programs.term_to_expression ctxt dummyT preterm
+      val expr = Expressions.term_to_expression ctxt dummyT preterm
       val t = Syntax.check_term ctxt (Type.constraint \<^typ>\<open>predicate expression2\<close> expr)
   in t end
 

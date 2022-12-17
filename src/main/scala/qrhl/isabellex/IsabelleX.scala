@@ -279,8 +279,11 @@ class IsabelleX(val setup : Isabelle.Setup) {
     super.finalize()
   }
 
-
   val boolT: Typ = Type(t.bool)
+  def all_const(typ: Typ): Const = Const(c.all, typ -->: boolT)
+  def all(name: String, typ: Typ, body: Term): Term = all_const(typ) $ Abs(name, typ, body)
+  def fst(typ1: Typ, typ2: Typ): Const = Const(c.fst, prodT(typ1, typ2) -->: typ1)
+  def snd(typ1: Typ, typ2: Typ): Const = Const(c.snd, prodT(typ1, typ2) -->: typ2)
   val True_const: Const = Const(c.True, boolT)
   val False_const: Const = Const(c.False, boolT)
   val dummyT: Type = Type(t.dummy)
@@ -579,14 +582,18 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
   val block: Const = Const(c.block, listT(programT) -->: programT)
 
+  def variableT(typ: Typ, memTyp: Typ, classical: Boolean): Type =
+    Type(if (classical) t.cregister else t.qregister, typ, memTyp)
+
   def variableT(typ: Typ, classical: Boolean, indexed: Boolean): Type =
-    Type(if (classical) t.cregister else t.qregister,
-      typ,
-      if (indexed && classical) cl2T
+    variableT(typ,
+      (if (indexed && classical) cl2T
       else if (indexed && !classical) qu2T
       else if (!indexed && classical) clT
-      else quT
+      else quT),
+      classical = classical
     )
+
   object VariableT {
     /** case VariableT(typ, classical, indexed) => ... */
     def unapply(typ: Typ): Option[(Typ, Boolean, Boolean)] = typ match {
@@ -833,9 +840,16 @@ class IsabelleX(val setup : Isabelle.Setup) {
     fv.result()
   }
 
-  def getter(varType: Typ, indexed: Boolean): Const =
-    Const(IsabelleConsts.getter, variableT(varType, classical=true, indexed=indexed) -->: (if (indexed) cl2T else clT) -->: varType)
+  def getter(varTyp: Typ, indexed: Boolean): Const =
+    Const(IsabelleConsts.getter, variableT(varTyp, classical=true, indexed=indexed) -->: (if (indexed) cl2T else clT) -->: varTyp)
 
+  def getter(varTyp: Typ, memTyp: Typ): Const =
+    Const(IsabelleConsts.getter, variableT(varTyp, memTyp, classical = true) -->: memTyp -->: varTyp)
+
+  def setter(varTyp: Typ, indexed: Boolean): Const =
+    setter(varTyp, if (indexed) cl2T else clT)
+  def setter(varTyp: Typ, memTyp: Typ): Const =
+    Const(IsabelleConsts.setter, variableT(varTyp, memTyp, classical = true) -->: varTyp -->: memTyp -->: memTyp)
 
   def quantum_equality_full(typLeft : Typ, typRight : Typ, typZ : Typ): Const =
     Const(IsabelleConsts.quantum_equality_full,  l2boundedT(typLeft,typZ) -->: variableT(typLeft, classical=false, indexed=true) -->: l2boundedT(typRight,typZ) -->: variableT(typRight, classical=false, indexed=true) -->: predicateT)
@@ -931,7 +945,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
     val swapOp =
       MLValue.compileFunction[Context, Term, Term](s"$qrhl_ops.swap_variables_conv")
-    lazy val colocalityOp =
+    /** term must come from ExpressionIndexed */
+    lazy val colocal_pred_qvars =
       MLValue.compileFunction[Context, Term, List[(String, Variable.Index, Typ)], Term](s"$qrhl_ops.colocal_pred_qvars")
     val isInfinite_op =
       MLValue.compileFunction[Context, Typ, Boolean](s"$qrhl_ops.is_finite")
@@ -1058,6 +1073,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
     lazy val varterm_to_variable2 = compileFunction[Boolean, VarTerm[(String, Index, Typ)], Term](s"fn (classical,vt) => $qrhl_ops.varterm_to_variable2 (if classical then $qrhl_ops.Classical else $qrhl_ops.Quantum) vt")
     lazy val variables_in_expression = compileFunction[Context, Term, (List[(Boolean, String, Index, Typ)],List[String])](
       s"fn (ctxt, t) => $qrhl_ops.variables_in_expression ctxt t |> map (cq,a,b,c) => (cq=$qrhl_ops.Classical,a,b,c)")
+    val clean_expression = compileFunction[Context, Term, Term](
+      s"fn (ctxt, t) => $qrhl_ops.clean_expression_conv ctxt (Thm.cterm_of ctxt t) |> Thm.rhs_of")
   }
 }
 

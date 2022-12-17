@@ -3,7 +3,7 @@ package qrhl.toplevel
 import java.io.{PrintWriter, StringWriter}
 import java.nio.file.{Path, Paths}
 import de.unruh.isabelle.pure.{Context, Typ}
-import qrhl.logic.{Block, CVariable, QVariable, Variable}
+import qrhl.logic.{Block, CVariable, Nonindexed, QVariable, Variable}
 import qrhl.{State, Subgoal, Tactic, UserException, toplevel}
 
 import scala.collection.immutable.ListSet
@@ -99,9 +99,9 @@ case class DeclareProgramCommand(name: String, oracles: List[String], program : 
     HashTag()(Hashable.hash(name), Hashable.hash(oracles), Hashable.hash(program))
 }
 
-case class DeclareAdversaryCommand(name: String, free: Seq[Variable], inner : Seq[Variable],
-                                   readonly: Seq[Variable], covered : Seq[Variable],
-                                   overwritten: Seq[Variable], numOracles: Int) extends Command {
+case class DeclareAdversaryCommand(name: String, free: Seq[Variable with Nonindexed], inner : Seq[Variable with Nonindexed],
+                                   readonly: Seq[Variable with Nonindexed], covered : Seq[Variable with Nonindexed],
+                                   overwritten: Seq[Variable with Nonindexed], numOracles: Int) extends Command {
 
   override def hash: Hash[DeclareAdversaryCommand.this.type] =
     HashTag()(Hashable.hash(name), Hashable.hash(free.toList), Hashable.hash(inner.toList),

@@ -8,6 +8,7 @@ import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
 import de.unruh.isabelle.pure.{App, Const}
 import hashedcomputation.{Hash, HashTag}
+import qrhl.logic.ExpressionInstantiatedIndexed
 
 // Implicits
 import de.unruh.isabelle.pure.Implicits._
@@ -30,13 +31,13 @@ case object FrameRuleTac extends Tactic {
   override def apply(state: State, goal: Subgoal)(implicit output: PrintWriter): List[Subgoal] = goal match {
     case AmbientSubgoal(_) => throw UserException("Expected qRHL judgment")
     case QRHLSubgoal(left, right, pre, post, assumptions) =>
-      val (b, r) = post.isabelleTerm match {
+      val (b, r) = post.instantiateMemory.termInst.isabelleTerm match {
         case App(App(Const(IsabelleConsts.inf, _), b2), r2) => (b2, r2)
         case _ => throw UserException(s"""Postcondition must be of the form "B ⊓ R", not $post""")
       }
-      val rRich = RichTerm(GIsabelle.predicateT, r)
+      val rRich = ExpressionInstantiatedIndexed.fromTerm(r)
 
-      val a = pre.isabelleTerm match {
+      val a = pre.instantiateMemory.termInst.isabelleTerm match {
         case App(App(Const(IsabelleConsts.inf, _), a2), r2) =>
           if (r2!=r)
             throw UserException(s"Rhs of precondition and rhs of postcondition must be equal ($rRich vs ${RichTerm(GIsabelle.predicateT, r2)})")
@@ -45,11 +46,13 @@ case object FrameRuleTac extends Tactic {
       }
 
       val env = state.environment
-      val leftVarUse = left.variableUse(env)
-      val rightVarUse = right.variableUse(env)
+      val ctxt = state.isabelle.context
+
+      val leftVarUse = left.variableUse(ctxt, env)
+      val rightVarUse = right.variableUse(ctxt, env)
 
       /** Classical vars in R */
-      val rCVars = rRich.variables(env).classical
+      val rCVars = rRich.variables(ctxt, env).classicalI
 
       /** Written classical vars in c (indexed) */
       val leftCW1 = leftVarUse.writtenClassical.map(_.index1)
@@ -67,11 +70,14 @@ case object FrameRuleTac extends Tactic {
       val qVars12 = leftVarUse.quantum.map(_.index1).union(rightVarUse.quantum.map(_.index2))
       val qVars12list = qVars12.toList.map { v => (v.name, v.theIndex, v.valueTyp) }
       /** "colocal_pred_qvars R qVars12" */
-      val colocality = AmbientSubgoal(RichTerm(Ops.colocalityOp(state.isabelle.context, r, qVars12list).retrieveNow))
+      val colocality = AmbientSubgoal(RichTerm(Ops.colocal_pred_qvars(
+        state.isabelle.context, rRich.abstractMemory.term.isabelleTerm, qVars12list).retrieveNow))
 
-      val qrhlSubgoal = QRHLSubgoal(left, right, RichTerm(GIsabelle.predicateT, a), RichTerm(GIsabelle.predicateT, b), assumptions)
+      val qrhlSubgoal = QRHLSubgoal(left, right,
+        ExpressionInstantiatedIndexed.fromTerm(a).abstractMemory,
+        ExpressionInstantiatedIndexed.fromTerm(b).abstractMemory,
+        assumptions)
 
       List(colocality, qrhlSubgoal)
   }
-
 }

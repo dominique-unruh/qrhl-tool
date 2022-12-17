@@ -5,11 +5,10 @@ import qrhl.isabellex.IsabelleX.ContextX
 import qrhl.isabellex.IsabelleX
 
 import scala.collection.mutable
-import de.unruh.isabelle.pure.{Term, Typ}
+import de.unruh.isabelle.pure.{Context, Term, Typ}
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.Typ
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 
 import scala.collection.immutable.ListSet
@@ -31,8 +30,8 @@ import hashedcomputation.Implicits._
   * @param programs All declared programs (both concrete and abstract (adversary) ones)
   */
 final class Environment private
-  (val cVariables : Map[String,CVariable],
-   val qVariables : Map[String,QVariable],
+  (val cVariables : Map[String, CVariableNI],
+   val qVariables : Map[String, QVariableNI],
    val ambientVariables : Map[String,Typ],
    val cqVariables12 : Set[String],
 //   val indexedNames : Set[String], // all variable names together, program variables indexed with 1/2
@@ -43,11 +42,11 @@ final class Environment private
 {
   override def hash: Hash[Environment.this.type] = _hash.asInstanceOf[Hash[this.type]]
 
-  def getCVariable(res: String): CVariable =
+  def getCVariable(res: String): CVariableNI =
     cVariables.getOrElse(res, throw UserException(s"Classical variable $res not declared"))
-  def getQVariable(res: String): QVariable =
+  def getQVariable(res: String): QVariableNI =
     qVariables.getOrElse(res, throw UserException(s"Quantum variable $res not declared"))
-  def getProgVariable(name: String): Variable =
+  def getProgVariable(name: String): Variable with Nonindexed =
     qVariables.getOrElse(name, cVariables.getOrElse(name, throw UserException(s"Program variable $name not declared")))
 
   def getAmbientVariable(res: String): Typ =
@@ -145,13 +144,13 @@ final class Environment private
 //  }
 
 
-  private def copy(cVariables:Map[String,CVariable]=cVariables,
-                   qVariables:Map[String,QVariable]=qVariables,
+  private def copy(cVariables:Map[String,CVariableNI]=cVariables,
+                   qVariables:Map[String,QVariableNI]=qVariables,
                    ambientVariables:Map[String,Typ]=ambientVariables,
                    programs:Map[String,ProgramDecl]=programs,
                    cqVariables12:Set[String]=cqVariables12,
                    hash:Hash[Environment]) =
-    new Environment(cVariables=cVariables, qVariables=qVariables, programs=programs,
+    new Environment(cVariables = cVariables, qVariables=qVariables, programs=programs,
       ambientVariables=ambientVariables, cqVariables12=cqVariables12, _hash=hash)
 }
 
@@ -173,8 +172,8 @@ sealed trait ProgramDecl extends HashedValue {
   def toStringMultiline : String
 }
 
-final case class AbstractProgramDecl(name:String, free:List[Variable], inner:List[Variable], written:List[Variable],
-                                     overwritten:List[Variable], covered:List[Variable], numOracles:Int) extends ProgramDecl {
+final case class AbstractProgramDecl(name:String, free:List[Variable with Nonindexed], inner:List[Variable with Nonindexed], written:List[Variable with Nonindexed],
+                                     overwritten:List[Variable with Nonindexed], covered:List[Variable with Nonindexed], numOracles:Int) extends ProgramDecl {
 
   override lazy val hash: Hash[AbstractProgramDecl.this.type] =
     HashTag()(Hashable.hash(name), Hashable.hash(free), Hashable.hash(inner), Hashable.hash(written),
@@ -207,7 +206,7 @@ final case class AbstractProgramDecl(name:String, free:List[Variable], inner:Lis
 object AbstractProgramDecl {
 }
 
-final case class ConcreteProgramDecl(environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {
+final case class ConcreteProgramDecl(ctxt: Context, environment: Environment, name:String, oracles:List[String], program:Block) extends ProgramDecl {
   import ConcreteProgramDecl._
 
   override lazy val hash: Hash[ConcreteProgramDecl.this.type] =
@@ -221,29 +220,29 @@ final case class ConcreteProgramDecl(environment: Environment, name:String, orac
       case Block(sts@_*) => sts.foreach(scan)
       case Call(_,_*) =>
       case Assign(_,e) =>
-        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        vars ++= e.term.variables.filter(environment.ambientVariables.contains)
       case Sample(_,e) =>
-        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        vars ++= e.term.variables.filter(environment.ambientVariables.contains)
       case QApply(_,e) =>
-        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        vars ++= e.term.variables.filter(environment.ambientVariables.contains)
       case While(e,body) =>
-        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        vars ++= e.term.variables.filter(environment.ambientVariables.contains)
         scan(body)
       case IfThenElse(e,thenBranch,elseBranch) =>
-        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        vars ++= e.term.variables.filter(environment.ambientVariables.contains)
         scan(thenBranch)
         scan(elseBranch)
       case Measurement(_, _,e) =>
-        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        vars ++= e.term.variables.filter(environment.ambientVariables.contains)
       case QInit(_,e) =>
-        vars ++= e.variables.filter(environment.ambientVariables.contains)
+        vars ++= e.term.variables.filter(environment.ambientVariables.contains)
     }
     scan(program)
     vars.toList
   }
 
   override lazy val variablesRecursive: VariableUse =
-    program.variableUse(environment)
+    program.variableUse(ctxt, environment)
 
   def declareInIsabelle(context: IsabelleX.ContextX): IsabelleX.ContextX = {
     val vars = variablesRecursive

@@ -108,7 +108,8 @@ case class PrintCommand(symbol : String) extends Command {
 
       val fixes = globalIsabelle.freeVarsWithType(term.isabelleTerm).toList
 
-      val qvars = term.variables(state.environment).quantum
+      val qvars = for (name <- term.variables; v <- state.environment.qVariables.get(name)) yield v
+
       val declaredQvars =
         if (qvars.isEmpty)
           Nil

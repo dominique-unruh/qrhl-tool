@@ -18,8 +18,8 @@ object TrueTac extends Tactic {
     case AmbientSubgoal(exp : RichTerm) => exp.isabelleTerm==GIsabelle.True_const
     case g : QRHLSubgoal =>
       g.assumptions.exists(_.isabelleTerm==GIsabelle.False_const) ||
-      g.pre.isabelleTerm==GIsabelle.predicate_bot ||
-      g.pre.isabelleTerm==GIsabelle.predicate_0
+      g.pre.instantiateMemory.termInst.isabelleTerm == GIsabelle.predicate_bot ||
+      g.pre.instantiateMemory.termInst.isabelleTerm == GIsabelle.predicate_0
   }
 
   override def toString: String = "true"

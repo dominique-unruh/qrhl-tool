@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import java.io.PrintWriter
 import qrhl.isabellex.{IsabelleX, RichTerm}
-import qrhl.logic.{Block, IfThenElse}
+import qrhl.logic.{Block, ExpressionInstantiatedIndexed, IfThenElse}
 import qrhl.tactic.JointIfTac.{allCases, differentCases, sameCases}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
 import IsabelleX.{globalIsabelle => GIsabelle}
@@ -11,6 +11,7 @@ import hashedcomputation.{Hash, HashTag, Hashable}
 
 import scala.collection.mutable.ListBuffer
 import hashedcomputation.Implicits._
+import qrhl.logic.Variable.{Index1, Index2}
 
 case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
   assert(Utils.areDistinct(cases))
@@ -29,8 +30,9 @@ case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
       }
 
       val env = state.environment
-      val condLIdx = condL.index1(env).isabelleTerm
-      val condRIdx = condR.index2(env).isabelleTerm
+      val ctxt = state.isabelle.context
+      val condLIdx = condL.index(ctxt, Index1).instantiateMemory
+      val condRIdx = condR.index(ctxt, Index2).instantiateMemory
       val casesSet = Set(cases:_*)
 
       val subgoals = new ListBuffer[Subgoal]
@@ -44,24 +46,29 @@ case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
         if (casesSet == allCases)
           GIsabelle.True_const
         else if (casesSet == sameCases)
-          GIsabelle.mk_eq(condLIdx, condRIdx)
+          GIsabelle.mk_eq(condLIdx.termInst.isabelleTerm, condRIdx.termInst.isabelleTerm)
         else if (casesSet == differentCases)
-          GIsabelle.not(GIsabelle.mk_eq(condLIdx, condRIdx))
+          GIsabelle.not(GIsabelle.mk_eq(condLIdx.termInst.isabelleTerm, condRIdx.termInst.isabelleTerm))
         else
           GIsabelle.disj({
             for ((l,r) <- cases)
               yield
-                GIsabelle.conj(eqBool(condLIdx,l),eqBool(condRIdx,r))
+                GIsabelle.conj(eqBool(condLIdx.termInst.isabelleTerm,l),eqBool(condRIdx.termInst.isabelleTerm,r))
           } :_*)
 
-      val casesSubgoal = GIsabelle.less_eq(pre.isabelleTerm, GIsabelle.classical_subspace(excludedCasesCond))
-      subgoals.append(AmbientSubgoal(RichTerm(GIsabelle.predicateT, casesSubgoal)))
+      val casesSubgoal = pre.leq(ExpressionInstantiatedIndexed.fromTerm(GIsabelle.classical_subspace(excludedCasesCond)).abstractMemory)
+      subgoals.append(AmbientSubgoal(casesSubgoal))
 
       for ((l,r) <- cases) {
         val newLeft = (if (l) thenBranchL else elseBranchL) ++ restL
         val newRight = (if (r) thenBranchR else elseBranchR) ++ restR
-        val newPre = GIsabelle.inf(pre.isabelleTerm, GIsabelle.classical_subspace(GIsabelle.conj(eqBool(condLIdx,l),eqBool(condRIdx,r))))
-        subgoals.append(QRHLSubgoal(newLeft,newRight,RichTerm(GIsabelle.predicateT,newPre),post,assumptions))
+        val newPre = ExpressionInstantiatedIndexed.fromTerm(
+          GIsabelle.inf(
+            pre.instantiateMemory.termInst.isabelleTerm,
+            GIsabelle.classical_subspace(GIsabelle.conj(
+              eqBool(condLIdx.termInst.isabelleTerm, l),
+              eqBool(condRIdx.termInst.isabelleTerm, r)))))
+        subgoals.append(QRHLSubgoal(newLeft, newRight, newPre.abstractMemory, post, assumptions))
       }
 
       subgoals.toList

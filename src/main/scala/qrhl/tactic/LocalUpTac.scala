@@ -2,7 +2,7 @@ package qrhl.tactic
 
 import java.io.PrintWriter
 import org.log4s
-import qrhl.logic.{Assign, Block, CVariable, Call, Environment, IfThenElse, Local, Measurement, QApply, QInit, QVariable, Sample, Statement, VarTerm, Variable, While}
+import qrhl.logic.{Assign, Block, CVariable, CVariableNI, Call, Environment, ExpressionNonindexed, IfThenElse, Local, Measurement, Nonindexed, QApply, QInit, QVariable, QVariableNI, Sample, Statement, VarTerm, Variable, While}
 import qrhl.{AmbientSubgoal, QRHLSubgoal, State, Subgoal, Tactic, UserException, Utils}
 
 import scala.collection.immutable.ListSet
@@ -15,6 +15,7 @@ import hashedcomputation.{Hash, HashTag, Hashable, HashedValue}
 import hashedcomputation.Implicits._
 import CVariable.ordering
 import QVariable.ordering
+import de.unruh.isabelle.pure.Context
 
 
 case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
@@ -25,26 +26,29 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       throw UserException("Expected a qRHL subgoal")
     case QRHLSubgoal(left, right, pre, post, assumptions) =>
       val env = state.environment
+      val ctxt = state.isabelle.context
 //      println(s"*** Possibly unsound (not proven) tactic 'local up' applied.")
-      val (left2, id) = if (side.forall(_==true)) up2(env, varID, left) else (left,varID)
-      val (right2, id2) = if (side.forall(_==false)) up2(env, id, right) else (right,id)
+      val (left2, id) = if (side.forall(_==true)) up2(ctxt, env, varID, left) else (left,varID)
+      val (right2, id2) = if (side.forall(_==false)) up2(ctxt, env, id, right) else (right,id)
       if (!id2.consumed)
         throw UserException(s"Not all variables found in $varID")
       List(QRHLSubgoal(left2.toBlock, right2.toBlock, pre, post, assumptions))
   }
 
   /**  Returns a program that initializes the given variables. */
-  def init(classical: Seq[CVariable] = Nil, quantum: Seq[QVariable] = Nil): Block = {
+  def init(classical: Seq[CVariableNI] = Nil, quantum: Seq[QVariableNI] = Nil): Block = {
     val statements = new ListBuffer[Statement]()
     for (c <- classical)
-      statements.append(Assign(VarTerm.varlist(c), RichTerm(GIsabelle.default(c.valueTyp))))
+      statements.append(Assign(VarTerm.varlist(c), ExpressionNonindexed.constant(
+      GIsabelle.default(c.valueTyp))))
     for (q <- quantum)
-      statements.append(QInit(VarTerm.varlist(q), RichTerm(GIsabelle.ket(GIsabelle.default(q.valueTyp)))))
+      statements.append(QInit(VarTerm.varlist(q), ExpressionNonindexed.constant(
+        GIsabelle.ket(GIsabelle.default(q.valueTyp)))))
     Block(statements.toSeq: _*)
   }
 
-  def up2(env: Environment, id: VarID, statement: Statement): (Statement,VarID) = {
-    val (st2, cvars, qvars, id2) = up(env,id,statement)
+  def up2(ctxt: Context, env: Environment, id: VarID, statement: Statement): (Statement,VarID) = {
+    val (st2, cvars, qvars, id2) = up(ctxt, env, id, statement)
     (Local.makeIfNeeded(cvars.toSeq,qvars.toSeq,st2), id2)
   }
 
@@ -69,7 +73,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
    * @return (newStatement,cVars,qVars,id) where newStatement is the rewritten statement, and cVars,qVars are
    *         lists of the variables that moved to the top. id is the updated [[LocalUpTac.VarID]] (in case some variables have been selected by id for moving).
    **/
-  def up(env: Environment, id: VarID, statement: Statement): (Statement,ListSet[CVariable],ListSet[QVariable],VarID) = statement match {
+  def up(ctxt: Context, env: Environment, id: VarID, statement: Statement): (Statement,ListSet[CVariableNI],ListSet[QVariableNI],VarID) = statement match {
     case _: Assign | _: Sample | _: QInit | _: QApply | _: Measurement | _: Call =>
       /* Here the statement is not changed, so no lemma is needed */
       (statement,empty,empty,id)
@@ -81,12 +85,12 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
        */
 
-      val (c, class_V, quant_V, id2) = up(env, id, body)
+      val (c, class_V, quant_V, id2) = up(ctxt, env, id, body)
       /** variables that can move further (Vu).  */
-      val class_Vup = class_V.diff(condition.variables(env).classical)
+      val class_Vup = class_V.diff(condition.variables(ctxt, env).classical.map(_.castNonindexed))
       val quant_Vup = quant_V
       /** variables that have to stop here (Vd). */
-      val class_Vdown = class_V.intersect(condition.variables(env).classical)
+      val class_Vdown = class_V.intersect(condition.variables(ctxt, env).classical.map(_.castNonindexed))
       val quant_Vdown = Nil
       // Add "init Vu" in front of c
       val body3 = (init(classical = class_Vup.toSeq, quantum = quant_Vup.toSeq) ++ c.toBlock).unwrapTrivialBlock
@@ -106,15 +110,16 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
         Velsedown := Velse - Vup
 
        */
-      val thenVarUse = thenBranch.variableUse(env)
-      val elseVarUse = elseBranch.variableUse(env)
-      val condVars = condition.variables(env).classical
+      val thenVarUse = thenBranch.variableUse(ctxt, env)
+      val elseVarUse = elseBranch.variableUse(ctxt, env)
+      val condVars = condition.variables(ctxt, env).classical.map(_.castNonindexed)
 
-      val (cthen, class_Vthen, quant_Vthen, id2) = up(env, id, thenBranch)
-      val (celse, class_Velse, quant_Velse, id3) = up(env, id2, elseBranch)
+      val (cthen, class_Vthen, quant_Vthen, id2) = up(ctxt, env, id, thenBranch)
+      val (celse, class_Velse, quant_Velse, id3) = up(ctxt, env, id2, elseBranch)
 
-      val class_Vup = (class_Vthen ++ class_Velse) -- (thenVarUse.classical -- class_Vthen) -- (elseVarUse.classical -- class_Velse) -- condVars
-      val quant_Vup = (quant_Vthen ++ quant_Velse) -- (thenVarUse.quantum -- quant_Vthen) -- (elseVarUse.quantum -- quant_Velse)
+      val class_Vup = (class_Vthen ++ class_Velse) -- (thenVarUse.classical.map(_.castNonindexed) -- class_Vthen) --
+        (elseVarUse.classical.map(_.castNonindexed) -- class_Velse) -- condVars
+      val quant_Vup = (quant_Vthen ++ quant_Velse) -- (thenVarUse.quantum.map(_.castNonindexed) -- quant_Vthen) -- (elseVarUse.quantum.map(_.castNonindexed) -- quant_Velse)
 
       val class_Vthendown = class_Vthen -- class_Vup
       val quant_Vthendown = quant_Vthen -- quant_Vup
@@ -132,7 +137,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       (statement, empty, empty, id)
     case Block(s) =>
       /* Block(s) is semantically equal to s, so we replace it by s before proceeding */
-      up(env, id, s)
+      up(ctxt, env, id, s)
     case Block(statements@_*) =>
       /*
 
@@ -152,10 +157,10 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       logger.debug("Operating on a block")
 
       // Contains the triples (class_Vi, quant_Vi, ci) for all i
-      val Vi_ci_list = mutable.ListBuffer[(ListSet[CVariable], ListSet[QVariable], Statement)]()
+      val Vi_ci_list = mutable.ListBuffer[(ListSet[CVariableNI], ListSet[QVariableNI], Statement)]()
       var idVar = id
       for (s <- statements) {
-        val (ci, class_Vi, quant_Vi, newId) = up(env, idVar, s)
+        val (ci, class_Vi, quant_Vi, newId) = up(ctxt, env, idVar, s)
         idVar = newId
         Vi_ci_list += ((class_Vi, quant_Vi, ci))
       }
@@ -165,10 +170,10 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
       val c = Block(Vi_ci_list.toSeq map { case (class_V,quant_V,c) => Local.makeIfNeeded(class_V.toSeq,quant_V.toSeq,c.toBlock) } : _*)
 
-      val cVarUse = c.variableUse(env)
+      val cVarUse = c.variableUse(ctxt, env)
 
-      val class_Vup = ListSet(Vi_ci_list.toSeq.flatMap(_._1):_*) -- cVarUse.classical
-      val quant_Vup = ListSet(Vi_ci_list.toSeq.flatMap(_._2):_*) -- cVarUse.quantum
+      val class_Vup = ListSet(Vi_ci_list.toSeq.flatMap(_._1):_*) -- cVarUse.classical.map(_.castNonindexed)
+      val quant_Vup = ListSet(Vi_ci_list.toSeq.flatMap(_._2):_*) -- cVarUse.quantum.map(_.castNonindexed)
 
       logger.debug(s"Vup: $class_Vup, $quant_Vup")
 
@@ -177,7 +182,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       var quant_W_i = quant_Vup
 
       // Will contain c1';c2';...;cn'
-      var ci_prime_joined = new ListBuffer[Statement]()
+      val ci_prime_joined = new ListBuffer[Statement]()
 
       for ((class_Vi, quant_Vi, ci) <- Vi_ci_list) {
 
@@ -198,7 +203,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
         ci_prime_joined ++= init(class_Vstar_i.toSeq, quant_Vstar_i.toSeq).statements
         ci_prime_joined ++= Local.makeIfNeeded(class_Vdown_i.toSeq, quant_Vdown_i.toSeq, ci).unwrapBlock
 
-        val ci_varuse = ci.variableUse(env)
+        val ci_varuse = ci.variableUse(ctxt, env)
 
         // Value of Wi for the next iteration
         // W_{i+1} := W_i \cup V*_i - (fv(c_i) - Vdown_i)
@@ -213,8 +218,8 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
 
       (ci_prime_block, class_Vup, quant_Vup, idVar)
     case Local(vars, body) =>
-      val qvars = vars collect { case v : QVariable => v }
-      val cvars = vars collect { case v : CVariable => v }
+      val qvars = Variable.quantumNI(vars)
+      val cvars = vars collect { case v : CVariable => v.castNonindexedSafe }
 
       /* Uses fact (lemma:unused):
 
@@ -224,7 +229,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       // cvars_sel, qvars_sel -- variables that are selected for moving up
       val (cvars_sel, qvars_sel, id2) = id.select(cvars, qvars)
       // cvars_body, qvars_body -- variables that are moving up from the body
-      val (body2, cvars_body, qvars_body, id3) = up(env,id2,body.unwrapTrivialBlock)
+      val (body2, cvars_body, qvars_body, id3) = up(ctxt, env, id2, body.unwrapTrivialBlock)
 
       // cvars_up, qvars_up -- variables that are supposed to move further up
       // (namely: the ones selected explicitly, and the ones moving up from the body that are not shadowed by this local)
@@ -241,7 +246,7 @@ case class LocalUpTac(side: Option[Boolean], varID: VarID) extends Tactic {
       assert(cvars_keep.union(cvars_up) == cvars_all)
       assert(qvars_keep.union(qvars_up) == qvars_all)
 
-      val varUse2 = body2.variableUse(env)
+      val varUse2 = body2.variableUse(ctxt, env)
       // Removing variables that do not occur in the body from those that should be propagated upwards
       // (justification: unused local variables can be removed)
       val cvars_up2 = cvars_up.intersect(varUse2.classical)
@@ -260,17 +265,17 @@ object LocalUpTac {
 
   sealed trait VarID extends HashedValue {
     def consumed : Boolean
-    def select(cvars: List[CVariable], qvars: List[QVariable]) : (List[CVariable], List[QVariable], VarID)
+    def select(cvars: List[CVariableNI], qvars: List[QVariableNI]) : (List[CVariableNI], List[QVariableNI], VarID)
   }
 
   final case object AllVarsConsumed extends VarID {
-    override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = (cvars,qvars,AllVarsConsumed)
+    override def select(cvars: List[CVariableNI], qvars: List[QVariableNI]): (List[CVariableNI], List[QVariableNI], VarID) = (cvars,qvars,AllVarsConsumed)
     override def consumed: Boolean = true
 
     override val hash: Hash[AllVarsConsumed.this.type] = HashTag()()
   }
   final case object AllVars extends VarID {
-    override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = (cvars,qvars,AllVarsConsumed)
+    override def select(cvars: List[CVariableNI], qvars: List[QVariableNI]): (List[CVariableNI], List[QVariableNI], VarID) = (cvars,qvars,AllVarsConsumed)
     override def consumed: Boolean = false
 
     override val hash: Hash[AllVars.this.type] = HashTag()()
@@ -315,9 +320,9 @@ object LocalUpTac {
     override def hash: Hash[IdxVarId.this.type] =
       HashTag()(Hashable.hash(cvars), Hashable.hash(qvars))
 
-    override def select(cvars: List[CVariable], qvars: List[QVariable]): (List[CVariable], List[QVariable], VarID) = {
-      val selectedCVars = new ListBuffer[CVariable]()
-      val selectedQVars = new ListBuffer[QVariable]()
+    override def select(cvars: List[CVariableNI], qvars: List[QVariableNI]): (List[CVariableNI], List[QVariableNI], VarID) = {
+      val selectedCVars = new ListBuffer[CVariableNI]()
+      val selectedQVars = new ListBuffer[QVariableNI]()
 
       var cvarsID = this.cvars
       var qvarsID = this.qvars

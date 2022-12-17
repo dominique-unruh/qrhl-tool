@@ -23,12 +23,6 @@ import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.Implicits._
 
 final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option[String]=None) extends HashedValue {
-  /** For expression in longform */
-  def expression2Typ: Typ = typ match {
-    case Type("fun", globalIsabelle.cl2T, typ) => typ
-    case typ => throw UserException(s"Internal error: encountered expression of invalid type ${IsabelleX.theContext.prettyTyp(typ)}")
-  }
-
   /** Transforms a longform expression into an instantiated longform expression.
    * Instantiated longform expression means that instead of `%mem. X mem`, we have `X _memory`
    * where _memory can be found in [[memory2Variable]]. */
@@ -44,42 +38,6 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
   override def hash: Hash[RichTerm.this.type] =
     HashTag()(Hashable.hash(typ), Hashable.hash(isabelleTerm))
-
-  def renameCVariables(renaming: List[(Variable, Variable)]): RichTerm = {
-    def s(t: Term) : Term = t match {
-      case Const(_, _) => t
-      case Free(name, typ) =>
-        renaming.find { case (x,_) => x.isClassical && x.name == name } match {
-          case None => t
-          case Some((x,y)) =>
-            assert(y.isClassical)
-            assert(x.valueTyp == y.valueTyp)
-            Free(y.name, typ)
-        }
-      case Var(_, _, _) => t
-      case Bound(_) => t
-      case Abs(name, typ, body) => Abs(name, typ, s(body))
-      case App(fun, arg) => App(s(fun), s(arg))
-    }
-    RichTerm(typ, s(isabelleTerm))
-  }
-
-  def renameCVariable(from: CVariable, to: CVariable): RichTerm = {
-    assert(from.valueTyp==to.valueTyp)
-    val fromTerm = from.variableTermShort
-    val toTerm = to.variableTermShort
-    def rename(t: Term): Term = t match {
-      case App(t,u) => App(rename(t), rename(u))
-      case Abs(name,typ,body) => Abs(name,typ,rename(body))
-      case _ : Bound | _ : Const | _ : Var => t
-      case v : Free if v==fromTerm => toTerm
-      case v : Free if v==toTerm =>
-        throw UserException(s"Replacing ${from.name} by ${to.name}, but ${to.name} already occurs in $this")
-      case _ : Free => t
-    }
-
-    RichTerm(typ, rename(isabelleTerm))
-  }
 
   /** Shortform to longform */
   def encodeAsExpression(context: IsabelleX.ContextX, indexed: Boolean) : RichTerm =
@@ -133,38 +91,17 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
       case C(cv) => pvars += cv
       case Q(qv) => pvars += qv
       case A(_) => avars += v
-      case Variable.Indexed(C(cv), left) =>
-        pvars += (if (deindex) cv else cv.index(left))
-      case Variable.Indexed(Q(qv), left) =>
-        pvars += (if (deindex) qv else qv.index(left))
+      case Variable.Indexed(C(cv), side) =>
+        pvars += (if (deindex) cv else cv.index(side))
+      case Variable.Indexed(Q(qv), side) =>
+        pvars += (if (deindex) qv else qv.index(side))
       case _ => throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
     }
 
     ExprVariableUse(program = ListSet(pvars.toSeq:_*), ambient = ListSet(avars.toSeq:_*))
   }
 
-  def variablesLongform(ctxt: Context, environment: Environment, indexed: Boolean): ExprVariableUse =
-    longformInstantiate(indexed).variablesLongformInstantiated(ctxt, environment, indexed)
 
-  def variablesLongformInstantiated(ctxt: Context, environment: Environment, indexed: Boolean): ExprVariableUse = {
-    val (pvars,others) = Ops.variables_in_expression(ctxt, isabelleTerm).retrieveNow
-    val pvars2 = pvars map { case (cq, name, index, typ) =>
-      if (indexed && index == NoIndex)
-        throw UserException(s"Encountered non-indexed variable $name in expression $this")
-      if (!indexed && index != NoIndex)
-        throw UserException(s"Encountered indexed variable ${name}1/2 in expression $this")
-      if (cq)
-        CVariable.fromName(name, typ, index=index)
-      else
-        QVariable.fromName(name, typ, index=index)
-    }
-
-    for (v <- others)
-      if (!environment.ambientVariables.contains(v))
-        throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
-
-      ExprVariableUse(program = ListSet(pvars2:_*), ambient = ListSet(others:_*))
-  }
 
 
 //    /** Finds all classical and ambient variables in an expression. The expression is assumed not to have indexed variables. */
@@ -243,6 +180,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
     case _ => this
   }
 
+  // TODO remove (have it only in Expression.shortform)
   /** Translates expression from longform into shortform */
   def decodeFromExpression(context: IsabelleX.ContextX): RichTerm =
     RichTerm.decodeFromExpression(context, isabelleTerm)
@@ -253,12 +191,15 @@ object RichTerm {
 //  private val logger: Logger = log4s.getLogger
   /** Default placeholder for the memory in longform expressions.
    * Used by [[RichTerm.longformInstantiate]] */
+  // TODO remove
   val memory2Variable: Free = Free("_memory", cl2T)
 
+  // TODO remove (have it only in Expression.shortform)
   /** Translates expression from longform into shortform */
   def decodeFromExpression(context:IsabelleX.ContextX, t: Term): RichTerm =
     RichTerm(Ops.decodeFromExpressionOp(MLValue((context.context,t))).retrieveNow)
 
+  // TODO remove (have it only in Expression.shortform)
   /** Parses an expression of type typ in shortform. Returns the term in shortform. */
   def decodeFromExpression(context:IsabelleX.ContextX, str: String, typ: Typ, indexed: Boolean): RichTerm =
     decodeFromExpression(context, context.readExpression(str, typ, indexed = indexed))

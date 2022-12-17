@@ -2,6 +2,7 @@ structure QRHL_Operations =
 struct
 
 open Programs
+open Expressions
 open Prog_Variables
 open QRHL
 
@@ -440,7 +441,7 @@ fun declare_variable (ctxt, name, T) = let
   val _ = if v<>name then error("variable "^name^" already declared") else ()
   in ctxt' end
 
-(* predicate: in shortform *)
+(* predicate: in longform *)
 fun colocal_pred_qvars (ctxt, predicate, qvars) = let
      val varterm = qvars |> Prog_Variables.varterm_from_list |> varterm_to_variable2 Quantum
      val colocality = \<^instantiate>\<open>predicate and varterm and 'a=\<open>varterm |> fastype_of |> dest_q2variableT\<close> in 
@@ -467,7 +468,7 @@ val joint_sample_equal_tac : unit * subgoal * Proof.context -> (subgoal list * t
 
 val joint_sample_tac =
   apply_tactic_on_term_concl (fn ctxt => fn witness => 
-      let val witness_expr = witness |> Programs.term_to_expression ctxt \<^typ>\<open>cl2\<close> |> Thm.cterm_of ctxt in
+      let val witness_expr = witness |> term_to_expression ctxt \<^typ>\<open>cl2\<close> |> Thm.cterm_of ctxt in
       Joint_Sample.joint_sample_seq_tac ctxt witness_expr 1 end)
 
 val seq_tac =

@@ -240,7 +240,7 @@ class State private (val environment: Environment,
     if (this.environment.variableExists(name))
       throw UserException(s"Name $name already used for a variable or program.")
 
-    val decl = ConcreteProgramDecl(environment,name,oracles,program)
+    val decl = ConcreteProgramDecl(isabelle.context, environment, name, oracles, program)
     val env1 = environment.declareProgram(decl)
     val isa = decl.declareInIsabelle(_isabelle.get)
 
@@ -254,7 +254,8 @@ class State private (val environment: Environment,
       hash = HashTag()(hash, decl.hash))
   }
 
-  def declareAdversary(name: String, free: Seq[Variable], inner: Seq[Variable], written: Seq[Variable], covered: Seq[Variable], overwritten: Seq[Variable], numOracles : Int): State = {
+  def declareAdversary(name: String, free: Seq[Variable with Nonindexed], inner: Seq[Variable with Nonindexed], written: Seq[Variable with Nonindexed],
+                       covered: Seq[Variable with Nonindexed], overwritten: Seq[Variable with Nonindexed], numOracles : Int): State = {
 //    val isa1 = _isabelle.get.declareVariable(name,
 //      if (numOracles==0) Isabelle.programT else Isabelle.oracle_programT)
     val decl = AbstractProgramDecl(name, free=free.toList,inner=inner.toList,written=written.toList,covered=covered.toList,overwritten=overwritten.toList, numOracles=numOracles)
@@ -332,7 +333,7 @@ class State private (val environment: Environment,
   }
 
   /** Parses an expression in shortform. Returns the parsed expression in shortform. */
-  def parseExpression(typ:Typ, str:String, indexed:Boolean): RichTerm = {
+  def parseExpression(typ:Typ, str:String, indexed:Boolean): Expression = {
     implicit val parserContext: ParserContext = this.parserContext
     Parser.parseAll(Parser.expression(typ, indexed=indexed),str) match {
       case Parser.Success(cmd2,_) => cmd2
@@ -341,10 +342,12 @@ class State private (val environment: Environment,
     }
   }
 
-  def parseExpressionLongform(typ: Typ, str: String, indexed:Boolean): RichTerm = {
-    val shortform = parseExpression(typ, str, indexed = indexed)
-    shortform.encodeAsExpression(isabelle, indexed = indexed)
-  }
+  /*
+    def parseExpressionLongform(typ: Typ, str: String, indexed:Boolean): RichTerm = {
+      val shortform = parseExpression(typ, str, indexed = indexed)
+      shortform.encodeAsExpression(isabelle, indexed = indexed)
+    }
+  */
 
   def parseBlock(str:String): Block = {
     implicit val parserContext: ParserContext = this.parserContext

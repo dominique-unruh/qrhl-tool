@@ -1,10 +1,9 @@
 package qrhl.tactic
 
 import java.io.PrintWriter
-
 import qrhl._
 import qrhl.isabellex.RichTerm
-import qrhl.logic.{Block, Statement}
+import qrhl.logic.{Block, ExpressionIndexed, Statement}
 
 /** amount -1 means "all" */
 abstract class WpBothStyleTac(leftAmount:Int=1, rightAmount:Int=1) extends Tactic {
@@ -29,5 +28,5 @@ abstract class WpBothStyleTac(leftAmount:Int=1, rightAmount:Int=1) extends Tacti
   /** Returns a (preferably weakest) precondition for post given programs left/right.
     * @return (wp,assms), where wp is the precondition, and assms are potential additional subgoals that need to be proven
     */
-  def getWP(state: State, left:Statement, right:Statement, post:RichTerm)(implicit output: PrintWriter) : (RichTerm,Seq[Subgoal])
+  def getWP(state: State, left: Statement, right: Statement, post: ExpressionIndexed)(implicit output: PrintWriter) : (ExpressionIndexed, Seq[Subgoal])
 }

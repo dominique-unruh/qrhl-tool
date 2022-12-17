@@ -2,7 +2,7 @@ package qrhl.isabellex
 
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.mlvalue.MLValue.Converter
-import qrhl.logic.{Assign, Block, CVariable, Call, IfThenElse, Local, Measurement, QApply, QInit, QVariable, Sample, Statement, VTCons, VTSingle, VTUnit, VarTerm, While}
+import qrhl.logic.{Assign, Block, CVariable, Call, ExpressionIndexed, ExpressionNonindexed, IfThenElse, Local, Measurement, QApply, QInit, QVariable, Sample, Statement, VTCons, VTSingle, VTUnit, VarTerm, While}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.control
@@ -31,19 +31,19 @@ object MLValueConverters {
       case block: Block =>
         Ops.listToBlock(block.statements)
       case Assign(variable, expression) =>
-        Ops.makeAssign((variable.map(v => (v.name,v.valueTyp)), expression.isabelleTerm))
+        Ops.makeAssign((variable.map(v => (v.name,v.valueTyp)), expression.term.isabelleTerm))
       case Sample(variable, expression) =>
-        Ops.makeSample((variable.map(v => (v.name,v.valueTyp)), expression.isabelleTerm))
+        Ops.makeSample((variable.map(v => (v.name,v.valueTyp)), expression.term.isabelleTerm))
       case IfThenElse(condition, thenBranch, elseBranch) =>
-        Ops.makeIfThenElse((condition.isabelleTerm,thenBranch.statements,elseBranch.statements))
+        Ops.makeIfThenElse((condition.term.isabelleTerm, thenBranch.statements, elseBranch.statements))
       case While(condition, body) =>
-        Ops.makeWhile((condition.isabelleTerm,body.statements))
+        Ops.makeWhile((condition.term.isabelleTerm,body.statements))
       case QInit(location, expression) =>
-        Ops.makeQInit((location.map(v => (v.name,v.valueTyp)), expression.isabelleTerm))
+        Ops.makeQInit((location.map(v => (v.name,v.valueTyp)), expression.term.isabelleTerm))
       case QApply(location, expression) =>
-        Ops.makeQApply((location.map(v => (v.name,v.valueTyp)), expression.isabelleTerm))
+        Ops.makeQApply((location.map(v => (v.name,v.valueTyp)), expression.term.isabelleTerm))
       case Measurement(result, location, e) =>
-        Ops.makeMeasurement((result.map(v => (v.name,v.valueTyp)), location.map(v => (v.name,v.valueTyp)), e.isabelleTerm))
+        Ops.makeMeasurement((result.map(v => (v.name,v.valueTyp)), location.map(v => (v.name,v.valueTyp)), e.term.isabelleTerm))
       case call : Call =>
         Ops.makeCall(call)
     }
@@ -61,10 +61,10 @@ object MLValueConverters {
               Block(stmts :_*))
         case "assign" =>
           for ((vars, expr) <- Ops.destAssign(value).retrieve)
-            yield Assign(vars.map { case (name, typ) => CVariable.fromName(name,typ) }, RichTerm(expr))
+            yield Assign(vars.map { case (name, typ) => CVariable.fromName(name,typ) }, ExpressionNonindexed.fromTerm(expr))
         case "sample" =>
           for ((vars, expr) <- Ops.destSample(value).retrieve)
-            yield Sample(vars.map { case (name, typ) => CVariable.fromName(name,typ) }, RichTerm(expr))
+            yield Sample(vars.map { case (name, typ) => CVariable.fromName(name,typ) }, ExpressionNonindexed.fromTerm(expr))
         case "call" =>
           Ops.destCall(value).retrieve
         case "measurement" =>
@@ -72,19 +72,19 @@ object MLValueConverters {
             yield Measurement(
               result.map { case (name, typ) => CVariable.fromName(name,typ) },
               location.map { case (name, typ) => QVariable.fromName(name,typ) },
-              RichTerm(e))
+              ExpressionNonindexed.fromTerm(e))
         case "qinit" =>
           for ((vars, expr) <- Ops.destQInit(value).retrieve)
-            yield QInit(vars.map { case (name, typ) => QVariable.fromName(name,typ) }, RichTerm(expr))
+            yield QInit(vars.map { case (name, typ) => QVariable.fromName(name,typ) }, ExpressionNonindexed.fromTerm(expr))
         case "qapply" =>
           for ((vars, expr) <- Ops.destQApply(value).retrieve)
-            yield QApply(vars.map { case (name, typ) => QVariable.fromName(name,typ) }, RichTerm(expr))
+            yield QApply(vars.map { case (name, typ) => QVariable.fromName(name,typ) }, ExpressionNonindexed.fromTerm(expr))
         case "ifthenelse" =>
           for ((cond,thens,elses) <- Ops.destIfThenElse(value).retrieve)
-            yield IfThenElse(RichTerm(cond), Block(thens:_*), Block(elses:_*))
+            yield IfThenElse(ExpressionNonindexed.fromTerm(cond), Block(thens:_*), Block(elses:_*))
         case "while" =>
           for ((cond,body) <- Ops.destWhile(value).retrieve)
-            yield While(RichTerm(cond), Block(body:_*))
+            yield While(ExpressionNonindexed.fromTerm(cond), Block(body:_*))
       }
     }
 
@@ -157,7 +157,7 @@ object MLValueConverters {
            subgoal <- subgoalType match {
              case 1 =>
                for ((left, right, pre, post, assms) <- Ops.destQrhlSubgoal(value).retrieve)
-                 yield QRHLSubgoal(Block(left: _*), Block(right: _*), RichTerm(pre), RichTerm(post), assms.map(RichTerm.apply))
+                 yield QRHLSubgoal(Block(left: _*), Block(right: _*), ExpressionIndexed.fromTerm(pre), ExpressionIndexed.fromTerm(post), assms.map(RichTerm.apply))
              case 2 =>
                for ((left, right, assms) <- Ops.destDenEqSubgoal(value).retrieve)
                  yield DenotationalEqSubgoal(left.toBlock, right.toBlock, assms.map(RichTerm.apply))
@@ -177,7 +177,7 @@ object MLValueConverters {
 
     override def store(value: Subgoal)(implicit isabelle: Isabelle): MLValue[Subgoal] = value match {
       case QRHLSubgoal(left, right, pre, post, assumptions) =>
-        Ops.makeQrhlSubgoal(left.statements, right.statements, pre.isabelleTerm, post.isabelleTerm, assumptions.map(_.isabelleTerm))
+        Ops.makeQrhlSubgoal(left.statements, right.statements, pre.term.isabelleTerm, post.term.isabelleTerm, assumptions.map(_.isabelleTerm))
       case AmbientSubgoal(goal) =>
         Ops.makeAmbientSubgoal(goal.isabelleTerm)
       case DenotationalEqSubgoal(left, right, assms) =>
