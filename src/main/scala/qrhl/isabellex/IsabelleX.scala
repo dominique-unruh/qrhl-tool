@@ -280,7 +280,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
   }
 
   val boolT: Typ = Type(t.bool)
-  def all_const(typ: Typ): Const = Const(c.all, typ -->: boolT)
+  def all_const(typ: Typ): Const = Const(c.all, (typ -->: boolT) -->: boolT)
   def all(name: String, typ: Typ, body: Term): Term = all_const(typ) $ Abs(name, typ, body)
   def fst(typ1: Typ, typ2: Typ): Const = Const(c.fst, prodT(typ1, typ2) -->: typ1)
   def snd(typ1: Typ, typ2: Typ): Const = Const(c.snd, prodT(typ1, typ2) -->: typ2)
