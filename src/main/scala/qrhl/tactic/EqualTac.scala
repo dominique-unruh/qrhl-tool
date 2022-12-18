@@ -759,14 +759,13 @@ object EqualTac {
 
         def parse(vt1: Term, vt2: Term): Unit = (vt1, vt2) match {
           case (GIsabelle.Variable_Unit(_,_), GIsabelle.Variable_Unit(_,_)) =>
-          case (Free(Variable.Indexed(name1, side1), VariableT(typ1, false/*classical*/, true/*indexed*/)),
-                Free(Variable.Indexed(name2, side2), VariableT(typ2, false, true))) =>
+//          case (Free(Variable.Indexed(name1, side1), VariableT(typ1, false/*classical*/, true/*indexed*/)),
+//                Free(Variable.Indexed(name2, side2), VariableT(typ2, false, true))) =>
+          case (Variable.Indexed(Free(name1, _), index1), Variable.Indexed(Free(name2, _), index2)) =>
+            if (index1 == Index2 || index2 == Index1)
+              throw trySwapped
             if (name1 != name2) throw noMatch
             val v = env.qVariables.getOrElse(name1, throw noMatch)
-            if (v.valueTyp != typ1) throw noMatch
-            if (v.valueTyp != typ2) throw noMatch
-            if (side1==Index2 || side2==Index1)
-              throw trySwapped
             result += v
           case (GIsabelle.Variable_Concat(vt1a, vt1b), GIsabelle.Variable_Concat(vt2a, vt2b)) =>
             parse(vt1a, vt2a); parse(vt1b, vt2b)

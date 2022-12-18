@@ -1,18 +1,18 @@
 package qrhl.logic
 
-import qrhl.isabellex.IsabelleX
+import qrhl.isabellex.{IsabelleConsts, IsabelleX}
 import IsabelleX.{globalIsabelle => GIsabelle}
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.mlvalue.MLValue.Converter
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{Bound, Free, Term, Typ}
+import de.unruh.isabelle.pure.{Bound, Const, Free, Term, Typ}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, RawHash}
 import qrhl.logic.Variable.{Index1, Index12, Index2, NoIndex}
 import qrhl.AllSet
 import GIsabelle.Ops.qrhl_ops
 import GIsabelle.Ops
 import de.unruh.isabelle.control.Isabelle.DInt
-import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, qu2T, quT}
+import qrhl.isabellex.IsabelleX.globalIsabelle.{cl2T, clT, qu2T, quT, RegisterChain}
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.{ExecutionContext, Future}
@@ -156,7 +156,7 @@ object Variable {
 */
 
   object Indexed {
-    def unapply(name: String): Option[(String, Index12)] = {
+    /*def unapply(name: String): Option[(String, Index12)] = {
       if (name.isEmpty) return None
       def basename = name.substring(0, name.length-1)
 
@@ -165,10 +165,21 @@ object Variable {
         case '2' => Some((basename, Index2))
         case _ => None
       }
-    }
+    }*/
     def unapply(variable: Variable): Option[(Variable, Index12)] = {
       if (variable.isIndexed) Some(variable.unindex, variable.theIndex.asInstanceOf[Index12])
       else None
+    }
+    def unapply(term: Term): Option[(Term, Index12)] = term match {
+      case RegisterChain(fstSnd, v) =>
+        fstSnd match {
+          case Const(IsabelleConsts.qFst, _) => Some((v,Index1))
+          case Const(IsabelleConsts.cFst, _) => Some((v,Index1))
+          case Const(IsabelleConsts.qSnd, _) => Some((v,Index2))
+          case Const(IsabelleConsts.cSnd, _) => Some((v,Index2))
+          case _ => None
+        }
+      case _ => None
     }
   }
 

@@ -723,13 +723,24 @@ class IsabelleX(val setup : Isabelle.Setup) {
     }
   }
 
-  def true_expression(indexed: Boolean): Const = Const(c.true_expression, expressionT(boolT, indexed = indexed) -->: boolT)
+  def qregister_chain(t1: Typ, t2: Typ, t3: Typ): Const =
+    Const(c.qregister_chain, registerT(t2, t3, classical=false) -->: registerT(t1, t2, classical=false) -->: registerT(t1, t3, classical=false))
+  def cregister_chain(t1: Typ, t2: Typ, t3: Typ): Const =
+    Const(c.cregister_chain, registerT(t2, t3, classical=true) -->: registerT(t1, t2, classical=true) -->: registerT(t1, t3, classical=true))
+  object RegisterChain {
+    def unapply(term: Term): Option[(Term, Term)] = term match {
+      case App(App(Const(c.cregister_chain | c.qregister_chain, _), vt1), vt2) => Some((vt1, vt2))
+      case _ => None
+    }
+  }
+
+/*  def true_expression(indexed: Boolean): Const = Const(c.true_expression, expressionT(boolT, indexed = indexed) -->: boolT)
   object True_Expression {
     def unapply(term: Term): Option[Term] = term match {
       case App(Const(c.true_expression,_), t) => Some(t)
       case _ => None
     }
-  }
+  }*/
 
   object OfType {
     def unapply(t: Term): Some[Typ] = Some(t.fastType)
