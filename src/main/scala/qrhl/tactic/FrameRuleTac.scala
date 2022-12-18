@@ -68,7 +68,7 @@ case object FrameRuleTac extends Tactic {
 
       /** quantum variables in c,d (with index) */
       val qVars12 = leftVarUse.quantum.map(_.index1).union(rightVarUse.quantum.map(_.index2))
-      val qVars12list = qVars12.toList.map { v => (v.name, v.theIndex, v.valueTyp) }
+      val qVars12list = qVars12.toList.map { v => (v.basename, v.theIndex, v.valueTyp) }
       /** "colocal_pred_qvars R qVars12" */
       val colocality = AmbientSubgoal(RichTerm(Ops.colocal_pred_qvars(
         state.isabelle.context, rRich.abstractMemory.term.isabelleTerm, qVars12list).retrieveNow))

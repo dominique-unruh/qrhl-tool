@@ -170,7 +170,7 @@ class ExpressionInstantiated(val termInst: RichTerm, val memTyp: Typ) extends Ha
 
 class ExpressionInstantiatedNonindexed(term: RichTerm)
   extends ExpressionInstantiated(term, clT) with HashedValue {
-  def variables(ctxt: Context, environment: Environment): ExprVariableUse = {
+  def variables(ctxt: Context, environment: Environment): ExprVariableUseNI = {
     val (pvars, others) = Ops.variables_in_expression(ctxt, term.isabelleTerm).retrieveNow
     val pvars2 = pvars map { case (cq, name, index, typ) =>
       if (index != NoIndex)
@@ -185,7 +185,7 @@ class ExpressionInstantiatedNonindexed(term: RichTerm)
       if (!environment.ambientVariables.contains(v))
         throw UserException(s"Internal error: Encountered unknown free variable $v in term $this. This should not happen.")
 
-    ExprVariableUse(program = ListSet(pvars2: _*), ambient = ListSet(others: _*))
+    new ExprVariableUseNI(program = ListSet(pvars2: _*), ambient = ListSet(others: _*))
   }
 
   override def renameCVariables(renaming: List[(CVariable, CVariable)]): ExpressionNonindexed =
@@ -288,7 +288,7 @@ class ExpressionNonindexed(term: RichTerm) extends Expression(term) {
 
   override def instantiateMemory: ExpressionInstantiatedNonindexed = super.instantiateMemory.castNonindexed
 
-  def variables(ctxt: Context, environment: Environment): ExprVariableUse =
+  def variables(ctxt: Context, environment: Environment): ExprVariableUseNI =
     instantiateMemory.variables(ctxt, environment)
 
   def index(ctxt: Context, side: Index12): ExpressionIndexed = {

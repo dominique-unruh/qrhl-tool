@@ -68,7 +68,7 @@ object VarTerm {
   }
 
   def isabelleTermLongform(vt:VarTerm[Variable], classical:Boolean, indexed:Boolean) : Term =
-    (if (indexed) Ops.varterm_to_variable2 else Ops.varterm_to_variable1)(classical, vt map { v => (v.name, v.theIndex, v.valueTyp) }).retrieveNow
+    (if (indexed) Ops.varterm_to_variable2 else Ops.varterm_to_variable1)(classical, vt map { v => (v.basename, v.theIndex, v.valueTyp) }).retrieveNow
 
   def varlist[A](elems: A*) : VarTerm[A] = {
     var result : VarTerm[A] = VTUnit
@@ -434,17 +434,17 @@ sealed trait Statement extends HashedValue {
     val vars = Set.newBuilder[String]
     def collect(s:Statement) : Unit = s match {
       case Local(vars2, body) =>
-        vars ++= vars2 map { _.name }
+        vars ++= vars2 map { _.basename }
         collect(body)
       case Block(ss @ _*) => ss.foreach(collect)
-      case Assign(v,e) => vars ++= v.iterator.map(_.name); vars ++= e.term.variables
-      case Sample(v,e) => vars ++= v.iterator.map[String](_.name); vars ++= e.term.variables
+      case Assign(v,e) => vars ++= v.iterator.map(_.basename); vars ++= e.term.variables
+      case Sample(v,e) => vars ++= v.iterator.map[String](_.basename); vars ++= e.term.variables
       case Call(_, _*) =>
       case While(e,body) => vars ++= e.term.variables; collect(body)
       case IfThenElse(e,p1,p2) => vars ++= e.term.variables; collect(p1); collect(p2)
-      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.term.variables
-      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.name); vars ++= vs.iterator.map[String](_.name); vars ++= e.term.variables
-      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.name); vars ++= e.term.variables
+      case QInit(vs,e) => vars ++= vs.iterator.map[String](_.basename); vars ++= e.term.variables
+      case Measurement(v,vs,e) => vars ++= v.iterator.map[String](_.basename); vars ++= vs.iterator.map[String](_.basename); vars ++= e.term.variables
+      case QApply(vs,e) => vars ++= vs.iterator.map[String](_.basename); vars ++= e.term.variables
     }
     collect(this)
     vars.result()
@@ -502,8 +502,8 @@ class Local(val vars: List[Variable with Nonindexed], val body : Block) extends 
   }
 
   override def toString: String = body.statements match {
-    case Nil => "{ local " + vars.map(_.name).mkString(", ") + "; skip; }"
-    case stmts => "{ local " + vars.map(_.name).mkString(", ") + "; " + stmts.map {_.toString}.mkString(" ") + " }"
+    case Nil => "{ local " + vars.map(_.basename).mkString(", ") + "; skip; }"
+    case stmts => "{ local " + vars.map(_.basename).mkString(", ") + "; " + stmts.map {_.toString}.mkString(" ") + " }"
   }
 
   def simplifyEmpty: Statement =
@@ -955,7 +955,7 @@ final case class Call(name:String, args:Call*) extends Statement {
     val fv = variableUse(ctxt, env).freeVariables
     for ((x,y) <- renaming)
       if (fv.contains(x))
-        throw UserException(s"Cannot rename ${x.name} -> ${y.name} in $this because ${x.name} is in the free variables. Consider inlining ${this.name}")
+        throw UserException(s"Cannot rename ${x.basename} -> ${y.basename} in $this because ${x.basename} is in the free variables. Consider inlining ${this.name}")
     this
   }
 }

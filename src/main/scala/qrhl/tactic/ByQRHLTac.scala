@@ -119,11 +119,11 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
 
         val vars1 = p1.variableUse(ctxt, env)
         val vars2 = p2.variableUse(ctxt, env)
-        val vars1expr = e1.variables(ctxt, env).classical
-        val vars2expr = e2.variables(ctxt, env).classical
+        val vars1expr = e1.variables(ctxt, env).classicalNI
+        val vars2expr = e2.variables(ctxt, env).classicalNI
 
         // fv(p1), fv(p2), fv(e1), fv(e2) (not indexed, only classical)
-        val cvars = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
+        val cvars: ListSet[CVariableNI] = vars1.classical ++ vars2.classical ++ vars1expr ++ vars2expr
         // fv(p1)-overwr(p1)  union   fv(p2)-overwr(p2)   (only quantum)
         // The minimum set that have to be included in the quantum equality
         val requiredQvars = (vars1.quantum -- vars1.overwrittenQuantum) ++ (vars2.quantum -- vars2.overwrittenQuantum)
@@ -142,8 +142,8 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
         // Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
         // if cvars =: x...z and qvars =: q...r
         val pre = Ops.byQRHLPreOp(
-            cvars.toList.map(v => (v.name, v.valueTyp)),
-            qvars.toList.map(v => (v.name, v.valueTyp))).retrieveNow
+            cvars.toList.map(v => (v.basename, v.valueTyp)),
+            qvars.toList.map(v => (v.basename, v.valueTyp))).retrieveNow
 
         val left = p1.toBlock
         val right = p2.toBlock
@@ -189,8 +189,8 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
          * In shortform.
          */
         val pre = Ops.byQRHLPreOp(
-          cvars.toList.map(v => (v.name, v.valueTyp)),
-          qvars.toList.map(v => (v.name, v.valueTyp))).retrieveNow
+          cvars.toList.map(v => (v.basename, v.valueTyp)),
+          qvars.toList.map(v => (v.basename, v.valueTyp))).retrieveNow
 
         val left = p1.toBlock
         val right = p2.toBlock

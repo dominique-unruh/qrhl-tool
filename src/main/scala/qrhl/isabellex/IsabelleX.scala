@@ -367,6 +367,11 @@ class IsabelleX(val setup : Isabelle.Setup) {
     INF(typ) $ (image(varTyp,typ) $ absfree(varName, varTyp, term) $ univ(varTyp))
   }
 
+  def INF_lambda(term: Term): Term = {
+    val Type("fun", inT, outT) = term.fastType
+    INF(outT) $ (image(inT, outT) $ term $ univ(inT))
+  }
+
   /** Abstract over subterm and take infimum */
   def INF(varName: String, subterm: Term, term: Term): Term = {
     val typ = term.fastType

@@ -57,14 +57,14 @@ class ParserTest extends AnyFunSuite {
   test("assign tuple") {
     val assign = Parser.parseAll(Parser.assign, "(x,y) <- (y,x);").get
     println(assign)
-    assert(assign.variable.toList.map(_.name)==List("x","y"))
+    assert(assign.variable.toList.map(_.basename)==List("x","y"))
     assign.checkWelltyped(parserContext.isabelle.get)
   }
 
   test("sample tuple") {
     val sample = Parser.parseAll(Parser.sample, "(x,y) <$ uniform UNIV;").get
     println(sample)
-    assert(sample.variable.toList.map(_.name)==List("x","y"))
+    assert(sample.variable.toList.map(_.basename)==List("x","y"))
     sample.checkWelltyped(parserContext.isabelle.get)
   }
 
@@ -99,14 +99,14 @@ class ParserTest extends AnyFunSuite {
   test("adversary") {
     val decl = Parser.parseAll(Parser.declareAdversary, "adversary A free x, y").get
     assert(decl.name=="A")
-    assert(decl.free.map(_.name)==List("x","y"))
+    assert(decl.free.map(_.basename)==List("x","y"))
     assert(decl.numOracles==0)
   }
 
   test("adversary calls") {
     val decl = Parser.parseAll(Parser.declareAdversary, "adversary A free x, y calls ?, ?").get
     assert(decl.name=="A")
-    assert(decl.free.map(_.name)==List("x","y"))
+    assert(decl.free.map(_.basename)==List("x","y"))
     assert(decl.numOracles==2)
   }
 

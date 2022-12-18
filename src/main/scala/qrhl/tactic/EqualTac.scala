@@ -442,7 +442,7 @@ case class EqualTac(exclude: List[String], in: List[Variable with Nonindexed], m
            |  overwritten(context) = ${varsToString(varUse.overwritten)}
            |  Vin = ${varsToString(in)}
            |So we add the missing variables to Vin.""".stripMargin,
-        extraIn = (out -- varUse.overwritten).toSet)
+        extraIn = out.toSet -- varUse.overwritten)
 
       //    assumes Vin_Vout_overwr: "quantum' Vin ⊆ Vout ∪ overwr C"
       add(
@@ -493,7 +493,7 @@ case class EqualTac(exclude: List[String], in: List[Variable with Nonindexed], m
            |  Vin = ${varsToString(in)}
            |  fv(R) = ${varsToString(postconditionVariables)}
            |So we remove the superfluous variables from R.""".stripMargin,
-        (out -- in).toSet)
+        out.toSet -- in)
 
       //    assumes Vin_Vout_R: "quantum' (Vin - Vout) ∩ Rv = {}"
       removeFromPost(
@@ -503,7 +503,7 @@ case class EqualTac(exclude: List[String], in: List[Variable with Nonindexed], m
            |  quantum(Vout) = ${varsToString(out)}
            |  fv(R) = ${varsToString(postconditionVariables)}
            |So we remove the superfluous variables from R.""".stripMargin,
-        (in.filter(_.isQuantum) -- out).toSet)
+        in.toSet.filter(_.isQuantum) -- out)
 
       //    assumes R_inner: "Rv ∩ inner C = {}"
       removeFromPost(
@@ -538,7 +538,7 @@ case class EqualTac(exclude: List[String], in: List[Variable with Nonindexed], m
           for (v <- env.qVariables.values)
             if (!mismatchesFree.contains(v) && isInfinite(v)) {
               println(
-                s"""We arbitrarily choose ${v.name} for that purpose. If you wish to use another one, add it to Vmid via the mid-parameter of the equal-tactic.
+                s"""We arbitrarily choose ${v.shortformName} for that purpose. If you wish to use another one, add it to Vmid via the mid-parameter of the equal-tactic.
                    |Also make sure the Isabelle simplifier can prove "infinite (UNIV::typ)" where typ is the type of that variable, otherwise I will not recognize it as infinite.""".stripMargin)
               add(msg = null, extraMid = Set(v))
               Breaks.break()
@@ -652,7 +652,7 @@ case class EqualTac(exclude: List[String], in: List[Variable with Nonindexed], m
     logger.debug(s"Postcondition: ${postcondition}; without ${varsToString(classicalsRemovedFromPost)}")
 
     if (classicalsRemovedFromPost.nonEmpty) {
-      val newPostcondition = removeClassicals(ctxt, env, postcondition, classicalsRemovedFromPost.toSet, Variable.classical(out).toSet)
+      val newPostcondition = removeClassicals(ctxt, env, postcondition, classicalsRemovedFromPost.toSet, Variable.classicalNI(out).toSet).instantiateMemory
       println(
         s"""Recall had to remove the classical variables ${varsToString(classicalsRemovedFromPost)} from the postcondition. I.e., we want:
            |  R = ${postconditionString()}
@@ -688,8 +688,8 @@ case class EqualTac(exclude: List[String], in: List[Variable with Nonindexed], m
         |""".stripMargin)
 
     val colocality = RichTerm(Ops.colocal_pred_qvars(isabelle.context, postcondition.abstractMemory.term.isabelleTerm,
-        (forbiddenQuantumInPostcondition.toList map { v => (v.name, Index1, v.valueTyp) }) ++
-          (forbiddenQuantumInPostcondition.toList map { v => (v.name, Index2, v.valueTyp) })).retrieveNow)
+        (forbiddenQuantumInPostcondition.toList map { v => (v.basename, Index1, v.valueTyp) }) ++
+          (forbiddenQuantumInPostcondition.toList map { v => (v.basename, Index2, v.valueTyp) })).retrieveNow)
 
     logger.debug(s"Colocality: $colocality")
 
@@ -829,12 +829,11 @@ object EqualTac {
   }
 
   private[tactic] /* Should be private but need access in test case */
-  def removeClassicals(ctxt: Context, env: Environment, postcondition: ExpressionInstantiatedIndexed, remove: Set[CVariable],
-                       equalities: Set[CVariable]): ExpressionInstantiatedIndexed = {
-    val suffix = RandomStringUtils.randomAlphanumeric(10)
+  def removeClassicals(ctxt: Context, env: Environment, postcondition: ExpressionInstantiatedIndexed, remove: Set[CVariableNI],
+                       equalities: Set[CVariableNI]): ExpressionIndexed = {
     // Classical variables in postcondition (indexed)
     val vars = postcondition.variables(ctxt, env).classicalI
-    // x1=x2 for every x in equalities&remove that also appeard in postcondition
+    // x1=x2 for every x in (equalities & remove) that also appears in postcondition
     val equalities2 = (equalities & remove).flatMap { v =>
       if (vars.contains(v.index1) && vars.contains(v.index2))
         Some(GIsabelle.mk_eq(v.index1.getter(ExpressionInstantiatedIndexed.memoryVariable), v.index2.getter(ExpressionInstantiatedIndexed.memoryVariable)))
@@ -853,11 +852,14 @@ object EqualTac {
       }
     // All variables in remove (indexed) that occur in vars
     val remove12 = (remove.map(_.index1) ++ remove.map(_.index2)) & vars
-    ExpressionInstantiatedIndexed.fromTerm(
-      remove12.foldLeft(postcondition2.termInst.isabelleTerm) {
-      (pc:Term, v:CVariable) =>
-        logger.debug(s"${v.name}, ${v.valueTyp}")
-        GIsabelle.INF(v.name, v.getter(ExpressionInstantiatedIndexed.memoryVariable), pc)
+    val postcondition3 = ExpressionIndexed.fromTerm(
+      remove12.foldLeft(postcondition2.abstractMemory.term.isabelleTerm) {
+      (pc:Term, v:CVariableI) =>
+        logger.debug(s"${v.basename}, ${v.valueTyp}")
+        // %mem. INF v'. pc (setter v mem)
+        Abs("mem", cl2T, GIsabelle.INF_lambda(Abs(v.shortformName, v.valueTyp,
+          pc $ (v.setter(Bound(0), Bound(1))))))
     })
+    postcondition3.clean(ctxt)
   }
 }

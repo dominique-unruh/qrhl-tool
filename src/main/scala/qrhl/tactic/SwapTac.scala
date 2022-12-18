@@ -43,28 +43,28 @@ case class SwapTac(left:Boolean, range1: SwapTac.Range, range2: SwapTac.Range,
     def error(msg: String) =
       throw UserException(s"Cannot swap\n    $context\nand\n    $nonContext,\n$msg")
 
-    def vars(vars:ListSet[_<:Variable]) : String =
-      vars.map(_.name).mkString(", ")
+/*    def vars(vars:ListSet[_<:Variable]) : String =
+      vars.map(_.name).mkString(", ")*/
 
     val qshared = vars1.quantum.intersect(vars2.quantum)
     if (qshared.nonEmpty)
-      error(s"they have shared quantum variables (${vars(qshared)})")
+      error(s"they have shared quantum variables (${Variable.varsToString(qshared)})")
 
     val wshared = vars1.writtenClassical.intersect(vars2.writtenClassical)
     if (wshared.nonEmpty)
-      error(s"they have shared written classical variables (${vars(wshared)})")
+      error(s"they have shared written classical variables (${Variable.varsToString(wshared)})")
 
     val w1r2 = vars1.writtenClassical.intersect(vars2.classical)
     if (w1r2.nonEmpty)
-      error(s"the first block writes classical variables that the second reads (${vars(w1r2)})")
+      error(s"the first block writes classical variables that the second reads (${Variable.varsToString(w1r2)})")
 
     val w2r1 = vars2.writtenClassical.intersect(vars1.classical)
     if (w2r1.nonEmpty)
-      error(s"the first block reads classical variables that the second writes (${vars(w2r1)})")
+      error(s"the first block reads classical variables that the second writes (${Variable.varsToString(w2r1)})")
 
     val i1f2 = vars1.inner.intersect(vars2.freeVariables)
     if (i1f2.nonEmpty)
-      error(s"the first block has inner variables that are free in the second (${vars(i1f2)})")
+      error(s"the first block has inner variables that are free in the second (${Variable.varsToString(i1f2)})")
   }
 
   def blockSplitAt(block: Block, i: Int): (Block, Block) = {

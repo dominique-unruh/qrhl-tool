@@ -130,26 +130,26 @@ case class ConseqQrhlTac(rule: String,
                 throw UserException(s"Variables ${Variable.varsToString(afterRight)} have repetitions")
 
               // beforeLeft as name/typ pairs
-              val beforeLeftPairs = beforeLeft map { v => (v.name, v.valueTyp) }
-              val beforeRightPairs = beforeRight map { v => (v.name, v.valueTyp) }
-              val afterLeftPairs = afterLeft map { v => (v.name, v.valueTyp) }
-              val afterRightPairs = afterRight map { v => (v.name, v.valueTyp) }
+              val beforeLeftPairs = beforeLeft map { v => (v.basename, v.valueTyp) }
+//              val beforeRightPairs = beforeRight map { v => (v.basename, v.valueTyp) } // unused
+              val afterLeftPairs = afterLeft map { v => (v.basename, v.valueTyp) }
+//              val afterRightPairs = afterRight map { v => (v.basename, v.valueTyp) } // unused
 
               // infinite (UNIV::beforeT set) ∨ (finite (UNIV::afterT set) ∧ card (UNIV::beforeT set) ≥ card (UNIV::afterT set)
               // Equivalent to (5).
               // In Isabelle, we need to explicitly make a case distinction on the finiteness of afterT because
               // card is the cardinality only in case of finite sets
               val cardinalityCondition1 = Ops.conseq_qrhl_cardinality_condition(
-                MLValue((ctxt, beforeLeftPairs, afterLeftPairs))).retrieveNow
+                ctxt, beforeLeftPairs, afterLeftPairs).retrieveNow
               // Add this to the goals that we need to check
               easyGoals += cardinalityCondition1
 
               // Like before/afterLeftPairs, but with index 1
-              val beforeLeftIdxPairs = beforeLeft  map { v => (v.name, Index1, v.valueTyp) }
-              val afterLeftIdxPairs = afterLeft map { v => (v.name, Index1, v.valueTyp) }
+              val beforeLeftIdxPairs = beforeLeft  map { v => (v.basename, Index1, v.valueTyp) }
+              val afterLeftIdxPairs = afterLeft map { v => (v.basename, Index1, v.valueTyp) }
               // Like before/afterRightPairs, but with index 2
-              val beforeRightIdxPairs = beforeRight map { v => (v.name, Index2, v.valueTyp) }
-              val afterRightIdxPairs = afterRight map { v => (v.name, Index2, v.valueTyp) }
+              val beforeRightIdxPairs = beforeRight map { v => (v.basename, Index2, v.valueTyp) }
+              val afterRightIdxPairs = afterRight map { v => (v.basename, Index2, v.valueTyp) }
 
               // Parses pre2 as X ⊓ ⟦L⟧ ≡⇩𝔮 ⟦R⟧.
               // Checks that L/R ends with beforeLeftIdxPairs, beforeRightIdxPairs

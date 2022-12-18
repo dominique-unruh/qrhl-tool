@@ -25,25 +25,25 @@ object MLValueConverters {
     override def store(value: Statement)(implicit isabelle: control.Isabelle): MLValue[Statement] = value match {
       case local: Local =>
         Ops.makeLocal((
-          VarTerm.varlist(local.vars.collect { case v : CVariable => (v.name, v.valueTyp) } :_*),
-          VarTerm.varlist(local.vars.collect { case v : QVariable => (v.name, v.valueTyp) } :_*),
+          VarTerm.varlist(local.vars.collect { case v : CVariable => (v.basename, v.valueTyp) } :_*),
+          VarTerm.varlist(local.vars.collect { case v : QVariable => (v.basename, v.valueTyp) } :_*),
           local.body.statements))
       case block: Block =>
         Ops.listToBlock(block.statements)
       case Assign(variable, expression) =>
-        Ops.makeAssign((variable.map(v => (v.name,v.valueTyp)), expression.term.isabelleTerm))
+        Ops.makeAssign((variable.map(v => (v.basename,v.valueTyp)), expression.term.isabelleTerm))
       case Sample(variable, expression) =>
-        Ops.makeSample((variable.map(v => (v.name,v.valueTyp)), expression.term.isabelleTerm))
+        Ops.makeSample((variable.map(v => (v.basename,v.valueTyp)), expression.term.isabelleTerm))
       case IfThenElse(condition, thenBranch, elseBranch) =>
         Ops.makeIfThenElse((condition.term.isabelleTerm, thenBranch.statements, elseBranch.statements))
       case While(condition, body) =>
         Ops.makeWhile((condition.term.isabelleTerm,body.statements))
       case QInit(location, expression) =>
-        Ops.makeQInit((location.map(v => (v.name,v.valueTyp)), expression.term.isabelleTerm))
+        Ops.makeQInit((location.map(v => (v.basename,v.valueTyp)), expression.term.isabelleTerm))
       case QApply(location, expression) =>
-        Ops.makeQApply((location.map(v => (v.name,v.valueTyp)), expression.term.isabelleTerm))
+        Ops.makeQApply((location.map(v => (v.basename,v.valueTyp)), expression.term.isabelleTerm))
       case Measurement(result, location, e) =>
-        Ops.makeMeasurement((result.map(v => (v.name,v.valueTyp)), location.map(v => (v.name,v.valueTyp)), e.term.isabelleTerm))
+        Ops.makeMeasurement((result.map(v => (v.basename,v.valueTyp)), location.map(v => (v.basename,v.valueTyp)), e.term.isabelleTerm))
       case call : Call =>
         Ops.makeCall(call)
     }

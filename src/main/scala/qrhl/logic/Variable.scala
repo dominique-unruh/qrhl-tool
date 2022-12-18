@@ -55,7 +55,7 @@ sealed trait Variable extends HashedValue {
   @inline final def isQuantum: Boolean = !isClassical
   def isIndexed: Boolean = theIndex != NoIndex
 
-  def name: String = theIndex match {
+  def shortformName: String = theIndex match {
     case Variable.NoIndex => basename
     case Variable.Index1 => basename + "1"
     case Variable.Index2 => basename + "2"
@@ -63,7 +63,7 @@ sealed trait Variable extends HashedValue {
 
   // Without the 1/2 suffix for indexed variables
   val basename:String
-  @deprecated("same as name") val variableName: String = name
+//  @deprecated("same as name") def variableName: String = name
   def index1: Variable with Indexed
   def index2: Variable with Indexed
   val theIndex: Variable.Index
@@ -85,13 +85,13 @@ sealed trait Variable extends HashedValue {
    *
    * */
   def variableTermShort: Term =
-    Free(name, if (isClassical) valueTyp else variableTyp)
+    Free(shortformName, if (isClassical) valueTyp else variableTyp)
 
   def variableTermLong: Term =
     if (isIndexed)
-      Ops.varterm_to_variable2(isClassical, VTSingle(name, theIndex, valueTyp)).retrieveNow
+      Ops.varterm_to_variable2(isClassical, VTSingle(basename, theIndex, valueTyp)).retrieveNow
     else
-      Ops.varterm_to_variable1(isClassical, VTSingle(name, theIndex, valueTyp)).retrieveNow
+      Ops.varterm_to_variable1(isClassical, VTSingle(basename, theIndex, valueTyp)).retrieveNow
 
   def classicalQuantumWord : String
 }
@@ -103,7 +103,7 @@ object Variable {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     def compareSame(x: Variable, y:Variable): Int = {
-      val nameComp = Ordering.String.compare(x.name, y.name)
+      val nameComp = Ordering.String.compare(x.basename, y.basename)
       if (nameComp==0)
         GIsabelle.Ops.compareTyps(x.valueTyp, y.valueTyp).retrieveNow
       else
@@ -139,7 +139,7 @@ object Variable {
     case VTCons(a,b) => s"(${vartermToString(toStr,a)}),${vartermToString(toStr,b)}"
   }
 
-  def vartermToString(vars: VarTerm[Variable]): String = vartermToString[Variable](_.name, vars)
+  def vartermToString(vars: VarTerm[Variable]): String = vartermToString[Variable](_.shortformName, vars)
 
   def index1(name:String) : String = name+"1"
   def index2(name:String) : String = name+"2"
@@ -196,7 +196,7 @@ object Variable {
 
   def varsToString(vars: Iterable[Variable]): String = vars match {
     case _ : AllSet[_] => "all variables"
-    case _ => varsNamesToString(vars.map(_.name))
+    case _ => varsNamesToString(vars.map(_.shortformName))
   }
 
   sealed trait Index extends HashedValue
@@ -283,18 +283,18 @@ object Variable {
 
 sealed class QVariable protected (override val basename:String, override val valueTyp: Typ, val theIndex: Variable.Index) extends Variable {
   override val hash: Hash[QVariable.this.type] =
-    HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
+    HashTag()(RawHash.hashString(basename), Hashable.hash(valueTyp))
 
   override def memTyp: Typ = if (isIndexed) qu2T else quT
 
   def castNonindexed: QVariableNI = {
     assert(theIndex == NoIndex)
-    QVariableNI.fromName(name, valueTyp)
+    QVariableNI.fromName(basename, valueTyp)
   }
 
   def castIndexed: QVariableI = {
     assert(theIndex != NoIndex)
-    QVariableI.fromName(name, valueTyp, theIndex.asInstanceOf[Index12])
+    QVariableI.fromName(basename, valueTyp, theIndex.asInstanceOf[Index12])
   }
 
   @inline
@@ -304,7 +304,7 @@ sealed class QVariable protected (override val basename:String, override val val
 
   override def index1: QVariableI = { assert(theIndex==NoIndex); QVariableI.fromName(basename, valueTyp, Index1) }
   override def index2: QVariableI = { assert(theIndex==NoIndex); QVariableI.fromName(basename, valueTyp, Index2) }
-  override def toString: String = s"quantum var $name : ${IsabelleX.pretty(valueTyp)}"
+  override def toString: String = s"quantum var $shortformName : ${IsabelleX.pretty(valueTyp)}"
   override def unindex: QVariableNI = { assert(isIndexed); QVariableNI.fromName(basename, valueTyp) }
 
 //  override def isQuantum: Boolean = true
@@ -380,7 +380,7 @@ sealed class CVariable protected (override val basename:String, override val val
   override def memTyp: Typ = if (isIndexed) cl2T else clT
 
   override val hash: Hash[CVariable.this.type] =
-    HashTag()(RawHash.hashString(name), Hashable.hash(valueTyp))
+    HashTag()(RawHash.hashString(basename), Hashable.hash(valueTyp))
 
   override def index1: CVariableI = { assert(theIndex==NoIndex); CVariableI.fromName(basename, valueTyp, Index1) }
   override def index2: CVariableI = { assert(theIndex==NoIndex); CVariableI.fromName(basename, valueTyp, Index2) }
@@ -391,7 +391,7 @@ sealed class CVariable protected (override val basename:String, override val val
     }
   }
 
-  override def toString: String = s"classical var $name : ${IsabelleX.pretty(valueTyp)}"
+  override def toString: String = s"classical var $shortformName : ${IsabelleX.pretty(valueTyp)}"
   override def unindex: CVariableNI = { assert(isIndexed); CVariableNI.fromName(basename, valueTyp) }
 
 //  def valueTerm(implicit isa: de.unruh.isabelle.control.Isabelle, ec: ExecutionContext): Term = Free(name, valueTyp)
@@ -409,13 +409,13 @@ sealed class CVariable protected (override val basename:String, override val val
   /** Checked at runtime */
   override def castNonindexed: CVariableNI = {
     assert(theIndex == NoIndex)
-    CVariableNI.fromName(name, valueTyp)
+    CVariableNI.fromName(basename, valueTyp)
   }
 
   /** Checked at runtime */
   override def castIndexed: CVariableI = {
     assert(theIndex != NoIndex)
-    CVariableI.fromName(name, valueTyp, theIndex.asInstanceOf[Index12])
+    CVariableI.fromName(basename, valueTyp, theIndex.asInstanceOf[Index12])
   }
 
   @inline

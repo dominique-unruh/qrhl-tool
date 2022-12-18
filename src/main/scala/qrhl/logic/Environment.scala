@@ -189,11 +189,11 @@ final case class AbstractProgramDecl(name:String, free:List[Variable with Nonind
 
   def declareInIsabelle(isabelle: IsabelleX.ContextX): IsabelleX.ContextX = {
     val vars = variablesRecursive
-    val cvars = vars.classical map { v => (v.name, v.valueTyp) }
-    val cwvars = vars.written collect { case v : CVariable => (v.name, v.valueTyp) }
-    val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
+    val cvars = vars.classical map { v => (v.basename, v.valueTyp) }
+    val cwvars = vars.written collect { case v : CVariable => (v.basename, v.valueTyp) }
+    val qvars = vars.quantum map { v => (v.basename, v.valueTyp) }
     val ctxt = Ops.declare_abstract_program_op(
-      MLValue((isabelle.context, name, cvars.toList, cwvars.toList, qvars.toList, numOracles))).retrieveNow
+      isabelle.context, name, cvars.toList, cwvars.toList, qvars.toList, numOracles).retrieveNow
     new ContextX(isabelle.isabelle,ctxt)
   }
 
@@ -246,10 +246,10 @@ final case class ConcreteProgramDecl(ctxt: Context, environment: Environment, na
 
   def declareInIsabelle(context: IsabelleX.ContextX): IsabelleX.ContextX = {
     val vars = variablesRecursive
-    val cvars = vars.classical map { v => (v.name, v.valueTyp) }
-    val cwvars = vars.written collect { case v : CVariable => (v.name, v.valueTyp) }
-    val qvars = vars.quantum map { v => (v.name, v.valueTyp) }
-    val ctxt = Ops.declare_concrete_program_op((context.context, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program)).retrieveNow
+    val cvars = vars.classical map { v => (v.basename, v.valueTyp) }
+    val cwvars = vars.written collect { case v : CVariable => (v.basename, v.valueTyp) }
+    val qvars = vars.quantum map { v => (v.basename, v.valueTyp) }
+    val ctxt = Ops.declare_concrete_program_op(context.context, name, cvars.toList, cwvars.toList, qvars.toList, oracles, program).retrieveNow
     new ContextX(context.isabelle, ctxt)
   }
 

@@ -56,9 +56,9 @@ case class RenameTac(left: Boolean, right: Boolean,
       //        assumes valid[simp]: "valid_var_subst σ"
       for ((x,y) <- renaming) {
         if (x.isClassical != y.isClassical)
-          throw UserException(s"${x.name} is a ${x.classicalQuantumWord} variable while ${y.name} is a ${x.classicalQuantumWord} variable")
+          throw UserException(s"${x.shortformName} is a ${x.classicalQuantumWord} variable while ${y.shortformName} is a ${x.classicalQuantumWord} variable")
         if (x.valueTyp != y.valueTyp)
-          throw UserException(s"${x.name} has type ${typStr(x.valueTyp)} while ${y.name} has ${typStr(y.valueTyp)}")
+          throw UserException(s"${x.shortformName} has type ${typStr(x.valueTyp)} while ${y.shortformName} has ${typStr(y.valueTyp)}")
       }
 
       //  assumes [simp]: "no_conflict σ c"
@@ -120,7 +120,7 @@ case class RenameTac(left: Boolean, right: Boolean,
       val renamedPre = renameInvariant(pre.instantiateMemory)
       val renamedPost = renameInvariant(post.instantiateMemory)
 
-      val forbiddenQInInvariant12 = forbiddenInInvariant collect { case v: QVariable => (v.name, v.theIndex, v.valueTyp) } toList
+      val forbiddenQInInvariant12 = forbiddenInInvariant collect { case v: QVariable => (v.basename, v.theIndex, v.valueTyp) } toList
       val colocalitySubgoal =
         if (forbiddenQInInvariant12.isEmpty) null
         else {

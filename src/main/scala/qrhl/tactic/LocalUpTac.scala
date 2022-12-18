@@ -362,31 +362,31 @@ object LocalUpTac {
       for (vi <- vars) vi match {
         case (v : CVariable, None) =>
           if (cvars.contains(v))
-            throw UserException(s"Incompatible local variable specification for ${v.name}")
+            throw UserException(s"Incompatible local variable specification for ${v.shortformName}")
           cvars.update(v,Nil)
         case (v : QVariable, None) =>
           if (qvars.contains(v))
-            throw UserException(s"Incompatible local variable specification for ${v.name}")
+            throw UserException(s"Incompatible local variable specification for ${v.shortformName}")
           qvars.update(v,Nil)
         case (v : CVariable, Some(i)) =>
           val sofar = cvars.get(v) match {
             case None => Nil
             case Some(Nil) =>
-              throw UserException(s"Incompatible local variable specification for ${v.name}")
+              throw UserException(s"Incompatible local variable specification for ${v.shortformName}")
             case Some(l) => l
           }
           if (sofar.contains(i))
-            throw UserException(s"Incompatible local variable specification for ${v.name}")
+            throw UserException(s"Incompatible local variable specification for ${v.shortformName}")
           cvars.update(v, sofar ++ List(i))
         case (v : QVariable, Some(i)) =>
           val sofar = qvars.get(v) match {
             case None => Nil
             case Some(Nil) =>
-              throw UserException(s"Incompatible local variable specification for ${v.name}")
+              throw UserException(s"Incompatible local variable specification for ${v.shortformName}")
             case Some(l) => l
           }
           if (sofar.contains(i))
-            throw UserException(s"Incompatible local variable specification for ${v.name}")
+            throw UserException(s"Incompatible local variable specification for ${v.shortformName}")
           qvars.update(v, sofar ++ List(i))
       }
 

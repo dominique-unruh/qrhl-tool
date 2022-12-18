@@ -423,7 +423,7 @@ class State private (val environment: Environment,
   def declareVariable(name: String, typ: Typ, quantum: Boolean): State = {
     val existingVars =
       for (c <- if (quantum) environment.qVariables.values else environment.cVariables.values)
-        yield (c.name, c.valueTyp)
+        yield (c.basename, c.valueTyp)
     val newEnv = environment.declareVariable(name, typ, quantum = quantum)
 //      .declareAmbientVariable("var_"+name, typ)
 //      .declareAmbientVariable("var_"+Variable.index1(name), typ)

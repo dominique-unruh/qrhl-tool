@@ -72,7 +72,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
 
   def substitute(v:CVariable, repl:RichTerm) : RichTerm = {
     assert(repl.typ==v.valueTyp)
-    map(RichTerm.substitute(v.name, repl.isabelleTerm, _))
+    map(RichTerm.substitute(v.basename, repl.isabelleTerm, _))
   }
 
   def index1(environment: Environment): RichTerm = index(environment, left=true)
