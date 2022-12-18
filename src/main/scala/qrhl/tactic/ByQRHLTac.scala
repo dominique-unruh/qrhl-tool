@@ -149,13 +149,14 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
         val right = p2.toBlock
 
         // Cla[e1 -->/= e2]
-        val post = RichTerm(GIsabelle.predExpressionT,
+        val post = ExpressionIndexed.fromTerm(
           Abs("mem", GIsabelle.cl2T,
             GIsabelle.classical_subspace(connective $
               (e1.term.isabelleTerm $ (GIsabelle.fst(clT, clT) $ Bound(0))) $
               (e2.term.isabelleTerm $ (GIsabelle.snd(clT, clT) $ Bound(0))))))
+          .clean(ctxt)
 
-        List(QRHLSubgoal(left,right,ExpressionIndexed.fromTerm(pre),ExpressionIndexed.fromTerm(post),Nil))
+        List(QRHLSubgoal(left, right, ExpressionIndexed.fromTerm(pre), post, Nil))
       // Subgoal: p1 denotationally-equivalent p2
       case DenotationalEqSubgoal(p1, p2, assms) =>
         val env = state.environment

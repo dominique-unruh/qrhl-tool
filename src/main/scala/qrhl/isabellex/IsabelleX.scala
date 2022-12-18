@@ -1162,8 +1162,7 @@ object IsabelleX {
   def isGlobalIsabelle(isabelle: IsabelleX): Boolean =
     (globalIsabellePeek != null) && (globalIsabelle == isabelle)
 
-  @deprecated("use RichTerm.toString", "now")
-  def pretty(t: Term): String = IsabelleX.theContext.prettyExpression(t)
+  def pretty(t: Term): String = IsabelleX.theContext.prettyTerm(t)
 
   def pretty(t: Typ): String = IsabelleX.theContext.prettyTyp(t)
 
@@ -1225,8 +1224,7 @@ object IsabelleX {
     def readTerm(str: String, typ: Typ): Term =
       Term(context, str, typ)
 
-    @deprecated("Use Expression.toString", "now")
-    def prettyExpression(term: Term): String =
+    def prettyTerm(term: Term): String =
       symbols.symbolsToUnicode(term.prettyRaw(context))
 
     def readTyp(str: String): Typ = Typ(context, str).force

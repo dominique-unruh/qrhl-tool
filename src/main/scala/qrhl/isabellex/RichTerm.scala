@@ -53,7 +53,7 @@ final class RichTerm private(val typ: Typ, val isabelleTerm:Term, _pretty:Option
   override lazy val toString: String = _pretty match {
     case Some(s) => s
     case _ => //noinspection ScalaDeprecation
-      IsabelleX.theContext.prettyExpression (isabelleTerm)
+      IsabelleX.theContext.prettyTerm (isabelleTerm)
   }
 
 //  val isabelleTerm : Term = isabelleTerm

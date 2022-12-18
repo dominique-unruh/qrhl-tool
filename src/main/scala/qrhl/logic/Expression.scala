@@ -250,7 +250,7 @@ class ExpressionIndexed(term: RichTerm) extends Expression(term) with HashedValu
     super.simplify(context, facts, thms).castIndexed
   }
 
-  override def clean(ctxt: Context): ExpressionIndexed = clean(ctxt).castIndexed
+  override def clean(ctxt: Context): ExpressionIndexed = super.clean(ctxt).castIndexed
 
   def renameCVariablesCQ(renaming: List[(Variable with Indexed, Variable with Indexed)]): ExpressionIndexed =
     renameCVariables(renaming collect { case (a: CVariable, b: CVariable) => (a, b) })
@@ -301,7 +301,7 @@ class ExpressionNonindexed(term: RichTerm) extends Expression(term) {
       .clean(ctxt)
   }
 
-  override def clean(ctxt: Context): ExpressionNonindexed = clean(ctxt).castNonindexed
+  override def clean(ctxt: Context): ExpressionNonindexed = super.clean(ctxt).castNonindexed
 }
 
 object ExpressionNonindexed {
