@@ -9,7 +9,7 @@ lemma joint_sample:
   defines "f\<^sub>2 \<equiv> (\<lambda>m. f (snd m))"
   defines "x\<^sub>1 \<equiv> cregister_chain cFst x"
   defines "y\<^sub>2 \<equiv> cregister_chain cSnd y"
-  defines "B' z \<equiv> (\<lambda>m. B (setter y\<^sub>2 (fst z) (setter x\<^sub>1 (snd z) m)))"
+  defines "B' z \<equiv> (\<lambda>m. B (setter y\<^sub>2 (snd z) (setter x\<^sub>1 (fst z) m)))"
   defines "A \<equiv> (\<lambda>m. 
     Cla[map_distr fst (witness m) = e\<^sub>1 m \<and> map_distr snd (witness m) = f\<^sub>2 m] \<sqinter>  
     (INF z\<in>supp (witness m). ((B' z m))))"
@@ -114,21 +114,5 @@ fun joint_sample_equal_seq_tac ctxt i =
 
 end
 \<close>
-
-experiment
-  fixes x :: \<open>bit cvariable\<close> and y :: \<open>bit cvariable\<close>
-  assumes [register]: \<open>cregister x\<close> \<open>cregister y\<close>
-begin
-schematic_goal xxx: "qrhl ?e [sample \<lbrakk>x\<rbrakk> Expr[uniform UNIV]] [sample \<lbrakk>y\<rbrakk> Expr[uniform UNIV]] Expr[Cla[x1=y2]]"
-  thm joint_sample_equal[where x=x and y=y]
-  apply (tactic \<open>Joint_Sample.joint_sample_equal_tac \<^context> 1\<close>)
-  by -
-thm xxx
-
-schematic_goal yyy: "qrhl ?e [sample \<lbrakk>x\<rbrakk> Expr[uniform UNIV]] [sample \<lbrakk>y\<rbrakk> Expr[uniform UNIV]] Expr[Cla[x1=y2]]"
-  by (tactic \<open>Joint_Sample.joint_sample_tac \<^context> \<^cterm>\<open>\<lambda>m::cl2. uniform UNIV :: (bit*bit) distr\<close> 1\<close>)
-thm yyy
-end
-
 
 end

@@ -53,6 +53,8 @@ lemma classical_sort[simp]:
   assumes "NO_MATCH Cla[x] A" 
   shows "A \<sqinter> Cla[b] = Cla[b] \<sqinter> A"
   by (simp add: classical_subspace_def)
+lemma classical_geq_top[simp]: \<open>\<top> \<le> Cla[b] \<longleftrightarrow> b\<close>
+  by (simp add: classical_subspace_def top_unique)
 
 lemma Cla_split[split]: "P (Cla[Q]) = ((Q \<longrightarrow> P top) \<and> (\<not> Q \<longrightarrow> P bot))"
   by (cases Q, auto) 

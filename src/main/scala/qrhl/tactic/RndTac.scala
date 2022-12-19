@@ -18,6 +18,6 @@ case class RndWitnessTac(left:VarTerm[CVariable], right:VarTerm[CVariable], witn
   extends IsabelleTac[Term]("joint_sample_tac", { _ => witness.term.isabelleTerm }) {
   override def toString: String = s"rnd $left,$right <- $witness"
 
-  override def hash: Hash[RndWitnessTac.this.type] = HashTag()(Hashable.hash(left), Hashable.hash(right))
+  override def hash: Hash[RndWitnessTac.this.type] = HashTag()(Hashable.hash(left), Hashable.hash(right), witness.hash)
 }
 

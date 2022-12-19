@@ -2,7 +2,7 @@ theory All_Unit_Tests
   imports 
     Test_Misc Test_Tactics Test_QRHL_Core Test_Weakest_Precondition Test_Prog_Variables
     Test_Strongest_Postcondition Test_Squash_Sampling Test_Programs Test_Expressions
-
+    Test_Joint_Sample
 begin
 
 ML \<open>
