@@ -292,8 +292,8 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
   (* keep_left, keep_right are the vars before beforeLeft/beforeRight (in vt_left/right) *)
   val keep_left = List.take (vt_left, (length vt_left - length beforeLeft))
   val keep_right = List.take (vt_right, (length vt_right - length beforeRight))
-  val keep_leftT = Prog_Variables.varterm_from_list keep_left |> varterm_to_variable2 Quantum |> fastype_of |> dest_qvariableT
-  val keep_rightT = Prog_Variables.varterm_from_list keep_right |> varterm_to_variable2 Quantum |> fastype_of |> dest_qvariableT
+  val keep_leftT = Prog_Variables.varterm_from_list keep_left |> varterm_to_variable2 Quantum |> fastype_of |> dest_q2variableT
+  val keep_rightT = Prog_Variables.varterm_from_list keep_right |> varterm_to_variable2 Quantum |> fastype_of |> dest_q2variableT
 
   (* Check: keep_left/right have the same type (as variable tuple *)
   (* (Should never fail.) *)
@@ -323,7 +323,7 @@ fun conseq_qrhl_replace_in_predicate (ctxt, predicate, beforeLeft, afterLeft, be
   (* predicate, with \<lbrakk>vt_left\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>vt_right\<rbrakk> replaced by \<lbrakk>replaced_left_vt\<rbrakk> \<equiv>\<^sub>\<qq> \<lbrakk>replaced_right_vt\<rbrakk> *)
   (* This is the first return value. *)
   val pred' = @{const inf(predicate)} $ pred_lhs $ qeq_replaced |> Term.abs ("mem", \<^typ>\<open>cl2\<close>)
-  val pred' = expression_to_term ctxt pred'
+  (* val pred' = expression_to_term ctxt pred' *)
 
   (* All of before/afterLeft/Right *)
   val all_vars0 = beforeLeft @ beforeRight @ afterLeft @ afterRight

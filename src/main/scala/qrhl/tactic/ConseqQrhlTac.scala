@@ -71,6 +71,16 @@ case class ConseqQrhlTac(rule: String,
                            (List[QVariableNI],List[QVariableNI]))]) extends Tactic {
   import ConseqQrhlTac.logger
 
+  override def toString: String = qvariableSubst match {
+    case None => s"conseq qrhl: $rule"
+    case Some(((l1,l2),(r1,r2))) =>
+      val l1s = l1.map(_.basename).mkString(",")
+      val l2s = l2.map(_.basename).mkString(",")
+      val r1s = r1.map(_.basename).mkString(",")
+      val r2s = r2.map(_.basename).mkString(",")
+      s"conseq qrhl ($l1s -> $l2s; $r1s -> $r2s): $rule"
+  }
+
   override def hash: Hash[ConseqQrhlTac.this.type] =
     HashTag()(Hashable.hash(rule), Hashable.hash(qvariableSubst))
 
@@ -93,7 +103,7 @@ case class ConseqQrhlTac(rule: String,
 
           val goals: ListBuffer[Subgoal] = ListBuffer()
 
-          val (pre3: ExpressionIndexed, post3: ExpressionIndexed) = qvariableSubst match {
+          val (pre3, post3) = qvariableSubst match {
             case None => (pre2, post2)
             case Some(((beforeLeft, afterLeft), (beforeRight, afterRight))) =>
               // beforeLeft: Variables on the left that should be replaced
@@ -171,7 +181,7 @@ case class ConseqQrhlTac(rule: String,
 
               goals += AmbientSubgoal(GIsabelle.conj(easyGoals.toSeq: _*), assms.map(_.isabelleTerm))
 
-              (RichTerm(pre3), RichTerm(post3))
+              (ExpressionIndexed.fromTerm(pre3), ExpressionIndexed.fromTerm(post3))
           }
 
           // (8a), (8b)
