@@ -220,6 +220,16 @@ lemma colocal_pred_qvars_pair[simp,intro]:
   shows \<open>colocal_pred_qvars S (qregister_pair F G)\<close>
   sorry
 
+lemma colocal_pred_qvars_apply_qregister_space[simp]:
+  assumes \<open>qcompatible F G\<close>
+  shows \<open>colocal_pred_qvars (apply_qregister_space F S) G\<close>
+  sorry
+
+lemma colocal_op_qvars_apply_qregister[simp]:
+  assumes \<open>qcompatible F G\<close>
+  shows \<open>colocal_op_qvars (apply_qregister F S) G\<close>
+  sorry
+
 lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
   by (cheat predicate_local_inf)
 lemma predicate_local_applyOpSpace[intro!]: "operator_local A Q \<Longrightarrow> predicate_local S Q \<Longrightarrow> predicate_local (A\<cdot>S) Q"

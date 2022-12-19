@@ -16,6 +16,17 @@ program right := {
   on r apply hadamard;
 }.
 
+lemma xxx: qregister ⟦q,r⟧.
+  simp.
+qed.
+
+lemma x2: qregister
+     ⟦qregister_chain ⟦#1⟧⇩q q, qregister_chain ⟦#1⟧⇩q r, qregister_chain ⟦#2.⟧⇩q q,
+      qregister_chain ⟦#2.⟧⇩q r⟧⇩q.
+      simp.
+      qed.
+      
+
 qrhl {Cla[True]} call left; ~ call right; {Qeq[q1,r1=q2,r2]}.
 
 inline left.
