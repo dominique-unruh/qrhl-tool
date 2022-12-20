@@ -26,14 +26,7 @@ inline right.
 
 measure.
 conseq post: Qeq[q1,r1=q2,r2].
-print goal.
-simp.
-print goal.
-print joint_measure_aux.
-
- rule joint_measure_aux.
-simp.
- simp!.
+{ simp. rule joint_measure_aux. simp!. }
 
 wp left.
  simp.
@@ -44,7 +37,7 @@ wp left.
 wp right.
  simp.
 skip.
-simp final_goal.
+simp! final_goal.
 
 qed.
 
