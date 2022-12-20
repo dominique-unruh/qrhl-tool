@@ -56,7 +56,7 @@ case class JointIfTac(cases : List[(Boolean,Boolean)]) extends Tactic {
                 GIsabelle.conj(eqBool(condLIdx.termInst.isabelleTerm,l),eqBool(condRIdx.termInst.isabelleTerm,r))
           } :_*)
 
-      val casesSubgoal = pre.leq(ExpressionInstantiatedIndexed.fromTerm(GIsabelle.classical_subspace(excludedCasesCond)).abstractMemory)
+      val casesSubgoal = pre.leq(ctxt, ExpressionInstantiatedIndexed.fromTerm(GIsabelle.classical_subspace(excludedCasesCond)).abstractMemory)
       subgoals.append(AmbientSubgoal(casesSubgoal))
 
       for ((l,r) <- cases) {

@@ -30,8 +30,6 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
    *             Call(prog) (prog must be a program)
    *             rho
    *
-   * e inside Pr[] must be in longform.
-   *
    * Special case: if the term to be matched is "1", return (True, empty program, null)
    */
   class Probability(left : Boolean, state : State) {
@@ -94,9 +92,7 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
     goal match {
         // Subgoal: Pr[e1:p1(rho)] R Pr[e2:p2(rho)]
         // lhs or rhs can also be just "1"
-        // Variables `e1`, `e2` contain *indexed* expressions!   // TODO why???
       case AmbientSubgoal(RichTerm(App(App(Const(rel,_),ProbLeft(e1,p1,rho1)),ProbRight(e2,p2,rho2)))) =>
-        // e1,e2 are in shortform
 
         if (rho1!=null && rho2!=null && rho1!=rho2)
           throw UserException("The initial state in lhs and rhs must be identical (syntactically same term, not just equal)")
@@ -185,8 +181,6 @@ case class ByQRHLTac(qvariables: List[QVariableNI]) extends Tactic {
         /** Precondition.
          * Cla[x1==x2 /\ ... /\ z1==z2] ⊓ [q1...r1] ==q [q2...r2]
          * if cvars =: x...z and qvars =: q...r
-         *
-         * In shortform.
          */
         val pre = Ops.byQRHLPreOp(
           cvars.toList.map(v => (v.basename, v.valueTyp)),

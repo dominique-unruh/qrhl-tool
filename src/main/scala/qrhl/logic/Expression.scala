@@ -1,9 +1,8 @@
 package qrhl.logic
 
-import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Thm, Typ, Type, Var}
+import de.unruh.isabelle.pure.{Abs, Bound, Context, Free, Term, Thm, Typ, Type}
 import hashedcomputation.{Hash, HashTag, HashedValue}
-import qrhl.UserException
+import qrhl.{AmbientSubgoal, UserException}
 import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle}
 import qrhl.isabellex.IsabelleX.globalIsabelle.{Ops, cl2T, clT}
 import qrhl.isabellex.{IsabelleX, RichTerm}
@@ -18,6 +17,7 @@ import qrhl.isabellex.IsabelleX.globalIsabelle.isabelleControl
 import de.unruh.isabelle.pure.Implicits._
 import de.unruh.isabelle.mlvalue.Implicits._
 import qrhl.isabellex.Implicits._
+import qrhl.isabellex.MLValueConverters.Implicits._
 
 class Expression(val term: RichTerm) extends HashedValue {
   override def toString: String = shortform(IsabelleX.theContext).toString
@@ -112,14 +112,10 @@ class Expression(val term: RichTerm) extends HashedValue {
     RichTerm(Ops.decodeFromExpressionOp(context.context,term.isabelleTerm).retrieveNow)
   }
 
-  def leq(other: Expression): RichTerm = {
-    assert(other.memTyp == memTyp)
-    assert(other.rangeTyp == rangeTyp)
-
-    RichTerm(globalIsabelle.all("mem", memTyp,
-      globalIsabelle.less_eq(rangeTyp) $ (term.isabelleTerm $ Bound(0)) $ (other.term.isabelleTerm $ Bound(0))
-    ))
-  }
+  /** Returns `!x y... this x y <= other x y` if x y are the classical program variables occurring in those expressions.
+   * More precisely, x would appear as `getter x mem` in an expression of the form `%mem. ...`. */
+  def leq(ctxt: Context, other: Expression): RichTerm =
+    RichTerm(Ops.expression_leq(ctxt, term.isabelleTerm, other.term.isabelleTerm).retrieveNow)
 
   def clean(ctxt: Context): Expression = Expression.fromTerm(Ops.clean_expression(ctxt, term.isabelleTerm).retrieveNow)
 }

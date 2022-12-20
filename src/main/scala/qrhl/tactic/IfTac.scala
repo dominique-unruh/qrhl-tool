@@ -37,7 +37,7 @@ case class IfTac(side:Index12, trueFalse:Option[Boolean]=None) extends Tactic {
       // Constructing the then-branch goal in case it should be shown impossible
       if (trueFalse.contains(false)) {
         // pre <= Cla[not cond]
-        val subgoal = pre.leq(ExpressionInstantiatedIndexed.fromTerm(
+        val subgoal = pre.leq(ctxt, ExpressionInstantiatedIndexed.fromTerm(
           GIsabelle.classical_subspace(GIsabelle.not(condIdx.termInst.isabelleTerm))).abstractMemory)
         subgoals.append(AmbientSubgoal(subgoal))
       }
@@ -45,7 +45,7 @@ case class IfTac(side:Index12, trueFalse:Option[Boolean]=None) extends Tactic {
       // Constructing the else-branch goal in case it should be shown impossible
       if (trueFalse.contains(true)) {
         // pre <= Cla[cond]
-        val subgoal = pre.leq(ExpressionInstantiatedIndexed.fromTerm(
+        val subgoal = pre.leq(ctxt, ExpressionInstantiatedIndexed.fromTerm(
           GIsabelle.classical_subspace(condIdx.termInst.isabelleTerm)).abstractMemory)
         subgoals.append(AmbientSubgoal(subgoal))
       }

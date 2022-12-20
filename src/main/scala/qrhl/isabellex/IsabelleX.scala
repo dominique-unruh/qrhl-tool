@@ -1095,6 +1095,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
       s"fn (ctxt, t) => $qrhl_ops.variables_in_expression ctxt t")
     val clean_expression = compileFunction[Context, Term, Term](
       s"fn (ctxt, t) => $qrhl_ops.clean_expression_conv ctxt (Thm.cterm_of ctxt t) |> Thm.rhs_of |> Thm.term_of")
+    val expression_leq = compileFunction[Context, Term, Term, Term](s"$qrhl_ops.expression_leq")
   }
 }
 

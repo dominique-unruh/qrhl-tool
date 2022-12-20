@@ -372,9 +372,9 @@ fun byQRHLPre (cvars, qvars) =
                                                  \<^Const>\<open>getter T \<open>\<^typ>\<open>cl2\<close>\<close>\<close> $ ((v,Index2,T) |> VTSingle |> varterm_to_variable2 Classical) $ Bound 0))
                      cvars
       val cEqs' = \<^const>\<open>classical_subspace\<close> $ QRHL.mk_conjs cEqs
-      val qvars1' = map (fn (v,T) => (v, Index1,T)) qvars |> varterm_from_list |> varterm_to_variable2_shortform Quantum
+      val qvars1' = map (fn (v,T) => (v, Index1,T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
       val qvars1T = fastype_of qvars1' |> dest_q2variableT
-      val qvars2' = map (fn (v,T) => (v, Index2, T)) qvars |> varterm_from_list |> varterm_to_variable2_shortform Quantum
+      val qvars2' = map (fn (v,T) => (v, Index2, T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
       val qvars2T = fastype_of qvars2' |> dest_q2variableT
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else () (* Shouldn't happen *)
       val qvarsEq = if qvars=[] then @{const top(predicate)} else QRHL.mk_quantum_equality qvars1' qvars2' qvars1T
@@ -560,5 +560,25 @@ fun print_as_statement ctxt name fixes extra_lines assms concl : string =
   in
     YXML.content_of result_string
   end
+
+fun expression_leq (ctxt, expr1, expr2) : term = let
+  val (mem1T, range1T) = fastype_of expr1 |> dest_funT 
+  val (mem2T, range2T) = fastype_of expr2 |> dest_funT 
+  val _ = range1T = range2T orelse raise TYPE ("expression_leq: mismatch in range types", [range1T, range2T], [expr1, expr2])
+  val _ = mem1T = mem2T orelse raise TYPE ("expression_leq: mismatch in memory types", [mem1T, mem2T], [expr1, expr2])
+  val t = Logic.all_const mem1T $ Abs("mem", mem1T, HOLogic.mk_Trueprop (\<^Const>\<open>less_eq range1T\<close> $ (expr1 $ Bound 0) $ (expr2 $ Bound 0)))
+  (* val _ = \<^print> t *)
+  val goal = Goal.init (Thm.cterm_of ctxt t)
+  (* val _ = \<^print> goal *)
+  val tac = generalize_getters ctxt 1
+  val t = case Seq.pull (tac goal) of
+              NONE => raise TERM ("expression_leq: generalize_getters failed", [t])
+            | SOME (goal',_) => case Thm.prems_of goal' of
+                [t] => t
+              | ts => raise TERM ("expression_leq: generalize_getters returns wrong number of goals", t :: ts)
+  val t = atomize ctxt t
+in
+  t
+end
 
 end

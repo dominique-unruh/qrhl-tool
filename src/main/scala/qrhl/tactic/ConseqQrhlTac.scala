@@ -185,8 +185,8 @@ case class ConseqQrhlTac(rule: String,
           }
 
           // (8a), (8b)
-          goals += AmbientSubgoal(pre.leq(pre3), assms)
-          goals += AmbientSubgoal(post3.leq(post), assms)
+          goals += AmbientSubgoal(pre.leq(ctxt, pre3), assms)
+          goals += AmbientSubgoal(post3.leq(ctxt, post), assms)
 
           goals.toList
         case List(goal : AmbientSubgoal) =>
