@@ -315,8 +315,8 @@ fun varterm_to_VARIABLE Classical VTUnit = \<^term>\<open>CREGISTER_unit :: CVAR
                             | Quantum =>  \<^term>\<open>QREGISTER_pair :: QVARIABLE \<Rightarrow> QVARIABLE \<Rightarrow> QVARIABLE\<close>
       in pair $ v1 $ v2 end
 
-fun varterm1_to_variable1 Classical VTUnit = \<^term>\<open>cvariable_unit :: unit cvariable\<close>
-  | varterm1_to_variable1 Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit qvariable\<close>
+fun varterm1_to_variable1 Classical VTUnit = \<^term>\<open>empty_cregister :: unit cvariable\<close>
+  | varterm1_to_variable1 Quantum VTUnit = \<^term>\<open>empty_qregister :: unit qvariable\<close>
   | varterm1_to_variable1 Classical (VTSingle (n,T)) = Free (n,mk_cvariableT T)
   | varterm1_to_variable1 Quantum (VTSingle (n,T)) = Free (n,mk_qvariableT T)
   | varterm1_to_variable1 cq (VTCons (t1, t2)) = let
@@ -340,8 +340,8 @@ fun varterm1_to_varterm VTUnit : varterm = VTUnit
 
 fun varterm_to_variable1 cq = varterm_to_varterm1 #> varterm1_to_variable1 cq
 
-fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>cvariable_unit :: unit c2variable\<close>
-  | varterm_to_variable2 Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit q2variable\<close>
+fun varterm_to_variable2 Classical VTUnit = \<^term>\<open>empty_cregister :: unit c2variable\<close>
+  | varterm_to_variable2 Quantum VTUnit = \<^term>\<open>empty_qregister :: unit q2variable\<close>
   | varterm_to_variable2 Classical (VTSingle (name,Index1,T)) =
           \<^instantiate>\<open>v=\<open>Free (name, mk_cvariableT T)\<close> and 'a=T in term \<open>cregister_chain cFst v :: 'a c2variable\<close>\<close>
   | varterm_to_variable2 Classical (VTSingle (name,Index2,T)) =

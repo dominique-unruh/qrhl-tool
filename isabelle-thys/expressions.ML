@@ -27,8 +27,8 @@ fun variable_shortname n NoIndex = n
   | variable_shortname n Index1 = n ^ "1"
   | variable_shortname n Index2 = n ^ "2"
 
-fun varterm_to_variable2_shortform Classical VTUnit = \<^term>\<open>cvariable_unit :: unit c2variable\<close>
-  | varterm_to_variable2_shortform Quantum VTUnit = \<^term>\<open>qvariable_unit :: unit q2variable\<close>
+fun varterm_to_variable2_shortform Classical VTUnit = \<^term>\<open>empty_cregister :: unit c2variable\<close>
+  | varterm_to_variable2_shortform Quantum VTUnit = \<^term>\<open>empty_qregister :: unit q2variable\<close>
   | varterm_to_variable2_shortform _ (VTSingle (name,NoIndex,T)) =
           raise error ("varterm_to_variable2_shortform: not an indexed variable: " ^ name)
   | varterm_to_variable2_shortform Classical (VTSingle (name,idx,T)) =

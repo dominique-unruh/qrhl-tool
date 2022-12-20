@@ -184,9 +184,9 @@ axiomatization distinct_qvars_op_vars :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q
 
 axiomatization distinct_qvars_op_pred :: "(qu2,qu2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
 
-abbreviation \<open>colocal_op_pred == distinct_qvars_op_pred\<close> (* Legacy *)
-abbreviation \<open>colocal_op_qvars == distinct_qvars_op_vars\<close> (* Legacy *)
-abbreviation \<open>colocal_pred_qvars == distinct_qvars_pred_vars\<close> (* Legacy *)
+abbreviation (input) \<open>colocal_op_pred == distinct_qvars_op_pred\<close> (* Legacy *)
+abbreviation (input) \<open>colocal_op_qvars == distinct_qvars_op_vars\<close> (* Legacy *)
+abbreviation (input) \<open>colocal_pred_qvars == distinct_qvars_pred_vars\<close> (* Legacy *)
 
 consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool" (* Legacy *)
 adhoc_overloading colocal \<open>\<lambda>x y. distinct_qvars_pred_vars x y\<close> \<open>\<lambda>x y. distinct_qvars_op_vars x y\<close> \<open>\<lambda>x y. distinct_qvars_op_pred x y\<close>
@@ -229,6 +229,14 @@ lemma colocal_op_qvars_apply_qregister[simp]:
   assumes \<open>qcompatible F G\<close>
   shows \<open>colocal_op_qvars (apply_qregister F S) G\<close>
   sorry
+
+lemma distinct_qvars_pred_vars_top[simp]: \<open>qregister X \<Longrightarrow> distinct_qvars_pred_vars top X\<close>
+  sorry
+lemma distinct_qvars_pred_vars_bot[simp]: \<open>qregister X \<Longrightarrow> distinct_qvars_pred_vars bot X\<close>
+  sorry
+lemma distinct_qvars_pred_vars_cla[simp]: \<open>qregister X \<Longrightarrow> distinct_qvars_pred_vars Cla[x] X\<close>
+  by simp
+
 
 lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
   by (cheat predicate_local_inf)
