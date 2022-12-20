@@ -2,6 +2,7 @@ theory EPR
   imports QRHL.QRHL
 begin
 
+(* TODO remove need for this *)
 declare ETTS.rep_in_S[simp del]
 declare ETTS.rep_inverse[simp del]
 declare ETTS.Abs_inverse[simp del]
@@ -11,12 +12,6 @@ lemma joint_measure_aux:
   assumes [simp]: \<open>declared_qvars \<lbrakk>q1, r1, q2, r2\<rbrakk>\<close>
   shows "\<forall>a b. \<lbrakk>q1, r1\<rbrakk>\<^sub>q \<equiv>\<qq> \<lbrakk>q2, r2\<rbrakk>\<^sub>q \<le> apply_qregister_space \<lbrakk>q1, r1\<rbrakk>\<^sub>q (ccspan {|(a::bit, b::bit)\<rangle>}) \<sqinter> apply_qregister_space \<lbrakk>q2, r2\<rbrakk>\<^sub>q (ccspan {|(a, b)\<rangle>}) \<squnion> - apply_qregister_space \<lbrakk>q1, r1\<rbrakk>\<^sub>q (ccspan {|(a, b)\<rangle>}) \<squnion> - apply_qregister_space \<lbrakk>q2, r2\<rbrakk>\<^sub>q (ccspan {|(a, b)\<rangle>})"
   sorry
-
-(* lemma final_goal_old: (* TODO remove *)
-  assumes [register]: "declared_qvars \<lbrakk>q1,r1,q2,r2\<rbrakk>"
-  shows \<open>\<lbrakk>q2, r2\<rbrakk> =\<^sub>\<qq> EPR \<sqinter> \<lbrakk>q1, r1\<rbrakk> =\<^sub>\<qq> EPR \<le> hadamard\<guillemotright>\<lbrakk>r2\<rbrakk> *\<^sub>S hadamard\<guillemotright>\<lbrakk>q1\<rbrakk> *\<^sub>S \<lbrakk>q1, r1\<rbrakk> \<equiv>\<qq> \<lbrakk>q2, r2\<rbrakk>\<close>
-  apply prepare_for_code
-  by eval *)
 
 (* TODO: Make more pretty *)
 lemma final_goal:

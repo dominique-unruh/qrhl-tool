@@ -598,7 +598,7 @@ ML \<open>
          where F', G' are index-registers
    Or: apply_register F A = apply_register G B \<equiv> apply_register F' A \<equiv> apply_register G' B
 
-   Only operates on the topleve constructor!
+   Only operates on the toplevel constructor!
 
    May fail it is does not know how to get rid of non-index-registers. (Not implemented!)
 *)
@@ -619,7 +619,6 @@ fun translate_to_index_registers_conv ctxt ct =
 
 
 (* TODO move to Prog_Variables *)
-(* TODO: should fail if nothing changes (method convention) *)
 method_setup translate_to_index_registers = \<open>
   Scan.succeed (fn ctxt => SIMPLE_METHOD (CONVERSION (translate_to_index_registers_conv ctxt) 1))
 \<close>

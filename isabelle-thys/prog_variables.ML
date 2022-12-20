@@ -538,10 +538,11 @@ fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_so
 fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
   handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
 
-(* TODO use bottom_rewrs_conv *)
+(* Normalizes a register (e.g., removes id registers etc.) *)
 val normalize_register_conv = Conv.bottom_rewrs_conv 
   @{thms qregister_chain_id[THEN eq_reflection] qregister_id_chain[THEN eq_reflection] qregister_chain_pair[symmetric, THEN eq_reflection]}
 
+(* Like normalize_register_conv, but prefers \<lbrakk>Fst o X, Fst o Y\<rbrakk> over Fst o \<lbrakk>X, Y\<rbrakk> *)
 fun normalize_register_conv2 ctxt = 
   normalize_register_conv ctxt then_conv Conv.bottom_rewrs_conv @{thms qregister_chain_pair[THEN eq_reflection]} ctxt
 
@@ -605,7 +606,7 @@ in
 (* Tries to rewrite a `qregister_conversion F G` into an index-register.
    (Index-registers are registers build from chain, pair, Fst, Snd, id.) *)
 fun qregister_conversion_to_register_conv ctxt = 
-  normalize_register_conv ctxt then_conv 
+  normalize_register_conv2 ctxt then_conv 
   (qregister_conversion_to_register_conv_id else_conv qregister_conversion_to_register_conv0 ctxt)
 end
 
@@ -620,7 +621,7 @@ fun qregister_le_tac ctxt = let
           (resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i THEN tac' ctxt i)
           )
 in SUBGOAL (fn (t,i) => 
-  CONVERSION (normalize_register_conv ctxt) i 
+  CONVERSION (normalize_register_conv2 ctxt) i 
   (* THEN print_tac ctxt "qregister_le_tac" *)
   THEN 
   (case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
