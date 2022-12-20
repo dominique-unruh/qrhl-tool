@@ -35,11 +35,11 @@ class ConseqQrhlTacTest extends AnyFunSuite {
     tl.execCmd("qrhl t1: {top ⊓ Qeq[r1 = r2]} skip; ~ skip; {top ⊓ Qeq[r1 = r2]}")
     val q = tl.state.environment.getQVariable("q")
     val r = tl.state.environment.getQVariable("r")
-    tl.execCmd(TacticCommand(ConseqQrhlTac("t1", Some(((List(r), List(q)), (List(r), List(q)))))))
+    tl.execCmd(TacticCommand(ConseqQrhlTac("t1", Some(((List(q), List(r)), (List(q), List(r)))))))
     val goal = tl.state.goal
     val context = tl.state.isabelle
     print(goal)
-    assert(goal.length == 2)
+    assert(goal.length == 3)
     for (subgoal <- goal) {
       subgoal.checkWelltyped(context)
       assert(subgoal.isInstanceOf[AmbientSubgoal])
