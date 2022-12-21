@@ -707,6 +707,9 @@ qed
 
 definition \<open>apply_qregister_space F S = apply_qregister F (Proj S) *\<^sub>S top\<close>
 
+lemma apply_non_qregister_space[simp]: \<open>apply_qregister_space non_qregister x = 0\<close>
+  by (simp add: apply_qregister_space_def)
+
 axiomatization CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
 axiomatization QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close>
 

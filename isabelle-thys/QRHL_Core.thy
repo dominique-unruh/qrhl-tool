@@ -757,6 +757,22 @@ proof -
     using op_eq by simp
 qed
 
+lemma distinct_qvars_pred_vars_quantum_equality[simp]:
+  assumes [register]: \<open>qregister \<lbrakk>F,H\<rbrakk>\<close> \<open>qregister \<lbrakk>G,H\<rbrakk>\<close>
+  shows \<open>distinct_qvars_pred_vars (quantum_equality_full U F V G) H\<close>
+proof (cases \<open>qregister \<lbrakk>F,G\<rbrakk>\<close>)
+  case True
+  note [register] = this
+  show ?thesis
+    by (simp add: quantum_equality_full_def)
+next
+  case False
+  then have \<open>\<lbrakk>F,G\<rbrakk> = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis 
+    by (simp add: quantum_equality_full_def apply_qregister_space_def)
+qed
+
 lemma predicate_local[intro!]: 
   assumes "qvariables_local (qregister_pair Q R) S"
   shows "predicate_local (quantum_equality_full U Q V R) S"
