@@ -115,7 +115,7 @@ case class PrintCommand(symbol : String) extends Command {
           Nil
         else
           List(symbols.unicodeToSymbols(
-            s"  assumes [simp]: ‹declared_qvars ⟦${qvars.map(_.basename).mkString(", ")}⟧›"))
+            s"  assumes [register]: ‹declared_qvars ⟦${qvars.map(_.basename).mkString(", ")}⟧›"))
 
       val string = globalIsabelle.Ops.print_as_statement(
         initialContext, lemmaname, fixes, declaredQvars, Nil, term.isabelleTerm).retrieveNow
