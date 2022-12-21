@@ -65,14 +65,10 @@ equal.
  simp!.
 inline hQuery.
 wp left.
- # TODO: [x,y] should not be paired together inside a Fst
  simp.
 wp right.
  simp.
 conseq post: Cla[cglobA1=cglobA2 ∧ h1=h2] ⊓ Qeq[qglobA1,x1,y1=qglobA2,x2,y2].
-
-simp.
-
  simp ! Uora_twice.
 equal.
  simp!.

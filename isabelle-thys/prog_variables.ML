@@ -544,7 +544,7 @@ val normalize_register_conv = Conv.bottom_rewrs_conv
 
 (* Like normalize_register_conv, but prefers \<lbrakk>Fst o X, Fst o Y\<rbrakk> over Fst o \<lbrakk>X, Y\<rbrakk> *)
 fun normalize_register_conv2 ctxt = 
-  normalize_register_conv ctxt then_conv Conv.bottom_rewrs_conv @{thms qregister_chain_pair[THEN eq_reflection]} ctxt
+  normalize_register_conv ctxt then_conv Conv.top_rewrs_conv @{thms qregister_chain_pair[THEN eq_reflection]} ctxt
 
 local
 val qregister_conversion_to_register_conv_simpset = 
