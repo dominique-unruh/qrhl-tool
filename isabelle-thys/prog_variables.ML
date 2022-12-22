@@ -161,32 +161,28 @@ fun register_thms_of thm regs = let
   in regs end
 
 fun register_compats_of thm compats = case Thm.prop_of thm of
-      Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ _ $ _)) =>
-        compats |> register_compats_of (@{thm cregister_pair_iff_compatible[THEN iffD1]} OF [thm])
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qregister\<close>, _) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _)) =>
-        compats |> register_compats_of (@{thm qregister_pair_iff_compatible[THEN iffD1]} OF [thm])
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ Free _) => compats
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qregister\<close>, _) $ Free _) => compats
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>ccompatible\<close>, _) $ (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ _ $ _) $ _) =>
+      \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>cregister _ _\<close> $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ _ $ _) $ _)) =>
         compats |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
                 |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
                 |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct1]} OF [thm])
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qcompatible\<close>, _) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
+    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ _ $ _) $ _)) =>
         compats |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
                 |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
                 |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct1]} OF [thm])
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>ccompatible\<close>, _) $ _ $ (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ _ $ _)) =>
+    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>cregister _ _\<close> $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ _ $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ _ $ _))) =>
         compats |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
                 |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
                 |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct1]} OF [thm])
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qcompatible\<close>, _) $ _ $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _)) =>
+    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ _ $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ _ $ _))) =>
         compats |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
                 |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
                 |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct1]} OF [thm])
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>ccompatible\<close>, _) $ _ $ _) =>
+    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>cregister _ _\<close> $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ _ $ _)) =>
         thm :: (@{thm ccompatible_sym} OF [thm]) :: compats
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qcompatible\<close>, _) $ _ $ _) =>
+    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ _ $ _)) =>
         thm :: (@{thm qcompatible_sym} OF [thm]) :: compats
+    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>cregister _ _\<close> $ Free _) => compats
+    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ Free _) => compats
     | _ => raise THM ("register_compats_of: expecting a fact of the form \<open>c/qregister \<dots>\<close> or \<open>c/qcompatible \<dots>\<close>", 0, [thm])
 
 (* fun declare_variable_from_thm (thm:thm) = let
@@ -239,17 +235,17 @@ fun add_register_assumption cq bind T ctxt =
   end
 
 fun declare_variable ctxt bind T cq existingVars =
-  let val qT = case cq of Classical => mk_cvariableT T | Quantum => mk_qvariableT T
+  let val memT = case cq of Classical => \<^typ>\<open>cl\<close> | Quantum => \<^typ>\<open>qu\<close>
       val v = Binding.name_of bind
       val (_,ctxt) = Variable.add_fixes_binding [bind] ctxt
       val ctxt = add_register_assumption cq bind T ctxt
       fun declareCompatible (n2,T2) ctxt = let
         val v1 = Free(v, mk_variableT cq T) val v2 = Free(n2, mk_variableT cq T2)
-        val compat1 = Const(case cq of Classical => \<^const_name>\<open>ccompatible\<close> | Quantum => \<^const_name>\<open>qcompatible\<close>,
-                         fastype_of v1 --> fastype_of v2 --> HOLogic.boolT) $ v1 $ v2
+        val compat1 = (case cq of Classical => \<^Const>\<open>cregister \<open>HOLogic.mk_prodT (T,T2)\<close> memT\<close> $ (\<^Const>\<open>cregister_pair T memT T2\<close> $ v1 $ v2)
+                                | Quantum   => \<^Const>\<open>qregister \<open>HOLogic.mk_prodT (T,T2)\<close> memT\<close> $ (\<^Const>\<open>qregister_pair T memT T2\<close> $ v1 $ v2))
             |> HOLogic.mk_Trueprop
-        val compat2 = Const(case cq of Classical => \<^const_name>\<open>ccompatible\<close> | Quantum => \<^const_name>\<open>qcompatible\<close>,
-                         fastype_of v2 --> fastype_of v1 --> HOLogic.boolT) $ v2 $ v1
+        val compat2 = (case cq of Classical => \<^Const>\<open>cregister \<open>HOLogic.mk_prodT (T2,T)\<close> memT\<close> $ (\<^Const>\<open>cregister_pair T2 memT T\<close> $ v2 $ v1)
+                                | Quantum   => \<^Const>\<open>qregister \<open>HOLogic.mk_prodT (T2,T)\<close> memT\<close> $ (\<^Const>\<open>qregister_pair T2 memT T\<close> $ v2 $ v1))
             |> HOLogic.mk_Trueprop
         val (_,ctxt) = Proof_Context.add_assms Assumption.assume_export
                   [((Binding.suffix_name ("_" ^ n2 ^ "_compatible") bind,[Simplifier.simp_add]), [(compat1,[]),(compat2,[])])] ctxt
@@ -506,8 +502,8 @@ end *)
 (* TODO something more reliable than just simp'ing *)
 fun distinct_vars_tac ctxt = let
   val ctxt = (Config.put Simplifier.simp_trace false ctxt) addsimps @{thms 
-    distinct_cvars_split1 distinct_cvars_split2 cregister_pair_iff_compatible ccompatible3 ccompatible3' (* cregister_chain_id *)
-    distinct_qvars_split1 distinct_qvars_split2 qregister_pair_iff_compatible qcompatible3 qcompatible3' (* qregister_chain_id *)
+    distinct_cvars_split2 ccompatible3 ccompatible3' (* cregister_chain_id *)
+    distinct_qvars_split1 distinct_qvars_split2 qcompatible3 qcompatible3' (* qregister_chain_id *)
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
   in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are variables and distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
 

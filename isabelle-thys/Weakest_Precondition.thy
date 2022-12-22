@@ -68,7 +68,7 @@ lemma [simp]: \<open>apply_cregister cswap (apply_cregister cFst x) = apply_creg
 lemma [simp]: \<open>apply_cregister cswap (apply_cregister cSnd x) = apply_cregister cFst x\<close>
   sorry
 lemma [simp]: \<open>cregister_chain cswap (cregister_chain cFst x) = cregister_chain cSnd x\<close>
-  by (metis ccompatible_Fst_Snd cregister_chain_assoc cregister_chain_pair_Fst cregister_pair_iff_compatible cswap_def distinct_cvars_swap)
+  by (metis ccompatible_Fst_Snd cregister_chain_assoc cregister_chain_pair_Fst cswap_def distinct_cvars_swap)
 lemma [simp]: \<open>cregister_chain cswap (cregister_chain cSnd x) = cregister_chain cFst x\<close>
   by (metis ccompatible_Fst_Snd ccompatible_sym cregister_chain_assoc cregister_chain_pair_Snd cswap_def)
 

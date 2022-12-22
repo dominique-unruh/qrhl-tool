@@ -18,6 +18,7 @@ hide_const (open) Order.top
 hide_const (open) Axioms_Classical.getter
 hide_const (open) Axioms_Classical.setter
 declare [[simproc del: Laws_Quantum.compatibility_warn]]
+declare [[simproc del: Laws_Classical.compatibility_warn]]
 hide_const (open) Classical_Extra.X Classical_Extra.Y Classical_Extra.x Classical_Extra.y
 
 type_synonym 'a cupdate = \<open>'a \<Rightarrow> 'a option\<close>
@@ -182,8 +183,21 @@ lemmas qcompatible_raw_def = compatible_def
 definition qcompatible_raw :: \<open>('a qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> ('b qupdate \<Rightarrow> 'c qupdate) \<Rightarrow> bool\<close> where
   \<open>qcompatible_raw F G \<longleftrightarrow> qregister_raw F \<and> qregister_raw G \<and> (\<forall>a b. F a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L F a)\<close> *)
 
-lift_definition ccompatible :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is ccompatible_raw.
-lift_definition qcompatible :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is qcompatible_raw.
+lift_definition cregister_pair :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> ('a\<times>'b, 'c) cregister\<close>
+  is \<open>\<lambda>F G. if ccompatible_raw F G then Axioms_Classical.register_pair F G else non_cregister_raw\<close>
+  by simp
+lift_definition qregister_pair :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> ('a\<times>'b, 'c) qregister\<close>
+  is \<open>\<lambda>F G. if qcompatible_raw F G then Axioms_Quantum.register_pair F G else non_qregister_raw\<close>
+  by simp
+
+abbreviation (input) \<open>ccompatible F G \<equiv> cregister (cregister_pair F G)\<close>
+abbreviation (input) \<open>qcompatible F G \<equiv> qregister (qregister_pair F G)\<close>
+
+lemma ccompatible_def: \<open>ccompatible F G \<longleftrightarrow> cregister F \<and> cregister G \<and> Laws_Classical.compatible (apply_cregister F) (apply_cregister G)\<close>
+  by (metis Laws_Classical.compatible_register1 Laws_Classical.compatible_register2 Laws_Classical.pair_is_register cregister.rep_eq cregister_pair.rep_eq non_cregister_raw)
+
+lemma qcompatible_def: \<open>qcompatible F G \<longleftrightarrow> qregister F \<and> qregister G \<and> Laws_Quantum.compatible (apply_qregister F) (apply_qregister G)\<close>
+  by (metis Laws_Quantum.compatible_register2 Laws_Quantum.compatible_sym Laws_Quantum.pair_is_register non_qregister_raw qregister.rep_eq qregister_pair.rep_eq)
 
 lemma qcompatibleI: \<open>qregister F \<Longrightarrow> qregister G \<Longrightarrow> (\<And>a b. apply_qregister F a o\<^sub>C\<^sub>L apply_qregister G b = apply_qregister G b o\<^sub>C\<^sub>L apply_qregister F a) \<Longrightarrow> qcompatible F G\<close>
   apply transfer
@@ -192,21 +206,7 @@ lemma qcompatibleI: \<open>qregister F \<Longrightarrow> qregister G \<Longright
 lemma qcompatible_commute: 
   assumes \<open>qcompatible F G\<close>
   shows \<open>apply_qregister F a o\<^sub>C\<^sub>L apply_qregister G b = apply_qregister G b o\<^sub>C\<^sub>L apply_qregister F a\<close>
-  sorry
-
-lift_definition cregister_pair :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> ('a\<times>'b, 'c) cregister\<close>
-  is \<open>\<lambda>F G. if ccompatible_raw F G then Axioms_Classical.register_pair F G else non_cregister_raw\<close>
-  by simp
-lift_definition qregister_pair :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> ('a\<times>'b, 'c) qregister\<close>
-  is \<open>\<lambda>F G. if qcompatible_raw F G then Axioms_Quantum.register_pair F G else non_qregister_raw\<close>
-  by simp
-
-lemma cregister_pair_iff_compatible: \<open>cregister (cregister_pair F G) \<longleftrightarrow> ccompatible F G\<close>
-  apply transfer
-  by (auto simp: non_cregister_raw)
-lemma qregister_pair_iff_compatible: \<open>qregister (qregister_pair F G) \<longleftrightarrow> qcompatible F G\<close>
-  apply transfer
-  by (auto simp: non_qregister_raw)
+  by (metis Laws_Quantum.swap_registers assms non_qregister_raw qregister.rep_eq qregister_pair.rep_eq)
 
 abbreviation \<open>tensor_map \<equiv> Axioms_Classical.tensor_update\<close>
 
@@ -218,8 +218,7 @@ lemma apply_cregister_pair: \<open>ccompatible F G \<Longrightarrow>
 lemma apply_qregister_pair: \<open>qcompatible F G \<Longrightarrow>
   apply_qregister (qregister_pair F G) (tensorOp a b) = apply_qregister F a o\<^sub>C\<^sub>L  apply_qregister G b\<close>
   apply transfer
-  (* by (auto simp: tensor_op_compat compatible_register1 compatible_register2 non_qregister_raw register_pair_apply) *)
-  sorry
+  using Laws_Quantum.register_pair_apply non_qregister_raw by auto
 
 lift_definition CCcompatible :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> bool\<close> is
   \<open>\<lambda>F G. \<forall>a\<in>F. \<forall>b\<in>G. a \<circ>\<^sub>m b = b \<circ>\<^sub>m a\<close>.
@@ -296,11 +295,12 @@ axiomatization where QQcompatible_sym: \<open>QQcompatible F G \<Longrightarrow>
 
 lemma ccompatible_CCcompatible: \<open>ccompatible F G \<longleftrightarrow> cregister F \<and> cregister G \<and> CCcompatible (CREGISTER_of F) (CREGISTER_of G)\<close>
   apply (transfer fixing: F G)
-  apply transfer by (auto simp: Laws_Classical.compatible_def)
+  apply (auto simp add: Laws_Classical.compatible_def ccompatible_def)
+  by (simp_all add: cregister.rep_eq)
 lemma qcompatible_QQcompatible: \<open>qcompatible F G \<longleftrightarrow> qregister F \<and> qregister G \<and> QQcompatible (QREGISTER_of F) (QREGISTER_of G)\<close>
   apply (transfer fixing: F G)
-  apply auto
-  by (transfer; simp add: qcompatible_raw_def)+
+  apply (auto simp add: qcompatible_commute qcompatible_def)
+  by (simp add: Laws_Quantum.compatible_def qregister.rep_eq)
 
 lemma CCcompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow> CCcompatible (CREGISTER_of F) (CREGISTER_of G)\<close>
   using ccompatible_CCcompatible by auto
@@ -330,13 +330,17 @@ lemma qcompatible_empty'[simp]: \<open>qcompatible empty_qregister Q \<longleftr
   by (meson qcompatible_empty qcompatible_sym)
 
 lemma ccompatible_register1: \<open>ccompatible F G \<Longrightarrow> cregister F\<close>
-  apply transfer by (simp add: ccompatible_raw_def)
+  apply transfer
+  by (auto simp add: ccompatible_raw_def non_cregister_raw non_cregister_raw)
 lemma ccompatible_register2: \<open>ccompatible F G \<Longrightarrow> cregister G\<close>
-  apply transfer by (simp add: ccompatible_raw_def)
+  apply transfer
+  by (auto simp add: ccompatible_raw_def non_cregister_raw non_cregister_raw)
 lemma qcompatible_register1: \<open>qcompatible F G \<Longrightarrow> qregister F\<close>
-  apply transfer by (simp add: qcompatible_raw_def)
+  apply transfer
+  by (auto simp add: qcompatible_raw_def non_qregister_raw non_qregister_raw)
 lemma qcompatible_register2: \<open>qcompatible F G \<Longrightarrow> qregister G\<close>
-  apply transfer by (simp add: qcompatible_raw_def)
+  apply transfer
+  by (auto simp add: qcompatible_raw_def non_qregister_raw non_qregister_raw)
 
 lemma ccompatible_non_cregister1[simp]: \<open>\<not> ccompatible non_cregister F\<close>
   apply transfer by (simp add: non_cregister_raw ccompatible_raw_def)
@@ -477,24 +481,19 @@ lemma Qqcompatible3I'[simp]: \<open>Qqcompatible F G \<Longrightarrow> Qqcompati
 (* TODO: (and also for quantum, also for COMPATIBLE)
 lemma ccompatible_register_tensor[simp]: \<open>ccompatible F F' \<Longrightarrow> ccompatible G G' \<Longrightarrow> ccompatible (cregister_tensor F G) (cregister_tensor F' G')\<close> *)
 
-lemma cregister_cregister_pairI[simp]: \<open>ccompatible x y \<Longrightarrow> cregister (cregister_pair x y)\<close>
-  by (simp add: cregister_pair_iff_compatible)
-lemma qregister_qregister_pairI[simp]: \<open>qcompatible x y \<Longrightarrow> qregister (qregister_pair x y)\<close>
-  by (simp add: qregister_pair_iff_compatible)
-
 definition \<open>cswap = cregister_pair cSnd cFst\<close>
 definition \<open>qswap = qregister_pair qSnd qFst\<close>
 
 lemma cregister_cswap[simp]: \<open>cregister cswap\<close>
-  by (simp add: ccompatible_Fst_Snd ccompatible_sym cregister_pair_iff_compatible cswap_def)
+  by (simp add: ccompatible_sym cswap_def)
 lemma qregister_qswap[simp]: \<open>qregister qswap\<close>
-  by (simp add: qcompatible_Fst_Snd qcompatible_sym qregister_pair_iff_compatible qswap_def)
+  by (simp add: qcompatible_sym qswap_def)
 
 lemma qregister_pair_qnonregister1[simp]: \<open>qregister_pair non_qregister F = non_qregister\<close>
-  using non_qregister qcompatible_non_qregister1 qregister_pair_iff_compatible by blast
+  using non_qregister qcompatible_non_qregister1 by blast
 
 lemma qregister_pair_qnonregister2[simp]: \<open>qregister_pair F non_qregister = non_qregister\<close>
-  using non_qregister qcompatible_non_qregister2 qregister_pair_iff_compatible by blast
+  using non_qregister qcompatible_non_qregister2 by blast
 
 lemma inj_qregister: \<open>inj (apply_qregister F)\<close> if \<open>qregister F\<close>
   using that apply transfer apply simp
@@ -504,13 +503,11 @@ lemma apply_non_qregister[simp]: \<open>apply_qregister non_qregister x = 0\<clo
   by (simp add: non_qregister.rep_eq non_qregister_raw_def)
 
 lemma qregister_compose: \<open>apply_qregister F (a o\<^sub>C\<^sub>L b) = apply_qregister F a o\<^sub>C\<^sub>L apply_qregister F b\<close>
-  apply (cases \<open>F = non_qregister\<close>)
-  apply (simp add: )
-  sorry
+  apply (transfer fixing: a b)
+  by (auto simp: non_qregister_raw_def Axioms_Quantum.register_mult)
 
 (* TODO: compatibility condition can be omitted *)
 lemma cregister_chain_pair:
-  assumes \<open>ccompatible G H\<close>
   shows \<open>cregister_chain F (cregister_pair G H) = cregister_pair (cregister_chain F G) (cregister_chain F H)\<close>
   sorry
 lemma qregister_chain_pair:
@@ -522,7 +519,7 @@ proof -
   then show ?thesis
   proof cases
     case GH_F
-    then show ?thesis
+    show ?thesis
       sorry
   next
     case nF
@@ -557,20 +554,13 @@ proof -
         by simp
     qed
     then have [simp]: \<open>qregister_pair (qregister_chain F G) (qregister_chain F H) = non_qregister\<close>
-      using non_qregister qregister_pair_iff_compatible by auto
+      using non_qregister by auto
     from nGH have [simp]: \<open>qregister_pair G H = non_qregister\<close>
-      using non_qregister qregister_pair_iff_compatible by blast
+      using non_qregister by blast
     with nGH show ?thesis 
       by simp
   qed
 qed
-
-lemma not_ccompatible_pair: \<open>\<not> ccompatible F G \<Longrightarrow> cregister_pair F G = non_cregister\<close>
-  apply (subst (asm) cregister_pair_iff_compatible[symmetric])
-  by (simp add: non_cregister)
-lemma not_qcompatible_pair: \<open>\<not> qcompatible F G \<Longrightarrow> qregister_pair F G = non_qregister\<close>
-  apply (subst (asm) qregister_pair_iff_compatible[symmetric])
-  using non_qregister by auto
 
 axiomatization where cregister_raw_id[simp]: \<open>cregister_raw id\<close>
 axiomatization where qregister_raw_id[simp]: \<open>qregister_raw id\<close>
@@ -1021,51 +1011,27 @@ abbreviation (input) "distinct_cvars Q == cregister Q" (* LEGACY *)
 
 lemma distinct_qvars_split1:
   "distinct_qvars (qregister_pair (qregister_pair Q R) S) = (distinct_qvars (qregister_pair Q R) \<and> distinct_qvars (qregister_pair Q S) \<and> distinct_qvars (qregister_pair R S))"
-  unfolding qregister_pair_iff_compatible
   using qcompatible3 by blast
 lemma distinct_qvars_swap: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> distinct_qvars (qregister_pair R Q)"
-  unfolding qregister_pair_iff_compatible
   using qcompatible_sym by auto
 lemma distinct_qvars_split2: "distinct_qvars (qregister_pair S (qregister_pair Q R)) = (distinct_qvars (qregister_pair Q R) \<and> distinct_qvars (qregister_pair Q S) \<and> distinct_qvars (qregister_pair R S))"
-  unfolding qregister_pair_iff_compatible
   by (metis qcompatible3 qcompatible_sym)
 lemma distinct_qvars_concat_unit1[simp]: "distinct_qvars (qregister_pair Q empty_qregister) = distinct_qvars Q" for Q::"'a qvariable"
-  unfolding qregister_pair_iff_compatible
   using qcompatible_QQcompatible qcompatible_empty by auto
 lemma distinct_qvars_concat_unit2[simp]: "distinct_qvars (qregister_pair empty_qregister Q) = distinct_qvars Q" for Q::"'a::finite qvariable"
-  unfolding qregister_pair_iff_compatible
   using qcompatible_QQcompatible qcompatible_empty qcompatible_sym by blast
 lemma distinct_qvars_unit[simp]: "distinct_qvars empty_qregister"
   by (simp add: )
 
 lemma distinct_qvarsL: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> distinct_qvars Q"
-  unfolding qregister_pair_iff_compatible
   by (simp add: qcompatible_QQcompatible)
 lemma distinct_qvarsR: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> distinct_qvars R"
-  unfolding qregister_pair_iff_compatible
-  by (simp add: qcompatible_register2)
+  by (simp add: qcompatible_def)
 
-lemma distinct_cvars_split1:
-  "distinct_cvars (cregister_pair (cregister_pair Q R) S) = (distinct_cvars (cregister_pair Q R) \<and> distinct_cvars (cregister_pair Q S) \<and> distinct_cvars (cregister_pair R S))"
-  unfolding cregister_pair_iff_compatible
-  by (simp add: ccompatible3)
 lemma distinct_cvars_swap: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars (cregister_pair R Q)"
-  unfolding cregister_pair_iff_compatible
   using ccompatible_sym by blast
 lemma distinct_cvars_split2: "distinct_cvars (cregister_pair S (cregister_pair Q R)) = (distinct_cvars (cregister_pair Q R) \<and> distinct_cvars (cregister_pair Q S) \<and> distinct_cvars (cregister_pair R S))"
-  by (metis distinct_cvars_split1 distinct_cvars_swap)
-lemma distinct_cvars_concat_unit1[simp]: "distinct_cvars (cregister_pair Q empty_cregister) = distinct_cvars Q" for Q::"'a::finite cvariable"
-  unfolding cregister_pair_iff_compatible
-  using ccompatible_CCcompatible ccompatible_empty by blast
-lemma distinct_cvars_concat_unit2[simp]: "distinct_cvars (cregister_pair empty_cregister Q) = distinct_cvars Q" for Q::"'a::finite cvariable"
-  by (metis distinct_cvars_concat_unit1 distinct_cvars_swap)
-lemma distinct_cvars_unit[simp]: "distinct_cvars empty_cregister"
-  by (simp add: )
-
-lemma distinct_cvarsL: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars Q"
-  using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible ccompatible_raw_def by blast
-lemma distinct_cvarsR: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars R"
-  using ccompatible.rep_eq cregister.rep_eq cregister_pair_iff_compatible ccompatible_raw_def by blast
+  by (metis ccompatible3 distinct_cvars_swap)
 
 section \<open>Indexed variables\<close>
 
@@ -1088,11 +1054,7 @@ definition index_flip_qvar :: \<open>'a q2variable \<Rightarrow> 'a q2variable\<
 lemma index_flip_qvar_register_pair[simp]: \<open>index_flip_qvar (qregister_pair Q R) = qregister_pair (index_flip_qvar Q) (index_flip_qvar R)\<close>
   unfolding index_flip_qvar_def
   apply (cases \<open>qcompatible Q R\<close>)
-  apply (simp add: qregister_chain_pair)
-  apply (subst not_qcompatible_pair, simp)
-  apply (subst not_qcompatible_pair)
-    apply auto
-  using qcompatible_chain_iso qswap_iso by blast
+  by (simp_all add: qregister_chain_pair)
 
 lemma index_flip_qvar_chain[simp]: \<open>index_flip_qvar (qregister_chain Q R) = qregister_chain (index_flip_qvar Q) R\<close>
   unfolding index_flip_qvar_def
@@ -1127,6 +1089,12 @@ named_theorems translate_to_index_registers
 
 
 section \<open>ML code\<close>
+
+(* TODO remove *)
+lemma distinct_cvarsL: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars Q"
+  by (rule ccompatible_register1)
+lemma distinct_cvarsR: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> distinct_cvars R"
+  by (rule ccompatible_register2)
 
 ML_file "prog_variables.ML"
 

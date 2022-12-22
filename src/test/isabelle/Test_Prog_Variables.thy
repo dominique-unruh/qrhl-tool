@@ -55,10 +55,10 @@ assert_aconv_conv (qregister_conversion_to_register_conv \<^context>)
 (* Check whether Prog_Variables.declare_variable properly declares quantum variables *)
 ML \<open>
 local
-val ctxt = Prog_Variables.declare_variable \<^context> \<^binding>\<open>qvar\<close> \<^typ>\<open>int\<close> Prog_Variables.Quantum [("q",\<^typ>\<open>int\<close>)]
+val ctxt = Prog_Variables.declare_variable \<^context> \<^binding>\<open>qvar\<close> \<^typ>\<open>bool\<close> Prog_Variables.Quantum [("q",\<^typ>\<open>int\<close>)]
 in
-val _ = assert_aconv (Syntax.read_term ctxt "qvar") \<^term>\<open>qvar :: int qvariable\<close>
-val _ = assert_aconv_conv (Simplifier.rewrite ctxt) \<^cterm>\<open>qregister \<lbrakk>qvar::int qvariable, q\<rbrakk>\<^sub>q\<close> \<^term>\<open>True\<close>
+val _ = assert_aconv (Syntax.read_term ctxt "qvar") \<^term>\<open>qvar :: bool qvariable\<close>
+val _ = assert_aconv_conv (Simplifier.rewrite ctxt) \<^cterm>\<open>qregister \<lbrakk>qvar::bool qvariable, q\<rbrakk>\<^sub>q\<close> \<^term>\<open>True\<close>
 end
 \<close>
 

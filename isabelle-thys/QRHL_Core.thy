@@ -508,15 +508,15 @@ lemma lift_extendR:
   assumes "distinct_qvars \<lbrakk>Q,R\<rbrakk>"
   shows "U\<guillemotright>Q = (U \<otimes>\<^sub>o id_cblinfun)\<guillemotright>\<lbrakk>Q,R\<rbrakk>"
   apply (subst apply_qregister_pair)
-  using assms qregister_pair_iff_compatible apply blast
-  by (metis apply_qregister_of_id assms cblinfun_compose_id_right distinct_qvarsR)
+  apply (simp add: assms)
+  using assms distinct_qvarsR by force
 
 lemma lift_extendL:
   assumes "distinct_qvars (qregister_pair Q R)"
   shows "U\<guillemotright>Q = (id_cblinfun \<otimes>\<^sub>o U)\<guillemotright>(qregister_pair R Q)"
   apply (subst apply_qregister_pair)
-  using assms distinct_qvars_swap qregister_pair_iff_compatible apply blast
-  by (metis apply_qregister_of_id assms cblinfun_compose_id_left distinct_qvarsR)
+   apply (simp add: assms distinct_qvars_swap)
+  using assms distinct_qvarsR by fastforce
 
 lemma move_sup_meas_rule:
   fixes Q::"'a q2variable"
@@ -526,14 +526,14 @@ lemma move_sup_meas_rule:
   apply (rule ccsubspace_supI_via_Proj) 
   using Proj_image_leq[of "C\<guillemotright>Q"] assms by simp
 
-lemma span_lift: "distinct_qvars Q \<Longrightarrow> ccspan G \<guillemotright> Q = ccspan {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
-  by (cheat span_lift)
+(* lemma span_lift: "distinct_qvars Q \<Longrightarrow> ccspan G \<guillemotright> Q = ccspan {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
+  by (cheat span_lift) *)
 
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_qvar Q"
   by (cheat index_flip_subspace_lift)
 
-lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q"
-  by (cheat index_flip_subspace_lift)
+(* lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q"
+  by (cheat index_flip_subspace_lift) *)
 
 lemma apply_qregister_qFst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
   by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
@@ -563,9 +563,9 @@ proof -
   also have \<open>\<dots> \<le> apply_qregister_space \<lbrakk>X, Y\<rbrakk>\<^sub>q (\<top> \<otimes>\<^sub>S ccspan {|y\<rangle>})\<close>
     by (smt (verit) assms distinct_qvarsL dual_order.trans inf.bounded_iff inf.cobounded2 tensor_lift top_greatest top_leq_lift)
   also have \<open>\<dots> = ccspan {|y\<rangle>} \<guillemotright> (qregister_chain \<lbrakk>X, Y\<rbrakk>\<^sub>q qSnd)\<close>
-    by (metis assms distinct_qvarsL inf.absorb_iff2 qregister_chain_pair_Snd qregister_pair_iff_compatible tensor_lift top.extremum top_lift)
+    by (metis assms distinct_qvarsL inf.absorb_iff2 qregister_chain_pair_Snd tensor_lift top.extremum top_lift)
   also have \<open>\<dots> = ccspan {ket y}\<guillemotright>Y\<close>
-    by (metis assms qregister_chain_pair_Snd qregister_pair_iff_compatible)
+    by (metis assms qregister_chain_pair_Snd)
   finally show ?thesis
     by -
 qed
@@ -856,7 +856,7 @@ translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
 
 lemma quantum_equality_sym:
-  assumes "distinct_qvars (qregister_pair Q R)"
+  assumes [simp]: "distinct_qvars (qregister_pair Q R)"
   shows "quantum_equality_full U Q V R = quantum_equality_full V R U Q"
 proof -
   have dist: "distinct_qvars (qregister_pair R Q)"
@@ -865,8 +865,6 @@ proof -
     using assms by blast
   have [simp]: \<open>qregister (qregister_pair R Q)\<close>
     by (simp add: dist)
-  have [simp]: \<open>qcompatible Q R\<close>
-    using assms qregister_pair_iff_compatible by blast
   have a: "comm_op \<cdot> ((V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V)) \<cdot> comm_op* = (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U)" by simp
   have op_eq: "((comm_op o\<^sub>C\<^sub>L (V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V))\<guillemotright>qregister_pair Q R) =
                ((comm_op o\<^sub>C\<^sub>L (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U))\<guillemotright>qregister_pair R Q)"
@@ -1105,11 +1103,6 @@ lemma translate_to_index_registers_qeq[translate_to_index_registers]:
   using assms 
   by (simp add: quantum_equality_full_def flip: apply_qregister_space_chain qregister_chain_pair)
 
-schematic_goal TODO_REMOVE:
-  assumes [simp,register]: "declared_qvars \<lbrakk>q1,r1,q2,r2\<rbrakk>"
-  shows \<open>quantum_equality_full (id_cblinfun) \<lbrakk>q1, r1\<rbrakk>\<^sub>q id_cblinfun \<lbrakk>q2, r2\<rbrakk>\<^sub>q \<equiv> x\<close>
-  apply translate_to_index_registers
-  oops
 
 section \<open>Common quantum objects\<close>
 
