@@ -16,8 +16,9 @@ unbundle cblinfun_notation
 no_notation m_inv ("inv\<index> _" [81] 80)
 hide_const (open) Order.top
 hide_const (open) Axioms_Classical.getter
-
-(* hide_const (open) Classical_Extra.X Classical_Extra.Y Classical_Extra.x Classical_Extra.y *)
+hide_const (open) Axioms_Classical.setter
+declare [[simproc del: Laws_Quantum.compatibility_warn]]
+hide_const (open) Classical_Extra.X Classical_Extra.Y Classical_Extra.x Classical_Extra.y
 
 type_synonym 'a cupdate = \<open>'a \<Rightarrow> 'a option\<close>
 type_synonym 'a qupdate = \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
@@ -29,26 +30,47 @@ abbreviation \<open>qregister_raw \<equiv> Axioms_Quantum.register\<close>
 
 abbreviation (input) \<open>tensorOp \<equiv> tensor_op\<close>
 
-axiomatization
-  where cregister_raw_empty: \<open>cregister_raw F \<Longrightarrow> F Map.empty = Map.empty\<close>
-    and cregister_raw_1: \<open>cregister_raw F \<Longrightarrow> F Some = Some\<close>
-  for F :: \<open>'a cupdate \<Rightarrow> 'b cupdate\<close>
-axiomatization
-  where qregister_raw_1: \<open>qregister_raw F \<Longrightarrow> F id_cblinfun = id_cblinfun\<close>
-    and qregister_raw_bounded_clinear: \<open>qregister_raw F \<Longrightarrow> bounded_clinear F\<close>
-  for F :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
-
+lemma cregister_raw_empty: \<open>cregister_raw F \<Longrightarrow> F Map.empty = Map.empty\<close>
+  by (simp add: register_empty)
+lemma qregister_raw_1: \<open>qregister_raw F \<Longrightarrow> F id_cblinfun = id_cblinfun\<close>
+  by simp
+lemma cregister_raw_1: \<open>cregister_raw F \<Longrightarrow> F Some = Some\<close>
+  by simp
+lemma qregister_raw_bounded_clinear: \<open>qregister_raw F \<Longrightarrow> bounded_clinear F\<close>
+  by (rule Axioms_Quantum.register_bounded_clinear)
 lemma qregister_raw_0: \<open>qregister_raw F \<Longrightarrow> F 0 = 0\<close>
   by (intro complex_vector.linear_0 bounded_clinear.clinear qregister_raw_bounded_clinear)
 
 definition non_cregister_raw :: \<open>'a cupdate \<Rightarrow> 'b cupdate\<close> where \<open>non_cregister_raw a = Map.empty\<close>
 definition non_qregister_raw :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close> where \<open>non_qregister_raw a = 0\<close>
 
-lemma cregister_raw_inj: \<open>cregister_raw F \<Longrightarrow> inj F\<close> sorry
-lemma qregister_raw_inj: \<open>qregister_raw F \<Longrightarrow> inj F\<close> sorry
+lemma cregister_raw_inj: \<open>inj_on F X\<close> if \<open>cregister_raw F\<close>
+proof -
+  note [[simproc del: Laws_Classical.compatibility_warn]]
+  define get set where \<open>get = Axioms_Classical.getter F\<close> and \<open>set = Axioms_Classical.setter F\<close>
+  have get_set: \<open>get (set a b) = a\<close> and set_set: \<open>set a (set a' b) = set a b\<close> for a a' b
+     apply (metis get_def local.set_def that valid_getter_setter_def valid_getter_setter_getter_setter)
+    by (metis local.set_def that valid_getter_setter_def valid_getter_setter_getter_setter)
+  fix b
+  define G :: \<open>'b Axioms_Classical.update \<Rightarrow> 'a Axioms_Classical.update\<close> 
+    where \<open>G g a = map_option get (g (set a b))\<close> for g a
+  have \<open>G (F f) a = f a\<close> for f a
+    apply (subst register_from_getter_setter_of_getter_setter[OF that, symmetric])
+    unfolding G_def 
+    apply (cases \<open>f a\<close>)
+    by (simp_all add: register_from_getter_setter_def[abs_def] set_set get_set
+        del: register_from_getter_setter_of_getter_setter
+        flip: get_def set_def)
+  then show \<open>inj_on F X\<close>
+    by (metis ext inj_onI)
+qed
+lemma qregister_raw_inj: \<open>qregister_raw F \<Longrightarrow> inj_on F X\<close>
+  by (rule register_inj)
 
-axiomatization where non_cregister_raw: \<open>\<not> cregister_raw non_cregister_raw\<close>
-axiomatization where non_qregister_raw: \<open>\<not> qregister_raw non_qregister_raw\<close>
+lemma non_cregister_raw: \<open>\<not> cregister_raw non_cregister_raw\<close>
+  by (metis cregister_raw_1 non_cregister_raw_def not_Some_eq)
+lemma non_qregister_raw: \<open>\<not> qregister_raw non_qregister_raw\<close>
+  by (metis id_cblinfun_not_0 non_qregister_raw_def qregister_raw_1)
 
 typedef ('a,'b) cregister = \<open>{f :: 'a cupdate \<Rightarrow> 'b cupdate. cregister_raw f} \<union> {non_cregister_raw}\<close>
   morphisms apply_cregister Abs_cregister by auto
@@ -59,13 +81,14 @@ setup_lifting type_definition_qregister
 
 lemma bounded_clinear_apply_qregister[simp]: \<open>bounded_clinear (apply_qregister F)\<close>
   apply transfer
-  apply (auto simp: non_qregister_raw_def[abs_def])
-  sorry
+  unfolding Axioms_Quantum.register_def
+  by (auto simp: non_qregister_raw_def[abs_def])
 
 lemma clinear_apply_qregister[simp]: \<open>clinear (apply_qregister F)\<close>
   using bounded_clinear.clinear bounded_clinear_apply_qregister by blast
 
-axiomatization apply_cregister_total :: \<open>('a,'b) cregister \<Rightarrow> ('a\<Rightarrow>'a) \<Rightarrow> ('b\<Rightarrow>'b)\<close>
+lift_definition apply_cregister_total :: \<open>('a,'b) cregister \<Rightarrow> ('a\<Rightarrow>'a) \<Rightarrow> ('b\<Rightarrow>'b)\<close> is
+  \<open>\<lambda>F f. the o F (Some o f)\<close>.
 
 lift_definition non_cregister :: \<open>('a,'b) cregister\<close> is non_cregister_raw by auto
 lift_definition non_qregister :: \<open>('a,'b) qregister\<close> is non_qregister_raw by auto
@@ -164,8 +187,7 @@ lift_definition qcompatible :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qr
 
 lemma qcompatibleI: \<open>qregister F \<Longrightarrow> qregister G \<Longrightarrow> (\<And>a b. apply_qregister F a o\<^sub>C\<^sub>L apply_qregister G b = apply_qregister G b o\<^sub>C\<^sub>L apply_qregister F a) \<Longrightarrow> qcompatible F G\<close>
   apply transfer
-  apply (simp add: Laws_Quantum.compatible_def[abs_def])
-  sorry
+  by (simp add: Laws_Quantum.compatible_def[abs_def])
 
 lemma qcompatible_commute: 
   assumes \<open>qcompatible F G\<close>

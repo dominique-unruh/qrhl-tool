@@ -158,7 +158,7 @@ lemma swap_variables_subspace_plus[simp]: "swap_variables_subspace v w (A+B) = (
 subsection "Distinct quantum variables"
 
 abbreviation (input) qvariables_local :: \<open>'a q2variable \<Rightarrow> 'b q2variable \<Rightarrow> bool\<close> where
-  \<open>qvariables_local Q R \<equiv> Qqcompatible (QCOMPLEMENT (QREGISTER_of R)) Q\<close>
+  \<open>qvariables_local Q R \<equiv> qregister_le Q R\<close>
 
 text \<open>The following constant \<open>DISTINCT_QVARS_GUARD\<close> is a marker that indicates that the simplifier
   should not attempt to solve the subgoal \<open>C\<close> (which is supposed to be of the form \<open>colocal_...\<close>)
@@ -174,15 +174,20 @@ definition [code del]: \<open>DISTINCT_QVARS_GUARD (C::bool) = C\<close>
 lemma DISTINCT_QVARS_GUARD_cong[cong]: \<open>DISTINCT_QVARS_GUARD x = DISTINCT_QVARS_GUARD x\<close>
   by simp
 
-axiomatization operator_local :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool" 
+definition operator_local :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
+  \<open>operator_local A F \<longleftrightarrow> A \<in> range (apply_qregister F)\<close>
 
-axiomatization predicate_local :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool"
+definition predicate_local :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
+  \<open>predicate_local S F \<longleftrightarrow> S \<in> range (apply_qregister_space F)\<close>
 
-axiomatization distinct_qvars_pred_vars :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool"
+definition distinct_qvars_op_vars :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
+  \<open>distinct_qvars_op_vars A F \<longleftrightarrow> A \<in> commutant (range (apply_qregister F))\<close>
 
-axiomatization distinct_qvars_op_vars :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool"
+definition distinct_qvars_pred_vars :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
+  \<open>distinct_qvars_pred_vars S F \<longleftrightarrow> distinct_qvars_op_vars (Proj S) F\<close>
 
-axiomatization distinct_qvars_op_pred :: "(qu2,qu2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool"
+definition distinct_qvars_op_pred :: "(qu2,qu2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool" where
+  \<open>distinct_qvars_op_pred A S \<longleftrightarrow> A o\<^sub>C\<^sub>L Proj S = Proj S o\<^sub>C\<^sub>L A\<close>
 
 abbreviation (input) \<open>colocal_op_pred == distinct_qvars_op_pred\<close> (* Legacy *)
 abbreviation (input) \<open>colocal_op_qvars == distinct_qvars_op_vars\<close> (* Legacy *)
@@ -193,57 +198,175 @@ adhoc_overloading colocal \<open>\<lambda>x y. distinct_qvars_pred_vars x y\<clo
 (* Having non-eta reduced terms in the adhoc_overloading effectively makes the overloading input-only,
    as appropropriate for a legacy name *)
 
-lemma colocal_pred_qvars_unit[simp]: "colocal_pred_qvars A \<lbrakk>\<rbrakk>"
-  by (cheat colocal_pred_qvars_unit)
-lemma colocal_pred_qvars_unit'[simp]: "colocal_pred_qvars A empty_qregister"
-  by (cheat colocal_pred_qvars_unit)
+(* TODO move to Prog_Var *)
+lemma apply_qregister_empty_qregister[simp]: \<open>apply_qregister empty_qregister A = one_dim_iso A *\<^sub>C id_cblinfun\<close>
+  sorry
 
-lemma colocal_op_qvars_unit[simp]: "colocal_op_qvars A \<lbrakk>\<rbrakk>"
-  by (cheat colocal_op_qvars_unit)
-lemma colocal_op_qvars_unit'[simp]: "colocal_op_qvars A empty_qregister"
-  by (cheat colocal_op_qvars_unit)
+lemma distinct_qvars_op_vars_unit'[simp]: "distinct_qvars_op_vars A empty_qregister"
+  by (simp add: distinct_qvars_op_vars_def commutant_def)
 
-lemma colocal_pred_qvars_top[simp,intro]:
-  assumes \<open>qregister F\<close>
+lemma distinct_qvars_pred_vars_unit'[simp]: "distinct_qvars_pred_vars A empty_qregister"
+  by (simp add: distinct_qvars_pred_vars_def)
+
+lemma distinct_qvars_op_vars_0[simp,intro]:
+  shows \<open>distinct_qvars_op_vars 0 F\<close>
+  by (simp add: distinct_qvars_op_vars_def commutant_def)
+
+lemma distinct_qvars_op_vars_id[simp,intro]:
+  shows \<open>distinct_qvars_op_vars id_cblinfun F\<close>
+  by (simp add: distinct_qvars_op_vars_def commutant_def)
+
+lemma distinct_qvars_pred_vars_top[simp,intro]:
   shows \<open>colocal_pred_qvars \<top> F\<close>
-  sorry
+  by (simp add: distinct_qvars_pred_vars_def)
 
-lemma colocal_pred_qvars_bot[simp,intro]:
-  assumes \<open>qregister F\<close>
-  shows \<open>colocal_pred_qvars \<bottom> F\<close>
-  sorry
+lemma distinct_qvars_pred_vars_bot[simp,intro]:
+  shows \<open>distinct_qvars_pred_vars \<bottom> F\<close>
+  by (simp add: distinct_qvars_pred_vars_def)
 
-lemma colocal_pred_qvars_pair[simp,intro]:
-  assumes \<open>qcompatible F G\<close>
-  assumes \<open>colocal_pred_qvars S F\<close>
-  assumes \<open>colocal_pred_qvars S G\<close>
-  shows \<open>colocal_pred_qvars S (qregister_pair F G)\<close>
-  sorry
+  (* TODO move to Prog_Variables *)
+  (* TODO same for cregister *)
+lemma qregister_raw_apply_qregister[simp]: \<open>qregister_raw (apply_qregister X) \<longleftrightarrow> qregister X\<close>
+  apply transfer by simp
 
-lemma colocal_pred_qvars_apply_qregister_space[simp]:
-  assumes \<open>qcompatible F G\<close>
-  shows \<open>colocal_pred_qvars (apply_qregister_space F S) G\<close>
-  sorry
+  (* TODO move to Prog_Variables *)
+lemma apply_qregister_plus: \<open>apply_qregister X (a+b) = apply_qregister X a + apply_qregister X b\<close>
+  using clinear_apply_qregister[of X]
+  by (rule complex_vector.linear_add)
+  
+  (* TODO move to Prog_Variables *)
+lemma apply_qregister_scaleC: \<open>apply_qregister X (c *\<^sub>C a) = c *\<^sub>C apply_qregister X a\<close>
+  using clinear_apply_qregister[of X]
+  by (rule clinear.scaleC)
+
+lemma distinct_qvars_op_vars_non_qregister[simp]: \<open>distinct_qvars_op_vars A non_qregister\<close>
+  by (simp add: distinct_qvars_op_vars_def commutant_def)
+
+lemma distinct_qvars_pred_vars_non_qregister[simp]: \<open>distinct_qvars_pred_vars S non_qregister\<close>
+  by (simp add: distinct_qvars_pred_vars_def)
+
+lemma distinct_qvars_op_vars_pair[simp,intro]:
+  assumes \<open>distinct_qvars_op_vars A F\<close>
+  assumes \<open>distinct_qvars_op_vars A G\<close>
+  shows \<open>distinct_qvars_op_vars A (qregister_pair F G)\<close>
+proof (cases \<open>qregister \<lbrakk>F,G\<rbrakk>\<^sub>q\<close>)
+  case True
+  note [register] = this
+  have \<open>clinear (\<lambda>B. A o\<^sub>C\<^sub>L apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B)\<close>
+    apply (rule clinearI)
+    by (auto simp: apply_qregister_plus cblinfun_compose_add_right apply_qregister_scaleC)
+  moreover have \<open>clinear (\<lambda>B. apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B o\<^sub>C\<^sub>L A)\<close>
+    apply (rule clinearI)
+    by (auto simp: apply_qregister_plus cblinfun_compose_add_left apply_qregister_scaleC)
+  moreover have \<open>continuous_map weak_star_topology weak_star_topology (\<lambda>B. A o\<^sub>C\<^sub>L apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B)\<close>
+    using weak_star_cont_register continuous_map_left_comp_weak_star    
+    apply (rule continuous_map_compose[unfolded o_def])
+    by simp
+  moreover have \<open>continuous_map weak_star_topology weak_star_topology (\<lambda>B. apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B o\<^sub>C\<^sub>L A)\<close>
+    using weak_star_cont_register continuous_map_right_comp_weak_star    
+    apply (rule continuous_map_compose[unfolded o_def])
+    by simp
+  ultimately have \<open>(\<lambda>B. A o\<^sub>C\<^sub>L apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B) = (\<lambda>B. apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B o\<^sub>C\<^sub>L A)\<close> for B
+    apply (rule weak_star_clinear_eq_butterfly_ketI)
+    using assms
+     apply (auto simp add: apply_qregister_pair distinct_qvars_op_vars_def commutant_def 
+        simp flip: tensor_ell2_ket tensor_butterfly)
+      by (metis (no_types, lifting) Laws_Quantum.compatible_ac_rules(2))
+  then show ?thesis
+    apply (simp add: distinct_qvars_op_vars_def commutant_def)
+    by metis
+next
+  case False
+  then have [simp]: \<open>\<lbrakk>F,G\<rbrakk> = non_qregister\<close>
+  using non_qregister by blast
+  then show ?thesis
+    by simp
+qed
+
+lemma distinct_qvars_pred_vars_pair[simp,intro]:
+  assumes \<open>distinct_qvars_pred_vars S F\<close>
+  assumes \<open>distinct_qvars_pred_vars S G\<close>
+  shows \<open>distinct_qvars_pred_vars S (qregister_pair F G)\<close>
+  using assms by (simp add: distinct_qvars_pred_vars_def distinct_qvars_op_vars_pair)
 
 lemma colocal_op_qvars_apply_qregister[simp]:
   assumes \<open>qcompatible F G\<close>
   shows \<open>colocal_op_qvars (apply_qregister F S) G\<close>
-  sorry
+  using assms
+  by (simp add: distinct_qvars_op_vars_def commutant_def qcompatible_commute)
 
-lemma distinct_qvars_pred_vars_top[simp]: \<open>qregister X \<Longrightarrow> distinct_qvars_pred_vars top X\<close>
-  sorry
-lemma distinct_qvars_pred_vars_bot[simp]: \<open>qregister X \<Longrightarrow> distinct_qvars_pred_vars bot X\<close>
-  sorry
+(* TODO to Prog_Var *)
+lemma apply_qregister_inject': \<open>apply_qregister F a = apply_qregister F b \<longleftrightarrow> a = b\<close> if \<open>qregister F\<close>
+  using that apply (transfer fixing: a b)
+  using qregister_raw_inj[of _ UNIV] injD by fastforce
+
+lemma apply_qregister_adj: \<open>apply_qregister F (a*) = (apply_qregister F a)*\<close>
+  apply transfer
+  by (auto simp: non_qregister_raw_def register_adj)
+
+lemma is_Proj_apply_qregister[simp]: \<open>is_Proj (apply_qregister F P) \<longleftrightarrow> is_Proj P\<close> if [register]: \<open>qregister F\<close>
+  by (auto simp add: is_Proj_algebraic apply_qregister_inject apply_qregister_inject' 
+      simp flip: qregister_compose apply_qregister_adj)
+
+lemma is_Proj_apply_qregister': \<open>is_Proj P \<Longrightarrow> is_Proj (apply_qregister F P)\<close>
+  apply (transfer fixing: P)
+  by (auto simp add: register_projector non_qregister_raw_def)
+
+lemma distinct_qvars_pred_vars_apply_qregister_space[simp]:
+  assumes [register]: \<open>qregister \<lbrakk>F,G\<rbrakk>\<close>
+  shows \<open>distinct_qvars_pred_vars (apply_qregister_space F S) G\<close>
+  by (simp add: distinct_qvars_pred_vars_def apply_qregister_space_def Proj_on_own_range)
+
 lemma distinct_qvars_pred_vars_cla[simp]: \<open>qregister X \<Longrightarrow> distinct_qvars_pred_vars Cla[x] X\<close>
   by simp
 
+lemma operator_local_Proj: \<open>operator_local (Proj S) F \<longleftrightarrow> predicate_local S F\<close>
+proof (cases \<open>qregister F\<close>)
+  case True
+  note [register] = this
+  have \<open>Proj (apply_qregister F (Proj T) *\<^sub>S \<top>) \<in> range (\<lambda>T. apply_qregister F T)\<close> for T
+  proof -
+    have \<open>Proj (apply_qregister F (Proj T) *\<^sub>S \<top>) = apply_qregister F (Proj T)\<close>
+      apply (rule Proj_on_own_range)
+      by simp
+    also have \<open>\<dots> \<in> range (\<lambda>T. apply_qregister F T)\<close>
+      by simp
+    finally show ?thesis
+      by -
+  qed
+  moreover have \<open>S \<in> range (\<lambda>x. apply_qregister F (Proj x) *\<^sub>S \<top>)\<close> 
+    if \<open>Proj S = apply_qregister F A\<close> for A
+  proof -
+    from that have \<open>is_Proj A\<close>
+      by (metis Proj_is_Proj True is_Proj_apply_qregister)
+    have \<open>S = Proj S *\<^sub>S \<top>\<close>
+      by simp
+    also from that have \<open>\<dots> = apply_qregister F A *\<^sub>S \<top>\<close>
+      by simp
+    also from \<open>is_Proj A\<close> have \<open>\<dots> = apply_qregister F (Proj (A *\<^sub>S \<top>)) *\<^sub>S \<top>\<close>
+      by (simp add: Proj_on_own_range)
+    also have \<open>\<dots> \<in> range (\<lambda>x. apply_qregister F (Proj x) *\<^sub>S \<top>)\<close>
+      by simp
+    ultimately show ?thesis
+      by (auto simp add: predicate_local_def operator_local_def apply_qregister_space_def)
+  qed
+  ultimately show ?thesis
+    by (auto simp: predicate_local_def operator_local_def apply_qregister_space_def)
+next
+  case False
+  then have [simp]: \<open>F = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis
+    by (auto simp add: predicate_local_def operator_local_def Proj_inj)
+qed
 
 lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
   by (cheat predicate_local_inf)
-lemma predicate_local_applyOpSpace[intro!]: "operator_local A Q \<Longrightarrow> predicate_local S Q \<Longrightarrow> predicate_local (A\<cdot>S) Q"
-  by (cheat predicate_local_applyOpSpace)
-lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> operator_local B Q \<Longrightarrow> operator_local (A\<cdot>B) Q"
-  by (cheat operator_local_timesOp)
+lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> operator_local B Q \<Longrightarrow> operator_local (A o\<^sub>C\<^sub>L B) Q"
+  apply (simp add: operator_local_def)
+  by (smt (verit) image_iff qregister_compose rangeI)
+lemma predicate_local_applyOpSpace[intro!]: "operator_local A Q \<Longrightarrow> predicate_local S Q \<Longrightarrow> predicate_local (A *\<^sub>S S) Q"
+  sorry
 
 subsection \<open>Lifting\<close>
 
@@ -263,12 +386,12 @@ adhoc_overloading
 lemma predicate_localE:
   assumes "predicate_local S Q"
   shows "\<exists>S'. S=S'\<guillemotright>Q"
-  by (cheat predicate_localE)
+  using assms predicate_local_def by fastforce
 
 lemma operator_localE:
-  assumes "operator_local S Q"
-  shows "\<exists>S'. S=S'\<guillemotright>Q"
-  by (cheat operator_localE)
+  assumes "operator_local A Q"
+  shows "\<exists>A'. A=A'\<guillemotright>Q"
+  using assms operator_local_def by fastforce
 
 lemma lift_predicate_local[intro!]: "qvariables_local R Q \<Longrightarrow> predicate_local (S\<guillemotright>R) Q"
   by (cheat lift_predicate_local)
