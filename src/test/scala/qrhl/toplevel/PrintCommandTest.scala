@@ -14,7 +14,7 @@ class PrintCommandTest extends AnyFunSuite {
     println(output)
     assert(output.contains("lemma bla_"))
     assert(output.contains("""fixes x :: "(int, cl) cregister" and z :: int and q :: "(int, qu) qregister""""))
-    assert(output.contains("""assumes [simp]: ‹declared_qvars ⟦q⟧›"""))
+    assert(output.contains("""assumes [register]: ‹declared_qvars ⟦q⟧›"""))
     assert(output.contains("""shows "qrhl (λmem. ℭ𝔩𝔞[getter (cregister_chain ⟦#1⟧⇩c x) mem = (1::int) ∧ (z::int) = 2]) [] [] (λmem. qregister_chain ⟦#1⟧⇩q (q::(int, qu) qregister) ≡𝔮 qregister_chain ⟦#2.⟧⇩q q)""""))
 //    assert(output.contains("""shows "QRHL {ℭ𝔩𝔞[(x1::int) = 1 ∧ (z::int) = 2]} [] [] {⟦q1::int variable⟧ ≡𝔮 ⟦q2⟧}""""))
   }
