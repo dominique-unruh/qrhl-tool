@@ -182,7 +182,7 @@ lemmas prepare_for_code_add =
 
   div_leq_simp mod_mod_cancel
 
-  getter_pair getter_chain setter_chain setter_pair setter_Fst setter_Snd
+  getter_pair getter_chain setter_chain setter_pair setter_cFst setter_cSnd
 
   enum_index_prod_def fst_enum_nth snd_enum_nth enum_index_nth if_distrib[of enum_index]
   enum_nth_injective

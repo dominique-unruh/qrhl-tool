@@ -56,7 +56,7 @@ lemma assign2_rule:
   apply (rule sym_rule)
   apply (subst DEADID.rel_mono_strong[of \<open>(\<lambda>m. index_flip_subspace (A (prod.swap m)))\<close>]) defer
    apply (rule assign1_rule)
-  by (auto simp: A_def setter_chain setter_Fst setter_Snd case_prod_beta getter_Fst getter_Snd)
+  by (auto simp: A_def setter_chain setter_cFst setter_cSnd case_prod_beta)
 
 lemma sample1_rule:
   fixes A B xs e
@@ -125,8 +125,7 @@ lemma sample2_rule:
   apply (rule sym_rule)
   apply (subst DEADID.rel_mono_strong[of \<open>(\<lambda>m. index_flip_subspace (A (prod.swap m)))\<close>]) defer
    apply (rule sample1_rule)
-  by (auto simp: A_def B'_def e1_def xs1_def setter_chain setter_Fst getter_Snd getter_Fst
-      setter_Snd case_prod_beta index_flip_subspace_INF)
+  by (auto simp: A_def B'_def e1_def xs1_def setter_chain setter_cFst setter_cSnd case_prod_beta)
 
 (*   using [[simproc del: index_var]]
   apply (rule sym_rule)

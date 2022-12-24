@@ -9,7 +9,7 @@ theory Prog_Variables
   (* keywords "variables" :: thy_decl_block *)
     Missing_Bounded_Operators
     Registers.Classical_Extra
-    Registers.Quantum_Extra
+    Registers.Quantum_Extra2
 begin
 
 unbundle cblinfun_notation
@@ -199,10 +199,17 @@ lemma ccompatible_def: \<open>ccompatible F G \<longleftrightarrow> cregister F 
 lemma qcompatible_def: \<open>qcompatible F G \<longleftrightarrow> qregister F \<and> qregister G \<and> Laws_Quantum.compatible (apply_qregister F) (apply_qregister G)\<close>
   by (metis Laws_Quantum.compatible_register2 Laws_Quantum.compatible_sym Laws_Quantum.pair_is_register non_qregister_raw qregister.rep_eq qregister_pair.rep_eq)
 
+lemma ccompatibleI: \<open>cregister F \<Longrightarrow> cregister G \<Longrightarrow> (\<And>a b. apply_cregister F a \<circ>\<^sub>m apply_cregister G b = apply_cregister G b \<circ>\<^sub>m apply_cregister F a) \<Longrightarrow> ccompatible F G\<close>
+  apply transfer
+  by (simp add: Laws_Classical.compatible_def[abs_def])
 lemma qcompatibleI: \<open>qregister F \<Longrightarrow> qregister G \<Longrightarrow> (\<And>a b. apply_qregister F a o\<^sub>C\<^sub>L apply_qregister G b = apply_qregister G b o\<^sub>C\<^sub>L apply_qregister F a) \<Longrightarrow> qcompatible F G\<close>
   apply transfer
   by (simp add: Laws_Quantum.compatible_def[abs_def])
 
+lemma ccompatible_commute: 
+  assumes \<open>ccompatible F G\<close>
+  shows \<open>apply_cregister F a \<circ>\<^sub>m apply_cregister G b = apply_cregister G b \<circ>\<^sub>m apply_cregister F a\<close>
+  using Laws_Classical.swap_registers assms ccompatible_def by blast
 lemma qcompatible_commute: 
   assumes \<open>qcompatible F G\<close>
   shows \<open>apply_qregister F a o\<^sub>C\<^sub>L apply_qregister G b = apply_qregister G b o\<^sub>C\<^sub>L apply_qregister F a\<close>
@@ -230,11 +237,22 @@ lift_definition Cccompatible :: \<open>'a CREGISTER \<Rightarrow> ('b,'a) cregis
 lift_definition Qqcompatible :: \<open>'a QREGISTER \<Rightarrow> ('b,'a) qregister \<Rightarrow> bool\<close> is
   \<open>\<lambda>F G. qregister_raw G \<and> (\<forall>a\<in>F. \<forall>b. a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L a)\<close>.
 
-axiomatization empty_cregister :: \<open>('a::{CARD_1,enum}, 'b) cregister\<close>
-  where empty_cregister_is_register[simp]: \<open>cregister empty_cregister\<close>
-axiomatization empty_qregister :: \<open>('a::{CARD_1,enum}, 'b) qregister\<close>
-  where empty_qregister_is_register[simp]: \<open>qregister empty_qregister\<close>
+definition \<open>empty_cregister_raw = register_from_getter_setter (\<lambda>_. undefined) (\<lambda>_::_::CARD_1. id)\<close> 
+lemma cregister_raw_empty_cregister_raw: \<open>cregister_raw empty_cregister_raw\<close>
+  apply (auto intro!: exI simp add: Axioms_Classical.register_def empty_cregister_raw_def)
+  by (simp add: valid_getter_setter_def)
 
+
+lift_definition empty_cregister :: \<open>('a::{CARD_1,enum}, 'b) cregister\<close> is
+  empty_cregister_raw
+  using cregister_raw_empty_cregister_raw by fast
+lemma empty_cregister_is_register[simp]: \<open>cregister empty_cregister\<close>
+  apply transfer by (rule cregister_raw_empty_cregister_raw)
+lift_definition empty_qregister :: \<open>('a::{CARD_1,enum}, 'b) qregister\<close> is
+  Quantum_Extra2.empty_var
+  by simp
+lemma empty_qregister_is_register[simp]: \<open>qregister empty_qregister\<close>
+  apply transfer by simp
 
 lemma empty_cregisters_same[simp]:
   fixes F :: \<open>('a::{CARD_1,enum},'b) cregister\<close>
@@ -290,8 +308,10 @@ proof (rule apply_qregister_inject[THEN iffD1], rule ext)
     by -
 qed
 
-axiomatization where CCcompatible_sym: \<open>CCcompatible F G \<Longrightarrow> CCcompatible G F\<close> for F G :: \<open>'a CREGISTER\<close>
-axiomatization where QQcompatible_sym: \<open>QQcompatible F G \<Longrightarrow> QQcompatible G F\<close> for F G :: \<open>'a QREGISTER\<close>
+lemma CCcompatible_sym: \<open>CCcompatible F G \<Longrightarrow> CCcompatible G F\<close> for F G :: \<open>'a CREGISTER\<close>
+  by (auto simp: CCcompatible_def)
+lemma QQcompatible_sym: \<open>QQcompatible F G \<Longrightarrow> QQcompatible G F\<close> for F G :: \<open>'a QREGISTER\<close>
+  by (auto simp: QQcompatible_def)
 
 lemma ccompatible_CCcompatible: \<open>ccompatible F G \<longleftrightarrow> cregister F \<and> cregister G \<and> CCcompatible (CREGISTER_of F) (CREGISTER_of G)\<close>
   apply (transfer fixing: F G)
@@ -312,18 +332,43 @@ lemma ccompatible_sym: \<open>ccompatible F G \<Longrightarrow> ccompatible G F\
 lemma qcompatible_sym: \<open>qcompatible F G \<Longrightarrow> qcompatible G F\<close> for F :: \<open>('a,'c) qregister\<close> and G :: \<open>('b,'c) qregister\<close>
   by (auto intro: QQcompatible_sym simp: qcompatible_QQcompatible)
 
-axiomatization where ccompatible3: \<open>ccompatible (cregister_pair F G) H \<longleftrightarrow> ccompatible F G \<and> ccompatible F H \<and> ccompatible G H\<close>
-axiomatization where qcompatible3: \<open>qcompatible (qregister_pair F G) H \<longleftrightarrow> qcompatible F G \<and> qcompatible F H \<and> qcompatible G H\<close>
+lemma ccompatible3: \<open>ccompatible (cregister_pair F G) H \<longleftrightarrow> ccompatible F G \<and> ccompatible F H \<and> ccompatible G H\<close>
+  unfolding ccompatible_def
+  apply transfer
+  apply (auto simp: non_cregister_raw)
+  apply (metis Laws_Classical.compatible_comp_left Laws_Classical.register_Fst Laws_Classical.register_pair_Fst)
+  by (metis Laws_Classical.compatible_comp_left Laws_Classical.register_Snd Laws_Classical.register_pair_Snd)
+lemma qcompatible3: \<open>qcompatible (qregister_pair F G) H \<longleftrightarrow> qcompatible F G \<and> qcompatible F H \<and> qcompatible G H\<close>
+  unfolding qcompatible_def
+  apply transfer
+  apply (auto simp: non_qregister_raw)
+  apply (metis Laws_Quantum.compatible_comp_left Laws_Quantum.register_Fst Laws_Quantum.register_pair_Fst)
+  by (metis Laws_Quantum.compatible_comp_left Laws_Quantum.register_Snd Laws_Quantum.register_pair_Snd)
 
 lemma ccompatible3': \<open>ccompatible H (cregister_pair F G) \<longleftrightarrow> ccompatible F G \<and> ccompatible H F \<and> ccompatible H G\<close>
   by (metis ccompatible3 ccompatible_sym)
 lemma qcompatible3': \<open>qcompatible H (qregister_pair F G) \<longleftrightarrow> qcompatible F G \<and> qcompatible H F \<and> qcompatible H G\<close>
   by (metis qcompatible3 qcompatible_sym)
 
+lemma compatible_empty_cregister_raw:
+  \<open>cregister_raw Q \<Longrightarrow> ccompatible_raw Q empty_cregister_raw\<close>
+  apply (simp add: ccompatible_raw_def cregister_raw_empty_cregister_raw)
+  apply (auto intro!: ext simp add: empty_cregister_raw_def register_from_getter_setter_def[abs_def] map_comp_def)
+  apply (case_tac \<open>Q a k\<close>)
+  apply (case_tac \<open>b undefined\<close>)
+  apply auto
+  apply (case_tac \<open>b undefined\<close>)
+  by auto
+
 lemma ccompatible_empty[simp]: \<open>ccompatible Q empty_cregister \<longleftrightarrow> cregister Q\<close>
-  sorry
+  apply transfer
+  apply (auto simp: compatible_empty_cregister_raw non_cregister_raw)
+  by (auto simp: ccompatible_raw_def non_cregister_raw)
 lemma qcompatible_empty[simp]: \<open>qcompatible Q empty_qregister \<longleftrightarrow> qregister Q\<close>
-  sorry
+  apply transfer
+  apply (auto simp: non_qregister_raw)
+  by (auto simp: qcompatible_raw_def non_qregister_raw)
+
 lemma ccompatible_empty'[simp]: \<open>ccompatible empty_cregister Q \<longleftrightarrow> cregister Q\<close>
   by (metis ccompatible_empty ccompatible_sym)
 lemma qcompatible_empty'[simp]: \<open>qcompatible empty_qregister Q \<longleftrightarrow> qregister Q\<close>
@@ -368,8 +413,10 @@ lift_definition qSnd :: \<open>('b, 'a\<times>'b) qregister\<close> is \<open>La
 lemma qSnd_register[simp]: \<open>qregister qSnd\<close>
   apply transfer by simp
 
-axiomatization where ccompatible_Fst_Snd[simp]: \<open>ccompatible cFst cSnd\<close>
-axiomatization where qcompatible_Fst_Snd[simp]: \<open>qcompatible qFst qSnd\<close>
+lemma ccompatible_Fst_Snd[simp]: \<open>ccompatible cFst cSnd\<close>
+  by (simp add: cFst.rep_eq cSnd.rep_eq ccompatible_def)
+lemma qcompatible_Fst_Snd[simp]: \<open>qcompatible qFst qSnd\<close>
+  by (simp add: qFst.rep_eq qSnd.rep_eq qcompatible_def)
 
 lift_definition cregister_chain :: \<open>('b,'c) cregister \<Rightarrow> ('a,'b) cregister \<Rightarrow> ('a,'c) cregister\<close>
   is \<open>\<lambda>F G. if cregister_raw F \<and> cregister_raw G then F o G else non_cregister_raw\<close>
@@ -420,8 +467,12 @@ lemma qregister_chain_is_qregister[simp]: \<open>qregister (qregister_chain F G)
   apply transfer
   by (auto simp: non_qregister_raw qregister_raw_chain)
 
-axiomatization where cregister_chain_pair_Fst[simp]: \<open>ccompatible F G \<Longrightarrow> cregister_chain (cregister_pair F G) cFst = F\<close>
-axiomatization where qregister_chain_pair_Fst[simp]: \<open>qcompatible F G \<Longrightarrow> qregister_chain (qregister_pair F G) qFst = F\<close>
+lemma cregister_chain_pair_Fst[simp]: \<open>ccompatible F G \<Longrightarrow> cregister_chain (cregister_pair F G) cFst = F\<close>
+  unfolding ccompatible_def apply transfer
+  by (simp add: Laws_Classical.register_pair_Fst)
+lemma qregister_chain_pair_Fst[simp]: \<open>qcompatible F G \<Longrightarrow> qregister_chain (qregister_pair F G) qFst = F\<close>
+  unfolding qcompatible_def apply transfer
+  by (simp add: Laws_Quantum.register_pair_Fst)
 
 lemma cregister_chain_pair_Fst_chain[simp]:
   assumes \<open>ccompatible F G\<close>
@@ -432,8 +483,12 @@ lemma qregister_chain_pair_Fst_chain[simp]:
   shows \<open>qregister_chain (qregister_pair F G) (qregister_chain qFst H) = qregister_chain F H\<close>
   by (metis qregister_chain_pair_Fst assms qregister_chain_assoc)
 
-axiomatization where cregister_chain_pair_Snd[simp]: \<open>ccompatible F G \<Longrightarrow> cregister_chain (cregister_pair F G) cSnd = G\<close>
-axiomatization where qregister_chain_pair_Snd[simp]: \<open>qcompatible F G \<Longrightarrow> qregister_chain (qregister_pair F G) qSnd = G\<close>
+lemma cregister_chain_pair_Snd[simp]: \<open>ccompatible F G \<Longrightarrow> cregister_chain (cregister_pair F G) cSnd = G\<close>
+  unfolding ccompatible_def apply transfer
+  by (simp add: Laws_Classical.register_pair_Snd)
+lemma qregister_chain_pair_Snd[simp]: \<open>qcompatible F G \<Longrightarrow> qregister_chain (qregister_pair F G) qSnd = G\<close>
+  unfolding qcompatible_def apply transfer
+  by (simp add: Laws_Quantum.register_pair_Snd)
 
 lemma cregister_chain_pair_Snd_chain[simp]:
   assumes \<open>ccompatible F G\<close>
@@ -450,8 +505,10 @@ lemma qregister_chain_empty_right[simp]: \<open>qregister F \<Longrightarrow> qr
 lemma qregister_chain_empty_left[simp]: \<open>qregister F \<Longrightarrow> qregister_chain empty_qregister F = empty_qregister\<close>
   apply (rule empty_qregisters_same) by auto
 
-lemma ccompatible_comp_left[simp]: "ccompatible F G \<Longrightarrow> cregister H \<Longrightarrow> ccompatible (cregister_chain F H) G" sorry
-lemma qcompatible_comp_left[simp]: "qcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> qcompatible (qregister_chain F H) G" sorry
+lemma ccompatible_comp_left[simp]: "ccompatible F G \<Longrightarrow> cregister H \<Longrightarrow> ccompatible (cregister_chain F H) G"
+  unfolding ccompatible_def apply transfer by auto
+lemma qcompatible_comp_left[simp]: "qcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> qcompatible (qregister_chain F H) G"
+  unfolding qcompatible_def apply transfer by auto
 
 lemma ccompatible_comp_right[simp]: "ccompatible F G \<Longrightarrow> cregister H \<Longrightarrow> ccompatible F (cregister_chain G H)"
   by (meson ccompatible_comp_left ccompatible_sym)
@@ -489,70 +546,145 @@ lemma cregister_cswap[simp]: \<open>cregister cswap\<close>
 lemma qregister_qswap[simp]: \<open>qregister qswap\<close>
   by (simp add: qcompatible_sym qswap_def)
 
+lemma cregister_pair_cnonregister1[simp]: \<open>cregister_pair non_cregister F = non_cregister\<close>
+  using non_cregister ccompatible_non_cregister1 by blast
 lemma qregister_pair_qnonregister1[simp]: \<open>qregister_pair non_qregister F = non_qregister\<close>
   using non_qregister qcompatible_non_qregister1 by blast
 
+lemma cregister_pair_cnonregister2[simp]: \<open>cregister_pair F non_cregister = non_cregister\<close>
+  using non_cregister ccompatible_non_cregister2 by blast
 lemma qregister_pair_qnonregister2[simp]: \<open>qregister_pair F non_qregister = non_qregister\<close>
   using non_qregister qcompatible_non_qregister2 by blast
 
+lemma inj_cregister: \<open>inj (apply_cregister F)\<close> if \<open>cregister F\<close>
+  using that apply transfer
+  by (simp add: cregister_raw_inj)
 lemma inj_qregister: \<open>inj (apply_qregister F)\<close> if \<open>qregister F\<close>
-  using that apply transfer apply simp
-  sorry
+  using that apply transfer
+  by (simp add: qregister_raw_inj)
 
 lemma apply_non_qregister[simp]: \<open>apply_qregister non_qregister x = 0\<close>
   by (simp add: non_qregister.rep_eq non_qregister_raw_def)
 
+lemma cregister_compose: \<open>apply_cregister F (a \<circ>\<^sub>m b) = apply_cregister F a \<circ>\<^sub>m apply_cregister F b\<close>
+  apply (transfer fixing: a b)
+  by (auto simp: non_cregister_raw_def Axioms_Classical.register_mult)
 lemma qregister_compose: \<open>apply_qregister F (a o\<^sub>C\<^sub>L b) = apply_qregister F a o\<^sub>C\<^sub>L apply_qregister F b\<close>
   apply (transfer fixing: a b)
   by (auto simp: non_qregister_raw_def Axioms_Quantum.register_mult)
 
+lemma not_ccompatible_chain: 
+  assumes \<open>\<not> ccompatible G H\<close>
+  shows \<open>\<not> ccompatible (cregister_chain F G) (cregister_chain F H)\<close>
+proof (rule notI)
+  assume asm: \<open>ccompatible (cregister_chain F G) (cregister_chain F H)\<close>
+  consider (FGH) \<open>cregister F\<close> \<open>cregister G\<close> \<open>cregister H\<close>
+    | (nF) \<open>\<not> cregister F\<close> | (nG) \<open>\<not> cregister G\<close> | (nH) \<open>\<not> cregister H\<close>
+    by auto
+  then show False
+  proof cases
+    case FGH
+    have \<open>apply_cregister F (apply_cregister G a \<circ>\<^sub>m apply_cregister H b) = apply_cregister F (apply_cregister H b \<circ>\<^sub>m apply_cregister G a)\<close> for a b
+      using ccompatible_commute[OF asm]
+      by (simp add: cregister_compose)
+    moreover from FGH have \<open>inj (apply_cregister F)\<close>
+      by (simp add: inj_cregister)
+    ultimately have \<open>apply_cregister G a \<circ>\<^sub>m apply_cregister H b = apply_cregister H b \<circ>\<^sub>m apply_cregister G a\<close> for a b
+      by (simp add: injD)
+    then have \<open>ccompatible G H\<close>
+      apply (rule_tac ccompatibleI)
+      using FGH by auto
+    with assms show False
+      by simp
+  next
+    case nF with asm assms show ?thesis by (simp add: non_cregister)
+  next
+    case nG with asm assms show ?thesis by (simp add: non_cregister)
+  next
+    case nH with asm assms show ?thesis by (simp add: non_cregister)
+  qed
+qed
+lemma not_qcompatible_chain: 
+  assumes \<open>\<not> qcompatible G H\<close>
+  shows \<open>\<not> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
+proof (rule notI)
+  assume asm: \<open>qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
+  consider (FGH) \<open>qregister F\<close> \<open>qregister G\<close> \<open>qregister H\<close>
+    | (nF) \<open>\<not> qregister F\<close> | (nG) \<open>\<not> qregister G\<close> | (nH) \<open>\<not> qregister H\<close>
+    by auto
+  then show False
+  proof cases
+    case FGH
+    have \<open>apply_qregister F (apply_qregister G a o\<^sub>C\<^sub>L apply_qregister H b) = apply_qregister F (apply_qregister H b o\<^sub>C\<^sub>L apply_qregister G a)\<close> for a b
+      using qcompatible_commute[OF asm]
+      by (simp add: qregister_compose)
+    moreover from FGH have \<open>inj (apply_qregister F)\<close>
+      by (simp add: inj_qregister)
+    ultimately have \<open>apply_qregister G a o\<^sub>C\<^sub>L apply_qregister H b = apply_qregister H b o\<^sub>C\<^sub>L apply_qregister G a\<close> for a b
+      by (simp add: injD)
+    then have \<open>qcompatible G H\<close>
+      apply (rule_tac qcompatibleI)
+      using FGH by auto
+    with assms show False
+      by simp
+  next
+    case nF with asm assms show ?thesis by (simp add: non_qregister)
+  next
+    case nG with asm assms show ?thesis by (simp add: non_qregister)
+  next
+    case nH with asm assms show ?thesis by (simp add: non_qregister)
+  qed
+qed
+
 (* TODO: compatibility condition can be omitted *)
 lemma cregister_chain_pair:
   shows \<open>cregister_chain F (cregister_pair G H) = cregister_pair (cregister_chain F G) (cregister_chain F H)\<close>
-  sorry
-lemma qregister_chain_pair:
-  shows \<open>qregister_chain F (qregister_pair G H) = qregister_pair (qregister_chain F G) (qregister_chain F H)\<close>
 proof -
-  consider (GH_F) \<open>qcompatible G H\<close> \<open>qregister F\<close> | (nF) \<open>F = non_qregister\<close> | (nG) \<open>G = non_qregister\<close>
-    | (nH) \<open>H = non_qregister\<close> | (nGH) \<open>qregister F\<close> \<open>qregister G\<close> \<open>qregister H\<close> \<open>\<not> qcompatible G H\<close>
-    by (auto simp flip: non_qregister)
+  consider (GH_F) \<open>ccompatible G H\<close> \<open>cregister F\<close> | (nF) \<open>F = non_cregister\<close> | (nGH) \<open>\<not> ccompatible G H\<close>
+    by (auto simp flip: non_cregister)
   then show ?thesis
   proof cases
     case GH_F
-    show ?thesis
-      sorry
+    then show ?thesis
+      unfolding ccompatible_def
+      apply transfer
+      by (simp add: Laws_Classical.register_comp_pair)
   next
     case nF
     then show ?thesis
       by simp
   next
-    case nG
-    then show ?thesis
+    case nGH
+    then have \<open>\<not> ccompatible (cregister_chain F G) (cregister_chain F H)\<close>
+      by (rule not_ccompatible_chain)
+    then have [simp]: \<open>cregister_pair (cregister_chain F G) (cregister_chain F H) = non_cregister\<close>
+      using non_cregister by auto
+    from nGH have [simp]: \<open>cregister_pair G H = non_cregister\<close>
+      using non_cregister by blast
+    with nGH show ?thesis 
       by simp
+  qed
+qed
+lemma qregister_chain_pair:
+  shows \<open>qregister_chain F (qregister_pair G H) = qregister_pair (qregister_chain F G) (qregister_chain F H)\<close>
+proof -
+  consider (GH_F) \<open>qcompatible G H\<close> \<open>qregister F\<close> | (nF) \<open>F = non_qregister\<close> | (nGH) \<open>\<not> qcompatible G H\<close>
+    by (auto simp flip: non_qregister)
+  then show ?thesis
+  proof cases
+    case GH_F
+    then show ?thesis
+      unfolding qcompatible_def
+      apply transfer
+      by (simp add: Laws_Quantum.register_comp_pair)
   next
-    case nH
+    case nF
     then show ?thesis
       by simp
   next
     case nGH
-    then have [simp]: \<open>qregister G\<close> \<open>qregister H\<close> \<open>qregister F\<close>
-      by simp_all
-    have \<open>\<not> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
-    proof (rule notI)
-      assume asm: \<open>qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
-      have \<open>apply_qregister F (apply_qregister G a o\<^sub>C\<^sub>L apply_qregister H b) = apply_qregister F (apply_qregister H b o\<^sub>C\<^sub>L apply_qregister G a)\<close> for a b
-        using qcompatible_commute[OF asm]
-        by (simp add: qregister_compose)
-      moreover from nGH have \<open>inj (apply_qregister F)\<close>
-        by (simp add: inj_qregister)
-      ultimately have \<open>apply_qregister G a o\<^sub>C\<^sub>L apply_qregister H b = apply_qregister H b o\<^sub>C\<^sub>L apply_qregister G a\<close> for a b
-        by (simp add: injD)
-      then have \<open>qcompatible G H\<close>
-        apply (rule_tac qcompatibleI)
-        using nGH by auto
-      with nGH show False
-        by simp
-    qed
+    then have \<open>\<not> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
+      by (rule not_qcompatible_chain)
     then have [simp]: \<open>qregister_pair (qregister_chain F G) (qregister_chain F H) = non_qregister\<close>
       using non_qregister by auto
     from nGH have [simp]: \<open>qregister_pair G H = non_qregister\<close>
@@ -561,9 +693,6 @@ proof -
       by simp
   qed
 qed
-
-axiomatization where cregister_raw_id[simp]: \<open>cregister_raw id\<close>
-axiomatization where qregister_raw_id[simp]: \<open>qregister_raw id\<close>
 
 lift_definition cregister_id :: \<open>('a,'a) cregister\<close> is id by simp
 lift_definition qregister_id :: \<open>('a,'a) qregister\<close> is id by simp
@@ -582,8 +711,16 @@ lemma apply_cregister_id[simp]: \<open>apply_cregister cregister_id = id\<close>
 lemma apply_qregister_id[simp]: \<open>apply_qregister qregister_id = id\<close>
   by (rule qregister_id.rep_eq)
 
-axiomatization where cregister_id[simp]: \<open>cregister cregister_id\<close>
-axiomatization where qregister_id[simp]: \<open>qregister qregister_id\<close>
+lemma cregister_id[simp]: \<open>cregister cregister_id\<close>
+  apply transfer by simp
+lemma qregister_id[simp]: \<open>qregister qregister_id\<close>
+  apply transfer by simp
+
+lemma cregister_chain_cswap_cswap[simp]: \<open>cregister_chain cswap cswap = cregister_id\<close>
+  by (metis Laws_Classical.pair_Fst_Snd apply_cregister_inverse cFst.rep_eq cSnd.rep_eq ccompatible_Fst_Snd ccompatible_Snd_Fst ccompatible_def cregister_chain_pair cregister_chain_pair_Fst cregister_chain_pair_Snd cregister_id.abs_eq cregister_pair.rep_eq cswap_def)
+lemma qregister_chain_qswap_qswap[simp]: \<open>qregister_chain qswap qswap = qregister_id\<close>
+  by (metis Laws_Quantum.compatible_Fst_Snd Laws_Quantum.pair_Fst_Snd apply_qregister_inverse qFst.rep_eq qSnd.rep_eq qcompatible_Snd_Fst qregister_chain_pair qregister_chain_pair_Fst qregister_chain_pair_Snd qregister_id.abs_eq qregister_pair.rep_eq qswap_def)
+
 
 definition \<open>iso_cregister I \<longleftrightarrow> cregister I \<and> (\<exists>J. cregister J \<and> cregister_chain I J = cregister_id \<and> cregister_chain J I = cregister_id)\<close>
 definition \<open>iso_qregister I \<longleftrightarrow> qregister I \<and> (\<exists>J. qregister J \<and> qregister_chain I J = qregister_id \<and> qregister_chain J I = qregister_id)\<close>
@@ -629,11 +766,15 @@ lemma iso_qregister_chain_inv: \<open>iso_qregister I \<Longrightarrow> qregiste
   apply simp
   by (smt (verit, best) apply_qregister_id iso_qregister_def iso_qregister_inv_chain left_right_inverse_eq pointfree_idE qregister_chain_apply)
 
-axiomatization where cswap_iso[simp]: \<open>iso_cregister cswap\<close>
-axiomatization where qswap_iso[simp]: \<open>iso_qregister qswap\<close>
+lemma cswap_iso[simp]: \<open>iso_cregister cswap\<close>
+  by (auto intro!: exI[of _ cswap] simp: iso_cregister_def)
+lemma qswap_iso[simp]: \<open>iso_qregister qswap\<close>
+  by (auto intro!: exI[of _ qswap] simp: iso_qregister_def)
 
-axiomatization where ccompatible_chain[simp]: \<open>cregister F \<Longrightarrow> ccompatible G H \<Longrightarrow> ccompatible (cregister_chain F G) (cregister_chain F H)\<close>
-axiomatization where qcompatible_chain[simp]: \<open>qregister F \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
+lemma ccompatible_chain[simp]: \<open>cregister F \<Longrightarrow> ccompatible G H \<Longrightarrow> ccompatible (cregister_chain F G) (cregister_chain F H)\<close>
+  unfolding ccompatible_def apply transfer by simp  
+lemma qcompatible_chain[simp]: \<open>qregister F \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
+  unfolding qcompatible_def apply transfer by simp  
 
 lemma ccompatible_chain_iso: \<open>iso_cregister I \<Longrightarrow> ccompatible (cregister_chain I F) (cregister_chain I G) \<longleftrightarrow> ccompatible F G\<close>
   apply (cases \<open>cregister F\<close>; cases \<open>cregister G\<close>)
@@ -658,37 +799,68 @@ lemma qcompatible_chain_iso: \<open>iso_qregister I \<Longrightarrow> qcompatibl
   using iso_qregister_def iso_qregister_inv_iso apply auto
   by (simp add: iso_qregister_def qcompatible_chain)
 
-axiomatization getter :: \<open>('a,'b) cregister \<Rightarrow> 'b \<Rightarrow> 'a\<close>
-axiomatization setter :: \<open>('a,'b) cregister \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b\<close>
+lift_definition getter :: \<open>('a,'b) cregister \<Rightarrow> 'b \<Rightarrow> 'a\<close> is
+  \<open>\<lambda>F. if cregister_raw F then Axioms_Classical.getter F else (\<lambda>_. undefined)\<close>.
+lift_definition setter :: \<open>('a,'b) cregister \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b\<close> is
+  \<open>\<lambda>F. if cregister_raw F then Axioms_Classical.setter F else (\<lambda>_. id)\<close>.
 
-axiomatization where getter_non_cregister[simp]: \<open>getter non_cregister m = undefined\<close>
-axiomatization where setter_non_cregister[simp]: \<open>setter non_cregister a = id\<close>
+lemma getter_non_cregister[simp]: \<open>getter non_cregister m = undefined\<close>
+  apply transfer by (simp add: non_cregister_raw)
+lemma setter_non_cregister[simp]: \<open>setter non_cregister a = id\<close>
+  apply transfer by (simp add: non_cregister_raw)
 
-axiomatization where getter_setter_same[simp]: \<open>cregister x \<Longrightarrow> getter x (setter x a m) = a\<close>
-axiomatization where setter_setter_same[simp]: \<open>setter x b (setter x a m) = setter x b m\<close>
-axiomatization where getter_setter_compat[simp]: \<open>ccompatible x y \<Longrightarrow> getter x (setter y a m) = getter x m\<close>
-axiomatization where setter_setter_compat: \<open>ccompatible x y \<Longrightarrow> setter x a (setter y b m) = setter y b (setter x a m)\<close>
-axiomatization where setter_getter_same[simp]: \<open>setter x (getter x m) m = m\<close>
+lemma getter_setter_same[simp]: \<open>cregister x \<Longrightarrow> getter x (setter x a m) = a\<close>
+  apply transfer apply (simp add: non_cregister_raw)
+  by (meson valid_getter_setter_def valid_getter_setter_getter_setter)
 
-axiomatization cregister_from_getter_setter where
-  setter_of_cregister_from_getter_is_cregister: \<open>valid_getter_setter g s \<Longrightarrow> cregister (cregister_from_getter_setter g s)\<close> and
-  setter_of_cregister_from_getter_setter: \<open>valid_getter_setter g s \<Longrightarrow> setter (cregister_from_getter_setter g s) = s\<close> and
-  getter_of_cregister_from_getter_setter: \<open>valid_getter_setter g s \<Longrightarrow> getter (cregister_from_getter_setter g s) = g\<close>
-  for g :: \<open>'b \<Rightarrow> 'a\<close> and s
+lemma setter_setter_same[simp]: \<open>setter x b (setter x a m) = setter x b m\<close>
+  apply transfer apply (simp add: non_cregister_raw)
+  by (meson valid_getter_setter_def valid_getter_setter_getter_setter)
+
+(* TODO move to Registers.Classical_Extra *)
+lemma getter_setter: \<open>Axioms_Classical.getter F (Axioms_Classical.setter G a m) = Axioms_Classical.getter F m\<close> if \<open>Laws_Classical.compatible F G\<close> for F G
+  sorry
+
+lemma getter_setter_compat[simp]: \<open>ccompatible x y \<Longrightarrow> getter x (setter y a m) = getter x m\<close>
+  unfolding ccompatible_def
+  apply transfer by (simp add: non_cregister_raw getter_setter)
+lemma setter_setter_compat: \<open>ccompatible x y \<Longrightarrow> setter x a (setter y b m) = setter y b (setter x a m)\<close>
+  unfolding ccompatible_def
+  apply transfer apply (simp add: non_cregister_raw)
+  by (metis Classical_Extra.compatible_setter o_def)
+lemma setter_getter_same[simp]: \<open>setter x (getter x m) m = m\<close>
+  apply transfer apply (simp add: non_cregister_raw)
+  by (metis valid_getter_setter_def valid_getter_setter_getter_setter)
+
+lift_definition cregister_from_getter_setter :: \<open>('b \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> ('a,'b) cregister\<close> is
+  \<open>\<lambda>g s. if valid_getter_setter g s then register_from_getter_setter g s else non_cregister_raw\<close>
+  by auto
+
+lemma setter_of_cregister_from_getter_is_cregister: \<open>valid_getter_setter g s \<Longrightarrow> cregister (cregister_from_getter_setter g s)\<close>
+  apply transfer by simp
+lemma setter_of_cregister_from_getter_setter: \<open>valid_getter_setter g s \<Longrightarrow> setter (cregister_from_getter_setter g s) = s\<close>
+  apply transfer by simp
+lemma getter_of_cregister_from_getter_setter: \<open>valid_getter_setter g s \<Longrightarrow> getter (cregister_from_getter_setter g s) = g\<close>
+  apply transfer by simp
 
 lemma setter_pair:
   assumes \<open>ccompatible F G\<close>
   shows \<open>setter (cregister_pair F G) = (\<lambda>(x,y). setter F x o setter G y)\<close>
+  using assms unfolding ccompatible_def
+  apply transfer apply auto
   sorry
 
 lemma getter_pair:
   assumes \<open>ccompatible F G\<close>
   shows \<open>getter (cregister_pair F G) = (\<lambda>m. (getter F m, getter G m))\<close>
+  using assms unfolding ccompatible_def
+  apply transfer apply auto
   sorry
 
 lemma getter_chain:
   assumes \<open>cregister F\<close>
   shows \<open>getter (cregister_chain F G) = getter G o getter F\<close>
+  using assms apply transfer apply (auto simp: non_cregister_raw)
   sorry
 
 definition same_outside_cregister :: \<open>('a,'b) cregister \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool\<close> where
@@ -725,10 +897,16 @@ lemma apply_non_qregister_space[simp]: \<open>apply_qregister_space non_qregiste
 axiomatization CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
 axiomatization QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close>
 
-axiomatization where cregister_pair_chain_swap[simp]:
+lemma cregister_pair_chain_swap[simp]:
   "cregister_chain (cregister_pair A B) cswap = (cregister_pair B A)"
-axiomatization where qregister_pair_chain_swap[simp]:
+  apply (cases \<open>ccompatible A B\<close>)
+   apply (auto simp: non_cregister cregister_chain_pair cswap_def)
+  by (metis ccompatible_sym non_cregister)
+lemma qregister_pair_chain_swap[simp]:
   "qregister_chain (qregister_pair A B) qswap = (qregister_pair B A)"
+  apply (cases \<open>qcompatible A B\<close>)
+   apply (auto simp: non_qregister qregister_chain_pair qswap_def)
+  by (metis qcompatible_sym non_qregister)
 
 lemma Cccompatible_antimono_left: \<open>A \<le> B \<Longrightarrow> Cccompatible B C \<Longrightarrow> Cccompatible A C\<close>
   apply transfer by auto
@@ -740,16 +918,60 @@ lemma setter_chain:
   shows \<open>setter (cregister_chain F G) a m = setter F (setter G a (getter F m)) m\<close>
   sorry
 
-lemma setter_Fst: \<open>setter cFst = (\<lambda>x (_,y). (x,y))\<close>
-  sorry
-lemma setter_Snd: \<open>setter cSnd = (\<lambda>y (x,_). (x,y))\<close>
-  sorry
+(* TODO move to Registers *)
+lemma valid_getter_setter_fst[simp]: \<open>valid_getter_setter fst (\<lambda>x (_,y). (x,y))\<close>
+  by (simp add: valid_getter_setter_def)
+lemma Fst_register_from_getter_setter: \<open>Laws_Classical.Fst = register_from_getter_setter fst (\<lambda>x (_,y). (x,y))\<close>
+proof -
+  have \<open>Axioms_Classical.preregister Laws_Classical.Fst\<close>
+    by simp
+  moreover have \<open>Axioms_Classical.preregister (register_from_getter_setter fst (\<lambda>x (_, y). (x, y)))\<close>
+    by simp
+  moreover have \<open>Laws_Classical.Fst (update1 u v) = register_from_getter_setter fst (\<lambda>x (_, y). (x, y)) (update1 u v)\<close> for u v :: 'a
+    by (auto intro!: ext 
+        simp add: Laws_Classical.Fst_def register_from_getter_setter_def[abs_def] 
+        Axioms_Classical.tensor_update_def update1_def)
+  ultimately show ?thesis
+    by (rule update1_extensionality)
+qed
+lemma valid_getter_setter_snd[simp]: \<open>valid_getter_setter snd (\<lambda>y (x,_). (x,y))\<close>
+  by (simp add: valid_getter_setter_def)
+lemma Snd_register_from_getter_setter: \<open>Laws_Classical.Snd = register_from_getter_setter snd (\<lambda>y (x,_). (x,y))\<close>
+proof -
+  have \<open>Axioms_Classical.preregister Laws_Classical.Snd\<close>
+    by simp
+  moreover have \<open>Axioms_Classical.preregister (register_from_getter_setter snd (\<lambda>y (x,_). (x, y)))\<close>
+    by simp
+  moreover have \<open>Laws_Classical.Snd (update1 u v) = register_from_getter_setter snd (\<lambda>y (x,_). (x,y)) (update1 u v)\<close> for u v :: 'a
+    by (auto intro!: ext 
+        simp add: Laws_Classical.Snd_def register_from_getter_setter_def[abs_def] 
+        Axioms_Classical.tensor_update_def update1_def)
+  ultimately show ?thesis
+    by (rule update1_extensionality)
+qed
+lemma setter_Fst: \<open>Axioms_Classical.setter Laws_Classical.Fst x' xy = (x',snd xy)\<close>
+  apply (subst Fst_register_from_getter_setter)
+  by (simp add: case_prod_beta)
+lemma getter_Fst: \<open>Axioms_Classical.getter Laws_Classical.Fst = fst\<close>
+  apply (subst Fst_register_from_getter_setter)
+  by (simp add: case_prod_beta)
+lemma setter_Snd: \<open>Axioms_Classical.setter Laws_Classical.Snd y' xy = (fst xy,y')\<close>
+  apply (subst Snd_register_from_getter_setter)
+  by (simp add: case_prod_beta)
+lemma getter_Snd: \<open>Axioms_Classical.getter Laws_Classical.Snd = snd\<close>
+  apply (subst Snd_register_from_getter_setter)
+  by (simp add: case_prod_beta)
 
-lemma getter_Fst[simp]: \<open>getter cFst = fst\<close>
-  sorry
-lemma getter_Snd[simp]: \<open>getter cSnd = snd\<close>
-  sorry
-
+lemma setter_cFst: \<open>setter cFst x' xy = (x',snd xy)\<close>
+  apply transfer
+  by (simp add: setter_Fst[abs_def] case_prod_unfold)
+lemma setter_cSnd: \<open>setter cSnd y' xy = (fst xy,y')\<close>
+  apply transfer
+  by (simp add: setter_Snd[abs_def] case_prod_unfold)
+lemma getter_cFst[simp]: \<open>getter cFst = fst\<close>
+  apply transfer by (simp add: getter_Fst)
+lemma getter_cSnd[simp]: \<open>getter cSnd = snd\<close>
+  apply transfer by (simp add: getter_Snd)
 
 (* TODO move to misc *)
 lemma Some_map_comp[simp]: \<open>Some \<circ>\<^sub>m f = f\<close>
@@ -1001,6 +1223,15 @@ type_synonym 'a qvariable = \<open>('a,qu) qregister\<close>
 type_synonym QVARIABLE = \<open>qu QREGISTER\<close>
 type_synonym CVARIABLE = \<open>cl CREGISTER\<close>
 
+lift_definition transform_qregister :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) \<Rightarrow> ('a,'b) qregister\<close> is
+  \<open>\<lambda>(U :: 'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2). if unitary U then cblinfun_apply (sandwich U) else non_qregister_raw\<close>
+  by (auto simp: unitary_sandwich_register)
+
+lemma qregister_transform_qregister[simp]: \<open>unitary U \<Longrightarrow> qregister (transform_qregister U)\<close>
+  apply (transfer fixing: U) by (auto simp: unitary_sandwich_register)
+
+lemma apply_qregister_transform_qregister: \<open>unitary U \<Longrightarrow> apply_qregister (transform_qregister U) a = sandwich U a\<close>
+  apply (transfer fixing: U a) by (auto simp: unitary_sandwich_register sandwich_apply)
 
 (* datatype 'a vtree = VTree_Singleton 'a | VTree_Concat "'a vtree" "'a vtree" | VTree_Unit *)
 
@@ -1072,7 +1303,9 @@ definition index_flip_mem2 :: "qu2 \<Rightarrow> qu2" where \<open>index_flip_me
 definition swap_cvariables_mem2 :: "'a c2variable \<Rightarrow> 'a c2variable \<Rightarrow> (cl2 \<Rightarrow> cl2)" where
   \<open>swap_cvariables_mem2 x y m = apply_cregister_total (cregister_pair x y) (\<lambda>(a,b). (b,a)) m\<close>
 
-axiomatization swap_variables_qvars :: \<open>'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> 'b q2variable \<Rightarrow> 'b q2variable\<close>
+definition swap_variables_qvars :: \<open>'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> 'b q2variable \<Rightarrow> 'b q2variable\<close> where
+  \<open>swap_variables_qvars Q Q' R = 
+    qregister_chain (transform_qregister (apply_qregister (qregister_pair Q Q') swap_ell2)) R\<close>
 
 section \<open>Unsorted\<close>
 
@@ -1083,7 +1316,7 @@ lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.
   sorry
 
 
-axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close>
+(* axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close> *)
 
 named_theorems translate_to_index_registers
 

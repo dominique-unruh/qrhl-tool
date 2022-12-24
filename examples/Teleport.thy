@@ -2,6 +2,11 @@ theory Teleport
   imports QRHL.QRHL Registers.Tensor_Product_Matrices
 begin
 
+(* TODO remove need for this *)
+declare ETTS.rep_in_S[simp del]
+declare ETTS.rep_inverse[simp del]
+declare ETTS.Abs_inverse[simp del]
+
 (* lemma assoc_op_lift_aux:
   fixes U Q R S
   assumes [register]: \<open>qregister \<lbrakk>Q, R, S\<rbrakk>\<close>
