@@ -2,11 +2,6 @@ theory EPR
   imports QRHL.QRHL
 begin
 
-(* TODO remove need for this *)
-declare ETTS.rep_in_S[simp del]
-declare ETTS.rep_inverse[simp del]
-declare ETTS.Abs_inverse[simp del]
-
 (* TODO: Make more pretty *)
 lemma joint_measure_aux:
   fixes q :: "(bit, qu) qregister" and r :: "(bit, qu) qregister"

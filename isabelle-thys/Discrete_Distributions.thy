@@ -1035,7 +1035,7 @@ lemma product_distr'_onepoint:
 proof transfer
   fix x :: 'a
     and D :: "'a \<Rightarrow> 'b \<Rightarrow> real"
-  assume "pred_fun (\<lambda>x. x\<in>UNIV) is_distribution D"
+  assume "pred_fun \<top> is_distribution D"
   then have distr: "is_distribution (D i)" for i
     by simp
   assume sum1: "infsum (D i) UNIV = 1" if "i \<noteq> x" for i
@@ -1101,7 +1101,7 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer, ru
     and x :: 'a
     and \<mu>f :: "'c \<Rightarrow> real"
   assume \<mu>: "is_distribution \<mu>"
-  assume f: "pred_fun (\<lambda>x. x\<in>UNIV) is_distribution f"
+  assume f: "pred_fun \<top> is_distribution f"
   then have fpos: "(0 \<le> f y x)" and fy_sum: "f y abs_summable_on UNIV" and fy_sum1: "infsum (f y) UNIV \<le> 1" for y x
     by (auto simp: is_distribution_def)
   from f have fyx1: "f y x \<le> 1" for y x
@@ -1221,7 +1221,7 @@ proof (rule local_defE[of "bind_distr \<mu> f"], rename_tac \<mu>f, transfer)
     and f :: "'b \<Rightarrow> 'a \<Rightarrow> real"
   assume \<mu>: "is_distribution \<mu>"
   then have \<mu>pos: "\<mu> x \<ge> 0" for x by (simp add: is_distribution_def)
-  assume f: "pred_fun (\<lambda>x. x\<in>UNIV) is_distribution f"
+  assume f: "pred_fun \<top> is_distribution f"
   then have fpos[simp]: "0 \<le> f y x" and fy_sum: "f y abs_summable_on UNIV"
     and fy_sum1: "infsum (f y) UNIV \<le> 1" 
     for y x
