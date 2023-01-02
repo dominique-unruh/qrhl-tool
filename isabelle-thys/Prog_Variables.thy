@@ -125,18 +125,51 @@ lemma apply_qregister_of_id[simp]: \<open>qregister F \<Longrightarrow> apply_qr
 (* Equivalence class of cregisters *)
 axiomatization valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close>
   where valid_cregister_range: \<open>cregister F \<Longrightarrow> valid_cregister_range (range (apply_cregister F))\<close> for F :: \<open>('b,'a) cregister\<close>
-(* TODO not a good definition because we don't see that it's closed under infinite intersections
-        (for defining valid_qregister_range-closure).
-        We probably need that for definition QREGISTER_PAIR.
 
-Maybe: Type-I factor works. Takesaki V.1.27, V.1.28, p299f seem to almost imply that every type-I factor
-is spatially isomorphic to B(H)\<otimes>\<complex>. (Which is what we need) Only the spatially is not clear. (Notation \<cong> is questionable)
+(* TODO move *)
+lemma csubspace_commutant[simp]: \<open>csubspace (commutant X)\<close>
+  by (auto simp add: complex_vector.subspace_def commutant_def cblinfun_compose_add_right cblinfun_compose_add_left)
 
- *)
-inductive valid_qregister_range :: \<open>'a qupdate set \<Rightarrow> bool\<close> where
-  \<open>isometry ((U::('a\<times>'a) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2)*) \<Longrightarrow> U* *\<^sub>S \<top> = (A \<otimes>\<^sub>S B)
-   \<Longrightarrow> \<FF> = range (\<lambda>a. U o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o id_cblinfun) o\<^sub>C\<^sub>L U*)
-   \<Longrightarrow> valid_qregister_range \<FF>\<close>
+lemma closed_commutant[simp]: \<open>closed (commutant X)\<close>
+proof (subst closed_sequential_limits, intro allI impI, erule conjE)
+  fix s :: \<open>nat \<Rightarrow> _\<close> and l 
+  assume s_comm: \<open>\<forall>n. s n \<in> commutant X\<close>
+  assume \<open>s \<longlonglongrightarrow> l\<close>
+  have \<open>l o\<^sub>C\<^sub>L x - x o\<^sub>C\<^sub>L l = 0\<close> if \<open>x \<in> X\<close> for x
+  proof -
+    from \<open>s \<longlonglongrightarrow> l\<close>
+    have \<open>(\<lambda>n. s n o\<^sub>C\<^sub>L x - x o\<^sub>C\<^sub>L s n) \<longlonglongrightarrow> l o\<^sub>C\<^sub>L x - x o\<^sub>C\<^sub>L l\<close>
+      apply (rule isCont_tendsto_compose[rotated])
+      by (intro continuous_intros)
+    then have \<open>(\<lambda>_. 0) \<longlonglongrightarrow> l o\<^sub>C\<^sub>L x - x o\<^sub>C\<^sub>L l\<close>
+      using s_comm that by (auto simp add: commutant_def)
+    then show ?thesis
+      by (simp add: LIMSEQ_const_iff that)
+  qed
+  then show \<open>l \<in> commutant X\<close>
+    by (simp add: commutant_def)
+qed
+
+(* TODO move *)
+lemma closed_csubspace_commutant[simp]: \<open>closed_csubspace (commutant X)\<close>
+  apply (rule closed_csubspace.intro) by simp_all
+
+(* TODO move *)
+lemma commutant_mult: \<open>a o\<^sub>C\<^sub>L b \<in> commutant X\<close> if \<open>a \<in> commutant X\<close> and \<open>b \<in> commutant X\<close>
+  using that 
+  apply (auto simp: commutant_def cblinfun_compose_assoc)
+  by (simp flip: cblinfun_compose_assoc)
+
+(* TODO move *)
+lemma double_commutant_grows[simp]: \<open>X \<subseteq> commutant (commutant X)\<close>
+  by (auto simp add: commutant_def)
+
+definition valid_qregister_range :: \<open>'a qupdate set \<Rightarrow> bool\<close> where
+  \<open>valid_qregister_range \<FF> \<longleftrightarrow> (\<forall>a\<in>\<FF>. a* \<in> \<FF>) \<and> commutant (commutant \<FF>) = \<FF>\<close>
+
+lemma valid_qregister_rangeI: \<open>(\<And>a. a\<in>\<FF> \<Longrightarrow> a* \<in> \<FF>) \<Longrightarrow> commutant (commutant \<FF>) \<subseteq> \<FF> \<Longrightarrow> valid_qregister_range \<FF>\<close>
+  apply (auto simp: valid_qregister_range_def)
+  using double_commutant_grows by blast
 
 (* TODO move *)
 lemma set_compr_2_image_collect: \<open>{f x y |x y. P x y} = case_prod f ` Collect (case_prod P)\<close>
@@ -245,73 +278,50 @@ lemma sandwich_tensor_ell2_right: \<open>sandwich (tensor_ell2_right \<psi>*) *\
   apply (rule cblinfun_eqI)
   by (simp add: sandwich_apply tensor_ell2_right_apply tensor_op_ell2)
 
+(* TODO move *)
+lemma register_range_complement_commutant: \<open>commutant (range F) = range G\<close> if \<open>complements F G\<close>
+  sorry
+
+(* TODO move *)
+lemma register_range_double_commutant: \<open>commutant (commutant (range F)) = range F\<close> if \<open>qregister_raw F\<close>
+proof -
+  from complement_exists
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis F.
+        commutant (commutant (range F)) = range F\<close>
+  proof (rule with_type_mp)
+    from that show \<open>qregister_raw F\<close>
+      apply transfer by simp
+    assume \<open>\<exists>G :: 'c ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2 \<Rightarrow> 'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. complements F G\<close>
+    then obtain G :: \<open>'c ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2 \<Rightarrow> 'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> 
+      where \<open>complements F G\<close>
+      by auto
+    then have \<open>commutant (range F) = range G\<close>
+      by (simp add: register_range_complement_commutant)
+    moreover have \<open>commutant (range G) = range F\<close>
+      by (meson \<open>complements F G\<close> complements_sym register_range_complement_commutant)
+    ultimately show \<open>commutant (commutant (range F)) = range F\<close>
+      by simp
+  qed
+  note this[cancel_with_type]
+  then show ?thesis
+    by -
+qed
+
 lemma valid_qregister_range: 
   fixes F :: \<open>('a,'b) qregister\<close>
   assumes \<open>qregister F\<close>
   shows \<open>valid_qregister_range (range (apply_qregister F))\<close>
-proof (use assms in transfer)
-  fix F :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
-  assume \<open>qregister_raw F\<close>
-  from register_decomposition
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis F.
-        valid_qregister_range (range F)\<close>
-  proof (rule with_type_mp)
-    from \<open>qregister_raw F\<close>
-    show \<open>qregister_raw F\<close>
-      by -
-    assume \<open>\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. F \<theta> = sandwich U (\<theta> \<otimes>\<^sub>o id_cblinfun))\<close>
-    then obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> 
-      where [simp]: \<open>unitary U\<close> and FU: \<open>F \<theta> = sandwich U (\<theta> \<otimes>\<^sub>o id_cblinfun)\<close> for \<theta>
-      by auto
-    fix x :: 'a and y :: 'c
-    define A B :: \<open>'b ell2 ccsubspace\<close> where 
-      \<open>A = U *\<^sub>S tensor_ell2_right (ket y) *\<^sub>S \<top>\<close> and \<open>B = U *\<^sub>S tensor_ell2_left (ket x) *\<^sub>S \<top>\<close>
-    define V where \<open>V = U o\<^sub>C\<^sub>L (tensor_ell2_right (ket y)* \<otimes>\<^sub>o tensor_ell2_left (ket x)*) o\<^sub>C\<^sub>L (U* \<otimes>\<^sub>o U*)\<close>
-    have \<open>isometry (V*)\<close>
-      by (auto intro!: isometry_cblinfun_compose isometry_tensor_op isometry_tensor_ell2_right
-          isometry_tensor_ell2_left
-          simp add: V_def tensor_op_adjoint)
-    have V_top: \<open>V* *\<^sub>S \<top> = A \<otimes>\<^sub>S B\<close>
-      by (simp add: V_def A_def B_def tensor_ccsubspace_image tensor_op_adjoint cblinfun_compose_image)
-    have range_F: \<open>range F = range (\<lambda>a. V o\<^sub>C\<^sub>L a \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V*)\<close>
-    proof (rule Set.set_eqI, rule iffI)
-      fix b :: \<open>'b qupdate\<close>
-      assume \<open>b \<in> range F\<close>
-      then obtain a where ba: \<open>b = sandwich U *\<^sub>V a \<otimes>\<^sub>o id_cblinfun\<close>
-        unfolding FU by blast
-      define a' where \<open>a' = F a\<close>
-      have *: \<open>a \<otimes>\<^sub>o id_cblinfun = sandwich (tensor_ell2_right |y\<rangle>* \<otimes>\<^sub>o tensor_ell2_left |x\<rangle>*) *\<^sub>V sandwich (U* \<otimes>\<^sub>o U*) *\<^sub>V
-              (a' \<otimes>\<^sub>o id_cblinfun)\<close>
-        apply (simp add: a'_def FU sandwich_tensor_op sandwich_isometry_id isometry_tensor_ell2_left)
-        by (simp add: sandwich_compose sandwich_tensor_ell2_right flip: cblinfun_apply_cblinfun_compose)
-      show \<open>b \<in> range (\<lambda>a. V o\<^sub>C\<^sub>L a \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V*)\<close>
-        apply (rule range_eqI[where x=a'])
-        by (simp add: V_def ba tensor_op_adjoint * sandwich_apply cblinfun_compose_assoc)
-    next
-      fix b :: \<open>'b qupdate\<close>
-      assume \<open>b \<in> range (\<lambda>a. V o\<^sub>C\<^sub>L a \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V*)\<close>
-      then obtain a where ba: \<open>b = sandwich V (a \<otimes>\<^sub>o id_cblinfun)\<close>
-        by (metis (no_types, lifting) rangeE sandwich.rep_eq)
-      define a' :: \<open>'a qupdate\<close> where \<open>a' = sandwich (tensor_ell2_right |y\<rangle>*) *\<^sub>V sandwich (U*) *\<^sub>V a\<close>
-      have \<open>b = F a'\<close>
-        apply (simp add: FU ba V_def sandwich_tensor_op flip: sandwich_compose)
-        by (simp add: a'_def sandwich_isometry_id isometry_tensor_ell2_left)
-      then show \<open>b \<in> range F\<close>
-        by simp
-    qed
-    from \<open>isometry (V* )\<close> V_top range_F
-    show \<open>valid_qregister_range (range F)\<close>
-      by (rule valid_qregister_range.intros[where U=V])
-  qed
-  note this[cancel_with_type]
-  then show \<open>valid_qregister_range (range F)\<close>
-    by -
+proof (rule valid_qregister_rangeI)
+  show \<open>a \<in> range (apply_qregister F) \<Longrightarrow> a* \<in> range (apply_qregister F)\<close> for a
+    by (metis (mono_tags, lifting) assms image_iff qregister.rep_eq rangeI register_adj)
+  show \<open>commutant (commutant (range (apply_qregister F))) \<subseteq> range (apply_qregister F)\<close>
+    apply (subst register_range_double_commutant)
+    using assms qregister.rep_eq by auto
 qed
-
 
 definition \<open>empty_cregister_range = {Map.empty, Some}\<close>
 axiomatization where valid_empty_cregister_range: \<open>valid_cregister_range empty_cregister_range\<close>
-definition \<open>empty_qregister_range = {c *\<^sub>C (id_cblinfun) | c. True}\<close>
+definition \<open>empty_qregister_range = {c *\<^sub>C id_cblinfun | c. True}\<close>
 axiomatization where valid_empty_qregister_range: \<open>valid_qregister_range empty_qregister_range\<close>
 typedef 'a CREGISTER = \<open>Collect valid_cregister_range :: 'a cupdate set set\<close>
   using valid_empty_cregister_range by blast
