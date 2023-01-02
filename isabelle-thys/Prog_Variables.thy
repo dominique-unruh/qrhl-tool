@@ -15,6 +15,7 @@ begin
 unbundle cblinfun_notation
 no_notation m_inv ("inv\<index> _" [81] 80)
 hide_const (open) Order.top
+no_notation Order.top ("\<top>\<index>")
 hide_const (open) Axioms_Classical.getter
 hide_const (open) Axioms_Classical.setter
 declare [[simproc del: Laws_Quantum.compatibility_warn]]
@@ -124,8 +125,190 @@ lemma apply_qregister_of_id[simp]: \<open>qregister F \<Longrightarrow> apply_qr
 (* Equivalence class of cregisters *)
 axiomatization valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close>
   where valid_cregister_range: \<open>cregister F \<Longrightarrow> valid_cregister_range (range (apply_cregister F))\<close> for F :: \<open>('b,'a) cregister\<close>
-axiomatization valid_qregister_range :: \<open>'a qupdate set \<Rightarrow> bool\<close>
-  where valid_qregister_range: \<open>qregister F \<Longrightarrow> valid_qregister_range (range (apply_qregister F))\<close> for F :: \<open>('b,'a) qregister\<close>
+(* TODO not a good definition because we don't see that it's closed under infinite intersections
+        (for defining valid_qregister_range-closure).
+        We probably need that for definition QREGISTER_PAIR.
+
+Maybe: Type-I factor works. Takesaki V.1.27, V.1.28, p299f seem to almost imply that every type-I factor
+is spatially isomorphic to B(H)\<otimes>\<complex>. (Which is what we need) Only the spatially is not clear. (Notation \<cong> is questionable)
+
+ *)
+inductive valid_qregister_range :: \<open>'a qupdate set \<Rightarrow> bool\<close> where
+  \<open>isometry ((U::('a\<times>'a) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2)*) \<Longrightarrow> U* *\<^sub>S \<top> = (A \<otimes>\<^sub>S B)
+   \<Longrightarrow> \<FF> = range (\<lambda>a. U o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o id_cblinfun) o\<^sub>C\<^sub>L U*)
+   \<Longrightarrow> valid_qregister_range \<FF>\<close>
+
+(* TODO move *)
+lemma set_compr_2_image_collect: \<open>{f x y |x y. P x y} = case_prod f ` Collect (case_prod P)\<close>
+  by fast
+
+(* TODO move *)
+lemma closure_image_closure: \<open>continuous_on (closure S) f \<Longrightarrow> closure (f ` closure S) = closure (f ` S)\<close>
+  by (smt (verit) closed_closure closure_closure closure_mono closure_subset image_closure_subset image_mono set_eq_subset)
+
+(* TODO move *)
+lemma ccspan_closure[simp]: \<open>ccspan (closure X) = ccspan X\<close>
+  by (simp add: basic_trans_rules(24) ccspan.rep_eq ccspan_leqI ccspan_mono closure_mono closure_subset complex_vector.span_superset)
+
+lemma tensor_ell2_diff1: \<open>tensor_ell2 (a - b) c = tensor_ell2 a c - tensor_ell2 b c\<close>
+  by (simp add: bounded_cbilinear.diff_left bounded_cbilinear_tensor_ell2)
+
+lemma tensor_ell2_diff2: \<open>tensor_ell2 a (b - c) = tensor_ell2 a b - tensor_ell2 a c\<close>
+  by (simp add: bounded_cbilinear.diff_right bounded_cbilinear_tensor_ell2)
+
+lemma continuous_tensor_ell2: \<open>continuous_on UNIV (\<lambda>(x::'a ell2, y::'b ell2). x \<otimes>\<^sub>s y)\<close>
+proof -
+  have cont: \<open>continuous_on UNIV (\<lambda>t. t \<otimes>\<^sub>s x)\<close> for x :: \<open>'b ell2\<close>
+    by (intro linear_continuous_on bounded_clinear.bounded_linear bounded_clinear_tensor_ell22)
+  have lip: \<open>local_lipschitz (UNIV :: 'a ell2 set) (UNIV :: 'b ell2 set) (\<otimes>\<^sub>s)\<close>
+  proof (rule local_lipschitzI)
+    fix t :: \<open>'a ell2\<close> and x :: \<open>'b ell2\<close>
+    define u L :: real where \<open>u = 1\<close> and \<open>L = norm t + u\<close>
+    have \<open>u > 0\<close>
+      by (simp add: u_def)
+    have [simp]: \<open>L \<ge> 0\<close>
+      by (simp add: L_def u_def)
+    have *: \<open>norm s \<le> L\<close> if \<open>s\<in>cball t u\<close> for s :: \<open>'a ell2\<close>
+      using that
+      apply (simp add: L_def dist_norm)
+      by (smt (verit) norm_minus_commute norm_triangle_sub)
+    have \<open>L-lipschitz_on (cball x u) ((\<otimes>\<^sub>s) s)\<close> if \<open>s\<in>cball t u\<close> for s :: \<open>'a ell2\<close>
+      apply (rule lipschitz_onI)
+      by (auto intro!: mult_right_mono *[OF that]
+          simp add: dist_norm norm_tensor_ell2 simp flip: tensor_ell2_diff2)
+    with \<open>u > 0\<close> show \<open>\<exists>u>0. \<exists>L. \<forall>s\<in>cball t u \<inter> UNIV. L-lipschitz_on (cball x u \<inter> UNIV) ((\<otimes>\<^sub>s) s)\<close>
+      by force
+  qed
+  show ?thesis
+    apply (subst UNIV_Times_UNIV[symmetric])
+    using lip cont by (rule Lipschitz.continuous_on_TimesI)
+qed
+
+(* TODO move to Tensor_Product *)
+lemma tensor_ccsubspace_image: \<open>(A *\<^sub>S T) \<otimes>\<^sub>S (B *\<^sub>S U) = (A \<otimes>\<^sub>o B) *\<^sub>S (T \<otimes>\<^sub>S U)\<close>
+proof -
+  have \<open>(A *\<^sub>S T) \<otimes>\<^sub>S (B *\<^sub>S U) = ccspan ((\<lambda>(\<psi>, \<phi>). \<psi> \<otimes>\<^sub>s \<phi>) ` (space_as_set (A *\<^sub>S T) \<times> space_as_set (B *\<^sub>S U)))\<close>
+    by (simp add: tensor_ccsubspace_def set_compr_2_image_collect ccspan.rep_eq)
+  also have \<open>\<dots> = ccspan ((\<lambda>(\<psi>, \<phi>). \<psi> \<otimes>\<^sub>s \<phi>) ` closure ((A ` space_as_set T) \<times> (B ` space_as_set U)))\<close>
+    by (simp add: cblinfun_image.rep_eq closure_Times)
+  also have \<open>\<dots> = ccspan (closure ((\<lambda>(\<psi>, \<phi>). \<psi> \<otimes>\<^sub>s \<phi>) ` ((A ` space_as_set T) \<times> (B ` space_as_set U))))\<close>
+    apply (subst closure_image_closure[symmetric])
+    using continuous_on_subset continuous_tensor_ell2 by auto
+  also have \<open>\<dots> = ccspan ((\<lambda>(\<psi>, \<phi>). \<psi> \<otimes>\<^sub>s \<phi>) ` ((A ` space_as_set T) \<times> (B ` space_as_set U)))\<close>
+    by simp
+  also have \<open>\<dots> = (A \<otimes>\<^sub>o B) *\<^sub>S ccspan ((\<lambda>(\<psi>, \<phi>). \<psi> \<otimes>\<^sub>s \<phi>) ` (space_as_set T \<times> space_as_set U))\<close>
+    by (simp add: cblinfun_image_ccspan image_image tensor_op_ell2 case_prod_beta
+        flip: map_prod_image)
+  also have \<open>\<dots> = (A \<otimes>\<^sub>o B) *\<^sub>S (T \<otimes>\<^sub>S U)\<close>
+    by (simp add: tensor_ccsubspace_def set_compr_2_image_collect)
+  finally show ?thesis
+    by -
+qed
+
+(* TODO move *)
+lemma isometry_tensor_op: \<open>isometry (U \<otimes>\<^sub>o V)\<close> if \<open>isometry U\<close> and \<open>isometry V\<close>
+  unfolding isometry_def using that by (simp add: tensor_op_adjoint comp_tensor_op)
+
+(* TODO move *)
+lemma isometry_tensor_ell2_right: \<open>isometry (tensor_ell2_right \<psi>)\<close> if \<open>norm \<psi> = 1\<close>
+  apply (rule norm_preserving_isometry)
+  by (simp add: tensor_ell2_right_apply norm_tensor_ell2 that)
+
+(* TODO move *)
+lemma isometry_tensor_ell2_left: \<open>isometry (tensor_ell2_left \<psi>)\<close> if \<open>norm \<psi> = 1\<close>
+  apply (rule norm_preserving_isometry)
+  by (simp add: tensor_ell2_left_apply norm_tensor_ell2 that)
+
+(* TODO move *)
+lemma sandwich_isometry_id: \<open>isometry (U*) \<Longrightarrow> sandwich U id_cblinfun = id_cblinfun\<close>
+  by (simp add: sandwich_apply isometry_def)
+
+(* TODO move *)
+(* TODO same for left *)
+lemma tensor_ell2_right_scale: \<open>tensor_ell2_right (a *\<^sub>C \<psi>) = a *\<^sub>C tensor_ell2_right \<psi>\<close>
+  apply transfer by (auto intro!: ext simp: tensor_ell2_scaleC2)
+
+(* TODO move *)
+(* TODO same for left *)
+lemma tensor_ell2_right_0[simp]: \<open>tensor_ell2_right 0 = 0\<close>
+  by (auto intro!: cblinfun_eqI simp: tensor_ell2_right_apply)
+
+(* TODO move *)
+(* TODO same for left *)
+lemma tensor_ell2_right_adj_apply[simp]: \<open>(tensor_ell2_right \<psi>*) *\<^sub>V (\<alpha> \<otimes>\<^sub>s \<beta>) = (\<psi> \<bullet>\<^sub>C \<beta>) *\<^sub>C \<alpha>\<close>
+  apply (rule cinner_extensionality)
+  by (simp add: cinner_adj_right tensor_ell2_right_apply)
+
+(* TODO move *)
+(* TODO same for left *)
+lemma sandwich_tensor_ell2_right: \<open>sandwich (tensor_ell2_right \<psi>*) *\<^sub>V a \<otimes>\<^sub>o b = (\<psi> \<bullet>\<^sub>C (b *\<^sub>V \<psi>)) *\<^sub>C a\<close>
+  apply (rule cblinfun_eqI)
+  by (simp add: sandwich_apply tensor_ell2_right_apply tensor_op_ell2)
+
+lemma valid_qregister_range: 
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>valid_qregister_range (range (apply_qregister F))\<close>
+proof (use assms in transfer)
+  fix F :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
+  assume \<open>qregister_raw F\<close>
+  from register_decomposition
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis F.
+        valid_qregister_range (range F)\<close>
+  proof (rule with_type_mp)
+    from \<open>qregister_raw F\<close>
+    show \<open>qregister_raw F\<close>
+      by -
+    assume \<open>\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. F \<theta> = sandwich U (\<theta> \<otimes>\<^sub>o id_cblinfun))\<close>
+    then obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> 
+      where [simp]: \<open>unitary U\<close> and FU: \<open>F \<theta> = sandwich U (\<theta> \<otimes>\<^sub>o id_cblinfun)\<close> for \<theta>
+      by auto
+    fix x :: 'a and y :: 'c
+    define A B :: \<open>'b ell2 ccsubspace\<close> where 
+      \<open>A = U *\<^sub>S tensor_ell2_right (ket y) *\<^sub>S \<top>\<close> and \<open>B = U *\<^sub>S tensor_ell2_left (ket x) *\<^sub>S \<top>\<close>
+    define V where \<open>V = U o\<^sub>C\<^sub>L (tensor_ell2_right (ket y)* \<otimes>\<^sub>o tensor_ell2_left (ket x)*) o\<^sub>C\<^sub>L (U* \<otimes>\<^sub>o U*)\<close>
+    have \<open>isometry (V*)\<close>
+      by (auto intro!: isometry_cblinfun_compose isometry_tensor_op isometry_tensor_ell2_right
+          isometry_tensor_ell2_left
+          simp add: V_def tensor_op_adjoint)
+    have V_top: \<open>V* *\<^sub>S \<top> = A \<otimes>\<^sub>S B\<close>
+      by (simp add: V_def A_def B_def tensor_ccsubspace_image tensor_op_adjoint cblinfun_compose_image)
+    have range_F: \<open>range F = range (\<lambda>a. V o\<^sub>C\<^sub>L a \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V*)\<close>
+    proof (rule Set.set_eqI, rule iffI)
+      fix b :: \<open>'b qupdate\<close>
+      assume \<open>b \<in> range F\<close>
+      then obtain a where ba: \<open>b = sandwich U *\<^sub>V a \<otimes>\<^sub>o id_cblinfun\<close>
+        unfolding FU by blast
+      define a' where \<open>a' = F a\<close>
+      have *: \<open>a \<otimes>\<^sub>o id_cblinfun = sandwich (tensor_ell2_right |y\<rangle>* \<otimes>\<^sub>o tensor_ell2_left |x\<rangle>*) *\<^sub>V sandwich (U* \<otimes>\<^sub>o U*) *\<^sub>V
+              (a' \<otimes>\<^sub>o id_cblinfun)\<close>
+        apply (simp add: a'_def FU sandwich_tensor_op sandwich_isometry_id isometry_tensor_ell2_left)
+        by (simp add: sandwich_compose sandwich_tensor_ell2_right flip: cblinfun_apply_cblinfun_compose)
+      show \<open>b \<in> range (\<lambda>a. V o\<^sub>C\<^sub>L a \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V*)\<close>
+        apply (rule range_eqI[where x=a'])
+        by (simp add: V_def ba tensor_op_adjoint * sandwich_apply cblinfun_compose_assoc)
+    next
+      fix b :: \<open>'b qupdate\<close>
+      assume \<open>b \<in> range (\<lambda>a. V o\<^sub>C\<^sub>L a \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L V*)\<close>
+      then obtain a where ba: \<open>b = sandwich V (a \<otimes>\<^sub>o id_cblinfun)\<close>
+        by (metis (no_types, lifting) rangeE sandwich.rep_eq)
+      define a' :: \<open>'a qupdate\<close> where \<open>a' = sandwich (tensor_ell2_right |y\<rangle>*) *\<^sub>V sandwich (U*) *\<^sub>V a\<close>
+      have \<open>b = F a'\<close>
+        apply (simp add: FU ba V_def sandwich_tensor_op flip: sandwich_compose)
+        by (simp add: a'_def sandwich_isometry_id isometry_tensor_ell2_left)
+      then show \<open>b \<in> range F\<close>
+        by simp
+    qed
+    from \<open>isometry (V* )\<close> V_top range_F
+    show \<open>valid_qregister_range (range F)\<close>
+      by (rule valid_qregister_range.intros[where U=V])
+  qed
+  note this[cancel_with_type]
+  then show \<open>valid_qregister_range (range F)\<close>
+    by -
+qed
+
+
 definition \<open>empty_cregister_range = {Map.empty, Some}\<close>
 axiomatization where valid_empty_cregister_range: \<open>valid_cregister_range empty_cregister_range\<close>
 definition \<open>empty_qregister_range = {c *\<^sub>C (id_cblinfun) | c. True}\<close>
@@ -515,8 +698,10 @@ lemma ccompatible_comp_right[simp]: "ccompatible F G \<Longrightarrow> cregister
 lemma qcompatible_comp_right[simp]: "qcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> qcompatible F (qregister_chain G H)"
   by (meson qcompatible_comp_left qcompatible_sym)
 
-lemma Cccompatible_comp_right[simp]: "Cccompatible F G \<Longrightarrow> cregister H \<Longrightarrow> Cccompatible F (cregister_chain G H)" sorry
-lemma Qqcompatible_comp_right[simp]: "Qqcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> Qqcompatible F (qregister_chain G H)" sorry
+lemma Cccompatible_comp_right[simp]: "Cccompatible F G \<Longrightarrow> cregister H \<Longrightarrow> Cccompatible F (cregister_chain G H)"
+  apply transfer by auto
+lemma Qqcompatible_comp_right[simp]: "Qqcompatible F G \<Longrightarrow> qregister H \<Longrightarrow> Qqcompatible F (qregister_chain G H)"
+  apply transfer by auto
 
 lemmas ccompatible_Snd_Fst[simp] = ccompatible_Fst_Snd[THEN ccompatible_sym]
 lemmas qcompatible_Snd_Fst[simp] = qcompatible_Fst_Snd[THEN qcompatible_sym]
