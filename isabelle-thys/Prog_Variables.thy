@@ -280,7 +280,8 @@ lemma sandwich_tensor_ell2_right: \<open>sandwich (tensor_ell2_right \<psi>*) *\
 
 (* TODO move *)
 lemma register_range_complement_commutant: \<open>commutant (range F) = range G\<close> if \<open>complements F G\<close>
-  sorry
+  apply (rule complement_range[symmetric])
+  using that by (simp_all add: complements_def)
 
 (* TODO move *)
 lemma register_range_double_commutant: \<open>commutant (commutant (range F)) = range F\<close> if \<open>qregister_raw F\<close>
@@ -358,8 +359,33 @@ lift_definition CREGISTER_unit :: \<open>'a CREGISTER\<close> is empty_cregister
 lift_definition QREGISTER_unit :: \<open>'a QREGISTER\<close> is empty_qregister_range
   by (simp add: valid_empty_qregister_range)
 
+(* TODO move *)
+lemma triple_commutant[simp]: \<open>commutant (commutant (commutant X)) = commutant X\<close>
+  by (auto simp: commutant_def)
+
+(* TODO move *)
+lemma commutant_adj: \<open>adj ` commutant X = commutant (adj ` X)\<close>
+  apply (auto intro!: image_eqI double_adj[symmetric] simp: commutant_def simp flip: adj_cblinfun_compose)
+  by (metis adj_cblinfun_compose double_adj)
+
 axiomatization CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
-axiomatization QREGISTER_pair :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close>
+lift_definition QREGISTER_pair :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is
+  \<open>\<lambda>\<FF> \<GG> :: 'a qupdate set. commutant (commutant (\<FF> \<union> \<GG>))\<close>
+proof -
+  fix \<FF> \<GG> :: \<open>'a qupdate set\<close>
+  assume \<open>\<FF> \<in> Collect valid_qregister_range\<close>
+  then have [simp]: \<open>adj ` \<FF> = \<FF>\<close>
+    apply (auto simp: valid_qregister_range_def)
+    by force
+  assume \<open>\<GG> \<in> Collect valid_qregister_range\<close>
+  then have [simp]: \<open>adj ` \<GG> = \<GG>\<close>
+    apply (auto simp: valid_qregister_range_def)
+    by force
+  have \<open>adj ` commutant (commutant (\<FF> \<union> \<GG>)) = commutant (commutant (\<FF> \<union> \<GG>))\<close>
+    by (simp add: commutant_adj image_Un)
+  then show \<open>commutant (commutant (\<FF> \<union> \<GG>)) \<in> Collect valid_qregister_range\<close>
+    by (auto intro!: valid_qregister_rangeI)
+qed
 
 definition ccommuting_raw :: \<open>('a cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> ('b cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> bool\<close> where
   \<open>ccommuting_raw F G \<longleftrightarrow> (\<forall>a b. F a \<circ>\<^sub>m G b = G b \<circ>\<^sub>m F a)\<close>
@@ -1410,7 +1436,7 @@ lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_cha
 
 typedecl cl
 typedecl qu
-instance qu :: default sorry
+instance qu :: default ..
 
 type_synonym 'a cvariable = \<open>('a,cl) cregister\<close>
 type_synonym 'a qvariable = \<open>('a,qu) qregister\<close>
