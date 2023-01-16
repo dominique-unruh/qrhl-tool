@@ -164,6 +164,10 @@ lemma commutant_mult: \<open>a o\<^sub>C\<^sub>L b \<in> commutant X\<close> if 
 lemma double_commutant_grows[simp]: \<open>X \<subseteq> commutant (commutant X)\<close>
   by (auto simp add: commutant_def)
 
+(* TODO move *)
+lemma commutant_antimono: \<open>X \<subseteq> Y \<Longrightarrow> commutant X \<supseteq> commutant Y\<close>
+  by (auto simp add: commutant_def)
+
 definition valid_qregister_range :: \<open>'a qupdate set \<Rightarrow> bool\<close> where
   \<open>valid_qregister_range \<FF> \<longleftrightarrow> (\<forall>a\<in>\<FF>. a* \<in> \<FF>) \<and> commutant (commutant \<FF>) = \<FF>\<close>
 
@@ -174,6 +178,9 @@ lemma valid_qregister_rangeI: \<open>(\<And>a. a\<in>\<FF> \<Longrightarrow> a* 
 (* TODO move *)
 lemma set_compr_2_image_collect: \<open>{f x y |x y. P x y} = case_prod f ` Collect (case_prod P)\<close>
   by fast
+lemma set_compr_4_image_collect: \<open>{f x y z w |x y z w. P x y z w} = (\<lambda>(x,y,z,w). f x y z w) ` Collect (\<lambda>(x,y,z,w). P x y z w)\<close>
+  by (auto simp: image_def)
+
 
 (* TODO move *)
 lemma closure_image_closure: \<open>continuous_on (closure S) f \<Longrightarrow> closure (f ` closure S) = closure (f ` S)\<close>
@@ -320,10 +327,84 @@ proof (rule valid_qregister_rangeI)
     using assms qregister.rep_eq by auto
 qed
 
+lift_definition cregister_id :: \<open>('a,'a) cregister\<close> is id by simp
+lift_definition qregister_id :: \<open>('a,'a) qregister\<close> is id by simp
+
+lemma apply_cregister_id[simp]: \<open>apply_cregister cregister_id = id\<close>
+  by (rule cregister_id.rep_eq)
+lemma apply_qregister_id[simp]: \<open>apply_qregister qregister_id = id\<close>
+  by (rule qregister_id.rep_eq)
+
+lemma cregister_id[simp]: \<open>cregister cregister_id\<close>
+  apply transfer by simp
+lemma qregister_id[simp]: \<open>qregister qregister_id\<close>
+  apply transfer by simp
+
+definition \<open>empty_cregister_raw = register_from_getter_setter (\<lambda>_. undefined) (\<lambda>_::_::CARD_1. id)\<close> 
+lemma cregister_raw_empty_cregister_raw: \<open>cregister_raw empty_cregister_raw\<close>
+  apply (auto intro!: exI simp add: Axioms_Classical.register_def empty_cregister_raw_def)
+  by (simp add: valid_getter_setter_def)
+
+
+lift_definition empty_cregister :: \<open>('a::{CARD_1,enum}, 'b) cregister\<close> is
+  empty_cregister_raw
+  using cregister_raw_empty_cregister_raw by fast
+lemma empty_cregister_is_register[simp]: \<open>cregister empty_cregister\<close>
+  apply transfer by (rule cregister_raw_empty_cregister_raw)
+lift_definition empty_qregister :: \<open>('a::{CARD_1,enum}, 'b) qregister\<close> is
+  Quantum_Extra2.empty_var
+  by simp
+lemma empty_qregister_is_register[simp]: \<open>qregister empty_qregister\<close>
+  apply transfer by simp
+
 definition \<open>empty_cregister_range = {Map.empty, Some}\<close>
-axiomatization where valid_empty_cregister_range: \<open>valid_cregister_range empty_cregister_range\<close>
-definition \<open>empty_qregister_range = {c *\<^sub>C id_cblinfun | c. True}\<close>
-axiomatization where valid_empty_qregister_range: \<open>valid_qregister_range empty_qregister_range\<close>
+lemma valid_empty_cregister_range: \<open>valid_cregister_range empty_cregister_range\<close>
+proof -
+  have 1: \<open>a \<in> (empty_cregister_range :: 'a cupdate set)\<close>
+    if \<open>a \<in> range (apply_cregister (empty_cregister :: (unit,_) cregister))\<close> for a
+  proof -
+    from that 
+    obtain b :: \<open>unit \<rightharpoonup> unit\<close> where ab: \<open>a = apply_cregister (empty_cregister :: (unit,_) cregister) b\<close>
+      by auto
+    consider (some) \<open>b = Some\<close> | (empty) \<open>b = Map.empty\<close>
+      by force
+    then show ?thesis
+      apply cases
+      by (auto simp add: ab empty_cregister_range_def)
+  qed
+
+  have \<open>Map.empty \<in> range (apply_cregister (empty_cregister :: (unit,_) cregister))\<close>
+    by (auto intro!: range_eqI[of _ _ Map.empty])
+  moreover have \<open>Some \<in> range (apply_cregister (empty_cregister :: (unit,_) cregister))\<close>
+    by (auto intro!: range_eqI[of _ _ Some])
+  ultimately have 2: \<open>range (apply_cregister (empty_cregister :: (unit,_) cregister)) \<supseteq> (empty_cregister_range :: 'a cupdate set)\<close>
+    by (auto simp add: empty_cregister_range_def)
+
+  from 1 2 have \<open>range (apply_cregister (empty_cregister :: (unit,_) cregister)) = (empty_cregister_range :: 'a cupdate set)\<close>
+    by auto
+  then show ?thesis
+    by (metis empty_cregister_is_register valid_cregister_range)
+qed
+lemma valid_cregister_range_UNIV: \<open>valid_cregister_range UNIV\<close>
+proof -
+  have \<open>range (apply_cregister cregister_id) = UNIV\<close>
+    by simp
+  then show ?thesis
+    using cregister_id valid_cregister_range by fastforce
+qed
+definition \<open>empty_qregister_range = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+lemma valid_empty_qregister_range: \<open>valid_qregister_range empty_qregister_range\<close>
+proof -
+  have 1: \<open>(empty_qregister_range :: 'a qupdate set) = (\<lambda>c. c *\<^sub>C id_cblinfun) ` (one_dim_iso :: unit qupdate \<Rightarrow> _) ` UNIV\<close>
+    by (metis (mono_tags, lifting) UNIV_eq_I empty_qregister_range_def one_dim_iso_idem one_dim_scaleC_1 rangeI)
+  have 2: \<open>\<dots> = range (apply_qregister (empty_qregister :: (unit,_) qregister))\<close>
+    by (simp add: empty_qregister.rep_eq empty_var_def image_image)
+  show ?thesis
+    by (simp add: 1 2 valid_qregister_range)
+qed
+lemma valid_qregister_range_UNIV: \<open>valid_qregister_range UNIV\<close>
+  by (auto simp: valid_qregister_range_def commutant_def)
+
 typedef 'a CREGISTER = \<open>Collect valid_cregister_range :: 'a cupdate set set\<close>
   using valid_empty_cregister_range by blast
 typedef 'a QREGISTER = \<open>Collect valid_qregister_range :: 'a qupdate set set\<close>
@@ -347,7 +428,6 @@ instance
 end
 instantiation QREGISTER :: (type) order begin
 lift_definition less_eq_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> bool\<close> is \<open>(\<subseteq>)\<close>.
-print_theorems
 lift_definition less_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> bool\<close> is \<open>(\<subset>)\<close>.
 instance
   apply (intro_classes; transfer)
@@ -358,6 +438,10 @@ lift_definition CREGISTER_unit :: \<open>'a CREGISTER\<close> is empty_cregister
   by (simp add: valid_empty_cregister_range)
 lift_definition QREGISTER_unit :: \<open>'a QREGISTER\<close> is empty_qregister_range
   by (simp add: valid_empty_qregister_range)
+lift_definition CREGISTER_all :: \<open>'a CREGISTER\<close> is UNIV
+  by (simp add: valid_cregister_range_UNIV)
+lift_definition QREGISTER_all :: \<open>'a QREGISTER\<close> is UNIV
+  by (simp add: valid_qregister_range_UNIV)
 
 (* TODO move *)
 lemma triple_commutant[simp]: \<open>commutant (commutant (commutant X)) = commutant X\<close>
@@ -456,22 +540,10 @@ lift_definition Cccompatible :: \<open>'a CREGISTER \<Rightarrow> ('b,'a) cregis
 lift_definition Qqcompatible :: \<open>'a QREGISTER \<Rightarrow> ('b,'a) qregister \<Rightarrow> bool\<close> is
   \<open>\<lambda>F G. qregister_raw G \<and> (\<forall>a\<in>F. \<forall>b. a o\<^sub>C\<^sub>L G b = G b o\<^sub>C\<^sub>L a)\<close>.
 
-definition \<open>empty_cregister_raw = register_from_getter_setter (\<lambda>_. undefined) (\<lambda>_::_::CARD_1. id)\<close> 
-lemma cregister_raw_empty_cregister_raw: \<open>cregister_raw empty_cregister_raw\<close>
-  apply (auto intro!: exI simp add: Axioms_Classical.register_def empty_cregister_raw_def)
-  by (simp add: valid_getter_setter_def)
-
-
-lift_definition empty_cregister :: \<open>('a::{CARD_1,enum}, 'b) cregister\<close> is
-  empty_cregister_raw
-  using cregister_raw_empty_cregister_raw by fast
-lemma empty_cregister_is_register[simp]: \<open>cregister empty_cregister\<close>
-  apply transfer by (rule cregister_raw_empty_cregister_raw)
-lift_definition empty_qregister :: \<open>('a::{CARD_1,enum}, 'b) qregister\<close> is
-  Quantum_Extra2.empty_var
-  by simp
-lemma empty_qregister_is_register[simp]: \<open>qregister empty_qregister\<close>
-  apply transfer by simp
+lemma Cccompatible_CCcompatible: \<open>Cccompatible F G \<longleftrightarrow> cregister G \<and> CCcompatible F (CREGISTER_of G)\<close>
+  by (simp add: Cccompatible.rep_eq CCcompatible.rep_eq CREGISTER_of.rep_eq cregister.rep_eq)
+lemma Qqcompatible_QQcompatible: \<open>Qqcompatible F G \<longleftrightarrow> qregister G \<and> QQcompatible F (QREGISTER_of G)\<close>
+  by (simp add: Qqcompatible.rep_eq QQcompatible.rep_eq QREGISTER_of.rep_eq qregister.rep_eq)
 
 lemma empty_cregisters_same[simp]:
   fixes F :: \<open>('a::{CARD_1,enum},'b) cregister\<close>
@@ -659,6 +731,15 @@ lemma qregister_chain_apply_simp[simp]:
   shows \<open>apply_qregister (qregister_chain F G) = apply_qregister F o apply_qregister G\<close>
   by (rule qregister_chain_apply)
 
+lemma cregister_id_chain[simp]: \<open>cregister_chain cregister_id F = F\<close>
+  apply transfer by auto
+lemma qregister_id_chain[simp]: \<open>qregister_chain qregister_id F = F\<close>
+  apply transfer by auto
+lemma cregister_chain_id[simp]: \<open>cregister_chain F cregister_id = F\<close>
+  apply transfer by auto
+lemma qregister_chain_id[simp]: \<open>qregister_chain F qregister_id = F\<close>
+  apply transfer by auto
+
 lemma cregister_chain_non_register1[simp]: \<open>cregister_chain non_cregister F = non_cregister\<close>
   apply transfer by (auto simp add: non_cregister_raw)
 lemma cregister_chain_non_register2[simp]: \<open>cregister_chain F non_cregister = non_cregister\<close>
@@ -742,6 +823,177 @@ lemma Qqcompatible_comp_right[simp]: "Qqcompatible F G \<Longrightarrow> qregist
 lemmas ccompatible_Snd_Fst[simp] = ccompatible_Fst_Snd[THEN ccompatible_sym]
 lemmas qcompatible_Snd_Fst[simp] = qcompatible_Fst_Snd[THEN qcompatible_sym]
 
+lemma commutant_empty[simp]: \<open>commutant {} = UNIV\<close>
+  by (simp add: commutant_def)
+
+lemma closedin_vimage:
+  assumes \<open>closedin U S\<close>
+  assumes \<open>continuous_map T U f\<close>
+  shows \<open>closedin T (topspace T \<inter> (f -` S))\<close>
+  by (meson assms(1) assms(2) continuous_map_closedin_preimage_eq)
+
+lemma join_forall: \<open>(\<forall>x. P x) \<and> (\<forall>x. Q x) \<longleftrightarrow> (\<forall>x. P x \<and> Q x)\<close>
+  by auto
+
+(* TODO move *)
+lemma closedin_singleton: 
+  assumes \<open>hausdorff T\<close> and \<open>x \<in> topspace T\<close>
+  shows \<open>closedin T {x}\<close>
+proof -
+  obtain U where openU: \<open>openin T (U y)\<close> and x_not_U: \<open>x \<notin> U y\<close> and yU: \<open>y \<in> U y\<close> if \<open>x \<noteq> y\<close> and \<open>y \<in> topspace T\<close> for y
+    apply atomize_elim unfolding join_forall apply (rule choice)
+    using assms(1)[unfolded hausdorff_def, rule_format, OF assms(2)]
+    by auto
+  have \<open>topspace T - {x} = (\<Union>y\<in>topspace T - {x}. U y)\<close>
+    using yU openU x_not_U apply auto
+    using openin_subset by fastforce
+  also have \<open>openin T \<dots>\<close>
+    using openU by fastforce
+  finally have \<open>openin T (topspace T - {x})\<close>
+    by -
+  then show ?thesis
+    using assms(2) closedin_def by blast
+qed
+
+(* TODO move *)
+lemma continuous_map_scaleC_weak_star'[continuous_intros]:
+  assumes \<open>continuous_map T weak_star_topology f\<close>
+  shows \<open>continuous_map T weak_star_topology (\<lambda>x. scaleC c (f x))\<close>
+  using continuous_map_compose[OF assms continuous_map_scaleC_weak_star]
+  by (simp add: o_def)
+
+(* TODO move *)
+lemma continuous_map_uminus_weak_star[continuous_intros]:
+  assumes \<open>continuous_map T weak_star_topology f\<close>
+  shows \<open>continuous_map T weak_star_topology (\<lambda>x. - f x)\<close>
+  apply (subst scaleC_minus1_left[abs_def,symmetric])
+  by (intro continuous_map_scaleC_weak_star' assms)
+
+(* TODO move *)
+lemma continuous_map_add_weak_star[continuous_intros]: 
+  assumes \<open>continuous_map T weak_star_topology f\<close>
+  assumes \<open>continuous_map T weak_star_topology g\<close>
+  shows \<open>continuous_map T weak_star_topology (\<lambda>x. f x + g x)\<close>
+proof -
+  have \<open>continuous_map T euclidean (\<lambda>x. trace (t o\<^sub>C\<^sub>L f x))\<close> if \<open>trace_class t\<close> for t
+    using assms(1) continuous_on_weak_star_topo_iff_coordinatewise that by auto
+  moreover have \<open>continuous_map T euclidean (\<lambda>x. trace (t o\<^sub>C\<^sub>L g x))\<close> if \<open>trace_class t\<close> for t
+    using assms(2) continuous_on_weak_star_topo_iff_coordinatewise that by auto
+  ultimately show ?thesis
+    by (auto intro!: continuous_map_add simp add: continuous_on_weak_star_topo_iff_coordinatewise
+        cblinfun_compose_add_right trace_class_comp_left trace_plus)
+qed
+
+(* TODO move *)
+lemma continuous_map_minus_weak_star[continuous_intros]: 
+  assumes \<open>continuous_map T weak_star_topology f\<close>
+  assumes \<open>continuous_map T weak_star_topology g\<close>
+  shows \<open>continuous_map T weak_star_topology (\<lambda>x. f x - g x)\<close>
+  apply (subst diff_conv_add_uminus)
+  by (intro assms continuous_intros)
+
+(* TODO move *)
+lemma commutant_weak_star_closed[simp]: \<open>closedin weak_star_topology (commutant X)\<close>
+proof -
+  have comm_inter: \<open>commutant X = (\<Inter>x\<in>X. commutant {x})\<close>
+    by (auto simp: commutant_def)
+  have comm_x: \<open>commutant {x} = (\<lambda>y. x o\<^sub>C\<^sub>L y - y o\<^sub>C\<^sub>L x) -` {0}\<close> for x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+    by (auto simp add: commutant_def vimage_def)
+  have cont: \<open>continuous_map weak_star_topology weak_star_topology (\<lambda>y. x o\<^sub>C\<^sub>L y - y o\<^sub>C\<^sub>L x)\<close> for x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+    apply (rule continuous_intros)
+    by (simp_all add: continuous_map_left_comp_weak_star continuous_map_right_comp_weak_star)
+  have \<open>closedin weak_star_topology ((\<lambda>y. x o\<^sub>C\<^sub>L y - y o\<^sub>C\<^sub>L x) -` {0})\<close> for x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+    using closedin_vimage[where U=\<open>weak_star_topology\<close> and S=\<open>{0}\<close> and T=weak_star_topology]
+    using cont by (auto simp add: closedin_singleton)
+  then show ?thesis
+    apply (cases \<open>X = {}\<close>)
+    using closedin_topspace[of weak_star_topology]
+    by (auto simp add: comm_inter comm_x)
+qed
+
+lemma cspan_in_double_commutant: \<open>cspan X \<subseteq> commutant (commutant X)\<close>
+  by (simp add: complex_vector.span_minimal)
+
+lemma weak_star_closure_in_double_commutant: \<open>weak_star_topology closure_of X \<subseteq> commutant (commutant X)\<close>
+  by (simp add: closure_of_minimal)
+
+lemma weak_star_closure_cspan_in_double_commutant: \<open>weak_star_topology closure_of cspan X \<subseteq> commutant (commutant X)\<close>
+  by (simp add: closure_of_minimal cspan_in_double_commutant)
+
+lemma CREGISTER_of_cregister_pair: \<open>ccompatible F G \<Longrightarrow> CREGISTER_of (cregister_pair F G) = CREGISTER_pair (CREGISTER_of F) (CREGISTER_of G)\<close>
+  sorry
+lemma QREGISTER_of_qregister_pair: \<open>QREGISTER_of (qregister_pair F G) = QREGISTER_pair (QREGISTER_of F) (QREGISTER_of G)\<close> 
+  if [simp]: \<open>qcompatible F G\<close>
+proof -
+  have [simp]: \<open>qregister F\<close> \<open>qregister G\<close>
+    using qcompatible_register1 qcompatible_register2 that by blast+
+  define F' G' where FG'_def: \<open>F' = Rep_QREGISTER (QREGISTER_of F)\<close> \<open>G' = Rep_QREGISTER (QREGISTER_of G)\<close>
+
+  have 1: \<open>Rep_QREGISTER (QREGISTER_pair (QREGISTER_of F) (QREGISTER_of G)) \<subseteq> Rep_QREGISTER (QREGISTER_of (qregister_pair F G))\<close>
+  proof -
+    have \<open>F' \<subseteq> Rep_QREGISTER (QREGISTER_of (qregister_pair F G))\<close>
+      apply (auto simp add: FG'_def QREGISTER_of.rep_eq)
+      apply (rule range_eqI[where x=\<open>_ \<otimes>\<^sub>o id_cblinfun\<close>])
+      by (simp add: apply_qregister_pair)
+    moreover have \<open>G' \<subseteq> Rep_QREGISTER (QREGISTER_of (qregister_pair F G))\<close>
+      apply (auto simp add: FG'_def QREGISTER_of.rep_eq)
+      apply (rule range_eqI[where x=\<open>id_cblinfun \<otimes>\<^sub>o _\<close>])
+      by (simp add: apply_qregister_pair)
+    ultimately have \<open>F' \<union> G' \<subseteq> Rep_QREGISTER (QREGISTER_of (qregister_pair F G))\<close>
+      by (simp add: FG'_def)
+    then have \<open>commutant (commutant (F' \<union> G')) \<subseteq> commutant (commutant (Rep_QREGISTER (QREGISTER_of (qregister_pair F G))))\<close>
+      by (intro commutant_antimono)
+    also have \<open>\<dots> = Rep_QREGISTER (QREGISTER_of (qregister_pair F G))\<close>
+      using Rep_QREGISTER valid_qregister_range_def by auto
+    finally show ?thesis
+      by (simp add: QREGISTER_pair.rep_eq FG'_def)
+  qed
+  have 2: \<open>Rep_QREGISTER (QREGISTER_of (qregister_pair F G)) \<subseteq> Rep_QREGISTER (QREGISTER_pair (QREGISTER_of F) (QREGISTER_of G))\<close>
+  proof -
+    have \<open>Rep_QREGISTER (QREGISTER_of (qregister_pair F G)) = apply_qregister (qregister_pair F G) ` UNIV\<close>
+      by (simp add: QREGISTER_of.rep_eq)
+    also have \<open>\<dots> = apply_qregister (qregister_pair F G) ` 
+                    (weak_star_topology closure_of cspan {butterket \<xi> \<eta> |\<xi> \<eta>. True})\<close>
+      apply (subst butterkets_weak_star_dense) by simp
+    also have \<open>\<dots> \<subseteq> weak_star_topology closure_of 
+                        apply_qregister (qregister_pair F G) ` cspan {butterket \<xi> \<eta> |\<xi> \<eta>. True}\<close>
+      apply (rule continuous_map_image_closure_subset)
+      using qregister.rep_eq that weak_star_cont_register by blast
+    also have \<open>\<dots> = weak_star_topology closure_of cspan
+                        (apply_qregister (qregister_pair F G) ` {butterket \<xi> \<eta> |\<xi> \<eta>. True})\<close>
+      apply (subst complex_vector.linear_span_image)
+      by simp_all
+    also have \<open>\<dots> = weak_star_topology closure_of cspan
+                        (apply_qregister (qregister_pair F G) ` {butterket (a,b) (c,d) |a b c d. True})\<close>
+      apply (rule arg_cong[where x=\<open>{butterket \<xi> \<eta> |\<xi> \<eta>. True}\<close>])
+      by auto
+    also have \<open>\<dots> = weak_star_topology closure_of cspan
+                        {apply_qregister F (butterket a c) o\<^sub>C\<^sub>L apply_qregister G (butterket b d) |a b c d. True}\<close>
+      apply (subst set_compr_4_image_collect)
+      apply (subst set_compr_4_image_collect)
+      by (simp add: image_image case_prod_unfold apply_qregister_pair
+          flip: tensor_ell2_ket tensor_butterfly)
+    also have \<open>\<dots> \<subseteq> weak_star_topology closure_of cspan
+                        {f o\<^sub>C\<^sub>L g | f g. f \<in> F' \<and> g \<in> G'}\<close>
+      apply (rule closure_of_mono)
+      apply (rule complex_vector.span_mono)
+      by (auto simp: FG'_def QREGISTER_of.rep_eq)
+    also have \<open>\<dots> \<subseteq> commutant (commutant {f o\<^sub>C\<^sub>L g | f g. f \<in> F' \<and> g \<in> G'})\<close>
+      by (rule weak_star_closure_cspan_in_double_commutant)
+    also have \<open>\<dots> \<subseteq> commutant (commutant (F' \<union> G'))\<close>
+      apply (rule commutant_antimono)
+      apply (auto simp: commutant_def)
+      by (metis (no_types, lifting) Un_iff lift_cblinfun_comp(2))
+    also have \<open>\<dots> = Rep_QREGISTER (QREGISTER_pair (QREGISTER_of F) (QREGISTER_of G))\<close>
+      by (simp add: QREGISTER_pair.rep_eq flip: FG'_def)
+    finally show ?thesis
+      by -
+  qed
+
+  from 1 2 show ?thesis
+    by (auto intro!: antisym simp add: less_eq_QREGISTER_def)
+qed
+
 lemma ccompatible3I[simp]: \<open>ccompatible F G \<Longrightarrow> ccompatible G H \<Longrightarrow> ccompatible F H \<Longrightarrow> ccompatible (cregister_pair F G) H\<close>
   by (simp add: ccompatible3)
 lemma qcompatible3I[simp]: \<open>qcompatible F G \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible F H \<Longrightarrow> qcompatible (qregister_pair F G) H\<close>
@@ -751,10 +1003,24 @@ lemma ccompatible3I'[simp]: \<open>ccompatible F G \<Longrightarrow> ccompatible
 lemma qcompatible3I'[simp]: \<open>qcompatible F G \<Longrightarrow> qcompatible F H \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible F (qregister_pair G H)\<close>
   by (simp add: qcompatible3')
 
-lemma Cccompatible3I[simp]: \<open>CCcompatible F G \<Longrightarrow> Cccompatible G H \<Longrightarrow> Cccompatible F H \<Longrightarrow> Cccompatible (CREGISTER_pair F G) H\<close> sorry
-lemma Qqcompatible3I[simp]: \<open>QQcompatible F G \<Longrightarrow> Qqcompatible G H \<Longrightarrow> Qqcompatible F H \<Longrightarrow> Qqcompatible (QREGISTER_pair F G) H\<close> sorry
-lemma Cccompatible3I'[simp]: \<open>Cccompatible F G \<Longrightarrow> Cccompatible F H \<Longrightarrow> ccompatible G H \<Longrightarrow> Cccompatible F (cregister_pair G H)\<close> sorry
-lemma Qqcompatible3I'[simp]: \<open>Qqcompatible F G \<Longrightarrow> Qqcompatible F H \<Longrightarrow> qcompatible G H \<Longrightarrow> Qqcompatible F (qregister_pair G H)\<close> sorry
+lemma CCcompatible3I[simp]: \<open>CCcompatible F G \<Longrightarrow> CCcompatible G H \<Longrightarrow> CCcompatible F H \<Longrightarrow> CCcompatible (CREGISTER_pair F G) H\<close>
+  sorry
+lemma QQcompatible3I[simp]: \<open>QQcompatible F G \<Longrightarrow> QQcompatible G H \<Longrightarrow> QQcompatible F H \<Longrightarrow> QQcompatible (QREGISTER_pair F G) H\<close> 
+  apply transfer apply (auto simp: commutant_def)
+  by (metis Un_iff)
+lemma CCcompatible3I'[simp]: \<open>CCcompatible F G \<Longrightarrow> CCcompatible F H \<Longrightarrow> CCcompatible G H \<Longrightarrow> CCcompatible F (CREGISTER_pair G H)\<close> 
+  using CCcompatible3I CCcompatible_sym by blast
+lemma QQcompatible3I'[simp]: \<open>QQcompatible F G \<Longrightarrow> QQcompatible F H \<Longrightarrow> QQcompatible G H \<Longrightarrow> QQcompatible F (QREGISTER_pair G H)\<close> 
+  using QQcompatible3I QQcompatible_sym by blast
+
+lemma Cccompatible3I[simp]: \<open>CCcompatible F G \<Longrightarrow> Cccompatible G H \<Longrightarrow> Cccompatible F H \<Longrightarrow> Cccompatible (CREGISTER_pair F G) H\<close>
+  by (simp add: Cccompatible_CCcompatible)
+lemma Qqcompatible3I[simp]: \<open>QQcompatible F G \<Longrightarrow> Qqcompatible G H \<Longrightarrow> Qqcompatible F H \<Longrightarrow> Qqcompatible (QREGISTER_pair F G) H\<close>
+  by (simp add: Qqcompatible_QQcompatible)
+lemma Cccompatible3I'[simp]: \<open>Cccompatible F G \<Longrightarrow> Cccompatible F H \<Longrightarrow> ccompatible G H \<Longrightarrow> Cccompatible F (cregister_pair G H)\<close>
+  by (simp add: Cccompatible_CCcompatible CREGISTER_of_cregister_pair)
+lemma Qqcompatible3I'[simp]: \<open>Qqcompatible F G \<Longrightarrow> Qqcompatible F H \<Longrightarrow> qcompatible G H \<Longrightarrow> Qqcompatible F (qregister_pair G H)\<close>
+  by (simp add: Qqcompatible_QQcompatible QREGISTER_of_qregister_pair)
 
 (* TODO: (and also for quantum, also for COMPATIBLE)
 lemma ccompatible_register_tensor[simp]: \<open>ccompatible F F' \<Longrightarrow> ccompatible G G' \<Longrightarrow> ccompatible (cregister_tensor F G) (cregister_tensor F' G')\<close> *)
@@ -915,28 +1181,6 @@ proof -
   qed
 qed
 
-lift_definition cregister_id :: \<open>('a,'a) cregister\<close> is id by simp
-lift_definition qregister_id :: \<open>('a,'a) qregister\<close> is id by simp
-
-lemma cregister_id_chain[simp]: \<open>cregister_chain cregister_id F = F\<close>
-  apply transfer by auto
-lemma qregister_id_chain[simp]: \<open>qregister_chain qregister_id F = F\<close>
-  apply transfer by auto
-lemma cregister_chain_id[simp]: \<open>cregister_chain F cregister_id = F\<close>
-  apply transfer by auto
-lemma qregister_chain_id[simp]: \<open>qregister_chain F qregister_id = F\<close>
-  apply transfer by auto
-
-lemma apply_cregister_id[simp]: \<open>apply_cregister cregister_id = id\<close>
-  by (rule cregister_id.rep_eq)
-lemma apply_qregister_id[simp]: \<open>apply_qregister qregister_id = id\<close>
-  by (rule qregister_id.rep_eq)
-
-lemma cregister_id[simp]: \<open>cregister cregister_id\<close>
-  apply transfer by simp
-lemma qregister_id[simp]: \<open>qregister qregister_id\<close>
-  apply transfer by simp
-
 lemma cregister_chain_cswap_cswap[simp]: \<open>cregister_chain cswap cswap = cregister_id\<close>
   by (metis Laws_Classical.pair_Fst_Snd apply_cregister_inverse cFst.rep_eq cSnd.rep_eq ccompatible_Fst_Snd ccompatible_Snd_Fst ccompatible_def cregister_chain_pair cregister_chain_pair_Fst cregister_chain_pair_Snd cregister_id.abs_eq cregister_pair.rep_eq cswap_def)
 lemma qregister_chain_qswap_qswap[simp]: \<open>qregister_chain qswap qswap = qregister_id\<close>
@@ -986,6 +1230,25 @@ lemma iso_qregister_chain_inv: \<open>iso_qregister I \<Longrightarrow> qregiste
   apply (rule apply_qregister_inject[THEN iffD1], rule ext)
   apply simp
   by (smt (verit, best) apply_qregister_id iso_qregister_def iso_qregister_inv_chain left_right_inverse_eq pointfree_idE qregister_chain_apply)
+
+lemma CREGISTER_of_iso: \<open>CREGISTER_of I = CREGISTER_all\<close> if \<open>iso_cregister I\<close>
+proof -
+  have \<open>x \<in> range (apply_cregister I)\<close> for x
+    apply (rule range_eqI[where x=\<open>apply_cregister (cregister_inv I) x\<close>])
+    by (metis inj_cregister inv_f_eq iso_cregister_def iso_cregister_inv_iso iso_cregister_inv_iso_apply that)
+  then show ?thesis
+    apply (transfer fixing: I)
+    using that by (auto simp: iso_cregister_def)
+qed
+lemma QREGISTER_of_iso: \<open>QREGISTER_of I = QREGISTER_all\<close> if \<open>iso_qregister I\<close>
+proof -
+  have \<open>x \<in> range (apply_qregister I)\<close> for x
+    apply (rule range_eqI[where x=\<open>apply_qregister (qregister_inv I) x\<close>])
+    by (metis inj_qregister inv_f_eq iso_qregister_def iso_qregister_inv_iso iso_qregister_inv_iso_apply that)
+  then show ?thesis
+    apply (transfer fixing: I)
+    using that by (auto simp: iso_qregister_def)
+qed
 
 lemma cswap_iso[simp]: \<open>iso_cregister cswap\<close>
   by (auto intro!: exI[of _ cswap] simp: iso_cregister_def)
@@ -1116,7 +1379,9 @@ lemma apply_non_qregister_space[simp]: \<open>apply_qregister_space non_qregiste
   by (simp add: apply_qregister_space_def)
 
 axiomatization CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
-axiomatization QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close>
+lift_definition QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is commutant
+  apply (auto simp add: valid_qregister_range_def)
+  by (metis (mono_tags, opaque_lifting) commutant_adj commutant_antimono double_adj image_iff subset_iff)
 
 lemma cregister_pair_chain_swap[simp]:
   "cregister_chain (cregister_pair A B) cswap = (cregister_pair B A)"
@@ -1220,8 +1485,8 @@ lemma Qqcompatible_QREGISTER_ofI[simp]: \<open>qcompatible F G \<Longrightarrow>
 
 lemma cregister_conversion_raw_register: \<open>cregister_raw F \<Longrightarrow> cregister_raw G \<Longrightarrow> range F \<subseteq> range G \<Longrightarrow> cregister_raw (inv G \<circ> F)\<close>
   sorry
-lemma qregister_conversion_raw_register: \<open>qregister_raw F \<Longrightarrow> qregister_raw G \<Longrightarrow> range F \<subseteq> range G \<Longrightarrow> qregister_raw (inv G \<circ> F)\<close>
-  sorry
+lemmas qregister_conversion_raw_register = register_inv_G_o_F
+(* lemma qregister_conversion_raw_register: \<open>qregister_raw F \<Longrightarrow> qregister_raw G \<Longrightarrow> range F \<subseteq> range G \<Longrightarrow> qregister_raw (inv G \<circ> F)\<close> *)
 
 lift_definition cregister_conversion :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> ('a,'b) cregister\<close> is
   \<open>\<lambda>F G. if cregister_raw F \<and> cregister_raw G \<and> range F \<subseteq> range G then inv G o F else non_cregister_raw\<close>
@@ -1234,17 +1499,62 @@ lift_definition qregister_conversion :: \<open>('a,'c) qregister \<Rightarrow> (
 definition \<open>cregister_le F G = (cregister F \<and> cregister G \<and> CREGISTER_of F \<le> CREGISTER_of G)\<close>
 definition \<open>qregister_le F G = (qregister F \<and> qregister G \<and> QREGISTER_of F \<le> QREGISTER_of G)\<close>
 
-lemma qregister_le_pair_leftI[iff]: \<open>qcompatible F G \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le G H \<Longrightarrow> qregister_le (qregister_pair F G) H\<close>
-  sorry
-lemma qregister_le_pair_rightI1: \<open>qcompatible G H \<Longrightarrow> qregister_le F G \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
-  sorry
-lemma qregister_le_pair_rightI2: \<open>qcompatible G H \<Longrightarrow> qregister_le F H \<Longrightarrow> qregister_le F (qregister_pair G H)\<close>
-  sorry
-lemma qregister_le_refl[iff]: \<open>qregister F \<Longrightarrow> qregister_le F F\<close> (* TODO: could replace by a simp-rule *)
+lemma cregister_conversion_register: \<open>cregister_le F G \<Longrightarrow> cregister (cregister_conversion F G)\<close>
+  apply (auto intro!: cregister_conversion_raw_register 
+      simp add: cregister_le_def less_eq_CREGISTER_def CREGISTER_of.rep_eq
+      cregister.rep_eq cregister_conversion.rep_eq)
+  by auto
+lemma qregister_conversion_register: \<open>qregister_le F G \<Longrightarrow> qregister (qregister_conversion F G)\<close>
+  apply (auto intro!: qregister_conversion_raw_register 
+      simp add: qregister_le_def less_eq_QREGISTER_def QREGISTER_of.rep_eq
+      qregister.rep_eq qregister_conversion.rep_eq)
+  by auto
+
+lemma qregister_le_pair_leftI[iff]: 
+  \<open>qregister_le (qregister_pair F G) H\<close> if \<open>qcompatible F G\<close> \<open>qregister_le F H\<close> \<open>qregister_le G H\<close>
+proof -
+  define F' G' H' where FGH'_def: \<open>F' = Rep_QREGISTER (QREGISTER_of F)\<close> 
+    \<open>G' = Rep_QREGISTER (QREGISTER_of G)\<close> \<open>H' = Rep_QREGISTER (QREGISTER_of H)\<close>
+  have \<open>F' \<union> G' \<subseteq> H'\<close>
+    by (metis FGH'_def Un_least less_eq_QREGISTER.rep_eq qregister_le_def that(2,3))
+  then have \<open>commutant (commutant (F' \<union> G')) \<subseteq> commutant (commutant H')\<close>
+    by (auto intro!: commutant_antimono)
+  also have \<open>\<dots> = H'\<close>
+    using FGH'_def Rep_QREGISTER valid_qregister_range_def by auto
+  finally have \<open>commutant (commutant (F' \<union> G')) \<subseteq> H'\<close>
+    by -
+  then show ?thesis
+    using that 
+    by (simp add: qregister_le_def QREGISTER_of_qregister_pair QREGISTER_pair.rep_eq 
+        less_eq_QREGISTER.rep_eq flip: FGH'_def)
+qed
+lemma qregister_le_pair_rightI1: \<open>qregister_le F (qregister_pair G H)\<close> if \<open>qcompatible G H\<close> \<open>qregister_le F G\<close>
+proof -
+  define F' G' H' where FGH'_def: \<open>F' = Rep_QREGISTER (QREGISTER_of F)\<close> 
+    \<open>G' = Rep_QREGISTER (QREGISTER_of G)\<close> \<open>H' = Rep_QREGISTER (QREGISTER_of H)\<close>
+  have \<open>F' \<subseteq> G' \<union> H'\<close>
+    using FGH'_def less_eq_QREGISTER.rep_eq qregister_le_def that(2) by blast
+  then have \<open>commutant (commutant (G' \<union> H')) \<supseteq> commutant (commutant F')\<close> (is \<open>_ \<supseteq> \<dots>\<close>)
+    by (auto intro!: commutant_antimono)
+  also have \<open>\<dots> = F'\<close>
+    using FGH'_def Rep_QREGISTER valid_qregister_range_def by auto
+  finally have \<open>commutant (commutant (G' \<union> H')) \<supseteq> F'\<close>
+    by -
+  then show ?thesis
+    using that 
+    by (simp add: qregister_le_def QREGISTER_of_qregister_pair QREGISTER_pair.rep_eq 
+        less_eq_QREGISTER.rep_eq flip: FGH'_def)
+qed
+lemma qregister_le_pair_rightI2: \<open>qregister_le F (qregister_pair G H)\<close> if \<open>qcompatible G H\<close> \<open>qregister_le F H\<close>
+  using qregister_le_pair_rightI1[OF that(1)[THEN qcompatible_sym] that(2)]
+  by (auto simp add: qregister_le_def qcompatible_sym QREGISTER_of_qregister_pair
+      less_eq_QREGISTER.rep_eq QREGISTER_pair.rep_eq Un_commute)
+lemma qregister_le_refl[iff]: \<open>qregister F \<Longrightarrow> qregister_le F F\<close> (* TODO: could replace this by a simp-rule *)
   unfolding qregister_le_def by simp
 lemma qregister_le_iso: \<open>qregister F \<Longrightarrow> iso_qregister G \<Longrightarrow> qregister_le F G\<close>
-  sorry
-lemma qregister_le_id[iff]: \<open>qregister F \<Longrightarrow> qregister_le F qregister_id\<close> (* TODO: could replace by a simp-rule *)
+  by (simp add: qregister_le_def QREGISTER_of_iso less_eq_QREGISTER.rep_eq QREGISTER_all.rep_eq
+      iso_qregister_def)
+lemma qregister_le_id[iff]: \<open>qregister F \<Longrightarrow> qregister_le F qregister_id\<close> (* TODO: could replace this by a simp-rule *)
   by (simp add: iso_qregister_def qregister_le_iso)
 
 
@@ -1271,15 +1581,15 @@ lemma qregister_apply_conversion:
   using assms apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
   by auto
 
-lemma apply_qregister_space_conversion:
-  assumes \<open>qregister_le F G\<close>
-  shows \<open>apply_qregister_space F S = apply_qregister_space G (apply_qregister_space (qregister_conversion F G) S)\<close>
-  unfolding apply_qregister_space_def
-  apply (subst qregister_apply_conversion[OF assms])
-  apply (subst Proj_on_own_range)
-   apply auto
-  sorry
+lemma qregister_projector: \<open>qregister F \<Longrightarrow> is_Proj a \<Longrightarrow> is_Proj (apply_qregister F a)\<close>
+  apply (transfer fixing: a)
+  by (rule register_projector)
 
+lemma apply_qregister_space_conversion:
+  assumes [simp]: \<open>qregister_le F G\<close>
+  shows \<open>apply_qregister_space F S = apply_qregister_space G (apply_qregister_space (qregister_conversion F G) S)\<close>
+  by (simp add: apply_qregister_space_def qregister_apply_conversion[OF assms] Proj_on_own_range
+      qregister_projector qregister_conversion_register)
 
 lemma cregister_conversion_id[simp]: \<open>cregister_conversion F cregister_id = F\<close>
   apply transfer by auto
@@ -1390,7 +1700,16 @@ lemma qregister_conversion_as_register:
 
 lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow> ('a,'b) qregister\<close> is
   \<open>\<lambda>F a. if cregister F then permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a else 0\<close>
-  sorry
+proof -
+  fix F :: \<open>('a, 'b) cregister\<close>
+  have \<open>qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close> if \<open>cregister F\<close>
+    sorry
+  then show \<open>(\<lambda>a. if cregister F
+            then permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a else 0)
+       \<in> Collect qregister_raw \<union> {non_qregister_raw}\<close>
+    apply (cases \<open>cregister F\<close>)
+    by (auto simp: non_qregister_raw_def)
+qed
 
 lemma qregister_of_cregister_non_register[simp]: \<open>qregister_of_cregister non_cregister = non_qregister\<close>
 proof -
@@ -1401,12 +1720,39 @@ proof -
     using non_qregister_raw_def by fastforce
 qed
 
-lemma qregister_of_cregister_Fst: \<open>qregister_of_cregister cFst = qFst\<close>
-  sorry
-lemma qregister_of_cregister_Snd: \<open>qregister_of_cregister cSnd = qSnd\<close>
+lemma qregister_qregister_of_cregister[simp]: \<open>qregister (qregister_of_cregister F) \<longleftrightarrow> cregister F\<close>
   sorry
 
-lemma qregister_qregister_of_cregister[simp]: \<open>qregister (qregister_of_cregister F) \<longleftrightarrow> cregister F\<close>
+(* TODO move *)
+
+lemma qregister_of_cregister_Fst: \<open>qregister_of_cregister cFst = qFst\<close>
+proof -
+  have *: \<open>Rep_ell2 (apply_qregister (qregister_of_cregister cFst) (butterket i j) *\<^sub>V |x\<rangle>) y =
+       Rep_ell2 (apply_qregister qFst (butterket i j) *\<^sub>V |x\<rangle>) y\<close> for i j :: 'a and x y :: \<open>'a \<times> 'c\<close>
+    apply (auto simp: qregister_of_cregister.rep_eq permute_and_tensor1_cblinfun_ket)
+    apply (subst permute_and_tensor1_cblinfun_ket)
+    using permute_and_tensor1_cblinfun_ket
+    by -
+  have \<open>apply_qregister (qregister_of_cregister cFst) (butterket i j) =
+           apply_qregister qFst (butterket i j)\<close> for i j :: 'a
+    by (auto intro!: equal_ket Rep_ell2_inject[THEN iffD1] ext simp: *)
+  then show ?thesis
+    apply (auto intro!: apply_qregister_inject[THEN iffD1]
+        weak_star_clinear_eq_butterfly_ketI[where T=weak_star_topology])
+    using Axioms_Quantum.register_def cFst_register qregister.rep_eq qregister_qregister_of_cregister apply blast
+    by (simp add: qFst.rep_eq weak_star_cont_register)
+
+    apply (rule ext)
+    apply (rule cblinfun_eqI)
+
+    apply (rule tensor_extensionality)
+    thm tensor_extensionality
+  apply (simp add: qregister_of_cregister.rep_eq qFst.rep_eq Fst_def)
+
+    thm cFst.rep_eq
+  apply transfer
+  sorry
+lemma qregister_of_cregister_Snd: \<open>qregister_of_cregister cSnd = qSnd\<close>
   sorry
 
 lemma qcompatible_qregister_of_cregister[simp]:
