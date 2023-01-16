@@ -1723,37 +1723,68 @@ qed
 lemma qregister_qregister_of_cregister[simp]: \<open>qregister (qregister_of_cregister F) \<longleftrightarrow> cregister F\<close>
   sorry
 
-(* TODO move *)
 
 lemma qregister_of_cregister_Fst: \<open>qregister_of_cregister cFst = qFst\<close>
 proof -
   have *: \<open>Rep_ell2 (apply_qregister (qregister_of_cregister cFst) (butterket i j) *\<^sub>V |x\<rangle>) y =
-       Rep_ell2 (apply_qregister qFst (butterket i j) *\<^sub>V |x\<rangle>) y\<close> for i j :: 'a and x y :: \<open>'a \<times> 'c\<close>
-    apply (auto simp: qregister_of_cregister.rep_eq permute_and_tensor1_cblinfun_ket)
-    apply (subst permute_and_tensor1_cblinfun_ket)
-    using permute_and_tensor1_cblinfun_ket
-    by -
+       Rep_ell2 (apply_qregister qFst (butterket i j) *\<^sub>V |x\<rangle>) y\<close> (is \<open>?lhs = ?rhs\<close>)
+    for i j :: 'a and x y :: \<open>'a \<times> 'c\<close>
+  proof -
+    obtain x1 x2 where x12: \<open>x = (x1, x2)\<close> by force
+    obtain y1 y2 where y12: \<open>y = (y1, y2)\<close> by force
+    have 1: \<open>inj_on fst (Collect (same_outside_cregister cFst x))\<close> for x :: \<open>'a \<times> 'c\<close>
+      by (smt (verit) equivp_def equivp_same_outside_cregister getter_cFst inj_onI mem_Collect_eq same_outside_cregister_def)
+    have \<open>?lhs = (if same_outside_cregister cFst y x then Rep_ell2 (butterket i j *\<^sub>V |x1\<rangle>) y1 else 0)\<close>
+      by (auto intro!: permute_and_tensor1_cblinfun_exists simp add: equivp_implies_part_equivp 
+          qregister_of_cregister.rep_eq permute_and_tensor1_cblinfun_ket 1 x12 y12)
+    also have \<open>\<dots> = ?rhs\<close>
+      apply (auto simp add: qFst.rep_eq Fst_def x12 y12 tensor_op_ell2 cinner_ket
+          simp flip: tensor_ell2_ket)
+      by (auto simp add: ket.rep_eq zero_ell2.rep_eq same_outside_cregister_def 
+          tensor_ell2_ket setter_cFst)
+    finally show ?thesis
+      by -
+  qed
   have \<open>apply_qregister (qregister_of_cregister cFst) (butterket i j) =
            apply_qregister qFst (butterket i j)\<close> for i j :: 'a
-    by (auto intro!: equal_ket Rep_ell2_inject[THEN iffD1] ext simp: *)
+    by (auto intro!: equal_ket Rep_ell2_inject[THEN iffD1] ext simp: * )
   then show ?thesis
     apply (auto intro!: apply_qregister_inject[THEN iffD1]
         weak_star_clinear_eq_butterfly_ketI[where T=weak_star_topology])
     using Axioms_Quantum.register_def cFst_register qregister.rep_eq qregister_qregister_of_cregister apply blast
     by (simp add: qFst.rep_eq weak_star_cont_register)
+qed
 
-    apply (rule ext)
-    apply (rule cblinfun_eqI)
-
-    apply (rule tensor_extensionality)
-    thm tensor_extensionality
-  apply (simp add: qregister_of_cregister.rep_eq qFst.rep_eq Fst_def)
-
-    thm cFst.rep_eq
-  apply transfer
-  sorry
 lemma qregister_of_cregister_Snd: \<open>qregister_of_cregister cSnd = qSnd\<close>
-  sorry
+proof -
+  have *: \<open>Rep_ell2 (apply_qregister (qregister_of_cregister cSnd) (butterket i j) *\<^sub>V |x\<rangle>) y =
+       Rep_ell2 (apply_qregister qSnd (butterket i j) *\<^sub>V |x\<rangle>) y\<close> (is \<open>?lhs = ?rhs\<close>)
+    for i j :: 'a and x y :: \<open>'c \<times> 'a\<close>
+  proof -
+    obtain x1 x2 where x12: \<open>x = (x1, x2)\<close> by force
+    obtain y1 y2 where y12: \<open>y = (y1, y2)\<close> by force
+    have 1: \<open>inj_on snd (Collect (same_outside_cregister cSnd x))\<close> for x :: \<open>'c \<times> 'a\<close>
+      by (smt (verit) equivp_def equivp_same_outside_cregister getter_cSnd inj_onI mem_Collect_eq same_outside_cregister_def)
+    have \<open>?lhs = (if same_outside_cregister cSnd y x then Rep_ell2 (butterket i j *\<^sub>V |x2\<rangle>) y2 else 0)\<close>
+      by (auto intro!: permute_and_tensor1_cblinfun_exists simp add: equivp_implies_part_equivp 
+          qregister_of_cregister.rep_eq permute_and_tensor1_cblinfun_ket 1 x12 y12)
+    also have \<open>\<dots> = ?rhs\<close>
+      apply (auto simp add: qSnd.rep_eq Snd_def x12 y12 tensor_op_ell2 cinner_ket
+          simp flip: tensor_ell2_ket)
+      by (auto simp add: ket.rep_eq zero_ell2.rep_eq same_outside_cregister_def 
+          tensor_ell2_ket setter_cSnd)
+    finally show ?thesis
+      by -
+  qed
+  have \<open>apply_qregister (qregister_of_cregister cSnd) (butterket i j) =
+           apply_qregister qSnd (butterket i j)\<close> for i j :: 'a
+    by (auto intro!: equal_ket Rep_ell2_inject[THEN iffD1] ext simp: * )
+  then show ?thesis
+    apply (auto intro!: apply_qregister_inject[THEN iffD1]
+        weak_star_clinear_eq_butterfly_ketI[where T=weak_star_topology])
+    using Axioms_Quantum.register_def cSnd_register qregister.rep_eq qregister_qregister_of_cregister apply blast
+    by (simp add: qSnd.rep_eq weak_star_cont_register)
+qed
 
 lemma qcompatible_qregister_of_cregister[simp]:
   \<open>qcompatible (qregister_of_cregister F) (qregister_of_cregister G) \<longleftrightarrow> ccompatible F G\<close>
