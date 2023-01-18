@@ -1,5 +1,7 @@
 theory Missing_Bounded_Operators
   imports Complex_Bounded_Operators.Complex_L2 Complex_Bounded_Operators.Cblinfun_Code Complex_Bounded_Operators.BO_Unsorted
+    Tensor_Product.Hilbert_Space_Tensor_Product
+    With_Type.With_Type
 begin
 
 unbundle cblinfun_notation
@@ -224,8 +226,8 @@ proof standard
     by (auto simp: div_less_iff_less_mult enum_nth_prod_def enum_index_prod_def)
   show \<open>enum_index a < CARD('a \<times> 'b)\<close> for a :: \<open>'a\<times>'b\<close>
     apply (cases a)
-    apply (auto simp: enum_index_prod_def)
-    by (metis (no_types, lifting) add_cancel_right_right div_less div_mult_self3 enum_index_bound less_eq_div_iff_mult_less_eq less_not_refl2 linorder_not_less zero_less_card_finite)
+    by (auto simp: enum_index_prod_def)
+    (* by (metis (no_types, lifting) add_cancel_right_right div_less div_mult_self3 enum_index_bound less_eq_div_iff_mult_less_eq less_not_refl2 linorder_not_less zero_less_card_finite) *)
 qed
 end
 
@@ -383,7 +385,140 @@ proof -
     by (simp add: * )
 qed
 
-lemma permute_and_tensor1_cblinfun_exists[simp]: 
+definition \<open>permute_and_tensor1_cblinfun_basis R = UNIV // {(x,y). R x y}\<close>
+definition permute_and_tensor1_cblinfun_U :: \<open>('c \<Rightarrow> 'a set) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> where
+ \<open>permute_and_tensor1_cblinfun_U Rep f R = classical_operator (Some o (\<lambda>(a,c). inv_into (Rep c) f a))\<close>
+
+lemma permute_and_tensor1_cblinfun_U_bij:
+  fixes Rep :: \<open>'c \<Rightarrow> 'a set\<close> and f :: \<open>'a \<Rightarrow> 'b\<close> and R :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close>
+  assumes Rep: \<open>range Rep = permute_and_tensor1_cblinfun_basis R\<close>
+  assumes equiv: \<open>equivp R\<close>
+  assumes \<open>inj Rep\<close>
+  assumes bij_f: \<open>\<And>a. bij_betw f (Collect (R a)) UNIV\<close>
+  shows \<open>bij (\<lambda>(a, c). inv_into (Rep c) f a)\<close>
+proof -
+  from equiv have equiv': \<open>equiv UNIV {(x, y). R x y}\<close>
+    by (simp add: equivp_equiv)
+  from equiv have [simp]: \<open>R a a\<close> for a
+    by (simp add: equivp_reflp)
+  from Rep equiv' have Collect_R: \<open>Collect (R a) \<in> range Rep\<close> for a
+    by (auto simp: permute_and_tensor1_cblinfun_basis_def quotient_def)
+  have inj': \<open>inj_on f (Collect (R a))\<close> for a
+    using bij_f by (rule bij_betw_imp_inj_on)
+  have b_f_Rep: \<open>b \<in> f ` Rep c\<close> for b c
+  proof -
+    from Rep
+    have \<open>Rep c \<in> UNIV // {(x, y). R x y}\<close>
+      by (auto simp add: permute_and_tensor1_cblinfun_basis_def)
+    then obtain a where \<open>Rep c = Collect (R a)\<close>
+      apply atomize_elim
+      by (simp add: quotient_def)
+    moreover from bij_f have \<open>b \<in> f ` Collect (R a)\<close>
+      by (simp add: bij_betw_def)
+    ultimately
+    show ?thesis
+      by simp
+  qed
+
+  have \<open>b = b'\<close> and \<open>c = c'\<close>
+    if \<open>inv_into (Rep c) f b = inv_into (Rep c') f b'\<close> for b c b' c'
+  proof -
+    from Rep have \<open>Rep c \<in> UNIV // {(x, y). R x y}\<close>
+      by (auto simp: permute_and_tensor1_cblinfun_basis_def)
+    have \<open>inv_into (Rep c) f b \<in> Rep c\<close> for b c
+      apply (rule inv_into_into)
+      by (simp add: b_f_Rep)
+    with that have \<open>Rep c \<inter> Rep c' \<noteq> {}\<close>
+      by (metis disjoint_iff)
+    with Rep have \<open>Rep c = Rep c'\<close>
+      apply (simp add: permute_and_tensor1_cblinfun_basis_def)
+      by (metis equiv' quotient_disj rangeI)
+    then show \<open>c = c'\<close>
+      using \<open>inj Rep\<close>
+      by (simp add: inj_eq)
+    with that have \<open>inv_into (Rep c) f b = inv_into (Rep c) f b'\<close>
+      by simp
+    then show \<open>b = b'\<close>
+      apply (rule inv_into_injective)
+      by (simp_all add: b_f_Rep)
+  qed
+  then have inj: \<open>inj (\<lambda>(a, c). inv_into (Rep c) f a)\<close>
+    by (auto intro!: injI)
+
+  have surj: \<open>surj (\<lambda>(a, c). inv_into (Rep c) f a)\<close>
+    apply (rule surjI[where f=\<open>\<lambda>b. (f b, inv Rep (Collect (R b)))\<close>])
+    by (simp_all add: f_inv_into_f[where f=Rep] Collect_R inv_into_f_f inj')
+  from inj surj show ?thesis
+    using bij_betw_def by blast
+qed
+
+
+lemma permute_and_tensor1_cblinfun_U_exists:
+  fixes Rep :: \<open>'c \<Rightarrow> 'a set\<close> and f :: \<open>'a \<Rightarrow> 'b\<close> and R :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close>
+  assumes \<open>range Rep = permute_and_tensor1_cblinfun_basis R\<close>
+  assumes \<open>equivp R\<close>
+  assumes \<open>inj Rep\<close>
+  assumes \<open>\<And>a. bij_betw f (Collect (R a)) UNIV\<close>
+  shows \<open>classical_operator_exists (Some o (\<lambda>(a,c). inv_into (Rep c) f a))\<close>
+  apply (rule classical_operator_exists_inj)
+  apply (subst inj_map_total)
+  apply (rule bij_is_inj)
+  using assms by (rule permute_and_tensor1_cblinfun_U_bij)
+
+lemma permute_and_tensor1_cblinfun_U_apply:
+  fixes Rep :: \<open>'c \<Rightarrow> 'a set\<close> and f :: \<open>'a \<Rightarrow> 'b\<close> and R :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close>
+  assumes \<open>range Rep = permute_and_tensor1_cblinfun_basis R\<close>
+  assumes \<open>equivp R\<close>
+  assumes \<open>inj Rep\<close>
+  assumes \<open>\<And>a. bij_betw f (Collect (R a)) UNIV\<close>
+  shows \<open>permute_and_tensor1_cblinfun_U Rep f R *\<^sub>V ket (b,c) = ket (inv_into (Rep c) f b)\<close>
+  using assms
+  by (auto simp: permute_and_tensor1_cblinfun_U_def classical_operator_ket permute_and_tensor1_cblinfun_U_exists)
+
+lemma permute_and_tensor1_cblinfun_U_unitary: 
+  fixes Rep :: \<open>'c \<Rightarrow> 'a set\<close> and f :: \<open>'a \<Rightarrow> 'b\<close> and R :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close>
+  assumes \<open>range Rep = permute_and_tensor1_cblinfun_basis R\<close>
+  assumes \<open>equivp R\<close>
+  assumes \<open>inj Rep\<close>
+  assumes \<open>\<And>a. bij_betw f (Collect (R a)) UNIV\<close>
+  shows \<open>unitary (permute_and_tensor1_cblinfun_U Rep f R)\<close>
+  using assms by (auto intro!: unitary_classical_operator permute_and_tensor1_cblinfun_U_bij 
+      simp: permute_and_tensor1_cblinfun_U_def)
+
+lemma permute_and_tensor1_cblinfun_U_adj_apply:
+  fixes Rep :: \<open>'c \<Rightarrow> 'a set\<close> and f :: \<open>'a \<Rightarrow> 'b\<close> and R :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close> and a :: 'a
+  assumes Rep: \<open>range Rep = permute_and_tensor1_cblinfun_basis R\<close>
+  assumes equiv: \<open>equivp R\<close>
+  assumes \<open>inj Rep\<close>
+  assumes bij_f: \<open>\<And>a. bij_betw f (Collect (R a)) UNIV\<close>
+  shows \<open>(permute_and_tensor1_cblinfun_U Rep f R)* *\<^sub>V ket a = ket (f a, inv Rep (Collect (case_prod R) `` {a}))\<close>
+proof -
+   have \<open>Collect (R a) \<in> UNIV // {(x, y). R x y}\<close> for a
+    by (auto intro!: exI[of _ a] simp: quotient_def equiv equivp_reflp)
+  then have 1: \<open>Collect (R a) \<in> range Rep\<close> for a
+    by (simp_all add: Rep permute_and_tensor1_cblinfun_basis_def)
+  have 2: \<open>inj_on f (Collect (R a))\<close>
+    using bij_f bij_betw_def by auto
+  have 3: \<open>R a a\<close>
+    by (simp add: equiv equivp_reflp)
+  have *: \<open>permute_and_tensor1_cblinfun_U Rep f R *\<^sub>V ket (f a, inv Rep (Collect (case_prod R) `` {a})) = ket a\<close>
+    apply (subst permute_and_tensor1_cblinfun_U_apply)
+    using assms apply auto[4]
+    by (simp add: f_inv_into_f[where f=Rep] 1 inv_into_f_f[where f=f] 2 3)
+  have uni: \<open>unitary (permute_and_tensor1_cblinfun_U Rep f R)\<close>
+    using assms by (rule permute_and_tensor1_cblinfun_U_unitary)
+  have \<open>(permute_and_tensor1_cblinfun_U Rep f R)* *\<^sub>V ket a = 
+        (permute_and_tensor1_cblinfun_U Rep f R)* *\<^sub>V 
+          permute_and_tensor1_cblinfun_U Rep f R *\<^sub>V ket (f a, inv Rep (Collect (case_prod R) `` {a}))\<close>
+    by (simp flip: * )
+  also from uni have \<open>\<dots> = ket (f a, inv Rep (Collect (case_prod R) `` {a}))\<close>
+    by (simp flip: cblinfun_apply_cblinfun_compose)
+  finally show ?thesis
+    by -
+qed
+
+
+lemma permute_and_tensor1_cblinfun_exists[simp]:
   \<open>permute_and_tensor1_cblinfun_exists f R A\<close>
   if \<open>part_equivp R\<close> and inj_f: \<open>\<forall>x. inj_on f (Collect (R x))\<close>
 proof -
@@ -603,10 +738,93 @@ proof -
 qed
 
 lemma permute_and_tensor1_cblinfun_ket[simp]: \<open>Rep_ell2 (permute_and_tensor1_cblinfun f R A *\<^sub>V ket a) b =
-  (if R b a then Rep_ell2 (A *\<^sub>V ket (f a)) (f b) else 0)\<close> 
+  of_bool (R b a) * Rep_ell2 (A *\<^sub>V ket (f a)) (f b)\<close> 
   if \<open>permute_and_tensor1_cblinfun_exists f R A\<close>
   using that
   by (simp add: permute_and_tensor1_cblinfun_def permute_and_tensor1_cblinfun_exists_def)
+
+lemma permute_and_tensor1_cblinfun_as_register:
+  fixes R :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close>
+  assumes equiv_R: \<open>equivp R\<close>
+  assumes bij_f: \<open>\<And>a. bij_betw f (Collect (R a)) UNIV\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'c::type = permute_and_tensor1_cblinfun_basis R. 
+            (\<forall>A. sandwich (permute_and_tensor1_cblinfun_U rep_c f R) (A \<otimes>\<^sub>o id_cblinfun) =
+            permute_and_tensor1_cblinfun f R A)
+            \<and> unitary (permute_and_tensor1_cblinfun_U rep_c f R)\<close>
+proof (rule with_typeI)
+  define S where \<open>S = permute_and_tensor1_cblinfun_basis R\<close>
+  show \<open>fst (S, ()) \<noteq> {}\<close>
+    by (simp add: permute_and_tensor1_cblinfun_basis_def S_def equiv_R equivp_reflp)
+  show \<open>fst with_type_type_class (fst (S, ())) (snd (S, ()))\<close>
+    by (auto simp: with_type_type_class_def)
+  show \<open>with_type_compat_rel (fst with_type_type_class) (fst (S, ())) (snd with_type_type_class)\<close>
+    by (auto simp: with_type_type_class_def with_type_compat_rel_def)
+  fix Rep :: \<open>'c \<Rightarrow> 'a set\<close> and Abs abs_ops
+
+  assume \<open>type_definition Rep Abs (fst (S, ()))\<close>
+  then interpret type_definition Rep Abs S
+    by simp
+
+  assume \<open>snd with_type_type_class (\<lambda>x y. x = Rep y) (snd (S, ())) abs_ops\<close>
+  define U where \<open>U = permute_and_tensor1_cblinfun_U Rep f R\<close>
+
+  have \<open>Collect (R a) \<in> UNIV // {(x, y). R x y}\<close> for a
+    by (auto intro!: exI[of _ a] simp: quotient_def equiv_R equivp_reflp)
+  then have Collect_R: \<open>Collect (R a) \<in> range Rep\<close> for a
+    by (simp_all add: Rep_range S_def permute_and_tensor1_cblinfun_basis_def)
+
+  have inv_Rep_Collect_eq: \<open>(inv Rep (Collect (R b)) = inv Rep (Collect (R a))) \<longleftrightarrow> R b a\<close> for a b
+  proof (rule iffI)
+    assume \<open>inv Rep (Collect (R b)) = inv Rep (Collect (R a))\<close>
+    then have \<open>Collect (R b) = Collect (R a)\<close>
+      by (simp add: inv_into_injective Collect_R)
+    then have \<open>R b = R a\<close>
+      by (rule Collect_inj)
+    then show \<open>R b a\<close>
+      using equiv_R
+      by (simp add: equivp_reflp)
+  next
+    assume \<open>R b a\<close>
+    then have \<open>Collect (R b) = Collect (R a)\<close>
+      by (metis equiv_R equivp_def)
+    then show \<open>inv Rep (Collect (R b)) = inv Rep (Collect (R a))\<close>
+      by simp
+  qed
+
+  have \<open>inj Rep\<close>
+    by (meson Rep_inject injI)
+
+  have \<open>Rep_ell2 ((sandwich U *\<^sub>V A \<otimes>\<^sub>o id_cblinfun) *\<^sub>V ket a) b =
+           of_bool (R b a) * Rep_ell2 (A *\<^sub>V ket (f a)) (f b)\<close> for a b A
+  proof -
+    have \<open>Rep_ell2 ((sandwich U *\<^sub>V A \<otimes>\<^sub>o id_cblinfun) *\<^sub>V ket a) b =
+            (U* *\<^sub>V ket b) \<bullet>\<^sub>C ((A \<otimes>\<^sub>o id_cblinfun) *\<^sub>V U* *\<^sub>V ket a)\<close>
+      by (simp add: sandwich_apply cinner_adj_left flip: cinner_ket_left)
+    also have \<open>\<dots> = ket (f b) \<bullet>\<^sub>C (A *\<^sub>V ket (f a)) *
+                        (ket (inv Rep (Collect (R b))) \<bullet>\<^sub>C ket (inv Rep (Collect (R a))))\<close>
+      unfolding U_def
+      apply (subst permute_and_tensor1_cblinfun_U_adj_apply)
+          apply (simp_all add: Rep_range S_def assms \<open>inj Rep\<close> bij_f)[4]
+      apply (subst permute_and_tensor1_cblinfun_U_adj_apply)
+          apply (simp_all add: Rep_range S_def assms \<open>inj Rep\<close> bij_f)[4]
+      by (simp add: tensor_op_ell2 flip: tensor_ell2_ket)
+    also have \<open>\<dots> = ket (f b) \<bullet>\<^sub>C (A *\<^sub>V ket (f a)) * of_bool (R b a)\<close>
+      by (simp add: cinner_ket inv_Rep_Collect_eq)
+    also have \<open>\<dots> = of_bool (R b a) * Rep_ell2 (A *\<^sub>V ket (f a)) (f b)\<close>
+      by (simp add: cinner_ket_left)
+    finally show ?thesis
+      by -
+  qed
+  moreover have \<open>permute_and_tensor1_cblinfun_exists f R A\<close> for A
+    apply (rule permute_and_tensor1_cblinfun_exists)
+    using assms bij_betw_imp_inj_on equivp_implies_part_equivp by auto
+  moreover have \<open>unitary (permute_and_tensor1_cblinfun_U Rep f R)\<close>
+    apply (rule permute_and_tensor1_cblinfun_U_unitary)
+    using assms bij_betw_imp_inj_on equivp_implies_part_equivp Rep S_def Rep_range \<open>inj Rep\<close> by auto
+  ultimately show \<open>(\<forall>A. sandwich U *\<^sub>V A \<otimes>\<^sub>o id_cblinfun =
+       permute_and_tensor1_cblinfun f R A) \<and> unitary (permute_and_tensor1_cblinfun_U Rep f R)\<close>
+    by (auto intro!: equal_ket Rep_ell2_inject[THEN iffD1])
+qed
 
 lemma clinear_permute_and_tensor1_cblinfun[simp]: \<open>clinear (permute_and_tensor1_cblinfun f R)\<close>
   if [simp]: \<open>\<And>A. permute_and_tensor1_cblinfun_exists f R A\<close>

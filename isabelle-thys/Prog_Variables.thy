@@ -1698,18 +1698,80 @@ lemma qregister_conversion_as_register:
     else 0\<close>
   sorry *)
 
+lemma qregister_raw_permute_and_tensor1_cblinfun:
+  assumes \<open>cregister F\<close>
+  shows \<open>qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close>
+proof -
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = permute_and_tensor1_cblinfun_basis (same_outside_cregister F).
+        qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close>
+  proof (rule with_type_mp[OF permute_and_tensor1_cblinfun_as_register])
+    show \<open>equivp (same_outside_cregister F)\<close>
+      by simp
+    show \<open>bij_betw (getter F) (Collect (same_outside_cregister F a)) UNIV\<close> for a
+      apply (rule bij_betw_byWitness[where f'=\<open>\<lambda>b. setter F b a\<close>])
+      apply (auto simp add: same_outside_cregister_def[abs_def] assms)
+      by (metis setter_getter_same setter_setter_same)
+    fix Rep :: \<open>'c \<Rightarrow> 'b set\<close>
+    define U where \<open>U = permute_and_tensor1_cblinfun_U Rep (getter F) (same_outside_cregister F)\<close>
+    assume asm: \<open>(\<forall>A. sandwich U *\<^sub>V (A \<otimes>\<^sub>o id_cblinfun) =
+                  permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) A)
+          \<and> unitary U\<close>
+    then have \<open>permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) = (sandwich U) o Laws_Quantum.Fst\<close>
+      by (auto intro!: ext simp: Laws_Quantum.Fst_def)  
+    moreover have \<open>qregister_raw \<dots>\<close>
+      apply (rule register_comp)
+      using asm by (simp_all add: unitary_sandwich_register)
+    ultimately show \<open>qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close>
+      by simp
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
+
+
 lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow> ('a,'b) qregister\<close> is
   \<open>\<lambda>F a. if cregister F then permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a else 0\<close>
-proof -
+  subgoal for F
+    apply (cases \<open>cregister F\<close>)
+    using qregister_raw_permute_and_tensor1_cblinfun[of F]
+    by (auto simp add: non_qregister_raw_def[abs_def])
+  by -
+
+(* TODO remove *)
+(* proof -
   fix F :: \<open>('a, 'b) cregister\<close>
+  have *: \<open>\<forall>\<^sub>\<tau> 'c::type = permute_and_tensor1_cblinfun_basis (same_outside_cregister F).
+        qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close> if \<open>cregister F\<close>
+  proof (rule with_type_mp[OF permute_and_tensor1_cblinfun_as_register])
+    show \<open>equivp (same_outside_cregister F)\<close>
+      by simp
+    show \<open>bij_betw (getter F) (Collect (same_outside_cregister F a)) UNIV\<close> for a
+      apply (rule bij_betw_byWitness[where f'=\<open>\<lambda>b. setter F b a\<close>])
+      apply (auto simp add: same_outside_cregister_def[abs_def] that)
+      by (metis setter_getter_same setter_setter_same)
+    fix Rep :: \<open>'c \<Rightarrow> 'b set\<close>
+    define U where \<open>U = permute_and_tensor1_cblinfun_U Rep (getter F) (same_outside_cregister F)\<close>
+    assume asm: \<open>(\<forall>A. sandwich U *\<^sub>V (A \<otimes>\<^sub>o id_cblinfun) =
+                  permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) A)
+          \<and> unitary U\<close>
+    then have \<open>permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) = (sandwich U) o Laws_Quantum.Fst\<close>
+      by (auto intro!: ext simp: Laws_Quantum.Fst_def)  
+    moreover have \<open>qregister_raw \<dots>\<close>
+      apply (rule register_comp)
+      using asm by (simp_all add: unitary_sandwich_register)
+    ultimately show \<open>qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close>
+      by simp
+  qed
   have \<open>qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close> if \<open>cregister F\<close>
-    sorry
+    using *[OF that, cancel_with_type]
+    by assumption
   then show \<open>(\<lambda>a. if cregister F
             then permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a else 0)
        \<in> Collect qregister_raw \<union> {non_qregister_raw}\<close>
     apply (cases \<open>cregister F\<close>)
     by (auto simp: non_qregister_raw_def)
-qed
+qed *)
 
 lemma qregister_of_cregister_non_register[simp]: \<open>qregister_of_cregister non_cregister = non_qregister\<close>
 proof -
@@ -1721,8 +1783,10 @@ proof -
 qed
 
 lemma qregister_qregister_of_cregister[simp]: \<open>qregister (qregister_of_cregister F) \<longleftrightarrow> cregister F\<close>
-  sorry
-
+  apply (transfer fixing: F)
+  apply (cases \<open>cregister F\<close>)
+  using qregister_raw_permute_and_tensor1_cblinfun[of F]
+  by auto
 
 lemma qregister_of_cregister_Fst: \<open>qregister_of_cregister cFst = qFst\<close>
 proof -
