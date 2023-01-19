@@ -1303,7 +1303,82 @@ lemma setter_setter_same[simp]: \<open>setter x b (setter x a m) = setter x b m\
 
 (* TODO move to Registers.Classical_Extra *)
 lemma getter_setter: \<open>Axioms_Classical.getter F (Axioms_Classical.setter G a m) = Axioms_Classical.getter F m\<close> if \<open>Laws_Classical.compatible F G\<close> for F G
-  sorry
+proof -
+  have \<open>Axioms_Classical.register F\<close>
+    using Laws_Classical.compatible_register1 that by blast
+  have \<open>Axioms_Classical.register G\<close>
+    using Laws_Classical.compatible_register2 that by auto
+  have valid_gsF: \<open>valid_getter_setter (Axioms_Classical.getter F) (Axioms_Classical.setter F)\<close>
+    by (simp add: \<open>cregister_raw F\<close>)
+
+  have \<open>Axioms_Classical.getter F (Axioms_Classical.setter G a m)
+      = Axioms_Classical.getter F (Axioms_Classical.setter G a 
+              (Axioms_Classical.setter F (Axioms_Classical.getter F m) m))\<close>
+    by (metis valid_gsF valid_getter_setter_def)
+  also have \<open>\<dots> = Axioms_Classical.getter F (Axioms_Classical.setter F
+                      (Axioms_Classical.getter F m) (Axioms_Classical.setter G a m))\<close>
+    by (metis (mono_tags, lifting) Classical_Extra.compatible_setter 
+        \<open>cregister_raw F\<close> \<open>cregister_raw G\<close> o_eq_dest that)
+  also have \<open>\<dots> = Axioms_Classical.getter F m\<close>
+    by (meson valid_gsF valid_getter_setter_def)
+  finally show ?thesis
+    by -
+qed
+
+(* TODO move to Registers *)
+lemma setter_setter_compatI_raw:
+  assumes \<open>cregister_raw x\<close> and \<open>cregister_raw y\<close>
+  assumes \<open>\<And>a b m. Axioms_Classical.setter x a (Axioms_Classical.setter y b m)
+                 = Axioms_Classical.setter y b (Axioms_Classical.setter x a m)\<close>
+  shows \<open>ccompatible_raw x y\<close>
+proof -
+  define sx gx sy gy where \<open>sx = Axioms_Classical.setter x\<close> and \<open>gx = Axioms_Classical.getter x\<close>
+    and \<open>sy = Axioms_Classical.setter y\<close> and \<open>gy = Axioms_Classical.getter y\<close>
+  have x: \<open>x = register_from_getter_setter gx sx\<close>
+    by (simp add: assms(1) gx_def sx_def)
+  have y: \<open>y = register_from_getter_setter gy sy\<close>
+    by (simp add: assms(2) gy_def sy_def)
+
+  have [simp]: \<open>sx (gx m) m = m\<close> for m
+    by (metis assms(1) gx_def sx_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>gx (sx a m) = a\<close> for a m
+    by (metis assms(1) gx_def sx_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>sy (gy m) m = m\<close> for m
+    by (metis assms(2) gy_def sy_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>gy (sy a m) = a\<close> for a m
+    by (metis assms(2) gy_def sy_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have s_comm: \<open>sx a (sy b m) = sy b (sx a m)\<close> for a b m
+    using assms(3) by (simp add: sx_def sy_def)
+  have [simp]: \<open>gx (sy a m) = gx m\<close> for a m
+  proof -
+    have \<open>gx (sy a m) = gx (sy a (sx (gx m) m))\<close>
+      by simp
+    also have \<open>\<dots> = gx (sx (gx m) (sy a m))\<close>
+      by (simp add: s_comm)
+    also have \<open>\<dots> = gx m\<close>
+      by simp
+    finally show ?thesis
+      by -
+  qed
+  have [simp]: \<open>gy (sx a m) = gy m\<close> for a m
+  proof -
+    have \<open>gy (sx a m) = gy (sx a (sy (gy m) m))\<close>
+      by simp
+    also have \<open>\<dots> = gy (sy (gy m) (sx a m))\<close>
+      by (simp flip: s_comm)
+    also have \<open>\<dots> = gy m\<close>
+      by simp
+    finally show ?thesis
+      by -
+  qed
+
+  have \<open>(x a \<circ>\<^sub>m y b) m = (y b \<circ>\<^sub>m x a) m\<close> for a b m
+    apply (cases \<open>a (gx m)\<close>; cases \<open>b (gy m)\<close>)
+    by (auto simp add: x y register_from_getter_setter_def[abs_def] s_comm)
+  then show ?thesis
+    apply (rule_tac Laws_Classical.compatibleI)
+    using assms(1,2) by auto
+qed
 
 lemma getter_setter_compat[simp]: \<open>ccompatible x y \<Longrightarrow> getter x (setter y a m) = getter x m\<close>
   unfolding ccompatible_def
@@ -1312,6 +1387,12 @@ lemma setter_setter_compat: \<open>ccompatible x y \<Longrightarrow> setter x a 
   unfolding ccompatible_def
   apply transfer apply (simp add: non_cregister_raw)
   by (metis Classical_Extra.compatible_setter o_def)
+lemma setter_setter_compatI: 
+  assumes \<open>cregister x\<close> and \<open>cregister y\<close>
+  assumes \<open>\<And>a b m. setter x a (setter y b m) = setter y b (setter x a m)\<close>
+  shows \<open>ccompatible x y\<close>
+  unfolding ccompatible_def using assms
+  apply transfer by (auto simp add: non_cregister_raw setter_setter_compatI_raw)
 lemma setter_getter_same[simp]: \<open>setter x (getter x m) m = m\<close>
   apply transfer apply (simp add: non_cregister_raw)
   by (metis valid_getter_setter_def valid_getter_setter_getter_setter)
@@ -1327,25 +1408,112 @@ lemma setter_of_cregister_from_getter_setter: \<open>valid_getter_setter g s \<L
 lemma getter_of_cregister_from_getter_setter: \<open>valid_getter_setter g s \<Longrightarrow> getter (cregister_from_getter_setter g s) = g\<close>
   apply transfer by simp
 
+
+(* TODO move to Registers *)
+lemma valid_getter_setter_pair: 
+  assumes \<open>Laws_Classical.compatible F G\<close>
+  shows \<open>valid_getter_setter (\<lambda>m. (Axioms_Classical.getter F m, Axioms_Classical.getter G m))
+           (\<lambda>(a, b) m. Axioms_Classical.setter F a (Axioms_Classical.setter G b m))\<close>
+proof -
+  have \<open>Axioms_Classical.register F\<close>
+    using Laws_Classical.compatible_register1 assms by blast
+  have \<open>Axioms_Classical.register G\<close>
+    using Laws_Classical.compatible_register2 assms by auto
+  have valid_gsF: \<open>valid_getter_setter (Axioms_Classical.getter F) (Axioms_Classical.setter F)\<close>
+    by (simp add: \<open>cregister_raw F\<close>)
+  have valid_gsG: \<open>valid_getter_setter (Axioms_Classical.getter G) (Axioms_Classical.setter G)\<close>
+    by (simp add: \<open>cregister_raw G\<close>)
+
+  have valid: \<open>valid_getter_setter (\<lambda>m. (Axioms_Classical.getter F m, Axioms_Classical.getter G m))
+     (\<lambda>(a, b) m. Axioms_Classical.setter F a (Axioms_Classical.setter G b m))\<close>
+    using valid_gsF valid_gsG
+    apply (auto simp: valid_getter_setter_def)
+     apply (metis Laws_Classical.compatible_sym assms getter_setter)
+    by (metis Classical_Extra.compatible_setter Laws_Classical.compatible_register1 Laws_Classical.compatible_register2 assms o_def)
+  show ?thesis
+    using valid by (auto simp: Axioms_Classical.register_pair_def o_def setter_of_register_from_getter_setter)
+qed
+
+(* TODO move to Registers session *)
+lemma setter_pair_raw: \<open>Axioms_Classical.setter (F;G) = (\<lambda>(x, y). Axioms_Classical.setter F x \<circ> Axioms_Classical.setter G y)\<close>
+  if \<open>Laws_Classical.compatible F G\<close>
+  using valid_getter_setter_pair[OF that] 
+  by (auto simp: Axioms_Classical.register_pair_def o_def)
+
 lemma setter_pair:
   assumes \<open>ccompatible F G\<close>
   shows \<open>setter (cregister_pair F G) = (\<lambda>(x,y). setter F x o setter G y)\<close>
   using assms unfolding ccompatible_def
-  apply transfer apply auto
-  sorry
+  apply transfer using setter_pair_raw by auto
+
+(* TODO move to Registers *)
+lemma getter_pair_raw:
+  assumes \<open>ccompatible_raw F G\<close>
+  shows \<open>Axioms_Classical.getter (F;G) = (\<lambda>m. (Axioms_Classical.getter F m, Axioms_Classical.getter G m))\<close>
+  using assms by (simp_all add: Axioms_Classical.register_pair_def valid_getter_setter_pair)
 
 lemma getter_pair:
   assumes \<open>ccompatible F G\<close>
   shows \<open>getter (cregister_pair F G) = (\<lambda>m. (getter F m, getter G m))\<close>
   using assms unfolding ccompatible_def
-  apply transfer apply auto
-  sorry
+  apply transfer using getter_pair_raw by auto
+
+(* TODO move to Registers *)
+lemma getterI: 
+  assumes \<open>Axioms_Classical.register F\<close>
+  assumes \<open>Axioms_Classical.setter F a m = m\<close>
+  shows \<open>Axioms_Classical.getter F m = a\<close>
+  by (metis assms(1) assms(2) valid_getter_setter_def valid_getter_setter_getter_setter)
+
+(* TODO move to Registers *)
+lemma register_apply_comp:
+  assumes \<open>cregister_raw F\<close> and \<open>cregister_raw G\<close>
+  shows \<open>register_apply (F \<circ> G) f m = register_apply F (register_apply G f) m\<close>
+  apply (rule option.inject[THEN iffD1])
+  by (simp add:
+      register_apply[unfolded o_def, OF \<open>cregister_raw F\<close>, THEN fun_cong]
+      register_apply[unfolded o_def, OF \<open>cregister_raw G\<close>, THEN fun_cong]
+      register_apply[unfolded o_def, OF cregister_raw_chain[OF \<open>cregister_raw G\<close> \<open>cregister_raw F\<close>], THEN fun_cong]
+      del: option.inject)
+
+(* TODO move to Registers *)
+lemma
+  assumes [simp]: \<open>cregister_raw F\<close> \<open>cregister_raw G\<close>
+  shows setter_chain_raw: \<open>Axioms_Classical.setter (F \<circ> G) a m =
+       Axioms_Classical.setter F
+        (Axioms_Classical.setter G a (Axioms_Classical.getter F m)) m\<close>
+    and getter_chain_raw: \<open>Axioms_Classical.getter (F \<circ> G) = Axioms_Classical.getter G \<circ> Axioms_Classical.getter F\<close>
+proof -
+  define sF gF where \<open>sF = Axioms_Classical.setter F\<close> and \<open>gF = Axioms_Classical.getter F\<close>
+  from \<open>Axioms_Classical.register F\<close>
+  have F: \<open>F u m = (case u (gF m) of None \<Rightarrow> None | Some x \<Rightarrow> Some (sF x m))\<close> for u m
+    by (metis gF_def register_from_getter_setter_def register_from_getter_setter_of_getter_setter sF_def)
+  have validF: \<open>valid_getter_setter gF sF\<close>
+    using gF_def sF_def by auto
+  define sG gG where \<open>sG = Axioms_Classical.setter G\<close> and \<open>gG = Axioms_Classical.getter G\<close>
+  from \<open>Axioms_Classical.register G\<close>
+  have G: \<open>G u m = (case u (gG m) of None \<Rightarrow> None | Some x \<Rightarrow> Some (sG x m))\<close> for u m
+    by (metis gG_def register_from_getter_setter_def register_from_getter_setter_of_getter_setter sG_def)
+  have validG: \<open>valid_getter_setter gG sG\<close>
+    by (simp add: gG_def sG_def)
+  define s g where \<open>s a m = sF (sG a (gF m)) m\<close> and \<open>g m = gG (gF m)\<close> for a m
+  have *: \<open>(F \<circ> G) a m = register_from_getter_setter g s a m\<close> for a m
+    by (auto simp add: option.case_eq_if F G s_def g_def register_from_getter_setter_def)
+  have \<open>valid_getter_setter g s\<close>
+    using validF validG by (auto simp: valid_getter_setter_def s_def g_def)
+  show \<open>Axioms_Classical.setter (F \<circ> G) a m = sF (sG a (gF m)) m\<close>
+    apply (simp add: *[abs_def] setter_of_register_from_getter_setter \<open>valid_getter_setter g s\<close>)
+    by (simp add: s_def)
+  show \<open>Axioms_Classical.getter (F \<circ> G) = gG o gF\<close>
+    apply (simp add: *[abs_def] getter_of_register_from_getter_setter \<open>valid_getter_setter g s\<close>)
+    by (simp add: g_def[abs_def] o_def)
+qed
+
 
 lemma getter_chain:
   assumes \<open>cregister F\<close>
   shows \<open>getter (cregister_chain F G) = getter G o getter F\<close>
-  using assms apply transfer apply (auto simp: non_cregister_raw)
-  sorry
+  using assms apply transfer using getter_chain_raw by (auto simp: non_cregister_raw)
 
 definition same_outside_cregister :: \<open>('a,'b) cregister \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool\<close> where
   \<open>same_outside_cregister F x y \<longleftrightarrow> x = setter F (getter F x) y\<close>
@@ -1402,7 +1570,7 @@ lemma Qqcompatible_antimono_left: \<open>A \<le> B \<Longrightarrow> Qqcompatibl
 lemma setter_chain:
   assumes \<open>cregister F\<close> \<open>cregister G\<close>
   shows \<open>setter (cregister_chain F G) a m = setter F (setter G a (getter F m)) m\<close>
-  sorry
+  using assms apply transfer using setter_chain_raw apply auto by fast
 
 (* TODO move to Registers *)
 lemma valid_getter_setter_fst[simp]: \<open>valid_getter_setter fst (\<lambda>x (_,y). (x,y))\<close>
@@ -1696,7 +1864,7 @@ lemma qregister_conversion_as_register:
   \<open>\<lambda>F a. if cregister F then
       explicit_cblinfun (\<lambda>i j. if same_outside_cregister F i j then Rep_ell2 (a *\<^sub>V ket (getter F j)) (getter F i) else 0)
     else 0\<close>
-  sorry *)
+   *)
 
 lemma qregister_raw_permute_and_tensor1_cblinfun:
   assumes \<open>cregister F\<close>
@@ -1850,10 +2018,6 @@ proof -
     by (simp add: qSnd.rep_eq weak_star_cont_register)
 qed
 
-lemma qcompatible_qregister_of_cregister[simp]:
-  \<open>qcompatible (qregister_of_cregister F) (qregister_of_cregister G) \<longleftrightarrow> ccompatible F G\<close>
-  sorry
-
 lemmas qcompatible_FS_qregister_of_cregister[simp] =
   qcompatible_Fst_Snd[unfolded qregister_of_cregister_Fst[symmetric]]
   qcompatible_Fst_Snd[unfolded qregister_of_cregister_Snd[symmetric]]
@@ -1868,8 +2032,128 @@ lemma apply_qregister_of_cregister:
           permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) a\<close>
   unfolding qregister_of_cregister.rep_eq using assms by simp
 
-lemma qregister_of_cregister_compatible: \<open>ccompatible x y \<longleftrightarrow> qcompatible (qregister_of_cregister x) (qregister_of_cregister y)\<close>
-  sorry
+
+lemma apply_qregister_qregister_of_cregister_butterket:
+  assumes \<open>cregister F\<close>
+  shows \<open>apply_qregister (qregister_of_cregister F) (butterket x y) (ket z) =
+          of_bool (y = getter F z) *\<^sub>C ket (setter F x z)\<close>
+proof (rule Rep_ell2_inject[THEN iffD1], rule ext)
+  fix w
+  have \<open>Rep_ell2 (apply_qregister (qregister_of_cregister F) (butterket x y) *\<^sub>V |z\<rangle>) w
+      = Rep_ell2 (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) (butterket x y) (ket z)) w\<close>
+    using \<open>cregister F\<close> by (simp add: apply_qregister_of_cregister)
+  also have \<open>\<dots> = of_bool (same_outside_cregister F w z) * Rep_ell2 (butterket x y *\<^sub>V |getter F z\<rangle>) (getter F w)\<close>
+    apply (subst permute_and_tensor1_cblinfun_ket)
+     apply (rule permute_and_tensor1_cblinfun_exists)
+      apply (simp add: equivp_implies_part_equivp)
+     apply (smt (verit, best) inj_onI mem_Collect_eq same_outside_cregister_def setter_getter_same setter_setter_same)
+    by simp
+  also have \<open>\<dots> = of_bool (same_outside_cregister F w z \<and> x = getter F w \<and> y = getter F z)\<close>
+    by (auto simp add: cinner_ket ket.rep_eq zero_ell2.rep_eq)
+  also have \<open>\<dots> = of_bool (w = setter F x z \<and> y = getter F z)\<close>
+    apply (rule arg_cong[where f=of_bool])
+    by (auto simp: same_outside_cregister_def \<open>cregister F\<close>)
+  also have \<open>\<dots> = Rep_ell2 (of_bool (y = getter F z) *\<^sub>C |setter F x z\<rangle>) w\<close>
+    by (auto simp add: ket.rep_eq zero_ell2.rep_eq)
+  finally show \<open>Rep_ell2 (apply_qregister (qregister_of_cregister F) (butterket x y) *\<^sub>V |z\<rangle>) w
+              = Rep_ell2 (of_bool (y = getter F z) *\<^sub>C |setter F x z\<rangle>) w\<close>
+    by -
+qed
+
+lemma apply_qregister_weak_star_continuous[simp]:
+  \<open>continuous_map weak_star_topology weak_star_topology (apply_qregister F)\<close>
+  apply transfer
+  by (auto simp: non_qregister_raw_def[abs_def] weak_star_cont_register)
+
+lemma qcompatible_qregister_of_cregister[simp]:
+  \<open>qcompatible (qregister_of_cregister F) (qregister_of_cregister G) \<longleftrightarrow> ccompatible F G\<close>
+proof (rule iffI)
+  assume compat: \<open>ccompatible F G\<close>
+  then have [simp]: \<open>cregister F\<close> \<open>cregister G\<close>
+    using ccompatible_register1 ccompatible_register2 by auto
+
+  have [simp]: \<open>getter F (setter G b m) = getter F m\<close> for b m
+    by (simp add: compat)
+  have [simp]: \<open>getter G (setter F a m) = getter G m\<close> for a m
+    by (simp add: ccompatible_sym compat)
+  have [simp]: \<open>setter F a (setter G b z) = setter G b (setter F a z)\<close> for a b z
+    by (simp add: compat setter_setter_compat)
+
+  have [simp]: \<open>clinear (\<lambda>a. apply_qregister X a o\<^sub>C\<^sub>L B)\<close> for a B X
+    using clinear_compose[OF clinear_apply_qregister[of X] clinear_cblinfun_compose_left[of B]]
+    by (simp add: o_def)
+  have [simp]: \<open>clinear (\<lambda>a. B o\<^sub>C\<^sub>L apply_qregister X a)\<close> for a B X
+    using clinear_compose[OF clinear_apply_qregister[of X] clinear_cblinfun_compose_right[of B]]
+    by (simp add: o_def)
+  have [intro]: \<open>continuous_map weak_star_topology weak_star_topology 
+         (\<lambda>a. apply_qregister X a o\<^sub>C\<^sub>L B)\<close> for B X
+    using continuous_map_compose[OF apply_qregister_weak_star_continuous[of X] continuous_map_right_comp_weak_star[of B]]
+    by (simp add: o_def)
+  have [intro]: \<open>continuous_map weak_star_topology weak_star_topology 
+         (\<lambda>a. B o\<^sub>C\<^sub>L apply_qregister X a)\<close> for B X
+    using continuous_map_compose[OF apply_qregister_weak_star_continuous[of X] continuous_map_left_comp_weak_star[of B]]
+    by (simp add: o_def)
+
+  have *: \<open>apply_qregister (qregister_of_cregister F) (butterket x y) *\<^sub>V apply_qregister (qregister_of_cregister G) (butterket x' y') *\<^sub>V ket z
+      = apply_qregister (qregister_of_cregister G) (butterket x' y') *\<^sub>V apply_qregister (qregister_of_cregister F) (butterket x y) *\<^sub>V ket z\<close>
+    for x y x' y' z
+    by (auto simp add: apply_qregister_qregister_of_cregister_butterket)
+  have *: \<open>apply_qregister (qregister_of_cregister F) (butterket x y) o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterket x' y')
+      = apply_qregister (qregister_of_cregister G) (butterket x' y') o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) (butterket x y)\<close>
+    for x y x' y'
+    apply (rule equal_ket)
+    using *[of x y x' y']
+    by simp
+  have *: \<open>apply_qregister (qregister_of_cregister F) a o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterket x' y')
+      = apply_qregister (qregister_of_cregister G) (butterket x' y') o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) a\<close>
+    for x' y' a
+    apply (rule fun_cong[where x=a])
+    apply (rule weak_star_clinear_eq_butterfly_ketI)
+    using * by auto
+  have \<open>apply_qregister (qregister_of_cregister F) a o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) b
+      = apply_qregister (qregister_of_cregister G) b o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) a\<close>
+    for a b
+    apply (rule fun_cong[where x=b])
+    apply (rule weak_star_clinear_eq_butterfly_ketI)
+    using * by auto
+  then show \<open>qcompatible (qregister_of_cregister F) (qregister_of_cregister G)\<close>
+    by (simp add: qcompatibleI)
+next
+  assume compat: \<open>qcompatible (qregister_of_cregister F) (qregister_of_cregister G)\<close>
+  then have qqF: \<open>qregister (qregister_of_cregister F)\<close> and qqG: \<open>qregister (qregister_of_cregister G)\<close>
+    by (auto simp add: qcompatible_def)
+  from qqF have [simp]: \<open>cregister F\<close>
+    apply (transfer fixing: F)
+    apply (cases \<open>cregister F\<close>)
+    by auto
+  from qqG have [simp]: \<open>cregister G\<close>
+    apply (transfer fixing: G)
+    apply (cases \<open>cregister G\<close>)
+    by auto
+
+  have \<open>setter F a (setter G b m) = setter G b (setter F a m)\<close> for a b m
+  proof (rule ccontr)
+    assume assm: \<open>setter F a (setter G b m) \<noteq> setter G b (setter F a m)\<close>
+    have *: \<open>(apply_qregister (qregister_of_cregister F) (butterket a a') o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterket b b')) *\<^sub>V ket m
+      = (apply_qregister (qregister_of_cregister G) (butterket b b') o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) (butterket a a')) *\<^sub>V ket m\<close>
+      for a' b'
+      by (simp add: compat qcompatible_commute)
+    have *: \<open>of_bool (b' = getter G m \<and> a' = getter F (setter G b m)) *\<^sub>C |setter F a (setter G b m)\<rangle>
+             = of_bool (a' = getter F m \<and> b' = getter G (setter F a m)) *\<^sub>C |setter G b (setter F a m)\<rangle>\<close>
+      for a' b'
+      using *[of a' b']
+      by (simp add: apply_qregister_qregister_of_cregister_butterket cblinfun.scaleC_right flip: of_bool_conj)
+    with assm have \<open>\<not> (b' = getter G m \<and> a' = getter F (setter G b m)) \<and> \<not> (a' = getter F m \<and> b' = getter G (setter F a m))\<close> 
+      for a' b'
+      by (smt (z3) complex_vector.scale_cancel_left ket_injective of_bool_eq(1) of_bool_eq_iff)
+    then show False
+      by blast
+  qed
+  then show \<open>ccompatible F G\<close>
+    apply (rule setter_setter_compatI[rotated -1])
+    by simp_all
+qed
+
 lemma qregister_of_cregister_pair: \<open>qregister_of_cregister (cregister_pair x y) = qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)\<close>
   sorry
 lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_chain x y) = qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)\<close>
@@ -1972,11 +2256,9 @@ definition swap_variables_qvars :: \<open>'a q2variable \<Rightarrow> 'a q2varia
 section \<open>Unsorted\<close>
 
 lemma getter_Snd_chain_swap[simp]: \<open>getter (cregister_chain cSnd G) (prod.swap m) = getter (cregister_chain cFst G) m\<close>
-  sorry
-
+  by (simp add: getter_chain)
 lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.swap m) = getter (cregister_chain cSnd G) m\<close>
-  sorry
-
+  by (simp add: getter_chain)
 
 (* axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close> *)
 
@@ -2276,7 +2558,7 @@ simproc_setup register_solve_le (\<open>REGISTER_SOLVE (qregister_le Q R)\<close
 (* lemma register_conversion_hint_solve[simp]: 
   \<open>register_conversion_hint R (apply_qregister Q x) = apply_qregister R (apply_qregister (qregister_conversion Q R) x)\<close>
   if \<open>REGISTER_SOLVE (qregister_le Q R)\<close>
-  sorry *)
+   *)
 
 definition \<open>NOT_INDEX_REGISTER x = True\<close>
 lemma NOT_INDEX_REGISTER_cong[cong]: \<open>NOT_INDEX_REGISTER x = NOT_INDEX_REGISTER x\<close>
