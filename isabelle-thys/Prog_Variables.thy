@@ -1866,6 +1866,10 @@ lemma qregister_conversion_as_register:
     else 0\<close>
    *)
 
+lemma permute_and_tensor1_cblinfun_exists_register: \<open>permute_and_tensor1_cblinfun_exists (getter F) (same_outside_cregister F) a\<close> if \<open>cregister F\<close>
+  apply (auto intro!: permute_and_tensor1_cblinfun_exists simp add: equivp_implies_part_equivp)
+  by (smt (verit, del_insts) equivp_def equivp_same_outside_cregister inj_onI mem_Collect_eq same_outside_cregister_def)
+
 lemma qregister_raw_permute_and_tensor1_cblinfun:
   assumes \<open>cregister F\<close>
   shows \<open>qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close>
@@ -1967,7 +1971,7 @@ proof -
     have 1: \<open>inj_on fst (Collect (same_outside_cregister cFst x))\<close> for x :: \<open>'a \<times> 'c\<close>
       by (smt (verit) equivp_def equivp_same_outside_cregister getter_cFst inj_onI mem_Collect_eq same_outside_cregister_def)
     have \<open>?lhs = (if same_outside_cregister cFst y x then Rep_ell2 (butterket i j *\<^sub>V |x1\<rangle>) y1 else 0)\<close>
-      by (auto intro!: permute_and_tensor1_cblinfun_exists simp add: equivp_implies_part_equivp 
+      by (auto intro!: permute_and_tensor1_cblinfun_exists_register simp add: equivp_implies_part_equivp 
           qregister_of_cregister.rep_eq permute_and_tensor1_cblinfun_ket 1 x12 y12)
     also have \<open>\<dots> = ?rhs\<close>
       apply (auto simp add: qFst.rep_eq Fst_def x12 y12 tensor_op_ell2 cinner_ket
@@ -2314,7 +2318,29 @@ next
 qed
 
 lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_chain x y) = qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)\<close>
-  sorry
+proof (cases \<open>cregister x \<and> cregister y\<close>)
+  case True
+  then have [simp]: \<open>cregister x\<close> \<open>cregister y\<close>
+    by (auto simp add: ccompatible_def)
+  have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterket k l) *\<^sub>V ket z =
+        apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l) *\<^sub>V ket z\<close> for k l z
+    apply (auto intro!: Rep_ell2_inject[THEN iffD1] ext 
+        simp add: apply_qregister_qregister_of_cregister_butterket getter_chain setter_chain)
+     apply (auto simp add: apply_qregister_of_cregister permute_and_tensor1_cblinfun_ket
+        permute_and_tensor1_cblinfun_exists_register ket.rep_eq same_outside_cregister_def
+        scaleC_ell2.rep_eq cinner_ket zero_ell2.rep_eq)
+    by (metis getter_setter_same[OF \<open>cregister x\<close>])
+  then have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterket k l) =
+        apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l
+    by (simp add: equal_ket)
+  then show ?thesis
+    apply (rule_tac qregister_eqI_separating[OF separating_butterkey])
+    by auto
+next
+  case False
+  then show ?thesis
+    by (auto simp add: non_cregister)
+qed
 
 typedecl cl
 typedecl qu
