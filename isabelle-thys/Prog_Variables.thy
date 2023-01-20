@@ -2154,8 +2154,165 @@ next
     by simp_all
 qed
 
-lemma qregister_of_cregister_pair: \<open>qregister_of_cregister (cregister_pair x y) = qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)\<close>
-  sorry
+lemma cregister_eqI_setter_raw: 
+  assumes [simp]: \<open>cregister_raw F\<close> \<open>cregister_raw G\<close>
+  assumes eq: \<open>\<And>a m. Axioms_Classical.setter F a m = Axioms_Classical.setter G a m\<close>
+  shows \<open>F = G\<close>
+proof -
+  from eq \<open>cregister_raw F\<close> \<open>cregister_raw G\<close> have \<open>Axioms_Classical.getter F = Axioms_Classical.getter G\<close>
+    by (auto simp: Axioms_Classical.getter_def)
+  with eq[abs_def]
+  have \<open>register_from_getter_setter (Axioms_Classical.getter F) (Axioms_Classical.setter F)
+      = register_from_getter_setter (Axioms_Classical.getter G) (Axioms_Classical.setter G)\<close>
+    by simp
+  then show ?thesis
+    by (simp add: register_from_getter_setter_of_getter_setter)
+qed
+
+lemma cregister_eqI_setter: 
+  assumes \<open>cregister F\<close> \<open>cregister G\<close>
+  assumes eq: \<open>\<And>a m. setter F a m = setter G a m\<close>
+  shows \<open>F = G\<close>
+  using assms apply transfer
+  by (auto intro!: cregister_eqI_setter_raw)
+
+lemma separating_butterkey:
+  \<open>Laws_Quantum.separating TYPE('b) (range (case_prod butterket))\<close>
+proof -
+  thm weak_star_clinear_eq_butterfly_ketI
+  have \<open>F = G\<close> if \<open>\<And>a b. F (butterket a b) = G (butterket a b)\<close> 
+    and \<open>Axioms_Quantum.preregister F\<close> and \<open>Axioms_Quantum.preregister G\<close> for F G :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
+    apply (rule weak_star_clinear_eq_butterfly_ketI[where T=weak_star_topology])
+    using that
+    by (auto simp: Axioms_Quantum.preregister_def bounded_clinear.clinear)
+  then show ?thesis
+    by (auto simp add: Laws_Quantum.separating_def)
+qed
+
+lemma separating_nonempty: \<open>\<not> (X \<subseteq> {0})\<close> if sep: \<open>separating TYPE('b) X\<close> for X :: \<open>'a qupdate set\<close>
+proof (rule notI)
+  assume \<open>X \<subseteq> {0}\<close>
+  have \<open>preregister 0\<close>
+    by (simp add: Axioms_Quantum.preregister_def zero_fun_def)
+  fix x
+  define F :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close> where \<open>F a = (ket x \<bullet>\<^sub>C (a *\<^sub>V ket x)) *\<^sub>C id_cblinfun\<close> for a
+  have \<open>bounded_clinear F\<close>
+    unfolding F_def[abs_def]
+    by (intro bounded_linear_intros)
+  moreover have \<open>continuous_map weak_star_topology weak_star_topology F\<close>
+  proof -
+    note continuous_map_compose[trans]
+    have \<open>continuous_map weak_star_topology cweak_operator_topology (\<lambda>f :: 'a qupdate. f)\<close>
+      by (simp add: wot_weaker_than_weak_star)
+    also have \<open>continuous_map cweak_operator_topology euclidean (\<lambda>a. ket x \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
+      by (simp add: cweak_operator_topology_continuous_evaluation)
+    also have \<open>continuous_map euclidean euclidean (\<lambda>c. c *\<^sub>C (id_cblinfun :: 'b qupdate))\<close>
+      by (auto intro!: continuous_map_iff_continuous2[THEN iffD2] continuous_at_imp_continuous_on)
+    also have \<open>continuous_map euclidean weak_star_topology (\<lambda>f :: 'b qupdate. f)\<close>
+      by (simp add: weak_star_topology_weaker_than_euclidean)
+    finally show ?thesis
+      by (simp add: o_def F_def[abs_def])
+  qed
+  ultimately have \<open>preregister F\<close>
+    by (simp add: Axioms_Quantum.preregister_def)
+  have \<open>0 a = F a\<close> if \<open>a \<in> X\<close> for a
+    using \<open>X \<subseteq> {0}\<close> that
+    by (auto simp: F_def)
+  with sep have \<open>0 = F\<close>
+    by (simp add: Laws_Quantum.register_eqI \<open>Axioms_Quantum.preregister 0\<close> \<open>Axioms_Quantum.preregister F\<close>)
+  then have \<open>0 (butterket x x) = F (butterket x x)\<close>
+    by simp
+  then show False
+    by (simp add: F_def)
+qed
+
+lemma qregister_eqI_separating:
+  fixes F G :: \<open>('a,'b) qregister\<close>
+  assumes sep: \<open>Laws_Quantum.separating TYPE('b) X\<close>
+  assumes eq: \<open>\<And>x. x\<in>X \<Longrightarrow> apply_qregister F x = apply_qregister G x\<close>
+  shows \<open>F = G\<close>
+proof -
+  obtain x where \<open>x \<in> X\<close> and \<open>x \<noteq> 0\<close>
+    using separating_nonempty[OF sep]
+    by auto
+
+  consider (reg) \<open>qregister F\<close> \<open>qregister G\<close> | (notreg) \<open>\<not> qregister F\<close> \<open>\<not> qregister G\<close>
+    | (notF) \<open>\<not> qregister F\<close> \<open>qregister G\<close> | (notG) \<open>qregister F\<close> \<open>\<not> qregister G\<close>
+    by auto
+  then show ?thesis
+  proof cases
+    case reg
+    then show ?thesis
+      using assms apply transfer
+      by (auto simp: Laws_Quantum.separating_def)
+  next
+    case notreg
+    then show ?thesis
+      by (simp add: non_qregister)
+  next
+    case notF
+    have \<open>apply_qregister F x = 0\<close>
+      using non_qregister notF(1) by force
+    moreover have \<open>apply_qregister G x \<noteq> 0\<close>
+      using \<open>x \<noteq> 0\<close> inj_qregister[OF notF(2)] injD by fastforce
+    moreover have \<open>apply_qregister F x = apply_qregister G x\<close>
+      using eq \<open>x \<in> X\<close> by simp
+    ultimately have False
+      by simp
+    then show ?thesis
+      by simp
+  next
+    case notG
+    have \<open>apply_qregister G x = 0\<close>
+      using non_qregister notG(2) by force
+    moreover have \<open>apply_qregister F x \<noteq> 0\<close>
+      using \<open>x \<noteq> 0\<close> inj_qregister[OF notG(1)] injD by fastforce
+    moreover have \<open>apply_qregister F x = apply_qregister G x\<close>
+      using eq \<open>x \<in> X\<close> by simp
+    ultimately have False
+      by simp
+    then show ?thesis
+      by simp
+  qed
+qed
+
+
+lemma qregister_of_cregister_pair: 
+  \<open>qregister_of_cregister (cregister_pair x y) = qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)\<close>
+proof (cases \<open>ccompatible x y\<close>)
+  case True
+  then have [simp]: \<open>ccompatible x y\<close> \<open>cregister x\<close> \<open>cregister y\<close>
+    by (auto simp add: ccompatible_def)
+  have \<open>apply_qregister (qregister_of_cregister (cregister_pair x y)) (butterket k l) *\<^sub>V ket z =
+        apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l) *\<^sub>V ket z\<close> for k l z
+  proof -
+    obtain k1 k2 where [simp]: \<open>k = (k1,k2)\<close>
+      by force
+    obtain l1 l2 where [simp]: \<open>l = (l1,l2)\<close>
+      by force
+    show ?thesis
+      apply (simp add: apply_qregister_pair flip: tensor_ell2_ket tensor_butterfly)
+      by (simp add: apply_qregister_qregister_of_cregister_butterket getter_pair setter_pair
+          tensor_ell2_ket tensor_butterfly)
+  qed
+  then have \<open>apply_qregister (qregister_of_cregister (cregister_pair x y)) (butterket k l) =
+        apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l
+    by (simp add: equal_ket)
+  then show ?thesis
+    apply (rule_tac qregister_eqI_separating[OF separating_butterkey])
+    by auto
+next
+  case False
+  then have \<open>\<not> qcompatible (qregister_of_cregister x) (qregister_of_cregister y)\<close>
+    by simp
+  then have 1: \<open>qregister_pair (qregister_of_cregister x) (qregister_of_cregister y) = non_qregister\<close>
+    using non_qregister by blast
+  from False have 2: \<open>cregister_pair x y = non_cregister\<close>
+    using non_cregister by blast
+  from 1 2 show ?thesis
+    by simp
+qed
+
 lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_chain x y) = qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)\<close>
   sorry
 
