@@ -124,7 +124,8 @@ lemma apply_qregister_of_id[simp]: \<open>qregister F \<Longrightarrow> apply_qr
 
 (* Equivalence class of cregisters *)
 axiomatization valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close>
-  where valid_cregister_range: \<open>cregister F \<Longrightarrow> valid_cregister_range (range (apply_cregister F))\<close> for F :: \<open>('b,'a) cregister\<close>
+lemma valid_cregister_range: \<open>cregister F \<Longrightarrow> valid_cregister_range (range (apply_cregister F))\<close> for F :: \<open>('b,'a) cregister\<close>
+  sorry
 
 (* TODO move *)
 lemma csubspace_commutant[simp]: \<open>csubspace (commutant X)\<close>
@@ -1651,8 +1652,239 @@ lemma Cccompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow>
 lemma Qqcompatible_QREGISTER_ofI[simp]: \<open>qcompatible F G \<Longrightarrow> Qqcompatible (QREGISTER_of F) G\<close>
   by (simp add: Qqcompatible_QREGISTER_of)
 
-lemma cregister_conversion_raw_register: \<open>cregister_raw F \<Longrightarrow> cregister_raw G \<Longrightarrow> range F \<subseteq> range G \<Longrightarrow> cregister_raw (inv G \<circ> F)\<close>
-  sorry
+(* TODO move *)
+lemma compare_all_eqI: \<open>(\<And>x. a = x \<longleftrightarrow> b = x) \<Longrightarrow> a = b\<close>
+  by auto
+
+(* TODO to Registers *)
+lemma getter_from_update1: 
+  assumes \<open>cregister_raw F\<close>
+  shows \<open>Axioms_Classical.getter F m = a \<longleftrightarrow> F (update1 a b) m \<noteq> None\<close>
+  apply (subst (2) register_from_getter_setter_of_getter_setter[symmetric, OF assms])
+  by (auto simp add: register_from_getter_setter_def update1_def)
+
+(* TODO to Registers *)
+lemma register_apply_mult:
+  assumes \<open>cregister_raw F\<close>
+  shows \<open>register_apply F a o register_apply F b = register_apply F (a o b)\<close>
+proof (rule ext)
+  fix x
+  have FSome: \<open>F (\<lambda>y. Some (w y)) z \<noteq> None\<close> for z w
+    by (meson assms option.simps(3) register_total total_fun_def)
+
+  have \<open>Some ((register_apply F a o register_apply F b) x) = F (Some o a) (register_apply F b x)\<close>
+    using register_apply[OF assms, THEN fun_cong]
+    by (simp add: o_def)
+  also have \<open>\<dots> = F (\<lambda>x. Some (a x)) (the (F (\<lambda>x. Some (b x)) x))\<close>
+    by (simp add: register_apply_def o_def)
+  also have \<open>\<dots> = (F (Some o a) \<circ>\<^sub>m F (Some o b)) x\<close>
+    apply (cases \<open>F (\<lambda>x. Some (b x)) x\<close>)
+    using FSome by (auto simp: map_comp_def o_def)
+  also have \<open>\<dots> = F ((Some o a) \<circ>\<^sub>m (Some o b)) x\<close>
+    by (simp add: Axioms_Classical.register_mult assms)
+  also have \<open>\<dots> = F (\<lambda>x. Some (a (b x))) x\<close>
+    apply (cases \<open>F (\<lambda>x. Some (b x)) x\<close>)
+    using FSome by (auto simp: map_comp_def)
+  also have \<open>\<dots> = Some (register_apply F (a o b) x)\<close>
+    by (simp add: register_apply_def o_def option.collapse[OF FSome])
+  finally show \<open>(register_apply F a \<circ> register_apply F b) x = register_apply F (a \<circ> b) x\<close>
+    by simp
+qed
+
+(* TODO to Registers (replace register_total?) *)
+lemma register_total_iff: 
+  assumes \<open>cregister_raw F\<close>
+  shows \<open>total_fun (F a) \<longleftrightarrow> total_fun a\<close>
+proof (rule iffI)
+  show \<open>total_fun a \<Longrightarrow> total_fun (F a)\<close>
+    using assms register_total by blast
+next
+  show \<open>total_fun a\<close> if \<open>total_fun (F a)\<close>
+  proof (rule ccontr)
+    assume \<open>\<not> total_fun a\<close>
+    then obtain x where \<open>a x = None\<close>
+      using total_fun_def by blast
+    then have \<open>a \<circ>\<^sub>m update1 x x = Map.empty\<close>
+      by (metis map_comp_None_iff update1_def)
+    then have \<open>F a \<circ>\<^sub>m F (update1 x x) = Map.empty\<close>
+      by (simp add: Axioms_Classical.register_mult cregister_raw_empty assms)
+    with \<open>total_fun (F a)\<close> have \<open>F (update1 x x) = Map.empty\<close>
+      by (meson map_comp_None_iff total_fun_def)
+    then have \<open>update1 x x = Map.empty\<close>
+      by (smt (verit) assms getter_from_update1 valid_getter_setter_def valid_getter_setter_getter_setter)
+    then show False
+      by (metis option.discI update1_def)
+  qed
+qed
+
+(* TODO move to Registers *)
+lemma register_apply_via_setter_getter:
+  assumes [simp]: \<open>cregister_raw F\<close>
+  shows \<open>register_apply F f m = Axioms_Classical.setter F (f (Axioms_Classical.getter F m)) m\<close>
+  apply (subst register_from_getter_setter_of_getter_setter[symmetric, OF assms])
+  by (simp add: register_from_getter_setter_def[abs_def] register_apply_def
+      del: register_from_getter_setter_of_getter_setter)
+
+(* TODO move to Registers *)
+lemma getter_register_apply:
+  assumes [simp]: \<open>cregister_raw F\<close>
+  shows \<open>Axioms_Classical.getter F (register_apply F f m) = f (Axioms_Classical.getter F m)\<close>
+  apply (simp add: register_apply_via_setter_getter)
+  by (metis assms valid_getter_setter_def valid_getter_setter_getter_setter)
+
+lemma cregister_conversion_raw_register:
+  fixes F :: \<open>'a cupdate \<Rightarrow> 'c cupdate\<close> and G :: \<open>'b cupdate \<Rightarrow> 'c cupdate\<close>
+  assumes regF: \<open>cregister_raw F\<close> and regG: \<open>cregister_raw G\<close> and range: \<open>range F \<subseteq> range G\<close>
+  shows \<open>cregister_raw (inv G \<circ> F)\<close>
+proof -
+  define gF gG sF sG where \<open>gF = Axioms_Classical.getter F\<close> and \<open>gG = Axioms_Classical.getter G\<close>
+    and \<open>sF = Axioms_Classical.setter F\<close> and \<open>sG = Axioms_Classical.setter G\<close>
+  fix c0
+  define g s where \<open>g b = gF (sG b c0)\<close> and \<open>s a b = gG (sF a (sG b c0))\<close> for a b
+  (* define C where \<open>C = {sG b c0 | b. True}\<close> *)
+  define C where \<open>C = {c. sG (gG c0) c = c0}\<close>
+
+  have [simp]: \<open>gG (sG b c) = b\<close> for b c
+    by (metis regG gG_def sG_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have sgG[simp]: \<open>sG (gG c) c = c\<close> for c
+    by (metis regG gG_def sG_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have ssG[simp]: \<open>sG b (sG b' c) = sG b c\<close> for b b' c
+    by (metis regG gG_def sG_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>gF (sF a c) = a\<close> for a c
+    by (metis regF gF_def sF_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>sF (gF c) c = c\<close> for c
+    by (metis regF gF_def sF_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>sF a (sF a' c) = sF a c\<close> for a a' c
+    by (metis regF gF_def sF_def valid_getter_setter_def valid_getter_setter_getter_setter)
+
+  have ggG: \<open>g (gG c) = gF c\<close> for c
+  proof -
+    have 1: \<open>gF c' = gF c''\<close> if \<open>gG c' = gG c''\<close> for c' c''
+    proof (rule compare_all_eqI)
+      fix a
+      from range obtain u where u: \<open>G u = F (update1 a a)\<close>
+        by (metis UNIV_I image_subset_iff rangeE)
+      from that have \<open>u (gG c') \<noteq> None \<longleftrightarrow> u (gG c'') \<noteq> None\<close>
+        by simp
+      then have \<open>G u c' \<noteq> None \<longleftrightarrow> G u c'' \<noteq> None\<close>
+        apply (subst (2) register_from_getter_setter_of_getter_setter[symmetric, OF regG])
+        apply (subst register_from_getter_setter_of_getter_setter[symmetric, OF regG])
+        by (auto simp add: register_from_getter_setter_def gG_def)
+      then have \<open>F (update1 a a) c' \<noteq> None \<longleftrightarrow> F (update1 a a) c'' \<noteq> None\<close>
+        by (simp add: u)
+      then show \<open>gF c' = a \<longleftrightarrow> gF c'' = a\<close>
+        by (simp add: gF_def getter_from_update1[OF regF, of _ a a])
+    qed
+    have 2:\<open>gG (sG (gG c) c0) = gG c\<close>
+      by simp
+    from 1 2 have \<open>gF (sG (gG c) c0) = gF c\<close>
+      by blast
+    then show ?thesis
+      by (simp add: g_def)
+  qed
+
+  have sg: \<open>b = s (g b) b\<close> for b
+    by (simp add: g_def s_def)
+
+  have gs: \<open>g (s a b) = a\<close> for a b
+    apply (simp add: g_def s_def)
+    apply (simp flip: ggG)
+    by (simp add: ggG)
+
+  have sgC: \<open>sG (gG c) c0 = c\<close> if \<open>c \<in> C\<close> for c
+    using that apply (simp add: C_def)
+    by (metis ssG sgG)
+
+  have \<open>c0 \<in> C\<close>
+    by (simp add: C_def)
+
+  have sG_C: \<open>sG b c \<in> C\<close> if \<open>c \<in> C\<close> for b c
+    using that by (simp add: C_def)
+
+  have sF_via_G: \<open>\<exists>u. sF a = register_apply G u\<close> for a
+  proof -
+    from range
+    obtain u' where u': \<open>F (\<lambda>b. Some a) = G u'\<close>
+      by blast
+    have \<open>total_fun (G u')\<close>
+      by (metis assms(1) option.simps(3) register_total total_fun_def u')
+    then have \<open>total_fun u'\<close>
+      by (simp add: regG register_total_iff)
+    then obtain u where u: \<open>u' = Some o u\<close>
+      apply atomize_elim
+      apply (auto simp: total_fun_def o_def)
+      by metis
+    show ?thesis
+      by (auto intro!: exI[of _ u] ext
+          simp: sF_def Axioms_Classical.setter_def register_apply_def u' u)
+  qed
+
+  have sG_sF: \<open>sG b (sF a c) = sG b c\<close> for a b c
+  proof -
+    obtain u where u: \<open>sF a = register_apply G u\<close>
+      using sF_via_G by blast
+    have \<open>sG b (sF a c) = register_apply G (\<lambda>_. b) (register_apply G u c)\<close>
+      by (simp add: sG_def Axioms_Classical.setter_def u)
+    also have \<open>\<dots> = register_apply G ((\<lambda>_. b) o u) c\<close>
+      using register_apply_mult[OF regG, unfolded o_def, THEN fun_cong]
+      by simp
+    also have \<open>\<dots> = sG b c\<close>
+      by (simp add: sG_def Axioms_Classical.setter_def)
+    finally show ?thesis
+      by -
+  qed
+
+  have sF_C: \<open>sF a c \<in> C\<close> if \<open>c \<in> C\<close> for a c
+    using that by (simp add: C_def sG_sF)
+
+  have ss: \<open>s a (s a' b) = s a b\<close> for a a' b
+    by (simp add: g_def s_def sgC sF_C sG_C \<open>c0 \<in> C\<close>)
+  
+  from sg gs ss have valid_gs: \<open>valid_getter_setter g s\<close>
+    by (simp add: valid_getter_setter_def)
+
+  have GF_gs: \<open>inv G o F = register_from_getter_setter g s\<close>
+  proof -
+    have gF: \<open>Axioms_Classical.getter (G o register_from_getter_setter g s) = gF\<close>
+      apply (simp add: getter_chain_raw regG register_register_from_getter_setter valid_gs
+          flip: gG_def)
+      by (simp add: ggG o_def)
+    have sF: \<open>Axioms_Classical.setter (G o register_from_getter_setter g s) = sF\<close> (is \<open>?lhs = sF\<close>)
+    proof (rule ext, rule ext)
+      fix a c
+      obtain u where u: \<open>sF a = register_apply G u\<close>
+        using sF_via_G by blast
+      have G_part: \<open>gG (?lhs a c) = gG (sF a c)\<close>
+      proof -
+        have \<open>gG (?lhs a c) = s a (gG c)\<close>
+          apply (simp add: setter_chain_raw regG register_register_from_getter_setter valid_gs
+              flip: gG_def sG_def)
+          thm s_def
+          by -
+        also have \<open>s a (gG c) = gG (sF a c)\<close>
+          apply (simp add: s_def u getter_register_apply gG_def regG)
+          by (simp flip: gG_def)
+        finally show ?thesis
+          by -
+      qed
+      have rest: \<open>sG b (?lhs a c) = sG b (sF a c)\<close> for b
+        by (simp add: setter_chain_raw regG register_register_from_getter_setter valid_gs sG_sF
+            flip: gG_def sG_def)
+      from G_part rest show \<open>?lhs a c = sF a c\<close>
+        by (metis sgG)
+    qed
+    from sF gF have \<open>G o register_from_getter_setter g s = F\<close>
+      by (metis assms(1) assms(2) cregister_raw_chain gF_def register_from_getter_setter_of_getter_setter register_register_from_getter_setter sF_def valid_gs)
+    with this[symmetric] show ?thesis
+      using range
+      by (simp add: o_def inv_f_f cregister_raw_inj regG)
+  qed
+
+  from GF_gs ggG
+  show \<open>cregister_raw (inv G o F)\<close>
+    by (simp add: valid_gs)
+qed
+
 lemmas qregister_conversion_raw_register = register_inv_G_o_F
 (* lemma qregister_conversion_raw_register: \<open>qregister_raw F \<Longrightarrow> qregister_raw G \<Longrightarrow> range F \<subseteq> range G \<Longrightarrow> qregister_raw (inv G \<circ> F)\<close> *)
 
