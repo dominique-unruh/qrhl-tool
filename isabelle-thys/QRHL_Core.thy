@@ -117,6 +117,38 @@ qed
 (* TODO move *)
 definition \<open>Uswap = classical_operator (\<lambda>(x,y). Some(y,x))\<close> for Uswap
 
+lemma 
+  shows Uswap_ket[simp]: \<open>(Uswap :: ('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _)*\<^sub>V ket (x,y) = ket (y,x)\<close>
+  and Uswap_adj[simp]: \<open>(Uswap :: ('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _)* = Uswap\<close>
+proof -
+  have inj: \<open>inj (\<lambda>(x::'a, y::'b). (y, x))\<close>
+    by (simp add: swap_inj_on)
+  then have inj_map: \<open>inj_map (\<lambda>(x::'a, y::'b). Some (y, x))\<close>
+    by (simp add: o_def case_prod_unfold flip: inj_map_total)
+  have surj: \<open>surj (\<lambda>(x::'a, y::'b). (y, x))\<close>
+    by fast
+  have inv: \<open>inv (\<lambda>(x::'a, y::'b). (y, x)) = (\<lambda>(x, y). (y, x))\<close>
+    by (simp add: inj inj_imp_inv_eq)
+  then have inv_map: \<open>inv_map (\<lambda>(x::'a, y::'b). Some (y, x)) = (\<lambda>(x, y). Some (y, x))\<close>
+    unfolding case_prod_unfold
+    apply (subst inv_map_total[unfolded o_def])
+    using surj
+    by (auto simp add: case_prod_unfold surj simp flip: inv_map_total[unfolded o_def])
+  have ex[simp]: \<open>classical_operator_exists (\<lambda>(x::'a, y::'b). Some (y, x))\<close>
+    using inj_map by (rule classical_operator_exists_inj)
+  show \<open>Uswap *\<^sub>V ket (x,y) = ket (y,x)\<close>
+    by (simp add: Uswap_def classical_operator_ket)
+  show \<open>(Uswap :: ('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _)* = Uswap\<close>
+    using inv_map inj_map by (simp add: Uswap_def classical_operator_adjoint inj)
+qed
+
+lemma Uswap_twice[simp]: \<open>Uswap o\<^sub>C\<^sub>L Uswap = id_cblinfun\<close>
+  apply (rule equal_ket)
+  by auto
+
+lemma Uswap_unitary[simp]: \<open>unitary Uswap\<close>
+  by (simp add: unitaryI)
+
 definition index_flip_vector :: "qu2 ell2 \<Rightarrow> qu2 ell2" where \<open>index_flip_vector \<psi> = Uswap *\<^sub>V \<psi>\<close>
 
 definition swap_variables_vector :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 \<Rightarrow> qu2 ell2" where
@@ -126,36 +158,45 @@ definition index_flip_subspace :: "qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 cc
   where \<open>index_flip_subspace S = Uswap *\<^sub>S S\<close>
 
 lemma index_flip_subspace_INF[simp]: \<open>index_flip_subspace (INF i\<in>A. S i) = (INF i\<in>A. index_flip_subspace (S i))\<close>
-  by (cheat index_flip_subspace_INF)
+  apply (simp add: index_flip_subspace_def)
+ (* Follows from *) thm cblinfun_image_INF_eq[where U=Uswap] (* but needs TTS. 
+Alternatively generelize that lemma *)
+  sorry
 
 definition swap_variables_subspace :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace" where
   \<open>swap_variables_subspace Q R S = (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q Uswap) *\<^sub>S S\<close>
 
 lemma index_flip_subspace_top[simp]: "index_flip_subspace top = top"
-  by (cheat index_flip_subspace_top)
+  by (simp add: index_flip_subspace_def)
 lemma index_flip_subspace_bot[simp]: "index_flip_subspace bot = bot"
-  by (cheat index_flip_subspace_bot)
+  by (simp add: index_flip_subspace_def)
 lemma index_flip_subspace_zero[simp]: "index_flip_subspace 0 = 0"
   by simp
 lemma index_flip_subspace_Cla[simp]: "index_flip_subspace (Cla[b]) = Cla[b]"
   by auto
 lemma index_flip_subspace_inf[simp]: "index_flip_subspace (A\<sqinter>B) = (index_flip_subspace A) \<sqinter> (index_flip_subspace B)"
-  by (cheat index_flip_subspace_inf)
+  by (simp add: index_flip_subspace_def)
 lemma index_flip_subspace_plus[simp]: "index_flip_subspace (A+B) = (index_flip_subspace A) + (index_flip_subspace B)"
-  by (cheat index_flip_subspace_plus)
+  by (simp add: index_flip_subspace_def)
 
-lemma swap_variables_subspace_top[simp]: "swap_variables_subspace v w top = top"
-  by (cheat swap_variables_subspace_top)
+(* TODO move to Prog_Variables *)
+lemma qregister_unitary: \<open>qregister F \<Longrightarrow> unitary U \<Longrightarrow> unitary (apply_qregister F U)\<close>
+  apply (transfer fixing: U) by (rule register_unitary)
+
+lemma swap_variables_subspace_top[simp]: "qcompatible v w \<Longrightarrow> swap_variables_subspace v w top = top"
+  by (simp add: swap_variables_subspace_def unitary_range qregister_unitary)
 lemma swap_variables_subspace_bot[simp]: "swap_variables_subspace v w bot = bot"
-  by (cheat swap_variables_subspace_bot)
+  by (simp add: swap_variables_subspace_def)
 lemma swap_variables_subspace_zero[simp]: "swap_variables_subspace v w 0 = 0"
   by simp
-lemma swap_variables_subspace_Cla[simp]: "swap_variables_subspace v w (Cla[b]) = Cla[b]"
+lemma swap_variables_subspace_Cla[simp]: "qcompatible v w \<Longrightarrow> swap_variables_subspace v w (Cla[b]) = Cla[b]"
   by auto
 lemma swap_variables_subspace_inf[simp]: "swap_variables_subspace v w (A\<sqinter>B) = (swap_variables_subspace v w A) \<sqinter> (swap_variables_subspace v w B)"
-  by (cheat swap_variables_subspace_inf)
+  apply (cases \<open>qregister \<lbrakk>v, w\<rbrakk>\<^sub>q\<close>)
+  by (simp_all add: swap_variables_subspace_def isometry_cblinfun_image_inf_distrib 
+      unitary_isometry qregister_unitary non_qregister)
 lemma swap_variables_subspace_plus[simp]: "swap_variables_subspace v w (A+B) = (swap_variables_subspace v w A) + (swap_variables_subspace v w B)"
-  by (cheat swap_variables_subspace_plus)
+  by (simp add: swap_variables_subspace_def)
 
 subsection "Distinct quantum variables"
 
