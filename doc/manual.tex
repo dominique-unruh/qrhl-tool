@@ -2135,7 +2135,14 @@ other preconditions the rule may have (i.e., conditions that the tactic
 checks immediately instead of creating a subgoal) are mentioned in the
 text accompanying the rule.
 
-\newcommand\tactic[1]{\subsubsection*{Tactic #1}\label{tactic:#1}\index{#1@\textttOLD{#1} (tactic)}}
+\makeatletter
+\newcommand\tactic[1]{%
+  \subsubsection*{Tactic #1
+    \Hy@writebookmark{}{#1}{\@currentHref}{2}{toc}
+  }%
+  \label{tactic:#1}%
+  \index{#1@\textttOLD{#1} (tactic)}}
+\makeatother
 
 \tactic{admit}
 
