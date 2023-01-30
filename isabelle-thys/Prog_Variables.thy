@@ -325,6 +325,9 @@ lemma triple_map_commutant[simp]: \<open>map_commutant (map_commutant (map_commu
 definition valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
   \<open>valid_cregister_range \<FF> \<longleftrightarrow> map_commutant (map_commutant \<FF>) = \<FF>\<close>
 
+lemma map_comp_Some_map_option: \<open>map_comp (\<lambda>x. Some (f x)) g = map_option f o g\<close>
+  by (auto intro!: ext simp: map_comp_def map_option_case)
+
 lemma valid_cregister_range: 
   fixes F :: \<open>('b,'a) cregister\<close>
   assumes \<open>cregister F\<close>
@@ -334,6 +337,14 @@ proof (insert assms, transfer)
   assume [simp]: \<open>cregister_raw F\<close>
   define g s where \<open>g = Axioms_Classical.getter F\<close> and \<open>s = Axioms_Classical.setter F\<close>
   define c where \<open>c m = s undefined m\<close> for m
+  have [simp]: \<open>g (s a m) = a\<close> for a m
+    by (metis \<open>cregister_raw F\<close> g_def s_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>s a (s b m) = s a m\<close> for a b m
+    by (metis \<open>cregister_raw F\<close> s_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>s (g m) m = m\<close> for m
+    by (metis \<open>cregister_raw F\<close> g_def s_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>c (s a m) = c m\<close> for a m
+    by (simp add: c_def)
 
   define X where \<open>X = range (\<lambda>x m. case x (c m) of Some m' \<Rightarrow> Some (s (g m) m') | None \<Rightarrow> None)\<close>
   have 1: \<open>a \<in> map_commutant X\<close> if \<open>a \<in> range F\<close> for a
@@ -346,54 +357,47 @@ proof (insert assms, transfer)
       by fast
     then have a_def: \<open>a = register_from_getter_setter g s a'\<close>
       by (simp add: g_def s_def)
-    have [simp]: \<open>g (s a m) = a\<close> for a m
-      by (metis \<open>cregister_raw F\<close> g_def s_def valid_getter_setter_def valid_getter_setter_getter_setter)
-    have [simp]: \<open>s a (s b m) = s a m\<close> for a b m
-      by (metis \<open>cregister_raw F\<close> s_def valid_getter_setter_def valid_getter_setter_getter_setter)
-    have [simp]: \<open>c (s a m) = c m\<close> for a m
-      by (simp add: c_def)
     show \<open>(a \<circ>\<^sub>m x) y = (x \<circ>\<^sub>m a) y\<close>
       apply (cases \<open>x' (c y)\<close>; cases \<open>a' (g y)\<close>)
       by (auto simp: map_comp_def x_def a_def register_from_getter_setter_def)
   qed
   have 2: \<open>a \<in> range F\<close> if \<open>a \<in> map_commutant X\<close> for a
-    by -
+  proof -
+    fix m0
+    define a' where \<open>a' x = map_option g (a (s x m0))\<close> for x
+    have \<open>F a' = a\<close>
+    proof (rule ext)
+      fix m
+      have \<open>(\<lambda>m. Some (s (g m) m')) \<in> X\<close>for m'
+        by (auto simp: X_def intro!: range_eqI[where x=\<open>\<lambda>x. Some m'\<close>])
+      then have *: \<open>a \<circ>\<^sub>m (\<lambda>m. Some (s (g m) m')) = (\<lambda>m. Some (s (g m) m')) \<circ>\<^sub>m a\<close> for m'
+        using map_commutant_def that by blast
+
+      have \<open>F a' m = map_option (\<lambda>x. s x m) (a' (g m))\<close>
+        using register_from_getter_setter_of_getter_setter[OF \<open>cregister_raw F\<close>]
+          register_from_getter_setter_def[of g s a' m]
+        by (metis g_def map_option_case s_def)
+      also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) ((a \<circ>\<^sub>m (\<lambda>m. Some (s (g m) m0))) m)\<close>
+        by (simp add: a'_def option.map_comp o_def)
+      also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) (((\<lambda>m. Some (s (g m) m0)) \<circ>\<^sub>m a) m)\<close>
+        by (simp add: *)
+      also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) (a m)\<close>
+        by (simp add: map_comp_Some_map_option option.map_comp o_def)
+      also have \<open>\<dots> = ((\<lambda>x. Some (s (g x) m)) \<circ>\<^sub>m a) m\<close>
+        by (simp add: map_comp_Some_map_option)
+      also have \<open>\<dots> = a m\<close>
+        by (simp flip: *)
+      finally show \<open>F a' m = a m\<close>
+        by -
+    qed
+    then show ?thesis
+      by auto
+  qed
   from 1 2 have \<open>range F = map_commutant X\<close>
     by auto
   then show \<open>valid_cregister_range (range F)\<close>
     by (simp add: valid_cregister_range_def)
 qed
-(*   define \<FF> where \<open>\<FF> = range (apply_cregister F)\<close>
-  have 1: \<open>partial_fun_Sup X \<in> \<FF>\<close> if compat_X: \<open>pairwise_all partial_fun_compatible X\<close> and \<open>X\<subseteq>\<FF>\<close> for X
-  proof -
-    from \<open>X \<subseteq> \<FF>\<close>
-    obtain Y where XY: \<open>X = apply_cregister F ` Y\<close>
-      by (metis \<FF>_def subset_imageE)
-    have \<open>partial_fun_Sup X = apply_cregister F (partial_fun_Sup Y)\<close>
-      by (simp add: XY assms cregister_partial_fun_Sup)
-    also have \<open>... \<in> \<FF>\<close>
-      by (simp add: \<FF>_def)
-    finally show ?thesis
-      by -
-  qed
-  have 2: \<open>a \<circ>\<^sub>m b \<in> \<FF>\<close> if \<open>a \<in> \<FF>\<close> and \<open>b \<in> \<FF>\<close> for a b
-  proof -
-    from \<open>a \<in> \<FF>\<close> 
-    obtain a' where a': \<open>a = apply_cregister F a'\<close>
-      using \<FF>_def by blast
-    from \<open>b \<in> \<FF>\<close> 
-    obtain b' where b': \<open>b = apply_cregister F b'\<close>
-      using \<FF>_def by blast
-    have \<open>a \<circ>\<^sub>m b = apply_cregister F (a' \<circ>\<^sub>m b')\<close>
-      using Axioms_Classical.register_mult a' b' assms cregister.rep_eq by auto
-    also have \<open>\<dots> \<in> \<FF>\<close>
-      by (simp add: \<FF>_def)
-    finally show ?thesis
-      by -
-  qed
-  from 1 2 show ?thesis
-    by (simp add: \<FF>_def valid_cregister_range_def)
-qed *)
 
 (* TODO move *)
 lemma csubspace_commutant[simp]: \<open>csubspace (commutant X)\<close>
