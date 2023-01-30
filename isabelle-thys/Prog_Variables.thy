@@ -122,10 +122,230 @@ lemma apply_cregister_of_id[simp]: \<open>cregister F \<Longrightarrow> apply_cr
 lemma apply_qregister_of_id[simp]: \<open>qregister F \<Longrightarrow> apply_qregister F id_cblinfun = id_cblinfun\<close>
   by (simp add: qregister.rep_eq qregister_raw_1)
 
+(* TODO move *)
+definition \<open>partial_fun_compatible f g \<longleftrightarrow> (\<forall>x. f x = None \<or> g x = None \<or> f x = g x)\<close>
+(* definition partial_fun_compatible:
+  \<open>partial_fun_compatible F \<longleftrightarrow> (\<forall>x. \<forall>f\<in>F. \<forall>g\<in>F. f x = None \<or> g x = None \<or> f x = g x)\<close> *)
+(* TODO move *)
+definition \<open>option_Sup X = the_default None (X-{None})\<close>
+definition \<open>partial_fun_Sup F x = option_Sup ((\<lambda>f. f x) ` F)\<close>
+
+lemma partial_fun_compatible_refl[simp]: \<open>partial_fun_compatible f f\<close>
+  by (simp add: partial_fun_compatible_def)
+
+lemma cregister_partial_fun_compatible:
+  assumes \<open>cregister F\<close>
+  assumes \<open>partial_fun_compatible f g\<close>
+  shows \<open>partial_fun_compatible (apply_cregister F f) (apply_cregister F g)\<close>
+proof -
+  have [simp]: \<open>cregister_raw (apply_cregister F)\<close>
+    using assms(1) cregister.rep_eq by auto
+  show \<open>partial_fun_compatible (apply_cregister F f) (apply_cregister F g)\<close>
+    apply (subst (2) register_from_getter_setter_of_getter_setter[symmetric], simp)
+    apply (subst register_from_getter_setter_of_getter_setter[symmetric], simp)
+    using assms(2)
+    apply (auto simp add: register_from_getter_setter_def[abs_def] partial_fun_compatible_def
+        simp del: register_from_getter_setter_of_getter_setter
+        split: option.split)
+    by (metis option.sel option.simps(3))
+qed
+(* (* IFF version *)
+lemma cregister_partial_fun_compatible:
+  assumes \<open>cregister F\<close>
+  shows \<open>partial_fun_compatible (apply_cregister F f) (apply_cregister F g) \<longleftrightarrow> partial_fun_compatible f g\<close>
+proof (rule iffI)
+  have [simp]: \<open>cregister_raw (apply_cregister F)\<close>
+    using assms(1) cregister.rep_eq by auto
+  show \<open>partial_fun_compatible f g \<Longrightarrow>
+            partial_fun_compatible (apply_cregister F f) (apply_cregister F g)\<close>
+    apply (subst (2) register_from_getter_setter_of_getter_setter[symmetric], simp)
+    apply (subst register_from_getter_setter_of_getter_setter[symmetric], simp)
+    apply (auto simp add: register_from_getter_setter_def[abs_def] partial_fun_compatible_def
+        simp del: register_from_getter_setter_of_getter_setter
+        split: option.split)
+    by (metis option.sel option.simps(3))
+  show \<open>partial_fun_compatible (apply_cregister F f) (apply_cregister F g) \<Longrightarrow>
+    partial_fun_compatible f g\<close>
+    apply (subst (asm) (2) register_from_getter_setter_of_getter_setter[symmetric], simp)
+    apply (subst (asm) register_from_getter_setter_of_getter_setter[symmetric], simp)
+    apply (auto simp add: register_from_getter_setter_def[abs_def] partial_fun_compatible_def
+        simp del: register_from_getter_setter_of_getter_setter
+        split: option.split_asm)
+    by (smt (verit) \<open>cregister_raw (apply_cregister F)\<close> option.exhaust valid_getter_setter_def valid_getter_setter_getter_setter)
+qed *)
+
+lemma option_Sup_empty[simp]: \<open>option_Sup {} = None\<close>
+  by (simp add: option_Sup_def)
+
+lemma option_Sup_None[simp]: \<open>option_Sup {None} = None\<close>
+  by (simp add: option_Sup_def)
+
+lemma option_Sup_Some[simp]: \<open>option_Sup {Some x} = Some x\<close>
+  by (simp add: option_Sup_def)
+
+lemma map_option_option_Sup:
+  assumes \<open>inj f\<close>
+  shows \<open>map_option f (option_Sup X) = option_Sup (map_option f ` X)\<close>
+proof -
+  consider (empty) \<open>X = {}\<close> | (1) \<open>card X = 1\<close> | (2) \<open>card X = 2\<close> | (3) \<open>card X \<ge> 3\<close> | (infinite) \<open>infinite X\<close>
+    by (metis One_nat_def Suc_1 card_seteq empty_subsetI le0 not_less_eq_eq numeral_nat(3) verit_la_disequality)
+  then
+  (* The following "easy" case distinction was a surprisingly tricky manual proof. Is there an easier way? *)
+  consider (empty) \<open>X = {}\<close> | (none) \<open>X = {None}\<close>
+    | (single) x where \<open>X = {Some x}\<close> | (single') x where \<open>X = {None, Some x}\<close> 
+    | (multiple) x y where \<open>{Some x, Some y} \<subseteq> X\<close> and \<open>x \<noteq> y\<close>
+  proof cases
+    case empty
+    moreover assume \<open>X = {} \<Longrightarrow> thesis\<close>
+    ultimately show thesis
+      by simp
+  next
+    case 1
+    then obtain x where \<open>X = {x}\<close>
+      using card_1_singletonE by blast
+    moreover assume \<open>X = {None} \<Longrightarrow> thesis\<close>
+    moreover assume \<open>X = {Some x} \<Longrightarrow> thesis\<close> for x
+    ultimately show thesis
+      by auto
+  next
+    case 2
+    then obtain x y where X: \<open>X = {x,y}\<close> and \<open>x \<noteq> y\<close> and \<open>y \<noteq> None\<close>
+      by (metis card_2_iff doubleton_eq_iff)
+    assume single': \<open>X = {None, Some x} \<Longrightarrow> thesis\<close> for x
+    assume multiple: \<open>{Some x', Some y'} \<subseteq> X \<Longrightarrow> x' \<noteq> y' \<Longrightarrow> thesis\<close> for x' y'
+    show thesis
+      apply (cases x; cases y)
+      using X  single' multiple
+      using \<open>x \<noteq> y\<close>
+      by auto 
+  next
+    case 3
+    then obtain x y z where \<open>x \<in> X\<close> and \<open>y \<in> X\<close> and \<open>z \<in> X\<close> and \<open>x \<noteq> y\<close> and \<open>x \<noteq> z\<close> and \<open>y \<noteq> z\<close>
+      by (auto simp add: numeral_3_eq_3 card_le_Suc_iff)
+    moreover assume multiple: \<open>{Some x', Some y'} \<subseteq> X \<Longrightarrow> x' \<noteq> y' \<Longrightarrow> thesis\<close> for x' y'
+    ultimately show thesis
+      apply (cases x; cases y; cases z)
+      by auto
+  next
+    case infinite
+    then obtain X' where \<open>card X' = 3\<close> and \<open>X' \<subseteq> X\<close>
+      using infinite_arbitrarily_large by blast
+    then obtain x y z where \<open>x \<in> X'\<close> and \<open>y \<in> X'\<close> and \<open>z \<in> X'\<close> and \<open>x \<noteq> y\<close> and \<open>x \<noteq> z\<close> and \<open>y \<noteq> z\<close>
+      by (auto simp add: numeral_3_eq_3 card_Suc_eq)
+    moreover assume multiple: \<open>{Some x', Some y'} \<subseteq> X \<Longrightarrow> x' \<noteq> y' \<Longrightarrow> thesis\<close> for x' y'
+    then have \<open>{Some x', Some y'} \<subseteq> X' \<Longrightarrow> x' \<noteq> y' \<Longrightarrow> thesis\<close> for x' y'
+      using \<open>X' \<subseteq> X\<close> by auto
+    ultimately show thesis
+      apply (cases x; cases y; cases z)
+      by auto
+  qed
+  then show ?thesis
+  proof cases
+    case empty
+    then show ?thesis by simp
+  next
+    case none
+    then show ?thesis by simp
+  next
+    case single
+    then show ?thesis by simp
+  next
+    case single'
+    then show ?thesis by (simp add: option_Sup_def)
+  next
+    case multiple
+    then have \<open>card (X - {None}) \<noteq> 1\<close>
+      by (smt (verit) Diff_eq_empty_iff card_1_singletonE insert_Diff_if insert_absorb insert_iff insert_not_empty option.discI option.inject)
+    then have 1: \<open>option_Sup X = None\<close>
+      by (simp add: option_Sup_def the_default_def)
+    have \<open>{Some (f x), Some (f y)} \<subseteq> map_option f ` X\<close>
+      by (metis empty_subsetI imageI insert_subset multiple(1) option.map(2))
+    moreover have \<open>f x \<noteq> f y\<close>
+      by (simp add: assms inj_eq multiple(2))
+    ultimately have \<open>card ((map_option f ` X) - {None}) \<noteq> 1\<close>
+      by (smt (verit) Diff_empty Diff_insert0 card_1_singletonE insert_Diff insert_iff insert_subset option.discI option.inject singleton_insert_inj_eq')
+    then have 2: \<open>option_Sup (map_option f ` X) = None\<close>
+      by (simp add: option_Sup_def the_default_def)
+    from 1 2 show ?thesis
+      by simp
+  qed
+qed
+
+lemma cregister_partial_fun_Sup:
+  assumes \<open>cregister F\<close>
+  shows \<open>partial_fun_Sup (apply_cregister F ` \<FF>) = apply_cregister F (partial_fun_Sup \<FF>)\<close>
+proof (insert assms, transfer fixing: \<FF>)
+  fix F :: \<open>'a cupdate \<Rightarrow> 'b cupdate\<close>
+  assume \<open>cregister_raw F\<close>
+  show \<open>partial_fun_Sup (F ` \<FF>) = F (partial_fun_Sup \<FF>)\<close>
+  proof (rule ext)
+    fix m
+    define Fm \<FF>Fm where \<open>Fm = Axioms_Classical.getter F m\<close> and \<open>\<FF>Fm = (\<lambda>f. f Fm) ` \<FF>\<close>
+    have \<open>partial_fun_Sup (F ` \<FF>) m =
+        partial_fun_Sup (register_from_getter_setter (Axioms_Classical.getter F) (Axioms_Classical.setter F) ` \<FF>) m\<close>
+      by (simp add: \<open>cregister_raw F\<close>)
+    also have \<open>\<dots> = option_Sup
+          (map_option (\<lambda>a. Axioms_Classical.setter F a m) ` \<FF>Fm)\<close>
+      by (simp add: register_from_getter_setter_def partial_fun_Sup_def
+          image_image Fm_def \<FF>Fm_def map_option_case)
+    also have \<open>\<dots> = map_option (\<lambda>a. Axioms_Classical.setter F a m) (option_Sup \<FF>Fm)\<close>
+      by (smt (verit) \<open>cregister_raw F\<close> inj_onI map_option_option_Sup valid_getter_setter_def valid_getter_setter_getter_setter)
+    also have \<open>\<dots> = register_from_getter_setter (Axioms_Classical.getter F) (Axioms_Classical.setter F) (partial_fun_Sup \<FF>) m\<close>
+      by (simp add: partial_fun_Sup_def[abs_def] register_from_getter_setter_def map_option_case
+          flip: Fm_def \<FF>Fm_def)
+    also have \<open>\<dots> = F (partial_fun_Sup \<FF>) m\<close>
+      by (simp add: \<open>cregister_raw F\<close>)
+    finally show \<open>partial_fun_Sup (F ` \<FF>) m = F (partial_fun_Sup \<FF>) m\<close>
+      by -
+  qed
+qed
+
+definition pairwise_all :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a set \<Rightarrow> bool"
+  where "pairwise_all R S \<longleftrightarrow> (\<forall>x \<in> S. \<forall>y \<in> S. R x y)"
+
+
 (* Equivalence class of cregisters *)
-axiomatization valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close>
-lemma valid_cregister_range: \<open>cregister F \<Longrightarrow> valid_cregister_range (range (apply_cregister F))\<close> for F :: \<open>('b,'a) cregister\<close>
-  sorry
+definition valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
+  \<open>valid_cregister_range \<FF> \<longleftrightarrow> 
+      (\<forall>X\<subseteq>\<FF>. pairwise_all partial_fun_compatible X \<longrightarrow> partial_fun_Sup X \<in> \<FF>)
+    \<and> (\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a \<circ>\<^sub>m b \<in> \<FF>)\<close>
+
+lemma valid_cregister_range: 
+  fixes F :: \<open>('b,'a) cregister\<close>
+  assumes \<open>cregister F\<close>
+  shows \<open>valid_cregister_range (range (apply_cregister F))\<close>
+proof -
+  define \<FF> where \<open>\<FF> = range (apply_cregister F)\<close>
+  have 1: \<open>partial_fun_Sup X \<in> \<FF>\<close> if compat_X: \<open>pairwise_all partial_fun_compatible X\<close> and \<open>X\<subseteq>\<FF>\<close> for X
+  proof -
+    from \<open>X \<subseteq> \<FF>\<close>
+    obtain Y where XY: \<open>X = apply_cregister F ` Y\<close>
+      by (metis \<FF>_def subset_imageE)
+    have \<open>partial_fun_Sup X = apply_cregister F (partial_fun_Sup Y)\<close>
+      by (simp add: XY assms cregister_partial_fun_Sup)
+    also have \<open>... \<in> \<FF>\<close>
+      by (simp add: \<FF>_def)
+    finally show ?thesis
+      by -
+  qed
+  have 2: \<open>a \<circ>\<^sub>m b \<in> \<FF>\<close> if \<open>a \<in> \<FF>\<close> and \<open>b \<in> \<FF>\<close> for a b
+  proof -
+    from \<open>a \<in> \<FF>\<close> 
+    obtain a' where a': \<open>a = apply_cregister F a'\<close>
+      using \<FF>_def by blast
+    from \<open>b \<in> \<FF>\<close> 
+    obtain b' where b': \<open>b = apply_cregister F b'\<close>
+      using \<FF>_def by blast
+    have \<open>a \<circ>\<^sub>m b = apply_cregister F (a' \<circ>\<^sub>m b')\<close>
+      using Axioms_Classical.register_mult a' b' assms cregister.rep_eq by auto
+    also have \<open>\<dots> \<in> \<FF>\<close>
+      by (simp add: \<FF>_def)
+    finally show ?thesis
+      by -
+  qed
+  from 1 2 show ?thesis
+    by (simp add: \<FF>_def valid_cregister_range_def)
+qed
 
 (* TODO move *)
 lemma csubspace_commutant[simp]: \<open>csubspace (commutant X)\<close>
@@ -453,7 +673,16 @@ lemma commutant_adj: \<open>adj ` commutant X = commutant (adj ` X)\<close>
   apply (auto intro!: image_eqI double_adj[symmetric] simp: commutant_def simp flip: adj_cblinfun_compose)
   by (metis adj_cblinfun_compose double_adj)
 
-axiomatization CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
+lemma valid_cregister_range_Inter: 
+  assumes \<open>\<And>x. x \<in> X \<Longrightarrow> valid_cregister_range x\<close>
+  shows \<open>valid_cregister_range (\<Inter>X)\<close>
+  using assms apply (auto simp: valid_cregister_range_def pairwise_all_def)
+  by fast
+
+lift_definition CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is
+  \<open>\<lambda>\<FF> \<GG> :: 'a cupdate set. valid_cregister_range hull (\<FF> \<union> \<GG>)\<close>
+  by (auto intro!: hull_in[of valid_cregister_range] valid_cregister_range_Inter)
+
 lift_definition QREGISTER_pair :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is
   \<open>\<lambda>\<FF> \<GG> :: 'a qupdate set. commutant (commutant (\<FF> \<union> \<GG>))\<close>
 proof -
@@ -921,9 +1150,167 @@ lemma weak_star_closure_in_double_commutant: \<open>weak_star_topology closure_o
 lemma weak_star_closure_cspan_in_double_commutant: \<open>weak_star_topology closure_of cspan X \<subseteq> commutant (commutant X)\<close>
   by (simp add: closure_of_minimal cspan_in_double_commutant)
 
-lemma CREGISTER_of_cregister_pair: \<open>ccompatible F G \<Longrightarrow> CREGISTER_of (cregister_pair F G) = CREGISTER_pair (CREGISTER_of F) (CREGISTER_of G)\<close>
-  sorry
-lemma QREGISTER_of_qregister_pair: \<open>QREGISTER_of (qregister_pair F G) = QREGISTER_pair (QREGISTER_of F) (QREGISTER_of G)\<close> 
+lemma valid_cregister_range_mult:
+  assumes \<open>valid_cregister_range \<FF>\<close>
+  assumes \<open>a \<in> \<FF>\<close> and \<open>b \<in> \<FF>\<close>
+  shows \<open>a \<circ>\<^sub>m b \<in> \<FF>\<close>
+  using assms by (simp add: valid_cregister_range_def)
+
+lemma partial_fun_Sup_update1: \<open>a = partial_fun_Sup {update1 x y | x y. a x = Some y}\<close>
+proof (rule ext)
+  fix w
+  consider (empty) \<open>a = Map.empty\<close> 
+    | (none) u v where \<open>a w = None\<close> \<open>a v = Some u\<close>
+    | (only) z where \<open>a = update1 w z\<close>
+    | (some) z u v where \<open>a w = Some z\<close> \<open>a v = Some u\<close> \<open>v \<noteq> w\<close>
+  proof atomize_elim
+    let ?thesis = \<open>a = Map.empty \<or> (\<exists>v u. a w = None \<and> a v = Some u) \<or> (\<exists>z. a = update1 w z)
+                                 \<or> (\<exists>z v u. a w = Some z \<and> a v = Some u \<and> v \<noteq> w)\<close>
+    consider (empty) \<open>a = Map.empty\<close> | (none) \<open>a \<noteq> Map.empty\<close> \<open>a w = None\<close>
+      | (two_some) z where \<open>a w = Some z\<close> \<open>a \<noteq> update1 w z\<close>
+      | (update1) z where \<open>a = update1 w z\<close>
+      by auto
+    then show ?thesis
+    proof cases
+      case empty
+      then show ?thesis by simp
+    next
+      case none
+      then show ?thesis by auto
+    next
+      case two_some
+      then obtain v where \<open>a v \<noteq> None\<close> \<open>v \<noteq> w\<close>
+        apply atomize_elim unfolding update1_def
+        by fastforce
+      with two_some show ?thesis
+        by auto
+    next
+      case update1
+      then show ?thesis by auto
+    qed
+  qed
+  then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+  proof cases
+    case empty
+    then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+      by (auto intro!:  simp add: case_prod_beta partial_fun_Sup_def)
+  next
+    case (none u v)
+    then have \<open>(\<lambda>(x,y). update1 x y w) ` {(x, y). a x = Some y} = {None}\<close>
+      by (auto intro!: image_eqI simp add: case_prod_beta update1_def)
+    then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+      by (simp add: none partial_fun_Sup_def image_image set_compr_2_image_collect case_prod_beta)
+  next
+    case (only z)
+    then have \<open>(\<lambda>(x,y). update1 x y w) ` {(x, y). a x = Some y} = {Some z}\<close>
+      by (auto intro!: image_eqI simp add: case_prod_beta update1_def)
+    then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+      by (simp add: only partial_fun_Sup_def image_image case_prod_beta update1_def)
+  next
+    case (some z u v)
+    then have \<open>(\<lambda>(x,y). update1 x y w) ` {(x, y). a x = Some y} = {None, Some z}\<close>
+      by (auto intro: image_eqI[where x=\<open>(w,z)\<close>]
+          simp add: case_prod_beta update1_def)
+    then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+      by (simp add: some partial_fun_Sup_def image_image set_compr_2_image_collect case_prod_beta option_Sup_def)
+  qed
+qed
+
+lemma partial_fun_compatible_update1:
+  \<open>pairwise_all partial_fun_compatible {update1 x y | x y. a x = Some y}\<close>
+  apply (auto simp: pairwise_all_def partial_fun_compatible_def update1_def)
+  by (metis option.inject option.simps(3))
+
+lemma tensor_map_update1: \<open>tensor_map (update1 x y) (update1 z w) = update1 (x,z) (y,w)\<close>
+  by (auto intro!: ext simp add: update1_def[abs_def] tensor_update_def)
+
+lemma CREGISTER_of_cregister_pair:
+  fixes F :: \<open>('a,'c) cregister\<close> and G :: \<open>('b,'c) cregister\<close>
+  assumes [simp]: \<open>ccompatible F G\<close>
+  shows \<open>CREGISTER_of (cregister_pair F G) = CREGISTER_pair (CREGISTER_of F) (CREGISTER_of G)\<close>
+proof (rule Rep_CREGISTER_inject[THEN iffD1], rule antisym)
+  have [simp]: \<open>cregister F\<close> \<open>cregister G\<close>
+    using assms ccompatible_register1 ccompatible_register2 by blast+
+  define FG \<FF> \<GG> where \<open>FG = cregister_pair F G\<close> and \<open>\<FF> = CREGISTER_of F\<close> and \<open>\<GG> = CREGISTER_of G\<close>
+  have [simp]: \<open>cregister FG\<close>
+    by (simp add: FG_def)
+  show \<open>Rep_CREGISTER (CREGISTER_of FG)
+          \<subseteq> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
+  proof (rule subsetI)
+    fix c :: \<open>'c cupdate\<close>
+    assume \<open>c \<in> Rep_CREGISTER (CREGISTER_of FG)\<close>
+    then obtain ab where ab: \<open>c = apply_cregister FG ab\<close>
+      apply atomize_elim
+      using assms by (auto simp add: CREGISTER_of.rep_eq FG_def)
+    define AB where \<open>AB = {(update1 (fst x) (fst y), update1 (snd x) (snd y)) |x y. ab x = Some y}\<close>
+    have tensor_AB: \<open>case_prod tensor_map ` AB = {update1 x y |x y. ab x = Some y}\<close>
+      apply (simp only: set_compr_2_image_collect AB_def)
+      by (simp add: image_image case_prod_beta tensor_map_update1)
+    then have ab_AB: \<open>ab = partial_fun_Sup (case_prod tensor_map ` AB)\<close>
+      using partial_fun_Sup_update1[of ab] by simp
+
+    from ab_AB have \<open>c = apply_cregister FG (partial_fun_Sup (case_prod tensor_map ` AB))\<close>
+      by (simp add: ab)
+    also have \<open>\<dots> = partial_fun_Sup ((\<lambda>(a,b). apply_cregister FG (tensor_map a b)) ` AB)\<close>
+      apply (subst cregister_partial_fun_Sup[symmetric])
+      by (simp_all add: image_image case_prod_beta)
+    also have \<open>\<dots> = partial_fun_Sup ((\<lambda>(a,b). apply_cregister F a \<circ>\<^sub>m apply_cregister G b) ` AB)\<close>
+      by (simp add: apply_cregister_pair assms FG_def)
+    also have \<open>\<dots> \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
+    proof -
+      have \<open>apply_cregister F a \<circ>\<^sub>m apply_cregister G b \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close> for a b
+      proof -
+        have Fa: \<open>apply_cregister F a \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
+          by (auto intro!: hull_inc simp: CREGISTER_pair.rep_eq CREGISTER_of.rep_eq \<FF>_def)
+        have Gb: \<open>apply_cregister G b \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
+          by (auto intro!: hull_inc simp: CREGISTER_pair.rep_eq CREGISTER_of.rep_eq \<GG>_def)
+        from Fa Gb show ?thesis
+          using Rep_CREGISTER valid_cregister_range_mult by auto
+      qed
+      then have 1: \<open>(\<lambda>(a,b). apply_cregister F a \<circ>\<^sub>m apply_cregister G b) ` AB 
+                      \<subseteq> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
+        by fast
+      have \<open>pairwise_all partial_fun_compatible ((\<lambda>(a,b). tensor_map a b) ` AB)\<close>
+        by (simp only: tensor_AB partial_fun_compatible_update1)
+      then have \<open>pairwise_all partial_fun_compatible (apply_cregister FG ` (\<lambda>(a,b). tensor_map a b) ` AB)\<close>
+        apply (auto simp: pairwise_all_def)
+        by (metis (no_types, opaque_lifting) FG_def assms cregister.rep_eq cregister_partial_fun_compatible prod.simps(2))
+      then have 2: \<open>pairwise_all partial_fun_compatible ((\<lambda>(a,b). apply_cregister F a \<circ>\<^sub>m apply_cregister G b) ` AB)\<close>
+        by (simp add: apply_cregister_pair FG_def image_image case_prod_beta)
+      from 1 2 show ?thesis
+        using Rep_CREGISTER[of \<open>CREGISTER_pair \<FF> \<GG>\<close>]
+        by (simp add: valid_cregister_range_def)
+    qed
+    finally show \<open>c \<in> \<dots>\<close>
+      by -
+  qed
+  show \<open>Rep_CREGISTER (CREGISTER_pair (CREGISTER_of F) (CREGISTER_of G))
+    \<subseteq> Rep_CREGISTER (CREGISTER_of (cregister_pair F G))\<close>
+  proof -
+    have \<open>c \<in> Rep_CREGISTER (CREGISTER_of (cregister_pair F G))\<close> if \<open>c \<in> Rep_CREGISTER (CREGISTER_of F)\<close> for c
+    proof -
+      from that obtain a where \<open>c = apply_cregister F a\<close>
+        apply atomize_elim
+        by (auto simp: CREGISTER_of.rep_eq)
+      then show ?thesis
+        by (auto intro!: range_eqI[of _ _ \<open>tensor_map a Some\<close>] simp add: CREGISTER_of.rep_eq apply_cregister_pair)
+    qed
+    moreover have \<open>c \<in> Rep_CREGISTER (CREGISTER_of (cregister_pair F G))\<close> if \<open>c \<in> Rep_CREGISTER (CREGISTER_of G)\<close> for c
+    proof -
+      from that obtain b where \<open>c = apply_cregister G b\<close>
+        apply atomize_elim
+        by (auto simp: CREGISTER_of.rep_eq)
+      then show ?thesis
+        by (auto intro!: range_eqI[of _ _ \<open>tensor_map Some b\<close>] simp add: CREGISTER_of.rep_eq apply_cregister_pair)
+    qed
+    ultimately show ?thesis
+      apply (simp add: CREGISTER_pair.rep_eq)
+      apply (rule hull_minimal)
+      using Rep_CREGISTER by auto
+  qed
+qed
+
+lemma QREGISTER_of_qregister_pair: \<open>QREGISTER_of (qregister_pair F G) = QREGISTER_pair (QREGISTER_of F) (QREGISTER_of G)\<close>
   if [simp]: \<open>qcompatible F G\<close>
 proof -
   have [simp]: \<open>qregister F\<close> \<open>qregister G\<close>
