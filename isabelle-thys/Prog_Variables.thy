@@ -2094,6 +2094,20 @@ definition \<open>apply_qregister_space F S = apply_qregister F (Proj S) *\<^sub
 lemma apply_non_qregister_space[simp]: \<open>apply_qregister_space non_qregister x = 0\<close>
   by (simp add: apply_qregister_space_def)
 
+lemma qregister_projector: \<open>qregister F \<Longrightarrow> is_Proj a \<Longrightarrow> is_Proj (apply_qregister F a)\<close>
+  apply (transfer fixing: a)
+  by (rule register_projector)
+
+lemma qregister_chain_apply_space: \<open>apply_qregister_space (qregister_chain F G) = apply_qregister_space F o apply_qregister_space G\<close>
+  apply (cases \<open>qregister G\<close>)
+  by (simp_all add: apply_qregister_space_def[abs_def]
+      qregister_chain_apply o_def Proj_on_own_range qregister_projector non_qregister)
+(* We limit this simplification rule to the case where F is neither Fst nor Snd because those cases are used commonly to encode indexed variables *)
+lemma qregister_chain_apply_space_simp[simp]:
+  assumes \<open>NO_MATCH qFst F\<close> \<open>NO_MATCH qSnd F\<close>
+  shows \<open>apply_qregister_space (qregister_chain F G) = apply_qregister_space F o apply_qregister_space G\<close>
+  by (rule qregister_chain_apply_space)
+
 lift_definition CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is map_commutant
   by (simp add: valid_cregister_range_def)
 lift_definition QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is commutant
@@ -2528,10 +2542,6 @@ lemma qregister_apply_conversion:
   shows \<open>apply_qregister F x = apply_qregister G (apply_qregister (qregister_conversion F G) x)\<close>
   using assms apply (subst qregister_chain_conversion[where F=F and G=G, symmetric])
   by auto
-
-lemma qregister_projector: \<open>qregister F \<Longrightarrow> is_Proj a \<Longrightarrow> is_Proj (apply_qregister F a)\<close>
-  apply (transfer fixing: a)
-  by (rule register_projector)
 
 lemma apply_qregister_space_conversion:
   assumes [simp]: \<open>qregister_le F G\<close>

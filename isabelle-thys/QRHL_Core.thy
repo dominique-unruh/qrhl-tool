@@ -119,7 +119,8 @@ definition \<open>Uswap = classical_operator (\<lambda>(x,y). Some(y,x))\<close>
 
 definition index_flip_vector :: "qu2 ell2 \<Rightarrow> qu2 ell2" where \<open>index_flip_vector \<psi> = Uswap *\<^sub>V \<psi>\<close>
 
-axiomatization swap_variables_vector :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 \<Rightarrow> qu2 ell2"
+definition swap_variables_vector :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 \<Rightarrow> qu2 ell2" where
+  \<open>swap_variables_vector Q R \<psi> = (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q Uswap) *\<^sub>V \<psi>\<close>
 
 definition index_flip_subspace :: "qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace"
   where \<open>index_flip_subspace S = Uswap *\<^sub>S S\<close>
@@ -127,7 +128,8 @@ definition index_flip_subspace :: "qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 cc
 lemma index_flip_subspace_INF[simp]: \<open>index_flip_subspace (INF i\<in>A. S i) = (INF i\<in>A. index_flip_subspace (S i))\<close>
   by (cheat index_flip_subspace_INF)
 
-axiomatization swap_variables_subspace :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace"
+definition swap_variables_subspace :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace" where
+  \<open>swap_variables_subspace Q R S = (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q Uswap) *\<^sub>S S\<close>
 
 lemma index_flip_subspace_top[simp]: "index_flip_subspace top = top"
   by (cheat index_flip_subspace_top)
@@ -200,7 +202,7 @@ adhoc_overloading colocal \<open>\<lambda>x y. distinct_qvars_pred_vars x y\<clo
 
 (* TODO move to Prog_Var *)
 lemma apply_qregister_empty_qregister[simp]: \<open>apply_qregister empty_qregister A = one_dim_iso A *\<^sub>C id_cblinfun\<close>
-  sorry
+  by (simp add: empty_qregister.rep_eq empty_var_def)
 
 lemma distinct_qvars_op_vars_unit'[simp]: "distinct_qvars_op_vars A empty_qregister"
   by (simp add: distinct_qvars_op_vars_def commutant_def)
@@ -360,13 +362,75 @@ next
     by (auto simp add: predicate_local_def operator_local_def Proj_inj)
 qed
 
+(* TODO: Move to Prog_Variables *)
+lemma apply_qregister_apply_qregister_space: 
+  \<open>apply_qregister Q A *\<^sub>S apply_qregister_space Q S = apply_qregister_space Q (A *\<^sub>S S)\<close> (is ?goal)
+proof (cases \<open>qregister Q\<close>)
+  case False
+  then have \<open>Q = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis
+    by simp
+next
+  case True
+  then have \<open>qregister_raw (apply_qregister Q)\<close>
+    by simp
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis (apply_qregister Q). ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U :: ('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2. 
+              unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> where
+      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
+      by auto
+    have \<open>apply_qregister Q A *\<^sub>S apply_qregister_space Q S = apply_qregister Q A *\<^sub>S apply_qregister Q (Proj S) *\<^sub>S \<top>\<close>
+      by (simp add: apply_qregister_space_def)
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S U* *\<^sub>S \<top>\<close>
+      by (simp add: decomp sandwich_apply lift_cblinfun_comp[OF unitaryD1] cblinfun_compose_image)
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S \<top>\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (\<top> \<otimes>\<^sub>S \<top>)\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S ((Proj S *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by (simp add: tensor_ccsubspace_via_Proj)
+    also have \<open>\<dots> = U *\<^sub>S ((A *\<^sub>S Proj S *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by (metis cblinfun_image_id tensor_ccsubspace_image)
+    also have \<open>\<dots> = U *\<^sub>S ((Proj (A *\<^sub>S S) *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (Proj (A *\<^sub>S S) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (\<top> \<otimes>\<^sub>S \<top>)\<close>
+      by (simp add: tensor_ccsubspace_via_Proj)
+    also have \<open>\<dots> = U *\<^sub>S (Proj (A *\<^sub>S S) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S U* *\<^sub>S \<top>\<close>
+      by simp
+    also have \<open>\<dots> = apply_qregister Q (Proj (A *\<^sub>S S)) *\<^sub>S \<top>\<close>
+      by (simp add: cblinfun_compose_image decomp sandwich_apply)
+    also have \<open>\<dots> = apply_qregister_space Q (A *\<^sub>S S)\<close>
+      by (simp add: apply_qregister_space_def)
+    finally show ?goal
+      by -
+  qed
+  from this[cancel_with_type]
+  show ?thesis 
+    by -
+qed
+
 lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
   by (cheat predicate_local_inf)
 lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> operator_local B Q \<Longrightarrow> operator_local (A o\<^sub>C\<^sub>L B) Q"
   apply (simp add: operator_local_def)
   by (smt (verit) image_iff qregister_compose rangeI)
-lemma predicate_local_applyOpSpace[intro!]: "operator_local A Q \<Longrightarrow> predicate_local S Q \<Longrightarrow> predicate_local (A *\<^sub>S S) Q"
-  sorry
+lemma predicate_local_applyOpSpace[intro!]: 
+  assumes \<open>operator_local A Q\<close> and \<open>predicate_local S Q\<close>
+  shows \<open>predicate_local (A *\<^sub>S S) Q\<close>
+proof -
+  from assms(1)
+  obtain A' where A_def: \<open>A = apply_qregister Q A'\<close>
+    by (meson image_iff operator_local_def)
+  from assms(2)
+  obtain S' where S_def: \<open>S = apply_qregister_space Q S'\<close>
+    by (meson image_iff predicate_local_def)
+  show \<open>predicate_local (A *\<^sub>S S) Q\<close>
+    by (simp add: A_def S_def apply_qregister_apply_qregister_space predicate_local_def)
+qed
 
 subsection \<open>Lifting\<close>
 
@@ -492,10 +556,10 @@ lemma colocal_op_commute:
   shows "A o\<^sub>C\<^sub>L B\<guillemotright>Q = B\<guillemotright>Q o\<^sub>C\<^sub>L A"
   by (cheat colocal_op_commute)
 
-lemma remove_qvar_unit_op:
-  "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op*)\<guillemotright>Q = A\<guillemotright>(qregister_pair Q \<lbrakk>\<rbrakk>)"
+(* lemma remove_qvar_unit_op:
+  "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op* )\<guillemotright>Q = A\<guillemotright>(qregister_pair Q \<lbrakk>\<rbrakk>)"
 for A::"(_,_)l2bounded" and Q::"'a q2variable"
-  by (cheat TODO12)
+  by (cheat TODO12) *)
 
 
 lemma colocal_op_pred_lift1[simp,intro!]:
@@ -530,6 +594,7 @@ lemma move_sup_meas_rule:
   by (cheat span_lift) *)
 
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_qvar Q"
+  apply (simp add: index_flip_subspace_def index_flip_qvar_def)
   by (cheat index_flip_subspace_lift)
 
 (* lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q"
@@ -601,9 +666,10 @@ lemma translate_to_index_registers_cblinfun_image[translate_to_index_registers]:
   shows \<open>cblinfun_image (apply_qregister F A') (apply_qregister_space G B') \<equiv>
           apply_qregister_space FG (cblinfun_image (apply_qregister F' A') 
                                    (apply_qregister_space G' B'))\<close>
-  using assms apply (simp flip: applyOpSpace_lift)
-  sorry
-
+  using assms
+  by (simp flip: applyOpSpace_lift 
+      del: qregister_chain_apply_simp
+      flip: qregister_chain_apply[unfolded o_def, THEN fun_cong, of FG F' A'])
 
 lemma translate_to_index_registers_eq_op[translate_to_index_registers]:
   assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
@@ -611,44 +677,42 @@ lemma translate_to_index_registers_eq_op[translate_to_index_registers]:
          (apply_qregister F' A') = (apply_qregister G' B')\<close>
   using assms by simp
 
-
-(* TODO move *)
-lemma apply_qregister_space_chain: \<open>apply_qregister_space (qregister_chain F G) S = apply_qregister_space F (apply_qregister_space G S)\<close>
-  sorry
+(* TODO use qregister_chain_apply_space instead *)
+(* lemma apply_qregister_space_chain: \<open>apply_qregister_space (qregister_chain F G) S = apply_qregister_space F (apply_qregister_space G S)\<close> *)
 
 lemma translate_to_index_registers_inf[translate_to_index_registers]:
   assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
   shows \<open>inf (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
           apply_qregister_space FG (inf (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
-  using assms by (auto simp add: apply_qregister_space_chain)
+  using assms by auto
 
 lemma translate_to_index_registers_sup[translate_to_index_registers]:
   assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
   shows \<open>sup (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
           apply_qregister_space FG (sup (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
-  using assms by (auto simp add: apply_qregister_space_chain)
+  using assms by auto
 
 lemma translate_to_index_registers_plus_space[translate_to_index_registers]:
   assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
   shows \<open>plus (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
           apply_qregister_space FG (plus (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
-  using assms by (auto simp add: apply_qregister_space_chain)
+  using assms by auto
 
 lemma translate_to_index_registers_leq[translate_to_index_registers]:
   assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
   shows \<open>(apply_qregister_space F A') \<le> (apply_qregister_space G B') \<equiv>
           (apply_qregister_space F' A') \<le> (apply_qregister_space G' B')\<close>
-  using assms by (auto simp add: apply_qregister_space_chain)
+  using assms by auto
 
 lemma translate_to_index_registers_eq_space[translate_to_index_registers]:
   assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
   shows \<open>(apply_qregister_space F A') = (apply_qregister_space G B') \<equiv>
           (apply_qregister_space F' A') = (apply_qregister_space G' B')\<close>
-  using assms by (auto simp add: apply_qregister_space_chain)
+  using assms by auto
 
 lemma translate_to_index_registers_apply_space[translate_to_index_registers]:
   shows \<open>apply_qregister_space F (apply_qregister_space F' A') \<equiv> apply_qregister_space (qregister_chain F F') A'\<close>
-  by (simp add: apply_qregister_space_chain)
+  by simp
 
 lemma tmp1: 
   assumes \<open>qregister_le F FG \<and> qregister_le G FG\<close>
@@ -672,7 +736,8 @@ fun TODO_NAME_tac ctxt =
 (* TODO: this should be applied in normalize_register_conv *)
 lemma pair_fst_snd[simp]:
   shows \<open>\<lbrakk>qFst, qSnd\<rbrakk>\<^sub>q = qregister_id\<close>
-  sorry
+  apply transfer
+  using Laws_Quantum.pair_Fst_Snd by auto
 
 (* TODO move *)
 (* TODO: this should be applied in normalize_register_conv *)
@@ -685,7 +750,7 @@ lemma pair_chain_fst_snd:
 
 (* TODO move *)
 lemma apply_qregister_space_id[simp]: \<open>apply_qregister_space qregister_id S = S\<close>
-  sorry
+  by (simp add: apply_qregister_space_def)
 
 
 ML \<open>
@@ -757,6 +822,7 @@ method_setup translate_to_index_registers = \<open>
 
 section \<open>Measurements\<close>
 
+(* TODO: We have the WOT now, can use that one in the def, maybe... *)
 definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
        \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<phi> \<bullet>\<^sub>C (M i *\<^sub>V \<psi>)) = \<phi> \<bullet>\<^sub>C (P *\<^sub>V \<psi>)) \<and> P \<le> id_cblinfun))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
@@ -817,7 +883,7 @@ section \<open>Quantum predicates (ctd.)\<close>
 
 subsection \<open>Subspace division\<close>
 
-consts space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a q2variable \<Rightarrow> predicate"
+axiomatization space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a q2variable \<Rightarrow> predicate"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
 lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
   by (cheat TODO14)
@@ -1101,20 +1167,22 @@ lemma translate_to_index_registers_qeq[translate_to_index_registers]:
   shows \<open>quantum_equality_full U F V G \<equiv>
           apply_qregister_space FG (quantum_equality_full U F' V G')\<close>
   using assms 
-  by (simp add: quantum_equality_full_def flip: apply_qregister_space_chain qregister_chain_pair)
+  by (simp add: quantum_equality_full_def flip: qregister_chain_pair)
 
 
 section \<open>Common quantum objects\<close>
-
-(* definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))" for CNOT *)
-lemma unitaryCNOT[simp]: "unitary CNOT"
-  sorry
 
 lemma adjoint_CNOT[simp]: "CNOT* = CNOT"
   by simp
 
 lemma CNOT_CNOT[simp]: "CNOT \<cdot> CNOT = id_cblinfun"
-  using unitaryCNOT unfolding unitary_def adjoint_CNOT by simp
+  apply (rule equal_ket)
+  by auto
+
+(* definition [code del]: "CNOT = classical_operator (Some o (\<lambda>(x::bit,y). (x,y+x)))" for CNOT *)
+lemma unitaryCNOT[simp]: "unitary CNOT"
+  apply (rule unitaryI)
+  by simp_all
 
 (* definition [code del]: "pauliX = classical_operator (Some o (\<lambda>x::bit. x+1))" *)
 lemma unitaryX[simp]: "unitary pauliX"
@@ -1138,17 +1206,19 @@ lemmas adjoint_Z[simp] = pauliZ_adjoint
 
 lemmas Z_Z[simp] = pauliZZ
 
-consts pauliY :: "(bit,bit) l2bounded"
-lemma unitaryY[simp]: "unitary pauliY"
-  by (cheat TODO15)
-lemma Y_Y[simp]: "pauliY \<cdot> pauliY = id_cblinfun"
-  by (cheat TODO15)
+definition "matrix_pauliY = mat_of_rows_list 2 [ [0, - imaginary_unit], [imaginary_unit, 0] ]"
+definition pauliY :: \<open>(bit, bit) matrix\<close> where [code del]: "pauliY = cblinfun_of_mat matrix_pauliY"
+lemma [simp, code]: "mat_of_cblinfun pauliY = matrix_pauliY"
+  apply (auto simp add: pauliY_def matrix_pauliY_def)
+  apply (subst cblinfun_of_mat_inverse)
+  by (auto)
 lemma adjoint_Y[simp]: "pauliY* = pauliY"
-  by (cheat TODO15)
+  by eval
+lemma Y_Y[simp]: "pauliY o\<^sub>C\<^sub>L pauliY = id_cblinfun"
+  by eval
 
-consts EPR :: "(bit*bit) ell2" 
-lemma EPR_normalized[simp]: "norm EPR = 1"
-  by (cheat TODO15)
+abbreviation EPR :: "(bit*bit) ell2" where \<open>EPR \<equiv> \<beta>00\<close>
+lemmas EPR_normalized = norm_\<beta>00
 
 definition "Uoracle f = classical_operator (Some o (\<lambda>(x,y::_::group_add). (x, y + (f x))))"
 
