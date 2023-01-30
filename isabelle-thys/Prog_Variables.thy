@@ -303,19 +303,67 @@ qed
 definition pairwise_all :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a set \<Rightarrow> bool"
   where "pairwise_all R S \<longleftrightarrow> (\<forall>x \<in> S. \<forall>y \<in> S. R x y)"
 
+definition \<open>map_commutant F = {x. \<forall>y\<in>F. x \<circ>\<^sub>m y = y \<circ>\<^sub>m x}\<close>
+
+
+(* TODO move *)
+lemma map_commutant_mult: \<open>a \<circ>\<^sub>m b \<in> map_commutant X\<close> if \<open>a \<in> map_commutant X\<close> and \<open>b \<in> map_commutant X\<close>
+  using that 
+  apply (auto simp: map_commutant_def comp_update_assoc)
+  by (simp flip: comp_update_assoc)
+
+lemma map_commutant_antimono: \<open>X \<subseteq> Y \<Longrightarrow> map_commutant X \<supseteq> map_commutant Y\<close>
+  by (auto simp add: map_commutant_def)
+
+lemma double_map_commutant_grows: \<open>X \<subseteq> map_commutant (map_commutant X)\<close>
+  by (auto simp add: map_commutant_def)
+
+lemma triple_map_commutant[simp]: \<open>map_commutant (map_commutant (map_commutant X)) = map_commutant X\<close>
+  by (auto simp: map_commutant_def)
 
 (* Equivalence class of cregisters *)
 definition valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
-  \<open>valid_cregister_range \<FF> \<longleftrightarrow> 
-      (\<forall>X\<subseteq>\<FF>. pairwise_all partial_fun_compatible X \<longrightarrow> partial_fun_Sup X \<in> \<FF>)
-    \<and> (\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a \<circ>\<^sub>m b \<in> \<FF>)\<close>
+  \<open>valid_cregister_range \<FF> \<longleftrightarrow> map_commutant (map_commutant \<FF>) = \<FF>\<close>
 
 lemma valid_cregister_range: 
   fixes F :: \<open>('b,'a) cregister\<close>
   assumes \<open>cregister F\<close>
   shows \<open>valid_cregister_range (range (apply_cregister F))\<close>
-proof -
-  define \<FF> where \<open>\<FF> = range (apply_cregister F)\<close>
+proof (insert assms, transfer)
+  fix F :: \<open>'b cupdate \<Rightarrow> 'a cupdate\<close>
+  assume [simp]: \<open>cregister_raw F\<close>
+  define g s where \<open>g = Axioms_Classical.getter F\<close> and \<open>s = Axioms_Classical.setter F\<close>
+  define c where \<open>c m = s undefined m\<close> for m
+
+  define X where \<open>X = range (\<lambda>x m. case x (c m) of Some m' \<Rightarrow> Some (s (g m) m') | None \<Rightarrow> None)\<close>
+  have 1: \<open>a \<in> map_commutant X\<close> if \<open>a \<in> range F\<close> for a
+  proof (unfold map_commutant_def, intro CollectI ballI ext)
+    fix x y
+    assume \<open>x \<in> X\<close>
+    then obtain x' where x_def: \<open>x = (\<lambda>m. case x' (c m) of Some m' \<Rightarrow> Some (s (g m) m') | None \<Rightarrow> None)\<close>
+      using X_def by blast
+    from \<open>a \<in> range F\<close> obtain a' where \<open>a = F a'\<close>
+      by fast
+    then have a_def: \<open>a = register_from_getter_setter g s a'\<close>
+      by (simp add: g_def s_def)
+    have [simp]: \<open>g (s a m) = a\<close> for a m
+      by (metis \<open>cregister_raw F\<close> g_def s_def valid_getter_setter_def valid_getter_setter_getter_setter)
+    have [simp]: \<open>s a (s b m) = s a m\<close> for a b m
+      by (metis \<open>cregister_raw F\<close> s_def valid_getter_setter_def valid_getter_setter_getter_setter)
+    have [simp]: \<open>c (s a m) = c m\<close> for a m
+      by (simp add: c_def)
+    show \<open>(a \<circ>\<^sub>m x) y = (x \<circ>\<^sub>m a) y\<close>
+      apply (cases \<open>x' (c y)\<close>; cases \<open>a' (g y)\<close>)
+      by (auto simp: map_comp_def x_def a_def register_from_getter_setter_def)
+  qed
+  have 2: \<open>a \<in> range F\<close> if \<open>a \<in> map_commutant X\<close> for a
+    by -
+  from 1 2 have \<open>range F = map_commutant X\<close>
+    by auto
+  then show \<open>valid_cregister_range (range F)\<close>
+    by (simp add: valid_cregister_range_def)
+qed
+(*   define \<FF> where \<open>\<FF> = range (apply_cregister F)\<close>
   have 1: \<open>partial_fun_Sup X \<in> \<FF>\<close> if compat_X: \<open>pairwise_all partial_fun_compatible X\<close> and \<open>X\<subseteq>\<FF>\<close> for X
   proof -
     from \<open>X \<subseteq> \<FF>\<close>
@@ -345,7 +393,7 @@ proof -
   qed
   from 1 2 show ?thesis
     by (simp add: \<FF>_def valid_cregister_range_def)
-qed
+qed *)
 
 (* TODO move *)
 lemma csubspace_commutant[simp]: \<open>csubspace (commutant X)\<close>
@@ -673,15 +721,15 @@ lemma commutant_adj: \<open>adj ` commutant X = commutant (adj ` X)\<close>
   apply (auto intro!: image_eqI double_adj[symmetric] simp: commutant_def simp flip: adj_cblinfun_compose)
   by (metis adj_cblinfun_compose double_adj)
 
-lemma valid_cregister_range_Inter: 
+(* lemma valid_cregister_range_Inter: 
   assumes \<open>\<And>x. x \<in> X \<Longrightarrow> valid_cregister_range x\<close>
   shows \<open>valid_cregister_range (\<Inter>X)\<close>
   using assms apply (auto simp: valid_cregister_range_def pairwise_all_def)
-  by fast
+  by fast *)
 
 lift_definition CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is
-  \<open>\<lambda>\<FF> \<GG> :: 'a cupdate set. valid_cregister_range hull (\<FF> \<union> \<GG>)\<close>
-  by (auto intro!: hull_in[of valid_cregister_range] valid_cregister_range_Inter)
+  \<open>\<lambda>\<FF> \<GG> :: 'a cupdate set. map_commutant (map_commutant (\<FF> \<union> \<GG>))\<close>
+  by (simp add: valid_cregister_range_def)
 
 lift_definition QREGISTER_pair :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is
   \<open>\<lambda>\<FF> \<GG> :: 'a qupdate set. commutant (commutant (\<FF> \<union> \<GG>))\<close>
@@ -1154,7 +1202,99 @@ lemma valid_cregister_range_mult:
   assumes \<open>valid_cregister_range \<FF>\<close>
   assumes \<open>a \<in> \<FF>\<close> and \<open>b \<in> \<FF>\<close>
   shows \<open>a \<circ>\<^sub>m b \<in> \<FF>\<close>
-  using assms by (simp add: valid_cregister_range_def)
+  using assms map_commutant_mult valid_cregister_range_def by blast
+
+lemma option_Sup_insert_None: \<open>{option_Sup {x, None}, None} = {x, None}\<close>
+  apply (cases x)
+  by (simp_all add: option_Sup_def insert_Diff_if)
+
+lemma map_comp_partial_fun_Sup_right:
+  fixes X :: \<open>('a \<rightharpoonup> 'b) set\<close> and a :: \<open>'b \<rightharpoonup> 'c\<close>
+  assumes \<open>pairwise_all partial_fun_compatible X\<close>
+  shows \<open>a \<circ>\<^sub>m partial_fun_Sup X = partial_fun_Sup (map_comp a ` X)\<close>
+proof (rule ext, rename_tac b)
+  fix b
+  show \<open>(a \<circ>\<^sub>m partial_fun_Sup X) b = partial_fun_Sup ((\<circ>\<^sub>m) a ` X) b\<close>
+  proof (cases \<open>(\<lambda>f. f b) ` X = {None} \<or> X = {}\<close>)
+    case True
+    have \<open>(a \<circ>\<^sub>m partial_fun_Sup X) b = None\<close>
+      using True by (auto simp add: partial_fun_Sup_def)
+    also have \<open>\<dots> = option_Sup ((a \<circ>\<^sub>m id) ` (\<lambda>f. f b) ` X)\<close>
+      using True by auto
+    also have \<open>\<dots> = partial_fun_Sup ((\<circ>\<^sub>m) a ` X) b\<close>
+      by (simp add: partial_fun_Sup_def image_image map_comp_def)
+    finally show ?thesis
+      by -
+  next
+    case False
+    then obtain x where \<open>x \<in> X\<close> and \<open>x b \<noteq> None\<close>
+      apply atomize_elim apply auto
+      by (metis imageI)
+    then obtain c where \<open>x b = Some c\<close>
+      by blast
+    with assms \<open>x \<in> X\<close>
+    have fbX: \<open>(\<lambda>f. f b) ` X - {None} = {Some c}\<close>
+      apply (auto intro!: image_eqI[of _ _ x] simp: pairwise_all_def partial_fun_compatible_def)
+      by fastforce
+
+    have \<open>{(a \<circ>\<^sub>m partial_fun_Sup X) b, None} = (map_comp a id) ` {partial_fun_Sup X b, None}\<close>
+      by (simp add: map_comp_def)
+    also have \<open>\<dots> = (a \<circ>\<^sub>m id) ` {Some c, None}\<close>
+      apply (rule arg_cong[where f=\<open>image (a \<circ>\<^sub>m id)\<close>])
+      by (simp add: fbX partial_fun_Sup_def option_Sup_def)
+    also have \<open>\<dots> = {a c, None}\<close>
+      by simp
+    also have \<open>\<dots> = {option_Sup ((a \<circ>\<^sub>m id) ` {Some c, None}), None}\<close>
+      by (simp add: option_Sup_insert_None)
+    also have \<open>\<dots> = {option_Sup ((a \<circ>\<^sub>m id) ` (insert None ((\<lambda>f. f b) ` X))), None}\<close>
+      by (smt (verit, ccfv_threshold) fbX insert_Diff_single insert_commute)
+    also have \<open>\<dots> = {option_Sup ((a \<circ>\<^sub>m id) ` (\<lambda>f. f b) ` X), None}\<close>
+      by (simp add: option_Sup_def)
+    also have \<open>\<dots> = {partial_fun_Sup ((\<circ>\<^sub>m) a ` X) b, None}\<close>
+      by (simp add: partial_fun_Sup_def image_image map_comp_def)
+    finally  show \<open>(a \<circ>\<^sub>m partial_fun_Sup X) b = partial_fun_Sup ((\<circ>\<^sub>m) a ` X) b\<close>
+      by (metis doubleton_eq_iff)
+  qed
+qed
+
+lemma option_Sup_map_empty_image[simp]: \<open>option_Sup (Map.empty ` X) = None\<close>
+proof (cases \<open>X = {}\<close>)
+  case True
+  then show ?thesis
+    by (simp add: option_Sup_def)
+next
+  case False
+  then have \<open>Map.empty ` X = {None :: 'a option}\<close>
+    by auto
+  then show ?thesis
+    by simp
+qed
+
+lemma map_comp_partial_fun_Sup_left:
+  fixes X :: \<open>('a \<rightharpoonup> 'b) set\<close> and a :: \<open>'c \<rightharpoonup> 'a\<close>
+  shows \<open>partial_fun_Sup X \<circ>\<^sub>m a = partial_fun_Sup ((\<lambda>x. x \<circ>\<^sub>m a) ` X)\<close>
+proof (rule ext)
+  fix b
+  show \<open>(partial_fun_Sup X \<circ>\<^sub>m a) b = partial_fun_Sup ((\<lambda>x. x \<circ>\<^sub>m a) ` X) b\<close>
+    apply (cases \<open>a b\<close>)
+    by (simp_all add: partial_fun_Sup_def[abs_def] image_image)
+qed
+
+lemma map_commutant_Sup_closed:
+  fixes X Z
+  defines \<open>\<FF> \<equiv> map_commutant Z\<close>
+  assumes \<open>X \<subseteq> \<FF>\<close>
+  assumes compat: \<open>pairwise_all partial_fun_compatible X\<close>
+  shows \<open>partial_fun_Sup X \<in> \<FF>\<close>
+proof (unfold \<FF>_def map_commutant_def, intro CollectI ballI, rename_tac x)
+  fix x
+  assume \<open>x \<in> Z\<close>
+  with \<open>X \<subseteq> \<FF>\<close>
+  have \<open>(\<lambda>y. y \<circ>\<^sub>m x) ` X = (\<lambda>y. x \<circ>\<^sub>m y) ` X\<close>
+    by (force simp add: \<FF>_def map_commutant_def)
+  then show \<open>(partial_fun_Sup X \<circ>\<^sub>m x) = (x \<circ>\<^sub>m partial_fun_Sup X)\<close>
+    by (simp add: map_comp_partial_fun_Sup_right[OF compat] map_comp_partial_fun_Sup_left)
+qed
 
 lemma partial_fun_Sup_update1: \<open>a = partial_fun_Sup {update1 x y | x y. a x = Some y}\<close>
 proof (rule ext)
@@ -1224,6 +1364,10 @@ lemma partial_fun_compatible_update1:
 lemma tensor_map_update1: \<open>tensor_map (update1 x y) (update1 z w) = update1 (x,z) (y,w)\<close>
   by (auto intro!: ext simp add: update1_def[abs_def] tensor_update_def)
 
+lemma CREGISTER_mult: \<open>a \<circ>\<^sub>m b \<in> Rep_CREGISTER X\<close> if \<open>a \<in> Rep_CREGISTER X\<close> and \<open>b \<in> Rep_CREGISTER X\<close>
+  using that Rep_CREGISTER map_commutant_mult apply (auto simp: valid_cregister_range_def)
+  by blast
+
 lemma CREGISTER_of_cregister_pair:
   fixes F :: \<open>('a,'c) cregister\<close> and G :: \<open>('b,'c) cregister\<close>
   assumes [simp]: \<open>ccompatible F G\<close>
@@ -1261,11 +1405,13 @@ proof (rule Rep_CREGISTER_inject[THEN iffD1], rule antisym)
       have \<open>apply_cregister F a \<circ>\<^sub>m apply_cregister G b \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close> for a b
       proof -
         have Fa: \<open>apply_cregister F a \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
-          by (auto intro!: hull_inc simp: CREGISTER_pair.rep_eq CREGISTER_of.rep_eq \<FF>_def)
+          using double_map_commutant_grows
+          by (force simp: CREGISTER_pair.rep_eq CREGISTER_of.rep_eq \<FF>_def)
         have Gb: \<open>apply_cregister G b \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
-          by (auto intro!: hull_inc simp: CREGISTER_pair.rep_eq CREGISTER_of.rep_eq \<GG>_def)
+          using double_map_commutant_grows
+          by (force simp: CREGISTER_pair.rep_eq CREGISTER_of.rep_eq \<GG>_def)
         from Fa Gb show ?thesis
-          using Rep_CREGISTER valid_cregister_range_mult by auto
+          by (rule CREGISTER_mult)
       qed
       then have 1: \<open>(\<lambda>(a,b). apply_cregister F a \<circ>\<^sub>m apply_cregister G b) ` AB 
                       \<subseteq> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
@@ -1279,7 +1425,7 @@ proof (rule Rep_CREGISTER_inject[THEN iffD1], rule antisym)
         by (simp add: apply_cregister_pair FG_def image_image case_prod_beta)
       from 1 2 show ?thesis
         using Rep_CREGISTER[of \<open>CREGISTER_pair \<FF> \<GG>\<close>]
-        by (simp add: valid_cregister_range_def)
+        by (simp add: CREGISTER_pair.rep_eq map_commutant_Sup_closed)
     qed
     finally show \<open>c \<in> \<dots>\<close>
       by -
@@ -1303,10 +1449,19 @@ proof (rule Rep_CREGISTER_inject[THEN iffD1], rule antisym)
       then show ?thesis
         by (auto intro!: range_eqI[of _ _ \<open>tensor_map Some b\<close>] simp add: CREGISTER_of.rep_eq apply_cregister_pair)
     qed
-    ultimately show ?thesis
+    ultimately 
+    have \<open>Rep_CREGISTER (CREGISTER_of F) \<union> Rep_CREGISTER (CREGISTER_of G) 
+        \<subseteq> Rep_CREGISTER (CREGISTER_of (cregister_pair F G))\<close>
+      by auto
+    then have \<open>Rep_CREGISTER (CREGISTER_pair (CREGISTER_of F) (CREGISTER_of G))
+             \<subseteq> map_commutant (map_commutant (Rep_CREGISTER (CREGISTER_of (cregister_pair F G))))\<close>
       apply (simp add: CREGISTER_pair.rep_eq)
-      apply (rule hull_minimal)
-      using Rep_CREGISTER by auto
+      apply (intro map_commutant_antimono)
+      by simp
+    also have \<open>\<dots> = Rep_CREGISTER (CREGISTER_of (cregister_pair F G))\<close>
+      using Rep_CREGISTER valid_cregister_range_def by auto
+    finally show ?thesis
+      by -
   qed
 qed
 
@@ -1392,7 +1547,8 @@ lemma qcompatible3I'[simp]: \<open>qcompatible F G \<Longrightarrow> qcompatible
   by (simp add: qcompatible3')
 
 lemma CCcompatible3I[simp]: \<open>CCcompatible F G \<Longrightarrow> CCcompatible G H \<Longrightarrow> CCcompatible F H \<Longrightarrow> CCcompatible (CREGISTER_pair F G) H\<close>
-  sorry
+  apply transfer apply (auto simp: map_commutant_def)
+  by (metis Un_iff)
 lemma QQcompatible3I[simp]: \<open>QQcompatible F G \<Longrightarrow> QQcompatible G H \<Longrightarrow> QQcompatible F H \<Longrightarrow> QQcompatible (QREGISTER_pair F G) H\<close> 
   apply transfer apply (auto simp: commutant_def)
   by (metis Un_iff)
@@ -1934,7 +2090,8 @@ definition \<open>apply_qregister_space F S = apply_qregister F (Proj S) *\<^sub
 lemma apply_non_qregister_space[simp]: \<open>apply_qregister_space non_qregister x = 0\<close>
   by (simp add: apply_qregister_space_def)
 
-axiomatization CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close>
+lift_definition CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is map_commutant
+  by (simp add: valid_cregister_range_def)
 lift_definition QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is commutant
   apply (auto simp add: valid_qregister_range_def)
   by (metis (mono_tags, opaque_lifting) commutant_adj commutant_antimono double_adj image_iff subset_iff)
