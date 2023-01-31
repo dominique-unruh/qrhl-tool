@@ -853,4 +853,123 @@ lemma permute_and_tensor1_mat_cong[cong]:
   apply (rule cong_mat)
   using assms by auto
 
+
+(* TODO replace existing cblinfun_image_INF_leq *)
+lemma cblinfun_image_INF_leq[simp]:
+  fixes U :: "'b::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'c::cbanach"
+    and V :: "'a \<Rightarrow> 'b ccsubspace"
+  shows \<open>U *\<^sub>S (INF i\<in>X. V i) \<le> (INF i\<in>X. U *\<^sub>S (V i))\<close>
+  apply transfer
+  by (simp add: INT_greatest Inter_lower closure_mono image_mono)
+
+(* TODO replace existing cblinfun_image_INF_eq_general *)
+lemma cblinfun_image_INF_eq_general:
+  fixes V :: "'a \<Rightarrow> 'b::chilbert_space ccsubspace"
+    and U :: "'b \<Rightarrow>\<^sub>C\<^sub>L'c::chilbert_space"
+    and Uinv :: "'c \<Rightarrow>\<^sub>C\<^sub>L'b"
+  assumes UinvUUinv: "Uinv o\<^sub>C\<^sub>L U o\<^sub>C\<^sub>L Uinv = Uinv" and UUinvU: "U o\<^sub>C\<^sub>L Uinv o\<^sub>C\<^sub>L U = U"
+    \<comment> \<open>Meaning: \<^term>\<open>Uinv\<close> is a Pseudoinverse of \<^term>\<open>U\<close>\<close>
+    and V: "\<And>i. V i \<le> Uinv *\<^sub>S top"
+    and \<open>X \<noteq> {}\<close>
+  shows "U *\<^sub>S (INF i\<in>X. V i) = (INF i\<in>X. U *\<^sub>S V i)"
+proof (rule antisym)
+  show "U *\<^sub>S (INF i\<in>X. V i) \<le> (INF i\<in>X. U *\<^sub>S V i)"
+    by (rule cblinfun_image_INF_leq)
+next
+  define rangeU rangeUinv where "rangeU = U *\<^sub>S top" and "rangeUinv = Uinv *\<^sub>S top"
+  define INFUV INFV where INFUV_def: "INFUV = (INF i\<in>X. U *\<^sub>S V i)" and INFV_def: "INFV = (INF i\<in>X. V i)"
+  from assms have "V i \<le> rangeUinv"
+    for i
+    unfolding rangeUinv_def by simp
+  moreover have "(Uinv o\<^sub>C\<^sub>L U) *\<^sub>V \<psi> = \<psi>" if "\<psi> \<in> space_as_set rangeUinv"
+    for \<psi>
+    using UinvUUinv cblinfun_fixes_range rangeUinv_def that by fastforce
+  ultimately have "(Uinv o\<^sub>C\<^sub>L U) *\<^sub>V \<psi> = \<psi>" if "\<psi> \<in> space_as_set (V i)"
+    for \<psi> i
+    using less_eq_ccsubspace.rep_eq that by blast
+  hence d1: "(Uinv o\<^sub>C\<^sub>L U) *\<^sub>S (V i) = (V i)" for i
+  proof (transfer fixing: i)
+    fix V :: "'a \<Rightarrow> 'b set"
+      and Uinv :: "'c \<Rightarrow> 'b"
+      and U :: "'b \<Rightarrow> 'c"
+    assume "pred_fun \<top> closed_csubspace V"
+      and "bounded_clinear Uinv"
+      and "bounded_clinear U"
+      and "\<And>\<psi> i. \<psi> \<in> V i \<Longrightarrow> (Uinv \<circ> U) \<psi> = \<psi>"
+    then show "closure ((Uinv \<circ> U) ` V i) = V i"
+    proof auto
+      fix x
+      from \<open>pred_fun \<top> closed_csubspace V\<close>
+      show "x \<in> V i"
+        if "x \<in> closure (V i)" 
+        using that apply simp
+        by (metis orthogonal_complement_of_closure closed_csubspace.subspace double_orthogonal_complement_id closure_is_closed_csubspace)
+      with \<open>pred_fun \<top> closed_csubspace V\<close>
+      show "x \<in> closure (V i)"
+        if "x \<in> V i"
+        using that
+        using setdist_eq_0_sing_1 setdist_sing_in_set
+        by blast
+    qed
+  qed
+  have "U *\<^sub>S V i \<le> rangeU" for i
+    by (simp add: cblinfun_image_mono rangeU_def)
+  hence "INFUV \<le> rangeU"
+    unfolding INFUV_def using \<open>X \<noteq> {}\<close>
+    by (metis INF_eq_const INF_lower2)
+  moreover have "(U o\<^sub>C\<^sub>L Uinv) *\<^sub>V \<psi> = \<psi>" if "\<psi> \<in> space_as_set rangeU" for \<psi>
+    using UUinvU cblinfun_fixes_range rangeU_def that by fastforce
+  ultimately have x: "(U o\<^sub>C\<^sub>L Uinv) *\<^sub>V \<psi> = \<psi>" if "\<psi> \<in> space_as_set INFUV" for \<psi>
+    by (simp add: in_mono less_eq_ccsubspace.rep_eq that)
+
+  have "closure ((U \<circ> Uinv) ` INFUV) = INFUV"
+    if "closed_csubspace INFUV"
+      and "bounded_clinear U"
+      and "bounded_clinear Uinv"
+      and "\<And>\<psi>. \<psi> \<in> INFUV \<Longrightarrow> (U \<circ> Uinv) \<psi> = \<psi>"
+    for INFUV :: "'c set"
+    using that
+  proof auto
+    fix x
+    show "x \<in> INFUV" if "x \<in> closure INFUV"
+      using that \<open>closed_csubspace INFUV\<close>
+      by (metis orthogonal_complement_of_closure closed_csubspace.subspace double_orthogonal_complement_id closure_is_closed_csubspace)
+    show "x \<in> closure INFUV"
+      if "x \<in> INFUV"
+      using that \<open>closed_csubspace INFUV\<close>
+      using setdist_eq_0_sing_1 setdist_sing_in_set
+      by (simp add: closed_csubspace.closed)
+  qed
+  hence "(U o\<^sub>C\<^sub>L Uinv) *\<^sub>S INFUV = INFUV"
+    by (metis (mono_tags, opaque_lifting) x cblinfun_image.rep_eq cblinfun_image_id id_cblinfun_apply image_cong
+        space_as_set_inject)
+  hence "INFUV = U *\<^sub>S Uinv *\<^sub>S INFUV"
+    by (simp add: cblinfun_compose_image)
+  also have "\<dots> \<le> U *\<^sub>S (INF i\<in>X. Uinv *\<^sub>S U *\<^sub>S V i)"
+    unfolding INFUV_def
+    by (metis cblinfun_image_mono cblinfun_image_INF_leq)
+  also have "\<dots> = U *\<^sub>S INFV"
+    using d1
+    by (metis (no_types, lifting) INFV_def cblinfun_assoc_left(2) image_cong)
+  finally show "INFUV \<le> U *\<^sub>S INFV".
+qed
+
+(* TODO replace existing cblinfun_image_INF_eq *)
+lemma cblinfun_image_INF_eq[simp]:
+  fixes V :: "'a \<Rightarrow> 'b::chilbert_space ccsubspace"
+    and U :: "'b \<Rightarrow>\<^sub>C\<^sub>L 'c::chilbert_space"
+  assumes \<open>isometry U\<close> \<open>X \<noteq> {}\<close>
+  shows "U *\<^sub>S (INF i\<in>X. V i) = (INF i\<in>X. U *\<^sub>S V i)"
+proof -
+  from \<open>isometry U\<close> have "U* o\<^sub>C\<^sub>L U o\<^sub>C\<^sub>L U* = U*"
+    unfolding isometry_def by simp
+  moreover from \<open>isometry U\<close> have "U o\<^sub>C\<^sub>L U* o\<^sub>C\<^sub>L U = U"
+    unfolding isometry_def
+    by (simp add: cblinfun_compose_assoc)
+  moreover have "V i \<le> U* *\<^sub>S top" for i
+    by (simp add: range_adjoint_isometry assms)
+  ultimately show ?thesis
+    using \<open>X \<noteq> {}\<close> by (rule cblinfun_image_INF_eq_general)
+qed
+
 end
