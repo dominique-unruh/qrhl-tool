@@ -160,7 +160,7 @@ definition index_flip_subspace :: "qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 cc
 lemma index_flip_subspace_INF[simp]: \<open>index_flip_subspace (INF i\<in>A. S i) = (INF i\<in>A. index_flip_subspace (S i))\<close>
   apply (simp add: index_flip_subspace_def)
  (* Follows from *) thm cblinfun_image_INF_eq[where U=Uswap] (* but needs TTS. 
-Alternatively generelize that lemma *)
+Alternatively generalize that lemma *)
   sorry
 
 definition swap_variables_subspace :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace" where
@@ -455,7 +455,7 @@ next
 qed
 
 lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
-  by (cheat predicate_local_inf)
+  sorry
 lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> operator_local B Q \<Longrightarrow> operator_local (A o\<^sub>C\<^sub>L B) Q"
   apply (simp add: operator_local_def)
   by (smt (verit) image_iff qregister_compose rangeI)
@@ -499,76 +499,79 @@ lemma operator_localE:
   using assms operator_local_def by fastforce
 
 lemma lift_predicate_local[intro!]: "qvariables_local R Q \<Longrightarrow> predicate_local (S\<guillemotright>R) Q"
-  by (cheat lift_predicate_local)
+  by (simp add: apply_qregister_space_conversion predicate_local_def)
 lemma lift_operator_local[intro!]: "qvariables_local R Q \<Longrightarrow> operator_local (S\<guillemotright>R) Q"
-  by (cheat lift_operator_local)
+  using operator_local_def qregister_apply_conversion by blast
 
 lemma adjoint_lift[simp]: "adj (liftOp U Q) = liftOp (adj U) Q" 
-  by (cheat adjoint_lift)
+  by (simp add: apply_qregister_adj)
 lemma scaleC_lift[simp]: "c *\<^sub>C (A\<guillemotright>Q) = (c *\<^sub>C A) \<guillemotright> Q" for A :: "(_,_) bounded"
-  by (cheat scaleC_lift)
+   by (simp add: apply_qregister_scaleC)
 lemma norm_lift[simp]:
   "distinct_qvars Q \<Longrightarrow> norm (X\<guillemotright>Q) = norm X"
-  by (cheat norm_lift)
+  by (simp add: register_norm)
 lemma imageOp_lift[simp]: "applyOpSpace (liftOp U Q) top = liftSpace (applyOpSpace U top) Q"
-  apply (cases \<open>qregister Q\<close>) defer
-  unfolding apply_qregister_space_def
-  apply (simp add: non_qregister non_qregister.rep_eq non_qregister_raw_def) 
-  by (cheat imageOp_lift)
+  apply (cases \<open>qregister Q\<close>)
+  apply (metis Proj_top apply_qregister_apply_qregister_space apply_qregister_of_id apply_qregister_space_def cblinfun_image_id)
+  by (simp add: apply_qregister_space_def non_qregister non_qregister.rep_eq non_qregister_raw_def) 
 lemma applyOpSpace_lift[simp]: "applyOpSpace (liftOp U Q) (liftSpace S Q) = liftSpace (applyOpSpace U S) Q"
-  by (cheat applyOpSpace_lift)
+   by (simp add: apply_qregister_apply_qregister_space)
 lemma top_lift[simp]: "distinct_qvars Q \<Longrightarrow> liftSpace top Q = top"
-  by (cheat top_lift)
+  by (simp add: apply_qregister_space_def)
 lemma bot_lift[simp]: "liftSpace bot Q = bot"
-  by (cheat bot_lift)
+  apply (cases \<open>qregister Q\<close>)
+  by (simp_all add: apply_qregister_space_def)
 lemma unitary_lift[simp]: "distinct_qvars Q \<Longrightarrow> unitary (liftOp U Q) = unitary U"
-  by (cheat unitary_lift)
+  sorry
 lemma tensor_lift: 
   fixes A B :: "_ subspace"
   assumes "distinct_qvars (qregister_pair Q R)"
   shows "(A\<otimes>B)\<guillemotright>(qregister_pair Q R) = (A\<guillemotright>Q) \<sqinter> (B\<guillemotright>R)"
-  by (cheat tensor_lift)
+  sorry
 
 lemma lift_inf[simp]: "S\<guillemotright>Q \<sqinter> T\<guillemotright>Q = (S \<sqinter> T)\<guillemotright>Q" for S::"'a subspace"
-  by (cheat lift_inf)
+  apply (cases \<open>qregister Q\<close>)
+  sorry
 lemma lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a subspace"
-  by (cheat lift_leq)
+  sorry
 lemma lift_eqSp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a subspace" 
-  by (cheat lift_eqSp)
+  by (simp add: dual_order.eq_iff)
 lemma lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a,'a) l2bounded" 
-  by (cheat TODO11)
-lemma lift_plus[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a subspace"  
-  by (cheat TODO11)
+  by (rule apply_qregister_inject')
+lemma lift_plus[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a subspace"
+  apply (cases \<open>qregister Q\<close>)
+  sorry
 lemma lift_sup[simp]: "S\<guillemotright>Q \<squnion> T\<guillemotright>Q = (S \<squnion> T)\<guillemotright>Q" for S T :: "'a subspace"  
-  by (cheat TODO11)
+  using lift_plus by auto
 lemma lift_plusOp[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a,'a) l2bounded"  
-  by (cheat TODO11)
-lemma lift_uminusOp[simp]: "- (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a,'a) l2bounded"  
-  (* unfolding uminus_l2bounded_def by simp *)
-  by (cheat lift_uminusOp)
+  by (simp add: apply_qregister_plus)
+lemma lift_uminusOp[simp]: "- (T\<guillemotright>Q) = (- T)\<guillemotright>Q" for T :: "('a,'a) l2bounded"
+  apply (subst scaleC_minus1_left[symmetric])
+  apply (subst (2) scaleC_minus1_left[symmetric])
+  by simp
 lemma lift_minusOp[simp]: "S\<guillemotright>Q - T\<guillemotright>Q = (S - T)\<guillemotright>Q" for S T :: "('a,'a) l2bounded"  
-  (* unfolding minus_l2bounded_def by simp *)
-  by (cheat lift_minusOp)
-lemma lift_timesOp[simp]: "S\<guillemotright>Q \<cdot> T\<guillemotright>Q = (S \<cdot> T)\<guillemotright>Q" for S T :: "('a,'a) l2bounded"  
-  by (cheat TODO11)
+  by (simp add: ordered_field_class.sign_simps(9))
+lemma lift_timesOp[simp]: "S\<guillemotright>Q o\<^sub>C\<^sub>L T\<guillemotright>Q = (S o\<^sub>C\<^sub>L T)\<guillemotright>Q" for S T :: "('a,'a) l2bounded"  
+   by (simp add: qregister_compose)
 lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> - (S\<guillemotright>Q) = (- S)\<guillemotright>Q" for Q :: "'a q2variable" and S :: "'a ell2 ccsubspace"
-  by (cheat TODO11)
-lemma lift_tensorOp: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) \<cdot> (T\<guillemotright>R) = (S \<otimes>\<^sub>o T)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S T :: "(_,_) l2bounded" 
-  by (cheat TODO11)
+  sorry
+lemma lift_tensorOp: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) o\<^sub>C\<^sub>L (T\<guillemotright>R) = (S \<otimes>\<^sub>o T)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S T :: "(_,_) l2bounded" 
+  by (simp add: apply_qregister_pair)
 lemma lift_tensorSpace: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S :: "_ subspace" 
-  by (cheat TODO11)
+  by (metis distinct_qvarsR inf_top.right_neutral tensor_lift top_lift)
 lemma lift_id_cblinfun[simp]: "distinct_qvars Q \<Longrightarrow> id_cblinfun\<guillemotright>Q = id_cblinfun" for Q
-  by (cheat TODO11)
+  by simp
 lemma INF_lift: "(INF x. S x\<guillemotright>Q) = (INF x. S x)\<guillemotright>Q" for Q::"'a q2variable" and S::"'b \<Rightarrow> 'a subspace"
-  by (cheat TODO11)
+  apply (cases \<open>qregister Q\<close>)
+  sorry
 lemma Cla_inf_lift: "Cla[b] \<sqinter> (S\<guillemotright>Q) = (if b then S else bot)\<guillemotright>Q" by auto
 lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 lemma Cla_sup_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<squnion> (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 lemma Proj_lift[simp]: "Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
   for Q::"'a q2variable"
-  by (cheat Proj_lift)
+   by (metis Proj_is_Proj Proj_on_own_range Proj_range imageOp_lift is_Proj_apply_qregister')
 lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q
-  by (cheat TODO11)
+  sorry
 lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q
   unfolding eigenspace_def apply (subst lift_id_cblinfun[symmetric, of Q], assumption)
   apply (simp del: lift_id_cblinfun)
@@ -595,18 +598,18 @@ lemma bot_eq_lift2: "distinct_qvars Q \<Longrightarrow> S\<guillemotright>Q = bo
 lemma colocal_op_commute:
   assumes "colocal_op_qvars A Q"
   shows "A o\<^sub>C\<^sub>L B\<guillemotright>Q = B\<guillemotright>Q o\<^sub>C\<^sub>L A"
-  by (cheat colocal_op_commute)
+  sorry
 
 (* lemma remove_qvar_unit_op:
   "(remove_qvar_unit_op \<cdot> A \<cdot> remove_qvar_unit_op* )\<guillemotright>Q = A\<guillemotright>(qregister_pair Q \<lbrakk>\<rbrakk>)"
 for A::"(_,_)l2bounded" and Q::"'a q2variable"
-  by (cheat TODO12) *)
+ *)
 
 
 lemma colocal_op_pred_lift1[simp,intro!]:
  "colocal_pred_qvars S Q \<Longrightarrow> colocal_op_pred (U\<guillemotright>Q) S"
 for Q :: "'a q2variable" and U :: "('a,'a) l2bounded" and S :: predicate
-  by (cheat TODO12)
+   by (simp add: colocal_op_commute distinct_qvars_op_pred_def distinct_qvars_pred_vars_def)
 
 
 lemma lift_extendR:
@@ -632,14 +635,14 @@ lemma move_sup_meas_rule:
   using Proj_image_leq[of "C\<guillemotright>Q"] assms by simp
 
 (* lemma span_lift: "distinct_qvars Q \<Longrightarrow> ccspan G \<guillemotright> Q = ccspan {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
-  by (cheat span_lift) *)
+   *)
 
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_qvar Q"
+  apply (cases \<open>qregister Q\<close>)
   apply (simp add: index_flip_subspace_def index_flip_qvar_def)
-  by (cheat index_flip_subspace_lift)
+  sorry
 
-(* lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q"
-  by (cheat index_flip_subspace_lift) *)
+(* lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q" *)
 
 lemma apply_qregister_qFst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
   by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
@@ -651,14 +654,78 @@ lemma apply_qregister_qSnd: \<open>apply_qregister qSnd b = id_cblinfun \<otimes
 lemma apply_qregister_space_qFst: \<open>apply_qregister_space qFst S = S \<otimes>\<^sub>S \<top>\<close>
   by (simp add: apply_qregister_space_def tensor_ccsubspace_via_Proj apply_qregister_qFst flip: imageOp_lift)
 
-(* TODO move *)
+(* TODO move to Prog_Vars *)
 lemma apply_qregister_space_qSnd: \<open>apply_qregister_space qSnd S = \<top> \<otimes>\<^sub>S S\<close>
   by (simp add: apply_qregister_space_def tensor_ccsubspace_via_Proj apply_qregister_qSnd flip: imageOp_lift)
 
-(* TODO move *)
+(* TODO move to Tensor *)
 lemma tensor_ccsubspace_ccspan: \<open>ccspan X \<otimes>\<^sub>S ccspan Y = ccspan {x \<otimes>\<^sub>s y | x y. x \<in> X \<and> y \<in> Y}\<close>
-  apply (simp add: tensor_ccsubspace_def)
-  sorry
+proof (rule antisym)
+  show \<open>ccspan {x \<otimes>\<^sub>s y |x y. x \<in> X \<and> y \<in> Y} \<le> ccspan X \<otimes>\<^sub>S ccspan Y\<close>
+    apply (auto intro!: ccspan_mono Collect_mono ex_mono simp add: tensor_ccsubspace_def)
+    using ccspan_superset by auto
+next
+  have \<open>{\<psi> \<otimes>\<^sub>s \<phi> |\<psi> \<phi>. \<psi> \<in> space_as_set (ccspan X) \<and> \<phi> \<in> space_as_set (ccspan Y)}
+       \<subseteq> closure {x \<otimes>\<^sub>s y |x y. x \<in> cspan X \<and> y \<in> cspan Y}\<close>
+  proof (rule subsetI)
+    fix \<gamma>
+    assume \<open>\<gamma> \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi> \<phi>. \<psi> \<in> space_as_set (ccspan X) \<and> \<phi> \<in> space_as_set (ccspan Y)}\<close>
+    then obtain \<psi> \<phi> where \<psi>: \<open>\<psi> \<in> space_as_set (ccspan X)\<close> and \<phi>: \<open>\<phi> \<in> space_as_set (ccspan Y)\<close> and \<gamma>_def: \<open>\<gamma> = \<psi> \<otimes>\<^sub>s \<phi>\<close>
+      by blast
+    from \<psi>
+    obtain \<psi>' where lim1: \<open>\<psi>' \<longlonglongrightarrow> \<psi>\<close> and \<psi>'X: \<open>\<psi>' n \<in> cspan X\<close> for n
+      apply atomize_elim
+      apply (auto simp: ccspan.rep_eq)
+      using closure_sequential by blast
+    from \<phi>
+    obtain \<phi>' where lim2: \<open>\<phi>' \<longlonglongrightarrow> \<phi>\<close> and \<phi>'Y: \<open>\<phi>' n \<in> cspan Y\<close> for n
+      apply atomize_elim
+      apply (auto simp: ccspan.rep_eq)
+      using closure_sequential by blast
+    interpret tensor: bounded_cbilinear tensor_ell2
+      by (rule bounded_cbilinear_tensor_ell2)
+    from lim1 lim2 have \<open>(\<lambda>n. \<psi>' n \<otimes>\<^sub>s \<phi>' n) \<longlonglongrightarrow> \<psi> \<otimes>\<^sub>s \<phi>\<close>
+      by (rule tensor.tendsto)
+    moreover have \<open>\<psi>' n \<otimes>\<^sub>s \<phi>' n \<in> {x \<otimes>\<^sub>s y |x y. x \<in> cspan X \<and> y \<in> cspan Y}\<close> for n
+      using \<psi>'X \<phi>'Y by auto
+    ultimately show \<open>\<gamma> \<in> closure {x \<otimes>\<^sub>s y |x y. x \<in> cspan X \<and> y \<in> cspan Y}\<close>
+      unfolding \<gamma>_def
+      by (meson closure_sequential)
+  qed
+  also have \<open>closure {x \<otimes>\<^sub>s y |x y. x \<in> cspan X \<and> y \<in> cspan Y}
+          \<subseteq> closure (cspan {x \<otimes>\<^sub>s y |x y. x \<in> X \<and> y \<in> Y})\<close>
+  proof (intro closure_mono subsetI)
+    fix \<gamma>
+    assume \<open>\<gamma> \<in> {x \<otimes>\<^sub>s y |x y. x \<in> cspan X \<and> y \<in> cspan Y}\<close>
+    then obtain x y where \<gamma>_def: \<open>\<gamma> = x \<otimes>\<^sub>s y\<close> and \<open>x \<in> cspan X\<close> and \<open>y \<in> cspan Y\<close>
+      by blast
+    from \<open>x \<in> cspan X\<close>
+    obtain X' x' where \<open>finite X'\<close> and \<open>X' \<subseteq> X\<close> and x_def: \<open>x = (\<Sum>i\<in>X'. x' i *\<^sub>C i)\<close>
+      using complex_vector.span_explicit[of X] apply atomize_elim
+      by auto
+    from \<open>y \<in> cspan Y\<close>
+    obtain Y' y' where \<open>finite Y'\<close> and \<open>Y' \<subseteq> Y\<close> and y_def: \<open>y = (\<Sum>j\<in>Y'. y' j *\<^sub>C j)\<close>
+      using complex_vector.span_explicit[of Y] apply atomize_elim
+      by auto
+    from x_def y_def \<gamma>_def
+    have \<open>\<gamma> = (\<Sum>i\<in>X'. x' i *\<^sub>C i) \<otimes>\<^sub>s (\<Sum>j\<in>Y'. y' j *\<^sub>C j)\<close>
+      by simp
+    also have \<open>\<dots> = (\<Sum>i\<in>X'. \<Sum>j\<in>Y'. (x' i *\<^sub>C i) \<otimes>\<^sub>s (y' j *\<^sub>C j))\<close>
+      by (smt (verit) sum.cong tensor_ell2_sum_left tensor_ell2_sum_right)
+    also have \<open>\<dots> = (\<Sum>i\<in>X'. \<Sum>j\<in>Y'. (x' i * y' j) *\<^sub>C (i \<otimes>\<^sub>s j))\<close>
+      by (metis (no_types, lifting) scaleC_scaleC sum.cong tensor_ell2_scaleC1 tensor_ell2_scaleC2)
+    also have \<open>\<dots> \<in> cspan {x \<otimes>\<^sub>s y |x y. x \<in> X \<and> y \<in> Y}\<close>
+      using \<open>X' \<subseteq> X\<close> \<open>Y' \<subseteq> Y\<close>
+      by (auto intro!: complex_vector.span_sum complex_vector.span_scale
+          complex_vector.span_base[of \<open>_ \<otimes>\<^sub>s _\<close>])
+    finally show \<open>\<gamma> \<in> cspan {x \<otimes>\<^sub>s y |x y. x \<in> X \<and> y \<in> Y}\<close>
+      by -
+  qed
+  also have \<open>\<dots> = space_as_set (ccspan {x \<otimes>\<^sub>s y |x y. x \<in> X \<and> y \<in> Y})\<close>
+    using ccspan.rep_eq by blast
+  finally show \<open>ccspan X \<otimes>\<^sub>S ccspan Y \<le> ccspan {x \<otimes>\<^sub>s y |x y. x \<in> X \<and> y \<in> Y}\<close>
+    by (auto intro!: ccspan_leqI simp add: tensor_ccsubspace_def)
+qed
 
 lemma ket_less_specific:
   assumes "qregister \<lbrakk>X,Y\<rbrakk>"
@@ -884,13 +951,13 @@ lemma is_Proj_mproj[simp]: "is_Proj (mproj M i)"
 
 lift_definition computational_basis :: "('a, 'a) measurement" is
   "\<lambda>i. proj (ket i)"
-  by (cheat computational_basis)
+  sorry
 
 lemma mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
   unfolding computational_basis.rep_eq by simp
 
 lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
-  by (cheat mtotal_computational_basis)
+  sorry
 
 lift_definition binary_measurement :: "('a,'a) l2bounded \<Rightarrow> (bit,'a) measurement" is
   "\<lambda>(P::('a,'a) l2bounded) (b::bit). (if is_Proj P then (if b=1 then P else id_cblinfun-P) else 0)"
@@ -927,18 +994,19 @@ subsection \<open>Subspace division\<close>
 axiomatization space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a q2variable \<Rightarrow> predicate"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
 lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
-  by (cheat TODO14)
+  sorry
 
 definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" where
   [code del]: "space_div_unlifted S \<psi> = Abs_clinear_space {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}"
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(qregister_pair Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
-  by (cheat space_div_space_div_unlifted)
+  sorry
 
 lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" 
-  by (cheat top_div)
+  by (metis distinct_qvars_pred_vars_top inf.cobounded1 leq_space_div top.extremum_unique)
 lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot" 
-  by (cheat bot_div)
+  apply (cases \<open>qregister Q\<close>)
+  sorry
 lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
 
 (* lemma space_div_add_extend_lift_as_var_concat_hint:
@@ -1004,11 +1072,11 @@ qed
 lemma predicate_local[intro!]: 
   assumes "qvariables_local (qregister_pair Q R) S"
   shows "predicate_local (quantum_equality_full U Q V R) S"
-  by (cheat predicate_local)
+   by (simp add: assms lift_predicate_local quantum_equality_full_def)
 
 lemma applyOpSpace_colocal:
   "colocal U S \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
-  by (cheat TODO14)
+  by (metis Proj_range cblinfun_compose_image distinct_qvars_op_pred_def unitary_range)
 
 lemma applyOpSpace_colocal_simp[simp]:
   "DISTINCT_QVARS_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
@@ -1029,13 +1097,13 @@ lemma qeq_collect_guarded[simp]:
 lemma Qeq_mult1[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
  for U::"('a,'a) l2bounded" and U2 :: "('b,'c) l2bounded"  
-  by (cheat TODO14)
+  sorry
 
 (* Proof in paper *)
 lemma Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
  for U::"('a,'a) l2bounded" and U1 :: "('b,'c) l2bounded"  
-  by (cheat TODO14)
+  sorry
 
 (* Proof in paper *)
 lemma quantum_eq_unique[simp]: "distinct_qvars (qregister_pair Q R) \<Longrightarrow>
@@ -1045,7 +1113,7 @@ lemma quantum_eq_unique[simp]: "distinct_qvars (qregister_pair Q R) \<Longrighta
   for Q::"'a q2variable" and R::"'b q2variable"
     and U::"('a,'c) l2bounded" and V::"('b,'c) l2bounded"
     and \<psi>::"'a ell2"
-  by (cheat TODO14)
+  sorry
 
 (* Proof in paper *)
 lemma
@@ -1055,20 +1123,19 @@ lemma
              = quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) (qregister_pair Q T) (addState \<psi> \<cdot> V) R"
     for U :: "('a,'c) l2bounded" and V :: "('b,'c) l2bounded" and \<psi> :: "'d ell2"
     and Q :: "'a q2variable"    and R :: "'b q2variable"    and T :: "'d q2variable"
-  by (cheat TODO14)
-
+  sorry
 
 (* We flip the lhs/rhs of the quantum equality in addition to changing the indices.
    This is because quantum equalities are typically written with 1-variables on the left and 2-variables on the right. *)
 lemma index_flip_subspace_quantum_equality[simp]: 
   "index_flip_subspace (quantum_equality_full U Q V R) = 
       quantum_equality_full V (index_flip_qvar R) U (index_flip_qvar Q)"
-  by (cheat index_flip_subspace_quantum_equality)
+  sorry
 
 lemma swap_variables_subspace_quantum_equality[simp]: 
   "swap_variables_subspace v w (quantum_equality_full U Q V R) = 
       quantum_equality_full U (swap_variables_qvars v w Q) V (swap_variables_qvars v w R)"
-  by (cheat swap_variables_subspace_quantum_equality)
+  sorry
 
 lemma quantum_equality_full_swap_left:
   assumes [simp]: "distinct_qvars (qregister_pair (qregister_pair Q R) S)"
@@ -1233,12 +1300,14 @@ lemmas adjoint_X[simp] = pauliX_adjoint
 
 lemmas X_X[simp] = pauliXX
 
-lemma unitaryH[simp]: "unitary hadamard"
-  by (cheat TODO14)
 lemmas adjoint_H[simp] = hada_adj
 
 lemma H_H[simp]: "hadamard \<cdot> hadamard = id_cblinfun"
-  using unitaryH unfolding unitary_def by simp
+  sorry
+
+lemma unitaryH[simp]: "unitary hadamard"
+  apply (rule unitaryI)
+  by simp_all
 
 lemma unitaryZ[simp]: "unitary pauliZ"
   by (simp add: unitary_def)
