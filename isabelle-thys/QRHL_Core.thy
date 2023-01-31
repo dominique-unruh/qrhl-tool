@@ -1204,14 +1204,30 @@ lemma qeq_collect_guarded[simp]:
 (* Proof in paper *)
 lemma Qeq_mult1[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
-  for U::"('a,'a) l2bounded" and U2 :: "('b,'c) l2bounded"  
-  sorry
+  for U::"('a,'a) l2bounded" and U2 :: "('b,'c) l2bounded"
+proof (cases \<open>qcompatible Q1 Q2\<close>)
+  case True
+  show ?thesis
+    sorry
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister quantum_equality_full_def)
+qed
 
 (* Proof in paper *)
 lemma Qeq_mult2[simp]:
   "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
  for U::"('a,'a) l2bounded" and U1 :: "('b,'c) l2bounded"  
-  sorry
+proof (cases \<open>qcompatible Q1 Q2\<close>)
+  case True
+  show ?thesis
+    sorry
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister quantum_equality_full_def)
+qed
 
 (* Proof in paper *)
 lemma quantum_eq_unique[simp]: "distinct_qvars (qregister_pair Q R) \<Longrightarrow>
@@ -1226,7 +1242,7 @@ lemma quantum_eq_unique[simp]: "distinct_qvars (qregister_pair Q R) \<Longrighta
 (* Proof in paper *)
 lemma
   quantum_eq_add_state: 
-    "distinct_qvars (qregister_pair Q (qregister_pair R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
+    "qregister (qregister_pair Q (qregister_pair R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
     quantum_equality_full U Q V R \<sqinter> ccspan {\<psi>}\<guillemotright>T
              = quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) (qregister_pair Q T) (addState \<psi> \<cdot> V) R"
     for U :: "('a,'c) l2bounded" and V :: "('b,'c) l2bounded" and \<psi> :: "'d ell2"
