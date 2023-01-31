@@ -43,8 +43,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
  seq 2 0: quantum_equality_full id_cblinfun ⟦C1,A1,B1⟧
           ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
- { wp left.
-   wp left.
+ { wp left 2.
    skip.
    simp.
    rule teleport_goal1.
@@ -73,7 +72,6 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    simp.
    skip.
    simp.
-    clear 1.
    fix c'.
    rule move_sup_meas_rule.
     simp!.

@@ -48,9 +48,18 @@ lemma [code]: \<open>mat_of_cblinfun (tensor_ell2_left \<psi> :: ('a::enum,('b \
   sorry
 
 lemma teleport_goal1:
+  fixes A1 B1 C1 A2 :: \<open>bit q2variable\<close>
   assumes [register]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows \<open>quantum_equality_full (addState EPR*) \<lbrakk>C1, A1, B1\<rbrakk> id_cblinfun \<lbrakk>A2\<rbrakk> 
-    \<le> CNOT\<guillemotright>\<lbrakk>C1, A1\<rbrakk> *\<^sub>S hadamard\<guillemotright>\<lbrakk>C1\<rbrakk> *\<^sub>S quantum_equality_full (addState EPR* o\<^sub>C\<^sub>L (assoc_op* o\<^sub>C\<^sub>L (CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L (assoc_op o\<^sub>C\<^sub>L hadamard \<otimes>\<^sub>o id_cblinfun)))) \<lbrakk>C1, A1, B1\<rbrakk> id_cblinfun \<lbrakk>A2\<rbrakk>\<close>
+  shows \<open>quantum_equality_full (tensor_ell2_right EPR*) \<lbrakk>C1, A1, B1\<rbrakk>\<^sub>q id_cblinfun A2 \<le>
+     apply_qregister \<lbrakk>C1, A1\<rbrakk>\<^sub>q CNOT *\<^sub>S apply_qregister C1 hadamard *\<^sub>S quantum_equality_full 
+    (tensor_ell2_right EPR* o\<^sub>C\<^sub>L (assoc_ell2 o\<^sub>C\<^sub>L ((CNOT \<otimes>\<^sub>o id_cblinfun)* o\<^sub>C\<^sub>L (assoc_ell2* o\<^sub>C\<^sub>L 
+    (hadamard \<otimes>\<^sub>o id_cblinfun)*)))) \<lbrakk>C1, A1, B1\<rbrakk>\<^sub>q id_cblinfun A2\<close>
+(*   shows \<open>quantum_equality_full (tensor_ell2_right EPR* ) \<lbrakk>C1, A1, B1\<rbrakk>\<^sub>q id_cblinfun (A2) \<le>
+ apply_qregister \<lbrakk>C1, A1\<rbrakk>\<^sub>q CNOT *\<^sub>S apply_qregister C1 hadamard *\<^sub>S 
+  quantum_equality_full (tensor_ell2_right EPR* o\<^sub>C\<^sub>L (assoc_ell2 o\<^sub>C\<^sub>L ((CNOT \<otimes>\<^sub>o id_cblinfun)* o\<^sub>C\<^sub>L 
+    (assoc_ell2* o\<^sub>C\<^sub>L (hadamard \<otimes>\<^sub>o id_cblinfun)* )))) \<lbrakk>C1, A1, B1\<rbrakk>\<^sub>q id_cblinfun A2\<close> *)
+(*   shows \<open>quantum_equality_full (addState EPR* ) \<lbrakk>C1, A1, B1\<rbrakk> id_cblinfun \<lbrakk>A2\<rbrakk> 
+    \<le> CNOT\<guillemotright>\<lbrakk>C1, A1\<rbrakk> *\<^sub>S hadamard\<guillemotright>\<lbrakk>C1\<rbrakk> *\<^sub>S quantum_equality_full (addState EPR* o\<^sub>C\<^sub>L (assoc_op* o\<^sub>C\<^sub>L (CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L (assoc_op o\<^sub>C\<^sub>L hadamard \<otimes>\<^sub>o id_cblinfun)))) \<lbrakk>C1, A1, B1\<rbrakk> id_cblinfun \<lbrakk>A2\<rbrakk>\<close> *)
 (* TODO: Find a simpler proof (add automation) *)
 proof -
   have hadamard: "(hadamard \<otimes> id_cblinfun) o\<^sub>C\<^sub>L (hadamard \<otimes>\<^sub>o id_cblinfun) = id_cblinfun" 
@@ -70,10 +79,10 @@ proof -
      apply (rule qregister_le_pair_rightI1, simp, simp)
     by simp
 
-  have 3: \<open>(tensor_ell2_right EPR* o\<^sub>C\<^sub>L
-         (assoc_ell2 o\<^sub>C\<^sub>L (CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L (assoc_ell2* o\<^sub>C\<^sub>L hadamard \<otimes>\<^sub>o id_cblinfun))) o\<^sub>C\<^sub>L
+  have 3: \<open>tensor_ell2_right EPR* o\<^sub>C\<^sub>L
+         (assoc_ell2 o\<^sub>C\<^sub>L ((CNOT \<otimes>\<^sub>o id_cblinfun)* o\<^sub>C\<^sub>L (assoc_ell2* o\<^sub>C\<^sub>L (hadamard \<otimes>\<^sub>o id_cblinfun)*))) o\<^sub>C\<^sub>L
          apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q hadamard o\<^sub>C\<^sub>L
-         apply_qregister \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q CNOT) = (addState EPR*)\<close>
+         apply_qregister \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q CNOT = addState EPR*\<close>
     apply prepare_for_code
     by eval
   show ?thesis
