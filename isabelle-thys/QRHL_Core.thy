@@ -30,9 +30,10 @@ type_synonym predicate = "qu2 subspace"
 
 subsection \<open>Classical predicates\<close>
   
-definition classical_subspace :: "bool \<Rightarrow> predicate"  ("\<CC>\<ll>\<aa>[_]")
+definition classical_subspace :: "bool \<Rightarrow> _ ell2 ccsubspace"  ("\<CC>\<ll>\<aa>[_]")
   where "\<CC>\<ll>\<aa>[b] = (if b then top else bot)"
-syntax classical_subspace :: "bool \<Rightarrow> predicate"  ("Cla[_]")
+syntax classical_subspace :: "bool \<Rightarrow> _ ell2 ccsubspace"  ("Cla[_]")
+  \<comment> \<open>Easier to type syntax\<close>
 
 lemma classical_true[simp]: "Cla[True] = top" unfolding classical_subspace_def by simp
 lemma classical_false[simp]: "Cla[False] = bot" unfolding classical_subspace_def by simp
@@ -930,6 +931,14 @@ lemma translate_to_index_registers_apply_space[translate_to_index_registers]:
   shows \<open>apply_qregister_space F (apply_qregister_space F' A') \<equiv> apply_qregister_space (qregister_chain F F') A'\<close>
   by simp
 
+lemma [translate_to_index_registers]: \<open>top \<equiv> apply_qregister_space \<lbrakk>\<rbrakk>\<^sub>q top\<close>
+  by simp
+lemma [translate_to_index_registers]: \<open>bot \<equiv> apply_qregister_space \<lbrakk>\<rbrakk>\<^sub>q bot\<close>
+  by simp
+lemma [translate_to_index_registers]: \<open>Cla[b] \<equiv> apply_qregister_space \<lbrakk>\<rbrakk>\<^sub>q Cla[b]\<close>
+  apply (rule eq_reflection) by auto
+
+
 lemma tmp1: 
   assumes \<open>qregister_le F FG \<and> qregister_le G FG\<close>
   assumes \<open>qregister_conversion F FG = F'\<close>
@@ -1019,8 +1028,19 @@ fun translate_to_index_registers_conv_top ctxt ct = let
   (* val T = Thm.typ_of cT *)
   val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq T\<close>) ct)
                        (Thm.cterm_of ctxt (Var(("rhs",Thm.maxidx_of_cterm ct + 1), T)))
+(* val _ = \<^print> ("translate_to_index_registers_conv_top", ct) *)
   val tac = translate_to_index_registers_tac ctxt
+  fun raise_error (Misc.Lazy_Error e) = let val term_str = Syntax.string_of_term ctxt (Thm.term_of ct) in
+      raise ERROR ("I was trying to process the following subterm:\n  " 
+        ^ term_str ^ "\nThis subterm was the result of transforming its children into index registers "
+        ^ "(where possible)\nand bringing non-index-registers to the top.\n"
+        ^ "In the current step, I tried to push the non-index-registers up further (using lemmas\nfrom "
+        ^ (Pretty.marks_str (Proof_Context.markup_extern_fact \<^context> \<^named_theorems>\<open>translate_to_index_registers\<close>) |> Pretty.string_of)
+        ^ ") but that failed with the following error:\n" ^ e ())
+    end
   val thm = Goal.prove_internal ctxt [] goal (K tac)
+            handle Misc.LAZY_ERROR e => raise_error e
+  (* val _ = \<^print> (" \<rightarrow> ", thm |> Thm.rhs_of) *)
   in thm end
 
 fun translate_to_index_registers_conv ctxt ct = 

@@ -178,7 +178,7 @@ fun rndWp v1 e1 v2 e2 T B =
         val B2 = @{const Inf(predicate)} $
                       (Const(\<^const_name>\<open>image\<close>, (T --> \<^typ>\<open>predicate\<close>) --> setT -->  \<^typ>\<open>predicate set\<close>)
                          $ absB $ supp)
-        val sameDistr = \<^const>\<open>classical_subspace\<close> $ HOLogic.mk_eq (e1,e2)
+        val sameDistr = \<^Const>\<open>classical_subspace \<^typ>\<open>qu2\<close>\<close> $ HOLogic.mk_eq (e1,e2)
     in
       @{const inf(predicate)} $ sameDistr $ B2
     end
@@ -202,7 +202,7 @@ fun rndWp2 v1 T1 e1 v2 T2 e2 f B =
           Const(\<^const_name>\<open>fst\<close>, T12-->T1) $ f, e1)
       val marginal2 = HOLogic.mk_eq (Const(\<^const_name>\<open>map_distr\<close>, (T12-->T2) --> distrT12 --> distrT2) $
           Const(\<^const_name>\<open>snd\<close>, T12-->T2) $ f, e2)
-      val marginals = \<^const>\<open>classical_subspace\<close> $ (HOLogic.mk_conj (marginal1,marginal2))
+      val marginals = \<^Const>\<open>classical_subspace \<^typ>\<open>qu2\<close>\<close> $ (HOLogic.mk_conj (marginal1,marginal2))
       val B2 = @{const Inf(predicate)} $
                (Const(\<^const_name>\<open>image\<close>, (T12 --> \<^typ>\<open>predicate\<close>) --> setT12 -->  \<^typ>\<open>predicate set\<close>) $
                  (Const(\<^const_name>\<open>case_prod\<close>, (T1-->T2--> \<^typ>\<open>predicate\<close>) --> (T12-->\<^typ>\<open>predicate\<close>)) $
@@ -257,7 +257,7 @@ fun tidyTrueTop t =
 
 fun mk_equals_wp R cvars1 cvars2 qvars1 qvars2 = let
       val cvarEqs = ListPair.zip (cvars1,cvars2) |> map HOLogic.mk_eq
-      val claCvarsEq = \<^const>\<open>classical_subspace\<close> $ mk_conjs cvarEqs
+      val claCvarsEq = \<^Const>\<open>classical_subspace \<^typ>\<open>qu2\<close>\<close> $ mk_conjs cvarEqs
       val (qvars1',qvars1T) = (* variables qvars1 *) error "mk_equals_wp: nyi"
       val (qvars2',qvars2T) = (* variables qvars2 *) error "mk_equals_wp: nyi"
       val _ = if qvars1T <> qvars2T then raise TYPE("mismatch",[qvars1T,qvars2T],[]) else ()
