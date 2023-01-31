@@ -5,7 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.tags.Slow
 import qrhl.{State, UserException}
 import qrhl.toplevel.ToplevelTest
-import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
+import IsabelleX.{ContextX, checkAFPVersion, globalIsabelle => GIsabelle}
 import de.unruh.isabelle.pure.{Const, Context, Thm}
 
 // Implicits
@@ -29,6 +29,10 @@ class IsabelleXTest extends AnyFunSuite {
       GIsabelle.False_const $ GIsabelle.False_const $ GIsabelle.False_const $ GIsabelle.True_const $ GIsabelle.True_const $ GIsabelle.True_const $ GIsabelle.True_const $ GIsabelle.False_const
     val c = GIsabelle.dest_char(term)
     assert(c=='x')
+  }
+
+  test("checkAFPVersion") {
+    checkAFPVersion()
   }
 
   /** Creates theories A importing B. Checks whether [[IsabelleX.globalIsabelle.getQRHLContextWithFiles]] reloads the theory content if the files have changed between calls. */

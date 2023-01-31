@@ -1131,7 +1131,7 @@ object IsabelleX {
       )
 
       def fail(reason: String): Unit = {
-        System.err.println(s"\n\nERROR: The AFP in ${Configuration.afpRoot} does not seem to be the AFP for Isabelle $version.\n")
+        System.err.println(s"\n\nERROR: The AFP in ${path} does not seem to be the AFP for Isabelle $version.\n")
         System.err.println(s"($reason)\n")
         System.err.println("Edit your config file (e.g., ~/.qrhl-tool.conf), option afp-root, to provide a different AFP directory.\n")
         System.err.println("(Or remove this option altogether and configure the AFP directly in your .isabelle folder to deactivate this check.)")
