@@ -36,6 +36,12 @@ assert_aconv_conv false (translate_to_index_registers_conv \<^context>)
        apply_qregister_space empty_qregister \<top>)\<close>
 \<close>
 
+ML \<open>
+assert_aconv_conv false (translate_to_index_registers_conv \<^context>)
+  \<^cterm>\<open>- (apply_qregister_space q X) \<sqinter> top\<close>
+  \<^term>\<open>TODO\<close>
+\<close>
+
 end
 
 end

@@ -3,6 +3,7 @@ theory QRHL_Core
     Misc_Missing Prog_Variables (* Registers.Pure_States *)
 "HOL-Eisbach.Eisbach"
   keywords "declare_variable_type" :: thy_decl
+    and "debug_translate_to_index_registers" :: "diag"
 begin
 
 hide_const (open) Real_Vector_Spaces.span
@@ -1058,6 +1059,29 @@ method_setup translate_to_index_registers = \<open>
   Scan.succeed (fn ctxt => SIMPLE_METHOD (CONVERSION (translate_to_index_registers_conv ctxt) 1))
 \<close>
 
+text \<open>Invocation: \<open>debug_translate_to_index_registers term for x y z and w z\<close>.
+Meaning: x y z are assumed compatible, and so are w z.\<close>
+ML \<open>
+  Outer_Syntax.command \<^command_keyword>\<open>debug_translate_to_index_registers\<close> "try what translate_to_index_registers does to a subterm"
+    ((Parse.term -- Scan.optional (Parse.$$$ "for" |-- Parse.!!! (Parse.and_list1 (Scan.repeat Parse.name))) []) >> 
+  (fn (term_str,fixes) => Toplevel.keep (fn state => let
+  val ctxt = Toplevel.context_of state
+  val ctxt = Config.put Syntax.ambiguity_limit 0 ctxt
+  val term_parsed = Syntax.parse_term ctxt term_str
+  fun mk_tuple [] = error "unexpected"
+    | mk_tuple [x] = Free(x,dummyT)
+    | mk_tuple (x::xs) = \<^Const>\<open>qregister_pair dummyT dummyT dummyT\<close> $ mk_tuple [x] $ mk_tuple xs
+  val assms_parsed = map (fn f => \<^Const>\<open>qregister dummyT dummyT\<close> $ mk_tuple f |> HOLogic.mk_Trueprop) fixes
+  (* val _ = assms_parsed |> map (Syntax.string_of_term ctxt) |> map writeln *)
+  val term :: assms = Syntax.check_terms ctxt (term_parsed :: assms_parsed)
+  val ctxt = fold (fn assm => Context.proof_map (Prog_Variables.declare_register_simps_from_thm (Thm.assume (Thm.cterm_of ctxt assm)))) assms ctxt
+  val ct = Thm.cterm_of ctxt term
+  val rhs = translate_to_index_registers_conv ctxt ct |> Thm.rhs_of
+  val result = Syntax.string_of_term ctxt (Thm.term_of rhs)
+  val _ = writeln result
+  in () end)));
+\<close>
+
 
 section \<open>Measurements\<close>
 
@@ -1607,5 +1631,14 @@ ML_file \<open>qrhl.ML\<close>
 section "Simprocs"
 
 simproc_setup distinct_qvars_guard_simproc (\<open>DISTINCT_QVARS_GUARD t\<close>) = QRHL.distinct_qvars_guard_simproc
+
+(* TODO: move to Prog_Vars, TODO: name*)
+lemma [translate_to_index_registers]: \<open>(apply_qregister F A)* \<equiv> apply_qregister F (A*)\<close>
+  by simp
+
+(* TODO: move to Prog_Vars, TODO name *)
+lemma [translate_to_index_registers]: \<open>- (apply_qregister F A) \<equiv> apply_qregister F (-A)\<close>
+  by simp
+
 
 end

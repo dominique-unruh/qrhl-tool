@@ -9,7 +9,7 @@ fun string_of_term_truncated ctxt depth t = let
   fun trunc d t = if d <= 0 then dddot_var
     else case t of
       \<^Const_>\<open>numeral _\<close> $ _ => t
-    | u $ v => (case strip_comb t of (hd,args) => list_comb (trunc (d-1) hd, map (trunc (d-1)) args))
+    | u $ v => trunc d u $ trunc (d-1) v
     | Abs(x, T, body) => Abs(x, T, trunc (d-1) body)
     | _ => t
 in Syntax.string_of_term ctxt (trunc depth t) end
