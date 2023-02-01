@@ -224,10 +224,10 @@ definition operator_local :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<
 definition predicate_local :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
   \<open>predicate_local S F \<longleftrightarrow> S \<in> range (apply_qregister_space F)\<close>
 
-definition distinct_qvars_op_vars :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
+definition distinct_qvars_op_vars :: "('b,'b) l2bounded \<Rightarrow> ('a,'b) qregister \<Rightarrow> bool" where
   \<open>distinct_qvars_op_vars A F \<longleftrightarrow> A \<in> commutant (range (apply_qregister F))\<close>
 
-definition distinct_qvars_pred_vars :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
+definition distinct_qvars_pred_vars :: "'b ell2 ccsubspace \<Rightarrow> ('a,'b) qregister \<Rightarrow> bool" where
   \<open>distinct_qvars_pred_vars S F \<longleftrightarrow> distinct_qvars_op_vars (Proj S) F\<close>
 
 definition distinct_qvars_op_pred :: "(qu2,qu2) l2bounded \<Rightarrow> predicate \<Rightarrow> bool" where
@@ -946,14 +946,17 @@ lemma tmp1:
   shows \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
   by (metis assms(1) assms(2) assms(3) qregister_chain_conversion qregister_le_def)
 
+(* 
+Does not backtrack once tmp1 succeeds. (Partially implemented: may backtrack depending where the error is)
+*)
 ML \<open>
-fun TODO_NAME_tac ctxt =
+fun translate_to_index_registers_assm_lub_tac ctxt =
   resolve_tac ctxt @{thms tmp1}
-  THEN' Prog_Variables.qregister_lub_tac ctxt
-  THEN' CONVERSION (Prog_Variables.qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv)
-  THEN' resolve_tac ctxt @{thms refl}
-  THEN' CONVERSION (Prog_Variables.qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv)
-  THEN' resolve_tac ctxt @{thms refl}
+  THEN' (Prog_Variables.qregister_lub_tac ctxt ORELSE' Misc.error_tac' (fn g => "Could not find lub in: " ^ Syntax.string_of_term ctxt g) ctxt)
+  THEN' (CONVERSION (Prog_Variables.qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv) ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
+  THEN' (resolve_tac ctxt @{thms refl} ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
+  THEN' (CONVERSION (Prog_Variables.qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv) ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
+  THEN' (resolve_tac ctxt @{thms refl} ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
 \<close>
 
 
@@ -986,9 +989,6 @@ fun resolve_inst_tac ctxt inst rules = FIRST' (map (fn rule => let
 ) rules)
 \<close>
 
-
-thm eq_reflection
-
 ML \<open>
 (* Works on first subgoal *)
 fun translate_to_index_registers_tac1 ctxt = let
@@ -996,13 +996,13 @@ fun translate_to_index_registers_tac1 ctxt = let
   in
     FIRST' [
       resolve_tac ctxt rules,
-      TODO_NAME_tac ctxt,
+      translate_to_index_registers_assm_lub_tac ctxt,
       resolve_tac ctxt [
         @{lemma \<open>apply_qregister F A \<equiv> apply_qregister F A\<close> by simp},
         @{lemma \<open>apply_qregister_space F A \<equiv> apply_qregister_space F A\<close> by simp},
         @{lemma \<open>A \<equiv> apply_qregister_space qregister_id A\<close> by simp},
         @{lemma \<open>A \<equiv> apply_qregister qregister_id A\<close> by simp},
-        @{lemma \<open>A \<equiv> A\<close> by simp}
+        @{thm reflexive} (* Cannot use @{lemma \<open>A \<equiv> A\<close> \<dots>} since that adds sort `type` to A *)
       ]
     ]
   end
@@ -1019,7 +1019,7 @@ ML \<open>
          where F', G' are index-registers
    Or: apply_register F A = apply_register G B \<equiv> apply_register F' A \<equiv> apply_register G' B
 
-   Only operates on the toplevel constructor!
+   Only operates on the toplevel constant application!
 
    May fail it is does not know how to get rid of non-index-registers. (Not implemented!)
 *)
@@ -1028,19 +1028,22 @@ fun translate_to_index_registers_conv_top ctxt ct = let
   (* val T = Thm.typ_of cT *)
   val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq T\<close>) ct)
                        (Thm.cterm_of ctxt (Var(("rhs",Thm.maxidx_of_cterm ct + 1), T)))
-(* val _ = \<^print> ("translate_to_index_registers_conv_top", ct) *)
+ val _ = \<^print> ("translate_to_index_registers_conv_top", ct)
   val tac = translate_to_index_registers_tac ctxt
-  fun raise_error (Misc.Lazy_Error e) = let val term_str = Syntax.string_of_term ctxt (Thm.term_of ct) in
-      raise ERROR ("I was trying to process the following subterm:\n  " 
+  fun raise_error e = let
+     val term_str = Misc.string_of_term_truncated ctxt 5 (Thm.term_of ct)
+     fun exception_to_str (Misc.LAZY_ERROR (Misc.Lazy_Error e)) = e ()
+       | exception_to_str e = Runtime.exn_message (Runtime.exn_context (SOME ctxt) e)
+  in raise ERROR ("I was trying to process the following subterm:\n  " 
         ^ term_str ^ "\nThis subterm was the result of transforming its children into index registers "
         ^ "(where possible)\nand bringing non-index-registers to the top.\n"
         ^ "In the current step, I tried to push the non-index-registers up further (using lemmas\nfrom "
         ^ (Pretty.marks_str (Proof_Context.markup_extern_fact \<^context> \<^named_theorems>\<open>translate_to_index_registers\<close>) |> Pretty.string_of)
-        ^ ") but that failed with the following error:\n" ^ e ())
+        ^ ") but that failed with the following error:\n" ^ exception_to_str e)
     end
   val thm = Goal.prove_internal ctxt [] goal (K tac)
-            handle Misc.LAZY_ERROR e => raise_error e
-  (* val _ = \<^print> (" \<rightarrow> ", thm |> Thm.rhs_of) *)
+            handle e => raise_error e
+  val _ = \<^print> (" \<rightarrow> ", thm |> Thm.rhs_of)
   in thm end
 
 fun translate_to_index_registers_conv ctxt ct = 
@@ -1059,6 +1062,7 @@ method_setup translate_to_index_registers = \<open>
 section \<open>Measurements\<close>
 
 (* TODO: We have the WOT now, can use that one in the def, maybe... *)
+(* TODO: Why not rephrase this in terms of is_Proj + projs orthogonal? Much easier. *)
 definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
        \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<phi> \<bullet>\<^sub>C (M i *\<^sub>V \<psi>)) = \<phi> \<bullet>\<^sub>C (P *\<^sub>V \<psi>)) \<and> P \<le> id_cblinfun))"
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
@@ -1119,28 +1123,47 @@ section \<open>Quantum predicates (ctd.)\<close>
 
 subsection \<open>Subspace division\<close>
 
-axiomatization space_div :: "predicate \<Rightarrow> 'a ell2 \<Rightarrow> 'a q2variable \<Rightarrow> predicate"
-                    ("_ \<div> _\<guillemotright>_" [89,89,89] 90)
-lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
+definition space_div :: "'b ell2 ccsubspace \<Rightarrow> 'a ell2 \<Rightarrow> ('a,'b) qregister \<Rightarrow> 'b ell2 ccsubspace"
+                    ("_ \<div> _\<guillemotright>_" [89,89,89] 90) where
+  \<open>space_div A \<psi> Q = (SUP a. apply_qregister Q a *\<^sub>S (A \<sqinter> (Q =\<^sub>q \<psi>)))\<close>
+  (* \<open>space_div A \<psi> Q = ccspan {apply_qregister Q a \<phi>\<psi> | a \<phi>\<psi>. \<phi>\<psi> \<in> space_as_set (A \<sqinter> (Q =\<^sub>q \<psi>))}\<close> (* Equivalent but less compact *) *)
+  (* \<open>space_div A \<psi> Q = (SUP a. apply_qregister Q a *\<^sub>S A)\<close> (* Wrong. "ccspan {EPR} \<div> ket0" should be 0 but isn't *) *)
+  (* \<open>space_div A \<psi> Q = Abs_clinear_space {\<phi>| \<phi> a. apply_qregister Q a *\<^sub>V \<phi> \<in> space_as_set A}\<close> (* Not right. E.g., a=0 makes this the whole space *) *)
+
+lemma space_div_lift:
+  \<open>space_div (apply_qregister_space FG A') \<psi> (qregister_chain FG G')
+           = apply_qregister_space FG (space_div A' \<psi> G')\<close>
+  by (simp add: space_div_def SUP_lift)
+
+lemma leq_space_div[simp]: "distinct_qvars_pred_vars A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) \<longleftrightarrow> (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
   sorry
 
-definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" where
-  [code del]: "space_div_unlifted S \<psi> = Abs_clinear_space {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}"
+lift_definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" is
+  "\<lambda>S \<psi>. {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}"
+  sorry
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(qregister_pair Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
   sorry
 
-lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" 
+lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top"
   by (metis distinct_qvars_pred_vars_top inf.cobounded1 leq_space_div top.extremum_unique)
-lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot" 
+lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot"
   apply (cases \<open>qregister Q\<close>)
-  sorry
-lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]" by simp
+  by (simp_all add: space_div_def)
+lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]"
+  by simp
 
 (* lemma space_div_add_extend_lift_as_var_concat_hint:
   fixes S :: "_ subspace"
   shows "NO_MATCH ((variable_concat a b),b) (Q,R) \<Longrightarrow> (space_div (S\<guillemotright>Q) \<psi> R) = (space_div (extend_lift_as_var_concat_hint (S\<guillemotright>Q) R)) \<psi> R"
   unfolding extend_lift_as_var_concat_hint_def by simp *)
+
+lemma translate_to_index_registers_space_div[translate_to_index_registers]:
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>space_div (apply_qregister_space F A) \<psi> G \<equiv>
+          apply_qregister_space FG (apply_qregister_space F' A \<div> \<psi>\<guillemotright>G')\<close>
+  using assms by (simp add: space_div_lift)
 
 subsection \<open>Quantum equality\<close>
 

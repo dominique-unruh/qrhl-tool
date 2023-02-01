@@ -371,7 +371,7 @@ fun byQRHLPre (cvars, qvars) =
   let val cEqs = map (fn (v,T) => HOLogic.mk_eq (\<^Const>\<open>getter T \<open>\<^typ>\<open>cl2\<close>\<close>\<close> $ ((v,Index1,T) |> VTSingle |> varterm_to_variable2 Classical) $ Bound 0, 
                                                  \<^Const>\<open>getter T \<open>\<^typ>\<open>cl2\<close>\<close>\<close> $ ((v,Index2,T) |> VTSingle |> varterm_to_variable2 Classical) $ Bound 0))
                      cvars
-      val cEqs' = \<^const>\<open>classical_subspace\<close> $ QRHL.mk_conjs cEqs
+      val cEqs' = \<^Const>\<open>classical_subspace \<^typ>\<open>qu2\<close>\<close> $ QRHL.mk_conjs cEqs
       val qvars1' = map (fn (v,T) => (v, Index1,T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum
       val qvars1T = fastype_of qvars1' |> dest_q2variableT
       val qvars2' = map (fn (v,T) => (v, Index2, T)) qvars |> varterm_from_list |> varterm_to_variable2 Quantum

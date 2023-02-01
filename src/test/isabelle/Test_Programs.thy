@@ -12,7 +12,7 @@ begin
 
 (* Parsing test *)
 ML \<open>
-assert_aconv \<^term>\<open>Pr[b=1 : left(rho)]\<close> \<^term>\<open>probability (\<lambda>mem. b = 1) left rho\<close>
+assert_aconv true \<^term>\<open>Pr[b=1 : left(rho)]\<close> \<^term>\<open>probability (\<lambda>mem. b = 1) left rho\<close>
 \<close>
 
 end

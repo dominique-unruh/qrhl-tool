@@ -388,9 +388,9 @@ fun distinct_qvars_guard_simproc _ _ ct = let
     | qvariables_in_term _ found = found
   val t = case Thm.term_of ct of \<^Const_>\<open>DISTINCT_QVARS_GUARD\<close> $ t => t
   val (vars1, vars2) = case t of
-     \<^Const_>\<open>distinct_qvars_pred_vars _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
+     \<^Const_>\<open>distinct_qvars_pred_vars _ _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
    | \<^Const_>\<open>distinct_qvars_op_pred\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
-   | \<^Const_>\<open>distinct_qvars_op_vars _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
+   | \<^Const_>\<open>distinct_qvars_op_vars _ _\<close> $ P $ Q => (qvariables_in_term P [], qvariables_in_term Q [])
    | _ => ([],[])
   val inter = Ord_List.inter string_ord (Ord_List.make string_ord vars1) (Ord_List.make string_ord vars2)
   val disjoint = null inter

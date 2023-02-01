@@ -14,7 +14,7 @@ begin
 declare [[eta_contract=false]]
 
 ML \<open>
-assert_aconv \<^term>\<open>\<forall>x::int. Cla[x = 1] \<le> Cla[x \<le> 1]\<close>
+assert_aconv true \<^term>\<open>\<forall>x::int. Cla[x = 1] \<le> Cla[x \<le> 1]\<close>
   (expression_leq (\<^context>, \<^term>\<open>Expr[Cla[x = 1]]\<close>, \<^term>\<open>Expr[Cla[x \<le> 1]]\<close>))
 \<close>
 

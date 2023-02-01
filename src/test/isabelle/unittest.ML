@@ -5,28 +5,34 @@ fun assert_equal mk_string y x =
 
 fun string_of_term_gl t = Syntax.string_of_term_global (Context.the_global_context ()) t
 
-fun assert_aconv expected y = let
+fun aconv' check_types t u =
+  if check_types then t aconv u
+  else let val t' = map_types (K dummyT) t
+           val u' = map_types (K dummyT) u
+    in t' aconv u' end
+
+fun assert_aconv check_types expected y = let
   (* val _ = \<^print> expected *)
   (* val _ = \<^print> y *)
   in
-  if expected aconv y then () else
+  if aconv' check_types expected y then () else
   if Envir.beta_norm expected aconv Envir.beta_norm y then
     error ("Expected: "^ string_of_term_gl expected^"\nGot:      the same up to beta equivalence")
   else error ("Expected: "^ string_of_term_gl expected^"\nGot:      "^ string_of_term_gl y)
   end
 
-fun assert_aconv_cterm x y = assert_aconv (Thm.term_of x) (Thm.term_of y)
+fun assert_aconv_cterm check_types x y = assert_aconv check_types (Thm.term_of x) (Thm.term_of y)
 
-fun assert_aconv_thm y x =
-  if Thm.prop_of x aconv y then () else
+fun assert_aconv_thm check_types y x =
+  if aconv' check_types (Thm.prop_of x) y then () else
   error ("Expected "^ string_of_term_gl y^" (up to aconv), got "^ @{make_string} x)
 
-fun assert_aconv_conv conv input expected =
+fun assert_aconv_conv check_types conv input expected =
   let val thm = conv input
       val _ = Thm.proof_body_of thm (* Makes sure that all proofs are executed and succeed *)
       val (lhs,rhs) = Logic.dest_equals (Thm.prop_of thm)
       val _ = if lhs aconv (Thm.term_of input) then () else error ("Conversion returned wrong lhs")
   in
-    if rhs aconv expected then () else
+    if aconv' check_types rhs expected then () else
     error ("Expected (up to aconv): "^ string_of_term_gl expected^"\nGot: "^ string_of_term_gl rhs)
   end

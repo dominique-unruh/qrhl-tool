@@ -3235,6 +3235,16 @@ lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.
 
 (* axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close> *)
 
+text \<open>Contains rules for the translate_to_index_registers-method.
+
+Format of the rules: \<^term>\<open>assumptions \<Longrightarrow> lhs \<equiv> rhs\<close>.
+Here lhs is of the form \<^term>\<open>op (apply_qregister F X) (apply_qregister G Y)\<close> (or similar with \<^const>\<open>apply_qregister_space\<close>, or with nothing if its not something liftable)
+and rhs is of the form \<^term>\<open>apply_qregister H term3\<close> (or similar with \<^const>\<open>apply_qregister_space\<close>).
+
+The assumptions can be used to instantiate variables in H or term3.
+The assumptions are evaluated in forward order.
+Only specific forms of assumptions are allowed, see the source of the ML function \<open>translate_to_index_registers_tac1\<close>.
+\<close>
 named_theorems translate_to_index_registers
 
 

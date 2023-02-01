@@ -30,24 +30,24 @@ schematic_goal
 
 ML \<open>
 val ct = \<^cterm>\<open>\<lbrakk>qregister_chain \<lbrakk>q\<rbrakk>\<^sub>q qregister_id \<mapsto> \<lbrakk>q,r\<rbrakk>\<rbrakk>\<^sub>q\<close>
-val _ = assert_aconv_conv (Prog_Variables.qregister_conversion_to_register_conv \<^context>) ct 
+val _ = assert_aconv_conv true (Prog_Variables.qregister_conversion_to_register_conv \<^context>) ct 
     \<^term>\<open>qFst :: (_, int * int) qregister\<close>
 \<close>
 
 ML \<open>
 val ct = \<^cterm>\<open>\<lbrakk>q \<mapsto> q\<rbrakk>\<^sub>q\<close>
-val _ = assert_aconv_conv (Prog_Variables.qregister_conversion_to_register_conv \<^context>) ct 
+val _ = assert_aconv_conv true (Prog_Variables.qregister_conversion_to_register_conv \<^context>) ct 
     \<^term>\<open>qregister_id :: (_, int) qregister\<close>
 \<close>
 
 ML \<open>
 val ct = \<^cterm>\<open>\<lbrakk>q \<mapsto> qregister_id\<rbrakk>\<^sub>q\<close>
-val _ = assert_aconv_conv (Prog_Variables.qregister_conversion_to_register_conv \<^context>) ct 
+val _ = assert_aconv_conv true (Prog_Variables.qregister_conversion_to_register_conv \<^context>) ct 
     \<^term>\<open>q\<close>
 \<close>
 
 ML \<open>
-assert_aconv_conv (qregister_conversion_to_register_conv \<^context>)
+assert_aconv_conv true (qregister_conversion_to_register_conv \<^context>)
   \<^cterm>\<open>\<lbrakk>q1, r1 \<mapsto> q1, r1, q2, r2\<rbrakk>\<^sub>q\<close>
   \<^term>\<open>\<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q :: (int \<times> int, int \<times> int \<times> int \<times> int) qregister\<close>
 \<close>
@@ -57,8 +57,8 @@ ML \<open>
 local
 val ctxt = Prog_Variables.declare_variable \<^context> \<^binding>\<open>qvar\<close> \<^typ>\<open>bool\<close> Prog_Variables.Quantum [("q",\<^typ>\<open>int\<close>)]
 in
-val _ = assert_aconv (Syntax.read_term ctxt "qvar") \<^term>\<open>qvar :: bool qvariable\<close>
-val _ = assert_aconv_conv (Simplifier.rewrite ctxt) \<^cterm>\<open>qregister \<lbrakk>qvar::bool qvariable, q\<rbrakk>\<^sub>q\<close> \<^term>\<open>True\<close>
+val _ = assert_aconv true (Syntax.read_term ctxt "qvar") \<^term>\<open>qvar :: bool qvariable\<close>
+val _ = assert_aconv_conv true (Simplifier.rewrite ctxt) \<^cterm>\<open>qregister \<lbrakk>qvar::bool qvariable, q\<rbrakk>\<^sub>q\<close> \<^term>\<open>True\<close>
 end
 \<close>
 
