@@ -615,6 +615,8 @@ fun qregister_le_tac ctxt = let
           (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i)
           ORELSE
           (resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i THEN tac' ctxt i)
+          ORELSE
+          (resolve_tac ctxt [@{lemma \<open>qregister Q ==> qregister_le empty_qregister Q\<close> by simp}] i THEN distinct_vars_tac ctxt i)
           )
 in SUBGOAL (fn (t,i) => 
   CONVERSION (normalize_register_conv2 ctxt) i 
@@ -728,13 +730,13 @@ fun qregister_lub_tac ctxt = SUBGOAL (fn (t,i) => let
   val lemma = @{lemma \<open>qregister_le Q QR \<Longrightarrow> qregister_le R QR \<Longrightarrow> qregister_le Q QR \<and> qregister_le R QR\<close> by simp}
   val lemma = infer_instantiate ctxt [(("QR",0), Thm.cterm_of ctxt QR)] lemma
   in
- (* print_tac ctxt "qregister_lub_tac, 0" THEN  *)
+ (* Misc.print_here_tac ctxt \<^here> THEN *)
     resolve_tac ctxt [lemma] i
- (* THEN print_tac ctxt "qregister_lub_tac, 1"   *)
+ (* THEN Misc.print_here_tac ctxt \<^here> *)
     THEN qregister_le_tac ctxt i
-(* THEN print_tac ctxt "qregister_lub_tac, 2" *)
+ (* THEN Misc.print_here_tac ctxt \<^here> *)
     THEN qregister_le_tac ctxt i
-(* THEN print_tac ctxt "qregister_lub_tac, 3" *)
+ (* THEN Misc.print_here_tac ctxt \<^here> *)
   end
 )
 

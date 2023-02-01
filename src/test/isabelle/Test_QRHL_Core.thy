@@ -29,11 +29,12 @@ assert_aconv_conv true (translate_to_index_registers_conv \<^context>)
 \<close>
 
 ML \<open>
-assert_aconv_conv true (translate_to_index_registers_conv \<^context>)
+assert_aconv_conv false (translate_to_index_registers_conv \<^context>)
   \<^cterm>\<open>apply_qregister q hadamard *\<^sub>S top\<close>
-  \<^term>\<open>TODO\<close>
+  \<^term>\<open>apply_qregister_space q
+      (apply_qregister qregister_id (apply_qregister qregister_id hadamard) *\<^sub>S
+       apply_qregister_space empty_qregister \<top>)\<close>
 \<close>
-
 
 end
 

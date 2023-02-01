@@ -1028,7 +1028,7 @@ fun translate_to_index_registers_conv_top ctxt ct = let
   (* val T = Thm.typ_of cT *)
   val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq T\<close>) ct)
                        (Thm.cterm_of ctxt (Var(("rhs",Thm.maxidx_of_cterm ct + 1), T)))
- val _ = \<^print> ("translate_to_index_registers_conv_top", ct)
+ (* val _ = \<^print> ("translate_to_index_registers_conv_top", ct) *)
   val tac = translate_to_index_registers_tac ctxt
   fun raise_error e = let
      val term_str = Misc.string_of_term_truncated ctxt 5 (Thm.term_of ct)
@@ -1043,7 +1043,7 @@ fun translate_to_index_registers_conv_top ctxt ct = let
     end
   val thm = Goal.prove_internal ctxt [] goal (K tac)
             handle e => raise_error e
-  val _ = \<^print> (" \<rightarrow> ", thm |> Thm.rhs_of)
+  (* val _ = \<^print> (" \<rightarrow> ", thm |> Thm.rhs_of) *)
   in thm end
 
 fun translate_to_index_registers_conv ctxt ct = 

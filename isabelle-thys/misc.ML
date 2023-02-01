@@ -309,4 +309,6 @@ fun concl_conv2 conv ctxt ct = case Thm.term_of ct of
 
 fun concl_conv_Trueprop conv = conv |> mk_ctxt_conv HOLogic.Trueprop_conv |> concl_conv2
 
+fun print_here_tac ctxt here = print_tac ctxt ("Goal state" ^ Position.here here ^ ":")
+
 end

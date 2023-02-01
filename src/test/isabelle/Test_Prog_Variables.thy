@@ -20,12 +20,19 @@ lemma
   shows \<open>\<lbrakk>r \<le> qregister_id\<rbrakk>\<^sub>q\<close>
   by (tactic \<open>Prog_Variables.qregister_le_tac \<^context> 1\<close>)
 
-schematic_goal 
+lemma \<open>\<lbrakk>empty_qregister \<le> r\<rbrakk>\<^sub>q\<close>
+  by (tactic \<open>Prog_Variables.qregister_le_tac \<^context> 1\<close>)
+
+lemma 
   shows \<open>\<lbrakk>qregister_chain \<lbrakk>q\<rbrakk>\<^sub>q qregister_id \<le> \<lbrakk>q, r\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q\<close>
   by (tactic \<open>Prog_Variables.qregister_le_tac \<^context> 1\<close>)
 
 schematic_goal 
   shows \<open>\<lbrakk>qregister_id \<le> (?F::(?'a,qu) qregister)\<rbrakk>\<^sub>q \<and> \<lbrakk>r \<le> ?F\<rbrakk>\<^sub>q\<close>
+  by (tactic \<open>Prog_Variables.qregister_lub_tac \<^context> 1\<close>)
+
+schematic_goal 
+  shows \<open>\<lbrakk>empty_qregister \<le> (?F::(?'a,qu) qregister)\<rbrakk>\<^sub>q \<and> \<lbrakk>r \<le> ?F\<rbrakk>\<^sub>q\<close>
   by (tactic \<open>Prog_Variables.qregister_lub_tac \<^context> 1\<close>)
 
 ML \<open>

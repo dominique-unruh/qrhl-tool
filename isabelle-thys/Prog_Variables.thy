@@ -731,6 +731,33 @@ lemma commutant_adj: \<open>adj ` commutant X = commutant (adj ` X)\<close>
   using assms apply (auto simp: valid_cregister_range_def pairwise_all_def)
   by fast *)
 
+lemma QREGISTER_of_empty_qregister[simp]: \<open>QREGISTER_of (empty_qregister :: ('a::{CARD_1,enum},'b) qregister) = QREGISTER_unit\<close>
+proof (rule Rep_QREGISTER_inject[THEN iffD1])
+  let ?empty = \<open>empty_qregister :: ('a::{CARD_1,enum},'b) qregister\<close>
+  have \<open>Rep_QREGISTER (QREGISTER_of ?empty) 
+        = (\<lambda>x. x *\<^sub>C id_cblinfun) ` range (C1_to_complex :: 'a qupdate \<Rightarrow> _)\<close>
+    by (simp add: QREGISTER_of.rep_eq Quantum_Extra2.empty_var_def image_image empty_qregister.rep_eq)
+  also have \<open>\<dots> = (\<lambda>x. x *\<^sub>C id_cblinfun) ` UNIV\<close>
+    apply (rule arg_cong[where y=UNIV])
+    by (metis one_dim_iso_idem one_dim_iso_inj surjI)
+  also have \<open>\<dots> = Rep_QREGISTER QREGISTER_unit\<close>    
+    by (simp add: QREGISTER_unit.rep_eq empty_qregister_range_def)
+  finally show \<open>Rep_QREGISTER (QREGISTER_of ?empty) = Rep_QREGISTER QREGISTER_unit\<close>
+    by -
+qed
+
+lemma QREGISTER_unit_smallest[simp]: \<open>(QREGISTER_unit :: 'a QREGISTER) \<le> X\<close>
+proof (unfold less_eq_QREGISTER.rep_eq)
+  have \<open>Rep_QREGISTER (QREGISTER_unit :: 'a QREGISTER) = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+    by (simp add: QREGISTER_unit.rep_eq empty_qregister_range_def)
+  also have \<open>\<dots> \<subseteq> commutant (commutant (Rep_QREGISTER X))\<close>
+    apply (subst commutant_def) by auto
+  also have \<open>\<dots> = Rep_QREGISTER X\<close>
+    using Rep_QREGISTER valid_qregister_range_def by auto
+  finally show \<open>Rep_QREGISTER (QREGISTER_unit :: 'a QREGISTER) \<subseteq> Rep_QREGISTER X\<close>
+    by -
+qed
+
 lift_definition CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is
   \<open>\<lambda>\<FF> \<GG> :: 'a cupdate set. map_commutant (map_commutant (\<FF> \<union> \<GG>))\<close>
   by (simp add: valid_cregister_range_def)
@@ -2460,6 +2487,11 @@ lift_definition qregister_conversion :: \<open>('a,'c) qregister \<Rightarrow> (
 
 definition \<open>cregister_le F G = (cregister F \<and> cregister G \<and> CREGISTER_of F \<le> CREGISTER_of G)\<close>
 definition \<open>qregister_le F G = (qregister F \<and> qregister G \<and> QREGISTER_of F \<le> QREGISTER_of G)\<close>
+
+(* TODO: same for cregister *)
+lemma qregister_le_empty_qregister[simp]:
+  shows \<open>qregister_le empty_qregister Q \<longleftrightarrow> qregister Q\<close>
+  by (simp add: qregister_le_def)
 
 lemma cregister_conversion_register: \<open>cregister_le F G \<Longrightarrow> cregister (cregister_conversion F G)\<close>
   apply (auto intro!: cregister_conversion_raw_register 
