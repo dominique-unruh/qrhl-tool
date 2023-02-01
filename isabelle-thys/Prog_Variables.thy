@@ -1,15 +1,13 @@
 theory Prog_Variables
-  imports Extended_Sorry Multi_Transfer (* Registers.Classical_Extra Registers.Quantum_Extra2 *)
-    (* Complex_Bounded_Operators.Complex_L2 *)
+  imports
+    Extended_Sorry Multi_Transfer
     HOL.Map
-    (* "HOL-Library.Adhoc_Overloading" *)
-    (* Tensor_Product.Tensor_Product *)
     BOLegacy
     Misc_Missing
-  (* keywords "variables" :: thy_decl_block *)
     Missing_Bounded_Operators
     Registers.Classical_Extra
     Registers.Quantum_Extra2
+  keywords "debug_translate_to_index_registers" :: "diag"
 begin
 
 unbundle cblinfun_notation
@@ -3265,6 +3263,54 @@ lemma getter_Snd_chain_swap[simp]: \<open>getter (cregister_chain cSnd G) (prod.
 lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.swap m) = getter (cregister_chain cSnd G) m\<close>
   by (simp add: getter_chain)
 
+lemma apply_qregister_plus: \<open>apply_qregister F (A + B) = apply_qregister F A + apply_qregister F B\<close>
+  sorry
+
+lemma apply_qregister_minus: \<open>apply_qregister F (A - B) = apply_qregister F A - apply_qregister F B\<close>
+  sorry
+
+lemma apply_qregister_space_image: \<open>apply_qregister_space F (A *\<^sub>S B) = apply_qregister F A *\<^sub>S apply_qregister_space F B\<close>
+  sorry
+
+lemma apply_qregister_inject: \<open>qregister F \<Longrightarrow> apply_qregister F A = apply_qregister F B \<longleftrightarrow> A = B\<close>
+  sorry
+
+lemma apply_qregister_space_inject: \<open>qregister F \<Longrightarrow> apply_qregister_space F A = apply_qregister_space F B \<longleftrightarrow> A = B\<close>
+  sorry
+
+lemma apply_qregister_space_leq: \<open>qregister F \<Longrightarrow> apply_qregister_space F A \<le> apply_qregister_space F B \<longleftrightarrow> A \<le> B\<close>
+  sorry
+
+lemma apply_qregister_leq: \<open>qregister F \<Longrightarrow> apply_qregister F A \<le> apply_qregister F B \<longleftrightarrow> A \<le> B\<close>
+  sorry
+
+lemma apply_qregister_space_inf: \<open>apply_qregister_space F (A \<sqinter> B) = apply_qregister_space F A \<sqinter> apply_qregister_space F B\<close>
+  sorry
+
+lemma apply_qregister_space_sup: \<open>apply_qregister_space F (A \<squnion> B) = apply_qregister_space F A \<squnion> apply_qregister_space F B\<close>
+  sorry
+
+lemma apply_qregister_space_plus: \<open>apply_qregister_space F (A + B) = apply_qregister_space F A + apply_qregister_space F B\<close>
+  sorry
+
+lemma apply_qregister_space_minus: \<open>apply_qregister_space F (A - B) = apply_qregister_space F A - apply_qregister_space F B\<close>
+  sorry
+
+lemma apply_qregister_space_uminus: \<open>apply_qregister_space F (- A) = - apply_qregister_space F A\<close>
+  sorry
+
+lemma apply_qregister_uminus: \<open>apply_qregister F (- A) = - apply_qregister F A\<close>
+  by (metis (no_types, lifting) apply_qregister_minus apply_qregister_of_0 semiring_norm(57))
+
+lemma apply_qregister_adj: \<open>apply_qregister F (A*) = (apply_qregister F A)*\<close>
+  sorry
+
+lemma apply_qregister_space_kernel: \<open>qregister F \<Longrightarrow> apply_qregister_space F (Complex_Bounded_Linear_Function.kernel A) = Complex_Bounded_Linear_Function.kernel (apply_qregister F A)\<close>
+  by (metis (mono_tags, opaque_lifting) Complex_Bounded_Linear_Function.zero_cblinfun_image Proj_image_leq apply_non_qregister_space apply_qregister_space_uminus cblinfun_image_0 kernel_0 kernel_compl_adj_range positive_hermitianI top_unique verit_comp_simplify1(2))
+
+lemma apply_qregister_space_eigenspace: \<open>qregister F \<Longrightarrow> apply_qregister_space F (eigenspace c A) = eigenspace c (apply_qregister F A)\<close>
+  by (metis Complex_Bounded_Linear_Function.zero_cblinfun_image Proj_on_own_range Proj_top apply_non_qregister_space apply_qregister_space_uminus id_cblinfun_not_0 is_Proj_0 kernel_0 kernel_Proj)
+
 (* axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close> *)
 
 text \<open>Contains rules for the translate_to_index_registers-method.
@@ -3280,6 +3326,162 @@ Only specific forms of assumptions are allowed, see the source of the ML functio
 named_theorems translate_to_index_registers
 
 
+lemma translate_to_index_registers_assm_lub_tac_aux: 
+  assumes \<open>qregister_le F FG \<and> qregister_le G FG\<close>
+  assumes \<open>qregister_conversion F FG = F'\<close>
+  assumes \<open>qregister_conversion G FG = G'\<close>
+  shows \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  by (metis assms(1) assms(2) assms(3) qregister_chain_conversion qregister_le_def)
+
+
+lemma translate_to_index_registers_template_oo:
+  assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
+        apply_qregister FG (f' X Y) = f (apply_qregister FG X) (apply_qregister FG Y)\<close>
+  assumes \<open>A \<equiv> apply_qregister F A'\<close>
+  assumes \<open>B \<equiv> apply_qregister G B'\<close>
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>f A B \<equiv> apply_qregister FG (f' (apply_qregister F' A') (apply_qregister G' B'))\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_o:
+  assumes \<open>\<And>F X. apply_qregister F (f' X) = f (apply_qregister F X)\<close>
+  assumes \<open>A \<equiv> apply_qregister F A'\<close>
+  shows \<open>f A \<equiv> apply_qregister F (f' A')\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_o_s:
+  assumes \<open>\<And>F X. apply_qregister_space F (f' X) = f (apply_qregister F X)\<close>
+  assumes \<open>A \<equiv> apply_qregister F A'\<close>
+  shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_o_s_qr:
+  assumes \<open>\<And>F X. qregister F \<Longrightarrow> apply_qregister_space F (f' X) = f (apply_qregister F X)\<close>
+  assumes \<open>A \<equiv> apply_qregister F A'\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_s:
+  assumes \<open>\<And>F X. apply_qregister_space F (f' X) = f (apply_qregister_space F X)\<close>
+  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
+  shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_ss:
+  assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
+        apply_qregister_space FG (f' X Y) = f (apply_qregister_space FG X) (apply_qregister_space FG Y)\<close>
+  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
+  assumes \<open>B \<equiv> apply_qregister_space G B'\<close>
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>f A B \<equiv> apply_qregister_space FG (f' (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_oo':
+  assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
+        f (apply_qregister FG X) (apply_qregister FG Y) = f' X Y\<close>
+  assumes \<open>A \<equiv> apply_qregister F A'\<close>
+  assumes \<open>B \<equiv> apply_qregister G B'\<close>
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>f A B \<equiv> f' (apply_qregister F' A') (apply_qregister G' B')\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_ss':
+  assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
+        f (apply_qregister_space FG X) (apply_qregister_space FG Y) = f' X Y\<close>
+  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
+  assumes \<open>B \<equiv> apply_qregister_space G B'\<close>
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>f A B \<equiv> f' (apply_qregister_space F' A') (apply_qregister_space G' B')\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_os:
+  assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
+        apply_qregister_space FG (f' X Y) = f (apply_qregister FG X) (apply_qregister_space FG Y)\<close>
+  assumes \<open>A \<equiv> apply_qregister F A'\<close>
+  assumes \<open>B \<equiv> apply_qregister_space G B'\<close>
+  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+  shows \<open>f A B \<equiv> apply_qregister_space FG (f' (apply_qregister F' A') (apply_qregister_space G' B'))\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_apply[translate_to_index_registers]:
+  assumes \<open>A \<equiv> apply_qregister G A'\<close>
+  shows \<open>apply_qregister F A \<equiv> apply_qregister (qregister_chain F G) A'\<close>
+  using assms by auto
+
+lemma translate_to_index_registers_apply_space[translate_to_index_registers]:
+  assumes \<open>A \<equiv> apply_qregister_space G A'\<close>
+  shows \<open>apply_qregister_space F A \<equiv> apply_qregister_space (qregister_chain F G) A'\<close>
+  using assms by auto
+
+lemmas translate_to_index_registers_compose[translate_to_index_registers] =
+  translate_to_index_registers_template_oo[where f=cblinfun_compose, OF qregister_compose]
+
+lemmas translate_to_index_registers_plus_op[translate_to_index_registers] =
+  translate_to_index_registers_template_oo[where f=plus, OF apply_qregister_plus]
+
+lemmas translate_to_index_registers_minus_op[translate_to_index_registers] =
+  translate_to_index_registers_template_oo[where f=minus, OF apply_qregister_minus]
+
+lemmas translate_to_index_registers_image[translate_to_index_registers] =
+  translate_to_index_registers_template_os[where f=cblinfun_image, OF apply_qregister_space_image]
+
+(* TODO move *)
+(* TODO: optionally: specify method, specify which prem *)
+attribute_setup remove_prem = \<open>
+  Scan.succeed (Thm.rule_attribute [] (fn context => fn thm => let
+    val ctxt = Context.proof_of context
+    val tac = assume_tac ctxt 1
+    in tac thm |> Seq.hd end))\<close>
+
+lemmas translate_to_index_registers_eq_op[translate_to_index_registers] =
+  translate_to_index_registers_template_oo'[where f=HOL.eq, OF apply_qregister_inject, remove_prem]
+
+lemmas translate_to_index_registers_inf[translate_to_index_registers] =
+  translate_to_index_registers_template_ss[where f=inf, OF apply_qregister_space_inf]
+
+lemmas translate_to_index_registers_minus_space[translate_to_index_registers] =
+  translate_to_index_registers_template_ss[where f=minus, OF apply_qregister_space_minus]
+
+lemmas translate_to_index_registers_sup[translate_to_index_registers] =
+  translate_to_index_registers_template_ss[where f=sup, OF apply_qregister_space_sup]
+
+lemmas translate_to_index_registers_plus_space[translate_to_index_registers] =
+  translate_to_index_registers_template_ss[where f=plus, OF apply_qregister_space_plus]
+
+lemmas translate_to_index_registers_eq_space[translate_to_index_registers] =
+  translate_to_index_registers_template_ss'[where f=HOL.eq, OF apply_qregister_space_inject, remove_prem]
+
+lemmas translate_to_index_registers_leq_space[translate_to_index_registers] =
+  translate_to_index_registers_template_ss'[where f=less_eq, OF apply_qregister_space_leq, remove_prem]
+
+lemmas translate_to_index_registers_leq_op[translate_to_index_registers] =
+  translate_to_index_registers_template_oo'[where f=less_eq, OF apply_qregister_leq, remove_prem]
+
+lemma translate_to_index_registers_top[translate_to_index_registers]:
+  \<open>top \<equiv> apply_qregister_space (empty_qregister :: (unit,_) qregister) top\<close>
+  apply (simp add: apply_qregister_space_def)
+  sorry
+
+lemma translate_to_index_registers_bot[translate_to_index_registers]:
+  \<open>bot \<equiv> apply_qregister_space (empty_qregister :: (unit,_) qregister) bot\<close>
+  by (simp add: apply_qregister_space_def)
+
+lemmas translate_to_index_registers_uminus_op[translate_to_index_registers] =
+  translate_to_index_registers_template_o[where f=uminus, OF apply_qregister_uminus]
+
+lemmas translate_to_index_registers_uminus_space[translate_to_index_registers] =
+  translate_to_index_registers_template_s[where f=uminus, OF apply_qregister_space_uminus]
+
+lemmas translate_to_index_registers_adj[translate_to_index_registers] =
+  translate_to_index_registers_template_o[where f=adj, OF apply_qregister_adj]
+
+lemmas translate_to_index_registers_kernel[translate_to_index_registers] =
+  translate_to_index_registers_template_o_s_qr[where f=Complex_Bounded_Linear_Function.kernel, OF apply_qregister_space_kernel, remove_prem]
+
+lemmas translate_to_index_registers_eigenspace[translate_to_index_registers] =
+  translate_to_index_registers_template_o_s_qr[where f=\<open>eigenspace _\<close>, OF apply_qregister_space_eigenspace, remove_prem]
+
 section \<open>ML code\<close>
 
 (* TODO remove *)
@@ -3289,6 +3491,33 @@ lemma distinct_cvarsR: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> di
   by (rule ccompatible_register2)
 
 ML_file "prog_variables.ML"
+
+method_setup translate_to_index_registers = \<open>
+  Scan.succeed (fn ctxt => SIMPLE_METHOD (CONVERSION (Prog_Variables.translate_to_index_registers_conv ctxt) 1))
+\<close>
+
+text \<open>Invocation: \<open>debug_translate_to_index_registers term for x y z and w z\<close>.
+Meaning: x y z are assumed compatible, and so are w z.\<close>
+ML \<open>
+  Outer_Syntax.command \<^command_keyword>\<open>debug_translate_to_index_registers\<close> "try what translate_to_index_registers does to a subterm"
+    ((Parse.term -- Scan.optional (Parse.$$$ "for" |-- Parse.!!! (Parse.and_list1 (Scan.repeat Parse.name))) []) >> 
+  (fn (term_str,fixes) => Toplevel.keep (fn state => let
+  val ctxt = Toplevel.context_of state
+  val ctxt = Config.put Syntax.ambiguity_limit 0 ctxt
+  val term_parsed = Syntax.parse_term ctxt term_str
+  fun mk_tuple [] = error "unexpected"
+    | mk_tuple [x] = Free(x,dummyT)
+    | mk_tuple (x::xs) = \<^Const>\<open>qregister_pair dummyT dummyT dummyT\<close> $ mk_tuple [x] $ mk_tuple xs
+  val assms_parsed = map (fn f => \<^Const>\<open>qregister dummyT dummyT\<close> $ mk_tuple f |> HOLogic.mk_Trueprop) fixes
+  (* val _ = assms_parsed |> map (Syntax.string_of_term ctxt) |> map writeln *)
+  val term :: assms = Syntax.check_terms ctxt (term_parsed :: assms_parsed)
+  val ctxt = fold (fn assm => Context.proof_map (Prog_Variables.declare_register_simps_from_thm (Thm.assume (Thm.cterm_of ctxt assm)))) assms ctxt
+  val ct = Thm.cterm_of ctxt term
+  val rhs = Prog_Variables.translate_to_index_registers_conv ctxt ct |> Thm.rhs_of
+  val result = Syntax.string_of_term ctxt (Thm.term_of rhs)
+  val _ = writeln result
+  in () end)));
+\<close>
 
 section \<open>Syntax\<close>
 

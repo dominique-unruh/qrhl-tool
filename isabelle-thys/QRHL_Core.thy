@@ -3,7 +3,6 @@ theory QRHL_Core
     Misc_Missing Prog_Variables (* Registers.Pure_States *)
 "HOL-Eisbach.Eisbach"
   keywords "declare_variable_type" :: thy_decl
-    and "debug_translate_to_index_registers" :: "diag"
 begin
 
 hide_const (open) Real_Vector_Spaces.span
@@ -858,107 +857,12 @@ lemma comm_op_twice[simp]: "distinct_qvars Q \<Longrightarrow> comm_op\<guillemo
   apply (subst adjoint_swap_ell2[symmetric])
   by (simp del: adjoint_swap_ell2 flip: adjoint_lift cblinfun_compose_assoc add: cblinfun_assoc_left)
 
-lemma translate_to_index_registers_compose[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>cblinfun_compose (apply_qregister F A') (apply_qregister G B') \<equiv>
-          apply_qregister FG (cblinfun_compose (apply_qregister F' A') 
-                                               (apply_qregister G' B'))\<close>
-  using assms by simp
-
-lemma translate_to_index_registers_plus_op[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>plus (apply_qregister F A') (apply_qregister G B') \<equiv>
-          apply_qregister FG (plus (apply_qregister F' A') 
-                                               (apply_qregister G' B'))\<close>
-  using assms by simp
-
-lemma translate_to_index_registers_minus_op[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>minus (apply_qregister F A') (apply_qregister G B') \<equiv>
-          apply_qregister FG (minus (apply_qregister F' A') 
-                                   (apply_qregister G' B'))\<close>
-  using assms by simp
-
-lemma translate_to_index_registers_cblinfun_image[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>cblinfun_image (apply_qregister F A') (apply_qregister_space G B') \<equiv>
-          apply_qregister_space FG (cblinfun_image (apply_qregister F' A') 
-                                   (apply_qregister_space G' B'))\<close>
-  using assms
-  by (simp flip: applyOpSpace_lift 
-      del: qregister_chain_apply_simp
-      flip: qregister_chain_apply[unfolded o_def, THEN fun_cong, of FG F' A'])
-
-lemma translate_to_index_registers_eq_op[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>(apply_qregister F A') = (apply_qregister G B') \<equiv>
-         (apply_qregister F' A') = (apply_qregister G' B')\<close>
-  using assms by simp
-
 (* TODO use qregister_chain_apply_space instead *)
 (* lemma apply_qregister_space_chain: \<open>apply_qregister_space (qregister_chain F G) S = apply_qregister_space F (apply_qregister_space G S)\<close> *)
 
-lemma translate_to_index_registers_inf[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>inf (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
-          apply_qregister_space FG (inf (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
-  using assms by auto
-
-lemma translate_to_index_registers_sup[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>sup (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
-          apply_qregister_space FG (sup (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
-  using assms by auto
-
-lemma translate_to_index_registers_plus_space[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>plus (apply_qregister_space F A') (apply_qregister_space G B') \<equiv>
-          apply_qregister_space FG (plus (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
-  using assms by auto
-
-lemma translate_to_index_registers_leq[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>(apply_qregister_space F A') \<le> (apply_qregister_space G B') \<equiv>
-          (apply_qregister_space F' A') \<le> (apply_qregister_space G' B')\<close>
-  using assms by auto
-
-lemma translate_to_index_registers_eq_space[translate_to_index_registers]:
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>(apply_qregister_space F A') = (apply_qregister_space G B') \<equiv>
-          (apply_qregister_space F' A') = (apply_qregister_space G' B')\<close>
-  using assms by auto
-
-lemma translate_to_index_registers_apply_space[translate_to_index_registers]:
-  shows \<open>apply_qregister_space F (apply_qregister_space F' A') \<equiv> apply_qregister_space (qregister_chain F F') A'\<close>
-  by simp
-
-lemma [translate_to_index_registers]: \<open>top \<equiv> apply_qregister_space \<lbrakk>\<rbrakk>\<^sub>q top\<close>
-  by simp
-lemma [translate_to_index_registers]: \<open>bot \<equiv> apply_qregister_space \<lbrakk>\<rbrakk>\<^sub>q bot\<close>
-  by simp
-lemma [translate_to_index_registers]: \<open>Cla[b] \<equiv> apply_qregister_space \<lbrakk>\<rbrakk>\<^sub>q Cla[b]\<close>
+lemma translate_to_index_registers_classical_subspace[translate_to_index_registers]:
+  \<open>Cla[b] \<equiv> apply_qregister_space \<lbrakk>\<rbrakk>\<^sub>q Cla[b]\<close>
   apply (rule eq_reflection) by auto
-
-
-lemma tmp1: 
-  assumes \<open>qregister_le F FG \<and> qregister_le G FG\<close>
-  assumes \<open>qregister_conversion F FG = F'\<close>
-  assumes \<open>qregister_conversion G FG = G'\<close>
-  shows \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  by (metis assms(1) assms(2) assms(3) qregister_chain_conversion qregister_le_def)
-
-(* 
-Does not backtrack once tmp1 succeeds. (Partially implemented: may backtrack depending where the error is)
-*)
-ML \<open>
-fun translate_to_index_registers_assm_lub_tac ctxt =
-  resolve_tac ctxt @{thms tmp1}
-  THEN' (Prog_Variables.qregister_lub_tac ctxt ORELSE' Misc.error_tac' (fn g => "Could not find lub in: " ^ Syntax.string_of_term ctxt g) ctxt)
-  THEN' (CONVERSION (Prog_Variables.qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv) ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
-  THEN' (resolve_tac ctxt @{thms refl} ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
-  THEN' (CONVERSION (Prog_Variables.qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv) ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
-  THEN' (resolve_tac ctxt @{thms refl} ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
-\<close>
 
 
 (* TODO move *)
@@ -990,97 +894,8 @@ fun resolve_inst_tac ctxt inst rules = FIRST' (map (fn rule => let
 ) rules)
 \<close>
 
-ML \<open>
-(* Works on first subgoal *)
-fun translate_to_index_registers_tac1 ctxt = let
-  val rules = \<^named_theorems>\<open>translate_to_index_registers\<close> |> Proof_Context.get_thms ctxt
-  in
-    FIRST' [
-      resolve_tac ctxt rules,
-      translate_to_index_registers_assm_lub_tac ctxt,
-      resolve_tac ctxt [
-        @{lemma \<open>apply_qregister F A \<equiv> apply_qregister F A\<close> by simp},
-        @{lemma \<open>apply_qregister_space F A \<equiv> apply_qregister_space F A\<close> by simp},
-        @{lemma \<open>A \<equiv> apply_qregister_space qregister_id A\<close> by simp},
-        @{lemma \<open>A \<equiv> apply_qregister qregister_id A\<close> by simp},
-        @{thm reflexive} (* Cannot use @{lemma \<open>A \<equiv> A\<close> \<dots>} since that adds sort `type` to A *)
-      ]
-    ]
-  end
-
-(* Works on all goals *)
-fun translate_to_index_registers_tac ctxt = REPEAT (translate_to_index_registers_tac1 ctxt 1)
-\<close>
 
 
-ML \<open>
-(* Expects goal X.
-   Translates it into X' which has the toplevel constructor rewritten to have only index registers directly below it.
-   E.g.: apply_register F A + apply_register G B \<equiv> apply_register FG (apply_register F' A + apply_register G' B)
-         where F', G' are index-registers
-   Or: apply_register F A = apply_register G B \<equiv> apply_register F' A \<equiv> apply_register G' B
-
-   Only operates on the toplevel constant application!
-
-   May fail it is does not know how to get rid of non-index-registers. (Not implemented!)
-*)
-fun translate_to_index_registers_conv_top ctxt ct = let
-  val T = Thm.ctyp_of_cterm ct |> Thm.typ_of
-  (* val T = Thm.typ_of cT *)
-  val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq T\<close>) ct)
-                       (Thm.cterm_of ctxt (Var(("rhs",Thm.maxidx_of_cterm ct + 1), T)))
- (* val _ = \<^print> ("translate_to_index_registers_conv_top", ct) *)
-  val tac = translate_to_index_registers_tac ctxt
-  fun raise_error e = let
-     val term_str = Misc.string_of_term_truncated ctxt 5 (Thm.term_of ct)
-     fun exception_to_str (Misc.LAZY_ERROR (Misc.Lazy_Error e)) = e ()
-       | exception_to_str e = Runtime.exn_message (Runtime.exn_context (SOME ctxt) e)
-  in raise ERROR ("I was trying to process the following subterm:\n  " 
-        ^ term_str ^ "\nThis subterm was the result of transforming its children into index registers "
-        ^ "(where possible)\nand bringing non-index-registers to the top.\n"
-        ^ "In the current step, I tried to push the non-index-registers up further (using lemmas\nfrom "
-        ^ (Pretty.marks_str (Proof_Context.markup_extern_fact \<^context> \<^named_theorems>\<open>translate_to_index_registers\<close>) |> Pretty.string_of)
-        ^ ") but that failed with the following error:\n" ^ exception_to_str e)
-    end
-  val thm = Goal.prove_internal ctxt [] goal (K tac)
-            handle e => raise_error e
-  (* val _ = \<^print> (" \<rightarrow> ", thm |> Thm.rhs_of) *)
-  in thm end
-
-fun translate_to_index_registers_conv ctxt ct = 
-  if Term.is_schematic (Thm.term_of ct) then error "schematic vars in translate_to_index_registers_conv not yet supported"
-  else Conv.bottom_conv (Conv.try_conv o translate_to_index_registers_conv_top) ctxt ct
-\<close>
-
-
-
-(* TODO move to Prog_Variables *)
-method_setup translate_to_index_registers = \<open>
-  Scan.succeed (fn ctxt => SIMPLE_METHOD (CONVERSION (translate_to_index_registers_conv ctxt) 1))
-\<close>
-
-text \<open>Invocation: \<open>debug_translate_to_index_registers term for x y z and w z\<close>.
-Meaning: x y z are assumed compatible, and so are w z.\<close>
-ML \<open>
-  Outer_Syntax.command \<^command_keyword>\<open>debug_translate_to_index_registers\<close> "try what translate_to_index_registers does to a subterm"
-    ((Parse.term -- Scan.optional (Parse.$$$ "for" |-- Parse.!!! (Parse.and_list1 (Scan.repeat Parse.name))) []) >> 
-  (fn (term_str,fixes) => Toplevel.keep (fn state => let
-  val ctxt = Toplevel.context_of state
-  val ctxt = Config.put Syntax.ambiguity_limit 0 ctxt
-  val term_parsed = Syntax.parse_term ctxt term_str
-  fun mk_tuple [] = error "unexpected"
-    | mk_tuple [x] = Free(x,dummyT)
-    | mk_tuple (x::xs) = \<^Const>\<open>qregister_pair dummyT dummyT dummyT\<close> $ mk_tuple [x] $ mk_tuple xs
-  val assms_parsed = map (fn f => \<^Const>\<open>qregister dummyT dummyT\<close> $ mk_tuple f |> HOLogic.mk_Trueprop) fixes
-  (* val _ = assms_parsed |> map (Syntax.string_of_term ctxt) |> map writeln *)
-  val term :: assms = Syntax.check_terms ctxt (term_parsed :: assms_parsed)
-  val ctxt = fold (fn assm => Context.proof_map (Prog_Variables.declare_register_simps_from_thm (Thm.assume (Thm.cterm_of ctxt assm)))) assms ctxt
-  val ct = Thm.cterm_of ctxt term
-  val rhs = translate_to_index_registers_conv ctxt ct |> Thm.rhs_of
-  val result = Syntax.string_of_term ctxt (Thm.term_of rhs)
-  val _ = writeln result
-  in () end)));
-\<close>
 
 
 section \<open>Measurements\<close>
@@ -1184,8 +999,9 @@ lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]"
 
 lemma translate_to_index_registers_space_div[translate_to_index_registers]:
   fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>A' \<equiv> apply_qregister_space F A\<close>
   assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>space_div (apply_qregister_space F A) \<psi> G \<equiv>
+  shows \<open>space_div A' \<psi> G \<equiv>
           apply_qregister_space FG (apply_qregister_space F' A \<div> \<psi>\<guillemotright>G')\<close>
   using assms by (simp add: space_div_lift)
 
@@ -1198,7 +1014,7 @@ definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> ('a,'d) qre
   for Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
   and U V :: "(_,'c) l2bounded"
 
-abbreviation "quantum_equality" :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> predicate" (infix "\<equiv>\<qq>" 100)
+abbreviation "quantum_equality" (infix "\<equiv>\<qq>" 100)
   where "quantum_equality X Y \<equiv> quantum_equality_full id_cblinfun X id_cblinfun Y"
 syntax quantum_equality :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> predicate" (infix "==q" 100)
 syntax "_quantum_equality" :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
@@ -1631,14 +1447,5 @@ ML_file \<open>qrhl.ML\<close>
 section "Simprocs"
 
 simproc_setup distinct_qvars_guard_simproc (\<open>DISTINCT_QVARS_GUARD t\<close>) = QRHL.distinct_qvars_guard_simproc
-
-(* TODO: move to Prog_Vars, TODO: name*)
-lemma [translate_to_index_registers]: \<open>(apply_qregister F A)* \<equiv> apply_qregister F (A*)\<close>
-  by simp
-
-(* TODO: move to Prog_Vars, TODO name *)
-lemma [translate_to_index_registers]: \<open>- (apply_qregister F A) \<equiv> apply_qregister F (-A)\<close>
-  by simp
-
 
 end

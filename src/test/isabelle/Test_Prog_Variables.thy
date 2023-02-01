@@ -4,8 +4,8 @@ begin
 
 
 experiment
-  fixes q r :: \<open>int qvariable\<close>
-  assumes [register]: \<open>qregister \<lbrakk>q, r\<rbrakk>\<close>
+  fixes q r :: \<open>int qvariable\<close> and b :: \<open>bit qvariable\<close>
+  assumes [register]: \<open>qregister \<lbrakk>q, r, b\<rbrakk>\<close>
 begin
 abbreviation \<open>q1 \<equiv> qregister_chain qFst q :: _ q2variable\<close> 
 abbreviation \<open>q2 \<equiv> qregister_chain qSnd q :: _ q2variable\<close>
@@ -71,6 +71,20 @@ end
 
 lemma \<open>\<lbrakk>q1, r1 \<le> q1, r1, q2\<rbrakk>\<^sub>q\<close>
   by (tactic \<open>Prog_Variables.qregister_le_tac \<^context> 1\<close>)
+
+ML \<open>
+assert_aconv_conv false (translate_to_index_registers_conv \<^context>)
+  \<^cterm>\<open>apply_qregister b hadamard *\<^sub>S top\<close>
+  \<^term>\<open>apply_qregister_space b
+      (apply_qregister qregister_id (apply_qregister qregister_id hadamard) *\<^sub>S
+       apply_qregister_space empty_qregister \<top>)\<close>
+\<close>
+
+ML \<open>
+assert_aconv_conv false (translate_to_index_registers_conv \<^context>)
+  \<^cterm>\<open>- (apply_qregister_space b X) \<sqinter> top\<close>
+  \<^term>\<open>TODO\<close>
+\<close>
 
 end
 

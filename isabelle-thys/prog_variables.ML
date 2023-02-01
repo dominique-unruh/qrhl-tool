@@ -740,4 +740,83 @@ fun qregister_lub_tac ctxt = SUBGOAL (fn (t,i) => let
   end
 )
 
+
+(* 
+Does not backtrack once tmp1 succeeds.
+*)
+fun translate_to_index_registers_assm_lub_tac ctxt =
+  resolve_tac ctxt @{thms translate_to_index_registers_assm_lub_tac_aux}
+  THEN' (qregister_lub_tac ctxt ORELSE' Misc.error_tac' (fn g => "Could not find lub in: " ^ Syntax.string_of_term ctxt g) ctxt)
+  THEN' (CONVERSION (qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv) ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
+  THEN' (resolve_tac ctxt @{thms refl} ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
+  THEN' (CONVERSION (qregister_conversion_to_register_conv ctxt |> Conv.arg1_conv |> HOLogic.Trueprop_conv) ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
+  THEN' (resolve_tac ctxt @{thms refl} ORELSE' Misc.error_tac' (K "TODO proper error message in translate_to_index_registers_assm_lub_tac") ctxt)
+
+(* TODO: Maybe use this fragment for error messages in translate_to_index_registers_conv_tac:
+
+  fun raise_error e = let
+     val term_str = Misc.string_of_term_truncated ctxt 5 (Thm.term_of ct)
+     fun exception_to_str (Misc.LAZY_ERROR (Misc.Lazy_Error e)) = e ()
+       | exception_to_str e = Runtime.exn_message (Runtime.exn_context (SOME ctxt) e)
+  in raise ERROR ("I was trying to process the following subterm:\n  " 
+        ^ term_str ^ "\nThis subterm was the result of transforming its children into index registers "
+        ^ "(where possible)\nand bringing non-index-registers to the top.\n"
+        ^ "In the current step, I tried to push the non-index-registers up further (using lemmas\nfrom "
+        ^ (Pretty.marks_str (Proof_Context.markup_extern_fact \<^context> \<^named_theorems>\<open>translate_to_index_registers\<close>) |> Pretty.string_of)
+        ^ ") but that failed with the following error:\n" ^ exception_to_str e)
+    end
+
+ *)
+
+(* TODO: rewrite all [translate_to_index_registers] rules *)
+
+fun translate_to_index_registers_conv_tac ctxt rules i st = let
+  fun err msg = raise CTERM ("translate_to_index_registers_conv_tac: TODO need better error message: " ^ msg, [Thm.cprem_of st i])
+  val ngoals = Thm.nprems_of st
+val _ = \<^print> (1,st)
+  val fallback_rules = [
+     @{lemma \<open>A \<equiv> apply_qregister_space qregister_id A\<close> by (simp add: apply_qregister_space_def)},
+     @{lemma \<open>A \<equiv> apply_qregister qregister_id A\<close> by simp}]
+  val st = case SINGLE (resolve_tac ctxt rules i ORELSE resolve_tac ctxt fallback_rules i) st of SOME st => st
+            | NONE => err "no rule matched"
+val _ = \<^print> (2,st)
+  val nr_new_goals = Thm.nprems_of st - ngoals + 1
+  val _ = nr_new_goals < 0 andalso err "nr_new_goals < 0"
+  val condition_tac = FIRST' [
+      (* Subgoal shape: qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G' *)
+      translate_to_index_registers_assm_lub_tac ctxt,
+      (* Subgoal shape: A \<equiv> apply_qregister F A *)
+      resolve_tac ctxt [@{lemma \<open>A \<equiv> apply_qregister F B \<Longrightarrow> A \<equiv> apply_qregister F B\<close> for F A by -}]
+        THEN' translate_to_index_registers_conv_tac ctxt rules
+    ]
+  fun condition_tac' i st = let (* Guard against non-solving or giving new subgoals *)
+    val ngoals = Thm.nprems_of st
+    val st = case SINGLE (condition_tac i) st of SOME st => st
+             | NONE => err "condition_tac failed"
+    val _ = Thm.nprems_of st < ngoals - 1 andalso err "condition_tac removed more than one subgoal"
+    val _ = Thm.nprems_of st >= ngoals andalso err "condition_tac did not remove subgoal"
+    in Seq.single st end
+  fun repeat_condition_tac 0 i = all_tac
+    | repeat_condition_tac n i = condition_tac' i THEN repeat_condition_tac (n-1) i 
+in 
+  repeat_condition_tac nr_new_goals i st
+end
+
+
+(* TODO move to Misc *)
+fun conv_from_tac ctxt tac ct = let
+  val _ = Term.is_schematic (Thm.term_of ct) andalso error "schematic vars in conv_from_tac not yet supported"
+  val idx = Thm.maxidx_of_cterm ct + 1
+  val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq \<open>Thm.typ_of_cterm ct\<close>\<close>)
+                                  ct)
+                       (Thm.var ((("rhs",idx),Thm.ctyp_of_cterm ct)))
+val _ = goal |> \<^print>
+  val thm = Goal.prove_internal ctxt [] goal (K tac)
+val _ = thm |> \<^print>
+in thm end
+
+fun translate_to_index_registers_conv ctxt = let
+  val rules = \<^named_theorems>\<open>translate_to_index_registers\<close> |> Proof_Context.get_thms ctxt
+  in conv_from_tac ctxt (translate_to_index_registers_conv_tac ctxt rules 1) end
+
 end
