@@ -19,6 +19,7 @@ hide_const (open) Axioms_Classical.setter
 declare [[simproc del: Laws_Quantum.compatibility_warn]]
 declare [[simproc del: Laws_Classical.compatibility_warn]]
 hide_const (open) Classical_Extra.X Classical_Extra.Y Classical_Extra.x Classical_Extra.y
+hide_const (open) Coset.kernel
 
 type_synonym 'a cupdate = \<open>'a \<Rightarrow> 'a option\<close>
 type_synonym 'a qupdate = \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
@@ -2119,6 +2120,7 @@ definition \<open>apply_qregister_space F S = apply_qregister F (Proj S) *\<^sub
 lemma apply_non_qregister_space[simp]: \<open>apply_qregister_space non_qregister x = 0\<close>
   by (simp add: apply_qregister_space_def)
 
+(* TODO Duplicated by is_Proj_apply_qregister' *)
 lemma qregister_projector: \<open>qregister F \<Longrightarrow> is_Proj a \<Longrightarrow> is_Proj (apply_qregister F a)\<close>
   apply (transfer fixing: a)
   by (rule register_projector)
@@ -3263,53 +3265,1013 @@ lemma getter_Snd_chain_swap[simp]: \<open>getter (cregister_chain cSnd G) (prod.
 lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.swap m) = getter (cregister_chain cSnd G) m\<close>
   by (simp add: getter_chain)
 
-lemma apply_qregister_plus: \<open>apply_qregister F (A + B) = apply_qregister F A + apply_qregister F B\<close>
-  sorry
+lemma apply_qregister_plus: \<open>apply_qregister X (a+b) = apply_qregister X a + apply_qregister X b\<close>
+  using clinear_apply_qregister[of X]
+  by (rule complex_vector.linear_add)
 
-lemma apply_qregister_minus: \<open>apply_qregister F (A - B) = apply_qregister F A - apply_qregister F B\<close>
-  sorry
+lemma apply_qregister_space_of_0: \<open>apply_qregister_space F 0 = 0\<close>
+  by (simp add: apply_qregister_space_def)
 
-lemma apply_qregister_space_image: \<open>apply_qregister_space F (A *\<^sub>S B) = apply_qregister F A *\<^sub>S apply_qregister_space F B\<close>
-  sorry
+lemma apply_qregister_space_top: \<open>qregister F \<Longrightarrow> apply_qregister_space F \<top> = \<top>\<close>
+  by (simp add: apply_qregister_space_def)
 
-lemma apply_qregister_inject: \<open>qregister F \<Longrightarrow> apply_qregister F A = apply_qregister F B \<longleftrightarrow> A = B\<close>
-  sorry
+lemma apply_qregister_space_bot: \<open>apply_qregister_space F \<bottom> = \<bottom>\<close>
+  by (simp add: apply_qregister_space_def)
 
-lemma apply_qregister_space_inject: \<open>qregister F \<Longrightarrow> apply_qregister_space F A = apply_qregister_space F B \<longleftrightarrow> A = B\<close>
-  sorry
+lemma apply_qregister_scaleC: \<open>apply_qregister F (c *\<^sub>C A) = c *\<^sub>C apply_qregister F A\<close>
+  using clinear_apply_qregister[of F]
+  by (rule complex_vector.linear_scale)
 
-lemma apply_qregister_space_leq: \<open>qregister F \<Longrightarrow> apply_qregister_space F A \<le> apply_qregister_space F B \<longleftrightarrow> A \<le> B\<close>
-  sorry
+lemma apply_qregister_scaleR: \<open>apply_qregister F (c *\<^sub>R A) = c *\<^sub>R apply_qregister F A\<close>
+  by (simp add: apply_qregister_scaleC scaleR_scaleC)
 
-lemma apply_qregister_leq: \<open>qregister F \<Longrightarrow> apply_qregister F A \<le> apply_qregister F B \<longleftrightarrow> A \<le> B\<close>
-  sorry
+lemma apply_qregister_space_scaleC: \<open>qregister F \<Longrightarrow> apply_qregister_space F (c *\<^sub>C A) = c *\<^sub>C apply_qregister_space F A\<close>
+  apply (cases \<open>c = 0\<close>)
+  by (simp_all add: apply_qregister_space_bot)
 
-lemma apply_qregister_space_inf: \<open>apply_qregister_space F (A \<sqinter> B) = apply_qregister_space F A \<sqinter> apply_qregister_space F B\<close>
-  sorry
+lemma apply_qregister_space_scaleR: \<open>qregister F \<Longrightarrow> apply_qregister_space F (c *\<^sub>R A) = c *\<^sub>R apply_qregister_space F A\<close>
+  by (simp add: apply_qregister_space_scaleC scaleR_scaleC)
 
-lemma apply_qregister_space_sup: \<open>apply_qregister_space F (A \<squnion> B) = apply_qregister_space F A \<squnion> apply_qregister_space F B\<close>
-  sorry
-
-lemma apply_qregister_space_plus: \<open>apply_qregister_space F (A + B) = apply_qregister_space F A + apply_qregister_space F B\<close>
-  sorry
-
-lemma apply_qregister_space_minus: \<open>apply_qregister_space F (A - B) = apply_qregister_space F A - apply_qregister_space F B\<close>
-  sorry
-
-lemma apply_qregister_space_uminus: \<open>apply_qregister_space F (- A) = - apply_qregister_space F A\<close>
-  sorry
+lemma apply_qregister_norm: \<open>qregister F \<Longrightarrow> norm (apply_qregister F A) = norm A\<close>
+  by (simp add: qregister.rep_eq register_norm)
 
 lemma apply_qregister_uminus: \<open>apply_qregister F (- A) = - apply_qregister F A\<close>
-  by (metis (no_types, lifting) apply_qregister_minus apply_qregister_of_0 semiring_norm(57))
+  apply (subst scaleC_minus1_left[symmetric])
+  apply (subst (2) scaleC_minus1_left[symmetric])
+  by (simp only: apply_qregister_scaleC)
+
+lemma apply_qregister_minus: \<open>apply_qregister F (A - B) = apply_qregister F A - apply_qregister F B\<close>
+  by (simp only: diff_conv_add_uminus apply_qregister_plus apply_qregister_uminus)
+
+lemma apply_qregister_space_image: \<open>apply_qregister_space Q (A *\<^sub>S S) = apply_qregister Q A *\<^sub>S apply_qregister_space Q S\<close>
+proof (cases \<open>qregister Q\<close>)
+  case False
+  then have \<open>Q = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis
+    by simp
+next
+  let ?goal = ?thesis
+  case True
+  then have \<open>qregister_raw (apply_qregister Q)\<close>
+    by (simp add: qregister.rep_eq)
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis (apply_qregister Q). ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U :: ('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2. 
+              unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> where
+      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
+      by auto
+    have \<open>apply_qregister Q A *\<^sub>S apply_qregister_space Q S = apply_qregister Q A *\<^sub>S apply_qregister Q (Proj S) *\<^sub>S \<top>\<close>
+      by (simp add: apply_qregister_space_def)
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S U* *\<^sub>S \<top>\<close>
+      by (simp add: decomp sandwich_apply lift_cblinfun_comp[OF unitaryD1] cblinfun_compose_image)
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S \<top>\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (\<top> \<otimes>\<^sub>S \<top>)\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S ((Proj S *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by (simp add: tensor_ccsubspace_via_Proj)
+    also have \<open>\<dots> = U *\<^sub>S ((A *\<^sub>S Proj S *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by (metis cblinfun_image_id tensor_ccsubspace_image)
+    also have \<open>\<dots> = U *\<^sub>S ((Proj (A *\<^sub>S S) *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (Proj (A *\<^sub>S S) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (\<top> \<otimes>\<^sub>S \<top>)\<close>
+      by (simp add: tensor_ccsubspace_via_Proj)
+    also have \<open>\<dots> = U *\<^sub>S (Proj (A *\<^sub>S S) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S U* *\<^sub>S \<top>\<close>
+      by simp
+    also have \<open>\<dots> = apply_qregister Q (Proj (A *\<^sub>S S)) *\<^sub>S \<top>\<close>
+      by (simp add: cblinfun_compose_image decomp sandwich_apply)
+    also have \<open>\<dots> = apply_qregister_space Q (A *\<^sub>S S)\<close>
+      by (simp add: apply_qregister_space_def)
+    finally show ?goal
+      by simp
+  qed
+  from this[cancel_with_type]
+  show ?thesis 
+    by -
+qed
+
+lemma apply_qregister_inject': \<open>apply_qregister F a = apply_qregister F b \<longleftrightarrow> a = b\<close> if \<open>qregister F\<close>
+  using that apply (transfer fixing: a b)
+  using qregister_raw_inj[of _ UNIV] injD by fastforce
 
 lemma apply_qregister_adj: \<open>apply_qregister F (A*) = (apply_qregister F A)*\<close>
-  sorry
+  apply (cases \<open>qregister F\<close>)
+   apply transfer
+  by (auto simp add: register_adj non_qregister)
+
+lemma apply_qregister_unitary[simp]: \<open>unitary (apply_qregister F U) \<longleftrightarrow> unitary U\<close> if \<open>qregister F\<close>
+  unfolding unitary_def
+  apply (subst apply_qregister_inject'[symmetric, OF that, of \<open>U* o\<^sub>C\<^sub>L U\<close>])
+  apply (subst apply_qregister_inject'[symmetric, OF that, of \<open>U o\<^sub>C\<^sub>L U*\<close>])
+  by (simp add: apply_qregister_adj qregister_compose that del: isometryD)
+
+lemma apply_qregister_isometry[simp]: \<open>isometry (apply_qregister F U) \<longleftrightarrow> isometry U\<close> if \<open>qregister F\<close>
+  unfolding isometry_def
+  apply (subst apply_qregister_inject'[symmetric, OF that, of \<open>U* o\<^sub>C\<^sub>L U\<close>])
+  by (simp add: apply_qregister_adj qregister_compose that del: isometryD)
+
+lemma apply_qregister_is_Proj': \<open>is_Proj P \<Longrightarrow> is_Proj (apply_qregister F P)\<close>
+  apply (transfer fixing: P)
+  by (auto simp add: register_projector non_qregister_raw_def)
+
+lemma apply_qregister_is_Proj[simp]: \<open>is_Proj (apply_qregister F P) \<longleftrightarrow> is_Proj P\<close> if \<open>qregister F\<close>
+  using that
+  by (auto simp add: is_Proj_algebraic apply_qregister_inject apply_qregister_inject' 
+      simp flip: qregister_compose apply_qregister_adj)
+
+lemma apply_qregister_Proj: \<open>apply_qregister F (Proj S) = Proj (apply_qregister_space F S)\<close>
+  by (simp add: Proj_on_own_range apply_qregister_space_def apply_qregister_is_Proj')
+
+lemma kernel_square[simp]: \<open>kernel (A* o\<^sub>C\<^sub>L A) = kernel A\<close>
+proof (intro ccsubspace_eqI iffI)
+  fix x
+  assume \<open>x \<in> space_as_set (kernel A)\<close>
+  then show \<open>x \<in> space_as_set (kernel (A* o\<^sub>C\<^sub>L A))\<close>
+    by (simp add: kernel.rep_eq)
+next
+  fix x
+  assume \<open>x \<in> space_as_set (kernel (A* o\<^sub>C\<^sub>L A))\<close>
+  then have \<open>A* *\<^sub>V A *\<^sub>V x = 0\<close>
+    by (simp add: kernel.rep_eq)
+  then have \<open>(A *\<^sub>V x) \<bullet>\<^sub>C (A *\<^sub>V x) = 0\<close>
+    by (metis cinner_adj_right cinner_zero_right)
+  then have \<open>A *\<^sub>V x = 0\<close>
+    by auto
+  then show \<open>x \<in> space_as_set (kernel A)\<close>
+    by (simp add: kernel.rep_eq)
+qed
+
+
+(* TODO move to partial_isometry-theory *)
+(* TODO might replace partial_isometry_square_proj by this *)
+lemma partial_isometry_iff_square_proj:
+  \<comment> \<open>@{cite conway2013functional}, Exercise VIII.3.15\<close>
+  fixes A :: \<open>'a :: chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b :: chilbert_space\<close>
+  shows \<open>partial_isometry A \<longleftrightarrow> is_Proj (A* o\<^sub>C\<^sub>L A)\<close>
+proof (rule iffI)
+  show \<open>is_Proj (A* o\<^sub>C\<^sub>L A)\<close> if \<open>partial_isometry A\<close>
+    by (simp add: partial_isometry_square_proj that)
+next
+  show \<open>partial_isometry A\<close> if \<open>is_Proj (A* o\<^sub>C\<^sub>L A)\<close>
+  proof (rule partial_isometryI)
+    fix h
+    from that have \<open>norm (A* o\<^sub>C\<^sub>L A) \<le> 1\<close>
+      using norm_is_Proj by blast
+    then have normA: \<open>norm A \<le> 1\<close> and normAadj: \<open>norm (A*) \<le> 1\<close>
+      by (simp_all add: norm_AadjA abs_square_le_1)
+    assume \<open>h \<in> space_as_set (- kernel A)\<close>
+    also have \<open>\<dots> = space_as_set (- kernel (A* o\<^sub>C\<^sub>L A))\<close>
+      by simp
+    also have \<open>\<dots> = space_as_set ((A* o\<^sub>C\<^sub>L A) *\<^sub>S \<top>)\<close>
+      by (simp add: kernel_compl_adj_range)
+    finally have \<open>A* *\<^sub>V A *\<^sub>V h = h\<close>
+      by (metis Proj_fixes_image Proj_on_own_range that cblinfun_apply_cblinfun_compose)
+    then have \<open>norm h = norm (A* *\<^sub>V A *\<^sub>V h)\<close>
+      by simp
+    also have \<open>\<dots> \<le> norm (A *\<^sub>V h)\<close>
+      by (smt (verit) normAadj mult_left_le_one_le norm_cblinfun norm_ge_zero)
+    also have \<open>\<dots> \<le> norm h\<close>
+      by (smt (verit) normA mult_left_le_one_le norm_cblinfun norm_ge_zero)
+    ultimately show \<open>norm (A *\<^sub>V h) = norm h\<close>
+      by simp
+  qed
+qed
+
+lemma apply_qregister_partial_isometry: \<open>qregister F \<Longrightarrow> partial_isometry (apply_qregister F U) \<longleftrightarrow> partial_isometry U\<close>
+  by (simp add: partial_isometry_iff_square_proj flip: apply_qregister_adj qregister_compose)
+
+lemma apply_qregister_mono: 
+  assumes [simp]: \<open>qregister Q\<close>
+  shows \<open>apply_qregister Q A \<le> apply_qregister Q B \<longleftrightarrow> A \<le> B\<close>
+proof (rule iffI)
+  assume \<open>A \<le> B\<close>
+  then obtain C :: \<open>'a qupdate\<close> where \<open>B - A = C* o\<^sub>C\<^sub>L C\<close>
+    by (metis diff_ge_0_iff_ge sqrt_op_square)
+  then have \<open>apply_qregister Q B - apply_qregister Q A = (apply_qregister Q C)* o\<^sub>C\<^sub>L apply_qregister Q C\<close>
+    by (metis apply_qregister_adj apply_qregister_minus qregister_compose)
+  then show \<open>apply_qregister Q A \<le> apply_qregister Q B\<close>
+    by (metis diff_ge_0_iff_ge positive_cblinfun_squareI)
+next
+  assume asm: \<open>apply_qregister Q A \<le> apply_qregister Q B\<close>
+  have [simp]: \<open>qregister_raw (apply_qregister Q)\<close>
+    using assms qregister.rep_eq by blast
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'z::type = register_decomposition_basis (apply_qregister Q). A \<le> B\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U::('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
+      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
+      by auto
+    show \<open>A \<le> B\<close>
+    proof (rule cblinfun_leI)
+      fix x
+      obtain y :: \<open>'z ell2\<close> where \<open>norm y = 1\<close>
+        by (meson norm_ket)
+      define BA where \<open>BA = B - A\<close>
+      from asm have QBA_pos: \<open>apply_qregister Q BA \<ge> 0\<close>
+        by (simp add: BA_def apply_qregister_minus)
+      have \<open>x \<bullet>\<^sub>C (BA *\<^sub>V x) = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C ((BA \<otimes>\<^sub>o id_cblinfun) *\<^sub>V (x \<otimes>\<^sub>s y))\<close>
+        using \<open>norm y = 1\<close> by (simp add: tensor_op_ell2 cnorm_eq_1)
+      also have \<open>\<dots> = (U *\<^sub>V (x \<otimes>\<^sub>s y)) \<bullet>\<^sub>C (apply_qregister Q BA *\<^sub>V U *\<^sub>V (x \<otimes>\<^sub>s y))\<close>
+        by (simp add: decomp sandwich_apply lift_cblinfun_comp[OF unitaryD1]
+            flip: cinner_adj_right)
+      also have \<open>\<dots> \<ge> 0\<close>
+        by (meson QBA_pos cinner_pos_if_pos)
+      finally show \<open>x \<bullet>\<^sub>C (A *\<^sub>V x) \<le> x \<bullet>\<^sub>C (B *\<^sub>V x)\<close>
+        by (simp add: BA_def cblinfun.diff_left cinner_diff_right apply_qregister_minus)
+    qed
+  qed
+  with this[cancel_with_type]
+  show \<open>A \<le> B\<close>
+    by -
+qed
+
+lemma apply_qregister_space_mono: \<open>qregister F \<Longrightarrow> apply_qregister_space F A \<le> apply_qregister_space F B \<longleftrightarrow> A \<le> B\<close>
+  by (simp add: apply_qregister_space_def Proj_on_own_range apply_qregister_mono
+      flip: Proj_mono)
+
+lemma apply_qregister_space_inject': \<open>apply_qregister_space F a = apply_qregister_space F b \<longleftrightarrow> a = b\<close> if \<open>qregister F\<close>
+  by (simp add: apply_qregister_space_mono order_class.order_eq_iff that)
+
+lemma apply_qregister_space_uminus: \<open>qregister F \<Longrightarrow> apply_qregister_space F (- A) = - apply_qregister_space F A\<close>
+  apply (simp only: apply_qregister_space_def Proj_ortho_compl apply_qregister_minus apply_qregister_of_id)
+  by (simp only: apply_qregister_Proj Proj_range flip: Proj_ortho_compl)
+
+lemma ccspan_finite: \<open>space_as_set (ccspan X) = cspan X\<close> if \<open>finite X\<close>
+  by (simp add: ccspan.rep_eq that)
+
+(* TODO to tensor *)
+(* TODO left *)
+lemma tensor_ccsubspace_bot_left[simp]: \<open>\<bottom> \<otimes>\<^sub>S S = \<bottom>\<close>
+  by (simp add: tensor_ccsubspace_via_Proj)
+lemma tensor_ccsubspace_bot_right[simp]: \<open>S \<otimes>\<^sub>S \<bottom> = \<bottom>\<close>
+  by (simp add: tensor_ccsubspace_via_Proj)
+
+(* TODO to Tensor *)
+(* TODO left *)
+lemma tensor_ccsubspace_right1dim_member:
+  assumes \<open>\<psi> \<in> space_as_set (S \<otimes>\<^sub>S ccspan{\<phi>})\<close>
+  shows \<open>\<exists>\<psi>'. \<psi> = \<psi>' \<otimes>\<^sub>s \<phi>\<close>
+proof (cases \<open>\<phi> = 0\<close>)
+  case True
+  with assms show ?thesis 
+    by simp
+next
+  case False
+  have \<open>{\<psi> \<otimes>\<^sub>s \<phi>' |\<psi> \<phi>'. \<psi> \<in> space_as_set S \<and> \<phi>' \<in> space_as_set (ccspan {\<phi>})}
+    = {\<psi> \<otimes>\<^sub>s \<phi> | \<psi>. \<psi> \<in> space_as_set S}\<close>
+  proof -
+    have \<open>\<psi> \<in> space_as_set S \<Longrightarrow> \<exists>\<psi>'. \<psi> \<otimes>\<^sub>s c *\<^sub>C \<phi> = \<psi>' \<otimes>\<^sub>s \<phi> \<and> \<psi>' \<in> space_as_set S\<close> for c \<psi>
+      apply (rule exI[where x=\<open>c *\<^sub>C \<psi>\<close>])
+      by (auto simp: tensor_ell2_scaleC2 tensor_ell2_scaleC1
+          complex_vector.subspace_scale)
+    moreover have \<open>\<psi> \<in> space_as_set S \<Longrightarrow>
+         \<exists>\<psi>' \<phi>'. \<psi> \<otimes>\<^sub>s \<phi> = \<psi>' \<otimes>\<^sub>s \<phi>' \<and> \<psi>' \<in> space_as_set S \<and> \<phi>' \<in> range (\<lambda>k. k *\<^sub>C \<phi>)\<close> for \<psi>
+      apply (rule exI[where x=\<psi>], rule exI[where x=\<phi>])
+      by (auto intro!: range_eqI[where x=\<open>1::complex\<close>])
+    ultimately show ?thesis
+      by (auto simp: ccspan_finite complex_vector.span_singleton)
+  qed
+  moreover have \<open>csubspace {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close>
+  proof (rule complex_vector.subspaceI)
+    show \<open>0 \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close>
+      by (auto intro!: exI[where x=0])
+    show \<open>x \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S} \<Longrightarrow>
+           y \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S} \<Longrightarrow> x + y \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close> for x y
+      apply (auto simp flip: tensor_ell2_add1)
+      apply (rename_tac \<psi> \<psi>', rule_tac x=\<open>\<psi> + \<psi>'\<close> in exI)
+      by (auto simp: complex_vector.subspace_add)
+    show \<open>x \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S} \<Longrightarrow> c *\<^sub>C x \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close> for c x
+      apply (auto simp flip: tensor_ell2_scaleC1)
+      apply (rename_tac \<psi>, rule_tac x=\<open>c *\<^sub>C \<psi>\<close> in exI)
+      by (auto simp: complex_vector.subspace_scale tensor_ell2_scaleC2 tensor_ell2_scaleC1)
+  qed
+  moreover have \<open>closed {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close>
+  proof (rule closed_sequential_limits[THEN iffD2, rule_format])
+    fix x l
+    assume asm: \<open>(\<forall>n. x n \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}) \<and> x \<longlonglongrightarrow> l\<close>
+    then obtain \<psi>' where x_def: \<open>x n = \<psi>' n \<otimes>\<^sub>s \<phi>\<close> and \<psi>'_S: \<open>\<psi>' n \<in> space_as_set S\<close> for n
+      apply atomize_elim apply auto by metis
+    from asm have \<open>x \<longlonglongrightarrow> l\<close>
+      by simp
+    have \<open>Cauchy \<psi>'\<close>
+    proof (rule CauchyI)
+      fix e :: real assume \<open>e > 0\<close>
+      define d where \<open>d = e * norm \<phi>\<close>
+      with False \<open>e > 0\<close> have \<open>d > 0\<close>
+        by auto
+      from \<open>x \<longlonglongrightarrow> l\<close>
+      have \<open>Cauchy x\<close>
+        using LIMSEQ_imp_Cauchy by blast
+      then obtain M where \<open>\<forall>m\<ge>M. \<forall>n\<ge>M. norm (x m - x n) < d\<close>
+        using Cauchy_iff \<open>0 < d\<close> by blast
+      then show \<open>\<exists>M. \<forall>m\<ge>M. \<forall>n\<ge>M. norm (\<psi>' m - \<psi>' n) < e\<close>
+        apply (rule_tac exI[of _ M])
+        using False by (auto simp add: x_def norm_tensor_ell2 d_def simp flip: tensor_ell2_diff1)
+    qed
+    then obtain l' where \<open>\<psi>' \<longlonglongrightarrow> l'\<close>
+      using convergent_eq_Cauchy by blast
+    with \<psi>'_S have l'_S: \<open>l' \<in> space_as_set S\<close>
+      by (metis \<open>Cauchy \<psi>'\<close> completeE complete_space_as_set limI)
+    from \<open>\<psi>' \<longlonglongrightarrow> l'\<close> have \<open>x \<longlonglongrightarrow> l' \<otimes>\<^sub>s \<phi>\<close>
+      by (auto intro: tendsto_eq_intros simp: x_def[abs_def])
+    with \<open>x \<longlonglongrightarrow> l\<close> have \<open>l = l' \<otimes>\<^sub>s \<phi>\<close>
+      using LIMSEQ_unique by blast
+    then show \<open>l \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close>
+      using l'_S by auto
+  qed
+  ultimately have \<open>space_as_set (ccspan {\<psi> \<otimes>\<^sub>s \<phi>' |\<psi> \<phi>'. \<psi> \<in> space_as_set S \<and> \<phi>' \<in> space_as_set (ccspan {\<phi>})})
+      = {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close> 
+    by (simp add: ccspan.rep_eq complex_vector.span_eq_iff[THEN iffD2])
+  with assms have \<open>\<psi> \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close>
+    by (simp add: tensor_ccsubspace_def)
+  then show \<open>\<exists>\<psi>'. \<psi> = \<psi>' \<otimes>\<^sub>s \<phi>\<close>
+    by auto
+qed
+
+(* TODO to BO *)
+lemma cblinfun_apply_in_image': "A *\<^sub>V \<psi> \<in> space_as_set (A *\<^sub>S S)" if \<open>\<psi> \<in> space_as_set S\<close>
+  by (metis cblinfun_image.rep_eq closure_subset image_subset_iff that)
+
+lemma is_Proj_tensor_op: \<open>is_Proj a \<Longrightarrow> is_Proj b \<Longrightarrow> is_Proj (a \<otimes>\<^sub>o b)\<close>
+  by (simp add: comp_tensor_op is_Proj_algebraic tensor_op_adjoint)
+
+lemma tensor_ell2_mem_tensor_ccsubspace_left:
+  assumes \<open>a \<otimes>\<^sub>s b \<in> space_as_set (S \<otimes>\<^sub>S T)\<close> and \<open>b \<noteq> 0\<close>
+  shows \<open>a \<in> space_as_set S\<close>
+proof (cases \<open>a = 0\<close>)
+  case True
+  then show ?thesis 
+    by simp
+next
+  case False
+  have \<open>norm (Proj S a) * norm (Proj T b) = norm ((Proj S a) \<otimes>\<^sub>s (Proj T b))\<close>
+    by (simp add: norm_tensor_ell2)
+  also have \<open>\<dots> = norm (Proj (S \<otimes>\<^sub>S T) (a \<otimes>\<^sub>s b))\<close>
+    by (simp add: tensor_ccsubspace_via_Proj Proj_on_image Proj_on_own_range is_Proj_tensor_op
+        tensor_op_ell2)
+  also from assms have \<open>\<dots> = norm (a \<otimes>\<^sub>s b)\<close>
+    by (simp add: Proj_fixes_image)
+  also have \<open>\<dots> = norm a * norm b\<close>
+    by (simp add: norm_tensor_ell2)
+  finally have prod_eq: \<open>norm (Proj S *\<^sub>V a) * norm (Proj T *\<^sub>V b) = norm a * norm b\<close>
+    by -
+  with False \<open>b \<noteq> 0\<close> have Tb_non0: \<open>norm (Proj T *\<^sub>V b) \<noteq> 0\<close>
+    by fastforce
+  have \<open>norm (Proj S a) = norm a\<close>
+  proof (rule ccontr)
+    assume asm: \<open>norm (Proj S *\<^sub>V a) \<noteq> norm a\<close>
+    have Sa_leq: \<open>norm (Proj S *\<^sub>V a) \<le> norm a\<close>
+      by (simp add: is_Proj_reduces_norm)
+    have Tb_leq: \<open>norm (Proj T *\<^sub>V b) \<le> norm b\<close>
+      by (simp add: is_Proj_reduces_norm)
+    from asm Sa_leq have \<open>norm (Proj S *\<^sub>V a) < norm a\<close>
+      by simp
+    then have \<open>norm (Proj S *\<^sub>V a) * norm (Proj T *\<^sub>V b) < norm a * norm (Proj T *\<^sub>V b)\<close>
+      using Tb_non0 by auto
+    also from Tb_leq have \<open>\<dots> \<le> norm a * norm b\<close>
+      using False by force
+    also note prod_eq
+    finally show False
+      by simp
+  qed
+  then show \<open>a \<in> space_as_set S\<close>
+    using norm_Proj_apply by blast
+qed
+
+(* TODO move *)
+lemma mem_ortho_ccspanI:
+  assumes \<open>\<And>y. y \<in> S \<Longrightarrow> is_orthogonal x y\<close>
+  shows \<open>x \<in> space_as_set (- ccspan S)\<close>
+proof -
+  have \<open>x \<in> space_as_set (ccspan {x})\<close>
+    using ccspan_superset by blast
+  also have \<open>\<dots> \<subseteq> space_as_set (- ccspan S)\<close>
+    apply (simp add: flip: less_eq_ccsubspace.rep_eq)
+    apply (rule ccspan_leq_ortho_ccspan)
+    using assms by auto
+  finally show ?thesis
+    by -
+qed
+
+
+(* lemma ccspan_of_images_sum1:
+  assumes \<open>has_sum_in cweak_operator_topology P M id_cblinfun\<close>
+  shows \<open>\<psi> \<in> space_as_set (ccspan ((\<lambda>i. P i *\<^sub>V \<psi>) ` M))\<close> *)
+
+lemma trunc_ell2_uminus: \<open>trunc_ell2 (-M) \<psi> = \<psi> - trunc_ell2 M \<psi>\<close>
+  by (metis Int_UNIV_left boolean_algebra_class.diff_eq subset_UNIV trunc_ell2_UNIV trunc_ell2_union_Diff)
+
+
+lemma tensor_ccsubspace_INF_left_top:
+  fixes S :: \<open>'a \<Rightarrow> 'b ell2 ccsubspace\<close>
+shows \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S (\<top>::'c ell2 ccsubspace) = (INF x\<in>X. S x \<otimes>\<^sub>S \<top>)\<close>
+proof (rule antisym[rotated])
+  let ?top = \<open>\<top> :: 'c ell2 ccsubspace\<close>
+  have \<open>\<psi> \<otimes>\<^sub>s \<phi> \<in> space_as_set (\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S ?top)\<close>
+    if \<open>\<psi> \<in> space_as_set (\<Sqinter>x\<in>X. S x)\<close> for \<psi> \<phi>
+  proof -
+    from that(1) have \<open>\<psi> \<in> space_as_set (S x)\<close> if \<open>x \<in> X\<close> for x
+      using that by (simp add: Inf_ccsubspace.rep_eq)
+    then have \<open>\<psi> \<otimes>\<^sub>s \<phi> \<in> space_as_set (S x \<otimes>\<^sub>S \<top>)\<close> if \<open>x \<in> X\<close> for x
+      using ccspan_superset that apply (auto simp: tensor_ccsubspace_def)
+      by fastforce
+    then show ?thesis
+      by (simp add: Inf_ccsubspace.rep_eq)
+  qed
+  then show \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S ?top \<le> (INF x\<in>X. S x \<otimes>\<^sub>S ?top)\<close>
+    apply (subst tensor_ccsubspace_def)
+    apply (rule ccspan_leqI)
+    by auto
+
+  show \<open>(\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S ?top) \<le> (\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S ?top\<close>
+  proof (rule ccsubspace_leI_unit)
+    fix \<psi>
+    assume asm: \<open>\<psi> \<in> space_as_set (\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S ?top)\<close>
+    obtain \<psi>' where \<psi>'b_b: \<open>\<psi>' b \<otimes>\<^sub>s ket b = (id_cblinfun \<otimes>\<^sub>o selfbutterket b) *\<^sub>V \<psi>\<close> for b
+    proof (atomize_elim, rule choice, intro allI)
+      fix b :: 'c
+      have \<open>(id_cblinfun \<otimes>\<^sub>o selfbutterket b) *\<^sub>V \<psi> \<in> space_as_set (\<top> \<otimes>\<^sub>S ccspan {ket b})\<close>
+        by (simp add: butterfly_eq_proj tensor_ccsubspace_via_Proj)
+      then show \<open>\<exists>\<psi>'. \<psi>' \<otimes>\<^sub>s ket b = (id_cblinfun \<otimes>\<^sub>o selfbutterket b) *\<^sub>V \<psi>\<close>
+       by (metis tensor_ccsubspace_right1dim_member)
+    qed
+  
+    have \<open>\<psi>' b \<in> space_as_set (S x)\<close> if \<open>x \<in> X\<close> for x b
+    proof -
+      from asm have \<psi>_ST: \<open>\<psi> \<in> space_as_set (S x \<otimes>\<^sub>S ?top)\<close>
+        by (meson INF_lower Set.basic_monos(7) less_eq_ccsubspace.rep_eq that)
+      have \<open>\<psi>' b \<otimes>\<^sub>s ket b = (id_cblinfun \<otimes>\<^sub>o selfbutterket b) *\<^sub>V \<psi>\<close>
+        by (simp add: \<psi>'b_b)
+      also from \<psi>_ST
+      have \<open>\<dots> \<in> space_as_set (((id_cblinfun \<otimes>\<^sub>o selfbutterket b)) *\<^sub>S (S x \<otimes>\<^sub>S ?top))\<close>
+        by (meson cblinfun_apply_in_image')
+      also have \<open>\<dots> = space_as_set (((id_cblinfun \<otimes>\<^sub>o selfbutterket b) o\<^sub>C\<^sub>L (Proj (S x) \<otimes>\<^sub>o id_cblinfun)) *\<^sub>S \<top>)\<close>
+        by (simp add: cblinfun_compose_image tensor_ccsubspace_via_Proj)
+      also have \<open>\<dots> = space_as_set ((Proj (S x) \<otimes>\<^sub>o (selfbutterket b o\<^sub>C\<^sub>L id_cblinfun)) *\<^sub>S \<top>)\<close>
+        by (simp add: comp_tensor_op)
+      also have \<open>\<dots> = space_as_set ((Proj (S x) \<otimes>\<^sub>o (id_cblinfun o\<^sub>C\<^sub>L selfbutterket b)) *\<^sub>S \<top>)\<close>
+        by simp
+      also have \<open>\<dots> = space_as_set (((Proj (S x) \<otimes>\<^sub>o id_cblinfun) o\<^sub>C\<^sub>L (id_cblinfun \<otimes>\<^sub>o selfbutterket b)) *\<^sub>S \<top>)\<close>
+        by (simp add: comp_tensor_op)
+      also have \<open>\<dots> \<subseteq> space_as_set ((Proj (S x) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S \<top>)\<close>
+        by (metis cblinfun_compose_image cblinfun_image_mono less_eq_ccsubspace.rep_eq top_greatest)
+      also have \<open>\<dots> = space_as_set (S x \<otimes>\<^sub>S ?top)\<close>
+        by (simp add: tensor_ccsubspace_via_Proj)
+      finally have \<open>\<psi>' b \<otimes>\<^sub>s ket b \<in> space_as_set (S x \<otimes>\<^sub>S ?top)\<close>
+        by -
+      then show \<open>\<psi>' b \<in> space_as_set (S x)\<close>
+        using tensor_ell2_mem_tensor_ccsubspace_left
+        by (metis ket_nonzero)
+    qed
+
+    then have \<open>\<psi>' b \<in> space_as_set (\<Sqinter>x\<in>X. S x)\<close> if \<open>x \<in> X\<close> for x b
+      using that by (simp add: Inf_ccsubspace.rep_eq)
+
+    then have *: \<open>\<psi>' b \<otimes> ket b \<in> space_as_set ((\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S ?top)\<close> for b
+      by (auto intro!: ccspan_superset[THEN set_mp] 
+          simp add: tensor_ccsubspace_def Inf_ccsubspace.rep_eq)
+    
+    have \<open>\<psi> \<in> space_as_set (ccspan (range (\<lambda>b. \<psi>' b \<otimes> ket b)))\<close> (is \<open>\<psi> \<in> ?rhs\<close>)
+    proof -
+      define \<gamma> where \<open>\<gamma> F = (\<Sum>b\<in>F. (id_cblinfun \<otimes>\<^sub>o selfbutterket b) *\<^sub>V \<psi>)\<close> for F
+      have \<gamma>_rhs: \<open>\<gamma> F \<in> ?rhs\<close> for F
+        apply (auto intro!: complex_vector.subspace_sum simp add: \<gamma>_def \<psi>'b_b)
+        using ccspan_superset by fastforce
+      have \<gamma>_trunc: \<open>\<gamma> F = trunc_ell2 (UNIV \<times> F) \<psi>\<close> if \<open>finite F\<close> for F
+      proof (rule cinner_ket_eqI)
+        fix x :: \<open>'b \<times> 'c\<close> obtain x1 x2 where x_def: \<open>x = (x1,x2)\<close>
+          by force
+        have *: \<open>ket x \<bullet>\<^sub>C ((id_cblinfun \<otimes>\<^sub>o selfbutterket j) *\<^sub>V \<psi>) = of_bool (j=x2) * Rep_ell2 \<psi> x\<close> for j
+          apply (simp add: x_def tensor_op_ell2 tensor_op_adjoint cinner_ket 
+              flip: tensor_ell2_ket cinner_adj_left)
+          by (simp add: tensor_ell2_ket cinner_ket_left)
+        have \<open>ket x \<bullet>\<^sub>C \<gamma> F = of_bool (x2\<in>F) *\<^sub>C Rep_ell2 \<psi> x\<close>
+          using that
+          apply (simp add: x_def \<gamma>_def complex_vector.linear_sum[of \<open>cinner _\<close>] bounded_clinear_cinner_right 
+              bounded_clinear.clinear sum_single[where i=x2] tensor_op_adjoint tensor_op_ell2 cinner_ket
+              flip: tensor_ell2_ket cinner_adj_left)
+          by (simp add: tensor_ell2_ket cinner_ket_left)
+        moreover have \<open>ket x \<bullet>\<^sub>C trunc_ell2 (UNIV \<times> F) \<psi> = of_bool (x2\<in>F) *\<^sub>C Rep_ell2 \<psi> x\<close>
+          by (simp add: trunc_ell2.rep_eq cinner_ket_left x_def)
+        ultimately show \<open>ket x \<bullet>\<^sub>C \<gamma> F = ket x \<bullet>\<^sub>C trunc_ell2 (UNIV \<times> F) \<psi>\<close>
+          by simp
+      qed
+      have \<open>(\<gamma> \<longlongrightarrow> \<psi>) (finite_subsets_at_top UNIV)\<close>
+      proof (rule tendsto_iff[THEN iffD2, rule_format])
+        fix e :: real assume \<open>e > 0\<close>
+        from trunc_ell2_lim_at_UNIV[of \<psi>]
+        have \<open>\<forall>\<^sub>F F in finite_subsets_at_top UNIV. dist (trunc_ell2 F \<psi>) \<psi> < e\<close>
+          by (simp add: \<open>0 < e\<close> tendstoD)
+        then obtain M where \<open>finite M\<close> and less_e: \<open>finite F \<Longrightarrow> F \<supseteq> M \<Longrightarrow> dist (trunc_ell2 F \<psi>) \<psi> < e\<close> for F
+          by (metis (mono_tags, lifting) eventually_finite_subsets_at_top subset_UNIV)
+        define M' where \<open>M' = snd ` M\<close>
+        have \<open>finite M'\<close>
+          using M'_def \<open>finite M\<close> by blast
+        have \<open>dist (\<gamma> F') \<psi> < e\<close> if \<open>finite F'\<close> and \<open>F' \<supseteq> M'\<close> for F'
+        proof -
+          have \<open>dist (\<gamma> F') \<psi> = norm (trunc_ell2 (- (UNIV \<times> F')) \<psi>)\<close>
+            using that by (simp only: \<gamma>_trunc dist_norm trunc_ell2_uminus norm_minus_commute)
+          also have \<open>\<dots> \<le> norm (trunc_ell2 (- ((fst ` M) \<times> F')) \<psi>)\<close>
+            by (meson Compl_anti_mono Set.basic_monos(1) Sigma_mono subset_UNIV trunc_ell2_norm_mono)
+          also have \<open>\<dots> = dist (trunc_ell2 ((fst ` M) \<times> F') \<psi>) \<psi>\<close>
+            apply (simp add: trunc_ell2_uminus dist_norm)
+            using norm_minus_commute by blast
+          also have \<open>\<dots> < e\<close>
+            apply (rule less_e)
+            using \<open>finite F'\<close> \<open>finite M\<close> apply force
+            using \<open>F' \<supseteq> M'\<close> M'_def by force
+          finally show ?thesis
+            by -
+        qed
+        then show \<open>\<forall>\<^sub>F F' in finite_subsets_at_top UNIV. dist (\<gamma> F') \<psi> < e\<close>
+          using \<open>finite M'\<close> by (auto simp add: eventually_finite_subsets_at_top)
+      qed
+      then show \<open>\<psi> \<in> ?rhs\<close>
+        apply (rule Lim_in_closed_set[rotated -1])
+        using \<gamma>_rhs by auto 
+    qed
+    also from * have \<open>\<dots> \<subseteq> space_as_set ((\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S ?top)\<close>
+      by (meson ccspan_leqI image_subset_iff less_eq_ccsubspace.rep_eq)
+    
+    finally show \<open>\<psi> \<in> space_as_set ((\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S ?top)\<close>
+      by -
+  qed
+qed
+
+(* TODO: Let some_chilbert_basis abbreviate some_chilbert_basis_of UNIV *)
+definition \<open>some_chilbert_basis_of X = (SOME B. is_ortho_set B \<and> (\<forall>b\<in>B. norm b = 1) \<and> ccspan B = X)\<close>
+
+lemma
+  fixes X :: \<open>'a::chilbert_space ccsubspace\<close>
+  shows some_chilbert_basis_of_is_ortho_set[simp]: \<open>is_ortho_set (some_chilbert_basis_of X)\<close>
+    and some_chilbert_basis_of_norm1: \<open>b \<in> some_chilbert_basis_of X \<Longrightarrow> norm b = 1\<close>
+    and some_chilbert_basis_of_ccspan[simp]: \<open>ccspan (some_chilbert_basis_of X) = X\<close>
+proof -
+  let ?P = \<open>\<lambda>B. is_ortho_set B \<and> (\<forall>b\<in>B. norm b = 1) \<and> ccspan B = X\<close>
+  have \<open>Ex ?P\<close>
+    using orthonormal_subspace_basis_exists[where S=\<open>{}\<close> and V=X]
+    by auto
+  then have \<open>?P (some_chilbert_basis_of X)\<close>
+    by (simp add: some_chilbert_basis_of_def verit_sko_ex)
+  then show is_ortho_set_some_chilbert_basis_of: \<open>is_ortho_set (some_chilbert_basis_of X)\<close>
+    and \<open>b \<in> some_chilbert_basis_of X \<Longrightarrow> norm b = 1\<close>
+    and \<open>ccspan (some_chilbert_basis_of X) = X\<close>
+    by auto
+qed
+
+lemma ccsubspace_as_whole_type:
+  fixes X :: \<open>'a::chilbert_space ccsubspace\<close>
+  assumes \<open>X \<noteq> 0\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'b::type = some_chilbert_basis_of X.
+         \<exists>U::'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a. isometry U \<and> U *\<^sub>S \<top> = X\<close>
+proof (rule with_typeI)
+  show \<open>fst (some_chilbert_basis_of X, ()) \<noteq> {}\<close>
+    using some_chilbert_basis_of_ccspan[of X] assms
+    by (auto simp del: some_chilbert_basis_of_ccspan)
+  show \<open>fst with_type_type_class (fst (some_chilbert_basis_of X, ()))
+     (snd (some_chilbert_basis_of X, ()))\<close>
+    by (simp add: with_type_type_class_def)
+  show \<open>with_type_compat_rel (fst with_type_type_class) (fst (some_chilbert_basis_of X, ()))
+     (snd with_type_type_class)\<close>
+    by (auto simp add: with_type_type_class_def with_type_compat_rel_def)
+  fix Rep :: \<open>'b \<Rightarrow> 'a\<close> and Abs
+  assume \<open>type_definition Rep Abs (fst (some_chilbert_basis_of X, ()))\<close>
+  then interpret type_definition Rep Abs \<open>some_chilbert_basis_of X\<close>
+    by simp
+  define U where \<open>U = cblinfun_extension (range ket) (Rep o inv ket)\<close>
+  have [simp]: \<open>Rep i \<bullet>\<^sub>C Rep j = 0\<close> if \<open>i \<noteq> j\<close> for i j
+    using Rep some_chilbert_basis_of_is_ortho_set[unfolded is_ortho_set_def] that
+    by (smt (verit) Rep_inverse)
+  moreover have [simp]: \<open>norm (Rep i) = 1\<close> for i
+    using Rep[of i] some_chilbert_basis_of_norm1
+    by auto
+  ultimately have \<open>cblinfun_extension_exists (range ket) (Rep o inv ket)\<close>
+    apply (rule_tac cblinfun_extension_exists_ortho)
+    by auto
+  then have U_ket[simp]: \<open>U (ket i) = Rep i\<close> for i
+    by (auto simp: cblinfun_extension_apply U_def)
+  have \<open>isometry U\<close>
+    apply (rule orthogonal_on_basis_is_isometry[where B=\<open>range ket\<close>])
+    by (auto simp: cinner_ket simp flip: cnorm_eq_1)
+  moreover have \<open>U *\<^sub>S ccspan (range ket) = X\<close>
+    apply (subst cblinfun_image_ccspan)
+    by (simp add: Rep_range image_image)
+  ultimately show \<open>\<exists>U :: 'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a. isometry U \<and> U *\<^sub>S \<top> = X\<close>
+    by auto
+qed
+
+lemma tensor_ccsubspace_INF_left: \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S T = (INF x\<in>X. S x \<otimes>\<^sub>S T)\<close> if \<open>X \<noteq> {}\<close>
+proof (cases \<open>T=0\<close>)
+  case True
+  then show ?thesis 
+    using that by simp
+next
+  case False
+  from ccsubspace_as_whole_type[OF False]
+  have \<open>\<forall>\<^sub>\<tau> 't::type = some_chilbert_basis_of T.
+        (INF x\<in>X. S x) \<otimes>\<^sub>S T = (INF x\<in>X. S x \<otimes>\<^sub>S T)\<close>
+  proof (rule with_type_mp)
+    fix Rep :: \<open>'t \<Rightarrow> 'c ell2\<close> and Abs
+    assume \<open>type_definition Rep Abs (some_chilbert_basis_of T)\<close>
+    then interpret type_definition Rep Abs \<open>some_chilbert_basis_of T\<close>
+      by simp
+    assume \<open>\<exists>U :: 't ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2. isometry U \<and> U *\<^sub>S \<top> = T\<close>
+    then obtain U :: \<open>'t ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2\<close> where [simp]: \<open>isometry U\<close> and imU: \<open>U *\<^sub>S \<top> = T\<close>
+      by auto
+    have \<open>(id_cblinfun \<otimes>\<^sub>o U) *\<^sub>S ((\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S \<top>) = (id_cblinfun \<otimes>\<^sub>o U) *\<^sub>S (\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S \<top>)\<close>
+      apply (rule arg_cong[where f=\<open>\<lambda>x. _ *\<^sub>S x\<close>])  
+      by (rule tensor_ccsubspace_INF_left_top)
+    then show \<open>(\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S T = (\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S T)\<close>
+      using that by (simp add: imU cblinfun_image_INF_eq isometry_tensor_op
+          flip: tensor_ccsubspace_image)
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
+
+
+(* (* TODO: To Tensor *)
+(* TODO: right *)
+(* TODO: remove *)
+lemma tensor_ccsubspace_INF_left: \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S T = (INF x\<in>X. S x \<otimes>\<^sub>S T)\<close> if \<open>X \<noteq> {}\<close>
+proof (rule antisym[rotated])
+  have \<open>\<psi> \<otimes>\<^sub>s \<phi> \<in> space_as_set (\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S T)\<close>
+    if \<open>\<psi> \<in> space_as_set (\<Sqinter>x\<in>X. S x)\<close> and \<open>\<phi> \<in> space_as_set T\<close> for \<psi> \<phi>
+  proof -
+    from that(1) have \<open>\<psi> \<in> space_as_set (S x)\<close> if \<open>x \<in> X\<close> for x
+      using that by (simp add: Inf_ccsubspace.rep_eq)
+    with that(2) have \<open>\<psi> \<otimes>\<^sub>s \<phi> \<in> space_as_set (S x \<otimes>\<^sub>S T)\<close> if \<open>x \<in> X\<close> for x
+      using ccspan_superset that apply (auto simp: tensor_ccsubspace_def)
+      by fastforce
+    then show ?thesis
+      by (simp add: Inf_ccsubspace.rep_eq)
+  qed
+  then show \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S T \<le> (INF x\<in>X. S x \<otimes>\<^sub>S T)\<close>
+    apply (subst tensor_ccsubspace_def)
+    apply (rule ccspan_leqI)
+    by auto
+
+  show \<open>(\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S T) \<le> (\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S T\<close>
+  proof (rule ccsubspace_leI_unit)
+    fix \<psi>
+    assume asm: \<open>\<psi> \<in> space_as_set (\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S T)\<close>
+    
+    obtain BT where \<open>ccspan BT = T\<close> and \<open>is_ortho_set BT\<close> 
+      and BT_norm: \<open>x \<in> BT \<Longrightarrow> norm x = 1\<close> for x
+      apply atomize_elim
+      using orthonormal_subspace_basis_exists[where S=\<open>{}\<close> and V=T]
+      by auto
+    
+    then obtain B where \<open>is_onb B\<close> and \<open>B \<supseteq> BT\<close>
+      apply atomize_elim using orthonormal_basis_exists[of BT]
+      by auto
+ 
+    from \<open>ccspan BT = T\<close> have BT_T: \<open>BT \<subseteq> space_as_set T\<close>
+      using ccspan_superset by blast
+
+    have nonBT_Proj_T: \<open>Proj T *\<^sub>V b = 0\<close> if \<open>b \<in> B - BT\<close> for b
+    proof -
+      have nonBT_in_orthoT: \<open>b \<in> space_as_set (- T)\<close>
+        apply (subst  \<open>ccspan BT = T\<close>[symmetric])
+        apply (rule mem_ortho_ccspanI)
+        using that \<open>is_onb B\<close> \<open>BT \<subseteq> B\<close>
+        by (force simp: is_onb_def is_ortho_set_def)
+      then show ?thesis
+        by (simp add: kernel_memberD)
+    qed
+
+    then have nonBT_img_T: \<open>selfbutter b *\<^sub>S T = 0\<close> if \<open>b \<in> B - BT\<close> for b
+      apply (subst Proj_range[symmetric, of T])
+      apply (simp add: flip: cblinfun_compose_image del: Proj_range)
+      by (metis adj_Proj butterfly_0_right butterfly_comp_cblinfun nonBT_Proj_T that)
+    
+    obtain \<psi>' where \<psi>'b_b: \<open>\<psi>' b \<otimes>\<^sub>s b = (id_cblinfun \<otimes>\<^sub>o selfbutter b) *\<^sub>V \<psi>\<close> if \<open>b \<in> B\<close> for b
+    proof (atomize_elim, rule choice, unfold ex_simps, intro allI impI)
+      fix b assume \<open>b \<in> B\<close>
+      have \<open>(id_cblinfun \<otimes>\<^sub>o selfbutter b) *\<^sub>V \<psi> \<in> space_as_set (\<top> \<otimes>\<^sub>S ccspan {b})\<close>
+        by (metis Proj_top \<open>b \<in> B\<close> \<open>is_onb B\<close> butterfly_eq_proj cblinfun_apply_in_image is_onb_def tensor_ccsubspace_via_Proj)
+      then show \<open>\<exists>\<psi>'. \<psi>' \<otimes>\<^sub>s b = (id_cblinfun \<otimes>\<^sub>o selfbutter b) *\<^sub>V \<psi>\<close>
+       by (metis tensor_ccsubspace_right1dim_member)
+    qed
+  
+    have \<open>\<psi>' b \<in> space_as_set (S x)\<close> if \<open>x \<in> X\<close> and \<open>b \<in> BT\<close> for x b
+    proof -
+      have \<open>b \<in> B\<close>
+        using \<open>BT \<subseteq> B\<close> that(2) by blast
+      have \<open>b \<noteq> 0\<close>
+        using BT_norm that(2) by fastforce
+      from asm have \<psi>_ST: \<open>\<psi> \<in> space_as_set (S x \<otimes>\<^sub>S T)\<close>
+        by (meson INF_lower Set.basic_monos(7) less_eq_ccsubspace.rep_eq that)
+      have \<open>\<psi>' b \<otimes>\<^sub>s b = (id_cblinfun \<otimes>\<^sub>o selfbutter b) *\<^sub>V \<psi>\<close>
+        by (simp add: \<psi>'b_b \<open>b \<in> B\<close>)
+      also from \<psi>_ST
+      have \<open>\<dots> \<in> space_as_set (((id_cblinfun \<otimes>\<^sub>o selfbutter b)) *\<^sub>S (S x \<otimes>\<^sub>S T))\<close>
+        by (meson cblinfun_apply_in_image')
+      also have \<open>\<dots> = space_as_set (((id_cblinfun \<otimes>\<^sub>o selfbutter b) o\<^sub>C\<^sub>L (Proj (S x) \<otimes>\<^sub>o Proj T)) *\<^sub>S \<top>)\<close>
+        by (simp add: cblinfun_compose_image tensor_ccsubspace_via_Proj)
+      also have \<open>\<dots> = space_as_set ((Proj (S x) \<otimes>\<^sub>o (selfbutter b o\<^sub>C\<^sub>L Proj T)) *\<^sub>S \<top>)\<close>
+        by (simp add: comp_tensor_op)
+      also have \<open>\<dots> = space_as_set ((Proj (S x) \<otimes>\<^sub>o (Proj T o\<^sub>C\<^sub>L selfbutter b)) *\<^sub>S \<top>)\<close>
+      proof -
+        from \<open>b \<in> BT\<close> have b_T: \<open>b \<in> space_as_set T\<close>
+          using BT_T by auto
+        have \<open>Proj T o\<^sub>C\<^sub>L selfbutter b = selfbutter b o\<^sub>C\<^sub>L Proj T\<close>
+        proof (rule cblinfun_eq_gen_eqI[where G=B])
+          show \<open>ccspan B = \<top>\<close>
+            using \<open>is_onb B\<close> is_onb_def by auto
+          fix b' assume \<open>b' \<in> B\<close>
+          then consider (b) \<open>b' = b\<close> | (BT) \<open>b' \<noteq> b\<close> \<open>b' \<in> BT\<close> | (B) \<open>b' \<noteq> b\<close> \<open>b' \<in> B-BT\<close>
+            by auto
+          then show \<open>(Proj T o\<^sub>C\<^sub>L selfbutter b) *\<^sub>V b' = (selfbutter b o\<^sub>C\<^sub>L Proj T) *\<^sub>V b'\<close>
+          proof cases
+            case b
+            then show ?thesis
+              by (simp add: Proj_fixes_image b_T cblinfun.scaleC_right)
+          next
+            case BT
+            then show ?thesis
+              apply auto
+              by (metis BT_T Proj_fixes_image Set.basic_monos(7) b_T cblinfun.scaleC_right)
+          next
+            case B
+            have \<open>b \<in> B\<close>
+              using \<open>BT \<subseteq> B\<close> that(2) by auto
+            then have 1: \<open>b \<bullet>\<^sub>C b' = 0\<close>
+              using B \<open>is_onb B\<close> by (auto simp: is_onb_def is_ortho_set_def)
+            from nonBT_Proj_T[OF B(2)]
+            have \<open>Proj T *\<^sub>V b' = 0\<close>
+              by -
+            with 1 show ?thesis
+              by auto
+          qed
+        qed
+        then show ?thesis
+          by simp
+      qed
+      also have \<open>\<dots> = space_as_set (((Proj (S x) \<otimes>\<^sub>o Proj T) o\<^sub>C\<^sub>L (id_cblinfun \<otimes>\<^sub>o selfbutter b)) *\<^sub>S \<top>)\<close>
+        by (simp add: comp_tensor_op)
+      also have \<open>\<dots> \<subseteq> space_as_set ((Proj (S x) \<otimes>\<^sub>o Proj T) *\<^sub>S \<top>)\<close>
+        by (metis cblinfun_compose_image cblinfun_image_mono less_eq_ccsubspace.rep_eq top_greatest)
+      also have \<open>\<dots> = space_as_set (S x \<otimes>\<^sub>S T)\<close>
+        by (simp add: tensor_ccsubspace_via_Proj)
+      finally have \<open>\<psi>' b \<otimes>\<^sub>s b \<in> space_as_set (S x \<otimes>\<^sub>S T)\<close>
+        by -
+      then show \<open>\<psi>' b \<in> space_as_set (S x)\<close>
+        using \<open>b \<noteq> 0\<close> tensor_ell2_mem_tensor_ccsubspace_left(1) by auto
+    qed
+
+    then have \<open>\<psi>' b \<in> space_as_set (\<Sqinter>x\<in>X. S x)\<close> if \<open>x \<in> X\<close> and \<open>b \<in> BT\<close> for x b
+      using that by (simp add: Inf_ccsubspace.rep_eq)
+
+    then have \<open>\<psi>' b \<otimes> b \<in> space_as_set ((\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S T)\<close> if \<open>b \<in> BT\<close> for b
+      using that BT_T
+      by (auto intro!: ccspan_superset[THEN set_mp] exI 
+          simp add: tensor_ccsubspace_def Inf_ccsubspace.rep_eq)
+    
+    moreover have \<open>\<psi>' b = 0\<close> if \<open>b \<in> B - BT\<close> for b
+    proof -
+      from \<open>X \<noteq> {}\<close> 
+      obtain x where \<open>x \<in> X\<close>
+        by blast
+      have \<open>\<psi>' b \<otimes>\<^sub>s b = (id_cblinfun \<otimes>\<^sub>o selfbutter b) *\<^sub>V \<psi>\<close>
+        using \<psi>'b_b that by blast
+      also from asm \<open>x \<in> X\<close> 
+      have \<open>\<dots> \<in> space_as_set ((id_cblinfun \<otimes>\<^sub>o selfbutter b) *\<^sub>S (S x \<otimes>\<^sub>S T))\<close>
+        by (simp add: Inf_ccsubspace.rep_eq cblinfun_apply_in_image')
+      also have \<open>\<dots> = 0\<close>
+        by (simp add: nonBT_img_T[OF that] flip: tensor_ccsubspace_image)
+      finally have \<open>\<psi>' b \<otimes>\<^sub>s b = 0\<close>
+        by simp
+      moreover have \<open>b \<noteq> 0\<close>
+        using \<open>is_onb B\<close> is_onb_def that by fastforce
+      ultimately show ?thesis
+        using tensor_ell2_nonzero by blast
+    qed
+   
+    ultimately have *: \<open>\<psi>' b \<otimes> b \<in> space_as_set ((\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S T)\<close> if \<open>b \<in> B\<close> for b
+      using that apply (cases \<open>b \<in> BT\<close>) by auto
+    
+    have \<open>\<psi> \<in> space_as_set (ccspan {\<psi>' b \<otimes> b | b. b \<in> B})\<close>
+    proof -
+      have \<open>\<psi> \<in> space_as_set (ccspan ((\<lambda>b. (id_cblinfun \<otimes>\<^sub>o selfbutter b) *\<^sub>V \<psi>) ` B))\<close>
+        apply (rule ccspan_of_images_sum1)
+        by -
+      also have \<open>\<dots> = space_as_set (ccspan {\<psi>' b \<otimes>\<^sub>s b |b. b \<in> B})\<close>
+        apply (rule arg_cong[where f=\<open>\<lambda>x. space_as_set (ccspan x)\<close>])
+        by (auto intro!: exI simp: \<psi>'b_b)
+      finally show ?thesis
+        by -
+    qed
+    also from * have \<open>\<dots> \<subseteq> space_as_set ((\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S T)\<close>
+      by (smt (z3) ccspan_leqI less_eq_ccsubspace.rep_eq mem_Collect_eq subset_iff)
+    
+    finally show \<open>\<psi> \<in> space_as_set ((\<Sqinter>x\<in>X. S x) \<otimes>\<^sub>S T)\<close>
+      by -
+  qed
+qed *)
+
+
+lemma apply_qregister_space_INF: 
+  assumes [simp]: \<open>qregister F\<close>
+  shows "apply_qregister_space F (INF x\<in>X. S x) = (INF x\<in>X. apply_qregister_space F (S x))"
+proof (cases \<open>X = {}\<close>)
+  case True
+  then show ?thesis
+    by (simp add: apply_qregister_space_top)
+next
+  let ?goal = ?thesis
+  case False
+  have \<open>qregister_raw (apply_qregister F)\<close>
+    using assms qregister.rep_eq by blast
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'z::type = register_decomposition_basis (apply_qregister F).
+        ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U::('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
+      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
+      by auto
+    from tensor_ccsubspace_INF_left[where X=X and T=\<open>\<top> :: 'z ell2 ccsubspace\<close> and S=S]
+    have ?goal if \<open>X \<noteq> {}\<close>
+      by (simp add: apply_qregister_space_def decomp sandwich_apply cblinfun_compose_image
+          unitary_isometry tensor_ccsubspace_via_Proj False
+          flip: cblinfun_image_INF_eq)
+    moreover have ?goal if \<open>X = {}\<close>
+      using False that by auto
+    ultimately show ?goal
+      apply (cases \<open>X = {}\<close>) by auto
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by auto
+qed
+
+lemma apply_qregister_space_SUP: "apply_qregister_space F (SUP x\<in>X. S x) = (SUP x\<in>X. apply_qregister_space F (S x))"
+  apply (cases \<open>qregister F\<close>)
+   apply (rule complement_injective)
+   apply (simp add: uminus_SUP apply_qregister_space_INF flip: apply_qregister_space_uminus)
+  by (simp add: non_qregister)
+
+lemma apply_qregister_space_inf: \<open>apply_qregister_space F (A \<sqinter> B) = apply_qregister_space F A \<sqinter> apply_qregister_space F B\<close>
+  apply (cases \<open>qregister F\<close>)
+  using apply_qregister_space_INF[where F=F and X=\<open>{True,False}\<close> and S=\<open>\<lambda> True \<Rightarrow> A | False \<Rightarrow> B\<close>]
+  by (auto simp: non_qregister)
+
+lemma apply_qregister_space_sup: \<open>apply_qregister_space F (A \<squnion> B) = apply_qregister_space F A \<squnion> apply_qregister_space F B\<close>
+  using apply_qregister_space_SUP[where F=F and X=\<open>{True,False}\<close> and S=\<open>\<lambda> True \<Rightarrow> A | False \<Rightarrow> B\<close>]
+  by simp
+
+lemma apply_qregister_space_plus: \<open>apply_qregister_space F (A + B) = apply_qregister_space F A + apply_qregister_space F B\<close>
+  by (simp add: plus_ccsubspace_def apply_qregister_space_sup)
+
+lemma apply_qregister_space_minus: \<open>apply_qregister_space F (A - B) = apply_qregister_space F A - apply_qregister_space F B\<close>
+  apply (cases \<open>qregister F\<close>)
+  by (simp_all add: complemented_lattice_class.diff_eq apply_qregister_space_inf apply_qregister_space_uminus
+      non_qregister)
 
 lemma apply_qregister_space_kernel: \<open>qregister F \<Longrightarrow> apply_qregister_space F (Complex_Bounded_Linear_Function.kernel A) = Complex_Bounded_Linear_Function.kernel (apply_qregister F A)\<close>
-  by (metis (mono_tags, opaque_lifting) Complex_Bounded_Linear_Function.zero_cblinfun_image Proj_image_leq apply_non_qregister_space apply_qregister_space_uminus cblinfun_image_0 kernel_0 kernel_compl_adj_range positive_hermitianI top_unique verit_comp_simplify1(2))
+  by (metis (no_types, lifting) Proj_on_image Proj_top apply_qregister_adj apply_qregister_of_id apply_qregister_space_def apply_qregister_space_image apply_qregister_space_uminus kernel_compl_adj_range)
 
 lemma apply_qregister_space_eigenspace: \<open>qregister F \<Longrightarrow> apply_qregister_space F (eigenspace c A) = eigenspace c (apply_qregister F A)\<close>
-  by (metis Complex_Bounded_Linear_Function.zero_cblinfun_image Proj_on_own_range Proj_top apply_non_qregister_space apply_qregister_space_uminus id_cblinfun_not_0 is_Proj_0 kernel_0 kernel_Proj)
+  by (simp add: apply_qregister_minus apply_qregister_scaleC apply_qregister_space_kernel eigenspace_def)
+
+lemma apply_qregister_space_orthogonal_spaces: \<open>qregister F \<Longrightarrow> orthogonal_spaces (apply_qregister_space F A) (apply_qregister_space F B) = orthogonal_spaces A B\<close>
+  by (metis apply_qregister_space_mono apply_qregister_space_uminus orthogonal_spaces_leq_compl)
+
+(* TODO move to abs_op-theory *)
+lemma abs_op_square: \<open>(abs_op A)* o\<^sub>C\<^sub>L abs_op A = A* o\<^sub>C\<^sub>L A\<close>
+  by (simp add: abs_op_def positive_cblinfun_squareI)
+
+lemma apply_qregister_pos: \<open>apply_qregister F A \<ge> 0 \<longleftrightarrow> A \<ge> 0\<close> if \<open>qregister F\<close>
+  by (metis that apply_qregister_mono apply_qregister_of_0)
+
+lemma apply_qregister_abs_op: \<open>apply_qregister F (abs_op A) = abs_op (apply_qregister F A)\<close>
+proof (cases \<open>qregister F\<close>)
+  case True
+  note [simp] = this
+  show ?thesis
+    apply (rule abs_opI)
+    by (simp_all add: abs_op_square abs_op_pos apply_qregister_pos flip: apply_qregister_adj qregister_compose)
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister)
+qed
+
+lemma apply_qregister_sqrt_op: \<open>apply_qregister F (sqrt_op A) = sqrt_op (apply_qregister F A)\<close>
+proof (cases \<open>qregister F\<close>)
+  case True
+  note posA[simp] = this
+  show ?thesis
+  proof (cases \<open>A \<ge> 0\<close>)
+    case True
+    then have posFA: \<open>0 \<le> apply_qregister F (sqrt_op A)\<close>
+      by (simp add: apply_qregister_pos)
+    have sq: \<open>apply_qregister F (sqrt_op A)* o\<^sub>C\<^sub>L apply_qregister F (sqrt_op A) = apply_qregister F A\<close>
+      using True by (simp_all add: abs_op_square flip: apply_qregister_adj qregister_compose)
+    from posFA sq
+    show ?thesis
+      by (rule sqrt_op_unique)
+  next
+    case False
+    then have 1: \<open>sqrt_op A = 0\<close>
+      by (rule sqrt_op_nonpos)
+    from False
+    have \<open>\<not> (0 \<le> apply_qregister F A)\<close>
+      by (simp add: apply_qregister_pos)
+    then have 2: \<open>sqrt_op (apply_qregister F A) = 0\<close>
+      by (rule sqrt_op_nonpos)
+    from 1 2
+    show ?thesis 
+      by simp
+  qed
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister)
+qed 
+
+(* TODO move to polar_decomposition-definition theory *)
+lemma polar_decomposition_0[simp]: \<open>polar_decomposition 0 = (0 :: 'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space)\<close>
+proof -
+  have \<open>polar_decomposition (0 :: 'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space) *\<^sub>S \<top> = 0 *\<^sub>S \<top>\<close>
+    by (simp add: polar_decomposition_final_space)
+  then show ?thesis
+    by simp
+qed
+
+(* TODO move to BO *)
+lemma cblinfun_same_on_image: \<open>A \<psi> = B \<psi>\<close> if eq: \<open>A o\<^sub>C\<^sub>L C = B o\<^sub>C\<^sub>L C\<close> and mem: \<open>\<psi> \<in> space_as_set (C *\<^sub>S \<top>)\<close>
+proof -
+  have \<open>A \<psi> = B \<psi>\<close> if \<open>\<psi> \<in> range C\<close> for \<psi>
+    by (metis (no_types, lifting) eq cblinfun_apply_cblinfun_compose image_iff that)
+  moreover have \<open>\<psi> \<in> closure (range C)\<close>
+    by (metis cblinfun_image.rep_eq mem top_ccsubspace.rep_eq)
+  ultimately show ?thesis
+    apply (rule on_closure_eqI)
+    by (auto simp: continuous_on_eq_continuous_at)
+qed
+
+(* TODO move to polar_decomposition-definition theory *)
+lemma polar_decomposition_unique:
+  fixes A :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes ker: \<open>kernel X = kernel A\<close>
+  assumes comp: \<open>X o\<^sub>C\<^sub>L abs_op A = A\<close>
+  shows \<open>X = polar_decomposition A\<close>
+proof -
+  have \<open>X \<psi> = polar_decomposition A \<psi>\<close> if \<open>\<psi> \<in> space_as_set (kernel A)\<close> for \<psi>
+  proof -
+    have \<open>\<psi> \<in> space_as_set (kernel X)\<close>
+      by (simp add: ker that)
+    then have \<open>X \<psi> = 0\<close>
+      by (simp add: kernel.rep_eq)
+    moreover
+    have \<open>\<psi> \<in> space_as_set (kernel (polar_decomposition A))\<close>
+      by (simp add: polar_decomposition_initial_space that)
+    then have \<open>polar_decomposition A \<psi> = 0\<close>
+      by (simp add: kernel.rep_eq del: polar_decomposition_initial_space)
+    ultimately show ?thesis
+      by simp
+  qed
+  then have 1: \<open>X o\<^sub>C\<^sub>L Proj (kernel A) = polar_decomposition A o\<^sub>C\<^sub>L Proj (kernel A)\<close>
+    by (metis (no_types, opaque_lifting) Proj_idempotent cblinfun_eqI lift_cblinfun_comp(4) norm_Proj_apply)
+
+  have *: \<open>abs_op A *\<^sub>S \<top> = - kernel A\<close>
+    by (metis (mono_tags, opaque_lifting) abs_op_pos kernel_abs_op kernel_compl_adj_range ortho_involution positive_hermitianI)
+  
+  have \<open>X o\<^sub>C\<^sub>L abs_op A = polar_decomposition A o\<^sub>C\<^sub>L abs_op A\<close>
+    by (simp add: comp polar_decomposition_correct)
+  then have \<open>X \<psi> = polar_decomposition A \<psi>\<close> if \<open>\<psi> \<in> space_as_set (abs_op A *\<^sub>S \<top>)\<close> for \<psi>
+    by (simp add: cblinfun_same_on_image that)
+  then have 2: \<open>X o\<^sub>C\<^sub>L Proj (- kernel A) = polar_decomposition A o\<^sub>C\<^sub>L Proj (- kernel A)\<close>
+    using * by (metis (no_types, opaque_lifting) Proj_idempotent cblinfun_eqI lift_cblinfun_comp(4) norm_Proj_apply)
+  from 1 2 have \<open>X o\<^sub>C\<^sub>L Proj (- kernel A) + X o\<^sub>C\<^sub>L Proj (kernel A)
+           = polar_decomposition A o\<^sub>C\<^sub>L Proj (- kernel A) + polar_decomposition A o\<^sub>C\<^sub>L Proj (kernel A)\<close>
+    by simp
+  then show ?thesis
+    by (simp add: Proj_ortho_compl flip: cblinfun_compose_add_right)
+qed
+
+lemma apply_qregister_polar_decomposition: \<open>apply_qregister F (polar_decomposition A) = polar_decomposition (apply_qregister F A)\<close>
+proof (cases \<open>qregister F\<close>)
+  case True
+  define PA FPA where \<open>PA = polar_decomposition A\<close> and \<open>FPA = apply_qregister F PA\<close>
+  have \<open>kernel (apply_qregister F (polar_decomposition A)) = kernel (apply_qregister F A)\<close>
+    by (metis True apply_qregister_space_kernel polar_decomposition_initial_space)
+  moreover have \<open>apply_qregister F (polar_decomposition A) o\<^sub>C\<^sub>L abs_op (apply_qregister F A) = apply_qregister F A\<close>
+    by (metis apply_qregister_abs_op polar_decomposition_correct qregister_compose)
+  ultimately show ?thesis
+    by (rule polar_decomposition_unique)
+next
+  case False
+  then show ?thesis 
+    by (simp add: polar_decomposition_0 non_qregister)
+qed
 
 (* axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close> *)
 
@@ -3349,10 +4311,29 @@ lemma translate_to_index_registers_template_o:
   shows \<open>f A \<equiv> apply_qregister F (f' A')\<close>
   using assms by simp
 
+lemma translate_to_index_registers_template_o':
+  assumes \<open>\<And>F X. f (apply_qregister F X) = f' X\<close>
+  assumes \<open>A \<equiv> apply_qregister F A'\<close>
+  shows \<open>f A \<equiv> f' A'\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_o'_qr:
+  assumes \<open>\<And>F X. qregister F \<Longrightarrow> f (apply_qregister F X) = f' X\<close>
+  assumes \<open>A \<equiv> apply_qregister F A'\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>f A \<equiv> f' A'\<close>
+  using assms by simp
+
 lemma translate_to_index_registers_template_o_s:
   assumes \<open>\<And>F X. apply_qregister_space F (f' X) = f (apply_qregister F X)\<close>
   assumes \<open>A \<equiv> apply_qregister F A'\<close>
   shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_s_o:
+  assumes \<open>\<And>F X. apply_qregister F (f' X) = f (apply_qregister_space F X)\<close>
+  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
+  shows \<open>f A \<equiv> apply_qregister F (f' A')\<close>
   using assms by simp
 
 lemma translate_to_index_registers_template_o_s_qr:
@@ -3365,6 +4346,13 @@ lemma translate_to_index_registers_template_o_s_qr:
 lemma translate_to_index_registers_template_s:
   assumes \<open>\<And>F X. apply_qregister_space F (f' X) = f (apply_qregister_space F X)\<close>
   assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
+  shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_s_qr:
+  assumes \<open>\<And>F X. qregister F \<Longrightarrow> apply_qregister_space F (f' X) = f (apply_qregister_space F X)\<close>
+  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
+  assumes \<open>qregister F\<close>
   shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
   using assms by simp
 
@@ -3404,6 +4392,16 @@ lemma translate_to_index_registers_template_os:
   shows \<open>f A B \<equiv> apply_qregister_space FG (f' (apply_qregister F' A') (apply_qregister_space G' B'))\<close>
   using assms by simp
 
+lemma translate_to_index_registers_template_s_empty:
+  assumes \<open>\<And>FG. qregister FG \<Longrightarrow> apply_qregister_space FG f = f'\<close>
+  shows \<open>f' \<equiv> apply_qregister_space (empty_qregister :: (unit,_) qregister) f\<close>
+  using assms by simp
+
+lemma translate_to_index_registers_template_o_empty:
+  assumes \<open>\<And>FG. qregister FG \<Longrightarrow> apply_qregister FG f = f'\<close>
+  shows \<open>f' \<equiv> apply_qregister (empty_qregister :: (unit,_) qregister) f\<close>
+  using assms by simp
+
 lemma translate_to_index_registers_apply[translate_to_index_registers]:
   assumes \<open>A \<equiv> apply_qregister G A'\<close>
   shows \<open>apply_qregister F A \<equiv> apply_qregister (qregister_chain F G) A'\<close>
@@ -3426,16 +4424,8 @@ lemmas translate_to_index_registers_minus_op[translate_to_index_registers] =
 lemmas translate_to_index_registers_image[translate_to_index_registers] =
   translate_to_index_registers_template_os[where f=cblinfun_image, OF apply_qregister_space_image]
 
-(* TODO move *)
-(* TODO: optionally: specify method, specify which prem *)
-attribute_setup remove_prem = \<open>
-  Scan.succeed (Thm.rule_attribute [] (fn context => fn thm => let
-    val ctxt = Context.proof_of context
-    val tac = assume_tac ctxt 1
-    in tac thm |> Seq.hd end))\<close>
-
 lemmas translate_to_index_registers_eq_op[translate_to_index_registers] =
-  translate_to_index_registers_template_oo'[where f=HOL.eq, OF apply_qregister_inject, remove_prem]
+  translate_to_index_registers_template_oo'[where f=HOL.eq, OF apply_qregister_inject', remove_prem]
 
 lemmas translate_to_index_registers_inf[translate_to_index_registers] =
   translate_to_index_registers_template_ss[where f=inf, OF apply_qregister_space_inf]
@@ -3450,37 +4440,91 @@ lemmas translate_to_index_registers_plus_space[translate_to_index_registers] =
   translate_to_index_registers_template_ss[where f=plus, OF apply_qregister_space_plus]
 
 lemmas translate_to_index_registers_eq_space[translate_to_index_registers] =
-  translate_to_index_registers_template_ss'[where f=HOL.eq, OF apply_qregister_space_inject, remove_prem]
+  translate_to_index_registers_template_ss'[where f=HOL.eq, OF apply_qregister_space_inject', remove_prem]
 
 lemmas translate_to_index_registers_leq_space[translate_to_index_registers] =
-  translate_to_index_registers_template_ss'[where f=less_eq, OF apply_qregister_space_leq, remove_prem]
+  translate_to_index_registers_template_ss'[where f=less_eq, OF apply_qregister_space_mono, remove_prem]
 
 lemmas translate_to_index_registers_leq_op[translate_to_index_registers] =
-  translate_to_index_registers_template_oo'[where f=less_eq, OF apply_qregister_leq, remove_prem]
+  translate_to_index_registers_template_oo'[where f=less_eq, OF apply_qregister_mono, remove_prem]
 
-lemma translate_to_index_registers_top[translate_to_index_registers]:
-  \<open>top \<equiv> apply_qregister_space (empty_qregister :: (unit,_) qregister) top\<close>
-  apply (simp add: apply_qregister_space_def)
-  sorry
+lemmas translate_to_index_registers_top[translate_to_index_registers] =
+  translate_to_index_registers_template_s_empty[where f=top, OF apply_qregister_space_top, remove_prem]
 
-lemma translate_to_index_registers_bot[translate_to_index_registers]:
-  \<open>bot \<equiv> apply_qregister_space (empty_qregister :: (unit,_) qregister) bot\<close>
-  by (simp add: apply_qregister_space_def)
+lemmas translate_to_index_registers_bot[translate_to_index_registers] =
+  translate_to_index_registers_template_s_empty[where f=bot, OF apply_qregister_space_bot]
+
+lemmas translate_to_index_registers_id[translate_to_index_registers] =
+  translate_to_index_registers_template_o_empty[where f=id_cblinfun, OF apply_qregister_of_id, remove_prem]
+
+lemma translate_to_index_registers_1[translate_to_index_registers]:
+  \<open>1 \<equiv> apply_qregister (empty_qregister :: (unit,_) qregister) id_cblinfun\<close>
+  using translate_to_index_registers_id by (simp flip: id_cblinfun_eq_1)
+
+lemmas translate_to_index_registers_zero[translate_to_index_registers] =
+  translate_to_index_registers_template_o_empty[where f=0, OF apply_qregister_of_0]
+
+lemmas translate_to_index_registers_zero_space[translate_to_index_registers] =
+  translate_to_index_registers_template_s_empty[where f=0, OF apply_qregister_space_of_0]
 
 lemmas translate_to_index_registers_uminus_op[translate_to_index_registers] =
   translate_to_index_registers_template_o[where f=uminus, OF apply_qregister_uminus]
 
 lemmas translate_to_index_registers_uminus_space[translate_to_index_registers] =
-  translate_to_index_registers_template_s[where f=uminus, OF apply_qregister_space_uminus]
+  translate_to_index_registers_template_s_qr[where f=uminus, OF apply_qregister_space_uminus, remove_prem]
 
 lemmas translate_to_index_registers_adj[translate_to_index_registers] =
   translate_to_index_registers_template_o[where f=adj, OF apply_qregister_adj]
+
+lemmas translate_to_index_registers_scaleC[translate_to_index_registers] =
+  translate_to_index_registers_template_o[where f=\<open>scaleC _\<close>, OF apply_qregister_scaleC]
+
+lemmas translate_to_index_registers_scaleR[translate_to_index_registers] =
+  translate_to_index_registers_template_o[where f=\<open>scaleR _\<close>, OF apply_qregister_scaleR]
+
+lemmas translate_to_index_registers_scaleC_space[translate_to_index_registers] =
+  translate_to_index_registers_template_s_qr[where f=\<open>scaleC _\<close>, OF apply_qregister_space_scaleC, remove_prem]
+
+lemmas translate_to_index_registers_scaleR_space[translate_to_index_registers] =
+  translate_to_index_registers_template_s_qr[where f=\<open>scaleR _\<close>, OF apply_qregister_space_scaleR, remove_prem]
+
+lemmas translate_to_index_registers_norm[translate_to_index_registers] =
+  translate_to_index_registers_template_o'_qr[where f=norm, OF apply_qregister_norm, remove_prem]
+
+lemmas translate_to_index_registers_Proj[translate_to_index_registers] =
+  translate_to_index_registers_template_s_o[where f=Proj, OF apply_qregister_Proj]
+
+lemmas translate_to_index_registers_is_Proj[translate_to_index_registers] =
+  translate_to_index_registers_template_o'_qr[where f=is_Proj, OF apply_qregister_is_Proj, remove_prem]
 
 lemmas translate_to_index_registers_kernel[translate_to_index_registers] =
   translate_to_index_registers_template_o_s_qr[where f=Complex_Bounded_Linear_Function.kernel, OF apply_qregister_space_kernel, remove_prem]
 
 lemmas translate_to_index_registers_eigenspace[translate_to_index_registers] =
   translate_to_index_registers_template_o_s_qr[where f=\<open>eigenspace _\<close>, OF apply_qregister_space_eigenspace, remove_prem]
+
+lemmas translate_to_index_registers_orthogonal_spaces[translate_to_index_registers] =
+  translate_to_index_registers_template_ss'[where f=orthogonal_spaces, OF apply_qregister_space_orthogonal_spaces, remove_prem]
+
+lemmas translate_to_index_registers_abs_op[translate_to_index_registers] =
+  translate_to_index_registers_template_o[where f=abs_op, OF apply_qregister_abs_op]
+
+lemmas translate_to_index_registers_sqrt_op[translate_to_index_registers] =
+  translate_to_index_registers_template_o[where f=sqrt_op, OF apply_qregister_sqrt_op]
+
+lemmas translate_to_index_registers_polar_decomposition[translate_to_index_registers] =
+  translate_to_index_registers_template_o[where f=polar_decomposition, OF apply_qregister_polar_decomposition]
+
+lemmas translate_to_index_registers_unitary[translate_to_index_registers] =
+  translate_to_index_registers_template_o'_qr[where f=unitary, OF apply_qregister_unitary, remove_prem]
+
+lemmas translate_to_index_registers_isometry[translate_to_index_registers] =
+  translate_to_index_registers_template_o'_qr[where f=isometry, OF apply_qregister_isometry, remove_prem]
+
+lemmas translate_to_index_registers_partial_isometry[translate_to_index_registers] =
+  translate_to_index_registers_template_o'_qr[where f=partial_isometry, OF apply_qregister_partial_isometry, remove_prem]
+
+(* TODO Inf (not INF), Sup (not SUP), Let, lambda-expr? *)
 
 section \<open>ML code\<close>
 

@@ -115,7 +115,7 @@ next
       by assumption
 qed
 
-(* TODO move *)
+(* TODO already exists: swap_ell2 *)
 definition \<open>Uswap = classical_operator (\<lambda>(x,y). Some(y,x))\<close> for Uswap
 
 lemma 
@@ -149,6 +149,9 @@ lemma Uswap_twice[simp]: \<open>Uswap o\<^sub>C\<^sub>L Uswap = id_cblinfun\<clo
 
 lemma Uswap_unitary[simp]: \<open>unitary Uswap\<close>
   by (simp add: unitaryI)
+
+lemma transform_qregister_Uswap: \<open>transform_qregister Uswap = qswap\<close>
+  sorry
 
 definition index_flip_vector :: "qu2 ell2 \<Rightarrow> qu2 ell2" where \<open>index_flip_vector \<psi> = Uswap *\<^sub>V \<psi>\<close>
 
@@ -273,10 +276,6 @@ lemma distinct_qvars_pred_vars_bot[simp,intro]:
 lemma qregister_raw_apply_qregister[simp]: \<open>qregister_raw (apply_qregister X) \<longleftrightarrow> qregister X\<close>
   apply transfer by simp
 
-  (* TODO move to Prog_Variables *)
-lemma apply_qregister_plus: \<open>apply_qregister X (a+b) = apply_qregister X a + apply_qregister X b\<close>
-  using clinear_apply_qregister[of X]
-  by (rule complex_vector.linear_add)
   
   (* TODO move to Prog_Variables *)
 lemma apply_qregister_scaleC: \<open>apply_qregister X (c *\<^sub>C a) = c *\<^sub>C apply_qregister X a\<close>
@@ -339,23 +338,6 @@ lemma colocal_op_qvars_apply_qregister[simp]:
   using assms
   by (simp add: distinct_qvars_op_vars_def commutant_def qcompatible_commute)
 
-(* TODO to Prog_Var *)
-lemma apply_qregister_inject': \<open>apply_qregister F a = apply_qregister F b \<longleftrightarrow> a = b\<close> if \<open>qregister F\<close>
-  using that apply (transfer fixing: a b)
-  using qregister_raw_inj[of _ UNIV] injD by fastforce
-
-lemma apply_qregister_adj: \<open>apply_qregister F (a*) = (apply_qregister F a)*\<close>
-  apply transfer
-  by (auto simp: non_qregister_raw_def register_adj)
-
-lemma is_Proj_apply_qregister[simp]: \<open>is_Proj (apply_qregister F P) \<longleftrightarrow> is_Proj P\<close> if [register]: \<open>qregister F\<close>
-  by (auto simp add: is_Proj_algebraic apply_qregister_inject apply_qregister_inject' 
-      simp flip: qregister_compose apply_qregister_adj)
-
-lemma is_Proj_apply_qregister': \<open>is_Proj P \<Longrightarrow> is_Proj (apply_qregister F P)\<close>
-  apply (transfer fixing: P)
-  by (auto simp add: register_projector non_qregister_raw_def)
-
 lemma distinct_qvars_pred_vars_apply_qregister_space[simp]:
   assumes [register]: \<open>qregister \<lbrakk>F,G\<rbrakk>\<close>
   shows \<open>distinct_qvars_pred_vars (apply_qregister_space F S) G\<close>
@@ -382,7 +364,7 @@ proof (cases \<open>qregister F\<close>)
     if \<open>Proj S = apply_qregister F A\<close> for A
   proof -
     from that have \<open>is_Proj A\<close>
-      by (metis Proj_is_Proj True is_Proj_apply_qregister)
+      by (metis Proj_is_Proj True apply_qregister_is_Proj)
     have \<open>S = Proj S *\<^sub>S \<top>\<close>
       by simp
     also from that have \<open>\<dots> = apply_qregister F A *\<^sub>S \<top>\<close>
@@ -404,56 +386,6 @@ next
     by (auto simp add: predicate_local_def operator_local_def Proj_inj)
 qed
 
-(* TODO: Move to Prog_Variables *)
-lemma apply_qregister_apply_qregister_space: 
-  \<open>apply_qregister Q A *\<^sub>S apply_qregister_space Q S = apply_qregister_space Q (A *\<^sub>S S)\<close> (is ?goal)
-proof (cases \<open>qregister Q\<close>)
-  case False
-  then have \<open>Q = non_qregister\<close>
-    by (simp add: non_qregister)
-  then show ?thesis
-    by simp
-next
-  case True
-  then have \<open>qregister_raw (apply_qregister Q)\<close>
-    by simp
-  from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis (apply_qregister Q). ?goal\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>U :: ('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2. 
-              unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-    then obtain U :: \<open>('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> where
-      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
-      by auto
-    have \<open>apply_qregister Q A *\<^sub>S apply_qregister_space Q S = apply_qregister Q A *\<^sub>S apply_qregister Q (Proj S) *\<^sub>S \<top>\<close>
-      by (simp add: apply_qregister_space_def)
-    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S U* *\<^sub>S \<top>\<close>
-      by (simp add: decomp sandwich_apply lift_cblinfun_comp[OF unitaryD1] cblinfun_compose_image)
-    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S \<top>\<close>
-      by simp
-    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (\<top> \<otimes>\<^sub>S \<top>)\<close>
-      by simp
-    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S ((Proj S *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
-      by (simp add: tensor_ccsubspace_via_Proj)
-    also have \<open>\<dots> = U *\<^sub>S ((A *\<^sub>S Proj S *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
-      by (metis cblinfun_image_id tensor_ccsubspace_image)
-    also have \<open>\<dots> = U *\<^sub>S ((Proj (A *\<^sub>S S) *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
-      by simp
-    also have \<open>\<dots> = U *\<^sub>S (Proj (A *\<^sub>S S) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (\<top> \<otimes>\<^sub>S \<top>)\<close>
-      by (simp add: tensor_ccsubspace_via_Proj)
-    also have \<open>\<dots> = U *\<^sub>S (Proj (A *\<^sub>S S) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S U* *\<^sub>S \<top>\<close>
-      by simp
-    also have \<open>\<dots> = apply_qregister Q (Proj (A *\<^sub>S S)) *\<^sub>S \<top>\<close>
-      by (simp add: cblinfun_compose_image decomp sandwich_apply)
-    also have \<open>\<dots> = apply_qregister_space Q (A *\<^sub>S S)\<close>
-      by (simp add: apply_qregister_space_def)
-    finally show ?goal
-      by -
-  qed
-  from this[cancel_with_type]
-  show ?thesis 
-    by -
-qed
 
 lemma operator_local_timesOp[intro!]: "operator_local A Q \<Longrightarrow> operator_local B Q \<Longrightarrow> operator_local (A o\<^sub>C\<^sub>L B) Q"
   apply (simp add: operator_local_def)
@@ -469,7 +401,7 @@ proof -
   obtain S' where S_def: \<open>S = apply_qregister_space Q S'\<close>
     by (meson image_iff predicate_local_def)
   show \<open>predicate_local (A *\<^sub>S S) Q\<close>
-    by (simp add: A_def S_def apply_qregister_apply_qregister_space predicate_local_def)
+    by (simp add: A_def S_def predicate_local_def flip:  apply_qregister_space_image)
 qed
 
 subsection \<open>Lifting\<close>
@@ -512,10 +444,10 @@ lemma norm_lift[simp]:
 (* TODO remove [simp]? *)
 lemma imageOp_lift[simp]: "applyOpSpace (liftOp U Q) top = liftSpace (applyOpSpace U top) Q"
   apply (cases \<open>qregister Q\<close>)
-  apply (metis Proj_top apply_qregister_apply_qregister_space apply_qregister_of_id apply_qregister_space_def cblinfun_image_id)
+  apply (metis Proj_top apply_qregister_space_image apply_qregister_of_id apply_qregister_space_def cblinfun_image_id)
   by (simp add: apply_qregister_space_def non_qregister non_qregister.rep_eq non_qregister_raw_def) 
 lemma applyOpSpace_lift[simp]: "applyOpSpace (liftOp U Q) (liftSpace S Q) = liftSpace (applyOpSpace U S) Q"
-   by (simp add: apply_qregister_apply_qregister_space)
+   by (simp flip: apply_qregister_space_image)
 lemma top_lift[simp]: "distinct_qvars Q \<Longrightarrow> liftSpace top Q = top"
   by (simp add: apply_qregister_space_def)
 lemma bot_lift[simp]: "liftSpace bot Q = bot"
@@ -535,12 +467,8 @@ lemma tensor_lift:
       compatible_proj_intersect[of \<open>apply_qregister Q\<close> \<open>apply_qregister R\<close>] apply_qregister_space_def
       flip: imageOp_lift)
 
-(* TODO move to general *)
-lemma complement_injective: \<open>- A = - B \<Longrightarrow> A = B\<close> for A B :: \<open>_ :: orthocomplemented_lattice\<close>
-  using orthocomplemented_lattice_class.ortho_involution by auto
-
 lemma lift_eqSp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "'a subspace" 
-  by (metis Proj_inj Proj_is_Proj Proj_on_own_range apply_qregister_inject' apply_qregister_space_def is_Proj_apply_qregister')
+  by (metis Proj_inj Proj_is_Proj Proj_on_own_range apply_qregister_inject' apply_qregister_space_def apply_qregister_is_Proj')
 lemma lift_eqOp[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q = T\<guillemotright>Q) = (S = T)" for S T :: "('a,'a) l2bounded" 
   by (rule apply_qregister_inject')
 lemma lift_plusOp[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "('a,'a) l2bounded"  
@@ -556,7 +484,7 @@ lemma lift_timesOp[simp]: "S\<guillemotright>Q o\<^sub>C\<^sub>L T\<guillemotrig
 lemma lift_ortho[simp]: "distinct_qvars Q \<Longrightarrow> - (S\<guillemotright>Q) = (- S)\<guillemotright>Q" for S :: "'a ell2 ccsubspace"
   apply (simp add: apply_qregister_space_def Proj_ortho_compl
       flip: imageOp_lift)
-  by (metis (no_types, lifting) Proj_is_Proj Proj_on_own_range apply_qregister_of_id is_Proj_apply_qregister' lift_minusOp range_cblinfun_code_def uminus_Span_code)
+  by (metis (no_types, lifting) Proj_is_Proj Proj_on_own_range apply_qregister_of_id apply_qregister_is_Proj' lift_minusOp range_cblinfun_code_def uminus_Span_code)
 lemma lift_tensorOp: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) o\<^sub>C\<^sub>L (T\<guillemotright>R) = (S \<otimes>\<^sub>o T)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S T :: "(_,_) l2bounded"
   by (simp add: apply_qregister_pair)
 lemma lift_tensorSpace: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (S\<guillemotright>Q) = (S \<otimes> top)\<guillemotright>qregister_pair Q R" for Q :: "'a q2variable" and R :: "'b q2variable" and S :: "_ subspace" 
@@ -564,67 +492,27 @@ lemma lift_tensorSpace: "distinct_qvars (qregister_pair Q R) \<Longrightarrow> (
 lemma lift_id_cblinfun[simp]: "distinct_qvars Q \<Longrightarrow> id_cblinfun\<guillemotright>Q = id_cblinfun" for Q
   by simp
 
-(* TODO: To Tensor *)
-lemma tensor_ccsubspace_INF_left: \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S T = (INF x\<in>X. S x \<otimes>\<^sub>S T)\<close>
-  sorry (* Quicksheets 2023 35-36 *)
+lemmas INF_lift = apply_qregister_space_INF[symmetric]
 
-(* TODO: to Prog_Vars *)
-lemma INF_lift: 
-  assumes [simp]: \<open>qregister Q\<close>
-  shows "(INF x\<in>X. S x\<guillemotright>Q) = (INF x\<in>X. S x)\<guillemotright>Q"
-proof (cases \<open>X = {}\<close>)
-  case True
-  then show ?thesis 
-    by simp
-next
-  case False
-  have \<open>qregister_raw (apply_qregister Q)\<close>
-    by simp
-  from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'z::type = register_decomposition_basis (apply_qregister Q).
-        (INF x\<in>X. S x\<guillemotright>Q) = (INF x\<in>X. S x)\<guillemotright>Q\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>U::('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-    then obtain U :: \<open>('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
-      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
-      by auto
-    from tensor_ccsubspace_INF_left[where X=X and T=\<open>\<top> :: 'z ell2 ccsubspace\<close> and S=S]
-    show \<open>(\<Sqinter>x\<in>X. apply_qregister_space Q (S x)) = apply_qregister_space Q (\<Sqinter>x\<in>X. S x)\<close>
-      by (simp add: apply_qregister_space_def decomp sandwich_apply cblinfun_compose_image
-          unitary_isometry tensor_ccsubspace_via_Proj False
-          flip: cblinfun_image_INF_eq)
-  qed
-  from this[cancel_with_type]
-  show ?thesis
-    by auto
-qed
-lemma SUP_lift: "(SUP x\<in>X. S x\<guillemotright>Q) = (SUP x\<in>X. S x)\<guillemotright>Q"
-  apply (cases \<open>qregister Q\<close>)
-   apply (rule complement_injective)
-   apply (simp add: uminus_SUP INF_lift)
-  by (simp add: non_qregister)
 lemma Cla_inf_lift: "Cla[b] \<sqinter> (S\<guillemotright>Q) = (if b then S else bot)\<guillemotright>Q" by auto
 lemma Cla_plus_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] + (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 lemma Cla_sup_lift: "distinct_qvars Q \<Longrightarrow> Cla[b] \<squnion> (S\<guillemotright>Q) = (if b then top else S)\<guillemotright>Q" by auto
 lemma Proj_lift[simp]: "Proj (S\<guillemotright>Q) = (Proj S)\<guillemotright>Q"
   for Q::"'a q2variable"
-   by (metis Proj_is_Proj Proj_on_own_range Proj_range imageOp_lift is_Proj_apply_qregister')
+   by (metis Proj_is_Proj Proj_on_own_range Proj_range imageOp_lift apply_qregister_is_Proj')
 lemma kernel_lift[simp]: "distinct_qvars Q \<Longrightarrow> kernel (A\<guillemotright>Q) = (kernel A)\<guillemotright>Q" for Q
-  sorry
+  by (simp add: apply_qregister_space_kernel)
 lemma eigenspace_lift[simp]: "distinct_qvars Q \<Longrightarrow> eigenspace a (A\<guillemotright>Q) = (eigenspace a A)\<guillemotright>Q" for Q
   unfolding eigenspace_def apply (subst lift_id_cblinfun[symmetric, of Q], assumption)
   apply (simp del: lift_id_cblinfun)
   by (metis (no_types, lifting) apply_qregister_of_id kernel_lift lift_minusOp scaleC_lift)
 
 lemma lift_plus[simp]: "S\<guillemotright>Q + T\<guillemotright>Q = (S + T)\<guillemotright>Q" for S T :: "'a subspace"
-  using SUP_lift[where Q=Q and X=\<open>{True,False}\<close> and S=\<open>\<lambda> True \<Rightarrow> S | False \<Rightarrow> T\<close>]
-  by auto
+  by (metis apply_qregister_space_plus)
 lemma lift_sup[simp]: "S\<guillemotright>Q \<squnion> T\<guillemotright>Q = (S \<squnion> T)\<guillemotright>Q" for S T :: "'a subspace"  
   using lift_plus by auto
 lemma lift_inf[simp]: "apply_qregister_space Q S \<sqinter> apply_qregister_space Q T = apply_qregister_space Q (S \<sqinter> T)" for S::"'a subspace"
-  apply (cases \<open>qregister Q\<close>)
-  using INF_lift[where Q=Q and X=\<open>{True,False}\<close> and S=\<open>\<lambda> True \<Rightarrow> S | False \<Rightarrow> T\<close>]
-  by (auto simp: non_qregister)
+  by (simp add: apply_qregister_space_inf)
 
 lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
   by (auto simp add: predicate_local_def)
@@ -635,56 +523,8 @@ lemma qregister_invertible_op:
 assumes \<open>qregister F\<close>
 shows \<open>F X invertible \<longleftrightarrow> X invertible\<close> *)
 
-(* TODO move to Prog_Var *)
-lemma apply_qregister_mono: 
-  assumes [simp]: \<open>qregister Q\<close>
-  shows \<open>apply_qregister Q A \<le> apply_qregister Q B \<longleftrightarrow> A \<le> B\<close>
-proof (rule iffI)
-  assume \<open>A \<le> B\<close>
-  then obtain C :: \<open>'a qupdate\<close> where \<open>B - A = C* o\<^sub>C\<^sub>L C\<close>
-    by (metis diff_ge_0_iff_ge sqrt_op_square)
-  then have \<open>apply_qregister Q B - apply_qregister Q A = (apply_qregister Q C)* o\<^sub>C\<^sub>L apply_qregister Q C\<close>
-    by (simp add: lift_minusOp)
-  then show \<open>apply_qregister Q A \<le> apply_qregister Q B\<close>
-    by (metis diff_ge_0_iff_ge positive_cblinfun_squareI)
-next
-  assume asm: \<open>apply_qregister Q A \<le> apply_qregister Q B\<close>
-  have [simp]: \<open>qregister_raw (apply_qregister Q)\<close>
-    by simp
-  from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'z::type = register_decomposition_basis (apply_qregister Q). A \<le> B\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>U::('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-    then obtain U :: \<open>('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
-      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
-      by auto
-    show \<open>A \<le> B\<close>
-    proof (rule cblinfun_leI)
-      fix x
-      obtain y :: \<open>'z ell2\<close> where \<open>norm y = 1\<close>
-        by (meson norm_ket)
-      define BA where \<open>BA = B - A\<close>
-      from asm have QBA_pos: \<open>apply_qregister Q BA \<ge> 0\<close>
-        by (simp add: BA_def flip: lift_minusOp)
-      have \<open>x \<bullet>\<^sub>C (BA *\<^sub>V x) = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C ((BA \<otimes>\<^sub>o id_cblinfun) *\<^sub>V (x \<otimes>\<^sub>s y))\<close>
-        using \<open>norm y = 1\<close> by (simp add: tensor_op_ell2 cnorm_eq_1)
-      also have \<open>\<dots> = (U *\<^sub>V (x \<otimes>\<^sub>s y)) \<bullet>\<^sub>C (apply_qregister Q BA *\<^sub>V U *\<^sub>V (x \<otimes>\<^sub>s y))\<close>
-        by (simp add: decomp sandwich_apply lift_cblinfun_comp[OF unitaryD1]
-            flip: cinner_adj_right)
-      also have \<open>\<dots> \<ge> 0\<close>
-        by (meson QBA_pos cinner_pos_if_pos)
-      finally show \<open>x \<bullet>\<^sub>C (A *\<^sub>V x) \<le> x \<bullet>\<^sub>C (B *\<^sub>V x)\<close>
-        by (simp add: BA_def cblinfun.diff_left cinner_diff_right flip: lift_minusOp)
-    qed
-  qed
-  with this[cancel_with_type]
-  show \<open>A \<le> B\<close>
-    by -
-qed
-
 lemma lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a subspace"
-  by (simp add: apply_qregister_space_def Proj_on_own_range apply_qregister_mono
-      flip: imageOp_lift Proj_mono)
+  by (rule apply_qregister_space_mono)
 
 lemma top_leq_lift: "distinct_qvars Q \<Longrightarrow> top \<le> S\<guillemotright>Q \<longleftrightarrow> top \<le> S"
   apply (subst top_lift[symmetric], assumption) apply (subst lift_leq, assumption) by simp
@@ -746,10 +586,16 @@ lemma move_sup_meas_rule:
 (* lemma span_lift: "distinct_qvars Q \<Longrightarrow> ccspan G \<guillemotright> Q = ccspan {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
    *)
 
+(* TODO move *)
+lemma apply_qregister_space_transform_qregister:
+  assumes [simp]: \<open>unitary U\<close>
+  shows \<open>apply_qregister_space (transform_qregister U) S = U *\<^sub>S S\<close>
+  by (simp add: apply_qregister_transform_qregister apply_qregister_space_def Proj_sandwich)
+
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_qvar Q"
   apply (cases \<open>qregister Q\<close>)
-  apply (simp add: index_flip_subspace_def index_flip_qvar_def)
-  sorry
+  by (simp_all add: index_flip_subspace_def index_flip_qvar_def apply_qregister_space_transform_qregister
+      flip: transform_qregister_Uswap)
 
 (* lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q" *)
 
@@ -902,8 +748,9 @@ section \<open>Measurements\<close>
 
 (* TODO: We have the WOT now, can use that one in the def, maybe... *)
 (* TODO: Why not rephrase this in terms of is_Proj + projs orthogonal? Much easier. *)
-definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
-       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<phi> \<bullet>\<^sub>C (M i *\<^sub>V \<psi>)) = \<phi> \<bullet>\<^sub>C (P *\<^sub>V \<psi>)) \<and> P \<le> id_cblinfun))"
+(* definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
+       \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<phi> \<bullet>\<^sub>C (M i *\<^sub>V \<psi>)) = \<phi> \<bullet>\<^sub>C (P *\<^sub>V \<psi>)) \<and> P \<le> id_cblinfun))" *)
+definition \<open>is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) \<and> (\<forall>i j. i\<noteq>j \<longrightarrow> M i o\<^sub>C\<^sub>L M j = 0))\<close>
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
   unfolding is_measurement_def
   by (auto intro: exI[of _ 0])
@@ -915,20 +762,25 @@ typedef ('a,'b) measurement = "{M::'a\<Rightarrow>('b,'b) l2bounded. is_measurem
 setup_lifting type_definition_measurement
 
 lift_definition mtotal :: "('a,'b) measurement \<Rightarrow> bool" is
-  "\<lambda>M. \<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<phi> \<bullet>\<^sub>C (M i *\<^sub>V \<psi>)) = (\<phi> \<bullet>\<^sub>C \<psi>)".
+  "\<lambda>M. (SUP x. M x *\<^sub>S \<top>) = \<top>".
 
 lemma is_Proj_mproj[simp]: "is_Proj (mproj M i)"
   using mproj[of M] unfolding is_measurement_def by auto
 
 lift_definition computational_basis :: "('a, 'a) measurement" is
-  "\<lambda>i. proj (ket i)"
-  sorry
+  "\<lambda>i. selfbutterket i"
+  by (simp add: is_measurement_def butterfly_is_Proj)
 
-lemma mproj_computational_basis[simp]: "mproj computational_basis x = proj (ket x)"
+lemma mproj_computational_basis[simp]: "mproj computational_basis x = selfbutterket x"
   unfolding computational_basis.rep_eq by simp
 
-lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
+(* TODO move *)
+lemma SUP_ccspan: \<open>(SUP x\<in>X. ccspan (S x)) = ccspan (\<Union>x\<in>X. S x)\<close>
   sorry
+
+lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
+  apply transfer
+  by (auto simp: butterfly_eq_proj SUP_ccspan UNION_singleton_eq_range)
 
 lift_definition binary_measurement :: "('a,'a) l2bounded \<Rightarrow> (bit,'a) measurement" is
   "\<lambda>(P::('a,'a) l2bounded) (b::bit). (if is_Proj P then (if b=1 then P else id_cblinfun-P) else 0)"
@@ -936,9 +788,8 @@ proof (rename_tac P, case_tac "is_Proj P")
   fix P :: "('a ell2, 'a ell2) bounded"
   assume [simp]: "is_Proj P"
   show "is_measurement (\<lambda>b::bit. if is_Proj P then if b = 1 then P else id_cblinfun - P else 0)"
-    apply simp
-    unfolding is_measurement_def apply (auto intro!: exI[of _ id_cblinfun] simp: UNIV_bit cinner_add_right[symmetric])
-    by (metis id_cblinfun_apply cblinfun.add_left diff_add_cancel)
+    by (auto simp: is_measurement_def cblinfun_compose_minus_right cblinfun_compose_minus_left
+        is_Proj_idempotent)
 next
   fix P :: "('a ell2, 'a ell2) bounded"
   assume [simp]: "\<not> is_Proj P"
@@ -953,10 +804,9 @@ lemma binary_measurement_false[simp]: "is_Proj P \<Longrightarrow> mproj (binary
   unfolding binary_measurement.rep_eq by auto
 
 lemma mtotal_binary_measurement[simp]: "mtotal (binary_measurement P) = is_Proj P"
-  apply (transfer fixing: P) apply (cases "is_Proj P") apply (auto simp: UNIV_bit)
-  apply (metis id_cblinfun_apply cblinfun.add_left cinner_add_right diff_add_cancel)
-  by (rule exI[of _ "ket undefined"], rule exI[of _ "ket undefined"], simp)
-
+  apply (transfer fixing: P)
+  apply (auto simp: UNIV_bit)
+  by (metis Proj_on_own_range add.commute complemented_lattice_class.sup_compl_top plus_ccsubspace_def range_cblinfun_code_def uminus_Span_code)
 
 section \<open>Quantum predicates (ctd.)\<close>
 
@@ -972,7 +822,7 @@ definition space_div :: "'b ell2 ccsubspace \<Rightarrow> 'a ell2 \<Rightarrow> 
 lemma space_div_lift:
   \<open>space_div (apply_qregister_space FG A') \<psi> (qregister_chain FG G')
            = apply_qregister_space FG (space_div A' \<psi> G')\<close>
-  by (simp add: space_div_def SUP_lift)
+  by (simp add: space_div_def apply_qregister_space_SUP)
 
 lemma leq_space_div[simp]: "distinct_qvars_pred_vars A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) \<longleftrightarrow> (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
   sorry
@@ -982,6 +832,8 @@ lift_definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b 
   sorry
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(qregister_pair Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
+(* TODO: Missing assumption: "qcompatible Q R". Add and test whether this breaks something. *)
+  apply (subst space_div_def)
   sorry
 
 lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top"
@@ -1148,6 +1000,7 @@ lemma quantum_equality_full_swap_left:
   assumes [simp]: "distinct_qvars (qregister_pair (qregister_pair Q R) S)"
   shows "quantum_equality_full U (qregister_pair Q R) V S
        = quantum_equality_full (U \<cdot> comm_op) (qregister_pair R Q) V S"
+  unfolding quantum_equality_full_def
   sorry
 (* proof -
   have "quantum_equality_full U (variable_concat Q R) V S

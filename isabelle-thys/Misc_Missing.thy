@@ -358,4 +358,14 @@ end
 lemma div_leq_simp: \<open>(i div n < m) \<longleftrightarrow> i < n*m\<close> if \<open>n \<noteq> 0\<close> for n m :: nat
   by (simp add: div_less_iff_less_mult ordered_field_class.sign_simps(5) that zero_less_iff_neq_zero)
 
+(* TODO: optionally: specify method, specify which prem *)
+attribute_setup remove_prem = \<open>
+  Scan.succeed (Thm.rule_attribute [] (fn context => fn thm => let
+    val ctxt = Context.proof_of context
+    val tac = assume_tac ctxt 1
+    in tac thm |> Seq.hd end))\<close>
+
+lemma complement_injective: \<open>- A = - B \<Longrightarrow> A = B\<close> for A B :: \<open>_ :: orthocomplemented_lattice\<close>
+  using orthocomplemented_lattice_class.ortho_involution by auto
+
 end
