@@ -115,51 +115,20 @@ next
       by assumption
 qed
 
-(* TODO already exists: swap_ell2 *)
-definition \<open>Uswap = classical_operator (\<lambda>(x,y). Some(y,x))\<close> for Uswap
-
 lemma 
-  shows Uswap_ket[simp]: \<open>(Uswap :: ('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _)*\<^sub>V ket (x,y) = ket (y,x)\<close>
-  and Uswap_adj[simp]: \<open>(Uswap :: ('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _)* = Uswap\<close>
-proof -
-  have inj: \<open>inj (\<lambda>(x::'a, y::'b). (y, x))\<close>
-    by (simp add: swap_inj_on)
-  then have inj_map: \<open>inj_map (\<lambda>(x::'a, y::'b). Some (y, x))\<close>
-    by (simp add: o_def case_prod_unfold flip: inj_map_total)
-  have surj: \<open>surj (\<lambda>(x::'a, y::'b). (y, x))\<close>
-    by fast
-  have inv: \<open>inv (\<lambda>(x::'a, y::'b). (y, x)) = (\<lambda>(x, y). (y, x))\<close>
-    by (simp add: inj inj_imp_inv_eq)
-  then have inv_map: \<open>inv_map (\<lambda>(x::'a, y::'b). Some (y, x)) = (\<lambda>(x, y). Some (y, x))\<close>
-    unfolding case_prod_unfold
-    apply (subst inv_map_total[unfolded o_def])
-    using surj
-    by (auto simp add: case_prod_unfold surj simp flip: inv_map_total[unfolded o_def])
-  have ex[simp]: \<open>classical_operator_exists (\<lambda>(x::'a, y::'b). Some (y, x))\<close>
-    using inj_map by (rule classical_operator_exists_inj)
-  show \<open>Uswap *\<^sub>V ket (x,y) = ket (y,x)\<close>
-    by (simp add: Uswap_def classical_operator_ket)
-  show \<open>(Uswap :: ('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _)* = Uswap\<close>
-    using inv_map inj_map by (simp add: Uswap_def classical_operator_adjoint inj)
-qed
+  shows swap_ell2_ket[simp]: \<open>(swap_ell2 :: ('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _)*\<^sub>V ket (x,y) = ket (y,x)\<close>
+  by (metis swap_ell2_tensor tensor_ell2_ket)
 
-lemma Uswap_twice[simp]: \<open>Uswap o\<^sub>C\<^sub>L Uswap = id_cblinfun\<close>
-  apply (rule equal_ket)
-  by auto
-
-lemma Uswap_unitary[simp]: \<open>unitary Uswap\<close>
-  by (simp add: unitaryI)
-
-lemma transform_qregister_Uswap: \<open>transform_qregister Uswap = qswap\<close>
+lemma transform_qregister_swap_ell2: \<open>transform_qregister swap_ell2 = qswap\<close>
   sorry
 
-definition index_flip_vector :: "qu2 ell2 \<Rightarrow> qu2 ell2" where \<open>index_flip_vector \<psi> = Uswap *\<^sub>V \<psi>\<close>
+definition index_flip_vector :: "qu2 ell2 \<Rightarrow> qu2 ell2" where \<open>index_flip_vector \<psi> = swap_ell2 *\<^sub>V \<psi>\<close>
 
 definition swap_variables_vector :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 \<Rightarrow> qu2 ell2" where
-  \<open>swap_variables_vector Q R \<psi> = (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q Uswap) *\<^sub>V \<psi>\<close>
+  \<open>swap_variables_vector Q R \<psi> = (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q swap_ell2) *\<^sub>V \<psi>\<close>
 
 definition index_flip_subspace :: "qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace"
-  where \<open>index_flip_subspace S = Uswap *\<^sub>S S\<close>
+  where \<open>index_flip_subspace S = swap_ell2 *\<^sub>S S\<close>
 
 lemma index_flip_subspace_top[simp]: "index_flip_subspace top = top"
   by (simp add: index_flip_subspace_def)
@@ -172,7 +141,7 @@ lemma index_flip_subspace_INF[simp]: \<open>index_flip_subspace (INF i\<in>A. S 
   by (simp add: index_flip_subspace_def)
 
 definition swap_variables_subspace :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 ccsubspace \<Rightarrow> qu2 ell2 ccsubspace" where
-  \<open>swap_variables_subspace Q R S = (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q Uswap) *\<^sub>S S\<close>
+  \<open>swap_variables_subspace Q R S = (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q swap_ell2) *\<^sub>S S\<close>
 
 lemma index_flip_subspace_zero[simp]: "index_flip_subspace 0 = 0"
   by simp
@@ -595,7 +564,7 @@ lemma apply_qregister_space_transform_qregister:
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_qvar Q"
   apply (cases \<open>qregister Q\<close>)
   by (simp_all add: index_flip_subspace_def index_flip_qvar_def apply_qregister_space_transform_qregister
-      flip: transform_qregister_Uswap)
+      flip: transform_qregister_swap_ell2)
 
 (* lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q" *)
 
@@ -1162,7 +1131,7 @@ lemmas X_X[simp] = pauliXX
 
 lemmas adjoint_H[simp] = hada_adj
 
-lemma H_H[simp]: "hadamard \<cdot> hadamard = id_cblinfun"
+lemma H_H[simp]: "hadamard o\<^sub>C\<^sub>L hadamard = id_cblinfun"
   sorry
 
 lemma unitaryH[simp]: "unitary hadamard"
