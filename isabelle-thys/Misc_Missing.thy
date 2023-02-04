@@ -1,6 +1,8 @@
 theory Misc_Missing
-  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality" Missing_Bounded_Operators Registers.Misc
-begin
+  imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality" 
+    (* Missing_Bounded_Operators *) Registers.Misc
+    Registers.Axioms_Classical
+begin                                                                         
 
 section \<open>Misc\<close>
 
@@ -347,6 +349,15 @@ lemma local_defE: "(\<And>x. x=y \<Longrightarrow> P) \<Longrightarrow> P" by me
 lemma inv_comp_eqI: \<open>inv f o g = h\<close> if \<open>inj f\<close> and \<open>g = f o h\<close> for f g
   using that(1) that(2) by fastforce
 
+
+class eenum = enum +
+  fixes enum_nth :: \<open>nat \<Rightarrow> 'a\<close>
+  fixes enum_index :: \<open>'a \<Rightarrow> nat\<close>
+  assumes enum_nth_enum[simp]: \<open>\<And>i. i < CARD('a) \<Longrightarrow> Enum.enum ! i = enum_nth i\<close>
+  assumes enum_nth_invalid: \<open>\<And>i. i \<ge> CARD('a) \<Longrightarrow> enum_nth i = enum_nth 0\<close> (* To get enum_index_nth below *)
+  assumes enum_nth_index[simp]: \<open>\<And>a. enum_nth (enum_index a) = a\<close>
+  assumes enum_index_bound[simp]: \<open>\<And>a. enum_index a < CARD('a)\<close>
+
 instantiation bit :: eenum begin
 definition \<open>enum_index_bit (x::bit) = (if x=1 then 1 else 0 :: nat)\<close>
 definition \<open>enum_nth_bit (i::nat) = (if i=1 then 1 else 0 :: bit)\<close>
@@ -367,5 +378,335 @@ attribute_setup remove_prem = \<open>
 
 lemma complement_injective: \<open>- A = - B \<Longrightarrow> A = B\<close> for A B :: \<open>_ :: orthocomplemented_lattice\<close>
   using orthocomplemented_lattice_class.ortho_involution by auto
+
+definition \<open>partial_fun_compatible f g \<longleftrightarrow> (\<forall>x. f x = None \<or> g x = None \<or> f x = g x)\<close>
+
+definition \<open>option_Sup X = the_default None (X-{None})\<close>
+definition \<open>partial_fun_Sup F x = option_Sup ((\<lambda>f. f x) ` F)\<close>
+
+lemma partial_fun_compatible_refl[simp]: \<open>partial_fun_compatible f f\<close>
+  by (simp add: partial_fun_compatible_def)
+
+lemma option_Sup_empty[simp]: \<open>option_Sup {} = None\<close>
+  by (simp add: option_Sup_def)
+
+lemma option_Sup_None[simp]: \<open>option_Sup {None} = None\<close>
+  by (simp add: option_Sup_def)
+
+lemma option_Sup_Some[simp]: \<open>option_Sup {Some x} = Some x\<close>
+  by (simp add: option_Sup_def)
+
+lemma map_option_option_Sup:
+  assumes \<open>inj f\<close>
+  shows \<open>map_option f (option_Sup X) = option_Sup (map_option f ` X)\<close>
+proof -
+  consider (empty) \<open>X = {}\<close> | (1) \<open>card X = 1\<close> | (2) \<open>card X = 2\<close> | (3) \<open>card X \<ge> 3\<close> | (infinite) \<open>infinite X\<close>
+    by (metis One_nat_def Suc_1 card_seteq empty_subsetI le0 not_less_eq_eq numeral_nat(3) verit_la_disequality)
+  then
+  (* The following "easy" case distinction was a surprisingly tricky manual proof. Is there an easier way? *)
+  consider (empty) \<open>X = {}\<close> | (none) \<open>X = {None}\<close>
+    | (single) x where \<open>X = {Some x}\<close> | (single') x where \<open>X = {None, Some x}\<close> 
+    | (multiple) x y where \<open>{Some x, Some y} \<subseteq> X\<close> and \<open>x \<noteq> y\<close>
+  proof cases
+    case empty
+    moreover assume \<open>X = {} \<Longrightarrow> thesis\<close>
+    ultimately show thesis
+      by simp
+  next
+    case 1
+    then obtain x where \<open>X = {x}\<close>
+      using card_1_singletonE by blast
+    moreover assume \<open>X = {None} \<Longrightarrow> thesis\<close>
+    moreover assume \<open>X = {Some x} \<Longrightarrow> thesis\<close> for x
+    ultimately show thesis
+      by auto
+  next
+    case 2
+    then obtain x y where X: \<open>X = {x,y}\<close> and \<open>x \<noteq> y\<close> and \<open>y \<noteq> None\<close>
+      by (metis card_2_iff doubleton_eq_iff)
+    assume single': \<open>X = {None, Some x} \<Longrightarrow> thesis\<close> for x
+    assume multiple: \<open>{Some x', Some y'} \<subseteq> X \<Longrightarrow> x' \<noteq> y' \<Longrightarrow> thesis\<close> for x' y'
+    show thesis
+      apply (cases x; cases y)
+      using X  single' multiple
+      using \<open>x \<noteq> y\<close>
+      by auto 
+  next
+    case 3
+    then obtain x y z where \<open>x \<in> X\<close> and \<open>y \<in> X\<close> and \<open>z \<in> X\<close> and \<open>x \<noteq> y\<close> and \<open>x \<noteq> z\<close> and \<open>y \<noteq> z\<close>
+      by (auto simp add: numeral_3_eq_3 card_le_Suc_iff)
+    moreover assume multiple: \<open>{Some x', Some y'} \<subseteq> X \<Longrightarrow> x' \<noteq> y' \<Longrightarrow> thesis\<close> for x' y'
+    ultimately show thesis
+      apply (cases x; cases y; cases z)
+      by auto
+  next
+    case infinite
+    then obtain X' where \<open>card X' = 3\<close> and \<open>X' \<subseteq> X\<close>
+      using infinite_arbitrarily_large by blast
+    then obtain x y z where \<open>x \<in> X'\<close> and \<open>y \<in> X'\<close> and \<open>z \<in> X'\<close> and \<open>x \<noteq> y\<close> and \<open>x \<noteq> z\<close> and \<open>y \<noteq> z\<close>
+      by (auto simp add: numeral_3_eq_3 card_Suc_eq)
+    moreover assume multiple: \<open>{Some x', Some y'} \<subseteq> X \<Longrightarrow> x' \<noteq> y' \<Longrightarrow> thesis\<close> for x' y'
+    then have \<open>{Some x', Some y'} \<subseteq> X' \<Longrightarrow> x' \<noteq> y' \<Longrightarrow> thesis\<close> for x' y'
+      using \<open>X' \<subseteq> X\<close> by auto
+    ultimately show thesis
+      apply (cases x; cases y; cases z)
+      by auto
+  qed
+  then show ?thesis
+  proof cases
+    case empty
+    then show ?thesis by simp
+  next
+    case none
+    then show ?thesis by simp
+  next
+    case single
+    then show ?thesis by simp
+  next
+    case single'
+    then show ?thesis by (simp add: option_Sup_def)
+  next
+    case multiple
+    then have \<open>card (X - {None}) \<noteq> 1\<close>
+      by (smt (verit) Diff_eq_empty_iff card_1_singletonE insert_Diff_if insert_absorb insert_iff insert_not_empty option.discI option.inject)
+    then have 1: \<open>option_Sup X = None\<close>
+      by (simp add: option_Sup_def the_default_def)
+    have \<open>{Some (f x), Some (f y)} \<subseteq> map_option f ` X\<close>
+      by (metis empty_subsetI imageI insert_subset multiple(1) option.map(2))
+    moreover have \<open>f x \<noteq> f y\<close>
+      by (simp add: assms inj_eq multiple(2))
+    ultimately have \<open>card ((map_option f ` X) - {None}) \<noteq> 1\<close>
+      by (smt (verit) Diff_empty Diff_insert0 card_1_singletonE insert_Diff insert_iff insert_subset option.discI option.inject singleton_insert_inj_eq')
+    then have 2: \<open>option_Sup (map_option f ` X) = None\<close>
+      by (simp add: option_Sup_def the_default_def)
+    from 1 2 show ?thesis
+      by simp
+  qed
+qed
+
+definition pairwise_all :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a set \<Rightarrow> bool"
+  where "pairwise_all R S \<longleftrightarrow> (\<forall>x \<in> S. \<forall>y \<in> S. R x y)"
+
+definition \<open>map_commutant F = {x. \<forall>y\<in>F. x \<circ>\<^sub>m y = y \<circ>\<^sub>m x}\<close>
+
+lemma map_commutant_mult: \<open>a \<circ>\<^sub>m b \<in> map_commutant X\<close> if \<open>a \<in> map_commutant X\<close> and \<open>b \<in> map_commutant X\<close>
+  using that 
+  apply (auto simp: map_commutant_def comp_update_assoc)
+  by (simp flip: comp_update_assoc)
+
+lemma map_commutant_antimono: \<open>X \<subseteq> Y \<Longrightarrow> map_commutant X \<supseteq> map_commutant Y\<close>
+  by (auto simp add: map_commutant_def)
+
+lemma double_map_commutant_grows: \<open>X \<subseteq> map_commutant (map_commutant X)\<close>
+  by (auto simp add: map_commutant_def)
+
+lemma triple_map_commutant[simp]: \<open>map_commutant (map_commutant (map_commutant X)) = map_commutant X\<close>
+  by (auto simp: map_commutant_def)
+
+lemma set_compr_2_image_collect: \<open>{f x y |x y. P x y} = case_prod f ` Collect (case_prod P)\<close>
+  by fast
+lemma set_compr_4_image_collect: \<open>{f x y z w |x y z w. P x y z w} = (\<lambda>(x,y,z,w). f x y z w) ` Collect (\<lambda>(x,y,z,w). P x y z w)\<close>
+  by (auto simp: image_def)
+
+lemma closure_image_closure: \<open>continuous_on (closure S) f \<Longrightarrow> closure (f ` closure S) = closure (f ` S)\<close>
+  by (smt (verit) closed_closure closure_closure closure_mono closure_subset image_closure_subset image_mono set_eq_subset)
+
+lemma closedin_vimage:
+  assumes \<open>closedin U S\<close>
+  assumes \<open>continuous_map T U f\<close>
+  shows \<open>closedin T (topspace T \<inter> (f -` S))\<close>
+  by (meson assms(1) assms(2) continuous_map_closedin_preimage_eq)
+
+lemma join_forall: \<open>(\<forall>x. P x) \<and> (\<forall>x. Q x) \<longleftrightarrow> (\<forall>x. P x \<and> Q x)\<close>
+  by auto
+
+lemma closedin_singleton: 
+  assumes \<open>hausdorff T\<close> and \<open>x \<in> topspace T\<close>
+  shows \<open>closedin T {x}\<close>
+proof -
+  obtain U where openU: \<open>openin T (U y)\<close> and x_not_U: \<open>x \<notin> U y\<close> and yU: \<open>y \<in> U y\<close> if \<open>x \<noteq> y\<close> and \<open>y \<in> topspace T\<close> for y
+    apply atomize_elim unfolding join_forall apply (rule choice)
+    using assms(1)[unfolded hausdorff_def, rule_format, OF assms(2)]
+    by auto
+  have \<open>topspace T - {x} = (\<Union>y\<in>topspace T - {x}. U y)\<close>
+    using yU openU x_not_U apply auto
+    using openin_subset by fastforce
+  also have \<open>openin T \<dots>\<close>
+    using openU by fastforce
+  finally have \<open>openin T (topspace T - {x})\<close>
+    by -
+  then show ?thesis
+    using assms(2) closedin_def by blast
+qed
+
+
+lemma option_Sup_insert_None: \<open>{option_Sup {x, None}, None} = {x, None}\<close>
+  apply (cases x)
+  by (simp_all add: option_Sup_def insert_Diff_if)
+
+lemma map_comp_partial_fun_Sup_right:
+  fixes X :: \<open>('a \<rightharpoonup> 'b) set\<close> and a :: \<open>'b \<rightharpoonup> 'c\<close>
+  assumes \<open>pairwise_all partial_fun_compatible X\<close>
+  shows \<open>a \<circ>\<^sub>m partial_fun_Sup X = partial_fun_Sup (map_comp a ` X)\<close>
+proof (rule ext, rename_tac b)
+  fix b
+  show \<open>(a \<circ>\<^sub>m partial_fun_Sup X) b = partial_fun_Sup ((\<circ>\<^sub>m) a ` X) b\<close>
+  proof (cases \<open>(\<lambda>f. f b) ` X = {None} \<or> X = {}\<close>)
+    case True
+    have \<open>(a \<circ>\<^sub>m partial_fun_Sup X) b = None\<close>
+      using True by (auto simp add: partial_fun_Sup_def)
+    also have \<open>\<dots> = option_Sup ((a \<circ>\<^sub>m id) ` (\<lambda>f. f b) ` X)\<close>
+      using True by auto
+    also have \<open>\<dots> = partial_fun_Sup ((\<circ>\<^sub>m) a ` X) b\<close>
+      by (simp add: partial_fun_Sup_def image_image map_comp_def)
+    finally show ?thesis
+      by -
+  next
+    case False
+    then obtain x where \<open>x \<in> X\<close> and \<open>x b \<noteq> None\<close>
+      apply atomize_elim apply auto
+      by (metis imageI)
+    then obtain c where \<open>x b = Some c\<close>
+      by blast
+    with assms \<open>x \<in> X\<close>
+    have fbX: \<open>(\<lambda>f. f b) ` X - {None} = {Some c}\<close>
+      apply (auto intro!: image_eqI[of _ _ x] simp: pairwise_all_def partial_fun_compatible_def)
+      by fastforce
+
+    have \<open>{(a \<circ>\<^sub>m partial_fun_Sup X) b, None} = (map_comp a id) ` {partial_fun_Sup X b, None}\<close>
+      by (simp add: map_comp_def)
+    also have \<open>\<dots> = (a \<circ>\<^sub>m id) ` {Some c, None}\<close>
+      apply (rule arg_cong[where f=\<open>image (a \<circ>\<^sub>m id)\<close>])
+      by (simp add: fbX partial_fun_Sup_def option_Sup_def)
+    also have \<open>\<dots> = {a c, None}\<close>
+      by simp
+    also have \<open>\<dots> = {option_Sup ((a \<circ>\<^sub>m id) ` {Some c, None}), None}\<close>
+      by (simp add: option_Sup_insert_None)
+    also have \<open>\<dots> = {option_Sup ((a \<circ>\<^sub>m id) ` (insert None ((\<lambda>f. f b) ` X))), None}\<close>
+      by (smt (verit, ccfv_threshold) fbX insert_Diff_single insert_commute)
+    also have \<open>\<dots> = {option_Sup ((a \<circ>\<^sub>m id) ` (\<lambda>f. f b) ` X), None}\<close>
+      by (simp add: option_Sup_def)
+    also have \<open>\<dots> = {partial_fun_Sup ((\<circ>\<^sub>m) a ` X) b, None}\<close>
+      by (simp add: partial_fun_Sup_def image_image map_comp_def)
+    finally  show \<open>(a \<circ>\<^sub>m partial_fun_Sup X) b = partial_fun_Sup ((\<circ>\<^sub>m) a ` X) b\<close>
+      by (metis doubleton_eq_iff)
+  qed
+qed
+
+lemma option_Sup_map_empty_image[simp]: \<open>option_Sup (Map.empty ` X) = None\<close>
+proof (cases \<open>X = {}\<close>)
+  case True
+  then show ?thesis
+    by (simp add: option_Sup_def)
+next
+  case False
+  then have \<open>Map.empty ` X = {None :: 'a option}\<close>
+    by auto
+  then show ?thesis
+    by simp
+qed
+
+lemma map_comp_partial_fun_Sup_left:
+  fixes X :: \<open>('a \<rightharpoonup> 'b) set\<close> and a :: \<open>'c \<rightharpoonup> 'a\<close>
+  shows \<open>partial_fun_Sup X \<circ>\<^sub>m a = partial_fun_Sup ((\<lambda>x. x \<circ>\<^sub>m a) ` X)\<close>
+proof (rule ext)
+  fix b
+  show \<open>(partial_fun_Sup X \<circ>\<^sub>m a) b = partial_fun_Sup ((\<lambda>x. x \<circ>\<^sub>m a) ` X) b\<close>
+    apply (cases \<open>a b\<close>)
+    by (simp_all add: partial_fun_Sup_def[abs_def] image_image)
+qed
+
+lemma map_commutant_Sup_closed:
+  fixes X Z
+  defines \<open>\<FF> \<equiv> map_commutant Z\<close>
+  assumes \<open>X \<subseteq> \<FF>\<close>
+  assumes compat: \<open>pairwise_all partial_fun_compatible X\<close>
+  shows \<open>partial_fun_Sup X \<in> \<FF>\<close>
+proof (unfold \<FF>_def map_commutant_def, intro CollectI ballI, rename_tac x)
+  fix x
+  assume \<open>x \<in> Z\<close>
+  with \<open>X \<subseteq> \<FF>\<close>
+  have \<open>(\<lambda>y. y \<circ>\<^sub>m x) ` X = (\<lambda>y. x \<circ>\<^sub>m y) ` X\<close>
+    by (force simp add: \<FF>_def map_commutant_def)
+  then show \<open>(partial_fun_Sup X \<circ>\<^sub>m x) = (x \<circ>\<^sub>m partial_fun_Sup X)\<close>
+    by (simp add: map_comp_partial_fun_Sup_right[OF compat] map_comp_partial_fun_Sup_left)
+qed
+
+lemma partial_fun_Sup_update1: \<open>a = partial_fun_Sup {update1 x y | x y. a x = Some y}\<close>
+proof (rule ext)
+  fix w
+  consider (empty) \<open>a = Map.empty\<close> 
+    | (none) u v where \<open>a w = None\<close> \<open>a v = Some u\<close>
+    | (only) z where \<open>a = update1 w z\<close>
+    | (some) z u v where \<open>a w = Some z\<close> \<open>a v = Some u\<close> \<open>v \<noteq> w\<close>
+  proof atomize_elim
+    let ?thesis = \<open>a = Map.empty \<or> (\<exists>v u. a w = None \<and> a v = Some u) \<or> (\<exists>z. a = update1 w z)
+                                 \<or> (\<exists>z v u. a w = Some z \<and> a v = Some u \<and> v \<noteq> w)\<close>
+    consider (empty) \<open>a = Map.empty\<close> | (none) \<open>a \<noteq> Map.empty\<close> \<open>a w = None\<close>
+      | (two_some) z where \<open>a w = Some z\<close> \<open>a \<noteq> update1 w z\<close>
+      | (update1) z where \<open>a = update1 w z\<close>
+      by auto
+    then show ?thesis
+    proof cases
+      case empty
+      then show ?thesis by simp
+    next
+      case none
+      then show ?thesis by auto
+    next
+      case two_some
+      then obtain v where \<open>a v \<noteq> None\<close> \<open>v \<noteq> w\<close>
+        apply atomize_elim unfolding update1_def
+        by fastforce
+      with two_some show ?thesis
+        by auto
+    next
+      case update1
+      then show ?thesis by auto
+    qed
+  qed
+  then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+  proof cases
+    case empty
+    then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+      by (auto intro!:  simp add: case_prod_beta partial_fun_Sup_def)
+  next
+    case (none u v)
+    then have \<open>(\<lambda>(x,y). update1 x y w) ` {(x, y). a x = Some y} = {None}\<close>
+      by (auto intro!: image_eqI simp add: case_prod_beta update1_def)
+    then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+      by (simp add: none partial_fun_Sup_def image_image set_compr_2_image_collect case_prod_beta)
+  next
+    case (only z)
+    then have \<open>(\<lambda>(x,y). update1 x y w) ` {(x, y). a x = Some y} = {Some z}\<close>
+      by (auto intro!: image_eqI simp add: case_prod_beta update1_def)
+    then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+      by (simp add: only partial_fun_Sup_def image_image case_prod_beta update1_def)
+  next
+    case (some z u v)
+    then have \<open>(\<lambda>(x,y). update1 x y w) ` {(x, y). a x = Some y} = {None, Some z}\<close>
+      by (auto intro: image_eqI[where x=\<open>(w,z)\<close>]
+          simp add: case_prod_beta update1_def)
+    then show \<open>a w = partial_fun_Sup {update1 x y | x y. a x = Some y} w\<close>
+      by (simp add: some partial_fun_Sup_def image_image set_compr_2_image_collect case_prod_beta option_Sup_def)
+  qed
+qed
+
+lemma partial_fun_compatible_update1:
+  \<open>pairwise_all partial_fun_compatible {update1 x y | x y. a x = Some y}\<close>
+  apply (auto simp: pairwise_all_def partial_fun_compatible_def update1_def)
+  by (metis option.inject option.simps(3))
+
+
+lemma Some_map_comp[simp]: \<open>Some \<circ>\<^sub>m f = f\<close>
+  apply (rule ext, case_tac \<open>f x\<close>)
+  by (auto simp: map_comp_def)
+
+lemma map_comp_Some[simp]: \<open>f \<circ>\<^sub>m Some = f\<close>
+  apply (rule ext, case_tac \<open>f x\<close>)
+  by (auto simp: map_comp_def)
+
+lemma compare_all_eqI: \<open>(\<And>x. a = x \<longleftrightarrow> b = x) \<Longrightarrow> a = b\<close>
+  by auto
 
 end
