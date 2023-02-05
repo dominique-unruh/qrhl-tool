@@ -119,8 +119,20 @@ lemma
   shows swap_ell2_ket[simp]: \<open>(swap_ell2 :: ('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _)*\<^sub>V ket (x,y) = ket (y,x)\<close>
   by (metis swap_ell2_tensor tensor_ell2_ket)
 
+lemma apply_qregister_fst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
+  by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
+
+lemma apply_qregister_snd: \<open>apply_qregister qSnd a = id_cblinfun \<otimes>\<^sub>o a\<close>
+  by (simp add: Laws_Quantum.Snd_def qSnd.rep_eq)
+
+lemma apply_qregister_qswap: \<open>apply_qregister qswap (a \<otimes>\<^sub>o b) = b \<otimes>\<^sub>o a\<close>
+  by (simp add: qswap_def apply_qregister_pair apply_qregister_fst apply_qregister_snd
+      comp_tensor_op)
+
 lemma transform_qregister_swap_ell2: \<open>transform_qregister swap_ell2 = qswap\<close>
-  sorry
+  apply (rule qregister_eqI_tensor_op)
+  by (auto simp: apply_qregister_transform_qregister apply_qregister_qswap
+      swap_tensor_op sandwich_apply)
 
 definition index_flip_vector :: "qu2 ell2 \<Rightarrow> qu2 ell2" where \<open>index_flip_vector \<psi> = swap_ell2 *\<^sub>V \<psi>\<close>
 
@@ -745,7 +757,14 @@ lemma mproj_computational_basis[simp]: "mproj computational_basis x = selfbutter
 
 (* TODO move *)
 lemma SUP_ccspan: \<open>(SUP x\<in>X. ccspan (S x)) = ccspan (\<Union>x\<in>X. S x)\<close>
-  sorry
+proof (rule SUP_eqI)
+  show \<open>ccspan (S x) \<le> ccspan (\<Union>x\<in>X. S x)\<close> if \<open>x \<in> X\<close> for x
+    apply (rule ccspan_mono)
+    using that by auto
+  show \<open>ccspan (\<Union>x\<in>X. S x) \<le> y\<close> if \<open>\<And>x. x \<in> X \<Longrightarrow> ccspan (S x) \<le> y\<close> for y
+    apply (intro ccspan_leqI UN_least)
+    using that ccspan_superset by (auto simp: less_eq_ccsubspace.rep_eq)
+qed
 
 lemma mtotal_computational_basis [simp]: "mtotal computational_basis"
   apply transfer
@@ -794,16 +813,58 @@ lemma space_div_lift:
   by (simp add: space_div_def apply_qregister_space_SUP)
 
 lemma leq_space_div[simp]: "distinct_qvars_pred_vars A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) \<longleftrightarrow> (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
-  sorry
+proof (rule iffI)
+  assume [simp]: \<open>distinct_qvars_pred_vars A Q\<close>
+  then have \<open>Proj A o\<^sub>C\<^sub>L apply_qregister Q x = apply_qregister Q x o\<^sub>C\<^sub>L Proj A\<close> for x
+    by (simp add: distinct_qvars_pred_vars_def distinct_qvars_op_vars_def commutant_def)
+  show \<open>A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B\<close> if \<open>A \<le> B \<div> \<psi>\<guillemotright>Q\<close>
+  proof (rule ccsubspace_leI_unit)
+    fix \<phi>
+    assume \<open>\<phi> \<in> space_as_set (A \<sqinter> apply_qregister_space Q (ccspan {\<psi>}))\<close>
+    then have \<open>\<phi> \<in> space_as_set A\<close> and \<open>\<phi> \<in> space_as_set (apply_qregister_space Q (ccspan {\<psi>}))\<close>
+      by auto
+    with that have \<open>\<phi> \<in> space_as_set (B \<div> \<psi>\<guillemotright>Q)\<close>
+      using less_eq_ccsubspace.rep_eq by force
+    then have \<open>\<phi> \<in> space_as_set (SUP a. apply_qregister Q a *\<^sub>S (B \<sqinter> (Q =\<^sub>q \<psi>)))\<close>
+      by (simp add: space_div_def)
+    show \<open>\<phi> \<in> space_as_set B\<close>
+      sorry
+  qed
+
+  show \<open>A \<le> B \<div> \<psi>\<guillemotright>Q\<close> if \<open>A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B\<close>
+    sorry
+qed
 
 lift_definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" is
   "\<lambda>S \<psi>. {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}"
-  sorry
+proof (rename_tac S \<psi>, rule closed_csubspace.intro)
+  fix S :: \<open>('a \<times> 'b) ell2 ccsubspace\<close> and \<psi>
+  show \<open>csubspace {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}\<close>
+    apply (rule complex_vector.subspaceI)
+    by (auto simp: tensor_ell2_add1 tensor_ell2_scaleC1
+        complex_vector.subspace_add complex_vector.subspace_scale)
+  show \<open>closed {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}\<close>
+  proof -
+    have \<open>{\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S} = (\<lambda>\<phi>. \<phi> \<otimes>\<^sub>s \<psi>) -` space_as_set S\<close>
+      by auto
+    moreover have \<open>closed ((\<lambda>\<phi>. \<phi> \<otimes>\<^sub>s \<psi>) -` space_as_set S)\<close>
+      apply (rule continuous_closed_vimage)
+      by (simp_all add: bounded_cbilinear.isCont[OF bounded_cbilinear_tensor_ell2])
+    ultimately show \<open>closed {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}\<close>
+      by simp
+  qed
+qed
+
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(qregister_pair Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
-(* TODO: Missing assumption: "qcompatible Q R". Add and test whether this breaks something. *)
-  apply (subst space_div_def)
-  sorry
+proof -
+  have \<open>qcompatible Q R\<close>
+    (* TODO: Missing assumption: "qcompatible Q R". Add and test whether this breaks something. *)
+    sorry
+  show ?thesis
+    apply (subst space_div_def)
+    sorry
+qed
 
 lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top"
   by (metis distinct_qvars_pred_vars_top inf.cobounded1 leq_space_div top.extremum_unique)
@@ -829,11 +890,11 @@ lemma translate_to_index_registers_space_div[translate_to_index_registers]:
 subsection \<open>Quantum equality\<close>
 
 (* TODO: 'c doesn't have to be ell2 *)
-definition quantum_equality_full :: "('a,'c) l2bounded \<Rightarrow> ('a,'d) qregister \<Rightarrow> ('b,'c) l2bounded \<Rightarrow> ('b,'d) qregister \<Rightarrow> 'd subspace" where
+definition quantum_equality_full :: "('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::complex_inner) \<Rightarrow> ('a,'d) qregister \<Rightarrow> ('b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c) \<Rightarrow> ('b,'d) qregister \<Rightarrow> 'd subspace" where
   [code del]: "quantum_equality_full U Q V R = 
                  (eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))) \<guillemotright> qregister_pair Q R"
   for Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
-  and U V :: "(_,'c) l2bounded"
+  and U V :: "_ \<Rightarrow>\<^sub>C\<^sub>L 'c"
 
 abbreviation "quantum_equality" (infix "\<equiv>\<qq>" 100)
   where "quantum_equality X Y \<equiv> quantum_equality_full id_cblinfun X id_cblinfun Y"
@@ -841,6 +902,11 @@ syntax quantum_equality :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarr
 syntax "_quantum_equality" :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
+
+(* TODO move *)
+lemma swap_ell2_commute_tensor_op: 
+  \<open>swap_ell2 o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o b) = (b \<otimes>\<^sub>o a) o\<^sub>C\<^sub>L swap_ell2\<close>
+  by (auto intro!: tensor_ell2_extensionality simp: tensor_op_ell2)
 
 lemma quantum_equality_sym:
   assumes [simp]: "distinct_qvars (qregister_pair Q R)"
@@ -855,8 +921,11 @@ proof -
   have a: "comm_op \<cdot> ((V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V)) \<cdot> comm_op* = (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U)" by simp
   have op_eq: "((comm_op o\<^sub>C\<^sub>L (V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V))\<guillemotright>qregister_pair Q R) =
                ((comm_op o\<^sub>C\<^sub>L (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U))\<guillemotright>qregister_pair R Q)"
-    using qregister_pair_chain_swap[of Q R, symmetric]
-    sorry
+    apply (subst qregister_pair_chain_swap[of Q R, symmetric])
+    apply (subst qregister_chain_apply)
+    apply (simp add: apply_qregister_qswap apply_qregister_transform_qregister sandwich_apply
+        flip: transform_qregister_swap_ell2 cblinfun_compose_assoc)
+    by (rule swap_ell2_commute_tensor_op)
   show ?thesis
     apply (subst quantum_equality_full_def)
     apply (subst quantum_equality_full_def)
@@ -905,14 +974,109 @@ lemma qeq_collect_guarded[simp]:
   shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
   by (fact qeq_collect)
 
+(* TODO move *)
+lemma kernel_apply_self: \<open>A *\<^sub>S kernel A = 0\<close>
+proof transfer
+  fix A :: \<open>'b \<Rightarrow> 'a\<close>
+  assume \<open>bounded_clinear A\<close>
+  then have \<open>A 0 = 0\<close>
+    by (simp add: bounded_clinear_def complex_vector.linear_0)
+  then have \<open>A ` A -` {0} = {0}\<close>
+    by fastforce
+  then show \<open>closure (A ` A -` {0}) = {0}\<close>
+    by auto
+qed
+
+(* TODO move *)
+lemma leq_kernel_iff: 
+  shows \<open>A \<le> kernel B \<longleftrightarrow> B *\<^sub>S A = 0\<close>
+proof (rule iffI)
+  assume \<open>A \<le> kernel B\<close>
+  then have \<open>B *\<^sub>S A \<le> B *\<^sub>S kernel B\<close>
+    by (simp add: cblinfun_image_mono)
+  also have \<open>\<dots> = 0\<close>
+    by (simp add: kernel_apply_self)
+  finally show \<open>B *\<^sub>S A = 0\<close>
+    by (simp add: bot.extremum_unique)
+next
+  assume \<open>B *\<^sub>S A = 0\<close>
+  then show \<open>A \<le> kernel B\<close>
+    apply transfer
+    by (metis closure_subset image_subset_iff_subset_vimage)
+qed
+
+(* TODO move *)
+lemma cblinfun_image_kernel:
+  assumes \<open>C *\<^sub>S A *\<^sub>S kernel B \<le> kernel B\<close>
+  assumes \<open>A o\<^sub>C\<^sub>L C = id_cblinfun\<close>
+  shows \<open>A *\<^sub>S kernel B = kernel (B o\<^sub>C\<^sub>L C)\<close>
+proof (rule antisym)
+  show \<open>A *\<^sub>S kernel B \<le> kernel (B o\<^sub>C\<^sub>L C)\<close>
+    using assms(1) by (simp add: leq_kernel_iff cblinfun_compose_image)
+  show \<open>kernel (B o\<^sub>C\<^sub>L C) \<le> A *\<^sub>S kernel B\<close>
+  proof (insert assms(2), transfer, intro subsetI)
+    fix A :: \<open>'a \<Rightarrow> 'b\<close> and B :: \<open>'a \<Rightarrow> 'c\<close> and C :: \<open>'b \<Rightarrow> 'a\<close> and x
+    assume \<open>x \<in> (B \<circ> C) -` {0}\<close>
+    then have BCx: \<open>B (C x) = 0\<close>
+      by simp
+    assume \<open>A \<circ> C = (\<lambda>x. x)\<close>
+    then have \<open>x = A (C x)\<close>
+      apply (simp add: o_def)
+      by metis
+    then show \<open>x \<in> closure (A ` B -` {0})\<close>
+      using \<open>B (C x) = 0\<close> closure_subset by fastforce
+  qed
+qed
+
+(* TODO move *)
+lemma cblinfun_image_kernel_unitary:
+  assumes \<open>unitary U\<close>
+  shows \<open>U *\<^sub>S kernel B = kernel (B o\<^sub>C\<^sub>L U*)\<close>
+  apply (rule cblinfun_image_kernel)
+  using assms by (auto simp flip: cblinfun_compose_image)
+
+(* TODO move *)
+lemma kernel_cblinfun_compose:
+  assumes \<open>kernel B = 0\<close>
+  shows \<open>kernel A = kernel (B o\<^sub>C\<^sub>L A)\<close>
+  sorry
+
 (* Proof in paper *)
 lemma Qeq_mult1[simp]:
-  "unitary U \<Longrightarrow> U\<guillemotright>Q1 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1\<cdot>U*) Q1 U2 Q2"
-  for U::"('a,'a) l2bounded" and U2 :: "('b,'c) l2bounded"
+  fixes U::"('a,'a) l2bounded" and U2 :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::complex_inner"
+  assumes [simp]: \<open>unitary U\<close>
+  shows "U\<guillemotright>Q1 *\<^sub>S quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full (U1 o\<^sub>C\<^sub>L U*) Q1 U2 Q2"
 proof (cases \<open>qcompatible Q1 Q2\<close>)
   case True
-  show ?thesis
-    sorry
+  have \<open>U\<guillemotright>Q1 *\<^sub>S quantum_equality_full U1 Q1 U2 Q2
+      = apply_qregister \<lbrakk>Q1, Q2\<rbrakk>\<^sub>q (U \<otimes>\<^sub>o id_cblinfun) *\<^sub>S
+          apply_qregister_space \<lbrakk>Q1, Q2\<rbrakk>\<^sub>q (eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (U2* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L U2)))\<close>
+    unfolding quantum_equality_full_def using True lift_extendR by fastforce
+  also have \<open>\<dots> = apply_qregister_space \<lbrakk>Q1, Q2\<rbrakk>\<^sub>q ((U \<otimes>\<^sub>o id_cblinfun) *\<^sub>S
+                 eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (U2* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L U2)))\<close>
+    by simp
+  also have \<open>\<dots> = apply_qregister_space \<lbrakk>Q1, Q2\<rbrakk>\<^sub>q
+           (eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (U2* o\<^sub>C\<^sub>L (U1 o\<^sub>C\<^sub>L U*)) \<otimes>\<^sub>o ((U1 o\<^sub>C\<^sub>L U*)* o\<^sub>C\<^sub>L U2)))\<close>
+  proof -
+    have \<open>(U \<otimes>\<^sub>o id_cblinfun) *\<^sub>S eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (U2* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L U2))
+        = kernel (swap_ell2 o\<^sub>C\<^sub>L (U2* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L U2) o\<^sub>C\<^sub>L U* \<otimes>\<^sub>o id_cblinfun - U* \<otimes>\<^sub>o id_cblinfun)\<close>
+      by (simp add: eigenspace_def cblinfun_image_kernel_unitary unitary_tensor_op
+          tensor_op_adjoint cblinfun_compose_minus_left)
+    also have \<open>\<dots> = kernel ((U \<otimes>\<^sub>o id_cblinfun) o\<^sub>C\<^sub>L (swap_ell2 o\<^sub>C\<^sub>L (U2* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L U2) o\<^sub>C\<^sub>L U* \<otimes>\<^sub>o id_cblinfun - U* \<otimes>\<^sub>o id_cblinfun))\<close>
+      apply (rule kernel_cblinfun_compose)
+      by (simp add: unitary_tensor_op kernel_compl_adj_range)
+    also have \<open>\<dots> = eigenspace 1 ((U \<otimes>\<^sub>o id_cblinfun) o\<^sub>C\<^sub>L swap_ell2 o\<^sub>C\<^sub>L (U2* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L U2) o\<^sub>C\<^sub>L U* \<otimes>\<^sub>o id_cblinfun)\<close>
+      by (simp add: eigenspace_def cblinfun_compose_minus_right comp_tensor_op cblinfun_compose_assoc)
+    also have \<open>\<dots> = eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (U2* o\<^sub>C\<^sub>L (U1 o\<^sub>C\<^sub>L U*)) \<otimes>\<^sub>o ((U1 o\<^sub>C\<^sub>L U*)* o\<^sub>C\<^sub>L U2))\<close>
+      apply (simp add: comp_tensor_op flip: cblinfun_compose_assoc swap_ell2_commute_tensor_op)
+      by (simp add: comp_tensor_op cblinfun_compose_assoc)
+    finally show ?thesis
+      by simp
+  qed
+  also have \<open>\<dots> = quantum_equality_full (U1 o\<^sub>C\<^sub>L U*) Q1 U2 Q2\<close>
+    by (simp add: quantum_equality_full_def)
+  finally show ?thesis
+    by -
 next
   case False
   then show ?thesis
@@ -921,12 +1085,14 @@ qed
 
 (* Proof in paper *)
 lemma Qeq_mult2[simp]:
-  "unitary U \<Longrightarrow> U\<guillemotright>Q2 \<cdot> quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2\<cdot>U*) Q2"
- for U::"('a,'a) l2bounded" and U1 :: "('b,'c) l2bounded"  
+  fixes U::"('a,'a) l2bounded" and U1 :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::complex_inner"
+  assumes \<open>unitary U\<close>
+  shows "U\<guillemotright>Q2 *\<^sub>S quantum_equality_full U1 Q1 U2 Q2 = quantum_equality_full U1 Q1 (U2 o\<^sub>C\<^sub>L U*) Q2"
 proof (cases \<open>qcompatible Q1 Q2\<close>)
   case True
   show ?thesis
-    sorry
+    apply (simp add: quantum_equality_sym[OF True])
+    using assms by (rule Qeq_mult1)
 next
   case False
   then show ?thesis
@@ -939,7 +1105,7 @@ lemma quantum_eq_unique[simp]: "distinct_qvars (qregister_pair Q R) \<Longrighta
   quantum_equality_full U Q V R \<sqinter> ccspan{\<psi>}\<guillemotright>Q
   = liftSpace (ccspan{\<psi>}) Q \<sqinter> liftSpace (ccspan{V* \<cdot> U \<cdot> \<psi>}) R"
   for Q::"'a q2variable" and R::"'b q2variable"
-    and U::"('a,'c) l2bounded" and V::"('b,'c) l2bounded"
+    and U :: "'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::chilbert_space" and V :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c"
     and \<psi>::"'a ell2"
   sorry
 
@@ -998,105 +1164,79 @@ lemma quantum_equality_full_swap_right:
   finally show ?thesis by -
 qed *)
 
+lemma kernel_member_iff: \<open>x \<in> space_as_set (kernel A) \<longleftrightarrow> A *\<^sub>V x = 0\<close>
+  using kernel_memberD kernel_memberI by blast
+
+lemma quantum_equality_full_not_compatible:
+  assumes \<open>\<not> qcompatible Q R\<close>
+  shows \<open>quantum_equality_full U Q V R = 0\<close>
+  using assms by (simp add: quantum_equality_full_def non_qregister)
+
+lemma quantum_equality_fixes_swap:
+  \<open>space_as_set (quantum_equality_full U Q V R)
+         = {\<psi>. apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V)) \<psi> = \<psi>}\<close>
+proof (cases \<open>qcompatible Q R\<close>)
+  case True
+  then show ?thesis
+    by (simp add: quantum_equality_full_def eigenspace_def kernel.rep_eq
+        apply_qregister_space_kernel apply_qregister_minus vimage_def cblinfun.diff_left
+        del: kernel_lift)
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister quantum_equality_full_not_compatible)
+qed
 
 lemma quantum_equality_merge:
-  assumes "distinct_qvars (qregister_pair (qregister_pair Q1 R1) (qregister_pair Q2 R2))"
+  fixes Q1 :: \<open>('a,'m) qregister\<close> and R1 :: \<open>('b,'m) qregister\<close> and Q2 R2
+  fixes U1 :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'j ell2\<close>
+  assumes [register]: "qregister \<lbrakk>Q1,R1,Q2,R2\<rbrakk>"
   shows "quantum_equality_full U1 Q1 V1 R1 \<sqinter> quantum_equality_full U2 Q2 V2 R2 
     \<le> quantum_equality_full (U1 \<otimes>\<^sub>o U2) (qregister_pair Q1 Q2) (V1 \<otimes>\<^sub>o V2) (qregister_pair R1 R2)"
-  sorry
-(* proof (rule ccsubspace_leI, rule subsetI)
-  fix x :: "mem2 ell2"
+proof (rule ccsubspace_leI, rule subsetI)
+  fix x :: "'m ell2"
   assume "x \<in> space_as_set (quantum_equality_full U1 Q1 V1 R1 \<sqinter> quantum_equality_full U2 Q2 V2 R2)"
-  then have x1: "x \<in> space_as_set (quantum_equality_full U1 Q1 V1 R1)"
-    and x2: "x \<in> space_as_set (quantum_equality_full U2 Q2 V2 R2)"
-    by auto
-  define QR1 QR2 QR12' Q12 R12 QR12 where "QR1 = variable_concat Q1 R1" and "QR2 = variable_concat Q2 R2"
-    and "QR12' = variable_concat QR1 QR2" and "Q12 = variable_concat Q1 Q2" and "R12 = variable_concat R1 R2"
-    and "QR12 = variable_concat Q12 R12"
+  then have x1: \<open>apply_qregister \<lbrakk>Q1, R1\<rbrakk>\<^sub>q (swap_ell2 o\<^sub>C\<^sub>L (V1* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L V1)) x = x\<close>
+    and x2: \<open>apply_qregister \<lbrakk>Q2, R2\<rbrakk>\<^sub>q (swap_ell2 o\<^sub>C\<^sub>L (V2* o\<^sub>C\<^sub>L U2) \<otimes>\<^sub>o (U2* o\<^sub>C\<^sub>L V2)) x = x\<close>
+    by (simp_all add: quantum_equality_fixes_swap)
+  then have x12: "((comm_op o\<^sub>C\<^sub>L (V1* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L V1)) \<otimes>\<^sub>o (comm_op o\<^sub>C\<^sub>L (V2* o\<^sub>C\<^sub>L U2) \<otimes>\<^sub>o (U2* o\<^sub>C\<^sub>L V2))) \<guillemotright> \<lbrakk>\<lbrakk>Q1,R1\<rbrakk>, \<lbrakk>Q2,R2\<rbrakk>\<rbrakk> *\<^sub>V x = x"
+    by (simp add: apply_qregister_pair)
 
-  have [simp]: "distinct_qvars QR1"
-    using assms unfolding QR1_def 
-    using distinct_qvarsL by blast
-  have [simp]: "distinct_qvars QR2"
-    using assms unfolding QR2_def
-    using distinct_qvarsR by blast
-  have [simp]: "distinct_qvars QR12'"
-    unfolding QR12'_def QR1_def QR2_def
-    using assms by (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)
-  have [simp]: "distinct_qvars (variable_concat Q12 R12)"
-    using assms unfolding Q12_def R12_def
-    by (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)
-  include no_notation_blinfun_apply
-  obtain T where qvar_trafo_T: "qvar_trafo T QR12 QR12'"
-    and apply_T[simp]: "T *\<^sub>V ((q1\<otimes>q2)\<otimes>(r1\<otimes>r2)) = (q1\<otimes>r1)\<otimes>(q2\<otimes>r2)" for q1 q2 r1 r2 :: "_ ell2"
-    apply atomize_elim apply (rule exI) apply (rule all_simps(2)[THEN iffD1], rule allI)+
-    unfolding QR12_def Q12_def R12_def
-    apply (rule qvar_trafo_ex_trans)
-     apply (rule qvar_trafo_ex_assoc1)
-    using assms apply (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)[1]
-    apply (rule qvar_trafo_ex_trans)
-     apply (rule qvar_trafo_ex_tensorR)
-    using assms apply (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)[1]
-      apply (rule qvar_trafo_ex_assoc2)
-    using assms apply (auto intro: distinct_qvars_swap distinct_qvarsL distinct_qvarsR simp: distinct_qvars_split1 distinct_qvars_split2)[2]
-    apply (rule qvar_trafo_ex_trans)
-     apply (rule qvar_trafo_ex_tensorR)
-    using assms apply (auto intro: distinct_qvars_swap distinct_qvarsL distinct_qvarsR simp: distinct_qvars_split1 distinct_qvars_split2)[1]
-      apply (rule qvar_trafo_ex_tensorL)
-    using assms apply (auto intro: distinct_qvars_swap distinct_qvarsL distinct_qvarsR simp: distinct_qvars_split1 distinct_qvars_split2)[1]
-       apply (rule qvar_trafo_ex_comm)
-    using assms apply (auto intro: distinct_qvars_swap distinct_qvarsL distinct_qvarsR simp: distinct_qvars_split1 distinct_qvars_split2)[3]
-    apply (rule qvar_trafo_ex_trans)
-     apply (rule qvar_trafo_ex_tensorR)
-    using assms apply (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)[1]
-      apply (rule qvar_trafo_ex_assoc1)
-    using assms apply (auto intro: distinct_qvars_swap distinct_qvarsL distinct_qvarsR simp: distinct_qvars_split1 distinct_qvars_split2)[2]
-    unfolding  QR12'_def QR1_def QR2_def
-    apply (rule qvar_trafo_ex_assoc2)
-    using assms by (auto intro: distinct_qvars_swap simp: distinct_qvars_split1 distinct_qvars_split2)[1]
+  define t :: \<open>('a\<times>'b) \<times> ('c\<times>'d) \<Rightarrow> _\<close> where \<open>t = (\<lambda>((q1,q2),(r1,r2)). ((q1,r1),(q2,r2)))\<close>
+  have \<open>bij t\<close>
+    apply (rule o_bij[where g=\<open>\<lambda>((q1,r1),(q2,r2)). ((q1,q2),(r1,r2))\<close>])
+    by (auto intro!: ext simp: t_def)
+  define T :: \<open>(('a\<times>'b) \<times> ('c\<times>'d)) ell2 \<Rightarrow>\<^sub>C\<^sub>L _\<close> where \<open>T = classical_operator (Some o t)\<close>
+  have ex_T: \<open>classical_operator_exists (Some o t)\<close>
+    using \<open>bij t\<close> bij_betw_imp_inj_on classical_operator_exists_inj inj_map_total by blast
+  have [simp]: \<open>unitary T\<close>
+    using \<open>bij t\<close> by (simp add: T_def unitary_classical_operator)
+  have applyT: \<open>T *\<^sub>V ket ((q1,q2),(r1,r2)) = ket ((q1,r1),(q2,r2))\<close> for q1 q2 r1 r2
+    using ex_T by (simp add: T_def classical_operator_ket t_def)
+  have applyTadj: \<open>T* *\<^sub>V ket ((q1,r1),(q2,r2)) = ket ((q1,q2),(r1,r2))\<close> for q1 q2 r1 r2
+    using arg_cong[OF applyT, where f=\<open>cblinfun_apply (T*)\<close>]
+    by (simp flip: cblinfun_apply_cblinfun_compose)
+  have sandwichT: \<open>sandwich T *\<^sub>V (aa \<otimes>\<^sub>o ba) \<otimes>\<^sub>o ab \<otimes>\<^sub>o bb = (aa \<otimes>\<^sub>o ab) \<otimes>\<^sub>o ba \<otimes>\<^sub>o bb\<close> for aa ba ab bb
+    apply (auto intro!: equal_ket cinner_ket_eqI simp: sandwich_apply applyTadj
+        simp flip: cinner_adj_left[of T])
+    by (simp add: tensor_op_ell2 flip: tensor_ell2_ket)
 
-  have apply_T_adj[simp]: "T* *\<^sub>V ((q1\<otimes>q2)\<otimes>(r1\<otimes>r2)) = (q1\<otimes>r1)\<otimes>(q2\<otimes>r2)" (is "?lhs=?rhs") for q1 q2 r1 r2
-  proof -
-    note apply_T[simp del]
-    from qvar_trafo_T have [simp]: "isometry T"
-      using qvar_trafo_unitary unitary_twosided_isometry by blast
-    have "?lhs = T* *\<^sub>V (T *\<^sub>V (q1\<otimes>r1)\<otimes>(q2\<otimes>r2))"
-      by (subst apply_T, simp)
-    also have "\<dots> = ?rhs"
-      by (simp add: cblinfun_apply_cblinfun_compose[symmetric])
-    finally show ?thesis by -
-  qed
+    have QR12_T: \<open>\<lbrakk>\<lbrakk>Q1,R1\<rbrakk>, \<lbrakk>Q2,R2\<rbrakk>\<rbrakk> = qregister_chain \<lbrakk>\<lbrakk>Q1,Q2\<rbrakk>, \<lbrakk>R1,R2\<rbrakk>\<rbrakk> (transform_qregister T)\<close>
+      apply (intro qregister_eqI_separating separating_tensor')
+             apply (rule separating_UNIV refl)+
+      apply (auto simp: apply_qregister_transform_qregister sandwichT apply_qregister_pair)
+      by (metis (no_types, lifting) assms lift_cblinfun_comp(2) qcompatible3' qcompatible_commute)
 
-  from x1 have x1': "(comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<guillemotright> QR1 *\<^sub>V x = x"
-    unfolding quantum_equality_full_def QR1_def[symmetric]
-    apply (subst (asm) eigenspace_lift[symmetric], simp)
-    by (frule eigenspace_memberD, simp)
-  from x2 have x2': "(comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2)) \<guillemotright> QR2 *\<^sub>V x = x"
-    unfolding quantum_equality_full_def QR2_def[symmetric]
-    apply (subst (asm) eigenspace_lift[symmetric], simp)
-    by (frule eigenspace_memberD, simp)
+  have \<open>(comm_op o\<^sub>C\<^sub>L (((V1 \<otimes>\<^sub>o V2)* o\<^sub>C\<^sub>L (U1 \<otimes>\<^sub>o U2)) \<otimes>\<^sub>o ((U1 \<otimes>\<^sub>o U2)* o\<^sub>C\<^sub>L (V1 \<otimes>\<^sub>o V2)))) \<guillemotright> \<lbrakk>\<lbrakk>Q1,Q2\<rbrakk>, \<lbrakk>R1,R2\<rbrakk>\<rbrakk>
+          = ((comm_op o\<^sub>C\<^sub>L (V1* o\<^sub>C\<^sub>L U1) \<otimes>\<^sub>o (U1* o\<^sub>C\<^sub>L V1)) \<otimes>\<^sub>o (comm_op o\<^sub>C\<^sub>L (V2*\<cdot>U2) \<otimes>\<^sub>o (U2*\<cdot>V2))) \<guillemotright> \<lbrakk>\<lbrakk>Q1,R1\<rbrakk>, \<lbrakk>Q2,R2\<rbrakk>\<rbrakk>\<close>
+    apply (auto intro!: equal_ket cinner_ket_eqI
+        simp add: QR12_T apply_qregister_transform_qregister sandwich_apply applyTadj tensor_op_adjoint
+        simp flip: cinner_adj_left[of T])
+    by (simp add: tensor_op_ell2 flip: tensor_ell2_ket)
 
-  have x12: "((comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<otimes> (comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2))) \<guillemotright> QR12' *\<^sub>V x = x"
-    unfolding QR12'_def apply (subst lift_tensorOp[symmetric])
-    unfolding QR12'_def[symmetric] apply simp
-    by (simp add: x1' x2')
-
-  have same_op: "(comm_op \<cdot> (((V1 \<otimes> V2)* o\<^sub>C\<^sub>L (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* o\<^sub>C\<^sub>L (V1 \<otimes> V2))))\<guillemotright>QR12
-      = ((comm_op \<cdot> (V1*\<cdot>U1)\<otimes>(U1*\<cdot>V1)) \<otimes> (comm_op \<cdot> (V2*\<cdot>U2)\<otimes>(U2*\<cdot>V2))) \<guillemotright> QR12'"
-    apply (subst qvar_trafo_l2bounded[OF qvar_trafo_T])
-    apply (subst lift_eqOp, simp)
-    apply (rule equal_ket)
-    by (auto simp: ket_product tensorOp_applyOp_distr)
-
-  have "(comm_op \<cdot> (((V1 \<otimes> V2)* o\<^sub>C\<^sub>L (U1 \<otimes> U2)) \<otimes> ((U1 \<otimes> U2)* o\<^sub>C\<^sub>L (V1 \<otimes> V2))))\<guillemotright>QR12 *\<^sub>V x = x"
-    apply (subst same_op) by (rule x12)
-
-  then show "x \<in> space_as_set (quantum_equality_full (U1 \<otimes> U2) Q12 (V1 \<otimes> V2) R12)"
-    unfolding quantum_equality_full_def QR12_def
-    apply (subst eigenspace_lift[symmetric], simp)
-    apply (rule eigenspace_memberI)
-    by simp
-qed *)
+  with x12 show \<open>x \<in> space_as_set (quantum_equality_full (U1 \<otimes>\<^sub>o U2) \<lbrakk>Q1, Q2\<rbrakk>\<^sub>q (V1 \<otimes>\<^sub>o V2) \<lbrakk>R1, R2\<rbrakk>\<^sub>q)\<close>
+    by (simp add: quantum_equality_fixes_swap)
+qed
 
 lemma translate_to_index_registers_qeq[translate_to_index_registers]:
   fixes F :: \<open>('a,'b) qregister\<close>

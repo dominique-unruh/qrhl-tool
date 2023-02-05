@@ -734,7 +734,7 @@ lift_definition cregister_chain :: \<open>('b,'c) cregister \<Rightarrow> ('a,'b
   by auto
 lift_definition qregister_chain :: \<open>('b,'c) qregister \<Rightarrow> ('a,'b) qregister \<Rightarrow> ('a,'c) qregister\<close>
   is \<open>\<lambda>F G. if qregister_raw F \<and> qregister_raw G then F o G else non_qregister_raw\<close>
-  by (metis (no_types, lifting) register_comp UnCI mem_Collect_eq singletonI)
+  by simp
 
 lemmas cregister_raw_chain = Axioms_Classical.register_comp
 lemmas qregister_raw_chain = register_comp
@@ -2156,7 +2156,7 @@ proof -
     then have \<open>permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) = (sandwich U) o Laws_Quantum.Fst\<close>
       by (auto intro!: ext simp: Laws_Quantum.Fst_def)  
     moreover have \<open>qregister_raw \<dots>\<close>
-      apply (rule register_comp)
+      apply (rule Axioms_Quantum.register_comp)
       using asm by (simp_all add: unitary_sandwich_register)
     ultimately show \<open>qregister_raw (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F))\<close>
       by simp
@@ -2410,7 +2410,7 @@ lemma cregister_eqI_setter:
   using assms apply transfer
   by (auto intro!: cregister_eqI_setter_raw)
 
-lemma separating_butterkey:
+lemma separating_butterket:
   \<open>Laws_Quantum.separating TYPE('b) (range (case_prod butterket))\<close>
 proof -
   thm weak_star_clinear_eq_butterfly_ketI
@@ -2426,7 +2426,7 @@ qed
 lemma separating_nonempty: \<open>\<not> (X \<subseteq> {0})\<close> if sep: \<open>separating TYPE('b) X\<close> for X :: \<open>'a qupdate set\<close>
 proof (rule notI)
   assume \<open>X \<subseteq> {0}\<close>
-  have \<open>preregister 0\<close>
+  have \<open>Axioms_Quantum.preregister 0\<close>
     by (simp add: Axioms_Quantum.preregister_def zero_fun_def)
   fix x
   define F :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close> where \<open>F a = (ket x \<bullet>\<^sub>C (a *\<^sub>V ket x)) *\<^sub>C id_cblinfun\<close> for a
@@ -2447,7 +2447,7 @@ proof (rule notI)
     finally show ?thesis
       by (simp add: o_def F_def[abs_def])
   qed
-  ultimately have \<open>preregister F\<close>
+  ultimately have \<open>Axioms_Quantum.preregister F\<close>
     by (simp add: Axioms_Quantum.preregister_def)
   have \<open>0 a = F a\<close> if \<open>a \<in> X\<close> for a
     using \<open>X \<subseteq> {0}\<close> that
@@ -2510,6 +2510,16 @@ proof -
   qed
 qed
 
+lemmas qregister_eqI_butterket = qregister_eqI_separating[OF separating_butterket]
+
+lemma qregister_eqI_tensor_op:
+  assumes \<open>\<And>a b. apply_qregister F (a \<otimes>\<^sub>o b) = apply_qregister G (a \<otimes>\<^sub>o b)\<close> 
+  shows \<open>F = G\<close>
+  apply (intro qregister_eqI_separating)
+   apply (rule separating_tensor)
+    apply (rule separating_UNIV)
+   apply (rule separating_UNIV)
+  using assms by auto
 
 lemma qregister_of_cregister_pair: 
   \<open>qregister_of_cregister (cregister_pair x y) = qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)\<close>
@@ -2533,7 +2543,7 @@ proof (cases \<open>ccompatible x y\<close>)
         apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l
     by (simp add: equal_ket)
   then show ?thesis
-    apply (rule_tac qregister_eqI_separating[OF separating_butterkey])
+    apply (rule_tac qregister_eqI_separating[OF separating_butterket])
     by auto
 next
   case False
@@ -2564,7 +2574,7 @@ proof (cases \<open>cregister x \<and> cregister y\<close>)
         apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l
     by (simp add: equal_ket)
   then show ?thesis
-    apply (rule_tac qregister_eqI_separating[OF separating_butterkey])
+    apply (rule_tac qregister_eqI_separating[OF separating_butterket])
     by auto
 next
   case False
