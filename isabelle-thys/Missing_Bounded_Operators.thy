@@ -1083,10 +1083,13 @@ lemma tensor_ell2_left_scale: \<open>tensor_ell2_left (a *\<^sub>C \<psi>) = a *
 lemma tensor_ell2_right_0[simp]: \<open>tensor_ell2_right 0 = 0\<close>
   by (auto intro!: cblinfun_eqI simp: tensor_ell2_right_apply)
 
-(* TODO same for left *)
 lemma tensor_ell2_right_adj_apply[simp]: \<open>(tensor_ell2_right \<psi>*) *\<^sub>V (\<alpha> \<otimes>\<^sub>s \<beta>) = (\<psi> \<bullet>\<^sub>C \<beta>) *\<^sub>C \<alpha>\<close>
   apply (rule cinner_extensionality)
   by (simp add: cinner_adj_right tensor_ell2_right_apply)
+lemma tensor_ell2_left_adj_apply[simp]: \<open>(tensor_ell2_left \<psi>*) *\<^sub>V (\<alpha> \<otimes>\<^sub>s \<beta>) = (\<psi> \<bullet>\<^sub>C \<alpha>) *\<^sub>C \<beta>\<close>
+  apply (rule cinner_extensionality)
+  by (simp add: cinner_adj_right tensor_ell2_right_apply)
+
 
 (* TODO same for left *)
 lemma sandwich_tensor_ell2_right: \<open>sandwich (tensor_ell2_right \<psi>*) *\<^sub>V a \<otimes>\<^sub>o b = (\<psi> \<bullet>\<^sub>C (b *\<^sub>V \<psi>)) *\<^sub>C a\<close>
@@ -1206,7 +1209,11 @@ lemma tensor_ccsubspace_bot_right[simp]: \<open>S \<otimes>\<^sub>S \<bottom> = 
 lemma ccspan_finite: \<open>space_as_set (ccspan X) = cspan X\<close> if \<open>finite X\<close>
   by (simp add: ccspan.rep_eq that)
 
-(* TODO left *)
+lemma swap_ell2_tensor_ccsubspace: \<open>swap_ell2 *\<^sub>S (S \<otimes>\<^sub>S T) = T \<otimes>\<^sub>S S\<close>
+  apply (auto intro!: arg_cong[where f=ccspan] 
+      simp add: tensor_ccsubspace_def cblinfun_image_ccspan image_image set_compr_2_image_collect)
+  by force
+
 lemma tensor_ccsubspace_right1dim_member:
   assumes \<open>\<psi> \<in> space_as_set (S \<otimes>\<^sub>S ccspan{\<phi>})\<close>
   shows \<open>\<exists>\<psi>'. \<psi> = \<psi>' \<otimes>\<^sub>s \<phi>\<close>
@@ -1284,6 +1291,27 @@ next
   with assms have \<open>\<psi> \<in> {\<psi> \<otimes>\<^sub>s \<phi> |\<psi>. \<psi> \<in> space_as_set S}\<close>
     by (simp add: tensor_ccsubspace_def)
   then show \<open>\<exists>\<psi>'. \<psi> = \<psi>' \<otimes>\<^sub>s \<phi>\<close>
+    by auto
+qed
+
+lemma tensor_ccsubspace_left1dim_member:
+  assumes \<open>\<psi> \<in> space_as_set (ccspan{\<phi>} \<otimes>\<^sub>S S)\<close>
+  shows \<open>\<exists>\<psi>'. \<psi> = \<phi> \<otimes>\<^sub>s \<psi>'\<close>
+proof -
+  from assms 
+  have \<open>swap_ell2 *\<^sub>V \<psi> \<in> space_as_set (swap_ell2 *\<^sub>S (ccspan {\<phi>} \<otimes>\<^sub>S S))\<close>
+  by (metis rev_image_eqI space_as_set_image_commute swap_ell2_selfinv)
+  then have \<open>swap_ell2 \<psi> \<in> space_as_set (S \<otimes>\<^sub>S ccspan{\<phi>})\<close>
+    by (simp add: swap_ell2_tensor_ccsubspace)
+  then obtain \<psi>' where \<psi>': \<open>swap_ell2 \<psi> = \<psi>' \<otimes>\<^sub>s \<phi>\<close>
+    using tensor_ccsubspace_right1dim_member by blast
+  have \<open>\<psi> = swap_ell2 *\<^sub>V swap_ell2 *\<^sub>V \<psi>\<close>
+    by (simp flip: cblinfun_apply_cblinfun_compose)
+  also have \<open>\<dots> = swap_ell2 *\<^sub>V (\<psi>' \<otimes>\<^sub>s \<phi>)\<close>
+    by (simp add: \<psi>')
+  also have \<open>\<dots> = \<phi> \<otimes>\<^sub>s \<psi>'\<close>
+    by simp
+  finally show ?thesis
     by auto
 qed
 

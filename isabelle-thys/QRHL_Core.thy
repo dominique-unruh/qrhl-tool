@@ -1770,25 +1770,352 @@ next
     by (simp add: non_qregister quantum_equality_full_def)
 qed
 
-(* Proof in paper *)
-lemma quantum_eq_unique[simp]: "distinct_qvars (qregister_pair Q R) \<Longrightarrow>
-  isometry U \<Longrightarrow> isometry (adj V) \<Longrightarrow> 
-  quantum_equality_full U Q V R \<sqinter> ccspan{\<psi>}\<guillemotright>Q
-  = liftSpace (ccspan{\<psi>}) Q \<sqinter> liftSpace (ccspan{V* \<cdot> U \<cdot> \<psi>}) R"
-  for Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
-    and U :: "'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::chilbert_space" and V :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c"
-    and \<psi> :: "'a ell2"
-  sorry
+lemma qFst_eq_vector_decompose:
+  \<open>\<psi> \<in> space_as_set (qFst =\<^sub>q \<phi>) \<longleftrightarrow> (\<exists>\<psi>'. \<psi> = \<phi> \<otimes>\<^sub>s \<psi>')\<close>
+proof (rule iffI)
+  assume \<open>\<psi> \<in> space_as_set (qFst =\<^sub>q \<phi>)\<close>
+  then have \<open>\<psi> \<in> space_as_set (ccspan {\<phi>} \<otimes>\<^sub>S \<top>)\<close>
+    by (simp add: apply_qregister_space_qFst)
+  then show \<open>\<exists>\<psi>'. \<psi> = \<phi> \<otimes>\<^sub>s \<psi>'\<close>
+    by (rule tensor_ccsubspace_left1dim_member)
+next
+  assume \<open>\<exists>\<psi>'. \<psi> = \<phi> \<otimes>\<^sub>s \<psi>'\<close>
+  then obtain \<psi>' where \<psi>_def: \<open>\<psi> = \<phi> \<otimes>\<^sub>s \<psi>'\<close>
+    by auto
+  then show \<open>\<psi> \<in> space_as_set (qFst =\<^sub>q \<phi>)\<close>
+    by (simp add: apply_qregister_space_qFst ccspan_superset' tensor_ell2_in_tensor_ccsubspace)
+qed
+
+lemma qSnd_eq_vector_decompose:
+  \<open>\<psi> \<in> space_as_set (qSnd =\<^sub>q \<phi>) \<longleftrightarrow> (\<exists>\<psi>'. \<psi> = \<psi>' \<otimes>\<^sub>s \<phi>)\<close>
+proof (rule iffI)
+  assume \<open>\<psi> \<in> space_as_set (qSnd =\<^sub>q \<phi>)\<close>
+  then have \<open>\<psi> \<in> space_as_set (\<top> \<otimes>\<^sub>S ccspan {\<phi>})\<close>
+    by (simp add: apply_qregister_space_qSnd)
+  then show \<open>\<exists>\<psi>'. \<psi> = \<psi>' \<otimes>\<^sub>s \<phi>\<close>
+    by (rule tensor_ccsubspace_right1dim_member)
+next
+  assume \<open>\<exists>\<psi>'. \<psi> = \<psi>' \<otimes>\<^sub>s \<phi>\<close>
+  then obtain \<psi>' where \<psi>_def: \<open>\<psi> = \<psi>' \<otimes>\<^sub>s \<phi>\<close>
+    by auto
+  then show \<open>\<psi> \<in> space_as_set (qSnd =\<^sub>q \<phi>)\<close>
+    by (simp add: apply_qregister_space_qSnd ccspan_superset' tensor_ell2_in_tensor_ccsubspace)
+qed
 
 (* Proof in paper *)
-lemma
-  quantum_eq_add_state: 
-    "qregister (qregister_pair Q (qregister_pair R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
-    quantum_equality_full U Q V R \<sqinter> ccspan {\<psi>}\<guillemotright>T
-             = quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) (qregister_pair Q T) (addState \<psi> \<cdot> V) R"
-    for U :: "'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2" and V :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2" and \<psi> :: "'d ell2"
+lemma quantum_eq_unique[simp]:
+  fixes Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
+    and U :: "'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::chilbert_space" and V :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c"
+    and \<psi> :: "'a ell2"
+  assumes [simp]: \<open>qregister \<lbrakk>Q,R\<rbrakk>\<close>
+  assumes \<open>isometry U\<close> and \<open>isometry (V*)\<close>
+  shows \<open>quantum_equality_full U Q V R \<sqinter> Q =\<^sub>q \<psi>   =  Q =\<^sub>q \<psi> \<sqinter> R =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>)\<close>
+proof -
+  have \<open>quantum_equality_full U qFst V qSnd \<sqinter> qFst =\<^sub>q \<psi>   =  qFst =\<^sub>q \<psi> \<sqinter> qSnd =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>)\<close>
+  proof (intro antisym inf.boundedI)
+    show \<open>quantum_equality_full U qFst V qSnd \<sqinter> qFst =\<^sub>q \<psi>  \<le>  qFst =\<^sub>q \<psi>\<close>
+      by simp
+    show \<open>qFst =\<^sub>q \<psi> \<sqinter> qSnd =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>)  \<le>  qFst =\<^sub>q \<psi>\<close>
+      by simp
+    show \<open>quantum_equality_full U qFst V qSnd \<sqinter> qFst =\<^sub>q \<psi>  \<le>  qSnd =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>)\<close>
+    proof (rule ccsubspace_leI_unit)
+      fix \<phi>
+      assume \<open>\<phi> \<in> space_as_set (quantum_equality_full U qFst V qSnd \<sqinter> qFst =\<^sub>q \<psi>)\<close>
+      then have qeq: \<open>\<phi> \<in> space_as_set (quantum_equality_full U qFst V qSnd)\<close> and fst: \<open>\<phi> \<in> space_as_set (qFst =\<^sub>q \<psi>)\<close>
+        by auto
+      from qeq have \<phi>_inv: \<open>swap_ell2 *\<^sub>V ((V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V)) *\<^sub>V \<phi> = \<phi>\<close>
+        using eigenspace_memberD[where e=1] by (force simp add: quantum_equality_full_def)
+      from fst obtain \<phi>' where \<phi>_def: \<open>\<phi> = \<psi> \<otimes>\<^sub>s \<phi>'\<close>
+        by (auto simp: qFst_eq_vector_decompose)
+      have \<open>\<phi> = (U* *\<^sub>V V *\<^sub>V \<phi>') \<otimes>\<^sub>s (V* *\<^sub>V U *\<^sub>V \<psi>)\<close>
+        apply (subst \<phi>_inv[symmetric])
+        by (simp add: \<phi>_def tensor_op_ell2)
+      also have \<open>\<dots> \<in> space_as_set (qSnd =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>))\<close>
+        by (simp add: apply_qregister_space_qSnd tensor_ell2_in_tensor_ccsubspace ccspan_superset')
+      finally show \<open>\<phi> \<in> space_as_set (qSnd =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>))\<close>
+        by -
+    qed
+    show \<open>qFst =\<^sub>q \<psi> \<sqinter> qSnd =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>)  \<le>  quantum_equality_full U qFst V qSnd\<close>
+    proof (rule ccsubspace_leI_unit)
+      fix \<phi>
+      assume \<open>\<phi> \<in> space_as_set (qFst =\<^sub>q \<psi> \<sqinter> qSnd =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>))\<close>
+      then have \<open>\<phi> \<in> space_as_set (ccspan {\<psi> \<otimes>\<^sub>s V* *\<^sub>V U *\<^sub>V \<psi>})\<close>
+        by (simp add: tensor_ccsubspace_ccspan flip: tensor_lift)
+      then obtain c where \<phi>_def: \<open>\<phi> = c *\<^sub>C (\<psi> \<otimes>\<^sub>s V* *\<^sub>V U *\<^sub>V \<psi>)\<close>
+        by (auto simp add: ccspan_finite complex_vector.span_singleton)
+      from \<open>isometry (V*)\<close> have [simp]: \<open>V *\<^sub>V V* *\<^sub>V x = x\<close> for x
+        by (simp add: isometry_def flip: cblinfun_apply_cblinfun_compose cblinfun_compose_assoc)
+      from \<open>isometry U\<close> have [simp]: \<open>U* *\<^sub>V U *\<^sub>V x = x\<close> for x
+        by (simp add: isometry_def flip: cblinfun_apply_cblinfun_compose cblinfun_compose_assoc)
+      have \<open>(swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V)) *\<^sub>V \<phi> = \<phi>\<close>
+        by (simp add: \<phi>_def cblinfun.scaleC_right tensor_op_ell2)
+      then show \<open>\<phi> \<in> space_as_set (quantum_equality_full U qFst V qSnd)\<close>
+        by (simp add: quantum_equality_full_def eigenspace_memberI)
+    qed
+  qed
+  then have \<open>(quantum_equality_full U qFst V qSnd \<sqinter> qFst =\<^sub>q \<psi>) \<guillemotright> \<lbrakk>Q,R\<rbrakk>
+             = (qFst =\<^sub>q \<psi> \<sqinter> qSnd =\<^sub>q (V* *\<^sub>V U *\<^sub>V \<psi>)) \<guillemotright> \<lbrakk>Q,R\<rbrakk>\<close>
+    by (rule arg_cong[where f=\<open>apply_qregister_space _\<close>])
+  then show ?thesis
+    by (simp add: apply_qregister_space_inf apply_qregister_space_quantum_equality 
+        qregister_chain_pair_Fst 
+        flip: qregister_chain_apply_space
+        del: lift_inf)
+qed
+
+(* TODO _right *)
+lemma eigenspace_tensor_id_left: \<open>eigenspace c (id_cblinfun \<otimes>\<^sub>o A) = \<top> \<otimes>\<^sub>S eigenspace c A\<close>
+  by (metis apply_qregister_qSnd apply_qregister_space_qSnd qSnd_register translate_to_index_registers_eigenspace)
+
+
+lemma summable_on_bounded_linear:
+  assumes \<open>bounded_linear f\<close>
+  assumes \<open>g summable_on S\<close>
+  shows \<open>(f o g) summable_on S\<close>
+  by (metis assms(1) assms(2) has_sum_bounded_linear infsum_bounded_linear summable_iff_has_sum_infsum)
+
+lemma infsum_cblinfun_apply_isometry:
+  assumes \<open>isometry A\<close>
+  shows \<open>infsum (\<lambda>x. A *\<^sub>V g x) S = A *\<^sub>V (infsum g S)\<close>
+proof -
+  consider (summable) \<open>g summable_on S\<close> | (summable') \<open>(\<lambda>x. A *\<^sub>V g x) summable_on S\<close>
+    | (not_summable) \<open>\<not> g summable_on S\<close> \<open>\<not> (\<lambda>x. A *\<^sub>V g x) summable_on S\<close>
+    by auto
+  then show ?thesis
+  proof cases
+    case summable
+    then show ?thesis
+      using infsum_cblinfun_apply by blast
+  next
+    case summable'
+    then have \<open>(\<lambda>x. A* *\<^sub>V A *\<^sub>V g x) summable_on S\<close>
+      apply (rule summable_on_bounded_linear[unfolded o_def, where f=\<open>\<lambda>x. A* *\<^sub>V x\<close>, rotated])
+      by (intro bounded_linear_intros)
+    with \<open>isometry A\<close> have \<open>g summable_on S\<close>
+      by (simp add: flip: cblinfun_apply_cblinfun_compose)
+    then show ?thesis
+      using infsum_cblinfun_apply by blast
+  next
+    case not_summable
+    then show ?thesis 
+      by (simp add: infsum_not_exists)
+  qed
+qed
+
+
+(* lemma tensor_ell2_left_adj_apply_tensor: \<open>tensor_ell2_left \<psi>* *\<^sub>V (\<gamma> \<otimes>\<^sub>s \<phi>) = (\<psi> \<bullet>\<^sub>C \<gamma>) *\<^sub>C \<phi>\<close>
+  apply (rule cinner_extensionality)
+  by (simp add: cinner_adj_right)
+
+lemma tensor_ell2_right_adj_apply_tensor: \<open>tensor_ell2_right \<psi>* *\<^sub>V (\<gamma> \<otimes>\<^sub>s \<phi>) = (\<psi> \<bullet>\<^sub>C \<phi>) *\<^sub>C \<gamma>\<close>
+  apply (rule cinner_extensionality)
+  by (simp add: cinner_adj_left) *)
+
+lemma summable_on_tensor_ell2_right: \<open>\<phi> summable_on A \<Longrightarrow> (\<lambda>x. \<psi> \<otimes>\<^sub>s \<phi> x) summable_on A\<close>
+  apply (rule summable_on_bounded_linear[unfolded o_def, where f=\<open>\<lambda>x. \<psi> \<otimes>\<^sub>s x\<close>])
+  by (intro bounded_linear_intros)
+
+lemma summable_on_tensor_ell2_left: \<open>\<phi> summable_on A \<Longrightarrow> (\<lambda>x. \<phi> x \<otimes>\<^sub>s \<psi>) summable_on A\<close>
+  apply (rule summable_on_bounded_linear[unfolded o_def, where f=\<open>\<lambda>x. x \<otimes>\<^sub>s \<psi>\<close>])
+  by (intro bounded_linear_intros)
+
+lemma infsum_tensor_ell2_right: \<open>\<psi> \<otimes>\<^sub>s (\<Sum>\<^sub>\<infinity>x\<in>A. \<phi> x) = (\<Sum>\<^sub>\<infinity>x\<in>A. \<psi> \<otimes>\<^sub>s \<phi> x)\<close>
+proof -
+  consider (summable) \<open>\<phi> summable_on A\<close> | (summable') \<open>\<psi> \<noteq> 0\<close> \<open>(\<lambda>x. \<psi> \<otimes>\<^sub>s \<phi> x) summable_on A\<close>
+    | (\<psi>0) \<open>\<psi> = 0\<close>
+    | (not_summable) \<open>\<not> \<phi> summable_on A\<close> \<open>\<not> (\<lambda>x. \<psi> \<otimes>\<^sub>s \<phi> x) summable_on A\<close>
+    by auto
+  then show ?thesis
+  proof cases
+    case summable
+    then show ?thesis
+      apply (rule infsum_bounded_linear[symmetric, unfolded o_def, rotated])
+      by (intro bounded_linear_intros)
+  next
+    case summable'
+    then have *: \<open>(\<psi> /\<^sub>R (norm \<psi>)\<^sup>2) \<bullet>\<^sub>C \<psi> = 1\<close>
+      by (simp add: scaleR_scaleC cdot_square_norm)
+    from summable'(2) have \<open>(\<lambda>x. (tensor_ell2_left (\<psi> /\<^sub>R (norm \<psi>)\<^sup>2))* *\<^sub>V (\<psi> \<otimes>\<^sub>s \<phi> x)) summable_on A\<close>
+      apply (rule summable_on_bounded_linear[unfolded o_def, rotated])
+      by (intro bounded_linear_intros)
+    with * have \<open>\<phi> summable_on A\<close>
+      by (simp add: tensor_ell2_left_adj_apply)
+    then show ?thesis
+      apply (rule infsum_bounded_linear[symmetric, unfolded o_def, rotated])
+      by (intro bounded_linear_intros)
+  next
+    case \<psi>0
+    then show ?thesis
+      by simp
+  next
+    case not_summable
+    then show ?thesis 
+      by (simp add: infsum_not_exists)
+  qed
+qed
+
+lemma infsum_tensor_ell2_left: \<open>(\<Sum>\<^sub>\<infinity>x\<in>A. \<phi> x) \<otimes>\<^sub>s \<psi> = (\<Sum>\<^sub>\<infinity>x\<in>A. \<phi> x \<otimes>\<^sub>s \<psi>)\<close>
+proof -
+  from infsum_tensor_ell2_right
+  have \<open>swap_ell2 *\<^sub>V (\<psi> \<otimes>\<^sub>s (\<Sum>\<^sub>\<infinity>x\<in>A. \<phi> x)) = swap_ell2 *\<^sub>V (\<Sum>\<^sub>\<infinity>x\<in>A. \<psi> \<otimes>\<^sub>s \<phi> x)\<close>
+    by metis
+  then show ?thesis
+    by (simp add: flip: infsum_cblinfun_apply_isometry)
+qed
+
+lemma infsum_in_closed_csubspaceI:
+  assumes \<open>\<And>x. x\<in>X \<Longrightarrow> f x \<in> A\<close>
+  assumes \<open>closed_csubspace A\<close>
+  shows \<open>infsum f X \<in> A\<close>
+proof (cases \<open>f summable_on X\<close>)
+  case True
+  then have lim: \<open>(sum f \<longlongrightarrow> infsum f X) (finite_subsets_at_top X)\<close>
+    by (simp add: infsum_tendsto)
+  have sumA: \<open>sum f F \<in> A\<close> if \<open>finite F\<close> and \<open>F \<subseteq> X\<close> for F
+    apply (rule complex_vector.subspace_sum)
+    using that assms by auto
+  from lim show \<open>infsum f X \<in> A\<close>
+    apply (rule Lim_in_closed_set[rotated -1])
+    using assms sumA by (auto intro!: closed_csubspace.closed eventually_finite_subsets_at_top_weakI)
+next
+  case False
+  then show ?thesis
+    using assms by (auto intro!: closed_csubspace.closed complex_vector.subspace_0 simp add: infsum_not_exists)
+qed
+
+(* TODO move *)
+lemma closed_csubspace_space_as_set[simp]: \<open>closed_csubspace (space_as_set X)\<close>
+  using space_as_set by simp
+
+(* Proof in paper, Lemma 34, p.25 *)
+lemma quantum_eq_add_state:
+  fixes U :: "'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2" and V :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2" and \<psi> :: "'d ell2"
     and Q :: "('a,'m) qregister" and R :: "('b,'m) qregister" and T :: "('d,'m) qregister"
-  sorry
+  assumes [register]: \<open>qregister \<lbrakk>Q,R,T\<rbrakk>\<close>
+  assumes \<open>norm \<psi> = 1\<close>
+  shows \<open>quantum_equality_full U Q V R  \<sqinter>  T =\<^sub>q \<psi>
+             = quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) \<lbrakk>Q,T\<rbrakk> (tensor_ell2_right \<psi> o\<^sub>C\<^sub>L V) R\<close>
+proof -
+  have [simp]: \<open>qregister_chain \<lbrakk>T, Q, R\<rbrakk>\<^sub>q \<lbrakk>\<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q = \<lbrakk>Q,T\<rbrakk>\<close>
+    apply (rule qregister_eqI_tensor_op)
+    by (simp add: apply_qregister_pair qregister_compose qregister_chain_pair
+        flip: qregister_chain_apply 
+        del: lift_timesOp qregister_chain_apply_simp)
+  have [simp]: \<open>\<lbrakk>#2, #3.\<rbrakk>\<^sub>q = qSnd\<close>
+    apply (rule qregister_eqI_tensor_op)
+    by (simp add: apply_qregister_pair qregister_compose qregister_chain_pair
+        apply_qregister_snd apply_qregister_fst qregister_chain_apply comp_tensor_op
+        del: lift_timesOp qregister_chain_apply_simp)
+  have trafo213: \<open>\<lbrakk>\<lbrakk>\<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q, \<lbrakk>#3.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q = transform_qregister (assoc_ell2 o\<^sub>C\<^sub>L (swap_ell2 \<otimes>\<^sub>o id_cblinfun))\<close>
+    apply (intro qregister_eqI_separating separating_tensor' separating_UNIV)
+         apply (auto intro!: separating_UNIV)[5]
+    by (auto intro!: equal_ket 
+        simp: apply_qregister_qFst apply_qregister_qSnd apply_qregister_pair qregister_chain_apply
+        comp_tensor_op tensor_op_ell2 apply_qregister_transform_qregister sandwich_apply
+        assoc_ell2'_tensor assoc_ell2_tensor tensor_op_adjoint
+        simp flip: tensor_ell2_ket)
+
+  have \<open>quantum_equality_full U \<lbrakk>#2\<rbrakk> V \<lbrakk>#3.\<rbrakk>  \<sqinter>  \<lbrakk>#1\<rbrakk> =\<^sub>q \<psi>
+             = quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) \<lbrakk>#2,#1\<rbrakk> (tensor_ell2_right \<psi> o\<^sub>C\<^sub>L V) \<lbrakk>#3.\<rbrakk>\<close>
+  proof (intro antisym ccsubspace_leI_unit)
+    fix x :: \<open>('d \<times> 'a \<times> 'b) ell2\<close> (* assume \<open>norm x = 1\<close> *)
+    assume \<open>x \<in> space_as_set (quantum_equality_full U \<lbrakk>#2\<rbrakk> V \<lbrakk>#3.\<rbrakk> \<sqinter> \<lbrakk>#1\<rbrakk> =\<^sub>q \<psi>)\<close>
+    then have qeq: \<open>x \<in> space_as_set (quantum_equality_full U \<lbrakk>#2\<rbrakk> V \<lbrakk>#3.\<rbrakk>)\<close>
+      and x1: \<open>x \<in> space_as_set (\<lbrakk>#1\<rbrakk> =\<^sub>q \<psi>)\<close>
+      by simp_all
+    from x1 obtain x' where x_def: \<open>x = \<psi> \<otimes>\<^sub>s x'\<close>
+      using qFst_eq_vector_decompose by blast
+    from qeq have x_inv: \<open>(id_cblinfun \<otimes>\<^sub>o (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))) *\<^sub>V x = x\<close>
+      using eigenspace_memberD[where e=1]
+      by (auto simp add: quantum_equality_full_def apply_qregister_space_qSnd
+          simp flip: eigenspace_tensor_id_left)
+
+    have x'_decomp: \<open>x' = (\<Sum>\<^sub>\<infinity>(a,b). Rep_ell2 x' (a,b) *\<^sub>C ket (a,b))\<close>
+      by (simp add: cond_case_prod_eta ell2_decompose_infsum)
+
+    have aux1: \<open>X *\<^sub>V x = (\<Sum>\<^sub>\<infinity>(a,b). X *\<^sub>V \<psi> \<otimes>\<^sub>s Rep_ell2 x' (a, b) *\<^sub>C |(a, b)\<rangle>)\<close> for X
+      unfolding x_def apply (subst x'_decomp)
+      by (simp add: case_prod_unfold summable_on_tensor_ell2_right ell2_decompose_summable
+          infsum_tensor_ell2_right
+          flip: infsum_cblinfun_apply)
+
+
+    have \<open>(sandwich (assoc_ell2 o\<^sub>C\<^sub>L swap_ell2 \<otimes>\<^sub>o id_cblinfun) *\<^sub>V
+             (swap_ell2 o\<^sub>C\<^sub>L
+              (V* o\<^sub>C\<^sub>L tensor_ell2_right \<psi>* o\<^sub>C\<^sub>L U \<otimes>\<^sub>o id_cblinfun) \<otimes>\<^sub>o
+              ((U \<otimes>\<^sub>o id_cblinfun)* o\<^sub>C\<^sub>L (tensor_ell2_right \<psi> o\<^sub>C\<^sub>L V)))) *\<^sub>V x
+        = (id_cblinfun \<otimes>\<^sub>o (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))) *\<^sub>V x\<close>
+      apply (subst (2) aux1) apply (subst aux1)
+      by (simp add: tensor_ell2_scaleC2
+          cblinfun_apply_cblinfun_compose cblinfun.scaleC_right sandwich_apply 
+          assoc_ell2'_tensor assoc_ell2_tensor tensor_op_adjoint tensor_op_ell2
+          cdot_square_norm \<open>norm \<psi> = 1\<close>
+          flip: tensor_ell2_ket)
+    also have \<open>\<dots> = x\<close>
+      by (simp add: x_inv)
+    finally show \<open>x \<in> space_as_set (quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) \<lbrakk>#2,#1\<rbrakk> (tensor_ell2_right \<psi> o\<^sub>C\<^sub>L V) \<lbrakk>#3.\<rbrakk>)\<close>
+      by (simp add: quantum_equality_full_def trafo213 apply_qregister_space_transform_qregister
+          cblinfun_image_eigenspace_isometry eigenspace_memberI)
+  next
+    fix x
+    assume \<open>x \<in> space_as_set (quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) \<lbrakk>#2,#1\<rbrakk> (tensor_ell2_right \<psi> o\<^sub>C\<^sub>L V) \<lbrakk>#3.\<rbrakk>)\<close>
+    then have x_inv: \<open>(sandwich (assoc_ell2 o\<^sub>C\<^sub>L swap_ell2 \<otimes>\<^sub>o id_cblinfun) *\<^sub>V (swap_ell2 o\<^sub>C\<^sub>L
+              (V* o\<^sub>C\<^sub>L tensor_ell2_right \<psi>* o\<^sub>C\<^sub>L U \<otimes>\<^sub>o id_cblinfun) \<otimes>\<^sub>o
+              ((U \<otimes>\<^sub>o id_cblinfun)* o\<^sub>C\<^sub>L (tensor_ell2_right \<psi> o\<^sub>C\<^sub>L V)))) *\<^sub>V x = x\<close>
+      using eigenspace_memberD[where e=1]
+      by (auto simp add: quantum_equality_full_def trafo213
+          apply_qregister_space_transform_qregister cblinfun_image_eigenspace_isometry)
+    have x_decomp: \<open>x = (\<Sum>\<^sub>\<infinity>(a,b,c). Rep_ell2 x (a,b,c) *\<^sub>C ket (a,b,c))\<close>
+      by (simp add: cond_case_prod_eta ell2_decompose_infsum)
+    have aux2: \<open>X *\<^sub>V x = (\<Sum>\<^sub>\<infinity>(a,b,c). X *\<^sub>V Rep_ell2 x (a,b,c) *\<^sub>C |(a,b,c)\<rangle>)\<close> for X
+      unfolding x_def apply (subst x_decomp)
+      by (simp add: case_prod_unfold summable_on_tensor_ell2_right ell2_decompose_summable
+          infsum_tensor_ell2_right
+          flip: infsum_cblinfun_apply)
+
+
+    have x1: \<open>x \<in> space_as_set (\<lbrakk>#1\<rbrakk> =\<^sub>q \<psi>)\<close>
+      apply (subst x_inv[symmetric])
+      apply (subst aux2)
+      using qFst_eq_vector_decompose 
+      by (auto intro!: infsum_in_closed_csubspaceI  complex_vector.subspace_scale 
+          simp: cblinfun.scaleC_right sandwich_apply assoc_ell2'_tensor tensor_op_adjoint
+          tensor_ell2_scaleC2 tensor_op_ell2 assoc_ell2_tensor
+          simp flip: tensor_ell2_ket)
+    from x1 obtain x' where x_def: \<open>x = \<psi> \<otimes>\<^sub>s x'\<close>
+      using qFst_eq_vector_decompose by blast
+    have x'_decomp: \<open>x' = (\<Sum>\<^sub>\<infinity>(a,b). Rep_ell2 x' (a,b) *\<^sub>C ket (a,b))\<close>
+      by (simp add: cond_case_prod_eta ell2_decompose_infsum)
+    have aux3: \<open>X *\<^sub>V x = (\<Sum>\<^sub>\<infinity>(a,b). X *\<^sub>V \<psi> \<otimes>\<^sub>s Rep_ell2 x' (a, b) *\<^sub>C |(a, b)\<rangle>)\<close> for X
+      unfolding x_def apply (subst x'_decomp)
+      by (simp add: case_prod_unfold summable_on_tensor_ell2_right ell2_decompose_summable
+          infsum_tensor_ell2_right
+          flip: infsum_cblinfun_apply)
+
+    have \<open>(id_cblinfun \<otimes>\<^sub>o (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))) *\<^sub>V x = x\<close>
+      apply (subst (2) x_inv[symmetric])
+      apply (subst aux3)
+      apply (subst aux3)
+      by (auto intro!: 
+          simp: cblinfun.scaleC_right sandwich_apply assoc_ell2'_tensor tensor_op_adjoint
+          tensor_ell2_scaleC2 tensor_op_ell2 assoc_ell2_tensor \<open>norm \<psi> = 1\<close> cdot_square_norm 
+          simp flip: tensor_ell2_ket)
+    then have qeq': \<open>x \<in> space_as_set (quantum_equality_full (V* o\<^sub>C\<^sub>L U) \<lbrakk>#2\<rbrakk>\<^sub>q id_cblinfun \<lbrakk>#3.\<rbrakk>\<^sub>q)\<close>
+      by (simp add: quantum_equality_full_def apply_qregister_space_qSnd eigenspace_memberI
+          flip: eigenspace_tensor_id_left)
+
+    from x1 qeq' show \<open>x \<in> space_as_set (quantum_equality_full U \<lbrakk>#2\<rbrakk> V \<lbrakk>#3.\<rbrakk> \<sqinter> \<lbrakk>#1\<rbrakk> =\<^sub>q \<psi>)\<close>
+      by simp
+  qed
+  then have \<open>(quantum_equality_full U \<lbrakk>#2\<rbrakk> V \<lbrakk>#3.\<rbrakk>  \<sqinter>  \<lbrakk>#1\<rbrakk> =\<^sub>q \<psi>) \<guillemotright> \<lbrakk>T,Q,R\<rbrakk>
+             = (quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) \<lbrakk>#2,#1\<rbrakk> (tensor_ell2_right \<psi> o\<^sub>C\<^sub>L V) \<lbrakk>#3.\<rbrakk>) \<guillemotright> \<lbrakk>T,Q,R\<rbrakk>\<close>
+    by (rule arg_cong[where f=\<open>apply_qregister_space _\<close>])
+  then show ?thesis
+    by (simp add: apply_qregister_space_inf apply_qregister_space_quantum_equality 
+        qregister_chain_pair_Fst qregister_chain_pair_Snd
+        flip: qregister_chain_apply_space qregister_chain_assoc
+        del: lift_inf qregister_chain_apply_space_simp)
+qed
 
 (* TODO move *)
 lemma unitary_nonzero[simp]: \<open>\<not> unitary (0 :: 'a::{chilbert_space, not_singleton} \<Rightarrow>\<^sub>C\<^sub>L _)\<close>

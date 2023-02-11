@@ -1582,7 +1582,7 @@ lemma qregister_projector: \<open>qregister F \<Longrightarrow> is_Proj a \<Long
   apply (transfer fixing: a)
   by (rule register_projector)
 
-lemma qregister_chain_apply_space: \<open>apply_qregister_space (qregister_chain F G) = (\<lambda>a. apply_qregister_space F (apply_qregister_space G a))\<close>
+lemma qregister_chain_apply_space: \<open>apply_qregister_space (qregister_chain F G) a = apply_qregister_space F (apply_qregister_space G a)\<close>
   apply (cases \<open>qregister G\<close>)
   by (simp_all add: apply_qregister_space_def[abs_def]
       qregister_chain_apply o_def Proj_on_own_range qregister_projector non_qregister)
