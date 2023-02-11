@@ -31,10 +31,11 @@ import org.apache.commons.codec.binary.Hex
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.{FileUtils, IOUtils}
 import qrhl.Utils.NestedException
-import qrhl.logic.Variable.{QC, Index}
+import qrhl.logic.Variable.{Index, QC}
 
 import java.nio.charset.Charset
 import java.security.MessageDigest
+import scala.sys.process.Process
 
 //import qrhl.Utils.tryRelativize
 import qrhl.isabellex.{IsabelleConsts => c, IsabelleTypes => t}
@@ -1125,13 +1126,33 @@ object IsabelleX {
     case None =>
     case Some(path) =>
       val digest = DigestUtils.getSha256Digest
+      // Set this to None in release
+      val gitRevision: Option[String] = Some("045e5ed6056709b14d2a76df42300d4c694f1a71")
       val hashes = Seq(
-        "thys/Complex_Bounded_Operators/Complex_Bounded_Linear_Function.thy" -> "9c295af32b41456fa15db7ac87525fb304811685fe56d1a760442836be6d65bf",
-        "thys/Hilbert_Space_Tensor_Product/Hilbert_Space_Tensor_Product.thy" -> "2e775579a9768ac6d2b60332c143cb4aa049f58410e3eb5c78d99a4d29fe6659",
+        "Complex_Bounded_Operators/Complex_Bounded_Linear_Function.thy" -> "9c295af32b41456fa15db7ac87525fb304811685fe56d1a760442836be6d65bf",
+        "Hilbert_Space_Tensor_Product/Hilbert_Space_Tensor_Product.thy" -> "2e775579a9768ac6d2b60332c143cb4aa049f58410e3eb5c78d99a4d29fe6659",
+        "Complex_Bounded_Operators/Complex_L2.thy" -> "1aada37a64ee4a374d8078bec7abc6228af04e085a8ca857246486f06d37fb8c",
       )
 
+      def gitFail(reason: String) {
+        System.err.println(s"\n\nERROR: The AFP in $path does not seem to be the AFP for this version of qrhl-tool.")
+        System.err.println(reason)
+        System.err.println(s"You need to clone https://github.com/dominique-unruh/afp.git using git to get the right AFP version, and checkout revision ${gitRevision.get}\n")
+        System.exit(1)
+      }
+
+      gitRevision match {
+        case None =>
+        case Some(rev) =>
+          if (Files.notExists(path.resolve(".git")))
+            gitFail("It is not a git repository.")
+          val actualRev = Process("git rev-parse HEAD", path.toFile).!!.trim
+          if (actualRev != rev)
+            gitFail(s"The currently checked out git revisition is $actualRev.")
+      }
+
       def fail(reason: String): Unit = {
-        System.err.println(s"\n\nERROR: The AFP in ${path} does not seem to be the AFP for Isabelle $version.\n")
+        System.err.println(s"\n\nERROR: The AFP in $path does not seem to be the AFP for Isabelle $version.\n")
         System.err.println(s"($reason)\n")
         System.err.println("Edit your config file (e.g., ~/.qrhl-tool.conf), option afp-root, to provide a different AFP directory.\n")
         System.err.println("(Or remove this option altogether and configure the AFP directly in your .isabelle folder to deactivate this check.)")
@@ -1139,12 +1160,12 @@ object IsabelleX {
       }
 
       for ((file, expectedHash) <- hashes) {
-        val thyFile = path.resolve(file)
+        val thyFile = path.resolve("thys").resolve(file)
         if (Files.notExists(thyFile))
           fail(s"Could not find file $file in that directory.")
         val hash = Hex.encodeHexString(DigestUtils.digest(digest, thyFile))
         if (hash != expectedHash)
-          fail(s"$file has a ${digest.getAlgorithm}-hash $hash but the correct AFP version has $expectedHash.")
+          fail(s"$file has a ${digest.getAlgorithm}-hash $hash but in the correct AFP version it has $expectedHash.")
       }
   }
 
