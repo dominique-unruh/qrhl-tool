@@ -1,6 +1,12 @@
 VERSION="snapshot"
 SOURCES := $(shell find src) $(wildcard *.qrhl) $(wildcard *.thy) doc/manual.pdf
 
+ifeq ($(OS), Windows_NT)
+  OPEN_HTML = start
+else
+  OPEN_HTML = xdg-open
+endif
+
 qrhl.zip : target/universal/qrhl-$(VERSION).zip
 	cp $< $@
 
@@ -47,7 +53,7 @@ view-test-results:
 	rm -rf target/tmp
 	mkdir target/tmp
 	cd target/tmp && gh run download
-	if [ -e target/tmp/index.html ]; then xdg-open target/tmp/index.html; else xdg-open target/tmp; fi
+	if [ -e target/tmp/index.html ]; then $(OPEN_HTML) target/tmp/index.html; else $(OPEN_HTML) target/tmp; fi
 
 issue :
 	gh issue create --assignee @me --milestone 0.8
