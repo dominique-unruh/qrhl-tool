@@ -1054,10 +1054,31 @@ lemma basis_projections_reconstruct_summable:
   shows \<open>(\<lambda>b. (b \<bullet>\<^sub>C \<psi>) *\<^sub>C b) summable_on B\<close>
   by (simp add: assms basis_projections_reconstruct basis_projections_reconstruct_has_sum summable_iff_has_sum_infsum)
 
+(* TODO move (this replaces Trace_Class.parseval_infsum) *)
 lemma has_sum_norm_on_basis:
-  assumes \<open>is_ortho_set B\<close> and \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
+  assumes \<open>is_ortho_set B\<close> and normB: \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
   shows \<open>has_sum (\<lambda>b. (norm (b \<bullet>\<^sub>C \<psi>))\<^sup>2) B ((norm \<psi>)\<^sup>2)\<close>
-  sorry
+proof -
+  have *: \<open>(\<lambda>v. (norm v)\<^sup>2) (\<Sum>b\<in>F. (b \<bullet>\<^sub>C \<psi>) *\<^sub>C b) = (\<Sum>b\<in>F. (norm (b \<bullet>\<^sub>C \<psi>))\<^sup>2)\<close> if \<open>finite F\<close> and \<open>F \<subseteq> B\<close> for F
+    apply (subst pythagorean_theorem_sum)
+    using \<open>is_ortho_set B\<close> normB that
+      apply (auto intro!: sum.cong[OF refl] simp: is_ortho_set_def)
+    by blast
+  
+  from assms have \<open>has_sum (\<lambda>b. (b \<bullet>\<^sub>C \<psi>) *\<^sub>C b) B \<psi>\<close>
+    by (simp add: basis_projections_reconstruct_has_sum)
+  then have \<open>((\<lambda>F. \<Sum>b\<in>F. (b \<bullet>\<^sub>C \<psi>) *\<^sub>C b) \<longlongrightarrow> \<psi>) (finite_subsets_at_top B)\<close>
+    by (simp add: has_sum_def)
+  then have \<open>((\<lambda>F. (\<lambda>v. (norm v)\<^sup>2) (\<Sum>b\<in>F. (b \<bullet>\<^sub>C \<psi>) *\<^sub>C b)) \<longlongrightarrow> (norm \<psi>)\<^sup>2) (finite_subsets_at_top B)\<close>
+    apply (rule isCont_tendsto_compose[rotated])
+    by simp
+  then have \<open>((\<lambda>F. (\<Sum>b\<in>F. (norm (b \<bullet>\<^sub>C \<psi>))\<^sup>2)) \<longlongrightarrow> (norm \<psi>)\<^sup>2) (finite_subsets_at_top B)\<close>
+    apply (rule tendsto_cong[THEN iffD2, rotated])
+    apply (rule eventually_finite_subsets_at_top_weakI)
+    by (simp add: *)
+  then show \<open>has_sum (\<lambda>b. (norm (b \<bullet>\<^sub>C \<psi>))\<^sup>2) B ((norm \<psi>)\<^sup>2)\<close>
+    by (simp add: has_sum_def)
+qed
 
 lemma summable_on_norm_on_basis:
   assumes \<open>is_ortho_set B\<close> and \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
@@ -1380,6 +1401,17 @@ syntax "_quantum_equality" :: "variable_list_args \<Rightarrow> variable_list_ar
 translations
   "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
 
+lemma quantum_equality_non_qregister1[simp]: \<open>quantum_equality_full U non_qregister V R = \<bottom>\<close>
+  by (simp add: quantum_equality_full_def)
+
+lemma quantum_equality_non_qregister2[simp]: \<open>quantum_equality_full U Q V non_qregister = \<bottom>\<close>
+  by (simp add: quantum_equality_full_def)
+
+lemma apply_qregister_space_quantum_equality:
+  \<open>apply_qregister_space S (quantum_equality_full U Q V R)
+     = quantum_equality_full U (qregister_chain S Q) V (qregister_chain S R)\<close>
+  by (simp add: quantum_equality_full_def flip: qregister_chain_pair)
+
 (* TODO move *)
 lemma swap_ell2_commute_tensor_op: 
   \<open>swap_ell2 o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o b) = (b \<otimes>\<^sub>o a) o\<^sub>C\<^sub>L swap_ell2\<close>
@@ -1471,6 +1503,54 @@ lemma transform_qregister_id: \<open>transform_qregister id_cblinfun = qregister
   apply (rule apply_qregister_inject[THEN iffD1])
   by (auto intro!: ext simp add: apply_qregister_transform_qregister)
 
+lemma isometry_tensor_id_right[simp]:
+  fixes U :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+  shows \<open>isometry (U \<otimes>\<^sub>o (id_cblinfun :: 'c ell2 \<Rightarrow>\<^sub>C\<^sub>L _)) \<longleftrightarrow> isometry U\<close>
+proof (rule iffI)
+  assume \<open>isometry U\<close>
+  then show \<open>isometry (U \<otimes>\<^sub>o id_cblinfun)\<close>
+    unfolding isometry_def
+    by (auto simp add: tensor_op_adjoint comp_tensor_op)
+next
+  let ?id = \<open>id_cblinfun :: 'c ell2 \<Rightarrow>\<^sub>C\<^sub>L _\<close>
+  assume asm: \<open>isometry (U \<otimes>\<^sub>o ?id)\<close>
+  then have \<open>(U* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o ?id = id_cblinfun \<otimes>\<^sub>o ?id\<close>
+    by (simp add: isometry_def tensor_op_adjoint comp_tensor_op)
+  then have \<open>U* o\<^sub>C\<^sub>L U = id_cblinfun\<close>
+    apply (rule inj_tensor_left[of ?id, unfolded inj_def, rule_format, rotated])
+    by simp
+  then show \<open>isometry U\<close>
+    by (simp add: isometry_def)
+qed
+
+lemma isometry_tensor_id_left[simp]: 
+  fixes U :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+  shows \<open>isometry ((id_cblinfun :: 'c ell2 \<Rightarrow>\<^sub>C\<^sub>L _) \<otimes>\<^sub>o U) \<longleftrightarrow> isometry U\<close>
+proof (rule iffI)
+  assume \<open>isometry U\<close>
+  then show \<open>isometry (id_cblinfun \<otimes>\<^sub>o U)\<close>
+    unfolding isometry_def
+    by (auto simp add: tensor_op_adjoint comp_tensor_op)
+next
+  let ?id = \<open>id_cblinfun :: 'c ell2 \<Rightarrow>\<^sub>C\<^sub>L _\<close>
+  assume asm: \<open>isometry (?id \<otimes>\<^sub>o U)\<close>
+  then have \<open>?id \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L U) = ?id \<otimes>\<^sub>o id_cblinfun\<close>
+    by (simp add: isometry_def tensor_op_adjoint comp_tensor_op)
+  then have \<open>U* o\<^sub>C\<^sub>L U = id_cblinfun\<close>
+    apply (rule inj_tensor_right[of ?id, unfolded inj_def, rule_format, rotated])
+    by simp
+  then show \<open>isometry U\<close>
+    by (simp add: isometry_def)
+qed
+
+lemma unitary_tensor_id_right[simp]: \<open>unitary (U \<otimes>\<^sub>o id_cblinfun) \<longleftrightarrow> unitary U\<close>
+  unfolding unitary_twosided_isometry
+  by (simp add: tensor_op_adjoint)
+
+lemma unitary_tensor_id_left[simp]: \<open>unitary (id_cblinfun \<otimes>\<^sub>o U) \<longleftrightarrow> unitary U\<close>
+  unfolding unitary_twosided_isometry
+  by (simp add: tensor_op_adjoint)
+
 (* TODO _id2 (other side) *)
 lemma qregister_tensor_transform_qregister_id1:
   \<open>qregister_tensor (transform_qregister U) qregister_id
@@ -1487,10 +1567,7 @@ proof (cases \<open>unitary U\<close>)
     by -
 next
   case False
-  note [simp] = False
-  have [simp]: \<open>\<not> unitary (U \<otimes>\<^sub>o id_cblinfun)\<close>
-    sorry
-  show ?thesis
+  then show ?thesis
     by (simp add: transform_qregister_non_unitary)
 qed
 
@@ -1501,7 +1578,54 @@ lemma qregister_chain_transform_qregister:
       simp: apply_qregister_transform_qregister sandwich_compose
       simp flip: cblinfun_apply_cblinfun_compose)
 
-(* TODO right *)
+lemma cblinfun_image_eigenspace_isometry:
+  assumes [simp]: \<open>isometry A\<close> and \<open>c \<noteq> 0\<close>
+  shows \<open>A *\<^sub>S eigenspace c B = eigenspace c (sandwich A B)\<close>
+proof (rule antisym)
+  show \<open>A *\<^sub>S eigenspace c B \<le> eigenspace c (sandwich A B)\<close>
+  proof (unfold cblinfun_image_def2, rule ccspan_leqI, rule subsetI)
+    fix x assume \<open>x \<in> (*\<^sub>V) A ` space_as_set (eigenspace c B)\<close>
+    then obtain y where x_def: \<open>x = A y\<close> and \<open>y \<in> space_as_set (eigenspace c B)\<close>
+      by auto
+    then have \<open>B y = c *\<^sub>C y\<close>
+      by (simp add: eigenspace_memberD)
+    then have \<open>sandwich A B x = c *\<^sub>C x\<close>
+      apply (simp add: sandwich_apply x_def cblinfun_compose_assoc 
+          flip: cblinfun_apply_cblinfun_compose)
+      by (simp add: cblinfun.scaleC_right)
+    then show \<open>x \<in> space_as_set (eigenspace c (sandwich A B))\<close>
+      by (simp add: eigenspace_memberI)
+  qed
+  show \<open>eigenspace c (sandwich A *\<^sub>V B) \<le> A *\<^sub>S eigenspace c B\<close>
+  proof (rule ccsubspace_leI_unit)
+    fix x
+    assume \<open>x \<in> space_as_set (eigenspace c (sandwich A B))\<close>
+    then have *: \<open>sandwich A B x = c *\<^sub>C x\<close>
+      by (simp add: eigenspace_memberD)
+    then have \<open>c *\<^sub>C x \<in> range A\<close>
+      apply (simp add: sandwich_apply)
+      by (metis rangeI)
+    then have \<open>(inverse c * c) *\<^sub>C x \<in> range A\<close>
+      apply (simp flip: scaleC_scaleC)
+      by (metis (no_types, lifting) cblinfun.scaleC_right rangeE rangeI)
+    with \<open>c \<noteq> 0\<close> have \<open>x \<in> range A\<close>
+      by simp
+    then obtain y where x_def: \<open>x = A y\<close>
+      by auto
+    have \<open>B *\<^sub>V y = A* *\<^sub>V sandwich A B x\<close>
+      apply (simp add: sandwich_apply x_def)
+      by (metis assms cblinfun_apply_cblinfun_compose id_cblinfun.rep_eq isometryD)
+    also have \<open>\<dots> = c *\<^sub>C y\<close>
+      apply (simp add: * cblinfun.scaleC_right)
+      apply (simp add: x_def)
+      by (metis assms(1) cblinfun_apply_cblinfun_compose id_cblinfun_apply isometry_def)
+    finally have \<open>y \<in> space_as_set (eigenspace c B)\<close>
+      by (simp add: eigenspace_memberI)
+    then show \<open>x \<in> space_as_set (A *\<^sub>S eigenspace c B) \<close>
+      by (simp add: x_def cblinfun_apply_in_image')
+  qed
+qed
+
 lemma quantum_equality_transform_register_left:
   fixes W :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
   assumes [simp]: \<open>unitary W\<close>
@@ -1509,9 +1633,14 @@ lemma quantum_equality_transform_register_left:
          quantum_equality_full U (qregister_chain Q (transform_qregister (W*))) V R\<close>
 proof (cases \<open>qcompatible Q R\<close>)
   case True
-  have \<open>eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U o\<^sub>C\<^sub>L W) \<otimes>\<^sub>o (W* o\<^sub>C\<^sub>L U* o\<^sub>C\<^sub>L V)) =
+  have \<open>swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U o\<^sub>C\<^sub>L W) \<otimes>\<^sub>o (W* o\<^sub>C\<^sub>L U* o\<^sub>C\<^sub>L V)
+         = sandwich (W* \<otimes>\<^sub>o id_cblinfun) *\<^sub>V (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))\<close>
+    apply (rule tensor_ell2_extensionality)
+    by (simp add: cblinfun_apply_cblinfun_compose tensor_op_ell2 sandwich_apply tensor_op_adjoint)
+  then have \<open>eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U o\<^sub>C\<^sub>L W) \<otimes>\<^sub>o (W* o\<^sub>C\<^sub>L U* o\<^sub>C\<^sub>L V)) =
     (W* \<otimes>\<^sub>o id_cblinfun) *\<^sub>S eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))\<close>
-    sorry
+    apply (subst cblinfun_image_eigenspace_isometry)
+    by simp_all
   with True show ?thesis
     by (simp add: quantum_equality_full_def adj_cblinfun_compose qregister_pair_chain_left
         qregister_tensor_transform_qregister_id1 apply_qregister_space_transform_qregister
@@ -1532,6 +1661,15 @@ next
   with False show ?thesis
     by (simp add: quantum_equality_full_not_compatible)
 qed
+
+lemma quantum_equality_transform_register_right:
+  fixes W :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+  assumes \<open>unitary W\<close>
+  shows \<open>quantum_equality_full U Q (V o\<^sub>C\<^sub>L W) R = 
+         quantum_equality_full U Q V (qregister_chain R (transform_qregister (W*)))\<close>
+  apply (subst quantum_equality_sym)
+  apply (subst (2) quantum_equality_sym)
+  using assms by (rule quantum_equality_transform_register_left)
 
 lemma distinct_qvars_pred_vars_quantum_equality[simp]:
   assumes [register]: \<open>qregister \<lbrakk>F,H\<rbrakk>\<close> \<open>qregister \<lbrakk>G,H\<rbrakk>\<close>
@@ -1652,53 +1790,52 @@ lemma
     and Q :: "('a,'m) qregister" and R :: "('b,'m) qregister" and T :: "('d,'m) qregister"
   sorry
 
+(* TODO move *)
+lemma unitary_nonzero[simp]: \<open>\<not> unitary (0 :: 'a::{chilbert_space, not_singleton} \<Rightarrow>\<^sub>C\<^sub>L _)\<close>
+  by (simp add: unitary_def)
+
+lemma swap_variables_subspace_quantum_equality[simp]: 
+  "swap_variables_subspace v w (quantum_equality_full U Q V R) = 
+      quantum_equality_full U (swap_variables_qvars v w Q) V (swap_variables_qvars v w R)"
+proof (cases \<open>qregister \<lbrakk>v,w\<rbrakk>\<close>)
+  case True
+  then show ?thesis
+    by (simp add: swap_variables_subspace_def swap_variables_qvars_def
+        apply_qregister_space_transform_qregister
+        flip: apply_qregister_space_quantum_equality)
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister swap_variables_subspace_def swap_variables_qvars_def
+        transform_qregister_non_unitary)
+qed
+
 (* We flip the lhs/rhs of the quantum equality in addition to changing the indices.
    This is because quantum equalities are typically written with 1-variables on the left and 2-variables on the right. *)
 lemma index_flip_subspace_quantum_equality[simp]: 
   "index_flip_subspace (quantum_equality_full U Q V R) = 
       quantum_equality_full V (index_flip_qvar R) U (index_flip_qvar Q)"
-  apply (simp add: index_flip_subspace_def index_flip_qvar_def)
-  sorry
-
-lemma swap_variables_subspace_quantum_equality[simp]: 
-  "swap_variables_subspace v w (quantum_equality_full U Q V R) = 
-      quantum_equality_full U (swap_variables_qvars v w Q) V (swap_variables_qvars v w R)"
-  sorry
+  apply (subst (2) quantum_equality_sym)
+  using swap_variables_subspace_quantum_equality[where v=qFst and w=qSnd]
+  by (auto simp add: swap_variables_subspace_def swap_variables_qvars_def
+      index_flip_subspace_def index_flip_qvar_def transform_qregister_swap_ell2
+      del: swap_variables_subspace_quantum_equality)
 
 lemma quantum_equality_full_swap_left:
-  assumes [simp]: "distinct_qvars (qregister_pair (qregister_pair Q R) S)"
+  (* assumes "distinct_qvars (qregister_pair (qregister_pair Q R) S)" *)
   shows "quantum_equality_full U (qregister_pair Q R) V S
-       = quantum_equality_full (U \<cdot> comm_op) (qregister_pair R Q) V S"
-  unfolding quantum_equality_full_def
-    (* Use quantum_equality_transform_register_left / _right ? *)
-  sorry
-(* proof -
-  have "quantum_equality_full U (variable_concat Q R) V S
-      = quantum_equality_full (U\<cdot>comm_op* ) (variable_concat R Q) (V\<cdot>id_cblinfun* ) S"
-    apply (rule quantum_equality_reorder)
-    using assms apply (auto simp: distinct_qvars_split1 intro!: qvar_trafo_comm_op qvar_trafo_id)
-    using distinct_qvarsR distinct_qvars_swap by blast+
-  also have "\<dots> = quantum_equality_full (U\<cdot>comm_op) (variable_concat R Q) V S"
-    by simp
-  finally show ?thesis by -
-qed *)
+       = quantum_equality_full (U o\<^sub>C\<^sub>L swap_ell2) (qregister_pair R Q) V S"
+  using quantum_equality_transform_register_left[where W=swap_ell2
+      and Q=\<open>\<lbrakk>Q,R\<rbrakk>\<close> and U=\<open>U o\<^sub>C\<^sub>L swap_ell2\<close> and V=V and R=S]
+  by (simp add: cblinfun_compose_assoc transform_qregister_swap_ell2)
 
 lemma quantum_equality_full_swap_right:
-  assumes [simp]: "distinct_qvars (qregister_pair (qregister_pair Q R) S)"
+  (* assumes "distinct_qvars (qregister_pair (qregister_pair Q R) S)" *)
   shows "quantum_equality_full U Q V (qregister_pair R S)
-       = quantum_equality_full U Q (V\<cdot>comm_op) (qregister_pair S R)"
-
-    sorry
-(* proof -
-  have "quantum_equality_full U Q V (variable_concat R S)
-      = quantum_equality_full (U\<cdot>id_cblinfun* ) Q (V\<cdot>comm_op* ) (variable_concat S R)"
-    apply (rule quantum_equality_reorder)
-    using assms apply (auto simp: distinct_qvars_split1 distinct_qvars_split2 intro!: qvar_trafo_comm_op qvar_trafo_id)
-    using distinct_qvarsR distinct_qvars_swap by blast+
-  also have "\<dots> = quantum_equality_full U Q (V\<cdot>comm_op) (variable_concat S R)"
-    by simp
-  finally show ?thesis by -
-qed *)
+       = quantum_equality_full U Q (V o\<^sub>C\<^sub>L comm_op) (qregister_pair S R)"
+  using quantum_equality_transform_register_right[where W=swap_ell2
+      and V=\<open>V o\<^sub>C\<^sub>L swap_ell2\<close> and R=\<open>\<lbrakk>R,S\<rbrakk>\<close> and U=U and Q=Q]
+  by (simp add: cblinfun_compose_assoc transform_qregister_swap_ell2)
 
 lemma kernel_member_iff: \<open>x \<in> space_as_set (kernel A) \<longleftrightarrow> A *\<^sub>V x = 0\<close>
   using kernel_memberD kernel_memberI by blast
@@ -1803,7 +1940,7 @@ lemmas X_X[simp] = pauliXX
 lemmas adjoint_H[simp] = hada_adj
 
 lemma H_H[simp]: "hadamard o\<^sub>C\<^sub>L hadamard = id_cblinfun"
-  sorry
+  by eval
 
 lemma unitaryH[simp]: "unitary hadamard"
   apply (rule unitaryI)
