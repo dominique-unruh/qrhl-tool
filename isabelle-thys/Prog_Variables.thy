@@ -1582,15 +1582,15 @@ lemma qregister_projector: \<open>qregister F \<Longrightarrow> is_Proj a \<Long
   apply (transfer fixing: a)
   by (rule register_projector)
 
-lemma qregister_chain_apply_space: \<open>apply_qregister_space (qregister_chain F G) = apply_qregister_space F o apply_qregister_space G\<close>
+lemma qregister_chain_apply_space: \<open>apply_qregister_space (qregister_chain F G) = (\<lambda>a. apply_qregister_space F (apply_qregister_space G a))\<close>
   apply (cases \<open>qregister G\<close>)
   by (simp_all add: apply_qregister_space_def[abs_def]
       qregister_chain_apply o_def Proj_on_own_range qregister_projector non_qregister)
 (* We limit this simplification rule to the case where F is neither Fst nor Snd because those cases are used commonly to encode indexed variables *)
 lemma qregister_chain_apply_space_simp[simp]:
-  assumes \<open>NO_MATCH qFst F\<close> \<open>NO_MATCH qSnd F\<close>
-  shows \<open>apply_qregister_space (qregister_chain F G) = apply_qregister_space F o apply_qregister_space G\<close>
-  by (rule qregister_chain_apply_space)
+  assumes \<open>NO_MATCH qFst F\<close> \<open>NO_MATCH qSnd F\<close> (* TODO do we still need this given that we restricted this rule to applied to a? *)
+  shows \<open>apply_qregister_space (qregister_chain F G) a = apply_qregister_space F (apply_qregister_space G a)\<close>
+  by (simp add: qregister_chain_apply_space)
 
 lift_definition CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is map_commutant
   by (simp add: valid_cregister_range_def)
@@ -3016,6 +3016,13 @@ next
 qed
 
 (* axiomatization lift_pure_state :: \<open>('a,'b) qregister \<Rightarrow> 'a ell2 \<Rightarrow> 'b ell2\<close> *)
+
+(* lift_definition ccomplements :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is complements. *)
+lift_definition qcomplements :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is complements.
+
+lemma qcomplements_def': \<open>qcomplements F G \<longleftrightarrow> qcompatible F G \<and> iso_qregister (qregister_pair F G)\<close>
+  unfolding iso_qregister_def apply transfer 
+  by (auto simp: complements_def Laws_Quantum.iso_register_def non_qregister_raw)
 
 text \<open>Contains rules for the translate_to_index_registers-method.
 

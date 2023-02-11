@@ -202,10 +202,10 @@ definition [code del]: \<open>DISTINCT_QVARS_GUARD (C::bool) = C\<close>
 lemma DISTINCT_QVARS_GUARD_cong[cong]: \<open>DISTINCT_QVARS_GUARD x = DISTINCT_QVARS_GUARD x\<close>
   by simp
 
-definition operator_local :: "(qu2,qu2) l2bounded \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
+definition operator_local :: "'b qupdate \<Rightarrow> ('a,'b) qregister \<Rightarrow> bool" where
   \<open>operator_local A F \<longleftrightarrow> A \<in> range (apply_qregister F)\<close>
 
-definition predicate_local :: "predicate \<Rightarrow> 'a q2variable \<Rightarrow> bool" where
+definition predicate_local :: "'b subspace \<Rightarrow> ('a,'b) qregister \<Rightarrow> bool" where
   \<open>predicate_local S F \<longleftrightarrow> S \<in> range (apply_qregister_space F)\<close>
 
 definition distinct_qvars_op_vars :: "('b,'b) l2bounded \<Rightarrow> ('a,'b) qregister \<Rightarrow> bool" where
@@ -802,38 +802,26 @@ subsection \<open>Subspace division\<close>
 
 definition space_div :: "'b ell2 ccsubspace \<Rightarrow> 'a ell2 \<Rightarrow> ('a,'b) qregister \<Rightarrow> 'b ell2 ccsubspace"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90) where
-  \<open>space_div A \<psi> Q = (SUP a. apply_qregister Q a *\<^sub>S (A \<sqinter> (Q =\<^sub>q \<psi>)))\<close>
+  \<open>space_div A \<psi> Q = (if \<psi> = 0 then \<top> else SUP a. apply_qregister Q a *\<^sub>S (A \<sqinter> (Q =\<^sub>q \<psi>)))\<close>
   (* \<open>space_div A \<psi> Q = ccspan {apply_qregister Q a \<phi>\<psi> | a \<phi>\<psi>. \<phi>\<psi> \<in> space_as_set (A \<sqinter> (Q =\<^sub>q \<psi>))}\<close> (* Equivalent but less compact *) *)
   (* \<open>space_div A \<psi> Q = (SUP a. apply_qregister Q a *\<^sub>S A)\<close> (* Wrong. "ccspan {EPR} \<div> ket0" should be 0 but isn't *) *)
   (* \<open>space_div A \<psi> Q = Abs_clinear_space {\<phi>| \<phi> a. apply_qregister Q a *\<^sub>V \<phi> \<in> space_as_set A}\<close> (* Not right. E.g., a=0 makes this the whole space *) *)
 
+lemma space_div_non_qregister[simp]: \<open>space_div A \<psi> non_qregister = (if \<psi>=0 then \<top> else \<bottom>)\<close>
+  by (simp add: space_div_def)
+
+lemma space_div_zero1[simp]: \<open>space_div 0 \<psi> Q = 0\<close> if \<open>\<psi> \<noteq> 0\<close>
+  using that by (simp add: space_div_def)
+
+lemma space_div_zero2[simp]: \<open>space_div S 0 Q = \<top>\<close>
+  by (simp add: space_div_def)
+
 lemma space_div_lift:
-  \<open>space_div (apply_qregister_space FG A') \<psi> (qregister_chain FG G')
+  assumes [simp]: \<open>qregister FG\<close>
+  shows \<open>space_div (apply_qregister_space FG A') \<psi> (qregister_chain FG G')
            = apply_qregister_space FG (space_div A' \<psi> G')\<close>
-  by (simp add: space_div_def apply_qregister_space_SUP)
-
-lemma leq_space_div[simp]: "distinct_qvars_pred_vars A Q \<Longrightarrow> (A \<le> B \<div> \<psi>\<guillemotright>Q) \<longleftrightarrow> (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
-proof (rule iffI)
-  assume [simp]: \<open>distinct_qvars_pred_vars A Q\<close>
-  then have \<open>Proj A o\<^sub>C\<^sub>L apply_qregister Q x = apply_qregister Q x o\<^sub>C\<^sub>L Proj A\<close> for x
-    by (simp add: distinct_qvars_pred_vars_def distinct_qvars_op_vars_def commutant_def)
-  show \<open>A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B\<close> if \<open>A \<le> B \<div> \<psi>\<guillemotright>Q\<close>
-  proof (rule ccsubspace_leI_unit)
-    fix \<phi>
-    assume \<open>\<phi> \<in> space_as_set (A \<sqinter> apply_qregister_space Q (ccspan {\<psi>}))\<close>
-    then have \<open>\<phi> \<in> space_as_set A\<close> and \<open>\<phi> \<in> space_as_set (apply_qregister_space Q (ccspan {\<psi>}))\<close>
-      by auto
-    with that have \<open>\<phi> \<in> space_as_set (B \<div> \<psi>\<guillemotright>Q)\<close>
-      using less_eq_ccsubspace.rep_eq by force
-    then have \<open>\<phi> \<in> space_as_set (SUP a. apply_qregister Q a *\<^sub>S (B \<sqinter> (Q =\<^sub>q \<psi>)))\<close>
-      by (simp add: space_div_def)
-    show \<open>\<phi> \<in> space_as_set B\<close>
-      sorry
-  qed
-
-  show \<open>A \<le> B \<div> \<psi>\<guillemotright>Q\<close> if \<open>A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B\<close>
-    sorry
-qed
+  apply (cases \<open>\<psi> = 0\<close>)
+  by (simp_all add: space_div_def apply_qregister_space_SUP)
 
 lift_definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" is
   "\<lambda>S \<psi>. {\<phi>. \<phi> \<otimes>\<^sub>s \<psi> \<in> space_as_set S}"
@@ -855,24 +843,447 @@ proof (rename_tac S \<psi>, rule closed_csubspace.intro)
   qed
 qed
 
+lemma space_div_unlifted_zero1[simp]: \<open>space_div_unlifted 0 \<psi> = 0\<close> if \<open>\<psi> \<noteq> 0\<close>
+  apply (rule space_as_set_inject[THEN iffD1])
+  using that tensor_ell2_nonzero by (auto simp add: space_div_unlifted.rep_eq)
 
-lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(qregister_pair Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
-proof -
-  have \<open>qcompatible Q R\<close>
-    (* TODO: Missing assumption: "qcompatible Q R". Add and test whether this breaks something. *)
-    sorry
-  show ?thesis
-    apply (subst space_div_def)
-    sorry
+lemma space_div_unlifted_zero2[simp]: \<open>space_div_unlifted S 0 = \<top>\<close>
+  by (simp add: space_div_unlifted_def top_ccsubspace.abs_eq)
+
+(* TODO move *)
+lemma tensor_ell2_in_tensor_ccsubspace: \<open>a \<otimes>\<^sub>s b \<in> space_as_set (A \<otimes>\<^sub>S B)\<close> if \<open>a \<in> space_as_set A\<close> and \<open>b \<in> space_as_set B\<close>
+  \<comment> \<open>Converse is @{thm [source] tensor_ell2_mem_tensor_ccsubspace_left} and \<open>..._right\<close>.\<close>
+  using that by (auto intro!: ccspan_superset[THEN subsetD] simp add: tensor_ccsubspace_def)
+
+(* TODO move *)
+lemma tensor_ccsubspace_mono: \<open>A \<otimes>\<^sub>S B \<le> C \<otimes>\<^sub>S D\<close> if \<open>A \<le> C\<close> and \<open>B \<le> D\<close>
+  apply (auto intro!: ccspan_mono simp add: tensor_ccsubspace_def)
+  using that
+  by (auto simp add: less_eq_ccsubspace_def)
+
+
+lemma space_div_space_div_unlifted: 
+  assumes \<open>qcompatible Q R\<close>
+  shows "space_div (S\<guillemotright>\<lbrakk>R,Q\<rbrakk>) \<psi> Q = (space_div_unlifted S \<psi>)\<guillemotright>R"
+proof (cases \<open>\<psi> = 0\<close>)
+  case True
+  have [simp]: \<open>qregister R\<close>
+    using assms qcompatible_register2 by blast
+  then show ?thesis
+    using True by simp
+next
+  case False
+  have [simp]: \<open>qcompatible R Q\<close>
+    using assms qcompatible_sym by blast
+  have \<open>space_div S \<psi> qSnd = space_div_unlifted S \<psi> \<guillemotright> qFst\<close>
+  proof (rule antisym)
+    show \<open>S \<div> \<psi>\<guillemotright>qSnd \<le> (space_div_unlifted S \<psi>) \<guillemotright> qFst\<close>
+    proof (simp only: space_div_def False if_False, rule SUP_least)
+      fix a
+      have \<open>S \<sqinter> (qSnd =\<^sub>q \<psi>) \<le> (space_div_unlifted S \<psi>) \<guillemotright> qFst\<close>
+      proof (rule ccsubspace_leI_unit)
+        fix \<phi> assume \<open>\<phi> \<in> space_as_set (S \<sqinter> (qSnd =\<^sub>q \<psi>))\<close>
+        then have \<phi>S: \<open>\<phi> \<in> space_as_set S\<close> and \<open>\<phi> \<in> space_as_set (qSnd =\<^sub>q \<psi>)\<close>
+          by simp_all
+        then have \<open>\<phi> \<in> space_as_set (\<top> \<otimes>\<^sub>S ccspan {\<psi>})\<close>
+          by (simp add: apply_qregister_space_qSnd)
+        then obtain \<gamma> where \<phi>_decomp: \<open>\<phi> = \<gamma> \<otimes> \<psi>\<close>
+          apply atomize_elim
+          apply (rule tensor_ccsubspace_right1dim_member)
+          by simp
+        then have \<open>\<gamma> \<in> space_as_set (space_div_unlifted S \<psi>)\<close>
+          using \<phi>S space_div_unlifted.rep_eq by auto
+        then show \<open>\<phi> \<in> space_as_set (space_div_unlifted S \<psi> \<guillemotright> qFst)\<close>
+          by (simp add: \<phi>_decomp apply_qregister_space_qFst tensor_ell2_in_tensor_ccsubspace)
+      qed
+      then have \<open>(a\<guillemotright>qSnd) *\<^sub>S (S \<sqinter> (qSnd =\<^sub>q \<psi>)) \<le> (a\<guillemotright>qSnd) *\<^sub>S (space_div_unlifted S \<psi> \<guillemotright> qFst)\<close>
+        by (simp add: cblinfun_image_mono)
+      also have \<open>\<dots> \<le> space_div_unlifted S \<psi> \<guillemotright> qFst\<close>
+        by (simp add: apply_qregister_space_qFst apply_qregister_qSnd tensor_ccsubspace_mono
+            flip: tensor_ccsubspace_image)
+      ultimately show \<open>(a\<guillemotright>qSnd) *\<^sub>S (S \<sqinter> (qSnd =\<^sub>q \<psi>)) \<le> space_div_unlifted S \<psi> \<guillemotright> qFst\<close>
+        by simp
+    qed
+    show \<open>(space_div_unlifted S \<psi>) \<guillemotright> qFst \<le> S \<div> \<psi>\<guillemotright>qSnd\<close>
+    proof -
+      have \<open>\<gamma> \<otimes>\<^sub>s \<phi> \<in> space_as_set (S \<div> \<psi>\<guillemotright>qSnd)\<close>
+        if \<open>\<gamma> \<in> space_as_set (space_div_unlifted S \<psi>)\<close> for \<gamma> \<phi>
+      proof -
+        from that
+        have \<open>\<gamma> \<otimes>\<^sub>s \<psi> \<in> space_as_set S\<close>
+          by (simp add: space_div_unlifted.rep_eq)
+        then have *: \<open>\<gamma> \<otimes>\<^sub>s \<psi> \<in> space_as_set (S \<sqinter> (qSnd =\<^sub>q \<psi>))\<close>
+          by (metis IntI UNIV_I apply_qregister_space_qSnd ccspan_superset insert_subset space_as_set_inf space_as_set_top tensor_ell2_in_tensor_ccsubspace)
+        define a where \<open>a = butterfly \<phi> \<psi> /\<^sub>R ((norm \<psi>)\<^sup>2)\<close>
+        from \<open>\<psi> \<noteq> 0\<close> have \<open>a *\<^sub>V \<psi> = \<phi>\<close>
+          by (simp add: a_def scaleR_scaleC power2_norm_eq_cinner)
+        then have \<open>\<gamma> \<otimes>\<^sub>s \<phi> = (a\<guillemotright>qSnd) *\<^sub>V (\<gamma> \<otimes>\<^sub>s \<psi>)\<close>
+          by (simp add: apply_qregister_qSnd tensor_op_ell2)
+        also have \<open>\<dots> \<in> space_as_set ((a\<guillemotright>qSnd) *\<^sub>S (S \<sqinter> (qSnd =\<^sub>q \<psi>)))\<close>
+          using "*" cblinfun_apply_in_image' by blast
+        also have \<open>\<dots> \<le> space_as_set (S \<div> \<psi>\<guillemotright>qSnd)\<close>
+          apply (simp add: space_div_def
+              flip: less_eq_ccsubspace.rep_eq)
+          by (meson Sup_upper range_eqI)
+        finally show ?thesis
+          by -
+      qed
+      then show ?thesis
+        by (auto intro!: ccspan_leqI 
+          simp add: apply_qregister_space_qFst tensor_ccsubspace_def)
+    qed
+  qed
+  then show \<open>space_div (S\<guillemotright>\<lbrakk>R,Q\<rbrakk>) \<psi> Q = (space_div_unlifted S \<psi>)\<guillemotright>R\<close>
+    using space_div_lift[where FG=\<open>\<lbrakk>R,Q\<rbrakk>\<close> and A'=S and \<psi>=\<psi> and G'=qSnd]
+    by (simp add: translate_to_index_registers_apply_space)
 qed
 
-lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top"
-  by (metis distinct_qvars_pred_vars_top inf.cobounded1 leq_space_div top.extremum_unique)
-lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = bot"
-  apply (cases \<open>qregister Q\<close>)
-  by (simp_all add: space_div_def)
-lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = Cla[e]"
-  by simp
+abbreviation \<open>qregister_decomposition_basis F \<equiv> register_decomposition_basis (apply_qregister F)\<close>
+
+lemma qcomplement_exists:
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
+          \<exists>G :: ('c,'b) qregister. qcomplements F G\<close>
+proof -
+  have *: \<open>(\<exists>G :: 'c qupdate \<Rightarrow> 'b qupdate. complements (apply_qregister F) G)
+    \<longleftrightarrow> (\<exists>G :: ('c,'b) qregister. qcomplements F G)\<close>
+    apply (rule Ex_iffI[where f=Abs_qregister and g=apply_qregister])
+    by (auto simp: qcomplements_def complements_def Abs_qregister_inverse
+        Abs_qregister_inverse Laws_Quantum.compatible_register2)
+  show ?thesis
+    apply (subst *[symmetric])
+    apply (rule complement_exists)
+    using assms by simp
+qed
+
+lemma basis_projections_reconstruct_has_sum:
+  assumes \<open>is_ortho_set B\<close> and normB: \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<psi>B: \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
+  shows \<open>has_sum (\<lambda>b. (b \<bullet>\<^sub>C \<psi>) *\<^sub>C b) B \<psi>\<close>
+proof (rule has_sumI_metric)
+  fix e :: real assume \<open>e > 0\<close>
+  define e2 where \<open>e2 = e/2\<close>
+  have [simp]: \<open>e2 > 0\<close>
+    by (simp add: \<open>0 < e\<close> e2_def)
+  define bb where \<open>bb \<phi> b = (b \<bullet>\<^sub>C \<phi>) *\<^sub>C b\<close> for \<phi> and b :: 'a
+  have linear_bb: \<open>clinear (\<lambda>\<phi>. bb \<phi> b)\<close> for b
+    by (simp add: bb_def cinner_add_right clinear_iff scaleC_left.add)
+  from \<psi>B obtain \<phi> where dist\<phi>\<psi>: \<open>dist \<phi> \<psi> < e2\<close> and \<phi>B: \<open>\<phi> \<in> cspan B\<close>
+    apply atomize_elim apply (simp add: ccspan.rep_eq closure_approachable)
+    using \<open>0 < e2\<close> by blast
+  from \<phi>B obtain F where \<open>finite F\<close> and \<open>F \<subseteq> B\<close> and \<phi>F: \<open>\<phi> \<in> cspan F\<close>
+    by (meson vector_finitely_spanned)
+  have \<open>dist (sum (bb \<psi>) G) \<psi> < e\<close> 
+    if \<open>finite G\<close> and \<open>F \<subseteq> G\<close> and \<open>G \<subseteq> B\<close> for G
+  proof -
+    have sum\<phi>: \<open>sum (bb \<phi>) G = \<phi>\<close>
+    proof -
+      from \<phi>F \<open>F \<subseteq> G\<close> have \<phi>G: \<open>\<phi> \<in> cspan G\<close>
+        using complex_vector.span_mono by blast
+      then obtain f where \<phi>sum: \<open>\<phi> = (\<Sum>b\<in>G. f b *\<^sub>C b)\<close>
+        using complex_vector.span_finite[OF \<open>finite G\<close>] 
+        by auto
+      have \<open>sum (bb \<phi>) G = (\<Sum>c\<in>G. \<Sum>b\<in>G. bb (f b *\<^sub>C b) c)\<close>
+        apply (simp add: \<phi>sum)
+        apply (rule sum.cong, simp)
+        apply (rule complex_vector.linear_sum[where f=\<open>\<lambda>x. bb x _\<close>])
+        by (rule linear_bb)
+      also have \<open>\<dots> = (\<Sum>(c,b)\<in>G\<times>G. bb (f b *\<^sub>C b) c)\<close>
+        by (simp add: sum.cartesian_product)
+      also have \<open>\<dots> = (\<Sum>b\<in>G. f b *\<^sub>C b)\<close>
+        apply (rule sym)
+        apply (rule sum.reindex_bij_witness_not_neutral
+            [where j=\<open>\<lambda>b. (b,b)\<close> and i=fst and T'=\<open>G\<times>G - (\<lambda>b. (b,b)) ` G\<close> and S'=\<open>{}\<close>])
+        using \<open>finite G\<close> apply (auto simp: bb_def)
+         apply (metis (no_types, lifting) assms(1) imageI is_ortho_set_antimono is_ortho_set_def that(3))
+        using normB \<open>G \<subseteq> B\<close> cnorm_eq_1 by blast
+      also have \<open>\<dots> = \<phi>\<close>
+        by (simp flip: \<phi>sum)
+      finally show ?thesis
+        by -
+    qed
+    have \<open>dist (sum (bb \<phi>) G) (sum (bb \<psi>) G) < e2\<close>
+    proof -
+      define \<gamma> where \<open>\<gamma> = \<phi> - \<psi>\<close>
+      have \<open>(dist (sum (bb \<phi>) G) (sum (bb \<psi>) G))\<^sup>2 = (norm (sum (bb \<gamma>) G))\<^sup>2\<close>
+        by (simp add: dist_norm \<gamma>_def complex_vector.linear_diff[OF linear_bb] sum_subtractf)
+      also have \<open>\<dots> = (norm (sum (bb \<gamma>) G))\<^sup>2 + (norm (\<gamma> - sum (bb \<gamma>) G))\<^sup>2 - (norm (\<gamma> - sum (bb \<gamma>) G))\<^sup>2\<close>
+        by simp
+      also have \<open>\<dots> = (norm (sum (bb \<gamma>) G + (\<gamma> - sum (bb \<gamma>) G)))\<^sup>2 - (norm (\<gamma> - sum (bb \<gamma>) G))\<^sup>2\<close>
+      proof -
+        have \<open>(\<Sum>b\<in>G. bb \<gamma> b \<bullet>\<^sub>C bb \<gamma> c) = bb \<gamma> c \<bullet>\<^sub>C \<gamma>\<close> if \<open>c \<in> G\<close> for c
+          apply (subst sum_single[where i=c])
+          using that apply (auto intro!: \<open>finite G\<close> simp: bb_def)
+           apply (metis \<open>G \<subseteq> B\<close> \<open>is_ortho_set B\<close> is_ortho_set_antimono is_ortho_set_def)
+          using \<open>G \<subseteq> B\<close> normB cnorm_eq_1 by blast
+        then have \<open>is_orthogonal (sum (bb \<gamma>) G) (\<gamma> - sum (bb \<gamma>) G)\<close>
+          by (simp add: cinner_sum_left cinner_diff_right cinner_sum_right)
+        then show ?thesis
+          apply (rule_tac arg_cong[where f=\<open>\<lambda>x. x - _\<close>])
+          by (rule pythagorean_theorem[symmetric])
+      qed
+      also have \<open>\<dots> = (norm \<gamma>)\<^sup>2 - (norm (\<gamma> - sum (bb \<gamma>) G))\<^sup>2\<close>
+        by simp
+      also have \<open>\<dots> \<le> (norm \<gamma>)\<^sup>2\<close>
+        by simp
+      also have \<open>\<dots> = (dist \<phi> \<psi>)\<^sup>2\<close>
+        by (simp add: \<gamma>_def dist_norm)
+      also have \<open>\<dots> < e2\<^sup>2\<close>
+        using dist\<phi>\<psi> apply (rule power_strict_mono)
+        by auto
+      finally show ?thesis
+        by (smt (verit) \<open>0 < e2\<close> power_mono)
+    qed
+    with sum\<phi> dist\<phi>\<psi> show \<open>dist (sum (bb \<psi>) G) \<psi> < e\<close>
+      apply (rule_tac dist_triangle_lt[where z=\<phi>])
+      by (simp add: e2_def dist_commute)
+  qed
+  with \<open>finite F\<close> and \<open>F \<subseteq> B\<close> 
+  show \<open>\<exists>F. finite F \<and>
+             F \<subseteq> B \<and> (\<forall>G. finite G \<and> F \<subseteq> G \<and> G \<subseteq> B \<longrightarrow> dist (sum (bb \<psi>) G) \<psi> < e)\<close>
+    by (auto intro!: exI[of _ F])
+qed
+
+lemma basis_projections_reconstruct:
+  assumes \<open>is_ortho_set B\<close> and \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
+  shows \<open>(\<Sum>\<^sub>\<infinity>b\<in>B. (b \<bullet>\<^sub>C \<psi>) *\<^sub>C b) = \<psi>\<close>
+  using assms basis_projections_reconstruct_has_sum infsumI by blast
+
+lemma basis_projections_reconstruct_summable:
+  assumes \<open>is_ortho_set B\<close> and \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
+  shows \<open>(\<lambda>b. (b \<bullet>\<^sub>C \<psi>) *\<^sub>C b) summable_on B\<close>
+  by (simp add: assms basis_projections_reconstruct basis_projections_reconstruct_has_sum summable_iff_has_sum_infsum)
+
+lemma has_sum_norm_on_basis:
+  assumes \<open>is_ortho_set B\<close> and \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
+  shows \<open>has_sum (\<lambda>b. (norm (b \<bullet>\<^sub>C \<psi>))\<^sup>2) B ((norm \<psi>)\<^sup>2)\<close>
+  sorry
+
+lemma summable_on_norm_on_basis:
+  assumes \<open>is_ortho_set B\<close> and \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
+  shows \<open>(\<lambda>b. (norm (b \<bullet>\<^sub>C \<psi>))\<^sup>2) summable_on B\<close>
+  using has_sum_norm_on_basis[OF assms] summable_onI by blast
+
+lemma infsum_norm_on_basis:
+  assumes \<open>is_ortho_set B\<close> and \<open>\<And>b. b\<in>B \<Longrightarrow> norm b = 1\<close> and \<open>\<psi> \<in> space_as_set (ccspan B)\<close>
+  shows \<open>(\<Sum>\<^sub>\<infinity>b\<in>B. (norm (b \<bullet>\<^sub>C \<psi>))\<^sup>2) = (norm \<psi>)\<^sup>2\<close>
+  using has_sum_norm_on_basis[OF assms]
+  using infsumI by blast
+
+
+lemma has_sum_reindex_bij_betw:
+  assumes "bij_betw g A B"
+  shows   "has_sum (\<lambda>x. f (g x)) A l \<longleftrightarrow> has_sum f B l"
+proof -
+  have \<open>has_sum (\<lambda>x. f (g x)) A l \<longleftrightarrow> has_sum f (g ` A) l\<close>
+    apply (rule has_sum_reindex[symmetric, unfolded o_def])
+    using assms bij_betw_imp_inj_on by blast
+  also have \<open>\<dots> \<longleftrightarrow> has_sum f B l\<close>
+    using assms bij_betw_imp_surj_on by blast
+  finally show ?thesis .
+qed
+
+(* TODO move *)
+lemma tensor_ccsubspace_element_as_infsum:
+  fixes A :: \<open>'a ell2 ccsubspace\<close> and B :: \<open>'b ell2 ccsubspace\<close>
+  assumes \<open>\<psi> \<in> space_as_set (A \<otimes>\<^sub>S B)\<close>
+  shows \<open>\<exists>\<phi> \<delta>. (\<forall>n::nat. \<phi> n \<in> space_as_set A) \<and> (\<forall>n. \<delta> n \<in> space_as_set B)
+       \<and> has_sum (\<lambda>n. \<phi> n \<otimes>\<^sub>s \<delta> n) UNIV \<psi>\<close>
+proof -
+  obtain A' where spanA': \<open>ccspan A' = A\<close> and orthoA': \<open>is_ortho_set A'\<close> and normA': \<open>a \<in> A' \<Longrightarrow> norm a = 1\<close> for a
+    using some_chilbert_basis_of_ccspan some_chilbert_basis_of_is_ortho_set some_chilbert_basis_of_norm1
+    by blast
+  obtain B' where spanB': \<open>ccspan B' = B\<close> and orthoB': \<open>is_ortho_set B'\<close> and normB': \<open>b \<in> B' \<Longrightarrow> norm b = 1\<close> for b
+    using some_chilbert_basis_of_ccspan some_chilbert_basis_of_is_ortho_set some_chilbert_basis_of_norm1
+    by blast
+  define AB' where \<open>AB' = {a \<otimes>\<^sub>s b | a b. a \<in> A' \<and> b \<in> B'}\<close>
+  define ABnon0 where \<open>ABnon0 = {ab \<in> AB'. (ab \<bullet>\<^sub>C \<psi>) *\<^sub>C ab \<noteq> 0}\<close>
+  have ABnon0_def': \<open>ABnon0 = {ab \<in> AB'. (norm (ab \<bullet>\<^sub>C \<psi>))\<^sup>2 \<noteq> 0}\<close>
+    by (auto simp: ABnon0_def)
+  have \<open>is_ortho_set AB'\<close>
+    by (simp add: AB'_def orthoA' orthoB' tensor_ell2_is_ortho_set)
+  have normAB': \<open>ab \<in> AB' \<Longrightarrow> norm ab = 1\<close> for ab
+    by (auto simp add: AB'_def norm_tensor_ell2 normA' normB')
+  have spanAB': \<open>ccspan AB' = A \<otimes>\<^sub>S B\<close>
+    by (simp add: tensor_ccsubspace_ccspan AB'_def flip: spanA' spanB')
+  have sum1: \<open>has_sum (\<lambda>ab. (ab \<bullet>\<^sub>C \<psi>) *\<^sub>C ab) AB' \<psi>\<close>
+    apply (rule basis_projections_reconstruct_has_sum)
+    by (simp_all add: spanAB' \<open>is_ortho_set AB'\<close> normAB' assms)
+  have \<open>(\<lambda>ab. (norm (ab \<bullet>\<^sub>C \<psi>))\<^sup>2) summable_on AB'\<close>
+    apply (rule summable_on_norm_on_basis)
+    by (simp_all add: spanAB' \<open>is_ortho_set AB'\<close> normAB' assms)
+  then have \<open>countable ABnon0\<close>
+    using ABnon0_def' summable_countable_real by blast
+  obtain f and N :: \<open>nat set\<close> where bij_f: \<open>bij_betw f N ABnon0\<close>
+    using \<open>countable ABnon0\<close> countableE_bij by blast
+  then obtain \<phi>0 \<delta>0 where f_def: \<open>f n = \<phi>0 n \<otimes>\<^sub>s \<delta>0 n\<close> and \<phi>0A': \<open>\<phi>0 n \<in> A'\<close> and \<delta>0B': \<open>\<delta>0 n \<in> B'\<close> if \<open>n \<in> N\<close> for n
+    apply atomize_elim 
+    apply (subst all_conj_distrib[symmetric] choice_iff[symmetric])+
+    apply (simp add: bij_betw_def ABnon0_def)
+    using AB'_def \<open>bij_betw f N ABnon0\<close> bij_betwE mem_Collect_eq by blast
+  define c where \<open>c n = (\<phi>0 n \<otimes>\<^sub>s \<delta>0 n) \<bullet>\<^sub>C \<psi>\<close> for n
+  from sum1 have \<open>has_sum (\<lambda>ab. (ab \<bullet>\<^sub>C \<psi>) *\<^sub>C ab) ABnon0 \<psi>\<close>
+    apply (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
+    by (auto simp: ABnon0_def)
+  then have \<open>has_sum (\<lambda>n. (f n \<bullet>\<^sub>C \<psi>) *\<^sub>C f n) N \<psi>\<close>
+    by (rule has_sum_reindex_bij_betw[OF bij_f, THEN iffD2])
+  then have sum2: \<open>has_sum (\<lambda>n. c n *\<^sub>C (\<phi>0 n \<otimes>\<^sub>s \<delta>0 n)) N \<psi>\<close>
+    apply (rule has_sum_cong[THEN iffD1, rotated])
+    by (simp add: f_def c_def)
+  define \<phi> \<delta> where \<open>\<phi> n = (if n\<in>N then c n *\<^sub>C \<phi>0 n else 0)\<close> and \<open>\<delta> n = (if n\<in>N then \<delta>0 n else 0)\<close> for n
+  then have 1: \<open>\<phi> n \<in> space_as_set A\<close> and 2: \<open>\<delta> n \<in> space_as_set B\<close> for n
+    using \<phi>0A' \<delta>0B' spanA' spanB' ccspan_superset 
+    by (auto intro!: complex_vector.subspace_scale simp: \<phi>_def \<delta>_def)
+  from sum2 have sum3: \<open>has_sum (\<lambda>n. \<phi> n \<otimes>\<^sub>s \<delta> n) UNIV \<psi>\<close>
+    apply (rule has_sum_cong_neutral[THEN iffD2, rotated -1])
+    by (auto simp: \<phi>_def \<delta>_def tensor_ell2_scaleC1)
+  from 1 2 sum3 show ?thesis
+    by auto
+qed
+
+lemma distinct_qvars_op_vars_complement:
+  assumes \<open>qcomplements Q R\<close>
+  assumes \<open>distinct_qvars_op_vars A Q\<close>
+  shows \<open>operator_local A R\<close>
+  using assms apply (auto simp add: distinct_qvars_op_vars_def operator_local_def)
+  by (simp add: qcomplements.rep_eq register_range_complement_commutant)
+
+
+lemma distinct_qvars_pred_vars_complement:
+  assumes \<open>qcomplements Q R\<close>
+  assumes \<open>distinct_qvars_pred_vars A Q\<close>
+  shows \<open>predicate_local A R\<close>
+  using assms(1) assms(2) distinct_qvars_op_vars_complement distinct_qvars_pred_vars_def operator_local_Proj by blast
+
+lemma ccspan_superset': \<open>x \<in> X \<Longrightarrow> x \<in> space_as_set (ccspan X)\<close>
+  using ccspan_superset by auto
+
+lemma iso_qregister_operator_local:
+  assumes \<open>iso_qregister Q\<close>
+  shows \<open>operator_local A Q\<close>
+proof -
+  from assms obtain J where \<open>qregister_chain Q J = qregister_id\<close>
+    unfolding iso_qregister_def by auto
+  then have \<open>A = apply_qregister Q (apply_qregister J A)\<close>
+    by (simp add: eq_id_iff translate_to_index_registers_apply)
+  then show ?thesis
+    by (simp add: operator_local_def)
+qed
+
+
+lemma iso_qregister_predicate_local:
+  assumes \<open>iso_qregister Q\<close>
+  shows \<open>predicate_local S Q\<close>
+  using assms iso_qregister_operator_local operator_local_Proj by blast
+
+lemma leq_space_div[simp]: 
+  fixes A B :: \<open>'b ell2 ccsubspace\<close> and Q :: \<open>('a, 'b) qregister\<close>
+  assumes \<open>qregister Q\<close> and \<open>distinct_qvars_pred_vars A Q\<close>
+  shows "(A \<le> B \<div> \<psi>\<guillemotright>Q) \<longleftrightarrow> (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
+proof -
+  from qcomplement_exists[OF \<open>qregister Q\<close>]
+  have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis Q.
+        (A \<le> B \<div> \<psi>\<guillemotright>Q) \<longleftrightarrow> (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>R. qcomplements Q R\<close>
+    then obtain R :: \<open>('c, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
+      by auto
+    then have \<open>qcomplements R Q\<close>
+      by (meson complements_sym qcomplements.rep_eq)
+    then have [simp]: \<open>qregister \<lbrakk>R,Q\<rbrakk>\<close>
+      by (simp add: qcomplements_def')
+    from \<open>qcomplements Q R\<close> have [simp]: \<open>qregister \<lbrakk>Q,R\<rbrakk>\<close>
+      by (simp add: qcomplements_def')
+    from \<open>qcomplements Q R\<close> have \<open>iso_qregister \<lbrakk>Q,R\<rbrakk>\<close>
+      by (simp add: qcomplements_def')
+    from \<open>qcomplements R Q\<close> have \<open>iso_qregister \<lbrakk>R,Q\<rbrakk>\<close>
+      by (simp add: qcomplements_def')
+
+    from \<open>distinct_qvars_pred_vars A Q\<close> \<open>qcomplements Q R\<close>
+    have \<open>predicate_local A R\<close>
+      using distinct_qvars_pred_vars_complement by auto
+    then obtain A' where A_def: \<open>A = A'\<guillemotright>R\<close>
+      using predicate_localE by blast
+    from \<open>iso_qregister \<lbrakk>R,Q\<rbrakk>\<close>
+    have \<open>predicate_local B \<lbrakk>R,Q\<rbrakk>\<close>
+      using iso_qregister_predicate_local by blast
+    then obtain B' where B_def: \<open>B = B'\<guillemotright>\<lbrakk>R,Q\<rbrakk>\<close>
+      using predicate_localE by blast
+
+    have \<open>A \<le> B \<div> \<psi>\<guillemotright>Q \<longleftrightarrow> A'\<guillemotright>R \<le> space_div_unlifted B' \<psi> \<guillemotright> R\<close>
+      by (simp add: A_def B_def space_div_space_div_unlifted)
+    also have \<open>\<dots> \<longleftrightarrow> A' \<le> space_div_unlifted B' \<psi>\<close>
+      using \<open>qregister \<lbrakk>R, Q\<rbrakk>\<^sub>q\<close> distinct_qvarsL lift_leq by blast
+    also have \<open>\<dots> \<longleftrightarrow> A'\<guillemotright>qFst \<sqinter> qSnd =\<^sub>q \<psi> \<le> B'\<close>
+    proof (rule iffI)
+      show \<open>A' \<le> space_div_unlifted B' \<psi>\<close> if \<open>A'\<guillemotright>qFst \<sqinter> qSnd =\<^sub>q \<psi> \<le> B'\<close>
+       proof (rule ccsubspace_leI_unit)
+        fix \<phi>
+        assume \<open>\<phi> \<in> space_as_set A'\<close>
+        then have \<open>\<phi> \<otimes> \<psi> \<in> space_as_set (A'\<guillemotright>qFst \<sqinter> qSnd =\<^sub>q \<psi>)\<close>
+          by (auto intro!: tensor_ell2_in_tensor_ccsubspace ccspan_superset'
+              simp add: apply_qregister_space_qFst apply_qregister_space_qSnd)
+        also from that have \<open>\<dots> \<subseteq> space_as_set B'\<close>
+          by (simp add: less_eq_ccsubspace.rep_eq)
+        finally show \<open>\<phi> \<in> space_as_set (space_div_unlifted B' \<psi>)\<close>
+          by (simp add: space_div_unlifted.rep_eq)
+      qed
+      show \<open>A'\<guillemotright>qFst \<sqinter> qSnd =\<^sub>q \<psi> \<le> B'\<close> if \<open>A' \<le> space_div_unlifted B' \<psi>\<close>
+      proof (rule ccsubspace_leI_unit)
+        fix \<phi> assume \<open>\<phi> \<in> space_as_set (A'\<guillemotright>qFst \<sqinter> qSnd =\<^sub>q \<psi>)\<close>
+        then have \<phi>A: \<open>\<phi> \<in> space_as_set (A'\<guillemotright>qFst)\<close> and \<phi>\<psi>: \<open>\<phi> \<in> space_as_set (qSnd =\<^sub>q \<psi>)\<close>
+          by auto
+        from \<phi>\<psi> obtain \<gamma> where \<phi>_decomp: \<open>\<phi> = \<gamma> \<otimes> \<psi>\<close>
+          apply atomize_elim
+          apply (rule tensor_ccsubspace_right1dim_member)
+          by (simp add: apply_qregister_space_qSnd)
+        from \<phi>A that have \<open>\<phi> \<in> space_as_set (space_div_unlifted B' \<psi> \<guillemotright> qFst)\<close>
+          using less_eq_ccsubspace.rep_eq by force
+        then have \<open>\<gamma> \<in> space_as_set (space_div_unlifted B' \<psi>)\<close>
+          by (metis UNIV_I \<phi>_decomp apply_qregister_space_qFst space_div_unlifted_zero2 tensor_ell2_mem_tensor_ccsubspace_left top_ccsubspace.rep_eq)
+        then show \<open>\<phi> \<in> space_as_set B'\<close>
+          by (simp add: space_div_unlifted.rep_eq \<phi>_decomp)
+      qed
+    qed
+    also have \<open>\<dots> \<longleftrightarrow> A \<sqinter> Q =\<^sub>q \<psi> \<le> B\<close>
+      apply (subst asm_rl[of \<open>Q =\<^sub>q \<psi> = (qSnd =\<^sub>q \<psi>) \<guillemotright> \<lbrakk>R,Q\<rbrakk>\<close>])
+       apply (simp add: qregister_chain_pair_Snd flip: qregister_chain_apply_space_simp)
+      apply (subst asm_rl[of \<open>A = A' \<guillemotright> qFst \<guillemotright> \<lbrakk>R,Q\<rbrakk>\<close>])
+       apply (simp add: A_def apply_qregister_space_qFst assms(1) tensor_lift)
+      by (simp add: B_def)
+    finally show \<open>(A \<le> B \<div> \<psi>\<guillemotright>Q) = (A \<sqinter> Q =\<^sub>q \<psi> \<le> B)\<close>
+      by -
+  qed
+  from this[cancel_with_type]
+  show \<open>A \<le> B \<div> \<psi>\<guillemotright>Q \<longleftrightarrow> A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B\<close>
+    by simp
+qed
+
+lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" if \<open>qregister Q\<close>
+proof -
+  from qcomplement_exists[OF that]
+  have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis Q.
+        top \<div> \<psi>\<guillemotright>Q = top\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>R. qcomplements Q R\<close>
+    then obtain R :: \<open>('c, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
+      by auto
+    then have [simp]: \<open>qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close>
+      by (simp add: qcomplements_def')
+    have \<open>top\<guillemotright>\<lbrakk>R,Q\<rbrakk> \<div> \<psi>\<guillemotright>Q = top\<close>
+      apply (simp add: space_div_space_div_unlifted space_div_unlifted_def flip: top_ccsubspace_def)
+      using \<open>qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close> qcompatible_register2 top_lift by blast
+    then show \<open>top \<div> \<psi>\<guillemotright>Q = top\<close>
+      by (simp add: distinct_qvars_swap)
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by simp
+qed
+lemma bot_div[simp]: "bot \<div> \<psi>\<guillemotright>Q = (if \<psi>=0 then top else bot)" if \<open>\<psi> \<noteq> 0\<close>
+  using space_div_zero1 by auto
+lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = (if \<psi>=0 then top else Cla[e])" if \<open>qregister Q\<close>
+  using that by auto
 
 (* lemma space_div_add_extend_lift_as_var_concat_hint:
   fixes S :: "_ subspace"
@@ -888,91 +1299,6 @@ lemma translate_to_index_registers_space_div[translate_to_index_registers]:
   using assms by (simp add: space_div_lift)
 
 subsection \<open>Quantum equality\<close>
-
-(* TODO: 'c doesn't have to be ell2 *)
-definition quantum_equality_full :: "('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::complex_inner) \<Rightarrow> ('a,'d) qregister \<Rightarrow> ('b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c) \<Rightarrow> ('b,'d) qregister \<Rightarrow> 'd subspace" where
-  [code del]: "quantum_equality_full U Q V R = 
-                 (eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))) \<guillemotright> qregister_pair Q R"
-  for Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
-  and U V :: "_ \<Rightarrow>\<^sub>C\<^sub>L 'c"
-
-abbreviation "quantum_equality" (infix "\<equiv>\<qq>" 100)
-  where "quantum_equality X Y \<equiv> quantum_equality_full id_cblinfun X id_cblinfun Y"
-syntax quantum_equality :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> predicate" (infix "==q" 100)
-syntax "_quantum_equality" :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
-translations
-  "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
-
-(* TODO move *)
-lemma swap_ell2_commute_tensor_op: 
-  \<open>swap_ell2 o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o b) = (b \<otimes>\<^sub>o a) o\<^sub>C\<^sub>L swap_ell2\<close>
-  by (auto intro!: tensor_ell2_extensionality simp: tensor_op_ell2)
-
-lemma quantum_equality_sym:
-  assumes [simp]: "distinct_qvars (qregister_pair Q R)"
-  shows "quantum_equality_full U Q V R = quantum_equality_full V R U Q"
-proof -
-  have dist: "distinct_qvars (qregister_pair R Q)"
-    using assms by (rule distinct_qvars_swap)
-  have [simp]: \<open>qregister (qregister_pair Q R)\<close>
-    using assms by blast
-  have [simp]: \<open>qregister (qregister_pair R Q)\<close>
-    by (simp add: dist)
-  have a: "comm_op \<cdot> ((V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V)) \<cdot> comm_op* = (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U)" by simp
-  have op_eq: "((comm_op o\<^sub>C\<^sub>L (V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V))\<guillemotright>qregister_pair Q R) =
-               ((comm_op o\<^sub>C\<^sub>L (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U))\<guillemotright>qregister_pair R Q)"
-    apply (subst qregister_pair_chain_swap[of Q R, symmetric])
-    apply (subst qregister_chain_apply)
-    apply (simp add: apply_qregister_qswap apply_qregister_transform_qregister sandwich_apply
-        flip: transform_qregister_swap_ell2 cblinfun_compose_assoc)
-    by (rule swap_ell2_commute_tensor_op)
-  show ?thesis
-    apply (subst quantum_equality_full_def)
-    apply (subst quantum_equality_full_def)
-    apply (subst eigenspace_lift[symmetric, OF assms])
-    apply (subst eigenspace_lift[symmetric, OF dist])
-    using op_eq by simp
-qed
-
-lemma distinct_qvars_pred_vars_quantum_equality[simp]:
-  assumes [register]: \<open>qregister \<lbrakk>F,H\<rbrakk>\<close> \<open>qregister \<lbrakk>G,H\<rbrakk>\<close>
-  shows \<open>distinct_qvars_pred_vars (quantum_equality_full U F V G) H\<close>
-proof (cases \<open>qregister \<lbrakk>F,G\<rbrakk>\<close>)
-  case True
-  note [register] = this
-  show ?thesis
-    by (simp add: quantum_equality_full_def)
-next
-  case False
-  then have \<open>\<lbrakk>F,G\<rbrakk> = non_qregister\<close>
-    by (simp add: non_qregister)
-  then show ?thesis 
-    by (simp add: quantum_equality_full_def apply_qregister_space_def)
-qed
-
-lemma predicate_local[intro!]: 
-  assumes "qvariables_local (qregister_pair Q R) S"
-  shows "predicate_local (quantum_equality_full U Q V R) S"
-   by (simp add: assms lift_predicate_local quantum_equality_full_def)
-
-lemma applyOpSpace_colocal:
-  "colocal U S \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
-  by (metis Proj_range cblinfun_compose_image distinct_qvars_op_pred_def unitary_range)
-
-lemma applyOpSpace_colocal_simp[simp]:
-  "DISTINCT_QVARS_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
-  by (simp add: applyOpSpace_colocal DISTINCT_QVARS_GUARD_def)
-
-lemma qeq_collect:
- "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
- for U :: "('a,'b) l2bounded" and V :: "('c,'b) l2bounded"
-  unfolding quantum_equality_full_def by auto
-
-lemma qeq_collect_guarded[simp]:
-  fixes U :: "('a,'b) l2bounded" and V :: "('c,'b) l2bounded"
-  assumes "NO_MATCH id_cblinfun V"
-  shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
-  by (fact qeq_collect)
 
 (* TODO move *)
 lemma kernel_apply_self: \<open>A *\<^sub>S kernel A = 0\<close>
@@ -1039,7 +1365,214 @@ lemma cblinfun_image_kernel_unitary:
 lemma kernel_cblinfun_compose:
   assumes \<open>kernel B = 0\<close>
   shows \<open>kernel A = kernel (B o\<^sub>C\<^sub>L A)\<close>
-  sorry
+  using assms apply transfer by auto
+
+definition quantum_equality_full :: "('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::complex_inner) \<Rightarrow> ('a,'d) qregister \<Rightarrow> ('b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c) \<Rightarrow> ('b,'d) qregister \<Rightarrow> 'd subspace" where
+  [code del]: "quantum_equality_full U Q V R = 
+                 (eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))) \<guillemotright> qregister_pair Q R"
+  for Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
+  and U V :: "_ \<Rightarrow>\<^sub>C\<^sub>L 'c"
+
+abbreviation "quantum_equality" (infix "\<equiv>\<qq>" 100)
+  where "quantum_equality X Y \<equiv> quantum_equality_full id_cblinfun X id_cblinfun Y"
+syntax quantum_equality :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> predicate" (infix "==q" 100)
+syntax "_quantum_equality" :: "variable_list_args \<Rightarrow> variable_list_args \<Rightarrow> predicate" ("Qeq'[_=_']")
+translations
+  "_quantum_equality a b" \<rightharpoonup> "CONST quantum_equality (_qvariables a) (_qvariables b)"
+
+(* TODO move *)
+lemma swap_ell2_commute_tensor_op: 
+  \<open>swap_ell2 o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o b) = (b \<otimes>\<^sub>o a) o\<^sub>C\<^sub>L swap_ell2\<close>
+  by (auto intro!: tensor_ell2_extensionality simp: tensor_op_ell2)
+
+
+lemma quantum_equality_full_not_compatible:
+  assumes \<open>\<not> qcompatible Q R\<close>
+  shows \<open>quantum_equality_full U Q V R = 0\<close>
+  using assms by (simp add: quantum_equality_full_def non_qregister)
+
+
+lemma quantum_equality_sym:
+  (* assumes [simp]: "distinct_qvars (qregister_pair Q R)" *)
+  shows "quantum_equality_full U Q V R = quantum_equality_full V R U Q"
+proof (cases \<open>qcompatible Q R\<close>)
+  case True
+  have dist: "distinct_qvars (qregister_pair R Q)"
+    using True by (rule distinct_qvars_swap)
+  have [simp]: \<open>qregister (qregister_pair Q R)\<close>
+    using True by blast
+  have [simp]: \<open>qregister (qregister_pair R Q)\<close>
+    by (simp add: dist)
+  have a: "comm_op \<cdot> ((V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V)) \<cdot> comm_op* = (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U)" by simp
+  have op_eq: "((comm_op o\<^sub>C\<^sub>L (V* \<cdot> U) \<otimes>\<^sub>o (U* \<cdot> V))\<guillemotright>qregister_pair Q R) =
+               ((comm_op o\<^sub>C\<^sub>L (U* \<cdot> V) \<otimes>\<^sub>o (V* \<cdot> U))\<guillemotright>qregister_pair R Q)"
+    apply (subst qregister_pair_chain_swap[of Q R, symmetric])
+    apply (subst qregister_chain_apply)
+    apply (simp add: apply_qregister_qswap apply_qregister_transform_qregister sandwich_apply
+        flip: transform_qregister_swap_ell2 cblinfun_compose_assoc)
+    by (rule swap_ell2_commute_tensor_op)
+  show ?thesis
+    apply (subst quantum_equality_full_def)
+    apply (subst quantum_equality_full_def)
+    apply (subst eigenspace_lift[symmetric, OF True])
+    apply (subst eigenspace_lift[symmetric, OF dist])
+    using op_eq by simp
+next
+  case False
+  then have \<open>\<not> qcompatible R Q\<close>
+    using qcompatible_sym by blast
+  with False
+  show ?thesis
+    by (simp add: quantum_equality_full_not_compatible)
+qed
+
+lift_definition qregister_tensor :: \<open>('a,'b) qregister \<Rightarrow> ('c,'d) qregister \<Rightarrow> ('a\<times>'c, 'b\<times>'d) qregister\<close> is
+  \<open>\<lambda>F G. if qregister_raw F \<and> qregister_raw G then Laws_Quantum.register_tensor F G else non_qregister_raw\<close>
+  by (auto simp: non_qregister_raw Laws_Quantum.register_tensor_is_register)
+
+lemma qcompatible_raw_non_qregister_raw_left[simp]: \<open>\<not> qcompatible_raw non_qregister_raw F\<close>
+  using non_qregister_raw qcompatible_raw_def by blast
+
+lemma qcompatible_raw_non_qregister_raw_right[simp]: \<open>\<not> qcompatible_raw F non_qregister_raw\<close>
+  using non_qregister_raw qcompatible_raw_def by blast
+
+lemma qregister_pair_chain_left: \<open>qcompatible F G \<Longrightarrow> \<lbrakk>qregister_chain F H, G\<rbrakk>\<^sub>q = qregister_chain \<lbrakk>F, G\<rbrakk> (qregister_tensor H qregister_id)\<close>
+  unfolding qcompatible_def
+  apply transfer
+  by (simp add: register_tensor_is_register pair_o_tensor non_qregister_raw)
+lemma qregister_pair_chain_right: \<open>qcompatible F G \<Longrightarrow> \<lbrakk>F, qregister_chain G H\<rbrakk>\<^sub>q = qregister_chain \<lbrakk>F, G\<rbrakk> (qregister_tensor qregister_id H)\<close>
+  unfolding qcompatible_def
+  apply transfer
+  by (simp add: register_tensor_is_register pair_o_tensor non_qregister_raw)
+
+lemma qregister_tensor_non_qregister_left[simp]: \<open>qregister_tensor non_qregister F = non_qregister\<close>
+  apply transfer by (auto simp: non_qregister_raw)
+lemma qregister_tensor_non_qregister_right[simp]: \<open>qregister_tensor F non_qregister = non_qregister\<close>
+  apply transfer by (auto simp: non_qregister_raw)
+
+lemma qregister_tensor_apply:
+  \<open>apply_qregister (qregister_tensor F G) (a \<otimes>\<^sub>o b) = apply_qregister F a \<otimes>\<^sub>o apply_qregister G b\<close>
+  apply (cases \<open>qregister F\<close>; cases \<open>qregister G\<close>)
+     apply (auto simp: non_qregister)
+  apply transfer
+  by simp
+
+lemma qregister_tensor_transform_qregister:
+  assumes [simp]: \<open>unitary U\<close> \<open>unitary V\<close>
+  shows \<open>qregister_tensor (transform_qregister U) (transform_qregister V)
+            = transform_qregister (U \<otimes>\<^sub>o V)\<close>
+  apply (rule qregister_eqI_tensor_op)
+  by (simp add: qregister_tensor_apply apply_qregister_transform_qregister unitary_tensor_op sandwich_tensor_op)
+
+lemma transform_qregister_non_unitary: \<open>\<not> unitary U \<Longrightarrow> transform_qregister U = non_qregister\<close>
+  apply (transfer fixing: U) by simp
+
+lemma transform_qregister_id: \<open>transform_qregister id_cblinfun = qregister_id\<close>
+  apply (rule apply_qregister_inject[THEN iffD1])
+  by (auto intro!: ext simp add: apply_qregister_transform_qregister)
+
+(* TODO _id2 (other side) *)
+lemma qregister_tensor_transform_qregister_id1:
+  \<open>qregister_tensor (transform_qregister U) qregister_id
+            = transform_qregister (U \<otimes>\<^sub>o id_cblinfun)\<close>
+proof (cases \<open>unitary U\<close>)
+  case True
+  note [simp] = True
+  have \<open>qregister_tensor (transform_qregister U) qregister_id
+      = qregister_tensor (transform_qregister U) (transform_qregister id_cblinfun)\<close>
+    by (simp add: transform_qregister_id)
+  also have \<open>\<dots> = transform_qregister (U \<otimes>\<^sub>o id_cblinfun)\<close>
+    by (simp add: qregister_tensor_transform_qregister)
+  finally show ?thesis
+    by -
+next
+  case False
+  note [simp] = False
+  have [simp]: \<open>\<not> unitary (U \<otimes>\<^sub>o id_cblinfun)\<close>
+    sorry
+  show ?thesis
+    by (simp add: transform_qregister_non_unitary)
+qed
+
+lemma qregister_chain_transform_qregister:
+  assumes [simp]: \<open>unitary U\<close> \<open>unitary V\<close>
+  shows \<open>qregister_chain (transform_qregister U) (transform_qregister V) = transform_qregister (U o\<^sub>C\<^sub>L V)\<close>
+  by (auto intro!: ext apply_qregister_inject[THEN iffD1]
+      simp: apply_qregister_transform_qregister sandwich_compose
+      simp flip: cblinfun_apply_cblinfun_compose)
+
+(* TODO right *)
+lemma quantum_equality_transform_register_left:
+  fixes W :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+  assumes [simp]: \<open>unitary W\<close>
+  shows \<open>quantum_equality_full (U o\<^sub>C\<^sub>L W) Q V R = 
+         quantum_equality_full U (qregister_chain Q (transform_qregister (W*))) V R\<close>
+proof (cases \<open>qcompatible Q R\<close>)
+  case True
+  have \<open>eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U o\<^sub>C\<^sub>L W) \<otimes>\<^sub>o (W* o\<^sub>C\<^sub>L U* o\<^sub>C\<^sub>L V)) =
+    (W* \<otimes>\<^sub>o id_cblinfun) *\<^sub>S eigenspace 1 (swap_ell2 o\<^sub>C\<^sub>L (V* o\<^sub>C\<^sub>L U) \<otimes>\<^sub>o (U* o\<^sub>C\<^sub>L V))\<close>
+    sorry
+  with True show ?thesis
+    by (simp add: quantum_equality_full_def adj_cblinfun_compose qregister_pair_chain_left
+        qregister_tensor_transform_qregister_id1 apply_qregister_space_transform_qregister
+        unitary_tensor_op
+        flip: cblinfun_compose_assoc)
+next
+  case False
+  have \<open>\<not> qcompatible (qregister_chain Q (transform_qregister (W*))) R\<close>
+  proof (rule notI)
+    assume \<open>qcompatible (qregister_chain Q (transform_qregister (W*))) R\<close>
+    then have \<open>qcompatible (qregister_chain (qregister_chain Q (transform_qregister (W*))) (transform_qregister W)) R\<close>
+      by simp
+    also have \<open>qregister_chain (qregister_chain Q (transform_qregister (W*))) (transform_qregister W) = Q\<close>
+      by (simp add: qregister_chain_assoc qregister_chain_transform_qregister transform_qregister_id)
+    finally show False
+      using False by simp
+  qed
+  with False show ?thesis
+    by (simp add: quantum_equality_full_not_compatible)
+qed
+
+lemma distinct_qvars_pred_vars_quantum_equality[simp]:
+  assumes [register]: \<open>qregister \<lbrakk>F,H\<rbrakk>\<close> \<open>qregister \<lbrakk>G,H\<rbrakk>\<close>
+  shows \<open>distinct_qvars_pred_vars (quantum_equality_full U F V G) H\<close>
+proof (cases \<open>qregister \<lbrakk>F,G\<rbrakk>\<close>)
+  case True
+  note [register] = this
+  show ?thesis
+    by (simp add: quantum_equality_full_def)
+next
+  case False
+  then have \<open>\<lbrakk>F,G\<rbrakk> = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis 
+    by (simp add: quantum_equality_full_def apply_qregister_space_def)
+qed
+
+lemma predicate_local[intro!]: 
+  assumes "qvariables_local (qregister_pair Q R) S"
+  shows "predicate_local (quantum_equality_full U Q V R) S"
+   by (simp add: assms lift_predicate_local quantum_equality_full_def)
+
+lemma applyOpSpace_colocal:
+  "colocal U S \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
+  by (metis Proj_range cblinfun_compose_image distinct_qvars_op_pred_def unitary_range)
+
+lemma applyOpSpace_colocal_simp[simp]:
+  "DISTINCT_QVARS_GUARD (colocal U S) \<Longrightarrow> unitary U \<Longrightarrow> U \<cdot> S = S" for U :: "(qu2,qu2) l2bounded" and S :: predicate
+  by (simp add: applyOpSpace_colocal DISTINCT_QVARS_GUARD_def)
+
+lemma qeq_collect:
+ "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
+ for U :: "('a,'b) l2bounded" and V :: "('c,'b) l2bounded"
+  unfolding quantum_equality_full_def by auto
+
+lemma qeq_collect_guarded[simp]:
+  fixes U :: "('a,'b) l2bounded" and V :: "('c,'b) l2bounded"
+  assumes "NO_MATCH id_cblinfun V"
+  shows "quantum_equality_full U Q1 V Q2 = quantum_equality_full (V*\<cdot>U) Q1 id_cblinfun Q2"
+  by (fact qeq_collect)
+
 
 (* Proof in paper *)
 lemma Qeq_mult1[simp]:
@@ -1091,7 +1624,7 @@ lemma Qeq_mult2[simp]:
 proof (cases \<open>qcompatible Q1 Q2\<close>)
   case True
   show ?thesis
-    apply (simp add: quantum_equality_sym[OF True])
+    apply (simp add: quantum_equality_sym[of U1])
     using assms by (rule Qeq_mult1)
 next
   case False
@@ -1104,9 +1637,9 @@ lemma quantum_eq_unique[simp]: "distinct_qvars (qregister_pair Q R) \<Longrighta
   isometry U \<Longrightarrow> isometry (adj V) \<Longrightarrow> 
   quantum_equality_full U Q V R \<sqinter> ccspan{\<psi>}\<guillemotright>Q
   = liftSpace (ccspan{\<psi>}) Q \<sqinter> liftSpace (ccspan{V* \<cdot> U \<cdot> \<psi>}) R"
-  for Q::"'a q2variable" and R::"'b q2variable"
+  for Q :: "('a,'d) qregister" and R :: "('b,'d) qregister"
     and U :: "'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c::chilbert_space" and V :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c"
-    and \<psi>::"'a ell2"
+    and \<psi> :: "'a ell2"
   sorry
 
 (* Proof in paper *)
@@ -1115,8 +1648,8 @@ lemma
     "qregister (qregister_pair Q (qregister_pair R T)) \<Longrightarrow> norm \<psi> = 1 \<Longrightarrow>
     quantum_equality_full U Q V R \<sqinter> ccspan {\<psi>}\<guillemotright>T
              = quantum_equality_full (U \<otimes>\<^sub>o id_cblinfun) (qregister_pair Q T) (addState \<psi> \<cdot> V) R"
-    for U :: "('a,'c) l2bounded" and V :: "('b,'c) l2bounded" and \<psi> :: "'d ell2"
-    and Q :: "'a q2variable"    and R :: "'b q2variable"    and T :: "'d q2variable"
+    for U :: "'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2" and V :: "'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2" and \<psi> :: "'d ell2"
+    and Q :: "('a,'m) qregister" and R :: "('b,'m) qregister" and T :: "('d,'m) qregister"
   sorry
 
 (* We flip the lhs/rhs of the quantum equality in addition to changing the indices.
@@ -1124,6 +1657,7 @@ lemma
 lemma index_flip_subspace_quantum_equality[simp]: 
   "index_flip_subspace (quantum_equality_full U Q V R) = 
       quantum_equality_full V (index_flip_qvar R) U (index_flip_qvar Q)"
+  apply (simp add: index_flip_subspace_def index_flip_qvar_def)
   sorry
 
 lemma swap_variables_subspace_quantum_equality[simp]: 
@@ -1136,6 +1670,7 @@ lemma quantum_equality_full_swap_left:
   shows "quantum_equality_full U (qregister_pair Q R) V S
        = quantum_equality_full (U \<cdot> comm_op) (qregister_pair R Q) V S"
   unfolding quantum_equality_full_def
+    (* Use quantum_equality_transform_register_left / _right ? *)
   sorry
 (* proof -
   have "quantum_equality_full U (variable_concat Q R) V S
@@ -1152,6 +1687,7 @@ lemma quantum_equality_full_swap_right:
   assumes [simp]: "distinct_qvars (qregister_pair (qregister_pair Q R) S)"
   shows "quantum_equality_full U Q V (qregister_pair R S)
        = quantum_equality_full U Q (V\<cdot>comm_op) (qregister_pair S R)"
+
     sorry
 (* proof -
   have "quantum_equality_full U Q V (variable_concat R S)
@@ -1166,11 +1702,6 @@ qed *)
 
 lemma kernel_member_iff: \<open>x \<in> space_as_set (kernel A) \<longleftrightarrow> A *\<^sub>V x = 0\<close>
   using kernel_memberD kernel_memberI by blast
-
-lemma quantum_equality_full_not_compatible:
-  assumes \<open>\<not> qcompatible Q R\<close>
-  shows \<open>quantum_equality_full U Q V R = 0\<close>
-  using assms by (simp add: quantum_equality_full_def non_qregister)
 
 lemma quantum_equality_fixes_swap:
   \<open>space_as_set (quantum_equality_full U Q V R)
