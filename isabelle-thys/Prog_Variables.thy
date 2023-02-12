@@ -1154,7 +1154,6 @@ proof (rule notI)
   qed
 qed
 
-(* TODO: compatibility condition can be omitted *)
 lemma cregister_chain_pair:
   shows \<open>cregister_chain F (cregister_pair G H) = cregister_pair (cregister_chain F G) (cregister_chain F H)\<close>
 proof -
