@@ -43,29 +43,23 @@ lemma vec_of_ell2_inj: "inj vec_of_ell2"
   unfolding vec_of_ell2_def
   by (metis injI vec_of_ell2_def vec_of_ell2_inverse)
 
+(* (* Already in Quantum.thy *)
 definition "matrix_X = mat_of_rows_list 2 [ [0::complex,1], [1,0] ]"
 lemma bounded_of_mat_X[code]: "mat_of_cblinfun pauliX = matrix_X"
-  by (cheat 16)
 definition "matrix_Z = mat_of_rows_list 2 [ [1::complex,0], [0,-1] ]"
-lemma bounded_of_mat_Z[code]: "mat_of_cblinfun pauliZ = matrix_Z"
-  by (cheat 16)
+lemma bounded_of_mat_Z[code]: "mat_of_cblinfun pauliZ = matrix_Z" *)
+(* (* Already in QRHL_Core.thy *)
 definition "matrix_Y = mat_of_rows_list 2 [ [0::complex,-\<i>], [\<i>,0] ]"
-lemma bounded_of_mat_Y[code]: "mat_of_cblinfun pauliY = matrix_Y"
-  by (cheat 16)
+lemma bounded_of_mat_Y[code]: "mat_of_cblinfun pauliY = matrix_Y" *)
 
-(* definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]" *)
-lemma bounded_of_mat_hadamard[code]: "mat_of_cblinfun hadamard = matrix_hadamard"
-  sorry
+(* (* Already in QRHL_Core.thy *)
+definition "matrix_hadamard = mat_of_rows_list 2 [ [1/sqrt 2::complex, 1/sqrt 2], [1/sqrt 2, -1/sqrt 2] ]"
+lemma bounded_of_mat_hadamard[code]: "mat_of_cblinfun hadamard = matrix_hadamard" *)
 (*   unfolding hadamard_def
   apply (rule cblinfun_of_mat_inverse)
   by (auto simp add: matrix_hadamard_def) *)
 (* definition "matrix_CNOT = mat_of_rows_list 4 [ [1::complex,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0] ]" *)
-lemma bounded_of_mat_CNOT[code]: "mat_of_cblinfun CNOT = matrix_CNOT"
-  sorry
-  (* unfolding CNOT_def
-  apply (rule cblinfun_of_mat_inverse)
-  by (auto simp add: matrix_CNOT_def) *)
-
+(* lemma bounded_of_mat_CNOT[code]: "mat_of_cblinfun CNOT = matrix_CNOT" *)
 
 (* TODO move *)
 instantiation bit :: linorder begin
@@ -93,8 +87,8 @@ end *)
   | _ \<Rightarrow> Code.abort (STR ''Computation of 'Proj S' only implemented for singleton S'') (\<lambda>_. mat_of_cblinfun (Proj (SPAN S :: 'a subspace))))"*)
 
 
-lemma vec_of_ell2_EPR[code]: "vec_of_ell2 EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]"
-  by (cheat 17)
+(* Already in Quantum.thy (via alias \<beta>00) *)
+(* lemma vec_of_ell2_EPR[code]: "vec_of_ell2 EPR = vec_of_list [1/sqrt 2,0,0,1/sqrt 2]" *)
 
 lemma [code_post]: 
   shows "Complex a 0 = complex_of_real a"
@@ -113,8 +107,22 @@ lemma quantum_equality_full_def_let:
   unfolding quantum_equality_full_def 
   by auto
 
-lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"
-  by (cheat space_div_unlifted_code)
+lemma space_div_unlifted_code [code]: 
+  "space_div_unlifted S \<psi> = kernel ((Proj S - id_cblinfun) o\<^sub>C\<^sub>L tensor_ell2_right \<psi>)"
+proof (rule ccsubspace_eqI)
+  fix x :: \<open>'a ell2\<close>
+  define A :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2\<close> where \<open>A = tensor_ell2_right \<psi>\<close>
+  have \<open>x \<in> space_as_set (space_div_unlifted S \<psi>) \<longleftrightarrow> x \<otimes>\<^sub>s \<psi> \<in> space_as_set S\<close>
+    by (simp add: space_div_unlifted.rep_eq)
+  also have \<open>\<dots> \<longleftrightarrow> tensor_ell2_right \<psi> x \<in> space_as_set S\<close>
+    by simp
+  also have \<open>\<dots> \<longleftrightarrow> (Proj S - id_cblinfun) *\<^sub>V tensor_ell2_right \<psi> x = 0\<close>
+    by (metis (no_types, lifting) Proj_fixes_image cblinfun.diff_left eq_iff_diff_eq_0 id_cblinfun.rep_eq norm_Proj_apply)
+  also have \<open>\<dots> \<longleftrightarrow> x \<in> space_as_set (kernel ((Proj S - id_cblinfun) o\<^sub>C\<^sub>L tensor_ell2_right \<psi>))\<close>
+    by (simp add: kernel_member_iff)
+  finally show \<open>x \<in> space_as_set (space_div_unlifted S \<psi>) \<longleftrightarrow> \<dots>\<close>
+    by -
+qed
 
 (* TODO needed? We can't give a code equation for cregister_pair anyway *)
 definition cregister_to_coderep :: \<open>('a,'b) cregister \<Rightarrow> (('b \<Rightarrow> 'a) \<times> ('a => 'b => 'b)) option\<close> where
@@ -126,22 +134,23 @@ fun cregister_from_coderep :: \<open>(('b \<Rightarrow> 'a) \<times> ('a => 'b =
 
 lemma cregister_to_coderep_inverse[code abstype]: \<open>cregister_from_coderep (cregister_to_coderep R) = R\<close>
   apply (cases \<open>cregister R\<close>)
-   apply (auto simp: cregister_to_coderep_def)
-  sorry
+  by (auto simp: cregister_to_coderep_def cregister_eqI_setter
+      setter_of_cregister_from_getter_is_cregister setter_of_cregister_from_getter_setter
+      valid_getter_setter_def non_cregister)
 lemma [code]: \<open>cregister_to_coderep cFst = Some (fst, \<lambda>a (_,b). (a,b))\<close>
-  sorry
+  by (simp add: cregister_to_coderep_def setter_cFst[abs_def] case_prod_unfold)
 lemma [code]: \<open>cregister_to_coderep cSnd = Some (snd, \<lambda>b (a,_). (a,b))\<close>
-   sorry
+  by (simp add: cregister_to_coderep_def setter_cSnd[abs_def] case_prod_unfold)
 lemma [code]: \<open>getter R = (case cregister_to_coderep R of 
   None \<Rightarrow> Code.abort STR ''getter of non_cregister executed'' (\<lambda>_. getter R)
   | Some (g, s) \<Rightarrow> g)\<close>
-   sorry
+  by (simp add: cregister_to_coderep_def)
 lemma [code]: \<open>setter R = (case cregister_to_coderep R of 
   None \<Rightarrow> Code.abort STR ''setter of non_cregister executed'' (\<lambda>_. setter R)
   | Some (g, s) \<Rightarrow> s)\<close>
-  sorry
+  by (simp add: cregister_to_coderep_def)
 lemma [code]: \<open>cregister_to_coderep cregister_id = Some (id, \<lambda>x _. x)\<close>
-  sorry
+  by (simp add: cregister_to_coderep_def getter_id[abs_def] setter_id[abs_def] id_def)
 
 (* TODO think of something more efficient... *)
 lemma apply_qregister_space_code_hack: \<open>apply_qregister_space (qregister_of_cregister F) S = apply_qregister (qregister_of_cregister F) (Proj S) *\<^sub>S \<top>\<close>

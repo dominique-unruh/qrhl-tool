@@ -1673,6 +1673,20 @@ lemma getter_cFst[simp]: \<open>getter cFst = fst\<close>
 lemma getter_cSnd[simp]: \<open>getter cSnd = snd\<close>
   apply transfer by (simp add: getter_Snd)
 
+lemma register_from_getter_setter_id: \<open>id = register_from_getter_setter (\<lambda>m. m) (\<lambda>a m. a)\<close>
+  by (auto intro!: ext simp add: register_from_getter_setter_def option.case_eq_if)
+lemma valid_getter_setter_id: \<open>valid_getter_setter (\<lambda>m. m) (\<lambda>a m. a)\<close>
+  by (simp add: valid_getter_setter_def)
+
+lemma getter_id: \<open>getter cregister_id m = m\<close>
+  apply transfer
+  apply (subst (2) register_from_getter_setter_id)
+  by (simp add: getter_of_register_from_getter_setter valid_getter_setter_id)
+lemma setter_id: \<open>setter cregister_id a m = a\<close>
+  apply transfer
+  apply (subst (2) register_from_getter_setter_id)
+  by (simp add: setter_of_register_from_getter_setter valid_getter_setter_id)
+
 lemma Cccompatible_CREGISTER_of: \<open>Cccompatible (CREGISTER_of A) B \<longleftrightarrow> ccompatible A B \<or> (cregister B \<and> A = non_cregister)\<close>
   unfolding CREGISTER_of.rep_eq Cccompatible.rep_eq
   apply transfer
