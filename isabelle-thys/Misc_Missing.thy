@@ -575,13 +575,8 @@ lemma double_map_commutant_grows: \<open>X \<subseteq> map_commutant (map_commut
 lemma triple_map_commutant[simp]: \<open>map_commutant (map_commutant (map_commutant X)) = map_commutant X\<close>
   by (auto simp: map_commutant_def)
 
-lemma set_compr_2_image_collect: \<open>{f x y |x y. P x y} = case_prod f ` Collect (case_prod P)\<close>
-  by fast
 lemma set_compr_4_image_collect: \<open>{f x y z w |x y z w. P x y z w} = (\<lambda>(x,y,z,w). f x y z w) ` Collect (\<lambda>(x,y,z,w). P x y z w)\<close>
   by (auto simp: image_def)
-
-lemma closure_image_closure: \<open>continuous_on (closure S) f \<Longrightarrow> closure (f ` closure S) = closure (f ` S)\<close>
-  by (smt (verit) closed_closure closure_closure closure_mono closure_subset image_closure_subset image_mono set_eq_subset)
 
 lemma closedin_vimage:
   assumes \<open>closedin U S\<close>
