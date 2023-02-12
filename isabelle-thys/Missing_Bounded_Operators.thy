@@ -1079,9 +1079,10 @@ lemma tensor_ell2_right_scale: \<open>tensor_ell2_right (a *\<^sub>C \<psi>) = a
 lemma tensor_ell2_left_scale: \<open>tensor_ell2_left (a *\<^sub>C \<psi>) = a *\<^sub>C tensor_ell2_left \<psi>\<close>
   apply transfer by (auto intro!: ext simp: tensor_ell2_scaleC1)
 
-(* TODO same for left *)
 lemma tensor_ell2_right_0[simp]: \<open>tensor_ell2_right 0 = 0\<close>
   by (auto intro!: cblinfun_eqI simp: tensor_ell2_right_apply)
+lemma tensor_ell2_left_0[simp]: \<open>tensor_ell2_left 0 = 0\<close>
+  by (auto intro!: cblinfun_eqI simp: tensor_ell2_left_apply)
 
 lemma tensor_ell2_right_adj_apply[simp]: \<open>(tensor_ell2_right \<psi>*) *\<^sub>V (\<alpha> \<otimes>\<^sub>s \<beta>) = (\<psi> \<bullet>\<^sub>C \<beta>) *\<^sub>C \<alpha>\<close>
   apply (rule cinner_extensionality)
@@ -1091,10 +1092,12 @@ lemma tensor_ell2_left_adj_apply[simp]: \<open>(tensor_ell2_left \<psi>*) *\<^su
   by (simp add: cinner_adj_right tensor_ell2_right_apply)
 
 
-(* TODO same for left *)
 lemma sandwich_tensor_ell2_right: \<open>sandwich (tensor_ell2_right \<psi>*) *\<^sub>V a \<otimes>\<^sub>o b = (\<psi> \<bullet>\<^sub>C (b *\<^sub>V \<psi>)) *\<^sub>C a\<close>
   apply (rule cblinfun_eqI)
   by (simp add: sandwich_apply tensor_ell2_right_apply tensor_op_ell2)
+lemma sandwich_tensor_ell2_left: \<open>sandwich (tensor_ell2_left \<psi>*) *\<^sub>V a \<otimes>\<^sub>o b = (\<psi> \<bullet>\<^sub>C (a *\<^sub>V \<psi>)) *\<^sub>C b\<close>
+  apply (rule cblinfun_eqI)
+  by (simp add: sandwich_apply tensor_ell2_left_apply tensor_op_ell2)
 
 lemma triple_commutant[simp]: \<open>commutant (commutant (commutant X)) = commutant X\<close>
   by (auto simp: commutant_def)
@@ -1321,7 +1324,6 @@ lemma cblinfun_apply_in_image': "A *\<^sub>V \<psi> \<in> space_as_set (A *\<^su
 lemma is_Proj_tensor_op: \<open>is_Proj a \<Longrightarrow> is_Proj b \<Longrightarrow> is_Proj (a \<otimes>\<^sub>o b)\<close>
   by (simp add: comp_tensor_op is_Proj_algebraic tensor_op_adjoint)
 
-(* TODO right *)
 lemma tensor_ell2_mem_tensor_ccsubspace_left:
   assumes \<open>a \<otimes>\<^sub>s b \<in> space_as_set (S \<otimes>\<^sub>S T)\<close> and \<open>b \<noteq> 0\<close>
   shows \<open>a \<in> space_as_set S\<close>
@@ -1365,6 +1367,18 @@ next
     using norm_Proj_apply by blast
 qed
 
+lemma tensor_ell2_mem_tensor_ccsubspace_right:
+  assumes \<open>a \<otimes>\<^sub>s b \<in> space_as_set (S \<otimes>\<^sub>S T)\<close> and \<open>a \<noteq> 0\<close>
+  shows \<open>b \<in> space_as_set T\<close>
+proof -
+  have \<open>swap_ell2 *\<^sub>V (a \<otimes>\<^sub>s b) \<in> space_as_set (swap_ell2 *\<^sub>S (S \<otimes>\<^sub>S T))\<close>
+    using assms(1) cblinfun_apply_in_image' by blast
+  then have \<open>b \<otimes>\<^sub>s a \<in> space_as_set (T \<otimes>\<^sub>S S)\<close>
+    by (simp add: swap_ell2_tensor_ccsubspace)
+  then show \<open>b \<in> space_as_set T\<close>
+    using \<open>a \<noteq> 0\<close> by (rule tensor_ell2_mem_tensor_ccsubspace_left)
+qed
+
 lemma mem_ortho_ccspanI:
   assumes \<open>\<And>y. y \<in> S \<Longrightarrow> is_orthogonal x y\<close>
   shows \<open>x \<in> space_as_set (- ccspan S)\<close>
@@ -1382,10 +1396,9 @@ qed
 lemma trunc_ell2_uminus: \<open>trunc_ell2 (-M) \<psi> = \<psi> - trunc_ell2 M \<psi>\<close>
   by (metis Int_UNIV_left boolean_algebra_class.diff_eq subset_UNIV trunc_ell2_UNIV trunc_ell2_union_Diff)
 
-(* TODO right *)
 lemma tensor_ccsubspace_INF_left_top:
   fixes S :: \<open>'a \<Rightarrow> 'b ell2 ccsubspace\<close>
-shows \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S (\<top>::'c ell2 ccsubspace) = (INF x\<in>X. S x \<otimes>\<^sub>S \<top>)\<close>
+  shows \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S (\<top>::'c ell2 ccsubspace) = (INF x\<in>X. S x \<otimes>\<^sub>S \<top>)\<close>
 proof (rule antisym[rotated])
   let ?top = \<open>\<top> :: 'c ell2 ccsubspace\<close>
   have \<open>\<psi> \<otimes>\<^sub>s \<phi> \<in> space_as_set (\<Sqinter>x\<in>X. S x \<otimes>\<^sub>S ?top)\<close>
@@ -1519,6 +1532,19 @@ proof (rule antisym[rotated])
   qed
 qed
 
+lemma tensor_ccsubspace_INF_right_top:
+  fixes S :: \<open>'a \<Rightarrow> 'b ell2 ccsubspace\<close>
+  shows \<open>(\<top>::'c ell2 ccsubspace) \<otimes>\<^sub>S (INF x\<in>X. S x) = (INF x\<in>X. \<top> \<otimes>\<^sub>S S x)\<close>
+proof -
+  have \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S (\<top>::'c ell2 ccsubspace) = (INF x\<in>X. S x \<otimes>\<^sub>S \<top>)\<close>
+    by (rule tensor_ccsubspace_INF_left_top)
+  then have \<open>swap_ell2 *\<^sub>S ((INF x\<in>X. S x) \<otimes>\<^sub>S (\<top>::'c ell2 ccsubspace)) = swap_ell2 *\<^sub>S (INF x\<in>X. S x \<otimes>\<^sub>S \<top>)\<close>
+    by simp
+  then show ?thesis
+    apply (cases \<open>X = {}\<close>)
+    by (simp_all add: swap_ell2_tensor_ccsubspace cblinfun_image_INF_eq)
+qed
+
 (* TODO: Let some_chilbert_basis abbreviate some_chilbert_basis_of UNIV *)
 definition \<open>some_chilbert_basis_of X = (SOME B. is_ortho_set B \<and> (\<forall>b\<in>B. norm b = 1) \<and> ccspan B = X)\<close>
 
@@ -1581,7 +1607,6 @@ proof (rule with_typeI)
     by auto
 qed
 
-(* TODO right *)
 lemma tensor_ccsubspace_INF_left: \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S T = (INF x\<in>X. S x \<otimes>\<^sub>S T)\<close> if \<open>X \<noteq> {}\<close>
 proof (cases \<open>T=0\<close>)
   case True
@@ -1610,6 +1635,17 @@ next
   from this[cancel_with_type]
   show ?thesis
     by -
+qed
+
+lemma tensor_ccsubspace_INF_right: \<open>(INF x\<in>X. T \<otimes>\<^sub>S S x) = (INF x\<in>X. T \<otimes>\<^sub>S S x)\<close> if \<open>X \<noteq> {}\<close>
+proof -
+  from that have \<open>(INF x\<in>X. S x) \<otimes>\<^sub>S T = (INF x\<in>X. S x \<otimes>\<^sub>S T)\<close>
+    by (rule tensor_ccsubspace_INF_left)
+  then have \<open>swap_ell2 *\<^sub>S ((INF x\<in>X. S x) \<otimes>\<^sub>S T) = swap_ell2 *\<^sub>S (INF x\<in>X. S x \<otimes>\<^sub>S T)\<close>
+    by simp
+  then show ?thesis
+    apply (cases \<open>X = {}\<close>)
+    by (simp_all add: swap_ell2_tensor_ccsubspace cblinfun_image_INF_eq)
 qed
 
 lemma abs_op_square: \<open>(abs_op A)* o\<^sub>C\<^sub>L abs_op A = A* o\<^sub>C\<^sub>L A\<close>
@@ -2082,6 +2118,14 @@ lemma unitary_tensor_id_left[simp]: \<open>unitary (id_cblinfun \<otimes>\<^sub>
   unfolding unitary_twosided_isometry
   by (simp add: tensor_op_adjoint)
 
+lemma eigenspace_0[simp]: \<open>eigenspace 0 A = kernel A\<close>
+  by (simp add: eigenspace_def)
+
+
+lemma kernel_isometry: \<open>kernel U = 0\<close> if \<open>isometry U\<close>
+  by (simp add: kernel_compl_adj_range range_adjoint_isometry that)
+
+
 lemma cblinfun_image_eigenspace_isometry:
   assumes [simp]: \<open>isometry A\<close> and \<open>c \<noteq> 0\<close>
   shows \<open>A *\<^sub>S eigenspace c B = eigenspace c (sandwich A B)\<close>
@@ -2129,6 +2173,14 @@ proof (rule antisym)
       by (simp add: x_def cblinfun_apply_in_image')
   qed
 qed
+
+lemma cblinfun_image_eigenspace_unitary:
+  assumes [simp]: \<open>unitary A\<close>
+  shows \<open>A *\<^sub>S eigenspace c B = eigenspace c (sandwich A B)\<close>
+  apply (cases \<open>c = 0\<close>)
+   apply (simp add: sandwich_apply cblinfun_image_kernel_unitary kernel_isometry cblinfun_compose_assoc
+    flip: kernel_cblinfun_compose)
+  by (simp add: cblinfun_image_eigenspace_isometry)
 
 lemma unitary_image_ortho_compl: 
   fixes U :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
@@ -2181,7 +2233,6 @@ proof -
     by -
 qed
 
-(* TODO _right *)
 lemma kernel_tensor_id_left: \<open>kernel (id_cblinfun \<otimes>\<^sub>o A) = \<top> \<otimes>\<^sub>S kernel A\<close>
 proof -
   have \<open>kernel (id_cblinfun \<otimes>\<^sub>o A) = - ((id_cblinfun \<otimes>\<^sub>o A)* *\<^sub>S \<top>)\<close>
@@ -2196,7 +2247,22 @@ proof -
     by -
 qed
 
-(* TODO _right *)
+lemma kernel_tensor_id_right: \<open>kernel (A \<otimes>\<^sub>o id_cblinfun) = kernel A \<otimes>\<^sub>S \<top>\<close>
+proof -
+  have ker_swap: \<open>kernel swap_ell2 = 0\<close>
+    by (simp add: kernel_isometry)
+  have \<open>kernel (id_cblinfun \<otimes>\<^sub>o A) = \<top> \<otimes>\<^sub>S kernel A\<close>
+    by (rule kernel_tensor_id_left)
+  from this[THEN arg_cong, of \<open>cblinfun_image swap_ell2\<close>]
+  show ?thesis
+    by (simp add: swap_ell2_tensor_ccsubspace cblinfun_image_kernel_unitary
+        flip: swap_ell2_commute_tensor_op kernel_cblinfun_compose[OF ker_swap])
+qed
+
+(* TODO put next to *) thm swap_tensor_op
+lemma swap_tensor_op[simp]: \<open>sandwich swap_ell2 (a \<otimes>\<^sub>o b) = b \<otimes>\<^sub>o a\<close>
+  by (simp add: sandwich_apply swap_tensor_op)
+
 lemma eigenspace_tensor_id_left: \<open>eigenspace c (id_cblinfun \<otimes>\<^sub>o A) = \<top> \<otimes>\<^sub>S eigenspace c A\<close>
 proof -
   have \<open>eigenspace c (id_cblinfun \<otimes>\<^sub>o A) = kernel (id_cblinfun \<otimes>\<^sub>o (A - c *\<^sub>C id_cblinfun))\<close>
@@ -2208,6 +2274,15 @@ proof -
     by (simp add: eigenspace_def)
   finally show ?thesis
     by -
+qed
+
+lemma eigenspace_tensor_id_right: \<open>eigenspace c (A \<otimes>\<^sub>o id_cblinfun) = eigenspace c A \<otimes>\<^sub>S \<top>\<close>
+proof -
+  have \<open>eigenspace c (id_cblinfun \<otimes>\<^sub>o A) = \<top> \<otimes>\<^sub>S eigenspace c A\<close>
+    by (rule eigenspace_tensor_id_left)
+  from this[THEN arg_cong, of \<open>cblinfun_image swap_ell2\<close>]
+  show ?thesis
+    by (simp add: swap_ell2_commute_tensor_op cblinfun_image_eigenspace_unitary swap_ell2_tensor_ccsubspace)
 qed
 
 lemma summable_on_bounded_linear:
