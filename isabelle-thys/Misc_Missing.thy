@@ -776,17 +776,5 @@ lemma map_comp_Some[simp]: \<open>f \<circ>\<^sub>m Some = f\<close>
 lemma compare_all_eqI: \<open>(\<And>x. a = x \<longleftrightarrow> b = x) \<Longrightarrow> a = b\<close>
   by auto
 
-lemma has_sum_reindex_bij_betw:
-  assumes "bij_betw g A B"
-  shows   "has_sum (\<lambda>x. f (g x)) A l \<longleftrightarrow> has_sum f B l"
-proof -
-  have \<open>has_sum (\<lambda>x. f (g x)) A l \<longleftrightarrow> has_sum f (g ` A) l\<close>
-    apply (rule has_sum_reindex[symmetric, unfolded o_def])
-    using assms bij_betw_imp_inj_on by blast
-  also have \<open>\<dots> \<longleftrightarrow> has_sum f B l\<close>
-    using assms bij_betw_imp_surj_on by blast
-  finally show ?thesis .
-qed
-
 
 end
