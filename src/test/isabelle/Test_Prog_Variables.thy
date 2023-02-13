@@ -73,15 +73,19 @@ lemma \<open>\<lbrakk>q1, r1 \<le> q1, r1, q2\<rbrakk>\<^sub>q\<close>
   by (tactic \<open>Prog_Variables.qregister_le_tac \<^context> 1\<close>)
 
 ML \<open>
-assert_aconv_conv false (translate_to_index_registers_conv \<^context>)
+fun translate_to_index_registers_conv_with_opts ctxt = translate_to_index_registers_conv ctxt translate_to_index_registers_conv_default_options
+\<close>
+
+
+ML \<open>
+assert_aconv_conv false (translate_to_index_registers_conv_with_opts \<^context>)
   \<^cterm>\<open>apply_qregister b hadamard *\<^sub>S top\<close>
-  \<^term>\<open>apply_qregister_space b
-      (apply_qregister qregister_id (apply_qregister qregister_id hadamard) *\<^sub>S
-       apply_qregister_space empty_qregister \<top>)\<close>
+  \<^term>\<open>apply_qregister_space (qregister_chain b qregister_id)
+      (apply_qregister qregister_id hadamard *\<^sub>S apply_qregister_space empty_qregister \<top>)\<close>
 \<close>
 
 ML \<open>
-assert_aconv_conv false (translate_to_index_registers_conv \<^context>)
+assert_aconv_conv false (translate_to_index_registers_conv_with_opts \<^context>)
   \<^cterm>\<open>- (apply_qregister_space b X) \<sqinter> top\<close>
   \<^term>\<open>TODO\<close>
 \<close>

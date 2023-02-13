@@ -311,4 +311,21 @@ fun concl_conv_Trueprop conv = conv |> mk_ctxt_conv HOLogic.Trueprop_conv |> con
 
 fun print_here_tac ctxt here = print_tac ctxt ("Goal state" ^ Position.here here ^ ":")
 
+(* Like resolve_tac, except:
+   - no backtracking (returns an option not a seq)
+   - returns the applied rule *)
+fun resolve_and_remember_rule _    []            i st : (thm * thm) option = NONE
+  | resolve_and_remember_rule ctxt (rule::rules) i st =
+      case resolve_tac ctxt [rule] i st |> Seq.pull of
+        SOME (st',_) => SOME (rule, st')
+      | NONE => resolve_and_remember_rule ctxt rules i st
+
+(* Stringifies a theorem either via its name (if known) or its term.
+   Prefixed with pfx_name or pfx_term, respectively. *)
+fun theorem_or_name ctxt pfx_name pfx_term thm = 
+  if Thm.has_name_hint thm
+  then pfx_name ^ (Pretty.marks_str (Proof_Context.markup_extern_fact ctxt (Thm.get_name_hint thm)) |> Pretty.string_of)
+  else pfx_term ^ Syntax.string_of_term ctxt (Thm.prop_of thm)
+
+
 end

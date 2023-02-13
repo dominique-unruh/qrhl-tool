@@ -3299,7 +3299,7 @@ lemma distinct_cvarsR: "distinct_cvars (cregister_pair Q R) \<Longrightarrow> di
 ML_file "prog_variables.ML"
 
 method_setup translate_to_index_registers = \<open>
-  Scan.succeed (fn ctxt => SIMPLE_METHOD (CONVERSION (Prog_Variables.translate_to_index_registers_conv ctxt) 1))
+  Scan.succeed (fn ctxt => SIMPLE_METHOD (CONVERSION (Prog_Variables.translate_to_index_registers_conv ctxt Prog_Variables.translate_to_index_registers_conv_default_options) 1))
 \<close>
 
 text \<open>Invocation: \<open>debug_translate_to_index_registers term for x y z and w z\<close>.
@@ -3319,7 +3319,7 @@ ML \<open>
   val term :: assms = Syntax.check_terms ctxt (term_parsed :: assms_parsed)
   val ctxt = fold (fn assm => Context.proof_map (Prog_Variables.declare_register_simps_from_thm (Thm.assume (Thm.cterm_of ctxt assm)))) assms ctxt
   val ct = Thm.cterm_of ctxt term
-  val rhs = Prog_Variables.translate_to_index_registers_conv ctxt ct |> Thm.rhs_of
+  val rhs = Prog_Variables.translate_to_index_registers_conv ctxt Prog_Variables.translate_to_index_registers_conv_default_options ct |> Thm.rhs_of
   val result = Syntax.string_of_term ctxt (Thm.term_of rhs)
   val _ = writeln result
   in () end)));

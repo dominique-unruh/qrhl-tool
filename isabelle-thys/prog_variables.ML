@@ -770,16 +770,36 @@ fun translate_to_index_registers_assm_lub_tac ctxt =
 
 (* TODO: rewrite all [translate_to_index_registers] rules *)
 
-fun translate_to_index_registers_conv_tac ctxt rules i st = let
-  fun err msg = raise CTERM ("translate_to_index_registers_conv_tac: TODO need better error message: " ^ msg, [Thm.cprem_of st i])
+type translate_to_index_registers_conv_options = {
+  trace: bool,
+  level: int
+}
+
+val translate_to_index_registers_conv_default_options = {trace = true, level = 0}
+
+fun translate_to_index_registers_conv_tac ctxt config rules i (st:thm) = let
+  fun named_thms_str () = (Pretty.marks_str (Proof_Context.markup_extern_fact ctxt \<^named_theorems>\<open>translate_to_index_registers\<close>) |> Pretty.string_of)
+  val thisgoal = Lazy.lazy (fn () => Thm.cprem_of st i |> Thm.term_of |> Syntax.string_of_term ctxt)
+  fun err msg = error ("translate_to_index_registers_conv_tac: TODO need better error message: " ^ msg ^ ", goal: " ^ Lazy.force thisgoal)
   val ngoals = Thm.nprems_of st
-val _ = \<^print> (1,st)
+  val next_config : translate_to_index_registers_conv_options = case config of
+    {trace, level} => {trace=trace, level=level+1}
+  val trace = if #trace config then
+    let val indent = replicate_string (#level config) "  " in fn str => 
+        let val lines = split_lines (str ())
+            val indented_lines = map (fn line => indent ^ line) lines
+            val indented_str = cat_lines indented_lines in        
+        tracing indented_str end end
+    else fn _ => ()
+  val _ = trace (fn () => "Attempting to translate registers in:\n  " ^ Lazy.force thisgoal)
   val fallback_rules = [
      @{lemma \<open>A \<equiv> apply_qregister_space qregister_id A\<close> by (simp add: apply_qregister_space_def)},
      @{lemma \<open>A \<equiv> apply_qregister qregister_id A\<close> by simp}]
-  val st = case SINGLE (resolve_tac ctxt rules i ORELSE resolve_tac ctxt fallback_rules i) st of SOME st => st
-            | NONE => err "no rule matched"
-val _ = \<^print> (2,st)
+  val st = case Misc.resolve_and_remember_rule ctxt rules i st of
+             SOME (rule,st) => (trace (fn () => "Successfully applied a rule from " ^ named_thms_str () ^ Misc.theorem_or_name ctxt ". Namely " ".\nNamely " rule); st)
+           | NONE => case Misc.resolve_and_remember_rule ctxt fallback_rules i st of
+                       SOME (rule,st) => (trace (fn () => "Successfully applied a fallback rule." ^ Misc.theorem_or_name ctxt " Namely " "\nNamely " rule); st)
+                     | NONE => error ("No rule matched in translate_to_index_registers when trying to solve:\n" ^ Lazy.force thisgoal)
   val nr_new_goals = Thm.nprems_of st - ngoals + 1
   val _ = nr_new_goals < 0 andalso err "nr_new_goals < 0"
   val condition_tac = FIRST' [
@@ -787,19 +807,26 @@ val _ = \<^print> (2,st)
       translate_to_index_registers_assm_lub_tac ctxt,
       (* Subgoal shape: A \<equiv> apply_qregister F A *)
       resolve_tac ctxt [@{lemma \<open>A \<equiv> apply_qregister F B \<Longrightarrow> A \<equiv> apply_qregister F B\<close> for F A by -}]
-        THEN' translate_to_index_registers_conv_tac ctxt rules
+        THEN' translate_to_index_registers_conv_tac ctxt next_config rules,
+      (* Subgoal shape: A \<equiv> apply_qregister_space F A *)
+      resolve_tac ctxt [@{lemma \<open>A \<equiv> apply_qregister_space F B \<Longrightarrow> A \<equiv> apply_qregister_space F B\<close> for F A by -}]
+        THEN' translate_to_index_registers_conv_tac ctxt next_config rules
     ]
   fun condition_tac' i st = let (* Guard against non-solving or giving new subgoals *)
     val ngoals = Thm.nprems_of st
+    val subgoal = Lazy.lazy (fn () => Thm.cprem_of st i |> Thm.term_of |> Syntax.string_of_term ctxt)
+    val _ = trace (fn () => "Solving subgoal " ^ Lazy.force subgoal)
     val st = case SINGLE (condition_tac i) st of SOME st => st
-             | NONE => err "condition_tac failed"
-    val _ = Thm.nprems_of st < ngoals - 1 andalso err "condition_tac removed more than one subgoal"
-    val _ = Thm.nprems_of st >= ngoals andalso err "condition_tac did not remove subgoal"
-    in Seq.single st end
-  fun repeat_condition_tac 0 i = all_tac
-    | repeat_condition_tac n i = condition_tac' i THEN repeat_condition_tac (n-1) i 
+             | NONE => err ("condition_tac failed (subgoal " ^ Lazy.force subgoal ^ ")")
+    val _ = Thm.nprems_of st < ngoals - 1 andalso err ("condition_tac removed more than one subgoal (subgoal " ^ Lazy.force subgoal ^ ")")
+    val _ = Thm.nprems_of st >= ngoals andalso err ("condition_tac did not remove subgoal (subgoal " ^ Lazy.force subgoal ^ ")")
+    in st end
+  fun repeat_condition_tac 0 _ st = st
+    | repeat_condition_tac n i st = condition_tac' i st |> repeat_condition_tac (n-1) i 
+  val st = repeat_condition_tac nr_new_goals i st
+  val _ = trace (fn () => "Successfully translated.")
 in 
-  repeat_condition_tac nr_new_goals i st
+  Seq.single st
 end
 
 
@@ -810,13 +837,13 @@ fun conv_from_tac ctxt tac ct = let
   val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq \<open>Thm.typ_of_cterm ct\<close>\<close>)
                                   ct)
                        (Thm.var ((("rhs",idx),Thm.ctyp_of_cterm ct)))
-val _ = goal |> \<^print>
+(* val _ = goal |> \<^print> *)
   val thm = Goal.prove_internal ctxt [] goal (K tac)
-val _ = thm |> \<^print>
+(* val _ = thm |> \<^print> *)
 in thm end
 
-fun translate_to_index_registers_conv ctxt = let
+fun translate_to_index_registers_conv ctxt config = let
   val rules = \<^named_theorems>\<open>translate_to_index_registers\<close> |> Proof_Context.get_thms ctxt
-  in conv_from_tac ctxt (translate_to_index_registers_conv_tac ctxt rules 1) end
+  in conv_from_tac ctxt (translate_to_index_registers_conv_tac ctxt config rules 1) end
 
 end
