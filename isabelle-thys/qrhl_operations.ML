@@ -417,10 +417,10 @@ fun whatVarterm (VTCons _) = "cons"
   | whatVarterm (VTSingle _) = "single"
   | whatVarterm VTUnit = "unit"
 
-fun show_oracles_lines thm : string list = let
+(* fun show_oracles_lines thm : string list = let
   val ctxt = thm |> Thm.theory_of_thm |> Proof_Context.init_global
   val text = Extended_Sorry.show_oracles_lines ctxt [thm] |> map YXML.content_of
-  in text end
+  in text end *)
 
 local
 fun freeze_typ (Type(n,Ts)) = Type (n, map freeze_typ Ts)

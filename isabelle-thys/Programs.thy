@@ -9,7 +9,7 @@ lift_definition fv_expression :: \<open>'a expression \<Rightarrow> CVARIABLE\<c
 lift_definition expression_eval :: \<open>'a expression \<Rightarrow> ('cl \<Rightarrow> 'a)\<close> is
   \<open>\<lambda>(_, e). e\<close>.
 lift_definition expression :: \<open>'a cvariable \<Rightarrow> ('a\<Rightarrow>'b) \<Rightarrow> ('b,'cl) expression\<close> is
-  \<open>\<lambda>(v::'a cvariable) (f::'a\<Rightarrow>'b). (CVARIABLE_of v, f o getter v)\<close>.
+  \<open>\<lambda>(v::'a cvariable) (f::'a\<Rightarrow>'b). (CREGISTER_of v, f o getter v)\<close>.
 definition \<open>const_expression x = expression (Classical_Extra.empty_var :: (unit,_) cvariable) (\<lambda>_. x)\<close> *)
 
 
@@ -35,75 +35,78 @@ consts fvc_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
 consts fvcw_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
 
 (* consts fvq_program :: "program \<Rightarrow> string set" *)
-lemma fvq_program_sequence: "fvq_program (block b) = fold (\<lambda>p v. QVARIABLE_pair (fvq_program p) v) b QVARIABLE_unit"
-  by (cheat TODO7)
-lemma fvq_program_assign: "fvq_program (assign x e) = QVARIABLE_unit"
-  by (cheat TODO7)
-lemma fvq_program_sample: "fvq_program (sample xs e2) = QVARIABLE_unit"
-  by (cheat TODO7)
+lemma fvq_program_sequence: "fvq_program (block b) = fold (\<lambda>p v. QREGISTER_pair (fvq_program p) v) b QREGISTER_unit"
+  sorry
+lemma fvq_program_assign: "fvq_program (assign x e) = QREGISTER_unit"
+  sorry
+lemma fvq_program_sample: "fvq_program (sample xs e2) = QREGISTER_unit"
+  sorry
 lemma fvq_program_ifthenelse: "fvq_program (ifthenelse c p1 p2) =
-  QVARIABLE_pair (fvq_program (block p1)) (fvq_program (block p2))"
-  by (cheat TODO7)
+  QREGISTER_pair (fvq_program (block p1)) (fvq_program (block p2))"
+  sorry
 lemma fvq_program_while: "fvq_program (while c b) = (fvq_program (block b))"
-  by (cheat TODO7)
-lemma fvq_program_qinit: "fvq_program (qinit Q e3) = QVARIABLE_of Q"
-  by (cheat TODO7)
-lemma fvq_program_qapply: "fvq_program (qapply Q e4) = QVARIABLE_of Q"
-  by (cheat TODO7)
-lemma fvq_program_measurement: "fvq_program (measurement x R e5) = QVARIABLE_of R"
-  by (cheat TODO7)
+  sorry
+lemma fvq_program_qinit: "fvq_program (qinit Q e3) = QREGISTER_of Q"
+  sorry
+lemma fvq_program_qapply: "fvq_program (qapply Q e4) = QREGISTER_of Q"
+  sorry
+lemma fvq_program_measurement: "fvq_program (measurement x R e5) = QREGISTER_of R"
+  sorry
 
-lemma fvc_program_sequence: "fvc_program (block b) = fold (\<lambda>p v. CVARIABLE_pair (fvc_program p) v) b CVARIABLE_unit"
-  by (cheat TODO7)
-lemma fvc_program_assign: "fvc_program (assign x e) = CVARIABLE_pair (CVARIABLE_of x) (fv_expression e)"
-  by (cheat TODO7)
-lemma fvc_program_sample: "fvc_program (sample x e) = CVARIABLE_pair (CVARIABLE_of x) (fv_expression e)"
-  by (cheat TODO7)
+lemma fvc_program_sequence: "fvc_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvc_program p) v) b CREGISTER_unit"
+  sorry
+lemma fvc_program_assign: "fvc_program (assign x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
+  sorry
+lemma fvc_program_sample: "fvc_program (sample x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
+  sorry
 lemma fvc_program_ifthenelse: "fvc_program (ifthenelse c p1 p2) =
-  CVARIABLE_pair (fv_expression c) (CVARIABLE_pair (fvc_program (block p1)) (fvc_program (block p2)))"
-  by (cheat TODO7)
+  CREGISTER_pair (fv_expression c) (CREGISTER_pair (fvc_program (block p1)) (fvc_program (block p2)))"
+  sorry
 lemma fvc_program_while: "fvc_program (while c b) = 
-  CVARIABLE_pair (fv_expression c) (fvc_program (block b))"
-  by (cheat TODO7)
+  CREGISTER_pair (fv_expression c) (fvc_program (block b))"
+  sorry
 lemma fvc_program_qinit: "fvc_program (qinit Q e3) = fv_expression e3"
-  by (cheat TODO7)
+  sorry
 lemma fvc_program_qapply: "fvc_program (qapply Q e4) = fv_expression e4"
-  by (cheat TODO7)
-lemma fvc_program_measurement: "fvc_program (measurement x R e) = CVARIABLE_pair (CVARIABLE_of x) (fv_expression e)"
-  by (cheat TODO7)
+  sorry
+lemma fvc_program_measurement: "fvc_program (measurement x R e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
+  sorry
 
-lemma fvcw_program_sequence: "fvcw_program (block b) = fold (\<lambda>p v. CVARIABLE_pair (fvcw_program p) v) b CVARIABLE_unit"
-  by (cheat TODO7)
-lemma fvcw_program_assign: "fvcw_program (assign x e) = CVARIABLE_of x"
-  by (cheat TODO7)
-lemma fvcw_program_sample: "fvcw_program (sample x e2) = CVARIABLE_of x"
-  by (cheat TODO7)
+lemma fvcw_program_sequence: "fvcw_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvcw_program p) v) b CREGISTER_unit"
+  sorry
+lemma fvcw_program_assign: "fvcw_program (assign x e) = CREGISTER_of x"
+  sorry
+lemma fvcw_program_sample: "fvcw_program (sample x e2) = CREGISTER_of x"
+  sorry
 lemma fvcw_program_ifthenelse: "fvcw_program (ifthenelse c p1 p2) =
-  CVARIABLE_pair (fvc_program (block p1)) (fvc_program (block p2))"
-  by (cheat TODO7)
+  CREGISTER_pair (fvc_program (block p1)) (fvc_program (block p2))"
+  sorry
 lemma fvcw_program_while: "fvcw_program (while c b) = fvcw_program (block b)"
-  by (cheat TODO7)
-lemma fvcw_program_qinit: "fvcw_program (qinit Q e3) = CVARIABLE_unit"
-  by (cheat TODO7)
-lemma fvcw_program_qapply: "fvcw_program (qapply Q e4) = CVARIABLE_unit"
-  by (cheat TODO7)
-lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CVARIABLE_of x"
-  by (cheat TODO7)
+  sorry
+lemma fvcw_program_qinit: "fvcw_program (qinit Q e3) = CREGISTER_unit"
+  sorry
+lemma fvcw_program_qapply: "fvcw_program (qapply Q e4) = CREGISTER_unit"
+  sorry
+lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CREGISTER_of x"
+  sorry
 
 lemma localvars_empty: "localvars empty_cregister empty_qregister P = block P"
-  by (cheat localvars_empty)
+  sorry
 
 lemma singleton_block: "block [P] = P"
-  by (cheat singleton_block)
+  sorry
 
-typedecl program_state
+typedecl ('a,'b) cq_operator
+type_synonym program_state = \<open>(cl,qu) cq_operator\<close>
+(* Classical part missing:
+type_synonym program_state = \<open>(qu ell2, qu ell2) trace_class\<close> *)
 
 axiomatization
   denotation :: "program \<Rightarrow> program_state \<Rightarrow> program_state" and
   program_state_distrib :: "program_state \<Rightarrow> cl distr"
 
 lemma denotation_block: "denotation (block ps) = fold denotation ps"
-  by (cheat denotation_block)
+  sorry
 
 definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" where
   "probability e p \<rho> = Prob (program_state_distrib (denotation p \<rho>)) (Collect e)"
@@ -115,7 +118,7 @@ hide_const probability_syntax *)
 lemma probability_sample: 
   "probability (expression m f) (block [sample m (const_expression D)]) rho
   = Prob D (Collect f)"
-  by (cheat probability_sample)
+  sorry
 
 lemma equal_until_bad: 
   assumes "probability (map_expression2 (|) e b) g3 rho \<ge> probability b g4 rho"

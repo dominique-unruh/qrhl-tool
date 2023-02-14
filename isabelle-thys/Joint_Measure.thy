@@ -19,8 +19,7 @@ lemma joint_measure_simple:
     Cla[e\<^sub>1=f\<^sub>2] \<sqinter> quantum_equality Q\<^sub>1 R\<^sub>2 \<sqinter> 
     (INF z. ((B' z m \<sqinter> ebar (e\<^sub>1 m) z \<sqinter> fbar (f\<^sub>2 m) z) + (- ebar (e\<^sub>1 m) z) + (- fbar (f\<^sub>2 m) z))))"
   shows "qrhl A [measurement x Q e] [measurement y R f] B"
-  by (cheat joint_measure_simple)
-
+  sorry
 
 (* lemma joint_measure_simple_tac:
   fixes e f x y Q R B

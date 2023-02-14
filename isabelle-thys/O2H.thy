@@ -38,7 +38,7 @@ lemma o2h:
   assumes "\<And>S G H z x. (S,G,H,z) \<in> supp distr \<Longrightarrow> x\<notin>S \<Longrightarrow> G x = H x"
 
   shows "abs (Pleft - Pright) \<le> 2 * sqrt( (1 + real q)*Pfind )"
-    by (cheat O2H)
+  sorry
 
 lemmas o2h' = o2h[where localsC="empty_cregister" and localsQ="empty_qregister", 
         unfolded localvars_empty[of "[_]", unfolded singleton_block]]
@@ -150,10 +150,10 @@ definition [program_bodies]: "findG = (block [assign \<lbrakk>count\<rbrakk>\<^s
         localvars \<lbrakk>\<rbrakk>\<^sub>c \<lbrakk>X\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGS]]]])"
 
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk>\<^sub>c (\<lambda>m. getter count m + 1)]" for P  
-  by (cheat Count)
+  sorry
 
-lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>\<^sub>c" by (cheat fv_adv)
-lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>\<^sub>q" by (cheat fv_adv)
+lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>\<^sub>c" sorry
+lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>\<^sub>q" sorry
 
 lemma 
   assumes \<open>Pr[count \<le> q : left(rho)] = 1\<close>

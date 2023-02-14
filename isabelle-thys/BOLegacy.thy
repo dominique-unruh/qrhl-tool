@@ -13,8 +13,6 @@ theory BOLegacy
     (* TODO: Still needed here? *)
     Registers.Quantum (* Imported because otherwise instantiations in QRHL_Code for bit will happen that make it impossible to merge Registers.Quantum with that theory.
 And we include it already here so that out simpset removals here won't be overwritten in a merge *)
-
-    Extended_Sorry
 begin
 
 (* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)

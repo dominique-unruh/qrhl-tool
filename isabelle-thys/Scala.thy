@@ -40,7 +40,7 @@ object IsabelleTypes {
   val prod = \<open>\<^type_name>\<open>prod\<close>\<close>
   val char = \<open>\<^type_name>\<open>char\<close>\<close>
   val real = \<open>\<^type_name>\<open>real\<close>\<close>
-  val program_state = \<open>\<^type_name>\<open>program_state\<close>\<close>
+  val cq_operator = \<open>\<^type_name>\<open>cq_operator\<close>\<close>
   val infinite = \<open>\<^type_name>\<open>infinite\<close>\<close>
   val cregister = \<open>\<^type_name>\<open>cregister\<close>\<close>
   val qregister = \<open>\<^type_name>\<open>qregister\<close>\<close>

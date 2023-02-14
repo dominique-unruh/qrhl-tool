@@ -754,7 +754,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
   val realT: Type = Type(t.real)
   val stringT: Type = listT(Type(t.char))
-  val program_stateT: Type = Type(t.program_state)
+  def cq_operatorT(classical: Typ, quantum: Typ): Type = Type(t.cq_operator, classical, quantum)
+  val program_stateT: Type = cq_operatorT(clT, quT)
   val probability: Const = Const(c.probability, expressionT(boolT, indexed=false) -->: programT -->: program_stateT -->: realT)
 
 

@@ -45,7 +45,7 @@ lemma wp1_qapply_tac:
   defines "e\<^sub>1 \<equiv> (\<lambda>m. e (fst m))"
   defines "A \<equiv> (\<lambda>m. Cla[isometry (e\<^sub>1 m)] \<sqinter> (adj ((e\<^sub>1 m)\<guillemotright>Q\<^sub>1) \<cdot> (B m \<sqinter> ((e\<^sub>1 m)\<guillemotright>Q\<^sub>1 \<cdot> top))))"
   shows "qrhl A [qapply Q e] [] B"
-  by (cheat wp1_qapply_tac)
+  sorry
 
 (* TODO move, name *)
 (* lemma [simp]: \<open>index_flip_subspace (apply_qregister qSnd S) = apply_qregister qFst S\<close> *)
@@ -91,7 +91,7 @@ lemma wp1_qinit_tac:
   defines "e\<^sub>1 \<equiv> (\<lambda>m. e (fst m))"
   defines "A \<equiv> map_expression2 (\<lambda>e\<^sub>1 B. Cla[norm e\<^sub>1 = 1] \<sqinter> (B \<div> e\<^sub>1 \<guillemotright> Q\<^sub>1)) e\<^sub>1 B"
   shows "qrhl A [qinit Q e] [] B"
-  by (cheat wp1_qinit_tac)
+  sorry
 
 lemma wp2_qinit_tac:
   fixes B e Q
@@ -112,7 +112,7 @@ lemma wp1_if_tac:
   assumes "qrhl wp_false p2 [] B"
   defines "A \<equiv> (\<lambda>m. (Cla[\<not> e\<^sub>1 m] + wp_true m) \<sqinter> (Cla[e\<^sub>1 m] + wp_false m))"
   shows "qrhl A [ifthenelse e p1 p2] [] B"
-  by (cheat wp1_if_tac)
+  sorry
 
 lemma wp2_if_tac:
   fixes e p1 p2 B
@@ -154,7 +154,7 @@ lemma wp1_measure_tac:
   defines "A \<equiv> (\<lambda>m. let M = e\<^sub>1 m in Cla[mtotal M] \<sqinter> 
                          (INF z. let P = ebar M z in ((B' z m \<sqinter> P) + - P)))"
   shows "qrhl A [measurement x Q e] [] B"
-  by (cheat wp1_measure_tac)
+  sorry
 
 lemma wp2_measure_tac:
   fixes A B x Q e

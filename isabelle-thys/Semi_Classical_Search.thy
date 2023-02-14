@@ -40,7 +40,7 @@ lemma semi_classical_search:
   defines "Pright == probability (\<lambda>m. getter guess m \<in> getter S m) game_right rho"
 
   shows "Pleft \<le> 4 * real q * Pright"
-    by (cheat Semi_Classical_Search)
+  sorry
 
 lemmas semi_classical_search' = semi_classical_search[where localsC="empty_cregister" and localsQ="empty_qregister", 
     unfolded localvars_empty[of "[_]", unfolded singleton_block]]
@@ -117,10 +117,10 @@ definition [program_bodies]: "right = block [assign \<lbrakk>count\<rbrakk>\<^su
         localvars \<lbrakk>\<rbrakk>\<^sub>c \<lbrakk>\<rbrakk> [instantiateOracles adv [instantiateOracles Count [queryGM]]]]"
 
 lemma [program_bodies]: "instantiateOracles Count [P] = block [P, assign \<lbrakk>count\<rbrakk>\<^sub>c Expr[count+1]]" for P  
-  by (cheat Count)
+  sorry
 
-lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>\<^sub>c" by (cheat fv_adv)
-lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>" by (cheat fv_adv)
+lemma fvc_adv[program_fv]: "fvc_oracle_program adv \<le> CREGISTER_of \<lbrakk>b,z\<rbrakk>\<^sub>c" sorry
+lemma fvq_adv[program_fv]: "fvq_oracle_program adv \<le> QREGISTER_of \<lbrakk>X,Y\<rbrakk>" sorry
 
 lemma
   assumes \<open>Pr[count \<le> q : left(rho)] = 1\<close>

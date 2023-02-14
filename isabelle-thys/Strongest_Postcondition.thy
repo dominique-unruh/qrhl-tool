@@ -32,16 +32,12 @@ lemma expression_eval_map_expression2':
   using assms by blast+
 
 lemma subst_mem2_twice: \<open>subst_mem2 (substitute_vars x e) (subst_mem2 (substitute_vars x f) m) = subst_mem2 (substitute_vars x e) m\<close>
-  by (cheat subst_mem2_twice)
 
 lemma subst_mem2_eval_vars: \<open>subst_mem2 (substitute_vars x1 Expr[eval_variables x1 m]) m = m\<close>
-  by (cheat subst_mem2_eval_vars)
 
 lemma subst_expression_footprint_substitute_vars_const: \<open>subst_expression_footprint (substitute_vars x Expr[z]) y = y - set (raw_variables x)\<close>
-  by (cheat subst_expression_footprint_substitute_vars_const)
 
 lemma eval_var_subst_that_var: \<open>eval_variables x (subst_mem2 (substitute_vars x e) m) = expression_eval e m\<close> if \<open>distinct_qvars x\<close>
-  by (cheat eval_var_subst_that_var)
 
 lemma flatten_tree_index: \<open>flatten_tree (index_vartree side x) = map (index_var_raw side) (flatten_tree x)\<close>
   apply (induction x)
@@ -348,7 +344,7 @@ lemma sp1_measure_tac:
   assumes lossless: \<open>true_expression L\<close>
   shows "qrhl A [measurement x Q e] [] B"
 (* Handwritten proof: Quicksheets 2022, pages 150-151. *)
-  by (cheat sp1_measure_tac)
+  sorry
 (* proof -
   define B' where \<open>B' z = subst_expression (substitute_vars x1 Expr[z]) B\<close> for z
   define A'' where \<open>A'' = map_expression2' (\<lambda>e\<^sub>1 B'. let M = e\<^sub>1 in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (INF z. let P = mproj M z\<guillemotright>Q1 *\<^sub>S \<top> in B' z \<sqinter> P + - P)) e1 B'\<close>
@@ -386,7 +382,7 @@ lemma sp2_measure_tac:
   defines lossless_exp: \<open>L \<equiv> (\<lambda>m. A m \<le> Cla[mtotal (e2 m)])\<close>
   assumes lossless: \<open>true_expression L\<close>
   shows "qrhl A [] [measurement x Q e] B"
-  by (cheat sp2_measure_tac)
+  sorry
 
 lemma sp1_cons_tac:
   assumes "qrhl A' ps [] B"

@@ -1,6 +1,6 @@
 theory Prog_Variables
   imports
-    Extended_Sorry Multi_Transfer
+    Multi_Transfer
     HOL.Map
     BOLegacy
     Misc_Missing

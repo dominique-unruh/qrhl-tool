@@ -5,7 +5,7 @@ begin
 (* TODO move *)
 lemma assign_sample:
   shows "denotation (assign Q e) = denotation (sample Q (\<lambda>m. point_distr (e m)))"
-  by (cheat assign_sample)
+  sorry
 
 lemma squash_sampling: 
   fixes Q R d e
@@ -14,7 +14,7 @@ lemma squash_sampling:
   defines "de \<equiv> (\<lambda>m. bind_distr (d m) (\<lambda>z. map_distr (\<lambda>y. (z,y)) (e' z m)))"
   shows "denotation (block [sample Q d, sample R e]) =
          denotation (sample \<lbrakk>Q,R\<rbrakk>\<^sub>c de)"
-  by (cheat squash_sampling)
+  sorry
 
 lemma squash_sampling_assign: 
   fixes Q R d e
@@ -71,18 +71,17 @@ lemma squash_qinit_qapply:
   assumes \<open>qregister_le R Q\<close>
   shows \<open>denotation (block [qinit Q \<psi>, qapply R U])
        = denotation (qinit Q (\<lambda>m. (U m \<guillemotright> qregister_conversion R Q) *\<^sub>V \<psi> m))\<close>
-  by (cheat squash_qinit_qapply)
+  sorry
 
 lemma squash_qapply_qapply:
   fixes U V :: \<open>(_,_) cblinfun expression\<close>
   assumes \<open>qregister_le Q QR \<and> qregister_le R QR\<close>
   shows \<open>denotation (block [qapply Q U, qapply R V])
        = denotation (qapply QR (\<lambda>m. (V m \<guillemotright> \<lbrakk>R \<mapsto> QR\<rbrakk>\<^sub>q) o\<^sub>C\<^sub>L (U m \<guillemotright> \<lbrakk>Q \<mapsto> QR\<rbrakk>\<^sub>q)))\<close>
-  by (cheat squash_qapply_qapply)
-
+  sorry
 (* lemma assign_sample:
   shows "denotation (assign Q e) = denotation (sample Q (map_expression (\<lambda>x. uniform {x}) e))"
-  by (cheat assign_sample) *)
+*)
 
 lemma squash_left_qrhl:
   assumes left0: "left0 @ [c1, c2] = left"

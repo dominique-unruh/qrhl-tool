@@ -4,13 +4,14 @@ begin
 
 lemma skip_rule:
   shows "qrhl B [] [] B"
-  by (cheat skip_rule)
+  by (auto simp add: qrhl_def denotation_block)
 
 lemma conseq_rule:
   assumes "\<And>m. A m \<le> A' m" and "\<And>m. B' m \<le> B m"
   assumes "qrhl A' b c B'"
   shows "qrhl A b c B"
-  by (cheat conseq_rule)
+  using  assms(3)
+  by (auto intro!: satisfies_mono[OF assms(1)] satisfies_mono[OF assms(2)] simp add: qrhl_def)
 
 lemma skip_conseq_rule:
   assumes \<open>\<And>m. A m \<le> B m\<close>
@@ -22,24 +23,24 @@ lemma skip_conseq_rule:
 lemma sym_rule:
   assumes "qrhl (\<lambda>m. index_flip_subspace (A (prod.swap m))) c b (\<lambda>m. index_flip_subspace (B (prod.swap m)))"
   shows "qrhl A b c B"
-  by (cheat sym_rule)
+  sorry
 
 lemma assign1_rule:
   fixes A B x e
   assumes \<open>cregister x\<close>
   defines "A == (\<lambda>m::cl2. B (setter (cregister_chain cFst x) (e (fst m)) m))"
   shows "qrhl A [assign x e] [] B"
-  by (cheat assign1_rule)
+  sorry
 
 (* 
 (* TODO move *)
 lemma index_flip_substitute_vars: 
   "map index_flip_substitute1 (substitute_vars xs e) = substitute_vars (index_flip_vars xs) (index_flip_expression e)"
-  by (cheat index_flip_substitute_vars) *)
+*)
 
 (* (* TODO move *)
 lemma index_flip_vars_index_vars: "index_flip_vars (index_vars left xs) = index_vars (\<not> left) xs"
-  by (cheat index_flip_vars_index_vars) *)
+*)
 
 (* TODO move *)
 (* lemma map_expression_subst_expression:
@@ -66,7 +67,7 @@ lemma sample1_rule:
   defines "\<And>z. B' z == (\<lambda>m. B (setter xs1 z m))"
   defines "A == (\<lambda>m. Cla[weight (e1 m) = 1] \<sqinter> (INF z\<in>supp (e1 m). B' z m))"
   shows "qrhl A [sample xs e] [] B"
-  by (cheat sample1_rule)
+  sorry
 
 (* lift_definition uniform_expression_family :: "('a \<Rightarrow> 'b expression) \<Rightarrow> bool" is
   "\<lambda>e. \<forall>z. fst (e z) = fst (e undefined)" .
@@ -112,7 +113,7 @@ lemma uniform_expression_family_expression[simp]:
   assumes "uniform_expression_family e1"
   assumes "uniform_expression_family e2"
   shows "uniform_expression_family (\<lambda>z. subst_expression (substitute_vars V (e1 z)) (e2 z))"
-  by (cheat uniform_expression_family_subst_expression) *)
+*)
 
 lemma sample2_rule:
   fixes A B xs e

@@ -14,8 +14,7 @@ lemma joint_sample:
     Cla[map_distr fst (witness m) = e\<^sub>1 m \<and> map_distr snd (witness m) = f\<^sub>2 m] \<sqinter>  
     (INF z\<in>supp (witness m). ((B' z m))))"
   shows "qrhl A [sample x e] [sample y f] B"
-  by (cheat joint_sample)
-
+  sorry
 
 lemma joint_sample_equal:
   fixes e f x y Q R B

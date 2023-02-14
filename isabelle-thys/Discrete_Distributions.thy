@@ -2,7 +2,7 @@ chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite"
-    Extended_Sorry "HOL-Library.Z2" Misc_Missing Multi_Transfer
+    "HOL-Library.Z2" Misc_Missing Multi_Transfer
     "Complex_Bounded_Operators.Extra_Ordered_Fields"
     "HOL-Analysis.Infinite_Sum"
     Registers.Misc
@@ -596,7 +596,7 @@ qed
 
 lift_definition "bind_distr" :: "'a distr \<Rightarrow> ('a \<Rightarrow> 'b distr) \<Rightarrow> 'b distr" 
   is "\<lambda>(\<mu>::'a\<Rightarrow>real) (f::'a\<Rightarrow>'b\<Rightarrow>real) x. \<Sum>\<^sub>\<infinity> y\<in>UNIV. \<mu> y * f y x"
-  by (cheat bind_distr)
+  sorry
 
 abbreviation "product_distr \<mu> \<nu> \<equiv> bind_distr \<mu> (\<lambda>z. map_distr (Pair z) \<nu>)"
 
@@ -1067,7 +1067,7 @@ lemma map_distr_product_distr'_onepoint:
 lemma bind_distr_twice_indep:
   "bind_distr A (\<lambda>a. bind_distr B (\<lambda>b. F a b)) 
  = bind_distr B (\<lambda>b. bind_distr A (\<lambda>a. F a b))"
-  by (cheat bind_distr_twice_indep)
+  sorry
 
 lemma bind_distr_point_distr[simp]: "bind_distr D point_distr = D"
 proof (transfer, rule ext)
@@ -1502,11 +1502,11 @@ lemma bind_product_distr':
     and F :: "'g \<Rightarrow> 'i \<Rightarrow> 'f distr"
   shows "bind_distr (product_distr' G) (\<lambda>D. product_distr' (\<lambda>i. F (D i) i))
          = product_distr' (\<lambda>i. bind_distr (G i) (\<lambda>d. F d i))"
-  by (cheat bind_product_distr')
+  sorry
 
 lemma product_distr'_uniform[simp]:
   "product_distr' (\<lambda>m. uniform (S m)) = uniform {f. \<forall>m. f m \<in> S m}"
-  by (cheat product_distr'_uniform)
+  sorry
 
 lemma product_distr'_point_distr[simp]:
   "product_distr' (\<lambda>i. point_distr (f i)) = point_distr f"
@@ -1515,11 +1515,11 @@ lemma product_distr'_point_distr[simp]:
   by auto
 
 lemma bind_point_distr[simp]: "bind_distr D (\<lambda>d. point_distr (f d)) = map_distr f D"
-  by (cheat bind_point_distr)
+  sorry
 
 lemma point_distr_bind[simp]: "bind_distr (point_distr x) f = f x"
   apply transfer apply auto
-  by (cheat point_distr_bind)
+  sorry
 
 lemma map_product_distr':
   shows "map_distr (\<lambda>D i. F (D i) i) (product_distr' G)
@@ -1530,7 +1530,7 @@ lemma map_product_distr':
 lemma total_product_distr'I:
   assumes "\<And>x. weight (f x) = 1"
   shows "weight (product_distr' f) = 1"
-  by (cheat total_product_distr'I)
+  sorry
 
 lemma bernoulli_combine_uniform:
   assumes "disjnt A B"
@@ -1610,7 +1610,7 @@ lemma bernoulli_p1: "bernoulli 1 = point_distr 1"
   by (auto simp: bernoulli0 bernoulli1)
 
 lemma bind_distr_map_distr': "bind_distr (map_distr f A) G = bind_distr A (\<lambda>x. G (f x))"
-  by (cheat bind_distr_map_distr')
+  sorry
 
 lemma map_distr_product_distr: 
   "map_distr (\<lambda>(x,y). (f x, g y)) (product_distr A B) = product_distr (map_distr f A) (map_distr g B)"
