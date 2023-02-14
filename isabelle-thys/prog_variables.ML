@@ -805,6 +805,9 @@ fun translate_to_index_registers_conv_tac ctxt config rules i (st:thm) = let
   val condition_tac = FIRST' [
       (* Subgoal shape: qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G' *)
       translate_to_index_registers_assm_lub_tac ctxt,
+      (* Subgoal shape: qregister F *)
+      resolve_tac ctxt [@{lemma \<open>qregister F \<Longrightarrow> qregister F\<close> for F by -}]
+        THEN' distinct_vars_tac ctxt,
       (* Subgoal shape: A \<equiv> apply_qregister F A *)
       resolve_tac ctxt [@{lemma \<open>A \<equiv> apply_qregister F B \<Longrightarrow> A \<equiv> apply_qregister F B\<close> for F A by -}]
         THEN' translate_to_index_registers_conv_tac ctxt next_config rules,

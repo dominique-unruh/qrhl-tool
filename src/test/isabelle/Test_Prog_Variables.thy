@@ -87,7 +87,8 @@ assert_aconv_conv false (translate_to_index_registers_conv_with_opts \<^context>
 ML \<open>
 assert_aconv_conv false (translate_to_index_registers_conv_with_opts \<^context>)
   \<^cterm>\<open>- (apply_qregister_space b X) \<sqinter> top\<close>
-  \<^term>\<open>TODO\<close>
+  \<^term>\<open>apply_qregister_space (qregister_chain b qregister_id)
+        (apply_qregister_space qregister_id (- X) \<sqinter> apply_qregister_space empty_qregister \<top>)\<close>
 \<close>
 
 end
