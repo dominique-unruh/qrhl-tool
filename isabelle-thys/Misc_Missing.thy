@@ -776,5 +776,7 @@ lemma map_comp_Some[simp]: \<open>f \<circ>\<^sub>m Some = f\<close>
 lemma compare_all_eqI: \<open>(\<And>x. a = x \<longleftrightarrow> b = x) \<Longrightarrow> a = b\<close>
   by auto
 
+lemma pure_extensional: \<open>(A::'a::{}\<Rightarrow>'b::{}) == B\<close> if \<open>(\<And>x. A x \<equiv> B x)\<close>
+  by (tactic \<open>resolve_tac \<^context> [Drule.extensional @{thm that}] 1\<close>)
 
 end

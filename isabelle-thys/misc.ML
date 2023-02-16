@@ -327,5 +327,30 @@ fun theorem_or_name ctxt pfx_name pfx_term thm =
   then pfx_name ^ (Pretty.marks_str (Proof_Context.markup_extern_fact ctxt (Thm.get_name_hint thm)) |> Pretty.string_of)
   else pfx_term ^ Syntax.string_of_term ctxt (Thm.prop_of thm)
 
+(* (* Removes outermost unused \<And>'s from goal. *)
+fun clean_params_tac i = REPEAT (CONVERSION (Conv.rewr_conv @{thm triv_forall_equality}) i) *)
+
+fun forall_dest_list ct = case Thm.term_of ct of
+  \<^Const_>\<open>Pure.all _\<close> $ Abs _ => let 
+      val (param, body) = Thm.dest_abs_global (Thm.dest_arg ct)
+      val (params, body') = forall_dest_list body
+      in (param::params, body') end
+  | _ => ([], ct)                           
+
+(* Runs tactic tac on the i-th subgoal as the only subgoal.
+   tac must solve the subgoal.
+   Parameters (outermost \<And>'s) are removed.
+   Schematics are preserved.
+   Note: When tac solves the goal, MY_SUBGOAL can still fail. E.g.:
+         Goal is \<open>\<And>x. x = ?y\<close> (unprovable), but tac sees \<open>x = ?y\<close> (provable).
+*)
+fun MY_SUBGOAL ctxt tac : int -> tactic = CSUBGOAL (fn (subgoal,i) => let
+  val (params, body) = forall_dest_list subgoal
+  val thm = Goal.prove_internal ctxt [] body
+            (K (tac {ctxt=ctxt, csubgoal=subgoal, cparams=params}))
+  val thm = Drule.forall_intr_list params thm
+  val tac' = Thm.bicompose (SOME ctxt) {match=false, flatten=false, incremented=false}
+               (false, thm, 0) i
+  in tac' end)
 
 end

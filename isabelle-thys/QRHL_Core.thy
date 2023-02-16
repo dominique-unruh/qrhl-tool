@@ -616,9 +616,8 @@ lemma comm_op_twice[simp]: "distinct_qvars Q \<Longrightarrow> comm_op\<guillemo
 (* lemma apply_qregister_space_chain: \<open>apply_qregister_space (qregister_chain F G) S = apply_qregister_space F (apply_qregister_space G S)\<close> *)
 
 lemma translate_to_index_registers_classical_subspace[translate_to_index_registers]:
-  \<open>Cla[b] \<equiv> apply_qregister_space \<lbrakk>\<rbrakk>\<^sub>q Cla[b]\<close>
-  apply (rule eq_reflection) by auto
-
+  \<open>TTIR_APPLY_QREGISTER_SPACE (Cla[b]) \<lbrakk>\<rbrakk>\<^sub>q (Cla[b])\<close>
+  by (auto simp: TTIR_APPLY_QREGISTER_SPACE_def)
 
 (* TODO move *)
 (* TODO: this should be applied in normalize_register_conv *)
@@ -841,7 +840,7 @@ next
   qed
   then show \<open>space_div (S\<guillemotright>\<lbrakk>R,Q\<rbrakk>) \<psi> Q = (space_div_unlifted S \<psi>)\<guillemotright>R\<close>
     using space_div_lift[where FG=\<open>\<lbrakk>R,Q\<rbrakk>\<close> and A'=S and \<psi>=\<psi> and G'=qSnd]
-    by (simp add: translate_to_index_registers_apply_space)
+    by (metis \<open>qregister \<lbrakk>R, Q\<rbrakk>\<^sub>q\<close> qregister_chain_apply_space qregister_chain_pair_Fst qregister_chain_pair_Snd)
 qed
 
 abbreviation \<open>qregister_decomposition_basis F \<equiv> register_decomposition_basis (apply_qregister F)\<close>
@@ -884,7 +883,7 @@ proof -
   from assms obtain J where \<open>qregister_chain Q J = qregister_id\<close>
     unfolding iso_qregister_def by auto
   then have \<open>A = apply_qregister Q (apply_qregister J A)\<close>
-    by (simp add: eq_id_iff translate_to_index_registers_apply)
+    by (metis TTIR_APPLY_QREGISTER_def eq_id_iff qregister_id.rep_eq translate_to_index_registers_apply)
   then show ?thesis
     by (simp add: operator_local_def)
 qed
@@ -1011,11 +1010,11 @@ lemma Cla_div[simp]: "Cla[e] \<div> \<psi>\<guillemotright>Q = (if \<psi>=0 then
 
 lemma translate_to_index_registers_space_div[translate_to_index_registers]:
   fixes F :: \<open>('a,'b) qregister\<close>
-  assumes \<open>A' \<equiv> apply_qregister_space F A\<close>
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>space_div A' \<psi> G \<equiv>
-          apply_qregister_space FG (apply_qregister_space F' A \<div> \<psi>\<guillemotright>G')\<close>
-  using assms by (simp add: space_div_lift)
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A' F A\<close>
+  assumes \<open>TTIR_LUB F G FG F' G'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (space_div A' \<psi> G)
+          FG (apply_qregister_space F' A \<div> \<psi>\<guillemotright>G')\<close>
+  using assms by (simp add: space_div_lift TTIR_APPLY_QREGISTER_SPACE_def TTIR_LUB_def)
 
 subsection \<open>Quantum equality\<close>
 
@@ -1635,11 +1634,12 @@ qed
 
 lemma translate_to_index_registers_qeq[translate_to_index_registers]:
   fixes F :: \<open>('a,'b) qregister\<close>
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>quantum_equality_full U F V G \<equiv>
-          apply_qregister_space FG (quantum_equality_full U F' V G')\<close>
+  assumes \<open>TTIR_LUB F G FG F' G'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (quantum_equality_full U F V G)
+          FG (quantum_equality_full U F' V G')\<close>
   using assms 
-  by (simp add: quantum_equality_full_def flip: qregister_chain_pair)
+  by (simp add: quantum_equality_full_def TTIR_APPLY_QREGISTER_SPACE_def TTIR_LUB_def
+      flip: qregister_chain_pair)
 
 
 section \<open>Common quantum objects\<close>

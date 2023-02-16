@@ -91,8 +91,20 @@ assert_aconv_conv false (translate_to_index_registers_conv_with_opts \<^context>
         (apply_qregister_space qregister_id (- X) \<sqinter> apply_qregister_space empty_qregister \<top>)\<close>
 \<close>
 
+ML \<open>
+assert_aconv_conv false (translate_to_index_registers_conv_with_opts \<^context>)
+  \<^cterm>\<open>undefined (apply_qregister q A + apply_qregister q B)\<close>
+  \<^term>\<open>undefined
+      (apply_qregister (qregister_chain q qregister_id)
+        (apply_qregister qregister_id A + apply_qregister qregister_id B))\<close>
+\<close>
+
+ML \<open>
+assert_aconv_conv false (translate_to_index_registers_conv_with_opts \<^context>)
+  \<^cterm>\<open>\<forall>a. (apply_qregister q a = apply_qregister q a)\<close>
+  \<^term>\<open>\<forall>x. apply_qregister qregister_id x = apply_qregister qregister_id x\<close>
+\<close>
+
 end
-
-
 
 end

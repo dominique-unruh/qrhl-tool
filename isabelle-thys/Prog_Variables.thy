@@ -3049,130 +3049,136 @@ Only specific forms of assumptions are allowed, see the source of the ML functio
 \<close>
 named_theorems translate_to_index_registers
 
+(* TODO ensure that we descend into registers if descent-mode is on, even if there is no explicit TTIR_EQ-condition *)
+
+definition \<open>TTIR_QREGISTER Q \<longleftrightarrow> qregister Q\<close>
+definition \<open>TTIR_LUB F G FG F' G' \<longleftrightarrow> qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
+definition \<open>TTIR_APPLY_QREGISTER A F B \<longleftrightarrow> A = apply_qregister F B\<close>
+definition \<open>TTIR_APPLY_QREGISTER_SPACE A F B \<longleftrightarrow> A = apply_qregister_space F B\<close>
+definition \<open>PROP TTIR_EQ (A::'a::{}) B \<equiv> (A \<equiv> B)\<close>
 
 lemma translate_to_index_registers_assm_lub_tac_aux: 
   assumes \<open>qregister_le F FG \<and> qregister_le G FG\<close>
   assumes \<open>qregister_conversion F FG = F'\<close>
   assumes \<open>qregister_conversion G FG = G'\<close>
-  shows \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  by (metis assms(1) assms(2) assms(3) qregister_chain_conversion qregister_le_def)
-
+  shows \<open>TTIR_LUB F G FG F' G'\<close>
+  by (metis assms TTIR_LUB_def qregister_chain_conversion qregister_le_def)
 
 lemma translate_to_index_registers_template_oo:
   assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
         apply_qregister FG (f' X Y) = f (apply_qregister FG X) (apply_qregister FG Y)\<close>
-  assumes \<open>A \<equiv> apply_qregister F A'\<close>
-  assumes \<open>B \<equiv> apply_qregister G B'\<close>
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>f A B \<equiv> apply_qregister FG (f' (apply_qregister F' A') (apply_qregister G' B'))\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER A F A'\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER B G B'\<close>
+  assumes \<open>TTIR_LUB F G FG F' G'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER (f A B) FG (f' (apply_qregister F' A') (apply_qregister G' B'))\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def TTIR_LUB_def)
 
 lemma translate_to_index_registers_template_o:
   assumes \<open>\<And>F X. apply_qregister F (f' X) = f (apply_qregister F X)\<close>
-  assumes \<open>A \<equiv> apply_qregister F A'\<close>
-  shows \<open>f A \<equiv> apply_qregister F (f' A')\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER A F A'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER (f A) F (f' A')\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def)
 
 lemma translate_to_index_registers_template_o':
   assumes \<open>\<And>F X. f (apply_qregister F X) = f' X\<close>
-  assumes \<open>A \<equiv> apply_qregister F A'\<close>
-  shows \<open>f A \<equiv> f' A'\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER A F A'\<close>
+  shows \<open>PROP TTIR_EQ (f A) (f' A')\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def TTIR_EQ_def)
 
 lemma translate_to_index_registers_template_o'_qr:
   assumes \<open>\<And>F X. qregister F \<Longrightarrow> f (apply_qregister F X) = f' X\<close>
-  assumes \<open>A \<equiv> apply_qregister F A'\<close>
-  assumes \<open>qregister F\<close>
-  shows \<open>f A \<equiv> f' A'\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER A F A'\<close>
+  assumes \<open>TTIR_QREGISTER F\<close>
+  shows \<open>PROP TTIR_EQ (f A) (f' A')\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def TTIR_QREGISTER_def TTIR_EQ_def)
 
 lemma translate_to_index_registers_template_o_s:
   assumes \<open>\<And>F X. apply_qregister_space F (f' X) = f (apply_qregister F X)\<close>
-  assumes \<open>A \<equiv> apply_qregister F A'\<close>
-  shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER A F A'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (f A) F (f' A')\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def TTIR_APPLY_QREGISTER_SPACE_def)
 
 lemma translate_to_index_registers_template_s_o:
   assumes \<open>\<And>F X. apply_qregister F (f' X) = f (apply_qregister_space F X)\<close>
-  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
-  shows \<open>f A \<equiv> apply_qregister F (f' A')\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A F A'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER (f A) F (f' A')\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def TTIR_APPLY_QREGISTER_SPACE_def)
 
 lemma translate_to_index_registers_template_o_s_qr:
   assumes \<open>\<And>F X. qregister F \<Longrightarrow> apply_qregister_space F (f' X) = f (apply_qregister F X)\<close>
-  assumes \<open>A \<equiv> apply_qregister F A'\<close>
-  assumes \<open>qregister F\<close>
-  shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER A F A'\<close>
+  assumes \<open>TTIR_QREGISTER F\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (f A) F (f' A')\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def TTIR_APPLY_QREGISTER_SPACE_def TTIR_QREGISTER_def)
 
 lemma translate_to_index_registers_template_s:
   assumes \<open>\<And>F X. apply_qregister_space F (f' X) = f (apply_qregister_space F X)\<close>
-  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
-  shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A F A'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (f A) F (f' A')\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_SPACE_def)
 
 lemma translate_to_index_registers_template_s_qr:
   assumes \<open>\<And>F X. qregister F \<Longrightarrow> apply_qregister_space F (f' X) = f (apply_qregister_space F X)\<close>
-  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
-  assumes \<open>qregister F\<close>
-  shows \<open>f A \<equiv> apply_qregister_space F (f' A')\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A F A'\<close>
+  assumes \<open>TTIR_QREGISTER F\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (f A) F (f' A')\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_SPACE_def TTIR_QREGISTER_def)
 
 lemma translate_to_index_registers_template_ss:
   assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
         apply_qregister_space FG (f' X Y) = f (apply_qregister_space FG X) (apply_qregister_space FG Y)\<close>
-  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
-  assumes \<open>B \<equiv> apply_qregister_space G B'\<close>
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>f A B \<equiv> apply_qregister_space FG (f' (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A F A'\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE B G B'\<close>
+  assumes \<open>TTIR_LUB F G FG F' G'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (f A B) FG (f' (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_SPACE_def TTIR_LUB_def)
 
 lemma translate_to_index_registers_template_oo':
   assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
         f (apply_qregister FG X) (apply_qregister FG Y) = f' X Y\<close>
-  assumes \<open>A \<equiv> apply_qregister F A'\<close>
-  assumes \<open>B \<equiv> apply_qregister G B'\<close>
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>f A B \<equiv> f' (apply_qregister F' A') (apply_qregister G' B')\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER A F A'\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER B G B'\<close>
+  assumes \<open>TTIR_LUB F G FG F' G'\<close>
+  shows \<open>PROP TTIR_EQ (f A B) (f' (apply_qregister F' A') (apply_qregister G' B'))\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def TTIR_EQ_def TTIR_LUB_def)
 
 lemma translate_to_index_registers_template_ss':
   assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
         f (apply_qregister_space FG X) (apply_qregister_space FG Y) = f' X Y\<close>
-  assumes \<open>A \<equiv> apply_qregister_space F A'\<close>
-  assumes \<open>B \<equiv> apply_qregister_space G B'\<close>
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>f A B \<equiv> f' (apply_qregister_space F' A') (apply_qregister_space G' B')\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A F A'\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE B G B'\<close>
+  assumes \<open>TTIR_LUB F G FG F' G'\<close>
+  shows \<open>PROP TTIR_EQ (f A B) (f' (apply_qregister_space F' A') (apply_qregister_space G' B'))\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_SPACE_def TTIR_EQ_def TTIR_LUB_def)
 
 lemma translate_to_index_registers_template_os:
   assumes \<open>\<And>FG X Y. qregister FG \<Longrightarrow> 
         apply_qregister_space FG (f' X Y) = f (apply_qregister FG X) (apply_qregister_space FG Y)\<close>
-  assumes \<open>A \<equiv> apply_qregister F A'\<close>
-  assumes \<open>B \<equiv> apply_qregister_space G B'\<close>
-  assumes \<open>qregister FG \<and> F = qregister_chain FG F' \<and> G = qregister_chain FG G'\<close>
-  shows \<open>f A B \<equiv> apply_qregister_space FG (f' (apply_qregister F' A') (apply_qregister_space G' B'))\<close>
-  using assms by simp
+  assumes \<open>TTIR_APPLY_QREGISTER A F A'\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE B G B'\<close>
+  assumes \<open>TTIR_LUB F G FG F' G'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (f A B) FG (f' (apply_qregister F' A') (apply_qregister_space G' B'))\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def TTIR_APPLY_QREGISTER_SPACE_def TTIR_LUB_def)
 
 lemma translate_to_index_registers_template_s_empty:
   assumes \<open>\<And>FG. qregister FG \<Longrightarrow> apply_qregister_space FG f = f'\<close>
-  shows \<open>f' \<equiv> apply_qregister_space (empty_qregister :: (unit,_) qregister) f\<close>
-  using assms by simp
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE f' (empty_qregister :: (unit,_) qregister) f\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_SPACE_def)
 
 lemma translate_to_index_registers_template_o_empty:
   assumes \<open>\<And>FG. qregister FG \<Longrightarrow> apply_qregister FG f = f'\<close>
-  shows \<open>f' \<equiv> apply_qregister (empty_qregister :: (unit,_) qregister) f\<close>
-  using assms by simp
+  shows \<open>TTIR_APPLY_QREGISTER f' (empty_qregister :: (unit,_) qregister) f\<close>
+  using assms by (simp add: TTIR_APPLY_QREGISTER_def)
 
 lemma translate_to_index_registers_apply[translate_to_index_registers]:
-  assumes \<open>A \<equiv> apply_qregister G A'\<close>
-  shows \<open>apply_qregister F A \<equiv> apply_qregister (qregister_chain F G) A'\<close>
-  using assms by auto
+  assumes \<open>TTIR_APPLY_QREGISTER A G A'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER (apply_qregister F A) (qregister_chain F G) A'\<close>
+  using assms by (auto simp: TTIR_APPLY_QREGISTER_def)
 
 lemma translate_to_index_registers_apply_space[translate_to_index_registers]:
-  assumes \<open>A \<equiv> apply_qregister_space G A'\<close>
-  shows \<open>apply_qregister_space F A \<equiv> apply_qregister_space (qregister_chain F G) A'\<close>
-  using assms by auto
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A G A'\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (apply_qregister_space F A) (qregister_chain F G) A'\<close>
+  using assms by (auto simp: TTIR_APPLY_QREGISTER_SPACE_def)
 
 lemmas translate_to_index_registers_compose[translate_to_index_registers] =
   translate_to_index_registers_template_oo[where f=cblinfun_compose, OF qregister_compose]
@@ -3220,7 +3226,7 @@ lemmas translate_to_index_registers_id[translate_to_index_registers] =
   translate_to_index_registers_template_o_empty[where f=id_cblinfun, OF apply_qregister_of_id, remove_prem]
 
 lemma translate_to_index_registers_1[translate_to_index_registers]:
-  \<open>1 \<equiv> apply_qregister (empty_qregister :: (unit,_) qregister) id_cblinfun\<close>
+  \<open>TTIR_APPLY_QREGISTER 1 (empty_qregister :: (unit,_) qregister) id_cblinfun\<close>
   using translate_to_index_registers_id by (simp flip: id_cblinfun_eq_1)
 
 lemmas translate_to_index_registers_zero[translate_to_index_registers] =
