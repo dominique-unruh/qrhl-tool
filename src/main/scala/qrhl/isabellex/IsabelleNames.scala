@@ -37,7 +37,7 @@ object IsabelleTypes {
   val prod = "Product_Type.prod"
   val char = "String.char"
   val real = "Real.real"
-  val program_state = "Programs.program_state"
+  val cq_operator = "Programs.cq_operator"
   val infinite = "QRHL_Core.infinite"
   val cregister = "Prog_Variables.cregister"
   val qregister = "Prog_Variables.qregister"
