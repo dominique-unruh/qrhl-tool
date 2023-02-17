@@ -343,14 +343,21 @@ fun forall_dest_list ct = case Thm.term_of ct of
    Schematics are preserved.
    Note: When tac solves the goal, MY_SUBGOAL can still fail. E.g.:
          Goal is \<open>\<And>x. x = ?y\<close> (unprovable), but tac sees \<open>x = ?y\<close> (provable).
+
+   Current limitations:
+   - tac is implicitly made deterministic (no backtracking)
 *)
 fun MY_SUBGOAL ctxt tac : int -> tactic = CSUBGOAL (fn (subgoal,i) => let
   val (params, body) = forall_dest_list subgoal
   val thm = Goal.prove_internal ctxt [] body
-            (K (tac {ctxt=ctxt, csubgoal=subgoal, cparams=params}))
+            (K (tac {ctxt=ctxt, csubgoal=subgoal, cparams=params}
+                ORELSE error_tac (K "MY_SUBGOAL: subgoals not solved") ctxt))
   val thm = Drule.forall_intr_list params thm
   val tac' = Thm.bicompose (SOME ctxt) {match=false, flatten=false, incremented=false}
                (false, thm, 0) i
   in tac' end)
+
+fun strip_params_concl (Const("Pure.all", _) $ Abs (a, T, t)) = strip_params_concl t
+  | strip_params_concl B = B;
 
 end

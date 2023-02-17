@@ -112,7 +112,7 @@ test := (Test / test).dependsOn(hashedcomputation / Test / test).value
 
 Universal / javaOptions += "-J-Xss10m"
 
-// This needs to be run manually (because it is slow and rarely needed)
+// This needs to be run manually (because it is slow and rarely needed). Does not support Windows
 lazy val createIsabelleNames = taskKey[Unit]("(Re)create isabellex/IsabelleNames.scala")
 createIsabelleNames := {
   val isabelleCommand = (isabelleHome / "bin/isabelle").toString

@@ -786,12 +786,12 @@ val translate_to_index_registers_conv_default_options : translate_to_index_regis
 fun translate_to_index_registers_conv_default_options_inc_level {trace, level, descend} : translate_to_index_registers_conv_options =
   {trace=trace, level=level+1, descend=descend}
 
-fun translate_to_index_registers_conv_tac' ctxt config rules i (st:thm) = let
+fun translate_to_index_registers_conv_tac0 ctxt config rules (st:thm) = let
   fun named_thms_str () = (Pretty.marks_str (Proof_Context.markup_extern_fact ctxt \<^named_theorems>\<open>translate_to_index_registers\<close>) |> Pretty.string_of)
-  val thisgoal = Thm.cprem_of st i |> Thm.term_of
+  val thisgoal = Thm.cprem_of st 1 |> Thm.term_of
   val thisgoal_str = Lazy.lazy (fn () => thisgoal |> Syntax.string_of_term ctxt)
   fun err msg = error ("translate_to_index_registers_conv_tac: TODO need better error message: " ^ msg ^ ", goal: " ^ Lazy.force thisgoal_str)
-  val ngoals = Thm.nprems_of st
+  val _ = Thm.nprems_of st = 1 orelse err "internal error"
   val next_config = translate_to_index_registers_conv_default_options_inc_level config
   val trace = if #trace config then
     let val indent = replicate_string (#level config) "  " in fn str => 
@@ -807,46 +807,44 @@ fun translate_to_index_registers_conv_tac' ctxt config rules i (st:thm) = let
      @{lemma \<open>TTIR_APPLY_QREGISTER_SPACE A F B \<Longrightarrow> PROP TTIR_EQ A (apply_qregister_space F B)\<close> by (simp add: TTIR_EQ_def TTIR_APPLY_QREGISTER_SPACE_def)},
      @{lemma \<open>TTIR_APPLY_QREGISTER_SPACE A qregister_id A\<close> by (simp add: apply_qregister_space_def TTIR_APPLY_QREGISTER_SPACE_def)},
      @{lemma \<open>TTIR_APPLY_QREGISTER A qregister_id A\<close> by (simp add: TTIR_APPLY_QREGISTER_def)}]
-  val st = case Misc.resolve_and_remember_rule ctxt rules i st of
+  val st = case Misc.resolve_and_remember_rule ctxt rules 1 st of
                SOME (rule,st) => (trace (fn () => "Successfully applied a rule from " ^ named_thms_str () ^ Misc.theorem_or_name ctxt ". Namely " ".\nNamely " rule);
                                   st)
              | NONE => 
-           case Misc.resolve_and_remember_rule ctxt fallback_rules i st of
+           case Misc.resolve_and_remember_rule ctxt fallback_rules 1 st of
                SOME (rule,st) => (trace (fn () => "Successfully applied a fallback rule." ^ Misc.theorem_or_name ctxt " Namely " "\nNamely " rule);
                                   st)
              | NONE => 
-           case (#descend config, thisgoal) of
-               (true, \<^Const_>\<open>TTIR_EQ _\<close> $ (t $ u) $ Var _) => (trace (fn () => "Descending into subterms separately.");
+           case (#descend config, Misc.strip_params_concl thisgoal) of
+               (true, \<^Const_>\<open>TTIR_EQ _\<close> $ (t $ u) $ _) => (trace (fn () => "Descending into subterms separately.");
                                  SINGLE (resolve_tac ctxt [infer_instantiate ctxt [(("A",0), Thm.cterm_of ctxt t), (("B",0), Thm.cterm_of ctxt u)]
-                                         @{lemma \<open>PROP TTIR_EQ (A::'a::{}\<Rightarrow>'b::{}) C \<Longrightarrow> PROP TTIR_EQ B D ==> PROP TTIR_EQ (A B) (C D)\<close> by (simp add: TTIR_EQ_def)}] i) st |> the)
-             | (true, \<^Const_>\<open>TTIR_EQ _\<close> $ (Abs _) $ Var _) => (trace (fn () => "Descending into lambda abstraction.");
-                                 SINGLE (resolve_tac ctxt [@{lemma \<open>(\<And>x. PROP TTIR_EQ (A x) (B x)) \<Longrightarrow> PROP TTIR_EQ (A::'a::{}\<Rightarrow>'b::{}) B\<close> by (auto simp add: TTIR_EQ_def intro!: pure_extensional)}] i) st |> the)
-             | (true, \<^Const_>\<open>TTIR_EQ _\<close> $ _ $ Var _) => (trace (fn () => "Doing nothing.");
-                                 SINGLE (resolve_tac ctxt [@{lemma \<open>PROP TTIR_EQ (A::'a::{}) A\<close> by (simp add: TTIR_EQ_def)}] i) st |> the)
+                                         @{lemma \<open>PROP TTIR_EQ (A::'a::{}\<Rightarrow>'b::{}) C \<Longrightarrow> PROP TTIR_EQ B D ==> PROP TTIR_EQ (A B) (C D)\<close> by (simp add: TTIR_EQ_def)}] 1) st |> the)
+             | (true, \<^Const_>\<open>TTIR_EQ _\<close> $ (Abs _) $ _) => (trace (fn () => "Descending into lambda abstraction.");
+                                 SINGLE (resolve_tac ctxt [@{lemma \<open>(\<And>x. PROP TTIR_EQ (A x) (B x)) \<Longrightarrow> PROP TTIR_EQ (A::'a::{}\<Rightarrow>'b::{}) B\<close> by (auto simp add: TTIR_EQ_def intro!: pure_extensional)}] 1) st |> the)
+             | (true, \<^Const_>\<open>TTIR_EQ _\<close> $ _ $ _) => (trace (fn () => "Doing nothing.");
+                                 SINGLE (resolve_tac ctxt [@{lemma \<open>PROP TTIR_EQ (A::'a::{}) A\<close> by (simp add: TTIR_EQ_def)}] 1) st |> the)
              | _ => 
            error ("No rule matched in " ^ named_thms_str() ^ " when trying to solve:\n" ^ Lazy.force thisgoal_str)
-  val nr_new_goals = Thm.nprems_of st - ngoals + 1
-  val _ = nr_new_goals < 0 andalso err "nr_new_goals < 0"
-  fun condition_tac' i st = let (* Guard against non-solving or giving new subgoals *)
+  val nr_new_goals = Thm.nprems_of st
+  fun condition_tac' st = let
     val ngoals = Thm.nprems_of st
-    val subgoal = Thm.cprem_of st i |> Thm.term_of
+    val subgoal = Thm.cprem_of st 1 |> Thm.term_of
     val subgoal_str = Lazy.lazy (fn () => subgoal |> Syntax.string_of_term ctxt)
     val _ = trace (fn () => "Solving subgoal " ^ Lazy.force subgoal_str)
     val st = case Logic.strip_assums_concl subgoal of
                (* TODO: Also need to descend into registers themselves via TTIR_EQ *)
                \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>TTIR_APPLY_QREGISTER_SPACE _ _\<close> $ _ $ _ $ _) => 
-                 SINGLE (translate_to_index_registers_conv_tac' ctxt next_config rules i) st
+                 SINGLE (translate_to_index_registers_conv_tac1 ctxt next_config rules 1) st
              | \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>TTIR_APPLY_QREGISTER _ _\<close> $ _ $ _ $ _) => 
-                 SINGLE (translate_to_index_registers_conv_tac' ctxt next_config rules i) st
+                 SINGLE (translate_to_index_registers_conv_tac1 ctxt next_config rules 1) st
              | \<^Const_>\<open>TTIR_EQ _\<close> $ _ $ _ => 
-                 SINGLE (translate_to_index_registers_conv_tac' ctxt next_config rules i) st
+                 SINGLE (translate_to_index_registers_conv_tac1 ctxt next_config rules 1) st
              | \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>TTIR_LUB _ _ _ _\<close> $ _ $ _ $ _ $ _ $ _) => 
-                 SINGLE (translate_to_index_registers_assm_lub_tac ctxt i) st
+                 SINGLE (translate_to_index_registers_assm_lub_tac ctxt 1) st
              | \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>TTIR_QREGISTER _ _\<close> $ _) =>
-                SINGLE (resolve_tac ctxt [@{lemma \<open>qregister F \<Longrightarrow> TTIR_QREGISTER F\<close> for F by (simp add: TTIR_QREGISTER_def)}] i
-                        THEN distinct_vars_tac ctxt i) st
-             | t => (\<^print> t;
-                     raise ERROR ("When translating registers, got a condition of the wrong form (" ^ Syntax.string_of_term ctxt subgoal
+                SINGLE (resolve_tac ctxt [@{lemma \<open>qregister F \<Longrightarrow> TTIR_QREGISTER F\<close> for F by (simp add: TTIR_QREGISTER_def)}] 1
+                        THEN distinct_vars_tac ctxt 1) st
+             | t => (raise ERROR ("When translating registers, got a condition of the wrong form (" ^ Syntax.string_of_term ctxt subgoal
                                  ^ ").\nThis probably means a there is a malformed rule in " ^ named_thms_str() ^ "."))
     val st = case st of SOME st => st
                       | NONE => err ("condition tac failed")
@@ -855,17 +853,20 @@ fun translate_to_index_registers_conv_tac' ctxt config rules i (st:thm) = let
     val _ = Thm.nprems_of st < ngoals - 1 andalso err ("condition_tac removed more than one subgoal (subgoal " ^ Lazy.force subgoal_str ^ ")")
     val _ = Thm.nprems_of st >= ngoals andalso err ("condition_tac did not remove subgoal (subgoal " ^ Lazy.force subgoal_str ^ ")")
     in st end
-  fun repeat_condition_tac 0 _ st = st
-    | repeat_condition_tac n i st = condition_tac' i st |> repeat_condition_tac (n-1) i 
-  val st = repeat_condition_tac nr_new_goals i st
+  fun repeat_condition_tac 0 st = st
+    | repeat_condition_tac n st = condition_tac' st |> repeat_condition_tac (n-1) 
+  val st = repeat_condition_tac nr_new_goals st
   val _ = trace (fn () => "Successfully translated.")
 in 
   Seq.single st
 end
 
+  and translate_to_index_registers_conv_tac1 ctxt config rules  = 
+    Misc.MY_SUBGOAL ctxt (fn {ctxt,...} => translate_to_index_registers_conv_tac0 ctxt config rules)
+
 fun translate_to_index_registers_conv_tac ctxt config rules =
   resolve_tac ctxt [@{lemma \<open>PROP TTIR_EQ A B \<Longrightarrow> A::'a::{} \<equiv> B\<close> by (simp add: TTIR_EQ_def)}]
-  THEN' translate_to_index_registers_conv_tac' ctxt config rules
+  THEN' translate_to_index_registers_conv_tac1 ctxt config rules
 
 (* TODO move to Misc *)
 fun conv_from_tac ctxt tac ct = let
