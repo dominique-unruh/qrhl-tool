@@ -52,7 +52,7 @@ abstract class IsabelleTac[A](operationName : String, arg : IsabelleX.ContextX =
 
     check(state, goal, newGoals2)
 
-    Subgoal.printOracles(thm)
+//    Subgoal.printOracles(thm)
 
     postprocess(state,goal,newGoals2)
   }

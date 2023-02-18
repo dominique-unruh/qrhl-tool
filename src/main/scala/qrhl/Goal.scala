@@ -5,7 +5,7 @@ import de.unruh.isabelle.pure.{ConcreteTerm, Cterm, MLValueTerm, Term, Thm}
 import hashedcomputation.{Hash, HashTag, Hashable, HashedValue, WithByteArray}
 import org.log4s
 import qrhl.isabellex.IsabelleX.{ContextX, globalIsabelle => GIsabelle}
-import GIsabelle.{Ops, show_oracles}
+import GIsabelle.Ops
 import qrhl.isabellex.{IsabelleX, RichTerm}
 import qrhl.logic.ExpressionInstantiated.memoryVarName
 import qrhl.logic.{Block, Environment, ExpressionIndexed}
@@ -53,10 +53,10 @@ sealed trait Subgoal extends HashedValue {
 object Subgoal {
   private val logger = log4s.getLogger
 
-  def printOracles(thms : Thm*): Unit = {
+/*  def printOracles(thms : Thm*): Unit = {
     for (thm <- thms)
       show_oracles(thm)
-  }
+  }*/
 }
 
 object QRHLSubgoal {
@@ -142,7 +142,7 @@ final case class QRHLSubgoal(left:Block, right:Block, pre:ExpressionIndexed, pos
     val left2 = if (everywhere) left.simplify(isabelle,facts,thms) else left
     val right2 = if (everywhere) right.simplify(isabelle,facts,thms) else right
 
-    Subgoal.printOracles(thms.toSeq : _*)
+//    Subgoal.printOracles(thms.toSeq : _*)
     QRHLSubgoal(left2, right2, pre2, post2, assms3)
   }
 
@@ -249,7 +249,7 @@ final case class AmbientSubgoal(goal: RichTerm) extends Subgoal {
 
   override def simplify(isabelle: IsabelleX.ContextX, facts: List[String], everywhere:Boolean): AmbientSubgoal = {
     val (term, thm) = goal.simplify(isabelle, facts)
-    Subgoal.printOracles(thm)
+//    Subgoal.printOracles(thm)
     AmbientSubgoal(term)
   }
 

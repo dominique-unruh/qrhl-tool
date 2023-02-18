@@ -425,12 +425,14 @@ class IsabelleX(val setup : Isabelle.Setup) {
   }
   def idOp(valueTyp: Typ): Const = Const(c.idOp, boundedT(valueTyp, valueTyp))
 
+/*
   def show_oracles_lines(thm: Thm): List[String] = {
     show_oracles_lines_op(thm.mlValue).retrieveNow.map(IsabelleX.symbols.symbolsToUnicode(_))
   }
   def show_oracles(thm: Thm): Unit = {
     logger.debug(show_oracles_lines(thm).mkString("\n"))
   }
+*/
 
   val conj: Const = Const(c.conj, boolT -->: boolT -->: boolT)
   def conj(terms: Term*): Term = terms match {
@@ -984,8 +986,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
       MLValue.compileFunction[Context, String, List[(String,Typ)], List[(String,Typ)], List[(String,Typ)], List[String], Statement, Context](
         s"$qrhl_ops.declare_concrete_program")
 
-    val show_oracles_lines_op =
-      MLValue.compileFunction[Thm, List[String]](s"$qrhl_ops.show_oracles_lines")
+//    val show_oracles_lines_op =
+//      MLValue.compileFunction[Thm, List[String]](s"$qrhl_ops.show_oracles_lines")
 
     lazy val statement_to_term_op =
       MLValue.compileFunction[Context, Statement, Term](s"fn (ctxt,st) => $qrhl_ops.statement_to_term ctxt st")
