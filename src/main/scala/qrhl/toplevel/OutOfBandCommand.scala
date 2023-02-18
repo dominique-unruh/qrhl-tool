@@ -10,4 +10,4 @@ case class UndoCommand(steps: Int) extends OutOfBandCommand {
 
 class OptionCommand extends OutOfBandCommand
 
-case class SillyTestOptionCommand() extends OptionCommand
+case class ShowFormulaWindow() extends OptionCommand

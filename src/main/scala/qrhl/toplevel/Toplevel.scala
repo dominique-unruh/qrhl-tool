@@ -4,7 +4,9 @@ import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import hashedcomputation.{Element, Fingerprint, Hash, HashTag, Hashable, HashedFunction, HashedPromise, HashedValue, NestedElement, Tuple3Element1, Tuple3Element2, Tuple3Element3, filesystem}
-import de.unruh.isabelle.control.IsabelleMLException
+import de.unruh.isabelle.control.{Isabelle, IsabelleMLException}
+import de.unruh.isabelle.pure.Context
+import formulaviewer.{Formula, IsabelleFormulaViewer}
 import hashedcomputation.Fingerprint.Entry
 import hashedcomputation.filesystem.{Directory, DirectorySnapshot, FileSnapshot, FingerprintedDirectorySnapshot, OutdatedSnapshotException, RootsDirectory}
 import qrhl.toplevel.Toplevel.CommandOrString
@@ -39,10 +41,9 @@ class Toplevel private(initialState : State,
   private var previousFS = null : DirectorySnapshot
   private val rootDirectory : RootsDirectory = RootsDirectory()
 //  private var filesChanged = false
-  private var sillyMode: Boolean = false
-
 
   def state: State = currentState
+  private var formulaViewer : IsabelleFormulaViewer = _
 
   //  val initialState: default.Hashed[State] = Hashed(_initialState, default.hash(getClass.descriptorString))
 //  def dispose(): Unit = {
@@ -143,10 +144,8 @@ class Toplevel private(initialState : State,
           commands = newCommands
           try {
             currentState = computeState(commands.reverse)
-            if (sillyMode)
-              println(currentState.toString.toUpperCase)
-            else
-              println(currentState)
+            println(currentState)
+            updateFormulaViewer(add=false)
           } catch {
             case _: Exception => println("*** There is an error somewhere farther up in the proof. Undo more steps. (Using C-c C-u in ProofGeneral.)")
           }
@@ -160,10 +159,8 @@ class Toplevel private(initialState : State,
         val newCommands = cmd :: commands
         currentState = computeState(newCommands.reverse)
         commands = newCommands
-        if (sillyMode)
-          println(currentState.toString.toUpperCase)
-        else
-          println(currentState)
+        println(currentState)
+        updateFormulaViewer(add=true)
     }
     //    logger.debug(s"Current command list: $commands")
   }
@@ -193,9 +190,27 @@ class Toplevel private(initialState : State,
     runWithErrorHandler(readLine, abortOnError=abortOnError)
   }
 
+  def updateFormulaViewer(add: Boolean): Unit = {
+    if (formulaViewer != null && currentState.hasIsabelle) {
+      implicit val isabelle: Isabelle = currentState.isabelle.isabelle.isabelleControl
+      implicit val context: Context = currentState.isabelle.context
+      formulaViewer.setContext(isabelle, context)
+      if (currentState.goal.nonEmpty) {
+        val goal = currentState.goal.head.toTerm(currentState.isabelle)
+        val formula = new Formula(goal.isabelleTerm)
+        if (add)
+          formulaViewer.addFormula(formula)
+        formulaViewer.showFormula(formula)
+      }
+    }
+  }
+
   def processOption(command: OptionCommand): Unit = command match {
-    case SillyTestOptionCommand() =>
-      sillyMode = true
+    case ShowFormulaWindow() =>
+      if (formulaViewer==null)
+        formulaViewer = new IsabelleFormulaViewer()
+      formulaViewer.setVisible(true)
+      updateFormulaViewer(add=true)
     case _ =>
       throw UserException(s"Internal error: processOption: unknown command: $command")
   }

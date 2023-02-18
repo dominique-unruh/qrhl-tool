@@ -612,9 +612,9 @@ object Parser extends JavaTokenParsers {
 
   val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
 
-  val silly: Parser[SillyTestOptionCommand] = literal("silly") ^^^ SillyTestOptionCommand()
+  val formulaviewer: Parser[ShowFormulaWindow] = literal("formula_viewer") ^^^ ShowFormulaWindow()
 
-  val outOfBandCommand: Parser[OutOfBandCommand] = undo | silly
+  val outOfBandCommand: Parser[OutOfBandCommand] = undo | formulaviewer
 
   val qed : Parser[QedCommand] = "qed" ^^ { _ => QedCommand() }
 
