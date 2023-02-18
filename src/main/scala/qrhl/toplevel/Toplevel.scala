@@ -39,6 +39,8 @@ class Toplevel private(initialState : State,
   private var previousFS = null : DirectorySnapshot
   private val rootDirectory : RootsDirectory = RootsDirectory()
 //  private var filesChanged = false
+  private var sillyMode: Boolean = false
+
 
   def state: State = currentState
 
@@ -130,28 +132,38 @@ class Toplevel private(initialState : State,
 
   /** Executes a single command. The command must be given without a final ".". */
   def execCmd(cmd:CommandOrString) : Unit = {
-    cmd.undo match {
-      case Some(undo) =>
-        if (undo > commands.length)
-          throw UserException(s"Cannot undo $undo steps (only ${commands.length} steps performed so far)")
-        println("Undo...\n")
-        // Don't store the new command list unless the "computeState()" below succeeds
-        // Otherwise ProofGeneral would get out of sync
-        val newCommands = commands.drop(undo)
-        commands = newCommands
-        try {
-          currentState = computeState(commands.reverse)
-          println(currentState)
-        } catch {
-          case _ : Exception => println("*** There is an error somewhere farther up in the proof. Undo more steps. (Using C-c C-u in ProofGeneral.)")
-        }
-      case _ => // Not an undo command
+    cmd.outOfBandCommand match {
+      case Some(UndoCommand(undo)) =>
+          if (undo > commands.length)
+            throw UserException(s"Cannot undo $undo steps (only ${commands.length} steps performed so far)")
+          println("Undo...\n")
+          // Don't store the new command list unless the "computeState()" below succeeds
+          // Otherwise ProofGeneral would get out of sync
+          val newCommands = commands.drop(undo)
+          commands = newCommands
+          try {
+            currentState = computeState(commands.reverse)
+            if (sillyMode)
+              println(currentState.toString.toUpperCase)
+            else
+              println(currentState)
+          } catch {
+            case _: Exception => println("*** There is an error somewhere farther up in the proof. Undo more steps. (Using C-c C-u in ProofGeneral.)")
+          }
+      case Some(cmd : OptionCommand) =>
+        processOption(cmd)
+      case Some(e) =>
+        throw UserException(s"Internal error: Unknown kind of OutOfBandCommand: $e")
+      case None =>
         // Don't store the new command list unless the "computeState()" below succeeds
         // Otherwise ProofGeneral would get out of sync
         val newCommands = cmd :: commands
         currentState = computeState(newCommands.reverse)
         commands = newCommands
-        println(currentState)
+        if (sillyMode)
+          println(currentState.toString.toUpperCase)
+        else
+          println(currentState)
     }
     //    logger.debug(s"Current command list: $commands")
   }
@@ -179,6 +191,13 @@ class Toplevel private(initialState : State,
     val directory = script.toAbsolutePath.normalize.getParent
     execCmd(CommandOrString.Cmd(ChangeDirectoryCommand(directory), readLine.position))
     runWithErrorHandler(readLine, abortOnError=abortOnError)
+  }
+
+  def processOption(command: OptionCommand): Unit = command match {
+    case SillyTestOptionCommand() =>
+      sillyMode = true
+    case _ =>
+      throw UserException(s"Internal error: processOption: unknown command: $command")
   }
 
   /** Checks that there is no pending proof.
@@ -325,13 +344,13 @@ object Toplevel {
   sealed trait CommandOrString extends HashedValue {
     def parse(state: State): Command
     val position: String
-    def undo: Option[Int]
+    def outOfBandCommand: Option[OutOfBandCommand]
   }
 
   object CommandOrString {
     final case class Cmd(command: Command, position: String) extends CommandOrString {
       override def parse(state: State): Command = command
-      override def undo: Option[Int] = None
+      override def outOfBandCommand: None.type = None
       override def hash: Hash[Cmd.this.type] = HashTag()(command.hash, Hashable.hash(position))
     }
 
@@ -344,11 +363,12 @@ object Toplevel {
         Await.result(HashedPromise(cachedParseCommand, (state, string)).getOutput,
           Duration.Inf)
 
-      override def undo: Option[Int] =
-        Parser.parseAll(Parser.undo, string) match {
-          case Parser.Success(n, _) => Some(n)
+      override def outOfBandCommand: Option[OutOfBandCommand] = {
+        Parser.parseAll(Parser.outOfBandCommand, string) match {
+          case Parser.Success(cmd, _) => Some(cmd)
           case _ => None
         }
+      }
 
       override def hash: Hash[Str.this.type] = HashTag()(Hashable.hash(string), Hashable.hash(position))
     }

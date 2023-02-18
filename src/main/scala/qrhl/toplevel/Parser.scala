@@ -610,7 +610,11 @@ object Parser extends JavaTokenParsers {
       tactic_isa |
       tactic_rewrite
 
-  val undo: Parser[Int] = literal("undo") ~> natural
+  val undo: Parser[UndoCommand] = literal("undo") ~> natural ^^ UndoCommand
+
+  val silly: Parser[SillyTestOptionCommand] = literal("silly") ^^^ SillyTestOptionCommand()
+
+  val outOfBandCommand: Parser[OutOfBandCommand] = undo | silly
 
   val qed : Parser[QedCommand] = "qed" ^^ { _ => QedCommand() }
 
