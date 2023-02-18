@@ -637,4 +637,26 @@ lemma weak_star_closure_cspan_in_double_commutant: \<open>weak_star_topology clo
   by (simp add: closure_of_minimal cspan_in_double_commutant)
 
 
+
+
+
+lemma map_vec_conjugate: \<open>map_vec conjugate v = conjugate v\<close>
+  by fastforce
+
+lemma map_map_vec_cols: \<open>map (map_vec f) (cols m) = cols (map_mat f m)\<close>
+  by (simp add: cols_def)
+
+lemma vec_of_ell2_carrier_vec[simp]: \<open>vec_of_ell2 v \<in> carrier_vec CARD('a)\<close> for v :: \<open>'a::enum ell2\<close>
+  apply (simp only: dim_vec_of_basis_enum' carrier_vec_def vec_of_ell2_def)
+  by simp
+
+definition butterfly_code :: \<open>'a ell2 \<Rightarrow> 'b ell2 \<Rightarrow> 'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> 
+  where [code del,code_abbrev]: \<open>butterfly_code = butterfly\<close> 
+lemma butterfly_code[code]: \<open>mat_of_cblinfun (butterfly_code s t)
+   = mat_of_cols (CARD('a)) [vec_of_ell2 s] * mat_of_rows (CARD('b)) [map_vec cnj (vec_of_ell2 t)]\<close>
+  for s :: \<open>'a::enum ell2\<close> and t :: \<open>'b::enum ell2\<close>
+  by (simp add: butterfly_code_def butterfly_def vector_to_cblinfun_code mat_of_cblinfun_compose
+      mat_of_cblinfun_adj mat_adjoint_def map_map_vec_cols
+      flip: vector_to_cblinfun_code_def map_vec_conjugate[abs_def])
+
 end
