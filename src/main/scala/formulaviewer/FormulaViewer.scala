@@ -2,24 +2,26 @@ package formulaviewer
 
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.control.Isabelle.Setup
-import de.unruh.isabelle.pure.Context
+import de.unruh.isabelle.pure.{App, ConcreteTerm, Context, Cterm, MLValueTerm, Term}
 
 import java.awt.BorderLayout
 import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
 import java.nio.file.Path
 import java.util
-import javax.swing.tree.{DefaultTreeModel, TreeNode}
+import javax.swing.JOptionPane.{ERROR_MESSAGE, showMessageDialog}
+import javax.swing.tree.{DefaultTreeModel, TreeNode, TreePath}
 import javax.swing._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.jdk.CollectionConverters.IteratorHasAsJava
 import scala.util.control.Breaks.{break, breakable}
 
-class IsabelleFormulaViewer extends JFrame("Isabelle Formula Viewer") {
+class FormulaViewer extends JFrame("qrhl-tool formula viewer") {
   private val listModel = new DefaultListModel[Formula]()
   private val formulaList: JList[Formula] = new JList[Formula](listModel)
   private val treeModel = new DefaultTreeModel(new FakeFormulaTreeNode("<nothing loaded>"))
   private val tree: JTree = new JTree(treeModel)
   private val statusBar = new JLabel()
+  private val formulaPane = new JPanel()
 
   private var context: Context = _
   private var isabelle: Isabelle = _
@@ -42,49 +44,75 @@ class IsabelleFormulaViewer extends JFrame("Isabelle Formula Viewer") {
   }
 
   def addFormula(formula: Formula): Unit =
-    listModel.addElement(formula)
+    listModel.add(0, formula)
 
   def showFormula(formula: Formula): Unit = {
     treeModel.setRoot(new FormulaTreeNode(null, formula))
+    formulaPane.removeAll()
+    formulaPane.add(FormulaPresentation.fromIsabelle(formula).swing)
+    formulaPane.revalidate()
     statusBar.setText("")
   }
 
-  object addFormulaAction extends AbstractAction("Add formula") {
+  object addFormulaAction extends AbstractAction("Input formula") {
     override def actionPerformed(e: ActionEvent): Unit = breakable {
-      implicit val isabelle: Isabelle = IsabelleFormulaViewer.this.isabelle
-      implicit val context: Context = IsabelleFormulaViewer.this.context
+      implicit val isabelle: Isabelle = FormulaViewer.this.isabelle
+      implicit val context: Context = FormulaViewer.this.context
       if (context == null) {
-        JOptionPane.showMessageDialog(IsabelleFormulaViewer.this, "Isabelle not initialized", "Error", JOptionPane.ERROR_MESSAGE)
-        break
+        showMessageDialog(FormulaViewer.this, "Isabelle not initialized", "Error", ERROR_MESSAGE)
+        break()
       }
       statusBar.setText("")
-      val string = JOptionPane.showInputDialog(IsabelleFormulaViewer.this, "Formula:", "Add formula", JOptionPane.PLAIN_MESSAGE)
-      if (string == null) break
+      val string = JOptionPane.showInputDialog(FormulaViewer.this, "Formula:", "Add formula", JOptionPane.PLAIN_MESSAGE)
+      if (string == null) break()
       val formula = try
         Formula.fromString(string)
       catch {
         case e: Throwable =>
-          JOptionPane.showMessageDialog(IsabelleFormulaViewer.this, s"Adding message failed:\n$e", "Error", JOptionPane.ERROR_MESSAGE)
-          break
+          showMessageDialog(FormulaViewer.this, s"Adding message failed:\n$e", "Error", ERROR_MESSAGE)
+          break()
       }
-      listModel.addElement(formula)
       showFormula(formula)
     }
   }
 
+  object formulaToCollection extends AbstractAction("To collection") {
+    override def actionPerformed(e: ActionEvent): Unit = {
+      val paths = tree.getSelectionModel.getSelectionPaths
+      val paths2 = if (paths.isEmpty) Array(new TreePath(treeModel.getRoot)) else paths
+      for (path <- paths2) {
+        path.getLastPathComponent.asInstanceOf[FormulaTreeNode] match {
+          case _ : FakeFormulaTreeNode =>
+            showMessageDialog(FormulaViewer.this, "No formula to add.", "Error", ERROR_MESSAGE)
+          case node =>
+            addFormula(node.formula)
+        }
+      }
+
+      tree.getLastSelectedPathComponent
+    }
+  }
+
   private def init(): Unit = {
-    val split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT)
-    split.setLeftComponent(tree)
-    split.setRightComponent(formulaList)
+    val treeScroll = new JScrollPane(tree)
+    val formulaListScroll = new JScrollPane(formulaList)
+    val formulaPaneScroll = new JScrollPane(formulaPane)
+    val leftSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, treeScroll, formulaPaneScroll)
+    leftSplit.setOneTouchExpandable(true)
+    val split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplit, formulaListScroll)
+    split.setOneTouchExpandable(true)
+    split.setDividerLocation(.8d)
+
     getContentPane.add(split, BorderLayout.CENTER)
     getContentPane.add(statusBar, BorderLayout.SOUTH)
     val toolbar = new JToolBar()
     getContentPane.add(toolbar, BorderLayout.NORTH)
 
     toolbar.add(addFormulaAction)
+    toolbar.add(formulaToCollection)
 
     setSize(1000, 800)
-    setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+    setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE)
 
     formulaList.addMouseListener(listMouseListener)
   }
@@ -95,7 +123,7 @@ class IsabelleFormulaViewer extends JFrame("Isabelle Formula Viewer") {
   )*/
 }
 
-object IsabelleFormulaViewer {
+object FormulaViewer {
 /*  def main(args: Array[String]): Unit = {
     implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
     val setup = Setup(isabelleHome = Path.of("c:\\temp\\Isabelle"))
