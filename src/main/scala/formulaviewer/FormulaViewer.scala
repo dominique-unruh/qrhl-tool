@@ -2,30 +2,27 @@ package formulaviewer
 
 import de.unruh.isabelle.control.Isabelle
 import de.unruh.isabelle.control.Isabelle.Setup
-import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{App, ConcreteTerm, Context, Cterm, MLValueTerm, Term}
-import formulaviewer.FormulaTreeNode.logger
+import de.unruh.isabelle.pure.Context
+import formulaviewer.FormulaViewer.logger
 import org.log4s
 
-import java.awt.{BorderLayout, Component}
+import java.awt.{BorderLayout, Component, Point}
 import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
 import java.nio.file.Path
-import java.util
 import javax.swing.JOptionPane.{ERROR_MESSAGE, showMessageDialog}
-import javax.swing.tree.{DefaultTreeModel, TreeNode, TreePath}
 import javax.swing._
-import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-import scala.jdk.CollectionConverters.{EnumerationHasAsScala, IteratorHasAsJava}
 import scala.util.control.Breaks.{break, breakable}
 
 class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapProvider {
   private val listModel = new DefaultListModel[Formula]()
   private val formulaList: JList[Formula] = new JList[Formula](listModel)
   private val statusBar = new JLabel()
-  private var _contextMap : ContextMap = ContextMap.id
-  private val formulaWidget = new FormulaWidget(this)
+  private val differ = new Differ
+  private val leftFormula = new FormulaWidget(this, Differ.Side(differ, side = true))
+  private val rightFormula = new FormulaWidget(this, Differ.Side(differ, side = false))
 
+  private var _contextMap : ContextMap = ContextMap.id
   private var context: Context = _
   private var isabelle: Isabelle = _
 
@@ -39,6 +36,24 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
 
   def contextMap: ContextMap = _contextMap
 
+  object formulaListPopup extends JPopupMenu {
+    add(new SimpleAction("To left", e =>
+      leftFormula.showFormula(formulaList.getSelectedValue)
+    ))
+    add(new SimpleAction("To right", e =>
+      rightFormula.showFormula(formulaList.getSelectedValue)
+    ))
+
+    override def show(invoker: Component, x: Int, y: Int): Unit = {
+      val itemIdx = formulaList.locationToIndex(new Point(x,y))
+      if (itemIdx != -1) {
+        if (!formulaList.isSelectedIndex(itemIdx))
+          formulaList.setSelectedIndex(itemIdx)
+      }
+      super.show(invoker, x, y)
+    }
+  }
+
   def setContext(isabelle: Isabelle, context: Context): Unit = synchronized {
     val firstIsabelle = this.isabelle eq null
     this.isabelle = isabelle
@@ -51,6 +66,7 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
   }
 
   object listMouseListener extends MouseAdapter {
+    // TODO remove
     override def mouseClicked(e: MouseEvent): Unit =
       if (e.getClickCount == 2) {
         val index = formulaList.locationToIndex(e.getPoint)
@@ -64,7 +80,7 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
     listModel.add(0, formula)
 
   def showFormula(formula: Formula): Unit = {
-    formulaWidget.showFormula(formula)
+    leftFormula.showFormula(formula)
     statusBar.setText("")
   }
 
@@ -91,9 +107,13 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
   }
 
   object formulaToCollection extends AbstractAction("To collection") {
-    override def actionPerformed(e: ActionEvent): Unit =
-      for (formula <- formulaWidget.selectedSubformulas)
+    // TODO something better than just taking the formulas from left and right
+    override def actionPerformed(e: ActionEvent): Unit = {
+      for (formula <- leftFormula.selectedSubformulas)
         addFormula(formula)
+      for (formula <- rightFormula.selectedSubformulas)
+        addFormula(formula)
+    }
   }
 
   def updateContextMap(): Unit = {
@@ -101,12 +121,16 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
     for (option <- contextOptions)
       newContextMap = newContextMap * option.contextMap
     _contextMap = newContextMap
-    formulaWidget.contextMapChanged()
+    leftFormula.contextMapChanged()
+    rightFormula.contextMapChanged()
   }
 
   private def init(): Unit = {
     val formulaListScroll = new JScrollPane(formulaList)
-    val split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, formulaWidget, formulaListScroll)
+    val formulaSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftFormula, rightFormula)
+    formulaSplit.setOneTouchExpandable(true)
+    formulaSplit.setDividerLocation(.5d)
+    val split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, formulaSplit, formulaListScroll)
     split.setOneTouchExpandable(true)
     split.setDividerLocation(.8d)
 
@@ -122,6 +146,11 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
       option.addListener { () => updateContextMap() }
     }
 
+    differ.left = leftFormula
+    differ.right = rightFormula
+
+    formulaList.setComponentPopupMenu(formulaListPopup)
+
     setSize(1000, 800)
     setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE)
 
@@ -130,6 +159,8 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
 }
 
 object FormulaViewer {
+  private val logger = log4s.getLogger
+
   def main(args: Array[String]): Unit = {
     implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
     val setup = Setup(isabelleHome = Path.of("c:\\temp\\Isabelle"))
@@ -153,16 +184,6 @@ object FormulaViewer {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+class SimpleAction(name: String, handler: ActionEvent => Unit) extends AbstractAction(name: String) {
+  override def actionPerformed(e: ActionEvent): Unit = handler(e)
+}

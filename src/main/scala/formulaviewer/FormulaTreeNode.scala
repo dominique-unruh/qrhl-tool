@@ -6,9 +6,18 @@ import org.log4s
 import java.util
 import javax.swing.tree.TreeNode
 import scala.jdk.CollectionConverters.IteratorHasAsJava
+import scala.util.{Failure, Success, Try}
 
-class FormulaTreeNode(contextMapProvider: ContextMapProvider, val parent: FormulaTreeNode, val formula: Formula) extends TreeNode {
-  lazy val myChildren: List[FormulaTreeNode] = formula.children.map(new FormulaTreeNode(contextMapProvider, this, _))
+class FormulaTreeNode(contextMapProvider: ContextMapProvider, val parent: FormulaTreeNode, index: Int, val formula: Formula) extends TreeNode {
+  lazy val myChildren: List[FormulaTreeNode] = formula.children.zipWithIndex.map { case (child, index) => new FormulaTreeNode(contextMapProvider, this, index, child) }
+
+  def formulaAt(path: List[Int]): Option[Formula] = path match {
+    case Nil => Some(this.formula)
+    case (idx::path) => Try(myChildren(idx)) match {
+      case Failure(exception) => None
+      case Success(child) => child.formulaAt(path)
+    }
+  }
 
   private var lastRender: (ContextMap, String) = (new ContextMap(_ => throw new Exception()), "")
 
@@ -36,6 +45,9 @@ class FormulaTreeNode(contextMapProvider: ContextMapProvider, val parent: Formul
   override def isLeaf: Boolean = myChildren.isEmpty
 
   override def children(): util.Enumeration[_ <: FormulaTreeNode] = myChildren.iterator.asJavaEnumeration
+
+  private def revPath: List[Int] = if (parent==null) Nil else index :: parent.revPath
+  def path: List[Int] = revPath.reverse
 }
 
 object FormulaTreeNode {
