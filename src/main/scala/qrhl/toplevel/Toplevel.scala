@@ -198,7 +198,7 @@ class Toplevel private(initialState : State,
       if (currentState.goal.nonEmpty) {
         val goal = currentState.goal.head.toTerm(currentState.isabelle)
         val formula = new Formula(goal.isabelleTerm)
-        formulaViewer.showFormula(formula)
+        formulaViewer.showFormulaLeft(formula)
       }
     }
   }

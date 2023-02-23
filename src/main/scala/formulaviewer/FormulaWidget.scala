@@ -4,10 +4,12 @@ import formulaviewer.FormulaWidget.logger
 import org.jetbrains.annotations.NotNull
 import org.log4s
 
-import java.awt.{Color, Component}
+import java.awt.datatransfer.StringSelection
+import java.awt.{Color, Component, Point, Toolkit}
 import java.lang.AssertionError
 import javax.swing.tree.{DefaultTreeCellRenderer, DefaultTreeModel, TreeCellRenderer, TreePath}
-import javax.swing.{JPanel, JScrollPane, JSplitPane, JTree}
+import javax.swing.{Action, JMenuItem, JPanel, JPopupMenu, JScrollPane, JSplitPane, JTree}
+import scala.util.Random
 
 
 class FormulaWidget(contextMapProvider: ContextMapProvider, differSide: Differ.Side) extends JSplitPane(JSplitPane.VERTICAL_SPLIT) {
@@ -27,21 +29,25 @@ class FormulaWidget(contextMapProvider: ContextMapProvider, differSide: Differ.S
     setRightComponent(formulaPaneScroll)
     setOneTouchExpandable(true)
     tree.setCellRenderer(cellRenderer)
+    tree.setComponentPopupMenu(treePopup)
   }
 
   object cellRenderer extends DefaultTreeCellRenderer {
     override def getTreeCellRendererComponent(tree: JTree, value: Any, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean): Component = {
       super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus)
-      value match {
-        case _ : FakeFormulaTreeNode =>
-        case node : FormulaTreeNode =>
-          val path = node.path
-          val color = differSide.color(path)
-          setOpaque(true)
-          setBackground(color)
-        case _ =>
-          throw new AssertionError(s"cell renderer got a ${value.getClass}")
-      }
+      if (selected)
+        setOpaque(false)
+      else
+        value match {
+          case _ : FakeFormulaTreeNode =>
+          case node : FormulaTreeNode =>
+            val path = node.path
+            val color = differSide.color(path)
+            setOpaque(true)
+            setBackground(color)
+          case _ =>
+            throw new AssertionError(s"cell renderer got a ${value.getClass}")
+        }
       this
     }
   }
@@ -60,7 +66,7 @@ class FormulaWidget(contextMapProvider: ContextMapProvider, differSide: Differ.S
   }
 
   def selectedSubformulas: Seq[Formula] = {
-    val paths = tree.getSelectionModel.getSelectionPaths
+    val paths = Option(tree.getSelectionModel.getSelectionPaths).getOrElse(Array.empty)
     val paths2 = if (paths.isEmpty) Array(new TreePath(treeModel.getRoot)) else paths
     for (path <- paths2.toSeq;
          formula = path.getLastPathComponent.asInstanceOf[FormulaTreeNode]
@@ -76,6 +82,28 @@ class FormulaWidget(contextMapProvider: ContextMapProvider, differSide: Differ.S
     formulaPane.add(FormulaPresentation.fromIsabelle(formula).swing)
     formulaPane.revalidate()
   }
+
+  private object treePopup extends JPopupMenu {
+    add(new SimpleAction("Copy", { e =>
+      val strings = selectedSubformulas.map(_.pretty(contextMapProvider.contextMap))
+      val string = strings.mkString("\n")
+      val clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
+      val stringSelection = new StringSelection(string)
+      clipboard.setContents(stringSelection, null);
+    }))
+
+    override def show(invoker: Component, x: Int, y: Int): Unit = {
+      val row = tree.getRowForLocation(x, y)
+      if (row != -1) {
+        if (!tree.isRowSelected(row))
+          tree.setSelectionRow(row)
+      }
+      super.show(invoker, x, y)
+    }
+  }
+
+  def addPopupAction(action: Action): Unit =
+    treePopup.add(action)
 }
 
 object FormulaWidget {

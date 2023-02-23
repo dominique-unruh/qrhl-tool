@@ -38,10 +38,16 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
 
   object formulaListPopup extends JPopupMenu {
     add(new SimpleAction("To left", e =>
-      leftFormula.showFormula(formulaList.getSelectedValue)
+      showFormulaLeft(formulaList.getSelectedValue)
     ))
     add(new SimpleAction("To right", e =>
-      rightFormula.showFormula(formulaList.getSelectedValue)
+      showFormulaRight(formulaList.getSelectedValue)
+    ))
+    add(new SimpleAction("Delete", e =>
+      for (index <- formulaList.getSelectedIndices.reverse) {
+        logger.debug(s"Remove $index")
+        listModel.remove(index)
+      }
     ))
 
     override def show(invoker: Component, x: Int, y: Int): Unit = {
@@ -71,7 +77,7 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
       if (e.getClickCount == 2) {
         val index = formulaList.locationToIndex(e.getPoint)
         val formula = listModel.getElementAt(index)
-        showFormula(formula)
+        showFormulaLeft(formula)
         e.consume()
       }
   }
@@ -79,8 +85,15 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
   def addFormula(formula: Formula): Unit =
     listModel.add(0, formula)
 
-  def showFormula(formula: Formula): Unit = {
+  def showFormulaLeft(formula: Formula): Unit = {
     leftFormula.showFormula(formula)
+    rightFormula.repaint()
+    statusBar.setText("")
+  }
+
+  def showFormulaRight(formula: Formula): Unit = {
+    rightFormula.showFormula(formula)
+    leftFormula.repaint()
     statusBar.setText("")
   }
 
@@ -102,16 +115,13 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
           showMessageDialog(FormulaViewer.this, s"Adding message failed:\n$e", "Error", ERROR_MESSAGE)
           break()
       }
-      showFormula(formula)
+      addFormula(formula)
     }
   }
 
-  object formulaToCollection extends AbstractAction("To collection") {
-    // TODO something better than just taking the formulas from left and right
+  private class FormulaToCollectionAction(widget: FormulaWidget) extends AbstractAction("To collection") {
     override def actionPerformed(e: ActionEvent): Unit = {
-      for (formula <- leftFormula.selectedSubformulas)
-        addFormula(formula)
-      for (formula <- rightFormula.selectedSubformulas)
+      for (formula <- widget.selectedSubformulas)
         addFormula(formula)
     }
   }
@@ -140,7 +150,6 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
     getContentPane.add(toolbar, BorderLayout.NORTH)
 
     toolbar.add(addFormulaAction)
-    toolbar.add(formulaToCollection)
     for (option <- contextOptions) {
       toolbar.add(option.button)
       option.addListener { () => updateContextMap() }
@@ -148,6 +157,9 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapPr
 
     differ.left = leftFormula
     differ.right = rightFormula
+
+    leftFormula.addPopupAction(new FormulaToCollectionAction(leftFormula))
+    rightFormula.addPopupAction(new FormulaToCollectionAction(rightFormula))
 
     formulaList.setComponentPopupMenu(formulaListPopup)
 
@@ -179,7 +191,7 @@ object FormulaViewer {
       )
     for (formula <- initialFormulas)
       viewer.addFormula(formula)
-    viewer.showFormula(initialFormulas.head)
+    viewer.showFormulaLeft(initialFormulas.head)
   }
 }
 
