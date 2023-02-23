@@ -1,6 +1,6 @@
 package formulaviewer
 
-class FakeFormulaTreeNode(formulaViewer: FormulaViewer, text: String) extends FormulaTreeNode(formulaViewer, null, null) {
+class FakeFormulaTreeNode(contextMapProvider: ContextMapProvider, text: String) extends FormulaTreeNode(contextMapProvider, null, null) {
   override lazy val myChildren: List[Nothing] = Nil
 
   override def toString: String = text

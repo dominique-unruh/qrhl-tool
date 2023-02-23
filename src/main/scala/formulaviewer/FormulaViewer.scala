@@ -19,14 +19,12 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.jdk.CollectionConverters.{EnumerationHasAsScala, IteratorHasAsJava}
 import scala.util.control.Breaks.{break, breakable}
 
-class FormulaViewer extends JFrame("qrhl-tool formula viewer") {
+class FormulaViewer extends JFrame("qrhl-tool formula viewer") with ContextMapProvider {
   private val listModel = new DefaultListModel[Formula]()
   private val formulaList: JList[Formula] = new JList[Formula](listModel)
-  private val treeModel = new DefaultTreeModel(new FakeFormulaTreeNode(this, "<nothing loaded>"))
-  private val tree: JTree = new JTree(treeModel)
   private val statusBar = new JLabel()
-  private val formulaPane = new JPanel()
   private var _contextMap : ContextMap = ContextMap.id
+  private val formulaWidget = new FormulaWidget(this)
 
   private var context: Context = _
   private var isabelle: Isabelle = _
@@ -66,10 +64,7 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") {
     listModel.add(0, formula)
 
   def showFormula(formula: Formula): Unit = {
-    treeModel.setRoot(new FormulaTreeNode(this,null, formula))
-    formulaPane.removeAll()
-    formulaPane.add(FormulaPresentation.fromIsabelle(formula).swing)
-    formulaPane.revalidate()
+    formulaWidget.showFormula(formula)
     statusBar.setText("")
   }
 
@@ -96,20 +91,9 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") {
   }
 
   object formulaToCollection extends AbstractAction("To collection") {
-    override def actionPerformed(e: ActionEvent): Unit = {
-      val paths = tree.getSelectionModel.getSelectionPaths
-      val paths2 = if (paths.isEmpty) Array(new TreePath(treeModel.getRoot)) else paths
-      for (path <- paths2) {
-        path.getLastPathComponent.asInstanceOf[FormulaTreeNode] match {
-          case _ : FakeFormulaTreeNode =>
-            showMessageDialog(FormulaViewer.this, "No formula to add.", "Error", ERROR_MESSAGE)
-          case node =>
-            addFormula(node.formula)
-        }
-      }
-
-      tree.getLastSelectedPathComponent
-    }
+    override def actionPerformed(e: ActionEvent): Unit =
+      for (formula <- formulaWidget.selectedSubformulas)
+        addFormula(formula)
   }
 
   def updateContextMap(): Unit = {
@@ -117,25 +101,12 @@ class FormulaViewer extends JFrame("qrhl-tool formula viewer") {
     for (option <- contextOptions)
       newContextMap = newContextMap * option.contextMap
     _contextMap = newContextMap
-    for (node <- allTreeNodes())
-      treeModel.nodeChanged(node)
-  }
-
-  private def allTreeNodes(node: FormulaTreeNode = treeModel.getRoot.asInstanceOf[FormulaTreeNode]): IterableOnce[FormulaTreeNode] = {
-    val subnodes =
-      for (child <- node.myChildren.iterator;
-           node <- allTreeNodes(child))
-      yield node
-    Iterator(node) ++ subnodes
+    formulaWidget.contextMapChanged()
   }
 
   private def init(): Unit = {
-    val treeScroll = new JScrollPane(tree)
     val formulaListScroll = new JScrollPane(formulaList)
-    val formulaPaneScroll = new JScrollPane(formulaPane)
-    val leftSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, treeScroll, formulaPaneScroll)
-    leftSplit.setOneTouchExpandable(true)
-    val split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplit, formulaListScroll)
+    val split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, formulaWidget, formulaListScroll)
     split.setOneTouchExpandable(true)
     split.setDividerLocation(.8d)
 
