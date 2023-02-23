@@ -5,18 +5,21 @@ import de.unruh.isabelle.pure.{Abs, App, Bound, Const, Context, Free, Term, Var}
 import formulaviewer.Formula.AppMulti
 
 class Formula(val term: Term)(implicit val isabelle: Isabelle, val context: Context) {
-  val pretty: String = term.pretty(context)
-  val prettyTyp: String =
-    try term.fastType.pretty(context)
+  def pretty(contextMap: ContextMap): String = term.pretty(contextMap(context))
+  def prettyTyp(contextMap: ContextMap): String =
+    try term.fastType.pretty(contextMap(context))
     catch {
       case _: IsabelleControllerException => "??"
     }
 
-  override def toString: String = term match {
-    case Const(name, _) => s"$pretty :: $prettyTyp (const: $name)"
+  def descriptiveString(contextMap: ContextMap) = term match {
+    case Const(name, _) => s"${pretty(contextMap)} :: ${prettyTyp(contextMap)} (const: $name)"
     case Bound(i) => s"Bound variable (index $i)"
-    case _ => s"$pretty :: $prettyTyp"
+    case _ => s"${pretty(contextMap)} :: ${prettyTyp(contextMap)}"
   }
+
+  override lazy val toString: String = pretty(ContextMap.id)
+
   lazy val children : List[Formula] = term match {
     case AppMulti(ts @ _*) => ts.map(new Formula(_)).toList
     case Abs(_, _, body) => List(new Formula(body))
