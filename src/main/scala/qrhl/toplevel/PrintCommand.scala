@@ -7,10 +7,13 @@ import IsabelleX.{globalIsabelle, symbols}
 import de.unruh.isabelle.control.{Isabelle, IsabelleMLException}
 import globalIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.{Const, Context}
+import de.unruh.isabelle.pure.{Const, Context, Term}
 import hashedcomputation.{Hash, HashTag, Hashable}
+import org.log4s
 import qrhl.Utils.pluralS
+import qrhl.toplevel.PrintCommand.logger
 
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 // Implicits
@@ -29,10 +32,11 @@ case class PrintCommand(symbol : String) extends Command {
     val env = state.environment
     val ctxt = state.isabelle.context
     val prettyTyp = state.isabelle.prettyTyp _
+    val terms : ListBuffer[Term] = new ListBuffer
 
     if (symbol == "goal") {
       found = true
-      printGoal(state, output)
+      terms ++= printGoal(state, output)
     }
 
     for (prog <- env.programs.get(symbol)) {
@@ -59,16 +63,6 @@ case class PrintCommand(symbol : String) extends Command {
     }
 
     try {
-      val fact = Ops.thms_as_subgoals(ctxt, symbol).retrieveNow
-      found = true
-      output.println(s"\nThe name $symbol refers to ${fact.length} lemmas:\n")
-      for (lemma <- fact)
-        output.println(lemma+"\n\n")
-    } catch {
-      case _ : IsabelleMLException => // Means there is no such lemma
-    }
-
-    try {
       Ops.check_const(ctxt, symbol).retrieveNow match {
         case Const(name, typ) =>
           output.println(s"\nThe name $symbol refers to the Isabelle constant $name :: ${typ.pretty(ctxt)}")
@@ -80,13 +74,33 @@ case class PrintCommand(symbol : String) extends Command {
       case _: IsabelleMLException => // Means there is no such constant
     }
 
+    val fact = try Some(Ops.thms_as_subgoals(ctxt, symbol).retrieveNow) catch {
+      case e: IsabelleMLException =>
+        // Means there is no such lemma, either because it's not a lemma name, or because the spec has errors.
+        // We output the error only if nothing else was found.
+        if (!found)
+          output.println(s"""Could not interpret "$symbol" as a lemma name: ${e.getMessage}""")
+        None
+    }
+
+    fact match {
+      case Some(fact) =>
+        found = true
+        output.println(s"\nThe name $symbol refers to ${fact.length} lemmas:\n")
+        for ((term,subgoal) <- fact) {
+          terms += term
+          output.println(s"$subgoal\n\n")
+        }
+      case None =>
+    }
+
     if (!found)
       output.println(s"No variable/program/lemma with name $symbol found.")
 
-    state
+    state.withPrintedTerm(terms.toSeq)
   }
 
-  def printGoal(state: State, output: PrintWriter): Unit = {
+  def printGoal(state: State, output: PrintWriter): Seq[Term] = {
     val subgoals = state.goal.focusedSubgoals
     if (subgoals.isEmpty)
       output.println("No goals to print.")
@@ -96,7 +110,7 @@ case class PrintCommand(symbol : String) extends Command {
     // Context without variable declarations etc. This approximates what is available in the Isabelle theories
     val initialContext = state.isabelle.context.theoryOf.context
 
-    for (subgoal <- subgoals) {
+    for (subgoal <- subgoals) yield {
       val currentLemmaName = state.currentLemma match {
         case Some(("", _)) => "lemma"
         case Some((name, _)) => name
@@ -123,6 +137,11 @@ case class PrintCommand(symbol : String) extends Command {
 
       output.println()
       output.println(unicode)
+      term.isabelleTerm
     }
   }
+}
+
+object PrintCommand {
+  private val logger = log4s.getLogger
 }

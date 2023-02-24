@@ -1075,7 +1075,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
     val declareVariableOp =
       MLValue.compileFunction[(Context, String, Typ), Context](s"$qrhl_ops.declare_variable")
     lazy val thms_as_subgoals =
-      MLValue.compileFunction[(Context, String), List[Subgoal]](s"$qrhl_ops.thms_as_subgoals")
+      MLValue.compileFunction[(Context, String), List[(Term, Subgoal)]](s"$qrhl_ops.thms_as_subgoals")
 //    val use_thy_op =
 //      MLValue.compileFunction[String, Unit]("Thy_Info.use_thy")
     lazy val applyToplevelCommand = MLValue.compileFunction[Context, String, Context](s"$qrhl_ops.applyToplevelCommand")

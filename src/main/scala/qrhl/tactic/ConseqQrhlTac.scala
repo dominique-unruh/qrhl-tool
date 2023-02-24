@@ -90,7 +90,7 @@ case class ConseqQrhlTac(rule: String,
       val isabelle = state.isabelle.isabelle
       val ctxt = state.isabelle.context
 
-      val ruleAsSubgoals = Ops.thms_as_subgoals(ctxt, rule).retrieveNow
+      val ruleAsSubgoals = Ops.thms_as_subgoals(ctxt, rule).retrieveNow.map(_._2)
 
       ruleAsSubgoals match {
         case List(QRHLSubgoal(left2, right2, pre2, post2, assms2)) =>

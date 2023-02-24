@@ -435,7 +435,8 @@ fun freeze_term (Const(n,T)) = Const (n, freeze_typ T)
 in
 fun thms_as_subgoals (ctxt, rule) = let
   val thms = get_thms ctxt rule
-  val subgoals = thms |> map Thm.prop_of |> map freeze_term |> map (term_to_subgoal ctxt)
+  val subgoals = map (fn thm => 
+    (Thm.prop_of thm, thm |> Thm.prop_of |> freeze_term |> term_to_subgoal ctxt)) thms
   in subgoals end
 end
 

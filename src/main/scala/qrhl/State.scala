@@ -18,9 +18,11 @@ import org.apache.commons.codec.binary.Hex
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.Typ
+import de.unruh.isabelle.pure.{Term, Typ}
 import hashedcomputation.filesystem.FingerprintedDirectorySnapshot
 import scalaz.Scalaz.ToIdOps
+
+import scala.collection.immutable.{AbstractSeq, LinearSeq}
 
 // Implicits
 import de.unruh.isabelle.mlvalue.Implicits._
@@ -133,14 +135,26 @@ class State private (val environment: Environment,
                      val currentLemma: Option[(String,RichTerm)],
                      private val _isabelle: Option[IsabelleX.ContextX],
                      private val _isabelleTheory: List[Path],
-//                     val dependencies: List[FileTimeStamp],
                      /** Absolute path */
                      val currentDirectory: Path,
                      val cheatMode : CheatMode,
                      val includedFiles : Set[Path],
                      val lastOutput : String,
+                     /** The term printed by the last print-command (for adding to the [[FormulaViewer]]) */
+                     val printedTerm : Option[Term],
                      _hash : Hash[State])
     extends HashedValue {
+  def withPrintedTerm(terms: Seq[Term]): State =
+    if (terms.isEmpty) this else withPrintedTerm(terms.head)
+
+  def withPrintedTerm(term: Term): State = copy(
+    printedTerm = Some(term),
+    hash = HashTag()(hash, Hashable.hash(term)))
+  def clearPrintedTerm : State =
+    if (printedTerm.isEmpty) this
+    else copy(printedTerm = None, hash = HashTag()(hash))
+
+
   def applyIsabelleToplevelCommand(command: String): State = {
     if (currentLemma.isDefined)
       throw UserException(s"""Isabelle commands are only possible outside a proof. Maybe you intended to use "isa ${command}."?""")
@@ -284,17 +298,18 @@ class State private (val environment: Environment,
   private def copy(environment:Environment=environment,
                    goal:Goal=goal,
                    isabelle:Option[IsabelleX.ContextX]=_isabelle.map(_.force),
-//                   dependencies:List[FileTimeStamp]=dependencies,
                    currentLemma:Option[(String,RichTerm)]=currentLemma,
                    currentDirectory:Path=currentDirectory,
                    cheatMode:CheatMode=cheatMode,
                    isabelleTheory:List[Path]=_isabelleTheory,
                    includedFiles:Set[Path]=includedFiles,
                    lastOutput:String=lastOutput,
+                   printedTerm : Option[Term] = printedTerm,
                    hash: Hash[State]) : State =
     new State(environment=environment, goal=goal, _isabelle=isabelle, cheatMode=cheatMode,
       currentLemma=currentLemma, currentDirectory=currentDirectory,
       includedFiles=includedFiles, _isabelleTheory=isabelleTheory, lastOutput = lastOutput,
+      printedTerm = printedTerm,
       _hash = hash)
 
   def changeDirectory(dir:Path): State = {
@@ -456,6 +471,7 @@ object State {
     currentLemma=None, currentDirectory=Paths.get("").toAbsolutePath,
     cheatMode=CheatMode.make(cheating), includedFiles=Set.empty,
     lastOutput = "Ready.",
+    printedTerm = None,
     _hash = HashTag()(Hashable.hash(cheating)))
 //  private[State] val defaultIsabelleTheory = "QRHL"
 

@@ -200,6 +200,10 @@ class Toplevel private(initialState : State,
         val formula = new Formula(goal.isabelleTerm)
         formulaViewer.showFormulaLeft(formula)
       }
+      currentState.printedTerm match {
+        case Some(term) => formulaViewer.showFormulaRight(new Formula(term))
+        case None =>
+      }
     }
   }
 
@@ -411,18 +415,19 @@ object Toplevel {
       logger.debug(s"Evaluating $command")
       type T = (Command, State, DirectorySnapshot)
       implicit val fs: FingerprintedDirectorySnapshot = FingerprintedDirectorySnapshot(directory)
+      val state2 = state.clearPrintedTerm
       val newState = command match {
         case includeCommand : IncludeCommand =>
           val stringWriter = new StringWriter()
           implicit val writer: PrintWriter = new PrintWriter(stringWriter)
-          val newState = state.include(includeCommand.file)
+          val newState = state2.include(includeCommand.file)
           writer.close()
           newState.setLastOutput(stringWriter.toString)
-        case cmd : IsabelleCommand =>
-          val newState = state.loadIsabelle(theory = cmd.thy, session = cmd.session)
+        case cmd : IsabelleCommand => // Why is this a separate case? Historic reasons?
+          val newState = state2.loadIsabelle(theory = cmd.thy, session = cmd.session)
           newState.setLastOutput("Isabelle loaded.")
         case _ =>
-          val newState = command.actString(state)
+          val newState = command.actString(state2)
           newState
       }
 
