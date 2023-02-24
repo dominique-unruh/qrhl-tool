@@ -92,26 +92,26 @@ qed
 
 lemma teleport_goal2_a0c0:
   assumes [register]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows \<open>(proj |0\<rangle>\<guillemotright>\<lbrakk>C1\<rbrakk> o\<^sub>C\<^sub>L proj |0\<rangle>\<guillemotright>\<lbrakk>A1\<rbrakk>) *\<^sub>S quantum_equality_full id_cblinfun \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op* o\<^sub>C\<^sub>L CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op o\<^sub>C\<^sub>L addState EPR) \<lbrakk>A2\<rbrakk> \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>\<close>
+  shows \<open>(selfbutter |0\<rangle>\<guillemotright>\<lbrakk>C1\<rbrakk> o\<^sub>C\<^sub>L selfbutter |0\<rangle>\<guillemotright>\<lbrakk>A1\<rbrakk>) *\<^sub>S quantum_equality_full id_cblinfun \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op* o\<^sub>C\<^sub>L CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op o\<^sub>C\<^sub>L addState EPR) \<lbrakk>A2\<rbrakk> \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>\<close>
   apply prepare_for_code
   by eval
 
 
 lemma teleport_goal2_a0c1:
   assumes [register]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows \<open>(pauliZ\<guillemotright>\<lbrakk>B1\<rbrakk> o\<^sub>C\<^sub>L proj |1\<rangle>\<guillemotright>\<lbrakk>C1\<rbrakk> o\<^sub>C\<^sub>L proj |0\<rangle>\<guillemotright>\<lbrakk>A1\<rbrakk>) *\<^sub>S quantum_equality_full id_cblinfun \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op* o\<^sub>C\<^sub>L CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op o\<^sub>C\<^sub>L addState EPR) \<lbrakk>A2\<rbrakk> \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>\<close>
+  shows \<open>(pauliZ\<guillemotright>\<lbrakk>B1\<rbrakk> o\<^sub>C\<^sub>L selfbutter |1\<rangle>\<guillemotright>\<lbrakk>C1\<rbrakk> o\<^sub>C\<^sub>L selfbutter |0\<rangle>\<guillemotright>\<lbrakk>A1\<rbrakk>) *\<^sub>S quantum_equality_full id_cblinfun \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op* o\<^sub>C\<^sub>L CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op o\<^sub>C\<^sub>L addState EPR) \<lbrakk>A2\<rbrakk> \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>\<close>
   apply prepare_for_code
   by eval
 
 lemma teleport_goal2_a1c0:
   assumes [register]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows \<open>(pauliX\<guillemotright>\<lbrakk>B1\<rbrakk> o\<^sub>C\<^sub>L proj |0\<rangle>\<guillemotright>\<lbrakk>C1\<rbrakk> o\<^sub>C\<^sub>L proj |1\<rangle>\<guillemotright>\<lbrakk>A1\<rbrakk>) *\<^sub>S quantum_equality_full id_cblinfun \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op* o\<^sub>C\<^sub>L CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op o\<^sub>C\<^sub>L addState EPR) \<lbrakk>A2\<rbrakk> \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>\<close>
+  shows \<open>(pauliX\<guillemotright>\<lbrakk>B1\<rbrakk> o\<^sub>C\<^sub>L selfbutter |0\<rangle>\<guillemotright>\<lbrakk>C1\<rbrakk> o\<^sub>C\<^sub>L selfbutter |1\<rangle>\<guillemotright>\<lbrakk>A1\<rbrakk>) *\<^sub>S quantum_equality_full id_cblinfun \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op* o\<^sub>C\<^sub>L CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op o\<^sub>C\<^sub>L addState EPR) \<lbrakk>A2\<rbrakk> \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>\<close>
   apply prepare_for_code
   by eval
 
 lemma teleport_goal2_a1c1:
   assumes [register]: "declared_qvars \<lbrakk>A1,B1,C1,A2\<rbrakk>"
-  shows \<open>(pauliZ\<guillemotright>\<lbrakk>B1\<rbrakk> o\<^sub>C\<^sub>L pauliX\<guillemotright>\<lbrakk>B1\<rbrakk> o\<^sub>C\<^sub>L proj |1\<rangle>\<guillemotright>\<lbrakk>C1\<rbrakk> o\<^sub>C\<^sub>L proj |1\<rangle>\<guillemotright>\<lbrakk>A1\<rbrakk>) *\<^sub>S quantum_equality_full id_cblinfun \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op* o\<^sub>C\<^sub>L CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op o\<^sub>C\<^sub>L addState EPR) \<lbrakk>A2\<rbrakk> \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>\<close>
+  shows \<open>(pauliZ\<guillemotright>\<lbrakk>B1\<rbrakk> o\<^sub>C\<^sub>L pauliX\<guillemotright>\<lbrakk>B1\<rbrakk> o\<^sub>C\<^sub>L selfbutter |1\<rangle>\<guillemotright>\<lbrakk>C1\<rbrakk> o\<^sub>C\<^sub>L selfbutter |1\<rangle>\<guillemotright>\<lbrakk>A1\<rbrakk>) *\<^sub>S quantum_equality_full id_cblinfun \<lbrakk>C1, A1, B1\<rbrakk> (hadamard \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op* o\<^sub>C\<^sub>L CNOT \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L assoc_op o\<^sub>C\<^sub>L addState EPR) \<lbrakk>A2\<rbrakk> \<le> \<lbrakk>B1\<rbrakk> \<equiv>\<qq> \<lbrakk>A2\<rbrakk>\<close>
   apply prepare_for_code
   by eval
 

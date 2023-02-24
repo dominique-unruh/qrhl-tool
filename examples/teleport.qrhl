@@ -49,33 +49,31 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
    rule teleport_goal1.
      simp!. }
 
- seq 1 0: proj |a1⟩»⟦A1⟧ *⇩S 
+ seq 1 0: selfbutter |a1⟩»⟦A1⟧ *⇩S 
              quantum_equality_full
                 id_cblinfun ⟦C1,A1,B1⟧
                 ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
- { wp left.
-   simp.
+ {
+   sp left.
+    simp! true_expression_def.
    skip.
-   simp.
-   fix a'.
-   rule move_sup_meas_rule.
-    simp!.
-   simp!. }
+   isa! auto intro!: Sup_least simp: cblinfun_assoc_left. }
 
  case a':=a1.
 
- seq 1 0: Cla[a1=a'] ⊓ ((proj |c1⟩»⟦C1⟧ o⇩C⇩L proj |a1⟩»⟦A1⟧) *⇩S
+ seq 1 0: Cla[a1=a'] ⊓ ((selfbutter |c1⟩»⟦C1⟧ o⇩C⇩L selfbutter |a1⟩»⟦A1⟧) *⇩S
                  quantum_equality_full
                     id_cblinfun ⟦C1,A1,B1⟧
                     ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
- { wp left.
+ {
+   wp left.
    simp.
    skip.
    simp.
    fix c'.
    rule move_sup_meas_rule.
     simp!.
-   simp ! cblinfun_assoc_right. }
+   simp! cblinfun_assoc_left butterfly_is_Proj Proj_on_own_range. }
 
  case c':=c1.
 
@@ -83,7 +81,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  + casesplit c'=0.
 
    # Case a1=0 c1=0
-   - conseq pre: Cla[a1=0 ∧ c1=0] ⊓ ((proj |0⟩»⟦C1⟧ o⇩C⇩L proj |0⟩»⟦A1⟧) *⇩S
+   - conseq pre: Cla[a1=0 ∧ c1=0] ⊓ ((selfbutter |0⟩»⟦C1⟧ o⇩C⇩L selfbutter |0⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
                       id_cblinfun ⟦C1,A1,B1⟧
                       ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
@@ -91,12 +89,11 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      clear 2.
      clear 1.
 
-     seq 2 0: (proj |0⟩»⟦C1⟧ o⇩C⇩L proj |0⟩»⟦A1⟧) *⇩S
+     seq 2 0: (selfbutter |0⟩»⟦C1⟧ o⇩C⇩L selfbutter |0⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
                       id_cblinfun ⟦C1,A1,B1⟧
                       ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
-     wp left.
-     wp left.
+     wp left 2.
      skip.
      simp!.
 
@@ -107,7 +104,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
 
    # Case a1=0 c1=1
-   - conseq pre: Cla[a1=0 ∧ c1=1] ⊓ ((proj |1⟩»⟦C1⟧ o⇩C⇩L proj |0⟩»⟦A1⟧) *⇩S
+   - conseq pre: Cla[a1=0 ∧ c1=1] ⊓ ((selfbutter |1⟩»⟦C1⟧ o⇩C⇩L selfbutter |0⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
                       id_cblinfun ⟦C1,A1,B1⟧
                       ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
@@ -115,7 +112,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      clear 2.
      clear 1.
 
-     seq 2 0: (pauliZ»⟦B1⟧ o⇩C⇩L proj |1⟩»⟦C1⟧ o⇩C⇩L proj |0⟩»⟦A1⟧) *⇩S
+     seq 2 0: (pauliZ»⟦B1⟧ o⇩C⇩L selfbutter |1⟩»⟦C1⟧ o⇩C⇩L selfbutter |0⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
                       id_cblinfun ⟦C1,A1,B1⟧
                       ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
@@ -131,7 +128,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
  + casesplit c'=0.
 
    # Case a1=1 c1=0
-   - conseq pre: Cla[a1=1 ∧ c1=0] ⊓ ((proj |0⟩»⟦C1⟧ o⇩C⇩L proj |1⟩»⟦A1⟧) *⇩S
+   - conseq pre: Cla[a1=1 ∧ c1=0] ⊓ ((selfbutter |0⟩»⟦C1⟧ o⇩C⇩L selfbutter |1⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
                       id_cblinfun ⟦C1,A1,B1⟧
                       ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
@@ -139,7 +136,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      clear 2.
      clear 1.
 
-     seq 2 0: (pauliX»⟦B1⟧ o⇩C⇩L proj |0⟩»⟦C1⟧ o⇩C⇩L proj |1⟩»⟦A1⟧) *⇩S
+     seq 2 0: (pauliX»⟦B1⟧ o⇩C⇩L selfbutter |0⟩»⟦C1⟧ o⇩C⇩L selfbutter |1⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
                       id_cblinfun ⟦C1,A1,B1⟧
                       ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
@@ -154,7 +151,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
 
 
    # Case a1=1 c1=1
-   - conseq pre: Cla[a1=1 ∧ c1=1] ⊓ ((proj |1⟩»⟦C1⟧ o⇩C⇩L proj |1⟩»⟦A1⟧) *⇩S
+   - conseq pre: Cla[a1=1 ∧ c1=1] ⊓ ((selfbutter |1⟩»⟦C1⟧ o⇩C⇩L selfbutter |1⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
                       id_cblinfun ⟦C1,A1,B1⟧
                       ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧).
@@ -162,7 +159,7 @@ qrhl {Qeq[C1=A2]} call teleport; ~ skip; {Qeq[B1=A2]}.
      clear 2.
      clear 1.
 
-     seq 2 0: (pauliZ»⟦B1⟧ o⇩C⇩L pauliX»⟦B1⟧ o⇩C⇩L proj |1⟩»⟦C1⟧ o⇩C⇩L proj |1⟩»⟦A1⟧) *⇩S
+     seq 2 0: (pauliZ»⟦B1⟧ o⇩C⇩L pauliX»⟦B1⟧ o⇩C⇩L selfbutter |1⟩»⟦C1⟧ o⇩C⇩L selfbutter |1⟩»⟦A1⟧) *⇩S
                    quantum_equality_full
                       id_cblinfun ⟦C1,A1,B1⟧
                       ((hadamard ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op* o⇩C⇩L (CNOT ⊗⇩o id_cblinfun) o⇩C⇩L assoc_op o⇩C⇩L addState EPR) ⟦A2⟧.
