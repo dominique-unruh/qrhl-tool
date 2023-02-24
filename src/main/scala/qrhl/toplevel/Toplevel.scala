@@ -191,7 +191,7 @@ class Toplevel private(initialState : State,
   }
 
   private def updateFormulaViewer(): Unit = {
-    if (formulaViewer != null && currentState.hasIsabelle) {
+    if (formulaViewer != null && formulaViewer.isVisible && currentState.hasIsabelle) {
       implicit val isabelle: Isabelle = currentState.isabelle.isabelle.isabelleControl
       implicit val context: Context = currentState.isabelle.context
       formulaViewer.setContext(isabelle, context)
