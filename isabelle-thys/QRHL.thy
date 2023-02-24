@@ -8,6 +8,11 @@ begin
 hide_const (open) Infinite_Set_Sum.abs_summable_on
 notation Infinite_Sum.abs_summable_on (infixr "abs'_summable'_on" 46) *)
 
+no_notation Lattice.meet (infixl "\<sqinter>\<index>" 70)
+no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
+no_notation Order.top ("\<top>\<index>")
+no_notation Order.bottom ("\<bottom>\<index>")
+
 unbundle notation_norm
 unbundle cblinfun_notation
 unbundle no_jnf_notation

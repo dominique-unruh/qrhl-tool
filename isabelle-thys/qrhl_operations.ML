@@ -6,6 +6,10 @@ open Expressions
 open Prog_Variables
 open QRHL
 
+
+
+
+
 (* TODO remove? *)
 structure Terms = struct
 val table = Synchronized.var ("term_table") (Inttab.empty, Termtab.empty)
@@ -546,6 +550,18 @@ in ctxt end
 val skip_tac_op =
   apply_tactic_on_term_concl (fn ctxt => fn () => Basic_Rules.skip_conseq_tac ctxt 1)
 
+(* Copied from Sketch_And_Explore.thy *)
+fun maybe_quote ctxt =
+  ATP_Util.maybe_quote (Thy_Header.get_keywords' ctxt);
+
+(* Copied from Sketch_And_Explore.thy *)
+fun print_typ ctxt T =
+  T
+  |> Syntax.string_of_typ ctxt
+  |> maybe_quote ctxt;
+
+val print_term = Print_Term_Reliably.print_term
+
 fun print_as_statement ctxt name fixes extra_lines assms concl : string =
   let
     (* val ((fixes, assms, concl), ctxt) = eigen_context_for_statement (fixes, assms, concl) ctxt *)
@@ -555,8 +571,8 @@ fun print_as_statement ctxt name fixes extra_lines assms concl : string =
     val fixes_s = if null fixes then []
                   else ["  fixes " ^ space_implode " and "
                         (map (fn (v, T) => v ^ " :: " ^ print_typ ctxt T) fixes)]
-    val assms_s = map (fn t => "  assumes " ^ print_term ctxt t) assms
-    val conclusion_s = "  shows " ^ print_term ctxt concl
+    val assms_s = map (fn t => "  assumes " ^ cartouche (print_term ctxt t)) assms
+    val conclusion_s = "  shows " ^ cartouche (print_term ctxt concl)
     val result_string = cat_lines ([lemma_s] @ fixes_s @ extra_lines @ assms_s @ [conclusion_s])
   in
     YXML.content_of result_string

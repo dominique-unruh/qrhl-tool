@@ -85,7 +85,7 @@ class FormulaWidget(contextMapProvider: ContextMapProvider, differSide: Differ.S
 
   private object treePopup extends JPopupMenu {
     add(new SimpleAction("Copy", { e =>
-      val strings = selectedSubformulas.map(_.pretty(contextMapProvider.contextMap))
+      val strings = selectedSubformulas.map(_.printTermReliably)
       val string = strings.mkString("\n")
       val clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
       val stringSelection = new StringSelection(string)

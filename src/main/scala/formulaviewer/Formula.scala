@@ -12,6 +12,8 @@ class Formula(val term: Term)(implicit val isabelle: Isabelle, val context: Cont
       case _: IsabelleControllerException => "??"
     }
 
+  def printTermReliably: String = Utils.printTermReliably(context, term)
+
   def descriptiveString(contextMap: ContextMap) = term match {
     case Const(name, _) => s"${pretty(contextMap)} :: ${prettyTyp(contextMap)} (const: $name)"
     case Bound(i) => s"Bound variable (index $i)"

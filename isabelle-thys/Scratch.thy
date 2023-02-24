@@ -1,6 +1,109 @@
 theory Scratch
-  imports QRHL.QRHL Missing_Bounded_Operators "HOL-Eisbach.Eisbach"
+  imports QRHL
+ (* "HOL-ex.Sketch_and_Explore" *) 
+(* "HOL-Eisbach.Eisbach" *)
+QRHL_Operations 
 begin
+
+ML \<open>
+
+\<close>
+
+ML \<open>
+\<close>
+
+
+(* Adapted from Sketch_And_Explore *)
+ML \<open>
+
+val t = Syntax.read_term (Proof_Context.set_mode Proof_Context.mode_schematic \<^context>)
+  "(1::?'a::{one}, undefined::('hello::finite \<times> 'huhu), undefined::'hello)"
+
+val res = Print_Term_Reliably.print_term \<^context> t
+val t2 = Syntax.read_term (Proof_Context.set_mode Proof_Context.mode_schematic \<^context>)
+res
+val eq = t = t2
+\<close>
+
+
+ML \<open>
+val t = Syntax.parse_term (Proof_Context.set_mode Proof_Context.mode_schematic \<^context>)
+  "(1::'a::{one}, 1::'a )"
+val tf = Term.add_tfrees t []
+|> map snd |> flat |> map writeln
+\<close>
+
+
+term \<open>\<bottom>\<close>
+
+term Order.bottom
+
+
+
+
+
+
+
+
+lemma lemma_724698:
+  fixes C :: "(bit, qu) qregister" and A :: "(bit, qu) qregister" and B :: "(bit, qu) qregister"
+  assumes [register]: \<open>declared_qvars \<lbrakk>C, A, B\<rbrakk>\<close>
+  shows "qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q (C::(bit, qu) qregister) \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A \<le> \<CC>\<ll>\<aa>[\<parallel>EPR\<parallel> = 1] \<sqinter> (\<CC>\<ll>\<aa>[isometry CNOT] \<sqinter> (apply_qregister \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C, qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A\<rbrakk>\<^sub>q CNOT* *\<^sub>S (\<CC>\<ll>\<aa>[isometry hadamard] \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C) hadamard* *\<^sub>S ((let M = computational_basis in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (\<Sqinter>z. let P = apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A) (mproj M z) *\<^sub>S \<top> in (let M = computational_basis in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (\<Sqinter>za. let P = apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C) (mproj M za) *\<^sub>S \<top> in (\<CC>\<ll>\<aa>[z \<noteq> 1] + \<CC>\<ll>\<aa>[isometry pauliX] \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliX* *\<^sub>S ((\<CC>\<ll>\<aa>[za \<noteq> 1] + \<CC>\<ll>\<aa>[isometry pauliZ] \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliZ* *\<^sub>S (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliZ *\<^sub>S \<top>)))) \<sqinter> (\<CC>\<ll>\<aa>[za = 1] + qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A) \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliX *\<^sub>S \<top>)))) \<sqinter> (\<CC>\<ll>\<aa>[z = 1] + (\<CC>\<ll>\<aa>[za \<noteq> 1] + \<CC>\<ll>\<aa>[isometry pauliZ] \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliZ* *\<^sub>S (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliZ *\<^sub>S \<top>)))) \<sqinter> (\<CC>\<ll>\<aa>[za = 1] + qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A)) \<sqinter> P + - P)) \<sqinter> P + - P)) \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C) hadamard *\<^sub>S \<top>))) \<sqinter> (apply_qregister \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C, qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A\<rbrakk>\<^sub>q CNOT *\<^sub>S \<top>)))) \<div> EPR\<guillemotright>\<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A, qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B\<rbrakk>\<^sub>q"
+  apply prepare_for_code
+
+experiment
+  fixes C :: "(bit, qu) qregister" and A :: "(bit, qu) qregister" and B :: "(bit, qu) qregister"
+  assumes [register]: \<open>declared_qvars \<lbrakk>C, A, B\<rbrakk>\<close>
+begin
+
+ML \<open>
+Prog_Variables.
+\<close>
+
+
+end
+
+
+ML\<open>open QRHL_Operations\<close>
+
+ML \<open>
+get_thms \<^context> "refl"
+\<close>
+
+
+ML \<open>
+QRHL_Operations.thms_as_subgoals (\<^context>, "refl")
+\<close>
+
+
+ML \<open>
+val ctxt = \<^context> |> Config.put Printer.show_types true
+val _ = Syntax.string_of_term ctxt \<^term>\<open>1=2\<close> |> writeln
+\<close>
+
+thm HOL.refl
+thm refl
+term refl
+
+thm conjI
+thm HOL.conjI
+
+declare[[show_types]]
+
+
+lemma xxx[simp]: \<open>is_Proj (selfbutterket c')\<close>
+  sledgehammer
+  by (simp add: butterfly_is_Proj)
+  try0
+  by -
+
+
+lemma \<open>Proj (selfbutterket c' *\<^sub>S \<top>) = selfbutterket c'\<close>
+  by (simp add: Proj_on_own_range)
+
+  apply simp
+
+lemma \<open>(SUP x\<in>Y. f x) \<le> (Z :: _ ell2 ccsubspace)\<close>
 
 no_notation m_inv ("inv\<index> _" [81] 80)
 unbundle no_vec_syntax
