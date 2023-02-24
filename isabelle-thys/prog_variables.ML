@@ -782,9 +782,11 @@ type translate_to_index_registers_conv_options = {
 }
 
 val translate_to_index_registers_conv_default_options : translate_to_index_registers_conv_options =
-  {trace = true, level = 0, descend = true}
-fun translate_to_index_registers_conv_default_options_inc_level {trace, level, descend} : translate_to_index_registers_conv_options =
-  {trace=trace, level=level+1, descend=descend}
+  {trace = false, level = 0, descend = true}
+fun translate_to_index_registers_conv_options_inc_level {trace, level, descend} : translate_to_index_registers_conv_options =
+  {trace = trace, level = level+1, descend = descend}
+fun translate_to_index_registers_conv_options_trace trace {trace=_, level, descend} : translate_to_index_registers_conv_options =
+  {trace = trace, level = level+1, descend = descend}
 
 fun translate_to_index_registers_conv_tac0 ctxt config rules (st:thm) = let
   fun named_thms_str () = (Pretty.marks_str (Proof_Context.markup_extern_fact ctxt \<^named_theorems>\<open>translate_to_index_registers\<close>) |> Pretty.string_of)
@@ -792,7 +794,7 @@ fun translate_to_index_registers_conv_tac0 ctxt config rules (st:thm) = let
   val thisgoal_str = Lazy.lazy (fn () => thisgoal |> Syntax.string_of_term ctxt)
   fun err msg = error ("translate_to_index_registers_conv_tac: TODO need better error message: " ^ msg ^ ", goal: " ^ Lazy.force thisgoal_str)
   val _ = Thm.nprems_of st = 1 orelse err "internal error"
-  val next_config = translate_to_index_registers_conv_default_options_inc_level config
+  val next_config = translate_to_index_registers_conv_options_inc_level config
   val trace = if #trace config then
     let val indent = replicate_string (#level config) "  " in fn str => 
         let val lines = split_lines (str ())

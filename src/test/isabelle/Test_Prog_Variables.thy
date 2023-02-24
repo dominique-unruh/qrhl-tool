@@ -73,7 +73,8 @@ lemma \<open>\<lbrakk>q1, r1 \<le> q1, r1, q2\<rbrakk>\<^sub>q\<close>
   by (tactic \<open>Prog_Variables.qregister_le_tac \<^context> 1\<close>)
 
 ML \<open>
-fun translate_to_index_registers_conv_with_opts ctxt = translate_to_index_registers_conv ctxt translate_to_index_registers_conv_default_options
+fun translate_to_index_registers_conv_with_opts ctxt = 
+  translate_to_index_registers_conv ctxt translate_to_index_registers_conv_default_options
 \<close>
 
 

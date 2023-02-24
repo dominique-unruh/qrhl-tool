@@ -146,7 +146,7 @@ fun annotate_types_in_term ctxt t =
 fun strip_duplicate_sorts ctxt t = let
   val defaultS = Sign.defaultS (Proof_Context.theory_of ctxt)
   val seen = Unsynchronized.ref []
-  fun f_sort T sort = if sort = defaultS orelse member (=) (!seen) T then dummyS 
+  fun f_sort T sort = if sort = defaultS orelse member (op=) (!seen) T then dummyS 
                       else (seen := T :: !seen; sort)
   fun f_atyp (T as TFree(name, sort)) = TFree(name, f_sort T sort)
     | f_atyp (T as TVar(name, sort)) = TVar(name, f_sort T sort)

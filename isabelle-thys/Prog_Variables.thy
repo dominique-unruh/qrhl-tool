@@ -3292,7 +3292,80 @@ lemmas translate_to_index_registers_isometry[translate_to_index_registers] =
 lemmas translate_to_index_registers_partial_isometry[translate_to_index_registers] =
   translate_to_index_registers_template_o'_qr[where f=partial_isometry, OF apply_qregister_partial_isometry, remove_prem]
 
-(* TODO Inf (not INF), Sup (not SUP), Let, lambda-expr? *)
+lemma translate_to_index_registers_INF[translate_to_index_registers]:
+  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER_SPACE (S x) Q (T x)\<close>
+  assumes \<open>TTIR_QREGISTER Q\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (INF x\<in>A. S x) Q (INF x\<in>A. T x)\<close>
+  using assms
+  by (simp add: TTIR_APPLY_QREGISTER_SPACE_def TTIR_QREGISTER_def apply_qregister_space_INF)
+
+lemma translate_to_index_registers_SUP[translate_to_index_registers]:
+  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER_SPACE (S x) Q (T x)\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (SUP x\<in>A. S x) Q (SUP x\<in>A. T x)\<close>
+  using assms
+  by (simp add: TTIR_APPLY_QREGISTER_SPACE_def TTIR_QREGISTER_def apply_qregister_space_SUP)
+
+lemma translate_to_index_registers_let_ss[translate_to_index_registers]:
+  fixes S :: \<open>'a ell2 ccsubspace \<Rightarrow> 'b ell2 ccsubspace\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A R B\<close>
+  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER_SPACE (S (apply_qregister_space R x)) Q (T x)\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (let x = A in S x) Q (let x = B in T x)\<close>
+  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_SPACE_def)
+
+lemma translate_to_index_registers_let_os[translate_to_index_registers]:
+  fixes S :: \<open>'a qupdate \<Rightarrow> 'b ell2 ccsubspace\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER A R B\<close>
+  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER_SPACE (S (apply_qregister R x)) Q (T x)\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (let x = A in S x) Q (let x = B in T x)\<close>
+  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_def TTIR_APPLY_QREGISTER_SPACE_def)
+
+lemma translate_to_index_registers_let_sx[translate_to_index_registers]:
+  fixes S :: \<open>'a ell2 ccsubspace \<Rightarrow> 'b ell2 ccsubspace\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A R B\<close>
+  assumes \<open>\<And>x. PROP TTIR_EQ (S (apply_qregister_space R x)) (T x)\<close>
+  shows \<open>PROP TTIR_EQ (let x = A in S x) (let x = B in T x)\<close>
+  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_SPACE_def)
+
+lemma translate_to_index_registers_let_ox[translate_to_index_registers]:
+  fixes S :: \<open>'a qupdate \<Rightarrow> 'b ell2 ccsubspace\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER A R B\<close>
+  assumes \<open>\<And>x. PROP TTIR_EQ (S (apply_qregister R x)) (T x)\<close>
+  shows \<open>PROP TTIR_EQ (let x = A in S x) (let x = B in T x)\<close>
+  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_def)
+
+lemma translate_to_index_registers_let_so[translate_to_index_registers]:
+  fixes S :: \<open>'a ell2 ccsubspace \<Rightarrow> 'b qupdate\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A R B\<close>
+  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER (S (apply_qregister_space R x)) Q (T x)\<close>
+  shows \<open>TTIR_APPLY_QREGISTER (let x = A in S x) Q (let x = B in T x)\<close>
+  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_def TTIR_APPLY_QREGISTER_SPACE_def)
+
+lemma translate_to_index_registers_let_oo[translate_to_index_registers]:
+  fixes S :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER A R B\<close>
+  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER (S (apply_qregister R x)) Q (T x)\<close>
+  shows \<open>TTIR_APPLY_QREGISTER (let x = A in S x) Q (let x = B in T x)\<close>
+  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_def)
+
+lemma translate_to_index_registers_let_s[translate_to_index_registers]:
+  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER_SPACE (S x) Q (T x)\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (let x = y in S x) Q (let x = y in T x)\<close>
+  by (simp add: assms)
+
+lemma translate_to_index_registers_let_o[translate_to_index_registers]:
+  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER (S x) Q (T x)\<close>
+  shows \<open>TTIR_APPLY_QREGISTER (let x = y in S x) Q (let x = y in T x)\<close>
+  by (simp add: assms)
+
+(* Could be an alternative to the more complex (but more let-duplication-avoiding) TTIR_APPLY_QREGISTER_SPACE-rules for let above *)
+lemma translate_to_index_registers_let1':
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE (S y) Q T\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (let x = y in S x) Q T\<close>
+  by (simp add: assms)
+lemma translate_to_index_registers_let2':
+  assumes \<open>TTIR_APPLY_QREGISTER (S y) Q T\<close>
+  shows \<open>TTIR_APPLY_QREGISTER (let x = y in S x) Q T\<close>
+  by (simp add: assms)
 
 section \<open>ML code\<close>
 
