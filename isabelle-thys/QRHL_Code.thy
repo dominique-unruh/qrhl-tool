@@ -137,9 +137,9 @@ lemma cregister_to_coderep_inverse[code abstype]: \<open>cregister_from_coderep 
   by (auto simp: cregister_to_coderep_def cregister_eqI_setter
       setter_of_cregister_from_getter_is_cregister setter_of_cregister_from_getter_setter
       valid_getter_setter_def non_cregister)
-lemma [code]: \<open>cregister_to_coderep cFst = Some (fst, \<lambda>a (_,b). (a,b))\<close>
+lemma [code]: \<open>cregister_to_coderep cFst = Some (fst, \<lambda>a. apfst (\<lambda>_. a))\<close>
   by (simp add: cregister_to_coderep_def setter_cFst[abs_def] case_prod_unfold)
-lemma [code]: \<open>cregister_to_coderep cSnd = Some (snd, \<lambda>b (a,_). (a,b))\<close>
+lemma [code]: \<open>cregister_to_coderep cSnd = Some (snd, \<lambda>b. apsnd (\<lambda>_. b))\<close>
   by (simp add: cregister_to_coderep_def setter_cSnd[abs_def] case_prod_unfold)
 lemma [code]: \<open>getter R = (case cregister_to_coderep R of 
   None \<Rightarrow> Code.abort STR ''getter of non_cregister executed'' (\<lambda>_. getter R)

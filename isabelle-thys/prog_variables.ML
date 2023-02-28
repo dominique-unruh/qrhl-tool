@@ -535,8 +535,11 @@ fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
   handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
 
 (* Normalizes a register (e.g., removes id registers etc.) *)
-val normalize_register_conv = Conv.bottom_rewrs_conv 
-  @{thms qregister_chain_id[THEN eq_reflection] qregister_id_chain[THEN eq_reflection] qregister_chain_pair[symmetric, THEN eq_reflection]}
+val normalize_register_conv = 
+  Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
+    @{thms qregister_chain_id[THEN eq_reflection] qregister_id_chain[THEN eq_reflection]
+           qregister_chain_pair[symmetric, THEN eq_reflection] pair_fst_snd[THEN eq_reflection]
+           qregister_chain_empty_right[THEN eq_reflection] qregister_chain_empty_left[THEN eq_reflection]}
 
 (* Like normalize_register_conv, but prefers \<lbrakk>Fst o X, Fst o Y\<rbrakk> over Fst o \<lbrakk>X, Y\<rbrakk> *)
 fun normalize_register_conv2 ctxt = 
@@ -600,7 +603,7 @@ in
 end
 in
 (* Tries to rewrite a `qregister_conversion F G` into an index-register.
-   (Index-registers are registers build from chain, pair, Fst, Snd, id.) *)
+   (Index-registers are registers build from chain, pair, Fst, Snd, id, empty.) *)
 fun qregister_conversion_to_register_conv ctxt = 
   normalize_register_conv2 ctxt then_conv 
   (qregister_conversion_to_register_conv_id else_conv qregister_conversion_to_register_conv0 ctxt)
@@ -628,7 +631,7 @@ in SUBGOAL (fn (t,i) =>
   | _ =>  tac' ctxt i))
 end
 
-(* Returns a theorem `qregister_le ctxt lhs rhs` if possible *)
+(* Returns a theorem `qregister_le lhs rhs` if possible *)
 (* TODO: support cregisters as well *)
 fun qregister_le_prove ctxt lhs rhs = let
   val (rhs_inT, rhs_outT) = dest_qregisterT_ct (Thm.ctyp_of_cterm rhs)
@@ -656,13 +659,21 @@ in
 end
 
 (* Returns true if argument is a (quantum) index-register *)
-(* TODO: support cregisters as well *)
 fun is_index_qregister (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ t $ u) = is_index_qregister t andalso is_index_qregister u
   | is_index_qregister (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ t $ u) = is_index_qregister t andalso is_index_qregister u
   | is_index_qregister (Const(\<^const_name>\<open>qFst\<close>,_)) = true
   | is_index_qregister (Const(\<^const_name>\<open>qSnd\<close>,_)) = true
   | is_index_qregister \<^Const_>\<open>qregister_id _\<close> = true
+  | is_index_qregister \<^Const_>\<open>empty_qregister _ _\<close> = true
   | is_index_qregister _ = false
+(* Returns true if argument is a (classical) index-register *)
+fun is_index_cregister (Const(\<^const_name>\<open>cregister_pair\<close>,_) $ t $ u) = is_index_cregister t andalso is_index_cregister u
+  | is_index_cregister (Const(\<^const_name>\<open>cregister_chain\<close>,_) $ t $ u) = is_index_cregister t andalso is_index_cregister u
+  | is_index_cregister (Const(\<^const_name>\<open>cFst\<close>,_)) = true
+  | is_index_cregister (Const(\<^const_name>\<open>cSnd\<close>,_)) = true
+  | is_index_cregister \<^Const_>\<open>cregister_id _\<close> = true
+  | is_index_cregister \<^Const_>\<open>empty_cregister _ _\<close> = true
+  | is_index_cregister _ = false
 
 (* Transforms F into [F1,\<dots>,Fn] such that F is equivalent to (F1;\<dots>Fn). *)
 (* TODO: support cregisters as well *)

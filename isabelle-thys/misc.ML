@@ -14,26 +14,41 @@ fun string_of_term_truncated ctxt depth t = let
     | _ => t
 in Syntax.string_of_term ctxt (trunc depth t) end
 
-fun prove_handle ctxt vars goal tac =
-  Goal.prove ctxt vars [] goal (fn {context,...} => tac context)
-  handle ERROR _ => raise TERM("Failed to prove goal",[goal])
+fun prove_handle ctxt goal tac =
+  Goal.prove_internal ctxt [] goal (fn _ => tac ctxt)
+  handle ERROR _ => raise CTERM("Failed to prove goal",[goal])
 
 fun SOLVE1 tac st = 
   (tac THEN COND (has_fewer_prems (Thm.nprems_of st)) all_tac no_tac) st
+
+fun generalized_reflexivity ct1 ct2 = let
+  val thm1 = (Thm.beta_conversion true then_conv Thm.eta_conversion) ct1
+  val thm2 = (Thm.beta_conversion true then_conv Thm.eta_conversion) ct2
+  val thm = Thm.transitive thm1 (Thm.symmetric thm2)
+          handle THM _ => raise CTERM ("generalized_reflexivity: mismatch", [ct1, ct2])
+in thm end
+
+fun mk_equals_cterm ctxt ct1 ct2 : cterm =
+  Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq \<open>Thm.typ_of_cterm ct1\<close>\<close>) ct1) ct2
 
 fun conv_from_tac check tac ctxt ct =
   let val t = Thm.term_of ct
       val _ = check ctxt t
       val maxidx = Thm.maxidx_of_cterm ct
-      val T = Thm.typ_of_cterm ct
-      val goal = Logic.mk_equals (Thm.term_of ct, Var(("result",maxidx+1), T))
-      val thm = prove_handle ctxt [] goal tac
+      val T = Thm.ctyp_of_cterm ct
+      val goal = mk_equals_cterm ctxt ct (Thm.var (("result",maxidx+1), T))
+      val thm = prove_handle ctxt goal tac
+      val thm = if Thm.term_of (Thm.lhs_of thm) = Thm.term_of ct then thm
+                else let val refl = generalized_reflexivity ct (Thm.lhs_of thm)
+                             handle CTERM _ => error ("conv_from_tac: tactic changed lhs")
+(* val _ = \<^print> ("FIXUP", Thm.prop_of refl, Thm.prop_of thm) *)
+                     in Thm.transitive refl thm end
   in
     thm
   end
 
 
-(* Converts e into (\<lambda>(x\<^sub>1,x\<^sub>2,x\<^sub>3,..). e (x\<^sub>1,x\<^sub>2,x\<^sub>3,..)).
+(* (* Converts e into (\<lambda>(x\<^sub>1,x\<^sub>2,x\<^sub>3,..). e (x\<^sub>1,x\<^sub>2,x\<^sub>3,..)).
   Names and types of x\<^sub>i are given by varlist.
   (Names are renamed to be distinct.)
  *)
@@ -50,7 +65,7 @@ fun pat_lambda_conv ctxt varlist ct = let
     prove_handle ctxt ["term"] goal (fn context => simp_tac (put_simpset current_simpset context) 1)
   in
     infer_instantiate ctxt [(("term",0),ct)] thm
-  end
+  end *)
 
 fun change_conv conv ct =
   let val thm = conv ct
@@ -302,6 +317,12 @@ fun generalize_tac ctxt varname pat = SUBGOAL (fn (t,i) => case first_order_sear
 fun mk_ctxt_conv (f: conv -> conv) (conv: Proof.context -> conv) (ctxt: Proof.context) : conv = 
   f (conv ctxt)
 
+fun mk_ctxt_conv2 (f: conv -> conv -> conv) (conv1: Proof.context -> conv) (conv2: Proof.context -> conv) (ctxt: Proof.context) : conv = 
+  f (conv1 ctxt) (conv2 ctxt)
+
+fun then_ctxt_conv (conv1: Proof.context -> conv) (conv2: Proof.context -> conv) (ctxt: Proof.context) : conv = 
+  conv1 ctxt then_conv conv2 ctxt
+
 fun concl_conv2 conv ctxt ct = case Thm.term_of ct of
   \<^Const_>\<open>Pure.all _\<close> $ Abs _ => Conv.arg_conv (Conv.abs_conv (fn (_,ctxt) => concl_conv2 conv ctxt) ctxt) ct
   | \<^Const>\<open>Pure.imp\<close> $ _ $ _ => Conv.arg_conv (concl_conv2 conv ctxt) ct
@@ -359,5 +380,17 @@ fun MY_SUBGOAL ctxt tac : int -> tactic = CSUBGOAL (fn (subgoal,i) => let
 
 fun strip_params_concl (Const("Pure.all", _) $ Abs (a, T, t)) = strip_params_concl t
   | strip_params_concl B = B;
+
+(* Rewrites with theorems thms, but uses prover for conditions.
+Prover is invoked with a context that contains the original simpset, even though
+we replace it for Raw_Simplifier.rewrite_cterm. *)
+fun rewrite_with_prover (prover: Proof.context -> tactic) rules ctxt = let
+  val simpset = simpset_of ctxt
+  val ctxt = Simplifier.init_simpset rules ctxt
+  fun prover' ctxt = SINGLE (prover (put_simpset simpset ctxt))
+  val tac = Raw_Simplifier.rewrite_cterm (false,false,false) prover' ctxt
+in tac end
+fun rewrite_with_prover_tac prover rules ctxt =
+  CONVERSION (rewrite_with_prover prover rules ctxt)
 
 end

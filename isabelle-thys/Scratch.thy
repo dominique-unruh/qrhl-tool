@@ -5,67 +5,10 @@ theory Scratch
 (* QRHL_Operations  *)
 begin
 
-lemma translate_to_index_registers_let_ss[translate_to_index_registers]:
-  fixes S :: \<open>'a ell2 ccsubspace \<Rightarrow> 'b ell2 ccsubspace\<close>
-  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A R B\<close>
-  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER_SPACE (S (apply_qregister_space R x)) Q (T x)\<close>
-  shows \<open>TTIR_APPLY_QREGISTER_SPACE (let x = A in S x) Q (let x = B in T x)\<close>
-  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_SPACE_def)
+ML \<open>
+open Prog_Variables
+\<close>
 
-lemma translate_to_index_registers_let_os[translate_to_index_registers]:
-  fixes S :: \<open>'a qupdate \<Rightarrow> 'b ell2 ccsubspace\<close>
-  assumes \<open>TTIR_APPLY_QREGISTER A R B\<close>
-  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER_SPACE (S (apply_qregister R x)) Q (T x)\<close>
-  shows \<open>TTIR_APPLY_QREGISTER_SPACE (let x = A in S x) Q (let x = B in T x)\<close>
-  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_def TTIR_APPLY_QREGISTER_SPACE_def)
-
-lemma translate_to_index_registers_let_sx[translate_to_index_registers]:
-  fixes S :: \<open>'a ell2 ccsubspace \<Rightarrow> 'b ell2 ccsubspace\<close>
-  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A R B\<close>
-  assumes \<open>\<And>x. PROP TTIR_EQ (S (apply_qregister_space R x)) (T x)\<close>
-  shows \<open>PROP TTIR_EQ (let x = A in S x) (let x = B in T x)\<close>
-  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_SPACE_def)
-
-lemma translate_to_index_registers_let_ox[translate_to_index_registers]:
-  fixes S :: \<open>'a qupdate \<Rightarrow> 'b ell2 ccsubspace\<close>
-  assumes \<open>TTIR_APPLY_QREGISTER A R B\<close>
-  assumes \<open>\<And>x. PROP TTIR_EQ (S (apply_qregister R x)) (T x)\<close>
-  shows \<open>PROP TTIR_EQ (let x = A in S x) (let x = B in T x)\<close>
-  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_def)
-
-lemma translate_to_index_registers_let_so[translate_to_index_registers]:
-  fixes S :: \<open>'a ell2 ccsubspace \<Rightarrow> 'b qupdate\<close>
-  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A R B\<close>
-  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER (S (apply_qregister_space R x)) Q (T x)\<close>
-  shows \<open>TTIR_APPLY_QREGISTER (let x = A in S x) Q (let x = B in T x)\<close>
-  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_def TTIR_APPLY_QREGISTER_SPACE_def)
-
-lemma translate_to_index_registers_let_oo[translate_to_index_registers]:
-  fixes S :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
-  assumes \<open>TTIR_APPLY_QREGISTER A R B\<close>
-  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER (S (apply_qregister R x)) Q (T x)\<close>
-  shows \<open>TTIR_APPLY_QREGISTER (let x = A in S x) Q (let x = B in T x)\<close>
-  using assms by (simp add: Let_def TTIR_APPLY_QREGISTER_def)
-
-lemma translate_to_index_registers_let_s[translate_to_index_registers]:
-  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER_SPACE (S x) Q (T x)\<close>
-  shows \<open>TTIR_APPLY_QREGISTER_SPACE (let x = y in S x) Q (let x = y in T x)\<close>
-  by (simp add: assms)
-
-lemma translate_to_index_registers_let_o[translate_to_index_registers]:
-  assumes \<open>\<And>x. TTIR_APPLY_QREGISTER (S x) Q (T x)\<close>
-  shows \<open>TTIR_APPLY_QREGISTER (let x = y in S x) Q (let x = y in T x)\<close>
-  by (simp add: assms)
-
-(* Could be an alternative to the more complex (but more let-duplication-avoiding) TTIR_APPLY_QREGISTER_SPACE-rules for let above *)
-lemma translate_to_index_registers_let1':
-  assumes \<open>TTIR_APPLY_QREGISTER_SPACE (S y) Q T\<close>
-  shows \<open>TTIR_APPLY_QREGISTER_SPACE (let x = y in S x) Q T\<close>
-  by (simp add: assms)
-lemma translate_to_index_registers_let2':
-  assumes \<open>TTIR_APPLY_QREGISTER (S y) Q T\<close>
-  shows \<open>TTIR_APPLY_QREGISTER (let x = y in S x) Q T\<close>
-  by (simp add: assms)
 
 experiment
   fixes C :: "(bit, qu) qregister" and A :: "(bit, qu) qregister" and B :: "(bit, qu) qregister"
@@ -93,13 +36,577 @@ ML \<open>Prog_Variables.translate_to_index_registers_conv \<^context>
 
 end
 
+
+lemmas prepare_for_code_add =
+  (* qregister_of_cregister_Fst[symmetric] qregister_of_cregister_Snd[symmetric] *)
+  (* qregister_of_cregister_pair[symmetric] qregister_of_cregister_chain[symmetric] *)
+  apply_qregister_of_cregister permute_and_tensor1_cblinfun_code_prep
+  same_outside_cregister_def
+
+  apply_qregister_space_code_hack (* TODO think of something more efficient *)
+
+  case_prod_beta if_distrib[of fst] if_distrib[of snd] prod_eq_iff
+
+  div_leq_simp mod_mod_cancel
+
+  getter_pair getter_chain setter_chain setter_pair setter_cFst setter_cSnd
+
+  enum_index_prod_def fst_enum_nth snd_enum_nth enum_index_nth if_distrib[of enum_index]
+  enum_nth_injective
+
+  quantum_equality_full_def_let space_div_space_div_unlifted INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
+  top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2
+
+lemmas prepare_for_code_flip =
+  qregister_of_cregister_Fst qregister_of_cregister_Snd
+  qregister_of_cregister_pair qregister_of_cregister_chain
+lemma xxx: \<open>apply_qregister_space \<lbrakk>\<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q (\<lbrakk>#1\<rbrakk>\<^sub>q \<equiv>\<qq> \<lbrakk>#2.\<rbrakk>\<^sub>q) = a\<close>
+  apply (simp add: join_registers cong del: if_weak_cong add: prepare_for_code_add flip: prepare_for_code_flip)
+  oops
+
+lemma permute_and_tensor1_mat'_cong:
+\<open>n=m \<Longrightarrow> a=b \<Longrightarrow> permute_and_tensor1_mat' n f g a = permute_and_tensor1_mat' m f g b\<close>
+  by simp
+
+definition "Proj_code = Proj"
+lemma apply_qregister_space_code_hack': \<open>apply_qregister_space (qregister_of_cregister F) S = apply_qregister (qregister_of_cregister F) (Proj_code S) *\<^sub>S \<top>\<close>
+  unfolding Proj_code_def by (rule apply_qregister_space_def)
+
+ML \<open>
+fun top_everywhere_conv conv ctxt = Conv.top_conv (fn ctxt => Conv.try_conv (conv ctxt)) ctxt
+fun bottom_everywhere_conv conv ctxt = Conv.bottom_conv (fn ctxt => Conv.try_conv (conv ctxt)) ctxt
+\<close>
+
+
+lemma xxx:
+\<open>apply_qregister_space \<lbrakk>\<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q (\<lbrakk>#1\<rbrakk>\<^sub>q \<equiv>\<qq> \<lbrakk>#2.\<rbrakk>\<^sub>q)
+    \<le> apply_qregister_space \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q
+        (apply_qregister_space \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q
+          (apply_qregister_space \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q
+            (apply_qregister_space empty_qregister \<CC>\<ll>\<aa>[isometry CNOT] \<sqinter>
+             apply_qregister_space \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q
+              (apply_qregister \<lbrakk>\<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q (CNOT*) *\<^sub>S
+               apply_qregister_space \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q
+                (apply_qregister_space \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q
+                  (apply_qregister_space empty_qregister \<CC>\<ll>\<aa>[isometry hadamard] \<sqinter>
+                   apply_qregister_space \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q
+                    (apply_qregister \<lbrakk>#3\<rbrakk>\<^sub>q (hadamard*) *\<^sub>S
+                      ( (top)))) \<sqinter>
+                 apply_qregister_space \<lbrakk>\<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q
+                  (apply_qregister \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q CNOT *\<^sub>S
+                   apply_qregister_space empty_qregister \<top>)))) \<div> EPR\<guillemotright>\<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q))\<close>
+
+  apply (simp add: join_registers cong: permute_and_tensor1_mat'_cong cong del: if_weak_cong 
+        add: prepare_for_code_add  flip: prepare_for_code_flip)
+  oops
+
+lemma apply_qregister_space_of_cregister:
+  assumes \<open>cregister F\<close>
+  shows \<open>apply_qregister_space (qregister_of_cregister F) a =
+          permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) (Proj a) *\<^sub>S \<top>\<close>
+  by (simp add: apply_qregister_of_cregister apply_qregister_space_def assms)
+
+lemma qregister_to_cregister_conv_aux1: \<open>Q \<equiv> qregister_of_cregister F \<Longrightarrow> R \<equiv> qregister_of_cregister G \<Longrightarrow> \<lbrakk>Q,R\<rbrakk>\<^sub>q \<equiv> qregister_of_cregister \<lbrakk>F,G\<rbrakk>\<^sub>c\<close>
+  by (simp add: Scratch.prepare_for_code_flip(3))
+
+lemma qregister_to_cregister_conv_aux2: 
+  \<open>Q \<equiv> qregister_of_cregister F \<Longrightarrow> R \<equiv> qregister_of_cregister G \<Longrightarrow> 
+      qregister_chain Q R \<equiv> qregister_of_cregister (cregister_chain F G)\<close>
+   by (simp add: Scratch.prepare_for_code_flip(4))
+
+lemma qregister_of_cregister_empty: \<open>qregister_of_cregister empty_cregister = empty_qregister\<close>
+  by (metis empty_cregister_is_register empty_qregisters_same qregister_qregister_of_cregister)
+
+lemma qregister_of_cregister_id: \<open>qregister_of_cregister cregister_id = qregister_id\<close>
+  by (metis cregister_chain_id cregister_id qregister_chain_id qregister_conversion_as_register qregister_of_cregister_chain qregister_qregister_of_cregister)
+
+ML \<open>
+fun qregister_to_cregister_conv_tac ctxt st =
+  ((DETERM (resolve_tac ctxt @{thms qregister_to_cregister_conv_aux1 qregister_to_cregister_conv_aux2} 1)
+    THEN qregister_to_cregister_conv_tac ctxt THEN qregister_to_cregister_conv_tac ctxt)
+  ORELSE (DETERM (resolve_tac ctxt 
+    @{thms qregister_of_cregister_Fst[symmetric, THEN eq_reflection]
+           qregister_of_cregister_Snd[symmetric, THEN eq_reflection]
+           qregister_of_cregister_empty[symmetric, THEN eq_reflection]
+           qregister_of_cregister_id[symmetric, THEN eq_reflection]} 1))) st\<close>
+
+
+ML \<open>
+val qregister_to_cregister_conv = Misc.conv_from_tac
+  (fn _ => fn t => Prog_Variables.is_index_qregister t orelse raise CTERM ("not an index qregister", [ct]))
+  qregister_to_cregister_conv_tac\<close>
+
+ML \<open>
+fun apply_qregister_to_cregister_conv_tac ctxt =
+  (DETERM (resolve_tac ctxt @{thms apply_qregister_of_cregister[THEN eq_reflection] apply_qregister_space_of_cregister[THEN eq_reflection]} 1))
+  THEN Prog_Variables.distinct_vars_tac ctxt 1\<close>
+
+(* schematic_goal \<open>apply_qregister (qregister_of_cregister \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>c, \<lbrakk>#2\<rbrakk>\<^sub>c, \<lbrakk>#3\<rbrakk>\<^sub>c, \<lbrakk>#4.\<rbrakk>\<^sub>c\<rbrakk>\<^sub>c) A \<equiv> ?Q\<close>
+  apply (tactic \<open>apply_qregister_to_cregister_conv_tac \<^context>\<close>)
+  apply (tactic \<open>Prog_Variables.distinct_vars_tac \<^context> 1\<close>)  
+  apply (rule apply_qregister_of_cregister[THEN eq_reflection] apply_qregister_space_of_cregister[THEN eq_reflection]) *)
+
+ML \<open>
+val apply_qregister_to_cregister_conv = Misc.conv_from_tac
+  (fn _ => fn t => case t of \<^Const_>\<open>apply_qregister _ _\<close> $ (\<^Const_>\<open>qregister_of_cregister _ _\<close> $ _) $ _ => ()
+                           | \<^Const_>\<open>apply_qregister_space _ _\<close> $ (\<^Const_>\<open>qregister_of_cregister _ _\<close> $ _) $ _ => ()
+                           | _ => raise TERM ("not of the form `apply_qregister (qregister_of_cregister _) _`", [t]))
+  apply_qregister_to_cregister_conv_tac\<close>
+
+lemma cregister_lens_getter_conv_pair_aux:
+  assumes \<open>cregister \<lbrakk>F,G\<rbrakk>\<^sub>c\<close>
+  assumes \<open>getter F \<equiv> f\<close>
+  assumes \<open>getter G \<equiv> g\<close>
+  shows \<open>getter \<lbrakk>F,G\<rbrakk>\<^sub>c \<equiv> BNF_Def.convol f g\<close>
+  by (simp add: Scratch.prepare_for_code_add(11) assms(1) assms(2) assms(3) BNF_Def.convol_def)
+
+lemma cregister_lens_getter_conv_chain_aux:
+  assumes \<open>cregister F\<close>
+  assumes \<open>getter F \<equiv> f\<close>
+  assumes \<open>getter G \<equiv> g\<close>
+  shows \<open>getter (cregister_chain F G) \<equiv> g o f\<close>
+  by (simp add: assms(1) assms(2) assms(3) getter_chain)
+
+lemma cregister_lens_setter_conv_pair_aux:
+  assumes \<open>cregister \<lbrakk>F,G\<rbrakk>\<^sub>c\<close>
+  assumes \<open>setter F \<equiv> f\<close>
+  assumes \<open>setter G \<equiv> g\<close>
+  shows \<open>setter \<lbrakk>F,G\<rbrakk>\<^sub>c \<equiv> (\<lambda>(x,y). f x o g y)\<close>
+  by (simp add: Scratch.prepare_for_code_add(14) assms(1) assms(2) assms(3))
+
+lemma cregister_lens_setter_conv_chain_aux:
+  assumes \<open>cregister F\<close>
+  assumes \<open>cregister G\<close>
+  assumes \<open>setter F \<equiv> sF\<close>
+  assumes \<open>setter G \<equiv> sG\<close>
+  assumes \<open>getter F \<equiv> gF\<close>
+  shows \<open>setter (cregister_chain F G) \<equiv> (\<lambda>a m. sF (sG a (gF m)) m)\<close>
+  using setter_chain[OF assms(1,2), abs_def]
+  by (simp add: assms(3-5))
+
+lemma same_outside_cregister_sym:
+  \<open>cregister F \<Longrightarrow> same_outside_cregister F n m \<longleftrightarrow> same_outside_cregister F m n\<close>
+  apply (simp add: same_outside_cregister_def)
+  by (metis setter_getter_same setter_setter_same)
+
+(* TODO unused? *)
+lemma cregister_lens_soc_conv_chain_aux:
+  assumes [simp]: \<open>cregister F\<close>
+  assumes [simp]: \<open>cregister G\<close>
+  assumes socF: \<open>same_outside_cregister F \<equiv> socF\<close>
+  assumes socG: \<open>same_outside_cregister G \<equiv> socG\<close>
+  assumes gF: \<open>getter F \<equiv> gF\<close>
+  shows \<open>same_outside_cregister (cregister_chain F G) \<equiv> 
+            (\<lambda>m n. socF m n \<and> socG (gF m) (gF n))\<close>
+proof (intro eq_reflection ext iffI)
+  fix m n
+  define gG sF sG where \<open>gG = getter G\<close> and \<open>sF = setter F\<close> and \<open>sG = setter G\<close>
+  have sF_twice: \<open>sF a (sF b m) = sF a m\<close> for a b m
+    by (simp add: sF_def)
+  have sG_twice: \<open>sG a (sG b m) = sG a m\<close> for a b m
+    by (simp add: sG_def)
+  have sF_gF: \<open>sF (gF m) m = m\<close> for m
+    by (simp add: sF_def flip: gF)
+  have sG_gG: \<open>sG (gG m) m = m\<close> for m
+    by (simp add: sG_def gG_def)
+  have gF_sF: \<open>gF (sF a m) = a\<close> for a m
+    by (simp add: sF_def flip: gF)
+
+  show \<open>socF m n \<and> socG (gF m) (gF n)\<close> if \<open>same_outside_cregister (cregister_chain F G) m n\<close>
+  proof (rule conjI)
+    from that have m_def: \<open>m = sF (sG (gG (gF m)) (gF n)) n\<close>
+      by (simp add: same_outside_cregister_def setter_chain getter_chain gF
+          flip: sF_def sG_def gG_def)
+    have \<open>socF n m\<close>
+    proof (simp flip: socF sF_def add: gF same_outside_cregister_def)
+      have \<open>sF (gF n) m = sF (gF n) (sF (sG (gG (gF m)) (gF n)) n)\<close>
+        apply (subst m_def) by simp
+      also have \<open>\<dots> = n\<close>
+        by (simp add: sF_twice sF_gF)
+      finally show \<open>n = sF (gF n) m\<close>
+        by simp
+    qed
+    then show \<open>socF m n\<close>
+      by (metis assms(1) assms(3) same_outside_cregister_sym)
+    have \<open>socG (gF n) (gF m)\<close>
+    proof (simp flip: socG sG_def gG_def add: gF same_outside_cregister_def)
+      have \<open>sG (gG (gF n)) (gF m) = sG (gG (gF n)) (gF (sF (sG (gG (gF m)) (gF n)) n))\<close>
+        apply (subst m_def) by simp
+      also have \<open>\<dots> = gF n\<close>
+        by (simp add: gF_sF sG_twice sG_gG)
+      finally show \<open>gF n = sG (gG (gF n)) (gF m)\<close>
+        by simp
+    qed
+    then show \<open>socG (gF m) (gF n)\<close>
+      by (metis assms(2) assms(4) same_outside_cregister_sym)
+  qed
+
+  show \<open>same_outside_cregister (cregister_chain F G) m n\<close> if \<open>socF m n \<and> socG (gF m) (gF n)\<close> 
+  proof -
+    from that have \<open>socF m n\<close> and \<open>socG (gF m) (gF n)\<close>
+      by auto
+    from \<open>socG (gF m) (gF n)\<close>
+    have 1: \<open>sG (gG (gF m)) (gF n) = gF m\<close>
+      by (simp add: same_outside_cregister_def flip: socG sG_def gG_def)
+    from \<open>socF m n\<close>
+    have 2: \<open>sF (gF m) n = m\<close>
+      by (simp add: same_outside_cregister_def gF flip: socF sF_def)
+
+    have \<open>Prog_Variables.setter (cregister_chain F G)
+     (Prog_Variables.getter (cregister_chain F G) m) n = sF (sG (gG (gF m)) (gF n)) n\<close>
+      by (simp add: getter_chain setter_chain gF flip: gG_def sG_def sF_def)
+    also have \<open>\<dots> = sF (gF m) n\<close>
+      by (simp add: 1)
+    also from 2 have \<open>\<dots> = m\<close>
+      by -
+    finally show \<open>same_outside_cregister (cregister_chain F G) m n\<close>
+      by (simp add: same_outside_cregister_def)
+  qed
+qed
+
+lemma getter_empty: \<open>getter empty_cregister a = undefined\<close>
+  by (rule everything_the_same)
+
+ML \<open>
+fun cregister_lens_getter_conv_tac ctxt st =
+  ((DETERM (resolve_tac ctxt @{thms cregister_lens_getter_conv_pair_aux cregister_lens_getter_conv_chain_aux} 1)
+    THEN Prog_Variables.distinct_vars_tac ctxt 1 THEN cregister_lens_getter_conv_tac ctxt THEN cregister_lens_getter_conv_tac ctxt)
+  ORELSE (DETERM (resolve_tac ctxt 
+    @{thms getter_cFst[THEN eq_reflection] getter_cSnd[THEN eq_reflection] getter_id[abs_def] getter_empty[abs_def]} 1))) st\<close>
+
+ML \<open>
+val cregister_lens_getter_conv = Misc.conv_from_tac
+  (fn _ => fn t => case t of \<^Const_>\<open>getter _ _\<close> $ F => is_index_cregister F orelse raise TERM ("not an index register", [t])
+                           | _ => raise TERM ("not of the form `getter \<dots>`", [t]))
+  cregister_lens_getter_conv_tac\<close>
+
+lemma setter_cregister: \<open>setter empty_cregister a m = m\<close>
+  by (metis getter_empty setter_getter_same setter_setter_same)
+
+ML \<open>
+fun cregister_lens_setter_conv_tac ctxt st =
+  ((DETERM (resolve_tac ctxt @{thms cregister_lens_setter_conv_pair_aux} 1)
+    THEN Prog_Variables.distinct_vars_tac ctxt 1 THEN cregister_lens_setter_conv_tac ctxt THEN cregister_lens_setter_conv_tac ctxt)
+  ORELSE (DETERM (resolve_tac ctxt @{thms cregister_lens_setter_conv_chain_aux} 1)
+    THEN Prog_Variables.distinct_vars_tac ctxt 1 THEN Prog_Variables.distinct_vars_tac ctxt 1
+    THEN cregister_lens_setter_conv_tac ctxt THEN cregister_lens_setter_conv_tac ctxt
+    THEN cregister_lens_getter_conv_tac ctxt)
+  ORELSE (DETERM (resolve_tac ctxt 
+    @{thms setter_cFst[abs_def] setter_cSnd[abs_def] setter_id[abs_def] setter_cregister[abs_def]} 1))) st\<close>
+
+thm setter_cFst[abs_def] setter_cSnd[abs_def] setter_id[abs_def] setter_cregister[abs_def]
+
+ML \<open>
+val cregister_lens_setter_conv = Misc.conv_from_tac
+  (fn _ => fn t => case t of \<^Const_>\<open>setter _ _\<close> $ F => is_index_cregister F orelse raise TERM ("not an index register", [t])
+                           | _ => raise TERM ("not of the form `setter \<dots>`", [t]))
+  cregister_lens_setter_conv_tac\<close>
+
+ML \<open>
+fun tmp_conv ct = let
+  val goal = Logic.mk_equals (Thm.term_of ct, Free ("HELLO", Thm.typ_of_cterm ct --> Thm.typ_of_cterm ct) $ Thm.term_of ct)
+  val thm = Skip_Proof.make_thm (Thm.theory_of_cterm ct) goal
+in thm end 
+\<close>
+
+ML \<open>
+fun abs_conv' conv = Conv.abs_conv (fn (_,ctxt) => conv ctxt)
+\<close>
+
+
+ML \<open>
+open Conv
+(* Converts same_outside_qregister F into (\<lambda>m n. \<dots>) for an index-register F *)
+fun cregister_lens_soc_conv ctxt = 
+Conv.rewr_conv @{lemma \<open>same_outside_cregister F \<equiv> (\<lambda>x y. x = Prog_Variables.setter F (Prog_Variables.getter F x) y)\<close> by (simp add: same_outside_cregister_def[abs_def])}
+then_conv
+(
+ Misc.mk_ctxt_conv2 combination_conv 
+      cregister_lens_setter_conv
+      (Misc.mk_ctxt_conv fun_conv cregister_lens_getter_conv)
+ |> Misc.mk_ctxt_conv fun_conv
+ |> Misc.mk_ctxt_conv arg_conv
+ |> abs_conv'
+ |> abs_conv'
+) ctxt
+\<close>
+
+ML \<open>
+fun cregister_lens_conv ctxt = 
+  cregister_lens_getter_conv ctxt
+  else_conv cregister_lens_setter_conv ctxt
+  else_conv cregister_lens_soc_conv ctxt
+\<close>
+
+abbreviation \<open>upfst x \<equiv> apfst (\<lambda>_. x)\<close>
+abbreviation \<open>upsnd x \<equiv> apsnd (\<lambda>_. x)\<close>
+
+lemma permute_and_tensor1_cblinfun_conv_tac_aux:
+  fixes f :: \<open>'a::eenum \<Rightarrow> 'b::eenum\<close> and g h :: \<open>'a \<Rightarrow> 'a \<Rightarrow> 'c::eenum\<close>
+  assumes \<open>\<And>a. enum_index (f a) \<equiv> f' (enum_index a)\<close>
+  assumes \<open>\<And>a b. enum_index (g a b) \<equiv> g' (enum_index a) (enum_index b)\<close>
+  assumes \<open>\<And>a b. enum_index (h a b) \<equiv> h' (enum_index a) (enum_index b)\<close>
+  (* assumes \<open>\<And>a b. R a b = R' (enum_index a) (enum_index b)\<close> *)
+  shows \<open>permute_and_tensor1_cblinfun f (\<lambda>a b. g a b = h a b) \<equiv> 
+      (\<lambda>a. permute_and_tensor1_mat' CARD('a) f' (\<lambda>a b. g' a b = h' b b) (mat_of_cblinfun a))\<close>
+  sorry
+
+lemma enum_index_apfst:
+  fixes f :: \<open>'a::eenum \<Rightarrow> 'c::eenum\<close> and x :: \<open>'a \<times> 'b::eenum\<close>
+  assumes \<open>\<And>a. enum_index (f a) = f' (enum_index a)\<close>
+  shows \<open>enum_index (apfst f x) = f' (enum_index x div CARD('b)) * CARD('b) + enum_index x mod CARD('b)\<close>
+  by (simp add: apfst_def map_prod_def case_prod_beta enum_index_prod_def assms)
+
+lemma enum_index_apsnd:
+  fixes f :: \<open>'b::eenum \<Rightarrow> 'c::eenum\<close> and x :: \<open>'a::eenum \<times> 'b\<close>
+  assumes \<open>\<And>a. enum_index (f a) = f' (enum_index a)\<close>
+  shows \<open>enum_index (apsnd f x) = enum_index x div CARD('b) * CARD('c) + f' (enum_index (snd x))\<close>
+  by (simp add: apsnd_def map_prod_def case_prod_beta enum_index_prod_def assms)
+
+lemma enum_index_upfst:
+  fixes a :: \<open>'c::eenum\<close> and x :: \<open>'a::eenum \<times> 'b::eenum\<close>
+  shows \<open>enum_index (upfst a x) = enum_index a * CARD('b) + enum_index x mod CARD('b)\<close>
+  by (simp add: enum_index_apfst)
+
+lemma enum_index_upsnd:
+  fixes a :: \<open>'c::eenum\<close> and x :: \<open>'a::eenum \<times> 'b::eenum\<close>
+  shows \<open>enum_index (upsnd a x) = enum_index x div CARD('b) * CARD('c) + enum_index a\<close>
+  by (simp add: enum_index_apsnd)
+
+lemma enum_index_convol:
+  fixes f :: \<open>'a \<Rightarrow> 'b::eenum\<close> and g :: \<open>'a \<Rightarrow> 'c::eenum\<close>
+  shows \<open>enum_index (BNF_Def.convol f g a) = enum_index (f a) * CARD('c) + enum_index (g a)\<close>
+  by (simp add: enum_index_prod_def convol_def)
+
+lemma upsnd_twice: \<open>upsnd a (upsnd b x) = upsnd a x\<close>
+  by (simp add: prod.expand)
+
+lemma upfst_twice: \<open>upfst a (upfst b x) = upfst a x\<close>
+  by (simp add: prod.expand)
+
+lemma upfst_upsnd: \<open>upfst a (upsnd b x) = (a,b)\<close>
+  by simp
+
+lemma upsnd_upfst: \<open>upsnd b (upfst a x) = (a,b)\<close>
+  by simp
+
+lemma snd_upsnd: \<open>snd (upsnd a x) = a\<close>
+  by simp
+
+lemma fst_upfst: \<open>fst (upfst a x) = a\<close>
+  by simp
+
+lemma enum_index_pair: \<open>enum_index (a,b) = enum_index a * CARD('b) + enum_index b\<close> for a :: \<open>'a::eenum\<close> and b :: \<open>'b::eenum\<close>
+  by (simp add: enum_index_prod_def)
+
+lemma enum_index_CARD_1: \<open>enum_index a = 0\<close> for a :: \<open>'a::{eenum,CARD_1}\<close>
+  apply (subst everything_the_same[of a \<open>enum_nth 0\<close>])
+  apply (subst enum_index_nth)
+  by simp
+
+instantiation unit :: eenum begin
+definition \<open>enum_nth_unit (_::nat) = ()\<close>
+definition \<open>enum_index_unit (_::unit) = (0::nat)\<close>
+instance
+  apply intro_classes
+  by (simp_all add: enum_index_unit_def)
+end
+
+ML \<open>
+local
+  val round1_simps = @{thms case_prod_beta snd_convol' fst_convol' o_def
+      upsnd_twice upfst_twice prod.collapse fst_conv snd_conv
+      upfst_upsnd upsnd_upfst snd_upsnd fst_upfst}
+  val round2_simps = @{thms enum_index_convol enum_index_upsnd enum_index_upfst
+      enum_index_fst enum_index_snd enum_index_pair div_leq_simp mod_mod_cancel
+      enum_index_CARD_1}
+in
+fun enum_index_conv ctxt = let
+  val round1_ctxt = (clear_simpset ctxt) addsimps round1_simps
+  val round2_ctxt = ctxt addsimps round2_simps
+in Simplifier.rewrite round1_ctxt then_conv Simplifier.rewrite round2_ctxt end
+end
+\<close>
+
+ML \<open>
+fun permute_and_tensor1_cblinfun_conv_tac ctxt =
+  resolve_tac ctxt @{thms permute_and_tensor1_cblinfun_conv_tac_aux} 1
+  THEN
+  CONVERSION ((enum_index_conv |> Misc.mk_ctxt_conv arg1_conv |> params_conv ~1) ctxt) 1
+  THEN
+  resolve_tac ctxt @{thms reflexive} 1
+  THEN
+  CONVERSION ((enum_index_conv |> Misc.mk_ctxt_conv arg1_conv |> params_conv ~1) ctxt) 1
+  THEN
+  resolve_tac ctxt @{thms reflexive} 1
+  THEN
+  CONVERSION ((enum_index_conv |> Misc.mk_ctxt_conv arg1_conv |> params_conv ~1) ctxt) 1
+  THEN
+  resolve_tac ctxt @{thms reflexive} 1
+\<close>
+
+ML \<open>
+val permute_and_tensor1_cblinfun_conv = Misc.conv_from_tac
+  (fn ctxt => fn t => case t of \<^Const_>\<open>permute_and_tensor1_cblinfun _ _\<close> $ _ $ _  => (* \<^print> ("Found one") *) ()
+                           | _ => raise TERM ("permute_and_tensor1_cblinfun_conv", [t]))
+  permute_and_tensor1_cblinfun_conv_tac
+\<close>
+
+
+
+ML \<open>
+fun wrap_dbg conv ctxt ct = let val res : thm
+ = conv ctxt ct (* handle e => (\<^print> ("exn"); raise e) *) 
+val orig = Thm.term_of ct
+val new = Thm.term_of (Thm.lhs_of res)
+val _ = new = orig orelse error
+   (\<^make_string> ("BLA", 
+orig = new, orig aconv new, Envir.beta_eta_contract orig = Envir.beta_eta_contract new,
+Envir.beta_norm orig = Envir.beta_norm new,
+Envir.aeconv (orig, new),
+orig, new))
+val _ = \<^print> ("Success") in res end
+\<close>
+
+ML \<open>
+cregister_lens_getter_conv \<^context> \<^cterm>\<open>Prog_Variables.getter empty_cregister\<close>
+\<close>
+
+schematic_goal \<open>permute_and_tensor1_cblinfun (\<lambda>a::'a::eenum. undefined :: unit) (\<lambda>x y. x = y) \<equiv> ?X\<close>
+  apply (tactic \<open>CONVERSION (top_everywhere_conv (wrap_dbg  permute_and_tensor1_cblinfun_conv) \<^context>) 1\<close>)
+  oops
+schematic_goal \<open>(Proj (apply_qregister qregister_id pauliZ *\<^sub>S apply_qregister_space (empty_qregister :: (unit,_) qregister) \<top>))
+=xxx\<close>
+  for XXX :: \<open>bit ell2 \<Rightarrow>\<^sub>C\<^sub>L bit ell2 \<Rightarrow> (bit \<times> bit \<times> bit) ell2 \<Rightarrow>\<^sub>C\<^sub>L (bit \<times> bit \<times> bit) ell2\<close>
+    apply (tactic \<open>CONVERSION (top_everywhere_conv qregister_to_cregister_conv \<^context>) 1\<close>)
+  apply (tactic \<open>CONVERSION (top_everywhere_conv apply_qregister_to_cregister_conv \<^context>) 1\<close>)
+  apply (tactic \<open>CONVERSION (top_everywhere_conv cregister_lens_conv \<^context>) 1\<close>)
+
+  apply (tactic \<open>CONVERSION (top_everywhere_conv (wrap_dbg  permute_and_tensor1_cblinfun_conv) \<^context>) 1\<close>)
+  oops
+
+ML \<open>
+fun foc l = CSUBGOAL (fn (ct,i) => let
+  val t = Thm.term_of ct
+  val thy = Thm.theory_of_cterm ct
+  fun subterm (t $ u) (0::ls) = subterm t ls
+    | subterm (t $ u) (_::ls) = subterm u ls
+    | subterm (Abs (n,T,t)) (_::ls) = subterm (subst_bound (Free(":"^n,T), t)) ls
+    | subterm t _ = t
+  val t' = subterm t l
+  val new_goal = Logic.mk_equals (t', Var(("XXX",0),fastype_of t'))
+  fun conv ct = Logic.mk_equals (Thm.term_of ct, new_goal) |> Skip_Proof.make_thm thy
+in CONVERSION conv i end) 1
+\<close>
+
+ML \<open>
+normalize_register_conv \<^context> \<^cterm>\<open>\<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q\<close>
+\<close>
+(* TODO: Implement TTIR-tactics for this. *)
+definition \<open>TTIR_COMPLEMENT F G \<longleftrightarrow> qcomplements F G\<close>
+definition \<open>TTIR_INVERSE F G \<longleftrightarrow> qregister_chain F G = qregister_id \<and> qregister_chain G F = qregister_id\<close>
+
+lemma translate_to_index_registers_space_div_unlift:
+  fixes A' :: \<open>'a ell2 ccsubspace\<close> and G :: \<open>('b,'a) qregister\<close>
+    and F :: \<open>('c,'a) qregister\<close> and FG :: \<open>('d,'a) qregister\<close>
+  assumes \<open>TTIR_APPLY_QREGISTER_SPACE A' F A\<close>
+  assumes \<open>TTIR_LUB F G FG F' G'\<close>
+  assumes \<open>TTIR_COMPLEMENT G' L\<close>
+  assumes \<open>TTIR_INVERSE \<lbrakk>L, G'\<rbrakk>\<^sub>q H\<close>
+  shows \<open>TTIR_APPLY_QREGISTER_SPACE (space_div A' \<psi> G)
+          (qregister_chain FG L) (space_div_unlifted (apply_qregister_space (qregister_chain H F') A) \<psi>)\<close>
+proof -
+  from \<open>TTIR_COMPLEMENT G' L\<close>
+  have [simp]: \<open>qregister \<lbrakk>G', L\<rbrakk>\<^sub>q\<close>
+    by (simp add: TTIR_COMPLEMENT_def qcomplements_def')
+  have F'_decomp: \<open>F' = qregister_chain (qregister_chain \<lbrakk>L, G'\<rbrakk> H) F'\<close>
+    using TTIR_INVERSE_def assms(4) by force
+
+  have \<open>space_div A' \<psi> G = space_div (A \<guillemotright> F') \<psi> G' \<guillemotright> FG\<close>
+    using assms by (simp add: space_div_lift TTIR_APPLY_QREGISTER_SPACE_def TTIR_LUB_def)
+  also have \<open>\<dots> = space_div (A \<guillemotright> F' \<guillemotright> H \<guillemotright> \<lbrakk>L,G'\<rbrakk>) \<psi> G' \<guillemotright> FG\<close>
+    apply (subst F'_decomp) by simp
+  also have \<open>\<dots> = space_div_unlifted (A \<guillemotright> F' \<guillemotright> H) \<psi> \<guillemotright> L \<guillemotright> FG\<close>
+    by (simp add: space_div_space_div_unlifted)
+  also have \<open>\<dots> = (space_div_unlifted (A \<guillemotright> qregister_chain H F') \<psi>) \<guillemotright> (qregister_chain FG L)\<close>
+    by simp
+  finally show ?thesis
+    by (simp add: TTIR_APPLY_QREGISTER_SPACE_def)
+qed
+
+(* Use in this form? *)
+lemma space_div_space_div_unlifted_inv:
+  assumes \<open>qcomplements Q R\<close>
+  shows \<open>space_div A \<psi> Q = 
+            space_div_unlifted (apply_qregister_space (qregister_inv \<lbrakk>R,Q\<rbrakk>) A) \<psi> \<guillemotright> R\<close>
+proof -
+  from assms have \<open>qcomplements R Q\<close>
+    by (meson complements_sym qcomplements.rep_eq)
+  define A' where \<open>A' = apply_qregister_space (qregister_inv \<lbrakk>R,Q\<rbrakk>) A\<close>
+  have \<open>qregister_chain \<lbrakk>R,Q\<rbrakk> (qregister_inv \<lbrakk>R,Q\<rbrakk>) = qregister_id\<close>
+    apply (rule iso_qregister_chain_inv)
+    using \<open>qcomplements R Q\<close> by (simp add: qcomplements_def')
+  then have \<open>space_div A \<psi> Q = space_div (apply_qregister_space \<lbrakk>R,Q\<rbrakk> A') \<psi> Q\<close>
+    by (metis (no_types, opaque_lifting) A'_def apply_qregister_space_id qregister_chain_apply_space)
+  also have \<open>\<dots> = apply_qregister_space R (space_div_unlifted A' \<psi>)\<close>
+    using space_div_space_div_unlifted assms qcomplements_def' by blast
+  finally show ?thesis
+    by (simp add: A'_def)
+qed
+
+lemma \<open>qregister_chain (\<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q) empty_qregister = xxx\<close>
+  apply (tactic \<open>CONVERSION (top_sweep_conv normalize_register_conv \<^context>) 1\<close>)
+  oops
+
 lemma lemma_724698:
   fixes C :: "(bit, qu) qregister" and A :: "(bit, qu) qregister" and B :: "(bit, qu) qregister"
   assumes [register]: \<open>declared_qvars \<lbrakk>C, A, B\<rbrakk>\<close>
   shows "qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q (C::(bit, qu) qregister) \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A \<le> \<CC>\<ll>\<aa>[\<parallel>EPR\<parallel> = 1] \<sqinter> (\<CC>\<ll>\<aa>[isometry CNOT] \<sqinter> (apply_qregister \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C, qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A\<rbrakk>\<^sub>q CNOT* *\<^sub>S (\<CC>\<ll>\<aa>[isometry hadamard] \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C) hadamard* *\<^sub>S ((let M = computational_basis in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (\<Sqinter>z. let P = apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A) (mproj M z) *\<^sub>S \<top> in (let M = computational_basis in \<CC>\<ll>\<aa>[mtotal M] \<sqinter> (\<Sqinter>za. let P = apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C) (mproj M za) *\<^sub>S \<top> in (\<CC>\<ll>\<aa>[z \<noteq> 1] + \<CC>\<ll>\<aa>[isometry pauliX] \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliX* *\<^sub>S ((\<CC>\<ll>\<aa>[za \<noteq> 1] + \<CC>\<ll>\<aa>[isometry pauliZ] \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliZ* *\<^sub>S (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliZ *\<^sub>S \<top>)))) \<sqinter> (\<CC>\<ll>\<aa>[za = 1] + qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A) \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliX *\<^sub>S \<top>)))) \<sqinter> (\<CC>\<ll>\<aa>[z = 1] + (\<CC>\<ll>\<aa>[za \<noteq> 1] + \<CC>\<ll>\<aa>[isometry pauliZ] \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliZ* *\<^sub>S (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B) pauliZ *\<^sub>S \<top>)))) \<sqinter> (\<CC>\<ll>\<aa>[za = 1] + qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B \<equiv>\<qq> qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q A)) \<sqinter> P + - P)) \<sqinter> P + - P)) \<sqinter> (apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C) hadamard *\<^sub>S \<top>))) \<sqinter> (apply_qregister \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q C, qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A\<rbrakk>\<^sub>q CNOT *\<^sub>S \<top>)))) \<div> EPR\<guillemotright>\<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A, qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q B\<rbrakk>\<^sub>q"
-  (* apply translate_to_index_registers *)
-  apply prepare_for_code
-  apply eval
+  apply translate_to_index_registers
+  apply (simp add: quantum_equality_full_def_let space_div_space_div_unlifted)
+  apply (tactic \<open>CONVERSION (top_everywhere_conv normalize_register_conv \<^context>) 1\<close>)
+  apply (simp only: apply_qregister_id apply_qregister_space_id)
+  apply (tactic \<open>CONVERSION (top_everywhere_conv qregister_to_cregister_conv \<^context>) 1\<close>)
+  apply (tactic \<open>CONVERSION (top_everywhere_conv apply_qregister_to_cregister_conv \<^context>) 1\<close>)
+  apply (tactic \<open>CONVERSION (top_everywhere_conv cregister_lens_conv \<^context>) 1\<close>)
+  using [[ML_print_depth=30]]
+  using [[show_types]]
+  apply (tactic \<open>CONVERSION (top_everywhere_conv ((* wrap_dbg *) permute_and_tensor1_cblinfun_conv) \<^context>) 1\<close>)
+  (* apply (tactic \<open>foc [1,1,0,1,1,1,1,0,1,1,1,0,0,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,0,1,0,1,1,1,1,0,1,1,1,1]\<close>) *)
+  (* apply (tactic \<open>foc [0,1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,1]\<close>) *)
+  (* apply (tactic \<open>foc [0,1,0,1,1,1,1,0,1,1,1,1,1,0,1,0]\<close>) *)
+  (* apply (tactic \<open>CONVERSION Thm.eta_conversion 1\<close>) *)
+  (* apply (tactic \<open>CONVERSION (Thm.beta_conversion true) 1\<close>) *)
+  (* apply (tactic \<open>CONVERSION (top_everywhere_conv (wrap_dbg permute_and_tensor1_cblinfun_conv) \<^context>) 1\<close>) *)
+(* TODO: Still contains: (Proj (apply_qregister qregister_id pauliZ *\<^sub>S apply_qregister_space empty_qregister \<top>))) *)
+  apply simp x
+
+  apply (simp add: join_registers   ZZZ
+cong del: if_weak_cong 
+cong: permute_and_tensor1_mat'_cong
+add:
+    permute_and_tensor1_cblinfun_code_prep 
+    
+
+   case_prod_beta if_distrib[of fst] if_distrib[of snd] prod_eq_iff 
+
+  div_leq_simp mod_mod_cancel 
+
+   enum_index_prod_def fst_enum_nth snd_enum_nth enum_index_nth if_distrib[of enum_index] 
+   enum_nth_injective 
+
+  (* quantum_equality_full_def_let space_div_space_div_unlifted INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift *)
+  (* top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2 *)
+
+
+ flip:
+ (* prepare_for_code_flip *)
+
+)
+  
+  (* apply prepare_for_code *)
+   apply eval 
+  by -
 
 ML\<open>open QRHL_Operations\<close>
 

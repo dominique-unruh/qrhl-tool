@@ -1662,16 +1662,24 @@ lemma getter_Snd: \<open>Axioms_Classical.getter Laws_Classical.Snd = snd\<close
   apply (subst Snd_register_from_getter_setter)
   by (simp add: case_prod_beta)
 
-lemma setter_cFst: \<open>setter cFst x' xy = (x',snd xy)\<close>
+lemma setter_cFst: \<open>setter cFst x' xy = apfst (\<lambda>_. x') xy\<close>
   apply transfer
-  by (simp add: setter_Fst[abs_def] case_prod_unfold)
-lemma setter_cSnd: \<open>setter cSnd y' xy = (fst xy,y')\<close>
+  by (simp add: setter_Fst[abs_def] case_prod_unfold apfst_def map_prod_def)
+lemma setter_cSnd: \<open>setter cSnd y' xy = apsnd (\<lambda>_. y') xy\<close>
   apply transfer
-  by (simp add: setter_Snd[abs_def] case_prod_unfold)
+  by (simp add: setter_Snd[abs_def] case_prod_unfold apsnd_def map_prod_def)
 lemma getter_cFst[simp]: \<open>getter cFst = fst\<close>
   apply transfer by (simp add: getter_Fst)
 lemma getter_cSnd[simp]: \<open>getter cSnd = snd\<close>
   apply transfer by (simp add: getter_Snd)
+
+(* TODO move *)
+(* TODO: this should be applied in normalize_register_conv *)
+lemma pair_fst_snd[simp]:
+  shows \<open>qregister_pair qFst qSnd = qregister_id\<close>
+  apply transfer
+  using Laws_Quantum.pair_Fst_Snd by auto
+
 
 lemma register_from_getter_setter_id: \<open>id = register_from_getter_setter (\<lambda>m. m) (\<lambda>a m. a)\<close>
   by (auto intro!: ext simp add: register_from_getter_setter_def option.case_eq_if)
@@ -3034,6 +3042,7 @@ qed
 lift_definition qcomplements :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is complements.
 
 lemma qcomplements_def': \<open>qcomplements F G \<longleftrightarrow> qcompatible F G \<and> iso_qregister (qregister_pair F G)\<close>
+(* TODO "qcompatible F G" can be dropped *)
   unfolding iso_qregister_def apply transfer 
   by (auto simp: complements_def Laws_Quantum.iso_register_def non_qregister_raw)
 

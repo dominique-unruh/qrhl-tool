@@ -621,13 +621,6 @@ lemma translate_to_index_registers_classical_subspace[translate_to_index_registe
 
 (* TODO move *)
 (* TODO: this should be applied in normalize_register_conv *)
-lemma pair_fst_snd[simp]:
-  shows \<open>\<lbrakk>qFst, qSnd\<rbrakk>\<^sub>q = qregister_id\<close>
-  apply transfer
-  using Laws_Quantum.pair_Fst_Snd by auto
-
-(* TODO move *)
-(* TODO: this should be applied in normalize_register_conv *)
 (* TODO: keep qregister_chain_pair or this  *)
 (* TODO: better name *)
 lemma pair_chain_fst_snd:
@@ -718,7 +711,7 @@ subsection \<open>Subspace division\<close>
 
 definition space_div :: "'b ell2 ccsubspace \<Rightarrow> 'a ell2 \<Rightarrow> ('a,'b) qregister \<Rightarrow> 'b ell2 ccsubspace"
                     ("_ \<div> _\<guillemotright>_" [89,89,89] 90) where
-  \<open>space_div A \<psi> Q = (if \<psi> = 0 then \<top> else SUP a. apply_qregister Q a *\<^sub>S (A \<sqinter> (Q =\<^sub>q \<psi>)))\<close>
+  [code del]: \<open>space_div A \<psi> Q = (if \<psi> = 0 then \<top> else SUP a. apply_qregister Q a *\<^sub>S (A \<sqinter> (Q =\<^sub>q \<psi>)))\<close>
   (* \<open>space_div A \<psi> Q = ccspan {apply_qregister Q a \<phi>\<psi> | a \<phi>\<psi>. \<phi>\<psi> \<in> space_as_set (A \<sqinter> (Q =\<^sub>q \<psi>))}\<close> (* Equivalent but less compact *) *)
   (* \<open>space_div A \<psi> Q = (SUP a. apply_qregister Q a *\<^sub>S A)\<close> (* Wrong. "ccspan {EPR} \<div> ket0" should be 0 but isn't *) *)
   (* \<open>space_div A \<psi> Q = Abs_clinear_space {\<phi>| \<phi> a. apply_qregister Q a *\<^sub>V \<phi> \<in> space_as_set A}\<close> (* Not right. E.g., a=0 makes this the whole space *) *)
