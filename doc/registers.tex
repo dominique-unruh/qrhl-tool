@@ -1,0 +1,132 @@
+\newif\ifdraft
+
+%\drafttrue
+
+\documentclass{article}
+
+\input{preamble}
+
+\begin{document}
+
+\section{What are registers?}
+
+\TODOQ{}
+
+\section{Fundamental operations on registers}
+
+\subsection{Valid registers}
+
+\verb|qregister|
+\verb|cregister|
+
+\verb|non_qregister|
+\verb|non_cregister|
+
+\subsection{Basic registers}
+
+\verb|qregister_id|
+\verb|cregister_id|
+
+\verb|empty_qregister|
+\verb|empty_cregister|
+
+\verb|qFst| \verb|qSnd|
+\verb|cFst| \verb|cSnd|
+
+
+\subsection{Pairing}
+
+\verb|qregister_pair|
+\verb|cregister_pair|
+
+\verb|ccompatible| (as an abbrev)
+\verb|cswap|
+(Same for q)
+
+
+\subsection{Chaining}
+
+\verb|qregister_chain|
+\verb|cregister_chain|
+
+\subsection{Iso-register}
+
+\verb|iso_cregister|
+\verb|cregister_inv|
+
+
+(Same for q)
+
+\subsection{Complements}
+
+\verb|qcomplements| (not def'd for c)
+
+\subsection{Equivalence classes}
+
+Type \verb|QREGISTER|, \verb|CREGISTER|
+
+\verb|CREGISTER_of| \verb|CREGISTER_unit|, \verb|CREGISTER_all|, \verb|CREGISTER_pair|
+(And same for Q)
+
+\verb|CCcompatible|, \verb|Cccompatible|
+
+\verb|CCOMPLEMENT|
+
+\subsection{Ordering}
+
+Ordering (\verb|less_eq|) of CREGISTER/QREGISTER by inclusion.
+
+\verb|cregister_le|
+
+\subsection{Conversion}
+
+\verb|cregister_conversion|
+
+
+\subsection{Special operations for qregisters} 
+
+\verb|transform_qregister|
+
+\verb|apply_qregister|
+
+\verb|apply_qregister_space|
+
+\verb|qregister_of_cregister|
+
+\subsection{Special operations for cregisters} 
+
+\verb|apply_cregister|
+
+\verb|apply_cregister_total|
+
+\verb|getter|, \verb|setter|
+
+\verb|cregister_from_getter_setter|
+
+\verb|same_outside_cregister|
+
+\subsection{Index registers}
+
+ML-functions: \verb|Prog_Variables.is_index_qregister|, \verb|Prog_Variables.is_index_cregister|
+
+\subsection{Syntax}
+
+\section{Proof tools}
+
+\begin{itemize}
+\item \verb|[register]| attribute.
+\item \verb|translate_to_index_registers| method, \verb|translate_to_index_registers_conv|. 
+\item \verb|distinct_vars_tac| -- solve subgoals of the form \verb|c/qregister ...|.
+\item \verb|normalize_register_conv|, \verb|normalize_register_conv2|
+\item \verb|qregister_conversion_to_register_conv| -- transforms a conversion into an index register
+ 
+\item \verb|qregister_le_tac| proves a subgoal of the form \verb|qregister_le ...|.
+\item \verb|apply_qregister_conversion| -- rewrites \verb|apply_qregister F A| into \verb|apply_qregister target (apply_qregister (qregister_conversion …) A)|
+  for suitable \verb|…|
+  Analogously for \verb|apply_qregister_space|.
+\item \verb|qregister_lub_tac| -- finds and proves a lub
+\item \verb|join_registers| -- returns a lub (no proof)
+\end{itemize}
+
+
+\end{document}

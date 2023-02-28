@@ -13,7 +13,7 @@ declmath.sty :
 %.thy.lst : ../examples/%.thy format-for-listings.py
 	python3 format-for-listings.py $< >$@
 
-manual.pdf : manual.tex qrhl.bib declmath.sty macros.tex example.qrhl.lst Example.thy.lst PrgEnc.thy.lst prg-enc-rorcpa.qrhl.lst prg-enc-indcpa.qrhl.lst PrgEnc.thy.lst equality.qrhl.lst Teleport.thy.lst Code_Example.thy.lst qrhl.aux
+manual.pdf : manual.tex qrhl.bib declmath.sty macros.tex example.qrhl.lst Example.thy.lst PrgEnc.thy.lst prg-enc-rorcpa.qrhl.lst prg-enc-indcpa.qrhl.lst PrgEnc.thy.lst equality.qrhl.lst Teleport.thy.lst Code_Example.thy.lst qrhl.aux preamble.tex
 	rm -f manual.aux manual.bbl manual-blx.bib manual.out
 	-pdflatex --synctex=1 -interaction batchmode manual
 	bibtex manual
