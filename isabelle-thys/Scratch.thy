@@ -502,9 +502,327 @@ in CONVERSION conv i end) 1
 ML \<open>
 normalize_register_conv \<^context> \<^cterm>\<open>\<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#4.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q\<close>
 \<close>
+
+ML \<open>
+(* TODO *)
+fun complement_of_index_register ctxt ct = let
+  val thm1 = normalize_register_conv2 ctxt ct  (* ct \<equiv> ct' *)
+  val ct' = Thm.rhs_of thm1 |> \<^print>
+in () end
+;;
+
+complement_of_index_register \<^context> \<^cterm>\<open>\<lbrakk>\<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#5.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q\<close>
+\<close>
+
+lift_definition equivalent_qregisters :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is
+  equivalent_registers.
+
+definition \<open>equivalent_qregisters' F G \<longleftrightarrow> equivalent_qregisters F G \<or> (F = non_qregister \<and> G = non_qregister)\<close>
+
+lemma QREGISTER_of_non_qregister: \<open>QREGISTER_of non_qregister = QREGISTER_unit\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_of.rep_eq QREGISTER_unit.rep_eq)
+
+definition QREGISTER_of' where \<open>QREGISTER_of' F = (if qregister F then Some (QREGISTER_of F) else None)\<close>
+
+lemma x1:
+  assumes \<open>qregister F\<close>
+  assumes \<open>equivalent_qregisters' F H\<close>
+  assumes \<open>qcomplements H G\<close>
+  shows \<open>qcomplements F G\<close>
+  sorry
+
+
+
+(* 
+lemma x2:
+  assumes \<open>QREGISTER_of' F \<equiv> QREGISTER_of' F'\<close>
+  assumes \<open>QREGISTER_of' G \<equiv> QREGISTER_of' G'\<close>
+  assumes \<open>QREGISTER_of' \<lbrakk>F',G'\<rbrakk> \<equiv> QREGISTER_of' H\<close>
+  shows \<open>QREGISTER_of' \<lbrakk>F,G\<rbrakk> \<equiv> QREGISTER_of' H\<close>
+  sorry
+
+lemma x3:
+  assumes \<open>QREGISTER_of' F \<equiv> QREGISTER_of' F'\<close>
+  shows \<open>QREGISTER_of' (qregister_chain qFst F) \<equiv> QREGISTER_of' (qregister_chain qFst F')\<close>
+  sorry
+
+lemma x4:
+  assumes \<open>QREGISTER_of' F \<equiv> QREGISTER_of' F'\<close>
+  shows \<open>QREGISTER_of' (qregister_chain qSnd F) \<equiv> QREGISTER_of' (qregister_chain qSnd F')\<close>
+  sorry
+
+lemma x5:
+  shows \<open>QREGISTER_of' \<lbrakk>qFst, qSnd\<rbrakk> \<equiv> QREGISTER_of' qregister_id\<close>
+  sorry
+
+lemma x6:
+  shows \<open>QREGISTER_of' \<lbrakk>qFst, qregister_chain qSnd F\<rbrakk> \<equiv> QREGISTER_of' \<lbrakk>qFst, qregister_chain qSnd F\<rbrakk>\<close>
+  by simp
+  sorry
+
+ML \<open>
+open Misc
+\<close>
+
+ML \<open>
+(* Given \<open>QREGISTER_of' F \<equiv> QREGISTER_of' ?Q\<close>, instantiates ?Q with a "sorted" F.
+   Assumes F is index-register.
+   "Sorted" means: \<open>Q = Fst o \<dots>\<close> or \<open>Q = Snd o \<dots>\<close> or \<open>Q = id\<close> or \<open>Q = empty\<close>
+    or \<open>Q = \<lbrakk>Fst o \<dots>, Snd o \<dots>\<rbrakk> where \<dots> is also sorted and not empty/id\<close>
+ *)
+fun QREGISTER_of'_index_reg_norm_tac ctxt = SUBGOAL (fn (t,i) => 
+  (\<^print> (Thm.cterm_of ctxt t);
+  case t of
+    \<^Const_>\<open>Pure.eq _\<close> $ (\<^Const_>\<open>QREGISTER_of' _ _\<close> $ (\<^Const_>\<open>qregister_pair _ _ _\<close> $ _ $ _)) $ _ =>
+      resolve_tac ctxt @{thms x2} i
+      THEN
+      QREGISTER_of'_index_reg_norm_tac ctxt i
+      THEN
+      QREGISTER_of'_index_reg_norm_tac ctxt i
+      THEN
+      print_here_tac ctxt \<^here>
+      THEN
+      resolve_tac ctxt @{thms x5 x6} i
+  | \<^Const_>\<open>Pure.eq _\<close> $ (\<^Const_>\<open>QREGISTER_of' _ _\<close> $ 
+         (\<^Const_>\<open>qregister_chain _ _ _\<close> $ \<^Const_>\<open>qFst _ _\<close> $ _)) $ _ =>
+      resolve_tac ctxt @{thms x3} i
+      THEN
+      QREGISTER_of'_index_reg_norm_tac ctxt i
+  | \<^Const_>\<open>Pure.eq _\<close> $ (\<^Const_>\<open>QREGISTER_of' _ _\<close> $ 
+         (\<^Const_>\<open>qregister_chain _ _ _\<close> $ \<^Const_>\<open>qSnd _ _\<close> $ _)) $ _ =>
+      resolve_tac ctxt @{thms x4} i
+      THEN
+      QREGISTER_of'_index_reg_norm_tac ctxt i
+  | \<^Const_>\<open>Pure.eq _\<close> $ (\<^Const_>\<open>QREGISTER_of' _ _\<close> $ \<^Const_>\<open>qFst _ _\<close>) $ _ =>
+      resolve_tac ctxt @{thms reflexive} i
+  | \<^Const_>\<open>Pure.eq _\<close> $ (\<^Const_>\<open>QREGISTER_of' _ _\<close> $ \<^Const_>\<open>qSnd _ _\<close>) $ _ =>
+      resolve_tac ctxt @{thms reflexive} i
+  | \<^Const_>\<open>Pure.eq _\<close> $ (\<^Const_>\<open>QREGISTER_of' _ _\<close> $ _) $ _ =>
+      print_here_tac ctxt \<^here>
+      THEN
+      resolve_tac ctxt @{thms} 1
+    ))
+\<close>
+ *)
+
+definition \<open>QREGISTER_pair' F G = (case (F,G) of (Some F', Some G') \<Rightarrow> Some (QREGISTER_pair F' G')
+  | _ \<Rightarrow> None)\<close>
+
+lift_definition QREGISTER_chain :: \<open>('a,'b) qregister \<Rightarrow> 'a QREGISTER \<Rightarrow> 'b QREGISTER\<close> is
+  \<open>\<lambda>F \<GG>. F ` \<GG>\<close>
+  apply auto
+  sorry
+
+lemma QREGISTER_of_qregister_chain: \<open>QREGISTER_of (qregister_chain F G) = QREGISTER_chain F (QREGISTER_of G)\<close>
+  sorry
+
+lift_definition QREGISTER_fst :: \<open>('a\<times>'b) QREGISTER\<close> is
+  \<open>(\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` UNIV\<close>
+  sorry
+lift_definition QREGISTER_snd :: \<open>('a\<times>'b) QREGISTER\<close> is
+  \<open>(\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` UNIV\<close>
+  sorry
+
+lemma QREGISTER_of_qFst: \<open>QREGISTER_of qFst = QREGISTER_fst\<close>
+  sorry
+lemma QREGISTER_of_qSnd: \<open>QREGISTER_of qSnd = QREGISTER_snd\<close>
+  sorry
+
+lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F)
+                      (QREGISTER_pair B
+                          (QREGISTER_chain A G))
+= QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+  sorry
+
+lemma QREGISTER_pair_assoc: \<open>QREGISTER_pair (QREGISTER_pair F G) H = QREGISTER_pair F (QREGISTER_pair G H)\<close>
+  sorry
+
+lemma x4: \<open>QREGISTER_pair (QREGISTER_chain A F)
+                      (QREGISTER_pair       (QREGISTER_chain A G) B)
+= QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+  sorry
+
+lemma x3: \<open>QREGISTER_pair (QREGISTER_chain F G) (QREGISTER_chain F H)
+= QREGISTER_chain F (QREGISTER_pair G H)\<close>
+  sorry
+
+lemma QREGISTER_pair_fst_snd: \<open>QREGISTER_pair QREGISTER_fst QREGISTER_snd = QREGISTER_all\<close>
+  sorry
+lemma QREGISTER_pair_snd_fst: \<open>QREGISTER_pair QREGISTER_snd QREGISTER_fst = QREGISTER_all\<close>
+  sorry
+
+lemma QREGISTER_pair_all_left: \<open>QREGISTER_pair QREGISTER_all F = QREGISTER_all\<close>
+  sorry
+
+lemma QREGISTER_pair_all_right: \<open>QREGISTER_pair F QREGISTER_all = QREGISTER_all\<close>
+  sorry
+
+lemma QREGISTER_pair_unit_left: \<open>QREGISTER_pair QREGISTER_unit F = F\<close>
+  sorry
+
+lemma QREGISTER_pair_unit_right: \<open>QREGISTER_pair F QREGISTER_unit = F\<close>
+  sorry
+
+lemma QREGISTER_chain_id_left: \<open>QREGISTER_chain qregister_id F = F\<close>
+  sorry
+
+lemma QREGISTER_chain_all_right: \<open>QREGISTER_chain F QREGISTER_all = QREGISTER_of F\<close>
+  sorry
+
+lemma QREGISTER_chain_unit_left: \<open>QREGISTER_chain empty_qregister F = QREGISTER_unit\<close>
+  sorry
+
+lemma QREGISTER_chain_unit_right: \<open>QREGISTER_chain F QREGISTER_unit = QREGISTER_unit\<close>
+  sorry
+
+lemma x7: \<open>QREGISTER_pair (QREGISTER_chain qSnd F) (QREGISTER_chain qFst G)
+= QREGISTER_pair (QREGISTER_chain qFst G) (QREGISTER_chain qSnd F)\<close>
+  sorry
+lemma x6: \<open>QREGISTER_pair (QREGISTER_chain qSnd F) QREGISTER_fst
+= QREGISTER_pair QREGISTER_fst (QREGISTER_chain qSd F)\<close>
+  sorry
+lemma x8: \<open>QREGISTER_pair QREGISTER_snd (QREGISTER_chain qFst G)
+= QREGISTER_pair (QREGISTER_chain qFst G) QREGISTER_snd\<close>
+  sorry
+
+
+lemma y2:
+  \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
+    = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>
+  sorry
+lemma y1:
+  \<open>QCOMPLEMENT (QREGISTER_pair QREGISTER_fst (QREGISTER_chain qSnd F))
+    = QREGISTER_chain qSnd (QCOMPLEMENT F)\<close>
+  sorry
+lemma y3:
+  \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) QREGISTER_snd)
+    = QREGISTER_chain qFst (QCOMPLEMENT F)\<close>
+  sorry
+
+lemma QCOMPLEMENT_snd: \<open>QCOMPLEMENT QREGISTER_snd = QREGISTER_fst\<close>
+  sorry
+
+lemma QCOMPLEMENT_fst: \<open>QCOMPLEMENT QREGISTER_fst = QREGISTER_snd\<close>
+  sorry
+
+lemma z1:
+  assumes \<open>qregister F\<close>
+  assumes \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
+  assumes \<open>qregister G\<close>
+  shows \<open>qcomplements F G\<close>
+  sorry
+
+ML "open Misc"
+
+lemma QREGISTER_of_qregister_id: \<open>QREGISTER_of qregister_id = QREGISTER_all\<close>
+  sorry
+
+lemma QREGISTER_of_empty_qregister: \<open>QREGISTER_of empty_qregister = QREGISTER_unit\<close>
+  sorry
+
+ML \<open>
+(* Converts "QREGISTER_of F" for index register F into an INDEX-REGISTER.
+   An INDEX-REGISTER is a QREGISTER built from
+  "QREGISTER_chain QREGISTER_pair QREGISTER_fst QREGISTER_snd qFst qSnd QREGISTER_all QREGISTER_unit".
+(While keeping the structure of the index-register. That is, can be undone be QREGISTER_of_index_reg_reverse_conv.)
+ *)
+val QREGISTER_of_index_reg_conv =
+  rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
+    (map (fn thm => thm RS @{thm eq_reflection})
+          @{thms 
+            QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain QREGISTER_of_empty_qregister
+            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})
+\<close>
+
+ML \<open>
+(* Opposite of QREGISTER_of_index_reg_conv *)
+val QREGISTER_of_index_reg_reverse_conv =
+  rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
+    (map (fn thm => thm RS @{thm sym} RS @{thm eq_reflection})
+          @{thms 
+            QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain QREGISTER_of_empty_qregister
+            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})\<close>
+
+ML \<open>
+(* Brings an INDEX-REGISTER into normal form. *)
+local
+  val rules = (map (fn thm => thm RS @{thm eq_reflection}) @{thms 
+    x2 x3 QREGISTER_pair_assoc x4 QREGISTER_pair_unit_left QREGISTER_pair_unit_right
+    QREGISTER_chain_id_left QREGISTER_chain_all_right
+    QREGISTER_pair_all_left QREGISTER_pair_all_right
+    QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst
+    QREGISTER_chain_unit_left QREGISTER_chain_unit_right})
+in
+fun INDEX_REGISTER_norm_conv ctxt = Raw_Simplifier.rewrite ctxt false rules
+end
+\<close>
+
+ML \<open>
+(* Rewrites QCOMPLEMENT (INDEX-QREGISTER) into an INDEX-QREGISTER *)
+local
+  val rules = (map (fn thm => thm RS @{thm eq_reflection}) @{thms 
+      y1 y2 y3 QCOMPLEMENT_snd QCOMPLEMENT_fst})
+in
+fun QCOMPLEMENT_INDEX_REGISTER_conv ctxt = Raw_Simplifier.rewrite ctxt false rules
+end
+\<close>
+
+
+ML \<open>
+fun qcomplements_tac ctxt =
+  resolve_tac ctxt @{thms z1} (* Creates three subgoals *)
+  THEN'
+  distinct_vars_tac ctxt (* Solve first subgoal *)
+  THEN'
+  (* Second subgoal *)
+  CONVERSION ((QREGISTER_of_index_reg_conv |> mk_ctxt_conv arg_conv |> mk_ctxt_conv arg1_conv |> concl_conv_Trueprop) ctxt)
+  THEN'
+  (* Second subgoal *)
+  CONVERSION ((INDEX_REGISTER_norm_conv |> mk_ctxt_conv arg_conv |> mk_ctxt_conv arg1_conv |> concl_conv_Trueprop) ctxt)
+  THEN'
+  (* Second subgoal *)
+  CONVERSION ((QCOMPLEMENT_INDEX_REGISTER_conv |> mk_ctxt_conv arg1_conv |> concl_conv_Trueprop) ctxt)
+  THEN'
+  (* Second subgoal *)
+  CONVERSION ((QREGISTER_of_index_reg_reverse_conv |> mk_ctxt_conv arg1_conv |> concl_conv_Trueprop) ctxt)
+  THEN'
+  (* Solve second subgoal *)
+  resolve_tac ctxt @{thms refl}
+  THEN'
+  distinct_vars_tac ctxt (* Solve third subgoal *)
+\<close>
+
+ML \<open>
+fun qcomplement_of_index_qregister ctxt ct = let
+  val _ = Prog_Variables.is_index_qregister (Thm.term_of ct)
+          orelse raise CTERM ("qcomplement_of_index_qregister: not an index qregister", [ct])
+  val index = Thm.maxidx_of_cterm ct + 1
+  val (inT,outT) = dest_qregisterT (Thm.typ_of_cterm ct)
+  val x_inT = TVar(("'x", index), [])
+  val qcomplement_const = Thm.cterm_of ctxt \<^Const>\<open>qcomplements inT outT x_inT\<close>
+  val x = Thm.cterm_of ctxt (Var (("x", index), \<^Type>\<open>qregister x_inT outT\<close>))
+  val goal =  (* qcomplements ct ? *)
+      Thm.apply (Thm.apply qcomplement_const ct) x |> Thm.apply \<^cterm>\<open>Trueprop\<close>
+  val thm = Goal.prove_internal \<^context> [] goal (K (qcomplements_tac ctxt 1))
+  val complement = thm |> Thm.cprop_of |> Thm.dest_arg |> Thm.dest_arg
+  val _ = Prog_Variables.is_index_qregister (Thm.term_of complement)
+          orelse raise CTERM ("qcomplement_of_index_qregister: failed to compute index-register", [ct, complement])
+in (complement, thm) end
+;;
+qcomplement_of_index_qregister \<^context> \<^cterm>\<open>\<lbrakk>\<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#5.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q\<close>
+\<close>
+
+
+schematic_goal \<open>qcomplements \<lbrakk>\<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#5.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q (?X :: (?'x,_) qregister)\<close>
+  by (tactic \<open>qcomplements_tac \<^context> 1\<close>)
+
 (* TODO: Implement TTIR-tactics for this. *)
+(* For index-register F *)
 definition \<open>TTIR_COMPLEMENT F G \<longleftrightarrow> qcomplements F G\<close>
-definition \<open>TTIR_INVERSE F G \<longleftrightarrow> qregister_chain F G = qregister_id \<and> qregister_chain G F = qregister_id\<close>
+(* For index-iso-register F *)
+definition \<open>TTIR_INVERSE F G \<longleftrightarrow> 
+  qregister_chain F G = qregister_id \<and> qregister_chain G F = qregister_id\<close>
 
 lemma translate_to_index_registers_space_div_unlift:
   fixes A' :: \<open>'a ell2 ccsubspace\<close> and G :: \<open>('b,'a) qregister\<close>
