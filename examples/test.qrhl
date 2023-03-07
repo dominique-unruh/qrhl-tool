@@ -1,90 +1,37 @@
 isabelle.
 
+quantum var a : int.
+classical var b : string.
+classical var c : nat.
 
-print xxx.  # Where does this come from?
+adversary A
+  free a, b, c
+  calls ?.
 
-print refl.  # Should be found
+transform unrolled A.
 
-print HOL.refl.  # Should be found
+# WARNING: Possibly unsound (not proven) command 'derive unrolled' invoked.
+# Declared transformed adversary A_unrolled with additional variables store_A, qstore_A.
+# Use "print A_unrolled.", "print store_A.", and "print qstore_A." to inspect the details.
 
-print undefined.  # Should be found?
+print A_unrolled.
 
-classical var x : int.
+# adversary A_unrolled
+#
+# Variable use of program A_unrolled:
+#  Free        ⊆ store_A, qstore_A, a, b, c
+#  Ambient     ⊆ ∅
+#  Programs    = ∅
+#  Written     ⊆ store_A, qstore_A, a, b, c
+#  Overwritten ⊇ ∅
+#  Inner       ⊆ ∅
+#  Covered     ⊇ all variables
+#  Oracles     ⊆ ∅
 
-print x.
+print store_A.
 
-lemma xx: 1=1.
-admit.
-qed.
+# classical var store_A : bool × char list × nat
 
-print xx.
+print qstore_A.
 
-
-quantum var Q : bit.
-quantum var R : bit.
-classical var b : bit.
-classical var y : int.
-
-program p1 := {
-  b <- measure Q with computational_basis;
-  x <- y+1;
-}.
-
-print p1.
-
-program p2 := {
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-  on Q apply hadamard;
-}.
-
-qrhl {undefined} call p1; ~  call p2; {undefined}.
-  inline p1.
-  inline p2.
-
-# swap left 2-3 1-1 subprograms: { b <- measure Q with computational_basis; }.
-
-swap left 1-1 2-2 subprograms: {}.
-
-print goal.
-
-conseq post: undefined.
-
-print goal.
-
-simp!.
-
-
-
-  # Imagine "undefined" means "diagonal_basis" below.
-  swap left 1 2
-    subprograms first: { b <- measure Q with computational_basis; } -> { b <- measure Q with undefined; }.
-
-
-print goal.
-
-+ 
-print goal.
-
-
-  byqrhl qvars Q,R.
-
-admit.
-
-print goal.
-  
+# quantum var qstore_A : int

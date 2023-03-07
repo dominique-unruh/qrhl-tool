@@ -659,8 +659,20 @@ object Parser extends JavaTokenParsers {
   val isabelleToplevel : Parser[IsabelleToplevelCommand] =
     literal("isabelle_cmd") ~> scanInnerSyntax ^^ IsabelleToplevelCommand.apply
 
+  def transform_unrolled(implicit context:ParserContext) : Parser[TransformUnrolledCommand] =
+    literal("unrolled") ~> commit(
+      for (program <- identifier)
+        yield TransformUnrolledCommand(program = program)
+    )
+
+  def transform(implicit context:ParserContext) : Parser[TransformCommand] =
+    literal("transform") ~> commit(
+      transform_unrolled
+    )
+
   def command(implicit context:ParserContext): Parser[Command] =
     isabelleToplevel |
     debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
-      include | qed | changeDirectory | cheat | print_cmd | focus | failure("expecting command")
+      include | qed | changeDirectory | cheat | print_cmd | focus | transform | failure("expecting command")
 }
+
