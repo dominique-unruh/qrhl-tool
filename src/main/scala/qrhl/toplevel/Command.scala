@@ -4,7 +4,7 @@ import java.io.{PrintWriter, StringWriter}
 import java.nio.file.{Path, Paths}
 import de.unruh.isabelle.pure.{Context, Typ}
 import qrhl.logic.{Block, CVariable, QVariable, Variable}
-import qrhl.{State, Subgoal, Tactic, UserException, toplevel}
+import qrhl.{SchemaInstantiation, State, Subgoal, Tactic, UserException, toplevel}
 
 import scala.collection.immutable.ListSet
 import de.unruh.isabelle.control.{Isabelle, IsabelleMLException, OperationCollection}
@@ -242,3 +242,9 @@ object IncludeCommand {
   def apply(file:String) : IncludeCommand = apply(Paths.get(file))
 }
 
+case class SchemaCommand(instantiation: SchemaInstantiation) extends Command {
+  override def toString: String = instantiation.toString
+  override protected def act(state: State, output: PrintWriter): State =
+    instantiation.act(state, output)
+  override def hash: Hash[SchemaCommand.this.type] = HashTag()(instantiation.hash)
+}

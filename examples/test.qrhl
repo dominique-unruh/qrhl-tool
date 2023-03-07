@@ -35,3 +35,28 @@ print store_A.
 print qstore_A.
 
 # quantum var qstore_A : int
+
+
+# Getting the simulation lemma for a specific Q:
+
+program Q := { on a apply undefined; }.
+
+schema A_unrolled Q.
+
+print A_unrolled_Q_unrolled.
+
+# The name A_unrolled_Q_unrolled refers to 1 lemmas:
+# 
+# Pre:   ⊤
+# 
+# Left:  (1) call A(Q);
+# 
+# Right: (1) store_A <- default;
+#        (2) qstore_A <q |default⟩;
+#        (3) call A_unrolled;
+#        (4) if (True) call Q; else {};
+#        (5) while (True) { call A_unrolled; if (True) call Q; else {}; }
+# 
+# Post:  ⊤
+
+

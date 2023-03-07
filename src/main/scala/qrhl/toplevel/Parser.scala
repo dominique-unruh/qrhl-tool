@@ -13,6 +13,7 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 
 case class ParserContext(environment: Environment,
+                         state: State,
                          isabelle: Option[IsabelleX.ContextX])
 
 object Parser extends JavaTokenParsers {
@@ -272,7 +273,8 @@ object Parser extends JavaTokenParsers {
       args2 = args.getOrElse(Nil);
       _ <- literal(":=");
       // temporarily add oracles to environment to allow them to occur in call-expressions during parsing
-      context2 = args2.foldLeft(context) { case (ctxt,p) => ctxt.copy(ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,Nil,Nil,Nil,0))) };
+      context2 = args2.foldLeft(context) { case (ctxt,p) =>
+        ctxt.copy(environment = ctxt.environment.declareProgram(AbstractProgramDecl(p,Nil,Nil,Nil,Nil,Nil,0))) };
       body <- parenBlock(context2))
       yield DeclareProgramCommand(name,args2,body.toBlock))
 
@@ -670,9 +672,19 @@ object Parser extends JavaTokenParsers {
       transform_unrolled
     )
 
+  def schema(implicit context:ParserContext) : Parser[SchemaCommand] =
+    literal("schema") ~> commit(
+      for (name <- identifier;
+           schema = context.state.schemas.getOrElse(name,
+             throw UserException(s"Unknown axiom schema $name"));
+           instantiation <- schema.parser
+           )
+        yield SchemaCommand(instantiation)
+    )
+
   def command(implicit context:ParserContext): Parser[Command] =
     isabelleToplevel |
     debug | isabelle | variable | declareProgram | declareAdversary | qrhl | goal | (tactic ^^ TacticCommand) |
-      include | qed | changeDirectory | cheat | print_cmd | focus | transform | failure("expecting command")
+      include | qed | changeDirectory | cheat | print_cmd | focus | transform | schema | failure("expecting command")
 }
 

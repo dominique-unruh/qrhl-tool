@@ -18,7 +18,7 @@ import org.apache.commons.codec.binary.Hex
 import IsabelleX.{ContextX, globalIsabelle => GIsabelle}
 import GIsabelle.Ops
 import de.unruh.isabelle.mlvalue.MLValue
-import de.unruh.isabelle.pure.Typ
+import de.unruh.isabelle.pure.{Term, Typ}
 import hashedcomputation.filesystem.FingerprintedDirectorySnapshot
 import scalaz.Scalaz.ToIdOps
 
@@ -139,8 +139,16 @@ class State private (val environment: Environment,
                      val cheatMode : CheatMode,
                      val includedFiles : Set[Path],
                      val lastOutput : String,
+                     val schemas: Map[String, Schema],
                      _hash : Hash[State])
     extends HashedValue {
+  def registerSchema(schema: Schema): State = {
+    if (schemas.contains(schema.name))
+      throw UserException(s"An axiom schema with name ${schema.name} is being added, but one with that name already exists: ${schemas(schema.name)}")
+    val newSchemas = schemas + (schema.name -> schema)
+    copy(schemas = newSchemas, hash = HashTag()(schema.hash))
+  }
+
   def applyIsabelleToplevelCommand(command: String): State = {
     if (currentLemma.isDefined)
       throw UserException(s"""Isabelle commands are only possible outside a proof. Maybe you intended to use "isa ${command}."?""")
@@ -219,6 +227,12 @@ class State private (val environment: Environment,
     )
   }
 
+  def declareFact(name: String, fact: Subgoal) : State = {
+    assert(name != "")
+    copy(isabelle = Some(isabelle.addAssumption(name, fact.toTerm(isabelle).isabelleTerm)),
+      hash = HashTag()(fact.hash))
+  }
+
   private def containsDuplicates[A](seq: Seq[A]): Boolean = {
     val seen = new mutable.HashSet[A]()
     for (e <- seq) {
@@ -290,9 +304,10 @@ class State private (val environment: Environment,
                    isabelleTheory:List[Path]=_isabelleTheory,
                    includedFiles:Set[Path]=includedFiles,
                    lastOutput:String=lastOutput,
+                   schemas: Map[String, Schema] = schemas,
                    hash: Hash[State]) : State =
     new State(environment=environment, goal=goal, _isabelle=isabelle, cheatMode=cheatMode,
-      currentLemma=currentLemma, currentDirectory=currentDirectory,
+      currentLemma=currentLemma, currentDirectory=currentDirectory, schemas = schemas,
       includedFiles=includedFiles, _isabelleTheory=isabelleTheory, lastOutput = lastOutput,
       _hash = hash)
 
@@ -320,7 +335,8 @@ class State private (val environment: Environment,
     "In cheat mode."
   else goal.longDescription
 
-  lazy val parserContext: ParserContext = ParserContext(isabelle=_isabelle, environment=environment)
+  lazy val parserContext: ParserContext =
+    ParserContext(isabelle = _isabelle, state = this, environment = environment)
 
   def parseCommand(str:String): Command = {
     implicit val parserContext: ParserContext = this.parserContext
@@ -444,6 +460,7 @@ object State {
     currentLemma=None, currentDirectory=Paths.get("").toAbsolutePath,
     cheatMode=CheatMode.make(cheating), includedFiles=Set.empty,
     lastOutput = "Ready.",
+    schemas = Map.empty,
     _hash = HashTag()(Hashable.hash(cheating)))
 //  private[State] val defaultIsabelleTheory = "QRHL"
 
