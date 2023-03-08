@@ -11,59 +11,88 @@ ML "open Prog_Variables"
 
 (* MOVE *)
 
+lemma id_in_commutant[iff]: \<open>id_cblinfun \<in> commutant A\<close>
+  by (simp add: commutant_memberI)
 
-(* (* TODO used? *)
-lemma filterlim_bot: \<open>filterlim f \<bottom> F \<longleftrightarrow> (F = \<bottom>)\<close>
-proof -
-  have \<open>F = \<bottom>\<close> if \<open>filtermap f F \<le> \<bottom>\<close>
-  proof -
-    from that have \<open>filtermap f F = \<bottom>\<close>
-      by (simp add: le_bot)
-    then have \<open>eventually (\<lambda>_. False) (filtermap f F)\<close>
-      by simp
-    then have \<open>eventually (\<lambda>_. False) F\<close>
-      by (simp add: eventually_filtermap)
-    then show \<open>F = \<bottom>\<close>
-      using eventually_False by auto
-  qed
-  then show ?thesis
-    by (auto simp add: filterlim_def)
-qed *)
-
-
+lemma valid_qregister_range_def_sot:
+  \<open>valid_qregister_range \<FF> \<longleftrightarrow> 
+      (\<forall>a\<in>\<FF>. a* \<in> \<FF>) \<and> csubspace \<FF> \<and> (\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>) \<and> id_cblinfun \<in> \<FF> \<and>
+      closedin cstrong_operator_topology \<FF>\<close>
+proof (unfold valid_qregister_range_def, intro iffI conjI; elim conjE; assumption?)
+  assume comm: \<open>commutant (commutant \<FF>) = \<FF>\<close>
+  from comm show \<open>closedin cstrong_operator_topology \<FF>\<close>
+    by (metis commutant_sot_closed)
+  from comm show \<open>csubspace \<FF>\<close>
+    by (metis csubspace_commutant)
+  from comm show \<open>\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>\<close>
+    using commutant_mult by blast
+  from comm show \<open>id_cblinfun \<in> \<FF>\<close>
+    by blast
+next
+  assume adj: \<open>\<forall>a\<in>\<FF>. a* \<in> \<FF>\<close>
+  assume subspace: \<open>csubspace \<FF>\<close>
+  assume closed: \<open>closedin cstrong_operator_topology \<FF>\<close>
+  assume mult: \<open>\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>\<close>
+  assume id: \<open>id_cblinfun \<in> \<FF>\<close>
+  have \<open>commutant (commutant \<FF>) = cstrong_operator_topology closure_of \<FF>\<close>
+    apply (rule double_commutant_theorem)
+    using subspace subspace mult id adj 
+    by simp_all
+  also from closed have \<open>\<dots> = \<FF>\<close>
+    by (simp add: closure_of_eq)
+  finally show \<open>commutant (commutant \<FF>) = \<FF>\<close>
+    by -
+qed
 
 (* TODO: valid_qregister_range could be a corollary of this *)
-lemma valid_qregister_range_pres_raw:
-  assumes \<open>qregister_raw F\<close>
-  assumes \<open>valid_qregister_range A\<close>
-  shows \<open>valid_qregister_range (F ` A)\<close>
-proof (rule valid_qregister_rangeI)
-(* Things to prove first:
-
-commutant (commutant A) = A \<longleftrightarrow> A SOT-closed (Double Commutant Thm, Conway Func IX.6.4)
-DONE: double_commutant_theorem
-
-registers preserve SOT-limits (quicksheets 2023, p62-63)
-DONE: closed_map_sot_register
-
- *)
-  show \<open>a \<in> F ` A \<Longrightarrow> a* \<in> F ` A\<close> for a
-    by (smt (verit) assms image_iff register_adjoint valid_qregister_range_def)
-  from \<open>valid_qregister_range A\<close>
-  have *: \<open>A = commutant (commutant A)\<close>
-    by (simp add: valid_qregister_range_def)
-  show \<open>commutant (commutant (F ` A)) \<subseteq> F ` A\<close>
-  proof (rule subsetI)
-    fix a
-    assume \<open>a \<in> commutant (commutant (F ` A))\<close>
-    then have \<open>a o\<^sub>C\<^sub>L b = b o\<^sub>C\<^sub>L a\<close> if \<open>b \<in> commutant (F ` A)\<close> for b
-      apply (subst (asm) commutant_def)
-      using that by auto
-
-    show \<open>a \<in> F ` A \<close>
-      by -
+lemma valid_qregister_range_pres:
+  assumes qreg: \<open>qregister F\<close>
+  assumes valid: \<open>valid_qregister_range A\<close>
+  shows \<open>valid_qregister_range (apply_qregister F ` A)\<close>
+proof (intro valid_qregister_range_def_sot[THEN iffD2] conjI ballI)
+  show \<open>a \<in> apply_qregister F ` A \<Longrightarrow> a* \<in> apply_qregister F ` A\<close> for a
+    using assms valid_qregister_range_def by fastforce
+  show \<open>csubspace (apply_qregister F ` A)\<close>
+    using valid
+    by (metis clinear_apply_qregister complex_vector.linear_subspace_image csubspace_commutant valid_qregister_range_def)
+  show \<open>a o\<^sub>C\<^sub>L b \<in> apply_qregister F ` A\<close>
+    if \<open>a \<in> apply_qregister F ` A\<close> and \<open>b \<in> apply_qregister F ` A\<close> for a b
+  proof -
+    from that obtain a' where a': \<open>a' \<in> A\<close> and a_def: \<open>a = apply_qregister F a'\<close>
+      by auto
+    from that obtain b' where b': \<open>b' \<in> A\<close> and b_def: \<open>b = apply_qregister F b'\<close>
+      by auto
+    from valid have \<open>a' o\<^sub>C\<^sub>L b' \<in> A\<close>
+      using that a' b' by (simp add: valid_qregister_range_def_sot)
+    then show ?thesis
+      using qreg by (simp add: a_def b_def register_mult)
+  qed
+  show \<open>id_cblinfun \<in> apply_qregister F ` A\<close>
+    using assms 
+    by (metis id_in_commutant imageI lift_id_cblinfun valid_qregister_range_def)
+  show \<open>closedin cstrong_operator_topology (apply_qregister F ` A)\<close>
+  proof -
+    have \<open>closedin cstrong_operator_topology A\<close>
+      using valid valid_qregister_range_def_sot by blast
+    moreover have \<open>closed_map cstrong_operator_topology cstrong_operator_topology (apply_qregister F)\<close>
+      using qreg
+      by (simp add: closed_map_sot_register)
+    ultimately show ?thesis
+      using closed_map_def by blast
   qed
 qed
+
+lemma qregister_Abs_qregister: \<open>qregister_raw F \<Longrightarrow> qregister (Abs_qregister F)\<close>
+  by (simp add: Abs_qregister_inverse flip: qregister_raw_apply_qregister)
+  
+lemma qregister_apply_Abs: \<open>qregister_raw F \<Longrightarrow> apply_qregister (Abs_qregister F) = F\<close>
+  by (simp add: Abs_qregister_inverse)
+
+lemma valid_qregister_range_pres_raw:
+  assumes qreg: \<open>qregister_raw F\<close>
+  assumes valid: \<open>valid_qregister_range A\<close>
+  shows \<open>valid_qregister_range (F ` A)\<close>
+  by (metis assms(1) assms(2) qregister_Abs_qregister qregister_apply_Abs valid_qregister_range_pres)
 
 (* lemma valid_qregister_range_raw:
   assumes \<open>qregister_raw F\<close>
@@ -72,31 +101,41 @@ qed
 
 lift_definition QREGISTER_chain :: \<open>('a,'b) qregister \<Rightarrow> 'a QREGISTER \<Rightarrow> 'b QREGISTER\<close> is
   \<open>\<lambda>F \<GG>. if qregister_raw F then F ` \<GG> else empty_qregister_range\<close>
-  by (auto simp add: valid_qregister_range_pres_raw non_qregister_raw valid_empty_qregister_range)
+  by (auto simp: non_qregister_raw  
+      intro!: valid_qregister_range_pres_raw valid_empty_qregister_range)
 
 lift_definition QREGISTER_fst :: \<open>('a\<times>'b) QREGISTER\<close> is
   \<open>(\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` UNIV\<close>
   using valid_qregister_range[of qFst]
-  apply simp
-  sorry
+  by (simp add: apply_qregister_fst[abs_def])
 lift_definition QREGISTER_snd :: \<open>('a\<times>'b) QREGISTER\<close> is
   \<open>(\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` UNIV\<close>
-  sorry
+  using valid_qregister_range[of qSnd]
+  by (simp add: apply_qregister_snd[abs_def])
+
+lemma apply_qregister_empty_qregister_range: \<open>qregister F \<Longrightarrow> apply_qregister F ` empty_qregister_range = empty_qregister_range\<close>
+  by (auto simp add: image_image empty_qregister_range_def apply_qregister_scaleC)
 
 lemma QREGISTER_of_qregister_chain: \<open>QREGISTER_of (qregister_chain F G) = QREGISTER_chain F (QREGISTER_of G)\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (auto simp add: QREGISTER_of.rep_eq QREGISTER_chain.rep_eq apply_qregister_empty_qregister_range)
 
 lemma QREGISTER_of_qFst: \<open>QREGISTER_of qFst = QREGISTER_fst\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_of.rep_eq QREGISTER_fst.rep_eq apply_qregister_fst)
 lemma QREGISTER_of_qSnd: \<open>QREGISTER_of qSnd = QREGISTER_snd\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_of.rep_eq QREGISTER_snd.rep_eq apply_qregister_snd)
+
+lemma QREGISTER_pair_sym: \<open>QREGISTER_pair F G = QREGISTER_pair G F\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_pair.rep_eq Un_ac(3))
 
 lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F)
                       (QREGISTER_pair B
                           (QREGISTER_chain A G))
 = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
   sorry
-
 
 lemma x3: \<open>QREGISTER_pair (QREGISTER_chain F G) (QREGISTER_chain F H)
 = QREGISTER_chain F (QREGISTER_pair G H)\<close>
@@ -110,34 +149,140 @@ lemma x4: \<open>QREGISTER_pair (QREGISTER_chain A F)
 = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
   sorry
 
+
+lemma empty_qregister_range_subset_valid_range: \<open>valid_qregister_range A \<Longrightarrow> empty_qregister_range \<subseteq> A\<close>
+  by (auto simp: valid_qregister_range_def_sot empty_qregister_range_def complex_vector.subspace_scale)
+
+instance QREGISTER :: (type) order_bot
+  apply intro_classes
+  apply transfer
+  using empty_qregister_range_subset_valid_range by simp
+
+instance QREGISTER :: (type) order_top
+  apply intro_classes
+  apply transfer
+  by simp
+
 lemma QREGISTER_pair_unit_left: \<open>QREGISTER_pair QREGISTER_unit F = F\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  using empty_qregister_range_subset_valid_range[of \<open>Rep_QREGISTER F\<close>] QREGISTER.Rep_QREGISTER[of F]
+  by (simp add: QREGISTER_pair.rep_eq bot_QREGISTER.rep_eq Un_absorb1 valid_qregister_range_def)
 
 lemma QREGISTER_pair_unit_right: \<open>QREGISTER_pair F QREGISTER_unit = F\<close>
-  sorry
+  apply (subst QREGISTER_pair_sym)
+  by (rule QREGISTER_pair_unit_left)
 
+lemma commutant_UNIV: \<open>commutant (UNIV :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set) = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+  (* Not sure if the assumption chilbert_space is needed *)
+proof -
+  have 1: \<open>c *\<^sub>C id_cblinfun \<in> commutant UNIV\<close> for c
+    by (simp add: commutant_def)
+  moreover have 2: \<open>x \<in> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close> if x_comm: \<open>x \<in> commutant UNIV\<close> for x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  proof -
+    obtain B :: \<open>'a set\<close> where \<open>is_onb B\<close>
+      using is_onb_some_chilbert_basis by blast
+    have \<open>\<exists>c. x *\<^sub>V \<psi> = c *\<^sub>C \<psi>\<close> for \<psi>
+    proof -
+      have \<open>norm (x *\<^sub>V \<psi>) = norm ((x o\<^sub>C\<^sub>L selfbutter (sgn \<psi>)) *\<^sub>V \<psi>)\<close>
+        by (simp add: cnorm_eq_1)
+      also have \<open>\<dots> = norm ((selfbutter (sgn \<psi>) o\<^sub>C\<^sub>L x) *\<^sub>V \<psi>)\<close>
+        using x_comm by (simp add: commutant_def del: butterfly_apply)
+      also have \<open>\<dots> = norm (proj \<psi> *\<^sub>V (x *\<^sub>V \<psi>))\<close>
+        by (simp add: butterfly_sgn_eq_proj)
+      finally have \<open>x *\<^sub>V \<psi> \<in> space_as_set (ccspan {\<psi>})\<close>
+        by (metis norm_Proj_apply)
+      then show ?thesis
+        by (auto simp add: ccspan_finite complex_vector.span_singleton)
+    qed
+    then obtain f where f: \<open>x *\<^sub>V \<psi> = f \<psi> *\<^sub>C \<psi>\<close> for \<psi>
+      apply atomize_elim apply (rule choice) by auto
+
+    have \<open>f \<psi> = f \<phi>\<close> if \<open>\<psi> \<in> B\<close> and \<open>\<phi> \<in> B\<close> for \<psi> \<phi>
+    proof (cases \<open>\<psi> = \<phi>\<close>)
+      case True
+      then show ?thesis by simp
+    next
+      case False
+      with that \<open>is_onb B\<close>
+      have [simp]: \<open>\<psi> \<bullet>\<^sub>C \<phi> = 0\<close>
+        by (auto simp: is_onb_def is_ortho_set_def)
+      then have [simp]: \<open>\<phi> \<bullet>\<^sub>C \<psi> = 0\<close>
+        using is_orthogonal_sym by blast
+      from that \<open>is_onb B\<close> have [simp]: \<open>\<psi> \<noteq> 0\<close>
+        by (auto simp: is_onb_def)
+      from that \<open>is_onb B\<close> have [simp]: \<open>\<phi> \<noteq> 0\<close>
+        by (auto simp: is_onb_def)
+
+      have \<open>f (\<psi>+\<phi>) *\<^sub>C \<psi> + f (\<psi>+\<phi>) *\<^sub>C \<phi> = f (\<psi>+\<phi>) *\<^sub>C (\<psi> + \<phi>)\<close>
+        by (simp add: complex_vector.vector_space_assms(1))
+      also have \<open>\<dots> = x *\<^sub>V (\<psi> + \<phi>)\<close>
+        by (simp add: f)
+      also have \<open>\<dots> = x *\<^sub>V \<psi> + x *\<^sub>V \<phi>\<close>
+        by (simp add: cblinfun.add_right)
+      also have \<open>\<dots> = f \<psi> *\<^sub>C \<psi> + f \<phi> *\<^sub>C \<phi>\<close>
+        by (simp add: f)
+      finally have *: \<open>f (\<psi> + \<phi>) *\<^sub>C \<psi> + f (\<psi> + \<phi>) *\<^sub>C \<phi> = f \<psi> *\<^sub>C \<psi> + f \<phi> *\<^sub>C \<phi>\<close>
+        by -
+      have \<open>f (\<psi> + \<phi>) = f \<psi>\<close>
+        using *[THEN arg_cong[where f=\<open>cinner \<psi>\<close>]]
+        by (simp add: cinner_add_right)
+      moreover have \<open>f (\<psi> + \<phi>) = f \<phi>\<close>
+        using *[THEN arg_cong[where f=\<open>cinner \<phi>\<close>]]
+        by (simp add: cinner_add_right)
+      ultimately show \<open>f \<psi> = f \<phi>\<close>
+        by simp
+    qed
+    then obtain c where \<open>f \<psi> = c\<close> if \<open>\<psi> \<in> B\<close> for \<psi>
+      by meson
+    then have \<open>x *\<^sub>V \<psi> = (c *\<^sub>C id_cblinfun) *\<^sub>V \<psi>\<close> if \<open>\<psi> \<in> B\<close> for \<psi>
+      by (simp add: f that)
+    then have \<open>x = c *\<^sub>C id_cblinfun\<close>
+      apply (rule cblinfun_eq_gen_eqI[where G=B])
+      using \<open>is_onb B\<close> by (auto simp: is_onb_def)
+    then show \<open>x \<in> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+      by (auto)
+  qed
+
+  from 1 2 show ?thesis
+    by auto
+qed
+
+lemma commutant_id_mult: \<open>commutant (range (\<lambda>c. c *\<^sub>C id_cblinfun :: _ \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)) = UNIV\<close>
+  by (metis commutant_UNIV commutant_empty triple_commutant)
 
 lemma QREGISTER_pair_all_left: \<open>QREGISTER_pair QREGISTER_all F = QREGISTER_all\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_pair.rep_eq top_QREGISTER.rep_eq
+      commutant_id_mult commutant_UNIV)
 
 lemma QREGISTER_pair_all_right: \<open>QREGISTER_pair F QREGISTER_all = QREGISTER_all\<close>
-  sorry
+  apply (subst QREGISTER_pair_sym)
+  by (rule QREGISTER_pair_all_left)
 
 lemma QREGISTER_chain_id_left: \<open>QREGISTER_chain qregister_id F = F\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_chain.rep_eq)
 
 lemma QREGISTER_chain_all_right: \<open>QREGISTER_chain F QREGISTER_all = QREGISTER_of F\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_chain.rep_eq QREGISTER_of.rep_eq top_QREGISTER.rep_eq)
 
 lemma QREGISTER_pair_fst_snd: \<open>QREGISTER_pair QREGISTER_fst QREGISTER_snd = QREGISTER_all\<close>
-  sorry
+  by (simp add: flip: QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_pair
+      QREGISTER_of_qregister_id)
 lemma QREGISTER_pair_snd_fst: \<open>QREGISTER_pair QREGISTER_snd QREGISTER_fst = QREGISTER_all\<close>
-  sorry
+  apply (subst QREGISTER_pair_sym)
+  by (rule QREGISTER_pair_fst_snd)
+
 lemma QREGISTER_chain_unit_left: \<open>QREGISTER_chain empty_qregister F = QREGISTER_unit\<close>
-  sorry
+  apply (rule antisym)
+   apply transfer
+  by (auto simp: Quantum_Extra2.empty_var_def empty_qregister_range_def)
 
 lemma QREGISTER_chain_unit_right: \<open>QREGISTER_chain F QREGISTER_unit = QREGISTER_unit\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (auto simp add: QREGISTER_chain.rep_eq bot_QREGISTER.rep_eq empty_qregister_range_def
+      image_image apply_qregister_scaleC)
 
 ML \<open>
 (* Brings an INDEX-REGISTER into normal form. *)
@@ -245,6 +390,27 @@ schematic_goal \<open>qcomplements \<lbrakk>\<lbrakk>#2\<rbrakk>\<^sub>q, \<lbra
 
 
 (* END MOVE *)
+
+
+(* (* TODO used? *)
+lemma filterlim_bot: \<open>filterlim f \<bottom> F \<longleftrightarrow> (F = \<bottom>)\<close>
+proof -
+  have \<open>F = \<bottom>\<close> if \<open>filtermap f F \<le> \<bottom>\<close>
+  proof -
+    from that have \<open>filtermap f F = \<bottom>\<close>
+      by (simp add: le_bot)
+    then have \<open>eventually (\<lambda>_. False) (filtermap f F)\<close>
+      by simp
+    then have \<open>eventually (\<lambda>_. False) F\<close>
+      by (simp add: eventually_filtermap)
+    then show \<open>F = \<bottom>\<close>
+      using eventually_False by auto
+  qed
+  then show ?thesis
+    by (auto simp add: filterlim_def)
+qed *)
+
+
 
 ML \<open>
 open Prog_Variables
@@ -762,7 +928,7 @@ definition \<open>equivalent_qregisters' F G \<longleftrightarrow> equivalent_qr
 
 lemma QREGISTER_of_non_qregister: \<open>QREGISTER_of non_qregister = QREGISTER_unit\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QREGISTER_of.rep_eq QREGISTER_unit.rep_eq)
+  by (simp add: QREGISTER_of.rep_eq bot_QREGISTER.rep_eq)
 
 definition QREGISTER_of' where \<open>QREGISTER_of' F = (if qregister F then Some (QREGISTER_of F) else None)\<close>
 

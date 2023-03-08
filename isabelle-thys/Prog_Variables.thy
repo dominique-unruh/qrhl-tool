@@ -453,18 +453,41 @@ instance
   by auto
 end
 
-lift_definition CREGISTER_unit :: \<open>'a CREGISTER\<close> is empty_cregister_range
+instantiation CREGISTER :: (type) bot begin
+lift_definition bot_CREGISTER :: \<open>'a CREGISTER\<close> is empty_cregister_range
   by (simp add: valid_empty_cregister_range)
-lift_definition QREGISTER_unit :: \<open>'a QREGISTER\<close> is empty_qregister_range
+instance..
+end
+
+instantiation QREGISTER :: (type) bot begin
+lift_definition bot_QREGISTER :: \<open>'a QREGISTER\<close> is empty_qregister_range
   by (simp add: valid_empty_qregister_range)
-lift_definition CREGISTER_all :: \<open>'a CREGISTER\<close> is UNIV
+instance..
+end
+
+(* LEGACY *)
+abbreviation (input) CREGISTER_unit :: \<open>'a CREGISTER\<close> where \<open>CREGISTER_unit \<equiv> bot\<close>
+abbreviation (input) QREGISTER_unit :: \<open>'a QREGISTER\<close> where \<open>QREGISTER_unit \<equiv> bot\<close>
+
+instantiation CREGISTER :: (type) top begin
+lift_definition top_CREGISTER :: \<open>'a CREGISTER\<close> is UNIV
   by (simp add: valid_cregister_range_UNIV)
-lift_definition QREGISTER_all :: \<open>'a QREGISTER\<close> is UNIV
+instance..
+end
+
+instantiation QREGISTER :: (type) top begin
+lift_definition top_QREGISTER :: \<open>'a QREGISTER\<close> is UNIV
   by (simp add: valid_qregister_range_UNIV)
+instance..
+end
+
+(* LEGACY *)
+abbreviation (input) CREGISTER_all :: \<open>'a CREGISTER\<close> where \<open>CREGISTER_all \<equiv> top\<close>
+abbreviation (input) QREGISTER_all :: \<open>'a QREGISTER\<close> where \<open>QREGISTER_all \<equiv> top\<close>
 
 lemma QREGISTER_of_qregister_id: \<open>QREGISTER_of qregister_id = QREGISTER_all\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QREGISTER_of.rep_eq QREGISTER_all.rep_eq)
+  by (simp add: QREGISTER_of.rep_eq top_QREGISTER.rep_eq)
 
 
 (* lemma valid_cregister_range_Inter: 
@@ -483,7 +506,7 @@ proof (rule Rep_QREGISTER_inject[THEN iffD1])
     apply (rule arg_cong[where y=UNIV])
     by (metis one_dim_iso_idem one_dim_iso_inj surjI)
   also have \<open>\<dots> = Rep_QREGISTER QREGISTER_unit\<close>    
-    by (simp add: QREGISTER_unit.rep_eq empty_qregister_range_def)
+    by (simp add: bot_QREGISTER.rep_eq empty_qregister_range_def)
   finally show \<open>Rep_QREGISTER (QREGISTER_of ?empty) = Rep_QREGISTER QREGISTER_unit\<close>
     by -
 qed
@@ -491,7 +514,7 @@ qed
 lemma QREGISTER_unit_smallest[simp]: \<open>(QREGISTER_unit :: 'a QREGISTER) \<le> X\<close>
 proof (unfold less_eq_QREGISTER.rep_eq)
   have \<open>Rep_QREGISTER (QREGISTER_unit :: 'a QREGISTER) = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
-    by (simp add: QREGISTER_unit.rep_eq empty_qregister_range_def)
+    by (simp add: bot_QREGISTER.rep_eq empty_qregister_range_def)
   also have \<open>\<dots> \<subseteq> commutant (commutant (Rep_QREGISTER X))\<close>
     apply (subst commutant_def) by auto
   also have \<open>\<dots> = Rep_QREGISTER X\<close>
@@ -2041,7 +2064,7 @@ lemma qregister_le_pair_rightI2: \<open>qregister_le F (qregister_pair G H)\<clo
 lemma qregister_le_refl[iff]: \<open>qregister F \<Longrightarrow> qregister_le F F\<close> (* TODO: could replace this by a simp-rule *)
   unfolding qregister_le_def by simp
 lemma qregister_le_iso: \<open>qregister F \<Longrightarrow> iso_qregister G \<Longrightarrow> qregister_le F G\<close>
-  by (simp add: qregister_le_def QREGISTER_of_iso less_eq_QREGISTER.rep_eq QREGISTER_all.rep_eq
+  by (simp add: qregister_le_def QREGISTER_of_iso less_eq_QREGISTER.rep_eq top_QREGISTER.rep_eq
       iso_qregister_def)
 lemma qregister_le_id[iff]: \<open>qregister F \<Longrightarrow> qregister_le F qregister_id\<close> (* TODO: could replace this by a simp-rule *)
   by (simp add: iso_qregister_def qregister_le_iso)
