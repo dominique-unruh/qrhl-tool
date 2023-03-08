@@ -397,6 +397,33 @@ qed
 lemma valid_qregister_range_UNIV: \<open>valid_qregister_range UNIV\<close>
   by (auto simp: valid_qregister_range_def commutant_def)
 
+abbreviation \<open>qregister_decomposition_basis F \<equiv> register_decomposition_basis (apply_qregister F)\<close>
+
+lemma closed_map_sot_register:
+  assumes \<open>qregister F\<close>
+  shows \<open>closed_map cstrong_operator_topology cstrong_operator_topology (apply_qregister F)\<close>
+proof -
+  have \<open>qregister_raw (apply_qregister F)\<close>
+    using assms qregister.rep_eq by blast
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F. ?thesis\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
+      \<open>unitary U\<close> and FU: \<open>apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
+      by metis
+    have \<open>closed_map cstrong_operator_topology cstrong_operator_topology (sandwich U o (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun))\<close>
+      apply (rule closed_map_compose)
+       apply (rule closed_map_sot_tensor_op_id_right)
+      using \<open>unitary U\<close> by (rule closed_map_sot_unitary_sandwich)
+    then show \<open>closed_map cstrong_operator_topology cstrong_operator_topology (apply_qregister F)\<close>
+      by (simp add: FU[abs_def] o_def)
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
+
 typedef 'a CREGISTER = \<open>Collect valid_cregister_range :: 'a cupdate set set\<close>
   using valid_empty_cregister_range by blast
 typedef 'a QREGISTER = \<open>Collect valid_qregister_range :: 'a qupdate set set\<close>
@@ -434,6 +461,10 @@ lift_definition CREGISTER_all :: \<open>'a CREGISTER\<close> is UNIV
   by (simp add: valid_cregister_range_UNIV)
 lift_definition QREGISTER_all :: \<open>'a QREGISTER\<close> is UNIV
   by (simp add: valid_qregister_range_UNIV)
+
+lemma QREGISTER_of_qregister_id: \<open>QREGISTER_of qregister_id = QREGISTER_all\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_of.rep_eq QREGISTER_all.rep_eq)
 
 
 (* lemma valid_cregister_range_Inter: 

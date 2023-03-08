@@ -894,27 +894,6 @@ lemma inflation_op_adj: \<open>(inflation_op' n ops)* = inflation_op' n (map adj
   by (simp_all add: adj_plus tensor_op_adjoint)
 
 
-(* TODO replace  *) thm limitin_closure_of (* with this *)
-lemma limitin_closure_of:
-  assumes limit: \<open>limitin T f c F\<close>
-  assumes in_S: \<open>\<forall>\<^sub>F x in F. f x \<in> S\<close>
-  assumes nontrivial: \<open>\<not> trivial_limit F\<close>
-  shows \<open>c \<in> T closure_of S\<close>
-proof (intro in_closure_of[THEN iffD2] conjI impI allI)
-  from limit show \<open>c \<in> topspace T\<close>
-    by (simp add: limitin_topspace)
-  fix U
-  assume \<open>c \<in> U \<and> openin T U\<close>
-  with limit have \<open>\<forall>\<^sub>F x in F. f x \<in> U\<close>
-    by (simp add: limitin_def)
-  with in_S have \<open>\<forall>\<^sub>F x in F. f x \<in> U \<and> f x \<in> S\<close>
-    by (simp add: eventually_frequently_simps)
-  with nontrivial
-  show \<open>\<exists>y. y \<in> S \<and> y \<in> U\<close>
-    using eventually_happens' by blast
-qed
-
-
 (* TODO: can be generalized for more pullback topologies, I think *)
 lemma cstrong_operator_topology_in_closureI:
   assumes \<open>\<And>M \<epsilon>. \<epsilon> > 0 \<Longrightarrow> finite M \<Longrightarrow> \<exists>a\<in>A. \<forall>v\<in>M. norm ((b-a) *\<^sub>V v) \<le> \<epsilon>\<close>
@@ -1313,6 +1292,116 @@ next
     qed
   qed
 qed
+
+
+(* TODO: replace  *) thm continuous_map_left_comp_sot (* with this *)
+lemma continuous_map_left_comp_sot[continuous_intros]: 
+  assumes \<open>continuous_map T cstrong_operator_topology f\<close> 
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. b o\<^sub>C\<^sub>L f x)\<close> 
+  by (fact continuous_map_compose[OF assms continuous_map_left_comp_sot, unfolded o_def])
+
+(* TODO: replace  *) thm continuous_map_right_comp_sot (* with this *)
+lemma continuous_map_right_comp_sot[continuous_intros]: 
+  assumes \<open>continuous_map T cstrong_operator_topology f\<close> 
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a)\<close> 
+  by (fact continuous_map_compose[OF assms continuous_map_right_comp_sot, unfolded o_def])
+
+lemma sandwich_sot_continuous[continuous_intros]:
+  assumes \<open>continuous_map T cstrong_operator_topology f\<close>
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. sandwich A (f x))\<close>
+  unfolding sandwich_apply
+  by (intro continuous_intros assms)
+
+
+lemma commutant_tensor1': \<open>commutant (range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)) = range (\<lambda>b. b \<otimes>\<^sub>o id_cblinfun)\<close>
+proof -
+  have \<open>commutant (range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)) = commutant (sandwich swap_ell2 ` range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun))\<close>
+    by (metis (no_types, lifting) image_cong range_composition swap_tensor_op_sandwich)
+  also have \<open>\<dots> = sandwich swap_ell2 ` commutant (range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun))\<close>
+    by (simp add: sandwich_unitary_complement)
+  also have \<open>\<dots> = sandwich swap_ell2 ` range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)\<close>
+    by (simp add: commutant_tensor1)
+  also have \<open>\<dots> = range (\<lambda>b. b \<otimes>\<^sub>o id_cblinfun)\<close>
+    by force
+  finally show ?thesis
+    by -
+qed
+
+
+
+lemma closed_map_sot_tensor_op_id_right: 
+  \<open>closed_map cstrong_operator_topology cstrong_operator_topology (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun :: ('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2)\<close>
+proof (unfold closed_map_def, intro allI impI)
+  fix U :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
+  assume closed_U: \<open>closedin cstrong_operator_topology U\<close>
+
+  have aux1: \<open>range f \<subseteq> X \<longleftrightarrow> (\<forall>x. f x \<in> X)\<close> for f :: \<open>'x \<Rightarrow> 'y\<close> and X
+    by blast
+
+  have \<open>l \<in> (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` U\<close> if range: \<open>range (\<lambda>x. f x) \<subseteq> (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` U\<close>
+    and limit: \<open>limitin cstrong_operator_topology f l F\<close> and \<open>F \<noteq> \<bottom>\<close> 
+  for f and l :: \<open>('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2\<close> and F :: \<open>(('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2) filter\<close>
+  proof -
+    from range obtain f' where f'U: \<open>range f' \<subseteq> U\<close> and f_def: \<open>f y = f' y \<otimes>\<^sub>o id_cblinfun\<close> for y
+      apply atomize_elim
+      apply (subst aux1)
+      apply (rule choice2)
+      by auto
+    have \<open>l \<in> commutant (range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a))\<close>
+    proof (rule commutant_memberI)
+      fix c :: \<open>('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2\<close> 
+      assume \<open>c \<in> range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)\<close>
+      then obtain c' where c_def: \<open>c = id_cblinfun \<otimes>\<^sub>o c'\<close>
+        by blast
+      from limit have 1: \<open>limitin cstrong_operator_topology ((\<lambda>z. z o\<^sub>C\<^sub>L c) o f) (l o\<^sub>C\<^sub>L c) F\<close>
+        apply(rule continuous_map_limit[rotated])
+        by (simp add: continuous_map_right_comp_sot)
+      from limit have 2: \<open>limitin cstrong_operator_topology ((\<lambda>z. c o\<^sub>C\<^sub>L z) o f) (c o\<^sub>C\<^sub>L l) F\<close>
+        apply(rule continuous_map_limit[rotated])
+        by (simp add: continuous_map_left_comp_sot)
+      have 3: \<open>f x o\<^sub>C\<^sub>L c = c o\<^sub>C\<^sub>L f x\<close> for x
+        by (simp add: f_def c_def comp_tensor_op)
+      from 1 2 show \<open>l o\<^sub>C\<^sub>L c = c o\<^sub>C\<^sub>L l\<close>
+        unfolding 3 o_def
+        by (meson hausdorff_sot limitin_unique that(3))
+    qed
+    then have \<open>l \<in> range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun)\<close>
+      by (simp add: commutant_tensor1')
+    then obtain l' where l_def: \<open>l = l' \<otimes>\<^sub>o id_cblinfun\<close>
+      by blast
+    have \<open>limitin cstrong_operator_topology f' l' F\<close>
+    proof (rule limitin_cstrong_operator_topology[THEN iffD2], rule allI)
+      fix \<psi> fix b :: 'b
+      have \<open>((\<lambda>x. f x *\<^sub>V (\<psi> \<otimes>\<^sub>s ket b)) \<longlongrightarrow> l *\<^sub>V (\<psi> \<otimes>\<^sub>s ket b)) F\<close>
+        using limitin_cstrong_operator_topology that(2) by auto
+      then have \<open>((\<lambda>x. (f' x *\<^sub>V \<psi>) \<otimes>\<^sub>s ket b) \<longlongrightarrow> (l' *\<^sub>V \<psi>) \<otimes>\<^sub>s ket b) F\<close>
+        by (simp add: f_def l_def tensor_op_ell2)
+      then have \<open>((\<lambda>x. (tensor_ell2_right (ket b))* *\<^sub>V ((f' x *\<^sub>V \<psi>) \<otimes>\<^sub>s ket b)) 
+                  \<longlongrightarrow> (tensor_ell2_right (ket b))* *\<^sub>V ((l' *\<^sub>V \<psi>) \<otimes>\<^sub>s ket b)) F\<close>
+        apply (rule cblinfun.tendsto[rotated])
+        by simp
+      then show \<open>((\<lambda>x. f' x *\<^sub>V \<psi>) \<longlongrightarrow> l' *\<^sub>V \<psi>) F\<close>
+        by (simp add: tensor_ell2_right_adj_apply)
+    qed
+    with closed_U f'U \<open>F \<noteq> \<bottom>\<close> have \<open>l' \<in> U\<close>
+      by (simp add: limitin_closedin)
+    then show \<open>l \<in> (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` U\<close>
+      by (simp add: l_def)
+  qed
+  then show \<open>closedin cstrong_operator_topology ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun :: ('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2) ` U)\<close>
+    apply (rule_tac closedin_if_converge_inside)
+    by simp_all
+qed
+
+lemma closed_map_sot_unitary_sandwich:
+  fixes U :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>unitary U\<close> (* Probably holds under weaker assumptions. *)
+  shows \<open>closed_map cstrong_operator_topology cstrong_operator_topology (\<lambda>x. sandwich U x)\<close>
+  apply (rule closed_eq_continuous_inverse_map[where g=\<open>sandwich (U*)\<close>, THEN iffD2])
+  using assms 
+  by (auto intro!: continuous_intros
+      simp add: sandwich_compose
+      simp flip: cblinfun_apply_cblinfun_compose)
 
 
 end

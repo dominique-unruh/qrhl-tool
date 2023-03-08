@@ -836,8 +836,6 @@ next
     by (metis \<open>qregister \<lbrakk>R, Q\<rbrakk>\<^sub>q\<close> qregister_chain_apply_space qregister_chain_pair_Fst qregister_chain_pair_Snd)
 qed
 
-abbreviation \<open>qregister_decomposition_basis F \<equiv> register_decomposition_basis (apply_qregister F)\<close>
-
 lemma qcomplement_exists:
   fixes F :: \<open>('a,'b) qregister\<close>
   assumes \<open>qregister F\<close>

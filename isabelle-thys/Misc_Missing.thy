@@ -779,4 +779,83 @@ lemma compare_all_eqI: \<open>(\<And>x. a = x \<longleftrightarrow> b = x) \<Lon
 lemma pure_extensional: \<open>(A::'a::{}\<Rightarrow>'b::{}) == B\<close> if \<open>(\<And>x. A x \<equiv> B x)\<close>
   by (tactic \<open>resolve_tac \<^context> [Drule.extensional @{thm that}] 1\<close>)
 
+lemma closedin_if_converge_inside:
+  fixes A :: \<open>'a set\<close>
+  assumes AT: \<open>A \<subseteq> topspace T\<close>
+  assumes xA: \<open>\<And>(F::'a filter) f x. F \<noteq> \<bottom> \<Longrightarrow> limitin T f x F \<Longrightarrow> range f \<subseteq> A \<Longrightarrow> x \<in> A\<close>
+  shows \<open>closedin T A\<close>
+proof (cases \<open>A = {}\<close>)
+  case True
+  then show ?thesis by simp
+next
+  case False
+  then obtain a where \<open>a \<in> A\<close>
+    by auto
+  define Ac where \<open>Ac = topspace T - A\<close>
+  have \<open>\<exists>U. openin T U \<and> x \<in> U \<and> U \<subseteq> Ac\<close> if \<open>x \<in> Ac\<close> for x
+  proof (rule ccontr)
+    assume \<open>\<nexists>U. openin T U \<and> x \<in> U \<and> U \<subseteq> Ac\<close>
+    then have UA: \<open>U \<inter> A \<noteq> {}\<close> if \<open>openin T U\<close>and \<open>x \<in> U\<close> for U
+      by (metis Ac_def Diff_mono Diff_triv openin_subset subset_refl that)
+    have [simp]: \<open>x \<in> topspace T\<close>
+      using that by (simp add: Ac_def)
+
+    define F where \<open>F = nhdsin T x \<sqinter> principal A\<close>
+    have \<open>F \<noteq> \<bottom>\<close>
+      apply (subst filter_eq_iff)
+      apply (auto intro!: exI[of _ \<open>\<lambda>_. False\<close>] simp: F_def eventually_inf eventually_principal
+          eventually_nhdsin)
+      by (meson UA disjoint_iff)
+
+    define f where \<open>f y = (if y\<in>A then y else a)\<close> for y
+    with \<open>a \<in> A\<close> have \<open>range f \<subseteq> A\<close>
+      by force
+
+    have \<open>\<forall>\<^sub>F y in F. f y \<in> U\<close> if \<open>openin T U\<close> and \<open>x \<in> U\<close> for U
+    proof -
+      have \<open>eventually (\<lambda>x. x \<in> U) (nhdsin T x)\<close>
+        using eventually_nhdsin that by fastforce
+      moreover have \<open>\<exists>R. (\<forall>x\<in>A. R x) \<and> (\<forall>x. x \<in> U \<longrightarrow> R x \<longrightarrow> f x \<in> U)\<close>
+        apply (rule exI[of _ \<open>\<lambda>x. x \<in> A\<close>])
+        by (simp add: f_def)
+      ultimately show ?thesis
+        by (auto simp add: F_def eventually_inf eventually_principal)
+    qed
+    then have \<open>limitin T f x F\<close>
+      unfolding limitin_def by simp
+    with \<open>F \<noteq> \<bottom>\<close> \<open>range f \<subseteq> A\<close> xA
+    have \<open>x \<in> A\<close>
+      by simp
+    with that show False
+      by (simp add: Ac_def)
+  qed
+  then have \<open>openin T Ac\<close>
+    apply (rule_tac openin_subopen[THEN iffD2])
+    by simp
+  then show ?thesis
+    by (simp add: Ac_def AT closedin_def)
+qed
+
+
+(* TODO replace  *) thm limitin_closure_of (* with this *)
+lemma limitin_closure_of:
+  assumes limit: \<open>limitin T f c F\<close>
+  assumes in_S: \<open>\<forall>\<^sub>F x in F. f x \<in> S\<close>
+  assumes nontrivial: \<open>\<not> trivial_limit F\<close>
+  shows \<open>c \<in> T closure_of S\<close>
+proof (intro in_closure_of[THEN iffD2] conjI impI allI)
+  from limit show \<open>c \<in> topspace T\<close>
+    by (simp add: limitin_topspace)
+  fix U
+  assume \<open>c \<in> U \<and> openin T U\<close>
+  with limit have \<open>\<forall>\<^sub>F x in F. f x \<in> U\<close>
+    by (simp add: limitin_def)
+  with in_S have \<open>\<forall>\<^sub>F x in F. f x \<in> U \<and> f x \<in> S\<close>
+    by (simp add: eventually_frequently_simps)
+  with nontrivial
+  show \<open>\<exists>y. y \<in> S \<and> y \<in> U\<close>
+    using eventually_happens' by blast
+qed
+
+
 end
