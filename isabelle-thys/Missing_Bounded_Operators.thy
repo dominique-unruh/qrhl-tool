@@ -659,4 +659,660 @@ lemma butterfly_code[code]: \<open>mat_of_cblinfun (butterfly_code s t)
       mat_of_cblinfun_adj mat_adjoint_def map_map_vec_cols
       flip: vector_to_cblinfun_code_def map_vec_conjugate[abs_def])
 
+
+lemma commutant_memberI:
+  assumes \<open>\<And>y. y \<in> X \<Longrightarrow> x o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L x\<close>
+  shows \<open>x \<in> commutant X\<close>
+  using assms by (simp add: commutant_def)
+
+lemma Proj_compose_cancelI:
+  assumes \<open>A *\<^sub>S \<top> \<le> S\<close>
+  shows \<open>Proj S o\<^sub>C\<^sub>L A = A\<close>
+  apply (rule cblinfun_eqI)
+proof -
+  fix x
+  have \<open>(Proj S o\<^sub>C\<^sub>L A) *\<^sub>V x = Proj S *\<^sub>V (A *\<^sub>V x)\<close>
+  by simp
+  also have \<open>\<dots> = A *\<^sub>V x\<close>
+    apply (rule Proj_fixes_image)
+    using assms cblinfun_apply_in_image less_eq_ccsubspace.rep_eq by blast
+  finally show \<open>(Proj S o\<^sub>C\<^sub>L A) *\<^sub>V x = A *\<^sub>V x\<close>
+    by -
+qed
+
+
+lemma continuous_cstrong_operator_topology_plus[continuous_intros]:
+  assumes \<open>continuous_map T cstrong_operator_topology f\<close>
+  assumes \<open>continuous_map T cstrong_operator_topology g\<close>
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. f x + g x)\<close>
+  using assms
+  by (auto intro!: continuous_map_add
+      simp: continuous_on_cstrong_operator_topo_iff_coordinatewise cblinfun.add_left)
+
+lemma continuous_cstrong_operator_topology_uminus[continuous_intros]:
+  assumes \<open>continuous_map T cstrong_operator_topology f\<close>
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. - f x)\<close>
+  using assms
+  by (auto simp add: continuous_on_cstrong_operator_topo_iff_coordinatewise cblinfun.minus_left)
+
+lemma continuous_cstrong_operator_topology_minus[continuous_intros]:
+  assumes \<open>continuous_map T cstrong_operator_topology f\<close>
+  assumes \<open>continuous_map T cstrong_operator_topology g\<close>
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. f x - g x)\<close>
+  apply (subst diff_conv_add_uminus)
+  by (intro continuous_intros assms)
+
+
+lemma cblinfun_image_ccspan_leqI:
+  assumes \<open>\<And>v. v \<in> M \<Longrightarrow> A *\<^sub>V v \<in> space_as_set T\<close>
+  shows \<open>A *\<^sub>S ccspan M \<le> T\<close>
+  by (simp add: assms cblinfun_image_ccspan ccspan_leqI image_subsetI)
+
+lemma space_as_setI_via_Proj:
+  assumes \<open>Proj M *\<^sub>V x = x\<close>
+  shows \<open>x \<in> space_as_set M\<close>
+  using assms norm_Proj_apply by fastforce
+
+lemma commutant_sot_closed: \<open>closedin cstrong_operator_topology (commutant A)\<close>
+  \<comment> \<open>@{cite conway13functional}, Exercise IX.6.2\<close>
+proof (cases \<open>A = {}\<close>)
+  case True
+  then show ?thesis
+    apply simp
+    by (metis closedin_topspace cstrong_operator_topology_topspace)
+next
+  case False
+  have closed_a: \<open>closedin cstrong_operator_topology (commutant {a})\<close> for a :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  proof -
+    have comm_a: \<open>commutant {a} = (\<lambda>b. a o\<^sub>C\<^sub>L b - b o\<^sub>C\<^sub>L a) -` {0}\<close>
+      by (auto simp: commutant_def)
+    have closed_0: \<open>closedin cstrong_operator_topology {0}\<close>
+      apply (rule closedin_singleton)
+      by simp_all
+    have cont: \<open>continuous_map cstrong_operator_topology cstrong_operator_topology (\<lambda>b. a o\<^sub>C\<^sub>L b - b o\<^sub>C\<^sub>L a)\<close>
+      by (intro continuous_intros continuous_map_left_comp_sot continuous_map_right_comp_sot)
+      (* TODO: Put continuous_map_left_comp_sot continuous_map_right_comp_sot into [continuous_intros]
+              (suitably rewritten) *)
+    show ?thesis
+      using closedin_vimage[OF closed_0 cont]
+      by (simp add: comm_a)
+  qed
+  have *: \<open>commutant A = (\<Inter>a\<in>A. commutant {a})\<close>
+    by (auto simp add: commutant_def)
+  show ?thesis
+    by (auto intro!: closedin_Inter simp: * False closed_a)
+qed
+
+
+
+fun inflation_op' :: \<open>nat \<Rightarrow> ('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) list \<Rightarrow> ('a\<times>nat) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('b\<times>nat) ell2\<close> where
+  \<open>inflation_op' n Nil = 0\<close>
+| \<open>inflation_op' n (a#as) = (a \<otimes>\<^sub>o selfbutterket n) + inflation_op' (n+1) as\<close>
+
+abbreviation \<open>inflation_op \<equiv> inflation_op' 0\<close>
+
+fun inflation_state' :: \<open>nat \<Rightarrow> 'a ell2 list \<Rightarrow> ('a\<times>nat) ell2\<close> where
+  \<open>inflation_state' n Nil = 0\<close>
+| \<open>inflation_state' n (a#as) = (a \<otimes>\<^sub>s ket n) + inflation_state' (n+1) as\<close>
+
+abbreviation \<open>inflation_state \<equiv> inflation_state' 0\<close>
+
+fun inflation_space' :: \<open>nat \<Rightarrow> 'a ell2 ccsubspace list \<Rightarrow> ('a\<times>nat) ell2 ccsubspace\<close> where
+  \<open>inflation_space' n Nil = 0\<close>
+| \<open>inflation_space' n (S#Ss) = (S \<otimes>\<^sub>S ccspan {ket n}) + inflation_space' (n+1) Ss\<close>
+
+abbreviation \<open>inflation_space \<equiv> inflation_space' 0\<close>
+
+definition inflation_carrier :: \<open>nat \<Rightarrow> ('a\<times>nat) ell2 ccsubspace\<close> where
+  \<open>inflation_carrier n = inflation_space (replicate n \<top>)\<close>
+
+definition inflation_op_carrier :: \<open>nat \<Rightarrow> (('a\<times>nat) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('b\<times>nat) ell2) set\<close> where
+  \<open>inflation_op_carrier n = { Proj (inflation_carrier n) o\<^sub>C\<^sub>L a o\<^sub>C\<^sub>L Proj (inflation_carrier n) | a. True }\<close>
+
+lemma is_Proj_id[simp]: \<open>is_Proj id_cblinfun\<close>
+  apply transfer
+  by (auto intro!: exI[of _ UNIV] simp: is_projection_on_def is_arg_min_def)
+
+lemma inflation_op_compose_outside: \<open>inflation_op' m ops o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o selfbutterket n) = 0\<close> if \<open>n < m\<close>
+  using that apply (induction ops arbitrary: m)
+  by (auto simp: cblinfun_compose_add_left comp_tensor_op cinner_ket)
+
+lemma inflation_op_compose_outside_rev: \<open>(a \<otimes>\<^sub>o selfbutterket n) o\<^sub>C\<^sub>L inflation_op' m ops = 0\<close> if \<open>n < m\<close>
+  using that apply (induction ops arbitrary: m)
+  by (auto simp: cblinfun_compose_add_right comp_tensor_op cinner_ket)
+
+
+lemma Proj_inflation_carrier: \<open>Proj (inflation_carrier n) = inflation_op (replicate n id_cblinfun)\<close>
+proof -
+  have \<open>Proj (inflation_space' m (replicate n \<top>)) = inflation_op' m (replicate n id_cblinfun)\<close> for m
+  proof (induction n arbitrary: m)
+    case 0
+    then show ?case
+      by simp
+  next
+    case (Suc n)
+    have *: \<open>orthogonal_spaces ((\<top> :: 'b ell2 ccsubspace) \<otimes>\<^sub>S ccspan {ket m}) (inflation_space' (Suc m) (replicate n \<top>))\<close>
+      by (auto simp add: orthogonal_projectors_orthogonal_spaces Suc tensor_ccsubspace_via_Proj 
+          Proj_on_own_range is_Proj_tensor_op inflation_op_compose_outside_rev butterfly_is_Proj
+          simp flip: butterfly_eq_proj)
+    show ?case 
+      apply (simp add: Suc * Proj_sup)
+      by (metis (no_types, opaque_lifting) Proj_is_Proj Proj_on_own_range Proj_top 
+          butterfly_eq_proj is_Proj_tensor_op norm_ket tensor_ccsubspace_via_Proj)
+  qed
+  then show ?thesis
+    by (force simp add: inflation_carrier_def)
+qed
+
+lemma inflation_op_carrierI:
+  assumes \<open>Proj (inflation_carrier n) o\<^sub>C\<^sub>L a o\<^sub>C\<^sub>L Proj (inflation_carrier n) = a\<close>
+  shows \<open>a \<in> inflation_op_carrier n\<close>
+  using assms by (auto intro!: exI[of _ a] simp add: inflation_op_carrier_def)
+
+lemma inflation_op_compose: \<open>inflation_op' n ops1 o\<^sub>C\<^sub>L inflation_op' n ops2 = inflation_op' n (map2 cblinfun_compose ops1 ops2)\<close>
+proof (induction ops2 arbitrary: ops1 n)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons op ops2)
+  note IH = this
+  fix ops1 :: \<open>('c ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) list\<close>
+  show \<open>inflation_op' n ops1 o\<^sub>C\<^sub>L inflation_op' n (op # ops2) =
+        inflation_op' n (map2 (o\<^sub>C\<^sub>L) ops1 (op # ops2))\<close>
+  proof (cases ops1)
+    case Nil
+    then show ?thesis 
+      by simp
+  next
+    case (Cons a list)
+    then show ?thesis
+      by (simp add: cblinfun_compose_add_right cblinfun_compose_add_left tensor_op_ell2
+          inflation_op_compose_outside comp_tensor_op inflation_op_compose_outside_rev
+          flip: IH)
+  qed
+qed
+
+lemma inflation_op_in_carrier: \<open>inflation_op ops \<in> inflation_op_carrier n\<close> if \<open>length ops \<le> n\<close>
+  apply (rule inflation_op_carrierI)
+  using that
+  by (simp add: Proj_inflation_carrier inflation_op_carrier_def inflation_op_compose
+      zip_replicate1 zip_replicate2 o_def)
+
+lemma inflation_op'_apply_tensor_outside: \<open>n < m \<Longrightarrow> inflation_op' m as *\<^sub>V (v \<otimes>\<^sub>s ket n) = 0\<close>
+  apply (induction as arbitrary: m)
+  by (auto simp: cblinfun.add_left tensor_op_ell2 cinner_ket)
+
+lemma inflation_op'_compose_tensor_outside: \<open>n < m \<Longrightarrow> inflation_op' m as o\<^sub>C\<^sub>L tensor_ell2_right (ket n) = 0\<close>
+  apply (rule cblinfun_eqI)
+  by (simp add: inflation_op'_apply_tensor_outside)
+
+lemma inflation_state'_apply_tensor_outside: \<open>n < m \<Longrightarrow> (a \<otimes>\<^sub>o butterfly \<psi> (ket n)) *\<^sub>V inflation_state' m vs = 0\<close>
+  apply (induction vs arbitrary: m)
+  by (auto simp: cblinfun.add_right tensor_op_ell2 cinner_ket)
+
+lemma inflation_op_apply_inflation_state: \<open>inflation_op' n ops *\<^sub>V inflation_state' n vecs = inflation_state' n (map2 cblinfun_apply ops vecs)\<close>
+proof (induction vecs arbitrary: ops n)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons v vecs)
+  note IH = this
+  fix ops :: \<open>('b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) list\<close>
+  show \<open>inflation_op' n ops *\<^sub>V inflation_state' n (v # vecs) =
+        inflation_state' n (map2 (*\<^sub>V) ops (v # vecs))\<close>
+  proof (cases ops)
+    case Nil
+    then show ?thesis 
+      by simp
+  next
+    case (Cons a list)
+    then show ?thesis
+      by (simp add: cblinfun.add_right cblinfun.add_left tensor_op_ell2
+          inflation_op'_apply_tensor_outside inflation_state'_apply_tensor_outside
+          flip: IH)
+  qed
+qed
+
+lemma inflation_state_in_carrier: \<open>inflation_state vecs \<in> space_as_set (inflation_carrier n)\<close> if \<open>length vecs + m \<le> n\<close>
+  apply (rule space_as_setI_via_Proj)
+  using that
+  by (simp add: Proj_inflation_carrier inflation_op_apply_inflation_state zip_replicate1 o_def)
+
+lemma inflation_op'_apply_tensor_outside': \<open>n \<ge> length as + m \<Longrightarrow> inflation_op' m as *\<^sub>V (v \<otimes>\<^sub>s ket n) = 0\<close>
+  apply (induction as arbitrary: m)
+  by (auto simp: cblinfun.add_left tensor_op_ell2 cinner_ket)
+
+lemma Proj_inflation_carrier_outside: \<open>Proj (inflation_carrier n) *\<^sub>V (\<psi> \<otimes>\<^sub>s ket i) = 0\<close> if \<open>i \<ge> n\<close>
+  by (simp add: Proj_inflation_carrier inflation_op'_apply_tensor_outside' that)
+
+lemma inflation_state'_is_orthogonal_outside: \<open>n < m \<Longrightarrow> is_orthogonal (a \<otimes>\<^sub>s ket n) (inflation_state' m vs)\<close>
+  apply (induction vs arbitrary: m)
+  by (auto simp: cinner_add_right)
+
+lemma inflation_op_adj: \<open>(inflation_op' n ops)* = inflation_op' n (map adj ops)\<close>
+  apply (induction ops arbitrary: n)
+  by (simp_all add: adj_plus tensor_op_adjoint)
+
+
+(* TODO replace  *) thm limitin_closure_of (* with this *)
+lemma limitin_closure_of:
+  assumes limit: \<open>limitin T f c F\<close>
+  assumes in_S: \<open>\<forall>\<^sub>F x in F. f x \<in> S\<close>
+  assumes nontrivial: \<open>\<not> trivial_limit F\<close>
+  shows \<open>c \<in> T closure_of S\<close>
+proof (intro in_closure_of[THEN iffD2] conjI impI allI)
+  from limit show \<open>c \<in> topspace T\<close>
+    by (simp add: limitin_topspace)
+  fix U
+  assume \<open>c \<in> U \<and> openin T U\<close>
+  with limit have \<open>\<forall>\<^sub>F x in F. f x \<in> U\<close>
+    by (simp add: limitin_def)
+  with in_S have \<open>\<forall>\<^sub>F x in F. f x \<in> U \<and> f x \<in> S\<close>
+    by (simp add: eventually_frequently_simps)
+  with nontrivial
+  show \<open>\<exists>y. y \<in> S \<and> y \<in> U\<close>
+    using eventually_happens' by blast
+qed
+
+
+(* TODO: can be generalized for more pullback topologies, I think *)
+lemma cstrong_operator_topology_in_closureI:
+  assumes \<open>\<And>M \<epsilon>. \<epsilon> > 0 \<Longrightarrow> finite M \<Longrightarrow> \<exists>a\<in>A. \<forall>v\<in>M. norm ((b-a) *\<^sub>V v) \<le> \<epsilon>\<close>
+  shows \<open>b \<in> cstrong_operator_topology closure_of A\<close>
+proof -
+  define F :: \<open>('a set \<times> real) filter\<close> where \<open>F = finite_subsets_at_top UNIV \<times>\<^sub>F at_right 0\<close>
+  obtain f where fA: \<open>f M \<epsilon> \<in> A\<close> and f: \<open>v \<in> M \<Longrightarrow> norm ((f M \<epsilon> - b) *\<^sub>V v) \<le> \<epsilon>\<close> if \<open>finite M\<close> and \<open>\<epsilon> > 0\<close> for M \<epsilon> v
+    apply atomize_elim
+    apply (intro allI choice2)
+    using assms
+    by (metis cblinfun.diff_left norm_minus_commute)
+  have F_props: \<open>\<forall>\<^sub>F (M,\<epsilon>) in F. finite M \<and> \<epsilon> > 0\<close>
+    apply (auto intro!: eventually_prodI simp: F_def case_prod_unfold)
+    by (simp add: eventually_at_right_less)
+  then have inA: \<open>\<forall>\<^sub>F (M,\<epsilon>) in F. f M \<epsilon> \<in> A\<close>
+    apply (rule eventually_rev_mp)
+    using fA by (auto intro!: always_eventually)
+  have \<open>limitin cstrong_operator_topology (case_prod f) b F\<close>
+  proof -
+    have \<open>\<forall>\<^sub>F (M,\<epsilon>) in F. norm (f M \<epsilon> *\<^sub>V v - b *\<^sub>V v) < e\<close> if \<open>e > 0\<close> for e v
+    proof -
+      have 1: \<open>\<forall>\<^sub>F (M,\<epsilon>) in F. (finite M \<and> v \<in> M) \<and> (\<epsilon> > 0 \<and> \<epsilon> < e)\<close>
+        apply (unfold F_def case_prod_unfold, rule eventually_prodI)
+        using eventually_at_right that
+        by (auto simp add: eventually_finite_subsets_at_top)
+      have 2: \<open>norm (f M \<epsilon> *\<^sub>V v - b *\<^sub>V v) < e\<close> if \<open>(finite M \<and> v \<in> M) \<and> (\<epsilon> > 0 \<and> \<epsilon> < e)\<close> for M \<epsilon>
+        by (smt (verit) cblinfun.diff_left f that)
+      show ?thesis
+        using 1 apply (rule eventually_mono)
+        using 2 by auto
+    qed
+    then have \<open>((\<lambda>(M,\<epsilon>). f M \<epsilon> *\<^sub>V v) \<longlongrightarrow> b *\<^sub>V v) F\<close> for v
+      by (simp add: tendsto_iff dist_norm case_prod_unfold)
+    then show ?thesis
+      by (simp add: case_prod_unfold limitin_cstrong_operator_topology)
+  qed
+  then show ?thesis
+    apply (rule limitin_closure_of)
+    using inA by (auto simp: F_def fA case_prod_unfold prod_filter_eq_bot)
+qed
+
+
+lemma inflation_state0:
+  assumes \<open>\<And>v. v \<in> set f \<Longrightarrow> v = 0\<close>
+  shows \<open>inflation_state' n f = 0\<close>
+  using assms apply (induction f arbitrary: n)
+   apply simp
+  using tensor_ell2_0_left by force
+
+lemma inflation_state_plus:
+  assumes \<open>length f = length g\<close>
+  shows \<open>inflation_state' n f + inflation_state' n g = inflation_state' n (map2 plus f g)\<close>
+  using assms apply (induction f g arbitrary: n rule: list_induct2)
+  by (auto simp: algebra_simps tensor_ell2_add1)
+
+lemma inflation_state_minus:
+  assumes \<open>length f = length g\<close>
+  shows \<open>inflation_state' n f - inflation_state' n g = inflation_state' n (map2 minus f g)\<close>
+  using assms apply (induction f g arbitrary: n rule: list_induct2)
+  by (auto simp: algebra_simps tensor_ell2_diff1)
+
+lemma inflation_state_scaleC:
+  shows \<open>c *\<^sub>C inflation_state' n f = inflation_state' n (map (scaleC c) f)\<close>
+  apply (induction f arbitrary: n)
+  by (auto simp: algebra_simps tensor_ell2_scaleC1)
+
+lemma inflation_op_compose_tensor_ell2_right:
+  assumes \<open>i \<ge> n\<close> and \<open>i < n + length f\<close>
+  shows \<open>inflation_op' n f o\<^sub>C\<^sub>L tensor_ell2_right (ket i) = tensor_ell2_right (ket i) o\<^sub>C\<^sub>L (f!(i-n))\<close>
+proof (insert assms, induction f arbitrary: n)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a f)
+  show ?case
+  proof (cases \<open>i = n\<close>)
+    case True
+    have \<open>a \<otimes>\<^sub>o selfbutterket n o\<^sub>C\<^sub>L tensor_ell2_right (ket n) = tensor_ell2_right (ket n) o\<^sub>C\<^sub>L a\<close>
+      apply (rule cblinfun_eqI)
+      by (simp add: tensor_op_ell2 cinner_ket)
+    with True show ?thesis
+      by (simp add: cblinfun_compose_add_left inflation_op'_compose_tensor_outside)
+  next
+    case False
+    with Cons.prems have 1: \<open>Suc n \<le> i\<close>
+      by presburger
+    have 2: \<open>a \<otimes>\<^sub>o selfbutterket n o\<^sub>C\<^sub>L tensor_ell2_right (ket i) = 0\<close>
+      apply (rule cblinfun_eqI)
+      using False by (simp add: tensor_op_ell2 cinner_ket)
+    show ?thesis
+      using Cons.prems 1
+      by (simp add: cblinfun_compose_add_left Cons.IH[where n=\<open>Suc n\<close>] 2)
+  qed
+qed
+
+lemma inflation_op_apply:
+  assumes \<open>i \<ge> n\<close> and \<open>i < n + length f\<close>
+  shows \<open>inflation_op' n f *\<^sub>V (\<psi> \<otimes>\<^sub>s ket i) = (f!(i-n) *\<^sub>V \<psi>) \<otimes>\<^sub>s ket i\<close>
+  by (simp add: inflation_op_compose_tensor_ell2_right assms
+      flip: tensor_ell2_right_apply cblinfun_apply_cblinfun_compose)
+
+lemma norm_inflation_state:
+  \<open>norm (inflation_state' n f) = sqrt (\<Sum>v\<leftarrow>f. (norm v)\<^sup>2)\<close>
+proof -
+  have \<open>(norm (inflation_state' n f))\<^sup>2 = (\<Sum>v\<leftarrow>f. (norm v)\<^sup>2)\<close>
+  proof (induction f arbitrary: n)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons v f)
+    have \<open>(norm (inflation_state' n (v # f)))\<^sup>2 = (norm (v \<otimes>\<^sub>s ket n + inflation_state' (Suc n) f))\<^sup>2\<close>
+      by simp
+    also have \<open>\<dots> = (norm (v \<otimes>\<^sub>s ket n))\<^sup>2 + (norm (inflation_state' (Suc n) f))\<^sup>2\<close>
+      apply (rule pythagorean_theorem)
+      apply (rule inflation_state'_is_orthogonal_outside)
+      by simp
+    also have \<open>\<dots> = (norm (v \<otimes>\<^sub>s ket n))\<^sup>2 + (\<Sum>v\<leftarrow>f. (norm v)\<^sup>2)\<close>
+      by (simp add: Cons.IH)
+    also have \<open>\<dots> = (norm v)\<^sup>2 + (\<Sum>v\<leftarrow>f. (norm v)\<^sup>2)\<close>
+      by (simp add: norm_tensor_ell2)
+    also have \<open>\<dots> = (\<Sum>v\<leftarrow>v#f. (norm v)\<^sup>2)\<close>
+      by simp
+    finally show ?case
+      by -
+  qed
+  then show ?thesis
+    by (simp add: real_sqrt_unique)
+qed
+
+lemma cstrong_operator_topology_in_closure_algebraicI:
+  \<comment> \<open>@{cite conway13functional}, Proposition IX.5.3\<close>
+  assumes space: \<open>csubspace A\<close>
+  assumes mult: \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
+  assumes one: \<open>id_cblinfun \<in> A\<close>
+  assumes main: \<open>\<And>n S. S \<le> inflation_carrier n \<Longrightarrow> (\<And>a. a \<in> A \<Longrightarrow> inflation_op (replicate n a) *\<^sub>S S \<le> S) \<Longrightarrow>
+                 inflation_op (replicate n b) *\<^sub>S S \<le> S\<close>
+  shows \<open>b \<in> cstrong_operator_topology closure_of A\<close>
+proof (rule cstrong_operator_topology_in_closureI)
+  fix F :: \<open>'a ell2 set\<close> and \<epsilon> :: real
+  assume \<open>finite F\<close> and \<open>\<epsilon> > 0\<close>
+  obtain f where \<open>set f = F\<close> and \<open>distinct f\<close>
+    using \<open>finite F\<close> finite_distinct_list by blast
+  define n M' M where \<open>n = length f\<close>
+    and \<open>M' = ((\<lambda>a. inflation_state (map (cblinfun_apply a) f)) ` A)\<close>
+    and \<open>M = ccspan M'\<close>
+  have M_carrier: \<open>M \<le> inflation_carrier n\<close>
+  proof -
+    have \<open>M' \<subseteq> space_as_set (inflation_carrier n)\<close>
+      by (auto intro!: inflation_state_in_carrier simp add: M'_def n_def)
+    then show ?thesis
+      by (simp add: M_def ccspan_leqI)
+  qed
+
+  have \<open>inflation_op (replicate n a) *\<^sub>S M \<le> M\<close> if \<open>a \<in> A\<close> for a
+  proof (unfold M_def, rule cblinfun_image_ccspan_leqI)
+    fix v assume \<open>v \<in> M'\<close>
+    then obtain a' where \<open>a' \<in> A\<close> and v_def: \<open>v = inflation_state (map (cblinfun_apply a') f)\<close>
+      using M'_def by blast
+    then have \<open>inflation_op (replicate n a) *\<^sub>V v = inflation_state (map ((*\<^sub>V) (a o\<^sub>C\<^sub>L a')) f)\<close>
+      by (simp add: v_def n_def inflation_op_apply_inflation_state map2_map_map 
+          flip: cblinfun_apply_cblinfun_compose map_replicate_const)
+    also have \<open>\<dots> \<in> M'\<close>
+      using M'_def \<open>a' \<in> A\<close> \<open>a \<in> A\<close> mult
+      by simp
+    also have \<open>\<dots> \<subseteq> space_as_set (ccspan M')\<close>
+      by (simp add: ccspan_superset)
+    finally show \<open>inflation_op (replicate n a) *\<^sub>V v \<in> space_as_set (ccspan M')\<close>
+      by -
+  qed
+  then have b_invariant: \<open>inflation_op (replicate n b) *\<^sub>S M \<le> M\<close>
+    using M_carrier by (simp add: main)
+  have f_M: \<open>inflation_state f \<in> space_as_set M\<close>
+  proof -
+    have \<open>inflation_state f = inflation_state (map (cblinfun_apply id_cblinfun) f)\<close>
+      by simp
+    also have \<open>\<dots> \<in> M'\<close>
+      using M'_def one by blast
+    also have \<open>\<dots> \<subseteq> space_as_set M\<close>
+      by (simp add: M_def ccspan_superset)
+    finally show ?thesis
+      by -
+  qed
+  have \<open>csubspace M'\<close>
+  proof (rule complex_vector.subspaceI)
+    fix c x y
+    show \<open>0 \<in> M'\<close>
+      apply (auto intro!: image_eqI[where x=0] simp add: M'_def)
+       apply (subst inflation_state0)
+      by (auto simp add: space complex_vector.subspace_0)
+    show \<open>x \<in> M' \<Longrightarrow> y \<in> M' \<Longrightarrow> x + y \<in> M'\<close>
+      by (auto intro!: image_eqI[where x=\<open>_ + _\<close>] 
+          simp add: M'_def inflation_state_plus map2_map_map
+          cblinfun.add_left[abs_def] space complex_vector.subspace_add)
+    show \<open>c *\<^sub>C x \<in> M' \<close> if \<open>x \<in> M'\<close>
+    proof -
+      from that
+      obtain a where \<open>a \<in> A\<close> and \<open>x = inflation_state (map ((*\<^sub>V) a) f)\<close>
+        by (auto simp add: M'_def)
+      then have \<open>c *\<^sub>C x = inflation_state (map ((*\<^sub>V) (c *\<^sub>C a)) f)\<close>
+        by (simp add: inflation_state_scaleC o_def scaleC_cblinfun.rep_eq)
+      moreover have \<open>c *\<^sub>C a \<in> A\<close>
+         by (simp add: \<open>a \<in> A\<close> space complex_vector.subspace_scale)
+      ultimately show ?thesis
+        unfolding M'_def
+        by (rule image_eqI)
+    qed
+  qed
+  then have M_closure_M': \<open>space_as_set M = closure M'\<close>
+    by (metis M_def ccspan.rep_eq complex_vector.span_eq_iff)
+  have \<open>inflation_state (map (cblinfun_apply b) f) \<in> space_as_set M\<close>
+  proof -
+    have \<open>map2 (*\<^sub>V) (replicate n b) f = map ((*\<^sub>V) b) f\<close>
+      using map2_map_map[where h=cblinfun_apply and g=id and f=\<open>\<lambda>_. b\<close> and xs=f]
+      by (simp add: n_def flip: map_replicate_const)
+    then have \<open>inflation_state (map (cblinfun_apply b) f) = inflation_op (replicate n b) *\<^sub>V inflation_state f\<close>
+      by (simp add: inflation_op_apply_inflation_state)
+    also have \<open>\<dots> \<in> space_as_set (inflation_op (replicate n b) *\<^sub>S M)\<close>
+      by (simp add: f_M cblinfun_apply_in_image')
+    also have \<open>\<dots> \<subseteq> space_as_set M\<close>
+      using b_invariant less_eq_ccsubspace.rep_eq by blast
+    finally show ?thesis
+      by -
+  qed
+    (* apply (auto intro!: ccspan_superset' simp add: M_def M'_def) *)
+  then obtain m where \<open>m \<in> M'\<close> and m_close: \<open>norm (m - inflation_state (map (cblinfun_apply b) f)) \<le> \<epsilon>\<close>
+    apply atomize_elim
+    apply (simp add: M_closure_M' closure_approachable dist_norm)
+    using \<open>\<epsilon> > 0\<close> by fastforce
+  from \<open>m \<in> M'\<close>
+  obtain a where \<open>a \<in> A\<close> and m_def: \<open>m = inflation_state (map (cblinfun_apply a) f)\<close>
+    by (auto simp add: M'_def)
+  have \<open>(\<Sum>v\<leftarrow>f. (norm ((a - b) *\<^sub>V v))\<^sup>2) \<le> \<epsilon>\<^sup>2\<close>
+  proof -
+    have \<open>(\<Sum>v\<leftarrow>f. (norm ((a - b) *\<^sub>V v))\<^sup>2) = (norm (inflation_state (map (cblinfun_apply (a - b)) f)))\<^sup>2\<close>
+      apply (simp add: norm_inflation_state o_def)
+      apply (subst real_sqrt_pow2)
+       apply (rule sum_list_nonneg)
+      by (auto simp: sum_list_nonneg)
+    also have \<open>\<dots> = (norm (m - inflation_state (map (cblinfun_apply b) f)))\<^sup>2\<close>
+      by (simp add: m_def inflation_state_minus map2_map_map cblinfun.diff_left[abs_def])
+    also have \<open>\<dots> \<le> \<epsilon>\<^sup>2\<close>
+      by (simp add: m_close power_mono)
+    finally show ?thesis
+      by -
+  qed
+  then have \<open>(norm ((a - b) *\<^sub>V v))\<^sup>2 \<le> \<epsilon>\<^sup>2\<close> if \<open>v \<in> F\<close> for v
+    using that apply (simp flip: sum.distinct_set_conv_list add: \<open>distinct f\<close>)
+    by (smt (verit) \<open>finite F\<close> \<open>set f = F\<close> sum_nonneg_leq_bound zero_le_power2)
+  then show \<open>\<exists>a\<in>A. \<forall>f\<in>F. norm ((b - a) *\<^sub>V f) \<le> \<epsilon>\<close>
+    using \<open>0 < \<epsilon>\<close> \<open>a \<in> A\<close>
+    by (metis cblinfun.real.diff_left norm_minus_commute power2_le_imp_le power_eq_0_iff power_zero_numeral realpow_pos_nth_unique zero_compare_simps(12))
+qed
+
+lemma commutant_inflation:
+  \<comment> \<open>One direction of @{cite conway13functional}, Proposition IX.6.2.\<close>
+  fixes n
+  defines \<open>\<And>X. commutant' X \<equiv> commutant X \<inter> inflation_op_carrier n\<close>
+  shows \<open>(\<lambda>a. inflation_op (replicate n a)) ` commutant (commutant A) 
+         \<subseteq> commutant' (commutant' ((\<lambda>a. inflation_op (replicate n a)) ` A))\<close>
+proof (unfold commutant'_def, rule subsetI, rule IntI)
+  fix b
+  assume \<open>b \<in> (\<lambda>a. inflation_op (replicate n a)) ` commutant (commutant A)\<close>
+  then obtain b0 where b_def: \<open>b = inflation_op (replicate n b0)\<close> and b0_A'': \<open>b0 \<in> commutant (commutant A)\<close>
+    by auto
+  show \<open>b \<in> inflation_op_carrier n\<close>
+    by (simp add: b_def inflation_op_in_carrier)
+  show \<open>b \<in> commutant (commutant ((\<lambda>a. inflation_op (replicate n a)) ` A) \<inter> inflation_op_carrier n)\<close>
+  proof (rule commutant_memberI)
+    fix c
+    assume \<open>c \<in> commutant ((\<lambda>a. inflation_op (replicate n a)) ` A) \<inter> inflation_op_carrier n\<close>
+    then have c_comm: \<open>c \<in> commutant ((\<lambda>a. inflation_op (replicate n a)) ` A)\<close>
+      and c_carr: \<open>c \<in> inflation_op_carrier n\<close>
+      by auto
+    define c' where \<open>c' i j = (tensor_ell2_right (ket i))* o\<^sub>C\<^sub>L c o\<^sub>C\<^sub>L tensor_ell2_right (ket j)\<close> for i j
+    have \<open>c' i j o\<^sub>C\<^sub>L a = a o\<^sub>C\<^sub>L c' i j\<close> if \<open>a \<in> A\<close> and \<open>i < n\<close> and \<open>j < n\<close> for a i j
+    proof -
+      from c_comm have \<open>c o\<^sub>C\<^sub>L inflation_op (replicate n a) = inflation_op (replicate n a) o\<^sub>C\<^sub>L c\<close>
+        using that by (auto simp: commutant_def)
+      then have \<open>(tensor_ell2_right (ket i))* o\<^sub>C\<^sub>L c o\<^sub>C\<^sub>L (inflation_op (replicate n a) o\<^sub>C\<^sub>L tensor_ell2_right (ket j))
+               = (inflation_op (replicate n (a*)) o\<^sub>C\<^sub>L (tensor_ell2_right (ket i)))* o\<^sub>C\<^sub>L c o\<^sub>C\<^sub>L tensor_ell2_right (ket j)\<close>
+        apply (simp add: inflation_op_adj)
+        by (metis (no_types, lifting) Misc.lift_cblinfun_comp(2))
+      then show ?thesis
+        apply (subst (asm) inflation_op_compose_tensor_ell2_right)
+          apply (simp, simp add: that)
+        apply (subst (asm) inflation_op_compose_tensor_ell2_right)
+          apply (simp, simp add: that)
+        by (simp add: that c'_def cblinfun_compose_assoc)
+    qed
+    then have \<open>c' i j \<in> commutant A\<close> if \<open>i < n\<close> and \<open>j < n\<close> for i j
+      using that by (simp add: commutant_memberI)
+    with b0_A'' have b0_c': \<open>b0 o\<^sub>C\<^sub>L c' i j = c' i j o\<^sub>C\<^sub>L b0\<close> if \<open>i < n\<close> and \<open>j < n\<close> for i j
+      using that by (simp add: commutant_def)
+
+    from c_carr obtain c'' where c'': \<open>c = Proj (inflation_carrier n) o\<^sub>C\<^sub>L c'' o\<^sub>C\<^sub>L Proj (inflation_carrier n)\<close>
+      by (auto simp add: inflation_op_carrier_def)
+    
+    have c0: \<open>c *\<^sub>V (\<psi> \<otimes>\<^sub>s ket i) = 0\<close> if \<open>i \<ge> n\<close> for i \<psi>
+      using that by (simp add: c'' Proj_inflation_carrier_outside)
+    have cadj0: \<open>c* *\<^sub>V (\<psi> \<otimes>\<^sub>s ket j) = 0\<close> if \<open>j \<ge> n\<close> for j \<psi>
+      using that by (simp add: c'' adj_Proj Proj_inflation_carrier_outside)
+
+    have \<open>inflation_op (replicate n b0) o\<^sub>C\<^sub>L c = c o\<^sub>C\<^sub>L inflation_op (replicate n b0)\<close>
+    proof (rule equal_ket, rule cinner_ket_eqI)
+      fix ii jj
+      obtain i' j' :: 'a and i j :: nat where ii_def: \<open>ii = (i',i)\<close> and jj_def: \<open>jj = (j',j)\<close>
+        by force
+      show \<open>ket ii \<bullet>\<^sub>C ((inflation_op (replicate n b0) o\<^sub>C\<^sub>L c) *\<^sub>V ket jj) =
+                 ket ii \<bullet>\<^sub>C ((c o\<^sub>C\<^sub>L inflation_op (replicate n b0)) *\<^sub>V ket jj)\<close>
+      proof (cases \<open>i < n \<and> j < n\<close>)
+        case True
+        have \<open>ket ii \<bullet>\<^sub>C ((inflation_op (replicate n b0) o\<^sub>C\<^sub>L c) *\<^sub>V ket jj) = ((b0* *\<^sub>V ket i') \<otimes>\<^sub>s ket i) \<bullet>\<^sub>C (c *\<^sub>V ket j' \<otimes>\<^sub>s ket j)\<close>
+          using True by (simp add: ii_def jj_def inflation_op_adj inflation_op_apply flip: tensor_ell2_inner_prod
+              flip: tensor_ell2_ket cinner_adj_left[where G=\<open>inflation_op _\<close>])
+        also have \<open>\<dots> = (ket i' \<otimes>\<^sub>s ket i) \<bullet>\<^sub>C (c *\<^sub>V (b0 *\<^sub>V ket j') \<otimes>\<^sub>s ket j)\<close>
+          using b0_c' apply (simp add: c'_def flip: tensor_ell2_right_apply cinner_adj_right)
+          by (metis (no_types, lifting) True simp_a_oCL_b')
+        also have \<open>\<dots> = ket ii \<bullet>\<^sub>C ((c o\<^sub>C\<^sub>L inflation_op (replicate n b0)) *\<^sub>V ket jj)\<close>
+          by (simp add: True ii_def jj_def inflation_op_adj inflation_op_apply flip: tensor_ell2_inner_prod
+              flip: tensor_ell2_ket cinner_adj_left[where G=\<open>inflation_op _\<close>])
+        finally show ?thesis
+          by -
+      next
+        case False
+        then show ?thesis
+          apply (auto simp add: ii_def jj_def inflation_op_adj c0 inflation_op'_apply_tensor_outside'
+              simp flip: tensor_ell2_ket  cinner_adj_left[where G=\<open>inflation_op _\<close>])
+          by (simp add: cadj0 flip: cinner_adj_left[where G=c])
+      qed
+    qed
+    then show \<open>b o\<^sub>C\<^sub>L c = c o\<^sub>C\<^sub>L b\<close>
+      by (simp add: b_def)
+  qed
+qed
+
+lemma double_commutant_theorem: (* TODO: generalize to non-ell2 spaces *)
+  \<comment> \<open>@{cite conway13functional}, Proposition IX.6.4\<close>
+  fixes A :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
+  assumes \<open>csubspace A\<close>
+  assumes \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
+  assumes \<open>id_cblinfun \<in> A\<close>
+  assumes \<open>\<And>a. a \<in> A \<Longrightarrow> a* \<in> A\<close>
+  shows \<open>commutant (commutant A) = cstrong_operator_topology closure_of A\<close>
+proof (intro Set.set_eqI iffI)
+  show \<open>x \<in> commutant (commutant A)\<close> if \<open>x \<in> cstrong_operator_topology closure_of A\<close> for x
+    using closure_of_minimal commutant_sot_closed double_commutant_grows that by blast
+next
+  show \<open>b \<in> cstrong_operator_topology closure_of A\<close> if b_A'': \<open>b \<in> commutant (commutant A)\<close> for b
+  proof (rule cstrong_operator_topology_in_closure_algebraicI)
+    show \<open>csubspace A\<close> and \<open>a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close> and \<open>id_cblinfun \<in> A\<close> for a a'
+      using assms by auto
+    fix n M
+    assume asm: \<open>a \<in> A \<Longrightarrow> inflation_op (replicate n a) *\<^sub>S M \<le> M\<close> for a
+    assume M_carrier: \<open>M \<le> inflation_carrier n\<close>
+    define commutant' where \<open>commutant' X = commutant X \<inter> inflation_op_carrier n\<close> for X :: \<open>(('a \<times> nat) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> nat) ell2) set\<close>
+    define An where \<open>An = (\<lambda>a. inflation_op (replicate n a)) ` A\<close>
+    have *: \<open>Proj M o\<^sub>C\<^sub>L (inflation_op (replicate n a) o\<^sub>C\<^sub>L Proj M) = inflation_op (replicate n a) o\<^sub>C\<^sub>L Proj M\<close> if \<open>a \<in> A\<close> for a
+      apply (rule Proj_compose_cancelI)
+      using asm that by (simp add: cblinfun_compose_image)
+    have \<open>Proj M o\<^sub>C\<^sub>L inflation_op (replicate n a) = inflation_op (replicate n a) o\<^sub>C\<^sub>L Proj M\<close> if \<open>a \<in> A\<close> for a
+    proof -
+      have \<open>Proj M o\<^sub>C\<^sub>L inflation_op (replicate n a) = (inflation_op (replicate n (a*)) o\<^sub>C\<^sub>L Proj M)*\<close>
+        by (simp add: inflation_op_adj adj_Proj)
+      also have \<open>\<dots> = (Proj M o\<^sub>C\<^sub>L inflation_op (replicate n (a*)) o\<^sub>C\<^sub>L Proj M)*\<close>
+        apply (subst *[symmetric])
+        by (simp_all add: that assms flip: cblinfun_compose_assoc)
+      also have \<open>\<dots> = Proj M o\<^sub>C\<^sub>L inflation_op (replicate n a) o\<^sub>C\<^sub>L Proj M\<close>
+        by (simp add: inflation_op_adj adj_Proj cblinfun_compose_assoc)
+      also have \<open>\<dots> = inflation_op (replicate n a) o\<^sub>C\<^sub>L Proj M\<close>
+        apply (subst *[symmetric])
+        by (simp_all add: that flip: cblinfun_compose_assoc)
+      finally show ?thesis
+        by -
+    qed
+    then have \<open>Proj M \<in> commutant' An\<close>
+      using  M_carrier 
+      apply (auto intro!: inflation_op_carrierI simp add: An_def commutant_def commutant'_def)
+      by (metis Proj_compose_cancelI Proj_range adj_Proj adj_cblinfun_compose)
+    from b_A'' have \<open>inflation_op (replicate n b) \<in> commutant' (commutant' An)\<close>
+      using commutant_inflation[of n A, folded commutant'_def]
+      by (auto simp add: An_def commutant'_def)
+    with \<open>Proj M \<in> commutant' An\<close>
+    have *: \<open>inflation_op (replicate n b) o\<^sub>C\<^sub>L Proj M = Proj M o\<^sub>C\<^sub>L inflation_op (replicate n b)\<close>
+      by (simp add: commutant_def commutant'_def)
+    show \<open>inflation_op (replicate n b) *\<^sub>S M \<le> M\<close>
+    proof -
+      have \<open>inflation_op (replicate n b) *\<^sub>S M = (inflation_op (replicate n b) o\<^sub>C\<^sub>L Proj M) *\<^sub>S \<top>\<close>
+        by (metis Misc.lift_cblinfun_comp(3) Proj_range)
+      also have \<open>\<dots> = (Proj M o\<^sub>C\<^sub>L inflation_op (replicate n b)) *\<^sub>S \<top>\<close>
+        by (simp add: * )
+      also have \<open>\<dots> \<le> M\<close>
+        by (metis Misc.lift_cblinfun_comp(3) Proj_image_leq)
+      finally show ?thesis
+        by -
+    qed
+  qed
+qed
+
+
 end
