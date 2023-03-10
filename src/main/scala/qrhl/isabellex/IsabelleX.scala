@@ -322,6 +322,18 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
   def empty_set(typ: Typ): Const = bot(setT(typ))
 
+  def fst_const(typ1: Typ, typ2: Typ): Const = Const(c.fst, prodT(typ1, typ2) -->: typ1)
+  def snd_const(typ1: Typ, typ2: Typ): Const = Const(c.snd, prodT(typ1, typ2) -->: typ2)
+
+  def fst(term: Term): App = {
+    val (typ1, typ2) = dest_prodT(term.fastType)
+    fst_const(typ1, typ2) $ term
+  }
+  def snd(term: Term): App = {
+    val (typ1, typ2) = dest_prodT(term.fastType)
+    snd_const(typ1, typ2) $ term
+  }
+
   def linear_spaceT(typ: Typ): Type = Type(t.ccsubspace, typ)
 
   val infiniteT: Typ = Type(t.infinite)
@@ -389,6 +401,7 @@ class IsabelleX(val setup : Isabelle.Setup) {
 
   val conj: Const = Const(c.conj, boolT -->: boolT -->: boolT)
   def conj(terms: Term*): Term = terms match {
+    case Nil => True_const
     case Seq(ts @ _*) =>
       ts.dropRight(1).foldRight(ts.last) { (t1,t2) => conj $ t1 $ t2 }
     //    case Nil => HOLogic.True
@@ -399,6 +412,8 @@ class IsabelleX(val setup : Isabelle.Setup) {
     case Seq(t, ts @ _*) => ts.foldLeft(t) { (t1,t2) => disj $ t1 $ t2 }
     case Nil => False_const
   }
+
+  def nil(typ: Typ): Const = Const(c.Nil, listT(typ))
 
   def mk_list(typ: Typ, terms: List[Term]): Term = {
     val lT = listT(typ)
@@ -542,6 +557,10 @@ class IsabelleX(val setup : Isabelle.Setup) {
   }
 
   def listT(typ: Typ): Type = Type(t.list, typ)
+  def dest_listT(typ: Typ): Typ = typ match {
+    case Type(t.list, typ2) => typ2
+    case _ => throw new IllegalArgumentException(s"Not a list type: ${pretty(typ)}")
+  }
 
   val block: Const = Const(c.block, listT(programT) -->: programT)
 

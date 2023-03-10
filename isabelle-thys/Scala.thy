@@ -100,6 +100,8 @@ object IsabelleConsts {
   val disj = \<open>\<^const_name>\<open>disj\<close>\<close>
   val true_expression = \<open>\<^const_name>\<open>true_expression\<close>\<close>
   val denotation = \<open>\<^const_name>\<open>denotation\<close>\<close>
+  val fst = \<open>\<^const_name>\<open>fst\<close>\<close>
+  val snd = \<open>\<^const_name>\<open>snd\<close>\<close>
 }
 \<close>
 

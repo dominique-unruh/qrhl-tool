@@ -97,4 +97,6 @@ object IsabelleConsts {
   val disj = "HOL.disj"
   val true_expression = "Strongest_Postcondition.true_expression"
   val denotation = "Programs.denotation"
+  val fst = "Product_Type.prod.fst"
+  val snd = "Product_Type.prod.snd"
 }

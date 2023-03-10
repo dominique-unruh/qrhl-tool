@@ -3,10 +3,13 @@ isabelle.
 quantum var a : int.
 classical var b : string.
 classical var c : nat.
+classical var x : bit.
 
 adversary A
   free a, b, c
   calls ?.
+
+### Creating the unrolled adversary for A
 
 transform unrolled A.
 
@@ -36,27 +39,30 @@ print qstore_A.
 
 # quantum var qstore_A : int
 
+### Getting the simulation lemma for a specific Q:
 
-# Getting the simulation lemma for a specific Q:
-
-program Q := { on a apply undefined; }.
+program Q := { x <- undefined; }.
 
 schema A_unrolled Q.
 
-print A_unrolled_Q_unrolled.
-
-# The name A_unrolled_Q_unrolled refers to 1 lemmas:
+# WARNING: Possibly unsound (not proven) command 'derive unrolled' used.
 # 
-# Pre:   ⊤
+# Instantiating facts about A_unrolled with oracle Q.
+# 
+# Use "print A_unrolled_Q." to inspect the resulting fact.
+
+print A_unrolled_Q.
+
+# The name A_unrolled_Q refers to 1 lemmas:
+# 
+# Pre:   ℭ𝔩𝔞[b1 = b2 ∧ c1 = c2 ∧ x1 = x2] ⊓ ⟦a1⟧ ≡𝔮 ⟦a2⟧
 # 
 # Left:  (1) call A(Q);
 # 
 # Right: (1) store_A <- default;
 #        (2) qstore_A <q |default⟩;
 #        (3) call A_unrolled;
-#        (4) if (True) call Q; else {};
-#        (5) while (True) { call A_unrolled; if (True) call Q; else {}; }
+#        (4) if (fst store_A ≠ []) call Q; else {};
+#        (5) while (fst store_A ≠ []) { call A_unrolled; if (fst store_A ≠ []) call Q; else {}; }
 # 
-# Post:  ⊤
-
-
+# Post:  ℭ𝔩𝔞[b1 = b2 ∧ c1 = c2 ∧ x1 = x2 ∧ store_A = default] ⊓ ⟦a1⟧ ≡𝔮 ⟦a2⟧ ⊓ ⟦qstore_A⟧ =⇩𝔮 |default⟩

@@ -146,7 +146,7 @@ class State private (val environment: Environment,
     if (schemas.contains(schema.name))
       throw UserException(s"An axiom schema with name ${schema.name} is being added, but one with that name already exists: ${schemas(schema.name)}")
     val newSchemas = schemas + (schema.name -> schema)
-    copy(schemas = newSchemas, hash = HashTag()(schema.hash))
+    copy(schemas = newSchemas, hash = HashTag()(hash, schema.hash))
   }
 
   def applyIsabelleToplevelCommand(command: String): State = {
@@ -230,7 +230,7 @@ class State private (val environment: Environment,
   def declareFact(name: String, fact: Subgoal) : State = {
     assert(name != "")
     copy(isabelle = Some(isabelle.addAssumption(name, fact.toTerm(isabelle).isabelleTerm)),
-      hash = HashTag()(fact.hash))
+      hash = HashTag()(hash, fact.hash))
   }
 
   private def containsDuplicates[A](seq: Seq[A]): Boolean = {
