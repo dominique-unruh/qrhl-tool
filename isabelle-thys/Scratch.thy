@@ -131,22 +131,70 @@ lemma QREGISTER_pair_sym: \<open>QREGISTER_pair F G = QREGISTER_pair G F\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
   by (simp add: QREGISTER_pair.rep_eq Un_ac(3))
 
-lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F)
-                      (QREGISTER_pair B
-                          (QREGISTER_chain A G))
-= QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+lemma double_commutant_hull: \<open>commutant (commutant X) = (\<lambda>X. commutant (commutant X) = X) hull X\<close>
+  by (smt (verit) commutant_antimono double_commutant_grows hull_unique triple_commutant)
+
+lemma commutant_adj_closed: \<open>(\<And>x. x \<in> X \<Longrightarrow> x* \<in> X) \<Longrightarrow> x \<in> commutant X \<Longrightarrow> x* \<in> commutant X\<close>
+  by (metis (no_types, opaque_lifting) commutant_adj commutant_antimono double_adj imageI subset_iff)
+
+lemma double_commutant_hull': 
+  assumes \<open>\<And>x. x \<in> X \<Longrightarrow> x* \<in> X\<close>
+  shows \<open>commutant (commutant X) = valid_qregister_range hull X\<close>
+proof (rule antisym)
+  show \<open>commutant (commutant X) \<subseteq> valid_qregister_range hull X\<close>
+    apply (subst double_commutant_hull)
+    apply (rule hull_antimono)
+    by (simp add: valid_qregister_range_def)
+  show \<open>valid_qregister_range hull X \<subseteq> commutant (commutant X)\<close>
+    apply (rule hull_minimal)
+    by (simp_all add: valid_qregister_range_def assms commutant_adj_closed)
+qed
+
+lemma QREGISTER_pair_valid_qregister_range_hull:
+  \<open>Rep_QREGISTER (QREGISTER_pair F G) = valid_qregister_range hull (Rep_QREGISTER F \<union> Rep_QREGISTER G)\<close>
+  apply (simp add: QREGISTER_pair.rep_eq)
+  apply (subst double_commutant_hull')
+  using Rep_QREGISTER valid_qregister_range_def by auto
+
+lemma hull_cong_restricted: \<open>X = Y \<Longrightarrow> P hull X = P hull Y\<close>
+  by simp
+
+(* TODO needed? *)
+lemma double_commutant_Un_left: \<open>commutant (commutant (commutant (commutant X) \<union> Y)) = commutant (commutant (X \<union> Y))\<close>
+  apply (simp add: double_commutant_hull cong: hull_cong_restricted)
+  using hull_Un_left by fastforce
+
+(* TODO needed? *)
+lemma double_commutant_Un_right: \<open>commutant (commutant (X \<union> commutant (commutant Y))) = commutant (commutant (X \<union> Y))\<close>
+  by (metis Un_ac(3) double_commutant_Un_left)
+
+lemma Rep_QREGISTER_Un_empty1[simp]: \<open>Rep_QREGISTER X \<union> empty_qregister_range = Rep_QREGISTER X\<close>
+  using QREGISTER_unit_smallest bot_QREGISTER.rep_eq less_eq_QREGISTER.rep_eq by blast
+lemma Rep_QREGISTER_Un_empty2[simp]: \<open>empty_qregister_range \<union> Rep_QREGISTER X = Rep_QREGISTER X\<close>
+  using Rep_QREGISTER_Un_empty1 by blast
+
+lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGISTER_chain A G))
+            = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  apply (simp add: QREGISTER_pair_valid_qregister_range_hull QREGISTER_chain.rep_eq non_qregister
+      flip: hull_Un_right)
   sorry
 
-lemma x3: \<open>QREGISTER_pair (QREGISTER_chain F G) (QREGISTER_chain F H)
-= QREGISTER_chain F (QREGISTER_pair G H)\<close>
+lemma QREGISTER_pair_QREGISTER_chain: \<open>QREGISTER_pair (QREGISTER_chain F G) (QREGISTER_chain F H)
+            = QREGISTER_chain F (QREGISTER_pair G H)\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  apply (simp add: QREGISTER_pair_valid_qregister_range_hull)
   sorry
 
-lemma QREGISTER_pair_assoc: \<open>QREGISTER_pair (QREGISTER_pair F G) H = QREGISTER_pair F (QREGISTER_pair G H)\<close>
-  sorry
+lemma QREGISTER_pair_assoc:
+  \<open>QREGISTER_pair (QREGISTER_pair F G) H = QREGISTER_pair F (QREGISTER_pair G H)\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_pair_valid_qregister_range_hull Un_ac(1)
+      flip: hull_Un_left hull_Un_right)
 
-lemma x4: \<open>QREGISTER_pair (QREGISTER_chain A F)
-                      (QREGISTER_pair       (QREGISTER_chain A G) B)
-= QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+lemma x4: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair (QREGISTER_chain A G) B)
+            = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
   sorry
 
 
@@ -288,7 +336,7 @@ ML \<open>
 (* Brings an INDEX-REGISTER into normal form. *)
 local
   val rules = (map (fn thm => thm RS @{thm eq_reflection}) @{thms 
-    x2 x3 QREGISTER_pair_assoc x4 QREGISTER_pair_unit_left QREGISTER_pair_unit_right
+    x2 QREGISTER_pair_QREGISTER_chain QREGISTER_pair_assoc x4 QREGISTER_pair_unit_left QREGISTER_pair_unit_right
     QREGISTER_chain_id_left QREGISTER_chain_all_right
     QREGISTER_pair_all_left QREGISTER_pair_all_right
     QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst
