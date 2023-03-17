@@ -270,164 +270,12 @@ proof (insert assms, transfer)
     by (simp add: valid_cregister_range_def)
 qed
 
-(* definition valid_qregister_range :: \<open>'a qupdate set \<Rightarrow> bool\<close> where
-  \<open>valid_qregister_range \<FF> \<longleftrightarrow> (\<forall>a\<in>\<FF>. a* \<in> \<FF>) \<and> commutant (commutant \<FF>) = \<FF>\<close> *)
-
-definition \<open>valid_qregister_range_aux f a \<longleftrightarrow> 
-    (\<forall>x y. snd (f x) \<noteq> snd (f y) \<longrightarrow> ket x \<bullet>\<^sub>C (a *\<^sub>V ket y) = 0)
-      \<and> (\<forall>x y x' y'. fst (f x) = fst (f x') \<longrightarrow> fst (f y) = fst (f y') \<longrightarrow> 
-                     snd (f x) = snd (f y) \<longrightarrow> snd (f x') = snd (f y') \<longrightarrow>
-                         ket x \<bullet>\<^sub>C (a *\<^sub>V ket y) = ket x' \<bullet>\<^sub>C (a *\<^sub>V ket y'))\<close>
 definition valid_qregister_range :: \<open>'a qupdate set \<Rightarrow> bool\<close> where
-  \<open>valid_qregister_range \<FF> \<longleftrightarrow> (\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) U L R. unitary U \<and> 
-    inj f \<and> range f = L \<times> R \<and>
-    \<FF> = {sandwich U a | a. valid_qregister_range_aux f a})\<close>
+  \<open>valid_qregister_range \<FF> \<longleftrightarrow> (\<forall>a\<in>\<FF>. a* \<in> \<FF>) \<and> commutant (commutant \<FF>) = \<FF>\<close>
 
-lemma valid_qregister_range_aux_sandwich:
-  assumes \<open>\<And>x. U *\<^sub>V ket x = ket (f x)\<close>
-  assumes \<open>unitary U\<close>
-  assumes \<open>bij f\<close>
-  shows \<open>valid_qregister_range_aux id (sandwich U a) \<longleftrightarrow> valid_qregister_range_aux f a\<close>
-proof -
-  have [simp]: \<open>U* *\<^sub>V ket x = ket (inv f x)\<close> for x
-    by (metis (mono_tags, lifting) \<open>bij f\<close> assms(1) assms(2) bij_betw_imp_surj_on cinner_adj_right cinner_ket_eqI isometry_cinner_both_sides surj_f_inv_f unitary_isometry)
-
-  have \<open>bij (inv f)\<close>
-    by (simp add: \<open>bij f\<close> bij_imp_bij_inv)
-
-  show ?thesis
-    using assms
-    apply (auto simp: sandwich_apply valid_qregister_range_aux_def bij_betw_imp_surj_on surj_f_inv_f
-        simp flip: cinner_adj_left)
-     apply (metis \<open>bij f\<close>  bij_betw_imp_inj_on invI surjective_pairing)
-    by (smt (verit) \<open>bij f\<close>  bij_betw_imp_inj_on inv_f_f surjective_pairing)
-qed
-
-lemma Collect_valid_qregister_range_aux_id:
-  \<open>{a. valid_qregister_range_aux id a} = range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-proof (intro Set.set_eqI iffI)
-  fix a :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'c) ell2\<close>
-  assume \<open>a \<in> range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-  then show \<open>a \<in> {a. valid_qregister_range_aux id a}\<close>
-    by (auto simp: tensor_op_ell2 tensor_ell2_inner_prod valid_qregister_range_aux_def
-        simp flip: tensor_ell2_ket)
-next
-  fix a
-  assume asm: \<open>a \<in> {a. valid_qregister_range_aux id a}\<close>
-  define \<theta> where \<open>\<theta> = tensor_ell2_right (ket undefined)* o\<^sub>C\<^sub>L a o\<^sub>C\<^sub>L tensor_ell2_right (ket undefined)\<close>
-  have \<open>a = \<theta> \<otimes>\<^sub>o id_cblinfun\<close>
-    using asm
-    by (auto intro!: equal_ket cinner_ket_eqI 
-        simp: tensor_op_ell2 tensor_ell2_inner_prod cinner_ket
-        \<theta>_def cinner_adj_right valid_qregister_range_aux_def
-        simp flip: tensor_ell2_ket)
-  then show \<open>a \<in> range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-    by auto
-qed
-
-abbreviation \<open>qregister_decomposition_basis F \<equiv> register_decomposition_basis (apply_qregister F)\<close>
-
-lemma valid_qregister_range:
-  fixes F :: \<open>('a,'b) qregister\<close>
-  assumes \<open>qregister F\<close>
-  shows \<open>valid_qregister_range (range (apply_qregister F))\<close>
-proof -
-  define \<FF> where \<open>\<FF> = range (apply_qregister F)\<close>
-  have \<open>qregister_raw (apply_qregister F)\<close>
-    using assms by (simp add: qregister.rep_eq)
-  from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
-        valid_qregister_range \<FF>\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>V :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary V \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich V *\<^sub>V (\<theta> \<otimes>\<^sub>o id_cblinfun))\<close>
-    then obtain V :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where [simp]: \<open>unitary V\<close> and F_decomp: \<open>apply_qregister F \<theta> = sandwich V *\<^sub>V (\<theta> \<otimes>\<^sub>o id_cblinfun)\<close> for \<theta>
-      by auto
-
-    obtain g :: \<open>'a \<times> 'c \<Rightarrow> 'b\<close> where [simp]: \<open>bij g\<close>
-    proof (atomize_elim, rule exI)
-      note bij_betw_trans[trans]
-      have \<open>bij_betw ket UNIV (range ket)\<close>
-        by (simp add: bij_betw_def)
-      also have \<open>bij_betw V (range ket) (V ` range ket)\<close>
-        by (auto intro!: inj_on_imp_bij_betw unitary_inj)
-      also have \<open>bij_betw (bij_between_bases (V ` range ket) (range ket)) (V ` range ket) (range ket)\<close>
-        by (auto intro!: bij_between_bases_bij unitary_image_onb)
-      also have \<open>bij_betw (inv ket) (range ket) UNIV\<close>
-        by (simp add: inj_imp_bij_betw_inv)
-      finally show \<open>bij (inv ket o bij_between_bases (V ` range ket) (range ket) o V o ket)\<close>
-        by (simp add: comp_assoc)
-    qed
-    have [simp]: \<open>range (inv g) = UNIV\<close>
-      by (simp add: bij_betw_inv_into bij_is_surj)
-
-    define G where \<open>G = classical_operator (Some o g)\<close>
-
-    obtain ia :: \<open>'a \<Rightarrow> 'b\<close> where \<open>inj ia\<close>
-      apply (atomize_elim, rule exI[where x=\<open>\<lambda>a. g (a,undefined)\<close>])
-      by (smt (verit) Pair_inject UNIV_I \<open>bij g\<close> bij_betw_iff_bijections injI)
-    obtain ic :: \<open>'c \<Rightarrow> 'b\<close> where \<open>inj ic\<close>
-      apply (atomize_elim, rule exI[where x=\<open>\<lambda>c. g (undefined,c)\<close>])
-      by (smt (verit) UNIV_I \<open>bij g\<close> bij_betw_iff_bijections injI prod.simps(1))
-      
-    define L R where \<open>L = range ia\<close> and \<open>R = range ic\<close>
-
-    define f :: \<open>'b \<Rightarrow> 'b \<times> 'b\<close> where \<open>f = map_prod ia ic o inv g\<close>
-
-    have [simp]: \<open>fst (f x) = fst (f y) \<longleftrightarrow> fst (inv g x) = fst (inv g y)\<close> for x y
-      using \<open>inj ia\<close> f_def injD by fastforce
-    have [simp]: \<open>snd (f x) = snd (f y) \<longleftrightarrow> snd (inv g x) = snd (inv g y)\<close> for x y
-      using \<open>inj ic\<close> f_def injD by fastforce
-
-    define U :: \<open>'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
-      where \<open>U = V o\<^sub>C\<^sub>L G*\<close>
-
-    have [simp]: \<open>unitary G\<close>
-      by (simp add: G_def)
-    have \<open>G (ket x) = ket (g x)\<close> for x
-      by (simp add: G_def bij_is_inj classical_operator_ket classical_operator_exists_inj)
-    then have Gadj_ket: \<open>G* *\<^sub>V (ket x) = ket (inv g x)\<close> for x
-      apply (subst unitary_adj_inv)
-      by (simp_all add: bij_is_surj inv_f_eq surj_f_inv_f unitary_inj)
-    have bij_sandwich_G: \<open>bij (sandwich G)\<close>
-      by (auto intro!: o_bij[where g=\<open>sandwich (G*)\<close>] simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
-    have inv_sandwich_G: \<open>inv (sandwich G) = sandwich (G*)\<close>
-      by (auto intro!: inv_unique_comp simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
-
-    have \<open>\<FF> = sandwich V ` range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-      by (simp add: \<FF>_def F_decomp image_image)
-    also have \<open>\<dots> = sandwich V ` {a. valid_qregister_range_aux id a}\<close>
-      by (simp add: Collect_valid_qregister_range_aux_id)
-    also have \<open>\<dots> = sandwich U ` sandwich G ` {a. valid_qregister_range_aux id a}\<close>
-      by (simp add: U_def image_image sandwich_compose cblinfun_assoc_right unitaryD1
-          flip: cblinfun_apply_cblinfun_compose)
-    also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux id (sandwich (G*) a)}\<close>
-      by (simp add: bij_image_Collect_eq bij_sandwich_G inv_sandwich_G)
-    also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux (inv g) a}\<close>
-      by (simp add: valid_qregister_range_aux_sandwich Gadj_ket bij_imp_bij_inv)
-    also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux f a}\<close>
-      by (simp add: valid_qregister_range_aux_def)
-    also have \<open>\<dots> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-      by auto
-    finally have \<FF>_eq: \<open>\<FF> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-      by -
-    moreover have inj_f: \<open>inj f\<close>
-      by (auto intro!: inj_compose prod.inj_map
-          simp add: bij_betw_inv_into bij_is_inj f_def \<open>inj ia\<close> \<open>inj ic\<close>)
-    moreover have range_f: \<open>range f = L \<times> R\<close>
-      by (auto simp add: f_def L_def R_def simp flip: image_image)
-    moreover have unitary_U: \<open>unitary U\<close>
-      by (auto intro!: unitary_cblinfun_compose
-          simp add: U_def)
-    show \<open>valid_qregister_range \<FF>\<close>
-      unfolding valid_qregister_range_def
-      apply (rule exI[of _ f], rule exI[of _ U], rule exI[of _ L], rule exI[of _ R])
-      by (simp only: unitary_U inj_f range_f \<FF>_eq)
-  qed
-  from this[cancel_with_type]
-  show \<open>valid_qregister_range \<FF>\<close>
-    by -
-qed
-
+lemma valid_qregister_rangeI: \<open>(\<And>a. a\<in>\<FF> \<Longrightarrow> a* \<in> \<FF>) \<Longrightarrow> commutant (commutant \<FF>) \<subseteq> \<FF> \<Longrightarrow> valid_qregister_range \<FF>\<close>
+  apply (auto simp: valid_qregister_range_def)
+  using double_commutant_grows by blast
 
 (* TODO move *)
 lemma register_range_complement_commutant: \<open>commutant (range F) = range G\<close> if \<open>complements F G\<close>
@@ -457,6 +305,18 @@ proof -
   note this[cancel_with_type]
   then show ?thesis
     by -
+qed
+
+lemma valid_qregister_range: 
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>valid_qregister_range (range (apply_qregister F))\<close>
+proof (rule valid_qregister_rangeI)
+  show \<open>a \<in> range (apply_qregister F) \<Longrightarrow> a* \<in> range (apply_qregister F)\<close> for a
+    by (metis (mono_tags, lifting) assms image_iff qregister.rep_eq rangeI register_adj)
+  show \<open>commutant (commutant (range (apply_qregister F))) \<subseteq> range (apply_qregister F)\<close>
+    apply (subst register_range_double_commutant)
+    using assms qregister.rep_eq by auto
 qed
 
 lift_definition cregister_id :: \<open>('a,'a) cregister\<close> is id by simp
@@ -535,7 +395,9 @@ proof -
     by (simp add: 1 2 valid_qregister_range)
 qed
 lemma valid_qregister_range_UNIV: \<open>valid_qregister_range UNIV\<close>
-  using valid_qregister_range[of qregister_id] by simp
+  by (auto simp: valid_qregister_range_def commutant_def)
+
+abbreviation \<open>qregister_decomposition_basis F \<equiv> register_decomposition_basis (apply_qregister F)\<close>
 
 lemma closed_map_sot_register:
   assumes \<open>qregister F\<close>
@@ -649,27 +511,34 @@ proof (rule Rep_QREGISTER_inject[THEN iffD1])
     by -
 qed
 
+lemma QREGISTER_unit_smallest[simp]: \<open>(QREGISTER_unit :: 'a QREGISTER) \<le> X\<close>
+proof (unfold less_eq_QREGISTER.rep_eq)
+  have \<open>Rep_QREGISTER (QREGISTER_unit :: 'a QREGISTER) = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+    by (simp add: bot_QREGISTER.rep_eq empty_qregister_range_def)
+  also have \<open>\<dots> \<subseteq> commutant (commutant (Rep_QREGISTER X))\<close>
+    apply (subst commutant_def) by auto
+  also have \<open>\<dots> = Rep_QREGISTER X\<close>
+    using Rep_QREGISTER valid_qregister_range_def by auto
+  finally show \<open>Rep_QREGISTER (QREGISTER_unit :: 'a QREGISTER) \<subseteq> Rep_QREGISTER X\<close>
+    by -
+qed
+
 lift_definition CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is
   \<open>\<lambda>\<FF> \<GG> :: 'a cupdate set. map_commutant (map_commutant (\<FF> \<union> \<GG>))\<close>
   by (simp add: valid_cregister_range_def)
 
-lemma valid_qregister_range_hull_in: \<open>valid_qregister_range (valid_qregister_range hull \<FF>)\<close>
-  apply (rule hull_in)
-  apply (simp add: valid_qregister_range_def)
-
 lift_definition QREGISTER_pair :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is
-  \<open>\<lambda>\<FF> \<GG> :: 'a qupdate set. valid_qregister_range hull (\<FF> \<union> \<GG>)\<close>
- 
+  \<open>\<lambda>\<FF> \<GG> :: 'a qupdate set. commutant (commutant (\<FF> \<union> \<GG>))\<close>
 proof -
   fix \<FF> \<GG> :: \<open>'a qupdate set\<close>
   assume \<open>\<FF> \<in> Collect valid_qregister_range\<close>
   then have [simp]: \<open>adj ` \<FF> = \<FF>\<close>
     apply (auto simp: valid_qregister_range_def)
-    by force x
+    by force
   assume \<open>\<GG> \<in> Collect valid_qregister_range\<close>
   then have [simp]: \<open>adj ` \<GG> = \<GG>\<close>
     apply (auto simp: valid_qregister_range_def)
-    by force x
+    by force
   have \<open>adj ` commutant (commutant (\<FF> \<union> \<GG>)) = commutant (commutant (\<FF> \<union> \<GG>))\<close>
     by (simp add: commutant_adj image_Un)
   then show \<open>commutant (commutant (\<FF> \<union> \<GG>)) \<in> Collect valid_qregister_range\<close>
@@ -1779,7 +1648,6 @@ lemma qregister_chain_apply_space_simp[simp]:
 lift_definition CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is map_commutant
   by (simp add: valid_cregister_range_def)
 lift_definition QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is commutant
-  by -
   apply (auto simp add: valid_qregister_range_def)
   by (metis (mono_tags, opaque_lifting) commutant_adj commutant_antimono double_adj image_iff subset_iff)
 
@@ -2810,148 +2678,6 @@ lemma apply_qregister_transform_qregister: \<open>unitary U \<Longrightarrow> ap
   apply (transfer fixing: U a) by (auto simp: unitary_sandwich_register sandwich_apply)
 
 (* datatype 'a vtree = VTree_Singleton 'a | VTree_Concat "'a vtree" "'a vtree" | VTree_Unit *)
-
-definition valid_qregister_range_content where
-  \<comment> \<open>Auxiliary definition for \<open>valid_qregister_range_content\<close> below.\<close>
-  \<open>valid_qregister_range_content \<FF> = (SOME L::'a set.
-    \<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) U R. unitary U \<and> 
-        inj f \<and> range f = L \<times> R \<and>
-        \<FF> = {sandwich U a | a. valid_qregister_range_aux f a})\<close>
-  for \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
-
-lemma apply_qregister_fst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
-  by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
-
-lemma apply_qregister_snd: \<open>apply_qregister qSnd a = id_cblinfun \<otimes>\<^sub>o a\<close>
-  by (simp add: Laws_Quantum.Snd_def qSnd.rep_eq)
-
-lemma valid_qregister_range_ex_register:
-  fixes \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
-  assumes \<open>valid_qregister_range \<FF>\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'l::type = valid_qregister_range_content \<FF>.
-         \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
-proof (rule with_typeI)
-  define L where \<open>L = valid_qregister_range_content \<FF>\<close>
-  have \<open>\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) U R. unitary U \<and> 
-        inj f \<and> range f = L \<times> R \<and>
-        \<FF> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-    unfolding L_def valid_qregister_range_content_def apply (rule someI_ex)
-    using assms unfolding valid_qregister_range_def 
-    by blast
-  then obtain f :: \<open>'a \<Rightarrow> 'a\<times>'a\<close> and U R where \<open>unitary U\<close> and \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close>
-    and \<FF>_eq: \<open>\<FF> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-    by auto
-  from range_f have \<open>L \<noteq> {}\<close> and \<open>R \<noteq> {}\<close>
-    by auto
-  then show \<open>fst (L, ()) \<noteq> {}\<close>
-    by simp
-  show \<open>fst with_type_type_class (fst (L, ())) (snd (L, ()))\<close>
-    by (simp add: with_type_type_class_def)
-  show \<open>with_type_compat_rel (fst with_type_type_class) (fst (L, ()))
-     (snd with_type_type_class)\<close>
-    by (simp add: with_type_compat_rel_type)
-  fix RepL :: \<open>'l \<Rightarrow> 'a\<close> and AbsL
-  assume \<open>type_definition RepL AbsL (fst (L, ()))\<close>
-  then interpret L: type_definition RepL AbsL L
-    by simp
-  have \<open>\<forall>\<^sub>\<tau> 'r::type = R. \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
-  proof (rule with_typeI)
-    from \<open>R \<noteq> {}\<close> show \<open>fst (R, ()) \<noteq> {}\<close>
-      by simp
-    show \<open>fst with_type_type_class (fst (R, ())) (snd (R, ()))\<close>
-      by (simp add: with_type_type_class_def)
-    show \<open>with_type_compat_rel (fst with_type_type_class) (fst (R, ())) (snd with_type_type_class)\<close>
-      by (simp add: with_type_compat_rel_type)
-    fix RepR :: \<open>'r \<Rightarrow> 'a\<close> and AbsR
-    assume \<open>type_definition RepR AbsR (fst (R, ()))\<close>
-    then interpret R: type_definition RepR AbsR R
-      by simp
-    define f' where \<open>f' = map_prod AbsL AbsR o f\<close>
-    have \<open>bij f'\<close>
-    proof -
-      note bij_betw_trans[trans]
-      have \<open>bij_betw f UNIV (L \<times> R)\<close>
-        by (simp add: \<open>inj f\<close> bij_betw_def range_f)
-      also have \<open>bij_betw (map_prod AbsL AbsR) (L \<times> R) (UNIV \<times> UNIV)\<close>
-        apply (rule bij_betw_map_prod)
-         apply (metis bij_betw_def inj_on_def L.Abs_image L.Abs_inject)
-        by (metis bij_betw_def inj_on_def R.Abs_image R.Abs_inject)
-      finally show ?thesis
-        by (simp add: f'_def)
-    qed
-    define V where \<open>V = classical_operator (Some o f')\<close>
-    have [simp]: \<open>unitary V\<close>
-      by (simp add: V_def unitary_classical_operator \<open>bij f'\<close>)
-    have V_ket: \<open>V *\<^sub>V ket x = ket (f' x)\<close> for x
-      by (simp add: V_def classical_operator_ket classical_operator_exists_inj inj_map_total bij_is_inj \<open>bij f'\<close>)
-    then have Vadj_ket: \<open>V* *\<^sub>V ket x = ket (inv f' x)\<close> for x
-      apply (subst unitary_adj_inv)
-      by (simp_all add: \<open>bij f'\<close> bij_is_surj inv_f_eq surj_f_inv_f unitary_inj)
-    have bij_sandwich_Vadj: \<open>bij (sandwich (V*))\<close>
-      by (auto intro!: o_bij[where g=\<open>sandwich V\<close>] simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
-    have inv_sandwich_Vadj: \<open>inv (sandwich (V*)) = sandwich V\<close>
-      by (auto intro!: inv_unique_comp simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
-
-    define F where \<open>F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L V*)) qFst\<close>
-    have \<open>qregister F\<close>
-      by (auto intro!: qregister_transform_qregister unitary_cblinfun_compose
-          simp: F_def \<open>unitary U\<close>)
-    have \<open>range (apply_qregister F) = \<FF>\<close>
-    proof -
-      have aux1: \<open>fst (f' x) = fst (f' y) \<longleftrightarrow> fst (f x) = fst (f y)\<close> for x y
-        by (metis L.Abs_inverse comp_apply eq_fst_iff f'_def fst_map_prod mem_Sigma_iff rangeI range_f)
-      have aux2: \<open>snd (f' x) = snd (f' y) \<longleftrightarrow> snd (f x) = snd (f y)\<close> for x y
-        by (metis R.type_definition_axioms SigmaD2 comp_eq_dest_lhs f'_def rangeI range_f snd_map_prod surjective_pairing type_definition.Abs_inject)
-
-      have \<open>range (apply_qregister F) = sandwich U ` sandwich (V*) ` range (\<lambda>x. x \<otimes>\<^sub>o id_cblinfun)\<close>
-        by (auto simp add: F_def apply_qregister_fst apply_qregister_transform_qregister \<open>unitary U\<close>
-            simp flip: sandwich_compose)
-      also have \<open>\<dots> = sandwich U ` sandwich (V*) ` {a. valid_qregister_range_aux id a}\<close>
-        by (simp add: Collect_valid_qregister_range_aux_id)
-      also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux id (sandwich V a)}\<close>
-        by (simp add: bij_image_Collect_eq bij_sandwich_Vadj inv_sandwich_Vadj)
-      also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux f' a}\<close>
-        apply (subst valid_qregister_range_aux_sandwich)
-        by (simp_all add: V_ket \<open>unitary V\<close> \<open>bij f'\<close>)
-      also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux f a}\<close>
-        apply (rule arg_cong[where f=\<open>\<lambda>a. sandwich U ` Collect a\<close>], rule ext)
-        by (simp add: valid_qregister_range_aux_def aux1 aux2)
-      also have \<open>\<dots> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-        by blast
-      finally show ?thesis
-        by (simp add: \<FF>_eq)
-    qed
-    with \<open>qregister F\<close> show \<open>\<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
-      by auto
-  qed
-  from this[cancel_with_type]
-  show \<open>\<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
-    by -
-qed
-
-lemma QREGISTER_unit_smallest[simp]: \<open>(QREGISTER_unit :: 'a QREGISTER) \<le> X\<close>
-proof -
-  have \<open>valid_qregister_range (Rep_QREGISTER X)\<close>
-    using Rep_QREGISTER by blast
-  from valid_qregister_range_ex_register[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = valid_qregister_range_content (Rep_QREGISTER X).
-        (QREGISTER_unit :: 'a QREGISTER) \<le> X\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>F :: ('c,'a) qregister. qregister F \<and> range (apply_qregister F) = Rep_QREGISTER X\<close>
-    then obtain F :: \<open>('c,'a) qregister\<close> where
-      Rep_X: \<open>Rep_QREGISTER X = range (apply_qregister F)\<close> and \<open>qregister F\<close>
-      by auto
-    have \<open>c *\<^sub>C id_cblinfun \<in> range (\<lambda>x. apply_qregister F x)\<close> for c
-      by (auto intro!: range_eqI[where x=\<open>c *\<^sub>C id_cblinfun\<close>] 
-          simp: clinear.scaleC clinear_apply_qregister \<open>qregister F\<close>)
-    then show \<open>(QREGISTER_unit :: 'a QREGISTER) \<le> X\<close>
-      by (auto simp add: less_eq_QREGISTER.rep_eq Rep_X bot_QREGISTER.rep_eq
-          empty_qregister_range_def)
-  qed
-  from this[cancel_with_type]
-  show ?thesis
-    by -
-qed
 
 section \<open>Distinct variables\<close>
 

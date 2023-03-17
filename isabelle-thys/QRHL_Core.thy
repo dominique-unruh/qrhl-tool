@@ -115,6 +115,12 @@ next
       by assumption
 qed
 
+lemma apply_qregister_fst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
+  by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
+
+lemma apply_qregister_snd: \<open>apply_qregister qSnd a = id_cblinfun \<otimes>\<^sub>o a\<close>
+  by (simp add: Laws_Quantum.Snd_def qSnd.rep_eq)
+
 lemma apply_qregister_qswap: \<open>apply_qregister qswap (a \<otimes>\<^sub>o b) = b \<otimes>\<^sub>o a\<close>
   by (simp add: qswap_def apply_qregister_pair apply_qregister_fst apply_qregister_snd
       comp_tensor_op)

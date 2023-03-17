@@ -1403,43 +1403,5 @@ lemma closed_map_sot_unitary_sandwich:
       simp add: sandwich_compose
       simp flip: cblinfun_apply_cblinfun_compose)
 
-lemma isometry_inj:
-  assumes \<open>isometry U\<close>
-  shows \<open>inj_on U X\<close>
-  apply (rule inj_on_inverseI[where g=\<open>U*\<close>])
-  using assms by (simp flip: cblinfun_apply_cblinfun_compose)
-
-lemma unitary_inj:
-  assumes \<open>unitary U\<close>
-  shows \<open>inj_on U X\<close>
-  apply (rule isometry_inj)
-  using assms by simp
-
-lemma unitary_adj_inv: \<open>unitary U \<Longrightarrow> cblinfun_apply (U*) = inv (cblinfun_apply U)\<close>
-  apply (rule inj_imp_inv_eq[symmetric])
-   apply (simp add: unitary_inj)
-  unfolding unitary_def
-  by (simp flip: cblinfun_apply_cblinfun_compose)
-
-lemma isometry_cinner_both_sides:
-  assumes \<open>isometry U\<close>
-  shows \<open>cinner (U x) (U y) = cinner x y\<close>
-  using assms by (simp add: flip: cinner_adj_right cblinfun_apply_cblinfun_compose)
-
-lemma isometry_image_is_ortho_set:
-  assumes \<open>is_ortho_set A\<close>
-  assumes \<open>isometry U\<close>
-  shows \<open>is_ortho_set (U ` A)\<close>
-  using assms apply (auto simp add: is_ortho_set_def isometry_cinner_both_sides)
-  by (metis cinner_eq_zero_iff isometry_cinner_both_sides)
-
-lemma unitary_image_onb:
-  assumes \<open>is_onb A\<close>
-  assumes \<open>unitary U\<close>
-  shows \<open>is_onb (U ` A)\<close>
-  using assms
-  by (auto simp add: is_onb_def isometry_image_is_ortho_set isometry_preserves_norm
-      simp flip: cblinfun_image_ccspan)
-
 
 end
