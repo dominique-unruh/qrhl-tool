@@ -1230,7 +1230,8 @@ proof (unfold commutant'_def, rule subsetI, rule IntI)
   qed
 qed
 
-lemma double_commutant_theorem: (* TODO: generalize to non-ell2 spaces *)
+lemma double_commutant_theorem_aux:
+  \<comment> \<open>Basically the double commutant theorem, except that we restricted to spaces of the form \<^typ>\<open>'a ell2\<close>\<close>
   \<comment> \<open>@{cite conway13functional}, Proposition IX.6.4\<close>
   fixes A :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
   assumes \<open>csubspace A\<close>
@@ -1293,6 +1294,115 @@ next
   qed
 qed
 
+(* TODO move next to *) thm continuous_map_right_comp_sot
+lemma continuous_map_right_comp_sot'[continuous_intros]: 
+  fixes a :: \<open>'d \<Rightarrow> _ \<Rightarrow>\<^sub>C\<^sub>L 'c::complex_normed_vector\<close> and
+    b :: \<open>'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_normed_vector\<close>
+  assumes \<open>continuous_map T cstrong_operator_topology a\<close> 
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. a x o\<^sub>C\<^sub>L b)\<close> 
+  using continuous_map_compose[OF assms continuous_map_right_comp_sot, of b]
+  by (simp add: o_def)
+
+(* TODO move next to *) thm continuous_map_left_comp_sot
+lemma continuous_map_left_comp_sot'[continuous_intros]: 
+  fixes a :: \<open>_ \<Rightarrow>\<^sub>C\<^sub>L 'c::complex_normed_vector\<close> and
+    b :: \<open>'d \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_normed_vector\<close>
+  assumes \<open>continuous_map T cstrong_operator_topology b\<close>
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L b x)\<close> 
+  using continuous_map_compose[OF assms continuous_map_left_comp_sot, of a]
+  by (simp add: o_def)
+
+
+lemma sandwich_sot_cont[continuous_intros]:
+  assumes \<open>continuous_map T cstrong_operator_topology f\<close>
+  shows \<open>continuous_map T cstrong_operator_topology (\<lambda>x. sandwich A (f x))\<close>
+  apply (simp add: sandwich_apply)
+  by (intro continuous_intros assms)
+
+lemma sandwich_arg_compose:
+  assumes \<open>isometry U\<close>
+  shows \<open>sandwich U x o\<^sub>C\<^sub>L sandwich U y = sandwich U (x o\<^sub>C\<^sub>L y)\<close>
+  apply (simp add: sandwich_apply)
+  by (metis (no_types, lifting) Misc.lift_cblinfun_comp(2) assms cblinfun_compose_id_right isometryD)
+
+lemma double_commutant_theorem_aux2: (* TODO: generalize to non-not_singleton *)
+  \<comment> \<open>Basically the double commutant theorem, except that we restricted to spaces of typeclass \<^class>\<open>not_singleton\<close>\<close>
+  \<comment> \<open>@{cite conway13functional}, Proposition IX.6.4\<close>
+  fixes A :: \<open>('a::{chilbert_space,not_singleton} \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close>
+  assumes subspace: \<open>csubspace A\<close>
+  assumes mult: \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
+  assumes id: \<open>id_cblinfun \<in> A\<close>
+  assumes adj: \<open>\<And>a. a \<in> A \<Longrightarrow> a* \<in> A\<close>
+  shows \<open>commutant (commutant A) = cstrong_operator_topology closure_of A\<close>
+proof -
+  define A' :: \<open>('a chilbert2ell2 ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a chilbert2ell2 ell2) set\<close>
+    where \<open>A' = sandwich (ell2_to_hilbert*) ` A\<close>
+  have subspace: \<open>csubspace A'\<close>
+    using subspace by (auto intro!: complex_vector.linear_subspace_image simp: A'_def)
+  have mult: \<open>\<And>a a'. a \<in> A' \<Longrightarrow> a' \<in> A' \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A'\<close>
+    using mult by (auto simp add: A'_def sandwich_arg_compose unitary_ell2_to_hilbert)
+  have id: \<open>id_cblinfun \<in> A'\<close>
+    using id by (auto intro!: image_eqI simp add: A'_def sandwich_isometry_id unitary_ell2_to_hilbert)
+  have adj: \<open>\<And>a. a \<in> A' \<Longrightarrow> a* \<in> A'\<close>
+    using adj by (auto intro!: image_eqI simp: A'_def simp flip: sandwich_apply_adj)
+  have homeo: \<open>homeomorphic_map cstrong_operator_topology cstrong_operator_topology
+     ((*\<^sub>V) (sandwich ell2_to_hilbert))\<close>
+    by (auto intro!: continuous_intros homeomorphic_maps_imp_map[where g=\<open>sandwich (ell2_to_hilbert*)\<close>]
+        simp: homeomorphic_maps_def sandwich_compose unitary_ell2_to_hilbert
+        simp flip: cblinfun_apply_cblinfun_compose)
+  have \<open>commutant (commutant A') = cstrong_operator_topology closure_of A'\<close>
+    using subspace mult id adj by (rule double_commutant_theorem_aux)
+  then have \<open>sandwich ell2_to_hilbert ` commutant (commutant A') = sandwich ell2_to_hilbert ` (cstrong_operator_topology closure_of A')\<close>
+    by simp
+  then show ?thesis
+    by (simp add: A'_def unitary_ell2_to_hilbert sandwich_unitary_complement image_image
+        sandwich_compose homeo
+        flip: cblinfun_apply_cblinfun_compose
+        homeomorphic_map_closure_of[where Y=cstrong_operator_topology])
+qed
+
+lemma double_commutant_theorem:
+  \<comment> \<open>@{cite conway13functional}, Proposition IX.6.4\<close>
+  fixes A :: \<open>('a::{chilbert_space} \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close>
+  assumes subspace: \<open>csubspace A\<close>
+  assumes mult: \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
+  assumes id: \<open>id_cblinfun \<in> A\<close>
+  assumes adj: \<open>\<And>a. a \<in> A \<Longrightarrow> a* \<in> A\<close>
+  shows \<open>commutant (commutant A) = cstrong_operator_topology closure_of A\<close>
+proof (cases \<open>UNIV = {0::'a}\<close>)
+  case True
+  then have \<open>(x :: 'a) = 0\<close> for x
+    by auto
+  then have UNIV_0: \<open>UNIV = {0 :: 'a\<Rightarrow>\<^sub>C\<^sub>L'a}\<close>
+    by (auto intro!: cblinfun_eqI)
+  have \<open>0 \<in> commutant (commutant A)\<close>
+    using complex_vector.subspace_0 csubspace_commutant by blast
+  then have 1: \<open>commutant (commutant A) = UNIV\<close>
+    using UNIV_0
+    by force
+  have \<open>0 \<in> A\<close>
+    by (simp add: assms(1) complex_vector.subspace_0)
+  then have \<open>0 \<in> cstrong_operator_topology closure_of A\<close>
+    by (simp add: assms(1) complex_vector.subspace_0)
+  then have 2: \<open>cstrong_operator_topology closure_of A = UNIV\<close>
+    using UNIV_0
+    by force
+  from 1 2 show ?thesis 
+    by simp
+next
+  case False
+  note aux2 = double_commutant_theorem_aux2[where 'a=\<open>'z::{chilbert_space,not_singleton}\<close>, rule_format, internalize_sort \<open>'z::{chilbert_space,not_singleton}\<close>]
+  have hilbert: \<open>class.chilbert_space (*\<^sub>R) (*\<^sub>C) (+) (0::'a) (-) uminus dist norm sgn uniformity open (\<bullet>\<^sub>C)\<close>
+    by (rule chilbert_space_class.chilbert_space_axioms)
+  from False
+  have not_singleton: \<open>class.not_singleton TYPE('a)\<close>
+    by (rule class_not_singletonI_monoid_add)
+  show ?thesis 
+    apply (rule aux2)
+    using assms hilbert not_singleton by auto
+qed
+
+hide_fact double_commutant_theorem_aux double_commutant_theorem_aux2
 
 (* TODO: replace  *) thm continuous_map_left_comp_sot (* with this *)
 lemma continuous_map_left_comp_sot[continuous_intros]: 
@@ -1402,6 +1512,209 @@ lemma closed_map_sot_unitary_sandwich:
   by (auto intro!: continuous_intros
       simp add: sandwich_compose
       simp flip: cblinfun_apply_cblinfun_compose)
+
+definition von_neumann_algebra where \<open>von_neumann_algebra A \<longleftrightarrow> (\<forall>a\<in>A. a* \<in> A) \<and> commutant (commutant A) = A\<close>
+definition von_neumann_factor where \<open>von_neumann_factor A \<longleftrightarrow> von_neumann_algebra A \<and> A \<inter> commutant A = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+
+lemma von_neumann_algebraI: \<open>(\<And>a. a\<in>A \<Longrightarrow> a* \<in> A) \<Longrightarrow> commutant (commutant A) \<subseteq> A \<Longrightarrow> von_neumann_algebra A\<close> for \<FF>
+  apply (auto simp: von_neumann_algebra_def)
+  using double_commutant_grows by blast
+
+lemma von_neumann_factorI:
+  assumes \<open>von_neumann_algebra A\<close>
+  assumes \<open>A \<inter> commutant A \<subseteq> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+  shows \<open>von_neumann_factor A\<close>
+proof -
+  have 1: \<open>A \<supseteq> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+    apply (subst asm_rl[of \<open>A = commutant (commutant A)\<close>])
+    using assms(1) von_neumann_algebra_def apply blast
+    by (auto simp: commutant_def)
+  have 2: \<open>commutant A \<supseteq> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+    by (auto simp: commutant_def)
+  from 1 2 assms show ?thesis
+    by (auto simp add: von_neumann_factor_def)
+qed
+
+lemma commutant_UNIV: \<open>commutant (UNIV :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set) = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+  (* Not sure if the assumption chilbert_space is needed *)
+proof -
+  have 1: \<open>c *\<^sub>C id_cblinfun \<in> commutant UNIV\<close> for c
+    by (simp add: commutant_def)
+  moreover have 2: \<open>x \<in> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close> if x_comm: \<open>x \<in> commutant UNIV\<close> for x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  proof -
+    obtain B :: \<open>'a set\<close> where \<open>is_onb B\<close>
+      using is_onb_some_chilbert_basis by blast
+    have \<open>\<exists>c. x *\<^sub>V \<psi> = c *\<^sub>C \<psi>\<close> for \<psi>
+    proof -
+      have \<open>norm (x *\<^sub>V \<psi>) = norm ((x o\<^sub>C\<^sub>L selfbutter (sgn \<psi>)) *\<^sub>V \<psi>)\<close>
+        by (simp add: cnorm_eq_1)
+      also have \<open>\<dots> = norm ((selfbutter (sgn \<psi>) o\<^sub>C\<^sub>L x) *\<^sub>V \<psi>)\<close>
+        using x_comm by (simp add: commutant_def del: butterfly_apply)
+      also have \<open>\<dots> = norm (proj \<psi> *\<^sub>V (x *\<^sub>V \<psi>))\<close>
+        by (simp add: butterfly_sgn_eq_proj)
+      finally have \<open>x *\<^sub>V \<psi> \<in> space_as_set (ccspan {\<psi>})\<close>
+        by (metis norm_Proj_apply)
+      then show ?thesis
+        by (auto simp add: ccspan_finite complex_vector.span_singleton)
+    qed
+    then obtain f where f: \<open>x *\<^sub>V \<psi> = f \<psi> *\<^sub>C \<psi>\<close> for \<psi>
+      apply atomize_elim apply (rule choice) by auto
+
+    have \<open>f \<psi> = f \<phi>\<close> if \<open>\<psi> \<in> B\<close> and \<open>\<phi> \<in> B\<close> for \<psi> \<phi>
+    proof (cases \<open>\<psi> = \<phi>\<close>)
+      case True
+      then show ?thesis by simp
+    next
+      case False
+      with that \<open>is_onb B\<close>
+      have [simp]: \<open>\<psi> \<bullet>\<^sub>C \<phi> = 0\<close>
+        by (auto simp: is_onb_def is_ortho_set_def)
+      then have [simp]: \<open>\<phi> \<bullet>\<^sub>C \<psi> = 0\<close>
+        using is_orthogonal_sym by blast
+      from that \<open>is_onb B\<close> have [simp]: \<open>\<psi> \<noteq> 0\<close>
+        by (auto simp: is_onb_def)
+      from that \<open>is_onb B\<close> have [simp]: \<open>\<phi> \<noteq> 0\<close>
+        by (auto simp: is_onb_def)
+
+      have \<open>f (\<psi>+\<phi>) *\<^sub>C \<psi> + f (\<psi>+\<phi>) *\<^sub>C \<phi> = f (\<psi>+\<phi>) *\<^sub>C (\<psi> + \<phi>)\<close>
+        by (simp add: complex_vector.vector_space_assms(1))
+      also have \<open>\<dots> = x *\<^sub>V (\<psi> + \<phi>)\<close>
+        by (simp add: f)
+      also have \<open>\<dots> = x *\<^sub>V \<psi> + x *\<^sub>V \<phi>\<close>
+        by (simp add: cblinfun.add_right)
+      also have \<open>\<dots> = f \<psi> *\<^sub>C \<psi> + f \<phi> *\<^sub>C \<phi>\<close>
+        by (simp add: f)
+      finally have *: \<open>f (\<psi> + \<phi>) *\<^sub>C \<psi> + f (\<psi> + \<phi>) *\<^sub>C \<phi> = f \<psi> *\<^sub>C \<psi> + f \<phi> *\<^sub>C \<phi>\<close>
+        by -
+      have \<open>f (\<psi> + \<phi>) = f \<psi>\<close>
+        using *[THEN arg_cong[where f=\<open>cinner \<psi>\<close>]]
+        by (simp add: cinner_add_right)
+      moreover have \<open>f (\<psi> + \<phi>) = f \<phi>\<close>
+        using *[THEN arg_cong[where f=\<open>cinner \<phi>\<close>]]
+        by (simp add: cinner_add_right)
+      ultimately show \<open>f \<psi> = f \<phi>\<close>
+        by simp
+    qed
+    then obtain c where \<open>f \<psi> = c\<close> if \<open>\<psi> \<in> B\<close> for \<psi>
+      by meson
+    then have \<open>x *\<^sub>V \<psi> = (c *\<^sub>C id_cblinfun) *\<^sub>V \<psi>\<close> if \<open>\<psi> \<in> B\<close> for \<psi>
+      by (simp add: f that)
+    then have \<open>x = c *\<^sub>C id_cblinfun\<close>
+      apply (rule cblinfun_eq_gen_eqI[where G=B])
+      using \<open>is_onb B\<close> by (auto simp: is_onb_def)
+    then show \<open>x \<in> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+      by (auto)
+  qed
+
+  from 1 2 show ?thesis
+    by auto
+qed
+
+
+lemma von_neumann_algebra_UNIV: \<open>von_neumann_algebra UNIV\<close>
+  by (auto simp: von_neumann_algebra_def commutant_def)
+
+lemma von_neumann_factor_UNIV: \<open>von_neumann_factor UNIV\<close>
+  by (simp add: von_neumann_factor_def commutant_UNIV von_neumann_algebra_UNIV)
+
+lemma von_neumann_algebra_UNION:
+  assumes \<open>\<And>x. x \<in> X \<Longrightarrow> von_neumann_algebra (A x)\<close>
+  shows \<open>von_neumann_algebra (commutant (commutant (\<Union>x\<in>X. A x)))\<close>
+proof (rule von_neumann_algebraI)
+  show \<open>commutant (commutant (commutant (commutant (\<Union>x\<in>X. A x))))
+    \<subseteq> commutant (commutant (\<Union>x\<in>X. A x))\<close>
+    by (meson commutant_antimono double_commutant_grows)
+next
+  fix a
+  assume \<open>a \<in> commutant (commutant (\<Union>x\<in>X. A x))\<close>
+  then have \<open>a* \<in> adj ` commutant (commutant (\<Union>x\<in>X. A x))\<close>
+    by simp
+  also have \<open>\<dots> = commutant (commutant (\<Union>x\<in>X. adj ` A x))\<close>
+    by (simp add: commutant_adj image_UN)
+  also have \<open>\<dots> \<subseteq> commutant (commutant (\<Union>x\<in>X. A x))\<close>
+    using assms by (auto simp: von_neumann_algebra_def intro!: commutant_antimono)
+  finally show \<open>a* \<in> commutant (commutant (\<Union>x\<in>X. A x))\<close>
+    by -
+qed
+
+lemma von_neumann_algebra_union:
+  assumes \<open>von_neumann_algebra A\<close>
+  assumes \<open>von_neumann_algebra B\<close>
+  shows \<open>von_neumann_algebra (commutant (commutant (A \<union> B)))\<close>
+  using von_neumann_algebra_UNION[where X=\<open>{True,False}\<close> and A=\<open>\<lambda>x. if x then A else B\<close>]
+  by (auto simp: assms Un_ac(3))
+
+(* lemma von_neumann_factor_union:
+  assumes \<open>von_neumann_factor A\<close>
+  assumes \<open>von_neumann_factor B\<close>
+  shows \<open>von_neumann_factor (commutant (commutant (A \<union> B)))\<close>
+proof (rule von_neumann_factorI)
+  show \<open>von_neumann_algebra (commutant (commutant (A \<union> B)))\<close>
+    apply (rule von_neumann_algebra_union)
+    using assms by (simp_all add: von_neumann_factor_def)
+  show \<open>commutant (commutant (A \<union> B)) \<inter> commutant (commutant (commutant (A \<union> B)))
+    \<subseteq> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+  proof (rule subsetI)
+    fix a
+    assume asm: \<open>a \<in> commutant (commutant (A \<union> B)) \<inter>
+             commutant (commutant (commutant (A \<union> B)))\<close>
+    then have a_cc: \<open>a \<in> commutant (commutant (A \<union> B))\<close>
+      and a_c: \<open>a \<in> commutant (A \<union> B)\<close>
+      by auto
+    from a_cc have \<open>a \<in> cstrong_operator_topology closure_of (A + B)\<close>
+  try0
+  by -
+  then have \<open>a \<in> cstrong_operator_topology closure_of A \<or> a \<in> cstrong_operator_topology closure_of B\<close>
+    by (simp add: closure_of_Un)
+
+  show \<open>a \<in> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+
+  by -
+qed *)
+
+lemma von_neumann_algebra_commutant: \<open>von_neumann_algebra (commutant A)\<close> if \<open>von_neumann_algebra A\<close>
+proof (rule von_neumann_algebraI)
+  show \<open>a* \<in> commutant A\<close> if \<open>a \<in> commutant A\<close> for a
+    by (smt (verit) Set.basic_monos(7) \<open>von_neumann_algebra A\<close> commutant_adj commutant_antimono double_adj image_iff image_subsetI that von_neumann_algebra_def)
+  show \<open>commutant (commutant (commutant A)) \<subseteq> commutant A \<close>
+    by simp
+qed
+
+
+lemma id_in_commutant[iff]: \<open>id_cblinfun \<in> commutant A\<close>
+  by (simp add: commutant_memberI)
+
+lemma von_neumann_algebra_def_sot:
+  \<open>von_neumann_algebra \<FF> \<longleftrightarrow> 
+      (\<forall>a\<in>\<FF>. a* \<in> \<FF>) \<and> csubspace \<FF> \<and> (\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>) \<and> id_cblinfun \<in> \<FF> \<and>
+      closedin cstrong_operator_topology \<FF>\<close>
+proof (unfold von_neumann_algebra_def, intro iffI conjI; elim conjE; assumption?)
+  assume comm: \<open>commutant (commutant \<FF>) = \<FF>\<close>
+  from comm show \<open>closedin cstrong_operator_topology \<FF>\<close>
+    by (metis commutant_sot_closed)
+  from comm show \<open>csubspace \<FF>\<close>
+    by (metis csubspace_commutant)
+  from comm show \<open>\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>\<close>
+    using commutant_mult by blast
+  from comm show \<open>id_cblinfun \<in> \<FF>\<close>
+    by blast
+next
+  assume adj: \<open>\<forall>a\<in>\<FF>. a* \<in> \<FF>\<close>
+  assume subspace: \<open>csubspace \<FF>\<close>
+  assume closed: \<open>closedin cstrong_operator_topology \<FF>\<close>
+  assume mult: \<open>\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>\<close>
+  assume id: \<open>id_cblinfun \<in> \<FF>\<close>
+  have \<open>commutant (commutant \<FF>) = cstrong_operator_topology closure_of \<FF>\<close>
+    apply (rule double_commutant_theorem)
+    thm double_commutant_theorem[of \<FF>]
+    using subspace subspace mult id adj 
+    by simp_all
+  also from closed have \<open>\<dots> = \<FF>\<close>
+    by (simp add: closure_of_eq)
+  finally show \<open>commutant (commutant \<FF>) = \<FF>\<close>
+    by -
+qed
+
 
 
 end

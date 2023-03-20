@@ -320,40 +320,12 @@ proof (rule with_typeI)
     by -
 qed
 
-(* MOVE *)
-
-lemma id_in_commutant[iff]: \<open>id_cblinfun \<in> commutant A\<close>
-  by (simp add: commutant_memberI)
 
 lemma valid_qregister_range_def_sot:
   \<open>valid_qregister_range \<FF> \<longleftrightarrow> 
       (\<forall>a\<in>\<FF>. a* \<in> \<FF>) \<and> csubspace \<FF> \<and> (\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>) \<and> id_cblinfun \<in> \<FF> \<and>
       closedin cstrong_operator_topology \<FF>\<close>
-proof (unfold valid_qregister_range_def, intro iffI conjI; elim conjE; assumption?)
-  assume comm: \<open>commutant (commutant \<FF>) = \<FF>\<close>
-  from comm show \<open>closedin cstrong_operator_topology \<FF>\<close>
-    by (metis commutant_sot_closed)
-  from comm show \<open>csubspace \<FF>\<close>
-    by (metis csubspace_commutant)
-  from comm show \<open>\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>\<close>
-    using commutant_mult by blast
-  from comm show \<open>id_cblinfun \<in> \<FF>\<close>
-    by blast
-next
-  assume adj: \<open>\<forall>a\<in>\<FF>. a* \<in> \<FF>\<close>
-  assume subspace: \<open>csubspace \<FF>\<close>
-  assume closed: \<open>closedin cstrong_operator_topology \<FF>\<close>
-  assume mult: \<open>\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>\<close>
-  assume id: \<open>id_cblinfun \<in> \<FF>\<close>
-  have \<open>commutant (commutant \<FF>) = cstrong_operator_topology closure_of \<FF>\<close>
-    apply (rule double_commutant_theorem)
-    using subspace subspace mult id adj 
-    by simp_all
-  also from closed have \<open>\<dots> = \<FF>\<close>
-    by (simp add: closure_of_eq)
-  finally show \<open>commutant (commutant \<FF>) = \<FF>\<close>
-    by -
-qed
+  by (simp add: valid_qregister_range_def von_neumann_algebra_def_sot)
 
 (* TODO: valid_qregister_range could be a corollary of this *)
 lemma valid_qregister_range_pres:
@@ -362,10 +334,11 @@ lemma valid_qregister_range_pres:
   shows \<open>valid_qregister_range (apply_qregister F ` A)\<close>
 proof (intro valid_qregister_range_def_sot[THEN iffD2] conjI ballI)
   show \<open>a \<in> apply_qregister F ` A \<Longrightarrow> a* \<in> apply_qregister F ` A\<close> for a
-    using assms valid_qregister_range_def by fastforce
+    using assms unfolding valid_qregister_range_def von_neumann_algebra_def by fastforce
   show \<open>csubspace (apply_qregister F ` A)\<close>
     using valid
-    by (metis clinear_apply_qregister complex_vector.linear_subspace_image csubspace_commutant valid_qregister_range_def)
+    by (metis clinear_apply_qregister complex_vector.linear_subspace_image csubspace_commutant
+        valid_qregister_range_def von_neumann_algebra_def)
   show \<open>a o\<^sub>C\<^sub>L b \<in> apply_qregister F ` A\<close>
     if \<open>a \<in> apply_qregister F ` A\<close> and \<open>b \<in> apply_qregister F ` A\<close> for a b
   proof -
@@ -380,7 +353,7 @@ proof (intro valid_qregister_range_def_sot[THEN iffD2] conjI ballI)
   qed
   show \<open>id_cblinfun \<in> apply_qregister F ` A\<close>
     using assms 
-    by (metis id_in_commutant imageI lift_id_cblinfun valid_qregister_range_def)
+    by (metis id_in_commutant imageI lift_id_cblinfun valid_qregister_range_def von_neumann_algebra_def)
   show \<open>closedin cstrong_operator_topology (apply_qregister F ` A)\<close>
   proof -
     have \<open>closedin cstrong_operator_topology A\<close>
@@ -448,24 +421,25 @@ lemma double_commutant_hull: \<open>commutant (commutant X) = (\<lambda>X. commu
 lemma commutant_adj_closed: \<open>(\<And>x. x \<in> X \<Longrightarrow> x* \<in> X) \<Longrightarrow> x \<in> commutant X \<Longrightarrow> x* \<in> commutant X\<close>
   by (metis (no_types, opaque_lifting) commutant_adj commutant_antimono double_adj imageI subset_iff)
 
-lemma double_commutant_hull': 
+(* TODO restate in terms of  von_neumann_algebra *)
+lemma double_commutant_hull':
   assumes \<open>\<And>x. x \<in> X \<Longrightarrow> x* \<in> X\<close>
   shows \<open>commutant (commutant X) = valid_qregister_range hull X\<close>
 proof (rule antisym)
   show \<open>commutant (commutant X) \<subseteq> valid_qregister_range hull X\<close>
     apply (subst double_commutant_hull)
     apply (rule hull_antimono)
-    by (simp add: valid_qregister_range_def)
+    by (simp add: valid_qregister_range_def von_neumann_algebra_def)
   show \<open>valid_qregister_range hull X \<subseteq> commutant (commutant X)\<close>
     apply (rule hull_minimal)
-    by (simp_all add: valid_qregister_range_def assms commutant_adj_closed)
+    by (simp_all add: valid_qregister_range_def von_neumann_algebra_def assms commutant_adj_closed)
 qed
 
 lemma QREGISTER_pair_valid_qregister_range_hull:
   \<open>Rep_QREGISTER (QREGISTER_pair F G) = valid_qregister_range hull (Rep_QREGISTER F \<union> Rep_QREGISTER G)\<close>
   apply (simp add: QREGISTER_pair.rep_eq)
   apply (subst double_commutant_hull')
-  using Rep_QREGISTER valid_qregister_range_def by auto
+  using Rep_QREGISTER valid_qregister_range_def  von_neumann_algebra_def by auto
 
 lemma hull_cong_restricted: \<open>X = Y \<Longrightarrow> P hull X = P hull Y\<close>
   by simp
@@ -484,16 +458,91 @@ lemma Rep_QREGISTER_Un_empty1[simp]: \<open>Rep_QREGISTER X \<union> empty_qregi
 lemma Rep_QREGISTER_Un_empty2[simp]: \<open>empty_qregister_range \<union> Rep_QREGISTER X = Rep_QREGISTER X\<close>
   using Rep_QREGISTER_Un_empty1 by blast
 
-lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGISTER_chain A G))
-            = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+lemma QREGISTER_chain_non_qregister[simp]: \<open>QREGISTER_chain non_qregister F = bot\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  apply (simp add: QREGISTER_pair_valid_qregister_range_hull QREGISTER_chain.rep_eq non_qregister
-      flip: hull_Un_right)
+  by (simp add: QREGISTER_chain.rep_eq bot_QREGISTER.rep_eq)
+
+lemma QREGISTER_pair_bot_left[simp]: \<open>QREGISTER_pair \<bottom> F = F\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  apply (simp add: QREGISTER_pair.rep_eq bot_QREGISTER.rep_eq)
+  by (metis QREGISTER_pair.rep_eq QREGISTER_pair_valid_qregister_range_hull Rep_QREGISTER Un_absorb hull_same mem_Collect_eq)
+
+lemma QREGISTER_pair_bot_right[simp]: \<open>QREGISTER_pair F \<bottom> = F\<close>
+  by (metis QREGISTER_pair_bot_left QREGISTER_pair_sym)
+
+lemma Rep_QREGISTER_pair_sot: \<open>Rep_QREGISTER (QREGISTER_pair F G) = cstrong_operator_topology closure_of (cspan (Rep_QREGISTER F \<union> Rep_QREGISTER G))\<close>
   sorry
+
+lemma
+  shows \<open>continuous_map cstrong_operator_topology cstrong_operator_topology (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun)\<close>
+proof (rule continuous_map_iff_preserves_convergence)
+  fix F :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) filter\<close> and a :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+  assume \<open>limitin cstrong_operator_topology id a F\<close>
+  show \<open>limitin cstrong_operator_topology (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) (a \<otimes>\<^sub>o id_cblinfun) F\<close>
+  proof (unfold limitin_cstrong_operator_topology, intro allI)
+    fix \<psi> :: \<open>('a \<times> 'd) ell2\<close>
+    have \<open>(\<lambda>x. (x \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<psi> - (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<psi>)\<close>
+
+    have \<open>((\<lambda>a. (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V ket (x,y)) \<longlongrightarrow> (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V ket (x,y)) F\<close> for x and y :: 'd
+      by-
+    
+    show \<open>((\<lambda>a. (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<psi>) \<longlongrightarrow> (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<psi>) F\<close>
+      apply (subst ell2_decompose_infsum[of \<psi>])
+      apply (subst (2) ell2_decompose_infsum[of \<psi>])
+      apply(subst infsum_cblinfun_apply[symmetric])
+      apply (simp add: ell2_decompose_summable)
+      apply(subst infsum_cblinfun_apply[symmetric])
+      apply (simp add: ell2_decompose_summable)
+      
+      
+      show ?thesis
+    apply (rule continuous_map_iff_preserves_convergence)
+
+proof (unfold continuous_on_cstrong_operator_topo_iff_coordinatewise, intro allI)
+
+
+lemma homeomorphic_map_apply_qregister_sot:
+  assumes \<open>qregister F\<close>
+  shows \<open>homeomorphic_map cstrong_operator_topology (subtopology cstrong_operator_topology (range (apply_qregister F))) (apply_qregister F)\<close>
+proof (rule homeomorphic_maps_imp_map[where g=\<open>inv (apply_qregister F)\<close>], unfold homeomorphic_maps_def, 
+    intro conjI ballI)
+  show 1: \<open>inv (apply_qregister F) (apply_qregister F x) = x\<close> for x
+    by (simp add: assms inj_qregister)
+  show 2: \<open>apply_qregister F (inv (apply_qregister F) y) = y\<close> if \<open>y \<in> topspace (subtopology cstrong_operator_topology (range (apply_qregister F)))\<close> for y
+    using that by (simp add: f_inv_into_f)
+  show \<open>continuous_map (subtopology cstrong_operator_topology (range (apply_qregister F)))
+     cstrong_operator_topology (inv (apply_qregister F))\<close>
+  try0
+  by -
+  show 3: \<open>continuous_map cstrong_operator_topology
+     (subtopology cstrong_operator_topology (range (apply_qregister F))) (apply_qregister F)\<close>
+  try0
+  by -
+qed
 
 lemma QREGISTER_pair_QREGISTER_chain: \<open>QREGISTER_pair (QREGISTER_chain F G) (QREGISTER_chain F H)
             = QREGISTER_chain F (QREGISTER_pair G H)\<close>
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+proof (cases \<open>qregister F\<close>)
+  case True
+  show ?thesis
+    apply (rule_tac Rep_QREGISTER_inject[THEN iffD1])
+    apply (simp add: Rep_QREGISTER_pair_sot QREGISTER_chain.rep_eq True complex_vector.linear_span_image
+ flip: image_Un)
+    apply (subst)
+     apply simp
+
+  by -
+
+    apply (transfer fixing: )
+    apply (auto simp)
+    apply (rule_tac Rep_QREGISTER_inject[THEN iffD1])
+    apply (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq)
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister)
+qed
+
   apply (simp add: QREGISTER_pair_valid_qregister_range_hull)
   sorry
 
@@ -505,8 +554,15 @@ lemma QREGISTER_pair_assoc:
 
 lemma x4: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair (QREGISTER_chain A G) B)
             = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  sorry
+  apply (simp flip: QREGISTER_pair_QREGISTER_chain)
+  using QREGISTER_pair_assoc QREGISTER_pair_sym
+  by metis
+
+lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGISTER_chain A G))
+            = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+  apply (simp flip: QREGISTER_pair_QREGISTER_chain)
+  using QREGISTER_pair_assoc QREGISTER_pair_sym
+  by metis
 
 
 lemma empty_qregister_range_subset_valid_range: \<open>valid_qregister_range A \<Longrightarrow> empty_qregister_range \<subseteq> A\<close>
@@ -525,86 +581,12 @@ instance QREGISTER :: (type) order_top
 lemma QREGISTER_pair_unit_left: \<open>QREGISTER_pair QREGISTER_unit F = F\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
   using empty_qregister_range_subset_valid_range[of \<open>Rep_QREGISTER F\<close>] QREGISTER.Rep_QREGISTER[of F]
-  by (simp add: QREGISTER_pair.rep_eq bot_QREGISTER.rep_eq Un_absorb1 valid_qregister_range_def)
+  by (simp add: QREGISTER_pair.rep_eq bot_QREGISTER.rep_eq Un_absorb1 valid_qregister_range_def von_neumann_algebra_def)
 
 lemma QREGISTER_pair_unit_right: \<open>QREGISTER_pair F QREGISTER_unit = F\<close>
   apply (subst QREGISTER_pair_sym)
   by (rule QREGISTER_pair_unit_left)
 
-lemma commutant_UNIV: \<open>commutant (UNIV :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set) = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
-  (* Not sure if the assumption chilbert_space is needed *)
-proof -
-  have 1: \<open>c *\<^sub>C id_cblinfun \<in> commutant UNIV\<close> for c
-    by (simp add: commutant_def)
-  moreover have 2: \<open>x \<in> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close> if x_comm: \<open>x \<in> commutant UNIV\<close> for x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
-  proof -
-    obtain B :: \<open>'a set\<close> where \<open>is_onb B\<close>
-      using is_onb_some_chilbert_basis by blast
-    have \<open>\<exists>c. x *\<^sub>V \<psi> = c *\<^sub>C \<psi>\<close> for \<psi>
-    proof -
-      have \<open>norm (x *\<^sub>V \<psi>) = norm ((x o\<^sub>C\<^sub>L selfbutter (sgn \<psi>)) *\<^sub>V \<psi>)\<close>
-        by (simp add: cnorm_eq_1)
-      also have \<open>\<dots> = norm ((selfbutter (sgn \<psi>) o\<^sub>C\<^sub>L x) *\<^sub>V \<psi>)\<close>
-        using x_comm by (simp add: commutant_def del: butterfly_apply)
-      also have \<open>\<dots> = norm (proj \<psi> *\<^sub>V (x *\<^sub>V \<psi>))\<close>
-        by (simp add: butterfly_sgn_eq_proj)
-      finally have \<open>x *\<^sub>V \<psi> \<in> space_as_set (ccspan {\<psi>})\<close>
-        by (metis norm_Proj_apply)
-      then show ?thesis
-        by (auto simp add: ccspan_finite complex_vector.span_singleton)
-    qed
-    then obtain f where f: \<open>x *\<^sub>V \<psi> = f \<psi> *\<^sub>C \<psi>\<close> for \<psi>
-      apply atomize_elim apply (rule choice) by auto
-
-    have \<open>f \<psi> = f \<phi>\<close> if \<open>\<psi> \<in> B\<close> and \<open>\<phi> \<in> B\<close> for \<psi> \<phi>
-    proof (cases \<open>\<psi> = \<phi>\<close>)
-      case True
-      then show ?thesis by simp
-    next
-      case False
-      with that \<open>is_onb B\<close>
-      have [simp]: \<open>\<psi> \<bullet>\<^sub>C \<phi> = 0\<close>
-        by (auto simp: is_onb_def is_ortho_set_def)
-      then have [simp]: \<open>\<phi> \<bullet>\<^sub>C \<psi> = 0\<close>
-        using is_orthogonal_sym by blast
-      from that \<open>is_onb B\<close> have [simp]: \<open>\<psi> \<noteq> 0\<close>
-        by (auto simp: is_onb_def)
-      from that \<open>is_onb B\<close> have [simp]: \<open>\<phi> \<noteq> 0\<close>
-        by (auto simp: is_onb_def)
-
-      have \<open>f (\<psi>+\<phi>) *\<^sub>C \<psi> + f (\<psi>+\<phi>) *\<^sub>C \<phi> = f (\<psi>+\<phi>) *\<^sub>C (\<psi> + \<phi>)\<close>
-        by (simp add: complex_vector.vector_space_assms(1))
-      also have \<open>\<dots> = x *\<^sub>V (\<psi> + \<phi>)\<close>
-        by (simp add: f)
-      also have \<open>\<dots> = x *\<^sub>V \<psi> + x *\<^sub>V \<phi>\<close>
-        by (simp add: cblinfun.add_right)
-      also have \<open>\<dots> = f \<psi> *\<^sub>C \<psi> + f \<phi> *\<^sub>C \<phi>\<close>
-        by (simp add: f)
-      finally have *: \<open>f (\<psi> + \<phi>) *\<^sub>C \<psi> + f (\<psi> + \<phi>) *\<^sub>C \<phi> = f \<psi> *\<^sub>C \<psi> + f \<phi> *\<^sub>C \<phi>\<close>
-        by -
-      have \<open>f (\<psi> + \<phi>) = f \<psi>\<close>
-        using *[THEN arg_cong[where f=\<open>cinner \<psi>\<close>]]
-        by (simp add: cinner_add_right)
-      moreover have \<open>f (\<psi> + \<phi>) = f \<phi>\<close>
-        using *[THEN arg_cong[where f=\<open>cinner \<phi>\<close>]]
-        by (simp add: cinner_add_right)
-      ultimately show \<open>f \<psi> = f \<phi>\<close>
-        by simp
-    qed
-    then obtain c where \<open>f \<psi> = c\<close> if \<open>\<psi> \<in> B\<close> for \<psi>
-      by meson
-    then have \<open>x *\<^sub>V \<psi> = (c *\<^sub>C id_cblinfun) *\<^sub>V \<psi>\<close> if \<open>\<psi> \<in> B\<close> for \<psi>
-      by (simp add: f that)
-    then have \<open>x = c *\<^sub>C id_cblinfun\<close>
-      apply (rule cblinfun_eq_gen_eqI[where G=B])
-      using \<open>is_onb B\<close> by (auto simp: is_onb_def)
-    then show \<open>x \<in> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
-      by (auto)
-  qed
-
-  from 1 2 show ?thesis
-    by auto
-qed
 
 lemma commutant_id_mult: \<open>commutant (range (\<lambda>c. c *\<^sub>C id_cblinfun :: _ \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)) = UNIV\<close>
   by (metis commutant_UNIV commutant_empty triple_commutant)
