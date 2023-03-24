@@ -857,5 +857,12 @@ proof (intro in_closure_of[THEN iffD2] conjI impI allI)
     using eventually_happens' by blast
 qed
 
+lemma bij_betw_map_prod:
+  assumes \<open>bij_betw f A B\<close>
+  assumes \<open>bij_betw g C D\<close>
+  shows \<open>bij_betw (map_prod f g) (A \<times> C) (B \<times> D)\<close>
+  apply (rule bij_betw_byWitness[where f'=\<open>map_prod (inv_into A f) (inv_into C g)\<close>])
+  using assms by (auto simp: bij_betw_def)
+
 
 end

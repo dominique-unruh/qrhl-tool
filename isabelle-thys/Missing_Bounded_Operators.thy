@@ -1716,5 +1716,215 @@ next
 qed
 
 
+lemma isometry_inj:
+  assumes \<open>isometry U\<close>
+  shows \<open>inj_on U X\<close>
+  apply (rule inj_on_inverseI[where g=\<open>U*\<close>])
+  using assms by (simp flip: cblinfun_apply_cblinfun_compose)
+
+lemma unitary_inj:
+  assumes \<open>unitary U\<close>
+  shows \<open>inj_on U X\<close>
+  apply (rule isometry_inj)
+  using assms by simp
+
+lemma unitary_adj_inv: \<open>unitary U \<Longrightarrow> cblinfun_apply (U*) = inv (cblinfun_apply U)\<close>
+  apply (rule inj_imp_inv_eq[symmetric])
+   apply (simp add: unitary_inj)
+  unfolding unitary_def
+  by (simp flip: cblinfun_apply_cblinfun_compose)
+
+lemma isometry_cinner_both_sides:
+  assumes \<open>isometry U\<close>
+  shows \<open>cinner (U x) (U y) = cinner x y\<close>
+  using assms by (simp add: flip: cinner_adj_right cblinfun_apply_cblinfun_compose)
+
+lemma isometry_image_is_ortho_set:
+  assumes \<open>is_ortho_set A\<close>
+  assumes \<open>isometry U\<close>
+  shows \<open>is_ortho_set (U ` A)\<close>
+  using assms apply (auto simp add: is_ortho_set_def isometry_cinner_both_sides)
+  by (metis cinner_eq_zero_iff isometry_cinner_both_sides)
+
+lemma unitary_image_onb:
+  assumes \<open>is_onb A\<close>
+  assumes \<open>unitary U\<close>
+  shows \<open>is_onb (U ` A)\<close>
+  using assms
+  by (auto simp add: is_onb_def isometry_image_is_ortho_set isometry_preserves_norm
+      simp flip: cblinfun_image_ccspan)
+
+lemma double_commutant_hull: \<open>commutant (commutant X) = (\<lambda>X. commutant (commutant X) = X) hull X\<close>
+  by (smt (verit) commutant_antimono double_commutant_grows hull_unique triple_commutant)
+
+lemma commutant_adj_closed: \<open>(\<And>x. x \<in> X \<Longrightarrow> x* \<in> X) \<Longrightarrow> x \<in> commutant X \<Longrightarrow> x* \<in> commutant X\<close>
+  by (metis (no_types, opaque_lifting) commutant_adj commutant_antimono double_adj imageI subset_iff)
+
+lemma double_commutant_hull':
+  assumes \<open>\<And>x. x \<in> X \<Longrightarrow> x* \<in> X\<close>
+  shows \<open>commutant (commutant X) = von_neumann_algebra hull X\<close>
+proof (rule antisym)
+  show \<open>commutant (commutant X) \<subseteq> von_neumann_algebra hull X\<close>
+    apply (subst double_commutant_hull)
+    apply (rule hull_antimono)
+    by (simp add: von_neumann_algebra_def)
+  show \<open>von_neumann_algebra hull X \<subseteq> commutant (commutant X)\<close>
+    apply (rule hull_minimal)
+    by (simp_all add: von_neumann_algebra_def assms commutant_adj_closed)
+qed
+
+lemma hull_cong_restricted: \<open>X = Y \<Longrightarrow> P hull X = P hull Y\<close>
+  by simp
+
+lemma double_commutant_Un_left: \<open>commutant (commutant (commutant (commutant X) \<union> Y)) = commutant (commutant (X \<union> Y))\<close>
+  apply (simp add: double_commutant_hull cong: hull_cong_restricted)
+  using hull_Un_left by fastforce
+
+lemma double_commutant_Un_right: \<open>commutant (commutant (X \<union> commutant (commutant Y))) = commutant (commutant (X \<union> Y))\<close>
+  by (metis Un_ac(3) double_commutant_Un_left)
+
+lemma tensor_ell2_right_butterfly: \<open>tensor_ell2_right \<psi> o\<^sub>C\<^sub>L tensor_ell2_right \<phi>* = id_cblinfun \<otimes>\<^sub>o butterfly \<psi> \<phi>\<close>
+  by (auto intro!: equal_ket cinner_ket_eqI simp: tensor_op_ell2 simp flip: tensor_ell2_ket)
+lemma tensor_ell2_left_butterfly: \<open>tensor_ell2_left \<psi> o\<^sub>C\<^sub>L tensor_ell2_left \<phi>* = butterfly \<psi> \<phi> \<otimes>\<^sub>o id_cblinfun\<close>
+  by (auto intro!: equal_ket cinner_ket_eqI simp: tensor_op_ell2 simp flip: tensor_ell2_ket)
+
+lemma amplification_double_commutant_commute:
+  \<open>commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))
+    = (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) `  commutant (commutant X)\<close>
+\<comment> \<open>@{cite takesaki}, Corollary IV.1.5\<close>
+proof -
+  define \<pi> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) \<Rightarrow> (('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2)\<close> where 
+    \<open>\<pi> a = a \<otimes>\<^sub>o id_cblinfun\<close> for a
+  define U :: \<open>'b \<Rightarrow> 'a ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2\<close> where \<open>U i = tensor_ell2_right (ket i)\<close> for i :: 'b
+  write commutant (\<open>_''\<close> [120] 120)
+      \<comment> \<open>Notation \<^term>\<open>X '\<close> for \<^term>\<open>commutant X\<close>\<close>
+  write id_cblinfun (\<open>\<one>\<close>)
+  have *: \<open>(\<pi> ` X)'' \<subseteq> range \<pi>\<close> for X
+  proof (rule subsetI)
+    fix x assume asm: \<open>x \<in> (\<pi> ` X)''\<close>
+    fix t
+    define y where \<open>y = U t* o\<^sub>C\<^sub>L x o\<^sub>C\<^sub>L U t\<close>
+    have \<open>ket (k,l) \<bullet>\<^sub>C (x *\<^sub>V ket (m,n)) = ket (k,l) \<bullet>\<^sub>C (\<pi> y *\<^sub>V ket (m,n))\<close> for k l m n
+    proof -
+      have comm: \<open>x o\<^sub>C\<^sub>L (U i o\<^sub>C\<^sub>L U j*) = (U i o\<^sub>C\<^sub>L U j*) o\<^sub>C\<^sub>L x\<close> for i j
+      proof -
+        have \<open>U i o\<^sub>C\<^sub>L U j* = id_cblinfun \<otimes>\<^sub>o butterket i j\<close>
+          by (simp add: U_def tensor_ell2_right_butterfly)
+        also have \<open>\<dots> \<in> (\<pi> ` X)'\<close>
+          by (simp add: \<pi>_def commutant_def comp_tensor_op)
+        finally show ?thesis
+          using asm
+          by (simp add: commutant_def)
+      qed
+      have \<open>ket (k,l) \<bullet>\<^sub>C (x *\<^sub>V ket (m,n)) = ket k \<bullet>\<^sub>C (U l* *\<^sub>V x *\<^sub>V U n *\<^sub>V ket m)\<close>
+        by (simp add: cinner_adj_right U_def tensor_ell2_ket)
+      also have \<open>\<dots> = ket k \<bullet>\<^sub>C (U l* *\<^sub>V x *\<^sub>V U n *\<^sub>V U t* *\<^sub>V U t *\<^sub>V ket m)\<close>
+        using U_def by fastforce
+      also have \<open>\<dots> = ket k \<bullet>\<^sub>C (U l* *\<^sub>V U n *\<^sub>V U t* *\<^sub>V x *\<^sub>V U t *\<^sub>V ket m)\<close>
+        using simp_a_oCL_b'[OF comm]
+        by simp
+      also have \<open>\<dots> = of_bool (l=n) * (ket k \<bullet>\<^sub>C (U t* *\<^sub>V x *\<^sub>V U t *\<^sub>V ket m))\<close>
+        using U_def by fastforce
+      also have \<open>\<dots> = of_bool (l=n) * (ket k \<bullet>\<^sub>C (y *\<^sub>V ket m))\<close>
+        using y_def by force
+      also have \<open>\<dots> = ket (k,l) \<bullet>\<^sub>C (\<pi> y *\<^sub>V ket (m,n))\<close>
+        by (simp add: \<pi>_def tensor_op_ell2 flip: tensor_ell2_ket)
+      finally show ?thesis
+        by -
+    qed
+    then have \<open>x = \<pi> y\<close>
+      by (metis cinner_ket_eqI equal_ket surj_pair)
+    then show \<open>x \<in> range \<pi>\<close>
+      by simp
+  qed
+  have **: \<open>\<pi> ` (Y ') = (\<pi> ` Y)' \<inter> range \<pi>\<close> for Y
+    using inj_tensor_left[of id_cblinfun]
+    apply (auto simp add: commutant_def \<pi>_def comp_tensor_op
+        intro!: image_eqI)
+    using injD by fastforce
+  have 1: \<open>(\<pi> ` X)'' \<subseteq> \<pi> ` (X '')\<close> for X
+  proof -
+    have \<open>(\<pi> ` X)'' \<subseteq> (\<pi> ` X)'' \<inter> range \<pi>\<close>
+      by (simp add: "*")
+    also have \<open>\<dots> \<subseteq> ((\<pi> ` X)' \<inter> range \<pi>)' \<inter> range \<pi>\<close>
+      by (simp add: commutant_antimono inf.coboundedI1)
+    also have \<open>\<dots> = \<pi> ` (X '')\<close>
+      by (simp add: ** )
+    finally show ?thesis
+      by -
+  qed
+
+  have \<open>x o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L x\<close> if \<open>x \<in> \<pi> ` (X '')\<close> and \<open>y \<in> (\<pi> ` X)'\<close> for x y
+  proof (intro equal_ket cinner_ket_eqI)
+    fix i j :: \<open>'a \<times> 'b\<close>
+    from that obtain w where \<open>w \<in> X ''\<close> and x_def: \<open>x = w \<otimes>\<^sub>o \<one>\<close>
+      by (auto simp: \<pi>_def)
+    obtain i1 i2 where i_def: \<open>i = (i1, i2)\<close> by force
+    obtain j1 j2 where j_def: \<open>j = (j1, j2)\<close> by force
+    define y\<^sub>0 where \<open>y\<^sub>0 = U i2* o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L U j2\<close>
+
+    have \<open>y\<^sub>0 \<in> X '\<close>
+    proof (rule commutant_memberI)
+      fix z assume \<open>z \<in> X\<close>
+      then have \<open>z \<otimes>\<^sub>o \<one> \<in> \<pi> ` X\<close>
+        by (auto simp: \<pi>_def)
+      have \<open>y\<^sub>0 o\<^sub>C\<^sub>L z = U i2* o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L (z \<otimes>\<^sub>o \<one>) o\<^sub>C\<^sub>L U j2\<close>
+        by (auto intro!: equal_ket simp add: y\<^sub>0_def U_def tensor_op_ell2)
+      also have \<open>\<dots> = U i2* o\<^sub>C\<^sub>L (z \<otimes>\<^sub>o \<one>) o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L U j2\<close>
+        using \<open>z \<otimes>\<^sub>o \<one> \<in> \<pi> ` X\<close> and \<open>y \<in> (\<pi> ` X)'\<close>
+        apply (auto simp add: commutant_def)
+        by (simp add: cblinfun_compose_assoc)
+      also have \<open>\<dots> = z o\<^sub>C\<^sub>L y\<^sub>0\<close>
+        by (auto intro!: equal_ket cinner_ket_eqI
+            simp add: y\<^sub>0_def U_def tensor_op_ell2 tensor_op_adjoint simp flip: cinner_adj_left)
+      finally show \<open>y\<^sub>0 o\<^sub>C\<^sub>L z = z o\<^sub>C\<^sub>L y\<^sub>0\<close>
+        by -
+    qed
+    have \<open>ket i \<bullet>\<^sub>C ((x o\<^sub>C\<^sub>L y) *\<^sub>V ket j) = ket i1 \<bullet>\<^sub>C (U i2* *\<^sub>V (w \<otimes>\<^sub>o \<one>) *\<^sub>V y *\<^sub>V U j2 *\<^sub>V ket j1)\<close>
+      by (simp add: U_def i_def j_def tensor_ell2_ket cinner_adj_right x_def)
+    also have \<open>\<dots> = ket i1 \<bullet>\<^sub>C (U i2* *\<^sub>V (w \<otimes>\<^sub>o \<one>) *\<^sub>V (U i2 o\<^sub>C\<^sub>L U i2*) *\<^sub>V y *\<^sub>V U j2 *\<^sub>V ket j1)\<close>
+      by (simp add: U_def tensor_ell2_right_butterfly tensor_op_adjoint tensor_op_ell2
+          flip: cinner_adj_left)
+    also have \<open>\<dots> = ket i1 \<bullet>\<^sub>C (w *\<^sub>V y\<^sub>0 *\<^sub>V ket j1)\<close>
+      by (simp add: y\<^sub>0_def tensor_op_adjoint tensor_op_ell2 U_def flip: cinner_adj_left)
+    also have \<open>\<dots> = ket i1 \<bullet>\<^sub>C (y\<^sub>0 *\<^sub>V w *\<^sub>V ket j1)\<close>
+      using \<open>y\<^sub>0 \<in> X '\<close> \<open>w \<in> X ''\<close>
+      apply (subst (asm) (2) commutant_def)
+      using lift_cblinfun_comp(4) by force
+    also have \<open>\<dots> = ket i1 \<bullet>\<^sub>C (U i2* *\<^sub>V y *\<^sub>V (U j2 o\<^sub>C\<^sub>L U j2*) *\<^sub>V (w \<otimes>\<^sub>o \<one>) *\<^sub>V U j2 *\<^sub>V ket j1)\<close>
+      by (simp add: y\<^sub>0_def tensor_op_adjoint tensor_op_ell2 U_def flip: cinner_adj_left)
+    also have \<open>\<dots> = ket i1 \<bullet>\<^sub>C (U i2* *\<^sub>V y *\<^sub>V (w \<otimes>\<^sub>o \<one>) *\<^sub>V U j2 *\<^sub>V ket j1)\<close>
+      by (simp add: U_def tensor_ell2_right_butterfly tensor_op_adjoint tensor_op_ell2
+          flip: cinner_adj_left)
+    also have \<open>\<dots> = ket i \<bullet>\<^sub>C ((y o\<^sub>C\<^sub>L x) *\<^sub>V ket j)\<close>
+      by (simp add: U_def i_def j_def tensor_ell2_ket cinner_adj_right x_def)
+    finally show \<open>ket i \<bullet>\<^sub>C ((x o\<^sub>C\<^sub>L y) *\<^sub>V ket j) = ket i \<bullet>\<^sub>C ((y o\<^sub>C\<^sub>L x) *\<^sub>V ket j)\<close>
+      by -
+  qed
+  then have 2: \<open>(\<pi> ` X)'' \<supseteq> \<pi> ` (X '')\<close>
+    by (auto intro!: commutant_memberI)
+  from 1 2 show ?thesis
+    by (auto simp flip: \<pi>_def)
+qed
+
+lemma amplification_double_commutant_commute':
+  \<open>commutant (commutant ((\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` X))
+    = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) `  commutant (commutant X)\<close>
+proof -
+  have \<open>commutant (commutant ((\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` X))
+    = commutant (commutant (sandwich swap_ell2 ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
+    by (simp add: swap_tensor_op_sandwich image_image)
+  also have \<open>\<dots> = sandwich swap_ell2 ` commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
+    by (simp add: sandwich_unitary_complement)
+  also have \<open>\<dots> = sandwich swap_ell2 ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` commutant (commutant X)\<close>
+    by (simp add: amplification_double_commutant_commute)
+  also have \<open>\<dots> = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) `  commutant (commutant X)\<close>
+    by (simp add: swap_tensor_op_sandwich image_image)
+  finally show ?thesis
+    by -
+qed
+
+lemma commutant_id_mult: \<open>commutant (range (\<lambda>c. c *\<^sub>C id_cblinfun :: _ \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)) = UNIV\<close>
+  by (metis commutant_UNIV commutant_empty triple_commutant)
 
 end
