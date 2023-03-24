@@ -813,13 +813,34 @@ val QREGISTER_of_index_reg_conv =
             QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})
 \<close>
 
-lemma xxx:
+lemma qcomplements_via_rangeI:
   assumes \<open>qregister F\<close>
   assumes \<open>range (apply_qregister G) = commutant (range (apply_qregister F))\<close>
   shows \<open>qcomplements F G\<close>
 proof (cases \<open>qregister G\<close>)
   case True
-  then show ?thesis sorry
+  have \<open>qregister_raw (apply_qregister F)\<close>
+    using assms(1) by auto
+  from complement_exists[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis F. qcomplements F G\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>G :: 'g qupdate \<Rightarrow> _. complements (apply_qregister F) G\<close>
+    then obtain G' :: \<open>'g qupdate \<Rightarrow> _\<close> where compl: \<open>complements (apply_qregister F) G'\<close>
+      by auto
+    then have \<open>range G' = commutant (range (apply_qregister F))\<close>
+      by (simp add: register_range_complement_commutant)
+    with assms have \<open>range G' = range (apply_qregister G)\<close>
+      by simp
+    then have \<open>equivalent_registers (apply_qregister G) G'\<close>
+      by (metis Laws_Complement_Quantum.complement_unique Laws_Quantum.equivalent_registers_register_right True compl qregister.rep_eq same_range_equivalent)
+    with compl have \<open>complements (apply_qregister F) (apply_qregister G)\<close>
+      using Laws_Quantum.equivalent_registers_sym equivalent_complements by blast
+    then show \<open>qcomplements F G\<close>
+      by (simp add: qcomplements.rep_eq)
+  qed
+  from this[cancel_with_type]
+  show ?thesis 
+    by -
 next
   case False
   then have \<open>id_cblinfun \<notin> range (apply_qregister G)\<close>
@@ -837,7 +858,7 @@ lemma z1:
   assumes CF: \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
   assumes G: \<open>qregister G\<close>
   shows \<open>qcomplements F G\<close>
-  using F apply (rule xxx)
+  using F apply (rule qcomplements_via_rangeI)
   using assms(2)[THEN Rep_QREGISTER_inject[THEN iffD2]]
   by (simp add: QCOMPLEMENT.rep_eq QREGISTER_of.rep_eq F G)
 
