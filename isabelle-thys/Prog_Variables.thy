@@ -593,6 +593,7 @@ lift_definition CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER
   \<open>\<lambda>\<FF> \<GG> :: 'a cupdate set. map_commutant (map_commutant (\<FF> \<union> \<GG>))\<close>
   by (simp add: valid_cregister_range_def)
 
+(* TODO: define as \<squnion> *)
 lift_definition QREGISTER_pair :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is
   \<open>\<lambda>\<FF> \<GG> :: 'a qupdate set. commutant (commutant (\<FF> \<union> \<GG>))\<close>
 proof -
@@ -1699,6 +1700,7 @@ lemma qregister_chain_apply_space_simp[simp]:
 
 lift_definition CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is map_commutant
   by (simp add: valid_cregister_range_def)
+(* TODO define as uminus *)
 lift_definition QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is commutant
   by (auto simp add: valid_qregister_range_def von_neumann_algebra_commutant)
 

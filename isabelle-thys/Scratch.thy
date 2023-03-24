@@ -470,10 +470,10 @@ lemma QREGISTER_pair_bot_left[simp]: \<open>QREGISTER_pair \<bottom> F = F\<clos
 lemma QREGISTER_pair_bot_right[simp]: \<open>QREGISTER_pair F \<bottom> = F\<close>
   by (metis QREGISTER_pair_bot_left QREGISTER_pair_sym)
 
-lemma Rep_QREGISTER_pair_sot: \<open>Rep_QREGISTER (QREGISTER_pair F G) = cstrong_operator_topology closure_of (cspan (Rep_QREGISTER F \<union> Rep_QREGISTER G))\<close>
-  sorry
+(* lemma Rep_QREGISTER_pair_sot: \<open>Rep_QREGISTER (QREGISTER_pair F G) = cstrong_operator_topology closure_of (cspan (Rep_QREGISTER F \<union> Rep_QREGISTER G))\<close>
+   *)
 
-lemma
+(* lemma
   shows \<open>continuous_map cstrong_operator_topology cstrong_operator_topology (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun)\<close>
 proof (rule continuous_map_iff_preserves_convergence)
   fix F :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) filter\<close> and a :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
@@ -518,6 +518,176 @@ proof (rule homeomorphic_maps_imp_map[where g=\<open>inv (apply_qregister F)\<cl
      (subtopology cstrong_operator_topology (range (apply_qregister F))) (apply_qregister F)\<close>
   try0
   by -
+qed *)
+
+lemma tensor_ell2_right_butterfly: \<open>tensor_ell2_right \<psi> o\<^sub>C\<^sub>L tensor_ell2_right \<phi>* = id_cblinfun \<otimes>\<^sub>o butterfly \<psi> \<phi>\<close>
+  by (auto intro!: equal_ket cinner_ket_eqI simp: tensor_op_ell2 simp flip: tensor_ell2_ket)
+lemma tensor_ell2_left_butterfly: \<open>tensor_ell2_left \<psi> o\<^sub>C\<^sub>L tensor_ell2_left \<phi>* = butterfly \<psi> \<phi> \<otimes>\<^sub>o id_cblinfun\<close>
+  by (auto intro!: equal_ket cinner_ket_eqI simp: tensor_op_ell2 simp flip: tensor_ell2_ket)
+
+lemma amplification_double_commutant_commute:
+  \<open>commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))
+    = (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) `  commutant (commutant X)\<close>
+\<comment> \<open>@{cite takesaki}, Corollary IV.1.5\<close>
+proof -
+  define \<pi> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) \<Rightarrow> (('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2)\<close> where 
+    \<open>\<pi> a = a \<otimes>\<^sub>o id_cblinfun\<close> for a
+  define U :: \<open>'b \<Rightarrow> 'a ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2\<close> where \<open>U i = tensor_ell2_right (ket i)\<close> for i :: 'b
+  write commutant (\<open>_''\<close> [120] 120)
+      \<comment> \<open>Notation \<^term>\<open>X '\<close> for \<^term>\<open>commutant X\<close>\<close>
+  write id_cblinfun (\<open>\<one>\<close>)
+  have *: \<open>(\<pi> ` X)'' \<subseteq> range \<pi>\<close> for X
+  proof (rule subsetI)
+    fix x assume asm: \<open>x \<in> (\<pi> ` X)''\<close>
+    fix t
+    define y where \<open>y = U t* o\<^sub>C\<^sub>L x o\<^sub>C\<^sub>L U t\<close>
+    have \<open>ket (k,l) \<bullet>\<^sub>C (x *\<^sub>V ket (m,n)) = ket (k,l) \<bullet>\<^sub>C (\<pi> y *\<^sub>V ket (m,n))\<close> for k l m n
+    proof -
+      have comm: \<open>x o\<^sub>C\<^sub>L (U i o\<^sub>C\<^sub>L U j*) = (U i o\<^sub>C\<^sub>L U j*) o\<^sub>C\<^sub>L x\<close> for i j
+      proof -
+        have \<open>U i o\<^sub>C\<^sub>L U j* = id_cblinfun \<otimes>\<^sub>o butterket i j\<close>
+          by (simp add: U_def tensor_ell2_right_butterfly)
+        also have \<open>\<dots> \<in> (\<pi> ` X)'\<close>
+          by (simp add: \<pi>_def commutant_def comp_tensor_op)
+        finally show ?thesis
+          using asm
+          by (simp add: commutant_def)
+      qed
+      have \<open>ket (k,l) \<bullet>\<^sub>C (x *\<^sub>V ket (m,n)) = ket k \<bullet>\<^sub>C (U l* *\<^sub>V x *\<^sub>V U n *\<^sub>V ket m)\<close>
+        by (simp add: cinner_adj_right U_def tensor_ell2_ket)
+      also have \<open>\<dots> = ket k \<bullet>\<^sub>C (U l* *\<^sub>V x *\<^sub>V U n *\<^sub>V U t* *\<^sub>V U t *\<^sub>V ket m)\<close>
+        using U_def by fastforce
+      also have \<open>\<dots> = ket k \<bullet>\<^sub>C (U l* *\<^sub>V U n *\<^sub>V U t* *\<^sub>V x *\<^sub>V U t *\<^sub>V ket m)\<close>
+        using simp_a_oCL_b'[OF comm]
+        by simp
+      also have \<open>\<dots> = of_bool (l=n) * (ket k \<bullet>\<^sub>C (U t* *\<^sub>V x *\<^sub>V U t *\<^sub>V ket m))\<close>
+        using U_def by fastforce
+      also have \<open>\<dots> = of_bool (l=n) * (ket k \<bullet>\<^sub>C (y *\<^sub>V ket m))\<close>
+        using y_def by force
+      also have \<open>\<dots> = ket (k,l) \<bullet>\<^sub>C (\<pi> y *\<^sub>V ket (m,n))\<close>
+        by (simp add: \<pi>_def tensor_op_ell2 flip: tensor_ell2_ket)
+      finally show ?thesis
+        by -
+    qed
+    then have \<open>x = \<pi> y\<close>
+      by (metis cinner_ket_eqI equal_ket surj_pair)
+    then show \<open>x \<in> range \<pi>\<close>
+      by simp
+  qed
+  have **: \<open>\<pi> ` (Y ') = (\<pi> ` Y)' \<inter> range \<pi>\<close> for Y
+    using inj_tensor_left[of id_cblinfun]
+    apply (auto simp add: commutant_def \<pi>_def comp_tensor_op
+        intro!: image_eqI)
+    using injD by fastforce
+  have 1: \<open>(\<pi> ` X)'' \<subseteq> \<pi> ` (X '')\<close> for X
+  proof -
+    have \<open>(\<pi> ` X)'' \<subseteq> (\<pi> ` X)'' \<inter> range \<pi>\<close>
+      by (simp add: "*")
+    also have \<open>\<dots> \<subseteq> ((\<pi> ` X)' \<inter> range \<pi>)' \<inter> range \<pi>\<close>
+      by (simp add: commutant_antimono inf.coboundedI1)
+    also have \<open>\<dots> = \<pi> ` (X '')\<close>
+      by (simp add: ** )
+    finally show ?thesis
+      by -
+  qed
+
+  have \<open>x o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L x\<close> if \<open>x \<in> \<pi> ` (X '')\<close> and \<open>y \<in> (\<pi> ` X)'\<close> for x y
+  proof (intro equal_ket cinner_ket_eqI)
+    fix i j :: \<open>'a \<times> 'b\<close>
+    from that obtain w where \<open>w \<in> X ''\<close> and x_def: \<open>x = w \<otimes>\<^sub>o \<one>\<close>
+      by (auto simp: \<pi>_def)
+    obtain i1 i2 where i_def: \<open>i = (i1, i2)\<close> by force
+    obtain j1 j2 where j_def: \<open>j = (j1, j2)\<close> by force
+    define y\<^sub>0 where \<open>y\<^sub>0 = U i2* o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L U j2\<close>
+
+    have \<open>y\<^sub>0 \<in> X '\<close>
+    proof (rule commutant_memberI)
+      fix z assume \<open>z \<in> X\<close>
+      then have \<open>z \<otimes>\<^sub>o \<one> \<in> \<pi> ` X\<close>
+        by (auto simp: \<pi>_def)
+      have \<open>y\<^sub>0 o\<^sub>C\<^sub>L z = U i2* o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L (z \<otimes>\<^sub>o \<one>) o\<^sub>C\<^sub>L U j2\<close>
+        by (auto intro!: equal_ket simp add: y\<^sub>0_def U_def tensor_op_ell2)
+      also have \<open>\<dots> = U i2* o\<^sub>C\<^sub>L (z \<otimes>\<^sub>o \<one>) o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L U j2\<close>
+        using \<open>z \<otimes>\<^sub>o \<one> \<in> \<pi> ` X\<close> and \<open>y \<in> (\<pi> ` X)'\<close>
+        apply (auto simp add: commutant_def)
+        by (simp add: cblinfun_compose_assoc)
+      also have \<open>\<dots> = z o\<^sub>C\<^sub>L y\<^sub>0\<close>
+        by (auto intro!: equal_ket cinner_ket_eqI
+            simp add: y\<^sub>0_def U_def tensor_op_ell2 tensor_op_adjoint simp flip: cinner_adj_left)
+      finally show \<open>y\<^sub>0 o\<^sub>C\<^sub>L z = z o\<^sub>C\<^sub>L y\<^sub>0\<close>
+        by -
+    qed
+    have \<open>|i\<rangle> \<bullet>\<^sub>C ((x o\<^sub>C\<^sub>L y) *\<^sub>V |j\<rangle>) = |i1\<rangle> \<bullet>\<^sub>C (U i2* *\<^sub>V (w \<otimes>\<^sub>o \<one>) *\<^sub>V y *\<^sub>V U j2 *\<^sub>V |j1\<rangle>)\<close>
+      by (simp add: U_def i_def j_def tensor_ell2_ket cinner_adj_right x_def)
+    also have \<open>\<dots> = |i1\<rangle> \<bullet>\<^sub>C (U i2* *\<^sub>V (w \<otimes>\<^sub>o \<one>) *\<^sub>V (U i2 o\<^sub>C\<^sub>L U i2*) *\<^sub>V y *\<^sub>V U j2 *\<^sub>V |j1\<rangle>)\<close>
+      by (simp add: U_def tensor_ell2_right_butterfly tensor_op_adjoint tensor_op_ell2
+          flip: cinner_adj_left)
+    also have \<open>\<dots> = |i1\<rangle> \<bullet>\<^sub>C (w *\<^sub>V y\<^sub>0 *\<^sub>V |j1\<rangle>)\<close>
+      by (simp add: y\<^sub>0_def tensor_op_adjoint tensor_op_ell2 U_def flip: cinner_adj_left)
+    also have \<open>\<dots> = |i1\<rangle> \<bullet>\<^sub>C (y\<^sub>0 *\<^sub>V w *\<^sub>V |j1\<rangle>)\<close>
+      using \<open>y\<^sub>0 \<in> X '\<close> \<open>w \<in> X ''\<close>
+      apply (subst (asm) (2) commutant_def)
+      using lift_cblinfun_comp(4) by force
+    also have \<open>\<dots> = |i1\<rangle> \<bullet>\<^sub>C (U i2* *\<^sub>V y *\<^sub>V (U j2 o\<^sub>C\<^sub>L U j2*) *\<^sub>V (w \<otimes>\<^sub>o \<one>) *\<^sub>V U j2 *\<^sub>V |j1\<rangle>)\<close>
+      by (simp add: y\<^sub>0_def tensor_op_adjoint tensor_op_ell2 U_def flip: cinner_adj_left)
+    also have \<open>\<dots> = |i1\<rangle> \<bullet>\<^sub>C (U i2* *\<^sub>V y *\<^sub>V (w \<otimes>\<^sub>o \<one>) *\<^sub>V U j2 *\<^sub>V |j1\<rangle>)\<close>
+      by (simp add: U_def tensor_ell2_right_butterfly tensor_op_adjoint tensor_op_ell2
+          flip: cinner_adj_left)
+    also have \<open>\<dots> = |i\<rangle> \<bullet>\<^sub>C ((y o\<^sub>C\<^sub>L x) *\<^sub>V |j\<rangle>)\<close>
+      by (simp add: U_def i_def j_def tensor_ell2_ket cinner_adj_right x_def)
+    finally show \<open>|i\<rangle> \<bullet>\<^sub>C ((x o\<^sub>C\<^sub>L y) *\<^sub>V |j\<rangle>) = |i\<rangle> \<bullet>\<^sub>C ((y o\<^sub>C\<^sub>L x) *\<^sub>V |j\<rangle>)\<close>
+      by -
+  qed
+  then have 2: \<open>(\<pi> ` X)'' \<supseteq> \<pi> ` (X '')\<close>
+    by (auto intro!: commutant_memberI)
+  from 1 2 show ?thesis
+    by (auto simp flip: \<pi>_def)
+qed
+
+lemma amplification_double_commutant_commute':
+  \<open>commutant (commutant ((\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` X))
+    = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) `  commutant (commutant X)\<close>
+proof -
+  have \<open>commutant (commutant ((\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` X))
+    = commutant (commutant (sandwich swap_ell2 ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
+    by (simp add: swap_tensor_op_sandwich image_image)
+  also have \<open>\<dots> = sandwich swap_ell2 ` commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
+    by (simp add: sandwich_unitary_complement)
+  also have \<open>\<dots> = sandwich swap_ell2 ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` commutant (commutant X)\<close>
+    by (simp add: amplification_double_commutant_commute)
+  also have \<open>\<dots> = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) `  commutant (commutant X)\<close>
+    by (simp add: swap_tensor_op_sandwich image_image)
+  finally show ?thesis
+    by -
+qed
+
+lemma register_double_commutant_commute:
+  assumes \<open>qregister F\<close>
+  shows \<open>commutant (commutant (apply_qregister F ` X)) = apply_qregister F ` commutant (commutant X)\<close>
+proof -
+  have \<open>qregister_raw (apply_qregister F)\<close>
+    using assms qregister.rep_eq by blast
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F. ?thesis\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where [simp]: \<open>unitary U\<close> and F_decomp: \<open>apply_qregister F \<theta> = sandwich U *\<^sub>V (\<theta> \<otimes>\<^sub>o id_cblinfun)\<close> for \<theta>
+      by auto
+    have \<open>commutant (commutant (apply_qregister F ` X))
+        = commutant (commutant (sandwich U ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
+      by (simp add: image_image F_decomp)
+    also have \<open>\<dots> = sandwich U ` commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
+      by (simp add: sandwich_unitary_complement)
+    also have \<open>\<dots> = sandwich U ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` commutant (commutant (X))\<close>
+      using amplification_double_commutant_commute by blast
+    also have \<open>\<dots> = apply_qregister F ` commutant (commutant X)\<close>
+      by (simp add: image_image F_decomp)
+    finally show \<open>commutant (commutant (apply_qregister F ` X)) = apply_qregister F ` commutant (commutant X)\<close>
+      by -
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
 qed
 
 lemma QREGISTER_pair_QREGISTER_chain: \<open>QREGISTER_pair (QREGISTER_chain F G) (QREGISTER_chain F H)
@@ -526,25 +696,15 @@ proof (cases \<open>qregister F\<close>)
   case True
   show ?thesis
     apply (rule_tac Rep_QREGISTER_inject[THEN iffD1])
-    apply (simp add: Rep_QREGISTER_pair_sot QREGISTER_chain.rep_eq True complex_vector.linear_span_image
- flip: image_Un)
-    apply (subst)
-     apply simp
-
-  by -
-
-    apply (transfer fixing: )
-    apply (auto simp)
-    apply (rule_tac Rep_QREGISTER_inject[THEN iffD1])
-    apply (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq)
+    by (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq
+        register_double_commutant_commute
+        True complex_vector.linear_span_image
+        flip: image_Un)
 next
   case False
   then show ?thesis
     by (simp add: non_qregister)
 qed
-
-  apply (simp add: QREGISTER_pair_valid_qregister_range_hull)
-  sorry
 
 lemma QREGISTER_pair_assoc:
   \<open>QREGISTER_pair (QREGISTER_pair F G) H = QREGISTER_pair F (QREGISTER_pair G H)\<close>
@@ -620,7 +780,7 @@ lemma QREGISTER_chain_unit_left: \<open>QREGISTER_chain empty_qregister F = QREG
    apply transfer
   by (auto simp: Quantum_Extra2.empty_var_def empty_qregister_range_def)
 
-lemma QREGISTER_chain_unit_right: \<open>QREGISTER_chain F QREGISTER_unit = QREGISTER_unit\<close>
+lemma QREGISTER_chain_unit_right[simp]: \<open>QREGISTER_chain F QREGISTER_unit = QREGISTER_unit\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
   by (auto simp add: QREGISTER_chain.rep_eq bot_QREGISTER.rep_eq empty_qregister_range_def
       image_image apply_qregister_scaleC)
@@ -653,34 +813,83 @@ val QREGISTER_of_index_reg_conv =
             QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})
 \<close>
 
+lemma xxx:
+  assumes \<open>qregister F\<close>
+  assumes \<open>range (apply_qregister G) = commutant (range (apply_qregister F))\<close>
+  shows \<open>qcomplements F G\<close>
+proof (cases \<open>qregister G\<close>)
+  case True
+  then show ?thesis sorry
+next
+  case False
+  then have \<open>id_cblinfun \<notin> range (apply_qregister G)\<close>
+    by (simp add: non_qregister)
+  moreover have \<open>id_cblinfun \<in> commutant (range (apply_qregister F))\<close>
+    by simp
+  ultimately have False
+    using assms by metis
+  then show ?thesis
+    by simp
+qed
 
 lemma z1:
-  assumes \<open>qregister F\<close>
-  assumes \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
-  assumes \<open>qregister G\<close>
+  assumes F: \<open>qregister F\<close>
+  assumes CF: \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
+  assumes G: \<open>qregister G\<close>
   shows \<open>qcomplements F G\<close>
-  sorry
-
+  using F apply (rule xxx)
+  using assms(2)[THEN Rep_QREGISTER_inject[THEN iffD2]]
+  by (simp add: QCOMPLEMENT.rep_eq QREGISTER_of.rep_eq F G)
 
 lemma y2:
   \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
     = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>
   sorry
+
+lemma QREGISTER_chain_fst_top[simp]: \<open>QREGISTER_chain qFst \<top> = QREGISTER_fst\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_chain.rep_eq QREGISTER_fst.rep_eq top_QREGISTER.rep_eq
+      apply_qregister_fst)
+
+lemma QREGISTER_chain_snd_top[simp]: \<open>QREGISTER_chain qSnd \<top> = QREGISTER_snd\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QREGISTER_chain.rep_eq QREGISTER_snd.rep_eq top_QREGISTER.rep_eq
+      apply_qregister_snd)
+
+lemma QCOMPLEMENT_top[simp]: \<open>QCOMPLEMENT \<top> = \<bottom>\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QCOMPLEMENT.rep_eq top_QREGISTER.rep_eq bot_QREGISTER.rep_eq
+      commutant_UNIV empty_qregister_range_def)
+
+lemma QCOMPLEMENT_bot[simp]: \<open>QCOMPLEMENT \<bottom> = \<top>\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QCOMPLEMENT.rep_eq top_QREGISTER.rep_eq bot_QREGISTER.rep_eq
+      commutant_id_mult empty_qregister_range_def)
+
 lemma y1:
   \<open>QCOMPLEMENT (QREGISTER_pair QREGISTER_fst (QREGISTER_chain qSnd F))
     = QREGISTER_chain qSnd (QCOMPLEMENT F)\<close>
-  sorry
+  using y2[where F=\<top> and G=F]
+  by simp
+
 lemma y3:
   \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) QREGISTER_snd)
     = QREGISTER_chain qFst (QCOMPLEMENT F)\<close>
-  sorry
-
-lemma QCOMPLEMENT_snd: \<open>QCOMPLEMENT QREGISTER_snd = QREGISTER_fst\<close>
-  sorry
+  using y2[where F=F and G=\<top>]
+  by simp
 
 lemma QCOMPLEMENT_fst: \<open>QCOMPLEMENT QREGISTER_fst = QREGISTER_snd\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QCOMPLEMENT.rep_eq QREGISTER_snd.rep_eq QREGISTER_fst.rep_eq commutant_tensor1)
 
+lemma QCOMPLEMENT_snd: \<open>QCOMPLEMENT QREGISTER_snd = QREGISTER_fst\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  by (simp add: QCOMPLEMENT.rep_eq QREGISTER_snd.rep_eq QREGISTER_fst.rep_eq commutant_tensor1')
+
+lemma QCOMPLEMENT_twice: \<open>QCOMPLEMENT (QCOMPLEMENT F) = F\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  using Rep_QREGISTER
+  by (auto simp: QCOMPLEMENT.rep_eq valid_qregister_range_def von_neumann_algebra_def)
 
 ML \<open>
 (* Rewrites QCOMPLEMENT (INDEX-QREGISTER) into an INDEX-QREGISTER *)
