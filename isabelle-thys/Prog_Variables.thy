@@ -447,11 +447,11 @@ proof -
   then show ?thesis
     using cregister_id valid_cregister_range by fastforce
 qed
-definition \<open>empty_qregister_range = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
-lemma valid_empty_qregister_range: \<open>valid_qregister_range empty_qregister_range\<close>
+
+lemma valid_one_algebra: \<open>valid_qregister_range one_algebra\<close>
 proof -
-  have 1: \<open>(empty_qregister_range :: 'a qupdate set) = (\<lambda>c. c *\<^sub>C id_cblinfun) ` (one_dim_iso :: unit qupdate \<Rightarrow> _) ` UNIV\<close>
-    by (metis (mono_tags, lifting) UNIV_eq_I empty_qregister_range_def one_dim_iso_idem one_dim_scaleC_1 rangeI)
+  have 1: \<open>(one_algebra :: 'a qupdate set) = (\<lambda>c. c *\<^sub>C id_cblinfun) ` (one_dim_iso :: unit qupdate \<Rightarrow> _) ` UNIV\<close>
+    by (metis (mono_tags, lifting) UNIV_eq_I one_algebra_def one_dim_iso_idem one_dim_scaleC_1 rangeI)
   have 2: \<open>\<dots> = range (apply_qregister (empty_qregister :: (unit,_) qregister))\<close>
     by (simp add: empty_qregister.rep_eq empty_var_def image_image)
   show ?thesis
@@ -492,7 +492,7 @@ qed
 typedef 'a CREGISTER = \<open>Collect valid_cregister_range :: 'a cupdate set set\<close>
   using valid_empty_cregister_range by blast
 typedef 'a QREGISTER = \<open>Collect valid_qregister_range :: 'a qupdate set set\<close>
-  using valid_empty_qregister_range by blast
+  using valid_one_algebra by blast
 setup_lifting type_definition_CREGISTER
 setup_lifting type_definition_QREGISTER
 
@@ -500,8 +500,8 @@ lift_definition CREGISTER_of :: \<open>('a,'b) cregister \<Rightarrow> 'b CREGIS
   \<open>\<lambda>F::('a,'b) cregister. if cregister F then range (apply_cregister F) :: 'b cupdate set else empty_cregister_range\<close>
   by (simp add: valid_empty_cregister_range valid_cregister_range)
 lift_definition QREGISTER_of :: \<open>('a,'b) qregister \<Rightarrow> 'b QREGISTER\<close> is
-  \<open>\<lambda>F::('a,'b) qregister. if qregister F then range (apply_qregister F) :: 'b qupdate set else empty_qregister_range\<close>
-  by (simp add: valid_empty_qregister_range valid_qregister_range)
+  \<open>\<lambda>F::('a,'b) qregister. if qregister F then range (apply_qregister F) :: 'b qupdate set else one_algebra\<close>
+  by (simp add: valid_one_algebra valid_qregister_range)
 
 instantiation CREGISTER :: (type) order begin
 lift_definition less_eq_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> bool\<close> is \<open>(\<subseteq>)\<close>.
@@ -525,8 +525,8 @@ instance..
 end
 
 instantiation QREGISTER :: (type) bot begin
-lift_definition bot_QREGISTER :: \<open>'a QREGISTER\<close> is empty_qregister_range
-  by (simp add: valid_empty_qregister_range)
+lift_definition bot_QREGISTER :: \<open>'a QREGISTER\<close> is one_algebra
+  by (simp add: valid_one_algebra)
 instance..
 end
 
@@ -571,17 +571,17 @@ proof (rule Rep_QREGISTER_inject[THEN iffD1])
     apply (rule arg_cong[where y=UNIV])
     by (metis one_dim_iso_idem one_dim_iso_inj surjI)
   also have \<open>\<dots> = Rep_QREGISTER QREGISTER_unit\<close>    
-    by (simp add: bot_QREGISTER.rep_eq empty_qregister_range_def)
+    by (simp add: bot_QREGISTER.rep_eq one_algebra_def)
   finally show \<open>Rep_QREGISTER (QREGISTER_of ?empty) = Rep_QREGISTER QREGISTER_unit\<close>
     by -
 qed
 
 lemma QREGISTER_unit_smallest[simp]: \<open>(QREGISTER_unit :: 'a QREGISTER) \<le> X\<close>
 proof (unfold less_eq_QREGISTER.rep_eq)
-  have \<open>Rep_QREGISTER (QREGISTER_unit :: 'a QREGISTER) = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
-    by (simp add: bot_QREGISTER.rep_eq empty_qregister_range_def)
+  have \<open>Rep_QREGISTER (QREGISTER_unit :: 'a QREGISTER) = one_algebra\<close>
+    by (simp add: bot_QREGISTER.rep_eq one_algebra_def)
   also have \<open>\<dots> \<subseteq> commutant (commutant (Rep_QREGISTER X))\<close>
-    apply (subst commutant_def) by auto
+    apply (subst commutant_def) by (auto simp: one_algebra_def)
   also have \<open>\<dots> = Rep_QREGISTER X\<close>
     using Rep_QREGISTER
     by (auto simp: valid_qregister_range_def von_neumann_factor_def von_neumann_algebra_def)
@@ -1809,7 +1809,7 @@ lemma Cccompatible_CREGISTER_of: \<open>Cccompatible (CREGISTER_of A) B \<longle
 lemma Qqcompatible_QREGISTER_of: \<open>Qqcompatible (QREGISTER_of A) B \<longleftrightarrow> qcompatible A B \<or> (qregister B \<and> A = non_qregister)\<close>
   unfolding QREGISTER_of.rep_eq Qqcompatible.rep_eq
   apply transfer
-  by (auto simp add: non_qregister_raw empty_qregister_range_def qcompatible_raw_def)
+  by (auto simp add: non_qregister_raw one_algebra_def qcompatible_raw_def)
 
 lemma Cccompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow> Cccompatible (CREGISTER_of F) G\<close>
   by (simp add: Cccompatible_CREGISTER_of)

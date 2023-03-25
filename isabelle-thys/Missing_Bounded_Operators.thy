@@ -1423,6 +1423,9 @@ lemma sandwich_sot_continuous[continuous_intros]:
   by (intro continuous_intros assms)
 
 
+definition one_algebra :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set\<close> where
+  \<open>one_algebra = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+
 lemma commutant_tensor1': \<open>commutant (range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)) = range (\<lambda>b. b \<otimes>\<^sub>o id_cblinfun)\<close>
 proof -
   have \<open>commutant (range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)) = commutant (sandwich swap_ell2 ` range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun))\<close>
@@ -1514,7 +1517,7 @@ lemma closed_map_sot_unitary_sandwich:
       simp flip: cblinfun_apply_cblinfun_compose)
 
 definition von_neumann_algebra where \<open>von_neumann_algebra A \<longleftrightarrow> (\<forall>a\<in>A. a* \<in> A) \<and> commutant (commutant A) = A\<close>
-definition von_neumann_factor where \<open>von_neumann_factor A \<longleftrightarrow> von_neumann_algebra A \<and> A \<inter> commutant A = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+definition von_neumann_factor where \<open>von_neumann_factor A \<longleftrightarrow> von_neumann_algebra A \<and> A \<inter> commutant A = one_algebra\<close>
 
 lemma von_neumann_algebraI: \<open>(\<And>a. a\<in>A \<Longrightarrow> a* \<in> A) \<Longrightarrow> commutant (commutant A) \<subseteq> A \<Longrightarrow> von_neumann_algebra A\<close> for \<FF>
   apply (auto simp: von_neumann_algebra_def)
@@ -1522,20 +1525,20 @@ lemma von_neumann_algebraI: \<open>(\<And>a. a\<in>A \<Longrightarrow> a* \<in> 
 
 lemma von_neumann_factorI:
   assumes \<open>von_neumann_algebra A\<close>
-  assumes \<open>A \<inter> commutant A \<subseteq> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+  assumes \<open>A \<inter> commutant A \<subseteq> one_algebra\<close>
   shows \<open>von_neumann_factor A\<close>
 proof -
-  have 1: \<open>A \<supseteq> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+  have 1: \<open>A \<supseteq> one_algebra\<close>
     apply (subst asm_rl[of \<open>A = commutant (commutant A)\<close>])
     using assms(1) von_neumann_algebra_def apply blast
-    by (auto simp: commutant_def)
-  have 2: \<open>commutant A \<supseteq> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
-    by (auto simp: commutant_def)
+    by (auto simp: commutant_def one_algebra_def)
+  have 2: \<open>commutant A \<supseteq> one_algebra\<close>
+    by (auto simp: commutant_def one_algebra_def)
   from 1 2 assms show ?thesis
     by (auto simp add: von_neumann_factor_def)
 qed
 
-lemma commutant_UNIV: \<open>commutant (UNIV :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set) = range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close>
+lemma commutant_UNIV: \<open>commutant (UNIV :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set) = one_algebra\<close>
   (* Not sure if the assumption chilbert_space is needed *)
 proof -
   have 1: \<open>c *\<^sub>C id_cblinfun \<in> commutant UNIV\<close> for c
@@ -1607,7 +1610,7 @@ proof -
   qed
 
   from 1 2 show ?thesis
-    by auto
+    by (auto simp: one_algebra_def)
 qed
 
 
@@ -1924,7 +1927,7 @@ proof -
     by -
 qed
 
-lemma commutant_id_mult: \<open>commutant (range (\<lambda>c. c *\<^sub>C id_cblinfun :: _ \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)) = UNIV\<close>
+lemma commutant_one_algebra: \<open>commutant one_algebra = UNIV\<close>
   by (metis commutant_UNIV commutant_empty triple_commutant)
 
 end

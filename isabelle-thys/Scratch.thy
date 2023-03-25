@@ -12,270 +12,6 @@ ML "open Prog_Variables"
 abbreviation \<open>upfst x \<equiv> apfst (\<lambda>_. x)\<close>
 abbreviation \<open>upsnd x \<equiv> apsnd (\<lambda>_. x)\<close>
 
-definition \<open>valid_qregister_range_aux f a \<longleftrightarrow> 
-    (\<forall>x y. snd (f x) \<noteq> snd (f y) \<longrightarrow> ket x \<bullet>\<^sub>C (a *\<^sub>V ket y) = 0)
-      \<and> (\<forall>x y x' y'. fst (f x) = fst (f x') \<longrightarrow> fst (f y) = fst (f y') \<longrightarrow> 
-                     snd (f x) = snd (f y) \<longrightarrow> snd (f x') = snd (f y') \<longrightarrow>
-                         ket x \<bullet>\<^sub>C (a *\<^sub>V ket y) = ket x' \<bullet>\<^sub>C (a *\<^sub>V ket y'))\<close>
-definition valid_qregister_range_new :: \<open>'a qupdate set \<Rightarrow> bool\<close> where
-  \<open>valid_qregister_range_new \<FF> \<longleftrightarrow> (\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) U L R. unitary U \<and> 
-    inj f \<and> range f = L \<times> R \<and>
-    \<FF> = {sandwich U a | a. valid_qregister_range_aux f a})\<close>
-
-lemma valid_qregister_range_aux_sandwich:
-  assumes \<open>\<And>x. U *\<^sub>V ket x = ket (f x)\<close>
-  assumes \<open>unitary U\<close>
-  assumes \<open>bij f\<close>
-  shows \<open>valid_qregister_range_aux id (sandwich U a) \<longleftrightarrow> valid_qregister_range_aux f a\<close>
-proof -
-  have [simp]: \<open>U* *\<^sub>V ket x = ket (inv f x)\<close> for x
-    by (metis (mono_tags, lifting) \<open>bij f\<close> assms(1) assms(2) bij_betw_imp_surj_on cinner_adj_right cinner_ket_eqI isometry_cinner_both_sides surj_f_inv_f unitary_isometry)
-
-  have \<open>bij (inv f)\<close>
-    by (simp add: \<open>bij f\<close> bij_imp_bij_inv)
-
-  show ?thesis
-    using assms
-    apply (auto simp: sandwich_apply valid_qregister_range_aux_def bij_betw_imp_surj_on surj_f_inv_f
-        simp flip: cinner_adj_left)
-     apply (metis \<open>bij f\<close>  bij_betw_imp_inj_on invI surjective_pairing)
-    by (smt (verit) \<open>bij f\<close>  bij_betw_imp_inj_on inv_f_f surjective_pairing)
-qed
-
-lemma Collect_valid_qregister_range_aux_id:
-  \<open>{a. valid_qregister_range_aux id a} = range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-proof (intro Set.set_eqI iffI)
-  fix a :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'c) ell2\<close>
-  assume \<open>a \<in> range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-  then show \<open>a \<in> {a. valid_qregister_range_aux id a}\<close>
-    by (auto simp: tensor_op_ell2 tensor_ell2_inner_prod valid_qregister_range_aux_def
-        simp flip: tensor_ell2_ket)
-next
-  fix a
-  assume asm: \<open>a \<in> {a. valid_qregister_range_aux id a}\<close>
-  define \<theta> where \<open>\<theta> = tensor_ell2_right (ket undefined)* o\<^sub>C\<^sub>L a o\<^sub>C\<^sub>L tensor_ell2_right (ket undefined)\<close>
-  have \<open>a = \<theta> \<otimes>\<^sub>o id_cblinfun\<close>
-    using asm
-    by (auto intro!: equal_ket cinner_ket_eqI 
-        simp: tensor_op_ell2 tensor_ell2_inner_prod cinner_ket
-        \<theta>_def cinner_adj_right valid_qregister_range_aux_def
-        simp flip: tensor_ell2_ket)
-  then show \<open>a \<in> range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-    by auto
-qed
-
-lemma qregister_has_valid_qregister_range:
-  fixes F :: \<open>('a,'b) qregister\<close>
-  assumes \<open>qregister F\<close>
-  shows \<open>valid_qregister_range_new (range (apply_qregister F))\<close>
-proof -
-  define \<FF> where \<open>\<FF> = range (apply_qregister F)\<close>
-  have \<open>qregister_raw (apply_qregister F)\<close>
-    using assms by auto
-  from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
-        valid_qregister_range_new \<FF>\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>V :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary V \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich V *\<^sub>V (\<theta> \<otimes>\<^sub>o id_cblinfun))\<close>
-    then obtain V :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where [simp]: \<open>unitary V\<close> and F_decomp: \<open>apply_qregister F \<theta> = sandwich V *\<^sub>V (\<theta> \<otimes>\<^sub>o id_cblinfun)\<close> for \<theta>
-      by auto
-
-    obtain g :: \<open>'a \<times> 'c \<Rightarrow> 'b\<close> where [simp]: \<open>bij g\<close>
-    proof (atomize_elim, rule exI)
-      note bij_betw_trans[trans]
-      have \<open>bij_betw ket UNIV (range ket)\<close>
-        by (simp add: bij_betw_def)
-      also have \<open>bij_betw V (range ket) (V ` range ket)\<close>
-        by (auto intro!: inj_on_imp_bij_betw unitary_inj)
-      also have \<open>bij_betw (bij_between_bases (V ` range ket) (range ket)) (V ` range ket) (range ket)\<close>
-        by (auto intro!: bij_between_bases_bij unitary_image_onb)
-      also have \<open>bij_betw (inv ket) (range ket) UNIV\<close>
-        by (simp add: inj_imp_bij_betw_inv)
-      finally show \<open>bij (inv ket o bij_between_bases (V ` range ket) (range ket) o V o ket)\<close>
-        by (simp add: comp_assoc)
-    qed
-    have [simp]: \<open>range (inv g) = UNIV\<close>
-      by (simp add: bij_betw_inv_into bij_is_surj)
-
-    define G where \<open>G = classical_operator (Some o g)\<close>
-
-    obtain ia :: \<open>'a \<Rightarrow> 'b\<close> where \<open>inj ia\<close>
-      apply (atomize_elim, rule exI[where x=\<open>\<lambda>a. g (a,undefined)\<close>])
-      by (smt (verit) Pair_inject UNIV_I \<open>bij g\<close> bij_betw_iff_bijections injI)
-    obtain ic :: \<open>'c \<Rightarrow> 'b\<close> where \<open>inj ic\<close>
-      apply (atomize_elim, rule exI[where x=\<open>\<lambda>c. g (undefined,c)\<close>])
-      by (smt (verit) UNIV_I \<open>bij g\<close> bij_betw_iff_bijections injI prod.simps(1))
-      
-    define L R where \<open>L = range ia\<close> and \<open>R = range ic\<close>
-
-    define f :: \<open>'b \<Rightarrow> 'b \<times> 'b\<close> where \<open>f = map_prod ia ic o inv g\<close>
-
-    have [simp]: \<open>fst (f x) = fst (f y) \<longleftrightarrow> fst (inv g x) = fst (inv g y)\<close> for x y
-      using \<open>inj ia\<close> f_def injD by fastforce
-    have [simp]: \<open>snd (f x) = snd (f y) \<longleftrightarrow> snd (inv g x) = snd (inv g y)\<close> for x y
-      using \<open>inj ic\<close> f_def injD by fastforce
-
-    define U :: \<open>'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
-      where \<open>U = V o\<^sub>C\<^sub>L G*\<close>
-
-    have [simp]: \<open>unitary G\<close>
-      by (simp add: G_def)
-    have \<open>G (ket x) = ket (g x)\<close> for x
-      by (simp add: G_def bij_is_inj classical_operator_ket classical_operator_exists_inj)
-    then have Gadj_ket: \<open>G* *\<^sub>V (ket x) = ket (inv g x)\<close> for x
-      apply (subst unitary_adj_inv)
-      by (simp_all add: bij_is_surj inv_f_eq surj_f_inv_f unitary_inj)
-    have bij_sandwich_G: \<open>bij (sandwich G)\<close>
-      by (auto intro!: o_bij[where g=\<open>sandwich (G*)\<close>] simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
-    have inv_sandwich_G: \<open>inv (sandwich G) = sandwich (G*)\<close>
-      by (auto intro!: inv_unique_comp simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
-
-    have \<open>\<FF> = sandwich V ` range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
-      by (simp add: \<FF>_def F_decomp image_image)
-    also have \<open>\<dots> = sandwich V ` {a. valid_qregister_range_aux id a}\<close>
-      by (simp add: Collect_valid_qregister_range_aux_id)
-    also have \<open>\<dots> = sandwich U ` sandwich G ` {a. valid_qregister_range_aux id a}\<close>
-      by (simp add: U_def image_image sandwich_compose cblinfun_assoc_right unitaryD1
-          flip: cblinfun_apply_cblinfun_compose)
-    also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux id (sandwich (G*) a)}\<close>
-      by (simp add: bij_image_Collect_eq bij_sandwich_G inv_sandwich_G)
-    also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux (inv g) a}\<close>
-      by (simp add: valid_qregister_range_aux_sandwich Gadj_ket bij_imp_bij_inv)
-    also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux f a}\<close>
-      by (simp add: valid_qregister_range_aux_def)
-    also have \<open>\<dots> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-      by auto
-    finally have \<FF>_eq: \<open>\<FF> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-      by -
-    moreover have inj_f: \<open>inj f\<close>
-      by (auto intro!: inj_compose prod.inj_map
-          simp add: bij_betw_inv_into bij_is_inj f_def \<open>inj ia\<close> \<open>inj ic\<close>)
-    moreover have range_f: \<open>range f = L \<times> R\<close>
-      by (auto simp add: f_def L_def R_def simp flip: image_image)
-    moreover have unitary_U: \<open>unitary U\<close>
-      by (auto intro!: unitary_cblinfun_compose
-          simp add: U_def)
-    show \<open>valid_qregister_range_new \<FF>\<close>
-      unfolding valid_qregister_range_new_def
-      apply (rule exI[of _ f], rule exI[of _ U], rule exI[of _ L], rule exI[of _ R])
-      by (simp only: unitary_U inj_f range_f \<FF>_eq)
-  qed
-  from this[cancel_with_type]
-  show \<open>valid_qregister_range_new \<FF>\<close>
-    by -
-qed
-
-definition \<open>valid_qregister_range_content \<FF> = (SOME L::'a set.
-    \<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) U R. unitary U \<and> 
-        inj f \<and> range f = L \<times> R \<and>
-        \<FF> = {sandwich U a | a. valid_qregister_range_aux f a})\<close>
-  for \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
-
-lemma valid_qregister_range_ex_register:
-  fixes \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
-  assumes \<open>valid_qregister_range_new \<FF>\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'l::type = valid_qregister_range_content \<FF>.
-         \<exists>F :: ('l, 'a) qregister. range (apply_qregister F) = \<FF>\<close>
-proof (rule with_typeI)
-  define L where \<open>L = valid_qregister_range_content \<FF>\<close>
-  have \<open>\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) U R. unitary U \<and> 
-        inj f \<and> range f = L \<times> R \<and>
-        \<FF> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-    unfolding L_def valid_qregister_range_content_def apply (rule someI_ex)
-    using assms unfolding valid_qregister_range_new_def 
-    by blast
-  then obtain f :: \<open>'a \<Rightarrow> 'a\<times>'a\<close> and U R where \<open>unitary U\<close> and \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close>
-    and \<FF>_eq: \<open>\<FF> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-    by auto
-  from range_f have \<open>L \<noteq> {}\<close> and \<open>R \<noteq> {}\<close>
-    by auto
-  then show \<open>fst (L, ()) \<noteq> {}\<close>
-    by simp
-  show \<open>fst with_type_type_class (fst (L, ())) (snd (L, ()))\<close>
-    by (simp add: with_type_type_class_def)
-  show \<open>with_type_compat_rel (fst with_type_type_class) (fst (L, ()))
-     (snd with_type_type_class)\<close>
-    by (simp add: with_type_compat_rel_type)
-  fix RepL :: \<open>'l \<Rightarrow> 'a\<close> and AbsL
-  assume \<open>type_definition RepL AbsL (fst (L, ()))\<close>
-  then interpret L: type_definition RepL AbsL L
-    by simp
-  have \<open>\<forall>\<^sub>\<tau> 'r::type = R. \<exists>F :: ('l, 'a) qregister. range (apply_qregister F) = \<FF>\<close>
-  proof (rule with_typeI)
-    from \<open>R \<noteq> {}\<close> show \<open>fst (R, ()) \<noteq> {}\<close>
-      by simp
-    show \<open>fst with_type_type_class (fst (R, ())) (snd (R, ()))\<close>
-      by (simp add: with_type_type_class_def)
-    show \<open>with_type_compat_rel (fst with_type_type_class) (fst (R, ())) (snd with_type_type_class)\<close>
-      by (simp add: with_type_compat_rel_type)
-    fix RepR :: \<open>'r \<Rightarrow> 'a\<close> and AbsR
-    assume \<open>type_definition RepR AbsR (fst (R, ()))\<close>
-    then interpret R: type_definition RepR AbsR R
-      by simp
-    define f' where \<open>f' = map_prod AbsL AbsR o f\<close>
-    have \<open>bij f'\<close>
-    proof -
-      note bij_betw_trans[trans]
-      have \<open>bij_betw f UNIV (L \<times> R)\<close>
-        by (simp add: \<open>inj f\<close> bij_betw_def range_f)
-      also have \<open>bij_betw (map_prod AbsL AbsR) (L \<times> R) (UNIV \<times> UNIV)\<close>
-        apply (rule bij_betw_map_prod)
-         apply (metis bij_betw_def inj_on_def L.Abs_image L.Abs_inject)
-        by (metis bij_betw_def inj_on_def R.Abs_image R.Abs_inject)
-      finally show ?thesis
-        by (simp add: f'_def)
-    qed
-    define V where \<open>V = classical_operator (Some o f')\<close>
-    have [simp]: \<open>unitary V\<close>
-      by (simp add: V_def unitary_classical_operator \<open>bij f'\<close>)
-    have V_ket: \<open>V *\<^sub>V ket x = ket (f' x)\<close> for x
-      by (simp add: V_def classical_operator_ket classical_operator_exists_inj inj_map_total bij_is_inj \<open>bij f'\<close>)
-    then have Vadj_ket: \<open>V* *\<^sub>V ket x = ket (inv f' x)\<close> for x
-      apply (subst unitary_adj_inv)
-      by (simp_all add: \<open>bij f'\<close> bij_is_surj inv_f_eq surj_f_inv_f unitary_inj)
-    have bij_sandwich_Vadj: \<open>bij (sandwich (V*))\<close>
-      by (auto intro!: o_bij[where g=\<open>sandwich V\<close>] simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
-    have inv_sandwich_Vadj: \<open>inv (sandwich (V*)) = sandwich V\<close>
-      by (auto intro!: inv_unique_comp simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
-
-    define F where \<open>F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L V*)) qFst\<close>
-    have \<open>qregister F\<close>
-      by (auto intro!: qregister_transform_qregister unitary_cblinfun_compose
-          simp: F_def \<open>unitary U\<close>)
-    have \<open>range (apply_qregister F) = \<FF>\<close>
-    proof -
-      have aux1: \<open>fst (f' x) = fst (f' y) \<longleftrightarrow> fst (f x) = fst (f y)\<close> for x y
-        by (metis L.Abs_inverse comp_apply eq_fst_iff f'_def fst_map_prod mem_Sigma_iff rangeI range_f)
-      have aux2: \<open>snd (f' x) = snd (f' y) \<longleftrightarrow> snd (f x) = snd (f y)\<close> for x y
-        by (metis R.type_definition_axioms SigmaD2 comp_eq_dest_lhs f'_def rangeI range_f snd_map_prod surjective_pairing type_definition.Abs_inject)
-
-      have \<open>range (apply_qregister F) = sandwich U ` sandwich (V*) ` range (\<lambda>x. x \<otimes>\<^sub>o id_cblinfun)\<close>
-        by (auto simp add: F_def apply_qregister_fst apply_qregister_transform_qregister \<open>unitary U\<close>
-            simp flip: sandwich_compose)
-      also have \<open>\<dots> = sandwich U ` sandwich (V*) ` {a. valid_qregister_range_aux id a}\<close>
-        by (simp add: Collect_valid_qregister_range_aux_id)
-      also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux id (sandwich V a)}\<close>
-        by (simp add: bij_image_Collect_eq bij_sandwich_Vadj inv_sandwich_Vadj)
-      also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux f' a}\<close>
-        apply (subst valid_qregister_range_aux_sandwich)
-        by (simp_all add: V_ket \<open>unitary V\<close> \<open>bij f'\<close>)
-      also have \<open>\<dots> = sandwich U ` {a. valid_qregister_range_aux f a}\<close>
-        apply (rule arg_cong[where f=\<open>\<lambda>a. sandwich U ` Collect a\<close>], rule ext)
-        by (simp add: valid_qregister_range_aux_def aux1 aux2)
-      also have \<open>\<dots> = {sandwich U a | a. valid_qregister_range_aux f a}\<close>
-        by blast
-      finally show ?thesis
-        by (simp add: \<FF>_eq)
-    qed
-    then show \<open>\<exists>F :: ('l, 'a) qregister. range (apply_qregister F) = \<FF>\<close>
-      by auto
-  qed
-  from this[cancel_with_type]
-  show \<open>\<exists>F :: ('l, 'a) qregister. range (apply_qregister F) = \<FF>\<close>
-    by -
-qed
-
-
 lemma valid_qregister_range_def_sot:
   \<open>valid_qregister_range \<FF> \<longleftrightarrow> 
       (\<forall>a\<in>\<FF>. a* \<in> \<FF>) \<and> csubspace \<FF> \<and> (\<forall>a\<in>\<FF>. \<forall>b\<in>\<FF>. a o\<^sub>C\<^sub>L b \<in> \<FF>) \<and> id_cblinfun \<in> \<FF> \<and>
@@ -339,9 +75,9 @@ lemma valid_qregister_range_pres_raw:
   by (simp add: assms valid_qregister_range_UNIV valid_qregister_range_pres_raw) *)
 
 lift_definition QREGISTER_chain :: \<open>('a,'b) qregister \<Rightarrow> 'a QREGISTER \<Rightarrow> 'b QREGISTER\<close> is
-  \<open>\<lambda>F \<GG>. if qregister_raw F then F ` \<GG> else empty_qregister_range\<close>
+  \<open>\<lambda>F \<GG>. if qregister_raw F then F ` \<GG> else one_algebra\<close>
   by (auto simp: non_qregister_raw  
-      intro!: valid_qregister_range_pres_raw valid_empty_qregister_range)
+      intro!: valid_qregister_range_pres_raw valid_one_algebra)
 
 lift_definition QREGISTER_fst :: \<open>('a\<times>'b) QREGISTER\<close> is
   \<open>(\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` UNIV\<close>
@@ -352,12 +88,12 @@ lift_definition QREGISTER_snd :: \<open>('a\<times>'b) QREGISTER\<close> is
   using valid_qregister_range[of qSnd]
   by (simp add: apply_qregister_snd[abs_def])
 
-lemma apply_qregister_empty_qregister_range: \<open>qregister F \<Longrightarrow> apply_qregister F ` empty_qregister_range = empty_qregister_range\<close>
-  by (auto simp add: image_image empty_qregister_range_def apply_qregister_scaleC)
+lemma apply_qregister_one_algebra: \<open>qregister F \<Longrightarrow> apply_qregister F ` one_algebra = one_algebra\<close>
+  by (auto simp add: image_image one_algebra_def apply_qregister_scaleC)
 
 lemma QREGISTER_of_qregister_chain: \<open>QREGISTER_of (qregister_chain F G) = QREGISTER_chain F (QREGISTER_of G)\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (auto simp add: QREGISTER_of.rep_eq QREGISTER_chain.rep_eq apply_qregister_empty_qregister_range)
+  by (auto simp add: QREGISTER_of.rep_eq QREGISTER_chain.rep_eq apply_qregister_one_algebra)
 
 lemma QREGISTER_of_qFst: \<open>QREGISTER_of qFst = QREGISTER_fst\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
@@ -376,9 +112,9 @@ lemma QREGISTER_pair_valid_qregister_range_hull:
   apply (subst double_commutant_hull')
   using Rep_QREGISTER unfolding valid_qregister_range_def von_neumann_algebra_def by auto
 
-lemma Rep_QREGISTER_Un_empty1[simp]: \<open>Rep_QREGISTER X \<union> empty_qregister_range = Rep_QREGISTER X\<close>
+lemma Rep_QREGISTER_Un_empty1[simp]: \<open>Rep_QREGISTER X \<union> one_algebra = Rep_QREGISTER X\<close>
   using QREGISTER_unit_smallest bot_QREGISTER.rep_eq less_eq_QREGISTER.rep_eq by blast
-lemma Rep_QREGISTER_Un_empty2[simp]: \<open>empty_qregister_range \<union> Rep_QREGISTER X = Rep_QREGISTER X\<close>
+lemma Rep_QREGISTER_Un_empty2[simp]: \<open>one_algebra \<union> Rep_QREGISTER X = Rep_QREGISTER X\<close>
   using Rep_QREGISTER_Un_empty1 by blast
 
 lemma QREGISTER_chain_non_qregister[simp]: \<open>QREGISTER_chain non_qregister F = bot\<close>
@@ -392,57 +128,6 @@ lemma QREGISTER_pair_bot_left[simp]: \<open>QREGISTER_pair \<bottom> F = F\<clos
 
 lemma QREGISTER_pair_bot_right[simp]: \<open>QREGISTER_pair F \<bottom> = F\<close>
   by (metis QREGISTER_pair_bot_left QREGISTER_pair_sym)
-
-(* lemma Rep_QREGISTER_pair_sot: \<open>Rep_QREGISTER (QREGISTER_pair F G) = cstrong_operator_topology closure_of (cspan (Rep_QREGISTER F \<union> Rep_QREGISTER G))\<close>
-   *)
-
-(* lemma
-  shows \<open>continuous_map cstrong_operator_topology cstrong_operator_topology (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun)\<close>
-proof (rule continuous_map_iff_preserves_convergence)
-  fix F :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) filter\<close> and a :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
-  assume \<open>limitin cstrong_operator_topology id a F\<close>
-  show \<open>limitin cstrong_operator_topology (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) (a \<otimes>\<^sub>o id_cblinfun) F\<close>
-  proof (unfold limitin_cstrong_operator_topology, intro allI)
-    fix \<psi> :: \<open>('a \<times> 'd) ell2\<close>
-    have \<open>(\<lambda>x. (x \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<psi> - (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<psi>)\<close>
-
-    have \<open>((\<lambda>a. (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V ket (x,y)) \<longlongrightarrow> (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V ket (x,y)) F\<close> for x and y :: 'd
-      by-
-    
-    show \<open>((\<lambda>a. (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<psi>) \<longlongrightarrow> (a \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<psi>) F\<close>
-      apply (subst ell2_decompose_infsum[of \<psi>])
-      apply (subst (2) ell2_decompose_infsum[of \<psi>])
-      apply(subst infsum_cblinfun_apply[symmetric])
-      apply (simp add: ell2_decompose_summable)
-      apply(subst infsum_cblinfun_apply[symmetric])
-      apply (simp add: ell2_decompose_summable)
-      
-      
-      show ?thesis
-    apply (rule continuous_map_iff_preserves_convergence)
-
-proof (unfold continuous_on_cstrong_operator_topo_iff_coordinatewise, intro allI)
-
-
-lemma homeomorphic_map_apply_qregister_sot:
-  assumes \<open>qregister F\<close>
-  shows \<open>homeomorphic_map cstrong_operator_topology (subtopology cstrong_operator_topology (range (apply_qregister F))) (apply_qregister F)\<close>
-proof (rule homeomorphic_maps_imp_map[where g=\<open>inv (apply_qregister F)\<close>], unfold homeomorphic_maps_def, 
-    intro conjI ballI)
-  show 1: \<open>inv (apply_qregister F) (apply_qregister F x) = x\<close> for x
-    by (simp add: assms inj_qregister)
-  show 2: \<open>apply_qregister F (inv (apply_qregister F) y) = y\<close> if \<open>y \<in> topspace (subtopology cstrong_operator_topology (range (apply_qregister F)))\<close> for y
-    using that by (simp add: f_inv_into_f)
-  show \<open>continuous_map (subtopology cstrong_operator_topology (range (apply_qregister F)))
-     cstrong_operator_topology (inv (apply_qregister F))\<close>
-  try0
-  by -
-  show 3: \<open>continuous_map cstrong_operator_topology
-     (subtopology cstrong_operator_topology (range (apply_qregister F))) (apply_qregister F)\<close>
-  try0
-  by -
-qed *)
-
 
 lemma register_double_commutant_commute:
   assumes \<open>qregister F\<close>
@@ -508,13 +193,13 @@ lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGIST
   by metis
 
 
-lemma empty_qregister_range_subset_valid_range: \<open>valid_qregister_range A \<Longrightarrow> empty_qregister_range \<subseteq> A\<close>
-  by (auto simp: valid_qregister_range_def_sot empty_qregister_range_def complex_vector.subspace_scale)
+lemma one_algebra_subset_valid_range: \<open>valid_qregister_range A \<Longrightarrow> one_algebra \<subseteq> A\<close>
+  by (auto simp: valid_qregister_range_def_sot one_algebra_def complex_vector.subspace_scale)
 
 instance QREGISTER :: (type) order_bot
   apply intro_classes
   apply transfer
-  using empty_qregister_range_subset_valid_range by simp
+  using one_algebra_subset_valid_range by simp
 
 instance QREGISTER :: (type) order_top
   apply intro_classes
@@ -523,7 +208,7 @@ instance QREGISTER :: (type) order_top
 
 lemma QREGISTER_pair_unit_left: \<open>QREGISTER_pair QREGISTER_unit F = F\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  using empty_qregister_range_subset_valid_range[of \<open>Rep_QREGISTER F\<close>] QREGISTER.Rep_QREGISTER[of F]
+  using one_algebra_subset_valid_range[of \<open>Rep_QREGISTER F\<close>] QREGISTER.Rep_QREGISTER[of F]
   by (simp add: QREGISTER_pair.rep_eq bot_QREGISTER.rep_eq Un_absorb1 valid_qregister_range_def von_neumann_algebra_def)
 
 lemma QREGISTER_pair_unit_right: \<open>QREGISTER_pair F QREGISTER_unit = F\<close>
@@ -533,7 +218,7 @@ lemma QREGISTER_pair_unit_right: \<open>QREGISTER_pair F QREGISTER_unit = F\<clo
 lemma QREGISTER_pair_all_left: \<open>QREGISTER_pair QREGISTER_all F = QREGISTER_all\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
   by (simp add: QREGISTER_pair.rep_eq top_QREGISTER.rep_eq
-      commutant_id_mult commutant_UNIV)
+      commutant_one_algebra commutant_UNIV)
 
 lemma QREGISTER_pair_all_right: \<open>QREGISTER_pair F QREGISTER_all = QREGISTER_all\<close>
   apply (subst QREGISTER_pair_sym)
@@ -557,11 +242,11 @@ lemma QREGISTER_pair_snd_fst: \<open>QREGISTER_pair QREGISTER_snd QREGISTER_fst 
 lemma QREGISTER_chain_unit_left: \<open>QREGISTER_chain empty_qregister F = QREGISTER_unit\<close>
   apply (rule antisym)
    apply transfer
-  by (auto simp: Quantum_Extra2.empty_var_def empty_qregister_range_def)
+  by (auto simp: Quantum_Extra2.empty_var_def one_algebra_def)
 
 lemma QREGISTER_chain_unit_right[simp]: \<open>QREGISTER_chain F QREGISTER_unit = QREGISTER_unit\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (auto simp add: QREGISTER_chain.rep_eq bot_QREGISTER.rep_eq empty_qregister_range_def
+  by (auto simp add: QREGISTER_chain.rep_eq bot_QREGISTER.rep_eq one_algebra_def
       image_image apply_qregister_scaleC)
 
 ML \<open>
@@ -641,10 +326,99 @@ lemma z1:
   using assms(2)[THEN Rep_QREGISTER_inject[THEN iffD2]]
   by (simp add: QCOMPLEMENT.rep_eq QREGISTER_of.rep_eq F G)
 
+definition tensor_vn (infixr "\<otimes>\<^sub>v\<^sub>N" 70) where
+  \<open>tensor_vn X Y = commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X \<union> (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` Y))\<close>
+
+lemma von_neumann_algebra_adj_image: \<open>von_neumann_algebra X \<Longrightarrow> adj ` X = X\<close>
+  by (auto simp: von_neumann_algebra_def intro!: image_eqI[where x=\<open>_*\<close>])
+
+lemma von_neumann_algebra_tensor_vn:
+  assumes \<open>von_neumann_algebra X\<close>
+  assumes \<open>von_neumann_algebra Y\<close>
+  shows \<open>von_neumann_algebra (X \<otimes>\<^sub>v\<^sub>N Y)\<close>
+proof (rule von_neumann_algebraI)
+  have \<open>adj ` (X \<otimes>\<^sub>v\<^sub>N Y) = commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` adj ` X \<union> (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` adj ` Y))\<close>
+    by (simp add: tensor_vn_def commutant_adj image_image image_Un tensor_op_adjoint)
+  also have \<open>\<dots> = commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X \<union> (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` Y))\<close>
+    using assms by (simp add: von_neumann_algebra_adj_image)
+  also have \<open>\<dots> = X \<otimes>\<^sub>v\<^sub>N Y\<close>
+    by (simp add: tensor_vn_def)
+  finally show \<open>a* \<in> X \<otimes>\<^sub>v\<^sub>N Y\<close> if \<open>a \<in> X \<otimes>\<^sub>v\<^sub>N Y\<close> for a
+    using that by blast
+  show \<open>commutant (commutant (X \<otimes>\<^sub>v\<^sub>N Y)) \<subseteq> X \<otimes>\<^sub>v\<^sub>N Y\<close>
+    by (simp add: tensor_vn_def)
+qed
+
+lemma tensor_vn_one_one[simp]: \<open>one_algebra \<otimes>\<^sub>v\<^sub>N one_algebra = one_algebra\<close>
+  apply (simp add: tensor_vn_def one_algebra_def image_image
+      tensor_op_scaleC_left tensor_op_scaleC_right)
+  by (simp add: commutant_one_algebra commutant_UNIV flip: one_algebra_def)
+
+lemma sandwich_swap_tensor_vn: \<open>sandwich swap_ell2 ` (X \<otimes>\<^sub>v\<^sub>N Y) = Y \<otimes>\<^sub>v\<^sub>N X\<close>
+  by (simp add: tensor_vn_def sandwich_unitary_complement image_Un image_image Un_commute)
+
+lemma tensor_vn_one_left: \<open>one_algebra \<otimes>\<^sub>v\<^sub>N X = (\<lambda>x. id_cblinfun \<otimes>\<^sub>o x) ` X\<close> if \<open>von_neumann_algebra X\<close>
+proof -
+  have \<open>one_algebra \<otimes>\<^sub>v\<^sub>N X = commutant
+     (commutant ((\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` X))\<close>
+    apply (simp add: tensor_vn_def one_algebra_def image_image)
+    by (metis (no_types, lifting) Un_commute Un_empty_right commutant_UNIV commutant_empty double_commutant_Un_right image_cong one_algebra_def tensor_id tensor_op_scaleC_left)
+  also have \<open>\<dots> = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` commutant (commutant X)\<close>
+    by (simp add: amplification_double_commutant_commute')
+  also have \<open>\<dots> = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` X\<close>
+    using that von_neumann_algebra_def by blast
+  finally show ?thesis
+    by -
+qed
+lemma tensor_vn_one_right: \<open>X \<otimes>\<^sub>v\<^sub>N one_algebra = (\<lambda>x. x \<otimes>\<^sub>o id_cblinfun) ` X\<close> if \<open>von_neumann_algebra X\<close>
+proof -
+  have \<open>X \<otimes>\<^sub>v\<^sub>N one_algebra = sandwich swap_ell2 ` (one_algebra \<otimes>\<^sub>v\<^sub>N X)\<close>
+    by (simp add: sandwich_swap_tensor_vn)
+  also have \<open>\<dots> = sandwich swap_ell2 ` (\<lambda>x. id_cblinfun \<otimes>\<^sub>o x) ` X\<close>
+    by (simp add: tensor_vn_one_left that)
+  also have \<open>\<dots> = (\<lambda>x. x \<otimes>\<^sub>o id_cblinfun) ` X\<close>
+    by (simp add: image_image)
+  finally show ?thesis
+    by -
+qed
+
+lemma commutant_tensor_vn:
+  \<comment> \<open>@{cite takesaki}, Theorem IV.5.9\<close>
+  assumes \<open>von_neumann_algebra X\<close>
+  assumes \<open>von_neumann_algebra Y\<close>
+  shows \<open>commutant (tensor_vn X Y) = commutant X \<otimes>\<^sub>v\<^sub>N commutant Y\<close>
+  sorry
+
+lemma tensor_vn_UNIV[simp]: \<open>UNIV \<otimes>\<^sub>v\<^sub>N UNIV = UNIV\<close>
+proof -
+  have \<open>UNIV \<otimes>\<^sub>v\<^sub>N UNIV = commutant (commutant (UNIV \<otimes>\<^sub>v\<^sub>N UNIV))\<close>
+    by (metis von_neumann_algebra_UNIV von_neumann_algebra_def von_neumann_algebra_tensor_vn)
+  also have \<open>\<dots> = commutant (commutant UNIV \<otimes>\<^sub>v\<^sub>N commutant UNIV)\<close>
+    by (simp add: commutant_tensor_vn von_neumann_algebra_UNIV)
+  also have \<open>\<dots> = commutant (one_algebra \<otimes>\<^sub>v\<^sub>N one_algebra)\<close>
+    by (simp add: commutant_UNIV)
+  also have \<open>\<dots> = commutant one_algebra\<close>
+    by simp
+  also have \<open>\<dots> = UNIV\<close>
+    by (simp add: commutant_one_algebra)
+  finally show ?thesis
+    by -
+qed
+
+
+lemma Rep_QREGISTER_pair_fst_snd:
+  \<open>Rep_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
+      = tensor_vn (Rep_QREGISTER F) (Rep_QREGISTER G)\<close>
+  by (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq apply_qregister_fst apply_qregister_snd tensor_vn_def)
+
 lemma y2:
   \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
     = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>
-  sorry
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  apply (simp add: QCOMPLEMENT.rep_eq Rep_QREGISTER_pair_fst_snd)
+  apply (subst commutant_tensor_vn)
+  using Rep_QREGISTER Rep_QREGISTER
+  by (force simp add: valid_qregister_range_def)+
 
 lemma QREGISTER_chain_fst_top[simp]: \<open>QREGISTER_chain qFst \<top> = QREGISTER_fst\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
@@ -659,12 +433,12 @@ lemma QREGISTER_chain_snd_top[simp]: \<open>QREGISTER_chain qSnd \<top> = QREGIS
 lemma QCOMPLEMENT_top[simp]: \<open>QCOMPLEMENT \<top> = \<bottom>\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
   by (simp add: QCOMPLEMENT.rep_eq top_QREGISTER.rep_eq bot_QREGISTER.rep_eq
-      commutant_UNIV empty_qregister_range_def)
+      commutant_UNIV one_algebra_def)
 
 lemma QCOMPLEMENT_bot[simp]: \<open>QCOMPLEMENT \<bottom> = \<top>\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
   by (simp add: QCOMPLEMENT.rep_eq top_QREGISTER.rep_eq bot_QREGISTER.rep_eq
-      commutant_id_mult empty_qregister_range_def)
+      commutant_one_algebra)
 
 lemma y1:
   \<open>QCOMPLEMENT (QREGISTER_pair QREGISTER_fst (QREGISTER_chain qSnd F))
