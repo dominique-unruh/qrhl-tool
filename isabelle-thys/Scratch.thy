@@ -382,12 +382,238 @@ proof -
     by -
 qed
 
+lemma double_commutant_in_vn_algI: \<open>commutant (commutant X) \<subseteq> Y\<close>
+  if \<open>von_neumann_algebra Y\<close> and \<open>X \<subseteq> Y\<close>
+  by (metis commutant_antimono that(1) that(2) von_neumann_algebra_def)
+
+lemma cblinfun_cinner_tensor_eqI:
+  assumes \<open>\<And>\<psi> \<phi>. (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C (A *\<^sub>V (\<psi> \<otimes>\<^sub>s \<phi>)) = (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C (B *\<^sub>V (\<psi> \<otimes>\<^sub>s \<phi>))\<close>
+  shows \<open>A = B\<close>
+proof -
+  define C where \<open>C = A - B\<close>
+  from assms have assmC: \<open>(\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C (C *\<^sub>V (\<psi> \<otimes>\<^sub>s \<phi>)) = 0\<close> for \<psi> \<phi>
+    by (simp add: C_def cblinfun.diff_left cinner_simps(3))
+
+  have \<open>(x \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V (z \<otimes>\<^sub>s w)) = 0\<close> for x y z w
+  proof -
+    define d e f g h j k l m n p q
+      where defs: \<open>d = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s w)\<close>
+        \<open>e = (z \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s y)\<close>
+        \<open>f = (x \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s y)\<close>
+        \<open>g = (z \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s y)\<close>
+        \<open>h = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s y)\<close>
+        \<open>j = (x \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s y)\<close>
+        \<open>k = (z \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s y)\<close>
+        \<open>l = (z \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s w)\<close>
+        \<open>m = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s w)\<close>
+        \<open>n = (z \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s w)\<close>
+        \<open>p = (z \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s w)\<close>
+        \<open>q = (x \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s w)\<close>
+
+    have *: \<open>cnj \<alpha> * e + cnj \<beta> * f + cnj \<beta> * cnj \<alpha> * g + \<alpha> * h + \<alpha> * cnj \<beta> * j +
+          \<alpha> * cnj \<beta> * cnj \<alpha> * k + \<beta> * m + \<beta> * cnj \<alpha> * n + \<beta> * cnj \<beta> * cnj \<alpha> * l +
+          \<beta> * \<alpha> * d + \<beta> * \<alpha> * cnj \<alpha> * p + \<beta> * \<alpha> * cnj \<beta> * q = 0\<close>
+      (is \<open>?lhs = _\<close>) for \<alpha> \<beta>
+    proof -
+      from assms 
+      have \<open>0 = ((x + \<alpha> *\<^sub>C z) \<otimes>\<^sub>s (y + \<beta> *\<^sub>C w)) \<bullet>\<^sub>C (C *\<^sub>V ((x + \<alpha> *\<^sub>C z) \<otimes>\<^sub>s (y + \<beta> *\<^sub>C w)))\<close>
+        by (simp add: assmC)
+      also have \<open>\<dots> = ?lhs\<close>
+        apply (simp add: tensor_ell2_add1 tensor_ell2_add2 cinner_add_right cinner_add_left
+            cblinfun.add_right tensor_ell2_scaleC1 tensor_ell2_scaleC2 semiring_class.distrib_left
+            cblinfun.scaleC_right
+            flip: add.assoc mult.assoc)
+        apply (simp add: assmC)
+        by (simp flip: defs)
+      finally show ?thesis
+        by simp
+    qed
+
+    have aux3: \<open>a = 0 \<Longrightarrow> b = 0 \<Longrightarrow> a + b = 0\<close> for a b :: complex
+      by auto
+    have aux4: \<open>a = 0 \<Longrightarrow> b = 0 \<Longrightarrow> a - b = 0\<close> for a b :: complex
+      by auto
+    have aux5: \<open>- (x * k) - x * j = x * (- k - j)\<close> for x k :: complex
+      by (simp add: right_diff_distrib')
+    have aux7: \<open>2 * a = 0 \<longleftrightarrow> a = 0\<close> for a :: complex
+      by auto
+    have aux8: \<open>8 = 2 * 2 * (2::complex)\<close>
+      by simp
+
+    from *[of 1 0]
+    have 1: \<open>e + h = 0\<close>
+      by simp
+    from *[of \<i> 0]
+    have 2: \<open>h = e\<close>
+      by simp
+    from 1 2
+    have [simp]: \<open>e = 0\<close> \<open>h = 0\<close>
+      by auto
+    from *[of 0 1]
+    have 3: \<open>f + m = 0\<close>
+      by simp
+    from *[of 0 \<i>]
+    have 4: \<open>m = f\<close>
+      by simp
+    from 3 4
+    have [simp]: \<open>m = 0\<close> \<open>f = 0\<close>
+      by auto
+    from *[of 1 1]
+    have 5: \<open>g + j + k + n + l + d + p + q = 0\<close>
+      by simp
+    from *[of 1 \<open>-1\<close>]
+    have 6: \<open>- g - j - k - n + l - d - p + q = 0\<close>
+      by simp
+    from aux3[OF 5 6]
+    have 7: \<open>l + q = 0\<close>
+      apply simp
+      by (metis distrib_left_numeral mult_eq_0_iff zero_neq_numeral)
+    from aux4[OF 5 7]
+    have 8: \<open>g + j + k + n + d + p = 0\<close>
+      by (simp add: algebra_simps)
+    from *[of 1 \<i>]
+    have 9: \<open>- (\<i> * g) - \<i> * j - \<i> * k + \<i> * n + l + \<i> * d + \<i> * p + q = 0\<close>
+      by simp
+    from *[of 1 \<open>-\<i>\<close>]
+    have 10: \<open>\<i> * g + \<i> * j + \<i> * k - \<i> * n + l - \<i> * d - \<i> * p + q = 0\<close>
+      by simp
+    from aux4[OF 9 10]
+    have 11: \<open>n + d + p - k - j - g = 0\<close>
+      apply (simp add: aux5 flip: right_diff_distrib semiring_class.distrib_left distrib_left_numeral 
+          del: mult_minus_right right_diff_distrib_numeral)
+      by (simp add: algebra_simps)
+    from aux4[OF 8 11]
+    have 12: \<open>g + j + k = 0\<close>
+      apply (simp add: aux5 flip: right_diff_distrib semiring_class.distrib_left distrib_left_numeral 
+          del: mult_minus_right right_diff_distrib_numeral)
+      by (simp add: algebra_simps)
+    from aux3[OF 8 11]
+    have 13: \<open>n + d + p = 0\<close>
+      apply simp
+      using 12 8 by fastforce
+    from *[of \<i> 1]
+    have 14: \<open>\<i> * j - \<i> * g + k - \<i> * n - \<i> * l + \<i> * d + p + \<i> * q = 0\<close>
+      by simp
+    from *[of \<i> \<open>-1\<close>]
+    have 15: \<open>\<i> * g - \<i> * j - k + \<i> * n - \<i> * l - \<i> * d - p + \<i> * q = 0\<close>
+      by simp
+    from aux3[OF 14 15]
+    have [simp]: \<open>q = l\<close>
+      by simp
+    from 7
+    have [simp]: \<open>q = 0\<close> \<open>l = 0\<close>
+      by auto
+    from 14
+    have 17: \<open>\<i> * j - \<i> * g + k - \<i> * n + \<i> * d + p = 0\<close>
+      by simp
+    from *[of \<open>-\<i>\<close> 1]
+    have 18: \<open>\<i> * g - \<i> * j + k + \<i> * n - \<i> * d + p = 0\<close>
+      by simp
+    from aux3[OF 17 18]
+    have [simp]: \<open>k = - p\<close>
+      apply simp
+      by (metis add_eq_0_iff2 add_scale_eq_noteq is_num_normalize(8) mult_2 zero_neq_numeral)
+    from aux4[OF 17 18]
+    have 20: \<open>j + d - n - g = 0\<close>
+      apply (simp add: aux5 flip: right_diff_distrib semiring_class.distrib_left distrib_left_numeral 
+          del: mult_minus_right right_diff_distrib_numeral)
+      by (simp add: algebra_simps)
+    from *[of \<open>-\<i>\<close> 1]
+      have 22: \<open>\<i> * g - \<i> * j + \<i> * n - \<i> * d = 0\<close>
+      by (simp add: algebra_simps)
+    from *[of \<open>-\<i>\<close> \<open>-1\<close>]
+    have 23: \<open>\<i> * j - \<i> * g - \<i> * n + \<i> * d = 0\<close>
+      by (simp add: algebra_simps)
+    from *[of \<i> \<i>]
+    have 24: \<open>j - g + n - d + 2 * \<i> * p = 0\<close>
+      by (simp add: algebra_simps)
+    from *[of \<i> \<open>-\<i>\<close>]
+    have 25: \<open>g - j - n + d - 2 * \<i> * p = 0\<close>
+      by (simp add: algebra_simps)
+    from *[of 2 1]
+    have 26: \<open>g + j + n + d = 0\<close>
+      apply simp
+      by (metis "12" "13" \<open>k = - p\<close> add_eq_0_iff2 is_num_normalize(1))
+    from aux4[OF 26 20]
+    have [simp]: \<open>g = - n\<close>
+      apply simp
+      by (simp only: aux7 add_eq_0_iff2 flip: distrib_left)
+    from 26
+    have [simp]: \<open>j = - d\<close>
+      by (simp add: add_eq_0_iff2)
+    from *[of 2 \<i>]
+    have 31: \<open>2 * p + d + n = 0\<close>
+      apply simp
+      apply (simp only: aux8 aux7 add_eq_0_iff2 flip: distrib_left)
+      by (smt (z3) "13" add.commute add_cancel_right_left add_eq_0_iff2 complex_i_not_zero eq_num_simps(6) more_arith_simps(8) mult_2 mult_right_cancel no_zero_divisors num.distinct(1) numeral_Bit0 numeral_eq_iff)
+    from aux4[OF 31 13]
+    have [simp]: \<open>p = 0\<close>
+      by simp
+    then have [simp]: \<open>k = 0\<close>
+      by auto
+    from 12
+    have \<open>g = - j\<close>
+      by simp
+    from 24
+    have \<open>d = - g\<close>
+      by auto
+
+    show \<open>d = 0\<close>
+      using refl[of d]
+      apply (subst (asm) \<open>d = - g\<close>)
+      apply (subst (asm) \<open>g = - j\<close>)
+      apply (subst (asm) \<open>j = - d\<close>)
+      by simp
+  qed
+  then show ?thesis
+    by (auto intro!: equal_ket cinner_ket_eqI
+        simp: C_def cblinfun.diff_left cinner_diff_right
+        simp flip: tensor_ell2_ket)
+qed
+
 lemma commutant_tensor_vn:
   \<comment> \<open>@{cite takesaki}, Theorem IV.5.9\<close>
-  assumes \<open>von_neumann_algebra X\<close>
-  assumes \<open>von_neumann_algebra Y\<close>
-  shows \<open>commutant (tensor_vn X Y) = commutant X \<otimes>\<^sub>v\<^sub>N commutant Y\<close>
-  sorry
+  assumes \<open>von_neumann_algebra M\<close>
+  assumes \<open>von_neumann_algebra N\<close>
+  shows \<open>commutant (tensor_vn M N) = commutant M \<otimes>\<^sub>v\<^sub>N commutant N\<close>
+proof -
+  write commutant (\<open>_''\<close> [120] 120)
+      \<comment> \<open>Notation \<^term>\<open>M '\<close> for \<^term>\<open>commutant M\<close>\<close>
+  write id_cblinfun (\<open>\<one>\<close>)
+
+  have 1: \<open>x o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L x\<close> if \<open>x \<in> (M ' \<otimes>\<^sub>v\<^sub>N N ')'\<close> and \<open>y \<in> (M \<otimes>\<^sub>v\<^sub>N N)'\<close> for x y
+  proof (intro equal_ket cinner_ket_eqI)
+    fix i j
+(* TODO: in Takesaki, i=j, but not kets. Why is that sufficient? *)
+    define e where \<open>e = Proj (ccspan {m *\<^sub>V ket i})\<close>
+    show \<open>|i\<rangle> \<bullet>\<^sub>C ((x o\<^sub>C\<^sub>L y) *\<^sub>V |j\<rangle>) = |i\<rangle> \<bullet>\<^sub>C ((y o\<^sub>C\<^sub>L x) *\<^sub>V |j\<rangle>)\<close>
+      by -
+  qed
+  have 2: \<open>M \<otimes>\<^sub>v\<^sub>N N \<subseteq> (M ' \<otimes>\<^sub>v\<^sub>N N ')'\<close>
+  proof -
+    have \<open>((\<lambda>a. a \<otimes>\<^sub>o \<one>) ` M \<union> (\<otimes>\<^sub>o) \<one> ` N) \<subseteq> ((\<lambda>a. a \<otimes>\<^sub>o \<one>) ` M ' \<union> (\<otimes>\<^sub>o) \<one> ` N ')'\<close>
+      by (auto intro!: commutant_memberI simp: comp_tensor_op commutant_def)
+    also have \<open>\<dots> = (M ' \<otimes>\<^sub>v\<^sub>N N ')'\<close>
+      by (simp add: tensor_vn_def)
+    finally show ?thesis
+      apply (subst tensor_vn_def)
+      apply (rule double_commutant_in_vn_algI)
+      by (auto intro!: von_neumann_algebra_commutant von_neumann_algebra_tensor_vn assms)
+  qed
+  have 3: \<open>M ' \<otimes>\<^sub>v\<^sub>N N ' \<subseteq> (M \<otimes>\<^sub>v\<^sub>N N)'\<close>
+  proof -
+    have \<open>((\<lambda>a. a \<otimes>\<^sub>o \<one>) ` M ' \<union> (\<otimes>\<^sub>o) \<one> ` N ') \<subseteq> ((\<lambda>a. a \<otimes>\<^sub>o \<one>) ` M \<union> (\<otimes>\<^sub>o) \<one> ` N)'\<close>
+      by (auto intro!: commutant_memberI simp: comp_tensor_op commutant_def)
+    also have \<open>\<dots> = (M \<otimes>\<^sub>v\<^sub>N N)'\<close>
+      by (simp add: tensor_vn_def)
+    finally show ?thesis
+      apply (subst tensor_vn_def)
+      apply (rule double_commutant_in_vn_algI)
+      by (auto intro!: von_neumann_algebra_commutant von_neumann_algebra_tensor_vn assms)
+  qed
+  from 1 2 3 show ?thesis
+    by (smt (verit) Un_Int_assoc_eq Un_absorb assms(1) assms(2) basic_trans_rules(24) commutant_memberI inf.absorb_iff1 subset_Un_eq subset_iff sup.absorb_iff1 von_neumann_algebra_commutant von_neumann_algebra_commutant von_neumann_algebra_def von_neumann_algebra_tensor_vn)
+qed
 
 lemma tensor_vn_UNIV[simp]: \<open>UNIV \<otimes>\<^sub>v\<^sub>N UNIV = UNIV\<close>
 proof -
