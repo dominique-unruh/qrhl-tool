@@ -283,7 +283,6 @@ proof (rule with_typeI)
     by -
 qed
 
-
 lemma actual_qregister_range_is_valid:
   assumes \<open>actual_qregister_range \<FF>\<close>
   shows \<open>valid_qregister_range \<FF>\<close>
@@ -617,462 +616,389 @@ lemma z1:
   using assms(2)[THEN Rep_QREGISTER_inject[THEN iffD2]]
   by (simp add: QCOMPLEMENT.rep_eq QREGISTER_of.rep_eq F G)
 
-definition tensor_vn (infixr "\<otimes>\<^sub>v\<^sub>N" 70) where
-  \<open>tensor_vn X Y = commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X \<union> (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` Y))\<close>
 
-lemma von_neumann_algebra_adj_image: \<open>von_neumann_algebra X \<Longrightarrow> adj ` X = X\<close>
-  by (auto simp: von_neumann_algebra_def intro!: image_eqI[where x=\<open>_*\<close>])
+lemma Rep_QREGISTER_pair_fst_snd:
+  \<open>Rep_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
+      = tensor_vn (Rep_QREGISTER F) (Rep_QREGISTER G)\<close>
+  by (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq apply_qregister_fst apply_qregister_snd tensor_vn_def)
 
-lemma von_neumann_algebra_tensor_vn:
-  assumes \<open>von_neumann_algebra X\<close>
-  assumes \<open>von_neumann_algebra Y\<close>
-  shows \<open>von_neumann_algebra (X \<otimes>\<^sub>v\<^sub>N Y)\<close>
-proof (rule von_neumann_algebraI)
-  have \<open>adj ` (X \<otimes>\<^sub>v\<^sub>N Y) = commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` adj ` X \<union> (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` adj ` Y))\<close>
-    by (simp add: tensor_vn_def commutant_adj image_image image_Un tensor_op_adjoint)
-  also have \<open>\<dots> = commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X \<union> (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` Y))\<close>
-    using assms by (simp add: von_neumann_algebra_adj_image)
-  also have \<open>\<dots> = X \<otimes>\<^sub>v\<^sub>N Y\<close>
-    by (simp add: tensor_vn_def)
-  finally show \<open>a* \<in> X \<otimes>\<^sub>v\<^sub>N Y\<close> if \<open>a \<in> X \<otimes>\<^sub>v\<^sub>N Y\<close> for a
-    using that by blast
-  show \<open>commutant (commutant (X \<otimes>\<^sub>v\<^sub>N Y)) \<subseteq> X \<otimes>\<^sub>v\<^sub>N Y\<close>
-    by (simp add: tensor_vn_def)
-qed
+lift_definition ACTUAL_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> bool\<close> is \<open>actual_qregister_range\<close>.
 
-lemma tensor_vn_one_one[simp]: \<open>one_algebra \<otimes>\<^sub>v\<^sub>N one_algebra = one_algebra\<close>
-  apply (simp add: tensor_vn_def one_algebra_def image_image
-      tensor_op_scaleC_left tensor_op_scaleC_right)
-  by (simp add: commutant_one_algebra commutant_UNIV flip: one_algebra_def)
+lemma ACTUAL_QREGISTER_QREGISTER_of: \<open>ACTUAL_QREGISTER (QREGISTER_of F)\<close> if \<open>qregister F\<close>
+  by (simp add: ACTUAL_QREGISTER.rep_eq QREGISTER_of.rep_eq qregister_has_actual_qregister_range that)
 
-lemma sandwich_swap_tensor_vn: \<open>sandwich swap_ell2 ` (X \<otimes>\<^sub>v\<^sub>N Y) = Y \<otimes>\<^sub>v\<^sub>N X\<close>
-  by (simp add: tensor_vn_def sandwich_unitary_complement image_Un image_image Un_commute)
+definition \<open>ACTUAL_QREGISTER_content \<FF> = actual_qregister_range_content (Rep_QREGISTER \<FF>)\<close>
 
-lemma tensor_vn_one_left: \<open>one_algebra \<otimes>\<^sub>v\<^sub>N X = (\<lambda>x. id_cblinfun \<otimes>\<^sub>o x) ` X\<close> if \<open>von_neumann_algebra X\<close>
+lemma ACTUAL_QREGISTER_ex_register:
+  fixes \<FF> :: \<open>'a QREGISTER\<close>
+  assumes \<open>ACTUAL_QREGISTER \<FF>\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'l::type = ACTUAL_QREGISTER_content \<FF>.
+         \<exists>F :: ('l, 'a) qregister. qregister F \<and> QREGISTER_of F = \<FF>\<close>
+  by (smt (verit, ccfv_threshold) ACTUAL_QREGISTER.rep_eq ACTUAL_QREGISTER_content_def QREGISTER_of.rep_eq Rep_QREGISTER_inject actual_qregister_range_ex_register assms with_type_mp)
+
+lemma ACTUAL_QREGISTER_chain:
+  assumes \<open>qregister F\<close>
+  assumes \<open>ACTUAL_QREGISTER \<GG>\<close>
+  shows \<open>ACTUAL_QREGISTER (QREGISTER_chain F \<GG>)\<close>
 proof -
-  have \<open>one_algebra \<otimes>\<^sub>v\<^sub>N X = commutant
-     (commutant ((\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` X))\<close>
-    apply (simp add: tensor_vn_def one_algebra_def image_image)
-    by (metis (no_types, lifting) Un_commute Un_empty_right commutant_UNIV commutant_empty double_commutant_Un_right image_cong one_algebra_def tensor_id tensor_op_scaleC_left)
-  also have \<open>\<dots> = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` commutant (commutant X)\<close>
-    by (simp add: amplification_double_commutant_commute')
-  also have \<open>\<dots> = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` X\<close>
-    using that von_neumann_algebra_def by blast
-  finally show ?thesis
-    by -
-qed
-lemma tensor_vn_one_right: \<open>X \<otimes>\<^sub>v\<^sub>N one_algebra = (\<lambda>x. x \<otimes>\<^sub>o id_cblinfun) ` X\<close> if \<open>von_neumann_algebra X\<close>
-proof -
-  have \<open>X \<otimes>\<^sub>v\<^sub>N one_algebra = sandwich swap_ell2 ` (one_algebra \<otimes>\<^sub>v\<^sub>N X)\<close>
-    by (simp add: sandwich_swap_tensor_vn)
-  also have \<open>\<dots> = sandwich swap_ell2 ` (\<lambda>x. id_cblinfun \<otimes>\<^sub>o x) ` X\<close>
-    by (simp add: tensor_vn_one_left that)
-  also have \<open>\<dots> = (\<lambda>x. x \<otimes>\<^sub>o id_cblinfun) ` X\<close>
-    by (simp add: image_image)
-  finally show ?thesis
-    by -
-qed
-
-lemma double_commutant_in_vn_algI: \<open>commutant (commutant X) \<subseteq> Y\<close>
-  if \<open>von_neumann_algebra Y\<close> and \<open>X \<subseteq> Y\<close>
-  by (metis commutant_antimono that(1) that(2) von_neumann_algebra_def)
-
-lemma cblinfun_cinner_tensor_eqI:
-  assumes \<open>\<And>\<psi> \<phi>. (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C (A *\<^sub>V (\<psi> \<otimes>\<^sub>s \<phi>)) = (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C (B *\<^sub>V (\<psi> \<otimes>\<^sub>s \<phi>))\<close>
-  shows \<open>A = B\<close>
-proof -
-  define C where \<open>C = A - B\<close>
-  from assms have assmC: \<open>(\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C (C *\<^sub>V (\<psi> \<otimes>\<^sub>s \<phi>)) = 0\<close> for \<psi> \<phi>
-    by (simp add: C_def cblinfun.diff_left cinner_simps(3))
-
-  have \<open>(x \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V (z \<otimes>\<^sub>s w)) = 0\<close> for x y z w
-  proof -
-    define d e f g h j k l m n p q
-      where defs: \<open>d = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s w)\<close>
-        \<open>e = (z \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s y)\<close>
-        \<open>f = (x \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s y)\<close>
-        \<open>g = (z \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s y)\<close>
-        \<open>h = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s y)\<close>
-        \<open>j = (x \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s y)\<close>
-        \<open>k = (z \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s y)\<close>
-        \<open>l = (z \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s w)\<close>
-        \<open>m = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s w)\<close>
-        \<open>n = (z \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V x \<otimes>\<^sub>s w)\<close>
-        \<open>p = (z \<otimes>\<^sub>s y) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s w)\<close>
-        \<open>q = (x \<otimes>\<^sub>s w) \<bullet>\<^sub>C (C *\<^sub>V z \<otimes>\<^sub>s w)\<close>
-
-    have constraint: \<open>cnj \<alpha> * e + cnj \<beta> * f + cnj \<beta> * cnj \<alpha> * g + \<alpha> * h + \<alpha> * cnj \<beta> * j +
-          \<alpha> * cnj \<beta> * cnj \<alpha> * k + \<beta> * m + \<beta> * cnj \<alpha> * n + \<beta> * cnj \<beta> * cnj \<alpha> * l +
-          \<beta> * \<alpha> * d + \<beta> * \<alpha> * cnj \<alpha> * p + \<beta> * \<alpha> * cnj \<beta> * q = 0\<close>
-      (is \<open>?lhs = _\<close>) for \<alpha> \<beta>
-    proof -
-      from assms 
-      have \<open>0 = ((x + \<alpha> *\<^sub>C z) \<otimes>\<^sub>s (y + \<beta> *\<^sub>C w)) \<bullet>\<^sub>C (C *\<^sub>V ((x + \<alpha> *\<^sub>C z) \<otimes>\<^sub>s (y + \<beta> *\<^sub>C w)))\<close>
-        by (simp add: assmC)
-      also have \<open>\<dots> = ?lhs\<close>
-        apply (simp add: tensor_ell2_add1 tensor_ell2_add2 cinner_add_right cinner_add_left
-            cblinfun.add_right tensor_ell2_scaleC1 tensor_ell2_scaleC2 semiring_class.distrib_left
-            cblinfun.scaleC_right
-            flip: add.assoc mult.assoc)
-        apply (simp add: assmC)
-        by (simp flip: defs)
-      finally show ?thesis
-        by simp
-    qed
-
-    have aux1: \<open>a = 0 \<Longrightarrow> b = 0 \<Longrightarrow> a + b = 0\<close> for a b :: complex
+  have \<open>actual_qregister_range (Rep_QREGISTER \<GG>)\<close>
+    using assms by transfer
+  from ACTUAL_QREGISTER_ex_register[OF assms(2)]
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = ACTUAL_QREGISTER_content \<GG>.
+       ACTUAL_QREGISTER (QREGISTER_chain F \<GG>)\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>G :: ('c, 'a) qregister. qregister G \<and> QREGISTER_of G = \<GG>\<close>
+    then obtain G :: \<open>('c, 'a) qregister\<close> where [simp]: \<open>qregister G\<close>
+      and rangeG: \<open>QREGISTER_of G = \<GG>\<close>
       by auto
-    have aux2: \<open>a = 0 \<Longrightarrow> b = 0 \<Longrightarrow> a - b = 0\<close> for a b :: complex
-      by auto
-    have aux3: \<open>- (x * k) - x * j = x * (- k - j)\<close> for x k :: complex
-      by (simp add: right_diff_distrib')
-    have aux4: \<open>2 * a = 0 \<longleftrightarrow> a = 0\<close> for a :: complex
-      by auto
-    have aux5: \<open>8 = 2 * 2 * (2::complex)\<close>
-      by simp
-
-    from constraint[of 1 0]
-    have 1: \<open>e + h = 0\<close>
-      by simp
-    from constraint[of \<i> 0]
-    have 2: \<open>h = e\<close>
-      by simp
-    from 1 2
-    have [simp]: \<open>e = 0\<close> \<open>h = 0\<close>
-      by auto
-    from constraint[of 0 1]
-    have 3: \<open>f + m = 0\<close>
-      by simp
-    from constraint[of 0 \<i>]
-    have 4: \<open>m = f\<close>
-      by simp
-    from 3 4
-    have [simp]: \<open>m = 0\<close> \<open>f = 0\<close>
-      by auto
-    from constraint[of 1 1]
-    have 5: \<open>g + j + k + n + l + d + p + q = 0\<close>
-      by simp
-    from constraint[of 1 \<open>-1\<close>]
-    have 6: \<open>- g - j - k - n + l - d - p + q = 0\<close>
-      by simp
-    from aux1[OF 5 6]
-    have 7: \<open>l + q = 0\<close>
-      apply simp
-      by (metis distrib_left_numeral mult_eq_0_iff zero_neq_numeral)
-    from aux2[OF 5 7]
-    have 8: \<open>g + j + k + n + d + p = 0\<close>
-      by (simp add: algebra_simps)
-    from constraint[of 1 \<i>]
-    have 9: \<open>- (\<i> * g) - \<i> * j - \<i> * k + \<i> * n + l + \<i> * d + \<i> * p + q = 0\<close>
-      by simp
-    from constraint[of 1 \<open>-\<i>\<close>]
-    have 10: \<open>\<i> * g + \<i> * j + \<i> * k - \<i> * n + l - \<i> * d - \<i> * p + q = 0\<close>
-      by simp
-    from aux2[OF 9 10]
-    have 11: \<open>n + d + p - k - j - g = 0\<close>
-      apply (simp add: aux3 flip: right_diff_distrib semiring_class.distrib_left distrib_left_numeral 
-          del: mult_minus_right right_diff_distrib_numeral)
-      by (simp add: algebra_simps)
-    from aux2[OF 8 11]
-    have 12: \<open>g + j + k = 0\<close>
-      apply (simp add: aux3 flip: right_diff_distrib semiring_class.distrib_left distrib_left_numeral 
-          del: mult_minus_right right_diff_distrib_numeral)
-      by (simp add: algebra_simps)
-    from aux1[OF 8 11]
-    have 13: \<open>n + d + p = 0\<close>
-      apply simp
-      using 12 8 by fastforce
-    from constraint[of \<i> 1]
-    have 14: \<open>\<i> * j - \<i> * g + k - \<i> * n - \<i> * l + \<i> * d + p + \<i> * q = 0\<close>
-      by simp
-    from constraint[of \<i> \<open>-1\<close>]
-    have 15: \<open>\<i> * g - \<i> * j - k + \<i> * n - \<i> * l - \<i> * d - p + \<i> * q = 0\<close>
-      by simp
-    from aux1[OF 14 15]
-    have [simp]: \<open>q = l\<close>
-      by simp
-    from 7
-    have [simp]: \<open>q = 0\<close> \<open>l = 0\<close>
-      by auto
-    from 14
-    have 16: \<open>\<i> * j - \<i> * g + k - \<i> * n + \<i> * d + p = 0\<close>
-      by simp
-    from constraint[of \<open>-\<i>\<close> 1]
-    have 17: \<open>\<i> * g - \<i> * j + k + \<i> * n - \<i> * d + p = 0\<close>
-      by simp
-    from aux1[OF 16 17]
-    have [simp]: \<open>k = - p\<close>
-      apply simp
-      by (metis add_eq_0_iff2 add_scale_eq_noteq is_num_normalize(8) mult_2 zero_neq_numeral)
-    from aux2[OF 16 17]
-    have 18: \<open>j + d - n - g = 0\<close>
-      apply (simp add: aux3 flip: right_diff_distrib semiring_class.distrib_left distrib_left_numeral 
-          del: mult_minus_right right_diff_distrib_numeral)
-      by (simp add: algebra_simps)
-    from constraint[of \<open>-\<i>\<close> 1]
-    have 19: \<open>\<i> * g - \<i> * j + \<i> * n - \<i> * d = 0\<close>
-      by (simp add: algebra_simps)
-    from constraint[of \<open>-\<i>\<close> \<open>-1\<close>]
-    have 20: \<open>\<i> * j - \<i> * g - \<i> * n + \<i> * d = 0\<close>
-      by (simp add: algebra_simps)
-    from constraint[of \<i> \<i>]
-    have 21: \<open>j - g + n - d + 2 * \<i> * p = 0\<close>
-      by (simp add: algebra_simps)
-    from constraint[of \<i> \<open>-\<i>\<close>]
-    have 22: \<open>g - j - n + d - 2 * \<i> * p = 0\<close>
-      by (simp add: algebra_simps)
-    from constraint[of 2 1]
-    have 23: \<open>g + j + n + d = 0\<close>
-      apply simp
-      by (metis "12" "13" \<open>k = - p\<close> add_eq_0_iff2 is_num_normalize(1))
-    from aux2[OF 23 18]
-    have [simp]: \<open>g = - n\<close>
-      apply simp
-      by (simp only: aux4 add_eq_0_iff2 flip: distrib_left)
-    from 23
-    have [simp]: \<open>j = - d\<close>
-      by (simp add: add_eq_0_iff2)
-    from constraint[of 2 \<i>]
-    have 24: \<open>2 * p + d + n = 0\<close>
-      apply simp
-      apply (simp only: aux5 aux4 add_eq_0_iff2 flip: distrib_left)
-      by (smt (z3) "13" add.commute add_cancel_right_left add_eq_0_iff2 complex_i_not_zero eq_num_simps(6) more_arith_simps(8) mult_2 mult_right_cancel no_zero_divisors num.distinct(1) numeral_Bit0 numeral_eq_iff)
-    from aux2[OF 24 13]
-    have [simp]: \<open>p = 0\<close>
-      by simp
-    then have [simp]: \<open>k = 0\<close>
-      by auto
-    from 12
-    have \<open>g = - j\<close>
-      by simp
-    from 21
-    have \<open>d = - g\<close>
-      by auto
-
-    show \<open>d = 0\<close>
-      using refl[of d]
-      apply (subst (asm) \<open>d = - g\<close>)
-      apply (subst (asm) \<open>g = - j\<close>)
-      apply (subst (asm) \<open>j = - d\<close>)
-      by simp
-  qed
-  then show ?thesis
-    by (auto intro!: equal_ket cinner_ket_eqI
-        simp: C_def cblinfun.diff_left cinner_diff_right
-        simp flip: tensor_ell2_ket)
-qed
-
-lemma von_neumann_algebra_compose:
-  assumes \<open>von_neumann_algebra M\<close>
-  assumes \<open>x \<in> M\<close> and \<open>y \<in> M\<close>
-  shows \<open>x o\<^sub>C\<^sub>L y \<in> M\<close>
-  using assms apply (auto simp: von_neumann_algebra_def commutant_def)
-  by (metis (no_types, lifting) assms(1) commutant_mult von_neumann_algebra_def)
-
-lemma von_neumann_algebra_id:
-  assumes \<open>von_neumann_algebra M\<close>
-  shows \<open>id_cblinfun \<in> M\<close>
-  using assms by (auto simp: von_neumann_algebra_def)
-
-(* TODO: replace *) thm sqrt_op_square (* with this *)
-lemma sqrt_op_square[simp]: \<open>a \<ge> 0 \<Longrightarrow> sqrt_op a o\<^sub>C\<^sub>L sqrt_op a = a\<close>
-  by (metis positive_hermitianI sqrt_op_pos sqrt_op_square)
-
-definition cstar_algebra where \<open>cstar_algebra A \<longleftrightarrow> csubspace A \<and> (\<forall>x\<in>A. \<forall>y\<in>A. x o\<^sub>C\<^sub>L y \<in> A) \<and> (\<forall>x\<in>A. x* \<in> A) \<and> closed A\<close>
-
-lemma sqrt_op_in_cstar_algebra:
-  assumes \<open>cstar_algebra A\<close>
-  assumes \<open>id_cblinfun \<in> A\<close>
-  assumes \<open>a \<in> A\<close>
-  shows \<open>sqrt_op a \<in> A\<close>
-proof -
-  have *: \<open>cblinfun_power a n \<in> A\<close> for n
-    apply (induction n)
-    using assms by (auto simp: cblinfun_power_Suc cstar_algebra_def)
-  have \<open>sqrt_op a \<in> closure (cspan (range (cblinfun_power a)))\<close>
-    by (rule sqrt_op_in_closure)
-  also have \<open>\<dots> \<subseteq> closure (cspan A)\<close>
-    apply (intro closure_mono complex_vector.span_mono)
-    by (auto intro!: * )
-  also have \<open>\<dots> = closure A\<close>
-    using \<open>cstar_algebra A\<close>
-    apply (simp add: cstar_algebra_def)
-    by (metis closure_closed complex_vector.span_eq_iff)
-  also have \<open>\<dots> = A\<close>
-    using \<open>cstar_algebra A\<close>
-    by (simp add: cstar_algebra_def)
-  finally show \<open>sqrt_op a \<in> A\<close>
-    by -
-qed
-
-lemma cstar_decompose_four_unitaries:
-  \<comment> \<open>@{cite takesaki}, Proposition I.4.9\<close>
-  fixes M :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set\<close>
-  assumes \<open>cstar_algebra M\<close>
-  assumes [simp]: \<open>id_cblinfun \<in> M\<close>
-  assumes \<open>x \<in> M\<close>
-  shows \<open>\<exists>a1 a2 a3 a4 u1 u2 u3 u4. u1 \<in> M \<and> u2 \<in> M \<and> u3 \<in> M \<and> u4 \<in> M
-              \<and> unitary u1 \<and> unitary u2 \<and> unitary u3 \<and> unitary u4
-              \<and> x = a1 *\<^sub>C u1 + a2 *\<^sub>C u2 + a3 *\<^sub>C u3 + a4 *\<^sub>C u4\<close>
-proof -
-  have herm: \<open>\<exists>u1 u2 a1 a2. u1 \<in> M \<and> u2 \<in> M \<and> unitary u1 \<and> unitary u2 \<and> h = a1 *\<^sub>C u1 + a2 *\<^sub>C u2\<close> 
-    if \<open>h \<in> M\<close> and \<open>h* = h\<close> for h
-  proof (cases \<open>h = 0\<close>)
-    case True
-    show ?thesis 
-      apply (rule exI[of _ id_cblinfun]; rule exI[of _  id_cblinfun])
-      apply (rule exI[of _ 0]; rule exI[of _ 0])
-      by (simp add: True)
-  next
-    case False
-    define h' where \<open>h' = sgn h\<close>
-    from False have [simp]: \<open>h' \<in> M\<close> and [simp]: \<open>h'* = h'\<close> and \<open>norm h' = 1\<close>
-        using \<open>cstar_algebra M\<close>
-        by (auto simp: h'_def sgn_cblinfun_def complex_vector.subspace_scale norm_inverse that
-            cstar_algebra_def)
-    define u where \<open>u = h' + imaginary_unit *\<^sub>C sqrt_op (id_cblinfun - (h' o\<^sub>C\<^sub>L h'))\<close>
-    have [simp]: \<open>u \<in> M\<close>
-    proof -
-      have \<open>id_cblinfun - h' o\<^sub>C\<^sub>L h' \<in> M\<close>
-        using \<open>cstar_algebra M\<close>
-        by (simp add: complex_vector.subspace_diff cstar_algebra_def)
-      then have \<open>sqrt_op (id_cblinfun - h' o\<^sub>C\<^sub>L h') \<in> M\<close>
-        apply (rule sqrt_op_in_cstar_algebra[rotated -1])
-        using \<open>cstar_algebra M\<close> by auto
-      then show ?thesis
-        using \<open>cstar_algebra M\<close>
-        by (auto simp: u_def cstar_algebra_def intro!: complex_vector.subspace_add complex_vector.subspace_scale)
-    qed
-    then have [simp]: \<open>u* \<in> M\<close>
-      using \<open>cstar_algebra M\<close>
-      by (simp add: cstar_algebra_def)
-    have *: \<open>h' o\<^sub>C\<^sub>L h' \<le> id_cblinfun\<close>
-      sorry
-    have **: \<open>h' o\<^sub>C\<^sub>L sqrt_op (id_cblinfun - h' o\<^sub>C\<^sub>L h') = sqrt_op (id_cblinfun - h' o\<^sub>C\<^sub>L h') o\<^sub>C\<^sub>L h'\<close>
-      apply (rule sqrt_op_commute[symmetric])
-      by (auto simp: * cblinfun_compose_minus_right cblinfun_compose_minus_left cblinfun_compose_assoc)
-    have [simp]: \<open>unitary u\<close>
-      by (auto intro!: unitary_def[THEN iffD2] simp: * ** u_def cblinfun_compose_add_right
-          cblinfun_compose_add_left adj_plus cblinfun_compose_minus_left cblinfun_compose_minus_right
-          positive_hermitianI[symmetric] sqrt_op_pos scaleC_diff_right scaleC_add_right)
-    have [simp]: \<open>u + u* = h' + h'\<close>
-      by (simp add: * u_def adj_plus positive_hermitianI[symmetric] sqrt_op_pos)
-    show ?thesis
-      apply (rule exI[of _ u]; rule exI[of _ \<open>u*\<close>])
-      apply (rule exI[of _ \<open>of_real (norm h) / 2\<close>]; rule exI[of _ \<open>of_real (norm h) / 2\<close>])
-      by (auto simp flip: scaleC_add_right scaleC_2 simp: h'_def)
-  qed
-  obtain a1 a2 u1 u2 where \<open>u1 \<in> M\<close> and \<open>u2 \<in> M\<close> and \<open>unitary u1\<close> and \<open>unitary u2\<close> and decomp1: \<open>x + x* = a1 *\<^sub>C u1 + a2 *\<^sub>C u2\<close>
-    apply atomize_elim
-    apply (rule herm)
-    using \<open>cstar_algebra M\<close>
-    by (simp_all add: \<open>x \<in> M\<close> complex_vector.subspace_add adj_plus cstar_algebra_def)
-  obtain a3 a4 u3 u4 where \<open>u3 \<in> M\<close> and \<open>u4 \<in> M\<close> and \<open>unitary u3\<close> and \<open>unitary u4\<close> 
-    and decomp2: \<open>\<i> *\<^sub>C (x - x*) = a3 *\<^sub>C u3 + a4 *\<^sub>C u4\<close>
-    apply atomize_elim
-    apply (rule herm)
-    using \<open>cstar_algebra M\<close>
-    by (simp_all add: \<open>x \<in> M\<close> adj_minus complex_vector.subspace_diff complex_vector.subspace_scale cstar_algebra_def flip: scaleC_minus_right)
-  have \<open>x = (1/2) *\<^sub>C (x + x*) + (-\<i>/2) *\<^sub>C (\<i> *\<^sub>C (x - x*))\<close>
-    by (simp add: scaleC_add_right scaleC_diff_right flip: scaleC_add_left)
-  also have \<open>\<dots> = (a1 / 2) *\<^sub>C u1 + (a2 / 2) *\<^sub>C u2 + (- \<i> * a3 / 2) *\<^sub>C u3 + (- \<i> * a4 / 2) *\<^sub>C u4\<close>
-    apply (simp only: decomp1 decomp2)
-    by (simp add: scaleC_add_right scaleC_diff_right)
-  finally show ?thesis
-    using \<open>u1 \<in> M\<close> \<open>u2 \<in> M\<close> \<open>u3 \<in> M\<close> \<open>u4 \<in> M\<close>
-      \<open>unitary u1\<close> \<open>unitary u2\<close> \<open>unitary u3\<close> \<open>unitary u4\<close>
-    by blast
-qed
-
-(* lemma xxx:
-  \<comment> \<open>@{cite takesaki}, Proposition II.3.10\<close>
-  fixes M :: \<open>('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close> and e :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  assumes \<open>von_neumann_algebra M\<close>
-  assumes \<open>isometry (e* )\<close>
-  assumes \<open>e* o\<^sub>C\<^sub>L e \<in> M\<close>
-  shows \<open>von_neumann_algebra (sandwich e ` M)\<close>
-    and \<open>von_neumann_algebra (sandwich e ` commutant M)\<close>
-    and \<open>commutant (sandwich e ` M) = sandwich e ` commutant M\<close>
-proof -
-  have \<open>von_neumann_algebra (sandwich e ` M)\<close>
-  proof (unfold von_neumann_algebra_def_sot, intro conjI ballI)
-    
-
-  by - *)
-
-(* lemma commutant_tensor_vn:
-  \<comment> \<open>@{cite takesaki}, Theorem IV.5.9\<close>
-  assumes \<open>von_neumann_algebra M\<close>
-  assumes \<open>von_neumann_algebra N\<close>
-  shows \<open>commutant (tensor_vn M N) = commutant M \<otimes>\<^sub>v\<^sub>N commutant N\<close>
-proof -
-  write commutant (\<open>_''\<close> [120] 120)
-       \<open>Notation \<^term>\<open>M '\<close> for \<^term>\<open>commutant M\<close>\<close>
-  write id_cblinfun (\<open>\<one>\<close>)
-
-  have 1: \<open>x o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L x\<close> if \<open>x \<in> (M ' \<otimes>\<^sub>v\<^sub>N N ')'\<close> and \<open>y \<in> (M \<otimes>\<^sub>v\<^sub>N N)'\<close> for x y
-  proof (intro cblinfun_cinner_tensor_eqI)
-    fix \<xi> :: \<open>'a ell2\<close> and \<eta> :: \<open>'b ell2\<close>
-    define e where \<open>e = Proj (ccspan ((\<lambda>m. m *\<^sub>V \<xi>) ` M))\<close>
-    define f where \<open>f = Proj (ccspan ((\<lambda>n. n *\<^sub>V \<eta>) ` N))\<close>
-    have \<open>e \<in> M '\<close> and \<open>e *\<^sub>S \<top> \<noteq> 0\<close>
-      if e_def: \<open>e = Proj (ccspan ((\<lambda>m. m *\<^sub>V \<xi>) ` M))\<close> and \<open>von_neumann_algebra M\<close>
-      for e M and \<xi> :: \<open>'x ell2\<close>
-    proof (rule commutant_memberI)
-      fix y assume \<open>y \<in> M\<close>
-      then have \<open>y* \<in> M\<close>
-        by (metis that(2) imageI von_neumann_algebra_adj_image)
-      have *: \<open>e o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L e = y o\<^sub>C\<^sub>L e\<close> if \<open>y \<in> M\<close> for y
-      proof -
-        have \<open>y *\<^sub>S e *\<^sub>S \<top> = y *\<^sub>S ccspan ((\<lambda>m. m *\<^sub>V \<xi>) ` M)\<close>
-          by (simp add: e_def)
-        also have \<open>\<dots> = ccspan ((\<lambda>x. y *\<^sub>V x *\<^sub>V \<xi>) ` M)\<close>
-          by (simp add: cblinfun_image_ccspan image_image)
-        also have \<open>\<dots> \<le> ccspan ((\<lambda>m. m *\<^sub>V \<xi>) ` M)\<close>
-          using von_neumann_algebra_compose[OF \<open>von_neumann_algebra M\<close> \<open>y \<in> M\<close>]
-          by (auto intro!: ccspan_mono simp: simp flip: cblinfun_apply_cblinfun_compose)
-        finally have \<open>e o\<^sub>C\<^sub>L (y o\<^sub>C\<^sub>L e) = y o\<^sub>C\<^sub>L e\<close>
-          apply (subst e_def)
-          by (auto simp: cblinfun_compose_image Proj_compose_cancelI)
-        then show ?thesis
-          by (simp add: cblinfun_compose_assoc)
-      qed
-      have \<open>e o\<^sub>C\<^sub>L y = (y* o\<^sub>C\<^sub>L e)*\<close>
-        by (simp add: e_def adj_Proj)
-      also have \<open>\<dots> = (e o\<^sub>C\<^sub>L y* o\<^sub>C\<^sub>L e)*\<close>
-        by (auto simp: * \<open>y* \<in> M\<close>)
-      also have \<open>\<dots> = e o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L e\<close>
-        by (simp add: e_def adj_Proj cblinfun_compose_assoc)
-      also have \<open>\<dots> = y o\<^sub>C\<^sub>L e\<close>
-        by (auto simp: * \<open>y \<in> M\<close>)
-      finally show \<open>e o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L e\<close>
-        by -
-    next
-      have \<open>\<xi> \<in> space_as_set (e *\<^sub>S \<top>)\<close>
-        by (auto intro!: ccspan_superset' image_eqI[where x=id_cblinfun] von_neumann_algebra_id 
-            simp: e_def \<open>von_neumann_algebra M\<close>)
-      moreover have \<open>\<xi> \<noteq> 0\<close>
-        sorry
-      ultimately show \<open>e *\<^sub>S \<top> \<noteq> 0\<close>
-        by auto
-    qed
-    from this[OF e_def assms(1)] and this[OF f_def assms(2)]
-    have eM': \<open>e \<in> M '\<close> and e0: \<open>e *\<^sub>S \<top> \<noteq> 0\<close> and fN': \<open>f \<in> N '\<close> and f0: \<open>f *\<^sub>S \<top> \<noteq> 0\<close>
+    have \<open>QREGISTER_chain F \<GG> = QREGISTER_of (qregister_chain F G)\<close>
+      apply (rule Rep_QREGISTER_inject[THEN iffD1])
+      by (simp add: QREGISTER_chain.rep_eq assms QREGISTER_of.rep_eq image_image flip: rangeG)
+    also have \<open>ACTUAL_QREGISTER \<dots>\<close>
+      by (simp add: ACTUAL_QREGISTER_QREGISTER_of assms(1))
+    finally show \<open>ACTUAL_QREGISTER (QREGISTER_chain F \<GG>)\<close>
       by -
-    let ?goal = \<open>(\<xi> \<otimes>\<^sub>s \<eta>) \<bullet>\<^sub>C ((x o\<^sub>C\<^sub>L y) *\<^sub>V (\<xi> \<otimes>\<^sub>s \<eta>)) = (\<xi> \<otimes>\<^sub>s \<eta>) \<bullet>\<^sub>C ((y o\<^sub>C\<^sub>L x) *\<^sub>V (\<xi> \<otimes>\<^sub>s \<eta>))\<close>
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
 
-    from ccsubspace_as_whole_type[OF e0]
-    have \<open>\<forall>\<^sub>\<tau> 'e::type = some_chilbert_basis_of (e *\<^sub>S \<top>). ?goal\<close>
+lemma ACTUAL_QREGISTER_fst[simp]: \<open>ACTUAL_QREGISTER QREGISTER_fst\<close>
+  by (metis ACTUAL_QREGISTER_QREGISTER_of QREGISTER_of_qFst qFst_register)
+
+lemma ACTUAL_QREGISTER_snd[simp]: \<open>ACTUAL_QREGISTER QREGISTER_snd\<close>
+  by (metis ACTUAL_QREGISTER_QREGISTER_of QREGISTER_of_qSnd qSnd_register)
+
+lemma ACTUAL_QREGISTER_top[simp]: \<open>ACTUAL_QREGISTER \<top>\<close>
+  by (metis ACTUAL_QREGISTER_QREGISTER_of QREGISTER_of_qregister_id qregister_id)
+
+lemma ACTUAL_QREGISTER_bot[simp]: \<open>ACTUAL_QREGISTER \<bottom>\<close>
+proof -
+  have *: \<open>a \<in> range (\<lambda>c. c *\<^sub>C id_cblinfun)\<close> 
+    if offdiag: \<open>\<And>x y. x \<noteq> y \<Longrightarrow> is_orthogonal |x\<rangle> (a *\<^sub>V |y\<rangle>)\<close> 
+      and diag: \<open>\<And>x y. |x\<rangle> \<bullet>\<^sub>C (a *\<^sub>V |x\<rangle>) = |y\<rangle> \<bullet>\<^sub>C (a *\<^sub>V |y\<rangle>)\<close>
+    for a :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
+  proof -
+    define c where \<open>c = ket undefined \<bullet>\<^sub>C (a *\<^sub>V ket undefined)\<close>
+    from diag have diag_simp: \<open>|x\<rangle> \<bullet>\<^sub>C (a *\<^sub>V |x\<rangle>) = |undefined\<rangle> \<bullet>\<^sub>C (a *\<^sub>V |undefined\<rangle>)\<close> if \<open>NO_MATCH undefined x\<close> for x
+      by simp
+    let ?id = \<open>id_cblinfun :: 'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
+    have \<open>|x\<rangle> \<bullet>\<^sub>C (a *\<^sub>V |y\<rangle>) = |x\<rangle> \<bullet>\<^sub>C ((c *\<^sub>C ?id) *\<^sub>V |y\<rangle>)\<close> for x y
+      apply (cases \<open>x = y\<close>)
+      by (auto simp add: diag_simp c_def offdiag)
+    then have \<open>a = c *\<^sub>C ?id\<close>
+      by (meson cinner_ket_eqI equal_ket)
+    then show ?thesis
+      by auto
+  qed
+  show ?thesis
+    apply transfer
+    unfolding actual_qregister_range_def
+    apply (rule exI[of _ \<open>\<lambda>x. (undefined,x)\<close>])
+    apply (rule exI[of _ id_cblinfun])
+    by (auto simp: actual_qregister_range_aux_def one_algebra_def * intro!: injI)
+qed
+
+lemma ACTUAL_QREGISTER_pair[simp]:
+  assumes actualF: \<open>ACTUAL_QREGISTER \<FF>\<close>
+  assumes actualG: \<open>ACTUAL_QREGISTER \<GG>\<close>
+  assumes comp: \<open>QQcompatible \<FF> \<GG>\<close>
+  shows \<open>ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
+proof -
+  from ACTUAL_QREGISTER_ex_register[OF actualF]
+  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content \<FF>.
+       ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>F :: ('f, 'a) qregister. qregister F \<and> QREGISTER_of F = \<FF>\<close>
+    then obtain F :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister F\<close> and qregF: \<open>QREGISTER_of F = \<FF>\<close>
+      by auto
+    from ACTUAL_QREGISTER_ex_register[OF actualG]
+    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content \<GG>.
+       ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
     proof (rule with_type_mp)
-      assume \<open>\<exists>Ue :: 'e ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2. isometry Ue \<and> Ue *\<^sub>S \<top> = e *\<^sub>S \<top>\<close>
-      then obtain Ue :: \<open>'e ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> where \<open>isometry Ue\<close> and \<open>Ue *\<^sub>S \<top> = e *\<^sub>S \<top>\<close>
+      assume \<open>\<exists>G :: ('g, 'a) qregister. qregister G \<and> QREGISTER_of G = \<GG>\<close>
+      then obtain G :: \<open>('g, 'a) qregister\<close> where [simp]: \<open>qregister G\<close> and qregG: \<open>QREGISTER_of G = \<GG>\<close>
         by auto
-      from ccsubspace_as_whole_type[OF f0]
-      have \<open>\<forall>\<^sub>\<tau> 'f::type = some_chilbert_basis_of (f *\<^sub>S \<top>). ?goal\<close>
+      from comp have comp': \<open>qcompatible F G\<close>
+        by (simp add: qcompatible_QQcompatible flip: qregG qregF)
+      then have \<open>QREGISTER_pair \<FF> \<GG> = QREGISTER_of \<lbrakk>F, G\<rbrakk>\<^sub>q\<close>
+        by (simp add: QREGISTER_of_qregister_pair qregF qregG)
+      also have \<open>ACTUAL_QREGISTER \<dots>\<close>
+        by (simp add: ACTUAL_QREGISTER_QREGISTER_of comp')
+      finally show \<open>ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
+        by -
+    qed
+    from this[cancel_with_type]
+    show \<open>ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
+      by -
+  qed
+  from this[cancel_with_type]
+  show \<open>ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
+    by -
+qed
+
+
+lemma QCOMPLEMENT_QREGISTER_of_eqI:
+  assumes \<open>qcomplements F G\<close>
+  shows \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
+  by (metis QCOMPLEMENT.rep_eq QREGISTER_of.rep_eq Rep_QREGISTER_inverse assms iso_qregister_def qcompatible_QQcompatible qcomplements.rep_eq qcomplements_def' register_range_complement_commutant)
+
+lemma ACTUAL_QREGISTER_complement: \<open>ACTUAL_QREGISTER (QCOMPLEMENT \<FF>)\<close> if \<open>ACTUAL_QREGISTER \<FF>\<close>
+proof -
+  let ?goal = ?thesis
+  from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER \<FF>\<close>]
+  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content \<FF>. ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>F :: ('f, 'a) qregister. qregister F \<and> QREGISTER_of F = \<FF>\<close>
+    then obtain F :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister F\<close> and qregF: \<open>QREGISTER_of F = \<FF>\<close>
+      by auto
+    from qcomplement_exists[OF \<open>qregister F\<close>]
+    have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis F. ?goal\<close>
+    proof (rule with_type_mp)
+      assume \<open>\<exists>G :: ('g, 'a) qregister. qcomplements F G\<close>
+      then obtain G :: \<open>('g, 'a) qregister\<close> where \<open>qcomplements F G\<close>
+        by auto
+      then have \<open>qregister G\<close>
+        using Laws_Quantum.compatible_register2 complements_def qcomplements.rep_eq qregister_raw_apply_qregister by blast
+      then have \<open>ACTUAL_QREGISTER (QREGISTER_of G)\<close>
+        by (simp add: ACTUAL_QREGISTER_QREGISTER_of)
+      also from \<open>qcomplements F G\<close> have \<open>QREGISTER_of G = QCOMPLEMENT (QREGISTER_of F)\<close>
+        using QCOMPLEMENT_QREGISTER_of_eqI by fastforce
+      also have \<open>\<dots> = QCOMPLEMENT \<FF>\<close>
+        by (simp add: qregF)
+      finally show ?goal
+        by -
+    qed
+    from this[cancel_with_type]
+    show ?goal
+      by -
+  qed
+  from this[cancel_with_type]
+  show ?goal
+    by -
+qed
+
+
+lemma ACTUAL_QREGISTER_complement_iff: \<open>ACTUAL_QREGISTER (QCOMPLEMENT \<FF>) \<longleftrightarrow> ACTUAL_QREGISTER \<FF>\<close>
+  by (metis ACTUAL_QREGISTER_complement QCOMPLEMENT.rep_eq Rep_QREGISTER Rep_QREGISTER_inverse mem_Collect_eq valid_qregister_range_def von_neumann_algebra_def)
+
+lift_definition equivalent_qregisters :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is equivalent_registers.
+
+lemma equivalent_qregisters_trans[trans]:
+  assumes \<open>equivalent_qregisters F G\<close>
+  assumes \<open>equivalent_qregisters G H\<close>
+  shows \<open>equivalent_qregisters F H\<close>
+  using assms apply transfer
+  using Laws_Quantum.equivalent_registers_trans by blast
+
+lemma equivalent_qregisters_sym[sym]:
+  assumes \<open>equivalent_qregisters F G\<close>
+  shows \<open>equivalent_qregisters G F\<close>
+  using assms apply transfer
+  using Laws_Quantum.equivalent_registers_sym by blast
+
+lemma equivalent_qregisters_triple1:
+  assumes \<open>qregister \<lbrakk>a,b,c\<rbrakk>\<close>
+  shows \<open>equivalent_qregisters \<lbrakk>a,\<lbrakk>b,c\<rbrakk>\<rbrakk> \<lbrakk>\<lbrakk>a,b\<rbrakk>,c\<rbrakk>\<close>
+proof -
+  define a' b' c' where abc'_def: \<open>a' = apply_qregister a\<close> \<open>b' = apply_qregister b\<close> \<open>c' = apply_qregister c\<close>
+  have [simp]: \<open>qcompatible_raw a' b'\<close>
+    using abc'_def(1) abc'_def(2) assms qcompatible3' qcompatible_def by blast
+  have [simp]: \<open>qcompatible_raw b' c'\<close>
+    by (metis abc'_def(2) abc'_def(3) assms qcompatible_def)
+  have [simp]: \<open>qcompatible_raw a' (b';c')\<close>
+    by (metis abc'_def(1) abc'_def(2) abc'_def(3) assms qcompatible_def qregister_pair.rep_eq)
+  have [simp]: \<open>qcompatible_raw (a';b') c'\<close>
+    using Laws_Quantum.compatible3 \<open>qcompatible_raw a' b'\<close> \<open>qcompatible_raw b' c'\<close> abc'_def(1) abc'_def(3) assms qcompatible3' qcompatible_def by blast
+
+  have \<open>Laws_Quantum.equivalent_registers (a';(b';c')) ((a';b');c')\<close>
+    by (metis Laws_Quantum.equivalent_registers_assoc \<open>qcompatible_raw a' b'\<close> \<open>qcompatible_raw b' c'\<close> abc'_def(1) abc'_def(3) assms qcompatible3' qcompatible_def)
+  then show ?thesis
+    by (simp add: equivalent_qregisters.rep_eq qregister_pair.rep_eq flip: abc'_def)
+qed
+
+lemma equivalent_qregisters_triple2:
+  assumes \<open>qregister \<lbrakk>F,G,H\<rbrakk>\<close>
+  shows \<open>equivalent_qregisters \<lbrakk>\<lbrakk>F,G\<rbrakk>,H\<rbrakk> \<lbrakk>F,\<lbrakk>G,H\<rbrakk>\<rbrakk>\<close>
+  using assms equivalent_qregisters_sym equivalent_qregisters_triple1 by blast
+
+lemma equivalent_qregisters_swap:
+  assumes \<open>qregister \<lbrakk>F,G\<rbrakk>\<close>
+  shows \<open>equivalent_qregisters \<lbrakk>F,G\<rbrakk> \<lbrakk>G,F\<rbrakk>\<close>
+  using assms apply transfer
+  apply (rule equivalent_registersI[where I=swap])
+  by (auto simp: non_qregister_raw Laws_Quantum.compatible_sym)
+
+lemma equivalent_qregisters_refl: \<open>equivalent_qregisters F F\<close> if \<open>qregister F\<close>
+  using that apply transfer
+  using Laws_Quantum.equivalent_registers_refl by blast
+
+lemma equivalent_qregisters_pair:
+  assumes \<open>equivalent_qregisters F F'\<close>
+  assumes \<open>equivalent_qregisters G G'\<close>
+  assumes \<open>qregister \<lbrakk>F,G\<rbrakk>\<close>
+  shows \<open>equivalent_qregisters \<lbrakk>F,G\<rbrakk> \<lbrakk>F',G'\<rbrakk>\<close>
+proof -
+  from assms(1) obtain I where [simp]: \<open>iso_register I\<close> and FI: \<open>apply_qregister F o I = apply_qregister F'\<close>
+    using Laws_Quantum.equivalent_registers_def equivalent_qregisters.rep_eq by blast
+  from assms(2) obtain J where [simp]: \<open>iso_register J\<close> and GJ: \<open>apply_qregister G o J = apply_qregister G'\<close>
+    using Laws_Quantum.equivalent_registers_def equivalent_qregisters.rep_eq by blast
+  have isoIJ: \<open>iso_register (I \<otimes>\<^sub>r J)\<close>
+    by simp
+  have FG[simp]: \<open>qregister_raw (apply_qregister \<lbrakk>F,G\<rbrakk>)\<close>
+    using assms(3) by auto
+  have FG2[simp]: \<open>qcompatible_raw (apply_qregister F) (apply_qregister G)\<close>
+    using assms(3) qcompatible_def by blast
+  have [simp]: \<open>qregister \<lbrakk>F',G'\<rbrakk>\<close>
+    by (metis Laws_Quantum.equivalent_registers_compatible1 Laws_Quantum.equivalent_registers_compatible2 Laws_Quantum.equivalent_registers_def FG2 assms(1) assms(2) equivalent_qregisters.rep_eq equivalent_qregisters_sym qcompatible_def qregister_raw_apply_qregister)
+  then have F'G'[simp]: \<open>qregister_raw (apply_qregister \<lbrakk>F',G'\<rbrakk>)\<close>
+    apply transfer by simp
+  have [simp]: \<open>qcompatible_raw (apply_qregister F') (apply_qregister G')\<close>
+    by (metis F'G' non_qregister_raw qregister_pair.rep_eq)
+  have \<open>apply_qregister \<lbrakk>F,G\<rbrakk> o (I \<otimes>\<^sub>r J) = apply_qregister \<lbrakk>F',G'\<rbrakk>\<close>
+    by (simp add: qregister_pair.rep_eq Laws_Quantum.iso_register_is_register Laws_Quantum.pair_o_tensor FI GJ)
+  with isoIJ FG
+  have \<open>equivalent_registers (apply_qregister \<lbrakk>F,G\<rbrakk>) (apply_qregister \<lbrakk>F',G'\<rbrakk>)\<close>
+    using Laws_Quantum.equivalent_registersI by blast
+  then show ?thesis
+    apply transfer by simp
+qed
+
+lemma equivalent_qregisters_chain:
+  assumes \<open>equivalent_qregisters F G\<close>
+  assumes \<open>qregister H\<close>
+  shows \<open>equivalent_qregisters (qregister_chain H F) (qregister_chain H G)\<close>
+  using assms apply transfer
+  by (simp add: Laws_Quantum.equivalent_registers_comp Laws_Quantum.equivalent_registers_register_left Laws_Quantum.equivalent_registers_register_right)
+  
+lemma iso_qregister_equivalent_id:
+  \<open>iso_qregister F \<longleftrightarrow> equivalent_qregisters F qregister_id\<close>
+  unfolding iso_qregister_def
+  apply transfer
+  by (metis Laws_Quantum.equivalent_registers_sym Laws_Quantum.iso_register_def Laws_Quantum.iso_register_equivalent_id Un_iff mem_Collect_eq)
+
+(* TODO: Just add an assumption and a comment that the assumption is not strictly necessary by Takesaki? *)
+lemma y2:
+  \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
+    = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>
+(* 
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  apply (simp add: QCOMPLEMENT.rep_eq Rep_QREGISTER_pair_fst_snd)
+  apply (subst commutant_tensor_vn)
+  using Rep_QREGISTER Rep_QREGISTER
+  by (force simp add: valid_qregister_range_def)+
+ *)
+proof -
+  let ?goal = ?thesis
+  have \<open>ACTUAL_QREGISTER F\<close>
+    sorry (* TODO: Add as assumption *)
+  have \<open>ACTUAL_QREGISTER G\<close>
+    sorry (* TODO: Add as assumption *)
+  from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER F\<close>]
+  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content F. ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>A :: ('f, 'a) qregister. qregister A \<and> QREGISTER_of A = F\<close>
+    then obtain A :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister A\<close> and qregF: \<open>QREGISTER_of A = F\<close>
+      by auto
+    from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER G\<close>]
+    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content G. ?goal\<close>
+    proof (rule with_type_mp)
+      assume \<open>\<exists>B :: ('g, 'b) qregister. qregister B \<and> QREGISTER_of B = G\<close>
+      then obtain B :: \<open>('g, 'b) qregister\<close> where [simp]: \<open>qregister B\<close> and qregG: \<open>QREGISTER_of B = G\<close>
+        by auto
+      from qcomplement_exists[OF \<open>qregister A\<close>]
+      have \<open>\<forall>\<^sub>\<tau> 'i::type = qregister_decomposition_basis A. ?goal\<close>
       proof (rule with_type_mp)
-        assume \<open>\<exists>Uf :: 'f ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. isometry Uf \<and> Uf *\<^sub>S \<top> = f *\<^sub>S \<top>\<close>
-        then obtain Uf :: \<open>'f ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where \<open>isometry Uf\<close> and \<open>Uf *\<^sub>S \<top> = f *\<^sub>S \<top>\<close>
+        assume \<open>\<exists>AC :: ('i, 'a) qregister. qcomplements A AC\<close>
+        then obtain AC :: \<open>('i, 'a) qregister\<close> where \<open>qcomplements A AC\<close>
           by auto
+        from qcomplement_exists[OF \<open>qregister B\<close>]
+        have \<open>\<forall>\<^sub>\<tau> 'j::type = qregister_decomposition_basis B. ?goal\<close>
+        proof (rule with_type_mp)
+          assume \<open>\<exists>BC :: ('j, 'b) qregister. qcomplements B BC\<close>
+          then obtain BC :: \<open>('j, 'b) qregister\<close> where \<open>qcomplements B BC\<close>
+            by auto
+          from \<open>qcomplements A AC\<close>
+          have [simp]: \<open>qregister AC\<close>
+            using iso_qregister_def qcompatible_register2 qcomplements_def' by blast
+          from \<open>qcomplements A AC\<close>
+          have [simp]: \<open>qcompatible A AC\<close>
+            using iso_qregister_def qcomplements_def' by blast
+          from \<open>qcomplements B BC\<close>
+          have [simp]: \<open>qregister BC\<close>
+            using iso_qregister_def qcompatible_register2 qcomplements_def' by blast
+          from \<open>qcomplements B BC\<close>
+          have [simp]: \<open>qcompatible B BC\<close>
+            using iso_qregister_def qcomplements_def' by blast
+          have [simp]: \<open>iso_qregister \<lbrakk>A, AC\<rbrakk>\<close>
+            using \<open>qcomplements A AC\<close> qcomplements_def' by blast
+          have [simp]: \<open>iso_qregister \<lbrakk>B, BC\<rbrakk>\<close>
+            using \<open>qcomplements B BC\<close> qcomplements_def' by blast
+          have QCOMPLEMENT_A: \<open>QCOMPLEMENT (QREGISTER_of A) = QREGISTER_of AC\<close>
+            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI \<open>qcomplements A AC\<close>)
+          have QCOMPLEMENT_B: \<open>QCOMPLEMENT (QREGISTER_of B) = QREGISTER_of BC\<close>
+            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI \<open>qcomplements B BC\<close>)
+          have \<open>qcomplements \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A, qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q B\<rbrakk>\<^sub>q
+                             \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q AC, qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q BC\<rbrakk>\<^sub>q\<close>
+          proof -
+            write equivalent_qregisters (infix "\<approx>" 50)
+            have \<open>\<lbrakk> \<lbrakk>qregister_chain qFst A, qregister_chain qSnd B\<rbrakk>,
+                    \<lbrakk>qregister_chain qFst AC, qregister_chain qSnd BC\<rbrakk> \<rbrakk>
+                \<approx> \<lbrakk> \<lbrakk>qregister_chain qFst A, qregister_chain qSnd B\<rbrakk>,
+                    \<lbrakk>qregister_chain qSnd BC, qregister_chain qFst AC\<rbrakk> \<rbrakk>\<close>
+              apply (rule equivalent_qregisters_pair)
+                apply (rule equivalent_qregisters_refl)
+                apply simp
+               apply (rule equivalent_qregisters_swap)
+              by simp_all
+            also have \<open>\<dots> \<approx> \<lbrakk>qregister_chain qFst A, \<lbrakk>qregister_chain qSnd B,
+                    \<lbrakk>qregister_chain qSnd BC, qregister_chain qFst AC\<rbrakk>\<rbrakk>\<rbrakk>\<close>
+              apply (rule equivalent_qregisters_triple2)
+              by simp
+            also have \<open>\<dots> \<approx> \<lbrakk>qregister_chain qFst A, \<lbrakk>\<lbrakk>qregister_chain qSnd B,
+                    qregister_chain qSnd BC\<rbrakk>, qregister_chain qFst AC\<rbrakk>\<rbrakk>\<close>
+              apply (rule equivalent_qregisters_pair)
+                apply (rule equivalent_qregisters_refl)
+                apply simp
+              apply (rule equivalent_qregisters_triple1)
+              by simp_all
+            also have \<open>\<dots> = \<lbrakk>qregister_chain qFst A, 
+                              \<lbrakk>qregister_chain qSnd \<lbrakk>B,BC\<rbrakk>, qregister_chain qFst AC\<rbrakk>\<rbrakk>\<close>
+              by (simp add: pair_chain_fst_snd)
+            also have \<open>\<dots> \<approx> \<lbrakk>qregister_chain qFst A, 
+                    \<lbrakk>qregister_chain qFst AC, qregister_chain qSnd \<lbrakk>B,BC\<rbrakk>\<rbrakk>\<rbrakk>\<close>
+              apply (rule equivalent_qregisters_pair)
+                apply (rule equivalent_qregisters_refl)
+                apply simp
+               apply (rule equivalent_qregisters_swap)
+              by simp_all
+            also have \<open>\<dots> \<approx> \<lbrakk>\<lbrakk>qregister_chain qFst A, qregister_chain qFst AC\<rbrakk>, 
+                             qregister_chain qSnd \<lbrakk>B,BC\<rbrakk>\<rbrakk>\<close>
+              apply (rule equivalent_qregisters_triple1)
+              by simp
+            also have \<open>\<dots> = \<lbrakk>qregister_chain qFst \<lbrakk>A,AC\<rbrakk>, 
+                             qregister_chain qSnd \<lbrakk>B,BC\<rbrakk>\<rbrakk>\<close>
+              by (simp add: pair_chain_fst_snd)
+            also have \<open>\<dots> \<approx> \<lbrakk>qregister_chain qFst qregister_id, 
+                             qregister_chain qSnd qregister_id\<rbrakk>\<close>
+              apply (rule equivalent_qregisters_pair)
+                apply (rule equivalent_qregisters_chain)
+                 apply (simp flip: iso_qregister_equivalent_id)
+              apply simp
+               apply (rule equivalent_qregisters_chain)
+              by (simp_all flip: iso_qregister_equivalent_id)
+            also have \<open>\<dots> = qregister_id\<close>
+              by simp
+            finally show ?thesis
+              by (simp add: iso_qregister_equivalent_id qcomplements_def')
+          qed
+          then show ?goal
+            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI
+                simp add: QCOMPLEMENT_A QCOMPLEMENT_B
+                simp flip: QREGISTER_of_qregister_chain QREGISTER_of_qregister_pair qregF qregG)
+        qed
+        from this[cancel_with_type]
         show ?goal
           by -
       qed
@@ -1084,152 +1010,11 @@ proof -
     show ?goal
       by -
   qed
-  have 2: \<open>M \<otimes>\<^sub>v\<^sub>N N \<subseteq> (M ' \<otimes>\<^sub>v\<^sub>N N ')'\<close>
-  proof -
-    have \<open>((\<lambda>a. a \<otimes>\<^sub>o \<one>) ` M \<union> (\<otimes>\<^sub>o) \<one> ` N) \<subseteq> ((\<lambda>a. a \<otimes>\<^sub>o \<one>) ` M ' \<union> (\<otimes>\<^sub>o) \<one> ` N ')'\<close>
-      by (auto intro!: commutant_memberI simp: comp_tensor_op commutant_def)
-    also have \<open>\<dots> = (M ' \<otimes>\<^sub>v\<^sub>N N ')'\<close>
-      by (simp add: tensor_vn_def)
-    finally show ?thesis
-      apply (subst tensor_vn_def)
-      apply (rule double_commutant_in_vn_algI)
-      by (auto intro!: von_neumann_algebra_commutant von_neumann_algebra_tensor_vn assms)
-  qed
-  have 3: \<open>M ' \<otimes>\<^sub>v\<^sub>N N ' \<subseteq> (M \<otimes>\<^sub>v\<^sub>N N)'\<close>
-  proof -
-    have \<open>((\<lambda>a. a \<otimes>\<^sub>o \<one>) ` M ' \<union> (\<otimes>\<^sub>o) \<one> ` N ') \<subseteq> ((\<lambda>a. a \<otimes>\<^sub>o \<one>) ` M \<union> (\<otimes>\<^sub>o) \<one> ` N)'\<close>
-      by (auto intro!: commutant_memberI simp: comp_tensor_op commutant_def)
-    also have \<open>\<dots> = (M \<otimes>\<^sub>v\<^sub>N N)'\<close>
-      by (simp add: tensor_vn_def)
-    finally show ?thesis
-      apply (subst tensor_vn_def)
-      apply (rule double_commutant_in_vn_algI)
-      by (auto intro!: von_neumann_algebra_commutant von_neumann_algebra_tensor_vn assms)
-  qed
-  from 1 2 3 show ?thesis
-    by (smt (verit) Un_Int_assoc_eq Un_absorb assms(1) assms(2) basic_trans_rules(24) commutant_memberI inf.absorb_iff1 subset_Un_eq subset_iff sup.absorb_iff1 von_neumann_algebra_commutant von_neumann_algebra_commutant von_neumann_algebra_def von_neumann_algebra_tensor_vn)
-qed *)
-
-lemma commutant_cspan: \<open>commutant (cspan A) = commutant A\<close>
-  by (meson basic_trans_rules(24) commutant_antimono complex_vector.span_superset cspan_in_double_commutant dual_order.trans)
-
-lemma cspan_compose_closed:
-  assumes \<open>\<And>a b. a \<in> A \<Longrightarrow> b \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L b \<in> A\<close>
-  assumes \<open>a \<in> cspan A\<close> and \<open>b \<in> cspan A\<close>
-  shows \<open>a o\<^sub>C\<^sub>L b \<in> cspan A\<close>
-proof -
-  from \<open>a \<in> cspan A\<close>
-  obtain F f where \<open>finite F\<close> and \<open>F \<subseteq> A\<close> and a_def: \<open>a = (\<Sum>x\<in>F. f x *\<^sub>C x)\<close>
-    by (smt (verit, del_insts) complex_vector.span_explicit mem_Collect_eq)
-  from \<open>b \<in> cspan A\<close>
-  obtain G g where \<open>finite G\<close> and \<open>G \<subseteq> A\<close> and b_def: \<open>b = (\<Sum>x\<in>G. g x *\<^sub>C x)\<close>
-    by (smt (verit, del_insts) complex_vector.span_explicit mem_Collect_eq)
-  have \<open>a o\<^sub>C\<^sub>L b = (\<Sum>(x,y)\<in>F\<times>G. (f x *\<^sub>C x) o\<^sub>C\<^sub>L (g y *\<^sub>C y))\<close>
-    apply (simp add: a_def b_def cblinfun_compose_sum_left)
-    by (auto intro!: sum.cong simp add: cblinfun_compose_sum_right scaleC_sum_right sum.cartesian_product case_prod_beta)
-  also have \<open>\<dots> = (\<Sum>(x,y)\<in>F\<times>G. (f x * g y) *\<^sub>C (x o\<^sub>C\<^sub>L y))\<close>
-    by (metis (no_types, opaque_lifting) cblinfun_compose_scaleC_left cblinfun_compose_scaleC_right scaleC_scaleC)
-  also have \<open>\<dots> \<in> cspan A\<close>
-    using assms \<open>G \<subseteq> A\<close> \<open>F \<subseteq> A\<close>
-    apply (auto intro!: complex_vector.span_sum complex_vector.span_scale 
-        simp: complex_vector.span_clauses)
-    using complex_vector.span_clauses(1) by blast
-  finally show ?thesis
+  from this[cancel_with_type]
+  show ?goal
     by -
 qed
 
-lemma cspan_adj_closed:
-  assumes \<open>\<And>a. a \<in> A \<Longrightarrow> a* \<in> A\<close>
-  assumes \<open>a \<in> cspan A\<close>
-  shows \<open>a* \<in> cspan A\<close>
-proof -
-  from \<open>a \<in> cspan A\<close>
-  obtain F f where \<open>finite F\<close> and \<open>F \<subseteq> A\<close> and \<open>a = (\<Sum>x\<in>F. f x *\<^sub>C x)\<close>
-    by (smt (verit, del_insts) complex_vector.span_explicit mem_Collect_eq)
-  then have \<open>a* = (\<Sum>x\<in>F. cnj (f x) *\<^sub>C x*)\<close>
-    by (auto simp: sum_adj)
-  also have \<open>\<dots> \<in> cspan A\<close>
-    using assms \<open>F \<subseteq> A\<close>
-    by (auto intro!: complex_vector.span_sum complex_vector.span_scale simp: complex_vector.span_clauses)
-  finally show ?thesis
-    by -
-qed
-
-lemma double_commutant_theorem_span:
-  fixes A :: \<open>('a::{chilbert_space} \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close>
-  assumes mult: \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
-  assumes id: \<open>id_cblinfun \<in> A\<close>
-  assumes adj: \<open>\<And>a. a \<in> A \<Longrightarrow> a* \<in> A\<close>
-  shows \<open>commutant (commutant A) = cstrong_operator_topology closure_of (cspan A)\<close>
-proof -
-  have \<open>commutant (commutant A) = commutant (commutant (cspan A))\<close>
-    by (simp add: commutant_cspan)
-  also have \<open>\<dots> = cstrong_operator_topology closure_of (cspan A)\<close>
-    apply (rule double_commutant_theorem)
-    using assms
-    apply (auto simp: cspan_compose_closed cspan_adj_closed)
-    using complex_vector.span_clauses(1) by blast
-  finally show ?thesis
-    by -
-qed
-
-lemma double_commutant_grows': \<open>x \<in> X \<Longrightarrow> x \<in> commutant (commutant X)\<close>
-  using double_commutant_grows by blast
-
-lemma tensor_vn_UNIV[simp]: \<open>UNIV \<otimes>\<^sub>v\<^sub>N UNIV = (UNIV :: (('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _) set)\<close>
-proof -
-  have \<open>(UNIV \<otimes>\<^sub>v\<^sub>N UNIV :: (('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _) set) = 
-        commutant (commutant (range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) \<union> range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)))\<close> (is \<open>_ = ?rhs\<close>)
-    by (simp add: tensor_vn_def commutant_cspan)
-  also have \<open>\<dots> \<supseteq> commutant (commutant {a \<otimes>\<^sub>o b |a b. True})\<close> (is \<open>_ \<supseteq> \<dots>\<close>)
-  proof (rule double_commutant_in_vn_algI)
-    show vn: \<open>von_neumann_algebra ?rhs\<close>
-      by (metis calculation von_neumann_algebra_UNIV von_neumann_algebra_tensor_vn)
-    show \<open>{a \<otimes>\<^sub>o b |(a :: 'a ell2 \<Rightarrow>\<^sub>C\<^sub>L _) (b :: 'b ell2 \<Rightarrow>\<^sub>C\<^sub>L _). True} \<subseteq> ?rhs\<close>
-    proof (rule subsetI)
-      fix x :: \<open>('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2\<close>
-      assume \<open>x \<in> {a \<otimes>\<^sub>o b |a b. True}\<close>
-      then obtain a b where \<open>x = a \<otimes>\<^sub>o b\<close>
-        by auto
-      then have \<open>x = (a \<otimes>\<^sub>o id_cblinfun) o\<^sub>C\<^sub>L (id_cblinfun \<otimes>\<^sub>o b)\<close>
-        by (simp add: comp_tensor_op)
-      also have \<open>\<dots> \<in> ?rhs\<close>
-      proof -
-        have \<open>a \<otimes>\<^sub>o id_cblinfun \<in> ?rhs\<close>
-          by (auto intro!: double_commutant_grows')
-        moreover have \<open>id_cblinfun \<otimes>\<^sub>o b \<in> ?rhs\<close>
-          by (auto intro!: double_commutant_grows')
-        ultimately show ?thesis
-          using commutant_mult by blast
-      qed
-      finally show \<open>x \<in> ?rhs\<close>
-        by -
-    qed
-  qed
-  also have \<open>\<dots> = cstrong_operator_topology closure_of (cspan {a \<otimes>\<^sub>o b |a b. True})\<close>
-    apply (rule double_commutant_theorem_span)
-      apply (auto simp: comp_tensor_op tensor_op_adjoint)
-    using tensor_id[symmetric] by blast+
-  also have \<open>\<dots> = UNIV\<close>
-    using tensor_op_dense by blast
-  finally show ?thesis
-    by auto
-qed
-
-lemma Rep_QREGISTER_pair_fst_snd:
-  \<open>Rep_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
-      = tensor_vn (Rep_QREGISTER F) (Rep_QREGISTER G)\<close>
-  by (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq apply_qregister_fst apply_qregister_snd tensor_vn_def)
-
-(* TODO: Just add an assumption and a comment that the assumption is not strictly necessary by Takesaki? *)
-lemma y2:
-  \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
-    = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  apply (simp add: QCOMPLEMENT.rep_eq Rep_QREGISTER_pair_fst_snd)
-  apply (subst commutant_tensor_vn)
-  using Rep_QREGISTER Rep_QREGISTER
-  by (force simp add: valid_qregister_range_def)+
 
 lemma QREGISTER_chain_fst_top[simp]: \<open>QREGISTER_chain qFst \<top> = QREGISTER_fst\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
@@ -1854,9 +1639,6 @@ in () end
 complement_of_index_register \<^context> \<^cterm>\<open>\<lbrakk>\<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#5.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q\<close>
 \<close>
 
-lift_definition equivalent_qregisters :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is
-  equivalent_registers.
-
 definition \<open>equivalent_qregisters' F G \<longleftrightarrow> equivalent_qregisters F G \<or> (F = non_qregister \<and> G = non_qregister)\<close>
 
 lemma QREGISTER_of_non_qregister: \<open>QREGISTER_of non_qregister = QREGISTER_unit\<close>
@@ -2006,7 +1788,7 @@ lemma translate_to_index_registers_space_div_unlift:
 proof -
   from \<open>TTIR_COMPLEMENT G' L\<close>
   have [simp]: \<open>qregister \<lbrakk>G', L\<rbrakk>\<^sub>q\<close>
-    by (simp add: TTIR_COMPLEMENT_def qcomplements_def')
+    by (simp add: TTIR_COMPLEMENT_def iso_qregister_def qcomplements_def')
   have F'_decomp: \<open>F' = qregister_chain (qregister_chain \<lbrakk>L, G'\<rbrakk> H) F'\<close>
     using TTIR_INVERSE_def assms(4) by force
 
@@ -2037,7 +1819,7 @@ proof -
   then have \<open>space_div A \<psi> Q = space_div (apply_qregister_space \<lbrakk>R,Q\<rbrakk> A') \<psi> Q\<close>
     by (metis (no_types, opaque_lifting) A'_def apply_qregister_space_id qregister_chain_apply_space)
   also have \<open>\<dots> = apply_qregister_space R (space_div_unlifted A' \<psi>)\<close>
-    using space_div_space_div_unlifted assms qcomplements_def' by blast
+    using space_div_space_div_unlifted assms iso_qregister_def qcomplements_def' by blast
   finally show ?thesis
     by (simp add: A'_def)
 qed

@@ -3141,7 +3141,7 @@ qed
 (* lift_definition ccomplements :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is complements. *)
 lift_definition qcomplements :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is complements.
 
-lemma qcomplements_def': \<open>qcomplements F G \<longleftrightarrow> qcompatible F G \<and> iso_qregister (qregister_pair F G)\<close>
+lemma qcomplements_def': \<open>qcomplements F G \<longleftrightarrow> iso_qregister (qregister_pair F G)\<close>
 (* TODO "qcompatible F G" can be dropped *)
   unfolding iso_qregister_def apply transfer 
   by (auto simp: complements_def Laws_Quantum.iso_register_def non_qregister_raw)
