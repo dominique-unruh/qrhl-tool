@@ -899,15 +899,14 @@ proof -
       by auto
     then have \<open>qcomplements R Q\<close>
       by (meson complements_sym qcomplements.rep_eq)
-    then have [simp]: \<open>qregister \<lbrakk>R,Q\<rbrakk>\<close>
-      by (simp add: qcomplements_def')
-    from \<open>qcomplements Q R\<close> have [simp]: \<open>qregister \<lbrakk>Q,R\<rbrakk>\<close>
-      by (simp add: qcomplements_def')
     from \<open>qcomplements Q R\<close> have \<open>iso_qregister \<lbrakk>Q,R\<rbrakk>\<close>
       by (simp add: qcomplements_def')
     from \<open>qcomplements R Q\<close> have \<open>iso_qregister \<lbrakk>R,Q\<rbrakk>\<close>
       by (simp add: qcomplements_def')
-
+    have [simp]: \<open>qregister \<lbrakk>R,Q\<rbrakk>\<close>
+      using \<open>iso_qregister \<lbrakk>R, Q\<rbrakk>\<^sub>q\<close> iso_qregister_def by blast
+    have [simp]: \<open>qregister \<lbrakk>Q,R\<rbrakk>\<close>
+      by (simp add: qcompatible_sym)
     from \<open>distinct_qvars_pred_vars A Q\<close> \<open>qcomplements Q R\<close>
     have \<open>predicate_local A R\<close>
       using distinct_qvars_pred_vars_complement by auto
@@ -978,7 +977,7 @@ proof -
     then obtain R :: \<open>('c, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
       by auto
     then have [simp]: \<open>qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close>
-      by (simp add: qcomplements_def')
+      using iso_qregister_def qcomplements_def' by blast
     have \<open>top\<guillemotright>\<lbrakk>R,Q\<rbrakk> \<div> \<psi>\<guillemotright>Q = top\<close>
       apply (simp add: space_div_space_div_unlifted space_div_unlifted_def flip: top_ccsubspace_def)
       using \<open>qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close> qcompatible_register2 top_lift by blast
