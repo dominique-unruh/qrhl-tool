@@ -571,22 +571,226 @@ proof -
         simp flip: tensor_ell2_ket)
 qed
 
-lemma commutant_tensor_vn:
+lemma von_neumann_algebra_compose:
+  assumes \<open>von_neumann_algebra M\<close>
+  assumes \<open>x \<in> M\<close> and \<open>y \<in> M\<close>
+  shows \<open>x o\<^sub>C\<^sub>L y \<in> M\<close>
+  using assms apply (auto simp: von_neumann_algebra_def commutant_def)
+  by (metis (no_types, lifting) assms(1) commutant_mult von_neumann_algebra_def)
+
+lemma von_neumann_algebra_id:
+  assumes \<open>von_neumann_algebra M\<close>
+  shows \<open>id_cblinfun \<in> M\<close>
+  using assms by (auto simp: von_neumann_algebra_def)
+
+(* TODO: replace *) thm sqrt_op_square (* with this *)
+lemma sqrt_op_square[simp]: \<open>a \<ge> 0 \<Longrightarrow> sqrt_op a o\<^sub>C\<^sub>L sqrt_op a = a\<close>
+  by (metis positive_hermitianI sqrt_op_pos sqrt_op_square)
+
+definition cstar_algebra where \<open>cstar_algebra A \<longleftrightarrow> csubspace A \<and> (\<forall>x\<in>A. \<forall>y\<in>A. x o\<^sub>C\<^sub>L y \<in> A) \<and> (\<forall>x\<in>A. x* \<in> A) \<and> closed A\<close>
+
+lemma sqrt_op_in_cstar_algebra:
+  assumes \<open>cstar_algebra A\<close>
+  assumes \<open>id_cblinfun \<in> A\<close>
+  assumes \<open>a \<in> A\<close>
+  shows \<open>sqrt_op a \<in> A\<close>
+proof -
+  have *: \<open>cblinfun_power a n \<in> A\<close> for n
+    apply (induction n)
+    using assms by (auto simp: cblinfun_power_Suc cstar_algebra_def)
+  have \<open>sqrt_op a \<in> closure (cspan (range (cblinfun_power a)))\<close>
+    by (rule sqrt_op_in_closure)
+  also have \<open>\<dots> \<subseteq> closure (cspan A)\<close>
+    apply (intro closure_mono complex_vector.span_mono)
+    by (auto intro!: * )
+  also have \<open>\<dots> = closure A\<close>
+    using \<open>cstar_algebra A\<close>
+    apply (simp add: cstar_algebra_def)
+    by (metis closure_closed complex_vector.span_eq_iff)
+  also have \<open>\<dots> = A\<close>
+    using \<open>cstar_algebra A\<close>
+    by (simp add: cstar_algebra_def)
+  finally show \<open>sqrt_op a \<in> A\<close>
+    by -
+qed
+
+lemma cstar_decompose_four_unitaries:
+  \<comment> \<open>@{cite takesaki}, Proposition I.4.9\<close>
+  fixes M :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set\<close>
+  assumes \<open>cstar_algebra M\<close>
+  assumes [simp]: \<open>id_cblinfun \<in> M\<close>
+  assumes \<open>x \<in> M\<close>
+  shows \<open>\<exists>a1 a2 a3 a4 u1 u2 u3 u4. u1 \<in> M \<and> u2 \<in> M \<and> u3 \<in> M \<and> u4 \<in> M
+              \<and> unitary u1 \<and> unitary u2 \<and> unitary u3 \<and> unitary u4
+              \<and> x = a1 *\<^sub>C u1 + a2 *\<^sub>C u2 + a3 *\<^sub>C u3 + a4 *\<^sub>C u4\<close>
+proof -
+  have herm: \<open>\<exists>u1 u2 a1 a2. u1 \<in> M \<and> u2 \<in> M \<and> unitary u1 \<and> unitary u2 \<and> h = a1 *\<^sub>C u1 + a2 *\<^sub>C u2\<close> 
+    if \<open>h \<in> M\<close> and \<open>h* = h\<close> for h
+  proof (cases \<open>h = 0\<close>)
+    case True
+    show ?thesis 
+      apply (rule exI[of _ id_cblinfun]; rule exI[of _  id_cblinfun])
+      apply (rule exI[of _ 0]; rule exI[of _ 0])
+      by (simp add: True)
+  next
+    case False
+    define h' where \<open>h' = sgn h\<close>
+    from False have [simp]: \<open>h' \<in> M\<close> and [simp]: \<open>h'* = h'\<close> and \<open>norm h' = 1\<close>
+        using \<open>cstar_algebra M\<close>
+        by (auto simp: h'_def sgn_cblinfun_def complex_vector.subspace_scale norm_inverse that
+            cstar_algebra_def)
+    define u where \<open>u = h' + imaginary_unit *\<^sub>C sqrt_op (id_cblinfun - (h' o\<^sub>C\<^sub>L h'))\<close>
+    have [simp]: \<open>u \<in> M\<close>
+    proof -
+      have \<open>id_cblinfun - h' o\<^sub>C\<^sub>L h' \<in> M\<close>
+        using \<open>cstar_algebra M\<close>
+        by (simp add: complex_vector.subspace_diff cstar_algebra_def)
+      then have \<open>sqrt_op (id_cblinfun - h' o\<^sub>C\<^sub>L h') \<in> M\<close>
+        apply (rule sqrt_op_in_cstar_algebra[rotated -1])
+        using \<open>cstar_algebra M\<close> by auto
+      then show ?thesis
+        using \<open>cstar_algebra M\<close>
+        by (auto simp: u_def cstar_algebra_def intro!: complex_vector.subspace_add complex_vector.subspace_scale)
+    qed
+    then have [simp]: \<open>u* \<in> M\<close>
+      using \<open>cstar_algebra M\<close>
+      by (simp add: cstar_algebra_def)
+    have *: \<open>h' o\<^sub>C\<^sub>L h' \<le> id_cblinfun\<close>
+      sorry
+    have **: \<open>h' o\<^sub>C\<^sub>L sqrt_op (id_cblinfun - h' o\<^sub>C\<^sub>L h') = sqrt_op (id_cblinfun - h' o\<^sub>C\<^sub>L h') o\<^sub>C\<^sub>L h'\<close>
+      apply (rule sqrt_op_commute[symmetric])
+      by (auto simp: * cblinfun_compose_minus_right cblinfun_compose_minus_left cblinfun_compose_assoc)
+    have [simp]: \<open>unitary u\<close>
+      by (auto intro!: unitary_def[THEN iffD2] simp: * ** u_def cblinfun_compose_add_right
+          cblinfun_compose_add_left adj_plus cblinfun_compose_minus_left cblinfun_compose_minus_right
+          positive_hermitianI[symmetric] sqrt_op_pos scaleC_diff_right scaleC_add_right)
+    have [simp]: \<open>u + u* = h' + h'\<close>
+      by (simp add: * u_def adj_plus positive_hermitianI[symmetric] sqrt_op_pos)
+    show ?thesis
+      apply (rule exI[of _ u]; rule exI[of _ \<open>u*\<close>])
+      apply (rule exI[of _ \<open>of_real (norm h) / 2\<close>]; rule exI[of _ \<open>of_real (norm h) / 2\<close>])
+      by (auto simp flip: scaleC_add_right scaleC_2 simp: h'_def)
+  qed
+  obtain a1 a2 u1 u2 where \<open>u1 \<in> M\<close> and \<open>u2 \<in> M\<close> and \<open>unitary u1\<close> and \<open>unitary u2\<close> and decomp1: \<open>x + x* = a1 *\<^sub>C u1 + a2 *\<^sub>C u2\<close>
+    apply atomize_elim
+    apply (rule herm)
+    using \<open>cstar_algebra M\<close>
+    by (simp_all add: \<open>x \<in> M\<close> complex_vector.subspace_add adj_plus cstar_algebra_def)
+  obtain a3 a4 u3 u4 where \<open>u3 \<in> M\<close> and \<open>u4 \<in> M\<close> and \<open>unitary u3\<close> and \<open>unitary u4\<close> 
+    and decomp2: \<open>\<i> *\<^sub>C (x - x*) = a3 *\<^sub>C u3 + a4 *\<^sub>C u4\<close>
+    apply atomize_elim
+    apply (rule herm)
+    using \<open>cstar_algebra M\<close>
+    by (simp_all add: \<open>x \<in> M\<close> adj_minus complex_vector.subspace_diff complex_vector.subspace_scale cstar_algebra_def flip: scaleC_minus_right)
+  have \<open>x = (1/2) *\<^sub>C (x + x*) + (-\<i>/2) *\<^sub>C (\<i> *\<^sub>C (x - x*))\<close>
+    by (simp add: scaleC_add_right scaleC_diff_right flip: scaleC_add_left)
+  also have \<open>\<dots> = (a1 / 2) *\<^sub>C u1 + (a2 / 2) *\<^sub>C u2 + (- \<i> * a3 / 2) *\<^sub>C u3 + (- \<i> * a4 / 2) *\<^sub>C u4\<close>
+    apply (simp only: decomp1 decomp2)
+    by (simp add: scaleC_add_right scaleC_diff_right)
+  finally show ?thesis
+    using \<open>u1 \<in> M\<close> \<open>u2 \<in> M\<close> \<open>u3 \<in> M\<close> \<open>u4 \<in> M\<close>
+      \<open>unitary u1\<close> \<open>unitary u2\<close> \<open>unitary u3\<close> \<open>unitary u4\<close>
+    by blast
+qed
+
+(* lemma xxx:
+  \<comment> \<open>@{cite takesaki}, Proposition II.3.10\<close>
+  fixes M :: \<open>('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close> and e :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>von_neumann_algebra M\<close>
+  assumes \<open>isometry (e* )\<close>
+  assumes \<open>e* o\<^sub>C\<^sub>L e \<in> M\<close>
+  shows \<open>von_neumann_algebra (sandwich e ` M)\<close>
+    and \<open>von_neumann_algebra (sandwich e ` commutant M)\<close>
+    and \<open>commutant (sandwich e ` M) = sandwich e ` commutant M\<close>
+proof -
+  have \<open>von_neumann_algebra (sandwich e ` M)\<close>
+  proof (unfold von_neumann_algebra_def_sot, intro conjI ballI)
+    
+
+  by - *)
+
+(* lemma commutant_tensor_vn:
   \<comment> \<open>@{cite takesaki}, Theorem IV.5.9\<close>
   assumes \<open>von_neumann_algebra M\<close>
   assumes \<open>von_neumann_algebra N\<close>
   shows \<open>commutant (tensor_vn M N) = commutant M \<otimes>\<^sub>v\<^sub>N commutant N\<close>
 proof -
   write commutant (\<open>_''\<close> [120] 120)
-      \<comment> \<open>Notation \<^term>\<open>M '\<close> for \<^term>\<open>commutant M\<close>\<close>
+       \<open>Notation \<^term>\<open>M '\<close> for \<^term>\<open>commutant M\<close>\<close>
   write id_cblinfun (\<open>\<one>\<close>)
 
   have 1: \<open>x o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L x\<close> if \<open>x \<in> (M ' \<otimes>\<^sub>v\<^sub>N N ')'\<close> and \<open>y \<in> (M \<otimes>\<^sub>v\<^sub>N N)'\<close> for x y
-  proof (intro equal_ket cinner_ket_eqI)
-    fix i j
-(* TODO: in Takesaki, i=j, but not kets. Why is that sufficient? *)
-    define e where \<open>e = Proj (ccspan {m *\<^sub>V ket i})\<close>
-    show \<open>|i\<rangle> \<bullet>\<^sub>C ((x o\<^sub>C\<^sub>L y) *\<^sub>V |j\<rangle>) = |i\<rangle> \<bullet>\<^sub>C ((y o\<^sub>C\<^sub>L x) *\<^sub>V |j\<rangle>)\<close>
+  proof (intro cblinfun_cinner_tensor_eqI)
+    fix \<xi> :: \<open>'a ell2\<close> and \<eta> :: \<open>'b ell2\<close>
+    define e where \<open>e = Proj (ccspan ((\<lambda>m. m *\<^sub>V \<xi>) ` M))\<close>
+    define f where \<open>f = Proj (ccspan ((\<lambda>n. n *\<^sub>V \<eta>) ` N))\<close>
+    have \<open>e \<in> M '\<close> and \<open>e *\<^sub>S \<top> \<noteq> 0\<close>
+      if e_def: \<open>e = Proj (ccspan ((\<lambda>m. m *\<^sub>V \<xi>) ` M))\<close> and \<open>von_neumann_algebra M\<close>
+      for e M and \<xi> :: \<open>'x ell2\<close>
+    proof (rule commutant_memberI)
+      fix y assume \<open>y \<in> M\<close>
+      then have \<open>y* \<in> M\<close>
+        by (metis that(2) imageI von_neumann_algebra_adj_image)
+      have *: \<open>e o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L e = y o\<^sub>C\<^sub>L e\<close> if \<open>y \<in> M\<close> for y
+      proof -
+        have \<open>y *\<^sub>S e *\<^sub>S \<top> = y *\<^sub>S ccspan ((\<lambda>m. m *\<^sub>V \<xi>) ` M)\<close>
+          by (simp add: e_def)
+        also have \<open>\<dots> = ccspan ((\<lambda>x. y *\<^sub>V x *\<^sub>V \<xi>) ` M)\<close>
+          by (simp add: cblinfun_image_ccspan image_image)
+        also have \<open>\<dots> \<le> ccspan ((\<lambda>m. m *\<^sub>V \<xi>) ` M)\<close>
+          using von_neumann_algebra_compose[OF \<open>von_neumann_algebra M\<close> \<open>y \<in> M\<close>]
+          by (auto intro!: ccspan_mono simp: simp flip: cblinfun_apply_cblinfun_compose)
+        finally have \<open>e o\<^sub>C\<^sub>L (y o\<^sub>C\<^sub>L e) = y o\<^sub>C\<^sub>L e\<close>
+          apply (subst e_def)
+          by (auto simp: cblinfun_compose_image Proj_compose_cancelI)
+        then show ?thesis
+          by (simp add: cblinfun_compose_assoc)
+      qed
+      have \<open>e o\<^sub>C\<^sub>L y = (y* o\<^sub>C\<^sub>L e)*\<close>
+        by (simp add: e_def adj_Proj)
+      also have \<open>\<dots> = (e o\<^sub>C\<^sub>L y* o\<^sub>C\<^sub>L e)*\<close>
+        by (auto simp: * \<open>y* \<in> M\<close>)
+      also have \<open>\<dots> = e o\<^sub>C\<^sub>L y o\<^sub>C\<^sub>L e\<close>
+        by (simp add: e_def adj_Proj cblinfun_compose_assoc)
+      also have \<open>\<dots> = y o\<^sub>C\<^sub>L e\<close>
+        by (auto simp: * \<open>y \<in> M\<close>)
+      finally show \<open>e o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L e\<close>
+        by -
+    next
+      have \<open>\<xi> \<in> space_as_set (e *\<^sub>S \<top>)\<close>
+        by (auto intro!: ccspan_superset' image_eqI[where x=id_cblinfun] von_neumann_algebra_id 
+            simp: e_def \<open>von_neumann_algebra M\<close>)
+      moreover have \<open>\<xi> \<noteq> 0\<close>
+        sorry
+      ultimately show \<open>e *\<^sub>S \<top> \<noteq> 0\<close>
+        by auto
+    qed
+    from this[OF e_def assms(1)] and this[OF f_def assms(2)]
+    have eM': \<open>e \<in> M '\<close> and e0: \<open>e *\<^sub>S \<top> \<noteq> 0\<close> and fN': \<open>f \<in> N '\<close> and f0: \<open>f *\<^sub>S \<top> \<noteq> 0\<close>
+      by -
+    let ?goal = \<open>(\<xi> \<otimes>\<^sub>s \<eta>) \<bullet>\<^sub>C ((x o\<^sub>C\<^sub>L y) *\<^sub>V (\<xi> \<otimes>\<^sub>s \<eta>)) = (\<xi> \<otimes>\<^sub>s \<eta>) \<bullet>\<^sub>C ((y o\<^sub>C\<^sub>L x) *\<^sub>V (\<xi> \<otimes>\<^sub>s \<eta>))\<close>
+
+    from ccsubspace_as_whole_type[OF e0]
+    have \<open>\<forall>\<^sub>\<tau> 'e::type = some_chilbert_basis_of (e *\<^sub>S \<top>). ?goal\<close>
+    proof (rule with_type_mp)
+      assume \<open>\<exists>Ue :: 'e ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2. isometry Ue \<and> Ue *\<^sub>S \<top> = e *\<^sub>S \<top>\<close>
+      then obtain Ue :: \<open>'e ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> where \<open>isometry Ue\<close> and \<open>Ue *\<^sub>S \<top> = e *\<^sub>S \<top>\<close>
+        by auto
+      from ccsubspace_as_whole_type[OF f0]
+      have \<open>\<forall>\<^sub>\<tau> 'f::type = some_chilbert_basis_of (f *\<^sub>S \<top>). ?goal\<close>
+      proof (rule with_type_mp)
+        assume \<open>\<exists>Uf :: 'f ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. isometry Uf \<and> Uf *\<^sub>S \<top> = f *\<^sub>S \<top>\<close>
+        then obtain Uf :: \<open>'f ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where \<open>isometry Uf\<close> and \<open>Uf *\<^sub>S \<top> = f *\<^sub>S \<top>\<close>
+          by auto
+        show ?goal
+          by -
+      qed
+      from this[cancel_with_type]
+      show ?goal
+        by -
+    qed
+    from this[cancel_with_type]
+    show ?goal
       by -
   qed
   have 2: \<open>M \<otimes>\<^sub>v\<^sub>N N \<subseteq> (M ' \<otimes>\<^sub>v\<^sub>N N ')'\<close>
@@ -613,30 +817,120 @@ proof -
   qed
   from 1 2 3 show ?thesis
     by (smt (verit) Un_Int_assoc_eq Un_absorb assms(1) assms(2) basic_trans_rules(24) commutant_memberI inf.absorb_iff1 subset_Un_eq subset_iff sup.absorb_iff1 von_neumann_algebra_commutant von_neumann_algebra_commutant von_neumann_algebra_def von_neumann_algebra_tensor_vn)
-qed
+qed *)
 
-lemma tensor_vn_UNIV[simp]: \<open>UNIV \<otimes>\<^sub>v\<^sub>N UNIV = UNIV\<close>
+lemma commutant_cspan: \<open>commutant (cspan A) = commutant A\<close>
+  by (meson basic_trans_rules(24) commutant_antimono complex_vector.span_superset cspan_in_double_commutant dual_order.trans)
+
+lemma cspan_compose_closed:
+  assumes \<open>\<And>a b. a \<in> A \<Longrightarrow> b \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L b \<in> A\<close>
+  assumes \<open>a \<in> cspan A\<close> and \<open>b \<in> cspan A\<close>
+  shows \<open>a o\<^sub>C\<^sub>L b \<in> cspan A\<close>
 proof -
-  have \<open>UNIV \<otimes>\<^sub>v\<^sub>N UNIV = commutant (commutant (UNIV \<otimes>\<^sub>v\<^sub>N UNIV))\<close>
-    by (metis von_neumann_algebra_UNIV von_neumann_algebra_def von_neumann_algebra_tensor_vn)
-  also have \<open>\<dots> = commutant (commutant UNIV \<otimes>\<^sub>v\<^sub>N commutant UNIV)\<close>
-    by (simp add: commutant_tensor_vn von_neumann_algebra_UNIV)
-  also have \<open>\<dots> = commutant (one_algebra \<otimes>\<^sub>v\<^sub>N one_algebra)\<close>
-    by (simp add: commutant_UNIV)
-  also have \<open>\<dots> = commutant one_algebra\<close>
-    by simp
-  also have \<open>\<dots> = UNIV\<close>
-    by (simp add: commutant_one_algebra)
+  from \<open>a \<in> cspan A\<close>
+  obtain F f where \<open>finite F\<close> and \<open>F \<subseteq> A\<close> and a_def: \<open>a = (\<Sum>x\<in>F. f x *\<^sub>C x)\<close>
+    by (smt (verit, del_insts) complex_vector.span_explicit mem_Collect_eq)
+  from \<open>b \<in> cspan A\<close>
+  obtain G g where \<open>finite G\<close> and \<open>G \<subseteq> A\<close> and b_def: \<open>b = (\<Sum>x\<in>G. g x *\<^sub>C x)\<close>
+    by (smt (verit, del_insts) complex_vector.span_explicit mem_Collect_eq)
+  have \<open>a o\<^sub>C\<^sub>L b = (\<Sum>(x,y)\<in>F\<times>G. (f x *\<^sub>C x) o\<^sub>C\<^sub>L (g y *\<^sub>C y))\<close>
+    apply (simp add: a_def b_def cblinfun_compose_sum_left)
+    by (auto intro!: sum.cong simp add: cblinfun_compose_sum_right scaleC_sum_right sum.cartesian_product case_prod_beta)
+  also have \<open>\<dots> = (\<Sum>(x,y)\<in>F\<times>G. (f x * g y) *\<^sub>C (x o\<^sub>C\<^sub>L y))\<close>
+    by (metis (no_types, opaque_lifting) cblinfun_compose_scaleC_left cblinfun_compose_scaleC_right scaleC_scaleC)
+  also have \<open>\<dots> \<in> cspan A\<close>
+    using assms \<open>G \<subseteq> A\<close> \<open>F \<subseteq> A\<close>
+    apply (auto intro!: complex_vector.span_sum complex_vector.span_scale 
+        simp: complex_vector.span_clauses)
+    using complex_vector.span_clauses(1) by blast
   finally show ?thesis
     by -
 qed
 
+lemma cspan_adj_closed:
+  assumes \<open>\<And>a. a \<in> A \<Longrightarrow> a* \<in> A\<close>
+  assumes \<open>a \<in> cspan A\<close>
+  shows \<open>a* \<in> cspan A\<close>
+proof -
+  from \<open>a \<in> cspan A\<close>
+  obtain F f where \<open>finite F\<close> and \<open>F \<subseteq> A\<close> and \<open>a = (\<Sum>x\<in>F. f x *\<^sub>C x)\<close>
+    by (smt (verit, del_insts) complex_vector.span_explicit mem_Collect_eq)
+  then have \<open>a* = (\<Sum>x\<in>F. cnj (f x) *\<^sub>C x*)\<close>
+    by (auto simp: sum_adj)
+  also have \<open>\<dots> \<in> cspan A\<close>
+    using assms \<open>F \<subseteq> A\<close>
+    by (auto intro!: complex_vector.span_sum complex_vector.span_scale simp: complex_vector.span_clauses)
+  finally show ?thesis
+    by -
+qed
+
+lemma double_commutant_theorem_span:
+  fixes A :: \<open>('a::{chilbert_space} \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close>
+  assumes mult: \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
+  assumes id: \<open>id_cblinfun \<in> A\<close>
+  assumes adj: \<open>\<And>a. a \<in> A \<Longrightarrow> a* \<in> A\<close>
+  shows \<open>commutant (commutant A) = cstrong_operator_topology closure_of (cspan A)\<close>
+proof -
+  have \<open>commutant (commutant A) = commutant (commutant (cspan A))\<close>
+    by (simp add: commutant_cspan)
+  also have \<open>\<dots> = cstrong_operator_topology closure_of (cspan A)\<close>
+    apply (rule double_commutant_theorem)
+    using assms
+    apply (auto simp: cspan_compose_closed cspan_adj_closed)
+    using complex_vector.span_clauses(1) by blast
+  finally show ?thesis
+    by -
+qed
+
+lemma double_commutant_grows': \<open>x \<in> X \<Longrightarrow> x \<in> commutant (commutant X)\<close>
+  using double_commutant_grows by blast
+
+lemma tensor_vn_UNIV[simp]: \<open>UNIV \<otimes>\<^sub>v\<^sub>N UNIV = (UNIV :: (('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _) set)\<close>
+proof -
+  have \<open>(UNIV \<otimes>\<^sub>v\<^sub>N UNIV :: (('a\<times>'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L _) set) = 
+        commutant (commutant (range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) \<union> range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)))\<close> (is \<open>_ = ?rhs\<close>)
+    by (simp add: tensor_vn_def commutant_cspan)
+  also have \<open>\<dots> \<supseteq> commutant (commutant {a \<otimes>\<^sub>o b |a b. True})\<close> (is \<open>_ \<supseteq> \<dots>\<close>)
+  proof (rule double_commutant_in_vn_algI)
+    show vn: \<open>von_neumann_algebra ?rhs\<close>
+      by (metis calculation von_neumann_algebra_UNIV von_neumann_algebra_tensor_vn)
+    show \<open>{a \<otimes>\<^sub>o b |(a :: 'a ell2 \<Rightarrow>\<^sub>C\<^sub>L _) (b :: 'b ell2 \<Rightarrow>\<^sub>C\<^sub>L _). True} \<subseteq> ?rhs\<close>
+    proof (rule subsetI)
+      fix x :: \<open>('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2\<close>
+      assume \<open>x \<in> {a \<otimes>\<^sub>o b |a b. True}\<close>
+      then obtain a b where \<open>x = a \<otimes>\<^sub>o b\<close>
+        by auto
+      then have \<open>x = (a \<otimes>\<^sub>o id_cblinfun) o\<^sub>C\<^sub>L (id_cblinfun \<otimes>\<^sub>o b)\<close>
+        by (simp add: comp_tensor_op)
+      also have \<open>\<dots> \<in> ?rhs\<close>
+      proof -
+        have \<open>a \<otimes>\<^sub>o id_cblinfun \<in> ?rhs\<close>
+          by (auto intro!: double_commutant_grows')
+        moreover have \<open>id_cblinfun \<otimes>\<^sub>o b \<in> ?rhs\<close>
+          by (auto intro!: double_commutant_grows')
+        ultimately show ?thesis
+          using commutant_mult by blast
+      qed
+      finally show \<open>x \<in> ?rhs\<close>
+        by -
+    qed
+  qed
+  also have \<open>\<dots> = cstrong_operator_topology closure_of (cspan {a \<otimes>\<^sub>o b |a b. True})\<close>
+    apply (rule double_commutant_theorem_span)
+      apply (auto simp: comp_tensor_op tensor_op_adjoint)
+    using tensor_id[symmetric] by blast+
+  also have \<open>\<dots> = UNIV\<close>
+    using tensor_op_dense by blast
+  finally show ?thesis
+    by auto
+qed
 
 lemma Rep_QREGISTER_pair_fst_snd:
   \<open>Rep_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
       = tensor_vn (Rep_QREGISTER F) (Rep_QREGISTER G)\<close>
   by (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq apply_qregister_fst apply_qregister_snd tensor_vn_def)
 
+(* TODO: Just add an assumption and a comment that the assumption is not strictly necessary by Takesaki? *)
 lemma y2:
   \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
     = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>

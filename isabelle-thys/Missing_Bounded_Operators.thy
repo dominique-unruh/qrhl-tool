@@ -1325,7 +1325,7 @@ lemma sandwich_arg_compose:
   apply (simp add: sandwich_apply)
   by (metis (no_types, lifting) Misc.lift_cblinfun_comp(2) assms cblinfun_compose_id_right isometryD)
 
-lemma double_commutant_theorem_aux2: (* TODO: generalize to non-not_singleton *)
+lemma double_commutant_theorem_aux2:
   \<comment> \<open>Basically the double commutant theorem, except that we restricted to spaces of typeclass \<^class>\<open>not_singleton\<close>\<close>
   \<comment> \<open>@{cite conway13functional}, Proposition IX.6.4\<close>
   fixes A :: \<open>('a::{chilbert_space,not_singleton} \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close>
