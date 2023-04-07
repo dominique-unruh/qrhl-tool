@@ -2,7 +2,7 @@ name: test-qrhl-tool
 on:
   push:
     branches-ignore:
-#      - topic-registers
+      - topic-registers
 jobs:
     test-qrhl:
       strategy:
