@@ -589,12 +589,15 @@ proof (unfold less_eq_QREGISTER.rep_eq)
     by -
 qed
 
-lift_definition CREGISTER_pair :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is
+instantiation CREGISTER :: (type) sup begin
+lift_definition sup_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is
   \<open>\<lambda>\<FF> \<GG> :: 'a cupdate set. map_commutant (map_commutant (\<FF> \<union> \<GG>))\<close>
   by (simp add: valid_cregister_range_def)
+instance..
+end
 
-(* TODO: define as \<squnion> *)
-lift_definition QREGISTER_pair :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is
+instantiation QREGISTER :: (type) sup begin
+lift_definition sup_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is
   \<open>\<lambda>\<FF> \<GG> :: 'a qupdate set. commutant (commutant (\<FF> \<union> \<GG>))\<close>
 proof -
   fix \<FF> \<GG> :: \<open>'a qupdate set\<close>
@@ -611,6 +614,11 @@ proof -
   then show \<open>commutant (commutant (\<FF> \<union> \<GG>)) \<in> Collect valid_qregister_range\<close>
     by (auto intro!: valid_qregister_rangeI)
 qed
+instance..
+end
+
+abbreviation (* LEGACY *) (input) \<open>CREGISTER_pair \<equiv> (sup :: 'a CREGISTER \<Rightarrow> _ \<Rightarrow> _)\<close>
+abbreviation (* LEGACY *) (input) \<open>QREGISTER_pair \<equiv> (sup :: 'a QREGISTER \<Rightarrow> _ \<Rightarrow> _)\<close>
 
 definition ccommuting_raw :: \<open>('a cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> ('b cupdate \<Rightarrow> 'c cupdate) \<Rightarrow> bool\<close> where
   \<open>ccommuting_raw F G \<longleftrightarrow> (\<forall>a b. F a \<circ>\<^sub>m G b = G b \<circ>\<^sub>m F a)\<close>
@@ -1014,10 +1022,10 @@ proof (rule Rep_CREGISTER_inject[THEN iffD1], rule antisym)
       proof -
         have Fa: \<open>apply_cregister F a \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
           using double_map_commutant_grows
-          by (force simp: CREGISTER_pair.rep_eq CREGISTER_of.rep_eq \<FF>_def)
+          by (force simp: sup_CREGISTER.rep_eq CREGISTER_of.rep_eq \<FF>_def)
         have Gb: \<open>apply_cregister G b \<in> Rep_CREGISTER (CREGISTER_pair \<FF> \<GG>)\<close>
           using double_map_commutant_grows
-          by (force simp: CREGISTER_pair.rep_eq CREGISTER_of.rep_eq \<GG>_def)
+          by (force simp: sup_CREGISTER.rep_eq CREGISTER_of.rep_eq \<GG>_def)
         from Fa Gb show ?thesis
           by (rule CREGISTER_mult)
       qed
@@ -1033,7 +1041,7 @@ proof (rule Rep_CREGISTER_inject[THEN iffD1], rule antisym)
         by (simp add: apply_cregister_pair FG_def image_image case_prod_beta)
       from 1 2 show ?thesis
         using Rep_CREGISTER[of \<open>CREGISTER_pair \<FF> \<GG>\<close>]
-        by (simp add: CREGISTER_pair.rep_eq map_commutant_Sup_closed)
+        by (simp add: sup_CREGISTER.rep_eq map_commutant_Sup_closed)
     qed
     finally show \<open>c \<in> \<dots>\<close>
       by -
@@ -1063,7 +1071,7 @@ proof (rule Rep_CREGISTER_inject[THEN iffD1], rule antisym)
       by auto
     then have \<open>Rep_CREGISTER (CREGISTER_pair (CREGISTER_of F) (CREGISTER_of G))
              \<subseteq> map_commutant (map_commutant (Rep_CREGISTER (CREGISTER_of (cregister_pair F G))))\<close>
-      apply (simp add: CREGISTER_pair.rep_eq)
+      apply (simp add: sup_CREGISTER.rep_eq)
       apply (intro map_commutant_antimono)
       by simp
     also have \<open>\<dots> = Rep_CREGISTER (CREGISTER_of (cregister_pair F G))\<close>
@@ -1097,7 +1105,7 @@ proof -
     also have \<open>\<dots> = Rep_QREGISTER (QREGISTER_of (qregister_pair F G))\<close>
       using Rep_QREGISTER by (auto simp: valid_qregister_range_def von_neumann_factor_def von_neumann_algebra_def)
     finally show ?thesis
-      by (simp add: QREGISTER_pair.rep_eq FG'_def)
+      by (simp add: sup_QREGISTER.rep_eq FG'_def)
   qed
   have 2: \<open>Rep_QREGISTER (QREGISTER_of (qregister_pair F G)) \<subseteq> Rep_QREGISTER (QREGISTER_pair (QREGISTER_of F) (QREGISTER_of G))\<close>
   proof -
@@ -1136,7 +1144,7 @@ proof -
       apply (auto simp: commutant_def)
       by (metis (no_types, lifting) Un_iff lift_cblinfun_comp(2))
     also have \<open>\<dots> = Rep_QREGISTER (QREGISTER_pair (QREGISTER_of F) (QREGISTER_of G))\<close>
-      by (simp add: QREGISTER_pair.rep_eq flip: FG'_def)
+      by (simp add: sup_QREGISTER.rep_eq flip: FG'_def)
     finally show ?thesis
       by -
   qed
@@ -1698,11 +1706,20 @@ lemma qregister_chain_apply_space_simp[simp]:
   shows \<open>apply_qregister_space (qregister_chain F G) a = apply_qregister_space F (apply_qregister_space G a)\<close>
   by (simp add: qregister_chain_apply_space)
 
-lift_definition CCOMPLEMENT :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is map_commutant
+instantiation CREGISTER :: (type) uminus begin
+lift_definition uminus_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is map_commutant
   by (simp add: valid_cregister_range_def)
-(* TODO define as uminus *)
-lift_definition QCOMPLEMENT :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is commutant
+instance..
+end
+
+instantiation QREGISTER :: (type) uminus begin
+lift_definition uminus_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is commutant
   by (auto simp add: valid_qregister_range_def von_neumann_algebra_commutant)
+instance..
+end
+
+abbreviation (* LEGACY *) (input) \<open>QCOMPLEMENT \<equiv> (uminus :: 'a QREGISTER \<Rightarrow> _)\<close>
+abbreviation (* LEGACY *) (input) \<open>CCOMPLEMENT \<equiv> (uminus :: 'a CREGISTER \<Rightarrow> _)\<close>
 
 lemma cregister_pair_chain_swap[simp]:
   "cregister_chain (cregister_pair A B) cswap = (cregister_pair B A)"
@@ -2090,7 +2107,7 @@ proof -
     by -
   then show ?thesis
     using that 
-    by (simp add: qregister_le_def QREGISTER_of_qregister_pair QREGISTER_pair.rep_eq 
+    by (simp add: qregister_le_def QREGISTER_of_qregister_pair sup_QREGISTER.rep_eq 
         less_eq_QREGISTER.rep_eq flip: FGH'_def)
 qed
 lemma qregister_le_pair_rightI1: \<open>qregister_le F (qregister_pair G H)\<close> if \<open>qcompatible G H\<close> \<open>qregister_le F G\<close>
@@ -2107,13 +2124,13 @@ proof -
     by -
   then show ?thesis
     using that 
-    by (simp add: qregister_le_def QREGISTER_of_qregister_pair QREGISTER_pair.rep_eq 
+    by (simp add: qregister_le_def QREGISTER_of_qregister_pair sup_QREGISTER.rep_eq 
         less_eq_QREGISTER.rep_eq flip: FGH'_def)
 qed
 lemma qregister_le_pair_rightI2: \<open>qregister_le F (qregister_pair G H)\<close> if \<open>qcompatible G H\<close> \<open>qregister_le F H\<close>
   using qregister_le_pair_rightI1[OF that(1)[THEN qcompatible_sym] that(2)]
   by (auto simp add: qregister_le_def qcompatible_sym QREGISTER_of_qregister_pair
-      less_eq_QREGISTER.rep_eq QREGISTER_pair.rep_eq Un_commute)
+      less_eq_QREGISTER.rep_eq sup_QREGISTER.rep_eq Un_commute)
 lemma qregister_le_refl[iff]: \<open>qregister F \<Longrightarrow> qregister_le F F\<close> (* TODO: could replace this by a simp-rule *)
   unfolding qregister_le_def by simp
 lemma qregister_le_iso: \<open>qregister F \<Longrightarrow> iso_qregister G \<Longrightarrow> qregister_le F G\<close>

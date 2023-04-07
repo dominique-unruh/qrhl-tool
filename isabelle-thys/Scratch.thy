@@ -9,6 +9,72 @@ no_notation eq_closure_of ("closure'_of\<index>")
 
 ML "open Prog_Variables"
 
+
+lemma QCOMPLEMENT_twice: \<open>QCOMPLEMENT (QCOMPLEMENT F) = F\<close>
+  apply (rule Rep_QREGISTER_inject[THEN iffD1])
+  using Rep_QREGISTER
+  by (auto simp: uminus_QREGISTER.rep_eq valid_qregister_range_def von_neumann_algebra_def)
+
+lemma QCOMPLEMENT_antimono: \<open>QCOMPLEMENT F \<ge> QCOMPLEMENT G\<close> if \<open>F \<le> G\<close>
+  using that apply transfer
+  by (metis commutant_antimono)
+
+lemma QREGISTER_pair_valid_qregister_range_hull:
+  \<open>Rep_QREGISTER (QREGISTER_pair F G) = valid_qregister_range hull (Rep_QREGISTER F \<union> Rep_QREGISTER G)\<close>
+  apply (simp add: sup_QREGISTER.rep_eq)
+  apply (subst double_commutant_hull')
+  using Rep_QREGISTER unfolding valid_qregister_range_def von_neumann_algebra_def by auto
+
+(* TODO: also for CREGISTER *)
+instantiation QREGISTER :: (type) semilattice_sup begin
+instance
+proof intro_classes
+  fix x y z :: \<open>'a QREGISTER\<close>
+  show \<open>x \<le> x \<squnion> y\<close>
+    apply transfer
+    by (meson Un_subset_iff double_commutant_grows)
+  show \<open>y \<le> x \<squnion> y\<close>
+    apply transfer
+    by (meson Un_subset_iff double_commutant_grows)
+  show \<open>y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x\<close>
+    apply transfer
+    apply auto
+    by (meson double_commutant_in_vn_algI le_sup_iff subsetD valid_qregister_range_def)
+qed
+end
+
+instantiation QREGISTER :: (type) lattice begin
+(* TODO: If we would change valid_qregister_range to mean von Neumann factor, we would even get orthocomplemented_lattice.
+   But we don't have a proof that the intersection of two factors is a factor. *)
+lift_definition inf_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is Set.inter
+  apply simp
+  by (smt (verit, best) double_commutant_in_vn_algI inf_le1 inf_le2 le_inf_iff mem_simps(4) valid_qregister_rangeI valid_qregister_range_def von_neumann_algebra_def)
+instance
+proof intro_classes
+  fix x y z :: \<open>'a QREGISTER\<close>
+  show \<open>x \<sqinter> y \<le> x\<close>
+    apply transfer by simp
+  show \<open>x \<sqinter> y \<le> y\<close>
+    apply transfer by simp
+  show \<open>x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> y \<sqinter> z\<close>
+    apply transfer by simp
+qed
+end
+
+instantiation QREGISTER :: (type) bounded_lattice begin
+instance
+proof intro_classes
+  fix x y :: \<open>'a QREGISTER\<close>
+  show \<open>\<bottom> \<le> x\<close>
+    apply transfer
+    by (metis commutant_UNIV commutant_antimono mem_Collect_eq top.extremum valid_qregister_range_def von_neumann_algebra_def)
+  show \<open>x \<le> \<top>\<close>
+    apply transfer
+    by simp
+qed
+end
+
+
 abbreviation \<open>upfst x \<equiv> apfst (\<lambda>_. x)\<close>
 abbreviation \<open>upsnd x \<equiv> apsnd (\<lambda>_. x)\<close>
 
@@ -394,13 +460,7 @@ lemma QREGISTER_of_qSnd: \<open>QREGISTER_of qSnd = QREGISTER_snd\<close>
 
 lemma QREGISTER_pair_sym: \<open>QREGISTER_pair F G = QREGISTER_pair G F\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QREGISTER_pair.rep_eq Un_ac(3))
-
-lemma QREGISTER_pair_valid_qregister_range_hull:
-  \<open>Rep_QREGISTER (QREGISTER_pair F G) = valid_qregister_range hull (Rep_QREGISTER F \<union> Rep_QREGISTER G)\<close>
-  apply (simp add: QREGISTER_pair.rep_eq)
-  apply (subst double_commutant_hull')
-  using Rep_QREGISTER unfolding valid_qregister_range_def von_neumann_algebra_def by auto
+  by (simp add: sup_QREGISTER.rep_eq Un_ac(3))
 
 lemma Rep_QREGISTER_Un_empty1[simp]: \<open>Rep_QREGISTER X \<union> one_algebra = Rep_QREGISTER X\<close>
   using QREGISTER_unit_smallest bot_QREGISTER.rep_eq less_eq_QREGISTER.rep_eq by blast
@@ -412,12 +472,10 @@ lemma QREGISTER_chain_non_qregister[simp]: \<open>QREGISTER_chain non_qregister 
   by (simp add: QREGISTER_chain.rep_eq bot_QREGISTER.rep_eq)
 
 lemma QREGISTER_pair_bot_left[simp]: \<open>QREGISTER_pair \<bottom> F = F\<close>
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  apply (simp add: QREGISTER_pair.rep_eq bot_QREGISTER.rep_eq)
-  by (metis QREGISTER_pair.rep_eq QREGISTER_pair_valid_qregister_range_hull Rep_QREGISTER Un_absorb hull_same mem_Collect_eq)
+  by simp
 
 lemma QREGISTER_pair_bot_right[simp]: \<open>QREGISTER_pair F \<bottom> = F\<close>
-  by (metis QREGISTER_pair_bot_left QREGISTER_pair_sym)
+  by simp
 
 lemma register_double_commutant_commute:
   assumes \<open>qregister F\<close>
@@ -454,7 +512,7 @@ proof (cases \<open>qregister F\<close>)
   case True
   show ?thesis
     apply (rule_tac Rep_QREGISTER_inject[THEN iffD1])
-    by (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq
+    by (simp add: sup_QREGISTER.rep_eq QREGISTER_chain.rep_eq
         register_double_commutant_commute
         True complex_vector.linear_span_image
         flip: image_Un)
@@ -486,33 +544,21 @@ lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGIST
 lemma one_algebra_subset_valid_range: \<open>valid_qregister_range A \<Longrightarrow> one_algebra \<subseteq> A\<close>
   by (auto simp: valid_qregister_range_def_sot one_algebra_def complex_vector.subspace_scale)
 
-instance QREGISTER :: (type) order_bot
-  apply intro_classes
-  apply transfer
-  using one_algebra_subset_valid_range by simp
+instance QREGISTER :: (type) order_bot..
 
-instance QREGISTER :: (type) order_top
-  apply intro_classes
-  apply transfer
-  by simp
+instance QREGISTER :: (type) order_top..
 
 lemma QREGISTER_pair_unit_left: \<open>QREGISTER_pair QREGISTER_unit F = F\<close>
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  using one_algebra_subset_valid_range[of \<open>Rep_QREGISTER F\<close>] QREGISTER.Rep_QREGISTER[of F]
-  by (simp add: QREGISTER_pair.rep_eq bot_QREGISTER.rep_eq Un_absorb1 valid_qregister_range_def von_neumann_algebra_def)
+  by simp
 
 lemma QREGISTER_pair_unit_right: \<open>QREGISTER_pair F QREGISTER_unit = F\<close>
-  apply (subst QREGISTER_pair_sym)
-  by (rule QREGISTER_pair_unit_left)
+  by simp
 
 lemma QREGISTER_pair_all_left: \<open>QREGISTER_pair QREGISTER_all F = QREGISTER_all\<close>
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QREGISTER_pair.rep_eq top_QREGISTER.rep_eq
-      commutant_one_algebra commutant_UNIV)
+  by simp
 
 lemma QREGISTER_pair_all_right: \<open>QREGISTER_pair F QREGISTER_all = QREGISTER_all\<close>
-  apply (subst QREGISTER_pair_sym)
-  by (rule QREGISTER_pair_all_left)
+  by simp
 
 lemma QREGISTER_chain_id_left: \<open>QREGISTER_chain qregister_id F = F\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
@@ -614,13 +660,13 @@ lemma z1:
   shows \<open>qcomplements F G\<close>
   using F apply (rule qcomplements_via_rangeI)
   using assms(2)[THEN Rep_QREGISTER_inject[THEN iffD2]]
-  by (simp add: QCOMPLEMENT.rep_eq QREGISTER_of.rep_eq F G)
+  by (simp add: uminus_QREGISTER.rep_eq QREGISTER_of.rep_eq F G)
 
 
 lemma Rep_QREGISTER_pair_fst_snd:
   \<open>Rep_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
       = tensor_vn (Rep_QREGISTER F) (Rep_QREGISTER G)\<close>
-  by (simp add: QREGISTER_pair.rep_eq QREGISTER_chain.rep_eq apply_qregister_fst apply_qregister_snd tensor_vn_def)
+  by (simp add: sup_QREGISTER.rep_eq QREGISTER_chain.rep_eq apply_qregister_fst apply_qregister_snd tensor_vn_def)
 
 lift_definition ACTUAL_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> bool\<close> is \<open>actual_qregister_range\<close>.
 
@@ -742,7 +788,7 @@ qed
 lemma QCOMPLEMENT_QREGISTER_of_eqI:
   assumes \<open>qcomplements F G\<close>
   shows \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
-  by (metis QCOMPLEMENT.rep_eq QREGISTER_of.rep_eq Rep_QREGISTER_inverse assms iso_qregister_def qcompatible_QQcompatible qcomplements.rep_eq qcomplements_def' register_range_complement_commutant)
+  by (metis uminus_QREGISTER.rep_eq QREGISTER_of.rep_eq Rep_QREGISTER_inverse assms iso_qregister_def qcompatible_QQcompatible qcomplements.rep_eq qcomplements_def' register_range_complement_commutant)
 
 lemma ACTUAL_QREGISTER_complement: \<open>ACTUAL_QREGISTER (QCOMPLEMENT \<FF>)\<close> if \<open>ACTUAL_QREGISTER \<FF>\<close>
 proof -
@@ -781,7 +827,7 @@ qed
 
 
 lemma ACTUAL_QREGISTER_complement_iff: \<open>ACTUAL_QREGISTER (QCOMPLEMENT \<FF>) \<longleftrightarrow> ACTUAL_QREGISTER \<FF>\<close>
-  by (metis ACTUAL_QREGISTER_complement QCOMPLEMENT.rep_eq Rep_QREGISTER Rep_QREGISTER_inverse mem_Collect_eq valid_qregister_range_def von_neumann_algebra_def)
+  by (metis ACTUAL_QREGISTER_complement uminus_QREGISTER.rep_eq Rep_QREGISTER Rep_QREGISTER_inverse mem_Collect_eq valid_qregister_range_def von_neumann_algebra_def)
 
 lift_definition equivalent_qregisters :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is equivalent_registers.
 
@@ -885,7 +931,7 @@ lemma y2:
     = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>
 (* 
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  apply (simp add: QCOMPLEMENT.rep_eq Rep_QREGISTER_pair_fst_snd)
+  apply (simp add: uminus_QREGISTER.rep_eq Rep_QREGISTER_pair_fst_snd)
   apply (subst commutant_tensor_vn)
   using Rep_QREGISTER Rep_QREGISTER
   by (force simp add: valid_qregister_range_def)+
@@ -1025,12 +1071,12 @@ lemma QREGISTER_chain_snd_top[simp]: \<open>QREGISTER_chain qSnd \<top> = QREGIS
 
 lemma QCOMPLEMENT_top[simp]: \<open>QCOMPLEMENT \<top> = \<bottom>\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QCOMPLEMENT.rep_eq top_QREGISTER.rep_eq bot_QREGISTER.rep_eq
+  by (simp add: uminus_QREGISTER.rep_eq top_QREGISTER.rep_eq bot_QREGISTER.rep_eq
       commutant_UNIV one_algebra_def)
 
 lemma QCOMPLEMENT_bot[simp]: \<open>QCOMPLEMENT \<bottom> = \<top>\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QCOMPLEMENT.rep_eq top_QREGISTER.rep_eq bot_QREGISTER.rep_eq
+  by (simp add: uminus_QREGISTER.rep_eq top_QREGISTER.rep_eq bot_QREGISTER.rep_eq
       commutant_one_algebra)
 
 lemma y1:
@@ -1049,21 +1095,28 @@ lemma y3:
 
 lemma QCOMPLEMENT_fst: \<open>QCOMPLEMENT QREGISTER_fst = QREGISTER_snd\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QCOMPLEMENT.rep_eq QREGISTER_snd.rep_eq QREGISTER_fst.rep_eq commutant_tensor1)
+  by (simp add: uminus_QREGISTER.rep_eq QREGISTER_snd.rep_eq QREGISTER_fst.rep_eq commutant_tensor1)
 
 lemma QCOMPLEMENT_snd: \<open>QCOMPLEMENT QREGISTER_snd = QREGISTER_fst\<close>
   apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QCOMPLEMENT.rep_eq QREGISTER_snd.rep_eq QREGISTER_fst.rep_eq commutant_tensor1')
+  by (simp add: uminus_QREGISTER.rep_eq QREGISTER_snd.rep_eq QREGISTER_fst.rep_eq commutant_tensor1')
 
-lemma QCOMPLEMENT_twice: \<open>QCOMPLEMENT (QCOMPLEMENT F) = F\<close>
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  using Rep_QREGISTER
-  by (auto simp: QCOMPLEMENT.rep_eq valid_qregister_range_def von_neumann_algebra_def)
+lemma QREGISTER_of_non_qregister[simp]: \<open>QREGISTER_of non_qregister = \<bottom>\<close>
+  by (simp add: QREGISTER_of.abs_eq bot_QREGISTER_def)
 
 (* TODO: needs assumptions? *)
 lemma y4: \<open>QCOMPLEMENT (QREGISTER_chain F G)
         = QREGISTER_pair (QCOMPLEMENT (QREGISTER_of F)) (QREGISTER_chain F (QCOMPLEMENT G))\<close>
-  sorry
+proof (cases \<open>qregister F\<close>)
+  case True
+  then show ?thesis sorry
+next
+  case False
+  then have \<open>F = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis
+    by simp
+qed
 
 (*
 ML \<open>
@@ -1742,10 +1795,6 @@ complement_of_index_register \<^context> \<^cterm>\<open>\<lbrakk>\<lbrakk>#3\<r
 
 definition \<open>equivalent_qregisters' F G \<longleftrightarrow> equivalent_qregisters F G \<or> (F = non_qregister \<and> G = non_qregister)\<close>
 
-lemma QREGISTER_of_non_qregister: \<open>QREGISTER_of non_qregister = QREGISTER_unit\<close>
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  by (simp add: QREGISTER_of.rep_eq bot_QREGISTER.rep_eq)
-
 definition QREGISTER_of' where \<open>QREGISTER_of' F = (if qregister F then Some (QREGISTER_of F) else None)\<close>
 
 lemma x1:
@@ -1978,57 +2027,6 @@ add:
   (* apply prepare_for_code *)
    apply eval 
   by -
-
-ML\<open>open QRHL_Operations\<close>
-
-
-no_notation m_inv ("inv\<index> _" [81] 80)
-unbundle no_vec_syntax
-unbundle jnf_notation
-hide_const (open) Finite_Cartesian_Product.mat
-hide_const (open) Finite_Cartesian_Product.vec
-
-derive (eq) ceq bit
-derive (compare) ccompare bit
-derive (dlist) set_impl bit
-
-
-lemma
-  fixes a b c
-  assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
-  shows True
-proof -
-  define CNOT' where \<open>CNOT' = apply_qregister \<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> CNOT\<close>
-
-  have \<open>apply_qregister \<lbrakk>a,b\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = 
-        apply_qregister \<lbrakk>a,c\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,b\<rbrakk> CNOT\<close>
-    apply prepare_for_code
-    by normalization
-
-  have \<open>CNOT' *\<^sub>V ket (1,1,1) = (ket (1,1,0) :: (bit*bit*bit) ell2)\<close>
-    unfolding CNOT'_def
-    apply prepare_for_code
-    by normalization
-
-
-  oops
-
-
-
-ML \<open>open Prog_Variables\<close>
-
-(* TEST *)
-lemma
-  fixes a b c
-  assumes t[variable]: \<open>qregister (\<lbrakk>a,b,c\<rbrakk> :: (bit*bit*bit) qvariable)\<close>
-  shows True
-proof -
-  define CNOT' where \<open>CNOT' = apply_qregister \<lbrakk>a,c \<mapsto> a,b,c\<rbrakk> CNOT\<close>
-  have \<open>apply_qregister \<lbrakk>a,b\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,c\<rbrakk> CNOT = 
-        apply_qregister \<lbrakk>a,c\<rbrakk> CNOT o\<^sub>C\<^sub>L apply_qregister \<lbrakk>a,b\<rbrakk> CNOT\<close>
-    apply (simp add: join_registers)
-    oops
-
 
 (* (* TODO keep? *)
 lemma qregister_chain_unit_right[simp]: \<open>qregister F \<Longrightarrow> qregister_chain F qvariable_unit = qvariable_unit\<close>
