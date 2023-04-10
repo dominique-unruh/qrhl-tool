@@ -1104,12 +1104,65 @@ lemma QCOMPLEMENT_snd: \<open>QCOMPLEMENT QREGISTER_snd = QREGISTER_fst\<close>
 lemma QREGISTER_of_non_qregister[simp]: \<open>QREGISTER_of non_qregister = \<bottom>\<close>
   by (simp add: QREGISTER_of.abs_eq bot_QREGISTER_def)
 
-(* TODO: needs assumptions? *)
-lemma y4: \<open>QCOMPLEMENT (QREGISTER_chain F G)
+lemma QREGISTER_demorgan1: \<open>- (X \<squnion> Y) = (- X \<sqinter> - Y)\<close> for X Y :: \<open>_ QREGISTER\<close>
+  apply transfer
+  by (auto simp: valid_qregister_range_def commutant_def)
+
+lemma QCOMPLEMENT_chain: \<open>QCOMPLEMENT (QREGISTER_chain F G)
         = QREGISTER_pair (QCOMPLEMENT (QREGISTER_of F)) (QREGISTER_chain F (QCOMPLEMENT G))\<close>
 proof (cases \<open>qregister F\<close>)
   case True
-  then show ?thesis sorry
+  have 1: \<open>- QREGISTER_of F \<le> - QREGISTER_chain F G\<close>
+    by (metis QCOMPLEMENT_antimono QREGISTER_chain_all_right QREGISTER_pair_QREGISTER_chain sup.absorb_iff2 top.extremum)
+  have 2: \<open>QREGISTER_chain F (- G) \<le> - QREGISTER_chain F G\<close>
+  proof (intro less_eq_QREGISTER.rep_eq[THEN iffD2] Set.subsetI)
+    fix Fx assume \<open>Fx \<in> Rep_QREGISTER (QREGISTER_chain F (- G))\<close>
+    then obtain x where xG': \<open>x \<in> Rep_QREGISTER (-G)\<close> and Fx_def: \<open>Fx = apply_qregister F x\<close>
+      by (auto simp: QREGISTER_chain.rep_eq True)
+    show \<open>Fx \<in> Rep_QREGISTER (- QREGISTER_chain F G)\<close>
+    proof (unfold uminus_QREGISTER.rep_eq, rule commutant_memberI)
+      fix Fy assume \<open>Fy \<in> Rep_QREGISTER (QREGISTER_chain F G)\<close>
+      then obtain y where yG: \<open>y \<in> Rep_QREGISTER G\<close> and Fy_def: \<open>Fy = apply_qregister F y\<close>
+        by (auto simp: QREGISTER_chain.rep_eq True)
+      from xG' yG have \<open>x o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L x\<close>
+        by (simp add: uminus_QREGISTER.rep_eq commutant_def)
+      then show \<open>Fx o\<^sub>C\<^sub>L Fy = Fy o\<^sub>C\<^sub>L Fx\<close>
+        by (simp add: Fx_def Fy_def)
+    qed
+  qed
+  have 3: \<open>- QREGISTER_chain F G \<le> - QREGISTER_of F \<squnion> QREGISTER_chain F (- G)\<close>
+  proof -
+    have \<open>- (- QREGISTER_of F \<squnion> QREGISTER_chain F (- G))
+        = QREGISTER_of F \<sqinter> - QREGISTER_chain F (- G)\<close>
+      by (simp add: QREGISTER_demorgan1 QCOMPLEMENT_twice)
+    also have \<open>\<dots> \<le> QREGISTER_chain F G\<close>
+    proof (intro less_eq_QREGISTER.rep_eq[THEN iffD2] Set.subsetI)
+      fix Fx assume asm: \<open>Fx \<in> Rep_QREGISTER (QREGISTER_of F \<sqinter> - QREGISTER_chain F (- G))\<close>
+      then obtain x where Fx_def: \<open>Fx = apply_qregister F x\<close>
+        by (metis IntE QREGISTER_of.rep_eq True imageE inf_QREGISTER.rep_eq)
+      with asm have Fx_FG'': \<open>apply_qregister F x \<in> commutant (apply_qregister F ` Rep_QREGISTER (- G))\<close>
+        by (simp add: inf_QREGISTER.rep_eq uminus_QREGISTER.rep_eq QREGISTER_chain.rep_eq True)
+      have \<open>x \<in> commutant (Rep_QREGISTER (-G))\<close>
+      proof (rule commutant_memberI)
+        fix y assume asm_y:\<open>y \<in> Rep_QREGISTER (- G)\<close>
+        then have \<open>apply_qregister F y \<in> apply_qregister F ` Rep_QREGISTER (- G)\<close>
+          by blast
+        with Fx_FG'' asm_y
+        have \<open>apply_qregister F x o\<^sub>C\<^sub>L apply_qregister F y = apply_qregister F y o\<^sub>C\<^sub>L apply_qregister F x\<close>
+          by (auto simp add: commutant_def)
+        with True show \<open>x o\<^sub>C\<^sub>L y = y o\<^sub>C\<^sub>L x\<close>
+          by simp
+      qed
+      then have \<open>x \<in> Rep_QREGISTER G\<close>
+        by (metis QCOMPLEMENT_twice uminus_QREGISTER.rep_eq)
+      then show \<open>Fx \<in> Rep_QREGISTER (QREGISTER_chain F G)\<close>
+        by (simp add: QREGISTER_chain.rep_eq True Fx_def)
+    qed
+    finally show ?thesis
+      by (metis QCOMPLEMENT_antimono QCOMPLEMENT_twice)
+  qed
+  show ?thesis
+    by (auto intro!: antisym 1 2 3)
 next
   case False
   then have \<open>F = non_qregister\<close>
@@ -1123,7 +1176,7 @@ ML \<open>
 (* Rewrites QCOMPLEMENT (INDEX-QREGISTER) into an INDEX-QREGISTER *)
 local
   val rules = (map (fn thm => thm RS @{thm eq_reflection}) @{thms 
-      y1 y2 y3 y4 QCOMPLEMENT_snd QCOMPLEMENT_fst QREGISTER_of_qFst QREGISTER_of_qSnd
+      y1 y2 y3 QCOMPLEMENT_chain QCOMPLEMENT_snd QCOMPLEMENT_fst QREGISTER_of_qFst QREGISTER_of_qSnd
       QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst QCOMPLEMENT_bot QCOMPLEMENT_top})
 in
 fun QCOMPLEMENT_INDEX_REGISTER_conv ctxt = Raw_Simplifier.rewrite ctxt false rules
@@ -1200,7 +1253,7 @@ ML \<open>
       put_simpset HOL_ss \<^context>
       addsimps
         @{thms 
-           y1 y2 y3 y4 QCOMPLEMENT_snd QCOMPLEMENT_fst QREGISTER_of_qFst QREGISTER_of_qSnd
+           y1 y2 y3 QCOMPLEMENT_chain QCOMPLEMENT_snd QCOMPLEMENT_fst QREGISTER_of_qFst QREGISTER_of_qSnd
            QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst QCOMPLEMENT_bot QCOMPLEMENT_top}
   val simpset = Simplifier.simpset_of simpctxt
 local
