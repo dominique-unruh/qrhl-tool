@@ -2,7 +2,7 @@ chapter \<open>Discrete (subprobability) distributions\<close>
 
 theory Discrete_Distributions
   imports Complex_Main "HOL-Library.Rewrite"
-    "HOL-Library.Z2" Misc_Missing Multi_Transfer
+    "HOL-Library.Z2" Registers2.Misc_Missing Multi_Transfer
     "Complex_Bounded_Operators.Extra_Ordered_Fields"
     "HOL-Analysis.Infinite_Sum"
     Registers.Misc
