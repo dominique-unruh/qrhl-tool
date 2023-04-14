@@ -340,4 +340,6 @@ lemma Cccompatible_CREGISTER_of: \<open>Cccompatible (CREGISTER_of A) B \<longle
 lemma Cccompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow> Cccompatible (CREGISTER_of F) G\<close>
   by (simp add: Cccompatible_CREGISTER_of)
 
+definition \<open>cregister_le F G = (cregister F \<and> cregister G \<and> CREGISTER_of F \<le> CREGISTER_of G)\<close>
+
 end

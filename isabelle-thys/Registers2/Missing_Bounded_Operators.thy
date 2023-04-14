@@ -2415,5 +2415,27 @@ proof -
     by auto
 qed
 
+lemma kernel_square[simp]: \<open>kernel (A* o\<^sub>C\<^sub>L A) = kernel A\<close>
+proof (intro ccsubspace_eqI iffI)
+  fix x
+  assume \<open>x \<in> space_as_set (kernel A)\<close>
+  then show \<open>x \<in> space_as_set (kernel (A* o\<^sub>C\<^sub>L A))\<close>
+    by (simp add: kernel.rep_eq)
+next
+  fix x
+  assume \<open>x \<in> space_as_set (kernel (A* o\<^sub>C\<^sub>L A))\<close>
+  then have \<open>A* *\<^sub>V A *\<^sub>V x = 0\<close>
+    by (simp add: kernel.rep_eq)
+  then have \<open>(A *\<^sub>V x) \<bullet>\<^sub>C (A *\<^sub>V x) = 0\<close>
+    by (metis cinner_adj_right cinner_zero_right)
+  then have \<open>A *\<^sub>V x = 0\<close>
+    by auto
+  then show \<open>x \<in> space_as_set (kernel A)\<close>
+    by (simp add: kernel.rep_eq)
+qed
+
+lemma Proj_on_image [simp]: \<open>Proj S *\<^sub>S S = S\<close>
+  by (metis Proj_idempotent Proj_range cblinfun_compose_image)
+
 
 end

@@ -400,6 +400,26 @@ lemma qregister_le_iso: \<open>qregister F \<Longrightarrow> iso_qregister G \<L
 lemma qregister_le_id[iff]: \<open>qregister F \<Longrightarrow> qregister_le F qregister_id\<close> (* TODO: could replace this by a simp-rule *)
   by (simp add: iso_qregister_def qregister_le_iso)
 
+instantiation QREGISTER :: (type) uminus begin
+lift_definition uminus_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is commutant
+  by (auto simp add: valid_qregister_range_def von_neumann_algebra_commutant)
+instance..
+end
+
+abbreviation (* LEGACY *) (input) \<open>QCOMPLEMENT \<equiv> (uminus :: 'a QREGISTER \<Rightarrow> _)\<close>
+
+lemma Qqcompatible_antimono_left: \<open>A \<le> B \<Longrightarrow> Qqcompatible B C \<Longrightarrow> Qqcompatible A C\<close>
+  apply transfer by auto
+
+
+lemma Qqcompatible_QREGISTER_of: \<open>Qqcompatible (QREGISTER_of A) B \<longleftrightarrow> qcompatible A B \<or> (qregister B \<and> A = non_qregister)\<close>
+  unfolding QREGISTER_of.rep_eq Qqcompatible.rep_eq
+  apply transfer
+  by (auto simp add: non_qregister_raw one_algebra_def qcompatible_raw_def)
+
+lemma Qqcompatible_QREGISTER_ofI[simp]: \<open>qcompatible F G \<Longrightarrow> Qqcompatible (QREGISTER_of F) G\<close>
+  by (simp add: Qqcompatible_QREGISTER_of)
+
 
 
 end

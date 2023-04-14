@@ -785,4 +785,125 @@ lemma getter_cFst[simp]: \<open>getter cFst = fst\<close>
 lemma getter_cSnd[simp]: \<open>getter cSnd = snd\<close>
   apply transfer by (simp add: getter_Snd)
 
+(* TODO: (and also for quantum, also for COMPATIBLE)
+lemma ccompatible_register_tensor[simp]: \<open>ccompatible F F' \<Longrightarrow> ccompatible G G' \<Longrightarrow> ccompatible (cregister_tensor F G) (cregister_tensor F' G')\<close> *)
+
+lemma register_from_getter_setter_id: \<open>id = register_from_getter_setter (\<lambda>m. m) (\<lambda>a m. a)\<close>
+  by (auto intro!: ext simp add: register_from_getter_setter_def option.case_eq_if)
+lemma valid_getter_setter_id: \<open>valid_getter_setter (\<lambda>m. m) (\<lambda>a m. a)\<close>
+  by (simp add: valid_getter_setter_def)
+
+lemma getter_id: \<open>getter cregister_id m = m\<close>
+  apply transfer
+  apply (subst (2) register_from_getter_setter_id)
+  by (simp add: getter_of_register_from_getter_setter valid_getter_setter_id)
+lemma setter_id: \<open>setter cregister_id a m = a\<close>
+  apply transfer
+  apply (subst (2) register_from_getter_setter_id)
+  by (simp add: setter_of_register_from_getter_setter valid_getter_setter_id)
+
+(* TODO to Registers *)
+lemma getter_from_update1: 
+  assumes \<open>cregister_raw F\<close>
+  shows \<open>Axioms_Classical.getter F m = a \<longleftrightarrow> F (update1 a b) m \<noteq> None\<close>
+  apply (subst (2) register_from_getter_setter_of_getter_setter[symmetric, OF assms])
+  by (auto simp add: register_from_getter_setter_def update1_def)
+
+(* TODO to Registers *)
+lemma register_apply_mult:
+  assumes \<open>cregister_raw F\<close>
+  shows \<open>register_apply F a o register_apply F b = register_apply F (a o b)\<close>
+proof (rule ext)
+  fix x
+  have FSome: \<open>F (\<lambda>y. Some (w y)) z \<noteq> None\<close> for z w
+    by (meson assms option.simps(3) register_total total_fun_def)
+
+  have \<open>Some ((register_apply F a o register_apply F b) x) = F (Some o a) (register_apply F b x)\<close>
+    using register_apply[OF assms, THEN fun_cong]
+    by (simp add: o_def)
+  also have \<open>\<dots> = F (\<lambda>x. Some (a x)) (the (F (\<lambda>x. Some (b x)) x))\<close>
+    by (simp add: register_apply_def o_def)
+  also have \<open>\<dots> = (F (Some o a) \<circ>\<^sub>m F (Some o b)) x\<close>
+    apply (cases \<open>F (\<lambda>x. Some (b x)) x\<close>)
+    using FSome by (auto simp: map_comp_def o_def)
+  also have \<open>\<dots> = F ((Some o a) \<circ>\<^sub>m (Some o b)) x\<close>
+    by (simp add: Axioms_Classical.register_mult assms)
+  also have \<open>\<dots> = F (\<lambda>x. Some (a (b x))) x\<close>
+    apply (cases \<open>F (\<lambda>x. Some (b x)) x\<close>)
+    using FSome by (auto simp: map_comp_def)
+  also have \<open>\<dots> = Some (register_apply F (a o b) x)\<close>
+    by (simp add: register_apply_def o_def option.collapse[OF FSome])
+  finally show \<open>(register_apply F a \<circ> register_apply F b) x = register_apply F (a \<circ> b) x\<close>
+    by simp
+qed
+
+(* TODO to Registers (replace register_total?) *)
+lemma register_total_iff: 
+  assumes \<open>cregister_raw F\<close>
+  shows \<open>total_fun (F a) \<longleftrightarrow> total_fun a\<close>
+proof (rule iffI)
+  show \<open>total_fun a \<Longrightarrow> total_fun (F a)\<close>
+    using assms register_total by blast
+next
+  show \<open>total_fun a\<close> if \<open>total_fun (F a)\<close>
+  proof (rule ccontr)
+    assume \<open>\<not> total_fun a\<close>
+    then obtain x where \<open>a x = None\<close>
+      using total_fun_def by blast
+    then have \<open>a \<circ>\<^sub>m update1 x x = Map.empty\<close>
+      by (metis map_comp_None_iff update1_def)
+    then have \<open>F a \<circ>\<^sub>m F (update1 x x) = Map.empty\<close>
+      by (simp add: Axioms_Classical.register_mult cregister_raw_empty assms)
+    with \<open>total_fun (F a)\<close> have \<open>F (update1 x x) = Map.empty\<close>
+      by (meson map_comp_None_iff total_fun_def)
+    then have \<open>update1 x x = Map.empty\<close>
+      by (smt (verit) assms getter_from_update1 valid_getter_setter_def valid_getter_setter_getter_setter)
+    then show False
+      by (metis option.discI update1_def)
+  qed
+qed
+
+(* TODO move to Registers *)
+lemma register_apply_via_setter_getter:
+  assumes [simp]: \<open>cregister_raw F\<close>
+  shows \<open>register_apply F f m = Axioms_Classical.setter F (f (Axioms_Classical.getter F m)) m\<close>
+  apply (subst register_from_getter_setter_of_getter_setter[symmetric, OF assms])
+  by (simp add: register_from_getter_setter_def[abs_def] register_apply_def
+      del: register_from_getter_setter_of_getter_setter)
+
+(* TODO move to Registers *)
+lemma getter_register_apply:
+  assumes [simp]: \<open>cregister_raw F\<close>
+  shows \<open>Axioms_Classical.getter F (register_apply F f m) = f (Axioms_Classical.getter F m)\<close>
+  apply (simp add: register_apply_via_setter_getter)
+  by (metis assms valid_getter_setter_def valid_getter_setter_getter_setter)
+
+lemma cregister_eqI_setter_raw: 
+  assumes [simp]: \<open>cregister_raw F\<close> \<open>cregister_raw G\<close>
+  assumes eq: \<open>\<And>a m. Axioms_Classical.setter F a m = Axioms_Classical.setter G a m\<close>
+  shows \<open>F = G\<close>
+proof -
+  from eq \<open>cregister_raw F\<close> \<open>cregister_raw G\<close> have \<open>Axioms_Classical.getter F = Axioms_Classical.getter G\<close>
+    by (auto simp: Axioms_Classical.getter_def)
+  with eq[abs_def]
+  have \<open>register_from_getter_setter (Axioms_Classical.getter F) (Axioms_Classical.setter F)
+      = register_from_getter_setter (Axioms_Classical.getter G) (Axioms_Classical.setter G)\<close>
+    by simp
+  then show ?thesis
+    by (simp add: register_from_getter_setter_of_getter_setter)
+qed
+
+lemma cregister_eqI_setter: 
+  assumes \<open>cregister F\<close> \<open>cregister G\<close>
+  assumes eq: \<open>\<And>a m. setter F a m = setter G a m\<close>
+  shows \<open>F = G\<close>
+  using assms apply transfer
+  by (auto intro!: cregister_eqI_setter_raw)
+
+lemma getter_Snd_chain_swap[simp]: \<open>getter (cregister_chain cSnd G) (prod.swap m) = getter (cregister_chain cFst G) m\<close>
+  by (simp add: getter_chain)
+lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.swap m) = getter (cregister_chain cSnd G) m\<close>
+  by (simp add: getter_chain)
+
+
 end

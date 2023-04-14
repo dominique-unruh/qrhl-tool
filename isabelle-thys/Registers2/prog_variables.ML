@@ -1,7 +1,8 @@
 structure Prog_Variables =
 struct
 
-datatype qc = Classical | Quantum
+open Registers
+
 datatype index = NoIndex | Index1 | Index2
 
 fun mk_ell2T T = Type(\<^type_name>\<open>ell2\<close>, [T])
@@ -515,18 +516,6 @@ fun distinct_vars_tac ctxt = let
           Const(case qc of Classical => \<^const_name>\<open>cSnd\<close> | Quantum => \<^const_name>\<open>qSnd\<close>, dummyT) $
           register_n qc last (n-1) end *)
 
-fun register_n Quantum true 1 = Const(\<^const_name>\<open>qregister_id\<close>, dummyT)
-  | register_n Classical true 1 = Const(\<^const_name>\<open>cregister_id\<close>, dummyT)
-  | register_n Quantum false 1 = Const(\<^const_name>\<open>qFst\<close>, dummyT)
-  | register_n Classical false 1 = Const(\<^const_name>\<open>cFst\<close>, dummyT)
-  | register_n Quantum true 2 = Const(\<^const_name>\<open>qSnd\<close>, dummyT)
-  | register_n Classical true 2 = Const(\<^const_name>\<open>cSnd\<close>, dummyT)
-  | register_n Quantum last n = let
-      val _ = n > 1 orelse error "register_n: n must be >= 1"
-      in Const(\<^const_name>\<open>qregister_chain\<close>, dummyT) $ Const(\<^const_name>\<open>qSnd\<close>, dummyT) $ register_n Quantum last (n-1) end
-  | register_n Classical last n = let
-      val _ = n > 1 orelse error "register_n: n must be >= 1"
-      in Const(\<^const_name>\<open>cregister_chain\<close>, dummyT) $ Const(\<^const_name>\<open>cSnd\<close>, dummyT) $ register_n Classical last (n-1) end
 
 fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_sort (Proof_Context.theory_of ctxt) (T,\<^sort>\<open>CARD_1\<close>)
   | is_empty_qregisterT _ T = raise TYPE("is_empty_qregisterT: not a qregister type", [T], [])

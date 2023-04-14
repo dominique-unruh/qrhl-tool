@@ -1586,8 +1586,8 @@ proof (intro eq_reflection ext iffI)
     have 2: \<open>sF (gF m) n = m\<close>
       by (simp add: same_outside_cregister_def gF flip: socF sF_def)
 
-    have \<open>Prog_Variables.setter (cregister_chain F G)
-     (Prog_Variables.getter (cregister_chain F G) m) n = sF (sG (gG (gF m)) (gF n)) n\<close>
+    have \<open>setter (cregister_chain F G)
+     (getter (cregister_chain F G) m) n = sF (sG (gG (gF m)) (gF n)) n\<close>
       by (simp add: getter_chain setter_chain gF flip: gG_def sG_def sF_def)
     also have \<open>\<dots> = sF (gF m) n\<close>
       by (simp add: 1)
@@ -1652,7 +1652,7 @@ ML \<open>
 open Conv
 (* Converts same_outside_qregister F into (\<lambda>m n. \<dots>) for an index-register F *)
 fun cregister_lens_soc_conv ctxt = 
-Conv.rewr_conv @{lemma \<open>same_outside_cregister F \<equiv> (\<lambda>x y. x = Prog_Variables.setter F (Prog_Variables.getter F x) y)\<close> by (simp add: same_outside_cregister_def[abs_def])}
+Conv.rewr_conv @{lemma \<open>same_outside_cregister F \<equiv> (\<lambda>x y. x = setter F (getter F x) y)\<close> by (simp add: same_outside_cregister_def[abs_def])}
 then_conv
 (
  Misc.mk_ctxt_conv2 combination_conv 
@@ -1801,7 +1801,7 @@ val _ = \<^print> ("Success") in res end
 \<close>
 
 ML \<open>
-cregister_lens_getter_conv \<^context> \<^cterm>\<open>Prog_Variables.getter empty_cregister\<close>
+cregister_lens_getter_conv \<^context> \<^cterm>\<open>getter empty_cregister\<close>
 \<close>
 
 schematic_goal \<open>permute_and_tensor1_cblinfun (\<lambda>a::'a::eenum. undefined :: unit) (\<lambda>x y. x = y) \<equiv> ?X\<close>

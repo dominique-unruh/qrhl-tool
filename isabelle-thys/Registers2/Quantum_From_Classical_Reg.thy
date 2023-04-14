@@ -45,6 +45,13 @@ lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow>
     using qregister_raw_permute_and_tensor1_cblinfun[of F]
     by (auto simp add: non_qregister_raw_def[abs_def])
   by -
+(* lift_definition qregister_of_cregister :: \<open>('a,'b) cregister \<Rightarrow> ('a,'b) qregister\<close> is
+  \<open>\<lambda>F a. if cregister F then
+      explicit_cblinfun (\<lambda>i j. if same_outside_cregister F i j then Rep_ell2 (a *\<^sub>V ket (getter F j)) (getter F i) else 0)
+    else 0\<close>
+   *)
+
+
 
 lemma qregister_of_cregister_non_register[simp]: \<open>qregister_of_cregister non_cregister = non_qregister\<close>
 proof -
@@ -254,5 +261,66 @@ next
     by simp_all
 qed
 
+
+lemma qregister_of_cregister_pair: 
+  \<open>qregister_of_cregister (cregister_pair x y) = qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)\<close>
+proof (cases \<open>ccompatible x y\<close>)
+  case True
+  then have [simp]: \<open>ccompatible x y\<close> \<open>cregister x\<close> \<open>cregister y\<close>
+    by (auto simp add: ccompatible_def)
+  have \<open>apply_qregister (qregister_of_cregister (cregister_pair x y)) (butterket k l) *\<^sub>V ket z =
+        apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l) *\<^sub>V ket z\<close> for k l z
+  proof -
+    obtain k1 k2 where [simp]: \<open>k = (k1,k2)\<close>
+      by force
+    obtain l1 l2 where [simp]: \<open>l = (l1,l2)\<close>
+      by force
+    show ?thesis
+      apply (simp add: apply_qregister_pair flip: tensor_ell2_ket tensor_butterfly)
+      by (simp add: apply_qregister_qregister_of_cregister_butterket getter_pair setter_pair
+          tensor_ell2_ket tensor_butterfly)
+  qed
+  then have \<open>apply_qregister (qregister_of_cregister (cregister_pair x y)) (butterket k l) =
+        apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l
+    by (simp add: equal_ket)
+  then show ?thesis
+    apply (rule_tac qregister_eqI_separating[OF separating_butterket])
+    by auto
+next
+  case False
+  then have \<open>\<not> qcompatible (qregister_of_cregister x) (qregister_of_cregister y)\<close>
+    by simp
+  then have 1: \<open>qregister_pair (qregister_of_cregister x) (qregister_of_cregister y) = non_qregister\<close>
+    using non_qregister by blast
+  from False have 2: \<open>cregister_pair x y = non_cregister\<close>
+    using non_cregister by blast
+  from 1 2 show ?thesis
+    by simp
+qed
+
+lemma qregister_of_cregister_chain: \<open>qregister_of_cregister (cregister_chain x y) = qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)\<close>
+proof (cases \<open>cregister x \<and> cregister y\<close>)
+  case True
+  then have [simp]: \<open>cregister x\<close> \<open>cregister y\<close>
+    by (auto simp add: ccompatible_def)
+  have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterket k l) *\<^sub>V ket z =
+        apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l) *\<^sub>V ket z\<close> for k l z
+    apply (auto intro!: Rep_ell2_inject[THEN iffD1] ext 
+        simp add: apply_qregister_qregister_of_cregister_butterket getter_chain setter_chain)
+     apply (auto simp add: apply_qregister_of_cregister permute_and_tensor1_cblinfun_ket
+        permute_and_tensor1_cblinfun_exists_register ket.rep_eq same_outside_cregister_def
+        scaleC_ell2.rep_eq cinner_ket zero_ell2.rep_eq)
+    by (metis getter_setter_same[OF \<open>cregister x\<close>])
+  then have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterket k l) =
+        apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l
+    by (simp add: equal_ket)
+  then show ?thesis
+    apply (rule_tac qregister_eqI_separating[OF separating_butterket])
+    by auto
+next
+  case False
+  then show ?thesis
+    by (auto simp add: non_cregister)
+qed
 
 end

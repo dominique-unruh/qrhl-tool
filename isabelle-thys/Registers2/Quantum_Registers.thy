@@ -440,5 +440,439 @@ lemma apply_qregister_weak_star_continuous[simp]:
   apply transfer
   by (auto simp: non_qregister_raw_def[abs_def] weak_star_cont_register)
 
+lemma separating_butterket:
+  \<open>Laws_Quantum.separating TYPE('b) (range (case_prod butterket))\<close>
+proof -
+  thm weak_star_clinear_eq_butterfly_ketI
+  have \<open>F = G\<close> if \<open>\<And>a b. F (butterket a b) = G (butterket a b)\<close> 
+    and \<open>Axioms_Quantum.preregister F\<close> and \<open>Axioms_Quantum.preregister G\<close> for F G :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
+    apply (rule weak_star_clinear_eq_butterfly_ketI[where T=weak_star_topology])
+    using that
+    by (auto simp: Axioms_Quantum.preregister_def bounded_clinear.clinear)
+  then show ?thesis
+    by (auto simp add: Laws_Quantum.separating_def)
+qed
+
+lemma separating_nonempty: \<open>\<not> (X \<subseteq> {0})\<close> if sep: \<open>separating TYPE('b) X\<close> for X :: \<open>'a qupdate set\<close>
+proof (rule notI)
+  assume \<open>X \<subseteq> {0}\<close>
+  have \<open>Axioms_Quantum.preregister 0\<close>
+    by (simp add: Axioms_Quantum.preregister_def zero_fun_def)
+  fix x
+  define F :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close> where \<open>F a = (ket x \<bullet>\<^sub>C (a *\<^sub>V ket x)) *\<^sub>C id_cblinfun\<close> for a
+  have \<open>bounded_clinear F\<close>
+    unfolding F_def[abs_def]
+    by (intro bounded_linear_intros)
+  moreover have \<open>continuous_map weak_star_topology weak_star_topology F\<close>
+  proof -
+    note continuous_map_compose[trans]
+    have \<open>continuous_map weak_star_topology cweak_operator_topology (\<lambda>f :: 'a qupdate. f)\<close>
+      by (simp add: wot_weaker_than_weak_star)
+    also have \<open>continuous_map cweak_operator_topology euclidean (\<lambda>a. ket x \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
+      by (simp add: cweak_operator_topology_continuous_evaluation)
+    also have \<open>continuous_map euclidean euclidean (\<lambda>c. c *\<^sub>C (id_cblinfun :: 'b qupdate))\<close>
+      by (auto intro!: continuous_map_iff_continuous2[THEN iffD2] continuous_at_imp_continuous_on)
+    also have \<open>continuous_map euclidean weak_star_topology (\<lambda>f :: 'b qupdate. f)\<close>
+      by (simp add: weak_star_topology_weaker_than_euclidean)
+    finally show ?thesis
+      by (simp add: o_def F_def[abs_def])
+  qed
+  ultimately have \<open>Axioms_Quantum.preregister F\<close>
+    by (simp add: Axioms_Quantum.preregister_def)
+  have \<open>0 a = F a\<close> if \<open>a \<in> X\<close> for a
+    using \<open>X \<subseteq> {0}\<close> that
+    by (auto simp: F_def)
+  with sep have \<open>0 = F\<close>
+    by (simp add: Laws_Quantum.register_eqI \<open>Axioms_Quantum.preregister 0\<close> \<open>Axioms_Quantum.preregister F\<close>)
+  then have \<open>0 (butterket x x) = F (butterket x x)\<close>
+    by simp
+  then show False
+    by (simp add: F_def)
+qed
+
+lemma qregister_eqI_separating:
+  fixes F G :: \<open>('a,'b) qregister\<close>
+  assumes sep: \<open>Laws_Quantum.separating TYPE('b) X\<close>
+  assumes eq: \<open>\<And>x. x\<in>X \<Longrightarrow> apply_qregister F x = apply_qregister G x\<close>
+  shows \<open>F = G\<close>
+proof -
+  obtain x where \<open>x \<in> X\<close> and \<open>x \<noteq> 0\<close>
+    using separating_nonempty[OF sep]
+    by auto
+
+  consider (reg) \<open>qregister F\<close> \<open>qregister G\<close> | (notreg) \<open>\<not> qregister F\<close> \<open>\<not> qregister G\<close>
+    | (notF) \<open>\<not> qregister F\<close> \<open>qregister G\<close> | (notG) \<open>qregister F\<close> \<open>\<not> qregister G\<close>
+    by auto
+  then show ?thesis
+  proof cases
+    case reg
+    then show ?thesis
+      using assms apply transfer
+      by (auto simp: Laws_Quantum.separating_def)
+  next
+    case notreg
+    then show ?thesis
+      by (simp add: non_qregister)
+  next
+    case notF
+    have \<open>apply_qregister F x = 0\<close>
+      using non_qregister notF(1) by force
+    moreover have \<open>apply_qregister G x \<noteq> 0\<close>
+      using \<open>x \<noteq> 0\<close> inj_qregister[OF notF(2)] injD by fastforce
+    moreover have \<open>apply_qregister F x = apply_qregister G x\<close>
+      using eq \<open>x \<in> X\<close> by simp
+    ultimately have False
+      by simp
+    then show ?thesis
+      by simp
+  next
+    case notG
+    have \<open>apply_qregister G x = 0\<close>
+      using non_qregister notG(2) by force
+    moreover have \<open>apply_qregister F x \<noteq> 0\<close>
+      using \<open>x \<noteq> 0\<close> inj_qregister[OF notG(1)] injD by fastforce
+    moreover have \<open>apply_qregister F x = apply_qregister G x\<close>
+      using eq \<open>x \<in> X\<close> by simp
+    ultimately have False
+      by simp
+    then show ?thesis
+      by simp
+  qed
+qed
+
+lemmas qregister_eqI_butterket = qregister_eqI_separating[OF separating_butterket]
+
+lemma qregister_eqI_tensor_op:
+  assumes \<open>\<And>a b. apply_qregister F (a \<otimes>\<^sub>o b) = apply_qregister G (a \<otimes>\<^sub>o b)\<close> 
+  shows \<open>F = G\<close>
+  apply (intro qregister_eqI_separating)
+   apply (rule separating_tensor)
+    apply (rule separating_UNIV)
+   apply (rule separating_UNIV)
+  using assms by auto
+
+lift_definition transform_qregister :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) \<Rightarrow> ('a,'b) qregister\<close> is
+  \<open>\<lambda>(U :: 'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2). if unitary U then cblinfun_apply (sandwich U) else non_qregister_raw\<close>
+  by (auto simp: unitary_sandwich_register)
+
+lemma qregister_transform_qregister[simp]: \<open>unitary U \<Longrightarrow> qregister (transform_qregister U)\<close>
+  apply (transfer fixing: U) by (auto simp: unitary_sandwich_register)
+
+lemma apply_qregister_transform_qregister: \<open>unitary U \<Longrightarrow> apply_qregister (transform_qregister U) a = sandwich U a\<close>
+  apply (transfer fixing: U a) by (auto simp: unitary_sandwich_register sandwich_apply)
+
+lemma apply_qregister_plus: \<open>apply_qregister X (a+b) = apply_qregister X a + apply_qregister X b\<close>
+  using clinear_apply_qregister[of X]
+  by (rule complex_vector.linear_add)
+
+lemma apply_qregister_space_of_0: \<open>apply_qregister_space F 0 = 0\<close>
+  by (simp add: apply_qregister_space_def)
+
+lemma apply_qregister_space_top: \<open>qregister F \<Longrightarrow> apply_qregister_space F \<top> = \<top>\<close>
+  by (simp add: apply_qregister_space_def)
+
+lemma apply_qregister_space_bot: \<open>apply_qregister_space F \<bottom> = \<bottom>\<close>
+  by (simp add: apply_qregister_space_def)
+
+lemma apply_qregister_space_scaleC: \<open>qregister F \<Longrightarrow> apply_qregister_space F (c *\<^sub>C A) = c *\<^sub>C apply_qregister_space F A\<close>
+  apply (cases \<open>c = 0\<close>)
+  by (simp_all add: apply_qregister_space_bot)
+
+lemma apply_qregister_space_scaleR: \<open>qregister F \<Longrightarrow> apply_qregister_space F (c *\<^sub>R A) = c *\<^sub>R apply_qregister_space F A\<close>
+  by (simp add: apply_qregister_space_scaleC scaleR_scaleC)
+
+lemma apply_qregister_norm: \<open>qregister F \<Longrightarrow> norm (apply_qregister F A) = norm A\<close>
+  by (simp add: qregister.rep_eq register_norm)
+
+lemma apply_qregister_uminus: \<open>apply_qregister F (- A) = - apply_qregister F A\<close>
+  apply (subst scaleC_minus1_left[symmetric])
+  apply (subst (2) scaleC_minus1_left[symmetric])
+  by (simp only: apply_qregister_scaleC)
+
+lemma apply_qregister_minus: \<open>apply_qregister F (A - B) = apply_qregister F A - apply_qregister F B\<close>
+  by (simp only: diff_conv_add_uminus apply_qregister_plus apply_qregister_uminus)
+
+lemma apply_qregister_space_image: \<open>apply_qregister_space Q (A *\<^sub>S S) = apply_qregister Q A *\<^sub>S apply_qregister_space Q S\<close>
+proof (cases \<open>qregister Q\<close>)
+  case False
+  then have \<open>Q = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis
+    by simp
+next
+  let ?goal = ?thesis
+  case True
+  then have \<open>qregister_raw (apply_qregister Q)\<close>
+    by (simp add: qregister.rep_eq)
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis (apply_qregister Q). ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U :: ('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2. 
+              unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> where
+      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
+      by auto
+    have \<open>apply_qregister Q A *\<^sub>S apply_qregister_space Q S = apply_qregister Q A *\<^sub>S apply_qregister Q (Proj S) *\<^sub>S \<top>\<close>
+      by (simp add: apply_qregister_space_def)
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S U* *\<^sub>S \<top>\<close>
+      by (simp add: decomp sandwich_apply lift_cblinfun_comp[OF unitaryD1] cblinfun_compose_image)
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S \<top>\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (Proj S \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (\<top> \<otimes>\<^sub>S \<top>)\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (A \<otimes>\<^sub>o id_cblinfun) *\<^sub>S ((Proj S *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by (simp add: tensor_ccsubspace_via_Proj)
+    also have \<open>\<dots> = U *\<^sub>S ((A *\<^sub>S Proj S *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by (metis cblinfun_image_id tensor_ccsubspace_image)
+    also have \<open>\<dots> = U *\<^sub>S ((Proj (A *\<^sub>S S) *\<^sub>S \<top>) \<otimes>\<^sub>S \<top>)\<close>
+      by simp
+    also have \<open>\<dots> = U *\<^sub>S (Proj (A *\<^sub>S S) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S (\<top> \<otimes>\<^sub>S \<top>)\<close>
+      by (simp add: tensor_ccsubspace_via_Proj)
+    also have \<open>\<dots> = U *\<^sub>S (Proj (A *\<^sub>S S) \<otimes>\<^sub>o id_cblinfun) *\<^sub>S U* *\<^sub>S \<top>\<close>
+      by simp
+    also have \<open>\<dots> = apply_qregister Q (Proj (A *\<^sub>S S)) *\<^sub>S \<top>\<close>
+      by (simp add: cblinfun_compose_image decomp sandwich_apply)
+    also have \<open>\<dots> = apply_qregister_space Q (A *\<^sub>S S)\<close>
+      by (simp add: apply_qregister_space_def)
+    finally show ?goal
+      by simp
+  qed
+  from this[cancel_with_type]
+  show ?thesis 
+    by -
+qed
+
+lemma apply_qregister_inject': \<open>apply_qregister F a = apply_qregister F b \<longleftrightarrow> a = b\<close> if \<open>qregister F\<close>
+  using that apply (transfer fixing: a b)
+  using qregister_raw_inj[of _ UNIV] injD by fastforce
+
+lemma apply_qregister_adj: \<open>apply_qregister F (A*) = (apply_qregister F A)*\<close>
+  apply (cases \<open>qregister F\<close>)
+   apply transfer
+  by (auto simp add: register_adj non_qregister)
+
+lemma apply_qregister_unitary[simp]: \<open>unitary (apply_qregister F U) \<longleftrightarrow> unitary U\<close> if \<open>qregister F\<close>
+  unfolding unitary_def
+  apply (subst apply_qregister_inject'[symmetric, OF that, of \<open>U* o\<^sub>C\<^sub>L U\<close>])
+  apply (subst apply_qregister_inject'[symmetric, OF that, of \<open>U o\<^sub>C\<^sub>L U*\<close>])
+  by (simp add: apply_qregister_adj qregister_compose that del: isometryD)
+
+lemma apply_qregister_isometry[simp]: \<open>isometry (apply_qregister F U) \<longleftrightarrow> isometry U\<close> if \<open>qregister F\<close>
+  unfolding isometry_def
+  apply (subst apply_qregister_inject'[symmetric, OF that, of \<open>U* o\<^sub>C\<^sub>L U\<close>])
+  by (simp add: apply_qregister_adj qregister_compose that del: isometryD)
+
+lemma apply_qregister_is_Proj': \<open>is_Proj P \<Longrightarrow> is_Proj (apply_qregister F P)\<close>
+  apply (transfer fixing: P)
+  by (auto simp add: register_projector non_qregister_raw_def)
+
+lemma apply_qregister_is_Proj[simp]: \<open>is_Proj (apply_qregister F P) \<longleftrightarrow> is_Proj P\<close> if \<open>qregister F\<close>
+  using that
+  by (auto simp add: is_Proj_algebraic apply_qregister_inject apply_qregister_inject' 
+      simp flip: qregister_compose apply_qregister_adj)
+
+lemma apply_qregister_Proj: \<open>apply_qregister F (Proj S) = Proj (apply_qregister_space F S)\<close>
+  by (simp add: Proj_on_own_range apply_qregister_space_def apply_qregister_is_Proj')
+
+
+lemma apply_qregister_partial_isometry: \<open>qregister F \<Longrightarrow> partial_isometry (apply_qregister F U) \<longleftrightarrow> partial_isometry U\<close>
+  by (simp add: partial_isometry_iff_square_proj flip: apply_qregister_adj qregister_compose)
+
+lemma apply_qregister_mono: 
+  assumes [simp]: \<open>qregister Q\<close>
+  shows \<open>apply_qregister Q A \<le> apply_qregister Q B \<longleftrightarrow> A \<le> B\<close>
+proof (rule iffI)
+  assume \<open>A \<le> B\<close>
+  then obtain C :: \<open>'a qupdate\<close> where \<open>B - A = C* o\<^sub>C\<^sub>L C\<close>
+    by (metis diff_ge_0_iff_ge positive_hermitianI sqrt_op_pos sqrt_op_square)
+  then have \<open>apply_qregister Q B - apply_qregister Q A = (apply_qregister Q C)* o\<^sub>C\<^sub>L apply_qregister Q C\<close>
+    by (metis apply_qregister_adj apply_qregister_minus qregister_compose)
+  then show \<open>apply_qregister Q A \<le> apply_qregister Q B\<close>
+    by (metis diff_ge_0_iff_ge positive_cblinfun_squareI)
+next
+  assume asm: \<open>apply_qregister Q A \<le> apply_qregister Q B\<close>
+  have [simp]: \<open>qregister_raw (apply_qregister Q)\<close>
+    using assms qregister.rep_eq by blast
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'z::type = register_decomposition_basis (apply_qregister Q). A \<le> B\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U::('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
+      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
+      by auto
+    show \<open>A \<le> B\<close>
+    proof (rule cblinfun_leI)
+      fix x
+      obtain y :: \<open>'z ell2\<close> where \<open>norm y = 1\<close>
+        by (meson norm_ket)
+      define BA where \<open>BA = B - A\<close>
+      from asm have QBA_pos: \<open>apply_qregister Q BA \<ge> 0\<close>
+        by (simp add: BA_def apply_qregister_minus)
+      have \<open>x \<bullet>\<^sub>C (BA *\<^sub>V x) = (x \<otimes>\<^sub>s y) \<bullet>\<^sub>C ((BA \<otimes>\<^sub>o id_cblinfun) *\<^sub>V (x \<otimes>\<^sub>s y))\<close>
+        using \<open>norm y = 1\<close> by (simp add: tensor_op_ell2 cnorm_eq_1)
+      also have \<open>\<dots> = (U *\<^sub>V (x \<otimes>\<^sub>s y)) \<bullet>\<^sub>C (apply_qregister Q BA *\<^sub>V U *\<^sub>V (x \<otimes>\<^sub>s y))\<close>
+        by (simp add: decomp sandwich_apply lift_cblinfun_comp[OF unitaryD1]
+            flip: cinner_adj_right)
+      also have \<open>\<dots> \<ge> 0\<close>
+        by (meson QBA_pos cinner_pos_if_pos)
+      finally show \<open>x \<bullet>\<^sub>C (A *\<^sub>V x) \<le> x \<bullet>\<^sub>C (B *\<^sub>V x)\<close>
+        by (simp add: BA_def cblinfun.diff_left cinner_diff_right apply_qregister_minus)
+    qed
+  qed
+  with this[cancel_with_type]
+  show \<open>A \<le> B\<close>
+    by -
+qed
+
+lemma apply_qregister_space_mono: \<open>qregister F \<Longrightarrow> apply_qregister_space F A \<le> apply_qregister_space F B \<longleftrightarrow> A \<le> B\<close>
+  by (simp add: apply_qregister_space_def Proj_on_own_range apply_qregister_mono
+      flip: Proj_mono)
+
+lemma apply_qregister_space_inject': \<open>apply_qregister_space F a = apply_qregister_space F b \<longleftrightarrow> a = b\<close> if \<open>qregister F\<close>
+  by (simp add: apply_qregister_space_mono order_class.order_eq_iff that)
+
+lemma apply_qregister_space_uminus: \<open>qregister F \<Longrightarrow> apply_qregister_space F (- A) = - apply_qregister_space F A\<close>
+  apply (simp only: apply_qregister_space_def Proj_ortho_compl apply_qregister_minus apply_qregister_of_id)
+  by (simp only: apply_qregister_Proj Proj_range flip: Proj_ortho_compl)
+
+lemma apply_qregister_space_INF: 
+  assumes [simp]: \<open>qregister F\<close>
+  shows "apply_qregister_space F (INF x\<in>X. S x) = (INF x\<in>X. apply_qregister_space F (S x))"
+proof (cases \<open>X = {}\<close>)
+  case True
+  then show ?thesis
+    by (simp add: apply_qregister_space_top)
+next
+  let ?goal = ?thesis
+  case False
+  have \<open>qregister_raw (apply_qregister F)\<close>
+    using assms qregister.rep_eq by blast
+  from register_decomposition[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'z::type = register_decomposition_basis (apply_qregister F).
+        ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U::('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+    then obtain U :: \<open>('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
+      [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
+      by auto
+    from tensor_ccsubspace_INF_left[where X=X and T=\<open>\<top> :: 'z ell2 ccsubspace\<close> and S=S]
+    have ?goal if \<open>X \<noteq> {}\<close>
+      by (simp add: apply_qregister_space_def decomp sandwich_apply cblinfun_compose_image
+          unitary_isometry tensor_ccsubspace_via_Proj False
+          flip: cblinfun_image_INF_eq)
+    moreover have ?goal if \<open>X = {}\<close>
+      using False that by auto
+    ultimately show ?goal
+      apply (cases \<open>X = {}\<close>) by auto
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by auto
+qed
+
+lemma apply_qregister_space_SUP: "apply_qregister_space F (SUP x\<in>X. S x) = (SUP x\<in>X. apply_qregister_space F (S x))"
+  apply (cases \<open>qregister F\<close>)
+   apply (rule complement_injective)
+   apply (simp add: uminus_SUP apply_qregister_space_INF flip: apply_qregister_space_uminus)
+  by (simp add: non_qregister)
+
+lemma apply_qregister_space_inf: \<open>apply_qregister_space F (A \<sqinter> B) = apply_qregister_space F A \<sqinter> apply_qregister_space F B\<close>
+  apply (cases \<open>qregister F\<close>)
+  using apply_qregister_space_INF[where F=F and X=\<open>{True,False}\<close> and S=\<open>\<lambda> True \<Rightarrow> A | False \<Rightarrow> B\<close>]
+  by (auto simp: non_qregister)
+
+lemma apply_qregister_space_sup: \<open>apply_qregister_space F (A \<squnion> B) = apply_qregister_space F A \<squnion> apply_qregister_space F B\<close>
+  using apply_qregister_space_SUP[where F=F and X=\<open>{True,False}\<close> and S=\<open>\<lambda> True \<Rightarrow> A | False \<Rightarrow> B\<close>]
+  by simp
+
+lemma apply_qregister_space_plus: \<open>apply_qregister_space F (A + B) = apply_qregister_space F A + apply_qregister_space F B\<close>
+  by (simp add: plus_ccsubspace_def apply_qregister_space_sup)
+
+lemma apply_qregister_space_minus: \<open>apply_qregister_space F (A - B) = apply_qregister_space F A - apply_qregister_space F B\<close>
+  apply (cases \<open>qregister F\<close>)
+  by (simp_all add: complemented_lattice_class.diff_eq apply_qregister_space_inf apply_qregister_space_uminus
+      non_qregister)
+
+lemma apply_qregister_space_kernel: \<open>qregister F \<Longrightarrow> apply_qregister_space F (Complex_Bounded_Linear_Function.kernel A) = Complex_Bounded_Linear_Function.kernel (apply_qregister F A)\<close>
+  by (metis (no_types, lifting) Proj_on_image Proj_top apply_qregister_adj apply_qregister_of_id apply_qregister_space_def apply_qregister_space_image apply_qregister_space_uminus kernel_compl_adj_range)
+
+lemma apply_qregister_space_eigenspace: \<open>qregister F \<Longrightarrow> apply_qregister_space F (eigenspace c A) = eigenspace c (apply_qregister F A)\<close>
+  by (simp add: apply_qregister_minus apply_qregister_scaleC apply_qregister_space_kernel eigenspace_def)
+
+lemma apply_qregister_space_orthogonal_spaces: \<open>qregister F \<Longrightarrow> orthogonal_spaces (apply_qregister_space F A) (apply_qregister_space F B) = orthogonal_spaces A B\<close>
+  by (metis apply_qregister_space_mono apply_qregister_space_uminus orthogonal_spaces_leq_compl)
+
+lemma apply_qregister_pos: \<open>apply_qregister F A \<ge> 0 \<longleftrightarrow> A \<ge> 0\<close> if \<open>qregister F\<close>
+  by (metis that apply_qregister_mono apply_qregister_of_0)
+
+lemma apply_qregister_abs_op: \<open>apply_qregister F (abs_op A) = abs_op (apply_qregister F A)\<close>
+proof (cases \<open>qregister F\<close>)
+  case True
+  note [simp] = this
+  show ?thesis
+    apply (rule abs_opI)
+    by (simp_all add: abs_op_square abs_op_pos apply_qregister_pos flip: apply_qregister_adj qregister_compose)
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister)
+qed
+
+lemma apply_qregister_sqrt_op: \<open>apply_qregister F (sqrt_op A) = sqrt_op (apply_qregister F A)\<close>
+proof (cases \<open>qregister F\<close>)
+  case True
+  note posA[simp] = this
+  show ?thesis
+  proof (cases \<open>A \<ge> 0\<close>)
+    case True
+    then have posFA: \<open>0 \<le> apply_qregister F (sqrt_op A)\<close>
+      by (simp add: apply_qregister_pos)
+    have sq: \<open>apply_qregister F (sqrt_op A)* o\<^sub>C\<^sub>L apply_qregister F (sqrt_op A) = apply_qregister F A\<close>
+      using True by (simp_all add: abs_op_square flip: apply_qregister_adj qregister_compose positive_hermitianI)
+    from posFA sq
+    show ?thesis
+      by (rule sqrt_op_unique)
+  next
+    case False
+    then have 1: \<open>sqrt_op A = 0\<close>
+      by (rule sqrt_op_nonpos)
+    from False
+    have \<open>\<not> (0 \<le> apply_qregister F A)\<close>
+      by (simp add: apply_qregister_pos)
+    then have 2: \<open>sqrt_op (apply_qregister F A) = 0\<close>
+      by (rule sqrt_op_nonpos)
+    from 1 2
+    show ?thesis 
+      by simp
+  qed
+next
+  case False
+  then show ?thesis
+    by (simp add: non_qregister)
+qed 
+
+lemma apply_qregister_polar_decomposition: \<open>apply_qregister F (polar_decomposition A) = polar_decomposition (apply_qregister F A)\<close>
+proof (cases \<open>qregister F\<close>)
+  case True
+  define PA FPA where \<open>PA = polar_decomposition A\<close> and \<open>FPA = apply_qregister F PA\<close>
+  have \<open>kernel (apply_qregister F (polar_decomposition A)) = kernel (apply_qregister F A)\<close>
+    by (metis True apply_qregister_space_kernel polar_decomposition_initial_space)
+  moreover have \<open>apply_qregister F (polar_decomposition A) o\<^sub>C\<^sub>L abs_op (apply_qregister F A) = apply_qregister F A\<close>
+    by (metis apply_qregister_abs_op polar_decomposition_correct qregister_compose)
+  ultimately show ?thesis
+    by (rule polar_decomposition_unique)
+next
+  case False
+  then show ?thesis 
+    by (simp add: polar_decomposition_0 non_qregister)
+qed
+
+(* lift_definition ccomplements :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is complements. *)
+lift_definition qcomplements :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is complements.
+
+lemma qcomplements_def': \<open>qcomplements F G \<longleftrightarrow> iso_qregister (qregister_pair F G)\<close>
+(* TODO "qcompatible F G" can be dropped *)
+  unfolding iso_qregister_def apply transfer 
+  by (auto simp: complements_def Laws_Quantum.iso_register_def non_qregister_raw)
 
 end

@@ -115,9 +115,6 @@ abbreviation (input) \<open>isProjector \<equiv> is_Proj\<close>
 
 notation ket ("|_\<rangle>")
 
-lemma Proj_on_image [simp]: \<open>Proj S *\<^sub>S S = S\<close>
-  by (metis Proj_idempotent Proj_range cblinfun_compose_image)
-
 lemma proj_ket_is_0[simp]: \<open>proj (ket x) *\<^sub>S ccspan {ket y} = 0\<close> if \<open>x \<noteq> y\<close>
   using that by (simp add: cblinfun_image_ccspan cinner_ket flip: butterfly_eq_proj)
 
