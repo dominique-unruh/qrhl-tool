@@ -115,21 +115,6 @@ next
       by assumption
 qed
 
-lemma apply_qregister_fst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
-  by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
-
-lemma apply_qregister_snd: \<open>apply_qregister qSnd a = id_cblinfun \<otimes>\<^sub>o a\<close>
-  by (simp add: Laws_Quantum.Snd_def qSnd.rep_eq)
-
-lemma apply_qregister_qswap: \<open>apply_qregister qswap (a \<otimes>\<^sub>o b) = b \<otimes>\<^sub>o a\<close>
-  by (simp add: qswap_def apply_qregister_pair apply_qregister_fst apply_qregister_snd
-      comp_tensor_op)
-
-lemma transform_qregister_swap_ell2: \<open>transform_qregister swap_ell2 = qswap\<close>
-  apply (rule qregister_eqI_tensor_op)
-  by (auto simp: apply_qregister_transform_qregister apply_qregister_qswap
-      swap_tensor_op sandwich_apply)
-
 definition index_flip_vector :: "qu2 ell2 \<Rightarrow> qu2 ell2" where \<open>index_flip_vector \<psi> = swap_ell2 *\<^sub>V \<psi>\<close>
 
 definition swap_variables_vector :: "'a q2variable \<Rightarrow> 'a q2variable \<Rightarrow> qu2 ell2 \<Rightarrow> qu2 ell2" where
@@ -159,10 +144,6 @@ lemma index_flip_subspace_inf[simp]: "index_flip_subspace (A\<sqinter>B) = (inde
   by (simp add: index_flip_subspace_def)
 lemma index_flip_subspace_plus[simp]: "index_flip_subspace (A+B) = (index_flip_subspace A) + (index_flip_subspace B)"
   by (simp add: index_flip_subspace_def)
-
-(* TODO move to Prog_Variables *)
-lemma qregister_unitary: \<open>qregister F \<Longrightarrow> unitary U \<Longrightarrow> unitary (apply_qregister F U)\<close>
-  apply (transfer fixing: U) by (rule register_unitary)
 
 lemma swap_variables_subspace_top[simp]: "qcompatible v w \<Longrightarrow> swap_variables_subspace v w top = top"
   by (simp add: swap_variables_subspace_def unitary_range qregister_unitary)
@@ -222,10 +203,6 @@ adhoc_overloading colocal \<open>\<lambda>x y. distinct_qvars_pred_vars x y\<clo
 (* Having non-eta reduced terms in the adhoc_overloading effectively makes the overloading input-only,
    as appropropriate for a legacy name *)
 
-(* TODO move to Prog_Var *)
-lemma apply_qregister_empty_qregister[simp]: \<open>apply_qregister empty_qregister A = one_dim_iso A *\<^sub>C id_cblinfun\<close>
-  by (simp add: empty_qregister.rep_eq empty_var_def)
-
 lemma distinct_qvars_op_vars_unit'[simp]: "distinct_qvars_op_vars A empty_qregister"
   by (simp add: distinct_qvars_op_vars_def commutant_def)
 
@@ -248,16 +225,6 @@ lemma distinct_qvars_pred_vars_bot[simp,intro]:
   shows \<open>distinct_qvars_pred_vars \<bottom> F\<close>
   by (simp add: distinct_qvars_pred_vars_def)
 
-  (* TODO move to Prog_Variables *)
-  (* TODO same for cregister *)
-lemma qregister_raw_apply_qregister[simp]: \<open>qregister_raw (apply_qregister X) \<longleftrightarrow> qregister X\<close>
-  apply transfer by simp
-
-  
-  (* TODO move to Prog_Variables *)
-lemma apply_qregister_scaleC: \<open>apply_qregister X (c *\<^sub>C a) = c *\<^sub>C apply_qregister X a\<close>
-  using clinear_apply_qregister[of X]
-  by (rule clinear.scaleC)
 
 lemma distinct_qvars_op_vars_non_qregister[simp]: \<open>distinct_qvars_op_vars A non_qregister\<close>
   by (simp add: distinct_qvars_op_vars_def commutant_def)
@@ -281,11 +248,11 @@ proof (cases \<open>qregister \<lbrakk>F,G\<rbrakk>\<^sub>q\<close>)
   moreover have \<open>continuous_map weak_star_topology weak_star_topology (\<lambda>B. A o\<^sub>C\<^sub>L apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B)\<close>
     using weak_star_cont_register continuous_map_left_comp_weak_star    
     apply (rule continuous_map_compose[unfolded o_def])
-    by simp
+    using True qregister.rep_eq by blast
   moreover have \<open>continuous_map weak_star_topology weak_star_topology (\<lambda>B. apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B o\<^sub>C\<^sub>L A)\<close>
     using weak_star_cont_register continuous_map_right_comp_weak_star    
     apply (rule continuous_map_compose[unfolded o_def])
-    by simp
+    using True qregister.rep_eq by blast
   ultimately have \<open>(\<lambda>B. A o\<^sub>C\<^sub>L apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B) = (\<lambda>B. apply_qregister \<lbrakk>F, G\<rbrakk>\<^sub>q B o\<^sub>C\<^sub>L A)\<close> for B
     apply (rule weak_star_clinear_eq_butterfly_ketI)
     using assms
@@ -417,7 +384,7 @@ lemma scaleC_lift[simp]: "c *\<^sub>C (A\<guillemotright>Q) = (c *\<^sub>C A) \<
    by (simp add: apply_qregister_scaleC)
 lemma norm_lift[simp]:
   "distinct_qvars Q \<Longrightarrow> norm (X\<guillemotright>Q) = norm X"
-  by (simp add: register_norm)
+  by (simp add: register_norm qregister_raw_apply_qregister)
 (* TODO remove [simp]? *)
 lemma imageOp_lift[simp]: "applyOpSpace (liftOp U Q) top = liftSpace (applyOpSpace U top) Q"
   apply (cases \<open>qregister Q\<close>)
@@ -494,12 +461,6 @@ lemma lift_inf[simp]: "apply_qregister_space Q S \<sqinter> apply_qregister_spac
 lemma predicate_local_inf[intro!]: "predicate_local S Q \<Longrightarrow> predicate_local T Q \<Longrightarrow> predicate_local (S\<sqinter>T) Q"
   by (auto simp add: predicate_local_def)
 
-(* TODO move to Prog_Var *)
-(* TODO write lemma (proof in quicksheets 2023 p32)
-lemma qregister_invertible_op:
-assumes \<open>qregister F\<close>
-shows \<open>F X invertible \<longleftrightarrow> X invertible\<close> *)
-
 lemma lift_leq[simp]: "distinct_qvars Q \<Longrightarrow> (S\<guillemotright>Q \<le> T\<guillemotright>Q) = (S \<le> T)" for S::"'a subspace"
   by (rule apply_qregister_space_mono)
 
@@ -563,32 +524,12 @@ lemma move_sup_meas_rule:
 (* lemma span_lift: "distinct_qvars Q \<Longrightarrow> ccspan G \<guillemotright> Q = ccspan {lift_vector \<psi> Q \<psi>' | \<psi> \<psi>'. \<psi>\<in>G \<and> \<psi>' \<in> lift_rest Q}"
    *)
 
-(* TODO move *)
-lemma apply_qregister_space_transform_qregister:
-  assumes [simp]: \<open>unitary U\<close>
-  shows \<open>apply_qregister_space (transform_qregister U) S = U *\<^sub>S S\<close>
-  by (simp add: apply_qregister_transform_qregister apply_qregister_space_def Proj_sandwich)
-
 lemma index_flip_subspace_lift[simp]: "index_flip_subspace (S\<guillemotright>Q) = S \<guillemotright> index_flip_qvar Q"
   apply (cases \<open>qregister Q\<close>)
   by (simp_all add: index_flip_subspace_def index_flip_qvar_def apply_qregister_space_transform_qregister
       flip: transform_qregister_swap_ell2)
 
 (* lemma swap_variables_subspace_lift[simp]: "swap_variables_subspace v w (S\<guillemotright>Q) = S \<guillemotright> swap_variables_vars v w Q" *)
-
-lemma apply_qregister_qFst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
-  by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
-
-lemma apply_qregister_qSnd: \<open>apply_qregister qSnd b = id_cblinfun \<otimes>\<^sub>o b\<close>
-  by (simp add: Laws_Quantum.Snd_def qSnd.rep_eq)
-
-(* TODO move *)
-lemma apply_qregister_space_qFst: \<open>apply_qregister_space qFst S = S \<otimes>\<^sub>S \<top>\<close>
-  by (simp add: apply_qregister_space_def tensor_ccsubspace_via_Proj apply_qregister_qFst flip: imageOp_lift)
-
-(* TODO move to Prog_Vars *)
-lemma apply_qregister_space_qSnd: \<open>apply_qregister_space qSnd S = \<top> \<otimes>\<^sub>S S\<close>
-  by (simp add: apply_qregister_space_def tensor_ccsubspace_via_Proj apply_qregister_qSnd flip: imageOp_lift)
 
 
 lemma ket_less_specific:
@@ -621,16 +562,13 @@ lemma translate_to_index_registers_classical_subspace[translate_to_index_registe
 
 (* TODO move *)
 (* TODO: this should be applied in normalize_register_conv *)
-(* TODO: keep qregister_chain_pair or this  *)
+(* TODO: keep *) thm qregister_chain_pair (* or this  *)
 (* TODO: better name *)
 lemma pair_chain_fst_snd:
   shows \<open>\<lbrakk>qregister_chain F A, qregister_chain F B\<rbrakk>\<^sub>q = qregister_chain F \<lbrakk>A, B\<rbrakk>\<^sub>q\<close>
   apply (rule sym)
   by (rule qregister_chain_pair)
 
-(* TODO move *)
-lemma apply_qregister_space_id[simp]: \<open>apply_qregister_space qregister_id S = S\<close>
-  by (simp add: apply_qregister_space_def)
 
 
 ML \<open>
@@ -836,22 +774,6 @@ next
     by (metis \<open>qregister \<lbrakk>R, Q\<rbrakk>\<^sub>q\<close> qregister_chain_apply_space qregister_chain_pair_Fst qregister_chain_pair_Snd)
 qed
 
-lemma qcomplement_exists:
-  fixes F :: \<open>('a,'b) qregister\<close>
-  assumes \<open>qregister F\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
-          \<exists>G :: ('c,'b) qregister. qcomplements F G\<close>
-proof -
-  have *: \<open>(\<exists>G :: 'c qupdate \<Rightarrow> 'b qupdate. complements (apply_qregister F) G)
-    \<longleftrightarrow> (\<exists>G :: ('c,'b) qregister. qcomplements F G)\<close>
-    apply (rule Ex_iffI[where f=Abs_qregister and g=apply_qregister])
-    by (auto simp: qcomplements_def complements_def Abs_qregister_inverse
-        Abs_qregister_inverse Laws_Quantum.compatible_register2)
-  show ?thesis
-    apply (subst *[symmetric])
-    apply (rule complement_exists)
-    using assms by simp
-qed
 
 lemma distinct_qvars_op_vars_complement:
   assumes \<open>qcomplements Q R\<close>
@@ -1072,78 +994,6 @@ next
   show ?thesis
     by (simp add: quantum_equality_full_not_compatible)
 qed
-
-lift_definition qregister_tensor :: \<open>('a,'b) qregister \<Rightarrow> ('c,'d) qregister \<Rightarrow> ('a\<times>'c, 'b\<times>'d) qregister\<close> is
-  \<open>\<lambda>F G. if qregister_raw F \<and> qregister_raw G then Laws_Quantum.register_tensor F G else non_qregister_raw\<close>
-  by (auto simp: non_qregister_raw Laws_Quantum.register_tensor_is_register)
-
-lemma qcompatible_raw_non_qregister_raw_left[simp]: \<open>\<not> qcompatible_raw non_qregister_raw F\<close>
-  using non_qregister_raw qcompatible_raw_def by blast
-
-lemma qcompatible_raw_non_qregister_raw_right[simp]: \<open>\<not> qcompatible_raw F non_qregister_raw\<close>
-  using non_qregister_raw qcompatible_raw_def by blast
-
-lemma qregister_pair_chain_left: \<open>qcompatible F G \<Longrightarrow> \<lbrakk>qregister_chain F H, G\<rbrakk>\<^sub>q = qregister_chain \<lbrakk>F, G\<rbrakk> (qregister_tensor H qregister_id)\<close>
-  unfolding qcompatible_def
-  apply transfer
-  by (simp add: register_tensor_is_register pair_o_tensor non_qregister_raw)
-lemma qregister_pair_chain_right: \<open>qcompatible F G \<Longrightarrow> \<lbrakk>F, qregister_chain G H\<rbrakk>\<^sub>q = qregister_chain \<lbrakk>F, G\<rbrakk> (qregister_tensor qregister_id H)\<close>
-  unfolding qcompatible_def
-  apply transfer
-  by (simp add: register_tensor_is_register pair_o_tensor non_qregister_raw)
-
-lemma qregister_tensor_non_qregister_left[simp]: \<open>qregister_tensor non_qregister F = non_qregister\<close>
-  apply transfer by (auto simp: non_qregister_raw)
-lemma qregister_tensor_non_qregister_right[simp]: \<open>qregister_tensor F non_qregister = non_qregister\<close>
-  apply transfer by (auto simp: non_qregister_raw)
-
-lemma qregister_tensor_apply:
-  \<open>apply_qregister (qregister_tensor F G) (a \<otimes>\<^sub>o b) = apply_qregister F a \<otimes>\<^sub>o apply_qregister G b\<close>
-  apply (cases \<open>qregister F\<close>; cases \<open>qregister G\<close>)
-     apply (auto simp: non_qregister)
-  apply transfer
-  by simp
-
-lemma qregister_tensor_transform_qregister:
-  assumes [simp]: \<open>unitary U\<close> \<open>unitary V\<close>
-  shows \<open>qregister_tensor (transform_qregister U) (transform_qregister V)
-            = transform_qregister (U \<otimes>\<^sub>o V)\<close>
-  apply (rule qregister_eqI_tensor_op)
-  by (simp add: qregister_tensor_apply apply_qregister_transform_qregister unitary_tensor_op sandwich_tensor_op)
-
-lemma transform_qregister_non_unitary: \<open>\<not> unitary U \<Longrightarrow> transform_qregister U = non_qregister\<close>
-  apply (transfer fixing: U) by simp
-
-lemma transform_qregister_id: \<open>transform_qregister id_cblinfun = qregister_id\<close>
-  apply (rule apply_qregister_inject[THEN iffD1])
-  by (auto intro!: ext simp add: apply_qregister_transform_qregister)
-
-(* TODO _id2 (other side) *)
-lemma qregister_tensor_transform_qregister_id1:
-  \<open>qregister_tensor (transform_qregister U) qregister_id
-            = transform_qregister (U \<otimes>\<^sub>o id_cblinfun)\<close>
-proof (cases \<open>unitary U\<close>)
-  case True
-  note [simp] = True
-  have \<open>qregister_tensor (transform_qregister U) qregister_id
-      = qregister_tensor (transform_qregister U) (transform_qregister id_cblinfun)\<close>
-    by (simp add: transform_qregister_id)
-  also have \<open>\<dots> = transform_qregister (U \<otimes>\<^sub>o id_cblinfun)\<close>
-    by (simp add: qregister_tensor_transform_qregister)
-  finally show ?thesis
-    by -
-next
-  case False
-  then show ?thesis
-    by (simp add: transform_qregister_non_unitary)
-qed
-
-lemma qregister_chain_transform_qregister:
-  assumes [simp]: \<open>unitary U\<close> \<open>unitary V\<close>
-  shows \<open>qregister_chain (transform_qregister U) (transform_qregister V) = transform_qregister (U o\<^sub>C\<^sub>L V)\<close>
-  by (auto intro!: ext apply_qregister_inject[THEN iffD1]
-      simp: apply_qregister_transform_qregister sandwich_compose
-      simp flip: cblinfun_apply_cblinfun_compose)
 
 
 lemma quantum_equality_transform_register_left:

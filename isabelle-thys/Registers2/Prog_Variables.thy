@@ -251,7 +251,8 @@ lemma translate_to_index_registers_template_s_empty:
 lemma translate_to_index_registers_template_o_empty:
   assumes \<open>\<And>FG. qregister FG \<Longrightarrow> apply_qregister FG f = f'\<close>
   shows \<open>TTIR_APPLY_QREGISTER f' (empty_qregister :: (unit,_) qregister) f\<close>
-  using assms by (simp add: TTIR_APPLY_QREGISTER_def)
+  using assms apply (simp add: TTIR_APPLY_QREGISTER_def)
+  using apply_qregister_empty_qregister empty_qregister_is_register by blast
 
 lemma translate_to_index_registers_apply[translate_to_index_registers]:
   assumes \<open>TTIR_APPLY_QREGISTER A G A'\<close>

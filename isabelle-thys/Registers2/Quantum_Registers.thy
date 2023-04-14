@@ -875,4 +875,203 @@ lemma qcomplements_def': \<open>qcomplements F G \<longleftrightarrow> iso_qregi
   unfolding iso_qregister_def apply transfer 
   by (auto simp: complements_def Laws_Quantum.iso_register_def non_qregister_raw)
 
+  (* TODO move to Prog_Variables *)
+  (* TODO same for cregister *)
+lemma qregister_raw_apply_qregister: \<open>qregister_raw (apply_qregister X) \<longleftrightarrow> qregister X\<close>
+  apply transfer by simp
+
+lemma qregister_Abs_qregister: \<open>qregister_raw F \<Longrightarrow> qregister (Abs_qregister F)\<close>
+  by (simp add: Abs_qregister_inverse flip: qregister_raw_apply_qregister)
+  
+lemma qregister_apply_Abs: \<open>qregister_raw F \<Longrightarrow> apply_qregister (Abs_qregister F) = F\<close>
+  by (simp add: Abs_qregister_inverse)
+
+lemma qregister_unitary: \<open>qregister F \<Longrightarrow> unitary U \<Longrightarrow> unitary (apply_qregister F U)\<close>
+  apply (transfer fixing: U) by (rule register_unitary)
+
+lemma apply_qregister_empty_qregister[simp]: \<open>apply_qregister empty_qregister A = one_dim_iso A *\<^sub>C id_cblinfun\<close>
+  by (simp add: empty_qregister.rep_eq empty_var_def)
+
+(* TODO write lemma (proof in quicksheets 2023 p32)
+lemma qregister_invertible_op:
+assumes \<open>qregister F\<close>
+shows \<open>F X invertible \<longleftrightarrow> X invertible\<close> *)
+
+lemma apply_qregister_space_transform_qregister:
+  assumes [simp]: \<open>unitary U\<close>
+  shows \<open>apply_qregister_space (transform_qregister U) S = U *\<^sub>S S\<close>
+  by (simp add: apply_qregister_transform_qregister apply_qregister_space_def Proj_sandwich)
+
+lemma apply_qregister_qFst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
+  by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
+
+lemma apply_qregister_qSnd: \<open>apply_qregister qSnd b = id_cblinfun \<otimes>\<^sub>o b\<close>
+  by (simp add: Laws_Quantum.Snd_def qSnd.rep_eq)
+
+lemma apply_qregister_image: "apply_qregister Q U *\<^sub>S top = apply_qregister_space Q (U *\<^sub>S top)"
+  apply (cases \<open>qregister Q\<close>)
+  by (simp_all add: apply_qregister_space_image apply_qregister_space_top non_qregister)
+lemma applyOpSpace_lift: "apply_qregister Q U *\<^sub>S apply_qregister_space Q S = apply_qregister_space Q (U *\<^sub>S S)"
+  thm apply_qregister_space_image
+   by (simp flip: apply_qregister_space_image)
+
+lemma apply_qregister_space_qFst: \<open>apply_qregister_space qFst S = S \<otimes>\<^sub>S \<top>\<close>
+  by (simp add: apply_qregister_space_def tensor_ccsubspace_via_Proj apply_qregister_qFst flip: apply_qregister_image)
+
+lemma apply_qregister_space_qSnd: \<open>apply_qregister_space qSnd S = \<top> \<otimes>\<^sub>S S\<close>
+  by (simp add: apply_qregister_space_def tensor_ccsubspace_via_Proj apply_qregister_qSnd flip: apply_qregister_image)
+
+lemma apply_qregister_fst: \<open>apply_qregister qFst a = a \<otimes>\<^sub>o id_cblinfun\<close>
+  by (simp add: Laws_Quantum.Fst_def qFst.rep_eq)
+
+lemma apply_qregister_snd: \<open>apply_qregister qSnd a = id_cblinfun \<otimes>\<^sub>o a\<close>
+  by (simp add: Laws_Quantum.Snd_def qSnd.rep_eq)
+
+lemma apply_qregister_qswap: \<open>apply_qregister qswap (a \<otimes>\<^sub>o b) = b \<otimes>\<^sub>o a\<close>
+  by (simp add: qswap_def apply_qregister_pair apply_qregister_fst apply_qregister_snd
+      comp_tensor_op)
+
+lemma transform_qregister_swap_ell2: \<open>transform_qregister swap_ell2 = qswap\<close>
+  apply (rule qregister_eqI_tensor_op)
+  by (auto simp: apply_qregister_transform_qregister apply_qregister_qswap
+      swap_tensor_op sandwich_apply)
+
+lemma apply_qregister_space_id[simp]: \<open>apply_qregister_space qregister_id S = S\<close>
+  by (simp add: apply_qregister_space_def)
+
+lift_definition qregister_tensor :: \<open>('a,'b) qregister \<Rightarrow> ('c,'d) qregister \<Rightarrow> ('a\<times>'c, 'b\<times>'d) qregister\<close> is
+  \<open>\<lambda>F G. if qregister_raw F \<and> qregister_raw G then Laws_Quantum.register_tensor F G else non_qregister_raw\<close>
+  by (auto simp: non_qregister_raw Laws_Quantum.register_tensor_is_register)
+
+lemma qcompatible_raw_non_qregister_raw_left[simp]: \<open>\<not> qcompatible_raw non_qregister_raw F\<close>
+  using non_qregister_raw qcompatible_raw_def by blast
+
+lemma qcompatible_raw_non_qregister_raw_right[simp]: \<open>\<not> qcompatible_raw F non_qregister_raw\<close>
+  using non_qregister_raw qcompatible_raw_def by blast
+
+lemma qregister_pair_chain_left: \<open>qcompatible F G \<Longrightarrow> qregister_pair (qregister_chain F H) G = qregister_chain (qregister_pair F G) (qregister_tensor H qregister_id)\<close>
+  unfolding qcompatible_def
+  apply transfer
+  by (simp add: register_tensor_is_register pair_o_tensor non_qregister_raw)
+lemma qregister_pair_chain_right: \<open>qcompatible F G \<Longrightarrow> qregister_pair F (qregister_chain G H) = qregister_chain (qregister_pair F G) (qregister_tensor qregister_id H)\<close>
+  unfolding qcompatible_def
+  apply transfer
+  by (simp add: register_tensor_is_register pair_o_tensor non_qregister_raw)
+
+lemma qregister_tensor_non_qregister_left[simp]: \<open>qregister_tensor non_qregister F = non_qregister\<close>
+  apply transfer by (auto simp: non_qregister_raw)
+lemma qregister_tensor_non_qregister_right[simp]: \<open>qregister_tensor F non_qregister = non_qregister\<close>
+  apply transfer by (auto simp: non_qregister_raw)
+
+lemma qregister_tensor_apply:
+  \<open>apply_qregister (qregister_tensor F G) (a \<otimes>\<^sub>o b) = apply_qregister F a \<otimes>\<^sub>o apply_qregister G b\<close>
+  apply (cases \<open>qregister F\<close>; cases \<open>qregister G\<close>)
+     apply (auto simp: non_qregister)
+  apply transfer
+  by simp
+
+lemma qregister_tensor_transform_qregister:
+  assumes [simp]: \<open>unitary U\<close> \<open>unitary V\<close>
+  shows \<open>qregister_tensor (transform_qregister U) (transform_qregister V)
+            = transform_qregister (U \<otimes>\<^sub>o V)\<close>
+  apply (rule qregister_eqI_tensor_op)
+  by (simp add: qregister_tensor_apply apply_qregister_transform_qregister unitary_tensor_op sandwich_tensor_op)
+
+lemma transform_qregister_non_unitary: \<open>\<not> unitary U \<Longrightarrow> transform_qregister U = non_qregister\<close>
+  apply (transfer fixing: U) by simp
+
+lemma transform_qregister_id: \<open>transform_qregister id_cblinfun = qregister_id\<close>
+  apply (rule apply_qregister_inject[THEN iffD1])
+  by (auto intro!: ext simp add: apply_qregister_transform_qregister)
+
+
+(* TODO _id2 (other side) *)
+lemma qregister_tensor_transform_qregister_id1:
+  \<open>qregister_tensor (transform_qregister U) qregister_id
+            = transform_qregister (U \<otimes>\<^sub>o id_cblinfun)\<close>
+proof (cases \<open>unitary U\<close>)
+  case True
+  note [simp] = True
+  have \<open>qregister_tensor (transform_qregister U) qregister_id
+      = qregister_tensor (transform_qregister U) (transform_qregister id_cblinfun)\<close>
+    by (simp add: transform_qregister_id)
+  also have \<open>\<dots> = transform_qregister (U \<otimes>\<^sub>o id_cblinfun)\<close>
+    by (simp add: qregister_tensor_transform_qregister)
+  finally show ?thesis
+    by -
+next
+  case False
+  then show ?thesis
+    by (simp add: transform_qregister_non_unitary)
+qed
+
+lemma qregister_chain_transform_qregister:
+  assumes [simp]: \<open>unitary U\<close> \<open>unitary V\<close>
+  shows \<open>qregister_chain (transform_qregister U) (transform_qregister V) = transform_qregister (U o\<^sub>C\<^sub>L V)\<close>
+  by (auto intro!: ext apply_qregister_inject[THEN iffD1]
+      simp: apply_qregister_transform_qregister sandwich_compose
+      simp flip: cblinfun_apply_cblinfun_compose)
+
+lemma register_range_complement_commutant: \<open>commutant (range F) = range G\<close> if \<open>complements F G\<close>
+  apply (rule complement_range[symmetric])
+  using that by (simp_all add: complements_def)
+
+lemma qcomplements_via_rangeI:
+  assumes \<open>qregister F\<close>
+  assumes \<open>range (apply_qregister G) = commutant (range (apply_qregister F))\<close>
+  shows \<open>qcomplements F G\<close>
+proof (cases \<open>qregister G\<close>)
+  case True
+  have \<open>qregister_raw (apply_qregister F)\<close>
+    using assms(1) by (auto simp: qregister_raw_apply_qregister)
+  from complement_exists[OF this]
+  have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis F. qcomplements F G\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>G :: 'g qupdate \<Rightarrow> _. complements (apply_qregister F) G\<close>
+    then obtain G' :: \<open>'g qupdate \<Rightarrow> _\<close> where compl: \<open>complements (apply_qregister F) G'\<close>
+      by auto
+    then have \<open>range G' = commutant (range (apply_qregister F))\<close>
+      by (simp add: register_range_complement_commutant)
+    with assms have \<open>range G' = range (apply_qregister G)\<close>
+      by simp
+    then have \<open>equivalent_registers (apply_qregister G) G'\<close>
+      by (metis Laws_Complement_Quantum.complement_unique Laws_Quantum.equivalent_registers_register_right True compl qregister.rep_eq same_range_equivalent)
+    with compl have \<open>complements (apply_qregister F) (apply_qregister G)\<close>
+      using Laws_Quantum.equivalent_registers_sym equivalent_complements by blast
+    then show \<open>qcomplements F G\<close>
+      by (simp add: qcomplements.rep_eq)
+  qed
+  from this[cancel_with_type]
+  show ?thesis 
+    by -
+next
+  case False
+  then have \<open>id_cblinfun \<notin> range (apply_qregister G)\<close>
+    by (simp add: non_qregister)
+  moreover have \<open>id_cblinfun \<in> commutant (range (apply_qregister F))\<close>
+    by simp
+  ultimately have False
+    using assms by metis
+  then show ?thesis
+    by simp
+qed
+
+lemma qcomplement_exists:
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
+          \<exists>G :: ('c,'b) qregister. qcomplements F G\<close>
+proof -
+  have *: \<open>(\<exists>G :: 'c qupdate \<Rightarrow> 'b qupdate. complements (apply_qregister F) G)
+    \<longleftrightarrow> (\<exists>G :: ('c,'b) qregister. qcomplements F G)\<close>
+    apply (rule Ex_iffI[where f=Abs_qregister and g=apply_qregister])
+    by (auto simp: qcomplements_def complements_def Abs_qregister_inverse
+        Abs_qregister_inverse Laws_Quantum.compatible_register2)
+  show ?thesis
+    apply (subst *[symmetric])
+    apply (rule complement_exists)
+    using assms by (simp add: qregister_raw_apply_qregister)
+qed
+
+
 end
