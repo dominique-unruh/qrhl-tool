@@ -28,25 +28,6 @@ fun generalized_reflexivity ct1 ct2 = let
           handle THM _ => raise CTERM ("generalized_reflexivity: mismatch", [ct1, ct2])
 in thm end
 
-fun mk_equals_cterm ctxt ct1 ct2 : cterm =
-  Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq \<open>Thm.typ_of_cterm ct1\<close>\<close>) ct1) ct2
-
-fun conv_from_tac check tac ctxt ct =
-  let val t = Thm.term_of ct
-      val _ = check ctxt t
-      val maxidx = Thm.maxidx_of_cterm ct
-      val T = Thm.ctyp_of_cterm ct
-      val goal = mk_equals_cterm ctxt ct (Thm.var (("result",maxidx+1), T))
-      val thm = prove_handle ctxt goal tac
-      val thm = if Thm.term_of (Thm.lhs_of thm) = Thm.term_of ct then thm
-                else let val refl = generalized_reflexivity ct (Thm.lhs_of thm)
-                             handle CTERM _ => error ("conv_from_tac: tactic changed lhs")
-(* val _ = \<^print> ("FIXUP", Thm.prop_of refl, Thm.prop_of thm) *)
-                     in Thm.transitive refl thm end
-  in
-    thm
-  end
-
 
 (* (* Converts e into (\<lambda>(x\<^sub>1,x\<^sub>2,x\<^sub>3,..). e (x\<^sub>1,x\<^sub>2,x\<^sub>3,..)).
   Names and types of x\<^sub>i are given by varlist.
@@ -392,5 +373,38 @@ fun rewrite_with_prover (prover: Proof.context -> tactic) rules ctxt = let
 in tac end
 fun rewrite_with_prover_tac prover rules ctxt =
   CONVERSION (rewrite_with_prover prover rules ctxt)
+
+(* Takes a tactic that proves goals of the form "something \<equiv> ?rhs" and
+   creates a conversion from it that converts "something" into whatever the tactic 
+   instantiated ?rhs with.
+
+   The resulting conversion does not support terms containing schematic variables.
+*)
+fun conv_from_tac ctxt tac ct = let
+  val _ = Term.is_schematic (Thm.term_of ct) andalso error "schematic vars in conv_from_tac not yet supported"
+  val idx = Thm.maxidx_of_cterm ct + 1
+  val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq \<open>Thm.typ_of_cterm ct\<close>\<close>)
+                                  ct)
+                       (Thm.var ((("rhs",idx),Thm.ctyp_of_cterm ct)))
+  val thm = Goal.prove_internal ctxt [] goal (K tac)
+in thm end
+(* TODO keep this or the above conv_from_tac, not both (what are the differences?) *)
+fun conv_from_tac' check tac ctxt ct =
+  let val t = Thm.term_of ct
+      val _ = check ctxt t
+      val maxidx = Thm.maxidx_of_cterm ct
+      val T = Thm.ctyp_of_cterm ct
+      val goal = mk_equals_cterm ct (Thm.var (("result",maxidx+1), T))
+      val thm = prove_handle ctxt goal tac
+      val thm = if Thm.term_of (Thm.lhs_of thm) = Thm.term_of ct then thm
+                else let val refl = generalized_reflexivity ct (Thm.lhs_of thm)
+                             handle CTERM _ => error ("conv_from_tac: tactic changed lhs")
+(* val _ = \<^print> ("FIXUP", Thm.prop_of refl, Thm.prop_of thm) *)
+                     in Thm.transitive refl thm end
+  in
+    thm
+  end
+
+
 
 end

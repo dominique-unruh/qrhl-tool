@@ -1,107 +1,8 @@
 structure Registers_Unsorted = struct
-
-fun dest_qregisterT (\<^Type>\<open>qregister T U\<close>) = (T,U)
-  | dest_qregisterT (\<^Type>\<open>dummy\<close>) = (dummyT, dummyT) (* So that it also works in not yet type-inferred terms *)
-  | dest_qregisterT T = raise TYPE("dest_qregisterT", [T], [])
-
-
-fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_sort (Proof_Context.theory_of ctxt) (T,\<^sort>\<open>CARD_1\<close>)
-  | is_empty_qregisterT _ T = raise TYPE("is_empty_qregisterT: not a qregister type", [T], [])
-
-fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
-  handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
-
-
-(* Transforms [F1,\<dots>,Fn] into (F1;\<dots>Fn). *)
-(* Note: not an exact inverse of explode_variable: it's only guaranteed that 
-   "implode_variable (explode_variable X)" is equivalent to X *)
-(* TODO: support cregisters as well *)
-fun implode_variable T [a] = a
-  | implode_variable T [] = \<^Const>\<open>empty_qregister HOLogic.unitT T\<close>
-  | implode_variable T (F::Gs) = let
-      val G = implode_variable T Gs
-      in
-       \<^Const>\<open>qregister_pair \<open>fastype_of F |> dest_qregisterT |> fst\<close> \<open>fastype_of F |> dest_qregisterT |> snd\<close> \<open>fastype_of G |> dest_qregisterT |> fst\<close>\<close> 
-        $ F $ G
-      end
-
-(* Transforms F into [F1,\<dots>,Fn] such that F is equivalent to (F1;\<dots>Fn). *)
-(* TODO: support cregisters as well *)
-fun explode_variable (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ F $ G) = explode_variable F @ explode_variable G
-  | explode_variable (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ \<^Const_>\<open>qregister_id _\<close> $ G) = explode_variable G
-  | explode_variable (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ F $ \<^Const_>\<open>qregister_id _\<close>) = explode_variable F
-  | explode_variable (Const(\<^const_name>\<open>qregister_chain\<close>,_) $ F $ G) =
-      explode_variable G |> map (fn g =>
-         \<^Const>\<open>qregister_chain \<open>fastype_of F |> dest_qregisterT |> fst\<close> \<open>fastype_of F |> dest_qregisterT |> snd\<close> \<open>fastype_of g |> dest_qregisterT |> fst\<close>\<close> 
-        $ F $ g)
-  | explode_variable \<^Const_>\<open>empty_qregister _ _\<close> = []
-  | explode_variable F = [F]    
-
-(* TODO something more reliable than just simp'ing *)
-fun distinct_vars_tac ctxt = let
-  val ctxt = (Config.put Simplifier.simp_trace false ctxt) addsimps @{thms 
-    distinct_cvars_split2 ccompatible3 ccompatible3' (* cregister_chain_id *)
-    qcompatible3 distinct_qvars_split2 qcompatible3 qcompatible3' (* qregister_chain_id *)
-    Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
-  in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are variables and distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
-
-
-(* Normalizes a register (e.g., removes id registers etc.) *)
-val normalize_register_conv = 
-  Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
-    @{thms qregister_chain_id[THEN eq_reflection] qregister_id_chain[THEN eq_reflection]
-           qregister_chain_pair[symmetric, THEN eq_reflection] pair_fst_snd[THEN eq_reflection]
-           qregister_chain_empty_right[THEN eq_reflection] qregister_chain_empty_left[THEN eq_reflection]}
-
-(* Like normalize_register_conv, but prefers \<lbrakk>Fst o X, Fst o Y\<rbrakk> over Fst o \<lbrakk>X, Y\<rbrakk> *)
-fun normalize_register_conv2 ctxt = 
-  normalize_register_conv ctxt then_conv Conv.top_rewrs_conv @{thms qregister_chain_pair[THEN eq_reflection]} ctxt
-
-(* Tactic to fully prove a goal of the form `qregister_le F G` *)
-(* TODO: support cregisters as well *)
-fun qregister_le_tac ctxt = let
-  fun tac' ctxt i st = st |>
-          ((resolve_tac ctxt @{thms qregister_le_refl qregister_le_id} i THEN distinct_vars_tac ctxt i)
-          ORELSE
-          (resolve_tac ctxt @{thms qregister_le_pair_rightI1 qregister_le_pair_rightI2} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i)
-          ORELSE
-          (resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN tac' ctxt i THEN tac' ctxt i)
-          ORELSE
-          (resolve_tac ctxt [@{lemma \<open>qregister Q ==> qregister_le empty_qregister Q\<close> by simp}] i THEN distinct_vars_tac ctxt i)
-          )
-in SUBGOAL (fn (t,i) => 
-  CONVERSION (normalize_register_conv2 ctxt) i 
-  (* THEN print_tac ctxt "qregister_le_tac" *)
-  THEN 
-  (case t of Const(\<^const_name>\<open>Trueprop\<close>,_) $ (Const(\<^const_name>\<open>qregister_le\<close>,_) $ (Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _) $ _) =>
-    (* Why to we have this special case? *)
-    resolve_tac ctxt @{thms qregister_le_pair_leftI} i THEN distinct_vars_tac ctxt i THEN qregister_le_tac ctxt i THEN qregister_le_tac ctxt i
-  | _ =>  tac' ctxt i))
-end
+open Registers open Registers_Automation
 
 
 
-(* Given variables F,G, returns an upper bound FG.
-   (Heuristically. Is not guaranteed to be a true upper bound.
-   But in simple cases, should be a lub.) *)
-(* TODO: support cregisters as well *)
-fun join_registers (_:Proof.context) F G = if F aconv G then SOME F else let
-  val Fs = explode_variable F
-  val Gs = explode_variable G
-  fun is_id \<^Const_>\<open>qregister_id _\<close> = true
-    | is_id _ = false
-  val (_, memoryT) = dest_qregisterT (fastype_of F)
-  in if exists is_id Fs orelse exists is_id Fs then
-        SOME \<^Const>\<open>qregister_id memoryT\<close>
-     else if subset (op aconv) (Gs, Fs) then SOME F
-     else if subset (op aconv) (Fs, Gs) then SOME G
-     else let
-      val FGs = Fs @ Gs |> sort_distinct Term_Ord.fast_term_ord
-      val FG = implode_variable memoryT FGs
-      in
-      SOME FG
-      end
-  end
 
 
 local
@@ -167,36 +68,6 @@ fun qregister_conversion_to_register_conv ctxt =
   normalize_register_conv2 ctxt then_conv 
   (qregister_conversion_to_register_conv_id else_conv qregister_conversion_to_register_conv0 ctxt)
 end
-
-
-(* Solves a goal of the form \<open>qregister_le Q ?QR \<and> qregister_le R ?QR\<close> by instantiating ?QR
-   as small as possible.
-*)
-fun qregister_lub_tac ctxt = Misc.MY_SUBGOAL ctxt (fn {ctxt, csubgoal, ...} => let
-  (* val _ = \<^print>("qregister_lub_tac", Thm.cterm_of ctxt t) *)
-  val (Q,R) = case Thm.term_of csubgoal of
-            \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>conj\<close> $ (\<^Const_>\<open>qregister_le _ _ _\<close> $ Q $ _)
-                                              $ (\<^Const_>\<open>qregister_le _ _ _\<close> $ R $ _))
-                => (Q,R)
-          | _ => error "qregister_lub_tac"
-  (* val _ = \<^print> (Q,R) *)
-  val QR = case join_registers ctxt Q R of
-             SOME QR => QR | NONE => error ("could not find upper bound of " ^ Syntax.string_of_term ctxt Q ^ " and " ^ Syntax.string_of_term ctxt R)
-  (* val _ = \<^print> QR *)
-  val lemma = @{lemma \<open>qregister_le Q QR \<Longrightarrow> qregister_le R QR \<Longrightarrow> qregister_le Q QR \<and> qregister_le R QR\<close> by simp}
-  val lemma = infer_instantiate ctxt [(("QR",0), Thm.cterm_of ctxt QR), (("Q",0), Thm.cterm_of ctxt Q), (("R",0), Thm.cterm_of ctxt R)] lemma
-  val tac =
-   (* Misc.print_here_tac ctxt \<^here> THEN  *)
-    resolve_tac ctxt [lemma] 1
- (* THEN Misc.print_here_tac ctxt \<^here>  *)
-    THEN qregister_le_tac ctxt 1
- (* THEN Misc.print_here_tac ctxt \<^here>  *)
-    THEN qregister_le_tac ctxt 1
-  (* THEN Misc.print_here_tac ctxt \<^here>  *)
-  in
-    tac ORELSE Misc.error_tac (K "qregister_lub_tac: failed to prove le") ctxt
-  end
-)
 
 
 
@@ -324,63 +195,9 @@ fun translate_to_index_registers_conv_tac ctxt config rules =
   resolve_tac ctxt [@{lemma \<open>PROP TTIR_EQ A B \<Longrightarrow> A::'a::{} \<equiv> B\<close> by (simp add: TTIR_EQ_def)}]
   THEN' translate_to_index_registers_conv_tac1 ctxt config rules
 
-(* TODO move to Misc *)
-fun conv_from_tac ctxt tac ct = let
-  val _ = Term.is_schematic (Thm.term_of ct) andalso error "schematic vars in conv_from_tac not yet supported"
-  val idx = Thm.maxidx_of_cterm ct + 1
-  val goal = Thm.apply (Thm.apply (Thm.cterm_of ctxt \<^Const>\<open>Pure.eq \<open>Thm.typ_of_cterm ct\<close>\<close>)
-                                  ct)
-                       (Thm.var ((("rhs",idx),Thm.ctyp_of_cterm ct)))
-(* val _ = goal |> \<^print> *)
-  val thm = Goal.prove_internal ctxt [] goal (K tac)
-(* val _ = thm |> \<^print> *)
-in thm end
-
 fun translate_to_index_registers_conv ctxt config = let
   val rules = \<^named_theorems>\<open>translate_to_index_registers\<close> |> Proof_Context.get_thms ctxt
-  in conv_from_tac ctxt (translate_to_index_registers_conv_tac ctxt config rules 1) end
-
-fun register_thms_of thm regs = let
-  val reg = case Thm.prop_of thm of
-      Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>cregister\<close>, _) $ reg) => reg
-    | Const(\<^const_name>\<open>Trueprop\<close>, _) $ (Const(\<^const_name>\<open>qregister\<close>, _) $ reg) => reg
-    | _ => raise THM ("register_thms_of: expecting a fact of the form \<open>c/qregister ...\<close>", 0, [thm])
-  val regs = case reg of
-      Free _ => thm::regs
-    | Const(\<^const_name>\<open>cregister_pair\<close>,_) $ _ $ _ =>
-        regs |> register_thms_of (@{thm distinct_cvarsR} OF [thm])
-             |> register_thms_of (@{thm distinct_cvarsL} OF [thm])
-    | Const(\<^const_name>\<open>qregister_pair\<close>,_) $ _ $ _ =>
-        regs |> register_thms_of (@{thm distinct_qvarsR} OF [thm])
-             |> register_thms_of (@{thm distinct_qvarsL} OF [thm])
-    | t => raise TERM ("register_thms_of: expecting a fact of the form \<open>c/register ...\<close> where ... is a register tuple of free variables. Got:", [t])
-  in regs end
-
-fun register_compats_of thm compats = case Thm.prop_of thm of
-      \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>cregister _ _\<close> $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ _ $ _) $ _)) =>
-        compats |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
-                |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
-                |> register_compats_of (@{thm ccompatible3[THEN iffD1, THEN conjunct1]} OF [thm])
-    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ _ $ _) $ _)) =>
-        compats |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
-                |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
-                |> register_compats_of (@{thm qcompatible3[THEN iffD1, THEN conjunct1]} OF [thm])
-    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>cregister _ _\<close> $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ _ $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ _ $ _))) =>
-        compats |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
-                |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
-                |> register_compats_of (@{thm ccompatible3'[THEN iffD1, THEN conjunct1]} OF [thm])
-    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ _ $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ _ $ _))) =>
-        compats |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct2]} OF [thm])
-                |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct2, THEN conjunct1]} OF [thm])
-                |> register_compats_of (@{thm qcompatible3'[THEN iffD1, THEN conjunct1]} OF [thm])
-    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>cregister _ _\<close> $ (\<^Const>\<open>cregister_pair _ _ _\<close> $ _ $ _)) =>
-        thm :: (@{thm ccompatible_sym} OF [thm]) :: compats
-    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ (\<^Const>\<open>qregister_pair _ _ _\<close> $ _ $ _)) =>
-        thm :: (@{thm qcompatible_sym} OF [thm]) :: compats
-    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>cregister _ _\<close> $ Free _) => compats
-    | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ Free _) => compats
-    | _ => raise THM ("register_compats_of: expecting a fact of the form \<open>c/qregister \<dots>\<close> or \<open>c/qcompatible \<dots>\<close>", 0, [thm])
-
+  in Misc.conv_from_tac ctxt (translate_to_index_registers_conv_tac ctxt config rules 1) end
 
 fun declare_register_simps_from_thm thm = let
   val vars = register_thms_of thm []

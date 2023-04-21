@@ -281,8 +281,8 @@ local
        ACTUAL_QREGISTER_fst ACTUAL_QREGISTER_snd ACTUAL_QREGISTER_chain
        ACTUAL_QREGISTER_bot ACTUAL_QREGISTER_top ACTUAL_QREGISTER_pair
        zz0 zz0' zz1 zz2 zz3 zz4
-    distinct_cvars_split2 ccompatible3 ccompatible3'
-    distinct_qvars_split1 distinct_qvars_split2 qcompatible3 qcompatible3'
+     ccompatible3 ccompatible3'
+      qcompatible3 qcompatible3'
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
     |> simpset_of
 in
@@ -516,7 +516,7 @@ fun qregister_to_cregister_conv_tac ctxt st =
 
 
 ML \<open>
-val qregister_to_cregister_conv = Misc.conv_from_tac
+val qregister_to_cregister_conv = Misc.conv_from_tac'
   (fn _ => fn t => Prog_Variables.is_index_qregister t orelse raise CTERM ("not an index qregister", [ct]))
   qregister_to_cregister_conv_tac\<close>
 
@@ -531,7 +531,7 @@ fun apply_qregister_to_cregister_conv_tac ctxt =
   apply (rule apply_qregister_of_cregister[THEN eq_reflection] apply_qregister_space_of_cregister[THEN eq_reflection]) *)
 
 ML \<open>
-val apply_qregister_to_cregister_conv = Misc.conv_from_tac
+val apply_qregister_to_cregister_conv = Misc.conv_from_tac'
   (fn _ => fn t => case t of \<^Const_>\<open>apply_qregister _ _\<close> $ (\<^Const_>\<open>qregister_of_cregister _ _\<close> $ _) $ _ => ()
                            | \<^Const_>\<open>apply_qregister_space _ _\<close> $ (\<^Const_>\<open>qregister_of_cregister _ _\<close> $ _) $ _ => ()
                            | _ => raise TERM ("not of the form `apply_qregister (qregister_of_cregister _) _`", [t]))
@@ -659,7 +659,7 @@ fun cregister_lens_getter_conv_tac ctxt st =
     @{thms getter_cFst[THEN eq_reflection] getter_cSnd[THEN eq_reflection] getter_id[abs_def] getter_empty[abs_def]} 1))) st\<close>
 
 ML \<open>
-val cregister_lens_getter_conv = Misc.conv_from_tac
+val cregister_lens_getter_conv = Misc.conv_from_tac'
   (fn _ => fn t => case t of \<^Const_>\<open>getter _ _\<close> $ F => is_index_cregister F orelse raise TERM ("not an index register", [t])
                            | _ => raise TERM ("not of the form `getter \<dots>`", [t]))
   cregister_lens_getter_conv_tac\<close>
@@ -681,7 +681,7 @@ fun cregister_lens_setter_conv_tac ctxt st =
 thm setter_cFst[abs_def] setter_cSnd[abs_def] setter_id[abs_def] setter_cregister[abs_def]
 
 ML \<open>
-val cregister_lens_setter_conv = Misc.conv_from_tac
+val cregister_lens_setter_conv = Misc.conv_from_tac'
   (fn _ => fn t => case t of \<^Const_>\<open>setter _ _\<close> $ F => is_index_cregister F orelse raise TERM ("not an index register", [t])
                            | _ => raise TERM ("not of the form `setter \<dots>`", [t]))
   cregister_lens_setter_conv_tac\<close>
@@ -828,7 +828,7 @@ fun permute_and_tensor1_cblinfun_conv_tac ctxt =
 \<close>
 
 ML \<open>
-val permute_and_tensor1_cblinfun_conv = Misc.conv_from_tac
+val permute_and_tensor1_cblinfun_conv = Misc.conv_from_tac'
   (fn ctxt => fn t => case t of \<^Const_>\<open>permute_and_tensor1_cblinfun _ _\<close> $ _ $ _  => (* \<^print> ("Found one") *) ()
                            | _ => raise TERM ("permute_and_tensor1_cblinfun_conv", [t]))
   permute_and_tensor1_cblinfun_conv_tac
