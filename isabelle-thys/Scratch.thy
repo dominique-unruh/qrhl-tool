@@ -11,215 +11,11 @@ ML "open Prog_Variables"
 
 
 
-abbreviation \<open>upfst x \<equiv> apfst (\<lambda>_. x)\<close>
-abbreviation \<open>upsnd x \<equiv> apsnd (\<lambda>_. x)\<close>
-
 (* lemma valid_qregister_range_raw:
   assumes \<open>qregister_raw F\<close>
   shows \<open>valid_qregister_range (range F)\<close>
   by (simp add: assms valid_qregister_range_UNIV valid_qregister_range_pres_raw) *)
 
-lemma INDEX_REGISTER_norm_conv_aux2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair (QREGISTER_chain A G) B)
-            = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
-  apply (simp flip: QREGISTER_pair_QREGISTER_chain)
-  using QREGISTER_pair_assoc QREGISTER_pair_sym
-  by metis
-
-lemma INDEX_REGISTER_norm_conv_aux1: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGISTER_chain A G))
-            = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
-  apply (simp flip: QREGISTER_pair_QREGISTER_chain)
-  using QREGISTER_pair_assoc QREGISTER_pair_sym
-  by metis
-
-
-ML \<open>
-(* Brings an INDEX-REGISTER into normal form. *)
-local
-  val rules = (map (fn thm => thm RS @{thm eq_reflection}) @{thms 
-    INDEX_REGISTER_norm_conv_aux1 QREGISTER_pair_QREGISTER_chain QREGISTER_pair_assoc 
-    INDEX_REGISTER_norm_conv_aux2 QREGISTER_pair_unit_left 
-    QREGISTER_pair_unit_right
-    QREGISTER_chain_id_left QREGISTER_chain_all_right
-    QREGISTER_pair_all_left QREGISTER_pair_all_right
-    QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst
-    QREGISTER_chain_unit_left QREGISTER_chain_unit_right})
-in
-fun INDEX_REGISTER_norm_conv ctxt = Raw_Simplifier.rewrite ctxt false rules
-end
-\<close>
-
-ML \<open>
-(* Converts "QREGISTER_of F" for index register F into an INDEX-REGISTER.
-   An INDEX-REGISTER is a QREGISTER built from
-  "QREGISTER_chain QREGISTER_pair QREGISTER_fst QREGISTER_snd qFst qSnd QREGISTER_all QREGISTER_unit".
-(While keeping the structure of the index-register. That is, can be undone be QREGISTER_of_index_reg_reverse_conv.)
- *)
-val QREGISTER_of_index_reg_conv =
-  Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
-    (map (fn thm => thm RS @{thm eq_reflection})
-          @{thms 
-            QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain QREGISTER_of_empty_qregister
-            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})
-\<close>
-
-lemma z1:
-  assumes F: \<open>qregister F\<close>
-  assumes CF: \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
-  assumes G: \<open>qregister G\<close>
-  shows \<open>qcomplements F G\<close>
-  using F apply (rule qcomplements_via_rangeI)
-  using assms(2)[THEN Rep_QREGISTER_inject[THEN iffD2]]
-  by (simp add: uminus_QREGISTER.rep_eq QREGISTER_of.rep_eq F G)
-
-
-(* TODO: Just add an assumption and a comment that the assumption is not strictly necessary by Takesaki? *)
-lemma y2:
-  assumes \<open>ACTUAL_QREGISTER F\<close> \<open>ACTUAL_QREGISTER G\<close> (* TODO comment on assumptions *)
-  shows \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
-    = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>
-(* 
-  apply (rule Rep_QREGISTER_inject[THEN iffD1])
-  apply (simp add: uminus_QREGISTER.rep_eq Rep_QREGISTER_pair_fst_snd)
-  apply (subst commutant_tensor_vn)
-  using Rep_QREGISTER Rep_QREGISTER
-  by (force simp add: valid_qregister_range_def)+
- *)
-proof -
-  let ?goal = ?thesis
-  from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER F\<close>]
-  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content F. ?goal\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>A :: ('f, 'a) qregister. qregister A \<and> QREGISTER_of A = F\<close>
-    then obtain A :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister A\<close> and qregF: \<open>QREGISTER_of A = F\<close>
-      by auto
-    from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER G\<close>]
-    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content G. ?goal\<close>
-    proof (rule with_type_mp)
-      assume \<open>\<exists>B :: ('g, 'b) qregister. qregister B \<and> QREGISTER_of B = G\<close>
-      then obtain B :: \<open>('g, 'b) qregister\<close> where [simp]: \<open>qregister B\<close> and qregG: \<open>QREGISTER_of B = G\<close>
-        by auto
-      from qcomplement_exists[OF \<open>qregister A\<close>]
-      have \<open>\<forall>\<^sub>\<tau> 'i::type = qregister_decomposition_basis A. ?goal\<close>
-      proof (rule with_type_mp)
-        assume \<open>\<exists>AC :: ('i, 'a) qregister. qcomplements A AC\<close>
-        then obtain AC :: \<open>('i, 'a) qregister\<close> where \<open>qcomplements A AC\<close>
-          by auto
-        from qcomplement_exists[OF \<open>qregister B\<close>]
-        have \<open>\<forall>\<^sub>\<tau> 'j::type = qregister_decomposition_basis B. ?goal\<close>
-        proof (rule with_type_mp)
-          assume \<open>\<exists>BC :: ('j, 'b) qregister. qcomplements B BC\<close>
-          then obtain BC :: \<open>('j, 'b) qregister\<close> where \<open>qcomplements B BC\<close>
-            by auto
-          from \<open>qcomplements A AC\<close>
-          have [simp]: \<open>qregister AC\<close>
-            using iso_qregister_def qcompatible_register2 qcomplements_def' by blast
-          from \<open>qcomplements A AC\<close>
-          have [simp]: \<open>qcompatible A AC\<close>
-            using iso_qregister_def qcomplements_def' by blast
-          from \<open>qcomplements B BC\<close>
-          have [simp]: \<open>qregister BC\<close>
-            using iso_qregister_def qcompatible_register2 qcomplements_def' by blast
-          from \<open>qcomplements B BC\<close>
-          have [simp]: \<open>qcompatible B BC\<close>
-            using iso_qregister_def qcomplements_def' by blast
-          have [simp]: \<open>iso_qregister \<lbrakk>A, AC\<rbrakk>\<close>
-            using \<open>qcomplements A AC\<close> qcomplements_def' by blast
-          have [simp]: \<open>iso_qregister \<lbrakk>B, BC\<rbrakk>\<close>
-            using \<open>qcomplements B BC\<close> qcomplements_def' by blast
-          have QCOMPLEMENT_A: \<open>QCOMPLEMENT (QREGISTER_of A) = QREGISTER_of AC\<close>
-            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI \<open>qcomplements A AC\<close>)
-          have QCOMPLEMENT_B: \<open>QCOMPLEMENT (QREGISTER_of B) = QREGISTER_of BC\<close>
-            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI \<open>qcomplements B BC\<close>)
-          have \<open>qcomplements \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q A, qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q B\<rbrakk>\<^sub>q
-                             \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q AC, qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q BC\<rbrakk>\<^sub>q\<close>
-          proof -
-            write equivalent_qregisters (infix "\<approx>" 50)
-            have \<open>\<lbrakk> \<lbrakk>qregister_chain qFst A, qregister_chain qSnd B\<rbrakk>,
-                    \<lbrakk>qregister_chain qFst AC, qregister_chain qSnd BC\<rbrakk> \<rbrakk>
-                \<approx> \<lbrakk> \<lbrakk>qregister_chain qFst A, qregister_chain qSnd B\<rbrakk>,
-                    \<lbrakk>qregister_chain qSnd BC, qregister_chain qFst AC\<rbrakk> \<rbrakk>\<close>
-              apply (rule equivalent_qregisters_pair)
-                apply (rule equivalent_qregisters_refl)
-                apply simp
-               apply (rule equivalent_qregisters_swap)
-              by simp_all
-            also have \<open>\<dots> \<approx> \<lbrakk>qregister_chain qFst A, \<lbrakk>qregister_chain qSnd B,
-                    \<lbrakk>qregister_chain qSnd BC, qregister_chain qFst AC\<rbrakk>\<rbrakk>\<rbrakk>\<close>
-              apply (rule equivalent_qregisters_triple2)
-              by simp
-            also have \<open>\<dots> \<approx> \<lbrakk>qregister_chain qFst A, \<lbrakk>\<lbrakk>qregister_chain qSnd B,
-                    qregister_chain qSnd BC\<rbrakk>, qregister_chain qFst AC\<rbrakk>\<rbrakk>\<close>
-              apply (rule equivalent_qregisters_pair)
-                apply (rule equivalent_qregisters_refl)
-                apply simp
-              apply (rule equivalent_qregisters_triple1)
-              by simp_all
-            also have \<open>\<dots> = \<lbrakk>qregister_chain qFst A, 
-                              \<lbrakk>qregister_chain qSnd \<lbrakk>B,BC\<rbrakk>, qregister_chain qFst AC\<rbrakk>\<rbrakk>\<close>
-              by (simp add: pair_chain_fst_snd)
-            also have \<open>\<dots> \<approx> \<lbrakk>qregister_chain qFst A, 
-                    \<lbrakk>qregister_chain qFst AC, qregister_chain qSnd \<lbrakk>B,BC\<rbrakk>\<rbrakk>\<rbrakk>\<close>
-              apply (rule equivalent_qregisters_pair)
-                apply (rule equivalent_qregisters_refl)
-                apply simp
-               apply (rule equivalent_qregisters_swap)
-              by simp_all
-            also have \<open>\<dots> \<approx> \<lbrakk>\<lbrakk>qregister_chain qFst A, qregister_chain qFst AC\<rbrakk>, 
-                             qregister_chain qSnd \<lbrakk>B,BC\<rbrakk>\<rbrakk>\<close>
-              apply (rule equivalent_qregisters_triple1)
-              by simp
-            also have \<open>\<dots> = \<lbrakk>qregister_chain qFst \<lbrakk>A,AC\<rbrakk>, 
-                             qregister_chain qSnd \<lbrakk>B,BC\<rbrakk>\<rbrakk>\<close>
-              by (simp add: pair_chain_fst_snd)
-            also have \<open>\<dots> \<approx> \<lbrakk>qregister_chain qFst qregister_id, 
-                             qregister_chain qSnd qregister_id\<rbrakk>\<close>
-              apply (rule equivalent_qregisters_pair)
-                apply (rule equivalent_qregisters_chain)
-                 apply (simp flip: iso_qregister_equivalent_id)
-              apply simp
-               apply (rule equivalent_qregisters_chain)
-              by (simp_all flip: iso_qregister_equivalent_id)
-            also have \<open>\<dots> = qregister_id\<close>
-              by simp
-            finally show ?thesis
-              by (simp add: iso_qregister_equivalent_id qcomplements_def')
-          qed
-          then show ?goal
-            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI
-                simp add: QCOMPLEMENT_A QCOMPLEMENT_B
-                simp flip: QREGISTER_of_qregister_chain QREGISTER_of_qregister_pair qregF qregG)
-        qed
-        from this[cancel_with_type]
-        show ?goal
-          by -
-      qed
-      from this[cancel_with_type]
-      show ?goal
-        by -
-    qed
-    from this[cancel_with_type]
-    show ?goal
-      by -
-  qed
-  from this[cancel_with_type]
-  show ?goal
-    by -
-qed
-
-
-lemma y1:
-  assumes \<open>ACTUAL_QREGISTER F\<close>
-  shows \<open>QCOMPLEMENT (QREGISTER_pair QREGISTER_fst (QREGISTER_chain qSnd F))
-    = QREGISTER_chain qSnd (QCOMPLEMENT F)\<close>
-  using y2[where F=\<top> and G=F] assms
-  by simp
-
-lemma y3:
-  assumes \<open>ACTUAL_QREGISTER F\<close>
-  shows \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) QREGISTER_snd)
-    = QREGISTER_chain qFst (QCOMPLEMENT F)\<close>
-  using y2[where F=F and G=\<top>] assms
-  by simp
 
 (*
 ML \<open>
@@ -234,91 +30,7 @@ end
 \<close>
 *)
 
-lemma zz0: \<open>ACTUAL_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))\<close> if \<open>ACTUAL_QREGISTER F\<close> and \<open>ACTUAL_QREGISTER G\<close>
-proof -
-  let ?goal = ?thesis
-  from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER F\<close>]
-  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content F. ?goal\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>A :: ('f, 'a) qregister. qregister A \<and> QREGISTER_of A = F\<close>
-    then obtain A :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister A\<close> and qregF: \<open>QREGISTER_of A = F\<close>
-      by auto
-    from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER G\<close>]
-    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content G. ?goal\<close>
-    proof (rule with_type_mp)
-      assume \<open>\<exists>B :: ('g, 'b) qregister. qregister B \<and> QREGISTER_of B = G\<close>
-      then obtain B :: \<open>('g, 'b) qregister\<close> where [simp]: \<open>qregister B\<close> and qregG: \<open>QREGISTER_of B = G\<close>
-        by auto
-      have \<open>QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G)
-          = QREGISTER_of (qregister_pair (qregister_chain qFst A) (qregister_chain qSnd B))\<close>
-        by (simp add: QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain qregG qregF)
-      then show ?goal
-        by (auto intro!: ACTUAL_QREGISTER_QREGISTER_of)
-    qed
-    from this[cancel_with_type]
-    show ?goal
-      by -
-  qed
-  from this[cancel_with_type]
-  show ?goal
-    by -
-qed
-
-lemma zz0': \<open>ACTUAL_QREGISTER (QREGISTER_pair (QREGISTER_chain qSnd G) (QREGISTER_chain qFst F))\<close> if \<open>ACTUAL_QREGISTER F \<and> ACTUAL_QREGISTER G\<close>
-  by (simp add: QREGISTER_pair_sym that zz0)
-lemma zz1: \<open>ACTUAL_QREGISTER (QREGISTER_pair QREGISTER_fst (QREGISTER_chain qSnd F))\<close> if \<open>ACTUAL_QREGISTER F\<close>
-  by (metis ACTUAL_QREGISTER_top QREGISTER_chain_fst_top that zz0)
-lemma zz2: \<open>ACTUAL_QREGISTER (QREGISTER_pair QREGISTER_snd (QREGISTER_chain qFst F))\<close> if \<open>ACTUAL_QREGISTER F\<close>
-  by (metis ACTUAL_QREGISTER_top QREGISTER_chain_snd_top that zz0')
-lemma zz3: \<open>ACTUAL_QREGISTER (QREGISTER_pair (QREGISTER_chain qSnd F) QREGISTER_fst)\<close> if \<open>ACTUAL_QREGISTER F\<close>
-  by (simp add: QREGISTER_pair_sym that zz1)
-lemma zz4: \<open>ACTUAL_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) QREGISTER_snd)\<close> if \<open>ACTUAL_QREGISTER F\<close>
-  by (simp add: QREGISTER_pair_sym that zz2)
-
-ML \<open>
-local
-  val simpset = \<^context>  addsimps @{thms 
-       ACTUAL_QREGISTER_fst ACTUAL_QREGISTER_snd ACTUAL_QREGISTER_chain
-       ACTUAL_QREGISTER_bot ACTUAL_QREGISTER_top ACTUAL_QREGISTER_pair
-       zz0 zz0' zz1 zz2 zz3 zz4
-     ccompatible3 ccompatible3'
-      qcompatible3 qcompatible3'
-    Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
-    |> simpset_of
-in
-(* Proves "ACTUAL_QREGISTER INDEX-QREGISTER" *)
-fun ACTUAL_QREGISTER_tac ctxt =
-  (* K (Misc.print_here_tac ctxt \<^here>) THEN'  *)
-  let
-  val ctxt = ctxt |> Config.put Simplifier.simp_trace false
-                  |> put_simpset simpset
-  in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove (using simp): " ^ Syntax.string_of_term ctxt t) end
-end
-\<close>
-
-
-ML \<open>
-(* Rewrites QCOMPLEMENT (INDEX-QREGISTER) into an INDEX-QREGISTER *)
-  val simpctxt =
-      put_simpset HOL_ss \<^context>
-      addsimps
-        @{thms 
-           y1 y2 y3 QCOMPLEMENT_chain QCOMPLEMENT_snd QCOMPLEMENT_fst QREGISTER_of_qFst QREGISTER_of_qSnd
-           QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst QCOMPLEMENT_bot QCOMPLEMENT_top}
-  val simpset = Simplifier.simpset_of simpctxt
-local
-in
-fun QCOMPLEMENT_INDEX_REGISTER_conv ctxt = let
-  val solver = mk_solver "ACTUAL_QREGISTER" (fn _ => ACTUAL_QREGISTER_tac ctxt)
-  val ctxt = Simplifier.put_simpset simpset ctxt 
-      addSSolver solver
-      addSolver solver
-  in
-    Simplifier.rewrite ctxt
-  end
-end
-\<close>
-
+(* TODO: make unit test? *)
 ML \<open>
 QCOMPLEMENT_INDEX_REGISTER_conv \<^context> \<^cterm>\<open>QCOMPLEMENT
      (QREGISTER_pair QREGISTER_fst
@@ -328,40 +40,7 @@ QCOMPLEMENT_INDEX_REGISTER_conv \<^context> \<^cterm>\<open>QCOMPLEMENT
              (QREGISTER_pair QREGISTER_fst (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q QREGISTER_snd))))))\<close>
 \<close>
 
-ML \<open>
-(* Opposite of QREGISTER_of_index_reg_conv *)
-val QREGISTER_of_index_reg_reverse_conv =
-  Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
-    (map (fn thm => thm RS @{thm sym} RS @{thm eq_reflection})
-          @{thms 
-            QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain QREGISTER_of_empty_qregister
-            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})\<close>
-
-
-ML \<open>
-fun qcomplements_tac ctxt =
-  resolve_tac ctxt @{thms z1} (* Creates three subgoals *)
-  THEN'
-  distinct_vars_tac ctxt (* Solve first subgoal *)
-  THEN'
-  (* Second subgoal *)
-  CONVERSION ((QREGISTER_of_index_reg_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.mk_ctxt_conv Conv.arg1_conv |> Misc.concl_conv_Trueprop) ctxt)
-  THEN'
-  (* Second subgoal *)
-  CONVERSION ((INDEX_REGISTER_norm_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.mk_ctxt_conv Conv.arg1_conv |> Misc.concl_conv_Trueprop) ctxt)
-  THEN'
-  (* Second subgoal *)
-  CONVERSION ((QCOMPLEMENT_INDEX_REGISTER_conv |> Misc.mk_ctxt_conv Conv.arg1_conv |> Misc.concl_conv_Trueprop) ctxt)
-  THEN'
-  (* Second subgoal *)
-  CONVERSION ((QREGISTER_of_index_reg_reverse_conv |> Misc.mk_ctxt_conv Conv.arg1_conv |> Misc.concl_conv_Trueprop) ctxt)
-  THEN'
-  (* Solve second subgoal *)
-  resolve_tac ctxt @{thms refl}
-  THEN'
-  distinct_vars_tac ctxt (* Solve third subgoal *)
-\<close>
-
+(* TODO: make unit test? *)
 schematic_goal \<open>qcomplements \<lbrakk>\<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#5.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q (?X :: (?'x,_) qregister)\<close>
   by (tactic \<open>qcomplements_tac \<^context> 1\<close>)
 
@@ -744,6 +423,10 @@ lemma enum_index_apsnd:
   assumes \<open>\<And>a. enum_index (f a) = f' (enum_index a)\<close>
   shows \<open>enum_index (apsnd f x) = enum_index x div CARD('b) * CARD('c) + f' (enum_index (snd x))\<close>
   by (simp add: apsnd_def map_prod_def case_prod_beta enum_index_prod_def assms)
+
+abbreviation \<open>upfst x \<equiv> apfst (\<lambda>_. x)\<close>
+abbreviation \<open>upsnd x \<equiv> apsnd (\<lambda>_. x)\<close>
+
 
 lemma enum_index_upfst:
   fixes a :: \<open>'c::eenum\<close> and x :: \<open>'a::eenum \<times> 'b::eenum\<close>

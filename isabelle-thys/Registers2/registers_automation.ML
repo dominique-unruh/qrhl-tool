@@ -8,6 +8,12 @@ val join_registers : Proof.context -> term -> term -> term option
 val qregister_lub_tac : Proof.context -> int -> tactic
 val register_compats_of : thm -> thm list -> thm list
 val register_thms_of : thm -> thm list -> thm list
+val QREGISTER_of_index_reg_conv : Proof.context -> conv
+val QREGISTER_of_index_reg_reverse_conv : Proof.context -> conv
+val INDEX_REGISTER_norm_conv : Proof.context -> conv
+val ACTUAL_QREGISTER_tac : Proof.context -> int -> tactic
+val QCOMPLEMENT_INDEX_REGISTER_conv : Proof.context -> conv
+val qcomplements_tac : Proof.context -> int -> tactic
 
 end = struct
 
@@ -161,5 +167,112 @@ fun register_compats_of thm compats = case Thm.prop_of thm of
     | \<^Const>\<open>Trueprop\<close> $ (\<^Const>\<open>qregister _ _\<close> $ Free _) => compats
     | _ => raise THM ("register_compats_of: expecting a fact of the form \<open>c/qregister \<dots>\<close> or \<open>c/qcompatible \<dots>\<close>", 0, [thm])
 
+(* Converts "QREGISTER_of F" for index register F into an INDEX-REGISTER.
+   An INDEX-REGISTER is a QREGISTER built from
+  "QREGISTER_chain QREGISTER_pair QREGISTER_fst QREGISTER_snd qFst qSnd QREGISTER_all QREGISTER_unit".
+(While keeping the structure of the index-register. That is, can be undone be QREGISTER_of_index_reg_reverse_conv.)
+ *)
+val QREGISTER_of_index_reg_conv =
+  Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
+    (map (fn thm => thm RS @{thm eq_reflection})
+          @{thms 
+            QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain QREGISTER_of_empty_qregister
+            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})
+
+(* Opposite of QREGISTER_of_index_reg_conv *)
+val QREGISTER_of_index_reg_reverse_conv =
+  Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
+    (map (fn thm => thm RS @{thm sym} RS @{thm eq_reflection})
+          @{thms 
+            QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain QREGISTER_of_empty_qregister
+            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})
+
+(* Brings an INDEX-REGISTER into normal form. (Only for quantum registers)
+
+The normal form of an INDEX-REGISTER is one of the following:
+- id
+- empty
+- R ::= fst | snd | fst o R | snd o R | \<lbrakk>fst o R; snd o R\<rbrakk>
+
+*)
+local
+  val rules = (map (fn thm => thm RS @{thm eq_reflection}) @{thms 
+    Registers_Automation.INDEX_REGISTER_norm_conv_aux1 QREGISTER_pair_QREGISTER_chain QREGISTER_pair_assoc 
+    Registers_Automation.INDEX_REGISTER_norm_conv_aux2 QREGISTER_pair_unit_left 
+    QREGISTER_pair_unit_right
+    QREGISTER_chain_id_left QREGISTER_chain_all_right
+    QREGISTER_pair_all_left QREGISTER_pair_all_right
+    QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst
+    QREGISTER_chain_unit_left QREGISTER_chain_unit_right})
+in
+fun INDEX_REGISTER_norm_conv ctxt = Raw_Simplifier.rewrite ctxt false rules
+end
+
+local
+  val simpset = \<^context>  addsimps @{thms 
+       ACTUAL_QREGISTER_fst ACTUAL_QREGISTER_snd ACTUAL_QREGISTER_chain
+       ACTUAL_QREGISTER_bot ACTUAL_QREGISTER_top ACTUAL_QREGISTER_pair
+       ACTUAL_QREGISTER_pair_fst_snd Registers_Automation.ACTUAL_QREGISTER_tac_aux1 Registers_Automation.ACTUAL_QREGISTER_tac_aux2 Registers_Automation.ACTUAL_QREGISTER_tac_aux3 Registers_Automation.ACTUAL_QREGISTER_tac_aux4 Registers_Automation.ACTUAL_QREGISTER_tac_aux5
+     ccompatible3 ccompatible3'
+      qcompatible3 qcompatible3'
+    Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
+    |> simpset_of
+in
+(* Proves "ACTUAL_QREGISTER INDEX-QREGISTER" *)
+fun ACTUAL_QREGISTER_tac ctxt =
+  (* K (Misc.print_here_tac ctxt \<^here>) THEN'  *)
+  let
+  val ctxt = ctxt |> Config.put Simplifier.simp_trace false
+                  |> put_simpset simpset
+  in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove (using simp): " ^ Syntax.string_of_term ctxt t) end
+end
+
+(* Rewrites QCOMPLEMENT (INDEX-QREGISTER) into an INDEX-QREGISTER *)
+  val simpctxt =
+      put_simpset HOL_ss \<^context>
+      addsimps
+        @{thms 
+           Registers_Automation.QCOMPLEMENT_INDEX_REGISTER_conv_aux1 Registers_Automation.QCOMPLEMENT_INDEX_REGISTER_conv_aux2 QCOMPLEMENT_pair_fst_snd QCOMPLEMENT_chain QCOMPLEMENT_snd QCOMPLEMENT_fst QREGISTER_of_qFst QREGISTER_of_qSnd
+           QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst QCOMPLEMENT_bot QCOMPLEMENT_top}
+  val simpset = Simplifier.simpset_of simpctxt
+local
+in
+fun QCOMPLEMENT_INDEX_REGISTER_conv ctxt = let
+  val solver = mk_solver "ACTUAL_QREGISTER" (fn _ => ACTUAL_QREGISTER_tac ctxt)
+  val ctxt = Simplifier.put_simpset simpset ctxt 
+      addSSolver solver
+      addSolver solver
+  in
+    Simplifier.rewrite ctxt
+  end
+end
+
+(* Proves a goal of the form \<open>qcomplements F ?X\<close> (instantiating ?X).
+
+TODO: For which F's does this work? Only index-registers?
+
+TODO: If only for index-registers, rename?
+*)
+fun qcomplements_tac ctxt =
+  resolve_tac ctxt @{thms Registers_Automation.qcomplements_tac_aux1} (* Creates three subgoals *)
+  THEN'
+  distinct_vars_tac ctxt (* Solve first subgoal *)
+  THEN'
+  (* Second subgoal *)
+  CONVERSION ((QREGISTER_of_index_reg_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.mk_ctxt_conv Conv.arg1_conv |> Misc.concl_conv_Trueprop) ctxt)
+  THEN'
+  (* Second subgoal *)
+  CONVERSION ((INDEX_REGISTER_norm_conv |> Misc.mk_ctxt_conv Conv.arg_conv |> Misc.mk_ctxt_conv Conv.arg1_conv |> Misc.concl_conv_Trueprop) ctxt)
+  THEN'
+  (* Second subgoal *)
+  CONVERSION ((QCOMPLEMENT_INDEX_REGISTER_conv |> Misc.mk_ctxt_conv Conv.arg1_conv |> Misc.concl_conv_Trueprop) ctxt)
+  THEN'
+  (* Second subgoal *)
+  CONVERSION ((QREGISTER_of_index_reg_reverse_conv |> Misc.mk_ctxt_conv Conv.arg1_conv |> Misc.concl_conv_Trueprop) ctxt)
+  THEN'
+  (* Solve second subgoal *)
+  resolve_tac ctxt @{thms refl}
+  THEN'
+  distinct_vars_tac ctxt (* Solve third subgoal *)
 
 end

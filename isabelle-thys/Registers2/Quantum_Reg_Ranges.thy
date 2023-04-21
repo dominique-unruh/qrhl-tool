@@ -1085,6 +1085,36 @@ proof -
     by -
 qed
 
+lemma ACTUAL_QREGISTER_pair_fst_snd: \<open>ACTUAL_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))\<close> if \<open>ACTUAL_QREGISTER F\<close> and \<open>ACTUAL_QREGISTER G\<close>
+proof -
+  let ?goal = ?thesis
+  from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER F\<close>]
+  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content F. ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>A :: ('f, 'a) qregister. qregister A \<and> QREGISTER_of A = F\<close>
+    then obtain A :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister A\<close> and qregF: \<open>QREGISTER_of A = F\<close>
+      by auto
+    from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER G\<close>]
+    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content G. ?goal\<close>
+    proof (rule with_type_mp)
+      assume \<open>\<exists>B :: ('g, 'b) qregister. qregister B \<and> QREGISTER_of B = G\<close>
+      then obtain B :: \<open>('g, 'b) qregister\<close> where [simp]: \<open>qregister B\<close> and qregG: \<open>QREGISTER_of B = G\<close>
+        by auto
+      have \<open>QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G)
+          = QREGISTER_of (qregister_pair (qregister_chain qFst A) (qregister_chain qSnd B))\<close>
+        by (simp add: QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain qregG qregF)
+      then show ?goal
+        by (auto intro!: ACTUAL_QREGISTER_QREGISTER_of)
+    qed
+    from this[cancel_with_type]
+    show ?goal
+      by -
+  qed
+  from this[cancel_with_type]
+  show ?goal
+    by -
+qed
+
 
 lemma QCOMPLEMENT_QREGISTER_of_eqI:
   assumes \<open>qcomplements F G\<close>
@@ -1321,6 +1351,141 @@ next
     by (simp add: non_qregister)
   then show ?thesis
     by simp
+qed
+
+lemma QCOMPLEMENT_pair_fst_snd:
+  assumes \<open>ACTUAL_QREGISTER F\<close> \<open>ACTUAL_QREGISTER G\<close> (* TODO comment on assumptions *)
+  shows \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) (QREGISTER_chain qSnd G))
+    = QREGISTER_pair (QREGISTER_chain qFst (QCOMPLEMENT F)) (QREGISTER_chain qSnd (QCOMPLEMENT G))\<close>
+
+text \<open>The assumptions \<^term>\<open>ACTUAL_QREGISTER F\<close> \<^term>\<open>ACTUAL_QREGISTER G\<close> are actually not
+  necessary. The theorem without these assumptions follows from the fact
+  \<^prop>\<open>von_neumann_algebra M \<Longrightarrow> von_neumann_algebra N \<Longrightarrow> commutant (tensor_vn M N) = commutant M \<otimes>\<^sub>v\<^sub>N commutant N\<close>
+  which is shown in @{cite takesaki}, Theorem IV.5.9.
+  We have an aborted proof of that fact in \<^url>\<open>https://github.com/dominique-unruh/qrhl-tool/blob/24188e63b2a064c77501071839c46266cfaa549f/isabelle-thys/Scratch.thy#L574\<close>
+  but it turned out to be very hard to prove (many additional facts about von-Neumann algebras needed first).
+  So we proved the simpler theorem given here with additional assumptions.\<close>
+
+proof -
+  let ?goal = ?thesis
+  from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER F\<close>]
+  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content F. ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>A :: ('f, 'a) qregister. qregister A \<and> QREGISTER_of A = F\<close>
+    then obtain A :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister A\<close> and qregF: \<open>QREGISTER_of A = F\<close>
+      by auto
+    from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER G\<close>]
+    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content G. ?goal\<close>
+    proof (rule with_type_mp)
+      assume \<open>\<exists>B :: ('g, 'b) qregister. qregister B \<and> QREGISTER_of B = G\<close>
+      then obtain B :: \<open>('g, 'b) qregister\<close> where [simp]: \<open>qregister B\<close> and qregG: \<open>QREGISTER_of B = G\<close>
+        by auto
+      from qcomplement_exists[OF \<open>qregister A\<close>]
+      have \<open>\<forall>\<^sub>\<tau> 'i::type = qregister_decomposition_basis A. ?goal\<close>
+      proof (rule with_type_mp)
+        assume \<open>\<exists>AC :: ('i, 'a) qregister. qcomplements A AC\<close>
+        then obtain AC :: \<open>('i, 'a) qregister\<close> where \<open>qcomplements A AC\<close>
+          by auto
+        from qcomplement_exists[OF \<open>qregister B\<close>]
+        have \<open>\<forall>\<^sub>\<tau> 'j::type = qregister_decomposition_basis B. ?goal\<close>
+        proof (rule with_type_mp)
+          assume \<open>\<exists>BC :: ('j, 'b) qregister. qcomplements B BC\<close>
+          then obtain BC :: \<open>('j, 'b) qregister\<close> where \<open>qcomplements B BC\<close>
+            by auto
+          from \<open>qcomplements A AC\<close>
+          have [simp]: \<open>qregister AC\<close>
+            using iso_qregister_def qcompatible_register2 qcomplements_def' by blast
+          from \<open>qcomplements A AC\<close>
+          have [simp]: \<open>qcompatible A AC\<close>
+            using iso_qregister_def qcomplements_def' by blast
+          from \<open>qcomplements B BC\<close>
+          have [simp]: \<open>qregister BC\<close>
+            using iso_qregister_def qcompatible_register2 qcomplements_def' by blast
+          from \<open>qcomplements B BC\<close>
+          have [simp]: \<open>qcompatible B BC\<close>
+            using iso_qregister_def qcomplements_def' by blast
+          have [simp]: \<open>iso_qregister (qregister_pair A AC)\<close>
+            using \<open>qcomplements A AC\<close> qcomplements_def' by blast
+          have [simp]: \<open>iso_qregister (qregister_pair B BC)\<close>
+            using \<open>qcomplements B BC\<close> qcomplements_def' by blast
+          have QCOMPLEMENT_A: \<open>QCOMPLEMENT (QREGISTER_of A) = QREGISTER_of AC\<close>
+            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI \<open>qcomplements A AC\<close>)
+          have QCOMPLEMENT_B: \<open>QCOMPLEMENT (QREGISTER_of B) = QREGISTER_of BC\<close>
+            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI \<open>qcomplements B BC\<close>)
+          have \<open>qcomplements (qregister_pair (qregister_chain qFst A) (qregister_chain qSnd B))
+                             (qregister_pair (qregister_chain qFst AC) (qregister_chain qSnd BC))\<close>
+          proof -
+            write equivalent_qregisters (infix "\<approx>" 50)
+            have \<open>qregister_pair (qregister_pair (qregister_chain qFst A) (qregister_chain qSnd B))
+                    (qregister_pair (qregister_chain qFst AC) (qregister_chain qSnd BC))
+                \<approx> qregister_pair (qregister_pair (qregister_chain qFst A) (qregister_chain qSnd B))
+                    (qregister_pair (qregister_chain qSnd BC) (qregister_chain qFst AC))\<close>
+              apply (rule equivalent_qregisters_pair)
+                apply (rule equivalent_qregisters_refl)
+                apply simp
+               apply (rule equivalent_qregisters_swap)
+              by simp_all
+            also have \<open>\<dots> \<approx> qregister_pair (qregister_chain qFst A) (qregister_pair (qregister_chain qSnd B)
+                    (qregister_pair (qregister_chain qSnd BC) (qregister_chain qFst AC)))\<close>
+              apply (rule equivalent_qregisters_triple2)
+              by simp
+            also have \<open>\<dots> \<approx> qregister_pair (qregister_chain qFst A) (qregister_pair (qregister_pair (qregister_chain qSnd B)
+                    (qregister_chain qSnd BC)) (qregister_chain qFst AC))\<close>
+              apply (rule equivalent_qregisters_pair)
+                apply (rule equivalent_qregisters_refl)
+                apply simp
+              apply (rule equivalent_qregisters_triple1)
+              by simp_all
+            also have \<open>\<dots> = qregister_pair (qregister_chain qFst A)
+                              (qregister_pair (qregister_chain qSnd (qregister_pair B BC)) (qregister_chain qFst AC))\<close>
+              by (simp add: qregister_chain_pair)
+            also have \<open>\<dots> \<approx> qregister_pair (qregister_chain qFst A)
+                    (qregister_pair (qregister_chain qFst AC) (qregister_chain qSnd (qregister_pair B BC)))\<close>
+              apply (rule equivalent_qregisters_pair)
+                apply (rule equivalent_qregisters_refl)
+                apply simp
+               apply (rule equivalent_qregisters_swap)
+              by simp_all
+            also have \<open>\<dots> \<approx> qregister_pair (qregister_pair (qregister_chain qFst A) (qregister_chain qFst AC))
+                             (qregister_chain qSnd (qregister_pair B BC))\<close>
+              apply (rule equivalent_qregisters_triple1)
+              by simp
+            also have \<open>\<dots> = qregister_pair (qregister_chain qFst (qregister_pair A AC))
+                             (qregister_chain qSnd (qregister_pair B BC))\<close>
+              by (simp add: qregister_chain_pair)
+            also have \<open>\<dots> \<approx> qregister_pair (qregister_chain qFst qregister_id)
+                             (qregister_chain qSnd qregister_id)\<close>
+              apply (rule equivalent_qregisters_pair)
+                apply (rule equivalent_qregisters_chain)
+                 apply (simp flip: iso_qregister_equivalent_id)
+              apply simp
+               apply (rule equivalent_qregisters_chain)
+              by (simp_all flip: iso_qregister_equivalent_id)
+            also have \<open>\<dots> = qregister_id\<close>
+              by simp
+            finally show ?thesis
+              by (simp add: iso_qregister_equivalent_id qcomplements_def')
+          qed
+          then show ?goal
+            by (auto intro!: QCOMPLEMENT_QREGISTER_of_eqI
+                simp add: QCOMPLEMENT_A QCOMPLEMENT_B
+                simp flip: QREGISTER_of_qregister_chain QREGISTER_of_qregister_pair qregF qregG)
+        qed
+        from this[cancel_with_type]
+        show ?goal
+          by -
+      qed
+      from this[cancel_with_type]
+      show ?goal
+        by -
+    qed
+    from this[cancel_with_type]
+    show ?goal
+      by -
+  qed
+  from this[cancel_with_type]
+  show ?goal
+    by -
 qed
 
 

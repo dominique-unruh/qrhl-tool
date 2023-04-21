@@ -2,6 +2,42 @@ theory Registers_Automation
   imports Registers_ML Quantum_Reg_Conversions Classical_Reg_Ranges
 begin
 
+subsection \<open>Setup for \<open>INDEX_REGISTER_norm_conv\<close>\<close>
+
+lemma INDEX_REGISTER_norm_conv_aux1: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGISTER_chain A G))
+            = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+  apply (simp flip: QREGISTER_pair_QREGISTER_chain)
+  using QREGISTER_pair_assoc QREGISTER_pair_sym
+  by metis
+
+hide_fact (open) INDEX_REGISTER_norm_conv_aux1
+
+lemma INDEX_REGISTER_norm_conv_aux2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair (QREGISTER_chain A G) B)
+            = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
+  apply (simp flip: QREGISTER_pair_QREGISTER_chain)
+  using QREGISTER_pair_assoc QREGISTER_pair_sym
+  by metis
+
+hide_fact (open) INDEX_REGISTER_norm_conv_aux2
+
+subsection \<open>Setup for \<open>ACTUAL_QREGISTER_tac\<close>\<close>
+
+lemma ACTUAL_QREGISTER_tac_aux1: \<open>ACTUAL_QREGISTER (QREGISTER_pair (QREGISTER_chain qSnd G) (QREGISTER_chain qFst F))\<close> if \<open>ACTUAL_QREGISTER F \<and> ACTUAL_QREGISTER G\<close>
+  by (simp add: QREGISTER_pair_sym that ACTUAL_QREGISTER_pair_fst_snd)
+hide_fact (open) ACTUAL_QREGISTER_tac_aux1
+lemma ACTUAL_QREGISTER_tac_aux2: \<open>ACTUAL_QREGISTER (QREGISTER_pair QREGISTER_fst (QREGISTER_chain qSnd F))\<close> if \<open>ACTUAL_QREGISTER F\<close>
+  by (metis ACTUAL_QREGISTER_top QREGISTER_chain_fst_top that ACTUAL_QREGISTER_pair_fst_snd)
+hide_fact (open) ACTUAL_QREGISTER_tac_aux2
+lemma ACTUAL_QREGISTER_tac_aux3: \<open>ACTUAL_QREGISTER (QREGISTER_pair QREGISTER_snd (QREGISTER_chain qFst F))\<close> if \<open>ACTUAL_QREGISTER F\<close>
+  by (metis ACTUAL_QREGISTER_top QREGISTER_chain_snd_top that Registers_Automation.ACTUAL_QREGISTER_tac_aux1)
+hide_fact (open) ACTUAL_QREGISTER_tac_aux3
+lemma ACTUAL_QREGISTER_tac_aux4: \<open>ACTUAL_QREGISTER (QREGISTER_pair (QREGISTER_chain qSnd F) QREGISTER_fst)\<close> if \<open>ACTUAL_QREGISTER F\<close>
+  by (simp add: QREGISTER_pair_sym that Registers_Automation.ACTUAL_QREGISTER_tac_aux2)
+hide_fact (open) ACTUAL_QREGISTER_tac_aux4
+lemma ACTUAL_QREGISTER_tac_aux5: \<open>ACTUAL_QREGISTER (QREGISTER_pair (QREGISTER_chain qFst F) QREGISTER_snd)\<close> if \<open>ACTUAL_QREGISTER F\<close>
+  by (simp add: QREGISTER_pair_sym that Registers_Automation.ACTUAL_QREGISTER_tac_aux3)
+hide_fact (open) ACTUAL_QREGISTER_tac_aux5
+
 subsection \<open>Setup for \<open>translate_to_index_registers\<close> method\<close>
 
 text \<open>Contains rules for the translate_to_index_registers-method.
@@ -335,6 +371,36 @@ lemma translate_to_index_registers_let2':
   shows \<open>TTIR_APPLY_QREGISTER (let x = y in S x) Q T\<close>
   by (simp add: assms)
 
+subsection \<open>Setup for \<open>QCOMPLEMENT_INDEX_REGISTER_conv\<close>\<close>
+
+lemma QCOMPLEMENT_INDEX_REGISTER_conv_aux1:
+  assumes \<open>ACTUAL_QREGISTER F\<close>
+  shows \<open>QCOMPLEMENT (QREGISTER_pair QREGISTER_fst (QREGISTER_chain qSnd F))
+    = QREGISTER_chain qSnd (QCOMPLEMENT F)\<close>
+  using QCOMPLEMENT_pair_fst_snd[where F=\<top> and G=F] assms
+  by simp
+hide_fact (open) QCOMPLEMENT_INDEX_REGISTER_conv_aux1
+
+lemma QCOMPLEMENT_INDEX_REGISTER_conv_aux2:
+  assumes \<open>ACTUAL_QREGISTER F\<close>
+  shows \<open>QCOMPLEMENT (QREGISTER_pair (QREGISTER_chain qFst F) QREGISTER_snd)
+    = QREGISTER_chain qFst (QCOMPLEMENT F)\<close>
+  using QCOMPLEMENT_pair_fst_snd[where F=F and G=\<top>] assms
+  by simp
+hide_fact (open) QCOMPLEMENT_INDEX_REGISTER_conv_aux2
+
+subsection \<open>Setup for \<open>qcomplements_tac\<close>\<close>
+
+lemma qcomplements_tac_aux1:
+  assumes F: \<open>qregister F\<close>
+  assumes CF: \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
+  assumes G: \<open>qregister G\<close>
+  shows \<open>qcomplements F G\<close>
+  using F apply (rule qcomplements_via_rangeI)
+  using assms(2)[THEN Rep_QREGISTER_inject[THEN iffD2]]
+  by (simp add: uminus_QREGISTER.rep_eq QREGISTER_of.rep_eq F G)
+
+hide_fact (open) qcomplements_tac_aux1
 
 subsection \<open>ML code\<close>
 
