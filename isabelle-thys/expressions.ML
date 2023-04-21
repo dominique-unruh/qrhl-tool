@@ -159,9 +159,9 @@ fun add_index_to_predicate left t = let
 
 fun generalize_getters ctxt = Subgoal.FOCUS_PARAMS (fn focus => let
   val m = focus |> #params |> hd |> snd (* We assume the memory is the outermost parameter! *)
-  val pattern = Const ("Prog_Variables.getter", TVar(("'a",0),[])) $ 
+  val pattern = Const (\<^const_name>\<open>Classical_Registers.getter\<close>, TVar(("'a",0),[])) $ 
                     Var (("_dummy_", 1), TVar(("'b",0),[])) $ Thm.term_of m
-  fun varname (Const(\<^const_name>\<open>getter\<close>,_) $ v $ _) = varname v ^ "'"
+  fun varname (Const(\<^const_name>\<open>Classical_Registers.getter\<close>,_) $ v $ _) = varname v ^ "'"
     | varname (Free(n,_)) = n
     | varname (Const(\<^const_name>\<open>cregister_chain\<close>,_) $ Const(\<^const_name>\<open>cFst\<close>,_) $ v) = varname v^"1"
     | varname (Const(\<^const_name>\<open>cregister_chain\<close>,_) $ Const(\<^const_name>\<open>cSnd\<close>,_) $ v) = varname v^"2"

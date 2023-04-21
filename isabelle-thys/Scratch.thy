@@ -19,13 +19,13 @@ abbreviation \<open>upsnd x \<equiv> apsnd (\<lambda>_. x)\<close>
   shows \<open>valid_qregister_range (range F)\<close>
   by (simp add: assms valid_qregister_range_UNIV valid_qregister_range_pres_raw) *)
 
-lemma x4: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair (QREGISTER_chain A G) B)
+lemma INDEX_REGISTER_norm_conv_aux2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair (QREGISTER_chain A G) B)
             = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
   apply (simp flip: QREGISTER_pair_QREGISTER_chain)
   using QREGISTER_pair_assoc QREGISTER_pair_sym
   by metis
 
-lemma x2: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGISTER_chain A G))
+lemma INDEX_REGISTER_norm_conv_aux1: \<open>QREGISTER_pair (QREGISTER_chain A F) (QREGISTER_pair B (QREGISTER_chain A G))
             = QREGISTER_pair B (QREGISTER_chain A (QREGISTER_pair F G))\<close>
   apply (simp flip: QREGISTER_pair_QREGISTER_chain)
   using QREGISTER_pair_assoc QREGISTER_pair_sym
@@ -36,7 +36,9 @@ ML \<open>
 (* Brings an INDEX-REGISTER into normal form. *)
 local
   val rules = (map (fn thm => thm RS @{thm eq_reflection}) @{thms 
-    x2 QREGISTER_pair_QREGISTER_chain QREGISTER_pair_assoc x4 QREGISTER_pair_unit_left QREGISTER_pair_unit_right
+    INDEX_REGISTER_norm_conv_aux1 QREGISTER_pair_QREGISTER_chain QREGISTER_pair_assoc 
+    INDEX_REGISTER_norm_conv_aux2 QREGISTER_pair_unit_left 
+    QREGISTER_pair_unit_right
     QREGISTER_chain_id_left QREGISTER_chain_all_right
     QREGISTER_pair_all_left QREGISTER_pair_all_right
     QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst

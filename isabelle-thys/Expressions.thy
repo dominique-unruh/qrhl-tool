@@ -1,5 +1,5 @@
 theory Expressions
-  imports Registers2.Prog_Variables
+  imports Prog_Variables
 begin
 
 type_synonym 'a expression = \<open>cl \<Rightarrow> 'a\<close>

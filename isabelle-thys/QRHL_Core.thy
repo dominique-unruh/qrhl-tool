@@ -1,6 +1,6 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" Registers2.BOLegacy Discrete_Distributions 
-    Registers2.Misc_Missing Registers2.Prog_Variables (* Registers.Pure_States *)
+    Registers2.Misc_Missing Prog_Variables (* Registers.Pure_States *)
     "HOL-Eisbach.Eisbach"
   keywords "declare_variable_type" :: thy_decl
 begin
