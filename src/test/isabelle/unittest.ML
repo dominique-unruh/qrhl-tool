@@ -36,3 +36,11 @@ fun assert_aconv_conv check_types conv input expected =
     if aconv' check_types rhs expected then () else
     error ("Expected (up to aconv): "^ string_of_term_gl expected^"\nGot: "^ string_of_term_gl rhs)
   end
+
+fun assert_schematic_aconv check_types (goal : {context: Proof.context, facts: thm list, goal: thm}) i expected = let
+  val terms = goal |> #goal |> Thm.concl_of |> Logic.unprotect |> Logic.dest_conjunctions 
+              |> map_filter (fn \<^Const_>\<open>Pure.term _\<close> $ t => SOME t | _ => NONE)
+  val term = nth terms (i-1) |> \<^print>
+  val _ = aconv' check_types term expected
+      orelse error ("Expected (up to aconv): "^ string_of_term_gl expected^"\nGot: "^ string_of_term_gl term)
+in () end

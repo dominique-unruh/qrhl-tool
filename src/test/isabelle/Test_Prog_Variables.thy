@@ -106,6 +106,22 @@ assert_aconv_conv false (translate_to_index_registers_conv_with_opts \<^context>
   \<^term>\<open>\<forall>x. apply_qregister qregister_id x = apply_qregister qregister_id x\<close>
 \<close>
 
+ML \<open>
+assert_aconv_conv false (QCOMPLEMENT_INDEX_REGISTER_conv \<^context>)
+ \<^cterm>\<open>QCOMPLEMENT
+     (QREGISTER_pair QREGISTER_fst
+       (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q
+         (QREGISTER_pair QREGISTER_fst
+           (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q
+             (QREGISTER_pair QREGISTER_fst (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q QREGISTER_snd))))))\<close>
+  \<^term>\<open>QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q QREGISTER_fst))\<close>
+\<close>
+
+schematic_goal \<open>a\<Longrightarrow>qcomplements \<lbrakk>\<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#5.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q (?X :: (?'x,_) qregister)\<close>
+  apply (tactic \<open>qcomplements_tac \<^context> 1\<close>)
+  ML_val \<open>assert_schematic_aconv false @{Isar.goal} 1 \<^term>\<open>\<lbrakk>#4\<rbrakk>\<^sub>q\<close>\<close>
+  by -
+
 end
 
 end

@@ -3,6 +3,7 @@ theory Scratch
  (* "HOL-ex.Sketch_and_Explore" *) 
 (* "HOL-Eisbach.Eisbach" *)
 (* QRHL_Operations  *)
+"QRHL-Tests.All_Unit_Tests"
 begin
 
 no_notation eq_closure_of ("closure'_of\<index>")
@@ -30,22 +31,6 @@ end
 \<close>
 *)
 
-(* TODO: make unit test? *)
-ML \<open>
-QCOMPLEMENT_INDEX_REGISTER_conv \<^context> \<^cterm>\<open>QCOMPLEMENT
-     (QREGISTER_pair QREGISTER_fst
-       (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q
-         (QREGISTER_pair QREGISTER_fst
-           (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q
-             (QREGISTER_pair QREGISTER_fst (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q QREGISTER_snd))))))\<close>
-\<close>
-
-(* TODO: make unit test? *)
-schematic_goal \<open>qcomplements \<lbrakk>\<lbrakk>#2\<rbrakk>\<^sub>q, \<lbrakk>#3\<rbrakk>\<^sub>q, \<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#5.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q (?X :: (?'x,_) qregister)\<close>
-  by (tactic \<open>qcomplements_tac \<^context> 1\<close>)
-
-
-(* END MOVE *)
 
 
 (* (* TODO used? *)
@@ -65,12 +50,6 @@ proof -
   then show ?thesis
     by (auto simp add: filterlim_def)
 qed *)
-
-
-
-ML \<open>
-open Prog_Variables
-\<close>
 
 
 experiment
@@ -692,8 +671,8 @@ fun qcomplement_of_index_qregister ctxt ct = let
   val (inT,outT) = dest_qregisterT (Thm.typ_of_cterm ct)
   val x_inT = TVar(("'x", index), [])
   val qcomplement_const = Thm.cterm_of ctxt \<^Const>\<open>qcomplements inT outT x_inT\<close>
-  val x = Thm.cterm_of ctxt (Var (("x", index), \<^Type>\<open>qregister x_inT outT\<close>))
-  val goal =  (* qcomplements ct ? *)
+  val x = (* TODO use Thm.var *)Thm.cterm_of ctxt (Var (("x", index), \<^Type>\<open>qregister x_inT outT\<close>))
+  val goal =  (* qcomplements ct ?x *)
       Thm.apply (Thm.apply qcomplement_const ct) x |> Thm.apply \<^cterm>\<open>Trueprop\<close>
   val thm = Goal.prove_internal \<^context> [] goal (K (qcomplements_tac ctxt 1))
   val complement = thm |> Thm.cprop_of |> Thm.dest_arg |> Thm.dest_arg
@@ -712,7 +691,7 @@ definition \<open>TTIR_COMPLEMENT F G \<longleftrightarrow> qcomplements F G\<cl
 definition \<open>TTIR_INVERSE F G \<longleftrightarrow> 
   qregister_chain F G = qregister_id \<and> qregister_chain G F = qregister_id\<close>
 
-lemma translate_to_index_registers_space_div_unlift:
+lemma translate_to_index_registers_space_div_unlift: 
   fixes A' :: \<open>'a ell2 ccsubspace\<close> and G :: \<open>('b,'a) qregister\<close>
     and F :: \<open>('c,'a) qregister\<close> and FG :: \<open>('d,'a) qregister\<close>
   assumes \<open>TTIR_APPLY_QREGISTER_SPACE A' F A\<close>
