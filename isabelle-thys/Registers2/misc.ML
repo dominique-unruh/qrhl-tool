@@ -57,6 +57,8 @@ fun change_conv conv ct =
 
 fun conditional_conv test conv1 conv2 ct = if test ct then conv1 ct else conv2 ct
 
+fun conditional_conv' test conv = conditional_conv test conv Conv.no_conv
+
 fun repeat_until_conv' test conv ct = 
   (conv 
   then_conv
@@ -316,7 +318,7 @@ fun print_here_tac ctxt here = print_tac ctxt ("Goal state" ^ Position.here here
 (* Like resolve_tac, except:
    - no backtracking (returns an option not a seq)
    - returns the applied rule *)
-fun resolve_and_remember_rule _    []            i st : (thm * thm) option = NONE
+fun resolve_and_remember_rule _    []            _ _ : (thm * thm) option = NONE
   | resolve_and_remember_rule ctxt (rule::rules) i st =
       case resolve_tac ctxt [rule] i st |> Seq.pull of
         SOME (st',_) => SOME (rule, st')
@@ -359,7 +361,7 @@ fun MY_SUBGOAL ctxt tac : int -> tactic = CSUBGOAL (fn (subgoal,i) => let
                (false, thm, 0) i
   in tac' end)
 
-fun strip_params_concl (Const("Pure.all", _) $ Abs (a, T, t)) = strip_params_concl t
+fun strip_params_concl (Const("Pure.all", _) $ Abs (_, _, t)) = strip_params_concl t
   | strip_params_concl B = B;
 
 (* Rewrites with theorems thms, but uses prover for conditions.

@@ -12,6 +12,23 @@ fun is_empty_qregisterT ctxt (\<^Type>\<open>qregister T _\<close>) = Sign.of_so
 fun is_empty_qregister ctxt t = is_empty_qregisterT ctxt (fastype_of t)
   handle TYPE(_, Ts, _) => raise TYPE("is_empty_qregister: not a qregister type", Ts, [t])
 
+fun is_index_qregister (\<^Const_>\<open>qregister_pair _ _ _\<close> $ t $ u) = is_index_qregister t andalso is_index_qregister u
+  | is_index_qregister (\<^Const_>\<open>qregister_chain _ _ _\<close> $ t $ u) = is_index_qregister t andalso is_index_qregister u
+  | is_index_qregister (\<^Const_>\<open>empty_qregister _ _\<close>) = true
+  | is_index_qregister (\<^Const_>\<open>qregister_id _\<close>) = true
+  | is_index_qregister (\<^Const_>\<open>qFst _ _\<close>) = true
+  | is_index_qregister (\<^Const_>\<open>qSnd _ _\<close>) = true
+  | is_index_qregister _ = false
+
+fun is_INDEX_QREGISTER (\<^Const_>\<open>sup _\<close> $ t $ u) = is_INDEX_QREGISTER t andalso is_INDEX_QREGISTER u
+  | is_INDEX_QREGISTER (\<^Const_>\<open>QREGISTER_chain _ _\<close> $ \<^Const_>\<open>qFst _ _\<close> $ t) = is_INDEX_QREGISTER t
+  | is_INDEX_QREGISTER (\<^Const_>\<open>QREGISTER_chain _ _\<close> $ \<^Const_>\<open>qSnd _ _\<close> $ t) = is_INDEX_QREGISTER t
+  | is_INDEX_QREGISTER (\<^Const_>\<open>bot \<open>\<^Type>\<open>QREGISTER _\<close>\<close>\<close>) = true
+  | is_INDEX_QREGISTER (\<^Const_>\<open>top \<open>\<^Type>\<open>QREGISTER _\<close>\<close>\<close>) = true
+  | is_INDEX_QREGISTER (\<^Const_>\<open>QREGISTER_fst _ _\<close>) = true
+  | is_INDEX_QREGISTER (\<^Const_>\<open>QREGISTER_snd _ _\<close>) = true
+  | is_INDEX_QREGISTER _ = false
+
 (* Transforms F into [F1,\<dots>,Fn] such that F is equivalent to (F1;\<dots>Fn). *)
 (* TODO: support cregisters as well *)
 (* TODO: rename \<rightarrow> ..._register *)

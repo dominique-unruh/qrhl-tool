@@ -1,5 +1,5 @@
 theory Registers_ML
-  imports Quantum_Registers
+  imports Quantum_Reg_Ranges
 begin
 
 text \<open>This theory contains some basic ML code for dealing with registers on the ML level.

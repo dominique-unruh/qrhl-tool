@@ -172,20 +172,22 @@ fun register_compats_of thm compats = case Thm.prop_of thm of
   "QREGISTER_chain QREGISTER_pair QREGISTER_fst QREGISTER_snd qFst qSnd QREGISTER_all QREGISTER_unit".
 (While keeping the structure of the index-register. That is, can be undone be QREGISTER_of_index_reg_reverse_conv.)
  *)
-val QREGISTER_of_index_reg_conv =
-  Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
+fun QREGISTER_of_index_reg_conv ctxt =
+  Misc.conditional_conv' (fn t => case Thm.term_of (\<^print>t) of \<^Const_>\<open>QREGISTER_of _ _\<close> $ t => is_index_qregister t | _ => false)
+  (Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
     (map (fn thm => thm RS @{thm eq_reflection})
           @{thms 
             QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain QREGISTER_of_empty_qregister
-            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})
+            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id}) ctxt)
 
 (* Opposite of QREGISTER_of_index_reg_conv *)
-val QREGISTER_of_index_reg_reverse_conv =
-  Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
+fun QREGISTER_of_index_reg_reverse_conv ctxt =
+  Misc.conditional_conv' (fn t => t |> Thm.term_of |> is_INDEX_QREGISTER)
+  (Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
     (map (fn thm => thm RS @{thm sym} RS @{thm eq_reflection})
           @{thms 
             QREGISTER_of_qregister_pair QREGISTER_of_qregister_chain QREGISTER_of_empty_qregister
-            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id})
+            QREGISTER_of_qFst QREGISTER_of_qSnd QREGISTER_of_qregister_id}) ctxt)
 
 (* Brings an INDEX-REGISTER into normal form. (Only for quantum registers)
 
@@ -205,7 +207,9 @@ local
     QREGISTER_pair_fst_snd QREGISTER_pair_snd_fst
     QREGISTER_chain_unit_left QREGISTER_chain_unit_right})
 in
-fun INDEX_REGISTER_norm_conv ctxt = Raw_Simplifier.rewrite ctxt false rules
+fun INDEX_REGISTER_norm_conv ctxt = 
+  Misc.conditional_conv' (fn t => t |> Thm.term_of |> is_INDEX_QREGISTER)
+        (Raw_Simplifier.rewrite ctxt false rules)
 end
 
 local
@@ -224,7 +228,11 @@ fun ACTUAL_QREGISTER_tac ctxt =
   let
   val ctxt = ctxt |> Config.put Simplifier.simp_trace false
                   |> put_simpset simpset
-  in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove (using simp): " ^ Syntax.string_of_term ctxt t) end
+  in SUBGOAL (fn (t,i) =>
+    (case t of \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>ACTUAL_QREGISTER _\<close> $ t') =>
+        is_INDEX_QREGISTER t' orelse raise TERM ("ACTUAL_QREGISTER_tac: not a goal with an INDEX-REGISTER", [t])
+        | _ => raise TERM ("ACTUAL_QREGISTER_tac: not a goal of the form \<open>ACTUAL_QREGISTER \<dots>\<close>", [t]);
+    Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove (using simp): " ^ Syntax.string_of_term ctxt t) i)) end
 end
 
 (* Rewrites QCOMPLEMENT (INDEX-QREGISTER) into an INDEX-QREGISTER *)
@@ -243,6 +251,7 @@ fun QCOMPLEMENT_INDEX_REGISTER_conv ctxt = let
       addSSolver solver
       addSolver solver
   in
+(* TODO: Add check that this is an INDEX-QREGISTER *)
     Simplifier.rewrite ctxt
   end
 end
