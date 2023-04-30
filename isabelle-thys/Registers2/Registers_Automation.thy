@@ -59,6 +59,9 @@ definition \<open>TTIR_LUB F G FG F' G' \<longleftrightarrow> qregister FG \<and
 definition \<open>TTIR_APPLY_QREGISTER A F B \<longleftrightarrow> A = apply_qregister F B\<close>
 definition \<open>TTIR_APPLY_QREGISTER_SPACE A F B \<longleftrightarrow> A = apply_qregister_space F B\<close>
 definition \<open>PROP TTIR_EQ (A::'a::{}) B \<equiv> (A \<equiv> B)\<close>
+(* For index-register F *)
+definition \<open>TTIR_COMPLEMENT F G \<longleftrightarrow> qcomplements F G\<close>
+
 
 lemma translate_to_index_registers_assm_lub_tac_aux: 
   assumes \<open>qregister_le F FG \<and> qregister_le G FG\<close>

@@ -689,11 +689,30 @@ qcomplement_of_index_qregister \<^context> \<^cterm>\<open>\<lbrakk>\<lbrakk>#2\
 
 
 (* TODO: Implement TTIR-tactics for this. *)
-(* For index-register F *)
-definition \<open>TTIR_COMPLEMENT F G \<longleftrightarrow> qcomplements F G\<close>
 (* For index-iso-register F *)
 definition \<open>TTIR_INVERSE F G \<longleftrightarrow> 
   qregister_chain F G = qregister_id \<and> qregister_chain G F = qregister_id\<close>
+
+(* Use in this form? *)
+lemma space_div_space_div_unlifted_inv:
+  assumes \<open>qcomplements Q R\<close>
+  shows \<open>space_div A \<psi> Q = 
+            space_div_unlifted (apply_qregister_space (qregister_inv \<lbrakk>R,Q\<rbrakk>) A) \<psi> \<guillemotright> R\<close>
+proof -
+  from assms have \<open>qcomplements R Q\<close>
+    by (meson complements_sym qcomplements.rep_eq)
+  define A' where \<open>A' = apply_qregister_space (qregister_inv \<lbrakk>R,Q\<rbrakk>) A\<close>
+  have \<open>qregister_chain \<lbrakk>R,Q\<rbrakk> (qregister_inv \<lbrakk>R,Q\<rbrakk>) = qregister_id\<close>
+    apply (rule iso_qregister_chain_inv)
+    using \<open>qcomplements R Q\<close> by (simp add: qcomplements_def')
+  then have \<open>space_div A \<psi> Q = space_div (apply_qregister_space \<lbrakk>R,Q\<rbrakk> A') \<psi> Q\<close>
+    by (metis (no_types, opaque_lifting) A'_def apply_qregister_space_id qregister_chain_apply_space)
+  also have \<open>\<dots> = apply_qregister_space R (space_div_unlifted A' \<psi>)\<close>
+    using space_div_space_div_unlifted assms iso_qregister_def qcomplements_def' by blast
+  finally show ?thesis
+    by (simp add: A'_def)
+qed
+
 
 lemma translate_to_index_registers_space_div_unlift: 
   fixes A' :: \<open>'a ell2 ccsubspace\<close> and G :: \<open>('b,'a) qregister\<close>
@@ -723,25 +742,18 @@ proof -
     by (simp add: TTIR_APPLY_QREGISTER_SPACE_def)
 qed
 
-(* Use in this form? *)
-lemma space_div_space_div_unlifted_inv:
-  assumes \<open>qcomplements Q R\<close>
-  shows \<open>space_div A \<psi> Q = 
-            space_div_unlifted (apply_qregister_space (qregister_inv \<lbrakk>R,Q\<rbrakk>) A) \<psi> \<guillemotright> R\<close>
-proof -
-  from assms have \<open>qcomplements R Q\<close>
-    by (meson complements_sym qcomplements.rep_eq)
-  define A' where \<open>A' = apply_qregister_space (qregister_inv \<lbrakk>R,Q\<rbrakk>) A\<close>
-  have \<open>qregister_chain \<lbrakk>R,Q\<rbrakk> (qregister_inv \<lbrakk>R,Q\<rbrakk>) = qregister_id\<close>
-    apply (rule iso_qregister_chain_inv)
-    using \<open>qcomplements R Q\<close> by (simp add: qcomplements_def')
-  then have \<open>space_div A \<psi> Q = space_div (apply_qregister_space \<lbrakk>R,Q\<rbrakk> A') \<psi> Q\<close>
-    by (metis (no_types, opaque_lifting) A'_def apply_qregister_space_id qregister_chain_apply_space)
-  also have \<open>\<dots> = apply_qregister_space R (space_div_unlifted A' \<psi>)\<close>
-    using space_div_space_div_unlifted assms iso_qregister_def qcomplements_def' by blast
-  finally show ?thesis
-    by (simp add: A'_def)
-qed
+declare translate_to_index_registers_space_div[translate_to_index_registers del]
+declare translate_to_index_registers_space_div_unlift[translate_to_index_registers]
+
+schematic_goal \<open>qregister_chain ?X \<lbrakk>#2., #1\<rbrakk> = qregister_id\<close>
+
+  oops
+
+ML \<open>
+qregister_conversion_to_register_conv \<^context>
+\<^cterm>\<open>\<lbrakk>qregister_id \<mapsto> \<lbrakk>#2., #1\<rbrakk>\<rbrakk>\<close>
+\<close>
+
 
 lemma
   assumes [register]: \<open>qregister \<lbrakk>Q,R\<rbrakk>\<close>
