@@ -11,6 +11,7 @@ no_notation Lattice.meet (infixl "\<sqinter>\<index>" 70)
 no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
 no_notation Order.top ("\<top>\<index>")
 no_notation Order.bottom ("\<bottom>\<index>")
+declare[[show_consts=false]]
 
 ML "open Prog_Variables"
 
@@ -745,14 +746,98 @@ qed
 declare translate_to_index_registers_space_div[translate_to_index_registers del]
 declare translate_to_index_registers_space_div_unlift[translate_to_index_registers]
 
-schematic_goal \<open>qregister_chain ?X \<lbrakk>#2., #1\<rbrakk> = qregister_id\<close>
+thm TTIR_INVERSE_def
 
-  oops
+(* lemma test1:
+  shows \<open>TTIR_INVERSE \<lbrakk>qregister_chain qFst A, qregister_chain qSnd B\<rbrakk> (undefined 1)\<close>
+  by x
+
+lemma test2:
+  shows \<open>TTIR_INVERSE \<lbrakk>qregister_chain qSnd A, qregister_chain qFst B\<rbrakk> (undefined 2)\<close>
+  by x
+
+lemma test3:
+  shows \<open>TTIR_INVERSE \<lbrakk>qSnd, qregister_chain qFst B\<rbrakk> (undefined 3)\<close>
+  by x
+
+lemma test4:
+  shows \<open>TTIR_INVERSE \<lbrakk>qregister_chain qSnd A, qFst\<rbrakk> (undefined 4)\<close>
+  by x
+
+lemma test5:
+  shows \<open>TTIR_INVERSE \<lbrakk>qSnd, qFst\<rbrakk> \<lbrakk>qSnd, qFst\<rbrakk>\<close>
+  by x
+
+
+lemma test6:
+  shows \<open>TTIR_INVERSE \<lbrakk>qregister_chain qFst A, qregister_chain qSnd B\<rbrakk> (undefined 6)\<close>
+  by x
+
+lemma test7:
+  shows \<open>TTIR_INVERSE \<lbrakk>qFst, qregister_chain qSnd B\<rbrakk> (undefined 7)\<close>
+  by x
+
+lemma test8:
+  shows \<open>TTIR_INVERSE \<lbrakk>qregister_chain qFst A, qSnd\<rbrakk> (undefined 8)\<close>
+  by x
+
+lemma test9:
+  shows \<open>TTIR_INVERSE \<lbrakk>qFst, qSnd\<rbrakk> qregister_id\<close>
+  by x
+
+lemma test10:
+  shows \<open>TTIR_INVERSE qregister_id qregister_id\<close>
+  by x
+
+lemma test11:
+  shows \<open>TTIR_INVERSE \<lbrakk>qregister_chain qSnd A, \<lbrakk>qregister_chain qSnd B, qregister_chain qFst C\<rbrakk>\<rbrakk> (undefined 11)\<close>
+  by -x
+
+lemma test12:
+  assumes \<open>TTIR_INVERSE \<lbrakk>qregister_chain C \<lbrakk>A, B\<rbrakk>, D\<rbrakk> (qregister_chain C\<close>
+  shows \<open>TTIR_INVERSE \<lbrakk>qregister_chain C A, \<lbrakk>qregister_chain C B, D\<rbrakk>\<rbrakk> X\<close>
+  apply (simp add: TTIR_INVERSE_def)
+  by -x *)
+
+lemma qregister_left_right_inverse:
+  assumes \<open>qregister_chain A B = qregister_id\<close>
+  shows \<open>qregister_chain B A = qregister_id\<close>
+proof -
+  from assms
+  have \<open>qregister A\<close> and \<open>qregister B\<close>
+    by (metis qregister_chain_is_qregister qregister_id)+
+  with assms show ?thesis
+  apply transfer
+    apply auto
+  by (metis inj_iff isomorphism_expand pointfree_idE qregister_raw_inj)
+qed
 
 ML \<open>
-qregister_conversion_to_register_conv \<^context>
-\<^cterm>\<open>\<lbrakk>qregister_id \<mapsto> \<lbrakk>#2., #1\<rbrakk>\<rbrakk>\<close>
+(* TODO: make test case *)
+val (_,thm) = index_qregister_inverse_proof \<^context> \<^term>\<open>\<lbrakk>#3.,  #2\<rbrakk> :: (_,unit*_*_) qregister\<close>
+ (* |> Syntax.string_of_term \<^context> |> writeln  *)
+|> \<^print>
 \<close>
+
+lemma TTIR_INVERSE_aux1:
+  assumes \<open>qregister_chain Y X = qregister_id\<close>
+  shows \<open>TTIR_INVERSE X Y\<close>
+  by (simp add: TTIR_INVERSE_def assms qregister_left_right_inverse)
+
+ML \<open>
+fun tac ctxt = SUBGOAL (fn (t,i) => let
+  val register = t |> HOLogic.dest_Trueprop |> dest_comb |> fst |> dest_comb |> snd |> \<^print>
+  val (_, thm) = index_qregister_inverse_proof ctxt register
+  in
+    resolve_tac ctxt @{thms TTIR_INVERSE_aux1} i
+    THEN
+    solve_tac ctxt [thm] i
+  end)
+\<close>
+
+schematic_goal \<open>TTIR_INVERSE \<lbrakk>#3., #2, #1\<rbrakk> ?X\<close>
+  apply (tactic \<open>tac \<^context> 1\<close>)
+  by -
 
 
 lemma
