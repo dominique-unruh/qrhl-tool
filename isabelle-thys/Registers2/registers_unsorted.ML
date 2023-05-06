@@ -174,6 +174,9 @@ fun translate_to_index_registers_conv_tac0 ctxt config rules (st:thm) = let
              | \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>TTIR_COMPLEMENT _ _ _\<close> $ _ $ _) =>
                 SINGLE (resolve_tac ctxt [@{lemma \<open>qcomplements F G \<Longrightarrow> TTIR_COMPLEMENT F G\<close> by (simp add: TTIR_COMPLEMENT_def)}] 1
                         THEN qcomplements_tac ctxt 1) st
+             | \<^Const_>\<open>Trueprop\<close> $ (\<^Const_>\<open>TTIR_INVERSE _ _\<close> $ F $ _) =>
+                SINGLE (resolve_tac ctxt [@{lemma \<open>qregister_chain G F = qregister_id \<Longrightarrow> TTIR_INVERSE F G\<close> by (simp add: TTIR_INVERSE_def qregister_left_right_inverse)}] 1
+                        THEN solve_tac ctxt [index_qregister_inverse_proof ctxt F |> snd] 1) st
              | t => (raise ERROR ("When translating registers, got a condition of the wrong form (" ^ Syntax.string_of_term ctxt subgoal
                                  ^ ").\nThis probably means a there is a malformed rule in " ^ named_thms_str() ^ "."))
     val st = case st of SOME st => st

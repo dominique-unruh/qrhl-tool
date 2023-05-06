@@ -76,23 +76,23 @@ fun is_dummy2 thm =
   | SOME t => Term.is_dummy_pattern (Term.head_of t) end
 
 
-structure MethodErrorStack = Proof_Data (
+(* structure MethodErrorStack = Proof_Data (
   type T = (unit -> string) list
   fun init _ = []
-)
+) *)
 datatype lazy_error = Lazy_Error of unit -> string
 exception LAZY_ERROR of lazy_error
 fun lazy_error msg = LAZY_ERROR (Lazy_Error msg)
 val _ = ML_system_pp (fn _ => fn _ => fn Lazy_Error msg => Pretty.to_polyml (Pretty.str (msg ())))
-fun method_error_push msg = MethodErrorStack.map (fn st => msg::st)
+(* fun method_error_push msg = MethodErrorStack.map (fn st => msg::st) *)
 (* val method_error = Attrib.setup_config_bool \<^binding>\<open>method_error\<close> (K false) *)
-fun msg_to_string ctxt msg () = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt))
-fun error_ctac msg (ctx,_) = Seq.single (Seq.Error (msg_to_string ctx msg))
-fun error_tac msg ctx : tactic = fn st => if is_dummy2 st then no_tac st else raise lazy_error (msg_to_string ctx msg)
+(* fun msg_to_string ctxt msg () = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt)) *)
+(* fun error_ctac msg (ctx,_) = Seq.single (Seq.Error (msg_to_string ctx msg)) *)
+fun error_tac msg ctxt : tactic = fn st => if is_dummy2 st then no_tac st else raise lazy_error (msg)
 fun error_tac' msg ctxt i : tactic = fn st => error_tac (fn () => 
   let val goal = nth (Thm.prems_of st) (i-1) handle Subscript => \<^prop>\<open>not_enough_subgoals\<close>
   in msg goal end) ctxt st
-fun error_method msg = CONTEXT_METHOD (K (error_ctac msg))
+(* fun error_method msg = CONTEXT_METHOD (K (error_ctac msg)) *)
 fun fail_on_LAZY_ERROR f x = f x handle LAZY_ERROR (Lazy_Error msg) => raise ERROR (msg())
 fun remove_LAZY_ERROR_in_seq xq =
   Seq.make (fn () => (case Seq.pull xq of NONE => NONE 
@@ -104,7 +104,7 @@ fun fail_tac_on_LAZY_ERROR tac st =
   handle LAZY_ERROR _ => Seq.empty
 
 fun succeed_or_error_tac' tac ctxt msg = SUBGOAL (fn (_,i) => tac i ORELSE error_tac' msg ctxt i)
-
+ 
 (* Solves a goal of the form "?x = a"
    by applying conv to a and then instantiating ?x with the result *)
 fun schematic_conv_tac str conv ctxt i =

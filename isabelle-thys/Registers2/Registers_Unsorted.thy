@@ -22,6 +22,12 @@ lemma distinct_qvarsR: "qregister (qregister_pair Q R) \<Longrightarrow> qregist
   by (simp add: qcompatible_def)
 
 
+(* lemma TTIR_INVERSE_aux1:
+  assumes \<open>qregister_chain Y X = qregister_id\<close>
+  shows \<open>TTIR_INVERSE X Y\<close>
+  by (simp add: TTIR_INVERSE_def assms qregister_left_right_inverse) *)
+
+
 ML_file \<open>registers_unsorted.ML\<close>
 
 

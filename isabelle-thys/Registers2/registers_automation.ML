@@ -27,7 +27,7 @@ fun distinct_vars_tac ctxt = let
     ccompatible3 ccompatible3' (* cregister_chain_id *)
     qcompatible3 qcompatible3 qcompatible3' (* qregister_chain_id *)
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
-  in Misc.succeed_or_error_tac' (SOLVED' (simp_tac ctxt)) ctxt (fn t => "Cannot prove that the variables are variables and distinct (using simp): " ^ Syntax.string_of_term ctxt t) end
+  in SOLVED' (simp_tac ctxt) end
 
 
 (* Normalizes a register (e.g., removes id registers etc.) *)
@@ -68,9 +68,11 @@ end
    But in simple cases, should be a lub.) *)
 (* TODO: support cregisters as well *)
 (* TODO: rename \<rightarrow> something with lub *)
-fun join_registers (_:Proof.context) F G = if F aconv G then SOME F else let
+fun join_registers (ctxt:Proof.context) F G = if F aconv G then SOME F else let
   val Fs = explode_variable F
   val Gs = explode_variable G
+  (* val _ = \<^print> (map (Thm.cterm_of ctxt) Fs) *)
+  (* val _ = \<^print> (map (Thm.cterm_of ctxt) Gs) *)
   fun is_id \<^Const_>\<open>qregister_id _\<close> = true
     | is_id _ = false
   val (_, memoryT) = dest_qregisterT (fastype_of F)
@@ -112,7 +114,7 @@ fun qregister_lub_tac ctxt = Misc.MY_SUBGOAL ctxt (fn {ctxt, csubgoal, ...} => l
     THEN qregister_le_tac ctxt 1
   (* THEN Misc.print_here_tac ctxt \<^here>  *)
   in
-    tac ORELSE Misc.error_tac (K "qregister_lub_tac: failed to prove le") ctxt
+    tac ORELSE Misc.error_tac (fn _ => "qregister_lub_tac: failed to prove le (attempted " ^ Syntax.string_of_term ctxt QR ^ " as lub for " ^ Syntax.string_of_term ctxt Q ^ " and " ^ Syntax.string_of_term ctxt R ^ ")") ctxt
   end
 )
 

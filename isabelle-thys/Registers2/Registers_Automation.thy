@@ -61,6 +61,9 @@ definition \<open>TTIR_APPLY_QREGISTER_SPACE A F B \<longleftrightarrow> A = app
 definition \<open>PROP TTIR_EQ (A::'a::{}) B \<equiv> (A \<equiv> B)\<close>
 (* For index-register F *)
 definition \<open>TTIR_COMPLEMENT F G \<longleftrightarrow> qcomplements F G\<close>
+(* For index-iso-register F *)
+definition \<open>TTIR_INVERSE F G \<longleftrightarrow> 
+  qregister_chain F G = qregister_id \<and> qregister_chain G F = qregister_id\<close>
 
 
 lemma translate_to_index_registers_assm_lub_tac_aux: 

@@ -1073,5 +1073,19 @@ proof -
     using assms by (simp add: qregister_raw_apply_qregister)
 qed
 
+(* TODO same for cregister *)
+lemma qregister_left_right_inverse:
+  assumes \<open>qregister_chain A B = qregister_id\<close>
+  shows \<open>qregister_chain B A = qregister_id\<close>
+proof -
+  from assms
+  have \<open>qregister A\<close> and \<open>qregister B\<close>
+    by (metis qregister_chain_is_qregister qregister_id)+
+  with assms show ?thesis
+  apply transfer
+    apply auto
+  by (metis inj_iff isomorphism_expand pointfree_idE qregister_raw_inj)
+qed
+
 
 end

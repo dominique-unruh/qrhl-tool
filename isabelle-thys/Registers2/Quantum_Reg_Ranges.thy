@@ -14,9 +14,8 @@ but the comments in the following two MathOverflow questions indicate that it is
 \<^url>\<open>https://mathoverflow.net/questions/442854/intersection-of-type-i-von-neumann-algebra-factors\<close>,
 \<^url>\<open>https://mathoverflow.net/questions/442906/intersection-of-finitely-many-type-i-von-neumann-algebra-factors\<close>.)
 
-A possible alternative definition could be as a \<^term>\<open>von_neumann_factor\<close>, but then we have to prove that the bicommutant of the union of two factors is a factor.
-I don't know whether that holds.
-\<close>
+(Note: we also cannot define a "valid qregister range" as a \<^term>\<open>von_neumann_factor\<close> for
+the same reason, see \<^url>\<open>https://mathoverflow.net/a/445985/101775\<close>.)\<close>
 definition valid_qregister_range :: \<open>'a qupdate set \<Rightarrow> bool\<close> where
   \<open>valid_qregister_range \<FF> \<longleftrightarrow> von_neumann_algebra \<FF>\<close>
 
