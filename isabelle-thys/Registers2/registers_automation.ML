@@ -23,7 +23,7 @@ open Registers
 
 (* TODO something more reliable than just simp'ing *)
 fun distinct_vars_tac ctxt = let
-  val ctxt = (Config.put Simplifier.simp_trace false ctxt) addsimps @{thms 
+  val ctxt = (ctxt |> Config.put Simplifier.simp_trace false |> Context_Position.not_really) addsimps @{thms 
     ccompatible3 ccompatible3' (* cregister_chain_id *)
     qcompatible3 qcompatible3 qcompatible3' (* qregister_chain_id *)
     Cccompatible_CREGISTER_of Qqcompatible_QREGISTER_of}
@@ -114,7 +114,9 @@ fun qregister_lub_tac ctxt = Misc.MY_SUBGOAL ctxt (fn {ctxt, csubgoal, ...} => l
     THEN qregister_le_tac ctxt 1
   (* THEN Misc.print_here_tac ctxt \<^here>  *)
   in
-    tac ORELSE Misc.error_tac (fn _ => "qregister_lub_tac: failed to prove le (attempted " ^ Syntax.string_of_term ctxt QR ^ " as lub for " ^ Syntax.string_of_term ctxt Q ^ " and " ^ Syntax.string_of_term ctxt R ^ ")") ctxt
+    tac ORELSE Misc.error_tac (fn _ => "qregister_lub_tac: failed to prove le.\n"
+      ^ "Tried: " ^ Syntax.string_of_term ctxt QR ^ "\n as lub for:" 
+      ^ Syntax.string_of_term ctxt Q ^ "\nand: " ^ Syntax.string_of_term ctxt R) ctxt
   end
 )
 
@@ -177,7 +179,7 @@ fun register_compats_of thm compats = case Thm.prop_of thm of
 (While keeping the structure of the index-register. That is, can be undone be QREGISTER_of_index_reg_reverse_conv.)
  *)
 fun QREGISTER_of_index_reg_conv ctxt =
-  Misc.conditional_conv' (fn t => case Thm.term_of (\<^print>t) of \<^Const_>\<open>QREGISTER_of _ _\<close> $ t => is_index_qregister t | _ => false)
+  Misc.conditional_conv' (fn t => case Thm.term_of t of \<^Const_>\<open>QREGISTER_of _ _\<close> $ t => is_index_qregister t | _ => false)
   (Misc.rewrite_with_prover (fn ctxt => distinct_vars_tac ctxt 1)
     (map (fn thm => thm RS @{thm eq_reflection})
           @{thms 

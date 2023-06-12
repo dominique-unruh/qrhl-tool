@@ -248,10 +248,16 @@ proof -
 qed
 
 lemma abs_summable_on_add:
-  fixes f g :: \<open>_ \<Rightarrow> real\<close> (* TODO more general *)
+  fixes f g :: \<open>_ \<Rightarrow> 'e ell2\<close> (* TODO more general *)
   assumes \<open>f abs_summable_on A\<close> and \<open>g abs_summable_on A\<close>
   shows \<open>(\<lambda>x. f x + g x) abs_summable_on A\<close>
-  sorry
+proof -
+  from assms have \<open>(\<lambda>x. norm (f x) + norm (g x)) summable_on A\<close>
+    using summable_on_add by blast
+  then show ?thesis
+    apply (rule Infinite_Sum.abs_summable_on_comparison_test')
+    using norm_triangle_ineq by blast
+qed
 
 lemma abs_summable_norm:
   assumes \<open>f abs_summable_on A\<close>
@@ -262,31 +268,36 @@ lemma abs_summable_on_scaleC_left [intro]:
   fixes c :: \<open>'a :: complex_normed_vector\<close>
   assumes "c \<noteq> 0 \<Longrightarrow> f abs_summable_on A"
   shows   "(\<lambda>x. f x *\<^sub>C c) abs_summable_on A"
-  by -
+  apply (cases \<open>c = 0\<close>)
+   apply simp
+  by (auto intro!: summable_on_cmult_left assms simp: norm_scaleC)
 
 lemma abs_summable_on_scaleC_right [intro]:
   fixes f :: \<open>'a \<Rightarrow> 'b :: complex_normed_vector\<close>
   assumes "c \<noteq> 0 \<Longrightarrow> f abs_summable_on A"
   shows   "(\<lambda>x. c *\<^sub>C f x) abs_summable_on A"
-  by -
+  apply (cases \<open>c = 0\<close>)
+   apply simp
+  by (auto intro!: summable_on_cmult_right assms simp: norm_scaleC)
 
 lemma kraus_family_map_abs_summable:
   assumes \<open>kraus_family \<EE>\<close>
   shows \<open>(\<lambda>E. of_nat (\<EE> E) *\<^sub>C Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)) abs_summable_on UNIV\<close>
+(*
 proof -
   wlog \<rho>_pos: \<open>\<rho> \<ge> 0\<close> generalizing \<rho>
   proof -
-    have aux: \<open>trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)\<close> 
+    have aux: \<open>trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close> 
       for \<rho> :: \<open>('a, 'a) trace_class\<close> and E :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
       by (simp add: trace_class_comp_left trace_class_comp_right)
     obtain \<rho>1 \<rho>2 \<rho>3 \<rho>4 a1 a2 a3 a4 where \<rho>_decomp: \<open>\<rho> = a1 *\<^sub>C \<rho>1 + a2 *\<^sub>C \<rho>2 + a3 *\<^sub>C \<rho>3 + a4 *\<^sub>C \<rho>4\<close>
       and pos: \<open>\<rho>1 \<ge> 0\<close> \<open>\<rho>2 \<ge> 0\<close> \<open>\<rho>3 \<ge> 0\<close> \<open>\<rho>4 \<ge> 0\<close>
       by -
-    have \<open>norm (of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L x*)) 
-      \<le> norm (a1 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>1 o\<^sub>C\<^sub>L x*))
-      + norm (a2 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>2 o\<^sub>C\<^sub>L x*))
-      + norm (a3 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>3 o\<^sub>C\<^sub>L x*))
-      + norm (a4 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>4 o\<^sub>C\<^sub>L x*))\<close> 
+    have \<open>norm (of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L x* )) 
+      \<le> norm (a1 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>1 o\<^sub>C\<^sub>L x* ))
+      + norm (a2 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>2 o\<^sub>C\<^sub>L x* ))
+      + norm (a3 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>3 o\<^sub>C\<^sub>L x* ))
+      + norm (a4 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>4 o\<^sub>C\<^sub>L x* ))\<close> 
       (is \<open>_ \<le> ?S x\<close>) for x
       apply (auto intro!: mult_left_mono
           simp add: norm_trace_class.abs_eq eq_onp_def trace_class_plus trace_class_scaleC
@@ -296,24 +307,24 @@ proof -
           simp flip: ring_distribs
           simp del: scaleC_scaleC)
       by (smt (verit) local.aux trace_class_plus trace_class_scaleC trace_norm_scaleC trace_norm_triangle)
-    then have *: \<open>norm (of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L x*)) 
+    then have *: \<open>norm (of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L x* )) 
       \<le> norm (?S x)\<close> for x
       by force
     show ?thesis
       apply (rule abs_summable_on_comparison_test[OF _ *])
       by (intro abs_summable_on_add abs_summable_norm abs_summable_on_scaleC_right hypothesis pos)
   qed
-  have aux: \<open>trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)\<close> 
+  have aux: \<open>trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close> 
     for \<rho> :: \<open>('a, 'a) trace_class\<close> and E :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
     by (simp add: trace_class_comp_left trace_class_comp_right)
   define n\<rho> where \<open>n\<rho> = norm \<rho>\<close>
-  have *: \<open>norm (of_nat (\<EE> E) *\<^sub>C Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*))
+  have *: \<open>norm (of_nat (\<EE> E) *\<^sub>C Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* ))
       \<le> norm (norm \<rho> *\<^sub>C of_nat (\<EE> E) *\<^sub>C norm (E* o\<^sub>C\<^sub>L E))\<close> for E
   proof -
-    have \<open>norm (Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)) =
-          trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)\<close>
+    have \<open>norm (Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )) =
+          trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close>
       by (simp add: norm_trace_class.abs_eq eq_onp_def aux)
-    also have \<open>\<dots> = trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)\<close>
+    also have \<open>\<dots> = trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close>
       by (metis \<rho>_pos abs_op_def from_trace_class_0 less_eq_trace_class.rep_eq sandwich_apply sandwich_pos sqrt_op_unique trace_abs_op)
     also have \<open>\<dots> = trace (from_trace_class \<rho> o\<^sub>C\<^sub>L (E* o\<^sub>C\<^sub>L E))\<close>
       by (simp add: Misc.lift_cblinfun_comp(2) circularity_of_trace trace_class_comp_left)
@@ -324,9 +335,9 @@ proof -
     finally show ?thesis
   sledgehammer
   by X (smt (verit, del_insts) Extra_Ordered_Fields.sign_simps(5) Extra_Ordered_Fields.sign_simps(6)
- \<open>complex_of_real (trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)) = trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)\<close> 
-\<open>norm (Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)) = trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)\<close>
- \<open>trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*) = trace (from_trace_class \<rho> o\<^sub>C\<^sub>L (E* o\<^sub>C\<^sub>L E))\<close> 
+ \<open>complex_of_real (trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )) = trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close> 
+\<open>norm (Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )) = trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close>
+ \<open>trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* ) = trace (from_trace_class \<rho> o\<^sub>C\<^sub>L (E* o\<^sub>C\<^sub>L E))\<close> 
 cmod_trace_times' mult_left_mono norm_AadjA norm_ge_zero 
 norm_mult norm_of_nat norm_of_real norm_trace_class.rep_eq of_real_power trace_class_from_trace_class)
   try0
@@ -348,11 +359,14 @@ qed
 
   show \<open>\<rho> \<ge> 0\<close>
   sorry
+*)
+  sorry
 
 lemma kraus_family_map_summable:
   assumes \<open>kraus_family \<EE>\<close>
   shows \<open>(\<lambda>E. of_nat (\<EE> E) *\<^sub>C Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)) summable_on UNIV\<close>
-  using abs_summable_summable assms kraus_family_map_abs_summable by force
+  apply (rule abs_summable_summable)
+  using assms by (rule kraus_family_map_abs_summable)
 
 lemma kraus_family_comp_apply:
   assumes \<open>kraus_family \<EE>\<close> and \<open>kraus_family \<FF>\<close>

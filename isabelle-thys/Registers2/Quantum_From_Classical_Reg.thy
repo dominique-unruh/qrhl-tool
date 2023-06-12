@@ -310,6 +310,7 @@ proof (cases \<open>cregister x \<and> cregister y\<close>)
      apply (auto simp add: apply_qregister_of_cregister permute_and_tensor1_cblinfun_ket
         permute_and_tensor1_cblinfun_exists_register ket.rep_eq same_outside_cregister_def
         scaleC_ell2.rep_eq cinner_ket zero_ell2.rep_eq)
+     apply (metis getter_setter_same[OF \<open>cregister x\<close>])
     by (metis getter_setter_same[OF \<open>cregister x\<close>])
   then have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterket k l) =
         apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l

@@ -714,7 +714,7 @@ lemma space_as_setI_via_Proj:
   using assms norm_Proj_apply by fastforce
 
 lemma commutant_sot_closed: \<open>closedin cstrong_operator_topology (commutant A)\<close>
-  \<comment> \<open>@{cite conway13functional}, Exercise IX.6.2\<close>
+  \<comment> \<open>\<^cite>\<open>conway2013course\<close>, Exercise IX.6.2\<close>
 proof (cases \<open>A = {}\<close>)
   case True
   then show ?thesis
@@ -1025,7 +1025,7 @@ proof -
 qed
 
 lemma cstrong_operator_topology_in_closure_algebraicI:
-  \<comment> \<open>@{cite conway13functional}, Proposition IX.5.3\<close>
+  \<comment> \<open>\<^cite>\<open>conway2013course\<close>, Proposition IX.5.3\<close>
   assumes space: \<open>csubspace A\<close>
   assumes mult: \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
   assumes one: \<open>id_cblinfun \<in> A\<close>
@@ -1149,7 +1149,7 @@ proof (rule cstrong_operator_topology_in_closureI)
 qed
 
 lemma commutant_inflation:
-  \<comment> \<open>One direction of @{cite conway13functional}, Proposition IX.6.2.\<close>
+  \<comment> \<open>One direction of \<^cite>\<open>conway2013course\<close>, Proposition IX.6.2.\<close>
   fixes n
   defines \<open>\<And>X. commutant' X \<equiv> commutant X \<inter> inflation_op_carrier n\<close>
   shows \<open>(\<lambda>a. inflation_op (replicate n a)) ` commutant (commutant A) 
@@ -1232,7 +1232,7 @@ qed
 
 lemma double_commutant_theorem_aux:
   \<comment> \<open>Basically the double commutant theorem, except that we restricted to spaces of the form \<^typ>\<open>'a ell2\<close>\<close>
-  \<comment> \<open>@{cite conway13functional}, Proposition IX.6.4\<close>
+  \<comment> \<open>\<^cite>\<open>conway2013course\<close>, Proposition IX.6.4\<close>
   fixes A :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
   assumes \<open>csubspace A\<close>
   assumes \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
@@ -1327,7 +1327,7 @@ lemma sandwich_arg_compose:
 
 lemma double_commutant_theorem_aux2:
   \<comment> \<open>Basically the double commutant theorem, except that we restricted to spaces of typeclass \<^class>\<open>not_singleton\<close>\<close>
-  \<comment> \<open>@{cite conway13functional}, Proposition IX.6.4\<close>
+  \<comment> \<open>\<^cite>\<open>conway2013course\<close>, Proposition IX.6.4\<close>
   fixes A :: \<open>('a::{chilbert_space,not_singleton} \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close>
   assumes subspace: \<open>csubspace A\<close>
   assumes mult: \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
@@ -1362,7 +1362,7 @@ proof -
 qed
 
 lemma double_commutant_theorem:
-  \<comment> \<open>@{cite conway13functional}, Proposition IX.6.4\<close>
+  \<comment> \<open>\<^cite>\<open>conway2013course\<close>, Proposition IX.6.4\<close>
   fixes A :: \<open>('a::{chilbert_space} \<Rightarrow>\<^sub>C\<^sub>L 'a) set\<close>
   assumes subspace: \<open>csubspace A\<close>
   assumes mult: \<open>\<And>a a'. a \<in> A \<Longrightarrow> a' \<in> A \<Longrightarrow> a o\<^sub>C\<^sub>L a' \<in> A\<close>
@@ -1497,7 +1497,7 @@ proof (unfold closed_map_def, intro allI impI)
         by (simp add: tensor_ell2_right_adj_apply)
     qed
     with closed_U f'U \<open>F \<noteq> \<bottom>\<close> have \<open>l' \<in> U\<close>
-      by (simp add: limitin_closedin)
+      by (simp add: Misc_Tensor_Product.limitin_closedin)
     then show \<open>l \<in> (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` U\<close>
       by (simp add: l_def)
   qed
@@ -1794,7 +1794,7 @@ lemma tensor_ell2_left_butterfly: \<open>tensor_ell2_left \<psi> o\<^sub>C\<^sub
 lemma amplification_double_commutant_commute:
   \<open>commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))
     = (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) `  commutant (commutant X)\<close>
-\<comment> \<open>@{cite takesaki}, Corollary IV.1.5\<close>
+\<comment> \<open>\<^cite>\<open>takesaki\<close>, Corollary IV.1.5\<close>
 proof -
   define \<pi> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) \<Rightarrow> (('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2)\<close> where 
     \<open>\<pi> a = a \<otimes>\<^sub>o id_cblinfun\<close> for a
@@ -2219,7 +2219,7 @@ proof -
 qed
 
 lemma cstar_decompose_four_unitaries:
-  \<comment> \<open>@{cite takesaki}, Proposition I.4.9\<close>
+  \<comment> \<open>\<^cite>\<open>takesaki\<close>, Proposition I.4.9\<close>
   fixes M :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) set\<close>
   assumes \<open>cstar_algebra M\<close>
   assumes [simp]: \<open>id_cblinfun \<in> M\<close>
