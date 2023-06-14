@@ -864,5 +864,77 @@ lemma bij_betw_map_prod:
   apply (rule bij_betw_byWitness[where f'=\<open>map_prod (inv_into A f) (inv_into C g)\<close>])
   using assms by (auto simp: bij_betw_def)
 
+lemma cmod_mono: \<open>0 \<le> a \<Longrightarrow> a \<le> b \<Longrightarrow> cmod a \<le> cmod b\<close>
+  by (simp add: cmod_Re less_eq_complex_def)
+
+(* Strengthening of Nat.of_nat_0_le_iff: wider type. *)
+lemma of_nat_0_le_iff: \<open>of_nat x \<ge> (0::_::{ordered_ab_semigroup_add,zero_less_one})\<close>
+  apply (induction x)
+   apply auto
+  by (metis add_mono semiring_norm(50) zero_less_one_class.zero_le_one)
+
+lemma not_not_singleton_zero: 
+  \<open>x = 0\<close> if \<open>\<not> class.not_singleton TYPE('a)\<close> for x :: \<open>'a::zero\<close>
+  using that unfolding class.not_singleton_def by auto
+
+lemma bdd_above_mono2:
+  assumes \<open>bdd_above (g ` B)\<close>
+  assumes \<open>A \<subseteq> B\<close>
+  assumes \<open>\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x\<close>
+  shows \<open>bdd_above (f ` A)\<close>
+  by (smt (verit, del_insts) Set.basic_monos(7) assms(1) assms(2) assms(3) basic_trans_rules(23) bdd_above.I2 bdd_above.unfold imageI)
+
+lemma has_sum_mono_neutral_complex:
+  fixes f :: "'a \<Rightarrow> complex"
+  assumes \<open>(f has_sum a) A\<close> and "(g has_sum b) B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "a \<le> b"
+proof -
+  have \<open>((\<lambda>x. Re (f x)) has_sum Re a) A\<close>
+    using assms(1) has_sum_Re has_sum_cong by blast
+  moreover have \<open>((\<lambda>x. Re (g x)) has_sum Re b) B\<close>
+    using assms(2) has_sum_Re has_sum_cong by blast
+  ultimately have Re: \<open>Re a \<le> Re b\<close>
+    apply (rule has_sum_mono_neutral)
+    using assms(3-5) by (simp_all add: less_eq_complex_def)
+  have \<open>((\<lambda>x. Im (f x)) has_sum Im a) A\<close>
+    using assms(1) has_sum_Im has_sum_cong by blast
+  then have \<open>((\<lambda>x. Im (f x)) has_sum Im a) (A \<inter> B)\<close>
+    apply (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
+    using assms(3-5) by (auto simp add: less_eq_complex_def)
+  moreover have \<open>((\<lambda>x. Im (g x)) has_sum Im b) B\<close>
+    using assms(2) has_sum_Im has_sum_cong by blast
+  then have \<open>((\<lambda>x. Im (f x)) has_sum Im b) (A \<inter> B)\<close>
+    apply (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
+    using assms(3-5) by (auto simp add: less_eq_complex_def)
+  ultimately have Im: \<open>Im a = Im b\<close>
+    by (rule has_sum_unique)
+  from Re Im show ?thesis
+    using less_eq_complexI by blast
+qed
+
+instance complex :: ordered_complex_vector
+  apply intro_classes
+  by (auto simp: less_eq_complex_def mult_left_mono mult_right_mono)
+
+
+lemma abs_summable_on_add:
+  assumes \<open>f abs_summable_on A\<close> and \<open>g abs_summable_on A\<close>
+  shows \<open>(\<lambda>x. f x + g x) abs_summable_on A\<close>
+proof -
+  from assms have \<open>(\<lambda>x. norm (f x) + norm (g x)) summable_on A\<close>
+    using summable_on_add by blast
+  then show ?thesis
+    apply (rule Infinite_Sum.abs_summable_on_comparison_test')
+    using norm_triangle_ineq by blast
+qed
+
+lemma abs_summable_norm:
+  assumes \<open>f abs_summable_on A\<close>
+  shows \<open>(\<lambda>x. norm (f x)) abs_summable_on A\<close>
+  using assms by simp
+
 
 end

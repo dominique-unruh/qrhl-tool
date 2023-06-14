@@ -2437,5 +2437,469 @@ qed
 lemma Proj_on_image [simp]: \<open>Proj S *\<^sub>S S = S\<close>
   by (metis Proj_idempotent Proj_range cblinfun_compose_image)
 
+lemma norm_cblinfun_mono:
+  fixes A B :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  assumes \<open>A \<ge> 0\<close>
+  assumes \<open>A \<le> B\<close>
+  shows \<open>norm A \<le> norm B\<close>
+proof -
+  have \<open>B \<ge> 0\<close>
+    using assms by force
+  have sqrtA: \<open>(sqrt_op A)* o\<^sub>C\<^sub>L sqrt_op A = A\<close>
+    by (simp add: \<open>A \<ge> 0\<close> flip: positive_hermitianI)
+  have sqrtB: \<open>(sqrt_op B)* o\<^sub>C\<^sub>L sqrt_op B = B\<close>
+    by (simp add: \<open>B \<ge> 0\<close> flip: positive_hermitianI)
+  have \<open>norm (sqrt_op A \<psi>) \<le> norm (sqrt_op B \<psi>)\<close> for \<psi>
+    apply (auto intro!: cnorm_le[THEN iffD2]
+        simp: sqrtA sqrtB
+        simp flip: cinner_adj_right cblinfun_apply_cblinfun_compose)
+    using assms less_eq_cblinfun_def by auto
+  then have \<open>norm (sqrt_op A) \<le> norm (sqrt_op B)\<close>
+    by (meson dual_order.trans norm_cblinfun norm_cblinfun_bound norm_ge_zero)
+  moreover have \<open>norm A = (norm (sqrt_op A))\<^sup>2\<close>
+    by (metis norm_AadjA sqrtA)
+  moreover have \<open>norm B = (norm (sqrt_op B))\<^sup>2\<close>
+    by (metis norm_AadjA sqrtB)
+  ultimately show \<open>norm A \<le> norm B\<close>
+    by force
+qed
+
+lemma sandwich_mono: \<open>sandwich A B \<le> sandwich A C\<close> if \<open>B \<le> C\<close>
+  by (metis cblinfun.real.diff_right diff_ge_0_iff_ge sandwich_pos that)
+
+lemma abs_op_id_on_pos: \<open>a \<ge> 0 \<Longrightarrow> abs_op a = a\<close>
+  using abs_opI by force
+
+lemma trace_norm_bounded:
+  fixes A B :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  assumes \<open>A \<ge> 0\<close> and \<open>trace_class B\<close>
+  assumes \<open>A \<le> B\<close>
+  shows \<open>trace_class A\<close>
+proof -
+  have \<open>(\<lambda>x. x \<bullet>\<^sub>C (B *\<^sub>V x)) abs_summable_on some_chilbert_basis\<close>
+    by (metis assms(2) is_onb_some_chilbert_basis summable_on_iff_abs_summable_on_complex trace_exists)
+  then have \<open>(\<lambda>x. x \<bullet>\<^sub>C (A *\<^sub>V x)) abs_summable_on some_chilbert_basis\<close>
+    apply (rule abs_summable_on_comparison_test)
+    using \<open>A \<ge> 0\<close> \<open>A \<le> B\<close>
+    by (auto intro!: cmod_mono cinner_pos_if_pos simp: abs_op_id_on_pos less_eq_cblinfun_def)
+  then show ?thesis
+    by (auto intro!: trace_classI[OF is_onb_some_chilbert_basis] simp: abs_op_id_on_pos \<open>A \<ge> 0\<close>)
+qed
+
+lemma trace_norm_cblinfun_mono:
+  fixes A B :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  assumes \<open>A \<ge> 0\<close> and \<open>trace_class B\<close>
+  assumes \<open>A \<le> B\<close>
+  shows \<open>trace_norm A \<le> trace_norm B\<close>
+proof -
+  from assms have \<open>trace_class A\<close>
+    by (rule trace_norm_bounded)
+  from \<open>A \<le> B\<close> and \<open>A \<ge> 0\<close>
+  have \<open>B \<ge> 0\<close>
+    by simp
+  have \<open>cmod (x \<bullet>\<^sub>C (abs_op A *\<^sub>V x)) \<le> cmod (x \<bullet>\<^sub>C (abs_op B *\<^sub>V x))\<close> for x
+    using \<open>A \<le> B\<close>
+    unfolding less_eq_cblinfun_def
+    using \<open>A \<ge> 0\<close> \<open>B \<ge> 0\<close> 
+    by (auto intro!: cmod_mono cinner_pos_if_pos simp: abs_op_id_on_pos)
+  then show \<open>trace_norm A \<le> trace_norm B\<close>
+    using \<open>trace_class A\<close> \<open>trace_class B\<close>
+    by (auto intro!: infsum_mono 
+        simp add: trace_norm_def trace_class_iff_summable[OF is_onb_some_chilbert_basis])
+qed
+
+(* TODO move *)
+instantiation trace_class :: (chilbert_space, chilbert_space) order begin
+lift_definition less_eq_trace_class :: \<open>('a, 'b) trace_class \<Rightarrow> ('a, 'b) trace_class \<Rightarrow> bool\<close> is
+  less_eq.
+lift_definition less_trace_class :: \<open>('a, 'b) trace_class \<Rightarrow> ('a, 'b) trace_class \<Rightarrow> bool\<close> is
+  less.
+instance
+  apply intro_classes
+     apply (auto simp add: less_eq_trace_class.rep_eq less_trace_class.rep_eq)
+  by (simp add: from_trace_class_inject)
+end
+
+
+lemma norm_cblinfun_mono_trace_class:
+  fixes A B :: \<open>('a::chilbert_space, 'a) trace_class\<close>
+  assumes \<open>A \<ge> 0\<close>
+  assumes \<open>A \<le> B\<close>
+  shows \<open>norm A \<le> norm B\<close>
+  using assms
+  apply transfer
+  apply (rule trace_norm_cblinfun_mono)
+  by auto
+
+lemma trace_class_sandwich: \<open>trace_class b \<Longrightarrow> trace_class (sandwich a b)\<close>
+  by (simp add: sandwich_apply trace_class_comp_right trace_class_comp_left)
+
+lemma trace_norm_butterfly: \<open>trace_norm (butterfly a a) = (norm a)^2\<close>
+  sorry
+
+lemma from_trace_class_sum:
+  shows \<open>from_trace_class (\<Sum>x\<in>M. f x) = (\<Sum>x\<in>M. from_trace_class (f x))\<close>
+  apply (induction M rule:infinite_finite_induct)
+  by (simp_all add: plus_trace_class.rep_eq)
+
+lemma not_not_singleton_cblinfun_zero: 
+  \<open>x = 0\<close> if \<open>\<not> class.not_singleton TYPE('a)\<close> for x :: \<open>'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_normed_vector\<close>
+  apply (rule cblinfun_eqI)
+  apply (subst not_not_singleton_zero[OF that])
+  by simp
+
+lemma cblinfun_norm_approx_witness':
+  fixes A :: \<open>'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_normed_vector\<close>
+  assumes \<open>\<epsilon> > 0\<close>
+  shows \<open>\<exists>\<psi>. norm (A *\<^sub>V \<psi>) / norm \<psi> \<ge> norm A - \<epsilon>\<close>
+proof (cases \<open>class.not_singleton TYPE('a)\<close>)
+  case True
+  obtain \<psi> where \<open>norm (A *\<^sub>V \<psi>) \<ge> norm A - \<epsilon>\<close> and \<open>norm \<psi> = 1\<close>
+    apply atomize_elim
+    using complex_normed_vector_axioms True assms
+    by (rule cblinfun_norm_approx_witness[internalize_sort' 'a])
+  then have \<open>norm (A *\<^sub>V \<psi>) / norm \<psi> \<ge> norm A - \<epsilon>\<close>
+    by simp
+  then show ?thesis 
+    by auto
+next
+  case False
+  show ?thesis
+    apply (subst not_not_singleton_cblinfun_zero[OF False])
+     apply simp
+    apply (subst not_not_singleton_cblinfun_zero[OF False])
+    using \<open>\<epsilon> > 0\<close> by simp
+qed
+
+lemma any_norm_exists:
+  assumes \<open>n \<ge> 0\<close>
+  shows \<open>\<exists>\<psi>::'a::{real_normed_vector,not_singleton}. norm \<psi> = n\<close>
+proof -
+  obtain \<psi> :: 'a where \<open>\<psi> \<noteq> 0\<close>
+    using not_singleton_card
+    by force
+  then have \<open>norm (n *\<^sub>R sgn \<psi>) = n\<close>
+    using assms by (auto simp: sgn_div_norm abs_mult)
+  then show ?thesis
+    by blast
+qed
+
+lemma cblinfun_norm_approx_witness_cinner:
+  fixes A :: \<open>'a::{not_singleton,chilbert_space} \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  assumes \<open>A \<ge> 0\<close> and \<open>\<epsilon> > 0\<close>
+  shows \<open>\<exists>\<psi>. \<psi> \<bullet>\<^sub>C (A *\<^sub>V \<psi>) \<ge> norm A - \<epsilon> \<and> norm \<psi> = 1\<close>
+proof (cases \<open>A = 0\<close>)
+  case False
+  define B where \<open>B = sqrt_op A\<close>
+  define \<delta> where \<open>\<delta> = min (\<epsilon> / (2 * norm B)) (norm B)\<close>
+  then have \<open>\<delta> > 0\<close>
+    by (smt (verit, ccfv_threshold) B_def False Positive_Operators.sqrt_op_square assms(1) assms(2) linordered_field_class.divide_pos_pos norm_AAadj norm_eq_zero positive_hermitianI power_zero_numeral sqrt_op_pos zero_less_norm_iff)
+  have \<delta>: \<open>2 * (\<delta> * norm B) - \<delta> * \<delta> \<le> \<epsilon>\<close>
+  proof -
+    have \<open>\<delta> \<le> \<epsilon> / (2 * norm B)\<close>
+      by (simp add: \<delta>_def)
+  then show ?thesis
+    using assms(2) \<open>0 < \<delta>\<close>
+    by (smt (verit, best) Extra_Ordered_Fields.sign_simps(19) add_diff_cancel_left' diff_diff_eq2 less_eq_real_def linorder_not_less mult_le_cancel_left_pos nice_ordered_field_class.pos_le_divide_eq)
+  qed
+  from cblinfun_norm_approx_witness[OF \<open>\<delta> > 0\<close>]
+  obtain \<psi> where bound: \<open>norm B - \<delta> \<le> norm (B *\<^sub>V \<psi>)\<close> and \<open>norm \<psi> = 1\<close>
+    by auto
+  have \<open>complex_of_real (norm A - \<epsilon>) = (norm B)\<^sup>2 - \<epsilon>\<close>
+    by (metis B_def Positive_Operators.sqrt_op_square assms(1) norm_AAadj positive_hermitianI sqrt_op_pos)
+  also have \<open>\<dots> \<le> (norm B - \<delta>)^2\<close>
+    apply (rule complex_of_real_mono)
+    using \<delta> by (simp add: power2_eq_square left_diff_distrib right_diff_distrib)
+  also have \<open>\<dots> \<le> (norm (B *\<^sub>V \<psi>))^2\<close>
+    apply (rule complex_of_real_mono)
+    apply (rule power_mono)
+    apply (rule bound)
+    by (auto simp: \<delta>_def)
+  also have \<open>\<dots> = B \<psi> \<bullet>\<^sub>C B \<psi>\<close>
+    by (simp add: cdot_square_norm)
+  also have \<open>\<dots> = \<psi> \<bullet>\<^sub>C A \<psi>\<close>
+    by (metis B_def Positive_Operators.sqrt_op_square assms(1) cblinfun_apply_cblinfun_compose cinner_adj_right positive_hermitianI sqrt_op_pos)
+  finally show ?thesis
+    using \<open>norm \<psi> = 1\<close> by auto
+next
+  case True
+  with \<open>\<epsilon> > 0\<close> show ?thesis
+    by (auto intro!: any_norm_exists)
+qed
+
+lemma cblinfun_norm_approx_witness_cinner':
+  fixes A :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  assumes \<open>A \<ge> 0\<close> and \<open>\<epsilon> > 0\<close>
+  shows \<open>\<exists>\<psi>. \<psi> \<bullet>\<^sub>C (A *\<^sub>V \<psi>) / (norm \<psi>)^2 \<ge> norm A - \<epsilon>\<close>
+proof (cases \<open>class.not_singleton TYPE('a)\<close>)
+  case True
+  obtain \<psi> where \<open>\<psi> \<bullet>\<^sub>C (A *\<^sub>V \<psi>) \<ge> norm A - \<epsilon>\<close> and \<open>norm \<psi> = 1\<close>
+    apply atomize_elim
+    using chilbert_space_axioms True assms
+    by (rule cblinfun_norm_approx_witness_cinner[internalize_sort' 'a])
+  then have \<open>\<psi> \<bullet>\<^sub>C (A *\<^sub>V \<psi>) / (norm \<psi>)^2 \<ge> norm A - \<epsilon>\<close>
+    by simp
+  then show ?thesis 
+    by auto
+next
+  case False
+  show ?thesis
+    apply (subst not_not_singleton_cblinfun_zero[OF False])
+     apply simp
+    apply (subst not_not_singleton_cblinfun_zero[OF False])
+    using \<open>\<epsilon> > 0\<close> by simp
+qed
+
+lemma has_sum_mono_neutral_wot:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b)"
+  assumes \<open>has_sum_in cweak_operator_topology f A a\<close> and "has_sum_in cweak_operator_topology g B b"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "a \<le> b"
+proof -
+  have \<psi>_eq: \<open>\<psi> \<bullet>\<^sub>C a \<psi> \<le> \<psi> \<bullet>\<^sub>C b \<psi>\<close> for \<psi>
+  proof -
+    from assms(1)
+    have sumA: \<open>((\<lambda>x. \<psi> \<bullet>\<^sub>C f x \<psi>) has_sum \<psi> \<bullet>\<^sub>C a \<psi>) A\<close>
+      by (simp add: has_sum_in_def has_sum_def limitin_cweak_operator_topology
+          cblinfun.sum_left cinner_sum_right)
+    from assms(2)
+    have sumB: \<open>((\<lambda>x. \<psi> \<bullet>\<^sub>C g x \<psi>) has_sum \<psi> \<bullet>\<^sub>C b \<psi>) B\<close>
+      by (simp add: has_sum_in_def has_sum_def limitin_cweak_operator_topology
+          cblinfun.sum_left cinner_sum_right)
+    from sumA sumB
+    show ?thesis
+      apply (rule has_sum_mono_neutral_complex)
+      using assms(3-5)
+      by (auto simp: less_eq_cblinfun_def)
+  qed
+  then show \<open>a \<le> b\<close>
+    by (simp add: less_eq_cblinfun_def)
+qed
+
+lemma sot_weaker_than_norm_limitin: \<open>limitin cstrong_operator_topology a A F\<close> if \<open>(a \<longlongrightarrow> A) F\<close>
+proof -
+  from that have \<open>((\<lambda>x. a x *\<^sub>V \<psi>) \<longlongrightarrow> A \<psi>) F\<close> for \<psi>
+    by (auto intro!: cblinfun.tendsto)
+  then show ?thesis
+    by (simp add: limitin_cstrong_operator_topology)
+qed
+
+lemma has_sum_mono_neutral_traceclass:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space, 'b) trace_class"
+  assumes \<open>(f has_sum a) A\<close> and "(g has_sum b) B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "a \<le> b"
+proof -
+  from assms(1)
+  have \<open>has_sum_in cweak_operator_topology (\<lambda>x. from_trace_class (f x)) A (from_trace_class a)\<close>
+    sorry
+  moreover
+  from assms(2)
+  have \<open>has_sum_in cweak_operator_topology (\<lambda>x. from_trace_class (g x)) B (from_trace_class b)\<close>
+    sorry
+  ultimately have \<open>from_trace_class a \<le> from_trace_class b\<close>
+    apply (rule has_sum_mono_neutral_wot)
+    using assms by (auto simp: less_eq_trace_class.rep_eq)
+  then show ?thesis
+    by (auto simp: less_eq_trace_class.rep_eq)
+qed
+
+lemma has_sum_mono_neutral_cblinfun:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b)"
+  assumes \<open>(f has_sum a) A\<close> and "(g has_sum b) B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "a \<le> b"
+proof -
+  from assms(1)
+  have \<open>has_sum_in cweak_operator_topology f A a\<close> 
+    by (auto intro!: wot_weaker_than_sot_limitin sot_weaker_than_norm_limitin 
+        simp: has_sum_def has_sum_in_def)
+  moreover
+  from assms(2) have "has_sum_in cweak_operator_topology g B b"
+    by (auto intro!: wot_weaker_than_sot_limitin sot_weaker_than_norm_limitin 
+        simp: has_sum_def has_sum_in_def)
+  ultimately show ?thesis
+    apply (rule has_sum_mono_neutral_wot)
+    using assms by auto
+qed
+
+
+
+lemma has_sum_mono_cblinfun:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b)"
+  assumes "(f has_sum x) A" and "(g has_sum y) A"
+  assumes \<open>\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x\<close>
+  shows "x \<le> y"
+  using assms has_sum_mono_neutral_cblinfun by force
+
+lemma has_sum_mono_traceclass:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space, 'b) trace_class"
+  assumes "(f has_sum x) A" and "(g has_sum y) A"
+  assumes \<open>\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x\<close>
+  shows "x \<le> y"
+  using assms has_sum_mono_neutral_traceclass by force
+
+lemma infsum_mono_cblinfun:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b)"
+  assumes "f summable_on A" and "g summable_on A"
+  assumes \<open>\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x\<close>
+  shows "infsum f A \<le> infsum g A"
+  by (meson assms has_sum_infsum has_sum_mono_cblinfun)
+
+lemma infsum_mono_traceclass:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space, 'b) trace_class"
+  assumes "f summable_on A" and "g summable_on A"
+  assumes \<open>\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x\<close>
+  shows "infsum f A \<le> infsum g A"
+  by (meson assms has_sum_infsum has_sum_mono_traceclass)
+
+lemma infsum_mono_neutral_cblinfun:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b)"
+  assumes "f summable_on A" and "g summable_on B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "infsum f A \<le> infsum g B"
+  by (smt (verit, del_insts) assms(1) assms(2) assms(3) assms(4) assms(5) has_sum_infsum has_sum_mono_neutral_cblinfun)
+
+lemma infsum_mono_neutral_traceclass:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space, 'b) trace_class"
+  assumes "f summable_on A" and "g summable_on B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "infsum f A \<le> infsum g B"
+  using assms(1) assms(2) assms(3) assms(4) assms(5) has_sum_mono_neutral_traceclass summable_iff_has_sum_infsum by blast
+
+instance cblinfun :: (chilbert_space, chilbert_space) ordered_complex_vector
+  by intro_classes
+
+instance trace_class :: (chilbert_space, chilbert_space) ordered_complex_vector
+  apply (intro_classes; transfer)
+  by (auto intro!: scaleC_left_mono scaleC_right_mono)
+
+lemma Abs_trace_class_geq0I: \<open>0 \<le> Abs_trace_class t\<close> if \<open>trace_class t\<close> and \<open>t \<ge> 0\<close>
+  using that by (simp add: zero_trace_class.abs_eq less_eq_trace_class.abs_eq eq_onp_def)
+
+lemma less_eq_scaled_id_norm: 
+  assumes \<open>norm A \<le> c\<close> and \<open>A = A*\<close>
+  shows \<open>A \<le> complex_of_real c *\<^sub>C id_cblinfun\<close>
+proof -
+  have \<open>x \<bullet>\<^sub>C (A *\<^sub>V x) \<le> complex_of_real c\<close> if \<open>norm x = 1\<close> for x
+  proof -
+    have \<open>norm (x \<bullet>\<^sub>C (A *\<^sub>V x)) \<le> norm (A *\<^sub>V x)\<close>
+      by (metis complex_inner_class.Cauchy_Schwarz_ineq2 mult_cancel_right1 that)
+    also have \<open>\<dots> \<le> norm A\<close>
+      by (metis more_arith_simps(6) norm_cblinfun that)
+    also have \<open>\<dots> \<le> c\<close>
+      by (rule assms)
+    finally have \<open>norm (x \<bullet>\<^sub>C (A *\<^sub>V x)) \<le> c\<close>
+      by -
+    moreover have \<open>x \<bullet>\<^sub>C (A *\<^sub>V x) \<in> \<real>\<close>
+      by (metis assms(2) cinner_hermitian_real)
+    ultimately show ?thesis
+      by (metis cnorm_le_square complex_of_real_cmod complex_of_real_mono complex_of_real_nn_iff dual_order.trans reals_zero_comparable)
+  qed
+  then show ?thesis
+    by (smt (verit) cblinfun.scaleC_left cblinfun_id_cblinfun_apply cblinfun_leI cinner_scaleC_right cnorm_eq_1 mult_cancel_left2)
+qed
+
+lemma abs_summable_on_scaleC_left [intro]:
+  fixes c :: \<open>'a :: complex_normed_vector\<close>
+  assumes "c \<noteq> 0 \<Longrightarrow> f abs_summable_on A"
+  shows   "(\<lambda>x. f x *\<^sub>C c) abs_summable_on A"
+  apply (cases \<open>c = 0\<close>)
+   apply simp
+  by (auto intro!: summable_on_cmult_left assms simp: norm_scaleC)
+
+lemma abs_summable_on_scaleC_right [intro]:
+  fixes f :: \<open>'a \<Rightarrow> 'b :: complex_normed_vector\<close>
+  assumes "c \<noteq> 0 \<Longrightarrow> f abs_summable_on A"
+  shows   "(\<lambda>x. c *\<^sub>C f x) abs_summable_on A"
+  apply (cases \<open>c = 0\<close>)
+   apply simp
+  by (auto intro!: summable_on_cmult_right assms simp: norm_scaleC)
+
+
+(* TODO replace original *) thm norm_leq_trace_norm
+lemma norm_leq_trace_norm: \<open>norm t \<le> trace_norm t\<close> if \<open>trace_class t\<close> 
+  for t :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close> (* TODO get rid of "not_singleton" *)
+proof (cases \<open>class.not_singleton TYPE('a)\<close>)
+  case True
+  show ?thesis
+    apply (rule norm_leq_trace_norm[internalize_sort' 'a, where t=t])
+    using that chilbert_space_axioms True by auto
+next
+  case False
+  then have x0: \<open>x = 0\<close> for x :: 'a
+    by (simp add: class.not_singleton_def)
+  have \<open>t = 0\<close>
+    apply (rule cblinfun_eqI)
+    apply (subst x0)
+    by simp
+  then show ?thesis 
+    by simp
+qed
+
+(* TODO move to Trace_Class *)
+lift_definition tc_compose :: \<open>('b::chilbert_space, 'c::chilbert_space) trace_class 
+                               \<Rightarrow> ('a::chilbert_space, 'b) trace_class \<Rightarrow> ('a,'c) trace_class\<close> is
+    cblinfun_compose
+  by (simp add: trace_class_comp_left)
+
+lemma norm_tc_compose:
+  \<open>norm (tc_compose a b) \<le> norm a * norm b\<close>
+proof transfer
+  fix a :: \<open>'c \<Rightarrow>\<^sub>C\<^sub>L 'b\<close> and b :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'c\<close>
+  assume \<open>a \<in> Collect trace_class\<close> and tc_b: \<open>b \<in> Collect trace_class\<close>
+  then have \<open>trace_norm (a o\<^sub>C\<^sub>L b) \<le> trace_norm a * norm b\<close>
+    by (simp add: trace_norm_comp_left)
+  also have \<open>\<dots> \<le> trace_norm a * trace_norm b\<close>
+    using tc_b by (auto intro!: mult_left_mono norm_leq_trace_norm)
+  finally show \<open>trace_norm (a o\<^sub>C\<^sub>L b) \<le> trace_norm a * trace_norm b\<close>
+    by -
+qed
+
+(* TODO move *)
+lemma abs_summable_product':
+  fixes x :: "'a \<Rightarrow> 'b::{real_normed_algebra}"
+  assumes "(\<lambda>i. x i) abs_summable_on A"
+    and "(\<lambda>i. y i) abs_summable_on A"
+  shows "(\<lambda>i. x i * y i) abs_summable_on A"
+proof -
+  from assms have \<open>(\<lambda>(i,j). x i * y j) abs_summable_on A \<times> A\<close>
+    by (rule abs_summable_times)
+  then have \<open>(\<lambda>(i,j). x i * y j) abs_summable_on (\<lambda>a. (a,a)) ` A\<close>
+    apply (rule summable_on_subset_banach)
+    by auto
+  then show ?thesis
+    apply (subst (asm) summable_on_reindex)
+    by (auto intro: inj_onI simp: o_def)
+qed
+
+(* TODO move *)
+lemma abs_summable_add:
+  fixes f g :: "'a \<Rightarrow> 'b::real_normed_vector"
+  assumes \<open>f abs_summable_on A\<close>
+  assumes \<open>g abs_summable_on A\<close>
+  shows \<open>(\<lambda>x. f x + g x) abs_summable_on A\<close>
+  apply (rule abs_summable_on_comparison_test[where g=\<open>\<lambda>x. norm (f x) + norm (g x)\<close>])
+  using assms by (auto intro!: summable_on_add simp add: norm_triangle_ineq)
+
+(* TODO move *)
+lemma abs_summable_minus:
+  fixes f g :: "'a \<Rightarrow> 'b::real_normed_vector"
+  assumes \<open>f abs_summable_on A\<close>
+  assumes \<open>g abs_summable_on A\<close>
+  shows \<open>(\<lambda>x. f x - g x) abs_summable_on A\<close>
+  using abs_summable_add[where f=f and g=\<open>\<lambda>x. - g x\<close>]
+  using assms by auto
+
 
 end
