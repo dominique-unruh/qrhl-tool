@@ -1647,7 +1647,10 @@ lemma von_neumann_algebra_union:
   using von_neumann_algebra_UNION[where X=\<open>{True,False}\<close> and A=\<open>\<lambda>x. if x then A else B\<close>]
   by (auto simp: assms Un_ac(3))
 
-(* lemma von_neumann_factor_union:
+(*
+NOT TRUE: https://mathoverflow.net/questions/445927/intersection-of-von-neumann-algebra-factors
+
+ lemma von_neumann_factor_union:
   assumes \<open>von_neumann_factor A\<close>
   assumes \<open>von_neumann_factor B\<close>
   shows \<open>von_neumann_factor (commutant (commutant (A \<union> B)))\<close>
@@ -2534,8 +2537,24 @@ lemma norm_cblinfun_mono_trace_class:
 lemma trace_class_sandwich: \<open>trace_class b \<Longrightarrow> trace_class (sandwich a b)\<close>
   by (simp add: sandwich_apply trace_class_comp_right trace_class_comp_left)
 
-lemma trace_norm_butterfly: \<open>trace_norm (butterfly a a) = (norm a)^2\<close>
-  sorry
+lemma trace_norm_butterfly: \<open>trace_norm (butterfly a b) = (norm a) * (norm b)\<close>
+  for a b :: \<open>_ :: chilbert_space\<close>
+proof -
+  have \<open>trace_norm (butterfly a b) = trace (abs_op (butterfly a b))\<close>
+    by (simp flip: trace_abs_op)
+  also have \<open>\<dots> = (norm a / norm b) * trace (selfbutter b)\<close>
+    by (simp add: abs_op_butterfly scaleR_scaleC trace_scaleC del: trace_abs_op)
+  also have \<open>\<dots> = (norm a / norm b) * trace ((vector_to_cblinfun b :: complex \<Rightarrow>\<^sub>C\<^sub>L _)* o\<^sub>C\<^sub>L vector_to_cblinfun b)\<close>
+    apply (subst butterfly_def)
+    apply (subst circularity_of_trace)
+    by simp_all
+  also have \<open>\<dots> = (norm a / norm b) * (b \<bullet>\<^sub>C b)\<close>
+    by simp
+  also have \<open>\<dots> = (norm a) * (norm b)\<close>
+    by (simp add: cdot_square_norm power2_eq_square)
+  finally show ?thesis
+    by (rule of_real_hom.injectivity)
+qed
 
 lemma from_trace_class_sum:
   shows \<open>from_trace_class (\<Sum>x\<in>M. f x) = (\<Sum>x\<in>M. from_trace_class (f x))\<close>
@@ -2686,26 +2705,20 @@ proof -
     by (simp add: limitin_cstrong_operator_topology)
 qed
 
-lemma has_sum_mono_neutral_traceclass:
-  fixes f :: "'a \<Rightarrow> ('b::chilbert_space, 'b) trace_class"
-  assumes \<open>(f has_sum a) A\<close> and "(g has_sum b) B"
-  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
-  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
-  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
-  shows "a \<le> b"
-proof -
-  from assms(1)
-  have \<open>has_sum_in cweak_operator_topology (\<lambda>x. from_trace_class (f x)) A (from_trace_class a)\<close>
-    sorry
-  moreover
-  from assms(2)
-  have \<open>has_sum_in cweak_operator_topology (\<lambda>x. from_trace_class (g x)) B (from_trace_class b)\<close>
-    sorry
-  ultimately have \<open>from_trace_class a \<le> from_trace_class b\<close>
-    apply (rule has_sum_mono_neutral_wot)
-    using assms by (auto simp: less_eq_trace_class.rep_eq)
-  then show ?thesis
-    by (auto simp: less_eq_trace_class.rep_eq)
+lemma bounded_clinear_from_trace_class:
+  \<open>bounded_clinear (from_trace_class :: ('a::chilbert_space,'b::chilbert_space) trace_class \<Rightarrow> _)\<close>
+proof (cases \<open>class.not_singleton TYPE('a)\<close>)
+  case True
+  show ?thesis
+    apply (rule bounded_clinearI[where K=1]; transfer)
+    by (auto intro!: norm_leq_trace_norm[internalize_sort' 'a] chilbert_space_axioms True)
+next
+  case False
+  then have zero: \<open>A = 0\<close> for A :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+    by (rule not_not_singleton_cblinfun_zero)
+  show ?thesis
+    apply (rule bounded_clinearI[where K=1])
+    by (subst zero, simp)+
 qed
 
 lemma has_sum_mono_neutral_cblinfun:
@@ -2727,6 +2740,31 @@ proof -
   ultimately show ?thesis
     apply (rule has_sum_mono_neutral_wot)
     using assms by auto
+qed
+
+
+lemma has_sum_mono_neutral_traceclass:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space, 'b) trace_class"
+  assumes \<open>(f has_sum a) A\<close> and "(g has_sum b) B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "a \<le> b"
+proof -
+  from assms(1)
+  have \<open>((\<lambda>x. from_trace_class (f x)) has_sum from_trace_class a) A\<close>
+    apply (rule Infinite_Sum.has_sum_bounded_linear[rotated])
+    by (intro bounded_clinear_from_trace_class bounded_clinear.bounded_linear)
+  moreover
+  from assms(2)
+  have \<open>((\<lambda>x. from_trace_class (g x)) has_sum from_trace_class b) B\<close>
+    apply (rule Infinite_Sum.has_sum_bounded_linear[rotated])
+    by (intro bounded_clinear_from_trace_class bounded_clinear.bounded_linear)
+  ultimately have \<open>from_trace_class a \<le> from_trace_class b\<close>
+    apply (rule has_sum_mono_neutral_cblinfun)
+    using assms by (auto simp: less_eq_trace_class.rep_eq)
+  then show ?thesis
+    by (auto simp: less_eq_trace_class.rep_eq)
 qed
 
 
