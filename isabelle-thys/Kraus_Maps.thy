@@ -1,5 +1,5 @@
 theory Kraus_Maps
-  imports Tensor_Product.Trace_Class Registers2.Missing_Bounded_Operators
+  imports Tensor_Product.Trace_Class Registers2.Missing_Bounded_Operators Wlog.Wlog "HOL-Library.Rewrite"
 begin
 
 unbundle cblinfun_notation
@@ -40,6 +40,9 @@ lemma from_trace_class_sandwich_tc:
   apply transfer
   by (rule sandwich_apply)
 
+lemma norm_sandwich_tc: \<open>norm (sandwich_tc e t) \<le> (norm e)^2 * norm t\<close>
+  by (simp add: norm_trace_class.rep_eq from_trace_class_sandwich_tc trace_norm_sandwich)
+
 lemma sandwich_tc_pos: \<open>sandwich_tc e t \<ge> 0\<close> if \<open>t \<ge> 0\<close>
   using that apply (transfer fixing: e)
   by (simp add: sandwich_pos)
@@ -47,6 +50,32 @@ lemma sandwich_tc_pos: \<open>sandwich_tc e t \<ge> 0\<close> if \<open>t \<ge> 
 definition \<open>kraus_family \<EE> \<longleftrightarrow> (\<exists>B. \<forall>F. finite F \<longrightarrow> norm (\<Sum>E\<in>F. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> B)\<close>
   for \<EE> :: \<open>(_::chilbert_space, _::chilbert_space) kraus_family\<close>
 definition \<open>kraus_family_norm \<EE> = (SUP F\<in>Collect finite. norm (\<Sum>E\<in>F. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E)))\<close>
+
+lemma kraus_family_norm_geq0:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>kraus_family_norm \<EE> \<ge> 0\<close>
+  unfolding kraus_family_norm_def
+  apply (rule cSUP_upper2[where x=\<open>{}\<close>])
+  using assms
+  by (simp_all add: bdd_above_def kraus_family_def)
+
+lemma kraus_family_sums_bounded_by_norm:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>norm (\<Sum>E\<in>M. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> kraus_family_norm \<EE>\<close>
+proof (cases \<open>finite M\<close>)
+  case True
+  then show ?thesis
+    using assms 
+    unfolding kraus_family_def kraus_family_norm_def
+    apply (rule_tac cSup_upper)
+     apply (rule image_eqI)
+    by auto
+next
+  case False
+  then show ?thesis
+    by (simp add: kraus_family_norm_geq0 assms)
+qed
+
 
 definition \<open>kraus_family_map \<EE> \<rho> = (\<Sum>\<^sub>\<infinity>E. of_nat (\<EE> E) *\<^sub>C sandwich_tc E \<rho>)\<close>
 
@@ -59,6 +88,8 @@ lemma kraus_equivalent_reflI: \<open>kraus_equivalent x x\<close> if \<open>krau
   using that by (simp add: kraus_equivalent_def)
 
 lemma kraus_family_zero[simp]: \<open>kraus_family (\<lambda>_. 0)\<close>
+  by (auto simp: kraus_family_def)
+lemma kraus_family_zero'[simp]: \<open>kraus_family 0\<close>
   by (auto simp: kraus_family_def)
 
 quotient_type (overloaded) ('a,'b) kraus_map = \<open>('a::chilbert_space, 'b::chilbert_space) kraus_family\<close> / partial: kraus_equivalent
@@ -107,119 +138,169 @@ lift_definition kraus_map_of_op :: \<open>('a::chilbert_space \<Rightarrow>\<^su
   is kraus_family_of_op
   by (simp add: kraus_equivalent_def)
 
-lemma kraus_family_map_bounded:
-  assumes \<open>kraus_family \<EE>\<close>
-  shows \<open>norm (kraus_family_map \<EE> \<rho>) \<le> kraus_family_norm \<EE> * norm \<rho>\<close>
-  sorry
+lift_definition trace_tc :: \<open>('a::chilbert_space, 'a) trace_class \<Rightarrow> complex\<close> is trace.
 
-lemma kraus_family_map_plus_left:
-  assumes \<open>kraus_family \<EE>\<close>
-  shows \<open>kraus_family_map \<EE> (x + y) = kraus_family_map \<EE> x + kraus_family_map \<EE> y\<close>
-  sorry
+lemma trace_tc_plus: \<open>trace_tc (a + b) = trace_tc a + trace_tc b\<close>
+  apply transfer by (simp add: trace_plus)
+
+lemma trace_tc_scaleC: \<open>trace_tc (c *\<^sub>C a) = c *\<^sub>C trace_tc a\<close>
+  apply transfer by (simp add: trace_scaleC)
+
+lemma trace_tc_norm: \<open>norm (trace_tc a) \<le> norm a\<close>
+  apply transfer by auto
+
+lemma bounded_clinear_trace_tc[bounded_clinear, simp]: \<open>bounded_clinear trace_tc\<close>
+  apply (rule bounded_clinearI[where K=1])
+  by (auto simp: trace_tc_scaleC trace_tc_plus intro!: trace_tc_norm)
 
 lemma kraus_family_map_scaleC:
   shows \<open>kraus_family_map \<EE> (c *\<^sub>C x) = c *\<^sub>C kraus_family_map \<EE> x\<close>
   by (simp add: kraus_family_map_def cblinfun.scaleC_right mult.commute
       flip: infsum_scaleC_right)
 
-lemma kraus_family_map_bounded_clinear:
-  assumes \<open>kraus_family \<EE>\<close>
-  shows \<open>bounded_clinear (kraus_family_map \<EE>)\<close>
-  apply (rule bounded_clinearI[where K=\<open>kraus_family_norm \<EE>\<close>])
-    apply (auto intro!: kraus_family_map_plus_left kraus_family_map_scaleC assms
-      mult.commute)
-  using kraus_family_map_bounded[OF assms]
-  by (simp add: mult.commute)
+lemma trace_norm_pos: \<open>trace_norm A = trace A\<close> if \<open>A \<ge> 0\<close>
+  by (metis abs_op_id_on_pos that trace_abs_op)
 
-lemma kraus_family_norm_geq0:
-  assumes \<open>kraus_family \<EE>\<close>
-  shows \<open>kraus_family_norm \<EE> \<ge> 0\<close>
-  unfolding kraus_family_norm_def
-  apply (rule cSUP_upper2[where x=\<open>{}\<close>])
-  using assms
-  by (simp_all add: bdd_above_def kraus_family_def)
+lemma norm_tc_pos: \<open>norm A = trace_tc A\<close> if \<open>A \<ge> 0\<close>
+   using that apply transfer by (simp add: trace_norm_pos)
+
+lemma from_trace_class_pos: \<open>from_trace_class A \<ge> 0 \<longleftrightarrow> A \<ge> 0\<close>
+  by (simp add: less_eq_trace_class.rep_eq)
+
+lemma infsum_tc_norm_bounded_abs_summable:
+  fixes A :: \<open>'a \<Rightarrow> ('b::chilbert_space, 'b::chilbert_space) trace_class\<close>
+  assumes pos: \<open>\<And>x. x \<in> M \<Longrightarrow> A x \<ge> 0\<close>
+  assumes bound_B: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> M \<Longrightarrow> norm (\<Sum>x\<in>F. A x) \<le> B\<close>
+  shows \<open>A abs_summable_on M\<close>
+proof -
+  have \<open>(\<Sum>x\<in>F. norm (A x)) = norm (\<Sum>x\<in>F. A x)\<close> if \<open>F \<subseteq> M\<close> for F
+  proof -
+    have \<open>complex_of_real (\<Sum>x\<in>F. norm (A x)) = (\<Sum>x\<in>F. complex_of_real (trace_norm (from_trace_class (A x))))\<close>
+      by (simp add: norm_trace_class.rep_eq trace_norm_pos)
+    also have \<open>\<dots> = (\<Sum>x\<in>F. trace (from_trace_class (A x)))\<close>
+      using that pos by (auto intro!: sum.cong simp add: trace_norm_pos less_eq_trace_class.rep_eq)
+    also have \<open>\<dots> = trace (from_trace_class (\<Sum>x\<in>F. A x))\<close>
+      by (simp add: from_trace_class_sum trace_sum)
+    also have \<open>\<dots> = norm (\<Sum>x\<in>F. A x)\<close>
+      by (smt (verit, ccfv_threshold) calculation norm_of_real norm_trace_class.rep_eq sum_norm_le trace_leq_trace_norm)
+    finally show ?thesis
+      using of_real_hom.injectivity by blast
+  qed
+  with bound_B have bound_B': \<open>(\<Sum>x\<in>F. norm (A x)) \<le> B\<close> if \<open>finite F\<close> and \<open>F \<subseteq> M\<close> for F
+    by (metis that(1) that(2))
+  then show \<open>A abs_summable_on M\<close>
+    apply (rule_tac nonneg_bdd_above_summable_on)
+    by (auto intro!: bdd_aboveI)
+qed
+
+lemma 
+  fixes t :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space\<close>
+  shows cblinfun_decomp_4pos: \<open>
+             \<exists>t1 t2 t3 t4.
+              t = t1 - t2 + \<i> *\<^sub>C t3 - \<i> *\<^sub>C t4
+               \<and> t1 \<ge> 0 \<and> t2 \<ge> 0 \<and> t3 \<ge> 0 \<and> t4 \<ge> 0\<close>
+  and trace_class_decomp_4pos: \<open>trace_class t \<Longrightarrow>
+             \<exists>t1 t2 t3 t4.
+              t = t1 - t2 + \<i> *\<^sub>C t3 - \<i> *\<^sub>C t4
+               \<and> trace_class t1 \<and> trace_class t2 \<and> trace_class t3 \<and> trace_class t4
+               \<and> t1 \<ge> 0 \<and> t2 \<ge> 0 \<and> t3 \<ge> 0 \<and> t4 \<ge> 0\<close>
+  sorry
+
+lemma trace_class_decomp_4pos':
+  fixes t :: \<open>('a::chilbert_space,'a) trace_class\<close>
+  shows \<open>\<exists>t1 t2 t3 t4.
+              t = t1 - t2 + \<i> *\<^sub>C t3 - \<i> *\<^sub>C t4
+               \<and> t1 \<ge> 0 \<and> t2 \<ge> 0 \<and> t3 \<ge> 0 \<and> t4 \<ge> 0\<close>
+proof -
+  from trace_class_decomp_4pos[of \<open>from_trace_class t\<close>, OF trace_class_from_trace_class]
+  obtain t1' t2' t3' t4'
+    where *: \<open>from_trace_class t = t1' - t2' + \<i> *\<^sub>C t3' - \<i> *\<^sub>C t4'
+               \<and> trace_class t1' \<and> trace_class t2' \<and> trace_class t3' \<and> trace_class t4'
+               \<and> t1' \<ge> 0 \<and> t2' \<ge> 0 \<and> t3' \<ge> 0 \<and> t4' \<ge> 0\<close>
+    by auto
+  obtain t1 t2 t3 t4 where t1234: \<open>t1' = from_trace_class t1\<close> \<open>t2' = from_trace_class t2\<close>
+    \<open>t3' = from_trace_class t3\<close> \<open>t4' = from_trace_class t4\<close>
+    by (metis "*" from_trace_class_cases mem_Collect_eq)
+
+  have \<open>t = t1 - t2 + \<i> *\<^sub>C t3 - \<i> *\<^sub>C t4
+               \<and> t1 \<ge> 0 \<and> t2 \<ge> 0 \<and> t3 \<ge> 0 \<and> t4 \<ge> 0\<close>
+    using * unfolding t1234 
+    by (auto simp: from_trace_class_inject less_eq_trace_class_def
+        simp flip: scaleC_trace_class.rep_eq plus_trace_class.rep_eq minus_trace_class.rep_eq)
+  then show ?thesis
+    by blast
+qed
 
 lemma kraus_family_map_abs_summable:
   assumes \<open>kraus_family \<EE>\<close>
   shows \<open>(\<lambda>E. of_nat (\<EE> E) *\<^sub>C sandwich_tc E \<rho>) abs_summable_on UNIV\<close>
-(*
 proof -
   wlog \<rho>_pos: \<open>\<rho> \<ge> 0\<close> generalizing \<rho>
   proof -
     have aux: \<open>trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close> 
       for \<rho> :: \<open>('a, 'a) trace_class\<close> and E :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
       by (simp add: trace_class_comp_left trace_class_comp_right)
-    obtain \<rho>1 \<rho>2 \<rho>3 \<rho>4 a1 a2 a3 a4 where \<rho>_decomp: \<open>\<rho> = a1 *\<^sub>C \<rho>1 + a2 *\<^sub>C \<rho>2 + a3 *\<^sub>C \<rho>3 + a4 *\<^sub>C \<rho>4\<close>
+    have aux2: \<open>norm (a - b) \<le> B\<close>
+      if \<open>norm a + norm b \<le> B\<close> for a b :: \<open>('b,'b) trace_class\<close> and B
+  apply (simp add: norm_triangle_le that)
+          sledgehammer
+          try0
+          by -
+        
+        by -
+            by auto
+    obtain \<rho>1 \<rho>2 \<rho>3 \<rho>4 where \<rho>_decomp: \<open>\<rho> = \<rho>1 - \<rho>2 + \<i> *\<^sub>C \<rho>3 - \<i> *\<^sub>C \<rho>4\<close>
       and pos: \<open>\<rho>1 \<ge> 0\<close> \<open>\<rho>2 \<ge> 0\<close> \<open>\<rho>3 \<ge> 0\<close> \<open>\<rho>4 \<ge> 0\<close>
-      by -
-    have \<open>norm (of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L x* )) 
-      \<le> norm (a1 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>1 o\<^sub>C\<^sub>L x* ))
-      + norm (a2 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>2 o\<^sub>C\<^sub>L x* ))
-      + norm (a3 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>3 o\<^sub>C\<^sub>L x* ))
-      + norm (a4 *\<^sub>C of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho>4 o\<^sub>C\<^sub>L x* ))\<close> 
+      apply atomize_elim using trace_class_decomp_4pos'[of \<rho>] by blast
+    have \<open>norm (of_nat (\<EE> x) *\<^sub>C sandwich_tc x \<rho>) 
+      \<le> norm (of_nat (\<EE> x) *\<^sub>C sandwich_tc x \<rho>1)
+      + norm (of_nat (\<EE> x) *\<^sub>C sandwich_tc x \<rho>2)
+      + norm (of_nat (\<EE> x) *\<^sub>C sandwich_tc x \<rho>3)
+      + norm (of_nat (\<EE> x) *\<^sub>C sandwich_tc x \<rho>4)\<close> 
       (is \<open>_ \<le> ?S x\<close>) for x
-      apply (auto intro!: mult_left_mono
-          simp add: norm_trace_class.abs_eq eq_onp_def trace_class_plus trace_class_scaleC
-          aux trace_class_adj \<rho>_decomp plus_trace_class.rep_eq scaleC_trace_class.rep_eq
-          cblinfun_compose_add_right cblinfun_compose_add_left
-          scaleC_left_commute[of _ \<open>of_nat (\<EE> x)\<close>]
-          simp flip: ring_distribs
-          simp del: scaleC_scaleC)
-      by (smt (verit) local.aux trace_class_plus trace_class_scaleC trace_norm_scaleC trace_norm_triangle)
-    then have *: \<open>norm (of_nat (\<EE> x) *\<^sub>C Abs_trace_class (x o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L x* )) 
-      \<le> norm (?S x)\<close> for x
+      by (auto simp add: \<rho>_decomp cblinfun.add_right cblinfun.diff_right cblinfun.scaleC_right
+          scaleC_add_right scaleC_diff_right norm_mult
+          intro!: norm_triangle_le aux2)
+    then have *: \<open>norm (of_nat (\<EE> x) *\<^sub>C sandwich_tc x \<rho>) \<le> norm (?S x)\<close> for x
       by force
     show ?thesis
       apply (rule abs_summable_on_comparison_test[OF _ *])
       by (intro abs_summable_on_add abs_summable_norm abs_summable_on_scaleC_right hypothesis pos)
   qed
-  have aux: \<open>trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close> 
-    for \<rho> :: \<open>('a, 'a) trace_class\<close> and E :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
-    by (simp add: trace_class_comp_left trace_class_comp_right)
-  define n\<rho> where \<open>n\<rho> = norm \<rho>\<close>
-  have *: \<open>norm (of_nat (\<EE> E) *\<^sub>C Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* ))
-      \<le> norm (norm \<rho> *\<^sub>C of_nat (\<EE> E) *\<^sub>C norm (E* o\<^sub>C\<^sub>L E))\<close> for E
-  proof -
-    have \<open>norm (Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )) =
-          trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close>
-      by (simp add: norm_trace_class.abs_eq eq_onp_def aux)
-    also have \<open>\<dots> = trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close>
-      by (metis \<rho>_pos abs_op_def from_trace_class_0 less_eq_trace_class.rep_eq sandwich_apply sandwich_pos sqrt_op_unique trace_abs_op)
-    also have \<open>\<dots> = trace (from_trace_class \<rho> o\<^sub>C\<^sub>L (E* o\<^sub>C\<^sub>L E))\<close>
-      by (simp add: Misc.lift_cblinfun_comp(2) circularity_of_trace trace_class_comp_left)
-    also have \<open>\<dots> \<le> trace_norm (from_trace_class \<rho>) * norm (E* o\<^sub>C\<^sub>L E)\<close>
-      by (metis Extra_Ordered_Fields.sign_simps(5) calculation circularity_of_trace cmod_trace_times complex_of_real_cmod complex_of_real_mono complex_of_real_nn_iff norm_ge_zero trace_class_from_trace_class)
-    also have \<open>\<dots> = norm \<rho> * norm (E* o\<^sub>C\<^sub>L E)\<close>
-      by (simp add: norm_trace_class.rep_eq)
-    finally show ?thesis
-  sledgehammer
-  by X (smt (verit, del_insts) Extra_Ordered_Fields.sign_simps(5) Extra_Ordered_Fields.sign_simps(6)
- \<open>complex_of_real (trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )) = trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close> 
-\<open>norm (Abs_trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )) = trace_norm (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close>
- \<open>trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* ) = trace (from_trace_class \<rho> o\<^sub>C\<^sub>L (E* o\<^sub>C\<^sub>L E))\<close> 
-cmod_trace_times' mult_left_mono norm_AadjA norm_ge_zero 
-norm_mult norm_of_nat norm_of_real norm_trace_class.rep_eq of_real_power trace_class_from_trace_class)
-  try0
-  by -
-qed
-  from assms obtain B where B: \<open>norm (\<Sum>E\<in>S. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> B\<close> if \<open>finite S\<close> for S
+  from assms obtain B where B: \<open>norm (\<Sum>E\<in>F. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> B\<close> if \<open>finite F\<close> for F
     by (auto simp: kraus_family_def)
 
-  show ?thesis
-    apply (rule abs_summable_on_comparison_test[OF _ *])
-    apply (rule abs_summable_on_scaleC_right)
-(* TODO: Impossible goal here. E* o E only bounded in Loewner order, not in norm *)
-    apply (rule nonneg_bdd_above_summable_on, simp)
-    apply (rule bdd_aboveI[where M=B])
-    using B' apply safe
-  by -
-
-
-
-  show \<open>\<rho> \<ge> 0\<close>
-  sorry
-*)
-  sorry
+  have \<open>norm (\<Sum>E\<in>F. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>)) \<le> B * norm \<rho>\<close> if \<open>finite F\<close> for F
+  proof -
+    have aux: \<open>complex_of_real (norm x) = y \<Longrightarrow> norm x = norm y\<close> for x :: \<open>('b,'b) trace_class\<close> and y
+      using norm_of_real by fastforce
+    have \<open>norm (\<Sum>E\<in>F. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>))
+        = norm (trace (from_trace_class (\<Sum>E\<in>F. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>))))\<close>
+      apply (rule aux)
+      by (simp add: Misc_Missing.of_nat_0_le_iff \<rho>_pos from_trace_class_pos norm_trace_class.rep_eq sandwich_tc_pos scaleC_nonneg_nonneg sum_nonneg trace_norm_pos)
+    also have \<open>\<dots> = norm (\<Sum>E\<in>F. \<EE> E * trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*))\<close>
+      apply (simp add: trace_sum from_trace_class_sum scaleC_trace_class.rep_eq trace_class_scaleC
+          trace_scaleC from_trace_class_sandwich_tc trace_class_sandwich)
+      by (simp add: sandwich_apply)
+    also have \<open>\<dots> = norm (\<Sum>E\<in>F. \<EE> E * trace (E* o\<^sub>C\<^sub>L E o\<^sub>C\<^sub>L from_trace_class \<rho>))\<close>
+      apply (subst circularity_of_trace)
+      by (auto intro!: trace_class_comp_right simp: cblinfun_compose_assoc)
+    also have \<open>\<dots> = norm (trace ((\<Sum>E\<in>F. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) o\<^sub>C\<^sub>L from_trace_class \<rho>))\<close>
+      by (simp add: trace_class_scaleC trace_class_comp_right cblinfun_compose_sum_left
+          flip: trace_scaleC trace_sum)
+    also have \<open>\<dots> \<le> norm (\<Sum>E\<in>F. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) * norm \<rho>\<close>
+      apply (simp add: norm_trace_class.rep_eq)
+      using cmod_trace_times trace_class_from_trace_class by blast
+    also have \<open>\<dots> \<le> B * norm \<rho>\<close>
+      by (simp add: B mult_right_mono that)
+    finally show ?thesis
+      by -
+  qed
+  then show ?thesis
+    apply (rule_tac infsum_tc_norm_bounded_abs_summable[where B=\<open>B * norm \<rho>\<close>])
+     apply (intro scaleC_nonneg_nonneg of_nat_0_le_iff sandwich_tc_pos \<rho>_pos)
+    by simp
+qed
 
 lemma kraus_family_map_summable:
   assumes \<open>kraus_family \<EE>\<close>
@@ -228,24 +309,135 @@ lemma kraus_family_map_summable:
   unfolding sandwich_apply
   using assms by (rule kraus_family_map_abs_summable)
 
+lemma kraus_family_map_plus_right:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>kraus_family_map \<EE> (x + y) = kraus_family_map \<EE> x + kraus_family_map \<EE> y\<close>
+  using assms
+  by (auto intro!: infsum_add kraus_family_map_summable
+      simp add: kraus_family_map_def cblinfun.add_right scaleC_add_right)
+
+lemma kraus_family_map_uminus_right:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>kraus_family_map \<EE> (- x) = - kraus_family_map \<EE> x\<close>
+  using assms
+  by (auto intro!: infsum_uminus kraus_family_map_summable
+      simp add: kraus_family_map_def cblinfun.minus_right scaleC_minus_right)
+
+
+lemma kraus_family_map_minus_right:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>kraus_family_map \<EE> (x - y) = kraus_family_map \<EE> x - kraus_family_map \<EE> y\<close>
+  using assms
+  by (simp only: diff_conv_add_uminus kraus_family_map_plus_right kraus_family_map_uminus_right)
+
+lemma infsum_nonneg_cblinfun:
+  fixes f :: "'a \<Rightarrow> 'b::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b"
+  assumes "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
+  shows "infsum f M \<ge> 0"
+  apply (cases \<open>f summable_on M\<close>)
+   apply (subst infsum_0_simp[symmetric])
+   apply (rule infsum_mono_cblinfun)
+  using assms by (auto simp: infsum_not_exists)
+
+lemma infsum_nonneg_traceclass:
+  fixes f :: "'a \<Rightarrow> ('b::chilbert_space, 'b) trace_class"
+  assumes "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
+  shows "infsum f M \<ge> 0"
+  apply (cases \<open>f summable_on M\<close>)
+   apply (subst infsum_0_simp[symmetric])
+   apply (rule infsum_mono_neutral_traceclass)
+  using assms by (auto simp: infsum_not_exists)
+
+lemma kraus_family_map_pos:
+  assumes \<open>\<rho> \<ge> 0\<close>
+  shows \<open>kraus_family_map \<EE> \<rho> \<ge> 0\<close>
+  by (auto intro!: infsum_nonneg_traceclass scaleC_nonneg_nonneg of_nat_0_le_iff
+      sandwich_tc_pos assms simp: kraus_family_map_def)
+
+lemma kraus_family_map_bounded_pos:
+  assumes \<open>kraus_family \<EE>\<close> and \<open>\<rho> \<ge> 0\<close>
+  shows \<open>norm (kraus_family_map \<EE> \<rho>) \<le> kraus_family_norm \<EE> * norm \<rho>\<close>
+proof -
+  have \<open>norm (kraus_family_map \<EE> \<rho>) = Re (trace_tc (\<Sum>\<^sub>\<infinity>E. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>)))\<close>
+    apply (subst Re_complex_of_real[symmetric])
+    apply (subst norm_tc_pos)
+    using \<open>\<rho> \<ge> 0\<close> apply (rule kraus_family_map_pos)
+    by (simp add: kraus_family_map_def)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>E. Re (trace_tc (\<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>))))\<close>
+    by (simp flip: infsum_bounded_linear[of \<open>\<lambda>x. Re (trace_tc x)\<close>] 
+        add: bounded_linear_compose[of Re trace_tc] bounded_linear_Re bounded_clinear.bounded_linear o_def trace_tc_scaleC assms kraus_family_map_def kraus_family_map_summable bounded_clinear.bounded_linear)
+  also have \<open>\<dots> \<le> kraus_family_norm \<EE> * norm \<rho>\<close>
+  proof (rule infsum_le_finite_sums)
+    show \<open>(\<lambda>E. Re (trace_tc (\<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>)))) summable_on UNIV\<close>
+      apply (rule summable_on_bounded_linear[unfolded o_def, where f=\<open>\<lambda>x. Re (trace_tc x)\<close>])
+      by (simp_all flip: infsum_bounded_linear[of \<open>\<lambda>x. Re (trace_tc x)\<close>] 
+        add: bounded_linear_compose[of Re trace_tc] bounded_linear_Re bounded_clinear.bounded_linear o_def trace_tc_scaleC assms kraus_family_map_def kraus_family_map_summable bounded_clinear.bounded_linear)
+    fix M :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'b) set\<close> assume \<open>finite M\<close>
+    have \<open>(\<Sum>E\<in>M. Re (trace_tc (\<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>)))) 
+        = (\<Sum>E\<in>M. Re (\<EE> E * trace (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E*)))\<close>
+      by (simp add: trace_tc.rep_eq from_trace_class_sandwich_tc sandwich_apply scaleC_trace_class.rep_eq trace_scaleC)
+    also have \<open>\<dots> = (\<Sum>E\<in>M. Re (\<EE> E * trace (E* o\<^sub>C\<^sub>L E o\<^sub>C\<^sub>L from_trace_class \<rho>)))\<close>
+      apply (subst circularity_of_trace)
+      by (auto intro!: trace_class_comp_right simp: cblinfun_compose_assoc)
+    also have \<open>\<dots> = Re (trace ((\<Sum>E\<in>M. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) o\<^sub>C\<^sub>L from_trace_class \<rho>))\<close>
+      by (simp only: trace_class_scaleC trace_class_comp_right trace_class_from_trace_class
+          flip: Re_sum trace_scaleC trace_sum cblinfun.scaleC_left cblinfun_compose_scaleC_left cblinfun_compose_sum_left)
+    also have \<open>\<dots> \<le> cmod (trace ((\<Sum>E\<in>M. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) o\<^sub>C\<^sub>L from_trace_class \<rho>))\<close>
+      by (rule complex_Re_le_cmod)
+    also have \<open>\<dots> \<le> norm (\<Sum>E\<in>M. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) * trace_norm (from_trace_class \<rho>)\<close>
+      apply (rule cmod_trace_times)
+      by simp
+    also have \<open>\<dots> \<le> kraus_family_norm \<EE> * norm \<rho>\<close>
+      apply (simp add: flip: norm_trace_class.rep_eq)
+      apply (rule mult_right_mono)
+      apply (rule kraus_family_sums_bounded_by_norm)
+      using assms by auto
+    finally show \<open>(\<Sum>E\<in>M. Re (trace_tc (complex_of_nat (\<EE> E) *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>)))) \<le> kraus_family_norm \<EE> * norm \<rho>\<close>
+      by -
+  qed
+  finally show ?thesis 
+    by -
+qed
+
+lemma kraus_family_map_bounded:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>norm (kraus_family_map \<EE> \<rho>) \<le> 4 * kraus_family_norm \<EE> * norm \<rho>\<close>
+(* proof -
+  have \<open>norm (kraus_family_map \<EE> \<rho>) = norm (\<Sum>\<^sub>\<infinity>E. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>))\<close>
+    by (simp add: kraus_family_map_def)
+  also have \<open>\<dots> \<le> \<close>
+   *)
+  sorry
+
+
+lemma kraus_family_map_bounded_clinear:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>bounded_clinear (kraus_family_map \<EE>)\<close>
+  apply (rule bounded_clinearI[where K=\<open>4 * kraus_family_norm \<EE>\<close>])
+    apply (auto intro!: kraus_family_map_plus_right kraus_family_map_scaleC assms
+      mult.commute)
+  using kraus_family_map_bounded[OF assms]
+  by (simp add: mult.commute)
+
+
 lemma kraus_family_map_bounded_tight:
   assumes \<open>kraus_family \<EE>\<close>
-  shows \<open>kraus_family_norm \<EE> = (\<Squnion>\<rho>. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close>
+  shows \<open>kraus_family_norm \<EE> = (\<Squnion>\<rho>\<in>{\<rho>. \<rho>\<ge>0}. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close>
 proof (rule antisym)
   from assms
-  have bounded: \<open>norm (kraus_family_map \<EE> \<rho>) / norm \<rho> \<le> kraus_family_norm \<EE>\<close> for \<rho>
+  have bounded: \<open>norm (kraus_family_map \<EE> \<rho>) / norm \<rho> \<le> kraus_family_norm \<EE>\<close> if \<open>\<rho> \<ge> 0\<close> for \<rho>
     apply (cases \<open>\<rho> = 0\<close>)
-    by (simp_all add: kraus_family_norm_geq0 kraus_family_map_bounded linordered_field_class.pos_divide_le_eq)
+    by (simp_all add: that kraus_family_norm_geq0 kraus_family_map_bounded_pos linordered_field_class.pos_divide_le_eq)
 
   have aux1: \<open>0 \<le> (\<Sum>E\<in>M. complex_of_nat (\<EE> E) *\<^sub>C
             sandwich_tc E (Abs_trace_class (selfbutter \<psi>)))\<close> for \<psi> M
     by (auto intro!: sum_nonneg scaleC_nonneg_nonneg of_nat_0_le_iff Abs_trace_class_geq0I
         trace_class_sandwich sandwich_tc_pos)
 
-  show \<open>(\<Squnion>\<rho>. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>) \<le> kraus_family_norm \<EE>\<close>
+  show \<open>(\<Squnion>\<rho>\<in>{\<rho>. \<rho>\<ge>0}. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>) \<le> kraus_family_norm \<EE>\<close>
     apply (rule cSUP_least)
     using bounded by auto
-  show \<open>kraus_family_norm \<EE> \<le> (\<Squnion>\<rho>. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close>
+  show \<open>kraus_family_norm \<EE> \<le> (\<Squnion>\<rho>\<in>{\<rho>. \<rho>\<ge>0}. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close>
     unfolding kraus_family_norm_def
   proof (rule cSUP_least)
     show \<open>Collect finite \<noteq> {}\<close>
@@ -253,7 +445,8 @@ proof (rule antisym)
     fix M :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'b) set\<close>
     assume \<open>M \<in> Collect finite\<close>
     then have [simp]: \<open>finite M\<close> by simp
-    have \<open>norm (\<Sum>E\<in>M. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E)) - \<epsilon> \<le> (\<Squnion>\<rho>. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close> 
+    have \<open>norm (\<Sum>E\<in>M. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E)) - \<epsilon>
+            \<le> (\<Squnion>\<rho>\<in>{\<rho>. \<rho>\<ge>0}. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close> 
       (is \<open>?lhs \<le> ?rhs\<close>) if \<open>\<epsilon> > 0\<close> for \<epsilon>
     proof (cases \<open>\<forall>\<psi>::'a. \<psi> = 0\<close>)
       case True
@@ -307,22 +500,21 @@ proof (rule antisym)
       also have \<open>\<dots> \<le> ?rhs\<close>
         apply (rule complex_of_real_mono)
         apply (rule cSup_upper)
-        apply simp
+        apply (auto intro!: image_eqI simp: less_eq_trace_class_def Abs_trace_class_inverse)[1]
         apply (rule bdd_aboveI[where M=\<open>kraus_family_norm \<EE>\<close>])
         using bounded by auto
       finally show ?thesis
         using complex_of_real_mono_iff by blast
     qed
-    then show \<open>norm (\<Sum>E\<in>M. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> (\<Squnion>\<rho>. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close>
+    then show \<open>norm (\<Sum>E\<in>M. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> (\<Squnion>\<rho>\<in>{\<rho>. \<rho>\<ge>0}. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close>
       by (smt (verit, ccfv_SIG) nice_ordered_field_class.field_le_epsilon)
   qed
 qed
 
 
-lemma
+(* lemma
   assumes \<open>kraus_family \<EE>\<close>
-  shows \<open>((\<lambda>F. norm (\<Sum>E\<in>F. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E))) \<longlongrightarrow> kraus_family_norm \<EE>) (finite_subsets_at_top UNIV)\<close>
-  sorry
+  shows \<open>((\<lambda>F. norm (\<Sum>E\<in>F. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E))) \<longlongrightarrow> kraus_family_norm \<EE>) (finite_subsets_at_top UNIV)\<close> *)
 
 lemma kraus_family_norm_welldefined:
   assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
@@ -476,17 +668,240 @@ proof -
     by (auto simp: kraus_family_def)
 qed
 
+(* TODO: also flip sandwich_compose *)
+lemma sandwich_tc_compose: \<open>sandwich_tc (A o\<^sub>C\<^sub>L B) = sandwich_tc A o\<^sub>C\<^sub>L sandwich_tc B\<close>
+  apply (rule cblinfun_eqI)
+  apply (rule from_trace_class_inject[THEN iffD1])
+  apply (transfer fixing: A B)
+  by (simp flip: sandwich_compose)
+
+lemma sandwich_tc_0_left[simp]: \<open>sandwich_tc 0 = 0\<close>
+  by (metis (no_types, opaque_lifting) cblinfun.zero_left cblinfun_eqI linorder_not_le norm_sandwich_tc norm_scaleC norm_zero power2_eq_square scaleC_left.zero zero_less_norm_iff)
+
+
+lemma kraus_family_map_mono:
+  assumes \<open>kraus_family \<EE>\<close> and \<open>\<rho> \<ge> \<tau>\<close>
+  shows \<open>kraus_family_map \<EE> \<rho> \<ge> kraus_family_map \<EE> \<tau>\<close>
+  apply (subst diff_ge_0_iff_ge[symmetric])
+  apply (subst kraus_family_map_minus_right[symmetric])
+   apply (fact assms)
+  apply (rule kraus_family_map_pos)
+  using assms(2) by (subst diff_ge_0_iff_ge)
+
+lemma kraus_family_map_geq_sum:
+  assumes \<open>kraus_family \<EE>\<close> and \<open>\<rho> \<ge> 0\<close>
+  shows \<open>kraus_family_map \<EE> \<rho> \<ge> (\<Sum>E\<in>M. \<EE> E *\<^sub>C sandwich_tc E \<rho>)\<close>
+proof (cases \<open>finite M\<close>)
+  case True
+  have *: \<open>(\<lambda>E. complex_of_nat (\<EE> E) *\<^sub>C (sandwich_tc E *\<^sub>V \<rho>)) summable_on X\<close> for X
+    apply (rule summable_on_subset_banach[where A=UNIV])
+     apply (rule kraus_family_map_summable)
+    using assms by auto
+  show ?thesis
+    apply (subst infsum_finite[symmetric])
+    by (auto intro!: infsum_mono_neutral_traceclass * scaleC_nonneg_nonneg of_nat_0_le_iff 
+        True sandwich_tc_pos assms
+        simp: kraus_family_map_def)
+next
+  case False
+  with assms show ?thesis
+    by (simp add: kraus_family_map_pos) 
+qed
+
+
 lemma kraus_family_comp_apply:
-  assumes \<open>kraus_family \<EE>\<close> and \<open>kraus_family \<FF>\<close>
+  assumes [simp]: \<open>kraus_family \<EE>\<close> \<open>kraus_family \<FF>\<close>
   shows \<open>kraus_family_map (kraus_family_comp \<EE> \<FF>) = kraus_family_map \<EE> \<circ> kraus_family_map \<FF>\<close>
-  sorry
+proof (rule ext, rename_tac \<rho>)
+  fix \<rho> :: \<open>('c, 'c) trace_class\<close>
+  wlog \<rho>_pos: \<open>\<rho> \<ge> 0\<close>
+    goal \<open>kraus_family_map (kraus_family_comp \<EE> \<FF>) \<rho> = (kraus_family_map \<EE> \<circ> kraus_family_map \<FF>) \<rho>\<close>
+    generalizing \<rho>
+  proof -
+    have aux: \<open>trace_class (E o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L E* )\<close> 
+      for \<rho> :: \<open>('a, 'a) trace_class\<close> and E :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+      by (simp add: trace_class_comp_left trace_class_comp_right)
+    obtain \<rho>1 \<rho>2 \<rho>3 \<rho>4 where \<rho>_decomp: \<open>\<rho> = \<rho>1 - \<rho>2 + \<i> *\<^sub>C \<rho>3 - \<i> *\<^sub>C \<rho>4\<close>
+      and pos: \<open>\<rho>1 \<ge> 0\<close> \<open>\<rho>2 \<ge> 0\<close> \<open>\<rho>3 \<ge> 0\<close> \<open>\<rho>4 \<ge> 0\<close>
+      apply atomize_elim using trace_class_decomp_4pos'[of \<rho>] by blast
+    show ?thesis
+      using pos by (simp add: hypothesis \<rho>_decomp kraus_family_map_plus_right kraus_family_kraus_family_comp kraus_family_map_scaleC)
+  qed
+
+  define EF where \<open>EF G = {(E, F). \<EE> E \<noteq> 0 \<and> \<FF> F \<noteq> 0 \<and> E o\<^sub>C\<^sub>L F = G}\<close> for G
+  have finite_EF: \<open>finite (EF G)\<close> if \<open>G \<noteq> 0\<close> for G
+    unfolding EF_def
+    using assms that by (rule kraus_family_comp_finite)
+
+(*   define X where \<open>X = kraus_family_map (kraus_family_comp \<EE> \<FF>) \<rho>\<close>
+
+  have \<open>((\<lambda>G. of_nat (kraus_family_comp \<EE> \<FF> G) *\<^sub>C sandwich_tc G \<rho>) has_sum X) UNIV\<close>
+    by (auto intro!: summable_iff_has_sum_infsum[THEN iffD1] kraus_family_map_summable kraus_family_kraus_family_comp
+        simp: X_def kraus_family_map_def)
+  then have \<open>((\<lambda>G. (\<Sum>(E,F)\<in>EF G. (\<EE> E * \<FF> F)) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) has_sum X) (-{0})\<close>
+    apply (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
+    by (auto simp: kraus_family_comp_def EF_def)
+  then have \<open>((\<lambda>G. \<Sum>(E,F)\<in>EF G. (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) has_sum X) (-{0})\<close>
+    by (auto simp: case_prod_unfold simp flip: scaleC_sum_left)
+  then have \<open>((\<lambda>G. \<Sum>\<^sub>\<infinity>(E,F)\<in>EF G. (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) has_sum X) (-{0})\<close>
+    apply (rule has_sum_cong[THEN iffD1, rotated -1])
+    using finite_EF by simp
+  then have \<open>((\<lambda>G. \<Sum>\<^sub>\<infinity>(E,F)\<in>EF G. (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) has_sum X) UNIV\<close>
+    apply (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
+    by (auto simp: case_prod_unfold)
+  then have \<open>((\<lambda>(G,E,F). (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) has_sum X) (SIGMA G:UNIV. EF G)\<close>
+  proof (rule has_sum_SigmaI[rotated])
+    have \<open>(\<lambda>(E, F). (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc (E o\<^sub>C\<^sub>L F) *\<^sub>V \<rho>) summable_on ({E. \<EE> E \<noteq> 0} \<times> {F. \<FF> F \<noteq> 0})\<close>
+      by xxx
+    then show \<open>(\<lambda>(G, E, F). (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) summable_on (SIGMA G:UNIV. EF G)\<close>
+      apply (subst summable_on_reindex_bij_betw[where A=\<open>{E. \<EE> E \<noteq> 0} \<times> {F. \<FF> F \<noteq> 0}\<close> and g=\<open>\<lambda>(E,F). (E o\<^sub>C\<^sub>L F, E, F)\<close>, symmetric])
+       apply (rule bij_betw_byWitness[where f'=\<open>\<lambda>(G,E,F). (E, F)\<close>])
+      by (auto simp: case_prod_unfold EF_def[abs_def])
+    have \<open>((\<lambda>(E,F). (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) has_sum
+              (\<Sum>\<^sub>\<infinity>(E, F)\<in>EF G. (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>))
+          (EF G)\<close> for G
+      apply (rule has_sum_infsum)
+      apply (cases \<open>G = 0\<close>)
+       apply (simp add: summable_on_0)
+      by (intro summable_on_finite finite_EF)
+    then show \<open>((\<lambda>y. case (x, y) of (G, E, F) \<Rightarrow> complex_of_nat (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) has_sum
+          (\<Sum>\<^sub>\<infinity>(E, F)\<in>EF x. complex_of_nat (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc x *\<^sub>V \<rho>))
+          (EF x)\<close> for x
+      by simp
+  qed
+  then have \<open>((\<lambda>(G,E,F). \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) has_sum X) (SIGMA G:UNIV. EF G)\<close>
+    apply (rule has_sum_cong[THEN iffD1, rotated])
+    by (auto simp: cblinfun.scaleC_right EF_def sandwich_tc_compose)
+  then have \<open>((\<lambda>(E,F). \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) has_sum X) ({E. \<EE> E \<noteq> 0} \<times> {F. \<FF> F \<noteq> 0})\<close>
+    apply (subst has_sum_reindex_bij_betw[where A=\<open>SIGMA G:UNIV. EF G\<close> and g=\<open>\<lambda>(G,E,F). (E,F)\<close>, symmetric])
+    apply (rule bij_betw_byWitness[where f'=\<open>\<lambda>(E,F). (E o\<^sub>C\<^sub>L F, E, F)\<close>])
+    by (auto simp: case_prod_unfold EF_def[abs_def])
+  then have \<open>((\<lambda>E. \<Sum>\<^sub>\<infinity>F|\<FF> F \<noteq> 0. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) has_sum X) {E. \<EE> E \<noteq> 0}\<close>  
+  proof (rule has_sum_SigmaD, simp)
+    have \<open>(\<lambda>F. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) summable_on UNIV\<close> for E
+      using kraus_family_map_summable[OF \<open>kraus_family \<FF>\<close>]
+      by (auto intro!: summable_on_scaleC_right summable_on_cblinfun_apply)
+    then have \<open>(\<lambda>F. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) summable_on {F. 0 < \<FF> F}\<close> for E
+      by (rule summable_on_subset_banach, simp)
+    then show \<open>((\<lambda>F. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) has_sum
+            (\<Sum>\<^sub>\<infinity>F | 0 < \<FF> F. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))))
+          {F. 0 < \<FF> F}\<close> for E
+      by (rule has_sum_infsum)
+  qed
+  then have \<open>((\<lambda>E. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V (\<Sum>\<^sub>\<infinity>F|\<FF> F \<noteq> 0. \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))) has_sum X) {E. \<EE> E \<noteq> 0}\<close>
+    by (simp add: infsum_scaleC_right infsum_cblinfun_apply kraus_family_map_summable assms
+        summable_on_subset_banach[where A=UNIV])
+  then have \<open>((\<lambda>E. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V kraus_family_map \<FF> \<rho>)) has_sum X) {E. \<EE> E \<noteq> 0}\<close>
+    apply (rule has_sum_cong[THEN iffD1, rotated -1])
+    apply (simp add: kraus_family_map_def)
+    apply (subst infsum_cong_neutral[where S=\<open>{F. 0 < \<FF> F}\<close> and T=UNIV])
+    by auto
+  then have \<open>((\<lambda>E. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V kraus_family_map \<FF> \<rho>)) has_sum X) UNIV\<close>
+    apply (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
+    by auto
+  moreover have \<open>((\<lambda>E. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V kraus_family_map \<FF> \<rho>)) has_sum 
+                      (kraus_family_map \<EE> \<circ> kraus_family_map \<FF>) \<rho>) UNIV\<close>
+    by (auto intro!: has_sum_infsum kraus_family_map_summable simp: kraus_family_map_def o_def)
+  ultimately show \<open>X = (kraus_family_map \<EE> \<circ> kraus_family_map \<FF>) \<rho>\<close>
+    by (rule has_sum_unique)
+
+    have \<open>(kraus_family_map \<EE> \<circ> kraus_family_map \<FF>) \<rho>
+      = (\<Sum>\<^sub>\<infinity>E|\<EE> E \<noteq> 0. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V (\<Sum>\<^sub>\<infinity>F|\<FF> F \<noteq> 0. \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))))\<close>
+    apply (simp add: kraus_family_map_def)
+    apply (subst infsum_cong_neutral[where S=\<open>{F. 0 < \<FF> F}\<close> and T=UNIV])
+    apply auto
+    apply (subst infsum_cong_neutral[where S=\<open>{E. 0 < \<EE> E}\<close> and T=UNIV])
+    by auto
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>E|\<EE> E \<noteq> 0. \<Sum>\<^sub>\<infinity>F|\<FF> F \<noteq> 0. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))\<close>
+    by (simp add: infsum_scaleC_right infsum_cblinfun_apply kraus_family_map_summable assms
+        summable_on_subset_banach[where A=UNIV])
+ *)
+
+  have sum1: \<open>(\<lambda>(E, F). \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V complex_of_nat (\<FF> F) *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) summable_on U\<close> for U
+  proof -
+    have *: \<open>norm (\<Sum>(E,F)\<in>M. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) \<le> norm (kraus_family_map \<EE> (kraus_family_map \<FF> \<rho>))\<close> if \<open>finite M\<close> for M
+    proof -
+      have \<open>norm (\<Sum>(E,F)\<in>M. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))
+          \<le> norm (\<Sum>(E,F)\<in>fst ` M \<times> snd ` M. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))\<close>
+        apply (rule norm_cblinfun_mono_trace_class)
+        using that by (force intro!: sum_mono2 simp add: \<rho>_pos case_prod_unfold Misc_Missing.of_nat_0_le_iff   sandwich_tc_pos scaleC_nonneg_nonneg sum_nonneg)+
+      also have \<open>\<dots> = norm (\<Sum>E\<in>fst ` M. \<EE> E *\<^sub>C sandwich_tc E *\<^sub>V (\<Sum>F\<in>snd ` M. \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))\<close>
+        by (simp add:  flip: sum.cartesian_product scaleC_sum_right cblinfun.sum_right)
+      also have \<open>\<dots> \<le> norm (kraus_family_map \<EE> (\<Sum>F\<in>snd ` M. \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))\<close>
+        apply (rule norm_cblinfun_mono_trace_class)
+         apply (simp add: \<rho>_pos case_prod_unfold Misc_Missing.of_nat_0_le_iff sandwich_tc_pos scaleC_nonneg_nonneg sum_nonneg)+
+        apply (rule kraus_family_map_geq_sum)
+        by (simp add: \<rho>_pos case_prod_unfold Misc_Missing.of_nat_0_le_iff sandwich_tc_pos scaleC_nonneg_nonneg sum_nonneg)+
+      also have \<open>\<dots> \<le> norm (kraus_family_map \<EE> (kraus_family_map \<FF> \<rho>))\<close>
+        apply (rule norm_cblinfun_mono_trace_class)
+         apply (simp add: kraus_family_map_pos \<rho>_pos case_prod_unfold Misc_Missing.of_nat_0_le_iff sandwich_tc_pos scaleC_nonneg_nonneg sum_nonneg)+
+        apply (rule kraus_family_map_mono, simp)
+        apply (rule kraus_family_map_geq_sum)
+        by (auto simp: \<rho>_pos)
+      finally show ?thesis
+        by -
+    qed
+    show ?thesis
+      apply (rule summable_on_subset_banach[where A=\<open>UNIV \<times> UNIV\<close>, rotated], simp)
+      apply (rule abs_summable_summable)
+      apply (rule infsum_tc_norm_bounded_abs_summable)
+       apply (simp add: \<rho>_pos case_prod_unfold Misc_Missing.of_nat_0_le_iff   sandwich_tc_pos scaleC_nonneg_nonneg sum_nonneg )
+      using * by simp
+  qed
+  then have \<open>(\<lambda>(G, E, F). \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V complex_of_nat (\<FF> F) *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))) summable_on (SIGMA G:UNIV. EF G)\<close>
+    apply (subst summable_on_reindex_bij_betw[where A=\<open>{E. \<EE> E \<noteq> 0} \<times> {F. \<FF> F \<noteq> 0}\<close> and g=\<open>\<lambda>(E,F). (E o\<^sub>C\<^sub>L F, E, F)\<close>, symmetric])
+     apply (rule bij_betw_byWitness[where f'=\<open>\<lambda>(G,E,F). (E, F)\<close>])
+    by (auto simp: case_prod_unfold EF_def[abs_def])
+  then have sum2: \<open>(\<lambda>(G, E, F). (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>) summable_on (SIGMA G:UNIV. EF G)\<close>
+    apply (rule summable_on_cong[THEN iffD1, rotated -1])
+    by (auto simp: EF_def cblinfun.scaleC_right sandwich_tc_compose)
+
+  have \<open>(kraus_family_map \<EE> \<circ> kraus_family_map \<FF>) \<rho> 
+      = (\<Sum>\<^sub>\<infinity>E|\<EE> E \<noteq> 0. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V (\<Sum>\<^sub>\<infinity>F|\<FF> F \<noteq> 0. \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>))))\<close>
+    apply (simp add: kraus_family_map_def)
+    apply (subst infsum_cong_neutral[where S=\<open>{F. 0 < \<FF> F}\<close> and T=UNIV])
+    apply auto
+    apply (subst infsum_cong_neutral[where S=\<open>{E. 0 < \<EE> E}\<close> and T=UNIV])
+    by auto
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>E|\<EE> E \<noteq> 0. \<Sum>\<^sub>\<infinity>F|\<FF> F \<noteq> 0. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))\<close>
+    by (simp add: infsum_scaleC_right infsum_cblinfun_apply kraus_family_map_summable assms
+        summable_on_subset_banach[where A=UNIV])
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,F)|\<EE> E \<noteq> 0 \<and> \<FF> F \<noteq> 0. \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))\<close>
+    apply (subst infsum_Sigma'_banach)
+    using sum1 by auto
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(G,E,F)\<in>(SIGMA G:UNIV. EF G). \<EE> E *\<^sub>C (sandwich_tc E *\<^sub>V \<FF> F *\<^sub>C (sandwich_tc F *\<^sub>V \<rho>)))\<close>
+    apply (subst infsum_reindex_bij_betw[symmetric, where A=\<open>SIGMA G:UNIV. EF G\<close> and g=\<open>\<lambda>(G,E,F). (E,F)\<close>])
+    apply (rule bij_betw_byWitness[where f'=\<open>\<lambda>(E,F). (E o\<^sub>C\<^sub>L F, E, F)\<close>])
+    by (auto simp: case_prod_unfold EF_def)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(G,E,F)\<in>(SIGMA G:UNIV. EF G). (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>)\<close>
+    apply (rule infsum_cong)
+    by (auto simp: EF_def cblinfun.scaleC_right sandwich_tc_compose)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>G. \<Sum>\<^sub>\<infinity>(E,F)\<in>EF G. (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>)\<close>
+    apply (rule infsum_Sigma'_banach[symmetric])
+    using sum2 by auto
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>G|G\<noteq>0. \<Sum>\<^sub>\<infinity>(E,F)\<in>EF G. (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>)\<close>
+    apply (rule infsum_cong_neutral)
+    by (auto simp: case_prod_unfold)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>G|G\<noteq>0. \<Sum>(E,F)\<in>EF G. (\<EE> E * \<FF> F) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>)\<close>
+    apply (rule infsum_cong)
+    using finite_EF by simp
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>G|G\<noteq>0. (\<Sum>(E,F)\<in>EF G. (\<EE> E * \<FF> F)) *\<^sub>C sandwich_tc G *\<^sub>V \<rho>)\<close>
+    by (auto intro!: infsum_cong simp: case_prod_unfold simp flip: scaleC_sum_left)
+  also have \<open>\<dots> = kraus_family_map (kraus_family_comp \<EE> \<FF>) \<rho>\<close>
+    unfolding kraus_family_map_def kraus_family_comp_def
+    apply (rule infsum_cong_neutral)
+    by (auto simp: EF_def)
+  finally show \<open>kraus_family_map (kraus_family_comp \<EE> \<FF>) \<rho> = (kraus_family_map \<EE> \<circ> kraus_family_map \<FF>) \<rho>\<close>
+    by simp
+qed
+
+
 
 lift_definition kraus_map_comp :: \<open>('a::chilbert_space,'b::chilbert_space) kraus_map
                                 \<Rightarrow> ('c::chilbert_space,'a) kraus_map \<Rightarrow> ('c,'b) kraus_map\<close>
   is kraus_family_comp
   by (auto intro!: kraus_family_kraus_family_comp
       simp add: kraus_equivalent_def kraus_family_comp_apply)
-
 
 definition \<open>kraus_map_id = kraus_map_of_op id_cblinfun\<close>
 
@@ -525,12 +940,48 @@ proof -
     by -
 qed
 
+lemma scaleC_scaleR_commute: \<open>a *\<^sub>C b *\<^sub>R x = b *\<^sub>R a *\<^sub>C x\<close> for x :: \<open>_::complex_normed_vector\<close>
+  by (simp add: scaleR_scaleC scaleC_left_commute)
+
+
 definition \<open>kraus_family_scale r \<EE> E = (if r \<le> 0 then 0 else \<EE> (E /\<^sub>R sqrt r))\<close>
+
+
+lemma kraus_family_scale_neg: \<open>kraus_family_scale r = (\<lambda>_. 0)\<close> if \<open>r \<le> 0\<close>
+  using that by (auto intro!: ext simp add: kraus_family_scale_def)
+
 
 lemma kraus_family_kraus_family_scale:
   assumes \<open>kraus_family \<EE>\<close>
   shows \<open>kraus_family (kraus_family_scale r \<EE>)\<close>
-  sorry
+proof (cases \<open>r > 0\<close>)
+  case True
+  define B where \<open>B = kraus_family_norm \<EE> * r\<close>
+  have \<open>norm (\<Sum>E\<in>F. \<EE> (E /\<^sub>R sqrt r) *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> B\<close>
+    if \<open>finite F\<close> for F
+  proof -
+    define F' where \<open>F' = (\<lambda>x. x /\<^sub>R sqrt r) ` F\<close>
+    have [simp]: \<open>finite F'\<close>
+      using F'_def that by blast
+    have inj: \<open>inj_on (\<lambda>x. x /\<^sub>R sqrt r) F\<close>
+      by (metis True UNIV_I dual_order.refl injective_scaleR linordered_field_class.inverse_positive_iff_positive not_less real_sqrt_less_mono real_sqrt_zero subset_iff subset_inj_on)
+    from assms have \<open>norm (\<Sum>E\<in>F'. \<EE> E *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> kraus_family_norm \<EE>\<close>
+      using B_def kraus_family_sums_bounded_by_norm by blast
+    then show \<open>norm (\<Sum>E\<in>F. \<EE> (E /\<^sub>R sqrt r) *\<^sub>C (E* o\<^sub>C\<^sub>L E)) \<le> B\<close>
+      unfolding F'_def B_def
+      apply (subst (asm) sum.reindex)
+      apply (fact inj)
+      using True apply (simp add: scaleC_scaleR_commute flip: scale_sum_right inverse_mult_distrib divide_inverse_commute)
+      using nice_ordered_field_class.pos_divide_le_eq by blast
+  qed
+  then show ?thesis
+    using True by (auto simp add: kraus_family_def kraus_family_scale_def) 
+next
+  case False
+  then show ?thesis
+    apply (subst kraus_family_scale_neg)
+    by auto
+qed
 
 lemma sandwich_scaleC_left: \<open>sandwich (c *\<^sub>C e) = (cmod c)^2 *\<^sub>C sandwich e\<close>
   by (auto intro!: cblinfun_eqI simp: sandwich_apply cnj_x_x abs_complex_def)
@@ -546,9 +997,6 @@ lemma sandwich_tc_scaleC_left: \<open>sandwich_tc (c *\<^sub>C e) = (cmod c)^2 *
 
 lemma sandwich_tc_scaleR_left: \<open>sandwich_tc (r *\<^sub>R e) = r^2 *\<^sub>R sandwich_tc e\<close>
   by (simp add: scaleR_scaleC sandwich_tc_scaleC_left flip: of_real_power)
-
-lemma scaleC_scaleR_commute: \<open>a *\<^sub>C b *\<^sub>R x = b *\<^sub>R a *\<^sub>C x\<close> for x :: \<open>_::complex_normed_vector\<close>
-  by (simp add: scaleR_scaleC scaleC_left_commute)
 
 lemma kraus_family_scale_map:
   assumes \<open>r \<ge> 0\<close>
@@ -578,10 +1026,6 @@ next
   finally show ?thesis
     by -
 qed
-
-lemma kraus_family_scale_neg: \<open>kraus_family_scale r = (\<lambda>_. 0)\<close> if \<open>r \<le> 0\<close>
-  using that by (auto intro!: ext simp add: kraus_family_scale_def)
-
 
 instantiation kraus_map :: (chilbert_space, chilbert_space) \<open>{zero,plus,scaleR}\<close> begin
 lift_definition zero_kraus_map :: \<open>('a,'b) kraus_map\<close> is \<open>\<lambda>_. 0::nat\<close>
