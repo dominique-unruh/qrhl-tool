@@ -60,7 +60,27 @@ setup_lifting type_definition_oracle_program
 lift_definition oracle_program_from_program :: \<open>program \<Rightarrow> oracle_program\<close> is id
   by (simp add: valid_program.simps)
 
-lift_definition block :: \<open>program list \<Rightarrow> program\<close> is
+lift_definition seq :: \<open>program \<Rightarrow> program \<Rightarrow> program\<close> is Seq
+proof -
+  fix p q
+  assume assms: \<open>p \<in> Collect valid_program\<close> \<open>q \<in> Collect valid_program\<close>
+  have \<open>valid_oracle_program (Seq p q)\<close>
+    using assms by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
+  moreover have \<open>oracle_number (Seq p q) = 0\<close>
+    using assms by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
+  ultimately show \<open>Seq p q \<in> Collect valid_program\<close>
+    by (simp add: valid_oracle_program_valid_program.intros)
+qed
+
+lift_definition skip :: program is Skip
+  by (auto intro!: valid_oracle_program_valid_program.intros)
+
+fun block :: \<open>program list \<Rightarrow> program\<close> where
+  \<open>block [] = skip\<close>
+| \<open>block [p] = p\<close>
+| \<open>block (p#ps) = seq p (block ps)\<close>
+
+(* lift_definition block :: \<open>program list \<Rightarrow> program\<close> is
   \<open>\<lambda>ps. fold Seq ps Skip\<close>
 proof -
   fix ps
@@ -87,7 +107,7 @@ proof -
   qed
   then show \<open>fold Seq ps Skip \<in> Collect valid_program\<close>
     by (simp add: valid_program.simps)
-qed
+qed *)
 
 lift_definition sample :: \<open>'a cvariable \<Rightarrow> 'a distr expression \<Rightarrow> program\<close> is
   \<open>\<lambda>X e. Sample (\<lambda>m::cl. map_distr (\<lambda>x. setter X x m) (e m))\<close>
@@ -177,13 +197,14 @@ lemma localvars_empty: "localvars empty_cregister empty_qregister P = block P"
   sorry
 
 lemma singleton_block: "block [P] = P"
-  sorry
-
+  by simp
+                                                              
 type_synonym program_state = \<open>(cl,qu) cq_operator\<close>
 
 fun denotation_raw :: "raw_program \<Rightarrow> program_state \<Rightarrow> program_state" where
   denotation_raw_Skip: \<open>denotation_raw Skip \<rho> = \<rho>\<close>
 | denotation_raw_Seq: \<open>denotation_raw (Seq c d) \<rho> = denotation_raw d (denotation_raw c \<rho>)\<close>
+| denotation_raw_Sample: \<open>denotation_raw (Sample e) \<rho> = cq_operator_cases (\<lambda>c \<rho>. cq_from_distrib (e c) \<rho>) \<rho>\<close>
 (* TODO missing cases *)
 
 lift_definition denotation :: "program \<Rightarrow> program_state \<Rightarrow> program_state" is denotation_raw.
@@ -208,12 +229,23 @@ proof -
   qed
 qed
 
-lemma denotation_block: "denotation (block ps) = foldr denotation ps"
-  apply transfer
-  subgoal for ps
-    apply (induction ps rule:rev_induct)
-    by (auto intro!: ext)
-  done
+lemma denotation_sample: \<open>denotation (sample x e) \<rho> = cq_operator_cases (\<lambda>c \<rho>. 
+  cq_from_distrib (map_distr (\<lambda>z. setter x z c) (e c)) \<rho>) \<rho>\<close>
+  by (simp add: denotation.rep_eq sample.rep_eq)
+
+lemma denotation_assign: \<open>denotation (assign x e) \<rho> = cq_operator_cases (\<lambda>c \<rho>.
+  deterministic_cq (setter x (e c) c) \<rho>) \<rho>\<close>
+  by (simp add: assign_def denotation_sample cq_from_distrib_point_distr)
+
+lemma denotation_skip: \<open>denotation skip = id\<close>
+  apply transfer by (auto intro!: ext)
+
+lemma denotation_seq: \<open>denotation (seq p q) = denotation q o denotation p\<close>
+  apply transfer by (auto intro!: ext)
+
+lemma denotation_block: "denotation (block ps) = fold denotation ps"
+  apply (induction ps rule:block.induct)
+  by (auto intro!: ext simp: denotation_skip denotation_seq)
 
 definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" where
   "probability e p \<rho> = Prob (program_state_distrib (denotation p \<rho>)) (Collect e)"
@@ -225,6 +257,7 @@ hide_const probability_syntax *)
 lemma probability_sample: 
   "probability (expression m f) (block [sample m (const_expression D)]) rho
   = Prob D (Collect f)"
+  apply (simp add: probability_def)
   sorry
 
 lemma equal_until_bad: 

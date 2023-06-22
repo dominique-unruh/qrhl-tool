@@ -1,5 +1,5 @@
 theory CQ_Operators
-  imports Tensor_Product.Trace_Class Registers2.Missing_Bounded_Operators
+  imports Tensor_Product.Trace_Class Registers2.Missing_Bounded_Operators Discrete_Distributions
 begin
 
 typedef ('a,'b) cq_operator = \<open>{f :: 'a \<Rightarrow> ('b ell2, 'b ell2) trace_class. f abs_summable_on UNIV}\<close>
@@ -272,5 +272,41 @@ proof intro_classes
         intro!: cq_operator_at_inject[THEN iffD1] ext antisym)
 qed
 end
+
+lift_definition cq_operator_cases :: \<open>('cin \<Rightarrow> ('qin ell2, 'qin ell2) trace_class \<Rightarrow> ('cout,'qout) cq_operator)
+                                    \<Rightarrow> ('cin,'qin) cq_operator \<Rightarrow> ('cout,'qout) cq_operator\<close> is
+\<open>\<lambda>(f::'cin \<Rightarrow> ('qin ell2, 'qin ell2) trace_class \<Rightarrow> ('cout \<Rightarrow> ('qout ell2, 'qout ell2) trace_class))
+ (cqin::'cin \<Rightarrow> ('qin ell2, 'qin ell2) trace_class) 
+ (cout::'cout). (\<Sum>\<^sub>\<infinity>cin::'cin. f cin (cqin cin) cout)\<close>
+proof -
+  fix f :: \<open>'cin \<Rightarrow> ('qin ell2, 'qin ell2) trace_class \<Rightarrow> ('cout \<Rightarrow> ('qout ell2, 'qout ell2) trace_class)\<close>
+  fix cqin :: \<open>'cin \<Rightarrow> ('qin ell2, 'qin ell2) trace_class\<close>
+  assume \<open>f cin qin abs_summable_on UNIV\<close> for cin qin
+  assume \<open>cqin abs_summable_on UNIV\<close>
+  have \<open>(\<lambda>(cout,cin). f cin (cqin cin) cout) abs_summable_on UNIV \<times> UNIV\<close>
+    (* by x *)
+    sorry
+  then show \<open>(\<lambda>cout. \<Sum>\<^sub>\<infinity>cin. f cin (cqin cin) cout) abs_summable_on UNIV\<close>
+    unfolding abs_summable_on_Sigma_iff
+    apply auto
+    sorry
+qed
+
+lift_definition cq_from_distrib :: \<open>'c distr \<Rightarrow> ('q ell2, 'q ell2) trace_class \<Rightarrow> ('c,'q) cq_operator\<close> is
+  \<open>\<lambda>(\<mu>::'c distr) (\<rho>::('q ell2, 'q ell2) trace_class) x. prob \<mu> x *\<^sub>R \<rho>\<close>
+  by (intro abs_summable_on_scaleR_left prob_abs_summable)
+
+lift_definition deterministic_cq :: \<open>'c \<Rightarrow> ('q ell2, 'q ell2) trace_class \<Rightarrow> ('c,'q) cq_operator\<close> is
+  \<open>\<lambda>(x::'c) (\<rho>::('q ell2, 'q ell2) trace_class) y. of_bool (x=y) *\<^sub>R \<rho>\<close>
+proof (rename_tac c \<rho>)
+  fix c :: 'c and \<rho> :: \<open>('q ell2, 'q ell2) trace_class\<close>
+  show \<open>(\<lambda>x. of_bool (c = x) *\<^sub>R \<rho>) abs_summable_on UNIV\<close>
+    apply (rule summable_on_cong_neutral[where T=\<open>{c}\<close>, THEN iffD2])
+    by auto
+qed
+
+lemma cq_from_distrib_point_distr: \<open>cq_from_distrib (point_distr x) \<rho> = deterministic_cq x \<rho>\<close>
+  apply (rule cq_operator_at_inject[THEN iffD1])
+  by (auto simp add: cq_from_distrib.rep_eq deterministic_cq.rep_eq)
 
 end

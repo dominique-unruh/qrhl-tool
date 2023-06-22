@@ -542,9 +542,9 @@ proof (rule clinearI)
     by (auto simp: scaleC_ell2.rep_eq simp flip: Rep_ell2_inject)
 qed
 
-lemma [code]: \<open>vec_of_ell2 (Abs_ell2 f) = vec CARD('a) (\<lambda>n. f (enum_nth n))\<close> for f :: \<open>'a::eenum \<Rightarrow> complex\<close>
+lemma Abs_ell2_code[code]: \<open>vec_of_ell2 (Abs_ell2 f) = vec CARD('a) (\<lambda>n. f (enum_nth n))\<close> for f :: \<open>'a::eenum \<Rightarrow> complex\<close>
   by (auto simp: vec_of_ell2_def vec_eq_iff vec_of_basis_enum_ell2_component)
-lemma [code]: \<open>Rep_ell2 \<psi> i = vec_of_ell2 \<psi> $ (enum_index i)\<close> for i :: \<open>'a::eenum\<close>
+lemma Rep_ell2_code[code]: \<open>Rep_ell2 \<psi> i = vec_of_ell2 \<psi> $ (enum_index i)\<close> for i :: \<open>'a::eenum\<close>
   by (auto simp: vec_of_ell2_def vec_eq_iff vec_of_basis_enum_ell2_component)
 
 lemma permute_and_tensor1_mat_cong[cong]: 
@@ -2864,6 +2864,22 @@ lemma abs_summable_on_scaleC_right [intro]:
    apply simp
   by (auto intro!: summable_on_cmult_right assms simp: norm_scaleC)
 
+
+lemma abs_summable_on_scaleR_left [intro]:
+  fixes c :: \<open>'a :: real_normed_vector\<close>
+  assumes "c \<noteq> 0 \<Longrightarrow> f abs_summable_on A"
+  shows   "(\<lambda>x. f x *\<^sub>R c) abs_summable_on A"
+  apply (cases \<open>c = 0\<close>)
+   apply simp
+  by (auto intro!: summable_on_cmult_left assms simp flip: real_norm_def)
+
+lemma abs_summable_on_scaleR_right [intro]:
+  fixes f :: \<open>'a \<Rightarrow> 'b :: real_normed_vector\<close>
+  assumes "c \<noteq> 0 \<Longrightarrow> f abs_summable_on A"
+  shows   "(\<lambda>x. c *\<^sub>R f x) abs_summable_on A"
+  apply (cases \<open>c = 0\<close>)
+   apply simp
+  by (auto intro!: summable_on_cmult_right assms)
 
 (* TODO replace original *) thm norm_leq_trace_norm
 lemma norm_leq_trace_norm: \<open>norm t \<le> trace_norm t\<close> if \<open>trace_class t\<close> 

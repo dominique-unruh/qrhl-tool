@@ -117,32 +117,30 @@ proof (transfer, auto simp: is_distribution_def)
     by simp 
 qed
 
-lift_definition uniform :: "'a set \<Rightarrow> 'a distr" is "\<lambda>M. (\<lambda>m. if m\<in>M then 1/card M else 0)"
+lift_definition uniform :: "'a set \<Rightarrow> 'a distr" is "\<lambda>M. (\<lambda>m. of_bool (m\<in>M) / card M)"
 proof (rename_tac M, auto simp: is_distribution_def)
   fix M :: "'a set" and x :: 'a
-  have "(\<Sum>m\<in>F. if m \<in> M then 1 / real (card M) else 0) \<le> 1" if "finite F" for F
+  have "(\<Sum>m\<in>F. of_bool (m \<in> M) / real (card M)) \<le> 1" if "finite F" for F
   proof (cases "finite M")
     case True
     show ?thesis
-      apply (subst sum.inter_restrict[symmetric, OF that])
-      apply simp
-      by (metis Int_lower2 True card_mono divide_le_eq_1 neq0_conv of_nat_0_less_iff of_nat_eq_0_iff of_nat_le_iff)
+      apply (subst sum.mono_neutral_cong_right[where S=\<open>F \<inter> M\<close>])
+      by (auto simp: that True card_mono divide_le_eq_1 less_le)
   next
     case False
     show ?thesis
       apply (subst card.infinite[OF False])
-      apply (rewrite asm_rl[of "1/real 0 = 0"]) apply auto[1]
+      apply (rewrite asm_rl[of "_/real 0 = 0"])
       by auto
-  qed
-  then show "(\<lambda>m. if m \<in> M then 1 / real (card M) else 0) summable_on UNIV"
-    and "(\<Sum>\<^sub>\<infinity>m. if m \<in> M then 1 / real (card M) else 0) \<le> 1"
+  qed 
+  then show "(\<lambda>m. of_bool (m \<in> M) / real (card M)) summable_on UNIV"
+    and "(\<Sum>\<^sub>\<infinity>m. of_bool (m \<in> M) / real (card M)) \<le> 1"
     by (simp_all add: distr_summable_on distr_infsum)
 qed
 
 
 lemma supp_uniform [simp]: "M \<noteq> {} \<Longrightarrow> finite M \<Longrightarrow> supp (uniform M) = M" for M :: "'a set"
-  apply transfer apply auto
-  using card_gt_0_iff by blast
+  apply transfer by (auto simp: card_gt_0_iff)
 
 lemma uniform_infinite: "infinite M \<Longrightarrow> uniform M = 0"
   apply transfer by auto
@@ -244,7 +242,7 @@ proof -
   proof (transfer fixing: M)
     from that have "(\<Sum>\<^sub>\<infinity>x\<in>M. 1 / real (card M)) = 1"
       by simp
-    then show "(\<Sum>\<^sub>\<infinity>m. if m \<in> M then 1 / real (card M) else 0) = 1"
+    then show "(\<Sum>\<^sub>\<infinity>m. of_bool (m \<in> M) / real (card M)) = 1"
       by (subst infsum_cong_neutral[where T=M], auto)
   qed
   ultimately show ?thesis
@@ -348,7 +346,7 @@ proof (cases "finite A", transfer fixing: f A B, rule ext)
     using bij_betw_finite by blast
   from bij have cardAB[simp]: "card A = card B"
     using bij_betw_same_card by blast
-  show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {x}. if m \<in> A then 1 / real (card A) else 0) = (if x \<in> B then 1 / real (card B) else 0)" 
+  show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {x}. of_bool (m \<in> A) / real (card A)) = (of_bool (x \<in> B) / real (card B))" 
      (is "?lhs = ?rhs")
   proof (cases "x \<in> B")
     case True
@@ -577,7 +575,7 @@ proof -
     using sumf sumg leq' summable_on_iff_abs_summable_on_real by auto
 qed
 
-lemma prob_uniform[simp]: "prob (uniform M) m = (if m\<in>M then 1/card M else 0)"
+lemma prob_uniform[simp]: "prob (uniform M) m = of_bool (m \<in> M) / card M"
   apply transfer by simp
 
 abbreviation "point_distr x \<equiv> uniform {x}"
@@ -737,9 +735,13 @@ lemma bind_distr_summable: "(\<lambda>y. prob \<mu> y * prob (f y) x) summable_o
 lemma prob_geq_0[simp]: "prob \<mu> f \<ge> 0"
   apply transfer by (auto simp: is_distribution_def)
 
-lemma prob_abs_summable: "prob \<mu> summable_on UNIV"
+lemma prob_summable: "prob \<mu> summable_on UNIV"
   apply transfer unfolding is_distribution_def
   using distr_summable_on by blast
+
+lemma prob_abs_summable[simp]: \<open>prob \<mu> abs_summable_on UNIV\<close>
+  apply transfer
+  by (auto simp: is_distribution_def)
 
 lemma supp_prob: "x \<in> supp \<mu> \<longleftrightarrow> prob \<mu> x > 0"
   apply transfer by auto
@@ -1073,11 +1075,11 @@ lemma bind_distr_point_distr[simp]: "bind_distr D point_distr = D"
 proof (transfer, rule ext)
   fix D :: "'a \<Rightarrow> real" and x :: 'a
   assume "is_distribution D"
-  have "(\<Sum>\<^sub>\<infinity>y. D y * (if x \<in> {y} then 1 / real (card {y}) else 0)) = (\<Sum>\<^sub>\<infinity>y\<in>{x}. D y)"
+  have "(\<Sum>\<^sub>\<infinity>y. D y * (of_bool (x \<in> {y}) / real (card {y}))) = (\<Sum>\<^sub>\<infinity>y\<in>{x}. D y)"
     apply (rule infsum_cong_neutral) by auto
   also have "\<dots> = D x"
     by auto
-  finally show "(\<Sum>\<^sub>\<infinity>y. D y * (if x \<in> {y} then 1 / real (card {y}) else 0)) = D x"
+  finally show "(\<Sum>\<^sub>\<infinity>y. D y * (of_bool (x \<in> {y}) / real (card {y}))) = D x"
     by simp
 qed
 
@@ -1448,7 +1450,7 @@ proof (cases "finite A")
       using regular_betw_finite by blast
     from reg_n have cardAB[simp]: "card A = n * card B"
       using regular_betw_n_card by blast
-    show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. if m \<in> A then 1 / real (card A) else 0) = (if y \<in> B then 1 / real (card B) else 0)" 
+    show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. of_bool (m \<in> A) / real (card A)) = of_bool (y \<in> B) / real (card B)" 
       (is "?lhs = ?rhs") for y
     proof (cases "y \<in> B")
       case True
@@ -1705,7 +1707,7 @@ lemma map_distr_point_distr[simp]:
   "map_distr f (point_distr x) = point_distr (f x)"
 proof (transfer fixing: f, rule ext, rename_tac x y)
   fix x y
-  have "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. if m \<in> {x} then 1 / real (card {x}) else 0)
+  have "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. of_bool (m \<in> {x}) / real (card {x}))
       = (\<Sum>\<^sub>\<infinity>m\<in>{m. m=x \<and> f m = y}. if m=x then 1 else 0)"
     by (rule infsum_cong_neutral, auto)
   also have "\<dots> = (if f x = y then 1 else 0)"
@@ -1713,9 +1715,9 @@ proof (transfer fixing: f, rule ext, rename_tac x y)
      apply auto
     apply (subst asm_rl[of \<open>{m. m = x \<and> f m = f x} = {x}\<close>])
     by auto
-  also have "\<dots> = (if y \<in> {f x} then 1 / real (card {f x}) else 0)"
+  also have "\<dots> = of_bool (y \<in> {f x}) / real (card {f x})"
     by auto
-  finally show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. if m \<in> {x} then 1 / real (card {x}) else 0) = (if y \<in> {f x} then 1 / real (card {f x}) else 0)"
+  finally show "(\<Sum>\<^sub>\<infinity>m\<in>f -` {y}. of_bool (m \<in> {x}) / real (card {x})) = of_bool (y \<in> {f x}) / real (card {f x})"
     by -
 qed
 
@@ -1758,10 +1760,8 @@ lemma markov_inequality:
   assumes "a > 0"
   shows "Prob \<mu> {a..} \<le> expectation \<mu> / a"
 proof -
-  have [simp]: "(\<lambda>x. prob \<mu> x) abs_summable_on A" for A
-    by (metis prob_abs_summable summable_on_iff_abs_summable_on_real summable_on_subset_banach top_greatest)
-  then have [simp]: "(\<lambda>x. prob \<mu> x * a) abs_summable_on A" for A
-    by (metis summable_on_cmult_left summable_on_iff_abs_summable_on_real)
+  have [simp]: "(\<lambda>x. prob \<mu> x * a) abs_summable_on A" for A
+    by (metis prob_summable UNIV_I subsetI summable_on_cmult_left summable_on_iff_abs_summable_on_real summable_on_subset_banach)
   from exp_ex have exp_ex[simp]: "(\<lambda>x. prob \<mu> x * x) abs_summable_on A" for A
     unfolding expectation_exists.rep_eq
     apply auto
@@ -1784,13 +1784,13 @@ proof -
     by (metis linorder_not_le mult_less_0_iff prob_geq_0)
   also have "\<dots> \<ge> (\<Sum>\<^sub>\<infinity>x\<in>{a..}. prob \<mu> x * a)" (is "_ \<ge> \<dots>")
     apply (rule infsum_mono)
-    apply (metis prob_abs_summable summable_on_cmult_left summable_on_subset_banach top_greatest)
+    apply (metis prob_summable summable_on_cmult_left summable_on_subset_banach top_greatest)
     using exp_ex summable_on_iff_abs_summable_on_real apply blast
     apply (rule mult_left_mono)
     by auto
   moreover have "\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>{a..}. prob \<mu> x) * a"
     apply (rule infsum_cmult_left)
-    by (meson prob_abs_summable subset_UNIV summable_on_subset_banach)
+    by (meson prob_summable subset_UNIV summable_on_subset_banach)
   moreover have "\<dots> = Prob \<mu> {a..} * a"
     apply transfer by simp
   ultimately have "expectation \<mu> \<ge> \<dots>"
