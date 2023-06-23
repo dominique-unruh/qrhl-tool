@@ -2,11 +2,6 @@ theory Squash_Sampling
   imports Programs Relational_Hoare
 begin
 
-(* TODO move *)
-lemma assign_sample:
-  shows "denotation (assign Q e) = denotation (sample Q (\<lambda>m. point_distr (e m)))"
-  sorry
-
 lemma squash_sampling: 
   fixes Q R d e
   assumes \<open>ccompatible Q R\<close>
@@ -26,7 +21,7 @@ lemma squash_sampling_assign:
 proof -
   have \<open>denotation (block [sample Q d, assign R e])
       = denotation (block [sample Q d, sample R (\<lambda>m. point_distr (e m))])\<close>
-    by (auto simp: denotation_block assign_sample)
+    by (auto simp: o_def denotation_block assign_def)
   also have \<open>\<dots> = denotation (sample \<lbrakk>Q,R\<rbrakk>\<^sub>c de)\<close>
     by (simp add: squash_sampling assms)
   finally show ?thesis
@@ -43,7 +38,7 @@ lemma squash_assign_sampling:
 proof -
   have \<open>denotation (block [assign Q d, sample R e])
       = denotation (block [sample Q (\<lambda>m. point_distr (d m)), sample R e])\<close>
-    by (auto simp: denotation_block assign_sample)
+    by (auto simp: denotation_block assign_def o_def)
   also have \<open>\<dots> = denotation (sample \<lbrakk>Q,R\<rbrakk>\<^sub>c de)\<close>
     by (simp add: squash_sampling assms Let_def)
   finally show ?thesis
@@ -60,9 +55,9 @@ lemma squash_assign:
 proof -
   have \<open>denotation (block [assign Q d, assign R e])
       = denotation (block [sample Q (\<lambda>m. point_distr (d m)), sample R (\<lambda>m. point_distr (e m))])\<close>
-    by (auto simp: denotation_block assign_sample)
+    by (auto simp: denotation_block assign_def o_def)
   also have \<open>\<dots> = denotation (assign \<lbrakk>Q,R\<rbrakk>\<^sub>c de)\<close>
-    by (simp add: squash_sampling assms assign_sample Let_def)
+    by (simp add: squash_sampling assms assign_def Let_def o_def)
   finally show ?thesis
     by -
 qed
@@ -272,8 +267,6 @@ proof -
   with qrhl show ?thesis
     using qrhl_denotation_replace by blast 
 qed *)
-
-thm squash_sampling squash_sampling_assign squash_assign_sampling squash_assign
 
 ML \<open>
 structure Squash_Sampling = struct

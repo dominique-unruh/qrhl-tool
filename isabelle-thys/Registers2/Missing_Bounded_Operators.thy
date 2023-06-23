@@ -1176,7 +1176,7 @@ proof (unfold commutant'_def, rule subsetI, rule IntI)
       then have \<open>(tensor_ell2_right (ket i))* o\<^sub>C\<^sub>L c o\<^sub>C\<^sub>L (inflation_op (replicate n a) o\<^sub>C\<^sub>L tensor_ell2_right (ket j))
                = (inflation_op (replicate n (a*)) o\<^sub>C\<^sub>L (tensor_ell2_right (ket i)))* o\<^sub>C\<^sub>L c o\<^sub>C\<^sub>L tensor_ell2_right (ket j)\<close>
         apply (simp add: inflation_op_adj)
-        by (metis (no_types, lifting) Misc.lift_cblinfun_comp(2))
+        by (metis (no_types, lifting) lift_cblinfun_comp(2))
       then show ?thesis
         apply (subst (asm) inflation_op_compose_tensor_ell2_right)
           apply (simp, simp add: that)
@@ -1283,11 +1283,11 @@ next
     show \<open>inflation_op (replicate n b) *\<^sub>S M \<le> M\<close>
     proof -
       have \<open>inflation_op (replicate n b) *\<^sub>S M = (inflation_op (replicate n b) o\<^sub>C\<^sub>L Proj M) *\<^sub>S \<top>\<close>
-        by (metis Misc.lift_cblinfun_comp(3) Proj_range)
+        by (metis lift_cblinfun_comp(3) Proj_range)
       also have \<open>\<dots> = (Proj M o\<^sub>C\<^sub>L inflation_op (replicate n b)) *\<^sub>S \<top>\<close>
         by (simp add: * )
       also have \<open>\<dots> \<le> M\<close>
-        by (metis Misc.lift_cblinfun_comp(3) Proj_image_leq)
+        by (metis lift_cblinfun_comp(3) Proj_image_leq)
       finally show ?thesis
         by -
     qed
@@ -1323,7 +1323,7 @@ lemma sandwich_arg_compose:
   assumes \<open>isometry U\<close>
   shows \<open>sandwich U x o\<^sub>C\<^sub>L sandwich U y = sandwich U (x o\<^sub>C\<^sub>L y)\<close>
   apply (simp add: sandwich_apply)
-  by (metis (no_types, lifting) Misc.lift_cblinfun_comp(2) assms cblinfun_compose_id_right isometryD)
+  by (metis (no_types, lifting) lift_cblinfun_comp(2) assms cblinfun_compose_id_right isometryD)
 
 lemma double_commutant_theorem_aux2:
   \<comment> \<open>Basically the double commutant theorem, except that we restricted to spaces of typeclass \<^class>\<open>not_singleton\<close>\<close>
@@ -1355,7 +1355,7 @@ proof -
   then have \<open>sandwich ell2_to_hilbert ` commutant (commutant A') = sandwich ell2_to_hilbert ` (cstrong_operator_topology closure_of A')\<close>
     by simp
   then show ?thesis
-    by (simp add: A'_def unitary_ell2_to_hilbert sandwich_unitary_complement image_image
+    by (simp add: A'_def unitary_ell2_to_hilbert sandwich_unitary_commutant image_image
         sandwich_compose homeo
         flip: cblinfun_apply_cblinfun_compose
         homeomorphic_map_closure_of[where Y=cstrong_operator_topology])
@@ -1431,7 +1431,7 @@ proof -
   have \<open>commutant (range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)) = commutant (sandwich swap_ell2 ` range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun))\<close>
     by (metis (no_types, lifting) image_cong range_composition swap_tensor_op_sandwich)
   also have \<open>\<dots> = sandwich swap_ell2 ` commutant (range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun))\<close>
-    by (simp add: sandwich_unitary_complement)
+    by (simp add: sandwich_unitary_commutant)
   also have \<open>\<dots> = sandwich swap_ell2 ` range (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a)\<close>
     by (simp add: commutant_tensor1)
   also have \<open>\<dots> = range (\<lambda>b. b \<otimes>\<^sub>o id_cblinfun)\<close>
@@ -1921,7 +1921,7 @@ proof -
     = commutant (commutant (sandwich swap_ell2 ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
     by (simp add: swap_tensor_op_sandwich image_image)
   also have \<open>\<dots> = sandwich swap_ell2 ` commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
-    by (simp add: sandwich_unitary_complement)
+    by (simp add: sandwich_unitary_commutant)
   also have \<open>\<dots> = sandwich swap_ell2 ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` commutant (commutant X)\<close>
     by (simp add: amplification_double_commutant_commute)
   also have \<open>\<dots> = (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) `  commutant (commutant X)\<close>
@@ -1962,7 +1962,7 @@ lemma tensor_vn_one_one[simp]: \<open>one_algebra \<otimes>\<^sub>v\<^sub>N one_
   by (simp add: commutant_one_algebra commutant_UNIV flip: one_algebra_def)
 
 lemma sandwich_swap_tensor_vn: \<open>sandwich swap_ell2 ` (X \<otimes>\<^sub>v\<^sub>N Y) = Y \<otimes>\<^sub>v\<^sub>N X\<close>
-  by (simp add: tensor_vn_def sandwich_unitary_complement image_Un image_image Un_commute)
+  by (simp add: tensor_vn_def sandwich_unitary_commutant image_Un image_image Un_commute)
 
 lemma tensor_vn_one_left: \<open>one_algebra \<otimes>\<^sub>v\<^sub>N X = (\<lambda>x. id_cblinfun \<otimes>\<^sub>o x) ` X\<close> if \<open>von_neumann_algebra X\<close>
 proof -

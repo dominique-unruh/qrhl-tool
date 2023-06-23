@@ -43,7 +43,7 @@ lemma semi_classical_search:
   sorry
 
 lemmas semi_classical_search' = semi_classical_search[where localsC="empty_cregister" and localsQ="empty_qregister", 
-    unfolded localvars_empty[of "[_]", unfolded singleton_block]]
+    unfolded localvars_empty[of "[_]", unfolded block_single]]
 
 ML \<open>
 structure Semi_Classical_Search = struct

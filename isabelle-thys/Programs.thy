@@ -76,9 +76,9 @@ lift_definition skip :: program is Skip
   by (auto intro!: valid_oracle_program_valid_program.intros)
 
 fun block :: \<open>program list \<Rightarrow> program\<close> where
-  \<open>block [] = skip\<close>
-| \<open>block [p] = p\<close>
-| \<open>block (p#ps) = seq p (block ps)\<close>
+  block_empty[simp del]: \<open>block [] = skip\<close>
+| block_single[simp del]: \<open>block [p] = p\<close>
+| block_cons[simp del]: \<open>block (p#ps) = seq p (block ps)\<close>
 
 (* lift_definition block :: \<open>program list \<Rightarrow> program\<close> is
   \<open>\<lambda>ps. fold Seq ps Skip\<close>
@@ -196,9 +196,6 @@ lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CREGISTER_o
 lemma localvars_empty: "localvars empty_cregister empty_qregister P = block P"
   sorry
 
-lemma singleton_block: "block [P] = P"
-  by simp
-                                                              
 type_synonym program_state = \<open>(cl,qu) cq_operator\<close>
 
 fun denotation_raw :: "raw_program \<Rightarrow> program_state \<Rightarrow> program_state" where
@@ -245,7 +242,7 @@ lemma denotation_seq: \<open>denotation (seq p q) = denotation q o denotation p\
 
 lemma denotation_block: "denotation (block ps) = fold denotation ps"
   apply (induction ps rule:block.induct)
-  by (auto intro!: ext simp: denotation_skip denotation_seq)
+  by (auto intro!: ext simp: denotation_skip denotation_seq block.simps)
 
 definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" where
   "probability e p \<rho> = Prob (program_state_distrib (denotation p \<rho>)) (Collect e)"

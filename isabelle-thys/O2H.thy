@@ -41,7 +41,7 @@ lemma o2h:
   sorry
 
 lemmas o2h' = o2h[where localsC="empty_cregister" and localsQ="empty_qregister", 
-        unfolded localvars_empty[of "[_]", unfolded singleton_block]]
+        unfolded localvars_empty[of "[_]", unfolded block_single]]
 
 ML \<open>
 structure O2H = struct

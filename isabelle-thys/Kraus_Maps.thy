@@ -205,7 +205,7 @@ proof -
   have [simp]: \<open>P* = P\<close>
     by (simp add: P_def adj_Proj)
   have Aa_aA: \<open>A o\<^sub>C\<^sub>L a = a o\<^sub>C\<^sub>L A\<close>
-    by (metis (full_types) A_def Misc.lift_cblinfun_comp(2) abs_op_def positive_cblinfun_squareI sqrt_op_commute that)
+    by (metis (full_types) A_def lift_cblinfun_comp(2) abs_op_def positive_cblinfun_squareI sqrt_op_commute that)
 
   have \<open>(A-a) \<psi> \<bullet>\<^sub>C (A+a) \<phi> = 0\<close> for \<phi> \<psi>
     by (simp add: adj_minus that \<open>A* = A\<close> aa_AA Aa_aA cblinfun_compose_add_right cblinfun_compose_minus_left

@@ -885,7 +885,7 @@ proof -
         = commutant (commutant (sandwich U ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
       by (simp add: image_image F_decomp)
     also have \<open>\<dots> = sandwich U ` commutant (commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` X))\<close>
-      by (simp add: sandwich_unitary_complement)
+      by (simp add: sandwich_unitary_commutant)
     also have \<open>\<dots> = sandwich U ` (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` commutant (commutant (X))\<close>
       using amplification_double_commutant_commute by blast
     also have \<open>\<dots> = apply_qregister F ` commutant (commutant X)\<close>
