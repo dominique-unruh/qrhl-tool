@@ -441,10 +441,10 @@ lemma apply_qregister_weak_star_continuous[simp]:
   by (auto simp: non_qregister_raw_def[abs_def] weak_star_cont_register)
 
 lemma separating_butterket:
-  \<open>Laws_Quantum.separating TYPE('b) (range (case_prod butterket))\<close>
+  \<open>Laws_Quantum.separating TYPE('b) (range (\<lambda>(x,y). butterfly (ket x) (ket y)))\<close>
 proof -
   thm weak_star_clinear_eq_butterfly_ketI
-  have \<open>F = G\<close> if \<open>\<And>a b. F (butterket a b) = G (butterket a b)\<close> 
+  have \<open>F = G\<close> if \<open>\<And>a b. F (butterfly (ket a) (ket b)) = G (butterfly (ket a) (ket b))\<close> 
     and \<open>Axioms_Quantum.preregister F\<close> and \<open>Axioms_Quantum.preregister G\<close> for F G :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close>
     apply (rule weak_star_clinear_eq_butterfly_ketI[where T=weak_star_topology])
     using that
@@ -484,7 +484,7 @@ proof (rule notI)
     by (auto simp: F_def)
   with sep have \<open>0 = F\<close>
     by (simp add: Laws_Quantum.register_eqI \<open>Axioms_Quantum.preregister 0\<close> \<open>Axioms_Quantum.preregister F\<close>)
-  then have \<open>0 (butterket x x) = F (butterket x x)\<close>
+  then have \<open>0 (butterfly (ket x) (ket x)) = F (butterfly (ket x) (ket x))\<close>
     by simp
   then show False
     by (simp add: F_def)

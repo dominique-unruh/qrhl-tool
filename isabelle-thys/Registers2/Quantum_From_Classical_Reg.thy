@@ -70,15 +70,15 @@ lemma qregister_qregister_of_cregister[simp]: \<open>qregister (qregister_of_cre
 
 lemma qregister_of_cregister_Fst: \<open>qregister_of_cregister cFst = qFst\<close>
 proof -
-  have *: \<open>Rep_ell2 (apply_qregister (qregister_of_cregister cFst) (butterket i j) *\<^sub>V ket x) y =
-       Rep_ell2 (apply_qregister qFst (butterket i j) *\<^sub>V ket x) y\<close> (is \<open>?lhs = ?rhs\<close>)
+  have *: \<open>Rep_ell2 (apply_qregister (qregister_of_cregister cFst) (butterfly (ket i) (ket j)) *\<^sub>V ket x) y =
+       Rep_ell2 (apply_qregister qFst (butterfly (ket i) (ket j)) *\<^sub>V ket x) y\<close> (is \<open>?lhs = ?rhs\<close>)
     for i j :: 'a and x y :: \<open>'a \<times> 'c\<close>
   proof -
     obtain x1 x2 where x12: \<open>x = (x1, x2)\<close> by force
     obtain y1 y2 where y12: \<open>y = (y1, y2)\<close> by force
     have 1: \<open>inj_on fst (Collect (same_outside_cregister cFst x))\<close> for x :: \<open>'a \<times> 'c\<close>
       by (smt (verit) equivp_def equivp_same_outside_cregister getter_cFst inj_onI mem_Collect_eq same_outside_cregister_def)
-    have \<open>?lhs = (if same_outside_cregister cFst y x then Rep_ell2 (butterket i j *\<^sub>V ket x1) y1 else 0)\<close>
+    have \<open>?lhs = (if same_outside_cregister cFst y x then Rep_ell2 (butterfly (ket i) (ket j) *\<^sub>V ket x1) y1 else 0)\<close>
       by (auto intro!: permute_and_tensor1_cblinfun_exists_register simp add: equivp_implies_part_equivp 
           qregister_of_cregister.rep_eq permute_and_tensor1_cblinfun_ket 1 x12 y12)
     also have \<open>\<dots> = ?rhs\<close>
@@ -89,8 +89,8 @@ proof -
     finally show ?thesis
       by -
   qed
-  have \<open>apply_qregister (qregister_of_cregister cFst) (butterket i j) =
-           apply_qregister qFst (butterket i j)\<close> for i j :: 'a
+  have \<open>apply_qregister (qregister_of_cregister cFst) (butterfly (ket i) (ket j)) =
+           apply_qregister qFst (butterfly (ket i) (ket j))\<close> for i j :: 'a
     by (auto intro!: equal_ket Rep_ell2_inject[THEN iffD1] ext simp: * )
   then show ?thesis
     by (auto intro!: apply_qregister_inject[THEN iffD1]
@@ -101,15 +101,15 @@ qed
 
 lemma qregister_of_cregister_Snd: \<open>qregister_of_cregister cSnd = qSnd\<close>
 proof -
-  have *: \<open>Rep_ell2 (apply_qregister (qregister_of_cregister cSnd) (butterket i j) *\<^sub>V ket x) y =
-       Rep_ell2 (apply_qregister qSnd (butterket i j) *\<^sub>V ket x) y\<close> (is \<open>?lhs = ?rhs\<close>)
+  have *: \<open>Rep_ell2 (apply_qregister (qregister_of_cregister cSnd) (butterfly (ket i) (ket j)) *\<^sub>V ket x) y =
+       Rep_ell2 (apply_qregister qSnd (butterfly (ket i) (ket j)) *\<^sub>V ket x) y\<close> (is \<open>?lhs = ?rhs\<close>)
     for i j :: 'a and x y :: \<open>'c \<times> 'a\<close>
   proof -
     obtain x1 x2 where x12: \<open>x = (x1, x2)\<close> by force
     obtain y1 y2 where y12: \<open>y = (y1, y2)\<close> by force
     have 1: \<open>inj_on snd (Collect (same_outside_cregister cSnd x))\<close> for x :: \<open>'c \<times> 'a\<close>
       by (smt (verit) equivp_def equivp_same_outside_cregister getter_cSnd inj_onI mem_Collect_eq same_outside_cregister_def)
-    have \<open>?lhs = (if same_outside_cregister cSnd y x then Rep_ell2 (butterket i j *\<^sub>V ket x2) y2 else 0)\<close>
+    have \<open>?lhs = (if same_outside_cregister cSnd y x then Rep_ell2 (butterfly (ket i) (ket j) *\<^sub>V ket x2) y2 else 0)\<close>
       by (auto intro!: permute_and_tensor1_cblinfun_exists simp add: equivp_implies_part_equivp 
           qregister_of_cregister.rep_eq permute_and_tensor1_cblinfun_ket 1 x12 y12)
     also have \<open>\<dots> = ?rhs\<close>
@@ -120,8 +120,8 @@ proof -
     finally show ?thesis
       by -
   qed
-  have \<open>apply_qregister (qregister_of_cregister cSnd) (butterket i j) =
-           apply_qregister qSnd (butterket i j)\<close> for i j :: 'a
+  have \<open>apply_qregister (qregister_of_cregister cSnd) (butterfly (ket i) (ket j)) =
+           apply_qregister qSnd (butterfly (ket i) (ket j))\<close> for i j :: 'a
     by (auto intro!: equal_ket Rep_ell2_inject[THEN iffD1] ext simp: * )
   then show ?thesis
     by (auto intro!: apply_qregister_inject[THEN iffD1]
@@ -147,14 +147,14 @@ lemma apply_qregister_of_cregister:
 
 lemma apply_qregister_qregister_of_cregister_butterket:
   assumes \<open>cregister F\<close>
-  shows \<open>apply_qregister (qregister_of_cregister F) (butterket x y) (ket z) =
+  shows \<open>apply_qregister (qregister_of_cregister F) (butterfly (ket x) (ket y)) (ket z) =
           of_bool (y = getter F z) *\<^sub>C ket (setter F x z)\<close>
 proof (rule Rep_ell2_inject[THEN iffD1], rule ext)
   fix w
-  have \<open>Rep_ell2 (apply_qregister (qregister_of_cregister F) (butterket x y) *\<^sub>V ket z) w
-      = Rep_ell2 (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) (butterket x y) (ket z)) w\<close>
+  have \<open>Rep_ell2 (apply_qregister (qregister_of_cregister F) (butterfly (ket x) (ket y)) *\<^sub>V ket z) w
+      = Rep_ell2 (permute_and_tensor1_cblinfun (getter F) (same_outside_cregister F) (butterfly (ket x) (ket y)) (ket z)) w\<close>
     using \<open>cregister F\<close> by (simp add: apply_qregister_of_cregister)
-  also have \<open>\<dots> = of_bool (same_outside_cregister F w z) * Rep_ell2 (butterket x y *\<^sub>V ket (getter F z)) (getter F w)\<close>
+  also have \<open>\<dots> = of_bool (same_outside_cregister F w z) * Rep_ell2 (butterfly (ket x) (ket y) *\<^sub>V ket (getter F z)) (getter F w)\<close>
     apply (subst permute_and_tensor1_cblinfun_ket)
      apply (rule permute_and_tensor1_cblinfun_exists)
       apply (simp add: equivp_implies_part_equivp)
@@ -167,7 +167,7 @@ proof (rule Rep_ell2_inject[THEN iffD1], rule ext)
     by (auto simp: same_outside_cregister_def \<open>cregister F\<close>)
   also have \<open>\<dots> = Rep_ell2 (of_bool (y = getter F z) *\<^sub>C ket (setter F x z)) w\<close>
     by (auto simp add: ket.rep_eq zero_ell2.rep_eq)
-  finally show \<open>Rep_ell2 (apply_qregister (qregister_of_cregister F) (butterket x y) *\<^sub>V ket z) w
+  finally show \<open>Rep_ell2 (apply_qregister (qregister_of_cregister F) (butterfly (ket x) (ket y)) *\<^sub>V ket z) w
               = Rep_ell2 (of_bool (y = getter F z) *\<^sub>C ket (setter F x z)) w\<close>
     by -
 qed
@@ -201,18 +201,18 @@ proof (rule iffI)
     using continuous_map_compose[OF apply_qregister_weak_star_continuous[of X] continuous_map_left_comp_weak_star[of B]]
     by (simp add: o_def)
 
-  have *: \<open>apply_qregister (qregister_of_cregister F) (butterket x y) *\<^sub>V apply_qregister (qregister_of_cregister G) (butterket x' y') *\<^sub>V ket z
-      = apply_qregister (qregister_of_cregister G) (butterket x' y') *\<^sub>V apply_qregister (qregister_of_cregister F) (butterket x y) *\<^sub>V ket z\<close>
+  have *: \<open>apply_qregister (qregister_of_cregister F) (butterfly (ket x) (ket y)) *\<^sub>V apply_qregister (qregister_of_cregister G) (butterfly (ket x') (ket y')) *\<^sub>V ket z
+      = apply_qregister (qregister_of_cregister G) (butterfly (ket x') (ket y')) *\<^sub>V apply_qregister (qregister_of_cregister F) (butterfly (ket x) (ket y)) *\<^sub>V ket z\<close>
     for x y x' y' z
     by (auto simp add: apply_qregister_qregister_of_cregister_butterket)
-  have *: \<open>apply_qregister (qregister_of_cregister F) (butterket x y) o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterket x' y')
-      = apply_qregister (qregister_of_cregister G) (butterket x' y') o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) (butterket x y)\<close>
+  have *: \<open>apply_qregister (qregister_of_cregister F) (butterfly (ket x) (ket y)) o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterfly (ket x') (ket y'))
+      = apply_qregister (qregister_of_cregister G) (butterfly (ket x') (ket y')) o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) (butterfly (ket x) (ket y))\<close>
     for x y x' y'
     apply (rule equal_ket)
     using *[of x y x' y']
     by simp
-  have *: \<open>apply_qregister (qregister_of_cregister F) a o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterket x' y')
-      = apply_qregister (qregister_of_cregister G) (butterket x' y') o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) a\<close>
+  have *: \<open>apply_qregister (qregister_of_cregister F) a o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterfly (ket x') (ket y'))
+      = apply_qregister (qregister_of_cregister G) (butterfly (ket x') (ket y')) o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) a\<close>
     for x' y' a
     apply (rule fun_cong[where x=a])
     apply (rule weak_star_clinear_eq_butterfly_ketI)
@@ -241,8 +241,8 @@ next
   have \<open>setter F a (setter G b m) = setter G b (setter F a m)\<close> for a b m
   proof (rule ccontr)
     assume assm: \<open>setter F a (setter G b m) \<noteq> setter G b (setter F a m)\<close>
-    have *: \<open>(apply_qregister (qregister_of_cregister F) (butterket a a') o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterket b b')) *\<^sub>V ket m
-      = (apply_qregister (qregister_of_cregister G) (butterket b b') o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) (butterket a a')) *\<^sub>V ket m\<close>
+    have *: \<open>(apply_qregister (qregister_of_cregister F) (butterfly (ket a) (ket a')) o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister G) (butterfly (ket b) (ket b'))) *\<^sub>V ket m
+      = (apply_qregister (qregister_of_cregister G) (butterfly (ket b) (ket b')) o\<^sub>C\<^sub>L apply_qregister (qregister_of_cregister F) (butterfly (ket a) (ket a'))) *\<^sub>V ket m\<close>
       for a' b'
       by (simp add: compat qcompatible_commute)
     have *: \<open>of_bool (b' = getter G m \<and> a' = getter F (setter G b m)) *\<^sub>C ket (setter F a (setter G b m))
@@ -268,8 +268,8 @@ proof (cases \<open>ccompatible x y\<close>)
   case True
   then have [simp]: \<open>ccompatible x y\<close> \<open>cregister x\<close> \<open>cregister y\<close>
     by (auto simp add: ccompatible_def)
-  have \<open>apply_qregister (qregister_of_cregister (cregister_pair x y)) (butterket k l) *\<^sub>V ket z =
-        apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l) *\<^sub>V ket z\<close> for k l z
+  have \<open>apply_qregister (qregister_of_cregister (cregister_pair x y)) (butterfly (ket k) (ket l)) *\<^sub>V ket z =
+        apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterfly (ket k) (ket l)) *\<^sub>V ket z\<close> for k l z
   proof -
     obtain k1 k2 where [simp]: \<open>k = (k1,k2)\<close>
       by force
@@ -280,8 +280,8 @@ proof (cases \<open>ccompatible x y\<close>)
       by (simp add: apply_qregister_qregister_of_cregister_butterket getter_pair setter_pair
           tensor_ell2_ket tensor_butterfly)
   qed
-  then have \<open>apply_qregister (qregister_of_cregister (cregister_pair x y)) (butterket k l) =
-        apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l
+  then have \<open>apply_qregister (qregister_of_cregister (cregister_pair x y)) (butterfly (ket k) (ket l)) =
+        apply_qregister (qregister_pair (qregister_of_cregister x) (qregister_of_cregister y)) (butterfly (ket k) (ket l))\<close> for k l
     by (simp add: equal_ket)
   then show ?thesis
     apply (rule_tac qregister_eqI_separating[OF separating_butterket])
@@ -303,8 +303,8 @@ proof (cases \<open>cregister x \<and> cregister y\<close>)
   case True
   then have [simp]: \<open>cregister x\<close> \<open>cregister y\<close>
     by (auto simp add: ccompatible_def)
-  have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterket k l) *\<^sub>V ket z =
-        apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l) *\<^sub>V ket z\<close> for k l z
+  have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterfly (ket k) (ket l)) *\<^sub>V ket z =
+        apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterfly (ket k) (ket l)) *\<^sub>V ket z\<close> for k l z
     apply (auto intro!: Rep_ell2_inject[THEN iffD1] ext 
         simp add: apply_qregister_qregister_of_cregister_butterket getter_chain setter_chain)
      apply (auto simp add: apply_qregister_of_cregister permute_and_tensor1_cblinfun_ket
@@ -312,8 +312,8 @@ proof (cases \<open>cregister x \<and> cregister y\<close>)
         scaleC_ell2.rep_eq cinner_ket zero_ell2.rep_eq)
      apply (metis getter_setter_same[OF \<open>cregister x\<close>])
     by (metis getter_setter_same[OF \<open>cregister x\<close>])
-  then have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterket k l) =
-        apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterket k l)\<close> for k l
+  then have \<open>apply_qregister (qregister_of_cregister (cregister_chain x y)) (butterfly (ket k) (ket l)) =
+        apply_qregister (qregister_chain (qregister_of_cregister x) (qregister_of_cregister y)) (butterfly (ket k) (ket l))\<close> for k l
     by (simp add: equal_ket)
   then show ?thesis
     apply (rule_tac qregister_eqI_separating[OF separating_butterket])

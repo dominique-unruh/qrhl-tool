@@ -607,10 +607,10 @@ lemma is_Proj_mproj[simp]: "is_Proj (mproj M i)"
   using mproj[of M] unfolding is_measurement_def by auto
 
 lift_definition computational_basis :: "('a, 'a) measurement" is
-  "\<lambda>i. selfbutterket i"
+  "\<lambda>i. butterfly (ket i) (ket i)"
   by (simp add: is_measurement_def butterfly_is_Proj)
 
-lemma mproj_computational_basis[simp]: "mproj computational_basis x = selfbutterket x"
+lemma mproj_computational_basis[simp]: "mproj computational_basis x = butterfly (ket x) (ket x)"
   unfolding computational_basis.rep_eq by simp
 
 lemma mtotal_computational_basis [simp]: "mtotal computational_basis"

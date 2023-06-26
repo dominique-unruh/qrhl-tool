@@ -578,35 +578,6 @@ lemma triple_map_commutant[simp]: \<open>map_commutant (map_commutant (map_commu
 lemma set_compr_4_image_collect: \<open>{f x y z w |x y z w. P x y z w} = (\<lambda>(x,y,z,w). f x y z w) ` Collect (\<lambda>(x,y,z,w). P x y z w)\<close>
   by (auto simp: image_def)
 
-lemma closedin_vimage:
-  assumes \<open>closedin U S\<close>
-  assumes \<open>continuous_map T U f\<close>
-  shows \<open>closedin T (topspace T \<inter> (f -` S))\<close>
-  by (meson assms(1) assms(2) continuous_map_closedin_preimage_eq)
-
-lemma join_forall: \<open>(\<forall>x. P x) \<and> (\<forall>x. Q x) \<longleftrightarrow> (\<forall>x. P x \<and> Q x)\<close>
-  by auto
-
-lemma closedin_singleton: 
-  assumes \<open>hausdorff T\<close> and \<open>x \<in> topspace T\<close>
-  shows \<open>closedin T {x}\<close>
-proof -
-  obtain U where openU: \<open>openin T (U y)\<close> and x_not_U: \<open>x \<notin> U y\<close> and yU: \<open>y \<in> U y\<close> if \<open>x \<noteq> y\<close> and \<open>y \<in> topspace T\<close> for y
-    apply atomize_elim unfolding join_forall apply (rule choice)
-    using assms(1)[unfolded hausdorff_def, rule_format, OF assms(2)]
-    by auto
-  have \<open>topspace T - {x} = (\<Union>y\<in>topspace T - {x}. U y)\<close>
-    using yU openU x_not_U apply auto
-    using openin_subset by fastforce
-  also have \<open>openin T \<dots>\<close>
-    using openU by fastforce
-  finally have \<open>openin T (topspace T - {x})\<close>
-    by -
-  then show ?thesis
-    using assms(2) closedin_def by blast
-qed
-
-
 lemma option_Sup_insert_None: \<open>{option_Sup {x, None}, None} = {x, None}\<close>
   apply (cases x)
   by (simp_all add: option_Sup_def insert_Diff_if)
@@ -779,84 +750,6 @@ lemma compare_all_eqI: \<open>(\<And>x. a = x \<longleftrightarrow> b = x) \<Lon
 lemma pure_extensional: \<open>(A::'a::{}\<Rightarrow>'b::{}) == B\<close> if \<open>(\<And>x. A x \<equiv> B x)\<close>
   by (tactic \<open>resolve_tac \<^context> [Drule.extensional @{thm that}] 1\<close>)
 
-lemma closedin_if_converge_inside:
-  fixes A :: \<open>'a set\<close>
-  assumes AT: \<open>A \<subseteq> topspace T\<close>
-  assumes xA: \<open>\<And>(F::'a filter) f x. F \<noteq> \<bottom> \<Longrightarrow> limitin T f x F \<Longrightarrow> range f \<subseteq> A \<Longrightarrow> x \<in> A\<close>
-  shows \<open>closedin T A\<close>
-proof (cases \<open>A = {}\<close>)
-  case True
-  then show ?thesis by simp
-next
-  case False
-  then obtain a where \<open>a \<in> A\<close>
-    by auto
-  define Ac where \<open>Ac = topspace T - A\<close>
-  have \<open>\<exists>U. openin T U \<and> x \<in> U \<and> U \<subseteq> Ac\<close> if \<open>x \<in> Ac\<close> for x
-  proof (rule ccontr)
-    assume \<open>\<nexists>U. openin T U \<and> x \<in> U \<and> U \<subseteq> Ac\<close>
-    then have UA: \<open>U \<inter> A \<noteq> {}\<close> if \<open>openin T U\<close>and \<open>x \<in> U\<close> for U
-      by (metis Ac_def Diff_mono Diff_triv openin_subset subset_refl that)
-    have [simp]: \<open>x \<in> topspace T\<close>
-      using that by (simp add: Ac_def)
-
-    define F where \<open>F = nhdsin T x \<sqinter> principal A\<close>
-    have \<open>F \<noteq> \<bottom>\<close>
-      apply (subst filter_eq_iff)
-      apply (auto intro!: exI[of _ \<open>\<lambda>_. False\<close>] simp: F_def eventually_inf eventually_principal
-          eventually_nhdsin)
-      by (meson UA disjoint_iff)
-
-    define f where \<open>f y = (if y\<in>A then y else a)\<close> for y
-    with \<open>a \<in> A\<close> have \<open>range f \<subseteq> A\<close>
-      by force
-
-    have \<open>\<forall>\<^sub>F y in F. f y \<in> U\<close> if \<open>openin T U\<close> and \<open>x \<in> U\<close> for U
-    proof -
-      have \<open>eventually (\<lambda>x. x \<in> U) (nhdsin T x)\<close>
-        using eventually_nhdsin that by fastforce
-      moreover have \<open>\<exists>R. (\<forall>x\<in>A. R x) \<and> (\<forall>x. x \<in> U \<longrightarrow> R x \<longrightarrow> f x \<in> U)\<close>
-        apply (rule exI[of _ \<open>\<lambda>x. x \<in> A\<close>])
-        by (simp add: f_def)
-      ultimately show ?thesis
-        by (auto simp add: F_def eventually_inf eventually_principal)
-    qed
-    then have \<open>limitin T f x F\<close>
-      unfolding limitin_def by simp
-    with \<open>F \<noteq> \<bottom>\<close> \<open>range f \<subseteq> A\<close> xA
-    have \<open>x \<in> A\<close>
-      by simp
-    with that show False
-      by (simp add: Ac_def)
-  qed
-  then have \<open>openin T Ac\<close>
-    apply (rule_tac openin_subopen[THEN iffD2])
-    by simp
-  then show ?thesis
-    by (simp add: Ac_def AT closedin_def)
-qed
-
-
-(* TODO replace  *) thm limitin_closure_of (* with this *)
-lemma limitin_closure_of:
-  assumes limit: \<open>limitin T f c F\<close>
-  assumes in_S: \<open>\<forall>\<^sub>F x in F. f x \<in> S\<close>
-  assumes nontrivial: \<open>\<not> trivial_limit F\<close>
-  shows \<open>c \<in> T closure_of S\<close>
-proof (intro in_closure_of[THEN iffD2] conjI impI allI)
-  from limit show \<open>c \<in> topspace T\<close>
-    by (simp add: limitin_topspace)
-  fix U
-  assume \<open>c \<in> U \<and> openin T U\<close>
-  with limit have \<open>\<forall>\<^sub>F x in F. f x \<in> U\<close>
-    by (simp add: limitin_def)
-  with in_S have \<open>\<forall>\<^sub>F x in F. f x \<in> U \<and> f x \<in> S\<close>
-    by (simp add: eventually_frequently_simps)
-  with nontrivial
-  show \<open>\<exists>y. y \<in> S \<and> y \<in> U\<close>
-    using eventually_happens' by blast
-qed
-
 lemma bij_betw_map_prod:
   assumes \<open>bij_betw f A B\<close>
   assumes \<open>bij_betw g C D\<close>
@@ -864,18 +757,11 @@ lemma bij_betw_map_prod:
   apply (rule bij_betw_byWitness[where f'=\<open>map_prod (inv_into A f) (inv_into C g)\<close>])
   using assms by (auto simp: bij_betw_def)
 
-lemma cmod_mono: \<open>0 \<le> a \<Longrightarrow> a \<le> b \<Longrightarrow> cmod a \<le> cmod b\<close>
-  by (simp add: cmod_Re less_eq_complex_def)
-
 (* Strengthening of Nat.of_nat_0_le_iff: wider type. *)
 lemma of_nat_0_le_iff: \<open>of_nat x \<ge> (0::_::{ordered_ab_semigroup_add,zero_less_one})\<close>
   apply (induction x)
    apply auto
   by (metis add_mono semiring_norm(50) zero_less_one_class.zero_le_one)
-
-lemma not_not_singleton_zero: 
-  \<open>x = 0\<close> if \<open>\<not> class.not_singleton TYPE('a)\<close> for x :: \<open>'a::zero\<close>
-  using that unfolding class.not_singleton_def by auto
 
 lemma bdd_above_mono2:
   assumes \<open>bdd_above (g ` B)\<close>
@@ -883,37 +769,6 @@ lemma bdd_above_mono2:
   assumes \<open>\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x\<close>
   shows \<open>bdd_above (f ` A)\<close>
   by (smt (verit, del_insts) Set.basic_monos(7) assms(1) assms(2) assms(3) basic_trans_rules(23) bdd_above.I2 bdd_above.unfold imageI)
-
-lemma has_sum_mono_neutral_complex:
-  fixes f :: "'a \<Rightarrow> complex"
-  assumes \<open>(f has_sum a) A\<close> and "(g has_sum b) B"
-  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
-  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
-  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
-  shows "a \<le> b"
-proof -
-  have \<open>((\<lambda>x. Re (f x)) has_sum Re a) A\<close>
-    using assms(1) has_sum_Re has_sum_cong by blast
-  moreover have \<open>((\<lambda>x. Re (g x)) has_sum Re b) B\<close>
-    using assms(2) has_sum_Re has_sum_cong by blast
-  ultimately have Re: \<open>Re a \<le> Re b\<close>
-    apply (rule has_sum_mono_neutral)
-    using assms(3-5) by (simp_all add: less_eq_complex_def)
-  have \<open>((\<lambda>x. Im (f x)) has_sum Im a) A\<close>
-    using assms(1) has_sum_Im has_sum_cong by blast
-  then have \<open>((\<lambda>x. Im (f x)) has_sum Im a) (A \<inter> B)\<close>
-    apply (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
-    using assms(3-5) by (auto simp add: less_eq_complex_def)
-  moreover have \<open>((\<lambda>x. Im (g x)) has_sum Im b) B\<close>
-    using assms(2) has_sum_Im has_sum_cong by blast
-  then have \<open>((\<lambda>x. Im (f x)) has_sum Im b) (A \<inter> B)\<close>
-    apply (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
-    using assms(3-5) by (auto simp add: less_eq_complex_def)
-  ultimately have Im: \<open>Im a = Im b\<close>
-    by (rule has_sum_unique)
-  from Re Im show ?thesis
-    using less_eq_complexI by blast
-qed
 
 instance complex :: ordered_complex_vector
   apply intro_classes
@@ -935,6 +790,40 @@ lemma abs_summable_norm:
   assumes \<open>f abs_summable_on A\<close>
   shows \<open>(\<lambda>x. norm (f x)) abs_summable_on A\<close>
   using assms by simp
+
+
+lemma abs_summable_product':
+  fixes x :: "'a \<Rightarrow> 'b::{real_normed_algebra}"
+  assumes "(\<lambda>i. x i) abs_summable_on A"
+    and "(\<lambda>i. y i) abs_summable_on A"
+  shows "(\<lambda>i. x i * y i) abs_summable_on A"
+proof -
+  from assms have \<open>(\<lambda>(i,j). x i * y j) abs_summable_on A \<times> A\<close>
+    by (rule abs_summable_times)
+  then have \<open>(\<lambda>(i,j). x i * y j) abs_summable_on (\<lambda>a. (a,a)) ` A\<close>
+    apply (rule summable_on_subset_banach)
+    by auto
+  then show ?thesis
+    apply (subst (asm) summable_on_reindex)
+    by (auto intro: inj_onI simp: o_def)
+qed
+
+(* TODO move *)
+lemma abs_summable_add:
+  fixes f g :: "'a \<Rightarrow> 'b::real_normed_vector"
+  assumes \<open>f abs_summable_on A\<close>
+  assumes \<open>g abs_summable_on A\<close>
+  shows \<open>(\<lambda>x. f x + g x) abs_summable_on A\<close>
+  apply (rule abs_summable_on_comparison_test[where g=\<open>\<lambda>x. norm (f x) + norm (g x)\<close>])
+  using assms by (auto intro!: summable_on_add simp add: norm_triangle_ineq)
+
+lemma abs_summable_minus:
+  fixes f g :: "'a \<Rightarrow> 'b::real_normed_vector"
+  assumes \<open>f abs_summable_on A\<close>
+  assumes \<open>g abs_summable_on A\<close>
+  shows \<open>(\<lambda>x. f x - g x) abs_summable_on A\<close>
+  using abs_summable_add[where f=f and g=\<open>\<lambda>x. - g x\<close>]
+  using assms by auto
 
 
 end

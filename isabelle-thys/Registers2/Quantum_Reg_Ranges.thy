@@ -270,22 +270,22 @@ proof -
     have \<open>Rep_QREGISTER (QREGISTER_of (qregister_pair F G)) = apply_qregister (qregister_pair F G) ` UNIV\<close>
       by (simp add: QREGISTER_of.rep_eq)
     also have \<open>\<dots> = apply_qregister (qregister_pair F G) ` 
-                    (weak_star_topology closure_of cspan {butterket \<xi> \<eta> |\<xi> \<eta>. True})\<close>
+                    (weak_star_topology closure_of cspan {butterfly (ket \<xi>) (ket \<eta>) |\<xi> \<eta>. True})\<close>
       apply (subst butterkets_weak_star_dense) by simp
     also have \<open>\<dots> \<subseteq> weak_star_topology closure_of 
-                        apply_qregister (qregister_pair F G) ` cspan {butterket \<xi> \<eta> |\<xi> \<eta>. True}\<close>
+                        apply_qregister (qregister_pair F G) ` cspan {butterfly (ket \<xi>) (ket \<eta>) |\<xi> \<eta>. True}\<close>
       apply (rule continuous_map_image_closure_subset)
       using qregister.rep_eq that weak_star_cont_register by blast
     also have \<open>\<dots> = weak_star_topology closure_of cspan
-                        (apply_qregister (qregister_pair F G) ` {butterket \<xi> \<eta> |\<xi> \<eta>. True})\<close>
+                        (apply_qregister (qregister_pair F G) ` {butterfly (ket \<xi>) (ket \<eta>) |\<xi> \<eta>. True})\<close>
       apply (subst complex_vector.linear_span_image)
       by simp_all
     also have \<open>\<dots> = weak_star_topology closure_of cspan
-                        (apply_qregister (qregister_pair F G) ` {butterket (a,b) (c,d) |a b c d. True})\<close>
-      apply (rule arg_cong[where x=\<open>{butterket \<xi> \<eta> |\<xi> \<eta>. True}\<close>])
+                        (apply_qregister (qregister_pair F G) ` {butterfly (ket (a,b)) (ket (c,d)) |a b c d. True})\<close>
+      apply (rule arg_cong[where x=\<open>{butterfly (ket \<xi>) (ket \<eta>) |\<xi> \<eta>. True}\<close>])
       by auto
     also have \<open>\<dots> = weak_star_topology closure_of cspan
-                        {apply_qregister F (butterket a c) o\<^sub>C\<^sub>L apply_qregister G (butterket b d) |a b c d. True}\<close>
+                        {apply_qregister F (butterfly (ket a) (ket c)) o\<^sub>C\<^sub>L apply_qregister G (butterfly (ket b) (ket d)) |a b c d. True}\<close>
       apply (subst set_compr_4_image_collect)
       apply (subst set_compr_4_image_collect)
       by (simp add: image_image case_prod_unfold apply_qregister_pair
@@ -1360,7 +1360,7 @@ lemma QCOMPLEMENT_pair_fst_snd:
 text \<open>The assumptions \<^term>\<open>ACTUAL_QREGISTER F\<close> \<^term>\<open>ACTUAL_QREGISTER G\<close> are actually not
   necessary. The theorem without these assumptions follows from the fact
   \<^prop>\<open>von_neumann_algebra M \<Longrightarrow> von_neumann_algebra N \<Longrightarrow> commutant (tensor_vn M N) = commutant M \<otimes>\<^sub>v\<^sub>N commutant N\<close>
-  which is shown in @{cite takesaki}, Theorem IV.5.9.
+  which is shown in \<^cite>\<open>takesaki\<close>, Theorem IV.5.9.
   We have an aborted proof of that fact in \<^url>\<open>https://github.com/dominique-unruh/qrhl-tool/blob/24188e63b2a064c77501071839c46266cfaa549f/isabelle-thys/Scratch.thy#L574\<close>
   but it turned out to be very hard to prove (many additional facts about von-Neumann algebras needed first).
   So we proved the simpler theorem given here with additional assumptions.\<close>
