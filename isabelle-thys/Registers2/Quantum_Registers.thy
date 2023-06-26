@@ -828,7 +828,7 @@ proof (cases \<open>qregister F\<close>)
     then have posFA: \<open>0 \<le> apply_qregister F (sqrt_op A)\<close>
       by (simp add: apply_qregister_pos)
     have sq: \<open>apply_qregister F (sqrt_op A)* o\<^sub>C\<^sub>L apply_qregister F (sqrt_op A) = apply_qregister F A\<close>
-      using True by (simp_all add: abs_op_square flip: apply_qregister_adj qregister_compose positive_hermitianI)
+      using True by (simp_all add: abs_op_square positive_hermitianI flip: apply_qregister_adj qregister_compose)
     from posFA sq
     show ?thesis
       by (rule sqrt_op_unique)

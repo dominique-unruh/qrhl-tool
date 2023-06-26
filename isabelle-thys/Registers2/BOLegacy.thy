@@ -87,15 +87,6 @@ consts tensor :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<otimes>" 70)
 adhoc_overloading
   tensor \<open>\<lambda>x. tensor_ell2 x\<close> \<open>\<lambda>x. tensor_op x\<close> \<open>\<lambda>x. tensor_ccsubspace x\<close>
 
-lemma equal_span':
-  fixes f g :: "'a::cbanach \<Rightarrow> 'b::cbanach"
-  assumes "bounded_clinear f"
-    and "bounded_clinear g"
-  assumes "\<And>x. x\<in>G \<Longrightarrow> f x = g x"
-  assumes "x\<in>closure (cspan G)"
-  shows "f x = g x"
-  using assms by (rule bounded_clinear_eq_on)
-
 (* TODO remove (seems to be a [simp] rule already) *)
 lemma bot_plus[simp]: "sup bot x = x" 
   for x :: "'a::complex_normed_vector ccsubspace"
