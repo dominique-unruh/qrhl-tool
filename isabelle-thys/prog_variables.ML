@@ -89,7 +89,7 @@ fun declare_variable_morph m name vartype ctxt' =
       add_varinfo m (name^"2") vartype ctxt'
 in
 fun declare_variable_lthy name vartype ctxt = 
-  Local_Theory.declaration {pervasive=true, syntax=false} (fn m => 
+  Local_Theory.declaration {pervasive=true, pos=Position.none, syntax=false} (fn m => 
     Context.mapping I (declare_variable_morph m name vartype ctxt)) ctxt
 
 fun declare_variable_ctxt name vartype ctxt = declare_variable_morph Morphism.identity name vartype ctxt ctxt

@@ -1,9 +1,9 @@
 theory All_Example_Thys
   imports 
     (* Examples *)
-    "QRHL-Examples.Example" "QRHL-Examples.Teleport_Terse" "QRHL-Examples.Teleport"
+    "QRHL-Examples.Example" "QRHL-Examples.Teleport" "QRHL-Examples.O2H_Example"
     "QRHL-Examples.Chsh" "QRHL-Examples.PrgEnc" "QRHL-Examples.Code_Example"
-    "QRHL-Examples.EPR" "QRHL-Examples.RandomOracle"
+    "QRHL-Examples.EPR" "QRHL-Examples.RandomOracle" "QRHL-Examples.OTP"
 begin
 
 ML \<open>
@@ -14,13 +14,12 @@ val examples = \<^theory> |> Resources.master_directory |> (fn p => Path.append 
   |> map_filter (fn f => if String.isSuffix ".thy" f andalso f <> "TestEx.thy"
       then SOME (substring (f, 0, String.size f - 4)) else NONE)
 
-val theories = \<^theory> |> Context.parents_of |> map Context.theory_name
+val theories = \<^theory> |> Context.parents_of |> map (Context.theory_name {long=false})
 
 val _ = examples |> map (fn f =>
   if member op= theories f then () else (warning ("Add \"QRHL-Examples."^f^"\" to the imports"); has_missing := true))
 
 val _ = if !has_missing then error "Please fix imports" else ()
-
 \<close>
 
 end

@@ -15,7 +15,7 @@ val tests =
         andalso f <> "All_Unit_Tests.thy" andalso f <> "All_Example_Thys.thy"
       then SOME (substring (f, 0, String.size f - 4)) else NONE)
 
-val theories = \<^theory> |> Context.parents_of |> map Context.theory_name
+val theories = \<^theory> |> Context.parents_of |> map (Context.theory_name {long=false})
 
 val _ = tests |> map (fn f =>
   if member op= theories f then () else (warning ("Add "^f^" to the imports"); has_missing := true))

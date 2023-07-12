@@ -1366,7 +1366,7 @@ lemma leq_space_div[simp]: "colocal A Q \<Longrightarrow> (A \<le> B \<div> \<ps
   by (cheat TODO14)
 
 definition space_div_unlifted :: "('a*'b) ell2 ccsubspace \<Rightarrow> 'b ell2 \<Rightarrow> 'a ell2 ccsubspace" where
-  [code del]: "space_div_unlifted S \<psi> = Abs_clinear_space {\<phi>. \<phi>\<otimes>\<psi> \<in> space_as_set S}"
+  [code del]: "space_div_unlifted S \<psi> = Abs_ccsubspace {\<phi>. \<phi>\<otimes>\<psi> \<in> space_as_set S}"
 
 lemma space_div_space_div_unlifted: "space_div (S\<guillemotright>(variable_concat Q R)) \<psi> R = (space_div_unlifted S \<psi>)\<guillemotright>Q"
   by (cheat space_div_space_div_unlifted)

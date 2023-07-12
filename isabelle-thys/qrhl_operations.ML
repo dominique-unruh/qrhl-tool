@@ -102,7 +102,7 @@ end
 
 fun local_thy_file thy : Path.T option = let val name = Context.theory_long_name thy in
   if String.isPrefix "Draft." name then
-  let val short = Context.theory_name thy
+  let val short = Context.theory_name {long=false} thy
       val dir = Thy_Info.master_directory name
   in SOME (Path.append dir (Path.basic (short^".thy"))(*  |> Path.implode *)) end
   else NONE 
@@ -507,7 +507,7 @@ fun applyToplevelCommand (ctxt, command) = let
   val thy = Proof_Context.theory_of ctxt
   val transactions = Outer_Syntax.parse_text thy (K thy) Position.none command
   fun map_thy thy = 
-    fold (Toplevel.command_exception true) transactions (Toplevel.theory_toplevel thy) |> Toplevel.theory_of
+    fold (Toplevel.command_exception true) transactions (Toplevel.make_state (SOME thy)) |> Toplevel.theory_of
   val ctxt = Proof_Context.background_theory map_thy ctxt
 in ctxt end
 

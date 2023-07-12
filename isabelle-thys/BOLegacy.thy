@@ -73,7 +73,6 @@ abbreviation (input) "applyOpSpace == cblinfun_image"
 abbreviation (input) "timesOp == cblinfun_compose"
 
 unbundle no_notation_blinfun_apply
-unbundle no_blinfun_notation
 unbundle cblinfun_notation
 
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
@@ -88,7 +87,7 @@ lemma equal_span':
   assumes "\<And>x. x\<in>G \<Longrightarrow> f x = g x"
   assumes "x\<in>closure (cspan G)"
   shows "f x = g x"
-  using assms by (rule bounded_clinear_eq_on)
+  using assms by (rule bounded_clinear_eq_on_closure)
 
 (* TODO remove (seems to be a [simp] rule already) *)
 lemma bot_plus[simp]: "sup bot x = x" 
