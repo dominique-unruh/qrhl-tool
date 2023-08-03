@@ -2,6 +2,7 @@ theory Quantum_Reg_Ranges
   imports Quantum_Registers Missing_Bounded_Operators
 begin
 
+no_notation Lattice.inf ("\<Sqinter>\<index>_" [90] 90)
 
 text \<open>The following definition of a valid qregister range is supposed to roughly define
 what sets are possible as the range of a qregister, as a preliminary to define the type \<open>QREGISTER\<close> below.
@@ -211,6 +212,41 @@ proof -
   then show \<open>commutant (commutant (\<FF> \<union> \<GG>)) \<in> Collect valid_qregister_range\<close>
     by (auto intro!: valid_qregister_rangeI)
 qed
+instance..
+end
+
+instantiation QREGISTER :: (type) inf begin
+lift_definition inf_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is Set.inter
+  apply simp
+  by (smt (verit, best) double_commutant_in_vn_algI inf_le1 inf_le2 le_inf_iff mem_simps(4) valid_qregister_rangeI valid_qregister_range_def von_neumann_algebra_def)
+instance..
+end
+
+instantiation QREGISTER :: (type) Sup begin
+lift_definition Sup_QREGISTER :: \<open>'a QREGISTER set \<Rightarrow> 'a QREGISTER\<close> is
+  \<open>\<lambda>\<FF>s :: 'a qupdate set set. commutant (commutant (\<Union>\<FF>s))\<close>
+proof -
+  fix \<FF>s :: \<open>'a qupdate set set\<close>
+  assume \<open>\<FF> \<in> Collect valid_qregister_range\<close> if \<open>\<FF> \<in> \<FF>s\<close> for \<FF>
+  then have [simp]: \<open>adj ` \<FF> = \<FF>\<close> if \<open>\<FF> \<in> \<FF>s\<close> for \<FF>
+    using that apply (auto simp: valid_qregister_range_def von_neumann_factor_def von_neumann_algebra_def)
+    by force
+  have \<open>adj ` commutant (commutant (\<Union>\<FF>s)) = commutant (commutant (\<Union>\<FF>s))\<close>
+    by (simp add: commutant_adj image_Union)
+  then show \<open>commutant (commutant (\<Union>\<FF>s)) \<in> Collect valid_qregister_range\<close>
+    by (auto intro!: valid_qregister_rangeI)
+qed
+instance..
+end
+
+(* TODO move to Tensor Product *)
+lemma von_neumann_algebra_UNION: \<open>(\<And>A. A \<in> \<AA> \<Longrightarrow> von_neumann_algebra A) \<Longrightarrow> von_neumann_algebra (\<Inter> \<AA>)\<close>
+  by (simp add: Inter_greatest Inter_lower double_commutant_in_vn_algI equalityI von_neumann_algebra_def)
+
+instantiation QREGISTER :: (type) Inf begin
+lift_definition Inf_QREGISTER :: \<open>'a QREGISTER set \<Rightarrow> 'a QREGISTER\<close> is
+  \<open>\<lambda>\<FF>s :: 'a qupdate set set. \<Inter>\<FF>s\<close>
+  by (auto intro!: von_neumann_algebra_UNION simp: valid_qregister_range_def)
 instance..
 end
 
@@ -452,9 +488,6 @@ end
 instantiation QREGISTER :: (type) lattice begin
 (* TODO: If we would change valid_qregister_range to mean von Neumann factor, we would even get orthocomplemented_lattice.
    But we don't have a proof that the intersection of two factors is a factor. *)
-lift_definition inf_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> 'a QREGISTER \<Rightarrow> 'a QREGISTER\<close> is Set.inter
-  apply simp
-  by (smt (verit, best) double_commutant_in_vn_algI inf_le1 inf_le2 le_inf_iff mem_simps(4) valid_qregister_rangeI valid_qregister_range_def von_neumann_algebra_def)
 instance
 proof intro_classes
   fix x y z :: \<open>'a QREGISTER\<close>
@@ -477,6 +510,28 @@ proof intro_classes
   show \<open>x \<le> \<top>\<close>
     apply transfer
     by simp
+qed
+end
+
+instantiation QREGISTER :: (type) complete_lattice begin
+instance
+proof intro_classes
+  fix \<FF>s :: \<open>'a QREGISTER set\<close> and \<GG> :: \<open>'a QREGISTER\<close>
+  show \<open>\<GG> \<le> \<Squnion>\<FF>s\<close> if \<open>\<GG> \<in> \<FF>s\<close>
+    using that apply transfer
+    by (meson Union_upper double_commutant_grows subset_trans)
+  show \<open>\<Sqinter>\<FF>s \<le> \<GG>\<close> if \<open>\<GG> \<in> \<FF>s\<close>
+    using that apply transfer by blast
+  show \<open>(\<And>\<FF>. \<FF> \<in> \<FF>s \<Longrightarrow> \<GG> \<le> \<FF>) \<Longrightarrow> \<GG> \<le> \<Sqinter> \<FF>s\<close>
+    apply transfer by auto
+  show \<open>(\<And>\<FF>. \<FF> \<in> \<FF>s \<Longrightarrow> \<GG> \<ge> \<FF>) \<Longrightarrow> \<GG> \<ge> \<Squnion> \<FF>s\<close>
+    apply transfer apply auto
+    by (meson Sup_least double_commutant_in_vn_algI subset_iff valid_qregister_range_def)
+  show \<open>\<Sqinter> {} = (\<top> :: 'a QREGISTER)\<close>
+    apply transfer by auto
+  show \<open>\<Squnion> {} = (\<bottom> :: 'a QREGISTER)\<close>
+    apply transfer
+    by (simp_all add: commutant_UNIV)
 qed
 end
 

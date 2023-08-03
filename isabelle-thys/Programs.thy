@@ -2,7 +2,8 @@ theory Programs
   imports QRHL_Core Expressions Wlog.Wlog Kraus_Maps CQ_Operators
 begin
 
-
+no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
+no_notation Order.bottom ("\<bottom>\<index>")
 
 datatype raw_program =
   Seq \<open>raw_program\<close> \<open>raw_program\<close>
@@ -130,22 +131,64 @@ consts
   instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
   localvars :: "'a cvariable \<Rightarrow> 'b qvariable \<Rightarrow> program list \<Rightarrow> program"
 
-consts fvq_program :: "program \<Rightarrow> QVARIABLE"
+fun fvq_raw_program :: \<open>raw_program \<Rightarrow> QVARIABLE\<close> where
+  \<open>fvq_raw_program (Seq p q) = fvq_raw_program p \<squnion> fvq_raw_program q\<close>
+| \<open>fvq_raw_program Skip = \<bottom>\<close>
+| \<open>fvq_raw_program (Sample _) = \<bottom>\<close>
+| \<open>fvq_raw_program (IfThenElse c p q) = fvq_raw_program p \<squnion> fvq_raw_program q\<close>
+| \<open>fvq_raw_program (While c p) = fvq_raw_program p\<close>
+| \<open>fvq_raw_program (QuantumOp e) = undefined\<close> (* TODO *)
+| \<open>fvq_raw_program (Measurement e) = undefined\<close> (* TODO *)
+| \<open>fvq_raw_program (InstantiateOracles p qs) = fvq_raw_program p \<squnion> (\<Squnion>q\<in>set qs. fvq_raw_program q)\<close>
+| \<open>fvq_raw_program (LocalQ Q _ p) = undefined\<close> (* TODO *)
+| \<open>fvq_raw_program (LocalC _ _ p) = fvq_raw_program p\<close>
+| \<open>fvq_raw_program (OracleCall _) = \<bottom>\<close>
+
+lift_definition fvq_program :: "program \<Rightarrow> QVARIABLE" is fvq_raw_program.
+lift_definition fvq_oracle_program :: "oracle_program \<Rightarrow> QVARIABLE" is fvq_raw_program.
+
 consts fvc_program :: "program \<Rightarrow> CVARIABLE"
 consts fvcw_program :: "program \<Rightarrow> CVARIABLE"
-consts fvq_oracle_program :: "oracle_program \<Rightarrow> QVARIABLE"
 consts fvc_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
 consts fvcw_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
 
-(* consts fvq_program :: "program \<Rightarrow> string set" *)
-lemma fvq_program_sequence: "fvq_program (block b) = fold (\<lambda>p v. QREGISTER_pair (fvq_program p) v) b QREGISTER_unit"
-  sorry
-lemma fvq_program_assign: "fvq_program (assign x e) = QREGISTER_unit"
-  sorry
+lemma fvq_program_skip[simp]: \<open>fvq_program skip = \<bottom>\<close>
+  apply transfer' by simp
+
+lemma fvq_program_seq: \<open>fvq_program (seq a b) = fvq_program a \<squnion> fvq_program b\<close>
+  apply transfer by simp
+
+lemma fvq_program_sequence: "fvq_program (block b) 
+      = fold (\<lambda>p v. QREGISTER_pair (fvq_program p) v) b QREGISTER_unit"
+proof (induction b rule:induct_list012)
+  case 1
+  show ?case
+    by (simp add: block_empty)
+next
+  case (2 x)
+  show ?case
+    by (simp add: block_single)
+next
+  case (3 x y zs)
+  define yzs where \<open>yzs = y # zs\<close>
+  have \<open>fvq_program (block (x # yzs)) = fvq_program x \<squnion> fvq_program (block yzs)\<close>
+    by (simp add: block_cons fvq_program_seq yzs_def)
+  also have \<open>\<dots> = fvq_program x \<squnion> fold (\<lambda>p v. fvq_program p \<squnion> v) yzs \<bottom>\<close>
+    by (simp add: 3 yzs_def)
+  also have \<open>fvq_program x \<squnion> fold (\<lambda>p v. fvq_program p \<squnion> v) yzs w = fold (\<lambda>p v. fvq_program p \<squnion> v) (x # yzs) w\<close> for w
+    apply (induction yzs arbitrary: w)
+    by (simp_all add: sup_aci)
+  finally show ?case
+    by (simp add: yzs_def)
+qed
+
 lemma fvq_program_sample: "fvq_program (sample xs e2) = QREGISTER_unit"
-  sorry
+  apply transfer' by simp
+lemma fvq_program_assign: "fvq_program (assign x e) = QREGISTER_unit"
+  by (simp add: assign_def fvq_program_sample)
 lemma fvq_program_ifthenelse: "fvq_program (ifthenelse c p1 p2) =
   QREGISTER_pair (fvq_program (block p1)) (fvq_program (block p2))"
+  apply transfer
   sorry
 lemma fvq_program_while: "fvq_program (while c b) = (fvq_program (block b))"
   sorry
@@ -197,6 +240,12 @@ lemma localvars_empty: "localvars empty_cregister empty_qregister P = block P"
   sorry
 
 type_synonym program_state = \<open>(cl,qu) cq_operator\<close>
+
+fun denotation_raw :: "raw_program \<Rightarrow> (cl,qu,cl,qu) cq_kraus_map" where
+  denotation_raw_Skip: \<open>denotation_raw Skip = cq_kraus_map_id\<close>
+| denotation_raw_Seq: \<open>denotation_raw (Seq c d) = cq_kraus_map_comp (denotation_raw d) (denotation_raw c)\<close>
+| denotation_raw_Sample: \<open>denotation_raw (Sample e) = 
+      cq_operator_cases (\<lambda>c \<rho>. cq_from_distrib (e c) \<rho>) \<rho>\<close>
 
 fun denotation_raw :: "raw_program \<Rightarrow> program_state \<Rightarrow> program_state" where
   denotation_raw_Skip: \<open>denotation_raw Skip \<rho> = \<rho>\<close>

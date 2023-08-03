@@ -1,9 +1,25 @@
 theory Scratch
-  imports
- (* QRHL *)
-(* "QRHL-Tests.All_Unit_Tests" *)
-QRHL_Code
+  imports "HOL-Library.Rewrite"
 begin
+
+lemma sum_single: 
+  assumes "finite A"
+  assumes "\<And>j. j \<noteq> i \<Longrightarrow> j\<in>A \<Longrightarrow> f j = 0"
+  shows "sum f A = (if i\<in>A then f i else 0)"
+  apply (subst sum.mono_neutral_cong_right[where S=\<open>A \<inter> {i}\<close> and h=f])
+  using assms by auto
+
+lemma \<open>(\<Sum>x::bool\<in>UNIV. (\<Sum>y\<in>UNIV. of_bool (x=y))) = 2\<close>
+  apply (rewrite at \<open>\<Sum>x\<in>UNIV. \<hole>\<close> sum_single)
+  (* This gives us the schematic variable ?i8 that we would like to instantiate with x *)
+  oops
+
+lemma \<open>(\<Sum>x::bool\<in>UNIV. (\<Sum>y\<in>UNIV. of_bool (x=y))) = 2\<close>
+  apply (rewrite at \<open>\<Sum>x\<in>UNIV. \<hole>\<close> to \<open>if x\<in>_ then _ else _\<close> sum_single)
+
+
+
+  apply (subst (2) sum_single)
 
 no_notation eq_closure_of ("closure'_of\<index>")
 no_notation Lattice.meet (infixl "\<sqinter>\<index>" 70)

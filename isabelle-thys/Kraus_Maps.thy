@@ -40,6 +40,11 @@ lemma from_trace_class_sandwich_tc:
   apply transfer
   by (rule sandwich_apply)
 
+lemma sandwich_tc_apply:
+  \<open>sandwich_tc e t = Abs_trace_class (sandwich e (from_trace_class t))\<close>
+  using from_trace_class_sandwich_tc[of e t]
+  by (metis from_trace_class_inverse)
+
 lemma norm_sandwich_tc: \<open>norm (sandwich_tc e t) \<le> (norm e)^2 * norm t\<close>
   by (simp add: norm_trace_class.rep_eq from_trace_class_sandwich_tc trace_norm_sandwich)
 
@@ -965,6 +970,14 @@ lift_definition kraus_map_comp :: \<open>('a::chilbert_space,'b::chilbert_space)
 
 definition \<open>kraus_map_id = kraus_map_of_op id_cblinfun\<close>
 
+lemma kraus_map_norm_id_le: \<open>kraus_map_norm kraus_map_id \<le> 1\<close>
+  apply (simp add: kraus_map_id_def)
+  apply transfer
+  by (auto intro!: power_le_one onorm_pos_le onorm_id_le)
+
+lemma kraus_map_norm_id[simp]: \<open>kraus_map_norm (kraus_map_id :: ('a :: {chilbert_space, not_singleton},'a) kraus_map) = 1\<close>
+  by (auto intro!: antisym kraus_map_norm_id_le simp: kraus_map_id_def)
+
 lemma kraus_family_plus:
   assumes \<open>kraus_family \<EE>\<close>
   assumes \<open>kraus_family \<FF>\<close>
@@ -1170,5 +1183,136 @@ proof (rule cblinfun_eqI)
   finally show \<open>kraus_map_apply (r *\<^sub>R \<EE>) *\<^sub>V \<rho> = 0 *\<^sub>V \<rho>\<close>
     by -
 qed
+
+lemma kraus_map_norm_0[simp]: \<open>kraus_map_norm 0 = 0\<close>
+  apply transfer
+  by (auto intro!: cSUP_const simp: kraus_family_norm_def)
+
+(*
+(* TODO move, TODO generalize from real *)
+lemma
+  fixes a :: real
+  assumes \<open>bdd_above (f ` F)\<close>
+  assumes \<open>(\<Squnion>x\<in>F. f x) = a\<close>
+  assumes \<open>b \<in> F\<close>
+  shows \<open>f b \<le> a\<close>
+  by (metis assms(1) assms(2) assms(3) cSUP_upper)
+by -
+
+lemma
+  fixes a :: real
+  assumes \<open>bdd_above F\<close>
+  assumes \<open>(\<Squnion>F) = a\<close>
+  assumes \<open>b \<in> F\<close>
+  shows \<open>b \<le> a\<close>
+try0
+sledgehammer
+by - *)
+
+
+instantiation kraus_map :: (chilbert_space, chilbert_space) dist begin
+definition dist_kraus_map :: \<open>('a,'b) kraus_map \<Rightarrow> ('a,'b) kraus_map \<Rightarrow> real\<close> where
+  \<open>dist_kraus_map E F = (\<Squnion>\<rho>. dist (kraus_map_apply E \<rho>) (kraus_map_apply F \<rho>) / norm \<rho>)\<close>
+instance..
+end
+
+lemma kraus_map_apply_inj: \<open>kraus_map_apply x = kraus_map_apply y \<Longrightarrow> x = y\<close>
+  apply transfer
+  by (simp add: kraus_equivalent_def)
+
+lemma norm_kraus_map_apply: \<open>norm (kraus_map_apply E \<rho>) \<le> 4 * kraus_map_norm E * norm \<rho>\<close>
+  apply (transfer fixing: \<rho>)
+  using kraus_equivalent_def kraus_family_map_bounded by blast
+
+lemma norm_kraus_map_apply_pos: \<open>norm (kraus_map_apply E \<rho>) \<le> kraus_map_norm E * norm \<rho>\<close> if \<open>\<rho> \<ge> 0\<close>
+  apply (transfer fixing: \<rho>)
+  by (simp add: kraus_equivalent_def kraus_family_map_bounded_pos that)
+
+lemma kraus_map_norm_geq0[simp]: \<open>kraus_map_norm E \<ge> 0\<close>
+  apply transfer
+  by (simp add: kraus_equivalent_def kraus_family_norm_geq0)
+
+lemma dist_kraus_map_bdd: \<open>bdd_above (range (\<lambda>\<rho>. dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply y *\<^sub>V \<rho>) / norm \<rho>))\<close>
+proof (rule bdd_aboveI)
+  fix r
+  assume \<open>r \<in> range (\<lambda>\<rho>. dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply y *\<^sub>V \<rho>) / norm \<rho>)\<close>
+  then obtain \<rho> where r_\<rho>: \<open>r = dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply y *\<^sub>V \<rho>) / norm \<rho>\<close>
+    by auto
+  have \<open>dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply y *\<^sub>V \<rho>) \<le> 
+        norm (kraus_map_apply x *\<^sub>V \<rho>) + norm (kraus_map_apply y *\<^sub>V \<rho>)\<close>
+    by (metis dist_0_norm dist_triangle3)
+  also have \<open>\<dots> \<le> 4 * kraus_map_norm x * norm \<rho> + 4 * kraus_map_norm y * norm \<rho>\<close>
+    by (auto intro!: add_mono norm_kraus_map_apply)
+  also have \<open>\<dots> \<le> (4 * kraus_map_norm x + 4 * kraus_map_norm y) * norm \<rho>\<close>
+    by (simp add: cross3_simps(23))
+  finally show \<open>r \<le> 4 * kraus_map_norm x + 4 * kraus_map_norm y\<close>
+    apply (cases \<open>norm \<rho> = 0\<close>)
+    by (auto simp: r_\<rho> linordered_field_class.pos_divide_le_eq)
+qed
+
+instantiation kraus_map :: (chilbert_space, chilbert_space) metric_space begin
+definition \<open>uniformity_kraus_map = (\<Sqinter>e\<in>{0<..}. principal {(x :: ('a,'b) kraus_map, y). dist x y < e})\<close>
+definition \<open>open_kraus_map U = (\<forall>x::('a,'b) kraus_map \<in> U. \<forall>\<^sub>F (x', y) in uniformity. x' = x \<longrightarrow> y \<in> U)\<close>
+instance
+proof (intro_classes, rule uniformity_kraus_map_def, rule open_kraus_map_def)
+  fix x y z :: \<open>('a,'b) kraus_map\<close>
+  show \<open>(dist x y = 0) \<longleftrightarrow> (x = y)\<close>
+  proof (rule iffI)
+    show \<open>x = y \<Longrightarrow> dist x y = 0\<close>
+      by (simp add: dist_kraus_map_def)
+    assume dist_0: \<open>dist x y = 0\<close>
+    have \<open>dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply y *\<^sub>V \<rho>) / norm \<rho> \<le> 0\<close> for \<rho>
+      by (auto intro!: cSUP_upper dist_kraus_map_bdd simp: dist_kraus_map_def simp flip: dist_0)
+    then have \<open>dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply y *\<^sub>V \<rho>) = 0\<close> for \<rho>
+      using order_antisym by fastforce
+    then have \<open>kraus_map_apply x *\<^sub>V \<rho> = kraus_map_apply y *\<^sub>V \<rho>\<close> for \<rho>
+      by simp
+    then have \<open>kraus_map_apply x = kraus_map_apply y\<close> for \<rho>
+      by (simp add: cblinfun_eqI)
+    then show \<open>x = y\<close>
+      by (simp add: kraus_map_apply_inj)
+  qed
+  show \<open>dist x y \<le> dist x z + dist y z\<close>
+  proof (unfold dist_kraus_map_def, rule cSUP_least)
+    show \<open>UNIV \<noteq> {}\<close> by simp
+    fix \<rho>
+    have \<open>dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply y *\<^sub>V \<rho>) / norm \<rho>
+            \<le> (dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply z *\<^sub>V \<rho>) +
+                dist (kraus_map_apply y *\<^sub>V \<rho>) (kraus_map_apply z *\<^sub>V \<rho>)) / norm \<rho>\<close>
+      apply (rule divide_right_mono)
+      using dist_triangle2 by auto
+    also have \<open>\<dots> = dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply z *\<^sub>V \<rho>) / norm \<rho> +
+                    dist (kraus_map_apply y *\<^sub>V \<rho>) (kraus_map_apply z *\<^sub>V \<rho>) / norm \<rho>\<close>
+      by (simp add: add_divide_distrib)
+    also have \<open>\<dots> \<le> (\<Squnion>\<rho>. dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply z *\<^sub>V \<rho>) / norm \<rho>) +
+                  (\<Squnion>\<rho>. dist (kraus_map_apply y *\<^sub>V \<rho>) (kraus_map_apply z *\<^sub>V \<rho>) / norm \<rho>)\<close>
+      by (auto intro!: add_mono cSUP_upper2 dist_kraus_map_bdd)
+    finally show \<open>dist (kraus_map_apply x *\<^sub>V \<rho>) (kraus_map_apply y *\<^sub>V \<rho>) / norm \<rho> \<le> \<dots>\<close>
+      by -
+  qed
+qed
+end
+
+lemma kraus_map_apply_comp: \<open>kraus_map_apply (kraus_map_comp E F) = kraus_map_apply E o\<^sub>C\<^sub>L kraus_map_apply F\<close>
+  apply transfer
+  apply (rule kraus_family_comp_apply)
+  using kraus_equivalent_def by auto
+
+lemma kraus_map_apply_0[simp]: \<open>kraus_map_apply 0 = 0\<close>
+  apply transfer'
+  by (simp add: kraus_family_map_def[abs_def])
+
+lemma kraus_map_comp_0_left[simp]: \<open>kraus_map_comp 0 E = 0\<close>
+  apply (rule kraus_map_apply_inj)
+  apply (rule cblinfun_eqI)
+  by (simp add: kraus_map_apply_comp)
+
+lemma kraus_map_comp_0_right[simp]: \<open>kraus_map_comp E 0 = 0\<close>
+  apply (rule kraus_map_apply_inj)
+  apply (rule cblinfun_eqI)
+  by (simp add: kraus_map_apply_comp)
+
+lemma kraus_map_comp_assoc: \<open>kraus_map_comp (kraus_map_comp E F) G = kraus_map_comp E (kraus_map_comp F G)\<close>
+  by (simp add: cblinfun_assoc_left(1) kraus_map_apply_comp kraus_map_apply_inj)
 
 end
