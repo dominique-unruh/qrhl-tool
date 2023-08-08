@@ -3,88 +3,7 @@ theory CQ_Operators
     Tensor_Product.Partial_Trace
 begin
 
-(* TODO move *)
-lift_definition tc_tensor :: \<open>('a ell2, 'b ell2) trace_class \<Rightarrow> ('c ell2, 'd ell2) trace_class \<Rightarrow> 
-      (('a \<times> 'c) ell2, ('b \<times> 'd) ell2) trace_class\<close> is
-  tensor_op
-  by (auto intro!: trace_class_tensor)
-
-
-lemma infsum_product:
-  fixes f :: \<open>'a \<Rightarrow> 'c :: {topological_semigroup_mult,division_ring,banach}\<close>
-  assumes \<open>(\<lambda>(x, y). f x * g y) summable_on X \<times> Y\<close>
-  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. f x) * (\<Sum>\<^sub>\<infinity>y\<in>Y. g y) = (\<Sum>\<^sub>\<infinity>(x,y)\<in>X\<times>Y. f x * g y)\<close>
-  using assms
-  by (simp add: infsum_cmult_right' infsum_cmult_left' flip: infsum_Sigma'_banach)
-
-lemma infsum_product':
-  fixes f :: \<open>'a \<Rightarrow> 'c :: {banach,times,real_normed_algebra}\<close> and g :: \<open>'b \<Rightarrow> 'c\<close>
-  assumes \<open>f abs_summable_on X\<close>
-  assumes \<open>g abs_summable_on Y\<close>
-  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. f x) * (\<Sum>\<^sub>\<infinity>y\<in>Y. g y) = (\<Sum>\<^sub>\<infinity>(x,y)\<in>X\<times>Y. f x * g y)\<close>
-  using assms
-  by (simp add: abs_summable_times infsum_cmult_right infsum_cmult_left abs_summable_summable flip: infsum_Sigma'_banach)
-
-(* TODO move *)
-lemma trace_norm_tensor: \<open>trace_norm (a \<otimes>\<^sub>o b) = trace_norm a * trace_norm b\<close>
-  apply (rule of_real_hom.injectivity[where 'a=complex])
-  by (simp add: abs_op_tensor trace_tensor flip: trace_abs_op)
-
-
-(* TODO move *)
-lemma bounded_cbilinear_tc_tensor: \<open>bounded_cbilinear tc_tensor\<close>
-  unfolding bounded_cbilinear_def
-  apply transfer
-  by (auto intro!: exI[of _ 1]
-      simp: trace_norm_tensor tensor_op_left_add tensor_op_right_add tensor_op_scaleC_left tensor_op_scaleC_right)
-lemmas bounded_clinear_tc_tensor_left[bounded_clinear] = bounded_cbilinear.bounded_clinear_left[OF bounded_cbilinear_tc_tensor]
-lemmas bounded_clinear_tc_tensor_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_tensor]
-
-
-(* TODO move *)
-lemma bounded_cbilinear_tc_compose: \<open>bounded_cbilinear tc_compose\<close>
-  unfolding bounded_cbilinear_def
-  apply transfer
-  apply (auto intro!: exI[of _ 1] simp: cblinfun_compose_add_left cblinfun_compose_add_right)
-  by (meson Unsorted_HSTP.norm_leq_trace_norm dual_order.trans mult_right_mono trace_norm_comp_right trace_norm_nneg)
-lemmas bounded_clinear_tc_compose_left[bounded_clinear] = bounded_cbilinear.bounded_clinear_left[OF bounded_cbilinear_tc_compose]
-lemmas bounded_clinear_tc_compose_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_compose]
-
-(* TODO move *)
-lemma tc_tensor_scaleC_left: \<open>tc_tensor (c *\<^sub>C a) b = c *\<^sub>C tc_tensor a b\<close>
-  apply transfer'
-  by (simp add: tensor_op_scaleC_left)
-lemma tc_tensor_scaleC_right: \<open>tc_tensor a (c *\<^sub>C b) = c *\<^sub>C tc_tensor a b\<close>
-  apply transfer'
-  by (simp add: tensor_op_scaleC_right)
-  
-(* TODO move *)
-lemma comp_tc_tensor: \<open>tc_compose (tc_tensor a b) (tc_tensor c d) = tc_tensor (tc_compose a c) (tc_compose b d)\<close>
-  apply transfer'
-  by (rule comp_tensor_op)
-
-(* TODO move *)
-lift_definition tc_butterfly :: \<open>'a::chilbert_space \<Rightarrow> 'b::chilbert_space \<Rightarrow> ('b,'a) trace_class\<close>
-  is butterfly
-  by simp
-
-(* TODO move *)
-lemma norm_tc_butterfly: \<open>norm (tc_butterfly \<psi> \<phi>) = norm \<psi> * norm \<phi>\<close>
-  apply (transfer fixing: \<psi> \<phi>)
-  by (simp add: trace_norm_butterfly)
-
-(* TODO move *)
-lemma norm_tc_tensor: \<open>norm (tc_tensor a b) = norm a * norm b\<close>
-  apply transfer'
-  apply (rule of_real_hom.injectivity[where 'a=complex])
-  by (simp add: abs_op_tensor trace_tensor flip: trace_abs_op)
-
-
-lemma comp_tc_butterfly[simp]: \<open>tc_compose (tc_butterfly a b) (tc_butterfly c d) = (b \<bullet>\<^sub>C c) *\<^sub>C tc_butterfly a d\<close>
-  apply transfer'
-  by simp
-
-lemma choice4':
+(* lemma choice4':
   assumes \<open>\<forall>x. \<exists>a b c d. P x a b c d\<close>
   shows \<open>\<exists>a b c d. \<forall>x. P x (a x) (b x) (c x) (d x)\<close>
 proof -
@@ -95,26 +14,9 @@ proof -
     by (rule choice)
   then show ?thesis
     by fast
-qed
+qed *)
 
-(* TODO move *)
-lemma summable_on_diff:
-  fixes f g :: "'a \<Rightarrow> 'b::real_normed_vector"  (* Can probably be shown for a much wider type class. *)
-  assumes \<open>f summable_on A\<close>
-  assumes \<open>g summable_on A\<close>
-  shows \<open>(\<lambda>x. f x - g x) summable_on A\<close>
-  using summable_on_add[where f=f and g=\<open>\<lambda>x. - g x\<close>] summable_on_uminus[where f=g]
-  using assms by auto
 
-lemma tc_tensor_pos: \<open>tc_tensor a b \<ge> 0\<close> if \<open>a \<ge> 0\<close> and \<open>b \<ge> 0\<close>
-  for a :: \<open>('a ell2,'a ell2) trace_class\<close> and b :: \<open>('b ell2,'b ell2) trace_class\<close>
-  using that apply transfer'
-  by (rule tensor_op_pos)
-
-(* TODO move *)
-lemma tc_butterfly_pos[simp]: \<open>0 \<le> tc_butterfly \<psi> \<psi>\<close>
-  apply transfer
-  by simp
 
 (* TODO move *)
 lemma infsum_of_bool_scaleC: \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. of_bool (x=y) *\<^sub>C f x) = of_bool (y\<in>X) *\<^sub>C f y\<close> for f :: \<open>_ \<Rightarrow> _::complex_vector\<close>
@@ -204,7 +106,7 @@ lemma from_trace_class_infsum:
 
 
 
-definition measure_first_kraus_family :: \<open>(('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) kraus_family\<close> where
+definition measure_first_kraus_family :: \<open>(('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2, unit) kraus_family\<close> where
   \<open>measure_first_kraus_family = indicator (range (\<lambda>x. selfbutter (ket x) \<otimes>\<^sub>o id_cblinfun))\<close>
 
 lemma kraus_family_measure_first_kraus_family: \<open>kraus_family measure_first_kraus_family\<close>
@@ -528,13 +430,7 @@ of_bool (y=x) *\<^sub>C b
 qed
 *)
 
-lemma infsum_single: 
-  assumes "\<And>j. j \<noteq> i \<Longrightarrow> j\<in>A \<Longrightarrow> f j = 0"
-  shows "infsum f A = (if i\<in>A then f i else 0)"
-  apply (subst infsum_cong_neutral[where T=\<open>A \<inter> {i}\<close> and g=f])
-  using assms by auto
-
-lemma mk_cq_operator_tc_compose: \<open>Rep_cq_operator 
+lemma mk_cq_operator_tc_compose: \<open>Rep_cq_operator
     (mk_cq_operator (\<lambda>c. tc_compose (cq_operator_at a c) (cq_operator_at b c)))
         = tc_compose (Rep_cq_operator a) (Rep_cq_operator b)\<close> (is \<open>?lhs = _\<close>)
 proof -
@@ -764,8 +660,7 @@ proof intro_classes
 qed
 end
 
-(* TODO name *)
-lemma TODO_Cauchy[transfer_rule]:
+lemma transfer_Cauchy_cq_operator[transfer_rule]:
   includes lifting_syntax
   shows \<open>(((=) ===> cr_cq_operator) ===> (\<longleftrightarrow>)) Cauchy Cauchy\<close>
   unfolding Cauchy_def dist_norm
@@ -790,7 +685,7 @@ proof -
     by (simp add: is_cq_operator_def)
 qed
 
-lemma TODO_convergent[transfer_rule]:
+lemma transfer_convergent_cq_operator[transfer_rule]:
   includes lifting_syntax
   shows \<open>(((=) ===> cr_cq_operator) ===> (\<longleftrightarrow>)) convergent convergent\<close>
 proof (rule rel_funI)
