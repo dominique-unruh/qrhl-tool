@@ -376,6 +376,14 @@ lemma has_sum_in_finite:
   using assms
   by (simp add: finite_subsets_at_top_finite has_sum_in_def limitin_def eventually_principal)
 
+lemma infsum_in_finite:
+  assumes "finite F"
+  assumes \<open>hausdorff T\<close>
+  assumes \<open>sum f F \<in> topspace T\<close>
+  shows "infsum_in T f F = sum f F"
+  using has_sum_in_finite[OF assms(1,3)]
+  using assms(2) has_sum_in_infsum_in has_sum_in_unique summable_on_in_def by blast
+
 instance cblinfun_wot :: (complex_normed_vector, complex_inner) topological_ab_group_add
   by intro_classes
 
@@ -416,9 +424,11 @@ next
     by (rule tendsto_unique)
 qed
 
-lemma infsum_wot_is_sup:
+lemma infsum_wot_is_Sup:
   fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
-  assumes bounded: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> X \<Longrightarrow> sum f F \<le> B\<close>
+  (* assumes bounded: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> X \<Longrightarrow> sum f F \<le> B\<close> *)
+  assumes summable: \<open>summable_on_in cweak_operator_topology f X\<close>
+    \<comment> \<open>See also @{thm [source] summable_wot_boundedI} for proving this.\<close>
   assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
   defines \<open>S \<equiv> infsum_in cweak_operator_topology f X\<close>
   shows \<open>is_Sup ((\<lambda>F. \<Sum>x\<in>F. f x) ` {F. finite F \<and> F \<subseteq> X}) S\<close>
@@ -426,7 +436,7 @@ proof (rule is_SupI)
   have has_sum: \<open>has_sum_in cweak_operator_topology f X S\<close>
     unfolding S_def
     apply (rule has_sum_in_infsum_in)
-    using assms by (auto intro!: summable_wot_boundedI)
+    using assms by auto
   show \<open>s \<le> S\<close> if \<open>s \<in> ((\<lambda>F. \<Sum>x\<in>F. f x) ` {F. finite F \<and> F \<subseteq> X})\<close> for s
   proof -
     from that obtain F where [simp]: \<open>finite F\<close> and \<open>F \<subseteq> X\<close> and s_def: \<open>s = (\<Sum>x\<in>F. f x)\<close>
@@ -460,7 +470,16 @@ proof (rule is_SupI)
   qed
 qed
 
-definition \<open>kraus_family \<EE> \<longleftrightarrow> bdd_above ((\<lambda>F. \<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) ` {F. F \<subseteq> \<EE> \<and> finite F})\<close>
+lemma summable_wot_bdd_above:
+  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
+  assumes summable: \<open>summable_on_in cweak_operator_topology f X\<close>
+    \<comment> \<open>See also @{thm [source] summable_wot_boundedI} for proving this.\<close>
+  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
+  shows \<open>bdd_above (sum f ` {F. finite F \<and> F \<subseteq> X})\<close>
+  using infsum_wot_is_Sup[OF assms]
+  by (auto intro!: simp: is_Sup_def bdd_above_def)
+
+definition \<open>kraus_family \<EE> \<longleftrightarrow> bdd_above ((\<lambda>F. \<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) ` {F. finite F \<and> F \<subseteq> \<EE>})\<close>
   for \<EE> :: \<open>(_::chilbert_space, _::chilbert_space, _) kraus_family\<close>
 definition \<open>kraus_family_bound \<EE> = (if kraus_family \<EE> then infsum_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) \<EE> else 0)\<close>
   for \<EE> :: \<open>(_::chilbert_space, _::chilbert_space, _) kraus_family\<close>
@@ -532,13 +551,13 @@ proof -
     by (metis (mono_tags, lifting) bdd_above.unfold imageI kraus_family_def mem_Collect_eq)
   then have \<open>is_Sup ((\<lambda>F. \<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) ` {F. finite F \<and> F \<subseteq> \<EE>})
      (infsum_in cweak_operator_topology (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E) \<EE>)\<close>
-    apply (rule infsum_wot_is_sup[where B=B])
-    by (auto intro!: positive_cblinfun_squareI simp: case_prod_beta)
+    apply (rule infsum_wot_is_Sup[OF summable_wot_boundedI[where B=B]])
+    by (auto intro!: summable_wot_boundedI positive_cblinfun_squareI simp: case_prod_beta)
   then show ?thesis
     by (auto intro!: simp: kraus_family_bound_def assms)
 qed
 
-lemma kraus_family_norm_def2:
+(* lemma kraus_family_norm_def2:
   fixes \<EE> :: \<open>('a::{chilbert_space, not_singleton}, 'b::chilbert_space, 'x) kraus_family\<close>
   shows \<open>kraus_family_norm \<EE> = (if kraus_family \<EE> \<and> \<EE> \<noteq> {} then
           norm (SUP M\<in>{M. M \<subseteq> \<EE> \<and> finite M}. \<Sum>(E,x)\<in>M. E* o\<^sub>C\<^sub>L E) else 0)\<close>
@@ -549,15 +568,15 @@ proof (cases \<open>kraus_family \<EE> \<and> \<EE> \<noteq> {}\<close>)
     show \<open>kraus_family_norm \<EE> \<le> norm (\<Squnion> (sum (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E) ` {M. M \<subseteq> \<EE> \<and> finite M}))\<close>
       by x
     show \<open>norm (\<Squnion> (sum (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E) ` {M. M \<subseteq> \<EE> \<and> finite M})) \<le> kraus_family_norm \<EE> \<close>
-      sorry
+      
   qed
 next
   case False
   then show ?thesis
     by (auto simp: kraus_family_norm_def)
-qed
+qed *)
 
-lemma kraus_family_norm_def3: 
+(* lemma kraus_family_norm_def3: 
 (* TODO get rid of "not_singleton" *)
   fixes \<EE> :: \<open>('a::{chilbert_space, not_singleton}, 'b::chilbert_space, 'x) kraus_family\<close>
   shows \<open>kraus_family_norm \<EE> = (if kraus_family \<EE> then
@@ -617,7 +636,7 @@ next
   case False
   then show ?thesis
     by (auto intro!: cInf_eq_minimum[where z=0] simp: kraus_family_norm_def)
-qed
+qed *)
 
 
 definition kraus_family_related_ops :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'b) \<Rightarrow> ('a,'b,'x) kraus_family\<close> where
@@ -698,7 +717,7 @@ next
     by (auto intro!: clinearI simp: cblinfun.add_left cinner_add_right)
 
   from assms
-  have \<open>bdd_above ((\<lambda>M. \<Sum>(E, x)\<in>M. E* o\<^sub>C\<^sub>L E) ` {M. M \<subseteq> \<EE> \<and> finite M})\<close>
+  have \<open>bdd_above ((\<lambda>M. \<Sum>(E, x)\<in>M. E* o\<^sub>C\<^sub>L E) ` {M. finite M \<and> M \<subseteq> \<EE>})\<close>
     by (simp add: kraus_family_def)
   then have \<open>bdd_above ((\<lambda>M. \<Sum>(F, x)\<in>M. F* o\<^sub>C\<^sub>L F) ` {M. M \<subseteq> kraus_family_related_ops \<EE> E \<and> finite M})\<close>
     apply (rule bdd_above_mono2[OF _ _ order.refl])
@@ -764,11 +783,35 @@ qed
 definition kraus_family_flatten :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family \<Rightarrow> ('a, 'b, unit) kraus_family\<close> where
   \<open>kraus_family_flatten \<EE> = {(E,x). norm (E* o\<^sub>C\<^sub>L E) = kraus_family_op_weight \<EE> E \<and> E \<noteq> 0}\<close>
 
+lemma kraus_family_bound_pos[simp]: \<open>kraus_family_bound \<EE> \<ge> 0\<close>
+  apply (cases \<open>kraus_family \<EE>\<close>)
+  apply (metis (no_types, lifting) empty_subsetI finite.emptyI image_iff is_Sup_def kraus_family_Sup mem_Collect_eq sum.empty)
+  by (simp add: kraus_family_bound_def)
+
+lemma kraus_family_sums_bounded_by_bound:
+  assumes \<open>kraus_family \<EE>\<close>
+  assumes \<open>M \<subseteq> \<EE>\<close>
+  shows \<open>(\<Sum>(E,_)\<in>M. E* o\<^sub>C\<^sub>L E) \<le> kraus_family_bound \<EE>\<close>
+proof (cases \<open>finite M\<close>)
+  case True
+  then show ?thesis
+  using kraus_family_Sup[OF assms(1)]
+  apply (simp add: is_Sup_def case_prod_beta)
+  using assms(2) by blast
+next
+  case False
+  then show ?thesis
+    by simp
+qed
+
 lemma kraus_family_sums_bounded_by_norm:
   assumes \<open>kraus_family \<EE>\<close>
   assumes \<open>M \<subseteq> \<EE>\<close>
   shows \<open>norm (\<Sum>(E,_)\<in>M. E* o\<^sub>C\<^sub>L E) \<le> kraus_family_norm \<EE>\<close>
-  sorry
+  using kraus_family_sums_bounded_by_bound assms
+  by (auto intro!: norm_cblinfun_mono sum_nonneg 
+      intro: positive_cblinfun_squareI
+      simp add: kraus_family_norm_def case_prod_beta)
 (* proof (cases \<open>finite (M\<inter>\<EE>)\<close>)
   case True
   then show ?thesis
@@ -817,8 +860,12 @@ proof -
     by (auto intro!: bdd_aboveI[of _ B] simp: kraus_family_def)
 qed
 
+lemma kraus_family_bound_finite: \<open>kraus_family_bound \<EE> = (\<Sum>(E,x)\<in>\<EE>. E* o\<^sub>C\<^sub>L E)\<close> if \<open>finite \<EE>\<close>
+  by (auto intro!: kraus_family_finite simp: kraus_family_bound_def that infsum_in_finite)
+
 lemma kraus_family_norm_finite: \<open>kraus_family_norm \<EE> = norm (\<Sum>(E,x)\<in>\<EE>. E* o\<^sub>C\<^sub>L E)\<close> if \<open>finite \<EE>\<close>
-proof -
+  by (simp add: kraus_family_norm_def kraus_family_bound_finite that)
+(* proof -
   define B where \<open>B = (\<Sum>(E,x)\<in>\<EE>. E* o\<^sub>C\<^sub>L E)\<close>
   have bound_B: \<open>(\<Sum>(E,x)\<in>M. E* o\<^sub>C\<^sub>L E) \<le> B\<close> if \<open>finite M\<close> and \<open>M \<subseteq> \<EE>\<close> for M
     unfolding B_def
@@ -830,7 +877,7 @@ proof -
     by (meson norm_cblinfun_mono positive_cblinfun_squareI sum_mono2 sum_nonneg that)
   then show ?thesis
     by (simp add: kraus_family_finite kraus_family_norm_def \<open>finite \<EE>\<close>)
-qed
+qed *)
 
 lemma kraus_family_kraus_family_of_op[simp]: \<open>kraus_family (kraus_family_of_op E)\<close>
   by (auto intro!: kraus_family_finite simp: kraus_family_of_op_def)
@@ -938,15 +985,15 @@ proof -
         simp flip: cblinfun_compose_minus_left)
 
   from assms
-  have \<open>bdd_above ((\<lambda>F. (\<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E)) ` {F. F \<subseteq> \<EE> \<and> finite F})\<close>
+  have \<open>bdd_above ((\<lambda>F. (\<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E)) ` {F. finite F \<and> F \<subseteq> \<EE>})\<close>
     by (simp add: kraus_family_def)
-  then have \<open>bdd_above ((\<lambda>F. Re (trace ((\<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) o\<^sub>C\<^sub>L from_trace_class \<rho>))) ` {F. F \<subseteq> \<EE> \<and> finite F})\<close>
+  then have \<open>bdd_above ((\<lambda>F. Re (trace ((\<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) o\<^sub>C\<^sub>L from_trace_class \<rho>))) ` {F. finite F \<and> F \<subseteq> \<EE>})\<close>
     apply (rule bdd_above_transform_mono_pos)
     by (auto intro!: sum_nonneg positive_cblinfun_squareI[OF refl] trace_EE\<rho>_mono
         simp: case_prod_unfold)
   then have \<open>bdd_above ((\<lambda>F. \<Sum>(E,x)\<in>F. Re (trace ((E* o\<^sub>C\<^sub>L E) o\<^sub>C\<^sub>L from_trace_class \<rho>))) ` {F. F \<subseteq> \<EE> \<and> finite F})\<close>
     apply (subst (asm) real_vector.linear_sum[where f=\<open>\<lambda>M. Re (trace (M o\<^sub>C\<^sub>L from_trace_class \<rho>))\<close>])
-    by (auto intro!: trace_EE\<rho>_lin simp: case_prod_unfold)
+    by (auto intro!: trace_EE\<rho>_lin simp: case_prod_unfold conj_commute)
   then have \<open>(\<lambda>(E,_). Re (trace ((E* o\<^sub>C\<^sub>L E) o\<^sub>C\<^sub>L from_trace_class \<rho>))) summable_on \<EE>\<close>
     apply (rule nonneg_bdd_above_summable_on[rotated])
     using trace_EE\<rho>_pos 
@@ -971,6 +1018,11 @@ lemma kraus_family_map_summable:
   shows \<open>(\<lambda>E. sandwich_tc (fst E) \<rho>) summable_on \<EE>\<close>
   apply (rule abs_summable_summable)
   using assms by (rule kraus_family_map_abs_summable)
+
+lemma kraus_family_map_has_sum:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>((\<lambda>E. sandwich_tc (fst E) \<rho>) has_sum kraus_family_map \<EE> \<rho>) \<EE>\<close>
+  by (simp add: assms kraus_family_map_def kraus_family_map_summable)
 
 lemma kraus_family_map_plus_right:
   assumes \<open>kraus_family \<EE>\<close>
@@ -1093,19 +1145,58 @@ lemma kraus_family_map_bounded_clinear:
   using kraus_family_map_bounded[OF assms]
   by (simp add: mult.commute)
 
+(* definition galois_connection_on :: \<open>'a::order set \<Rightarrow> 'b::order set \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a) \<Rightarrow> bool\<close> where
+  \<open>galois_connection_on X Y f g \<longleftrightarrow> (\<forall>x\<in>X. \<forall>y\<in>Y. f x \<le> y \<longleftrightarrow> x \<le> g y)\<close>
 
+
+
+lemma is_Sup_preserved_mono:
+  assumes \<open>is_Sup X s\<close>
+  assumes \<open>mono f\<close>
+  shows \<open>is_Sup (f ` X) (f s)\<close>
+proof (rule is_SupI)
+  show \<open>x \<in> f ` X \<Longrightarrow> x \<le> f s\<close> for x
+    using assms(1) assms(2) is_Sup_def monoD by fastforce
+  show \<open>(\<And>x. x \<in> f ` X \<Longrightarrow> x \<le> y) \<Longrightarrow> f s \<le> y\<close> for y
+try0
+by - *)
+
+(*
+lemma is_Sup_preserved_norm_tc:
+  fixes X and s :: \<open>('a::chilbert_space, 'a) trace_class\<close>
+  assumes \<open>is_Sup X s\<close>
+  assumes \<open>\<And>x. x \<in> X \<Longrightarrow> x \<ge> 0\<close>
+  shows \<open>is_Sup (norm ` X) (norm s)\<close>
+proof (rule is_SupI)
+  show \<open>r \<le> norm s\<close> if \<open>r \<in> norm ` X\<close> for r
+  proof -
+    from that obtain x where rx: \<open>r = norm x\<close> and \<open>x \<in> X\<close>
+      by auto
+    with assms have \<open>x \<ge> 0\<close> and \<open>x \<le> s\<close>
+      by (simp_all add: is_Sup_def)
+    then have \<open>norm x \<le> norm s\<close>
+      using norm_cblinfun_mono_trace_class by blast
+    then show \<open>r \<le> norm s\<close>
+      by (simp add: rx)
+  qed
+  show \<open>norm s \<le> t\<close> if \<open>\<And>r. r \<in> norm ` X \<Longrightarrow> r \<le> t\<close> for t
+  proof -
+    from assms
+
+*)
+
+(*
 lemma kraus_family_map_bounded_tight:
   assumes \<open>kraus_family \<EE>\<close>
   shows \<open>kraus_family_norm \<EE> = (\<Squnion>\<rho>\<in>{\<rho>. \<rho>\<ge>0}. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close>
-    sorry
-(* proof (rule antisym)
+proof (rule antisym)
   from assms
   have bounded: \<open>norm (kraus_family_map \<EE> \<rho>) / norm \<rho> \<le> kraus_family_norm \<EE>\<close> if \<open>\<rho> \<ge> 0\<close> for \<rho>
     apply (cases \<open>\<rho> = 0\<close>)
     by (simp_all add: that kraus_family_norm_geq0 kraus_family_map_bounded_pos linordered_field_class.pos_divide_le_eq)
 
-  have aux1: \<open>0 \<le> (\<Sum>E\<in>M. complex_of_nat (\<EE> E) *\<^sub>C
-            sandwich_tc E (Abs_trace_class (selfbutter \<psi>)))\<close> for \<psi> M
+(* TODO used? *)
+  have aux1: \<open>0 \<le> (\<Sum>(E,x)\<in>M. sandwich_tc E (Abs_trace_class (selfbutter \<psi>)))\<close> for \<psi> M
     by (auto intro!: sum_nonneg scaleC_nonneg_nonneg of_nat_0_le_iff Abs_trace_class_geq0I
         trace_class_sandwich sandwich_tc_pos)
 
@@ -1113,7 +1204,7 @@ lemma kraus_family_map_bounded_tight:
     apply (rule cSUP_least)
     using bounded by auto
   show \<open>kraus_family_norm \<EE> \<le> (\<Squnion>\<rho>\<in>{\<rho>. \<rho>\<ge>0}. norm (kraus_family_map \<EE> \<rho>) / norm \<rho>)\<close>
-    unfolding kraus_family_norm_def
+    using cSUP_least
   proof (rule cSUP_least)
     show \<open>Collect finite \<noteq> {}\<close>
       by auto
@@ -1191,11 +1282,52 @@ qed
   assumes \<open>kraus_family \<EE>\<close>
   shows \<open>((\<lambda>F. norm (\<Sum>E\<in>F. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E))) \<longlongrightarrow> kraus_family_norm \<EE>) (finite_subsets_at_top UNIV)\<close> *)
 
+lemma has_sum_in_cweak_operator_topology_pointwise:
+  \<open>has_sum_in cweak_operator_topology f X s \<longleftrightarrow> (\<forall>\<psi> \<phi>. ((\<lambda>x. \<psi> \<bullet>\<^sub>C f x \<phi>) has_sum \<psi> \<bullet>\<^sub>C s \<phi>) X)\<close>
+  by (simp add: has_sum_in_def has_sum_def limitin_cweak_operator_topology
+      cblinfun.sum_left cinner_sum_right)
+
+
+lemma kraus_family_bound_from_map:
+  assumes \<open>kraus_family \<EE>\<close>
+  shows \<open>\<psi> \<bullet>\<^sub>C kraus_family_bound \<EE> \<phi> = trace_tc (kraus_family_map \<EE> (tc_butterfly \<phi> \<psi>))\<close>
+proof -
+  from assms
+  have \<open>has_sum_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) \<EE> (kraus_family_bound \<EE>)\<close>
+    by (simp add: kraus_family_bound_has_sum)
+  then have \<open>((\<lambda>(E, x). \<psi> \<bullet>\<^sub>C (E* o\<^sub>C\<^sub>L E) \<phi>) has_sum \<psi> \<bullet>\<^sub>C kraus_family_bound \<EE> \<phi>) \<EE>\<close>
+    by (auto intro!: simp: has_sum_in_cweak_operator_topology_pointwise case_prod_unfold)
+  moreover have \<open>((\<lambda>(E, x). \<psi> \<bullet>\<^sub>C (E* o\<^sub>C\<^sub>L E) \<phi>) has_sum trace_tc (kraus_family_map \<EE> (tc_butterfly \<phi> \<psi>))) \<EE>\<close>
+  proof -
+    have *: \<open>trace_tc (sandwich_tc E (tc_butterfly \<phi> \<psi>)) = \<psi> \<bullet>\<^sub>C (E* o\<^sub>C\<^sub>L E) \<phi>\<close> for E :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+      by (auto intro!: simp: trace_tc.rep_eq from_trace_class_sandwich_tc
+          sandwich_apply tc_butterfly.rep_eq circularity_of_trace[symmetric, of _ E]
+          trace_class_comp_left cblinfun_compose_assoc trace_butterfly_comp)
+    from kraus_family_map_has_sum[OF assms]
+    have \<open>((\<lambda>Ex. sandwich_tc (fst Ex) (tc_butterfly \<phi> \<psi>)) has_sum kraus_family_map \<EE> (tc_butterfly \<phi> \<psi>)) \<EE>\<close>
+      by blast
+    then have \<open>((\<lambda>Ex. trace_tc (sandwich_tc (fst Ex) (tc_butterfly \<phi> \<psi>))) has_sum trace_tc (kraus_family_map \<EE> (tc_butterfly \<phi> \<psi>))) \<EE>\<close>
+      apply (rule has_sum_bounded_linear[rotated, unfolded o_def])
+      by (simp add: bounded_clinear.bounded_linear)
+    then
+    show ?thesis
+      by (simp add: * case_prod_unfold)
+  qed
+  ultimately show ?thesis
+    using has_sum_unique by blast
+qed
+
+
+lemma kraus_family_bound_welldefined:
+  assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
+  shows \<open>kraus_family_bound \<EE> = kraus_family_bound \<FF>\<close>
+  using assms by (auto intro!: cblinfun_cinner_eqI simp: kraus_equivalent_def kraus_family_bound_from_map)
+
 lemma kraus_family_norm_welldefined:
   assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
   shows \<open>kraus_family_norm \<EE> = kraus_family_norm \<FF>\<close>
-  using assms unfolding kraus_equivalent_def
-  by (smt (z3) SUP_cong kraus_family_map_bounded_tight)
+  using assms
+  by (simp add: kraus_family_norm_def kraus_family_bound_welldefined)
 
 lift_definition kraus_map_norm :: \<open>('a::chilbert_space, 'b::chilbert_space) kraus_map \<Rightarrow> real\<close> is
   kraus_family_norm
@@ -1332,7 +1464,7 @@ proof -
       by -
   qed
   then show ?thesis
-    by (simp add: kraus_family_def kraus_family_comp_def case_prod_beta)
+    by (simp add: kraus_family_def kraus_family_comp_def case_prod_beta conj_commute)
 qed
   
 (*
@@ -1442,12 +1574,18 @@ lemma kraus_family_comp_apply:
 proof (rule ext, rename_tac \<rho>)
   fix \<rho> :: \<open>('c, 'c) trace_class\<close>
 
+  have family: \<open>kraus_family (kraus_family_comp \<EE> \<FF>)\<close>
+    by (simp add: kraus_family_kraus_family_comp)
+
   have sum2: \<open>(\<lambda>(F, x). sandwich_tc F *\<^sub>V \<rho>) summable_on \<FF>\<close>
     by (simp add: kraus_family_map_summable split_def)
-  have sum1: \<open>(\<lambda>((E, x), (F, y)). sandwich_tc (E o\<^sub>C\<^sub>L F) *\<^sub>V \<rho>) summable_on \<EE> \<times> \<FF>\<close>
-    sorry
-
-  have \<open>kraus_family_map (kraus_family_comp \<EE> \<FF>) \<rho> 
+  from family have \<open>(\<lambda>E. sandwich_tc (fst E) *\<^sub>V \<rho>) summable_on (\<lambda>((E, x), F, y). (E o\<^sub>C\<^sub>L F, E, F, x, y)) ` (\<EE> \<times> \<FF>)\<close>
+    by (auto intro!: kraus_family_map_summable simp: kraus_family_comp_def case_prod_unfold)
+  then have sum1: \<open>(\<lambda>((E, x), (F, y)). sandwich_tc (E o\<^sub>C\<^sub>L F) *\<^sub>V \<rho>) summable_on \<EE> \<times> \<FF>\<close>
+    apply (subst (asm) summable_on_reindex)
+    by (auto intro!: inj_onI simp: o_def case_prod_unfold)
+  
+  have \<open>kraus_family_map (kraus_family_comp \<EE> \<FF>) \<rho>
           = (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>((E, x), F, y). (E o\<^sub>C\<^sub>L F, E, F, x, y)) ` (\<EE> \<times> \<FF>). sandwich_tc (fst E) *\<^sub>V \<rho>)\<close>
     by (simp add: kraus_family_map_def kraus_family_comp_def)
   also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>((E,x),(F,y))\<in>\<EE> \<times> \<FF>. sandwich_tc (E o\<^sub>C\<^sub>L F) *\<^sub>V \<rho>)\<close>
@@ -1589,18 +1727,65 @@ lemma has_sum_Sigma'_banach:
   shows \<open>((\<lambda>x. infsum (f x) (B x)) has_sum S) A\<close>
   by (metis (no_types, lifting) assms has_sum_cong has_sum_imp_summable has_sum_infsum infsumI infsum_Sigma'_banach summable_on_Sigma_banach)
 
+(* instantiation cblinfun_wot :: (complex_normed_vector, complex_inner) uniform_topological_group_add begin
+lift_definition uniformity_cblinfun_wot :: \<open>(('a, 'b) cblinfun_wot \<times> ('a, 'b) cblinfun_wot) filter\<close> is
+  \<open>SUP \<psi> \<phi>. (INF e\<in>{0 <..}. principal {(x, y). \<psi> \<bullet>\<^sub>C (x-y :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b) \<phi> < e})\<close>.
+instance
+proof
+  have \<open>open U = (\<forall>x\<in>U. \<forall>\<^sub>F (x', y) in uniformity. x' = x \<longrightarrow> y \<in> U)\<close> for U :: \<open>('a, 'b) cblinfun_wot set\<close>
+    apply transfer
+    apply (simp add: openin_cweak_operator_topology eventually_Sup)
+  thm uniformi *)
+
+lemma kraus_family_def2:
+  \<open>kraus_family \<EE> \<longleftrightarrow> summable_on_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) \<EE>\<close>
+proof (rule iffI)
+  assume \<open>kraus_family \<EE>\<close>
+  show \<open>summable_on_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) \<EE>\<close>
+    using \<open>kraus_family \<EE>\<close> kraus_family_bound_has_sum summable_on_in_def by blast
+next
+  assume \<open>summable_on_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) \<EE>\<close>
+  then show \<open>kraus_family \<EE>\<close>
+    by (auto intro!: summable_wot_bdd_above[where X=\<EE>] positive_cblinfun_squareI simp: kraus_family_def)
+qed
+
+lemma has_sum_on_wot_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(((=) ===> cr_cblinfun_wot) ===> (=) ===> cr_cblinfun_wot ===> (\<longleftrightarrow>)) (has_sum_in cweak_operator_topology) HAS_SUM\<close>
+  unfolding has_sum_euclidean_iff[abs_def, symmetric] has_sum_in_def[abs_def]
+  by transfer_prover
+
+lemma summable_on_wot_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(((=) ===> cr_cblinfun_wot) ===> (=) ===> (\<longleftrightarrow>)) (summable_on_in cweak_operator_topology) (summable_on)\<close>
+  apply (auto intro!: simp: summable_on_def[abs_def] summable_on_in_def[abs_def])
+  by transfer_prover
+
+lemma Abs_cblinfun_wot_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>((=) ===> cr_cblinfun_wot) id Abs_cblinfun_wot\<close>
+  by (auto intro!: rel_funI simp: cr_cblinfun_wot_def Abs_cblinfun_wot_inverse)
+
+lemma kraus_family_def2':
+  \<open>kraus_family \<EE> \<longleftrightarrow> (\<lambda>(E,x). Abs_cblinfun_wot (E* o\<^sub>C\<^sub>L E)) summable_on \<EE>\<close>
+  apply (transfer' fixing: \<EE>)
+  by (simp add: kraus_family_def2)
+
 lemma 
   fixes \<EE> :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family\<close>
   assumes \<open>kraus_family \<EE>\<close>
   shows kraus_family_flatten_same_map: \<open>kraus_family_map (kraus_family_flatten \<EE>) = kraus_family_map \<EE>\<close>
     and kraus_family_kraus_family_flatten: \<open>kraus_family (kraus_family_flatten \<EE>)\<close>
+    and kraus_family_flatten_bound: \<open>kraus_family_bound (kraus_family_flatten \<EE>) = kraus_family_bound \<EE>\<close>
     and kraus_family_flatten_norm: \<open>kraus_family_norm (kraus_family_flatten \<EE>) = kraus_family_norm \<EE>\<close>
 proof (rule ext)
   fix \<rho> :: \<open>('a, 'a) trace_class\<close>
-  define good normal \<sigma> S where \<open>good E \<longleftrightarrow> (norm E)\<^sup>2 = kraus_family_op_weight \<EE> E \<and> E \<noteq> 0\<close>
+  define good normal \<sigma> B B' where \<open>good E \<longleftrightarrow> (norm E)\<^sup>2 = kraus_family_op_weight \<EE> E \<and> E \<noteq> 0\<close>
     and \<open>normal E = E /\<^sub>R sqrt (kraus_family_op_weight \<EE> E)\<close>
     and \<open>\<sigma> = kraus_family_map \<EE> \<rho>\<close>
-    and \<open>S = (\<Sum>\<^sub>\<infinity>(F,x)\<in>\<EE>. F* o\<^sub>C\<^sub>L F)\<close> for E
+    and \<open>B = kraus_family_bound \<EE>\<close> 
+    and \<open>B' = Abs_cblinfun_wot B\<close> 
+  for E
   have E_inv: \<open>kraus_family_op_weight \<EE> E \<noteq> 0\<close> if \<open>good E\<close> for E
     using that by (auto simp:  good_def)
 
@@ -1684,194 +1869,105 @@ proof (rule ext)
       by (auto intro!: image_eqI[where x=\<open>((E,()),F,x)\<close>] simp: Fx_def)
   qed
 
-  from \<open>kraus_family \<EE>\<close>
-  have \<open>(\<lambda>(F,x). sandwich_tc F *\<^sub>V \<rho>) summable_on \<EE>\<close>
-    by (simp add: case_prod_unfold kraus_family_map_summable)
-  then have \<open>((\<lambda>(F,x). sandwich_tc F *\<^sub>V \<rho>) has_sum \<sigma>) \<EE>\<close>
-    by (simp add: \<sigma>_def kraus_family_map_def split_def)
-  then have \<open>((\<lambda>(F,x). sandwich_tc F *\<^sub>V \<rho>) has_sum \<sigma>) {(F,x)\<in>\<EE>. F \<noteq> 0}\<close>
-    apply (rule has_sum_cong_neutral[THEN iffD2, rotated -1])
-    by auto
-  then have \<open>((\<lambda>(F,x). sandwich_tc F *\<^sub>V \<rho>) has_sum \<sigma>)
+  show \<open>kraus_family_map (kraus_family_flatten \<EE>) \<rho> = \<sigma>\<close>
+  proof -
+    from \<open>kraus_family \<EE>\<close>
+    have \<open>(\<lambda>(F,x). sandwich_tc F *\<^sub>V \<rho>) summable_on \<EE>\<close>
+      by (simp add: case_prod_unfold kraus_family_map_summable)
+    then have \<open>((\<lambda>(F,x). sandwich_tc F *\<^sub>V \<rho>) has_sum \<sigma>) \<EE>\<close>
+      by (simp add: \<sigma>_def kraus_family_map_def split_def)
+    then have \<open>((\<lambda>(F,x). sandwich_tc F *\<^sub>V \<rho>) has_sum \<sigma>) {(F,x)\<in>\<EE>. F \<noteq> 0}\<close>
+      apply (rule has_sum_cong_neutral[THEN iffD2, rotated -1])
+      by auto
+    then have \<open>((\<lambda>(F,x). sandwich_tc F *\<^sub>V \<rho>) has_sum \<sigma>)
            (snd ` (SIGMA (E,x::unit):{E. good (fst E)}. kraus_family_related_ops \<EE> E))\<close>
-    by (simp add: snd_sigma)
-  then have \<open>((\<lambda>((E,x::unit), (F,y)). sandwich_tc F *\<^sub>V \<rho>) has_sum \<sigma>)
+      by (simp add: snd_sigma)
+    then have \<open>((\<lambda>((E,x::unit), (F,y)). sandwich_tc F *\<^sub>V \<rho>) has_sum \<sigma>)
        (SIGMA (E,x):{E. good (fst E)}. kraus_family_related_ops \<EE> E)\<close>
-    apply (subst (asm) has_sum_reindex)
-    by (auto intro!: inj_on_def inj_snd simp: o_def case_prod_unfold)
-  then have sum1: \<open>((\<lambda>((E,x::unit), (F,x)). (norm F)\<^sup>2 *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>) has_sum \<sigma>)
+      apply (subst (asm) has_sum_reindex)
+      by (auto intro!: inj_on_def inj_snd simp: o_def case_prod_unfold)
+    then have sum1: \<open>((\<lambda>((E,x::unit), (F,x)). (norm F)\<^sup>2 *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>) has_sum \<sigma>)
     (SIGMA (E,x):{p. good (fst p)}. kraus_family_related_ops \<EE> E)\<close>
-    apply (rule has_sum_cong[THEN iffD2, rotated])
-    apply (auto intro!: simp: good_def normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
-        kraus_family_related_ops_def kraus_family_op_weight_scale)
-    by (metis (no_types, opaque_lifting) Extra_Ordered_Fields.sign_simps(5) linorder_not_less more_arith_simps(11) mult_eq_0_iff norm_le_zero_iff order.refl power2_eq_square right_inverse scale_one)
-  then have \<open>((\<lambda>(E,_). \<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E.
+      apply (rule has_sum_cong[THEN iffD2, rotated])
+      apply (auto intro!: simp: good_def normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
+          kraus_family_related_ops_def kraus_family_op_weight_scale)
+      by (metis (no_types, opaque_lifting) Extra_Ordered_Fields.sign_simps(5) linorder_not_less more_arith_simps(11) mult_eq_0_iff norm_le_zero_iff order.refl power2_eq_square right_inverse scale_one)
+    then have \<open>((\<lambda>(E,_). \<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E.
                 (norm F)\<^sup>2 *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>) has_sum \<sigma>) {(E, x::unit). good E}\<close>
-    by (auto intro!: has_sum_Sigma'_banach simp add: case_prod_unfold)
-  then have \<open>((\<lambda>(E,_). (\<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E. (norm F)\<^sup>2) *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>)
+      by (auto intro!: has_sum_Sigma'_banach simp add: case_prod_unfold)
+    then have \<open>((\<lambda>(E,_). (\<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E. (norm F)\<^sup>2) *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>)
                         has_sum \<sigma>) {(E, x::unit). good E}\<close>
-    apply (rule has_sum_cong[THEN iffD1, rotated])
-    apply auto
-    by (smt (verit) Complex_Vector_Spaces.infsum_scaleR_left cblinfun.scaleR_left infsum_cong split_def)
-  then have \<open>((\<lambda>(E,_). kraus_family_op_weight \<EE> E *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>) has_sum \<sigma>) {(E, x::unit). good E}\<close>
-    by (simp add: kraus_family_op_weight_def)
-  then have \<open>((\<lambda>(E,_). sandwich_tc E *\<^sub>V \<rho>) has_sum \<sigma>) {(E, x::unit). good E}\<close>
-    apply (rule has_sum_cong[THEN iffD1, rotated])
-    by (auto intro!: simp: normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv)
-  then have \<open>((\<lambda>(E,_). sandwich_tc E *\<^sub>V \<rho>) has_sum \<sigma>) (kraus_family_flatten \<EE>)\<close>
-    by (simp add: kraus_family_flatten_def good_def)
-  then show \<open>kraus_family_map (kraus_family_flatten \<EE>) \<rho> = \<sigma>\<close>
-    by (simp add: kraus_family_map_def case_prod_unfold infsumI)
+      apply (rule has_sum_cong[THEN iffD1, rotated])
+      apply auto
+      by (smt (verit) Complex_Vector_Spaces.infsum_scaleR_left cblinfun.scaleR_left infsum_cong split_def)
+    then have \<open>((\<lambda>(E,_). kraus_family_op_weight \<EE> E *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>) has_sum \<sigma>) {(E, x::unit). good E}\<close>
+      by (simp add: kraus_family_op_weight_def)
+    then have \<open>((\<lambda>(E,_). sandwich_tc E *\<^sub>V \<rho>) has_sum \<sigma>) {(E, x::unit). good E}\<close>
+      apply (rule has_sum_cong[THEN iffD1, rotated])
+      by (auto intro!: simp: normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv)
+    then have \<open>((\<lambda>(E,_). sandwich_tc E *\<^sub>V \<rho>) has_sum \<sigma>) (kraus_family_flatten \<EE>)\<close>
+      by (simp add: kraus_family_flatten_def good_def)
+    then show \<open>kraus_family_map (kraus_family_flatten \<EE>) \<rho> = \<sigma>\<close>
+      by (simp add: kraus_family_map_def case_prod_unfold infsumI)
+  qed
 
-  from \<open>kraus_family \<EE>\<close>
-  obtain N where \<open>(\<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> N\<close> if \<open>F \<subseteq> \<EE>\<close> and \<open>finite F\<close> for F
-    by -
-
-  have \<open>(\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) summable_on \<EE>\<close>
-    by (simp add: kraus_family_def)
-  then have \<open>((\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) has_sum S) \<EE>\<close>
-    by (simp add: S_def kraus_family_map_def split_def)
-  then have \<open>((\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) has_sum S) {(F,x)\<in>\<EE>. F \<noteq> 0}\<close>
-    apply (rule has_sum_cong_neutral[THEN iffD2, rotated -1])
-    by auto
-  then have \<open>((\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) has_sum S)
+  have bound_has_sum: \<open>has_sum_in cweak_operator_topology (\<lambda>(E,_). E* o\<^sub>C\<^sub>L E) (kraus_family_flatten \<EE>) B\<close>
+  proof (unfold has_sum_in_cweak_operator_topology_pointwise, intro allI)
+    fix \<psi> \<phi> :: 'a
+    define B' where \<open>B' = \<psi> \<bullet>\<^sub>C B \<phi>\<close>
+    have \<open>has_sum_in cweak_operator_topology (\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) \<EE> B\<close>
+      using B_def assms kraus_family_bound_has_sum by blast
+    then have \<open>((\<lambda>(F,x). \<psi> \<bullet>\<^sub>C (F* o\<^sub>C\<^sub>L F) \<phi>) has_sum B') \<EE>\<close>
+      by (simp add: B'_def has_sum_in_cweak_operator_topology_pointwise case_prod_unfold)
+    then have \<open>((\<lambda>(F,x). \<psi> \<bullet>\<^sub>C (F* o\<^sub>C\<^sub>L F) \<phi>) has_sum B') {(F,x)\<in>\<EE>. F \<noteq> 0}\<close>
+      apply (rule has_sum_cong_neutral[THEN iffD2, rotated -1])
+      by (auto simp: zero_cblinfun_wot_def)
+    then have \<open>((\<lambda>(F,x). \<psi> \<bullet>\<^sub>C (F* o\<^sub>C\<^sub>L F) \<phi>) has_sum B')
            (snd ` (SIGMA (E,x::unit):{E. good (fst E)}. kraus_family_related_ops \<EE> E))\<close>
-    by (simp add: snd_sigma)
-  then have \<open>((\<lambda>((E,x::unit), (F,y)). F* o\<^sub>C\<^sub>L F) has_sum S)
+      by (simp add: snd_sigma)
+    then have \<open>((\<lambda>((E,x::unit), (F,y)). \<psi> \<bullet>\<^sub>C (F* o\<^sub>C\<^sub>L F) \<phi>) has_sum B')
        (SIGMA (E,x):{E. good (fst E)}. kraus_family_related_ops \<EE> E)\<close>
-    apply (subst (asm) has_sum_reindex)
-    by (auto intro!: inj_on_def inj_snd simp: o_def case_prod_unfold)
-  then have sum1: \<open>((\<lambda>((E,x::unit), (F,x)). (norm F)\<^sup>2 *\<^sub>R (normal E* o\<^sub>C\<^sub>L normal E)) has_sum S)
+      apply (subst (asm) has_sum_reindex)
+      by (auto intro!: inj_on_def inj_snd simp: o_def case_prod_unfold)
+    then have sum1: \<open>((\<lambda>((E,x::unit), (F,x)). (norm F)\<^sup>2 *\<^sub>R (\<psi> \<bullet>\<^sub>C (normal E* o\<^sub>C\<^sub>L normal E) \<phi>)) has_sum B')
     (SIGMA (E,x):{p. good (fst p)}. kraus_family_related_ops \<EE> E)\<close>
-    apply (rule has_sum_cong[THEN iffD2, rotated])
-    apply (auto intro!: simp: good_def normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
-        kraus_family_related_ops_def kraus_family_op_weight_scale)
-    by (smt (verit) Extra_Ordered_Fields.sign_simps(5) assms kraus_family_op_weight_neq0 more_arith_simps(11) power2_eq_square power_inverse real_sqrt_pow2 right_inverse scale_one zero_compare_simps(13))
-  then have \<open>((\<lambda>(E,_). \<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E.
-                (norm F)\<^sup>2 *\<^sub>R (normal E* o\<^sub>C\<^sub>L normal E)) has_sum S) {(E, x::unit). good E}\<close>
-    by (auto intro!: has_sum_Sigma'_banach simp add: case_prod_unfold)
-  then have \<open>((\<lambda>(E,_). (\<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E. (norm F)\<^sup>2) *\<^sub>R (normal E* o\<^sub>C\<^sub>L normal E))
-                        has_sum S) {(E, x::unit). good E}\<close>
-    apply (rule has_sum_cong[THEN iffD1, rotated])
-    apply auto
-    by (smt (verit) Complex_Vector_Spaces.infsum_scaleR_left cblinfun.scaleR_left infsum_cong split_def)
-  then have \<open>((\<lambda>(E,_). kraus_family_op_weight \<EE> E *\<^sub>R (normal E* o\<^sub>C\<^sub>L normal E)) has_sum S) {(E, x::unit). good E}\<close>
-    by (simp add: kraus_family_op_weight_def)
-  then have \<open>((\<lambda>(E,_). E* o\<^sub>C\<^sub>L E) has_sum S) {(E, x::unit). good E}\<close>
-    apply (rule has_sum_cong[THEN iffD1, rotated])
-    by (auto intro!: simp: normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
-        simp flip: inverse_mult_distrib semigroup_mult.mult_assoc)
-  then have sum: \<open>((\<lambda>(E,_). E* o\<^sub>C\<^sub>L E) has_sum S) (kraus_family_flatten \<EE>)\<close>
-    by (simp add: kraus_family_flatten_def good_def)
-  then have \<open>(\<Sum>\<^sub>\<infinity>(E,_)\<in>kraus_family_flatten \<EE>. E* o\<^sub>C\<^sub>L E) = S\<close>
-    using infsumI by blast
+      apply (rule has_sum_cong[THEN iffD2, rotated])
+      apply (auto intro!: simp: good_def normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
+          kraus_family_related_ops_def kraus_family_op_weight_scale 
+          cblinfun.scaleC_left cblinfun.scaleC_right cinner_scaleC_right scaleR_scaleC) 
+      by (smt (verit, ccfv_threshold) Extra_Ordered_Fields.sign_simps(4) Extra_Ordered_Fields.sign_simps(5) assms complex_of_real_pos_iff inverse_mult_distrib kraus_family_op_weight_geq0 kraus_family_op_weight_neq0 kraus_family_op_weight_scale less_irrefl of_real_mult power2_eq_square real_sqrt_pow2 right_inverse scaleR_scaleC)
+    then have \<open>((\<lambda>(E,_). \<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E.
+                (norm F)\<^sup>2 *\<^sub>R (\<psi> \<bullet>\<^sub>C (normal E* o\<^sub>C\<^sub>L normal E) \<phi>)) has_sum B') {(E, x::unit). good E}\<close>
+      by (auto intro!: has_sum_Sigma'_banach simp add: case_prod_unfold)
+    then have \<open>((\<lambda>(E,_). (\<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E. (norm F)\<^sup>2) *\<^sub>R (\<psi> \<bullet>\<^sub>C (normal E* o\<^sub>C\<^sub>L normal E) \<phi>))
+                        has_sum B') {(E, x::unit). good E}\<close>
+      apply (rule has_sum_cong[THEN iffD1, rotated])
+      apply auto
+      by (smt (verit) Complex_Vector_Spaces.infsum_scaleR_left cblinfun.scaleR_left infsum_cong split_def)
+    then have \<open>((\<lambda>(E,_). kraus_family_op_weight \<EE> E *\<^sub>R (\<psi> \<bullet>\<^sub>C (normal E* o\<^sub>C\<^sub>L normal E) \<phi>)) has_sum B') {(E, x::unit). good E}\<close>
+      by (simp add: kraus_family_op_weight_def)
+    then have \<open>((\<lambda>(E,_). \<psi> \<bullet>\<^sub>C (E* o\<^sub>C\<^sub>L E) \<phi>) has_sum B') {(E, x::unit). good E}\<close>
+      apply (rule has_sum_cong[THEN iffD1, rotated])
+      apply (auto intro!: simp: normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
+          cblinfun.scaleR_left scaleR_scaleC
+          simp flip: inverse_mult_distrib semigroup_mult.mult_assoc)
+      by (metis E_inv field_class.field_inverse kraus_family_op_weight_geq0 mult.commute of_real_eq_0_iff of_real_hom.hom_mult power2_eq_square real_sqrt_pow2)
+    then have \<open>((\<lambda>(E,_). \<psi> \<bullet>\<^sub>C (E* o\<^sub>C\<^sub>L E) \<phi>) has_sum B') (kraus_family_flatten \<EE>)\<close>
+      by (simp add: kraus_family_flatten_def good_def)
+    then show \<open>((\<lambda>x. \<psi> \<bullet>\<^sub>C ((case x of (E, uu_) \<Rightarrow> E* o\<^sub>C\<^sub>L E) *\<^sub>V \<phi>)) has_sum B') (kraus_family_flatten \<EE>)\<close>
+      by (simp add: case_prod_unfold)
+  qed
 
-  have *: \<open>(\<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> N\<close> if \<open>F \<subseteq> kraus_family_flatten \<EE>\<close> and \<open>finite F\<close> for F
-    by xxx
-  then show \<open>kraus_family (kraus_family_flatten \<EE>)\<close>
-    apply (auto intro!: bdd_aboveI2[where M=N] simp add: kraus_family_def)
-try0
-sledgehammer
-  by -
-  with * have \<open>kraus_family_norm (kraus_family_flatten \<EE>) \<le> N\<close>
-try0
-sledgehammer
-   apply (simp add: kraus_family_norm_def S_def)
+  from bound_has_sum show family: \<open>kraus_family (kraus_family_flatten \<EE>)\<close>
+    by (auto simp: kraus_family_def2 summable_on_in_def)
 
-  then have \<open>kraus_family_norm (kraus_family_flatten \<EE>) \<le> N\<close>
-    apply (simp add: kraus_family_norm_def S_def)
-  
-  from \<open>kraus_family \<EE>\<close>
-  have \<open>(\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) summable_on \<EE>\<close>
-    by (simp add: kraus_family_def)
-  then have \<open>((\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) has_sum S) \<EE>\<close>
-    by (simp add: S_def kraus_family_map_def split_def)
-  then have \<open>((\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) has_sum S) {(F,x)\<in>\<EE>. F \<noteq> 0}\<close>
-    apply (rule has_sum_cong_neutral[THEN iffD2, rotated -1])
-    by auto
-  then have \<open>((\<lambda>(F,x). F* o\<^sub>C\<^sub>L F) has_sum S)
-           (snd ` (SIGMA (E,x::unit):{E. good (fst E)}. kraus_family_related_ops \<EE> E))\<close>
-    by (simp add: snd_sigma)
-  then have \<open>((\<lambda>((E,x::unit), (F,y)). F* o\<^sub>C\<^sub>L F) has_sum S)
-       (SIGMA (E,x):{E. good (fst E)}. kraus_family_related_ops \<EE> E)\<close>
-    apply (subst (asm) has_sum_reindex)
-    by (auto intro!: inj_on_def inj_snd simp: o_def case_prod_unfold)
-  then have sum1: \<open>((\<lambda>((E,x::unit), (F,x)). (norm F)\<^sup>2 *\<^sub>R (normal E* o\<^sub>C\<^sub>L normal E)) has_sum S)
-    (SIGMA (E,x):{p. good (fst p)}. kraus_family_related_ops \<EE> E)\<close>
-    apply (rule has_sum_cong[THEN iffD2, rotated])
-    apply (auto intro!: simp: good_def normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
-        kraus_family_related_ops_def kraus_family_op_weight_scale)
-    by (smt (verit) Extra_Ordered_Fields.sign_simps(5) assms kraus_family_op_weight_neq0 more_arith_simps(11) power2_eq_square power_inverse real_sqrt_pow2 right_inverse scale_one zero_compare_simps(13))
-  then have \<open>((\<lambda>(E,_). \<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E.
-                (norm F)\<^sup>2 *\<^sub>R (normal E* o\<^sub>C\<^sub>L normal E)) has_sum S) {(E, x::unit). good E}\<close>
-    by (auto intro!: has_sum_Sigma'_banach simp add: case_prod_unfold)
-  then have \<open>((\<lambda>(E,_). (\<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E. (norm F)\<^sup>2) *\<^sub>R (normal E* o\<^sub>C\<^sub>L normal E))
-                        has_sum S) {(E, x::unit). good E}\<close>
-    apply (rule has_sum_cong[THEN iffD1, rotated])
-    apply auto
-    by (smt (verit) Complex_Vector_Spaces.infsum_scaleR_left cblinfun.scaleR_left infsum_cong split_def)
-  then have \<open>((\<lambda>(E,_). kraus_family_op_weight \<EE> E *\<^sub>R (normal E* o\<^sub>C\<^sub>L normal E)) has_sum S) {(E, x::unit). good E}\<close>
-    by (simp add: kraus_family_op_weight_def)
-  then have \<open>((\<lambda>(E,_). E* o\<^sub>C\<^sub>L E) has_sum S) {(E, x::unit). good E}\<close>
-    apply (rule has_sum_cong[THEN iffD1, rotated])
-    by (auto intro!: simp: normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
-        simp flip: inverse_mult_distrib semigroup_mult.mult_assoc)
-  then have sum: \<open>((\<lambda>(E,_). E* o\<^sub>C\<^sub>L E) has_sum S) (kraus_family_flatten \<EE>)\<close>
-    by (simp add: kraus_family_flatten_def good_def)
-  then have \<open>(\<Sum>\<^sub>\<infinity>(E,_)\<in>kraus_family_flatten \<EE>. E* o\<^sub>C\<^sub>L E) = S\<close>
-    using infsumI by blast
-  then show \<open>kraus_family_norm (kraus_family_flatten \<EE>) = kraus_family_norm \<EE>\<close>
-    by (simp add: kraus_family_norm_def S_def)
-  
-  show \<open>kraus_family (kraus_family_flatten \<EE>)\<close>
-    using sum by (auto intro!: has_sum_imp_summable simp: kraus_family_def S_def)
+  from family bound_has_sum show bound: \<open>kraus_family_bound (kraus_family_flatten \<EE>) = B\<close>
+    apply (auto intro!: simp: kraus_family_bound_def)
+    using has_sum_in_infsum_in has_sum_in_unique hausdorff_cweak_operator_topology summable_on_in_def by blast
+
+  from bound show \<open>kraus_family_norm (kraus_family_flatten \<EE>) = kraus_family_norm \<EE>\<close>
+    by (simp add: kraus_family_norm_def B_def)
 qed
-
-(*   have \<open>kraus_family_map (kraus_family_flatten \<EE>) \<rho> 
-      = (\<Sum>\<^sub>\<infinity>(E,_)\<in>{(E, _::unit). good E}. sandwich_tc E *\<^sub>V \<rho>)\<close>
-    by (simp add: kraus_family_map_def kraus_family_flatten_def good_def case_prod_unfold)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,_)\<in>{(E, x::unit). good E}. kraus_family_op_weight \<EE> E *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>)\<close>
-    apply (rule infsum_cong)
-    by (auto intro!: simp: normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv)
-X  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,_)\<in>{(E, x::unit). good E}. 
-                (\<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E. (norm F)\<^sup>2) *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>)\<close>
-    by (simp add: kraus_family_op_weight_def)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,_)\<in>{(E, x::unit). good E}. \<Sum>\<^sub>\<infinity>(F, x)\<in>kraus_family_related_ops \<EE> E.
-                (norm F)\<^sup>2 *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>)\<close>
-    by (smt (verit, ccfv_SIG) Complex_Vector_Spaces.infsum_scaleR_left cblinfun.scaleR_left infsum_cong split_def)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>((E,x::unit), (F,y))\<in>(SIGMA (E,x):{E. good (fst E)}. kraus_family_related_ops \<EE> E).
-       (norm F)\<^sup>2 *\<^sub>R sandwich_tc (normal E) *\<^sub>V \<rho>)\<close>
-    unfolding case_prod_unfold
-    apply (subst infsum_Sigma'_banach)
-    using sum1
-    by (auto simp add: case_prod_unfold)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>((E,x::unit), (F,y))\<in>(SIGMA (E,x):{E. good (fst E)}. kraus_family_related_ops \<EE> E).
-       sandwich_tc F *\<^sub>V \<rho>)\<close>
-    apply (rule infsum_cong)
-    apply (auto intro!: simp: good_def normal_def sandwich_tc_scaleR_left power_inverse real_sqrt_pow2 E_inv
-        kraus_family_related_ops_def kraus_family_op_weight_scale)
-    by (simp add: Extra_Ordered_Fields.sign_simps(6) assms kraus_family_op_weight_neq0 ordered_field_class.sign_simps(5) power_mult_distrib)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(F,x)\<in>snd ` (SIGMA (E,x::unit):{E. good (fst E)}. kraus_family_related_ops \<EE> E).
-       sandwich_tc F *\<^sub>V \<rho>)\<close>
-    apply (subst infsum_reindex)
-    by (auto intro!: inj_on_def inj_snd simp: o_def case_prod_unfold)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(F,x)\<in>{(F,x)\<in>\<EE>. F \<noteq> 0}. sandwich_tc F *\<^sub>V \<rho>)\<close>
-    by (simp add: snd_sigma)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(F,x)\<in>\<EE>. sandwich_tc F *\<^sub>V \<rho>)\<close>
-    apply (rule infsum_cong_neutral)
-    by auto
-  also have \<open>\<dots> = kraus_family_map \<EE> \<rho>\<close>
-    by (simp add: kraus_family_map_def case_prod_unfold)
-  finally show \<open>kraus_family_map (kraus_family_flatten \<EE>) \<rho> = kraus_family_map \<EE> \<rho>\<close>
-    by - *)
-(* qed *)
-
-
-(* lemma
-  assumes \<open>kraus_family \<EE>\<close>
-  shows kraus_family_kraus_family_flatten: \<open>kraus_family (kraus_family_flatten \<EE>)\<close>
-    and kraus_family_flatten_norm: \<open>kraus_family_norm (kraus_family_flatten \<EE>) = kraus_family_norm \<EE>\<close>
-   *)
 
 
 lift_definition kraus_map_comp :: \<open>('a::chilbert_space,'b::chilbert_space) kraus_map
@@ -1901,7 +1997,7 @@ lemma kraus_family_plus:
   using assms
   by (auto intro!: summable_on_Un_disjoint 
       summable_on_reindex[THEN iffD2] inj_onI
-      simp: kraus_family_def kraus_family_plus_def o_def case_prod_unfold)
+      simp: kraus_family_def2' kraus_family_plus_def o_def case_prod_unfold conj_commute)
 
 
 lemma kraus_family_map_plus:
@@ -2076,7 +2172,7 @@ lemma kraus_map_scaleR_neg:
 
 lemma kraus_map_norm_0[simp]: \<open>kraus_map_norm 0 = 0\<close>
   apply transfer
-  by (auto intro!: cSUP_const simp: kraus_family_norm_def)
+  by (auto intro!: simp: kraus_family_norm_def kraus_family_bound_def infsum_in_finite)
 
 (*
 (* TODO move, TODO generalize from real *)
