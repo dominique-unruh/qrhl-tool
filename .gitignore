@@ -45,3 +45,5 @@ _region_.pdf
 /.bsp
 .#*
 \#*#
+/Gemfile.lock
+/_site
