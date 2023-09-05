@@ -40,6 +40,7 @@ This file is more of a personal collection of notes but can be fleshed out on de
   * `git fetch origin master`
   * `git merge master`
   * Replace `2022-RC2` (or whatever previous version) mentions by `2022-RC3` (or whatever)
+    in file `isabelleVersion`
   * `sbt createIsabelleNames`
   * Update `/home/unruh/.qrhl-tool.conf` as well
   * Run tests (in IDEA)
