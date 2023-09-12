@@ -1,6 +1,26 @@
 theory Scratch
   imports "HOL-Library.Rewrite"
+Complex_Bounded_Operators.Cblinfun_Matrix
+Complex_Bounded_Operators.Cblinfun_Code
+    (* "HOL-Library.Code_Target_Nat" *)
 begin
+
+unbundle cblinfun_notation
+
+code_printing constant plus => (SML) infix 1 "+"
+
+lemma mat_of_cblinfun_inverse[code abstype]:
+  \<open>cblinfun_of_mat (mat_of_cblinfun B) = B\<close>
+  for B::"'a::{basis_enum,complex_normed_vector}  \<Rightarrow>\<^sub>C\<^sub>L 'b::{basis_enum,complex_normed_vector}"
+
+value True
+
+value \<open>1234::nat\<close>
+
+value \<open>(1234::nat) * (4321)\<close>
+
+lemma \<open>(1234::nat) * (4321) = 5332114\<close>
+  by eval
 
 lemma sum_single: 
   assumes "finite A"
