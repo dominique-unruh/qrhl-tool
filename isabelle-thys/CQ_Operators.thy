@@ -1149,12 +1149,62 @@ qed
 lemma rank1_comp_left: \<open>rank1 (a o\<^sub>C\<^sub>L b)\<close> if \<open>rank1 a\<close>
   by (metis Compact_Operators.rank1_def butterfly_comp_cblinfun that) *)
 
+lemma finite_rank_cspan_butterflies:
+  \<open>finite_rank a \<longleftrightarrow> a \<in> cspan (range (case_prod butterfly))\<close>
+  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+proof -
+  have \<open>(Collect finite_rank :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'b) set) = cspan (Collect rank1)\<close>
+    using finite_rank_def by fastforce
+  also have \<open>\<dots> = cspan (insert 0 (Collect rank1))\<close>
+    by force
+  also have \<open>\<dots> = cspan (range (case_prod butterfly))\<close>
+    apply (rule arg_cong[where f=cspan])
+    apply (auto intro!: simp: rank1_iff_butterfly case_prod_beta image_def)
+    apply auto
+    by (metis butterfly_0_left)
+  finally show ?thesis
+    by auto
+qed
+
 lemma finite_rank_comp_right: \<open>finite_rank (a o\<^sub>C\<^sub>L b)\<close> if \<open>finite_rank b\<close>
-by -
+  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
+proof -
+  from that
+  have \<open>b \<in> cspan (range (case_prod butterfly))\<close>
+    by (simp add: finite_rank_cspan_butterflies)
+  then have \<open>a o\<^sub>C\<^sub>L b \<in> ((o\<^sub>C\<^sub>L) a) ` cspan (range (case_prod butterfly))\<close>
+    by fast
+  also have \<open>\<dots> = cspan (((o\<^sub>C\<^sub>L) a) ` range (case_prod butterfly))\<close>
+    by (simp add: clinear_cblinfun_compose_right complex_vector.linear_span_image)
+  also have \<open>\<dots> \<subseteq> cspan (range (case_prod butterfly))\<close>
+    apply (auto intro!: complex_vector.span_mono
+        simp add: image_image case_prod_unfold cblinfun_comp_butterfly image_def)
+    by fast
+  finally show ?thesis
+    using finite_rank_cspan_butterflies by blast
+qed
+
 lemma finite_rank_comp_left: \<open>finite_rank (a o\<^sub>C\<^sub>L b)\<close> if \<open>finite_rank a\<close>
-by -
+  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
+proof -
+  from that
+  have \<open>a \<in> cspan (range (case_prod butterfly))\<close>
+    by (simp add: finite_rank_cspan_butterflies)
+  then have \<open>a o\<^sub>C\<^sub>L b \<in> (\<lambda>a. a o\<^sub>C\<^sub>L b) ` cspan (range (case_prod butterfly))\<close>
+    by fast
+  also have \<open>\<dots> = cspan ((\<lambda>a. a o\<^sub>C\<^sub>L b) ` range (case_prod butterfly))\<close>
+    by (simp add: clinear_cblinfun_compose_left complex_vector.linear_span_image)
+  also have \<open>\<dots> \<subseteq> cspan (range (case_prod butterfly))\<close>
+    apply (auto intro!: complex_vector.span_mono
+        simp add: image_image case_prod_unfold butterfly_comp_cblinfun image_def)
+    by fast
+  finally show ?thesis
+    using finite_rank_cspan_butterflies by blast
+qed
+
 
 lemma compact_op_comp_right: \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close> if \<open>compact_op b\<close>
+  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
 proof -
   from that have \<open>b \<in> closure (Collect finite_rank)\<close>
   using compact_op_def by blast
@@ -1169,6 +1219,7 @@ proof -
 qed
 
 lemma compact_op_comp_left: \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close> if \<open>compact_op a\<close>
+  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
 proof -
   from that have \<open>a \<in> closure (Collect finite_rank)\<close>
   using compact_op_def by blast
@@ -1232,7 +1283,7 @@ qed
 
 lemma rank1_trace_class: \<open>trace_class a\<close> if \<open>rank1 a\<close>
   for a b :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  using Compact_Operators.rank1_def that by force
+  using that by (auto intro!: simp: rank1_iff_butterfly)
 
 lemma finite_rank_trace_class: \<open>trace_class a\<close> if \<open>finite_rank a\<close>
   for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
@@ -1251,6 +1302,7 @@ lemma trace_class_hilbert_schmidt: \<open>hilbert_schmidt a\<close> if \<open>tr
   by (auto intro!: trace_class_comp_right that simp: hilbert_schmidt_def)
 
 lemma finite_rank_hilbert_schmidt: \<open>hilbert_schmidt a\<close> if \<open>finite_rank a\<close>
+  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
   using finite_rank_comp_right finite_rank_trace_class hilbert_schmidtI that by blast
 
 lemma hilbert_schmidt_compact: \<open>compact_op a\<close> if \<open>hilbert_schmidt a\<close>
@@ -1361,7 +1413,7 @@ proof (intro rel_funI rel_setI)
   qed
 qed
 
-(* lemma
+(* lemma (* NOT TRUE *)
   assumes \<open>trace_class x\<close>
   assumes \<open>S \<subseteq> Collect trace_class\<close>
   shows \<open>continuous (at x within S) Abs_trace_class\<close>
@@ -1379,6 +1431,21 @@ sledgehammer [dont_slice]
 by -
   assume \<open>dist y x < e\<close>
  *)
+
+lemma cspan_trace_class:
+  \<open>cspan (Collect trace_class :: ('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space) set) = Collect trace_class\<close>
+proof (intro Set.set_eqI iffI)
+  fix x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+  show \<open>x \<in> Collect trace_class \<Longrightarrow> x \<in> cspan (Collect trace_class)\<close>
+    by (simp add: complex_vector.span_clauses)
+  assume \<open>x \<in> cspan (Collect trace_class)\<close>
+  then obtain F f where x_def: \<open>x = (\<Sum>a\<in>F. f a *\<^sub>C a)\<close> and \<open>F \<subseteq> Collect trace_class\<close>
+    by (auto intro!: simp: complex_vector.span_explicit)
+  then have \<open>trace_class x\<close>
+    by (auto intro!: trace_class_sum trace_class_scaleC simp: x_def)
+  then show \<open>x \<in> Collect trace_class \<close>
+    by simp
+qed
 
 (* TODO move *)
 lemma finite_rank_dense_trace_class:
@@ -1398,7 +1465,15 @@ proof -
       using closure_sequential by blast
     define f' where \<open>f' n = Abs_trace_class (f n)\<close> for n
     have [simp]: \<open>trace_class (f n)\<close> for n
-      by x
+    proof -
+      note f_range[of n]
+      also have \<open>cspan ((\<lambda>(\<xi>,\<eta>). butterfly \<xi> \<eta>) ` (A \<times> B)) \<subseteq> cspan (Collect trace_class)\<close>
+        by (auto intro!: complex_vector.span_mono simp: )
+      also have \<open>\<dots> = Collect trace_class\<close>
+        by (simp add: cspan_trace_class)
+      finally show ?thesis
+        by simp
+    qed
     have f_f': \<open>f n = from_trace_class (f' n)\<close> for n
       by (simp add: f'_def Abs_trace_class_inverse)
     have f'_range: \<open>f' n \<in> cspan ((\<lambda>(\<xi>,\<eta>). tc_butterfly \<xi> \<eta>) ` (A \<times> B))\<close> for n
@@ -1415,7 +1490,8 @@ proof -
       unfolding f'_def
       apply (subst from_trace_class_inverse[symmetric, of x])
       apply (rule continuous_within_tendsto_compose'[where f=Abs_trace_class and S=\<open>Collect trace_class\<close>])
-        apply (auto intro!: simp: )
+        apply (auto intro!: f_lim simp: )
+(* NOT TRUE! *)
       by -
     from f'_range f'_limit
     show \<open>\<exists>f'. (\<forall>n. f' n \<in> cspan ((\<lambda>(\<xi>, \<eta>). tc_butterfly \<xi> \<eta>) ` (A \<times> B))) \<and> f' \<longlonglongrightarrow> x\<close>
@@ -1431,7 +1507,39 @@ definition diagonal_operator where \<open>diagonal_operator f =
 lemma diagonal_operator_exists:
   assumes \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>
   shows \<open>explicit_cblinfun_exists (\<lambda>x y. of_bool (x = y) * f x)\<close>
-  by x
+proof -
+  from assms obtain B where B: \<open>cmod (f x) \<le> B\<close> for x
+    by (auto simp: bdd_above_def)
+  show ?thesis
+  proof (rule explicit_cblinfun_exists_bounded)
+    fix S T :: \<open>'a set\<close> and \<psi> :: \<open>'a \<Rightarrow> complex\<close>
+    assume [simp]: \<open>finite S\<close> \<open>finite T\<close>
+    assume \<open>\<psi> a = 0\<close> if \<open>a \<notin> T\<close> for a
+    have \<open>(\<Sum>b\<in>S. (cmod (\<Sum>a\<in>T. \<psi> a *\<^sub>C (of_bool (b = a) * f b)))\<^sup>2)
+        = (\<Sum>b\<in>S. (cmod (of_bool (b \<in> T) * \<psi> b * f b))\<^sup>2)\<close>
+      apply (rule sum.cong[OF refl])
+      subgoal for b
+        apply (subst sum_single[where i=b])
+        by auto
+      by -
+    also have \<open>\<dots> = (\<Sum>b\<in>S\<inter>T. (cmod (\<psi> b * f b))\<^sup>2)\<close>
+      apply (rule sum.mono_neutral_cong_right)
+      by auto
+    also have \<open>\<dots> \<le> (\<Sum>b\<in>T. (cmod (\<psi> b * f b))\<^sup>2)\<close>
+      by (simp add: sum_mono2)
+    also have \<open>\<dots> \<le> (\<Sum>b\<in>T. B\<^sup>2 * (cmod (\<psi> b))\<^sup>2)\<close>
+      apply (rule sum_mono)
+      apply (auto intro!: simp: norm_mult power_mult_distrib)
+      apply (subst mult.commute)
+      by (simp add: B mult_right_mono power_mono)
+    also have \<open>\<dots> = B\<^sup>2 * (\<Sum>b\<in>T. (cmod (\<psi> b))\<^sup>2)\<close>
+      by (simp add: vector_space_over_itself.scale_sum_right)
+    finally
+    show \<open>(\<Sum>b\<in>S. (cmod (\<Sum>a\<in>T. \<psi> a *\<^sub>C (of_bool (b = a) * f b)))\<^sup>2)
+       \<le> B\<^sup>2 * (\<Sum>a\<in>T. (cmod (\<psi> a))\<^sup>2)\<close>
+      by -
+  qed
+qed
 
 lemma diagonal_operator_ket:
   assumes \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>
