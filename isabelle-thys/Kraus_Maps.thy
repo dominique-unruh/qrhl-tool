@@ -1499,7 +1499,7 @@ proof -
         case_prod_unfold)
 qed
 
-lemma kraus_family_kraus_family_comp:
+lemma kraus_family_kraus_family_comp[intro]:
   fixes \<EE> :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family\<close>
     and \<FF> :: \<open>('c::chilbert_space, 'a, 'y) kraus_family\<close>
   assumes \<open>kraus_family \<EE>\<close> and \<open>kraus_family \<FF>\<close>
@@ -1873,7 +1873,7 @@ lemma
   fixes \<EE> :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family\<close>
   assumes \<open>kraus_family \<EE>\<close>
   shows kraus_family_flatten_same_map: \<open>kraus_family_map (kraus_family_flatten \<EE>) = kraus_family_map \<EE>\<close>
-    and kraus_family_kraus_family_flatten: \<open>kraus_family (kraus_family_flatten \<EE>)\<close>
+    and kraus_family_kraus_family_flatten[intro]: \<open>kraus_family (kraus_family_flatten \<EE>)\<close>
     and kraus_family_flatten_bound: \<open>kraus_family_bound (kraus_family_flatten \<EE>) = kraus_family_bound \<EE>\<close>
     and kraus_family_flatten_norm: \<open>kraus_family_norm (kraus_family_flatten \<EE>) = kraus_family_norm \<EE>\<close>
 proof (rule ext)

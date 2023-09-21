@@ -118,7 +118,7 @@ proof -
     by (auto intro!: is_Proj_leq_id)
 qed
 
-lemma kraus_family_measure_first_kraus_family: \<open>kraus_family measure_first_kraus_family\<close>
+lemma kraus_family_measure_first_kraus_family[iff]: \<open>kraus_family measure_first_kraus_family\<close>
 proof (unfold kraus_family_def, rule bdd_aboveI[where M=id_cblinfun])
   fix A :: \<open>('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b) ell2\<close>
   assume \<open>A \<in> sum (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E) ` {F. finite F \<and> F \<subseteq> measure_first_kraus_family}\<close>
@@ -157,6 +157,10 @@ proof -
     apply (subst (asm) has_sum_reindex)
     by (auto simp add: inj_def o_def)
 qed
+
+lemma measure_first_kraus_family_apply_summable: \<open>(\<lambda>x. sandwich_tc (selfbutter (ket x) \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<rho>) summable_on UNIV\<close>
+by -
+
 
 lemma measure_first_kraus_family_apply: \<open>kraus_family_map measure_first_kraus_family \<rho> = (\<Sum>\<^sub>\<infinity>x. sandwich_tc (selfbutter (ket x) \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<rho>)\<close>
   using measure_first_kraus_family_apply_has_sum
@@ -1447,7 +1451,7 @@ proof (intro Set.set_eqI iffI)
     by simp
 qed
 
-(* TODO move *)
+(* (* TODO move *)
 lemma finite_rank_dense_trace_class:
   fixes A :: \<open>'a::chilbert_space set\<close> and B :: \<open>'b::chilbert_space set\<close>
   assumes \<open>is_onb A\<close> \<open>is_onb B\<close>
@@ -1499,7 +1503,7 @@ proof -
   qed
   then show ?thesis
     by auto
-qed
+qed *)
 
 definition diagonal_operator where \<open>diagonal_operator f = 
   (if bdd_above (range (\<lambda>x. cmod (f x))) then explicit_cblinfun (\<lambda>x y. of_bool (x=y) * f x) else 0)\<close>
@@ -1785,24 +1789,195 @@ lemma cq_map_from_distr1_apply:
   apply (transfer' fixing: \<mu> \<rho>)
   by (simp add: cq_map_from_distr0_apply kraus_family_flatten_same_map kraus_family_cq_map_from_distr0)
 
-lift_definition cq_map_from_distr :: \<open>'c distr \<Rightarrow> ('d, 'q, 'c, 'q) cq_kraus_map\<close> is
-  cq_map_from_distr1
-  apply (transfer' fixing: )
-  apply (auto intro!: simp: )
-  by -
-(* proof (rule CollectI)
-  fix \<mu> :: \<open>'c distr\<close>
-  have \<open>kraus_map_apply (kraus_map_comp measure_first_kraus_map
-            (kraus_map_comp (cq_map_from_distr0 \<mu>) measure_first_kraus_map)) *\<^sub>V \<rho> =
-         kraus_map_apply (cq_map_from_distr0 \<mu>) *\<^sub>V \<rho>\<close> for \<rho> :: \<open>(('d\<times>'q) ell2, _) trace_class\<close>
-  proof -
+(* (* TODO move *)
+lemma kraus_equivalent_flatten_left[simp]: 
+  assumes \<open>kraus_family F\<close>
+  shows \<open>kraus_equivalent (kraus_family_flatten F) G \<longleftrightarrow> kraus_equivalent F G\<close>
+  by (simp add: assms kraus_equivalent_def kraus_family_flatten_same_map kraus_family_kraus_family_flatten)
+(* TODO move *)
+lemma kraus_equivalent_flatten_right[simp]: 
+  assumes \<open>kraus_family G\<close>
+  shows \<open>kraus_equivalent F (kraus_family_flatten G) \<longleftrightarrow> kraus_equivalent F G\<close>
+  by (simp add: assms kraus_equivalent_def kraus_family_flatten_same_map kraus_family_kraus_family_flatten) *)
 
-    show ?thesis
-      by x
+lemma kraus_equivalent_kraus_family_flatten_left: \<open>kraus_equivalent (kraus_family_flatten F) F\<close> if \<open>kraus_family F\<close>
+  by (simp add: kraus_equivalent_def kraus_family_flatten_same_map kraus_family_kraus_family_flatten that)
+lemma kraus_equivalent_kraus_family_flatten_right: \<open>kraus_equivalent F (kraus_family_flatten F)\<close> if \<open>kraus_family F\<close>
+  by (simp add: kraus_equivalent_def kraus_family_flatten_same_map kraus_family_kraus_family_flatten that)
+
+lemma kraus_family_comp_cong: \<open>kraus_equivalent (kraus_family_comp F G) (kraus_family_comp F' G')\<close>
+  if \<open>kraus_equivalent F F'\<close> and \<open>kraus_equivalent G G'\<close>
+  by (metis kraus_equivalent_def kraus_family_comp_apply kraus_family_kraus_family_comp that(1) that(2))
+
+lemma kraus_equivalent_trans[trans]:
+  \<open>kraus_equivalent F G \<Longrightarrow> kraus_equivalent G H \<Longrightarrow> kraus_equivalent F H\<close>
+  by (simp add: kraus_equivalent_def)
+
+(* TODO move *)
+lemma partial_trace_plus: \<open>partial_trace (t + u) = partial_trace t + partial_trace u\<close>
+proof -
+  from partial_trace_has_sum[of t] and partial_trace_has_sum[of u]
+  have \<open>((\<lambda>j. Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class t o\<^sub>C\<^sub>L tensor_ell2_right (ket j))
+            + Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class u o\<^sub>C\<^sub>L tensor_ell2_right (ket j))) has_sum
+           partial_trace t + partial_trace u) UNIV\<close> (is \<open>(?f has_sum _) _\<close>)
+    by (rule has_sum_add)
+  moreover have \<open>?f j = Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class (t + u) o\<^sub>C\<^sub>L tensor_ell2_right (ket j))\<close> (is \<open>?f j = ?g j\<close>) for j
+    by (smt (verit) Abs_trace_class_inverse cblinfun_compose_add_left cblinfun_compose_add_right from_trace_class_inverse mem_Collect_eq plus_trace_class.rep_eq trace_class_comp_left trace_class_comp_right trace_class_from_trace_class)
+  ultimately have \<open>(?g has_sum partial_trace t + partial_trace u) UNIV\<close>
+    by simp
+  moreover have \<open>(?g has_sum partial_trace (t + u)) UNIV\<close>
+    by (simp add: partial_trace_has_sum)
+  ultimately show ?thesis
+    using has_sum_unique by blast
+qed
+
+(* TODO: put near *) thm infsum_scaleC_right
+lemma has_sum_scaleC_right:
+  fixes f :: \<open>'a \<Rightarrow> 'b :: complex_normed_vector\<close>
+  assumes \<open>(f has_sum x) A\<close>
+  shows   \<open>((\<lambda>x. c *\<^sub>C f x) has_sum c *\<^sub>C x) A\<close>
+  by -
+
+(* TODO move *)
+lemma partial_trace_scaleC: \<open>partial_trace (c *\<^sub>C t) = c *\<^sub>C partial_trace t\<close>
+proof -
+  from partial_trace_has_sum[of t]
+  have \<open>((\<lambda>j. c *\<^sub>C Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class t o\<^sub>C\<^sub>L tensor_ell2_right (ket j))) has_sum
+           c *\<^sub>C partial_trace t) UNIV\<close> (is \<open>(?f has_sum _) _\<close>)
+    by (rule has_sum_scaleC_right)
+  moreover have \<open>?f j = Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class (c *\<^sub>C t) o\<^sub>C\<^sub>L tensor_ell2_right (ket j))\<close> (is \<open>?f j = ?g j\<close>) for j
+    by (metis (no_types, lifting) Abs_trace_class_inverse cblinfun_compose_scaleC_left cblinfun_compose_scaleC_right from_trace_class_inject mem_Collect_eq scaleC_trace_class.rep_eq trace_class_comp_left trace_class_comp_right trace_class_from_trace_class)
+  ultimately have \<open>(?g has_sum c *\<^sub>C partial_trace t) UNIV\<close>
+    by simp
+  moreover have \<open>(?g has_sum partial_trace (c *\<^sub>C t)) UNIV\<close>
+    by (simp add: partial_trace_has_sum)
+  ultimately show ?thesis
+    using has_sum_unique by blast
+qed
+
+lemma bounded_clinear_partial_trace[bounded_clinear]: \<open>bounded_clinear partial_trace\<close>
+  apply (rule bounded_clinearI[where K=1])
+  by (simp_all add: partial_trace_plus partial_trace_scaleC partial_trace_norm_reducing)
+
+lemma rewrite_via_subgoal: \<open>x = y \<Longrightarrow> x = y\<close>
+  by -
+
+(* TODO move *)
+lemma partial_trace_of_sandwich_sum:
+  \<open>(\<Sum>\<^sub>\<infinity>x. partial_trace (sandwich_tc (id_cblinfun \<otimes>\<^sub>o selfbutter (ket x)) *\<^sub>V t)) = partial_trace t\<close>
+  by -
+
+lemma kraus_map_is_cq_cq_map_from_distr1: \<open>kraus_map_is_cq (cq_map_from_distr1 \<mu> :: (('b \<times> 'c) ell2, ('a \<times> 'c) ell2) kraus_map)\<close> for \<mu> :: \<open>'a distr\<close>
+proof -
+  write kraus_equivalent (infix "~" 55)
+  note kraus_family_cq_map_from_distr0[iff]
+    kraus_family_kraus_family_flatten[iff]
+    kraus_family_flatten_same_map[simp]
+
+  have \<open>kraus_map_comp (cq_map_from_distr1 \<mu>) measure_first_kraus_map = cq_map_from_distr1 \<mu>\<close>
+  proof (transfer fixing: \<mu>)
+    show \<open>kraus_family_flatten (kraus_family_comp (kraus_family_flatten (cq_map_from_distr0 \<mu>)) (kraus_family_flatten measure_first_kraus_family))
+        ~ kraus_family_flatten (cq_map_from_distr0 \<mu>)\<close> (is \<open>?lhs ~ ?rhs\<close>)
+    proof -
+      have \<open>?lhs ~ kraus_family_comp (kraus_family_flatten (cq_map_from_distr0 \<mu>)) (kraus_family_flatten measure_first_kraus_family)\<close> (is \<open>?lhs ~ _\<close>)
+        apply (rule kraus_equivalent_kraus_family_flatten_left)
+        by (auto intro!: kraus_family_kraus_family_comp simp: )
+      also have \<open>\<dots> ~ kraus_family_comp (cq_map_from_distr0 \<mu>) measure_first_kraus_family\<close>
+        apply (rule kraus_family_comp_cong)
+        by (auto intro!: kraus_equivalent_kraus_family_flatten_left kraus_equivalent_reflI simp: )
+      also have \<open>\<dots> ~ cq_map_from_distr0 \<mu>\<close>
+      proof (intro kraus_equivalent_def[THEN iffD2] conjI ext)
+        show \<open>kraus_family (cq_map_from_distr0 \<mu>)\<close>
+          by fast
+        show \<open>kraus_family (kraus_family_comp (cq_map_from_distr0 \<mu>) measure_first_kraus_family)\<close>
+          by fast
+        fix \<rho> :: \<open>(('f \<times> 'g) ell2, ('f \<times> 'g) ell2) trace_class\<close>
+        show \<open>kraus_family_map (kraus_family_comp (cq_map_from_distr0 \<mu>) measure_first_kraus_family) \<rho> =
+              kraus_family_map (cq_map_from_distr0 \<mu>) \<rho>\<close> (is \<open>?lhs = _\<close>)
+        proof -
+          define \<rho>' where \<open>\<rho>' = sandwich_tc swap_ell2 *\<^sub>V \<rho>\<close>
+          have *: \<open>sandwich_tc swap_ell2 *\<^sub>V sandwich_tc (U \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<rho>
+                = sandwich_tc (id_cblinfun \<otimes>\<^sub>o U) *\<^sub>V \<rho>'\<close> for U :: \<open>'f ell2 \<Rightarrow>\<^sub>C\<^sub>L 'y ell2\<close>
+            by (metis (no_types, lifting) \<rho>'_def cblinfun_apply_cblinfun_compose sandwich_tc_compose swap_ell2_commute_tensor_op)
+
+          have \<open>?lhs = kraus_family_map (cq_map_from_distr0 \<mu>) (kraus_family_map measure_first_kraus_family \<rho>)\<close>
+            by (simp add: kraus_family_comp_apply)
+          also have \<open>\<dots> = tc_tensor (diagonal_operator_tc (prob \<mu>))
+               (partial_trace (sandwich_tc swap_ell2 *\<^sub>V (\<Sum>\<^sub>\<infinity>x. sandwich_tc (selfbutter (ket x) \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<rho>)))\<close>
+            by (simp add: cq_map_from_distr0_apply measure_first_kraus_family_apply)
+          also have \<open>\<dots> = tc_tensor (diagonal_operator_tc (prob \<mu>))
+               (\<Sum>\<^sub>\<infinity>x. partial_trace (sandwich_tc swap_ell2 *\<^sub>V sandwich_tc (selfbutter (ket x) \<otimes>\<^sub>o id_cblinfun) *\<^sub>V \<rho>))\<close>
+            apply (subst infsum_bounded_linear[where f=\<open>\<lambda>x. partial_trace (sandwich_tc swap_ell2 *\<^sub>V x)\<close>, symmetric, unfolded o_def])
+            by (intro bounded_clinear.bounded_linear bounded_linear_intros
+                measure_first_kraus_family_apply_summable refl)+
+          also have \<open>\<dots> = tc_tensor (diagonal_operator_tc (prob \<mu>))
+               (\<Sum>\<^sub>\<infinity>x. partial_trace (sandwich_tc (id_cblinfun \<otimes>\<^sub>o selfbutter (ket x)) *\<^sub>V \<rho>'))\<close>
+            by (simp add: * )
+          also have \<open>\<dots> = tc_tensor (diagonal_operator_tc (prob \<mu>)) (partial_trace \<rho>')\<close>
+            by (simp add: partial_trace_of_sandwich_sum)
+          also have \<open>\<dots> = kraus_family_map (cq_map_from_distr0 \<mu>) \<rho>\<close>
+            by (simp add: cq_map_from_distr0_apply \<rho>'_def)
+          finally show ?thesis
+            by -
+        qed
+      qed
+      also have \<open>\<dots> ~ ?rhs\<close>
+        by (simp add: kraus_equivalent_kraus_family_flatten_right)
+      finally show ?thesis
+        by -
+    qed
   qed
-  then show \<open>kraus_map_is_cq (cq_map_from_distr0 \<mu> :: (('d\<times>'q) ell2, ('c\<times>'q) ell2) kraus_map)\<close>
-    by (auto intro!: ext kraus_map_apply_inj cblinfun_eqI simp: kraus_map_is_cq_def)
-qed *)
+
+  moreover have \<open>kraus_map_comp measure_first_kraus_map (cq_map_from_distr1 \<mu>) = cq_map_from_distr1 \<mu>\<close> (is \<open>?lhs = _\<close>)
+  proof (transfer fixing: \<mu>)
+    show \<open>kraus_family_flatten (kraus_family_comp (kraus_family_flatten measure_first_kraus_family) (kraus_family_flatten (cq_map_from_distr0 \<mu>))) ~
+          kraus_family_flatten (cq_map_from_distr0 \<mu>)\<close> (is \<open>?lhs ~ ?rhs\<close>)
+    proof -
+      have \<open>?lhs ~ kraus_family_comp (kraus_family_flatten measure_first_kraus_family) (kraus_family_flatten (cq_map_from_distr0 \<mu>))\<close>
+        apply (rule kraus_equivalent_kraus_family_flatten_left)
+        by auto
+      also have \<open>\<dots> ~ kraus_family_comp measure_first_kraus_family (cq_map_from_distr0 \<mu>)\<close>
+        apply (rule kraus_family_comp_cong)
+        by (simp_all add: kraus_equivalent_kraus_family_flatten_left)
+      also have \<open>\<dots> ~ cq_map_from_distr0 \<mu>\<close>
+      proof (intro kraus_equivalent_def[THEN iffD2] conjI ext)
+        show \<open>kraus_family (kraus_family_comp measure_first_kraus_family (cq_map_from_distr0 \<mu>))\<close>
+          by (simp add: kraus_family_kraus_family_comp)
+        show \<open>kraus_family (cq_map_from_distr0 \<mu>)\<close>
+          by simp
+        fix \<rho> :: \<open>(('f \<times> 'g) ell2, ('f \<times> 'g) ell2) trace_class\<close>
+        define \<rho>' where \<open>\<rho>' = partial_trace (sandwich_tc swap_ell2 *\<^sub>V \<rho>)\<close>
+        have \<open>kraus_family_map (kraus_family_comp measure_first_kraus_family (cq_map_from_distr0 \<mu>)) \<rho>
+              = (\<Sum>\<^sub>\<infinity>x. sandwich_tc (selfbutter (ket x) \<otimes>\<^sub>o id_cblinfun) *\<^sub>V
+                     tc_tensor (diagonal_operator_tc (\<lambda>x. complex_of_real (prob \<mu> x))) \<rho>')\<close>
+          by (simp add: kraus_family_comp_apply cq_map_from_distr0_apply measure_first_kraus_family_apply \<rho>'_def)
+        also have \<open>\<dots> = tc_tensor (diagonal_operator_tc (\<lambda>x. complex_of_real (prob \<mu> x))) \<rho>'\<close>
+          try0
+          sledgehammer [dont_slice]
+          by -
+        also have \<open>\<dots> = kraus_family_map (cq_map_from_distr0 \<mu>) \<rho>\<close>
+          by (simp add: cq_map_from_distr0_apply \<rho>'_def)
+        finally show \<open>kraus_family_map (kraus_family_comp measure_first_kraus_family (cq_map_from_distr0 \<mu>)) \<rho>
+            = kraus_family_map (cq_map_from_distr0 \<mu>) \<rho>\<close>
+          by -
+      qed
+      also have \<open>\<dots> ~ ?rhs\<close>
+        by (simp add: kraus_equivalent_kraus_family_flatten_right)
+      finally show ?thesis
+        by -
+    qed
+  qed
+
+  ultimately show ?thesis
+    by (smt (verit, del_insts) kraus_map_is_cq_def)
+qed
+
+
+
+lift_definition cq_map_from_distr :: \<open>'c distr \<Rightarrow> ('d, 'q, 'c, 'q) cq_kraus_map\<close> is cq_map_from_distr1
+  apply (transfer' fixing: )
+  by (simp add: kraus_map_is_cq_cq_map_from_distr1)
+
 
 definition deterministic_cq :: \<open>'c \<Rightarrow> ('q ell2, 'q ell2) trace_class \<Rightarrow> ('c,'q) cq_operator\<close> where
   \<open>deterministic_cq c \<rho> = mk_cq_operator (\<lambda>d. of_bool (c=d) *\<^sub>R \<rho>)\<close>
