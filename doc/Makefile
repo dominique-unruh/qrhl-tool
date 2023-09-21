@@ -6,6 +6,7 @@ std : manual.pdf
 declmath.sty :
 	if ! [ -d declmath ]; then \
 		git clone --depth=1 'https://github.com/dominique-unruh/declmath.git'; fi
+	git -C declmath pull
 	for f in declmath.sty makesymind.py; do \
 		ln -sf declmath/"$$f" .; done
 %.qrhl.lst : ../examples/%.qrhl format-for-listings.py
