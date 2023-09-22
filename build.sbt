@@ -148,6 +148,7 @@ Steps when releasing a release/release candidate:
  - wait for github runner tests to succeed
  - git push origin vXXX
  - Create a new release here: https://github.com/dominique-unruh/qrhl-tool/releases/new
+ - git cherry master -v
  - git checkout master
  - cherry pick changes from release-candidate branch
  - Edit gh-pages branch
