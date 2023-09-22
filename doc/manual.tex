@@ -721,12 +721,16 @@ tactic) which treats those probabilities as uninterpreted values $\in[0,1]$.
 \texttt{qrhl} or \texttt{lemma}, the tool is in proof mode. In this
 mode, the state consists of a list of subgoals. (In ProofGeneral, the
 current list of subgoals are listed in the \texttt{*goals*} window.)
-Each subgoal is either a qRHL judgment (like the ones created by the
-\texttt{qrhl} command) or an ambient logic formula (like the ones
-created by \texttt{lemma}). (A qRHL subgoal can additionally contain a
-list of assumptions $A_1,\dots,A_n$
-that are ambient logic formulas. In this case, the interpretation is
-that the qRHL judgments holds whenever those assumptions are satisfied.)
+Each subgoal is one of:
+\begin{compactitem}
+\item a qRHL judgment (like the ones created by the \texttt{qrhl} command)
+\item an ambient logic formula (like the ones created by \texttt{lemma})
+\item a denotational equivalence (two programs that are claimed to have the same denotational semantics)\footnote{This is equivalent to just writing \texttt{denotation P = denotation Q} in Isabelle or a lemma statement.}
+\end{compactitem}
+(A qRHL subgoal and a denotational-equivalence subgoal can additionally contain a
+list of assumptions $A_1,\dots,A_n$ that are ambient logic formulas.
+In this case, the interpretation is
+that the qRHL judgment / equivalence holds whenever those assumptions are satisfied.)
 
 A proof consists of a sequence of tactic invocations. Each tactic
 transforms the first subgoal into zero or more subgoals.  (With the
@@ -2729,7 +2733,7 @@ it replaces all occurrences of \texttt{call $P$;}
 in the current subgoal by the code of $P$.
 Here $P$
 must be a program defined by \texttt{program $P$ := \{...\}.}
-The current goal must be a qRHL subgoal.
+The current goal must be a qRHL subgoal or a denotational equivalence.
 
 Logically, this does not change the subgoal since \texttt{call $P$;}
 is just an abbreviation for the code of $P$.
@@ -3535,9 +3539,11 @@ And \texttt{sp $n$ $m$} is equivalent to \texttt{sp left $n$. sp right $n$.}
 \tactic{squash}
 
 When invoked as \texttt{squash left} (or \texttt{squash right}) on a
-qRHL subgoal, it replaces the last two assign/sample statements $\bc_1;\bc_2$ in the
-left (or right) subgoal by a single assign/sample statement $\bc'$ with the same effect.
-If the last two statements are not assign/sample statements, the tactic fails.
+qRHL subgoal or denotational equivalence subgoal,
+it replaces the last two statements $\bc_1;\bc_2$ in the
+left (or right) subgoal by a single statement $\bc'$ with the same effect.
+This works only for specific combinations of last two statements;
+in other cases, the tactic fails.
 
 This tactic is useful, e.g., when we want to use the \texttt{rnd}
 tactic but in one program variables $\xx$ and $\yy$ are sampled in two
@@ -3546,8 +3552,8 @@ simultaneously using a joint distribution. Then we can join the two
 statements in the first program using \texttt{squash} before using
 \texttt{rnd}.
 
-We distinguish four cases.
-In the following $X,Y$ are tuples of variables, $d,e$ are expressions.
+The following combinations of $\bc_1,\bc_2$ are supported.
+Here $X,Y$ are tuples of classical variables, $Q,R$ are tuples of quantum variables, $d,e$ are expressions.
 And $e'\ z:=e\{z/X\}$.
 \begin{compactitem}
 \item $\bc_1=\sample X d$ and $\bc_2=\sample Y e$:\\
@@ -3558,11 +3564,13 @@ And $e'\ z:=e\{z/X\}$.
   Then $\bc'=\sample{(X,Y)}{\mathtt{map\_distr}\ (\lambda y.\ (y, e\ y))\ (e'\ z)}$.
 \item $\bc_1=\assign X d$ and $\bc_2=\assign Y e$:
   Then $\bc'=\assign{(X,Y)}{(d, e' d)}$.
+\item $\bc_1 = \Qapply d Q$, $\bc_2 = \Qapply e R$.
+  Then $\bc' = \Qapply{S}{f}$ for $S$ containing the variables from $Q$ and $R$, and $f$ being a suitable expression computing a unitary.
+  There must be no repeated variables in $Q$, nor in $R$ (but $Q$ and $R$ may share variables).
+\item $\bc_1 = \Qinit Qd$, $\bc_2 = \Qapply e R$.
+  Then $\bc' = \Qapply{Q}{f}$ for $f$ being a suitable expression computing a state.
+  There must be no repeated variables in $Q$, nor in $R$. And the variables in $R$ must be a subset of those in $Q$.
 \end{compactitem}
-Note that this is allowed even if $X$ and $Y$ share
-variables.\footnote{This works because if $X$ and $Y$ share a variable $\xx$,
-  then in $(X,Y)$, the rightmost occurrence of $\xx$ determines what is assigned to $\xx$,
-  which is the intended behavior in this case.}
 
 
 \tactic{swap}
@@ -3645,7 +3653,6 @@ Then the tactic parses $\bc$ as $\bc=:C[\be_1,\dots,\be_m]$ where $C$ is a multi
 The resulting subgoals are then:
 \begin{itemize}
 \item If $\mathit{range_1}$ comes before $\mathit{range_2}$ in the program:
-  \TODOQ{check: is d;c before or after?}
   \begin{itemize}
   \item For each $i=1,\dots,n$: Denotational equivalence of  ${\be_i;\bd}$ and $\bd;\be_i$.
   \item The original subgoal with $\bc;\bd$ replaced by $\bd;\bc$.
