@@ -13,8 +13,8 @@ See [here](install.md) for installation instructions.
 
 ## Documentation and help
 
-* The [user manual](manual-0.7.1-fixed.pdf), included in the binary installation as `manual.pdf`
-* [Example files](https://github.com/dominique-unruh/qrhl-tool/tree/v0.7.1/examples), included in the binary installation in `examples/`
+* The [user manual](manual-0.7.2.pdf), included in the binary installation as `manual.pdf`
+* [Example files](https://github.com/dominique-unruh/qrhl-tool/tree/v0.7.2/examples), included in the binary installation in `examples/`
 * The [quickstart guide](quickstart_guide-qRHL-tool.pdf) contributed by Tejas Shah
 * [Gitter chat](https://gitter.im/dominique-unruh/qrhl-tool)
 
