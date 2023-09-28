@@ -6,478 +6,6 @@ unbundle cblinfun_notation
 
 type_synonym ('a,'b,'x) kraus_family = \<open>(('a \<Rightarrow>\<^sub>C\<^sub>L 'b) \<times> 'x) set\<close>
 
-definition (in order) \<open>is_Sup X s \<longleftrightarrow> (\<forall>x\<in>X. x \<le> s) \<and> (\<forall>y. (\<forall>x\<in>X. x \<le> y) \<longrightarrow> s \<le> y)\<close>
-definition (in order) \<open>has_Sup X \<longleftrightarrow> (\<exists>s. is_Sup X s)\<close>
-
-lemma (in order) is_SupI:
-  assumes \<open>\<And>x. x \<in> X \<Longrightarrow> x \<le> s\<close>
-  assumes \<open>\<And>y. (\<And>x. x \<in> X \<Longrightarrow> x \<le> y) \<Longrightarrow> s \<le> y\<close>
-  shows \<open>is_Sup X s\<close>
-  using assms by (auto simp add: is_Sup_def)
-
-lemma is_Sup_unique: \<open>is_Sup X a \<Longrightarrow> is_Sup X b \<Longrightarrow> a=b\<close>
-  by (simp add: Orderings.order_eq_iff is_Sup_def)
-
-lemma has_Sup_bdd_above: \<open>has_Sup X \<Longrightarrow> bdd_above X\<close>
-  by (metis bdd_above.unfold has_Sup_def is_Sup_def)
-
-lemma is_Sup_has_Sup: \<open>is_Sup X s \<Longrightarrow> has_Sup X\<close>
-  using has_Sup_def by blast
-
-(* TODO move *)
-class Sup_order = order + Sup + sup +
-  assumes is_Sup_Sup: \<open>has_Sup X \<Longrightarrow> is_Sup X (Sup X)\<close>
-  assumes is_Sup_sup: \<open>has_Sup {x,y} \<Longrightarrow> is_Sup {x,y} (sup x y)\<close>
-
-lemma (in Sup_order) is_Sup_eq_Sup:
-  assumes \<open>is_Sup X s\<close>
-  shows \<open>s = Sup X\<close>
-  by (meson assms local.dual_order.antisym local.has_Sup_def local.is_Sup_Sup local.is_Sup_def)
-
-lemma is_Sup_cSup:
-  fixes X :: \<open>'a::conditionally_complete_lattice set\<close>
-  assumes \<open>bdd_above X\<close> and \<open>X \<noteq> {}\<close>
-  shows \<open>is_Sup X (Sup X)\<close>
-  using assms by (auto intro!: cSup_upper cSup_least simp: is_Sup_def)
-
-(* TODO move *)
-instantiation cblinfun :: (chilbert_space, chilbert_space) Sup_order begin
-definition \<open>Sup_cblinfun (X::('a\<Rightarrow>\<^sub>C\<^sub>L'b) set) = (SOME s. is_Sup X s)\<close>
-definition \<open>sup_cblinfun (x::'a\<Rightarrow>\<^sub>C\<^sub>L'b) y = Sup {x,y}\<close>
-instance
-proof
-  fix X :: \<open>('a\<Rightarrow>\<^sub>C\<^sub>L'b) set\<close> and x y :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
-  show \<open>has_Sup X \<Longrightarrow> is_Sup X (\<Squnion> X)\<close>
-    by (simp add: Kraus_Maps.Sup_cblinfun_def has_Sup_def someI_ex)
-  show \<open>has_Sup {x, y} \<Longrightarrow> is_Sup {x, y} (x \<squnion> y)\<close>
-    by (simp add: Kraus_Maps.Sup_cblinfun_def has_Sup_def someI_ex sup_cblinfun_def)
-qed
-end
-
-definition increasing_filter :: \<open>'a::order filter \<Rightarrow> bool\<close> where
-  \<open>increasing_filter F \<longleftrightarrow> (\<forall>\<^sub>F x in F. \<forall>\<^sub>F y in F. y \<ge> x)\<close>
-
-(* TODO: reference: https://math.stackexchange.com/a/4749216/403528 *)
-lemma increasing_finite_subsets_at_top[simp]: \<open>increasing_filter (finite_subsets_at_top X)\<close>
-  apply (simp add: increasing_filter_def eventually_finite_subsets_at_top)
-  by force
-
-lemma increasing_filtermap:
-  fixes F :: \<open>'a::order filter\<close> and f :: \<open>'a \<Rightarrow> 'b::order\<close> and X :: \<open>'a set\<close>
-  assumes increasing: \<open>increasing_filter F\<close>
-  assumes mono: \<open>mono_on X f\<close>
-  assumes ev_X: \<open>eventually (\<lambda>x. x \<in> X) F\<close>
-  shows \<open>increasing_filter (filtermap f F)\<close>
-proof -
-  from increasing
-  have incr: \<open>\<forall>\<^sub>F x in F. \<forall>\<^sub>F y in F. x \<le> y\<close>
-    apply (simp add: increasing_filter_def)
-    by -
-  have \<open>\<forall>\<^sub>F x in F. \<forall>\<^sub>F y in F. f x \<le> f y\<close>
-  proof (rule eventually_elim2[OF ev_X incr])
-    fix x
-    assume \<open>x \<in> X\<close>
-    assume \<open>\<forall>\<^sub>F y in F. x \<le> y\<close>
-    then show \<open>\<forall>\<^sub>F y in F. f x \<le> f y\<close>
-    proof (rule eventually_elim2[OF ev_X])
-      fix y assume \<open>y \<in> X\<close> and \<open>x \<le> y\<close>
-      with \<open>x \<in> X\<close> show \<open>f x \<le> f y\<close>
-        using mono by (simp add: mono_on_def)
-    qed
-  qed
-  then show \<open>increasing_filter (filtermap f F)\<close>
-    by (simp add: increasing_filter_def eventually_filtermap)
-qed
-
-(* TODO: reference: https://math.stackexchange.com/a/4749216/403528 *)
-lemma monotone_convergence:
-  fixes f :: \<open>'b \<Rightarrow> 'a::{order_topology, conditionally_complete_linorder}\<close>
-  assumes bounded: \<open>\<forall>\<^sub>F x in F. f x \<le> B\<close>
-  assumes increasing: \<open>increasing_filter (filtermap f F)\<close>
-  shows \<open>\<exists>l. (f \<longlongrightarrow> l) F\<close>
-proof (cases \<open>F \<noteq> \<bottom>\<close>)
-  case True
-  note [simp] = True
-  define S l where \<open>S x \<longleftrightarrow> (\<forall>\<^sub>F y in F. f y \<ge> x) \<and> x \<le> B\<close> 
-    and \<open>l = Sup (Collect S)\<close> for x
-  from bounded increasing
-  have ev_S: \<open>eventually S (filtermap f F)\<close>
-    by (auto intro!: eventually_conj simp: S_def[abs_def] increasing_filter_def eventually_filtermap)
-  have bdd_S: \<open>bdd_above (Collect S)\<close>
-    by (auto simp: S_def)
-  have S_nonempty: \<open>Collect S \<noteq> {}\<close>
-    using ev_S
-    by (metis Collect_empty_eq_bot Set.empty_def True eventually_False filtermap_bot_iff)
-  have \<open>(f \<longlongrightarrow> l) F\<close>
-  proof (rule order_tendstoI; rename_tac x)
-    fix x
-    assume \<open>x < l\<close>
-    then obtain s where \<open>S s\<close> and \<open>x < s\<close>
-      using less_cSupD[OF S_nonempty] l_def
-      by blast
-    then 
-    show \<open>\<forall>\<^sub>F y in F. x < f y\<close>
-      using S_def basic_trans_rules(22) eventually_mono by force
-  next
-    fix x
-    assume asm: \<open>l < x\<close>
-    from ev_S
-    show \<open>\<forall>\<^sub>F y in F. f y < x\<close>
-      unfolding eventually_filtermap
-      apply (rule eventually_mono)
-      using asm
-      by (metis bdd_S cSup_upper dual_order.strict_trans2 l_def mem_Collect_eq)
-  qed
-  then show \<open>\<exists>l. (f \<longlongrightarrow> l) F\<close>
-    by (auto intro!: exI[of _ l] simp: filterlim_def)
-next
-  case False
-  then show \<open>\<exists>l. (f \<longlongrightarrow> l) F\<close>
-    by (auto intro!: exI)
-qed
-
-lemma monotone_convergence_complex:
-  fixes f :: \<open>'b \<Rightarrow> complex\<close>
-  assumes bounded: \<open>\<forall>\<^sub>F x in F. f x \<le> B\<close>
-  assumes increasing: \<open>increasing_filter (filtermap f F)\<close>
-  shows \<open>\<exists>l. (f \<longlongrightarrow> l) F\<close>
-proof -
-  have inc_re: \<open>increasing_filter (filtermap (\<lambda>x. Re (f x)) F)\<close>
-    using increasing_filtermap[OF increasing, where f=Re and X=UNIV]
-    by (simp add: less_eq_complex_def[abs_def] mono_def monotone_def filtermap_filtermap)
-  from bounded have \<open>\<forall>\<^sub>F x in F. Re (f x) \<le> Re B\<close>
-    using eventually_mono less_eq_complex_def by fastforce
-  from monotone_convergence[OF this inc_re]
-  obtain re where lim_re: \<open>((\<lambda>x. Re (f x)) \<longlongrightarrow> re) F\<close>
-    by auto
-  from bounded have \<open>\<forall>\<^sub>F x in F. Im (f x) = Im B\<close>
-    by (simp add: less_eq_complex_def[abs_def] eventually_mono)
-  then have lim_im: \<open>((\<lambda>x. Im (f x)) \<longlongrightarrow> Im B) F\<close>
-    by (simp add: tendsto_eventually)
-  from lim_re lim_im have \<open>(f \<longlongrightarrow> Complex re (Im B)) F\<close>
-    by (simp add: tendsto_complex_iff)
-  then show ?thesis
-    by auto
-qed
-
-lemma tendsto_upperbound_complex:
-  fixes f :: \<open>'a \<Rightarrow> complex\<close>
-  assumes x: "(f \<longlongrightarrow> x) F"
-      and ev: "eventually (\<lambda>i. a \<ge> f i) F"
-      and F: "F \<noteq> \<bottom>"
-    shows "a \<ge> x"
-proof (rule less_eq_complexI)
-  show \<open>Re a \<ge> Re x\<close>
-    apply (rule tendsto_upperbound[where f=\<open>\<lambda>x. Re (f x)\<close> and F=F])
-    using ev by (auto intro!: F tendsto_Re x simp: eventually_mono Re_mono)
-  from ev x show \<open>Im x = Im a\<close>
-    apply (auto intro!: simp: less_eq_complex_def intro: eventually_mono)
-  proof - (* Sledgehammer generated proof *)
-    assume a1: "\<forall>\<^sub>F i in F. Re (f i) \<le> Re a \<and> Im (f i) = Im a"
-    assume a2: "(f \<longlongrightarrow> x) F"
-    have "\<forall>\<^sub>F aa in F. Im (f aa) = Im a"
-      using a1 by (simp add: eventually_conj_iff)
-    then show ?thesis
-      using a2 by (metis assms(3) tendsto_Im tendsto_eventually tendsto_unique)
-  qed
-qed
-
-(* TODO: Conway, operator, 43.1(i,ii), but translated to filters *)
-(* TODO move *)
-lemma monotone_convergence_wot:
-  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
-  assumes bounded: \<open>\<forall>\<^sub>F x in F. f x \<le> B\<close>
-  assumes pos: \<open>\<forall>\<^sub>F x in F. f x \<ge> 0\<close> (* TODO can be removed wlog *)
-  assumes increasing: \<open>increasing_filter (filtermap f F)\<close>
-  shows \<open>\<exists>L. limitin cweak_operator_topology f L F\<close>
-proof (cases \<open>F = \<bottom>\<close>)
-  case True
-  then show ?thesis
-    by (auto intro!: exI limitin_trivial)
-next
-  case False
-  define surround where \<open>surround \<psi> a = \<psi> \<bullet>\<^sub>C (a *\<^sub>V \<psi>)\<close> for \<psi> :: 'a and a
-  have mono_surround: \<open>mono (surround \<psi>)\<close> for \<psi>
-    by (auto intro!: monoI simp: surround_def less_eq_cblinfun_def)
-  obtain l' where  tendsto_l': \<open>((\<lambda>x. surround \<psi> (f x)) \<longlongrightarrow> l' \<psi>) F\<close>
-    (* and l'_bound: \<open>norm (l' \<psi>) \<le> norm B * (norm \<psi>)\<^sup>2\<close> *) for \<psi>
-  proof (atomize_elim, intro choice allI)
-    fix \<psi> :: 'a
-    from bounded
-    have surround_bound: \<open>\<forall>\<^sub>F x in F. surround \<psi> (f x) \<le> surround \<psi> B\<close>
-      unfolding surround_def
-      apply (rule eventually_mono)
-      by (simp add: less_eq_cblinfun_def)
-    moreover have \<open>increasing_filter (filtermap (\<lambda>x. surround \<psi> (f x)) F)\<close>
-      using increasing_filtermap[OF increasing mono_surround]
-      by (simp add: filtermap_filtermap)
-    ultimately obtain l' where \<open>((\<lambda>x. surround \<psi> (f x)) \<longlongrightarrow> l') F\<close>
-      apply atomize_elim
-      by (auto intro!: monotone_convergence_complex increasing mono_surround
-          simp: eventually_filtermap)
-(*     then have \<open>l' \<le> surround \<psi> B\<close>
-      using surround_bound False by (rule tendsto_upperbound_complex)
-    then have \<open>norm l' \<le> norm (surround \<psi> B)\<close>
-      by -
-    also have \<open>\<dots> \<le> norm B * (norm \<psi>)\<^sup>2\<close>
-      using Cauchy_Schwarz_ineq2
-      apply (auto intro!: simp: surround_def )
-      by -
-    finally have \<open>norm l' \<le> norm B * (norm \<psi>)\<^sup>2\<close>
-      by simp
-    with tendsto *)
-    then show \<open>\<exists>l'. ((\<lambda>x. surround \<psi> (f x)) \<longlongrightarrow> l') F\<close>
-      by auto
-  qed
-  define l where \<open>l \<phi> \<psi> = (l' (\<phi>+\<psi>) - l' (\<phi>-\<psi>) - \<i> * l' (\<phi> + \<i> *\<^sub>C \<psi>) + \<i> * l' (\<phi> - \<i> *\<^sub>C \<psi>)) / 4\<close> for \<phi> \<psi> :: 'a
-(*   have \<open>norm (l \<phi> \<psi>) \<le> xxxx\<close> for \<phi> \<psi>
-  proof -
-    from l'_bound[of \<open>\<phi> + \<psi>\<close>]
-    have \<open>norm (l' (\<phi> + \<psi>)) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
-      by (smt (verit, ccfv_SIG) mult_left_mono norm_ge_zero norm_triangle_ineq norm_zero power2_diff real_inner_class.parallelogram_law sum_squares_bound)
-    moreover from l'_bound[of \<open>\<phi> - \<psi>\<close>]
-    have \<open>norm (l' (\<phi> - \<psi>)) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
-      by (smt (verit, ccfv_SIG) mult_left_mono norm_ge_zero norm_triangle_ineq4 norm_zero power2_diff real_inner_class.parallelogram_law sum_squares_bound)
-    moreover from l'_bound[of \<open>\<phi> + \<i> *\<^sub>C \<psi>\<close>]
-    have \<open>norm (l' (\<phi> + \<i> *\<^sub>C \<psi>)) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
-      by -
-    moreover from l'_bound[of \<open>\<phi> - \<i> *\<^sub>C \<psi>\<close>]
-    have \<open>norm (l' (\<phi> - \<i> *\<^sub>C \<psi>)) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
-      by -
-    ultimately have \<open>norm (l \<phi> \<psi>) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
-      apply (auto intro!: simp: l_def)
-      by -
-    also have \<open>\<dots> \<le> norm B * norm \<phi> * norm \<psi>\<close>
-      (* ? ? ? *)
-      apply (auto intro!: simp: l_def)
-      by x
-    show ?thesis
-      by x
-  qed *)
-  have polar: \<open>\<phi> \<bullet>\<^sub>C a \<psi> = (surround (\<phi>+\<psi>) a - surround (\<phi>-\<psi>) a - \<i> * surround (\<phi> + \<i> *\<^sub>C \<psi>) a + \<i> * surround (\<phi> - \<i> *\<^sub>C \<psi>) a) / 4\<close> for a :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close> and \<phi> \<psi>
-    by (simp add: surround_def cblinfun.add_right cinner_add cblinfun.diff_right 
-        cinner_diff cblinfun.scaleC_right ring_distribs)
-  have tendsto_l: \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi>) \<longlongrightarrow> l \<phi> \<psi>) F\<close> for \<phi> \<psi>
-    by (auto intro!: tendsto_divide tendsto_add tendsto_diff tendsto_l' simp: l_def polar)
-  have l_bound: \<open>norm (l \<phi> \<psi>) \<le> norm B * norm \<phi> * norm \<psi>\<close> for \<phi> \<psi>
-  proof -
-    from bounded pos
-    have \<open>\<forall>\<^sub>F x in F. norm (\<phi> \<bullet>\<^sub>C f x \<psi>) \<le> norm B * norm \<phi> * norm \<psi>\<close> for \<phi> \<psi>
-    proof (rule eventually_elim2)
-      fix x
-      assume \<open>f x \<le> B\<close> and \<open>0 \<le> f x\<close>
-      have \<open>cmod (\<phi> \<bullet>\<^sub>C (f x *\<^sub>V \<psi>)) \<le> norm \<phi> * norm (f x *\<^sub>V \<psi>)\<close>
-        using complex_inner_class.Cauchy_Schwarz_ineq2 by blast
-      also have \<open>\<dots> \<le> norm \<phi> * (norm (f x) * norm \<psi>)\<close>
-        by (simp add: mult_left_mono norm_cblinfun)
-      also from \<open>f x \<le> B\<close> \<open>0 \<le> f x\<close>
-      have \<open>\<dots> \<le> norm \<phi> * (norm B * norm \<psi>)\<close>
-        by (auto intro!: mult_left_mono mult_right_mono norm_cblinfun_mono simp: )
-      also have \<open>\<dots> = norm B * norm \<phi> * norm \<psi>\<close>
-        by simp
-      finally show \<open>norm (\<phi> \<bullet>\<^sub>C f x \<psi>) \<le> norm B * norm \<phi> * norm \<psi>\<close>
-        by -
-    qed
-    moreover from tendsto_l
-    have \<open>((\<lambda>x. norm (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> norm (l \<phi> \<psi>)) F\<close> for \<phi> \<psi>
-      using tendsto_norm by blast
-    ultimately show ?thesis
-      using False tendsto_upperbound by blast
-  qed
-  have \<open>bounded_sesquilinear l\<close>
-  proof (rule bounded_sesquilinear.intro)
-    fix \<phi> \<phi>' \<psi> \<psi>' and r :: complex
-    from tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi> + \<phi> \<bullet>\<^sub>C f x \<psi>') \<longlongrightarrow> l \<phi> \<psi> + l \<phi> \<psi>') F\<close>
-      by (simp add: tendsto_add)
-    moreover from tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi> + \<phi> \<bullet>\<^sub>C f x \<psi>') \<longlongrightarrow> l \<phi> (\<psi> + \<psi>')) F\<close>
-      by (simp flip: cinner_add_right cblinfun.add_right)
-    ultimately show \<open>l \<phi> (\<psi> + \<psi>') = l \<phi> \<psi> + l \<phi> \<psi>'\<close>
-      by (rule tendsto_unique[OF False, rotated])
-    from tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi> + \<phi>' \<bullet>\<^sub>C f x \<psi>) \<longlongrightarrow> l \<phi> \<psi> + l \<phi>' \<psi>) F\<close>
-      by (simp add: tendsto_add)
-    moreover from tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi> + \<phi>' \<bullet>\<^sub>C f x \<psi>) \<longlongrightarrow> l (\<phi> + \<phi>') \<psi>) F\<close>
-      by (simp flip: cinner_add_left cblinfun.add_left)
-    ultimately show \<open>l (\<phi> + \<phi>') \<psi> = l \<phi> \<psi> + l \<phi>' \<psi>\<close>
-      by (rule tendsto_unique[OF False, rotated])
-    from tendsto_l have \<open>((\<lambda>x. r *\<^sub>C (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> r *\<^sub>C l \<phi> \<psi>) F\<close>
-      using tendsto_scaleC by blast
-    moreover from tendsto_l have \<open>((\<lambda>x. r *\<^sub>C (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> l \<phi> (r *\<^sub>C \<psi>)) F\<close>
-      by (simp flip: cinner_scaleC_right cblinfun.scaleC_right)
-    ultimately show \<open>l \<phi> (r *\<^sub>C \<psi>) = r *\<^sub>C l \<phi> \<psi>\<close>
-      by (rule tendsto_unique[OF False, rotated])
-    from tendsto_l have \<open>((\<lambda>x. cnj r *\<^sub>C (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> cnj r *\<^sub>C l \<phi> \<psi>) F\<close>
-      using tendsto_scaleC by blast
-    moreover from tendsto_l have \<open>((\<lambda>x. cnj r *\<^sub>C (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> l (r *\<^sub>C \<phi>) \<psi>) F\<close>
-      by (simp flip: cinner_scaleC_left cblinfun.scaleC_left)
-    ultimately show \<open>l (r *\<^sub>C \<phi>) \<psi> = cnj r *\<^sub>C l \<phi> \<psi>\<close>
-      by (rule tendsto_unique[OF False, rotated])
-    show \<open>\<exists>K. \<forall>a b. cmod (l a b) \<le> norm a * norm b * K\<close>
-      using l_bound by (auto intro!: exI[of _ \<open>norm B\<close>] simp: mult_ac)
-  qed
-  define L where \<open>L = (the_riesz_rep_sesqui l)*\<close>
-  then have \<open>\<phi> \<bullet>\<^sub>C L \<psi> = l \<phi> \<psi>\<close> for \<phi> \<psi>
-    by (auto intro!: \<open>bounded_sesquilinear l\<close> the_riesz_rep_sesqui_apply simp: cinner_adj_right)
-  with tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi>) \<longlongrightarrow> \<phi> \<bullet>\<^sub>C L \<psi>) F\<close> for \<phi> \<psi>
-    by simp
-  then have \<open>limitin cweak_operator_topology f L F\<close>
-    by (simp add: limitin_cweak_operator_topology)
-  then show ?thesis
-    by auto
-qed
-
-lemma summable_wot_boundedI:
-  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
-  assumes bounded: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> X \<Longrightarrow> sum f F \<le> B\<close>
-  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
-  shows \<open>summable_on_in cweak_operator_topology f X\<close>
-proof -
-  have pos': \<open>(\<Sum>x\<in>F. f x) \<ge> 0\<close> if \<open>finite F\<close> and \<open>F \<subseteq> X\<close> for F
-    using that pos
-    by (simp add: basic_trans_rules(31) sum_nonneg)
-  from pos have incr: \<open>increasing_filter (filtermap (sum f) (finite_subsets_at_top X))\<close>
-    by (auto intro!: increasing_filtermap[where X=\<open>{F. finite F \<and> F \<subseteq> X}\<close>] mono_onI sum_mono2)
-  show ?thesis
-    apply (simp add: summable_on_in_def has_sum_in_def) 
-    by (safe intro!: bounded pos' incr monotone_convergence_wot[where B=B] eventually_finite_subsets_at_top_weakI)
-qed
-
-instantiation cblinfun_wot :: (chilbert_space, chilbert_space) order begin
-lift_definition less_eq_cblinfun_wot :: \<open>('a, 'b) cblinfun_wot \<Rightarrow> ('a, 'b) cblinfun_wot \<Rightarrow> bool\<close> is less_eq.
-lift_definition less_cblinfun_wot :: \<open>('a, 'b) cblinfun_wot \<Rightarrow> ('a, 'b) cblinfun_wot \<Rightarrow> bool\<close> is less.
-instance
-  apply (intro_classes; transfer')
-  by auto
-end
-
-lemma is_Sup_wot_transfer[transfer_rule]:
-  includes lifting_syntax
-  shows \<open>(rel_set cr_cblinfun_wot ===> cr_cblinfun_wot ===> (\<longleftrightarrow>)) is_Sup is_Sup\<close>
-  apply (simp add: is_Sup_def[abs_def])
-  by transfer_prover
-
-lemma has_Sup_wot_transfer[transfer_rule]:
-  includes lifting_syntax
-  shows \<open>(rel_set cr_cblinfun_wot ===> (\<longleftrightarrow>)) has_Sup has_Sup\<close>
-  apply (simp add: has_Sup_def[abs_def])
-  by transfer_prover
-
-instantiation cblinfun_wot :: (chilbert_space, chilbert_space) Sup_order begin
-lift_definition sup_cblinfun_wot :: \<open>('a, 'b) cblinfun_wot \<Rightarrow> ('a, 'b) cblinfun_wot \<Rightarrow> ('a, 'b) cblinfun_wot\<close> is sup.
-lift_definition Sup_cblinfun_wot :: \<open>('a, 'b) cblinfun_wot set \<Rightarrow> ('a, 'b) cblinfun_wot\<close> is Sup.
-instance
-  apply (intro_classes; transfer')
-  by (auto intro!: is_Sup_Sup is_Sup_sup simp: )
-end
-
-lemma has_sum_in_finite:
-  assumes "finite F"
-  assumes \<open>sum f F \<in> topspace T\<close>
-  shows "has_sum_in T f F (sum f F)"
-  using assms
-  by (simp add: finite_subsets_at_top_finite has_sum_in_def limitin_def eventually_principal)
-
-lemma infsum_in_finite:
-  assumes "finite F"
-  assumes \<open>hausdorff T\<close>
-  assumes \<open>sum f F \<in> topspace T\<close>
-  shows "infsum_in T f F = sum f F"
-  using has_sum_in_finite[OF assms(1,3)]
-  using assms(2) has_sum_in_infsum_in has_sum_in_unique summable_on_in_def by blast
-
-instance cblinfun_wot :: (complex_normed_vector, complex_inner) topological_ab_group_add
-  by intro_classes
-
-lemma tendsto_le_complex:
-  fixes x y :: complex
-  assumes F: "\<not> trivial_limit F"
-    and x: "(f \<longlongrightarrow> x) F"
-    and y: "(g \<longlongrightarrow> y) F"
-    and ev: "eventually (\<lambda>x. g x \<le> f x) F"
-  shows "y \<le> x"
-proof (rule less_eq_complexI)
-  note F
-  moreover have \<open>((\<lambda>x. Re (f x)) \<longlongrightarrow> Re x) F\<close>
-    by (simp add: assms tendsto_Re)
-  moreover have \<open>((\<lambda>x. Re (g x)) \<longlongrightarrow> Re y) F\<close>
-    by (simp add: assms tendsto_Re)
-  moreover from ev have "eventually (\<lambda>x. Re (g x) \<le> Re (f x)) F"
-    apply (rule eventually_mono)
-    by (simp add: less_eq_complex_def)
-  ultimately show \<open>Re y \<le> Re x\<close>
-    by (rule tendsto_le)
-next
-  note F
-  moreover have \<open>((\<lambda>x. Im (g x)) \<longlongrightarrow> Im y) F\<close>
-    by (simp add: assms tendsto_Im)
-  moreover 
-  have \<open>((\<lambda>x. Im (g x)) \<longlongrightarrow> Im x) F\<close>
-  proof -
-    have \<open>((\<lambda>x. Im (f x)) \<longlongrightarrow> Im x) F\<close>
-      by (simp add: assms tendsto_Im)
-    moreover from ev have \<open>\<forall>\<^sub>F x in F. Im (f x) = Im (g x)\<close>
-      apply (rule eventually_mono)
-      by (simp add: less_eq_complex_def)
-    ultimately show ?thesis
-      by (rule Lim_transform_eventually)
-  qed
-  ultimately show \<open>Im y = Im x\<close>
-    by (rule tendsto_unique)
-qed
-
-lemma infsum_wot_is_Sup:
-  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
-  (* assumes bounded: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> X \<Longrightarrow> sum f F \<le> B\<close> *)
-  assumes summable: \<open>summable_on_in cweak_operator_topology f X\<close>
-    \<comment> \<open>See also @{thm [source] summable_wot_boundedI} for proving this.\<close>
-  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
-  defines \<open>S \<equiv> infsum_in cweak_operator_topology f X\<close>
-  shows \<open>is_Sup ((\<lambda>F. \<Sum>x\<in>F. f x) ` {F. finite F \<and> F \<subseteq> X}) S\<close>
-proof (rule is_SupI)
-  have has_sum: \<open>has_sum_in cweak_operator_topology f X S\<close>
-    unfolding S_def
-    apply (rule has_sum_in_infsum_in)
-    using assms by auto
-  show \<open>s \<le> S\<close> if \<open>s \<in> ((\<lambda>F. \<Sum>x\<in>F. f x) ` {F. finite F \<and> F \<subseteq> X})\<close> for s
-  proof -
-    from that obtain F where [simp]: \<open>finite F\<close> and \<open>F \<subseteq> X\<close> and s_def: \<open>s = (\<Sum>x\<in>F. f x)\<close>
-      by auto
-    show ?thesis
-    proof (rule has_sum_mono_neutral_wot)
-      show \<open>has_sum_in cweak_operator_topology f F s\<close>
-        by (auto intro!: has_sum_in_finite simp: s_def)
-      show \<open>has_sum_in cweak_operator_topology f X S\<close>
-        by (fact has_sum)
-      show \<open>f x \<le> f x\<close> for x
-        by simp
-      show \<open>f x \<le> 0\<close> if \<open>x \<in> F - X\<close> for x
-        using \<open>F \<subseteq> X\<close> that by auto
-      show \<open>f x \<ge> 0\<close> if \<open>x \<in> X - F\<close> for x
-        using that pos by auto
-    qed
-  qed
-  show \<open>S \<le> y\<close>
-    if y_bound: \<open>\<And>x. x \<in> ((\<lambda>F. \<Sum>x\<in>F. f x) ` {F. finite F \<and> F \<subseteq> X}) \<Longrightarrow> x \<le> y\<close> for y
-  proof (rule cblinfun_leI, rename_tac \<psi>)
-    fix \<psi> :: 'a
-    define g where \<open>g x = \<psi> \<bullet>\<^sub>C Rep_cblinfun_wot x \<psi>\<close> for x
-    from has_sum have lim: \<open>((\<lambda>i. \<psi> \<bullet>\<^sub>C ((\<Sum>x\<in>i. f x) *\<^sub>V \<psi>)) \<longlongrightarrow> \<psi> \<bullet>\<^sub>C (S *\<^sub>V \<psi>)) (finite_subsets_at_top X)\<close>
-      by (simp add: has_sum_in_def limitin_cweak_operator_topology)
-    have bound: \<open>\<psi> \<bullet>\<^sub>C (\<Sum>x\<in>F. f x) \<psi> \<le> \<psi> \<bullet>\<^sub>C y \<psi>\<close> if \<open>finite F\<close> \<open>F \<subseteq> X\<close> for F
-      using y_bound less_eq_cblinfun_def that(1) that(2) by fastforce
-    show \<open>\<psi> \<bullet>\<^sub>C (S *\<^sub>V \<psi>) \<le> \<psi> \<bullet>\<^sub>C y \<psi>\<close>
-      using finite_subsets_at_top_neq_bot tendsto_const lim apply (rule tendsto_le_complex)
-      using bound by (auto intro!: eventually_finite_subsets_at_top_weakI)
-  qed
-qed
-
-lemma summable_wot_bdd_above:
-  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
-  assumes summable: \<open>summable_on_in cweak_operator_topology f X\<close>
-    \<comment> \<open>See also @{thm [source] summable_wot_boundedI} for proving this.\<close>
-  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
-  shows \<open>bdd_above (sum f ` {F. finite F \<and> F \<subseteq> X})\<close>
-  using infsum_wot_is_Sup[OF assms]
-  by (auto intro!: simp: is_Sup_def bdd_above_def)
 
 definition \<open>kraus_family \<EE> \<longleftrightarrow> bdd_above ((\<lambda>F. \<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) ` {F. finite F \<and> F \<subseteq> \<EE>})\<close>
   for \<EE> :: \<open>(_::chilbert_space, _::chilbert_space, _) kraus_family\<close>
@@ -653,29 +181,6 @@ definition kraus_family_op_weight where
 
 lemma kraus_family_op_weight_geq0[simp]: \<open>kraus_family_op_weight \<EE> E \<ge> 0\<close>
   by (auto intro!: infsum_nonneg simp: kraus_family_op_weight_def)
-
-lemma bdd_above_transform_mono_pos:
-  assumes bdd: \<open>bdd_above ((\<lambda>x. g x) ` M)\<close>
-  assumes gpos: \<open>\<And>x. x \<in> M \<Longrightarrow> g x \<ge> 0\<close>
-  assumes mono: \<open>mono_on (Collect ((\<le>) 0)) f\<close>
-  shows \<open>bdd_above ((\<lambda>x. f (g x)) ` M)\<close>
-proof (cases \<open>M = {}\<close>)
-  case True
-  then show ?thesis
-    by simp
-next
-  case False
-  from bdd obtain B where B: \<open>g x \<le> B\<close> if \<open>x \<in> M\<close> for x
-  by (meson bdd_above.unfold imageI)
-  with gpos False have \<open>B \<ge> 0\<close>
-    using dual_order.trans by blast
-  have \<open>f (g x) \<le> f B\<close> if \<open>x \<in> M\<close> for x
-    using mono _ _ B
-    apply (rule mono_onD)
-    by (auto intro!: gpos that  \<open>B \<ge> 0\<close>)
-  then show ?thesis
-    by fast
-qed
 
 lemma kraus_family_related_ops_abs_summable:
   fixes \<EE> :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family\<close>
@@ -924,28 +429,6 @@ lemma kraus_family_map_scaleC:
   shows \<open>kraus_family_map \<EE> (c *\<^sub>C x) = c *\<^sub>C kraus_family_map \<EE> x\<close>
   by (simp add: kraus_family_map_def cblinfun.scaleC_right case_prod_unfold
       flip: infsum_scaleC_right)
-
-(* TODO move *)
-lemma trace_comp_pos:
-  fixes a b :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
-  assumes \<open>trace_class b\<close>
-  assumes \<open>a \<ge> 0\<close> and \<open>b \<ge> 0\<close>
-  shows \<open>trace (a o\<^sub>C\<^sub>L b) \<ge> 0\<close>
-proof -
-  obtain c :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close> where \<open>a = c* o\<^sub>C\<^sub>L c\<close>
-  by (metis assms(2) positive_hermitianI sqrt_op_pos sqrt_op_square)
-  then have \<open>trace (a o\<^sub>C\<^sub>L b) = trace (sandwich c b)\<close>
-    by (simp add: sandwich_apply assms(1) cblinfun_assoc_left(1) circularity_of_trace trace_class_comp_right)
-  also have \<open>\<dots> \<ge> 0\<close>
-    by (auto intro!: trace_pos sandwich_pos assms)
-  finally show ?thesis
-    by -
-qed
-
-lemma trace_minus: 
-  assumes \<open>trace_class a\<close> \<open>trace_class b\<close>
-  shows \<open>trace (a - b) = trace a - trace b\<close>
-  by (metis (no_types, lifting) add_uminus_conv_diff assms(1) assms(2) trace_class_uminus trace_plus trace_uminus)
 
 lemma kraus_family_map_abs_summable:
   assumes \<open>kraus_family \<EE>\<close>
@@ -1293,12 +776,6 @@ qed
 (* lemma
   assumes \<open>kraus_family \<EE>\<close>
   shows \<open>((\<lambda>F. norm (\<Sum>E\<in>F. complex_of_nat (\<EE> E) *\<^sub>C (E* o\<^sub>C\<^sub>L E))) \<longlongrightarrow> kraus_family_norm \<EE>) (finite_subsets_at_top UNIV)\<close> *)
-
-lemma has_sum_in_cweak_operator_topology_pointwise:
-  \<open>has_sum_in cweak_operator_topology f X s \<longleftrightarrow> (\<forall>\<psi> \<phi>. ((\<lambda>x. \<psi> \<bullet>\<^sub>C f x \<phi>) has_sum \<psi> \<bullet>\<^sub>C s \<phi>) X)\<close>
-  by (simp add: has_sum_in_def has_sum_def limitin_cweak_operator_topology
-      cblinfun.sum_left cinner_sum_right)
-
 
 lemma kraus_family_bound_from_map:
   assumes \<open>kraus_family \<EE>\<close>
@@ -1817,14 +1294,6 @@ proof -
     by (simp add: kraus_family_related_ops_def kraus_family_op_weight_def)
 qed
 
-(* TODO move *)
-lemma has_sum_Sigma'_banach:
-  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
-    and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::banach\<close>
-  assumes "((\<lambda>(x,y). f x y) has_sum S) (Sigma A B)"
-  shows \<open>((\<lambda>x. infsum (f x) (B x)) has_sum S) A\<close>
-  by (metis (no_types, lifting) assms has_sum_cong has_sum_imp_summable has_sum_infsum infsumI infsum_Sigma'_banach summable_on_Sigma_banach)
-
 (* instantiation cblinfun_wot :: (complex_normed_vector, complex_inner) uniform_topological_group_add begin
 lift_definition uniformity_cblinfun_wot :: \<open>(('a, 'b) cblinfun_wot \<times> ('a, 'b) cblinfun_wot) filter\<close> is
   \<open>SUP \<psi> \<phi>. (INF e\<in>{0 <..}. principal {(x, y). \<psi> \<bullet>\<^sub>C (x-y :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b) \<phi> < e})\<close>.
@@ -1846,23 +1315,6 @@ next
   then show \<open>kraus_family \<EE>\<close>
     by (auto intro!: summable_wot_bdd_above[where X=\<EE>] positive_cblinfun_squareI simp: kraus_family_def)
 qed
-
-lemma has_sum_on_wot_transfer[transfer_rule]:
-  includes lifting_syntax
-  shows \<open>(((=) ===> cr_cblinfun_wot) ===> (=) ===> cr_cblinfun_wot ===> (\<longleftrightarrow>)) (has_sum_in cweak_operator_topology) HAS_SUM\<close>
-  unfolding has_sum_euclidean_iff[abs_def, symmetric] has_sum_in_def[abs_def]
-  by transfer_prover
-
-lemma summable_on_wot_transfer[transfer_rule]:
-  includes lifting_syntax
-  shows \<open>(((=) ===> cr_cblinfun_wot) ===> (=) ===> (\<longleftrightarrow>)) (summable_on_in cweak_operator_topology) (summable_on)\<close>
-  apply (auto intro!: simp: summable_on_def[abs_def] summable_on_in_def[abs_def])
-  by transfer_prover
-
-lemma Abs_cblinfun_wot_transfer[transfer_rule]:
-  includes lifting_syntax
-  shows \<open>((=) ===> cr_cblinfun_wot) id Abs_cblinfun_wot\<close>
-  by (auto intro!: rel_funI simp: cr_cblinfun_wot_def Abs_cblinfun_wot_inverse)
 
 lemma kraus_family_def2':
   \<open>kraus_family \<EE> \<longleftrightarrow> (\<lambda>(E,x). Abs_cblinfun_wot (E* o\<^sub>C\<^sub>L E)) summable_on \<EE>\<close>
@@ -2131,12 +1583,6 @@ definition kraus_family_scale :: \<open>real \<Rightarrow> ('a::chilbert_space,'
 (* lemma kraus_family_scale_neg: \<open>kraus_family_scale r = {}\<close> if \<open>r \<le> 0\<close>
   using that by (auto intro!: ext simp add: kraus_family_scale_def) *)
 
-(* TODO move *)
-lemma Ex_impI:
-  assumes \<open>\<And>x. P x \<Longrightarrow> Q (f x)\<close>
-  shows \<open>Ex P \<Longrightarrow> Ex Q\<close>
-  using assms by auto
-
 lemma kraus_family_kraus_family_scale:
   assumes kraus\<EE>: \<open>kraus_family \<EE>\<close>
   shows \<open>kraus_family (kraus_family_scale r \<EE>)\<close>
@@ -2237,6 +1683,17 @@ end
 lift_definition kraus_map_apply :: \<open>('a::chilbert_space,'b::chilbert_space) kraus_map \<Rightarrow> ('a,'a) trace_class \<Rightarrow>\<^sub>C\<^sub>L ('b,'b) trace_class\<close> is
   \<open>kraus_family_map\<close>
   by (auto simp: kraus_equivalent_def kraus_family_map_bounded_clinear)
+
+lemma kraus_family_of_op_apply: \<open>kraus_family_map (kraus_family_of_op E) \<rho> = sandwich_tc E *\<^sub>V \<rho>\<close>
+  by (simp add: kraus_family_map_def kraus_family_of_op_def)
+
+
+lemma kraus_map_of_op_apply: \<open>kraus_map_apply (kraus_map_of_op E) \<rho> = sandwich_tc E *\<^sub>V \<rho>\<close>
+  apply (transfer' fixing: \<rho>)
+  by (simp add: kraus_family_of_op_apply)
+
+lemma kraus_map_id_apply[simp]: \<open>kraus_map_apply kraus_map_id \<rho> = \<rho>\<close>
+  by (simp add: kraus_map_id_def kraus_map_of_op_apply)
 
 lemma kraus_family_rep_kraus_map[simp]: \<open>kraus_family (rep_kraus_map \<EE>)\<close>
   using Quotient_rep_reflp[OF Quotient_kraus_map]
@@ -2405,46 +1862,6 @@ lift_definition tc_tensor :: \<open>('a ell2, 'b ell2) trace_class \<Rightarrow>
   by (auto intro!: trace_class_tensor) *)
 
 
-lemma infsum_product:
-  fixes f :: \<open>'a \<Rightarrow> 'c :: {topological_semigroup_mult,division_ring,banach}\<close>
-  assumes \<open>(\<lambda>(x, y). f x * g y) summable_on X \<times> Y\<close>
-  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. f x) * (\<Sum>\<^sub>\<infinity>y\<in>Y. g y) = (\<Sum>\<^sub>\<infinity>(x,y)\<in>X\<times>Y. f x * g y)\<close>
-  using assms
-  by (simp add: infsum_cmult_right' infsum_cmult_left' flip: infsum_Sigma'_banach)
-
-lemma infsum_product':
-  fixes f :: \<open>'a \<Rightarrow> 'c :: {banach,times,real_normed_algebra}\<close> and g :: \<open>'b \<Rightarrow> 'c\<close>
-  assumes \<open>f abs_summable_on X\<close>
-  assumes \<open>g abs_summable_on Y\<close>
-  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. f x) * (\<Sum>\<^sub>\<infinity>y\<in>Y. g y) = (\<Sum>\<^sub>\<infinity>(x,y)\<in>X\<times>Y. f x * g y)\<close>
-  using assms
-  by (simp add: abs_summable_times infsum_cmult_right infsum_cmult_left abs_summable_summable flip: infsum_Sigma'_banach)
-
-(* TODO move *)
-lemma trace_norm_tensor: \<open>trace_norm (a \<otimes>\<^sub>o b) = trace_norm a * trace_norm b\<close>
-  apply (rule of_real_hom.injectivity[where 'a=complex])
-  by (simp add: abs_op_tensor trace_tensor flip: trace_abs_op)
-
-
-(* TODO move *)
-lemma bounded_cbilinear_tc_tensor: \<open>bounded_cbilinear tc_tensor\<close>
-  unfolding bounded_cbilinear_def
-  apply transfer
-  by (auto intro!: exI[of _ 1]
-      simp: trace_norm_tensor tensor_op_left_add tensor_op_right_add tensor_op_scaleC_left tensor_op_scaleC_right)
-lemmas bounded_clinear_tc_tensor_left[bounded_clinear] = bounded_cbilinear.bounded_clinear_left[OF bounded_cbilinear_tc_tensor]
-lemmas bounded_clinear_tc_tensor_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_tensor]
-
-
-(* TODO move *)
-lemma bounded_cbilinear_tc_compose: \<open>bounded_cbilinear tc_compose\<close>
-  unfolding bounded_cbilinear_def
-  apply transfer
-  apply (auto intro!: exI[of _ 1] simp: cblinfun_compose_add_left cblinfun_compose_add_right)
-  by (meson Unsorted_HSTP.norm_leq_trace_norm dual_order.trans mult_right_mono trace_norm_comp_right trace_norm_nneg)
-lemmas bounded_clinear_tc_compose_left[bounded_clinear] = bounded_cbilinear.bounded_clinear_left[OF bounded_cbilinear_tc_compose]
-lemmas bounded_clinear_tc_compose_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_compose]
-
 (* (* TODO move *)
 lemma tc_tensor_scaleC_left: \<open>tc_tensor (c *\<^sub>C a) b = c *\<^sub>C tc_tensor a b\<close>
   apply transfer'
@@ -2478,5 +1895,431 @@ lemma norm_tc_tensor: \<open>norm (tc_tensor a b) = norm a * norm b\<close>
 (* lemma comp_tc_butterfly[simp]: \<open>tc_compose (tc_butterfly a b) (tc_butterfly c d) = (b \<bullet>\<^sub>C c) *\<^sub>C tc_butterfly a d\<close>
   apply transfer'
   by simp *)
+
+(* lemma cspan_trace_class_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(rel_set cr_trace_class ===> rel_set cr_trace_class) cspan cspan\<close>
+  by - *)
+
+definition trace_kraus_family :: \<open>'a set \<Rightarrow> ('a::chilbert_space, complex, 'a) kraus_family\<close> where
+  \<open>trace_kraus_family B = (\<lambda>x. (vector_to_cblinfun x*, x)) ` B\<close>
+
+lemma trace_kraus_family_is_kraus_family: \<open>kraus_family (trace_kraus_family B)\<close> if \<open>is_onb B\<close>
+proof -
+  have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> id_cblinfun\<close> if \<open>finite F\<close> and FB: \<open>F \<subseteq> trace_kraus_family B\<close> for F :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L complex \<times> 'a) set\<close>
+  proof -
+    obtain G where \<open>finite G\<close> and \<open>G \<subseteq> B\<close> and FG: \<open>F = (\<lambda>x. (vector_to_cblinfun x*, x)) ` G\<close>
+      apply atomize_elim
+      using \<open>finite F\<close> and FB
+      apply (simp add: trace_kraus_family_def)
+      by (meson finite_subset_image)
+    from \<open>G \<subseteq> B\<close> have [simp]: \<open>is_ortho_set G\<close>
+      by (meson \<open>is_onb B\<close> is_onb_def is_ortho_set_antimono)
+    from \<open>G \<subseteq> B\<close> have [simp]: \<open>e \<in> G \<Longrightarrow> norm e = 1\<close> for e
+      by (meson Set.basic_monos(7) \<open>is_onb B\<close> is_onb_def)
+    have [simp]: \<open>inj_on (\<lambda>x. (vector_to_cblinfun x*, x)) G\<close>
+      by (meson inj_onI prod.inject)
+    have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) = (\<Sum>x\<in>G. selfbutter x)\<close>
+      by (simp add: FG sum.reindex butterfly_def)
+    also have \<open>(\<Sum>x\<in>G. selfbutter x) \<le> id_cblinfun\<close>
+      apply (rule sum_butterfly_leq_id)
+      by auto
+    finally show ?thesis
+      by -
+  qed
+  then show ?thesis
+    by (auto intro!: bdd_aboveI[where M=id_cblinfun] kraus_familyI)
+qed
+
+
+lemma trace_kraus_family_is_trace: 
+  assumes \<open>is_onb B\<close>
+  shows \<open>kraus_family_map (trace_kraus_family B) \<rho> = one_dim_iso (trace_tc \<rho>)\<close>
+proof -
+  define \<rho>' where \<open>\<rho>' = from_trace_class \<rho>\<close>
+  have \<open>kraus_family_map (trace_kraus_family B) \<rho> = (\<Sum>\<^sub>\<infinity>x\<in>B. sandwich_tc (vector_to_cblinfun x*) *\<^sub>V \<rho>)\<close>
+    apply (simp add: kraus_family_map_def trace_kraus_family_def)
+    apply (subst infsum_reindex)
+     apply (meson inj_onI prod.simps(1))
+    by (simp add: o_def)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>B. one_dim_iso (x \<bullet>\<^sub>C (\<rho>' x)))\<close>
+    apply (intro infsum_cong from_trace_class_inject[THEN iffD1])
+    apply (subst from_trace_class_sandwich_tc)
+    by (simp add: sandwich_apply flip: \<rho>'_def)
+  also have \<open>\<dots> = one_dim_iso (\<Sum>\<^sub>\<infinity>x\<in>B. (x \<bullet>\<^sub>C (\<rho>' x)))\<close>
+    by (metis (mono_tags, lifting) \<rho>'_def infsum_cblinfun_apply infsum_cong assms one_cblinfun.rep_eq trace_class_from_trace_class trace_exists)
+  also have \<open>\<dots> = one_dim_iso (trace \<rho>')\<close>
+    by (metis \<rho>'_def trace_class_from_trace_class trace_alt_def[OF assms])
+  also have \<open>\<dots> = one_dim_iso (trace_tc \<rho>)\<close>
+    by (simp add: \<rho>'_def trace_tc.rep_eq)
+  finally show ?thesis
+    by -
+qed
+
+lemma kraus_equivalent_trace_kraus_family:
+  assumes \<open>is_onb A\<close> and \<open>is_onb B\<close>
+  shows \<open>kraus_equivalent (trace_kraus_family A) (trace_kraus_family B)\<close>
+  by (auto intro!: trace_kraus_family_is_kraus_family
+      simp: kraus_equivalent_def trace_kraus_family_is_trace assms)
+
+
+lift_definition trace_kraus_map :: \<open>('a::chilbert_space, complex) kraus_map\<close> is
+  \<open>kraus_family_flatten (trace_kraus_family some_chilbert_basis)\<close>
+  by (simp add: kraus_equivalent_reflI kraus_family_kraus_family_flatten trace_kraus_family_is_kraus_family)
+
+lemma trace_kraus_map_is_trace: \<open>kraus_map_apply trace_kraus_map \<rho> = one_dim_iso (trace_tc \<rho>)\<close>
+  apply (transfer' fixing: \<rho>)
+  by (simp add: kraus_family_flatten_same_map trace_kraus_family_is_kraus_family trace_kraus_family_is_trace)
+
+definition \<open>trace_preserving \<EE> \<longleftrightarrow> (\<forall>\<rho>. trace_tc (kraus_map_apply \<EE> \<rho>) = trace_tc \<rho>)\<close>
+
+(* lemma \<open>kraus_map_norm \<EE> \<le> 1\<close> if \<open>trace_preserving \<EE>\<close>
+by -
+
+lemma \<open>kraus_map_norm \<EE> = 1\<close> if \<open>trace_preserving \<EE>\<close> 
+  for \<EE> :: \<open>('a::{not_singleton, chilbert_space}, 'b::chilbert_space) kraus_map\<close>
+by - *)
+
+lemma trace_preserving_id[iff]: \<open>trace_preserving kraus_map_id\<close>
+  by (simp add: trace_preserving_def trace_kraus_map_is_trace)
+
+
+lemma trace_preserving_trace_kraus_map[iff]: \<open>trace_preserving trace_kraus_map\<close>
+  by (simp add: trace_preserving_def trace_kraus_map_is_trace)
+
+
+lemma kraus_equivalent_kraus_family_flatten_left: \<open>kraus_equivalent (kraus_family_flatten F) G\<close> if \<open>kraus_equivalent F G\<close>
+  using that by (simp add: kraus_equivalent_def kraus_family_flatten_same_map kraus_family_kraus_family_flatten)
+lemma kraus_equivalent_kraus_family_flatten_right: \<open>kraus_equivalent F (kraus_family_flatten G)\<close> if \<open>kraus_equivalent F G\<close>
+  using that by (simp add: kraus_equivalent_def kraus_family_flatten_same_map kraus_family_kraus_family_flatten)
+
+lemma kraus_family_comp_cong: \<open>kraus_equivalent (kraus_family_comp F G) (kraus_family_comp F' G')\<close>
+  if \<open>kraus_equivalent F F'\<close> and \<open>kraus_equivalent G G'\<close>
+  by (metis kraus_equivalent_def kraus_family_comp_apply kraus_family_kraus_family_comp that(1) that(2))
+
+lemma kraus_equivalent_trans[trans]:
+  \<open>kraus_equivalent F G \<Longrightarrow> kraus_equivalent G H \<Longrightarrow> kraus_equivalent F H\<close>
+  by (simp add: kraus_equivalent_def)
+
+definition kraus_family_tensor :: \<open>('a ell2, 'b ell2, 'x) kraus_family \<Rightarrow> ('c ell2, 'd ell2, 'y) kraus_family \<Rightarrow> (('a\<times>'c) ell2, ('b\<times>'d) ell2, ('x\<times>'y)) kraus_family\<close> where
+  \<open>kraus_family_tensor \<EE> \<FF> = (\<lambda>((E,x), (F,y)). (E \<otimes>\<^sub>o F, (x,y))) ` (\<EE>\<times>\<FF>)\<close>
+
+lemma kraus_family_kraus_family_tensor:
+  assumes \<open>kraus_family \<EE>\<close> and \<open>kraus_family \<FF>\<close>
+  shows \<open>kraus_family (kraus_family_tensor \<EE> \<FF>)\<close>
+  by -
+
+lemma kraus_tensor_cong:
+  assumes \<open>kraus_equivalent \<EE> \<EE>'\<close>
+  assumes \<open>kraus_equivalent \<FF> \<FF>'\<close>
+  shows \<open>kraus_equivalent (kraus_family_tensor \<EE> \<FF>) (kraus_family_tensor \<EE>' \<FF>')\<close>
+  by -
+
+definition eigenvalues :: \<open>('a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> complex set\<close> where
+  \<open>eigenvalues a = {x. eigenspace x a \<noteq> 0}\<close>
+
+lemma eigenvalues_0[simp]: \<open>eigenvalues (0 :: 'a::{not_singleton,complex_normed_vector} \<Rightarrow>\<^sub>C\<^sub>L 'a) = {0}\<close>
+  apply (auto intro!: simp: eigenvalues_def eigenspace_def)
+  by (metis id_cblinfun_eq_1 kernel_id kernel_scaleC of_complex_def scaleC_minus1_left zero_ccsubspace_def zero_neq_neg_one)
+
+(* TODO move *)
+lemma nonzero_ccsubspace_contains_unit_vector:
+  assumes \<open>S \<noteq> 0\<close>
+  shows \<open>\<exists>\<psi>. \<psi> \<in> space_as_set S \<and> norm \<psi> = 1\<close>
+proof -
+  from assms 
+  obtain \<psi> where \<open>\<psi> \<in> space_as_set S\<close> and \<open>\<psi> \<noteq> 0\<close>
+    apply transfer
+    by (auto simp: complex_vector.subspace_0)
+  then have \<open>sgn \<psi> \<in> space_as_set S\<close> and \<open>norm (sgn \<psi>) = 1\<close>
+     apply (simp add: complex_vector.subspace_scale scaleR_scaleC sgn_div_norm)
+    by (simp add: \<open>\<psi> \<noteq> 0\<close> norm_sgn)
+  then show ?thesis
+    by auto
+qed
+
+lemma unit_eigenvector_ex: 
+  assumes \<open>x \<in> eigenvalues a\<close>
+  shows \<open>\<exists>h. norm h = 1 \<and> a h = x *\<^sub>C h\<close>
+proof -
+  from assms have \<open>eigenspace x a \<noteq> 0\<close>
+    by (simp add: eigenvalues_def)
+  then obtain \<psi> where \<psi>_ev: \<open>\<psi> \<in> space_as_set (eigenspace x a)\<close> and \<open>\<psi> \<noteq> 0\<close>
+    using nonzero_ccsubspace_contains_unit_vector by force
+  define h where \<open>h = sgn \<psi>\<close>
+  with \<open>\<psi> \<noteq> 0\<close> have \<open>norm h = 1\<close>
+    by (simp add: norm_sgn)
+  from \<psi>_ev have \<open>h \<in> space_as_set (eigenspace x a)\<close>
+    by (simp add: h_def sgn_in_spaceI)
+  then have \<open>a *\<^sub>V h = x *\<^sub>C h\<close>
+    unfolding eigenspace_def
+    apply (transfer' fixing: x)
+    by simp
+  with \<open>norm h = 1\<close> show ?thesis
+    by auto    
+qed
+
+
+lemma eigenvalue_norm_bound:
+  assumes \<open>e \<in> eigenvalues a\<close>
+  shows \<open>norm e \<le> norm a\<close>
+proof -
+  from assms obtain h where \<open>norm h = 1\<close> and ah_eh: \<open>a h = e *\<^sub>C h\<close>
+    using unit_eigenvector_ex by blast
+  have \<open>cmod e = norm (e *\<^sub>C h)\<close>
+    by (simp add: \<open>norm h = 1\<close>)
+  also have \<open>\<dots> = norm (a h)\<close>
+    using ah_eh by presburger
+  also have \<open>\<dots> \<le> norm a\<close>
+    by (metis \<open>norm h = 1\<close> cblinfun.real.bounded_linear_right mult_cancel_left1 norm_cblinfun.rep_eq onorm)
+  finally show \<open>cmod e \<le> norm a\<close>
+    by -
+qed
+
+lemma eigenvalue_selfadj_real:
+  assumes \<open>e \<in> eigenvalues a\<close>
+  assumes \<open>a* = a\<close>
+  shows \<open>e \<in> \<real>\<close>
+proof -
+  from assms obtain h where \<open>norm h = 1\<close> and ah_eh: \<open>a h = e *\<^sub>C h\<close>
+    using unit_eigenvector_ex by blast
+  have \<open>e = h \<bullet>\<^sub>C (e *\<^sub>C h)\<close>
+    by (metis \<open>norm h = 1\<close> cinner_simps(6) mult_cancel_left1 norm_one one_cinner_one power2_norm_eq_cinner power2_norm_eq_cinner)
+  also have \<open>\<dots> = h \<bullet>\<^sub>C a h\<close>
+    by (simp add: ah_eh)
+  also from assms(2) have \<open>\<dots> \<in> \<real>\<close>
+    using cinner_hermitian_real by blast
+  finally show \<open>e \<in> \<real>\<close>
+    by -
+qed
+
+
+definition largest_eigenvalue :: \<open>('a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> complex\<close> where
+  \<open>largest_eigenvalue a = (SOME x. x \<in> eigenvalues a \<and> (\<forall>y \<in> eigenvalues a. cmod x \<ge> cmod y))\<close>
+
+lemma norm_is_eigenvalue:
+(* TODO Conway, Operators Lemma II.5.9 *)
+  fixes a :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a::{not_singleton, chilbert_space}\<close>
+  assumes \<open>compact_op a\<close>
+  assumes \<open>a* = a\<close>
+  shows \<open>norm a \<in> eigenvalues a \<or> - norm a \<in> eigenvalues a\<close>
+proof -
+  wlog \<open>a \<noteq> 0\<close>
+    using negation by auto
+  obtain h e where \<open>(\<lambda>i. h i \<bullet>\<^sub>C a (h i)) \<longlonglongrightarrow> e\<close> and \<open>norm (h i) = 1\<close> and norme: \<open>cmod e = norm a\<close> for i
+  proof atomize_elim
+    have sgn_cmod: \<open>sgn x * cmod x = x\<close> for x
+      by (simp add: Missing_Bounded_Operators.complex_of_real_cmod sgn_mult_abs)
+    obtain h0 where h0lim_cmod: \<open>(\<lambda>i. cmod (h0 i \<bullet>\<^sub>C a (h0 i))) \<longlonglongrightarrow> norm a\<close> 
+      and normh: \<open>norm (h0 i) = 1\<close> for i
+      by 0
+(*     then have \<open>\<forall>\<^sub>F i in sequentially. cmod (h0 i \<bullet>\<^sub>C a (h0 i)) \<noteq> 0\<close>
+      by -
+    then obtain s :: \<open>nat \<Rightarrow> nat\<close> where \<open>strict_mono s\<close> and \<open>cmod (h0 (s i) \<bullet>\<^sub>C a (h0 (s i))) \<noteq> 0\<close> for i
+      try0
+      sledgehammer [dont_slice]
+      by - *)
+    have sgn_sphere: \<open>sgn (h0 i \<bullet>\<^sub>C a (h0 i)) \<in> insert 0 (sphere 0 1)\<close> for i
+      using normh apply (auto intro!: left_inverse simp: sgn_div_norm)
+      by -
+    have compact: \<open>compact (insert 0 (sphere (0::complex) 1))\<close>
+      by simp
+    obtain r l where \<open>strict_mono r\<close> and l_sphere: \<open>l \<in> insert 0 (sphere 0 1)\<close>
+      and h0lim_sgn: \<open>((\<lambda>i. sgn (h0 i \<bullet>\<^sub>C a (h0 i))) \<circ> r) \<longlonglongrightarrow> l\<close>
+      using compact[unfolded compact_def, rule_format, OF sgn_sphere]
+      by fast
+    define h and e where \<open>h i = h0 (r i)\<close> and \<open>e = l * norm a\<close> for i
+    have hlim_cmod: \<open>(\<lambda>i. cmod (h i \<bullet>\<^sub>C a (h i))) \<longlonglongrightarrow> norm a\<close>
+      using LIMSEQ_subseq_LIMSEQ[OF h0lim_cmod \<open>strict_mono r\<close>]  
+      unfolding h_def o_def by auto
+    with h0lim_sgn have \<open>(\<lambda>i. sgn (h i \<bullet>\<^sub>C a (h i)) * cmod (h i \<bullet>\<^sub>C a (h i))) \<longlonglongrightarrow> e\<close>
+      by (auto intro!: tendsto_mult tendsto_of_real simp: o_def h_def e_def)
+    then have hlim: \<open>(\<lambda>i. h i \<bullet>\<^sub>C a (h i)) \<longlonglongrightarrow> e\<close>
+      by (simp add: sgn_cmod)
+    have \<open>e \<noteq> 0\<close>
+    proof (rule ccontr, simp)
+      assume \<open>e = 0\<close>
+      from hlim have \<open>(\<lambda>i. cmod (h i \<bullet>\<^sub>C a (h i))) \<longlonglongrightarrow> cmod e\<close>
+        apply (rule tendsto_compose[where g=cmod, rotated])
+        by (smt (verit, del_insts) \<open>e = 0\<close> diff_zero dist_norm metric_LIM_imp_LIM norm_ge_zero norm_zero real_norm_def tendsto_ident_at)
+      with \<open>e = 0\<close> hlim_cmod have \<open>norm a = 0\<close>
+        using LIMSEQ_unique by fastforce
+      with \<open>a \<noteq> 0\<close> show False
+        by simp
+    qed
+    then have norme: \<open>norm e = norm a\<close>
+      using l_sphere by (simp add: e_def norm_mult)
+    show \<open>\<exists>h e. (\<lambda>i. h i \<bullet>\<^sub>C (a *\<^sub>V h i)) \<longlonglongrightarrow> e \<and> (\<forall>i. norm (h i) = 1) \<and> cmod e = norm a\<close>
+      using norme normh hlim
+      by (auto intro!: exI[of _ h] exI[of _ e] simp: h_def)
+  qed
+  have \<open>e \<in> eigenvalues a\<close>
+    by -
+  with \<open>a* = a\<close> have \<open>e \<in> \<real>\<close>
+    using eigenvalue_selfadj_real by blast
+  with norme
+  have \<open>e = norm a \<or> e = - norm a\<close>
+    by (smt (verit, best) in_Reals_norm of_real_Re)
+  with \<open>e \<in> eigenvalues a\<close> show ?thesis
+    by auto
+qed
+
+lemma 
+  assumes \<open>compact_op a\<close>
+  assumes \<open>a* = a\<close>
+  shows largest_eigenvalue_norm: \<open>largest_eigenvalue a \<in> {norm a, - norm a}\<close>
+    and largest_eigenvalue_ex: \<open>largest_eigenvalue a \<in> eigenvalues a\<close>
+proof -
+  define l where \<open>l = largest_eigenvalue a\<close>
+  from norm_is_eigenvalue[OF assms]
+  obtain e where \<open>e \<in> {of_real (norm a), - of_real (norm a)}\<close> and \<open>e \<in> eigenvalues a\<close>
+    by auto
+  then have norme: \<open>norm e = norm a\<close>
+    by auto
+  have \<open>e \<in> eigenvalues a \<and> (\<forall>y\<in>eigenvalues a. cmod y \<le> cmod e)\<close> (is \<open>?P e\<close>)
+    by (auto intro!: \<open>e \<in> eigenvalues a\<close> simp: eigenvalue_norm_bound norme)
+  then have *: \<open>l \<in> eigenvalues a \<and> (\<forall>y\<in>eigenvalues a. cmod y \<le> cmod l)\<close>
+    unfolding l_def largest_eigenvalue_def by (rule someI)
+  then show \<open>l \<in> eigenvalues a\<close>
+    by simp
+  have \<open>norm l \<ge> norm a\<close>
+    using * norme \<open>e \<in> eigenvalues a\<close> by auto
+  moreover have \<open>norm l \<le> norm a\<close>
+    using "*" eigenvalue_norm_bound by blast
+  ultimately have \<open>norm l = norm a\<close>
+    by linarith
+  moreover have \<open>l \<in> \<real>\<close>
+    using \<open>l \<in> eigenvalues a\<close> assms(2) eigenvalue_selfadj_real by blast
+  ultimately show \<open>largest_eigenvalue a \<in> {norm a, - norm a}\<close>
+    by (smt (verit, ccfv_SIG) in_Reals_norm insertCI l_def of_real_Re)
+qed
+
+fun eigenvalues_of :: \<open>('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> nat \<Rightarrow> complex\<close> 
+  and spectral_decomp :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a)\<close>
+  where
+  \<open>eigenvalues_of a 0 = largest_eigenvalue a\<close>
+| \<open>eigenvalues_of a (Suc n) = largest_eigenvalue (spectral_decomp a n)\<close>
+| \<open>spectral_decomp a 0 = (let e = eigenvalues_of a 0 in e *\<^sub>C Proj (eigenspace e a))\<close>
+| \<open>spectral_decomp a (Suc n) = (let e = eigenvalues_of a (Suc n) in
+                                spectral_decomp a n + e *\<^sub>C Proj (eigenspace e a))\<close>
+
+lemma eigenvalues_of_tendsto_0:
+  assumes \<open>compact_op a\<close>
+  assumes \<open>a* = a\<close>
+  shows \<open>eigenvalues_of a \<longlonglongrightarrow> 0\<close>
+  by -
+
+lemma spectral_decomp_finite_rank: 
+  assumes \<open>compact_op a\<close>
+  assumes \<open>a* = a\<close>
+  shows \<open>finite_rank (spectral_decomp a n)\<close>
+  by -
+
+lemma spectral_decomp_tendsto:
+  assumes \<open>compact_op a\<close>
+  assumes \<open>a* = a\<close>
+  shows \<open>spectral_decomp a \<longlonglongrightarrow> a\<close>
+  by -
+
+lift_definition adj_tc :: \<open>('a::chilbert_space, 'b::chilbert_space) trace_class \<Rightarrow> ('b,'a) trace_class\<close> is adj
+  by simp
+
+lift_definition spectral_decomp_tc :: \<open>('a::chilbert_space, 'a) trace_class \<Rightarrow> nat \<Rightarrow> ('a, 'a) trace_class\<close> is
+  spectral_decomp
+  apply (auto intro!: simp: )
+  by -
+
+
+lift_definition rank1_tc :: \<open>('a::chilbert_space, 'b::chilbert_space) trace_class \<Rightarrow> bool\<close> is rank1.
+lift_definition finite_rank_tc :: \<open>('a::chilbert_space, 'b::chilbert_space) trace_class \<Rightarrow> bool\<close> is finite_rank.
+
+lemma spectral_decomp_tc_finite_rank: 
+  assumes \<open>adj_tc a = a\<close>
+  shows \<open>finite_rank_tc (spectral_decomp_tc a n)\<close>
+  by -
+
+lemma spectral_decomp_tendsto_tc:
+  assumes \<open>adj_tc a = a\<close>
+  shows \<open>spectral_decomp_tc a \<longlonglongrightarrow> a\<close>
+  by -
+
+lemma csubspace_finite_rank_tc: \<open>csubspace (Collect finite_rank_tc)\<close>
+  by -
+
+lemma finite_rank_tc_dense: \<open>closure (Collect finite_rank_tc :: ('a::chilbert_space,'a) trace_class set) = UNIV\<close>
+proof (intro order_top_class.top_le subsetI)
+  fix a :: \<open>('a,'a) trace_class\<close>
+  wlog selfadj: \<open>adj_tc a = a\<close> goal \<open>a \<in> closure (Collect finite_rank_tc)\<close> generalizing a
+  proof -
+    define b c where \<open>b = a + adj_tc a\<close> and \<open>c = \<i> *\<^sub>C (a - adj_tc a)\<close>
+    have \<open>adj_tc b = b\<close>
+      unfolding b_def
+      apply transfer
+      by (simp add: adj_plus)
+    have \<open>adj_tc c = c\<close>
+      unfolding c_def
+      apply transfer
+      apply (simp add: adj_minus)
+      by (metis minus_diff_eq scaleC_right.minus)
+    have abc: \<open>a = (1/2) *\<^sub>C b + (-\<i>/2) *\<^sub>C c\<close>
+      apply (simp add: b_def c_def)
+      by (metis (no_types, lifting) cross3_simps(8) diff_add_cancel group_cancel.add2 scaleC_add_right scaleC_half_double)
+    have \<open>b \<in> closure (Collect finite_rank_tc)\<close> and \<open>c \<in> closure (Collect finite_rank_tc)\<close>
+      using \<open>adj_tc b = b\<close> \<open>adj_tc c = c\<close> hypothesis by auto
+    with abc have \<open>a \<in> cspan (closure (Collect finite_rank_tc))\<close>
+      by (metis complex_vector.span_add complex_vector.span_clauses(1) complex_vector.span_clauses(4))
+    also have \<open>\<dots> \<subseteq> closure (cspan (Collect finite_rank_tc))\<close>
+      by (simp add: closure_mono complex_vector.span_minimal complex_vector.span_superset)
+    also have \<open>\<dots> = closure (Collect finite_rank_tc)\<close>
+      by (metis Set.basic_monos(1) complex_vector.span_minimal complex_vector.span_superset csubspace_finite_rank_tc subset_antisym)
+    finally show ?thesis
+      by -
+  qed
+  then have \<open>spectral_decomp_tc a \<longlonglongrightarrow> a\<close>
+    by (simp add: spectral_decomp_tendsto_tc)
+  moreover from selfadj 
+  have \<open>finite_rank_tc (spectral_decomp_tc a n)\<close> for n
+    by (simp add: spectral_decomp_tc_finite_rank)
+  ultimately show \<open>a \<in> closure (Collect finite_rank_tc)\<close>
+    using closure_sequential by force
+qed
+
+lemma finite_rank_tc_def': \<open>finite_rank_tc A \<longleftrightarrow> A \<in> cspan (Collect rank1_tc)\<close>
+  apply transfer
+  apply (auto simp: finite_rank_def)
+   apply (metis (no_types, lifting) Collect_cong rank1_trace_class)
+  by (metis (no_types, lifting) Collect_cong rank1_trace_class)
+
+lemma
+  fixes A B :: \<open>'a::chilbert_space set\<close>
+  assumes \<open>is_onb A\<close> and \<open>is_onb B\<close>
+  shows \<open>ccspan ((\<lambda>(x, y). tc_butterfly x y) ` (A\<times>B)) = \<top>\<close>
+proof -
+  have \<open>closure (cspan ((\<lambda>(x, y). tc_butterfly x y) ` (A\<times>B))) \<supseteq> Collect rank1_tc\<close>
+    by -
+  moreover have \<open>cspan (Collect rank1_tc) = Collect finite_rank_tc\<close>
+    using finite_rank_tc_def' by fastforce
+  moreover have \<open>closure (Collect finite_rank_tc :: ('a,'a) trace_class set) = UNIV\<close>
+    by (rule finite_rank_tc_dense)
+  ultimately have \<open>closure (cspan ((\<lambda>(x, y). tc_butterfly x y) ` (A\<times>B))) \<supseteq> UNIV\<close>
+    by (smt (verit, ccfv_SIG) closure_closure closure_is_csubspace closure_mono complex_vector.span_minimal complex_vector.subspace_span)
+  then show ?thesis
+    by (metis ccspan.abs_eq ccspan_UNIV closure_UNIV complex_vector.span_UNIV top.extremum_uniqueI)
+qed
+
+lift_definition kraus_map_tensor :: \<open>('a ell2, 'b ell2) kraus_map \<Rightarrow> ('c ell2, 'd ell2) kraus_map \<Rightarrow> (('a\<times>'c) ell2, ('b\<times>'d) ell2) kraus_map\<close> is
+  \<open>\<lambda>\<EE> \<FF>. kraus_family_flatten (kraus_family_tensor \<EE> \<FF>)\<close>
+  by (intro kraus_equivalent_kraus_family_flatten_left kraus_equivalent_kraus_family_flatten_right kraus_tensor_cong)
+
+(* 
+
+TODO:
+* kraus_family (kraus_family_tensor \<dots>)
+* kraus_map_apply (kraus_map_tensor \<EE> \<FF>) (tensor_tc \<rho> \<sigma>)) = \<dots>
+* kraus_map_tensor kraus_map_id kraus_map_trace = partial_trace
+* kraus_map_tensor of compositions
+* partial_trace ((kraus_map_tensor id \<EE>) \<rho>) = partial_trace \<rho>  if  trace_preserving \<EE>
+
+*)
 
 end

@@ -4,6 +4,7 @@ theory Missing_Bounded_Operators
     Tensor_Product.Hilbert_Space_Tensor_Product
     With_Type.With_Type Misc_Missing
     Tensor_Product.Unsorted_HSTP
+    Tensor_Product.Partial_Trace
 begin
 
 unbundle cblinfun_notation
@@ -616,6 +617,1040 @@ proof (rule von_neumann_factorI)
 
   by -
 qed *)
+
+lemma infsum_of_bool_scaleC: \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. of_bool (x=y) *\<^sub>C f x) = of_bool (y\<in>X) *\<^sub>C f y\<close> for f :: \<open>_ \<Rightarrow> _::complex_vector\<close>
+  apply (cases \<open>y\<in>X\<close>)
+   apply (subst infsum_cong_neutral[where T=\<open>{y}\<close> and g=f])
+      apply auto[4]
+  apply (subst infsum_cong_neutral[where T=\<open>{}\<close> and g=f])
+  by auto
+
+lemma inj_selfbutter_ket:
+  assumes "selfbutter (ket x) = selfbutter (ket y)"
+  shows "x = y"
+proof -
+  have \<open>1 = norm (selfbutter (ket x) *\<^sub>V ket x)\<close>
+    by auto
+  also have \<open>\<dots> = norm (selfbutter (ket y) *\<^sub>V ket x)\<close>
+    using assms by simp
+  also have \<open>\<dots> = of_bool (x=y)\<close>
+    by (simp add: cinner_ket)
+  finally show ?thesis
+    by simp
+qed
+
+instantiation cblinfun :: (chilbert_space, chilbert_space) Sup_order begin
+definition \<open>Sup_cblinfun (X::('a\<Rightarrow>\<^sub>C\<^sub>L'b) set) = (SOME s. is_Sup X s)\<close>
+definition \<open>sup_cblinfun (x::'a\<Rightarrow>\<^sub>C\<^sub>L'b) y = Sup {x,y}\<close>
+instance
+proof
+  fix X :: \<open>('a\<Rightarrow>\<^sub>C\<^sub>L'b) set\<close> and x y :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+  show \<open>has_Sup X \<Longrightarrow> is_Sup X (\<Squnion> X)\<close>
+    by (simp add: Sup_cblinfun_def has_Sup_def someI_ex)
+  show \<open>has_Sup {x, y} \<Longrightarrow> is_Sup {x, y} (x \<squnion> y)\<close>
+    by (simp add: Sup_cblinfun_def has_Sup_def someI_ex sup_cblinfun_def)
+qed
+end
+
+
+(* TODO: Conway, operator, 43.1(i,ii), but translated to filters *)
+(* TODO move *)
+lemma monotone_convergence_wot:
+  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
+  assumes bounded: \<open>\<forall>\<^sub>F x in F. f x \<le> B\<close>
+  assumes pos: \<open>\<forall>\<^sub>F x in F. f x \<ge> 0\<close> (* TODO can be removed wlog *)
+  assumes increasing: \<open>increasing_filter (filtermap f F)\<close>
+  shows \<open>\<exists>L. limitin cweak_operator_topology f L F\<close>
+proof (cases \<open>F = \<bottom>\<close>)
+  case True
+  then show ?thesis
+    by (auto intro!: exI limitin_trivial)
+next
+  case False
+  define surround where \<open>surround \<psi> a = \<psi> \<bullet>\<^sub>C (a *\<^sub>V \<psi>)\<close> for \<psi> :: 'a and a
+  have mono_surround: \<open>mono (surround \<psi>)\<close> for \<psi>
+    by (auto intro!: monoI simp: surround_def less_eq_cblinfun_def)
+  obtain l' where  tendsto_l': \<open>((\<lambda>x. surround \<psi> (f x)) \<longlongrightarrow> l' \<psi>) F\<close>
+    (* and l'_bound: \<open>norm (l' \<psi>) \<le> norm B * (norm \<psi>)\<^sup>2\<close> *) for \<psi>
+  proof (atomize_elim, intro choice allI)
+    fix \<psi> :: 'a
+    from bounded
+    have surround_bound: \<open>\<forall>\<^sub>F x in F. surround \<psi> (f x) \<le> surround \<psi> B\<close>
+      unfolding surround_def
+      apply (rule eventually_mono)
+      by (simp add: less_eq_cblinfun_def)
+    moreover have \<open>increasing_filter (filtermap (\<lambda>x. surround \<psi> (f x)) F)\<close>
+      using increasing_filtermap[OF increasing mono_surround]
+      by (simp add: filtermap_filtermap)
+    ultimately obtain l' where \<open>((\<lambda>x. surround \<psi> (f x)) \<longlongrightarrow> l') F\<close>
+      apply atomize_elim
+      by (auto intro!: monotone_convergence_complex increasing mono_surround
+          simp: eventually_filtermap)
+(*     then have \<open>l' \<le> surround \<psi> B\<close>
+      using surround_bound False by (rule tendsto_upperbound_complex)
+    then have \<open>norm l' \<le> norm (surround \<psi> B)\<close>
+      by -
+    also have \<open>\<dots> \<le> norm B * (norm \<psi>)\<^sup>2\<close>
+      using Cauchy_Schwarz_ineq2
+      apply (auto intro!: simp: surround_def )
+      by -
+    finally have \<open>norm l' \<le> norm B * (norm \<psi>)\<^sup>2\<close>
+      by simp
+    with tendsto *)
+    then show \<open>\<exists>l'. ((\<lambda>x. surround \<psi> (f x)) \<longlongrightarrow> l') F\<close>
+      by auto
+  qed
+  define l where \<open>l \<phi> \<psi> = (l' (\<phi>+\<psi>) - l' (\<phi>-\<psi>) - \<i> * l' (\<phi> + \<i> *\<^sub>C \<psi>) + \<i> * l' (\<phi> - \<i> *\<^sub>C \<psi>)) / 4\<close> for \<phi> \<psi> :: 'a
+(*   have \<open>norm (l \<phi> \<psi>) \<le> xxxx\<close> for \<phi> \<psi>
+  proof -
+    from l'_bound[of \<open>\<phi> + \<psi>\<close>]
+    have \<open>norm (l' (\<phi> + \<psi>)) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
+      by (smt (verit, ccfv_SIG) mult_left_mono norm_ge_zero norm_triangle_ineq norm_zero power2_diff real_inner_class.parallelogram_law sum_squares_bound)
+    moreover from l'_bound[of \<open>\<phi> - \<psi>\<close>]
+    have \<open>norm (l' (\<phi> - \<psi>)) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
+      by (smt (verit, ccfv_SIG) mult_left_mono norm_ge_zero norm_triangle_ineq4 norm_zero power2_diff real_inner_class.parallelogram_law sum_squares_bound)
+    moreover from l'_bound[of \<open>\<phi> + \<i> *\<^sub>C \<psi>\<close>]
+    have \<open>norm (l' (\<phi> + \<i> *\<^sub>C \<psi>)) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
+      by -
+    moreover from l'_bound[of \<open>\<phi> - \<i> *\<^sub>C \<psi>\<close>]
+    have \<open>norm (l' (\<phi> - \<i> *\<^sub>C \<psi>)) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
+      by -
+    ultimately have \<open>norm (l \<phi> \<psi>) \<le> norm B * (norm \<phi> + norm \<psi>)\<^sup>2\<close>
+      apply (auto intro!: simp: l_def)
+      by -
+    also have \<open>\<dots> \<le> norm B * norm \<phi> * norm \<psi>\<close>
+      (* ? ? ? *)
+      apply (auto intro!: simp: l_def)
+      by x
+    show ?thesis
+      by x
+  qed *)
+  have polar: \<open>\<phi> \<bullet>\<^sub>C a \<psi> = (surround (\<phi>+\<psi>) a - surround (\<phi>-\<psi>) a - \<i> * surround (\<phi> + \<i> *\<^sub>C \<psi>) a + \<i> * surround (\<phi> - \<i> *\<^sub>C \<psi>) a) / 4\<close> for a :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close> and \<phi> \<psi>
+    by (simp add: surround_def cblinfun.add_right cinner_add cblinfun.diff_right 
+        cinner_diff cblinfun.scaleC_right ring_distribs)
+  have tendsto_l: \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi>) \<longlongrightarrow> l \<phi> \<psi>) F\<close> for \<phi> \<psi>
+    by (auto intro!: tendsto_divide tendsto_add tendsto_diff tendsto_l' simp: l_def polar)
+  have l_bound: \<open>norm (l \<phi> \<psi>) \<le> norm B * norm \<phi> * norm \<psi>\<close> for \<phi> \<psi>
+  proof -
+    from bounded pos
+    have \<open>\<forall>\<^sub>F x in F. norm (\<phi> \<bullet>\<^sub>C f x \<psi>) \<le> norm B * norm \<phi> * norm \<psi>\<close> for \<phi> \<psi>
+    proof (rule eventually_elim2)
+      fix x
+      assume \<open>f x \<le> B\<close> and \<open>0 \<le> f x\<close>
+      have \<open>cmod (\<phi> \<bullet>\<^sub>C (f x *\<^sub>V \<psi>)) \<le> norm \<phi> * norm (f x *\<^sub>V \<psi>)\<close>
+        using complex_inner_class.Cauchy_Schwarz_ineq2 by blast
+      also have \<open>\<dots> \<le> norm \<phi> * (norm (f x) * norm \<psi>)\<close>
+        by (simp add: mult_left_mono norm_cblinfun)
+      also from \<open>f x \<le> B\<close> \<open>0 \<le> f x\<close>
+      have \<open>\<dots> \<le> norm \<phi> * (norm B * norm \<psi>)\<close>
+        by (auto intro!: mult_left_mono mult_right_mono norm_cblinfun_mono simp: )
+      also have \<open>\<dots> = norm B * norm \<phi> * norm \<psi>\<close>
+        by simp
+      finally show \<open>norm (\<phi> \<bullet>\<^sub>C f x \<psi>) \<le> norm B * norm \<phi> * norm \<psi>\<close>
+        by -
+    qed
+    moreover from tendsto_l
+    have \<open>((\<lambda>x. norm (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> norm (l \<phi> \<psi>)) F\<close> for \<phi> \<psi>
+      using tendsto_norm by blast
+    ultimately show ?thesis
+      using False tendsto_upperbound by blast
+  qed
+  have \<open>bounded_sesquilinear l\<close>
+  proof (rule bounded_sesquilinear.intro)
+    fix \<phi> \<phi>' \<psi> \<psi>' and r :: complex
+    from tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi> + \<phi> \<bullet>\<^sub>C f x \<psi>') \<longlongrightarrow> l \<phi> \<psi> + l \<phi> \<psi>') F\<close>
+      by (simp add: tendsto_add)
+    moreover from tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi> + \<phi> \<bullet>\<^sub>C f x \<psi>') \<longlongrightarrow> l \<phi> (\<psi> + \<psi>')) F\<close>
+      by (simp flip: cinner_add_right cblinfun.add_right)
+    ultimately show \<open>l \<phi> (\<psi> + \<psi>') = l \<phi> \<psi> + l \<phi> \<psi>'\<close>
+      by (rule tendsto_unique[OF False, rotated])
+    from tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi> + \<phi>' \<bullet>\<^sub>C f x \<psi>) \<longlongrightarrow> l \<phi> \<psi> + l \<phi>' \<psi>) F\<close>
+      by (simp add: tendsto_add)
+    moreover from tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi> + \<phi>' \<bullet>\<^sub>C f x \<psi>) \<longlongrightarrow> l (\<phi> + \<phi>') \<psi>) F\<close>
+      by (simp flip: cinner_add_left cblinfun.add_left)
+    ultimately show \<open>l (\<phi> + \<phi>') \<psi> = l \<phi> \<psi> + l \<phi>' \<psi>\<close>
+      by (rule tendsto_unique[OF False, rotated])
+    from tendsto_l have \<open>((\<lambda>x. r *\<^sub>C (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> r *\<^sub>C l \<phi> \<psi>) F\<close>
+      using tendsto_scaleC by blast
+    moreover from tendsto_l have \<open>((\<lambda>x. r *\<^sub>C (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> l \<phi> (r *\<^sub>C \<psi>)) F\<close>
+      by (simp flip: cinner_scaleC_right cblinfun.scaleC_right)
+    ultimately show \<open>l \<phi> (r *\<^sub>C \<psi>) = r *\<^sub>C l \<phi> \<psi>\<close>
+      by (rule tendsto_unique[OF False, rotated])
+    from tendsto_l have \<open>((\<lambda>x. cnj r *\<^sub>C (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> cnj r *\<^sub>C l \<phi> \<psi>) F\<close>
+      using tendsto_scaleC by blast
+    moreover from tendsto_l have \<open>((\<lambda>x. cnj r *\<^sub>C (\<phi> \<bullet>\<^sub>C f x \<psi>)) \<longlongrightarrow> l (r *\<^sub>C \<phi>) \<psi>) F\<close>
+      by (simp flip: cinner_scaleC_left cblinfun.scaleC_left)
+    ultimately show \<open>l (r *\<^sub>C \<phi>) \<psi> = cnj r *\<^sub>C l \<phi> \<psi>\<close>
+      by (rule tendsto_unique[OF False, rotated])
+    show \<open>\<exists>K. \<forall>a b. cmod (l a b) \<le> norm a * norm b * K\<close>
+      using l_bound by (auto intro!: exI[of _ \<open>norm B\<close>] simp: mult_ac)
+  qed
+  define L where \<open>L = (the_riesz_rep_sesqui l)*\<close>
+  then have \<open>\<phi> \<bullet>\<^sub>C L \<psi> = l \<phi> \<psi>\<close> for \<phi> \<psi>
+    by (auto intro!: \<open>bounded_sesquilinear l\<close> the_riesz_rep_sesqui_apply simp: cinner_adj_right)
+  with tendsto_l have \<open>((\<lambda>x. \<phi> \<bullet>\<^sub>C f x \<psi>) \<longlongrightarrow> \<phi> \<bullet>\<^sub>C L \<psi>) F\<close> for \<phi> \<psi>
+    by simp
+  then have \<open>limitin cweak_operator_topology f L F\<close>
+    by (simp add: limitin_cweak_operator_topology)
+  then show ?thesis
+    by auto
+qed
+
+lemma summable_wot_boundedI:
+  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
+  assumes bounded: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> X \<Longrightarrow> sum f F \<le> B\<close>
+  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
+  shows \<open>summable_on_in cweak_operator_topology f X\<close>
+proof -
+  have pos': \<open>(\<Sum>x\<in>F. f x) \<ge> 0\<close> if \<open>finite F\<close> and \<open>F \<subseteq> X\<close> for F
+    using that pos
+    by (simp add: basic_trans_rules(31) sum_nonneg)
+  from pos have incr: \<open>increasing_filter (filtermap (sum f) (finite_subsets_at_top X))\<close>
+    by (auto intro!: increasing_filtermap[where X=\<open>{F. finite F \<and> F \<subseteq> X}\<close>] mono_onI sum_mono2)
+  show ?thesis
+    apply (simp add: summable_on_in_def has_sum_in_def) 
+    by (safe intro!: bounded pos' incr monotone_convergence_wot[where B=B] eventually_finite_subsets_at_top_weakI)
+qed
+
+instantiation cblinfun_wot :: (chilbert_space, chilbert_space) order begin
+lift_definition less_eq_cblinfun_wot :: \<open>('a, 'b) cblinfun_wot \<Rightarrow> ('a, 'b) cblinfun_wot \<Rightarrow> bool\<close> is less_eq.
+lift_definition less_cblinfun_wot :: \<open>('a, 'b) cblinfun_wot \<Rightarrow> ('a, 'b) cblinfun_wot \<Rightarrow> bool\<close> is less.
+instance
+  apply (intro_classes; transfer')
+  by auto
+end
+
+lemma is_Sup_wot_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(rel_set cr_cblinfun_wot ===> cr_cblinfun_wot ===> (\<longleftrightarrow>)) is_Sup is_Sup\<close>
+  apply (simp add: is_Sup_def[abs_def])
+  by transfer_prover
+
+lemma has_Sup_wot_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(rel_set cr_cblinfun_wot ===> (\<longleftrightarrow>)) has_Sup has_Sup\<close>
+  apply (simp add: has_Sup_def[abs_def])
+  by transfer_prover
+
+instantiation cblinfun_wot :: (chilbert_space, chilbert_space) Sup_order begin
+lift_definition sup_cblinfun_wot :: \<open>('a, 'b) cblinfun_wot \<Rightarrow> ('a, 'b) cblinfun_wot \<Rightarrow> ('a, 'b) cblinfun_wot\<close> is sup.
+lift_definition Sup_cblinfun_wot :: \<open>('a, 'b) cblinfun_wot set \<Rightarrow> ('a, 'b) cblinfun_wot\<close> is Sup.
+instance
+  apply (intro_classes; transfer')
+  by (auto intro!: is_Sup_Sup is_Sup_sup simp: )
+end
+
+instance cblinfun_wot :: (complex_normed_vector, complex_inner) topological_ab_group_add
+  by intro_classes
+
+lemma infsum_wot_is_Sup:
+  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
+  (* assumes bounded: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> X \<Longrightarrow> sum f F \<le> B\<close> *)
+  assumes summable: \<open>summable_on_in cweak_operator_topology f X\<close>
+    \<comment> \<open>See also @{thm [source] summable_wot_boundedI} for proving this.\<close>
+  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
+  defines \<open>S \<equiv> infsum_in cweak_operator_topology f X\<close>
+  shows \<open>is_Sup ((\<lambda>F. \<Sum>x\<in>F. f x) ` {F. finite F \<and> F \<subseteq> X}) S\<close>
+proof (rule is_SupI)
+  have has_sum: \<open>has_sum_in cweak_operator_topology f X S\<close>
+    unfolding S_def
+    apply (rule has_sum_in_infsum_in)
+    using assms by auto
+  show \<open>s \<le> S\<close> if \<open>s \<in> ((\<lambda>F. \<Sum>x\<in>F. f x) ` {F. finite F \<and> F \<subseteq> X})\<close> for s
+  proof -
+    from that obtain F where [simp]: \<open>finite F\<close> and \<open>F \<subseteq> X\<close> and s_def: \<open>s = (\<Sum>x\<in>F. f x)\<close>
+      by auto
+    show ?thesis
+    proof (rule has_sum_mono_neutral_wot)
+      show \<open>has_sum_in cweak_operator_topology f F s\<close>
+        by (auto intro!: has_sum_in_finite simp: s_def)
+      show \<open>has_sum_in cweak_operator_topology f X S\<close>
+        by (fact has_sum)
+      show \<open>f x \<le> f x\<close> for x
+        by simp
+      show \<open>f x \<le> 0\<close> if \<open>x \<in> F - X\<close> for x
+        using \<open>F \<subseteq> X\<close> that by auto
+      show \<open>f x \<ge> 0\<close> if \<open>x \<in> X - F\<close> for x
+        using that pos by auto
+    qed
+  qed
+  show \<open>S \<le> y\<close>
+    if y_bound: \<open>\<And>x. x \<in> ((\<lambda>F. \<Sum>x\<in>F. f x) ` {F. finite F \<and> F \<subseteq> X}) \<Longrightarrow> x \<le> y\<close> for y
+  proof (rule cblinfun_leI, rename_tac \<psi>)
+    fix \<psi> :: 'a
+    define g where \<open>g x = \<psi> \<bullet>\<^sub>C Rep_cblinfun_wot x \<psi>\<close> for x
+    from has_sum have lim: \<open>((\<lambda>i. \<psi> \<bullet>\<^sub>C ((\<Sum>x\<in>i. f x) *\<^sub>V \<psi>)) \<longlongrightarrow> \<psi> \<bullet>\<^sub>C (S *\<^sub>V \<psi>)) (finite_subsets_at_top X)\<close>
+      by (simp add: has_sum_in_def limitin_cweak_operator_topology)
+    have bound: \<open>\<psi> \<bullet>\<^sub>C (\<Sum>x\<in>F. f x) \<psi> \<le> \<psi> \<bullet>\<^sub>C y \<psi>\<close> if \<open>finite F\<close> \<open>F \<subseteq> X\<close> for F
+      using y_bound less_eq_cblinfun_def that(1) that(2) by fastforce
+    show \<open>\<psi> \<bullet>\<^sub>C (S *\<^sub>V \<psi>) \<le> \<psi> \<bullet>\<^sub>C y \<psi>\<close>
+      using finite_subsets_at_top_neq_bot tendsto_const lim apply (rule tendsto_le_complex)
+      using bound by (auto intro!: eventually_finite_subsets_at_top_weakI)
+  qed
+qed
+
+lemma summable_wot_bdd_above:
+  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
+  assumes summable: \<open>summable_on_in cweak_operator_topology f X\<close>
+    \<comment> \<open>See also @{thm [source] summable_wot_boundedI} for proving this.\<close>
+  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
+  shows \<open>bdd_above (sum f ` {F. finite F \<and> F \<subseteq> X})\<close>
+  using infsum_wot_is_Sup[OF assms]
+  by (auto intro!: simp: is_Sup_def bdd_above_def)
+
+(* TODO move *)
+lemma trace_comp_pos:
+  fixes a b :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  assumes \<open>trace_class b\<close>
+  assumes \<open>a \<ge> 0\<close> and \<open>b \<ge> 0\<close>
+  shows \<open>trace (a o\<^sub>C\<^sub>L b) \<ge> 0\<close>
+proof -
+  obtain c :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close> where \<open>a = c* o\<^sub>C\<^sub>L c\<close>
+  by (metis assms(2) positive_hermitianI sqrt_op_pos sqrt_op_square)
+  then have \<open>trace (a o\<^sub>C\<^sub>L b) = trace (sandwich c b)\<close>
+    by (simp add: sandwich_apply assms(1) cblinfun_assoc_left(1) circularity_of_trace trace_class_comp_right)
+  also have \<open>\<dots> \<ge> 0\<close>
+    by (auto intro!: trace_pos sandwich_pos assms)
+  finally show ?thesis
+    by -
+qed
+
+lemma trace_minus: 
+  assumes \<open>trace_class a\<close> \<open>trace_class b\<close>
+  shows \<open>trace (a - b) = trace a - trace b\<close>
+  by (metis (no_types, lifting) add_uminus_conv_diff assms(1) assms(2) trace_class_uminus trace_plus trace_uminus)
+                                    
+lemma has_sum_in_cweak_operator_topology_pointwise:
+  \<open>has_sum_in cweak_operator_topology f X s \<longleftrightarrow> (\<forall>\<psi> \<phi>. ((\<lambda>x. \<psi> \<bullet>\<^sub>C f x \<phi>) has_sum \<psi> \<bullet>\<^sub>C s \<phi>) X)\<close>
+  by (simp add: has_sum_in_def has_sum_def limitin_cweak_operator_topology
+      cblinfun.sum_left cinner_sum_right)
+
+
+lemma has_sum_on_wot_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(((=) ===> cr_cblinfun_wot) ===> (=) ===> cr_cblinfun_wot ===> (\<longleftrightarrow>)) (has_sum_in cweak_operator_topology) HAS_SUM\<close>
+  unfolding has_sum_euclidean_iff[abs_def, symmetric] has_sum_in_def[abs_def]
+  by transfer_prover
+
+lemma summable_on_wot_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(((=) ===> cr_cblinfun_wot) ===> (=) ===> (\<longleftrightarrow>)) (summable_on_in cweak_operator_topology) (summable_on)\<close>
+  apply (auto intro!: simp: summable_on_def[abs_def] summable_on_in_def[abs_def])
+  by transfer_prover
+
+lemma Abs_cblinfun_wot_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>((=) ===> cr_cblinfun_wot) id Abs_cblinfun_wot\<close>
+  by (auto intro!: rel_funI simp: cr_cblinfun_wot_def Abs_cblinfun_wot_inverse)
+
+(* TODO move *)
+lemma trace_norm_tensor: \<open>trace_norm (a \<otimes>\<^sub>o b) = trace_norm a * trace_norm b\<close>
+  apply (rule of_real_hom.injectivity[where 'a=complex])
+  by (simp add: abs_op_tensor trace_tensor flip: trace_abs_op)
+
+
+(* TODO move *)
+lemma bounded_cbilinear_tc_tensor: \<open>bounded_cbilinear tc_tensor\<close>
+  unfolding bounded_cbilinear_def
+  apply transfer
+  by (auto intro!: exI[of _ 1]
+      simp: trace_norm_tensor tensor_op_left_add tensor_op_right_add tensor_op_scaleC_left tensor_op_scaleC_right)
+lemmas bounded_clinear_tc_tensor_left[bounded_clinear] = bounded_cbilinear.bounded_clinear_left[OF bounded_cbilinear_tc_tensor]
+lemmas bounded_clinear_tc_tensor_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_tensor]
+
+
+(* TODO move *)
+lemma bounded_cbilinear_tc_compose: \<open>bounded_cbilinear tc_compose\<close>
+  unfolding bounded_cbilinear_def
+  apply transfer
+  apply (auto intro!: exI[of _ 1] simp: cblinfun_compose_add_left cblinfun_compose_add_right)
+  by (meson Unsorted_HSTP.norm_leq_trace_norm dual_order.trans mult_right_mono trace_norm_comp_right trace_norm_nneg)
+lemmas bounded_clinear_tc_compose_left[bounded_clinear] = bounded_cbilinear.bounded_clinear_left[OF bounded_cbilinear_tc_compose]
+lemmas bounded_clinear_tc_compose_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_compose]
+
+lemma abs_op_one_dim: \<open>abs_op x = one_dim_iso (abs (one_dim_iso x :: complex))\<close>
+  by (metis (mono_tags, lifting) abs_opI abs_op_scaleC of_complex_def one_cblinfun_adj one_comp_one_cblinfun one_dim_iso_is_of_complex one_dim_iso_of_one one_dim_iso_of_zero one_dim_loewner_order one_dim_scaleC_1 zero_less_one_class.zero_le_one)
+
+lemma trace_norm_one_dim: \<open>trace_norm x = cmod (one_dim_iso x)\<close>
+  apply (rule of_real_hom.injectivity[where 'a=complex])
+  apply (simp add: abs_op_one_dim flip: trace_abs_op)
+  by (simp add: abs_complex_def)
+
+instantiation trace_class :: (one_dim, one_dim) complex_inner begin
+lift_definition cinner_trace_class :: \<open>('a, 'b) trace_class \<Rightarrow> ('a, 'b) trace_class \<Rightarrow> complex\<close> is \<open>(\<bullet>\<^sub>C)\<close>.
+instance
+proof intro_classes
+  fix x y z :: \<open>('a, 'b) trace_class\<close>
+  show \<open>x \<bullet>\<^sub>C y = cnj (y \<bullet>\<^sub>C x)\<close>
+    apply transfer'
+    by simp
+  show \<open>(x + y) \<bullet>\<^sub>C z = x \<bullet>\<^sub>C z + y \<bullet>\<^sub>C z\<close>
+    apply transfer'
+    by (simp add: cinner_simps)
+  show \<open>r *\<^sub>C x \<bullet>\<^sub>C y = cnj r * (x \<bullet>\<^sub>C y)\<close> for r
+    apply (transfer' fixing: r)
+    using cinner_simps by blast
+  show \<open>0 \<le> x \<bullet>\<^sub>C x\<close>
+    apply transfer'
+    by simp
+  show \<open>(x \<bullet>\<^sub>C x = 0) = (x = 0)\<close>
+    apply transfer'
+    by auto
+  show \<open>norm x = sqrt (cmod (x \<bullet>\<^sub>C x))\<close>
+  proof transfer'
+    fix x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+    define c :: complex where \<open>c = one_dim_iso x\<close>
+    then have xc: \<open>x = c *\<^sub>C 1\<close>
+      by simp
+    have \<open>trace_norm x = norm c\<close>
+      by (simp add: trace_norm_one_dim xc)
+    also have \<open>norm c = sqrt (cmod (x \<bullet>\<^sub>C x))\<close>
+      by (metis inner_real_def norm_eq_sqrt_cinner norm_one norm_scaleC real_inner_1_right xc)
+    finally show \<open>trace_norm x = sqrt (cmod (x \<bullet>\<^sub>C x)) \<close>
+      by (simp add: cinner_cblinfun_def)
+  qed
+qed
+end
+
+
+(* TODO move *)
+instantiation trace_class :: (one_dim, one_dim) one_dim begin
+lift_definition one_trace_class :: \<open>('a, 'b) trace_class\<close> is 1
+  by auto
+lift_definition times_trace_class :: \<open>('a, 'b) trace_class \<Rightarrow> ('a, 'b) trace_class \<Rightarrow> ('a, 'b) trace_class\<close> is \<open>(*)\<close>
+  by auto
+lift_definition divide_trace_class :: \<open>('a, 'b) trace_class \<Rightarrow> ('a, 'b) trace_class \<Rightarrow> ('a, 'b) trace_class\<close> is \<open>(/)\<close>
+  by auto
+lift_definition inverse_trace_class :: \<open>('a, 'b) trace_class \<Rightarrow> ('a, 'b) trace_class\<close> is \<open>Fields.inverse\<close>
+  by auto
+definition canonical_basis_trace_class :: \<open>('a, 'b) trace_class list\<close> where \<open>canonical_basis_trace_class = [1]\<close>
+definition canonical_basis_length_trace_class :: \<open>('a, 'b) trace_class itself \<Rightarrow> nat\<close> where \<open>canonical_basis_length_trace_class = 1\<close>
+instance
+proof intro_classes
+  fix x y z :: \<open>('a, 'b) trace_class\<close>
+  have [simp]: \<open>1 \<noteq> (0 :: ('a, 'b) trace_class)\<close>
+    using one_trace_class.rep_eq by force
+  then have [simp]: \<open>0 \<noteq> (1 :: ('a, 'b) trace_class)\<close>
+    by force
+  show \<open>distinct (canonical_basis :: (_,_) trace_class list)\<close>
+    by (simp add: canonical_basis_trace_class_def)
+  show \<open>cindependent (set canonical_basis :: (_,_) trace_class set)\<close>
+    by (simp add: canonical_basis_trace_class_def)
+  show \<open>canonical_basis_length TYPE(('a, 'b) trace_class) = length (canonical_basis :: (_,_) trace_class list)\<close>
+    by (simp add: canonical_basis_length_trace_class_def canonical_basis_trace_class_def)
+  show \<open>x \<in> set canonical_basis \<Longrightarrow> norm x = 1\<close>
+    apply (simp add: canonical_basis_trace_class_def)
+    by (smt (verit, ccfv_threshold) one_trace_class_def cinner_trace_class.abs_eq cnorm_eq_1 one_cinner_one one_trace_class.rsp)
+  show \<open>canonical_basis = [1 :: ('a,'b) trace_class]\<close>
+    by (simp add: canonical_basis_trace_class_def)
+  show \<open>a *\<^sub>C 1 * b *\<^sub>C 1 = (a * b) *\<^sub>C (1 :: ('a,'b) trace_class)\<close> for a b :: complex
+    apply (transfer' fixing: a b)
+    by simp
+  show \<open>x div y = x * inverse y\<close>
+    apply transfer'
+    by (simp add: divide_cblinfun_def)
+  show \<open>inverse (a *\<^sub>C 1 :: ('a,'b) trace_class) = 1 /\<^sub>C a\<close> for a :: complex
+    apply transfer'
+    by simp
+  show \<open>is_ortho_set (set canonical_basis :: ('a,'b) trace_class set)\<close>
+    by (simp add: is_ortho_set_def canonical_basis_trace_class_def)
+  show \<open>cspan (set canonical_basis :: ('a,'b) trace_class set) = UNIV\<close>
+  proof (intro Set.set_eqI iffI UNIV_I)
+    fix x :: \<open>('a,'b) trace_class\<close>
+    have \<open>\<exists>c. y = c *\<^sub>C 1\<close> for y :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+      apply (rule exI[where x=\<open>one_dim_iso y\<close>])
+      by simp
+    then obtain c where \<open>x = c *\<^sub>C 1\<close>
+      apply transfer'
+      by auto
+    then show \<open>x \<in> cspan (set canonical_basis)\<close>
+      by (auto intro!: complex_vector.span_base complex_vector.span_clauses
+          simp: canonical_basis_trace_class_def)
+  qed
+qed
+end
+
+lemma from_trace_class_one_dim_iso[simp]: \<open>from_trace_class = one_dim_iso\<close>
+proof (rule ext)
+  fix x:: \<open>('a, 'b) trace_class\<close>
+  have \<open>from_trace_class x = from_trace_class (one_dim_iso x *\<^sub>C 1)\<close>
+    by simp
+  also have \<open>\<dots> = one_dim_iso x *\<^sub>C from_trace_class 1\<close>
+    using scaleC_trace_class.rep_eq by blast
+  also have \<open>\<dots> = one_dim_iso x *\<^sub>C 1\<close>
+    by (simp add: one_trace_class.rep_eq)
+  also have \<open>\<dots> = one_dim_iso x\<close>
+    by simp
+  finally show \<open>from_trace_class x = one_dim_iso x\<close>
+    by -
+qed
+
+
+lemma trace_tc_one_dim_iso[simp]: \<open>trace_tc = one_dim_iso\<close>
+  by (simp add: trace_tc.rep_eq[abs_def])
+
+
+lemma sandwich_tc_id_cblinfun[simp]: \<open>sandwich_tc id_cblinfun t = t\<close>
+  by (simp add: from_trace_class_inverse sandwich_tc_apply)
+
+
+(* TODO move *)
+(* TODO: generalize original is_ortho_set_ket to this *) thm is_ortho_set_ket 
+lemma is_ortho_set_ket[simp]: \<open>is_ortho_set (ket ` A)\<close>
+  using is_ortho_set_def by fastforce
+
+lemma is_Proj_butterfly_ket: \<open>is_Proj (\<Sum>x\<in>M. selfbutter (ket x))\<close>
+  apply (subst sum.reindex[symmetric, unfolded o_def, of ket])
+  by (auto intro!: inj_onI sum_butterfly_is_Proj simp: )
+
+(* TODO move *)
+lemma infsum_cblinfun_compose_left:
+  assumes \<open>b summable_on X\<close>
+  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. a o\<^sub>C\<^sub>L b x) = a o\<^sub>C\<^sub>L (\<Sum>\<^sub>\<infinity>x\<in>X. b x)\<close>
+  apply (subst infsum_bounded_linear[symmetric, where g=b and S=X and f=\<open>\<lambda>b. a o\<^sub>C\<^sub>L b\<close>])
+  by (auto intro!: bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_right simp add: assms o_def)
+lemma infsum_cblinfun_compose_right:
+  assumes \<open>a summable_on X\<close>
+  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. a x o\<^sub>C\<^sub>L b) = (\<Sum>\<^sub>\<infinity>x\<in>X. a x) o\<^sub>C\<^sub>L b\<close>
+  apply (subst infsum_bounded_linear[symmetric, where g=a and S=X and f=\<open>\<lambda>a. a o\<^sub>C\<^sub>L b\<close>])
+  by (auto intro!: bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_left simp add: assms o_def)
+
+(* TODO move *)
+lemma summable_cblinfun_compose_left:
+  assumes \<open>b summable_on X\<close>
+  shows \<open>(\<lambda>x. a o\<^sub>C\<^sub>L b x) summable_on X\<close>
+  apply (rule Infinite_Sum.summable_on_bounded_linear[where h=\<open>\<lambda>b. a o\<^sub>C\<^sub>L b\<close>])
+  by (auto intro!: bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_right simp add: assms o_def)
+lemma summable_cblinfun_compose_right:
+  assumes \<open>a summable_on X\<close>
+  shows \<open>(\<lambda>x. a x o\<^sub>C\<^sub>L b) summable_on X\<close>
+  apply (rule Infinite_Sum.summable_on_bounded_linear[where h=\<open>\<lambda>a. a o\<^sub>C\<^sub>L b\<close>])
+  by (auto intro!: bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_left simp add: assms o_def)
+
+
+(* TODO move *)
+lemma from_trace_class_abs_summable: \<open>f abs_summable_on X \<Longrightarrow> (\<lambda>x. from_trace_class (f x)) abs_summable_on X\<close>
+    apply (rule abs_summable_on_comparison_test[where g=\<open>f\<close>])
+    by (simp_all add: Unsorted_HSTP.norm_leq_trace_norm norm_trace_class.rep_eq)
+
+(* TODO move *)
+lemma from_trace_class_summable: \<open>f summable_on X \<Longrightarrow> (\<lambda>x. from_trace_class (f x)) summable_on X\<close>
+  apply (rule Infinite_Sum.summable_on_bounded_linear[where h=from_trace_class])
+  by (simp_all add: bounded_clinear.bounded_linear bounded_clinear_from_trace_class)
+
+(* TODO move *)
+lemma from_trace_class_infsum: 
+  assumes \<open>f summable_on UNIV\<close>
+  shows \<open>from_trace_class (\<Sum>\<^sub>\<infinity>x. f x) = (\<Sum>\<^sub>\<infinity>x. from_trace_class (f x))\<close>
+  apply (rule infsum_bounded_linear_strong[symmetric])
+  using assms
+  by (auto intro!: bounded_clinear.bounded_linear bounded_clinear_from_trace_class from_trace_class_summable)
+
+
+(* TODO move *)
+lemma is_Proj_leq_id: \<open>is_Proj P \<Longrightarrow> P \<le> id_cblinfun\<close>
+  by (metis diff_ge_0_iff_ge is_Proj_algebraic is_Proj_complement positive_cblinfun_squareI)
+
+lemma sum_butterfly_leq_id: 
+  assumes \<open>is_ortho_set E\<close>
+  assumes \<open>\<And>e. e\<in>E \<Longrightarrow> norm e = 1\<close>
+  shows \<open>(\<Sum>i\<in>E. butterfly i i) \<le> id_cblinfun\<close>
+proof -
+  have \<open>is_Proj (\<Sum>\<psi>\<in>E. butterfly \<psi> \<psi>)\<close>
+    using assms by (rule sum_butterfly_is_Proj)
+  then show ?thesis
+    by (auto intro!: is_Proj_leq_id)
+qed
+
+lemma tc_tensor_0_left[simp]: \<open>tc_tensor 0 x = 0\<close>
+  apply transfer' by simp
+lemma tc_tensor_0_right[simp]: \<open>tc_tensor x 0 = 0\<close>
+  apply transfer' by simp
+
+interpretation tensor_op_cbilinear: bounded_cbilinear tensor_op
+  by simp
+
+lemma finite_rank_cspan_butterflies:
+  \<open>finite_rank a \<longleftrightarrow> a \<in> cspan (range (case_prod butterfly))\<close>
+  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+proof -
+  have \<open>(Collect finite_rank :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'b) set) = cspan (Collect rank1)\<close>
+    using finite_rank_def by fastforce
+  also have \<open>\<dots> = cspan (insert 0 (Collect rank1))\<close>
+    by force
+  also have \<open>\<dots> = cspan (range (case_prod butterfly))\<close>
+    apply (rule arg_cong[where f=cspan])
+    apply (auto intro!: simp: rank1_iff_butterfly case_prod_beta image_def)
+    apply auto
+    by (metis butterfly_0_left)
+  finally show ?thesis
+    by auto
+qed
+
+lemma finite_rank_comp_right: \<open>finite_rank (a o\<^sub>C\<^sub>L b)\<close> if \<open>finite_rank b\<close>
+  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
+proof -
+  from that
+  have \<open>b \<in> cspan (range (case_prod butterfly))\<close>
+    by (simp add: finite_rank_cspan_butterflies)
+  then have \<open>a o\<^sub>C\<^sub>L b \<in> ((o\<^sub>C\<^sub>L) a) ` cspan (range (case_prod butterfly))\<close>
+    by fast
+  also have \<open>\<dots> = cspan (((o\<^sub>C\<^sub>L) a) ` range (case_prod butterfly))\<close>
+    by (simp add: clinear_cblinfun_compose_right complex_vector.linear_span_image)
+  also have \<open>\<dots> \<subseteq> cspan (range (case_prod butterfly))\<close>
+    apply (auto intro!: complex_vector.span_mono
+        simp add: image_image case_prod_unfold cblinfun_comp_butterfly image_def)
+    by fast
+  finally show ?thesis
+    using finite_rank_cspan_butterflies by blast
+qed
+
+lemma finite_rank_comp_left: \<open>finite_rank (a o\<^sub>C\<^sub>L b)\<close> if \<open>finite_rank a\<close>
+  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
+proof -
+  from that
+  have \<open>a \<in> cspan (range (case_prod butterfly))\<close>
+    by (simp add: finite_rank_cspan_butterflies)
+  then have \<open>a o\<^sub>C\<^sub>L b \<in> (\<lambda>a. a o\<^sub>C\<^sub>L b) ` cspan (range (case_prod butterfly))\<close>
+    by fast
+  also have \<open>\<dots> = cspan ((\<lambda>a. a o\<^sub>C\<^sub>L b) ` range (case_prod butterfly))\<close>
+    by (simp add: clinear_cblinfun_compose_left complex_vector.linear_span_image)
+  also have \<open>\<dots> \<subseteq> cspan (range (case_prod butterfly))\<close>
+    apply (auto intro!: complex_vector.span_mono
+        simp add: image_image case_prod_unfold butterfly_comp_cblinfun image_def)
+    by fast
+  finally show ?thesis
+    using finite_rank_cspan_butterflies by blast
+qed
+
+
+lemma compact_op_comp_right: \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close> if \<open>compact_op b\<close>
+  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
+proof -
+  from that have \<open>b \<in> closure (Collect finite_rank)\<close>
+  using compact_op_finite_rank by blast
+  then have \<open>a o\<^sub>C\<^sub>L b \<in> cblinfun_compose a ` closure (Collect finite_rank)\<close>
+    by blast
+  also have \<open>\<dots> \<subseteq> closure (cblinfun_compose a ` Collect finite_rank)\<close>
+    by (auto intro!: closure_bounded_linear_image_subset bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_right)
+  also have \<open>\<dots> \<subseteq> closure (Collect finite_rank)\<close>
+    by (auto intro!: closure_mono finite_rank_comp_right)
+  finally show \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close>
+    using compact_op_finite_rank by blast
+qed
+
+lemma compact_op_comp_left: \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close> if \<open>compact_op a\<close>
+  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
+proof -
+  from that have \<open>a \<in> closure (Collect finite_rank)\<close>
+  using compact_op_finite_rank by blast
+  then have \<open>a o\<^sub>C\<^sub>L b \<in> (\<lambda>a. a o\<^sub>C\<^sub>L b) ` closure (Collect finite_rank)\<close>
+    by blast
+  also have \<open>\<dots> \<subseteq> closure ((\<lambda>a. a o\<^sub>C\<^sub>L b) ` Collect finite_rank)\<close>
+    by (auto intro!: closure_bounded_linear_image_subset bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_left)
+  also have \<open>\<dots> \<subseteq> closure (Collect finite_rank)\<close>
+    by (auto intro!: closure_mono finite_rank_comp_left)
+  finally show \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close>
+    using compact_op_finite_rank by blast
+qed
+
+lemma norm_cblinfun_bound_unit: "norm f \<le> b"
+  if \<open>0 \<le> b\<close> and \<open>\<And>x. norm x = 1 \<Longrightarrow> norm (f *\<^sub>V x) \<le> b\<close>
+proof (rule norm_cblinfun_bound)
+  show \<open>0 \<le> b\<close> by (fact that)
+  show \<open>norm (f *\<^sub>V x) \<le> b * norm x\<close> for x
+  proof (cases \<open>x = 0\<close>)
+    case True
+    then show ?thesis by simp
+  next
+    case False
+    then have \<open>norm (f *\<^sub>V x) = norm (f *\<^sub>V sgn x) * norm x\<close>
+      by (simp add: sgn_div_norm cblinfun.scaleR_right)
+    also have \<open>\<dots> \<le> b * norm x\<close>
+      by (auto intro!: mult_right_mono that simp: False norm_sgn)
+    finally show ?thesis
+      by -
+  qed
+qed
+
+lemma hilbert_schmidt_norm_geq_norm:
+(* TODO cite conway operators, Prop 18.6(c) *)
+  assumes \<open>hilbert_schmidt a\<close>
+  shows \<open>norm a \<le> hilbert_schmidt_norm a\<close>
+proof -
+  have \<open>norm (a x) \<le> hilbert_schmidt_norm a\<close> if \<open>norm x = 1\<close> for x
+  proof -
+    obtain B where \<open>x \<in> B\<close> and \<open>is_onb B\<close>
+      using orthonormal_basis_exists[of \<open>{x}\<close>] \<open>norm x = 1\<close>
+      by force
+    have \<open>(norm (a x))\<^sup>2 = (\<Sum>\<^sub>\<infinity>x\<in>{x}. (norm (a x))\<^sup>2)\<close>
+      by simp
+    also have \<open>\<dots> \<le> (\<Sum>\<^sub>\<infinity>x\<in>B. (norm (a x))\<^sup>2)\<close>
+      apply (rule infsum_mono_neutral)
+      by (auto intro!: summable_hilbert_schmidt_norm_square \<open>is_onb B\<close> assms \<open>x \<in> B\<close>)
+    also have \<open>\<dots> = (hilbert_schmidt_norm a)\<^sup>2\<close>
+      using infsum_hilbert_schmidt_norm_square[OF \<open>is_onb B\<close> assms]
+      by -
+    finally show ?thesis
+      by force
+  qed
+  then show ?thesis
+    by (auto intro!: norm_cblinfun_bound_unit)
+qed
+
+lemma rank1_trace_class: \<open>trace_class a\<close> if \<open>rank1 a\<close>
+  for a b :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  using that by (auto intro!: simp: rank1_iff_butterfly)
+
+lemma finite_rank_trace_class: \<open>trace_class a\<close> if \<open>finite_rank a\<close>
+  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+proof -
+  from \<open>finite_rank a\<close> obtain F f where \<open>finite F\<close> and \<open>F \<subseteq> Collect rank1\<close>
+    and a_def: \<open>a = (\<Sum>x\<in>F. f x *\<^sub>C x)\<close>
+    by (smt (verit, ccfv_threshold) complex_vector.span_explicit finite_rank_def mem_Collect_eq)
+  then show \<open>trace_class a\<close>
+    unfolding a_def
+    apply induction
+    by (auto intro!: trace_class_plus trace_class_scaleC intro: rank1_trace_class)
+qed
+
+lemma trace_class_hilbert_schmidt: \<open>hilbert_schmidt a\<close> if \<open>trace_class a\<close>
+  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  by (auto intro!: trace_class_comp_right that simp: hilbert_schmidt_def)
+
+lemma finite_rank_hilbert_schmidt: \<open>hilbert_schmidt a\<close> if \<open>finite_rank a\<close>
+  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  using finite_rank_comp_right finite_rank_trace_class hilbert_schmidtI that by blast
+
+lemma hilbert_schmidt_compact: \<open>compact_op a\<close> if \<open>hilbert_schmidt a\<close>
+  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  \<comment> \<open>(* TODO cite: conway operators *), Corollary 18.7.
+      (Only the second part. The first part is stated inside the proof though.)\<close>
+proof -
+  have \<open>\<exists>b. finite_rank b \<and> hilbert_schmidt_norm (b - a) < \<epsilon>\<close> if \<open>\<epsilon> > 0\<close> for \<epsilon>
+  proof -
+    have \<open>\<epsilon>\<^sup>2 > 0\<close>
+      using that by force
+    obtain B :: \<open>'a set\<close> where \<open>is_onb B\<close>
+      using is_onb_some_chilbert_basis by blast
+    with \<open>hilbert_schmidt a\<close> have a_sum_B: \<open>(\<lambda>x. (norm (a *\<^sub>V x))\<^sup>2) summable_on B\<close>
+      by (auto intro!: summable_hilbert_schmidt_norm_square)
+    then have \<open>((\<lambda>x. (norm (a *\<^sub>V x))\<^sup>2) has_sum (\<Sum>\<^sub>\<infinity>x\<in>B. (norm (a *\<^sub>V x))\<^sup>2)) B\<close>
+      using has_sum_infsum by blast
+    from tendsto_iff[THEN iffD1, rule_format, OF this[unfolded has_sum_def] \<open>\<epsilon>\<^sup>2 > 0\<close>]
+    obtain F where [simp]: \<open>finite F\<close> and \<open>F \<subseteq> B\<close>
+      and Fbound: \<open>dist (\<Sum>x\<in>F. (norm (a *\<^sub>V x))\<^sup>2) (\<Sum>\<^sub>\<infinity>x\<in>B. (norm (a *\<^sub>V x))\<^sup>2) < \<epsilon>\<^sup>2\<close>
+      apply atomize_elim
+      by (auto intro!: simp: eventually_finite_subsets_at_top)
+    define p b where \<open>p = (\<Sum>x\<in>F. selfbutter x)\<close> and \<open>b = a o\<^sub>C\<^sub>L p\<close>
+    have [simp]: \<open>p x = x\<close> if \<open>x \<in> F\<close> for x
+      apply (simp add: p_def cblinfun.sum_left)
+      apply (subst sum_single[where i=x])
+      using \<open>F \<subseteq> B\<close> that \<open>is_onb B\<close>
+      by (auto intro!: simp:  cnorm_eq_1 is_onb_def is_ortho_set_def)
+    have [simp]: \<open>p x = 0\<close> if \<open>x \<in> B - F\<close> for x
+      using \<open>F \<subseteq> B\<close> that \<open>is_onb B\<close>
+      apply (auto intro!: sum.neutral simp add: p_def cblinfun.sum_left is_onb_def is_ortho_set_def)
+      by auto
+    have \<open>finite_rank p\<close>
+      by (simp add: finite_rank_sum p_def)
+    then have \<open>finite_rank b\<close>
+      by (simp add: b_def finite_rank_comp_right)
+    with \<open>hilbert_schmidt a\<close> have \<open>hilbert_schmidt (b - a)\<close>
+      by (auto intro!: hilbert_schmidt_minus intro: finite_rank_hilbert_schmidt)
+    then have \<open>(hilbert_schmidt_norm (b - a))\<^sup>2 = (\<Sum>\<^sub>\<infinity>x\<in>B. (norm ((b - a) *\<^sub>V x))\<^sup>2)\<close>
+      by (simp add: infsum_hilbert_schmidt_norm_square \<open>is_onb B\<close>)
+    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>B-F. (norm (a *\<^sub>V x))\<^sup>2)\<close>
+      by (auto intro!: infsum_cong_neutral
+          simp: b_def cblinfun.diff_left)
+    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>B. (norm (a *\<^sub>V x))\<^sup>2) - (\<Sum>x\<in>F. (norm (a *\<^sub>V x))\<^sup>2)\<close>
+      apply (subst infsum_Diff)
+      using \<open>F \<subseteq> B\<close> a_sum_B by auto
+    also have \<open>\<dots> < \<epsilon>\<^sup>2\<close>
+      using Fbound
+      by (simp add: dist_norm)
+    finally show ?thesis
+      using \<open>finite_rank b\<close>
+      using power_less_imp_less_base that by fastforce
+  qed
+  then have \<open>\<exists>b. finite_rank b \<and> dist b a < \<epsilon>\<close> if \<open>\<epsilon> > 0\<close> for \<epsilon>
+    apply (rule ex_mono[rule_format, rotated])
+     apply (auto intro!: that simp: dist_norm)
+    using hilbert_schmidt_minus \<open>hilbert_schmidt a\<close> finite_rank_hilbert_schmidt hilbert_schmidt_norm_geq_norm
+    by fastforce
+  then show ?thesis
+    by (simp add: compact_op_finite_rank closure_approachable)
+qed
+
+lemma trace_class_compact: \<open>compact_op a\<close> if \<open>trace_class a\<close> 
+  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  by (simp add: hilbert_schmidt_compact that trace_class_hilbert_schmidt)
+
+
+lemma cspan_tc_transfer[transfer_rule]: 
+  includes lifting_syntax
+  shows \<open>(rel_set cr_trace_class ===> rel_set cr_trace_class) cspan cspan\<close>
+proof (intro rel_funI rel_setI)
+  fix B :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'b) set\<close> and C
+  assume \<open>rel_set cr_trace_class B C\<close>
+  then have BC: \<open>B = from_trace_class ` C\<close>
+    by (auto intro!: simp: cr_trace_class_def image_iff rel_set_def)
+      (*     then have tc_B: \<open>B \<subseteq> Collect trace_class\<close> (* TODO used? *)
+      by auto *)
+
+  show \<open>\<exists>t\<in>cspan C. cr_trace_class a t\<close> if \<open>a \<in> cspan B\<close> for a
+  proof -
+    from that obtain F f where \<open>finite F\<close> and \<open>F \<subseteq> B\<close> and a_sum: \<open>a = (\<Sum>x\<in>F. f x *\<^sub>C x)\<close>
+      by (auto simp: complex_vector.span_explicit)
+    from \<open>F \<subseteq> B\<close>
+    obtain F' where \<open>F' \<subseteq> C\<close> and FF': \<open>F = from_trace_class ` F'\<close>
+      by (auto elim!: subset_imageE simp: BC)
+    define t where \<open>t = (\<Sum>x\<in>F'. f (from_trace_class x) *\<^sub>C x)\<close>
+    have \<open>a = from_trace_class t\<close>
+      by (simp add: a_sum t_def from_trace_class_sum scaleC_trace_class.rep_eq FF'
+          sum.reindex o_def from_trace_class_inject inj_on_def)
+    moreover have \<open>t \<in> cspan C\<close>
+      by (metis (no_types, lifting) \<open>F' \<subseteq> C\<close> complex_vector.span_clauses(4) complex_vector.span_sum complex_vector.span_superset subsetD t_def)
+    ultimately show \<open>\<exists>t\<in>cspan C. cr_trace_class a t\<close>
+      by (auto simp: cr_trace_class_def)
+  qed
+
+  show \<open>\<exists>a\<in>cspan B. cr_trace_class a t\<close> if \<open>t \<in> cspan C\<close> for t
+  proof -
+    from that obtain F f where \<open>finite F\<close> and \<open>F \<subseteq> C\<close> and t_sum: \<open>t = (\<Sum>x\<in>F. f x *\<^sub>C x)\<close>
+      by (auto simp: complex_vector.span_explicit)
+    define a where \<open>a = (\<Sum>x\<in>F. f x *\<^sub>C from_trace_class x)\<close>
+    then have \<open>a = from_trace_class t\<close>
+      by (simp add: t_sum a_def from_trace_class_sum scaleC_trace_class.rep_eq)
+    moreover have \<open>a \<in> cspan B\<close>
+      using BC \<open>F \<subseteq> C\<close> 
+      by (auto intro!: complex_vector.span_base complex_vector.span_sum complex_vector.span_scale simp: a_def)
+    ultimately show ?thesis
+      by (auto simp: cr_trace_class_def)
+  qed
+qed
+
+lemma cspan_trace_class:
+  \<open>cspan (Collect trace_class :: ('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space) set) = Collect trace_class\<close>
+proof (intro Set.set_eqI iffI)
+  fix x :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+  show \<open>x \<in> Collect trace_class \<Longrightarrow> x \<in> cspan (Collect trace_class)\<close>
+    by (simp add: complex_vector.span_clauses)
+  assume \<open>x \<in> cspan (Collect trace_class)\<close>
+  then obtain F f where x_def: \<open>x = (\<Sum>a\<in>F. f a *\<^sub>C a)\<close> and \<open>F \<subseteq> Collect trace_class\<close>
+    by (auto intro!: simp: complex_vector.span_explicit)
+  then have \<open>trace_class x\<close>
+    by (auto intro!: trace_class_sum trace_class_scaleC simp: x_def)
+  then show \<open>x \<in> Collect trace_class \<close>
+    by simp
+qed
+
+definition diagonal_operator where \<open>diagonal_operator f = 
+  (if bdd_above (range (\<lambda>x. cmod (f x))) then explicit_cblinfun (\<lambda>x y. of_bool (x=y) * f x) else 0)\<close>
+
+lemma diagonal_operator_exists:
+  assumes \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>
+  shows \<open>explicit_cblinfun_exists (\<lambda>x y. of_bool (x = y) * f x)\<close>
+proof -
+  from assms obtain B where B: \<open>cmod (f x) \<le> B\<close> for x
+    by (auto simp: bdd_above_def)
+  show ?thesis
+  proof (rule explicit_cblinfun_exists_bounded)
+    fix S T :: \<open>'a set\<close> and \<psi> :: \<open>'a \<Rightarrow> complex\<close>
+    assume [simp]: \<open>finite S\<close> \<open>finite T\<close>
+    assume \<open>\<psi> a = 0\<close> if \<open>a \<notin> T\<close> for a
+    have \<open>(\<Sum>b\<in>S. (cmod (\<Sum>a\<in>T. \<psi> a *\<^sub>C (of_bool (b = a) * f b)))\<^sup>2)
+        = (\<Sum>b\<in>S. (cmod (of_bool (b \<in> T) * \<psi> b * f b))\<^sup>2)\<close>
+      apply (rule sum.cong[OF refl])
+      subgoal for b
+        apply (subst sum_single[where i=b])
+        by auto
+      by -
+    also have \<open>\<dots> = (\<Sum>b\<in>S\<inter>T. (cmod (\<psi> b * f b))\<^sup>2)\<close>
+      apply (rule sum.mono_neutral_cong_right)
+      by auto
+    also have \<open>\<dots> \<le> (\<Sum>b\<in>T. (cmod (\<psi> b * f b))\<^sup>2)\<close>
+      by (simp add: sum_mono2)
+    also have \<open>\<dots> \<le> (\<Sum>b\<in>T. B\<^sup>2 * (cmod (\<psi> b))\<^sup>2)\<close>
+      apply (rule sum_mono)
+      apply (auto intro!: simp: norm_mult power_mult_distrib)
+      apply (subst mult.commute)
+      by (simp add: B mult_right_mono power_mono)
+    also have \<open>\<dots> = B\<^sup>2 * (\<Sum>b\<in>T. (cmod (\<psi> b))\<^sup>2)\<close>
+      by (simp add: vector_space_over_itself.scale_sum_right)
+    finally
+    show \<open>(\<Sum>b\<in>S. (cmod (\<Sum>a\<in>T. \<psi> a *\<^sub>C (of_bool (b = a) * f b)))\<^sup>2)
+       \<le> B\<^sup>2 * (\<Sum>a\<in>T. (cmod (\<psi> a))\<^sup>2)\<close>
+      by -
+  qed
+qed
+
+lemma diagonal_operator_ket:
+  assumes \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>
+  shows \<open>diagonal_operator f (ket x) = f x *\<^sub>C ket x\<close>
+proof -
+  have [simp]: \<open>has_ell2_norm (\<lambda>b. of_bool (b = x) * f b)\<close>
+    by (auto intro!: finite_nonzero_values_imp_summable_on simp: has_ell2_norm_def)
+  have \<open>Abs_ell2 (\<lambda>b. of_bool (b = x) * f b) = f x *\<^sub>C ket x\<close>
+    apply (rule Rep_ell2_inject[THEN iffD1])
+    by (auto simp: Abs_ell2_inverse scaleC_ell2.rep_eq ket.rep_eq)
+  then show ?thesis
+    by (auto intro!: simp: diagonal_operator_def assms explicit_cblinfun_ket diagonal_operator_exists)
+qed
+
+lemma diagonal_operator_invalid:
+  assumes \<open>\<not> bdd_above (range (\<lambda>x. cmod (f x)))\<close>
+  shows \<open>diagonal_operator f = 0\<close>
+  by (simp add: assms diagonal_operator_def)
+
+lemma diagonal_operator_comp:
+  assumes \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>
+  assumes \<open>bdd_above (range (\<lambda>x. cmod (g x)))\<close>
+  shows \<open>diagonal_operator f o\<^sub>C\<^sub>L diagonal_operator g = diagonal_operator (\<lambda>x. (f x * g x))\<close>
+proof -
+  have \<open>bdd_above (range (\<lambda>x. cmod (f x * g x)))\<close>
+  proof -
+    from assms(1) obtain F where \<open>cmod (f x) \<le> F\<close> for x
+      by (auto simp: bdd_above_def)
+    moreover from assms(2) obtain G where \<open>cmod (g x) \<le> G\<close> for x
+      by (auto simp: bdd_above_def)
+    ultimately have \<open>cmod (f x * g x) \<le> F * G\<close> for x
+      by (smt (verit, del_insts) mult_right_mono norm_ge_zero norm_mult ordered_comm_semiring_class.comm_mult_left_mono)
+    then show ?thesis
+      by fast
+  qed
+  then show ?thesis
+    by (auto intro!: equal_ket simp: diagonal_operator_ket assms cblinfun.scaleC_right)
+qed
+
+lemma diagonal_operator_adj: \<open>diagonal_operator f* = diagonal_operator (\<lambda>x. cnj (f x))\<close>
+  apply (cases \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>)
+  by (auto intro!: equal_ket cinner_ket_eqI 
+      simp: diagonal_operator_ket cinner_adj_right diagonal_operator_invalid)
+
+(* TODO move *)
+lemma complex_of_real_cmod: \<open>complex_of_real (cmod x) = abs x\<close>
+  by (simp add: abs_complex_def)
+
+lemma diagonal_operator_pos:
+  assumes \<open>\<And>x. f x \<ge> 0\<close>
+  shows \<open>diagonal_operator f \<ge> 0\<close>
+proof (cases \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>)
+  case True
+  have [simp]: \<open>csqrt (f x) = sqrt (cmod (f x))\<close> for x
+    by (simp add: Extra_Ordered_Fields.complex_of_real_cmod assms of_real_sqrt)
+  have bdd: \<open>bdd_above (range (\<lambda>x. sqrt (cmod (f x))))\<close>
+  proof -
+    from True obtain B where \<open>cmod (f x) \<le> B\<close> for x
+      by (auto simp: bdd_above_def)
+    then show ?thesis
+      by (auto intro!: bdd_aboveI[where M=\<open>sqrt B\<close>] simp: )
+  qed
+  show ?thesis
+    apply (rule positive_cblinfun_squareI[where B=\<open>diagonal_operator (\<lambda>x. csqrt (f x))\<close>])
+    by (simp add: assms diagonal_operator_adj diagonal_operator_comp bdd complex_of_real_cmod abs_pos
+        flip: of_real_mult)
+next
+  case False
+  then show ?thesis
+    by (simp add: diagonal_operator_invalid)
+qed
+
+
+
+lemma abs_op_diagonal_operator: 
+  \<open>abs_op (diagonal_operator f) = diagonal_operator (\<lambda>x. abs (f x))\<close>
+proof (cases \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>)
+  case True
+  show ?thesis
+    apply (rule abs_opI[symmetric])
+    by (auto intro!: diagonal_operator_pos abs_nn simp: True diagonal_operator_adj diagonal_operator_comp cnj_x_x)
+next
+  case False
+  then show ?thesis
+    by (simp add: diagonal_operator_invalid)
+qed
+
+lift_definition diagonal_operator_tc :: \<open>('a \<Rightarrow> complex) \<Rightarrow> ('a ell2, 'a ell2) trace_class\<close> is
+  \<open>\<lambda>f. if f abs_summable_on UNIV then diagonal_operator f else 0\<close>
+proof (rule CollectI)
+  fix f :: \<open>'a \<Rightarrow> complex\<close>
+  show \<open>trace_class (if f abs_summable_on UNIV then diagonal_operator f else 0)\<close>
+  proof (cases \<open>f abs_summable_on UNIV\<close>)
+    case True
+    have bdd: \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>
+    proof (rule bdd_aboveI2)
+      fix x
+      have \<open>cmod (f x) = (\<Sum>\<^sub>\<infinity>x\<in>{x}. cmod (f x))\<close>
+        by simp
+      also have \<open>\<dots> \<le> (\<Sum>\<^sub>\<infinity>x. cmod (f x))\<close>
+        apply (rule infsum_mono_neutral)
+        by (auto intro!: True)
+      finally show \<open>cmod (f x) \<le> (\<Sum>\<^sub>\<infinity>x. cmod (f x))\<close>
+        by -
+    qed
+    have \<open>trace_class (diagonal_operator f)\<close>
+      by (auto intro!: trace_classI[OF is_onb_ket] summable_on_reindex[THEN iffD2] True
+          simp: abs_op_diagonal_operator o_def diagonal_operator_ket bdd)
+    with True show ?thesis
+      by simp
+  next
+    case False
+    then show ?thesis
+      by simp
+  qed
+qed
+
+lemma from_trace_class_diagonal_operator_tc:
+  assumes \<open>f abs_summable_on UNIV\<close>
+  shows \<open>from_trace_class (diagonal_operator_tc f) = diagonal_operator f\<close>
+  apply (transfer fixing: f)
+  using assms by simp
+
+lemma vector_sandwich_partial_trace_has_sum:
+  \<open>((\<lambda>z. ((x \<otimes>\<^sub>s ket z) \<bullet>\<^sub>C (from_trace_class \<rho> *\<^sub>V (y \<otimes>\<^sub>s ket z))))
+      has_sum x \<bullet>\<^sub>C (from_trace_class (partial_trace \<rho>) *\<^sub>V y)) UNIV\<close>
+proof -
+  define x\<rho>y where \<open>x\<rho>y = x \<bullet>\<^sub>C (from_trace_class (partial_trace \<rho>) *\<^sub>V y)\<close>
+  have \<open>((\<lambda>j. Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L tensor_ell2_right (ket j))) 
+        has_sum partial_trace \<rho>) UNIV\<close>
+    using partial_trace_has_sum by force
+  then have \<open>((\<lambda>j. x \<bullet>\<^sub>C (from_trace_class (Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L 
+                          from_trace_class \<rho> o\<^sub>C\<^sub>L tensor_ell2_right (ket j))) *\<^sub>V y))
+        has_sum x\<rho>y) UNIV\<close>
+    unfolding x\<rho>y_def
+    apply (rule Infinite_Sum.has_sum_bounded_linear[rotated])
+    by (intro bounded_clinear.bounded_linear bounded_linear_intros)
+  then have \<open>((\<lambda>j. x \<bullet>\<^sub>C (tensor_ell2_right (ket j)* *\<^sub>V from_trace_class \<rho> *\<^sub>V y \<otimes>\<^sub>s ket j)) has_sum
+     x\<rho>y) UNIV\<close>
+    by (simp add: x\<rho>y_def Abs_trace_class_inverse trace_class_comp_left trace_class_comp_right)
+  then show ?thesis
+    by (metis (no_types, lifting) cinner_adj_right has_sum_cong tensor_ell2_right_apply x\<rho>y_def)
+qed
+
+lemma vector_sandwich_partial_trace:
+  \<open>x \<bullet>\<^sub>C (from_trace_class (partial_trace \<rho>) *\<^sub>V y) =
+      (\<Sum>\<^sub>\<infinity>z. ((x \<otimes>\<^sub>s ket z) \<bullet>\<^sub>C (from_trace_class \<rho> *\<^sub>V (y \<otimes>\<^sub>s ket z))))\<close>
+  by (metis (mono_tags, lifting) infsumI vector_sandwich_partial_trace_has_sum)
+
+
+(* TODO move *)
+lemma partial_trace_plus: \<open>partial_trace (t + u) = partial_trace t + partial_trace u\<close>
+proof -
+  from partial_trace_has_sum[of t] and partial_trace_has_sum[of u]
+  have \<open>((\<lambda>j. Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class t o\<^sub>C\<^sub>L tensor_ell2_right (ket j))
+            + Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class u o\<^sub>C\<^sub>L tensor_ell2_right (ket j))) has_sum
+           partial_trace t + partial_trace u) UNIV\<close> (is \<open>(?f has_sum _) _\<close>)
+    by (rule has_sum_add)
+  moreover have \<open>?f j = Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class (t + u) o\<^sub>C\<^sub>L tensor_ell2_right (ket j))\<close> (is \<open>?f j = ?g j\<close>) for j
+    by (smt (verit) Abs_trace_class_inverse cblinfun_compose_add_left cblinfun_compose_add_right from_trace_class_inverse mem_Collect_eq plus_trace_class.rep_eq trace_class_comp_left trace_class_comp_right trace_class_from_trace_class)
+  ultimately have \<open>(?g has_sum partial_trace t + partial_trace u) UNIV\<close>
+    by simp
+  moreover have \<open>(?g has_sum partial_trace (t + u)) UNIV\<close>
+    by (simp add: partial_trace_has_sum)
+  ultimately show ?thesis
+    using has_sum_unique by blast
+qed
 
 
 
