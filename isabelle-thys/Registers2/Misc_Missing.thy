@@ -829,40 +829,6 @@ lemma abs_summable_minus:
 lemma of_nat_indicator: \<open>of_nat (indicator E x) = indicator E x\<close>
   by (metis indicator_eq_0_iff indicator_eq_1_iff of_nat_1 semiring_1_class.of_nat_simps(1))
 
-definition (in order) \<open>is_Sup X s \<longleftrightarrow> (\<forall>x\<in>X. x \<le> s) \<and> (\<forall>y. (\<forall>x\<in>X. x \<le> y) \<longrightarrow> s \<le> y)\<close>
-definition (in order) \<open>has_Sup X \<longleftrightarrow> (\<exists>s. is_Sup X s)\<close>
-
-lemma (in order) is_SupI:
-  assumes \<open>\<And>x. x \<in> X \<Longrightarrow> x \<le> s\<close>
-  assumes \<open>\<And>y. (\<And>x. x \<in> X \<Longrightarrow> x \<le> y) \<Longrightarrow> s \<le> y\<close>
-  shows \<open>is_Sup X s\<close>
-  using assms by (auto simp add: is_Sup_def)
-
-lemma is_Sup_unique: \<open>is_Sup X a \<Longrightarrow> is_Sup X b \<Longrightarrow> a=b\<close>
-  by (simp add: Orderings.order_eq_iff is_Sup_def)
-
-lemma has_Sup_bdd_above: \<open>has_Sup X \<Longrightarrow> bdd_above X\<close>
-  by (metis bdd_above.unfold has_Sup_def is_Sup_def)
-
-lemma is_Sup_has_Sup: \<open>is_Sup X s \<Longrightarrow> has_Sup X\<close>
-  using has_Sup_def by blast
-
-(* TODO move *)
-class Sup_order = order + Sup + sup +
-  assumes is_Sup_Sup: \<open>has_Sup X \<Longrightarrow> is_Sup X (Sup X)\<close>
-  assumes is_Sup_sup: \<open>has_Sup {x,y} \<Longrightarrow> is_Sup {x,y} (sup x y)\<close>
-
-lemma (in Sup_order) is_Sup_eq_Sup:
-  assumes \<open>is_Sup X s\<close>
-  shows \<open>s = Sup X\<close>
-  by (meson assms local.dual_order.antisym local.has_Sup_def local.is_Sup_Sup local.is_Sup_def)
-
-lemma is_Sup_cSup:
-  fixes X :: \<open>'a::conditionally_complete_lattice set\<close>
-  assumes \<open>bdd_above X\<close> and \<open>X \<noteq> {}\<close>
-  shows \<open>is_Sup X (Sup X)\<close>
-  using assms by (auto intro!: cSup_upper cSup_least simp: is_Sup_def)
-
 definition increasing_filter :: \<open>'a::order filter \<Rightarrow> bool\<close> where
   \<open>increasing_filter F \<longleftrightarrow> (\<forall>\<^sub>F x in F. \<forall>\<^sub>F y in F. y \<ge> x)\<close>
 
