@@ -20,6 +20,18 @@ lemma reducing_subspace_ortho[simp]: \<open>reducing_subspace (-S) A \<longleftr
   for S :: \<open>'a::chilbert_space ccsubspace\<close>
   by (auto intro!: simp: reducing_subspace_def ortho_involution)
 
+lemma invariant_subspace_bot[simp]: \<open>invariant_subspace \<bottom> A\<close>
+  by (simp add: invariant_subspaceI) 
+
+lemma invariant_subspace_top[simp]: \<open>invariant_subspace \<top> A\<close>
+  by (simp add: invariant_subspaceI) 
+
+lemma reducing_subspace_bot[simp]: \<open>reducing_subspace \<bottom> A\<close>
+  by (metis cblinfun_image_bot eq_refl orthogonal_bot orthogonal_spaces_leq_compl reducing_subspaceI) 
+
+lemma reducing_subspace_top[simp]: \<open>reducing_subspace \<top> A\<close>
+  by (simp add: reducing_subspace_def)
+
 definition normal_op :: \<open>('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> bool\<close> where
   \<open>normal_op A  \<longleftrightarrow>  A o\<^sub>C\<^sub>L A* = A* o\<^sub>C\<^sub>L A\<close>
 
@@ -545,10 +557,13 @@ fun eigenvalues_of :: \<open>('a::{not_singleton, chilbert_space} \<Rightarrow>\
   and eigenvalues_of_T :: \<open>('a::{not_singleton, chilbert_space} \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a)\<close>
   (* and spectral_decomp :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a)\<close> *)
   where \<open>eigenvalues_of a n = largest_eigenvalue (eigenvalues_of_T a n)\<close>
-  | \<open>eigenvalues_of_E a n = eigenspace (eigenvalues_of a n) (eigenvalues_of_T a n)\<close>
+  | \<open>eigenvalues_of_E a n = (if eigenvalues_of a n = 0 then 0 else eigenspace (eigenvalues_of a n) (eigenvalues_of_T a n))\<close>
   (* | \<open>eigenvalues_of_T a n = a o\<^sub>C\<^sub>L Proj (- (\<Squnion>i\<in>{..<n}. eigenvalues_of_E a i))\<close> *)
   | \<open>eigenvalues_of_T a (Suc n) = eigenvalues_of_T a n o\<^sub>C\<^sub>L Proj (- eigenvalues_of_E a n)\<close>
   | \<open>eigenvalues_of_T a 0 = a\<close>
+
+definition eigenvalues_of_P :: \<open>('a::{not_singleton, chilbert_space} \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a)\<close> where
+  \<open>eigenvalues_of_P a n = Proj (eigenvalues_of_E a n)\<close>
 
 declare eigenvalues_of.simps[simp del]
 declare eigenvalues_of_E.simps[simp del]
@@ -561,20 +576,6 @@ lemmas eigenvalues_of_E_def = eigenvalues_of_E.simps
 
 (* lemma spectral_decomp_is_Proj[iff]: \<open>is_Proj (spectral_decomp a n)\<close>
   by (simp add: spectral_decomp_def) *)
-
-(* lemma spectral_decomp_finite_rank: 
-  assumes \<open>compact_op a\<close>
-  shows \<open>finite_rank (spectral_decomp a n)\<close>
-proof -
-  have fin_Proj: \<open>finite_rank (Proj (eigenspace e a))\<close> if \<open>e \<noteq> 0\<close> for e
-    by (intro finite_rank_Proj_finite_dim compact_op_eigenspace_finite_dim assms that)
-  have fin_Proj': \<open>finite_rank (e *\<^sub>C Proj (eigenspace e a))\<close> for e
-    apply (cases \<open>e = 0\<close>)
-    using fin_Proj by auto
-  show ?thesis
-    unfolding spectral_decomp_def Let_def
-    by (rule fin_Proj')
-qed *)
 
 lemma cblinfun_cinner_eq0I:
   fixes a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
@@ -840,7 +841,8 @@ next
   from Suc have \<open>normal_op T\<close>
     by (auto intro!: selfadjoint_imp_normal simp: T_def)
   then have \<open>reducing_subspace E T\<close>
-    by (auto intro!: eigenspace_is_reducing simp: eigenvalues_of_E_def E_def T_def)
+    apply (auto intro!: eigenspace_is_reducing simp: eigenvalues_of_E_def E_def T_def)
+    by -
   then have \<open>reducing_subspace (- E) T\<close>
     by simp
   then have *: \<open>Proj (- E) o\<^sub>C\<^sub>L T o\<^sub>C\<^sub>L Proj (- E) = T o\<^sub>C\<^sub>L Proj (- E)\<close>
@@ -871,6 +873,19 @@ lemma eigenvalues_of_eigenvalues_of_T:
   shows \<open>eigenvalues_of a n \<in> eigenvalues (eigenvalues_of_T a n)\<close>
   by (auto intro!: largest_eigenvalue_ex eigenvalues_of_T_compact eigenvalues_of_op_selfadj assms
       simp: eigenvalues_of_def)
+
+lemma eigenvalues_of_P_finite_rank: 
+  assumes \<open>compact_op a\<close>
+  shows \<open>finite_rank (eigenvalues_of_P a n)\<close>
+  apply (cases \<open>eigenvalues_of a n = 0\<close>)
+  by (auto intro!: finite_rank_Proj_finite_dim compact_op_eigenspace_finite_dim eigenvalues_of_T_compact assms
+      simp: eigenvalues_of_P_def eigenvalues_of_E_def)
+
+lemma norm_eigenvalues_of_T:
+  assumes \<open>compact_op a\<close>
+  assumes \<open>selfadjoint a\<close>
+  shows \<open>norm (eigenvalues_of_T a n) = cmod (eigenvalues_of a n)\<close>
+  by (simp add: eigenvalues_of_def cmod_largest_eigenvalue eigenvalues_of_T_compact eigenvalues_of_op_selfadj assms)
 
 lemma eigenvalues_of_T_eigenvectors:
   assumes \<open>n \<ge> m\<close> and \<open>e \<noteq> 0\<close>
@@ -1169,33 +1184,56 @@ next
     by (auto intro!: tendsto_norm_zero_cancel simp: E_def)
 qed
 
+lemma eigenvalues_of_T_tendsto:
+  assumes \<open>compact_op a\<close>
+  assumes \<open>selfadjoint a\<close>
+  shows \<open>eigenvalues_of_T a \<longlonglongrightarrow> 0\<close>
+  apply (rule tendsto_norm_zero_cancel)
+  using eigenvalues_of_tendsto_0[OF assms]
+  apply (simp add: norm_eigenvalues_of_T assms)
+  using tendsto_norm_zero by blast 
+
+lemma eigenvalues_of_T_eigenvalues_of_P:
+(* TODO assms *)
+  shows \<open>eigenvalues_of_T a n = a - (\<Sum>i<n. eigenvalues_of a i *\<^sub>C eigenvalues_of_P a i)\<close>
+  by x
 
 lemma spectral_decomp_tendsto:
   assumes \<open>compact_op a\<close>
-  assumes \<open>a* = a\<close>
-  shows \<open>(\<lambda>n. eigenvalues_of a n *\<^sub>C spectral_decomp a n)  sums  a\<close>
-  by -
+  assumes \<open>selfadjoint a\<close>
+  shows \<open>(\<lambda>n. eigenvalues_of a n *\<^sub>C eigenvalues_of_P a n)  sums  a\<close>
+proof -
+  from eigenvalues_of_T_tendsto[OF assms]
+  have \<open>(\<lambda>n. a - eigenvalues_of_T a n) \<longlonglongrightarrow> a\<close>
+    by (simp add: tendsto_diff_const_left_rewrite)
+  moreover from eigenvalues_of_T_eigenvalues_of_P[of a]
+  have \<open>a - eigenvalues_of_T a n = (\<Sum>i<n. eigenvalues_of a i *\<^sub>C eigenvalues_of_P a i)\<close> for n
+    by simp
+  ultimately show ?thesis
+    by (simp add: sums_def)
+qed
+
 
 lift_definition adj_tc :: \<open>('a::chilbert_space, 'b::chilbert_space) trace_class \<Rightarrow> ('b,'a) trace_class\<close> is adj
   by simp
 
-lift_definition spectral_decomp_tc :: \<open>('a::chilbert_space, 'a) trace_class \<Rightarrow> nat \<Rightarrow> ('a, 'a) trace_class\<close> is
-  spectral_decomp
+lift_definition eigenvalues_of_P_tc :: \<open>('a::{chilbert_space, not_singleton}, 'a) trace_class \<Rightarrow> nat \<Rightarrow> ('a, 'a) trace_class\<close> is
+  eigenvalues_of_P
   using finite_rank_trace_class spectral_decomp_finite_rank trace_class_compact by blast
 
 
 lift_definition rank1_tc :: \<open>('a::chilbert_space, 'b::chilbert_space) trace_class \<Rightarrow> bool\<close> is rank1.
 lift_definition finite_rank_tc :: \<open>('a::chilbert_space, 'b::chilbert_space) trace_class \<Rightarrow> bool\<close> is finite_rank.
 
-lemma spectral_decomp_tc_finite_rank: 
+lemma eigenvalues_of_P_tc_finite_rank: 
   assumes \<open>adj_tc a = a\<close>
-  shows \<open>finite_rank_tc (spectral_decomp_tc a n)\<close>
+  shows \<open>finite_rank_tc (eigenvalues_of_P_tc a n)\<close>
   using assms apply transfer
   by (simp add: spectral_decomp_finite_rank trace_class_compact)
 
 lemma spectral_decomp_tendsto_tc:
   assumes \<open>adj_tc a = a\<close>
-  shows \<open>spectral_decomp_tc a  sums  a\<close>
+  shows \<open>eigenvalues_of_P_tc a  sums  a\<close>
   by -
 
 lemma finite_rank_tc_0[iff]: \<open>finite_rank_tc 0\<close>
@@ -1242,12 +1280,12 @@ proof (intro order_top_class.top_le subsetI)
     finally show ?thesis
       by -
   qed
-  then have \<open>spectral_decomp_tc a  sums  a\<close>
+  then have \<open>eigenvalues_of_P_tc a  sums  a\<close>
     by (simp add: spectral_decomp_tendsto_tc)
   moreover from selfadj 
-  have \<open>finite_rank_tc (\<Sum>i<n. spectral_decomp_tc a i)\<close> for n
+  have \<open>finite_rank_tc (\<Sum>i<n. eigenvalues_of_P_tc a i)\<close> for n
     apply (induction n)
-    by (auto intro!: finite_rank_tc_plus spectral_decomp_tc_finite_rank)
+    by (auto intro!: finite_rank_tc_plus eigenvalues_of_P_tc_finite_rank)
   ultimately show \<open>a \<in> closure (Collect finite_rank_tc)\<close>
     unfolding sums_def closure_sequential
     apply (auto intro!: simp: sums_def closure_sequential)
