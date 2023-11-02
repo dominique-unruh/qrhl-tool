@@ -646,7 +646,7 @@ lemma normal_op_adj_eigenvalues:
 lemma reducing_iff_also_adj_invariant:
 (* TODO conway, func, prop 3.7 *)
   shows \<open>reducing_subspace S A \<longleftrightarrow> (A *\<^sub>S S \<le> S \<and> (A*) *\<^sub>S S \<le> S)\<close>
-  sorry
+  by x
 
 lemma cblinfun_image_less_eqI:
   fixes A :: \<open>'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_normed_vector\<close>
@@ -857,7 +857,7 @@ lemma eigenspaces_orthogonal:
   assumes \<open>e \<noteq> f\<close>
   assumes \<open>normal_op a\<close>
   shows \<open>orthogonal_spaces (eigenspace e a) (eigenspace f a)\<close>
-  sorry
+  by x
 
 lemma eigenvalues_of_T_compact:
   assumes \<open>compact_op a\<close>
@@ -865,17 +865,19 @@ lemma eigenvalues_of_T_compact:
   apply (induction n)
   by (auto intro!: compact_op_comp_left assms)
 
-lemma eigenvalues_of_are_eigenvalues:
-(* TODO conway, functional, Thm II.5.1 *)
+lemma eigenvalues_of_eigenvalues_of_T:
   assumes \<open>compact_op a\<close>
   assumes \<open>selfadjoint a\<close>
-  assumes eigen_neq0: \<open>eigenvalues_of a n \<noteq> 0\<close>
-  shows \<open>eigenvalues_of a n \<in> eigenvalues a\<close>
+  shows \<open>eigenvalues_of a n \<in> eigenvalues (eigenvalues_of_T a n)\<close>
+  by (auto intro!: largest_eigenvalue_ex eigenvalues_of_T_compact eigenvalues_of_op_selfadj assms
+      simp: eigenvalues_of_def)
+
+lemma eigenvalues_of_T_eigenvectors:
+  assumes \<open>n \<ge> m\<close> and \<open>e \<noteq> 0\<close>
+  assumes \<open>selfadjoint a\<close>
+  shows \<open>eigenspace e (eigenvalues_of_T a n) \<le> eigenspace e (eigenvalues_of_T a m)\<close>
 proof -
-  define e where \<open>e = eigenvalues_of a n\<close>
-  with assms have \<open>e \<noteq> 0\<close>
-    by fastforce
-  have \<open>eigenspace e (eigenvalues_of_T a (Suc n)) \<le> eigenspace e (eigenvalues_of_T a n)\<close> for n
+  have *: \<open>eigenspace e (eigenvalues_of_T a (Suc n)) \<le> eigenspace e (eigenvalues_of_T a n)\<close> for n
   proof (intro ccsubspace_leI subsetI)
     fix h
     assume asm: \<open>h \<in> space_as_set (eigenspace e (eigenvalues_of_T a (Suc n)))\<close>
@@ -896,14 +898,29 @@ proof -
     finally show \<open>h \<in> space_as_set (eigenspace e (eigenvalues_of_T a n))\<close>
       by (simp add: eigenspace_memberI) 
   qed
-  then have \<open>eigenspace e (eigenvalues_of_T a n) \<le> eigenspace e (eigenvalues_of_T a 0)\<close>
-    apply (induction n)
-     apply blast
-    using le_left_mono by blast
-  also have \<open>\<dots> = eigenspace e a\<close>
+  define k where \<open>k = n - m\<close>
+  from * have \<open>eigenspace e (eigenvalues_of_T a (m + k)) \<le> eigenspace e (eigenvalues_of_T a m)\<close>
+    apply (induction k)
+     apply (auto intro!: simp: simp del: eigenvalues_of_T.simps simp flip: )
+    using order_trans_rules(23) by blast 
+  then show ?thesis
+    using \<open>n \<ge> m\<close> by (simp add: k_def)
+qed
+
+lemma eigenvalues_of_are_eigenvalues:
+(* TODO conway, functional, Thm II.5.1 *)
+  assumes \<open>compact_op a\<close>
+  assumes \<open>selfadjoint a\<close>
+  assumes eigen_neq0: \<open>eigenvalues_of a n \<noteq> 0\<close>
+  shows \<open>eigenvalues_of a n \<in> eigenvalues a\<close>
+proof -
+  define e where \<open>e = eigenvalues_of a n\<close>
+  with assms have \<open>e \<noteq> 0\<close>
+    by fastforce
+
+  from eigenvalues_of_T_eigenvectors[where m=0 and a=a and n=n, OF _ \<open>e \<noteq> 0\<close> \<open>selfadjoint a\<close>]
+  have 1: \<open>eigenspace e (eigenvalues_of_T a n) \<le> eigenspace e a\<close>
     by simp
-  finally have 1: \<open>eigenspace e (eigenvalues_of_T a n) \<le> eigenspace e a\<close>
-    by -
   have 2: \<open>eigenvalues_of_E a n \<noteq> \<bottom>\<close>
   proof -
     have \<open>eigenvalues_of a n \<in> eigenvalues (eigenvalues_of_T a n)\<close>
@@ -962,14 +979,93 @@ qed
 
 lemma eigenvalues_of_distinct:
   assumes \<open>n \<noteq> m\<close>
-  assumes \<open>eigenvalues_of a n \<noteq> 0\<close>
+  assumes \<open>compact_op a\<close>
+  assumes \<open>selfadjoint a\<close>
+  assumes neq0: \<open>eigenvalues_of a n \<noteq> 0\<close>
   shows \<open>eigenvalues_of a n \<noteq> eigenvalues_of a m\<close>
-(* 
-  have \<open>eigenspace e (eigenvalues_of_T a (Suc n)) \<le> eigenspace e (eigenvalues_of_T a n)\<close> for n
-from eigenvalues_of_are_eigenvalues
-might be useful here?
- *)
-  by -
+proof (rule ccontr)
+  assume \<open>\<not> eigenvalues_of a n \<noteq> eigenvalues_of a m\<close>
+  then have eq: \<open>eigenvalues_of a n = eigenvalues_of a m\<close>
+    by blast
+  wlog nm: \<open>n > m\<close> goal False generalizing n m keeping eq neq0
+    using hypothesis[of n m] negation assms eq neq0
+    by auto
+  define e where \<open>e = eigenvalues_of a n\<close>
+  with neq0 have \<open>e \<noteq> 0\<close>
+    by simp
+
+  have \<open>eigenvalues_of_E a n \<noteq> \<bottom>\<close>
+  proof -
+    have \<open>e \<in> eigenvalues (eigenvalues_of_T a n)\<close>
+      by (auto intro!: eigenvalues_of_eigenvalues_of_T assms simp: e_def)
+    then show ?thesis
+      by (simp add: eigenvalues_of_E_def eigenvalues_def e_def)
+  qed
+  then obtain h where \<open>norm h = 1\<close> and h_En: \<open>h \<in> space_as_set (eigenvalues_of_E a n)\<close>
+    using ccsubspace_contains_unit by blast 
+  have T_Sucm_h: \<open>eigenvalues_of_T a (Suc m) h = 0\<close>
+  proof -
+    have \<open>eigenvalues_of_E a n = eigenspace e (eigenvalues_of_T a n)\<close>
+      by (simp add: eigenvalues_of_E_def e_def)
+    also have \<open>\<dots> \<le> eigenspace e (eigenvalues_of_T a m)\<close>
+      using \<open>n > m\<close> \<open>e \<noteq> 0\<close> assms
+      by (auto intro!: eigenvalues_of_T_eigenvectors simp: )
+    also have \<open>\<dots> = eigenvalues_of_E a m\<close>
+      by (simp add: eigenvalues_of_E_def e_def eq)
+    finally have \<open>h \<in> space_as_set (eigenvalues_of_E a m)\<close>
+      using h_En
+      by (simp add: basic_trans_rules(31) less_eq_ccsubspace.rep_eq) 
+    then show \<open>eigenvalues_of_T a (Suc m) h = 0\<close>
+      by (simp add: Proj_0_compl)
+  qed
+  have \<open>eigenvalues_of_T a (Suc m + k) h = 0\<close> if \<open>k \<le> n - m - 1\<close> for k
+  proof (insert that, induction k)
+    case 0
+    from T_Sucm_h show ?case
+      by simp
+  next
+    case (Suc k)
+    define mk1 where \<open>mk1 = Suc (m + k)\<close>
+    from Suc.prems have \<open>mk1 \<le> n\<close>
+      using mk1_def by linarith 
+    have \<open>eigenspace e (eigenvalues_of_T a n) \<le> eigenspace e (eigenvalues_of_T a mk1)\<close>
+      using \<open>mk1 \<le> n\<close> \<open>e \<noteq> 0\<close> \<open>selfadjoint a\<close>
+      by (rule eigenvalues_of_T_eigenvectors)
+    with h_En have h_mk1: \<open>h \<in> space_as_set (eigenspace e (eigenvalues_of_T a mk1))\<close>
+      by (auto simp: e_def eigenvalues_of_E_def less_eq_ccsubspace.rep_eq)
+    have \<open>Proj (- eigenvalues_of_E a mk1) *\<^sub>V h = 0 \<or> Proj (- eigenvalues_of_E a mk1) *\<^sub>V h = h\<close>
+    proof (cases \<open>e = eigenvalues_of a mk1\<close>)
+      case True
+      from h_mk1 have \<open>Proj (- eigenvalues_of_E a mk1) h = 0\<close>
+        by (simp add: Proj_0_compl True eigenvalues_of_E_def) 
+      then show ?thesis 
+        by simp
+    next
+      case False
+      have \<open>orthogonal_spaces (eigenspace e (eigenvalues_of_T a mk1)) (eigenvalues_of_E a mk1)\<close>
+        by (simp add: False assms eigenspaces_orthogonal eigenvalues_of_E.simps eigenvalues_of_op_selfadj selfadjoint_imp_normal) 
+      with h_mk1 have \<open>h \<in> space_as_set (- eigenvalues_of_E a mk1)\<close>
+        using less_eq_ccsubspace.rep_eq orthogonal_spaces_leq_compl by blast 
+      then have \<open>Proj (- eigenvalues_of_E a mk1) h = h\<close>
+        by (rule Proj_fixes_image)
+      then show ?thesis 
+        by simp
+    qed
+    with Suc show ?case
+      by (auto simp: mk1_def)
+  qed
+  from this[where k=\<open>n - m - 1\<close>]
+  have \<open>eigenvalues_of_T a n h = 0\<close>
+    using \<open>n > m\<close>
+    by (simp del: eigenvalues_of_T.simps)
+  moreover from h_En have \<open>eigenvalues_of_T a n h = e *\<^sub>C h\<close>
+    by (simp add: e_def eigenspace_memberD eigenvalues_of_E_def)
+  ultimately show False
+    using \<open>norm h = 1\<close> \<open>e \<noteq> 0\<close>
+    by force
+qed
+
+
 
 lemma eigenvalues_of_tendsto_0:
   (* In the proof of Conway, Functional, Theorem II.5.1 *)
@@ -1015,7 +1111,7 @@ next
     then have \<open>E (n j) \<noteq> E (n k)\<close>
       unfolding E_def
       apply (rule eigenvalues_of_distinct)
-      using False by auto
+      using False assms by auto
     then have \<open>orthogonal_spaces (eigenspace (E (n j)) a) (eigenspace (E (n k)) a)\<close>
       apply (rule eigenspaces_orthogonal)
       by (simp add: assms(2) selfadjoint_imp_normal) 
