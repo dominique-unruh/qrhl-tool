@@ -1298,10 +1298,6 @@ proof -
     by (auto intro!: norm_cblinfun_bound_unit)
 qed
 
-lemma rank1_trace_class: \<open>trace_class a\<close> if \<open>rank1 a\<close>
-  for a b :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  using that by (auto intro!: simp: rank1_iff_butterfly)
-
 lemma finite_rank_trace_class: \<open>trace_class a\<close> if \<open>finite_rank a\<close>
   for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
 proof -
@@ -1528,9 +1524,6 @@ lemma diagonal_operator_adj: \<open>diagonal_operator f* = diagonal_operator (\<
   by (auto intro!: equal_ket cinner_ket_eqI 
       simp: diagonal_operator_ket cinner_adj_right diagonal_operator_invalid)
 
-(* TODO move *)
-lemma complex_of_real_cmod: \<open>complex_of_real (cmod x) = abs x\<close>
-  by (simp add: abs_complex_def)
 
 lemma diagonal_operator_pos:
   assumes \<open>\<And>x. f x \<ge> 0\<close>
