@@ -920,7 +920,7 @@ lemma spectral_decomp_tendsto_tc:
   using assms has_sum_imp_sums spectral_decomp_has_sum_tc by blast 
 
 
-lemma finite_rank_tc_dense: \<open>closure (Collect finite_rank_tc :: ('a::chilbert_space,'a) trace_class set) = UNIV\<close>
+lemma finite_rank_tc_dense_aux: \<open>closure (Collect finite_rank_tc :: ('a::chilbert_space, 'a) trace_class set) = UNIV\<close>
 proof (intro order_top_class.top_le subsetI)
   fix a :: \<open>('a,'a) trace_class\<close>
   wlog selfadj: \<open>selfadjoint_tc a\<close> goal \<open>a \<in> closure (Collect finite_rank_tc)\<close> generalizing a
@@ -968,5 +968,45 @@ lemma finite_rank_tc_def': \<open>finite_rank_tc A \<longleftrightarrow> A \<in>
    apply (metis (no_types, lifting) Collect_cong rank1_trace_class)
   by (metis (no_types, lifting) Collect_cong rank1_trace_class)
 
+lemma finite_rank_tc_dense: \<open>closure (Collect finite_rank_tc :: ('a::chilbert_space, 'b::chilbert_space) trace_class set) = UNIV\<close>
+proof -
+  have \<open>UNIV = closure (Collect finite_rank_tc :: ('a\<times>'b, 'a\<times>'b) trace_class set)\<close>
+    by (rule finite_rank_tc_dense_aux[symmetric])
+  define l r and corner :: \<open>('a\<times>'b, 'a\<times>'b) trace_class \<Rightarrow> _\<close> where
+    \<open>l = cblinfun_left\<close> and \<open>r = cblinfun_right\<close> and
+    \<open>corner t = compose_tcl (compose_tcr (r*) t) l\<close> for t
+  have [iff]: \<open>bounded_clinear corner\<close>
+    by (auto intro: bounded_clinear_compose compose_tcl.bounded_clinear_left compose_tcr.bounded_clinear_right 
+        simp: corner_def[abs_def])
+  have \<open>UNIV = corner ` UNIV\<close>
+  proof (intro UNIV_eq_I range_eqI)
+    fix t
+    have \<open>from_trace_class (corner (compose_tcl (compose_tcr r t) (l*)))
+         = (r* o\<^sub>C\<^sub>L r) o\<^sub>C\<^sub>L from_trace_class t o\<^sub>C\<^sub>L (l* o\<^sub>C\<^sub>L l)\<close>
+      by (simp add: corner_def compose_tcl.rep_eq compose_tcr.rep_eq cblinfun_compose_assoc)
+    also have \<open>\<dots> = from_trace_class t\<close>
+      by (simp add: l_def r_def)
+    finally show \<open>t = corner (compose_tcl (compose_tcr r t) (l*))\<close>
+      by (metis from_trace_class_inject)
+  qed
+  also have \<open>\<dots> = corner ` closure (Collect finite_rank_tc)\<close>
+    by (simp add: finite_rank_tc_dense_aux)
+  also have \<open>\<dots> \<subseteq> closure (corner ` Collect finite_rank_tc)\<close>
+    by (auto intro!: bounded_clinear.bounded_linear closure_bounded_linear_image_subset)
+  also have \<open>\<dots> \<subseteq> closure (Collect finite_rank_tc)\<close>
+  proof (intro closure_mono subsetI CollectI)
+    fix t assume \<open>t \<in> corner ` Collect finite_rank_tc\<close>
+    then obtain u where \<open>finite_rank_tc u\<close> and tu: \<open>t = corner u\<close>
+      by blast
+    show \<open>finite_rank_tc t\<close>
+      using \<open>finite_rank_tc u\<close>
+      by (auto intro!: finite_rank_compose_right[of _ l] finite_rank_compose_left[of _ \<open>r*\<close>]
+          simp add: corner_def tu finite_rank_tc.rep_eq compose_tcl.rep_eq compose_tcr.rep_eq)
+  qed
+  finally show ?thesis
+    by blast
+qed
+
+hide_fact finite_rank_tc_dense_aux
 
 end

@@ -1089,10 +1089,14 @@ qed
 lemma trace_tc_one_dim_iso[simp]: \<open>trace_tc = one_dim_iso\<close>
   by (simp add: trace_tc.rep_eq[abs_def])
 
+lemma compose_tcr_id_left[simp]: \<open>compose_tcr id_cblinfun t = t\<close>
+  by (auto intro!: from_trace_class_inject[THEN iffD1] simp: compose_tcr.rep_eq)
+
+lemma compose_tcl_id_right[simp]: \<open>compose_tcl t id_cblinfun = t\<close>
+  by (auto intro!: from_trace_class_inject[THEN iffD1] simp: compose_tcl.rep_eq)
 
 lemma sandwich_tc_id_cblinfun[simp]: \<open>sandwich_tc id_cblinfun t = t\<close>
-  by (simp add: from_trace_class_inverse sandwich_tc_apply)
-
+  by (simp add: from_trace_class_inverse sandwich_tc_def)
 
 (* TODO move *)
 (* TODO: generalize original is_ortho_set_ket to this *) thm is_ortho_set_ket 
@@ -1605,18 +1609,17 @@ lemma vector_sandwich_partial_trace_has_sum:
       has_sum x \<bullet>\<^sub>C (from_trace_class (partial_trace \<rho>) *\<^sub>V y)) UNIV\<close>
 proof -
   define x\<rho>y where \<open>x\<rho>y = x \<bullet>\<^sub>C (from_trace_class (partial_trace \<rho>) *\<^sub>V y)\<close>
-  have \<open>((\<lambda>j. Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class \<rho> o\<^sub>C\<^sub>L tensor_ell2_right (ket j))) 
+  have \<open>((\<lambda>j. compose_tcl (compose_tcr ((tensor_ell2_right (ket j))*) \<rho>) (tensor_ell2_right (ket j))) 
         has_sum partial_trace \<rho>) UNIV\<close>
     using partial_trace_has_sum by force
-  then have \<open>((\<lambda>j. x \<bullet>\<^sub>C (from_trace_class (Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L 
-                          from_trace_class \<rho> o\<^sub>C\<^sub>L tensor_ell2_right (ket j))) *\<^sub>V y))
+  then have \<open>((\<lambda>j. x \<bullet>\<^sub>C (from_trace_class (compose_tcl (compose_tcr ((tensor_ell2_right (ket j))*) \<rho>) (tensor_ell2_right (ket j))) *\<^sub>V y))
         has_sum x\<rho>y) UNIV\<close>
     unfolding x\<rho>y_def
     apply (rule Infinite_Sum.has_sum_bounded_linear[rotated])
     by (intro bounded_clinear.bounded_linear bounded_linear_intros)
   then have \<open>((\<lambda>j. x \<bullet>\<^sub>C (tensor_ell2_right (ket j)* *\<^sub>V from_trace_class \<rho> *\<^sub>V y \<otimes>\<^sub>s ket j)) has_sum
      x\<rho>y) UNIV\<close>
-    by (simp add: x\<rho>y_def Abs_trace_class_inverse trace_class_comp_left trace_class_comp_right)
+    by (simp add: compose_tcl.rep_eq compose_tcr.rep_eq)
   then show ?thesis
     by (metis (no_types, lifting) cinner_adj_right has_sum_cong tensor_ell2_right_apply x\<rho>y_def)
 qed
@@ -1631,12 +1634,12 @@ lemma vector_sandwich_partial_trace:
 lemma partial_trace_plus: \<open>partial_trace (t + u) = partial_trace t + partial_trace u\<close>
 proof -
   from partial_trace_has_sum[of t] and partial_trace_has_sum[of u]
-  have \<open>((\<lambda>j. Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class t o\<^sub>C\<^sub>L tensor_ell2_right (ket j))
-            + Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class u o\<^sub>C\<^sub>L tensor_ell2_right (ket j))) has_sum
+  have \<open>((\<lambda>j. compose_tcl (compose_tcr ((tensor_ell2_right (ket j))*) t) (tensor_ell2_right (ket j))
+            + compose_tcl (compose_tcr ((tensor_ell2_right (ket j))*) u) (tensor_ell2_right (ket j))) has_sum
            partial_trace t + partial_trace u) UNIV\<close> (is \<open>(?f has_sum _) _\<close>)
     by (rule has_sum_add)
-  moreover have \<open>?f j = Abs_trace_class (tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L from_trace_class (t + u) o\<^sub>C\<^sub>L tensor_ell2_right (ket j))\<close> (is \<open>?f j = ?g j\<close>) for j
-    by (smt (verit) Abs_trace_class_inverse cblinfun_compose_add_left cblinfun_compose_add_right from_trace_class_inverse mem_Collect_eq plus_trace_class.rep_eq trace_class_comp_left trace_class_comp_right trace_class_from_trace_class)
+  moreover have \<open>?f j = compose_tcl (compose_tcr ((tensor_ell2_right (ket j))*) (t + u)) (tensor_ell2_right (ket j))\<close> (is \<open>?f j = ?g j\<close>) for j
+    by (simp add: compose_tcl.add_left compose_tcr.add_right)
   ultimately have \<open>(?g has_sum partial_trace t + partial_trace u) UNIV\<close>
     by simp
   moreover have \<open>(?g has_sum partial_trace (t + u)) UNIV\<close>
