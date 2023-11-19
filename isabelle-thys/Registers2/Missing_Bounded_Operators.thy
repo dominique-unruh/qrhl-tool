@@ -1174,60 +1174,6 @@ lemma tc_tensor_0_right[simp]: \<open>tc_tensor x 0 = 0\<close>
 interpretation tensor_op_cbilinear: bounded_cbilinear tensor_op
   by simp
 
-lemma finite_rank_cspan_butterflies:
-  \<open>finite_rank a \<longleftrightarrow> a \<in> cspan (range (case_prod butterfly))\<close>
-  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-proof -
-  have \<open>(Collect finite_rank :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'b) set) = cspan (Collect rank1)\<close>
-    using finite_rank_def by fastforce
-  also have \<open>\<dots> = cspan (insert 0 (Collect rank1))\<close>
-    by force
-  also have \<open>\<dots> = cspan (range (case_prod butterfly))\<close>
-    apply (rule arg_cong[where f=cspan])
-    apply (auto intro!: simp: rank1_iff_butterfly case_prod_beta image_def)
-    apply auto
-    by (metis butterfly_0_left)
-  finally show ?thesis
-    by auto
-qed
-
-lemma finite_rank_comp_right: \<open>finite_rank (a o\<^sub>C\<^sub>L b)\<close> if \<open>finite_rank b\<close>
-  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
-proof -
-  from that
-  have \<open>b \<in> cspan (range (case_prod butterfly))\<close>
-    by (simp add: finite_rank_cspan_butterflies)
-  then have \<open>a o\<^sub>C\<^sub>L b \<in> ((o\<^sub>C\<^sub>L) a) ` cspan (range (case_prod butterfly))\<close>
-    by fast
-  also have \<open>\<dots> = cspan (((o\<^sub>C\<^sub>L) a) ` range (case_prod butterfly))\<close>
-    by (simp add: clinear_cblinfun_compose_right complex_vector.linear_span_image)
-  also have \<open>\<dots> \<subseteq> cspan (range (case_prod butterfly))\<close>
-    apply (auto intro!: complex_vector.span_mono
-        simp add: image_image case_prod_unfold cblinfun_comp_butterfly image_def)
-    by fast
-  finally show ?thesis
-    using finite_rank_cspan_butterflies by blast
-qed
-
-lemma finite_rank_comp_left: \<open>finite_rank (a o\<^sub>C\<^sub>L b)\<close> if \<open>finite_rank a\<close>
-  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
-proof -
-  from that
-  have \<open>a \<in> cspan (range (case_prod butterfly))\<close>
-    by (simp add: finite_rank_cspan_butterflies)
-  then have \<open>a o\<^sub>C\<^sub>L b \<in> (\<lambda>a. a o\<^sub>C\<^sub>L b) ` cspan (range (case_prod butterfly))\<close>
-    by fast
-  also have \<open>\<dots> = cspan ((\<lambda>a. a o\<^sub>C\<^sub>L b) ` range (case_prod butterfly))\<close>
-    by (simp add: clinear_cblinfun_compose_left complex_vector.linear_span_image)
-  also have \<open>\<dots> \<subseteq> cspan (range (case_prod butterfly))\<close>
-    apply (auto intro!: complex_vector.span_mono
-        simp add: image_image case_prod_unfold butterfly_comp_cblinfun image_def)
-    by fast
-  finally show ?thesis
-    using finite_rank_cspan_butterflies by blast
-qed
-
-
 lemma compact_op_comp_right: \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close> if \<open>compact_op b\<close>
   for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
 proof -
@@ -1239,21 +1185,6 @@ proof -
     by (auto intro!: closure_bounded_linear_image_subset bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_right)
   also have \<open>\<dots> \<subseteq> closure (Collect finite_rank)\<close>
     by (auto intro!: closure_mono finite_rank_comp_right)
-  finally show \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close>
-    using compact_op_finite_rank by blast
-qed
-
-lemma compact_op_comp_left: \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close> if \<open>compact_op a\<close>
-  for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
-proof -
-  from that have \<open>a \<in> closure (Collect finite_rank)\<close>
-  using compact_op_finite_rank by blast
-  then have \<open>a o\<^sub>C\<^sub>L b \<in> (\<lambda>a. a o\<^sub>C\<^sub>L b) ` closure (Collect finite_rank)\<close>
-    by blast
-  also have \<open>\<dots> \<subseteq> closure ((\<lambda>a. a o\<^sub>C\<^sub>L b) ` Collect finite_rank)\<close>
-    by (auto intro!: closure_bounded_linear_image_subset bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_left)
-  also have \<open>\<dots> \<subseteq> closure (Collect finite_rank)\<close>
-    by (auto intro!: closure_mono finite_rank_comp_left)
   finally show \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close>
     using compact_op_finite_rank by blast
 qed
@@ -1276,116 +1207,6 @@ proof (rule norm_cblinfun_bound)
       by -
   qed
 qed
-
-lemma hilbert_schmidt_norm_geq_norm:
-(* TODO cite conway operators, Prop 18.6(c) *)
-  assumes \<open>hilbert_schmidt a\<close>
-  shows \<open>norm a \<le> hilbert_schmidt_norm a\<close>
-proof -
-  have \<open>norm (a x) \<le> hilbert_schmidt_norm a\<close> if \<open>norm x = 1\<close> for x
-  proof -
-    obtain B where \<open>x \<in> B\<close> and \<open>is_onb B\<close>
-      using orthonormal_basis_exists[of \<open>{x}\<close>] \<open>norm x = 1\<close>
-      by force
-    have \<open>(norm (a x))\<^sup>2 = (\<Sum>\<^sub>\<infinity>x\<in>{x}. (norm (a x))\<^sup>2)\<close>
-      by simp
-    also have \<open>\<dots> \<le> (\<Sum>\<^sub>\<infinity>x\<in>B. (norm (a x))\<^sup>2)\<close>
-      apply (rule infsum_mono_neutral)
-      by (auto intro!: summable_hilbert_schmidt_norm_square \<open>is_onb B\<close> assms \<open>x \<in> B\<close>)
-    also have \<open>\<dots> = (hilbert_schmidt_norm a)\<^sup>2\<close>
-      using infsum_hilbert_schmidt_norm_square[OF \<open>is_onb B\<close> assms]
-      by -
-    finally show ?thesis
-      by force
-  qed
-  then show ?thesis
-    by (auto intro!: norm_cblinfun_bound_unit)
-qed
-
-lemma finite_rank_trace_class: \<open>trace_class a\<close> if \<open>finite_rank a\<close>
-  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-proof -
-  from \<open>finite_rank a\<close> obtain F f where \<open>finite F\<close> and \<open>F \<subseteq> Collect rank1\<close>
-    and a_def: \<open>a = (\<Sum>x\<in>F. f x *\<^sub>C x)\<close>
-    by (smt (verit, ccfv_threshold) complex_vector.span_explicit finite_rank_def mem_Collect_eq)
-  then show \<open>trace_class a\<close>
-    unfolding a_def
-    apply induction
-    by (auto intro!: trace_class_plus trace_class_scaleC intro: rank1_trace_class)
-qed
-
-lemma trace_class_hilbert_schmidt: \<open>hilbert_schmidt a\<close> if \<open>trace_class a\<close>
-  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  by (auto intro!: trace_class_comp_right that simp: hilbert_schmidt_def)
-
-lemma finite_rank_hilbert_schmidt: \<open>hilbert_schmidt a\<close> if \<open>finite_rank a\<close>
-  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  using finite_rank_comp_right finite_rank_trace_class hilbert_schmidtI that by blast
-
-lemma hilbert_schmidt_compact: \<open>compact_op a\<close> if \<open>hilbert_schmidt a\<close>
-  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  \<comment> \<open>(* TODO cite: conway operators *), Corollary 18.7.
-      (Only the second part. The first part is stated inside the proof though.)\<close>
-proof -
-  have \<open>\<exists>b. finite_rank b \<and> hilbert_schmidt_norm (b - a) < \<epsilon>\<close> if \<open>\<epsilon> > 0\<close> for \<epsilon>
-  proof -
-    have \<open>\<epsilon>\<^sup>2 > 0\<close>
-      using that by force
-    obtain B :: \<open>'a set\<close> where \<open>is_onb B\<close>
-      using is_onb_some_chilbert_basis by blast
-    with \<open>hilbert_schmidt a\<close> have a_sum_B: \<open>(\<lambda>x. (norm (a *\<^sub>V x))\<^sup>2) summable_on B\<close>
-      by (auto intro!: summable_hilbert_schmidt_norm_square)
-    then have \<open>((\<lambda>x. (norm (a *\<^sub>V x))\<^sup>2) has_sum (\<Sum>\<^sub>\<infinity>x\<in>B. (norm (a *\<^sub>V x))\<^sup>2)) B\<close>
-      using has_sum_infsum by blast
-    from tendsto_iff[THEN iffD1, rule_format, OF this[unfolded has_sum_def] \<open>\<epsilon>\<^sup>2 > 0\<close>]
-    obtain F where [simp]: \<open>finite F\<close> and \<open>F \<subseteq> B\<close>
-      and Fbound: \<open>dist (\<Sum>x\<in>F. (norm (a *\<^sub>V x))\<^sup>2) (\<Sum>\<^sub>\<infinity>x\<in>B. (norm (a *\<^sub>V x))\<^sup>2) < \<epsilon>\<^sup>2\<close>
-      apply atomize_elim
-      by (auto intro!: simp: eventually_finite_subsets_at_top)
-    define p b where \<open>p = (\<Sum>x\<in>F. selfbutter x)\<close> and \<open>b = a o\<^sub>C\<^sub>L p\<close>
-    have [simp]: \<open>p x = x\<close> if \<open>x \<in> F\<close> for x
-      apply (simp add: p_def cblinfun.sum_left)
-      apply (subst sum_single[where i=x])
-      using \<open>F \<subseteq> B\<close> that \<open>is_onb B\<close>
-      by (auto intro!: simp:  cnorm_eq_1 is_onb_def is_ortho_set_def)
-    have [simp]: \<open>p x = 0\<close> if \<open>x \<in> B - F\<close> for x
-      using \<open>F \<subseteq> B\<close> that \<open>is_onb B\<close>
-      apply (auto intro!: sum.neutral simp add: p_def cblinfun.sum_left is_onb_def is_ortho_set_def)
-      by auto
-    have \<open>finite_rank p\<close>
-      by (simp add: finite_rank_sum p_def)
-    then have \<open>finite_rank b\<close>
-      by (simp add: b_def finite_rank_comp_right)
-    with \<open>hilbert_schmidt a\<close> have \<open>hilbert_schmidt (b - a)\<close>
-      by (auto intro!: hilbert_schmidt_minus intro: finite_rank_hilbert_schmidt)
-    then have \<open>(hilbert_schmidt_norm (b - a))\<^sup>2 = (\<Sum>\<^sub>\<infinity>x\<in>B. (norm ((b - a) *\<^sub>V x))\<^sup>2)\<close>
-      by (simp add: infsum_hilbert_schmidt_norm_square \<open>is_onb B\<close>)
-    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>B-F. (norm (a *\<^sub>V x))\<^sup>2)\<close>
-      by (auto intro!: infsum_cong_neutral
-          simp: b_def cblinfun.diff_left)
-    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>B. (norm (a *\<^sub>V x))\<^sup>2) - (\<Sum>x\<in>F. (norm (a *\<^sub>V x))\<^sup>2)\<close>
-      apply (subst infsum_Diff)
-      using \<open>F \<subseteq> B\<close> a_sum_B by auto
-    also have \<open>\<dots> < \<epsilon>\<^sup>2\<close>
-      using Fbound
-      by (simp add: dist_norm)
-    finally show ?thesis
-      using \<open>finite_rank b\<close>
-      using power_less_imp_less_base that by fastforce
-  qed
-  then have \<open>\<exists>b. finite_rank b \<and> dist b a < \<epsilon>\<close> if \<open>\<epsilon> > 0\<close> for \<epsilon>
-    apply (rule ex_mono[rule_format, rotated])
-     apply (auto intro!: that simp: dist_norm)
-    using hilbert_schmidt_minus \<open>hilbert_schmidt a\<close> finite_rank_hilbert_schmidt hilbert_schmidt_norm_geq_norm
-    by fastforce
-  then show ?thesis
-    by (simp add: compact_op_finite_rank closure_approachable)
-qed
-
-lemma trace_class_compact: \<open>compact_op a\<close> if \<open>trace_class a\<close> 
-  for a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  by (simp add: hilbert_schmidt_compact that trace_class_hilbert_schmidt)
-
 
 lemma cspan_tc_transfer[transfer_rule]: 
   includes lifting_syntax
