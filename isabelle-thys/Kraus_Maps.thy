@@ -1,6 +1,5 @@
 theory Kraus_Maps
   imports Tensor_Product.Trace_Class Registers2.Missing_Bounded_Operators Wlog.Wlog "HOL-Library.Rewrite"
-    Temporary_Compact_Op
 begin
 
 unbundle cblinfun_notation
@@ -355,7 +354,7 @@ lemma kraus_family_zero[simp]: \<open>kraus_family {}\<close>
 quotient_type (overloaded) ('a,'b) kraus_map = \<open>('a::chilbert_space, 'b::chilbert_space, unit) kraus_family\<close> / partial: kraus_equivalent
   by (auto intro!: part_equivpI exI[of _ \<open>{}\<close>] sympI transpI simp: kraus_equivalent_def)
 
-definition \<open>kraus_family_comp_dependent \<EE> \<FF> = (\<lambda>((F,y), (E,x)). (E o\<^sub>C\<^sub>L F, (E,F,x,y))) ` (SIGMA (F,y):\<FF>. \<EE> y)\<close> 
+definition \<open>kraus_family_comp_dependent \<EE> \<FF> = (\<lambda>((F,y), (E,x)). (E o\<^sub>C\<^sub>L F, (E,F,x,y))) ` (SIGMA (F,y):\<FF>. \<EE> y)\<close>
   for \<FF> :: \<open>(_::chilbert_space, _::chilbert_space, _) kraus_family\<close>
 
 definition \<open>kraus_family_comp \<EE> \<FF> = kraus_family_comp_dependent (\<lambda>_. \<EE>) \<FF>\<close>
