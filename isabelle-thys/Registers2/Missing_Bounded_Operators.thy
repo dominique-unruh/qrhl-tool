@@ -1171,9 +1171,6 @@ lemma tc_tensor_0_left[simp]: \<open>tc_tensor 0 x = 0\<close>
 lemma tc_tensor_0_right[simp]: \<open>tc_tensor x 0 = 0\<close>
   apply transfer' by simp
 
-interpretation tensor_op_cbilinear: bounded_cbilinear tensor_op
-  by simp
-
 lemma compact_op_comp_right: \<open>compact_op (a o\<^sub>C\<^sub>L b)\<close> if \<open>compact_op b\<close>
   for a b :: \<open>_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space\<close>
 proof -
@@ -1425,6 +1422,7 @@ proof -
   ultimately show ?thesis
     using has_sum_unique by blast
 qed
+
 
 
 

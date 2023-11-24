@@ -5,11 +5,11 @@ begin
 
 
 
+lift_definition measure_kraus_family :: \<open>('a ell2, 'a ell2, 'a) kraus_family\<close> is
+  \<open>range (\<lambda>x. (selfbutter (ket x), x))\<close>
+  sorry 
 
-definition measure_kraus_family :: \<open>('a ell2, 'a ell2, 'a) kraus_family\<close> where
-  \<open>measure_kraus_family = range (\<lambda>x. (selfbutter (ket x), x))\<close>
-
-lemma kraus_family_measure_kraus_family[iff]: \<open>kraus_family measure_kraus_family\<close>
+(* lemma kraus_family_measure_kraus_family[iff]: \<open>kraus_family measure_kraus_family\<close>
 proof (unfold kraus_family_def, rule bdd_aboveI[where M=id_cblinfun])
   fix A :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
   assume \<open>A \<in> sum (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E) ` {F. finite F \<and> F \<subseteq> measure_kraus_family}\<close>
@@ -28,7 +28,7 @@ proof (unfold kraus_family_def, rule bdd_aboveI[where M=id_cblinfun])
     by (metis (mono_tags, lifting) imageE inj_on_def ket_injective norm_ket o_def sum.cong sum.reindex)
   then show \<open>A \<le> id_cblinfun\<close>
     by (simp add: is_Proj_leq_id)
-qed
+qed *)
 
 (* (* TODO remove? *)
 definition measure_first_kraus_family :: \<open>(('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2, 'cl) kraus_family\<close> where
@@ -56,10 +56,7 @@ proof (unfold kraus_family_def, rule bdd_aboveI[where M=id_cblinfun])
 qed *)
 
 lift_definition measure_kraus_map :: \<open>('a ell2, 'a ell2) kraus_map\<close> is
-  \<open>kraus_family_flatten measure_kraus_family\<close>
-  by (auto intro!: kraus_equivalent_reflI)
-
-
+  \<open>kraus_family_flatten measure_kraus_family\<close>.
 
 lemma measure_kraus_family_apply_has_sum:
   \<open>((\<lambda>x. sandwich_tc (selfbutter (ket x)) \<rho>) has_sum kraus_family_map measure_kraus_family \<rho>) UNIV\<close>
