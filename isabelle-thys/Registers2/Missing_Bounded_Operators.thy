@@ -1405,25 +1405,6 @@ lemma vector_sandwich_partial_trace:
   by (metis (mono_tags, lifting) infsumI vector_sandwich_partial_trace_has_sum)
 
 
-(* TODO move *)
-lemma partial_trace_plus: \<open>partial_trace (t + u) = partial_trace t + partial_trace u\<close>
-proof -
-  from partial_trace_has_sum[of t] and partial_trace_has_sum[of u]
-  have \<open>((\<lambda>j. compose_tcl (compose_tcr ((tensor_ell2_right (ket j))*) t) (tensor_ell2_right (ket j))
-            + compose_tcl (compose_tcr ((tensor_ell2_right (ket j))*) u) (tensor_ell2_right (ket j))) has_sum
-           partial_trace t + partial_trace u) UNIV\<close> (is \<open>(?f has_sum _) _\<close>)
-    by (rule has_sum_add)
-  moreover have \<open>?f j = compose_tcl (compose_tcr ((tensor_ell2_right (ket j))*) (t + u)) (tensor_ell2_right (ket j))\<close> (is \<open>?f j = ?g j\<close>) for j
-    by (simp add: compose_tcl.add_left compose_tcr.add_right)
-  ultimately have \<open>(?g has_sum partial_trace t + partial_trace u) UNIV\<close>
-    by simp
-  moreover have \<open>(?g has_sum partial_trace (t + u)) UNIV\<close>
-    by (simp add: partial_trace_has_sum)
-  ultimately show ?thesis
-    using has_sum_unique by blast
-qed
-
-
 
 
 end

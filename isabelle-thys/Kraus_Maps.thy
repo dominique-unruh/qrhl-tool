@@ -37,7 +37,7 @@ proof -
     by (metis (mono_tags, lifting) bdd_aboveI2 mem_Collect_eq)
 qed
 
-lemma kraus_family_norm_geq0:
+lemma kraus_family_norm_geq0[iff]:
   shows \<open>kraus_family_norm \<EE> \<ge> 0\<close>
 proof (cases \<open>Rep_kraus_family \<EE> \<noteq> {}\<close>)
   case True
@@ -359,8 +359,8 @@ lemma kraus_equivalent_reflI: \<open>kraus_equivalent x x\<close>
   by (auto simp: kraus_family_def) *)
 
 (* TODO define map function? *)
-quotient_type (overloaded) ('a,'b) kraus_map = \<open>('a::chilbert_space, 'b::chilbert_space, unit) kraus_family\<close> / kraus_equivalent
-  by (auto intro!: equivpI exI[of _ \<open>{}\<close>] reflpI sympI transpI simp: kraus_equivalent_def)
+(* quotient_type (overloaded) ('a,'b) kraus_map = \<open>('a::chilbert_space, 'b::chilbert_space, unit) kraus_family\<close> / kraus_equivalent
+  by (auto intro!: equivpI exI[of _ \<open>{}\<close>] reflpI sympI transpI simp: kraus_equivalent_def) *)
 
 lift_definition kraus_family_comp_dependent :: \<open>('x \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'y) kraus_family) \<Rightarrow> ('a::chilbert_space,'b,'x) kraus_family
                     \<Rightarrow> ('a,'c,'b \<Rightarrow>\<^sub>C\<^sub>L 'c \<times> 'a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'y \<times> 'x) kraus_family\<close> is
@@ -395,7 +395,8 @@ proof (rename_tac \<EE> \<FF>)
       apply (auto intro!: simp: BE_def case_prod_beta)
       by (smt (verit) adj_0 comparable_hermitean less_eq_scaled_id_norm positive_cblinfun_squareI scaleR_scaleC sum_nonneg)
     have [simp]: \<open>B \<ge> 0\<close>
-      using kraus_family_norm_geq0[of \<open>\<EE> undefined\<close>] \<EE>_uniform[of undefined] by auto
+      using kraus_family_norm_geq0[of \<open>\<EE> undefined\<close>] \<EE>_uniform[of undefined]
+      by (auto simp del: kraus_family_norm_geq0)
 
     have \<open>bdd_above ((\<lambda>M. \<Sum>(E,x)\<in>M. E* o\<^sub>C\<^sub>L E) `
             {M. M \<subseteq> (\<lambda>((F,y), (E,x)). (E o\<^sub>C\<^sub>L F, (E,F,x,y))) ` \<FF>x\<EE> \<and> finite M})\<close>
@@ -537,8 +538,9 @@ lemma kraus_family_of_op_norm[simp]: \<open>kraus_family_norm (kraus_family_of_o
     by -
 qed *)
 
-lift_definition kraus_map_of_op :: \<open>('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space) \<Rightarrow> ('a,'b) kraus_map\<close>
-  is kraus_family_of_op.
+(* lift_definition kraus_map_of_op :: \<open>('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space) \<Rightarrow> ('a,'b) kraus_map\<close>
+  is kraus_family_of_op. *)
+
 
 lemma sandwich_tc_scaleC_right: \<open>sandwich_tc e (c *\<^sub>C t) = c *\<^sub>C sandwich_tc e t\<close>
   apply (transfer fixing: e c)
@@ -753,7 +755,7 @@ proof -
     by -
 qed
 
-lemma kraus_family_map_bounded_clinear:
+lemma kraus_family_map_bounded_clinear[bounded_clinear]:
   shows \<open>bounded_clinear (kraus_family_map \<EE>)\<close>
   apply (rule bounded_clinearI[where K=\<open>4 * kraus_family_norm \<EE>\<close>])
     apply (auto intro!: kraus_family_map_plus_right kraus_family_map_scaleC
@@ -801,14 +803,14 @@ lemma kraus_family_norm_welldefined:
   using assms
   by (simp add: kraus_family_norm_def kraus_family_bound_welldefined)
 
-lift_definition kraus_map_norm :: \<open>('a::chilbert_space, 'b::chilbert_space) kraus_map \<Rightarrow> real\<close> is
+(* lift_definition kraus_map_norm :: \<open>('a::chilbert_space, 'b::chilbert_space) kraus_map \<Rightarrow> real\<close> is
   kraus_family_norm
-  by (rule kraus_family_norm_welldefined)
+  by (rule kraus_family_norm_welldefined) *)
 
-lemma kraus_map_of_op_norm[simp]:
+(* lemma kraus_map_of_op_norm[simp]:
   \<open>kraus_map_norm (kraus_map_of_op E) = (norm E)\<^sup>2\<close>
   apply (transfer fixing: E)
-  by simp
+  by simp *)
 
 (* lemma kraus_family_kraus_family_comp[intro]:
   fixes \<EE> :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family\<close>
@@ -1227,21 +1229,55 @@ qed
 
 abbreviation \<open>kraus_family_flatten \<equiv> kraus_family_map_outcome (\<lambda>_. ())\<close>
 
-lift_definition kraus_map_comp :: \<open>('a::chilbert_space,'b::chilbert_space) kraus_map
+definition kraus_map :: \<open>(('a::chilbert_space,'a) trace_class \<Rightarrow> ('b::chilbert_space,'b) trace_class) \<Rightarrow> bool\<close> where
+  \<open>kraus_map \<EE> \<longleftrightarrow> (\<exists>EE :: ('a,'b,unit) kraus_family. \<EE> = kraus_family_map EE)\<close>
+
+lemma kraus_map_def': \<open>kraus_map \<EE> \<longleftrightarrow> (\<exists>EE :: ('a::chilbert_space,'b::chilbert_space,'x) kraus_family. \<EE> = kraus_family_map EE)\<close>
+proof (rule iffI)
+  assume \<open>kraus_map \<EE>\<close>
+  then obtain EE :: \<open>('a,'b,unit) kraus_family\<close> where EE: \<open>\<EE> = kraus_family_map EE\<close>
+    using kraus_map_def by blast
+  define EE' :: \<open>('a,'b,'x) kraus_family\<close> where \<open>EE' = kraus_family_map_outcome (\<lambda>_. undefined) EE\<close>
+  have \<open>kraus_family_map EE' = kraus_family_map EE\<close>
+    by (simp add: EE'_def kraus_family_map_outcome_same_map)
+  with EE show \<open>\<exists>EE :: ('a,'b,'x) kraus_family. \<EE> = kraus_family_map EE\<close>
+    by metis
+next
+  assume \<open>\<exists>EE :: ('a,'b,'x) kraus_family. \<EE> = kraus_family_map EE\<close>
+  then obtain EE :: \<open>('a,'b,'x) kraus_family\<close> where EE: \<open>\<EE> = kraus_family_map EE\<close>
+    using kraus_map_def by blast
+  define EE' :: \<open>('a,'b,unit) kraus_family\<close> where \<open>EE' = kraus_family_map_outcome (\<lambda>_. ()) EE\<close>
+  have \<open>kraus_family_map EE' = kraus_family_map EE\<close>
+    by (simp add: EE'_def kraus_family_map_outcome_same_map)
+  with EE show \<open>kraus_map \<EE>\<close>
+    apply (simp add: kraus_map_def)
+    by metis
+qed
+
+lemma kraus_mapI:
+  assumes \<open>\<EE> = kraus_family_map EE\<close>
+  shows \<open>kraus_map \<EE>\<close>
+  using assms kraus_map_def' by blast
+
+lemma kraus_map_kraus_family_map[iff]: \<open>kraus_map (kraus_family_map \<EE>)\<close>
+  using kraus_map_def'
+  by blast
+
+(* lift_definition kraus_map_comp :: \<open>('a::chilbert_space,'b::chilbert_space) kraus_map
                                 \<Rightarrow> ('c::chilbert_space,'a) kraus_map \<Rightarrow> ('c,'b) kraus_map\<close>
   is \<open>\<lambda>\<EE> \<FF>. kraus_family_flatten (kraus_family_comp \<EE> \<FF>)\<close>
   by (auto intro!: 
-      simp add: kraus_equivalent_def kraus_family_comp_apply kraus_family_map_outcome_same_map)
+      simp add: kraus_equivalent_def kraus_family_comp_apply kraus_family_map_outcome_same_map) *)
 
-definition \<open>kraus_map_id = kraus_map_of_op id_cblinfun\<close>
+definition \<open>kraus_family_id = kraus_family_of_op id_cblinfun\<close>
 
-lemma kraus_map_norm_id_le: \<open>kraus_map_norm kraus_map_id \<le> 1\<close>
-  apply (simp add: kraus_map_id_def)
+lemma kraus_family_norm_id_le: \<open>kraus_family_norm kraus_family_id \<le> 1\<close>
+  apply (simp add: kraus_family_id_def)
   apply transfer
   by (auto intro!: power_le_one onorm_pos_le onorm_id_le)
 
-lemma kraus_map_norm_id[simp]: \<open>kraus_map_norm (kraus_map_id :: ('a :: {chilbert_space, not_singleton},'a) kraus_map) = 1\<close>
-  by (auto intro!: antisym kraus_map_norm_id_le simp: kraus_map_id_def)
+lemma kraus_map_norm_id[simp]: \<open>kraus_family_norm (kraus_family_id :: ('a :: {chilbert_space, not_singleton},'a,unit) kraus_family) = 1\<close>
+  by (auto intro!: antisym kraus_family_norm_id_le simp: kraus_family_id_def)
 
 lift_definition kraus_family_plus :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family \<Rightarrow> ('a,'b,'y) kraus_family \<Rightarrow> ('a,'b,'x+'y) kraus_family\<close> is
   \<open>\<lambda>\<EE> \<FF>. (\<lambda>(E,x). (E, Inl x)) ` \<EE> \<union> (\<lambda>(F,y). (F, Inr y)) ` \<FF>\<close>
@@ -1284,7 +1320,8 @@ proof -
     by -
 qed
 
-lift_definition kraus_family_scale :: \<open>real \<Rightarrow> ('a::chilbert_space,'b::chilbert_space,'x) kraus_family \<Rightarrow> ('a,'b,'x) kraus_family\<close> is
+instantiation kraus_family :: (chilbert_space, chilbert_space, type) scaleR begin
+lift_definition scaleR_kraus_family :: \<open>real \<Rightarrow> ('a::chilbert_space,'b::chilbert_space,'x) kraus_family \<Rightarrow> ('a,'b,'x) kraus_family\<close> is
   \<open>\<lambda>r \<EE>. if r \<le> 0 then {} else (\<lambda>(E,x). (sqrt r *\<^sub>R E, x)) ` \<EE>\<close>
 proof (rename_tac r \<EE>)
   fix r and \<EE> :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'x) set\<close>
@@ -1325,26 +1362,27 @@ proof (rename_tac r \<EE>)
       by (simp add: scaled_def)
   qed
 qed
-
+instance..
+end
 
 lemma kraus_family_scale_map:
   assumes \<open>r \<ge> 0\<close>
-  shows \<open>kraus_family_map (kraus_family_scale r \<EE>) \<rho> = r *\<^sub>R kraus_family_map \<EE> \<rho>\<close>
+  shows \<open>kraus_family_map (r *\<^sub>R \<EE>) \<rho> = r *\<^sub>R kraus_family_map \<EE> \<rho>\<close>
 proof (cases \<open>r > 0\<close>)
   case True
   then show ?thesis
-    apply (simp add: kraus_family_scale.rep_eq kraus_family_map_def)
+    apply (simp add: scaleR_kraus_family.rep_eq kraus_family_map_def)
     apply (subst infsum_reindex)
     by (auto intro!: inj_onI
-        simp: kraus_family_scale_def kraus_family_map_def case_prod_unfold
+        simp: kraus_family_map_def case_prod_unfold
         o_def sandwich_tc_scaleR_left cblinfun.scaleR_left infsum_scaleR_right)
 next
   case False
   with assms show ?thesis
-    by (simp add: kraus_family_map.rep_eq kraus_family_scale.rep_eq)
+    by (simp add: kraus_family_map.rep_eq scaleR_kraus_family.rep_eq)
 qed
 
-instantiation kraus_map :: (chilbert_space, chilbert_space) \<open>{zero,plus,scaleR}\<close> begin
+(* instantiation kraus_map :: (chilbert_space, chilbert_space) \<open>{zero,plus,scaleR}\<close> begin
 lift_definition zero_kraus_map :: \<open>('a,'b) kraus_map\<close> is 0.
 lift_definition plus_kraus_map :: \<open>('a,'b) kraus_map \<Rightarrow> ('a,'b) kraus_map \<Rightarrow> ('a,'b) kraus_map\<close> is
   \<open>\<lambda>\<EE> \<FF>. kraus_family_flatten (kraus_family_plus \<EE> \<FF>)\<close>
@@ -1360,10 +1398,10 @@ proof (unfold kraus_equivalent_def)
     by (auto intro!: ext simp: kraus_family_scale_map)
 qed
 instance..
-end
+end *)
 
 
-instantiation kraus_map :: (chilbert_space, chilbert_space) comm_monoid_add begin
+(* instantiation kraus_map :: (chilbert_space, chilbert_space) comm_monoid_add begin
 instance
 proof intro_classes
   fix a b c :: \<open>('a, 'b) kraus_map\<close>
@@ -1380,82 +1418,81 @@ proof intro_classes
     by (auto intro!: ext
         simp add: kraus_equivalent_def kraus_family_map_outcome_same_map kraus_family_map_plus)
 qed
-end
+end *)
 
 
-lift_definition kraus_map_apply :: \<open>('a::chilbert_space,'b::chilbert_space) kraus_map \<Rightarrow> ('a,'a) trace_class \<Rightarrow> ('b,'b) trace_class\<close> is
+(* lift_definition kraus_map_apply :: \<open>('a::chilbert_space,'b::chilbert_space) kraus_map \<Rightarrow> ('a,'a) trace_class \<Rightarrow> ('b,'b) trace_class\<close> is
   \<open>kraus_family_map\<close>
-  by (auto simp: kraus_equivalent_def)
+  by (auto simp: kraus_equivalent_def) *)
 
-lemma kraus_map_apply_bounded_clinear[bounded_clinear]:
+(* lemma kraus_map_apply_bounded_clinear[bounded_clinear]:
   \<open>bounded_clinear (kraus_map_apply \<EE>)\<close>
   apply transfer
-  using kraus_equivalent_def kraus_family_map_bounded_clinear by blast
+  using kraus_equivalent_def kraus_family_map_bounded_clinear by blast *)
 
 lemma kraus_family_of_op_apply: \<open>kraus_family_map (kraus_family_of_op E) \<rho> = sandwich_tc E \<rho>\<close>
   by (simp add: kraus_family_map_def kraus_family_of_op.rep_eq)
 
 
-lemma kraus_map_of_op_apply: \<open>kraus_map_apply (kraus_map_of_op E) \<rho> = sandwich_tc E \<rho>\<close>
+(* lemma kraus_map_of_op_apply: \<open>kraus_map_apply (kraus_map_of_op E) \<rho> = sandwich_tc E \<rho>\<close>
   apply (transfer' fixing: \<rho>)
-  by (simp add: kraus_family_of_op_apply)
+  by (simp add: kraus_family_of_op_apply) *)
 
-lemma kraus_map_id_apply[simp]: \<open>kraus_map_apply kraus_map_id \<rho> = \<rho>\<close>
-  by (simp add: kraus_map_id_def kraus_map_of_op_apply)
+lemma kraus_family_id_apply[simp]: \<open>kraus_family_map kraus_family_id \<rho> = \<rho>\<close>
+  by (simp add: kraus_family_id_def kraus_family_of_op_apply)
 
 (* lemma kraus_family_rep_kraus_map[simp]: \<open>kraus_family (rep_kraus_map \<EE>)\<close>
   using Quotient_rep_reflp[OF Quotient_kraus_map]
   by (auto simp add: kraus_equivalent_def) *)
 
-lemma kraus_map_scaleR:
+(* lemma kraus_family_scaleR:
   assumes \<open>r \<ge> 0\<close>
-  shows \<open>kraus_map_apply (r *\<^sub>R \<EE>) \<rho> = r *\<^sub>R kraus_map_apply \<EE> \<rho>\<close>
+  shows \<open>kraus_family_map (r *\<^sub>R \<EE>) \<rho> = r *\<^sub>R kraus_family_map \<EE> \<rho>\<close>
 proof -
-  have \<open>kraus_map_apply (r *\<^sub>R \<EE>) \<rho> = kraus_family_map (kraus_family_scale r (rep_kraus_map \<EE>)) \<rho>\<close>
-    by (simp add: scaleR_kraus_map_def kraus_map_apply.abs_eq kraus_equivalent_reflI)
-  also have \<open>\<dots> = r *\<^sub>R kraus_family_map (rep_kraus_map \<EE>) \<rho>\<close>
-    by (simp add: kraus_family_scale_map assms)
-  also have \<open>\<dots> = r *\<^sub>R kraus_map_apply \<EE> \<rho>\<close>
-    by (simp flip: kraus_map_apply.rep_eq add: cblinfun.scaleR_left)
-  finally show \<open>kraus_map_apply (r *\<^sub>R \<EE>) \<rho> = r *\<^sub>R kraus_map_apply \<EE> \<rho>\<close>
+  have \<open>kraus_family_map (r *\<^sub>R \<EE>) \<rho> = kraus_family_family (kraus_family_scale r (rep_kraus_family \<EE>)) \<rho>\<close>
+    by (simp add: scaleR_kraus_family_def kraus_family_map.abs_eq kraus_equivalent_reflI)
+  also have \<open>\<dots> = r *\<^sub>R kraus_family_family (rep_kraus_family \<EE>) \<rho>\<close>
+    by (simp add: kraus_family_scale_family assms)
+  also have \<open>\<dots> = r *\<^sub>R kraus_family_map \<EE> \<rho>\<close>
+    by (simp flip: kraus_family_map.rep_eq add: cblinfun.scaleR_left)
+  finally show \<open>kraus_family_map (r *\<^sub>R \<EE>) \<rho> = r *\<^sub>R kraus_family_map \<EE> \<rho>\<close>
     by -
-qed
+qed *)
 
 lemma kraus_map_scaleR_neg:
   assumes \<open>r \<le> 0\<close>
-  shows \<open>kraus_map_apply (r *\<^sub>R \<EE>) = 0\<close>
+  shows \<open>kraus_family_map (r *\<^sub>R \<EE>) = 0\<close>
   apply (transfer fixing: r)
   using assms
-  by (auto intro!: ext simp: kraus_family_scale.rep_eq kraus_family_map.rep_eq)
+  by (auto intro!: ext simp: scaleR_kraus_family.rep_eq kraus_family_map.rep_eq)
 
-lemma kraus_map_norm_0[simp]: \<open>kraus_map_norm 0 = 0\<close>
-  apply transfer by simp
+(* lemma kraus_map_norm_0[simp]: \<open>kraus_family_norm 0 = 0\<close>
+  apply transfer by simp *)
 
 
-
-instantiation kraus_map :: (chilbert_space, chilbert_space) dist begin
+(* instantiation kraus_map :: (chilbert_space, chilbert_space) dist begin
 definition dist_kraus_map :: \<open>('a,'b) kraus_map \<Rightarrow> ('a,'b) kraus_map \<Rightarrow> real\<close> where
   \<open>dist_kraus_map E F = (\<Squnion>\<rho>. dist (kraus_map_apply E \<rho>) (kraus_map_apply F \<rho>) / norm \<rho>)\<close>
 instance..
-end
+end *)
 
-lemma kraus_map_apply_inj: \<open>kraus_map_apply x = kraus_map_apply y \<Longrightarrow> x = y\<close>
+(* lemma kraus_map_apply_inj: \<open>kraus_map_apply x = kraus_map_apply y \<Longrightarrow> x = y\<close>
   apply transfer
-  by (simp add: kraus_equivalent_def)
+  by (simp add: kraus_equivalent_def) *)
 
-lemma norm_kraus_map_apply: \<open>norm (kraus_map_apply E \<rho>) \<le> 4 * kraus_map_norm E * norm \<rho>\<close>
+(* lemma norm_kraus_map_apply: \<open>norm (kraus_map_apply E \<rho>) \<le> 4 * kraus_map_norm E * norm \<rho>\<close>
   apply (transfer fixing: \<rho>)
-  using kraus_equivalent_def kraus_family_map_bounded by blast
+  using kraus_equivalent_def kraus_family_map_bounded by blast *)
 
-lemma norm_kraus_map_apply_pos: \<open>norm (kraus_map_apply E \<rho>) \<le> kraus_map_norm E * norm \<rho>\<close> if \<open>\<rho> \<ge> 0\<close>
+(* lemma norm_kraus_map_apply_pos: \<open>norm (kraus_map_apply E \<rho>) \<le> kraus_map_norm E * norm \<rho>\<close> if \<open>\<rho> \<ge> 0\<close>
   apply (transfer fixing: \<rho>)
-  by (simp add: kraus_equivalent_def kraus_family_map_bounded_pos that)
+  by (simp add: kraus_equivalent_def kraus_family_map_bounded_pos that) *)
 
-lemma kraus_map_norm_geq0[simp]: \<open>kraus_map_norm E \<ge> 0\<close>
+(* lemma kraus_map_norm_geq0[simp]: \<open>kraus_map_norm E \<ge> 0\<close>
   apply transfer
-  by (simp add: kraus_equivalent_def kraus_family_norm_geq0)
+  by (simp add: kraus_equivalent_def kraus_family_norm_geq0) *)
 
-lemma dist_kraus_map_bdd: \<open>bdd_above (range (\<lambda>\<rho>. dist (kraus_map_apply x \<rho>) (kraus_map_apply y \<rho>) / norm \<rho>))\<close>
+(* lemma dist_kraus_map_bdd: \<open>bdd_above (range (\<lambda>\<rho>. dist (kraus_map_apply x \<rho>) (kraus_map_apply y \<rho>) / norm \<rho>))\<close>
 proof (rule bdd_aboveI)
   fix r
   assume \<open>r \<in> range (\<lambda>\<rho>. dist (kraus_map_apply x \<rho>) (kraus_map_apply y \<rho>) / norm \<rho>)\<close>
@@ -1471,22 +1508,33 @@ proof (rule bdd_aboveI)
   finally show \<open>r \<le> 4 * kraus_map_norm x + 4 * kraus_map_norm y\<close>
     apply (cases \<open>norm \<rho> = 0\<close>)
     by (auto simp: r_\<rho> linordered_field_class.pos_divide_le_eq)
-qed
+qed *)
 
-lemma kraus_map_apply_0_left[iff]: \<open>kraus_map_apply 0 \<rho> = 0\<close>
+
+lemma kraus_family_apply_0_left[iff]: \<open>kraus_family_map 0 \<rho> = 0\<close>
+  apply (transfer' fixing: \<rho>)
+  by simp
+
+(* lemma kraus_map_apply_0_left[iff]: \<open>kraus_map_apply 0 \<rho> = 0\<close>
 proof -
   have \<open>kraus_map_apply 0 \<rho> = x\<close> if \<open>x = 0\<close> for x
     apply (transfer fixing: \<rho> x)
     by (simp add: that)
   then show ?thesis
     by simp
-qed
+qed *)
 
-lemma kraus_map_apply_0_right[iff]: \<open>kraus_map_apply \<EE> 0 = 0\<close>
-  by (intro Linear_Algebra.linear_simps bounded_clinear.bounded_linear kraus_map_apply_bounded_clinear)
+lemma kraus_family_map_clinear[iff]: \<open>clinear (kraus_family_map \<EE>)\<close>
+  by (simp add: bounded_clinear.axioms(1) kraus_family_map_bounded_clinear)
+
+lemma kraus_map_apply_0_right[iff]: \<open>kraus_family_map \<EE> 0 = 0\<close>
+  by (metis ab_left_minus kraus_family_map_plus_right kraus_family_map_uminus_right)
+
+(* lemma kraus_map_apply_0_right[iff]: \<open>kraus_map_apply \<EE> 0 = 0\<close>
+  by (intro Linear_Algebra.linear_simps bounded_clinear.bounded_linear kraus_map_apply_bounded_clinear) *)
 
 
-instantiation kraus_map :: (chilbert_space, chilbert_space) metric_space begin
+(* instantiation kraus_map :: (chilbert_space, chilbert_space) metric_space begin
 definition \<open>uniformity_kraus_map = (\<Sqinter>e\<in>{0<..}. principal {(x :: ('a,'b) kraus_map, y). dist x y < e})\<close>
 definition \<open>open_kraus_map U = (\<forall>x::('a,'b) kraus_map \<in> U. \<forall>\<^sub>F (x', y) in uniformity. x' = x \<longrightarrow> y \<in> U)\<close>
 instance
@@ -1529,15 +1577,15 @@ proof (intro_classes, rule uniformity_kraus_map_def, rule open_kraus_map_def)
       by -
   qed
 qed
-end
+end *)
 
-lemma kraus_map_apply_comp: \<open>kraus_map_apply (kraus_map_comp E F) = kraus_map_apply E o kraus_map_apply F\<close>
+(* lemma kraus_map_apply_comp: \<open>kraus_map_apply (kraus_map_comp E F) = kraus_map_apply E o kraus_map_apply F\<close>
   apply transfer
-  by (simp add: kraus_equivalent_def kraus_family_map_outcome_same_map kraus_family_comp_apply)
+  by (simp add: kraus_equivalent_def kraus_family_map_outcome_same_map kraus_family_comp_apply) *)
 
-lemma kraus_map_comp_assoc: \<open>kraus_map_comp (kraus_map_comp E F) G = kraus_map_comp E (kraus_map_comp F G)\<close>
+(* lemma kraus_map_comp_assoc: \<open>kraus_map_comp (kraus_map_comp E F) G = kraus_map_comp E (kraus_map_comp F G)\<close>
   apply (rule kraus_map_apply_inj)
-  by (simp add: kraus_map_apply_comp o_def)
+  by (simp add: kraus_map_apply_comp o_def) *)
 
 (* Could be renamed complete measurement *)
 lift_definition trace_kraus_family :: \<open>'a set \<Rightarrow> ('a::chilbert_space, 'b::one_dim, 'a) kraus_family\<close> is
@@ -1606,20 +1654,30 @@ lemma kraus_equivalent_trace_kraus_family:
   shows \<open>kraus_equivalent (trace_kraus_family A) (trace_kraus_family B)\<close>
   by (auto simp: kraus_equivalent_def trace_kraus_family_is_trace assms)
 
-lift_definition trace_kraus_map :: \<open>('a::chilbert_space, 'b::one_dim) kraus_map\<close> is
-  \<open>kraus_family_flatten (trace_kraus_family some_chilbert_basis)\<close>.
+(* lift_definition trace_kraus_map :: \<open>('a::chilbert_space, 'b::one_dim) kraus_map\<close> is
+  \<open>kraus_family_flatten (trace_kraus_family some_chilbert_basis)\<close>. *)
 
-lemma trace_kraus_map_is_trace: \<open>kraus_map_apply trace_kraus_map \<rho> = one_dim_iso (trace_tc \<rho>)\<close>
+lemma trace_is_kraus_map: \<open>kraus_map (one_dim_iso o trace_tc)\<close>
+  by (auto intro!: ext kraus_mapI[of _ \<open>trace_kraus_family some_chilbert_basis\<close>]
+      simp: trace_kraus_family_is_trace)
+
+lemma id_is_kraus_map[iff]: \<open>kraus_map id\<close>
+  by (auto intro!: ext kraus_mapI[of _ kraus_family_id])
+
+(* lemma trace_kraus_map_is_trace: \<open>kraus_map_apply trace_kraus_map \<rho> = one_dim_iso (trace_tc \<rho>)\<close>
   apply (transfer' fixing: \<rho>)
-  by (simp add: kraus_family_map_outcome_same_map trace_kraus_family_is_trace)
+  by (simp add: kraus_family_map_outcome_same_map trace_kraus_family_is_trace) *)
 
-definition \<open>trace_preserving \<EE> \<longleftrightarrow> (\<forall>\<rho>. trace_tc (kraus_map_apply \<EE> \<rho>) = trace_tc \<rho>)\<close>
+definition \<open>trace_preserving_map \<EE> \<longleftrightarrow> clinear \<EE> \<and> (\<forall>\<rho>. trace_tc (\<EE> \<rho>) = trace_tc \<rho>)\<close>
 
-lemma trace_preserving_id[iff]: \<open>trace_preserving kraus_map_id\<close>
-  by (simp add: trace_preserving_def trace_kraus_map_is_trace)
+lemma trace_preserving_id[iff]: \<open>trace_preserving_map id\<close>
+  by (simp add: trace_preserving_map_def complex_vector.linear_id)
 
-lemma trace_preserving_trace_kraus_map[iff]: \<open>trace_preserving trace_kraus_map\<close>
-  by (simp add: trace_preserving_def trace_kraus_map_is_trace)
+lemma clinear_of_complex[iff]: \<open>clinear of_complex\<close>
+  by (simp add: clinearI)
+
+lemma trace_preserving_trace_kraus_map[iff]: \<open>trace_preserving_map (one_dim_iso o trace_tc)\<close>
+  by (auto intro!: clinear_compose simp add: trace_preserving_map_def bounded_clinear.clinear)
 
 lemma kraus_equivalent_kraus_family_map_outcome_left: \<open>kraus_equivalent (kraus_family_flatten F) G\<close> if \<open>kraus_equivalent F G\<close>
   using that by (simp add: kraus_equivalent_def kraus_family_map_outcome_same_map)
@@ -1763,19 +1821,26 @@ proof (intro kraus_equivalent_def[THEN iffD2] conjI)
   qed
 qed
 
-lift_definition kraus_map_tensor :: \<open>('a ell2, 'b ell2) kraus_map \<Rightarrow> ('c ell2, 'd ell2) kraus_map \<Rightarrow> (('a\<times>'c) ell2, ('b\<times>'d) ell2) kraus_map\<close> is
+(* lift_definition kraus_map_tensor :: \<open>('a ell2, 'b ell2) kraus_map \<Rightarrow> ('c ell2, 'd ell2) kraus_map \<Rightarrow> (('a\<times>'c) ell2, ('b\<times>'d) ell2) kraus_map\<close> is
   \<open>\<lambda>\<EE> \<FF>. kraus_family_flatten (kraus_family_tensor \<EE> \<FF>)\<close>
-  by (intro kraus_equivalent_kraus_family_map_outcome_left kraus_equivalent_kraus_family_map_outcome_right kraus_tensor_cong)
+  by (intro kraus_equivalent_kraus_family_map_outcome_left kraus_equivalent_kraus_family_map_outcome_right kraus_tensor_cong) *)
 
-lemma kraus_map_tensor:
+(* lemma kraus_map_tensor:
   shows \<open>kraus_map_apply (kraus_map_tensor \<EE> \<FF>) (tc_tensor \<rho> \<sigma>) = tc_tensor (kraus_map_apply \<EE> \<rho>) (kraus_map_apply \<FF> \<sigma>)\<close>
   apply (transfer fixing: \<rho> \<sigma>)
-  by (simp add: kraus_equivalent_def kraus_family_map_outcome_same_map kraus_family_map_tensor)
+  by (simp add: kraus_equivalent_def kraus_family_map_outcome_same_map kraus_family_map_tensor) *)
 
 lemma kraus_map_tensor_compose_distribute:
+  shows \<open>kraus_equivalent (kraus_family_tensor (kraus_family_comp \<EE> \<FF>) (kraus_family_comp \<GG> \<HH>))
+                          (kraus_family_comp (kraus_family_tensor \<EE> \<GG>) (kraus_family_tensor \<FF> \<HH>))\<close>
+  by (auto intro!: eq_from_separatingI2[OF separating_set_bounded_clinear_tc_tensor]
+      kraus_family_map_bounded_clinear comp_bounded_clinear
+      simp: kraus_equivalent_def kraus_family_map_tensor kraus_family_comp_apply)
+
+(* lemma kraus_map_tensor_compose_distribute:
   shows \<open>kraus_map_tensor (kraus_map_comp \<EE> \<FF>) (kraus_map_comp \<GG> \<HH>) = kraus_map_comp (kraus_map_tensor \<EE> \<GG>) (kraus_map_tensor \<FF> \<HH>)\<close>
   apply (intro kraus_map_apply_inj cblinfun_apply_inject[THEN iffD1] eq_from_separatingI2[OF separating_set_bounded_clinear_tc_tensor])
-  by (auto intro!: bounded_linear_intros simp: kraus_map_tensor kraus_map_apply_comp o_def)
+  by (auto intro!: bounded_linear_intros simp: kraus_map_tensor kraus_map_apply_comp o_def) *)
 
 (* definition kraus_family_trace :: \<open>('a::chilbert_space, 'b::one_dim, 'a) kraus_family\<close> where
   \<open>kraus_family_trace = (\<lambda>b. (vector_to_cblinfun b*, b)) ` some_chilbert_basis\<close>
@@ -1811,30 +1876,6 @@ proof (intro kraus_familyI bdd_aboveI)
     by -
 qed *)
 
-lemma infsum_bounded_linear_invertible:
-  assumes \<open>bounded_linear f\<close>
-  assumes \<open>bounded_linear f'\<close>
-  assumes \<open>f' o f = id\<close>
-  shows \<open>infsum (f \<circ> g) S = f (infsum g S)\<close>
-proof (cases \<open>g summable_on S\<close>)
-  case True
-  then show ?thesis
-    using assms(1) infsum_bounded_linear by blast
-next
-  case False
-  have \<open>\<not> (f o g) summable_on S\<close>
-  proof (rule ccontr)
-    assume \<open>\<not> \<not> f \<circ> g summable_on S\<close>
-    with \<open>bounded_linear f'\<close> have \<open>f' o f o g summable_on S\<close>
-      by (auto intro: summable_on_bounded_linear simp: o_def)
-    then have \<open>g summable_on S\<close>
-      by (simp add: assms(3))
-    with False show False
-      by blast
-  qed
-  then show ?thesis
-    by (simp add: False assms(1) infsum_not_exists linear_simps(3))
-qed
 
 
 (* lemma kraus_family_map_trace: \<open>trace_tc t = one_dim_iso (kraus_family_map (kraus_family_trace :: ('a::chilbert_space, 'b::one_dim, 'a) kraus_family) t)\<close>
@@ -1859,83 +1900,81 @@ qed *)
 (* lift_definition kraus_map_trace :: \<open>('a::chilbert_space, 'b::one_dim) kraus_map\<close> is \<open>kraus_family_flatten kraus_family_trace\<close>
   by (auto simp: kraus_equivalent_def) *)
 
-lemma trace_kraus_map_is_trace': \<open>trace_tc t = one_dim_iso (kraus_map_apply trace_kraus_map t)\<close>
+lemma trace_kraus_family_is_trace': 
+  assumes \<open>is_onb B\<close>
+  shows \<open>trace_tc t = one_dim_iso (kraus_family_map (trace_kraus_family B) t)\<close>
+  by (simp add: trace_kraus_family_is_trace assms)
+
+(* lemma trace_kraus_map_is_trace': \<open>trace_tc t = one_dim_iso (kraus_map_apply trace_kraus_map t)\<close>
   apply (transfer fixing: t)
-  by (simp add: kraus_family_map_outcome_same_map trace_kraus_family_is_trace)
+  by (simp add: kraus_family_map_outcome_same_map trace_kraus_family_is_trace) *)
 
-lemma partial_trace_scaleC: \<open>partial_trace (c *\<^sub>C t) = c *\<^sub>C partial_trace t\<close>
-  by (simp add: partial_trace_def infsum_scaleC_right compose_tcr.scaleC_right compose_tcl.scaleC_left)
-
-lemma partial_trace_tensor: \<open>partial_trace (tc_tensor t u) = trace_tc u *\<^sub>C t\<close>
-proof -
-  define t' u' where \<open>t' = from_trace_class t\<close> and \<open>u' = from_trace_class u\<close>
-  have 1: \<open>(\<lambda>j. ket j \<bullet>\<^sub>C (from_trace_class u *\<^sub>V ket j)) summable_on UNIV\<close>
-    using  trace_exists[where B=\<open>range ket\<close> and A=\<open>from_trace_class u\<close>]
-    by (simp add: summable_on_reindex o_def)
-  have \<open>partial_trace (tc_tensor t u) =
-      (\<Sum>\<^sub>\<infinity>j. compose_tcl (compose_tcr (tensor_ell2_right (ket j)*) (tc_tensor t u)) (tensor_ell2_right (ket j)))\<close>
-    by (simp add: partial_trace_def)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>j. (ket j \<bullet>\<^sub>C (from_trace_class u *\<^sub>V ket j)) *\<^sub>C t)\<close>
-  proof -
-    have *: \<open>tensor_ell2_right (ket j)* o\<^sub>C\<^sub>L t' \<otimes>\<^sub>o u' o\<^sub>C\<^sub>L tensor_ell2_right (ket j) =
-         (ket j \<bullet>\<^sub>C (u' *\<^sub>V ket j)) *\<^sub>C t'\<close> for j
-      by (auto intro!: cblinfun_eqI simp: tensor_op_ell2)
-    show ?thesis
-    apply (rule infsum_cong)
-      by (auto intro!: from_trace_class_inject[THEN iffD1] simp flip: t'_def u'_def
-        simp: * compose_tcl.rep_eq compose_tcr.rep_eq tc_tensor.rep_eq scaleC_trace_class.rep_eq)
-  qed
-  also have \<open>\<dots> = trace_tc u *\<^sub>C t\<close>
-    by (auto intro!: infsum_scaleC_left simp: trace_tc_def trace_alt_def[OF is_onb_ket] infsum_reindex o_def 1)
-  finally show ?thesis
-    by -
+lemma partial_trace_as_kraus_map: 
+  fixes B :: \<open>'b ell2 set\<close>
+  assumes \<open>is_onb B\<close>
+  shows \<open>partial_trace t = 
+  kraus_family_map (kraus_family_of_op (tensor_ell2_right 1*))
+  (kraus_family_map (kraus_family_tensor kraus_family_id (trace_kraus_family B)) t)\<close>
+(* TODO: also "kraus_map_apply (kraus_map_tensor kraus_map_id kraus_map_trace) t = ... partial_trace ... *)
+proof (rule fun_cong[where x=t], rule eq_from_separatingI2[OF separating_set_bounded_clinear_tc_tensor])
+  show \<open>bounded_clinear partial_trace\<close>
+    by simp
+  show \<open>bounded_clinear
+     (\<lambda>t. kraus_family_map (kraus_family_of_op (tensor_ell2_right 1*))
+           (kraus_family_map (kraus_family_tensor kraus_family_id (trace_kraus_family B)) t))\<close>
+    by (intro bounded_linear_intros)
+  fix \<rho> :: \<open>('a ell2, 'a ell2) trace_class\<close> and \<sigma> :: \<open>('b ell2, 'b ell2) trace_class\<close>
+  show \<open>partial_trace (tc_tensor \<rho> \<sigma>) =
+           kraus_family_map (kraus_family_of_op (tensor_ell2_right 1*))
+            (kraus_family_map (kraus_family_tensor kraus_family_id (trace_kraus_family B)) (tc_tensor \<rho> \<sigma>))\<close>
+    apply (auto intro!: from_trace_class_inject[THEN iffD1]
+        simp: assms partial_trace_tensor kraus_family_map_tensor trace_kraus_family_is_trace kraus_family_of_op_apply
+        from_trace_class_sandwich_tc sandwich_apply trace_tc.rep_eq tc_tensor.rep_eq scaleC_trace_class.rep_eq)
+    by (auto intro!: cblinfun_eqI simp: tensor_op_ell2)
 qed
 
 
-lemma bounded_clinear_partial_trace[bounded_clinear, iff]: \<open>bounded_clinear partial_trace\<close>
-  apply (rule bounded_clinearI[where K=1])
-  by (auto simp add: partial_trace_plus partial_trace_scaleC partial_trace_norm_reducing)
-
-
-lemma partial_trace_as_kraus_map: \<open>partial_trace t = 
-  kraus_map_apply (kraus_map_of_op (tensor_ell2_right 1*))
+(* lemma partial_trace_as_kraus_map: \<open>partial_trace t = 
+  kraus_map_apply (kraus_map_of_op (tensor_ell2_right 1* ))
   (kraus_map_apply (kraus_map_tensor kraus_map_id trace_kraus_map) t)\<close>
 (* TODO: also "kraus_map_apply (kraus_map_tensor kraus_map_id kraus_map_trace) t = ... partial_trace ... *)
 proof (rule fun_cong[where x=t], rule eq_from_separatingI2[OF separating_set_bounded_clinear_tc_tensor])
   show \<open>bounded_clinear partial_trace\<close>
     by simp
   show \<open>bounded_clinear
-     (\<lambda>a. kraus_map_apply (kraus_map_of_op (tensor_ell2_right 1*))
+     (\<lambda>a. kraus_map_apply (kraus_map_of_op (tensor_ell2_right 1* ))
            (kraus_map_apply (kraus_map_tensor kraus_map_id trace_kraus_map) a))\<close>
     by (intro bounded_linear_intros)
   fix \<rho> :: \<open>('a ell2, 'a ell2) trace_class\<close> and \<sigma> :: \<open>('b ell2, 'b ell2) trace_class\<close>
   show \<open>partial_trace (tc_tensor \<rho> \<sigma>) =
-           kraus_map_apply (kraus_map_of_op (tensor_ell2_right 1*))
+           kraus_map_apply (kraus_map_of_op (tensor_ell2_right 1* ))
            (kraus_map_apply (kraus_map_tensor kraus_map_id trace_kraus_map) (tc_tensor \<rho> \<sigma>))\<close>
     apply (auto intro!: from_trace_class_inject[THEN iffD1]
         simp: partial_trace_tensor kraus_map_tensor trace_kraus_map_is_trace kraus_map_of_op_apply
         from_trace_class_sandwich_tc sandwich_apply trace_tc.rep_eq tc_tensor.rep_eq scaleC_trace_class.rep_eq)
     by (auto intro!: cblinfun_eqI simp: tensor_op_ell2)
-qed
+qed *)
 
 lemma partial_trace_ignore_trace_preserving_map:
-  assumes \<open>trace_preserving \<EE>\<close>
-  shows \<open>partial_trace (kraus_map_apply (kraus_map_tensor kraus_map_id \<EE>) \<rho>) = partial_trace \<rho>\<close>
+  assumes \<open>trace_preserving_map (kraus_family_map \<EE>)\<close>
+  shows \<open>partial_trace (kraus_family_map (kraus_family_tensor kraus_family_id \<EE>) \<rho>) = partial_trace \<rho>\<close>
 proof (rule fun_cong[where x=\<rho>], rule eq_from_separatingI2[OF separating_set_bounded_clinear_tc_tensor])
-  show \<open>bounded_clinear (\<lambda>a. partial_trace (kraus_map_apply (kraus_map_tensor kraus_map_id \<EE>) a))\<close>
+  show \<open>bounded_clinear (\<lambda>a. partial_trace (kraus_family_map (kraus_family_tensor kraus_family_id \<EE>) a))\<close>
     by (intro bounded_linear_intros)
   show \<open>bounded_clinear partial_trace\<close>
     by (intro bounded_linear_intros)
-  fix \<rho> :: \<open>('c ell2, 'c ell2) trace_class\<close> and \<sigma> :: \<open>('a ell2, 'a ell2) trace_class\<close>
+  fix \<rho> :: \<open>('d ell2, 'd ell2) trace_class\<close> and \<sigma> :: \<open>('a ell2, 'a ell2) trace_class\<close>
   from assms
-  show \<open>partial_trace (kraus_map_apply (kraus_map_tensor kraus_map_id \<EE>) (tc_tensor \<rho> \<sigma>)) = partial_trace (tc_tensor \<rho> \<sigma>)\<close>
-    by (auto intro!: simp: kraus_map_tensor partial_trace_tensor trace_preserving_def)
+  show \<open>partial_trace (kraus_family_map (kraus_family_tensor kraus_family_id \<EE>) (tc_tensor \<rho> \<sigma>)) =
+           partial_trace (tc_tensor \<rho> \<sigma>)\<close>
+  (* show \<open>partial_trace (kraus_map_apply (kraus_map_tensor kraus_map_id \<EE>) (tc_tensor \<rho> \<sigma>)) = partial_trace (tc_tensor \<rho> \<sigma>)\<close> *)
+    by (auto intro!: simp: kraus_family_map_tensor partial_trace_tensor trace_preserving_map_def)
 qed
 
-lemma kraus_map_comp_id_left[simp]: \<open>kraus_map_comp kraus_map_id \<EE> = \<EE>\<close>
+(* lemma kraus_map_comp_id_left[simp]: \<open>kraus_map_comp kraus_map_id \<EE> = \<EE>\<close>
   by (auto intro!: kraus_map_apply_inj cblinfun_eqI simp: kraus_map_apply_comp kraus_map_id_apply)
 
 lemma kraus_map_comp_id_right[simp]: \<open>kraus_map_comp \<EE> kraus_map_id = \<EE>\<close>
-  by (auto intro!: kraus_map_apply_inj cblinfun_eqI simp: kraus_map_apply_comp kraus_map_id_apply)
+  by (auto intro!: kraus_map_apply_inj cblinfun_eqI simp: kraus_map_apply_comp kraus_map_id_apply) *)
 
 end
