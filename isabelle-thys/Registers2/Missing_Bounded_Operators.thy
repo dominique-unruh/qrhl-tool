@@ -915,11 +915,6 @@ proof -
     by -
 qed
 
-lemma trace_minus: 
-  assumes \<open>trace_class a\<close> \<open>trace_class b\<close>
-  shows \<open>trace (a - b) = trace a - trace b\<close>
-  by (metis (no_types, lifting) add_uminus_conv_diff assms(1) assms(2) trace_class_uminus trace_plus trace_uminus)
-                                    
 lemma has_sum_in_cweak_operator_topology_pointwise:
   \<open>has_sum_in cweak_operator_topology f X s \<longleftrightarrow> (\<forall>\<psi> \<phi>. ((\<lambda>x. \<psi> \<bullet>\<^sub>C f x \<phi>) has_sum \<psi> \<bullet>\<^sub>C s \<phi>) X)\<close>
   by (simp add: has_sum_in_def has_sum_def limitin_cweak_operator_topology

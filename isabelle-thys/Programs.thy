@@ -11,7 +11,7 @@ datatype raw_program =
   | Sample \<open>cl distr expression\<close>
   | IfThenElse \<open>bool expression\<close> \<open>raw_program\<close> \<open>raw_program\<close>
   | While \<open>bool expression\<close> \<open>raw_program\<close>
-  | QuantumOp \<open>(qu ell2, qu ell2) kraus_map expression\<close>
+  | QuantumOp \<open>(qu ell2, qu ell2, unit) kraus_family expression\<close>
   | Measurement \<open>(cl, qu) measurement expression\<close>
   | InstantiateOracles \<open>raw_program\<close> \<open>raw_program list\<close>
   | LocalQ \<open>qu QREGISTER\<close> \<open>(qu ell2, qu ell2) trace_class\<close> \<open>raw_program\<close>
@@ -38,7 +38,7 @@ inductive valid_oracle_program :: \<open>raw_program \<Rightarrow> bool\<close> 
 | \<open>(\<And>m. weight (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (Sample e)\<close>
 | \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program d \<Longrightarrow> valid_oracle_program (IfThenElse e c d)\<close>
 | \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program (While e c)\<close>
-| \<open>(\<And>m. kraus_map_norm (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (QuantumOp e)\<close>
+| \<open>(\<And>m. kraus_family_norm (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (QuantumOp e)\<close>
 | \<open>valid_oracle_program (Measurement e)\<close>
 | \<open>(\<And>d. d \<in> set ds \<Longrightarrow> valid_program d) \<Longrightarrow> valid_oracle_program c \<Longrightarrow> 
   oracle_number c \<le> length ds \<Longrightarrow> valid_oracle_program (InstantiateOracles c ds)\<close>
@@ -119,7 +119,7 @@ definition assign :: \<open>'a cvariable \<Rightarrow> 'a expression \<Rightarro
 
 lift_definition qapply :: \<open>'a qvariable \<Rightarrow> ('a,'a) l2bounded expression \<Rightarrow> program\<close> is
   \<open>\<lambda>Q e. if qregister Q then
-      QuantumOp (\<lambda>m. kraus_map_of_op (apply_qregister Q (if norm (e m) \<le> 1 then e m else 0))) else Skip\<close>
+      QuantumOp (\<lambda>m. kraus_family_of_op (apply_qregister Q (if norm (e m) \<le> 1 then e m else 0))) else Skip\<close>
   apply (auto intro!: valid_oracle_program_valid_program.intros)
   by (simp add: power_le_one)
 
@@ -239,7 +239,7 @@ lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CREGISTER_o
 lemma localvars_empty: "localvars empty_cregister empty_qregister P = block P"
   sorry
 
-type_synonym program_state = \<open>(cl,qu) cq_operator\<close>
+typedef program_state = \<open>(cl,qu) cq_operator\<close>
 
 fun denotation_raw :: "raw_program \<Rightarrow> (cl,qu,cl,qu) cq_kraus_map" where
   denotation_raw_Skip: \<open>denotation_raw Skip = cq_kraus_map_id\<close>
