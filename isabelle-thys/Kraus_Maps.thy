@@ -2,6 +2,8 @@ theory Kraus_Maps
   imports Tensor_Product.Trace_Class Registers2.Missing_Bounded_Operators Wlog.Wlog "HOL-Library.Rewrite"
 begin
 
+no_notation  Order.top ("\<top>\<index>")
+
 unbundle cblinfun_notation
 
 definition \<open>kraus_family \<EE> \<longleftrightarrow> bdd_above ((\<lambda>F. \<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) ` {F. finite F \<and> F \<subseteq> \<EE>})\<close>
@@ -980,7 +982,7 @@ qed
 
 lemma 
   fixes \<EE> :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family\<close>
-  shows kraus_family_map_outcome_same_map: \<open>kraus_family_map (kraus_family_map_outcome f \<EE>) = kraus_family_map \<EE>\<close>
+  shows kraus_family_map_outcome_same_map[simp]: \<open>kraus_family_map (kraus_family_map_outcome f \<EE>) = kraus_family_map \<EE>\<close>
     and kraus_family_map_outcome_bound: \<open>kraus_family_bound (kraus_family_map_outcome f \<EE>) = kraus_family_bound \<EE>\<close>
     and kraus_family_map_outcome_norm: \<open>kraus_family_norm (kraus_family_map_outcome f \<EE>) = kraus_family_norm \<EE>\<close>
 proof (rule ext)
@@ -1165,10 +1167,68 @@ proof (rename_tac \<EE> \<FF>)
   qed
 qed
 
+lift_definition kraus_family_remove_0 :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family \<Rightarrow> ('a,'b,'x) kraus_family\<close> is
+  \<open>Set.filter (\<lambda>(E,x). E\<noteq>0)\<close>
+proof -
+  fix \<EE> :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'c) set\<close>
+  have *: \<open>{F. finite F \<and> F \<subseteq> Set.filter (\<lambda>p. fst p \<noteq> 0) \<EE>} \<subseteq> {F. finite F \<and> F \<subseteq> \<EE>}\<close>
+    by auto
+  show \<open>\<EE> \<in> Collect kraus_family \<Longrightarrow> Set.filter (\<lambda>(E, x). E \<noteq> 0) \<EE> \<in> Collect kraus_family\<close>
+    by (auto intro: bdd_above_mono2[OF _ *] simp add: kraus_family_def case_prod_unfold)
+qed
+
+(* lemma kraus_family_map_outcome_inj:
+  assumes \<open>inj f\<close>
+  shows \<open>Rep_kraus_family (kraus_family_map_outcome f \<EE>) = (\<lambda>(E,x). (E, f x)) ` Rep_kraus_family (kraus_family_remove_0 \<EE>)\<close>
+proof (intro Set.set_eqI iffI)
+  fix Ex
+  assume asm: \<open>Ex \<in> Rep_kraus_family (kraus_family_map_outcome f \<EE>)\<close>
+  obtain E x where [simp]: \<open>Ex = (E,x)\<close>
+    by fastforce
+  from asm
+  have norm_EE: \<open>norm (E* o\<^sub>C\<^sub>L E) = kraus_family_op_weight (kraus_family_filter (\<lambda>y. f y = x) \<EE>) E\<close> and \<open>E \<noteq> 0\<close>
+    by (simp_all add: kraus_family_map_outcome.rep_eq)
+
+  have \<open>kraus_family_op_weight (kraus_family_filter (\<lambda>y. f y = x) \<EE>) E \<noteq> 0\<close>
+    using \<open>E \<noteq> 0\<close> norm_EE by force
+  then have \<open>{(F, xa). (F, xa) \<in> Rep_kraus_family (kraus_family_filter (\<lambda>y. f y = x) \<EE>) \<and> (\<exists>r>0. E = r *\<^sub>R F)} \<noteq> {}\<close>
+    apply (simp add: kraus_family_op_weight_def kraus_family_related_ops_def)
+    by (smt (verit, ccfv_SIG) case_prodE infsum_0 mem_Collect_eq)
+  then obtain F y r where Fy_filter: \<open>(F, y) \<in> Rep_kraus_family (kraus_family_filter (\<lambda>y. f y = x) \<EE>)\<close>
+    and \<open>r > 0\<close> and \<open>E = r *\<^sub>R F\<close>
+    by blast
+  from Fy_filter have Fy_\<EE>: \<open>(F, y) \<in> Rep_kraus_family \<EE>\<close> and \<open>f y = x\<close>
+    by (simp_all add: kraus_family_filter.rep_eq)
+  with \<open>r > 0\<close> \<open>E = r *\<^sub>R F\<close> \<open>E \<noteq> 0\<close> have \<open>F \<noteq> 0\<close>
+    by auto
+  with Fy_\<EE> have \<open>(F, y) \<in> Rep_kraus_family (kraus_family_remove_0 \<EE>)\<close>
+    by (simp add: kraus_family_remove_0.rep_eq)
+  then show \<open>Ex \<in> (\<lambda>(E, x). (E, f x)) ` Rep_kraus_family (kraus_family_remove_0 \<EE>)\<close>
+    apply (rule rev_image_eqI)
+apply (auto intro!: simp: \<open>E = r *\<^sub>R F\<close>)
+try0
+sledgehammer [dont_slice]
+by -
+next
+  fix Ex
+  assume \<open>Ex \<in> (\<lambda>(E, x). (E, f x)) ` Rep_kraus_family (kraus_family_remove_0 \<EE>)\<close>
+  obtain E x where [simp]: \<open>Ex = (E,x)\<close>
+    by fastforce
+  show \<open>Ex \<in> Rep_kraus_family (kraus_family_map_outcome f \<EE>)\<close>
+
+
+  apply (simp add: kraus_family_map_outcome.rep_eq)
+  apply (auto intro!: simp: kraus_family_map_outcome.rep_eq) *)
+
 
 definition \<open>kraus_family_comp_dependent \<EE> \<FF> = kraus_family_map_outcome (\<lambda>(F,E,y,x). (y,x)) (kraus_family_comp_dependent_raw \<EE> \<FF>)\<close>
 
 definition \<open>kraus_family_comp \<EE> \<FF> = kraus_family_comp_dependent (\<lambda>_. \<EE>) \<FF>\<close>
+
+(* lemma Rep_kraus_family_comp: \<open>Rep_kraus_family (kraus_family_comp \<EE> \<FF>) = xxx\<close>
+  apply (auto intro!: simp: kraus_family_comp_def kraus_family_comp_dependent_def kraus_family_comp_dependent_raw.rep_eq
+id_def) 
+  by xxx *)
 
 lemma kraus_family_comp_dependent_raw_apply:
   fixes \<EE> :: \<open>'y \<Rightarrow> ('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family\<close>
@@ -1629,12 +1689,12 @@ proof (rename_tac B)
     by auto
 qed
 
-lift_definition complete_measurement :: \<open>'a set \<Rightarrow> ('a::chilbert_space, 'a, 'a) kraus_family\<close> is
-  \<open>\<lambda>B. if is_ortho_set B then (\<lambda>x. (selfbutter (sgn x), x)) ` B else {}\<close>
-proof (rename_tac B)
-  fix B :: \<open>'a set\<close>
+lemma complete_measurement_is_family: 
+  assumes \<open>is_ortho_set B\<close>
+  shows \<open>kraus_family ((\<lambda>x. (selfbutter (sgn x), x)) ` B)\<close>
+proof -
   define family :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a \<times> 'a) set\<close> where \<open>family = (\<lambda>x. (selfbutter (sgn x), x)) ` B\<close>
-  have \<open>kraus_family family\<close> if \<open>is_ortho_set B\<close>
+  show \<open>kraus_family family\<close>
   proof -
     have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> id_cblinfun\<close> if \<open>finite F\<close> and FB: \<open>F \<subseteq> family\<close> for F :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a \<times> 'a) set\<close>
     proof -
@@ -1675,12 +1735,11 @@ proof (rename_tac B)
     then show ?thesis
       by (auto intro!: bdd_aboveI[where M=id_cblinfun] kraus_familyI)
   qed
-  then
-  show \<open>(if is_ortho_set B then family else {}) \<in> Collect kraus_family\<close>
-    by auto
 qed
 
-
+lift_definition complete_measurement :: \<open>'a set \<Rightarrow> ('a::chilbert_space, 'a, 'a) kraus_family\<close> is
+  \<open>\<lambda>B. if is_ortho_set B then (\<lambda>x. (selfbutter (sgn x), x)) ` B else {}\<close>
+  by (auto intro!: complete_measurement_is_family)
 
 lemma trace_kraus_family_is_trace: 
   assumes \<open>is_onb B\<close>
@@ -2112,5 +2171,762 @@ proof (rule ext)
   with sum show \<open>kraus_family_map F \<rho> = \<EE> \<rho>\<close>
     by (metis (no_types, lifting) infsumI)
 qed
+
+lemma complete_measurement_idem[simp]:
+  \<open>kraus_family_map (complete_measurement B) (kraus_family_map (complete_measurement B) \<rho>)
+      = kraus_family_map (complete_measurement B) \<rho>\<close>
+proof (cases \<open>is_ortho_set B\<close>)
+  case True
+  have \<open>(\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>x. (selfbutter (sgn x), x)) ` B. 
+            sandwich_tc (fst E) (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>x. (selfbutter (sgn x), x)) ` B. sandwich_tc (fst E) \<rho>)) =
+        (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>x. (selfbutter (sgn x), x)) ` B. sandwich_tc (fst E) \<rho>)\<close>
+  proof (rule infsum_cong)
+    fix hh assume hh_B: \<open>hh \<in> (\<lambda>h. (selfbutter (sgn h), h)) ` B\<close>
+    then obtain h where \<open>h \<in> B\<close> and [simp]: \<open>hh = (selfbutter (sgn h), h)\<close>
+      by blast
+    from kraus_family_map_abs_summable[OF complete_measurement_is_family[OF \<open>is_ortho_set B\<close>]]
+    have summ: \<open>(\<lambda>x. sandwich_tc (fst x) \<rho>) summable_on (\<lambda>x. (selfbutter (sgn x), x)) ` B\<close>
+      by (auto intro: abs_summable_summable simp: case_prod_beta)
+    have \<open>sandwich_tc (selfbutter (sgn h)) (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>x. (selfbutter (sgn x), x)) ` B. sandwich_tc (fst E) \<rho>)
+            = (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>x. (selfbutter (sgn x), x)) ` B. sandwich_tc (selfbutter (sgn h)) (sandwich_tc (fst E) \<rho>))\<close>
+      apply (rule infsum_bounded_linear[unfolded o_def, symmetric])
+       apply (intro bounded_linear_intros)
+      by (rule summ)
+    also have \<open>\<dots> = sandwich_tc (selfbutter (sgn h)) \<rho>\<close>
+    proof (subst infsum_single[where i=hh])
+      fix hh' assume \<open>hh' \<noteq> hh\<close> and \<open>hh' \<in> (\<lambda>h. (selfbutter (sgn h), h)) ` B\<close>
+      then obtain h' where \<open>h' \<in> B\<close> and [simp]: \<open>hh' = (selfbutter (sgn h'), h')\<close>
+        by blast
+      with \<open>hh' \<noteq> hh\<close> have \<open>h \<noteq> h'\<close>
+        by force
+      then have *: \<open>sgn h \<bullet>\<^sub>C sgn h' = 0\<close>
+        using True \<open>h \<in> B\<close> \<open>h' \<in> B\<close> is_ortho_set_def by fastforce
+      show \<open>sandwich_tc (selfbutter (sgn h)) (sandwich_tc (fst hh') \<rho>) = 0\<close>
+        by (simp add: * flip: sandwich_tc_compose[unfolded o_def, THEN fun_cong])
+    next
+      have *: \<open>sgn h \<bullet>\<^sub>C sgn h = 1\<close>
+        by (metis True \<open>h \<in> B\<close> cnorm_eq_1 is_ortho_set_def norm_sgn)
+      have \<open>(if hh \<in> (\<lambda>x. (selfbutter (sgn x), x)) ` B then sandwich_tc (selfbutter (sgn h)) (sandwich_tc (fst hh) \<rho>) else 0)
+      = sandwich_tc (selfbutter (sgn h)) (sandwich_tc (fst hh) \<rho>)\<close> (is \<open>?lhs = _\<close>)
+        using hh_B by presburger
+      also have \<open>\<dots> = sandwich_tc (selfbutter (sgn h)) \<rho>\<close>
+        by (simp add: * flip: sandwich_tc_compose[unfolded o_def, THEN fun_cong])
+      finally show \<open>?lhs = \<dots>\<close>
+        by -
+    qed
+    finally show \<open>sandwich_tc (fst hh) (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>x. (selfbutter (sgn x), x)) ` B. sandwich_tc (fst E) \<rho>) = sandwich_tc (fst hh) \<rho>\<close>
+      by simp
+  qed
+  with True show ?thesis
+    apply (transfer fixing: B \<rho>)
+    by simp
+next
+  case False
+  then show ?thesis
+    apply (transfer fixing: B \<rho>)
+    by simp
+qed
+
+
+lemma kraus_family_map_complete_measurement:
+  assumes [simp]: \<open>is_ortho_set B\<close>
+  shows \<open>kraus_family_map (complete_measurement B) t = 
+    (\<Sum>\<^sub>\<infinity>x\<in>B. sandwich_tc (selfbutter (sgn x)) t)\<close>
+proof -
+  have \<open>kraus_family_map (complete_measurement B) t = 
+      (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>x. (selfbutter (sgn x), x)) ` B. sandwich_tc (fst E) t)\<close>
+    apply (transfer' fixing: B t)
+    by simp
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>B. sandwich_tc (selfbutter (sgn x)) t)\<close>
+    apply (subst infsum_reindex)
+    by (auto intro!: inj_onI simp: o_def)
+  finally show ?thesis
+    by -
+qed
+
+lemma kraus_family_map_complete_measurement_onb:
+  assumes \<open>is_onb B\<close>
+  shows \<open>kraus_family_map (complete_measurement B) t = 
+    (\<Sum>\<^sub>\<infinity>x\<in>B. sandwich_tc (selfbutter x) t)\<close>
+proof -
+  have [simp]: \<open>is_ortho_set B\<close>
+    using assms by (simp add: is_onb_def)
+  have [simp]: \<open>sgn x = x\<close> if \<open>x \<in> B\<close> for x
+    using assms that
+    by (simp add: is_onb_def sgn_div_norm)
+  have \<open>kraus_family_map (complete_measurement B) t = (\<Sum>\<^sub>\<infinity>x\<in>B. sandwich_tc (selfbutter (sgn x)) t)\<close>
+    by (simp add: kraus_family_map_complete_measurement)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>B. sandwich_tc (selfbutter x) t)\<close>
+    apply (rule infsum_cong)
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+lemma kraus_family_map_complete_measurement_ket:
+  \<open>kraus_family_map (complete_measurement (range ket)) t = 
+    (\<Sum>\<^sub>\<infinity>x. sandwich_tc (selfbutter (ket x)) t)\<close>
+proof -
+  have \<open>kraus_family_map (complete_measurement (range ket)) t = 
+    (\<Sum>\<^sub>\<infinity>x\<in>range ket. sandwich_tc (selfbutter x) t)\<close>
+    by (simp add: kraus_family_map_complete_measurement_onb)
+  also have \<open>\<dots>  = (\<Sum>\<^sub>\<infinity>x. sandwich_tc (selfbutter (ket x)) t)\<close>
+    by (simp add: infsum_reindex o_def)
+  finally show ?thesis
+    by -
+qed
+
+term spectral_dec_proj
+
+definition some_onb_of :: \<open>'a ccsubspace \<Rightarrow> 'a::chilbert_space set\<close> where
+  \<open>some_onb_of S = (SOME B::'a set. is_ortho_set B \<and> (\<forall>b\<in>B. norm b = 1) \<and> ccspan B = S)\<close>
+
+lemma is_ortho_set_some_onb_of[iff]: \<open>is_ortho_set (some_onb_of S)\<close> (is \<open>?thesis1\<close>)
+  and some_onb_of_normed: \<open>b \<in> some_onb_of S \<Longrightarrow> norm b = 1\<close> (is \<open>PROP ?thesis2\<close>)
+  and ccspan_some_onb_of[simp]: \<open>ccspan (some_onb_of S) = S\<close> (is \<open>?thesis3\<close>)
+proof -
+  define P where \<open>P B \<longleftrightarrow> is_ortho_set B \<and> (\<forall>b\<in>B. norm b = 1) \<and> ccspan B = S\<close> for B
+  from orthonormal_subspace_basis_exists[where S=\<open>{}\<close>]
+  have \<open>\<exists>B. P B\<close>
+    by (auto simp: P_def)
+  then have \<open>P (SOME B. P B)\<close>
+    by (simp add: someI_ex)
+  then have \<open>P (some_onb_of S)\<close>
+    by (simp add: P_def some_onb_of_def)
+  then show ?thesis1 \<open>PROP ?thesis2\<close> ?thesis3
+    by (simp_all add: P_def)
+qed
+
+lemma some_onb_of_0[simp]: \<open>some_onb_of 0 = {}\<close>
+proof -
+  have no0: \<open>0 \<notin> some_onb_of 0\<close>
+    using is_ortho_set_def by blast
+  have \<open>ccspan (some_onb_of 0) = (0 :: 'a ccsubspace)\<close>
+    by simp
+  then have \<open>some_onb_of 0 \<subseteq> space_as_set (0 :: 'a ccsubspace)\<close>
+    by (metis ccspan_superset)
+  also have \<open>\<dots> = {0}\<close>
+    by simp
+  finally show ?thesis
+    using no0
+    by blast
+qed
+
+definition spectral_dec_vecs :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> 'a::chilbert_space set\<close> where
+  \<open>spectral_dec_vecs a = (\<Union>n. scaleC (csqrt (spectral_dec_val a n)) ` some_onb_of (spectral_dec_space a n))\<close>
+
+lift_definition spectral_dec_vecs_tc :: \<open>('a,'a) trace_class \<Rightarrow> 'a::chilbert_space set\<close> is
+  spectral_dec_vecs.
+
+lemma spectral_dec_vecs_ortho:
+  assumes \<open>selfadjoint a\<close> and \<open>compact_op a\<close>
+  shows \<open>is_ortho_set (spectral_dec_vecs a)\<close>
+proof (unfold is_ortho_set_def, intro conjI ballI impI)
+  show \<open>0 \<notin> spectral_dec_vecs a\<close>
+  proof (rule notI)
+    assume \<open>0 \<in> spectral_dec_vecs a\<close>
+    then obtain n v where v0: \<open>0 = csqrt (spectral_dec_val a n) *\<^sub>C v\<close> and v_in: \<open>v \<in> some_onb_of (spectral_dec_space a n)\<close>
+      by (auto simp: spectral_dec_vecs_def)
+    from v_in have \<open>v \<noteq> 0\<close>
+      using is_ortho_set_def is_ortho_set_some_onb_of by blast
+    from v_in have \<open>spectral_dec_space a n \<noteq> 0\<close>
+      using some_onb_of_0 by force
+    then have \<open>spectral_dec_val a n \<noteq> 0\<close>
+      by (meson spectral_dec_space.elims)
+    with v0 \<open>v \<noteq> 0\<close> show False
+      by force
+  qed
+  fix g h assume g: \<open>g \<in> spectral_dec_vecs a\<close> and h: \<open>h \<in> spectral_dec_vecs a\<close> and \<open>g \<noteq> h\<close>
+  from g obtain ng g' where gg': \<open>g = csqrt (spectral_dec_val a ng) *\<^sub>C g'\<close> and g'_in: \<open>g' \<in> some_onb_of (spectral_dec_space a ng)\<close>
+    by (auto simp: spectral_dec_vecs_def)
+  from h obtain nh h' where hh': \<open>h = csqrt (spectral_dec_val a nh) *\<^sub>C h'\<close> and h'_in: \<open>h' \<in> some_onb_of (spectral_dec_space a nh)\<close>
+    by (auto simp: spectral_dec_vecs_def)
+  have \<open>is_orthogonal g' h'\<close>
+  proof (cases \<open>ng = nh\<close>)
+    case True
+    with h'_in have \<open>h' \<in> some_onb_of (spectral_dec_space a nh)\<close>
+      by simp
+    with g'_in True \<open>g \<noteq> h\<close> gg' hh'
+    show ?thesis
+      using  is_ortho_set_def by fastforce
+  next
+    case False
+    then have \<open>orthogonal_spaces (spectral_dec_space a ng) (spectral_dec_space a nh)\<close>
+      by (auto intro!: spectral_dec_space_orthogonal assms simp: )
+    with h'_in g'_in show \<open>is_orthogonal g' h'\<close>
+      using orthogonal_spaces_ccspan by force
+  qed
+  then show \<open>is_orthogonal g h\<close>
+    by (simp add: gg' hh')
+qed
+
+lemma inj_scaleC:
+  fixes A :: \<open>'a::complex_vector set\<close>
+  assumes \<open>c \<noteq> 0\<close>
+  shows \<open>inj_on (scaleC c) A\<close>
+  by (meson assms inj_onI scaleC_left_imp_eq)
+
+
+lemma finite_dim_ccsubspace_zero[iff]: \<open>finite_dim_ccsubspace 0\<close>
+proof -
+  have *: \<open>cfinite_dim (cspan {0})\<close>
+    by blast
+  show ?thesis
+    apply transfer
+    using * by simp
+qed
+
+lemma finite_dim_ccsubspace_bot[iff]: \<open>finite_dim_ccsubspace \<bottom>\<close>
+  using finite_dim_ccsubspace_zero by auto
+
+
+lemma spectral_dec_space_0:
+  assumes \<open>spectral_dec_val a n = 0\<close>
+  shows \<open>spectral_dec_space a n = 0\<close>
+  by (simp add: assms spectral_dec_space_def)
+
+lemma spectral_dec_space_finite_dim[intro]:
+  assumes \<open>compact_op a\<close>
+  shows \<open>finite_dim_ccsubspace (spectral_dec_space a n)\<close>
+  by (auto intro!: compact_op_eigenspace_finite_dim spectral_dec_op_compact assms simp: spectral_dec_space_def )
+
+
+lemma some_onb_of_finite_dim:
+  assumes \<open>finite_dim_ccsubspace S\<close>
+  shows \<open>finite (some_onb_of S)\<close>
+proof -
+  from assms obtain C where CS: \<open>cspan C = space_as_set S\<close> and \<open>finite C\<close>
+    by (meson cfinite_dim_subspace_has_basis csubspace_space_as_set finite_dim_ccsubspace.rep_eq)
+  then show \<open>finite (some_onb_of S)\<close>
+    using ccspan_superset complex_vector.independent_span_bound is_ortho_set_cindependent by fastforce
+qed
+
+lemma cdim_infinite_0:
+  assumes \<open>\<not> cfinite_dim S\<close>
+  shows \<open>cdim S = 0\<close>
+proof -
+  from assms have not_fin_cspan: \<open>\<not> cfinite_dim (cspan S)\<close>
+    using cfinite_dim_def cfinite_dim_subspace_has_basis complex_vector.span_superset by fastforce
+  obtain B where \<open>cindependent B\<close> and \<open>cspan S = cspan B\<close>
+    using csubspace_has_basis by blast
+  with not_fin_cspan have \<open>infinite B\<close>
+    by auto
+  then have \<open>card B = 0\<close>
+    by force
+  have \<open>cdim (cspan S) = 0\<close> 
+    apply (rule complex_vector.dim_unique[of B])
+       apply (auto intro!: simp add: \<open>cspan S = cspan B\<close> complex_vector.span_superset)
+    using \<open>cindependent B\<close> \<open>card B = 0\<close> by auto
+  then show ?thesis
+    by simp
+qed
+
+
+
+lemma some_onb_of_card:
+  shows \<open>card (some_onb_of S) = cdim (space_as_set S)\<close>
+proof (cases \<open>finite_dim_ccsubspace S\<close>)
+  case True
+  show ?thesis
+    apply (rule complex_vector.dim_eq_card[symmetric])
+     apply (auto simp: is_ortho_set_cindependent)
+     apply (metis True ccspan_finite ccspan_some_onb_of complex_vector.span_clauses(1) some_onb_of_finite_dim)
+    by (metis True ccspan_finite ccspan_some_onb_of complex_vector.span_eq_iff csubspace_space_as_set some_onb_of_finite_dim)
+next
+  case False
+  then have \<open>cdim (space_as_set S) = 0\<close>
+    by (simp add: cdim_infinite_0 finite_dim_ccsubspace.rep_eq)
+  moreover from False have \<open>infinite (some_onb_of S)\<close>
+    using ccspan_finite_dim by fastforce
+  ultimately show ?thesis 
+    by simp
+qed
+
+lemma compact_from_trace_class[iff]: \<open>compact_op (from_trace_class t)\<close>
+  by (auto intro!: simp: trace_class_compact)
+
+(* TODO move *)
+lemma some_onb_of_in_space[iff]:
+  \<open>some_onb_of S \<subseteq> space_as_set S\<close>
+  using ccspan_superset by fastforce
+
+
+lemma sum_some_onb_of_butterfly:
+  assumes \<open>finite_dim_ccsubspace S\<close>
+  shows \<open>(\<Sum>x\<in>some_onb_of S. butterfly x x) = Proj S\<close>
+proof -
+  obtain B where onb_S_in_B: \<open>some_onb_of S \<subseteq> B\<close> and \<open>is_onb B\<close>
+    apply atomize_elim
+    apply (rule orthonormal_basis_exists)
+    by (simp_all add: some_onb_of_normed)
+  have S_ccspan: \<open>S = ccspan (some_onb_of S)\<close>
+    by simp
+
+  show ?thesis
+  proof (rule cblinfun_eq_gen_eqI[where G=B])
+    show \<open>ccspan B = \<top>\<close>
+      using \<open>is_onb B\<close> is_onb_def by blast
+    fix b assume \<open>b \<in> B\<close>
+    show \<open>(\<Sum>x\<in>some_onb_of S. selfbutter x) *\<^sub>V b = Proj S *\<^sub>V b\<close>
+    proof (cases \<open>b \<in> some_onb_of S\<close>)
+      case True
+      have \<open>(\<Sum>x\<in>some_onb_of S. selfbutter x) *\<^sub>V b = (\<Sum>x\<in>some_onb_of S. selfbutter x *\<^sub>V b)\<close>
+        using cblinfun.sum_left by blast
+      also have \<open>\<dots> = b\<close>
+        apply (subst sum_single[where i=b])
+        using True apply (auto intro!: simp add: assms some_onb_of_finite_dim) 
+        using is_ortho_set_def apply fastforce
+        using cnorm_eq_1 some_onb_of_normed by force
+      also have \<open>\<dots> = Proj S *\<^sub>V b\<close>
+        apply (rule Proj_fixes_image[symmetric])
+        using True some_onb_of_in_space by blast
+      finally show ?thesis
+        by -
+    next
+      case False
+      have *: \<open>is_orthogonal x b\<close> if \<open>x \<in> some_onb_of S\<close> and \<open>x \<noteq> 0\<close> for x
+      proof -
+        have \<open>x \<in> B\<close>
+          using onb_S_in_B that(1) by fastforce
+        moreover note \<open>b \<in> B\<close>
+        moreover have \<open>x \<noteq> b\<close>
+          using False that(1) by blast
+        moreover note \<open>is_onb B\<close>
+        ultimately show \<open>is_orthogonal x b\<close>
+          by (simp add: is_onb_def is_ortho_set_def)
+      qed
+      have \<open>(\<Sum>x\<in>some_onb_of S. selfbutter x) *\<^sub>V b = (\<Sum>x\<in>some_onb_of S. selfbutter x *\<^sub>V b)\<close>
+        using cblinfun.sum_left by blast
+      also have \<open>\<dots> = 0\<close>
+        by (auto intro!: sum.neutral simp: * )
+      also have \<open>\<dots> = Proj S *\<^sub>V b\<close>
+        apply (rule Proj_0_compl[symmetric])
+        apply (subst S_ccspan)
+        apply (rule mem_ortho_ccspanI)
+        using "*" cinner_zero_right is_orthogonal_sym by blast
+      finally show ?thesis 
+        by -
+    qed
+  qed
+qed
+
+
+
+
+lemma sum_some_onb_of_tc_butterfly:
+  assumes \<open>finite_dim_ccsubspace S\<close>
+  shows \<open>(\<Sum>x\<in>some_onb_of S. tc_butterfly x x) = Abs_trace_class (Proj S)\<close>
+  by (metis (mono_tags, lifting) assms from_trace_class_inverse from_trace_class_sum sum.cong sum_some_onb_of_butterfly tc_butterfly.rep_eq)
+
+
+lemma eigenvalues_nonneg:
+  assumes \<open>a \<ge> 0\<close> and \<open>v \<in> eigenvalues a\<close>
+  shows \<open>v \<ge> 0\<close>
+proof -
+  from assms obtain h where \<open>norm h = 1\<close> and ahvh: \<open>a *\<^sub>V h = v *\<^sub>C h\<close>
+    using unit_eigenvector_ex by blast
+  have \<open>0 \<le> h \<bullet>\<^sub>C a h\<close>
+    by (simp add: assms(1) cinner_pos_if_pos)
+  also have \<open>\<dots> = v * (h \<bullet>\<^sub>C h)\<close>
+    by (simp add: ahvh)
+  also have \<open>\<dots> = v\<close>
+    using \<open>norm h = 1\<close> cnorm_eq_1 by auto
+  finally show \<open>v \<ge> 0\<close>
+    by blast
+qed
+
+(* TODO move *)
+lemma spectral_dec_val_nonneg:
+  assumes \<open>a \<ge> 0\<close>
+  assumes \<open>compact_op a\<close>
+  shows \<open>spectral_dec_val a n \<ge> 0\<close>
+proof -
+  define v where \<open>v = spectral_dec_val a n\<close>
+  wlog non0: \<open>spectral_dec_val a n \<noteq> 0\<close> generalizing v keeping v_def
+    using negation by force
+  have [simp]: \<open>selfadjoint a\<close>
+    using adj_0 assms(1) comparable_hermitean selfadjoint_def by blast
+  have \<open>v \<in> eigenvalues a\<close>
+    by (auto intro!: non0 spectral_dec_val_eigenvalue assms simp: v_def)
+  then show \<open>spectral_dec_val a n \<ge> 0\<close>
+    using assms(1) eigenvalues_nonneg v_def by blast
+qed
+
+lemma Proj_pos[iff]: \<open>Proj S \<ge> 0\<close>
+  apply (rule positive_cblinfun_squareI[where B=\<open>Proj S\<close>])
+  by (simp add: adj_Proj)
+
+lemma abs_op_Proj[simp]: \<open>abs_op (Proj S) = Proj S\<close>
+  by (simp add: abs_op_id_on_pos)
+
+lemma trace_class_Proj: \<open>trace_class (Proj S) \<longleftrightarrow> finite_dim_ccsubspace S\<close>
+proof -
+  define C where \<open>C = some_onb_of S\<close>
+  then obtain B where \<open>is_onb B\<close> and \<open>C \<subseteq> B\<close>
+    using orthonormal_basis_exists some_onb_of_normed by blast
+  have card_C: \<open>card C = cdim (space_as_set S)\<close>
+    by (simp add: C_def some_onb_of_card)
+  have S_C: \<open>S = ccspan C\<close>
+    by (simp add: C_def)
+
+  from \<open>is_onb B\<close>
+  have \<open>trace_class (Proj S) \<longleftrightarrow> ((\<lambda>x. cmod (x \<bullet>\<^sub>C (abs_op (Proj S) *\<^sub>V x))) abs_summable_on B)\<close>
+    by (rule trace_class_iff_summable)
+  also have \<open>\<dots> \<longleftrightarrow> ((\<lambda>x. cmod (x \<bullet>\<^sub>C (Proj S *\<^sub>V x))) abs_summable_on B)\<close>
+    by simp
+  also have \<open>\<dots> \<longleftrightarrow> ((\<lambda>x. 1::real) abs_summable_on C)\<close>
+  proof (rule summable_on_cong_neutral)
+    fix x :: 'a
+    show \<open>norm 1 = 0\<close> if \<open>x \<in> C - B\<close>
+      using that \<open>C \<subseteq> B\<close> by auto
+    show \<open>norm (cmod (x \<bullet>\<^sub>C (Proj S *\<^sub>V x))) = norm (1::real)\<close> if \<open>x \<in> B \<inter> C\<close>
+      apply (subst Proj_fixes_image)
+      using C_def Int_absorb1 that \<open>is_onb B\<close>
+      by (auto simp: is_onb_def cnorm_eq_1)
+    show \<open>norm (cmod (x \<bullet>\<^sub>C (Proj S *\<^sub>V x))) = 0\<close> if \<open>x \<in> B - C\<close>
+      apply (subst Proj_0_compl)
+       apply (subst S_C)
+       apply (rule mem_ortho_ccspanI)
+      using that \<open>is_onb B\<close> \<open>C \<subseteq> B\<close>
+      by (force simp: is_onb_def is_ortho_set_def)+
+  qed
+  also have \<open>\<dots> \<longleftrightarrow> finite C\<close>
+    using infsum_diverge_constant[where A=C and c=\<open>1::real\<close>]
+    by auto
+  also have \<open>\<dots> \<longleftrightarrow> finite_dim_ccsubspace S\<close>
+    by (metis C_def S_C ccspan_finite_dim some_onb_of_finite_dim)
+  finally show ?thesis
+    by -
+qed
+
+lemma not_trace_class_trace0: \<open>trace a = 0\<close> if \<open>\<not> trace_class a\<close>
+  using that by (simp add: trace_def)
+
+
+(* lemma not_csubspace_cdim_0: \<open>cdim S = 0\<close> if \<open>\<not> csubspace S\<close>
+proof (rule ccontr)
+  assume \<open>cdim S \<noteq> 0\<close>
+  then obtain B
+    apply (auto intro!: simp: complex_vector.dim_def) *)
+
+
+lemma trace_Proj: \<open>trace (Proj S) = cdim (space_as_set S)\<close>
+proof (cases \<open>finite_dim_ccsubspace S\<close>)
+  case True
+  define C where \<open>C = some_onb_of S\<close>
+  then obtain B where \<open>is_onb B\<close> and \<open>C \<subseteq> B\<close>
+    using orthonormal_basis_exists some_onb_of_normed by blast
+  have [simp]: \<open>finite C\<close>
+    using C_def True some_onb_of_finite_dim by blast
+  have card_C: \<open>card C = cdim (space_as_set S)\<close>
+    by (simp add: C_def some_onb_of_card)
+  have S_C: \<open>S = ccspan C\<close>
+    by (simp add: C_def)
+
+  from True have \<open>trace_class (Proj S)\<close>
+    by (simp add: trace_class_Proj)
+  with \<open>is_onb B\<close> have \<open>((\<lambda>e. e \<bullet>\<^sub>C (Proj S *\<^sub>V e)) has_sum trace (Proj S)) B\<close>
+    by (rule trace_has_sum)
+  then have \<open>((\<lambda>e. 1) has_sum trace (Proj S)) C\<close>
+  proof (rule has_sum_cong_neutral[THEN iffD1, rotated -1])
+    fix x :: 'a
+    show \<open>1 = 0\<close> if \<open>x \<in> C - B\<close>
+      using that \<open>C \<subseteq> B\<close> by auto
+    show \<open>x \<bullet>\<^sub>C (Proj S *\<^sub>V x) = 1\<close> if \<open>x \<in> B \<inter> C\<close>
+      apply (subst Proj_fixes_image)
+      using C_def Int_absorb1 that \<open>is_onb B\<close>
+      by (auto simp: is_onb_def cnorm_eq_1)
+    show \<open>is_orthogonal x (Proj S *\<^sub>V x)\<close> if \<open>x \<in> B - C\<close>
+      apply (subst Proj_0_compl)
+       apply (subst S_C)
+       apply (rule mem_ortho_ccspanI)
+      using that \<open>is_onb B\<close> \<open>C \<subseteq> B\<close>
+      by (force simp: is_onb_def is_ortho_set_def)+
+  qed
+  then have \<open>trace (Proj S) = card C\<close>
+    using has_sum_constant[OF \<open>finite C\<close>, of 1]
+    apply simp
+    using has_sum_unique by blast
+  also have \<open>\<dots> = cdim (space_as_set S)\<close>
+    using card_C by presburger
+  finally show ?thesis
+    by -
+next
+  case False
+  then have \<open>\<not> trace_class (Proj S)\<close>
+    using trace_class_Proj by blast
+  then have \<open>trace (Proj S) = 0\<close>
+    by (rule not_trace_class_trace0)
+  moreover from False have \<open>cdim (space_as_set S) = 0\<close>
+    apply transfer
+    by (simp add: cdim_infinite_0)
+  ultimately show ?thesis
+    by simp
+qed
+
+lemma butterfly_spectral_dec_vec_tc_has_sum:
+  (* assumes \<open>selfadjoint_tc t\<close> *)
+  assumes \<open>t \<ge> 0\<close>
+(* TODO: wrong - only positive t *)
+  shows \<open>((\<lambda>v. tc_butterfly v v) has_sum t) (spectral_dec_vecs_tc t)\<close>
+proof -
+  define t' where \<open>t' = from_trace_class t\<close>
+  note power2_csqrt[unfolded power2_eq_square, simp]
+  note Reals_cnj_iff[simp]
+  have [simp]: \<open>compact_op t'\<close>
+    by (simp add: t'_def)
+  from assms have \<open>selfadjoint_tc t\<close>
+    apply transfer
+    by (simp add: comparable_hermitean selfadjoint_def)
+  have spectral_real[simp]: \<open>spectral_dec_val t' n \<in> \<real>\<close> for n
+    apply (rule spectral_dec_val_real)
+    using \<open>selfadjoint_tc t\<close> by (auto intro!: trace_class_compact simp: selfadjoint_tc.rep_eq t'_def)
+
+  have *: \<open>((\<lambda>(n,v). tc_butterfly v v) has_sum t) (SIGMA n:UNIV. (*\<^sub>C) (csqrt (spectral_dec_val t' n)) ` some_onb_of (spectral_dec_space t' n))\<close>
+  proof (rule has_sum_SigmaI[where g=\<open>\<lambda>n. spectral_dec_val t' n *\<^sub>C spectral_dec_proj_tc t n\<close>])
+    have \<open>spectral_dec_val t' n \<ge> 0\<close> for n
+      by (simp add: assms from_trace_class_pos spectral_dec_val_nonneg t'_def)
+    then have [simp]: \<open>cnj (csqrt (spectral_dec_val t' n)) * csqrt (spectral_dec_val t' n) = spectral_dec_val t' n\<close> for n
+      apply (auto simp add: csqrt_of_real_nonneg less_eq_complex_def)
+      by (metis of_real_Re of_real_mult spectral_real sqrt_sqrt)
+    have sum: \<open>(\<Sum>y\<in>(\<lambda>x. csqrt (spectral_dec_val t' n) *\<^sub>C x) ` some_onb_of (spectral_dec_space t' n). tc_butterfly y y) = spectral_dec_val t' n *\<^sub>C spectral_dec_proj_tc t n\<close> for n
+    proof (cases \<open>spectral_dec_val t' n = 0\<close>)
+      case True
+      then show ?thesis
+        by (metis (mono_tags, lifting) csqrt_0 imageE scaleC_eq_0_iff sum.neutral tc_butterfly_scaleC_left)
+    next
+      case False
+      then have \<open>inj_on (\<lambda>x. csqrt (spectral_dec_val t' n) *\<^sub>C x) X\<close> for X :: \<open>'a set\<close>
+        by (meson csqrt_eq_0 inj_scaleC)
+      then show ?thesis 
+        by (simp add: sum.reindex False spectral_dec_space_finite_dim sum_some_onb_of_tc_butterfly
+            spectral_dec_proj_def spectral_dec_proj_tc_def flip: scaleC_sum_right t'_def)
+    qed
+    then show \<open>((\<lambda>y. case (n, y) of (n, v) \<Rightarrow> tc_butterfly v v) has_sum spectral_dec_val t' n *\<^sub>C spectral_dec_proj_tc t n)
+          ((*\<^sub>C) (csqrt (spectral_dec_val t' n)) ` some_onb_of (spectral_dec_space t' n))\<close> for n
+      by (auto intro!: has_sum_finiteI finite_imageI some_onb_of_finite_dim spectral_dec_space_finite_dim simp: t'_def)
+    show \<open>((\<lambda>n. spectral_dec_val t' n *\<^sub>C spectral_dec_proj_tc t n) has_sum t) UNIV\<close>
+      by (auto intro!: spectral_dec_has_sum_tc \<open>selfadjoint_tc t\<close> simp: t'_def simp flip: spectral_dec_val_tc.rep_eq)
+    show \<open>(\<lambda>(n, v). tc_butterfly v v) summable_on (SIGMA n:UNIV. (*\<^sub>C) (csqrt (spectral_dec_val t' n)) ` some_onb_of (spectral_dec_space t' n))\<close>
+    proof -
+      have inj: \<open>inj_on ((*\<^sub>C) (csqrt (spectral_dec_val t' n))) (some_onb_of (spectral_dec_space t' n))\<close> for n
+      proof (cases \<open>spectral_dec_val t' n = 0\<close>)
+        case True
+        then have \<open>spectral_dec_space t' n = 0\<close>
+          using spectral_dec_space_0 by blast
+        then have \<open>some_onb_of (spectral_dec_space t' n) = {}\<close>
+          using some_onb_of_0 by auto
+        then show ?thesis
+          by simp
+      next
+        case False
+        then show ?thesis
+          by (auto intro!: inj_scaleC)
+      qed
+      have 1: \<open>(\<lambda>x. tc_butterfly x x) abs_summable_on (\<lambda>xa. csqrt (spectral_dec_val t' n) *\<^sub>C xa) ` some_onb_of (spectral_dec_space t' n)\<close> for n
+        by (auto intro!: summable_on_finite some_onb_of_finite_dim spectral_dec_space_finite_dim simp: t'_def)
+      (* have \<open>(\<Sum>\<^sub>\<infinity>x\<in>some_onb_of (spectral_dec_space t' h). norm (tc_butterfly x x)) = spectral_dec_proj t' h\<close> for h *)
+      have \<open>(\<lambda>n. cmod (spectral_dec_val t' n) * (\<Sum>\<^sub>\<infinity>h\<in>some_onb_of (spectral_dec_space t' n). norm (tc_butterfly h h))) abs_summable_on UNIV\<close>
+      proof -
+        have *: \<open>(\<Sum>\<^sub>\<infinity>h\<in>some_onb_of (spectral_dec_space t' n). norm (tc_butterfly h h)) = norm (spectral_dec_proj_tc t n)\<close> for n
+        proof -
+          have \<open>(\<Sum>\<^sub>\<infinity>h\<in>some_onb_of (spectral_dec_space t' n). norm (tc_butterfly h h))
+              = (\<Sum>\<^sub>\<infinity>h\<in>some_onb_of (spectral_dec_space t' n). 1)\<close>
+            by (simp add: infsum_cong norm_tc_butterfly some_onb_of_normed)
+          also have \<open>\<dots> = card (some_onb_of (spectral_dec_space t' n))\<close>
+            by simp
+          also have \<open>\<dots> = cdim (space_as_set (spectral_dec_space t' n))\<close>
+            by (simp add: some_onb_of_card)
+          also have \<open>\<dots> = norm (spectral_dec_proj_tc t n)\<close>
+            unfolding t'_def 
+            apply transfer
+            by (metis of_real_eq_iff of_real_of_nat_eq spectral_dec_proj_def spectral_dec_proj_pos
+                trace_Proj trace_norm_pos)
+          finally show ?thesis
+            by -
+        qed
+        show ?thesis
+          apply (simp add: * )
+          by (metis (no_types, lifting) \<open>selfadjoint_tc t\<close> norm_scaleC spectral_dec_summable_tc
+              spectral_dec_val_tc.rep_eq summable_on_cong t'_def)
+      qed
+      then have 2: \<open>(\<lambda>n. \<Sum>\<^sub>\<infinity>v\<in>(*\<^sub>C) (csqrt (spectral_dec_val t' n)) ` some_onb_of (spectral_dec_space t' n).
+            norm (tc_butterfly v v)) abs_summable_on UNIV\<close>
+        apply (subst infsum_reindex)
+        by (auto intro!: inj simp: o_def infsum_cmult_right' norm_mult (* inj_on_def *) simp del: real_norm_def)
+      show ?thesis
+        apply (rule abs_summable_summable)
+        apply (rule abs_summable_on_Sigma_iff[THEN iffD2])
+        using 1 2 by auto
+    qed
+  qed
+  have \<open>((\<lambda>v. tc_butterfly v v) has_sum t) (\<Union>n. (*\<^sub>C) (csqrt (spectral_dec_val t' n)) ` some_onb_of (spectral_dec_space t' n))\<close>
+  proof -
+    have **: \<open>(\<Union>n. (*\<^sub>C) (csqrt (spectral_dec_val t' n)) ` some_onb_of (spectral_dec_space t' n)) =
+              snd ` (SIGMA n:UNIV. (*\<^sub>C) (csqrt (spectral_dec_val t' n)) ` some_onb_of (spectral_dec_space t' n))\<close>
+      by force
+    have inj: \<open>inj_on snd (SIGMA n:UNIV. (\<lambda>x. csqrt (spectral_dec_val t' n) *\<^sub>C x) ` some_onb_of (spectral_dec_space t' n))\<close>
+    proof (rule inj_onI)
+      fix nh assume nh: \<open>nh \<in> (SIGMA n:UNIV. (\<lambda>x. csqrt (spectral_dec_val t' n) *\<^sub>C x) ` some_onb_of (spectral_dec_space t' n))\<close>
+      fix mg assume mg: \<open>mg \<in> (SIGMA m:UNIV. (\<lambda>x. csqrt (spectral_dec_val t' m) *\<^sub>C x) ` some_onb_of (spectral_dec_space t' m))\<close>
+      assume \<open>snd nh = snd mg\<close>
+      from nh obtain n h where nh': \<open>nh = (n, csqrt (spectral_dec_val t' n) *\<^sub>C h)\<close> and h: \<open>h \<in> some_onb_of (spectral_dec_space t' n)\<close>
+        by blast
+      from mg obtain m g where mg': \<open>mg = (m, csqrt (spectral_dec_val t' m) *\<^sub>C g)\<close> and g: \<open>g \<in> some_onb_of (spectral_dec_space t' m)\<close>
+        by blast
+      have \<open>n = m\<close>
+      proof (rule ccontr)
+        assume [simp]: \<open>n \<noteq> m\<close>
+        from h have val_not_0: \<open>spectral_dec_val t' n \<noteq> 0\<close>
+          using some_onb_of_0 spectral_dec_space_0 by fastforce
+        from \<open>snd nh = snd mg\<close> nh' mg' have eq: \<open>csqrt (spectral_dec_val t' n) *\<^sub>C h = csqrt (spectral_dec_val t' m) *\<^sub>C g\<close>
+          by simp
+        from \<open>n \<noteq> m\<close> have \<open>orthogonal_spaces (spectral_dec_space t' n) (spectral_dec_space t' m)\<close>
+          apply (rule spectral_dec_space_orthogonal[rotated -1])
+          using \<open>selfadjoint_tc t\<close> by (auto intro!: trace_class_compact simp: t'_def selfadjoint_tc.rep_eq)
+        with h g have \<open>is_orthogonal h g\<close>
+          using orthogonal_spaces_ccspan by fastforce
+        then have \<open>is_orthogonal (csqrt (spectral_dec_val t' n) *\<^sub>C h) (csqrt (spectral_dec_val t' m) *\<^sub>C g)\<close>
+          by force
+        with eq have val_h_0: \<open>csqrt (spectral_dec_val t' n) *\<^sub>C h = 0\<close>
+          by simp
+        with val_not_0 have \<open>h = 0\<close>
+          by fastforce
+        with h show False
+          using is_ortho_set_some_onb_of
+          by (auto simp: is_ortho_set_def)
+      qed
+      with \<open>snd nh = snd mg\<close> nh' mg' show \<open>nh = mg\<close>
+        by simp
+    qed
+    from * show ?thesis
+      apply (subst ** )
+      apply (rule has_sum_reindex[THEN iffD2, rotated])
+      by (auto intro!: inj simp: o_def case_prod_unfold)
+  qed
+  then show ?thesis
+    by (simp add: spectral_dec_vecs_tc.rep_eq spectral_dec_vecs_def flip: t'_def)
+qed
+
+lemma spectral_dec_vec_tc_norm_summable:
+  assumes \<open>t \<ge> 0\<close>
+  shows \<open>(\<lambda>v. (norm v)\<^sup>2) summable_on (spectral_dec_vecs_tc t)\<close>
+proof -
+  from butterfly_spectral_dec_vec_tc_has_sum[OF assms]
+  have \<open>(\<lambda>v. tc_butterfly v v) summable_on (spectral_dec_vecs_tc t)\<close>
+    using has_sum_imp_summable by blast
+  then have \<open>(\<lambda>v. trace_tc (tc_butterfly v v)) summable_on (spectral_dec_vecs_tc t)\<close>
+    apply (rule summable_on_bounded_linear[rotated])
+    by (simp add: bounded_clinear.bounded_linear)
+  moreover have *: \<open>trace_tc (tc_butterfly v v) = of_real ((norm v)\<^sup>2)\<close> for v :: 'a
+    by (metis norm_tc_butterfly norm_tc_pos power2_eq_square tc_butterfly_pos)
+  ultimately have \<open>(\<lambda>v. complex_of_real ((norm v)\<^sup>2)) summable_on (spectral_dec_vecs_tc t)\<close>
+    by simp
+  then show ?thesis
+    by (smt (verit, ccfv_SIG) *
+        complex_Re_le_cmod norm_tc_butterfly of_real_hom.hom_power power2_eq_square power2_norm_eq_cinner 
+        power2_norm_eq_cinner' summable_on_cong summable_on_iff_abs_summable_on_complex trace_tc_norm)
+qed
+
+
+(* lemma spectral_dec_vec_tc_norm_summable:
+  \<open>(\<lambda>n. (norm (spectral_dec_vec_tc t n))\<^sup>2) summable_on UNIV\<close>
+  by xxx *)
+
+
+(* TODO move next to *) thm one_dim_loewner_order
+lemma one_dim_loewner_order_strict: \<open>A > B \<longleftrightarrow> one_dim_iso A > (one_dim_iso B :: complex)\<close> for A B :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a::{chilbert_space, one_dim}\<close>
+  by (auto simp: less_cblinfun_def one_dim_loewner_order)
+
+(* TODO move to One_Dim *)
+lemma one_dim_cblinfun_zero_le_one: \<open>0 < (1 :: 'a::one_dim \<Rightarrow>\<^sub>C\<^sub>L 'a)\<close>
+  by (simp add: one_dim_loewner_order_strict)
+lemma one_dim_cblinfun_one_pos: \<open>0 \<le> (1 :: 'a::one_dim \<Rightarrow>\<^sub>C\<^sub>L 'a)\<close>
+  by (simp add: one_dim_loewner_order)
+
+lemma pos_selfadjoint: \<open>selfadjoint a\<close> if \<open>a \<ge> 0\<close>
+  using adj_0 comparable_hermitean selfadjoint_def that by blast
+
+lift_definition constant_kraus_family :: \<open>('b,'b) trace_class \<Rightarrow> ('a::one_dim, 'b::chilbert_space, unit) kraus_family\<close> is
+  \<open>\<lambda>t::('b,'b) trace_class. if t \<ge> 0 then
+    (\<lambda>v. (vector_to_cblinfun v,())) ` spectral_dec_vecs_tc t
+  else {}\<close>
+proof (rule CollectI, rename_tac t)
+(* TODO why does this wlog not work:
+
+  fix t :: \<open>('b,'b) trace_class\<close>
+  let ?thesis = \<open>kraus_family (if selfadjoint_tc t then range (\<lambda>n. (vector_to_cblinfun (spectral_dec_vec_tc t n) :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b, n)) else {})\<close>
+  wlog self_adjoint: \<open>selfadjoint_tc t\<close> 
+    goal ?thesis
+    using hypothesis by auto
+  fix t :: \<open>('b,'b) trace_class\<close>
+  assume  \<open>selfadjoint_tc t\<close> 
+  show \<open>kraus_family
+          (if selfadjoint_tc t then range (\<lambda>n. (vector_to_cblinfun (spectral_dec_vec_tc t n) :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b, n)) else {})\<close>
+  show \<open>kraus_family (if selfadjoint_tc t then range (\<lambda>n. (vector_to_cblinfun (spectral_dec_vec_tc t n) :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b, n)) else {})\<close>
+*)
+  fix t :: \<open>('b,'b) trace_class\<close>
+  show \<open>kraus_family (if t \<ge> 0 then (\<lambda>v. (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b,())) ` spectral_dec_vecs_tc t else {})\<close>
+  proof (cases \<open>t \<ge> 0\<close>)
+    case True
+    have \<open>kraus_family ((\<lambda>v. (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b,())) ` spectral_dec_vecs_tc t)\<close>
+    proof (intro kraus_familyI bdd_aboveI, rename_tac E)
+      fix E :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+      assume \<open>E \<in> (\<lambda>F. \<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) ` {F. finite F \<and> F \<subseteq> (\<lambda>v. (vector_to_cblinfun v, ())) ` spectral_dec_vecs_tc t}\<close>
+      then obtain F where E_def: \<open>E = (\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E)\<close> and \<open>finite F\<close> and \<open>F \<subseteq> (\<lambda>v. (vector_to_cblinfun v, ())) ` spectral_dec_vecs_tc t\<close>
+        by blast
+      then obtain F' where F_def: \<open>F = (\<lambda>v. (vector_to_cblinfun v, ())) ` F'\<close> and \<open>finite F'\<close> and F'_subset: \<open>F' \<subseteq> spectral_dec_vecs_tc t\<close>
+        by (meson finite_subset_image)
+      have inj: \<open>inj_on (\<lambda>v. (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b, ())) F'\<close>
+      proof (rule inj_onI, rule ccontr)
+        fix x y
+        assume \<open>x \<in> F'\<close> and \<open>y \<in> F'\<close>
+        assume eq: \<open>(vector_to_cblinfun x :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b, ()) = (vector_to_cblinfun y, ())\<close>
+        assume \<open>x \<noteq> y\<close>
+        have ortho: \<open>is_ortho_set (spectral_dec_vecs (from_trace_class t))\<close>
+          using True
+          by (auto intro!: spectral_dec_vecs_ortho trace_class_compact pos_selfadjoint
+              simp: selfadjoint_tc.rep_eq from_trace_class_pos)
+        with \<open>x \<noteq> y\<close> F'_subset \<open>x \<in> F'\<close> \<open>y \<in> F'\<close>
+        have \<open>x \<bullet>\<^sub>C y = 0\<close>
+          by (auto simp: spectral_dec_vecs_tc.rep_eq is_ortho_set_def)
+        then have \<open>(vector_to_cblinfun x :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b)* o\<^sub>C\<^sub>L (vector_to_cblinfun y :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b) = 0\<close>
+          by simp
+        with eq have \<open>(vector_to_cblinfun x :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b)= 0\<close>
+          by force
+        then have \<open>norm x = 0\<close>
+          by (smt (verit, del_insts) norm_vector_to_cblinfun norm_zero)
+        with ortho F'_subset \<open>x \<in> F'\<close> show False
+          by (auto simp: spectral_dec_vecs_tc.rep_eq is_ortho_set_def)
+      qed
+      have \<open>E = (\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E)\<close>
+        by (simp add: E_def)
+      also have \<open>\<dots> = (\<Sum>v\<in>F'. (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b)* o\<^sub>C\<^sub>L vector_to_cblinfun v)\<close>
+        unfolding F_def
+        apply (subst sum.reindex)
+        by (auto intro!: inj)
+      also have \<open>\<dots> = (\<Sum>v\<in>F'. ((norm (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b))\<^sup>2) *\<^sub>R 1)\<close>
+        by (auto intro!: sum.cong simp: power2_norm_eq_cinner scaleR_scaleC)
+      also have \<open>\<dots> = (\<Sum>v\<in>F'. (norm (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b))\<^sup>2) *\<^sub>R 1\<close>
+        by (metis scaleR_left.sum)
+      also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>v\<in>F'. (norm (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b))\<^sup>2) *\<^sub>R 1\<close>
+        using \<open>finite F'\<close> by force
+      also have \<open>\<dots> \<le> (\<Sum>\<^sub>\<infinity>v\<in>spectral_dec_vecs_tc t. (norm (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b))\<^sup>2) *\<^sub>R 1\<close>
+        apply (intro scaleR_right_mono infsum_mono_neutral)
+        using F'_subset
+        by (auto intro!: one_dim_cblinfun_one_pos spectral_dec_vec_tc_norm_summable True
+            simp: \<open>finite F'\<close> )
+      finally show \<open>E \<le> (\<Sum>\<^sub>\<infinity>v\<in>spectral_dec_vecs_tc t. (norm (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b))\<^sup>2) *\<^sub>R 1\<close>
+        by -
+    qed
+    with True show ?thesis
+      by simp
+  next
+    case False
+    then show ?thesis
+      by simp
+  qed
+qed
+
 
 end

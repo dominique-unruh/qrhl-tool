@@ -1,5 +1,5 @@
 theory Programs
-  imports QRHL_Core Expressions Wlog.Wlog Kraus_Maps CQ_Operators
+  imports QRHL_Core Expressions Wlog.Wlog Kraus_Maps CQ_Operators2
 begin
 
 no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
@@ -239,13 +239,14 @@ lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CREGISTER_o
 lemma localvars_empty: "localvars empty_cregister empty_qregister P = block P"
   sorry
 
-typedef program_state = \<open>(cl,qu) cq_operator\<close>
+type_synonym program_state = \<open>(cl,qu) cq_operator\<close>
+type_synonym program_semantics = \<open>(cl,qu,cl,qu) cq_kraus_family\<close>
 
-fun denotation_raw :: "raw_program \<Rightarrow> (cl,qu,cl,qu) cq_kraus_map" where
-  denotation_raw_Skip: \<open>denotation_raw Skip = cq_kraus_map_id\<close>
-| denotation_raw_Seq: \<open>denotation_raw (Seq c d) = cq_kraus_map_comp (denotation_raw d) (denotation_raw c)\<close>
+fun denotation_raw :: "raw_program \<Rightarrow> program_semantics" where
+  denotation_raw_Skip: \<open>denotation_raw Skip = cq_kraus_family_id\<close>
+| denotation_raw_Seq: \<open>denotation_raw (Seq c d) = cq_kraus_family_comp (denotation_raw d) (denotation_raw c)\<close>
 | denotation_raw_Sample: \<open>denotation_raw (Sample e) = 
-      cq_operator_cases (\<lambda>c \<rho>. cq_from_distrib (e c) \<rho>) \<rho>\<close>
+      cq_operator_cases (\<lambda>c \<rho>. cq_diagonal_operator (prob (e c)) \<rho>) \<rho>\<close>
 
 fun denotation_raw :: "raw_program \<Rightarrow> program_state \<Rightarrow> program_state" where
   denotation_raw_Skip: \<open>denotation_raw Skip \<rho> = \<rho>\<close>

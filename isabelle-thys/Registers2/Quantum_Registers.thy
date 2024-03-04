@@ -811,7 +811,8 @@ proof (cases \<open>qregister F\<close>)
   note [simp] = this
   show ?thesis
     apply (rule abs_opI)
-    by (simp_all add: abs_op_square abs_op_pos apply_qregister_pos flip: apply_qregister_adj qregister_compose)
+    by (simp_all add: abs_op_square abs_op_pos apply_qregister_pos flip: apply_qregister_adj qregister_compose
+        del: adj_abs_op)
 next
   case False
   then show ?thesis

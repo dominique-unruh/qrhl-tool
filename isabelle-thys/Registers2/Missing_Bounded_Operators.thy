@@ -1368,6 +1368,9 @@ proof (rule CollectI)
   qed
 qed
 
+lemma diagonal_operator_tc_invalid: \<open>\<not> f abs_summable_on UNIV \<Longrightarrow> diagonal_operator_tc f = 0\<close>
+  apply (transfer fixing: f) by simp
+
 lemma from_trace_class_diagonal_operator_tc:
   assumes \<open>f abs_summable_on UNIV\<close>
   shows \<open>from_trace_class (diagonal_operator_tc f) = diagonal_operator f\<close>

@@ -306,19 +306,19 @@ proof -
     have \<open>Rep_QREGISTER (QREGISTER_of (qregister_pair F G)) = apply_qregister (qregister_pair F G) ` UNIV\<close>
       by (simp add: QREGISTER_of.rep_eq)
     also have \<open>\<dots> = apply_qregister (qregister_pair F G) ` 
-                    (weak_star_topology closure_of cspan {butterfly (ket \<xi>) (ket \<eta>) |\<xi> \<eta>. True})\<close>
-      apply (subst butterkets_weak_star_dense) by simp
+                    (weak_star_topology closure_of cspan (range (\<lambda>(\<xi>, \<eta>). butterfly (ket \<xi>) (ket \<eta>))))\<close>
+      by simp
     also have \<open>\<dots> \<subseteq> weak_star_topology closure_of 
-                        apply_qregister (qregister_pair F G) ` cspan {butterfly (ket \<xi>) (ket \<eta>) |\<xi> \<eta>. True}\<close>
+                        apply_qregister (qregister_pair F G) ` cspan (range (\<lambda>(\<xi>, \<eta>). butterfly (ket \<xi>) (ket \<eta>)))\<close>
       apply (rule continuous_map_image_closure_subset)
       using qregister.rep_eq that weak_star_cont_register by blast
     also have \<open>\<dots> = weak_star_topology closure_of cspan
-                        (apply_qregister (qregister_pair F G) ` {butterfly (ket \<xi>) (ket \<eta>) |\<xi> \<eta>. True})\<close>
+                        (apply_qregister (qregister_pair F G) ` (range (\<lambda>(\<xi>, \<eta>). butterfly (ket \<xi>) (ket \<eta>))))\<close>
       apply (subst complex_vector.linear_span_image)
       by simp_all
     also have \<open>\<dots> = weak_star_topology closure_of cspan
                         (apply_qregister (qregister_pair F G) ` {butterfly (ket (a,b)) (ket (c,d)) |a b c d. True})\<close>
-      apply (rule arg_cong[where x=\<open>{butterfly (ket \<xi>) (ket \<eta>) |\<xi> \<eta>. True}\<close>])
+      apply (rule arg_cong[where x=\<open>range (\<lambda>(\<xi>, \<eta>). butterfly (ket \<xi>) (ket \<eta>))\<close>])
       by auto
     also have \<open>\<dots> = weak_star_topology closure_of cspan
                         {apply_qregister F (butterfly (ket a) (ket c)) o\<^sub>C\<^sub>L apply_qregister G (butterfly (ket b) (ket d)) |a b c d. True}\<close>
@@ -657,17 +657,17 @@ proof -
       apply (subst unitary_adj_inv)
       by (simp_all add: bij_is_surj inv_f_eq surj_f_inv_f unitary_inj)
     have bij_sandwich_G: \<open>bij (sandwich G)\<close>
-      by (auto intro!: o_bij[where g=\<open>sandwich (G*)\<close>] simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
+      by (auto intro!: o_bij[where g=\<open>sandwich (G*)\<close>] simp flip: sandwich_compose cblinfun_compose.rep_eq)
     have inv_sandwich_G: \<open>inv (sandwich G) = sandwich (G*)\<close>
-      by (auto intro!: inv_unique_comp simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
+      by (auto intro!: inv_unique_comp simp flip: sandwich_compose cblinfun_compose.rep_eq)
 
     have \<open>\<FF> = sandwich V ` range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
       by (simp add: \<FF>_def F_decomp image_image)
     also have \<open>\<dots> = sandwich V ` {a. actual_qregister_range_aux id a}\<close>
       by (simp add: Collect_actual_qregister_range_aux_id)
     also have \<open>\<dots> = sandwich U ` sandwich G ` {a. actual_qregister_range_aux id a}\<close>
-      by (simp add: U_def image_image sandwich_compose cblinfun_assoc_right unitaryD1
-          flip: cblinfun_apply_cblinfun_compose)
+      by (simp add: U_def image_image cblinfun_assoc_right unitaryD1
+          flip: cblinfun_apply_cblinfun_compose sandwich_compose)
     also have \<open>\<dots> = sandwich U ` {a. actual_qregister_range_aux id (sandwich (G*) a)}\<close>
       by (simp add: bij_image_Collect_eq bij_sandwich_G inv_sandwich_G)
     also have \<open>\<dots> = sandwich U ` {a. actual_qregister_range_aux (inv g) a}\<close>
@@ -765,9 +765,9 @@ proof (rule with_typeI)
       apply (subst unitary_adj_inv)
       by (simp_all add: \<open>bij f'\<close> bij_is_surj inv_f_eq surj_f_inv_f unitary_inj)
     have bij_sandwich_Vadj: \<open>bij (sandwich (V*))\<close>
-      by (auto intro!: o_bij[where g=\<open>sandwich V\<close>] simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
+      by (auto intro!: o_bij[where g=\<open>sandwich V\<close>] simp flip: sandwich_compose cblinfun_compose.rep_eq)
     have inv_sandwich_Vadj: \<open>inv (sandwich (V*)) = sandwich V\<close>
-      by (auto intro!: inv_unique_comp simp: sandwich_compose simp flip: cblinfun_compose.rep_eq)
+      by (auto intro!: inv_unique_comp simp flip: sandwich_compose simp flip: cblinfun_compose.rep_eq)
 
     define F where \<open>F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L V*)) qFst\<close>
     have \<open>qregister F\<close>
@@ -782,7 +782,7 @@ proof (rule with_typeI)
 
       have \<open>range (apply_qregister F) = sandwich U ` sandwich (V*) ` range (\<lambda>x. x \<otimes>\<^sub>o id_cblinfun)\<close>
         by (auto simp add: F_def apply_qregister_fst apply_qregister_transform_qregister \<open>unitary U\<close>
-            simp flip: sandwich_compose)
+            sandwich_compose)
       also have \<open>\<dots> = sandwich U ` sandwich (V*) ` {a. actual_qregister_range_aux id a}\<close>
         by (simp add: Collect_actual_qregister_range_aux_id)
       also have \<open>\<dots> = sandwich U ` {a. actual_qregister_range_aux id (sandwich V a)}\<close>
