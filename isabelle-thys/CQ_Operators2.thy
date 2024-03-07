@@ -2,7 +2,8 @@ theory CQ_Operators2
   imports Kraus_Maps
 begin
 
-definition \<open>measure_first = kraus_family_tensor (complete_measurement (range ket)) kraus_family_id\<close>
+definition \<open>measure_first =
+  kraus_family_map_outcome (\<lambda>(out,_). inv ket out) (kraus_family_tensor (complete_measurement (range ket)) kraus_family_id)\<close>
 
 lemma measure_first_idem[simp]: \<open>kraus_family_map measure_first (kraus_family_map measure_first \<rho>) = kraus_family_map measure_first \<rho>\<close>
   apply (rule fun_cong[where x=\<rho>])
@@ -205,71 +206,6 @@ proof -
     using D_def by force
 qed
 
-(* TODO move *)
-lemma tc_butterfly_scaleC_infsum:
-  fixes f :: \<open>'a \<Rightarrow> complex\<close>
-  shows \<open>(\<Sum>\<^sub>\<infinity>x. f x *\<^sub>C tc_butterfly (ket x) (ket x)) = diagonal_operator_tc f\<close>
-proof (cases \<open>f abs_summable_on UNIV\<close>)
-  case True
-  then show ?thesis
-    using infsumI tc_butterfly_scaleC_has_sum by fastforce
-next
-  case False
-  then have [simp]: \<open>diagonal_operator_tc f = 0\<close>
-    apply (transfer fixing: f) by simp
-  have \<open>\<not> (\<lambda>x. f x *\<^sub>C tc_butterfly (ket x) (ket x)) summable_on UNIV\<close>
-  proof (rule notI)
-    assume \<open>(\<lambda>x. f x *\<^sub>C tc_butterfly (ket x) (ket x)) summable_on UNIV\<close>
-    then have \<open>(\<lambda>x. trace_tc (f x *\<^sub>C tc_butterfly (ket x) (ket x))) summable_on UNIV\<close>
-      apply (rule summable_on_bounded_linear[rotated])
-      by (simp add: bounded_clinear.bounded_linear)
-    then have \<open>f summable_on UNIV\<close>
-      apply (rule summable_on_cong[THEN iffD1, rotated])
-      apply (transfer' fixing: f)
-      by (simp add: trace_scaleC trace_butterfly)
-    with False
-    show False
-      by (metis summable_on_iff_abs_summable_on_complex)
-  qed
-  then have [simp]: \<open>(\<Sum>\<^sub>\<infinity>x. f x *\<^sub>C tc_butterfly (ket x) (ket x)) = 0\<close>
-    using infsum_not_exists by blast
-  show ?thesis 
-    by simp
-qed
-
-
-lemma complete_measurement_diag[simp]:
-  \<open>kraus_family_map (complete_measurement (range ket)) (diagonal_operator_tc f) = diagonal_operator_tc f\<close>
-proof (cases \<open>f abs_summable_on UNIV\<close>)
-  case True
-  have \<open>kraus_family_map (complete_measurement (range ket)) (diagonal_operator_tc f) = 
-            (\<Sum>\<^sub>\<infinity>x. sandwich_tc (selfbutter (ket x)) (diagonal_operator_tc f))\<close>
-    by (simp add: kraus_family_map_complete_measurement_ket)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x. sandwich_tc (selfbutter (ket x)) (\<Sum>\<^sub>\<infinity>y. f y *\<^sub>C tc_butterfly (ket y) (ket y)))\<close>
-    by (simp add: flip: tc_butterfly_scaleC_infsum)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x. \<Sum>\<^sub>\<infinity>y. sandwich_tc (selfbutter (ket x)) (f y *\<^sub>C tc_butterfly (ket y) (ket y)))\<close>
-    apply (rule infsum_cong)
-    apply (rule infsum_bounded_linear[unfolded o_def, symmetric])
-    by (auto intro!: bounded_clinear.bounded_linear bounded_clinear_sandwich_tc tc_butterfly_scaleC_summable True)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x. \<Sum>\<^sub>\<infinity>y. of_bool (y=x) *\<^sub>C f x *\<^sub>C tc_butterfly (ket x) (ket x))\<close>
-    apply (rule infsum_cong)+
-    apply (transfer' fixing: f)
-    by (simp add: sandwich_apply)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x. f x *\<^sub>C tc_butterfly (ket x) (ket x))\<close>
-    apply (subst infsum_of_bool_scaleC)
-    by simp
-  also have \<open>\<dots> = diagonal_operator_tc f\<close>
-    by (simp add: flip: tc_butterfly_scaleC_infsum)
-  finally show ?thesis
-    by -
-next
-  case False
-  then have \<open>diagonal_operator_tc f = 0\<close>
-    by (rule diagonal_operator_tc_invalid)
-  then show ?thesis
-    by simp
-qed
-
 lift_definition cq_diagonal_operator :: \<open>('c \<Rightarrow> complex) \<Rightarrow> ('q ell2, 'q ell2) trace_class \<Rightarrow> ('c,'q) cq_operator\<close> is
   \<open>\<lambda>f \<rho>\<^sub>q. tc_tensor (diagonal_operator_tc f) \<rho>\<^sub>q\<close>
   by (auto intro!: simp: is_cq_operator_def measure_first_def kraus_family_map_tensor)
@@ -278,5 +214,26 @@ lift_definition cq_diagonal_operator :: \<open>('c \<Rightarrow> complex) \<Righ
   show \<open>tc_tensor (diagonal_operator_tc f) \<rho>\<^sub>q \<in> Collect is_cq_operator\<close>
     apply (auto intro!: simp: is_cq_operator_def measure_first_def kraus_family_map_tensor ) *)
 
+lift_definition cq_kraus_map_cases :: \<open>('c1 \<Rightarrow> ('c1,'q1,'c2,'q2) cq_kraus_family) \<Rightarrow> ('c1,'q1,'c2,'q2) cq_kraus_family\<close> is
+  \<open>\<lambda>\<EE> :: 'c1 \<Rightarrow> (('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family. 
+    kraus_family_flatten (kraus_family_comp_dependent \<EE> measure_first)\<close>
+proof (rule CollectI)
+  fix \<EE> :: \<open>'c1 \<Rightarrow> (('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family\<close>
+  assume \<open>\<EE> x \<in> Collect kraus_family_is_cq\<close> for x
+  write kraus_equivalent (infix "~~" 80)
+  write kraus_family_comp (infixl "oo" 85)
+  have \<open>measure_first oo (kraus_family_flatten (kraus_family_comp_dependent \<EE> measure_first) oo measure_first)
+      ~~ measure_first oo (kraus_family_comp_dependent \<EE> measure_first oo measure_first)\<close>
+    by (intro kraus_family_comp_cong kraus_equivalent_reflI kraus_equivalent_kraus_family_map_outcome_left)
+  also have \<open>\<dots> ~~ measure_first oo kraus_family_comp_dependent \<EE> measure_first oo measure_first\<close>
+try0
+sledgehammer [dont_slice]
+by -
+
+
+apply (simp add: )
+  show \<open>kraus_family_is_cq (kraus_family_flatten (kraus_family_comp_dependent \<EE> measure_first))\<close>
+    unfolding kraus_family_is_cq_def
+apply (auto intro!: simp: )
 
 end
