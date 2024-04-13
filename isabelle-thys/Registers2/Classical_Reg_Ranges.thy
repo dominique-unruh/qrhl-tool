@@ -371,4 +371,8 @@ lemma Cccompatible_CREGISTER_ofI[simp]: \<open>ccompatible F G \<Longrightarrow>
 
 definition \<open>cregister_le F G = (cregister F \<and> cregister G \<and> CREGISTER_of F \<le> CREGISTER_of G)\<close>
 
+lemma map_commutant_empty_cregister_range[simp]: \<open>map_commutant empty_cregister_range = UNIV\<close>
+  by (simp add: map_commutant_def empty_cregister_range_def)
+
+
 end

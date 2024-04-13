@@ -5,263 +5,6 @@ begin
 no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
 no_notation Order.bottom ("\<bottom>\<index>")
 
-lemma summable_Sigma_positive:
-  fixes f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{topological_comm_monoid_add, linorder_topology,
-             ordered_comm_monoid_add, conditionally_complete_linorder}\<close>
-  assumes \<open>\<And>x. x\<in>X \<Longrightarrow> f x summable_on Y x\<close>
-  assumes \<open>(\<lambda>x. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y) summable_on X\<close>
-  assumes \<open>\<And>x y. x \<in> X \<Longrightarrow> y \<in> Y x \<Longrightarrow> f x y \<ge> 0\<close>
-  shows \<open>(\<lambda>(x, y). f x y) summable_on (SIGMA x:X. Y x)\<close>
-proof -
-  have \<open>(\<Sum>(x,y)\<in>F. f x y) \<le> (\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y)\<close> if \<open>F \<subseteq> Sigma X Y\<close> and \<open>finite F\<close> for F
-  proof -
-    define g where \<open>g x y = (if (x,y) \<in> Sigma X Y then f x y else 0)\<close> for x y
-    have g_pos[iff]: \<open>g x y \<ge> 0\<close> for x y
-       using assms by (auto intro!: simp: g_def)
-    have \<open>(\<Sum>(x,y)\<in>F. f x y) = (\<Sum>(x,y)\<in>F. g x y)\<close>
-      by (smt (verit, ccfv_SIG) g_def split_cong subsetD sum.cong that(1))
-    also have \<open>(\<Sum>(x,y)\<in>F. g x y) \<le> (\<Sum>(x,y)\<in>fst ` F \<times> snd ` F. g x y)\<close>
-      using that assms apply (auto intro!: sum_mono2 assms simp: image_iff)
-      by force+
-    also have \<open>\<dots> = (\<Sum>x\<in>fst ` F. \<Sum>y\<in>snd ` F. g x y)\<close>
-      by (metis (no_types, lifting) finite_imageI sum.Sigma sum.cong that(2))
-    also have \<open>\<dots> = (\<Sum>x\<in>fst ` F. \<Sum>\<^sub>\<infinity>y\<in>snd ` F. g x y)\<close>
-      by (metis finite_imageI infsum_finite that(2))
-    also have \<open>\<dots> \<le> (\<Sum>x\<in>fst ` F. \<Sum>\<^sub>\<infinity>y\<in>Y x. g x y)\<close>
-      apply (intro sum_mono infsum_mono_neutral)
-      using assms that
-          apply (auto intro!: simp: )
-       apply (smt (verit, best) Orderings.order_eq_iff SigmaD1 g_def subsetD summable_on_comparison_test)
-      by (simp add: g_def)
-    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>fst ` F. \<Sum>\<^sub>\<infinity>y\<in>Y x. g x y)\<close>
-      using that by (auto intro!: infsum_finite[symmetric] simp: )
-    also have \<open>\<dots> \<le> (\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. g x y)\<close>
-      apply (rule infsum_mono_neutral)
-      using that assms apply (auto intro!: infsum_nonneg simp: )
-      by (metis (mono_tags, lifting) g_def infsum_cong mem_Sigma_iff summable_on_cong)
-    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y)\<close>
-      by (smt (verit, ccfv_threshold) g_def infsum_cong mem_Sigma_iff)
-    finally show ?thesis
-      by -
-  qed
-  then show ?thesis
-    apply (rule_tac nonneg_bdd_above_summable_on)
-    by (auto intro!: assms bdd_aboveI2)
-qed
-
-lemma monotone_convergence_tc:
-  fixes f :: \<open>'b \<Rightarrow> ('a, 'a::chilbert_space) trace_class\<close>
-  assumes bounded: \<open>\<forall>\<^sub>F x in F. trace_tc (f x) \<le> B\<close>
-  assumes pos: \<open>\<forall>\<^sub>F x in F. f x \<ge> 0\<close>
-  assumes increasing: \<open>increasing_filter (filtermap f F)\<close>
-  shows \<open>\<exists>L. (f \<longlongrightarrow> L) F\<close>
-proof -
-  wlog \<open>F \<noteq> \<bottom>\<close>
-    using negation by simp
-  then have \<open>filtermap f F \<noteq> \<bottom>\<close>
-    by (simp add: filtermap_bot_iff)
-  have \<open>mono_on {t::('a,'a) trace_class. t \<ge> 0} trace_tc\<close>
-    by (simp add: ord.mono_onI trace_tc_mono)
-  with increasing
-  have \<open>increasing_filter (filtermap (trace_tc o f) F)\<close>
-    unfolding filtermap_compose
-    apply (rule increasing_filtermap)
-    by (auto intro!: pos simp: eventually_filtermap)
-  then obtain l where l: \<open>((\<lambda>x. trace_tc (f x)) \<longlongrightarrow> l) F\<close>
-    apply atomize_elim
-    apply (rule monotone_convergence_complex)
-    using bounded by (simp_all add: o_def)
-  have \<open>cauchy_filter (filtermap f F)\<close>
-  proof (rule cauchy_filter_metricI)
-    fix e :: real assume \<open>e > 0\<close>
-    define d where \<open>d = e/4\<close>
-    have \<open>\<forall>\<^sub>F x in filtermap f F. dist (trace_tc x) l < d\<close>
-      unfolding eventually_filtermap
-      using l apply (rule tendstoD)
-      using \<open>e > 0\<close> by (simp add: d_def)
-    then obtain P1 where ev_P1: \<open>eventually P1 (filtermap f F)\<close> and P1: \<open>P1 x \<Longrightarrow> dist (trace_tc x) l < d\<close> for x
-      by blast
-    from increasing obtain P2 where ev_P2: \<open>eventually P2 (filtermap f F)\<close> and
-      P2: \<open>P2 x \<Longrightarrow> (\<forall>\<^sub>F z in filtermap f F. z \<ge> x)\<close> for x
-      using increasing_filter_def by blast
-    define P where \<open>P x \<longleftrightarrow> P1 x \<and> P2 x\<close> for x
-    with ev_P1 ev_P2 have ev_P: \<open>eventually P (filtermap f F)\<close>
-      by (auto intro!: eventually_conj simp: P_def[abs_def])
-    have \<open>dist x y < e\<close> if \<open>P x\<close> and \<open>P y\<close> for x y
-    proof -
-      from \<open>P x\<close> have \<open>\<forall>\<^sub>F z in filtermap f F. z \<ge> x\<close>
-        by (simp add: P_def P2)
-      moreover from \<open>P y\<close> have \<open>\<forall>\<^sub>F z in filtermap f F. z \<ge> y\<close>
-        by (simp add: P_def P2)
-      ultimately have \<open>\<forall>\<^sub>F z in filtermap f F. z \<ge> x \<and> z \<ge> y \<and> P1 z\<close>
-        using ev_P1 by (auto intro!: eventually_conj)
-      from eventually_happens'[OF \<open>filtermap f F \<noteq> \<bottom>\<close> this]
-      obtain z where \<open>z \<ge> x\<close> and \<open>z \<ge> y\<close> and \<open>P1 z\<close>
-        by auto
-      have \<open>dist x y \<le> norm (z - x) + norm (z - y)\<close>
-        by (metis (no_types, lifting) diff_add_cancel diff_add_eq_diff_diff_swap dist_trace_class_def norm_minus_commute norm_triangle_sub)
-      also from \<open>x \<le> z\<close> \<open>y \<le> z\<close> have \<open>\<dots> = (trace_tc z - trace_tc x) + (trace_tc z - trace_tc y)\<close>
-        by (metis (no_types, lifting) cross3_simps(16) diff_left_mono diff_self norm_tc_pos of_real_hom.hom_add trace_tc_plus)
-      also from \<open>x \<le> z\<close> \<open>y \<le> z\<close> have \<open>\<dots> = norm (trace_tc z - trace_tc x) + norm (trace_tc z - trace_tc y)\<close>                  
-        by (simp add: Extra_Ordered_Fields.complex_of_real_cmod trace_tc_mono)
-      also have \<open>\<dots> = dist (trace_tc z) (trace_tc x) + dist (trace_tc z) (trace_tc y)\<close>
-        using dist_complex_def by presburger
-      also have \<open>\<dots> \<le> (dist (trace_tc z) l + dist (trace_tc x) l) + (dist (trace_tc z) l + dist (trace_tc y) l)\<close> 
-        apply (intro complex_of_real_mono add_mono)
-        by (simp_all add: dist_triangle2)
-      also from P1 \<open>P1 z\<close> that have \<open>\<dots> < 4 * d\<close>
-        by (smt (verit, best) P_def complex_of_real_strict_mono_iff)
-      also have \<open>\<dots> = e\<close>
-        by (simp add: d_def)
-      finally show ?thesis
-        by simp
-    qed
-    with ev_P show \<open>\<exists>P. eventually P (filtermap f F) \<and> (\<forall>x y. P x \<and> P y \<longrightarrow> dist x y < e)\<close>
-      by blast
-  qed
-  then have \<open>convergent_filter (filtermap f F)\<close>
-  using cauchy_filter_convergent by fastforce
-  then show \<open>\<exists>L. (f \<longlongrightarrow> L) F\<close>
-    by (simp add: convergent_filter_iff filterlim_def)
-qed
-
-
-lemma nonneg_bdd_above_summable_on_tc:
-  fixes f :: \<open>'a \<Rightarrow> ('c::chilbert_space, 'c) trace_class\<close>
-  assumes pos: \<open>\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0\<close>
-  assumes bdd: \<open>bdd_above (trace_tc ` sum f ` {F. F\<subseteq>A \<and> finite F})\<close>
-  shows \<open>f summable_on A\<close>
-proof -
-  have pos': \<open>(\<Sum>x\<in>F. f x) \<ge> 0\<close> if \<open>finite F\<close> and \<open>F \<subseteq> A\<close> for F
-    using that pos
-    by (simp add: basic_trans_rules(31) sum_nonneg)
-  from pos have incr: \<open>increasing_filter (filtermap (sum f) (finite_subsets_at_top A))\<close>
-    by (auto intro!: increasing_filtermap[where X=\<open>{F. finite F \<and> F \<subseteq> A}\<close>] mono_onI sum_mono2)
-  from bdd obtain B where B: \<open>trace_tc (sum f X) \<le> B\<close> if \<open>finite X\<close> and \<open>X \<subseteq> A\<close> for X
-    apply atomize_elim
-    by (auto simp: bdd_above_def)
-  show ?thesis
-    apply (simp add: summable_on_def has_sum_def)
-    by (safe intro!: pos' incr monotone_convergence_tc[where B=B] B
-        eventually_finite_subsets_at_top_weakI)
-qed
-
-
-lemma summable_Sigma_positive_tc:
-  fixes f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> ('c, 'c::chilbert_space) trace_class\<close>
-  assumes \<open>\<And>x. x\<in>X \<Longrightarrow> f x summable_on Y x\<close>
-  assumes \<open>(\<lambda>x. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y) summable_on X\<close>
-  assumes \<open>\<And>x y. x \<in> X \<Longrightarrow> y \<in> Y x \<Longrightarrow> f x y \<ge> 0\<close>
-  shows \<open>(\<lambda>(x, y). f x y) summable_on (SIGMA x:X. Y x)\<close>
-proof -
-  have \<open>trace_tc (\<Sum>(x,y)\<in>F. f x y) \<le> trace_tc (\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y)\<close> if \<open>F \<subseteq> Sigma X Y\<close> and \<open>finite F\<close> for F
-  proof -
-    define g where \<open>g x y = (if (x,y) \<in> Sigma X Y then f x y else 0)\<close> for x y
-    have g_pos[iff]: \<open>g x y \<ge> 0\<close> for x y
-      using assms by (auto intro!: simp: g_def)
-    have g_summable: \<open>g x summable_on Y x\<close> for x
-      by (metis assms(1) g_def mem_Sigma_iff summable_on_0 summable_on_cong)
-    have sum_g_summable: \<open>(\<lambda>x. \<Sum>\<^sub>\<infinity>y\<in>Y x. g x y) summable_on X\<close>
-      by (metis (mono_tags, lifting) SigmaI g_def assms(2) infsum_cong summable_on_cong)
-    have \<open>(\<Sum>(x,y)\<in>F. f x y) = (\<Sum>(x,y)\<in>F. g x y)\<close>
-      by (smt (verit, ccfv_SIG) g_def split_cong subsetD sum.cong that(1))
-    also have \<open>(\<Sum>(x,y)\<in>F. g x y) \<le> (\<Sum>(x,y)\<in>fst ` F \<times> snd ` F. g x y)\<close>
-      using that assms apply (auto intro!: sum_mono2 assms simp: image_iff)
-      by force+
-    also have \<open>\<dots> = (\<Sum>x\<in>fst ` F. \<Sum>y\<in>snd ` F. g x y)\<close>
-      by (metis (no_types, lifting) finite_imageI sum.Sigma sum.cong that(2))
-    also have \<open>\<dots> = (\<Sum>x\<in>fst ` F. \<Sum>\<^sub>\<infinity>y\<in>snd ` F. g x y)\<close>
-      by (metis finite_imageI infsum_finite that(2))
-    also have \<open>\<dots> \<le> (\<Sum>x\<in>fst ` F. \<Sum>\<^sub>\<infinity>y\<in>Y x. g x y)\<close>
-      apply (intro sum_mono infsum_mono_neutral_traceclass)
-      using assms that
-          apply (auto intro!: g_summable)
-      by (simp add: g_def)
-    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>fst ` F. \<Sum>\<^sub>\<infinity>y\<in>Y x. g x y)\<close>
-      using that by (auto intro!: infsum_finite[symmetric] simp: )
-    also have \<open>\<dots> \<le> (\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. g x y)\<close>
-      apply (rule infsum_mono_neutral_traceclass)
-      using that assms by (auto intro!: infsum_nonneg_traceclass sum_g_summable)
-    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y)\<close>
-      by (smt (verit, ccfv_threshold) g_def infsum_cong mem_Sigma_iff)
-    finally show ?thesis
-      using trace_tc_mono by blast
-  qed
-  then show ?thesis
-    apply (rule_tac nonneg_bdd_above_summable_on_tc)
-    by (auto intro!: assms bdd_aboveI2)
-qed
-
-
-lemma infsum_Sigma_positive:
-  fixes f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{topological_comm_monoid_add, linorder_topology,
-             ordered_comm_monoid_add, conditionally_complete_linorder, banach}\<close>
-  assumes \<open>\<And>x. x\<in>X \<Longrightarrow> f x summable_on Y x\<close>
-  assumes \<open>\<And>x y. x \<in> X \<Longrightarrow> y \<in> Y x \<Longrightarrow> f x y \<ge> 0\<close>
-  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y) = (\<Sum>\<^sub>\<infinity>(x,y)\<in>Sigma X Y. f x y)\<close>
-proof (cases \<open>(\<lambda>x. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y) summable_on X\<close>)
-  case True
-  show ?thesis
-    apply (rule infsum_Sigma'_banach)
-    apply (rule summable_Sigma_positive)
-    using assms True by auto
-next
-  case False
-  then have 1: \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y) = 0\<close>
-    using infsum_not_exists by blast
-  from False have \<open>\<not> (\<lambda>(x,y). f x y) summable_on Sigma X Y\<close>
-    using summable_on_Sigma_banach by blast
-  then have 2: \<open>(\<Sum>\<^sub>\<infinity>(x, y)\<in>Sigma X Y. f x y) = 0\<close>
-    using infsum_not_exists by blast
-  from 1 2 show ?thesis
-    by simp
-qed
-
-
-lemma infsum_Sigma_positive_tc:
-  fixes f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> ('c::chilbert_space, 'c) trace_class\<close>
-  assumes \<open>\<And>x. x\<in>X \<Longrightarrow> f x summable_on Y x\<close>
-  assumes \<open>\<And>x y. x \<in> X \<Longrightarrow> y \<in> Y x \<Longrightarrow> f x y \<ge> 0\<close>
-  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y) = (\<Sum>\<^sub>\<infinity>(x,y)\<in>Sigma X Y. f x y)\<close>
-proof (cases \<open>(\<lambda>x. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y) summable_on X\<close>)
-  case True
-  show ?thesis
-    apply (rule infsum_Sigma'_banach)
-    apply (rule summable_Sigma_positive_tc)
-    using assms True by auto
-next
-  case False
-  then have 1: \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y x. f x y) = 0\<close>
-    using infsum_not_exists by blast
-  from False have \<open>\<not> (\<lambda>(x,y). f x y) summable_on Sigma X Y\<close>
-    using summable_on_Sigma_banach by blast
-  then have 2: \<open>(\<Sum>\<^sub>\<infinity>(x, y)\<in>Sigma X Y. f x y) = 0\<close>
-    using infsum_not_exists by blast
-  from 1 2 show ?thesis
-    by simp
-qed
-
-lemma infsum_swap_positive_tc:
-  fixes f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> ('c::chilbert_space, 'c) trace_class\<close>
-  assumes \<open>\<And>x. x\<in>X \<Longrightarrow> f x summable_on Y\<close>
-  assumes \<open>\<And>y. y\<in>Y \<Longrightarrow> (\<lambda>x. f x y) summable_on X\<close>
-  assumes \<open>\<And>x y. x \<in> X \<Longrightarrow> y \<in> Y \<Longrightarrow> f x y \<ge> 0\<close>
-  shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y. f x y) = (\<Sum>\<^sub>\<infinity>y\<in>Y. \<Sum>\<^sub>\<infinity>x\<in>X. f x y)\<close>
-proof -
-  have \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. \<Sum>\<^sub>\<infinity>y\<in>Y. f x y) = (\<Sum>\<^sub>\<infinity>(x,y)\<in>X\<times>Y. f x y)\<close>
-    apply (rule infsum_Sigma_positive_tc)
-    using assms by auto
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(y,x)\<in>Y\<times>X. f x y)\<close>
-    apply (subst product_swap[symmetric])
-    by (simp add: infsum_reindex o_def)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>y\<in>Y. \<Sum>\<^sub>\<infinity>x\<in>X. f x y)\<close>
-    apply (rule infsum_Sigma_positive_tc[symmetric])
-    using assms by auto
-  finally show ?thesis
-    by -
-qed
-
-
 
 
 (* definition \<open>cregister_with_init_rel = (\<lambda>(F,m) (G,n). F=G \<and> (\<exists>f\<in>Rep_CREGISTER (- F). f m = Some n))\<close>
@@ -632,25 +375,6 @@ lift_definition program_semantics_id :: program_semantics is
   \<open>\<lambda>c. kraus_family_map_outcome (\<lambda>(). c) kraus_family_id\<close>
   by (simp add: program_semantics_rel_def)
 
-(* TODO move *)
-lemma trace_tc_pos: \<open>t \<ge> 0 \<Longrightarrow> trace_tc t \<ge> 0\<close>
-  using trace_tc_mono by fastforce
-
-(* TODO replace original *)
-lemma infsum_nonneg_complex:
-  fixes f :: "'a \<Rightarrow> complex"
-  assumes "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
-  shows "infsum f M \<ge> 0" (is "?lhs \<ge> _")
-  apply (cases \<open>f summable_on M\<close>)
-   apply (metis assms infsum_0_simp summable_on_0_simp infsum_mono_complex)
-  by (simp add: infsum_not_exists)
-
-lemma has_sumI:
-  assumes \<open>f summable_on X\<close>
-  assumes \<open>infsum f X = s\<close>
-  shows \<open>(f has_sum s) X\<close>
-  using assms has_sum_infsum by blast
-
 lift_definition program_semantics_apply :: \<open>program_semantics \<Rightarrow> program_state \<Rightarrow> program_state\<close> is
   \<open>\<lambda>\<EE> \<rho> c. (\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (\<EE> d) (\<rho> d))\<close>
 proof (rename_tac \<EE> \<EE>' \<rho>, intro conjI allI ext)
@@ -806,47 +530,6 @@ qed
 lemma kraus_family_map'_0_right[simp]: \<open>kraus_family_map' X \<EE> 0 = 0\<close>
   by (simp add: kraus_family_map'_def)
 
-lemma separating_set_clinear_cspan:
-  assumes \<open>cspan S = UNIV\<close>
-  shows \<open>separating_set clinear S\<close>
-  using assms
-  by (auto intro: complex_vector.linear_eq_on simp: separating_set_def)
-
-lemma separating_density_ops:
-  assumes \<open>B > 0\<close>
-  shows \<open>separating_set clinear {t :: ('a::chilbert_space, 'a) trace_class. 0 \<le> t \<and> norm t \<le> B}\<close>
-proof -
-  define S where \<open>S = {t :: ('a, 'a) trace_class. 0 \<le> t \<and> norm t \<le> B}\<close>
-  have \<open>cspan S = UNIV\<close>
-  proof (intro Set.set_eqI iffI UNIV_I)
-    fix t :: \<open>('a, 'a) trace_class\<close>
-    from trace_class_decomp_4pos'
-    obtain t1 t2 t3 t4 where t_decomp: \<open>t = t1 - t2 + \<i> *\<^sub>C t3 - \<i> *\<^sub>C t4\<close>
-      and pos: \<open>t1 \<ge> 0\<close> \<open>t2 \<ge> 0\<close> \<open>t3 \<ge> 0\<close> \<open>t4 \<ge> 0\<close>
-      by fast
-    have \<open>t' \<in> cspan S\<close> if \<open>t' \<ge> 0\<close> for t'
-    proof -
-      define t'' where \<open>t'' = (B / norm t') *\<^sub>R t'\<close>
-      have \<open>t'' \<in> S\<close>
-        using \<open>B > 0\<close>
-        by (simp add: S_def that zero_le_scaleR_iff t''_def)
-      have t'_t'': \<open>t' = (norm t' / B) *\<^sub>R t''\<close>
-        using \<open>B > 0\<close> t''_def by auto
-      show \<open>t' \<in> cspan S\<close>
-        apply (subst t'_t'')
-        using \<open>t'' \<in> S\<close>
-        by (simp add: scaleR_scaleC complex_vector.span_clauses)
-    qed
-    with pos have \<open>t1 \<in> cspan S\<close> and \<open>t2 \<in> cspan S\<close> and \<open>t3 \<in> cspan S\<close> and \<open>t4 \<in> cspan S\<close>
-      by auto
-    then show \<open>t \<in> cspan S\<close>
-      by (auto intro!: complex_vector.span_diff complex_vector.span_add complex_vector.span_scale
-          intro: complex_vector.span_base simp: t_decomp)
-  qed
-  then show \<open>separating_set clinear S\<close>
-    by (rule separating_set_clinear_cspan)
-qed
-
 lemma program_semantics_eqI:
   assumes \<open>\<And>\<rho>. program_semantics_apply s \<rho> = program_semantics_apply t \<rho>\<close>
   shows \<open>s = t\<close>
@@ -904,21 +587,6 @@ proof transfer'
     finally show \<open>(\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (kraus_family_map_outcome (\<lambda>(). d) kraus_family_id) (\<rho> d)) = \<rho> c\<close>
       by -
   qed
-qed
-
-lemma summable_abs_summable_tc:
-  fixes f :: \<open>'a \<Rightarrow> ('b::chilbert_space,'b) trace_class\<close>
-  assumes \<open>f summable_on X\<close>
-  assumes \<open>\<And>x. x\<in>X \<Longrightarrow> f x \<ge> 0\<close>
-  shows \<open>f abs_summable_on X\<close>
-proof -
-  from assms(1) have \<open>(\<lambda>x. trace_tc (f x)) summable_on X\<close>
-    apply (rule summable_on_bounded_linear[rotated])
-    by (simp add: bounded_clinear.bounded_linear)
-  then have \<open>(\<lambda>x. Re (trace_tc (f x))) summable_on X\<close>
-    using summable_on_Re by blast
-  then show \<open>(\<lambda>x. norm (f x)) summable_on X\<close>
-    by (metis (mono_tags, lifting) assms(2) norm_tc_pos_Re summable_on_cong)
 qed
 
 lemma program_semantics_apply_seq: \<open>program_semantics_apply (program_semantics_seq s t) \<rho> = program_semantics_apply t (program_semantics_apply s \<rho>)\<close>
@@ -1063,10 +731,6 @@ lemma program_semantics_seq_id_left[simp]: \<open>program_semantics_seq program_
   by (simp add: program_semantics_apply_seq)
 
 
-(* TODO move *)
-lemma infsum_prob_leq1[iff]: \<open>(\<Sum>\<^sub>\<infinity>x. prob \<mu> x) \<le> 1\<close>
-  by (simp flip: Prob.rep_eq)
-
 lift_definition program_semantics_sample :: \<open>cl distr expression \<Rightarrow> program_semantics\<close> is
   \<open>\<lambda>e c. kraus_map_sample (prob (e c))\<close>
   by (simp add: program_semantics_rel_def kraus_map_sample_norm prob_summable )
@@ -1079,9 +743,6 @@ lift_definition program_semantics_quantum_op :: \<open>(qu ell2, qu ell2, unit) 
   \<open>\<lambda>(\<EE>::(qu ell2, qu ell2, unit) kraus_family expression) c. 
       kraus_family_map_outcome (\<lambda>_. c) (if kraus_family_norm (\<EE> c) \<le> 1 then \<EE> c else 0)\<close>
   by (simp add: program_semantics_rel_def)
-
-lemma map_commutant_empty_cregister_range[simp]: \<open>map_commutant empty_cregister_range = UNIV\<close>
-  by (simp add: map_commutant_def empty_cregister_range_def)
 
 text \<open>\<^term>\<open>copy_CREGISTER_from F m n\<close> takes the content of \<^term>\<open>F\<close> from m and everything outside of \<^term>\<open>F\<close> from n
   and returns the combination. See \<^term>\<open>copy_CREGISTER_from_CREGISTER_of\<close> below.\<close>
@@ -1116,13 +777,6 @@ lemma apply_cregister_getter_setter:
   apply (transfer' fixing: a)
   apply (subst register_from_getter_setter_of_getter_setter[symmetric])
   by (auto intro!: simp: register_from_getter_setter_def[abs_def])
-
-lemma map_commutant_empty[simp]: \<open>map_commutant {Map.empty} = UNIV\<close>
-  by (auto simp: map_commutant_def)
-
-lemma redundant_option_case: \<open>(case a of None \<Rightarrow> None | Some x \<Rightarrow> Some x) = a\<close>
-  apply (cases a)
-  by auto
 
 lemma map_commutant_range_apply_cregister:
   \<open>map_commutant (range (apply_cregister F)) 
@@ -1269,70 +923,7 @@ axiomatization program_semantics_local_q :: \<open>qu QREGISTER \<Rightarrow> (q
 
 axiomatization program_semantics_while :: \<open>bool expression \<Rightarrow> program_semantics \<Rightarrow> program_semantics\<close>
 
-(* TODO move to QRHL_Core *)
-lemma is_measurement_sum_is_Proj:
-  assumes \<open>is_measurement M\<close>
-  shows \<open>is_Proj (\<Sum>x\<in>F. M x)\<close>
-proof (induction F rule:infinite_finite_induct)
-  case (infinite A)
-  then show ?case
-    by simp
-next
-  case empty
-  then show ?case
-    by simp
-next
-  case (insert x F)
-  have [simp]: \<open>(\<Sum>x\<in>F. M x) o\<^sub>C\<^sub>L M x = 0\<close>
-    by (metis (mono_tags, lifting) assms cblinfun_compose_sum_left is_measurement_def local.insert(1) local.insert(2) sum_single)
-  have [simp]: \<open>M x o\<^sub>C\<^sub>L (\<Sum>x\<in>F. M x) = 0\<close>
-    by (metis (mono_tags, lifting) assms cblinfun_compose_sum_right is_measurement_def local.insert(1) local.insert(2) sum_single)
-  from assms have \<open>is_Proj (M x)\<close>
-    by (simp add: is_measurement_def)
-  with insert.IH show ?case
-    by (simp add: is_Proj_algebraic sum.insert insert cblinfun_compose_add_right cblinfun_compose_add_left adj_plus)
-qed
 
-lemma kraus_map_from_measurement_norm_leq1_aux:
-  assumes \<open>is_measurement M\<close>
-  assumes \<open>finite F\<close> and \<open>F \<subseteq> range (\<lambda>x. (M x, x))\<close>
-  shows \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> id_cblinfun\<close>
-proof -
-  from assms obtain F' where \<open>finite F'\<close> and F_def: \<open>F = (\<lambda>x. (M x, x)) ` F'\<close>
-    by (meson finite_subset_image)
-  have \<open>is_Proj (\<Sum>x\<in>F'. M x)\<close>
-    using \<open>is_measurement M\<close> by (rule is_measurement_sum_is_Proj)
-  also have \<open>\<dots> = (\<Sum>x\<in>F'. (M x)* o\<^sub>C\<^sub>L (M x))\<close>
-    using \<open>is_measurement M\<close>
-    by (metis is_Proj_idempotent is_measurement_def is_proj_selfadj)
-  also have \<open>\<dots> = (\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E)\<close>
-    by (simp add: F_def inj_on_def sum.reindex)
-  finally show \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> id_cblinfun\<close>
-    using is_Proj_leq_id by blast
-qed
-
-lift_definition kraus_map_from_measurement :: \<open>('x,'a) measurement \<Rightarrow> ('a ell2,'a ell2,'x) kraus_family\<close> is
-  \<open>\<lambda>m :: 'x\<Rightarrow>('a,'a) l2bounded. range (\<lambda>x. (m x, x))\<close>
-    apply (intro CollectI kraus_familyI bdd_aboveI2)
-    apply (rule kraus_map_from_measurement_norm_leq1_aux)
-    using kraus_map_from_measurement_norm_leq1_aux
-    by auto
-
-(* TODO move to QRHL_Core *)
-lemma is_measurement_mproj[iff]: \<open>is_measurement (mproj M)\<close>
-  using mproj by auto
-
-lemma kraus_map_from_measurement_bound_leq1: 
-  shows \<open>kraus_family_bound (kraus_map_from_measurement M) \<le> id_cblinfun\<close>
-  apply (rule kraus_family_bound_leqI)
-  apply (rule kraus_map_from_measurement_norm_leq1_aux[of \<open>mproj M\<close>])
-  by (auto intro!: kraus_family_bound_leqI simp: kraus_map_from_measurement.rep_eq)
-
-lemma kraus_map_from_measurement_norm_leq1:
-  shows \<open>kraus_family_norm (kraus_map_from_measurement M) \<le> 1\<close>
-  using kraus_map_from_measurement_bound_leq1[of M]
-  apply (simp add: kraus_family_norm_def)
-  by (metis kraus_family_bound_pos norm_cblinfun_id norm_cblinfun_mono)
 
 (* lemma kraus_map_from_measurement_norm: 
   assumes \<open>M \<noteq> 0\<close>

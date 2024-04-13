@@ -1976,6 +1976,9 @@ lemma expectation'_upper_bound:
   apply (rule expectation_upper_bound)
   using assms by auto
 
+lemma infsum_prob_leq1[iff]: \<open>(\<Sum>\<^sub>\<infinity>x. prob \<mu> x) \<le> 1\<close>
+  by (simp flip: Prob.rep_eq)
+
 ML_file "discrete_distributions.ML"
 
 end

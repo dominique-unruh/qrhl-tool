@@ -1,6 +1,7 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" Registers2.BOLegacy Discrete_Distributions 
     Registers2.Misc_Missing Prog_Variables (* Registers.Pure_States *)
+    Kraus_Maps
     "HOL-Eisbach.Eisbach"
   keywords "declare_variable_type" :: thy_decl
 begin
@@ -649,6 +650,71 @@ lift_definition zero_measurement :: \<open>('a,'b) measurement\<close> is \<open
   by (rule is_measurement_0)
 instance..
 end
+
+(* TODO move to QRHL_Core *)
+lemma is_measurement_sum_is_Proj:
+  assumes \<open>is_measurement M\<close>
+  shows \<open>is_Proj (\<Sum>x\<in>F. M x)\<close>
+proof (induction F rule:infinite_finite_induct)
+  case (infinite A)
+  then show ?case
+    by simp
+next
+  case empty
+  then show ?case
+    by simp
+next
+  case (insert x F)
+  have [simp]: \<open>(\<Sum>x\<in>F. M x) o\<^sub>C\<^sub>L M x = 0\<close>
+    by (metis (mono_tags, lifting) assms cblinfun_compose_sum_left is_measurement_def local.insert(1) local.insert(2) sum_single)
+  have [simp]: \<open>M x o\<^sub>C\<^sub>L (\<Sum>x\<in>F. M x) = 0\<close>
+    by (metis (mono_tags, lifting) assms cblinfun_compose_sum_right is_measurement_def local.insert(1) local.insert(2) sum_single)
+  from assms have \<open>is_Proj (M x)\<close>
+    by (simp add: is_measurement_def)
+  with insert.IH show ?case
+    by (simp add: is_Proj_algebraic sum.insert insert cblinfun_compose_add_right cblinfun_compose_add_left adj_plus)
+qed
+
+lemma kraus_map_from_measurement_norm_leq1_aux:
+  assumes \<open>is_measurement M\<close>
+  assumes \<open>finite F\<close> and \<open>F \<subseteq> range (\<lambda>x. (M x, x))\<close>
+  shows \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> id_cblinfun\<close>
+proof -
+  from assms obtain F' where \<open>finite F'\<close> and F_def: \<open>F = (\<lambda>x. (M x, x)) ` F'\<close>
+    by (meson finite_subset_image)
+  have \<open>is_Proj (\<Sum>x\<in>F'. M x)\<close>
+    using \<open>is_measurement M\<close> by (rule is_measurement_sum_is_Proj)
+  also have \<open>\<dots> = (\<Sum>x\<in>F'. (M x)* o\<^sub>C\<^sub>L (M x))\<close>
+    using \<open>is_measurement M\<close>
+    by (metis is_Proj_idempotent is_measurement_def is_proj_selfadj)
+  also have \<open>\<dots> = (\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E)\<close>
+    by (simp add: F_def inj_on_def sum.reindex)
+  finally show \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> id_cblinfun\<close>
+    using is_Proj_leq_id by blast
+qed
+
+lift_definition kraus_map_from_measurement :: \<open>('x,'a) measurement \<Rightarrow> ('a ell2,'a ell2,'x) kraus_family\<close> is
+  \<open>\<lambda>m :: 'x\<Rightarrow>('a,'a) l2bounded. range (\<lambda>x. (m x, x))\<close>
+    apply (intro CollectI kraus_familyI bdd_aboveI2)
+    apply (rule kraus_map_from_measurement_norm_leq1_aux)
+    using kraus_map_from_measurement_norm_leq1_aux
+    by auto
+
+(* TODO move to QRHL_Core *)
+lemma is_measurement_mproj[iff]: \<open>is_measurement (mproj M)\<close>
+  using mproj by auto
+
+lemma kraus_map_from_measurement_bound_leq1: 
+  shows \<open>kraus_family_bound (kraus_map_from_measurement M) \<le> id_cblinfun\<close>
+  apply (rule kraus_family_bound_leqI)
+  apply (rule kraus_map_from_measurement_norm_leq1_aux[of \<open>mproj M\<close>])
+  by (auto intro!: kraus_family_bound_leqI simp: kraus_map_from_measurement.rep_eq)
+
+lemma kraus_map_from_measurement_norm_leq1:
+  shows \<open>kraus_family_norm (kraus_map_from_measurement M) \<le> 1\<close>
+  using kraus_map_from_measurement_bound_leq1[of M]
+  apply (simp add: kraus_family_norm_def)
+  by (metis kraus_family_bound_pos norm_cblinfun_id norm_cblinfun_mono)
 
 section \<open>Quantum predicates (ctd.)\<close>
 
