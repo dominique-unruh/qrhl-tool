@@ -3553,4 +3553,8 @@ proof -
     by (simp add: kraus_family_norm_def B_def)
 qed
 
+lemma kraus_family_map'_0_right[simp]: \<open>kraus_family_map' X \<EE> 0 = 0\<close>
+  by (simp add: kraus_family_map'_def)
+
+
 end
