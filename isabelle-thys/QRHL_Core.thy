@@ -590,6 +590,7 @@ section \<open>Measurements\<close>
 (* definition "is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) 
        \<and> (\<exists>P. (\<forall>\<psi> \<phi>. (\<Sum>\<^sub>\<infinity> i. \<phi> \<bullet>\<^sub>C (M i *\<^sub>V \<psi>)) = \<phi> \<bullet>\<^sub>C (P *\<^sub>V \<psi>)) \<and> P \<le> id_cblinfun))" *)
 definition \<open>is_measurement M \<longleftrightarrow> ((\<forall>i. is_Proj (M i)) \<and> (\<forall>i j. i\<noteq>j \<longrightarrow> M i o\<^sub>C\<^sub>L M j = 0))\<close>
+  for M :: \<open>'a \<Rightarrow> 'b \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
 lemma is_measurement_0[simp]: "is_measurement (\<lambda>_. 0)"
   unfolding is_measurement_def
   by (auto intro: exI[of _ 0])
@@ -642,6 +643,12 @@ lemma mtotal_binary_measurement[simp]: "mtotal (binary_measurement P) = is_Proj 
   apply (transfer fixing: P)
   apply (auto simp: UNIV_bit)
   by (metis Proj_on_own_range add.commute complemented_lattice_class.sup_compl_top plus_ccsubspace_def range_cblinfun_code_def uminus_Span_code)
+
+instantiation measurement :: (type,type) zero begin
+lift_definition zero_measurement :: \<open>('a,'b) measurement\<close> is \<open>\<lambda>_. 0\<close>
+  by (rule is_measurement_0)
+instance..
+end
 
 section \<open>Quantum predicates (ctd.)\<close>
 

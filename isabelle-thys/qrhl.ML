@@ -339,7 +339,7 @@ fun declare_variable_type args sort a mx lthy =
   let val sort' = Sign.minimize_sort (Proof_Context.theory_of lthy) ((* @{class universe}:: *)sort)
       val is_base_sort = Sign.subsort (Proof_Context.theory_of lthy) (Object_Logic.get_base_sort lthy |> the_default [], sort)
       (* val _ = Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort'] |> @{print} *)
-      val _ = if null (Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort']) then
+      val _ = if null (fst (Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort'])) then
                 warning ("Assuming the existence of a type of sort "^Syntax.string_of_sort lthy sort'^".\n"^
                          "To show that this is not an inconsistency, define an arbitrary type of that sort first!")
               else ()

@@ -7,13 +7,17 @@ begin
 definition valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
   \<open>valid_cregister_range \<FF> \<longleftrightarrow> map_commutant (map_commutant \<FF>) = \<FF>\<close>
 
+definition actual_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
+  \<open>actual_cregister_range \<FF> \<longleftrightarrow> valid_cregister_range \<FF> \<and> (\<forall>m m'. \<exists>a\<in>\<FF>. \<exists>b\<in>map_commutant \<FF>. (a \<circ>\<^sub>m b) m = Some m')\<close>
+
+(* TODO move *)
 lemma map_comp_Some_map_option: \<open>map_comp (\<lambda>x. Some (f x)) g = map_option f o g\<close>
   by (auto intro!: ext simp: map_comp_def map_option_case)
 
-lemma valid_cregister_range: 
+lemma actual_register_range: 
   fixes F :: \<open>('b,'a) cregister\<close>
   assumes \<open>cregister F\<close>
-  shows \<open>valid_cregister_range (range (apply_cregister F))\<close>
+  shows \<open>actual_cregister_range (range (apply_cregister F))\<close>
 proof (insert assms, transfer)
   fix F :: \<open>'b cupdate \<Rightarrow> 'a cupdate\<close>
   assume [simp]: \<open>cregister_raw F\<close>
@@ -27,21 +31,23 @@ proof (insert assms, transfer)
     by (metis \<open>cregister_raw F\<close> g_def s_def valid_getter_setter_def valid_getter_setter_getter_setter)
   have [simp]: \<open>c (s a m) = c m\<close> for a m
     by (simp add: c_def)
+  have F_gs: \<open>F = register_from_getter_setter g s\<close>
+    by (simp add: g_def s_def)
 
-  define X where \<open>X = range (\<lambda>x m. case x (c m) of Some m' \<Rightarrow> Some (s (g m) m') | None \<Rightarrow> None)\<close>
+  define Xf X where \<open>Xf f m = (case f (c m) of Some m' \<Rightarrow> Some (s (g m) m') | None \<Rightarrow> None)\<close> and \<open>X = range Xf\<close> for f m
   have 1: \<open>a \<in> map_commutant X\<close> if \<open>a \<in> range F\<close> for a
   proof (unfold map_commutant_def, intro CollectI ballI ext)
     fix x y
     assume \<open>x \<in> X\<close>
-    then obtain x' where x_def: \<open>x = (\<lambda>m. case x' (c m) of Some m' \<Rightarrow> Some (s (g m) m') | None \<Rightarrow> None)\<close>
-      using X_def by blast
+    then obtain x' where x_def: \<open>x = Xf x'\<close>
+      using X_def Xf_def by blast
     from \<open>a \<in> range F\<close> obtain a' where \<open>a = F a'\<close>
       by fast
     then have a_def: \<open>a = register_from_getter_setter g s a'\<close>
       by (simp add: g_def s_def)
     show \<open>(a \<circ>\<^sub>m x) y = (x \<circ>\<^sub>m a) y\<close>
       apply (cases \<open>x' (c y)\<close>; cases \<open>a' (g y)\<close>)
-      by (auto simp: map_comp_def x_def a_def register_from_getter_setter_def)
+      by (auto simp: map_comp_def x_def Xf_def a_def register_from_getter_setter_def)
   qed
   have 2: \<open>a \<in> range F\<close> if \<open>a \<in> map_commutant X\<close> for a
   proof -
@@ -51,7 +57,7 @@ proof (insert assms, transfer)
     proof (rule ext)
       fix m
       have \<open>(\<lambda>m. Some (s (g m) m')) \<in> X\<close>for m'
-        by (auto simp: X_def intro!: range_eqI[where x=\<open>\<lambda>x. Some m'\<close>])
+        by (auto simp: X_def Xf_def intro!: range_eqI[where x=\<open>\<lambda>x. Some m'\<close>])
       then have *: \<open>a \<circ>\<^sub>m (\<lambda>m. Some (s (g m) m')) = (\<lambda>m. Some (s (g m) m')) \<circ>\<^sub>m a\<close> for m'
         using map_commutant_def that by blast
 
@@ -75,11 +81,31 @@ proof (insert assms, transfer)
     then show ?thesis
       by auto
   qed
-  from 1 2 have \<open>range F = map_commutant X\<close>
+  from 1 2 have range_F_comm_X: \<open>range F = map_commutant X\<close>
     by auto
-  then show \<open>valid_cregister_range (range F)\<close>
-    by (simp add: valid_cregister_range_def)
+  have trans: \<open>\<exists>a\<in>range F. \<exists>b\<in>map_commutant (range F). (a \<circ>\<^sub>m b) m = Some m'\<close> for m m'
+  proof -
+    define a b where \<open>a n = Some (s (g m') n)\<close> and \<open>b = Xf (\<lambda>_. Some m')\<close> for n
+    have \<open>(a \<circ>\<^sub>m b) m = Some m'\<close>
+      by (auto intro!: simp: a_def b_def Xf_def)
+    moreover have \<open>a \<in> range F\<close>
+      by (auto intro!: exI[of _ \<open>\<lambda>_. Some (g m')\<close>]
+          simp: a_def[abs_def] F_gs register_from_getter_setter_def image_iff)
+    moreover have \<open>b \<in> map_commutant (range F)\<close>
+      by (simp add: b_def double_map_commutant_grows local.X_def range_F_comm_X range_subsetD)
+    ultimately show ?thesis
+      by auto
+  qed
+  from range_F_comm_X trans show \<open>actual_cregister_range (range F)\<close>
+    by (simp add: actual_cregister_range_def valid_cregister_range_def)
 qed
+
+lemma valid_cregister_range: 
+  fixes F :: \<open>('b,'a) cregister\<close>
+  assumes \<open>cregister F\<close>
+  shows \<open>valid_cregister_range (range (apply_cregister F))\<close>
+  using actual_cregister_range_def actual_register_range assms by blast
+
 
 definition \<open>empty_cregister_range = {Map.empty, Some}\<close>
 lemma valid_empty_cregister_range: \<open>valid_cregister_range empty_cregister_range\<close>
@@ -120,6 +146,9 @@ qed
 typedef 'a CREGISTER = \<open>Collect valid_cregister_range :: 'a cupdate set set\<close>
   using valid_empty_cregister_range by blast
 setup_lifting type_definition_CREGISTER
+
+lift_definition ACTUAL_CREGISTER :: \<open>'b CREGISTER \<Rightarrow> bool\<close> is
+  actual_cregister_range.
 
 lift_definition CREGISTER_of :: \<open>('a,'b) cregister \<Rightarrow> 'b CREGISTER\<close> is
   \<open>\<lambda>F::('a,'b) cregister. if cregister F then range (apply_cregister F) :: 'b cupdate set else empty_cregister_range\<close>
