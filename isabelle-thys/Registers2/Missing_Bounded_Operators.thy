@@ -1106,12 +1106,12 @@ lemma is_Proj_butterfly_ket: \<open>is_Proj (\<Sum>x\<in>M. selfbutter (ket x))\
 lemma infsum_cblinfun_compose_left:
   assumes \<open>b summable_on X\<close>
   shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. a o\<^sub>C\<^sub>L b x) = a o\<^sub>C\<^sub>L (\<Sum>\<^sub>\<infinity>x\<in>X. b x)\<close>
-  apply (subst infsum_bounded_linear[symmetric, where g=b and S=X and f=\<open>\<lambda>b. a o\<^sub>C\<^sub>L b\<close>])
+  apply (subst infsum_bounded_linear[symmetric, where f=b and A=X and h=\<open>\<lambda>b. a o\<^sub>C\<^sub>L b\<close>])
   by (auto intro!: bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_right simp add: assms o_def)
 lemma infsum_cblinfun_compose_right:
   assumes \<open>a summable_on X\<close>
   shows \<open>(\<Sum>\<^sub>\<infinity>x\<in>X. a x o\<^sub>C\<^sub>L b) = (\<Sum>\<^sub>\<infinity>x\<in>X. a x) o\<^sub>C\<^sub>L b\<close>
-  apply (subst infsum_bounded_linear[symmetric, where g=a and S=X and f=\<open>\<lambda>a. a o\<^sub>C\<^sub>L b\<close>])
+  apply (subst infsum_bounded_linear[symmetric, where f=a and A=X and h=\<open>\<lambda>a. a o\<^sub>C\<^sub>L b\<close>])
   by (auto intro!: bounded_clinear.bounded_linear bounded_clinear_cblinfun_compose_left simp add: assms o_def)
 
 (* TODO move *)
@@ -1305,7 +1305,7 @@ lemma diagonal_operator_pos:
 proof (cases \<open>bdd_above (range (\<lambda>x. cmod (f x)))\<close>)
   case True
   have [simp]: \<open>csqrt (f x) = sqrt (cmod (f x))\<close> for x
-    by (simp add: Extra_Ordered_Fields.complex_of_real_cmod assms of_real_sqrt)
+    by (simp add: Extra_Ordered_Fields.complex_of_real_cmod assms abs_pos of_real_sqrt)
   have bdd: \<open>bdd_above (range (\<lambda>x. sqrt (cmod (f x))))\<close>
   proof -
     from True obtain B where \<open>cmod (f x) \<le> B\<close> for x
@@ -1403,7 +1403,7 @@ lemma vector_sandwich_partial_trace:
   by (metis (mono_tags, lifting) infsumI vector_sandwich_partial_trace_has_sum)
 
 lemma pos_imp_selfadjoint: \<open>a \<ge> 0 \<Longrightarrow> selfadjoint a\<close>
-  by (simp add: comparable_hermitean selfadjoint_def)
+  using positive_hermitianI selfadjoint_def by blast
 
 lemma sandwich_tc_scaleC_right: \<open>sandwich_tc e (c *\<^sub>C t) = c *\<^sub>C sandwich_tc e t\<close>
   apply (transfer fixing: e c)
@@ -1819,7 +1819,8 @@ proof -
     by (simp add: t'_def)
   from assms have \<open>selfadjoint_tc t\<close>
     apply transfer
-    by (simp add: comparable_hermitean selfadjoint_def)
+    apply (rule comparable_hermitean[of 0])
+    by simp_all
   have spectral_real[simp]: \<open>spectral_dec_val t' n \<in> \<real>\<close> for n
     apply (rule spectral_dec_val_real)
     using \<open>selfadjoint_tc t\<close> by (auto intro!: trace_class_compact simp: selfadjoint_tc.rep_eq t'_def)
@@ -2116,9 +2117,9 @@ proof -
     by (simp add: has_sum_in_def)
 qed
 
-(* TODO: remove "hausdorff" *)
+(* (* TODO: remove "hausdorff" *)
 lemma Hausdorff_space_hausdorff: \<open>Hausdorff_space T \<longleftrightarrow> hausdorff T\<close>
-  by (auto simp: hausdorff_def Hausdorff_space_def disjnt_def)
+  by (auto simp: hausdorff_def Hausdorff_space_def disjnt_def) *)
 
 
 lemma infsum_in_0:
@@ -2128,11 +2129,12 @@ lemma infsum_in_0:
 proof -
   have \<open>has_sum_in T f M 0\<close>
     using assms
-    by (auto intro!: has_sum_in_0 Hausdorff_imp_t1_space simp: Hausdorff_space_hausdorff)
+    by (auto intro!: has_sum_in_0 Hausdorff_imp_t1_space)
   then show ?thesis
     by (meson assms(1) has_sum_in_infsum_in has_sum_in_unique not_summable_infsum_in_0)
 qed
 
+(* TODO remove? (norm_sgn good enough?) *)
 lemma norm_sgn_1: 
   fixes x :: \<open>'a :: {sgn_div_norm, real_normed_vector}\<close>
   assumes \<open>x \<noteq> 0\<close>
@@ -2141,19 +2143,6 @@ lemma norm_sgn_1:
 
 
 
-(* TODO replace original cblinfun_cinner_eqI *)
-lemma cblinfun_cinner_eqI:
-  fixes A B :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
-  assumes \<open>\<And>\<psi>. norm \<psi> = 1 \<Longrightarrow> cinner \<psi> (A *\<^sub>V \<psi>) = cinner \<psi> (B *\<^sub>V \<psi>)\<close>
-  shows \<open>A = B\<close>
-proof -
-  have \<open>cinner \<psi> (A *\<^sub>V \<psi>) = cinner \<psi> (B *\<^sub>V \<psi>)\<close> for \<psi>
-    apply (cases \<open>\<psi> = 0\<close>)
-    using assms[of \<open>sgn \<psi>\<close>]
-    by (simp_all add: norm_sgn_1 sgn_div_norm cblinfun.scaleR_right)
-  then show ?thesis
-    by (rule cblinfun_cinner_eqI)
-qed
 
 lemma summable_Sigma_positive:
   fixes f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{topological_comm_monoid_add, linorder_topology,
@@ -2253,7 +2242,7 @@ proof -
       also from \<open>x \<le> z\<close> \<open>y \<le> z\<close> have \<open>\<dots> = (trace_tc z - trace_tc x) + (trace_tc z - trace_tc y)\<close>
         by (metis (no_types, lifting) cross3_simps(16) diff_left_mono diff_self norm_tc_pos of_real_hom.hom_add trace_tc_plus)
       also from \<open>x \<le> z\<close> \<open>y \<le> z\<close> have \<open>\<dots> = norm (trace_tc z - trace_tc x) + norm (trace_tc z - trace_tc y)\<close>                  
-        by (simp add: Extra_Ordered_Fields.complex_of_real_cmod trace_tc_mono)
+        by (simp add: Extra_Ordered_Fields.complex_of_real_cmod trace_tc_mono abs_pos)
       also have \<open>\<dots> = dist (trace_tc z) (trace_tc x) + dist (trace_tc z) (trace_tc y)\<close>
         using dist_complex_def by presburger
       also have \<open>\<dots> \<le> (dist (trace_tc z) l + dist (trace_tc x) l) + (dist (trace_tc z) l + dist (trace_tc y) l)\<close> 

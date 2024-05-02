@@ -60,7 +60,8 @@ ML \<open>
 \<close>
 
 simproc_setup qregister_conversion_to_register (\<open>qregister_conversion x y\<close>) =
-  \<open>fn m => fn ctxt => fn ct => SOME (Registers_Unsorted.qregister_conversion_to_register_conv ctxt ct) handle e => NONE\<close>
+  \<open>fn m => fn ctxt => fn ct => \<^try>\<open>SOME (Registers_Unsorted.qregister_conversion_to_register_conv ctxt ct)
+    catch e => NONE\<close>\<close>
 
 (* TODO: check if we keep this mechanism. *)
 definition \<open>JOIN_REGISTERS F G FG \<equiv> True\<close>

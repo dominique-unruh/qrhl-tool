@@ -194,7 +194,67 @@ lift_definition sup_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER 
 instance..
 end
 
+instantiation CREGISTER :: (type) inf begin
+lift_definition inf_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is
+  \<open>\<lambda>\<FF> \<GG> :: 'a cupdate set. \<FF> \<inter> \<GG>\<close>
+proof (unfold mem_Collect_eq)
+  fix F G :: \<open>('a \<Rightarrow> 'a option) set\<close>
+  assume \<open>valid_cregister_range F\<close>
+  assume \<open>valid_cregister_range G\<close>
+  have \<open>map_commutant (map_commutant (F \<inter> G)) \<supseteq> F \<inter> G\<close>
+    by (simp add: double_map_commutant_grows)
+  moreover have \<open>map_commutant (map_commutant (F \<inter> G)) \<subseteq> F\<close>
+    if \<open>valid_cregister_range F\<close> for F G :: \<open>('a \<Rightarrow> 'a option) set\<close>
+  proof -
+    have \<open>map_commutant (map_commutant (F \<inter> G)) \<subseteq> map_commutant (map_commutant F)\<close>
+      by (simp add: map_commutant_antimono)
+    also have \<open>\<dots> = F\<close>
+      using that valid_cregister_range_def by blast
+    finally show ?thesis
+      by -
+  qed
+  ultimately show \<open>valid_cregister_range (F \<inter> G)\<close>
+    using \<open>valid_cregister_range F\<close> \<open>valid_cregister_range G\<close>
+    apply (auto simp add: valid_cregister_range_def)
+    by (metis Int_commute in_mono)
+qed
+instance..
+end
+
 abbreviation (* LEGACY *) (input) \<open>CREGISTER_pair \<equiv> (sup :: 'a CREGISTER \<Rightarrow> _ \<Rightarrow> _)\<close>
+
+instantiation CREGISTER :: (type) Sup begin
+lift_definition Sup_CREGISTER :: \<open>'a CREGISTER set \<Rightarrow> 'a CREGISTER\<close> is
+  \<open>\<lambda>X :: 'a cupdate set set. map_commutant (map_commutant (\<Union>X))\<close>
+  by (auto simp add: valid_cregister_range_def)
+instance..
+end
+
+instantiation CREGISTER :: (type) Inf begin
+lift_definition Inf_CREGISTER :: \<open>'a CREGISTER set \<Rightarrow> 'a CREGISTER\<close> is
+  \<open>\<lambda>X :: 'a cupdate set set. \<Inter> X\<close>
+proof (unfold mem_Collect_eq)
+  fix X :: \<open>('a \<Rightarrow> 'a option) set set\<close>
+  assume valid: \<open>valid_cregister_range F\<close> if \<open>F \<in> X\<close> for F
+  have \<open>map_commutant (map_commutant (\<Inter> X)) \<supseteq> \<Inter> X\<close>
+    by (simp add: double_map_commutant_grows)
+  moreover have \<open>map_commutant (map_commutant (\<Inter> X)) \<subseteq> F\<close>
+    if \<open>valid_cregister_range F\<close> and \<open>F \<in> X\<close> for F :: \<open>('a \<Rightarrow> 'a option) set\<close>
+  proof -
+    have \<open>map_commutant (map_commutant (\<Inter> X)) \<subseteq> map_commutant (map_commutant F)\<close>
+      using that by (auto intro!: map_commutant_antimono)
+    also have \<open>\<dots> = F\<close>
+      using that valid_cregister_range_def by blast
+    finally show ?thesis
+      by -
+  qed
+  ultimately show \<open>valid_cregister_range (\<Inter> X)\<close>
+    using valid
+    by (auto simp add: valid_cregister_range_def)
+qed
+instance..
+end
+
 
 lift_definition CCcompatible :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> bool\<close> is
   \<open>\<lambda>F G. \<forall>a\<in>F. \<forall>b\<in>G. a \<circ>\<^sub>m b = b \<circ>\<^sub>m a\<close>.
@@ -350,9 +410,12 @@ proof -
 qed
 
 
-instantiation CREGISTER :: (type) uminus begin
+instantiation CREGISTER :: (type) \<open>{uminus,minus}\<close> begin
 lift_definition uminus_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is map_commutant
   by (simp add: valid_cregister_range_def)
+lift_definition minus_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a CREGISTER \<Rightarrow> 'a CREGISTER\<close> is
+  \<open>\<lambda>F G. F \<inter> map_commutant G\<close>
+  by (metis (no_types, lifting) eq_onp_same_args inf_CREGISTER.rsp rel_fun_eq_onp_rel uminus_CREGISTER.rsp)
 instance..
 end
 
@@ -374,5 +437,113 @@ definition \<open>cregister_le F G = (cregister F \<and> cregister G \<and> CREG
 lemma map_commutant_empty_cregister_range[simp]: \<open>map_commutant empty_cregister_range = UNIV\<close>
   by (simp add: map_commutant_def empty_cregister_range_def)
 
+lemma double_complement_CREGISTER[simp]:
+  fixes F :: \<open>'a CREGISTER\<close>
+  shows \<open>- (- F) = F\<close>
+  apply transfer
+  by (simp add: valid_cregister_range_def)
+
+lemma demorgan_CREGISTER_sup:
+  fixes F G :: \<open>'a CREGISTER\<close>
+  shows \<open>F \<squnion> G = - (- F \<sqinter> - G)\<close>
+  apply transfer
+  by (auto simp: map_commutant_def)
+
+lemma demorgan_CREGISTER_Sup:
+  fixes X :: \<open>'a CREGISTER set\<close>
+  shows \<open>\<Squnion> X = - \<Sqinter> (uminus ` X)\<close>
+  apply transfer
+  by (auto simp: map_commutant_def)
+
+instance CREGISTER :: (type) lattice
+proof
+  fix x y z :: \<open>'a CREGISTER\<close>
+  show \<open>x \<sqinter> y \<le> x\<close>
+    apply transfer'
+    by simp
+  show \<open>x \<sqinter> y \<le> y\<close>
+    apply transfer'
+    by simp
+  show \<open>x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> y \<sqinter> z\<close>
+    apply transfer'
+    by simp
+  show \<open>x \<le> x \<squnion> y\<close>
+    apply transfer'
+    using double_map_commutant_grows by fastforce
+  show \<open>y \<le> x \<squnion> y\<close>
+    apply transfer'
+    using double_map_commutant_grows by fastforce
+  show \<open>y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x\<close>
+    apply (auto intro!: simp: demorgan_CREGISTER_sup)
+    by (metis double_complement_CREGISTER inf_CREGISTER.rep_eq le_infI less_eq_CREGISTER.rep_eq map_commutant_antimono uminus_CREGISTER.rep_eq)
+qed
+
+lemma compl_le_compl_iff_CREGISTER:
+  fixes x y:: \<open>'a CREGISTER\<close>
+  shows \<open>(- x \<le> - y) = (y \<le> x)\<close>
+  apply transfer
+  by (metis CollectD map_commutant_antimono valid_cregister_range_def)
+
+instance CREGISTER :: (type) bounded_lattice
+proof
+  fix x :: \<open>'a CREGISTER\<close>
+  show bot: \<open>\<bottom> \<le> x\<close>
+    apply transfer
+    apply auto
+    by (smt (z3) UNIV_I map_commutant_def map_commutant_empty_cregister_range mem_Collect_eq valid_cregister_range_def)
+  show \<open>x \<le> \<top>\<close> for x :: \<open>'a CREGISTER\<close>
+    apply transfer'
+    by simp
+qed
+
+instance CREGISTER :: (type) complete_lattice
+proof
+  fix x y z :: \<open>'a CREGISTER\<close> and X :: \<open>'a CREGISTER set\<close>
+  show \<open>x \<in> X \<Longrightarrow> \<Sqinter> X \<le> x\<close>
+    apply transfer'
+    by blast
+  show Inf: \<open>(\<And>x. x \<in> X \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> \<Sqinter> X\<close> for z :: \<open>'a CREGISTER\<close> and X :: \<open>'a CREGISTER set\<close>
+    apply transfer
+    by blast
+  show \<open>x \<in> X \<Longrightarrow> x \<le> \<Squnion> X\<close>
+    apply transfer
+    using double_map_commutant_grows by fastforce
+  show \<open>(\<And>x. x \<in> X \<Longrightarrow> x \<le> z) \<Longrightarrow> \<Squnion> X \<le> z\<close>
+    apply (rule compl_le_compl_iff_CREGISTER[THEN iffD1])
+    by (auto intro!: Inf simp add: demorgan_CREGISTER_Sup compl_le_compl_iff_CREGISTER)
+  show Inf_empty: \<open>\<Sqinter> {} = (\<top> :: 'a CREGISTER)\<close>
+    apply transfer'
+    by simp
+  show \<open>\<Squnion> {} = (\<bottom> :: 'a CREGISTER)\<close>
+    apply (simp add: demorgan_CREGISTER_Sup Inf_empty)
+    apply transfer'
+    using valid_cregister_range_def valid_empty_cregister_range by fastforce
+qed
+
+(*
+Is it one?
+
+instance CREGISTER :: (type) complemented_lattice
+proof
+  fix x y z :: \<open>'a CREGISTER\<close>
+  show \<open>x - y = x \<sqinter> - y\<close>
+    apply transfer'
+    by blast
+  show \<open>x \<sqinter> - x = \<bottom>\<close>
+  proof (intro antisym bot_least, transfer, unfold mem_Collect_eq)
+    fix x :: \<open>('a \<Rightarrow> 'a option) set\<close>
+    assume \<open>valid_cregister_range x\<close>
+    show \<open>x \<inter> map_commutant x \<subseteq> empty_cregister_range\<close>
+    proof (rule subsetI)
+      fix f assume \<open>f \<in> x \<inter> map_commutant x\<close>
+      show \<open>f \<in> empty_cregister_range\<close>
+        by x
+    qed
+  qed
+  show \<open>x \<squnion> - x = \<top>\<close>
+    using \<open>x \<sqinter> - x = \<bottom>\<close>
+    by (metis bot_CREGISTER.rep_eq demorgan_CREGISTER_sup double_complement_CREGISTER double_map_commutant_grows inf_absorb1 inf_commute less_eq_CREGISTER.rep_eq map_commutant_empty_cregister_range top_CREGISTER.rep_eq uminus_CREGISTER.rep_eq)
+qed
+*)
 
 end

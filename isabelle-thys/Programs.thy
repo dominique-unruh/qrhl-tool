@@ -5,11 +5,11 @@ begin
 no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
 no_notation Order.bottom ("\<bottom>\<index>")
 
-lift_definition program_semantics_sample :: \<open>('cl \<Rightarrow> 'cl distr) \<Rightarrow> ('cl,'qu) program_semantics\<close> is
+lift_definition cq_map_sample :: \<open>('cl \<Rightarrow> 'cl distr) \<Rightarrow> ('cl,'qu) cq_map\<close> is
   \<open>\<lambda>e c. kraus_map_sample (prob (e c))\<close>
-  by (simp add: program_semantics_rel_def kraus_map_sample_norm prob_summable )
+  by (simp add: cq_map_rel_def kraus_map_sample_norm prob_summable )
 
-lift_definition program_state_distrib :: "('cl,'qu) program_state \<Rightarrow> 'cl distr" is
+lift_definition cq_operator_distrib :: "('cl,'qu) cq_operator \<Rightarrow> 'cl distr" is
   \<open>\<lambda>\<rho> c. norm (\<rho> c)\<close>
 proof -
   fix \<rho> :: \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2) trace_class\<close>
@@ -28,57 +28,6 @@ proof -
     by (simp add: is_distribution_def)
 qed
 
-
-(* definition \<open>cregister_with_init_rel = (\<lambda>(F,m) (G,n). F=G \<and> (\<exists>f\<in>Rep_CREGISTER (- F). f m = Some n))\<close>
-
-lemma Some_in_valid_cregister_range:
-  assumes \<open>valid_cregister_range X\<close>
-  shows \<open>Some \<in> X\<close>
-try0
-sledgehammer [dont_slice]
-by -
-
-lemma cregister_with_init_rel_refl[iff]: \<open>reflp cregister_with_init_rel\<close>
-  using Rep_CREGISTER Some_in_valid_cregister_range
-  by (auto intro!: reflpI bexI[of _ Some] simp: cregister_with_init_rel_def)
-
-lemma cregister_with_init_rel_transp[iff]: \<open>transp cregister_with_init_rel\<close>
-proof (rule transpI)
-  fix Fm Gn Hk assume assms: \<open>cregister_with_init_rel Fm Gn\<close> \<open>cregister_with_init_rel Gn Hk\<close>
-  obtain F m G n H k where defs: \<open>Fm = (F,m)\<close> \<open>Gn = (G,n)\<close> \<open>Hk = (H,k)\<close>
-    by force
-  from assms have [simp]: \<open>F = G\<close> \<open>G = H\<close>
-    by (simp_all add: cregister_with_init_rel_def defs)
-  from assms obtain f where f: \<open>f \<in> Rep_CREGISTER (-F)\<close> and fm: \<open>f m = Some n\<close>
-    apply atomize_elim
-    by (auto simp: cregister_with_init_rel_def defs)
-  from assms obtain g where g: \<open>g \<in> Rep_CREGISTER (-G)\<close> and gn: \<open>g n = Some k\<close>
-    apply atomize_elim
-    by (auto simp: cregister_with_init_rel_def defs)
-  show \<open>cregister_with_init_rel Fm Hk\<close>
-    using Rep_CREGISTER f g fm gn
-    by (auto intro!: bexI[of _ \<open>g \<circ>\<^sub>m f\<close>] valid_cregister_range_mult Rep_CREGISTER 
-        simp: cregister_with_init_rel_def defs)
-qed
-
-lemma cregister_with_init_rel_sym[iff]: \<open>symp cregister_with_init_rel\<close>
-proof (rule sympI)
-  fix Fm Gn assume assm: \<open>cregister_with_init_rel Fm Gn\<close>
-  obtain F m G n where defs: \<open>Fm = (F,m)\<close> \<open>Gn = (G,n)\<close>
-    by force
-  from assm have [simp]: \<open>F = G\<close>
-    by (simp add: cregister_with_init_rel_def defs)
-  from assm obtain f where f: \<open>f \<in> Rep_CREGISTER (-F)\<close> and fm: \<open>f m = Some n\<close>
-    apply atomize_elim
-    by (auto simp: cregister_with_init_rel_def defs)
-  define g where \<open>g n' = (if n' then \<close>
-  show \<open>cregister_with_init_rel Gn Fm\<close>
-    apply (simp add: cregister_with_init_rel_def defs)
-
-quotient_type 'a cregister_with_init = \<open>'a CREGISTER \<times> 'a\<close> / cregister_with_init_rel
-apply (auto intro!: equivpI simp: )
-proof (rule )
-*)
 
 datatype raw_program =
   Seq \<open>raw_program\<close> \<open>raw_program\<close>
@@ -108,6 +57,16 @@ fun oracle_number :: \<open>raw_program \<Rightarrow> nat\<close> where
 | \<open>oracle_number (LocalC _ _ c) = oracle_number c\<close>
 | \<open>oracle_number (OracleCall i) = Suc i\<close>
 
+fun no_oracles :: \<open>raw_program \<Rightarrow> bool\<close> where
+\<open>no_oracles (Seq c d) \<longleftrightarrow> no_oracles c \<and> no_oracles d\<close>
+| \<open>no_oracles (IfThenElse e c d) \<longleftrightarrow> no_oracles c \<and> no_oracles d\<close>
+| \<open>no_oracles (While e c) \<longleftrightarrow> no_oracles c\<close>
+| \<open>no_oracles (LocalQ _ _ c) \<longleftrightarrow> no_oracles c\<close>
+| \<open>no_oracles (LocalC _ _ c) \<longleftrightarrow> no_oracles c\<close>
+| \<open>no_oracles (OracleCall _) \<longleftrightarrow> False\<close>
+| \<open>no_oracles (InstantiateOracles _ _) \<longleftrightarrow> False\<close>
+| \<open>no_oracles p \<longleftrightarrow> True\<close>
+
 
 inductive valid_oracle_program :: \<open>raw_program \<Rightarrow> bool\<close> and valid_program :: \<open>raw_program \<Rightarrow> bool\<close> where
   \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program d \<Longrightarrow> valid_oracle_program (Seq c d)\<close>
@@ -121,7 +80,7 @@ inductive valid_oracle_program :: \<open>raw_program \<Rightarrow> bool\<close> 
   oracle_number c \<le> length ds \<Longrightarrow> valid_oracle_program (InstantiateOracles c ds)\<close>
 | \<open>valid_oracle_program c \<Longrightarrow> ACTUAL_QREGISTER q \<Longrightarrow> norm \<rho> = 1 \<Longrightarrow> valid_oracle_program (LocalQ q \<rho> c)\<close>
 | \<open>valid_oracle_program c \<Longrightarrow> ACTUAL_CREGISTER x \<Longrightarrow> valid_oracle_program (LocalC x init c)\<close>
-| \<open>valid_oracle_program c \<Longrightarrow> oracle_number c = 0 \<Longrightarrow> valid_program c\<close>
+| \<open>valid_oracle_program c \<Longrightarrow> no_oracles c \<Longrightarrow> valid_program c\<close>
 
 
 typedef program = \<open>Collect valid_program\<close>
@@ -143,7 +102,7 @@ proof -
   assume assms: \<open>p \<in> Collect valid_program\<close> \<open>q \<in> Collect valid_program\<close>
   have \<open>valid_oracle_program (Seq p q)\<close>
     using assms by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
-  moreover have \<open>oracle_number (Seq p q) = 0\<close>
+  moreover have \<open>no_oracles (Seq p q)\<close>
     using assms by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
   ultimately show \<open>Seq p q \<in> Collect valid_program\<close>
     by (simp add: valid_oracle_program_valid_program.intros)
@@ -199,15 +158,30 @@ lift_definition qapply :: \<open>'a qvariable \<Rightarrow> ('a,'a) l2bounded ex
   apply (auto intro!: valid_oracle_program_valid_program.intros)
   by (simp add: power_le_one)
 
+lift_definition ifthenelse1 :: \<open>bool expression \<Rightarrow> program \<Rightarrow> program \<Rightarrow> program\<close> is IfThenElse
+  by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
+
+definition ifthenelse :: \<open>bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program\<close> where
+  \<open>ifthenelse c p q = ifthenelse1 c (block p) (block q)\<close>
+
+lift_definition while1 :: \<open>bool expression \<Rightarrow> program \<Rightarrow> program\<close> is While
+  by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
+
+definition while :: \<open>bool expression \<Rightarrow> program list \<Rightarrow> program\<close> where
+  \<open>while c p = while1 c (block p)\<close>
+
+(* lift_definition qinit :: \<open>'a qvariable \<Rightarrow> 'a ell2 expression \<Rightarrow> program\<close> is
+\<open>\<lambda>... QuantumOp\<close> *)
+
+term QuantumOp
+
 consts
-  ifthenelse :: "bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program"
-  while :: "bool expression \<Rightarrow> program list \<Rightarrow> program"
   qinit :: "'a qvariable \<Rightarrow> 'a ell2 expression \<Rightarrow> program"
   measurement :: "'a cvariable \<Rightarrow> 'b qvariable \<Rightarrow> ('a,'b) measurement expression \<Rightarrow> program"
   instantiateOracles :: "oracle_program \<Rightarrow> program list \<Rightarrow> program"
   localvars :: "'a cvariable \<Rightarrow> 'b qvariable \<Rightarrow> program list \<Rightarrow> program"
 
-fun fvq_raw_program :: \<open>raw_program \<Rightarrow> QVARIABLE\<close> where
+(* fun fvq_raw_program :: \<open>raw_program \<Rightarrow> QVARIABLE\<close> where
   \<open>fvq_raw_program (Seq p q) = fvq_raw_program p \<squnion> fvq_raw_program q\<close>
 | \<open>fvq_raw_program Skip = \<bottom>\<close>
 | \<open>fvq_raw_program (Sample _) = \<bottom>\<close>
@@ -218,99 +192,8 @@ fun fvq_raw_program :: \<open>raw_program \<Rightarrow> QVARIABLE\<close> where
 | \<open>fvq_raw_program (InstantiateOracles p qs) = fvq_raw_program p \<squnion> (\<Squnion>q\<in>set qs. fvq_raw_program q)\<close>
 | \<open>fvq_raw_program (LocalQ Q _ p) = undefined\<close> (* TODO *)
 | \<open>fvq_raw_program (LocalC _ _ p) = fvq_raw_program p\<close>
-| \<open>fvq_raw_program (OracleCall _) = \<bottom>\<close>
+| \<open>fvq_raw_program (OracleCall _) = \<bottom>\<close> *)
 
-lift_definition fvq_program :: "program \<Rightarrow> QVARIABLE" is fvq_raw_program.
-lift_definition fvq_oracle_program :: "oracle_program \<Rightarrow> QVARIABLE" is fvq_raw_program.
-
-consts fvc_program :: "program \<Rightarrow> CVARIABLE"
-consts fvcw_program :: "program \<Rightarrow> CVARIABLE"
-consts fvc_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
-consts fvcw_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
-
-lemma fvq_program_skip[simp]: \<open>fvq_program skip = \<bottom>\<close>
-  apply transfer' by simp
-
-lemma fvq_program_seq: \<open>fvq_program (seq a b) = fvq_program a \<squnion> fvq_program b\<close>
-  apply transfer by simp
-
-lemma fvq_program_sequence: "fvq_program (block b) 
-      = fold (\<lambda>p v. QREGISTER_pair (fvq_program p) v) b QREGISTER_unit"
-proof (induction b rule:induct_list012)
-  case 1
-  show ?case
-    by (simp add: block_empty)
-next
-  case (2 x)
-  show ?case
-    by (simp add: block_single)
-next
-  case (3 x y zs)
-  define yzs where \<open>yzs = y # zs\<close>
-  have \<open>fvq_program (block (x # yzs)) = fvq_program x \<squnion> fvq_program (block yzs)\<close>
-    by (simp add: block_cons fvq_program_seq yzs_def)
-  also have \<open>\<dots> = fvq_program x \<squnion> fold (\<lambda>p v. fvq_program p \<squnion> v) yzs \<bottom>\<close>
-    by (simp add: 3 yzs_def)
-  also have \<open>fvq_program x \<squnion> fold (\<lambda>p v. fvq_program p \<squnion> v) yzs w = fold (\<lambda>p v. fvq_program p \<squnion> v) (x # yzs) w\<close> for w
-    apply (induction yzs arbitrary: w)
-    by (simp_all add: sup_aci)
-  finally show ?case
-    by (simp add: yzs_def)
-qed
-
-lemma fvq_program_sample: "fvq_program (sample xs e2) = QREGISTER_unit"
-  apply transfer' by simp
-lemma fvq_program_assign: "fvq_program (assign x e) = QREGISTER_unit"
-  by (simp add: assign_def fvq_program_sample)
-lemma fvq_program_ifthenelse: "fvq_program (ifthenelse c p1 p2) =
-  QREGISTER_pair (fvq_program (block p1)) (fvq_program (block p2))"
-  apply transfer
-  sorry
-lemma fvq_program_while: "fvq_program (while c b) = (fvq_program (block b))"
-  sorry
-lemma fvq_program_qinit: "fvq_program (qinit Q e3) = QREGISTER_of Q"
-  sorry
-lemma fvq_program_qapply: "fvq_program (qapply Q e4) = QREGISTER_of Q"
-  sorry
-lemma fvq_program_measurement: "fvq_program (measurement x R e5) = QREGISTER_of R"
-  sorry
-
-lemma fvc_program_sequence: "fvc_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvc_program p) v) b CREGISTER_unit"
-  sorry
-lemma fvc_program_assign: "fvc_program (assign x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
-  sorry
-lemma fvc_program_sample: "fvc_program (sample x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
-  sorry
-lemma fvc_program_ifthenelse: "fvc_program (ifthenelse c p1 p2) =
-  CREGISTER_pair (fv_expression c) (CREGISTER_pair (fvc_program (block p1)) (fvc_program (block p2)))"
-  sorry
-lemma fvc_program_while: "fvc_program (while c b) = 
-  CREGISTER_pair (fv_expression c) (fvc_program (block b))"
-  sorry
-lemma fvc_program_qinit: "fvc_program (qinit Q e3) = fv_expression e3"
-  sorry
-lemma fvc_program_qapply: "fvc_program (qapply Q e4) = fv_expression e4"
-  sorry
-lemma fvc_program_measurement: "fvc_program (measurement x R e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
-  sorry
-
-lemma fvcw_program_sequence: "fvcw_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvcw_program p) v) b CREGISTER_unit"
-  sorry
-lemma fvcw_program_assign: "fvcw_program (assign x e) = CREGISTER_of x"
-  sorry
-lemma fvcw_program_sample: "fvcw_program (sample x e2) = CREGISTER_of x"
-  sorry
-lemma fvcw_program_ifthenelse: "fvcw_program (ifthenelse c p1 p2) =
-  CREGISTER_pair (fvc_program (block p1)) (fvc_program (block p2))"
-  sorry
-lemma fvcw_program_while: "fvcw_program (while c b) = fvcw_program (block b)"
-  sorry
-lemma fvcw_program_qinit: "fvcw_program (qinit Q e3) = CREGISTER_unit"
-  sorry
-lemma fvcw_program_qapply: "fvcw_program (qapply Q e4) = CREGISTER_unit"
-  sorry
-lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CREGISTER_of x"
-  sorry
 
 lemma localvars_empty: "localvars empty_cregister empty_qregister P = block P"
   sorry
@@ -486,13 +369,14 @@ proof -
 qed
 
 
-lift_definition program_semantics_local_c :: \<open>cl CREGISTER \<Rightarrow> cl \<Rightarrow> (cl,qu) program_semantics \<Rightarrow> (cl,qu) program_semantics\<close> is
+lift_definition cq_map_local_c :: \<open>cl CREGISTER \<Rightarrow> cl \<Rightarrow> (cl,qu) cq_map \<Rightarrow> (cl,qu) cq_map\<close> is
   \<open>\<lambda>F init \<EE> c. kraus_family_map_outcome (\<lambda>d. copy_CREGISTER_from F c d) (\<EE> (copy_CREGISTER_from F init c))\<close>
-  by (simp add: program_semantics_rel_def kraus_equivalent'_map_cong)
+  by (simp add: cq_map_rel_def kraus_equivalent'_map_cong)
 
-axiomatization program_semantics_local_q :: \<open>qu QREGISTER \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> (cl,qu) program_semantics \<Rightarrow> (cl,qu) program_semantics\<close>
+axiomatization cq_map_local_q :: 
+  \<open>qu QREGISTER \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> (cl,qu) cq_map \<Rightarrow> (cl,qu) cq_map\<close>
 
-axiomatization program_semantics_while :: \<open>bool expression \<Rightarrow> (cl,qu) program_semantics \<Rightarrow> (cl,qu) program_semantics\<close>
+axiomatization cq_map_while :: \<open>bool expression \<Rightarrow> (cl,qu) cq_map \<Rightarrow> (cl,qu) cq_map\<close>
 
 
 
@@ -502,58 +386,58 @@ axiomatization program_semantics_while :: \<open>bool expression \<Rightarrow> (
 
 (* lemma kraus_map_from_measurement_0: \<open>kraus_equivalent' (kraus_map_from_measurement 0) 0\<close> *)
 
-lift_definition program_semantics_measurement :: \<open>(cl, qu) measurement expression \<Rightarrow> (cl,qu) program_semantics\<close> is
+lift_definition cq_map_measurement :: \<open>(cl, qu) measurement expression \<Rightarrow> (cl,qu) cq_map\<close> is
   \<open>\<lambda>m c. kraus_map_from_measurement (m c)\<close>
-  by (auto intro!: kraus_map_from_measurement_norm_leq1 simp: program_semantics_rel_def)
+  by (auto intro!: kraus_map_from_measurement_norm_leq1 simp: cq_map_rel_def)
 
-fun denotation_raw :: \<open>raw_program \<Rightarrow> (cl,qu) program_semantics\<close> where
-  denotation_raw_Skip: \<open>denotation_raw Skip = program_semantics_id\<close>
-| denotation_raw_Seq:  \<open>denotation_raw (Seq c d) = program_semantics_seq (denotation_raw c) (denotation_raw d)\<close>
-| denotation_raw_Sample: \<open>denotation_raw (Sample e) = program_semantics_sample e\<close>
-| denotation_raw_IfThenElse: \<open>denotation_raw (IfThenElse e c d) = program_semantics_if e (denotation_raw c) (denotation_raw d)\<close>
-| denotation_raw_While: \<open>denotation_raw (While e c) = program_semantics_while e (denotation_raw c)\<close>
-| denotation_raw_QuantumOp: \<open>denotation_raw (QuantumOp \<EE>) = program_semantics_quantum_op \<EE>\<close>
-| denotation_raw_Measurement: \<open>denotation_raw (Measurement m) = program_semantics_measurement m\<close>
+fun denotation_raw :: \<open>raw_program \<Rightarrow> (cl,qu) cq_map\<close> where
+  denotation_raw_Skip: \<open>denotation_raw Skip = cq_map_id\<close>
+| denotation_raw_Seq:  \<open>denotation_raw (Seq c d) = cq_map_seq (denotation_raw c) (denotation_raw d)\<close>
+| denotation_raw_Sample: \<open>denotation_raw (Sample e) = cq_map_sample e\<close>
+| denotation_raw_IfThenElse: \<open>denotation_raw (IfThenElse e c d) = cq_map_if e (denotation_raw c) (denotation_raw d)\<close>
+| denotation_raw_While: \<open>denotation_raw (While e c) = cq_map_while e (denotation_raw c)\<close>
+| denotation_raw_QuantumOp: \<open>denotation_raw (QuantumOp \<EE>) = cq_map_quantum_op \<EE>\<close>
+| denotation_raw_Measurement: \<open>denotation_raw (Measurement m) = cq_map_measurement m\<close>
 | denotation_raw_OracleCall: \<open>denotation_raw (OracleCall _) = undefined\<close>
   \<comment> \<open>\<^const>\<open>OracleCall\<close> should not occur in valid programs\<close>
 | denotation_raw_InstantiateOracles: \<open>denotation_raw (InstantiateOracles _ _) = undefined\<close>
   \<comment> \<open>\<^const>\<open>InstantiateOracles\<close> should not occur in valid programs\<close>
-| denotation_raw_LocalC: \<open>denotation_raw (LocalC F init c) = program_semantics_local_c F init (denotation_raw c)\<close>
-| denotation_raw_LocalQ: \<open>denotation_raw (LocalQ F init c) = program_semantics_local_q F init (denotation_raw c)\<close>
+| denotation_raw_LocalC: \<open>denotation_raw (LocalC F init c) = cq_map_local_c F init (denotation_raw c)\<close>
+| denotation_raw_LocalQ: \<open>denotation_raw (LocalQ F init c) = cq_map_local_q F init (denotation_raw c)\<close>
 
 
 
-(* fun denotation_raw :: "raw_program \<Rightarrow> program_semantics" where
+(* fun denotation_raw :: "raw_program \<Rightarrow> cq_map" where
   denotation_raw_Skip: \<open>denotation_raw Skip = cq_kraus_family_id\<close>
 | denotation_raw_Seq: \<open>denotation_raw (Seq c d) = cq_kraus_family_comp (denotation_raw d) (denotation_raw c)\<close>
 | denotation_raw_Sample: \<open>denotation_raw (Sample e) = 
       cq_operator_cases (\<lambda>c \<rho>. cq_diagonal_operator (prob (e c)) \<rho>) \<rho>\<close>
 
-fun denotation_raw :: "raw_program \<Rightarrow> program_state \<Rightarrow> program_state" where
+fun denotation_raw :: "raw_program \<Rightarrow> cq_operator \<Rightarrow> cq_operator" where
   denotation_raw_Skip: \<open>denotation_raw Skip \<rho> = \<rho>\<close>
 | denotation_raw_Seq: \<open>denotation_raw (Seq c d) \<rho> = denotation_raw d (denotation_raw c \<rho>)\<close>
 | denotation_raw_Sample: \<open>denotation_raw (Sample e) \<rho> = cq_operator_cases (\<lambda>c \<rho>. cq_from_distrib (e c) \<rho>) \<rho>\<close>
 (* TODO missing cases *)
  *)
 
-lift_definition denotation :: "program \<Rightarrow> (cl,qu) program_semantics" is denotation_raw.
+lift_definition denotation :: "program \<Rightarrow> (cl,qu) cq_map" is denotation_raw.
 
-lemma denotation_sample: \<open>denotation (sample x e) = program_semantics_sample (\<lambda>m. map_distr (\<lambda>xa. Classical_Registers.setter x xa m) (e m))\<close>
+lemma denotation_sample: \<open>denotation (sample x e) = cq_map_sample (\<lambda>m. map_distr (\<lambda>xa. Classical_Registers.setter x xa m) (e m))\<close>
   apply (transfer' fixing: x e)
   by simp
 
 (* TODO nicer one *)
-lemma denotation_assign: \<open>denotation (assign x e) = program_semantics_sample (\<lambda>m. point_distr (Classical_Registers.setter x (e m) m))\<close>
+lemma denotation_assign: \<open>denotation (assign x e) = cq_map_sample (\<lambda>m. point_distr (Classical_Registers.setter x (e m) m))\<close>
   by (simp add: assign_def denotation_sample)
 
-lemma denotation_skip: \<open>denotation skip = program_semantics_id\<close>
+lemma denotation_skip: \<open>denotation skip = cq_map_id\<close>
   apply transfer' 
   by simp
 
-lemma denotation_seq: \<open>denotation (seq p q) = program_semantics_seq (denotation p) (denotation q)\<close>
+lemma denotation_seq: \<open>denotation (seq p q) = cq_map_seq (denotation p) (denotation q)\<close>
   apply transfer' by (auto intro!: ext)
 
-lemma denotation_block: "denotation (block ps) = foldr (\<lambda>p s. program_semantics_seq (denotation p) s) ps program_semantics_id"
+lemma denotation_block: "denotation (block ps) = foldr (\<lambda>p s. cq_map_seq (denotation p) s) ps cq_map_id"
 proof (induction ps rule:block.induct)
   case 1
   show ?case
@@ -568,10 +452,149 @@ next
     by (simp add: block_cons denotation_seq)
 qed
 
-definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> (cl,qu) program_state \<Rightarrow> real" where
-  "probability e p \<rho> = Prob (program_state_distrib (program_semantics_apply (denotation p) \<rho>)) (Collect e)"
+lift_definition kraus_family_in_qref_strict :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> is
+  \<open>\<lambda>\<EE> Q. \<forall>(E,x)\<in>\<EE>. E \<in> Rep_QREGISTER Q\<close>.
+definition kraus_family_in_qref :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> where
+  \<open>kraus_family_in_qref \<EE> Q \<longleftrightarrow> (\<exists>\<FF>. kraus_equivalent' \<EE> \<FF> \<and> kraus_family_in_qref_strict \<FF> Q)\<close>
 
-(* consts "probability_syntax" :: "bool \<Rightarrow> program \<Rightarrow> program_state \<Rightarrow> real" ("Pr[_ : (_'(_'))]")
+lift_definition qc_map_in_qref :: \<open>('cl,'qu) cq_map \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> is
+  \<open>\<lambda>\<EE> Q. \<forall>x. kraus_family_in_qref (\<EE> x) Q\<close>
+  apply (auto intro!: simp: cq_map_rel_def kraus_family_in_qref_def)
+  using kraus_equivalent'_trans kraus_equivalent'_sym
+  by meson
+
+definition fvq_of_cq_map :: \<open>(cl, qu) cq_map \<Rightarrow> QVARIABLE\<close> where
+  \<open>fvq_of_cq_map \<EE> = Inf {Q. qc_map_in_qref \<EE> Q}\<close>
+
+definition fvq_program :: \<open>program \<Rightarrow> QVARIABLE\<close> where
+  \<open>fvq_program p = fvq_of_cq_map (denotation p)\<close>
+
+function fvq_raw_program :: \<open>raw_program \<Rightarrow> QVARIABLE\<close> where
+ \<open>no_oracles p \<Longrightarrow> fvq_raw_program p = fvq_of_cq_map (undefined denotation_raw p)\<close>
+| \<open>\<not> no_oracles (Seq p q) \<Longrightarrow> fvq_raw_program (Seq p q) = fvq_raw_program p \<squnion> fvq_raw_program q\<close>
+| \<open>\<not> no_oracles (IfThenElse c p q) \<Longrightarrow> fvq_raw_program (IfThenElse c p q) = fvq_raw_program p \<squnion> fvq_raw_program q\<close>
+| \<open>\<not> no_oracles (While c p) \<Longrightarrow> fvq_raw_program (While c p) = fvq_raw_program p\<close>
+| \<open>fvq_raw_program (InstantiateOracles p qs) = fvq_raw_program p \<squnion> (\<Squnion>q\<in>set qs. fvq_raw_program q)\<close>
+| \<open>\<not> no_oracles (LocalQ Q \<rho> p) \<Longrightarrow> fvq_raw_program (LocalQ Q \<rho> p) = undefined\<close> (* TODO *)
+| \<open>\<not> no_oracles (LocalC C c p) \<Longrightarrow> fvq_raw_program (LocalC C c p) = fvq_raw_program p\<close>
+| \<open>fvq_raw_program (OracleCall _) = \<bottom>\<close>
+                      apply atomize_elim
+  by (auto elim: no_oracles.elims)
+termination by lexicographic_order
+
+consts fvc_program :: "program \<Rightarrow> CVARIABLE"
+consts fvcw_program :: "program \<Rightarrow> CVARIABLE"
+consts fvc_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
+consts fvcw_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
+
+lemma fvq_program_skip[simp]: \<open>fvq_program skip = \<bottom>\<close>
+  sorry
+
+(* TODO Truth is \<le> *)
+lemma fvq_program_seq: \<open>fvq_program (seq a b) = fvq_program a \<squnion> fvq_program b\<close>
+  sorry
+
+(* TODO Truth is \<le> *)
+lemma fvq_program_sequence: "fvq_program (block b) 
+      = fold (\<lambda>p v. QREGISTER_pair (fvq_program p) v) b QREGISTER_unit"
+proof (induction b rule:induct_list012)
+  case 1
+  show ?case
+    by (simp add: block_empty)
+next
+  case (2 x)
+  show ?case
+    by (simp add: block_single)
+next
+  case (3 x y zs)
+  define yzs where \<open>yzs = y # zs\<close>
+  have \<open>fvq_program (block (x # yzs)) = fvq_program x \<squnion> fvq_program (block yzs)\<close>
+    by (simp add: block_cons fvq_program_seq yzs_def)
+  also have \<open>\<dots> = fvq_program x \<squnion> fold (\<lambda>p v. fvq_program p \<squnion> v) yzs \<bottom>\<close>
+    by (simp add: 3 yzs_def)
+  also have \<open>fvq_program x \<squnion> fold (\<lambda>p v. fvq_program p \<squnion> v) yzs w = fold (\<lambda>p v. fvq_program p \<squnion> v) (x # yzs) w\<close> for w
+    apply (induction yzs arbitrary: w)
+    by (simp_all add: sup_aci)
+  finally show ?case
+    by (simp add: yzs_def)
+qed
+
+lemma fvq_program_sample: "fvq_program (sample xs e2) = QREGISTER_unit"
+  sorry
+lemma fvq_program_assign: "fvq_program (assign x e) = QREGISTER_unit"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvq_program_ifthenelse: "fvq_program (ifthenelse c p1 p2) =
+  QREGISTER_pair (fvq_program (block p1)) (fvq_program (block p2))"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvq_program_while: "fvq_program (while c b) = (fvq_program (block b))"
+  sorry
+(* TODO Truth is \<le>. Or is = correct? *)
+lemma fvq_program_qinit: "fvq_program (qinit Q e3) = QREGISTER_of Q"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvq_program_qapply: "fvq_program (qapply Q e4) = QREGISTER_of Q"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvq_program_measurement: "fvq_program (measurement x R e5) = QREGISTER_of R"
+  sorry
+
+(* TODO Truth is \<le> *)
+lemma fvc_program_sequence: "fvc_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvc_program p) v) b CREGISTER_unit"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvc_program_assign: "fvc_program (assign x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvc_program_sample: "fvc_program (sample x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvc_program_ifthenelse: "fvc_program (ifthenelse c p1 p2) =
+  CREGISTER_pair (fv_expression c) (CREGISTER_pair (fvc_program (block p1)) (fvc_program (block p2)))"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvc_program_while: "fvc_program (while c b) = 
+  CREGISTER_pair (fv_expression c) (fvc_program (block b))"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvc_program_qinit: "fvc_program (qinit Q e3) = fv_expression e3"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvc_program_qapply: "fvc_program (qapply Q e4) = fv_expression e4"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvc_program_measurement: "fvc_program (measurement x R e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
+  sorry
+
+(* TODO Truth is \<le> *)
+lemma fvcw_program_sequence: "fvcw_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvcw_program p) v) b CREGISTER_unit"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvcw_program_assign: "fvcw_program (assign x e) = CREGISTER_of x"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvcw_program_sample: "fvcw_program (sample x e2) = CREGISTER_of x"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvcw_program_ifthenelse: "fvcw_program (ifthenelse c p1 p2) =
+  CREGISTER_pair (fvc_program (block p1)) (fvc_program (block p2))"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvcw_program_while: "fvcw_program (while c b) = fvcw_program (block b)"
+  sorry
+lemma fvcw_program_qinit: "fvcw_program (qinit Q e3) = CREGISTER_unit"
+  sorry
+lemma fvcw_program_qapply: "fvcw_program (qapply Q e4) = CREGISTER_unit"
+  sorry
+(* TODO Truth is \<le> *)
+lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CREGISTER_of x"
+  sorry
+
+definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> (cl,qu) cq_operator \<Rightarrow> real" where
+  "probability e p \<rho> = Prob (cq_operator_distrib (cq_map_apply (denotation p) \<rho>)) (Collect e)"
+
+(* consts "probability_syntax" :: "bool \<Rightarrow> program \<Rightarrow> cq_operator \<Rightarrow> real" ("Pr[_ : (_'(_'))]")
 translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c"
 hide_const probability_syntax *)
 
@@ -586,8 +609,8 @@ lemma equal_until_bad:
   assumes "probability (map_expression2 (\<lambda>e b. \<not>e&b) e b) g3 rho \<le> probability b g4 rho"
   shows "abs (probability b g3 rho - probability b g4 rho) \<le> probability e g3 rho"
 proof -
-  define d3 d4 where \<open>d3 = program_state_distrib (program_semantics_apply (denotation g3) rho)\<close>
-    and \<open>d4 = program_state_distrib (program_semantics_apply (denotation g4) rho)\<close>
+  define d3 d4 where \<open>d3 = cq_operator_distrib (cq_map_apply (denotation g3) rho)\<close>
+    and \<open>d4 = cq_operator_distrib (cq_map_apply (denotation g4) rho)\<close>
   from assms have assm1: \<open>Prob d4 (Collect b) \<le> Prob d3 {m. e m \<or> b m}\<close>
     and assm2: \<open>Prob d3 {m. \<not> e m \<and> b m} \<le> Prob d4 (Collect b)\<close>
     by (simp_all add: probability_def d3_def d4_def)
@@ -630,7 +653,7 @@ named_theorems program_fv
 
 ML_file "programs.ML"
 
-consts "probability_syntax" :: "bool expression \<Rightarrow> program \<Rightarrow> (cl,qu) program_state \<Rightarrow> real" ("Pr[_:(_'(_'))]")
+consts "probability_syntax" :: "bool expression \<Rightarrow> program \<Rightarrow> (cl,qu) cq_operator \<Rightarrow> real" ("Pr[_:(_'(_'))]")
 translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability (Expr[a]) b c"
 (* translations "CONST probability_syntax a b c" \<rightleftharpoons> "CONST probability a b c" *)
 hide_const probability_syntax

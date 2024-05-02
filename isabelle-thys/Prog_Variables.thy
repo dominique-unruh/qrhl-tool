@@ -157,7 +157,7 @@ simproc_setup register_conversion_hint (\<open>register_conversion_hint G (apply
     val target = ct |> Thm.dest_arg1
     val conv = (Prog_Variables.apply_qregister_conversion_conv ctxt target |> Conv.arg_conv)
         then_conv Conv.rewr_conv @{thm register_conversion_hint_def[THEN eq_reflection]}
-    in SOME (conv ct) handle e => NONE end\<close>
+    in \<^try>\<open>SOME (conv ct) catch e => NONE\<close> end\<close>
 
 (* lemma register_conversion_hint_solve[simp]: 
   \<open>register_conversion_hint R (apply_qregister Q x) = apply_qregister R (apply_qregister (qregister_conversion Q R) x)\<close>
