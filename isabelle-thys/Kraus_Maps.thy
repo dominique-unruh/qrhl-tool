@@ -17,12 +17,6 @@ setup_lifting type_definition_kraus_family
 lift_definition kraus_family_bound :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a)\<close> is
   \<open>\<lambda>\<EE>. infsum_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) \<EE>\<close> .
 
-(* TODO move *)
-lift_definition adj_wot :: \<open>('a::chilbert_space, 'b::complex_inner) cblinfun_wot \<Rightarrow> ('b, 'a) cblinfun_wot\<close> is adj.
-lift_definition cblinfun_compose_wot :: \<open>('a::complex_inner, 'b::complex_inner) cblinfun_wot \<Rightarrow>
-    ('c::complex_normed_vector, 'a) cblinfun_wot \<Rightarrow>
-    ('c, 'b) cblinfun_wot\<close> is cblinfun_compose.
-
 lemma kraus_family_bound_def':
   \<open>kraus_family_bound \<EE> = Rep_cblinfun_wot (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
   unfolding kraus_family_bound.rep_eq infsum_euclidean_eq[symmetric]
@@ -130,16 +124,6 @@ lemma kraus_family_bound_leqI:
   shows \<open>kraus_family_bound \<EE> \<le> B\<close>
   using kraus_family_Sup[of \<EE>]
   by (simp add: assms is_Sup_def)
-
-(* TODO replace less_eq_scaled_id_norm *) thm less_eq_scaled_id_norm
-lemma less_eq_scaled_id_norm: 
-  assumes \<open>norm A \<le> c\<close> and \<open>selfadjoint A\<close>
-  shows \<open>A \<le> c *\<^sub>R id_cblinfun\<close>
-  using less_eq_scaled_id_norm assms 
-  unfolding scaleR_scaleC selfadjoint_def
-  by metis
-
-
 
 lemma kraus_family_bound_pos[simp]: \<open>kraus_family_bound \<EE> \<ge> 0\<close>
   using kraus_family_Sup[of \<EE>]
@@ -3585,20 +3569,6 @@ qed
 lemma kraus_family_map'_0_right[simp]: \<open>kraus_family_map' X \<EE> 0 = 0\<close>
   by (simp add: kraus_family_map'_def)
 
-(* TODO move *)
-lemma limitin_principal_singleton:
-  assumes \<open>f x \<in> topspace T\<close>
-  shows "limitin T f (f x) (principal {x})"
-  using assms by (simp add: limitin_def eventually_principal)
-
-(* TODO move *)
-lemma summable_on_in_finite:
-  fixes f :: \<open>'a \<Rightarrow> 'b::{comm_monoid_add,topological_space}\<close>
-  assumes "finite F"
-  assumes \<open>sum f F \<in> topspace T\<close>
-  shows "summable_on_in T f F"
-  using assms summable_on_in_def has_sum_in_finite by blast
-
 lift_definition kraus_map_infsum :: \<open>('a \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'x) kraus_family) \<Rightarrow> 'a set \<Rightarrow> ('b,'c,'a\<times>'x) kraus_family\<close> is
   \<open>\<lambda>\<EE> A. if summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A
          then (\<lambda>(a,(E,x)). (E,(a,x))) ` Sigma A (\<lambda>a. Rep_kraus_family (\<EE> a)) else {}\<close>
@@ -3781,205 +3751,7 @@ qed *)
 
 
 
-lemma closedin_pullback_topology:
-  "closedin (pullback_topology A f T) S \<longleftrightarrow> (\<exists>C. closedin T C \<and> S = f-`C \<inter> A)"
-proof (rule iffI)
-  define TT PT where \<open>TT = topspace T\<close> and \<open>PT = topspace (pullback_topology A f T)\<close>
-  assume closed: \<open>closedin (pullback_topology A f T) S\<close>
-  then have \<open>S \<subseteq> PT\<close>
-    using PT_def closedin_subset by blast
-  from closed have \<open>openin (pullback_topology A f T) (PT - S)\<close>
-    by (auto intro!: simp: closedin_def PT_def)
-  then obtain U where \<open>openin T U\<close> and S_fUA: \<open>PT - S = f -` U \<inter> A\<close>
-    by (auto simp: openin_pullback_topology)
-  define C where \<open>C = TT - U\<close>
-  have \<open>closedin T C\<close>
-    using C_def TT_def \<open>openin T U\<close> by blast
-  moreover have \<open>S = f -` C \<inter> A\<close>
-    using S_fUA \<open>S \<subseteq> PT\<close>
-    apply (simp only: C_def PT_def TT_def)
-    by (metis Diff_Diff_Int Diff_Int_distrib2  inf.absorb_iff2 topspace_pullback_topology vimage_Diff)
-  ultimately show \<open>\<exists>C. closedin T C \<and> S = f -` C \<inter> A\<close>
-    by auto
-next
-  assume \<open>\<exists>U. closedin T U \<and> S = f -` U \<inter> A\<close>
-  then show \<open>closedin (pullback_topology A f T) S\<close>
-    apply (simp add: openin_pullback_topology closedin_def topspace_pullback_topology)
-    by blast
-qed
 
-
-lemma regular_space_pullback[intro]:
-  assumes \<open>regular_space T\<close>
-  shows \<open>regular_space (pullback_topology A f T)\<close>
-proof (unfold regular_space_def, intro allI impI)
-  define TT PT where \<open>TT = topspace T\<close> and \<open>PT = topspace (pullback_topology A f T)\<close>
-  fix S y
-  assume asm: \<open>closedin (pullback_topology A f T) S \<and> y \<in> PT - S\<close>
-  from asm obtain C where \<open>closedin T C\<close> and S_fCA: \<open>S = f -` C \<inter> A\<close>
-    by (auto simp: closedin_pullback_topology)
-  from asm S_fCA
-  have \<open>f y \<in> TT - C\<close>
-    by (auto simp: PT_def TT_def topspace_pullback_topology)
-  then obtain U' V' where \<open>openin T U'\<close> and \<open>openin T V'\<close> and \<open>f y \<in> U'\<close> and \<open>C \<subseteq> V'\<close> and \<open>U' \<inter> V' = {}\<close>
-    by (metis TT_def \<open>closedin T C\<close> assms regular_space_def disjnt_def)
-  define U V where \<open>U = f -` U' \<inter> A\<close> and \<open>V = f -` V' \<inter> A\<close>
-  have \<open>openin (pullback_topology A f T) U\<close>
-    using U_def \<open>openin T U'\<close> openin_pullback_topology by blast
-  moreover have \<open>openin (pullback_topology A f T) V\<close>
-    using V_def \<open>openin T V'\<close> openin_pullback_topology by blast
-  moreover have \<open>y \<in> U\<close>
-    by (metis DiffD1 Int_iff PT_def U_def \<open>f y \<in> U'\<close> asm topspace_pullback_topology vimageI)
-  moreover have \<open>S \<subseteq> V\<close>
-    using S_fCA V_def \<open>C \<subseteq> V'\<close> by blast
-  moreover have \<open>disjnt U V\<close>
-    using U_def V_def \<open>U' \<inter> V' = {}\<close> disjnt_def by blast
-
-  ultimately show \<open>\<exists>U V. openin (pullback_topology A f T) U \<and> openin (pullback_topology A f T) V \<and> y \<in> U \<and> S \<subseteq> V \<and> disjnt U V\<close>
-    apply (rule_tac exI[of _ U], rule_tac exI[of _ V])
-    by auto
-qed
-
-lemma t3_space_euclidean_regular[iff]: \<open>regular_space (euclidean :: 'a::t3_space topology)\<close>
-  using t3_space
-  apply (simp add: regular_space_def disjnt_def)
-  by fast
-
-
-lemma regular_space_wot: \<open>regular_space cweak_operator_topology\<close>
-proof -
-  have \<open>regular_space (product_topology (\<lambda>i::'b\<times>'a. euclidean :: complex topology) UNIV)\<close>
-    by (simp add: regular_space_product_topology)
-  then have \<open>regular_space (euclidean :: ('b\<times>'a \<Rightarrow> complex) topology)\<close>
-    using euclidean_product_topology by metis
-  then show ?thesis
-    unfolding cweak_operator_topology_def
-    by (rule_tac regular_space_pullback)
-qed
-
-
-instance cblinfun_wot :: (complex_normed_vector, complex_inner) t3_space
-  apply intro_classes
-  apply transfer
-  using regular_space_wot
-  by (auto simp add: regular_space_def disjnt_def)
-
-lemma infsum_Sigma:
-  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
-    and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{topological_comm_monoid_add, t3_space}\<close>
-  assumes summableAB: "f summable_on (Sigma A B)"
-  assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> (\<lambda>y. f (x, y)) summable_on (B x)\<close>
-  shows "infsum f (Sigma A B) = (\<Sum>\<^sub>\<infinity>x\<in>A. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x, y))"
-proof -
-  have 1: \<open>(f has_sum infsum f (Sigma A B)) (Sigma A B)\<close>
-    by (simp add: assms)
-  define b where \<open>b x = (\<Sum>\<^sub>\<infinity>y\<in>B x. f (x, y))\<close> for x
-  have 2: \<open>((\<lambda>y. f (x, y)) has_sum b x) (B x)\<close> if \<open>x \<in> A\<close> for x
-    using b_def assms(2) that by auto
-  have 3: \<open>(b has_sum (\<Sum>\<^sub>\<infinity>x\<in>A. b x)) A\<close>
-    using 1 2 by (metis has_sum_SigmaD infsumI)
-  have 4: \<open>(f has_sum (\<Sum>\<^sub>\<infinity>x\<in>A. b x)) (Sigma A B)\<close>
-    using 2 3 apply (rule has_sum_SigmaI)
-    using assms by auto
-  from 1 4 show ?thesis
-    using b_def[abs_def] infsumI by blast
-qed
-
-lemma summable_wot_boundedI':
-  fixes f :: \<open>'b \<Rightarrow> ('a::chilbert_space, 'a) cblinfun_wot\<close>
-  assumes bounded: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> X \<Longrightarrow> sum f F \<le> B\<close>
-  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
-  shows \<open>f summable_on X\<close>
-  apply (subst summable_on_euclidean_eq[symmetric])
-  using assms
-  apply (transfer' fixing: X)
-  apply (rule summable_wot_boundedI)
-  by auto
-
-instance cblinfun :: (chilbert_space,chilbert_space) ordered_comm_monoid_add
-  by intro_classes
-
-instance cblinfun_wot :: (chilbert_space,chilbert_space) ordered_comm_monoid_add
-proof
-  fix a b c :: \<open>('a,'b) cblinfun_wot\<close>
-  assume \<open>a \<le> b\<close>
-  then show \<open>c + a \<le> c + b\<close>
-    apply transfer'
-    by simp
-qed
-
-lemma infsum_mono_neutral_wot':
-  fixes f :: "'a \<Rightarrow> ('b::chilbert_space, 'b) cblinfun_wot"
-  assumes "f summable_on A" and "g summable_on B"
-  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
-  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
-  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
-  shows "infsum f A \<le> infsum g B"
-  unfolding infsum_euclidean_eq[symmetric]
-  using assms
-  apply (transfer' fixing: A B)
-  apply (rule infsum_mono_neutral_wot)
-  by auto
-
-
-lemma infsum_nonneg_wot':
-  fixes f :: "'a \<Rightarrow> ('c::chilbert_space,'c) cblinfun_wot"
-  assumes "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
-  shows "infsum f M \<ge> 0"
-proof (cases \<open>f summable_on M\<close>)
-  case True
-  show ?thesis
-    apply (subst infsum_0[symmetric, OF refl])
-    apply (rule infsum_mono_neutral_wot'[where A=M and B=M])
-    using assms True by auto
-next
-  case False
-  then have \<open>infsum f M = 0\<close>
-    using infsum_not_exists by blast
-  then show ?thesis
-    by simp
-qed
-
-
-lemma summable_on_Sigma_wotI:
-  fixes f :: \<open>'a \<times> 'b \<Rightarrow> ('c::chilbert_space,'c) cblinfun_wot\<close>
-  assumes \<open>\<And>x y. x \<in> A \<Longrightarrow> y \<in> B x \<Longrightarrow> f (x,y) \<ge> 0\<close>
-  assumes summableA: \<open>(\<lambda>x. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x,y)) summable_on A\<close>
-  assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> (\<lambda>y. f (x, y)) summable_on (B x)\<close>
-  shows \<open>f summable_on Sigma A B\<close>
-proof (rule summable_wot_boundedI')
-  show \<open>f x \<ge> 0\<close> if \<open>x \<in> Sigma A B\<close> for x
-    using assms that by blast
-  show \<open>sum f F \<le> (\<Sum>\<^sub>\<infinity>x\<in>A. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x,y))\<close> if \<open>finite F\<close> and \<open>F \<subseteq> Sigma A B\<close> for F
-  proof -
-    define FA where \<open>FA = fst ` F\<close>
-    define FB where \<open>FB x = {y. (x,y)\<in>F}\<close> for x
-    have F_FAB: \<open>F = Sigma FA FB\<close>
-      by (auto simp: FA_def FB_def image_iff Bex_def)
-    have [simp]: \<open>finite FA\<close> \<open>finite (FB x)\<close> for x
-      using \<open>finite F\<close> by (auto intro!: finite_inverse_image injI simp: FA_def FB_def)
-    have FA_A: \<open>FA \<subseteq> A\<close>
-      using FA_def that(2) by auto
-    have FB_B: \<open>FB x \<subseteq> B x\<close> if \<open>x \<in> A\<close> for x
-      using FB_def \<open>F \<subseteq> Sigma A B\<close> by auto
-    have \<open>sum f F = (\<Sum>x\<in>FA. \<Sum>y\<in>FB x. f (x,y))\<close>
-      apply (subst sum.Sigma)
-      by (auto simp: F_FAB)
-    also have \<open>\<dots> = (\<Sum>x\<in>FA. \<Sum>\<^sub>\<infinity>y\<in>FB x. f (x,y))\<close>
-      by fastforce
-    also have \<open>\<dots> \<le> (\<Sum>x\<in>FA. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x,y))\<close>
-      apply (rule sum_mono)
-      apply (rule infsum_mono_neutral_wot')
-      using FA_A FB_B assms by auto 
-    also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>x\<in>FA. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x,y))\<close>
-      by fastforce
-    also have \<open>\<dots> \<le> (\<Sum>\<^sub>\<infinity>x\<in>A. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x,y))\<close>
-      apply (rule infsum_mono_neutral_wot')
-      using FA_A assms by (auto intro!: infsum_nonneg_wot')
-    finally show \<open>sum f F \<le> (\<Sum>\<^sub>\<infinity>x\<in>A. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x,y))\<close>
-      by -
-  qed
-qed
 
 lemma kraus_family_bound_kraus_map_infsum:
   fixes f :: \<open>'a \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'x) kraus_family\<close>

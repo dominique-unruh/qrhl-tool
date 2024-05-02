@@ -829,112 +829,6 @@ lemma abs_summable_minus:
 lemma of_nat_indicator: \<open>of_nat (indicator E x) = indicator E x\<close>
   by (metis indicator_eq_0_iff indicator_eq_1_iff of_nat_1 semiring_1_class.of_nat_simps(1))
 
-definition increasing_filter :: \<open>'a::order filter \<Rightarrow> bool\<close> where
-  \<open>increasing_filter F \<longleftrightarrow> (\<forall>\<^sub>F x in F. \<forall>\<^sub>F y in F. y \<ge> x)\<close>
-
-(* TODO: reference: https://math.stackexchange.com/a/4749216/403528 *)
-lemma increasing_finite_subsets_at_top[simp]: \<open>increasing_filter (finite_subsets_at_top X)\<close>
-  apply (simp add: increasing_filter_def eventually_finite_subsets_at_top)
-  by force
-
-lemma increasing_filtermap:
-  fixes F :: \<open>'a::order filter\<close> and f :: \<open>'a \<Rightarrow> 'b::order\<close> and X :: \<open>'a set\<close>
-  assumes increasing: \<open>increasing_filter F\<close>
-  assumes mono: \<open>mono_on X f\<close>
-  assumes ev_X: \<open>eventually (\<lambda>x. x \<in> X) F\<close>
-  shows \<open>increasing_filter (filtermap f F)\<close>
-proof -
-  from increasing
-  have incr: \<open>\<forall>\<^sub>F x in F. \<forall>\<^sub>F y in F. x \<le> y\<close>
-    apply (simp add: increasing_filter_def)
-    by -
-  have \<open>\<forall>\<^sub>F x in F. \<forall>\<^sub>F y in F. f x \<le> f y\<close>
-  proof (rule eventually_elim2[OF ev_X incr])
-    fix x
-    assume \<open>x \<in> X\<close>
-    assume \<open>\<forall>\<^sub>F y in F. x \<le> y\<close>
-    then show \<open>\<forall>\<^sub>F y in F. f x \<le> f y\<close>
-    proof (rule eventually_elim2[OF ev_X])
-      fix y assume \<open>y \<in> X\<close> and \<open>x \<le> y\<close>
-      with \<open>x \<in> X\<close> show \<open>f x \<le> f y\<close>
-        using mono by (simp add: mono_on_def)
-    qed
-  qed
-  then show \<open>increasing_filter (filtermap f F)\<close>
-    by (simp add: increasing_filter_def eventually_filtermap)
-qed
-
-(* TODO: reference: https://math.stackexchange.com/a/4749216/403528 *)
-lemma monotone_convergence:
-  fixes f :: \<open>'b \<Rightarrow> 'a::{order_topology, conditionally_complete_linorder}\<close>
-  assumes bounded: \<open>\<forall>\<^sub>F x in F. f x \<le> B\<close>
-  assumes increasing: \<open>increasing_filter (filtermap f F)\<close>
-  shows \<open>\<exists>l. (f \<longlongrightarrow> l) F\<close>
-proof (cases \<open>F \<noteq> \<bottom>\<close>)
-  case True
-  note [simp] = True
-  define S l where \<open>S x \<longleftrightarrow> (\<forall>\<^sub>F y in F. f y \<ge> x) \<and> x \<le> B\<close> 
-    and \<open>l = Sup (Collect S)\<close> for x
-  from bounded increasing
-  have ev_S: \<open>eventually S (filtermap f F)\<close>
-    by (auto intro!: eventually_conj simp: S_def[abs_def] increasing_filter_def eventually_filtermap)
-  have bdd_S: \<open>bdd_above (Collect S)\<close>
-    by (auto simp: S_def)
-  have S_nonempty: \<open>Collect S \<noteq> {}\<close>
-    using ev_S
-    by (metis Collect_empty_eq_bot Set.empty_def True eventually_False filtermap_bot_iff)
-  have \<open>(f \<longlongrightarrow> l) F\<close>
-  proof (rule order_tendstoI; rename_tac x)
-    fix x
-    assume \<open>x < l\<close>
-    then obtain s where \<open>S s\<close> and \<open>x < s\<close>
-      using less_cSupD[OF S_nonempty] l_def
-      by blast
-    then 
-    show \<open>\<forall>\<^sub>F y in F. x < f y\<close>
-      using S_def basic_trans_rules(22) eventually_mono by force
-  next
-    fix x
-    assume asm: \<open>l < x\<close>
-    from ev_S
-    show \<open>\<forall>\<^sub>F y in F. f y < x\<close>
-      unfolding eventually_filtermap
-      apply (rule eventually_mono)
-      using asm
-      by (metis bdd_S cSup_upper dual_order.strict_trans2 l_def mem_Collect_eq)
-  qed
-  then show \<open>\<exists>l. (f \<longlongrightarrow> l) F\<close>
-    by (auto intro!: exI[of _ l] simp: filterlim_def)
-next
-  case False
-  then show \<open>\<exists>l. (f \<longlongrightarrow> l) F\<close>
-    by (auto intro!: exI)
-qed
-
-lemma monotone_convergence_complex:
-  fixes f :: \<open>'b \<Rightarrow> complex\<close>
-  assumes bounded: \<open>\<forall>\<^sub>F x in F. f x \<le> B\<close>
-  assumes increasing: \<open>increasing_filter (filtermap f F)\<close>
-  shows \<open>\<exists>l. (f \<longlongrightarrow> l) F\<close>
-proof -
-  have inc_re: \<open>increasing_filter (filtermap (\<lambda>x. Re (f x)) F)\<close>
-    using increasing_filtermap[OF increasing, where f=Re and X=UNIV]
-    by (simp add: less_eq_complex_def[abs_def] mono_def monotone_def filtermap_filtermap)
-  from bounded have \<open>\<forall>\<^sub>F x in F. Re (f x) \<le> Re B\<close>
-    using eventually_mono less_eq_complex_def by fastforce
-  from monotone_convergence[OF this inc_re]
-  obtain re where lim_re: \<open>((\<lambda>x. Re (f x)) \<longlongrightarrow> re) F\<close>
-    by auto
-  from bounded have \<open>\<forall>\<^sub>F x in F. Im (f x) = Im B\<close>
-    by (simp add: less_eq_complex_def[abs_def] eventually_mono)
-  then have lim_im: \<open>((\<lambda>x. Im (f x)) \<longlongrightarrow> Im B) F\<close>
-    by (simp add: tendsto_eventually)
-  from lim_re lim_im have \<open>(f \<longlongrightarrow> Complex re (Im B)) F\<close>
-    by (simp add: tendsto_complex_iff)
-  then show ?thesis
-    by auto
-qed
-
 lemma tendsto_upperbound_complex:
   fixes f :: \<open>'a \<Rightarrow> complex\<close>
   assumes x: "(f \<longlongrightarrow> x) F"
@@ -963,6 +857,13 @@ lemma has_sum_in_finite:
   shows "has_sum_in T f F (sum f F)"
   using assms
   by (simp add: finite_subsets_at_top_finite has_sum_in_def limitin_def eventually_principal)
+
+lemma summable_on_in_finite:
+  fixes f :: \<open>'a \<Rightarrow> 'b::{comm_monoid_add,topological_space}\<close>
+  assumes "finite F"
+  assumes \<open>sum f F \<in> topspace T\<close>
+  shows "summable_on_in T f F"
+  using assms summable_on_in_def has_sum_in_finite by blast
 
 lemma infsum_in_finite:
   assumes "finite F"
@@ -1079,6 +980,32 @@ qed
 
 lemma rewrite_via_subgoal: \<open>x = y \<Longrightarrow> x = y\<close>
   by -
+
+lemma limitin_principal_singleton:
+  assumes \<open>f x \<in> topspace T\<close>
+  shows "limitin T f (f x) (principal {x})"
+  using assms by (simp add: limitin_def eventually_principal)
+
+lemma infsum_Sigma:
+  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
+    and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{topological_comm_monoid_add, t3_space}\<close>
+  assumes summableAB: "f summable_on (Sigma A B)"
+  assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> (\<lambda>y. f (x, y)) summable_on (B x)\<close>
+  shows "infsum f (Sigma A B) = (\<Sum>\<^sub>\<infinity>x\<in>A. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x, y))"
+proof -
+  have 1: \<open>(f has_sum infsum f (Sigma A B)) (Sigma A B)\<close>
+    by (simp add: assms)
+  define b where \<open>b x = (\<Sum>\<^sub>\<infinity>y\<in>B x. f (x, y))\<close> for x
+  have 2: \<open>((\<lambda>y. f (x, y)) has_sum b x) (B x)\<close> if \<open>x \<in> A\<close> for x
+    using b_def assms(2) that by auto
+  have 3: \<open>(b has_sum (\<Sum>\<^sub>\<infinity>x\<in>A. b x)) A\<close>
+    using 1 2 by (metis has_sum_SigmaD infsumI)
+  have 4: \<open>(f has_sum (\<Sum>\<^sub>\<infinity>x\<in>A. b x)) (Sigma A B)\<close>
+    using 2 3 apply (rule has_sum_SigmaI)
+    using assms by auto
+  from 1 4 show ?thesis
+    using b_def[abs_def] infsumI by blast
+qed
 
 
 end
