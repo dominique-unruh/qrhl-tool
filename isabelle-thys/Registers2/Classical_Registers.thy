@@ -905,5 +905,14 @@ lemma getter_Snd_chain_swap[simp]: \<open>getter (cregister_chain cSnd G) (prod.
 lemma getter_Fst_chain_swap[simp]: \<open>getter (cregister_chain cFst G) (prod.swap m) = getter (cregister_chain cSnd G) m\<close>
   by (simp add: getter_chain)
 
+lemma apply_cregister_getter_setter:
+  assumes \<open>cregister F\<close>
+  shows \<open>apply_cregister F a m = (case a (getter F m) of None \<Rightarrow> None | Some x \<Rightarrow> Some (setter F x m))\<close>
+  using assms
+  apply (transfer' fixing: a)
+  apply (subst register_from_getter_setter_of_getter_setter[symmetric])
+  by (auto intro!: simp: register_from_getter_setter_def[abs_def])
+
+
 
 end

@@ -439,12 +439,12 @@ lift_definition cq_map_if :: \<open>('cl \<Rightarrow> bool) \<Rightarrow> ('cl,
   \<open>\<lambda>e p q c. if e c then p c else q c\<close>
   by (simp add: cq_map_rel_def)
 
-lift_definition cq_map_quantum_op :: \<open>('cl \<Rightarrow> ('qu ell2, 'qu ell2, unit) kraus_family) \<Rightarrow> ('cl,'qu) cq_map\<close> is
-  \<open>\<lambda>(\<EE>::'cl \<Rightarrow> ('qu ell2, 'qu ell2, unit) kraus_family) c. 
+lift_definition cq_map_quantum_op :: \<open>('cl \<Rightarrow> ('qu ell2, 'qu ell2, 'x) kraus_family) \<Rightarrow> ('cl,'qu) cq_map\<close> is
+  \<open>\<lambda>(\<EE>::'cl \<Rightarrow> ('qu ell2, 'qu ell2, 'x) kraus_family) c. 
       kraus_family_map_outcome (\<lambda>_. c) (if kraus_family_norm (\<EE> c) \<le> 1 then \<EE> c else 0)\<close>
   by (simp add: cq_map_rel_def)
 
-
-
+definition cq_map_of_op :: \<open>'qu ell2 \<Rightarrow>\<^sub>C\<^sub>L 'qu ell2 \<Rightarrow> ('cl, 'qu) cq_map\<close> where
+  \<open>cq_map_of_op U = cq_map_quantum_op (\<lambda>_. kraus_family_of_op U)\<close>
 
 end

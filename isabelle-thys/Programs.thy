@@ -221,17 +221,6 @@ proof -
     by simp
 qed
 
-lemma CREGISTER_of_non_cregister[simp]: \<open>CREGISTER_of non_cregister = \<bottom>\<close>
-  by (simp add: CREGISTER_of.abs_eq bot_CREGISTER_def)
-
-lemma apply_cregister_getter_setter:
-  assumes \<open>cregister F\<close>
-  shows \<open>apply_cregister F a m = (case a (getter F m) of None \<Rightarrow> None | Some x \<Rightarrow> Some (setter F x m))\<close>
-  using assms
-  apply (transfer' fixing: a)
-  apply (subst register_from_getter_setter_of_getter_setter[symmetric])
-  by (auto intro!: simp: register_from_getter_setter_def[abs_def])
-
 lemma map_commutant_range_apply_cregister:
   \<open>map_commutant (range (apply_cregister F)) 
     = range (\<lambda>f m. case f (setter F m0 m) of None \<Rightarrow> None | Some m' \<Rightarrow> Some (setter F (getter F m) m'))\<close>
@@ -373,8 +362,615 @@ lift_definition cq_map_local_c :: \<open>cl CREGISTER \<Rightarrow> cl \<Rightar
   \<open>\<lambda>F init \<EE> c. kraus_family_map_outcome (\<lambda>d. copy_CREGISTER_from F c d) (\<EE> (copy_CREGISTER_from F init c))\<close>
   by (simp add: cq_map_rel_def kraus_equivalent'_map_cong)
 
-axiomatization cq_map_local_q :: 
-  \<open>qu QREGISTER \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> (cl,qu) cq_map \<Rightarrow> (cl,qu) cq_map\<close>
+(* definition \<open>swap_QREGISTER' = (\<lambda>(f,U,L,R).
+  sandwich (U \<otimes>\<^sub>o U) (classical_operator (Some o map_prod (inv f) (inv f) o (\<lambda>((x,y),(z,w)). ((z,y),(x,w))) o map_prod f f))
+)\<close> *)
+
+definition minimal_projection_in :: \<open>('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a) set \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> bool\<close> where
+  \<open>minimal_projection_in A P \<longleftrightarrow> P \<in> A \<and> is_Proj P \<and> P \<noteq> 0 \<and> (\<forall>P'\<in>A. is_Proj P' \<longrightarrow> P' \<le> P \<longrightarrow> P' \<noteq> 0 \<longrightarrow> P' = P)\<close>
+
+definition is_swap_on_qupdate_set :: \<open>'a qupdate set \<Rightarrow> ('a\<times>'a) qupdate \<Rightarrow> bool\<close> where
+  \<open>is_swap_on_qupdate_set Q U \<longleftrightarrow> U \<in> Q \<otimes>\<^sub>v\<^sub>N Q \<and> unitary U \<and> (\<forall>a\<in>Q. \<forall>b\<in>Q. sandwich U (a \<otimes>\<^sub>o b) = b \<otimes>\<^sub>o a)
+       \<and> (\<forall>a. minimal_projection_in Q a \<longrightarrow> U o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o a) = a \<otimes>\<^sub>o a)\<close>
+
+lift_definition swap_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> ('a\<times>'a) qupdate\<close> is
+  \<open>\<lambda>Q. the_default 0 (Collect (is_swap_on_qupdate_set Q))\<close>.
+
+lemma range_apply_qregister_factor[iff]:
+  fixes F :: \<open>('a, 'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>von_neumann_factor (range (apply_qregister F))\<close>
+proof -
+  from qcomplement_exists[OF assms]
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F. von_neumann_factor (range (apply_qregister F))\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>G::('c, 'b) qregister. qcomplements F G\<close>
+    then obtain G :: \<open>('c, 'b) qregister\<close> where \<open>qcomplements F G\<close>
+      by blast
+    define F' G' FG FG' where \<open>F' = apply_qregister F\<close> and \<open>G' = apply_qregister G\<close> and \<open>FG = qregister_pair F G\<close> and \<open>FG' = apply_qregister FG\<close>
+    have \<open>iso_qregister FG\<close>
+      using FG_def \<open>qcomplements F G\<close> qcomplements_def' by blast
+    then have [iff]: \<open>inj FG'\<close>
+      using FG'_def inj_qregister iso_qregister_def by blast
+    have vN: \<open>von_neumann_algebra (range F')\<close>
+      by (metis assms valid_qregister_range valid_qregister_range_def F'_def)
+    have \<open>range F' \<inter> commutant (range F') = range F' \<inter> range G'\<close>
+      using F'_def G'_def \<open>qcomplements F G\<close>
+      by (metis qcomplements.rep_eq register_range_complement_commutant)
+    also have \<open>\<dots> = range (apply_qregister (qregister_chain FG qFst)) \<inter> range (apply_qregister (qregister_chain FG qSnd))\<close>
+      apply (simp add: F'_def G'_def FG_def)
+      by (metis (no_types, lifting) FG_def \<open>iso_qregister FG\<close> apply_qregister_fst
+          apply_qregister_snd image_cong iso_qregister_def lift_extendL lift_extendR qcompatible_sym)
+    also have \<open>\<dots> = FG' ` (range (apply_qregister qFst) \<inter> range (apply_qregister qSnd))\<close>
+      by (simp flip: FG'_def add: image_image image_Int)
+    also have \<open>\<dots> = FG' ` (range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) \<inter> range (\<lambda>b. id_cblinfun \<otimes>\<^sub>o b))\<close>
+      by (metis (no_types, lifting) apply_qregister_fst apply_qregister_snd image_cong)
+    also have \<open>\<dots> = FG' ` one_algebra\<close>
+    proof (intro arg_cong[where f=\<open>image FG'\<close>] Set.set_eqI iffI)
+      fix x :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'c) ell2\<close> assume \<open>x \<in> one_algebra\<close>
+      then obtain c where c_def: \<open>x = c *\<^sub>C id_cblinfun\<close>
+        by (metis imageE one_algebra_def)
+      then show \<open>x \<in> range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) \<inter> range (\<lambda>b. id_cblinfun \<otimes>\<^sub>o b)\<close>
+        by (auto intro!: exI[of _ \<open>c *\<^sub>C id_cblinfun\<close>]
+            simp: image_iff tensor_op_cbilinear.scaleC_left tensor_op_cbilinear.scaleC_right)
+    next
+      fix x :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'c) ell2\<close>
+      assume asm: \<open>x \<in> range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) \<inter> range (\<lambda>b. id_cblinfun \<otimes>\<^sub>o b)\<close>
+      show \<open>x \<in> one_algebra\<close>
+      proof (cases \<open>x = 0\<close>)
+        case True
+        then show ?thesis 
+          by (auto intro!: exI[of _ 0] simp: one_algebra_def)
+      next
+        case False
+        from asm obtain a b where x_a: \<open>x = a \<otimes>\<^sub>o id_cblinfun\<close> and x_b: \<open>x = id_cblinfun \<otimes>\<^sub>o b\<close>
+          by fast
+        then obtain c where \<open>b = c *\<^sub>C id_cblinfun\<close>
+          apply atomize_elim
+          apply (rule tensor_op_almost_injective)
+          by (auto intro!: simp: )
+        then show \<open>x \<in> one_algebra\<close>
+          by (auto simp add: x_b one_algebra_def image_iff tensor_op_cbilinear.scaleC_right)
+      qed
+    qed
+    also have \<open>\<dots> = one_algebra\<close>
+      using FG'_def \<open>iso_qregister FG\<close> apply_qregister_one_algebra iso_qregister_def by blast
+    finally have \<open>range F' \<inter> commutant (range F') = one_algebra\<close>
+      by -
+    with vN show \<open>von_neumann_factor (range F')\<close>
+      by (simp add: von_neumann_factor_def)
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
+
+
+(* 
+lemma von_neumann_factor_tensor:
+  assumes \<open>von_neumann_factor A\<close>
+  assumes \<open>von_neumann_factor B\<close>
+  shows \<open>von_neumann_factor (A \<otimes>\<^sub>v\<^sub>N B)\<close>
+
+https://math.stackexchange.com/questions/4794773/tensor-product-of-factors-is-a-factor
+
+ *)
+
+lemma is_swap_on_qupdate_set_unique:
+  assumes vN: \<open>von_neumann_algebra Q\<close>
+  assumes factor: \<open>von_neumann_factor (Q \<otimes>\<^sub>v\<^sub>N Q)\<close>
+  assumes min_proj: \<open>Ex (minimal_projection_in Q)\<close>
+  assumes U: \<open>is_swap_on_qupdate_set Q U\<close>
+  assumes V: \<open>is_swap_on_qupdate_set Q V\<close>
+  shows \<open>U = V\<close>
+proof -
+  define W where \<open>W = V* o\<^sub>C\<^sub>L U\<close>
+  from U have [iff]: \<open>unitary U\<close>
+    using is_swap_on_qupdate_set_def by blast
+  from V have [iff]: \<open>unitary V\<close>
+    using is_swap_on_qupdate_set_def by blast
+
+  have commute_Wab: \<open>W o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o b) = (a \<otimes>\<^sub>o b) o\<^sub>C\<^sub>L W\<close> if \<open>a \<in> Q\<close> and \<open>b \<in> Q\<close> for a b
+  proof -
+    have \<open>W o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o b) = V* o\<^sub>C\<^sub>L sandwich U (a \<otimes>\<^sub>o b) o\<^sub>C\<^sub>L U\<close>
+      by (simp add: W_def sandwich_apply cblinfun_compose_assoc)
+    also from that have \<open>\<dots> = V* o\<^sub>C\<^sub>L sandwich V (a \<otimes>\<^sub>o b) o\<^sub>C\<^sub>L U\<close>
+      using U V
+      by (simp add: is_swap_on_qupdate_set_def)
+    also have \<open>\<dots> = (a \<otimes>\<^sub>o b) o\<^sub>C\<^sub>L W\<close>
+      by (simp add: W_def sandwich_apply flip: cblinfun_compose_assoc)
+    finally show ?thesis
+      by -
+  qed
+  have W_commutant: \<open>W \<in> commutant (Q \<otimes>\<^sub>v\<^sub>N Q)\<close>
+  proof -
+    from vN
+    have \<open>id_cblinfun \<in> Q\<close>
+      by (simp add: von_neumann_algebra_id von_neumann_factor_def)
+    with commute_Wab have \<open>W \<in> commutant ((\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) ` Q \<union> (\<lambda>a. id_cblinfun \<otimes>\<^sub>o a) ` Q)\<close>    
+      by (auto intro!: commutant_memberI)
+    also have \<open>\<dots> = commutant (Q \<otimes>\<^sub>v\<^sub>N Q)\<close>
+      by (simp add: tensor_vn_def)
+    finally show ?thesis
+      by -
+  qed
+  have \<open>W \<in> Q \<otimes>\<^sub>v\<^sub>N Q\<close>
+  proof -
+    have \<open>U \<in> Q \<otimes>\<^sub>v\<^sub>N Q\<close>
+      using U is_swap_on_qupdate_set_def by blast
+    moreover have \<open>V \<in> Q \<otimes>\<^sub>v\<^sub>N Q\<close>
+      using V is_swap_on_qupdate_set_def by blast
+    ultimately show ?thesis
+      using vN
+      by (metis W_def rev_image_eqI von_neumann_algebra_adj_image von_neumann_algebra_compose von_neumann_algebra_tensor_vn von_neumann_factor_def)
+  qed
+  with W_commutant factor have \<open>W \<in> one_algebra\<close>
+    using von_neumann_factor_def by fastforce
+  then obtain c where W_cI: \<open>W = c *\<^sub>C id_cblinfun\<close>
+    by (metis imageE one_algebra_def)
+  have \<open>W = id_cblinfun\<close>
+  proof -
+    from min_proj obtain a where min_a: \<open>minimal_projection_in Q a\<close>
+      by blast
+    have aa_neq0: \<open>a \<otimes>\<^sub>o a \<noteq> 0\<close>
+      by (metis min_a minimal_projection_in_def tensor_op_nonzero)
+    from U min_a have \<open>U o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o a) = a \<otimes>\<^sub>o a\<close>
+      by (simp add: is_swap_on_qupdate_set_def)
+    moreover    from V min_a have \<open>V o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o a) = a \<otimes>\<^sub>o a\<close>
+      by (simp add: is_swap_on_qupdate_set_def)
+    ultimately have \<open>W o\<^sub>C\<^sub>L (a \<otimes>\<^sub>o a) = a \<otimes>\<^sub>o a\<close>
+      by (metis W_def \<open>unitary V\<close> cblinfun_assoc_right(1) cblinfun_compose_id_left unitaryD1)
+    with W_cI have \<open>c = 1\<close>
+      using aa_neq0 apply (auto intro!: simp: )
+      by (simp add: complex_vector.scale_right_imp_eq)
+    with W_cI show \<open>W = id_cblinfun\<close>
+      by fastforce
+  qed
+  then show \<open>U = V\<close>
+    by (metis W_def \<open>unitary V\<close> adj_cblinfun_compose cblinfun_compose_assoc cblinfun_compose_id_right double_adj unitaryD2)
+qed
+
+lemma range_qregister_pair:
+  assumes \<open>qcompatible F G\<close>
+  shows \<open>range (apply_qregister (qregister_pair F G)) = commutant (commutant (range (apply_qregister F) \<union> range (apply_qregister G)))\<close>
+proof -
+  have \<open>range (apply_qregister (qregister_pair F G)) = Rep_QREGISTER (QREGISTER_of (qregister_pair F G))\<close>
+    by (simp add: QREGISTER_of.rep_eq assms)
+  also have \<open>\<dots> = Rep_QREGISTER (QREGISTER_of F \<squnion> QREGISTER_of G)\<close>
+    by (simp add: QREGISTER_of_qregister_pair assms)
+  also have \<open>\<dots> = commutant (commutant (Rep_QREGISTER (QREGISTER_of F) \<union> Rep_QREGISTER (QREGISTER_of G)))\<close>
+    by (simp add: sup_QREGISTER.rep_eq)
+  also have \<open>\<dots> = commutant (commutant (range (apply_qregister F) \<union> range (apply_qregister G)))\<close>
+    using assms apply (simp add: QREGISTER_of.rep_eq)
+    using distinct_qvarsL distinct_qvarsR by blast
+  finally show ?thesis
+    by -
+qed
+
+lemma qregister_tensor_pair:
+  \<open>qregister_tensor Q R = \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q Q, qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q R\<rbrakk>\<^sub>q\<close>
+proof (cases \<open>qregister Q \<and> qregister R\<close>)
+  case True
+  then show ?thesis
+    apply transfer
+    by (simp add: register_tensor_def Laws_Quantum.Fst_def Laws_Quantum.Snd_def o_def)
+next
+  case False
+  then have \<open>Q = non_qregister \<or> R = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis
+    by auto
+qed
+
+lemma range_qregister_tensor:
+  assumes \<open>qregister F\<close> and \<open>qregister G\<close>
+  shows \<open>range (apply_qregister (qregister_tensor F G)) = range (apply_qregister F) \<otimes>\<^sub>v\<^sub>N range (apply_qregister G)\<close>
+  using assms 
+  by (simp add: range_qregister_pair qregister_tensor_pair tensor_vn_def image_image
+      qregister_chain_apply apply_qregister_fst apply_qregister_snd)
+
+lemma qregister_qregister_tensor:
+  assumes \<open>qregister F\<close>
+  assumes \<open>qregister G\<close>
+  shows \<open>qregister (qregister_tensor F G)\<close>
+  using assms
+  apply transfer
+  using Laws_Quantum.register_tensor_is_register by auto
+
+lemma minimal_projection_in_apply_qregister_preimage:
+  assumes \<open>minimal_projection_in (apply_qregister Q ` A) b\<close>
+  shows \<open>\<exists>a. minimal_projection_in A a \<and> b = a \<guillemotright> Q\<close>
+proof (cases \<open>qregister Q\<close>)
+  case True
+  note [iff] = True
+  from assms obtain a where baQ: \<open>b = a \<guillemotright> Q\<close> and \<open>a \<in> A\<close>
+    by (auto simp: minimal_projection_in_def)
+  from assms have \<open>is_Proj b\<close>
+    using minimal_projection_in_def by blast
+  with baQ have \<open>is_Proj a\<close>
+    by simp
+  from assms have \<open>b \<noteq> 0\<close>
+    using minimal_projection_in_def by blast
+  with baQ have \<open>a \<noteq> 0\<close>
+    by force
+  have \<open>a' = a\<close> if \<open>a' \<noteq> 0\<close> and \<open>is_Proj a'\<close> and \<open>a' \<in> A\<close> and \<open>a' \<le> a\<close> for a'
+  proof -
+    from assms have \<open>a' \<guillemotright> Q \<noteq> 0\<close>
+      using lift_eqOp that(1) by fastforce
+    moreover from assms have \<open>is_Proj (a' \<guillemotright> Q)\<close>
+      by (simp add: that(2))
+    moreover from assms have \<open>a' \<guillemotright> Q \<in> apply_qregister Q ` A\<close>
+      using that(3) by blast
+    moreover from assms have \<open>a' \<guillemotright> Q \<le> b\<close>
+      using apply_qregister_mono baQ that(4) by blast
+    ultimately have \<open>a' \<guillemotright> Q = b\<close>
+      by (metis assms minimal_projection_in_def)
+    then show \<open>a' = a\<close>
+      by (simp add: baQ)
+  qed
+  with \<open>a \<in> A\<close> \<open>is_Proj a\<close> \<open>a \<noteq> 0\<close> baQ
+  show ?thesis
+    by (auto intro!: exI[of _ a] simp: minimal_projection_in_def)
+next
+  case False
+  from assms obtain a where baQ: \<open>b = a \<guillemotright> Q\<close>
+    by (auto simp: minimal_projection_in_def)
+  from assms have \<open>b \<noteq> 0\<close>
+    using minimal_projection_in_def by blast
+  from False baQ have \<open>b = 0\<close>
+    by (simp add: non_qregister)
+  with \<open>b \<noteq> 0\<close>
+  have False
+    by simp
+  then show ?thesis
+    by simp
+qed
+
+lemma minimal_projection_in_UNIV_rank1:
+  assumes \<open>minimal_projection_in UNIV a\<close>
+  shows \<open>rank1 a\<close>
+proof (rule ccontr)
+  assume \<open>\<not> rank1 a\<close>
+  then have \<open>a \<noteq> 0\<close>
+    by fastforce
+  then obtain \<psi> where \<open>norm \<psi> = 1\<close> and \<open>\<psi> \<in> space_as_set (a *\<^sub>S \<top>)\<close>
+    by (metis Complex_Bounded_Linear_Function.zero_cblinfun_image Proj_compose_cancelI Proj_on_own_range cblinfun_assoc_left(2) cblinfun_image_bot_zero ccsubspace_leI_unit is_Proj_0)
+  have \<open>is_Proj (proj \<psi>)\<close>
+    by (simp add: \<open>norm \<psi> = 1\<close> butterfly_is_Proj)
+  have \<open>proj \<psi> \<noteq> 0\<close>
+    by (smt (verit, ccfv_threshold) Proj_0_compl Proj_idempotent Proj_ortho_compl Proj_range Proj_top UNIV_I \<open>norm \<psi> = 1\<close> basic_trans_rules(31) cblinfun_fixes_range ccspan_superset diff_zero norm_eq_zero singletonI top_ccsubspace.rep_eq)
+  have \<open>space_as_set (proj \<psi> *\<^sub>S \<top>) \<le> space_as_set (a *\<^sub>S \<top>)\<close>
+    by (metis Proj_fixes_image \<open>\<psi> \<in> space_as_set (a *\<^sub>S \<top>)\<close> \<open>norm \<psi> = 1\<close> butterfly_eq_proj cblinfun_comp_butterfly cblinfun_fixes_range space_as_setI_via_Proj subsetI)
+  then have \<open>proj \<psi> \<le> a\<close>
+    by (metis Proj_mono Proj_on_own_range Proj_range assms ccsubspace_leI minimal_projection_in_def)
+  from assms \<open>is_Proj (proj \<psi>)\<close> \<open>proj \<psi> \<le> a\<close> \<open>proj \<psi> \<noteq> 0\<close>
+  have \<open>a = proj \<psi>\<close>
+    using minimal_projection_in_def by blast
+  then have \<open>rank1 a\<close>
+    by simp
+  with \<open>\<not> rank1 a\<close> show False
+    by simp
+qed
+
+
+lemma is_swap_on_qupdate_set_swap_ell2: 
+  assumes [iff]: \<open>qregister Q\<close>
+  shows \<open>is_swap_on_qupdate_set (range (apply_qregister Q)) (swap_ell2 \<guillemotright> qregister_tensor Q Q)\<close>
+proof (unfold is_swap_on_qupdate_set_def, intro conjI ballI allI impI)
+  show \<open>swap_ell2 \<guillemotright> qregister_tensor Q Q \<in> range (apply_qregister Q) \<otimes>\<^sub>v\<^sub>N range (apply_qregister Q)\<close>
+    using range_qregister_tensor[OF assms assms]
+    by auto
+  show \<open>unitary (swap_ell2 \<guillemotright> qregister_tensor Q Q)\<close>
+    by (auto intro!: qregister_unitary qregister_qregister_tensor)
+  show \<open>sandwich (swap_ell2 \<guillemotright> qregister_tensor Q Q) *\<^sub>V a \<otimes>\<^sub>o b = b \<otimes>\<^sub>o a\<close>
+    if \<open>a \<in> range (apply_qregister Q)\<close> and \<open>b \<in> range (apply_qregister Q)\<close> for a b
+    by (smt (verit, del_insts) adjoint_lift adjoint_swap_ell2 imageE qregister_compose qregister_tensor_apply sandwich_apply swap_tensor_op that(1) that(2))
+  show \<open>(swap_ell2 \<guillemotright> qregister_tensor Q Q) o\<^sub>C\<^sub>L a \<otimes>\<^sub>o a = a \<otimes>\<^sub>o a\<close>
+    if \<open>minimal_projection_in (range (apply_qregister Q)) a\<close> for a
+  proof -
+    from minimal_projection_in_apply_qregister_preimage[OF that]
+    obtain b where \<open>minimal_projection_in UNIV b\<close> and \<open>a = b \<guillemotright> Q\<close>
+      by auto
+    from \<open>minimal_projection_in UNIV b\<close> have \<open>rank1 b\<close>
+      by (rule minimal_projection_in_UNIV_rank1)
+    then obtain \<psi> \<phi> where \<open>b = butterfly \<psi> \<phi>\<close>
+      by (auto intro!: simp: rank1_iff_butterfly)
+    then have \<open>swap_ell2 o\<^sub>C\<^sub>L (b \<otimes>\<^sub>o b) = b \<otimes>\<^sub>o b\<close>
+      by (auto intro!: tensor_ell2_extensionality simp: cblinfun.scaleC_right)
+    then have \<open>(swap_ell2 \<guillemotright> qregister_tensor Q Q) o\<^sub>C\<^sub>L ((b \<otimes>\<^sub>o b) \<guillemotright> qregister_tensor Q Q) = (b \<otimes>\<^sub>o b) \<guillemotright> qregister_tensor Q Q\<close>
+      by simp
+    moreover have \<open>(b \<otimes>\<^sub>o b) \<guillemotright> qregister_tensor Q Q = a \<otimes>\<^sub>o a\<close>
+      by (simp add: \<open>a = b \<guillemotright> Q\<close> qregister_tensor_apply)
+    ultimately show \<open>apply_qregister (qregister_tensor Q Q) swap_ell2 o\<^sub>C\<^sub>L a \<otimes>\<^sub>o a = a \<otimes>\<^sub>o a\<close>
+      by simp
+  qed
+qed
+
+lemma card1I:
+  assumes "a \<in> A"
+  assumes "\<And>x. x \<in> A \<Longrightarrow> x = a"
+  shows \<open>card A = 1\<close>
+  by (metis One_nat_def assms(1) assms(2) card_eq_Suc_0_ex1)
+
+lemma the_default_CollectI:
+  assumes "P a"
+    and "\<And>x. P x \<Longrightarrow> x = a"
+  shows "P (the_default d (Collect P))"
+proof -
+  have card: \<open>card (Collect P) = 1\<close>
+    apply (rule card1I)
+    using assms by auto
+  from assms have \<open>P (THE x. P x)\<close>
+    by (rule theI)
+  then show ?thesis
+    by (simp add: the_default_def card)
+qed
+
+lemma apply_qregister_minimal_projection_in:
+  assumes \<open>qregister Q\<close>
+  assumes \<open>minimal_projection_in A a\<close>
+  shows \<open>minimal_projection_in (apply_qregister Q ` A) (a \<guillemotright> Q)\<close>
+proof (unfold minimal_projection_in_def, intro conjI ballI impI)
+  show \<open>apply_qregister Q a \<in> apply_qregister Q ` A\<close>
+  by (meson assms(2) image_eqI minimal_projection_in_def)
+  show \<open>is_Proj (apply_qregister Q a)\<close>
+  using apply_qregister_is_Proj' assms(2) minimal_projection_in_def by blast
+  show \<open>apply_qregister Q a \<noteq> 0\<close>
+  by (metis apply_qregister_of_0 assms(1) assms(2) lift_eqOp minimal_projection_in_def)
+  show \<open>b = apply_qregister Q a\<close>
+    if \<open>b \<in> apply_qregister Q ` A\<close> and \<open>is_Proj b\<close> and \<open>b \<le> apply_qregister Q a\<close> and \<open>b \<noteq> 0\<close> for b
+  proof -
+    from that(1) obtain c where bcQ: \<open>b = c \<guillemotright> Q\<close> and \<open>c \<in> A\<close>
+      by blast
+    then have \<open>c = a\<close>
+      using apply_qregister_mono assms assms minimal_projection_in_def that by fastforce
+    then show \<open>b = apply_qregister Q a\<close>
+      using bcQ by blast
+  qed
+qed
+
+
+lemma minimal_projection_in_proj:
+  assumes \<open>\<psi> \<noteq> 0\<close> and \<open>proj \<psi> \<in> A\<close>
+  shows \<open>minimal_projection_in A (proj \<psi>)\<close>
+proof (unfold minimal_projection_in_def, intro conjI impI ballI)
+  from assms show \<open>proj \<psi> \<in> A\<close>
+    by simp
+  show \<open>is_Proj (proj \<psi>)\<close>
+    by simp
+  from assms show \<open>proj \<psi> \<noteq> 0\<close>
+    by (metis Proj_bot Proj_inj bot_ccsubspace.rep_eq ccspan_superset empty_not_insert singleton_insert_inj_eq' subset_singleton_iff)
+  show \<open>a = proj \<psi>\<close>
+    if \<open>a \<in> A\<close> and \<open>is_Proj a\<close> and \<open>a \<le> proj \<psi>\<close> and \<open>a \<noteq> 0\<close> for a
+    by (metis Proj_mono Proj_on_own_range cblinfun_image_bot_zero ccspan_of_empty ccspan_some_onb_of some_onb_of_0 subspace_of_1dim_ccspan that(2) that(3) that(4))
+qed
+
+lemma is_swap_on_qupdate_set_swap_QREGISTER_of:
+  assumes [iff]: \<open>qregister Q\<close>
+  shows \<open>is_swap_on_qupdate_set (range (apply_qregister Q)) (swap_QREGISTER (QREGISTER_of Q))\<close>
+proof -
+  have vN_Q: \<open>von_neumann_algebra (range (apply_qregister Q))\<close>
+    using valid_qregister_range valid_qregister_range_def by blast
+  have vN_QQ: \<open>von_neumann_factor (range (apply_qregister Q) \<otimes>\<^sub>v\<^sub>N range (apply_qregister Q))\<close>
+    by (auto intro!: range_apply_qregister_factor qregister_qregister_tensor simp flip: range_qregister_tensor)
+  have min_proj: \<open>Ex (minimal_projection_in (range (apply_qregister Q)))\<close>
+    using minimal_projection_in_proj[where A=UNIV and \<psi>=\<open>ket undefined\<close>] apply_qregister_minimal_projection_in[where Q=Q and A=UNIV]
+    by auto
+  have 1: \<open>is_swap_on_qupdate_set (range (apply_qregister Q)) (apply_qregister (qregister_tensor Q Q) swap_ell2)\<close>
+    by (simp add: is_swap_on_qupdate_set_swap_ell2) 
+  have 2: \<open>U = apply_qregister (qregister_tensor Q Q) swap_ell2\<close>
+    if \<open>is_swap_on_qupdate_set (range (\<lambda>a. apply_qregister Q a)) U\<close> for U
+    using vN_Q vN_QQ min_proj that 1 by (rule is_swap_on_qupdate_set_unique)
+  have \<open>is_swap_on_qupdate_set (range (apply_qregister Q))
+     (the_default 0 (Collect (is_swap_on_qupdate_set (range (apply_qregister Q)))))\<close>
+    using 1 2 by (rule the_default_CollectI[where a=\<open>swap_ell2 \<guillemotright> qregister_tensor Q Q\<close>])
+  then show ?thesis
+    by (simp add: swap_QREGISTER.rep_eq QREGISTER_of.rep_eq) 
+qed
+
+lemma swap_QREGISTER_QREGISTER_of: 
+  assumes [simp]: \<open>qregister Q\<close>
+  shows \<open>swap_QREGISTER (QREGISTER_of Q) = (swap_ell2 \<guillemotright> qregister_tensor Q Q)\<close>
+proof (rule is_swap_on_qupdate_set_unique[where Q=\<open>range (apply_qregister Q)\<close>])
+  show \<open>von_neumann_algebra (range (apply_qregister Q))\<close>
+    using assms valid_qregister_range valid_qregister_range_def by blast
+  show \<open>von_neumann_factor (range (apply_qregister Q) \<otimes>\<^sub>v\<^sub>N range (apply_qregister Q))\<close>
+    by (auto intro!: range_apply_qregister_factor qregister_qregister_tensor simp flip: range_qregister_tensor)
+  show \<open>Ex (minimal_projection_in (range (apply_qregister Q)))\<close>
+    using minimal_projection_in_proj[where A=UNIV and \<psi>=\<open>ket undefined\<close>] apply_qregister_minimal_projection_in[where Q=Q and A=UNIV]
+    by auto
+  show \<open>is_swap_on_qupdate_set (range (apply_qregister Q)) (swap_QREGISTER (QREGISTER_of Q))\<close>
+    using assms by (rule is_swap_on_qupdate_set_swap_QREGISTER_of)
+  show \<open>is_swap_on_qupdate_set (range (apply_qregister Q))(swap_ell2 \<guillemotright> qregister_tensor Q Q)\<close>
+    by (rule is_swap_on_qupdate_set_swap_ell2, simp)
+qed
+
+lemma is_swap_on_qupdate_set_swap_QREGISTER:
+  assumes \<open>ACTUAL_QREGISTER Q\<close>
+  shows \<open>is_swap_on_qupdate_set (Rep_QREGISTER Q) (swap_QREGISTER Q)\<close>
+proof -
+  from ACTUAL_QREGISTER_ex_register[OF assms]
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = ACTUAL_QREGISTER_content Q. is_swap_on_qupdate_set (Rep_QREGISTER Q) (swap_QREGISTER Q)\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>F::('c, 'a) qregister. qregister F \<and> QREGISTER_of F = Q\<close>
+    then obtain F :: \<open>('c, 'a) qregister\<close> where [iff]: \<open>qregister F\<close> and Q_def: \<open>Q = QREGISTER_of F\<close>
+      by blast
+    then have \<open>swap_QREGISTER (QREGISTER_of F) = (swap_ell2 \<guillemotright> qregister_tensor F F)\<close>
+      using swap_QREGISTER_QREGISTER_of by blast
+    moreover have \<open>is_swap_on_qupdate_set (range (apply_qregister F)) (apply_qregister (qregister_tensor F F) swap_ell2)\<close>
+      by (simp add: is_swap_on_qupdate_set_swap_ell2)
+    ultimately show \<open>is_swap_on_qupdate_set (Rep_QREGISTER Q) (swap_QREGISTER Q)\<close>
+      by (simp add: Q_def QREGISTER_of.rep_eq)
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
+
+
+(* definition swap_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> ('a\<times>'a) qupdate\<close> where
+  \<open>swap_QREGISTER Q = the_default 0 (swap_QREGISTER' ` {(f :: 'a \<Rightarrow> 'a\<times>'a, U, L, R). unitary U \<and> 
+    inj f \<and> range f = L \<times> R \<and>
+    Rep_QREGISTER Q = {sandwich U a | a. actual_qregister_range_aux f a}})\<close> *)
+
+
+
+(* TODO: generalize (not only "type", rep/abs args) *)
+lemma with_type_conj:
+  assumes \<open>\<forall>\<^sub>\<tau> 'a::type = A. P\<close>
+    and \<open>\<forall>\<^sub>\<tau> 'b::type = B. Q\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'a::type = A. \<forall>\<^sub>\<tau> 'b::type = B. P \<and> Q\<close>
+  apply (auto intro!: simp: with_type_def)
+  by (smt (verit, ccfv_threshold) assms(1) assms(2) prod.case_eq_if prod.simps(2) with_type_def)
+
+lemma with_type_mp2:
+  assumes \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (P Rep Abs))\<close>
+  assumes \<open>(\<And>Rep Abs Rep' Abs'. type_definition Rep Abs S \<Longrightarrow> fst CR S p \<Longrightarrow> type_definition Rep' Abs' S' \<Longrightarrow> fst CR' S' p' \<Longrightarrow>
+               P Rep Abs Rep' Abs' \<Longrightarrow> Q Rep Abs Rep' Abs')\<close>
+  shows \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (Q Rep Abs))\<close>
+  using assms by (auto simp add: with_type_def case_prod_beta)
+
+(* lemma swap_QREGISTER_welldefined_aux1:
+  fixes f :: \<open>'a \<Rightarrow> 'b\<times>'c\<close> and U :: \<open>'a update\<close> and L R
+    and f' :: \<open>'a \<Rightarrow> 'd\<times>'e\<close> and U' :: \<open>'a update\<close> and L' R'
+  assumes \<open>unitary U\<close> and \<open>inj f\<close> and \<open>range f = L \<times> R\<close>
+  assumes \<open>unitary U'\<close> and \<open>inj f'\<close> and \<open>range f' = L' \<times> R'\<close>
+  assumes eq: \<open>{sandwich U a | a. actual_qregister_range_aux f a} = {sandwich U' a | a. actual_qregister_range_aux f' a}\<close>
+  shows \<open>swap_QREGISTER' (f,U,L,R) = swap_QREGISTER' (f',U',L',R')\<close> (is ?goal)
+proof -
+  define Q :: \<open>'a update set\<close> where \<open>Q = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
+  then have Q_def2: \<open>Q = {sandwich U' a | a. actual_qregister_range_aux f' a}\<close>
+    using eq by simp
+  have ex_F: \<open>\<forall>\<^sub>\<tau> 'l1::type = L. \<forall>\<^sub>\<tau> 'r1::type = R. \<exists>F :: ('l1, 'a) qregister. qregister F \<and> range (apply_qregister F) = Q
+          \<and> F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l1 abs_r1 o f))* )) qFst\<close>
+    apply (rule actual_qregister_range_ex_register_aux[of U f L R])
+    using assms(1-3)
+    by (auto simp: Q_def)
+  then have \<open>\<forall>\<^sub>\<tau> 'l1::type = L. \<forall>\<^sub>\<tau> 'r1::type = R. ?goal\<close>
+  proof (rule with_type_mp2)
+    fix abs_l1 :: \<open>'b \<Rightarrow> 'l1\<close> and abs_r1 :: \<open>'c \<Rightarrow> 'r1\<close>
+    assume \<open>\<exists>F :: ('l1, 'a) qregister. qregister F \<and> range (apply_qregister F) = Q
+          \<and> F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l1 abs_r1 o f))* )) qFst\<close>
+    then obtain F :: \<open>('l1, 'a) qregister\<close> where \<open>qregister F\<close> and \<open>range (apply_qregister F) = Q\<close>
+      and \<open>F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l1 abs_r1 o f))* )) qFst\<close>
+      by auto
+    have ex_F': \<open>\<forall>\<^sub>\<tau> 'l2::type = L'. \<forall>\<^sub>\<tau> 'r2::type = R'. \<exists>F' :: ('l2, 'a) qregister. qregister F' \<and> range (apply_qregister F') = Q
+          \<and> F' = qregister_chain (transform_qregister (U' o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l2 abs_r2 o f'))* )) qFst\<close>
+      apply (rule actual_qregister_range_ex_register_aux[of U' f' L' R'])
+      using assms(4-6)
+      by (auto simp: Q_def2)
+    then have \<open>\<forall>\<^sub>\<tau> 'l2::type = L'. \<forall>\<^sub>\<tau> 'r2::type = R'. ?goal\<close>
+    proof (rule with_type_mp2)
+      fix abs_l2 :: \<open>'d \<Rightarrow> 'l2\<close> and abs_r2 :: \<open>'e \<Rightarrow> 'r2\<close>
+      assume \<open>\<exists>F' :: ('l2, 'a) qregister. qregister F' \<and> range (apply_qregister F') = Q
+          \<and> F' = qregister_chain (transform_qregister (U' o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l2 abs_r2 o f'))* )) qFst\<close>
+      then obtain F' :: \<open>('l2, 'a) qregister\<close> where \<open>qregister F'\<close> and \<open>range (apply_qregister F') = Q\<close>
+        and \<open>F' = qregister_chain (transform_qregister (U' o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l2 abs_r2 o f'))* )) qFst\<close>
+        by auto
+      have \<open>equivalent_qregisters F' F\<close>
+        by -
+      then obtain I where \<open>iso_qregister I\<close> and FI: \<open>F' = qregister_chain F I\<close>
+        by -
+      have 1: \<open>swap_QREGISTER' (f, U, L, R) = apply_qregister \<lbrakk>qregister_chain qFst F, qregister_chain qSnd F\<rbrakk> swap_ell2\<close>
+        by x
+      have \<open>swap_QREGISTER' (f', U', L', R') = apply_qregister \<lbrakk>qregister_chain qFst F', qregister_chain qSnd F'\<rbrakk> swap_ell2\<close>
+        by x
+      also have \<open>\<dots> = apply_qregister \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q F, qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q F\<rbrakk> (apply_qregister (qregister_tensor I I) swap_ell2)\<close>
+        apply (simp add: FI)
+        by -
+      also have \<open>\<dots> = apply_qregister \<lbrakk>qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q F, qregister_chain \<lbrakk>#2.\<rbrakk>\<^sub>q F\<rbrakk> swap_ell2\<close>
+        by -
+      also have \<open>\<dots> = swap_QREGISTER' (f, U, L, R)\<close>
+        by (simp flip : 1)
+      finally show ?goal
+        by simp
+    qed
+    from this[cancel_with_type, cancel_with_type]
+    show ?goal
+      by -
+  qed
+  from this[cancel_with_type, cancel_with_type]
+  show ?goal
+    by -
+qed *)
+
+(* lemma swap_QREGISTER_welldefined_aux2:
+  fixes f :: \<open>'a \<Rightarrow> 'b\<times>'c\<close> and U :: \<open>'a update\<close> and L R
+  assumes \<open>unitary U\<close> and \<open>inj f\<close> and \<open>range f = L \<times> R\<close>
+  assumes \<open>Rep_QREGISTER Q = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
+  shows \<open>swap_QREGISTER Q = swap_QREGISTER' (f,U,L,R)\<close>
+proof -
+  have aux: \<open>A = {x}\<close> if \<open>x \<in> A\<close> and \<open>\<And>y. y\<in>A \<Longrightarrow> x = y\<close> for A x
+    using that 
+  by blast
+by -
+
+
+  have *: \<open>swap_QREGISTER' ` {(f :: 'a \<Rightarrow> 'a\<times>'a, U, L, R). unitary U \<and> 
+    inj f \<and> range f = L \<times> R \<and>
+    Rep_QREGISTER Q = {sandwich U a | a. actual_qregister_range_aux f a}} = {swap_QREGISTER' (f,U,L,R)}\<close>
+  proof (rule aux)
+    using assms apply (auto intro!: exI swap_QREGISTER_welldefined_aux1 simp: image_iff)
+try0
+sledgehammer [dont_slice]
+by -
+
+    by x
+  show ?thesis
+    by (simp only: swap_QREGISTER_def * the_default_singleton)
+qed *)
+
+lemma qregister_decomposition:
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
+         (\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> 
+            F = qregister_chain (transform_qregister U) qFst)\<close>
+proof -
+  have [simp]: \<open>qregister_raw (apply_qregister F)\<close>
+    using assms qregister.rep_eq by blast
+  then have *: \<open>F = qregister_chain (transform_qregister U) \<lbrakk>#1\<rbrakk>\<^sub>q
+      = (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close> if \<open>unitary U\<close> for U
+    apply (transfer' fixing: U)
+    by (auto intro!: unitary_sandwich_register that
+        simp: Laws_Quantum.Fst_def sandwich_apply non_qregister_raw)
+  show ?thesis
+    using register_decomposition[where \<Phi>=\<open>apply_qregister F\<close>] assms * \<open>qregister_raw (apply_qregister F)\<close>
+    by (smt (verit, ccfv_threshold) with_type_mp)
+qed
+
+(* lemma swap_QREGISTER_welldefined:
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>swap_QREGISTER (QREGISTER_of F) = apply_qregister \<lbrakk>qregister_chain qFst F, qregister_chain qSnd F\<rbrakk> swap_ell2\<close> (is ?goal)
+proof -
+  from qregister_decomposition[OF assms]  
+  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F. ?goal\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>U. unitary U \<and> F = qregister_chain (transform_qregister U) qFst\<close>
+    define f where \<open>\<close>
+    show ?goal
+
+
+  from \<open>ACTUAL_QREGISTER Q\<close>
+  obtain f' :: \<open>'a \<Rightarrow> 'a\<times>'a\<close> and U' :: \<open>'a update\<close> and L' R'
+    where \<open>unitary U'\<close> and \<open>inj f'\<close> and \<open>range f' = L' \<times> R'\<close>
+      and \<open>Rep_QREGISTER Q = {sandwich U' a | a. actual_qregister_range_aux f' a}\<close>
+    by (auto simp add: ACTUAL_QREGISTER.rep_eq actual_qregister_range_def) *)
+
+definition cq_map_auxiliary_state ::
+  \<open>('aux ell2, 'aux ell2) trace_class \<Rightarrow> ('cl, 'qu\<times>'aux) cq_map \<Rightarrow> ('cl,'qu) cq_map\<close> where
+  \<open>cq_map_auxiliary_state \<rho> \<EE> = undefined\<close>
+
+
+(* axiomatization cq_map_local_q :: 
+  \<open>qu QREGISTER \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> (cl,qu) cq_map \<Rightarrow> (cl,qu) cq_map\<close> *)
+definition cq_map_local_q :: 
+  \<open>qu QREGISTER \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> (cl,qu) cq_map \<Rightarrow> (cl,qu) cq_map\<close> where
+  \<open>cq_map_local_q Q \<rho> \<EE> = cq_map_auxiliary_state \<rho> (
+    cq_map_seq  (cq_map_of_op (swap_QREGISTER Q))
+    (cq_map_seq (undefined ''TENSOR identity'' \<EE>)
+                (cq_map_of_op (swap_QREGISTER Q))))\<close>
 
 axiomatization cq_map_while :: \<open>bool expression \<Rightarrow> (cl,qu) cq_map \<Rightarrow> (cl,qu) cq_map\<close>
 

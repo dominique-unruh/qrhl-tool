@@ -546,4 +546,8 @@ proof
 qed
 *)
 
+lemma CREGISTER_of_non_cregister[simp]: \<open>CREGISTER_of non_cregister = \<bottom>\<close>
+  by (simp add: CREGISTER_of.abs_eq bot_CREGISTER_def)
+
+
 end

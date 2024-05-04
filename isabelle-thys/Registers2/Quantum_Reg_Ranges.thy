@@ -573,6 +573,16 @@ proof -
     by (smt (verit) \<open>bij f\<close>  bij_betw_imp_inj_on inv_f_f surjective_pairing)
 qed
 
+(* TODO: generalize (not only "type", rep/abs args) *)
+(* TODO move *)
+lemma with_type_swap:
+  fixes A :: \<open>'c set\<close> and B :: \<open>'d set\<close>
+  assumes \<open>A \<noteq> {}\<close> and \<open>B \<noteq> {}\<close>
+  shows \<open>(\<forall>\<^sub>\<tau> 'a::type = A. \<forall>\<^sub>\<tau> 'b::type = B. P) \<longleftrightarrow> (\<forall>\<^sub>\<tau> 'b::type = B. \<forall>\<^sub>\<tau> 'a::type = A. P)\<close>
+  apply (cases \<open>\<exists>(Rep::'a\<Rightarrow>'c) Abs. type_definition Rep Abs A\<close>; cases \<open>\<exists>(Rep::'b\<Rightarrow>'d) Abs. type_definition Rep Abs B\<close>)
+  using assms by (auto simp add: with_type_def with_type_type_class_def with_type_compat_rel_def)
+
+
 lemma Collect_actual_qregister_range_aux_id:
   \<open>{a. actual_qregister_range_aux id a} = range (\<lambda>\<theta>. \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
 proof (intro Set.set_eqI iffI)
@@ -702,22 +712,15 @@ definition \<open>actual_qregister_range_content \<FF> = (SOME L::'a set.
         \<FF> = {sandwich U a | a. actual_qregister_range_aux f a})\<close>
   for \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
 
-lemma actual_qregister_range_ex_register:
-  fixes \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
-  assumes \<open>actual_qregister_range \<FF>\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'l::type = actual_qregister_range_content \<FF>.
-         \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
+lemma actual_qregister_range_ex_register_aux:
+    \<comment> \<open>Mainly used for \<open>actual_qregister_range_ex_register\<close> below, but can be useful on its own\<close>
+  fixes \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close> and f :: \<open>'a \<Rightarrow> 'b\<times>'c\<close> and L R
+  assumes \<open>unitary U\<close> and \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close> 
+  assumes \<FF>_eq: \<open>\<FF> = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'l::type = L. \<forall>\<^sub>\<tau> 'r::type = R.
+         \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
+              F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l abs_r o f))*)) qFst\<close>
 proof (rule with_typeI)
-  define L where \<open>L = actual_qregister_range_content \<FF>\<close>
-  have \<open>\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) U R. unitary U \<and> 
-        inj f \<and> range f = L \<times> R \<and>
-        \<FF> = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
-    unfolding L_def actual_qregister_range_content_def apply (rule someI_ex)
-    using assms unfolding actual_qregister_range_def 
-    by blast
-  then obtain f :: \<open>'a \<Rightarrow> 'a\<times>'a\<close> and U R where \<open>unitary U\<close> and \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close>
-    and \<FF>_eq: \<open>\<FF> = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
-    by auto
   from range_f have \<open>L \<noteq> {}\<close> and \<open>R \<noteq> {}\<close>
     by auto
   then show \<open>fst (L, ()) \<noteq> {}\<close>
@@ -727,11 +730,12 @@ proof (rule with_typeI)
   show \<open>with_type_compat_rel (fst with_type_type_class) (fst (L, ()))
      (snd with_type_type_class)\<close>
     by (simp add: with_type_compat_rel_type)
-  fix RepL :: \<open>'l \<Rightarrow> 'a\<close> and AbsL
+  fix RepL :: \<open>'l \<Rightarrow> 'b\<close> and AbsL
   assume \<open>type_definition RepL AbsL (fst (L, ()))\<close>
   then interpret L: type_definition RepL AbsL L
     by simp
-  have \<open>\<forall>\<^sub>\<tau> 'r::type = R. \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
+  show \<open>\<forall>\<^sub>\<tau> 'r::type = R. \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
+          F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod AbsL abs_r o f))*)) qFst\<close>
   proof (rule with_typeI)
     from \<open>R \<noteq> {}\<close> show \<open>fst (R, ()) \<noteq> {}\<close>
       by simp
@@ -739,7 +743,7 @@ proof (rule with_typeI)
       by (simp add: with_type_type_class_def)
     show \<open>with_type_compat_rel (fst with_type_type_class) (fst (R, ())) (snd with_type_type_class)\<close>
       by (simp add: with_type_compat_rel_type)
-    fix RepR :: \<open>'r \<Rightarrow> 'a\<close> and AbsR
+    fix RepR :: \<open>'r \<Rightarrow> 'c\<close> and AbsR
     assume \<open>type_definition RepR AbsR (fst (R, ()))\<close>
     then interpret R: type_definition RepR AbsR R
       by simp
@@ -798,13 +802,50 @@ proof (rule with_typeI)
       finally show ?thesis
         by (simp add: \<FF>_eq)
     qed
-    ultimately show \<open>\<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
+    moreover have \<open>F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod AbsL AbsR o f))*)) qFst\<close>
+      by (simp add: F_def V_def comp_assoc f'_def)
+    ultimately show \<open>\<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>
+        \<and> F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod AbsL AbsR o f))*)) qFst\<close>
       by auto
   qed
+qed
+
+
+lemma actual_qregister_range_ex_register:
+  fixes \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
+  assumes \<open>actual_qregister_range \<FF>\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'l::type = actual_qregister_range_content \<FF>.
+         \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
+proof -
+  define L where \<open>L = actual_qregister_range_content \<FF>\<close>
+  have \<open>\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) U R. unitary U \<and> 
+        inj f \<and> range f = L \<times> R \<and>
+        \<FF> = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
+    unfolding L_def actual_qregister_range_content_def apply (rule someI_ex)
+    using assms unfolding actual_qregister_range_def 
+    by blast
+  then obtain f :: \<open>'a \<Rightarrow> 'a\<times>'a\<close> and U R where \<open>unitary U\<close> and \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close>
+    and \<FF>_eq: \<open>\<FF> = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
+    by auto
+  then have \<open>\<forall>\<^sub>\<tau> 'l::type = L. \<forall>\<^sub>\<tau> 'r::type = R.
+         \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
+              F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l abs_r o f))*)) qFst\<close>
+    apply (rule_tac actual_qregister_range_ex_register_aux)
+    by (auto simp: L_def)
+  then have *: \<open>\<forall>\<^sub>\<tau> 'l::type = L. \<forall>\<^sub>\<tau> 'r::type = R.
+         \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close> for xxx :: \<open>'r\<close>
+    apply (rule with_type_mp)
+    apply (rule with_type_mp)
+    by blast+
+  from range_f have \<open>L \<noteq> {}\<close> and \<open>R \<noteq> {}\<close>
+    by auto
+  note *[THEN with_type_swap[OF this, THEN iffD1]]
   from this[cancel_with_type]
-  show \<open>\<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
+  show \<open>\<forall>\<^sub>\<tau> 'l::type = L.
+         \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
     by -
 qed
+
 
 lemma actual_qregister_range_is_valid:
   assumes \<open>actual_qregister_range \<FF>\<close>
