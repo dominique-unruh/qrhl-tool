@@ -1008,4 +1008,12 @@ proof -
 qed
 
 
+lemma redundant_option_case: \<open>(case a of None \<Rightarrow> None | Some x \<Rightarrow> Some x) = a\<close>
+  apply (cases a)
+  by auto
+
+lemma map_commutant_empty[simp]: \<open>map_commutant {Map.empty} = UNIV\<close>
+  by (auto simp: map_commutant_def)
+
+
 end

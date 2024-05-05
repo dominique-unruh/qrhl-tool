@@ -3,7 +3,7 @@ theory CQ_Operators
 begin
 
 definition \<open>cq_map_rel \<EE> \<FF> \<longleftrightarrow> (\<forall>x. kraus_family_norm (\<EE> x) \<le> 1 \<and> kraus_equivalent' (\<EE> x) (\<FF> x))\<close>
-  for \<EE> \<FF> :: \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2, 'cl) kraus_family\<close>
+  for \<EE> \<FF> :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close>
 
 typedef ('cl,'qu) cq_operator = \<open>{\<rho> :: 'cl \<Rightarrow> ('qu ell2, 'qu ell2) trace_class. (\<forall>c. \<rho> c \<ge> 0) \<and> 
                           (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> (\<Sum>\<^sub>\<infinity>c. trace_tc (\<rho> c)) \<le> 1}\<close>
@@ -48,7 +48,7 @@ proof (rename_tac c \<rho>, intro conjI allI)
 qed
 
 
-quotient_type ('cl,'qu) cq_map = \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2, 'cl) kraus_family\<close> /
+quotient_type ('cl1,'qu1,'cl2,'qu2) cq_map = \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close> /
   partial: cq_map_rel
 proof (rule part_equivpI)
   show \<open>\<exists>x. cq_map_rel x x\<close>
@@ -77,18 +77,18 @@ proof (rule part_equivpI)
 qed
 (* setup_lifting type_definition_cq_map *)
 
-lift_definition cq_map_id :: \<open>('cl,'qu) cq_map\<close> is 
+lift_definition cq_map_id :: \<open>('cl,'qu,'cl,'qu) cq_map\<close> is 
   \<open>\<lambda>c. kraus_family_map_outcome (\<lambda>(). c) kraus_family_id\<close>
   by (simp add: cq_map_rel_def)
 
-lift_definition cq_map_apply :: \<open>('cl,'qu) cq_map \<Rightarrow> ('cl,'qu) cq_operator \<Rightarrow> ('cl,'qu) cq_operator\<close> is
+lift_definition cq_map_apply :: \<open>('cl1,'qu1,'cl2,'qu2) cq_map \<Rightarrow> ('cl1,'qu1) cq_operator \<Rightarrow> ('cl2,'qu2) cq_operator\<close> is
   \<open>\<lambda>\<EE> \<rho> c. (\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (\<EE> d) (\<rho> d))\<close>
 proof (rename_tac \<EE> \<EE>' \<rho>, intro conjI allI ext)
-  fix \<EE> \<EE>' :: \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2, 'cl) kraus_family\<close>
+  fix \<EE> \<EE>' :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close>
   assume rel: \<open>cq_map_rel \<EE> \<EE>'\<close>
   then have norm_\<EE>: \<open>kraus_family_norm (\<EE> x) \<le> 1\<close> for x
     unfolding cq_map_rel_def by blast
-  fix \<rho> :: \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2) trace_class\<close> and c
+  fix \<rho> :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu1 ell2) trace_class\<close> and c
   assume \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> (\<Sum>\<^sub>\<infinity>c. trace_tc (\<rho> c)) \<le> 1\<close>
   then have \<rho>_pos: \<open>0 \<le> \<rho> c\<close> and \<rho>_sum: \<open>(\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV\<close> and \<rho>_leq1: \<open>(\<Sum>\<^sub>\<infinity>c. trace_tc (\<rho> c)) \<le> 1\<close> for c
     by auto
@@ -209,10 +209,11 @@ proof (rename_tac \<EE> \<EE>' \<rho>, intro conjI allI ext)
     by (auto intro!: kraus_family_map'_eqI infsum_cong simp: cq_map_rel_def)
 qed
 
-lift_definition cq_map_seq :: \<open>('cl,'qu) cq_map \<Rightarrow> ('cl,'qu) cq_map \<Rightarrow> ('cl,'qu) cq_map\<close>
+lift_definition cq_map_seq :: \<open>('cl1,'qu1,'cl2,'qu2) cq_map \<Rightarrow> ('cl2,'qu2,'cl3,'qu3) cq_map \<Rightarrow> ('cl1,'qu1,'cl3,'qu3) cq_map\<close>
   is \<open>\<lambda>\<EE> \<FF> c. kraus_family_map_outcome snd (kraus_family_comp_dependent \<FF> (\<EE> c))\<close>
 proof -
-  fix \<EE> \<FF> \<EE>' \<FF>' :: \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2, 'cl) kraus_family\<close>
+  fix \<EE> \<EE>' :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close>
+  fix \<FF> \<FF>' :: \<open>'cl2 \<Rightarrow> ('qu2 ell2, 'qu3 ell2, 'cl3) kraus_family\<close>
   assume asms: \<open>cq_map_rel \<EE> \<EE>'\<close>  \<open>cq_map_rel \<FF> \<FF>'\<close>
   have F1: \<open>kraus_family_norm (\<FF>' x) \<le> 1\<close> for x
     by (metis asms(2) kraus_equivalent'_imp_equivalent kraus_family_norm_welldefined cq_map_rel_def)
@@ -295,7 +296,9 @@ qed
 
 lemma cq_map_apply_seq: \<open>cq_map_apply (cq_map_seq s t) \<rho> = cq_map_apply t (cq_map_apply s \<rho>)\<close>
 proof (transfer, intro ext)
-  fix s t :: \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2, 'cl) kraus_family\<close> and \<rho> :: \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2) trace_class\<close> and c :: 'cl
+  fix s :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close>
+    and t :: \<open>'cl2 \<Rightarrow> ('qu2 ell2, 'qu3 ell2, 'cl3) kraus_family\<close>
+    and \<rho> :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu1 ell2) trace_class\<close> and c :: 'cl3
   assume assms: \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> (\<Sum>\<^sub>\<infinity>c. trace_tc (\<rho> c)) \<le> 1\<close>
   assume \<open>cq_map_rel s s\<close>
   assume \<open>cq_map_rel t t\<close>
@@ -435,16 +438,17 @@ lemma cq_map_seq_id_left[simp]: \<open>cq_map_seq cq_map_id s = s\<close>
   by (simp add: cq_map_apply_seq)
 
 
-lift_definition cq_map_if :: \<open>('cl \<Rightarrow> bool) \<Rightarrow> ('cl,'qu) cq_map \<Rightarrow> ('cl,'qu) cq_map \<Rightarrow> ('cl,'qu) cq_map\<close> is
+lift_definition cq_map_if :: \<open>('cl1 \<Rightarrow> bool) \<Rightarrow> ('cl1,'qu1,'cl2,'qu2) cq_map \<Rightarrow> ('cl1,'qu1,'cl2,'qu2) cq_map \<Rightarrow> ('cl1,'qu1,'cl2,'qu2) cq_map\<close> is
   \<open>\<lambda>e p q c. if e c then p c else q c\<close>
   by (simp add: cq_map_rel_def)
 
-lift_definition cq_map_quantum_op :: \<open>('cl \<Rightarrow> ('qu ell2, 'qu ell2, 'x) kraus_family) \<Rightarrow> ('cl,'qu) cq_map\<close> is
-  \<open>\<lambda>(\<EE>::'cl \<Rightarrow> ('qu ell2, 'qu ell2, 'x) kraus_family) c. 
+lift_definition cq_map_quantum_op :: \<open>('cl \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'x) kraus_family) \<Rightarrow> ('cl,'qu1,'cl,'qu2) cq_map\<close> is
+  \<open>\<lambda>(\<EE>::'cl \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'x) kraus_family) c. 
       kraus_family_map_outcome (\<lambda>_. c) (if kraus_family_norm (\<EE> c) \<le> 1 then \<EE> c else 0)\<close>
   by (simp add: cq_map_rel_def)
 
-definition cq_map_of_op :: \<open>'qu ell2 \<Rightarrow>\<^sub>C\<^sub>L 'qu ell2 \<Rightarrow> ('cl, 'qu) cq_map\<close> where
+definition cq_map_of_op :: \<open>'qu1 ell2 \<Rightarrow>\<^sub>C\<^sub>L 'qu2 ell2 \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map\<close> where
   \<open>cq_map_of_op U = cq_map_quantum_op (\<lambda>_. kraus_family_of_op U)\<close>
+
 
 end

@@ -549,5 +549,165 @@ qed
 lemma CREGISTER_of_non_cregister[simp]: \<open>CREGISTER_of non_cregister = \<bottom>\<close>
   by (simp add: CREGISTER_of.abs_eq bot_CREGISTER_def)
 
+text \<open>\<^term>\<open>copy_CREGISTER_from F m n\<close> takes the content of \<^term>\<open>F\<close> from m and everything outside of \<^term>\<open>F\<close> from n
+  and returns the combination. See \<^term>\<open>copy_CREGISTER_from_CREGISTER_of\<close> below.\<close>
+lift_definition copy_CREGISTER_from :: \<open>'a CREGISTER \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a\<close> is
+  \<open>\<lambda>F m0 m1. SOME m. \<exists>a\<in>F. \<exists>b\<in>map_commutant F. Some m = a m1 \<and> Some m = b m0\<close>.
+
+lemma copy_CREGISTER_from_bot[simp]:
+  \<open>copy_CREGISTER_from \<bottom> m0 m1 = m1\<close>
+proof -
+  have [simp]: \<open>Some \<in> empty_cregister_range\<close>
+    by (simp add: empty_cregister_range_def)
+  have \<open>\<exists>a\<in>empty_cregister_range. \<exists>b\<in>map_commutant empty_cregister_range. Some m1 = a m1 \<and> Some m1 = b m0\<close>
+    apply (rule bexI[of _ Some], rule bexI[of _ \<open>\<lambda>_. Some m1\<close>])
+    by auto
+  moreover have \<open>m = m1\<close> 
+    if \<open>\<exists>a\<in>empty_cregister_range. \<exists>b\<in>map_commutant empty_cregister_range. Some m = a m1 \<and> Some m = b m0\<close> for m
+    using that by (simp add: empty_cregister_range_def)
+  ultimately have \<open>(SOME m. \<exists>a\<in>empty_cregister_range. \<exists>b\<in>map_commutant empty_cregister_range. Some m = a m1 \<and> Some m = b m0) = m1\<close>
+    by (rule some_equality)
+  then show ?thesis
+    apply (transfer' fixing: m0 m1)
+    by simp
+qed
+
+lemma map_commutant_range_apply_cregister:
+  \<open>map_commutant (range (apply_cregister F)) 
+    = range (\<lambda>f m. case f (setter F m0 m) of None \<Rightarrow> None | Some m' \<Rightarrow> Some (setter F (getter F m) m'))\<close>
+proof (cases \<open>cregister F\<close>)
+  case True
+  note [simp] = True
+  define g s where \<open>g = getter F\<close> and \<open>s = setter F\<close>
+  have [simp]: \<open>g (s x m) = x\<close> for x m
+    by (simp add: g_def s_def)
+  have [simp]: \<open>s x (s y m) = s x m\<close> for x y m
+    by (simp add: s_def)
+  have [simp]: \<open>s (g m) m = m\<close> for m
+    by (simp add: g_def s_def)
+  have F_Some_x: \<open>apply_cregister F (\<lambda>_. Some x) = Some o s x\<close> for x
+    apply (subst apply_cregister_getter_setter[OF True, abs_def])
+    by (simp add: s_def o_def)
+  show ?thesis
+  proof (intro Set.set_eqI iffI range_eqI ext)
+    fix h
+    assume \<open>h \<in> range
+              (\<lambda>f m. case f (Classical_Registers.setter F m0 m) of None \<Rightarrow> None
+                      | Some m' \<Rightarrow> Some (Classical_Registers.setter F (Classical_Registers.getter F m) m'))\<close>
+    then obtain f where h_f: \<open>h m = (case f (Classical_Registers.setter F m0 m) of None \<Rightarrow> None
+                      | Some m' \<Rightarrow> Some (Classical_Registers.setter F (Classical_Registers.getter F m) m'))\<close> for m
+      by auto
+    have \<open>(h \<circ>\<^sub>m apply_cregister F a) m = (apply_cregister F a \<circ>\<^sub>m h) m\<close>
+      for m a 
+      unfolding map_comp_def h_f apply_cregister_getter_setter[OF True, folded g_def s_def, abs_def] 
+        g_def[symmetric] s_def[symmetric]
+      apply (cases \<open>a (g m)\<close>; cases \<open>f (s m0 m)\<close>)
+      by (auto intro!: ext)
+    then show \<open>h \<in> map_commutant (range (apply_cregister F))\<close>
+      by (auto intro!: ext simp: map_commutant_def)
+  next
+    fix h m assume \<open>h \<in> map_commutant (range (apply_cregister F))\<close>
+    then have comm: \<open>(h \<circ>\<^sub>m apply_cregister F a) m = (apply_cregister F a \<circ>\<^sub>m h) m\<close> for a m
+      by (simp add: map_commutant_def)
+    have \<open>(case h (s m0 m) of None \<Rightarrow> None | Some m' \<Rightarrow> Some (s (g m) m'))
+        = ((Some o s (g m)) \<circ>\<^sub>m h) (s m0 m)\<close>
+      by (simp add: map_comp_def o_def)
+    also have \<open>\<dots> = (apply_cregister F (\<lambda>_. Some (g m)) \<circ>\<^sub>m h) (s m0 m)\<close>
+      by (simp add: F_Some_x)
+    also have \<open>\<dots> = (h \<circ>\<^sub>m apply_cregister F (\<lambda>_. Some (g m))) (s m0 m)\<close>
+      by (simp add: comm)
+    also have \<open>\<dots> = h m\<close>
+      by (simp add: F_Some_x)
+    finally show \<open>h m =
+           (case h (setter F m0 m) of None \<Rightarrow> None
+            | Some m' \<Rightarrow> Some (setter F (getter F m) m'))\<close>
+      by (simp add: g_def s_def cong: option.case_cong)
+  qed
+next
+  case False
+  then have [simp]: \<open>F = non_cregister\<close>
+    using non_cregister by blast
+  show ?thesis
+    by (simp add: non_cregister.rep_eq non_cregister_raw_def redundant_option_case cong: option.case_cong)
+qed
+
+lemma copy_CREGISTER_from_CREGISTER_of:
+  fixes F :: \<open>('a,'b) cregister\<close>
+  assumes [simp]: \<open>cregister F\<close>
+  shows \<open>copy_CREGISTER_from (CREGISTER_of F) m0 m1 = setter F (getter F m0) m1\<close>
+proof -
+  define g s where \<open>g = getter F\<close> and \<open>s = setter F\<close>
+  have [simp]: \<open>g (s x m) = x\<close> for x m
+    by (simp add: g_def s_def)
+  have [simp]: \<open>s x (s y m) = s x m\<close> for x y m
+    by (simp add: s_def)
+  have [simp]: \<open>s (g m) m = m\<close> for m
+    by (simp add: g_def s_def)
+  define F' where \<open>F' = range (apply_cregister F)\<close>
+  define m where \<open>m = s (g m0) m1\<close>
+  have \<open>\<exists>a\<in>F'. \<exists>b\<in>map_commutant F'. Some m = a m1 \<and> Some m = b m0\<close>
+  proof (rule bexI[of _ \<open>\<lambda>m'. Some (s (g m) m')\<close>],
+      rule bexI[of _ \<open>\<lambda>m'. Some (s (g m') m1)\<close>], rule conjI)
+    show \<open>Some m = Some (s (g m) m1)\<close>
+      by (simp add: m_def)
+    show \<open>Some m = Some (s (g m0) m1)\<close>
+      by (simp add: m_def)
+    show \<open>(\<lambda>m'. Some (s (g m') m1)) \<in> map_commutant F'\<close>
+    proof -
+      have \<open>((\<lambda>m'. Some (s (g m') m1)) \<circ>\<^sub>m apply_cregister F a) x =
+           apply_cregister F a (s (g x) m1)\<close> for a x
+        apply (cases \<open>a (g x)\<close>)
+        by (auto intro!: ext simp add: apply_cregister_getter_setter s_def g_def)
+      then show ?thesis
+        by (auto intro!: ext simp add: F'_def map_commutant_def)
+    qed
+    show \<open>(\<lambda>m'. Some (s (g m) m')) \<in> F'\<close>
+      by (auto intro!: ext exI[of _ \<open>\<lambda>_. Some (g m)\<close>] simp add: F'_def image_iff apply_cregister_getter_setter s_def g_def)
+  qed
+  moreover have \<open>\<exists>a\<in>F'. \<exists>b\<in>map_commutant F'. Some m' = a m1 \<and> Some m' = b m0 \<Longrightarrow> m' = m\<close> for m'
+  proof (erule bexE, erule bexE)
+    fix a b assume a: \<open>a \<in> F'\<close> and \<open>b \<in> map_commutant F'\<close> and m'_ab: \<open>Some m' = a m1 \<and> Some m' = b m0\<close>
+    from \<open>a \<in> F'\<close> obtain a' where \<open>a = apply_cregister F a'\<close>
+      by (auto simp: F'_def)
+    then have a': \<open>a m = (case a' (g m) of None \<Rightarrow> None | Some x \<Rightarrow> Some (s x m))\<close> for m
+      by (simp add: apply_cregister_getter_setter g_def option.case_eq_if s_def)
+    fix m_fix :: 'a
+    from \<open>b \<in> map_commutant F'\<close>
+    obtain b' where b': \<open>b m = (case b' (s m_fix m) of None \<Rightarrow> None
+         | Some m' \<Rightarrow> Some (s (g m) m'))\<close> for m
+      apply atomize_elim
+      by (auto simp: map_commutant_range_apply_cregister[of F m_fix, folded F'_def s_def g_def])
+    have gmm': \<open>g m' = g m\<close>
+    proof -
+      from m'_ab have \<open>Some m' = b m0\<close>
+        by auto
+      then obtain x where \<open>m' = s (g m0) x\<close>
+        apply atomize_elim
+        apply (cases \<open>b' (s m_fix m0)\<close>)
+        by (auto intro!: simp: b')
+      then show ?thesis
+        by (simp add: m_def)
+    qed
+    have \<open>s x m = s x m'\<close> for x
+    proof -
+      from m'_ab have \<open>Some m' = a m1\<close>
+        by simp
+      then show ?thesis
+        apply (cases \<open>a' (g m1)\<close>)
+        by (auto simp add: a' m_def)
+    qed
+    with gmm' have \<open>s (g m) m = s (g m') m'\<close>
+      by metis
+    then show \<open>m' = m\<close>
+      by simp
+  qed
+  ultimately have \<open>(SOME m. \<exists>a\<in>F'. \<exists>b\<in>map_commutant F'. Some m = a m1 \<and> Some m = b m0) = m\<close>
+    by (rule some_equality)
+  with assms show ?thesis
+    apply (simp only: m_def F'_def s_def g_def)
+    apply (transfer' fixing: m0 m1)
+    by auto
+qed
+
 
 end

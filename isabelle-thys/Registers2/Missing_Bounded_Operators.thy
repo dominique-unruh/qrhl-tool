@@ -2292,13 +2292,51 @@ proof -
     by (metis (mono_tags, lifting) assms(2) norm_tc_pos_Re summable_on_cong)
 qed
 
-lemma map_commutant_empty[simp]: \<open>map_commutant {Map.empty} = UNIV\<close>
-  by (auto simp: map_commutant_def)
+definition minimal_projection_in :: \<open>('a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a) set \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a) \<Rightarrow> bool\<close> where
+  \<open>minimal_projection_in A P \<longleftrightarrow> P \<in> A \<and> is_Proj P \<and> P \<noteq> 0 \<and> (\<forall>P'\<in>A. is_Proj P' \<longrightarrow> P' \<le> P \<longrightarrow> P' \<noteq> 0 \<longrightarrow> P' = P)\<close>
 
-lemma redundant_option_case: \<open>(case a of None \<Rightarrow> None | Some x \<Rightarrow> Some x) = a\<close>
-  apply (cases a)
-  by auto
+lemma minimal_projection_in_UNIV_rank1:
+  assumes \<open>minimal_projection_in UNIV a\<close>
+  shows \<open>rank1 a\<close>
+proof (rule ccontr)
+  assume \<open>\<not> rank1 a\<close>
+  then have \<open>a \<noteq> 0\<close>
+    by fastforce
+  then obtain \<psi> where \<open>norm \<psi> = 1\<close> and \<open>\<psi> \<in> space_as_set (a *\<^sub>S \<top>)\<close>
+    by (metis Complex_Bounded_Linear_Function.zero_cblinfun_image Proj_compose_cancelI Proj_on_own_range cblinfun_assoc_left(2) cblinfun_image_bot_zero ccsubspace_leI_unit is_Proj_0)
+  have \<open>is_Proj (proj \<psi>)\<close>
+    by (simp add: \<open>norm \<psi> = 1\<close> butterfly_is_Proj)
+  have \<open>proj \<psi> \<noteq> 0\<close>
+    by (smt (verit, ccfv_threshold) Proj_0_compl Proj_idempotent Proj_ortho_compl Proj_range Proj_top UNIV_I \<open>norm \<psi> = 1\<close> basic_trans_rules(31) cblinfun_fixes_range ccspan_superset diff_zero norm_eq_zero singletonI top_ccsubspace.rep_eq)
+  have \<open>space_as_set (proj \<psi> *\<^sub>S \<top>) \<le> space_as_set (a *\<^sub>S \<top>)\<close>
+    by (metis Proj_fixes_image \<open>\<psi> \<in> space_as_set (a *\<^sub>S \<top>)\<close> \<open>norm \<psi> = 1\<close> butterfly_eq_proj cblinfun_comp_butterfly cblinfun_fixes_range space_as_setI_via_Proj subsetI)
+  then have \<open>proj \<psi> \<le> a\<close>
+    by (metis Proj_mono Proj_on_own_range Proj_range assms ccsubspace_leI minimal_projection_in_def)
+  from assms \<open>is_Proj (proj \<psi>)\<close> \<open>proj \<psi> \<le> a\<close> \<open>proj \<psi> \<noteq> 0\<close>
+  have \<open>a = proj \<psi>\<close>
+    using minimal_projection_in_def by blast
+  then have \<open>rank1 a\<close>
+    by simp
+  with \<open>\<not> rank1 a\<close> show False
+    by simp
+qed
 
+
+
+lemma minimal_projection_in_proj:
+  assumes \<open>\<psi> \<noteq> 0\<close> and \<open>proj \<psi> \<in> A\<close>
+  shows \<open>minimal_projection_in A (proj \<psi>)\<close>
+proof (unfold minimal_projection_in_def, intro conjI impI ballI)
+  from assms show \<open>proj \<psi> \<in> A\<close>
+    by simp
+  show \<open>is_Proj (proj \<psi>)\<close>
+    by simp
+  from assms show \<open>proj \<psi> \<noteq> 0\<close>
+    by (metis Proj_bot Proj_inj bot_ccsubspace.rep_eq ccspan_superset empty_not_insert singleton_insert_inj_eq' subset_singleton_iff)
+  show \<open>a = proj \<psi>\<close>
+    if \<open>a \<in> A\<close> and \<open>is_Proj a\<close> and \<open>a \<le> proj \<psi>\<close> and \<open>a \<noteq> 0\<close> for a
+    by (metis Proj_mono Proj_on_own_range cblinfun_image_bot_zero ccspan_of_empty ccspan_some_onb_of some_onb_of_0 subspace_of_1dim_ccspan that(2) that(3) that(4))
+qed
 
 
 

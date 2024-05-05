@@ -503,16 +503,12 @@ for Q :: "'a q2variable" and U :: "('a,'a) l2bounded" and S :: predicate
 lemma lift_extendR:
   assumes "distinct_qvars \<lbrakk>Q,R\<rbrakk>"
   shows "U\<guillemotright>Q = (U \<otimes>\<^sub>o id_cblinfun)\<guillemotright>\<lbrakk>Q,R\<rbrakk>"
-  apply (subst apply_qregister_pair)
-  apply (simp add: assms)
-  using assms distinct_qvarsR by force
+  using assms by (rule apply_qregister_extend_pair_right)
 
 lemma lift_extendL:
   assumes "distinct_qvars (qregister_pair Q R)"
   shows "U\<guillemotright>Q = (id_cblinfun \<otimes>\<^sub>o U)\<guillemotright>(qregister_pair R Q)"
-  apply (subst apply_qregister_pair)
-   apply (simp add: assms distinct_qvars_swap)
-  using assms distinct_qvarsR by fastforce
+  using assms by (rule apply_qregister_extend_pair_left)
 
 lemma move_sup_meas_rule:
   fixes Q::"'a q2variable"

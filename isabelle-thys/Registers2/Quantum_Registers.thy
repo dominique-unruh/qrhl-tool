@@ -1088,5 +1088,63 @@ proof -
   by (metis inj_iff isomorphism_expand pointfree_idE qregister_raw_inj)
 qed
 
+lemma apply_qregister_extend_pair_right:
+  assumes "qcompatible Q R"
+  shows "apply_qregister Q U = apply_qregister (qregister_pair Q R) (U \<otimes>\<^sub>o id_cblinfun)"
+  apply (subst apply_qregister_pair)
+   apply (simp add: assms)
+  using assms qcompatible_register2 by fastforce
+
+lemma apply_qregister_extend_pair_left:
+  assumes "qcompatible Q R"
+  shows "apply_qregister Q U = apply_qregister (qregister_pair R Q) (id_cblinfun \<otimes>\<^sub>o U)"
+  apply (subst apply_qregister_pair)
+   apply (simp add: assms qcompatible_sym)
+  using assms qcompatible_register2 by fastforce
+
+lemma qregister_tensor_pair:
+  \<open>qregister_tensor Q R = qregister_pair (qregister_chain qFst Q) (qregister_chain qSnd R)\<close>
+proof (cases \<open>qregister Q \<and> qregister R\<close>)
+  case True
+  then show ?thesis
+    apply transfer
+    by (simp add: register_tensor_def Laws_Quantum.Fst_def Laws_Quantum.Snd_def o_def)
+next
+  case False
+  then have \<open>Q = non_qregister \<or> R = non_qregister\<close>
+    by (simp add: non_qregister)
+  then show ?thesis
+    by auto
+qed
+
+lemma qregister_qregister_tensor:
+  assumes \<open>qregister F\<close>
+  assumes \<open>qregister G\<close>
+  shows \<open>qregister (qregister_tensor F G)\<close>
+  using assms
+  apply transfer
+  using Laws_Quantum.register_tensor_is_register by auto
+
+
+lemma qregister_decomposition:
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
+         (\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> 
+            F = qregister_chain (transform_qregister U) qFst)\<close>
+proof -
+  have [simp]: \<open>qregister_raw (apply_qregister F)\<close>
+    using assms qregister.rep_eq by blast
+  then have *: \<open>F = qregister_chain (transform_qregister U) qFst
+      = (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close> if \<open>unitary U\<close> for U
+    apply (transfer' fixing: U)
+    by (auto intro!: unitary_sandwich_register that
+        simp: Laws_Quantum.Fst_def sandwich_apply non_qregister_raw)
+  show ?thesis
+    using register_decomposition[where \<Phi>=\<open>apply_qregister F\<close>] assms * \<open>qregister_raw (apply_qregister F)\<close>
+    by (smt (verit, ccfv_threshold) with_type_mp)
+qed
+
+
 
 end
