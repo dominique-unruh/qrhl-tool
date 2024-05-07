@@ -2140,30 +2140,155 @@ proof -
 qed
 
 
-lemma kraus_family_bound_tensor_raw:
+(* lemma kraus_family_bound_tensor_raw:
   \<open>kraus_family_bound (kraus_family_tensor_raw \<EE> \<FF>) \<le> kraus_family_bound \<EE> \<otimes>\<^sub>o kraus_family_bound \<FF>\<close>
   (* Actually equality holds. *)
   by (auto intro!: kraus_family_bound_leqI
       kraus_family_tensor_raw_bound_aux[where \<EE>=\<open>Rep_kraus_family \<EE>\<close> and \<FF>=\<open>Rep_kraus_family \<FF>\<close>]
-      kraus_family_sums_bounded_by_bound simp: kraus_family_tensor_raw.rep_eq)
+      kraus_family_sums_bounded_by_bound simp: kraus_family_tensor_raw.rep_eq) *)
 
 hide_fact kraus_family_tensor_raw_bound_aux
 
 definition \<open>kraus_family_tensor \<EE> \<FF> = kraus_family_map_outcome (\<lambda>(E, F, x, y). (x,y)) (kraus_family_tensor_raw \<EE> \<FF>)\<close>
+
+
+lemma has_sum_in_wot_compose_left:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>has_sum_in cweak_operator_topology f X s\<close>
+  shows \<open>has_sum_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X (a o\<^sub>C\<^sub>L s)\<close>
+proof (rule has_sum_in_cweak_operator_topology_pointwise[THEN iffD2], intro allI, rename_tac g h)
+  fix g h
+  from assms have \<open>((\<lambda>x. (a*) g \<bullet>\<^sub>C f x h) has_sum (a*) g \<bullet>\<^sub>C s h) X\<close>
+    by (metis has_sum_in_cweak_operator_topology_pointwise)
+  then show \<open>((\<lambda>x. g \<bullet>\<^sub>C (a o\<^sub>C\<^sub>L f x) h) has_sum g \<bullet>\<^sub>C (a o\<^sub>C\<^sub>L s) h) X\<close>
+    by (metis (no_types, lifting) cblinfun_apply_cblinfun_compose cinner_adj_left has_sum_cong)
+qed
+
+lemma has_sum_in_wot_compose_right:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_inner\<close>
+  assumes \<open>has_sum_in cweak_operator_topology f X s\<close>
+  shows \<open>has_sum_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X (s o\<^sub>C\<^sub>L a)\<close>
+proof (rule has_sum_in_cweak_operator_topology_pointwise[THEN iffD2], intro allI, rename_tac g h)
+  fix g h
+  from assms have \<open>((\<lambda>x. g \<bullet>\<^sub>C f x (a h)) has_sum g \<bullet>\<^sub>C s (a h)) X\<close>
+    by (metis has_sum_in_cweak_operator_topology_pointwise)
+  then show \<open>((\<lambda>x. g \<bullet>\<^sub>C (f x o\<^sub>C\<^sub>L a) h) has_sum g \<bullet>\<^sub>C (s o\<^sub>C\<^sub>L a) h) X\<close>
+    by simp
+qed
+
+lemma summable_on_in_wot_compose_left:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>summable_on_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X\<close>
+  using has_sum_in_wot_compose_left assms
+  by (fastforce simp: summable_on_in_def)
+
+lemma summable_on_in_wot_compose_right:
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>summable_on_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X\<close>
+  using has_sum_in_wot_compose_right assms
+  by (fastforce simp: summable_on_in_def)
+
+lemma infsum_in_wot_compose_left:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>infsum_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X = a o\<^sub>C\<^sub>L (infsum_in cweak_operator_topology f X)\<close>
+  by (metis (mono_tags, lifting) assms has_sum_in_infsum_in has_sum_in_unique hausdorff_cweak_operator_topology
+      has_sum_in_wot_compose_left summable_on_in_wot_compose_left)
+
+lemma infsum_in_wot_compose_right:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_inner\<close>
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>infsum_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X = (infsum_in cweak_operator_topology f X) o\<^sub>C\<^sub>L a\<close>
+  by (metis (mono_tags, lifting) assms has_sum_in_infsum_in has_sum_in_unique hausdorff_cweak_operator_topology
+      has_sum_in_wot_compose_right summable_on_in_wot_compose_right)
+
+lemma summable_on_in_cweak_operator_topology_pointwise:
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>(\<lambda>x. a \<bullet>\<^sub>C f x b) summable_on X\<close>
+  using assms
+  by (auto simp: summable_on_in_def summable_on_def has_sum_in_cweak_operator_topology_pointwise)
+
+lemma infsum_in_cweak_operator_topology_pointwise:
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>a \<bullet>\<^sub>C (infsum_in cweak_operator_topology f X) b = (\<Sum>\<^sub>\<infinity>x\<in>X. a \<bullet>\<^sub>C f x b)\<close>
+  by (metis (mono_tags, lifting) assms has_sum_in_cweak_operator_topology_pointwise has_sum_in_infsum_in hausdorff_cweak_operator_topology infsumI)
 
 lemma kraus_family_map_tensor:
   \<open>kraus_family_map (kraus_family_tensor \<EE> \<FF>) (tc_tensor \<rho> \<sigma>)= tc_tensor (kraus_family_map \<EE> \<rho>) (kraus_family_map \<FF> \<sigma>)\<close>
   by (auto intro!: simp: kraus_family_tensor_def kraus_family_map_outcome_same_map kraus_family_map_tensor_raw)
 
 
+lemma kraus_family_bound_tensor_raw:
+  \<open>kraus_family_bound (kraus_family_tensor_raw \<EE> \<FF>) = kraus_family_bound \<EE> \<otimes>\<^sub>o kraus_family_bound \<FF>\<close>
+proof (rule cblinfun_cinner_tensor_eqI)
+  fix \<psi> \<phi>
+
+  from kraus_family_bound_summable[of \<open>kraus_family_tensor_raw \<EE> \<FF>\<close>]
+  have sum1: \<open>summable_on_in cweak_operator_topology (\<lambda>((E,x),(F,y)). (E \<otimes>\<^sub>o F)* o\<^sub>C\<^sub>L (E \<otimes>\<^sub>o F))
+     (Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>)\<close>
+    unfolding kraus_family_tensor_raw.rep_eq
+    apply (subst (asm) summable_on_in_reindex)
+    by (auto simp add: kraus_family_tensor_raw.rep_eq case_prod_unfold inj_on_def o_def)
+  have sum4: \<open>summable_on_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) (Rep_kraus_family \<EE>)\<close>
+    using kraus_family_bound_summable by blast
+  have sum5: \<open>summable_on_in cweak_operator_topology (\<lambda>(F,y). F* o\<^sub>C\<^sub>L F) (Rep_kraus_family \<FF>)\<close>
+    using kraus_family_bound_summable by blast
+  have sum2: \<open>(\<lambda>(E, x). \<psi> \<bullet>\<^sub>C ((E* o\<^sub>C\<^sub>L E) *\<^sub>V \<psi>)) abs_summable_on Rep_kraus_family \<EE>\<close>
+    using kraus_family_bound_summable by (auto intro!: summable_on_in_cweak_operator_topology_pointwise 
+        simp add: case_prod_unfold simp flip: summable_on_iff_abs_summable_on_complex
+        simp del: cblinfun_apply_cblinfun_compose)
+  have sum3: \<open>(\<lambda>(F,y). \<phi> \<bullet>\<^sub>C ((F* o\<^sub>C\<^sub>L F) *\<^sub>V \<phi>)) abs_summable_on Rep_kraus_family \<FF>\<close>
+    using kraus_family_bound_summable by (auto intro!: summable_on_in_cweak_operator_topology_pointwise
+        simp add: case_prod_unfold simp flip: summable_on_iff_abs_summable_on_complex
+        simp del: cblinfun_apply_cblinfun_compose)
+
+  have \<open>(\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C (kraus_family_bound (kraus_family_tensor_raw \<EE> \<FF>) *\<^sub>V \<psi> \<otimes>\<^sub>s \<phi>)
+      = (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C
+        (infsum_in cweak_operator_topology ((\<lambda>(E, x). E* o\<^sub>C\<^sub>L E) \<circ> (\<lambda>((E, x), F, y). (E \<otimes>\<^sub>o F, E, F, x, y)))
+          (Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>) *\<^sub>V
+         \<psi> \<otimes>\<^sub>s \<phi>)\<close>
+    unfolding kraus_family_bound.rep_eq kraus_family_tensor_raw.rep_eq
+    apply (subst infsum_in_reindex)
+    by (auto simp add: inj_on_def case_prod_unfold)
+  also have \<open>\<dots> = (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C
+        (infsum_in cweak_operator_topology (\<lambda>((E,x),(F,y)). (E \<otimes>\<^sub>o F)* o\<^sub>C\<^sub>L (E \<otimes>\<^sub>o F))
+            (Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>) *\<^sub>V
+         \<psi> \<otimes>\<^sub>s \<phi>)\<close>
+    by (simp add: o_def case_prod_unfold)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>((E,x),(F,y)) \<in> Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>.
+                         (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C ((E \<otimes>\<^sub>o F)* o\<^sub>C\<^sub>L (E \<otimes>\<^sub>o F)) (\<psi> \<otimes>\<^sub>s \<phi>))\<close>
+    apply (subst infsum_in_cweak_operator_topology_pointwise)
+    using sum1 by (auto intro!: simp: case_prod_unfold)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>((E,x),(F,y)) \<in> Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>.
+                     (\<psi> \<bullet>\<^sub>C (E* o\<^sub>C\<^sub>L E) \<psi>) * (\<phi> \<bullet>\<^sub>C (F* o\<^sub>C\<^sub>L F) \<phi>))\<close>
+    apply (rule infsum_cong)
+    by (simp_all add: tensor_op_adjoint tensor_op_ell2)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x) \<in> Rep_kraus_family \<EE>. \<psi> \<bullet>\<^sub>C (E* o\<^sub>C\<^sub>L E) \<psi>)
+                      * (\<Sum>\<^sub>\<infinity>(F,y) \<in> Rep_kraus_family \<FF>. \<phi> \<bullet>\<^sub>C (F* o\<^sub>C\<^sub>L F) \<phi>)\<close>
+    apply (subst infsum_product')
+    using sum2 sum3 by (simp_all add: case_prod_unfold)
+  also have \<open>\<dots> = (\<psi> \<bullet>\<^sub>C kraus_family_bound \<EE> \<psi>) * (\<phi> \<bullet>\<^sub>C kraus_family_bound \<FF> \<phi>)\<close>
+    unfolding kraus_family_bound.rep_eq case_prod_unfold
+    apply (subst infsum_in_cweak_operator_topology_pointwise[symmetric])
+    using sum4 apply (simp add: case_prod_unfold)
+    apply (subst infsum_in_cweak_operator_topology_pointwise[symmetric])
+    using sum5 apply (simp add: case_prod_unfold)
+    by (rule refl)
+  also have \<open>\<dots> = (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C ((kraus_family_bound \<EE> \<otimes>\<^sub>o kraus_family_bound \<FF>) *\<^sub>V \<psi> \<otimes>\<^sub>s \<phi>)\<close>
+    by (simp add: tensor_op_ell2)
+  finally show \<open>(\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C (kraus_family_bound (kraus_family_tensor_raw \<EE> \<FF>) *\<^sub>V \<psi> \<otimes>\<^sub>s \<phi>) =
+       (\<psi> \<otimes>\<^sub>s \<phi>) \<bullet>\<^sub>C ((kraus_family_bound \<EE> \<otimes>\<^sub>o kraus_family_bound \<FF>) *\<^sub>V \<psi> \<otimes>\<^sub>s \<phi>)\<close>
+    by -
+qed
+
+
 lemma kraus_family_bound_tensor:
-  \<open>kraus_family_bound (kraus_family_tensor \<EE> \<FF>) \<le> kraus_family_bound \<EE> \<otimes>\<^sub>o kraus_family_bound \<FF>\<close>
-  (* Actually equality holds. *)
+  \<open>kraus_family_bound (kraus_family_tensor \<EE> \<FF>) = kraus_family_bound \<EE> \<otimes>\<^sub>o kraus_family_bound \<FF>\<close>
   by (simp add: kraus_family_tensor_def kraus_family_map_outcome_bound kraus_family_bound_tensor_raw) 
 
 lemma kraus_family_norm_tensor:
-  \<open>kraus_family_norm (kraus_family_tensor \<EE> \<FF>) \<le> kraus_family_norm \<EE> * kraus_family_norm \<FF>\<close>
-  (* Actually equality holds. *)
+  \<open>kraus_family_norm (kraus_family_tensor \<EE> \<FF>) = kraus_family_norm \<EE> * kraus_family_norm \<FF>\<close>
   by (auto intro!: norm_cblinfun_mono
       simp add: kraus_family_norm_def kraus_family_bound_tensor
       simp flip: tensor_op_norm)
@@ -2387,30 +2512,111 @@ lemma trace_kraus_family_is_trace':
   apply (transfer fixing: t)
   by (simp add: kraus_family_map_outcome_same_map trace_kraus_family_is_trace) *)
 
+lift_definition kraus_map_domain :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family \<Rightarrow> 'x set\<close> is
+  \<open>\<lambda>\<EE>. snd ` Set.filter (\<lambda>(E,x). E \<noteq> 0) \<EE>\<close>.
+
+lemma kraus_family_map_map_outcome_inj:
+  assumes \<open>inj_on f (kraus_map_domain \<EE>)\<close>
+  shows \<open>kraus_family_map (kraus_family_map_outcome_inj f \<EE>) \<rho> = kraus_family_map \<EE> \<rho>\<close>
+proof -
+  define EE where \<open>EE = Set.filter (\<lambda>(E,x). E\<noteq>0) (Rep_kraus_family \<EE>)\<close>
+  have \<open>kraus_family_map (kraus_family_map_outcome_inj f \<EE>) \<rho> = (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>(E, x). (E, f x)) ` Rep_kraus_family \<EE>. sandwich_tc (fst E) \<rho>)\<close>
+    by (simp add: kraus_family_map.rep_eq kraus_family_map_outcome_inj.rep_eq)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>(E, x). (E, f x)) ` EE. sandwich_tc (fst E) \<rho>)\<close>
+    apply (rule infsum_cong_neutral)
+      apply (auto simp: EE_def)
+    by fastforce
+  also have \<open>\<dots> = infsum ((\<lambda>E. sandwich_tc (fst E) \<rho>) \<circ> (\<lambda>(E, x). (E, f x))) EE\<close>
+    apply (rule infsum_reindex)
+    using assms
+    apply (auto intro!: simp: inj_on_def kraus_map_domain.rep_eq EE_def)
+    by (metis (mono_tags, lifting) Set.member_filter case_prodI snd_conv)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>EE. sandwich_tc E \<rho>)\<close>
+    by (simp add: o_def case_prod_unfold)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. sandwich_tc E \<rho>)\<close>
+    apply (rule infsum_cong_neutral)
+    by (auto simp: EE_def)
+  also have \<open>\<dots> = kraus_family_map \<EE> \<rho>\<close>
+    by (metis (no_types, lifting) infsum_cong kraus_family_map.rep_eq prod.case_eq_if)
+  finally show \<open>kraus_family_map (kraus_family_map_outcome_inj f \<EE>) \<rho> = kraus_family_map \<EE> \<rho>\<close>
+    by -
+qed
+
+
+
+lemma kraus_equivalent'_map_outcome_inj:
+  assumes \<open>inj_on f (kraus_map_domain \<EE>)\<close>
+  shows \<open>kraus_equivalent' (kraus_family_map_outcome_inj f \<EE>) (kraus_family_map_outcome f \<EE>)\<close>
+proof (rule kraus_equivalent'I)
+  fix x \<rho>
+  define \<EE>fx where \<open>\<EE>fx = kraus_family_filter (\<lambda>z. f z = x) \<EE>\<close>
+  from assms have inj_\<EE>fx: \<open>inj_on f (kraus_map_domain \<EE>fx)\<close>
+    by (simp add: inj_on_def kraus_map_domain.rep_eq \<EE>fx_def kraus_family_filter.rep_eq)
+  have \<open>kraus_family_map' {x} (kraus_family_map_outcome_inj f \<EE>) \<rho> = kraus_family_map (kraus_family_filter (\<lambda>z. z=x) (kraus_family_map_outcome_inj f \<EE>)) \<rho>\<close>
+    by (simp add: kraus_family_map'_def)
+  also have \<open>\<dots> = kraus_family_map (kraus_family_map_outcome_inj f \<EE>fx) \<rho>\<close>
+    apply (rule arg_cong[where f=\<open>\<lambda>t. kraus_family_map t \<rho>\<close>])
+    unfolding \<EE>fx_def
+    apply (transfer' fixing: f)
+    by force
+  also have \<open>\<dots> = kraus_family_map \<EE>fx \<rho>\<close>
+    using inj_\<EE>fx by (rule kraus_family_map_map_outcome_inj)
+  also have \<open>\<dots> = kraus_family_map (kraus_family_map_outcome f (kraus_family_filter (\<lambda>z. f z = x) \<EE>)) \<rho>\<close>
+    by (simp add: \<EE>fx_def)
+  also have \<open>\<dots> = kraus_family_map (kraus_family_filter (\<lambda>xa. xa = x) (kraus_family_map_outcome f \<EE>)) \<rho>\<close>
+    apply (subst kraus_family_filter_map_outcome)
+    by simp
+  also have \<open>\<dots> = kraus_family_map' {x} (kraus_family_map_outcome f \<EE>) \<rho>\<close>
+    by (simp add: kraus_family_map'_def)
+  finally show \<open>kraus_family_map' {x} (kraus_family_map_outcome_inj f \<EE>) \<rho> = kraus_family_map' {x} (kraus_family_map_outcome f \<EE>) \<rho>\<close>
+    by -
+qed
+
+
+
+lemma 
+  fixes \<EE> :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family\<close>
+  assumes \<open>inj_on f (kraus_map_domain \<EE>)\<close>
+  shows kraus_family_map_outcome_inj_same_map[simp]: \<open>kraus_family_map (kraus_family_map_outcome_inj f \<EE>) = kraus_family_map \<EE>\<close>
+    and kraus_family_map_outcome_inj_bound: \<open>kraus_family_bound (kraus_family_map_outcome_inj f \<EE>) = kraus_family_bound \<EE>\<close>
+    and kraus_family_map_outcome_inj_norm[simp]: \<open>kraus_family_norm (kraus_family_map_outcome_inj f \<EE>) = kraus_family_norm \<EE>\<close>
+  apply (metis assms kraus_equivalent'_imp_equivalent kraus_equivalent'_map_outcome_inj kraus_equivalent_def kraus_family_map_outcome_same_map)
+  apply (metis assms kraus_equivalent'_imp_equivalent kraus_equivalent'_map_outcome_inj kraus_family_bound_welldefined kraus_family_map_outcome_bound)
+  using assms kraus_equivalent'_imp_equivalent kraus_equivalent'_map_outcome_inj kraus_family_norm_welldefined by fastforce
+
+
+definition kraus_map_partial_trace :: \<open>'b ell2 set \<Rightarrow> (('a\<times>'b) ell2, 'a ell2, 'b) kraus_family\<close> where
+\<open>kraus_map_partial_trace B = kraus_family_map_outcome (\<lambda>((_,b),_). inv ket b)
+(kraus_family_comp (kraus_family_of_op (tensor_ell2_right (ket ())*))
+ (kraus_family_tensor kraus_family_id (trace_kraus_family B)))\<close>
+
 lemma partial_trace_as_kraus_map: 
   fixes B :: \<open>'b ell2 set\<close>
   assumes \<open>is_onb B\<close>
-  shows \<open>partial_trace t = 
-  kraus_family_map (kraus_family_of_op (tensor_ell2_right 1*))
-  (kraus_family_map (kraus_family_tensor kraus_family_id (trace_kraus_family B)) t)\<close>
+  shows \<open>partial_trace t = kraus_family_map (kraus_map_partial_trace B) t\<close>
 (* TODO: also "kraus_map_apply (kraus_map_tensor kraus_map_id kraus_map_trace) t = ... partial_trace ... *)
-proof (rule fun_cong[where x=t], rule eq_from_separatingI2[OF separating_set_bounded_clinear_tc_tensor])
-  show \<open>bounded_clinear partial_trace\<close>
-    by simp
-  show \<open>bounded_clinear
-     (\<lambda>t. kraus_family_map (kraus_family_of_op (tensor_ell2_right 1*))
+proof -
+  have \<open>partial_trace t = kraus_family_map (kraus_family_of_op (tensor_ell2_right (ket ())*))
+  (kraus_family_map (kraus_family_tensor kraus_family_id (trace_kraus_family B)) t)\<close>
+  proof (rule fun_cong[where x=t], rule eq_from_separatingI2[OF separating_set_bounded_clinear_tc_tensor])
+    show \<open>bounded_clinear partial_trace\<close>
+      by simp
+    show \<open>bounded_clinear
+     (\<lambda>t. kraus_family_map (kraus_family_of_op (tensor_ell2_right (ket ())*))
            (kraus_family_map (kraus_family_tensor kraus_family_id (trace_kraus_family B)) t))\<close>
-    by (intro bounded_linear_intros)
-  fix \<rho> :: \<open>('a ell2, 'a ell2) trace_class\<close> and \<sigma> :: \<open>('b ell2, 'b ell2) trace_class\<close>
-  show \<open>partial_trace (tc_tensor \<rho> \<sigma>) =
-           kraus_family_map (kraus_family_of_op (tensor_ell2_right 1*))
+      by (intro bounded_linear_intros)
+    fix \<rho> :: \<open>('a ell2, 'a ell2) trace_class\<close> and \<sigma> :: \<open>('b ell2, 'b ell2) trace_class\<close>
+    show \<open>partial_trace (tc_tensor \<rho> \<sigma>) =
+           kraus_family_map (kraus_family_of_op (tensor_ell2_right (ket ())*))
             (kraus_family_map (kraus_family_tensor kraus_family_id (trace_kraus_family B)) (tc_tensor \<rho> \<sigma>))\<close>
-    apply (auto intro!: from_trace_class_inject[THEN iffD1]
-        simp: assms partial_trace_tensor kraus_family_map_tensor trace_kraus_family_is_trace kraus_family_of_op_apply
-        from_trace_class_sandwich_tc sandwich_apply trace_tc.rep_eq tc_tensor.rep_eq scaleC_trace_class.rep_eq)
-    by (auto intro!: cblinfun_eqI simp: tensor_op_ell2)
+       apply (auto intro!: from_trace_class_inject[THEN iffD1]
+          simp: assms partial_trace_tensor kraus_family_map_tensor trace_kraus_family_is_trace kraus_family_of_op_apply
+          from_trace_class_sandwich_tc sandwich_apply trace_tc.rep_eq tc_tensor.rep_eq scaleC_trace_class.rep_eq)
+      by (auto intro!: cblinfun_eqI simp: tensor_op_ell2 ket_CARD_1_is_1)
+  qed
+  then show ?thesis
+    by (simp add: kraus_map_partial_trace_def kraus_family_comp_apply)
 qed
-
 
 (* lemma partial_trace_as_kraus_map: \<open>partial_trace t = 
   kraus_map_apply (kraus_map_of_op (tensor_ell2_right 1* ))
@@ -2715,7 +2921,41 @@ proof (rule CollectI, rename_tac t)
   qed
 qed
 
+lemma vector_to_cblinfun_inj: \<open>inj_on (vector_to_cblinfun :: 'a::complex_normed_vector \<Rightarrow> 'b::one_dim \<Rightarrow>\<^sub>C\<^sub>L _) X\<close>
+proof (rule inj_onI)
+  fix x y :: 'a
+  assume \<open>vector_to_cblinfun x = (vector_to_cblinfun y :: 'b \<Rightarrow>\<^sub>C\<^sub>L _)\<close>
+  then have \<open>vector_to_cblinfun x (1::'b) = vector_to_cblinfun y (1::'b)\<close>
+    by simp
+  then show \<open>x = y\<close>
+    by simp
+qed
 
+lemma kraus_family_map_constant: 
+  assumes \<open>\<rho> \<ge> 0\<close>
+  shows \<open>kraus_family_map (constant_kraus_family \<rho>) \<sigma> = one_dim_iso \<sigma> *\<^sub>C \<rho>\<close>
+proof -
+  have \<open>kraus_family_map (constant_kraus_family \<rho>) \<sigma>
+         = (\<Sum>\<^sub>\<infinity>(E,x)\<in>(\<lambda>v. (vector_to_cblinfun v, ())) ` spectral_dec_vecs_tc \<rho>. sandwich_tc E \<sigma>)\<close>
+    by (simp add: assms kraus_family_map.rep_eq constant_kraus_family.rep_eq case_prod_unfold)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>v \<in> spectral_dec_vecs_tc \<rho>. sandwich_tc (vector_to_cblinfun v) \<sigma>)\<close>
+    apply (subst infsum_reindex)
+    using vector_to_cblinfun_inj[of UNIV]
+    by (auto simp: o_def inj_on_def)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>v \<in> spectral_dec_vecs_tc \<rho>. one_dim_iso \<sigma> *\<^sub>C tc_butterfly v v)\<close>
+    apply (rule infsum_cong)
+    apply (subst one_dim_scaleC_1[symmetric])
+    apply (rule from_trace_class_inject[THEN iffD1])
+    apply (simp only: sandwich_tc_def compose_tcl.rep_eq compose_tcr.rep_eq scaleC_trace_class.rep_eq
+        tc_butterfly.rep_eq cblinfun_compose_scaleC_right cblinfun_compose_scaleC_left)
+    by (simp flip: butterfly_def_one_dim)
+  also have \<open>\<dots> = one_dim_iso \<sigma> *\<^sub>C (\<Sum>\<^sub>\<infinity>v \<in> spectral_dec_vecs_tc \<rho>. tc_butterfly v v)\<close>
+    using infsum_scaleC_right by fastforce
+  also have \<open>\<dots> = one_dim_iso \<sigma> *\<^sub>C \<rho>\<close>
+    by (simp add: assms butterfly_spectral_dec_vec_tc_has_sum infsumI)
+  finally show ?thesis
+    by -
+qed
 
 lemma complete_measurement_diag[simp]:
   \<open>kraus_family_map (complete_measurement (range ket)) (diagonal_operator_tc f) = diagonal_operator_tc f\<close>
@@ -2913,64 +3153,6 @@ proof -
   then show ?thesis
     apply (rule_tac kraus_equivalent'I)
     by (simp add: kraus_family_map'_def kraus_family_filter_map_outcome)
-qed
-
-lift_definition kraus_map_domain :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family \<Rightarrow> 'x set\<close> is
-  \<open>\<lambda>\<EE>. snd ` Set.filter (\<lambda>(E,x). E \<noteq> 0) \<EE>\<close>.
-
-lemma kraus_family_map_map_outcome_inj:
-  assumes \<open>inj_on f (kraus_map_domain \<EE>)\<close>
-  shows \<open>kraus_family_map (kraus_family_map_outcome_inj f \<EE>) \<rho> = kraus_family_map \<EE> \<rho>\<close>
-proof -
-  define EE where \<open>EE = Set.filter (\<lambda>(E,x). E\<noteq>0) (Rep_kraus_family \<EE>)\<close>
-  have \<open>kraus_family_map (kraus_family_map_outcome_inj f \<EE>) \<rho> = (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>(E, x). (E, f x)) ` Rep_kraus_family \<EE>. sandwich_tc (fst E) \<rho>)\<close>
-    by (simp add: kraus_family_map.rep_eq kraus_family_map_outcome_inj.rep_eq)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>(E, x). (E, f x)) ` EE. sandwich_tc (fst E) \<rho>)\<close>
-    apply (rule infsum_cong_neutral)
-      apply (auto simp: EE_def)
-    by fastforce
-  also have \<open>\<dots> = infsum ((\<lambda>E. sandwich_tc (fst E) \<rho>) \<circ> (\<lambda>(E, x). (E, f x))) EE\<close>
-    apply (rule infsum_reindex)
-    using assms
-    apply (auto intro!: simp: inj_on_def kraus_map_domain.rep_eq EE_def)
-    by (metis (mono_tags, lifting) Set.member_filter case_prodI snd_conv)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>EE. sandwich_tc E \<rho>)\<close>
-    by (simp add: o_def case_prod_unfold)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. sandwich_tc E \<rho>)\<close>
-    apply (rule infsum_cong_neutral)
-    by (auto simp: EE_def)
-  also have \<open>\<dots> = kraus_family_map \<EE> \<rho>\<close>
-    by (metis (no_types, lifting) infsum_cong kraus_family_map.rep_eq prod.case_eq_if)
-  finally show \<open>kraus_family_map (kraus_family_map_outcome_inj f \<EE>) \<rho> = kraus_family_map \<EE> \<rho>\<close>
-    by -
-qed
-
-lemma kraus_equivalent'_map_outcome_inj:
-  assumes \<open>inj_on f (kraus_map_domain \<EE>)\<close>
-  shows \<open>kraus_equivalent' (kraus_family_map_outcome_inj f \<EE>) (kraus_family_map_outcome f \<EE>)\<close>
-proof (rule kraus_equivalent'I)
-  fix x \<rho>
-  define \<EE>fx where \<open>\<EE>fx = kraus_family_filter (\<lambda>z. f z = x) \<EE>\<close>
-  from assms have inj_\<EE>fx: \<open>inj_on f (kraus_map_domain \<EE>fx)\<close>
-    by (simp add: inj_on_def kraus_map_domain.rep_eq \<EE>fx_def kraus_family_filter.rep_eq)
-  have \<open>kraus_family_map' {x} (kraus_family_map_outcome_inj f \<EE>) \<rho> = kraus_family_map (kraus_family_filter (\<lambda>z. z=x) (kraus_family_map_outcome_inj f \<EE>)) \<rho>\<close>
-    by (simp add: kraus_family_map'_def)
-  also have \<open>\<dots> = kraus_family_map (kraus_family_map_outcome_inj f \<EE>fx) \<rho>\<close>
-    apply (rule arg_cong[where f=\<open>\<lambda>t. kraus_family_map t \<rho>\<close>])
-    unfolding \<EE>fx_def
-    apply (transfer' fixing: f)
-    by force
-  also have \<open>\<dots> = kraus_family_map \<EE>fx \<rho>\<close>
-    using inj_\<EE>fx by (rule kraus_family_map_map_outcome_inj)
-  also have \<open>\<dots> = kraus_family_map (kraus_family_map_outcome f (kraus_family_filter (\<lambda>z. f z = x) \<EE>)) \<rho>\<close>
-    by (simp add: \<EE>fx_def)
-  also have \<open>\<dots> = kraus_family_map (kraus_family_filter (\<lambda>xa. xa = x) (kraus_family_map_outcome f \<EE>)) \<rho>\<close>
-    apply (subst kraus_family_filter_map_outcome)
-    by simp
-  also have \<open>\<dots> = kraus_family_map' {x} (kraus_family_map_outcome f \<EE>) \<rho>\<close>
-    by (simp add: kraus_family_map'_def)
-  finally show \<open>kraus_family_map' {x} (kraus_family_map_outcome_inj f \<EE>) \<rho> = kraus_family_map' {x} (kraus_family_map_outcome f \<EE>) \<rho>\<close>
-    by -
 qed
 
 lemma kraus_family_bound_filter:
@@ -3878,5 +4060,65 @@ proof -
     apply (rule Abs_cblinfun_wot_inject[THEN iffD1, rotated -1])
     by simp_all
 qed
+
+
+lemma kraus_family_bound_comp_dep_raw:
+  shows \<open>kraus_family_bound (kraus_family_comp_dependent_raw \<EE> (kraus_family_of_op U))
+       = sandwich (U*) (kraus_family_bound (\<EE> ()))\<close>
+proof -
+  write compose_wot (infixl "o\<^sub>W" 55)
+  define EE where \<open>EE = Rep_kraus_family (\<EE> ())\<close>
+
+  have sum1: \<open>summable_on_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) EE\<close>
+    by (simp add: EE_def kraus_family_bound_summable)
+  then have sum2: \<open>summable_on_in cweak_operator_topology (\<lambda>(E,x). U* o\<^sub>C\<^sub>L (E* o\<^sub>C\<^sub>L E)) EE\<close>
+    by (simp add: case_prod_unfold summable_on_in_wot_compose_left)
+
+  have \<open>kraus_family_bound (kraus_family_comp_dependent_raw \<EE> (kraus_family_of_op U)) = 
+        infsum_in cweak_operator_topology (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E)
+          ((\<lambda>((F, y), (E, x)). ((E o\<^sub>C\<^sub>L F, F, E, y, x))) ` (SIGMA (F, y):{(U, ())}. EE))\<close>
+    by (simp add: kraus_family_bound.rep_eq kraus_family_comp_dependent_raw.rep_eq kraus_family_of_op.rep_eq EE_def)
+  also have \<open>\<dots>  = infsum_in cweak_operator_topology (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E)
+                   ((\<lambda>(E,x). (E o\<^sub>C\<^sub>L U, U, E, (), x)) ` EE)\<close>
+    apply (rule arg_cong[where f=\<open>infsum_in _ _\<close>])
+    by force
+  also have \<open>\<dots> = infsum_in cweak_operator_topology (\<lambda>(E, x). (E o\<^sub>C\<^sub>L U)* o\<^sub>C\<^sub>L (E o\<^sub>C\<^sub>L U)) EE\<close>
+    apply (subst infsum_in_reindex)
+    by (auto intro!: inj_onI simp: o_def case_prod_unfold infsum_in_reindex)
+  also have \<open>\<dots> = infsum_in cweak_operator_topology (\<lambda>(E, x). U* o\<^sub>C\<^sub>L (E* o\<^sub>C\<^sub>L E) o\<^sub>C\<^sub>L U) EE\<close>
+    by (metis (no_types, lifting) adj_cblinfun_compose cblinfun_assoc_left(1))
+  also have \<open>\<dots> = U* o\<^sub>C\<^sub>L infsum_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) EE o\<^sub>C\<^sub>L U\<close>
+    using sum1 sum2 by (simp add: case_prod_unfold infsum_in_wot_compose_right infsum_in_wot_compose_left)
+  also have \<open>\<dots> = sandwich (U*) (kraus_family_bound (\<EE> ()))\<close>
+  by (simp add: EE_def kraus_family_bound.rep_eq sandwich_apply)
+  finally show ?thesis
+    by -
+qed
+
+
+lemma kraus_family_bound_comp_dep:
+  shows \<open>kraus_family_bound (kraus_family_comp_dependent \<EE> (kraus_family_of_op U)) = sandwich (U*) (kraus_family_bound (\<EE> ()))\<close>
+  by (simp add: kraus_family_comp_dependent_def kraus_family_map_outcome_bound kraus_family_bound_comp_dep_raw)
+
+lemma kraus_family_bound_comp:
+  shows \<open>kraus_family_bound (kraus_family_comp \<EE> (kraus_family_of_op U)) = sandwich (U*) (kraus_family_bound \<EE>)\<close>
+  by (simp add: kraus_family_bound_comp_dep kraus_family_comp_def)
+
+lemma kraus_family_norm_comp_dep_coiso:
+  assumes \<open>isometry (U*)\<close>
+  shows \<open>kraus_family_norm (kraus_family_comp_dependent \<EE> (kraus_family_of_op U)) = kraus_family_norm (\<EE> ())\<close>
+  using assms
+  by (simp add: kraus_family_bound_comp_dep kraus_family_norm_def sandwich_apply
+      norm_isometry_compose norm_isometry_compose')
+
+
+lemma kraus_family_norm_comp_coiso:
+  assumes \<open>isometry (U*)\<close>
+  shows \<open>kraus_family_norm (kraus_family_comp \<EE> (kraus_family_of_op U)) = kraus_family_norm \<EE>\<close>
+  using assms
+  by (simp add: kraus_family_bound_comp kraus_family_norm_def sandwich_apply
+      norm_isometry_compose norm_isometry_compose')
+
+
 
 end
