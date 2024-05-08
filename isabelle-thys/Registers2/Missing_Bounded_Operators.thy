@@ -2339,5 +2339,28 @@ proof (unfold minimal_projection_in_def, intro conjI impI ballI)
 qed
 
 
+lemma unitary_tensor_ell2_right_CARD_1:
+  fixes \<psi> :: \<open>'a :: {CARD_1,enum} ell2\<close>
+  assumes \<open>norm \<psi> = 1\<close>
+  shows \<open>unitary (tensor_ell2_right \<psi>)\<close>
+proof (rule unitaryI)
+  show \<open>tensor_ell2_right \<psi>* o\<^sub>C\<^sub>L tensor_ell2_right \<psi> = id_cblinfun\<close>
+    by (simp add: assms isometry_tensor_ell2_right)
+  have *: \<open>(\<psi> \<bullet>\<^sub>C \<phi>) * (\<phi> \<bullet>\<^sub>C \<psi>) = \<phi> \<bullet>\<^sub>C \<phi>\<close> for \<phi>
+  proof -
+    define \<psi>' \<phi>' where \<open>\<psi>' = 1 \<bullet>\<^sub>C \<psi>\<close> and \<open>\<phi>' = 1 \<bullet>\<^sub>C \<phi>\<close>
+    have \<psi>: \<open>\<psi> = \<psi>' *\<^sub>C 1\<close>
+      by (metis \<psi>'_def one_cinner_a_scaleC_one)
+  have \<phi>: \<open>\<phi> = \<phi>' *\<^sub>C 1\<close>
+      by (metis \<phi>'_def one_cinner_a_scaleC_one)
+    show ?thesis
+      apply (simp add: \<psi> \<phi>)
+      by (metis (no_types, lifting) Groups.mult_ac(1) \<psi> assms cinner_simps(5) cinner_simps(6) norm_one of_complex_def of_complex_inner_1 power2_norm_eq_cinner)
+  qed
+  show \<open>tensor_ell2_right \<psi> o\<^sub>C\<^sub>L tensor_ell2_right \<psi>* = id_cblinfun\<close>
+    apply (rule cblinfun_cinner_tensor_eqI)
+    by (simp add: * )
+qed
+
 
 end

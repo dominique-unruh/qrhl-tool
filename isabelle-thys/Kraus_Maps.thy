@@ -4121,4 +4121,142 @@ lemma kraus_family_norm_comp_coiso:
 
 
 
+
+
+lemma kraus_family_bound_comp_dep_raw':
+  assumes \<open>isometry U\<close>
+  shows \<open>kraus_family_bound (kraus_family_comp_dependent_raw (\<lambda>_. kraus_family_of_op U) \<EE>)
+       = kraus_family_bound \<EE>\<close>
+proof -
+  write compose_wot (infixl "o\<^sub>W" 55)
+  define EE where \<open>EE = Rep_kraus_family \<EE>\<close>
+
+  have \<open>kraus_family_bound (kraus_family_comp_dependent_raw (\<lambda>_. kraus_family_of_op U) \<EE>) = 
+        infsum_in cweak_operator_topology (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E)
+           ((\<lambda>((F, y), (E, x)). (E o\<^sub>C\<^sub>L F, F, E, y, ())) ` (SIGMA (F, y):EE. {(U, ())}))\<close>
+    by (simp add: kraus_family_bound.rep_eq kraus_family_comp_dependent_raw.rep_eq kraus_family_of_op.rep_eq EE_def)
+  also have \<open>\<dots>  = infsum_in cweak_operator_topology (\<lambda>(E, x). E* o\<^sub>C\<^sub>L E)
+                   ((\<lambda>(E,x). (U o\<^sub>C\<^sub>L E, E, U, x, ())) ` EE)\<close>
+    apply (rule arg_cong[where f=\<open>infsum_in _ _\<close>])
+    by force
+  also have \<open>\<dots> = infsum_in cweak_operator_topology (\<lambda>(E, x). (U o\<^sub>C\<^sub>L E)* o\<^sub>C\<^sub>L (U o\<^sub>C\<^sub>L E)) EE\<close>
+    apply (subst infsum_in_reindex)
+    by (auto intro!: inj_onI simp: o_def case_prod_unfold infsum_in_reindex)
+  also have \<open>\<dots> = infsum_in cweak_operator_topology (\<lambda>(E, x). E* o\<^sub>C\<^sub>L (U* o\<^sub>C\<^sub>L U) o\<^sub>C\<^sub>L E) EE\<close>
+    by (metis (no_types, lifting) adj_cblinfun_compose cblinfun_assoc_left(1))
+  also have \<open>\<dots> = infsum_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) EE\<close>
+    using assms by simp
+  also have \<open>\<dots> = kraus_family_bound \<EE>\<close>
+    by (simp add: EE_def kraus_family_bound.rep_eq sandwich_apply)
+  finally show ?thesis
+    by -
+qed
+
+
+
+lemma kraus_family_bound_comp_dep':
+  assumes \<open>isometry U\<close>
+  shows \<open>kraus_family_bound (kraus_family_comp_dependent (\<lambda>_. kraus_family_of_op U) \<EE>) = kraus_family_bound \<EE>\<close>
+  using assms by (simp add: kraus_family_comp_dependent_def kraus_family_map_outcome_bound kraus_family_bound_comp_dep_raw')
+
+lemma kraus_family_bound_comp':
+  assumes \<open>isometry U\<close>
+  shows \<open>kraus_family_bound (kraus_family_comp (kraus_family_of_op U) \<EE>) = kraus_family_bound \<EE>\<close>
+  using assms by (simp add: kraus_family_bound_comp_dep' kraus_family_comp_def)
+
+lemma kraus_family_norm_comp_dep':
+  assumes \<open>isometry U\<close>
+  shows \<open>kraus_family_norm (kraus_family_comp_dependent (\<lambda>_. kraus_family_of_op U) \<EE>) = kraus_family_norm \<EE>\<close>
+  using assms
+  by (simp add: kraus_family_bound_comp_dep' kraus_family_norm_def sandwich_apply
+      norm_isometry_compose norm_isometry_compose')
+
+
+lemma kraus_family_norm_comp':
+  assumes \<open>isometry U\<close>
+  shows \<open>kraus_family_norm (kraus_family_comp (kraus_family_of_op U) \<EE>) = kraus_family_norm \<EE>\<close>
+  using assms
+  by (simp add: kraus_family_bound_comp' kraus_family_norm_def sandwich_apply
+      norm_isometry_compose norm_isometry_compose')
+
+
+
+
+
+definition kraus_family_tensor_op_right :: \<open>('extra ell2, 'extra ell2) trace_class \<Rightarrow> ('qu ell2, ('qu\<times>'extra) ell2, unit) kraus_family\<close> where
+  \<open>kraus_family_tensor_op_right \<rho> = 
+  kraus_family_map_outcome_inj (\<lambda>_. ())
+  (kraus_family_comp (kraus_family_tensor kraus_family_id (constant_kraus_family \<rho>))
+   (kraus_family_of_op (tensor_ell2_right (ket ()))))\<close>
+
+lemma kraus_family_bound_constant: 
+  fixes \<rho> :: \<open>('a::chilbert_space, 'a) trace_class\<close>
+  assumes \<open>\<rho> \<ge> 0\<close>
+  shows \<open>kraus_family_bound (constant_kraus_family \<rho>) = trace_tc \<rho> *\<^sub>C id_cblinfun\<close>
+proof (rule cblinfun_cinner_eqI)
+  fix \<psi> :: 'b assume \<open>norm \<psi> = 1\<close>
+  have \<open>\<psi> \<bullet>\<^sub>C kraus_family_bound (constant_kraus_family \<rho>) \<psi> = trace_tc (kraus_family_map (constant_kraus_family \<rho>) (tc_butterfly \<psi> \<psi>))\<close>
+    by (rule kraus_family_bound_from_map)
+  also have \<open>\<dots> = trace_tc (trace_tc (tc_butterfly \<psi> \<psi>) *\<^sub>C \<rho>)\<close>
+    by (simp add: kraus_family_map_constant assms)
+  also have \<open>\<dots> = trace_tc \<rho>\<close>
+    by (metis \<open>norm \<psi> = 1\<close> cinner_complex_def complex_cnj_one complex_vector.vector_space_assms(4) norm_mult norm_one norm_tc_butterfly norm_tc_pos of_real_hom.hom_one one_cinner_one tc_butterfly_pos)
+  also have \<open>\<dots> = \<psi> \<bullet>\<^sub>C (trace_tc \<rho> *\<^sub>C id_cblinfun) \<psi>\<close>
+    by (metis \<open>norm \<psi> = 1\<close> cblinfun.scaleC_left cinner_scaleC_right cnorm_eq_1 id_apply id_cblinfun.rep_eq of_complex_def one_dim_iso_id one_dim_iso_is_of_complex scaleC_conv_of_complex)
+  finally show \<open>\<psi> \<bullet>\<^sub>C kraus_family_bound (constant_kraus_family \<rho>) \<psi> = \<psi> \<bullet>\<^sub>C (trace_tc \<rho> *\<^sub>C id_cblinfun) \<psi>\<close>
+    by -
+qed
+
+lemma kraus_family_norm_constant:
+  assumes \<open>\<rho> \<ge> 0\<close>
+  shows \<open>kraus_family_norm (constant_kraus_family \<rho>) = norm \<rho>\<close>
+  using assms
+  by (simp add: kraus_family_norm_def kraus_family_bound_constant cmod_Re norm_tc_pos_Re trace_tc_pos)
+
+lemma kraus_family_norm_tensor_op_right[simp]:
+  assumes \<open>\<rho> \<ge> 0\<close>
+  shows \<open>kraus_family_norm (kraus_family_tensor_op_right \<rho>) = norm \<rho>\<close>
+proof -
+  have [simp]: \<open>isometry (tensor_ell2_right (ket ())*)\<close>
+    by (simp add: unitary_tensor_ell2_right_CARD_1)
+  show ?thesis
+    using assms by (auto intro!: simp: kraus_family_tensor_op_right_def
+        kraus_family_map_outcome_inj_norm kraus_family_norm_constant
+        inj_on_def kraus_family_norm_comp_coiso
+        kraus_family_norm_tensor)
+qed
+
+
+lemma kraus_family_bound_trace:
+  assumes \<open>is_onb B\<close>
+  shows \<open>kraus_family_bound (trace_kraus_family B) = id_cblinfun\<close>
+  using assms
+  apply (auto intro!: cblinfun_cinner_eqI simp: kraus_family_bound_from_map trace_kraus_family_is_trace)
+  by (metis cinner_complex_def cnorm_eq_1 complex_cnj_one norm_tc_butterfly norm_tc_pos of_real_1 of_real_mult one_cinner_one tc_butterfly_pos)
+
+lemma kraus_family_bound_of_op[simp]: \<open>kraus_family_bound (kraus_family_of_op A) = A* o\<^sub>C\<^sub>L A\<close>
+  by (simp add: kraus_family_bound_def kraus_family_of_op.rep_eq infsum_in_finite)
+
+lemma kraus_family_bound_id[simp]: \<open>kraus_family_bound kraus_family_id = id_cblinfun\<close>
+  by (simp add: kraus_family_id_def)
+
+lemma kraus_family_norm_trace:
+  fixes B :: \<open>'a::{chilbert_space, not_singleton} set\<close>
+  assumes \<open>is_onb B\<close>
+  shows \<open>kraus_family_norm (trace_kraus_family B) = 1\<close>
+  using assms by (simp add: kraus_family_bound_trace kraus_family_norm_def)
+
+lemma kraus_family_bound_partial_trace[simp]:
+  assumes \<open>is_onb B\<close>
+  shows \<open>kraus_family_bound (kraus_map_partial_trace B) = id_cblinfun\<close>
+  using assms
+  by (simp add: kraus_map_partial_trace_def kraus_family_map_outcome_bound
+      unitary_tensor_ell2_right_CARD_1 kraus_family_bound_comp' kraus_family_bound_tensor
+      kraus_family_bound_trace)
+
+lemma kraus_family_norm_partial_trace[simp]:
+  assumes \<open>is_onb B\<close>
+  shows \<open>kraus_family_norm (kraus_map_partial_trace B) = 1\<close>
+  using assms by (simp add: kraus_family_norm_def)
+
 end

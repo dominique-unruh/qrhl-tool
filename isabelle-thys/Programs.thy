@@ -241,82 +241,14 @@ lemma with_type_mp2:
   shows \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (Q Rep Abs))\<close>
   using assms by (auto simp add: with_type_def case_prod_beta)
 
-definition kraus_family_tensor_op_right :: \<open>('extra ell2, 'extra ell2) trace_class \<Rightarrow> ('qu ell2, ('qu\<times>'extra) ell2, unit) kraus_family\<close> where
-  \<open>kraus_family_tensor_op_right \<rho> = 
-  kraus_family_map_outcome_inj (\<lambda>_. ())
-  (kraus_family_comp (kraus_family_tensor kraus_family_id (constant_kraus_family \<rho>))
-   (kraus_family_of_op (tensor_ell2_right (ket ()))))\<close>
-
-lemma kraus_family_bound_constant: 
-  fixes \<rho> :: \<open>('a::chilbert_space, 'a) trace_class\<close>
-  assumes \<open>\<rho> \<ge> 0\<close>
-  shows \<open>kraus_family_bound (constant_kraus_family \<rho>) = trace_tc \<rho> *\<^sub>C id_cblinfun\<close>
-proof (rule cblinfun_cinner_eqI)
-  fix \<psi> :: 'b assume \<open>norm \<psi> = 1\<close>
-  have \<open>\<psi> \<bullet>\<^sub>C kraus_family_bound (constant_kraus_family \<rho>) \<psi> = trace_tc (kraus_family_map (constant_kraus_family \<rho>) (tc_butterfly \<psi> \<psi>))\<close>
-    by (rule kraus_family_bound_from_map)
-  also have \<open>\<dots> = trace_tc (trace_tc (tc_butterfly \<psi> \<psi>) *\<^sub>C \<rho>)\<close>
-    by (simp add: kraus_family_map_constant assms)
-  also have \<open>\<dots> = trace_tc \<rho>\<close>
-    by (metis \<open>norm \<psi> = 1\<close> cinner_complex_def complex_cnj_one complex_vector.vector_space_assms(4) norm_mult norm_one norm_tc_butterfly norm_tc_pos of_real_hom.hom_one one_cinner_one tc_butterfly_pos)
-  also have \<open>\<dots> = \<psi> \<bullet>\<^sub>C (trace_tc \<rho> *\<^sub>C id_cblinfun) \<psi>\<close>
-    by (metis \<open>norm \<psi> = 1\<close> cblinfun.scaleC_left cinner_scaleC_right cnorm_eq_1 id_apply id_cblinfun.rep_eq of_complex_def one_dim_iso_id one_dim_iso_is_of_complex scaleC_conv_of_complex)
-  finally show \<open>\<psi> \<bullet>\<^sub>C kraus_family_bound (constant_kraus_family \<rho>) \<psi> = \<psi> \<bullet>\<^sub>C (trace_tc \<rho> *\<^sub>C id_cblinfun) \<psi>\<close>
-    by -
-qed
-
-lemma kraus_family_norm_constant:
-  assumes \<open>\<rho> \<ge> 0\<close>
-  shows \<open>kraus_family_norm (constant_kraus_family \<rho>) = norm \<rho>\<close>
-  using assms
-  by (simp add: kraus_family_norm_def kraus_family_bound_constant cmod_Re norm_tc_pos_Re trace_tc_pos)
-
-lemma unitary_tensor_ell2_right_CARD_1:
-  fixes \<psi> :: \<open>'a :: {CARD_1,enum} ell2\<close>
-  assumes \<open>norm \<psi> = 1\<close>
-  shows \<open>unitary (tensor_ell2_right \<psi>)\<close>
-proof (rule unitaryI)
-  show \<open>tensor_ell2_right \<psi>* o\<^sub>C\<^sub>L tensor_ell2_right \<psi> = id_cblinfun\<close>
-    by (simp add: assms isometry_tensor_ell2_right)
-  have *: \<open>(\<psi> \<bullet>\<^sub>C \<phi>) * (\<phi> \<bullet>\<^sub>C \<psi>) = \<phi> \<bullet>\<^sub>C \<phi>\<close> for \<phi>
-  proof -
-    define \<psi>' \<phi>' where \<open>\<psi>' = 1 \<bullet>\<^sub>C \<psi>\<close> and \<open>\<phi>' = 1 \<bullet>\<^sub>C \<phi>\<close>
-    have \<psi>: \<open>\<psi> = \<psi>' *\<^sub>C 1\<close>
-      by (metis \<psi>'_def one_cinner_a_scaleC_one)
-  have \<phi>: \<open>\<phi> = \<phi>' *\<^sub>C 1\<close>
-      by (metis \<phi>'_def one_cinner_a_scaleC_one)
-    show ?thesis
-      apply (simp add: \<psi> \<phi>)
-      by (metis (no_types, lifting) Groups.mult_ac(1) \<psi> assms cinner_simps(5) cinner_simps(6) norm_one of_complex_def of_complex_inner_1 power2_norm_eq_cinner)
-  qed
-  show \<open>tensor_ell2_right \<psi> o\<^sub>C\<^sub>L tensor_ell2_right \<psi>* = id_cblinfun\<close>
-    apply (rule cblinfun_cinner_tensor_eqI)
-    by (simp add: * )
-qed
-
-lemma kraus_family_norm_tensor_op_right[simp]:
-  assumes \<open>\<rho> \<ge> 0\<close>
-  shows \<open>kraus_family_norm (kraus_family_tensor_op_right \<rho>) = norm \<rho>\<close>
-proof -
-  have [simp]: \<open>isometry (tensor_ell2_right |()\<rangle>*)\<close>
-    by (simp add: unitary_tensor_ell2_right_CARD_1)
-  show ?thesis
-    using assms by (auto intro!: simp: kraus_family_tensor_op_right_def
-        kraus_family_map_outcome_inj_norm kraus_family_norm_constant
-        inj_on_def kraus_family_norm_comp_coiso
-        kraus_family_norm_tensor)
-qed
-
 lift_definition cq_map_tensor_op_right :: \<open>('extra ell2, 'extra ell2) trace_class \<Rightarrow> ('cl, 'qu, 'cl, 'qu\<times>'extra) cq_map\<close> is
   \<open>\<lambda>\<rho> c. if \<rho> \<ge> 0 \<and> norm \<rho> \<le> 1 then kraus_family_map_outcome_inj (\<lambda>_. c) (kraus_family_tensor_op_right \<rho>) else 0\<close>
   by (simp add: cq_map_rel_def kraus_family_map_outcome_inj_norm inj_on_def kraus_family_norm_tensor_op_right)
 
 lift_definition cq_map_partial_trace :: \<open>('cl, 'qu1\<times>'qu2, 'cl, 'qu1) cq_map\<close> is
   \<open>\<lambda>c. kraus_family_map_outcome (\<lambda>_. c) (kraus_map_partial_trace (range ket))\<close>
-  apply (auto intro!: simp: cq_map_rel_def)
-  by x
+  by (auto intro!: simp: cq_map_rel_def)
 
-(* TODO: Run inner cq_map with a \<rho>-initialized second part. *)
 definition cq_map_auxiliary_state ::
   \<open>('aux ell2, 'aux ell2) trace_class \<Rightarrow> ('cl1, 'qu1\<times>'aux, 'cl2, 'qu2\<times>'aux) cq_map \<Rightarrow> ('cl1,'qu1,'cl2,'qu2) cq_map\<close> where
   \<open>cq_map_auxiliary_state \<rho> \<EE> = 
