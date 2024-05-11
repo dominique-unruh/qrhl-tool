@@ -2362,5 +2362,115 @@ proof (rule unitaryI)
     by (simp add: * )
 qed
 
+lemma less_eq_cblinfunI:
+  fixes a b :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space\<close>
+  assumes \<open>\<And>h. h \<bullet>\<^sub>C a h \<le> h \<bullet>\<^sub>C b h\<close>
+  shows \<open>a \<le> b\<close>
+  using assms
+  by (simp add: less_eq_cblinfun_def)
+
+
+lemma has_sum_in_wot_compose_left:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>has_sum_in cweak_operator_topology f X s\<close>
+  shows \<open>has_sum_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X (a o\<^sub>C\<^sub>L s)\<close>
+proof (rule has_sum_in_cweak_operator_topology_pointwise[THEN iffD2], intro allI, rename_tac g h)
+  fix g h
+  from assms have \<open>((\<lambda>x. (a*) g \<bullet>\<^sub>C f x h) has_sum (a*) g \<bullet>\<^sub>C s h) X\<close>
+    by (metis has_sum_in_cweak_operator_topology_pointwise)
+  then show \<open>((\<lambda>x. g \<bullet>\<^sub>C (a o\<^sub>C\<^sub>L f x) h) has_sum g \<bullet>\<^sub>C (a o\<^sub>C\<^sub>L s) h) X\<close>
+    by (metis (no_types, lifting) cblinfun_apply_cblinfun_compose cinner_adj_left has_sum_cong)
+qed
+
+lemma has_sum_in_wot_compose_right:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_inner\<close>
+  assumes \<open>has_sum_in cweak_operator_topology f X s\<close>
+  shows \<open>has_sum_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X (s o\<^sub>C\<^sub>L a)\<close>
+proof (rule has_sum_in_cweak_operator_topology_pointwise[THEN iffD2], intro allI, rename_tac g h)
+  fix g h
+  from assms have \<open>((\<lambda>x. g \<bullet>\<^sub>C f x (a h)) has_sum g \<bullet>\<^sub>C s (a h)) X\<close>
+    by (metis has_sum_in_cweak_operator_topology_pointwise)
+  then show \<open>((\<lambda>x. g \<bullet>\<^sub>C (f x o\<^sub>C\<^sub>L a) h) has_sum g \<bullet>\<^sub>C (s o\<^sub>C\<^sub>L a) h) X\<close>
+    by simp
+qed
+
+lemma summable_on_in_wot_compose_left:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>summable_on_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X\<close>
+  using has_sum_in_wot_compose_left assms
+  by (fastforce simp: summable_on_in_def)
+
+lemma summable_on_in_wot_compose_right:
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>summable_on_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X\<close>
+  using has_sum_in_wot_compose_right assms
+  by (fastforce simp: summable_on_in_def)
+
+lemma infsum_in_wot_compose_left:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>infsum_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X = a o\<^sub>C\<^sub>L (infsum_in cweak_operator_topology f X)\<close>
+  by (metis (mono_tags, lifting) assms has_sum_in_infsum_in has_sum_in_unique hausdorff_cweak_operator_topology
+      has_sum_in_wot_compose_left summable_on_in_wot_compose_left)
+
+lemma infsum_in_wot_compose_right:
+  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_inner\<close>
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>infsum_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X = (infsum_in cweak_operator_topology f X) o\<^sub>C\<^sub>L a\<close>
+  by (metis (mono_tags, lifting) assms has_sum_in_infsum_in has_sum_in_unique hausdorff_cweak_operator_topology
+      has_sum_in_wot_compose_right summable_on_in_wot_compose_right)
+
+lemma summable_on_in_cweak_operator_topology_pointwise:
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>(\<lambda>x. a \<bullet>\<^sub>C f x b) summable_on X\<close>
+  using assms
+  by (auto simp: summable_on_in_def summable_on_def has_sum_in_cweak_operator_topology_pointwise)
+
+lemma infsum_in_cweak_operator_topology_pointwise:
+  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
+  shows \<open>a \<bullet>\<^sub>C (infsum_in cweak_operator_topology f X) b = (\<Sum>\<^sub>\<infinity>x\<in>X. a \<bullet>\<^sub>C f x b)\<close>
+  by (metis (mono_tags, lifting) assms has_sum_in_cweak_operator_topology_pointwise has_sum_in_infsum_in hausdorff_cweak_operator_topology infsumI)
+
+
+lemma infsum_wot_boundedI:
+  fixes f :: \<open>'b \<Rightarrow> ('a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space)\<close>
+  assumes bounded: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> X \<Longrightarrow> sum f F \<le> B\<close>
+  assumes pos: \<open>\<And>x. x \<in> X \<Longrightarrow> f x \<ge> 0\<close>
+  shows \<open>infsum_in cweak_operator_topology f X \<le> B\<close>
+proof (rule less_eq_cblinfunI)
+  fix h
+  have summ: \<open>summable_on_in cweak_operator_topology f X\<close>
+    using assms by (rule summable_wot_boundedI)
+  then have \<open>h \<bullet>\<^sub>C (infsum_in cweak_operator_topology f X *\<^sub>V h) = (\<Sum>\<^sub>\<infinity>x\<in>X. h \<bullet>\<^sub>C (f x *\<^sub>V h))\<close>
+    by (rule infsum_in_cweak_operator_topology_pointwise)
+  also have \<open>\<dots> \<le> h \<bullet>\<^sub>C B h\<close>
+  proof (rule less_eq_complexI)
+    from summ have summ': \<open>(\<lambda>x. h \<bullet>\<^sub>C (f x *\<^sub>V h)) summable_on X\<close>
+      by (auto intro!: summable_on_in_cweak_operator_topology_pointwise)
+    have *: \<open>(\<Sum>x\<in>F. h \<bullet>\<^sub>C (f x *\<^sub>V h)) \<le> h \<bullet>\<^sub>C B h\<close> if \<open>finite F\<close> and \<open>F \<subseteq> X\<close> for F
+      using that bounded
+      by (simp add: less_eq_cblinfun_def flip: cinner_sum_right cblinfun.sum_left)
+    show \<open>Im (\<Sum>\<^sub>\<infinity>x\<in>X. h \<bullet>\<^sub>C (f x *\<^sub>V h)) = Im (h \<bullet>\<^sub>C (B *\<^sub>V h))\<close>
+    proof -
+      from *[of \<open>{}\<close>] have \<open>h \<bullet>\<^sub>C B h \<ge> 0\<close>
+        by simp
+      then have \<open>Im (h \<bullet>\<^sub>C B h) = 0\<close>
+        using comp_Im_same zero_complex.sel(2) by presburger
+      moreover then have \<open>Im (h \<bullet>\<^sub>C (f x *\<^sub>V h)) = 0\<close> if \<open>x \<in> X\<close> for x
+        using *[of \<open>{x}\<close>] that 
+        by (simp add: less_eq_complex_def)
+      ultimately show \<open>Im (\<Sum>\<^sub>\<infinity>x\<in>X. h \<bullet>\<^sub>C (f x *\<^sub>V h)) = Im (h \<bullet>\<^sub>C (B *\<^sub>V h))\<close>
+        by (auto intro!: infsum_0 simp: summ' simp flip: infsum_Im)
+    qed
+    show \<open>Re (\<Sum>\<^sub>\<infinity>x\<in>X. h \<bullet>\<^sub>C (f x *\<^sub>V h)) \<le> Re (h \<bullet>\<^sub>C (B *\<^sub>V h))\<close>
+      apply (auto intro!: summable_on_Re infsum_le_finite_sums simp: summ' simp flip: infsum_Re)
+      using summ'
+      by (metis "*" Re_sum less_eq_complex_def)
+  qed
+  finally show \<open>h \<bullet>\<^sub>C (infsum_in cweak_operator_topology f X *\<^sub>V h) \<le> h \<bullet>\<^sub>C (B *\<^sub>V h)\<close>
+    by -
+qed
+
 
 end

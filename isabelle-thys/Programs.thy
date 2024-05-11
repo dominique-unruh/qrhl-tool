@@ -241,25 +241,6 @@ lemma with_type_mp2:
   shows \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (Q Rep Abs))\<close>
   using assms by (auto simp add: with_type_def case_prod_beta)
 
-lift_definition cq_map_tensor_op_right :: \<open>('extra ell2, 'extra ell2) trace_class \<Rightarrow> ('cl, 'qu, 'cl, 'qu\<times>'extra) cq_map\<close> is
-  \<open>\<lambda>\<rho> c. if \<rho> \<ge> 0 \<and> norm \<rho> \<le> 1 then kraus_family_map_outcome_inj (\<lambda>_. c) (kraus_family_tensor_op_right \<rho>) else 0\<close>
-  by (simp add: cq_map_rel_def kraus_family_map_outcome_inj_norm inj_on_def kraus_family_norm_tensor_op_right)
-
-lift_definition cq_map_partial_trace :: \<open>('cl, 'qu1\<times>'qu2, 'cl, 'qu1) cq_map\<close> is
-  \<open>\<lambda>c. kraus_family_map_outcome (\<lambda>_. c) (kraus_map_partial_trace (range ket))\<close>
-  by (auto intro!: simp: cq_map_rel_def)
-
-definition cq_map_auxiliary_state ::
-  \<open>('aux ell2, 'aux ell2) trace_class \<Rightarrow> ('cl1, 'qu1\<times>'aux, 'cl2, 'qu2\<times>'aux) cq_map \<Rightarrow> ('cl1,'qu1,'cl2,'qu2) cq_map\<close> where
-  \<open>cq_map_auxiliary_state \<rho> \<EE> = 
-      cq_map_seq (cq_map_tensor_op_right \<rho>) (cq_map_seq \<EE> cq_map_partial_trace)\<close>
-
-lift_definition cq_map_tensor_id_right :: \<open>('cl1, 'qu1, 'cl2, 'qu2) cq_map \<Rightarrow> ('cl1, 'qu1\<times>'extra, 'cl2, 'qu2\<times>'extra) cq_map\<close> is
-  \<open>\<lambda>\<EE> c. kraus_family_map_outcome fst (kraus_family_tensor (\<EE> c) kraus_family_id)\<close>
-  apply (auto intro!: kraus_equivalent'_map_cong kraus_family_tensor_cong'
-      simp: cq_map_rel_def )
-  by (smt (verit) kraus_family_norm_tensor kraus_map_norm_id mult_cancel_left2)
-
 definition cq_map_local_q :: 
   \<open>'qu QREGISTER \<Rightarrow> ('qu ell2, 'qu ell2) trace_class \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map\<close> where
   \<open>cq_map_local_q Q \<rho> \<EE> = cq_map_auxiliary_state \<rho> (
@@ -267,8 +248,20 @@ definition cq_map_local_q ::
     (cq_map_seq (cq_map_tensor_id_right \<EE>)
                 (cq_map_of_op (swap_QREGISTER Q))))\<close>
 
-axiomatization cq_map_while :: \<open>bool expression \<Rightarrow> ('cl,'qu,'cl','qu) cq_map \<Rightarrow> ('cl,'qu,'cl','qu) cq_map\<close>
 
+(* lemma infsum_le_finite_sums_wot':
+  fixes b :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+  assumes \<open>summable_on_in cweak_operator_topology f A\<close>
+  assumes \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> A \<Longrightarrow> sum f F \<le> b\<close>
+  shows \<open>infsum_in cweak_operator_topology f A \<le> b\<close> *)
+
+(* lemma infsum_le_finite_sums_wot:
+  fixes b :: \<open>('a::chilbert_space, 'a) cblinfun_wot\<close>
+  assumes \<open>f summable_on A\<close>
+  assumes \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> A \<Longrightarrow> sum f F \<le> b\<close>
+  shows \<open>infsum f A \<le> b\<close>
+proof -
+ *)
 
 
 (* lemma kraus_map_from_measurement_norm: 

@@ -450,5 +450,113 @@ lift_definition cq_map_quantum_op :: \<open>('cl \<Rightarrow> ('qu1 ell2, 'qu2 
 definition cq_map_of_op :: \<open>'qu1 ell2 \<Rightarrow>\<^sub>C\<^sub>L 'qu2 ell2 \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map\<close> where
   \<open>cq_map_of_op U = cq_map_quantum_op (\<lambda>_. kraus_family_of_op U)\<close>
 
+lift_definition cq_map_tensor_op_right :: \<open>('extra ell2, 'extra ell2) trace_class \<Rightarrow> ('cl, 'qu, 'cl, 'qu\<times>'extra) cq_map\<close> is
+  \<open>\<lambda>\<rho> c. if \<rho> \<ge> 0 \<and> norm \<rho> \<le> 1 then kraus_family_map_outcome_inj (\<lambda>_. c) (kraus_family_tensor_op_right \<rho>) else 0\<close>
+  by (simp add: cq_map_rel_def kraus_family_map_outcome_inj_norm inj_on_def kraus_family_norm_tensor_op_right)
+
+lift_definition cq_map_partial_trace :: \<open>('cl, 'qu1\<times>'qu2, 'cl, 'qu1) cq_map\<close> is
+  \<open>\<lambda>c. kraus_family_map_outcome (\<lambda>_. c) (kraus_map_partial_trace (range ket))\<close>
+  by (auto intro!: simp: cq_map_rel_def)
+
+definition cq_map_auxiliary_state ::
+  \<open>('aux ell2, 'aux ell2) trace_class \<Rightarrow> ('cl1, 'qu1\<times>'aux, 'cl2, 'qu2\<times>'aux) cq_map \<Rightarrow> ('cl1,'qu1,'cl2,'qu2) cq_map\<close> where
+  \<open>cq_map_auxiliary_state \<rho> \<EE> = 
+      cq_map_seq (cq_map_tensor_op_right \<rho>) (cq_map_seq \<EE> cq_map_partial_trace)\<close>
+
+lift_definition cq_map_tensor_id_right :: \<open>('cl1, 'qu1, 'cl2, 'qu2) cq_map \<Rightarrow> ('cl1, 'qu1\<times>'extra, 'cl2, 'qu2\<times>'extra) cq_map\<close> is
+  \<open>\<lambda>\<EE> c. kraus_family_map_outcome fst (kraus_family_tensor (\<EE> c) kraus_family_id)\<close>
+  apply (auto intro!: kraus_equivalent'_map_cong kraus_family_tensor_cong'
+      simp: cq_map_rel_def )
+  by (smt (verit) kraus_family_norm_tensor kraus_map_norm_id mult_cancel_left2)
+
+instantiation cq_map :: (type,type,type,type) zero begin
+lift_definition zero_cq_map :: \<open>('a, 'b, 'c, 'd) cq_map\<close> is
+  \<open>\<lambda>c. 0\<close>
+  by (simp add: cq_map_rel_def)
+instance..
+end
+
+fun cq_map_while_n :: \<open>('cl \<Rightarrow> bool) \<Rightarrow> ('cl,'qu,'cl,'qu) cq_map \<Rightarrow> nat \<Rightarrow> ('cl,'qu,'cl,'qu) cq_map\<close> where
+  \<open>cq_map_while_n c _ 0 = cq_map_if c cq_map_id 0\<close>
+| \<open>cq_map_while_n c \<EE> (Suc n) = cq_map_if c (cq_map_seq \<EE> (cq_map_while_n c \<EE> n)) 0\<close>
+
+
+lift_definition cq_map_infsum :: \<open>('a \<Rightarrow> ('cl1,'qu1,'cl2,'qu2) cq_map) \<Rightarrow> 'a set \<Rightarrow> ('cl1,'qu1,'a\<times>'cl2,'qu2) cq_map\<close> is
+  \<open>\<lambda>\<EE> A. if \<forall>c. (summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a c)) A
+      \<and> infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a c)) A \<le> id_cblinfun)
+      then \<lambda>c. kraus_map_infsum (\<lambda>a. \<EE> a c) A else (\<lambda>_. 0)\<close>
+proof -
+  fix \<EE> \<FF> :: \<open>'a \<Rightarrow> 'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close>
+  fix A :: \<open>'a set\<close>
+  assume rel: \<open>cq_map_rel (\<EE> a) (\<FF> a)\<close> for a
+  define KMI' cond KMI where 
+    \<open>KMI' \<EE> = (\<lambda>c. kraus_map_infsum (\<lambda>a. \<EE> a c) A)\<close> and
+    \<open>cond \<EE> \<longleftrightarrow> (\<forall>c. summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a c)) A \<and>
+              infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a c)) A \<le> id_cblinfun)\<close> and
+    \<open>KMI \<EE> = (if cond \<EE> then KMI' \<EE> else (\<lambda>_. 0))\<close>
+  for \<EE> :: \<open>'a \<Rightarrow> 'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close>
+  from rel
+  have bound_eq: \<open>kraus_family_bound (\<EE> a c) = kraus_family_bound (\<FF> a c)\<close> for a c
+    by (auto intro!: kraus_family_bound_welldefined kraus_equivalent'_imp_equivalent simp: cq_map_rel_def)
+  have cond_eq: \<open>cond \<EE> \<longleftrightarrow> cond \<FF>\<close>
+    by (simp add: cond_def bound_eq)
+  show \<open>cq_map_rel (KMI \<EE>) (KMI \<FF>)\<close>
+  proof (cases \<open>cond \<EE>\<close>)
+    case True
+    have \<open>cq_map_rel (KMI' \<EE>) (KMI' \<FF>)\<close>
+    proof (subst cq_map_rel_def, intro allI conjI)
+      fix c :: 'cl1
+      have bound: \<open>(\<Sum>a\<in>F. kraus_family_bound (\<EE> a c)) \<le> id_cblinfun\<close> 
+        if \<open>finite F\<close> and \<open>F \<subseteq> A\<close> for F
+      proof -
+        have \<open>(\<Sum>a\<in>F. kraus_family_bound (\<EE> a c)) = infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a c)) F\<close>
+          by (auto intro!: infsum_in_finite[symmetric] that)
+        also have \<open>\<dots> \<le> infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a c)) A\<close>
+          using that True
+          by (auto intro!: infsum_mono_neutral_wot intro: summable_on_in_finite simp: cond_def)
+        also have \<open>\<dots> \<le> id_cblinfun\<close>
+          using True by (simp add: cond_def)
+        finally show ?thesis
+          by -
+      qed
+      have summable: \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a c)) A\<close>
+        apply (rule summable_wot_boundedI)
+        using bound by simp_all
+      have infsum_leq: \<open>infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a c)) A \<le> id_cblinfun\<close>
+        using bound apply (rule infsum_wot_boundedI)
+        by simp_all
+      have \<open>kraus_family_bound (kraus_map_infsum (\<lambda>a. \<EE> a c) A) \<le> id_cblinfun\<close>
+        apply (subst kraus_family_bound_kraus_map_infsum)
+        using summable infsum_leq by simp_all
+      then have \<open>kraus_family_norm (kraus_map_infsum (\<lambda>a. \<EE> a c) A) \<le> 1\<close>
+         apply (simp add: kraus_family_norm_def)
+        using kraus_family_bound_pos norm_cblinfun_mono by fastforce
+      then show \<open>kraus_family_norm (KMI' \<EE> c) \<le> 1\<close>
+        by (simp add: KMI'_def)
+    next
+      fix c :: 'cl1
+      from rel
+      show \<open>kraus_equivalent' (KMI' \<EE> c) (KMI' \<FF> c)\<close>
+        by (auto intro!: kraus_equivalent'_kraus_map_infsum simp: KMI'_def cq_map_rel_def)
+    qed
+    with True show ?thesis
+      by (simp add: KMI_def cond_eq)
+  next
+    case False
+    then have \<open>\<not> cond \<FF>\<close>
+      using cond_eq by force
+    with False show \<open>cq_map_rel (KMI \<EE>) (KMI \<FF>)\<close>
+      by (simp add: KMI_def cq_map_rel_def)
+  qed
+qed
+
+lift_definition cq_map_classical :: \<open>('cl1 \<Rightarrow> 'cl2) \<Rightarrow> ('cl1, 'qu, 'cl2, 'qu) cq_map\<close> is
+  \<open>\<lambda>f c. kraus_family_map_outcome_inj (\<lambda>_. f c) kraus_family_id\<close>
+  by (simp add: cq_map_rel_def kraus_family_map_outcome_inj_norm inj_on_def)
+
+
+definition cq_map_while :: \<open>('cl \<Rightarrow> bool) \<Rightarrow> ('cl,'qu,'cl,'qu) cq_map \<Rightarrow> ('cl,'qu,'cl,'qu) cq_map\<close> where
+  \<open>cq_map_while c \<EE> = cq_map_seq (cq_map_infsum (\<lambda>n. cq_map_while_n c \<EE> n) UNIV) (cq_map_classical snd)\<close>
+
 
 end

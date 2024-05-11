@@ -1015,5 +1015,11 @@ lemma redundant_option_case: \<open>(case a of None \<Rightarrow> None | Some x 
 lemma map_commutant_empty[simp]: \<open>map_commutant {Map.empty} = UNIV\<close>
   by (auto simp: map_commutant_def)
 
+lemma summable_on_in_cong:
+  assumes "\<And>x. x\<in>A \<Longrightarrow> f x = g x"
+  shows "summable_on_in T f A \<longleftrightarrow> summable_on_in T g A"
+  by (simp add: summable_on_in_def has_sum_in_cong[OF assms])
+
+
 
 end

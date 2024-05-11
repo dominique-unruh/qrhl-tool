@@ -2151,69 +2151,6 @@ hide_fact kraus_family_tensor_raw_bound_aux
 
 definition \<open>kraus_family_tensor \<EE> \<FF> = kraus_family_map_outcome (\<lambda>(E, F, x, y). (x,y)) (kraus_family_tensor_raw \<EE> \<FF>)\<close>
 
-
-lemma has_sum_in_wot_compose_left:
-  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  assumes \<open>has_sum_in cweak_operator_topology f X s\<close>
-  shows \<open>has_sum_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X (a o\<^sub>C\<^sub>L s)\<close>
-proof (rule has_sum_in_cweak_operator_topology_pointwise[THEN iffD2], intro allI, rename_tac g h)
-  fix g h
-  from assms have \<open>((\<lambda>x. (a*) g \<bullet>\<^sub>C f x h) has_sum (a*) g \<bullet>\<^sub>C s h) X\<close>
-    by (metis has_sum_in_cweak_operator_topology_pointwise)
-  then show \<open>((\<lambda>x. g \<bullet>\<^sub>C (a o\<^sub>C\<^sub>L f x) h) has_sum g \<bullet>\<^sub>C (a o\<^sub>C\<^sub>L s) h) X\<close>
-    by (metis (no_types, lifting) cblinfun_apply_cblinfun_compose cinner_adj_left has_sum_cong)
-qed
-
-lemma has_sum_in_wot_compose_right:
-  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_inner\<close>
-  assumes \<open>has_sum_in cweak_operator_topology f X s\<close>
-  shows \<open>has_sum_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X (s o\<^sub>C\<^sub>L a)\<close>
-proof (rule has_sum_in_cweak_operator_topology_pointwise[THEN iffD2], intro allI, rename_tac g h)
-  fix g h
-  from assms have \<open>((\<lambda>x. g \<bullet>\<^sub>C f x (a h)) has_sum g \<bullet>\<^sub>C s (a h)) X\<close>
-    by (metis has_sum_in_cweak_operator_topology_pointwise)
-  then show \<open>((\<lambda>x. g \<bullet>\<^sub>C (f x o\<^sub>C\<^sub>L a) h) has_sum g \<bullet>\<^sub>C (s o\<^sub>C\<^sub>L a) h) X\<close>
-    by simp
-qed
-
-lemma summable_on_in_wot_compose_left:
-  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
-  shows \<open>summable_on_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X\<close>
-  using has_sum_in_wot_compose_left assms
-  by (fastforce simp: summable_on_in_def)
-
-lemma summable_on_in_wot_compose_right:
-  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
-  shows \<open>summable_on_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X\<close>
-  using has_sum_in_wot_compose_right assms
-  by (fastforce simp: summable_on_in_def)
-
-lemma infsum_in_wot_compose_left:
-  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
-  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
-  shows \<open>infsum_in cweak_operator_topology (\<lambda>x. a o\<^sub>C\<^sub>L f x) X = a o\<^sub>C\<^sub>L (infsum_in cweak_operator_topology f X)\<close>
-  by (metis (mono_tags, lifting) assms has_sum_in_infsum_in has_sum_in_unique hausdorff_cweak_operator_topology
-      has_sum_in_wot_compose_left summable_on_in_wot_compose_left)
-
-lemma infsum_in_wot_compose_right:
-  fixes f :: \<open>'c \<Rightarrow> 'a::complex_normed_vector \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_inner\<close>
-  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
-  shows \<open>infsum_in cweak_operator_topology (\<lambda>x. f x o\<^sub>C\<^sub>L a) X = (infsum_in cweak_operator_topology f X) o\<^sub>C\<^sub>L a\<close>
-  by (metis (mono_tags, lifting) assms has_sum_in_infsum_in has_sum_in_unique hausdorff_cweak_operator_topology
-      has_sum_in_wot_compose_right summable_on_in_wot_compose_right)
-
-lemma summable_on_in_cweak_operator_topology_pointwise:
-  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
-  shows \<open>(\<lambda>x. a \<bullet>\<^sub>C f x b) summable_on X\<close>
-  using assms
-  by (auto simp: summable_on_in_def summable_on_def has_sum_in_cweak_operator_topology_pointwise)
-
-lemma infsum_in_cweak_operator_topology_pointwise:
-  assumes \<open>summable_on_in cweak_operator_topology f X\<close>
-  shows \<open>a \<bullet>\<^sub>C (infsum_in cweak_operator_topology f X) b = (\<Sum>\<^sub>\<infinity>x\<in>X. a \<bullet>\<^sub>C f x b)\<close>
-  by (metis (mono_tags, lifting) assms has_sum_in_cweak_operator_topology_pointwise has_sum_in_infsum_in hausdorff_cweak_operator_topology infsumI)
-
 lemma kraus_family_map_tensor:
   \<open>kraus_family_map (kraus_family_tensor \<EE> \<FF>) (tc_tensor \<rho> \<sigma>)= tc_tensor (kraus_family_map \<EE> \<rho>) (kraus_family_map \<FF> \<sigma>)\<close>
   by (auto intro!: simp: kraus_family_tensor_def kraus_family_map_outcome_same_map kraus_family_map_tensor_raw)
@@ -4258,5 +4195,87 @@ lemma kraus_family_norm_partial_trace[simp]:
   assumes \<open>is_onb B\<close>
   shows \<open>kraus_family_norm (kraus_map_partial_trace B) = 1\<close>
   using assms by (simp add: kraus_family_norm_def)
+
+lemma kraus_family_filter_infsum:
+  assumes \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>
+  shows \<open>kraus_family_filter P (kraus_map_infsum \<EE> A) 
+           = kraus_map_infsum (\<lambda>a. kraus_family_filter (\<lambda>x. P (a,x)) (\<EE> a)) {a\<in>A. \<exists>x. P (a,x)}\<close>
+    (is \<open>?lhs = ?rhs\<close>)
+proof -
+  have summ: \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (kraus_family_filter (\<lambda>x. P (a, x)) (\<EE> a)))
+      {a \<in> A. \<exists>x. P (a, x)}\<close>
+  proof (rule summable_wot_boundedI)
+    fix F assume \<open>finite F\<close> and F_subset: \<open>F \<subseteq> {a \<in> A. \<exists>x. P (a, x)}\<close>
+    have \<open>(\<Sum>a\<in>F. kraus_family_bound (kraus_family_filter (\<lambda>x. P (a, x)) (\<EE> a)))
+        \<le> (\<Sum>a\<in>F. kraus_family_bound (\<EE> a))\<close>
+      by (meson kraus_family_bound_filter sum_mono)
+    also have \<open>\<dots> = infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) F\<close>
+      apply (rule infsum_in_finite[symmetric])
+      by (auto intro!: \<open>finite F\<close>)
+    also have \<open>\<dots> \<le> infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>
+      apply (rule infsum_mono_neutral_wot)
+      using F_subset by (auto intro!:  \<open>finite F\<close> assms intro: summable_on_in_finite simp:)
+    finally show \<open>(\<Sum>a\<in>F. kraus_family_bound (kraus_family_filter (\<lambda>x. P (a, x)) (\<EE> a))) \<le> \<dots>\<close>
+      by -
+  next
+    show \<open>0 \<le> kraus_family_bound (kraus_family_filter (\<lambda>y. P (x, y)) (\<EE> x))\<close> for x
+      by simp
+  qed
+  have \<open>Rep_kraus_family ?lhs = Rep_kraus_family ?rhs\<close>
+    by (force simp add: kraus_family_filter.rep_eq kraus_map_infsum.rep_eq assms summ)
+  then show \<open>?lhs = ?rhs\<close>
+    by (simp add: Rep_kraus_family_inject)
+qed
+
+lemma kraus_map_infsum_empty[simp]: \<open>kraus_map_infsum \<EE> {} = 0\<close>
+  apply transfer' by simp
+
+lemma kraus_map_infsum_singleton[simp]: \<open>kraus_map_infsum \<EE> {a} = kraus_family_map_outcome_inj (\<lambda>x. (a,x)) (\<EE> a)\<close>
+  apply (rule Rep_kraus_family_inject[THEN iffD1])
+  by (force simp add: kraus_map_infsum.rep_eq summable_on_in_finite kraus_family_map_outcome_inj.rep_eq)
+
+lemma kraus_map_infsum_invalid: 
+  assumes \<open>\<not> summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>
+  shows \<open>kraus_map_infsum \<EE> A = 0\<close>
+  using assms
+  apply transfer'
+  by simp
+
+lemma kraus_equivalent'_kraus_map_infsum:
+  fixes \<EE> \<FF> :: \<open>'a \<Rightarrow> ('b::chilbert_space, 'c::chilbert_space, 'x) kraus_family\<close>
+  assumes \<open>\<And>a. a \<in> A \<Longrightarrow> kraus_equivalent' (\<EE> a) (\<FF> a)\<close>
+  shows \<open>kraus_equivalent' (kraus_map_infsum \<EE> A) (kraus_map_infsum \<FF> A)\<close>
+proof (cases \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>)
+  case True
+  then have True': \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<FF> a)) A\<close>
+    apply (rule summable_on_in_cong[THEN iffD1, rotated])
+    by (simp add: kraus_family_bound_welldefined assms kraus_equivalent'_imp_equivalent)
+  show ?thesis
+  proof (rule kraus_equivalent'I)
+    fix ax :: \<open>'a \<times> 'x\<close> and \<rho>
+    obtain a x where ax_def: \<open>ax = (a,x)\<close>
+      by fastforce
+    have *: \<open>{a'. a' = a \<and> a' \<in> A} = (if a\<in>A then {a} else {})\<close>
+      by auto
+    have \<open>kraus_family_map' {ax} (kraus_map_infsum \<EE> A) \<rho> = (if a\<in>A then kraus_family_map' {x} (\<EE> a) \<rho> else 0)\<close>
+      by (simp add: ax_def kraus_family_map'_def True kraus_family_filter_infsum * 
+          kraus_family_map_outcome_inj_same_map inj_on_def)
+    also from assms have \<open>\<dots> = (if a\<in>A then kraus_family_map' {x} (\<FF> a) \<rho> else 0)\<close>
+      by (auto intro!: kraus_family_map'_eqI)
+    also have \<open>\<dots> = kraus_family_map' {ax} (kraus_map_infsum \<FF> A) \<rho>\<close>
+      by (simp add: ax_def kraus_family_map'_def True' kraus_family_filter_infsum * 
+          kraus_family_map_outcome_inj_same_map inj_on_def)
+    finally show \<open>kraus_family_map' {ax} (kraus_map_infsum \<EE> A) \<rho> = kraus_family_map' {ax} (kraus_map_infsum \<FF> A) \<rho>\<close>
+      by -
+  qed
+next
+  case False
+  then have False': \<open>\<not> summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<FF> a)) A\<close>
+    apply (subst (asm) assms[THEN kraus_equivalent'_imp_equivalent, THEN kraus_family_bound_welldefined, THEN summable_on_in_cong])
+    by auto
+  show ?thesis
+    by (simp add: kraus_map_infsum_invalid False False')
+qed
+
 
 end
