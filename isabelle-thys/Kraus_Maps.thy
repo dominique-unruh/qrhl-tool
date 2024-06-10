@@ -2253,7 +2253,7 @@ proof (intro kraus_equivalent_def[THEN iffD2] conjI)
 qed
 
 lemma kraus_family_filter_tensor:
-\<open>kraus_family_filter (\<lambda>(x,y). P x \<and> Q y) (kraus_family_tensor \<EE> \<FF>) = kraus_family_tensor (kraus_family_filter P \<EE>) (kraus_family_filter Q \<FF>)\<close>
+  \<open>kraus_family_filter (\<lambda>(x,y). P x \<and> Q y) (kraus_family_tensor \<EE> \<FF>) = kraus_family_tensor (kraus_family_filter P \<EE>) (kraus_family_filter Q \<FF>)\<close>
   apply (auto intro!: arg_cong[where f=\<open>kraus_family_map_outcome _\<close>] simp: kraus_family_tensor_def kraus_family_filter_map_outcome)
   apply transfer
   by (force simp add: image_iff case_prod_unfold)
@@ -4276,6 +4276,32 @@ next
   show ?thesis
     by (simp add: kraus_map_infsum_invalid False False')
 qed
+
+no_notation   eq_closure_of ("closure'_of\<index>")
+
+lemma
+(* TODO Ref: Nielsen Chuang, Th 2.6, generalized to infdim *)
+  assumes \<open>((\<lambda>i. tc_butterfly (\<psi> i) (\<psi> i)) has_sum t) X\<close>
+  assumes \<open>((\<lambda>i. tc_butterfly (\<phi> i) (\<phi> i)) has_sum t) Y\<close>
+  shows \<open>xx\<close>
+proof -
+  thm butterfly_spectral_dec_vec_tc_has_sum
+  have \<open>is_orthogonal \<gamma> (\<psi> i)\<close> if \<open>\<And>k. k \<in> spectral_dec_vecs_tc t \<Longrightarrow> is_orthogonal \<gamma> k\<close> for \<gamma> i
+    by x
+  have \<open>\<psi> i \<in> closure (cspan (spectral_dec_vecs_tc t))\<close> for i
+    by (metis \<open>\<And>i \<gamma>. (\<And>k. k \<in> spectral_dec_vecs_tc t \<Longrightarrow> is_orthogonal \<gamma> k) \<Longrightarrow> is_orthogonal \<gamma> (\<psi> i)\<close> is_orthogonal_sym orthogonal_complementI orthogonal_complement_orthoI orthogonal_complement_orthogonal_complement_closure_cspan)
+by -
+  then obtain c where \<open>\<psi> i = \<close>
+
+lemma
+  assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
+  shows \<open>xxx\<close>
+proof -
+
+
+lemma
+  assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
+  shows \<open>Abstract_Topology.closure_of XXX (fst ` Rep_kraus_family \<EE>) = Abstract_Topology.closure_of XXX (fst ` Rep_kraus_family \<FF>)\<close>
 
 
 end

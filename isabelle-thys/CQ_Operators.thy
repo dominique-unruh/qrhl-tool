@@ -5,6 +5,12 @@ begin
 definition \<open>cq_map_rel \<EE> \<FF> \<longleftrightarrow> (\<forall>x. kraus_family_norm (\<EE> x) \<le> 1 \<and> kraus_equivalent' (\<EE> x) (\<FF> x))\<close>
   for \<EE> \<FF> :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close>
 
+lemma cq_map_rel_refl:
+  assumes \<open>\<And>x. \<EE> x = \<FF> x\<close>
+  assumes \<open>\<And>x. kraus_family_norm (\<EE> x) \<le> 1\<close>
+  shows \<open>cq_map_rel \<EE> \<FF>\<close>
+  using assms by (simp add: cq_map_rel_def)
+
 typedef ('cl,'qu) cq_operator = \<open>{\<rho> :: 'cl \<Rightarrow> ('qu ell2, 'qu ell2) trace_class. (\<forall>c. \<rho> c \<ge> 0) \<and> 
                           (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> (\<Sum>\<^sub>\<infinity>c. trace_tc (\<rho> c)) \<le> 1}\<close>
   apply (rule exI[of _ \<open>\<lambda>_. 0\<close>])
@@ -47,34 +53,34 @@ proof (rename_tac c \<rho>, intro conjI allI)
   qed
 qed
 
+lemma symp_cq_map_rel[iff]: \<open>symp cq_map_rel\<close>
+proof (rule sympI)
+  fix \<EE> \<FF> assume asm: \<open>cq_map_rel \<EE> \<FF>\<close>
+  then have eq1: \<open>kraus_equivalent' (\<EE> x) (\<FF> x)\<close> for x
+    unfolding cq_map_rel_def by blast
+  then have eq2: \<open>kraus_equivalent' (\<FF> x) (\<EE> x)\<close> for x
+    using kraus_equivalent'_sym by blast
+  from eq1 have eq3: \<open>kraus_equivalent (\<EE> x) (\<FF> x)\<close> for x
+    by (rule kraus_equivalent'_imp_equivalent)
+  have \<open>kraus_family_norm (\<EE> x) \<le> 1\<close> for x
+    using asm unfolding cq_map_rel_def by blast
+  with eq3
+  have norm: \<open>kraus_family_norm (\<FF> x) \<le> 1\<close> for x
+    by (metis kraus_family_norm_welldefined)
+  with eq2 show \<open>cq_map_rel \<FF> \<EE>\<close>
+    by (simp add: cq_map_rel_def)
+qed
+
+lemma transp_cq_map_rel[iff]: \<open>transp cq_map_rel\<close>
+    apply (auto intro!: transpI simp: cq_map_rel_def)
+    using kraus_equivalent'_trans by blast
+
+lemma part_equivp_cq_map_rel[iff]: \<open>part_equivp cq_map_rel\<close>
+  by (auto intro!: part_equivpI exI[of _ \<open>\<lambda>_. 0\<close>] cq_map_rel_refl)
 
 quotient_type ('cl1,'qu1,'cl2,'qu2) cq_map = \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close> /
   partial: cq_map_rel
-proof (rule part_equivpI)
-  show \<open>\<exists>x. cq_map_rel x x\<close>
-    apply (rule exI[of _ \<open>\<lambda>_. 0\<close>])
-    by (simp add: cq_map_rel_def)
-  show \<open>symp cq_map_rel\<close>
-  proof (rule sympI)
-    fix \<EE> \<FF> assume asm: \<open>cq_map_rel \<EE> \<FF>\<close>
-    then have eq1: \<open>kraus_equivalent' (\<EE> x) (\<FF> x)\<close> for x
-      unfolding cq_map_rel_def by blast
-    then have eq2: \<open>kraus_equivalent' (\<FF> x) (\<EE> x)\<close> for x
-      using kraus_equivalent'_sym by blast
-    from eq1 have eq3: \<open>kraus_equivalent (\<EE> x) (\<FF> x)\<close> for x
-      by (rule kraus_equivalent'_imp_equivalent)
-    have \<open>kraus_family_norm (\<EE> x) \<le> 1\<close> for x
-      using asm unfolding cq_map_rel_def by blast
-    with eq3
-    have norm: \<open>kraus_family_norm (\<FF> x) \<le> 1\<close> for x
-      by (metis kraus_family_norm_welldefined)
-    with eq2 show \<open>cq_map_rel \<FF> \<EE>\<close>
-      by (simp add: cq_map_rel_def)
-  qed
-  show \<open>transp cq_map_rel\<close>
-    apply (auto intro!: transpI simp: cq_map_rel_def)
-    using kraus_equivalent'_trans by blast
-qed
+  by (rule part_equivp_cq_map_rel)
 (* setup_lifting type_definition_cq_map *)
 
 lift_definition cq_map_id :: \<open>('cl,'qu,'cl,'qu) cq_map\<close> is 

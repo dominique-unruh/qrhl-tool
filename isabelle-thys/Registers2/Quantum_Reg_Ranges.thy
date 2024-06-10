@@ -1066,8 +1066,23 @@ lemma Rep_QREGISTER_pair_fst_snd:
 
 lift_definition ACTUAL_QREGISTER :: \<open>'a QREGISTER \<Rightarrow> bool\<close> is \<open>actual_qregister_range\<close>.
 
-lemma ACTUAL_QREGISTER_QREGISTER_of: \<open>ACTUAL_QREGISTER (QREGISTER_of F)\<close> if \<open>qregister F\<close>
-  by (simp add: ACTUAL_QREGISTER.rep_eq QREGISTER_of.rep_eq qregister_has_actual_qregister_range that)
+lemma empty_qregister_range[simp]: \<open>range (apply_qregister empty_qregister) = one_algebra\<close>
+  by (metis QREGISTER_of.rep_eq QREGISTER_of_empty_qregister bot_QREGISTER.rep_eq empty_qregister_is_register)
+
+
+lemma actual_qregister_range_one_algebra[iff]: \<open>actual_qregister_range one_algebra\<close>
+proof -
+  from empty_qregister_is_register
+  have \<open>actual_qregister_range (range (apply_qregister (empty_qregister)))\<close>
+    by (rule qregister_has_actual_qregister_range)
+  then show ?thesis
+    by (simp only: empty_qregister_range)
+qed
+
+lemma ACTUAL_QREGISTER_QREGISTER_of[iff]: \<open>ACTUAL_QREGISTER (QREGISTER_of F)\<close>
+  apply (cases \<open>qregister F\<close>)
+   apply (simp add: ACTUAL_QREGISTER.rep_eq QREGISTER_of.rep_eq qregister_has_actual_qregister_range)
+  by (simp add: ACTUAL_QREGISTER.rep_eq QREGISTER_of.rep_eq)
 
 definition \<open>ACTUAL_QREGISTER_content \<FF> = actual_qregister_range_content (Rep_QREGISTER \<FF>)\<close>
 
